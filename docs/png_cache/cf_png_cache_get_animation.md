@@ -1,0 +1,34 @@
+[](../header.md ':include')
+
+# cf_png_cache_get_animation
+
+Category: [png_cache](/api_reference?id=png_cache)  
+GitHub: [cute_png_cache.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_png_cache.h)  
+---
+
+Looks up an animation within the png cache by name.
+
+```cpp
+const CF_Animation* cf_png_cache_get_animation(const char* name);
+```
+
+Parameters | Description
+--- | ---
+name | A unique name for the animation.
+
+## Return Value
+
+Returns a [CF_Animation](/sprite/cf_animation.md).
+
+## Remarks
+
+You may use this function if you wish to implement your own sprites. However, it's recommended to instead use
+[cf_make_png_cache_sprite](/png_cache/cf_make_png_cache_sprite.md) and [CF_Sprite](/sprite/cf_sprite.md).
+
+## Related Pages
+
+[CF_Png](/png_cache/cf_png.md)  
+[cf_png_cache_load](/png_cache/cf_png_cache_load.md)  
+[cf_make_png_cache_animation](/png_cache/cf_make_png_cache_animation.md)  
+[cf_make_png_cache_animation_table](/png_cache/cf_make_png_cache_animation_table.md)  
+[cf_make_png_cache_sprite](/png_cache/cf_make_png_cache_sprite.md)  

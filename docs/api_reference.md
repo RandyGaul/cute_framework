@@ -1146,6 +1146,24 @@ This is a list of all functions in Cute Framework organized by categories. This 
 - [CF_AStarOutput](/pathfinding/cf_astaroutput.md)
 
 
+## png_cache
+
+### functions
+- [cf_make_png_cache_animation](/png_cache/cf_make_png_cache_animation.md)
+- [cf_make_png_cache_animation_table](/png_cache/cf_make_png_cache_animation_table.md)
+- [cf_make_png_cache_sprite](/png_cache/cf_make_png_cache_sprite.md)
+- [cf_png_cache_get_animation](/png_cache/cf_png_cache_get_animation.md)
+- [cf_png_cache_get_animation_table](/png_cache/cf_png_cache_get_animation_table.md)
+- [cf_png_cache_load](/png_cache/cf_png_cache_load.md)
+- [cf_png_cache_load_from_memory](/png_cache/cf_png_cache_load_from_memory.md)
+- [cf_png_cache_unload](/png_cache/cf_png_cache_unload.md)
+- [cf_png_defaults](/png_cache/cf_png_defaults.md)
+
+
+### structs
+- [CF_Png](/png_cache/cf_png.md)
+
+
 ## random
 
 ### functions
@@ -1356,6 +1374,34 @@ This is a list of all functions in Cute Framework organized by categories. This 
 - [CF_TICKS](/time/cf_ticks.md)
 
 
+## web
+
+### functions
+- [cf_https_add_header](/web/cf_https_add_header.md)
+- [cf_https_destroy](/web/cf_https_destroy.md)
+- [cf_https_get](/web/cf_https_get.md)
+- [cf_https_post](/web/cf_https_post.md)
+- [cf_https_process](/web/cf_https_process.md)
+- [cf_https_response](/web/cf_https_response.md)
+- [cf_https_response_code](/web/cf_https_response_code.md)
+- [cf_https_response_content](/web/cf_https_response_content.md)
+- [cf_https_response_content_length](/web/cf_https_response_content_length.md)
+- [cf_https_response_find_header](/web/cf_https_response_find_header.md)
+- [cf_https_response_headers](/web/cf_https_response_headers.md)
+- [cf_https_response_headers_count](/web/cf_https_response_headers_count.md)
+- [cf_https_result_to_string](/web/cf_https_result_to_string.md)
+
+
+### structs
+- [CF_HttpsHeader](/web/cf_httpsheader.md)
+- [CF_HttpsRequest](/web/cf_httpsrequest.md)
+- [CF_HttpsResponse](/web/cf_httpsresponse.md)
+
+
+### enums
+- [CF_HttpsResult](/web/cf_httpsresult.md)
+
+
 ## utility
 
 ### functions
@@ -1393,33 +1439,5 @@ This is a list of all functions in Cute Framework organized by categories. This 
 
 ### enums
 - [CF_MessageBoxType](/utility/cf_messageboxtype.md)
-
-
-## web
-
-### functions
-- [cf_https_add_header](/web/cf_https_add_header.md)
-- [cf_https_destroy](/web/cf_https_destroy.md)
-- [cf_https_get](/web/cf_https_get.md)
-- [cf_https_post](/web/cf_https_post.md)
-- [cf_https_process](/web/cf_https_process.md)
-- [cf_https_response](/web/cf_https_response.md)
-- [cf_https_response_code](/web/cf_https_response_code.md)
-- [cf_https_response_content](/web/cf_https_response_content.md)
-- [cf_https_response_content_length](/web/cf_https_response_content_length.md)
-- [cf_https_response_find_header](/web/cf_https_response_find_header.md)
-- [cf_https_response_headers](/web/cf_https_response_headers.md)
-- [cf_https_response_headers_count](/web/cf_https_response_headers_count.md)
-- [cf_https_result_to_string](/web/cf_https_result_to_string.md)
-
-
-### structs
-- [CF_HttpsHeader](/web/cf_httpsheader.md)
-- [CF_HttpsRequest](/web/cf_httpsrequest.md)
-- [CF_HttpsResponse](/web/cf_httpsresponse.md)
-
-
-### enums
-- [CF_HttpsResult](/web/cf_httpsresult.md)
 
 

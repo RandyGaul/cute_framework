@@ -1,0 +1,24 @@
+[](../header.md ':include')
+
+# cf_png_defaults
+
+Category: [png_cache](/api_reference?id=png_cache)  
+GitHub: [cute_png_cache.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_png_cache.h)  
+---
+
+Initialize an empty [CF_Png](/png_cache/cf_png.md) struct.
+
+```cpp
+CF_Png cf_png_defaults()
+```
+
+## Return Value
+
+Returns an empty [CF_Png](/png_cache/cf_png.md) struct.
+
+## Related Pages
+
+[CF_Png](/png_cache/cf_png.md)  
+[cf_make_png_cache_sprite](/png_cache/cf_make_png_cache_sprite.md)  
+[cf_png_cache_load](/png_cache/cf_png_cache_load.md)  
+[cf_make_png_cache_animation](/png_cache/cf_make_png_cache_animation.md)  
