@@ -30,6 +30,5 @@ After completing the above fundamental reading it's recommended to then select t
 * [Networking](/topics/networking.md)
 * [Pathfinding](/topics/pathfinding.md)
 * [Random Numbers](/topics/random_numbers.md)
-* [Serialization](/topics/serialization.md)
 * [Strings](/topics/strings.md)
 * [Virtual File System](/topics/virtual_file_system.md)

@@ -806,6 +806,7 @@ struct Directory
 		return files;
 	}
 
+	CF_INLINE bool has_next() { return *m_list ? true : false; }
 	CF_INLINE const char* next() { if (*m_list) { const char* result = *m_list++; return result; } else { return NULL; } }
 
 	CF_INLINE Directory& operator=(const Directory& d) { m_path = d.m_path; m_list = m_dirs = fs_enumerate_directory(m_path); return *this; }

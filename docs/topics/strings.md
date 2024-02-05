@@ -139,7 +139,7 @@ while (utf8.next()) {
 
 ## Paths
 
-The [path API in CF](https://randygaul.github.io/cute_framework/#/api_reference/?id=path) is a set of helper functions to deal with paths as a string. It auto-magically inserts "/" between folder names as appropriate, and can pop parts of the path off the end. It's great for easily opening up and traversing directories.
+The [path API in CF](https://randygaul.github.io/cute_framework/#/api_reference?id=path) is a set of helper functions to deal with paths as a string. It auto-magically inserts "/" between folder names as appropriate, and can pop parts of the path off the end. It's great for easily opening up and traversing directories.
 
 ### Paths in C++
 
