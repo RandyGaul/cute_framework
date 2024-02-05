@@ -15,13 +15,15 @@ CF_Coroutine cf_make_coroutine(CF_CoroutineFn* fn, int stack_size, void* udata);
 Parameters | Description
 --- | ---
 fn | The entry point (function) the coroutine runs.
-stack_size | The size of the coroutine's stack to call functions and make local variables.
+stack_size | The size of the coroutine's stack to call functions and make local variables, the default is about 57344 bytes.
 udata | Can be `NULL`. Gets handed back to you when [cf_coroutine_get_udata](/coroutine/cf_coroutine_get_udata.md) is called.
 
 ## Remarks
 
 The coroutine starts in a `COROUTINE_STATE_SUSPENDED`, and won't run until [cf_coroutine_resume](/coroutine/cf_coroutine_resume.md) is first called. Free up the
-coroutine with [cf_destroy_coroutine](/coroutine/cf_destroy_coroutine.md) when done. See [CF_Coroutine](/coroutine/cf_coroutine.md) for some more details.
+coroutine with [cf_destroy_coroutine](/coroutine/cf_destroy_coroutine.md) when done. See [CF_Coroutine](/coroutine/cf_coroutine.md) for some more details. IMPORTANT NOTE: You should beef
+up the stack_size to 1 or 2 MB (you may use e.g. `CF_MB  2`) if you wish to call into APIs such as DirectX. A variety of APIs
+and libraries out there have very deep or complex call stacks -- so the default size may cause stack overflows in such cases.
 
 ## Related Pages
 
