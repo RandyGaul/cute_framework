@@ -1391,6 +1391,10 @@ CF_INLINE void camera_dimensions(float w, float h) { cf_camera_dimensions(w, h);
 CF_INLINE void camera_look_at(float x, float y) { cf_camera_look_at(x, y); }
 CF_INLINE void camera_look_at(v2 pos) { cf_camera_look_at(pos.x, pos.y); }
 CF_INLINE void camera_rotate(float radians) { cf_camera_rotate(radians); }
+CF_INLINE CF_V2 camera_peek_position() { return cf_camera_peek_position(); }
+CF_INLINE CF_V2 camera_peek_dimensions() { return cf_camera_peek_dimensions(); }
+CF_INLINE float camera_peek_rotation() { return cf_camera_peek_rotation(); }
+CF_INLINE CF_M3x2 camera_peek() { return cf_camera_peek(); }
 CF_INLINE void camera_push() { cf_camera_push(); }
 CF_INLINE void camera_pop() { cf_camera_pop(); }
 

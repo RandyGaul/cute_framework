@@ -35,7 +35,11 @@ extern "C" {
  * @struct   CF_HandleTable
  * @category utility
  * @brief    An opaque pointer representing a handle table.
- * @remarks  The handle table stores a lookup table of unique `CF_Handle`s.
+ * @remarks  The handle table stores a lookup table of unique `CF_Handle`s. Handles use a lookup table mechanism
+ *           to map one integer to another. This is useful to implement object pools or other similar kinds of
+ *           data structures. This is a rather low-level utility, mainly used to implement CF's ECS. If you want
+ *           to see it in action you may peruse the CF source code. Otherwise, it's assumed you know what you're
+ *           doing if you're reading this.
  * @related  CF_HandleTable CF_Handle cf_make_handle_allocator cf_handle_allocator_alloc cf_handle_allocator_get_index
  */
 typedef struct CF_HandleTable CF_HandleTable;
