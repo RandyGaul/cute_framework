@@ -2146,7 +2146,7 @@ void cs_mix()
 					int new_capacity = s_ctx->duplicate_capacity ? s_ctx->duplicate_capacity * 2 : 1024;
 					void* duplicates = CUTE_SOUND_ALLOC(sizeof(void*) * new_capacity, s_ctx->mem_ctx);
 					CUTE_SOUND_MEMCPY(duplicates, s_ctx->duplicates, sizeof(void*) * s_ctx->duplicate_count);
-					CUTE_SOUND_FREE(s_ctx->duplicates);
+					CUTE_SOUND_FREE(s_ctx->duplicates, s_ctx->mem_ctx);
 					s_ctx->duplicates = (void**)duplicates;
 					s_ctx->duplicate_capacity = new_capacity;
 				}
