@@ -1908,7 +1908,7 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 		text_length = 0;
 	}
 	// Render the string glyph-by-glyph.
-	while (*text && text_length--) {
+	while (text_length-- && *text) {
 		cp_prev = cp;
 		const char* prev_text = text;
 		if (render && do_effects) effect_spawn();
