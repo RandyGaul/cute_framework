@@ -1914,9 +1914,7 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 		if (render && do_effects) effect_spawn();
 		text = cf_decode_UTF8(text, &cp);
 		++index;
-		if (do_effects) {
-			CF_DEFER(effect_cleanup());
-		}
+		CF_DEFER(effect_cleanup());
 
 		if (cp == '\n') {
 			apply_newline();
