@@ -127,6 +127,7 @@ struct CF_Draw
 	Cute::Array<CF_Aabb> text_clip_boxes = { cf_make_aabb(cf_v2(-FLT_MAX, -FLT_MAX), cf_v2(FLT_MAX, FLT_MAX)) };
 	Cute::Array<bool> vertical = { false };
 	Cute::Array<CF_Strike> strikes;
+	Cute::Array<bool> effects = { true };
 };
 
 void cf_make_draw();
