@@ -110,6 +110,7 @@ set(CF_SRCS
 	src/cute_guid.cpp
 	src/cute_alloc.cpp
 	src/cute_result.cpp
+	src/cute_aabb_grid.cpp
 
 	src/internal/cute_dx11.cpp
 	src/internal/yyjson.c
@@ -181,6 +182,7 @@ set(CF_PUBLIC_HDRS
 	include/cute_networking.h
 	include/cute_guid.h
 	include/cute_routine.h
+	include/cute_aabb_grid.h
 )
 
 set(IMGUI_HDRS
