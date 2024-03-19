@@ -1,22 +1,8 @@
 /*
 	Cute Framework
-	Copyright (C) 2023 Randy Gaul https://randygaul.github.io/
+	Copyright (C) 2024 Randy Gaul https://randygaul.github.io/
 
-	This software is provided 'as-is', without any express or implied
-	warranty.  In no event will the authors be held liable for any damages
-	arising from the use of this software.
-
-	Permission is granted to anyone to use this software for any purpose,
-	including commercial applications, and to alter it and redistribute it
-	freely, subject to the following restrictions:
-
-	1. The origin of this software must not be misrepresented; you must not
-	   claim that you wrote the original software. If you use this software
-	   in a product, an acknowledgment in the product documentation would be
-	   appreciated but is not required.
-	2. Altered source versions must be plainly marked as such, and must not be
-	   misrepresented as being the original software.
-	3. This notice may not be removed or altered from any source distribution.
+	This software is dual-licensed with zlib or Unlicense, check LICENSE.txt for more info
 */
 
 #ifndef CF_COLOR_H
@@ -588,7 +574,7 @@ CF_INLINE CF_Pixel cf_pixel_premultiply(CF_Pixel c) { c.colors.r = cf_mul_un8(c.
  * @return   Returns a `CF_Color` (0.0f-1.0f) converted from pixel form (0-255).
  * @related  cf_pixel_to_color cf_pixel_to_int_rgba cf_pixel_to_int_rgb cf_pixel_to_string
  */
-CF_INLINE CF_Color cf_pixel_to_color(CF_Pixel p) { return cf_make_color_hex2((int)p.val & 0xFFFFFF, ((int)p.val & 0xFF000000) >> 24); }
+CF_INLINE CF_Color cf_pixel_to_color(CF_Pixel p) { return cf_make_color_rgba(p.colors.r, p.colors.g, p.colors.b, p.colors.a); }
 
 /**
  * @function cf_pixel_to_int_rgb
@@ -599,7 +585,7 @@ CF_INLINE CF_Color cf_pixel_to_color(CF_Pixel p) { return cf_make_color_hex2((in
  *           the green component, the third byte is the blue component, the fourth byte is 0xFF or full-alpha.
  * @related  cf_pixel_to_color cf_pixel_to_int_rgba cf_pixel_to_int_rgb cf_pixel_to_string
  */
-CF_INLINE uint32_t cf_pixel_to_int_rgb(CF_Pixel p) { return p.val | 0x000000FF; }
+CF_INLINE uint32_t cf_pixel_to_int_rgb(CF_Pixel p) { return p.val | 0xFF000000; }
 
 /**
  * @function cf_pixel_to_int_rgba
@@ -640,7 +626,7 @@ CF_INLINE CF_Pixel cf_color_to_pixel(CF_Color c) { CF_Pixel p; p.colors.r = (int
  *           the green component, the third byte is the blue component, the fourth byte is 0xFF or full-alpha.
  * @related  cf_color_to_pixel cf_color_to_int_rgb cf_color_to_int_rgba cf_color_to_string
  */
-CF_INLINE uint32_t cf_color_to_int_rgb(CF_Color c) { return cf_color_to_pixel(c).val | 0x000000FF; }
+CF_INLINE uint32_t cf_color_to_int_rgb(CF_Color c) { return cf_color_to_pixel(c).val | 0xFF000000; }
 
 /**
  * @function cf_color_to_int_rgba
@@ -932,13 +918,13 @@ CF_INLINE bool operator!=(Pixel a, Pixel b) { return a.val != b.val; }
 CF_INLINE Pixel lerp(Pixel a, Pixel b, uint8_t s) { return cf_pixel_lerp(a, b, s); }
 CF_INLINE Pixel premultiply(Pixel p) { return cf_pixel_premultiply(p); }
 
-CF_INLINE Color to_color(Pixel p) { return cf_make_color_hex((int)p.val); }
+CF_INLINE Color to_color(Pixel p) { return cf_make_color_rgba(p.colors.r, p.colors.g, p.colors.b, p.colors.a); }
 CF_INLINE uint32_t to_int_rgba(Pixel p) { return p.val; }
-CF_INLINE uint32_t to_int_rgb(Pixel p) { return p.val | 0x000000FF; }
+CF_INLINE uint32_t to_int_rgb(Pixel p) { return p.val | 0xFF000000; }
 CF_INLINE String to_string(Pixel p) { char* s = NULL; return shex(s, p.val); }
 
 CF_INLINE Pixel to_pixel(Color c) { return cf_color_to_pixel(c); }
-CF_INLINE uint32_t to_int_rgb(Color c) { return cf_color_to_pixel(c).val | 0x000000FF; }
+CF_INLINE uint32_t to_int_rgb(Color c) { return cf_color_to_pixel(c).val | 0xFF000000; }
 CF_INLINE uint32_t to_int_rgba(Color c) { return cf_color_to_pixel(c).val; }
 CF_INLINE String to_string(Color c) { char* s = NULL; return shex(s, cf_color_to_pixel(c).val); }
 

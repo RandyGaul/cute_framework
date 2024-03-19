@@ -1,22 +1,8 @@
 /*
 	Cute Framework
-	Copyright (C) 2023 Randy Gaul https://randygaul.github.io/
+	Copyright (C) 2024 Randy Gaul https://randygaul.github.io/
 
-	This software is provided 'as-is', without any express or implied
-	warranty.  In no event will the authors be held liable for any damages
-	arising from the use of this software.
-
-	Permission is granted to anyone to use this software for any purpositione,
-	including commercial applications, and to alter it and redistribute it
-	freely, subject to the following restrictions:
-
-	1. The origin of this software must not be misrepresented; you must not
-	   claim that you wrote the original software. If you use this software
-	   in a product, an acknowledgment in the product documentation would be
-	   appreciated but is not required.
-	2. Altered source versions must be plainly marked as such, and must not be
-	   misrepresented as being the original software.
-	3. This notice may not be removed or altered from any source distribution.
+	This software is dual-licensed with zlib or Unlicense, check LICENSE.txt for more info
 */
 
 #include <cute_draw.h>
@@ -2339,7 +2325,16 @@ CF_M3x2 cf_camera_peek()
 
 CF_TemporaryImage cf_fetch_image(const CF_Sprite* sprite)
 {
-	spritebatch_sprite_t s = spritebatch_fetch(&draw->sb, sprite->animation->frames[sprite->frame_index].id, sprite->w, sprite->h);
+	uint64_t image_id;
+	if (sprite->animation)
+	{
+		image_id = sprite->animation->frames[sprite->frame_index].id;
+	}
+	else
+	{
+		image_id = sprite->easy_sprite_id;
+	}
+	spritebatch_sprite_t s = spritebatch_fetch(&draw->sb, image_id, sprite->w, sprite->h);
 	CF_TemporaryImage image;
 	image.tex = { s.texture_id };
 	image.w = sprite->w;
