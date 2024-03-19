@@ -2,8 +2,6 @@
 #include <cimgui.h>
 #include <sokol/sokol_gfx_imgui.h>
 
-#include <stdio.h>
-
 #include "draw_to_texture_data/blit_shader.h"
 
 typedef struct Offscreen

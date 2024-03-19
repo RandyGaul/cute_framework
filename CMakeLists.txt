@@ -409,6 +409,7 @@ if (CF_FRAMEWORK_BUILD_SAMPLES)
 	add_executable(https samples/https.c)
 	add_executable(spaceshooter samples/spaceshooter.cpp)
 	add_executable(draw_to_texture samples/draw_to_texture.c)
+	add_executable(hello_triangle samples/hello_triangle.c)
 	set(SAMPLE_EXECUTABLES
 		easysprite
 		basicecs
@@ -428,6 +429,7 @@ if (CF_FRAMEWORK_BUILD_SAMPLES)
 		https
 		spaceshooter
 		draw_to_texture
+		hello_triangle
 	)
 
 	foreach(CURRENT_TARGET ${SAMPLE_EXECUTABLES})

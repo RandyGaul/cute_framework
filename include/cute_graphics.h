@@ -930,9 +930,9 @@ CF_API uint64_t CF_CALL cf_canvas_get_backend_depth_stencil_handle(CF_Canvas can
 	CF_ENUM(VERTEX_FORMAT_SHORT2N,  7 )                             \
 	/* @entry Two 16-bit unsigned bytes, in normalized form. */     \
 	CF_ENUM(VERTEX_FORMAT_USHORT2N, 8 )                             \
-	/* @entry A single 32-bit signed byte, in normalized form. */   \
+	/* @entry Four 16-bit signed bytes, in normalized form. */      \
 	CF_ENUM(VERTEX_FORMAT_SHORT4N,  9 )                             \
-	/* @entry A single 32-bit unsigned byte, in normalized form. */ \
+	/* @entry Four 16-bit unsigned bytes, in normalized form. */    \
 	CF_ENUM(VERTEX_FORMAT_USHORT4N, 10)                             \
 	/* @end */
 
