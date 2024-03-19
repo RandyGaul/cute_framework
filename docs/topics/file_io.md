@@ -87,43 +87,6 @@ const char* write_directory = cf_fs_get_user_directory("my_game_company_name", "
 cf_fs_set_write_directory(write_directory);
 ```
 
-## Directories
+## Directories and Paths
 
-In C++ we have a `Directory` utility class (in C you may use [`cf_fs_create_directory`](https://randygaul.github.io/cute_framework/#/file/cf_fs_create_directory). To create a directory simply do:
-
-```cpp
-Directory::create("/sprites/enemy2");
-```
-
-!> **Note** Directories can only be created in the *write directory*. You must specify the write directory after your application launches before creating directories (or editing any other kind of file) by calling [`cf_fs_set_write_directory`](https://randygaul.github.io/cute_framework/#/file/cf_fs_set_write_directory).
-
-Here's an example of how to loop over all files in a directory and print their names:
-
-```cpp
-Directory dir = Directory::open("/sprites");
-while (dir.has_next())
-{
-	const char* path = dir.next();
-	printf("%s\n", path);
-}
-```
-
-Alternatively, if you wish to create an array of the contents of a directory, you may use `Directory::enumerate`. This is suggested if you need to reference the list of files names many times, but don't actually need to fetch the list of names off-disk more than once:
-
-```cpp
-Array<Path> paths = Directory::enumerate("/sprites");
-for (int i = 0; i < paths.size(); ++i)
-{
-	printf("%s\n", paths[i].c_str());
-}
-```
-
-## Paths
-
-In C++ we have a wrapper class called `Path`, which wraps the C [path API](https://randygaul.github.io/cute_framework/#/api_reference?id=path). `Path`'s can be made from strings, and have a variety of helper functions such as adding folders to the end of a path, or popping folders off of the path.
-
-```cpp
-Path path = "/sprites/ghost/wailing";
-path.pop(); // Go up one level.
-printf("%s\n", path.c_str()); // Prints "/sprites/ghost"
-```
+To learn about creating directories and traversing them check out the docs on [Paths and Directories here](https://randygaul.github.io/cute_framework/#/topics/strings?id=paths).

@@ -6,12 +6,14 @@ Category: [web](/api_reference?id=web)
 GitHub: [cute_https.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_https.h)  
 ---
 
-TODO
+Represents an [HTTPS request](https://www.ibm.com/docs/en/cics-ts/5.3?topic=protocol-http-requests).
 
 ## Remarks
 
-TODO
+You may create a request by calling either [cf_https_get](/web/cf_https_get.md) or [cf_https_post](/web/cf_https_post.md).
 
 ## Related Pages
 
-TODO  
+[cf_https_post](/web/cf_https_post.md)  
+[CF_HttpsResponse](/web/cf_httpsresponse.md)  
+[cf_https_get](/web/cf_https_get.md)  

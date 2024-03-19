@@ -10,7 +10,11 @@ An opaque pointer representing a handle table.
 
 ## Remarks
 
-The handle table stores a lookup table of unique [CF_Handle](/utility/cf_handle.md)s.
+The handle table stores a lookup table of unique [CF_Handle](/utility/cf_handle.md)s. Handles use a lookup table mechanism
+to map one integer to another. This is useful to implement object pools or other similar kinds of
+data structures. This is a rather low-level utility, mainly used to implement CF's ECS. If you want
+to see it in action you may peruse the CF source code. Otherwise, it's assumed you know what you're
+doing if you're reading this.
 
 ## Related Pages
 
