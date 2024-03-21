@@ -808,6 +808,9 @@ private:
 
 }
 
+using CF_Path = Cute::Path;
+using CF_Directory = Cute::Directory;
+
 #endif // CF_CPP
 
 #endif // CF_FILE_SYSTEM_H

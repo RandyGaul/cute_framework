@@ -410,7 +410,7 @@ if (CF_FRAMEWORK_BUILD_SAMPLES)
 	add_executable(spaceshooter samples/spaceshooter.cpp)
 	add_executable(draw_to_texture samples/draw_to_texture.c)
 	add_executable(hello_triangle samples/hello_triangle.c)
-	add_executable(puddles samples/puddles.cpp)
+	add_executable(waves samples/waves.cpp)
 	set(SAMPLE_EXECUTABLES
 		easysprite
 		basicecs
@@ -431,7 +431,7 @@ if (CF_FRAMEWORK_BUILD_SAMPLES)
 		spaceshooter
 		draw_to_texture
 		hello_triangle
-		puddles
+		waves
 	)
 
 	foreach(CURRENT_TARGET ${SAMPLE_EXECUTABLES})
@@ -448,7 +448,7 @@ if (CF_FRAMEWORK_BUILD_SAMPLES)
 
 	# Copy over some folders for certain samples.
 	add_custom_command(TARGET spaceshooter PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/samples/spaceshooter_data $<TARGET_FILE_DIR:spaceshooter>/spaceshooter_data)
-	add_custom_command(TARGET puddles PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/samples/puddles_data $<TARGET_FILE_DIR:puddles>/puddles_data)
+	add_custom_command(TARGET waves PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/samples/waves_data $<TARGET_FILE_DIR:waves>/waves_data)
 endif()
 
 # Propogate public headers to other cmake scripts including this subdirectory.
