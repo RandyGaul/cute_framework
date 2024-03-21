@@ -5,14 +5,6 @@
 
 using namespace Cute;
 
-struct Offscreen
-{
-	int w, h;
-	CF_Texture target;
-	CF_Texture depth_stencil;
-	CF_Canvas canvas;
-};
-
 void mount_content_directory_as(const char* dir)
 {
 	Path path = fs_get_base_directory();
