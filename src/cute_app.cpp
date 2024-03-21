@@ -89,37 +89,16 @@ unsigned char default_png_data[81] = {
 static void s_canvas(int w, int h)
 {
 	{
-		CF_TextureParams params = cf_texture_defaults();
-		params.width = w;
-		params.height = h;
-		params.render_target = true;
-		if (app->backbuffer.id) {
-			cf_destroy_texture(app->backbuffer);
-		}
-		app->backbuffer = cf_make_texture(params);
-	}
-	{
-		CF_TextureParams params = cf_texture_defaults();
-		params.width = w;
-		params.height = h;
-		params.render_target = true;
-		params.pixel_format = CF_PIXELFORMAT_DEPTH_STENCIL;
-		if (app->backbuffer_depth_stencil.id) {
-			cf_destroy_texture(app->backbuffer_depth_stencil);
-		}
-		app->backbuffer_depth_stencil = cf_make_texture(params);
-	}
-	{
-		CF_CanvasParams params = cf_canvas_defaults();
-		params.target = app->backbuffer;
-		params.depth_stencil_target = app->backbuffer_depth_stencil;
+		CF_CanvasParams params = cf_canvas_defaults(w, h);
 		if (app->offscreen_canvas.id) {
 			cf_destroy_canvas(app->offscreen_canvas);
 		}
 		app->offscreen_canvas = cf_make_canvas(params);
 	}
 	{
-		CF_CanvasParams params = cf_canvas_defaults();
+		// Size (0,0) is a hidden feature to use sokol's default canvas. This let's us
+		// get pixels to the actual screen as a final pass.
+		CF_CanvasParams params = cf_canvas_defaults(0, 0);
 		if (app->backbuffer_canvas.id) {
 			cf_destroy_canvas(app->backbuffer_canvas);
 		}
@@ -127,7 +106,7 @@ static void s_canvas(int w, int h)
 	}
 	app->canvas_w = w;
 	app->canvas_h = h;
-	cf_material_set_texture_fs(app->backbuffer_material, "u_image", app->backbuffer);
+	cf_material_set_texture_fs(app->backbuffer_material, "u_image", cf_canvas_get_target(app->offscreen_canvas));
 }
 
 CF_Result cf_make_app(const char* window_title, int x, int y, int w, int h, int options, const char* argv0)
@@ -339,7 +318,6 @@ void cf_destroy_app()
 	if (app->gfx_enabled) {
 		sg_end_pass();
 		cf_destroy_draw();
-		cf_destroy_texture(app->backbuffer);
 		cf_destroy_canvas(app->offscreen_canvas);
 		cf_destroy_canvas(app->backbuffer_canvas);
 		cf_destroy_mesh(app->backbuffer_quad);
@@ -484,6 +462,8 @@ int cf_app_draw_onto_screen(bool clear)
 	draw->vertical.set_count(1);
 	draw->user_params.set_count(1);
 	draw->shaders.set_count(1);
+	material_clear_textures(draw->material);
+	material_clear_uniforms(draw->material);
 
 	// Report the number of draw calls.
 	// This is always user draw call count +1.

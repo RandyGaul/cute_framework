@@ -1054,7 +1054,7 @@ CF_API CF_RenderState CF_CALL cf_render_settings_peek_render_state();
 CF_API void CF_CALL cf_render_settings_set_atlas_dimensions(int width_in_pixels, int height_in_pixels);
 
 /**
- * @function cf_draw_push_shader
+ * @function cf_render_settings_push_shader
  * @category draw
  * @brief    TODO
  * @related  TODO
@@ -1062,7 +1062,7 @@ CF_API void CF_CALL cf_render_settings_set_atlas_dimensions(int width_in_pixels,
 CF_API void CF_CALL cf_render_settings_push_shader(CF_Shader shader);
 
 /**
- * @function cf_draw_pop_shader
+ * @function cf_render_settings_pop_shader
  * @category draw
  * @brief    TODO
  * @related  TODO
@@ -1070,12 +1070,60 @@ CF_API void CF_CALL cf_render_settings_push_shader(CF_Shader shader);
 CF_API CF_Shader CF_CALL cf_render_settings_pop_shader();
 
 /**
- * @function cf_draw_peek_shader
+ * @function cf_render_settings_peek_shader
  * @category draw
  * @brief    TODO
  * @related  TODO
  */
 CF_API CF_Shader CF_CALL cf_render_settings_peek_shader();
+
+/**
+ * @function cf_render_settings_push_texture
+ * @category draw
+ * @brief    TODO
+ * @related  TODO
+ */
+CF_API void CF_CALL cf_render_settings_push_texture(const char* name, CF_Texture texture);
+
+/**
+ * @function cf_render_settings_push_uniform
+ * @category draw
+ * @brief    TODO
+ * @related  TODO
+ */
+CF_API void CF_CALL cf_render_settings_push_uniform(const char* name, void* data, CF_UniformType type, int array_length);
+
+/**
+ * @function cf_render_settings_push_uniform_int
+ * @category draw
+ * @brief    TODO
+ * @related  TODO
+ */
+CF_API void CF_CALL cf_render_settings_push_uniform_int(const char* name, int val);
+
+/**
+ * @function cf_render_settings_push_uniform_float
+ * @category draw
+ * @brief    TODO
+ * @related  TODO
+ */
+CF_API void CF_CALL cf_render_settings_push_uniform_float(const char* name, float val);
+
+/**
+ * @function cf_render_settings_push_uniform_v2
+ * @category draw
+ * @brief    TODO
+ * @related  TODO
+ */
+CF_API void CF_CALL cf_render_settings_push_uniform_v2(const char* name, CF_V2 val);
+
+/**
+ * @function cf_render_settings_push_uniform_color
+ * @category draw
+ * @brief    TODO
+ * @related  TODO
+ */
+CF_API void CF_CALL cf_render_settings_push_uniform_color(const char* name, CF_Color val);
 
 /**
  * @function cf_camera_dimensions
@@ -1246,6 +1294,7 @@ namespace Cute
 using TemporaryImage = CF_TemporaryImage;
 
 CF_INLINE void draw_sprite(const Sprite* sprite) { cf_draw_sprite(sprite); }
+CF_INLINE void draw_sprite(const Sprite& sprite) { cf_draw_sprite(&sprite); }
 CF_INLINE void draw_quad(Aabb bb, float thickness = 1.0f, float chubbiness = 0) { cf_draw_quad(bb, thickness, chubbiness); }
 CF_INLINE void draw_quad(v2 p0, v2 p1, v2 p2, v2 p3, float thickness = 1.0f, float chubbiness = 0) { cf_draw_quad2(p0, p1, p2, p3, thickness, chubbiness); }
 CF_INLINE void draw_quad_fill(Aabb bb, float chubbiness = 0) { cf_draw_quad_fill(bb, chubbiness); }
@@ -1372,6 +1421,12 @@ CF_INLINE CF_RenderState render_settings_peek_render_state() { return render_set
 CF_INLINE void render_settings_push_shader(CF_Shader shader) { cf_render_settings_push_shader(shader); }
 CF_INLINE CF_Shader render_settings_pop_shader() { return cf_render_settings_pop_shader(); }
 CF_INLINE CF_Shader render_settings_peek_shader() { return cf_render_settings_peek_shader(); }
+CF_INLINE void render_settings_push_texture(const char* name, CF_Texture texture) { cf_render_settings_push_texture(name, texture); }
+CF_INLINE void render_settings_push_uniform(const char* name, void* data, CF_UniformType type, int array_length) { cf_render_settings_push_uniform(name, data, type, array_length); }
+CF_INLINE void render_settings_push_uniform(const char* name, int val) { cf_render_settings_push_uniform_int(name, val); }
+CF_INLINE void render_settings_push_uniform(const char* name, float val) { cf_render_settings_push_uniform_float(name, val); }
+CF_INLINE void render_settings_push_uniform(const char* name, v2 val) { cf_render_settings_push_uniform_v2(name, val); }
+CF_INLINE void render_settings_push_uniform(const char* name, CF_Color val) { cf_render_settings_push_uniform_color(name, val); }
 
 CF_INLINE void camera_dimensions(float w, float h) { cf_camera_dimensions(w, h); }
 CF_INLINE void camera_look_at(float x, float y) { cf_camera_look_at(x, y); }

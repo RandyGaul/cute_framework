@@ -59,9 +59,7 @@ using namespace Cute;
 SPRITEBATCH_U64 cf_generate_texture_handle(void* pixels, int w, int h, void* udata)
 {
 	CF_UNUSED(udata);
-	CF_TextureParams params = cf_texture_defaults();
-	params.width = w;
-	params.height = h;
+	CF_TextureParams params = cf_texture_defaults(w, h);
 	params.filter = draw->filter;
 	params.initial_data = pixels;
 	params.initial_data_size = w * h * sizeof(CF_Pixel);
@@ -2246,6 +2244,36 @@ CF_Shader cf_render_settings_pop_shader()
 CF_Shader cf_render_settings_peek_shader()
 {
 	return draw->shaders.last();
+}
+
+void cf_render_settings_push_texture(const char* name, CF_Texture texture)
+{
+	material_set_texture_fs(draw->material, name, texture);
+}
+
+void cf_render_settings_push_uniform(const char* name, void* data, CF_UniformType type, int array_length)
+{
+	material_set_uniform_fs(draw->material, "shader_uniforms", name, data, type, array_length);
+}
+
+void cf_render_settings_push_uniform_int(const char* name, int val)
+{
+	material_set_uniform_fs(draw->material, "shader_uniforms", name, &val, CF_UNIFORM_TYPE_INT, 1);
+}
+
+void cf_render_settings_push_uniform_float(const char* name, float val)
+{
+	material_set_uniform_fs(draw->material, "shader_uniforms", name, &val, CF_UNIFORM_TYPE_FLOAT, 1);
+}
+
+void cf_render_settings_push_uniform_v2(const char* name, v2 val)
+{
+	material_set_uniform_fs(draw->material, "shader_uniforms", name, &val, CF_UNIFORM_TYPE_FLOAT2, 1);
+}
+
+void cf_render_settings_push_uniform_color(const char* name, CF_Color val)
+{
+	material_set_uniform_fs(draw->material, "shader_uniforms", name, &val, CF_UNIFORM_TYPE_FLOAT4, 1);
 }
 
 void cf_render_to(CF_Canvas canvas, bool clear)

@@ -336,7 +336,8 @@ float distance_triangle(vec2 p, vec2 a, vec2 b, vec2 c)
 		c = (!is_sprite && !is_text && !is_tri) ? sdf(c, v_col, d - v_radius) : c;
 
 		c *= v_alpha;
-		c = shader(c, v_uv, v_pos, v_posH, v_user);
+		vec2 screen_position = (v_posH + vec2(1,1)) * 0.5;
+		c = shader(c, v_pos, screen_position, v_user);
 		if (c.a == 0) discard;
 		result = c;
 	}

@@ -259,3 +259,39 @@ You can see the [Text Effect](https://randygaul.github.io/cute_framework/#/text/
 ## Camera
 
 The drawing functions are all relative to the camera. The camera has it's own [Camera API Reference](https://randygaul.github.io/cute_framework/#/api_reference?id=camera) as well as a [Camera](https://randygaul.github.io/cute_framework/#/topics/camera) topic overview page.
+
+## Shaders
+
+You can apply customizable shaders that work with the draw API by using functions like [cf_render_settings_push_shader](https://randygaul.github.io/cute_framework/#/draw/cf_render_settings_push_shader)
+ and [cf_render_settings_pop_shader](https://randygaul.github.io/cute_framework/#/draw/cf_render_settings_pop_shader). The draw API passes geometry onto an optional function, within the fragment shader, called `shader`. This function is the final step in the entire fragment shader, granting the opportunity to alter the final output pixel color. Let us look at an example custom shader to apply a color mixing effect.
+
+```glsl
+@module flash
+
+@ctype mat4 CF_Matrix4x4
+@ctype vec4 CF_Color
+@ctype vec2 CF_V2
+
+@block shader_block
+vec4 shader(vec4 color, vec2 pos, vec2 uv, vec4 params)
+{
+	return vec4(mix(color.rgb, params.rgb, params.a), color.a);
+}
+@end
+
+@include ../../include/shaders/draw.glsl
+```
+
+The `color` param is the color that would be rendered if you don't make any modifications to it within the `shader` function. If drawing a sprite this would be the color of a particular pixel from the sprite's texture, or, if drawing a shape the color of the shape itself.
+
+`pos` was the rendering position used when calling an associated draw function like `cf_draw_sprite`.
+
+`uv` is a position relative to the screen, where (0,0) is the bottom left, and (1,1) is the top right of the screen.
+
+`params` are four optional floats. They come from vertex attributes set by [cf_draw_push_vertex_attributes](https://randygaul.github.io/cute_framework/#/draw/cf_draw_push_vertex_attributes). Each different item drawn through CF's draw API will attach the previously pushed attributes onto their vertices. These four floats are general-purpose, and only used to pass into the `shader` function. Use them to pack information to implement your own custom visual FX. In the above example `pamams.a` is used to mix between the draw color or from a custom color packed into `params.rgb`.
+
+The color mixing can be used to flash a color such as when a character takes damage, without the need for creating additional copies of the art assets.
+
+The rest of the shader, aside from `@module flash` which names the shader itself (you must fill this out), is mere copy + paste boilerplate, and should be ignored.
+
+You may also add in uniforms and textures as-needed. TODO -- Show example shader from puddles sample.

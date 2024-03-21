@@ -5,7 +5,7 @@
 @ctype vec2 CF_V2
 
 @block shader_block
-vec4 shader(vec4 color, vec2 uv, vec2 pos, vec2 posH, vec4 params)
+vec4 shader(vec4 color, vec2 pos, vec2 uv, vec4 params)
 {
 	return color;
 }
