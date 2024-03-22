@@ -21,8 +21,8 @@ VERTEX_FORMAT_BYTE4N | Four 8-bit signed bytes, in normalized form.
 VERTEX_FORMAT_UBYTE4N | Four 8-bit unsigned bytes, in normalized form.
 VERTEX_FORMAT_SHORT2N | Two 16-bit signed bytes, in normalized form.
 VERTEX_FORMAT_USHORT2N | Two 16-bit unsigned bytes, in normalized form.
-VERTEX_FORMAT_SHORT4N | A single 32-bit signed byte, in normalized form.
-VERTEX_FORMAT_USHORT4N | A single 32-bit unsigned byte, in normalized form.
+VERTEX_FORMAT_SHORT4N | Four 16-bit signed bytes, in normalized form.
+VERTEX_FORMAT_USHORT4N | Four 16-bit unsigned bytes, in normalized form.
 
 ## Remarks
 

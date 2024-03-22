@@ -297,6 +297,13 @@ typedef struct CF_Manifold
  */
 #define CF_PI 3.14159265f
 
+/**
+ * @function CF_TAU
+ * @category math
+ * @brief    TAU (PI * 2) the numeric constant.
+ */
+#define CF_TAU (2.0f*3.14159265f)
+
 //--------------------------------------------------------------------------------------------------
 // Scalar float ops.
 

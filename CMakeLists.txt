@@ -110,6 +110,7 @@ set(CF_SRCS
 	src/cute_guid.cpp
 	src/cute_alloc.cpp
 	src/cute_result.cpp
+	src/cute_noise.cpp
 
 	src/internal/cute_dx11.cpp
 	src/internal/yyjson.c
@@ -181,6 +182,7 @@ set(CF_PUBLIC_HDRS
 	include/cute_networking.h
 	include/cute_guid.h
 	include/cute_routine.h
+	include/cute_noise.h
 )
 
 set(IMGUI_HDRS
@@ -411,6 +413,8 @@ if (CF_FRAMEWORK_BUILD_SAMPLES)
 	add_executable(draw_to_texture samples/draw_to_texture.c)
 	add_executable(hello_triangle samples/hello_triangle.c)
 	add_executable(waves samples/waves.cpp)
+	add_executable(shallow_water samples/shallow_water.cpp)
+	add_executable(noise samples/noise.c)
 	set(SAMPLE_EXECUTABLES
 		easysprite
 		basicecs
@@ -432,6 +436,8 @@ if (CF_FRAMEWORK_BUILD_SAMPLES)
 		draw_to_texture
 		hello_triangle
 		waves
+		shallow_water
+		noise
 	)
 
 	foreach(CURRENT_TARGET ${SAMPLE_EXECUTABLES})
@@ -449,6 +455,7 @@ if (CF_FRAMEWORK_BUILD_SAMPLES)
 	# Copy over some folders for certain samples.
 	add_custom_command(TARGET spaceshooter PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/samples/spaceshooter_data $<TARGET_FILE_DIR:spaceshooter>/spaceshooter_data)
 	add_custom_command(TARGET waves PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/samples/waves_data $<TARGET_FILE_DIR:waves>/waves_data)
+	add_custom_command(TARGET shallow_water PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/samples/shallow_water_data $<TARGET_FILE_DIR:shallow_water>/shallow_water_data)
 endif()
 
 # Propogate public headers to other cmake scripts including this subdirectory.
