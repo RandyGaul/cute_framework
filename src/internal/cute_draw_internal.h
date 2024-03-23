@@ -37,11 +37,11 @@ struct BatchGeometry
 	float alpha;
 	float radius;
 	float stroke;
+	float aa;
 	bool do_clipping;
 	bool is_text;
 	bool is_sprite;
 	bool fill;
-	bool antialias;
 	CF_Pixel user_params;
 };
 
@@ -58,10 +58,11 @@ struct DrawVertex
 	CF_Pixel color;
 	float radius;
 	float stroke;
-	uint8_t type;  // r
-	uint8_t alpha; // g
-	uint8_t fill;  // b
-	uint8_t aa;    // a
+	float aa;
+	uint8_t type;     // r
+	uint8_t alpha;    // g
+	uint8_t fill;     // b
+	uint8_t not_used; // a
 	CF_Pixel user_params;
 };
 

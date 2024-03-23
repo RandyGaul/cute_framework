@@ -169,10 +169,10 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 				out[i].color = s->geom.color;
 				out[i].radius = s->geom.radius;
 				out[i].stroke = s->geom.stroke;
+				out[i].aa = s->geom.aa;
 				out[i].type = VA_TYPE_TRIANGLE_SDF;
 				out[i].alpha = (uint8_t)(s->geom.alpha * 255.0f);
 				out[i].fill = s->geom.fill ? 255 : 0;
-				out[i].aa = s->geom.antialias ? 255 : 0;
 				out[i].user_params = geom.user_params;
 			}
 
@@ -188,10 +188,10 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 				out[i].color = s->geom.color;
 				out[i].radius = s->geom.radius;
 				out[i].stroke = s->geom.stroke;
+				out[i].aa = s->geom.aa;
 				out[i].type = VA_TYPE_BOX;
 				out[i].alpha = (uint8_t)(s->geom.alpha * 255.0f);
 				out[i].fill = s->geom.fill ? 255 : 0;
-				out[i].aa = s->geom.antialias ? 255 : 0;
 				out[i].user_params = geom.user_params;
 			}
 
@@ -310,10 +310,10 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 				out[i].color = s->geom.color;
 				out[i].radius = s->geom.radius;
 				out[i].stroke = s->geom.stroke;
+				out[i].aa = s->geom.aa;
 				out[i].type = VA_TYPE_SEGMENT;
 				out[i].alpha = (uint8_t)(s->geom.alpha * 255.0f);
 				out[i].fill = s->geom.fill ? 255 : 0;
-				out[i].aa = s->geom.antialias ? 255 : 0;
 				out[i].user_params = geom.user_params;
 			}
 
@@ -329,10 +329,10 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 				out[i].color = s->geom.color;
 				out[i].radius = s->geom.radius;
 				out[i].stroke = s->geom.stroke;
+				out[i].aa = s->geom.aa;
 				out[i].type = VA_TYPE_SEGMENT;
 				out[i].alpha = (uint8_t)(s->geom.alpha * 255.0f);
 				out[i].fill = s->geom.fill ? 255 : 0;
-				out[i].aa = s->geom.antialias ? 255 : 0;
 				out[i].user_params = geom.user_params;
 			}
 			
@@ -372,8 +372,6 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 	// Apply uniforms.
 	v2 u_texture_size = cf_v2((float)texture_w, (float)texture_h);
 	cf_material_set_uniform_fs(draw->material, "fs_params", "u_texture_size", &u_texture_size, CF_UNIFORM_TYPE_FLOAT2, 1);
-	cf_material_set_uniform_fs(draw->material, "fs_params", "u_aaf", &draw->aaf, CF_UNIFORM_TYPE_FLOAT, 1);
-	cf_material_set_uniform_fs(draw->material, "fs_params", "u_aa_scale", &draw->antialias_scale.last(), CF_UNIFORM_TYPE_FLOAT, 1);
 	v2 u_texel_size = cf_v2(1.0f / (float)texture_w, 1.0f / (float)texture_h);
 	cf_material_set_uniform_fs(draw->material, "fs_params", "u_texel_size", &u_texel_size, CF_UNIFORM_TYPE_FLOAT2, 1);
 
@@ -419,7 +417,7 @@ void cf_make_draw()
 
 	// Mesh + vertex attributes.
 	draw->mesh = cf_make_mesh(CF_USAGE_TYPE_STREAM, CF_MB * 25, 0, 0);
-	CF_VertexAttribute attrs[11] = { };
+	CF_VertexAttribute attrs[12] = { };
 	attrs[0].name = "in_pos";
 	attrs[0].format = CF_VERTEX_FORMAT_FLOAT2;
 	attrs[0].offset = CF_OFFSET_OF(DrawVertex, p);
@@ -447,12 +445,15 @@ void cf_make_draw()
 	attrs[8].name = "in_stroke";
 	attrs[8].format = CF_VERTEX_FORMAT_FLOAT;
 	attrs[8].offset = CF_OFFSET_OF(DrawVertex, stroke);
-	attrs[9].name = "in_params";
-	attrs[9].format = CF_VERTEX_FORMAT_UBYTE4N;
-	attrs[9].offset = CF_OFFSET_OF(DrawVertex, type);
-	attrs[10].name = "in_user_params";
+	attrs[9].name = "in_aa";
+	attrs[9].format = CF_VERTEX_FORMAT_FLOAT;
+	attrs[9].offset = CF_OFFSET_OF(DrawVertex, aa);
+	attrs[10].name = "in_params";
 	attrs[10].format = CF_VERTEX_FORMAT_UBYTE4N;
-	attrs[10].offset = CF_OFFSET_OF(DrawVertex, user_params);
+	attrs[10].offset = CF_OFFSET_OF(DrawVertex, type);
+	attrs[11].name = "in_user_params";
+	attrs[11].format = CF_VERTEX_FORMAT_UBYTE4N;
+	attrs[11].offset = CF_OFFSET_OF(DrawVertex, user_params);
 	cf_mesh_set_attributes(draw->mesh, attrs, CF_ARRAY_SIZE(attrs), sizeof(DrawVertex), 0);
 
 	// Shaders.
@@ -582,7 +583,7 @@ static void s_draw_quad(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float stroke, fl
 	s.geom.radius = radius;
 	s.geom.stroke = stroke;
 	s.geom.fill = fill;
-	s.geom.antialias = draw->antialias.last();
+	s.geom.aa = aaf;
 	s.geom.user_params = draw->user_params.last();
 	s.sort_bits = draw->layers.last();
 	spritebatch_push(&draw->sb, s);
@@ -642,7 +643,7 @@ static void s_draw_circle(v2 position, float stroke, float radius, bool fill)
 	s.geom.radius = radius;
 	s.geom.stroke = stroke;
 	s.geom.fill = fill;
-	s.geom.antialias = draw->antialias.last();
+	s.geom.aa = aaf;
 	s.geom.user_params = draw->user_params.last();
 	s.sort_bits = draw->layers.last();
 	spritebatch_push(&draw->sb, s);
@@ -709,7 +710,7 @@ static void s_draw_capsule(v2 a, v2 b, float stroke, float radius, bool fill)
 	s.geom.radius = radius;
 	s.geom.stroke = stroke;
 	s.geom.fill = fill;
-	s.geom.antialias = draw->antialias.last();
+	s.geom.aa = draw->aaf * draw->antialias.last();
 	s.geom.user_params = draw->user_params.last();
 	s.sort_bits = draw->layers.last();
 	spritebatch_push(&draw->sb, s);
@@ -800,7 +801,7 @@ static void s_cf_draw_tri(v2 a, v2 b, v2 c, float stroke, float radius, bool fil
 	s.geom.radius = radius;
 	s.geom.stroke = stroke;
 	s.geom.fill = fill;
-	s.geom.antialias = draw->antialias.last();
+	s.geom.aa = draw->aaf * draw->antialias.last();
 	s.geom.user_params = draw->user_params.last();
 	s.sort_bits = draw->layers.last();
 	spritebatch_push(&draw->sb, s);
@@ -842,7 +843,7 @@ void cf_draw_polyline(CF_V2* pts, int count, float thickness, bool loop)
 	s.geom.radius = radius;
 	s.geom.stroke = 0;
 	s.geom.fill = true;
-	s.geom.antialias = draw->antialias.last();
+	s.geom.aa = draw->aaf * draw->antialias.last();
 	s.geom.type = BATCH_GEOMETRY_TYPE_SEGMENT;
 	s.geom.user_params = draw->user_params.last();
 	s.sort_bits = draw->layers.last();

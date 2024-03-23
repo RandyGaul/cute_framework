@@ -22,69 +22,45 @@ int main(int argc, char* argv[])
 	mount_content_directory_as("/");
 	app_init_imgui();
 
-	CF_Png png;
-	cf_png_cache_load("/noise.png", &png);
-	CF_ASSERT(png.w == 128);
-	CF_ASSERT(png.h == 128);
-
 	CF_Shader shader = CF_MAKE_SOKOL_SHADER(shallow_water_shader);
+	CF_Canvas offscreen = make_canvas(canvas_defaults(160, 120));
 
-	CF_TextureParams tex_params = texture_defaults(128, 128);
-	tex_params.initial_data = png.pix;
-	tex_params.initial_data_size = sizeof(CF_Pixel) * png.w * png.h;
-	CF_Texture tex = make_texture(tex_params);
-
-	CF_Sprite water1 = make_sprite("/water1.ase");
-	CF_Sprite water2 = make_sprite("/water2.ase");
-	CF_Sprite water3 = make_sprite("/water3.ase");
-	water1.scale *= 2;
-	water2.scale *= 2;
-	water3.scale *= 2;
-
-	CF_Canvas offscreen = make_canvas(canvas_defaults(640, 480));
-
-	while (app_is_running())
+	struct Wavelet
 	{
+		v2 p = V2(0,0);
+		float r = 1.0f;
+		float blur = 3.0f;
+		float opacity = 1.0f;
+	};
+
+	Array<Wavelet> wavelets;
+
+	auto add_wavelet = [&](int x, int y) {
+		Wavelet w;
+		w.p = V2(x*0.25f - 80, (-y+480)*0.25f - 60);
+		wavelets.add(w);
+	};
+
+	while (app_is_running()) {
 		app_update();
+		camera_dimensions(160, 120);
 
-		ImGui::SetNextWindowSize(V2(250,100));
-		ImGui::Begin("Shallow Water Sample");
-		static float amplitude = 5.0f;
-		ImGui::SliderFloat("amplitude", &amplitude, 0, 20);
-		static float speed = 1.0f;
-		ImGui::SliderFloat("speed", &speed, 0, 5, "%.3f");
-		static bool show_noise = false;
-		ImGui::Checkbox("show noise", &show_noise);
-		ImGui::End();
-
-		if (!show_noise) {
-			srand(0);
-			for (int i = 0; i <= 480/32; ++i) {
-				for (int j = 0; j <= 640/32; ++j) {
-					CF_Sprite water;
-					switch (rand() % 3) {
-					case 0: water = water1; break;
-					case 1: water = water2; break;
-					case 2: water = water3; break;
-					}
-					water.transform.p.y = (float)(i * 32) - 240.0f;
-					water.transform.p.x = (float)(j * 32) - 320.0f;
-					draw_sprite(water);
-				}
-			}
-			render_to(offscreen);
+		if (mouse_just_pressed(MOUSE_BUTTON_LEFT)) {
+			add_wavelet(mouse_x(), mouse_y());
 		}
 
-		static float time;
-		time += CF_DELTA_TIME * 0.125f * speed;
-		render_settings_push_shader(shader);
-		render_settings_push_uniform("amplitude", amplitude);
-		render_settings_push_uniform("time", time);
-		render_settings_push_uniform("show_noise", show_noise ? 1.0f : 0.0f);
-		render_settings_push_texture("water_tex", canvas_get_target(offscreen));
-		render_settings_push_texture("noise_tex", tex);
-		draw_push_antialias(false);
-		draw_box_fill(make_aabb(V2(0,0), 640, 480));
+		for (int i = 0; i < wavelets.size(); ++i) {
+			Wavelet& w = wavelets[i];
+			draw_push_antialias_scale(w.blur);
+			draw_push_color(make_color(1.0f, 1.0f, 1.0f, w.opacity));
+			draw_circle(w.p, w.r, 0);
+			w.r += 10.0f * CF_DELTA_TIME;
+			w.opacity -= 0.5f * CF_DELTA_TIME;
+			w.blur += 20.0f * CF_DELTA_TIME;
+			if (w.opacity < 0) {
+				wavelets.unordered_remove(i++);
+			}
+		}
 
 		app_draw_onto_screen();
 	}

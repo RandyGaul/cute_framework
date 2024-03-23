@@ -148,10 +148,10 @@ CF_API CF_Pixel* CF_CALL cf_noise_pixels_wrapped(int w, int h, uint64_t seed, fl
  * @function cf_noise_fbm_pixels
  * @category noise
  * @brief    Creates an image from noise using fractal brownian motion.
- * @param    w          The width of the image.
- * @param    h          The height of the image.
- * @param    seed       Used to seed the sequence of numbers generated. Default 0.
- * @param    scale      Scales up or down the noise in the image, like zooming in or out. Default 1.0f.
+ * @param    w           The width of the image.
+ * @param    h           The height of the image.
+ * @param    seed        Used to seed the sequence of numbers generated. Default 0.
+ * @param    scale       Scales up or down the noise in the image, like zooming in or out. Default 1.0f.
  * @param    lacunarity  The difference in the period of the noise between each octave. Default 2.0f.
  * @param    octaves     The number of octaves to sum together. Higher numbers has worse performance. Default 3.
  * @param    falloff     How much contribution higher octaves have compared to lower ones. Default 0.5f.
@@ -165,10 +165,10 @@ CF_API CF_Pixel* CF_CALL cf_noise_fbm_pixels(int w, int h, uint64_t seed, float 
  * @function cf_noise_fbm_pixels_wrapped
  * @category noise
  * @brief    Creates an image from noise using fractal brownian motion, that can also animate in a loop, and tiles seamlessly.
- * @param    w          The width of the image.
- * @param    h          The height of the image.
- * @param    seed       Used to seed the sequence of numbers generated. Default 0.
- * @param    scale      Scales up or down the noise in the image, like zooming in or out. Default 1.0f.
+ * @param    w           The width of the image.
+ * @param    h           The height of the image.
+ * @param    seed        Used to seed the sequence of numbers generated. Default 0.
+ * @param    scale       Scales up or down the noise in the image, like zooming in or out. Default 1.0f.
  * @param    lacunarity  The difference in the period of the noise between each octave. Default 2.0f.
  * @param    octaves     The number of octaves to sum together. Higher numbers has worse performance. Default 3.
  * @param    falloff     How much contribution higher octaves have compared to lower ones. Default 0.5f.
