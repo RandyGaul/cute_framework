@@ -28,6 +28,7 @@
 - [Virtual File System](/topics/virtual_file_system.md)
 - [Web](/topics/web.md)
 - **Links**
+- [API Reference](/api_reference)
 
 <p><a href="https://github.com/RandyGaul/cute_framework/"><img src=https://github.com/RandyGaul/cute_framework/blob/master/assets/github.svg?raw=true />GitHub</a>
 <a href="https://discord.gg/ajWHTHz9"><img src=https://github.com/RandyGaul/cute_framework/blob/master/assets/discord.svg?raw=true />Discord</a></p>

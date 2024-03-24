@@ -263,7 +263,13 @@ The drawing functions are all relative to the camera. The camera has it's own [C
 ## Shaders
 
 You can apply customizable shaders that work with the draw API by using functions like [cf_render_settings_push_shader](https://randygaul.github.io/cute_framework/#/draw/cf_render_settings_push_shader)
- and [cf_render_settings_pop_shader](https://randygaul.github.io/cute_framework/#/draw/cf_render_settings_pop_shader). The draw API passes geometry onto an optional function, within the fragment shader, called `shader`. This function is the final step in the entire fragment shader, granting the opportunity to alter the final output pixel color. Let us look at an example custom shader to apply a color mixing effect.
+ and [cf_render_settings_pop_shader](https://randygaul.github.io/cute_framework/#/draw/cf_render_settings_pop_shader). By creating custom FX you can implement interesting visuals like the following wavelet example:
+
+<p align="center">
+<img src=https://github.com/RandyGaul/cute_framework/blob/master/assets/basic_shapes.gif?raw=true>
+</p>
+
+The draw API passes *all* geometry into an optional shader function, within the fragment shader, called `shader`. This function is the final step in the entire fragment shader, granting the opportunity to alter the final output pixel color. Let us look at an example custom shader to apply a color mixing effect.
 
 ```glsl
 @module flash
@@ -294,4 +300,86 @@ The color mixing can be used to flash a color such as when a character takes dam
 
 The rest of the shader, aside from `@module flash` which names the shader itself (you must fill this out), is mere copy + paste boilerplate, and should be ignored.
 
-You may also add in uniforms and textures as-needed. TODO -- Show example shader from puddles sample.
+You may also add in uniforms and textures as-needed. The draw API has some functions for setting uniforms and textures via [cf_render_settings_push_uniform](https://randygaul.github.io/cute_framework/#/draw/cf_render_settings_push_uniform) and [cf_render_settings_push_texture](https://randygaul.github.io/cute_framework/#/draw/cf_render_settings_push_texture). These will get auto-magically hooked up and send values to your shader.
+
+Here's a full example shader from the wavelets (called [shallow water on github](https://github.com/RandyGaul/cute_framework/blob/master/samples/shallow_water.cpp)) demo:
+
+```glsl
+@module shallow_water
+
+@ctype mat4 CF_Matrix4x4
+@ctype vec4 CF_Color
+@ctype vec2 CF_V2
+
+@block shader_block
+uniform sampler2D wavelets_tex;
+uniform sampler2D noise_tex;
+uniform sampler2D scene_tex;
+
+uniform shader_uniforms {
+	float show_normals;
+	float show_noise;
+};
+
+vec2 normal_from_heightmap(sampler2D tex, vec2 uv)
+{
+	float ha = textureOffset(tex, uv, ivec2(-1, 1)).r;
+	float hb = textureOffset(tex, uv, ivec2( 1, 1)).r;
+	float hc = textureOffset(tex, uv, ivec2( 0,-1)).r;
+	vec2 n = vec2(ha-hc, hb-hc);
+	return n;
+}
+
+vec4 normal_to_color(vec2 n)
+{
+	return vec4(n * 0.5 + 0.5, 1.0, 1.0);
+}
+
+vec4 shader(vec4 color, vec2 pos, vec2 uv, vec4 params)
+{
+	vec2 dim = vec2(1.0/160.0,1.0/120.0);
+	vec2 n = normal_from_heightmap(noise_tex, uv);
+	vec2 w = normal_from_heightmap(wavelets_tex, uv+n*dim*10.0);
+	vec4 c = mix(normal_to_color(n), normal_to_color(w), 0.25);
+	c = texture(scene_tex, uv+(n+w)*dim*10.0);
+	c = mix(c, vec4(1), length(n+w) > 0.2 ? 0.1 : 0.0);
+
+	c = show_normals > 0.0 ? mix(normal_to_color(n), normal_to_color(w), 0.25) : c;
+
+	c = show_noise > 0.0 ? texture(noise_tex, uv) : c;
+
+	return c;
+}
+@end
+
+@include ../../include/shaders/draw.glsl
+```
+
+The custom textures are `wavelets_tex`, `noise_tex` and `scene_tex`. The custom uniforms are `show_normals` and `show_noise`. In C++ it's quite easy to hook up your custom shader, textures, and uniforms (snippet from the [wavelets sample](https://github.com/RandyGaul/cute_framework/blob/master/samples/shallow_water.cpp):
+
+```cpp
+render_settings_push_shader(shader);
+render_settings_push_texture("wavelets_tex", canvas_get_target(offscreen));
+render_settings_push_texture("noise_tex", noise_tex);
+render_settings_push_texture("scene_tex", canvas_get_target(scene_canvas));
+render_settings_push_uniform("show_noise", show_noise ? 1.0f : 0.0f);
+render_settings_push_uniform("show_normals", show_normals ? 1.0f : 0.0f);
+draw_push_antialias(false);
+draw_box(V2(0,0), (float)W, (float)H);
+```
+
+The wavelets effects are drawn off-screen into render target textures. These are super easy to setup with either a `CF_Canvas`, or a more low-level option of creating the texture yourself with [cf_make_texture](https://randygaul.github.io/cute_framework/#/graphics/cf_make_texture).
+
+Make a canvas like so:
+
+```cpp
+CF_Canvas offscreen = make_canvas(canvas_defaults(160, 120));
+```
+
+Then render to it like so (after calling draw functions to queue up sprites/shapes to draw):
+
+```cpp
+render_to(offscreen);
+```
+
+The canvas's internal texture can be sent to a shader as a uniform with [canvas_get_target](https://randygaul.github.io/cute_framework/#/graphics/canvas_get_target), just as in one of the code snippets above detailing uniforms/textures.
