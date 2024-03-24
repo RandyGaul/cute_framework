@@ -266,7 +266,7 @@ You can apply customizable shaders that work with the draw API by using function
  and [cf_render_settings_pop_shader](https://randygaul.github.io/cute_framework/#/draw/cf_render_settings_pop_shader). By creating custom FX you can implement interesting visuals like the following wavelet example:
 
 <p align="center">
-<img src=https://github.com/RandyGaul/cute_framework/blob/master/assets/basic_shapes.gif?raw=true>
+<img src=https://github.com/RandyGaul/cute_framework/blob/master/assets/wavelets.gif?raw=true>
 </p>
 
 The draw API passes *all* geometry into an optional shader function, within the fragment shader, called `shader`. This function is the final step in the entire fragment shader, granting the opportunity to alter the final output pixel color. Let us look at an example custom shader to apply a color mixing effect.
