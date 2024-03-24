@@ -81,8 +81,6 @@ Some particular pages of interest are:
 
 !> **Important Note** You will need to mount your content folder before the following sample code will run. This lets CF know where to find your files for loading. See here from the previous page on [File I/O](https://randygaul.github.io/cute_framework/#/#/topics/file_io) to learn how.
 
-You may download [girl.aseprite](https://github.com/RandyGaul/cute_framework/raw/master/test/test_data/girl.aseprite) for this example.
-
 ```cpp
 #include <cute.h>
 using namespace Cute;
@@ -148,8 +146,6 @@ Text has it's own [Text API Reference](https://randygaul.github.io/cute_framewor
 Here's an example sample for drawing some text onto the screen.
 
 !> **Important Note** You will need to mount your content folder before the following sample code will run. This lets CF know where to find your files for loading. See here from the previous page on [File I/O](https://randygaul.github.io/cute_framework/#/#/topics/file_io) to learn how.
-
-You may download [calibri.tff](https://github.com/RandyGaul/cute_framework/raw/master/samples/sample_data/calibri.ttf) to run this sample.
 
 ```cpp
 #include <cute.h>
@@ -355,7 +351,7 @@ vec4 shader(vec4 color, vec2 pos, vec2 uv, vec4 params)
 @include ../../include/shaders/draw.glsl
 ```
 
-The custom textures are `wavelets_tex`, `noise_tex` and `scene_tex`. The custom uniforms are `show_normals` and `show_noise`. In C++ it's quite easy to hook up your custom shader, textures, and uniforms (snippet from the [wavelets sample](https://github.com/RandyGaul/cute_framework/blob/master/samples/shallow_water.cpp):
+The custom textures are `wavelets_tex`, `noise_tex` and `scene_tex`. The custom uniforms are `show_normals` and `show_noise`. In C++ it's quite easy to hook up your custom shader, textures, and uniforms (snippet from the [wavelets sample](https://github.com/RandyGaul/cute_framework/blob/master/samples/shallow_water.cpp)): If you want to learn about the fundamentals of writing shader code in CF take a look at the low-level graphics page here for an overview: [Low Level Graphics](https://randygaul.github.io/cute_framework/#/topics/low_level_graphics). This page assumes you know the basics of writing GLSL code to hook up to CF's draw API.
 
 ```cpp
 render_settings_push_shader(shader);
