@@ -9,7 +9,7 @@ GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/maste
 Returns a good set of default values for a [CF_CanvasParams](/graphics/cf_canvasparams.md) to call [cf_make_canvas](/graphics/cf_make_canvas.md).
 
 ```cpp
-CF_CanvasParams cf_canvas_defaults();
+CF_CanvasParams cf_canvas_defaults(int w, int h);
 ```
 
 ## Related Pages

@@ -319,7 +319,6 @@ This is a list of all functions in Cute Framework organized by categories. This 
 - [cf_draw_peek_antialias_scale](/draw/cf_draw_peek_antialias_scale.md)
 - [cf_draw_peek_color](/draw/cf_draw_peek_color.md)
 - [cf_draw_peek_layer](/draw/cf_draw_peek_layer.md)
-- [cf_draw_peek_shader](/draw/cf_draw_peek_shader.md)
 - [cf_draw_peek_tint](/draw/cf_draw_peek_tint.md)
 - [cf_draw_peek_vertex_attributes](/draw/cf_draw_peek_vertex_attributes.md)
 - [cf_draw_polyline](/draw/cf_draw_polyline.md)
@@ -327,14 +326,12 @@ This is a list of all functions in Cute Framework organized by categories. This 
 - [cf_draw_pop_antialias_scale](/draw/cf_draw_pop_antialias_scale.md)
 - [cf_draw_pop_color](/draw/cf_draw_pop_color.md)
 - [cf_draw_pop_layer](/draw/cf_draw_pop_layer.md)
-- [cf_draw_pop_shader](/draw/cf_draw_pop_shader.md)
 - [cf_draw_pop_tint](/draw/cf_draw_pop_tint.md)
 - [cf_draw_pop_vertex_attributes](/draw/cf_draw_pop_vertex_attributes.md)
 - [cf_draw_push_antialias](/draw/cf_draw_push_antialias.md)
 - [cf_draw_push_antialias_scale](/draw/cf_draw_push_antialias_scale.md)
 - [cf_draw_push_color](/draw/cf_draw_push_color.md)
 - [cf_draw_push_layer](/draw/cf_draw_push_layer.md)
-- [cf_draw_push_shader](/draw/cf_draw_push_shader.md)
 - [cf_draw_push_tint](/draw/cf_draw_push_tint.md)
 - [cf_draw_push_vertex_attributes](/draw/cf_draw_push_vertex_attributes.md)
 - [cf_draw_push_vertex_attributes2](/draw/cf_draw_push_vertex_attributes2.md)
@@ -349,12 +346,21 @@ This is a list of all functions in Cute Framework organized by categories. This 
 - [cf_render_settings_filter](/draw/cf_render_settings_filter.md)
 - [cf_render_settings_peek_render_state](/draw/cf_render_settings_peek_render_state.md)
 - [cf_render_settings_peek_scissor](/draw/cf_render_settings_peek_scissor.md)
+- [cf_render_settings_peek_shader](/draw/cf_render_settings_peek_shader.md)
 - [cf_render_settings_peek_viewport](/draw/cf_render_settings_peek_viewport.md)
 - [cf_render_settings_pop_render_state](/draw/cf_render_settings_pop_render_state.md)
 - [cf_render_settings_pop_scissor](/draw/cf_render_settings_pop_scissor.md)
+- [cf_render_settings_pop_shader](/draw/cf_render_settings_pop_shader.md)
 - [cf_render_settings_pop_viewport](/draw/cf_render_settings_pop_viewport.md)
 - [cf_render_settings_push_render_state](/draw/cf_render_settings_push_render_state.md)
 - [cf_render_settings_push_scissor](/draw/cf_render_settings_push_scissor.md)
+- [cf_render_settings_push_shader](/draw/cf_render_settings_push_shader.md)
+- [cf_render_settings_push_texture](/draw/cf_render_settings_push_texture.md)
+- [cf_render_settings_push_uniform](/draw/cf_render_settings_push_uniform.md)
+- [cf_render_settings_push_uniform_color](/draw/cf_render_settings_push_uniform_color.md)
+- [cf_render_settings_push_uniform_float](/draw/cf_render_settings_push_uniform_float.md)
+- [cf_render_settings_push_uniform_int](/draw/cf_render_settings_push_uniform_int.md)
+- [cf_render_settings_push_uniform_v2](/draw/cf_render_settings_push_uniform_v2.md)
 - [cf_render_settings_push_viewport](/draw/cf_render_settings_push_viewport.md)
 - [cf_render_settings_set_atlas_dimensions](/draw/cf_render_settings_set_atlas_dimensions.md)
 - [cf_render_to](/draw/cf_render_to.md)
@@ -383,6 +389,8 @@ This is a list of all functions in Cute Framework organized by categories. This 
 - [cf_canvas_defaults](/graphics/cf_canvas_defaults.md)
 - [cf_canvas_get_backend_depth_stencil_handle](/graphics/cf_canvas_get_backend_depth_stencil_handle.md)
 - [cf_canvas_get_backend_target_handle](/graphics/cf_canvas_get_backend_target_handle.md)
+- [cf_canvas_get_depth_stencil_target](/graphics/cf_canvas_get_depth_stencil_target.md)
+- [cf_canvas_get_target](/graphics/cf_canvas_get_target.md)
 - [cf_clamp_color](/graphics/cf_clamp_color.md)
 - [cf_clamp_color01](/graphics/cf_clamp_color01.md)
 - [cf_clear_color](/graphics/cf_clear_color.md)
@@ -442,6 +450,8 @@ This is a list of all functions in Cute Framework organized by categories. This 
 - [cf_make_shader](/graphics/cf_make_shader.md)
 - [CF_MAKE_SOKOL_SHADER](/graphics/cf_make_sokol_shader.md)
 - [cf_make_texture](/graphics/cf_make_texture.md)
+- [cf_material_clear_textures](/graphics/cf_material_clear_textures.md)
+- [cf_material_clear_uniforms](/graphics/cf_material_clear_uniforms.md)
 - [cf_material_set_render_state](/graphics/cf_material_set_render_state.md)
 - [cf_material_set_texture_fs](/graphics/cf_material_set_texture_fs.md)
 - [cf_material_set_texture_vs](/graphics/cf_material_set_texture_vs.md)
@@ -898,6 +908,7 @@ This is a list of all functions in Cute Framework organized by categories. This 
 - [cf_sub_v2](/math/cf_sub_v2.md)
 - [cf_surface_area_aabb](/math/cf_surface_area_aabb.md)
 - [cf_surface_area_circle](/math/cf_surface_area_circle.md)
+- [CF_TAU](/math/cf_tau.md)
 - [cf_top](/math/cf_top.md)
 - [cf_top_left](/math/cf_top_left.md)
 - [cf_top_right](/math/cf_top_right.md)
@@ -1116,19 +1127,23 @@ This is a list of all functions in Cute Framework organized by categories. This 
 - [CF_ServerEventType](/net/cf_servereventtype.md)
 
 
-## path
+## noise
 
 ### functions
-- [spcompact](/path/spcompact.md)
-- [spdir_of](/path/spdir_of.md)
-- [spext](/path/spext.md)
-- [spext_equ](/path/spext_equ.md)
-- [spfname](/path/spfname.md)
-- [spfname_no_ext](/path/spfname_no_ext.md)
-- [spnorm](/path/spnorm.md)
-- [sppop](/path/sppop.md)
-- [sppopn](/path/sppopn.md)
-- [sptop_of](/path/sptop_of.md)
+- [cf_destroy_noise](/noise/cf_destroy_noise.md)
+- [cf_make_noise](/noise/cf_make_noise.md)
+- [cf_make_noise_fbm](/noise/cf_make_noise_fbm.md)
+- [cf_noise2](/noise/cf_noise2.md)
+- [cf_noise3](/noise/cf_noise3.md)
+- [cf_noise4](/noise/cf_noise4.md)
+- [cf_noise_fbm_pixels](/noise/cf_noise_fbm_pixels.md)
+- [cf_noise_fbm_pixels_wrapped](/noise/cf_noise_fbm_pixels_wrapped.md)
+- [cf_noise_pixels](/noise/cf_noise_pixels.md)
+- [cf_noise_pixels_wrapped](/noise/cf_noise_pixels_wrapped.md)
+
+
+### structs
+- [CF_Noise](/noise/cf_noise.md)
 
 
 ## pathfinding
@@ -1145,6 +1160,21 @@ This is a list of all functions in Cute Framework organized by categories. This 
 ### structs
 - [CF_AStarGrid](/pathfinding/cf_astargrid.md)
 - [CF_AStarOutput](/pathfinding/cf_astaroutput.md)
+
+
+## path
+
+### functions
+- [spcompact](/path/spcompact.md)
+- [spdir_of](/path/spdir_of.md)
+- [spext](/path/spext.md)
+- [spext_equ](/path/spext_equ.md)
+- [spfname](/path/spfname.md)
+- [spfname_no_ext](/path/spfname_no_ext.md)
+- [spnorm](/path/spnorm.md)
+- [sppop](/path/sppop.md)
+- [sppopn](/path/sppopn.md)
+- [sptop_of](/path/sptop_of.md)
 
 
 ## png_cache
@@ -1376,34 +1406,6 @@ This is a list of all functions in Cute Framework organized by categories. This 
 - [CF_TICKS](/time/cf_ticks.md)
 
 
-## web
-
-### functions
-- [cf_https_add_header](/web/cf_https_add_header.md)
-- [cf_https_destroy](/web/cf_https_destroy.md)
-- [cf_https_get](/web/cf_https_get.md)
-- [cf_https_post](/web/cf_https_post.md)
-- [cf_https_process](/web/cf_https_process.md)
-- [cf_https_response](/web/cf_https_response.md)
-- [cf_https_response_code](/web/cf_https_response_code.md)
-- [cf_https_response_content](/web/cf_https_response_content.md)
-- [cf_https_response_content_length](/web/cf_https_response_content_length.md)
-- [cf_https_response_find_header](/web/cf_https_response_find_header.md)
-- [cf_https_response_headers](/web/cf_https_response_headers.md)
-- [cf_https_response_headers_count](/web/cf_https_response_headers_count.md)
-- [cf_https_result_to_string](/web/cf_https_result_to_string.md)
-
-
-### structs
-- [CF_HttpsHeader](/web/cf_httpsheader.md)
-- [CF_HttpsRequest](/web/cf_httpsrequest.md)
-- [CF_HttpsResponse](/web/cf_httpsresponse.md)
-
-
-### enums
-- [CF_HttpsResult](/web/cf_httpsresult.md)
-
-
 ## utility
 
 ### functions
@@ -1441,5 +1443,33 @@ This is a list of all functions in Cute Framework organized by categories. This 
 
 ### enums
 - [CF_MessageBoxType](/utility/cf_messageboxtype.md)
+
+
+## web
+
+### functions
+- [cf_https_add_header](/web/cf_https_add_header.md)
+- [cf_https_destroy](/web/cf_https_destroy.md)
+- [cf_https_get](/web/cf_https_get.md)
+- [cf_https_post](/web/cf_https_post.md)
+- [cf_https_process](/web/cf_https_process.md)
+- [cf_https_response](/web/cf_https_response.md)
+- [cf_https_response_code](/web/cf_https_response_code.md)
+- [cf_https_response_content](/web/cf_https_response_content.md)
+- [cf_https_response_content_length](/web/cf_https_response_content_length.md)
+- [cf_https_response_find_header](/web/cf_https_response_find_header.md)
+- [cf_https_response_headers](/web/cf_https_response_headers.md)
+- [cf_https_response_headers_count](/web/cf_https_response_headers_count.md)
+- [cf_https_result_to_string](/web/cf_https_result_to_string.md)
+
+
+### structs
+- [CF_HttpsHeader](/web/cf_httpsheader.md)
+- [CF_HttpsRequest](/web/cf_httpsrequest.md)
+- [CF_HttpsResponse](/web/cf_httpsresponse.md)
+
+
+### enums
+- [CF_HttpsResult](/web/cf_httpsresult.md)
 
 

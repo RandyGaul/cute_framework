@@ -2,17 +2,7 @@
 #include <cimgui.h>
 #include <sokol/sokol_gfx_imgui.h>
 
-#include <stdio.h>
-
 #include "draw_to_texture_data/blit_shader.h"
-
-typedef struct Offscreen
-{
-	int w, h;
-	CF_Texture backbuffer;
-	CF_Texture backbuffer_depth_stencil;
-	CF_Canvas canvas;
-} Offscreen;
 
 typedef struct Vertex
 {
@@ -40,40 +30,6 @@ static void s_quad(float x, float y, float sx, float sy, Vertex quad[6])
 	}
 }
 
-Offscreen make_offscreen(int w, int h)
-{
-	Offscreen offscreen;
-	offscreen.w = w;
-	offscreen.h = h;
-
-	CF_TextureParams backbuffer_params = cf_texture_defaults();
-	backbuffer_params.width = w;
-	backbuffer_params.height = h;
-	backbuffer_params.render_target = true;
-	offscreen.backbuffer = cf_make_texture(backbuffer_params);
-
-	CF_TextureParams backbuffer_depth_stencil_params = cf_texture_defaults();
-	backbuffer_depth_stencil_params.width = w;
-	backbuffer_depth_stencil_params.height = h;
-	backbuffer_depth_stencil_params.render_target = true;
-	backbuffer_depth_stencil_params.pixel_format = CF_PIXELFORMAT_DEPTH_STENCIL;
-	offscreen.backbuffer_depth_stencil = cf_make_texture(backbuffer_depth_stencil_params);
-
-	CF_CanvasParams params = cf_canvas_defaults();
-	params.target = offscreen.backbuffer;
-	params.depth_stencil_target = offscreen.backbuffer_depth_stencil;
-	offscreen.canvas = cf_make_canvas(params);
-
-	return offscreen;
-}
-
-void destroy_offscreen(Offscreen offscreen)
-{
-	cf_destroy_texture(offscreen.backbuffer);
-	cf_destroy_texture(offscreen.backbuffer_depth_stencil);
-	cf_destroy_canvas(offscreen.canvas);
-}
-
 int main(int argc, char* argv[])
 {
 	float w = 640.0f;
@@ -86,7 +42,7 @@ int main(int argc, char* argv[])
 	sg_imgui_t* sg_imgui = cf_app_get_sokol_imgui();
 
 	// Create an offscreen canvas.
-	Offscreen offscreen = make_offscreen((int)(w*0.5f), (int)(h*0.5f));
+	CF_Canvas offscreen = cf_make_canvas(cf_canvas_defaults((int)(w*0.5f), (int)(h*0.5f)));
 
 	// Create a quad for left view.
 	CF_Mesh left_quad = cf_make_mesh(CF_USAGE_TYPE_IMMUTABLE, sizeof(Vertex) * 6, 0, 0);
@@ -118,7 +74,7 @@ int main(int argc, char* argv[])
 
 	// Setup shader + material for drawing the offscreen canvas onto the screen (blit).
 	CF_Material blit_material = cf_make_material();
-	cf_material_set_texture_fs(blit_material, "u_image", offscreen.backbuffer);
+	cf_material_set_texture_fs(blit_material, "u_image", cf_canvas_get_target(offscreen));
 	CF_Shader blit_shader = CF_MAKE_SOKOL_SHADER(blit_shader);
 
 	while (cf_app_is_running())
@@ -127,7 +83,7 @@ int main(int argc, char* argv[])
 
 		// Draw offscreen.
 		cf_draw_circle2(cf_v2(0,0), 100, 5);
-		cf_render_to(offscreen.canvas, true);
+		cf_render_to(offscreen, true);
 
 		// Fetch this each frame, as it's invalidated during window-resizing.
 		CF_Canvas app_canvas = cf_app_get_canvas();
@@ -169,7 +125,7 @@ int main(int argc, char* argv[])
 	cf_destroy_mesh(left_quad);
 	cf_destroy_mesh(right_quad);
 	cf_destroy_mesh(fullscreen_quad);
-	destroy_offscreen(offscreen);
+	cf_destroy_canvas(offscreen);
 	cf_destroy_app();
 
 	return 0;

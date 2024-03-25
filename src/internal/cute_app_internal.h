@@ -73,8 +73,6 @@ struct CF_App
 	int x;
 	int y;
 	int draw_call_count = 0;
-	CF_Texture backbuffer = { };
-	CF_Texture backbuffer_depth_stencil = { };
 	int canvas_w;
 	int canvas_h;
 	CF_Canvas offscreen_canvas = { };

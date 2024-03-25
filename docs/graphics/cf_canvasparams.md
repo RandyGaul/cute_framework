@@ -11,8 +11,8 @@ A texture the GPU can draw upon (with an optional depth/stencil texture).
 Struct Members | Description
 --- | ---
 `const char* name` | The name of the canvas, for debug purposes.
-`CF_Texture target` | The texture used to store pixel information when rendering to the canvas. See [CF_Texture](/graphics/cf_texture.md).
-`CF_Texture depth_stencil_target` | The texture used to store depth and stencil information when rendering to the canvas. See [CF_Texture](/graphics/cf_texture.md).
+`CF_TextureParams target` | The texture used to store pixel information when rendering to the canvas. See [CF_TextureParams](/graphics/cf_textureparams.md).
+`CF_TextureParams depth_stencil_target` | The texture used to store depth and stencil information when rendering to the canvas. See [CF_TextureParams](/graphics/cf_textureparams.md).
 
 ## Remarks
 

@@ -152,16 +152,15 @@ float dd(float d)
 
 vec4 sdf(vec4 a, vec4 b, float d)
 {
-	float aaf = u_aaf * u_aa_scale;
 	float wire_d = sdf_stroke(d);
-	vec4 stroke_aa = mix(b, a, smoothstep(0.0, aaf, wire_d));
+	vec4 stroke_aa = mix(b, a, smoothstep(0.0, v_aa, wire_d));
 	vec4 stroke_no_aa = wire_d <= 0.0 ? b : a;
 
-	vec4 fill_aa = mix(b, a, smoothstep(0.0, aaf, d));
+	vec4 fill_aa = mix(b, a, smoothstep(0.0, v_aa, d));
 	vec4 fill_no_aa = clamp(d, -1.0, 1.0) <= 0.0 ? b : a;
 
-	vec4 stroke = mix(stroke_no_aa, stroke_aa, v_aa);
-	vec4 fill = mix(fill_no_aa, fill_aa, v_aa);
+	vec4 stroke = mix(stroke_aa, stroke_aa, v_aa > 0.0 ? 1.0 : 0.0);
+	vec4 fill = mix(fill_no_aa, fill_aa, v_aa > 0.0 ? 1.0 : 0.0);
 
 	result = mix(stroke, fill, v_fill);
 	return result;
@@ -229,8 +228,9 @@ float distance_triangle(vec2 p, vec2 a, vec2 b, vec2 c)
 	layout (location = 6) in vec4 in_col;
 	layout (location = 7) in float in_radius;
 	layout (location = 8) in float in_stroke;
-	layout (location = 9) in vec4 in_params;
-	layout (location = 10) in vec4 in_user_params;
+	layout (location = 9) in float in_aa;
+	layout (location = 10) in vec4 in_params;
+	layout (location = 11) in vec4 in_user_params;
 
 	layout (location = 0) out vec2 v_pos;
 	layout (location = 1) out vec2 v_a;
@@ -240,10 +240,10 @@ float distance_triangle(vec2 p, vec2 a, vec2 b, vec2 c)
 	layout (location = 5) out vec4 v_col;
 	layout (location = 6) out float v_radius;
 	layout (location = 7) out float v_stroke;
-	layout (location = 8) out float v_type;
-	layout (location = 9) out float v_alpha;
-	layout (location = 10) out float v_fill;
-	layout (location = 11) out float v_aa;
+	layout (location = 8) out float v_aa;
+	layout (location = 9) out float v_type;
+	layout (location = 10) out float v_alpha;
+	layout (location = 11) out float v_fill;
 	layout (location = 12) out vec2 v_posH;
 	layout (location = 13) out vec4 v_user;
 
@@ -263,10 +263,11 @@ float distance_triangle(vec2 p, vec2 a, vec2 b, vec2 c)
 		v_col = in_col;
 		v_radius = in_radius;
 		v_stroke = in_stroke;
+		v_aa = in_aa;
 		v_type = in_params.r;
 		v_alpha = in_params.g;
 		v_fill = in_params.b;
-		v_aa = in_params.a;
+		// = in_params.a;
 
 		vec4 posH = vec4(in_posH, 0, 1);
 		gl_Position = posH;
@@ -284,10 +285,10 @@ float distance_triangle(vec2 p, vec2 a, vec2 b, vec2 c)
 	layout (location = 5) in vec4 v_col;
 	layout (location = 6) in float v_radius;
 	layout (location = 7) in float v_stroke;
-	layout (location = 8) in float v_type;
-	layout (location = 9) in float v_alpha;
-	layout (location = 10) in float v_fill;
-	layout (location = 11) in float v_aa;
+	layout (location = 8) in float v_aa;
+	layout (location = 9) in float v_type;
+	layout (location = 10) in float v_alpha;
+	layout (location = 11) in float v_fill;
 	layout (location = 12) in vec2 v_posH;
 	layout (location = 13) in vec4 v_user;
 
@@ -297,8 +298,6 @@ float distance_triangle(vec2 p, vec2 a, vec2 b, vec2 c)
 
 	layout (binding = 0) uniform fs_params {
 		vec2 u_texture_size;
-		float u_aaf;
-		float u_aa_scale;
 	};
 
 	@include_block blend
@@ -336,7 +335,8 @@ float distance_triangle(vec2 p, vec2 a, vec2 b, vec2 c)
 		c = (!is_sprite && !is_text && !is_tri) ? sdf(c, v_col, d - v_radius) : c;
 
 		c *= v_alpha;
-		c = shader(c, v_uv, v_pos, v_posH, v_user);
+		vec2 screen_position = (v_posH + vec2(1,1)) * 0.5 * vec2(1,-1);
+		c = shader(c, v_pos, screen_position, v_user);
 		if (c.a == 0) discard;
 		result = c;
 	}

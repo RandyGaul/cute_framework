@@ -83,6 +83,8 @@ struct CF_CanvasInternal
 {
 	sg_pass_action action;
 	bool pass_is_default;
+	CF_Texture cf_texture;
+	CF_Texture cf_depth_stencil;
 	sg_image texture;
 	sg_image depth_stencil;
 	sg_pass pass;
@@ -289,7 +291,7 @@ int cf_query_resource_limit(CF_ResourceLimit resource_limit)
 	return result;
 }
 
-CF_TextureParams cf_texture_defaults()
+CF_TextureParams cf_texture_defaults(int w, int h)
 {
 	CF_TextureParams params;
 	params.pixel_format = CF_PIXELFORMAT_DEFAULT;
@@ -297,8 +299,8 @@ CF_TextureParams cf_texture_defaults()
 	params.usage = CF_USAGE_TYPE_IMMUTABLE;
 	params.wrap_u = CF_WRAP_MODE_DEFAULT;
 	params.wrap_v = CF_WRAP_MODE_DEFAULT;
-	params.width = 0;
-	params.height = 0;
+	params.width = w;
+	params.height = h;
 	params.render_target = false;
 	params.initial_data = NULL;
 	params.initial_data_size = 0;
@@ -367,12 +369,21 @@ void cf_destroy_shader(CF_Shader shader)
 	CF_FREE(shader_internal);
 }
 
-CF_CanvasParams cf_canvas_defaults()
+CF_CanvasParams cf_canvas_defaults(int w, int h)
 {
 	CF_CanvasParams params;
-	params.name = NULL;
-	params.target = { };
-	params.depth_stencil_target = { };
+	if (w == 0 || h == 0) {
+		params.name = NULL;
+		params.target = { };
+		params.depth_stencil_target = { };
+	} else {
+		params.name = NULL;
+		params.target = cf_texture_defaults(w, h);
+		params.target.render_target = true;
+		params.depth_stencil_target = cf_texture_defaults(w, h);
+		params.depth_stencil_target.pixel_format = CF_PIXELFORMAT_DEPTH_STENCIL;
+		params.depth_stencil_target.render_target = true;
+	}
 	return params;
 }
 
@@ -392,16 +403,21 @@ static void s_canvas_clear_settings(CF_CanvasInternal* canvas)
 CF_Canvas cf_make_canvas(CF_CanvasParams canvas_params)
 {
 	CF_CanvasInternal* canvas = (CF_CanvasInternal*)CF_CALLOC(sizeof(CF_CanvasInternal));
-	if (canvas_params.target.id) {
+	if (canvas_params.target.width > 0 && canvas_params.target.height > 0) {
+		canvas->cf_texture = cf_make_texture(canvas_params.target);
+		canvas->cf_depth_stencil = cf_make_texture(canvas_params.depth_stencil_target);
+
 		sg_pass_desc desc;
 		CF_MEMSET(&desc, 0, sizeof(desc));
-		desc.color_attachments[0].image = { (uint32_t)canvas_params.target.id };
-		desc.depth_stencil_attachment.image = { (uint32_t)canvas_params.depth_stencil_target.id };
+		desc.color_attachments[0].image = { (uint32_t)canvas->cf_texture.id };
+		desc.depth_stencil_attachment.image = { (uint32_t)canvas->cf_depth_stencil.id };
 		canvas->texture = desc.color_attachments[0].image;
 		canvas->depth_stencil = desc.depth_stencil_attachment.image;
 		desc.label = canvas_params.name;
 		canvas->pass = sg_make_pass(desc);
 	} else {
+		canvas->cf_texture.id = CF_INVALID_HANDLE;
+		canvas->cf_depth_stencil.id = CF_INVALID_HANDLE;
 		canvas->texture.id = SG_INVALID_ID;
 		canvas->depth_stencil.id = SG_INVALID_ID;
 		canvas->pass_is_default = true;
@@ -418,6 +434,18 @@ void cf_destroy_canvas(CF_Canvas canvas_handle)
 		sg_destroy_pass(canvas->pass);
 	}
 	CF_FREE(canvas);
+}
+
+CF_Texture cf_canvas_get_target(CF_Canvas canvas_handle)
+{
+	CF_CanvasInternal* canvas = (CF_CanvasInternal*)canvas_handle.id;
+	return canvas->cf_texture;
+}
+
+CF_Texture cf_canvas_get_depth_stencil_target(CF_Canvas canvas_handle)
+{
+	CF_CanvasInternal* canvas = (CF_CanvasInternal*)canvas_handle.id;
+	return canvas->cf_depth_stencil;
 }
 
 CF_API uint64_t CF_CALL cf_canvas_get_backend_target_handle(CF_Canvas canvas_handle)
@@ -766,6 +794,13 @@ void cf_material_set_texture_fs(CF_Material material_handle, const char* name, C
 	s_material_set_texture(&material->fs, name, texture);
 }
 
+void cf_material_clear_textures(CF_Material material_handle)
+{
+	CF_MaterialInternal* material = (CF_MaterialInternal*)material_handle.id;
+	material->vs.textures.clear();
+	material->fs.textures.clear();
+}
+
 static int s_uniform_size(CF_UniformType type)
 {
 	switch (type) {
@@ -819,6 +854,13 @@ void cf_material_set_uniform_fs(CF_Material material_handle, const char* block_n
 	block_name = sintern(block_name);
 	name = sintern(name);
 	s_material_set_uniform(&material->uniform_arena, &material->fs, block_name, name, data, type, array_length);
+}
+
+void cf_material_clear_uniforms(CF_Material material_handle)
+{
+	CF_MaterialInternal* material = (CF_MaterialInternal*)material_handle.id;
+	material->vs.uniforms.clear();
+	material->fs.uniforms.clear();
 }
 
 static void s_end_pass()

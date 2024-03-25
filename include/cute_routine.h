@@ -68,6 +68,7 @@ struct Routine
     // Sets which label (defined by `rt_label`) to resume from next.
     CF_INLINE void set_next(const char* label) { at = rt_fnv1a(label); elapsed = seconds = wait_elapsed = 0; }
     CF_INLINE void reset() { *this = { }; }
+    CF_INLINE void init() { reset(); }
 };
 
 // -------------------------------------------------------------------------------------------------

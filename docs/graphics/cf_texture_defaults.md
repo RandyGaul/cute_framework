@@ -9,7 +9,7 @@ GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/maste
 Returns a good set of default values for [CF_TextureParams](/graphics/cf_textureparams.md) to call [cf_make_texture](/graphics/cf_make_texture.md).
 
 ```cpp
-CF_TextureParams cf_texture_defaults();
+CF_TextureParams cf_texture_defaults(int w, int h);
 ```
 
 ## Related Pages

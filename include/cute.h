@@ -34,6 +34,7 @@
 #include "cute_json.h"
 #include "cute_math.h"
 #include "cute_networking.h"
+#include "cute_noise.h"
 #include "cute_png_cache.h"
 #include "cute_rnd.h"
 #include "cute_sprite.h"

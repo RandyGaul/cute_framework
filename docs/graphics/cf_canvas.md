@@ -10,7 +10,7 @@ An opaque handle representing a canvas.
 
 ## Remarks
 
-A texture is a buffer of data sent to the GPU for random access. Usually textures are used to store image data.
+TODO
 
 ## Related Pages
 

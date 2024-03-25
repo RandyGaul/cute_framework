@@ -26,9 +26,9 @@ extern "C" {
 /**
  * @struct   CF_HttpsRequest
  * @category web
- * @brief    TODO
- * @remarks  TODO
- * @related  TODO
+ * @brief    Represents an [HTTPS request](https://www.ibm.com/docs/en/cics-ts/5.3?topic=protocol-http-requests).
+ * @remarks  You may create a request by calling either `cf_https_get` or `cf_https_post`.
+ * @related  CF_HttpsRequest CF_HttpsResponse cf_https_get cf_https_post
  */
 typedef struct CF_HttpsRequest { uint64_t id; } CF_HttpsRequest;
 // @end
@@ -36,9 +36,9 @@ typedef struct CF_HttpsRequest { uint64_t id; } CF_HttpsRequest;
 /**
  * @struct   CF_HttpsResponse
  * @category web
- * @brief    TODO
- * @remarks  TODO
- * @related  TODO
+ * @brief    Represents an [HTTPS response](https://www.ibm.com/docs/en/cics-ts/5.2?topic=protocol-http-responses).
+ * @remarks  The response may be fetched from a `CF_HttpsRequest` by calling `cf_https_response`.
+ * @related  CF_HttpsRequest CF_HttpsResponse cf_https_response cf_https_response_find_header cf_https_response_content
  */
 typedef struct CF_HttpsResponse { uint64_t id; } CF_HttpsResponse;
 // @end
@@ -46,13 +46,16 @@ typedef struct CF_HttpsResponse { uint64_t id; } CF_HttpsResponse;
 /**
  * @struct   CF_HttpsHeader
  * @category web
- * @brief    TODO
- * @remarks  TODO
- * @related  TODO
+ * @brief    Represents an [HTTPS header](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers).
+ * @remarks  Headers may be fetched from a `CF_HttpsResponse` by calling `cf_https_response_find_header`, or `cf_https_response_headers`.
+ * @related  CF_HttpsRequest CF_HttpsResponse CF_HttpsHeader cf_https_response_find_header cf_https_response_headers
  */
 typedef struct CF_HttpsHeader
 {
+	/* @member The name of the header, also known as the key of the header. */
 	const char* name;
+
+	/* @member The value of the header. */
 	const char* value;
 } CF_HttpsHeader;
 // @end

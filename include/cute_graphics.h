@@ -88,7 +88,7 @@ typedef struct CF_Texture { uint64_t id; } CF_Texture;
  * @struct   CF_Canvas
  * @category graphics
  * @brief    An opaque handle representing a canvas.
- * @remarks  A texture is a buffer of data sent to the GPU for random access. Usually textures are used to store image data.
+ * @remarks  TODO
  * @related  CF_Texture CF_Canvas CF_Material CF_Shader CF_CanvasParams cf_canvas_defaults cf_make_canvas cf_destroy_canvas cf_apply_canvas
  */
 typedef struct CF_Canvas { uint64_t id; } CF_Canvas;
@@ -685,7 +685,7 @@ typedef struct CF_TextureParams
  * @brief    Returns a good set of default values for `CF_TextureParams` to call `cf_make_texture`.
  * @related  CF_TextureParams CF_Texture cf_make_texture
  */
-CF_API CF_TextureParams CF_CALL cf_texture_defaults();
+CF_API CF_TextureParams CF_CALL cf_texture_defaults(int w, int h);
 
 /**
  * @function cf_make_texture
@@ -853,11 +853,11 @@ typedef struct CF_CanvasParams
 	/* @member The name of the canvas, for debug purposes. */
 	const char* name;
 
-	/* @member The texture used to store pixel information when rendering to the canvas. See `CF_Texture`. */
-	CF_Texture target;
+	/* @member The texture used to store pixel information when rendering to the canvas. See `CF_TextureParams`. */
+	CF_TextureParams target;
 
-	/* @member The texture used to store depth and stencil information when rendering to the canvas. See `CF_Texture`. */
-	CF_Texture depth_stencil_target;
+	/* @member The texture used to store depth and stencil information when rendering to the canvas. See `CF_TextureParams`. */
+	CF_TextureParams depth_stencil_target;
 } CF_CanvasParams;
 // @end
 
@@ -867,7 +867,7 @@ typedef struct CF_CanvasParams
  * @brief    Returns a good set of default values for a `CF_CanvasParams` to call `cf_make_canvas`.
  * @related  CF_CanvasParams cf_canvas_defaults cf_make_canvas cf_destroy_canvas cf_apply_canvas cf_clear_color
  */
-CF_API CF_CanvasParams CF_CALL cf_canvas_defaults();
+CF_API CF_CanvasParams CF_CALL cf_canvas_defaults(int w, int h);
 
 /**
  * @function cf_make_canvas
@@ -884,6 +884,22 @@ CF_API CF_Canvas CF_CALL cf_make_canvas(CF_CanvasParams canvas_params);
  * @related  CF_CanvasParams cf_canvas_defaults cf_make_canvas cf_destroy_canvas cf_apply_canvas cf_clear_color
  */
 CF_API void CF_CALL cf_destroy_canvas(CF_Canvas canvas);
+
+/**
+ * @function cf_canvas_get_target
+ * @category graphics
+ * @brief    Returns the `target` texture the canvas renders upon.
+ * @related  CF_CanvasParams cf_canvas_defaults cf_make_canvas cf_destroy_canvas cf_apply_canvas cf_clear_color
+ */
+CF_API CF_Texture CF_CALL cf_canvas_get_target(CF_Canvas canvas);
+
+/**
+ * @function cf_canvas_get_depth_stencil_target
+ * @category graphics
+ * @brief    Returns the `depth_stencil_target` texture the canvas renders upon.
+ * @related  CF_CanvasParams cf_canvas_defaults cf_make_canvas cf_destroy_canvas cf_apply_canvas cf_clear_color
+ */
+CF_API CF_Texture CF_CALL cf_canvas_get_depth_stencil_target(CF_Canvas canvas);
 
 /**
  * @function cf_canvas_get_backend_target_handle
@@ -930,9 +946,9 @@ CF_API uint64_t CF_CALL cf_canvas_get_backend_depth_stencil_handle(CF_Canvas can
 	CF_ENUM(VERTEX_FORMAT_SHORT2N,  7 )                             \
 	/* @entry Two 16-bit unsigned bytes, in normalized form. */     \
 	CF_ENUM(VERTEX_FORMAT_USHORT2N, 8 )                             \
-	/* @entry A single 32-bit signed byte, in normalized form. */   \
+	/* @entry Four 16-bit signed bytes, in normalized form. */      \
 	CF_ENUM(VERTEX_FORMAT_SHORT4N,  9 )                             \
-	/* @entry A single 32-bit unsigned byte, in normalized form. */ \
+	/* @entry Four 16-bit unsigned bytes, in normalized form. */    \
 	CF_ENUM(VERTEX_FORMAT_USHORT4N, 10)                             \
 	/* @end */
 
@@ -1713,6 +1729,16 @@ CF_API void CF_CALL cf_material_set_texture_vs(CF_Material material, const char*
 CF_API void CF_CALL cf_material_set_texture_fs(CF_Material material, const char* name, CF_Texture texture);
 
 /**
+ * @function cf_material_clear_textures
+ * @category graphics
+ * @brief    Clears all textures previously set by `cf_material_set_texture_vs` or `cf_material_set_texture_fs`.
+ * @param    material      The material.
+ * @remarks  See `CF_Texture` and `CF_TextureParams` for an overview.
+ * @related  CF_UniformType CF_Material cf_make_material cf_destroy_material cf_material_set_render_state cf_material_set_texture_vs cf_material_set_texture_fs cf_material_set_uniform_vs cf_material_set_uniform_fs
+ */
+CF_API void CF_CALL cf_material_clear_textures(CF_Material material);
+
+/**
  * @function cf_material_set_uniform_vs
  * @category graphics
  * @brief    Sets up a uniform value, used for inputs to vertex shaders.
@@ -1755,6 +1781,15 @@ CF_API void CF_CALL cf_material_set_uniform_vs(CF_Material material, const char*
  * @related  CF_UniformType CF_Material cf_make_material cf_destroy_material cf_material_set_render_state cf_material_set_texture_vs cf_material_set_texture_fs cf_material_set_uniform_vs cf_material_set_uniform_fs
  */
 CF_API void CF_CALL cf_material_set_uniform_fs(CF_Material material, const char* block_name, const char* name, void* data, CF_UniformType type, int array_length);
+
+/**
+ * @function cf_material_clear_uniforms
+ * @category graphics
+ * @brief    Clears any uniforms previously set by `cf_material_set_uniform_vs` or `cf_material_set_uniform_fs`.
+ * @param    material      The material.
+ * @related  CF_UniformType CF_Material cf_make_material cf_destroy_material cf_material_set_render_state cf_material_set_texture_vs cf_material_set_texture_fs cf_material_set_uniform_vs cf_material_set_uniform_fs
+ */
+CF_API void CF_CALL cf_material_clear_uniforms(CF_Material material);
 
 //--------------------------------------------------------------------------------------------------
 // Rendering Functions.
@@ -2103,15 +2138,17 @@ CF_INLINE BackendType query_backend() { return cf_query_backend(); }
 CF_INLINE bool query_pixel_format(PixelFormat format, PixelFormatOp op) { return cf_query_pixel_format(format, op); }
 CF_INLINE bool query_device_feature(DeviceFeature feature) { return cf_query_device_feature(feature); }
 CF_INLINE int query_resource_limit(ResourceLimit resource_limit) { return cf_query_resource_limit(resource_limit); }
-CF_INLINE TextureParams texture_defaults() { return cf_texture_defaults(); }
+CF_INLINE TextureParams texture_defaults(int w, int h) { return cf_texture_defaults(w, h); }
 CF_INLINE Texture make_texture(TextureParams texture_params) { return cf_make_texture(texture_params); }
 CF_INLINE void destroy_texture(Texture texture) { cf_destroy_texture(texture); }
 CF_INLINE void update_texture(Texture texture, void* data, int size) { cf_update_texture(texture, data, size); }
 CF_INLINE Shader make_shader(SokolShader sokol_shader) { return cf_make_shader(sokol_shader); }
 CF_INLINE void destroy_shader(Shader shader) { cf_destroy_shader(shader); }
-CF_INLINE CanvasParams canvas_defaults() { return cf_canvas_defaults(); }
+CF_INLINE CanvasParams canvas_defaults(int w, int h) { return cf_canvas_defaults(w, h); }
 CF_INLINE Canvas make_canvas(CanvasParams pass_params) { return cf_make_canvas(pass_params); }
 CF_INLINE void destroy_canvas(Canvas canvas) { cf_destroy_canvas(canvas); }
+CF_INLINE Texture canvas_get_target(Canvas canvas) { return cf_canvas_get_target(canvas); }
+CF_INLINE Texture canvas_get_depth_stencil_target(Canvas canvas) { return cf_canvas_get_depth_stencil_target(canvas); }
 CF_INLINE uint64_t canvas_get_backend_target_handle(CF_Canvas canvas) { return cf_canvas_get_backend_target_handle(canvas); }
 CF_INLINE uint64_t canvas_get_backend_depth_stencil_handle(CF_Canvas canvas) { return cf_canvas_get_backend_depth_stencil_handle(canvas); }
 CF_INLINE Mesh make_mesh(UsageType usage_type, int vertex_buffer_size, int index_buffer_size, int instance_buffer_size) { return cf_make_mesh(usage_type, vertex_buffer_size, index_buffer_size, instance_buffer_size); }
@@ -2132,8 +2169,10 @@ CF_INLINE void destroy_material(Material material) { cf_destroy_material(materia
 CF_INLINE void material_set_render_state(Material material, RenderState render_state) { cf_material_set_render_state(material, render_state); }
 CF_INLINE void material_set_texture_vs(Material material, const char* name, Texture texture) { cf_material_set_texture_vs(material, name, texture); }
 CF_INLINE void material_set_texture_fs(Material material, const char* name, Texture texture) { cf_material_set_texture_fs(material, name, texture); }
+CF_INLINE void material_clear_textures(Material material) { cf_material_clear_textures(material); }
 CF_INLINE void material_set_uniform_vs(Material material, const char* block_name, const char* name, void* data, UniformType type, int array_length) { cf_material_set_uniform_vs(material, block_name, name, data, type, array_length); }
 CF_INLINE void material_set_uniform_fs(Material material, const char* block_name, const char* name, void* data, UniformType type, int array_length) { cf_material_set_uniform_fs(material, block_name, name, data, type, array_length); }
+CF_INLINE void material_clear_uniforms(Material material) { cf_material_clear_uniforms(material); }
 CF_INLINE void apply_canvas(Canvas canvas, bool clear = true) { cf_apply_canvas(canvas, clear); }
 CF_INLINE void apply_viewport(int x, int y, int w, int h) { cf_apply_viewport(x, y, w, h); }
 CF_INLINE void apply_scissor(int x, int y, int w, int h) { cf_apply_scissor(x, y, w, h); }
