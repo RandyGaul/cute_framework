@@ -1784,7 +1784,9 @@ cs_error_t cs_init(void* os_handle, unsigned play_frequency_in_Hz, int buffered_
 	s_ctx->mutex = SDL_CreateMutex();
 
 #endif
-
+	s_ctx->duplicate_capacity = 0;
+	s_ctx->duplicate_count = 0;
+	s_ctx->duplicates = NULL;
 	return CUTE_SOUND_ERROR_NONE;
 }
 
