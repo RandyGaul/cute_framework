@@ -1784,7 +1784,9 @@ cs_error_t cs_init(void* os_handle, unsigned play_frequency_in_Hz, int buffered_
 	s_ctx->mutex = SDL_CreateMutex();
 
 #endif
-
+	s_ctx->duplicate_capacity = 0;
+	s_ctx->duplicate_count = 0;
+	s_ctx->duplicates = NULL;
 	return CUTE_SOUND_ERROR_NONE;
 }
 
@@ -2714,7 +2716,7 @@ static void s_insert(cs_sound_inst_t* inst)
 	inst->audio->playing_count += 1;
 	inst->active = true;
 	inst->id = s_ctx->instance_id_gen++;
-	hashtable_insert(&s_ctx->instance_map, inst->id, inst);
+	hashtable_insert(&s_ctx->instance_map, inst->id, &inst);
 	// s_on_make_playing(inst);
 	cs_unlock();
 }
@@ -3053,7 +3055,9 @@ cs_sound_params_t cs_sound_params_default()
 
 static cs_sound_inst_t* s_get_inst(cs_playing_sound_t sound)
 {
-	return (cs_sound_inst_t*)hashtable_find(&s_ctx->instance_map, sound.id);
+	cs_sound_inst_t** inst = (cs_sound_inst_t**)hashtable_find(&s_ctx->instance_map, sound.id);
+	if (inst) return *inst;
+	return NULL;
 }
 
 cs_playing_sound_t cs_play_sound(cs_audio_source_t* audio, cs_sound_params_t params)
