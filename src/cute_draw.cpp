@@ -1662,7 +1662,7 @@ static CF_TextCodeVal s_parse_code_val(CF_CodeParseState* s)
 		} else if (cp == '"') {
 			String string = s_parse_string(s);
 			val.type = CF_TEXT_CODE_VAL_TYPE_STRING;
-			val.u.string = sintern(string.c_str());
+			val.u.string = !string.empty() ? sintern(string.c_str()) : NULL;
 		} else {
 			double number = s_parse_number(s);
 			val.type = CF_TEXT_CODE_VAL_TYPE_NUMBER;
