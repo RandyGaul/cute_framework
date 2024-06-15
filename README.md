@@ -133,7 +133,7 @@ And that's it! Regenerate your project and you will be able to build your new sa
 
 Once confirmed working as intended, open a pull request to add in your new sample!
 
-# Editing the Docs
+## Editing the Docs
 
 All of CF's docs for the [CF website](https://randygaul.github.io/cute_framework/#/) are located here in GitHub [under the docs folder](https://github.com/RandyGaul/cute_framework/tree/master/docs). Editing any of these docs is a good way to contribute to CF through a pull-request.
 
