@@ -1199,18 +1199,18 @@ This is a list of all functions in Cute Framework organized by categories. This 
 ## random
 
 ### functions
-- [cf_rnd_next](/random/cf_rnd_next.md)
-- [cf_rnd_next_double](/random/cf_rnd_next_double.md)
-- [cf_rnd_next_float](/random/cf_rnd_next_float.md)
-- [cf_rnd_next_range_double](/random/cf_rnd_next_range_double.md)
-- [cf_rnd_next_range_float](/random/cf_rnd_next_range_float.md)
-- [cf_rnd_next_range_int](/random/cf_rnd_next_range_int.md)
-- [cf_rnd_next_range_uint64](/random/cf_rnd_next_range_uint64.md)
+- [cf_rnd](/random/cf_rnd.md)
+- [cf_rnd_double](/random/cf_rnd_double.md)
+- [cf_rnd_float](/random/cf_rnd_float.md)
+- [cf_rnd_range_double](/random/cf_rnd_range_double.md)
+- [cf_rnd_range_float](/random/cf_rnd_range_float.md)
+- [cf_rnd_range_int](/random/cf_rnd_range_int.md)
+- [cf_rnd_range_uint64](/random/cf_rnd_range_uint64.md)
 - [cf_rnd_seed](/random/cf_rnd_seed.md)
 
 
 ### structs
-- [CF_Rnd](/random/cf_rnd.md)
+- [CF_RndState](/random/cf_rndstate.md)
 
 
 ## sprite

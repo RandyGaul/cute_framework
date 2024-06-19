@@ -264,7 +264,7 @@ struct LineParticleBarn
 
 struct Game
 {
-	CF_Rnd rnd;
+	CF_RndState rnd;
 	PlayerShip player;
 	AsteroidBarn asteroids;
 	TrailBarn trails;
@@ -287,8 +287,8 @@ struct Game
 
 Game* g;
 
-float rnd_range(float lo, float hi) { return rnd_next_range(g->rnd, lo, hi); }
-v2 rnd_range(v2 lo, v2 hi) { return V2(rnd_next_range(g->rnd, lo.x, hi.x), rnd_next_range(g->rnd, lo.y, hi.y)); }
+float rnd_range(float lo, float hi) { return rnd_range(g->rnd, lo, hi); }
+v2 rnd_range(v2 lo, v2 hi) { return V2(rnd_range(g->rnd, lo.x, hi.x), rnd_range(g->rnd, lo.y, hi.y)); }
 
 void TrailBarn::add(CF_Aabb box, float duration)
 {

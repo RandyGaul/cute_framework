@@ -1688,8 +1688,8 @@ static bool s_text_fx_shake(TextEffect* effect)
 	int seed = (int)(effect->elapsed * freq);
 	float x = (float)effect->get_number("x", 2);
 	float y = (float)effect->get_number("y", 2);
-	CF_Rnd rnd = cf_rnd_seed(seed);
-	v2 offset = V2(rnd_next_range(rnd, -x, y), rnd_next_range(rnd, -x, y));
+	CF_RndState rnd = rnd_seed(seed);
+	v2 offset = V2(rnd_range(rnd, -x, y), rnd_range(rnd, -x, y));
 	effect->q0 += offset;
 	effect->q1 += offset;
 	return true;
