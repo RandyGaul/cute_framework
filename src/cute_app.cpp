@@ -323,6 +323,11 @@ void cf_destroy_app()
 		cf_destroy_mesh(app->backbuffer_quad);
 		cf_destroy_shader(app->backbuffer_shader);
 		cf_destroy_material(app->backbuffer_material);
+		if (app->canvas_blit_init) {
+			cf_destroy_mesh(app->blit_mesh);
+			cf_destroy_material(app->blit_material);
+			cf_destroy_shader(app->blit_shader);
+		}
 		cf_destroy_graphics();
 		sg_shutdown();
 		cf_dx11_shutdown();

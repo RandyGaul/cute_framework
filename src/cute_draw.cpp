@@ -745,7 +745,7 @@ void CF_INLINE s_bounding_box_of_triangle(v2 a, v2 b, v2 c, float radius, float 
 	float d1 = dot(bc, bc);
 	float d2 = dot(ca, ca);
 	auto build_box = [](float d, v2 a, v2 b, v2 c, float inflate, v2* out) {
-		float w = sqrtf(d);
+		float w = CF_SQRTF(d);
 		v2 u = (b - a) / w;
 		v2 v = skew(u);
 		float h = dot(v, c) - dot(v, a);
@@ -1714,8 +1714,8 @@ static bool s_text_fx_shake(TextEffect* effect)
 	int seed = (int)(effect->elapsed * freq);
 	float x = (float)effect->get_number("x", 2);
 	float y = (float)effect->get_number("y", 2);
-	CF_Rnd rnd = cf_rnd_seed(seed);
-	v2 offset = V2(rnd_next_range(rnd, -x, y), rnd_next_range(rnd, -x, y));
+	CF_RndState rnd = rnd_seed(seed);
+	v2 offset = V2(rnd_range(rnd, -x, y), rnd_range(rnd, -x, y));
 	effect->q0 += offset;
 	effect->q1 += offset;
 	return true;
@@ -1725,7 +1725,7 @@ static bool s_text_fx_fade(TextEffect* effect)
 {
 	double speed = effect->get_number("speed", 2);
 	double span = effect->get_number("span", 5);
-	effect->opacity = cosf((float)(effect->elapsed * speed + effect->index_into_effect / span)) * 0.5f + 0.5f;
+	effect->opacity = CF_COSF((float)(effect->elapsed * speed + effect->index_into_effect / span)) * 0.5f + 0.5f;
 	return true;
 }
 
@@ -1734,7 +1734,7 @@ static bool s_text_fx_wave(TextEffect* effect)
 	double speed = effect->get_number("speed", 5);
 	double span = effect->get_number("span", 10);
 	double height = effect->get_number("height", 5);
-	float offset = (cosf((float)(effect->elapsed * speed + effect->index_into_effect / span)) * 0.5f + 0.5f) * (float)height;
+	float offset = (CF_COSF((float)(effect->elapsed * speed + effect->index_into_effect / span)) * 0.5f + 0.5f) * (float)height;
 	effect->q0.y += offset;
 	effect->q1.y += offset;
 	return true;

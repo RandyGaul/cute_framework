@@ -6,10 +6,10 @@ You may already know about the [`rand`](https://en.cppreference.com/w/c/numeric/
 
 ## Seeding
 
-To initialize a fresh random number generator, [`CF_Rnd`](https://randygaul.github.io/cute_framework/#/random/cf_rnd), call [`cf_rnd_seed`](https://randygaul.github.io/cute_framework/#/random/cf_rnd_seed).
+To initialize a fresh random number generator, [`CF_RndState`](https://randygaul.github.io/cute_framework/#/random/cf_rndstate), call [`cf_rnd_seed`](https://randygaul.github.io/cute_framework/#/random/cf_rnd_seed).
 
 ```cpp
-CF_Rnd rnd = cf_rnd_seed(0);
+CF_RndState rnd = cf_rnd_seed(0);
 ```
 
 The seed acts as the initial parameter for the random number genertor, and dictates what number sequence will be generated. Each seed produces a deterministic set of numbers. That means if ever need to recreate something generated from random numbers, you can use the same initial seed.
@@ -21,19 +21,19 @@ If we want to generate _seemingly_ random but different numbers each time the ap
 
 // 
 
-CF_Rnd rnd = cf_rnd_seed((int)(time(NULL));
+CF_RndState rnd = cf_rnd_seed((int)(time(NULL));
 ```
 
-[`CF_Rnd`](https://randygaul.github.io/cute_framework/#/random/cf_rnd) only takes up 128 bytes of stack space, so feel free to create as many of them as you need!
+[`CF_RndState`](https://randygaul.github.io/cute_framework/#/random/cf_rndstate) only takes up 128 bytes of stack space, so feel free to create as many of them as you need!
 
 ## Random Numbers
 
-[`CF_Rnd`](https://randygaul.github.io/cute_framework/#/random/cf_rnd) can generate random integers and floats, and also generate them within specified ranges. For example, you can make a function to return a random float from 0 to 1:
+[`CF_RndState`](https://randygaul.github.io/cute_framework/#/random/cf_rndstate) can generate random integers and floats, and also generate them within specified ranges. For example, you can make a function to return a random float from 0 to 1:
 
 ```cpp
 float random01(CF_Rnd* rnd)
 {
-	return cf_rnd_next_range_float(rnd, 0.0f, 1.0f);
+	return cf_rnd_range_float(rnd, 0.0f, 1.0f);
 }
 ```
 

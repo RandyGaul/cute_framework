@@ -2,34 +2,6 @@
 #include <cimgui.h>
 #include <sokol/sokol_gfx_imgui.h>
 
-#include "draw_to_texture_data/blit_shader.h"
-
-typedef struct Vertex
-{
-	float x, y;
-	float u, v;
-} Vertex;
-
-// UV (0,0) is top-left of the screen, while UV (1,1) is bottom right. We flip the y-axis for UVs to make the y-axis point up.
-// Coordinate (-1,1) is top left, while (1,-1) is bottom right.
-static void s_quad(float x, float y, float sx, float sy, Vertex quad[6])
-{
-	// Build a quad from (-1.0f,-1.0f) to (1.0f,1.0f).
-	quad[0].x = -1.0f; quad[0].y =  1.0f; quad[0].u = 0; quad[0].v = 0;
-	quad[1].x =  1.0f; quad[1].y = -1.0f; quad[1].u = 1; quad[1].v = 1;
-	quad[2].x =  1.0f; quad[2].y =  1.0f; quad[2].u = 1; quad[2].v = 0;
-
-	quad[3].x = -1.0f; quad[3].y =  1.0f; quad[3].u = 0; quad[3].v = 0;
-	quad[4].x = -1.0f; quad[4].y = -1.0f; quad[4].u = 0; quad[4].v = 1;
-	quad[5].x =  1.0f; quad[5].y = -1.0f; quad[5].u = 1; quad[5].v = 1;
-
-	// Scale the quad about the origin by (sx,sy), then translate it by (x,y).
-	for (int i = 0; i < 6; ++i) {
-		quad[i].x = quad[i].x * sx + x;
-		quad[i].y = quad[i].y * sy + y;
-	}
-}
-
 int main(int argc, char* argv[])
 {
 	float w = 640.0f;
@@ -44,39 +16,6 @@ int main(int argc, char* argv[])
 	// Create an offscreen canvas.
 	CF_Canvas offscreen = cf_make_canvas(cf_canvas_defaults((int)(w*0.5f), (int)(h*0.5f)));
 
-	// Create a quad for left view.
-	CF_Mesh left_quad = cf_make_mesh(CF_USAGE_TYPE_IMMUTABLE, sizeof(Vertex) * 6, 0, 0);
-	CF_VertexAttribute attrs[2] = { 0 };
-	attrs[0].name = "in_pos";
-	attrs[0].format = CF_VERTEX_FORMAT_FLOAT2;
-	attrs[0].offset = CF_OFFSET_OF(Vertex, x);
-	attrs[1].name = "in_uv";
-	attrs[1].format = CF_VERTEX_FORMAT_FLOAT2;
-	attrs[1].offset = CF_OFFSET_OF(Vertex, u);
-	cf_mesh_set_attributes(left_quad, attrs, CF_ARRAY_SIZE(attrs), sizeof(Vertex), 0);
-	Vertex left_quad_verts[6];
-	s_quad(-0.5f, 0, 0.5f, 0.5f, left_quad_verts);
-	cf_mesh_update_vertex_data(left_quad, left_quad_verts, 6);
-
-	// Create a quad for the right view.
-	CF_Mesh right_quad = cf_make_mesh(CF_USAGE_TYPE_IMMUTABLE, sizeof(Vertex) * 6, 0, 0);
-	cf_mesh_set_attributes(right_quad, attrs, CF_ARRAY_SIZE(attrs), sizeof(Vertex), 0);
-	Vertex right_quad_verts[6];
-	s_quad(0.5f, 0, 0.5f, 0.5f, right_quad_verts);
-	cf_mesh_update_vertex_data(right_quad, right_quad_verts, 6);
-
-	// Create a quad for the full screen.
-	CF_Mesh fullscreen_quad = cf_make_mesh(CF_USAGE_TYPE_IMMUTABLE, sizeof(Vertex) * 6, 0, 0);
-	cf_mesh_set_attributes(fullscreen_quad, attrs, CF_ARRAY_SIZE(attrs), sizeof(Vertex), 0);
-	Vertex fullscreen_quad_verts[6];
-	s_quad(0, 0, 1, 1, fullscreen_quad_verts);
-	cf_mesh_update_vertex_data(fullscreen_quad, fullscreen_quad_verts, 6);
-
-	// Setup shader + material for drawing the offscreen canvas onto the screen (blit).
-	CF_Material blit_material = cf_make_material();
-	cf_material_set_texture_fs(blit_material, "u_image", cf_canvas_get_target(offscreen));
-	CF_Shader blit_shader = CF_MAKE_SOKOL_SHADER(blit_shader);
-
 	while (cf_app_is_running())
 	{
 		cf_app_update(NULL);
@@ -88,19 +27,8 @@ int main(int argc, char* argv[])
 		// Fetch this each frame, as it's invalidated during window-resizing.
 		CF_Canvas app_canvas = cf_app_get_canvas();
 
-		// Draw our offscreen texture onto the app's canvas.
-		cf_apply_canvas(app_canvas, false);
-		{
-			// Draw offscreen texture onto the app's canvas on the left.
-			cf_apply_mesh(left_quad);
-			cf_apply_shader(blit_shader, blit_material);
-			cf_draw_elements();
-
-			// Also draw the offscreen texture onto the app's canvas on the right.
-			cf_apply_mesh(right_quad);
-			cf_apply_shader(blit_shader, blit_material);
-			cf_draw_elements();
-		}
+		cf_canvas_blit(offscreen, cf_v2(0,0), cf_v2(1,1), app_canvas, cf_v2(0.0f,0.25f), cf_v2(0.5f,0.75f));
+		cf_canvas_blit(offscreen, cf_v2(0,0), cf_v2(1,1), app_canvas, cf_v2(0.5f,0.25f), cf_v2(1.0f,0.75f));
 
 		// Show debug views of graphics primitives.
 		if (igBeginMainMenuBar()) {
@@ -120,11 +48,6 @@ int main(int argc, char* argv[])
 		cf_app_draw_onto_screen(false);
 	}
 
-	cf_destroy_shader(blit_shader);
-	cf_destroy_material(blit_material);
-	cf_destroy_mesh(left_quad);
-	cf_destroy_mesh(right_quad);
-	cf_destroy_mesh(fullscreen_quad);
 	cf_destroy_canvas(offscreen);
 	cf_destroy_app();
 

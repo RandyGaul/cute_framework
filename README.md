@@ -8,11 +8,9 @@
 
 [Cute Framework](https://randygaul.github.io/cute_framework/#/) (CF) is the *cutest* framework available for making 2D games in C++. It provides a portable foundational layer for building 2D games in C/C++ without baggage, gnarly dependencies, or cryptic APIs. CF runs almost anywhere, including Windows, MacOS, iOS, Android, Linux, Browsers, and more!
 
-> **NOTE**: Cute Framework is currently in flux for it's v1.0 release! These notes/docs will be changed as they get rolled out and come online.
-
 ## Download and Setup
 
-~~The easiest option is to head over and pickup the [latest pre-built version](https://github.com/randygaul/cute_framework/releases/latest)~~ This link is currently out of date, and awaiting the soon to be v1.0 release (see below for building latest from source). You can link your project against CF as either a static or shared library. Be sure to also visit the [Cute Framework documentation site](https://randygaul.github.io/cute_framework/#/).
+Cute Frameowrk is designed to be built from source. You can link your project against CF as either a static or shared library. Be sure to visit the [Cute Framework documentation site](https://randygaul.github.io/cute_framework/#/) for more in-depth details and steps.
 
 ## Example Game Window
 
@@ -44,9 +42,9 @@ int main(int argc, char* argv[])
 
 ### Building from Source
 
-Another option for those familiar with CMake is to build from source with CMake. Make sure you have a compiler installed that you're familiar with beforehand. If you're new to C/C++ I highly recommend using Microsoft Visual Studio (Community Edition), for Windows users. If you don't like Visual Studio you can try gcc/g++ (MinGW), [tdm-gcc](https://jmeubank.github.io/tdm-gcc/) is recommended in this case. If you're MacOS, XCode (and the command line tools) are recommended. For Linux you'll probably use g++.
+Building CF should be done with CMake. The reason CMake is chosen, is it's one of the only working cross-platform build generators in existence, that actually works pretty much everywhere. Make sure you have a compiler installed that you're familiar with beforehand. If you're new to C/C++ I highly recommend using Microsoft Visual Studio (Community Edition), for Windows users. If you don't like Visual Studio you can try gcc/g++ (MinGW), [tdm-gcc](https://jmeubank.github.io/tdm-gcc/) is recommended in this case. If you're MacOS, XCode (and the command line tools) are recommended. For Linux you'll probably use g++.
 
-It's highly recommended to use our [Cmake project template](https://github.com/RandyGaul/cute_framework_project_template#cmake-101-walkthrough) and follow along these steps with it!
+It's highly recommended to use CF's [Cmake project template](https://github.com/RandyGaul/cute_framework_project_template#cmake-101-walkthrough) and follow along these steps with it!
 
 1. Download and install CMake (v3.14 or higher, you can just get the latest version). CMake is for easy cross-platform building. Also install [git](https://git-scm.com/downloads). If you're new to git and a Windows user it's highly recommended to use [Github Desktop](https://desktop.github.com/).
 2. Copy CMakeLists.txt ([this one here](https://github.com/RandyGaul/cute_framework_project_template/blob/main/CMakeLists.txt)) into the top-level of your project directory.
@@ -76,5 +74,65 @@ The [documentation website](https://randygaul.github.io/cute_framework/#/) is th
 If you're stuck and need help then check out the [Discord chat](https://discord.gg/2DFHRmX). Feel free to pop in and ask questions, make suggestions, or have a discussion. General gamedev chatting unrelated to CF is also welcome!
 
 Feel free to open up an [issue right here on GitHub](https://github.com/RandyGaul/cute_framework/issues) to ask any questions. If you'd like to make a pull request I highly recommend opening a GitHub issue first to start a discussion on any changes you would like to make.
+
+# Contributing
+
+The main ways to contribute to CF are:
+
+- Bug reporting/fixes
+- Adding new sample code
+- Editing the docs
+
+Read on below for instructions on each style of contribution. If you wish to add in new features to CF please open a GitHub issue to discuss the proposal first, to avoid putting in effort on a PR before receiving any feedback and avoid wasted work.
+
+## Bug Reporting/Fixes
+
+Simply open up a GitHub issue for reporting bugs. Be sure to describe as much detail as you can to understand or debug the problem.
+
+For bug fixes please create a GitHub pull request. Try to be careful to match CF code style, and describe your decision making and the problem involved.
+
+## Adding new Sample Code
+
+The CF [samples](https://github.com/RandyGaul/cute_framework/tree/master/samples) are quite easy to extend. Simply copy + paste one of the other samples to get started, such as one of the simpler ones, perhaps [basic_sprite](https://github.com/RandyGaul/cute_framework/blob/master/samples/basic_sprite.cppb). or [basic_input.c](https://github.com/RandyGaul/cute_framework/blob/master/samples/basic_input.c).
+
+Open up CF's [CmakeLists.txt file](https://github.com/RandyGaul/cute_framework/blob/master/CMakeLists.txt) to hook up the sample to the build system. Search for `CF_FRAMEWORK_BUILD_SAMPLES` to find a list of executable targets for all the samples via `add_executable`. Add your new sample here like so for the example "new_sample":
+
+```cmake
+...
+add_executable(waves samples/waves.cpp)
+add_executable(shallow_water samples/shallow_water.cpp)
+add_executable(noise samples/noise.c)
+add_executable(new_sample samples/new_sample.c)
+```
+
+Just below also add in a line via `set(SAMPLE_EXECUTABLES` like so:
+
+```cmake
+		hello_triangle
+		waves
+		shallow_water
+		noise
+		new_sample
+	)
+```
+
+If your sample needs access to files on disk, such as assets like images or audio, create a folder in CF's samples folder. Name it "new_sample_data", where "new_sample" is the name of your new sample. Then add in a line to CF's [CmakeLists.txt file](https://github.com/RandyGaul/cute_framework/blob/master/CMakeLists.txt) to copy over the assets to the build folder when building.
+
+```cmake
+	add_custom_command(TARGET spaceshooter PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/samples/spaceshooter_data $<TARGET_FILE_DIR:spaceshooter>/spaceshooter_data)
+	add_custom_command(TARGET waves PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/samples/waves_data $<TARGET_FILE_DIR:waves>/waves_data)
+	add_custom_command(TARGET shallow_water PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/samples/shallow_water_data $<TARGET_FILE_DIR:shallow_water>/shallow_water_data)
+	add_custom_command(TARGET shallow_water PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/samples/new_sample $<TARGET_FILE_DIR:shallow_water>/new_sample)
+```
+
+And that's it! Regenerate your project and you will be able to build your new sample. The next step is to add in your sample to [CF's documentation](https://randygaul.github.io/cute_framework/#/samples). You should [edit this file](https://github.com/RandyGaul/cute_framework/blob/master/docs/samples.md) to add your sample to the list of CF samples.
+
+Once confirmed working as intended, open a pull request to add in your new sample!
+
+## Editing the Docs
+
+All of CF's docs for the [CF website](https://randygaul.github.io/cute_framework/#/) are located here in GitHub [under the docs folder](https://github.com/RandyGaul/cute_framework/tree/master/docs). Editing any of these docs is a good way to contribute to CF through a pull-request.
+
+Please note that the reference pages for functions/structs are automatically generated by CF's [docs parser + generator](https://github.com/RandyGaul/cute_framework/blob/master/samples/docs_parser.cpp). You can run this executable to regenerate all of the docs files for all of CF. If you wish to edit any of the reference pages be sure to edit the appropriate file in CF's actual source code and regenerate the docs by running the CF sample [docs_parser](https://github.com/RandyGaul/cute_framework/blob/master/samples/docs_parser.cpp). You can then create a pull-request for any of the regenerated docs files.
 
 <p align="center"><img src=https://github.com/RandyGaul/cute_framework/blob/master/assets/CF_Logo_Pixel_2x.png></p>

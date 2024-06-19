@@ -88,6 +88,10 @@ struct CF_App
 	bool vsync = false;
 	bool audio_needs_updates = false;
 	void* update_udata = NULL;
+	bool canvas_blit_init = false;
+	CF_Mesh blit_mesh;
+	CF_Material blit_material;
+	CF_Shader blit_shader;
 
 	// Input stuff.
 	Cute::Array<char> ime_composition;
