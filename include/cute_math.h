@@ -10,18 +10,49 @@
 
 #include "cute_defines.h"
 
-#ifndef CF_NO_DEFAULT_MATH_FUNCTIONS
-#include <math.h>
-#define CF_SQRTF sqrtf
-#define CF_FABSF fabsf
-#define CF_FABS fabs
-#define CF_SINF sinf
-#define CF_COSF cosf
-#define CF_ACOSF acosf
-#define CF_ATAN2F atan2f
-#define CF_FLOORF floorf
-#define CF_ROUNDF roundf
-#define CF_FMODF fmodf
+#ifndef CF_SQRTF
+	#include <math.h>
+	#define CF_SQRTF sqrtf
+#endif
+
+#ifndef CF_FABSF
+	#include <math.h>
+	#define CF_FABSF fabsf
+#endif
+
+#ifndef CF_SINF
+	#include <math.h>
+	#define CF_SINF sinf
+#endif
+
+#ifndef CF_COSF
+	#include <math.h>
+	#define CF_COSF cosf
+#endif
+
+#ifndef CF_ACOSF
+	#include <math.h>
+	#define CF_ACOSF acosf
+#endif
+
+#ifndef CF_ATAN2F
+	#include <math.h>
+	#define CF_ATAN2F atan2f
+#endif
+
+#ifndef CF_FLOORF
+	#include <math.h>
+	#define CF_FLOORF floorf
+#endif
+
+#ifndef CF_ROUNDF
+	#include <math.h>
+	#define CF_ROUNDF roundf
+#endif
+
+#ifndef CF_FMODF
+	#include <math.h>
+	#define CF_FMODF fmodf
 #endif
 
 //--------------------------------------------------------------------------------------------------
@@ -1472,7 +1503,7 @@ CF_INLINE bool cf_parallel(CF_V2 a, CF_V2 b, float tol)
 {
 	float k = cf_len(a) / cf_len(b);
 	b = cf_mul_v2_f(b, k);
-	if (CF_FABS(a.x - b.x) < tol && CF_FABS(a.y - b.y) < tol) {
+	if (CF_FABSF(a.x - b.x) < tol && CF_FABSF(a.y - b.y) < tol) {
 		return true;
 	} else {
 		return false;
