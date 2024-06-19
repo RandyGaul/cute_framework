@@ -10,7 +10,50 @@
 
 #include "cute_defines.h"
 
-#include <math.h>
+#ifndef CF_SQRTF
+	#include <math.h>
+	#define CF_SQRTF sqrtf
+#endif
+
+#ifndef CF_FABSF
+	#include <math.h>
+	#define CF_FABSF fabsf
+#endif
+
+#ifndef CF_SINF
+	#include <math.h>
+	#define CF_SINF sinf
+#endif
+
+#ifndef CF_COSF
+	#include <math.h>
+	#define CF_COSF cosf
+#endif
+
+#ifndef CF_ACOSF
+	#include <math.h>
+	#define CF_ACOSF acosf
+#endif
+
+#ifndef CF_ATAN2F
+	#include <math.h>
+	#define CF_ATAN2F atan2f
+#endif
+
+#ifndef CF_FLOORF
+	#include <math.h>
+	#define CF_FLOORF floorf
+#endif
+
+#ifndef CF_ROUNDF
+	#include <math.h>
+	#define CF_ROUNDF roundf
+#endif
+
+#ifndef CF_FMODF
+	#include <math.h>
+	#define CF_FMODF fmodf
+#endif
 
 //--------------------------------------------------------------------------------------------------
 // C API
@@ -329,7 +372,7 @@ typedef struct CF_Manifold
  * @brief    Returns absolute value of a float.
  * @related  cf_min cf_max cf_clamp cf_clamp01 cf_sign cf_intersect cf_safe_invert cf_lerp cf_remap cf_mod cf_fract
  */
-CF_INLINE float cf_abs(float a) { return fabsf(a); }
+CF_INLINE float cf_abs(float a) { return CF_FABSF(a); }
 
 /**
  * @function cf_clamp
@@ -410,7 +453,7 @@ CF_INLINE float cf_mod(float x, float m) { return x - (int)(x / m) * m; }
  * @brief    Returns the fractional portion of a float.
  * @related  cf_min cf_max cf_clamp cf_clamp01 cf_sign cf_intersect cf_safe_invert cf_lerp cf_remap cf_mod cf_fract
  */
-CF_INLINE float cf_fract(float x) { return x - floorf(x); }
+CF_INLINE float cf_fract(float x) { return x - CF_FLOORF(x); }
 
 /**
  * @function cf_sign_int
@@ -614,7 +657,7 @@ CF_INLINE float cf_quint_in_out(float x) { if (x < 0.5f) return 16.0f * x * x * 
  * @remarks  Here is a great link to [visualize each easing function](https://easings.net/).
  * @related  cf_sin_in cf_sin_out cf_sin_in_out
  */
-CF_INLINE float cf_sin_in(float x) { return sinf((x - 1.0f) * CF_PI * 0.5f) + 1.0f; }
+CF_INLINE float cf_sin_in(float x) { return CF_SINF((x - 1.0f) * CF_PI * 0.5f) + 1.0f; }
 
 /**
  * @function cf_sin_out
@@ -623,7 +666,7 @@ CF_INLINE float cf_sin_in(float x) { return sinf((x - 1.0f) * CF_PI * 0.5f) + 1.
  * @remarks  Here is a great link to [visualize each easing function](https://easings.net/).
  * @related  cf_sin_in cf_sin_out cf_sin_in_out
  */
-CF_INLINE float cf_sin_out(float x) { return sinf(x * (CF_PI * 0.5f)); }
+CF_INLINE float cf_sin_out(float x) { return CF_SINF(x * (CF_PI * 0.5f)); }
 
 /**
  * @function cf_sin_in_out
@@ -632,7 +675,7 @@ CF_INLINE float cf_sin_out(float x) { return sinf(x * (CF_PI * 0.5f)); }
  * @remarks  Here is a great link to [visualize each easing function](https://easings.net/).
  * @related  cf_sin_in cf_sin_out cf_sin_in_out
  */
-CF_INLINE float cf_sin_in_out(float x) { return 0.5f * (1.0f - cosf(x * CF_PI)); }
+CF_INLINE float cf_sin_in_out(float x) { return 0.5f * (1.0f - CF_COSF(x * CF_PI)); }
 
 /**
  * @function cf_circle_in
@@ -641,7 +684,7 @@ CF_INLINE float cf_sin_in_out(float x) { return 0.5f * (1.0f - cosf(x * CF_PI));
  * @remarks  Here is a great link to [visualize each easing function](https://easings.net/).
  * @related  cf_circle_in cf_circle_out cf_circle_in_out
  */
-CF_INLINE float cf_circle_in(float x) { return 1.0f - sqrtf(1.0f - (x * x)); }
+CF_INLINE float cf_circle_in(float x) { return 1.0f - CF_SQRTF(1.0f - (x * x)); }
 
 /**
  * @function cf_circle_out
@@ -650,7 +693,7 @@ CF_INLINE float cf_circle_in(float x) { return 1.0f - sqrtf(1.0f - (x * x)); }
  * @remarks  Here is a great link to [visualize each easing function](https://easings.net/).
  * @related  cf_circle_in cf_circle_out cf_circle_in_out
  */
-CF_INLINE float cf_circle_out(float x) { return sqrtf((2.0f - x) * x); }
+CF_INLINE float cf_circle_out(float x) { return CF_SQRTF((2.0f - x) * x); }
 
 /**
  * @function cf_circle_in_out
@@ -659,7 +702,7 @@ CF_INLINE float cf_circle_out(float x) { return sqrtf((2.0f - x) * x); }
  * @remarks  Here is a great link to [visualize each easing function](https://easings.net/).
  * @related  cf_circle_in cf_circle_out cf_circle_in_out
  */
-CF_INLINE float cf_circle_in_out(float x) { if (x < 0.5f) return 0.5f * (1.0f - sqrtf(1.0f - 4.0f * (x * x))); else return 0.5f * (sqrtf(-((2.0f * x) - 3.0f) * ((2.0f * x) - 1.0f)) + 1.0f); }
+CF_INLINE float cf_circle_in_out(float x) { if (x < 0.5f) return 0.5f * (1.0f - CF_SQRTF(1.0f - 4.0f * (x * x))); else return 0.5f * (CF_SQRTF(-((2.0f * x) - 3.0f) * ((2.0f * x) - 1.0f)) + 1.0f); }
 
 /**
  * @function cf_back_in
@@ -668,7 +711,7 @@ CF_INLINE float cf_circle_in_out(float x) { if (x < 0.5f) return 0.5f * (1.0f - 
  * @remarks  Here is a great link to [visualize each easing function](https://easings.net/).
  * @related  cf_back_in cf_back_out cf_back_in_out
  */
-CF_INLINE float cf_back_in(float x) { return x * x * x - x * sinf(x * CF_PI); }
+CF_INLINE float cf_back_in(float x) { return x * x * x - x * CF_SINF(x * CF_PI); }
 
 /**
  * @function cf_back_out
@@ -677,7 +720,7 @@ CF_INLINE float cf_back_in(float x) { return x * x * x - x * sinf(x * CF_PI); }
  * @remarks  Here is a great link to [visualize each easing function](https://easings.net/).
  * @related  cf_back_in cf_back_out cf_back_in_out
  */
-CF_INLINE float cf_back_out(float x) { float f = (1.0f - x); return 1.0f - (x * x * x - x * sinf(f * CF_PI)); }
+CF_INLINE float cf_back_out(float x) { float f = (1.0f - x); return 1.0f - (x * x * x - x * CF_SINF(f * CF_PI)); }
 
 /**
  * @function cf_back_in_out
@@ -686,7 +729,7 @@ CF_INLINE float cf_back_out(float x) { float f = (1.0f - x); return 1.0f - (x * 
  * @remarks  Here is a great link to [visualize each easing function](https://easings.net/).
  * @related  cf_back_in cf_back_out cf_back_in_out
  */
-CF_INLINE float cf_back_in_out(float x) { if (x < 0.5f) { float f = 2.0f * x; return 0.5f * (f * f * f - f * sinf(f * CF_PI)); } else { float f = (1.0f - (2.0f * x - 1.0f)); return 0.5f * (1.0f - (f * f * f - f * sinf(f * CF_PI))) + 0.5f; } }
+CF_INLINE float cf_back_in_out(float x) { if (x < 0.5f) { float f = 2.0f * x; return 0.5f * (f * f * f - f * CF_SINF(f * CF_PI)); } else { float f = (1.0f - (2.0f * x - 1.0f)); return 0.5f * (1.0f - (f * f * f - f * CF_SINF(f * CF_PI))) + 0.5f; } }
 
 //--------------------------------------------------------------------------------------------------
 // 2D vector ops.
@@ -838,7 +881,7 @@ CF_INLINE CF_V2 cf_clamp01_v2(CF_V2 a) { return cf_max_v2(cf_v2(0, 0), cf_min_v2
  * @brief    Returns the component-wise absolute value of two vectors.
  * @related  CF_V2 cf_min_v2 cf_max_v2 cf_clamp_v2 cf_clamp01_v2 cf_abs_v2 cf_hmin cf_hmax
  */
-CF_INLINE CF_V2 cf_abs_v2(CF_V2 a) { return cf_v2(fabsf(a.x), fabsf(a.y)); }
+CF_INLINE CF_V2 cf_abs_v2(CF_V2 a) { return cf_v2(CF_FABSF(a.x), CF_FABSF(a.y)); }
 
 /**
  * @function cf_hmin
@@ -862,7 +905,7 @@ CF_INLINE float cf_hmax(CF_V2 a) { return cf_max(a.x, a.y); }
  * @brief    Returns length of a vector.
  * @related  CF_V2 cf_len cf_distance cf_norm cf_safe_norm
  */
-CF_INLINE float cf_len(CF_V2 a) { return sqrtf(cf_dot(a, a)); }
+CF_INLINE float cf_len(CF_V2 a) { return CF_SQRTF(cf_dot(a, a)); }
 
 /**
  * @function cf_len_sq
@@ -878,7 +921,7 @@ CF_INLINE float cf_len_sq(CF_V2 a) { return cf_dot(a, a); }
  * @brief    Returns distance between two points.
  * @related  CF_V2 cf_len cf_distance cf_norm cf_safe_norm
  */
-CF_INLINE float cf_distance(CF_V2 a, CF_V2 b) { CF_V2 d = cf_sub_v2(b, a); return sqrtf(cf_dot(d, d)); }
+CF_INLINE float cf_distance(CF_V2 a, CF_V2 b) { CF_V2 d = cf_sub_v2(b, a); return CF_SQRTF(cf_dot(d, d)); }
 
 /**
  * @function cf_norm
@@ -897,7 +940,7 @@ CF_INLINE CF_V2 cf_norm(CF_V2 a) { return cf_div_v2_f(a, cf_len(a)); }
  *           the case of a zero vector.
  * @related  CF_V2 cf_len cf_distance cf_norm cf_safe_norm
  */
-CF_INLINE CF_V2 cf_safe_norm(CF_V2 a) { float sq = cf_dot(a, a); return sq ? cf_div_v2_f(a, sqrtf(sq)) : cf_v2(0, 0); }
+CF_INLINE CF_V2 cf_safe_norm(CF_V2 a) { float sq = cf_dot(a, a); return sq ? cf_div_v2_f(a, CF_SQRTF(sq)) : cf_v2(0, 0); }
 
 /**
  * @function cf_safe_norm_f
@@ -1005,7 +1048,7 @@ CF_INLINE int cf_greater_equal_v2(CF_V2 a, CF_V2 b) { return a.x >= b.x && a.y >
  * @remarks  Floor means the decimal-point part is zero'd out.
  * @related  CF_V2 cf_round cf_lesser_v2 cf_greater_v2 cf_lesser_equal_v2 cf_greater_equal_v2 cf_parallel
  */
-CF_INLINE CF_V2 cf_floor(CF_V2 a) { return cf_v2(floorf(a.x), floorf(a.y)); }
+CF_INLINE CF_V2 cf_floor(CF_V2 a) { return cf_v2(CF_FLOORF(a.x), CF_FLOORF(a.y)); }
 
 /**
  * @function cf_round
@@ -1014,7 +1057,7 @@ CF_INLINE CF_V2 cf_floor(CF_V2 a) { return cf_v2(floorf(a.x), floorf(a.y)); }
  * @remarks  Rounding means clamping the float to the nearest whole integer value.
  * @related  CF_V2 cf_lesser_v2 cf_greater_v2 cf_lesser_equal_v2 cf_greater_equal_v2 cf_parallel
  */
-CF_INLINE CF_V2 cf_round(CF_V2 a) { return cf_v2(roundf(a.x), roundf(a.y)); }
+CF_INLINE CF_V2 cf_round(CF_V2 a) { return cf_v2(CF_ROUNDF(a.x), CF_ROUNDF(a.y)); }
 
 /**
  * @function cf_safe_invert_v2
@@ -1041,7 +1084,7 @@ CF_INLINE CF_V2 cf_sign_v2(CF_V2 a) { return cf_v2(cf_sign(a.x), cf_sign(a.y)); 
  * @brief    Returns an initialized `CF_SinCos` from `radians`.
  * @related  CF_SinCos cf_sincos_f cf_x_axis cf_y_axis cf_mul_sc_v2 cf_mulT_sc_v2 cf_mul_sc cf_mulT_sc
  */
-CF_INLINE CF_SinCos cf_sincos_f(float radians) { CF_SinCos r; r.s = sinf(radians); r.c = cosf(radians); return r; }
+CF_INLINE CF_SinCos cf_sincos_f(float radians) { CF_SinCos r; r.s = CF_SINF(radians); r.c = CF_COSF(radians); return r; }
 CF_INLINE CF_SinCos cf_sincos() { CF_SinCos r; r.c = 1.0f; r.s = 0; return r; }
 
 /**
@@ -1098,7 +1141,7 @@ CF_INLINE CF_SinCos cf_mulT_sc(CF_SinCos a, CF_SinCos b) { CF_SinCos c; c.c = a.
  * @brief    Returns a remap'd result from atan2f to the continuous range of 0, 2*PI.
  * @related  cf_atan2_360 cf_atan2_360_sc cf_atan2_360_v2
  */
-CF_INLINE float cf_atan2_360(float y, float x) { return atan2f(-y, -x) + CF_PI; }
+CF_INLINE float cf_atan2_360(float y, float x) { return CF_ATAN2F(-y, -x) + CF_PI; }
 
 /**
  * @function cf_atan2_360_sc
@@ -1114,7 +1157,7 @@ CF_INLINE float cf_atan2_360_sc(CF_SinCos r) { return cf_atan2_360(r.s, r.c); }
  * @brief    Returns a remap'd result from atan2f to the continuous range of 0, 2*PI.
  * @related  cf_atan2_360 cf_atan2_360_sc cf_atan2_360_v2
  */
-CF_INLINE float cf_atan2_360_v2(CF_V2 v) { return atan2f(-v.y, -v.x) + CF_PI; }
+CF_INLINE float cf_atan2_360_v2(CF_V2 v) { return CF_ATAN2F(-v.y, -v.x) + CF_PI; }
 
 /**
  * @function cf_shortest_arc
@@ -1126,7 +1169,7 @@ CF_INLINE float cf_shortest_arc(CF_V2 a, CF_V2 b)
 {
 	float c = cf_dot(a, b);
 	float s = cf_det2(a, b);
-	float theta = acosf(c);
+	float theta = CF_ACOSF(c);
 	if (s > 0) {
 		return theta;
 	} else {
@@ -1152,7 +1195,7 @@ CF_INLINE float cf_angle_diff(float radians_a, float radians_b)
  * @brief    returns a vector according to the sin/cos of `radians`.
  * @related  cf_shortest_arc cf_angle_diff cf_from_angle
  */
-CF_INLINE CF_V2 cf_from_angle(float radians) { return cf_v2(cosf(radians), sinf(radians)); }
+CF_INLINE CF_V2 cf_from_angle(float radians) { return cf_v2(CF_COSF(radians), CF_SINF(radians)); }
 
 //--------------------------------------------------------------------------------------------------
 // m2 ops.
@@ -1460,7 +1503,7 @@ CF_INLINE bool cf_parallel(CF_V2 a, CF_V2 b, float tol)
 {
 	float k = cf_len(a) / cf_len(b);
 	b = cf_mul_v2_f(b, k);
-	if (fabs(a.x - b.x) < tol && fabs(a.y - b.y) < tol) {
+	if (CF_FABSF(a.x - b.x) < tol && CF_FABSF(a.y - b.y) < tol) {
 		return true;
 	} else {
 		return false;
