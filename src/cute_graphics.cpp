@@ -12,6 +12,8 @@
 #include <internal/cute_alloc_internal.h>
 #include <internal/cute_app_internal.h>
 
+#include <shaders/blit_shader.h>
+
 // Override sokol_gfx macros for the default clear color with our own values.
 // This is a simple way to control sokol's default clear color, as well as custom clear
 // colors all in the same place.
@@ -448,16 +450,88 @@ CF_Texture cf_canvas_get_depth_stencil_target(CF_Canvas canvas_handle)
 	return canvas->cf_depth_stencil;
 }
 
-CF_API uint64_t CF_CALL cf_canvas_get_backend_target_handle(CF_Canvas canvas_handle)
+uint64_t cf_canvas_get_backend_target_handle(CF_Canvas canvas_handle)
 {
 	CF_CanvasInternal* canvas = (CF_CanvasInternal*)canvas_handle.id;
 	return (uint64_t)canvas->texture.id;
 }
 
-CF_API uint64_t CF_CALL cf_canvas_get_backend_depth_stencil_handle(CF_Canvas canvas_handle)
+uint64_t cf_canvas_get_backend_depth_stencil_handle(CF_Canvas canvas_handle)
 {
 	CF_CanvasInternal* canvas = (CF_CanvasInternal*)canvas_handle.id;
 	return (uint64_t)canvas->depth_stencil.id;
+}
+
+void cf_canvas_blit(CF_Canvas src, CF_V2 u0, CF_V2 v0, CF_Canvas dst, CF_V2 u1, CF_V2 v1)
+{
+	typedef struct Vertex
+	{
+		float x, y;
+		float u, v;
+	} Vertex;
+
+	if (!app->canvas_blit_init) {
+		app->canvas_blit_init = true;
+
+		// Create a full-screen quad mesh.
+		CF_Mesh blit_mesh = cf_make_mesh(USAGE_TYPE_STREAM, sizeof(Vertex) * 1024, 0, 0);
+		CF_VertexAttribute attrs[2] = { 0 };
+		attrs[0].name = "in_pos";
+		attrs[0].format = CF_VERTEX_FORMAT_FLOAT2;
+		attrs[0].offset = CF_OFFSET_OF(Vertex, x);
+		attrs[1].name = "in_uv";
+		attrs[1].format = CF_VERTEX_FORMAT_FLOAT2;
+		attrs[1].offset = CF_OFFSET_OF(Vertex, u);
+		cf_mesh_set_attributes(blit_mesh, attrs, CF_ARRAY_SIZE(attrs), sizeof(Vertex), 0);
+		app->blit_mesh = blit_mesh;
+
+		// Create material + shader for blitting.
+		CF_Material blit_material = cf_make_material();
+		cf_material_set_texture_fs(blit_material, "u_image", cf_canvas_get_target(src));
+		CF_Shader blit_shader = CF_MAKE_SOKOL_SHADER(blit_shader);
+		app->blit_material = blit_material;
+		app->blit_shader = blit_shader;
+	}
+
+	// UV (0,0) is top-left of the screen, while UV (1,1) is bottom right. We flip the y-axis for UVs to make the y-axis point up.
+	// Coordinate (-1,1) is top left, while (1,-1) is bottom right.
+	auto fill_quad = [](float x, float y, float sx, float sy, v2 u, v2 v, Vertex verts[6])
+	{
+		// Build a quad from (-1.0f,-1.0f) to (1.0f,1.0f).
+		verts[0].x = -1.0f; verts[0].y =  1.0f; verts[0].u = u.x; verts[0].v = u.y;
+		verts[1].x =  1.0f; verts[1].y = -1.0f; verts[1].u = v.x; verts[1].v = v.y;
+		verts[2].x =  1.0f; verts[2].y =  1.0f; verts[2].u = v.x; verts[2].v = u.y;
+
+		verts[3].x = -1.0f; verts[3].y =  1.0f; verts[3].u = u.x; verts[3].v = u.y;
+		verts[4].x = -1.0f; verts[4].y = -1.0f; verts[4].u = u.x; verts[4].v = v.y;
+		verts[5].x =  1.0f; verts[5].y = -1.0f; verts[5].u = v.x; verts[5].v = v.y;
+
+		// Scale the quad about the origin by (sx,sy), then translate it by (x,y).
+		for (int i = 0; i < 6; ++i) {
+			verts[i].x = verts[i].x * sx + x;
+			verts[i].y = verts[i].y * sy + y;
+		}
+	};
+
+	// We're going to blit onto dst.
+	cf_apply_canvas(dst, false);
+
+	// Create a quad where positions come from dst, and UV's come from src.
+	float w = v1.x - u1.x;
+	float h = v1.y - u1.y;
+	float x = (u1.x + v1.x) - 1.0f;
+	float y = (u1.y + v1.y) - 1.0f;
+	Vertex verts[6];
+	fill_quad(x, y, w, h, u0, v0, verts);
+	cf_mesh_append_vertex_data(app->blit_mesh, verts, 6);
+
+	// Read pixels from src.
+	cf_material_set_texture_fs(app->blit_material, "u_image", cf_canvas_get_target(src));
+
+	// Blit onto dst.
+	cf_apply_mesh(app->blit_mesh);
+	cf_apply_shader(app->blit_shader, app->blit_material);
+	cf_draw_elements();
 }
 
 CF_Mesh cf_make_mesh(CF_UsageType usage_type, int vertex_buffer_size, int index_buffer_size, int instance_buffer_size)
@@ -521,7 +595,7 @@ void cf_mesh_update_vertex_data(CF_Mesh mesh_handle, void* data, int count)
 	}
 	CF_ASSERT(mesh->attribute_count);
 	if (mesh->need_vertex_sync) {
-		s_sync_vertex_buffer(mesh, data, size);
+		s_sync_vertex_buffer(mesh, mesh->usage == SG_USAGE_IMMUTABLE ? data : NULL, size);
 	} else {
 		sg_range range = { data, (size_t)size };
 		sg_update_buffer(mesh->vertices.handle, range);
@@ -580,7 +654,7 @@ void cf_mesh_update_instance_data(CF_Mesh mesh_handle, void* data, int count)
 	}
 	CF_ASSERT(mesh->attribute_count);
 	if (mesh->need_instance_sync) {
-		s_sync_isntance_buffer(mesh, data, size);
+		s_sync_isntance_buffer(mesh, mesh->usage == SG_USAGE_IMMUTABLE ? data : NULL, size);
 	} else {
 		sg_range range = { data, (size_t)size };
 		sg_update_buffer(mesh->instances.handle, range);
@@ -639,7 +713,7 @@ void cf_mesh_update_index_data(CF_Mesh mesh_handle, uint32_t* indices, int count
 	}
 	CF_ASSERT(mesh->attribute_count);
 	if (mesh->need_index_sync) {
-		s_sync_index_buffer(mesh, indices, size);
+		s_sync_index_buffer(mesh, mesh->usage == SG_USAGE_IMMUTABLE ? indices : NULL, size);
 	} else {
 		sg_range range = { indices, (size_t)size };
 		sg_update_buffer(mesh->indices.handle, range);

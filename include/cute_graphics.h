@@ -917,6 +917,25 @@ CF_API uint64_t CF_CALL cf_canvas_get_backend_target_handle(CF_Canvas canvas);
  */
 CF_API uint64_t CF_CALL cf_canvas_get_backend_depth_stencil_handle(CF_Canvas canvas);
 
+/**
+ * @function cf_canvas_blit
+ * @category graphics
+ * @brief    Blits one canvas onto another.
+ * @param    src           The source texture to copy pixels from.
+ * @param    u0            The normalized coordinate of the top-left of the source rect.
+ * @param    v0            The normalized coordinate of the bottom-right of the source rect.
+ * @param    src           The canvas where pixels are copied from.
+ * @param    u1            The normalized coordinate of the top-left of the destination rect.
+ * @param    v1            The normalized coordinate of the bottom-right of the destination rect.
+ * @param    dst           The destination canvas where pixels are copied to.
+ * @remarks  The texture formats of the underlying canvas's must be PIXELFORMAT_DEFAULT. Each u/v coordinate
+ *           is normalized, meaning a number from 0 to 1. This lets the function operate on canvas's of any
+ *           size. To convert a coordinate to a normalized coordinate, simply divide the x/y of your coordinate
+ *           by the width/height of the canvas.
+ * @related  CF_Canvas
+ */
+CF_API void CF_CALL cf_canvas_blit(CF_Canvas src, CF_V2 u0, CF_V2 v0, CF_Canvas dst, CF_V2 u1, CF_V2 v1);
+
 //--------------------------------------------------------------------------------------------------
 // Mesh.
 

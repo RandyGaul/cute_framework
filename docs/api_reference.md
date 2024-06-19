@@ -386,6 +386,7 @@ This is a list of all functions in Cute Framework organized by categories. This 
 - [cf_backend_type_to_string](/graphics/cf_backend_type_to_string.md)
 - [cf_blend_factor_string](/graphics/cf_blend_factor_string.md)
 - [cf_blend_op_string](/graphics/cf_blend_op_string.md)
+- [cf_canvas_blit](/graphics/cf_canvas_blit.md)
 - [cf_canvas_defaults](/graphics/cf_canvas_defaults.md)
 - [cf_canvas_get_backend_depth_stencil_handle](/graphics/cf_canvas_get_backend_depth_stencil_handle.md)
 - [cf_canvas_get_backend_target_handle](/graphics/cf_canvas_get_backend_target_handle.md)
