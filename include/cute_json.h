@@ -19,14 +19,29 @@
 extern "C" {
 #endif // __cplusplus
 
+/**
+ * @enum     CF_JDoc
+ * @category json
+ * @brief    Represents a single json document.
+ * @related  CF_JDoc CF_JVal cf_make_json
+ */
 typedef struct CF_JDoc { uint64_t id; } CF_JDoc;
+/* @end */
+
+/**
+ * @enum     CF_JVal
+ * @category json
+ * @brief    Represents a single json value, such an integer or array.
+ * @related  CF_JDoc CF_JVal cf_make_json CF_JType
+ */
 typedef struct CF_JVal { uint64_t id; } CF_JVal;
+/* @end */
 
 /**
  * @enum     CF_JType
  * @category json
- * @brief    TODO
- * @related  TODO
+ * @brief    Describes the type of a `CF_JVal`.
+ * @related  CF_JDoc CF_JVal cf_make_json
  */
 #define CF_JTYPE_DEFS \
 	/* @entry TODO */                 \
@@ -59,7 +74,7 @@ typedef enum CF_JType
  * @category json
  * @brief    Convert an enum `CF_JType` to a c-style string.
  * @param    state        The type to convert to a string.
- * @related  TODO
+ * @related  CF_JVal CF_JType
  */
 CF_INLINE const char* cf_json_type_to_string(CF_JType type)
 {
@@ -71,6 +86,15 @@ CF_INLINE const char* cf_json_type_to_string(CF_JType type)
 	}
 }
 
+/**
+ * @function cf_make_json
+ * @category json
+ * @brief    Loads a json blob.
+ * @param    data       A pointer to the raw json blob data.
+ * @param    size       The number of bytes in the `data` pointer.
+ * @remarks  You should call `cf_json_get_root` on this document to begin fetching values out of it.
+ * @related  cf_draw_quad cf_draw_quad2 cf_draw_quad_fill cf_draw_quad_fill2
+ */
 CF_API CF_JDoc CF_CALL cf_make_json(const void* data, size_t size);
 CF_API CF_JDoc CF_CALL cf_make_json_from_file(const char* virtual_path);
 CF_API void CF_CALL cf_destroy_json(CF_JDoc doc);

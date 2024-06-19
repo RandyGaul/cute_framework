@@ -8,11 +8,9 @@
 
 [Cute Framework](https://randygaul.github.io/cute_framework/#/) (CF) is the *cutest* framework available for making 2D games in C++. It provides a portable foundational layer for building 2D games in C/C++ without baggage, gnarly dependencies, or cryptic APIs. CF runs almost anywhere, including Windows, MacOS, iOS, Android, Linux, Browsers, and more!
 
-> **NOTE**: Cute Framework is currently in flux for it's v1.0 release! These notes/docs will be changed as they get rolled out and come online.
-
 ## Download and Setup
 
-~~The easiest option is to head over and pickup the [latest pre-built version](https://github.com/randygaul/cute_framework/releases/latest)~~ This link is currently out of date, and awaiting the soon to be v1.0 release (see below for building latest from source). You can link your project against CF as either a static or shared library. Be sure to also visit the [Cute Framework documentation site](https://randygaul.github.io/cute_framework/#/).
+Cute Frameowrk is designed to be built from source. You can link your project against CF as either a static or shared library. Be sure to visit the [Cute Framework documentation site](https://randygaul.github.io/cute_framework/#/) for more in-depth details and steps.
 
 ## Example Game Window
 
@@ -44,9 +42,9 @@ int main(int argc, char* argv[])
 
 ### Building from Source
 
-Another option for those familiar with CMake is to build from source with CMake. Make sure you have a compiler installed that you're familiar with beforehand. If you're new to C/C++ I highly recommend using Microsoft Visual Studio (Community Edition), for Windows users. If you don't like Visual Studio you can try gcc/g++ (MinGW), [tdm-gcc](https://jmeubank.github.io/tdm-gcc/) is recommended in this case. If you're MacOS, XCode (and the command line tools) are recommended. For Linux you'll probably use g++.
+Building CF should be done with CMake. The reason CMake is chosen, is it's one of the only working cross-platform build generators in existence, that actually works pretty much everywhere. Make sure you have a compiler installed that you're familiar with beforehand. If you're new to C/C++ I highly recommend using Microsoft Visual Studio (Community Edition), for Windows users. If you don't like Visual Studio you can try gcc/g++ (MinGW), [tdm-gcc](https://jmeubank.github.io/tdm-gcc/) is recommended in this case. If you're MacOS, XCode (and the command line tools) are recommended. For Linux you'll probably use g++.
 
-It's highly recommended to use our [Cmake project template](https://github.com/RandyGaul/cute_framework_project_template#cmake-101-walkthrough) and follow along these steps with it!
+It's highly recommended to use CF's [Cmake project template](https://github.com/RandyGaul/cute_framework_project_template#cmake-101-walkthrough) and follow along these steps with it!
 
 1. Download and install CMake (v3.14 or higher, you can just get the latest version). CMake is for easy cross-platform building. Also install [git](https://git-scm.com/downloads). If you're new to git and a Windows user it's highly recommended to use [Github Desktop](https://desktop.github.com/).
 2. Copy CMakeLists.txt ([this one here](https://github.com/RandyGaul/cute_framework_project_template/blob/main/CMakeLists.txt)) into the top-level of your project directory.
