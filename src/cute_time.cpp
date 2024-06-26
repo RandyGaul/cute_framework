@@ -179,7 +179,7 @@ bool cf_on_interval(float interval, float offset)
 
 bool cf_between_interval(float interval, float offset)
 {
-	return fmodf((float)CF_SECONDS - offset, interval * 2) >= interval;
+	return CF_FMODF((float)CF_SECONDS - offset, interval * 2) >= interval;
 }
 
 bool cf_on_timestamp(double timestamp)

@@ -428,7 +428,7 @@ CF_INLINE float cf_overlay(float base, float blend) { return (base <= 0.5f) ? 2*
  *           The `blend` color is used to adjust colors in the `base`, while still preserving shadows and highlights of the `base`.
  * @related  CF_Color cf_hue cf_overlay_color cf_softlight_color cf_overlay cf_softlight
  */
-CF_INLINE float cf_softlight(float base, float blend) { if (blend <= 0.5f) return base - (1-2*blend)*base*(1-base); else return base + (2*blend-1) * (((base <= 0.25f) ? ((16*base-12) * base+4) * base : sqrtf(base)) - base); }
+CF_INLINE float cf_softlight(float base, float blend) { if (blend <= 0.5f) return base - (1-2*blend)*base*(1-base); else return base + (2*blend-1) * (((base <= 0.25f) ? ((16*base-12) * base+4) * base : CF_SQRTF(base)) - base); }
 
 /**
  * @function cf_overlay_color
