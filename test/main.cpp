@@ -71,6 +71,8 @@ int main(int argc, char* argv[])
 	_CrtSetReportFile(_CRT_WARN, _CRTDBG_FILE_STDERR);
 	_CrtSetReportFile(_CRT_ERROR, _CRTDBG_FILE_STDERR);
 	_CrtSetReportFile(_CRT_ASSERT, _CRTDBG_FILE_STDERR);
+	#undef RUN_TEST_SUITE
+	#define RUN_TEST_SUITE(suite_fp) pu_run_suite(#suite_fp, suite_fp); sinuke(); _CrtDumpMemoryLeaks();
 #endif
 
 	pu_display_colors(true);
