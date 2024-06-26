@@ -123,6 +123,7 @@ TEST_CASE(test_json_array)
 		"}"
 	;
 	REQUIRE(!CF_STRCMP(s0, s1));
+	sfree(s0);
 	cf_destroy_json(doc);
 
 	return true;
