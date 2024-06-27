@@ -816,7 +816,7 @@ int main(int argc, char* argv[])
 		fclose(fp);
 	}
 
-#if 0
+#if 1
 	// Delete any old document files that are no longer used in the category folders.
 	{
 		for (int i = 0; i < s->categories.count(); ++i) {

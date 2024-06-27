@@ -507,7 +507,7 @@ CF_API CF_Pixel CF_CALL cf_draw_peek_vertex_attributes();
  * @function cf_make_font
  * @category text
  * @brief    Constructs a font for rendering text.
- * @param    path        A virtual path (TODO_LINK) to the font file.
+ * @param    path        A virtual path to the font file. See [Virtual File System](https://randygaul.github.io/cute_framework/#/topics/virtual_file_system).
  * @param    font_name   A unique name for this font. Used by `cf_push_font` and friends.
  * @return   Returns any errors as `CF_Result`.
  * @remarks  Memory is only consumed when you draw a certain glyph (text character). Just loading up the font initially is

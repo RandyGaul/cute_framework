@@ -17,5 +17,4 @@ Struct Members | Description
 
 ## Related Pages
 
-TODO_LINK_TO_COLOR_PAGE  
 [CF_Pixel](/graphics/cf_pixel.md)  

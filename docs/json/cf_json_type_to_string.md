@@ -18,4 +18,5 @@ state | The type to convert to a string.
 
 ## Related Pages
 
-TODO  
+[CF_JVal](/json/cf_jval.md)  
+[CF_JType](/json/cf_jtype.md)  

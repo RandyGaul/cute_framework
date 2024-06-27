@@ -4,6 +4,8 @@
 
 Cute Framework (CF for short) is the *cutest* framework available for making 2D games in C++. CF provides a portable foundational layer for building 2D games in C/C++ without baggage, gnarly dependencies, or cryptic APIs. CF runs almost anywhere, including Windows, MacOS, iOS, Android, Linux, and more!
 
+?> **Note** Cute Framework documentation covers the C API, however, the vast majority of CF also has associated C++ wrapper APIs that sit along-side the C API in all of CF's headers. The documentation doesn't cover the C++ API nearly as much, but, they are generally extremely similar. The reason only the C API is documented extensively is to help keep maintenance of CF easier, as maintaining documentation is a big effort. A more focused, but higher quality documentation is preferred.
+
 ## Download and Setup
 
 CF must be built from source using Cmake. Cmake provides one of the only reliable ways to setup and build C/C++ programs in a cross-platform manner. If you're new to Cmake there are some step-by-step instructions just below written specifically for getting your project up and running. These steps are a great way to learn about cross-platform developement in general, not just for CF!

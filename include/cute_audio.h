@@ -32,7 +32,7 @@ typedef struct CF_Audio { uint64_t id; } CF_Audio;
  * @function cf_audio_load_ogg
  * @category audio
  * @brief    Loads a .ogg audio file.
- * @param    path         The virtual path TODO_LINK to a .ogg file.
+ * @param    path         The virtual path to a .ogg file. See [Virtual File System](https://randygaul.github.io/cute_framework/#/topics/virtual_file_system).
  * @return   Returns a pointer to `CF_Audio`. Free it up with `cf_audio_destroy` when done.
  * @related  CF_Audio cf_audio_load_ogg cf_audio_load_ogg_from_memory cf_audio_load_wav cf_audio_load_wav_from_memory cf_audio_destroy
  */
@@ -42,7 +42,7 @@ CF_API CF_Audio CF_CALL cf_audio_load_ogg(const char* path);
  * @function cf_audio_load_wav
  * @category audio
  * @brief    Loads a .wav audio file.
- * @param    path         The virtual path TODO_LINK to a .wav file.
+ * @param    path         The virtual path to a .wav file. See [Virtual File System](https://randygaul.github.io/cute_framework/#/topics/virtual_file_system).
  * @return   Returns a pointer to `CF_Audio`. Free it up with `cf_audio_destroy` when done.
  * @related  CF_Audio cf_audio_load_ogg cf_audio_load_ogg_from_memory cf_audio_load_wav cf_audio_load_wav_from_memory cf_audio_destroy
  */

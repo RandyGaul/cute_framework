@@ -23,7 +23,7 @@ extern "C" {
  * @struct   CF_Color
  * @category graphics
  * @brief    16-byte value with 0.0f to 1.0f components, representing an RGBA (red green blue alpha) color.
- * @related  CF_Color CF_Pixel TODO_LINK_TO_COLOR_PAGE
+ * @related  CF_Color CF_Pixel
  */
 typedef struct CF_Color
 {
@@ -45,7 +45,7 @@ typedef struct CF_Color
  * @struct   CF_Pixel
  * @category graphics
  * @brief    4-byte value with 0-255 components, representing an RGBA (red green blue alpha) color.
- * @related  CF_Color CF_Pixel TODO_LINK_TO_COLOR_PAGE
+ * @related  CF_Color CF_Pixel
  */
 typedef union CF_Pixel
 {

@@ -19,4 +19,3 @@ Struct Members | Description
 ## Related Pages
 
 [CF_Color](/graphics/cf_color.md)  
-TODO_LINK_TO_COLOR_PAGE  

@@ -22,8 +22,8 @@ Returns `NULL` in the case of errors, and can be unloaded by calling `unload_sha
 
 ## Remarks
 
-Does not use the virtual file system (see TODO_LINK_VFS_TUTORIAL). Once loaded, individual functions can be loaded from the shared
-library be called [cf_load_function](/utility/cf_load_function.md).
+Does not use the virtual file system. Once loaded, individual functions can be loaded from the shared
+library be called [cf_load_function](/utility/cf_load_function.md). See [Virtual File System](https://randygaul.github.io/cute_framework/#/topics/virtual_file_system).
 
 ## Related Pages
 
