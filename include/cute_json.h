@@ -330,9 +330,7 @@ typedef struct CF_JIter
  * @brief    Creates an iterator for a given JSON value.
  * @param    val       The JSON value to iterate upon.
  * @return   Returns a `CF_JIter` for iterating.
- * @remarks  The `CF_JIter` can be used in foor loops, and can traverse both JSON arrays and objects. When
- *           traversing arrays do not call `cf_json_iter_key`.
- *           
+ * @example > Traversing arrays/objects.
  *           // Traverse an array of strings:
  *           for (CF_JIter i = cf_json_iter(v); !cf_json_iter_done(i); i = cf_json_iter_next(i)) {
  *               const char* val = cf_json_get_string(cf_json_iter_val(i));
@@ -344,6 +342,8 @@ typedef struct CF_JIter
  *               const char* val = cf_json_get_string(cf_json_iter_val(i));
  *               printf("%s\n", val);
  *           }
+ * @remarks  The `CF_JIter` can be used in foor loops, and can traverse both JSON arrays and objects. When
+ *           traversing arrays do not call `cf_json_iter_key`.
  * @related  CF_JVal cf_json_get cf_json_array_at cf_json_array_get cf_json_iter cf_json_iter_remove
  */
 CF_API CF_JIter CF_CALL cf_json_iter(CF_JVal val);
