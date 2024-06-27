@@ -724,9 +724,8 @@ CF_API void CF_CALL cf_json_array_add_string_range(CF_JDoc doc, CF_JVal arr, con
 /**
  * @function cf_json_array_add_array
  * @category json
- * @brief    Appends an array to the end of a json array.
+ * @brief    Creates a new array and adds it to the end of a json array.
  * @return   Returns the newly added array.
- * @remarks  This function is not equivalent to `cf_json_array_add`. Instead, this actually appends the values onto the new array.
  * @related  CF_JVal cf_json_array_add cf_json_object_add
  */
 CF_API CF_JVal CF_CALL cf_json_array_add_array(CF_JDoc doc, CF_JVal arr);
@@ -919,7 +918,7 @@ CF_API dyna char* CF_CALL cf_json_to_string_minimal(CF_JDoc doc);
  * @function cf_json_to_file
  * @category json
  * @param    doc           The json document to save.
- * @param    virtual_path  A virtual path to the json file. See [Virtual File System](https://randygaul.github.io/cute_framework/#/topics/virtual_file_system).
+ * @param    virtual_path  A virtual path to the json file. Make sure to setup your write directory with `cf_fs_set_write_directory`. See [Virtual File System](https://randygaul.github.io/cute_framework/#/topics/virtual_file_system).
  * @brief    Saves the json document to a file.
  * @remarks  If you want to remove all unnecessary formatting/whitespace then use `cf_json_to_file_minimal`.
  * @related  CF_JDoc cf_make_json cf_make_json_from_file cf_json_get_root cf_destroy_json cf_json_get_root cf_json_to_string cf_json_to_file cf_json_to_string_minimal cf_json_to_file_minimal
@@ -930,7 +929,7 @@ CF_API CF_Result CF_CALL cf_json_to_file(CF_JDoc doc, const char* virtual_path);
  * @function cf_json_to_file_minimal
  * @category json
  * @param    doc           The json document to save.
- * @param    virtual_path  A virtual path to the json file. See [Virtual File System](https://randygaul.github.io/cute_framework/#/topics/virtual_file_system).
+ * @param    virtual_path  A virtual path to the json file. Make sure to setup your write directory with `cf_fs_set_write_directory`. See [Virtual File System](https://randygaul.github.io/cute_framework/#/topics/virtual_file_system).
  * @brief    Saves the json document to a file.
  * @related  CF_JDoc cf_make_json cf_make_json_from_file cf_json_get_root cf_destroy_json cf_json_get_root cf_json_to_string cf_json_to_file cf_json_to_string_minimal cf_json_to_file_minimal
  */
@@ -945,8 +944,165 @@ CF_API CF_Result CF_CALL cf_json_to_file_minimal(CF_JDoc doc, const char* virtua
 
 #ifdef CF_CPP
 
+using JType = CF_JType;
+
 namespace Cute
 {
+
+struct JVal;
+
+struct JIter
+{
+	CF_INLINE JIter(CF_JIter i, CF_JDoc d) { this->i = i; this->d = d; }
+
+	bool done() const;
+	const char* key() const;
+	JVal val() const;
+
+	JIter& next();
+	JVal next(const char* key);
+	JVal remove();
+
+	// Only use this when iterating an array.
+	CF_INLINE int index() const { return (int)i.index; }
+
+private:
+	CF_JDoc d;
+	CF_JIter i;
+};
+
+struct JVal
+{
+	CF_INLINE JType type() const { return cf_json_type(v); }
+	CF_INLINE bool is_null() const { return cf_json_is_null(v); }
+	CF_INLINE bool is_int() const { return cf_json_is_int(v); }
+	CF_INLINE bool is_float() const { return cf_json_is_float(v); }
+	CF_INLINE bool is_string() const { return cf_json_is_string(v); }
+	CF_INLINE bool is_array() const { return cf_json_is_array(v); }
+	CF_INLINE bool is_object() const { return cf_json_is_object(v); }
+
+	CF_INLINE JVal get(const char* key) const { return JVal(cf_json_get(v, key), d); }
+	CF_INLINE JVal get(int index) const { return JVal(cf_json_array_get(v, index), d); }
+	CF_INLINE JVal at(int index) const { return JVal(cf_json_array_at(v, index), d); }
+	CF_INLINE int get_int() const { return cf_json_get_int(v); }
+	CF_INLINE int64_t get_i64() const { return cf_json_get_i64(v); }
+	CF_INLINE uint64_t get_u64() const { return cf_json_get_u64(v); }
+	CF_INLINE float get_float() const { return cf_json_get_float(v); }
+	CF_INLINE double get_double() const { return cf_json_get_double(v); }
+	CF_INLINE bool get_bool() const { return cf_json_get_bool(v); }
+	CF_INLINE const char* get_string() const { return cf_json_get_string(v); }
+	CF_INLINE int get_len() const { return cf_json_get_len(v); }
+	CF_INLINE JIter iter() const { return JIter(cf_json_iter(v), d); }
+
+	CF_INLINE void set_null() { cf_json_set_null(v); }
+	CF_INLINE void set(int i) { cf_json_set_int(v, i); }
+	CF_INLINE JVal& operator=(int i) { cf_json_set_int(v, i); return *this; }
+	CF_INLINE void set(int64_t i) { cf_json_set_i64(v, i); }
+	CF_INLINE JVal& operator=(int64_t i) { cf_json_set_i64(v, i); return *this; }
+	CF_INLINE void set(uint64_t i) { cf_json_set_u64(v, i); }
+	CF_INLINE JVal& operator=(uint64_t i) { cf_json_set_u64(v, i); return *this; }
+	CF_INLINE void set(float i) { cf_json_set_float(v, i); }
+	CF_INLINE JVal& operator=(float i) { cf_json_set_float(v, i); return *this; }
+	CF_INLINE void set(double i) { cf_json_set_double(v, i); }
+	CF_INLINE JVal& operator=(double i) { cf_json_set_double(v, i); return *this; }
+	CF_INLINE void set(bool i) { cf_json_set_bool(v, i); }
+	CF_INLINE JVal& operator=(bool i) { cf_json_set_bool(v, i); return *this; }
+	CF_INLINE void set(const char* i) { cf_json_set_string(v, i); }
+	CF_INLINE JVal& operator=(const char* i) { cf_json_set_string(v, i); return *this; }
+	CF_INLINE void set(const char* begin, const char* end) { cf_json_set_string_range(v, begin, end); }
+
+	// Array functions.
+	CF_INLINE void add_null() { cf_json_array_add_null(d, v); }
+	CF_INLINE void add(int val) { cf_json_array_add_int(d, v, val); }
+	CF_INLINE void add(int64_t val) { cf_json_array_add_i64(d, v, val); }
+	CF_INLINE void add(uint64_t val) { cf_json_array_add_u64(d, v, val); }
+	CF_INLINE void add(float val) { cf_json_array_add_float(d, v, val); }
+	CF_INLINE void add(double val) { cf_json_array_add_double(d, v, val); }
+	CF_INLINE void add(bool val) { cf_json_array_add_bool(d, v, val); }
+	CF_INLINE void add(const char* val) { cf_json_array_add_string(d, v, val); }
+	CF_INLINE void add_range(const char* begin, const char* end) { cf_json_array_add_string_range(d, v, begin, end); }
+	CF_INLINE void add(JVal val) { cf_json_array_add(v, val.v); }
+	CF_INLINE JVal pop() { return JVal(cf_json_array_pop(v), d); }
+
+	// Adding properties.
+	CF_INLINE void add(const char* key, JVal val) { cf_json_object_add(d, v, key, val.v); }
+	CF_INLINE void add_null(const char* key) { cf_json_object_add_null(d, v, key); }
+	CF_INLINE void add(const char* key, int val) { cf_json_object_add_int(d, v, key, val); }
+	CF_INLINE void add(const char* key, int64_t val) { cf_json_object_add_i64(d, v, key, val); }
+	CF_INLINE void add(const char* key, uint64_t val) { cf_json_object_add_u64(d, v, key, val); }
+	CF_INLINE void add(const char* key, float val) { cf_json_object_add_float(d, v, key, val); }
+	CF_INLINE void add(const char* key, double val) { cf_json_object_add_double(d, v, key, val); }
+	CF_INLINE void add(const char* key, bool val) { cf_json_object_add_bool(d, v, key, val); }
+	CF_INLINE void add(const char* key, const char* val) { cf_json_object_add_string(d, v, key, val); }
+	CF_INLINE void add(const char* key, const char* begin, const char* end) { cf_json_object_add_string_range(d, v, key, begin, end); }
+
+	// Removing properties.
+	CF_INLINE void remove(const char* key) { cf_json_object_remove_key(v, key); }
+	CF_INLINE void remove(const char* key_begin, const char* key_end) { cf_json_object_remove_key_range(v, key_begin, key_end); }
+	CF_INLINE void rename(const char* key, const char* rename) { cf_json_object_rename_key(d, v, key, rename); }
+	CF_INLINE void rename(const char* key_begin, const char* key_end, const char* rename_begin, const char* rename_end) { cf_json_object_rename_key_range(d, v, key_begin, key_end, rename_begin, rename_end); }
+
+private:
+	CF_INLINE JVal(CF_JVal v, CF_JDoc d) { this->v = v; this->d = d; }
+	CF_JDoc d;
+	CF_JVal v;
+
+	friend struct JDoc;
+	friend struct JIter;
+};
+
+struct JDoc
+{
+	CF_INLINE static JDoc make() { return JDoc(cf_make_json(NULL, 0)); }
+	CF_INLINE static JDoc make(const void* data, size_t size) { return JDoc(cf_make_json(data, size)); }
+	CF_INLINE static JDoc make(const char* virtual_path) { return JDoc(cf_make_json_from_file(virtual_path)); }
+	CF_INLINE static void destroy(JDoc doc) { cf_destroy_json(doc.d); }
+
+	CF_INLINE void set_root(JVal v) { cf_json_set_root(d, v.v); }
+	CF_INLINE JVal root() const { return JVal(cf_json_get_root(d), d); }
+	CF_INLINE JVal alloc_null() { return JVal(cf_json_from_null(d), d); }
+	CF_INLINE JVal alloc(int v) { return JVal(cf_json_from_int(d, v), d); }
+	CF_INLINE JVal alloc(int64_t v) { return JVal(cf_json_from_i64(d, v), d); }
+	CF_INLINE JVal alloc(uint64_t v) { return JVal(cf_json_from_u64(d, v), d); }
+	CF_INLINE JVal alloc(float v) { return JVal(cf_json_from_float(d, v), d); }
+	CF_INLINE JVal alloc(double v) { return JVal(cf_json_from_double(d, v), d); }
+	CF_INLINE JVal alloc(bool v) { return JVal(cf_json_from_bool(d, v), d); }
+	CF_INLINE JVal alloc(const char* v) { return JVal(cf_json_from_string(d, v), d); }
+	CF_INLINE JVal alloc(const char* begin, const char* end) { return JVal(cf_json_from_string_range(d, begin, end), d); }
+
+	CF_INLINE JVal alloc_array() { return JVal(cf_json_array(d), d); }
+	CF_INLINE JVal alloc_array(int* vals, int count) { return JVal(cf_json_array_from_int(d, vals, count), d); }
+	CF_INLINE JVal alloc_array(int64_t* vals, int count) { return JVal(cf_json_array_from_i64(d, vals, count), d); }
+	CF_INLINE JVal alloc_array(uint64_t* vals, int count) { return JVal(cf_json_array_from_u64(d, vals, count), d); }
+	CF_INLINE JVal alloc_array(float* vals, int count) { return JVal(cf_json_array_from_float(d, vals, count), d); }
+	CF_INLINE JVal alloc_array(double* vals, int count) { return JVal(cf_json_array_from_double(d, vals, count), d); }
+	CF_INLINE JVal alloc_array(bool* vals, int count) { return JVal(cf_json_array_from_bool(d, vals, count), d); }
+	CF_INLINE JVal alloc_array(const char** vals, int count) { return JVal(cf_json_array_from_string(d, vals, count), d); }
+
+	CF_INLINE JVal alloc_object() { return JVal(cf_json_object(d), d); }
+	CF_INLINE JVal alloc_object(const char** keys, const char** vals, int count) { return JVal(cf_json_object_from_strings(d, keys, vals, count), d); }
+	CF_INLINE JVal alloc_object(const char** kv_pairs, int pair_count) { return JVal(cf_json_object_from_string_pairs(d, kv_pairs, pair_count), d); }
+
+	CF_INLINE void destroy() { cf_destroy_json(d); }
+
+	CF_INLINE String to_string() { return String::steal_from(cf_json_to_string(d)); }
+	CF_INLINE String to_string_minimal() { return String::steal_from(cf_json_to_string_minimal(d)); }
+	CF_INLINE void to_file(const char* virtual_path) { cf_json_to_file(d, virtual_path); }
+	CF_INLINE void to_file_minimal(const char* virtual_path) { cf_json_to_file_minimal(d, virtual_path); }
+
+private:
+	CF_INLINE JDoc(CF_JDoc d) { this->d = d; }
+	CF_JDoc d;
+};
+
+CF_INLINE bool JIter::done() const { return cf_json_iter_done(i); }
+CF_INLINE const char* JIter::key() const { return cf_json_iter_key(i); }
+CF_INLINE JVal JIter::val() const { return JVal(cf_json_iter_val(i), d); }
+
+CF_INLINE JIter& JIter::next() { i = cf_json_iter_next(i); return *this; }
+CF_INLINE JVal JIter::next(const char* key) { return JVal(cf_json_iter_next_by_name(&i, key), d); }
+CF_INLINE JVal JIter::remove() { return JVal(cf_json_iter_remove(&i), d); }
+
 }
 
 #endif // CF_CPP

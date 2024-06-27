@@ -51,6 +51,31 @@ TEST_CASE(test_json_basic)
 	return true;
 }
 
+TEST_CASE(test_json_basic_cpp)
+{
+	JDoc doc = JDoc::make();
+	JVal root = doc.alloc_object();
+	doc.set_root(root);
+
+	root.add("x", 1.0f);
+	root.add("y", 2.0f);
+	root.add("z", 3.0f);
+
+	String s0 = doc.to_string();
+	const char* s1 = 
+		"{\n"
+		"\t\"x\": 1.0,\n"
+		"\t\"y\": 2.0,\n"
+		"\t\"z\": 3.0\n"
+		"}"
+	;
+
+	REQUIRE(!CF_STRCMP(s0, s1));
+	doc.destroy();
+
+	return true;
+}
+
 TEST_CASE(test_json_nested_objects)
 {
 	const char* s = 
@@ -129,6 +154,45 @@ TEST_CASE(test_json_array)
 	return true;
 }
 
+TEST_CASE(test_json_array_cpp)
+{
+	JDoc doc = JDoc::make();
+	JVal root = doc.alloc_object();
+	doc.set_root(root);
+
+	JVal words = doc.alloc_array();
+	words.add("hello");
+	words.add("goodbye");
+	words.add("saturday");
+	root.add("words", words);
+
+	for (JIter iter = words.iter(); !iter.done(); iter = iter.next()) {
+		const char* val = iter.val().get_string();
+		if (iter.index() == 0) {
+			REQUIRE(!CF_STRCMP(val, "hello"));
+		} else if (iter.index() == 1) {
+			REQUIRE(!CF_STRCMP(val, "goodbye"));
+		} else {
+			REQUIRE(!CF_STRCMP(val, "saturday"));
+		}
+	}
+
+	String s0 = doc.to_string();
+	const char* s1 =
+		"{\n"
+		"\t\"words\": [\n"
+		"\t\t\"hello\",\n"
+		"\t\t\"goodbye\",\n"
+		"\t\t\"saturday\"\n"
+		"\t]\n"
+		"}"
+	;
+	REQUIRE(!CF_STRCMP(s0, s1));
+	doc.destroy();
+
+	return true;
+}
+
 TEST_CASE(test_json_iterate_object)
 {
 	CF_JDoc doc = cf_make_json(NULL, 0);
@@ -159,10 +223,43 @@ TEST_CASE(test_json_iterate_object)
 	return true;
 }
 
+TEST_CASE(test_json_iterate_object_cpp)
+{
+	JDoc doc = JDoc::make();
+	JVal root = doc.alloc_object();
+	doc.set_root(root);
+
+	root.add("x", 1.0f);
+	root.add("y", 2.0f);
+	root.add("z", 3.0f);
+
+	for (JIter iter = root.iter(); !iter.done(); iter = iter.next()) {
+		const char* key = iter.key();
+		float val = iter.val().get_float();
+		if (iter.index() == 0) {
+			REQUIRE(!CF_STRCMP(key, "x"));
+			REQUIRE(val == 1.0f);
+		} else if (iter.index() == 1) {
+			REQUIRE(!CF_STRCMP(key, "y"));
+			REQUIRE(val == 2.0f);
+		} else {
+			REQUIRE(!CF_STRCMP(key, "z"));
+			REQUIRE(val == 3.0f);
+		}
+	}
+
+	doc.destroy();
+
+	return true;
+}
+
 TEST_SUITE(test_json)
 {
 	RUN_TEST_CASE(test_json_basic);
+	RUN_TEST_CASE(test_json_basic_cpp);
 	RUN_TEST_CASE(test_json_nested_objects);
 	RUN_TEST_CASE(test_json_array);
+	RUN_TEST_CASE(test_json_array_cpp);
 	RUN_TEST_CASE(test_json_iterate_object);
+	RUN_TEST_CASE(test_json_iterate_object_cpp);
 }

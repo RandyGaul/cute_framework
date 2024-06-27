@@ -15,7 +15,7 @@ CF_Result cf_json_to_file(CF_JDoc doc, const char* virtual_path);
 Parameters | Description
 --- | ---
 doc | The json document to save.
-virtual_path | A virtual path to the json file. See [Virtual File System](https://randygaul.github.io/cute_framework/#/topics/virtual_file_system).
+virtual_path | A virtual path to the json file. Make sure to setup your write directory with [cf_fs_set_write_directory](/file/cf_fs_set_write_directory.md). See [Virtual File System](https://randygaul.github.io/cute_framework/#/topics/virtual_file_system).
 
 ## Remarks
 
