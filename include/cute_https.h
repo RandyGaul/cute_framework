@@ -27,7 +27,39 @@ extern "C" {
  * @struct   CF_HttpsRequest
  * @category web
  * @brief    Represents an [HTTPS request](https://www.ibm.com/docs/en/cics-ts/5.3?topic=protocol-http-requests).
- * @remarks  You may create a request by calling either `cf_https_get` or `cf_https_post`.
+ * @example  > Creating a request and waiting for a response.
+ *     int main(int argc, char* argv[])
+ *     {
+ *         const char* hostname = "www.google.com";
+ *         //const char* hostname = "badssl.com";
+ *         //const char* hostname = "expired.badssl.com";
+ *         //const char* hostname = "wrong.host.badssl.com";
+ *         //const char* hostname = "self-signed.badssl.com";
+ *         //const char* hostname = "untrusted-root.badssl.com";
+ *         CF_HttpsRequest request = cf_https_get(hostname, 443, "/", true);
+ *     
+ *         while (1) {
+ *             CF_HttpsResult state = cf_https_process(request);
+ *             if (state < 0) {
+ *                 printf("%s\n", cf_https_result_to_string(state));
+ *                 cf_https_destroy(request);
+ *                 return -1;
+ *             }
+ *             if (state == CF_HTTPS_RESULT_OK) {
+ *                 break;
+ *             }
+ *         }
+ *     
+ *         CF_HttpsResponse response = cf_https_response(request);
+ *         const char* content = cf_https_response_content(response);
+ *         int length = cf_https_response_content_length(response);
+ *         printf("%.*s", length, content);
+ *         cf_https_destroy(request);
+ *     
+ *         return 0;
+ *     }
+ * @remarks  You may create a request by calling either `cf_https_get` or `cf_https_post`. It is intended to continually
+ *           call `cf_https_process` in a loop until the request generates a response, or fails.
  * @related  CF_HttpsRequest CF_HttpsResponse cf_https_get cf_https_post
  */
 typedef struct CF_HttpsRequest { uint64_t id; } CF_HttpsRequest;
@@ -63,67 +95,79 @@ typedef struct CF_HttpsHeader
 /**
  * @function cf_https_get
  * @category web
- * @brief    TODO
- * @return   TODO
- * @remarks  TODO
- * @related  TODO
+ * @brief    Creates an HTTPS GET request.
+ * @param    host         The address of the host, e.g. "www.google.com".
+ * @param    port         The port number to connect over, typically 443 for common web traffic.
+ * @param    uri          The address of the resource the request references, e.g. "/index.html".
+ * @param    verify_cert  Recommended as true. Set to true to verify the server certificate (you want this on).
+ * @return   Returns a `CF_HttpsRequest` for processing the get request and receiving a response.
+ * @remarks  You should continually call `cf_https_process` on the `CF_HttpsRequest`. See `CF_HttpsRequest` for details.
+ * @related  CF_HttpsRequest cf_https_get cf_https_post cf_https_destroy cf_https_process cf_https_response
  */
 CF_API CF_HttpsRequest CF_CALL cf_https_get(const char* host, int port, const char* uri, bool verify_cert);
+
 
 /**
  * @function cf_https_post
  * @category web
- * @brief    TODO
- * @return   TODO
- * @remarks  TODO
- * @related  TODO
+ * @brief    Creates an HTTPS POST request.
+ * @param    host            The address of the host, e.g. "www.google.com".
+ * @param    port            The port number to connect over, typically 443 for common web traffic.
+ * @param    uri             The address of the resource the request references, e.g. "/index.html".
+ * @param    content         The content to send along with the POST request.
+ * @param    content_length  Length in bytes of the `content` string.
+ * @param    verify_cert  Recommended as true. Set to true to verify the server certificate (you want this on).
+ * @return   Returns a `CF_HttpsRequest` for processing the get request and receiving a response.
+ * @remarks  You should continually call `cf_https_process` on the `CF_HttpsRequest`. See `CF_HttpsRequest` for details.
+ * @related  CF_HttpsRequest cf_https_get cf_https_post cf_https_destroy cf_https_process cf_https_response
  */
 CF_API CF_HttpsRequest CF_CALL cf_https_post(const char* host, int port, const char* uri, const void* content, int content_length, bool verify_cert);
 
 /**
  * @function cf_https_add_header
  * @category web
- * @brief    TODO
- * @return   TODO
- * @remarks  TODO
- * @related  TODO
+ * @brief    Adds a header to the request.
+ * @param    request    The request.
+ * @param    name       The key value of the header.
+ * @param    value      String representation of the header's value.
+ * @remarks  You should call this before calling `cf_https_process`. Calling this after `cf_https_process` will break things.
+ * @related  CF_HttpsRequest cf_https_get cf_https_post cf_https_destroy cf_https_process cf_https_response
  */
 CF_API void CF_CALL cf_https_add_header(CF_HttpsRequest request, const char* name, const char* value);
 
 /**
  * @function cf_https_destroy
  * @category web
- * @brief    TODO
- * @return   TODO
- * @remarks  TODO
- * @related  TODO
+ * @brief    Destroys a `CF_HttpsRequest`.
+ * @related  CF_HttpsRequest cf_https_get cf_https_post cf_https_destroy cf_https_process cf_https_response
  */
 CF_API void CF_CALL cf_https_destroy(CF_HttpsRequest request);
 
 /**
  * @enum     CF_HttpsResult
  * @category web
- * @brief    The states of power for the application.
- * @related  TODO
+ * @brief    Status of a `CF_HttpsRequest`.
+ * @remarks  Intended to be used in a loop, along with `cf_https_process`. See `CF_HttpsRequest`.
+ * @related  CF_HttpsRequest cf_https_process cf_https_result_to_string
  */
 #define CF_HTTPS_RESULT_DEFS \
-	/* @entry ... */                                             \
+	/* @entry The server has an invalid certificate. */          \
 	CF_ENUM(HTTPS_RESULT_BAD_CERTIFICATE,                    -7) \
-	/* @entry ... */                                             \
+	/* @entry The server's certificate has expired. */           \
 	CF_ENUM(HTTPS_RESULT_CERTIFICATE_EXPIRED,                -6) \
-	/* @entry ... */                                             \
+	/* @entry The name of the host is invalid. */                \
 	CF_ENUM(HTTPS_RESULT_BAD_HOSTNAME,                       -5) \
-	/* @entry ... */                                             \
+	/* @entry Unable to verify the host's cert. */               \
 	CF_ENUM(HTTPS_RESULT_CANNOT_VERIFY_CA_CHAIN,             -4) \
-	/* @entry ... */                                             \
+	/* @entry Unable to form a secure connection. */             \
 	CF_ENUM(HTTPS_RESULT_NO_MATCHING_ENCRYPTION_ALGORITHMS,  -3) \
-	/* @entry ... */                                             \
+	/* @entry Socket on the local machine failed. */             \
 	CF_ENUM(HTTPS_RESULT_SOCKET_ERROR,                       -2) \
-	/* @entry ... */                                             \
+	/* @entry Unknown error. */                                  \
 	CF_ENUM(HTTPS_RESULT_FAILED,                             -1) \
-	/* @entry ... */                                             \
+	/* @entry Continue calling `cf_https_process`. */            \
 	CF_ENUM(HTTPS_RESULT_PENDING,                             0) \
-	/* @entry ... */                                             \
+	/* @entry The result has finished, you may stop calling `cf_https_process`, and fetch the response via `cf_https_response`. */ \
 	CF_ENUM(HTTPS_RESULT_OK,                                  1) \
 	/* @end */
 
@@ -139,7 +183,7 @@ typedef enum CF_HttpsResult
  * @category web
  * @brief    Convert an enum `CF_HttpsState` to a c-style string.
  * @param    state        The state to convert to a string.
- * @related  TODO
+ * @related  CF_HttpsRequest cf_https_process cf_https_result_to_string
  */
 CF_INLINE const char* cf_https_result_to_string(CF_HttpsResult state)
 {
@@ -154,10 +198,10 @@ CF_INLINE const char* cf_https_result_to_string(CF_HttpsResult state)
 /**
  * @function cf_https_process
  * @category web
- * @brief    TODO
- * @return   TODO
- * @remarks  TODO
- * @related  TODO
+ * @brief    Processes a request and generates a response.
+ * @return   Returns the status of the request `CF_HttpsResult`.
+ * @remarks  You should call this function in a loop. See `CF_HttpsResult`.
+ * @related  CF_HttpsResult cf_https_process cf_https_get cf_https_post cf_https_response
  */
 CF_API CF_HttpsResult CF_CALL cf_https_process(CF_HttpsRequest request);
 
@@ -175,60 +219,52 @@ CF_API CF_HttpsResponse CF_CALL cf_https_response(CF_HttpsRequest request);
 /**
  * @function cf_https_response_code
  * @category web
- * @brief    TODO
- * @return   TODO
- * @remarks  TODO
- * @related  TODO
+ * @brief    Returns the HTTP code for the response.
+ * @related  CF_HttpsResponse cf_https_response cf_https_response_code
  */
 CF_API int CF_CALL cf_https_response_code(CF_HttpsResponse response);
 
 /**
  * @function cf_https_response_content_length
  * @category web
- * @brief    TODO
- * @return   TODO
- * @remarks  TODO
- * @related  TODO
+ * @brief    Returns the length of the response content.
+ * @related  CF_HttpsResponse cf_https_response cf_https_response_content
  */
 CF_API int CF_CALL cf_https_response_content_length(CF_HttpsResponse response);
 
 /**
  * @function cf_https_response_content
  * @category web
- * @brief    TODO
- * @return   TODO
- * @remarks  TODO
- * @related  TODO
+ * @brief    Returns the content of the response as a string.
+ * @related  CF_HttpsResponse cf_https_response_content cf_https_response_content_length
  */
 CF_API char* CF_CALL cf_https_response_content(CF_HttpsResponse response);
 
 /**
  * @function cf_https_response_find_header
  * @category web
- * @brief    TODO
- * @return   TODO
- * @remarks  TODO
- * @related  TODO
+ * @brief    Searches for and returns a header by name.
+ * @param    response     The HTTP response.
+ * @param    header_name  The name of the header to search for.
+ * @related  CF_HttpsHeader CF_HttpsResponse cf_https_response_find_header cf_https_response_headers
  */
 CF_API CF_HttpsHeader CF_CALL cf_https_response_find_header(CF_HttpsResponse response, const char* header_name);
 
 /**
  * @function cf_https_response_headers_count
  * @category web
- * @brief    TODO
- * @return   TODO
- * @remarks  TODO
- * @related  TODO
+ * @brief    Returns the number of headers in the response.
+ * @remarks  Intended to be used with `cf_https_response_headers`.
+ * @related  CF_HttpsHeader CF_HttpsResponse cf_https_response_find_header cf_https_response_headers
  */
 CF_API int CF_CALL cf_https_response_headers_count(CF_HttpsResponse response);
 
 /**
  * @function cf_https_response_headers
  * @category web
- * @brief    TODO
- * @return   TODO
- * @remarks  TODO
- * @related  TODO
+ * @brief    Returns an array of response headers.
+ * @remarks  Intended to be used with `cf_https_response_headers_count`.
+ * @related  CF_HttpsHeader CF_HttpsResponse cf_https_response_find_header cf_https_response_headers
  */
 CF_API htbl const CF_HttpsHeader* CF_CALL cf_https_response_headers(CF_HttpsResponse response);
 
