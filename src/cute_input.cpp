@@ -317,6 +317,21 @@ bool cf_mouse_double_clicked(CF_MouseButton button)
 	return cf_mouse_just_pressed(button) && app->mouse.click_type == CF_MOUSE_CLICK_DOUBLE;
 }
 
+void cf_mouse_hide(bool true_to_hide)
+{
+	SDL_ShowCursor(true_to_hide ? SDL_DISABLE : SDL_ENABLE);
+}
+
+bool cf_mouse_hidden()
+{
+	return SDL_ShowCursor(SDL_QUERY);
+}
+
+void cf_mouse_lock_inside_window(bool true_to_lock)
+{
+	SDL_SetWindowMouseGrab(app->window, (SDL_bool)true_to_lock);
+}
+
 void cf_clear_all_mouse_state()
 {
 	CF_MEMSET(&app->mouse, 0, sizeof(app->mouse));

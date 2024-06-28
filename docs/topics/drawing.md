@@ -298,7 +298,7 @@ The color mixing can be used to flash a color such as when a character takes dam
 
 The rest of the shader, aside from `@module flash` which names the shader itself (you must fill this out), is mere copy + paste boilerplate, and should be ignored.
 
-You may also add in uniforms and textures as-needed. The draw API has some functions for setting uniforms and textures via [cf_render_settings_push_uniform](https://randygaul.github.io/cute_framework/#/draw/cf_render_settings_push_uniform) and [cf_render_settings_push_texture](https://randygaul.github.io/cute_framework/#/draw/cf_render_settings_push_texture). These will get auto-magically hooked up and send values to your shader.
+You may also add in uniforms and textures as-needed. The draw API has some functions for setting uniforms and textures via [cf_render_settings_push_uniform](https://randygaul.github.io/cute_framework/#/draw/cf_render_settings_push_uniform) and [cf_render_settings_push_texture](https://randygaul.github.io/cute_framework/#/draw/cf_render_settings_push_texture). These will get auto-magically hooked up and send values to your shader. When you add in your own uniforms just be sure to place them inside of a uniform block like in the below sample (see `shader_uniforms`, and don't change this name either! It must be called `shader_uniforms`).
 
 Here's a full example shader from the wavelets (called [shallow water on github](https://github.com/RandyGaul/cute_framework/blob/master/samples/shallow_water.cpp)) demo:
 

@@ -1,6 +1,3 @@
-transparent windows (look into how, see if it's easy to support, or find a way to enable this)
-hide mouse
-lock mouse to screen
 specify which screen to spawn upon
 request window attention
 DPI handling care in docs
@@ -16,3 +13,6 @@ resync all cute_headers
 set cute_version.h
 update cute_user_config with all the math overrides recent PR
 ECS docs
+
+punted
+- transparent windows - Can't find an easy way to do this through SDL, might be a cross-platform nightmare
