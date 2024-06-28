@@ -5,7 +5,7 @@
 @ctype vec2 CF_V2
 
 @block shader_block
-vec4 shader(vec4 color, vec2 uv, vec2 pos, vec2 posH, vec4 params)
+vec4 shader(vec4 color, vec2 pos, vec2 atlas_uv, vec2 screen_uv, vec4 params)
 {
 	return vec4(mix(color.rgb, params.rgb, params.a), color.a);
 }

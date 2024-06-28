@@ -28,8 +28,9 @@ vec4 normal_to_color(vec2 n)
 	return vec4(n * 0.5 + 0.5, 1.0, 1.0);
 }
 
-vec4 shader(vec4 color, vec2 pos, vec2 uv, vec4 params)
+vec4 shader(vec4 color, vec2 pos, vec2 atlas_uv, vec2 screen_uv, vec4 params)
 {
+	vec2 uv = screen_uv;
 	vec2 dim = vec2(1.0/160.0,1.0/120.0);
 	vec2 n = normal_from_heightmap(noise_tex, uv);
 	vec2 w = normal_from_heightmap(wavelets_tex, uv+n*dim*10.0);
