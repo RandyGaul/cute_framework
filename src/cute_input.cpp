@@ -330,6 +330,7 @@ bool cf_mouse_hidden()
 void cf_mouse_lock_inside_window(bool true_to_lock)
 {
 	SDL_SetWindowMouseGrab(app->window, (SDL_bool)true_to_lock);
+	SDL_WINDOWPOS_CENTERED_DISPLAY(3);
 }
 
 void cf_clear_all_mouse_state()

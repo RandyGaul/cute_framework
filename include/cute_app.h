@@ -329,6 +329,32 @@ CF_API bool CF_CALL cf_app_gained_focus();
 CF_API bool CF_CALL cf_app_has_focus();
 
 /**
+ * @function cf_app_request_attention
+ * @category app
+ * @brief    Requests attention for the window for a brief period.
+ * @remarks  On Windows this flashes the tab icon, and bounces the dock icon on OSX.
+ * @related  cf_app_request_attention cf_app_request_attention_continuously cf_app_request_attention_cancel
+ */
+CF_API void CF_CALL cf_app_request_attention();
+
+/**
+ * @function cf_app_request_attention_continuously
+ * @category app
+ * @brief    Requests attention for the window for continuously.
+ * @remarks  On Windows this flashes the tab icon, and bounces the dock icon on OSX.
+ * @related  cf_app_request_attention cf_app_request_attention_continuously cf_app_request_attention_cancel
+ */
+CF_API void CF_CALL cf_app_request_attention_continuously();
+
+/**
+ * @function cf_app_request_attention_cancel
+ * @category app
+ * @brief    Cancels any previous requests for attention.
+ * @related  cf_app_request_attention cf_app_request_attention_continuously cf_app_request_attention_cancel
+ */
+CF_API void CF_CALL cf_app_request_attention_cancel();
+
+/**
  * @function cf_app_was_minimized
  * @category app
  * @brief    Returns true if the app was minimized last frame.

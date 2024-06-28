@@ -1,5 +1,3 @@
-specify which screen to spawn upon
-request window attention
 DPI handling care in docs
 doc page on transforms
 example box2d integration
@@ -16,3 +14,4 @@ ECS docs
 
 punted
 - transparent windows - Can't find an easy way to do this through SDL, might be a cross-platform nightmare
+- specify which screen to spawn upon - Don't have multiple screens to test right now, see SDL_WINDOWPOS_CENTERED_DISPLAY
