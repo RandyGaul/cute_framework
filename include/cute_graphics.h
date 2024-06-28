@@ -2168,8 +2168,9 @@ CF_INLINE Canvas make_canvas(CanvasParams pass_params) { return cf_make_canvas(p
 CF_INLINE void destroy_canvas(Canvas canvas) { cf_destroy_canvas(canvas); }
 CF_INLINE Texture canvas_get_target(Canvas canvas) { return cf_canvas_get_target(canvas); }
 CF_INLINE Texture canvas_get_depth_stencil_target(Canvas canvas) { return cf_canvas_get_depth_stencil_target(canvas); }
-CF_INLINE uint64_t canvas_get_backend_target_handle(CF_Canvas canvas) { return cf_canvas_get_backend_target_handle(canvas); }
-CF_INLINE uint64_t canvas_get_backend_depth_stencil_handle(CF_Canvas canvas) { return cf_canvas_get_backend_depth_stencil_handle(canvas); }
+CF_INLINE uint64_t canvas_get_backend_target_handle(Canvas canvas) { return cf_canvas_get_backend_target_handle(canvas); }
+CF_INLINE uint64_t canvas_get_backend_depth_stencil_handle(Canvas canvas) { return cf_canvas_get_backend_depth_stencil_handle(canvas); }
+CF_INLINE void canvas_blit(Canvas src, v2 u0, v2 v0, Canvas dst, v2 u1, v2 v1) { cf_canvas_blit(src, u0, v0, dst, u1, v1); }
 CF_INLINE Mesh make_mesh(UsageType usage_type, int vertex_buffer_size, int index_buffer_size, int instance_buffer_size) { return cf_make_mesh(usage_type, vertex_buffer_size, index_buffer_size, instance_buffer_size); }
 CF_INLINE void destroy_mesh(Mesh mesh) { cf_destroy_mesh(mesh); }
 CF_INLINE void mesh_set_attributes(Mesh mesh, const VertexAttribute* attributes, int attribute_count, int vertex_stride, int instance_stride) { cf_mesh_set_attributes(mesh, attributes, attribute_count, vertex_stride, instance_stride); }
