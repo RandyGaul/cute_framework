@@ -951,6 +951,8 @@ namespace Cute
 
 struct JVal;
 
+// JSON iterator, for traversing key-value properties on objects, or arrays.
+// Traversals are done in one direction, linearly.
 struct JIter
 {
 	CF_INLINE JIter(CF_JIter i, CF_JDoc d) { this->i = i; this->d = d; }
@@ -971,6 +973,8 @@ private:
 	CF_JIter i;
 };
 
+// Represents a single JSON value, such as an integer, object, or array.
+// Create these with JDoc::alloc_*** functions.
 struct JVal
 {
 	CF_INLINE JType type() const { return cf_json_type(v); }
@@ -1051,15 +1055,23 @@ private:
 	friend struct JIter;
 };
 
+// A JSON document, capable of loading up JSON documents from disk or memory, and also editing
+// the JSON in-memory. JVal's are created relative to one document, and cannot be directly transferred
+// to another JDoc. Instead, use JVal::get_*** to fetch C-values out of the document, and then create
+// new JVals in another document using JDoc::alloc_*** functions.
 struct JDoc
 {
+	// Creating/loading documents. Be sure to call `destroy` when you're done.
 	CF_INLINE static JDoc make() { return JDoc(cf_make_json(NULL, 0)); }
 	CF_INLINE static JDoc make(const void* data, size_t size) { return JDoc(cf_make_json(data, size)); }
 	CF_INLINE static JDoc make(const char* virtual_path) { return JDoc(cf_make_json_from_file(virtual_path)); }
 	CF_INLINE static void destroy(JDoc doc) { cf_destroy_json(doc.d); }
+	CF_INLINE void destroy() { cf_destroy_json(d); }
 
 	CF_INLINE void set_root(JVal v) { cf_json_set_root(d, v.v); }
 	CF_INLINE JVal root() const { return JVal(cf_json_get_root(d), d); }
+
+	// Creating JSON values, JVal.
 	CF_INLINE JVal alloc_null() { return JVal(cf_json_from_null(d), d); }
 	CF_INLINE JVal alloc(int v) { return JVal(cf_json_from_int(d, v), d); }
 	CF_INLINE JVal alloc(int64_t v) { return JVal(cf_json_from_i64(d, v), d); }
@@ -1083,11 +1095,12 @@ struct JDoc
 	CF_INLINE JVal alloc_object(const char** keys, const char** vals, int count) { return JVal(cf_json_object_from_strings(d, keys, vals, count), d); }
 	CF_INLINE JVal alloc_object(const char** kv_pairs, int pair_count) { return JVal(cf_json_object_from_string_pairs(d, kv_pairs, pair_count), d); }
 
-	CF_INLINE void destroy() { cf_destroy_json(d); }
-
-	CF_INLINE String to_string() { return String::steal_from(cf_json_to_string(d)); }
-	CF_INLINE String to_string_minimal() { return String::steal_from(cf_json_to_string_minimal(d)); }
+	// Writing out the document to string or disk.
 	CF_INLINE void to_file(const char* virtual_path) { cf_json_to_file(d, virtual_path); }
+	CF_INLINE String to_string() { return String::steal_from(cf_json_to_string(d)); }
+
+	// Minimal versions remove extra formatting and whitespace.
+	CF_INLINE String to_string_minimal() { return String::steal_from(cf_json_to_string_minimal(d)); }
 	CF_INLINE void to_file_minimal(const char* virtual_path) { cf_json_to_file_minimal(d, virtual_path); }
 
 private:
@@ -1095,6 +1108,7 @@ private:
 	CF_JDoc d;
 };
 
+// Inline implementations placed down here, as opposed to inside the class, to avoid circular reference compile errors.
 CF_INLINE bool JIter::done() const { return cf_json_iter_done(i); }
 CF_INLINE const char* JIter::key() const { return cf_json_iter_key(i); }
 CF_INLINE JVal JIter::val() const { return JVal(cf_json_iter_val(i), d); }
