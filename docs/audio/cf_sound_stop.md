@@ -27,3 +27,4 @@ void cf_sound_stop(CF_Sound sound);
 [cf_sound_set_is_paused](/audio/cf_sound_set_is_paused.md)  
 [cf_sound_set_is_looped](/audio/cf_sound_set_is_looped.md)  
 [cf_sound_set_volume](/audio/cf_sound_set_volume.md)  
+[cf_sound_set_pitch](/audio/cf_sound_set_pitch.md)  

@@ -9,7 +9,7 @@ GitHub: [cute_audio.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Sets the sample index to play at for the music.
 
 ```cpp
-CF_Result cf_music_set_sample_index(uint64_t sample_index);
+CF_Result cf_music_set_sample_index(int sample_index);
 ```
 
 Parameters | Description
@@ -31,3 +31,4 @@ This can be useful to sync a dynamic audio system that can turn on/off different
 [cf_music_switch_to](/audio/cf_music_switch_to.md)  
 [cf_music_crossfade](/audio/cf_music_crossfade.md)  
 [cf_music_get_sample_index](/audio/cf_music_get_sample_index.md)  
+[cf_music_set_pitch](/audio/cf_music_set_pitch.md)  

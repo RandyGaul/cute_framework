@@ -9,7 +9,7 @@ GitHub: [cute_audio.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Sets the sample index for the sound to control which sample to play next.
 
 ```cpp
-void cf_sound_set_sample_index(CF_Sound sound, uint64_t sample_index);
+void cf_sound_set_sample_index(CF_Sound sound, int sample_index);
 ```
 
 Parameters | Description
@@ -33,7 +33,8 @@ can turn on/off different instruments or sounds.
 [cf_sound_get_is_looped](/audio/cf_sound_get_is_looped.md)  
 [cf_sound_get_volume](/audio/cf_sound_get_volume.md)  
 [cf_sound_get_sample_index](/audio/cf_sound_get_sample_index.md)  
-[cf_sound_stop](/audio/cf_sound_stop.md)  
+[cf_sound_set_pitch](/audio/cf_sound_set_pitch.md)  
 [cf_sound_set_is_paused](/audio/cf_sound_set_is_paused.md)  
 [cf_sound_set_is_looped](/audio/cf_sound_set_is_looped.md)  
 [cf_sound_set_volume](/audio/cf_sound_set_volume.md)  
+[cf_sound_stop](/audio/cf_sound_stop.md)  

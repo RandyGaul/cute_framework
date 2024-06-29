@@ -19,7 +19,7 @@ fade_out_time | A number of seconds to fade the music out. Can be 0.0f to instan
 ## Related Pages
 
 [cf_music_play](/audio/cf_music_play.md)  
-[cf_music_set_sample_index](/audio/cf_music_set_sample_index.md)  
+[cf_music_set_pitch](/audio/cf_music_set_pitch.md)  
 [cf_music_set_volume](/audio/cf_music_set_volume.md)  
 [cf_music_set_loop](/audio/cf_music_set_loop.md)  
 [cf_music_pause](/audio/cf_music_pause.md)  
@@ -27,3 +27,4 @@ fade_out_time | A number of seconds to fade the music out. Can be 0.0f to instan
 [cf_music_switch_to](/audio/cf_music_switch_to.md)  
 [cf_music_crossfade](/audio/cf_music_crossfade.md)  
 [cf_music_get_sample_index](/audio/cf_music_get_sample_index.md)  
+[cf_music_set_sample_index](/audio/cf_music_set_sample_index.md)  

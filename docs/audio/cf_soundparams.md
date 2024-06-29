@@ -14,7 +14,7 @@ Struct Members | Description
 `bool looped` | Default: false. True to loop the sound.
 `float volume` | Default: 0.5f. A volume control from 0.0f to 1.0f. 0.0f meaning silent, 1.0f meaning max volume.
 `float pan` | Default: 0.5f. A stereo pan control from 0.0f to 1.0f. 0.0f means left-speaker, 1.0f means right speaker, 0.5f means equal both.
-`float delay` | Default: 0.0f. A number of seconds to wait before hearing the sound play.
+`float pitch` | Default: 1.0f. Lower numbers lower the pitch and increase playback speed. Higher numbers increase the pitch and reduce playback speed.
 
 ## Remarks
 
@@ -22,7 +22,7 @@ You can use default settings from the [cf_sound_params_defaults](/audio/cf_sound
 
 ## Related Pages
 
-[cf_sound_stop](/audio/cf_sound_stop.md)  
+[cf_sound_set_pitch](/audio/cf_sound_set_pitch.md)  
 [CF_Sound](/audio/cf_sound.md)  
 [cf_sound_params_defaults](/audio/cf_sound_params_defaults.md)  
 [cf_play_sound](/audio/cf_play_sound.md)  
@@ -35,3 +35,5 @@ You can use default settings from the [cf_sound_params_defaults](/audio/cf_sound
 [cf_sound_set_is_paused](/audio/cf_sound_set_is_paused.md)  
 [cf_sound_set_is_looped](/audio/cf_sound_set_is_looped.md)  
 [cf_sound_set_volume](/audio/cf_sound_set_volume.md)  
+[cf_sound_stop](/audio/cf_sound_stop.md)  
+  
