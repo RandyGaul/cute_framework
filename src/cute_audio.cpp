@@ -224,9 +224,33 @@ void cf_sound_set_sample_index(CF_Sound sound, uint64_t sample_index)
 	cs_sound_set_sample_index(cssound, sample_index);
 }
 
+void cf_sound_stop(CF_Sound sound)
+{
+	cs_playing_sound_t cssound = { sound.id };
+	cs_sound_stop(cssound);
+}
+
 void cf_audio_cull_duplicates(bool true_to_cull_duplicates)
 {
 	cs_cull_duplicates(true_to_cull_duplicates);
+}
+
+int cf_audio_sample_rate(CF_Audio audio)
+{
+	cs_audio_source_t* src = (cs_audio_source_t*)audio.id;
+	return src->sample_rate;
+}
+
+int cf_audio_sample_count(CF_Audio audio)
+{
+	cs_audio_source_t* src = (cs_audio_source_t*)audio.id;
+	return src->sample_count;
+}
+
+int cf_audio_channel_count(CF_Audio audio)
+{
+	cs_audio_source_t* src = (cs_audio_source_t*)audio.id;
+	return src->channel_count;
 }
 
 #undef STB_VORBIS_HEADER_ONLY

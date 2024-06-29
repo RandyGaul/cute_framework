@@ -56,6 +56,9 @@ This is a list of all functions in Cute Framework organized by categories. This 
 - [cf_app_mouse_exited](/app/cf_app_mouse_exited.md)
 - [cf_app_mouse_inside](/app/cf_app_mouse_inside.md)
 - [cf_app_power_info](/app/cf_app_power_info.md)
+- [cf_app_request_attention](/app/cf_app_request_attention.md)
+- [cf_app_request_attention_cancel](/app/cf_app_request_attention_cancel.md)
+- [cf_app_request_attention_continuously](/app/cf_app_request_attention_continuously.md)
 - [cf_app_set_canvas_size](/app/cf_app_set_canvas_size.md)
 - [cf_app_set_position](/app/cf_app_set_position.md)
 - [cf_app_set_size](/app/cf_app_set_size.md)
@@ -122,12 +125,15 @@ This is a list of all functions in Cute Framework organized by categories. This 
 ## audio
 
 ### functions
+- [cf_audio_channel_count](/audio/cf_audio_channel_count.md)
 - [cf_audio_cull_duplicates](/audio/cf_audio_cull_duplicates.md)
 - [cf_audio_destroy](/audio/cf_audio_destroy.md)
 - [cf_audio_load_ogg](/audio/cf_audio_load_ogg.md)
 - [cf_audio_load_ogg_from_memory](/audio/cf_audio_load_ogg_from_memory.md)
 - [cf_audio_load_wav](/audio/cf_audio_load_wav.md)
 - [cf_audio_load_wav_from_memory](/audio/cf_audio_load_wav_from_memory.md)
+- [cf_audio_sample_count](/audio/cf_audio_sample_count.md)
+- [cf_audio_sample_rate](/audio/cf_audio_sample_rate.md)
 - [cf_audio_set_global_volume](/audio/cf_audio_set_global_volume.md)
 - [cf_audio_set_pan](/audio/cf_audio_set_pan.md)
 - [cf_audio_set_pause](/audio/cf_audio_set_pause.md)
@@ -153,6 +159,7 @@ This is a list of all functions in Cute Framework organized by categories. This 
 - [cf_sound_set_is_paused](/audio/cf_sound_set_is_paused.md)
 - [cf_sound_set_sample_index](/audio/cf_sound_set_sample_index.md)
 - [cf_sound_set_volume](/audio/cf_sound_set_volume.md)
+- [cf_sound_stop](/audio/cf_sound_stop.md)
 
 
 ### structs
@@ -1122,8 +1129,11 @@ This is a list of all functions in Cute Framework organized by categories. This 
 - [cf_mouse_double_click_held](/input/cf_mouse_double_click_held.md)
 - [cf_mouse_double_clicked](/input/cf_mouse_double_clicked.md)
 - [cf_mouse_down](/input/cf_mouse_down.md)
+- [cf_mouse_hidden](/input/cf_mouse_hidden.md)
+- [cf_mouse_hide](/input/cf_mouse_hide.md)
 - [cf_mouse_just_pressed](/input/cf_mouse_just_pressed.md)
 - [cf_mouse_just_released](/input/cf_mouse_just_released.md)
+- [cf_mouse_lock_inside_window](/input/cf_mouse_lock_inside_window.md)
 - [cf_mouse_wheel_motion](/input/cf_mouse_wheel_motion.md)
 - [cf_mouse_x](/input/cf_mouse_x.md)
 - [cf_mouse_y](/input/cf_mouse_y.md)
