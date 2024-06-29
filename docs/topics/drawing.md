@@ -275,7 +275,7 @@ The draw API passes *all* geometry into an optional shader function, within the 
 @ctype vec2 CF_V2
 
 @block shader_block
-vec4 shader(vec4 color, vec2 pos, vec2 uv, vec4 params)
+vec4 shader(vec4 color, vec2 pos, vec2 atlas_uv, vec2 screen_uv, vec4 params)
 {
 	return vec4(mix(color.rgb, params.rgb, params.a), color.a);
 }
@@ -288,7 +288,9 @@ The `color` param is the color that would be rendered if you don't make any modi
 
 `pos` was the rendering position used when calling an associated draw function like `cf_draw_sprite`.
 
-`uv` is a position relative to the screen, where (0,0) is the bottom left, and (1,1) is the top right of the screen.
+`atlas_uv` is the uv corresponding to the texel within `u_image`, the atlas CF has generated behinds the scenes for any sprites to be drawn. You can freely access `u_image` and use `atlas_uv` for this particular fragment, such as for multisampling algorithms. For pixel art games it's important to sample using the function `smooth_uv`, something like so: `smooth_uv(v_uv, u_texture_size)` to generate a uv coordinate that will scale pixel art correctly.
+
+`screen_uv` is a position relative to the screen, where (0,0) is the bottom left, and (1,1) is the top right of the screen.
 
 `params` are four optional floats. They come from vertex attributes set by [cf_draw_push_vertex_attributes](https://randygaul.github.io/cute_framework/#/draw/cf_draw_push_vertex_attributes). Each different item drawn through CF's draw API will attach the previously pushed attributes onto their vertices. These four floats are general-purpose, and only used to pass into the `shader` function. Use them to pack information to implement your own custom visual FX. In the above example `pamams.a` is used to mix between the draw color or from a custom color packed into `params.rgb`.
 
@@ -296,7 +298,7 @@ The color mixing can be used to flash a color such as when a character takes dam
 
 The rest of the shader, aside from `@module flash` which names the shader itself (you must fill this out), is mere copy + paste boilerplate, and should be ignored.
 
-You may also add in uniforms and textures as-needed. The draw API has some functions for setting uniforms and textures via [cf_render_settings_push_uniform](https://randygaul.github.io/cute_framework/#/draw/cf_render_settings_push_uniform) and [cf_render_settings_push_texture](https://randygaul.github.io/cute_framework/#/draw/cf_render_settings_push_texture). These will get auto-magically hooked up and send values to your shader.
+You may also add in uniforms and textures as-needed. The draw API has some functions for setting uniforms and textures via [cf_render_settings_push_uniform](https://randygaul.github.io/cute_framework/#/draw/cf_render_settings_push_uniform) and [cf_render_settings_push_texture](https://randygaul.github.io/cute_framework/#/draw/cf_render_settings_push_texture). These will get auto-magically hooked up and send values to your shader. When you add in your own uniforms just be sure to place them inside of a uniform block like in the below sample (see `shader_uniforms`, and don't change this name either! It must be called `shader_uniforms`).
 
 Here's a full example shader from the wavelets (called [shallow water on github](https://github.com/RandyGaul/cute_framework/blob/master/samples/shallow_water.cpp)) demo:
 
@@ -331,8 +333,9 @@ vec4 normal_to_color(vec2 n)
 	return vec4(n * 0.5 + 0.5, 1.0, 1.0);
 }
 
-vec4 shader(vec4 color, vec2 pos, vec2 uv, vec4 params)
+vec4 shader(vec4 color, vec2 pos, vec2 atlas_uv, vec2 screen_uv, vec4 params)
 {
+	vec2 uv = screen_uv;
 	vec2 dim = vec2(1.0/160.0,1.0/120.0);
 	vec2 n = normal_from_heightmap(noise_tex, uv);
 	vec2 w = normal_from_heightmap(wavelets_tex, uv+n*dim*10.0);

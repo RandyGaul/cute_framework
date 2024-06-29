@@ -32,7 +32,7 @@ typedef struct CF_Audio { uint64_t id; } CF_Audio;
  * @function cf_audio_load_ogg
  * @category audio
  * @brief    Loads a .ogg audio file.
- * @param    path         The virtual path TODO_LINK to a .ogg file.
+ * @param    path         The virtual path to a .ogg file. See [Virtual File System](https://randygaul.github.io/cute_framework/#/topics/virtual_file_system).
  * @return   Returns a pointer to `CF_Audio`. Free it up with `cf_audio_destroy` when done.
  * @related  CF_Audio cf_audio_load_ogg cf_audio_load_ogg_from_memory cf_audio_load_wav cf_audio_load_wav_from_memory cf_audio_destroy
  */
@@ -42,7 +42,7 @@ CF_API CF_Audio CF_CALL cf_audio_load_ogg(const char* path);
  * @function cf_audio_load_wav
  * @category audio
  * @brief    Loads a .wav audio file.
- * @param    path         The virtual path TODO_LINK to a .wav file.
+ * @param    path         The virtual path to a .wav file. See [Virtual File System](https://randygaul.github.io/cute_framework/#/topics/virtual_file_system).
  * @return   Returns a pointer to `CF_Audio`. Free it up with `cf_audio_destroy` when done.
  * @related  CF_Audio cf_audio_load_ogg cf_audio_load_ogg_from_memory cf_audio_load_wav cf_audio_load_wav_from_memory cf_audio_destroy
  */
@@ -94,6 +94,30 @@ CF_API void CF_CALL cf_audio_destroy(CF_Audio audio);
  * @related  CF_SoundParams CF_Sound cf_sound_params_defaults cf_play_sound cf_sound_is_active cf_sound_get_is_paused cf_sound_get_is_looped cf_sound_get_volume cf_sound_get_sample_index cf_sound_set_sample_index cf_sound_set_is_paused cf_sound_set_is_looped cf_sound_set_volume
  */
 CF_API void CF_CALL cf_audio_cull_duplicates(bool true_to_cull_duplicates);
+
+/**
+ * @function cf_audio_sample_rate
+ * @category audio
+ * @brief    Returns the sample rate for a loaded audio resource.
+ * @related  CF_Audio cf_audio_sample_rate cf_audio_sample_count cf_audio_channel_count
+ */
+CF_API int CF_CALL cf_audio_sample_rate(CF_Audio audio);
+
+/**
+ * @function cf_audio_sample_count
+ * @category audio
+ * @brief    Returns the sample count for a loaded audio resource.
+ * @related  CF_Audio cf_audio_sample_rate cf_audio_sample_count cf_audio_channel_count
+ */
+CF_API int CF_CALL cf_audio_sample_count(CF_Audio audio);
+
+/**
+ * @function cf_audio_channel_count
+ * @category audio
+ * @brief    Returns the channel count for a loaded audio resource.
+ * @related  CF_Audio cf_audio_sample_rate cf_audio_sample_count cf_audio_channel_count
+ */
+CF_API int CF_CALL cf_audio_channel_count(CF_Audio audio);
 
 // -------------------------------------------------------------------------------------------------
 // Global controls.
@@ -238,7 +262,7 @@ CF_API CF_Result CF_CALL cf_music_set_sample_index(uint64_t sample_index);
  * @category audio
  * @brief    Parameters for the function `cf_play_sound`.
  * @remarks  You can use default settings from the `cf_sound_params_defaults` function.
- * @related  CF_SoundParams CF_Sound cf_sound_params_defaults cf_play_sound cf_sound_is_active cf_sound_get_is_paused cf_sound_get_is_looped cf_sound_get_volume cf_sound_get_sample_index cf_sound_set_sample_index cf_sound_set_is_paused cf_sound_set_is_looped cf_sound_set_volume
+ * @related  CF_SoundParams CF_Sound cf_sound_params_defaults cf_play_sound cf_sound_is_active cf_sound_get_is_paused cf_sound_get_is_looped cf_sound_get_volume cf_sound_get_sample_index cf_sound_set_sample_index cf_sound_set_is_paused cf_sound_set_is_looped cf_sound_set_volume cf_sound_stop
  */
 typedef struct CF_SoundParams
 {
@@ -263,7 +287,7 @@ typedef struct CF_SoundParams
  * @struct   CF_Sound
  * @category audio
  * @brief    An opaque pointer representing a sound created by `cf_play_sound`.
- * @related  CF_SoundParams CF_Sound cf_sound_params_defaults cf_play_sound cf_sound_is_active cf_sound_get_is_paused cf_sound_get_is_looped cf_sound_get_volume cf_sound_get_sample_index cf_sound_set_sample_index cf_sound_set_is_paused cf_sound_set_is_looped cf_sound_set_volume
+ * @related  CF_SoundParams CF_Sound cf_sound_params_defaults cf_play_sound cf_sound_is_active cf_sound_get_is_paused cf_sound_get_is_looped cf_sound_get_volume cf_sound_get_sample_index cf_sound_set_sample_index cf_sound_set_is_paused cf_sound_set_is_looped cf_sound_set_volume cf_sound_stop
  */
 typedef struct CF_Sound { uint64_t id; } CF_Sound;
 // @end
@@ -272,7 +296,7 @@ typedef struct CF_Sound { uint64_t id; } CF_Sound;
  * @function cf_sound_params_defaults
  * @category audio
  * @brief    Returns a `CF_SoundParams` filled with default state, to use with `cf_play_sound`.
- * @related  CF_SoundParams CF_Sound cf_sound_params_defaults cf_play_sound cf_sound_is_active cf_sound_get_is_paused cf_sound_get_is_looped cf_sound_get_volume cf_sound_get_sample_index cf_sound_set_sample_index cf_sound_set_is_paused cf_sound_set_is_looped cf_sound_set_volume
+ * @related  CF_SoundParams CF_Sound cf_sound_params_defaults cf_play_sound cf_sound_is_active cf_sound_get_is_paused cf_sound_get_is_looped cf_sound_get_volume cf_sound_get_sample_index cf_sound_set_sample_index cf_sound_set_is_paused cf_sound_set_is_looped cf_sound_set_volume cf_sound_stop
  */
 CF_INLINE CF_SoundParams CF_CALL cf_sound_params_defaults()
 {
@@ -292,7 +316,7 @@ CF_INLINE CF_SoundParams CF_CALL cf_sound_params_defaults()
  * @param    audio_source   The `CF_Audio` samples for the sound to play.
  * @param    params         `CF_SoundParams` on how to play the sound. You can use default values by calling `cf_sound_params_defaults`.
  * @return   Returns a playing sound `CF_Sound`.
- * @related  CF_SoundParams CF_Sound cf_sound_params_defaults cf_play_sound cf_sound_is_active cf_sound_get_is_paused cf_sound_get_is_looped cf_sound_get_volume cf_sound_get_sample_index cf_sound_set_sample_index cf_sound_set_is_paused cf_sound_set_is_looped cf_sound_set_volume
+ * @related  CF_SoundParams CF_Sound cf_sound_params_defaults cf_play_sound cf_sound_is_active cf_sound_get_is_paused cf_sound_get_is_looped cf_sound_get_volume cf_sound_get_sample_index cf_sound_set_sample_index cf_sound_set_is_paused cf_sound_set_is_looped cf_sound_set_volume cf_sound_stop
  */
 CF_API CF_Sound CF_CALL cf_play_sound(CF_Audio audio_source, CF_SoundParams params);
 
@@ -302,7 +326,7 @@ CF_API CF_Sound CF_CALL cf_play_sound(CF_Audio audio_source, CF_SoundParams para
  * @brief    Returns whether or not a sound is active.
  * @param    sound          The sound.
  * @return   Rreturns true if the sound is active, or false if it finished playing (and was not looped).
- * @related  CF_SoundParams CF_Sound cf_sound_params_defaults cf_play_sound cf_sound_is_active cf_sound_get_is_paused cf_sound_get_is_looped cf_sound_get_volume cf_sound_get_sample_index cf_sound_set_sample_index cf_sound_set_is_paused cf_sound_set_is_looped cf_sound_set_volume
+ * @related  CF_SoundParams CF_Sound cf_sound_params_defaults cf_play_sound cf_sound_is_active cf_sound_get_is_paused cf_sound_get_is_looped cf_sound_get_volume cf_sound_get_sample_index cf_sound_set_sample_index cf_sound_set_is_paused cf_sound_set_is_looped cf_sound_set_volume cf_sound_stop
  */
 CF_API bool CF_CALL cf_sound_is_active(CF_Sound sound);
 
@@ -312,7 +336,7 @@ CF_API bool CF_CALL cf_sound_is_active(CF_Sound sound);
  * @brief    Returns whether or not a sound is paused.
  * @param    sound          The sound.
  * @remarks  You can set a sound to paused with `cf_sound_set_is_paused`, or upon creation with `cf_play_sound`.
- * @related  CF_SoundParams CF_Sound cf_sound_params_defaults cf_play_sound cf_sound_is_active cf_sound_get_is_paused cf_sound_get_is_looped cf_sound_get_volume cf_sound_get_sample_index cf_sound_set_sample_index cf_sound_set_is_paused cf_sound_set_is_looped cf_sound_set_volume
+ * @related  CF_SoundParams CF_Sound cf_sound_params_defaults cf_play_sound cf_sound_is_active cf_sound_get_is_paused cf_sound_get_is_looped cf_sound_get_volume cf_sound_get_sample_index cf_sound_set_sample_index cf_sound_set_is_paused cf_sound_set_is_looped cf_sound_set_volume cf_sound_stop
  */
 CF_API bool CF_CALL cf_sound_get_is_paused(CF_Sound sound);
 
@@ -322,7 +346,7 @@ CF_API bool CF_CALL cf_sound_get_is_paused(CF_Sound sound);
  * @brief    Returns whether or not a sound is looped.
  * @param    sound          The sound.
  * @remarks  You can set a sound to looped with `cf_sound_set_is_looped`, or upon creation with `cf_play_sound`.
- * @related  CF_SoundParams CF_Sound cf_sound_params_defaults cf_play_sound cf_sound_is_active cf_sound_get_is_paused cf_sound_get_is_looped cf_sound_get_volume cf_sound_get_sample_index cf_sound_set_sample_index cf_sound_set_is_paused cf_sound_set_is_looped cf_sound_set_volume
+ * @related  CF_SoundParams CF_Sound cf_sound_params_defaults cf_play_sound cf_sound_is_active cf_sound_get_is_paused cf_sound_get_is_looped cf_sound_get_volume cf_sound_get_sample_index cf_sound_set_sample_index cf_sound_set_is_paused cf_sound_set_is_looped cf_sound_set_volume cf_sound_stop
  */
 CF_API bool CF_CALL cf_sound_get_is_looped(CF_Sound sound);
 
@@ -332,7 +356,7 @@ CF_API bool CF_CALL cf_sound_get_is_looped(CF_Sound sound);
  * @brief    Returns the volume of the sound.
  * @param    sound          The sound.
  * @remarks  You can set a sound volume with `cf_sound_set_volume`, or upon creation with `cf_play_sound`.
- * @related  CF_SoundParams CF_Sound cf_sound_params_defaults cf_play_sound cf_sound_is_active cf_sound_get_is_paused cf_sound_get_is_looped cf_sound_get_volume cf_sound_get_sample_index cf_sound_set_sample_index cf_sound_set_is_paused cf_sound_set_is_looped cf_sound_set_volume
+ * @related  CF_SoundParams CF_Sound cf_sound_params_defaults cf_play_sound cf_sound_is_active cf_sound_get_is_paused cf_sound_get_is_looped cf_sound_get_volume cf_sound_get_sample_index cf_sound_set_sample_index cf_sound_set_is_paused cf_sound_set_is_looped cf_sound_set_volume cf_sound_stop
  */
 CF_API float CF_CALL cf_sound_get_volume(CF_Sound sound);
 
@@ -343,7 +367,7 @@ CF_API float CF_CALL cf_sound_get_volume(CF_Sound sound);
  * @param    sound          The sound.
  * @remarks  You can set a sound's playing index with `cf_sound_set_sample_index`. This can be useful to sync a dynamic audio system that
  *           can turn on/off different instruments or sounds.
- * @related  CF_SoundParams CF_Sound cf_sound_params_defaults cf_play_sound cf_sound_is_active cf_sound_get_is_paused cf_sound_get_is_looped cf_sound_get_volume cf_sound_get_sample_index cf_sound_set_sample_index cf_sound_set_is_paused cf_sound_set_is_looped cf_sound_set_volume
+ * @related  CF_SoundParams CF_Sound cf_sound_params_defaults cf_play_sound cf_sound_is_active cf_sound_get_is_paused cf_sound_get_is_looped cf_sound_get_volume cf_sound_get_sample_index cf_sound_set_sample_index cf_sound_set_is_paused cf_sound_set_is_looped cf_sound_set_volume cf_sound_stop
  */
 CF_API uint64_t CF_CALL cf_sound_get_sample_index(CF_Sound sound);
 
@@ -354,7 +378,7 @@ CF_API uint64_t CF_CALL cf_sound_get_sample_index(CF_Sound sound);
  * @param    sound            The sound.
  * @param    true_for_paused  The pause state to set.
  * @remarks  You can get a sound's paused state with `cf_sound_get_is_paused`.
- * @related  CF_SoundParams CF_Sound cf_sound_params_defaults cf_play_sound cf_sound_is_active cf_sound_get_is_paused cf_sound_get_is_looped cf_sound_get_volume cf_sound_get_sample_index cf_sound_set_sample_index cf_sound_set_is_paused cf_sound_set_is_looped cf_sound_set_volume
+ * @related  CF_SoundParams CF_Sound cf_sound_params_defaults cf_play_sound cf_sound_is_active cf_sound_get_is_paused cf_sound_get_is_looped cf_sound_get_volume cf_sound_get_sample_index cf_sound_set_sample_index cf_sound_set_is_paused cf_sound_set_is_looped cf_sound_set_volume cf_sound_stop
  */
 CF_API void CF_CALL cf_sound_set_is_paused(CF_Sound sound, bool true_for_paused);
 
@@ -365,7 +389,7 @@ CF_API void CF_CALL cf_sound_set_is_paused(CF_Sound sound, bool true_for_paused)
  * @param    sound            The sound.
  * @param    true_for_looped  The loop state to set.
  * @remarks  You can get a sound's looped state with `cf_sound_get_is_looped`.
- * @related  CF_SoundParams CF_Sound cf_sound_params_defaults cf_play_sound cf_sound_is_active cf_sound_get_is_paused cf_sound_get_is_looped cf_sound_get_volume cf_sound_get_sample_index cf_sound_set_sample_index cf_sound_set_is_paused cf_sound_set_is_looped cf_sound_set_volume
+ * @related  CF_SoundParams CF_Sound cf_sound_params_defaults cf_play_sound cf_sound_is_active cf_sound_get_is_paused cf_sound_get_is_looped cf_sound_get_volume cf_sound_get_sample_index cf_sound_set_sample_index cf_sound_set_is_paused cf_sound_set_is_looped cf_sound_set_volume cf_sound_stop
  */
 CF_API void CF_CALL cf_sound_set_is_looped(CF_Sound sound, bool true_for_looped);
 
@@ -376,7 +400,7 @@ CF_API void CF_CALL cf_sound_set_is_looped(CF_Sound sound, bool true_for_looped)
  * @param    sound      The sound.
  * @param    volume     A value from 0.0f to 1.0f. 0.0f meaning silent, 1.0f meaning max volume.
  * @remarks  You can get a sound's volume with `cf_sound_get_volume`.
- * @related  CF_SoundParams CF_Sound cf_sound_params_defaults cf_play_sound cf_sound_is_active cf_sound_get_is_paused cf_sound_get_is_looped cf_sound_get_volume cf_sound_get_sample_index cf_sound_set_sample_index cf_sound_set_is_paused cf_sound_set_is_looped cf_sound_set_volume
+ * @related  CF_SoundParams CF_Sound cf_sound_params_defaults cf_play_sound cf_sound_is_active cf_sound_get_is_paused cf_sound_get_is_looped cf_sound_get_volume cf_sound_get_sample_index cf_sound_set_sample_index cf_sound_set_is_paused cf_sound_set_is_looped cf_sound_set_volume cf_sound_stop
  */
 CF_API void CF_CALL cf_sound_set_volume(CF_Sound sound, float volume);
 
@@ -388,9 +412,17 @@ CF_API void CF_CALL cf_sound_set_volume(CF_Sound sound, float volume);
  * @param    sample_index  The index of the sample to play the sound from.
  * @remarks  You can get a sound's playing index with `cf_sound_get_sample_index`. This can be useful to sync a dynamic audio system that
  *           can turn on/off different instruments or sounds.
- * @related  CF_SoundParams CF_Sound cf_sound_params_defaults cf_play_sound cf_sound_is_active cf_sound_get_is_paused cf_sound_get_is_looped cf_sound_get_volume cf_sound_get_sample_index cf_sound_set_sample_index cf_sound_set_is_paused cf_sound_set_is_looped cf_sound_set_volume
+ * @related  CF_SoundParams CF_Sound cf_sound_params_defaults cf_play_sound cf_sound_is_active cf_sound_get_is_paused cf_sound_get_is_looped cf_sound_get_volume cf_sound_get_sample_index cf_sound_set_sample_index cf_sound_set_is_paused cf_sound_set_is_looped cf_sound_set_volume cf_sound_stop
  */
 CF_API void CF_CALL cf_sound_set_sample_index(CF_Sound sound, uint64_t sample_index);
+
+/**
+ * @function cf_sound_stop
+ * @category audio
+ * @brief    Stops the sound instance so it no longer plays.
+ * @related  CF_SoundParams CF_Sound cf_sound_params_defaults cf_play_sound cf_sound_is_active cf_sound_get_is_paused cf_sound_get_is_looped cf_sound_get_volume cf_sound_get_sample_index cf_sound_set_sample_index cf_sound_set_is_paused cf_sound_set_is_looped cf_sound_set_volume cf_sound_stop
+ */
+CF_API void CF_CALL cf_sound_stop(CF_Sound sound);
 
 #ifdef __cplusplus
 }
@@ -423,6 +455,9 @@ CF_INLINE Audio audio_load_wav(const char* path) { return cf_audio_load_wav(path
 CF_INLINE Audio audio_load_ogg_from_memory(void* memory, int byte_count) { return cf_audio_load_ogg_from_memory(memory, byte_count); }
 CF_INLINE Audio audio_load_wav_from_memory(void* memory, int byte_count) { return cf_audio_load_wav_from_memory(memory, byte_count); }
 CF_INLINE void audio_destroy(Audio audio) { cf_audio_destroy(audio); }
+CF_INLINE int audio_sample_rate(Audio audio) { return cf_audio_sample_rate(audio); }
+CF_INLINE int audio_sample_count(Audio audio) { return cf_audio_sample_count(audio); }
+CF_INLINE int audio_channel_count(Audio audio) { return cf_audio_channel_count(audio); }
 
 // -------------------------------------------------------------------------------------------------
 
@@ -460,6 +495,7 @@ CF_INLINE void sound_set_is_paused(Sound sound, bool true_for_paused) { cf_sound
 CF_INLINE void sound_set_is_looped(Sound sound, bool true_for_looped) { cf_sound_set_is_looped(sound, true_for_looped); }
 CF_INLINE void sound_set_volume(Sound sound, float volume) { cf_sound_set_volume(sound, volume); }
 CF_INLINE void sound_set_sample_index(Sound sound, int sample_index) { cf_sound_set_sample_index(sound, sample_index); }
+CF_INLINE void sound_stop(Sound sound) { cf_sound_stop(sound); }
 
 }
 

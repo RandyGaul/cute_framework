@@ -14,7 +14,7 @@ CF_Audio cf_audio_load_wav(const char* path);
 
 Parameters | Description
 --- | ---
-path | The virtual path TODO_LINK to a .wav file.
+path | The virtual path to a .wav file. See [Virtual File System](https://randygaul.github.io/cute_framework/#/topics/virtual_file_system).
 
 ## Return Value
 

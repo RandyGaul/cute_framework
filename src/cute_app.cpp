@@ -534,6 +534,21 @@ bool cf_app_has_focus()
 	return app->window_state.has_keyboard_focus;
 }
 
+void cf_app_request_attention()
+{
+	SDL_FlashWindow(app->window, SDL_FLASH_BRIEFLY);
+}
+
+void cf_app_request_attention_continuously()
+{
+	SDL_FlashWindow(app->window, SDL_FLASH_UNTIL_FOCUSED);
+}
+
+void cf_app_request_attention_cancel()
+{
+	SDL_FlashWindow(app->window, SDL_FLASH_CANCEL);
+}
+
 bool cf_app_was_minimized()
 {
 	return app->window_state.minimized && !app->window_state_prev.minimized;

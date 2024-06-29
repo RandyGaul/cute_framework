@@ -34,4 +34,5 @@ You can get a sound's looped state with [cf_sound_get_is_looped](/audio/cf_sound
 [cf_sound_get_sample_index](/audio/cf_sound_get_sample_index.md)  
 [cf_sound_set_sample_index](/audio/cf_sound_set_sample_index.md)  
 [cf_sound_set_is_paused](/audio/cf_sound_set_is_paused.md)  
+[cf_sound_stop](/audio/cf_sound_stop.md)  
 [cf_sound_set_volume](/audio/cf_sound_set_volume.md)  

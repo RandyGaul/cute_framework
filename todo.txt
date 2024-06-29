@@ -1,0 +1,17 @@
+DPI handling
+doc page on transforms
+pitch
+text fx init
+text fx word iterator
+docs pass on all pages
+https C++ API
+knock out github issues
+resync all cute_headers
+set cute_version.h
+update cute_user_config with all the math overrides recent PR
+ECS docs
+
+punted
+- transparent windows - Can't find an easy way to do this through SDL, might be a cross-platform nightmare
+- specify which screen to spawn upon - Don't have multiple screens to test right now, see SDL_WINDOWPOS_CENTERED_DISPLAY
+- example box2d integration - adn wanted to see this for Lua, hooking up with CF itself would be trivial

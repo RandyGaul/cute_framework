@@ -711,6 +711,32 @@ CF_API bool CF_CALL cf_mouse_double_click_held(CF_MouseButton button);
 CF_API bool CF_CALL cf_mouse_double_clicked(CF_MouseButton button);
 
 /**
+ * @function cf_mouse_hide
+ * @category input
+ * @brief    Hides or shows the mouse.
+ * @related  cf_mouse_hide cf_mouse_hidden cf_mouse_lock_inside_window
+ */
+CF_API void CF_CALL cf_mouse_hide(bool true_to_hide);
+
+/**
+ * @function cf_mouse_hidden
+ * @category input
+ * @brief    Returns whether the mouse is hidden.
+ * @return   True means hidden, false means not hidden.
+ * @related  cf_mouse_hide cf_mouse_hidden cf_mouse_lock_inside_window
+ */
+CF_API bool CF_CALL cf_mouse_hidden();
+
+/**
+ * @function cf_mouse_lock_inside_window
+ * @category input
+ * @brief    Locks the mouse within the window's borders.
+ * @remarks  This is off by default, meaning the mouse is free to leave the border of the window.
+ * @related  cf_mouse_hide cf_mouse_hidden cf_mouse_lock_inside_window
+ */
+CF_API void CF_CALL cf_mouse_lock_inside_window(bool true_to_lock);
+
+/**
  * @function cf_input_text_add_utf8
  * @category input
  * @brief    Adds a utf8 codepoint to the input buffer of the application.
@@ -938,41 +964,44 @@ CF_INLINE const char* to_string(MouseButton button)
 using ImeComposition = CF_ImeComposition;
 using Touch = CF_Touch;
 
-CF_INLINE bool CF_CALL key_down(KeyButton key) { return cf_key_down(key); }
-CF_INLINE bool CF_CALL key_just_pressed(KeyButton key) { return cf_key_just_pressed(key); }
-CF_INLINE bool CF_CALL key_just_released(KeyButton key) { return cf_key_just_released(key); }
-CF_INLINE bool CF_CALL key_repeating(KeyButton key) { return cf_key_repeating(key); }
-CF_INLINE bool CF_CALL key_ctrl() { return cf_key_ctrl(); }
-CF_INLINE bool CF_CALL key_shift() { return cf_key_shift(); }
-CF_INLINE bool CF_CALL key_alt() { return cf_key_alt(); }
-CF_INLINE bool CF_CALL key_gui() { return cf_key_gui(); }
-CF_INLINE void CF_CALL clear_key_states() { cf_clear_key_states(); }
-	 
-CF_INLINE int CF_CALL mouse_x() { return cf_mouse_x(); }
-CF_INLINE int CF_CALL mouse_y() { return cf_mouse_y(); }
-	 
-CF_INLINE bool CF_CALL mouse_down(MouseButton button) { return cf_mouse_down(button); }
-CF_INLINE bool CF_CALL mouse_just_pressed(MouseButton button) { return cf_mouse_just_pressed(button); }
-CF_INLINE bool CF_CALL mouse_just_released(MouseButton button) { return cf_mouse_just_released(button); }
-CF_INLINE int CF_CALL mouse_wheel_motion() { return cf_mouse_wheel_motion(); }
-CF_INLINE bool CF_CALL mouse_double_click_held(MouseButton button) { return cf_mouse_double_click_held(button); }
-CF_INLINE bool CF_CALL mouse_double_clicked(MouseButton button) { return cf_mouse_double_clicked(button); }
-	 
-CF_INLINE void CF_CALL input_text_add_utf8(const char* text) { cf_input_text_add_utf8(text); }
-CF_INLINE int CF_CALL input_text_pop_utf32() { return cf_input_text_pop_utf32(); }
-CF_INLINE bool CF_CALL input_text_has_data() { return cf_input_text_has_data(); }
-CF_INLINE void CF_CALL input_text_clear() {  cf_input_text_clear(); }
-	 
-CF_INLINE void CF_CALL input_enable_ime() { cf_input_enable_ime(); }
-CF_INLINE void CF_CALL input_disable_ime() { cf_input_disable_ime(); }
-CF_INLINE bool CF_CALL input_is_ime_enabled() { return cf_input_is_ime_enabled(); }
-CF_INLINE bool CF_CALL input_has_ime_keyboard_support() { return cf_input_has_ime_keyboard_support(); }
-CF_INLINE bool CF_CALL input_is_ime_keyboard_shown() { return cf_input_is_ime_keyboard_shown(); }
-CF_INLINE void CF_CALL input_set_ime_rect(int x, int y, int w, int h) { cf_input_set_ime_rect(x, y, w, h); }
+CF_INLINE bool key_down(KeyButton key) { return cf_key_down(key); }
+CF_INLINE bool key_just_pressed(KeyButton key) { return cf_key_just_pressed(key); }
+CF_INLINE bool key_just_released(KeyButton key) { return cf_key_just_released(key); }
+CF_INLINE bool key_repeating(KeyButton key) { return cf_key_repeating(key); }
+CF_INLINE bool key_ctrl() { return cf_key_ctrl(); }
+CF_INLINE bool key_shift() { return cf_key_shift(); }
+CF_INLINE bool key_alt() { return cf_key_alt(); }
+CF_INLINE bool key_gui() { return cf_key_gui(); }
+CF_INLINE void clear_key_states() { cf_clear_key_states(); }
 
-CF_INLINE bool CF_CALL input_get_ime_composition(ImeComposition* composition) { return cf_input_get_ime_composition(composition); }
+CF_INLINE int mouse_x() { return cf_mouse_x(); }
+CF_INLINE int mouse_y() { return cf_mouse_y(); }
 
-CF_INLINE bool CF_CALL touch_get(uint64_t id, Touch* touch) { return cf_touch_get(id,touch); }
+CF_INLINE bool mouse_down(MouseButton button) { return cf_mouse_down(button); }
+CF_INLINE bool mouse_just_pressed(MouseButton button) { return cf_mouse_just_pressed(button); }
+CF_INLINE bool mouse_just_released(MouseButton button) { return cf_mouse_just_released(button); }
+CF_INLINE int mouse_wheel_motion() { return cf_mouse_wheel_motion(); }
+CF_INLINE bool mouse_double_click_held(MouseButton button) { return cf_mouse_double_click_held(button); }
+CF_INLINE bool mouse_double_clicked(MouseButton button) { return cf_mouse_double_clicked(button); }
+CF_INLINE void mouse_hide(bool true_to_hide) { cf_mouse_hide(true_to_hide); }
+CF_INLINE bool mouse_hidden() { return cf_mouse_hidden(); }
+CF_INLINE void mouse_lock_inside_window(bool true_to_lock) { cf_mouse_lock_inside_window(true_to_lock); }
+
+CF_INLINE void input_text_add_utf8(const char* text) { cf_input_text_add_utf8(text); }
+CF_INLINE int input_text_pop_utf32() { return cf_input_text_pop_utf32(); }
+CF_INLINE bool input_text_has_data() { return cf_input_text_has_data(); }
+CF_INLINE void input_text_clear() {  cf_input_text_clear(); }
+	 
+CF_INLINE void input_enable_ime() { cf_input_enable_ime(); }
+CF_INLINE void input_disable_ime() { cf_input_disable_ime(); }
+CF_INLINE bool input_is_ime_enabled() { return cf_input_is_ime_enabled(); }
+CF_INLINE bool input_has_ime_keyboard_support() { return cf_input_has_ime_keyboard_support(); }
+CF_INLINE bool input_is_ime_keyboard_shown() { return cf_input_is_ime_keyboard_shown(); }
+CF_INLINE void input_set_ime_rect(int x, int y, int w, int h) { cf_input_set_ime_rect(x, y, w, h); }
+
+CF_INLINE bool input_get_ime_composition(ImeComposition* composition) { return cf_input_get_ime_composition(composition); }
+
+CF_INLINE bool touch_get(uint64_t id, Touch* touch) { return cf_touch_get(id,touch); }
 
 }
 

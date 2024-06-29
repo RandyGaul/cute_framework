@@ -14,7 +14,7 @@ Splits a string about the character `ch` one time, scanning from left-to-right.
 
 Parameters | Description
 --- | ---
-s | The string.
+s | The string. Must be a dynamically allocated string from this string API. Does not work on string literals.
 ch | A character to split about.
 
 ## Return Value
@@ -23,13 +23,13 @@ Returns the string to the left of `ch`.
 
 ## Remarks
 
-s` will contain the string to the right of `ch`.
+`s` will contain the string to the right of `ch`.
 Returns the string to the left of `ch`.
 If `ch` isn't found, simply returns `NULL` and does not modify `s`.
-You must call `sfree` on the returned string.
+You must call [sfree](/string/sfree.md) on the returned string.
 
 This function is intended to be used in a loop, successively chopping off pieces of `s`.
-A much easier, but slightly slower, version of this function is `ssplit`, which returns
+A much easier, but slightly slower, version of this function is [ssplit](/string/ssplit.md), which returns
 an array of strings.
 
 ## Related Pages

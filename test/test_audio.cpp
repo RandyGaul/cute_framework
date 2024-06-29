@@ -39,6 +39,7 @@ TEST_CASE(test_audio_load_synchronous)
 	cf_audio_destroy(audio);
 	audio = cf_audio_load_wav_from_memory(jump_data, jump_sz);
 	REQUIRE(audio.id);
+	cf_audio_destroy(audio);
 	cf_destroy_app();
 
 	return true;

@@ -14,7 +14,7 @@ CF_Result cf_make_font(const char* path, const char* font_name);
 
 Parameters | Description
 --- | ---
-path | A virtual path (TODO_LINK) to the font file.
+path | A virtual path to the font file. See [Virtual File System](https://randygaul.github.io/cute_framework/#/topics/virtual_file_system).
 font_name | A unique name for this font. Used by [cf_push_font](/text/cf_push_font.md) and friends.
 
 ## Return Value

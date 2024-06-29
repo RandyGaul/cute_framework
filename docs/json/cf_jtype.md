@@ -6,21 +6,23 @@ Category: [json](/api_reference?id=json)
 GitHub: [cute_json.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_json.h)  
 ---
 
-TODO
+Describes the type of a [CF_JVal](/json/cf_jval.md).
 
 ## Values
 
 Enum | Description
 --- | ---
-JTYPE_NONE | TODO
-JTYPE_NULL | TODO
-JTYPE_INT | TODO
-JTYPE_FLOAT | TODO
-JTYPE_BOOL | TODO
-JTYPE_STRING | TODO
-JTYPE_ARRAY | TODO
-JTYPE_OBJECT | TODO
+JTYPE_NONE | Empty value, representing an uninitialized state. This is not the same as `CF_JTYPE_NULL`.
+JTYPE_NULL | Null.
+JTYPE_INT | Integer.
+JTYPE_FLOAT | Float.
+JTYPE_BOOL | Boolean.
+JTYPE_STRING | String.
+JTYPE_ARRAY | An Array.
+JTYPE_OBJECT | A JSON Object.
 
 ## Related Pages
 
-TODO  
+[CF_JDoc](/json/cf_jdoc.md)  
+[CF_JVal](/json/cf_jval.md)  
+[cf_make_json](/json/cf_make_json.md)  

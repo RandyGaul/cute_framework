@@ -265,6 +265,17 @@ TEST_CASE(test_dictionary_and_interning)
 	return true;
 }
 
+TEST_CASE(test_split_for_memleaks)
+{
+	const char* data = "asdf,fa;sdf,a,f,q2,1,d,afs;d,a,1,,a,sa,d,v,,";
+	Array<String> a = String::split(data, ';');
+	for (int i = 0; i < a.size(); ++i) {
+		Array<String> b = a[i].split(',');
+	}
+
+	return true;
+}
+
 TEST_SUITE(test_string)
 {
 	RUN_TEST_CASE(test_array_macros_simple);
@@ -272,4 +283,5 @@ TEST_SUITE(test_string)
  	RUN_TEST_CASE(test_string_macros_advanced);
 	RUN_TEST_CASE(test_string_interning);
 	RUN_TEST_CASE(test_dictionary_and_interning);
+	RUN_TEST_CASE(test_split_for_memleaks);
 }

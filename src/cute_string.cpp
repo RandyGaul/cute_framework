@@ -261,7 +261,6 @@ char* cf_ssplit_once(char* s, char split_c)
 
 char** cf_ssplit(const char* s, char split_c)
 {
-	CF_ACANARY(s);
 	char* copy = NULL;
 	char** result = NULL;
 	char* split = NULL;

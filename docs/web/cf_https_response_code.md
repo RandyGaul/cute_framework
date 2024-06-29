@@ -6,20 +6,13 @@ Category: [web](/api_reference?id=web)
 GitHub: [cute_https.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_https.h)  
 ---
 
-TODO
+Returns the HTTP code for the response.
 
 ```cpp
 int cf_https_response_code(CF_HttpsResponse response);
 ```
 
-## Return Value
-
-TODO
-
-## Remarks
-
-TODO
-
 ## Related Pages
 
-TODO  
+[CF_HttpsResponse](/web/cf_httpsresponse.md)  
+[cf_https_response](/web/cf_https_response.md)  

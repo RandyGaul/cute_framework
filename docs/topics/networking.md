@@ -2,6 +2,9 @@
 
 <br>
 
+
+!> **Note** CF's networking is implemented by [cute_net.h](https://github.com/RandyGaul/cute_headers/blob/master/cute_net.h), a low level networking header. This code has not yet reached stable maturity -- use at your own risk! CF would like to release networking features officially in a future release.
+
 CF's networking model uses a [client server networking architecture](https://en.wikipedia.org/wiki/Client%E2%80%93server_model). The underlying protocol works over UDP packets. There is no TCP support or peer-to-peer connections. However, CF does provide an [https API](https://randygaul.github.io/cute_framework/#/api_reference?id=web) for sending requests to an HTTP server. Here are the features of the client server API.
 
 * Out-of-the-box security model based on state of the art connect tokens.
@@ -53,5 +56,3 @@ The game server itself is an instance of [`CF_Server`](https://randygaul.github.
 ## Example Client and Server
 
 Here is a [quick and dirty demonstration](https://github.com/RandyGaul/cf_net_test) showing how to setup a client and server for testing purposes. This shows basic usage of the client and server API, where multiple clients can connect to a single server. The connect tokens are generated on the dedicated server instead of using a web service, which is a great way to test things out during development.
-
-!> **Note** This sample code is a WIP -- Currently it's written with [cute_net.h](https://github.com/RandyGaul/cute_headers/blob/master/cute_net.h), a low level networking header. The sample needs to be ported/updated to be a proper CF sample -- this is slated for CF's initial v1.0 launch.

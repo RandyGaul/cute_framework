@@ -22,7 +22,7 @@ You can use default settings from the [cf_sound_params_defaults](/audio/cf_sound
 
 ## Related Pages
 
-[cf_sound_set_volume](/audio/cf_sound_set_volume.md)  
+[cf_sound_stop](/audio/cf_sound_stop.md)  
 [CF_Sound](/audio/cf_sound.md)  
 [cf_sound_params_defaults](/audio/cf_sound_params_defaults.md)  
 [cf_play_sound](/audio/cf_play_sound.md)  
@@ -34,3 +34,4 @@ You can use default settings from the [cf_sound_params_defaults](/audio/cf_sound
 [cf_sound_set_sample_index](/audio/cf_sound_set_sample_index.md)  
 [cf_sound_set_is_paused](/audio/cf_sound_set_is_paused.md)  
 [cf_sound_set_is_looped](/audio/cf_sound_set_is_looped.md)  
+[cf_sound_set_volume](/audio/cf_sound_set_volume.md)  

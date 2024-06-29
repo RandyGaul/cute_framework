@@ -414,10 +414,10 @@ extern "C" {
  * @function ssplit_once
  * @category string
  * @brief    Splits a string about the character `ch` one time, scanning from left-to-right.
- * @param    s            The string.
+ * @param    s            The string. Must be a dynamically allocated string from this string API. Does *not* work on string literals.
  * @param    ch           A character to split about.
  * @return   Returns the string to the left of `ch`.
- * @remarks  s` will contain the string to the right of `ch`.
+ * @remarks  `s` will contain the string to the right of `ch`.
  *           Returns the string to the left of `ch`.
  *           If `ch` isn't found, simply returns `NULL` and does not modify `s`.
  *           You must call `sfree` on the returned string.
@@ -1055,7 +1055,8 @@ struct String
 	CF_INLINE String& operator=(const char* s) { sset(m_str, s); return *this; }
 	CF_INLINE String& operator=(const String& s) { sset(m_str, s); return *this; }
 	CF_INLINE String& operator=(String&& s) { m_str = s.m_str; s.m_str = NULL; return *this; }
-	CF_INLINE Array<String> split(char split_c) { Array<String> r; char** s = ssplit(m_str, split_c); for (int i=0;i<alen(s);++i) r.add(cf_move(steal_from(s[i]))); return r; }
+	CF_INLINE Array<String> split(char split_c) { Array<String> r; char** s = ssplit(m_str, split_c); for (int i=0;i<alen(s);++i) r.add(cf_move(steal_from(s[i]))); afree(s); return r; }
+	static CF_INLINE Array<String> split(const char* split_me, char split_c) { Array<String> r; char** s = ssplit(split_me, split_c); for (int i=0;i<alen(s);++i) r.add(cf_move(steal_from(s[i]))); afree(s); return r; }
 	CF_INLINE char pop() { char result = slast(m_str); spop(m_str); return result; }
 	CF_INLINE char pop(int n) { char result = slast(m_str); spopn(m_str, n); return result; }
 	CF_INLINE char popn(int n) { char result = slast(m_str); spopn(m_str, n); return result; }
