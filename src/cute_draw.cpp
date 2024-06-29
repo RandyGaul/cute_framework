@@ -452,7 +452,7 @@ void cf_make_draw()
 	attrs[10].format = CF_VERTEX_FORMAT_UBYTE4N;
 	attrs[10].offset = CF_OFFSET_OF(DrawVertex, type);
 	attrs[11].name = "in_user_params";
-	attrs[11].format = CF_VERTEX_FORMAT_UBYTE4N;
+	attrs[11].format = CF_VERTEX_FORMAT_FLOAT4;
 	attrs[11].offset = CF_OFFSET_OF(DrawVertex, user_params);
 	cf_mesh_set_attributes(draw->mesh, attrs, CF_ARRAY_SIZE(attrs), sizeof(DrawVertex), 0);
 
@@ -2137,22 +2137,22 @@ float cf_draw_peek_antialias_scale()
 	return draw->antialias_scale.last();
 }
 
-void cf_draw_push_vertex_attributes(uint8_t r, uint8_t g, uint8_t b, uint8_t a)
+void cf_draw_push_vertex_attributes(float r, float g, float b, float a)
 {
-	draw->user_params.add(cf_make_pixel_rgba(r, g, b, a));
+	draw->user_params.add(cf_make_color_rgba_f(r, g, b, a));
 }
 
-void cf_draw_push_vertex_attributes2(CF_Pixel attributes)
+void cf_draw_push_vertex_attributes2(CF_Color attributes)
 {
 	draw->user_params.add(attributes);
 }
 
-CF_Pixel cf_draw_pop_vertex_attributes()
+CF_Color cf_draw_pop_vertex_attributes()
 {
 	return draw->user_params.count() > 1 ? draw->user_params.pop() : draw->user_params.last();
 }
 
-CF_Pixel cf_draw_peek_vertex_attributes()
+CF_Color cf_draw_peek_vertex_attributes()
 {
 	return draw->user_params.last();
 }

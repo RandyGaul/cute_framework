@@ -9,7 +9,7 @@ GitHub: [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 TODO
 
 ```cpp
-CF_Pixel cf_draw_peek_vertex_attributes();
+CF_Color cf_draw_peek_vertex_attributes();
 ```
 
 ## Related Pages

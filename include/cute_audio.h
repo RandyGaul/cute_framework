@@ -514,6 +514,7 @@ CF_INLINE void sound_set_is_paused(Sound sound, bool true_for_paused) { cf_sound
 CF_INLINE void sound_set_is_looped(Sound sound, bool true_for_looped) { cf_sound_set_is_looped(sound, true_for_looped); }
 CF_INLINE void sound_set_volume(Sound sound, float volume) { cf_sound_set_volume(sound, volume); }
 CF_INLINE void sound_set_sample_index(Sound sound, int sample_index) { cf_sound_set_sample_index(sound, sample_index); }
+CF_INLINE void sound_set_pitch(Sound sound, float pitch = 1.0f) { cf_sound_set_pitch(sound, pitch); }
 CF_INLINE void sound_stop(Sound sound) { cf_sound_stop(sound); }
 
 }

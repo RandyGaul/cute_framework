@@ -1094,12 +1094,12 @@ void mount_content_directory_as(const char* dir)
 
 void push_flash(CF_Color color)
 {
-	draw_push_vertex_attributes(to_pixel(color));
+	draw_push_vertex_attributes(color);
 }
 
 CF_Color pop_flash()
 {
-	return to_color(draw_pop_vertex_attributes());
+	return draw_pop_vertex_attributes();
 }
 
 int main(int argc, char* argv[])
@@ -1121,6 +1121,14 @@ int main(int argc, char* argv[])
 
 	while (app_is_running()) {
 		app_update();
+		push_flash(color_invisible());
+
+		// Draw hearts for HP.
+		for (int i = 0; i < g->player.hp; ++i) {
+			Sprite s = make_sprite("heart.ase");
+			s.transform.p = V2(-300.0f + i * (s.w + 3.0f), 220);
+			s.draw();
+		}
 
 		player_movement_routine();
 		player_weapons_routine();
@@ -1191,13 +1199,6 @@ int main(int argc, char* argv[])
 		// Draw any animation FX.
 		g->animations.update();
 		g->animations.draw();
-
-		// Draw hearts for HP.
-		for (int i = 0; i < g->player.hp; ++i) {
-			Sprite s = make_sprite("heart.ase");
-			s.transform.p = V2(-300.0f + i * (s.w + 3.0f), 220);
-			s.draw();
-		}
 
 		render_settings_push_shader(flash_shader);
 		app_draw_onto_screen();

@@ -9,7 +9,7 @@ GitHub: [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Pushes a set of vertex parameters.
 
 ```cpp
-void cf_draw_push_vertex_attributes(uint8_t r, uint8_t g, uint8_t b, uint8_t a);
+void cf_draw_push_vertex_attributes(float r, float g, float b, float a);
 ```
 
 ## Related Pages

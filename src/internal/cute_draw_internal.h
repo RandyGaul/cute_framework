@@ -42,7 +42,7 @@ struct BatchGeometry
 	bool is_text;
 	bool is_sprite;
 	bool fill;
-	CF_Pixel user_params;
+	CF_Color user_params;
 };
 
 #define SPRITEBATCH_SPRITE_GEOMETRY BatchGeometry
@@ -63,7 +63,7 @@ struct DrawVertex
 	uint8_t alpha;    // g
 	uint8_t fill;     // b
 	uint8_t not_used; // a
-	CF_Pixel user_params;
+	CF_Color user_params;
 };
 
 struct CF_Strike
@@ -98,7 +98,7 @@ struct CF_Draw
 	Cute::Array<CF_Rect> viewports = { { -1, -1, 0, 0 } };
 	Cute::Array<int> layers = { 0 };
 	Cute::Array<CF_Cam> cam_stack;
-	Cute::Array<CF_Pixel> user_params = { cf_make_pixel_hex(0) };
+	Cute::Array<CF_Color> user_params = { cf_make_color_hex(0) };
 	Cute::Array<CF_Shader> shaders;
 	CF_M3x2 cam = cf_make_identity();
 	CF_V2 cam_dimensions = { };

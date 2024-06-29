@@ -477,7 +477,7 @@ CF_API float CF_CALL cf_draw_peek_antialias_scale();
  * @brief    Pushes a set of vertex parameters.
  * @related  TODO
  */
-CF_API void CF_CALL cf_draw_push_vertex_attributes(uint8_t r, uint8_t g, uint8_t b, uint8_t a);
+CF_API void CF_CALL cf_draw_push_vertex_attributes(float r, float g, float b, float a);
 
 /**
  * @function cf_draw_push_vertex_attributes2
@@ -485,7 +485,7 @@ CF_API void CF_CALL cf_draw_push_vertex_attributes(uint8_t r, uint8_t g, uint8_t
  * @brief    TODO
  * @related  TODO
  */
-CF_API void CF_CALL cf_draw_push_vertex_attributes2(CF_Pixel attributes);
+CF_API void CF_CALL cf_draw_push_vertex_attributes2(CF_Color attributes);
 
 /**
  * @function cf_draw_pop_vertex_attributes
@@ -493,7 +493,7 @@ CF_API void CF_CALL cf_draw_push_vertex_attributes2(CF_Pixel attributes);
  * @brief    TODO
  * @related  TODO
  */
-CF_API CF_Pixel CF_CALL cf_draw_pop_vertex_attributes();
+CF_API CF_Color CF_CALL cf_draw_pop_vertex_attributes();
 
 /**
  * @function cf_draw_peek_vertex_attributes
@@ -501,7 +501,7 @@ CF_API CF_Pixel CF_CALL cf_draw_pop_vertex_attributes();
  * @brief    TODO
  * @related  TODO
  */
-CF_API CF_Pixel CF_CALL cf_draw_peek_vertex_attributes();
+CF_API CF_Color CF_CALL cf_draw_peek_vertex_attributes();
 
 /**
  * @function cf_make_font
@@ -1336,10 +1336,10 @@ CF_INLINE bool draw_peek_antialias() { return cf_draw_peek_antialias(); }
 CF_INLINE void draw_push_antialias_scale(float scale) { return cf_draw_push_antialias_scale(scale); }
 CF_INLINE float draw_pop_antialias_scale() { return cf_draw_pop_antialias_scale(); }
 CF_INLINE float draw_peek_antialias_scale() { return cf_draw_peek_antialias_scale(); }
-CF_INLINE void draw_push_vertex_attributes(uint8_t r, uint8_t g, uint8_t b, uint8_t a) { cf_draw_push_vertex_attributes(r, g, b, a); }
-CF_INLINE void draw_push_vertex_attributes(CF_Pixel attributes) { cf_draw_push_vertex_attributes2(attributes); }
-CF_INLINE CF_Pixel draw_pop_vertex_attributes() { return cf_draw_pop_vertex_attributes(); }
-CF_INLINE CF_Pixel draw_peek_vertex_attributes() { return cf_draw_peek_vertex_attributes(); }
+CF_INLINE void draw_push_vertex_attributes(float r, float g, float b, float a) { cf_draw_push_vertex_attributes(r, g, b, a); }
+CF_INLINE void draw_push_vertex_attributes(CF_Color attributes) { cf_draw_push_vertex_attributes2(attributes); }
+CF_INLINE CF_Color draw_pop_vertex_attributes() { return cf_draw_pop_vertex_attributes(); }
+CF_INLINE CF_Color draw_peek_vertex_attributes() { return cf_draw_peek_vertex_attributes(); }
 
 CF_INLINE CF_Result make_font(const char* path, const char* font_name) { return cf_make_font(path, font_name); }
 CF_INLINE CF_Result make_font_from_memory(void* data, int size, const char* font_name) { return cf_make_font_from_memory(data, size, font_name); }
