@@ -1407,12 +1407,12 @@ bool cf_peek_text_vertical_layout()
 	return draw->vertical.last();
 }
 
-void cf_push_text_effect(bool text_effects_on)
+void cf_push_text_effect_active(bool text_effects_on)
 {
 	draw->text_effects.add(text_effects_on);
 }
 
-bool cf_pop_text_effect()
+bool cf_pop_text_effect_active()
 {
 	if (draw->text_effects.count() > 1) {
 		return draw->text_effects.pop();
@@ -1421,7 +1421,7 @@ bool cf_pop_text_effect()
 	}
 }
 
-bool cf_peek_text_effect()
+bool cf_peek_text_effect_active()
 {
 	return draw->text_effects.last();
 }
@@ -1799,7 +1799,6 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 	CF_ASSERT(font);
 	if (!font) return V2(0,0);
 
-	bool do_effects = draw->text_effects.last();
 	// Cache effect state key'd by input text pointer.
 	CF_TextEffectState* effect_state = app->text_effect_states.try_find(text);
 	if (!effect_state) {
@@ -1822,6 +1821,7 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 	}
 
 	// Use the sanitized string for rendering. This excludes all text codes.
+	bool do_effects = draw->text_effects.last();
 	if (do_effects) {
 		text = effect_state->sanitized.c_str();
 	}
@@ -1913,6 +1913,7 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 	if (!text) {
 		text_length = 0;
 	}
+
 	// Render the string glyph-by-glyph.
 	while (text_length-- && *text) {
 		cp_prev = cp;

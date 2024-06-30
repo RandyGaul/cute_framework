@@ -783,9 +783,30 @@ CF_API bool CF_CALL cf_pop_text_vertical_layout();
  */
 CF_API bool CF_CALL cf_peek_text_vertical_layout();
 
-CF_API void CF_CALL cf_push_text_effect(bool effects_on);
-CF_API bool CF_CALL cf_pop_text_effect();
-CF_API bool CF_CALL cf_peek_text_effect();
+/**
+ * @function cf_push_text_effect_active
+ * @category text
+ * @brief    Turns on/off text effects.
+ * @remarks  Text effects are on by default.
+ * @related  cf_push_text_effect_active cf_pop_text_effect_active cf_peek_text_effect_active
+ */
+CF_API void CF_CALL cf_push_text_effect_active(bool effects_on);
+
+/**
+ * @function cf_pop_text_effect_active
+ * @category text
+ * @brief    Pops the previously pushed activated state for text effects. See `cf_push_text_effect_active`.
+ * @related  cf_push_text_effect_active cf_pop_text_effect_active cf_peek_text_effect_active
+ */
+CF_API bool CF_CALL cf_pop_text_effect_active();
+
+/**
+ * @function cf_peek_text_effect_active
+ * @category text
+ * @brief    Returns the last text active state.
+ * @related  cf_push_text_effect_active cf_pop_text_effect_active cf_peek_text_effect_active
+ */
+CF_API bool CF_CALL cf_peek_text_effect_active();
 
 /**
  * @function cf_text_width
