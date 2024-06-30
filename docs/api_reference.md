@@ -144,6 +144,7 @@ This is a list of all functions in Cute Framework organized by categories. This 
 - [cf_music_play](/audio/cf_music_play.md)
 - [cf_music_resume](/audio/cf_music_resume.md)
 - [cf_music_set_loop](/audio/cf_music_set_loop.md)
+- [cf_music_set_pitch](/audio/cf_music_set_pitch.md)
 - [cf_music_set_sample_index](/audio/cf_music_set_sample_index.md)
 - [cf_music_set_volume](/audio/cf_music_set_volume.md)
 - [cf_music_stop](/audio/cf_music_stop.md)
@@ -157,6 +158,7 @@ This is a list of all functions in Cute Framework organized by categories. This 
 - [cf_sound_params_defaults](/audio/cf_sound_params_defaults.md)
 - [cf_sound_set_is_looped](/audio/cf_sound_set_is_looped.md)
 - [cf_sound_set_is_paused](/audio/cf_sound_set_is_paused.md)
+- [cf_sound_set_pitch](/audio/cf_sound_set_pitch.md)
 - [cf_sound_set_sample_index](/audio/cf_sound_set_sample_index.md)
 - [cf_sound_set_volume](/audio/cf_sound_set_volume.md)
 - [cf_sound_stop](/audio/cf_sound_stop.md)
@@ -346,6 +348,7 @@ This is a list of all functions in Cute Framework organized by categories. This 
 - [cf_draw_quad2](/draw/cf_draw_quad2.md)
 - [cf_draw_quad_fill](/draw/cf_draw_quad_fill.md)
 - [cf_draw_quad_fill2](/draw/cf_draw_quad_fill2.md)
+- [cf_draw_set_vertex_callback](/draw/cf_draw_set_vertex_callback.md)
 - [cf_draw_sprite](/draw/cf_draw_sprite.md)
 - [cf_draw_tri](/draw/cf_draw_tri.md)
 - [cf_draw_tri_fill](/draw/cf_draw_tri_fill.md)
@@ -371,10 +374,12 @@ This is a list of all functions in Cute Framework organized by categories. This 
 - [cf_render_settings_push_viewport](/draw/cf_render_settings_push_viewport.md)
 - [cf_render_settings_set_atlas_dimensions](/draw/cf_render_settings_set_atlas_dimensions.md)
 - [cf_render_to](/draw/cf_render_to.md)
+- [CF_VertexFn](/draw/cf_vertexfn.md)
 
 
 ### structs
 - [CF_TemporaryImage](/draw/cf_temporaryimage.md)
+- [CF_Vertex](/draw/cf_vertex.md)
 
 
 ## graphics
@@ -864,6 +869,7 @@ This is a list of all functions in Cute Framework organized by categories. This 
 - [cf_bottom_right](/math/cf_bottom_right.md)
 - [cf_center](/math/cf_center.md)
 - [cf_centroid](/math/cf_centroid.md)
+- [cf_ciel](/math/cf_ciel.md)
 - [cf_circle_in](/math/cf_circle_in.md)
 - [cf_circle_in_out](/math/cf_circle_in_out.md)
 - [cf_circle_out](/math/cf_circle_out.md)

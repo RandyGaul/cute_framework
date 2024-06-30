@@ -20,10 +20,11 @@ volume | A value from 0.0f to 1.0f, where 0.0f means no volume, and 1.0f means f
 
 [cf_music_play](/audio/cf_music_play.md)  
 [cf_music_stop](/audio/cf_music_stop.md)  
-[cf_music_set_sample_index](/audio/cf_music_set_sample_index.md)  
+[cf_music_set_pitch](/audio/cf_music_set_pitch.md)  
 [cf_music_set_loop](/audio/cf_music_set_loop.md)  
 [cf_music_pause](/audio/cf_music_pause.md)  
 [cf_music_resume](/audio/cf_music_resume.md)  
 [cf_music_switch_to](/audio/cf_music_switch_to.md)  
 [cf_music_crossfade](/audio/cf_music_crossfade.md)  
 [cf_music_get_sample_index](/audio/cf_music_get_sample_index.md)  
+[cf_music_set_sample_index](/audio/cf_music_set_sample_index.md)  

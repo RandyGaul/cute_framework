@@ -111,13 +111,13 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 	CF_UNUSED(udata);
 	int vert_count = 0;
 	draw->verts.ensure_count(count * 6);
-	DrawVertex* verts = draw->verts.data();
-	CF_MEMSET(verts, 0, sizeof(DrawVertex) * count * 6);
+	CF_Vertex* verts = draw->verts.data();
+	CF_MEMSET(verts, 0, sizeof(CF_Vertex) * count * 6);
 
 	for (int i = 0; i < count; ++i) {
 		spritebatch_sprite_t* s = sprites + i;
 		BatchGeometry geom = s->geom;
-		DrawVertex* out = verts + vert_count;
+		CF_Vertex* out = verts + vert_count;
 
 		v2 quad[6] = {
 			geom.box[0],
@@ -137,7 +137,7 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 			geom.boxH[2],
 		};
 
-		switch (s->geom.type) {
+		switch (geom.type) {
 		case BATCH_GEOMETRY_TYPE_TRI:
 		{
 			for (int i = 0; i < 3; ++i) {
@@ -148,7 +148,7 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 				out[i].alpha = (uint8_t)(s->geom.alpha * 255.0f);
 				out[i].fill = 255;
 				out[i].aa = 0;
-				out[i].user_params = geom.user_params;
+				out[i].attributes = geom.user_params;
 			}
 
 			out[0].posH = geom.a;
@@ -173,7 +173,7 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 				out[i].type = VA_TYPE_TRIANGLE_SDF;
 				out[i].alpha = (uint8_t)(s->geom.alpha * 255.0f);
 				out[i].fill = s->geom.fill ? 255 : 0;
-				out[i].user_params = geom.user_params;
+				out[i].attributes = geom.user_params;
 			}
 
 			vert_count += 6;
@@ -192,7 +192,7 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 				out[i].type = VA_TYPE_BOX;
 				out[i].alpha = (uint8_t)(s->geom.alpha * 255.0f);
 				out[i].fill = s->geom.fill ? 255 : 0;
-				out[i].user_params = geom.user_params;
+				out[i].attributes = geom.user_params;
 			}
 
 			out[0].p = quad[0];
@@ -268,7 +268,7 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 					CF_ASSERT(false);
 				}
 				out[i].color = s->geom.color;
-				out[i].user_params = geom.user_params;
+				out[i].attributes = geom.user_params;
 			}
 
 			out[0].posH = geom.a;
@@ -314,7 +314,7 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 				out[i].type = VA_TYPE_SEGMENT;
 				out[i].alpha = (uint8_t)(s->geom.alpha * 255.0f);
 				out[i].fill = s->geom.fill ? 255 : 0;
-				out[i].user_params = geom.user_params;
+				out[i].attributes = geom.user_params;
 			}
 
 			vert_count += 6;
@@ -333,7 +333,7 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 				out[i].type = VA_TYPE_SEGMENT;
 				out[i].alpha = (uint8_t)(s->geom.alpha * 255.0f);
 				out[i].fill = s->geom.fill ? 255 : 0;
-				out[i].user_params = geom.user_params;
+				out[i].attributes = geom.user_params;
 			}
 			
 			out[0].p = geom.box[0];
@@ -347,6 +347,11 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 			vert_count += 3;
 		}	break;
 		}
+	}
+
+	// Allow users to optionally modulate vertices.
+	if (draw->vertex_fn) {
+		draw->vertex_fn(verts, vert_count);
 	}
 
 	// Apply viewport.
@@ -420,41 +425,41 @@ void cf_make_draw()
 	CF_VertexAttribute attrs[12] = { };
 	attrs[0].name = "in_pos";
 	attrs[0].format = CF_VERTEX_FORMAT_FLOAT2;
-	attrs[0].offset = CF_OFFSET_OF(DrawVertex, p);
+	attrs[0].offset = CF_OFFSET_OF(CF_Vertex, p);
 	attrs[1].name = "in_posH";
 	attrs[1].format = CF_VERTEX_FORMAT_FLOAT2;
-	attrs[1].offset = CF_OFFSET_OF(DrawVertex, posH);
+	attrs[1].offset = CF_OFFSET_OF(CF_Vertex, posH);
 	attrs[2].name = "in_a";
 	attrs[2].format = CF_VERTEX_FORMAT_FLOAT2;
-	attrs[2].offset = CF_OFFSET_OF(DrawVertex, a);
+	attrs[2].offset = CF_OFFSET_OF(CF_Vertex, a);
 	attrs[3].name = "in_b";
 	attrs[3].format = CF_VERTEX_FORMAT_FLOAT2;
-	attrs[3].offset = CF_OFFSET_OF(DrawVertex, b);
+	attrs[3].offset = CF_OFFSET_OF(CF_Vertex, b);
 	attrs[4].name = "in_c";
 	attrs[4].format = CF_VERTEX_FORMAT_FLOAT2;
-	attrs[4].offset = CF_OFFSET_OF(DrawVertex, c);
+	attrs[4].offset = CF_OFFSET_OF(CF_Vertex, c);
 	attrs[5].name = "in_uv";
 	attrs[5].format = CF_VERTEX_FORMAT_FLOAT2;
-	attrs[5].offset = CF_OFFSET_OF(DrawVertex, uv);
+	attrs[5].offset = CF_OFFSET_OF(CF_Vertex, uv);
 	attrs[6].name = "in_col";
 	attrs[6].format = CF_VERTEX_FORMAT_UBYTE4N;
-	attrs[6].offset = CF_OFFSET_OF(DrawVertex, color);
+	attrs[6].offset = CF_OFFSET_OF(CF_Vertex, color);
 	attrs[7].name = "in_radius";
 	attrs[7].format = CF_VERTEX_FORMAT_FLOAT;
-	attrs[7].offset = CF_OFFSET_OF(DrawVertex, radius);
+	attrs[7].offset = CF_OFFSET_OF(CF_Vertex, radius);
 	attrs[8].name = "in_stroke";
 	attrs[8].format = CF_VERTEX_FORMAT_FLOAT;
-	attrs[8].offset = CF_OFFSET_OF(DrawVertex, stroke);
+	attrs[8].offset = CF_OFFSET_OF(CF_Vertex, stroke);
 	attrs[9].name = "in_aa";
 	attrs[9].format = CF_VERTEX_FORMAT_FLOAT;
-	attrs[9].offset = CF_OFFSET_OF(DrawVertex, aa);
+	attrs[9].offset = CF_OFFSET_OF(CF_Vertex, aa);
 	attrs[10].name = "in_params";
 	attrs[10].format = CF_VERTEX_FORMAT_UBYTE4N;
-	attrs[10].offset = CF_OFFSET_OF(DrawVertex, type);
+	attrs[10].offset = CF_OFFSET_OF(CF_Vertex, type);
 	attrs[11].name = "in_user_params";
-	attrs[11].format = CF_VERTEX_FORMAT_UBYTE4N;
-	attrs[11].offset = CF_OFFSET_OF(DrawVertex, user_params);
-	cf_mesh_set_attributes(draw->mesh, attrs, CF_ARRAY_SIZE(attrs), sizeof(DrawVertex), 0);
+	attrs[11].format = CF_VERTEX_FORMAT_FLOAT4;
+	attrs[11].offset = CF_OFFSET_OF(CF_Vertex, attributes);
+	cf_mesh_set_attributes(draw->mesh, attrs, CF_ARRAY_SIZE(attrs), sizeof(CF_Vertex), 0);
 
 	// Shaders.
 	draw->shaders.add(CF_MAKE_SOKOL_SHADER(sprite_shader));
@@ -693,10 +698,6 @@ static void s_draw_capsule(v2 a, v2 b, float stroke, float radius, bool fill)
 	s.geom.type = BATCH_GEOMETRY_TYPE_CAPSULE;
 
 	s_bounding_box_of_capsule(a, b, radius, stroke, s.geom.box);
-	s.geom.box[0] = s.geom.box[0];
-	s.geom.box[1] = s.geom.box[1];
-	s.geom.box[2] = s.geom.box[2];
-	s.geom.box[3] = s.geom.box[3];
 	s.geom.boxH[0] = mul(m, s.geom.box[0]);
 	s.geom.boxH[1] = mul(m, s.geom.box[1]);
 	s.geom.boxH[2] = mul(m, s.geom.box[2]);
@@ -713,6 +714,7 @@ static void s_draw_capsule(v2 a, v2 b, float stroke, float radius, bool fill)
 	s.geom.aa = draw->aaf * draw->antialias.last();
 	s.geom.user_params = draw->user_params.last();
 	s.sort_bits = draw->layers.last();
+
 	spritebatch_push(&draw->sb, s);
 }
 
@@ -2170,24 +2172,29 @@ float cf_draw_peek_antialias_scale()
 	return draw->antialias_scale.last();
 }
 
-void cf_draw_push_vertex_attributes(uint8_t r, uint8_t g, uint8_t b, uint8_t a)
+void cf_draw_push_vertex_attributes(float r, float g, float b, float a)
 {
-	draw->user_params.add(cf_make_pixel_rgba(r, g, b, a));
+	draw->user_params.add(cf_make_color_rgba_f(r, g, b, a));
 }
 
-void cf_draw_push_vertex_attributes2(CF_Pixel attributes)
+void cf_draw_push_vertex_attributes2(CF_Color attributes)
 {
 	draw->user_params.add(attributes);
 }
 
-CF_Pixel cf_draw_pop_vertex_attributes()
+CF_Color cf_draw_pop_vertex_attributes()
 {
 	return draw->user_params.count() > 1 ? draw->user_params.pop() : draw->user_params.last();
 }
 
-CF_Pixel cf_draw_peek_vertex_attributes()
+CF_Color cf_draw_peek_vertex_attributes()
 {
 	return draw->user_params.last();
+}
+
+void cf_draw_set_vertex_callback(CF_VertexFn* vertex_fn)
+{
+	draw->vertex_fn = vertex_fn;
 }
 
 void cf_render_settings_filter(CF_Filter filter)

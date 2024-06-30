@@ -25,5 +25,6 @@ cross_fade_time | A number of seconds to crossfade to the next track. Can be 0.0
 [cf_music_pause](/audio/cf_music_pause.md)  
 [cf_music_resume](/audio/cf_music_resume.md)  
 [cf_music_switch_to](/audio/cf_music_switch_to.md)  
-[cf_music_set_sample_index](/audio/cf_music_set_sample_index.md)  
+[cf_music_set_pitch](/audio/cf_music_set_pitch.md)  
 [cf_music_get_sample_index](/audio/cf_music_get_sample_index.md)  
+[cf_music_set_sample_index](/audio/cf_music_set_sample_index.md)  
