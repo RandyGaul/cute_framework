@@ -507,7 +507,7 @@ CF_API CF_Color CF_CALL cf_draw_peek_vertex_attributes();
  * @struct   CF_Vertex
  * @category draw
  * @brief    The full vertex layout CF uses just before sending verts to the GPU.
- * @remarks  You may fill in vertices via callback by `cf_draw_push_vertex_callback`. See `CF_VertexFn`.
+ * @remarks  You may fill in vertices via callback by `cf_set_vertex_callback`. See `CF_VertexFn`.
  *           This is useful when you need to fill in unique `attributes` per-vertex, or modify any other
  *           bits of the vertex before rendering. This could be used to implement features like dynamically
  *           generated UV's for shape slicing, or complex lighting systems.
@@ -565,7 +565,7 @@ typedef struct CF_Vertex
  *           triangles. Since all shapes are rendered with signed-distance functions, most shapes merely generate
  *           a single quad, so you may find triangle counts lower than originally anticipated.
  *           
- *           Call `cf_draw_set_vertex_callback` to setup your callback.
+ *           Call `cf_set_vertex_callback` to setup your callback.
  *           
  *           There is no adjecancy info provided. If you need to know which triangles connect to others you
  *           should probably redesign your feature to not require adjecancy information, or use your own custom

@@ -26,7 +26,7 @@ Struct Members | Description
 
 ## Remarks
 
-You may fill in vertices via callback by `cf_draw_push_vertex_callback`. See [CF_VertexFn](/draw/cf_vertexfn.md).
+You may fill in vertices via callback by [cf_set_vertex_callback](/draw/cf_set_vertex_callback.md). See [CF_VertexFn](/draw/cf_vertexfn.md).
 This is useful when you need to fill in unique `attributes` per-vertex, or modify any other
 bits of the vertex before rendering. This could be used to implement features like dynamically
 generated UV's for shape slicing, or complex lighting systems.
