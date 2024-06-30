@@ -521,19 +521,19 @@ typedef struct CF_Vertex
 	/* @member "Homogenous" position transformed by the camera. */
 	CF_V2 posH;
 
-	/* @member For internal use -- used in signed-distance functions for rendering shapes. */
+	/* @member For internal use -- For signed-distance functions for rendering shapes. */
 	CF_V2 a, b, c;
 
-	/* @member For internal use -- used for sprite rendering. */
+	/* @member For internal use -- For sprite rendering. */
 	CF_V2 uv;
 
 	/* @member Color for rendering shapes (ignored for sprites). */
 	CF_Pixel color;
 
-	/* @member For internal use -- Used for applying "chubbiness" factor for shapes, or radii on circle/capsule. */
+	/* @member For internal use -- For applying "chubbiness" factor for shapes, or radii on circle/capsule. */
 	float radius;
 
-	/* @member For internal use -- Used for shape rendering for border style stroke rendering (no fill). */
+	/* @member For internal use -- For shape rendering for border style stroke rendering (no fill). */
 	float stroke;
 
 	/* @member For internal use -- Factor for the size of antialiasing. */
@@ -579,17 +579,7 @@ typedef void (CF_VertexFn)(CF_Vertex* verts, int count);
  * @function cf_draw_set_vertex_callback
  * @category draw
  * @brief    An optional callback for modifying vertices before they are sent to the GPU.
- * @remarks  Setup this callback to apply per-vertex modulations for implementing advanced graphical effects.
- *           `Count` is always a multiple of three, as this function always processes large batched arrays of
- *           triangles. Since all shapes are rendered with signed-distance functions, most shapes merely generate
- *           a single quad, so you may find triangle counts lower than originally anticipated.
- *           
- *           Call `cf_draw_set_vertex_callback` to setup your callback.
- *           
- *           There is no adjecancy info provided. If you need to know which triangles connect to others you
- *           should probably redesign your feature to not require adjecancy information, or use your own custom
- *           rendering solution. With a custom solution you may use low-level graphics in cute_graphics.h, where
- *           any adjacency info can be controlled 100% by you a-priori.
+ * @remarks  See `CF_VertexFn`.
  * @related  CF_Vertex CF_VertexFn cf_draw_push_vertex_callback cf_draw_pop_vertex_callback
  */
 CF_API void CF_CALL cf_draw_set_vertex_callback(CF_VertexFn* vertex_fn);

@@ -869,6 +869,7 @@ This is a list of all functions in Cute Framework organized by categories. This 
 - [cf_bottom_right](/math/cf_bottom_right.md)
 - [cf_center](/math/cf_center.md)
 - [cf_centroid](/math/cf_centroid.md)
+- [cf_ciel](/math/cf_ciel.md)
 - [cf_circle_in](/math/cf_circle_in.md)
 - [cf_circle_in_out](/math/cf_circle_in_out.md)
 - [cf_circle_out](/math/cf_circle_out.md)

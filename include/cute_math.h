@@ -45,6 +45,11 @@
 	#define CF_FLOORF floorf
 #endif
 
+#ifndef CF_CEILF
+	#include <math.h>
+	#define CF_CEILF ceilf
+#endif
+
 #ifndef CF_ROUNDF
 	#include <math.h>
 	#define CF_ROUNDF roundf
@@ -1046,9 +1051,18 @@ CF_INLINE int cf_greater_equal_v2(CF_V2 a, CF_V2 b) { return a.x >= b.x && a.y >
  * @category math
  * @brief    Returns the component-wise floor of a vector.
  * @remarks  Floor means the decimal-point part is zero'd out.
- * @related  CF_V2 cf_round cf_lesser_v2 cf_greater_v2 cf_lesser_equal_v2 cf_greater_equal_v2 cf_parallel
+ * @related  CF_V2 cf_round cf_lesser_v2 cf_greater_v2 cf_lesser_equal_v2 cf_greater_equal_v2 cf_parallel cf_floor cf_ciel
  */
 CF_INLINE CF_V2 cf_floor(CF_V2 a) { return cf_v2(CF_FLOORF(a.x), CF_FLOORF(a.y)); }
+
+/**
+ * @function cf_ciel
+ * @category math
+ * @brief    Returns the component-wise ceil of a vector.
+ * @remarks  Ceil means the number is clamped up to the next whole-number.
+ * @related  CF_V2 cf_round cf_lesser_v2 cf_greater_v2 cf_lesser_equal_v2 cf_greater_equal_v2 cf_parallel cf_floor cf_ciel
+ */
+CF_INLINE CF_V2 cf_ciel(CF_V2 a) { return cf_v2(CF_FLOORF(a.x), CF_FLOORF(a.y)); }
 
 /**
  * @function cf_round

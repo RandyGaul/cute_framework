@@ -12,11 +12,11 @@ Struct Members | Description
 --- | ---
 `CF_V2 p` | World space position.
 `CF_V2 posH` | "Homogenous" position transformed by the camera.
-`CF_V2 a, b, c` | For internal use -- used in signed-distance functions for rendering shapes.
-`CF_V2 uv` | For internal use -- used for sprite rendering.
+`CF_V2 a, b, c` | For internal use -- For signed-distance functions for rendering shapes.
+`CF_V2 uv` | For internal use -- For sprite rendering.
 `CF_Pixel color` | Color for rendering shapes (ignored for sprites).
-`float radius` | For internal use -- Used for applying "chubbiness" factor for shapes, or radii on circle/capsule.
-`float stroke` | For internal use -- Used for shape rendering for border style stroke rendering (no fill).
+`float radius` | For internal use -- For applying "chubbiness" factor for shapes, or radii on circle/capsule.
+`float stroke` | For internal use -- For shape rendering for border style stroke rendering (no fill).
 `float aa` | For internal use -- Factor for the size of antialiasing.
 `uint8_t type` | For internal use -- The type of shape to be rendered, used by the signed-distance functions within CF's internal fragment shader.
 `uint8_t alpha` | Used for the alpha-component (transparency).
