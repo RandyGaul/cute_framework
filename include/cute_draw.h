@@ -504,6 +504,97 @@ CF_API CF_Color CF_CALL cf_draw_pop_vertex_attributes();
 CF_API CF_Color CF_CALL cf_draw_peek_vertex_attributes();
 
 /**
+ * @struct   CF_Vertex
+ * @category draw
+ * @brief    The full vertex layout CF uses just before sending verts to the GPU.
+ * @remarks  You may fill in vertices via callback by `cf_draw_push_vertex_callback`. See `CF_VertexFn`.
+ *           This is useful when you need to fill in unique `attributes` per-vertex, or modify any other
+ *           bits of the vertex before rendering. This could be used to implement features like dynamically
+ *           generated UV's for shape slicing, or complex lighting systems.
+ * @related  CF_Vertex CF_VertexFn cf_draw_push_vertex_callback cf_draw_pop_vertex_callback
+ */
+typedef struct CF_Vertex
+{
+	/* @member World space position. */
+	CF_V2 p;
+
+	/* @member "Homogenous" position transformed by the camera. */
+	CF_V2 posH;
+
+	/* @member For internal use -- used in signed-distance functions for rendering shapes. */
+	CF_V2 a, b, c;
+
+	/* @member For internal use -- used for sprite rendering. */
+	CF_V2 uv;
+
+	/* @member Color for rendering shapes (ignored for sprites). */
+	CF_Pixel color;
+
+	/* @member For internal use -- Used for applying "chubbiness" factor for shapes, or radii on circle/capsule. */
+	float radius;
+
+	/* @member For internal use -- Used for shape rendering for border style stroke rendering (no fill). */
+	float stroke;
+
+	/* @member For internal use -- Factor for the size of antialiasing. */
+	float aa;
+
+	/* @member For internal use -- The type of shape to be rendered, used by the signed-distance functions within CF's internal fragment shader. */
+	uint8_t type;
+
+	/* @member Used for the alpha-component (transparency). */
+	uint8_t alpha;
+
+	/* @member For internal use -- Whether or not to render shapes as filled or strokedx. */
+	uint8_t fill;
+
+	/* @member For internal use -- Reserved for a future purpose, simply fulfills byte alignment for now. */
+	uint8_t not_used;
+
+	/* @member Four general purpose floats passed into custom user shaders. */
+	CF_Color attributes;
+} CF_Vertex;
+// @end
+
+/**
+ * @function CF_VertexFn
+ * @category draw
+ * @brief    An optional callback for modifying vertices before they are sent to the GPU.
+ * @remarks  Setup this callback to apply per-vertex modulations for implementing advanced graphical effects.
+ *           `Count` is always a multiple of three, as this function always processes large batched arrays of
+ *           triangles. Since all shapes are rendered with signed-distance functions, most shapes merely generate
+ *           a single quad, so you may find triangle counts lower than originally anticipated.
+ *           
+ *           Call `cf_draw_set_vertex_callback` to setup your callback.
+ *           
+ *           There is no adjecancy info provided. If you need to know which triangles connect to others you
+ *           should probably redesign your feature to not require adjecancy information, or use your own custom
+ *           rendering solution. With a custom solution you may use low-level graphics in cute_graphics.h, where
+ *           any adjacency info can be controlled 100% by you a-priori.
+ * @related  CF_Vertex CF_VertexFn cf_draw_push_vertex_callback cf_draw_pop_vertex_callback
+ */
+typedef void (CF_VertexFn)(CF_Vertex* verts, int count);
+
+/**
+ * @function cf_draw_set_vertex_callback
+ * @category draw
+ * @brief    An optional callback for modifying vertices before they are sent to the GPU.
+ * @remarks  Setup this callback to apply per-vertex modulations for implementing advanced graphical effects.
+ *           `Count` is always a multiple of three, as this function always processes large batched arrays of
+ *           triangles. Since all shapes are rendered with signed-distance functions, most shapes merely generate
+ *           a single quad, so you may find triangle counts lower than originally anticipated.
+ *           
+ *           Call `cf_draw_set_vertex_callback` to setup your callback.
+ *           
+ *           There is no adjecancy info provided. If you need to know which triangles connect to others you
+ *           should probably redesign your feature to not require adjecancy information, or use your own custom
+ *           rendering solution. With a custom solution you may use low-level graphics in cute_graphics.h, where
+ *           any adjacency info can be controlled 100% by you a-priori.
+ * @related  CF_Vertex CF_VertexFn cf_draw_push_vertex_callback cf_draw_pop_vertex_callback
+ */
+CF_API void CF_CALL cf_draw_set_vertex_callback(CF_VertexFn* vertex_fn);
+
+/**
  * @function cf_make_font
  * @category text
  * @brief    Constructs a font for rendering text.

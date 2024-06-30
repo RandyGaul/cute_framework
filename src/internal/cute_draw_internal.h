@@ -10,6 +10,7 @@
 
 #include <cute_array.h>
 #include <cute_math.h>
+#include <cute_draw.h>
 
 #include <float.h>
 
@@ -48,23 +49,6 @@ struct BatchGeometry
 #define SPRITEBATCH_SPRITE_GEOMETRY BatchGeometry
 
 #include <cute/cute_spritebatch.h>
-
-struct DrawVertex
-{
-	CF_V2 p;
-	CF_V2 posH;
-	CF_V2 a, b, c;
-	CF_V2 uv;
-	CF_Pixel color;
-	float radius;
-	float stroke;
-	float aa;
-	uint8_t type;     // r
-	uint8_t alpha;    // g
-	uint8_t fill;     // b
-	uint8_t not_used; // a
-	CF_Color user_params;
-};
 
 struct CF_Strike
 {
@@ -106,7 +90,7 @@ struct CF_Draw
 	float cam_rotation = 0;
 	float aaf = 0;
 	Cute::Array<CF_V2> temp;
-	Cute::Array<DrawVertex> verts;
+	Cute::Array<CF_Vertex> verts;
 	Cute::Array<float> font_sizes = { 18 };
 	Cute::Array<const char*> fonts = { NULL };
 	Cute::Array<int> blurs = { 0 };
@@ -114,6 +98,7 @@ struct CF_Draw
 	Cute::Array<CF_Aabb> text_clip_boxes = { cf_make_aabb(cf_v2(-FLT_MAX, -FLT_MAX), cf_v2(FLT_MAX, FLT_MAX)) };
 	Cute::Array<bool> vertical = { false };
 	Cute::Array<CF_Strike> strikes;
+	CF_VertexFn* vertex_fn = NULL;
 };
 
 void cf_make_draw();
