@@ -1407,6 +1407,25 @@ bool cf_peek_text_vertical_layout()
 	return draw->vertical.last();
 }
 
+void cf_push_text_effect(bool text_effects_on)
+{
+	draw->text_effects.add(text_effects_on);
+}
+
+bool cf_pop_text_effect()
+{
+	if (draw->text_effects.count() > 1) {
+		return draw->text_effects.pop();
+	} else {
+		return draw->text_effects.last();
+	}
+}
+
+bool cf_peek_text_effect()
+{
+	return draw->text_effects.last();
+}
+
 static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool render = true);
 
 float cf_text_width(const char* text, int text_length)
@@ -1558,10 +1577,13 @@ static CF_Color s_parse_color(CF_CodeParseState* s)
 			s->skip();
 		}
 	}
-	int hex = (int)string.to_hex();
-	if (digits == 6) {
-		// Treat the color as opaque if only 3 bytes were found.
-		hex = hex << 8 | 0xFF;
+	int hex = 0;
+	if (!string.empty()) {
+		hex = (int)string.to_hex();
+		if (digits == 6) {
+			// Treat the color as opaque if only 3 bytes were found.
+			hex = hex << 8 | 0xFF;
+		}
 	}
 	CF_Color result = make_color(hex);
 	return result;
@@ -1598,11 +1620,13 @@ static double s_parse_number(CF_CodeParseState* s)
 			s->skip(false);
 		}
 	}
-	double result;
+	double result = 0;
 	if (is_float) {
 		result = string.to_double();
 	} else {
-		result = (double)string.to_int();
+		if (!string.empty()) {
+			result = (double)string.to_int();
+		}
 	}
 	if (is_neg) result = -result;
 	return result;
@@ -1631,19 +1655,21 @@ static String s_parse_string(CF_CodeParseState* s)
 static CF_TextCodeVal s_parse_code_val(CF_CodeParseState* s)
 {
 	CF_TextCodeVal val = { };
-	int cp = s->peek();
-	if (cp == '#') {
-		CF_Color c = s_parse_color(s);
-		val.type = CF_TEXT_CODE_VAL_TYPE_COLOR;
-		val.u.color = c;
-	} else if (cp == '"') {
-		String string = s_parse_string(s);
-		val.type = CF_TEXT_CODE_VAL_TYPE_STRING;
-		val.u.string = sintern(string.c_str());
-	} else {
-		double number = s_parse_number(s);
-		val.type = CF_TEXT_CODE_VAL_TYPE_NUMBER;
-		val.u.number = number;
+	if (!s->sanitized.empty()) {
+		int cp = s->peek();
+		if (cp == '#') {
+			CF_Color c = s_parse_color(s);
+			val.type = CF_TEXT_CODE_VAL_TYPE_COLOR;
+			val.u.color = c;
+		} else if (cp == '"') {
+			String string = s_parse_string(s);
+			val.type = CF_TEXT_CODE_VAL_TYPE_STRING;
+			val.u.string = !string.empty() ? sintern(string.c_str()) : NULL;
+		} else {
+			double number = s_parse_number(s);
+			val.type = CF_TEXT_CODE_VAL_TYPE_NUMBER;
+			val.u.number = number;
+		}
 	}
 	return val;
 }
@@ -1773,6 +1799,7 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 	CF_ASSERT(font);
 	if (!font) return V2(0,0);
 
+	bool do_effects = draw->text_effects.last();
 	// Cache effect state key'd by input text pointer.
 	CF_TextEffectState* effect_state = app->text_effect_states.try_find(text);
 	if (!effect_state) {
@@ -1795,7 +1822,9 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 	}
 
 	// Use the sanitized string for rendering. This excludes all text codes.
-	text = effect_state->sanitized.c_str();
+	if (do_effects) {
+		text = effect_state->sanitized.c_str();
+	}
 
 	// Gather up all state required for rendering.
 	float font_size = draw->font_sizes.last();
@@ -1841,7 +1870,9 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 			TextEffect* effect = effect_state->effects + i;
 			if (effect->index_into_string + effect->glyph_count == index) {
 				effect->index_into_effect = index - effect->index_into_string - 1;
-				effect->fn(effect); // Signal we're done (one past the end).
+				if (effect->fn) {
+					effect->fn(effect); // Signal we're done (one past the end).
+				}
 				effect_state->effects.unordered_remove(i);
 			} else {
 				 ++i;
@@ -1879,12 +1910,14 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 	if (text_length < 0) {
 		text_length = INT_MAX;
 	}
-
+	if (!text) {
+		text_length = 0;
+	}
 	// Render the string glyph-by-glyph.
-	while (*text) {
+	while (text_length-- && *text) {
 		cp_prev = cp;
 		const char* prev_text = text;
-		if (render) effect_spawn();
+		if (render && do_effects) effect_spawn();
 		text = cf_decode_UTF8(text, &cp);
 		++index;
 		CF_DEFER(effect_cleanup());
@@ -2006,7 +2039,7 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 		draw->strikes.clear();
 	}
 
-	return V2(w, h);
+	return V2(x, y - h * 0.25f);
 }
 
 void cf_draw_text(const char* text, CF_V2 position, int text_length)

@@ -783,6 +783,10 @@ CF_API bool CF_CALL cf_pop_text_vertical_layout();
  */
 CF_API bool CF_CALL cf_peek_text_vertical_layout();
 
+CF_API void CF_CALL cf_push_text_effect(bool effects_on);
+CF_API bool CF_CALL cf_pop_text_effect();
+CF_API bool CF_CALL cf_peek_text_effect();
+
 /**
  * @function cf_text_width
  * @category text
