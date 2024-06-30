@@ -33,6 +33,5 @@ generated UV's for shape slicing, or complex lighting systems.
 
 ## Related Pages
 
-cf_draw_pop_vertex_callback  
+[cf_set_vertex_callback](/draw/cf_set_vertex_callback.md)  
 [CF_VertexFn](/draw/cf_vertexfn.md)  
-cf_draw_push_vertex_callback  

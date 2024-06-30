@@ -511,7 +511,7 @@ CF_API CF_Color CF_CALL cf_draw_peek_vertex_attributes();
  *           This is useful when you need to fill in unique `attributes` per-vertex, or modify any other
  *           bits of the vertex before rendering. This could be used to implement features like dynamically
  *           generated UV's for shape slicing, or complex lighting systems.
- * @related  CF_Vertex CF_VertexFn cf_draw_push_vertex_callback cf_draw_pop_vertex_callback
+ * @related  CF_Vertex CF_VertexFn cf_set_vertex_callback
  */
 typedef struct CF_Vertex
 {
@@ -571,18 +571,18 @@ typedef struct CF_Vertex
  *           should probably redesign your feature to not require adjecancy information, or use your own custom
  *           rendering solution. With a custom solution you may use low-level graphics in cute_graphics.h, where
  *           any adjacency info can be controlled 100% by you a-priori.
- * @related  CF_Vertex CF_VertexFn cf_draw_push_vertex_callback cf_draw_pop_vertex_callback
+ * @related  CF_Vertex CF_VertexFn cf_set_vertex_callback
  */
 typedef void (CF_VertexFn)(CF_Vertex* verts, int count);
 
 /**
- * @function cf_draw_set_vertex_callback
+ * @function cf_set_vertex_callback
  * @category draw
  * @brief    An optional callback for modifying vertices before they are sent to the GPU.
  * @remarks  See `CF_VertexFn`.
- * @related  CF_Vertex CF_VertexFn cf_draw_push_vertex_callback cf_draw_pop_vertex_callback
+ * @related  CF_Vertex CF_VertexFn cf_set_vertex_callback
  */
-CF_API void CF_CALL cf_draw_set_vertex_callback(CF_VertexFn* vertex_fn);
+CF_API void CF_CALL cf_set_vertex_callback(CF_VertexFn* vertex_fn);
 
 /**
  * @function cf_make_font

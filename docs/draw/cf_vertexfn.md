@@ -19,7 +19,7 @@ Setup this callback to apply per-vertex modulations for implementing advanced gr
 triangles. Since all shapes are rendered with signed-distance functions, most shapes merely generate
 a single quad, so you may find triangle counts lower than originally anticipated.
 
-Call [cf_draw_set_vertex_callback](/draw/cf_draw_set_vertex_callback.md) to setup your callback.
+Call `cf_draw_set_vertex_callback` to setup your callback.
 
 There is no adjecancy info provided. If you need to know which triangles connect to others you
 should probably redesign your feature to not require adjecancy information, or use your own custom
@@ -29,5 +29,4 @@ any adjacency info can be controlled 100% by you a-priori.
 ## Related Pages
 
 [CF_Vertex](/draw/cf_vertex.md)  
-cf_draw_pop_vertex_callback  
-cf_draw_push_vertex_callback  
+[cf_set_vertex_callback](/draw/cf_set_vertex_callback.md)  

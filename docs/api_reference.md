@@ -348,7 +348,6 @@ This is a list of all functions in Cute Framework organized by categories. This 
 - [cf_draw_quad2](/draw/cf_draw_quad2.md)
 - [cf_draw_quad_fill](/draw/cf_draw_quad_fill.md)
 - [cf_draw_quad_fill2](/draw/cf_draw_quad_fill2.md)
-- [cf_draw_set_vertex_callback](/draw/cf_draw_set_vertex_callback.md)
 - [cf_draw_sprite](/draw/cf_draw_sprite.md)
 - [cf_draw_tri](/draw/cf_draw_tri.md)
 - [cf_draw_tri_fill](/draw/cf_draw_tri_fill.md)
@@ -374,6 +373,7 @@ This is a list of all functions in Cute Framework organized by categories. This 
 - [cf_render_settings_push_viewport](/draw/cf_render_settings_push_viewport.md)
 - [cf_render_settings_set_atlas_dimensions](/draw/cf_render_settings_set_atlas_dimensions.md)
 - [cf_render_to](/draw/cf_render_to.md)
+- [cf_set_vertex_callback](/draw/cf_set_vertex_callback.md)
 - [CF_VertexFn](/draw/cf_vertexfn.md)
 
 

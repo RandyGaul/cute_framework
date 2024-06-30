@@ -2159,7 +2159,7 @@ CF_Color cf_draw_peek_vertex_attributes()
 	return draw->user_params.last();
 }
 
-void cf_draw_set_vertex_callback(CF_VertexFn* vertex_fn)
+void cf_set_vertex_callback(CF_VertexFn* vertex_fn)
 {
 	draw->vertex_fn = vertex_fn;
 }
