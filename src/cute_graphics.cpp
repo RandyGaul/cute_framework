@@ -630,10 +630,10 @@ bool cf_mesh_will_overflow_vertex_data(CF_Mesh mesh_handle, int append_count)
 	return sg_query_buffer_will_overflow(mesh->vertices.handle, append_count * mesh->vertices.stride);
 }
 
-static void s_sync_isntance_buffer(CF_MeshInternal* mesh, void* data, int size)
+static void s_sync_instance_buffer(CF_MeshInternal* mesh, void* data, int size)
 {
 	mesh->need_instance_sync = false;
-	if (mesh->vertices.handle.id) sg_destroy_buffer(mesh->vertices.handle);
+	if (mesh->instances.handle.id) sg_destroy_buffer(mesh->instances.handle);
 	sg_buffer_desc desc = { };
 	desc.size = mesh->instances.size;
 	desc.type = SG_BUFFERTYPE_VERTEXBUFFER;
@@ -654,7 +654,7 @@ void cf_mesh_update_instance_data(CF_Mesh mesh_handle, void* data, int count)
 	}
 	CF_ASSERT(mesh->attribute_count);
 	if (mesh->need_instance_sync) {
-		s_sync_isntance_buffer(mesh, mesh->usage == SG_USAGE_IMMUTABLE ? data : NULL, size);
+		s_sync_instance_buffer(mesh, mesh->usage == SG_USAGE_IMMUTABLE ? data : NULL, size);
 	} else {
 		sg_range range = { data, (size_t)size };
 		sg_update_buffer(mesh->instances.handle, range);
@@ -669,7 +669,7 @@ int cf_mesh_append_instance_data(CF_Mesh mesh_handle, void* data, int append_cou
 	CF_ASSERT(mesh->attribute_count);
 	CF_ASSERT(mesh->instances.size >= size);
 	if (mesh->need_instance_sync) {
-		s_sync_isntance_buffer(mesh, NULL, mesh->instances.size);
+		s_sync_instance_buffer(mesh, NULL, mesh->instances.size);
 	}
 	sg_range range = { data, (size_t)size };
 	if (!sg_query_buffer_will_overflow(mesh->instances.handle, size)) {
