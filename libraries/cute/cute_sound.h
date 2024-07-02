@@ -2271,7 +2271,7 @@ void cs_mix()
 					samples_to_read = audio->sample_count - playing->sample_index;
 				} else if (samples_to_read + playing->sample_index < 0) {
 					// When pitch shifting is negative, samples_to_read is also negative so that offset needs to
-					// be accounted for otherwise the sample index cursor gets stuck at sample count
+					// be accounted for otherwise the sample index cursor gets stuck at sample count.
 					playing->sample_index = audio->sample_count + samples_to_read + playing->sample_index;
 				}
 				int samples_to_write = (int)(samples_to_read / playing->pitch);
@@ -2401,7 +2401,7 @@ void cs_mix()
 				playing->sample_index += samples_to_read;
 				CUTE_SOUND_ASSERT(playing->sample_index <= audio->sample_count);
 				if (playing->pitch < 0) {
-					// when pitch shifting is negative adjust the timing a bit further back from sample count to avoid any clipping
+					// When pitch shifting is negative adjust the timing a bit further back from sample count to avoid any clipping.
 					if (prev_playing_sample_index - playing->sample_index < 0) {
 						if (playing->looped) {
 							playing->sample_index = audio->sample_count - samples_needed;
