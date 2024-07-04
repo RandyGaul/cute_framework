@@ -14,7 +14,9 @@ htbl const CF_HttpsHeader* cf_https_response_headers(CF_HttpsResponse response);
 
 ## Remarks
 
-Intended to be used with [cf_https_response_headers_count](/web/cf_https_response_headers_count.md).
+Intended to be used with [cf_https_response_headers_count](/web/cf_https_response_headers_count.md). Do not free this array, it will
+get cleaned up when the originating [CF_HttpsRequest](/web/cf_httpsrequest.md) is destroyed via [cf_https_destroy](/web/cf_https_destroy.md).
+If you're familiar with [htbl](/hash/htbl.md) you may treat this pointer as a hashtable key'd by strings.
 
 ## Related Pages
 

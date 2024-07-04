@@ -26,6 +26,8 @@ extern "C" {
 }
 #endif
 
+// Credit to Mattias Gustavsson for the original API design of cute_https.h
+
 using namespace Cute;
 
 #ifndef CF_EMSCRIPTEN

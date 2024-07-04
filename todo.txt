@@ -1,17 +1,17 @@
-investigate https://discord.com/channels/432009046833233930/432009046833233932/1256474663085805618
 DPI handling
 doc page on transforms
-text fx init
-text fx word iterator
+note text effect onstart/finish helpers in the topic page
+text effect word/line iterator, aabb calcs
 docs pass on all pages
-https C++ API
 knock out github issues
 resync all cute_headers
 set cute_version.h
 update cute_user_config with all the math overrides recent PR
 ECS docs
+draw docs
 document circular buffer
 Document cute_image.h
+contributor list
 
 punted
 - transparent windows - Can't find an easy way to do this through SDL, might be a cross-platform nightmare

@@ -784,31 +784,6 @@ CF_API bool CF_CALL cf_pop_text_vertical_layout();
 CF_API bool CF_CALL cf_peek_text_vertical_layout();
 
 /**
- * @function cf_push_text_effect_active
- * @category text
- * @brief    Turns on/off text effects.
- * @remarks  Text effects are on by default.
- * @related  cf_push_text_effect_active cf_pop_text_effect_active cf_peek_text_effect_active
- */
-CF_API void CF_CALL cf_push_text_effect_active(bool effects_on);
-
-/**
- * @function cf_pop_text_effect_active
- * @category text
- * @brief    Pops the previously pushed activated state for text effects. See `cf_push_text_effect_active`.
- * @related  cf_push_text_effect_active cf_pop_text_effect_active cf_peek_text_effect_active
- */
-CF_API bool CF_CALL cf_pop_text_effect_active();
-
-/**
- * @function cf_peek_text_effect_active
- * @category text
- * @brief    Returns the last text active state.
- * @related  cf_push_text_effect_active cf_pop_text_effect_active cf_peek_text_effect_active
- */
-CF_API bool CF_CALL cf_peek_text_effect_active();
-
-/**
  * @function cf_text_width
  * @category text
  * @brief    Returns the width of a text given the currently pushed font.
@@ -885,7 +860,7 @@ typedef struct CF_TextEffect
 	/* @member How long this effect has persisted for. */
 	float elapsed;
 
-	/* @member Center of this glyp's space -- not the same as the center of the glyph quad. */
+	/* @member Center of this glyph's space -- not the same as the center of the glyph quad. */
 	CF_V2 center;
 
 	/* @member User-modifiable. This glyph's renderable quad. q0 is the min vertex, while q1 is the max vertex. */
@@ -1055,6 +1030,31 @@ CF_API CF_Color CF_CALL cf_text_effect_get_color(CF_TextEffect* fx, const char* 
  * @related  CF_TextEffect CF_TextEffectFn cf_text_effect_register cf_text_effect_on_start cf_text_effect_on_finish cf_text_effect_get_number cf_text_effect_get_color cf_text_effect_get_string
  */
 CF_API const char* CF_CALL cf_text_effect_get_string(CF_TextEffect* fx, const char* key, const char* default_val);
+
+/**
+ * @function cf_push_text_effect_active
+ * @category text
+ * @brief    Turns on/off text effects.
+ * @remarks  Text effects are on by default.
+ * @related  cf_push_text_effect_active cf_pop_text_effect_active cf_peek_text_effect_active
+ */
+CF_API void CF_CALL cf_push_text_effect_active(bool effects_on);
+
+/**
+ * @function cf_pop_text_effect_active
+ * @category text
+ * @brief    Pops the previously pushed activated state for text effects. See `cf_push_text_effect_active`.
+ * @related  cf_push_text_effect_active cf_pop_text_effect_active cf_peek_text_effect_active
+ */
+CF_API bool CF_CALL cf_pop_text_effect_active();
+
+/**
+ * @function cf_peek_text_effect_active
+ * @category text
+ * @brief    Returns the last text active state.
+ * @related  cf_push_text_effect_active cf_pop_text_effect_active cf_peek_text_effect_active
+ */
+CF_API bool CF_CALL cf_peek_text_effect_active();
 
 /**
  * @function cf_render_settings_filter

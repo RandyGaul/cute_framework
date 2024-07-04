@@ -25,4 +25,4 @@ Floor means the decimal-point part is zero'd out.
 [cf_lesser_equal_v2](/math/cf_lesser_equal_v2.md)  
 [cf_greater_equal_v2](/math/cf_greater_equal_v2.md)  
 [cf_parallel](/math/cf_parallel.md)  
-[cf_ciel](/math/cf_ciel.md)  
+[cf_ceil](/math/cf_ceil.md)  

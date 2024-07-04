@@ -16,7 +16,7 @@ Struct Members | Description
 `int index_into_effect` | Starts at 0 and increments for each character affected.
 `int glyph_count` | The number of glyphs spanning the entire effect.
 `float elapsed` | How long this effect has persisted for.
-`CF_V2 center` | Center of this glyp's space -- not the same as the center of the glyph quad.
+`CF_V2 center` | Center of this glyph's space -- not the same as the center of the glyph quad.
 `CF_V2 q0, q1` | User-modifiable. This glyph's renderable quad. q0 is the min vertex, while q1 is the max vertex.
 `int w, h` | Width and height of the glyph.
 `CF_Color color` | User-modifiable. The color to render this glyph with.

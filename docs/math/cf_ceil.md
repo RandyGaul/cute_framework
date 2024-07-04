@@ -1,6 +1,6 @@
 [](../header.md ':include')
 
-# cf_ciel
+# cf_ceil
 
 Category: [math](/api_reference?id=math)  
 GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_math.h)  
@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns the component-wise ceil of a vector.
 
 ```cpp
-CF_V2 cf_ciel(CF_V2 a)
+CF_V2 cf_ceil(CF_V2 a)
 ```
 
 ## Remarks
