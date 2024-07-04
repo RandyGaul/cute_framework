@@ -210,7 +210,6 @@ set(CF_HDRS
 	${SOKOL_HDRS}
 
 	src/internal/cute_app_internal.h
-	src/internal/cute_file_system_internal.h
 	src/internal/cute_input_internal.h
 	src/internal/cute_serialize_internal.h
 	src/internal/cute_ecs_internal.h
