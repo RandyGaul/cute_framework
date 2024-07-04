@@ -671,6 +671,30 @@ CF_API const char* CF_CALL cf_fs_get_backend_specific_error_message();
  */
 CF_API const char* CF_CALL cf_fs_get_actual_path(const char* virtual_path);
 
+/**
+ * @function cf_fs_init
+ * @category file
+ * @brief    Initializes the [Virtual File System](https://randygaul.github.io/cute_framework/#/topics/virtual_file_system).
+ * @param    argv0       The first command-line argument passed into your `main` function.
+ * @remarks  This function is automatically called by `cf_app_make`; for most use cases you do not
+ *           need to call this function. However, sometimes it's convenient to make tools that crawl
+ *           over files without the need for a full application window. In this case simply call this
+ *           function to enable all the `cf_fs_***` functions.
+ * @related  cf_fs_init cf_fs_destroy
+ */
+CF_API CF_Result CF_CALL cf_fs_init(const char* argv0);
+
+/**
+ * @function cf_fs_destroy
+ * @category file
+ * @brief    Destroys the [Virtual File System](https://randygaul.github.io/cute_framework/#/topics/virtual_file_system).
+ * @param    argv0       The first command-line argument passed into your `main` function.
+ * @remarks  Cleans up all static memory used by `cf_fs_init`. You probably don't need to call this function,
+ *           as `cf_app_destroy` already does this for you.
+ * @related  cf_fs_init cf_fs_destroy
+ */
+CF_API void CF_CALL cf_fs_destroy();
+
 #ifdef __cplusplus
 }
 #endif // __cplusplus

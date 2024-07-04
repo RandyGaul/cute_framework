@@ -6,8 +6,6 @@ using namespace Cute;
 
 // Parses all the Cute headers and generates documentation pages in .md format.
 
-#include "internal/cute_file_system_internal.h"
-
 const char* g_relative_path;
 const char* get_relative_path()
 {

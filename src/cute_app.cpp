@@ -16,7 +16,6 @@
 
 #include <internal/cute_alloc_internal.h>
 #include <internal/cute_app_internal.h>
-#include <internal/cute_file_system_internal.h>
 #include <internal/cute_input_internal.h>
 #include <internal/cute_graphics_internal.h>
 #include <internal/cute_draw_internal.h>

@@ -8,6 +8,16 @@
 #ifndef CF_H
 #define CF_H
 
+/* Special thanks contributor list
+ * 
+ * ogam
+ * Jon Stevens
+ * Kariem
+ * Bullno1
+ * 
+ */
+
+
 #include "cute_aabb_tree.h"
 #include "cute_alloc.h"
 #include "cute_app.h"

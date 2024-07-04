@@ -21,7 +21,6 @@
 
 #include "test_harness.h"
 
-#include <internal/cute_file_system_internal.h> // fs_init / fs_destroy
 #include <cute.h>
 using namespace Cute;
 

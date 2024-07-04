@@ -11,7 +11,6 @@
 
 #include <internal/cute_alloc_internal.h>
 #include <internal/cute_app_internal.h>
-#include <internal/cute_file_system_internal.h>
 
 #include <physfs/physfs.h>
 

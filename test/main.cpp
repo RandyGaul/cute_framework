@@ -37,7 +37,6 @@
 #define PICO_UNIT_IMPLEMENTATION
 #include <pico/pico_unit.h>
 
-#include <internal/cute_file_system_internal.h>
 #include <cute.h>
 
 TEST_SUITE(test_aabb);
