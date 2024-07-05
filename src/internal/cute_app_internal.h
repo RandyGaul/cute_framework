@@ -68,6 +68,9 @@ struct CF_App
 	CF_Threadpool* threadpool = NULL;
 	bool gfx_enabled = false;
 	sg_context_desc gfx_ctx_params;
+	float dpi_scale = 1.0f;
+	float dpi_scale_prev = 1.0f;
+	bool dpi_scale_was_changed = false;
 	int w;
 	int h;
 	int x;

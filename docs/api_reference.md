@@ -35,11 +35,13 @@ This is a list of all functions in Cute Framework organized by categories. This 
 ## app
 
 ### functions
+- [cf_app_dpi_scale_was_changed](/app/cf_app_dpi_scale_was_changed.md)
 - [cf_app_draw_onto_screen](/app/cf_app_draw_onto_screen.md)
 - [cf_app_gained_focus](/app/cf_app_gained_focus.md)
 - [cf_app_get_canvas](/app/cf_app_get_canvas.md)
 - [cf_app_get_canvas_height](/app/cf_app_get_canvas_height.md)
 - [cf_app_get_canvas_width](/app/cf_app_get_canvas_width.md)
+- [cf_app_get_dpi_scale](/app/cf_app_get_dpi_scale.md)
 - [cf_app_get_height](/app/cf_app_get_height.md)
 - [cf_app_get_position](/app/cf_app_get_position.md)
 - [cf_app_get_size](/app/cf_app_get_size.md)

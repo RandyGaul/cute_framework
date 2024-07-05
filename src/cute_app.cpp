@@ -374,12 +374,22 @@ static void s_on_update(void* udata)
 void cf_app_update(CF_OnUpdateFn* on_update)
 {
 	if (app->gfx_enabled) {
+		// Deal with DPI scaling.
+		int pw = 0, ph = 0;
+		SDL_GetWindowSizeInPixels(app->window, &pw, &ph);
+		app->dpi_scale = (float)ph / (float)app->h;
+		app->dpi_scale_was_changed = false;
+		if (app->dpi_scale != app->dpi_scale_prev) {
+			app->dpi_scale_was_changed = true;
+			app->dpi_scale_prev = app->dpi_scale;
+		}
+
 		if (app->using_imgui) {
 			simgui_frame_desc_t desc = { };
 			desc.delta_time = DELTA_TIME;
 			desc.width = app->w;
 			desc.height = app->h;
-			desc.dpi_scale; // TODO.
+			desc.dpi_scale = app->dpi_scale;
 			ImGui_ImplSDL2_NewFrame(app->window);
 			simgui_new_frame(&desc);
 		}
@@ -491,6 +501,16 @@ int cf_app_get_width()
 int cf_app_get_height()
 {
 	return app->h;
+}
+
+float cf_app_get_dpi_scale()
+{
+	return app->dpi_scale;
+}
+
+bool cf_app_dpi_scale_was_changed()
+{
+	return app->dpi_scale_was_changed;
 }
 
 void cf_app_set_size(int w, int h)

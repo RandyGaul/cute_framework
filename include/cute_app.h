@@ -65,7 +65,7 @@ typedef struct sg_image sg_image;
 	/* @entry Starts the application with the window centered on the screen. */ \
 	CF_ENUM(APP_OPTIONS_WINDOW_POS_CENTERED,            1 << 9)  \
 	/* @entry Disables automatically mounting the folder the executable runs from to "/". See `cf_fs_mount` for more details. */ \
-	CF_ENUM(APP_OPTIONS_FILE_SYSTEM_DONT_DEFAULT_MOUNT, 1 << 10)  \
+	CF_ENUM(APP_OPTIONS_FILE_SYSTEM_DONT_DEFAULT_MOUNT, 1 << 10) \
 	/* @entry Starts the application with no audio. */           \
 	CF_ENUM(APP_OPTIONS_NO_AUDIO,                       1 << 11) \
 	/* @end */
@@ -235,7 +235,7 @@ CF_API int CF_CALL cf_app_draw_onto_screen(bool clear);
  * @brief    Gets the size of the window in pixels.
  * @param    w          The width of the window in pixels.
  * @param    h          The height of the window in pixels.
- * @related  cf_app_set_size cf_app_get_position cf_app_set_position cf_app_get_width cf_app_get_height
+ * @related  cf_app_set_size cf_app_get_position cf_app_set_position cf_app_get_width cf_app_get_height cf_app_get_dpi_scale
  */
 CF_API void CF_CALL cf_app_get_size(int* w, int* h);
 
@@ -243,7 +243,7 @@ CF_API void CF_CALL cf_app_get_size(int* w, int* h);
  * @function cf_app_get_width
  * @category app
  * @brief    Returns the size of the window width in pixels.
- * @related  cf_app_set_size cf_app_get_position cf_app_set_position cf_app_get_width cf_app_get_height
+ * @related  cf_app_set_size cf_app_get_position cf_app_set_position cf_app_get_width cf_app_get_height cf_app_get_dpi_scale
  */
 CF_API int CF_CALL cf_app_get_width();
 
@@ -251,9 +251,30 @@ CF_API int CF_CALL cf_app_get_width();
  * @function cf_app_get_height
  * @category app
  * @brief    Returns the size of the window height in pixels.
- * @related  cf_app_set_size cf_app_get_position cf_app_set_position cf_app_get_width cf_app_get_height
+ * @related  cf_app_set_size cf_app_get_position cf_app_set_position cf_app_get_width cf_app_get_height cf_app_get_dpi_scale
  */
 CF_API int CF_CALL cf_app_get_height();
+
+/**
+ * @function cf_app_get_dpi_scale
+ * @category app
+ * @brief    Returns the scaling factor for the device's intended DPI setting.
+ * @remarks  On some devices (e.g. Apple Retina or iOS) pixels are clustered in 4x4 packs and abstracted as a single pixel
+ *           called a "point". The intent is for applications to work in points, and scale their UI elements by a factor of 2x
+ *           to aid in readability. These devices have very small pixels. Most of the time you should ignore dpi and let the OS
+ *           handle this. CF enables DPI settings by default, but, you can see if this function returns 2.0f to let you know if
+ *           pixels are clustered for you under the hood.
+ * @related  cf_app_set_size cf_app_get_position cf_app_set_position cf_app_get_width cf_app_get_height cf_app_get_dpi_scale cf_app_dpi_scale_was_changed
+ */
+CF_API float CF_CALL cf_app_get_dpi_scale();
+
+/**
+ * @function cf_app_dpi_scale_was_changed
+ * @category app
+ * @brief    Returns true if the DPI scaling changed, such as moving from one screen to another.
+ * @related  cf_app_get_dpi_scale cf_app_dpi_scale_was_changed
+ */
+CF_API bool CF_CALL cf_app_dpi_scale_was_changed();
 
 /**
  * @function cf_app_set_size
