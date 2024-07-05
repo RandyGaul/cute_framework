@@ -200,6 +200,17 @@ CF_API void CF_CALL cf_music_set_volume(float volume);
 CF_API void CF_CALL cf_music_set_loop(bool true_to_loop);
 
 /**
+ * @function cf_music_set_pitch
+ * @category audio
+ * @brief    Sets the pitch for the music.
+ * @param    pitch    The pitch to set, default to 1.0f.
+ * @remarks  This is a playback speed multiplier, meaning negative numbers will play the music backwards,
+ *           while positive numbers play forwards.
+ * @related  cf_music_play cf_music_stop cf_music_set_volume cf_music_set_loop cf_music_pause cf_music_resume cf_music_switch_to cf_music_crossfade cf_music_get_sample_index cf_music_set_sample_index cf_music_set_pitch
+ */
+CF_API void CF_CALL cf_music_set_pitch(float pitch);
+
+/**
  * @function cf_music_pause
  * @category audio
  * @brief    Pauses the music.
@@ -253,16 +264,6 @@ CF_API int CF_CALL cf_music_get_sample_index();
  * @related  cf_music_play cf_music_stop cf_music_set_volume cf_music_set_loop cf_music_pause cf_music_resume cf_music_switch_to cf_music_crossfade cf_music_get_sample_index cf_music_set_sample_index cf_music_set_pitch
  */
 CF_API CF_Result CF_CALL cf_music_set_sample_index(int sample_index);
-
-/**
- * @function cf_music_set_pitch
- * @category audio
- * @brief    Sets the sample index to play at for the music.
- * @param    sample_index   Tells where to play music from within the `CF_Audio` for the currently playing music track.
- * @remarks  This can be useful to sync a dynamic audio system that can turn on/off different instruments or sounds.
- * @related  cf_music_play cf_music_stop cf_music_set_volume cf_music_set_loop cf_music_pause cf_music_resume cf_music_switch_to cf_music_crossfade cf_music_get_sample_index cf_music_set_sample_index cf_music_set_pitch
- */
-CF_API void CF_CALL cf_music_set_pitch(float pitch);
 
 // -------------------------------------------------------------------------------------------------
 // Sound API.
@@ -415,6 +416,15 @@ CF_API void CF_CALL cf_sound_set_is_looped(CF_Sound sound, bool true_for_looped)
 CF_API void CF_CALL cf_sound_set_volume(CF_Sound sound, float volume);
 
 /**
+ * @function cf_sound_set_pitch
+ * @category audio
+ * @brief    Sets pitch for the sound.
+ * @remarks  Defaults to 1.0f.
+ * @related  CF_SoundParams CF_Sound cf_sound_params_defaults cf_play_sound cf_sound_is_active cf_sound_get_is_paused cf_sound_get_is_looped cf_sound_get_volume cf_sound_get_sample_index cf_sound_set_sample_index cf_sound_set_is_paused cf_sound_set_is_looped cf_sound_set_volume cf_sound_stop cf_sound_set_pitch
+ */
+CF_API void CF_CALL cf_sound_set_pitch(CF_Sound sound, float pitch);
+
+/**
  * @function cf_sound_set_sample_index
  * @category audio
  * @brief    Sets the sample index for the sound to control which sample to play next.
@@ -425,14 +435,6 @@ CF_API void CF_CALL cf_sound_set_volume(CF_Sound sound, float volume);
  * @related  CF_SoundParams CF_Sound cf_sound_params_defaults cf_play_sound cf_sound_is_active cf_sound_get_is_paused cf_sound_get_is_looped cf_sound_get_volume cf_sound_get_sample_index cf_sound_set_sample_index cf_sound_set_is_paused cf_sound_set_is_looped cf_sound_set_volume cf_sound_stop cf_sound_set_pitch
  */
 CF_API void CF_CALL cf_sound_set_sample_index(CF_Sound sound, int sample_index);
-
-/**
- * @function cf_sound_set_pitch
- * @category audio
- * @brief    Sets pitch for the sound.
- * @related  CF_SoundParams CF_Sound cf_sound_params_defaults cf_play_sound cf_sound_is_active cf_sound_get_is_paused cf_sound_get_is_looped cf_sound_get_volume cf_sound_get_sample_index cf_sound_set_sample_index cf_sound_set_is_paused cf_sound_set_is_looped cf_sound_set_volume cf_sound_stop cf_sound_set_pitch
- */
-CF_API void CF_CALL cf_sound_set_pitch(CF_Sound sound, float pitch);
 
 /**
  * @function cf_sound_stop
@@ -492,12 +494,12 @@ CF_INLINE void play_music(Audio audio_source, float fade_in_time = 0) { cf_music
 CF_INLINE void stop_music(float fade_out_time = 0) { cf_music_stop(fade_out_time = 0); }
 CF_INLINE void music_set_volume(float volume) { cf_music_set_volume(volume); }
 CF_INLINE void music_set_loop(bool true_to_loop) { cf_music_set_loop(true_to_loop); }
+CF_INLINE void music_set_pitch(float pitch = 1.0f) { cf_music_set_pitch(pitch); }
 CF_INLINE void music_pause() { cf_music_pause(); }
 CF_INLINE void music_resume() { cf_music_resume(); }
 CF_INLINE void music_switch_to(Audio audio_source, float fade_out_time = 0, float fade_in_time = 0) { cf_music_switch_to(audio_source, fade_out_time, fade_in_time); }
 CF_INLINE void music_crossfade(Audio audio_source, float cross_fade_time = 0) { cf_music_crossfade(audio_source, cross_fade_time); }
 CF_INLINE void music_set_sample_index(int sample_index) { cf_music_set_sample_index(sample_index); }
-CF_INLINE void music_set_pitch(float pitch = 1.0f) { cf_music_set_pitch(pitch); }
 CF_INLINE int music_get_sample_index() { return cf_music_get_sample_index(); }
 
 // -------------------------------------------------------------------------------------------------
@@ -513,8 +515,8 @@ CF_INLINE int sound_get_sample_index(Sound sound) { return cf_sound_get_sample_i
 CF_INLINE void sound_set_is_paused(Sound sound, bool true_for_paused) { cf_sound_set_is_paused(sound, true_for_paused); }
 CF_INLINE void sound_set_is_looped(Sound sound, bool true_for_looped) { cf_sound_set_is_looped(sound, true_for_looped); }
 CF_INLINE void sound_set_volume(Sound sound, float volume) { cf_sound_set_volume(sound, volume); }
-CF_INLINE void sound_set_sample_index(Sound sound, int sample_index) { cf_sound_set_sample_index(sound, sample_index); }
 CF_INLINE void sound_set_pitch(Sound sound, float pitch = 1.0f) { cf_sound_set_pitch(sound, pitch); }
+CF_INLINE void sound_set_sample_index(Sound sound, int sample_index) { cf_sound_set_sample_index(sound, sample_index); }
 CF_INLINE void sound_stop(Sound sound) { cf_sound_stop(sound); }
 
 }
