@@ -253,6 +253,30 @@ TEST_CASE(test_json_iterate_object_cpp)
 	return true;
 }
 
+TEST_CASE(test_json_numeric)
+{
+	const char* s =
+			"{\n"
+			"\t\"health\": 100,\n"
+			"\t\"speed\": 50.0,\n"
+			"\t\"is_cute\": 1\n"
+			"}"
+	;
+	CF_JDoc doc = cf_make_json(s, CF_STRLEN(s));
+	CF_JVal root = cf_json_get_root(doc);
+	float health = cf_json_get_float(cf_json_get(root, "health"));
+	int speed = cf_json_get_int(cf_json_get(root, "speed"));
+	bool is_cute = cf_json_get_bool(cf_json_get(root, "is_cute"));
+
+	REQUIRE(health == 100.f);
+	REQUIRE(speed == 50);
+	REQUIRE(is_cute == true);
+
+	cf_destroy_json(doc);
+
+	return true;
+}
+
 TEST_SUITE(test_json)
 {
 	RUN_TEST_CASE(test_json_basic);
@@ -262,4 +286,5 @@ TEST_SUITE(test_json)
 	RUN_TEST_CASE(test_json_array_cpp);
 	RUN_TEST_CASE(test_json_iterate_object);
 	RUN_TEST_CASE(test_json_iterate_object_cpp);
+	RUN_TEST_CASE(test_json_numeric);
 }

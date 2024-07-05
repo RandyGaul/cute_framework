@@ -107,32 +107,98 @@ CF_API bool CF_CALL cf_json_is_object(CF_JVal val_handle)
 
 int cf_json_get_int(CF_JVal val_handle)
 {
-	return yyjson_mut_get_int((yyjson_mut_val*)val_handle.id);
+	yyjson_mut_val* val = (yyjson_mut_val*)val_handle.id;
+	if (yyjson_mut_is_num(val)) {
+		if (yyjson_mut_is_real(val)) {
+			return (int)yyjson_mut_get_real(val);
+		} else {
+			return (int)yyjson_mut_get_int(val);
+		}
+	} else if (yyjson_mut_is_bool(val)) {
+		return (int)yyjson_mut_get_bool(val);
+	} else {
+		return 0;
+	}
 }
 
 int64_t cf_json_get_i64(CF_JVal val_handle)
 {
-	return yyjson_mut_get_sint((yyjson_mut_val*)val_handle.id);
+	yyjson_mut_val* val = (yyjson_mut_val*)val_handle.id;
+	if (yyjson_mut_is_num(val)) {
+		if (yyjson_mut_is_real(val)) {
+			return (int64_t)yyjson_mut_get_real(val);
+		} else {
+			return (int64_t)yyjson_mut_get_sint(val);
+		}
+	} else if (yyjson_mut_is_bool(val)) {
+		return (int64_t)yyjson_mut_get_bool(val);
+	} else {
+		return 0;
+	}
 }
 
 uint64_t cf_json_get_u64(CF_JVal val_handle)
 {
-	return yyjson_mut_get_uint((yyjson_mut_val*)val_handle.id);
+	yyjson_mut_val* val = (yyjson_mut_val*)val_handle.id;
+	if (yyjson_mut_is_num(val)) {
+		if (yyjson_mut_is_real(val)) {
+			return (uint64_t)yyjson_mut_get_real(val);
+		} else {
+			return (uint64_t)yyjson_mut_get_uint(val);
+		}
+	} else if (yyjson_mut_is_bool(val)) {
+		return (uint64_t)yyjson_mut_get_bool(val);
+	} else {
+		return 0;
+	}
 }
 
 float cf_json_get_float(CF_JVal val_handle)
 {
-	return (float)yyjson_mut_get_real((yyjson_mut_val*)val_handle.id);
+	yyjson_mut_val* val = (yyjson_mut_val*)val_handle.id;
+	if (yyjson_mut_is_num(val)) {
+		if (yyjson_mut_is_real(val)) {
+			return (float)yyjson_mut_get_real(val);
+		} else {
+			return (float)yyjson_mut_get_int(val);
+		}
+	} else if (yyjson_mut_is_bool(val)) {
+		return (float)yyjson_mut_get_bool(val);
+	} else {
+		return 0;
+	}
 }
 
 double cf_json_get_double(CF_JVal val_handle)
 {
-	return yyjson_mut_get_real((yyjson_mut_val*)val_handle.id);
+	yyjson_mut_val* val = (yyjson_mut_val*)val_handle.id;
+	if (yyjson_mut_is_num(val)) {
+		if (yyjson_mut_is_real(val)) {
+			return (double)yyjson_mut_get_real(val);
+		} else {
+			return (double)yyjson_mut_get_int(val);
+		}
+	} else if (yyjson_mut_is_bool(val)) {
+		return (double)yyjson_mut_get_bool(val);
+	} else {
+		return 0;
+	}
 }
 
 bool cf_json_get_bool(CF_JVal val_handle)
 {
-	return yyjson_mut_get_bool((yyjson_mut_val*)val_handle.id);
+	yyjson_mut_val* val = (yyjson_mut_val*)val_handle.id;
+	if (yyjson_mut_is_num(val)) {
+		if (yyjson_mut_is_real(val)) {
+			return (bool)yyjson_mut_get_real(val);
+		} else {
+			return (bool)yyjson_mut_get_int(val);
+		}
+	} else if (yyjson_mut_is_bool(val)) {
+		return (bool)yyjson_mut_get_bool(val);
+	} else {
+		return 0;
+	}
 }
 
 const char* cf_json_get_string(CF_JVal val_handle)
