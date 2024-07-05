@@ -22,6 +22,11 @@ default_val | A default value for the text code parameter if doesn't exist in th
 
 Returns the value of the text code parameter.
 
+## Remarks
+
+You may place a string inside of markups by wrapped quotes. Example: `<my_effect metadata=\"Here's the metadata.\">Hello world!</my_effect>`.
+This string can be fetched from within your [CF_TextEffectFn](/text/cf_texteffectfn.md) callback by calling [cf_text_effect_get_string](/text/cf_text_effect_get_string.md).
+
 ## Related Pages
 
 [CF_TextEffect](/text/cf_texteffect.md)  

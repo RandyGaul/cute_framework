@@ -73,6 +73,8 @@ example, the text code <shake> will be used.
 ```
 When registering a custom text effect, any parameters in the string will be stored for you
 automatically. You only need to fetch them with the appropriate cf_text_effect_get function.
+Note: You can also setup parameters for markup as strings, not just numbers/colors. Example: `<color=#2c5ee8 metadata=\"Just some string.\">blue text</color>`,
+where the `color` markup contains a parameter called `metadata` and a strinf value of `"Just some string."`.
 
 ## Related Pages
 

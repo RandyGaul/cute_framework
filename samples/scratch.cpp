@@ -67,7 +67,7 @@ int main(int argc, char* argv[])
 		draw_push_antialias_scale(aaf);
 		ImGui::End();
 
-		if (1) {
+		if (0) {
 			const char* text = "This <fade hello=\"some string\">sample\n is a\n blah blah blah\n haha\n test\n ground</fade> for CF development.";
 			v2 at = V2(-text_width(text) * 0.5f, 225);
 			draw_text(text, at);
@@ -89,7 +89,7 @@ int main(int argc, char* argv[])
 			draw_pop_antialias();
 		}
 
-		if (0) {
+		if (1) {
 			draw_push_antialias(true);
 			draw_circle_fill(V2(sinf(t*0.25f) * 250.0f,0), (cosf(t) * 0.5f + 0.5f) * 50.0f + 50.0f);
 			draw_circle(V2(sinf(t+2.0f) * 50.0f,0), (cosf(t) * 0.5f + 0.5f) * 50.0f + 50.0f, 5);

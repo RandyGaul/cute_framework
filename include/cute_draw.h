@@ -977,6 +977,8 @@ typedef bool (CF_TextEffectFn)(CF_TextEffect* fx);
  *           ```
  *           When registering a custom text effect, any parameters in the string will be stored for you
  *           automatically. You only need to fetch them with the appropriate cf_text_effect_get*** function.
+ *           Note: You can also setup parameters for markup as strings, not just numbers/colors. Example: `<color=#2c5ee8 metadata=\"Just some string.\">blue text</color>`,
+ *           where the `color` markup contains a parameter called `metadata` and a strinf value of `"Just some string."`.
  * @related  CF_TextEffect CF_TextEffectFn cf_text_effect_register cf_text_effect_on_start cf_text_effect_on_finish cf_text_effect_get_number cf_text_effect_get_color cf_text_effect_get_string
  */
 CF_API void CF_CALL cf_text_effect_register(const char* name, CF_TextEffectFn* fn);
@@ -1013,6 +1015,8 @@ CF_API CF_Color CF_CALL cf_text_effect_get_color(const CF_TextEffect* fx, const 
  * @param    key          The name of the text code parameter
  * @param    default_val  A default value for the text code parameter if doesn't exist in the text.
  * @return   Returns the value of the text code parameter.
+ * @remarks  You may place a string inside of markups by wrapped quotes. Example: `<my_effect metadata=\"Here's the metadata.\">Hello world!</my_effect>`.
+ *           This string can be fetched from within your `CF_TextEffectFn` callback by calling `cf_text_effect_get_string`.
  * @related  CF_TextEffect CF_TextEffectFn cf_text_effect_register cf_text_effect_on_start cf_text_effect_on_finish cf_text_effect_get_number cf_text_effect_get_color cf_text_effect_get_string
  */
 CF_API const char* CF_CALL cf_text_effect_get_string(const CF_TextEffect* fx, const char* key, const char* default_val);
