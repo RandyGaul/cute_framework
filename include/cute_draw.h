@@ -919,7 +919,7 @@ typedef struct CF_TextEffect
  *           position, visibility, etc. You should use `cf_text_effect_get_number`, `cf_text_effect_get_color`, or
  *           `cf_text_effect_get_string` to fetch values from your codes. As a convenience, you can see if the current
  *           character is the first or last to render using `cf_text_effect_on_start` or `cf_text_effect_on_finish` respectively.
- * @related  CF_TextEffect CF_TextEffectFn cf_text_effect_register cf_text_effect_on_start cf_text_effect_on_finish cf_text_effect_get_number cf_text_effect_get_color cf_text_effect_get_string
+ * @related  CF_TextEffect CF_TextEffectFn cf_text_effect_register cf_text_effect_get_number cf_text_effect_get_color cf_text_effect_get_string
  */
 typedef bool (CF_TextEffectFn)(CF_TextEffect* fx);
 
@@ -979,7 +979,7 @@ typedef bool (CF_TextEffectFn)(CF_TextEffect* fx);
  *           automatically. You only need to fetch them with the appropriate cf_text_effect_get*** function.
  *           Note: You can also setup parameters for markup as strings, not just numbers/colors. Example: `<color=#2c5ee8 metadata=\"Just some string.\">blue text</color>`,
  *           where the `color` markup contains a parameter called `metadata` and a strinf value of `"Just some string."`.
- * @related  CF_TextEffect CF_TextEffectFn cf_text_effect_register cf_text_effect_on_start cf_text_effect_on_finish cf_text_effect_get_number cf_text_effect_get_color cf_text_effect_get_string
+ * @related  CF_TextEffect CF_TextEffectFn cf_text_effect_register cf_text_effect_get_number cf_text_effect_get_color cf_text_effect_get_string
  */
 CF_API void CF_CALL cf_text_effect_register(const char* name, CF_TextEffectFn* fn);
 
@@ -991,7 +991,7 @@ CF_API void CF_CALL cf_text_effect_register(const char* name, CF_TextEffectFn* f
  * @param    key          The name of the text code parameter
  * @param    default_val  A default value for the text code parameter if doesn't exist in the text.
  * @return   Returns the value of the text code parameter.
- * @related  CF_TextEffect CF_TextEffectFn cf_text_effect_register cf_text_effect_on_start cf_text_effect_on_finish cf_text_effect_get_number cf_text_effect_get_color cf_text_effect_get_string
+ * @related  CF_TextEffect CF_TextEffectFn cf_text_effect_register cf_text_effect_get_number cf_text_effect_get_color cf_text_effect_get_string
  */
 CF_API double CF_CALL cf_text_effect_get_number(const CF_TextEffect* fx, const char* key, double default_val);
 
@@ -1003,7 +1003,7 @@ CF_API double CF_CALL cf_text_effect_get_number(const CF_TextEffect* fx, const c
  * @param    key          The name of the text code parameter
  * @param    default_val  A default value for the text code parameter if doesn't exist in the text.
  * @return   Returns the value of the text code parameter.
- * @related  CF_TextEffect CF_TextEffectFn cf_text_effect_register cf_text_effect_on_start cf_text_effect_on_finish cf_text_effect_get_number cf_text_effect_get_color cf_text_effect_get_string
+ * @related  CF_TextEffect CF_TextEffectFn cf_text_effect_register cf_text_effect_get_number cf_text_effect_get_color cf_text_effect_get_string
  */
 CF_API CF_Color CF_CALL cf_text_effect_get_color(const CF_TextEffect* fx, const char* key, CF_Color default_val);
 
@@ -1017,7 +1017,7 @@ CF_API CF_Color CF_CALL cf_text_effect_get_color(const CF_TextEffect* fx, const 
  * @return   Returns the value of the text code parameter.
  * @remarks  You may place a string inside of markups by wrapped quotes. Example: `<my_effect metadata=\"Here's the metadata.\">Hello world!</my_effect>`.
  *           This string can be fetched from within your `CF_TextEffectFn` callback by calling `cf_text_effect_get_string`.
- * @related  CF_TextEffect CF_TextEffectFn cf_text_effect_register cf_text_effect_on_start cf_text_effect_on_finish cf_text_effect_get_number cf_text_effect_get_color cf_text_effect_get_string
+ * @related  CF_TextEffect CF_TextEffectFn cf_text_effect_register cf_text_effect_get_number cf_text_effect_get_color cf_text_effect_get_string
  */
 CF_API const char* CF_CALL cf_text_effect_get_string(const CF_TextEffect* fx, const char* key, const char* default_val);
 
