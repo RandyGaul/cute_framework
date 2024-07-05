@@ -426,7 +426,10 @@ int cf_app_draw_onto_screen(bool clear)
 	// Update the spritebatch itself.
 	// This does atlas management internally.
 	// All references to backend texture id's are now invalid (fetch_image or canvas_get_backend_target_handle).
-	spritebatch_tick(&draw->sb);
+	if (!draw->delay_defrag) {
+		spritebatch_tick(&draw->sb);
+		spritebatch_defrag(&draw->sb);
+	}
 
 	// Render any remaining geometry in the draw API.
 	cf_render_to(app->offscreen_canvas, clear);
@@ -447,6 +450,15 @@ int cf_app_draw_onto_screen(bool clear)
 		s_imgui_present();
 	}
 
+	// Do defrag down here after rendering ImGui to avoid thrashing any texture IDs. Generally we want to defrag
+	// before doing final rendering to reduce draw call count, but in the case where ImGui is rendered it's acceptable
+	// to have the perf-hit and delay until next frame.
+	if (draw->delay_defrag) {
+		spritebatch_tick(&draw->sb);
+		spritebatch_defrag(&draw->sb);
+		draw->delay_defrag = false;
+	}
+
 	// Flip to screen.
 	cf_commit();
 	cf_dx11_present(app->vsync);
@@ -454,8 +466,6 @@ int cf_app_draw_onto_screen(bool clear)
 	if (app->options & APP_OPTIONS_OPENGL_CONTEXT) {
 		SDL_GL_SwapWindow(app->window);
 	}
-
-	spritebatch_defrag(&draw->sb);
 
 	// Clear all pushed draw parameters.
 	draw->colors.set_count(1);

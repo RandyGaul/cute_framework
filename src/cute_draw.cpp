@@ -2423,6 +2423,7 @@ CF_M3x2 cf_camera_peek()
 
 CF_TemporaryImage cf_fetch_image(const CF_Sprite* sprite)
 {
+	draw->delay_defrag = true;
 	uint64_t image_id;
 	if (sprite->animation)
 	{

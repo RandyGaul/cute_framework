@@ -69,6 +69,7 @@ struct CF_Draw
 {
 	CF_V2 atlas_dims = cf_v2(2048, 2048);
 	CF_V2 texel_dims = cf_v2(1.0f/2048.0f, 1.0f/2048.0f);
+	bool delay_defrag = false;
 	spritebatch_t sb;
 	CF_Mesh mesh;
 	CF_Material material;
