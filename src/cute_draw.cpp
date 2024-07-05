@@ -218,7 +218,7 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 			if (geom.do_clipping) {
 				CF_ASSERT(geom.is_text);
 
-				CF_Aabb bb = make_aabb(geom.c, geom.b);
+				CF_Aabb bb = make_aabb(geom.d, geom.b);
 				CF_Aabb clip = geom.clip;
 				float top = clip.max.y;
 				float left = clip.min.x;
@@ -226,7 +226,9 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 				float right = clip.max.x;
 
 				int separating_x_axis = (bb.max.x < left) | (bb.min.x > right);
-				if (separating_x_axis) continue;
+				if (separating_x_axis) {
+					continue;
+				}
 
 				if (bb.min.x < left) {
 					s->minx = s_intersect(bb.min.x, bb.max.x, s->minx, s->maxx, left);

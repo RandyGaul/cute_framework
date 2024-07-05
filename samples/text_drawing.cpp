@@ -30,6 +30,7 @@ int main(int argc, char* argv[])
 		// Clip text within a box.
 		v2 o = V2(cosf(t),sinf(t)) * 25.0f;
 		Aabb clip = make_aabb(V2(-75,-75) + o, V2(75,50) + o);
+		camera_push();
 		draw_quad(clip, 0);
 		push_text_clip_box(clip);
 		push_font_size(13);
@@ -38,7 +39,6 @@ int main(int argc, char* argv[])
 		pop_text_clip_box();
 
 		// Draw text with a limited width.
-		draw_quad(clip, 0);
 		push_font_size(13);
 		push_text_wrap_width(100.0f + cosf(t) * 75.0f);
 		o = V2(-200, 150);
