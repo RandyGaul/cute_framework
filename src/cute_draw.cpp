@@ -1719,7 +1719,7 @@ static bool s_text_fx_shake(TextEffect* effect)
 	float x = (float)effect->get_number("x", 2);
 	float y = (float)effect->get_number("y", 2);
 	CF_RndState rnd = rnd_seed(seed);
-	v2 offset = V2(rnd_range(rnd, -x, x), rnd_range(rnd, -x, y));
+	v2 offset = round(V2(rnd_range(rnd, -x, x), rnd_range(rnd, -y, y)));
 	effect->q0 += offset;
 	effect->q1 += offset;
 	return true;
