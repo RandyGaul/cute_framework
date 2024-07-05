@@ -1426,7 +1426,7 @@ bool cf_peek_text_effect_active()
 	return draw->text_effects.last();
 }
 
-static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool render = true);
+static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool render = true, cf_text_markup_info_fn* markups = NULL);
 
 float cf_text_width(const char* text, int text_length)
 {
@@ -1793,7 +1793,7 @@ static void s_parse_codes(CF_TextEffectState* effect, const char* text)
 	effect->sanitized = s->sanitized;
 }
 
-static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool render)
+static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool render, cf_text_markup_info_fn* markups)
 {
 	CF_Font* font = cf_font_get(draw->fonts.last());
 	CF_ASSERT(font);
@@ -1815,7 +1815,7 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 			s_parse_codes(effect_state, text);
 		}
 	}
-	if (render) {
+	if (render || markups) {
 		effect_state->alive = true;
 		effect_state->elapsed += CF_DELTA_TIME;
 	}
@@ -1844,6 +1844,7 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 	float y = initial_y;
 	int index = 0;
 	int code_index = 0;
+	int newline_count = 0;
 
 	// Called whenever text-effects need to be spawned, before going to the next glyph.
 	auto effect_spawn = [&]() {
@@ -1853,7 +1854,7 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 				++code_index;
 				TextEffect effect = { };
 				effect.effect_name = code->effect_name;
-				effect.index_into_string = code->index_in_string;
+				effect.initial_index = effect.index_into_string = code->index_in_string;
 				effect.index_into_effect = 0;
 				effect.glyph_count = code->glyph_count;
 				effect.elapsed = effect_state->elapsed;
@@ -1871,7 +1872,18 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 			if (effect->index_into_string + effect->glyph_count == index) {
 				effect->index_into_effect = index - effect->index_into_string - 1;
 				if (effect->fn) {
+					effect->on_end = true;
 					effect->fn(effect); // Signal we're done (one past the end).
+					if (markups) {
+						effect->bounds.add(effect->line_bound);
+						CF_MarkupInfo info;
+						info.effect_name = effect->effect_name;
+						info.start_glyph_index = effect->initial_index;
+						info.glyph_count = effect->glyph_count;
+						info.bounds_count = effect->bounds.count();
+						info.bounds = effect->bounds.data();
+						markups(text, info, (CF_TextEffect*)effect);
+					}
 				}
 				effect_state->effects.unordered_remove(i);
 			} else {
@@ -1897,6 +1909,7 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 		}
 	};
 
+	bool hit_newline = false;
 	auto apply_newline = [&]() {
 		if (vertical) {
 			x += w;
@@ -1905,6 +1918,8 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 			x = position.x;
 			y -= line_height;
 		}
+		hit_newline = true;
+		++newline_count;
 	};
 	
 	if (text_length < 0) {
@@ -1918,7 +1933,7 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 	while (text_length-- && *text) {
 		cp_prev = cp;
 		const char* prev_text = text;
-		if (render && do_effects) effect_spawn();
+		if ((render || markups) && do_effects) effect_spawn();
 		text = cf_decode_UTF8(text, &cp);
 		++index;
 		CF_DEFER(effect_cleanup());
@@ -1961,7 +1976,7 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 
 		// Prepare a sprite struct for rendering.
 		float xadvance = glyph->xadvance;
-		if (render) {
+		if (render || markups) {
 			bool visible = glyph->visible;
 			s.image_id = glyph->image_id;
 			s.w = glyph->w;
@@ -1994,6 +2009,7 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 					effect->xadvance = xadvance;
 					effect->visible = visible;
 					effect->font_size = font_size;
+					effect->on_begin = effect->on_start();
 					keep_going = fn(effect);
 					q0 = effect->q0;
 					q1 = effect->q1;
@@ -2001,6 +2017,22 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 					s.geom.alpha = effect->opacity;
 					xadvance = effect->xadvance;
 					visible = effect->visible;
+
+					// Track bounds while rendering.
+					if (markups) {
+						if (!effect->line_bound_init) {
+							effect->line_bound = make_aabb(q0, q1);
+							effect->line_bound_init = true;
+						} else {
+							if (hit_newline) {
+								effect->bounds.add(effect->line_bound);
+								effect->line_bound = make_aabb(q0, q1);
+							} else {
+								effect->line_bound = combine(effect->line_bound, make_aabb(q0, q1));
+							}
+						}
+					}
+
 					if (!keep_going) {
 						effect_state->effects.unordered_remove(i);
 					}
@@ -2011,7 +2043,7 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 			}
 
 			// Actually render the sprite.
-			if (visible) {
+			if (visible && render) {
 				s.geom.a = mul(draw->cam, V2(q0.x, q1.y));
 				s.geom.b = mul(draw->cam, V2(q1.x, q1.y));
 				s.geom.c = mul(draw->cam, V2(q1.x, q0.y));
@@ -2027,6 +2059,7 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 		}
 
 		advance_to_next_glyph(xadvance);
+		hit_newline = false; 
 	}
 
 	if (render) {
@@ -2037,8 +2070,8 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 			float thickness = draw->strikes[i].thickness;
 			cf_draw_line(p0, p1, thickness);
 		}
-		draw->strikes.clear();
 	}
+	draw->strikes.clear();
 
 	return V2(x, y - h * 0.25f);
 }
@@ -2053,29 +2086,24 @@ void cf_text_effect_register(const char* name, CF_TextEffectFn* fn)
 	app->text_effect_fns.insert(sintern(name), fn);
 }
 
-bool cf_text_effect_on_start(CF_TextEffect* fx)
-{
-	return ((TextEffect*)fx)->on_start();
-}
-
-bool cf_text_effect_on_finish(CF_TextEffect* fx)
-{
-	return ((TextEffect*)fx)->on_finish();
-}
-
-double cf_text_effect_get_number(CF_TextEffect* fx, const char* key, double default_val)
+double cf_text_effect_get_number(const CF_TextEffect* fx, const char* key, double default_val)
 {
 	return ((TextEffect*)fx)->get_number(key, default_val);
 }
 
-CF_Color cf_text_effect_get_color(CF_TextEffect* fx, const char* key, CF_Color default_val)
+CF_Color cf_text_effect_get_color(const CF_TextEffect* fx, const char* key, CF_Color default_val)
 {
 	return ((TextEffect*)fx)->get_color(key, default_val);
 }
 
-const char* cf_text_effect_get_string(CF_TextEffect* fx, const char* key, const char* default_val)
+const char* cf_text_effect_get_string(const CF_TextEffect* fx, const char* key, const char* default_val)
 {
 	return ((TextEffect*)fx)->get_string(key, default_val);
+}
+
+void cf_text_get_markup_info(cf_text_markup_info_fn* fn, const char* text, CF_V2 position, int num_chars_to_draw)
+{
+	s_draw_text(text, position, num_chars_to_draw, false, fn);
 }
 
 void cf_draw_push_layer(int layer)

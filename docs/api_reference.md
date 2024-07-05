@@ -1478,16 +1478,17 @@ This is a list of all functions in Cute Framework organized by categories. This 
 - [cf_text_effect_get_color](/text/cf_text_effect_get_color.md)
 - [cf_text_effect_get_number](/text/cf_text_effect_get_number.md)
 - [cf_text_effect_get_string](/text/cf_text_effect_get_string.md)
-- [cf_text_effect_on_finish](/text/cf_text_effect_on_finish.md)
-- [cf_text_effect_on_start](/text/cf_text_effect_on_start.md)
 - [cf_text_effect_register](/text/cf_text_effect_register.md)
+- [cf_text_get_markup_info](/text/cf_text_get_markup_info.md)
 - [cf_text_height](/text/cf_text_height.md)
+- [cf_text_markup_info_fn](/text/cf_text_markup_info_fn.md)
 - [cf_text_size](/text/cf_text_size.md)
 - [cf_text_width](/text/cf_text_width.md)
 - [CF_TextEffectFn](/text/cf_texteffectfn.md)
 
 
 ### structs
+- [CF_MarkupInfo](/text/cf_markupinfo.md)
 - [CF_TextEffect](/text/cf_texteffect.md)
 
 

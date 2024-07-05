@@ -1,4 +1,3 @@
-DPI handling
 doc page on transforms
 note text effect onstart/finish helpers in the topic page
 text effect word/line iterator, aabb calcs
@@ -11,7 +10,6 @@ ECS docs
 draw docs
 document circular buffer
 Document cute_image.h
-contributor list
 
 punted
 - transparent windows - Can't find an easy way to do this through SDL, might be a cross-platform nightmare

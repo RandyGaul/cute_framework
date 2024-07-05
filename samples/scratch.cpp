@@ -67,6 +67,20 @@ int main(int argc, char* argv[])
 		draw_push_antialias_scale(aaf);
 		ImGui::End();
 
+		if (1) {
+			const char* text = "This <fade hello=\"some string\">sample\n is a\n blah blah blah\n haha\n test\n ground</fade> for CF development.";
+			v2 at = V2(-text_width(text) * 0.5f, 225);
+			draw_text(text, at);
+
+			auto markups = [](const char* text, CF_MarkupInfo info, const CF_TextEffect* fx) {
+				const char* hello = cf_text_effect_get_string(fx, "hello", NULL);
+				for (int i = 0; i < info.bounds_count; ++i) {
+					draw_box(info.bounds[i]);
+				}
+			};
+			cf_text_get_markup_info(markups, text, at, -1);
+		}
+
 		if (0) {
 			draw_push_antialias(aa);
 			//draw_circle_fill(v, 100);

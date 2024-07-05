@@ -48,14 +48,14 @@ The text between your custom text-code will get passed to `fn` for you, and call
 the text just before it gets rendered. You have the chance to modify things such as the text color, size, scale,
 position, visibility, etc. You should use [cf_text_effect_get_number](/text/cf_text_effect_get_number.md), [cf_text_effect_get_color](/text/cf_text_effect_get_color.md), or
 [cf_text_effect_get_string](/text/cf_text_effect_get_string.md) to fetch values from your codes. As a convenience, you can see if the current
-character is the first or last to render using [cf_text_effect_on_start](/text/cf_text_effect_on_start.md) or [cf_text_effect_on_finish](/text/cf_text_effect_on_finish.md) respectively.
+character is the first or last to render using `cf_text_effect_on_start` or `cf_text_effect_on_finish` respectively.
 
 ## Related Pages
 
 [CF_TextEffect](/text/cf_texteffect.md)  
 [cf_text_effect_get_string](/text/cf_text_effect_get_string.md)  
 [cf_text_effect_register](/text/cf_text_effect_register.md)  
-[cf_text_effect_on_start](/text/cf_text_effect_on_start.md)  
-[cf_text_effect_on_finish](/text/cf_text_effect_on_finish.md)  
+cf_text_effect_on_start  
+cf_text_effect_on_finish  
 [cf_text_effect_get_number](/text/cf_text_effect_get_number.md)  
 [cf_text_effect_get_color](/text/cf_text_effect_get_color.md)  

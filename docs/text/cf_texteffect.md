@@ -11,6 +11,8 @@ A user-defined text effect that can be triggered with text codes.
 Struct Members | Description
 --- | ---
 `const char* effect_name` | Name of this effect, as registered by [cf_text_effect_register](/text/cf_text_effect_register.md).
+`bool on_begin` | True if the text effect just started, useful for initialing things.
+`bool on_end` | True if the text effect has finished. No glyph will be rendered at this time.
 `int character` | UTF8 codepoint of the current character.
 `int index_into_string` | The index into the string in [cf_draw_text](/text/cf_draw_text.md) currently affected.
 `int index_into_effect` | Starts at 0 and increments for each character affected.

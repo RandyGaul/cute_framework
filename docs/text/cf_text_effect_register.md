@@ -65,7 +65,7 @@ example, the text code <shake> will be used.
      example : "<wave>Wobbly wave text.</wave>"
      speed   : default (5)     - Number of times per second to bob up and down.
      span    : default (10)    - Number of characters long for the wave to loop.
-     height. : default (5)     - How many characters high the wave will go.
+     height  : default (5)     - How many characters high the wave will go.
 + strike
      example : "<strike>Strikethrough</strike>"
      example : "<strike=10>Thick Strikethrough</strike>"
@@ -79,7 +79,7 @@ automatically. You only need to fetch them with the appropriate cf_text_effect_g
 [CF_TextEffect](/text/cf_texteffect.md)  
 [CF_TextEffectFn](/text/cf_texteffectfn.md)  
 [cf_text_effect_get_string](/text/cf_text_effect_get_string.md)  
-[cf_text_effect_on_start](/text/cf_text_effect_on_start.md)  
-[cf_text_effect_on_finish](/text/cf_text_effect_on_finish.md)  
+cf_text_effect_on_start  
+cf_text_effect_on_finish  
 [cf_text_effect_get_number](/text/cf_text_effect_get_number.md)  
 [cf_text_effect_get_color](/text/cf_text_effect_get_color.md)  

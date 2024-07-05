@@ -845,6 +845,12 @@ typedef struct CF_TextEffect
 	/* @member Name of this effect, as registered by `cf_text_effect_register`. */
 	const char* effect_name;
 
+	/* @member True if the text effect just started, useful for initialing things. */
+	bool on_begin;
+
+	/* @member True if the text effect has finished. No glyph will be rendered at this time. */
+	bool on_end;
+
 	/* @member UTF8 codepoint of the current character. */
 	int character;
 
@@ -963,7 +969,7 @@ typedef bool (CF_TextEffectFn)(CF_TextEffect* fx);
  *                example : "<wave>Wobbly wave text.</wave>"
  *                speed   : default (5)     - Number of times per second to bob up and down.
  *                span    : default (10)    - Number of characters long for the wave to loop.
- *                height. : default (5)     - How many characters high the wave will go.
+ *                height  : default (5)     - How many characters high the wave will go.
  *           + strike
  *                example : "<strike>Strikethrough</strike>"
  *                example : "<strike=10>Thick Strikethrough</strike>"
@@ -976,26 +982,6 @@ typedef bool (CF_TextEffectFn)(CF_TextEffect* fx);
 CF_API void CF_CALL cf_text_effect_register(const char* name, CF_TextEffectFn* fn);
 
 /**
- * @function cf_text_effect_on_start
- * @category text
- * @brief    Helper function to see if the current glyph is the beginning of the text, from within a custom text effect.
- * @param    fx        The text effect state.
- * @return   Return true to continue to the next glyph, false otherwise.
- * @related  CF_TextEffect CF_TextEffectFn cf_text_effect_register cf_text_effect_on_start cf_text_effect_on_finish cf_text_effect_get_number cf_text_effect_get_color cf_text_effect_get_string
- */
-CF_API bool CF_CALL cf_text_effect_on_start(CF_TextEffect* fx);
-
-/**
- * @function cf_text_effect_on_finish
- * @category text
- * @brief    Helper function to see if the current glyph is the end of the text, from within a custom text effect.
- * @param    fx        The text effect state.
- * @return   Return true to continue to the next glyph, false otherwise.
- * @related  CF_TextEffect CF_TextEffectFn cf_text_effect_register cf_text_effect_on_start cf_text_effect_on_finish cf_text_effect_get_number cf_text_effect_get_color cf_text_effect_get_string
- */
-CF_API bool CF_CALL cf_text_effect_on_finish(CF_TextEffect* fx);
-
-/**
  * @function cf_text_effect_get_number
  * @category text
  * @brief    Returns the text parameter as a number.
@@ -1005,7 +991,7 @@ CF_API bool CF_CALL cf_text_effect_on_finish(CF_TextEffect* fx);
  * @return   Returns the value of the text code parameter.
  * @related  CF_TextEffect CF_TextEffectFn cf_text_effect_register cf_text_effect_on_start cf_text_effect_on_finish cf_text_effect_get_number cf_text_effect_get_color cf_text_effect_get_string
  */
-CF_API double CF_CALL cf_text_effect_get_number(CF_TextEffect* fx, const char* key, double default_val);
+CF_API double CF_CALL cf_text_effect_get_number(const CF_TextEffect* fx, const char* key, double default_val);
 
 /**
  * @function cf_text_effect_get_color
@@ -1017,7 +1003,7 @@ CF_API double CF_CALL cf_text_effect_get_number(CF_TextEffect* fx, const char* k
  * @return   Returns the value of the text code parameter.
  * @related  CF_TextEffect CF_TextEffectFn cf_text_effect_register cf_text_effect_on_start cf_text_effect_on_finish cf_text_effect_get_number cf_text_effect_get_color cf_text_effect_get_string
  */
-CF_API CF_Color CF_CALL cf_text_effect_get_color(CF_TextEffect* fx, const char* key, CF_Color default_val);
+CF_API CF_Color CF_CALL cf_text_effect_get_color(const CF_TextEffect* fx, const char* key, CF_Color default_val);
 
 /**
  * @function cf_text_effect_get_string
@@ -1029,7 +1015,61 @@ CF_API CF_Color CF_CALL cf_text_effect_get_color(CF_TextEffect* fx, const char* 
  * @return   Returns the value of the text code parameter.
  * @related  CF_TextEffect CF_TextEffectFn cf_text_effect_register cf_text_effect_on_start cf_text_effect_on_finish cf_text_effect_get_number cf_text_effect_get_color cf_text_effect_get_string
  */
-CF_API const char* CF_CALL cf_text_effect_get_string(CF_TextEffect* fx, const char* key, const char* default_val);
+CF_API const char* CF_CALL cf_text_effect_get_string(const CF_TextEffect* fx, const char* key, const char* default_val);
+
+/**
+ * @struct   CF_MarkupInfo
+ * @category text
+ * @brief    Info describing a markup inside of a string rendered with text effects.
+ * @remarks  This struct describes the markup information for each text effect within a renderable string.
+ * @related  CF_TextEffect CF_MarkupInfo cf_text_markup_info_fn cf_text_get_markup_info
+ */
+typedef struct CF_MarkupInfo
+{
+	/* @member The name of the text effect. These would be effect names like `fade` or anything you have registered via `cf_text_effect_register`. */
+	const char* effect_name;
+
+	/* @member The index of the first glyph this markup applies to. Use this index on the `text` string provided in the `cf_text_markup_info_fn` callback. */
+	int start_glyph_index;
+
+	/* @member The number of glyphs this markup applies to. */
+	int glyph_count;
+
+	/* @member The number of `CF_Aabb`'s in `bounds`. */
+	int bounds_count;
+
+	/* @member An arry of `CF_Aabb`'s, one per line the `text` string provided in the `cf_text_markup_info_fn` callback. */
+	CF_Aabb* bounds;
+} CF_MarkupInfo;
+// @end
+
+/**
+ * @function cf_text_markup_info_fn
+ * @category text
+ * @brief    Reports markup information for a text effect.
+ * @param    text        The renderable text.
+ * @param    info        Description of the markup for this text effect.
+ * @param    fx          The `CF_TextEffect` instance used for rendering, containing markup metadata. See remarks for details.
+ * @remarks  This callback is invoked once per markup within the renderable `text`. If you wish to fetch any of the markup metadata
+ *           you may use `cf_text_effect_get_number`, `cf_text_effect_get_color`, or `cf_text_effect_get_string` by passing in the `fx` pointer to each.
+ * @related  CF_TextEffect CF_MarkupInfo cf_text_markup_info_fn cf_text_get_markup_info
+ */
+typedef void (cf_text_markup_info_fn)(const char* text, CF_MarkupInfo info, const CF_TextEffect* fx);
+
+
+/**
+ * @function cf_text_get_markup_info
+ * @category text
+ * @brief    Reports markup information for a text effect.
+ * @param    fn                 The callback to invoke once per text effect.
+ * @param    text               The renderable text.
+ * @param    position           The top-left corner of the text.
+ * @param    num_chars_to_draw  The number of characters to draw `text`. Use -1 to draw the whole string.
+ * @remarks  The callback `fn` is invoked once per markup within the renderable `text`. If you wish to fetch any of the markup metadata
+ *           you may use `cf_text_effect_get_number`, `cf_text_effect_get_color`, or `cf_text_effect_get_string` by passing in the `fx` pointer to each.
+ * @related  CF_TextEffect CF_MarkupInfo cf_text_markup_info_fn cf_text_get_markup_info
+ */
+CF_API void CF_CALL cf_text_get_markup_info(cf_text_markup_info_fn* fn, const char* text, CF_V2 position, int num_chars_to_draw /*= -1*/);
 
 /**
  * @function cf_push_text_effect_active
@@ -1476,7 +1516,7 @@ struct TextEffect : public CF_TextEffect
 	CF_INLINE bool on_start() const { return index_into_effect == 0; }
 	CF_INLINE bool on_finish() const { return index_into_effect == glyph_count - 1; }
 
-	CF_INLINE double get_number(const char* key, double default_val = 0)
+	CF_INLINE double get_number(const char* key, double default_val = 0) const
 	{
 		const CF_TextCodeVal* v = params->try_find(sintern(key));
 		if (v && v->type == CF_TEXT_CODE_VAL_TYPE_NUMBER) {
@@ -1486,7 +1526,7 @@ struct TextEffect : public CF_TextEffect
 		}
 	}
 	
-	CF_INLINE CF_Color get_color(const char* key, CF_Color default_val = cf_color_white())
+	CF_INLINE CF_Color get_color(const char* key, CF_Color default_val = cf_color_white()) const
 	{
 		const CF_TextCodeVal* v = params->try_find(sintern(key));
 		if (v && v->type == CF_TEXT_CODE_VAL_TYPE_COLOR) {
@@ -1496,7 +1536,7 @@ struct TextEffect : public CF_TextEffect
 		}
 	}
 	
-	CF_INLINE const char* get_string(const char* key, const char* default_val = NULL)
+	CF_INLINE const char* get_string(const char* key, const char* default_val = NULL) const
 	{
 		const CF_TextCodeVal* v = params->try_find(sintern(key));
 		if (v && v->type == CF_TEXT_CODE_VAL_TYPE_STRING) {
@@ -1507,8 +1547,12 @@ struct TextEffect : public CF_TextEffect
 	}
 
 	// "private" state -- don't touch.
+	int initial_index;
 	const Cute::Map<const char*, CF_TextCodeVal>* params;
 	CF_TextEffectFn* fn;
+	bool line_bound_init = false;
+	Aabb line_bound;
+	Array<Aabb> bounds;
 };
 
 typedef bool (TextEffectFn)(TextEffect* fx);
