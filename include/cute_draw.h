@@ -1563,6 +1563,14 @@ typedef bool (TextEffectFn)(TextEffect* fx);
 
 CF_INLINE void text_effect_register(const char* name, TextEffectFn* fn) { cf_text_effect_register(name, (CF_TextEffectFn*)fn); }
 
+using MarkupInfo = CF_MarkupInfo;
+using text_markup_info_fn = cf_text_markup_info_fn;
+
+CF_INLINE void text_get_markup_info(cf_text_markup_info_fn* fn, const char* text, v2 position, int num_chars_to_draw = -1) { cf_text_get_markup_info(fn, text, position, num_chars_to_draw); }
+CF_INLINE void push_text_effect_active(bool effects_on) { cf_push_text_effect_active(effects_on); }
+CF_INLINE bool pop_text_effect_active() { cf_pop_text_effect_active(); }
+CF_INLINE bool peek_text_effect_active() { cf_peek_text_effect_active(); }
+
 CF_INLINE void render_settings_filter(CF_Filter filter) { cf_render_settings_filter(filter); }
 CF_INLINE void render_settings_push_viewport(CF_Rect viewport) { cf_render_settings_push_viewport(viewport); }
 CF_INLINE CF_Rect render_settings_pop_viewport() { return cf_render_settings_pop_viewport(); }

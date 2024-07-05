@@ -414,6 +414,7 @@ if (CF_FRAMEWORK_BUILD_SAMPLES)
 	add_executable(waves samples/waves.cpp)
 	add_executable(shallow_water samples/shallow_water.cpp)
 	add_executable(noise samples/noise.c)
+	add_executable(fetch_image samples/fetch_image.cpp)
 	set(SAMPLE_EXECUTABLES
 		easysprite
 		basicecs
@@ -437,6 +438,7 @@ if (CF_FRAMEWORK_BUILD_SAMPLES)
 		waves
 		shallow_water
 		noise
+		fetch_image
 	)
 
 	foreach(CURRENT_TARGET ${SAMPLE_EXECUTABLES})

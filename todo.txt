@@ -1,6 +1,5 @@
 doc page on transforms
 note text effect onstart/finish helpers in the topic page
-text effect word/line iterator, aabb calcs
 docs pass on all pages
 knock out github issues
 resync all cute_headers
