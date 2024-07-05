@@ -1401,7 +1401,7 @@ typedef struct CF_TemporaryImage
  * @category draw
  * @brief    Returns a `CF_TemporaryImage` for a given sprite.
  * @param    sprite     The sprite.
- * @remarks  Useful to render a sprite in an external system, e.g. Dear ImGui. This struct is only valid until the next time `cf_render_to` or
+ * @remarks  Useful to render a sprite in an external system, e.g. Dear ImGui. This struct is only valid until the next time
  *           `cf_app_draw_onto_screen` is called.
  * @related  CF_TemporaryImage cf_fetch_image
  */
