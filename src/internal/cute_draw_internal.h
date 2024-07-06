@@ -93,7 +93,7 @@ struct CF_Draw
 	Cute::Array<CF_V2> temp;
 	Cute::Array<CF_Vertex> verts;
 	Cute::Array<float> font_sizes = { 18 };
-	Cute::Array<const char*> fonts = { NULL };
+	Cute::Array<const char*> fonts = { sintern("Calibri") };
 	Cute::Array<int> blurs = { 0 };
 	Cute::Array<float> text_wrap_widths = { FLT_MAX };
 	Cute::Array<CF_Aabb> text_clip_boxes = { cf_make_aabb(cf_v2(-FLT_MAX, -FLT_MAX), cf_v2(FLT_MAX, FLT_MAX)) };

@@ -1564,9 +1564,9 @@ typedef bool (TextEffectFn)(TextEffect* fx);
 CF_INLINE void text_effect_register(const char* name, TextEffectFn* fn) { cf_text_effect_register(name, (CF_TextEffectFn*)fn); }
 
 using MarkupInfo = CF_MarkupInfo;
-using text_markup_info_fn = cf_text_markup_info_fn;
+typedef bool (text_markup_info_fn)(const char* text, MarkupInfo info, const TextEffect* fx);
 
-CF_INLINE void text_get_markup_info(cf_text_markup_info_fn* fn, const char* text, v2 position, int num_chars_to_draw = -1) { cf_text_get_markup_info(fn, text, position, num_chars_to_draw); }
+CF_INLINE void text_get_markup_info(text_markup_info_fn* fn, const char* text, v2 position, int num_chars_to_draw = -1) { cf_text_get_markup_info((cf_text_markup_info_fn*)fn, text, position, num_chars_to_draw); }
 CF_INLINE void push_text_effect_active(bool effects_on) { cf_push_text_effect_active(effects_on); }
 CF_INLINE bool pop_text_effect_active() { cf_pop_text_effect_active(); }
 CF_INLINE bool peek_text_effect_active() { cf_peek_text_effect_active(); }

@@ -24,6 +24,8 @@
 #include <internal/cute_png_cache_internal.h>
 #include <internal/cute_aseprite_cache_internal.h>
 
+#include <data/fonts/calibri.h>
+
 #include <SDL.h>
 
 #ifdef CF_WINDOWS
@@ -116,9 +118,13 @@ CF_Result cf_make_app(const char* window_title, int x, int y, int w, int h, int 
 	Uint32 sdl_options = SDL_INIT_EVENTS | SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER;
 #else
 	Uint32 sdl_options = SDL_INIT_EVENTS | SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER | SDL_INIT_HAPTIC;
-	bool needs_video = options & (APP_OPTIONS_OPENGL_CONTEXT | APP_OPTIONS_OPENGLES_CONTEXT | APP_OPTIONS_D3D11_CONTEXT | APP_OPTIONS_METAL_CONTEXT | APP_OPTIONS_DEFAULT_GFX_CONTEXT);
-	if (!needs_video || options & APP_OPTIONS_NO_GFX) {
+	if (options & APP_OPTIONS_NO_GFX) {
 		sdl_options &= ~SDL_INIT_VIDEO;
+	} else {
+		bool specific_gfx_context = options & (APP_OPTIONS_OPENGL_CONTEXT | APP_OPTIONS_OPENGLES_CONTEXT | APP_OPTIONS_D3D11_CONTEXT | APP_OPTIONS_METAL_CONTEXT);
+		if (!specific_gfx_context) {
+			options |= APP_OPTIONS_DEFAULT_GFX_CONTEXT;
+		}
 	}
 #endif
 
@@ -232,6 +238,7 @@ CF_Result cf_make_app(const char* window_title, int x, int y, int w, int h, int 
 	cf_make_png_cache();
 
 	if (app->gfx_enabled) {
+		// Setup the backbuffer fullscreen mesh and canvas.
 		{
 			app->backbuffer_quad = cf_make_mesh(CF_USAGE_TYPE_IMMUTABLE, sizeof(Vertex) * 6, 0, 0);
 			CF_VertexAttribute attrs[2] = { };
@@ -263,6 +270,9 @@ CF_Result cf_make_app(const char* window_title, int x, int y, int w, int h, int 
 		// This will clear the initial offscreen canvas to prevent the first frame from starting off
 		// with a black background.
 		cf_apply_canvas(app->offscreen_canvas, true);
+
+		// Create a default font.
+		make_font_from_memory(calibri_data, calibri_sz, "Calibri");
 	}
 
 	if (!(options & APP_OPTIONS_NO_AUDIO)) {

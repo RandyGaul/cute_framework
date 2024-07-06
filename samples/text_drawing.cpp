@@ -3,7 +3,6 @@ using namespace Cute;
 
 #include "proggy.h"
 #include "sample_text.h"
-#include "calibri.h"
 
 int main(int argc, char* argv[])
 {
@@ -13,7 +12,6 @@ int main(int argc, char* argv[])
 
 	draw_push_antialias(true);
 	make_font_from_memory(proggy_data, proggy_sz, "ProggyClean");
-	make_font_from_memory(calibri_data, calibri_sz, "calibri");
 	set_fixed_timestep();
 	int draw_calls = 0;
 
@@ -46,7 +44,7 @@ int main(int argc, char* argv[])
 		pop_text_wrap_width();
 
 		// Draw utf8 encoded text loaded from a text file.
-		push_font("calibri");
+		push_font("Calibri");
 		push_font_size(20);
 		draw_text(sample, V2(-300,200));
 		pop_font_size();

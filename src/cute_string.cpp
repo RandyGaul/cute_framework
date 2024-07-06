@@ -474,7 +474,7 @@ static intern_table_t* s_inst()
 
 const char* cf_sintern(const char* s)
 {
-	return cf_sintern_range(s, s + CF_STRLEN(s));
+	return s ? cf_sintern_range(s, s + CF_STRLEN(s)) : NULL;
 }
 
 const char* cf_sintern_range(const char* start, const char* end)

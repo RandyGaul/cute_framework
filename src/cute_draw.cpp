@@ -1657,21 +1657,19 @@ static String s_parse_string(CF_CodeParseState* s)
 static CF_TextCodeVal s_parse_code_val(CF_CodeParseState* s)
 {
 	CF_TextCodeVal val = { };
-	if (!s->sanitized.empty()) {
-		int cp = s->peek();
-		if (cp == '#') {
-			CF_Color c = s_parse_color(s);
-			val.type = CF_TEXT_CODE_VAL_TYPE_COLOR;
-			val.u.color = c;
-		} else if (cp == '"') {
-			String string = s_parse_string(s);
-			val.type = CF_TEXT_CODE_VAL_TYPE_STRING;
-			val.u.string = !string.empty() ? sintern(string.c_str()) : NULL;
-		} else {
-			double number = s_parse_number(s);
-			val.type = CF_TEXT_CODE_VAL_TYPE_NUMBER;
-			val.u.number = number;
-		}
+	int cp = s->peek();
+	if (cp == '#') {
+		CF_Color c = s_parse_color(s);
+		val.type = CF_TEXT_CODE_VAL_TYPE_COLOR;
+		val.u.color = c;
+	} else if (cp == '"') {
+		String string = s_parse_string(s);
+		val.type = CF_TEXT_CODE_VAL_TYPE_STRING;
+		val.u.string = !string.empty() ? sintern(string.c_str()) : NULL;
+	} else {
+		double number = s_parse_number(s);
+		val.type = CF_TEXT_CODE_VAL_TYPE_NUMBER;
+		val.u.number = number;
 	}
 	return val;
 }
@@ -1873,19 +1871,17 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 			TextEffect* effect = effect_state->effects + i;
 			if (effect->index_into_string + effect->glyph_count == index) {
 				effect->index_into_effect = index - effect->index_into_string - 1;
-				if (effect->fn) {
-					effect->on_end = true;
-					effect->fn(effect); // Signal we're done (one past the end).
-					if (markups) {
-						effect->bounds.add(effect->line_bound);
-						CF_MarkupInfo info;
-						info.effect_name = effect->effect_name;
-						info.start_glyph_index = effect->initial_index;
-						info.glyph_count = effect->glyph_count;
-						info.bounds_count = effect->bounds.count();
-						info.bounds = effect->bounds.data();
-						markups(text, info, (CF_TextEffect*)effect);
-					}
+				effect->on_end = true;
+				if (effect->fn) effect->fn(effect); // Signal we're done (one past the end).
+				if (markups) {
+					effect->bounds.add(effect->line_bound);
+					CF_MarkupInfo info;
+					info.effect_name = effect->effect_name;
+					info.start_glyph_index = effect->initial_index;
+					info.glyph_count = effect->glyph_count;
+					info.bounds_count = effect->bounds.count();
+					info.bounds = effect->bounds.data();
+					markups(text, info, (CF_TextEffect*)effect);
 				}
 				effect_state->effects.unordered_remove(i);
 			} else {

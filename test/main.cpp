@@ -1,22 +1,8 @@
 /*
 	Cute Framework
-	Copyright (C) 2019 Randy Gaul https://randygaul.net
+	Copyright (C) 2024 Randy Gaul https://randygaul.github.io/
 
-	This software is provided 'as-is', without any express or implied
-	warranty.  In no event will the authors be held liable for any damages
-	arising from the use of this software.
-
-	Permission is granted to anyone to use this software for any purpose,
-	including commercial applications, and to alter it and redistribute it
-	freely, subject to the following restrictions:
-
-	1. The origin of this software must not be misrepresented; you must not
-	   claim that you wrote the original software. If you use this software
-	   in a product, an acknowledgment in the product documentation would be
-	   appreciated but is not required.
-	2. Altered source versions must be plainly marked as such, and must not be
-	   misrepresented as being the original software.
-	3. This notice may not be removed or altered from any source distribution.
+	This software is dual-licensed with zlib or Unlicense, check LICENSE.txt for more info
 */
 
 #ifndef _CRT_SECURE_NO_WARNINGS
@@ -39,7 +25,7 @@
 
 #include <cute.h>
 
-TEST_SUITE(test_aabb);
+TEST_SUITE(test_aabb_tree);
 TEST_SUITE(test_array);
 TEST_SUITE(test_aseprite);
 TEST_SUITE(test_audio);
@@ -55,6 +41,7 @@ TEST_SUITE(test_png_cache);
 TEST_SUITE(test_sprite);
 TEST_SUITE(test_string);
 TEST_SUITE(test_json);
+TEST_SUITE(test_markups);
 
 int main(int argc, char* argv[])
 {
@@ -76,7 +63,7 @@ int main(int argc, char* argv[])
 
 	pu_display_colors(true);
 
-	RUN_TEST_SUITE(test_aabb);
+	RUN_TEST_SUITE(test_aabb_tree);
 	RUN_TEST_SUITE(test_array);
 	RUN_TEST_SUITE(test_aseprite);
 	RUN_TEST_SUITE(test_audio);
@@ -92,6 +79,7 @@ int main(int argc, char* argv[])
 	RUN_TEST_SUITE(test_sprite);
 	RUN_TEST_SUITE(test_string);
 	RUN_TEST_SUITE(test_json);
+	RUN_TEST_SUITE(test_markups);
 
 	pu_print_stats();
 	return pu_test_failed();
