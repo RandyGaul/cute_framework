@@ -3,8 +3,6 @@ using namespace Cute;
 
 #include <imgui.h>
 
-#include "calibri.h"
-
 int main(int argc, char* argv[])
 {
 	int w = 640/1;
@@ -14,9 +12,6 @@ int main(int argc, char* argv[])
 	if (is_error(result)) return -1;
 
 	app_init_imgui();
-
-	make_font_from_memory(calibri_data, calibri_sz, "Calibri");
-	push_font("Calibri");
 
 	int draw_calls = 0;
 
