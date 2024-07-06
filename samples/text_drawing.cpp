@@ -28,7 +28,6 @@ int main(int argc, char* argv[])
 		// Clip text within a box.
 		v2 o = V2(cosf(t),sinf(t)) * 25.0f;
 		Aabb clip = make_aabb(V2(-75,-75) + o, V2(75,50) + o);
-		camera_push();
 		draw_quad(clip, 0);
 		push_text_clip_box(clip);
 		push_font_size(13);

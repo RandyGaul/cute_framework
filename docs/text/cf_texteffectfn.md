@@ -58,7 +58,5 @@ character is the first or last to render using `cf_text_effect_on_start` or `cf_
 [CF_TextEffect](/text/cf_texteffect.md)  
 [cf_text_effect_get_string](/text/cf_text_effect_get_string.md)  
 [cf_text_effect_register](/text/cf_text_effect_register.md)  
-cf_text_effect_on_start  
-cf_text_effect_on_finish  
 [cf_text_effect_get_number](/text/cf_text_effect_get_number.md)  
 [cf_text_effect_get_color](/text/cf_text_effect_get_color.md)  

@@ -6,7 +6,7 @@ int main(int argc, char* argv[])
 {
 	float w = 640.0f;
 	float h = 480.0f;
-	int options = CF_APP_OPTIONS_DEFAULT_GFX_CONTEXT | CF_APP_OPTIONS_WINDOW_POS_CENTERED | CF_APP_OPTIONS_RESIZABLE;
+	int options = CF_APP_OPTIONS_WINDOW_POS_CENTERED | CF_APP_OPTIONS_RESIZABLE;
 	CF_Result result = cf_make_app("Draw to Texture", 0, 0, (int)w, (int)h, options, argv[0]);
 	if (cf_is_error(result)) return -1;
 

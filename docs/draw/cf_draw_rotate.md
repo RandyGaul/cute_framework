@@ -3,25 +3,28 @@
 [//]: # (See: https://github.com/RandyGaul/cute_framework/blob/master/samples/docs_parser.cpp)
 [](../header.md ':include')
 
-# cf_draw_sprite
+# cf_draw_rotate
 
 Category: [draw](/api_reference?id=draw)  
 GitHub: [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_draw.h)  
 ---
 
-Draws a sprite.
+Rotates the current coordinate system.
 
 ```cpp
-void cf_draw_sprite(const CF_Sprite* sprite);
+void cf_draw_rotate(float radians);
 ```
 
 Parameters | Description
 --- | ---
-sprite | The sprite.
+radians | The angle to rotate by.
 
 ## Related Pages
 
-[cf_app_draw_onto_screen](/app/cf_app_draw_onto_screen.md)  
-[cf_draw_quad](/draw/cf_draw_quad.md)  
-draw_look_at  
-cf_draw_to  
+[cf_draw_translate](/draw/cf_draw_translate.md)  
+[cf_draw_transform](/draw/cf_draw_transform.md)  
+[cf_draw_translate](/draw/cf_draw_translate.md)  
+[cf_draw_scale](/draw/cf_draw_scale.md)  
+[cf_draw_pop](/draw/cf_draw_pop.md)  
+[cf_draw_TRS](/draw/cf_draw_trs.md)  
+[cf_draw_push](/draw/cf_draw_push.md)  

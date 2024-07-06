@@ -56,15 +56,6 @@ struct CF_Strike
 	float thickness;
 };
 
-struct CF_Cam
-{
-	CF_V2 pos;
-	CF_V2 scale;
-	float angle;
-	float aaf;
-	CF_M3x2 m;
-};
-
 struct CF_Draw
 {
 	CF_V2 atlas_dims = cf_v2(2048, 2048);
@@ -77,19 +68,19 @@ struct CF_Draw
 	Cute::Array<CF_Color> colors = { cf_color_white() };
 	Cute::Array<CF_Color> tints = { cf_color_grey() };
 	Cute::Array<bool> antialias = { true };
-	Cute::Array<float> antialias_scale = { 1.5 };
+	Cute::Array<float> antialias_scale = { 1.5f };
 	Cute::Array<CF_RenderState> render_states;
 	Cute::Array<CF_Rect> scissors = { { -1, -1, 0, 0 } };
 	Cute::Array<CF_Rect> viewports = { { -1, -1, 0, 0 } };
 	Cute::Array<int> layers = { 0 };
-	Cute::Array<CF_Cam> cam_stack;
+	Cute::Array<CF_M3x2> cam_stack = { cf_make_identity() };
+	float aaf = 0;
+	CF_M3x2 projection;
+	CF_M3x2 mvp;
+	void reset_cam();
+	void set_aaf();
 	Cute::Array<CF_Color> user_params = { cf_make_color_hex(0) };
 	Cute::Array<CF_Shader> shaders;
-	CF_M3x2 cam = cf_make_identity();
-	CF_V2 cam_dimensions = { };
-	CF_V2 cam_position = { };
-	float cam_rotation = 0;
-	float aaf = 0;
 	Cute::Array<CF_V2> temp;
 	Cute::Array<CF_Vertex> verts;
 	Cute::Array<float> font_sizes = { 18 };

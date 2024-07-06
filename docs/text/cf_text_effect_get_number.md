@@ -30,7 +30,5 @@ Returns the value of the text code parameter.
 [CF_TextEffect](/text/cf_texteffect.md)  
 [CF_TextEffectFn](/text/cf_texteffectfn.md)  
 [cf_text_effect_register](/text/cf_text_effect_register.md)  
-cf_text_effect_on_start  
-cf_text_effect_on_finish  
 [cf_text_effect_get_string](/text/cf_text_effect_get_string.md)  
 [cf_text_effect_get_color](/text/cf_text_effect_get_color.md)  

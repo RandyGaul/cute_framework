@@ -28,9 +28,9 @@ canvas, so this function is not necessary to call at all. Instead, calling [cf_a
 
 ## Related Pages
 
-[cf_camera_dimensions](/camera/cf_camera_dimensions.md)  
-[cf_camera_look_at](/camera/cf_camera_look_at.md)  
-[cf_camera_rotate](/camera/cf_camera_rotate.md)  
-[cf_camera_push](/camera/cf_camera_push.md)  
-[cf_camera_pop](/camera/cf_camera_pop.md)  
+[cf_draw_scale](/draw/cf_draw_scale.md)  
+[cf_draw_translate](/draw/cf_draw_translate.md)  
+[cf_draw_rotate](/draw/cf_draw_rotate.md)  
+[cf_draw_push](/draw/cf_draw_push.md)  
+[cf_draw_pop](/draw/cf_draw_pop.md)  
 [cf_app_draw_onto_screen](/app/cf_app_draw_onto_screen.md)  

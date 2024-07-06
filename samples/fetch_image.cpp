@@ -32,6 +32,9 @@ int main(int argc, char *argv[])
 		
 		cf_sprite_update(&sprite);
 		cf_draw_sprite(&sprite);
+
+		const char* text = "Press space";
+		Cute::draw_text(text, V2(-Cute::text_width(text)*0.5f-8.0f,200));
 		
 		ImGui::Begin("Sprite");
 		{

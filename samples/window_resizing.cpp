@@ -29,7 +29,7 @@ int main(int argc, char* argv[])
 			h = CF_ALIGN_TRUNCATE(h, 2);
 			app_set_size(w, h);
 			app_set_canvas_size(w, h);
-			camera_dimensions((float)w, (float)h);
+			draw_scale((float)w, (float)h);
 			printf("%d, %d\n", w, h);
 		}
 

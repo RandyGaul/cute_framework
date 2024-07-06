@@ -84,7 +84,7 @@ int main(int argc, char* argv[])
 		cf_free(noise);
 
 		app_update();
-		camera_dimensions(160, 120);
+		draw_scale(4,4);
 
 		ImGui::Begin("Shallow Water Sample");
 		static bool show_noise;

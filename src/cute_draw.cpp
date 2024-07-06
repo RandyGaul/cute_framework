@@ -415,12 +415,30 @@ static void s_init_sb(int w, int h)
 	}
 }
 
+void CF_Draw::reset_cam()
+{
+	cam_stack.clear();
+	cam_stack.add(cf_make_identity());
+	mvp = projection;
+	draw->antialias_scale.set_count(1);
+	draw->set_aaf();
+}
+
+// Sets the anti-alias factor, the width of roughly one pixel scaled.
+// This factor remains constant-size despite zooming in/out with the camera.
+void CF_Draw::set_aaf()
+{
+	float on_or_off = draw->antialias.last() ? 1.0f : 0.0f;
+	float inv_cam_scale = 1.0f / len(draw->cam_stack.last().m.y);
+	float scale = draw->antialias_scale.last();
+	aaf = scale * inv_cam_scale * on_or_off;
+}
+
 void cf_make_draw()
 {
 	draw = CF_NEW(CF_Draw);
-
-	// Setup a good default camera dimensions size.
-	cf_camera_dimensions((float)app->w, (float)app->h);
+	draw->projection = ortho_2d(0, 0, (float)app->w, (float)app->h);
+	draw->reset_cam();
 
 	// Mesh + vertex attributes.
 	draw->mesh = cf_make_mesh(CF_USAGE_TYPE_STREAM, CF_MB * 25, 0, 0);
@@ -541,10 +559,11 @@ void cf_draw_sprite(const CF_Sprite* sprite)
 		quad[j].y = y;
 	}
 
-	s.geom.a = mul(draw->cam, quad[0]);
-	s.geom.b = mul(draw->cam, quad[1]);
-	s.geom.c = mul(draw->cam, quad[2]);
-	s.geom.d = mul(draw->cam, quad[3]);
+	CF_M3x2 m = draw->mvp;
+	s.geom.a = mul(m, quad[0]);
+	s.geom.b = mul(m, quad[1]);
+	s.geom.c = mul(m, quad[2]);
+	s.geom.d = mul(m, quad[3]);
 	s.geom.is_sprite = true;
 
 	s.geom.color = premultiply(to_pixel(draw->tints.last()));
@@ -556,8 +575,8 @@ void cf_draw_sprite(const CF_Sprite* sprite)
 
 static void s_draw_quad(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float stroke, float radius, bool fill)
 {
-	CF_M3x2 m = draw->cam;
-	float aaf = draw->aaf * draw->antialias_scale.last();
+	CF_M3x2 m = draw->mvp;
+	float aaf = draw->aaf;
 	spritebatch_sprite_t s = { };
 	s.image_id = app->default_image_id;
 	s.w = s.h = 1;
@@ -622,8 +641,8 @@ void cf_draw_quad_fill2(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float chubbiness
 
 static void s_draw_circle(v2 position, float stroke, float radius, bool fill)
 {
-	CF_M3x2 m = draw->cam;
-	float aaf = draw->aaf * draw->antialias_scale.last();
+	CF_M3x2 m = draw->mvp;
+	float aaf = draw->aaf;
 	spritebatch_sprite_t s = { };
 	s.image_id = app->default_image_id;
 	s.w = s.h = 1;
@@ -682,7 +701,7 @@ void cf_draw_arc(CF_V2 p, CF_V2 center_of_arc, float range, int iters, float thi
 
 static CF_INLINE void s_bounding_box_of_capsule(v2 a, v2 b, float radius, float stroke, v2 out[4])
 {
-	float aaf = draw->aaf * draw->antialias_scale.last();
+	float aaf = draw->aaf;
 	v2 n0 = norm(b - a) * (radius + stroke + aaf);
 	v2 n1 = skew(n0);
 	out[0] = a - n0 + n1;
@@ -693,7 +712,7 @@ static CF_INLINE void s_bounding_box_of_capsule(v2 a, v2 b, float radius, float 
 
 static void s_draw_capsule(v2 a, v2 b, float stroke, float radius, bool fill)
 {
-	CF_M3x2 m = draw->cam;
+	CF_M3x2 m = draw->mvp;
 	spritebatch_sprite_t s = { };
 	s.image_id = app->default_image_id;
 	s.w = s.h = 1;
@@ -713,7 +732,7 @@ static void s_draw_capsule(v2 a, v2 b, float stroke, float radius, bool fill)
 	s.geom.radius = radius;
 	s.geom.stroke = stroke;
 	s.geom.fill = fill;
-	s.geom.aa = draw->aaf * draw->antialias.last();
+	s.geom.aa = draw->aaf;
 	s.geom.user_params = draw->user_params.last();
 	s.sort_bits = draw->layers.last();
 
@@ -762,7 +781,7 @@ void CF_INLINE s_bounding_box_of_triangle(v2 a, v2 b, v2 c, float radius, float 
 		out[2] = b + u * inflate + v * (inflate + h);
 		out[3] = a - u * inflate + v * (inflate + h);
 	};
-	float aaf = draw->aaf * draw->antialias_scale.last();
+	float aaf = draw->aaf;
 	if (d0 >= d1 && d0 >= d2) {
 		build_box(d0, a, b, c, radius + stroke + aaf, out);
 	} else if (d1 >= d0 && d1 >= d2) {
@@ -774,7 +793,7 @@ void CF_INLINE s_bounding_box_of_triangle(v2 a, v2 b, v2 c, float radius, float 
 
 static void s_cf_draw_tri(v2 a, v2 b, v2 c, float stroke, float radius, bool fill)
 {
-	CF_M3x2 m = draw->cam;
+	CF_M3x2 m = draw->mvp;
 	spritebatch_sprite_t s = { };
 	s.image_id = app->default_image_id;
 	s.w = s.h = 1;
@@ -805,7 +824,7 @@ static void s_cf_draw_tri(v2 a, v2 b, v2 c, float stroke, float radius, bool fil
 	s.geom.radius = radius;
 	s.geom.stroke = stroke;
 	s.geom.fill = fill;
-	s.geom.aa = draw->aaf * draw->antialias.last();
+	s.geom.aa = draw->aaf;
 	s.geom.user_params = draw->user_params.last();
 	s.sort_bits = draw->layers.last();
 	spritebatch_push(&draw->sb, s);
@@ -839,7 +858,7 @@ void cf_draw_polyline(CF_V2* pts, int count, float thickness, bool loop)
 	}
 
 	// Each portion of the polyline will be rendered with a single triangle per spritebatch entry.
-	CF_M3x2 m = draw->cam;
+	CF_M3x2 m = draw->mvp;
 	spritebatch_sprite_t s = { };
 	s.image_id = app->default_image_id;
 	s.geom.color = premultiply(to_pixel(cf_overlay_color(draw->colors.last(), draw->tints.last())));
@@ -847,7 +866,7 @@ void cf_draw_polyline(CF_V2* pts, int count, float thickness, bool loop)
 	s.geom.radius = radius;
 	s.geom.stroke = 0;
 	s.geom.fill = true;
-	s.geom.aa = draw->aaf * draw->antialias.last();
+	s.geom.aa = draw->aaf;
 	s.geom.type = BATCH_GEOMETRY_TYPE_SEGMENT;
 	s.geom.user_params = draw->user_params.last();
 	s.sort_bits = draw->layers.last();
@@ -2042,12 +2061,13 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 
 			// Actually render the sprite.
 			if (visible && render) {
-				s.geom.a = mul(draw->cam, V2(q0.x, q1.y));
-				s.geom.b = mul(draw->cam, V2(q1.x, q1.y));
-				s.geom.c = mul(draw->cam, V2(q1.x, q0.y));
-				s.geom.d = mul(draw->cam, V2(q0.x, q0.y));
+				M3x2 m = draw->mvp;
+				s.geom.a = mul(m, V2(q0.x, q1.y));
+				s.geom.b = mul(m, V2(q1.x, q1.y));
+				s.geom.c = mul(m, V2(q1.x, q0.y));
+				s.geom.d = mul(m, V2(q0.x, q0.y));
 				s.geom.color = premultiply(to_pixel(color));
-				s.geom.clip = make_aabb(mul(draw->cam, clip.min), mul(draw->cam, clip.max));
+				s.geom.clip = make_aabb(mul(m, clip.min), mul(m, clip.max));
 				s.geom.do_clipping = do_clipping;
 				s.geom.is_text = true;
 				s.sort_bits = draw->layers.last();
@@ -2164,12 +2184,15 @@ CF_Color cf_draw_peek_tint()
 void cf_draw_push_antialias(bool antialias)
 {
 	draw->antialias.add(antialias);
+	draw->set_aaf();
 }
 
 bool cf_draw_pop_antialias()
 {
 	if (draw->antialias.count() > 1) {
-		return draw->antialias.pop();
+		bool result = draw->antialias.pop();
+		draw->set_aaf();
+		return result;
 	} else {
 		return draw->antialias.last();
 	}
@@ -2183,12 +2206,15 @@ bool cf_draw_peek_antialias()
 void cf_draw_push_antialias_scale(float scale)
 {
 	draw->antialias_scale.add(scale);
+	draw->set_aaf();
 }
 
 float cf_draw_pop_antialias_scale()
 {
 	if (draw->antialias_scale.count() > 1) {
-		return draw->antialias_scale.pop();
+		float scale = draw->antialias_scale.pop();
+		draw->set_aaf();
+		return scale;
 	} else {
 		return draw->antialias_scale.last();
 	}
@@ -2351,72 +2377,78 @@ void cf_render_to(CF_Canvas canvas, bool clear)
 	draw->verts.clear();
 }
 
-void cf_camera_dimensions(float w, float h)
+void cf_draw_transform(CF_M3x2 m)
 {
-	draw->cam_dimensions = V2(w, h) * 0.5f;
-	draw->aaf = draw->cam_dimensions.y / (float)app->h;
-	draw->cam = cf_invert(cf_make_transform_TSR(draw->cam_position, draw->cam_dimensions, draw->cam_rotation));
+	m = mul(draw->cam_stack.last(), m);
+	draw->cam_stack.last() = m;
+	draw->mvp = mul(draw->projection, m);
+	draw->set_aaf();
 }
 
-void cf_camera_look_at(float x, float y)
+void cf_draw_translate(float x, float y)
 {
-	draw->cam_position = V2(x, y);
-	draw->cam = cf_invert(cf_make_transform_TSR(draw->cam_position, draw->cam_dimensions, draw->cam_rotation));
+	M3x2 m = make_translation(x, y);
+	cf_draw_transform(m);
 }
 
-void cf_camera_rotate(float radians)
+void cf_draw_translate_v2(CF_V2 position)
 {
-	draw->cam_rotation = radians;
-	draw->cam = cf_invert(cf_make_transform_TSR(draw->cam_position, draw->cam_dimensions, draw->cam_rotation));
+	cf_draw_translate(position.x, position.y);
 }
 
-void cf_camera_push()
+void cf_draw_scale(float w, float h)
 {
-	CF_Cam cam;
-	cam.m = draw->cam;
-	cam.pos = draw->cam_position;
-	cam.scale = draw->cam_dimensions;
-	cam.angle = draw->cam_rotation;
-	cam.aaf = draw->aaf;
-	draw->cam_stack.add(cam);
+	M3x2 m = make_scale(w, h);
+	cf_draw_transform(m);
 }
 
-void cf_camera_pop()
+void cf_draw_scale_v2(CF_V2 scale)
 {
-	if (draw->cam_stack.size()) {
-		CF_Cam cam = draw->cam_stack.pop();
-		draw->cam = cam.m;
-		draw->cam_position = cam.pos;
-		draw->cam_dimensions = cam.scale;
-		draw->cam_rotation = cam.angle;
-		draw->aaf = cam.aaf;
-	} else {
-		draw->cam_dimensions = V2((float)app->w, (float)app->h) * 0.5f;
-		draw->cam_position = V2(0, 0);
-		draw->cam_rotation = 0;
-		draw->aaf = draw->cam_dimensions.y / (float)app->h;
-		draw->cam = cf_invert(cf_make_transform_TSR(draw->cam_position, draw->cam_dimensions, draw->cam_rotation));
+	cf_draw_scale(scale.x, scale.y);
+}
+
+void cf_draw_rotate(float radians)
+{
+	CF_M3x2 m = make_rotation(radians);
+	cf_draw_transform(m);
+}
+
+void cf_draw_TRS(CF_V2 position, CF_V2 scale, float radians)
+{
+	cf_draw_transform(make_transform(position, scale, radians));
+}
+
+void cf_draw_TRS_absolute(CF_V2 position, CF_V2 scale, float radians)
+{
+	CF_M3x2 m = make_transform(position, scale, radians);
+	draw->cam_stack.last() = m;
+	draw->mvp = mul(m, draw->projection);
+	draw->set_aaf();
+}
+
+void cf_draw_push()
+{
+	draw->cam_stack.add(draw->cam_stack.last());
+}
+
+void cf_draw_pop()
+{
+	if (draw->cam_stack.size() > 1) {
+		draw->cam_stack.pop();
 	}
+	draw->mvp = mul(draw->cam_stack.last(), draw->projection);
+	draw->set_aaf();
 }
 
-CF_V2 cf_camera_peek_position()
+CF_M3x2 cf_draw_peek()
 {
-	return draw->cam_position;
+	return draw->cam_stack.last();
 }
 
-CF_V2 cf_camera_peek_dimensions()
+void cf_draw_projection(CF_M3x2 projection)
 {
-	return draw->cam_dimensions * 2.0f;
-}
-
-float cf_camera_peek_rotation()
-{
-	return draw->cam_rotation;
-}
-
-CF_M3x2 cf_camera_peek()
-{
-	return draw->cam;
+	draw->projection = projection;
+	draw->mvp = mul(draw->cam_stack.last(), projection);
 }
 
 CF_TemporaryImage cf_fetch_image(const CF_Sprite* sprite)

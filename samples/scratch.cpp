@@ -3,6 +3,8 @@ using namespace Cute;
 
 #include <imgui.h>
 
+// This isn't really a sample, but a scratch pad for the CF author to experiment.
+
 int main(int argc, char* argv[])
 {
 	int w = 640/1;
@@ -20,9 +22,7 @@ int main(int argc, char* argv[])
 	s.scale.y = 2.0f;
 	s.play("spin");
 
-	draw_push_antialias(false);
 	Color c = color_white();
-	draw_push_color(c);
 	cf_clear_color(0, 0, 0, 0);
 
 	float fps = 0;
@@ -31,7 +31,6 @@ int main(int argc, char* argv[])
 
 	while (app_is_running()) {
 		app_update();
-		push_font("Calibri");
 
 		if (fps == 0) {
 			fps = 1.0f / CF_DELTA_TIME;
@@ -55,12 +54,28 @@ int main(int argc, char* argv[])
 		ImGui::SliderFloat("aaf", &aaf, 0, 10);
 		ImGui::SliderFloat("chubbiness", &chubbiness, 0, 10);
 		ImGui::Checkbox("aa", &aa);
-		camera_look_at(cam_p.x, cam_p.y);
-		camera_rotate(cam_rot);
-		camera_dimensions(cam_scale * w, cam_scale * h);
-		draw_pop_antialias_scale();
+		draw_translate(cam_p);
+		draw_rotate(cam_rot);
+		draw_scale(cam_scale, cam_scale);
+		draw_push_antialias(aa);
 		draw_push_antialias_scale(aaf);
 		ImGui::End();
+
+		if (0) {
+			draw_push();
+			draw_text("Hello world1", V2(0,0));
+			draw_translate(100,0);
+			draw_text("Hello world2", V2(0,0));
+			draw_rotate(1);
+			draw_text("Hello world3", V2(0,0));
+			draw_translate(100,0);
+			draw_text("Hello world4", V2(0,0));
+			draw_scale(2,2);
+			draw_rotate(t);
+			draw_text("Hello world5", V2(0,0));
+			s.draw();
+			draw_pop();
+		}
 
 		if (0) {
 			const char* text = "This <fade hello=\"some string\">sample\n is a\n blah blah blah\n haha\n test\n ground</fade> for CF development.";
@@ -84,7 +99,7 @@ int main(int argc, char* argv[])
 			draw_pop_antialias();
 		}
 
-		if (1) {
+		if (0) {
 			draw_push_antialias(true);
 			draw_circle_fill(V2(sinf(t*0.25f) * 250.0f,0), (cosf(t) * 0.5f + 0.5f) * 50.0f + 50.0f);
 			draw_circle(V2(sinf(t+2.0f) * 50.0f,0), (cosf(t) * 0.5f + 0.5f) * 50.0f + 50.0f, 5);
@@ -106,7 +121,7 @@ int main(int argc, char* argv[])
 			draw_quad_fill(cf_make_aabb(V2(-60,-60)-o*25.0f, V2(-40,-30)-o*25.0f));
 		}
 
-		if (0) {
+		if (1) {
 			v2 box[4];
 			Aabb bb = make_aabb(V2(-20,-30), V2(30,50));
 			aabb_verts(box, bb);

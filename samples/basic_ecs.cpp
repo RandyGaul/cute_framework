@@ -176,8 +176,7 @@ void debuff_system(CF_ComponentList component_list, int entity_count, void* udat
 
 int main(int argc, char* argv[])
 {
-	int options = CF_APP_OPTIONS_DEFAULT_GFX_CONTEXT | CF_APP_OPTIONS_WINDOW_POS_CENTERED;
-	CF_Result result = cf_make_app("Hitpoints ECS", 0, 0, 800, 800, options, argv[0]);
+	CF_Result result = cf_make_app("Hitpoints ECS", 0, 0, 800, 800, CF_APP_OPTIONS_WINDOW_POS_CENTERED, argv[0]);
 	if (cf_is_error(result)) return -1;
 
 	// Register component types.

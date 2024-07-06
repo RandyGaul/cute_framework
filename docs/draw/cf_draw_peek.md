@@ -3,25 +3,23 @@
 [//]: # (See: https://github.com/RandyGaul/cute_framework/blob/master/samples/docs_parser.cpp)
 [](../header.md ':include')
 
-# cf_draw_sprite
+# cf_draw_peek
 
 Category: [draw](/api_reference?id=draw)  
 GitHub: [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_draw.h)  
 ---
 
-Draws a sprite.
+Returns the current camera as a [CF_M3x2](/math/cf_m3x2.md).
 
 ```cpp
-void cf_draw_sprite(const CF_Sprite* sprite);
+CF_M3x2 cf_draw_peek();
 ```
 
-Parameters | Description
---- | ---
-sprite | The sprite.
+## Remarks
+
+Multiplying this matrix against a vector will transform the vector to "cam space" or "eye space".
 
 ## Related Pages
 
-[cf_app_draw_onto_screen](/app/cf_app_draw_onto_screen.md)  
-[cf_draw_quad](/draw/cf_draw_quad.md)  
-draw_look_at  
-cf_draw_to  
+[cf_draw_push](/draw/cf_draw_push.md)  
+[cf_draw_pop](/draw/cf_draw_pop.md)  

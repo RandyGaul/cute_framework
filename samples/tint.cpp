@@ -3,8 +3,7 @@ using namespace Cute;
 
 int main(int argc, char* argv[])
 {
-	int options = APP_OPTIONS_DEFAULT_GFX_CONTEXT | APP_OPTIONS_WINDOW_POS_CENTERED;
-	Result result = make_app("Tint Demo", 0, 0, 640, 480, options, argv[0]);
+	Result result = make_app("Tint Demo", 0, 0, 640, 480, APP_OPTIONS_WINDOW_POS_CENTERED, argv[0]);
 	if (is_error(result)) return -1;
 
 	Sprite s = cf_make_demo_sprite();
@@ -14,8 +13,9 @@ int main(int argc, char* argv[])
 	while (app_is_running()) {
 		app_update();
 
-		camera_dimensions(640/4, 480/4);
-		draw_push_antialias(true);
+		const char* text = "Press keys 1-8";
+		draw_text(text, V2(-text_width(text)*0.5f-8.0f,200));
+		draw_scale(4,4);
 
 		static int which = 0;
 		if (key_just_pressed(KEY_1))

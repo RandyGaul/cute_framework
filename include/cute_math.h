@@ -1357,6 +1357,24 @@ CF_INLINE CF_M3x2 cf_invert(CF_M3x2 a)
 	return b;
 }
 
+/**
+ * @function cf_ortho_2d
+ * @category math
+ * @brief    Constructs an orthographic projection matrix given position and scaling values.
+ * @related  CF_M3x2 cf_mul_m32_v2 cf_mul_m32 cf_make_identity cf_make_translation cf_make_scale cf_make_scale_translation cf_make_rotation cf_make_transform_TSR cf_invert
+ */
+CF_INLINE CF_M3x2 cf_ortho_2d(float x, float y, float scale_x, float scale_y)
+{
+	CF_M3x2 matrix;
+	matrix.m.x.x = 2.0f / scale_x;
+	matrix.m.x.y = 0.0f;
+	matrix.m.y.x = 0.0f;
+	matrix.m.y.y = 2.0f / scale_y;
+	matrix.p.x = -2.0f * x / scale_x;
+	matrix.p.y = -2.0f * y / scale_y;
+	return matrix;
+}
+
 //--------------------------------------------------------------------------------------------------
 // Transform ops.
 // No scale factor allowed here, good for physics + colliders.
@@ -2729,12 +2747,14 @@ CF_INLINE M3x2 make_translation(float x, float y) { return cf_make_translation_f
 CF_INLINE M3x2 make_translation(v2 p) { return cf_make_translation(p); }
 CF_INLINE M3x2 make_scale(v2 s) { return cf_make_scale(s); }
 CF_INLINE M3x2 make_scale(float s) { return cf_make_scale_f(s); }
+CF_INLINE M3x2 make_scale(float sx, float sy) { return cf_make_scale(cf_v2(sx, sy)); }
 CF_INLINE M3x2 make_scale(v2 s, v2 p) { return cf_make_scale_translation(s, p); }
 CF_INLINE M3x2 make_scale(float s, v2 p) { return cf_make_scale_translation_f(s, p); }
-CF_INLINE M3x2 make_scale(float sx, float sy, v2 p) { return cf_make_scale_translation_f_f(sx, sy, p); }
+CF_INLINE M3x2 make_scale_translation(float sx, float sy, v2 p) { return cf_make_scale_translation_f_f(sx, sy, p); }
 CF_INLINE M3x2 make_rotation(float radians) { return cf_make_rotation(radians); }
 CF_INLINE M3x2 make_transform(v2 p, v2 s, float radians) { return cf_make_transform_TSR(p, s, radians); }
 CF_INLINE M3x2 invert(M3x2 m) { return cf_invert(m); }
+CF_INLINE M3x2 ortho_2d(float x, float y, float scale_x, float scale_y) { return cf_ortho_2d(x, y, scale_x, scale_y); }
 
 CF_INLINE Transform make_transform() { return cf_make_transform(); }
 CF_INLINE Transform make_transform(v2 p, float radians) { return cf_make_transform_TR(p, radians); }

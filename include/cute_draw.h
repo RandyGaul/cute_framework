@@ -26,7 +26,7 @@ extern "C" {
  * @category draw
  * @brief    Draws a sprite.
  * @param    sprite     The sprite.
- * @related  cf_draw_sprite cf_draw_quad camera_look_at cf_draw_to cf_app_draw_onto_screen
+ * @related  cf_draw_sprite cf_draw_quad draw_look_at cf_draw_to cf_app_draw_onto_screen
  */
 CF_API void CF_CALL cf_draw_sprite(const CF_Sprite* sprite);
 
@@ -1276,85 +1276,124 @@ CF_API void CF_CALL cf_render_settings_push_uniform_v2(const char* name, CF_V2 v
 CF_API void CF_CALL cf_render_settings_push_uniform_color(const char* name, CF_Color val);
 
 /**
- * @function cf_camera_dimensions
- * @category camera
- * @brief    Sets the width and height of the camera's view.
- * @param    w          The width of the camera's view.
- * @param    h          The height of the camera's view.
- * @related  cf_camera_dimensions cf_camera_look_at cf_camera_rotate cf_camera_push cf_camera_pop cf_app_draw_onto_screen cf_render_to cf_camera_peek_position cf_camera_peek_dimensions cf_camera_peek_rotation cf_camera_peek
+ * @function cf_draw_transform
+ * @category draw
+ * @brief    Applies this transform to current coordinate system.
+ * @param    m      The transform to apply.
+ * @related  cf_draw_transform cf_draw_translate cf_draw_scale cf_draw_rotate cf_draw_TRS cf_draw_push cf_draw_pop
  */
-CF_API void CF_CALL cf_camera_dimensions(float w, float h);
+CF_API void CF_CALL cf_draw_transform(CF_M3x2 m);
 
 /**
- * @function cf_camera_look_at
- * @category camera
- * @brief    Sets where in the world the camera sees.
- * @param    x          The x position of the camera's view.
- * @param    y          The y position of the camera's view.
- * @related  cf_camera_dimensions cf_camera_look_at cf_camera_rotate cf_camera_push cf_camera_pop cf_app_draw_onto_screen cf_render_to cf_camera_peek_position cf_camera_peek_dimensions cf_camera_peek_rotation cf_camera_peek
+ * @function cf_draw_translate
+ * @category draw
+ * @brief    Translates the current coordinate system.
+ * @param    x      The x position to translate by.
+ * @param    y      The y position to translate by.
+ * @related  cf_draw_translate_v2 cf_draw_transform cf_draw_translate cf_draw_scale cf_draw_rotate cf_draw_TRS cf_draw_push cf_draw_pop
  */
-CF_API void CF_CALL cf_camera_look_at(float x, float y);
+CF_API void CF_CALL cf_draw_translate(float x, float y);
 
 /**
- * @function cf_camera_rotate
- * @category camera
- * @brief    Rotates the camera.
- * @param    radians    The angle of camera rotation.
- * @related  cf_camera_dimensions cf_camera_look_at cf_camera_rotate cf_camera_push cf_camera_pop cf_app_draw_onto_screen cf_render_to cf_camera_peek_position cf_camera_peek_dimensions cf_camera_peek_rotation cf_camera_peek
+ * @function cf_draw_translate_v2
+ * @category draw
+ * @brief    Translates the current coordinate system.
+ * @param    position   The position to translate by.
+ * @related  cf_draw_translate cf_draw_transform cf_draw_translate cf_draw_scale cf_draw_rotate cf_draw_TRS cf_draw_push cf_draw_pop
  */
-CF_API void CF_CALL cf_camera_rotate(float radians);
+CF_API void CF_CALL cf_draw_translate_v2(CF_V2 position);
 
 /**
- * @function cf_camera_push
- * @category camera
- * @brief    Pushes a copy of the camera state.
- * @related  cf_camera_dimensions cf_camera_look_at cf_camera_rotate cf_camera_push cf_camera_pop cf_app_draw_onto_screen cf_render_to cf_camera_peek_position cf_camera_peek_dimensions cf_camera_peek_rotation cf_camera_peek
+ * @function cf_draw_scale
+ * @category draw
+ * @brief    Scales the current coordinate system.
+ * @param    w      The width to scale the x-axis by.
+ * @param    h      The height to scale the y-axis by.
+ * @related  cf_draw_scale_v2 cf_draw_translate cf_draw_transform cf_draw_translate cf_draw_scale cf_draw_rotate cf_draw_TRS cf_draw_push cf_draw_pop
  */
-CF_API void CF_CALL cf_camera_push();
+CF_API void CF_CALL cf_draw_scale(float w, float h);
 
 /**
- * @function cf_camera_pop
- * @category camera
- * @brief    Pops the current camera state, and uses the previously pushed camera state.
- * @related  cf_camera_dimensions cf_camera_look_at cf_camera_rotate cf_camera_push cf_camera_pop cf_app_draw_onto_screen cf_render_to cf_camera_peek_position cf_camera_peek_dimensions cf_camera_peek_rotation cf_camera_peek
+ * @function cf_draw_scale_v2
+ * @category draw
+ * @brief    Scales the current coordinate system.
+ * @related  cf_draw_scale cf_draw_translate cf_draw_transform cf_draw_translate cf_draw_scale cf_draw_rotate cf_draw_TRS cf_draw_push cf_draw_pop
  */
-CF_API void CF_CALL cf_camera_pop();
+CF_API void CF_CALL cf_draw_scale_v2(CF_V2 scale);
 
 /**
- * @function cf_camera_peek_position
- * @category camera
- * @brief    Returns the current camera position.
- * @remarks  See `cf_camera_look_at`.
- * @related  cf_camera_dimensions cf_camera_look_at cf_camera_rotate cf_camera_push cf_camera_pop cf_app_draw_onto_screen cf_render_to cf_camera_peek_position cf_camera_peek_dimensions cf_camera_peek_rotation cf_camera_peek
+ * @function cf_draw_rotate
+ * @category draw
+ * @brief    Rotates the current coordinate system.
+ * @param    radians    The angle to rotate by.
+ * @related  cf_draw_translate cf_draw_transform cf_draw_translate cf_draw_scale cf_draw_rotate cf_draw_TRS cf_draw_push cf_draw_pop
  */
-CF_API CF_V2 CF_CALL cf_camera_peek_position();
+CF_API void CF_CALL cf_draw_rotate(float radians);
 
 /**
- * @function cf_camera_peek_dimensions
- * @category camera
- * @brief    Returns the current camera dimensions.
- * @remarks  See `cf_camera_dimensions`.
- * @related  cf_camera_dimensions cf_camera_look_at cf_camera_rotate cf_camera_push cf_camera_pop cf_app_draw_onto_screen cf_render_to cf_camera_peek_position cf_camera_peek_dimensions cf_camera_peek_rotation cf_camera_peek
+ * @function cf_draw_TRS
+ * @category draw
+ * @brief    Transforms the current coordinate system by a rotation, then a scale, then a translation.
+ * @related  cf_draw_TRS_absolute cf_draw_translate cf_draw_transform cf_draw_translate cf_draw_scale cf_draw_rotate cf_draw_TRS cf_draw_push cf_draw_pop
  */
-CF_API CF_V2 CF_CALL cf_camera_peek_dimensions();
+CF_API void CF_CALL cf_draw_TRS(CF_V2 position, CF_V2 scale, float radians);
 
 /**
- * @function cf_camera_peek_rotation
- * @category camera
- * @brief    Returns the current camera rotation.
- * @remarks  See `cf_camera_rotate`.
- * @related  cf_camera_dimensions cf_camera_look_at cf_camera_rotate cf_camera_push cf_camera_pop cf_app_draw_onto_screen cf_render_to cf_camera_peek_position cf_camera_peek_dimensions cf_camera_peek_rotation cf_camera_peek
+ * @function cf_draw_push_TRS_absolute
+ * @category draw
+ * @brief    Sets the current coordinate system.
+ * @related  cf_draw_translate cf_draw_transform cf_draw_translate cf_draw_scale cf_draw_rotate cf_draw_TRS cf_draw_push cf_draw_pop
  */
-CF_API float CF_CALL cf_camera_peek_rotation();
+CF_API void CF_CALL cf_draw_TRS_absolute(CF_V2 position, CF_V2 scale, float radians);
 
 /**
- * @function cf_camera_peek
- * @category camera
+ * @function cf_draw_push
+ * @category draw
+ * @brief    Save a copy of this coordinate system.
+ * @remarks  This function is essential for drawing things locally without affecting the coordinate
+ *           system of anything else that needs to draw. For example, you may push/pop to modify the
+ *           coordinate system before drawing, and restore the prior coordinate system when done:
+ *           ```cpp
+ *           cf_draw_push(); // Save a copy of the prior coordinate system.
+ *           cf_draw_translate(100, 0);
+ *           cf_draw_rotate(CF_PI/3.0f);
+ *           cf_draw_line(a, b); // Draw using the previous translate then rotate.
+ *           cf_draw_pop(); // Restore the prior coordinate system.
+ *           ```
+ * @related  cf_draw_push cf_draw_pop cf_draw_peek cf_draw_translate cf_draw_transform cf_draw_translate cf_draw_scale cf_draw_rotate cf_draw_TRS
+ */
+CF_API void CF_CALL cf_draw_push();
+
+/**
+ * @function cf_draw_pop
+ * @category draw
+ * @brief    Restores the previous coordinate system.
+ * @remarks  This function is essential for drawing things locally without affecting the coordinate
+ *           system of anything else that needs to draw. See `cf_draw_push` for details.
+ * @related  cf_draw_push cf_draw_pop cf_draw_peek cf_draw_translate cf_draw_transform cf_draw_translate cf_draw_scale cf_draw_rotate cf_draw_TRS
+ */
+CF_API void CF_CALL cf_draw_pop();
+
+/**
+ * @function cf_draw_peek
+ * @category draw
  * @brief    Returns the current camera as a `CF_M3x2`.
  * @remarks  Multiplying this matrix against a vector will transform the vector to "cam space" or "eye space".
- * @related  cf_camera_dimensions cf_camera_look_at cf_camera_rotate cf_camera_push cf_camera_pop cf_app_draw_onto_screen cf_render_to cf_camera_peek_position cf_camera_peek_dimensions cf_camera_peek_rotation cf_camera_peek
+ * @related  cf_draw_push cf_draw_pop
  */
-CF_API CF_M3x2 CF_CALL cf_camera_peek();
+CF_API CF_M3x2 CF_CALL cf_draw_peek();
+
+/**
+ * @function cf_draw_projection
+ * @category draw
+ * @brief    Sets the projection matrix used by the draw API.
+ * @remarks  You should not use this function unless you know what you're doing. You will need to call this
+ *           again whenever the app is resized, as CF automatically sets the projection matrix upon resizing.
+ *           See `cf_app_was_resized`. If you want to learn more you can try searching online for "model view
+ *           projection" matrices, aka MVP matrices.
+ * @related  cf_app_was_resized
+ */
+CF_API void CF_CALL cf_draw_projection(CF_M3x2 projection);
 
 /**
  * @function cf_render_to
@@ -1365,7 +1404,7 @@ CF_API CF_M3x2 CF_CALL cf_camera_peek();
  * @remarks  This is advanced function. It's useful for off-screen rendering for certain rendering effects, such as multi-pass
  *           effects like reflections, or advanced lighting techniques. By default, everything will get renderered to the app's
  *           canvas, so this function is not necessary to call at all. Instead, calling `cf_app_draw_onto_screen` should be the go-to.
- * @related  cf_camera_dimensions cf_camera_look_at cf_camera_rotate cf_camera_push cf_camera_pop cf_app_draw_onto_screen cf_render_to
+ * @related  cf_draw_scale cf_draw_translate cf_draw_rotate cf_draw_push cf_draw_pop cf_app_draw_onto_screen cf_render_to
  */
 CF_API void CF_CALL cf_render_to(CF_Canvas canvas, bool clear);
 
@@ -1474,12 +1513,12 @@ CF_INLINE void draw_arrow(v2 a, v2 b, float thickness, float arrow_width) { cf_d
 CF_INLINE void draw_push_layer(int layer) { cf_draw_push_layer(layer); }
 CF_INLINE int draw_pop_layer() { return cf_draw_pop_layer(); }
 CF_INLINE int draw_peek_layer() { return cf_draw_peek_layer(); }
-CF_INLINE void draw_push_color(CF_Color c) { cf_draw_push_color(c); }
-CF_INLINE CF_Color draw_pop_color() { return cf_draw_pop_color(); }
-CF_INLINE CF_Color draw_peek_color() { return cf_draw_peek_color(); }
-CF_INLINE void draw_push_tint(CF_Color c) { cf_draw_push_tint(c); }
-CF_INLINE CF_Color draw_pop_tint() { return cf_draw_pop_tint(); }
-CF_INLINE CF_Color draw_peek_tint() { return cf_draw_peek_tint(); }
+CF_INLINE void draw_push_color(Color c) { cf_draw_push_color(c); }
+CF_INLINE Color draw_pop_color() { return cf_draw_pop_color(); }
+CF_INLINE Color draw_peek_color() { return cf_draw_peek_color(); }
+CF_INLINE void draw_push_tint(Color c) { cf_draw_push_tint(c); }
+CF_INLINE Color draw_pop_tint() { return cf_draw_pop_tint(); }
+CF_INLINE Color draw_peek_tint() { return cf_draw_peek_tint(); }
 CF_INLINE void draw_push_antialias(bool antialias) { cf_draw_push_antialias(antialias); }
 CF_INLINE bool draw_pop_antialias() { return cf_draw_pop_antialias(); }
 CF_INLINE bool draw_peek_antialias() { return cf_draw_peek_antialias(); }
@@ -1487,12 +1526,12 @@ CF_INLINE void draw_push_antialias_scale(float scale) { return cf_draw_push_anti
 CF_INLINE float draw_pop_antialias_scale() { return cf_draw_pop_antialias_scale(); }
 CF_INLINE float draw_peek_antialias_scale() { return cf_draw_peek_antialias_scale(); }
 CF_INLINE void draw_push_vertex_attributes(float r, float g, float b, float a) { cf_draw_push_vertex_attributes(r, g, b, a); }
-CF_INLINE void draw_push_vertex_attributes(CF_Color attributes) { cf_draw_push_vertex_attributes2(attributes); }
-CF_INLINE CF_Color draw_pop_vertex_attributes() { return cf_draw_pop_vertex_attributes(); }
-CF_INLINE CF_Color draw_peek_vertex_attributes() { return cf_draw_peek_vertex_attributes(); }
+CF_INLINE void draw_push_vertex_attributes(Color attributes) { cf_draw_push_vertex_attributes2(attributes); }
+CF_INLINE Color draw_pop_vertex_attributes() { return cf_draw_pop_vertex_attributes(); }
+CF_INLINE Color draw_peek_vertex_attributes() { return cf_draw_peek_vertex_attributes(); }
 
-CF_INLINE CF_Result make_font(const char* path, const char* font_name) { return cf_make_font(path, font_name); }
-CF_INLINE CF_Result make_font_from_memory(void* data, int size, const char* font_name) { return cf_make_font_from_memory(data, size, font_name); }
+CF_INLINE Result make_font(const char* path, const char* font_name) { return cf_make_font(path, font_name); }
+CF_INLINE Result make_font_from_memory(void* data, int size, const char* font_name) { return cf_make_font_from_memory(data, size, font_name); }
 CF_INLINE void destroy_font(const char* font_name) { cf_destroy_font(font_name); }
 CF_INLINE void font_add_backup_codepoints(const char* font_name, int* codepoints, int count) { cf_font_add_backup_codepoints(font_name, codepoints, count); }
 CF_INLINE void push_font(const char* font_name) { cf_push_font(font_name); }
@@ -1507,13 +1546,13 @@ CF_INLINE int peek_font_blur() { return cf_peek_font_blur(); }
 CF_INLINE void push_text_wrap_width(float width) { cf_push_text_wrap_width(width); }
 CF_INLINE float pop_text_wrap_width() { return cf_pop_text_wrap_width(); }
 CF_INLINE float peek_text_wrap_width() { return cf_peek_text_wrap_width(); }
-CF_INLINE void push_text_clip_box(CF_Aabb clip_box) { cf_push_text_clip_box(clip_box); }
-CF_INLINE CF_Aabb pop_text_clip_box() { return cf_pop_text_clip_box(); }
-CF_INLINE CF_Aabb peek_text_clip_box() { return cf_peek_text_clip_box(); }
+CF_INLINE void push_text_clip_box(Aabb clip_box) { cf_push_text_clip_box(clip_box); }
+CF_INLINE Aabb pop_text_clip_box() { return cf_pop_text_clip_box(); }
+CF_INLINE Aabb peek_text_clip_box() { return cf_peek_text_clip_box(); }
 CF_INLINE float text_width(const char* text, int num_chars_to_render = -1) { return cf_text_width(text, num_chars_to_render); }
 CF_INLINE float text_height(const char* text, int num_chars_to_render = -1) { return cf_text_height(text, num_chars_to_render); }
 CF_INLINE v2 text_size(const char* text, int num_chars_to_render = -1) { return cf_text_size(text, num_chars_to_render); }
-CF_INLINE void draw_text(const char* text, CF_V2 position, int num_chars_to_render = -1) { cf_draw_text(text, position, num_chars_to_render); }
+CF_INLINE void draw_text(const char* text, v2 position, int num_chars_to_render = -1) { cf_draw_text(text, position, num_chars_to_render); }
 
 struct TextEffect : public CF_TextEffect
 {
@@ -1571,41 +1610,42 @@ CF_INLINE void push_text_effect_active(bool effects_on) { cf_push_text_effect_ac
 CF_INLINE bool pop_text_effect_active() { cf_pop_text_effect_active(); }
 CF_INLINE bool peek_text_effect_active() { cf_peek_text_effect_active(); }
 
-CF_INLINE void render_settings_filter(CF_Filter filter) { cf_render_settings_filter(filter); }
-CF_INLINE void render_settings_push_viewport(CF_Rect viewport) { cf_render_settings_push_viewport(viewport); }
-CF_INLINE CF_Rect render_settings_pop_viewport() { return cf_render_settings_pop_viewport(); }
-CF_INLINE CF_Rect render_settings_peek_viewport() { return cf_render_settings_peek_viewport(); }
-CF_INLINE void render_settings_push_scissor(CF_Rect scissor) { cf_render_settings_push_scissor(scissor); }
-CF_INLINE CF_Rect render_settings_pop_scissor() { return cf_render_settings_pop_scissor(); }
-CF_INLINE CF_Rect render_settings_peek_scissor() { return cf_render_settings_peek_scissor(); }
-CF_INLINE void render_settings_push_render_state(CF_RenderState render_state) { render_settings_push_render_state(render_state); }
-CF_INLINE CF_RenderState render_settings_pop_render_state() { return render_settings_pop_render_state(); }
-CF_INLINE CF_RenderState render_settings_peek_render_state() { return render_settings_peek_render_state(); }
-CF_INLINE void render_settings_push_shader(CF_Shader shader) { cf_render_settings_push_shader(shader); }
-CF_INLINE CF_Shader render_settings_pop_shader() { return cf_render_settings_pop_shader(); }
-CF_INLINE CF_Shader render_settings_peek_shader() { return cf_render_settings_peek_shader(); }
-CF_INLINE void render_settings_push_texture(const char* name, CF_Texture texture) { cf_render_settings_push_texture(name, texture); }
-CF_INLINE void render_settings_push_uniform(const char* name, void* data, CF_UniformType type, int array_length) { cf_render_settings_push_uniform(name, data, type, array_length); }
+CF_INLINE void render_settings_filter(Filter filter) { cf_render_settings_filter(filter); }
+CF_INLINE void render_settings_push_viewport(Rect viewport) { cf_render_settings_push_viewport(viewport); }
+CF_INLINE Rect render_settings_pop_viewport() { return cf_render_settings_pop_viewport(); }
+CF_INLINE Rect render_settings_peek_viewport() { return cf_render_settings_peek_viewport(); }
+CF_INLINE void render_settings_push_scissor(Rect scissor) { cf_render_settings_push_scissor(scissor); }
+CF_INLINE Rect render_settings_pop_scissor() { return cf_render_settings_pop_scissor(); }
+CF_INLINE Rect render_settings_peek_scissor() { return cf_render_settings_peek_scissor(); }
+CF_INLINE void render_settings_push_render_state(RenderState render_state) { render_settings_push_render_state(render_state); }
+CF_INLINE RenderState render_settings_pop_render_state() { return render_settings_pop_render_state(); }
+CF_INLINE RenderState render_settings_peek_render_state() { return render_settings_peek_render_state(); }
+CF_INLINE void render_settings_push_shader(Shader shader) { cf_render_settings_push_shader(shader); }
+CF_INLINE Shader render_settings_pop_shader() { return cf_render_settings_pop_shader(); }
+CF_INLINE Shader render_settings_peek_shader() { return cf_render_settings_peek_shader(); }
+CF_INLINE void render_settings_push_texture(const char* name, Texture texture) { cf_render_settings_push_texture(name, texture); }
+CF_INLINE void render_settings_push_uniform(const char* name, void* data, UniformType type, int array_length) { cf_render_settings_push_uniform(name, data, type, array_length); }
 CF_INLINE void render_settings_push_uniform(const char* name, int val) { cf_render_settings_push_uniform_int(name, val); }
 CF_INLINE void render_settings_push_uniform(const char* name, float val) { cf_render_settings_push_uniform_float(name, val); }
 CF_INLINE void render_settings_push_uniform(const char* name, v2 val) { cf_render_settings_push_uniform_v2(name, val); }
-CF_INLINE void render_settings_push_uniform(const char* name, CF_Color val) { cf_render_settings_push_uniform_color(name, val); }
+CF_INLINE void render_settings_push_uniform(const char* name, Color val) { cf_render_settings_push_uniform_color(name, val); }
 
-CF_INLINE void camera_dimensions(float w, float h) { cf_camera_dimensions(w, h); }
-CF_INLINE void camera_look_at(float x, float y) { cf_camera_look_at(x, y); }
-CF_INLINE void camera_look_at(v2 pos) { cf_camera_look_at(pos.x, pos.y); }
-CF_INLINE void camera_rotate(float radians) { cf_camera_rotate(radians); }
-CF_INLINE CF_V2 camera_peek_position() { return cf_camera_peek_position(); }
-CF_INLINE CF_V2 camera_peek_dimensions() { return cf_camera_peek_dimensions(); }
-CF_INLINE float camera_peek_rotation() { return cf_camera_peek_rotation(); }
-CF_INLINE CF_M3x2 camera_peek() { return cf_camera_peek(); }
-CF_INLINE void camera_push() { cf_camera_push(); }
-CF_INLINE void camera_pop() { cf_camera_pop(); }
+CF_INLINE void draw_scale(float w, float h) { cf_draw_scale(w, h); }
+CF_INLINE void draw_scale(v2 scale) { cf_draw_scale_v2(scale); }
+CF_INLINE void draw_translate(float x, float y) { cf_draw_translate(x, y); }
+CF_INLINE void draw_translate(v2 pos) { cf_draw_translate_v2(pos); }
+CF_INLINE void draw_rotate(float radians) { cf_draw_rotate(radians); }
+CF_INLINE void draw_TRS(v2 pos, v2 scale, float radians) { cf_draw_TRS(pos, scale, radians); }
+CF_INLINE void draw_TRS_absolute(v2 pos, v2 scale, float radians) { cf_draw_TRS_absolute(pos, scale, radians); }
+CF_INLINE void draw_push() { cf_draw_push(); }
+CF_INLINE void draw_pop() { cf_draw_pop(); }
+CF_INLINE M3x2 draw_peek() { return cf_draw_peek(); }
+CF_INLINE void draw_projection(M3x2 projection) { cf_draw_projection(projection); }
 
 CF_INLINE void render_to(CF_Canvas canvas, bool clear = false) { cf_render_to(canvas, clear); }
 
-CF_INLINE CF_TemporaryImage fetch_image(const CF_Sprite* sprite) { return cf_fetch_image(sprite); }
-CF_INLINE CF_TemporaryImage fetch_image(const CF_Sprite& sprite) { return cf_fetch_image(&sprite); }
+CF_INLINE TemporaryImage fetch_image(const CF_Sprite* sprite) { return cf_fetch_image(sprite); }
+CF_INLINE TemporaryImage fetch_image(const CF_Sprite& sprite) { return cf_fetch_image(&sprite); }
 
 }
 

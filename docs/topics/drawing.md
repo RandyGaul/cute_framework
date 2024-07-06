@@ -252,10 +252,6 @@ You can see the [Text Effect](https://randygaul.github.io/cute_framework/#/text/
 
 ?> **Note** the position of rendering text is the top-left corner of the text.
 
-## Camera
-
-The drawing functions are all relative to the camera. The camera has it's own [Camera API Reference](https://randygaul.github.io/cute_framework/#/api_reference?id=camera) as well as a [Camera](https://randygaul.github.io/cute_framework/#/topics/camera) topic overview page.
-
 ## Shaders
 
 You can apply customizable shaders that work with the draw API by using functions like [cf_render_settings_push_shader](https://randygaul.github.io/cute_framework/#/draw/cf_render_settings_push_shader)

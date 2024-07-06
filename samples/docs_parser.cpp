@@ -691,10 +691,6 @@ int main(int argc, char* argv[])
 		related.add("base64", {
 			"- [Serialization](/topics/serialization.md)",
 		});
-		related.add("camera", {
-			"- [Drawing](/topics/drawing.md)",
-			"- [Camera](/topics/camera.md)",
-		});
 		related.add("collision", {
 			"- [Collision](/topics/collision.md)",
 		});
