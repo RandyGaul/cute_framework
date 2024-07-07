@@ -2,8 +2,6 @@ resync all cute_headers
 set cute_version.h
 ECS docs in code
 draw docs in code
-document circular buffer
-Document cute_image.h
 make cute snake work again
 implement draw arc
 ecs handle bugfix

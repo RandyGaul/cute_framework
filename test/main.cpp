@@ -30,7 +30,6 @@ TEST_SUITE(test_array);
 TEST_SUITE(test_aseprite);
 TEST_SUITE(test_audio);
 TEST_SUITE(test_base64);
-TEST_SUITE(test_circular_buffer);
 TEST_SUITE(test_coroutine);
 TEST_SUITE(test_doubly_list);
 TEST_SUITE(test_ecs);
@@ -68,7 +67,6 @@ int main(int argc, char* argv[])
 	RUN_TEST_SUITE(test_aseprite);
 	RUN_TEST_SUITE(test_audio);
 	RUN_TEST_SUITE(test_base64);
-	RUN_TEST_SUITE(test_circular_buffer);
 	RUN_TEST_SUITE(test_coroutine);
 	RUN_TEST_SUITE(test_doubly_list);
 	RUN_TEST_SUITE(test_ecs);

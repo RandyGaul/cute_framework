@@ -32,7 +32,6 @@
 #include "cute_array.h"
 #include "cute_audio.h"
 #include "cute_base64.h"
-#include "cute_circular_buffer.h"
 #include "cute_clipboard.h"
 #include "cute_color.h"
 #include "cute_multithreading.h"

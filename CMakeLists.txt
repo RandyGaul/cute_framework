@@ -78,7 +78,6 @@ set(CF_SRCS
 	src/cute_app.cpp
 	src/cute_array.cpp
 	src/cute_audio.cpp
-	src/cute_circular_buffer.cpp
 	src/cute_clipboard.cpp
 	src/cute_multithreading.cpp
 	src/cute_file_system.cpp
@@ -142,7 +141,6 @@ set(CF_PUBLIC_HDRS
 	include/cute_audio.h
 	include/cute_user_config.h
 	include/cute_c_runtime.h
-	include/cute_circular_buffer.h
 	include/cute_clipboard.h
 	include/cute_multithreading.h
 	include/cute_defines.h
@@ -358,7 +356,6 @@ if (CF_FRAMEWORK_BUILD_TESTS)
 		test/test_aseprite.cpp
 		test/test_audio.cpp
 		test/test_base64.cpp
-		test/test_circular_buffer.cpp
 		test/test_coroutine.cpp
 		test/test_doubly_list.cpp
 		test/test_ecs.cpp
