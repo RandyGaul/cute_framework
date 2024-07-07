@@ -18,7 +18,11 @@ CF_V2 cf_screen_to_world(CF_V2 point);
 ## Remarks
 
 Screen space has the origin at the top-left of the screen with the y-axis pointing down. This
-matches the coordinate space mouse coordinates are given.
+matches the coordinate space mouse coordinates are given. Example:
+```c
+CF_V2 p = cf_v2((float)mouse_x(), (float)mouse_y());
+p = cf_screen_to_world(p);
+```
 
 ## Related Pages
 
