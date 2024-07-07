@@ -9,16 +9,18 @@ Category: [ecs](/api_reference?id=ecs)
 GitHub: [cute_ecs.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_ecs.h)  
 ---
 
-TODO
+Defines a new system.
 
 ```cpp
 void cf_system_begin();
 ```
 
-## Remarks
-
-TODO
-
 ## Related Pages
 
-TODO  
+[cf_system_end](/ecs/cf_system_end.md)  
+[cf_system_set_name](/ecs/cf_system_set_name.md)  
+[cf_system_set_update](/ecs/cf_system_set_update.md)  
+[cf_system_require_component](/ecs/cf_system_require_component.md)  
+[cf_system_set_optional_pre_update](/ecs/cf_system_set_optional_pre_update.md)  
+[cf_system_set_optional_post_update](/ecs/cf_system_set_optional_post_update.md)  
+[cf_system_set_optional_udata](/ecs/cf_system_set_optional_udata.md)  

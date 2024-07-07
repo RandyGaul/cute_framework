@@ -321,7 +321,6 @@ This is a list of all functions in Cute Framework organized by categories. This 
 ## draw
 
 ### functions
-- [cf_draw_arc](/draw/cf_draw_arc.md)
 - [cf_draw_arrow](/draw/cf_draw_arrow.md)
 - [cf_draw_bezier_line](/draw/cf_draw_bezier_line.md)
 - [cf_draw_bezier_line2](/draw/cf_draw_bezier_line2.md)

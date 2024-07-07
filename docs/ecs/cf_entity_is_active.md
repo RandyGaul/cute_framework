@@ -9,7 +9,7 @@ Category: [ecs](/api_reference?id=ecs)
 GitHub: [cute_ecs.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_ecs.h)  
 ---
 
-TODO
+Returns true if this entity is active (it will participate in system updates).
 
 ```cpp
 bool cf_entity_is_active(CF_Entity entity);
@@ -17,4 +17,7 @@ bool cf_entity_is_active(CF_Entity entity);
 
 ## Related Pages
 
-TODO  
+[CF_Entity](/ecs/cf_entity.md)  
+[cf_entity_delayed_activate](/ecs/cf_entity_delayed_activate.md)  
+[cf_entity_deactivate](/ecs/cf_entity_deactivate.md)  
+[cf_entity_activate](/ecs/cf_entity_activate.md)  

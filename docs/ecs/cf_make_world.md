@@ -9,7 +9,7 @@ Category: [ecs](/api_reference?id=ecs)
 GitHub: [cute_ecs.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_ecs.h)  
 ---
 
-TODO
+Constructs a new entity world.
 
 ```cpp
 CF_World cf_make_world();
@@ -17,8 +17,14 @@ CF_World cf_make_world();
 
 ## Remarks
 
-TODO
+Entity worlds are scopes of entity instances. Other functions like looking up an entity, or system updates, only work
+on entity instances that belong to the currently active world.
 
 ## Related Pages
 
-TODO  
+[CF_World](/ecs/cf_world.md)  
+[cf_world_equals](/ecs/cf_world_equals.md)  
+[cf_destroy_world](/ecs/cf_destroy_world.md)  
+[cf_world_push](/ecs/cf_world_push.md)  
+[cf_world_pop](/ecs/cf_world_pop.md)  
+[cf_world_peek](/ecs/cf_world_peek.md)  

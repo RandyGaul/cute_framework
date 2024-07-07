@@ -9,7 +9,7 @@ Category: [ecs](/api_reference?id=ecs)
 GitHub: [cute_ecs.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_ecs.h)  
 ---
 
-TODO
+Changes the type of this entity.
 
 ```cpp
 void cf_entity_change_type(CF_Entity entity, const char* entity_type);
@@ -17,4 +17,6 @@ void cf_entity_change_type(CF_Entity entity, const char* entity_type);
 
 ## Related Pages
 
-TODO  
+[cf_entity_delayed_change_type](/ecs/cf_entity_delayed_change_type.md)  
+entity_get_type_string  
+[cf_entity_type_rename](/ecs/cf_entity_type_rename.md)  

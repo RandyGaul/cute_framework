@@ -15,10 +15,8 @@ Returns a pointer to a specific component on an entity.
 void* cf_entity_get_component(CF_Entity entity, const char* component_type);
 ```
 
-## Remarks
-
-TODO
-
 ## Related Pages
 
-TODO  
+[cf_make_entity](/ecs/cf_make_entity.md)  
+[cf_destroy_entity](/ecs/cf_destroy_entity.md)  
+[cf_entity_has_component](/ecs/cf_entity_has_component.md)  

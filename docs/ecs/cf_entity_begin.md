@@ -17,7 +17,8 @@ void cf_entity_begin();
 
 ## Remarks
 
-TODO
+Call [cf_entity_end](/ecs/cf_entity_end.md) to finish the entity definition. Once done you may instantiate entities
+of this type via [cf_make_entity](/ecs/cf_make_entity.md).
 
 ## Related Pages
 

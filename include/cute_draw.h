@@ -139,7 +139,7 @@ CF_INLINE void cf_draw_box_fill2(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float c
  * @brief    Draws a circle wireframe.
  * @param    circle     The circle.
  * @param    thickness  The thickness of each line to draw.
- * @related  cf_draw_circle cf_draw_circle2 cf_draw_circle_fill cf_draw_circle_fill2 cf_draw_arc
+ * @related  cf_draw_circle cf_draw_circle2 cf_draw_circle_fill cf_draw_circle_fill2
  */
 CF_API void CF_CALL cf_draw_circle(CF_Circle circle, float thickness);
 
@@ -150,7 +150,7 @@ CF_API void CF_CALL cf_draw_circle(CF_Circle circle, float thickness);
  * @param    p          Center of the circle.
  * @param    r          Radius of the circle.
  * @param    thickness  The thickness of each line to draw.
- * @related  cf_draw_circle cf_draw_circle2 cf_draw_circle_fill cf_draw_circle_fill2 cf_draw_arc
+ * @related  cf_draw_circle cf_draw_circle2 cf_draw_circle_fill cf_draw_circle_fill2
  */
 CF_API void CF_CALL cf_draw_circle2(CF_V2 p, float r, float thickness);
 
@@ -159,7 +159,7 @@ CF_API void CF_CALL cf_draw_circle2(CF_V2 p, float r, float thickness);
  * @category draw
  * @brief    Draws a circle.
  * @param    circle     The circle.
- * @related  cf_draw_circle cf_draw_circle2 cf_draw_circle_fill cf_draw_circle_fill2 cf_draw_arc
+ * @related  cf_draw_circle cf_draw_circle2 cf_draw_circle_fill cf_draw_circle_fill2
  */
 CF_API void CF_CALL cf_draw_circle_fill(CF_Circle circle);
 
@@ -169,22 +169,9 @@ CF_API void CF_CALL cf_draw_circle_fill(CF_Circle circle);
  * @brief    Draws a circle.
  * @param    p          Center of the circle.
  * @param    r          Radius of the circle.
- * @related  cf_draw_circle cf_draw_circle2 cf_draw_circle_fill cf_draw_circle_fill2 cf_draw_arc
+ * @related  cf_draw_circle cf_draw_circle2 cf_draw_circle_fill cf_draw_circle_fill2
  */
 CF_API void CF_CALL cf_draw_circle_fill2(CF_V2 p, float r);
-
-/**
- * @function cf_draw_arc
- * @category draw
- * @brief    Draws an arc of a circle wireframe.
- * @param    p              Center of the arc.
- * @param    center_of_arc  Radius of the circle.
- * @param    range          Angle the arc covers.
- * @param    iters          Number of edges used for the circle. More looks smoother, but renders slower.
- * @param    thickness      The thickness of each line to draw.
- * @related  cf_draw_circle cf_draw_circle2 cf_draw_circle_fill cf_draw_circle_fill2 cf_draw_arc
- */
-CF_API void CF_CALL cf_draw_arc(CF_V2 p, CF_V2 center_of_arc, float range, int iters, float thickness);
 
 /**
  * @function cf_draw_capsule
@@ -1525,7 +1512,6 @@ CF_INLINE void draw_circle(Circle circle, float thickness = 1.0f) { cf_draw_circ
 CF_INLINE void draw_circle(v2 p, float r, float thickness = 1.0f) { cf_draw_circle2(p, r, thickness); }
 CF_INLINE void draw_circle_fill(Circle circle) { cf_draw_circle_fill(circle); }
 CF_INLINE void draw_circle_fill(v2 p, float r) { cf_draw_circle_fill2(p, r); }
-CF_INLINE void draw_arc(v2 p, v2 center_of_arc, float range, int iters = 20, float thickness = 1.0f) { cf_draw_arc(p, center_of_arc, range, iters, thickness); }
 CF_INLINE void draw_capsule(Capsule capsule, float thickness = 1.0f) { cf_draw_capsule(capsule, thickness); }
 CF_INLINE void draw_capsule(v2 p0, v2 p1, float r, float thickness = 1.0f) { cf_draw_capsule2(p0, p1, r, thickness); }
 CF_INLINE void draw_capsule_fill(Capsule capsule) { cf_draw_capsule_fill(capsule); }

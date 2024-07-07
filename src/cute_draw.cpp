@@ -695,10 +695,6 @@ void cf_draw_circle_fill2(CF_V2 position, float radius)
 	s_draw_circle(position, 0, radius, true);
 }
 
-void cf_draw_arc(CF_V2 p, CF_V2 center_of_arc, float range, int iters, float thickness)
-{
-}
-
 static CF_INLINE void s_bounding_box_of_capsule(v2 a, v2 b, float radius, float stroke, v2 out[4])
 {
 	float aaf = draw->aaf;

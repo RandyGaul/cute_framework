@@ -9,12 +9,18 @@ Category: [ecs](/api_reference?id=ecs)
 GitHub: [cute_ecs.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_ecs.h)  
 ---
 
-TODO
+Changes the string identifier for an entity type.
 
 ```cpp
 void cf_entity_type_rename(const char* entity_type, const char* new_entity_type_name);
 ```
 
+## Remarks
+
+This function can be useful for implementing certain editors.
+
 ## Related Pages
 
-TODO  
+[cf_entity_delayed_change_type](/ecs/cf_entity_delayed_change_type.md)  
+[cf_entity_change_type](/ecs/cf_entity_change_type.md)  
+entity_get_type_string  

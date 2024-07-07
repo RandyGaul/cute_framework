@@ -9,16 +9,17 @@ Category: [ecs](/api_reference?id=ecs)
 GitHub: [cute_ecs.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_ecs.h)  
 ---
 
-TODO
+Destroys the world.
 
 ```cpp
 void cf_destroy_world(CF_World world);
 ```
 
-## Remarks
-
-TODO
-
 ## Related Pages
 
-TODO  
+[CF_World](/ecs/cf_world.md)  
+[cf_make_world](/ecs/cf_make_world.md)  
+[cf_world_equals](/ecs/cf_world_equals.md)  
+[cf_world_push](/ecs/cf_world_push.md)  
+[cf_world_pop](/ecs/cf_world_pop.md)  
+[cf_world_peek](/ecs/cf_world_peek.md)  

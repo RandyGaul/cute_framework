@@ -9,7 +9,7 @@ Category: [ecs](/api_reference?id=ecs)
 GitHub: [cute_ecs.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_ecs.h)  
 ---
 
-TODO
+Returns a list of components to update, where array elements line up with each entity.
 
 ```cpp
 void* cf_get_components(CF_ComponentList component_list, const char* component_type);
@@ -17,8 +17,16 @@ void* cf_get_components(CF_ComponentList component_list, const char* component_t
 
 ## Remarks
 
-TODO
+It's highly recommended to use the macro [CF_GET_COMPONENTS](/ecs/cf_get_components.md) to fetch component arrays.
+For a full example see the [Entity Component System](https://randygaul.github.io/cute_framework/#/topics/entity_component_system) page.
 
 ## Related Pages
 
-TODO  
+[cf_system_begin](/ecs/cf_system_begin.md)  
+[cf_system_set_name](/ecs/cf_system_set_name.md)  
+[cf_system_set_update](/ecs/cf_system_set_update.md)  
+[cf_system_require_component](/ecs/cf_system_require_component.md)  
+[cf_system_set_optional_pre_update](/ecs/cf_system_set_optional_pre_update.md)  
+[cf_system_set_optional_post_update](/ecs/cf_system_set_optional_post_update.md)  
+[cf_system_set_optional_udata](/ecs/cf_system_set_optional_udata.md)  
+[cf_system_end](/ecs/cf_system_end.md)  

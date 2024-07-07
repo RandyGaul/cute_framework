@@ -15,10 +15,8 @@ Returns an entity's type string.
 const char* cf_entity_get_type_string(CF_Entity entity);
 ```
 
-## Remarks
-
-TODO
-
 ## Related Pages
 
-TODO  
+[cf_make_entity](/ecs/cf_make_entity.md)  
+[cf_destroy_entity](/ecs/cf_destroy_entity.md)  
+[cf_entity_has_component](/ecs/cf_entity_has_component.md)  

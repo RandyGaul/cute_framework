@@ -15,10 +15,9 @@ Marks a specific entity for delayed destruction.
 void cf_destroy_entity_delayed(CF_Entity entity);
 ```
 
-## Remarks
-
-TODO
-
 ## Related Pages
 
-TODO  
+[cf_make_entity](/ecs/cf_make_entity.md)  
+[cf_destroy_entity](/ecs/cf_destroy_entity.md)  
+[cf_entity_has_component](/ecs/cf_entity_has_component.md)  
+[cf_entity_get_component](/ecs/cf_entity_get_component.md)  

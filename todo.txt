@@ -1,6 +1,2 @@
-resync all cute_headers
 set cute_version.h
-ECS docs in code
 make cute snake work again
-implement draw arc
-ecs handle bugfix

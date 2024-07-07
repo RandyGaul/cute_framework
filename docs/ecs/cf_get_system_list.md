@@ -9,7 +9,7 @@ Category: [ecs](/api_reference?id=ecs)
 GitHub: [cute_ecs.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_ecs.h)  
 ---
 
-TODO
+Returns an array of all systems that have been defined.
 
 ```cpp
 dyna const char** cf_get_system_list();
@@ -17,8 +17,11 @@ dyna const char** cf_get_system_list();
 
 ## Remarks
 
-TODO
+This is an introspective function, useful for implementing certain editors. Free it with [afree](/array/afree.md) when done. See [dyna](/array/dyna.md).
 
 ## Related Pages
 
-TODO  
+[cf_is_entity_type_valid](/ecs/cf_is_entity_type_valid.md)  
+[cf_get_entity_list](/ecs/cf_get_entity_list.md)  
+[cf_get_component_list](/ecs/cf_get_component_list.md)  
+[cf_get_component_list_for_entity_type](/ecs/cf_get_component_list_for_entity_type.md)  

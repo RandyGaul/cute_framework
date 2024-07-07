@@ -9,7 +9,7 @@ Category: [ecs](/api_reference?id=ecs)
 GitHub: [cute_ecs.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_ecs.h)  
 ---
 
-TODO
+Beings the defnition of a new component type.
 
 ```cpp
 void cf_component_begin();
@@ -17,8 +17,12 @@ void cf_component_begin();
 
 ## Remarks
 
-TODO
+Once [cf_component_end](/ecs/cf_component_end.md) is called you may instantiate components of this type when creating entities.
 
 ## Related Pages
 
-TODO  
+[cf_component_end](/ecs/cf_component_end.md)  
+[cf_component_set_name](/ecs/cf_component_set_name.md)  
+[cf_component_set_size](/ecs/cf_component_set_size.md)  
+[cf_component_set_optional_initializer](/ecs/cf_component_set_optional_initializer.md)  
+[cf_component_set_optional_cleanup](/ecs/cf_component_set_optional_cleanup.md)  

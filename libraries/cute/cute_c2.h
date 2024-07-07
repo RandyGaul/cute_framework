@@ -358,14 +358,14 @@ typedef struct c2GJKCache
 CUTE_C2_API float c2GJK(const void* A, C2_TYPE typeA, const c2x* ax_ptr, const void* B, C2_TYPE typeB, const c2x* bx_ptr, c2v* outA, c2v* outB, int use_radius, int* iterations, c2GJKCache* cache);
 
 // Stores results of a time of impact calculation done by `c2TOI`.
-struct c2TOIResult
+typedef struct c2TOIResult
 {
 	int hit;        // 1 if shapes were touching at the TOI, 0 if they never hit.
 	float toi;      // The time of impact between two shapes.
 	c2v n;          // Surface normal from shape A to B at the time of impact.
 	c2v p;          // Point of contact between shapes A and B at time of impact.
 	int iterations; // Number of iterations the solver underwent.
-};
+} c2TOIResult;
 
 // This is an advanced function, intended to be used by people who know what they're doing.
 //
@@ -1114,10 +1114,15 @@ c2TOIResult c2TOI(const void* A, C2_TYPE typeA, const c2x* ax_ptr, c2v vA, const
 	float rA = pA.radius;
 	float rB = pB.radius;
 	float radius = rA + rB;
+	if (!use_radius) {
+		rA = 0;
+		rB = 0;
+		radius = 0;
+	}
 	float tolerance = 1.0e-4f;
 
 	c2TOIResult result;
-	result.hit = false;
+	result.hit = 0;
 	result.n = c2V(0, 0);
 	result.p = c2V(0, 0);
 	result.toi = 1.0f;
@@ -1165,15 +1170,15 @@ c2TOIResult c2TOI(const void* A, C2_TYPE typeA, const c2x* ax_ptr, c2v vA, const
 	}
 
 	if (result.iterations == 0) {
-		result.hit = false;
+		result.hit = 0;
 	} else {
-		result.n = c2SafeNorm(c2Neg(v));
+		if (c2Dot(v, v) > 0) result.n = c2SafeNorm(c2Neg(v));
 		int i = c2Support(pA.verts, pA.count, c2MulrvT(ax.r, result.n));
 		c2v p = c2Mulxv(ax, pA.verts[i]);
-		if (use_radius) p = c2Add(c2Add(p, c2Mulvs(result.n, rA)), c2Mulvs(vA, t));
+		p = c2Add(c2Add(p, c2Mulvs(result.n, rA)), c2Mulvs(vA, t));
 		result.p = p;
 		result.toi = t;
-		result.hit = true;
+		result.hit = 1;
 	}
 
 	return result;
@@ -1385,7 +1390,7 @@ int c2CircleToPoint(c2Circle A, c2v B)
 	return d2 < A.r * A.r;
 }
 
-// see: http://www.randygaul.net/2014/07/23/distance-point-to-line-segment/
+// See: https://randygaul.github.io/math/collision-detection/2014/07/01/Distance-Point-to-Line-Segment.html
 int c2CircletoCapsule(c2Circle A, c2Capsule B)
 {
 	c2v n = c2Sub(B.b, B.a);
@@ -1477,7 +1482,7 @@ static inline float c2SignedDistPointToPlane_OneDimensional(float p, float n, fl
 static inline float c2RayToPlane_OneDimensional(float da, float db)
 {
 	if (da < 0) return 0; // Ray started behind plane.
-	else if (da * db >= 0) return 1.0f; // Ray starts and ends on the same of the plane.
+	else if (da * db > 0) return 1.0f; // Ray starts and ends on the same of the plane.
 	else // Ray starts and ends on opposite sides of the plane (or directly on the plane).
 	{
 		float d = da - db;
@@ -1522,10 +1527,10 @@ int c2RaytoAABB(c2Ray A, c2AABB B, c2Raycast* out)
 	float t3 = c2RayToPlane_OneDimensional(da3, db3);
 
 	// Calculate hit predicate, no branching.
-	int hit0 = t0 < 1.0f;
-	int hit1 = t1 < 1.0f;
-	int hit2 = t2 < 1.0f;
-	int hit3 = t3 < 1.0f;
+	int hit0 = t0 <= 1.0f;
+	int hit1 = t1 <= 1.0f;
+	int hit2 = t2 <= 1.0f;
+	int hit3 = t3 <= 1.0f;
 	int hit = hit0 | hit1 | hit2 | hit3;
 
 	if (hit)
@@ -2225,7 +2230,7 @@ void c2PolytoPolyManifold(const c2Poly* A, const c2x* ax_ptr, const c2Poly* B, c
 	This software is available under 2 licenses - you may choose the one you like.
 	------------------------------------------------------------------------------
 	ALTERNATIVE A - zlib license
-	Copyright (c) 2017 Randy Gaul http://www.randygaul.net
+	Copyright (c) 2023 Randy Gaul https://randygaul.github.io/
 	This software is provided 'as-is', without any express or implied warranty.
 	In no event will the authors be held liable for any damages arising from
 	the use of this software.

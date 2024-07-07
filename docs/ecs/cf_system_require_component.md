@@ -9,7 +9,7 @@ Category: [ecs](/api_reference?id=ecs)
 GitHub: [cute_ecs.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_ecs.h)  
 ---
 
-TODO
+Specifies this system will filter for and update entities with this component type.
 
 ```cpp
 void cf_system_require_component(const char* component_type);
@@ -17,8 +17,15 @@ void cf_system_require_component(const char* component_type);
 
 ## Remarks
 
-TODO
+You should call this function once per component type this system is interested in. The system will
+only update entities who have all of the specified components.
 
 ## Related Pages
 
-TODO  
+[cf_system_begin](/ecs/cf_system_begin.md)  
+[cf_system_set_name](/ecs/cf_system_set_name.md)  
+[cf_system_set_update](/ecs/cf_system_set_update.md)  
+[cf_system_end](/ecs/cf_system_end.md)  
+[cf_system_set_optional_pre_update](/ecs/cf_system_set_optional_pre_update.md)  
+[cf_system_set_optional_post_update](/ecs/cf_system_set_optional_post_update.md)  
+[cf_system_set_optional_udata](/ecs/cf_system_set_optional_udata.md)  

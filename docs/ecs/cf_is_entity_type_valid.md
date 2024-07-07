@@ -9,7 +9,7 @@ Category: [ecs](/api_reference?id=ecs)
 GitHub: [cute_ecs.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_ecs.h)  
 ---
 
-TODO
+Returns true if a the entity_type is valid.
 
 ```cpp
 bool cf_is_entity_type_valid(const char* entity_type);
@@ -17,8 +17,11 @@ bool cf_is_entity_type_valid(const char* entity_type);
 
 ## Remarks
 
-TODO
+This is an introspective function, useful for implementing certain editors.
 
 ## Related Pages
 
-TODO  
+[cf_get_component_list_for_entity_type](/ecs/cf_get_component_list_for_entity_type.md)  
+[cf_get_entity_list](/ecs/cf_get_entity_list.md)  
+[cf_get_component_list](/ecs/cf_get_component_list.md)  
+[cf_get_system_list](/ecs/cf_get_system_list.md)  

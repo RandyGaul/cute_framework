@@ -12,13 +12,11 @@ GitHub: [cute_ecs.h](https://github.com/RandyGaul/cute_framework/blob/master/inc
 Returns true if two [CF_Entity](/ecs/cf_entity.md)'s are equal.
 
 ```cpp
-bool cf_entity_equals(CF_Entity* a, CF_Entity* b)
+bool cf_entity_equals(CF_Entity a, CF_Entity b)
 ```
-
-## Remarks
-
-TODO
 
 ## Related Pages
 
-TODO  
+[CF_Entity](/ecs/cf_entity.md)  
+[cf_make_entity](/ecs/cf_make_entity.md)  
+[cf_destroy_entity](/ecs/cf_destroy_entity.md)  

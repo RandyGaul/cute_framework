@@ -17,8 +17,9 @@ CF_Entity cf_make_entity(const char* entity_type);
 
 ## Remarks
 
-TODO
+You must first define components and the entity layout itself. For a full example see the [Entity Component System](https://randygaul.github.io/cute_framework/#/topics/entity_component_system) page.
 
 ## Related Pages
 
-TODO  
+[cf_entity_has_component](/ecs/cf_entity_has_component.md)  
+[cf_destroy_entity](/ecs/cf_destroy_entity.md)  

@@ -15,10 +15,8 @@ Returns true if the [CF_Entity](/ecs/cf_entity.md) is a valid entity.
 bool cf_entity_is_valid(CF_Entity entity);
 ```
 
-## Remarks
-
-TODO
-
 ## Related Pages
 
-TODO  
+[cf_make_entity](/ecs/cf_make_entity.md)  
+[cf_destroy_entity](/ecs/cf_destroy_entity.md)  
+[cf_entity_has_component](/ecs/cf_entity_has_component.md)  

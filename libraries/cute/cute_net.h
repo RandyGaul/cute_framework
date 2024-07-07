@@ -3,7 +3,7 @@
 		Licensing information can be found at the end of the file.
 	------------------------------------------------------------------------------
 
-	cute_net.h - v1.02
+	cute_net.h - v1.03
 
 	To create implementation (the function definitions)
 		#define CUTE_NET_IMPLEMENTATION
@@ -105,6 +105,11 @@
 		                * Fixed a bug where reliable sequence numbers were incremented
 		                  at the wrong time, causing a desynchronization and connection
 		                  drop.
+		1.03 (03/27/2023) Fixed an issue where sometimes a sequence buffer would mark an
+		                  an entry as free before actually free'ing it, inevitably causing
+		                  a double free. Also added a new function cn_server_set_public_ip,
+		                  useful for testing servers behind a NAT: WARNING -- not recommended
+		                  for shipping due to compromised security!!!
 */
 
 /*
@@ -237,8 +242,10 @@ typedef struct cn_crypto_sign_public_t { uint8_t key[32]; } cn_crypto_sign_publi
 typedef struct cn_crypto_sign_secret_t { uint8_t key[64]; } cn_crypto_sign_secret_t;
 typedef struct cn_crypto_signature_t { uint8_t bytes[64]; } cn_crypto_signature_t;
 
-#ifndef CN_INLINE 
+#ifdef __cplusplus
 #	define CN_INLINE inline
+#else
+#	define CN_INLINE static inline
 #endif
 
 //--------------------------------------------------------------------------------------------------
@@ -530,6 +537,23 @@ void cn_server_disconnect_client(cn_server_t* server, int client_index, bool not
 cn_result_t cn_server_send(cn_server_t* server, const void* packet, int size, int client_index, bool send_reliably);
 bool cn_server_is_client_connected(cn_server_t* server, int client_index);
 
+/**
+ * WARNING -- For test/dev builds only!
+ * 
+ * If your server runs in the cloud with a public ip (highly recommended) this function is not at all necessary. However,
+ * for testing purposes a lot of developers want to start out with port forwarding on their personal machine. Unfortunately
+ * routers nowadays will likely act as your public IP. The connect token a client uses must use the router's IP address. As
+ * the token is opened up by the server the server will notice it's local IP (something like 192.168.1.3) will not match the
+ * the server's public ip listed in the connect token, causing a disconnect.
+ * 
+ * Instead you may specify the server to match against it's *local IP*, instead of the public IP. This of course compromises
+ * the entire security design, but it's a great way to get going before learning how to setup a proper dedicated server with
+ * a real public IP address.
+ * 
+ * For some more info/context you can see the original GitHub issue on this topic: https://github.com/RandyGaul/cute_headers/issues/344
+ */
+void cn_server_set_public_ip(cn_server_t* server, const char* address_and_port);
+
 void cn_server_enable_network_simulator(cn_server_t* server, double latency, double jitter, double drop_chance, double duplicate_chance);
 float cn_server_get_packet_loss_estimate(cn_server_t* server, int client_index);
 float cn_server_get_rtt_estimate(cn_server_t* server, int client_index);
@@ -672,7 +696,7 @@ extern "C" {
 #define _hydro_attr_warn_unused_result_ _hydro_attr_((warn_unused_result))
 #define _hydro_attr_weak_ _hydro_attr_((weak))
 
-#if defined(__INTEL_COMPILER) || defined(_MSC_VER)
+#if defined(__INTEL_COMPILER) || (defined(_MSC_VER) && !defined(__clang__))
 #define _hydro_attr_aligned_(X) __declspec(align(X))
 #elif defined(__clang__) || defined(__GNUC__)
 #define _hydro_attr_aligned_(X) _hydro_attr_((aligned(X)))
@@ -5273,6 +5297,8 @@ struct cn_protocol_server_t
 	bool running;
 	uint64_t application_id;
 	uint64_t current_time;
+	bool use_developer_mode_public_ip;
+	cn_endpoint_t developer_mode_public_ip;
 	cn_socket_t socket;
 	cn_protocol_packet_allocator_t* packet_allocator;
 	cn_crypto_sign_public_t public_key;
@@ -5333,7 +5359,7 @@ cn_result_t cn_init()
 	return cn_crypto_init();
 }
 
-static CN_INLINE cn_result_t s_cn_init_check()
+CN_INLINE cn_result_t s_cn_init_check()
 {
 	if (!s_cn_is_init) {
 		if (cn_is_error(cn_init())) {
@@ -6499,7 +6525,7 @@ void cn_protocol_encryption_map_look_for_timeouts_or_expirations(cn_protocol_enc
 
 // -------------------------------------------------------------------------------------------------
 
-static CN_INLINE const char* s_protocol_client_state_str(cn_protocol_client_state_t state)
+CN_INLINE const char* s_protocol_client_state_str(cn_protocol_client_state_t state)
 {
 	switch (state)
 	{
@@ -6588,12 +6614,12 @@ cn_result_t cn_protocol_client_connect(cn_protocol_client_t* client, const uint8
 	return cn_error_success();
 }
 
-static CN_INLINE cn_endpoint_t s_protocol_server_endpoint(cn_protocol_client_t* client)
+CN_INLINE cn_endpoint_t s_protocol_server_endpoint(cn_protocol_client_t* client)
 {
 	return client->connect_token.endpoints[client->server_endpoint_index];
 }
 
-static CN_INLINE const char* s_protocol_packet_str(uint8_t type)
+CN_INLINE const char* s_protocol_packet_str(uint8_t type)
 {
 	switch (type)
 	{
@@ -7045,7 +7071,7 @@ cn_handle_t cn_handle_allocator_alloc(cn_handle_allocator_t* table, uint32_t ind
 	return handle;
 }
 
-static CN_INLINE uint32_t s_table_index(cn_handle_t handle)
+CN_INLINE uint32_t s_table_index(cn_handle_t handle)
 {
 	return (uint32_t)((handle & 0xFFFFFFFF00000000ULL) >> 32);
 }
@@ -7149,12 +7175,12 @@ cn_result_t cn_protocol_server_start(cn_protocol_server_t* server, const char* a
 	return cn_error_success();
 }
 
-static CN_INLINE int s_protocol_server_event_pull(cn_protocol_server_t* server, cn_protocol_server_event_t* event)
+CN_INLINE int s_protocol_server_event_pull(cn_protocol_server_t* server, cn_protocol_server_event_t* event)
 {
 	return cn_circular_buffer_pull(&server->event_queue, event, sizeof(cn_protocol_server_event_t));
 }
 
-static CN_INLINE int s_protocol_server_event_push(cn_protocol_server_t* server, cn_protocol_server_event_t* event)
+CN_INLINE int s_protocol_server_event_push(cn_protocol_server_t* server, cn_protocol_server_event_t* event)
 {
 	if (cn_circular_buffer_push(&server->event_queue, event, sizeof(cn_protocol_server_event_t)) < 0) {
 		if (cn_circular_buffer_grow(&server->event_queue, server->event_queue.capacity * 2) < 0) {
@@ -7341,6 +7367,9 @@ static void s_protocol_server_receive_packets(cn_protocol_server_t* server)
 			}
 
 			cn_endpoint_t server_endpoint = server->socket.endpoint;
+			if (server->use_developer_mode_public_ip) {
+				server_endpoint = server->developer_mode_public_ip;
+			}
 			int found = 0;
 			for (int i = 0; i < token.endpoint_count; ++i)
 			{
@@ -7744,7 +7773,7 @@ typedef struct cn_ack_system_t
 
 #define CN_CHECK(X) if (X) ret = -1;
 
-#define CN_SEQUENCE_BUFFER_EMPTY (~0UL)
+#define CN_SEQUENCE_BUFFER_EMPTY (0xFFFFFFFF)
 
 typedef void (cn_sequence_buffer_cleanup_entry_fn)(void* data, uint16_t sequence, void* udata, void* mem_ctx);
 
@@ -7752,8 +7781,8 @@ void cn_sequence_buffer_remove(cn_sequence_buffer_t* buffer, uint16_t sequence, 
 {
 	int index = sequence % buffer->capacity;
 	if (buffer->entry_sequence[index] != CN_SEQUENCE_BUFFER_EMPTY) {
-		buffer->entry_sequence[index] = CN_SEQUENCE_BUFFER_EMPTY;
 		if (cleanup_fn) cleanup_fn(buffer->entry_data + buffer->stride * index, buffer->entry_sequence[index], buffer->udata, buffer->mem_ctx);
+		buffer->entry_sequence[index] = CN_SEQUENCE_BUFFER_EMPTY;
 	}
 }
 
@@ -7813,18 +7842,18 @@ static void s_sequence_buffer_remove_entries(cn_sequence_buffer_t* buffer, int s
 	}
 }
 
-static CN_INLINE int s_sequence_greater_than(uint16_t a, uint16_t b)
+CN_INLINE int s_sequence_greater_than(uint16_t a, uint16_t b)
 {
 	return ((a > b) && (a - b <= 32768)) |
 	       ((a < b) && (b - a  > 32768));
 }
 
-static CN_INLINE int s_sequence_less_than(uint16_t a, uint16_t b)
+CN_INLINE int s_sequence_less_than(uint16_t a, uint16_t b)
 {
 	return s_sequence_greater_than(b, a);
 }
 
-static CN_INLINE int s_sequence_is_stale(cn_sequence_buffer_t* buffer, uint16_t sequence)
+CN_INLINE int s_sequence_is_stale(cn_sequence_buffer_t* buffer, uint16_t sequence)
 {
 	return s_sequence_less_than(sequence, buffer->sequence - ((uint16_t)buffer->capacity));
 }
@@ -8309,7 +8338,7 @@ void cn_ack_system_clear_acks(cn_ack_system_t* ack_system)
 	ack_system->acks_count = 0;
 }
 
-static CN_INLINE double s_calc_packet_loss(double packet_loss, cn_sequence_buffer_t* sent_packets)
+CN_INLINE double s_calc_packet_loss(double packet_loss, cn_sequence_buffer_t* sent_packets)
 {
 	int packet_drop_count = 0;
 	uint32_t base_sequence = (sent_packets->sequence - sent_packets->capacity + 1) + 0xFFFF;
@@ -8333,7 +8362,7 @@ static CN_INLINE double s_calc_packet_loss(double packet_loss, cn_sequence_buffe
 
 #include <float.h>
 
-static CN_INLINE double s_calc_bandwidth(double bandwidth, cn_sequence_buffer_t* packets)
+CN_INLINE double s_calc_bandwidth(double bandwidth, cn_sequence_buffer_t* packets)
 {
 	int bytes_sent = 0;
 	uint32_t base_sequence = (packets->sequence - packets->capacity + 1) + 0xFFFF;
@@ -8513,7 +8542,7 @@ void cn_transport_destroy(cn_transport_t* transport)
 	CN_FREE(transport, mem_ctx);
 }
 
-static CN_INLINE int s_transport_write_header(uint8_t* buffer, int size, uint8_t prefix, uint16_t sequence, uint16_t fragment_count, uint16_t fragment_index, uint16_t fragment_size)
+CN_INLINE int s_transport_write_header(uint8_t* buffer, int size, uint8_t prefix, uint16_t sequence, uint16_t fragment_count, uint16_t fragment_index, uint16_t fragment_size)
 {
 	if (size < CN_TRANSPORT_HEADER_SIZE) return -1;
 	uint8_t* buffer_start = buffer;
@@ -9139,12 +9168,12 @@ void cn_server_stop(cn_server_t* server)
 	}
 }
 
-static CN_INLINE int s_server_event_pull(cn_server_t* server, cn_server_event_t* event)
+CN_INLINE int s_server_event_pull(cn_server_t* server, cn_server_event_t* event)
 {
 	return cn_circular_buffer_pull(&server->event_queue, event, sizeof(cn_server_event_t));
 }
 
-static CN_INLINE int s_server_event_push(cn_server_t* server, cn_server_event_t* event)
+CN_INLINE int s_server_event_push(cn_server_t* server, cn_server_event_t* event)
 {
 	if (cn_circular_buffer_push(&server->event_queue, event, sizeof(cn_server_event_t)) < 0) {
 		if (cn_circular_buffer_grow(&server->event_queue, server->event_queue.capacity * 2) < 0) {
@@ -9271,6 +9300,12 @@ cn_result_t cn_server_send(cn_server_t* server, const void* packet, int size, in
 bool cn_server_is_client_connected(cn_server_t* server, int client_index)
 {
 	return cn_protocol_server_is_client_connected(server->p_server, client_index);
+}
+
+void cn_server_set_public_ip(cn_server_t* server, const char* address_and_port)
+{
+	server->p_server->use_developer_mode_public_ip = true;
+	cn_endpoint_init(&server->p_server->developer_mode_public_ip, address_and_port);
 }
 
 void cn_server_enable_network_simulator(cn_server_t* server, double latency, double jitter, double drop_chance, double duplicate_chance)
@@ -12299,7 +12334,7 @@ break_soak:
 	This software is available under 2 licenses - you may choose the one you like.
 	------------------------------------------------------------------------------
 	ALTERNATIVE A - zlib license
-	Copyright (c) 2022 Randy Gaul http://www.randygaul.net
+	Copyright (c) 2023 Randy Gaul https://randygaul.github.io/
 	This software is provided 'as-is', without any express or implied warranty.
 	In no event will the authors be held liable for any damages arising from
 	the use of this software.

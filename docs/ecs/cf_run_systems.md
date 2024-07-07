@@ -9,7 +9,7 @@ Category: [ecs](/api_reference?id=ecs)
 GitHub: [cute_ecs.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_ecs.h)  
 ---
 
-TODO
+Updates a system.
 
 ```cpp
 void cf_run_systems();
@@ -17,8 +17,16 @@ void cf_run_systems();
 
 ## Remarks
 
-TODO
+All entities who have matching components will be filtered for and passed along to the system for updating. The order
+of system updates is determined by the order in which they are defined by [cf_system_begin](/ecs/cf_system_begin.md).
 
 ## Related Pages
 
-TODO  
+[cf_system_begin](/ecs/cf_system_begin.md)  
+[cf_system_set_name](/ecs/cf_system_set_name.md)  
+[cf_system_set_update](/ecs/cf_system_set_update.md)  
+[cf_system_require_component](/ecs/cf_system_require_component.md)  
+[cf_system_set_optional_pre_update](/ecs/cf_system_set_optional_pre_update.md)  
+[cf_system_set_optional_post_update](/ecs/cf_system_set_optional_post_update.md)  
+[cf_system_set_optional_udata](/ecs/cf_system_set_optional_udata.md)  
+[cf_system_end](/ecs/cf_system_end.md)  

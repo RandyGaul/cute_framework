@@ -14,7 +14,6 @@ CF can render a variety of shape types:
 - Line segment
 - Polyline
 - Capsule
-- Arc
 - Bezier polyline
 
 The shape renderer in CF has a few extra features that nearly all shapes take advantage of:

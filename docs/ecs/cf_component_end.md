@@ -9,16 +9,16 @@ Category: [ecs](/api_reference?id=ecs)
 GitHub: [cute_ecs.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_ecs.h)  
 ---
 
-TODO
+Completes the definition of this new component type.
 
 ```cpp
 void cf_component_end();
 ```
 
-## Remarks
-
-TODO
-
 ## Related Pages
 
-TODO  
+[cf_component_begin](/ecs/cf_component_begin.md)  
+[cf_component_set_name](/ecs/cf_component_set_name.md)  
+[cf_component_set_size](/ecs/cf_component_set_size.md)  
+[cf_component_set_optional_initializer](/ecs/cf_component_set_optional_initializer.md)  
+[cf_component_set_optional_cleanup](/ecs/cf_component_set_optional_cleanup.md)  

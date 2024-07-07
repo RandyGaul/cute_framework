@@ -15,10 +15,8 @@ Destroys a specific entity right now.
 void cf_destroy_entity(CF_Entity entity);
 ```
 
-## Remarks
-
-TODO
-
 ## Related Pages
 
-TODO  
+[cf_make_entity](/ecs/cf_make_entity.md)  
+[cf_entity_get_component](/ecs/cf_entity_get_component.md)  
+[cf_entity_has_component](/ecs/cf_entity_has_component.md)  

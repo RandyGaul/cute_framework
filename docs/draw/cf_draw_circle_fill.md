@@ -23,5 +23,4 @@ circle | The circle.
 
 [cf_draw_circle](/draw/cf_draw_circle.md)  
 [cf_draw_circle2](/draw/cf_draw_circle2.md)  
-[cf_draw_arc](/draw/cf_draw_arc.md)  
 [cf_draw_circle_fill2](/draw/cf_draw_circle_fill2.md)  

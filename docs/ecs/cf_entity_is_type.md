@@ -15,10 +15,8 @@ Returns true if the entity is a certain type.
 bool cf_entity_is_type(CF_Entity entity, const char* entity_type);
 ```
 
-## Remarks
-
-TODO
-
 ## Related Pages
 
-TODO  
+[cf_make_entity](/ecs/cf_make_entity.md)  
+[cf_destroy_entity](/ecs/cf_destroy_entity.md)  
+[cf_entity_has_component](/ecs/cf_entity_has_component.md)  
