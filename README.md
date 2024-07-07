@@ -67,7 +67,7 @@ sudo apt-get install -y --no-install-recommends libglfw3 libglfw3-dev libx11-dev
 The [documentation website](https://randygaul.github.io/cute_framework/#/) is the go-to place for finding all the resources available. Here are some quick-links to get you started:
 
 - [Topics and Tutorials](https://randygaul.github.io/cute_framework/#/topics/)
-- [Samples](https://randygaul.github.io/cute_framework/#/samples)
+- [Samples](https://github.com/RandyGaul/cute_framework/tree/master/samples)
 - [API Reference](https://randygaul.github.io/cute_framework/#/api_reference)
 
 If you're stuck and need help then check out the [Discord chat](https://discord.gg/2DFHRmX). Feel free to pop in and ask questions, make suggestions, or have a discussion. General gamedev chatting unrelated to CF is also welcome!
