@@ -36,7 +36,3 @@ float random01(CF_Rnd* rnd)
 	return cf_rnd_range_float(rnd, 0.0f, 1.0f);
 }
 ```
-
-Here's the list of random generator functions available:
-
-[](../random/functions.md ':include')

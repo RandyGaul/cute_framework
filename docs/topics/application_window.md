@@ -10,8 +10,7 @@ Here's a good starting program to copy + paste. It creates a window in the cente
 int main(int argc, char* argv[])
 {
 	// Create a window with a resolution of 640 x 480.
-	int options = CF_APP_OPTIONS_DEFAULT_GFX_CONTEXT | CF_APP_OPTIONS_WINDOW_POS_CENTERED;
-	CF_Result result = cf_make_app("Fancy Window Title", 0, 0, 640, 480, options, argv[0]);
+	CF_Result result = cf_make_app("Fancy Window Title", 0, 0, 640, 480, CF_APP_OPTIONS_WINDOW_POS_CENTERED, argv[0]);
 	if (is_error(result)) {
 		printf("Error: %s\n", result.details);
 		return -1;
@@ -30,13 +29,13 @@ int main(int argc, char* argv[])
 }
 ```
 
-Now is a good time to check out the [App Options](https://randygaul.github.io/cute_framework/#/app/app_options) page to see what kind of windows are avialable. This covers things like letting the window resize, what kind of graphics context to initialize, whether or not audio is enabled, etc.
+Now is a good time to check out the [App Options](https://randygaul.github.io/cute_framework/#/app/app_options) page to see what kind of windows are available. This covers things like letting the window resize, what kind of graphics context to initialize, whether or not audio is enabled, etc.
 
 ## Gathering Input
 
-Once your window is created your app is now up and running. You have access to inputs from the keyboard, mouse, joypad, touch, and [IME inputs](https://learn.microsoft.com/en-us/windows/apps/design/input/input-method-editors). For more in-depth reading about input, see the [Input](https://randygaul.github.io/cute_framework/#/topics/input) page.
+You have access to inputs from the keyboard, mouse, joypad, touch, and [IME inputs](https://learn.microsoft.com/en-us/windows/apps/design/input/input-method-editors). For more in-depth reading about input, see the [Input](https://randygaul.github.io/cute_framework/#/topics/input) page.
 
-The basic way to gather input is to call functions such as [`cf_key_down`](https://randygaul.github.io/cute_framework/#/input/cf_key_down) or [`cf_mouse_down`](https://randygaul.github.io/cute_framework/#/input/cf_mouse_down). These will return true for as long as the corresponding key or mouse button are currently down. Feel free to call these any time after calling [`cf_app_update`](https://randygaul.github.io/cute_framework/#/app/cf_app_update).
+Gather keyboard inputs by calling [`cf_key_down`](https://randygaul.github.io/cute_framework/#/input/cf_key_down) or [`cf_mouse_down`](https://randygaul.github.io/cute_framework/#/input/cf_mouse_down). These will return true for as long as the corresponding key is down. You may gather input after calling [`cf_app_update`](https://randygaul.github.io/cute_framework/#/app/cf_app_update).
 
 Here is a basic demonstration of capturing keyboard and mouse inputs.
 
@@ -46,8 +45,7 @@ Here is a basic demonstration of capturing keyboard and mouse inputs.
 
 int main(int argc, char* argv[])
 {
-	int options = CF_APP_OPTIONS_DEFAULT_GFX_CONTEXT | CF_APP_OPTIONS_WINDOW_POS_CENTERED;
-	CF_Result result = cf_make_app("Fancy Window Title", 0, 0, 640, 480, options, argv[0]);
+	CF_Result result = cf_make_app("Input", 0, 0, 640, 480, CF_APP_OPTIONS_WINDOW_POS_CENTERED, argv[0]);
 	if (cf_is_error(result)) return -1;
 
 	while (cf_app_is_running())
@@ -101,6 +99,6 @@ For a full demonstration you can check out the sample on [Window Events](https:/
 
 ## Resizing Windows
 
-If you've already learned about [Low Level Graphics](https://randygaul.github.io/cute_framework/#/topics/low_leveL_graphics) this section will make more sense. The application has its own internal canvas. A canvas is a graphical texture the application can render onto. The app's built-in canvas automatically gathers up all drawings from [`cute_draw.h`](https://randygaul.github.io/cute_framework/#/api_reference?id=draw) and displays them onto the screen. Whenever the app is resized you may want to also resize the app's internal canvas.
+If you've already learned about [Low Level Graphics](https://randygaul.github.io/cute_framework/#/topics/low_leveL_graphics) this section will make more sense. The application has its own internal canvas. A canvas is a graphical texture the application can render upon. The app's built-in canvas automatically gathers up all drawings from [`cute_draw.h`](https://randygaul.github.io/cute_framework/#/api_reference?id=draw) and displays them onto the screen. Whenever the app is resized you may want to also resize the app's internal canvas.
 
 Check out the sample on [Window Resizing](https://github.com/RandyGaul/cute_framework/blob/master/samples/window_resizing.cpp) for a full example of auto-resizing the app's internal canvas (or not).

@@ -4,7 +4,7 @@
 
 Cute Framework (CF for short) is the *cutest* framework available for making 2D games in C++. CF provides a portable foundational layer for building 2D games in C/C++ without baggage, gnarly dependencies, or cryptic APIs. CF runs almost anywhere, including Windows, MacOS, iOS, Android, Linux, and more!
 
-?> **Note** Cute Framework documentation covers the C API, however, the vast majority of CF also has associated C++ wrapper APIs that sit along-side the C API in all of CF's headers.
+?> **Note** Cute Framework documentation covers the C API, however, the vast majority of CF also has associated C++ wrapper APIs that sit along-side the C API in each header.
 
 ## Download and Setup
 
@@ -31,8 +31,7 @@ using namespace Cute;
 int main(int argc, char* argv[])
 {
 	// Create a window with a resolution of 640 x 480.
-	int options = APP_OPTIONS_DEFAULT_GFX_CONTEXT | APP_OPTIONS_WINDOW_POS_CENTERED;
-	Result result = make_app("Fancy Window Title", 0, 0, 640, 480, options, argv[0]);
+	Result result = make_app("Fancy Window Title", 0, 0, 640, 480, APP_OPTIONS_WINDOW_POS_CENTERED, argv[0]);
 	if (is_error(result)) {
 		printf("Error: %s\n", result.details);
 		return -1;

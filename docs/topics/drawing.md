@@ -6,7 +6,24 @@ Getting things on the screen with CF can be done in one of two ways: [Low Level 
 
 ## Drawing Shapes
 
-Getting started with drawing shapes in CF is about calling an associated drawing function. For circles, use [`cf_draw_circle`](https://randygaul.github.io/cute_framework/#/draw/cf_draw_circle), for boxes/rectangles use [`cf_draw_quad`](https://randygaul.github.io/cute_framework/#/draw/cf_draw_quad), for lines use [`cf_draw_line`](https://randygaul.github.io/cute_framework/#/draw/cf_draw_line) or [`cf_draw_polyline`](https://randygaul.github.io/cute_framework/#/draw/cf_draw_polyline), and so on.
+CF can render a variety of shape types:
+
+- Circle
+- Box/Aabb
+- Triangle
+- Line segment
+- Polyline
+- Capsule
+- Arc
+- Bezier polyline
+
+The shape renderer in CF has a few extra features that nearly all shapes take advantage of:
+
+- Customizeable antialiasing
+- Border stroke vs fill style
+- Edge rounding (chubbiness)
+
+For circles, use [`cf_draw_circle`](https://randygaul.github.io/cute_framework/#/draw/cf_draw_circle), for boxes/rectangles use [`cf_draw_quad`](https://randygaul.github.io/cute_framework/#/draw/cf_draw_quad), for lines use [`cf_draw_line`](https://randygaul.github.io/cute_framework/#/draw/cf_draw_line) or [`cf_draw_polyline`](https://randygaul.github.io/cute_framework/#/draw/cf_draw_polyline), and so on.
 
 > Drawing some basic shapes, a pulsating circle and square.
 
@@ -54,15 +71,16 @@ int main(int argc, char* argv[])
 
 ## Push and Pop Settings
 
-Like we saw in the above example, the draw API has some settings that can be pushed and popped. The various settings include:
+The draw API has some settings that can be pushed and popped. Pushing and popping settings is a great way to customize how to draw without affecting the settings of the rest of your code. Here are some of the customizeable settings:
 
 - color
-- antialias
+- antialias on/off
 - antialias scale
 - layer
 - tint
+- chubbiness
 
-Whenever a setting is pushed it will be used by subsequent drawing functions. For example, if we push a color with [`cf_draw_push_color`](https://randygaul.github.io/cute_framework/#/draw/cf_draw_push_color) it will get used until a new setting is pushed or popped. When we pop a setting the previously pushed state is restored. This is a great way to use your own settings locally, and then restore anything previous without messing up the settings for the rest of your code.
+Whenever a setting is pushed it will be used by subsequent drawing functions. For example, if we push a color with [`cf_draw_push_color`](https://randygaul.github.io/cute_framework/#/draw/cf_draw_push_color) it will get used until a new setting is pushed or popped. When we pop a setting the previously pushed state is restored. This is a great way to use your own settings locally, and then restore anything previous without messing up the settings for the rest of your code. You may nest push/pop pairs as many times as needed.
 
 ## Draw Layer
 
@@ -77,6 +95,8 @@ Some particular pages of interest are:
 - [Sprite API Reference](https://randygaul.github.io/cute_framework/#/api_reference?id=sprite)
 - [CF_Sprite](https://randygaul.github.io/cute_framework/#/sprite/cf_sprite)
 - [cf_sprite_play](https://randygaul.github.io/cute_framework/#/sprite/cf_sprite_play)
+
+CF comes with a convenience function called [`cf_make_demo_sprite`](https://randygaul.github.io/cute_framework/#/draw/cf_make_demo_sprite). This sprite contains a small pixel art girl with a couple built-in animations. Here's a program to load her up and draw her on screen:
 
 ```cpp
 #include <cute.h>
@@ -114,7 +134,7 @@ The girl sprite in the above sample code contains a few different animations, su
 
 ---
 
-Here's an example of drawing a more full looking scene with various sprites. Simply load up a whole bunch of sprite assets and draw them all! The sprite drawing API is designed to efficiently handle many thousands of different sprites on all platforms, all without the need to bake textures into atlases or do any kind of sprite packing yourself.
+Here's an example of drawing a more full looking scene with various sprites. Simply load up a bunch of sprite assets and draw them all! The sprite drawing API is designed to efficiently handle many thousands of different sprites on all platforms, all without the need to bake textures into atlases or do any kind of sprite packing yourself.
 
 <p align="center">
 <img src=https://github.com/RandyGaul/cute_framework/blob/master/assets/block_man.gif?raw=true>
@@ -139,9 +159,11 @@ Text has it's own [Text API Reference](https://randygaul.github.io/cute_framewor
 
 ?> Recall that each push function has associated peek and pop APIs! See the [Text API Reference](https://randygaul.github.io/cute_framework/#/api_reference?id=text) for a full list of text related pages.
 
-Here's an example sample for drawing some text onto the screen.
+Here's a [sample](https://github.com/RandyGaul/cute_framework/blob/master/samples/text_drawing.cpp) for drawing some text onto the screen.
 
-TODO
+<p align="center">
+<img src=https://github.com/RandyGaul/cute_framework/blob/master/assets/text_drawing.gif?raw=true>
+</p>
 
 You can see the [Text Effect](https://randygaul.github.io/cute_framework/#/text/cf_text_effect_register) system in work. Text codes that look sort of like xml are supported for a variety of built-in effects. Click the previous link to see some documentation about built-in text effects, and how to contruct + register your own custom text effect codes.
 

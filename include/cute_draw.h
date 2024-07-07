@@ -1409,7 +1409,11 @@ CF_V2 cf_world_to_screen(CF_V2 point);
  * @category draw
  * @brief    Converts a coordinate from screen space to world space.
  * @remarks  Screen space has the origin at the top-left of the screen with the y-axis pointing down. This
- *           matches the coordinate space mouse coordinates are given.
+ *           matches the coordinate space mouse coordinates are given. Example:
+ *           ```c
+ *           CF_V2 p = cf_v2((float)mouse_x(), (float)mouse_y());
+ *           p = cf_screen_to_world(p);
+ *           ```
  * @related  cf_world_to_screen cf_screen_to_world
  */
 CF_V2 cf_screen_to_world(CF_V2 point);

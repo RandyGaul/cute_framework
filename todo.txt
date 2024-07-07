@@ -1,20 +1,12 @@
-note text effect onstart/finish helpers in the topic page
-Note the default font in docs topic page
-change samples page to just point to github to reduce maintenance cost (also delete readme step)
-New text drawing sample
-tech blog post on the CF draw renderer (SDF, antialias, polyline, batching)
-docs pass on all pages
 resync all cute_headers
 set cute_version.h
 update cute_user_config with all the math overrides recent PR
-ECS docs and topic page
+ECS docs in code
 draw docs in code
 document circular buffer
 Document cute_image.h
-note about rounding on text rendering page
-cleanup pass on samples
-fill out some other simple samples for basic features
 make cute snake work again
+implement draw arc
 
 punted
 - transparent windows - Can't find an easy way to do this through SDL, might be a cross-platform nightmare

@@ -62,49 +62,6 @@ Double clicks (both held and just-pressed) are available with [`cf_mouse_double_
 
 The mouse coordinates can be fetched with [`cf_mouse_x`](https://randygaul.github.io/cute_framework/#/input/cf_mouse_x) and [`cf_mouse_y`](https://randygaul.github.io/cute_framework/#/input/cf_mouse_y). Each function returns an integer component. (0, 0) is the top-left of the screen, with the y-axis pointing downwards. It may be a little annoying to get mouse coordinates like this, since the default graphics coordinate system has (0, 0) at the center of the screen with the y-axis pointing upwards.
 
-It's recommended to write a function to convert mouse coordinates relative to the camera (aka [camera or eye space](https://gamedev.stackexchange.com/questions/65783/what-are-world-space-and-eye-space-in-game-development)). This way mouse coordinates can be expressed in the same space as the rest of your game, making it easy to implement collision checks or other interactivity.
-
-> Example function to place mouse coordinates into the world.
-
-```cpp
-CF_V2 mouse_screen()
-{
-	// We start at (0, 0) as the top-left pixel, y-axis pointing down the screen.
-	int x = mouse_x();
-	int y = mouse_y();
-
-	// Bottom-left corner is now (0, 0).
-	y = y - h;
-
-	// y-axis now points up the screen.
-	y = -y;
-
-	// Shift to the center of the screen as (0, 0).
-	int w = app_get_width();
-	int h = app_get_height();
-	CF_V2 result = cf_v2(x - w * 0.5f, y - h * 0.5f);
-	return result;
-}
-```
-
-Similarly we can write down a function to get the mouse coordinates in the world using the [`camera`](https://randygaul.github.io/cute_framework/#/topics/camera) peek functions.
-
-```cpp
-CF_V2 mouse_world()
-{
-	// Get the mouse relative to the screen. Origin is as (0, 0), y-axis pointing upwards.
-	CF_V2 p = mouse_screen();
-
-	// Fetch the camera's transform.
-	CF_M3x2 m = cf_camera_peek();
-
-	// Transform the point relative to the camera.
-	// This effectively places the mouse point into the world.
-	CF_V2 result = cf_mul_m32_v2(m, p);
-	return result;
-}
-```
-
 ## Touch
 
 Touch inputs come in the form of touch events ([`CF_Touch`](https://randygaul.github.io/cute_framework/#/input/cf_touch)). Each touch event has a unique 64-bit identifier. Usually touch events are fairly short-lived, so it's up to you to note their unique ID's from one frame to another, and notice when a particular touch event dissappears.

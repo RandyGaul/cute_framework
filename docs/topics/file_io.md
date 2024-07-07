@@ -25,7 +25,7 @@ The VFS adds a layer of indirection from actual file or asset paths, to virtual 
         └─ file.cpp
 ```
 
-All of the games assets are in the `content` folder, including sprites, songs, etc. Source files go in the `src` folder, while all build related things go into the `build` folder. This is a good way to organize your project structure. The simplest way to get the VFS setup is to _mount_ the `content` folder. This means taking an absolute path to the `content` folder and giving it an aliased path. The game can from then on only refer to the aliased path, thus achieving all the benefits of the VFS.
+All game assets are in the `content` folder, including sprites, songs, etc. Source files go in the `src` folder, while all build related things go into the `build` folder. This is a good way to organize your project structure. The simplest way to get the VFS setup is to _mount_ the `content` folder. This means taking an absolute path to the `content` folder and giving it an aliased path. The game can from then on only refer to the aliased path, thus achieving all the benefits of the VFS.
 
 To mount the content folder you may implement a function like this using CF's C API (a simpler C++ version is just below):
 
