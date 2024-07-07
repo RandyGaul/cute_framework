@@ -9,7 +9,7 @@ Category: [draw](/api_reference?id=draw)
 GitHub: [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_draw.h)  
 ---
 
-TODO
+Returns the current custom shader.
 
 ```cpp
 CF_Shader cf_render_settings_peek_shader();
@@ -17,4 +17,6 @@ CF_Shader cf_render_settings_peek_shader();
 
 ## Related Pages
 
-TODO  
+[CF_Shader](/graphics/cf_shader.md)  
+[cf_render_settings_push_shader](/draw/cf_render_settings_push_shader.md)  
+[cf_render_settings_pop_shader](/draw/cf_render_settings_pop_shader.md)  

@@ -9,12 +9,20 @@ Category: [draw](/api_reference?id=draw)
 GitHub: [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_draw.h)  
 ---
 
-TODO
+Pushes a custom shader.
 
 ```cpp
 void cf_render_settings_push_shader(CF_Shader shader);
 ```
 
+## Remarks
+
+Your shader can be created via [CF_MAKE_SOKOL_SHADER](/graphics/cf_make_sokol_shader.md), but must be written
+in a specific way to be compatible with the draw API. For more in-depth explanations,
+see CF's docs on [Draw Shaders](https://randygaul.github.io/cute_framework/#/topics/drawing?id=shaders).
+
 ## Related Pages
 
-TODO  
+[CF_Shader](/graphics/cf_shader.md)  
+[cf_render_settings_peek_shader](/draw/cf_render_settings_peek_shader.md)  
+[cf_render_settings_pop_shader](/draw/cf_render_settings_pop_shader.md)  

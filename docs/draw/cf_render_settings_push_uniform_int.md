@@ -9,7 +9,7 @@ Category: [draw](/api_reference?id=draw)
 GitHub: [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_draw.h)  
 ---
 
-TODO
+Pushes an integer uniform by name.
 
 ```cpp
 void cf_render_settings_push_uniform_int(const char* name, int val);
@@ -17,4 +17,8 @@ void cf_render_settings_push_uniform_int(const char* name, int val);
 
 ## Related Pages
 
-TODO  
+[cf_render_settings_push_texture](/draw/cf_render_settings_push_texture.md)  
+[cf_render_settings_push_uniform](/draw/cf_render_settings_push_uniform.md)  
+[cf_render_settings_push_uniform_color](/draw/cf_render_settings_push_uniform_color.md)  
+[cf_render_settings_push_uniform_float](/draw/cf_render_settings_push_uniform_float.md)  
+[cf_render_settings_push_uniform_v2](/draw/cf_render_settings_push_uniform_v2.md)  

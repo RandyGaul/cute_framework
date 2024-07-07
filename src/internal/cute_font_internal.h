@@ -31,7 +31,6 @@ struct CF_Font
 {
 	uint8_t* file_data = NULL;
 	stbtt_fontinfo info;
-	Cute::Array<int> backups;
 	Cute::Map<uint64_t, int> kerning;
 	Cute::Map<uint64_t, CF_Glyph> glyphs;
 	Cute::Array<uint64_t> image_ids;

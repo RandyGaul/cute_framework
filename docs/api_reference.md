@@ -1474,7 +1474,6 @@ This is a list of all functions in Cute Framework organized by categories. This 
 ### functions
 - [cf_destroy_font](/text/cf_destroy_font.md)
 - [cf_draw_text](/text/cf_draw_text.md)
-- [cf_font_add_backup_codepoints](/text/cf_font_add_backup_codepoints.md)
 - [cf_make_font](/text/cf_make_font.md)
 - [cf_make_font_from_memory](/text/cf_make_font_from_memory.md)
 - [cf_peek_font](/text/cf_peek_font.md)

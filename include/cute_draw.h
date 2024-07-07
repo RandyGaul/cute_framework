@@ -474,32 +474,38 @@ CF_API float CF_CALL cf_draw_peek_antialias_scale();
 /**
  * @function cf_draw_push_vertex_attributes
  * @category draw
- * @brief    Pushes a set of vertex parameters.
- * @related  TODO
+ * @brief    Pushes a set of vertex attributes.
+ * @remarks  Each attribute gets copied onto *all* the vertices for everything drawn thereafter. This is useful
+ *           for custom shaders that want some extra bits of data sent to the fragment shader. If you want to
+ *           customize individual vertices then check out `CF_Vertex`.
+ * @related  CF_Vertex cf_draw_push_vertex_attributes cf_draw_push_vertex_attributes2 cf_draw_pop_vertex_attributes cf_draw_peek_vertex_attributes
  */
 CF_API void CF_CALL cf_draw_push_vertex_attributes(float r, float g, float b, float a);
 
 /**
  * @function cf_draw_push_vertex_attributes2
  * @category draw
- * @brief    TODO
- * @related  TODO
+ * @brief    Pushes a set of vertex attributes.
+ * @remarks  Each attribute gets copied onto *all* the vertices for everything drawn thereafter. This is useful
+ *           for custom shaders that want some extra bits of data sent to the fragment shader. If you want to
+ *           customize individual vertices then check out `CF_Vertex`.
+ * @related  CF_Vertex cf_draw_push_vertex_attributes cf_draw_push_vertex_attributes2 cf_draw_pop_vertex_attributes cf_draw_peek_vertex_attributes
  */
 CF_API void CF_CALL cf_draw_push_vertex_attributes2(CF_Color attributes);
 
 /**
  * @function cf_draw_pop_vertex_attributes
  * @category draw
- * @brief    TODO
- * @related  TODO
+ * @brief    Pops the current vertex attribute state, restoring the previous state.
+ * @related  CF_Vertex cf_draw_push_vertex_attributes cf_draw_push_vertex_attributes2 cf_draw_pop_vertex_attributes cf_draw_peek_vertex_attributes
  */
 CF_API CF_Color CF_CALL cf_draw_pop_vertex_attributes();
 
 /**
  * @function cf_draw_peek_vertex_attributes
  * @category draw
- * @brief    TODO
- * @related  TODO
+ * @brief    Returns the current vertex attribute state.
+ * @related  CF_Vertex cf_draw_push_vertex_attributes cf_draw_push_vertex_attributes2 cf_draw_pop_vertex_attributes cf_draw_peek_vertex_attributes
  */
 CF_API CF_Color CF_CALL cf_draw_peek_vertex_attributes();
 
@@ -621,17 +627,6 @@ CF_API CF_Result CF_CALL cf_make_font_from_memory(void* data, int size, const ch
  * @related  cf_make_font cf_make_font_from_memory cf_destroy_font cf_push_font cf_push_font_size cf_push_font_blur cf_draw_text
  */
 CF_API void CF_CALL cf_destroy_font(const char* font_name);
-
-/**
- * @function cf_font_add_backup_codepoints
- * @category text
- * @brief    When drawing text, and missing glyphs from the font will be replaced by any backup codepoints.
- * @param    font_name   The unique name for this font.
- * @param    codepoints  An array of backup codepoints. Highest priority comes first in the array.
- * @param    count       The number of elements in `codepoints`.
- * @related  cf_draw_text
- */
-CF_API void CF_CALL cf_font_add_backup_codepoints(const char* font_name, int* codepoints, int count);
 
 /**
  * @function cf_push_font
@@ -1205,72 +1200,82 @@ CF_API void CF_CALL cf_render_settings_set_atlas_dimensions(int width_in_pixels,
 /**
  * @function cf_render_settings_push_shader
  * @category draw
- * @brief    TODO
- * @related  TODO
+ * @brief    Pushes a custom shader.
+ * @remarks  Your shader can be created via `CF_MAKE_SOKOL_SHADER`, but must be written
+ *           in a specific way to be compatible with the draw API. For more in-depth explanations,
+ *           see CF's docs on [Draw Shaders](https://randygaul.github.io/cute_framework/#/topics/drawing?id=shaders).
+ * @related  CF_Shader cf_render_settings_push_shader cf_render_settings_pop_shader cf_render_settings_peek_shader
  */
 CF_API void CF_CALL cf_render_settings_push_shader(CF_Shader shader);
 
 /**
  * @function cf_render_settings_pop_shader
  * @category draw
- * @brief    TODO
- * @related  TODO
+ * @brief    Pops the custom shader and restores the previous state.
+ * @related  CF_Shader cf_render_settings_push_shader cf_render_settings_pop_shader cf_render_settings_peek_shader
  */
 CF_API CF_Shader CF_CALL cf_render_settings_pop_shader();
 
 /**
  * @function cf_render_settings_peek_shader
  * @category draw
- * @brief    TODO
- * @related  TODO
+ * @brief    Returns the current custom shader.
+ * @related  CF_Shader cf_render_settings_push_shader cf_render_settings_pop_shader cf_render_settings_peek_shader
  */
 CF_API CF_Shader CF_CALL cf_render_settings_peek_shader();
 
 /**
  * @function cf_render_settings_push_texture
  * @category draw
- * @brief    TODO
- * @related  TODO
+ * @brief    Pushes a texture onto a texture slot by name.
+ * @param    name     The name of the uniform this texture will bind to.
+ * @param    texture  The texture to bind.
+ * @remarks  This is useful for custom shaders. See `cf_render_settings_push_shader`.
+ * @related  cf_render_settings_push_texture cf_render_settings_push_uniform cf_render_settings_push_uniform_int cf_render_settings_push_uniform_float cf_render_settings_push_uniform_v2 cf_render_settings_push_uniform_color
  */
 CF_API void CF_CALL cf_render_settings_push_texture(const char* name, CF_Texture texture);
 
 /**
  * @function cf_render_settings_push_uniform
  * @category draw
- * @brief    TODO
- * @related  TODO
+ * @brief    Pushes a uniform and binds it by name.
+ * @param    name          The name of the uniform in the shader.
+ * @param    data          A pointer to the data to send to the shader.
+ * @param    type          The `CF_UniformType` of data to send.
+ * @param    array_length  The numeber of elements of `CF_UniformType` to send.
+ * @related  cf_render_settings_push_texture cf_render_settings_push_uniform cf_render_settings_push_uniform_int cf_render_settings_push_uniform_float cf_render_settings_push_uniform_v2 cf_render_settings_push_uniform_color
  */
 CF_API void CF_CALL cf_render_settings_push_uniform(const char* name, void* data, CF_UniformType type, int array_length);
 
 /**
  * @function cf_render_settings_push_uniform_int
  * @category draw
- * @brief    TODO
- * @related  TODO
+ * @brief    Pushes an integer uniform by name.
+ * @related  cf_render_settings_push_texture cf_render_settings_push_uniform cf_render_settings_push_uniform_int cf_render_settings_push_uniform_float cf_render_settings_push_uniform_v2 cf_render_settings_push_uniform_color
  */
 CF_API void CF_CALL cf_render_settings_push_uniform_int(const char* name, int val);
 
 /**
  * @function cf_render_settings_push_uniform_float
  * @category draw
- * @brief    TODO
- * @related  TODO
+ * @brief    Pushes a float uniform by name.
+ * @related  cf_render_settings_push_texture cf_render_settings_push_uniform cf_render_settings_push_uniform_int cf_render_settings_push_uniform_float cf_render_settings_push_uniform_v2 cf_render_settings_push_uniform_color
  */
 CF_API void CF_CALL cf_render_settings_push_uniform_float(const char* name, float val);
 
 /**
  * @function cf_render_settings_push_uniform_v2
  * @category draw
- * @brief    TODO
- * @related  TODO
+ * @brief    Pushes a vector uniform by name.
+ * @related  cf_render_settings_push_texture cf_render_settings_push_uniform cf_render_settings_push_uniform_int cf_render_settings_push_uniform_float cf_render_settings_push_uniform_v2 cf_render_settings_push_uniform_color
  */
 CF_API void CF_CALL cf_render_settings_push_uniform_v2(const char* name, CF_V2 val);
 
 /**
  * @function cf_render_settings_push_uniform_color
  * @category draw
- * @brief    TODO
- * @related  TODO
+ * @brief    Pushes a color uniform by name.
+ * @related  cf_render_settings_push_texture cf_render_settings_push_uniform cf_render_settings_push_uniform_int cf_render_settings_push_uniform_float cf_render_settings_push_uniform_v2 cf_render_settings_push_uniform_color
  */
 CF_API void CF_CALL cf_render_settings_push_uniform_color(const char* name, CF_Color val);
 
@@ -1556,7 +1561,6 @@ CF_INLINE Color draw_peek_vertex_attributes() { return cf_draw_peek_vertex_attri
 CF_INLINE Result make_font(const char* path, const char* font_name) { return cf_make_font(path, font_name); }
 CF_INLINE Result make_font_from_memory(void* data, int size, const char* font_name) { return cf_make_font_from_memory(data, size, font_name); }
 CF_INLINE void destroy_font(const char* font_name) { cf_destroy_font(font_name); }
-CF_INLINE void font_add_backup_codepoints(const char* font_name, int* codepoints, int count) { cf_font_add_backup_codepoints(font_name, codepoints, count); }
 CF_INLINE void push_font(const char* font_name) { cf_push_font(font_name); }
 CF_INLINE const char* pop_font() { return cf_pop_font(); }
 CF_INLINE const char* peek_font() { return cf_peek_font(); }

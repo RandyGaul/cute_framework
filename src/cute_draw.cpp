@@ -1131,23 +1131,6 @@ void cf_destroy_font(const char* font_name)
 	CF_FREE(font);
 }
 
-void cf_font_add_backup_codepoints(const char* font_name, int* codepoints, int count)
-{
-	CF_Font* font = app->fonts.get(sintern(font_name));
-	for (int i = 0; i < count; ++i) {
-		bool found = false;
-		for (int j = 0; j < font->backups.count(); ++j) {
-			if (font->backups[j] == codepoints[i]) {
-				found = true;
-				break;
-			}
-		}
-		if (!found) {
-			font->backups.add(codepoints[i]);
-		}
-	}
-}
-
 CF_Font* cf_font_get(const char* font_name)
 {
 	CF_ASSERT(font_name);
@@ -1294,7 +1277,6 @@ CF_Glyph* cf_font_get_glyph(CF_Font* font, int codepoint, float font_size, int b
 		if (!glyph_index) {
 			// This codepoint doesn't exist in this font.
 			// Try and use a backup glyph instead.
-			// TODO
 			glyph_index = 0xFFFD;
 		}
 		glyph = font->glyphs.insert(glyph_key);
@@ -2360,7 +2342,7 @@ void cf_render_settings_push_uniform_float(const char* name, float val)
 	material_set_uniform_fs(draw->material, "shader_uniforms", name, &val, CF_UNIFORM_TYPE_FLOAT, 1);
 }
 
-void cf_render_settings_push_uniform_v2(const char* name, v2 val)
+void cf_render_settings_push_uniform_v2(const char* name, CF_V2 val)
 {
 	material_set_uniform_fs(draw->material, "shader_uniforms", name, &val, CF_UNIFORM_TYPE_FLOAT2, 1);
 }

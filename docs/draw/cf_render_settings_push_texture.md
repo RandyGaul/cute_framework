@@ -9,12 +9,25 @@ Category: [draw](/api_reference?id=draw)
 GitHub: [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_draw.h)  
 ---
 
-TODO
+Pushes a texture onto a texture slot by name.
 
 ```cpp
 void cf_render_settings_push_texture(const char* name, CF_Texture texture);
 ```
 
+Parameters | Description
+--- | ---
+name | The name of the uniform this texture will bind to.
+texture | The texture to bind.
+
+## Remarks
+
+This is useful for custom shaders. See [cf_render_settings_push_shader](/draw/cf_render_settings_push_shader.md).
+
 ## Related Pages
 
-TODO  
+[cf_render_settings_push_uniform_color](/draw/cf_render_settings_push_uniform_color.md)  
+[cf_render_settings_push_uniform](/draw/cf_render_settings_push_uniform.md)  
+[cf_render_settings_push_uniform_int](/draw/cf_render_settings_push_uniform_int.md)  
+[cf_render_settings_push_uniform_float](/draw/cf_render_settings_push_uniform_float.md)  
+[cf_render_settings_push_uniform_v2](/draw/cf_render_settings_push_uniform_v2.md)  
