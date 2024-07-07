@@ -11,10 +11,6 @@ GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/maste
 
 An opaque handle representing a canvas.
 
-## Remarks
-
-TODO
-
 ## Related Pages
 
 [CF_Texture](/graphics/cf_texture.md)  

@@ -192,7 +192,7 @@ CF_API CF_Sprite CF_CALL cf_make_easy_sprite_from_png(const char* png_path, CF_R
 /**
  * @function cf_make_easy_sprite_from_pixels
  * @category sprite
- * @brief    TODO
+ * @brief    Constructs a sprite from an array of pixels.
  * @related  CF_Sprite cf_make_easy_sprite_from_png cf_make_easy_sprite_from_pixels cf_easy_sprite_update_pixels cf_easy_sprite_unload
  */
 CF_API CF_Sprite CF_CALL cf_make_easy_sprite_from_pixels(const CF_Pixel* pixels, int w, int h);
@@ -200,7 +200,8 @@ CF_API CF_Sprite CF_CALL cf_make_easy_sprite_from_pixels(const CF_Pixel* pixels,
 /**
  * @function cf_easy_sprite_update_pixels
  * @category sprite
- * @brief    TODO
+ * @brief    Updates the pixels of a sprite created from `cf_make_easy_sprite_from_pixels`.
+ * @remarks  This is not a particularly fast function - you've been warned.
  * @related  CF_Sprite cf_make_easy_sprite_from_png cf_make_easy_sprite_from_pixels cf_easy_sprite_update_pixels cf_easy_sprite_unload
  */
 CF_API void CF_CALL cf_easy_sprite_update_pixels(CF_Sprite* sprite, const CF_Pixel* pixels);

@@ -192,8 +192,6 @@ CF_API void CF_CALL cf_app_signal_shutdown();
  * @category app
  * @brief    Updates the application. Must be called once per frame, at the beginning of the frame.
  * @param    on_update  Called for each update tick.
- * @example > Running an app in Variable or Fixed Timestep.
- *     TODO
  * @related  cf_make_app cf_app_is_running cf_app_signal_shutdown cf_destroy_app
  */
 CF_API void CF_CALL cf_app_update(CF_OnUpdateFn* on_update);

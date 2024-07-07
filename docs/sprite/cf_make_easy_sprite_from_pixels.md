@@ -9,7 +9,7 @@ Category: [sprite](/api_reference?id=sprite)
 GitHub: [cute_sprite.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_sprite.h)  
 ---
 
-TODO
+Constructs a sprite from an array of pixels.
 
 ```cpp
 CF_Sprite cf_make_easy_sprite_from_pixels(const CF_Pixel* pixels, int w, int h);

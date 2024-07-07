@@ -9,7 +9,7 @@ Category: [collision](/api_reference?id=collision)
 GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_math.h)  
 ---
 
-TODO
+Returns an initialize [CF_Ray](/math/cf_ray.md).
 
 ```cpp
 CF_Ray cf_make_ray(CF_V2 start, CF_V2 direction_normalized, float length)
@@ -17,4 +17,4 @@ CF_Ray cf_make_ray(CF_V2 start, CF_V2 direction_normalized, float length)
 
 ## Related Pages
 
-TODO  
+[CF_Ray](/math/cf_ray.md)  

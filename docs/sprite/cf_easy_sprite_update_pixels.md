@@ -9,11 +9,15 @@ Category: [sprite](/api_reference?id=sprite)
 GitHub: [cute_sprite.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_sprite.h)  
 ---
 
-TODO
+Updates the pixels of a sprite created from [cf_make_easy_sprite_from_pixels](/sprite/cf_make_easy_sprite_from_pixels.md).
 
 ```cpp
 void cf_easy_sprite_update_pixels(CF_Sprite* sprite, const CF_Pixel* pixels);
 ```
+
+## Remarks
+
+This is not a particularly fast function - you've been warned.
 
 ## Related Pages
 

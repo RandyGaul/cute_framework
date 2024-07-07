@@ -88,7 +88,6 @@ typedef struct CF_Texture { uint64_t id; } CF_Texture;
  * @struct   CF_Canvas
  * @category graphics
  * @brief    An opaque handle representing a canvas.
- * @remarks  TODO
  * @related  CF_Texture CF_Canvas CF_Material CF_Shader CF_CanvasParams cf_canvas_defaults cf_make_canvas cf_destroy_canvas cf_apply_canvas
  */
 typedef struct CF_Canvas { uint64_t id; } CF_Canvas;

@@ -25,14 +25,6 @@ cell_costs | The cost of each cell in the grid. 1.0f is default. Anything < 1.0f
 
 Returns a [CF_AStarGrid](/pathfinding/cf_astargrid.md) for path-finding. Pass this to the function [cf_a_star](/pathfinding/cf_a_star.md).
 
-## Code Example
-
-> Calculating a path along a small grid, and printing the result.
-
-```cpp
-TODO
-```
-
 ## Remarks
 
 [CF_AStarGrid](/pathfinding/cf_astargrid.md)'s are designed to be created once and used many times. You can update the cost of any index with

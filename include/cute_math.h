@@ -1948,8 +1948,8 @@ CF_INLINE CF_Circle cf_mul_tf_circle(CF_Transform tx, CF_Circle a) { CF_Circle b
 /**
  * @function cf_make_ray
  * @category collision
- * @brief    TODO
- * @related  TODO
+ * @brief    Returns an initialize `CF_Ray`.
+ * @related  CF_Ray
  */
 CF_INLINE CF_Ray cf_make_ray(CF_V2 start, CF_V2 direction_normalized, float length) { CF_Ray ray; ray.p = start; ray.d = direction_normalized; ray.t = length; return ray; }
 

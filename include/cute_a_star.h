@@ -35,8 +35,6 @@ typedef struct CF_AStarGrid { uint64_t id; } CF_AStarGrid;
  * @param    h           The height of the grid.
  * @param    cell_costs  The cost of each cell in the grid. 1.0f is default. Anything < 1.0f is treated as _non-traversable_. Can be `NULL`, meaning each cell is 1.0f cost.
  * @return   Returns a `CF_AStarGrid` for path-finding. Pass this to the function `cf_a_star`.
- * @example > Calculating a path along a small grid, and printing the result.
- *     TODO
  * @remarks  `CF_AStarGrid`'s are designed to be created once and used many times. You can update the cost of any index with
  *           `cf_a_star_grid_set_cost` and `cf_a_star_grid_get_cost`. Free the grid when you're done using it with `cf_destroy_a_star_grid`.
  * @related  cf_destroy_a_star_grid cf_a_star_grid_set_cost cf_a_star_grid_get_cost cf_a_star

@@ -1698,7 +1698,7 @@ static void s_parse_code(CF_CodeParseState* s)
 	code.index_in_string = s->glyph_count;
 	if (finish) {
 		bool success = s->effect->parse_finish(code.effect_name, code.index_in_string);
-		// TODO - Error handling.
+		CF_UNUSED(success);
 	} else {
 		s->effect->parse_add(code);
 	}

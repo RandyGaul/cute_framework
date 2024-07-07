@@ -19,14 +19,6 @@ Parameters | Description
 --- | ---
 on_update | Called for each update tick.
 
-## Code Example
-
-> Running an app in Variable or Fixed Timestep.
-
-```cpp
-TODO
-```
-
 ## Related Pages
 
 [cf_make_app](/app/cf_make_app.md)  

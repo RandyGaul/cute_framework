@@ -1,12 +1,6 @@
 resync all cute_headers
 set cute_version.h
 ECS docs in code
-draw docs in code
 make cute snake work again
 implement draw arc
 ecs handle bugfix
-
-punted
-- transparent windows - Can't find an easy way to do this through SDL, might be a cross-platform nightmare
-- specify which screen to spawn upon - Don't have multiple screens to test right now, see SDL_WINDOWPOS_CENTERED_DISPLAY
-- example box2d integration - adn wanted to see this for Lua, hooking up with CF itself would be trivial

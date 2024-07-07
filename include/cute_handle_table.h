@@ -157,9 +157,9 @@ CF_API void CF_CALL cf_handle_allocator_update_index(CF_HandleTable* table, CF_H
 /**
  * @function cf_handle_allocator_update_type
  * @category utility
- * @brief    TODO
+ * @brief    Updates the `type` of the underlying pointer.
  */
-void cf_handle_allocator_update_type(CF_HandleTable* table, CF_Handle handle, uint16_t type);
+CF_API void CF_CALL cf_handle_allocator_update_type(CF_HandleTable* table, CF_Handle handle, uint16_t type);
 
 /**
  * @function cf_handle_allocator_free
