@@ -2451,6 +2451,22 @@ void cf_draw_projection(CF_M3x2 projection)
 	draw->mvp = mul(draw->cam_stack.last(), projection);
 }
 
+CF_V2 cf_world_to_screen(CF_V2 point)
+{
+	point = mul(draw->mvp, point);
+	point.x = (point.x + 1.0f) * (float)app->w * 0.5f;
+	point.y = (1.0f - point.y) * (float)app->h * 0.5f;
+	return point;
+}
+
+CF_V2 cf_screen_to_world(CF_V2 point)
+{
+	point.x = (point.x / (float)app->w) * 2.0f - 1.0f;
+	point.y = -((point.y / (float)app->h) * 2.0f - 1.0f);
+	point = mul(invert(draw->mvp), point);
+	return point;
+}
+
 CF_TemporaryImage cf_fetch_image(const CF_Sprite* sprite)
 {
 	draw->delay_defrag = true;

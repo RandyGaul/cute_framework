@@ -1060,7 +1060,6 @@ typedef struct CF_MarkupInfo
  */
 typedef void (cf_text_markup_info_fn)(const char* text, CF_MarkupInfo info, const CF_TextEffect* fx);
 
-
 /**
  * @function cf_text_get_markup_info
  * @category text
@@ -1339,7 +1338,7 @@ CF_API void CF_CALL cf_draw_rotate(float radians);
 CF_API void CF_CALL cf_draw_TRS(CF_V2 position, CF_V2 scale, float radians);
 
 /**
- * @function cf_draw_push_TRS_absolute
+ * @function cf_draw_TRS_absolute
  * @category draw
  * @brief    Sets the current coordinate system.
  * @related  cf_draw_translate cf_draw_transform cf_draw_translate cf_draw_scale cf_draw_rotate cf_draw_TRS cf_draw_push cf_draw_pop
@@ -1394,6 +1393,26 @@ CF_API CF_M3x2 CF_CALL cf_draw_peek();
  * @related  cf_app_was_resized
  */
 CF_API void CF_CALL cf_draw_projection(CF_M3x2 projection);
+
+/**
+ * @function cf_world_to_screen
+ * @category draw
+ * @brief    Converts a coordinate from world space into screen space.
+ * @remarks  Screen space has the origin at the top-left of the screen with the y-axis pointing down. This
+ *           matches the coordinate space mouse coordinates are given.
+ * @related  cf_world_to_screen cf_screen_to_world
+ */
+CF_V2 cf_world_to_screen(CF_V2 point);
+
+/**
+ * @function cf_screen_to_world
+ * @category draw
+ * @brief    Converts a coordinate from screen space to world space.
+ * @remarks  Screen space has the origin at the top-left of the screen with the y-axis pointing down. This
+ *           matches the coordinate space mouse coordinates are given.
+ * @related  cf_world_to_screen cf_screen_to_world
+ */
+CF_V2 cf_screen_to_world(CF_V2 point);
 
 /**
  * @function cf_render_to
@@ -1641,6 +1660,8 @@ CF_INLINE void draw_push() { cf_draw_push(); }
 CF_INLINE void draw_pop() { cf_draw_pop(); }
 CF_INLINE M3x2 draw_peek() { return cf_draw_peek(); }
 CF_INLINE void draw_projection(M3x2 projection) { cf_draw_projection(projection); }
+CF_INLINE v2 world_to_screen(v2 point) { return cf_world_to_screen(point); }
+CF_INLINE v2 screen_to_world(v2 point) { return cf_screen_to_world(point); }
 
 CF_INLINE void render_to(CF_Canvas canvas, bool clear = false) { cf_render_to(canvas, clear); }
 

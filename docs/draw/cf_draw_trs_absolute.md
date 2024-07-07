@@ -3,7 +3,7 @@
 [//]: # (See: https://github.com/RandyGaul/cute_framework/blob/master/samples/docs_parser.cpp)
 [](../header.md ':include')
 
-# cf_draw_push_TRS_absolute
+# cf_draw_TRS_absolute
 
 Category: [draw](/api_reference?id=draw)  
 GitHub: [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_draw.h)  

@@ -1,6 +1,8 @@
-screen to world, world to screen
 note text effect onstart/finish helpers in the topic page
 Note the default font in docs topic page
+change samples page to just point to github to reduce maintenance cost (also delete readme step)
+New text drawing sample
+tech blog post on the CF draw renderer (SDF, antialias, polyline, batching)
 docs pass on all pages
 resync all cute_headers
 set cute_version.h

@@ -9,7 +9,7 @@ int main(int argc, char* argv[])
 {
 	int w = 640/1;
 	int h = 480/1;
-	int options = APP_OPTIONS_DEFAULT_GFX_CONTEXT | APP_OPTIONS_WINDOW_POS_CENTERED | APP_OPTIONS_RESIZABLE;
+	int options = APP_OPTIONS_WINDOW_POS_CENTERED | APP_OPTIONS_RESIZABLE;
 	Result result = make_app("Development Scratch", 0, 0, w, h, options, argv[0]);
 	if (is_error(result)) return -1;
 
@@ -60,6 +60,12 @@ int main(int argc, char* argv[])
 		draw_push_antialias(aa);
 		draw_push_antialias_scale(aaf);
 		ImGui::End();
+
+		if (1) {
+			v2 m = V2((float)cf_mouse_x(), (float)cf_mouse_y());
+			v2 m2 = cf_screen_to_world(m);
+			draw_circle(m2, 5);
+		}
 
 		if (0) {
 			draw_push();
@@ -121,7 +127,7 @@ int main(int argc, char* argv[])
 			draw_quad_fill(cf_make_aabb(V2(-60,-60)-o*25.0f, V2(-40,-30)-o*25.0f));
 		}
 
-		if (1) {
+		if (0) {
 			v2 box[4];
 			Aabb bb = make_aabb(V2(-20,-30), V2(30,50));
 			aabb_verts(box, bb);

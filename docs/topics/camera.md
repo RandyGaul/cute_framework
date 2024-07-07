@@ -33,6 +33,18 @@ cf_draw_sprite(sprite);
 cf_draw_pop(); // Restore the previous transform.
 ```
 
+These push/pop pairs are the recommended pattern for drawing. You may also nest push/pop pairs within each other. Conceptually this forms a tree-like relationship between coordinate systems.
+
+```cpp
+cf_draw_push();
+// Draw some things...
+	cf_draw_push();
+	// Draw things relative to the previous coordinate system.
+	// ...
+	cf_draw_pop();
+cf_draw_pop();
+```
+
 ## Transform Heirarchies
 
 Whenever we adjust the coordinate system CF internally concatenates each prior adjustment, forming a series of translations/scales/rotations.
