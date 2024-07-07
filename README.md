@@ -124,9 +124,7 @@ If your sample needs access to files on disk, such as assets like images or audi
 	add_custom_command(TARGET shallow_water PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/samples/new_sample $<TARGET_FILE_DIR:shallow_water>/new_sample)
 ```
 
-And that's it! Regenerate your project and you will be able to build your new sample. The next step is to add in your sample to [CF's documentation](https://randygaul.github.io/cute_framework/#/samples). You should [edit this file](https://github.com/RandyGaul/cute_framework/blob/master/docs/samples.md) to add your sample to the list of CF samples.
-
-Once confirmed working as intended, open a pull request to add in your new sample!
+And that's it! Regenerate your project and you will be able to build your new sample. Once confirmed working as intended, open a pull request to add in your new sample!
 
 ## Editing the Docs
 
