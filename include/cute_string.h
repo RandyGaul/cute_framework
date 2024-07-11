@@ -992,6 +992,7 @@ struct String
 	CF_INLINE String(const String& s) { sset(m_str, s); }
 	CF_INLINE String(String&& s) {  m_str = s.m_str; s.m_str = NULL; }
 	CF_INLINE String(int i) { sint(m_str, i); }
+	CF_INLINE String(uint32_t i) { suint(m_str, i); }
 	CF_INLINE String(int64_t uint) { sint(m_str, uint); }
 	CF_INLINE String(uint64_t uint) { suint(m_str, uint); }
 	CF_INLINE String(float f) { sfloat(m_str, f); }
