@@ -1630,9 +1630,9 @@ CF_INLINE Rect render_settings_peek_viewport() { return cf_render_settings_peek_
 CF_INLINE void render_settings_push_scissor(Rect scissor) { cf_render_settings_push_scissor(scissor); }
 CF_INLINE Rect render_settings_pop_scissor() { return cf_render_settings_pop_scissor(); }
 CF_INLINE Rect render_settings_peek_scissor() { return cf_render_settings_peek_scissor(); }
-CF_INLINE void render_settings_push_render_state(RenderState render_state) { render_settings_push_render_state(render_state); }
-CF_INLINE RenderState render_settings_pop_render_state() { return render_settings_pop_render_state(); }
-CF_INLINE RenderState render_settings_peek_render_state() { return render_settings_peek_render_state(); }
+CF_INLINE void render_settings_push_render_state(RenderState render_state) { cf_render_settings_push_render_state(render_state); }
+CF_INLINE RenderState render_settings_pop_render_state() { return cf_render_settings_pop_render_state(); }
+CF_INLINE RenderState render_settings_peek_render_state() { return cf_render_settings_peek_render_state(); }
 CF_INLINE void render_settings_push_shader(Shader shader) { cf_render_settings_push_shader(shader); }
 CF_INLINE Shader render_settings_pop_shader() { return cf_render_settings_pop_shader(); }
 CF_INLINE Shader render_settings_peek_shader() { return cf_render_settings_peek_shader(); }
