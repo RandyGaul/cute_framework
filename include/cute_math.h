@@ -1972,7 +1972,7 @@ CF_INLINE CF_V2 cf_impact(CF_Ray r, float t) { return cf_add_v2(r.p, cf_mul_v2_f
 CF_INLINE CF_V2 cf_endpoint(CF_Ray r) { return cf_add_v2(r.p, cf_mul_v2_f(r.d, r.t)); }
 
 /**
- * @function cf_ray_to_halfpsace
+ * @function cf_ray_to_halfspace
  * @category collision
  * @brief    Returns true if the ray hits a given plane.
  * @param    A          The ray.
