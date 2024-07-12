@@ -186,7 +186,7 @@ typedef struct CF_Halfspace
  * @category math
  * @brief    A ray.
  * @remarks  A ray is a directional line segment. It starts at an endpoint and extends into another direction for a specified distance (defined by `t`).
- * @related  CF_Ray cf_impact cf_endpoint cf_ray_to_halfpsace cf_ray_to_circle cf_ray_to_aabb cf_ray_to_capsule cf_ray_to_poly
+ * @related  CF_Ray cf_impact cf_endpoint cf_ray_to_halfspace cf_ray_to_circle cf_ray_to_aabb cf_ray_to_capsule cf_ray_to_poly
  */
 typedef struct CF_Ray
 {
@@ -205,7 +205,7 @@ typedef struct CF_Ray
  * @struct   CF_Raycast
  * @category math
  * @brief    The results for a raycast query.
- * @related  CF_Raycast cf_ray_to_halfpsace cf_ray_to_circle cf_ray_to_aabb cf_ray_to_capsule cf_ray_to_poly
+ * @related  CF_Raycast cf_ray_to_halfspace cf_ray_to_circle cf_ray_to_aabb cf_ray_to_capsule cf_ray_to_poly
  */
 typedef struct CF_Raycast
 {
@@ -2826,7 +2826,7 @@ CF_INLINE Ray make_ray(v2 start, v2 direction_normalized, float length) { return
 CF_INLINE v2 impact(Ray r, float t) { return cf_impact(r, t); }
 CF_INLINE v2 endpoint(Ray r) { return cf_endpoint(r); }
 
-CF_INLINE int ray_to_halfpsace(Ray A, Halfspace B, Raycast* out) { return cf_ray_to_halfpsace(A, B, out); }
+CF_INLINE int ray_to_halfpsace(Ray A, Halfspace B, Raycast* out) { return cf_ray_to_halfspace(A, B, out); }
 CF_INLINE float distance_sq(v2 a, v2 b, v2 p) { return cf_distance_sq(a, b, p); }
 
 CF_INLINE v2 center_of_mass(Poly poly) { return cf_center_of_mass(poly); }
