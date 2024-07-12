@@ -1390,6 +1390,7 @@ This is a list of all functions in Cute Framework organized by categories. This 
 - [cf_sprite_set_offset_y](/sprite/cf_sprite_set_offset_y.md)
 - [cf_sprite_set_opacity](/sprite/cf_sprite_set_opacity.md)
 - [cf_sprite_set_play_speed_multiplier](/sprite/cf_sprite_set_play_speed_multiplier.md)
+- [cf_sprite_set_scale](/sprite/cf_sprite_set_scale.md)
 - [cf_sprite_set_scale_x](/sprite/cf_sprite_set_scale_x.md)
 - [cf_sprite_set_scale_y](/sprite/cf_sprite_set_scale_y.md)
 - [cf_sprite_toggle_pause](/sprite/cf_sprite_toggle_pause.md)

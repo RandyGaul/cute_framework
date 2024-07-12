@@ -19,5 +19,6 @@ float cf_sprite_get_scale_y(CF_Sprite* sprite)
 
 [CF_Sprite](/sprite/cf_sprite.md)  
 [cf_sprite_get_scale_x](/sprite/cf_sprite_get_scale_x.md)  
-[cf_sprite_set_scale_y](/sprite/cf_sprite_set_scale_y.md)  
+[cf_sprite_set_scale](/sprite/cf_sprite_set_scale.md)  
 [cf_sprite_set_scale_x](/sprite/cf_sprite_set_scale_x.md)  
+[cf_sprite_set_scale_y](/sprite/cf_sprite_set_scale_y.md)  

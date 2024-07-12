@@ -305,7 +305,7 @@ CF_INLINE int cf_sprite_height(CF_Sprite* sprite) { return sprite->h; }
  * @function cf_sprite_get_scale_x
  * @category sprite
  * @brief    Returns the sprite's scale on the x-axis.
- * @related  CF_Sprite cf_sprite_get_scale_x cf_sprite_get_scale_y cf_sprite_set_scale_x cf_sprite_set_scale_y
+ * @related  CF_Sprite cf_sprite_get_scale_x cf_sprite_get_scale_y cf_sprite_set_scale_x cf_sprite_set_scale_y cf_sprite_set_scale
  */
 CF_INLINE float cf_sprite_get_scale_x(CF_Sprite* sprite) { return sprite->scale.x; }
 
@@ -313,15 +313,23 @@ CF_INLINE float cf_sprite_get_scale_x(CF_Sprite* sprite) { return sprite->scale.
  * @function cf_sprite_get_scale_y
  * @category sprite
  * @brief    Returns the sprite's scale on the y-axis.
- * @related  CF_Sprite cf_sprite_get_scale_x cf_sprite_get_scale_y cf_sprite_set_scale_x cf_sprite_set_scale_y
+ * @related  CF_Sprite cf_sprite_get_scale_x cf_sprite_get_scale_y cf_sprite_set_scale_x cf_sprite_set_scale_y cf_sprite_set_scale
  */
 CF_INLINE float cf_sprite_get_scale_y(CF_Sprite* sprite) { return sprite->scale.y; }
+
+/**
+ * @function cf_sprite_set_scale
+ * @category sprite
+ * @brief    Returns the sprite's scale on the x-axis.
+ * @related  CF_Sprite cf_sprite_get_scale_x cf_sprite_get_scale_y cf_sprite_set_scale_x cf_sprite_set_scale_y cf_sprite_set_scale
+ */
+CF_INLINE void cf_sprite_set_scale(CF_Sprite* sprite, CF_V2 scale) { sprite->scale = scale; }
 
 /**
  * @function cf_sprite_set_scale_x
  * @category sprite
  * @brief    Returns the sprite's scale on the x-axis.
- * @related  CF_Sprite cf_sprite_get_scale_x cf_sprite_get_scale_y cf_sprite_set_scale_x cf_sprite_set_scale_y
+ * @related  CF_Sprite cf_sprite_get_scale_x cf_sprite_get_scale_y cf_sprite_set_scale_x cf_sprite_set_scale_y cf_sprite_set_scale
  */
 CF_INLINE void cf_sprite_set_scale_x(CF_Sprite* sprite, float x) { sprite->scale.x = x; }
 
@@ -329,7 +337,7 @@ CF_INLINE void cf_sprite_set_scale_x(CF_Sprite* sprite, float x) { sprite->scale
  * @function cf_sprite_set_scale_y
  * @category sprite
  * @brief    Returns the sprite's scale on the y-axis.
- * @related  CF_Sprite cf_sprite_get_scale_x cf_sprite_get_scale_y cf_sprite_set_scale_x cf_sprite_set_scale_y
+ * @related  CF_Sprite cf_sprite_get_scale_x cf_sprite_get_scale_y cf_sprite_set_scale_x cf_sprite_set_scale_y cf_sprite_set_scale
  */
 CF_INLINE void cf_sprite_set_scale_y(CF_Sprite* sprite, float y) { sprite->scale.y = y; }
 
