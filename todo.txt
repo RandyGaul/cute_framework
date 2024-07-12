@@ -1,2 +1,0 @@
-set cute_version.h
-make cute snake work again

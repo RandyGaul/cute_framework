@@ -286,6 +286,121 @@ CF_INLINE void cf_sprite_draw(CF_Sprite* sprite)
 }
 
 /**
+ * @function cf_sprite_width
+ * @category sprite
+ * @brief    Returns the sprite's width in pixels.
+ * @related  CF_Sprite cf_sprite_width cf_sprite_height
+ */
+CF_INLINE int cf_sprite_width(CF_Sprite* sprite) { return sprite->w; }
+
+/**
+ * @function cf_sprite_height
+ * @category sprite
+ * @brief    Returns the sprite's height in pixels.
+ * @related  CF_Sprite cf_sprite_width cf_sprite_height
+ */
+CF_INLINE int cf_sprite_height(CF_Sprite* sprite) { return sprite->h; }
+
+/**
+ * @function cf_sprite_get_scale_x
+ * @category sprite
+ * @brief    Returns the sprite's scale on the x-axis.
+ * @related  CF_Sprite cf_sprite_get_scale_x cf_sprite_get_scale_y cf_sprite_set_scale_x cf_sprite_set_scale_y
+ */
+CF_INLINE float cf_sprite_get_scale_x(CF_Sprite* sprite) { return sprite->scale.x; }
+
+/**
+ * @function cf_sprite_get_scale_y
+ * @category sprite
+ * @brief    Returns the sprite's scale on the y-axis.
+ * @related  CF_Sprite cf_sprite_get_scale_x cf_sprite_get_scale_y cf_sprite_set_scale_x cf_sprite_set_scale_y
+ */
+CF_INLINE float cf_sprite_get_scale_y(CF_Sprite* sprite) { return sprite->scale.y; }
+
+/**
+ * @function cf_sprite_set_scale_x
+ * @category sprite
+ * @brief    Returns the sprite's scale on the x-axis.
+ * @related  CF_Sprite cf_sprite_get_scale_x cf_sprite_get_scale_y cf_sprite_set_scale_x cf_sprite_set_scale_y
+ */
+CF_INLINE void cf_sprite_set_scale_x(CF_Sprite* sprite, float x) { sprite->scale.x = x; }
+
+/**
+ * @function cf_sprite_set_scale_y
+ * @category sprite
+ * @brief    Returns the sprite's scale on the y-axis.
+ * @related  CF_Sprite cf_sprite_get_scale_x cf_sprite_get_scale_y cf_sprite_set_scale_x cf_sprite_set_scale_y
+ */
+CF_INLINE void cf_sprite_set_scale_y(CF_Sprite* sprite, float y) { sprite->scale.y = y; }
+
+/**
+ * @function cf_sprite_get_offset_x
+ * @category sprite
+ * @brief    Returns the sprite's local offset on the x-axis.
+ * @related  CF_Sprite cf_sprite_get_offset_x cf_sprite_get_offset_y cf_sprite_set_offset_x cf_sprite_set_offset_y
+ */
+CF_INLINE float cf_sprite_get_offset_x(CF_Sprite* sprite) { return sprite->local_offset.x; }
+
+/**
+ * @function cf_sprite_get_offset_y
+ * @category sprite
+ * @brief    Returns the sprite's local offset on the y-axis.
+ * @related  CF_Sprite cf_sprite_get_offset_x cf_sprite_get_offset_y cf_sprite_set_offset_x cf_sprite_set_offset_y
+ */
+CF_INLINE float cf_sprite_get_offset_y(CF_Sprite* sprite) { return sprite->local_offset.y; }
+
+/**
+ * @function cf_sprite_set_offset_x
+ * @category sprite
+ * @brief    Returns the sprite's local offset on the x-axis.
+ * @related  CF_Sprite cf_sprite_get_offset_x cf_sprite_get_offset_y cf_sprite_set_offset_x cf_sprite_set_offset_y
+ */
+CF_INLINE void cf_sprite_set_offset_x(CF_Sprite* sprite, float offset) { sprite->local_offset.x = offset; }
+
+/**
+ * @function cf_sprite_set_offset_y
+ * @category sprite
+ * @brief    Returns the sprite's local offset on the y-axis.
+ * @related  CF_Sprite cf_sprite_get_offset_x cf_sprite_get_offset_y cf_sprite_set_offset_x cf_sprite_set_offset_y
+ */
+CF_INLINE void cf_sprite_set_offset_y(CF_Sprite* sprite, float offset) { sprite->local_offset.y = offset; }
+
+/**
+ * @function cf_sprite_get_opacity
+ * @category sprite
+ * @brief    Returns the sprite's opacity, a value from 0-1.
+ */
+CF_INLINE float cf_sprite_get_opacity(CF_Sprite* sprite) { return sprite->opacity; }
+
+/**
+ * @function cf_sprite_set_opacity
+ * @category sprite
+ * @brief    Sets the sprite's opacity, a value from 0-1.
+ */
+CF_INLINE void cf_sprite_set_opacity(CF_Sprite* sprite, float opacity) { sprite->opacity = opacity; }
+
+/**
+ * @function cf_sprite_get_play_speed_multiplier
+ * @category sprite
+ * @brief    Returns the sprite's playing speed multiplier.
+ */
+CF_INLINE float cf_sprite_get_play_speed_multiplier(CF_Sprite* sprite) { return sprite->play_speed_multiplier; }
+
+/**
+ * @function cf_sprite_set_play_speed_multiplier
+ * @category sprite
+ * @brief    Sets the sprite's playing speed multiplier.
+ */
+CF_INLINE void cf_sprite_set_play_speed_multiplier(CF_Sprite* sprite, float multiplier) { sprite->play_speed_multiplier = multiplier; }
+
+/**
+ * @function cf_sprite_get_loop_count
+ * @category sprite
+ * @brief    Returns the sprite's loop count.
+ */
+CF_INLINE int cf_sprite_get_loop_count(CF_Sprite* sprite) { return sprite->loop_count; }
+
+/**
  * @function cf_sprite_update
  * @category sprite
  * @brief    Updates a sprite's animation.
