@@ -1980,7 +1980,7 @@ CF_INLINE CF_V2 cf_endpoint(CF_Ray r) { return cf_add_v2(r.p, cf_mul_v2_f(r.d, r
  * @param    out        Can be `NULL`. `CF_Raycast` results are placed here (contains normal + time of impact).
  * @related  CF_Ray
  */
-CF_INLINE bool cf_ray_to_halfpsace(CF_Ray A, CF_Halfspace B, CF_Raycast* out)
+CF_INLINE bool cf_ray_to_halfspace(CF_Ray A, CF_Halfspace B, CF_Raycast* out)
 {
 	float da = cf_distance_hs(B, A.p);
 	float db = cf_distance_hs(B, cf_impact(A, A.t));
