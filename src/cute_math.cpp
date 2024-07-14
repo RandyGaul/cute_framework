@@ -257,55 +257,74 @@ CF_Raycast cf_ray_to_poly(CF_Ray A, const CF_Poly* B, const CF_Transform* bx_ptr
 	result.t = cast.t;
 	return result;
 }
-
-void cf_circle_to_circle_manifold(CF_Circle A, CF_Circle B, CF_Manifold* m)
+CF_Manifold cf_circle_to_circle_manifold(CF_Circle A, CF_Circle B)
 {
-	c2CircletoCircleManifold(*(c2Circle*)&A, *(c2Circle*)&B, (c2Manifold*)m);
+	c2Manifold m;
+	c2CircletoCircleManifold(*(c2Circle*)&A, *(c2Circle*)&B, &m);
+	return *(CF_Manifold*)&m;
 }
 
-void cf_circle_to_aabb_manifold(CF_Circle A, CF_Aabb B, CF_Manifold* m)
+CF_Manifold cf_circle_to_aabb_manifold(CF_Circle A, CF_Aabb B)
 {
-	c2CircletoAABBManifold(*(c2Circle*)&A, *(c2AABB*)&B, (c2Manifold*)m);
+	c2Manifold m;
+	c2CircletoAABBManifold(*(c2Circle*)&A, *(c2AABB*)&B, &m);
+	return *(CF_Manifold*)&m;
 }
 
-void cf_circle_to_capsule_manifold(CF_Circle A, CF_Capsule B, CF_Manifold* m)
+CF_Manifold cf_circle_to_capsule_manifold(CF_Circle A, CF_Capsule B)
 {
-	c2CircletoCapsuleManifold(*(c2Circle*)&A, *(c2Capsule*)&B, (c2Manifold*)m);
+	c2Manifold m;
+	c2CircletoCapsuleManifold(*(c2Circle*)&A, *(c2Capsule*)&B, &m);
+	return *(CF_Manifold*)&m;
 }
 
-void cf_aabb_to_aabb_manifold(CF_Aabb A, CF_Aabb B, CF_Manifold* m)
+CF_Manifold cf_aabb_to_aabb_manifold(CF_Aabb A, CF_Aabb B)
 {
-	c2AABBtoAABBManifold(*(c2AABB*)&A, *(c2AABB*)&B, (c2Manifold*)m);
+	c2Manifold m;
+	c2AABBtoAABBManifold(*(c2AABB*)&A, *(c2AABB*)&B, &m);
+	return *(CF_Manifold*)&m;
 }
 
-void cf_aabb_to_capsule_manifold(CF_Aabb A, CF_Capsule B, CF_Manifold* m)
+CF_Manifold cf_aabb_to_capsule_manifold(CF_Aabb A, CF_Capsule B)
 {
-	c2AABBtoCapsuleManifold(*(c2AABB*)&A, *(c2Capsule*)&B, (c2Manifold*)m);
+	c2Manifold m;
+	c2AABBtoCapsuleManifold(*(c2AABB*)&A, *(c2Capsule*)&B, &m);
+	return *(CF_Manifold*)&m;
 }
 
-void cf_capsule_to_capsule_manifold(CF_Capsule A, CF_Capsule B, CF_Manifold* m)
+CF_Manifold cf_capsule_to_capsule_manifold(CF_Capsule A, CF_Capsule B)
 {
-	c2CapsuletoCapsuleManifold(*(c2Capsule*)&A, *(c2Capsule*)&B, (c2Manifold*)m);
+	c2Manifold m;
+	c2CapsuletoCapsuleManifold(*(c2Capsule*)&A, *(c2Capsule*)&B, &m);
+	return *(CF_Manifold*)&m;
 }
 
-void cf_circle_to_poly_manifold(CF_Circle A, const CF_Poly* B, const CF_Transform* bx, CF_Manifold* m)
+CF_Manifold cf_circle_to_poly_manifold(CF_Circle A, const CF_Poly* B, const CF_Transform* bx)
 {
-	c2CircletoPolyManifold(*(c2Circle*)&A, (c2Poly*)B, (c2x*)bx, (c2Manifold*)m);
+	c2Manifold m;
+	c2CircletoPolyManifold(*(c2Circle*)&A, (c2Poly*)B, (c2x*)bx, &m);
+	return *(CF_Manifold*)&m;
 }
 
-void cf_aabb_to_poly_manifold(CF_Aabb A, const CF_Poly* B, const CF_Transform* bx, CF_Manifold* m)
+CF_Manifold cf_aabb_to_poly_manifold(CF_Aabb A, const CF_Poly* B, const CF_Transform* bx)
 {
-	c2AABBtoPolyManifold(*(c2AABB*)&A, (c2Poly*)B, (c2x*)bx, (c2Manifold*)m);
+	c2Manifold m;
+	c2AABBtoPolyManifold(*(c2AABB*)&A, (c2Poly*)B, (c2x*)bx, &m);
+	return *(CF_Manifold*)&m;
 }
 
-void cf_capsule_to_poly_manifold(CF_Capsule A, const CF_Poly* B, const CF_Transform* bx, CF_Manifold* m)
+CF_Manifold cf_capsule_to_poly_manifold(CF_Capsule A, const CF_Poly* B, const CF_Transform* bx)
 {
-	c2CapsuletoPolyManifold(*(c2Capsule*)&A, (c2Poly*)B, (c2x*)bx, (c2Manifold*)m);
+	c2Manifold m;
+	c2CapsuletoPolyManifold(*(c2Capsule*)&A, (c2Poly*)B, (c2x*)bx, &m);
+	return *(CF_Manifold*)&m;
 }
 
-void cf_poly_to_poly_manifold(const CF_Poly* A, const CF_Transform* ax, const CF_Poly* B, const CF_Transform* bx, CF_Manifold* m)
+CF_Manifold cf_poly_to_poly_manifold(const CF_Poly* A, const CF_Transform* ax, const CF_Poly* B, const CF_Transform* bx)
 {
-	c2PolytoPolyManifold((c2Poly*)A, (c2x*)ax, (c2Poly*)B, (c2x*)bx, (c2Manifold*)m);
+	c2Manifold m;
+	c2PolytoPolyManifold((c2Poly*)A, (c2x*)ax, (c2Poly*)B, (c2x*)bx, &m);
+	return *(CF_Manifold*)&m;
 }
 
 float cf_gjk(const void* A, CF_ShapeType typeA, const CF_Transform* ax_ptr, const void* B, CF_ShapeType typeB, const CF_Transform* bx_ptr, CF_V2* outA, CF_V2* outB, bool use_radius, int* iterations, CF_GjkCache* cache)

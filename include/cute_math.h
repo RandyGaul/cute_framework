@@ -2316,11 +2316,11 @@ CF_API CF_Raycast CF_CALL cf_ray_to_poly(CF_Ray A, const CF_Poly* B, const CF_Tr
  * @brief    Computes information about how two shapes intersect.
  * @param    A          The first shape.
  * @param    B          The second shape.
- * @param    m          Contains information about the intersection. `m->count` is set to zero for no-intersection. See `CF_Manifold` for details.
+ * @return   Returns a `CF_Manifold` containing information about the intersection. See `CF_Manifold` for details.
  * @remarks  This function is slightly slower than the boolean version `cf_circle_to_circle`.
  * @related  CF_Manifold CF_Circle cf_circle_to_circle_manifold cf_circle_to_aabb_manifold cf_circle_to_capsule_manifold cf_aabb_to_aabb_manifold cf_aabb_to_capsule_manifold cf_circle_to_poly_manifold cf_aabb_to_poly_manifold cf_capsule_to_poly_manifold cf_poly_to_poly_manifold
  */
-CF_API void CF_CALL cf_circle_to_circle_manifold(CF_Circle A, CF_Circle B, CF_Manifold* m);
+CF_API CF_Manifold CF_CALL cf_circle_to_circle_manifold(CF_Circle A, CF_Circle B);
 
 /**
  * @function cf_circle_to_aabb_manifold
@@ -2328,11 +2328,11 @@ CF_API void CF_CALL cf_circle_to_circle_manifold(CF_Circle A, CF_Circle B, CF_Ma
  * @brief    Computes information about how two shapes intersect.
  * @param    A          The first shape.
  * @param    B          The second shape.
- * @param    m          Contains information about the intersection. `m->count` is set to zero for no-intersection. See `CF_Manifold` for details.
+ * @return   Returns a `CF_Manifold` containing information about the intersection. See `CF_Manifold` for details.
  * @remarks  This function is slightly slower than the boolean version `cf_circle_to_aabb`.
  * @related  CF_Manifold CF_Circle CF_Aabb cf_circle_to_circle_manifold cf_circle_to_aabb_manifold cf_circle_to_capsule_manifold cf_aabb_to_aabb_manifold cf_aabb_to_capsule_manifold cf_circle_to_poly_manifold cf_aabb_to_poly_manifold cf_capsule_to_poly_manifold cf_poly_to_poly_manifold
  */
-CF_API void CF_CALL cf_circle_to_aabb_manifold(CF_Circle A, CF_Aabb B, CF_Manifold* m);
+CF_API CF_Manifold CF_CALL cf_circle_to_aabb_manifold(CF_Circle A, CF_Aabb B);
 
 /**
  * @function cf_circle_to_capsule_manifold
@@ -2340,11 +2340,11 @@ CF_API void CF_CALL cf_circle_to_aabb_manifold(CF_Circle A, CF_Aabb B, CF_Manifo
  * @brief    Computes information about how two shapes intersect.
  * @param    A          The first shape.
  * @param    B          The second shape.
- * @param    m          Contains information about the intersection. `m->count` is set to zero for no-intersection. See `CF_Manifold` for details.
+ * @return   Returns a `CF_Manifold` containing information about the intersection. See `CF_Manifold` for details.
  * @remarks  This function is slightly slower than the boolean version `cf_circle_to_capsule`.
  * @related  CF_Manifold CF_Circle CF_Capsule cf_circle_to_circle_manifold cf_circle_to_aabb_manifold cf_circle_to_capsule_manifold cf_aabb_to_aabb_manifold cf_aabb_to_capsule_manifold cf_circle_to_poly_manifold cf_aabb_to_poly_manifold cf_capsule_to_poly_manifold cf_poly_to_poly_manifold
  */
-CF_API void CF_CALL cf_circle_to_capsule_manifold(CF_Circle A, CF_Capsule B, CF_Manifold* m);
+CF_API CF_Manifold CF_CALL cf_circle_to_capsule_manifold(CF_Circle A, CF_Capsule B);
 
 /**
  * @function cf_aabb_to_aabb_manifold
@@ -2352,11 +2352,11 @@ CF_API void CF_CALL cf_circle_to_capsule_manifold(CF_Circle A, CF_Capsule B, CF_
  * @brief    Computes information about how two shapes intersect.
  * @param    A          The first shape.
  * @param    B          The second shape.
- * @param    m          Contains information about the intersection. `m->count` is set to zero for no-intersection. See `CF_Manifold` for details.
+ * @return   Returns a `CF_Manifold` containing information about the intersection. See `CF_Manifold` for details.
  * @remarks  This function is slightly slower than the boolean version `cf_aabb_to_aabb`.
  * @related  CF_Manifold CF_Aabb cf_circle_to_circle_manifold cf_circle_to_aabb_manifold cf_circle_to_capsule_manifold cf_aabb_to_aabb_manifold cf_aabb_to_capsule_manifold cf_circle_to_poly_manifold cf_aabb_to_poly_manifold cf_capsule_to_poly_manifold cf_poly_to_poly_manifold
  */
-CF_API void CF_CALL cf_aabb_to_aabb_manifold(CF_Aabb A, CF_Aabb B, CF_Manifold* m);
+CF_API CF_Manifold CF_CALL cf_aabb_to_aabb_manifold(CF_Aabb A, CF_Aabb B);
 
 /**
  * @function cf_aabb_to_capsule_manifold
@@ -2364,11 +2364,11 @@ CF_API void CF_CALL cf_aabb_to_aabb_manifold(CF_Aabb A, CF_Aabb B, CF_Manifold* 
  * @brief    Computes information about how two shapes intersect.
  * @param    A          The first shape.
  * @param    B          The second shape.
- * @param    m          Contains information about the intersection. `m->count` is set to zero for no-intersection. See `CF_Manifold` for details.
+ * @return   Returns a `CF_Manifold` containing information about the intersection. See `CF_Manifold` for details.
  * @remarks  This function is slightly slower than the boolean version `cf_aabb_to_capsule`.
  * @related  CF_Manifold CF_Aabb CF_Capsule cf_circle_to_circle_manifold cf_circle_to_aabb_manifold cf_circle_to_capsule_manifold cf_aabb_to_aabb_manifold cf_aabb_to_capsule_manifold cf_circle_to_poly_manifold cf_aabb_to_poly_manifold cf_capsule_to_poly_manifold cf_poly_to_poly_manifold
  */
-CF_API void CF_CALL cf_aabb_to_capsule_manifold(CF_Aabb A, CF_Capsule B, CF_Manifold* m);
+CF_API CF_Manifold CF_CALL cf_aabb_to_capsule_manifold(CF_Aabb A, CF_Capsule B);
 
 /**
  * @function cf_capsule_to_capsule_manifold
@@ -2376,11 +2376,11 @@ CF_API void CF_CALL cf_aabb_to_capsule_manifold(CF_Aabb A, CF_Capsule B, CF_Mani
  * @brief    Computes information about how two shapes intersect.
  * @param    A          The first shape.
  * @param    B          The second shape.
- * @param    m          Contains information about the intersection. `m->count` is set to zero for no-intersection. See `CF_Manifold` for details.
+ * @return   Returns a `CF_Manifold` containing information about the intersection. See `CF_Manifold` for details.
  * @remarks  This function is slightly slower than the boolean version `cf_capsule_to_capsule`.
  * @related  CF_Manifold CF_Capsule cf_circle_to_circle_manifold cf_circle_to_aabb_manifold cf_circle_to_capsule_manifold cf_aabb_to_aabb_manifold cf_aabb_to_capsule_manifold cf_circle_to_poly_manifold cf_aabb_to_poly_manifold cf_capsule_to_poly_manifold cf_poly_to_poly_manifold
  */
-CF_API void CF_CALL cf_capsule_to_capsule_manifold(CF_Capsule A, CF_Capsule B, CF_Manifold* m);
+CF_API CF_Manifold CF_CALL cf_capsule_to_capsule_manifold(CF_Capsule A, CF_Capsule B);
 
 /**
  * @function cf_circle_to_poly_manifold
@@ -2388,11 +2388,11 @@ CF_API void CF_CALL cf_capsule_to_capsule_manifold(CF_Capsule A, CF_Capsule B, C
  * @brief    Computes information about how two shapes intersect.
  * @param    A          The first shape.
  * @param    B          The second shape.
- * @param    m          Contains information about the intersection. `m->count` is set to zero for no-intersection. See `CF_Manifold` for details.
+ * @return   Returns a `CF_Manifold` containing information about the intersection. See `CF_Manifold` for details.
  * @remarks  This function is slightly slower than the boolean version `cf_circle_to_poly`.
  * @related  CF_Manifold CF_Circle CF_Poly cf_circle_to_circle_manifold cf_circle_to_aabb_manifold cf_circle_to_capsule_manifold cf_aabb_to_aabb_manifold cf_aabb_to_capsule_manifold cf_circle_to_poly_manifold cf_aabb_to_poly_manifold cf_capsule_to_poly_manifold cf_poly_to_poly_manifold
  */
-CF_API void CF_CALL cf_circle_to_poly_manifold(CF_Circle A, const CF_Poly* B, const CF_Transform* bx, CF_Manifold* m);
+CF_API CF_Manifold CF_CALL cf_circle_to_poly_manifold(CF_Circle A, const CF_Poly* B, const CF_Transform* bx);
 
 /**
  * @function cf_aabb_to_poly_manifold
@@ -2400,11 +2400,11 @@ CF_API void CF_CALL cf_circle_to_poly_manifold(CF_Circle A, const CF_Poly* B, co
  * @brief    Computes information about how two shapes intersect.
  * @param    A          The first shape.
  * @param    B          The second shape.
- * @param    m          Contains information about the intersection. `m->count` is set to zero for no-intersection. See `CF_Manifold` for details.
+ * @return   Returns a `CF_Manifold` containing information about the intersection. See `CF_Manifold` for details.
  * @remarks  This function is slightly slower than the boolean version `cf_aabb_to_poly`.
  * @related  CF_Manifold CF_Aabb CF_Poly cf_circle_to_circle_manifold cf_circle_to_aabb_manifold cf_circle_to_capsule_manifold cf_aabb_to_aabb_manifold cf_aabb_to_capsule_manifold cf_circle_to_poly_manifold cf_aabb_to_poly_manifold cf_capsule_to_poly_manifold cf_poly_to_poly_manifold
  */
-CF_API void CF_CALL cf_aabb_to_poly_manifold(CF_Aabb A, const CF_Poly* B, const CF_Transform* bx, CF_Manifold* m);
+CF_API CF_Manifold CF_CALL cf_aabb_to_poly_manifold(CF_Aabb A, const CF_Poly* B, const CF_Transform* bx);
 
 /**
  * @function cf_capsule_to_poly_manifold
@@ -2412,11 +2412,11 @@ CF_API void CF_CALL cf_aabb_to_poly_manifold(CF_Aabb A, const CF_Poly* B, const 
  * @brief    Computes information about how two shapes intersect.
  * @param    A          The first shape.
  * @param    B          The second shape.
- * @param    m          Contains information about the intersection. `m->count` is set to zero for no-intersection. See `CF_Manifold` for details.
+ * @return   Returns a `CF_Manifold` containing information about the intersection. See `CF_Manifold` for details.
  * @remarks  This function is slightly slower than the boolean version `cf_capsule_to_poly`.
  * @related  CF_Manifold CF_Capsule CF_Poly cf_circle_to_circle_manifold cf_circle_to_aabb_manifold cf_circle_to_capsule_manifold cf_aabb_to_aabb_manifold cf_aabb_to_capsule_manifold cf_circle_to_poly_manifold cf_aabb_to_poly_manifold cf_capsule_to_poly_manifold cf_poly_to_poly_manifold
  */
-CF_API void CF_CALL cf_capsule_to_poly_manifold(CF_Capsule A, const CF_Poly* B, const CF_Transform* bx, CF_Manifold* m);
+CF_API CF_Manifold CF_CALL cf_capsule_to_poly_manifold(CF_Capsule A, const CF_Poly* B, const CF_Transform* bx);
 
 /**
  * @function cf_poly_to_poly_manifold
@@ -2424,11 +2424,11 @@ CF_API void CF_CALL cf_capsule_to_poly_manifold(CF_Capsule A, const CF_Poly* B, 
  * @brief    Computes information about how two shapes intersect.
  * @param    A          The first shape.
  * @param    B          The second shape.
- * @param    m          Contains information about the intersection. `m->count` is set to zero for no-intersection. See `CF_Manifold` for details.
+ * @return   Returns a `CF_Manifold` containing information about the intersection. See `CF_Manifold` for details.
  * @remarks  This function is slightly slower than the boolean version `cf_poly_to_poly`.
  * @related  CF_Manifold CF_Poly cf_circle_to_circle_manifold cf_circle_to_aabb_manifold cf_circle_to_capsule_manifold cf_aabb_to_aabb_manifold cf_aabb_to_capsule_manifold cf_circle_to_poly_manifold cf_aabb_to_poly_manifold cf_capsule_to_poly_manifold cf_poly_to_poly_manifold
  */
-CF_API void CF_CALL cf_poly_to_poly_manifold(const CF_Poly* A, const CF_Transform* ax, const CF_Poly* B, const CF_Transform* bx, CF_Manifold* m);
+CF_API CF_Manifold CF_CALL cf_poly_to_poly_manifold(const CF_Poly* A, const CF_Transform* ax, const CF_Poly* B, const CF_Transform* bx);
 
 /**
  * @struct   CF_GjkCache
@@ -2859,16 +2859,16 @@ CF_INLINE Raycast ray_to_aabb(Ray A, Aabb B) { return cf_ray_to_aabb(A, B); }
 CF_INLINE Raycast ray_to_capsule(Ray A, Capsule B) { return cf_ray_to_capsule(A, B); }
 CF_INLINE Raycast ray_to_poly(Ray A, const Poly* B, const Transform* bx_ptr = NULL) { return cf_ray_to_poly(A, B, bx_ptr); }
 
-CF_INLINE void circle_to_circle_manifold(Circle A, Circle B, Manifold* m) { return cf_circle_to_circle_manifold(A, B, m); }
-CF_INLINE void circle_to_aabb_manifold(Circle A, Aabb B, Manifold* m) { return cf_circle_to_aabb_manifold(A, B, m); }
-CF_INLINE void circle_to_capsule_manifold(Circle A, Capsule B, Manifold* m) { return cf_circle_to_capsule_manifold(A, B, m); }
-CF_INLINE void aabb_to_aabb_manifold(Aabb A, Aabb B, Manifold* m) { return cf_aabb_to_aabb_manifold(A, B, m); }
-CF_INLINE void aabb_to_capsule_manifold(Aabb A, Capsule B, Manifold* m) { return cf_aabb_to_capsule_manifold(A, B, m); }
-CF_INLINE void capsule_to_capsule_manifold(Capsule A, Capsule B, Manifold* m) { return cf_capsule_to_capsule_manifold(A, B, m); }
-CF_INLINE void circle_to_poly_manifold(Circle A, const Poly* B, const Transform* bx, Manifold* m) { return cf_circle_to_poly_manifold(A, B, bx, m); }
-CF_INLINE void aabb_to_poly_manifold(Aabb A, const Poly* B, const Transform* bx, Manifold* m) { return cf_aabb_to_poly_manifold(A, B, bx, m); }
-CF_INLINE void capsule_to_poly_manifold(Capsule A, const Poly* B, const Transform* bx, Manifold* m) { return cf_capsule_to_poly_manifold(A, B, bx, m); }
-CF_INLINE void poly_to_poly_manifold(const Poly* A, const Transform* ax, const Poly* B, const Transform* bx, Manifold* m) { return cf_poly_to_poly_manifold(A, ax, B, bx, m); }
+CF_INLINE Manifold circle_to_circle_manifold(Circle A, Circle B) { return cf_circle_to_circle_manifold(A, B); }
+CF_INLINE Manifold circle_to_aabb_manifold(Circle A, Aabb B) { return cf_circle_to_aabb_manifold(A, B); }
+CF_INLINE Manifold circle_to_capsule_manifold(Circle A, Capsule B) { return cf_circle_to_capsule_manifold(A, B); }
+CF_INLINE Manifold aabb_to_aabb_manifold(Aabb A, Aabb B) { return cf_aabb_to_aabb_manifold(A, B); }
+CF_INLINE Manifold aabb_to_capsule_manifold(Aabb A, Capsule B) { return cf_aabb_to_capsule_manifold(A, B); }
+CF_INLINE Manifold capsule_to_capsule_manifold(Capsule A, Capsule B) { return cf_capsule_to_capsule_manifold(A, B); }
+CF_INLINE Manifold circle_to_poly_manifold(Circle A, const Poly* B, const Transform* bx) { return cf_circle_to_poly_manifold(A, B, bx); }
+CF_INLINE Manifold aabb_to_poly_manifold(Aabb A, const Poly* B, const Transform* bx) { return cf_aabb_to_poly_manifold(A, B, bx); }
+CF_INLINE Manifold capsule_to_poly_manifold(Capsule A, const Poly* B, const Transform* bx) { return cf_capsule_to_poly_manifold(A, B, bx); }
+CF_INLINE Manifold poly_to_poly_manifold(const Poly* A, const Transform* ax, const Poly* B, const Transform* bx) { return cf_poly_to_poly_manifold(A, ax, B, bx); }
 
 CF_INLINE float gjk(const void* A, ShapeType typeA, const Transform* ax_ptr, const void* B, ShapeType typeB, const Transform* bx_ptr, v2* outA, v2* outB, int use_radius, int* iterations, GjkCache* cache)
 {

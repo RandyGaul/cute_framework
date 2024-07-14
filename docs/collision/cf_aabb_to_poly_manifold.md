@@ -12,14 +12,17 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Computes information about how two shapes intersect.
 
 ```cpp
-void cf_aabb_to_poly_manifold(CF_Aabb A, const CF_Poly* B, const CF_Transform* bx, CF_Manifold* m);
+CF_Manifold cf_aabb_to_poly_manifold(CF_Aabb A, const CF_Poly* B, const CF_Transform* bx);
 ```
 
 Parameters | Description
 --- | ---
 A | The first shape.
 B | The second shape.
-m | Contains information about the intersection. `m->count` is set to zero for no-intersection. See [CF_Manifold](/collision/cf_manifold.md) for details.
+
+## Return Value
+
+Returns a [CF_Manifold](/collision/cf_manifold.md) containing information about the intersection. See [CF_Manifold](/collision/cf_manifold.md) for details.
 
 ## Remarks
 
