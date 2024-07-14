@@ -26,7 +26,7 @@ A ray is a directional line segment. It starts at an endpoint and extends into a
 [cf_ray_to_poly](/collision/cf_ray_to_poly.md)  
 [cf_impact](/collision/cf_impact.md)  
 [cf_endpoint](/collision/cf_endpoint.md)  
-[cf_ray_to_halfpsace](/collision/cf_ray_to_halfpsace.md)  
+[cf_ray_to_halfspace](/collision/cf_ray_to_halfspace.md)  
 [cf_ray_to_circle](/collision/cf_ray_to_circle.md)  
 [cf_ray_to_aabb](/collision/cf_ray_to_aabb.md)  
 [cf_ray_to_capsule](/collision/cf_ray_to_capsule.md)  

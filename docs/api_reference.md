@@ -239,7 +239,7 @@ This is a list of all functions in Cute Framework organized by categories. This 
 - [cf_ray_to_aabb](/collision/cf_ray_to_aabb.md)
 - [cf_ray_to_capsule](/collision/cf_ray_to_capsule.md)
 - [cf_ray_to_circle](/collision/cf_ray_to_circle.md)
-- [cf_ray_to_halfpsace](/collision/cf_ray_to_halfpsace.md)
+- [cf_ray_to_halfspace](/collision/cf_ray_to_halfspace.md)
 - [cf_ray_to_poly](/collision/cf_ray_to_poly.md)
 - [cf_shape_type_to_string](/collision/cf_shape_type_to_string.md)
 - [cf_slice](/collision/cf_slice.md)

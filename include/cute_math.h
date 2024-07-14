@@ -186,7 +186,7 @@ typedef struct CF_Halfspace
  * @category math
  * @brief    A ray.
  * @remarks  A ray is a directional line segment. It starts at an endpoint and extends into another direction for a specified distance (defined by `t`).
- * @related  CF_Ray cf_impact cf_endpoint cf_ray_to_halfpsace cf_ray_to_circle cf_ray_to_aabb cf_ray_to_capsule cf_ray_to_poly
+ * @related  CF_Ray cf_impact cf_endpoint cf_ray_to_halfspace cf_ray_to_circle cf_ray_to_aabb cf_ray_to_capsule cf_ray_to_poly
  */
 typedef struct CF_Ray
 {
@@ -205,7 +205,7 @@ typedef struct CF_Ray
  * @struct   CF_Raycast
  * @category math
  * @brief    The results for a raycast query.
- * @related  CF_Raycast cf_ray_to_halfpsace cf_ray_to_circle cf_ray_to_aabb cf_ray_to_capsule cf_ray_to_poly
+ * @related  CF_Raycast cf_ray_to_halfspace cf_ray_to_circle cf_ray_to_aabb cf_ray_to_capsule cf_ray_to_poly
  */
 typedef struct CF_Raycast
 {
@@ -1975,7 +1975,7 @@ CF_INLINE CF_V2 cf_impact(CF_Ray r, float t) { return cf_add_v2(r.p, cf_mul_v2_f
 CF_INLINE CF_V2 cf_endpoint(CF_Ray r) { return cf_add_v2(r.p, cf_mul_v2_f(r.d, r.t)); }
 
 /**
- * @function cf_ray_to_halfpsace
+ * @function cf_ray_to_halfspace
  * @category collision
  * @brief    Returns true if the ray hits a given plane.
  * @param    A          The ray.
@@ -1983,7 +1983,7 @@ CF_INLINE CF_V2 cf_endpoint(CF_Ray r) { return cf_add_v2(r.p, cf_mul_v2_f(r.d, r
  * @param    out        Can be `NULL`. `CF_Raycast` results are placed here (contains normal + time of impact).
  * @related  CF_Ray
  */
-CF_INLINE CF_Raycast cf_ray_to_halfpsace(CF_Ray A, CF_Halfspace B)
+CF_INLINE CF_Raycast cf_ray_to_halfspace(CF_Ray A, CF_Halfspace B)
 {
 	CF_Raycast result = { 0 };
 	float da = cf_distance_hs(B, A.p);
@@ -2831,7 +2831,7 @@ CF_INLINE Ray make_ray(v2 start, v2 direction_normalized, float length) { return
 CF_INLINE v2 impact(Ray r, float t) { return cf_impact(r, t); }
 CF_INLINE v2 endpoint(Ray r) { return cf_endpoint(r); }
 
-CF_INLINE Raycast ray_to_halfpsace(Ray A, Halfspace B) { return cf_ray_to_halfpsace(A, B); }
+CF_INLINE Raycast ray_to_halfpsace(Ray A, Halfspace B) { return cf_ray_to_halfspace(A, B); }
 CF_INLINE float distance_sq(v2 a, v2 b, v2 p) { return cf_distance_sq(a, b, p); }
 
 CF_INLINE v2 center_of_mass(Poly poly) { return cf_center_of_mass(poly); }
