@@ -2831,7 +2831,7 @@ CF_INLINE Ray make_ray(v2 start, v2 direction_normalized, float length) { return
 CF_INLINE v2 impact(Ray r, float t) { return cf_impact(r, t); }
 CF_INLINE v2 endpoint(Ray r) { return cf_endpoint(r); }
 
-CF_INLINE Raycast ray_to_halfpsace(Ray A, Halfspace B) { return cf_ray_to_halfspace(A, B); }
+CF_INLINE Raycast ray_to_halfspace(Ray A, Halfspace B) { return cf_ray_to_halfspace(A, B); }
 CF_INLINE float distance_sq(v2 a, v2 b, v2 p) { return cf_distance_sq(a, b, p); }
 
 CF_INLINE v2 center_of_mass(Poly poly) { return cf_center_of_mass(poly); }
