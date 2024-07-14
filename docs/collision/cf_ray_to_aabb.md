@@ -12,7 +12,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns true if a ray hits an Aabb.
 
 ```cpp
-bool cf_ray_to_aabb(CF_Ray A, CF_Aabb B, CF_Raycast* out);
+CF_Raycast cf_ray_to_aabb(CF_Ray A, CF_Aabb B);
 ```
 
 Parameters | Description

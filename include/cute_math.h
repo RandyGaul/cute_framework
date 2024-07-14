@@ -209,6 +209,9 @@ typedef struct CF_Ray
  */
 typedef struct CF_Raycast
 {
+	/* @member True if the ray hit. When this is false then members t and n are zero'd out. */
+	bool hit;
+
 	/* @member Time of impact. */
 	float t;
 
@@ -1980,14 +1983,16 @@ CF_INLINE CF_V2 cf_endpoint(CF_Ray r) { return cf_add_v2(r.p, cf_mul_v2_f(r.d, r
  * @param    out        Can be `NULL`. `CF_Raycast` results are placed here (contains normal + time of impact).
  * @related  CF_Ray
  */
-CF_INLINE bool cf_ray_to_halfpsace(CF_Ray A, CF_Halfspace B, CF_Raycast* out)
+CF_INLINE CF_Raycast cf_ray_to_halfpsace(CF_Ray A, CF_Halfspace B)
 {
+	CF_Raycast result = { 0 };
 	float da = cf_distance_hs(B, A.p);
 	float db = cf_distance_hs(B, cf_impact(A, A.t));
-	if (da * db > 0) return false;
-	out->n = cf_mul_v2_f(B.n, cf_sign(da));
-	out->t = cf_intersect(da, db);
-	return true;
+	if (da * db > 0) return result;
+	result.n = cf_mul_v2_f(B.n, cf_sign(da));
+	result.t = cf_intersect(da, db);
+	result.hit = true;
+	return result;
 }
 
 /**
@@ -2270,7 +2275,7 @@ CF_API bool CF_CALL cf_poly_to_poly(const CF_Poly* A, const CF_Transform* ax, co
  * @param    out        Can be `NULL`. `CF_Raycast` results are placed here (contains normal + time of impact).
  * @related  CF_Ray CF_Circle CF_Raycast cf_ray_to_circle cf_ray_to_aabb cf_ray_to_capsule cf_ray_to_poly
  */
-CF_API bool CF_CALL cf_ray_to_circle(CF_Ray A, CF_Circle B, CF_Raycast* out);
+CF_API CF_Raycast CF_CALL cf_ray_to_circle(CF_Ray A, CF_Circle B);
 
 /**
  * @function cf_ray_to_aabb
@@ -2281,7 +2286,7 @@ CF_API bool CF_CALL cf_ray_to_circle(CF_Ray A, CF_Circle B, CF_Raycast* out);
  * @param    out        Can be `NULL`. `CF_Raycast` results are placed here (contains normal + time of impact).
  * @related  CF_Ray CF_Aabb CF_Raycast cf_ray_to_circle cf_ray_to_aabb cf_ray_to_capsule cf_ray_to_poly
  */
-CF_API bool CF_CALL cf_ray_to_aabb(CF_Ray A, CF_Aabb B, CF_Raycast* out);
+CF_API CF_Raycast CF_CALL cf_ray_to_aabb(CF_Ray A, CF_Aabb B);
 
 /**
  * @function cf_ray_to_capsule
@@ -2292,7 +2297,7 @@ CF_API bool CF_CALL cf_ray_to_aabb(CF_Ray A, CF_Aabb B, CF_Raycast* out);
  * @param    out        Can be `NULL`. `CF_Raycast` results are placed here (contains normal + time of impact).
  * @related  CF_Ray CF_Capsule CF_Raycast cf_ray_to_circle cf_ray_to_aabb cf_ray_to_capsule cf_ray_to_poly
  */
-CF_API bool CF_CALL cf_ray_to_capsule(CF_Ray A, CF_Capsule B, CF_Raycast* out);
+CF_API CF_Raycast CF_CALL cf_ray_to_capsule(CF_Ray A, CF_Capsule B);
 
 /**
  * @function cf_ray_to_poly
@@ -2303,7 +2308,7 @@ CF_API bool CF_CALL cf_ray_to_capsule(CF_Ray A, CF_Capsule B, CF_Raycast* out);
  * @param    out        Can be `NULL`. `CF_Raycast` results are placed here (contains normal + time of impact).
  * @related  CF_Ray CF_Poly CF_Raycast cf_ray_to_circle cf_ray_to_aabb cf_ray_to_capsule cf_ray_to_poly
  */
-CF_API bool CF_CALL cf_ray_to_poly(CF_Ray A, const CF_Poly* B, const CF_Transform* bx_ptr, CF_Raycast* out);
+CF_API CF_Raycast CF_CALL cf_ray_to_poly(CF_Ray A, const CF_Poly* B, const CF_Transform* bx_ptr);
 
 /**
  * @function cf_circle_to_circle_manifold
@@ -2826,7 +2831,7 @@ CF_INLINE Ray make_ray(v2 start, v2 direction_normalized, float length) { return
 CF_INLINE v2 impact(Ray r, float t) { return cf_impact(r, t); }
 CF_INLINE v2 endpoint(Ray r) { return cf_endpoint(r); }
 
-CF_INLINE int ray_to_halfpsace(Ray A, Halfspace B, Raycast* out) { return cf_ray_to_halfpsace(A, B, out); }
+CF_INLINE Raycast ray_to_halfpsace(Ray A, Halfspace B) { return cf_ray_to_halfpsace(A, B); }
 CF_INLINE float distance_sq(v2 a, v2 b, v2 p) { return cf_distance_sq(a, b, p); }
 
 CF_INLINE v2 center_of_mass(Poly poly) { return cf_center_of_mass(poly); }
@@ -2849,10 +2854,10 @@ CF_INLINE bool aabb_to_poly(Aabb A, const Poly* B, const Transform* bx) { return
 CF_INLINE bool capsule_to_poly(Capsule A, const Poly* B, const Transform* bx) { return cf_capsule_to_poly(A, B, bx); }
 CF_INLINE bool poly_to_poly(const Poly* A, const Transform* ax, const Poly* B, const Transform* bx) { return cf_poly_to_poly(A, ax, B, bx); }
 
-CF_INLINE bool ray_to_circle(Ray A, Circle B, Raycast* out = NULL) { return cf_ray_to_circle(A, B, out); }
-CF_INLINE bool ray_to_aabb(Ray A, Aabb B, Raycast* out = NULL) { return cf_ray_to_aabb(A, B, out); }
-CF_INLINE bool ray_to_capsule(Ray A, Capsule B, Raycast* out = NULL) { return cf_ray_to_capsule(A, B, out); }
-CF_INLINE bool ray_to_poly(Ray A, const Poly* B, const Transform* bx_ptr = NULL, Raycast* out = NULL) { return cf_ray_to_poly(A, B, bx_ptr, out); }
+CF_INLINE Raycast ray_to_circle(Ray A, Circle B) { return cf_ray_to_circle(A, B); }
+CF_INLINE Raycast ray_to_aabb(Ray A, Aabb B) { return cf_ray_to_aabb(A, B); }
+CF_INLINE Raycast ray_to_capsule(Ray A, Capsule B) { return cf_ray_to_capsule(A, B); }
+CF_INLINE Raycast ray_to_poly(Ray A, const Poly* B, const Transform* bx_ptr = NULL) { return cf_ray_to_poly(A, B, bx_ptr); }
 
 CF_INLINE void circle_to_circle_manifold(Circle A, Circle B, Manifold* m) { return cf_circle_to_circle_manifold(A, B, m); }
 CF_INLINE void circle_to_aabb_manifold(Circle A, Aabb B, Manifold* m) { return cf_circle_to_aabb_manifold(A, B, m); }

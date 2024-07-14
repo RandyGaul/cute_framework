@@ -547,7 +547,7 @@ void AsteroidBarn::slice(CF_Ray r)
 	for (int i = 0; i < ASTEROIDS_MAX; ++i) {
 		if (!alive[i]) continue;
 		if (slice_timeout[i] > 0) continue;
-		if (!ray_to_poly(r, &poly[i])) continue;
+		if (!ray_to_poly(r, &poly[i]).hit) continue;
 		SliceOutput sho = Cute::slice(h, poly[i]);
 		if (!sho.front.count | !sho.back.count) continue;
 		v2 c = center_mass[i];

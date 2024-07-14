@@ -12,7 +12,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns true if a ray hits a circle.
 
 ```cpp
-bool cf_ray_to_circle(CF_Ray A, CF_Circle B, CF_Raycast* out);
+CF_Raycast cf_ray_to_circle(CF_Ray A, CF_Circle B);
 ```
 
 Parameters | Description

@@ -12,7 +12,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns true if a ray hits a polygon.
 
 ```cpp
-bool cf_ray_to_poly(CF_Ray A, const CF_Poly* B, const CF_Transform* bx_ptr, CF_Raycast* out);
+CF_Raycast cf_ray_to_poly(CF_Ray A, const CF_Poly* B, const CF_Transform* bx_ptr);
 ```
 
 Parameters | Description

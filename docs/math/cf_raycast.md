@@ -13,6 +13,7 @@ The results for a raycast query.
 
 Struct Members | Description
 --- | ---
+`bool hit` | True if the ray hit. When this is false then members t and n are zero'd out.
 `float t` | Time of impact.
 `CF_V2 n` | Normal of surface at impact (unit length).
 

@@ -21,7 +21,6 @@ CF_STATIC_ASSERT(sizeof(CF_Transform) == sizeof(c2x), "Must be equal.");
 CF_STATIC_ASSERT(sizeof(CF_M2x2) == sizeof(c2m), "Must be equal.");
 CF_STATIC_ASSERT(sizeof(CF_Halfspace) == sizeof(c2h), "Must be equal.");
 CF_STATIC_ASSERT(sizeof(CF_Ray) == sizeof(c2Ray), "Must be equal.");
-CF_STATIC_ASSERT(sizeof(CF_Raycast) == sizeof(c2Raycast), "Must be equal.");
 CF_STATIC_ASSERT(sizeof(CF_Manifold) == sizeof(c2Manifold), "Must be equal.");
 CF_STATIC_ASSERT(sizeof(CF_GjkCache) == sizeof(c2GJKCache), "Must be equal.");
 CF_STATIC_ASSERT(sizeof(CF_Circle) == sizeof(c2Circle), "Must be equal.");
@@ -219,35 +218,43 @@ bool cf_poly_to_poly(const CF_Poly* A, const CF_Transform* ax, const CF_Poly* B,
 	return !!c2PolytoPoly((c2Poly*)A, (c2x*)ax, (c2Poly*)B, (c2x*)bx);
 }
 
-bool cf_ray_to_circle(CF_Ray A, CF_Circle B, CF_Raycast* out)
+CF_Raycast cf_ray_to_circle(CF_Ray A, CF_Circle B)
 {
-	CF_Raycast cast;
-	bool result = !!c2RaytoCircle(*(c2Ray*)&A, *(c2Circle*)&B, (c2Raycast*)&cast);
-	if (out) *out = cast;
+	CF_Raycast result;
+	c2Raycast cast;
+	result.hit = !!c2RaytoCircle(*(c2Ray*)&A, *(c2Circle*)&B, (c2Raycast*)&cast);
+	result.n = *(v2*)&cast.n;
+	result.t = cast.t;
 	return result;
 }
 
-bool cf_ray_to_aabb(CF_Ray A, CF_Aabb B, CF_Raycast* out)
+CF_Raycast cf_ray_to_aabb(CF_Ray A, CF_Aabb B)
 {
-	CF_Raycast cast;
-	bool result = !!c2RaytoAABB(*(c2Ray*)&A, *(c2AABB*)&B, (c2Raycast*)&cast);
-	if (out) *out = cast;
+	CF_Raycast result;
+	c2Raycast cast;
+	result.hit = !!c2RaytoAABB(*(c2Ray*)&A, *(c2AABB*)&B, (c2Raycast*)&cast);
+	result.n = *(v2*)&cast.n;
+	result.t = cast.t;
 	return result;
 }
 
-bool cf_ray_to_capsule(CF_Ray A, CF_Capsule B, CF_Raycast* out)
+CF_Raycast cf_ray_to_capsule(CF_Ray A, CF_Capsule B)
 {
-	CF_Raycast cast;
-	bool result = !!c2RaytoCapsule(*(c2Ray*)&A, *(c2Capsule*)&B, (c2Raycast*)&cast);
-	if (out) *out = cast;
+	CF_Raycast result;
+	c2Raycast cast;
+	result.hit = !!c2RaytoCapsule(*(c2Ray*)&A, *(c2Capsule*)&B, (c2Raycast*)&cast);
+	result.n = *(v2*)&cast.n;
+	result.t = cast.t;
 	return result;
 }
 
-bool cf_ray_to_poly(CF_Ray A, const CF_Poly* B, const CF_Transform* bx_ptr, CF_Raycast* out)
+CF_Raycast cf_ray_to_poly(CF_Ray A, const CF_Poly* B, const CF_Transform* bx_ptr)
 {
-	CF_Raycast cast;
-	bool result = !!c2RaytoPoly(*(c2Ray*)&A, (c2Poly*)B, (c2x*)bx_ptr, (c2Raycast*)&cast);
-	if (out) *out = cast;
+	CF_Raycast result;
+	c2Raycast cast;
+	result.hit = !!c2RaytoPoly(*(c2Ray*)&A, (c2Poly*)B, (c2x*)bx_ptr, (c2Raycast*)&cast);
+	result.n = *(v2*)&cast.n;
+	result.t = cast.t;
 	return result;
 }
 
