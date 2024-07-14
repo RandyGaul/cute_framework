@@ -894,8 +894,9 @@ static void s_material_set_uniform(CF_Arena* arena, CF_MaterialState* state, con
 	if (array_length <= 0) array_length = 1;
 	CF_UniformInfo* uniform = NULL;
 	for (int i = 0; i < state->uniforms.count(); ++i) {
-		if (state->uniforms[i].block_name == block_name && state->uniforms[i].name == name) {
-			uniform = state->uniforms + i;
+		CF_UniformInfo* u = state->uniforms + i;
+		if (u->block_name == block_name && u->name == name) {
+			uniform = u;
 			break;
 		}
 	}
@@ -933,6 +934,7 @@ void cf_material_set_uniform_fs(CF_Material material_handle, const char* block_n
 void cf_material_clear_uniforms(CF_Material material_handle)
 {
 	CF_MaterialInternal* material = (CF_MaterialInternal*)material_handle.id;
+	arena_reset(&material->uniform_arena);
 	material->vs.uniforms.clear();
 	material->fs.uniforms.clear();
 }
