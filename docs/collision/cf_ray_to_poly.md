@@ -9,7 +9,7 @@ Category: [collision](/api_reference?id=collision)
 GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_math.h)  
 ---
 
-Returns true if a ray hits a polygon.
+Returns a raycast to a polygon.
 
 ```cpp
 CF_Raycast cf_ray_to_poly(CF_Ray A, const CF_Poly* B, const CF_Transform* bx_ptr);
@@ -19,7 +19,10 @@ Parameters | Description
 --- | ---
 A | The ray.
 B | The polygon.
-out | Can be `NULL`. [CF_Raycast](/math/cf_raycast.md) results are placed here (contains normal + time of impact).
+
+## Return Value
+
+[CF_Raycast](/math/cf_raycast.md) results are placed here. See [CF_RayCast](/math/cf_raycast.md).
 
 ## Related Pages
 

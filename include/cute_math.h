@@ -1977,10 +1977,10 @@ CF_INLINE CF_V2 cf_endpoint(CF_Ray r) { return cf_add_v2(r.p, cf_mul_v2_f(r.d, r
 /**
  * @function cf_ray_to_halfspace
  * @category collision
- * @brief    Returns true if the ray hits a given plane.
+ * @brief    Returns a raycast to a halfspace (plane)
  * @param    A          The ray.
  * @param    B          The plane.
- * @param    out        Can be `NULL`. `CF_Raycast` results are placed here (contains normal + time of impact).
+ * @param    Returns a `CF_Raycast` containing results about the raycast.
  * @related  CF_Ray
  */
 CF_INLINE CF_Raycast cf_ray_to_halfspace(CF_Ray A, CF_Halfspace B)
@@ -2269,10 +2269,10 @@ CF_API bool CF_CALL cf_poly_to_poly(const CF_Poly* A, const CF_Transform* ax, co
 /**
  * @function cf_ray_to_circle
  * @category collision
- * @brief    Returns true if a ray hits a circle.
+ * @brief    Returns a raycast to a circle.
  * @param    A          The ray.
  * @param    B          The circle.
- * @param    out        Can be `NULL`. `CF_Raycast` results are placed here (contains normal + time of impact).
+ * @return   `CF_Raycast` results are placed here. See `CF_RayCast`.
  * @related  CF_Ray CF_Circle CF_Raycast cf_ray_to_circle cf_ray_to_aabb cf_ray_to_capsule cf_ray_to_poly
  */
 CF_API CF_Raycast CF_CALL cf_ray_to_circle(CF_Ray A, CF_Circle B);
@@ -2280,10 +2280,10 @@ CF_API CF_Raycast CF_CALL cf_ray_to_circle(CF_Ray A, CF_Circle B);
 /**
  * @function cf_ray_to_aabb
  * @category collision
- * @brief    Returns true if a ray hits an Aabb.
+ * @brief    Returns a raycast to an aabb.
  * @param    A          The ray.
  * @param    B          The Aabb.
- * @param    out        Can be `NULL`. `CF_Raycast` results are placed here (contains normal + time of impact).
+ * @return   `CF_Raycast` results are placed here. See `CF_RayCast`.
  * @related  CF_Ray CF_Aabb CF_Raycast cf_ray_to_circle cf_ray_to_aabb cf_ray_to_capsule cf_ray_to_poly
  */
 CF_API CF_Raycast CF_CALL cf_ray_to_aabb(CF_Ray A, CF_Aabb B);
@@ -2291,10 +2291,10 @@ CF_API CF_Raycast CF_CALL cf_ray_to_aabb(CF_Ray A, CF_Aabb B);
 /**
  * @function cf_ray_to_capsule
  * @category collision
- * @brief    Returns true if a ray hits a capsule.
+ * @brief    Returns a raycast to a capsule.
  * @param    A          The ray.
  * @param    B          The capsule.
- * @param    out        Can be `NULL`. `CF_Raycast` results are placed here (contains normal + time of impact).
+ * @return   `CF_Raycast` results are placed here. See `CF_RayCast`.
  * @related  CF_Ray CF_Capsule CF_Raycast cf_ray_to_circle cf_ray_to_aabb cf_ray_to_capsule cf_ray_to_poly
  */
 CF_API CF_Raycast CF_CALL cf_ray_to_capsule(CF_Ray A, CF_Capsule B);
@@ -2302,10 +2302,10 @@ CF_API CF_Raycast CF_CALL cf_ray_to_capsule(CF_Ray A, CF_Capsule B);
 /**
  * @function cf_ray_to_poly
  * @category collision
- * @brief    Returns true if a ray hits a polygon.
+ * @brief    Returns a raycast to a polygon.
  * @param    A          The ray.
  * @param    B          The polygon.
- * @param    out        Can be `NULL`. `CF_Raycast` results are placed here (contains normal + time of impact).
+ * @return   `CF_Raycast` results are placed here. See `CF_RayCast`.
  * @related  CF_Ray CF_Poly CF_Raycast cf_ray_to_circle cf_ray_to_aabb cf_ray_to_capsule cf_ray_to_poly
  */
 CF_API CF_Raycast CF_CALL cf_ray_to_poly(CF_Ray A, const CF_Poly* B, const CF_Transform* bx_ptr);

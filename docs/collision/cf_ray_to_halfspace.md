@@ -9,7 +9,7 @@ Category: [collision](/api_reference?id=collision)
 GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_math.h)  
 ---
 
-Returns true if the ray hits a given plane.
+Returns a raycast to a halfspace (plane)
 
 ```cpp
 CF_Raycast cf_ray_to_halfspace(CF_Ray A, CF_Halfspace B)
@@ -19,7 +19,7 @@ Parameters | Description
 --- | ---
 A | The ray.
 B | The plane.
-out | Can be `NULL`. [CF_Raycast](/math/cf_raycast.md) results are placed here (contains normal + time of impact).
+Returns | a [CF_Raycast](/math/cf_raycast.md) containing results about the raycast.
 
 ## Related Pages
 
