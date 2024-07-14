@@ -26,7 +26,6 @@ void* s_default_alloc(size_t size, void* udata)
 
 void s_default_free(void* ptr, void* udata)
 {
-	c--;
 	CF_UNUSED(udata);
 	free(ptr);
 }
