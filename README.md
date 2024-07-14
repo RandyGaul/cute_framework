@@ -10,7 +10,7 @@
 
 ## Download and Setup
 
-Cute Frameowrk is designed to be built from source. You can link your project against CF as either a static or shared library. Be sure to visit the [Cute Framework documentation site](https://randygaul.github.io/cute_framework/#/) for more in-depth details and steps.
+Cute Framework is designed to be built from source. You can link your project against CF as either a static or shared library. Be sure to visit the [Cute Framework documentation site](https://randygaul.github.io/cute_framework/#/) for more in-depth details and steps.
 
 ## Example Game Window
 
