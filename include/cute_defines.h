@@ -22,6 +22,9 @@
 #	define CF_WINDOWS 1
 #elif defined(__linux__) || defined(__unix__) && !defined(__APPLE__) && !defined(__EMSCRIPTEN__)
 #	define CF_LINUX 1
+#       if !defined(__SSE__)
+#               define CUTE_SOUND_SCALAR_MODE
+#       endif
 #elif defined(__APPLE__)
 #	define CF_APPLE 1
 #	include <TargetConditionals.h>
