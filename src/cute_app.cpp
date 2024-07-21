@@ -381,6 +381,7 @@ static void s_on_update(void* udata)
 		if (app->on_sound_finish_single_threaded) {
 			mutex_lock(&app->on_sound_finish_mutex);
 			Array<CF_Sound> on_finish = app->on_sound_finish_queue;
+			app->on_sound_finish_queue.clear();
 			mutex_unlock(&app->on_sound_finish_mutex);
 			for (int i = 0; i < on_finish.size(); ++i) {
 				app->on_sound_finish(on_finish[i], app->on_sound_finish_udata);
