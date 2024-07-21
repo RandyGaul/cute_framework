@@ -95,6 +95,11 @@ struct CF_App
 	CF_Mesh blit_mesh;
 	CF_Material blit_material;
 	CF_Shader blit_shader;
+	bool on_sound_finish_single_threaded = false;
+	Cute::Array<CF_Sound> on_sound_finish_queue;
+	void (*on_sound_finish)(CF_Sound, void*) = NULL;
+	void* on_sound_finish_udata = NULL;
+	CF_Mutex on_sound_finish_mutex = cf_make_mutex();
 
 	// Input stuff.
 	Cute::Array<char> ime_composition;

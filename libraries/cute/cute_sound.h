@@ -116,6 +116,7 @@
 		fluffrabbit       1.11 - scalar SIMD mode and various compiler warning/error fixes
 		Daniel Guzman     2.01 - compilation fixes for clang/llvm on MAC. 
 		Brie              2.06 - Looping sound rollover
+  	        ogam              x.xx - Lots of bugfixes over time, including support negative pitch
 
 
 	DOCUMENTATION (very quick intro)
@@ -367,6 +368,13 @@ typedef struct cs_sound_params_t
 cs_sound_params_t cs_sound_params_default();
 
 cs_playing_sound_t cs_play_sound(cs_audio_source_t* audio, cs_sound_params_t params);
+
+/**
+ * Setup a callback for whenever a sound finishes playing. This will get called from the
+ * mixer thread, which means you'll need to deal with a multithreaded callback if you've
+ * spawned a separate mixing thread.
+ */
+void cs_on_sound_finished_callback(void (*on_finish)(cs_playing_sound_t, void*), void* udata);
 
 bool cs_sound_is_active(cs_playing_sound_t sound);
 bool cs_sound_get_is_paused(cs_playing_sound_t sound);
@@ -1413,6 +1421,8 @@ typedef struct cs_context_t
 	void** duplicates /* = NULL */;
 	int duplicate_count /* = 0 */;
 	int duplicate_capacity /* = 0 */;
+	void (*on_finish)(cs_playing_sound_t, void*); /* = NULL */;
+	void* on_finish_udata /* = NULL */;
 
 	bool music_paused /* = false */;
 	bool music_looped /* = true */;
@@ -1791,6 +1801,8 @@ cs_error_t cs_init(void* os_handle, unsigned play_frequency_in_Hz, int buffered_
 	s_ctx->sound_volume = 1.0f;
 	s_ctx->music_looped = true;
 	s_ctx->music_paused = false;
+	s_ctx->on_finish = NULL;
+	s_ctx->on_finish_udata = NULL;
 	s_ctx->t = 0;
 	s_ctx->fade = 0;
 	s_ctx->fade_switch_1 = 0;
@@ -2451,6 +2463,10 @@ void cs_mix()
 			hashtable_remove(&s_ctx->instance_map, playing->id);
 			playing_node = next_node;
 			write_offset = 0;
+			if (s_ctx->on_finish) {
+				cs_playing_sound_t snd = { playing->id };
+				s_ctx->on_finish(snd, s_ctx->on_finish_udata);
+			}
 			continue;
 		} while (playing_node != end_node);
 	}
@@ -3235,6 +3251,12 @@ cs_playing_sound_t cs_play_sound(cs_audio_source_t* audio, cs_sound_params_t par
 	cs_sound_inst_t* inst = s_inst(audio, params);
 	cs_playing_sound_t sound = { inst->id };
 	return sound;
+}
+
+void cs_on_sound_finished_callback(void (*on_finish)(cs_playing_sound_t, void*), void* udata)
+{
+	s_ctx->on_finish = on_finish;
+	s_ctx->on_finish_udata = udata;
 }
 
 bool cs_sound_is_active(cs_playing_sound_t sound)

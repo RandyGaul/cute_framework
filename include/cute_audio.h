@@ -20,6 +20,15 @@ extern "C" {
 #endif // __cplusplus
 
 /**
+ * @struct   CF_Sound
+ * @category audio
+ * @brief    An opaque pointer representing a sound created by `cf_play_sound`.
+ * @related  CF_SoundParams CF_Sound cf_sound_params_defaults cf_play_sound cf_sound_is_active cf_sound_get_is_paused cf_sound_get_is_looped cf_sound_get_volume cf_sound_get_sample_index cf_sound_set_sample_index cf_sound_set_is_paused cf_sound_set_is_looped cf_sound_set_volume cf_sound_stop cf_sound_set_pitch
+ */
+typedef struct CF_Sound { uint64_t id; } CF_Sound;
+// @end
+
+/**
  * @struct   CF_Audio
  * @category audio
  * @brief    An opaque pointer representing raw audio samples loaded as a resource.
@@ -295,15 +304,6 @@ typedef struct CF_SoundParams
 // @end
 
 /**
- * @struct   CF_Sound
- * @category audio
- * @brief    An opaque pointer representing a sound created by `cf_play_sound`.
- * @related  CF_SoundParams CF_Sound cf_sound_params_defaults cf_play_sound cf_sound_is_active cf_sound_get_is_paused cf_sound_get_is_looped cf_sound_get_volume cf_sound_get_sample_index cf_sound_set_sample_index cf_sound_set_is_paused cf_sound_set_is_looped cf_sound_set_volume cf_sound_stop cf_sound_set_pitch
- */
-typedef struct CF_Sound { uint64_t id; } CF_Sound;
-// @end
-
-/**
  * @function cf_sound_params_defaults
  * @category audio
  * @brief    Returns a `CF_SoundParams` filled with default state, to use with `cf_play_sound`.
@@ -330,6 +330,17 @@ CF_INLINE CF_SoundParams CF_CALL cf_sound_params_defaults()
  * @related  CF_SoundParams CF_Sound cf_sound_params_defaults cf_play_sound cf_sound_is_active cf_sound_get_is_paused cf_sound_get_is_looped cf_sound_get_volume cf_sound_get_sample_index cf_sound_set_sample_index cf_sound_set_is_paused cf_sound_set_is_looped cf_sound_set_volume cf_sound_stop cf_sound_set_pitch
  */
 CF_API CF_Sound CF_CALL cf_play_sound(CF_Audio audio_source, CF_SoundParams params);
+
+/**
+ * @function cf_sound_set_on_finish_callback
+ * @category audio
+ * @brief    Sets the callback for notifications of when a sound finishes playing.
+ * @param    on_finished      Called whenever a `CF_Sound` finishes playing, including music.
+ * @param    udata            An optional pointer handed back to you within the `on_finished` callback.
+ * @param    single_threaded  Set to true to queue up callbacks and invoke them on the main thread. Otherwise this callback is called from the mixing thread directly.
+ * @related  CF_Audio cf_audio_sample_rate cf_audio_sample_count cf_audio_channel_count
+ */
+CF_API void CF_CALL cf_sound_set_on_finish_callback(void (*on_finished)(CF_Sound, void*), void* udata, bool single_threaded);
 
 /**
  * @function cf_sound_is_active
@@ -469,7 +480,6 @@ struct Sound : public CF_Sound
 	Sound() { id = -1; }
 	Sound(CF_Sound s) { *(CF_Sound*)this = s; }
 };
-
 CF_INLINE Audio audio_load_ogg(const char* path) { return cf_audio_load_ogg(path); }
 CF_INLINE Audio audio_load_wav(const char* path) { return cf_audio_load_wav(path); }
 CF_INLINE Audio audio_load_ogg_from_memory(void* memory, int byte_count) { return cf_audio_load_ogg_from_memory(memory, byte_count); }

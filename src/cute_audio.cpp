@@ -10,6 +10,7 @@
 #include <cute_alloc.h>
 
 #include <internal/cute_alloc_internal.h>
+#include <internal/cute_app_internal.h>
 
 #define STB_VORBIS_HEADER_ONLY
 #include <stb/stb_vorbis.c>
@@ -173,6 +174,23 @@ CF_Sound cf_play_sound(CF_Audio audio_source, CF_SoundParams params)
 	cs_playing_sound_t csresult = cs_play_sound((cs_audio_source_t*)audio_source.id, csparams);
 	result.id = csresult.id;
 	return result;
+}
+
+void s_on_finish(CF_Sound snd, void* udata)
+{
+	if (app->on_sound_finish_single_threaded) {
+		app->on_sound_finish_queue.add(snd);
+	} else {
+		app->on_sound_finish(snd, udata);
+	}
+}
+
+void cf_sound_set_on_finish_callback(void (*on_finish)(CF_Sound, void*), void* udata, bool single_threaded)
+{
+	app->on_sound_finish_single_threaded = single_threaded;
+	app->on_sound_finish = on_finish;
+	app->on_sound_finish_udata = udata;
+	cs_on_sound_finished_callback((void (*)(cs_playing_sound_t, void*))s_on_finish, udata);
 }
 
 bool cf_sound_is_active(CF_Sound sound)

@@ -349,6 +349,7 @@ void cf_destroy_app()
 		cf_destroy_world(app->worlds[i]);
 	}
 	cs_shutdown();
+	destroy_mutex(&app->on_sound_finish_mutex);
 	SDL_DestroyWindow(app->window);
 	SDL_Quit();
 	destroy_threadpool(app->threadpool);
@@ -377,6 +378,14 @@ static void s_on_update(void* udata)
 	cf_pump_input_msgs();
 	if (app->audio_needs_updates) {
 		cs_update(DELTA_TIME);
+		if (app->on_sound_finish_single_threaded) {
+			mutex_lock(&app->on_sound_finish_mutex);
+			Array<CF_Sound> on_finish = app->on_sound_finish_queue;
+			mutex_unlock(&app->on_sound_finish_mutex);
+			for (int i = 0; i < on_finish.size(); ++i) {
+				app->on_sound_finish(on_finish[i], app->on_sound_finish_udata);
+			}
+		}
 	}
 	if (app->user_on_update) app->user_on_update(udata);
 }
