@@ -628,9 +628,28 @@ CF_API void CF_CALL cf_app_set_vsync(bool true_turn_on_vsync);
  */
 CF_API bool CF_CALL cf_app_get_vsync();
 
-CF_API void cf_app_set_window_mode();
-CF_API void cf_app_set_borderless_fullscreen_mode();
-CF_API void cf_app_set_fullscreen_mode();
+/**
+ * @function cf_app_set_windowed_mode
+ * @category app
+ * @brief    Sets the application to windowed mode.
+ * @related  cf_app_set_windowed_mode cf_app_set_borderless_fullscreen_mode cf_app_set_fullscreen_mode
+ */
+CF_API void CF_CALL cf_app_set_windowed_mode();
+
+/**
+ * @function cf_app_set_borderless_fullscreen_mode
+ * @category app
+ * @brief    Sets the application mode to "fake fullscreen" without a border.
+ * @related  cf_app_set_windowed_mode cf_app_set_borderless_fullscreen_mode cf_app_set_fullscreen_mode
+ */
+CF_API void CF_CALL cf_app_set_borderless_fullscreen_mode();
+/**
+ * @function cf_app_set_fullscreen_mode
+ * @category app
+ * @brief    Sets the application true fullscreen mode.
+ * @related  cf_app_set_windowed_mode cf_app_set_borderless_fullscreen_mode cf_app_set_fullscreen_mode
+ */
+CF_API void CF_CALL cf_app_set_fullscreen_mode();
     
 /**
  * @enum     CF_PowerState
@@ -782,6 +801,9 @@ CF_INLINE int app_get_canvas_width() { return cf_app_get_canvas_width(); }
 CF_INLINE int app_get_canvas_height() { return cf_app_get_canvas_height(); }
 CF_INLINE void app_set_vsync(bool true_turn_on_vsync) { cf_app_set_vsync(true_turn_on_vsync); }
 CF_INLINE bool app_get_vsync() { return cf_app_get_vsync(); }
+CF_INLINE void app_set_windowed_mode() { cf_app_set_windowed_mode(); }
+CF_INLINE void app_set_borderless_fullscreen_mode() { cf_app_set_borderless_fullscreen_mode(); }
+CF_INLINE void app_set_fullscreen_mode() { cf_app_set_fullscreen_mode(); }
 
 CF_INLINE ImGuiContext* app_init_imgui(bool no_default_font = false) { return cf_app_init_imgui(no_default_font); }
 CF_INLINE sg_imgui_t* app_get_sokol_imgui() { return cf_app_get_sokol_imgui(); }
