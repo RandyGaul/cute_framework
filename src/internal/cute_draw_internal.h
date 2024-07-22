@@ -70,8 +70,8 @@ struct CF_Draw
 	Cute::Array<bool> antialias = { true };
 	Cute::Array<float> antialias_scale = { 1.5f };
 	Cute::Array<CF_RenderState> render_states;
-	Cute::Array<CF_Rect> scissors = { { -1, -1, 0, 0 } };
-	Cute::Array<CF_Rect> viewports = { { -1, -1, 0, 0 } };
+	Cute::Array<CF_Rect> scissors = { { 0, 0, -1, -1 } };
+	Cute::Array<CF_Rect> viewports = { { 0, 0, -1, -1 } };
 	Cute::Array<int> layers = { 0 };
 	Cute::Array<CF_M3x2> cam_stack = { cf_make_identity() };
 	float aaf = 0;
