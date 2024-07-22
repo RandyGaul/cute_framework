@@ -260,10 +260,11 @@ CF_Result cf_make_app(const char* window_title, int display_index, int x, int y,
 
 	SDL_Window* window;
 	if (options & APP_OPTIONS_WINDOW_POS_CENTERED) {
-
 		window = SDL_CreateWindow(window_title, SDL_WINDOWPOS_CENTERED_DISPLAY(display_index), SDL_WINDOWPOS_CENTERED_DISPLAY(display_index), w, h, flags);
 	} else {
-		window = SDL_CreateWindow(window_title, x, y, w, h, flags);
+		int x_offset = display_x(display_index);
+		int y_offset = display_y(display_index);
+		window = SDL_CreateWindow(window_title, x_offset+x, y_offset+y, w, h, flags);
 	}
 	CF_App* app = (CF_App*)CF_ALLOC(sizeof(CF_App));
 	CF_PLACEMENT_NEW(app) CF_App;
