@@ -17,5 +17,6 @@ void cf_app_set_windowed_mode();
 
 ## Related Pages
 
-[cf_app_set_fullscreen_mode](/app/cf_app_set_fullscreen_mode.md)  
+[cf_app_set_title](/app/cf_app_set_title.md)  
 [cf_app_set_borderless_fullscreen_mode](/app/cf_app_set_borderless_fullscreen_mode.md)  
+[cf_app_set_fullscreen_mode](/app/cf_app_set_fullscreen_mode.md)  

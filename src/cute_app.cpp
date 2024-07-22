@@ -776,6 +776,11 @@ void cf_app_set_fullscreen_mode()
 	SDL_SetWindowFullscreen(app->window, SDL_WINDOW_FULLSCREEN);
 }
 
+void cf_app_set_title(const char* title)
+{
+	SDL_SetWindowTitle(app->window, title);
+}
+
 ImGuiContext* cf_app_init_imgui(bool no_default_font)
 {
 	if (!app->gfx_enabled) return NULL;
