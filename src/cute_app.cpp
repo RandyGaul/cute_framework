@@ -761,6 +761,21 @@ bool cf_app_get_vsync()
 	return app->vsync;
 }
 
+void cf_app_set_window_mode()
+{
+    SDL_SetWindowFullscreen(app->window, 0);
+}
+
+void cf_app_set_borderless_fullscreen_mode()
+{
+    SDL_SetWindowFullscreen(app->window, SDL_WINDOW_FULLSCREEN_DESKTOP);
+}
+
+void cf_app_set_fullscreen_mode()
+{
+    SDL_SetWindowFullscreen(app->window, SDL_WINDOW_FULLSCREEN);
+}
+
 ImGuiContext* cf_app_init_imgui(bool no_default_font)
 {
 	if (!app->gfx_enabled) return NULL;

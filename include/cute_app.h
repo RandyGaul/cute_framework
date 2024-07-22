@@ -628,6 +628,10 @@ CF_API void CF_CALL cf_app_set_vsync(bool true_turn_on_vsync);
  */
 CF_API bool CF_CALL cf_app_get_vsync();
 
+CF_API void cf_app_set_window_mode();
+CF_API void cf_app_set_borderless_fullscreen_mode();
+CF_API void cf_app_set_fullscreen_mode();
+    
 /**
  * @enum     CF_PowerState
  * @category app
