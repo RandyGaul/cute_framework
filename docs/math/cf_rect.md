@@ -13,7 +13,7 @@ Box that cannot rotate defined with integers instead of floats.
 
 Struct Members | Description
 --- | ---
-`int w, h, x, y` | The position + w/h.
+`int x, y, w, h` | The position + w/h.
 
 ## Remarks
 

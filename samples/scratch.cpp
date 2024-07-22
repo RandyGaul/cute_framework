@@ -10,7 +10,7 @@ int main(int argc, char* argv[])
 	int w = 640/1;
 	int h = 480/1;
 	int options = APP_OPTIONS_WINDOW_POS_CENTERED | APP_OPTIONS_RESIZABLE;
-	Result result = make_app("Development Scratch", 0, 0, w, h, options, argv[0]);
+	Result result = make_app("Development Scratch", 0, 0, 0, w, h, options, argv[0]);
 	if (is_error(result)) return -1;
 
 	app_init_imgui();

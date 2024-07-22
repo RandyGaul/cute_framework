@@ -16,7 +16,7 @@ using namespace Cute;
 /* Load a sprite destroy it. */
 TEST_CASE(test_make_sprite)
 {
-	CHECK(cf_is_error(cf_make_app(NULL, 0, 0, 0, 0, APP_OPTIONS_HIDDEN | APP_OPTIONS_NO_AUDIO | APP_OPTIONS_NO_GFX, NULL)));
+	CHECK(cf_is_error(cf_make_app(NULL, 0, 0, 0, 0, 0, APP_OPTIONS_HIDDEN | APP_OPTIONS_NO_AUDIO | APP_OPTIONS_NO_GFX, NULL)));
 	CF_Sprite s = cf_make_sprite_from_memory("girl.aseprite", girl_data, girl_sz);
 	REQUIRE(s.name);
 	cf_destroy_app();
@@ -25,7 +25,7 @@ TEST_CASE(test_make_sprite)
 
 TEST_CASE(test_easy_sprite_unload)
 {
-	CHECK(cf_is_error(cf_make_app(NULL, 0, 0, 0, 0, APP_OPTIONS_HIDDEN | APP_OPTIONS_NO_AUDIO | APP_OPTIONS_NO_GFX, NULL)));
+	CHECK(cf_is_error(cf_make_app(NULL, 0, 0, 0, 0, 0, APP_OPTIONS_HIDDEN | APP_OPTIONS_NO_AUDIO | APP_OPTIONS_NO_GFX, NULL)));
 
 	CF_Pixel r, g, b;
 	r.val = 0xFF0000FF;

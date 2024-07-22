@@ -1106,7 +1106,7 @@ int main(int argc, char* argv[])
 {
 	// Create a window with a resolution of 640 x 480.
 	int options = APP_OPTIONS_DEFAULT_GFX_CONTEXT | APP_OPTIONS_WINDOW_POS_CENTERED;
-	Result result = make_app("Space Shooter", 0, 0, 640, 480, options, argv[0]);
+	Result result = make_app("Space Shooter", 0, 0, 0, 640, 480, options, argv[0]);
 	if (is_error(result)) return -1;
 
 	mount_content_directory_as("/");

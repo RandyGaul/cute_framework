@@ -3,7 +3,7 @@ using namespace Cute;
 
 int main(int argc, char* argv[])
 {
-	Result result = make_app("Basic Shapes", 0, 0, 640, 480, APP_OPTIONS_WINDOW_POS_CENTERED, argv[0]);
+	Result result = make_app("Basic Shapes", 0, 0, 0, 640, 480, APP_OPTIONS_WINDOW_POS_CENTERED, argv[0]);
 	if (is_error(result)) {
 		printf("Error: %s\n", result.details);
 		return -1;

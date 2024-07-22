@@ -50,6 +50,91 @@
 
 CF_STATIC_ASSERT(sizeof(uint64_t) >= sizeof(void*), "Must be equal for opaque id implementations throughout CF.");
 
+static void s_init_video()
+{
+	static bool init = false;
+	if (init) return;
+	init = true;
+	SDL_SetMainReady();
+	SDL_Init(SDL_INIT_VIDEO);
+}
+
+int cf_display_count()
+{
+	s_init_video();
+	return SDL_GetNumVideoDisplays();
+}
+
+int cf_display_x(int display_index)
+{
+	s_init_video();
+	SDL_Rect rect;
+	SDL_GetDisplayBounds(display_index, &rect);
+	return rect.x;
+}
+
+int cf_display_y(int display_index)
+{
+	s_init_video();
+	SDL_Rect rect;
+	SDL_GetDisplayBounds(display_index, &rect);
+	return rect.y;
+}
+
+int cf_display_width(int display_index)
+{
+	s_init_video();
+	SDL_Rect rect;
+	SDL_GetDisplayBounds(display_index, &rect);
+	return rect.w;
+}
+
+int cf_display_height(int display_index)
+{
+	s_init_video();
+	SDL_Rect rect;
+	SDL_GetDisplayBounds(display_index, &rect);
+	return rect.h;
+}
+
+int cf_display_refresh_rate(int display_index)
+{
+	s_init_video();
+	SDL_DisplayMode mode;
+	SDL_GetCurrentDisplayMode(display_index, &mode);
+	return mode.refresh_rate;
+}
+
+CF_Rect cf_display_bounds(int display_index)
+{
+	s_init_video();
+	SDL_Rect rect;
+	SDL_GetDisplayBounds(display_index, &rect);
+	CF_Rect result = { rect.x, rect.y, rect.w, rect.h };
+	return result;
+}
+
+const char* cf_display_name(int display_index)
+{
+	s_init_video();
+	return SDL_GetDisplayName(display_index);
+}
+
+CF_DisplayOrientation cf_display_orientation(int display_index)
+{
+	s_init_video();
+	SDL_DisplayOrientation orientation = SDL_GetDisplayOrientation(display_index);
+	switch (orientation)
+	{
+	default:
+	case SDL_ORIENTATION_UNKNOWN: return CF_DISPLAY_ORIENTATION_UNKNOWN;
+	case SDL_ORIENTATION_LANDSCAPE: return CF_DISPLAY_ORIENTATION_LANDSCAPE;
+	case SDL_ORIENTATION_LANDSCAPE_FLIPPED: return CF_DISPLAY_ORIENTATION_LANDSCAPE_FLIPPED;
+	case SDL_ORIENTATION_PORTRAIT: return CF_DISPLAY_ORIENTATION_PORTRAIT;
+	case SDL_ORIENTATION_PORTRAIT_FLIPPED: return CF_DISPLAY_ORIENTATION_PORTRAIT_FLIPPED;
+	}
+}
+
 CF_GLOBAL CF_App* app;
 
 using namespace Cute;
@@ -110,7 +195,7 @@ static void s_canvas(int w, int h)
 	cf_material_set_texture_fs(app->backbuffer_material, "u_image", cf_canvas_get_target(app->offscreen_canvas));
 }
 
-CF_Result cf_make_app(const char* window_title, int x, int y, int w, int h, int options, const char* argv0)
+CF_Result cf_make_app(const char* window_title, int display_index, int x, int y, int w, int h, int options, const char* argv0)
 {
 	SDL_SetMainReady();
 
@@ -175,7 +260,8 @@ CF_Result cf_make_app(const char* window_title, int x, int y, int w, int h, int 
 
 	SDL_Window* window;
 	if (options & APP_OPTIONS_WINDOW_POS_CENTERED) {
-		window = SDL_CreateWindow(window_title, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, w, h, flags);
+
+		window = SDL_CreateWindow(window_title, SDL_WINDOWPOS_CENTERED_DISPLAY(display_index), SDL_WINDOWPOS_CENTERED_DISPLAY(display_index), w, h, flags);
 	} else {
 		window = SDL_CreateWindow(window_title, x, y, w, h, flags);
 	}
@@ -287,7 +373,7 @@ CF_Result cf_make_app(const char* window_title, int x, int y, int w, int h, int 
 			app->spawned_mix_thread = true;
 	#endif // CF_EMSCRIPTEN
 			app->audio_needs_updates = true;
-			cs_cull_duplicates(true);
+			//cs_cull_duplicates(true); -- https://github.com/RandyGaul/cute_framework/issues/172
 		} else {
 			CF_Result result;
 			result.code = -1;

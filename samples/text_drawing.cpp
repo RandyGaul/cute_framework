@@ -7,7 +7,7 @@ using namespace Cute;
 int main(int argc, char* argv[])
 {
 	int options = APP_OPTIONS_DEFAULT_GFX_CONTEXT | APP_OPTIONS_WINDOW_POS_CENTERED | APP_OPTIONS_RESIZABLE;
-	Result result = make_app("Text Drawing", 0, 0, 640, 480, options, argv[0]);
+	Result result = make_app("Text Drawing", 0, 0, 0, 640, 480, options, argv[0]);
 	if (is_error(result)) return -1;
 
 	draw_push_antialias(true);

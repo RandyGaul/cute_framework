@@ -75,6 +75,15 @@ This is a list of all functions in Cute Framework organized by categories. This 
 - [cf_app_was_resized](/app/cf_app_was_resized.md)
 - [cf_app_was_restored](/app/cf_app_was_restored.md)
 - [cf_destroy_app](/app/cf_destroy_app.md)
+- [cf_display_bounds](/app/cf_display_bounds.md)
+- [cf_display_count](/app/cf_display_count.md)
+- [cf_display_height](/app/cf_display_height.md)
+- [cf_display_name](/app/cf_display_name.md)
+- [cf_display_orientation](/app/cf_display_orientation.md)
+- [cf_display_refresh_rate](/app/cf_display_refresh_rate.md)
+- [cf_display_width](/app/cf_display_width.md)
+- [cf_display_x](/app/cf_display_x.md)
+- [cf_display_y](/app/cf_display_y.md)
 - [cf_make_app](/app/cf_make_app.md)
 - [cf_power_state_to_string](/app/cf_power_state_to_string.md)
 
@@ -86,6 +95,7 @@ This is a list of all functions in Cute Framework organized by categories. This 
 ### enums
 - [App Options](/app/app_options.md)
 - [CF_PowerState](/app/cf_powerstate.md)
+- [Display Orientation](/app/display_orientation.md)
 
 
 ## array

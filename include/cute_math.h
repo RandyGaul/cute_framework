@@ -264,7 +264,7 @@ typedef struct CF_Aabb
 typedef struct CF_Rect
 {
 	/* @member The position + w/h. */
-	int w, h, x, y;
+	int x, y, w, h;
 } CF_Rect;
 // @end
 

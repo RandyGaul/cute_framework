@@ -26,6 +26,115 @@ typedef struct sg_imgui_t sg_imgui_t;
 typedef struct sg_image sg_image;
 
 /**
+ * @enum     Display Orientation
+ * @category app
+ * @brief    Represents the orientation style of a display.
+ * @related  cf_make_app cf_display_orientation
+ */
+#define CF_DISPLAY_ORIENTATION_DEFS \
+	/* @entry An unknown orientation. */               \
+	CF_ENUM(DISPLAY_ORIENTATION_UNKNOWN,           0)  \
+	/* @entry Landscape orientation. */                \
+	CF_ENUM(DISPLAY_ORIENTATION_LANDSCAPE,         1)  \
+	/* @entry Landscape orientation (upside down). */  \
+	CF_ENUM(DISPLAY_ORIENTATION_LANDSCAPE_FLIPPED, 2)  \
+	/* @entry Portrait orientation. */                 \
+	CF_ENUM(DISPLAY_ORIENTATION_PORTRAIT,          3)  \
+	/* @entry Portrait orientation (upside down). */   \
+	CF_ENUM(DISPLAY_ORIENTATION_PORTRAIT_FLIPPED,  4)  \
+	/* @end */
+
+typedef enum CF_DisplayOrientation
+{
+	#define CF_ENUM(K, V) CF_##K = V,
+	CF_DISPLAY_ORIENTATION_DEFS
+	#undef CF_ENUM
+} CF_DisplayOrientation;
+
+/**
+ * @function cf_display_count
+ * @category app
+ * @brief    Returns the number of displays on the system.
+ * @remarks  Inidices >= 0 and < the return value are valid display indices.
+ * @related  cf_make_app cf_display_count cf_display_x cf_display_y cf_display_width cf_display_height cf_display_refresh_rate cf_display_bounds cf_display_name cf_display_orientation
+ */
+CF_API int CF_CALL cf_display_count();
+
+/**
+ * @function cf_display_x
+ * @category app
+ * @brief    Returns the x position, in pixels, of the display.
+ * @param    display_index  The index of the display. See `cf_display_count`.
+ * @remarks  Display positions are in a global space, so different displays have different but unique coordinates.
+ * @related  cf_make_app cf_display_count cf_display_x cf_display_y cf_display_width cf_display_height cf_display_refresh_rate cf_display_bounds cf_display_name cf_display_orientation
+ */
+CF_API int CF_CALL cf_display_x(int display_index);
+
+/**
+ * @function cf_display_y
+ * @category app
+ * @brief    Returns the y position, in pixels, of the display.
+ * @param    display_index  The index of the display. See `cf_display_count`.
+ * @remarks  Display positions are in a global space, so different displays have different but unique coordinates.
+ * @related  cf_make_app cf_display_count cf_display_x cf_display_y cf_display_width cf_display_height cf_display_refresh_rate cf_display_bounds cf_display_name cf_display_orientation
+ */
+CF_API int CF_CALL cf_display_y(int display_index);
+
+/**
+ * @function cf_display_width
+ * @category app
+ * @brief    Returns the width, in pixels, of the display.
+ * @param    display_index  The index of the display. See `cf_display_count`.
+ * @related  cf_make_app cf_display_count cf_display_x cf_display_y cf_display_width cf_display_height cf_display_refresh_rate cf_display_bounds cf_display_name cf_display_orientation
+ */
+CF_API int CF_CALL cf_display_width(int display_index);
+
+/**
+ * @function cf_display_height
+ * @category app
+ * @brief    Returns the height, in pixels, of the display.
+ * @param    display_index  The index of the display. See `cf_display_count`.
+ * @related  cf_make_app cf_display_count cf_display_x cf_display_y cf_display_width cf_display_height cf_display_refresh_rate cf_display_bounds cf_display_name cf_display_orientation
+ */
+CF_API int CF_CALL cf_display_height(int display_index);
+
+/**
+ * @function cf_display_refresh_rate
+ * @category app
+ * @brief    Returns the refresh rate, in hz, of the display.
+ * @param    display_index  The index of the display. See `cf_display_count`.
+ * @related  cf_make_app cf_display_count cf_display_x cf_display_y cf_display_width cf_display_height cf_display_refresh_rate cf_display_bounds cf_display_name cf_display_orientation
+ */
+CF_API int CF_CALL cf_display_refresh_rate(int display_index);
+
+/**
+ * @function cf_display_bounds
+ * @category app
+ * @brief    Returns the bounds, in pixels, of the display.
+ * @param    display_index  The index of the display. See `cf_display_count`.
+ * @related  cf_make_app cf_display_count cf_display_x cf_display_y cf_display_width cf_display_height cf_display_refresh_rate cf_display_bounds cf_display_name cf_display_orientation
+ */
+CF_API CF_Rect CF_CALL cf_display_bounds(int display_index);
+
+/**
+ * @function cf_display_name
+ * @category app
+ * @brief    Returns the name of the display.
+ * @param    display_index  The index of the display. See `cf_display_count`.
+ * @related  cf_make_app cf_display_count cf_display_x cf_display_y cf_display_width cf_display_height cf_display_refresh_rate cf_display_bounds cf_display_name cf_display_orientation
+ */
+CF_API const char* CF_CALL cf_display_name(int display_index);
+
+/**
+ * @function cf_display_orientation
+ * @category app
+ * @brief    Returns the orientation.
+ * @param    display_index  The index of the display. See `cf_display_count`.
+ * @related  cf_make_app cf_display_count cf_display_x cf_display_y cf_display_width cf_display_height cf_display_refresh_rate cf_display_bounds cf_display_name cf_display_orientation
+ */
+CF_API CF_DisplayOrientation CF_CALL cf_display_orientation(int display_index);
+
+/**
  * @enum     App Options
  * @category app
  * @brief    Various options to control how the application starts up, such as fullscreen, or selecting a graphics backend.
@@ -82,6 +191,7 @@ enum
  * @category app
  * @brief    Use this function to construct an instance of your application window and (optionally) initialize graphics.
  * @param    window_title  The title of the window in utf8 encoding.
+ * @param    display_index The index of the display to spawn upon. Set this to zero for the default display. See `cf_display_count`.
  * @param    x             The x position of the window.
  * @param    y             The y position of the window.
  * @param    w             The width of the window in pixels.
@@ -113,7 +223,7 @@ enum
  *           Parameters `w` and `h` are ignored if the window is initialized to fullscreen mode with `APP_OPTIONS_FULLSCREEN`.
  * @related  cf_app_is_running cf_app_signal_shutdown cf_destroy_app
  */
-CF_API CF_Result CF_CALL cf_make_app(const char* window_title, int x, int y, int w, int h, int options, const char* argv0);
+CF_API CF_Result CF_CALL cf_make_app(const char* window_title, int display_index, int x, int y, int w, int h, int options, const char* argv0);
 
 /**
  * @function cf_destroy_app
@@ -609,6 +719,11 @@ enum : int
 
 using PowerInfo = CF_PowerInfo;
 
+using DisplayOrientation = CF_DisplayOrientation;
+#define CF_ENUM(K, V) CF_INLINE constexpr DisplayOrientation K = CF_##K;
+CF_DISPLAY_ORIENTATION_DEFS
+#undef CF_ENUM
+
 using PowerState = CF_PowerState;
 #define CF_ENUM(K, V) CF_INLINE constexpr PowerState K = CF_##K;
 CF_POWER_STATE_DEFS
@@ -622,7 +737,17 @@ CF_INLINE const char* power_state_to_string(PowerState state) { switch (state) {
 	}
 }
 
-CF_INLINE Result make_app(const char* window_title, int x, int y, int w, int h, int options = 0, const char* argv0 = NULL) { return cf_make_app(window_title, x, y, w, h, options, argv0); }
+CF_INLINE int display_count() { return cf_display_count(); }
+CF_INLINE int display_x(int display_index = 0) { return cf_display_x(display_index); }
+CF_INLINE int display_y(int display_index = 0) { return cf_display_y(display_index); }
+CF_INLINE int display_width(int display_index = 0) { return cf_display_width(display_index); }
+CF_INLINE int display_height(int display_index = 0) { return cf_display_height(display_index); }
+CF_INLINE int display_refresh_rate(int display_index = 0) { return cf_display_refresh_rate(display_index); }
+CF_INLINE Rect display_bounds(int display_index = 0) { return cf_display_bounds(display_index); }
+CF_INLINE const char* display_name(int display_index = 0) { return cf_display_name(display_index); }
+CF_INLINE DisplayOrientation display_orientation(int display_index = 0) { return cf_display_orientation(display_index); }
+
+CF_INLINE Result make_app(const char* window_title, int display_index, int x, int y, int w, int h, int options = 0, const char* argv0 = NULL) { return cf_make_app(window_title, display_index, x, y, w, h, options, argv0); }
 CF_INLINE void destroy_app() { cf_destroy_app(); }
 CF_INLINE bool app_is_running() { return cf_app_is_running(); }
 CF_INLINE void app_signal_shutdown() { cf_app_signal_shutdown(); }

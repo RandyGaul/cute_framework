@@ -16,7 +16,7 @@ void mount_content_directory_as(const char* dir)
 int main(int argc, char* argv[])
 {
 	int options = APP_OPTIONS_DEFAULT_GFX_CONTEXT | APP_OPTIONS_WINDOW_POS_CENTERED | APP_OPTIONS_RESIZABLE;
-	CF_Result result = make_app("Waves Sample", 0, 0, 640, 480, options, argv[0]);
+	CF_Result result = make_app("Waves Sample", 0, 0, 0, 640, 480, options, argv[0]);
 	if (is_error(result)) return -1;
 
 	mount_content_directory_as("/");

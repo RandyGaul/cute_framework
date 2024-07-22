@@ -485,6 +485,7 @@ CF_INLINE Audio audio_load_wav(const char* path) { return cf_audio_load_wav(path
 CF_INLINE Audio audio_load_ogg_from_memory(void* memory, int byte_count) { return cf_audio_load_ogg_from_memory(memory, byte_count); }
 CF_INLINE Audio audio_load_wav_from_memory(void* memory, int byte_count) { return cf_audio_load_wav_from_memory(memory, byte_count); }
 CF_INLINE void audio_destroy(Audio audio) { cf_audio_destroy(audio); }
+CF_INLINE void audio_cull_duplicates(bool true_to_cull_duplicates = false) { cf_audio_cull_duplicates(true_to_cull_duplicates); }
 CF_INLINE int audio_sample_rate(Audio audio) { return cf_audio_sample_rate(audio); }
 CF_INLINE int audio_sample_count(Audio audio) { return cf_audio_sample_count(audio); }
 CF_INLINE int audio_channel_count(Audio audio) { return cf_audio_channel_count(audio); }
