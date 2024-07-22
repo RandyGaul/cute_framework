@@ -83,7 +83,7 @@ CF_Handle cf_handle_allocator_alloc(CF_HandleTable* table, uint32_t index, uint1
 		int first_index = table->m_handles.capacity();
 		if (!first_index) first_index = 1;
 		table->m_handles.ensure_count(first_index * 2);
-		int last_index = table->m_handles.capacity() - 1;
+		int last_index = table->m_handles.count() - 1;
 		s_add_elements_to_freelist(table, first_index, last_index);
 		freelist_index = table->m_freelist;
 	}
