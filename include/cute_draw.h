@@ -1620,8 +1620,8 @@ typedef bool (text_markup_info_fn)(const char* text, MarkupInfo info, const Text
 
 CF_INLINE void text_get_markup_info(text_markup_info_fn* fn, const char* text, v2 position, int num_chars_to_draw = -1) { cf_text_get_markup_info((cf_text_markup_info_fn*)fn, text, position, num_chars_to_draw); }
 CF_INLINE void push_text_effect_active(bool effects_on) { cf_push_text_effect_active(effects_on); }
-CF_INLINE bool pop_text_effect_active() { cf_pop_text_effect_active(); }
-CF_INLINE bool peek_text_effect_active() { cf_peek_text_effect_active(); }
+CF_INLINE bool pop_text_effect_active() { return cf_pop_text_effect_active(); }
+CF_INLINE bool peek_text_effect_active() { return cf_peek_text_effect_active(); }
 
 CF_INLINE void render_settings_filter(Filter filter) { cf_render_settings_filter(filter); }
 CF_INLINE void render_settings_push_viewport(Rect viewport) { cf_render_settings_push_viewport(viewport); }
