@@ -824,7 +824,7 @@ CF_INLINE void app_set_windowed_mode() { cf_app_set_windowed_mode(); }
 CF_INLINE void app_set_borderless_fullscreen_mode() { cf_app_set_borderless_fullscreen_mode(); }
 CF_INLINE void app_set_fullscreen_mode() { cf_app_set_fullscreen_mode(); }
 CF_INLINE void app_set_title(const char* title) { cf_app_set_title(title); }
-CF_INLINE void app_set_icon(const char* title) { cf_app_set_icon(title); }
+CF_INLINE void app_set_icon(const char* virtual_path_to_png) { cf_app_set_icon(virtual_path_to_png); }
 
 CF_INLINE ImGuiContext* app_init_imgui(bool no_default_font = false) { return cf_app_init_imgui(no_default_font); }
 CF_INLINE sg_imgui_t* app_get_sokol_imgui() { return cf_app_get_sokol_imgui(); }
