@@ -171,7 +171,7 @@ CF_API CF_DisplayOrientation CF_CALL cf_display_orientation(int display_index);
 	CF_ENUM(APP_OPTIONS_RESIZABLE,                      1 << 7)  \
 	/* @entry Starts the application with the window hidden. */  \
 	CF_ENUM(APP_OPTIONS_HIDDEN,                         1 << 8)  \
-	/* @entry Starts the application with the window centered on the screen. */ \
+	/* @entry Starts the application with the window centered on the screen. Does not affect any later adjustments to window size/position. */ \
 	CF_ENUM(APP_OPTIONS_WINDOW_POS_CENTERED,            1 << 9)  \
 	/* @entry Disables automatically mounting the folder the executable runs from to "/". See `cf_fs_mount` for more details. */ \
 	CF_ENUM(APP_OPTIONS_FILE_SYSTEM_DONT_DEFAULT_MOUNT, 1 << 10) \
@@ -191,7 +191,7 @@ enum
  * @category app
  * @brief    Use this function to construct an instance of your application window and (optionally) initialize graphics.
  * @param    window_title  The title of the window in utf8 encoding.
- * @param    display_index The index of the display to spawn upon. Set this to zero for the default display. See `cf_display_count`.
+ * @param    display_index The index of the display to spawn upon. Set this to zero for the primary display. See `cf_display_count`.
  * @param    x             The x position of the window.
  * @param    y             The y position of the window.
  * @param    w             The width of the window in pixels.
@@ -656,9 +656,19 @@ CF_API void CF_CALL cf_app_set_fullscreen_mode();
  * @function cf_app_set_title
  * @category app
  * @brief    Sets the application' true fullscreen mode's title.
- * @related  cf_app_set_windowed_mode cf_app_set_borderless_fullscreen_mode cf_app_set_fullscreen_mode cf_app_set_title
+ * @related  cf_app_set_windowed_mode cf_app_set_borderless_fullscreen_mode cf_app_set_fullscreen_mode cf_app_set_title cf_app_set_icon
  */
 CF_API void CF_CALL cf_app_set_title(const char* title);
+
+/**
+ * @function cf_app_set_icon
+ * @category app
+ * @brief    Sets the icon for the application.
+ * @param    virtual_path_to_png  A path to a png file. See [Virtual File System](https://randygaul.github.io/cute_framework/#/topics/virtual_file_system).
+ * @remarks  The icon file must be a png image. Suggested image dimensions are 32x32, 48x48, or 64x64.
+ * @related  cf_app_set_title cf_app_set_icon
+ */
+CF_API void CF_CALL cf_app_set_icon(const char* virtual_path_to_png);
 
 /**
  * @enum     CF_PowerState

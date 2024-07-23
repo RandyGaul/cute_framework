@@ -66,6 +66,7 @@ This is a list of all functions in Cute Framework organized by categories. This 
 - [cf_app_set_borderless_fullscreen_mode](/app/cf_app_set_borderless_fullscreen_mode.md)
 - [cf_app_set_canvas_size](/app/cf_app_set_canvas_size.md)
 - [cf_app_set_fullscreen_mode](/app/cf_app_set_fullscreen_mode.md)
+- [cf_app_set_icon](/app/cf_app_set_icon.md)
 - [cf_app_set_position](/app/cf_app_set_position.md)
 - [cf_app_set_size](/app/cf_app_set_size.md)
 - [cf_app_set_title](/app/cf_app_set_title.md)

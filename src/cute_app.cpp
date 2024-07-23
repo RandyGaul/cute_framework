@@ -272,8 +272,7 @@ CF_Result cf_make_app(const char* window_title, int display_index, int x, int y,
 	app->window = window;
 	app->w = w;
 	app->h = h;
-	app->x = x;
-	app->y = y;
+	SDL_GetWindowPosition(app->window, &app->x, &app->y);
 	list_init(&app->joypads);
 	::app = app;
 
@@ -779,6 +778,19 @@ void cf_app_set_fullscreen_mode()
 void cf_app_set_title(const char* title)
 {
 	SDL_SetWindowTitle(app->window, title);
+}
+
+void cf_app_set_icon(const char* virtual_path_to_png)
+{
+	CF_Image img;
+	if (is_error(cf_image_load_png(virtual_path_to_png, &img))) {
+		fprintf(stderr, "Unable to open icon png file %s.", virtual_path_to_png);
+		return;
+	}
+	SDL_Surface* icon = SDL_CreateRGBSurfaceFrom(img.pix, img.w, img.h, 32, img.w * 4, 0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000);
+	SDL_SetWindowIcon(app->window, icon);
+	SDL_FreeSurface(icon);
+	cf_image_free(&img);
 }
 
 ImGuiContext* cf_app_init_imgui(bool no_default_font)

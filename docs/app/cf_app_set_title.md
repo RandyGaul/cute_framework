@@ -20,3 +20,4 @@ void cf_app_set_title(const char* title);
 [cf_app_set_windowed_mode](/app/cf_app_set_windowed_mode.md)  
 [cf_app_set_borderless_fullscreen_mode](/app/cf_app_set_borderless_fullscreen_mode.md)  
 [cf_app_set_fullscreen_mode](/app/cf_app_set_fullscreen_mode.md)  
+[cf_app_set_icon](/app/cf_app_set_icon.md)  

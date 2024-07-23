@@ -24,7 +24,7 @@ APP_OPTIONS_NO_GFX | Does not initialize any graphics backend at all (for server
 APP_OPTIONS_FULLSCREEN | Starts the application in borderless full-screen mode.
 APP_OPTIONS_RESIZABLE | Allows the window to be resized.
 APP_OPTIONS_HIDDEN | Starts the application with the window hidden.
-APP_OPTIONS_WINDOW_POS_CENTERED | Starts the application with the window centered on the screen.
+APP_OPTIONS_WINDOW_POS_CENTERED | Starts the application with the window centered on the screen. Does not affect any later adjustments to window size/position.
 APP_OPTIONS_FILE_SYSTEM_DONT_DEFAULT_MOUNT | Disables automatically mounting the folder the executable runs from to "/". See [cf_fs_mount](/file/cf_fs_mount.md) for more details.
 APP_OPTIONS_NO_AUDIO | Starts the application with no audio.
 
