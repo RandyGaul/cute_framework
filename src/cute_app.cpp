@@ -46,6 +46,9 @@
 #include <imgui/backends/imgui_impl_sdl.h>
 #include <sokol/sokol_gfx_imgui.h>
 
+#define SOKOL_LOG_IMPL
+#include <sokol/sokol_log.h>
+
 #include <shaders/backbuffer_shader.h>
 
 CF_STATIC_ASSERT(sizeof(uint64_t) >= sizeof(void*), "Must be equal for opaque id implementations throughout CF.");
@@ -286,6 +289,10 @@ CF_Result cf_make_app(const char* window_title, int display_index, int x, int y,
 	void* hwnd = NULL;
 #endif
 
+	sg_desc params = { };
+	params.context = app->gfx_ctx_params;
+	params.logger.func = slog_func;
+
 	if ((options & APP_OPTIONS_OPENGL_CONTEXT) | (options & APP_OPTIONS_OPENGLES_CONTEXT) && !(options & APP_OPTIONS_NO_GFX)) {
 		SDL_GL_SetSwapInterval(app->vsync);
 		SDL_GLContext ctx = SDL_GL_CreateContext(window);
@@ -296,8 +303,6 @@ CF_Result cf_make_app(const char* window_title, int display_index, int x, int y,
 		CF_MEMSET(&app->gfx_ctx_params, 0, sizeof(app->gfx_ctx_params));
 		app->gfx_ctx_params.color_format = SG_PIXELFORMAT_RGBA8;
 		app->gfx_ctx_params.depth_format = SG_PIXELFORMAT_DEPTH_STENCIL;
-		sg_desc params = { };
-		params.context = app->gfx_ctx_params;
 		sg_setup(params);
 		app->gfx_enabled = true;
 	}
@@ -305,8 +310,6 @@ CF_Result cf_make_app(const char* window_title, int display_index, int x, int y,
 	if (options & APP_OPTIONS_D3D11_CONTEXT && !(options & APP_OPTIONS_NO_GFX)) {
 		cf_dx11_init(hwnd, w, h, 1);
 		app->gfx_ctx_params = cf_dx11_get_context();
-		sg_desc params = { };
-		params.context = app->gfx_ctx_params;
 		sg_setup(params);
 		app->gfx_enabled = true;
 	}
@@ -314,8 +317,6 @@ CF_Result cf_make_app(const char* window_title, int display_index, int x, int y,
 	if (options & APP_OPTIONS_METAL_CONTEXT && !(options & APP_OPTIONS_NO_GFX)) {
 		cf_metal_init(window, w, h, 1);
 		app->gfx_ctx_params = cf_metal_get_context();
-		sg_desc params = { };
-		params.context = app->gfx_ctx_params;
 		sg_setup(params);
 		app->gfx_enabled = true;
 	}
