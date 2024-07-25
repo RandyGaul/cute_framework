@@ -506,14 +506,18 @@ void cf_canvas_blit(CF_Canvas src, CF_V2 u0, CF_V2 v0, CF_Canvas dst, CF_V2 u1, 
 	// Coordinate (-1,1) is top left, while (1,-1) is bottom right.
 	auto fill_quad = [](float x, float y, float sx, float sy, v2 u, v2 v, Vertex verts[6])
 	{
-		// Build a quad from (-1.0f,-1.0f) to (1.0f,1.0f).
-		verts[0].x = -1.0f; verts[0].y =  1.0f; verts[0].u = u.x; verts[0].v = u.y;
-		verts[1].x =  1.0f; verts[1].y = -1.0f; verts[1].u = v.x; verts[1].v = v.y;
-		verts[2].x =  1.0f; verts[2].y =  1.0f; verts[2].u = v.x; verts[2].v = u.y;
+		u.y = 1.0f - u.y;
+		v.y = 1.0f - v.y;
 
-		verts[3].x = -1.0f; verts[3].y =  1.0f; verts[3].u = u.x; verts[3].v = u.y;
-		verts[4].x = -1.0f; verts[4].y = -1.0f; verts[4].u = u.x; verts[4].v = v.y;
-		verts[5].x =  1.0f; verts[5].y = -1.0f; verts[5].u = v.x; verts[5].v = v.y;
+		// Build a quad from (-1.0f,-1.0f) to (1.0f,1.0f).
+		verts[0].x = -1.0f; verts[0].y =  1.0f; verts[0].u = u.x; verts[0].v = v.y;
+		verts[1].x =  1.0f; verts[1].y = -1.0f; verts[1].u = v.x; verts[1].v = u.y;
+		verts[2].x =  1.0f; verts[2].y =  1.0f; verts[2].u = v.x; verts[2].v = v.y;
+
+		verts[3].x = -1.0f; verts[3].y =  1.0f; verts[3].u = u.x; verts[3].v = v.y;
+		verts[4].x = -1.0f; verts[4].y = -1.0f; verts[4].u = u.x; verts[4].v = u.y;
+		verts[5].x =  1.0f; verts[5].y = -1.0f; verts[5].u = v.x; verts[5].v = u.y;
+
 
 		// Scale the quad about the origin by (sx,sy), then translate it by (x,y).
 		for (int i = 0; i < 6; ++i) {
