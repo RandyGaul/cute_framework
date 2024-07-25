@@ -488,6 +488,15 @@ void cf_canvas_blit(CF_Canvas src, CF_V2 u0, CF_V2 v0, CF_Canvas dst, CF_V2 u1, 
 		// Create material + shader for blitting.
 		CF_Material blit_material = cf_make_material();
 		cf_material_set_texture_fs(blit_material, "u_image", cf_canvas_get_target(src));
+		CF_RenderState state = cf_render_state_defaults();
+		state.blend.enabled = true;
+		state.blend.rgb_src_blend_factor = CF_BLENDFACTOR_ONE;
+		state.blend.rgb_dst_blend_factor = CF_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
+		state.blend.rgb_op = CF_BLEND_OP_ADD;
+		state.blend.alpha_src_blend_factor = CF_BLENDFACTOR_ONE;
+		state.blend.alpha_dst_blend_factor = CF_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
+		state.blend.alpha_op = CF_BLEND_OP_ADD;
+		cf_material_set_render_state(blit_material, state);
 		CF_Shader blit_shader = CF_MAKE_SOKOL_SHADER(blit_shader);
 		app->blit_material = blit_material;
 		app->blit_shader = blit_shader;
