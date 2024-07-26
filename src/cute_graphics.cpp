@@ -518,7 +518,6 @@ void cf_canvas_blit(CF_Canvas src, CF_V2 u0, CF_V2 v0, CF_Canvas dst, CF_V2 u1, 
 		verts[4].x = -1.0f; verts[4].y = -1.0f; verts[4].u = u.x; verts[4].v = u.y;
 		verts[5].x =  1.0f; verts[5].y = -1.0f; verts[5].u = v.x; verts[5].v = u.y;
 
-
 		// Scale the quad about the origin by (sx,sy), then translate it by (x,y).
 		for (int i = 0; i < 6; ++i) {
 			verts[i].x = verts[i].x * sx + x;

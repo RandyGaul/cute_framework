@@ -543,11 +543,6 @@ int cf_app_draw_onto_screen(bool clear)
 		spritebatch_defrag(&draw->sb);
 	}
 
-	if (cf_app_was_resized() && app->gfx_enabled) {
-		SDL_GetWindowSize(app->window, &app->w, &app->h);
-		draw->projection = ortho_2d(0, 0, (float)app->w, (float)app->h);
-	}
-
 	// Render any remaining geometry in the draw API.
 	cf_render_to(app->offscreen_canvas, clear);
 
@@ -642,6 +637,8 @@ bool cf_app_dpi_scale_was_changed()
 void cf_app_set_size(int w, int h)
 {
 	SDL_SetWindowSize(app->window, w, h);
+	app->w = w;
+	app->h = h;
 }
 
 void cf_app_get_position(int* x, int* y)
