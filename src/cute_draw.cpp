@@ -2449,12 +2449,9 @@ CF_TemporaryImage cf_fetch_image(const CF_Sprite* sprite)
 {
 	draw->delay_defrag = true;
 	uint64_t image_id;
-	if (sprite->animation)
-	{
+	if (sprite->animation) {
 		image_id = sprite->animation->frames[sprite->frame_index].id;
-	}
-	else
-	{
+	} else {
 		image_id = sprite->easy_sprite_id;
 	}
 	spritebatch_sprite_t s = spritebatch_fetch(&draw->sb, image_id, sprite->w, sprite->h);
