@@ -2400,13 +2400,14 @@ void cf_draw_TRS_absolute(CF_V2 position, CF_V2 scale, float radians)
 {
 	CF_M3x2 m = make_transform(position, scale, radians);
 	draw->cam_stack.last() = m;
-	draw->mvp = mul(m, draw->projection);
+	draw->mvp = mul(draw->projection, m);
 	draw->set_aaf();
 }
 
 void cf_draw_push()
 {
-	draw->cam_stack.add(draw->cam_stack.last());
+	CF_M3x2 m = draw->cam_stack.last();
+	draw->cam_stack.add(m);
 }
 
 void cf_draw_pop()
@@ -2414,7 +2415,8 @@ void cf_draw_pop()
 	if (draw->cam_stack.size() > 1) {
 		draw->cam_stack.pop();
 	}
-	draw->mvp = mul(draw->cam_stack.last(), draw->projection);
+	CF_M3x2 m = draw->cam_stack.last();
+	draw->mvp = mul(draw->projection, m);
 	draw->set_aaf();
 }
 
@@ -2426,7 +2428,7 @@ CF_M3x2 cf_draw_peek()
 void cf_draw_projection(CF_M3x2 projection)
 {
 	draw->projection = projection;
-	draw->mvp = mul(draw->cam_stack.last(), projection);
+	draw->mvp = mul(projection, draw->cam_stack.last());
 }
 
 CF_V2 cf_world_to_screen(CF_V2 point)
