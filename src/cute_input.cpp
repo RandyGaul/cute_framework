@@ -198,6 +198,12 @@ bool cf_key_down(CF_KeyButton key)
 	return app->keys[key];
 }
 
+bool cf_key_up(CF_KeyButton key)
+{
+	CF_ASSERT(key >= 0 && key < 512);
+	return !app->keys[key];
+}
+
 bool cf_key_just_pressed(CF_KeyButton key)
 {
 	CF_ASSERT(key >= 0 && key < 512);
