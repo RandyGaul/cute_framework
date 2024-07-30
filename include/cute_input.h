@@ -572,6 +572,14 @@ CF_INLINE const char* cf_key_button_to_string(CF_KeyButton button)
 CF_API bool CF_CALL cf_key_down(CF_KeyButton key);
 
 /**
+ * @function cf_key_up
+ * @category input
+ * @brief    Returns true if a key is currently up.
+ * @related  CF_KeyButton cf_key_down cf_key_up cf_key_just_pressed cf_key_just_released cf_key_ctrl cf_key_shift cf_key_alt cf_key_gui cf_clear_key_states cf_key_repeating
+ */
+CF_API bool CF_CALL cf_key_up(CF_KeyButton key);
+
+/**
  * @function cf_key_just_pressed
  * @category input
  * @brief    Returns true if a key was just pressed.
@@ -965,6 +973,7 @@ using ImeComposition = CF_ImeComposition;
 using Touch = CF_Touch;
 
 CF_INLINE bool key_down(KeyButton key) { return cf_key_down(key); }
+CF_INLINE bool key_up(KeyButton key) { return cf_key_up(key); }
 CF_INLINE bool key_just_pressed(KeyButton key) { return cf_key_just_pressed(key); }
 CF_INLINE bool key_just_released(KeyButton key) { return cf_key_just_released(key); }
 CF_INLINE bool key_repeating(KeyButton key) { return cf_key_repeating(key); }
