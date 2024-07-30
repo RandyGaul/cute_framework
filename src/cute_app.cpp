@@ -624,6 +624,11 @@ int cf_app_get_height()
 	return app->h;
 }
 
+void cf_app_show_window()
+{
+	SDL_ShowWindow(app->window);
+}
+
 float cf_app_get_dpi_scale()
 {
 	return app->dpi_scale;

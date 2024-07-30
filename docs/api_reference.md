@@ -72,6 +72,7 @@ This is a list of all functions in Cute Framework organized by categories. This 
 - [cf_app_set_title](/app/cf_app_set_title.md)
 - [cf_app_set_vsync](/app/cf_app_set_vsync.md)
 - [cf_app_set_windowed_mode](/app/cf_app_set_windowed_mode.md)
+- [cf_app_show_window](/app/cf_app_show_window.md)
 - [cf_app_signal_shutdown](/app/cf_app_signal_shutdown.md)
 - [cf_app_update](/app/cf_app_update.md)
 - [cf_app_was_maximized](/app/cf_app_was_maximized.md)

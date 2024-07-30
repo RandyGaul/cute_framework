@@ -364,6 +364,14 @@ CF_API int CF_CALL cf_app_get_width();
 CF_API int CF_CALL cf_app_get_height();
 
 /**
+ * @function cf_app_show_window
+ * @category app
+ * @brief    Brings the app out of a minimized/hidden state.
+ * @related  cf_app_set_size cf_app_get_position cf_app_set_position cf_app_get_width cf_app_get_height cf_app_get_dpi_scale
+ */
+CF_API void CF_CALL cf_app_show_window();
+
+/**
  * @function cf_app_get_dpi_scale
  * @category app
  * @brief    Returns the scaling factor for the device's intended DPI setting.
