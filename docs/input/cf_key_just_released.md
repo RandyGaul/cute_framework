@@ -19,7 +19,7 @@ bool cf_key_just_released(CF_KeyButton key);
 
 [CF_KeyButton](/input/cf_keybutton.md)  
 [cf_key_down](/input/cf_key_down.md)  
-cf_key_up  
+[cf_key_up](/input/cf_key_up.md)  
 [cf_key_just_pressed](/input/cf_key_just_pressed.md)  
 [cf_key_repeating](/input/cf_key_repeating.md)  
 [cf_key_ctrl](/input/cf_key_ctrl.md)  

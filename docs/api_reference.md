@@ -1149,6 +1149,7 @@ This is a list of all functions in Cute Framework organized by categories. This 
 - [cf_key_just_released](/input/cf_key_just_released.md)
 - [cf_key_repeating](/input/cf_key_repeating.md)
 - [cf_key_shift](/input/cf_key_shift.md)
+- [cf_key_up](/input/cf_key_up.md)
 - [cf_mouse_button_to_string](/input/cf_mouse_button_to_string.md)
 - [cf_mouse_double_click_held](/input/cf_mouse_double_click_held.md)
 - [cf_mouse_double_clicked](/input/cf_mouse_double_clicked.md)

@@ -807,6 +807,7 @@ CF_INLINE void app_get_size(int* w, int* h) { return cf_app_get_size(w, h); }
 CF_INLINE void app_set_size(int w, int h) { return cf_app_set_size(w, h); }
 CF_INLINE void app_get_position(int* x, int* y) { return cf_app_get_position(x, y); }
 CF_INLINE void app_set_position(int x, int y) { return cf_app_set_position(x, y); }
+CF_INLINE void app_show_window() { return cf_app_show_window(); }
 CF_INLINE int app_get_width() { return cf_app_get_width(); }
 CF_INLINE int app_get_height() { return cf_app_get_height(); }
 CF_INLINE float app_get_dpi_scale() { return cf_app_get_dpi_scale(); }

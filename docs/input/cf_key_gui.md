@@ -23,7 +23,7 @@ Windows key in Windows, Command key in OSX.
 
 [CF_KeyButton](/input/cf_keybutton.md)  
 [cf_key_down](/input/cf_key_down.md)  
-cf_key_up  
+[cf_key_up](/input/cf_key_up.md)  
 [cf_key_just_pressed](/input/cf_key_just_pressed.md)  
 [cf_key_just_released](/input/cf_key_just_released.md)  
 [cf_key_ctrl](/input/cf_key_ctrl.md)  
