@@ -521,9 +521,9 @@ CF_INLINE void audio_set_pause(bool true_for_paused) { cf_audio_set_pause(true_f
 // -------------------------------------------------------------------------------------------------
 
 CF_INLINE void music_play(Audio audio_source, float fade_in_time = 0) { cf_music_play(audio_source, fade_in_time); }
-CF_INLINE void music_stop(float fade_out_time = 0) { cf_music_stop(fade_out_time = 0); }
+CF_INLINE void music_stop(float fade_out_time = 0) { cf_music_stop(fade_out_time); }
 CF_INLINE void play_music(Audio audio_source, float fade_in_time = 0) { cf_music_play(audio_source, fade_in_time); }
-CF_INLINE void stop_music(float fade_out_time = 0) { cf_music_stop(fade_out_time = 0); }
+CF_INLINE void stop_music(float fade_out_time = 0) { cf_music_stop(fade_out_time); }
 CF_INLINE void music_set_volume(float volume) { cf_music_set_volume(volume); }
 CF_INLINE void music_set_loop(bool true_to_loop) { cf_music_set_loop(true_to_loop); }
 CF_INLINE void music_set_pitch(float pitch = 1.0f) { cf_music_set_pitch(pitch); }
