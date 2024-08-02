@@ -380,6 +380,7 @@ bool cs_sound_is_active(cs_playing_sound_t sound);
 bool cs_sound_get_is_paused(cs_playing_sound_t sound);
 bool cs_sound_get_is_looped(cs_playing_sound_t sound);
 float cs_sound_get_volume(cs_playing_sound_t sound);
+float cs_sound_get_pitch(cs_playing_sound_t sound);
 float cs_sound_get_pan(cs_playing_sound_t sound);
 int cs_sound_get_sample_index(cs_playing_sound_t sound);
 void cs_sound_set_is_paused(cs_playing_sound_t sound, bool true_for_paused);
@@ -3285,6 +3286,13 @@ float cs_sound_get_volume(cs_playing_sound_t sound)
 	cs_sound_inst_t* inst = s_get_inst(sound);
 	if (!inst) return 0;
 	return inst->volume;
+}
+
+float cs_sound_get_pitch(cs_playing_sound_t sound)
+{
+	cs_sound_inst_t* inst = s_get_inst(sound);
+	if (!inst) return 0;
+	return inst->pitch;
 }
 
 float cs_sound_get_pan(cs_playing_sound_t sound)

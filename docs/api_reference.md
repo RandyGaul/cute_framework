@@ -172,6 +172,7 @@ This is a list of all functions in Cute Framework organized by categories. This 
 - [cf_play_sound](/audio/cf_play_sound.md)
 - [cf_sound_get_is_looped](/audio/cf_sound_get_is_looped.md)
 - [cf_sound_get_is_paused](/audio/cf_sound_get_is_paused.md)
+- [cf_sound_get_pitch](/audio/cf_sound_get_pitch.md)
 - [cf_sound_get_sample_index](/audio/cf_sound_get_sample_index.md)
 - [cf_sound_get_volume](/audio/cf_sound_get_volume.md)
 - [cf_sound_is_active](/audio/cf_sound_is_active.md)

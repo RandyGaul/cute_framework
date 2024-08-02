@@ -215,6 +215,12 @@ float cf_sound_get_volume(CF_Sound sound)
 	return cs_sound_get_volume(cssound);
 }
 
+float cf_sound_get_pitch(CF_Sound sound)
+{
+	cs_playing_sound_t cssound = { sound.id };
+	return cs_sound_get_pitch(cssound);
+}
+
 int cf_sound_get_sample_index(CF_Sound sound)
 {
 	cs_playing_sound_t cssound = { sound.id };

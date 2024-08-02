@@ -29,7 +29,7 @@ Returns a playing sound [CF_Sound](/audio/cf_sound.md).
 [CF_SoundParams](/audio/cf_soundparams.md)  
 [CF_Sound](/audio/cf_sound.md)  
 [cf_sound_params_defaults](/audio/cf_sound_params_defaults.md)  
-[cf_sound_set_pitch](/audio/cf_sound_set_pitch.md)  
+[cf_sound_get_pitch](/audio/cf_sound_get_pitch.md)  
 [cf_sound_is_active](/audio/cf_sound_is_active.md)  
 [cf_sound_get_is_paused](/audio/cf_sound_get_is_paused.md)  
 [cf_sound_get_is_looped](/audio/cf_sound_get_is_looped.md)  
@@ -40,3 +40,4 @@ Returns a playing sound [CF_Sound](/audio/cf_sound.md).
 [cf_sound_set_is_looped](/audio/cf_sound_set_is_looped.md)  
 [cf_sound_set_volume](/audio/cf_sound_set_volume.md)  
 [cf_sound_stop](/audio/cf_sound_stop.md)  
+[cf_sound_set_pitch](/audio/cf_sound_set_pitch.md)  
