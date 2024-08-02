@@ -183,12 +183,29 @@ void s_on_finish(CF_Sound snd, void* udata)
 	}
 }
 
+void s_on_finish_music(void* udata)
+{
+	if (app->on_sound_finish_single_threaded) {
+		app->on_music_finish_signal = true;
+	} else {
+		app->on_music_finish(udata);
+	}
+}
+
 void cf_sound_set_on_finish_callback(void (*on_finish)(CF_Sound, void*), void* udata, bool single_threaded)
 {
 	app->on_sound_finish_single_threaded = single_threaded;
 	app->on_sound_finish = on_finish;
 	app->on_sound_finish_udata = udata;
 	cs_on_sound_finished_callback((void (*)(cs_playing_sound_t, void*))s_on_finish, udata);
+}
+
+void cf_music_set_on_finish_callback(void (*on_finish)(void*), void* udata, bool single_threaded)
+{
+	app->on_sound_finish_single_threaded = single_threaded;
+	app->on_music_finish = on_finish;
+	app->on_music_finish_udata = udata;
+	cs_on_music_finished_callback((void (*)(void*))s_on_finish_music, udata);
 }
 
 bool cf_sound_is_active(CF_Sound sound)

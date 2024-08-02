@@ -164,6 +164,7 @@ This is a list of all functions in Cute Framework organized by categories. This 
 - [cf_music_play](/audio/cf_music_play.md)
 - [cf_music_resume](/audio/cf_music_resume.md)
 - [cf_music_set_loop](/audio/cf_music_set_loop.md)
+- [cf_music_set_on_finish_callback](/audio/cf_music_set_on_finish_callback.md)
 - [cf_music_set_pitch](/audio/cf_music_set_pitch.md)
 - [cf_music_set_sample_index](/audio/cf_music_set_sample_index.md)
 - [cf_music_set_volume](/audio/cf_music_set_volume.md)

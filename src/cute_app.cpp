@@ -478,6 +478,10 @@ static void s_on_update(void* udata)
 			for (int i = 0; i < on_finish.size(); ++i) {
 				app->on_sound_finish(on_finish[i], app->on_sound_finish_udata);
 			}
+			if (app->on_music_finish && app->on_music_finish_signal) {
+				app->on_music_finish_signal = false;
+				app->on_music_finish(app->on_music_finish_udata);
+			}
 		}
 	}
 	if (app->user_on_update) app->user_on_update(udata);

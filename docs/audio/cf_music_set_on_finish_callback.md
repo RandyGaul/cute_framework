@@ -3,21 +3,21 @@
 [//]: # (See: https://github.com/RandyGaul/cute_framework/blob/master/samples/docs_parser.cpp)
 [](../header.md ':include')
 
-# cf_sound_set_on_finish_callback
+# cf_music_set_on_finish_callback
 
 Category: [audio](/api_reference?id=audio)  
 GitHub: [cute_audio.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_audio.h)  
 ---
 
-Sets the callback for notifications of when a sound finishes playing, excluding music.
+Sets the callback for notifications of when the current song finishes playing.
 
 ```cpp
-void cf_sound_set_on_finish_callback(void (*on_finished)(CF_Sound snd, void* udata), void* udata, bool single_threaded);
+void cf_music_set_on_finish_callback(void (*on_finished)(void* udata), void* udata, bool single_threaded);
 ```
 
 Parameters | Description
 --- | ---
-on_finished | Called whenever a [CF_Sound](/audio/cf_sound.md) finishes playing, excluding music.
+on_finished | Called whenever the current song finishes.
 udata | An optional pointer handed back to you within the `on_finished` callback.
 single_threaded | Set to true to queue up callbacks and invoke them on the main thread. Otherwise this callback is called from the mixing thread directly.
 

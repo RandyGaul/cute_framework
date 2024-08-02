@@ -274,6 +274,17 @@ CF_API int CF_CALL cf_music_get_sample_index();
  */
 CF_API CF_Result CF_CALL cf_music_set_sample_index(int sample_index);
 
+/**
+ * @function cf_music_set_on_finish_callback
+ * @category audio
+ * @brief    Sets the callback for notifications of when the current song finishes playing.
+ * @param    on_finished      Called whenever the current song finishes.
+ * @param    udata            An optional pointer handed back to you within the `on_finished` callback.
+ * @param    single_threaded  Set to true to queue up callbacks and invoke them on the main thread. Otherwise this callback is called from the mixing thread directly.
+ * @related  CF_Audio cf_audio_sample_rate cf_audio_sample_count cf_audio_channel_count
+ */
+CF_API void CF_CALL cf_music_set_on_finish_callback(void (*on_finished)(void* udata), void* udata, bool single_threaded);
+
 // -------------------------------------------------------------------------------------------------
 // Sound API.
 
@@ -334,13 +345,13 @@ CF_API CF_Sound CF_CALL cf_play_sound(CF_Audio audio_source, CF_SoundParams para
 /**
  * @function cf_sound_set_on_finish_callback
  * @category audio
- * @brief    Sets the callback for notifications of when a sound finishes playing.
- * @param    on_finished      Called whenever a `CF_Sound` finishes playing, including music.
+ * @brief    Sets the callback for notifications of when a sound finishes playing, excluding music.
+ * @param    on_finished      Called whenever a `CF_Sound` finishes playing, excluding music.
  * @param    udata            An optional pointer handed back to you within the `on_finished` callback.
  * @param    single_threaded  Set to true to queue up callbacks and invoke them on the main thread. Otherwise this callback is called from the mixing thread directly.
  * @related  CF_Audio cf_audio_sample_rate cf_audio_sample_count cf_audio_channel_count
  */
-CF_API void CF_CALL cf_sound_set_on_finish_callback(void (*on_finished)(CF_Sound, void*), void* udata, bool single_threaded);
+CF_API void CF_CALL cf_sound_set_on_finish_callback(void (*on_finished)(CF_Sound snd, void* udata), void* udata, bool single_threaded);
 
 /**
  * @function cf_sound_is_active

@@ -98,7 +98,10 @@ struct CF_App
 	bool on_sound_finish_single_threaded = false;
 	Cute::Array<CF_Sound> on_sound_finish_queue;
 	void (*on_sound_finish)(CF_Sound, void*) = NULL;
+	void (*on_music_finish)(void*) = NULL;
+	bool on_music_finish_signal = false;
 	void* on_sound_finish_udata = NULL;
+	void* on_music_finish_udata = NULL;
 	CF_Mutex on_sound_finish_mutex = cf_make_mutex();
 
 	// Input stuff.
