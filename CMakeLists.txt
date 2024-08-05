@@ -305,13 +305,13 @@ endif()
 # SDL2 for platform support.
 # Just don't build the shared library at all, it's not needed.
 set(SDL_SHARED_ENABLED_BY_DEFAULT OFF)
-set(SDL_VERSION 2.30.6)
+set(CF_SDL_VERSION 2.30.6)
 if(EMSCRIPTEN)
 	# Emscripten provides its own SDL2.
 else()
 	fetch_content_with_folder(
 		SDL2
-		URL https://github.com/libsdl-org/SDL/releases/download/release-${SDL_VERSION}/SDL2-${SDL_VERSION}.tar.gz
+		URL https://github.com/libsdl-org/SDL/releases/download/release-${CF_SDL_VERSION}/SDL2-${CF_SDL_VERSION}.tar.gz
 	)
 	set(CF_LINK_LIBS ${CF_LINK_LIBS} SDL2main SDL2-static)
 endif()
