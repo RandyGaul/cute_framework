@@ -57,7 +57,7 @@ jobs:
       
       # Run tests for MSVC 17
       - name: Run Tests for MSVC 17
-        shell: cmd
+        shell: bash
         run: |
           cd build_folder\Release
           tests.exe
@@ -66,7 +66,7 @@ jobs:
       
       # Run tests for MinGW (no Release folder)
       - name: Run Tests for MinGW
-        shell: cmd
+        shell: bash
         run: |
           cd build_folder
           tests.exe
@@ -94,7 +94,7 @@ jobs:
       # looking for cute.lib for MSCV. robocopy doesn't trigger a build failure for
       # not finding a file.
       - name: Generate artifacts for Windows
-        shell: cmd
+        shell: bash
         run: |
           robocopy include dist *.h
           robocopy build_folder\Release dist cute.lib 
