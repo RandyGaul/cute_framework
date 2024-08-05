@@ -294,9 +294,7 @@ set(CF_LINK_LIBS ${CF_LINK_LIBS} physfs)
 if(LINUX)
 	fetch_content_with_folder(
 		s2n
-		GIT_REPOSITORY https://github.com/aws/s2n-tls
-		GIT_TAG v1.3.46
-		GIT_PROGRESS TRUE
+		URL https://github.com/aws/s2n-tls/archive/refs/tags/v1.3.46.zip
 	)
 	set(CF_LINK_LIBS ${CF_LINK_LIBS} s2n)
 endif()
@@ -314,9 +312,7 @@ if(EMSCRIPTEN)
 else()
 	fetch_content_with_folder(
 		SDL2
-		GIT_REPOSITORY https://github.com/libsdl-org/SDL
-		GIT_TAG release-2.26.1
-		GIT_PROGRESS TRUE
+		URL https://github.com/libsdl-org/SDL/releases/download/release-2.26.1/SDL2-2.26.1.tar.gz
 	)
 	set(CF_LINK_LIBS ${CF_LINK_LIBS} SDL2main SDL2-static)
 endif()
