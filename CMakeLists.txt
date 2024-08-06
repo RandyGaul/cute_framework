@@ -29,8 +29,6 @@ endfunction()
 
 # Todo - Fix how turning some of these off breaks the build.
 option(CF_FRAMEWORK_STATIC "Build static library for Cute Framework." ON)
-option(CF_FRAMEWORK_BUILD_TESTS "Build the cute framework unit tests." ON)
-option(CF_FRAMEWORK_BUILD_SAMPLES "Build the cute framework sample programs." ON)
 
 # Platform detection.
 if(CMAKE_SYSTEM_NAME MATCHES "Emscripten")
@@ -294,9 +292,7 @@ set(CF_LINK_LIBS ${CF_LINK_LIBS} physfs)
 if(LINUX)
 	fetch_content_with_folder(
 		s2n
-		GIT_REPOSITORY https://github.com/aws/s2n-tls
-		GIT_TAG v1.3.46
-		GIT_PROGRESS TRUE
+		URL https://github.com/aws/s2n-tls/archive/refs/tags/v1.3.46.zip
 	)
 	set(CF_LINK_LIBS ${CF_LINK_LIBS} s2n)
 endif()
@@ -309,14 +305,13 @@ endif()
 # SDL2 for platform support.
 # Just don't build the shared library at all, it's not needed.
 set(SDL_SHARED_ENABLED_BY_DEFAULT OFF)
+set(CF_SDL_VERSION 2.30.5)
 if(EMSCRIPTEN)
 	# Emscripten provides its own SDL2.
 else()
 	fetch_content_with_folder(
 		SDL2
-		GIT_REPOSITORY https://github.com/libsdl-org/SDL
-		GIT_TAG release-2.26.1
-		GIT_PROGRESS TRUE
+		URL https://github.com/libsdl-org/SDL/releases/download/release-${CF_SDL_VERSION}/SDL2-${CF_SDL_VERSION}.tar.gz
 	)
 	set(CF_LINK_LIBS ${CF_LINK_LIBS} SDL2main SDL2-static)
 endif()
@@ -349,112 +344,116 @@ endif()
 # Link up all dependencies to Cute.
 target_link_libraries(cute PUBLIC ${CF_LINK_LIBS})
 
-# Cute unit tests executable (optional, defaulted to also build).
-if (CF_FRAMEWORK_BUILD_TESTS)
-	set(CF_TEST_SRCS test/main.cpp
-		test/test_array.cpp
-		test/test_aseprite.cpp
-		test/test_audio.cpp
-		test/test_base64.cpp
-		test/test_coroutine.cpp
-		test/test_doubly_list.cpp
-		test/test_ecs.cpp
-		test/test_handle.cpp
-		test/test_hashtable.cpp
-		test/test_path.cpp
-		test/test_png_cache.cpp
-		test/test_sprite.cpp
-		test/test_string.cpp
-		test/test_json.cpp
-		test/test_aabb_tree.cpp
-		test/test_markups.cpp
-		)
-	set(CF_TEST_HDRS test/test_harness.h)
-
-	add_executable(tests ${CF_TEST_SRCS} ${CF_TEST_HDRS})
-	target_link_libraries(tests PRIVATE cute)
-
-	if(EMSCRIPTEN)
-		set(CMAKE_EXECUTABLE_SUFFIX ".html")
-		target_compile_options(tests PUBLIC -O1 -fno-rtti -fno-exceptions)
-		target_link_options(tests PRIVATE -o tests.html --emrun -O1)
-	endif()
-
-	# For convenience make tests the startup project in Visual Studio.
-	# Also set working directory to the target output folder.
-	if (MSVC)
-		set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT tests)
-		set_property(TARGET tests PROPERTY VS_DEBUGGER_WORKING_DIRECTORY $<TARGET_FILE_DIR:tests>)
-	endif()
-endif()
-
-# Cute sample prgrams (optional, defaulted to also build).
-if (CF_FRAMEWORK_BUILD_SAMPLES)
-	add_executable(easysprite samples/easy_sprite.c)
-	add_executable(basicecs samples/basic_ecs.cpp)
-	add_executable(basicserialization samples/basic_serialization.c)
-	add_executable(imgui samples/imgui.c)
-	add_executable(textdrawing samples/text_drawing.cpp)
-	add_executable(basicsprite samples/basic_sprite.cpp)
-	add_executable(basicshapes samples/basic_shapes.cpp)
-	add_executable(windowresizing samples/window_resizing.cpp)
-	add_executable(basicinput samples/basic_input.c)
-	add_executable(windowevents samples/window_events.c)
-	add_executable(window samples/window.cpp)
-	add_executable(tint samples/tint.cpp)
-	add_executable(docsparser samples/docs_parser.cpp)
-	add_executable(scratch samples/scratch.cpp)
-	add_executable(echo samples/echo.cpp)
-	add_executable(https samples/https.c)
-	add_executable(spaceshooter samples/spaceshooter.cpp)
-	add_executable(draw_to_texture samples/draw_to_texture.c)
-	add_executable(hello_triangle samples/hello_triangle.c)
-	add_executable(waves samples/waves.cpp)
-	add_executable(shallow_water samples/shallow_water.cpp)
-	add_executable(noise samples/noise.c)
-	add_executable(fetch_image samples/fetch_image.cpp)
-	set(SAMPLE_EXECUTABLES
-		easysprite
-		basicecs
-		basicserialization
-		imgui
-		textdrawing
-		basicsprite
-		basicshapes
-		windowresizing
-		basicinput
-		windowevents
-		window
-		tint
-		docsparser
-		scratch
-		echo
-		https
-		spaceshooter
-		draw_to_texture
-		hello_triangle
-		waves
-		shallow_water
-		noise
-		fetch_image
-	)
-
-	foreach(CURRENT_TARGET ${SAMPLE_EXECUTABLES})
-		target_link_libraries("${CURRENT_TARGET}" PRIVATE cute)
-		if (APPLE)
-			set_target_properties("${CURRENT_TARGET}" PROPERTIES
-				MACOSX_BUNDLE_GUI_IDENTIFIER "com.cuteframework.${CURRENT_TARGET}"
-				MACOSX_BUNDLE_BUNDLE_VERSION "1.0.0"
-				MACOSX_BUNDLE_SHORT_VERSION_STRING "1.0.0"
+if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
+	option(CF_FRAMEWORK_BUILD_TESTS "Build the cute framework unit tests." ON)
+	option(CF_FRAMEWORK_BUILD_SAMPLES "Build the cute framework sample programs." ON)
+	# Cute unit tests executable (optional, defaulted to also build).
+	if (CF_FRAMEWORK_BUILD_TESTS)
+		set(CF_TEST_SRCS test/main.cpp
+			test/test_array.cpp
+			test/test_aseprite.cpp
+			test/test_audio.cpp
+			test/test_base64.cpp
+			test/test_coroutine.cpp
+			test/test_doubly_list.cpp
+			test/test_ecs.cpp
+			test/test_handle.cpp
+			test/test_hashtable.cpp
+			test/test_path.cpp
+			test/test_png_cache.cpp
+			test/test_sprite.cpp
+			test/test_string.cpp
+			test/test_json.cpp
+			test/test_aabb_tree.cpp
+			test/test_markups.cpp
 			)
-		endif()
-		set_target_properties("${CURRENT_TARGET}" PROPERTIES FOLDER "samples")
-	endforeach()
+		set(CF_TEST_HDRS test/test_harness.h)
 
-	# Copy over some folders for certain samples.
-	add_custom_command(TARGET spaceshooter PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/samples/spaceshooter_data $<TARGET_FILE_DIR:spaceshooter>/spaceshooter_data)
-	add_custom_command(TARGET waves PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/samples/waves_data $<TARGET_FILE_DIR:waves>/waves_data)
-	add_custom_command(TARGET shallow_water PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/samples/shallow_water_data $<TARGET_FILE_DIR:shallow_water>/shallow_water_data)
+		add_executable(tests ${CF_TEST_SRCS} ${CF_TEST_HDRS})
+		target_link_libraries(tests PRIVATE cute)
+
+		if(EMSCRIPTEN)
+			set(CMAKE_EXECUTABLE_SUFFIX ".html")
+			target_compile_options(tests PUBLIC -O1 -fno-rtti -fno-exceptions)
+			target_link_options(tests PRIVATE -o tests.html --emrun -O1)
+		endif()
+
+		# For convenience make tests the startup project in Visual Studio.
+		# Also set working directory to the target output folder.
+		if (MSVC)
+			set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT tests)
+			set_property(TARGET tests PROPERTY VS_DEBUGGER_WORKING_DIRECTORY $<TARGET_FILE_DIR:tests>)
+		endif()
+	endif()
+
+	# Cute sample prgrams (optional, defaulted to also build).
+	if (CF_FRAMEWORK_BUILD_SAMPLES)
+		add_executable(easysprite samples/easy_sprite.c)
+		add_executable(basicecs samples/basic_ecs.cpp)
+		add_executable(basicserialization samples/basic_serialization.c)
+		add_executable(imgui samples/imgui.c)
+		add_executable(textdrawing samples/text_drawing.cpp)
+		add_executable(basicsprite samples/basic_sprite.cpp)
+		add_executable(basicshapes samples/basic_shapes.cpp)
+		add_executable(windowresizing samples/window_resizing.cpp)
+		add_executable(basicinput samples/basic_input.c)
+		add_executable(windowevents samples/window_events.c)
+		add_executable(window samples/window.cpp)
+		add_executable(tint samples/tint.cpp)
+		add_executable(docsparser samples/docs_parser.cpp)
+		add_executable(scratch samples/scratch.cpp)
+		add_executable(echo samples/echo.cpp)
+		add_executable(https samples/https.c)
+		add_executable(spaceshooter samples/spaceshooter.cpp)
+		add_executable(draw_to_texture samples/draw_to_texture.c)
+		add_executable(hello_triangle samples/hello_triangle.c)
+		add_executable(waves samples/waves.cpp)
+		add_executable(shallow_water samples/shallow_water.cpp)
+		add_executable(noise samples/noise.c)
+		add_executable(fetch_image samples/fetch_image.cpp)
+		set(SAMPLE_EXECUTABLES
+			easysprite
+			basicecs
+			basicserialization
+			imgui
+			textdrawing
+			basicsprite
+			basicshapes
+			windowresizing
+			basicinput
+			windowevents
+			window
+			tint
+			docsparser
+			scratch
+			echo
+			https
+			spaceshooter
+			draw_to_texture
+			hello_triangle
+			waves
+			shallow_water
+			noise
+			fetch_image
+		)
+
+		foreach(CURRENT_TARGET ${SAMPLE_EXECUTABLES})
+			target_link_libraries("${CURRENT_TARGET}" PRIVATE cute)
+			if (APPLE)
+				set_target_properties("${CURRENT_TARGET}" PROPERTIES
+					MACOSX_BUNDLE_GUI_IDENTIFIER "com.cuteframework.${CURRENT_TARGET}"
+					MACOSX_BUNDLE_BUNDLE_VERSION "1.0.0"
+					MACOSX_BUNDLE_SHORT_VERSION_STRING "1.0.0"
+				)
+			endif()
+			set_target_properties("${CURRENT_TARGET}" PROPERTIES FOLDER "samples")
+		endforeach()
+
+		# Copy over some folders for certain samples.
+		add_custom_command(TARGET spaceshooter PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/samples/spaceshooter_data $<TARGET_FILE_DIR:spaceshooter>/spaceshooter_data)
+		add_custom_command(TARGET waves PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/samples/waves_data $<TARGET_FILE_DIR:waves>/waves_data)
+		add_custom_command(TARGET shallow_water PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/samples/shallow_water_data $<TARGET_FILE_DIR:shallow_water>/shallow_water_data)
+	endif()
 endif()
 
 # Propogate public headers to other cmake scripts including this subdirectory.
