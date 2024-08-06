@@ -168,6 +168,7 @@ CF_Sound cf_play_sound(CF_Audio audio_source, CF_SoundParams params)
 	csparams.volume = params.volume;
 	csparams.pan = params.pan;
 	csparams.pitch = params.pitch;
+	csparams.sample_index = params.sample_index;
 	CF_Sound result;
 	cs_playing_sound_t csresult = cs_play_sound((cs_audio_source_t*)audio_source.id, csparams);
 	result.id = csresult.id;

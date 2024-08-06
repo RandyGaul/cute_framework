@@ -18,6 +18,7 @@ Struct Members | Description
 `float volume` | Default: 0.5f. A volume control from 0.0f to 1.0f. 0.0f meaning silent, 1.0f meaning max volume.
 `float pan` | Default: 0.5f. A stereo pan control from 0.0f to 1.0f. 0.0f means left-speaker, 1.0f means right speaker, 0.5f means equal both.
 `float pitch` | Default: 1.0f. Lower numbers lower the pitch and increase playback speed. Higher numbers increase the pitch and reduce playback speed.
+`int sample_index` | Default: 0. Specify the sample to start playing at. In term of seconds this would be the [cf_audio_sample_rate](/audio/cf_audio_sample_rate.md)  seconds.
 
 ## Remarks
 

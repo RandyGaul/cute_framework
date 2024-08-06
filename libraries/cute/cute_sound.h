@@ -363,6 +363,7 @@ typedef struct cs_sound_params_t
 	float volume /* = 1.0f */;
 	float pan    /* = 0.5f */; // Can be from 0 to 1.
 	float pitch  /* = 1.0f */;
+	int sample_index /* = 0 */;
 } cs_sound_params_t;
 
 cs_sound_params_t cs_sound_params_default();
@@ -2953,7 +2954,8 @@ static cs_sound_inst_t* s_inst(cs_audio_source_t* src, cs_sound_params_t params)
 	inst->pan1 = panr;
 	inst->pitch = params.pitch;
 	inst->audio = src;
-	inst->sample_index = 0;
+	inst->sample_index = params.sample_index;
+	CUTE_SOUND_ASSERT(inst->sample_index < src->sample_count);
 	cs_list_init_node(&inst->node);
 	s_insert(inst);
 	return inst;
@@ -3250,6 +3252,7 @@ cs_sound_params_t cs_sound_params_default()
 	params.volume = 1.0f;
 	params.pan = 0.5f;
 	params.pitch = 1.0f;
+	params.sample_index = 0;
 	return params;
 }
 

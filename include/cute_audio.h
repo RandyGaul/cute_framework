@@ -311,6 +311,9 @@ typedef struct CF_SoundParams
 
 	/* @member Default: 1.0f. Lower numbers lower the pitch and increase playback speed. Higher numbers increase the pitch and reduce playback speed. */
 	float pitch;
+
+	/* @member Default: 0. Specify the sample to start playing at. In term of seconds this would be the `cf_audio_sample_rate` * seconds. */
+	int sample_index;
 } CF_SoundParams;
 // @end
 
@@ -328,6 +331,7 @@ CF_INLINE CF_SoundParams CF_CALL cf_sound_params_defaults()
 	params.volume = 1.0f;
 	params.pan = 0.5f;
 	params.pitch = 1.0f;
+	params.sample_index = 0;
 	return params;
 }
 
