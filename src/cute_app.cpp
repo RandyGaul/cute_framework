@@ -855,3 +855,20 @@ CF_PowerInfo cf_app_power_info()
 	}
 	return info;
 }
+
+void cf_default_assert(bool expr, const char* message, const char* file, int line)
+{
+	if (!expr) {
+		fprintf(stderr, "CF_ASSERT(%s) : %s, line %d\n", message, file, line);
+#ifdef _MSC_VER
+		__debugbreak();
+#endif
+	}
+}
+
+cf_assert_fn* g_assert_fn = cf_default_assert;
+
+void cf_set_assert_handler(cf_assert_fn* assert_fn)
+{
+	g_assert_fn = assert_fn;
+}

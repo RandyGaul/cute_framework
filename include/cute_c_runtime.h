@@ -10,11 +10,7 @@
 
 #ifndef CF_ASSERT
 #	include <assert.h>
-#	ifdef _MSC_VER
-#		define CF_ASSERT(...) (!(__VA_ARGS__) ? __debugbreak(), assert(__VA_ARGS__) : assert(__VA_ARGS__))
-#	else
-#		define CF_ASSERT assert
-#	endif
+#	define CF_ASSERT(expr) (g_assert_fn(expr, #expr, __FILE__, (int)__LINE__))
 #endif
 
 #ifndef CF_MEMCPY

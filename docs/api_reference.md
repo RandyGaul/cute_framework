@@ -80,6 +80,7 @@ This is a list of all functions in Cute Framework organized by categories. This 
 - [cf_app_was_moved](/app/cf_app_was_moved.md)
 - [cf_app_was_resized](/app/cf_app_was_resized.md)
 - [cf_app_was_restored](/app/cf_app_was_restored.md)
+- [cf_assert_fn](/app/cf_assert_fn.md)
 - [cf_destroy_app](/app/cf_destroy_app.md)
 - [cf_display_bounds](/app/cf_display_bounds.md)
 - [cf_display_count](/app/cf_display_count.md)
@@ -92,6 +93,7 @@ This is a list of all functions in Cute Framework organized by categories. This 
 - [cf_display_y](/app/cf_display_y.md)
 - [cf_make_app](/app/cf_make_app.md)
 - [cf_power_state_to_string](/app/cf_power_state_to_string.md)
+- [cf_set_assert_handler](/app/cf_set_assert_handler.md)
 
 
 ### structs

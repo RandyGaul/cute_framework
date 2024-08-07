@@ -35,6 +35,7 @@ struct CF_Draw* draw;
 #define STB_TRUETYPE_IMPLEMENTATION
 #include <stb/stb_truetype.h>
 
+#define IM_ASSERT CF_ASSERT
 #include <imgui.h>
 #include <imgui_internal.h>
 #define CIMGUI_DEFINE_ENUMS_AND_STRUCTS
