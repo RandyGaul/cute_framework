@@ -51,17 +51,17 @@
 #define ATTR_color_fill_vs_in_col (1)
 /*
     #version 330
-    
+
     layout(location = 0) in vec2 in_pos;
     out vec4 col;
     layout(location = 1) in vec4 in_col;
-    
+
     void main()
     {
         col = in_col;
         gl_Position = vec4(in_pos, 0.0, 1.0);
     }
-    
+
 */
 static const char color_fill_vs_source_glsl330[181] = {
     0x23,0x76,0x65,0x72,0x73,0x69,0x6f,0x6e,0x20,0x33,0x33,0x30,0x0a,0x0a,0x6c,0x61,
@@ -79,15 +79,15 @@ static const char color_fill_vs_source_glsl330[181] = {
 };
 /*
     #version 330
-    
+
     layout(location = 0) out vec4 result;
     in vec4 col;
-    
+
     void main()
     {
         result = col;
     }
-    
+
 */
 static const char color_fill_fs_source_glsl330[102] = {
     0x23,0x76,0x65,0x72,0x73,0x69,0x6f,0x6e,0x20,0x33,0x33,0x30,0x0a,0x0a,0x6c,0x61,
@@ -100,17 +100,17 @@ static const char color_fill_fs_source_glsl330[102] = {
 };
 /*
     #version 300 es
-    
+
     layout(location = 0) in vec2 in_pos;
     out vec4 col;
     layout(location = 1) in vec4 in_col;
-    
+
     void main()
     {
         col = in_col;
         gl_Position = vec4(in_pos, 0.0, 1.0);
     }
-    
+
 */
 static const char color_fill_vs_source_glsl300es[184] = {
     0x23,0x76,0x65,0x72,0x73,0x69,0x6f,0x6e,0x20,0x33,0x30,0x30,0x20,0x65,0x73,0x0a,
@@ -130,15 +130,15 @@ static const char color_fill_vs_source_glsl300es[184] = {
     #version 300 es
     precision mediump float;
     precision highp int;
-    
+
     layout(location = 0) out highp vec4 result;
     in highp vec4 col;
-    
+
     void main()
     {
         result = col;
     }
-    
+
 */
 static const char color_fill_fs_source_glsl300es[163] = {
     0x23,0x76,0x65,0x72,0x73,0x69,0x6f,0x6e,0x20,0x33,0x30,0x30,0x20,0x65,0x73,0x0a,
@@ -158,25 +158,25 @@ static const char color_fill_fs_source_glsl300es[163] = {
     static float2 in_pos;
     static float4 col;
     static float4 in_col;
-    
+
     struct SPIRV_Cross_Input
     {
         float2 in_pos : TEXCOORD0;
         float4 in_col : TEXCOORD1;
     };
-    
+
     struct SPIRV_Cross_Output
     {
         float4 col : TEXCOORD0;
         float4 gl_Position : SV_Position;
     };
-    
+
     void vert_main()
     {
         col = in_col;
         gl_Position = float4(in_pos, 0.0f, 1.0f);
     }
-    
+
     SPIRV_Cross_Output main(SPIRV_Cross_Input stage_input)
     {
         in_pos = stage_input.in_pos;
@@ -234,22 +234,22 @@ static const char color_fill_vs_source_hlsl5[645] = {
 /*
     static float4 result;
     static float4 col;
-    
+
     struct SPIRV_Cross_Input
     {
         float4 col : TEXCOORD0;
     };
-    
+
     struct SPIRV_Cross_Output
     {
         float4 result : SV_Target0;
     };
-    
+
     void frag_main()
     {
         result = col;
     }
-    
+
     SPIRV_Cross_Output main(SPIRV_Cross_Input stage_input)
     {
         col = stage_input.col;
@@ -290,21 +290,21 @@ static const char color_fill_fs_source_hlsl5[405] = {
 /*
     #include <metal_stdlib>
     #include <simd/simd.h>
-    
+
     using namespace metal;
-    
+
     struct main0_out
     {
         float4 col [[user(locn0)]];
         float4 gl_Position [[position]];
     };
-    
+
     struct main0_in
     {
         float2 in_pos [[attribute(0)]];
         float4 in_col [[attribute(1)]];
     };
-    
+
     vertex main0_out main0(main0_in in [[stage_in]])
     {
         main0_out out = {};
@@ -312,7 +312,7 @@ static const char color_fill_fs_source_hlsl5[405] = {
         out.gl_Position = float4(in.in_pos, 0.0, 1.0);
         return out;
     }
-    
+
 */
 static const char color_fill_vs_source_metal_macos[429] = {
     0x23,0x69,0x6e,0x63,0x6c,0x75,0x64,0x65,0x20,0x3c,0x6d,0x65,0x74,0x61,0x6c,0x5f,
@@ -346,26 +346,26 @@ static const char color_fill_vs_source_metal_macos[429] = {
 /*
     #include <metal_stdlib>
     #include <simd/simd.h>
-    
+
     using namespace metal;
-    
+
     struct main0_out
     {
         float4 result [[color(0)]];
     };
-    
+
     struct main0_in
     {
         float4 col [[user(locn0)]];
     };
-    
+
     fragment main0_out main0(main0_in in [[stage_in]])
     {
         main0_out out = {};
         out.result = in.col;
         return out;
     }
-    
+
 */
 static const char color_fill_fs_source_metal_macos[303] = {
     0x23,0x69,0x6e,0x63,0x6c,0x75,0x64,0x65,0x20,0x3c,0x6d,0x65,0x74,0x61,0x6c,0x5f,
@@ -391,21 +391,21 @@ static const char color_fill_fs_source_metal_macos[303] = {
 /*
     #include <metal_stdlib>
     #include <simd/simd.h>
-    
+
     using namespace metal;
-    
+
     struct main0_out
     {
         float4 col [[user(locn0)]];
         float4 gl_Position [[position]];
     };
-    
+
     struct main0_in
     {
         float2 in_pos [[attribute(0)]];
         float4 in_col [[attribute(1)]];
     };
-    
+
     vertex main0_out main0(main0_in in [[stage_in]])
     {
         main0_out out = {};
@@ -413,7 +413,7 @@ static const char color_fill_fs_source_metal_macos[303] = {
         out.gl_Position = float4(in.in_pos, 0.0, 1.0);
         return out;
     }
-    
+
 */
 static const char color_fill_vs_source_metal_ios[429] = {
     0x23,0x69,0x6e,0x63,0x6c,0x75,0x64,0x65,0x20,0x3c,0x6d,0x65,0x74,0x61,0x6c,0x5f,
@@ -447,26 +447,26 @@ static const char color_fill_vs_source_metal_ios[429] = {
 /*
     #include <metal_stdlib>
     #include <simd/simd.h>
-    
+
     using namespace metal;
-    
+
     struct main0_out
     {
         float4 result [[color(0)]];
     };
-    
+
     struct main0_in
     {
         float4 col [[user(locn0)]];
     };
-    
+
     fragment main0_out main0(main0_in in [[stage_in]])
     {
         main0_out out = {};
         out.result = in.col;
         return out;
     }
-    
+
 */
 static const char color_fill_fs_source_metal_ios[303] = {
     0x23,0x69,0x6e,0x63,0x6c,0x75,0x64,0x65,0x20,0x3c,0x6d,0x65,0x74,0x61,0x6c,0x5f,
@@ -492,21 +492,21 @@ static const char color_fill_fs_source_metal_ios[303] = {
 /*
     #include <metal_stdlib>
     #include <simd/simd.h>
-    
+
     using namespace metal;
-    
+
     struct main0_out
     {
         float4 col [[user(locn0)]];
         float4 gl_Position [[position]];
     };
-    
+
     struct main0_in
     {
         float2 in_pos [[attribute(0)]];
         float4 in_col [[attribute(1)]];
     };
-    
+
     vertex main0_out main0(main0_in in [[stage_in]])
     {
         main0_out out = {};
@@ -514,7 +514,7 @@ static const char color_fill_fs_source_metal_ios[303] = {
         out.gl_Position = float4(in.in_pos, 0.0, 1.0);
         return out;
     }
-    
+
 */
 static const char color_fill_vs_source_metal_sim[429] = {
     0x23,0x69,0x6e,0x63,0x6c,0x75,0x64,0x65,0x20,0x3c,0x6d,0x65,0x74,0x61,0x6c,0x5f,
@@ -548,26 +548,26 @@ static const char color_fill_vs_source_metal_sim[429] = {
 /*
     #include <metal_stdlib>
     #include <simd/simd.h>
-    
+
     using namespace metal;
-    
+
     struct main0_out
     {
         float4 result [[color(0)]];
     };
-    
+
     struct main0_in
     {
         float4 col [[user(locn0)]];
     };
-    
+
     fragment main0_out main0(main0_in in [[stage_in]])
     {
         main0_out out = {};
         out.result = in.col;
         return out;
     }
-    
+
 */
 static const char color_fill_fs_source_metal_sim[303] = {
     0x23,0x69,0x6e,0x63,0x6c,0x75,0x64,0x65,0x20,0x3c,0x6d,0x65,0x74,0x61,0x6c,0x5f,
@@ -594,7 +594,7 @@ static const char color_fill_fs_source_metal_sim[303] = {
   #error "Please include sokol_gfx.h before color_fill_shader.h"
 #endif
 static inline const sg_shader_desc* color_fill_shader_shader_desc(sg_backend backend) {
-  if (backend == SG_BACKEND_GLCORE33) {
+  if (backend == SG_BACKEND_GLCORE) {
     static sg_shader_desc desc;
     static bool valid;
     if (!valid) {

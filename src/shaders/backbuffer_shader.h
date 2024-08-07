@@ -20,7 +20,7 @@
                     Bind slot: SLOT_backbuffer_fs_params = 0
                 Image 'u_image':
                     Type: SG_IMAGETYPE_2D
-                    Component Type: SG_SAMPLERTYPE_FLOAT
+                    Component Type: SG_IMAGESAMPLETYPE_FLOAT
                     Bind slot: SLOT_backbuffer_u_image = 0
 
 
@@ -74,17 +74,17 @@ SOKOL_SHDC_ALIGN(16) typedef struct backbuffer_fs_params_t {
 #pragma pack(pop)
 /*
     #version 330
-    
+
     layout(location = 0) in vec2 in_pos;
     out vec2 uv;
     layout(location = 1) in vec2 in_uv;
-    
+
     void main()
     {
         uv = in_uv;
         gl_Position = vec4(in_pos, 0.0, 1.0);
     }
-    
+
 */
 static const char backbuffer_vs_source_glsl330[177] = {
     0x23,0x76,0x65,0x72,0x73,0x69,0x6f,0x6e,0x20,0x33,0x33,0x30,0x0a,0x0a,0x6c,0x61,
@@ -102,26 +102,26 @@ static const char backbuffer_vs_source_glsl330[177] = {
 };
 /*
     #version 330
-    
+
     uniform vec4 fs_params[1];
     uniform sampler2D u_image;
-    
+
     in vec2 uv;
     layout(location = 0) out vec4 result;
-    
+
     vec2 smooth_uv(vec2 uv_1, vec2 texture_size)
     {
         vec2 _25 = floor(uv_1 * texture_size + vec2(0.5));
         return (_25 + clamp((uv_1 * texture_size + (-_25)) / fwidth(uv_1 * texture_size), vec2(-0.5), vec2(0.5))) / texture_size;
     }
-    
+
     void main()
     {
         vec2 param = uv;
         vec2 param_1 = fs_params[0].xy;
         result = texture(u_image, smooth_uv(param, param_1));
     }
-    
+
 */
 static const char backbuffer_fs_source_glsl330[484] = {
     0x23,0x76,0x65,0x72,0x73,0x69,0x6f,0x6e,0x20,0x33,0x33,0x30,0x0a,0x0a,0x75,0x6e,
@@ -158,17 +158,17 @@ static const char backbuffer_fs_source_glsl330[484] = {
 };
 /*
     #version 300 es
-    
+
     layout(location = 0) in vec2 in_pos;
     out vec2 uv;
     layout(location = 1) in vec2 in_uv;
-    
+
     void main()
     {
         uv = in_uv;
         gl_Position = vec4(in_pos, 0.0, 1.0);
     }
-    
+
 */
 static const char backbuffer_vs_source_glsl300es[180] = {
     0x23,0x76,0x65,0x72,0x73,0x69,0x6f,0x6e,0x20,0x33,0x30,0x30,0x20,0x65,0x73,0x0a,
@@ -188,26 +188,26 @@ static const char backbuffer_vs_source_glsl300es[180] = {
     #version 300 es
     precision mediump float;
     precision highp int;
-    
+
     uniform highp vec4 fs_params[1];
     uniform highp sampler2D u_image;
-    
+
     in highp vec2 uv;
     layout(location = 0) out highp vec4 result;
-    
+
     highp vec2 smooth_uv(highp vec2 uv_1, highp vec2 texture_size)
     {
         highp vec2 _25 = floor(uv_1 * texture_size + vec2(0.5));
         return (_25 + clamp((uv_1 * texture_size + (-_25)) / fwidth(uv_1 * texture_size), vec2(-0.5), vec2(0.5))) / texture_size;
     }
-    
+
     void main()
     {
         highp vec2 param = uv;
         highp vec2 param_1 = fs_params[0].xy;
         result = texture(u_image, smooth_uv(param, param_1));
     }
-    
+
 */
 static const char backbuffer_fs_source_glsl300es[593] = {
     0x23,0x76,0x65,0x72,0x73,0x69,0x6f,0x6e,0x20,0x33,0x30,0x30,0x20,0x65,0x73,0x0a,
@@ -254,25 +254,25 @@ static const char backbuffer_fs_source_glsl300es[593] = {
     static float2 in_pos;
     static float2 uv;
     static float2 in_uv;
-    
+
     struct SPIRV_Cross_Input
     {
         float2 in_pos : TEXCOORD0;
         float2 in_uv : TEXCOORD1;
     };
-    
+
     struct SPIRV_Cross_Output
     {
         float2 uv : TEXCOORD0;
         float4 gl_Position : SV_Position;
     };
-    
+
     void vert_main()
     {
         uv = in_uv;
         gl_Position = float4(in_pos, 0.0f, 1.0f);
     }
-    
+
     SPIRV_Cross_Output main(SPIRV_Cross_Input stage_input)
     {
         in_pos = stage_input.in_pos;
@@ -331,36 +331,36 @@ static const char backbuffer_vs_source_hlsl5[635] = {
     {
         float2 _55_u_texture_size : packoffset(c0);
     };
-    
+
     Texture2D<float4> u_image : register(t0);
     SamplerState _u_image_sampler : register(s0);
-    
+
     static float2 uv;
     static float4 result;
-    
+
     struct SPIRV_Cross_Input
     {
         float2 uv : TEXCOORD0;
     };
-    
+
     struct SPIRV_Cross_Output
     {
         float4 result : SV_Target0;
     };
-    
+
     float2 smooth_uv(float2 uv_1, float2 texture_size)
     {
         float2 _25 = floor(mad(uv_1, texture_size, 0.5f.xx));
         return (_25 + clamp(mad(uv_1, texture_size, -_25) / fwidth(uv_1 * texture_size), (-0.5f).xx, 0.5f.xx)) / texture_size;
     }
-    
+
     void frag_main()
     {
         float2 param = uv;
         float2 param_1 = _55_u_texture_size;
         result = u_image.Sample(_u_image_sampler, smooth_uv(param, param_1));
     }
-    
+
     SPIRV_Cross_Output main(SPIRV_Cross_Input stage_input)
     {
         uv = stage_input.uv;
@@ -434,21 +434,21 @@ static const char backbuffer_fs_source_hlsl5[934] = {
 /*
     #include <metal_stdlib>
     #include <simd/simd.h>
-    
+
     using namespace metal;
-    
+
     struct main0_out
     {
         float2 uv [[user(locn0)]];
         float4 gl_Position [[position]];
     };
-    
+
     struct main0_in
     {
         float2 in_pos [[attribute(0)]];
         float2 in_uv [[attribute(1)]];
     };
-    
+
     vertex main0_out main0(main0_in in [[stage_in]])
     {
         main0_out out = {};
@@ -456,7 +456,7 @@ static const char backbuffer_fs_source_hlsl5[934] = {
         out.gl_Position = float4(in.in_pos, 0.0, 1.0);
         return out;
     }
-    
+
 */
 static const char backbuffer_vs_source_metal_macos[425] = {
     0x23,0x69,0x6e,0x63,0x6c,0x75,0x64,0x65,0x20,0x3c,0x6d,0x65,0x74,0x61,0x6c,0x5f,
@@ -489,34 +489,34 @@ static const char backbuffer_vs_source_metal_macos[425] = {
 };
 /*
     #pragma clang diagnostic ignored "-Wmissing-prototypes"
-    
+
     #include <metal_stdlib>
     #include <simd/simd.h>
-    
+
     using namespace metal;
-    
+
     struct fs_params
     {
         float2 u_texture_size;
     };
-    
+
     struct main0_out
     {
         float4 result [[color(0)]];
     };
-    
+
     struct main0_in
     {
         float2 uv [[user(locn0)]];
     };
-    
+
     static inline __attribute__((always_inline))
     float2 smooth_uv(thread const float2& uv, thread const float2& texture_size)
     {
         float2 _25 = floor(fma(uv, texture_size, float2(0.5)));
         return (_25 + fast::clamp(fma(uv, texture_size, -_25) / fwidth(uv * texture_size), float2(-0.5), float2(0.5))) / texture_size;
     }
-    
+
     fragment main0_out main0(main0_in in [[stage_in]], constant fs_params& _55 [[buffer(0)]], texture2d<float> u_image [[texture(0)]], sampler u_imageSmplr [[sampler(0)]])
     {
         main0_out out = {};
@@ -525,7 +525,7 @@ static const char backbuffer_vs_source_metal_macos[425] = {
         out.result = u_image.sample(u_imageSmplr, smooth_uv(param, param_1));
         return out;
     }
-    
+
 */
 static const char backbuffer_fs_source_metal_macos[960] = {
     0x23,0x70,0x72,0x61,0x67,0x6d,0x61,0x20,0x63,0x6c,0x61,0x6e,0x67,0x20,0x64,0x69,
@@ -593,21 +593,21 @@ static const char backbuffer_fs_source_metal_macos[960] = {
 /*
     #include <metal_stdlib>
     #include <simd/simd.h>
-    
+
     using namespace metal;
-    
+
     struct main0_out
     {
         float2 uv [[user(locn0)]];
         float4 gl_Position [[position]];
     };
-    
+
     struct main0_in
     {
         float2 in_pos [[attribute(0)]];
         float2 in_uv [[attribute(1)]];
     };
-    
+
     vertex main0_out main0(main0_in in [[stage_in]])
     {
         main0_out out = {};
@@ -615,7 +615,7 @@ static const char backbuffer_fs_source_metal_macos[960] = {
         out.gl_Position = float4(in.in_pos, 0.0, 1.0);
         return out;
     }
-    
+
 */
 static const char backbuffer_vs_source_metal_ios[425] = {
     0x23,0x69,0x6e,0x63,0x6c,0x75,0x64,0x65,0x20,0x3c,0x6d,0x65,0x74,0x61,0x6c,0x5f,
@@ -648,34 +648,34 @@ static const char backbuffer_vs_source_metal_ios[425] = {
 };
 /*
     #pragma clang diagnostic ignored "-Wmissing-prototypes"
-    
+
     #include <metal_stdlib>
     #include <simd/simd.h>
-    
+
     using namespace metal;
-    
+
     struct fs_params
     {
         float2 u_texture_size;
     };
-    
+
     struct main0_out
     {
         float4 result [[color(0)]];
     };
-    
+
     struct main0_in
     {
         float2 uv [[user(locn0)]];
     };
-    
+
     static inline __attribute__((always_inline))
     float2 smooth_uv(thread const float2& uv, thread const float2& texture_size)
     {
         float2 _25 = floor(fma(uv, texture_size, float2(0.5)));
         return (_25 + fast::clamp(fma(uv, texture_size, -_25) / fwidth(uv * texture_size), float2(-0.5), float2(0.5))) / texture_size;
     }
-    
+
     fragment main0_out main0(main0_in in [[stage_in]], constant fs_params& _55 [[buffer(0)]], texture2d<float> u_image [[texture(0)]], sampler u_imageSmplr [[sampler(0)]])
     {
         main0_out out = {};
@@ -684,7 +684,7 @@ static const char backbuffer_vs_source_metal_ios[425] = {
         out.result = u_image.sample(u_imageSmplr, smooth_uv(param, param_1));
         return out;
     }
-    
+
 */
 static const char backbuffer_fs_source_metal_ios[960] = {
     0x23,0x70,0x72,0x61,0x67,0x6d,0x61,0x20,0x63,0x6c,0x61,0x6e,0x67,0x20,0x64,0x69,
@@ -752,21 +752,21 @@ static const char backbuffer_fs_source_metal_ios[960] = {
 /*
     #include <metal_stdlib>
     #include <simd/simd.h>
-    
+
     using namespace metal;
-    
+
     struct main0_out
     {
         float2 uv [[user(locn0)]];
         float4 gl_Position [[position]];
     };
-    
+
     struct main0_in
     {
         float2 in_pos [[attribute(0)]];
         float2 in_uv [[attribute(1)]];
     };
-    
+
     vertex main0_out main0(main0_in in [[stage_in]])
     {
         main0_out out = {};
@@ -774,7 +774,7 @@ static const char backbuffer_fs_source_metal_ios[960] = {
         out.gl_Position = float4(in.in_pos, 0.0, 1.0);
         return out;
     }
-    
+
 */
 static const char backbuffer_vs_source_metal_sim[425] = {
     0x23,0x69,0x6e,0x63,0x6c,0x75,0x64,0x65,0x20,0x3c,0x6d,0x65,0x74,0x61,0x6c,0x5f,
@@ -807,34 +807,34 @@ static const char backbuffer_vs_source_metal_sim[425] = {
 };
 /*
     #pragma clang diagnostic ignored "-Wmissing-prototypes"
-    
+
     #include <metal_stdlib>
     #include <simd/simd.h>
-    
+
     using namespace metal;
-    
+
     struct fs_params
     {
         float2 u_texture_size;
     };
-    
+
     struct main0_out
     {
         float4 result [[color(0)]];
     };
-    
+
     struct main0_in
     {
         float2 uv [[user(locn0)]];
     };
-    
+
     static inline __attribute__((always_inline))
     float2 smooth_uv(thread const float2& uv, thread const float2& texture_size)
     {
         float2 _25 = floor(fma(uv, texture_size, float2(0.5)));
         return (_25 + fast::clamp(fma(uv, texture_size, -_25) / fwidth(uv * texture_size), float2(-0.5), float2(0.5))) / texture_size;
     }
-    
+
     fragment main0_out main0(main0_in in [[stage_in]], constant fs_params& _55 [[buffer(0)]], texture2d<float> u_image [[texture(0)]], sampler u_imageSmplr [[sampler(0)]])
     {
         main0_out out = {};
@@ -843,7 +843,7 @@ static const char backbuffer_vs_source_metal_sim[425] = {
         out.result = u_image.sample(u_imageSmplr, smooth_uv(param, param_1));
         return out;
     }
-    
+
 */
 static const char backbuffer_fs_source_metal_sim[960] = {
     0x23,0x70,0x72,0x61,0x67,0x6d,0x61,0x20,0x63,0x6c,0x61,0x6e,0x67,0x20,0x64,0x69,
@@ -912,7 +912,7 @@ static const char backbuffer_fs_source_metal_sim[960] = {
   #error "Please include sokol_gfx.h before backbuffer_shader.h"
 #endif
 static inline const sg_shader_desc* backbuffer_shd_shader_desc(sg_backend backend) {
-  if (backend == SG_BACKEND_GLCORE33) {
+  if (backend == SG_BACKEND_GLCORE) {
     static sg_shader_desc desc;
     static bool valid;
     if (!valid) {
@@ -930,7 +930,7 @@ static inline const sg_shader_desc* backbuffer_shd_shader_desc(sg_backend backen
       desc.fs.uniform_blocks[0].uniforms[0].array_count = 1;
       desc.fs.images[0].name = "u_image";
       desc.fs.images[0].image_type = SG_IMAGETYPE_2D;
-      desc.fs.images[0].sampler_type = SG_SAMPLERTYPE_FLOAT;
+      desc.fs.images[0].sample_type = SG_IMAGESAMPLETYPE_FLOAT;
       desc.label = "backbuffer_shd_shader";
     }
     return &desc;
@@ -953,7 +953,7 @@ static inline const sg_shader_desc* backbuffer_shd_shader_desc(sg_backend backen
       desc.fs.uniform_blocks[0].uniforms[0].array_count = 1;
       desc.fs.images[0].name = "u_image";
       desc.fs.images[0].image_type = SG_IMAGETYPE_2D;
-      desc.fs.images[0].sampler_type = SG_SAMPLERTYPE_FLOAT;
+      desc.fs.images[0].sample_type = SG_IMAGESAMPLETYPE_FLOAT;
       desc.label = "backbuffer_shd_shader";
     }
     return &desc;
@@ -977,7 +977,7 @@ static inline const sg_shader_desc* backbuffer_shd_shader_desc(sg_backend backen
       desc.fs.uniform_blocks[0].layout = SG_UNIFORMLAYOUT_STD140;
       desc.fs.images[0].name = "u_image";
       desc.fs.images[0].image_type = SG_IMAGETYPE_2D;
-      desc.fs.images[0].sampler_type = SG_SAMPLERTYPE_FLOAT;
+      desc.fs.images[0].sample_type = SG_IMAGESAMPLETYPE_FLOAT;
       desc.label = "backbuffer_shd_shader";
     }
     return &desc;
@@ -995,7 +995,7 @@ static inline const sg_shader_desc* backbuffer_shd_shader_desc(sg_backend backen
       desc.fs.uniform_blocks[0].layout = SG_UNIFORMLAYOUT_STD140;
       desc.fs.images[0].name = "u_image";
       desc.fs.images[0].image_type = SG_IMAGETYPE_2D;
-      desc.fs.images[0].sampler_type = SG_SAMPLERTYPE_FLOAT;
+      desc.fs.images[0].sample_type = SG_IMAGESAMPLETYPE_FLOAT;
       desc.label = "backbuffer_shd_shader";
     }
     return &desc;
@@ -1013,7 +1013,7 @@ static inline const sg_shader_desc* backbuffer_shd_shader_desc(sg_backend backen
       desc.fs.uniform_blocks[0].layout = SG_UNIFORMLAYOUT_STD140;
       desc.fs.images[0].name = "u_image";
       desc.fs.images[0].image_type = SG_IMAGETYPE_2D;
-      desc.fs.images[0].sampler_type = SG_SAMPLERTYPE_FLOAT;
+      desc.fs.images[0].sample_type = SG_IMAGESAMPLETYPE_FLOAT;
       desc.label = "backbuffer_shd_shader";
     }
     return &desc;
@@ -1031,7 +1031,7 @@ static inline const sg_shader_desc* backbuffer_shd_shader_desc(sg_backend backen
       desc.fs.uniform_blocks[0].layout = SG_UNIFORMLAYOUT_STD140;
       desc.fs.images[0].name = "u_image";
       desc.fs.images[0].image_type = SG_IMAGETYPE_2D;
-      desc.fs.images[0].sampler_type = SG_SAMPLERTYPE_FLOAT;
+      desc.fs.images[0].sample_type = SG_IMAGESAMPLETYPE_FLOAT;
       desc.label = "backbuffer_shd_shader";
     }
     return &desc;

@@ -104,7 +104,7 @@ SOKOL_SHDC_ALIGN(16) typedef struct sprite_fs_params_t {
 #pragma pack(pop)
 /*
     #version 330
-    
+
     out vec2 v_pos;
     layout(location = 0) in vec2 in_pos;
     out vec2 v_a;
@@ -131,7 +131,7 @@ SOKOL_SHDC_ALIGN(16) typedef struct sprite_fs_params_t {
     out vec2 v_posH;
     out vec4 v_user;
     layout(location = 11) in vec4 in_user_params;
-    
+
     void main()
     {
         v_pos = in_pos;
@@ -151,7 +151,7 @@ SOKOL_SHDC_ALIGN(16) typedef struct sprite_fs_params_t {
         v_user = in_user_params;
         gl_Position.y = -gl_Position.y;
     }
-    
+
 */
 static const char sprite_vs_source_glsl330[1111] = {
     0x23,0x76,0x65,0x72,0x73,0x69,0x6f,0x6e,0x20,0x33,0x33,0x30,0x0a,0x0a,0x6f,0x75,
@@ -227,10 +227,10 @@ static const char sprite_vs_source_glsl330[1111] = {
 };
 /*
     #version 330
-    
+
     uniform vec4 fs_params[1];
     uniform sampler2D u_image;
-    
+
     in float v_stroke;
     in float v_aa;
     layout(location = 0) out vec4 result;
@@ -246,18 +246,18 @@ static const char sprite_vs_source_glsl330[1111] = {
     in float v_alpha;
     in vec2 v_posH;
     in vec4 v_user;
-    
+
     vec2 smooth_uv(vec2 uv, vec2 texture_size)
     {
         vec2 _205 = floor(uv * texture_size + vec2(0.5));
         return (_205 + clamp((uv * texture_size + (-_205)) / fwidth(uv * texture_size), vec2(-0.5), vec2(0.5))) / texture_size;
     }
-    
+
     vec4 de_gamma(vec4 c)
     {
         return vec4(pow(abs(c.xyz), vec3(2.2000000476837158203125)), c.w);
     }
-    
+
     float overlay(float base, float blend)
     {
         float _105;
@@ -271,7 +271,7 @@ static const char sprite_vs_source_glsl330[1111] = {
         }
         return _105;
     }
-    
+
     vec3 overlay(vec3 base, vec3 blend)
     {
         float param = base.x;
@@ -282,30 +282,30 @@ static const char sprite_vs_source_glsl330[1111] = {
         float param_5 = blend.z;
         return vec3(overlay(param, param_1), overlay(param_2, param_3), overlay(param_4, param_5));
     }
-    
+
     vec4 overlay(vec4 base, vec4 blend)
     {
         vec3 param = base.xyz;
         vec3 param_1 = blend.xyz;
         return vec4(overlay(param, param_1), base.w);
     }
-    
+
     vec4 gamma(vec4 c)
     {
         return vec4(pow(abs(c.xyz), vec3(0.4545454680919647216796875)), c.w);
     }
-    
+
     vec2 skew(vec2 v)
     {
         return vec2(-v.y, v.x);
     }
-    
+
     float distance_aabb(vec2 p, vec2 he)
     {
         vec2 _349 = abs(p) - he;
         return length(max(_349, vec2(0.0))) + min(max(_349.x, _349.y), 0.0);
     }
-    
+
     float distance_box(inout vec2 p, vec2 c, vec2 he, vec2 u)
     {
         vec2 param = u;
@@ -315,7 +315,7 @@ static const char sprite_vs_source_glsl330[1111] = {
         vec2 param_2 = he;
         return distance_aabb(param_1, param_2);
     }
-    
+
     float safe_div(float a, float b)
     {
         float _226;
@@ -329,7 +329,7 @@ static const char sprite_vs_source_glsl330[1111] = {
         }
         return _226;
     }
-    
+
     float safe_len(vec2 v)
     {
         float _239 = dot(v, v);
@@ -344,7 +344,7 @@ static const char sprite_vs_source_glsl330[1111] = {
         }
         return _242;
     }
-    
+
     float distance_segment(vec2 p, vec2 a, vec2 b)
     {
         vec2 _394 = b - a;
@@ -354,12 +354,12 @@ static const char sprite_vs_source_glsl330[1111] = {
         vec2 param_2 = _398 - (_394 * clamp(safe_div(param, param_1), 0.0, 1.0));
         return safe_len(param_2);
     }
-    
+
     float det2(vec2 a, vec2 b)
     {
         return a.x * b.y + (-(a.y * b.x));
     }
-    
+
     float distance_triangle(vec2 p, vec2 a, vec2 b, vec2 c)
     {
         vec2 _424 = b - a;
@@ -389,12 +389,12 @@ static const char sprite_vs_source_glsl330[1111] = {
         vec2 _531 = min(min(vec2(dot(_459, _459), _495 * det2(param_8, param_9)), vec2(dot(_474, _474), _495 * det2(param_10, param_11))), vec2(dot(_489, _489), _495 * det2(param_12, param_13)));
         return (-sqrt(_531.x)) * sign(_531.y);
     }
-    
+
     float sdf_stroke(float d)
     {
         return abs(d) - v_stroke;
     }
-    
+
     vec4 sdf(vec4 a, vec4 b, float d)
     {
         float param = d;
@@ -404,12 +404,12 @@ static const char sprite_vs_source_glsl330[1111] = {
         result = mix(mix(_292, _292, _324), mix(vec4(_316.x ? b.x : a.x, _316.y ? b.y : a.y, _316.z ? b.z : a.z, _316.w ? b.w : a.w), mix(b, a, vec4(smoothstep(0.0, v_aa, d))), _324), vec4(v_fill));
         return result;
     }
-    
+
     vec4 shader(vec4 color, vec2 pos, vec2 atlas_uv, vec2 screen_uv, vec4 params)
     {
         return color;
     }
-    
+
     void main()
     {
         bool _549 = v_type >= 0.0;
@@ -574,7 +574,7 @@ static const char sprite_vs_source_glsl330[1111] = {
         }
         result = c;
     }
-    
+
 */
 static const char sprite_fs_source_glsl330[7923] = {
     0x23,0x76,0x65,0x72,0x73,0x69,0x6f,0x6e,0x20,0x33,0x33,0x30,0x0a,0x0a,0x75,0x6e,
@@ -1076,7 +1076,7 @@ static const char sprite_fs_source_glsl330[7923] = {
 };
 /*
     #version 300 es
-    
+
     out vec2 v_pos;
     layout(location = 0) in vec2 in_pos;
     out vec2 v_a;
@@ -1103,7 +1103,7 @@ static const char sprite_fs_source_glsl330[7923] = {
     out vec2 v_posH;
     out vec4 v_user;
     layout(location = 11) in vec4 in_user_params;
-    
+
     void main()
     {
         v_pos = in_pos;
@@ -1123,7 +1123,7 @@ static const char sprite_fs_source_glsl330[7923] = {
         v_user = in_user_params;
         gl_Position.y = -gl_Position.y;
     }
-    
+
 */
 static const char sprite_vs_source_glsl300es[1114] = {
     0x23,0x76,0x65,0x72,0x73,0x69,0x6f,0x6e,0x20,0x33,0x30,0x30,0x20,0x65,0x73,0x0a,
@@ -1201,10 +1201,10 @@ static const char sprite_vs_source_glsl300es[1114] = {
     #version 300 es
     precision mediump float;
     precision highp int;
-    
+
     uniform highp vec4 fs_params[1];
     uniform highp sampler2D u_image;
-    
+
     in highp float v_stroke;
     in highp float v_aa;
     layout(location = 0) out highp vec4 result;
@@ -1220,18 +1220,18 @@ static const char sprite_vs_source_glsl300es[1114] = {
     in highp float v_alpha;
     in highp vec2 v_posH;
     in highp vec4 v_user;
-    
+
     highp vec2 smooth_uv(highp vec2 uv, highp vec2 texture_size)
     {
         highp vec2 _205 = floor(uv * texture_size + vec2(0.5));
         return (_205 + clamp((uv * texture_size + (-_205)) / fwidth(uv * texture_size), vec2(-0.5), vec2(0.5))) / texture_size;
     }
-    
+
     highp vec4 de_gamma(highp vec4 c)
     {
         return vec4(pow(abs(c.xyz), vec3(2.2000000476837158203125)), c.w);
     }
-    
+
     highp float overlay(highp float base, highp float blend)
     {
         highp float _105;
@@ -1245,7 +1245,7 @@ static const char sprite_vs_source_glsl300es[1114] = {
         }
         return _105;
     }
-    
+
     highp vec3 overlay(highp vec3 base, highp vec3 blend)
     {
         highp float param = base.x;
@@ -1256,30 +1256,30 @@ static const char sprite_vs_source_glsl300es[1114] = {
         highp float param_5 = blend.z;
         return vec3(overlay(param, param_1), overlay(param_2, param_3), overlay(param_4, param_5));
     }
-    
+
     highp vec4 overlay(highp vec4 base, highp vec4 blend)
     {
         highp vec3 param = base.xyz;
         highp vec3 param_1 = blend.xyz;
         return vec4(overlay(param, param_1), base.w);
     }
-    
+
     highp vec4 gamma(highp vec4 c)
     {
         return vec4(pow(abs(c.xyz), vec3(0.4545454680919647216796875)), c.w);
     }
-    
+
     highp vec2 skew(highp vec2 v)
     {
         return vec2(-v.y, v.x);
     }
-    
+
     highp float distance_aabb(highp vec2 p, highp vec2 he)
     {
         highp vec2 _349 = abs(p) - he;
         return length(max(_349, vec2(0.0))) + min(max(_349.x, _349.y), 0.0);
     }
-    
+
     highp float distance_box(inout highp vec2 p, highp vec2 c, highp vec2 he, highp vec2 u)
     {
         highp vec2 param = u;
@@ -1289,7 +1289,7 @@ static const char sprite_vs_source_glsl300es[1114] = {
         highp vec2 param_2 = he;
         return distance_aabb(param_1, param_2);
     }
-    
+
     highp float safe_div(highp float a, highp float b)
     {
         highp float _226;
@@ -1303,7 +1303,7 @@ static const char sprite_vs_source_glsl300es[1114] = {
         }
         return _226;
     }
-    
+
     highp float safe_len(highp vec2 v)
     {
         highp float _239 = dot(v, v);
@@ -1318,7 +1318,7 @@ static const char sprite_vs_source_glsl300es[1114] = {
         }
         return _242;
     }
-    
+
     highp float distance_segment(highp vec2 p, highp vec2 a, highp vec2 b)
     {
         highp vec2 _394 = b - a;
@@ -1328,12 +1328,12 @@ static const char sprite_vs_source_glsl300es[1114] = {
         highp vec2 param_2 = _398 - (_394 * clamp(safe_div(param, param_1), 0.0, 1.0));
         return safe_len(param_2);
     }
-    
+
     highp float det2(highp vec2 a, highp vec2 b)
     {
         return a.x * b.y + (-(a.y * b.x));
     }
-    
+
     highp float distance_triangle(highp vec2 p, highp vec2 a, highp vec2 b, highp vec2 c)
     {
         highp vec2 _424 = b - a;
@@ -1363,12 +1363,12 @@ static const char sprite_vs_source_glsl300es[1114] = {
         highp vec2 _531 = min(min(vec2(dot(_459, _459), _495 * det2(param_8, param_9)), vec2(dot(_474, _474), _495 * det2(param_10, param_11))), vec2(dot(_489, _489), _495 * det2(param_12, param_13)));
         return (-sqrt(_531.x)) * sign(_531.y);
     }
-    
+
     highp float sdf_stroke(highp float d)
     {
         return abs(d) - v_stroke;
     }
-    
+
     highp vec4 sdf(highp vec4 a, highp vec4 b, highp float d)
     {
         highp float param = d;
@@ -1378,12 +1378,12 @@ static const char sprite_vs_source_glsl300es[1114] = {
         result = mix(mix(_292, _292, _324), mix(vec4(_316.x ? b.x : a.x, _316.y ? b.y : a.y, _316.z ? b.z : a.z, _316.w ? b.w : a.w), mix(b, a, vec4(smoothstep(0.0, v_aa, d))), _324), vec4(v_fill));
         return result;
     }
-    
+
     highp vec4 shader(highp vec4 color, highp vec2 pos, highp vec2 atlas_uv, highp vec2 screen_uv, highp vec4 params)
     {
         return color;
     }
-    
+
     void main()
     {
         bool _549 = v_type >= 0.0;
@@ -1548,7 +1548,7 @@ static const char sprite_vs_source_glsl300es[1114] = {
         }
         result = c;
     }
-    
+
 */
 static const char sprite_fs_source_glsl300es[8938] = {
     0x23,0x76,0x65,0x72,0x73,0x69,0x6f,0x6e,0x20,0x33,0x30,0x30,0x20,0x65,0x73,0x0a,
@@ -2139,7 +2139,7 @@ static const char sprite_fs_source_glsl300es[8938] = {
     static float2 v_posH;
     static float4 v_user;
     static float4 in_user_params;
-    
+
     struct SPIRV_Cross_Input
     {
         float2 in_pos : TEXCOORD0;
@@ -2155,7 +2155,7 @@ static const char sprite_fs_source_glsl300es[8938] = {
         float4 in_params : TEXCOORD10;
         float4 in_user_params : TEXCOORD11;
     };
-    
+
     struct SPIRV_Cross_Output
     {
         float2 v_pos : TEXCOORD0;
@@ -2174,7 +2174,7 @@ static const char sprite_fs_source_glsl300es[8938] = {
         float4 v_user : TEXCOORD13;
         float4 gl_Position : SV_Position;
     };
-    
+
     void vert_main()
     {
         v_pos = in_pos;
@@ -2193,7 +2193,7 @@ static const char sprite_fs_source_glsl300es[8938] = {
         v_posH = in_posH;
         v_user = in_user_params;
     }
-    
+
     SPIRV_Cross_Output main(SPIRV_Cross_Input stage_input)
     {
         in_pos = stage_input.in_pos;
@@ -2418,10 +2418,10 @@ static const char sprite_vs_source_hlsl5[2925] = {
     {
         float2 _619_u_texture_size : packoffset(c0);
     };
-    
+
     Texture2D<float4> u_image : register(t0);
     SamplerState _u_image_sampler : register(s0);
-    
+
     static float v_stroke;
     static float v_aa;
     static float4 result;
@@ -2437,7 +2437,7 @@ static const char sprite_vs_source_hlsl5[2925] = {
     static float v_alpha;
     static float2 v_posH;
     static float4 v_user;
-    
+
     struct SPIRV_Cross_Input
     {
         float2 v_pos : TEXCOORD0;
@@ -2455,23 +2455,23 @@ static const char sprite_vs_source_hlsl5[2925] = {
         float2 v_posH : TEXCOORD12;
         float4 v_user : TEXCOORD13;
     };
-    
+
     struct SPIRV_Cross_Output
     {
         float4 result : SV_Target0;
     };
-    
+
     float2 smooth_uv(float2 uv, float2 texture_size)
     {
         float2 _205 = floor(mad(uv, texture_size, 0.5f.xx));
         return (_205 + clamp(mad(uv, texture_size, -_205) / fwidth(uv * texture_size), (-0.5f).xx, 0.5f.xx)) / texture_size;
     }
-    
+
     float4 de_gamma(float4 c)
     {
         return float4(pow(abs(c.xyz), 2.2000000476837158203125f.xxx), c.w);
     }
-    
+
     float overlay(float base, float blend)
     {
         float _105;
@@ -2485,7 +2485,7 @@ static const char sprite_vs_source_hlsl5[2925] = {
         }
         return _105;
     }
-    
+
     float3 overlay(float3 base, float3 blend)
     {
         float param = base.x;
@@ -2496,30 +2496,30 @@ static const char sprite_vs_source_hlsl5[2925] = {
         float param_5 = blend.z;
         return float3(overlay(param, param_1), overlay(param_2, param_3), overlay(param_4, param_5));
     }
-    
+
     float4 overlay(float4 base, float4 blend)
     {
         float3 param = base.xyz;
         float3 param_1 = blend.xyz;
         return float4(overlay(param, param_1), base.w);
     }
-    
+
     float4 gamma(float4 c)
     {
         return float4(pow(abs(c.xyz), 0.4545454680919647216796875f.xxx), c.w);
     }
-    
+
     float2 skew(float2 v)
     {
         return float2(-v.y, v.x);
     }
-    
+
     float distance_aabb(float2 p, float2 he)
     {
         float2 _349 = abs(p) - he;
         return length(max(_349, 0.0f.xx)) + min(max(_349.x, _349.y), 0.0f);
     }
-    
+
     float distance_box(inout float2 p, float2 c, float2 he, float2 u)
     {
         float2 param = u;
@@ -2529,7 +2529,7 @@ static const char sprite_vs_source_hlsl5[2925] = {
         float2 param_2 = he;
         return distance_aabb(param_1, param_2);
     }
-    
+
     float safe_div(float a, float b)
     {
         float _226;
@@ -2543,7 +2543,7 @@ static const char sprite_vs_source_hlsl5[2925] = {
         }
         return _226;
     }
-    
+
     float safe_len(float2 v)
     {
         float _239 = dot(v, v);
@@ -2558,7 +2558,7 @@ static const char sprite_vs_source_hlsl5[2925] = {
         }
         return _242;
     }
-    
+
     float distance_segment(float2 p, float2 a, float2 b)
     {
         float2 _394 = b - a;
@@ -2568,12 +2568,12 @@ static const char sprite_vs_source_hlsl5[2925] = {
         float2 param_2 = _398 - (_394 * clamp(safe_div(param, param_1), 0.0f, 1.0f));
         return safe_len(param_2);
     }
-    
+
     float det2(float2 a, float2 b)
     {
         return mad(a.x, b.y, -(a.y * b.x));
     }
-    
+
     float distance_triangle(float2 p, float2 a, float2 b, float2 c)
     {
         float2 _424 = b - a;
@@ -2603,12 +2603,12 @@ static const char sprite_vs_source_hlsl5[2925] = {
         float2 _531 = min(min(float2(dot(_459, _459), _495 * det2(param_8, param_9)), float2(dot(_474, _474), _495 * det2(param_10, param_11))), float2(dot(_489, _489), _495 * det2(param_12, param_13)));
         return (-sqrt(_531.x)) * sign(_531.y);
     }
-    
+
     float sdf_stroke(float d)
     {
         return abs(d) - v_stroke;
     }
-    
+
     float4 sdf(float4 a, float4 b, float d)
     {
         float param = d;
@@ -2618,12 +2618,12 @@ static const char sprite_vs_source_hlsl5[2925] = {
         result = lerp(lerp(_292, _292, _324), lerp(float4(_316.x ? b.x : a.x, _316.y ? b.y : a.y, _316.z ? b.z : a.z, _316.w ? b.w : a.w), lerp(b, a, smoothstep(0.0f, v_aa, d).xxxx), _324), v_fill.xxxx);
         return result;
     }
-    
+
     float4 shader(float4 color, float2 pos, float2 atlas_uv, float2 screen_uv, float4 params)
     {
         return color;
     }
-    
+
     void frag_main()
     {
         bool _549 = v_type >= 0.0f;
@@ -2788,7 +2788,7 @@ static const char sprite_vs_source_hlsl5[2925] = {
         }
         result = c;
     }
-    
+
     SPIRV_Cross_Output main(SPIRV_Cross_Input stage_input)
     {
         v_stroke = stage_input.v_stroke;
@@ -3411,9 +3411,9 @@ static const char sprite_fs_source_hlsl5[9516] = {
 /*
     #include <metal_stdlib>
     #include <simd/simd.h>
-    
+
     using namespace metal;
-    
+
     struct main0_out
     {
         float2 v_pos [[user(locn0)]];
@@ -3432,7 +3432,7 @@ static const char sprite_fs_source_hlsl5[9516] = {
         float4 v_user [[user(locn13)]];
         float4 gl_Position [[position]];
     };
-    
+
     struct main0_in
     {
         float2 in_pos [[attribute(0)]];
@@ -3448,7 +3448,7 @@ static const char sprite_fs_source_hlsl5[9516] = {
         float4 in_params [[attribute(10)]];
         float4 in_user_params [[attribute(11)]];
     };
-    
+
     vertex main0_out main0(main0_in in [[stage_in]])
     {
         main0_out out = {};
@@ -3469,7 +3469,7 @@ static const char sprite_fs_source_hlsl5[9516] = {
         out.v_user = in.in_user_params;
         return out;
     }
-    
+
 */
 static const char sprite_vs_source_metal_macos[1624] = {
     0x23,0x69,0x6e,0x63,0x6c,0x75,0x64,0x65,0x20,0x3c,0x6d,0x65,0x74,0x61,0x6c,0x5f,
@@ -3577,22 +3577,22 @@ static const char sprite_vs_source_metal_macos[1624] = {
 };
 /*
     #pragma clang diagnostic ignored "-Wmissing-prototypes"
-    
+
     #include <metal_stdlib>
     #include <simd/simd.h>
-    
+
     using namespace metal;
-    
+
     struct fs_params
     {
         float2 u_texture_size;
     };
-    
+
     struct main0_out
     {
         float4 result [[color(0)]];
     };
-    
+
     struct main0_in
     {
         float2 v_pos [[user(locn0)]];
@@ -3610,20 +3610,20 @@ static const char sprite_vs_source_metal_macos[1624] = {
         float2 v_posH [[user(locn12)]];
         float4 v_user [[user(locn13)]];
     };
-    
+
     static inline __attribute__((always_inline))
     float2 smooth_uv(thread const float2& uv, thread const float2& texture_size)
     {
         float2 _205 = floor(fma(uv, texture_size, float2(0.5)));
         return (_205 + fast::clamp(fma(uv, texture_size, -_205) / fwidth(uv * texture_size), float2(-0.5), float2(0.5))) / texture_size;
     }
-    
+
     static inline __attribute__((always_inline))
     float4 de_gamma(thread const float4& c)
     {
         return float4(pow(abs(c.xyz), float3(2.2000000476837158203125)), c.w);
     }
-    
+
     static inline __attribute__((always_inline))
     float overlay(thread const float& base, thread const float& blend)
     {
@@ -3638,7 +3638,7 @@ static const char sprite_vs_source_metal_macos[1624] = {
         }
         return _105;
     }
-    
+
     static inline __attribute__((always_inline))
     float3 overlay(thread const float3& base, thread const float3& blend)
     {
@@ -3650,7 +3650,7 @@ static const char sprite_vs_source_metal_macos[1624] = {
         float param_5 = blend.z;
         return float3(overlay(param, param_1), overlay(param_2, param_3), overlay(param_4, param_5));
     }
-    
+
     static inline __attribute__((always_inline))
     float4 overlay(thread const float4& base, thread const float4& blend)
     {
@@ -3658,26 +3658,26 @@ static const char sprite_vs_source_metal_macos[1624] = {
         float3 param_1 = blend.xyz;
         return float4(overlay(param, param_1), base.w);
     }
-    
+
     static inline __attribute__((always_inline))
     float4 gamma(thread const float4& c)
     {
         return float4(pow(abs(c.xyz), float3(0.4545454680919647216796875)), c.w);
     }
-    
+
     static inline __attribute__((always_inline))
     float2 skew(thread const float2& v)
     {
         return float2(-v.y, v.x);
     }
-    
+
     static inline __attribute__((always_inline))
     float distance_aabb(thread const float2& p, thread const float2& he)
     {
         float2 _349 = abs(p) - he;
         return length(fast::max(_349, float2(0.0))) + fast::min(fast::max(_349.x, _349.y), 0.0);
     }
-    
+
     static inline __attribute__((always_inline))
     float distance_box(thread float2& p, thread const float2& c, thread const float2& he, thread const float2& u)
     {
@@ -3688,7 +3688,7 @@ static const char sprite_vs_source_metal_macos[1624] = {
         float2 param_2 = he;
         return distance_aabb(param_1, param_2);
     }
-    
+
     static inline __attribute__((always_inline))
     float safe_div(thread const float& a, thread const float& b)
     {
@@ -3703,7 +3703,7 @@ static const char sprite_vs_source_metal_macos[1624] = {
         }
         return _226;
     }
-    
+
     static inline __attribute__((always_inline))
     float safe_len(thread const float2& v)
     {
@@ -3719,7 +3719,7 @@ static const char sprite_vs_source_metal_macos[1624] = {
         }
         return _242;
     }
-    
+
     static inline __attribute__((always_inline))
     float distance_segment(thread const float2& p, thread const float2& a, thread const float2& b)
     {
@@ -3730,13 +3730,13 @@ static const char sprite_vs_source_metal_macos[1624] = {
         float2 param_2 = _398 - (_394 * fast::clamp(safe_div(param, param_1), 0.0, 1.0));
         return safe_len(param_2);
     }
-    
+
     static inline __attribute__((always_inline))
     float det2(thread const float2& a, thread const float2& b)
     {
         return fma(a.x, b.y, -(a.y * b.x));
     }
-    
+
     static inline __attribute__((always_inline))
     float distance_triangle(thread const float2& p, thread const float2& a, thread const float2& b, thread const float2& c)
     {
@@ -3767,13 +3767,13 @@ static const char sprite_vs_source_metal_macos[1624] = {
         float2 _531 = fast::min(fast::min(float2(dot(_459, _459), _495 * det2(param_8, param_9)), float2(dot(_474, _474), _495 * det2(param_10, param_11))), float2(dot(_489, _489), _495 * det2(param_12, param_13)));
         return (-sqrt(_531.x)) * sign(_531.y);
     }
-    
+
     static inline __attribute__((always_inline))
     float sdf_stroke(thread const float& d, thread float& v_stroke)
     {
         return abs(d) - v_stroke;
     }
-    
+
     static inline __attribute__((always_inline))
     float4 sdf(thread const float4& a, thread const float4& b, thread const float& d, thread float& v_stroke, thread float& v_aa, thread float4& result, thread float& v_fill)
     {
@@ -3783,13 +3783,13 @@ static const char sprite_vs_source_metal_macos[1624] = {
         result = mix(mix(_292, _292, _324), mix(select(a, b, bool4(fast::clamp(d, -1.0, 1.0) <= 0.0)), mix(b, a, float4(smoothstep(0.0, v_aa, d))), _324), float4(v_fill));
         return result;
     }
-    
+
     static inline __attribute__((always_inline))
     float4 shader(thread const float4& color, thread const float2& pos, thread const float2& atlas_uv, thread const float2& screen_uv, thread const float4& params)
     {
         return color;
     }
-    
+
     fragment main0_out main0(main0_in in [[stage_in]], constant fs_params& _619 [[buffer(0)]], texture2d<float> u_image [[texture(0)]], sampler u_imageSmplr [[sampler(0)]])
     {
         main0_out out = {};
@@ -3955,7 +3955,7 @@ static const char sprite_vs_source_metal_macos[1624] = {
         out.result = c;
         return out;
     }
-    
+
 */
 static const char sprite_fs_source_metal_macos[10252] = {
     0x23,0x70,0x72,0x61,0x67,0x6d,0x61,0x20,0x63,0x6c,0x61,0x6e,0x67,0x20,0x64,0x69,
@@ -4603,9 +4603,9 @@ static const char sprite_fs_source_metal_macos[10252] = {
 /*
     #include <metal_stdlib>
     #include <simd/simd.h>
-    
+
     using namespace metal;
-    
+
     struct main0_out
     {
         float2 v_pos [[user(locn0)]];
@@ -4624,7 +4624,7 @@ static const char sprite_fs_source_metal_macos[10252] = {
         float4 v_user [[user(locn13)]];
         float4 gl_Position [[position]];
     };
-    
+
     struct main0_in
     {
         float2 in_pos [[attribute(0)]];
@@ -4640,7 +4640,7 @@ static const char sprite_fs_source_metal_macos[10252] = {
         float4 in_params [[attribute(10)]];
         float4 in_user_params [[attribute(11)]];
     };
-    
+
     vertex main0_out main0(main0_in in [[stage_in]])
     {
         main0_out out = {};
@@ -4661,7 +4661,7 @@ static const char sprite_fs_source_metal_macos[10252] = {
         out.v_user = in.in_user_params;
         return out;
     }
-    
+
 */
 static const char sprite_vs_source_metal_ios[1624] = {
     0x23,0x69,0x6e,0x63,0x6c,0x75,0x64,0x65,0x20,0x3c,0x6d,0x65,0x74,0x61,0x6c,0x5f,
@@ -4769,22 +4769,22 @@ static const char sprite_vs_source_metal_ios[1624] = {
 };
 /*
     #pragma clang diagnostic ignored "-Wmissing-prototypes"
-    
+
     #include <metal_stdlib>
     #include <simd/simd.h>
-    
+
     using namespace metal;
-    
+
     struct fs_params
     {
         float2 u_texture_size;
     };
-    
+
     struct main0_out
     {
         float4 result [[color(0)]];
     };
-    
+
     struct main0_in
     {
         float2 v_pos [[user(locn0)]];
@@ -4802,20 +4802,20 @@ static const char sprite_vs_source_metal_ios[1624] = {
         float2 v_posH [[user(locn12)]];
         float4 v_user [[user(locn13)]];
     };
-    
+
     static inline __attribute__((always_inline))
     float2 smooth_uv(thread const float2& uv, thread const float2& texture_size)
     {
         float2 _205 = floor(fma(uv, texture_size, float2(0.5)));
         return (_205 + fast::clamp(fma(uv, texture_size, -_205) / fwidth(uv * texture_size), float2(-0.5), float2(0.5))) / texture_size;
     }
-    
+
     static inline __attribute__((always_inline))
     float4 de_gamma(thread const float4& c)
     {
         return float4(pow(abs(c.xyz), float3(2.2000000476837158203125)), c.w);
     }
-    
+
     static inline __attribute__((always_inline))
     float overlay(thread const float& base, thread const float& blend)
     {
@@ -4830,7 +4830,7 @@ static const char sprite_vs_source_metal_ios[1624] = {
         }
         return _105;
     }
-    
+
     static inline __attribute__((always_inline))
     float3 overlay(thread const float3& base, thread const float3& blend)
     {
@@ -4842,7 +4842,7 @@ static const char sprite_vs_source_metal_ios[1624] = {
         float param_5 = blend.z;
         return float3(overlay(param, param_1), overlay(param_2, param_3), overlay(param_4, param_5));
     }
-    
+
     static inline __attribute__((always_inline))
     float4 overlay(thread const float4& base, thread const float4& blend)
     {
@@ -4850,26 +4850,26 @@ static const char sprite_vs_source_metal_ios[1624] = {
         float3 param_1 = blend.xyz;
         return float4(overlay(param, param_1), base.w);
     }
-    
+
     static inline __attribute__((always_inline))
     float4 gamma(thread const float4& c)
     {
         return float4(pow(abs(c.xyz), float3(0.4545454680919647216796875)), c.w);
     }
-    
+
     static inline __attribute__((always_inline))
     float2 skew(thread const float2& v)
     {
         return float2(-v.y, v.x);
     }
-    
+
     static inline __attribute__((always_inline))
     float distance_aabb(thread const float2& p, thread const float2& he)
     {
         float2 _349 = abs(p) - he;
         return length(fast::max(_349, float2(0.0))) + fast::min(fast::max(_349.x, _349.y), 0.0);
     }
-    
+
     static inline __attribute__((always_inline))
     float distance_box(thread float2& p, thread const float2& c, thread const float2& he, thread const float2& u)
     {
@@ -4880,7 +4880,7 @@ static const char sprite_vs_source_metal_ios[1624] = {
         float2 param_2 = he;
         return distance_aabb(param_1, param_2);
     }
-    
+
     static inline __attribute__((always_inline))
     float safe_div(thread const float& a, thread const float& b)
     {
@@ -4895,7 +4895,7 @@ static const char sprite_vs_source_metal_ios[1624] = {
         }
         return _226;
     }
-    
+
     static inline __attribute__((always_inline))
     float safe_len(thread const float2& v)
     {
@@ -4911,7 +4911,7 @@ static const char sprite_vs_source_metal_ios[1624] = {
         }
         return _242;
     }
-    
+
     static inline __attribute__((always_inline))
     float distance_segment(thread const float2& p, thread const float2& a, thread const float2& b)
     {
@@ -4922,13 +4922,13 @@ static const char sprite_vs_source_metal_ios[1624] = {
         float2 param_2 = _398 - (_394 * fast::clamp(safe_div(param, param_1), 0.0, 1.0));
         return safe_len(param_2);
     }
-    
+
     static inline __attribute__((always_inline))
     float det2(thread const float2& a, thread const float2& b)
     {
         return fma(a.x, b.y, -(a.y * b.x));
     }
-    
+
     static inline __attribute__((always_inline))
     float distance_triangle(thread const float2& p, thread const float2& a, thread const float2& b, thread const float2& c)
     {
@@ -4959,13 +4959,13 @@ static const char sprite_vs_source_metal_ios[1624] = {
         float2 _531 = fast::min(fast::min(float2(dot(_459, _459), _495 * det2(param_8, param_9)), float2(dot(_474, _474), _495 * det2(param_10, param_11))), float2(dot(_489, _489), _495 * det2(param_12, param_13)));
         return (-sqrt(_531.x)) * sign(_531.y);
     }
-    
+
     static inline __attribute__((always_inline))
     float sdf_stroke(thread const float& d, thread float& v_stroke)
     {
         return abs(d) - v_stroke;
     }
-    
+
     static inline __attribute__((always_inline))
     float4 sdf(thread const float4& a, thread const float4& b, thread const float& d, thread float& v_stroke, thread float& v_aa, thread float4& result, thread float& v_fill)
     {
@@ -4975,13 +4975,13 @@ static const char sprite_vs_source_metal_ios[1624] = {
         result = mix(mix(_292, _292, _324), mix(select(a, b, bool4(fast::clamp(d, -1.0, 1.0) <= 0.0)), mix(b, a, float4(smoothstep(0.0, v_aa, d))), _324), float4(v_fill));
         return result;
     }
-    
+
     static inline __attribute__((always_inline))
     float4 shader(thread const float4& color, thread const float2& pos, thread const float2& atlas_uv, thread const float2& screen_uv, thread const float4& params)
     {
         return color;
     }
-    
+
     fragment main0_out main0(main0_in in [[stage_in]], constant fs_params& _619 [[buffer(0)]], texture2d<float> u_image [[texture(0)]], sampler u_imageSmplr [[sampler(0)]])
     {
         main0_out out = {};
@@ -5147,7 +5147,7 @@ static const char sprite_vs_source_metal_ios[1624] = {
         out.result = c;
         return out;
     }
-    
+
 */
 static const char sprite_fs_source_metal_ios[10252] = {
     0x23,0x70,0x72,0x61,0x67,0x6d,0x61,0x20,0x63,0x6c,0x61,0x6e,0x67,0x20,0x64,0x69,
@@ -5795,9 +5795,9 @@ static const char sprite_fs_source_metal_ios[10252] = {
 /*
     #include <metal_stdlib>
     #include <simd/simd.h>
-    
+
     using namespace metal;
-    
+
     struct main0_out
     {
         float2 v_pos [[user(locn0)]];
@@ -5816,7 +5816,7 @@ static const char sprite_fs_source_metal_ios[10252] = {
         float4 v_user [[user(locn13)]];
         float4 gl_Position [[position]];
     };
-    
+
     struct main0_in
     {
         float2 in_pos [[attribute(0)]];
@@ -5832,7 +5832,7 @@ static const char sprite_fs_source_metal_ios[10252] = {
         float4 in_params [[attribute(10)]];
         float4 in_user_params [[attribute(11)]];
     };
-    
+
     vertex main0_out main0(main0_in in [[stage_in]])
     {
         main0_out out = {};
@@ -5853,7 +5853,7 @@ static const char sprite_fs_source_metal_ios[10252] = {
         out.v_user = in.in_user_params;
         return out;
     }
-    
+
 */
 static const char sprite_vs_source_metal_sim[1624] = {
     0x23,0x69,0x6e,0x63,0x6c,0x75,0x64,0x65,0x20,0x3c,0x6d,0x65,0x74,0x61,0x6c,0x5f,
@@ -5961,22 +5961,22 @@ static const char sprite_vs_source_metal_sim[1624] = {
 };
 /*
     #pragma clang diagnostic ignored "-Wmissing-prototypes"
-    
+
     #include <metal_stdlib>
     #include <simd/simd.h>
-    
+
     using namespace metal;
-    
+
     struct fs_params
     {
         float2 u_texture_size;
     };
-    
+
     struct main0_out
     {
         float4 result [[color(0)]];
     };
-    
+
     struct main0_in
     {
         float2 v_pos [[user(locn0)]];
@@ -5994,20 +5994,20 @@ static const char sprite_vs_source_metal_sim[1624] = {
         float2 v_posH [[user(locn12)]];
         float4 v_user [[user(locn13)]];
     };
-    
+
     static inline __attribute__((always_inline))
     float2 smooth_uv(thread const float2& uv, thread const float2& texture_size)
     {
         float2 _205 = floor(fma(uv, texture_size, float2(0.5)));
         return (_205 + fast::clamp(fma(uv, texture_size, -_205) / fwidth(uv * texture_size), float2(-0.5), float2(0.5))) / texture_size;
     }
-    
+
     static inline __attribute__((always_inline))
     float4 de_gamma(thread const float4& c)
     {
         return float4(pow(abs(c.xyz), float3(2.2000000476837158203125)), c.w);
     }
-    
+
     static inline __attribute__((always_inline))
     float overlay(thread const float& base, thread const float& blend)
     {
@@ -6022,7 +6022,7 @@ static const char sprite_vs_source_metal_sim[1624] = {
         }
         return _105;
     }
-    
+
     static inline __attribute__((always_inline))
     float3 overlay(thread const float3& base, thread const float3& blend)
     {
@@ -6034,7 +6034,7 @@ static const char sprite_vs_source_metal_sim[1624] = {
         float param_5 = blend.z;
         return float3(overlay(param, param_1), overlay(param_2, param_3), overlay(param_4, param_5));
     }
-    
+
     static inline __attribute__((always_inline))
     float4 overlay(thread const float4& base, thread const float4& blend)
     {
@@ -6042,26 +6042,26 @@ static const char sprite_vs_source_metal_sim[1624] = {
         float3 param_1 = blend.xyz;
         return float4(overlay(param, param_1), base.w);
     }
-    
+
     static inline __attribute__((always_inline))
     float4 gamma(thread const float4& c)
     {
         return float4(pow(abs(c.xyz), float3(0.4545454680919647216796875)), c.w);
     }
-    
+
     static inline __attribute__((always_inline))
     float2 skew(thread const float2& v)
     {
         return float2(-v.y, v.x);
     }
-    
+
     static inline __attribute__((always_inline))
     float distance_aabb(thread const float2& p, thread const float2& he)
     {
         float2 _349 = abs(p) - he;
         return length(fast::max(_349, float2(0.0))) + fast::min(fast::max(_349.x, _349.y), 0.0);
     }
-    
+
     static inline __attribute__((always_inline))
     float distance_box(thread float2& p, thread const float2& c, thread const float2& he, thread const float2& u)
     {
@@ -6072,7 +6072,7 @@ static const char sprite_vs_source_metal_sim[1624] = {
         float2 param_2 = he;
         return distance_aabb(param_1, param_2);
     }
-    
+
     static inline __attribute__((always_inline))
     float safe_div(thread const float& a, thread const float& b)
     {
@@ -6087,7 +6087,7 @@ static const char sprite_vs_source_metal_sim[1624] = {
         }
         return _226;
     }
-    
+
     static inline __attribute__((always_inline))
     float safe_len(thread const float2& v)
     {
@@ -6103,7 +6103,7 @@ static const char sprite_vs_source_metal_sim[1624] = {
         }
         return _242;
     }
-    
+
     static inline __attribute__((always_inline))
     float distance_segment(thread const float2& p, thread const float2& a, thread const float2& b)
     {
@@ -6114,13 +6114,13 @@ static const char sprite_vs_source_metal_sim[1624] = {
         float2 param_2 = _398 - (_394 * fast::clamp(safe_div(param, param_1), 0.0, 1.0));
         return safe_len(param_2);
     }
-    
+
     static inline __attribute__((always_inline))
     float det2(thread const float2& a, thread const float2& b)
     {
         return fma(a.x, b.y, -(a.y * b.x));
     }
-    
+
     static inline __attribute__((always_inline))
     float distance_triangle(thread const float2& p, thread const float2& a, thread const float2& b, thread const float2& c)
     {
@@ -6151,13 +6151,13 @@ static const char sprite_vs_source_metal_sim[1624] = {
         float2 _531 = fast::min(fast::min(float2(dot(_459, _459), _495 * det2(param_8, param_9)), float2(dot(_474, _474), _495 * det2(param_10, param_11))), float2(dot(_489, _489), _495 * det2(param_12, param_13)));
         return (-sqrt(_531.x)) * sign(_531.y);
     }
-    
+
     static inline __attribute__((always_inline))
     float sdf_stroke(thread const float& d, thread float& v_stroke)
     {
         return abs(d) - v_stroke;
     }
-    
+
     static inline __attribute__((always_inline))
     float4 sdf(thread const float4& a, thread const float4& b, thread const float& d, thread float& v_stroke, thread float& v_aa, thread float4& result, thread float& v_fill)
     {
@@ -6167,13 +6167,13 @@ static const char sprite_vs_source_metal_sim[1624] = {
         result = mix(mix(_292, _292, _324), mix(select(a, b, bool4(fast::clamp(d, -1.0, 1.0) <= 0.0)), mix(b, a, float4(smoothstep(0.0, v_aa, d))), _324), float4(v_fill));
         return result;
     }
-    
+
     static inline __attribute__((always_inline))
     float4 shader(thread const float4& color, thread const float2& pos, thread const float2& atlas_uv, thread const float2& screen_uv, thread const float4& params)
     {
         return color;
     }
-    
+
     fragment main0_out main0(main0_in in [[stage_in]], constant fs_params& _619 [[buffer(0)]], texture2d<float> u_image [[texture(0)]], sampler u_imageSmplr [[sampler(0)]])
     {
         main0_out out = {};
@@ -6339,7 +6339,7 @@ static const char sprite_vs_source_metal_sim[1624] = {
         out.result = c;
         return out;
     }
-    
+
 */
 static const char sprite_fs_source_metal_sim[10252] = {
     0x23,0x70,0x72,0x61,0x67,0x6d,0x61,0x20,0x63,0x6c,0x61,0x6e,0x67,0x20,0x64,0x69,
@@ -6988,7 +6988,7 @@ static const char sprite_fs_source_metal_sim[10252] = {
   #error "Please include sokol_gfx.h before sprite_shader.h"
 #endif
 static inline const sg_shader_desc* sprite_shader_shader_desc(sg_backend backend) {
-  if (backend == SG_BACKEND_GLCORE33) {
+  if (backend == SG_BACKEND_GLCORE) {
     static sg_shader_desc desc;
     static bool valid;
     if (!valid) {

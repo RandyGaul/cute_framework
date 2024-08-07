@@ -218,7 +218,7 @@ CF_Result cf_make_app(const char* window_title, int display_index, int x, int y,
 
 	// Turn on high DPI support for all platforms.
 	options |= SDL_WINDOW_ALLOW_HIGHDPI;
-	
+
 	if (SDL_Init(sdl_options)) {
 		return cf_result_error("SDL_Init failed");
 	}
@@ -315,7 +315,7 @@ CF_Result cf_make_app(const char* window_title, int display_index, int x, int y,
 		sg_setup(params);
 		app->gfx_enabled = true;
 	}
-	
+
 	if (options & APP_OPTIONS_METAL_CONTEXT && !(options & APP_OPTIONS_NO_GFX)) {
 		cf_metal_init(window, w, h, 1);
 		app->gfx_ctx_params = cf_metal_get_context();
@@ -814,10 +814,10 @@ ImGuiContext* cf_app_init_imgui(bool no_default_font)
 	app->using_imgui = true;
 
 	ImGui::StyleColorsDark();
-	
+
 	sg_backend backend = sg_query_backend();
 	switch (backend) {
-		case SG_BACKEND_GLCORE33: ImGui_ImplSDL2_InitForOpenGL(app->window, NULL); break;
+		case SG_BACKEND_GLCORE: ImGui_ImplSDL2_InitForOpenGL(app->window, NULL); break;
 		case SG_BACKEND_GLES3: ImGui_ImplSDL2_InitForOpenGL(app->window, NULL); break;
 		case SG_BACKEND_D3D11: ImGui_ImplSDL2_InitForD3D(app->window); break;
 		case SG_BACKEND_METAL_IOS: ImGui_ImplSDL2_InitForMetal(app->window); break;
@@ -825,12 +825,12 @@ ImGuiContext* cf_app_init_imgui(bool no_default_font)
 		case SG_BACKEND_METAL_SIMULATOR: ImGui_ImplSDL2_InitForMetal(app->window); break;
 		case SG_BACKEND_WGPU: ImGui_ImplSDL2_InitForOpenGL(app->window, NULL); break;
 	}
-	
+
 	simgui_desc_t imgui_params = { 0 };
 	imgui_params.no_default_font = no_default_font;
 	imgui_params.ini_filename = "imgui.ini";
 	simgui_setup(imgui_params);
-	sg_imgui_desc_t sg_imgui_desc = { };
+	sgimgui_desc_t sg_imgui_desc = { };
 	sg_imgui_init(&app->sg_imgui, &sg_imgui_desc);
 
 	return ::ImGui::GetCurrentContext();

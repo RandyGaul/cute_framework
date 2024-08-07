@@ -57,17 +57,17 @@
 #define SLOT_blit_u_image (0)
 /*
     #version 330
-    
+
     layout(location = 0) in vec2 in_pos;
     out vec2 uv;
     layout(location = 1) in vec2 in_uv;
-    
+
     void main()
     {
         uv = in_uv;
         gl_Position = vec4(in_pos, 0.0, 1.0);
     }
-    
+
 */
 static const char blit_vs_source_glsl330[177] = {
     0x23,0x76,0x65,0x72,0x73,0x69,0x6f,0x6e,0x20,0x33,0x33,0x30,0x0a,0x0a,0x6c,0x61,
@@ -85,17 +85,17 @@ static const char blit_vs_source_glsl330[177] = {
 };
 /*
     #version 330
-    
+
     uniform sampler2D u_image;
-    
+
     in vec2 uv;
     layout(location = 0) out vec4 result;
-    
+
     void main()
     {
         result = texture(u_image, uv);
     }
-    
+
 */
 static const char blit_fs_source_glsl330[146] = {
     0x23,0x76,0x65,0x72,0x73,0x69,0x6f,0x6e,0x20,0x33,0x33,0x30,0x0a,0x0a,0x75,0x6e,
@@ -111,17 +111,17 @@ static const char blit_fs_source_glsl330[146] = {
 };
 /*
     #version 300 es
-    
+
     layout(location = 0) in vec2 in_pos;
     out vec2 uv;
     layout(location = 1) in vec2 in_uv;
-    
+
     void main()
     {
         uv = in_uv;
         gl_Position = vec4(in_pos, 0.0, 1.0);
     }
-    
+
 */
 static const char blit_vs_source_glsl300es[180] = {
     0x23,0x76,0x65,0x72,0x73,0x69,0x6f,0x6e,0x20,0x33,0x30,0x30,0x20,0x65,0x73,0x0a,
@@ -141,17 +141,17 @@ static const char blit_vs_source_glsl300es[180] = {
     #version 300 es
     precision mediump float;
     precision highp int;
-    
+
     uniform highp sampler2D u_image;
-    
+
     in highp vec2 uv;
     layout(location = 0) out highp vec4 result;
-    
+
     void main()
     {
         result = texture(u_image, uv);
     }
-    
+
 */
 static const char blit_fs_source_glsl300es[213] = {
     0x23,0x76,0x65,0x72,0x73,0x69,0x6f,0x6e,0x20,0x33,0x30,0x30,0x20,0x65,0x73,0x0a,
@@ -174,25 +174,25 @@ static const char blit_fs_source_glsl300es[213] = {
     static float2 in_pos;
     static float2 uv;
     static float2 in_uv;
-    
+
     struct SPIRV_Cross_Input
     {
         float2 in_pos : TEXCOORD0;
         float2 in_uv : TEXCOORD1;
     };
-    
+
     struct SPIRV_Cross_Output
     {
         float2 uv : TEXCOORD0;
         float4 gl_Position : SV_Position;
     };
-    
+
     void vert_main()
     {
         uv = in_uv;
         gl_Position = float4(in_pos, 0.0f, 1.0f);
     }
-    
+
     SPIRV_Cross_Output main(SPIRV_Cross_Input stage_input)
     {
         in_pos = stage_input.in_pos;
@@ -249,25 +249,25 @@ static const char blit_vs_source_hlsl5[635] = {
 /*
     Texture2D<float4> u_image : register(t0);
     SamplerState _u_image_sampler : register(s0);
-    
+
     static float2 uv;
     static float4 result;
-    
+
     struct SPIRV_Cross_Input
     {
         float2 uv : TEXCOORD0;
     };
-    
+
     struct SPIRV_Cross_Output
     {
         float4 result : SV_Target0;
     };
-    
+
     void frag_main()
     {
         result = u_image.Sample(_u_image_sampler, uv);
     }
-    
+
     SPIRV_Cross_Output main(SPIRV_Cross_Input stage_input)
     {
         uv = stage_input.uv;
@@ -315,21 +315,21 @@ static const char blit_fs_source_hlsl5[523] = {
 /*
     #include <metal_stdlib>
     #include <simd/simd.h>
-    
+
     using namespace metal;
-    
+
     struct main0_out
     {
         float2 uv [[user(locn0)]];
         float4 gl_Position [[position]];
     };
-    
+
     struct main0_in
     {
         float2 in_pos [[attribute(0)]];
         float2 in_uv [[attribute(1)]];
     };
-    
+
     vertex main0_out main0(main0_in in [[stage_in]])
     {
         main0_out out = {};
@@ -337,7 +337,7 @@ static const char blit_fs_source_hlsl5[523] = {
         out.gl_Position = float4(in.in_pos, 0.0, 1.0);
         return out;
     }
-    
+
 */
 static const char blit_vs_source_metal_macos[425] = {
     0x23,0x69,0x6e,0x63,0x6c,0x75,0x64,0x65,0x20,0x3c,0x6d,0x65,0x74,0x61,0x6c,0x5f,
@@ -371,26 +371,26 @@ static const char blit_vs_source_metal_macos[425] = {
 /*
     #include <metal_stdlib>
     #include <simd/simd.h>
-    
+
     using namespace metal;
-    
+
     struct main0_out
     {
         float4 result [[color(0)]];
     };
-    
+
     struct main0_in
     {
         float2 uv [[user(locn0)]];
     };
-    
+
     fragment main0_out main0(main0_in in [[stage_in]], texture2d<float> u_image [[texture(0)]], sampler u_imageSmplr [[sampler(0)]])
     {
         main0_out out = {};
         out.result = u_image.sample(u_imageSmplr, in.uv);
         return out;
     }
-    
+
 */
 static const char blit_fs_source_metal_macos[409] = {
     0x23,0x69,0x6e,0x63,0x6c,0x75,0x64,0x65,0x20,0x3c,0x6d,0x65,0x74,0x61,0x6c,0x5f,
@@ -423,21 +423,21 @@ static const char blit_fs_source_metal_macos[409] = {
 /*
     #include <metal_stdlib>
     #include <simd/simd.h>
-    
+
     using namespace metal;
-    
+
     struct main0_out
     {
         float2 uv [[user(locn0)]];
         float4 gl_Position [[position]];
     };
-    
+
     struct main0_in
     {
         float2 in_pos [[attribute(0)]];
         float2 in_uv [[attribute(1)]];
     };
-    
+
     vertex main0_out main0(main0_in in [[stage_in]])
     {
         main0_out out = {};
@@ -445,7 +445,7 @@ static const char blit_fs_source_metal_macos[409] = {
         out.gl_Position = float4(in.in_pos, 0.0, 1.0);
         return out;
     }
-    
+
 */
 static const char blit_vs_source_metal_ios[425] = {
     0x23,0x69,0x6e,0x63,0x6c,0x75,0x64,0x65,0x20,0x3c,0x6d,0x65,0x74,0x61,0x6c,0x5f,
@@ -479,26 +479,26 @@ static const char blit_vs_source_metal_ios[425] = {
 /*
     #include <metal_stdlib>
     #include <simd/simd.h>
-    
+
     using namespace metal;
-    
+
     struct main0_out
     {
         float4 result [[color(0)]];
     };
-    
+
     struct main0_in
     {
         float2 uv [[user(locn0)]];
     };
-    
+
     fragment main0_out main0(main0_in in [[stage_in]], texture2d<float> u_image [[texture(0)]], sampler u_imageSmplr [[sampler(0)]])
     {
         main0_out out = {};
         out.result = u_image.sample(u_imageSmplr, in.uv);
         return out;
     }
-    
+
 */
 static const char blit_fs_source_metal_ios[409] = {
     0x23,0x69,0x6e,0x63,0x6c,0x75,0x64,0x65,0x20,0x3c,0x6d,0x65,0x74,0x61,0x6c,0x5f,
@@ -531,21 +531,21 @@ static const char blit_fs_source_metal_ios[409] = {
 /*
     #include <metal_stdlib>
     #include <simd/simd.h>
-    
+
     using namespace metal;
-    
+
     struct main0_out
     {
         float2 uv [[user(locn0)]];
         float4 gl_Position [[position]];
     };
-    
+
     struct main0_in
     {
         float2 in_pos [[attribute(0)]];
         float2 in_uv [[attribute(1)]];
     };
-    
+
     vertex main0_out main0(main0_in in [[stage_in]])
     {
         main0_out out = {};
@@ -553,7 +553,7 @@ static const char blit_fs_source_metal_ios[409] = {
         out.gl_Position = float4(in.in_pos, 0.0, 1.0);
         return out;
     }
-    
+
 */
 static const char blit_vs_source_metal_sim[425] = {
     0x23,0x69,0x6e,0x63,0x6c,0x75,0x64,0x65,0x20,0x3c,0x6d,0x65,0x74,0x61,0x6c,0x5f,
@@ -587,26 +587,26 @@ static const char blit_vs_source_metal_sim[425] = {
 /*
     #include <metal_stdlib>
     #include <simd/simd.h>
-    
+
     using namespace metal;
-    
+
     struct main0_out
     {
         float4 result [[color(0)]];
     };
-    
+
     struct main0_in
     {
         float2 uv [[user(locn0)]];
     };
-    
+
     fragment main0_out main0(main0_in in [[stage_in]], texture2d<float> u_image [[texture(0)]], sampler u_imageSmplr [[sampler(0)]])
     {
         main0_out out = {};
         out.result = u_image.sample(u_imageSmplr, in.uv);
         return out;
     }
-    
+
 */
 static const char blit_fs_source_metal_sim[409] = {
     0x23,0x69,0x6e,0x63,0x6c,0x75,0x64,0x65,0x20,0x3c,0x6d,0x65,0x74,0x61,0x6c,0x5f,
@@ -640,7 +640,7 @@ static const char blit_fs_source_metal_sim[409] = {
   #error "Please include sokol_gfx.h before blit_shader.h"
 #endif
 static inline const sg_shader_desc* blit_shader_shader_desc(sg_backend backend) {
-  if (backend == SG_BACKEND_GLCORE33) {
+  if (backend == SG_BACKEND_GLCORE) {
     static sg_shader_desc desc;
     static bool valid;
     if (!valid) {
