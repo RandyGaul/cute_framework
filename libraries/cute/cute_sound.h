@@ -3,7 +3,7 @@
 		Licensing information can be found at the end of the file.
 	------------------------------------------------------------------------------
 
-	cute_sound.h - v2.07
+	cute_sound.h - v2.08
 
 
 	To create implementation (the function definitions)
@@ -102,6 +102,8 @@
 		                  for panning and similar.
 		2.06 (06/23/2024) Looping sounds play seamlessly.
 		2.07 (06/23/2024) Added pitch shifting support, removed delay support.
+		2.08 (08/07/2024) Added sample_index to sound params, removed unnecessary asserts
+		                  for stopping music, added callbacks sounds/music ending
 
 
 	CONTRIBUTORS
@@ -116,7 +118,7 @@
 		fluffrabbit       1.11 - scalar SIMD mode and various compiler warning/error fixes
 		Daniel Guzman     2.01 - compilation fixes for clang/llvm on MAC. 
 		Brie              2.06 - Looping sound rollover
-  	        ogam              x.xx - Lots of bugfixes over time, including support negative pitch
+		ogam              x.xx - Lots of bugfixes over time, including support negative pitch
 
 
 	DOCUMENTATION (very quick intro)

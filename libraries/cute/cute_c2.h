@@ -1162,6 +1162,8 @@ c2TOIResult c2TOI(const void* A, C2_TYPE typeA, const c2x* ax_ptr, c2v vA, const
 		}
 
 		if (s.count == 3) {
+			result.toi = t;
+			result.hit = 1;
 			return result;
 		}
 
@@ -1267,7 +1269,7 @@ c2Poly c2Dual(c2Poly poly, float skin_factor)
 	// dual = { a / d, b / d }
 	for (int i = 0; i < poly.count; ++i) {
 		c2v n = poly.norms[i];
-		float d = c2Dot(n, poly.verts[i]) - skin_factor;
+		float d = c2Dot(n, poly.verts[i]) + skin_factor;
 		if (d == 0) dual.verts[i] = c2V(0, 0);
 		else dual.verts[i] = c2Div(n, d);
 	}
