@@ -48,6 +48,7 @@ struct BatchGeometry
 
 #define SPRITEBATCH_SPRITE_GEOMETRY BatchGeometry
 
+#define SPRITEBATCH_ASSERT CF_ASSERT
 #include <cute/cute_spritebatch.h>
 
 struct CF_Strike

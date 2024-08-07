@@ -23,6 +23,7 @@
 
 #define CUTE_SOUND_IMPLEMENTATION
 #define CUTE_SOUND_FORCE_SDL
+#define CUTE_SOUND_ASSERT CF_ASSERT
 #include <cute/cute_sound.h>
 
 CF_Audio cf_audio_load_ogg(const char* path)

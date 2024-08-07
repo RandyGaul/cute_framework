@@ -618,6 +618,10 @@ struct spritebatch_t
 	#define HASHTABLE_FREE(ctx, ptr) SPRITEBATCH_FREE(ptr, ctx)
 #endif
 
+#ifndef HASHTABLE_ASSERT
+	#define HASHTABLE_ASSERT SPRITEBATCH_ASSERT
+#endif
+
 #define SPRITE_BATCH_INTERNAL_H
 #endif
 

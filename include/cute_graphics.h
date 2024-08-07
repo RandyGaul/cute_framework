@@ -13,6 +13,7 @@
 #include "cute_color.h"
 #include "cute_c_runtime.h"
 
+#define SOKOL_ASSERT CF_ASSERT
 #include "sokol/sokol_gfx.h"
 
 //--------------------------------------------------------------------------------------------------

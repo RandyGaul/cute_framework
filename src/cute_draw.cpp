@@ -23,16 +23,15 @@
 
 struct CF_Draw* draw;
 
-#include <cute/cute_png.h>
-
 #define SPRITEBATCH_IMPLEMENTATION
-//#define SPRITEBATCH_LOG CF_DEBUG_PRINTF
 #include <cute/cute_spritebatch.h>
 
 #define CUTE_PNG_IMPLEMENTATION
+#define CUTE_PNG_ASSERT CF_ASSERT
 #include <cute/cute_png.h>
 
 #define STB_TRUETYPE_IMPLEMENTATION
+#define STBTT_assert CF_ASSERT
 #include <stb/stb_truetype.h>
 
 #define IM_ASSERT CF_ASSERT
