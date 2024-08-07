@@ -2976,10 +2976,9 @@ void cs_music_play(cs_audio_source_t* audio_source, float fade_in_time)
 	s_ctx->fade = fade_in_time;
 	s_ctx->t = 0;
 
-	CUTE_SOUND_ASSERT(s_ctx->music_playing == NULL);
-	CUTE_SOUND_ASSERT(s_ctx->music_next == NULL);
 	cs_sound_inst_t* inst = s_inst_music(audio_source, fade_in_time == 0 ? 1.0f : 0);
 	s_ctx->music_playing = inst;
+	s_ctx->music_next = NULL;
 }
 
 void cs_music_stop(float fade_out_time)
