@@ -622,6 +622,28 @@ void cf_draw_quad(CF_Aabb bb, float thickness, float chubbiness)
 	s_draw_quad(verts[0], verts[1], verts[2], verts[3], thickness, chubbiness, false);
 }
 
+void cf_draw_box_rounded(CF_Aabb bb, float thickness, float radius)
+{
+	v2 p = center(bb);
+	float x = p.x;
+	float y = p.y;
+	float hw = (width(bb) - 2*radius) * 0.5f;
+	float hh = (height(bb) - 2*radius) * 0.5f;
+	bb = make_aabb(V2(x - hw, y - hh), V2(x + hw, y + hh));
+	draw_box(bb, thickness, radius);
+}
+
+void cf_draw_box_rounded_fill(CF_Aabb bb, float radius)
+{
+	v2 p = center(bb);
+	float x = p.x;
+	float y = p.y;
+	float hw = (width(bb) - 2*radius) * 0.5f;
+	float hh = (height(bb) - 2*radius) * 0.5f;
+	bb = make_aabb(V2(x - hw, y - hh), V2(x + hw, y + hh));
+	draw_box_fill(bb, radius);
+}
+
 void cf_draw_quad2(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float thickness, float chubbiness)
 {
 	s_draw_quad(p0, p1, p2, p3, thickness, chubbiness, false);

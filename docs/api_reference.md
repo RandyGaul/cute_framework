@@ -347,6 +347,8 @@ This is a list of all functions in Cute Framework organized by categories. This 
 - [cf_draw_box2](/draw/cf_draw_box2.md)
 - [cf_draw_box_fill](/draw/cf_draw_box_fill.md)
 - [cf_draw_box_fill2](/draw/cf_draw_box_fill2.md)
+- [cf_draw_box_rounded](/draw/cf_draw_box_rounded.md)
+- [cf_draw_box_rounded_fill](/draw/cf_draw_box_rounded_fill.md)
 - [cf_draw_capsule](/draw/cf_draw_capsule.md)
 - [cf_draw_capsule2](/draw/cf_draw_capsule2.md)
 - [cf_draw_capsule_fill](/draw/cf_draw_capsule_fill.md)

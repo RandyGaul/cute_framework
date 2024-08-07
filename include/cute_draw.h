@@ -92,6 +92,16 @@ CF_API void CF_CALL cf_draw_quad_fill2(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, f
 */
 CF_INLINE void cf_draw_box(CF_Aabb bb, float thickness, float chubbiness) { cf_draw_quad(bb, thickness, chubbiness); }
 
+/**
+* @function cf_draw_box_rounded
+* @category draw
+* @brief    Draws a quad wireframe with rounded corners.
+* @param    bb         The AABB (Axis-Aligned Bounding Box) to draw a quad over.
+* @param    thickness  The thickness of each line to draw.
+* @param    radius     The radius to use for rounding.
+* @related  cf_draw_quad cf_draw_quad2 cf_draw_quad_fill cf_draw_quad_fill2
+*/
+CF_API void CF_CALL cf_draw_box_rounded(CF_Aabb bb, float thickness, float radius);
 
 /**
 * @function cf_draw_box2
@@ -132,6 +142,16 @@ CF_INLINE void cf_draw_box_fill(CF_Aabb bb, float chubbiness) { cf_draw_quad_fil
 * @related  cf_draw_quad cf_draw_quad2 cf_draw_quad_fill cf_draw_quad_fill2
 */
 CF_INLINE void cf_draw_box_fill2(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float chubbiness) { cf_draw_quad_fill2(p0, p1, p2, p3, chubbiness); }
+
+/**
+* @function cf_draw_box_rounded_fill
+* @category draw
+* @brief    Draws a quad with rounded corners.
+* @param    bb         The AABB (Axis-Aligned Bounding Box) to draw a quad over.
+* @param    radius     The radius to use for rounding.
+* @related  cf_draw_quad cf_draw_quad2 cf_draw_quad_fill cf_draw_quad_fill2
+*/
+CF_API void CF_CALL cf_draw_box_rounded_fill(CF_Aabb bb, float radius);
 
 /**
  * @function cf_draw_circle
@@ -1506,6 +1526,8 @@ CF_INLINE void draw_quad_fill(v2 p0, v2 p1, v2 p2, v2 p3, float chubbiness = 0) 
 CF_INLINE void draw_box(Aabb bb, float thickness = 1.0f, float chubbiness = 0) { cf_draw_quad(bb, thickness, chubbiness); }
 CF_INLINE void draw_box(v2 p0, v2 p1, v2 p2, v2 p3, float thickness = 1.0f, float chubbiness = 0) { cf_draw_quad2(p0, p1, p2, p3, thickness, chubbiness); }
 CF_INLINE void draw_box(v2 p, float w, float h, float thickness = 1.0f, float chubbiness = 0) { cf_draw_quad(make_aabb(p, w, h), thickness, chubbiness); }
+CF_INLINE void draw_box_rounded(Aabb bb, float thickness = 1.0f, float chubbiness = 0) { cf_draw_box_rounded(bb, thickness, chubbiness); }
+CF_INLINE void draw_box_rounded_fill(Aabb bb, float chubbiness = 0) { cf_draw_box_rounded_fill(bb, chubbiness); }
 CF_INLINE void draw_box_fill(Aabb bb, float chubbiness = 0) { cf_draw_quad_fill(bb, chubbiness); }
 CF_INLINE void draw_box_fill(v2 p0, v2 p1, v2 p2, v2 p3, float chubbiness = 0) { cf_draw_quad_fill2(p0, p1, p2, p3, chubbiness); }
 CF_INLINE void draw_circle(Circle circle, float thickness = 1.0f) { cf_draw_circle(circle, thickness); }
