@@ -1718,6 +1718,9 @@ CF_INLINE void render_to(CF_Canvas canvas, bool clear = false) { cf_render_to(ca
 CF_INLINE TemporaryImage fetch_image(const CF_Sprite* sprite) { return cf_fetch_image(sprite); }
 CF_INLINE TemporaryImage fetch_image(const CF_Sprite& sprite) { return cf_fetch_image(&sprite); }
 
+using AtlasSubImage = CF_AtlasSubImage;
+CF_INLINE void register_premade_atlas(const char* png_path, int sub_image_count, AtlasSubImage* sub_images) { cf_register_premade_atlas(png_path, sub_image_count, sub_images); }
+
 }
 
 #endif // CF_CPP
