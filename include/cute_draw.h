@@ -1481,6 +1481,40 @@ typedef struct CF_TemporaryImage
  */
 CF_API CF_TemporaryImage CF_CALL cf_fetch_image(const CF_Sprite* sprite);
 
+/**
+ * @struct   CF_AtlasSubImage
+ * @category draw
+ * @brief    Represents a single sub-image within an atlas, defined by a uv coordinate pair.
+ * @related  CF_AtlasSubImage cf_register_premade_atlas
+ */
+typedef struct CF_AtlasSubImage
+{
+	/* @member Must be a unique number for all sub-images across all atlases. You should start at 0 and increment for each unique id you need. */
+	uint64_t image_id;
+
+	/* @member The width in height, in pixels, of the sub-image. */
+	int w, h;
+
+	/* @member u coordinate in the premade atlas. */
+	float minx, miny;
+
+	/* @member v coordinate in the premade atlas. */
+	float maxx, maxy;
+} CF_AtlasSubImage;
+// @end
+
+/**
+ * @function cf_register_premade_atlas
+ * @category draw
+ * @brief    Registers a premade atlas within the draw system.
+ * @param    png_path   A virtual path to the png_file for the atlas. See [Virtual File System](https://randygaul.github.io/cute_framework/#/topics/virtual_file_system).
+ * @remarks  This function is useful if you want to load up atlases into CF. However, internally CF employs
+ *           it's own online atlas compiler, so baking atlases is not necessary. This function is here just
+ *           for convenience.
+ * @related  CF_AtlasSubImage cf_register_premade_atlas
+ */
+CF_API void CF_CALL cf_register_premade_atlas(const char* png_path, int sub_image_count, CF_AtlasSubImage* sub_images);
+
 //--------------------------------------------------------------------------------------------------
 // "Hidden" API -- Just here for some inline C++ functions below.
 

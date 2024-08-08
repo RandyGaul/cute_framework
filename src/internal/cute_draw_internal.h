@@ -92,6 +92,7 @@ struct CF_Draw
 	Cute::Array<bool> vertical = { false };
 	Cute::Array<CF_Strike> strikes;
 	Cute::Array<bool> text_effects = { true };
+	Cute::Map<uint64_t, uint64_t> premade_sub_image_id_to_png_atlas_map;
 	CF_VertexFn* vertex_fn = NULL;
 };
 
@@ -109,6 +110,8 @@ void cf_destroy_draw();
 #define CF_FONT_ID_RANGE_HI      (CF_FONT_ID_RANGE_LO     + CF_IMAGE_ID_RANGE_SIZE)
 #define CF_EASY_ID_RANGE_LO      (CF_FONT_ID_RANGE_HI     + 1)
 #define CF_EASY_ID_RANGE_HI      (CF_EASY_ID_RANGE_LO     + CF_IMAGE_ID_RANGE_SIZE)
+#define CF_PREMADE_ID_RANGE_LO   (CF_EASY_ID_RANGE_HI     + 1)
+#define CF_PREMADE_ID_RANGE_HI   (CF_PREMADE_ID_RANGE_LO  + CF_IMAGE_ID_RANGE_SIZE)
 
 SPRITEBATCH_U64 cf_generate_texture_handle(void* pixels, int w, int h, void* udata);
 void cf_destroy_texture_handle(SPRITEBATCH_U64 texture_id, void* udata);

@@ -93,6 +93,9 @@ void cf_get_pixels(SPRITEBATCH_U64 image_id, void* buffer, int bytes_to_fill, vo
 	} else if (image_id >= CF_EASY_ID_RANGE_LO && image_id <= CF_EASY_ID_RANGE_HI) {
 		CF_Pixel* pixels = app->easy_sprites.get(image_id).pix;
 		CF_MEMCPY(buffer, pixels, bytes_to_fill);
+	} else if (image_id >= CF_PREMADE_ID_RANGE_LO && image_id <= CF_PREMADE_ID_RANGE_LO) {
+		uint64_t png_id = draw->premade_sub_image_id_to_png_atlas_map.find(image_id);
+		cf_png_cache_get_pixels(png_id, buffer, bytes_to_fill);
 	} else {
 		CF_ASSERT(false);
 		CF_MEMSET(buffer, 0, sizeof(bytes_to_fill));
@@ -2486,4 +2489,27 @@ CF_TemporaryImage cf_fetch_image(const CF_Sprite* sprite)
 	image.u = cf_v2(s.minx, s.miny);
 	image.v = cf_v2(s.maxx, s.maxy);
 	return image;
+}
+
+void cf_register_premade_atlas(const char* png_path, int sub_image_count, CF_AtlasSubImage* sub_images)
+{
+	Png png;
+	if (is_error(png_cache_load(png_path, &png))) {
+		CF_ASSERT(false);
+		return;
+	}
+	Array<spritebatch_premade_sprite_t> premades;
+	for (int i = 0; i < sub_image_count; ++i) {
+		spritebatch_premade_sprite_t s = { 0 };
+		s.image_id = sub_images[i].image_id + CF_PREMADE_ID_RANGE_LO;
+		s.w = sub_images[i].w;
+		s.h = sub_images[i].h;
+		s.minx = sub_images[i].minx;
+		s.maxx = sub_images[i].maxx;
+		s.miny = sub_images[i].miny;
+		s.maxy = sub_images[i].maxy;
+		premades.add(s);
+		draw->premade_sub_image_id_to_png_atlas_map.add(s.image_id, png.id);
+	}
+	spritebatch_register_premade_atlas(&draw->sb, png.id, png.w, png.h, sub_image_count, premades.data());
 }
