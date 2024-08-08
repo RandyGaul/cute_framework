@@ -13,7 +13,7 @@ typedef struct Vertex
 
 int main(int argc, char* argv[])
 {
-	int options = CF_APP_OPTIONS_DEFAULT_GFX_CONTEXT | CF_APP_OPTIONS_WINDOW_POS_CENTERED | CF_APP_OPTIONS_RESIZABLE;
+	int options = CF_APP_OPTIONS_WINDOW_POS_CENTERED | CF_APP_OPTIONS_RESIZABLE;
 	CF_Result result = cf_make_app("Hello Triangle", 0, 0, 0, 640, 480, options, argv[0]);
 	if (cf_is_error(result)) return -1;
 

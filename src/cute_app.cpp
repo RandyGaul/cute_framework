@@ -202,17 +202,27 @@ CF_Result cf_make_app(const char* window_title, int display_index, int x, int y,
 {
 	SDL_SetMainReady();
 
+	bool use_dx11 = false;
+	bool use_gl33 = false;
+	bool use_gles3 = false;
+	bool use_metal = false;
+	#if defined(CF_WINDOWS)
+	use_dx11 = true;
+	#elif defined(CF_LINUX)
+	use_gl33 = true;
+	#elif defined(CF_APPLE)
+	use_metal = true;
+	#elif defined(CF_EMSCRIPTEN)
+	use_gles3 = true;
+	#endif
+	bool use_gfx = (use_dx11|use_gl33|use_gles3|use_metal) && !(options & APP_OPTIONS_NO_GFX);
+
 #ifdef CF_EMSCRIPTEN
 	Uint32 sdl_options = SDL_INIT_EVENTS | SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER;
 #else
 	Uint32 sdl_options = SDL_INIT_EVENTS | SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER | SDL_INIT_HAPTIC;
 	if (options & APP_OPTIONS_NO_GFX) {
 		sdl_options &= ~SDL_INIT_VIDEO;
-	} else {
-		bool specific_gfx_context = options & (APP_OPTIONS_OPENGL_CONTEXT | APP_OPTIONS_OPENGLES_CONTEXT | APP_OPTIONS_D3D11_CONTEXT | APP_OPTIONS_METAL_CONTEXT);
-		if (!specific_gfx_context) {
-			options |= APP_OPTIONS_DEFAULT_GFX_CONTEXT;
-		}
 	}
 #endif
 
@@ -223,39 +233,27 @@ CF_Result cf_make_app(const char* window_title, int display_index, int x, int y,
 		return cf_result_error("SDL_Init failed");
 	}
 
-	if (options & APP_OPTIONS_DEFAULT_GFX_CONTEXT && !(options & APP_OPTIONS_NO_GFX)) {
-#ifdef CF_WINDOWS
-		options |= APP_OPTIONS_D3D11_CONTEXT;
-#elif CF_EMSCRIPTEN
-		options |= APP_OPTIONS_OPENGLES_CONTEXT;
-#elif CF_APPLE
-		options |= APP_OPTIONS_METAL_CONTEXT;
-#else
-		options |= APP_OPTIONS_OPENGL_CONTEXT;
-#endif
-	}
-
-	if (options & (APP_OPTIONS_D3D11_CONTEXT | APP_OPTIONS_OPENGLES_CONTEXT | APP_OPTIONS_OPENGL_CONTEXT | APP_OPTIONS_METAL_CONTEXT)) {
+	if (use_gfx) {
 		// Some backends don't support window size of zero.
 		w = w <= 0 ? 1 : w;
 		h = h <= 0 ? 1 : h;
 	}
 
 	Uint32 flags = 0;
-	if (options & APP_OPTIONS_OPENGL_CONTEXT) flags |= SDL_WINDOW_OPENGL;
-	if (options & APP_OPTIONS_OPENGLES_CONTEXT) flags |= SDL_WINDOW_OPENGL;
-	if (options & APP_OPTIONS_METAL_CONTEXT) flags |= SDL_WINDOW_METAL;
+	if (use_gl33) flags |= SDL_WINDOW_OPENGL;
+	if (use_gles3) flags |= SDL_WINDOW_OPENGL;
+	if (use_metal) flags |= SDL_WINDOW_METAL;
 	if (options & APP_OPTIONS_FULLSCREEN) flags |= SDL_WINDOW_FULLSCREEN;
 	if (options & APP_OPTIONS_RESIZABLE) flags |= SDL_WINDOW_RESIZABLE;
 	if (options & APP_OPTIONS_HIDDEN) flags |= (SDL_WINDOW_HIDDEN | SDL_WINDOW_MINIMIZED);
 
-	if (options & APP_OPTIONS_OPENGL_CONTEXT) {
+	if (use_gl33) {
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
 	}
 
-	if (options & APP_OPTIONS_OPENGLES_CONTEXT) {
+	if (use_gles3) {
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
@@ -289,7 +287,8 @@ CF_Result cf_make_app(const char* window_title, int display_index, int x, int y,
 	void* hwnd = NULL;
 #endif
 
-	if ((options & APP_OPTIONS_OPENGL_CONTEXT) | (options & APP_OPTIONS_OPENGLES_CONTEXT) && !(options & APP_OPTIONS_NO_GFX)) {
+	if ((use_gl33 || use_gles3) && use_gfx) {
+		app->use_gl = true;
 		SDL_GL_SetSwapInterval(app->vsync);
 		SDL_GLContext ctx = SDL_GL_CreateContext(window);
 		if (!ctx) {
@@ -306,7 +305,7 @@ CF_Result cf_make_app(const char* window_title, int display_index, int x, int y,
 		app->gfx_enabled = true;
 	}
 
-	if (options & APP_OPTIONS_D3D11_CONTEXT && !(options & APP_OPTIONS_NO_GFX)) {
+	if (use_dx11 && use_gfx) {
 		cf_dx11_init(hwnd, w, h, 1);
 		app->gfx_ctx_params = cf_dx11_get_context();
 		sg_desc params = { };
@@ -316,7 +315,7 @@ CF_Result cf_make_app(const char* window_title, int display_index, int x, int y,
 		app->gfx_enabled = true;
 	}
 	
-	if (options & APP_OPTIONS_METAL_CONTEXT && !(options & APP_OPTIONS_NO_GFX)) {
+	if (use_metal && use_gfx) {
 		cf_metal_init(window, w, h, 1);
 		app->gfx_ctx_params = cf_metal_get_context();
 		sg_desc params = { };
@@ -579,7 +578,7 @@ int cf_app_draw_onto_screen(bool clear)
 	cf_commit();
 	cf_dx11_present(app->vsync);
 	cf_metal_present(app->vsync);
-	if (app->options & APP_OPTIONS_OPENGL_CONTEXT) {
+	if (app->use_gl) {
 		SDL_GL_SwapWindow(app->window);
 	}
 

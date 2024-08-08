@@ -89,6 +89,7 @@ struct CF_App
 	sg_imgui_t sg_imgui;
 	uint64_t default_image_id = CF_PNG_ID_RANGE_LO;
 	bool vsync = false;
+	bool use_gl = false;
 	bool audio_needs_updates = false;
 	void* update_udata = NULL;
 	bool canvas_blit_init = false;

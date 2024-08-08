@@ -412,6 +412,7 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 		add_executable(noise samples/noise.c)
 		add_executable(fetch_image samples/fetch_image.cpp)
 		add_executable(metaballs samples/metaballs.cpp)
+		add_executable(timestep samples/timestep.cpp)
 		set(SAMPLE_EXECUTABLES
 			easysprite
 			basicecs
@@ -437,6 +438,7 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 			noise
 			fetch_image
 			metaballs
+			timestep
 		)
 
 		foreach(CURRENT_TARGET ${SAMPLE_EXECUTABLES})

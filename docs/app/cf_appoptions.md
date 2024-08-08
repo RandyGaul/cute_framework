@@ -3,7 +3,7 @@
 [//]: # (See: https://github.com/RandyGaul/cute_framework/blob/master/samples/docs_parser.cpp)
 [](../header.md ':include')
 
-# App Options
+# CF_AppOptions
 
 Category: [app](/api_reference?id=app)  
 GitHub: [cute_app.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_app.h)  
@@ -15,11 +15,6 @@ Various options to control how the application starts up, such as fullscreen, or
 
 Enum | Description
 --- | ---
-APP_OPTIONS_OPENGL_CONTEXT | Starts the app with an OpenGL 3.3 context.
-APP_OPTIONS_OPENGLES_CONTEXT | Starts the app with an OpenGL ES 3.0 context.
-APP_OPTIONS_D3D11_CONTEXT | Starts the app with a DirectX 11 context (Windows only).
-APP_OPTIONS_METAL_CONTEXT | Starts the app with a Metal context (Apple only).
-APP_OPTIONS_DEFAULT_GFX_CONTEXT | Picks a good default graphics context for the given platform.
 APP_OPTIONS_NO_GFX | Does not initialize any graphics backend at all (for servers or headless mode).
 APP_OPTIONS_FULLSCREEN | Starts the application in borderless full-screen mode.
 APP_OPTIONS_RESIZABLE | Allows the window to be resized.
@@ -38,8 +33,7 @@ using namespace cute;
 
 int main(int argc, const char argv)
 {
-    uint32_t options = APP_OPTIONS_D3D11_CONTEXT | APP_OPTIONS_WINDOW_POS_CENTERED;
-    app_make("Fancy Window Title", 0, 0, 640, 480, options, argv[0]);
+    app_make("Fancy Window Title", 0, 0, 0, 640, 480, APP_OPTIONS_WINDOW_POS_CENTERED, argv[0]);
     app_destroy();
     return 0;
 }
@@ -47,9 +41,9 @@ int main(int argc, const char argv)
 
 ## Remarks
 
-The [app_options](/app/app_options.md) parameter of [cf_make_app](/app/cf_make_app.md) is a bitmask flag. Simply take the `APP_OPTIONS_` flags listed above and OR them together.
+The `app_options` parameter of [cf_make_app](/app/cf_make_app.md) is a bitmask flag. Simply take the `APP_OPTIONS_` flags listed above and OR them together.
 
 ## Related Pages
 
-[cf_make_app](/app/cf_make_app.md)  
 [cf_destroy_app](/app/cf_destroy_app.md)  
+[cf_make_app](/app/cf_make_app.md)  

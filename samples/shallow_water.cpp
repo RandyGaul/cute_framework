@@ -26,7 +26,7 @@ CF_Pixel* get_noise(int w, int h, float time)
 
 int main(int argc, char* argv[])
 {
-	int options = APP_OPTIONS_DEFAULT_GFX_CONTEXT | APP_OPTIONS_WINDOW_POS_CENTERED | APP_OPTIONS_RESIZABLE;
+	int options = APP_OPTIONS_WINDOW_POS_CENTERED | APP_OPTIONS_RESIZABLE;
 	CF_Result result = make_app("Shallow Water Sample", 0, 0, 0, 640, 480, options, argv[0]);
 	if (is_error(result)) return -1;
 

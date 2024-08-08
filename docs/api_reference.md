@@ -101,7 +101,7 @@ This is a list of all functions in Cute Framework organized by categories. This 
 
 
 ### enums
-- [App Options](/app/app_options.md)
+- [CF_AppOptions](/app/cf_appoptions.md)
 - [CF_PowerState](/app/cf_powerstate.md)
 - [Display Orientation](/app/display_orientation.md)
 

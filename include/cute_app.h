@@ -135,7 +135,7 @@ CF_API const char* CF_CALL cf_display_name(int display_index);
 CF_API CF_DisplayOrientation CF_CALL cf_display_orientation(int display_index);
 
 /**
- * @enum     App Options
+ * @enum     CF_AppOptions
  * @category app
  * @brief    Various options to control how the application starts up, such as fullscreen, or selecting a graphics backend.
  * @example > Creating a basic window and immediately destroying it.
@@ -144,47 +144,36 @@ CF_API CF_DisplayOrientation CF_CALL cf_display_orientation(int display_index);
  *     
  *     int main(int argc, const char** argv)
  *     {
- *         uint32_t options = APP_OPTIONS_D3D11_CONTEXT | APP_OPTIONS_WINDOW_POS_CENTERED;
- *         app_make("Fancy Window Title", 0, 0, 640, 480, options, argv[0]);
+ *         app_make("Fancy Window Title", 0, 0, 0, 640, 480, APP_OPTIONS_WINDOW_POS_CENTERED, argv[0]);
  *         app_destroy();
  *         return 0;
  *     }
  * @remarks  The `app_options` parameter of `cf_make_app` is a bitmask flag. Simply take the `APP_OPTIONS_*` flags listed above and OR them together.
- * @related  cf_make_app cf_destroy_app
+ * @related  CF_AppOptions cf_make_app cf_destroy_app
  */
 #define CF_APP_OPTION_DEFS \
-	/* @entry Starts the app with an OpenGL 3.3 context. */      \
-	CF_ENUM(APP_OPTIONS_OPENGL_CONTEXT,                 1 << 0)  \
-	/* @entry Starts the app with an OpenGL ES 3.0 context. */   \
-	CF_ENUM(APP_OPTIONS_OPENGLES_CONTEXT,               1 << 1)  \
-	/* @entry Starts the app with a DirectX 11 context (Windows only). */ \
-	CF_ENUM(APP_OPTIONS_D3D11_CONTEXT,                  1 << 2)  \
-	/* @entry Starts the app with a Metal context (Apple only). */ \
-	CF_ENUM(APP_OPTIONS_METAL_CONTEXT,                  1 << 3)  \
-	/* @entry Picks a good default graphics context for the given platform. */ \
-	CF_ENUM(APP_OPTIONS_DEFAULT_GFX_CONTEXT,            1 << 4)  \
 	/* @entry Does not initialize any graphics backend at all (for servers or headless mode). */ \
-	CF_ENUM(APP_OPTIONS_NO_GFX,                         1 << 5)  \
+	CF_ENUM(APP_OPTIONS_NO_GFX,                         1 << 0)  \
 	/* @entry Starts the application in borderless full-screen mode. */ \
-	CF_ENUM(APP_OPTIONS_FULLSCREEN,                     1 << 6)  \
+	CF_ENUM(APP_OPTIONS_FULLSCREEN,                     1 << 1)  \
 	/* @entry Allows the window to be resized. */                \
-	CF_ENUM(APP_OPTIONS_RESIZABLE,                      1 << 7)  \
+	CF_ENUM(APP_OPTIONS_RESIZABLE,                      1 << 2)  \
 	/* @entry Starts the application with the window hidden. */  \
-	CF_ENUM(APP_OPTIONS_HIDDEN,                         1 << 8)  \
+	CF_ENUM(APP_OPTIONS_HIDDEN,                         1 << 3)  \
 	/* @entry Starts the application with the window centered on the screen. Does not affect any later adjustments to window size/position. */ \
-	CF_ENUM(APP_OPTIONS_WINDOW_POS_CENTERED,            1 << 9)  \
+	CF_ENUM(APP_OPTIONS_WINDOW_POS_CENTERED,            1 << 4)  \
 	/* @entry Disables automatically mounting the folder the executable runs from to "/". See `cf_fs_mount` for more details. */ \
-	CF_ENUM(APP_OPTIONS_FILE_SYSTEM_DONT_DEFAULT_MOUNT, 1 << 10) \
+	CF_ENUM(APP_OPTIONS_FILE_SYSTEM_DONT_DEFAULT_MOUNT, 1 << 5) \
 	/* @entry Starts the application with no audio. */           \
-	CF_ENUM(APP_OPTIONS_NO_AUDIO,                       1 << 11) \
+	CF_ENUM(APP_OPTIONS_NO_AUDIO,                       1 << 6) \
 	/* @end */
 
-enum
+typedef enum CF_AppOptions
 {
 	#define CF_ENUM(K, V) CF_##K = V,
 	CF_APP_OPTION_DEFS
 	#undef CF_ENUM
-};
+} CF_AppOptions;
 
 /**
  * @function cf_make_app
@@ -221,7 +210,7 @@ enum
  *     }
  * @remarks  The options parameter is an enum from `app_options`. Different options can be OR'd together.
  *           Parameters `w` and `h` are ignored if the window is initialized to fullscreen mode with `APP_OPTIONS_FULLSCREEN`.
- * @related  cf_app_is_running cf_app_signal_shutdown cf_destroy_app
+ * @related  CF_AppOptions cf_app_is_running cf_app_signal_shutdown cf_destroy_app
  */
 CF_API CF_Result CF_CALL cf_make_app(const char* window_title, int display_index, int x, int y, int w, int h, int options, const char* argv0);
 

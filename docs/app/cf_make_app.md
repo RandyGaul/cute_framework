@@ -23,7 +23,7 @@ x | The x position of the window.
 y | The y position of the window.
 w | The width of the window in pixels.
 h | The height of the window in pixels.
-options | 0 by default; a bitmask of [app_options](/app/app_options.md) flags.
+options | 0 by default; a bitmask of `app_options` flags.
 argv0 | The first argument passed to your main function in the `argv` parameter.
 
 ## Return Value
@@ -58,11 +58,12 @@ int main(int argc, const char argv)
 
 ## Remarks
 
-The options parameter is an enum from [app_options](/app/app_options.md). Different options can be OR'd together.
+The options parameter is an enum from `app_options`. Different options can be OR'd together.
 Parameters `w` and `h` are ignored if the window is initialized to fullscreen mode with `APP_OPTIONS_FULLSCREEN`.
 
 ## Related Pages
 
+[CF_AppOptions](/app/cf_appoptions.md)  
 [cf_app_is_running](/app/cf_app_is_running.md)  
 [cf_app_signal_shutdown](/app/cf_app_signal_shutdown.md)  
 [cf_destroy_app](/app/cf_destroy_app.md)  

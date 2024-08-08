@@ -5,7 +5,7 @@ int main(int argc, char* argv[])
 {
 	int w = 640;
 	int h = 480;
-	int options = APP_OPTIONS_DEFAULT_GFX_CONTEXT | APP_OPTIONS_WINDOW_POS_CENTERED | APP_OPTIONS_RESIZABLE;
+	int options = APP_OPTIONS_WINDOW_POS_CENTERED | APP_OPTIONS_RESIZABLE;
 	Result result = make_app("Window Resizing", 0, 0, 0, w, h, options, argv[0]);
 	if (is_error(result)) return -1;
 
