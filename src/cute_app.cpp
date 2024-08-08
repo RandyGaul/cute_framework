@@ -150,13 +150,13 @@ struct Vertex
 
 static void s_quad(float x, float y, float sx, float sy, Vertex quad[6])
 {
-	quad[0].x = -0.5f; quad[0].y =  0.5f; quad[0].u = 0; quad[0].v = 0;
-	quad[1].x =  0.5f; quad[1].y = -0.5f; quad[1].u = 1; quad[1].v = 1;
-	quad[2].x =  0.5f; quad[2].y =  0.5f; quad[2].u = 1; quad[2].v = 0;
+	quad[0].x = -0.5f; quad[0].y =  0.5f; quad[0].u = 0; quad[0].v = 1;
+	quad[1].x =  0.5f; quad[1].y = -0.5f; quad[1].u = 1; quad[1].v = 0;
+	quad[2].x =  0.5f; quad[2].y =  0.5f; quad[2].u = 1; quad[2].v = 1;
 
-	quad[3].x = -0.5f; quad[3].y =  0.5f; quad[3].u = 0; quad[3].v = 0;
-	quad[4].x = -0.5f; quad[4].y = -0.5f; quad[4].u = 0; quad[4].v = 1;
-	quad[5].x =  0.5f; quad[5].y = -0.5f; quad[5].u = 1; quad[5].v = 1;
+	quad[3].x = -0.5f; quad[3].y =  0.5f; quad[3].u = 0; quad[3].v = 1;
+	quad[4].x = -0.5f; quad[4].y = -0.5f; quad[4].u = 0; quad[4].v = 0;
+	quad[5].x =  0.5f; quad[5].y = -0.5f; quad[5].u = 1; quad[5].v = 0;
 
 	for (int i = 0; i < 6; ++i) {
 		quad[i].x = quad[i].x * sx + x;
@@ -342,7 +342,7 @@ CF_Result cf_make_app(const char* window_title, int display_index, int x, int y,
 			attrs[1].offset = CF_OFFSET_OF(Vertex, u);
 			cf_mesh_set_attributes(app->backbuffer_quad, attrs, CF_ARRAY_SIZE(attrs), sizeof(Vertex), 0);
 			Vertex quad[6];
-			s_quad(0, 0, 2, 2, quad);
+			s_quad(0, 0, 2, -2, quad); // Flip y-axis to achieve uv as (0,0) for bottom-left of screen.
 			cf_mesh_update_vertex_data(app->backbuffer_quad, quad, 6);
 		}
 		{
