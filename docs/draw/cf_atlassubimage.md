@@ -20,4 +20,5 @@ Struct Members | Description
 
 ## Related Pages
 
+[cf_make_premade_sprite](/draw/cf_make_premade_sprite.md)  
 [cf_register_premade_atlas](/draw/cf_register_premade_atlas.md)  

@@ -28,3 +28,4 @@ for convenience.
 ## Related Pages
 
 [CF_AtlasSubImage](/draw/cf_atlassubimage.md)  
+[cf_make_premade_sprite](/draw/cf_make_premade_sprite.md)  

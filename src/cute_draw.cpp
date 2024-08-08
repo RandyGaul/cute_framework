@@ -2510,6 +2510,19 @@ void cf_register_premade_atlas(const char* png_path, int sub_image_count, CF_Atl
 		s.maxy = sub_images[i].maxy;
 		premades.add(s);
 		draw->premade_sub_image_id_to_png_atlas_map.add(s.image_id, png.id);
+		draw->premade_sub_image_id_to_sub_image.add(s.image_id, sub_images[i]);
 	}
 	spritebatch_register_premade_atlas(&draw->sb, png.id, png.w, png.h, sub_image_count, premades.data());
+}
+
+CF_Sprite cf_make_premade_sprite(uint64_t image_id)
+{
+	image_id = image_id + CF_PREMADE_ID_RANGE_LO;
+	CF_AtlasSubImage sub_image = draw->premade_sub_image_id_to_sub_image.find(image_id);
+	CF_Sprite s = cf_sprite_defaults();
+	s.name = "premade_sprite";
+	s.easy_sprite_id = sub_image.image_id;
+	s.w = sub_image.w;
+	s.h = sub_image.h;
+	return s;
 }

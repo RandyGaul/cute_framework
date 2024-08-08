@@ -400,6 +400,7 @@ This is a list of all functions in Cute Framework organized by categories. This 
 - [cf_draw_TRS](/draw/cf_draw_trs.md)
 - [cf_draw_TRS_absolute](/draw/cf_draw_trs_absolute.md)
 - [cf_fetch_image](/draw/cf_fetch_image.md)
+- [cf_make_premade_sprite](/draw/cf_make_premade_sprite.md)
 - [cf_register_premade_atlas](/draw/cf_register_premade_atlas.md)
 - [cf_render_settings_filter](/draw/cf_render_settings_filter.md)
 - [cf_render_settings_peek_render_state](/draw/cf_render_settings_peek_render_state.md)

@@ -1485,7 +1485,7 @@ CF_API CF_TemporaryImage CF_CALL cf_fetch_image(const CF_Sprite* sprite);
  * @struct   CF_AtlasSubImage
  * @category draw
  * @brief    Represents a single sub-image within an atlas, defined by a uv coordinate pair.
- * @related  CF_AtlasSubImage cf_register_premade_atlas
+ * @related  CF_AtlasSubImage cf_register_premade_atlas cf_make_premade_sprite
  */
 typedef struct CF_AtlasSubImage
 {
@@ -1511,9 +1511,18 @@ typedef struct CF_AtlasSubImage
  * @remarks  This function is useful if you want to load up atlases into CF. However, internally CF employs
  *           it's own online atlas compiler, so baking atlases is not necessary. This function is here just
  *           for convenience.
- * @related  CF_AtlasSubImage cf_register_premade_atlas
+ * @related  CF_AtlasSubImage cf_register_premade_atlas cf_make_premade_sprite
  */
 CF_API void CF_CALL cf_register_premade_atlas(const char* png_path, int sub_image_count, CF_AtlasSubImage* sub_images);
+
+/**
+ * @function cf_make_premade_sprite
+ * @category draw
+ * @brief    Initializes a single-frame drawable sprite from a premade atlas `image_id`.
+ * @param    image_id   The id from `cf_register_premade_atlas`.
+ * @related  CF_AtlasSubImage cf_register_premade_atlas cf_make_premade_sprite
+ */
+CF_API CF_Sprite CF_CALL cf_make_premade_sprite(uint64_t image_id);
 
 //--------------------------------------------------------------------------------------------------
 // "Hidden" API -- Just here for some inline C++ functions below.
@@ -1720,6 +1729,7 @@ CF_INLINE TemporaryImage fetch_image(const CF_Sprite& sprite) { return cf_fetch_
 
 using AtlasSubImage = CF_AtlasSubImage;
 CF_INLINE void register_premade_atlas(const char* png_path, int sub_image_count, AtlasSubImage* sub_images) { cf_register_premade_atlas(png_path, sub_image_count, sub_images); }
+CF_INLINE Sprite make_premade_sprite(uint64_t image_id) { return cf_make_premade_sprite(image_id); }
 
 }
 
