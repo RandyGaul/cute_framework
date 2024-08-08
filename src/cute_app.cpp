@@ -318,9 +318,10 @@ CF_Result cf_make_app(const char* window_title, int display_index, int x, int y,
 
 	if (options & APP_OPTIONS_METAL_CONTEXT && !(options & APP_OPTIONS_NO_GFX)) {
 		cf_metal_init(window, w, h, 1);
-		app->gfx_ctx_params = cf_metal_get_context();
+		app->gfx_environment = cf_metal_get_environment();
+		app->gfx_swapchain = cf_metal_get_swapchain();
 		sg_desc params = { };
-		params.context = app->gfx_ctx_params;
+		params.environment = app->gfx_environment;
 		params.logger.func = slog_func;
 		sg_setup(params);
 		app->gfx_enabled = true;

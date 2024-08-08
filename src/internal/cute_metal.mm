@@ -53,18 +53,37 @@ void cf_metal_init(void* sdl_window, int w, int h, int sample_count)
 	s_init_depth_texture();
 }
 
-sg_context_desc cf_metal_get_context()
+sg_context_desc cf_metal_get_environment()
 {
-	sg_context_desc desc = { };
-	desc.color_format = SG_PIXELFORMAT_BGRA8;
-	desc.depth_format = SG_PIXELFORMAT_DEPTH_STENCIL;
-	desc.sample_count = state.sample_count;
-	desc.metal.device = (__bridge const void*)state.device;
-	desc.metal.drawable_cb = cf_metal_get_drawable;
-	desc.metal.renderpass_descriptor_cb = cf_metal_get_render_pass_descriptor;
-	return desc;
+	return (sg_environment) {
+		.defaults = {
+			.sample_count = state.sample_count,
+			.color_format = SG_PIXELFORMAT_BGRA8,
+			.depth_format = SG_PIXELFORMAT_DEPTH_STENCIL,
+		},
+		.metal = {
+			.device = (__bridge const void*)state.device,
+		}
+	}
 }
 
+sg_swapchain cf_metal_get_swapchain()
+{
+	return (sg_swapchain) {
+		.width = state.w,
+		.height = state.h,
+		.sample_count = state.sample_count,
+		.color_format = SG_PIXELFORMAT_BGRA8,
+		.depth_format = SG_PIXELFORMAT_DEPTH_STENCIL,
+		.metal = {
+			.current_drawable = (__bridge const void*)state.drawable,
+			.depth_stencil_texture = (__bridge const void*)state.depth_texture,
+			/* .msaa_color_texture = (__bridge const void*)[mtk_view multisampleColorTexture], */
+		}
+	};
+}
+
+// TODO: Remove?
 const void *cf_metal_get_render_pass_descriptor()
 {
 	state.drawable = [state.layer nextDrawable];

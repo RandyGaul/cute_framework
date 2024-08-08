@@ -1011,7 +1011,10 @@ void cf_apply_canvas(CF_Canvas pass_handle, bool clear)
 		canvas->action.stencil.load_action = SG_LOADACTION_LOAD;
 	}
 	if (canvas->pass_is_default) {
-		sg_begin_default_pass(&canvas->action, app->w, app->h);
+		sg_begin_pass(&(sg_pass){
+			.action = &canvas->action,
+			.swapchain = app->gfx_swapchain
+		})
 	} else {
 		sg_begin_pass(canvas->pass, &canvas->action);
 	}
@@ -1109,7 +1112,7 @@ void cf_apply_shader(CF_Shader shader_handle, CF_Material material_handle)
 	desc.layout = layout;
 	desc.depth.compare = s_wrap(state->depth_compare);
 	desc.depth.write_enabled = state->depth_write_enabled;
-	desc.depth.pixel_format = app->gfx_ctx_params.depth_format;
+	desc.depth.pixel_format = app->gfx_environment.depth_format;
 	desc.stencil.enabled = state->stencil.enabled;
 	desc.stencil.read_mask = state->stencil.read_mask;
 	desc.stencil.write_mask = state->stencil.write_mask;

@@ -67,7 +67,8 @@ struct CF_App
 	bool spawned_mix_thread = false;
 	CF_Threadpool* threadpool = NULL;
 	bool gfx_enabled = false;
-	sg_context_desc gfx_ctx_params;
+	sg_environment gfx_environment;
+	sg_swapchain gfx_swapchain;
 	float dpi_scale = 1.0f;
 	float dpi_scale_prev = 1.0f;
 	bool dpi_scale_was_changed = false;
