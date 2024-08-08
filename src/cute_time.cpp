@@ -84,8 +84,6 @@ void cf_set_update_udata(void* udata)
 	app->update_udata = udata;
 }
 
-#include <chrono>
-
 // Originally from: https://blog.bearcats.nl/accurate-sleep-function/
 // Modified slightly to avoid pulling in std::chrono, and fix some bugs.
 static void s_precise_sleep(double seconds)
