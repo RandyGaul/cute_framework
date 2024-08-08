@@ -84,10 +84,74 @@ void cf_set_update_udata(void* udata)
 	app->update_udata = udata;
 }
 
+#include <chrono>
+
+// Originally from: https://blog.bearcats.nl/accurate-sleep-function/
+// Modified slightly to avoid pulling in std::chrono, and fix some bugs.
+static void s_precise_sleep(double seconds)
+{
+	static double estimate = 5e-3;
+	static double mean = 5e-3;
+	static double m2 = 0;
+	static int64_t count = 1;
+
+	// Sleep for 1ms while there's some level of certainty it won't overshoot.
+	// Then break from this loop and perform a spin-lock for the remaining time.
+	while (seconds > estimate) {
+		uint64_t start = cf_get_ticks();
+		cf_sleep(1);
+		uint64_t end = cf_get_ticks();
+
+		double observed = (end - start) * inv_freq;
+		seconds -= observed;
+
+		++count;
+		double delta = observed - mean;
+		mean += delta / count;
+		m2 += delta * (observed - mean);
+		double stddev = sqrt(m2 / (count - 1));
+		estimate = mean + stddev * 5.0f;
+
+		if (count > 100000) {
+			estimate = 5e-3;
+			mean = 5e-3;
+			m2 = 0;
+			count = 0;
+		}
+	}
+
+	if (seconds < 0) {
+		// Overshoot.
+		return;
+	}
+
+	// Spin lock.
+	uint64_t start = cf_get_ticks();
+	while (1) {
+		uint64_t now = cf_get_ticks();
+		uint64_t elapsed = now - start;
+		double elapsed_seconds = elapsed * inv_freq;
+		if (elapsed_seconds < seconds) {
+			break;
+		}
+	}
+}
+
+static void s_fps_limit()
+{
+	if (target_framerate != -1) {
+		double seconds = 1.0 / target_framerate;
+		s_precise_sleep(seconds);
+	}
+}
+
 void cf_update_time(CF_OnUpdateFn* on_update)
 {
 	if (ticks_per_timestep) {
 		// Fixed timestep (opt-in only).
+
+		// Sleep if the app is running too fast.
+		s_fps_limit();
 
 		// Accumulate unsimulated time.
 		uint64_t now = cf_get_ticks();
@@ -95,19 +159,6 @@ void cf_update_time(CF_OnUpdateFn* on_update)
 		uint64_t delta = now - prev_ticks;
 		prev_ticks = now;
 		unsimulated_ticks += delta;
-
-		// Sleep if the app is running too fast.
-		uint64_t target_ticks = (uint64_t)((1.0 / target_framerate) * freq);
-		while (target_framerate != -1 && unsimulated_ticks < target_ticks) {
-			int milliseconds = (int)((target_ticks - unsimulated_ticks) * (inv_freq * 1000));
-			cf_sleep(milliseconds);
-
-			// Record how much we slept by.
-			now = cf_get_ticks();
-			delta = now - prev_ticks;
-			prev_ticks = now;
-			unsimulated_ticks += delta;
-		}
 
 		// Record traditional delta time for this update.
 		CF_DELTA_TIME = (float)((now - old_prev_ticks) * inv_freq);
@@ -145,9 +196,14 @@ void cf_update_time(CF_OnUpdateFn* on_update)
 		CF_DELTA_TIME_INTERPOLANT = (float)(((unsimulated_ticks * inv_freq) / CF_DELTA_TIME_FIXED));
 	} else {
 		// Variable timestep (default).
+
+		// Sleep if the app is running too fast.
+		s_fps_limit();
+
 		uint64_t now = cf_get_ticks();
 		uint64_t delta = now - prev_ticks;
 		prev_ticks = now;
+
 		CF_DELTA_TIME = (float)(delta * inv_freq);
 		if (pause_ticks > 0) {
 			pause_ticks -= (int64_t)delta;

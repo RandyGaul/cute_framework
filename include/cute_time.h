@@ -161,6 +161,8 @@ CF_API void CF_CALL cf_set_update_udata(void* udata);
  * @category time
  * @brief    Updates the application.
  * @param    on_update  Can be `NULL`. Called once per update. Mostly just useful for the fixed-timestep case (see `cf_set_fixed_timestep`).
+ * @remarks  Typically you will want to call this function just after `cf_app_update`, or, alternatively pass
+             in `on_update` to `cf_app_update` instead of calling this function at all.
  * @related  cf_set_fixed_timestep cf_set_fixed_timestep_max_updates cf_update_time cf_set_update_udata CF_DELTA_TIME_FIXED CF_DELTA_TIME_INTERPOLANT
  */
 CF_API void CF_CALL cf_update_time(CF_OnUpdateFn* on_update);
