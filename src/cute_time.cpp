@@ -99,17 +99,17 @@ static void s_precise_sleep(double seconds)
 		uint64_t start = cf_get_ticks();
 		cf_sleep(1);
 		uint64_t end = cf_get_ticks();
-
+	
 		double observed = (end - start) * inv_freq;
 		seconds -= observed;
-
+	
 		++count;
 		double delta = observed - mean;
 		mean += delta / count;
 		m2 += delta * (observed - mean);
 		double stddev = sqrt(m2 / (count - 1));
-		estimate = mean + stddev * 5.0f;
-
+		estimate = mean + stddev;
+	
 		if (count > 100000) {
 			estimate = 5e-3;
 			mean = 5e-3;
@@ -117,7 +117,7 @@ static void s_precise_sleep(double seconds)
 			count = 0;
 		}
 	}
-
+	
 	if (seconds < 0) {
 		// Overshoot.
 		return;
@@ -129,7 +129,7 @@ static void s_precise_sleep(double seconds)
 		uint64_t now = cf_get_ticks();
 		uint64_t elapsed = now - start;
 		double elapsed_seconds = elapsed * inv_freq;
-		if (elapsed_seconds < seconds) {
+		if (elapsed_seconds > seconds) {
 			break;
 		}
 	}
@@ -139,7 +139,9 @@ static void s_fps_limit()
 {
 	if (target_framerate != -1) {
 		double seconds = 1.0 / target_framerate;
-		s_precise_sleep(seconds);
+		uint64_t now = cf_get_ticks();
+		uint64_t delta = now - prev_ticks;
+		s_precise_sleep(seconds - delta * inv_freq);
 	}
 }
 
