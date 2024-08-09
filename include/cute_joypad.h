@@ -506,8 +506,8 @@ CF_INLINE const char* joypad_serial_number(CF_Joypad joypad) { return cf_joypad_
 CF_INLINE uint16_t joypad_firmware_version(CF_Joypad joypad) { return cf_joypad_firmware_version(joypad); }
 CF_INLINE uint16_t joypad_product_version(CF_Joypad joypad) { return cf_joypad_product_version(joypad); }
 CF_INLINE bool joypad_button_down(Joypad joypad, JoypadButton button) { return cf_joypad_button_down(joypad, button); }
-CF_INLINE bool joypad_button_was_pressed(Joypad joypad, JoypadButton button) { return cf_joypad_button_just_pressed(joypad, button); }
-CF_INLINE bool joypad_button_was_released(Joypad joypad, JoypadButton button) { return cf_joypad_button_just_released(joypad, button); }
+CF_INLINE bool joypad_button_just_pressed(Joypad joypad, JoypadButton button) { return cf_joypad_button_just_pressed(joypad, button); }
+CF_INLINE bool joypad_button_just_released(Joypad joypad, JoypadButton button) { return cf_joypad_button_just_released(joypad, button); }
 CF_INLINE int16_t joypad_axis(Joypad joypad, JoypadAxis axis) { return cf_joypad_axis(joypad, axis); }
 
 }
