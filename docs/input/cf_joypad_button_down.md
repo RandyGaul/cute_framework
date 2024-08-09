@@ -12,7 +12,7 @@ GitHub: [cute_joypad.h](https://github.com/RandyGaul/cute_framework/blob/master/
 Returns true if the button is currently down.
 
 ```cpp
-bool cf_joypad_button_down(CF_Joypad* joypad, CF_JoypadButton button);
+bool cf_joypad_button_down(CF_Joypad joypad, CF_JoypadButton button);
 ```
 
 Parameters | Description

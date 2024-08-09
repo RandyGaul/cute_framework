@@ -12,7 +12,7 @@ GitHub: [cute_haptics.h](https://github.com/RandyGaul/cute_framework/blob/master
 Stops playing the specified effect.
 
 ```cpp
-void cf_haptic_stop_effect(CF_Haptic* haptic, CF_HapticEffect effect);
+void cf_haptic_stop_effect(CF_Haptic haptic, CF_HapticEffect effect);
 ```
 
 Parameters | Description

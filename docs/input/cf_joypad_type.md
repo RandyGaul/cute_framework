@@ -3,27 +3,23 @@
 [//]: # (See: https://github.com/RandyGaul/cute_framework/blob/master/samples/docs_parser.cpp)
 [](../header.md ':include')
 
-# cf_joypad_axis
+# cf_joypad_type
 
 Category: [input](/api_reference?id=input)  
 GitHub: [cute_joypad.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_joypad.h)  
 ---
 
-Returns a signed 16-bit integer representing how much a joypad axis is activated by.
+Returns the type of the joypad.
 
 ```cpp
-int16_t cf_joypad_axis(CF_Joypad joypad, CF_JoypadAxis axis);
+CF_JoypadType cf_joypad_type(CF_Joypad joypad);
 ```
 
 Parameters | Description
 --- | ---
 joypad | The joypad.
-axis | The axis.
 
 ## Related Pages
 
 [CF_Joypad](/input/cf_joypad.md)  
-[CF_JoypadButton](/input/cf_joypadbutton.md)  
-[cf_joypad_button_down](/input/cf_joypad_button_down.md)  
-[cf_joypad_button_just_pressed](/input/cf_joypad_button_just_pressed.md)  
-[cf_joypad_button_just_released](/input/cf_joypad_button_just_released.md)  
+[CF_JoypadType](/input/cf_joypadtype.md)  

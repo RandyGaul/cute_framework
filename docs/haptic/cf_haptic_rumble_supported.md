@@ -12,7 +12,7 @@ GitHub: [cute_haptics.h](https://github.com/RandyGaul/cute_framework/blob/master
 Checks to see if a simple sine/leftright haptic can be supported on the device.
 
 ```cpp
-bool cf_haptic_rumble_supported(CF_Haptic* haptic);
+bool cf_haptic_rumble_supported(CF_Haptic haptic);
 ```
 
 Parameters | Description

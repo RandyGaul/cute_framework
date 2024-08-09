@@ -9,7 +9,7 @@ Category: [input](/api_reference?id=input)
 GitHub: [cute_joypad.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_joypad.h)  
 ---
 
-An opaque pointer representing a joypad.
+An opaque handle representing a joypad.
 
 ## Related Pages
 

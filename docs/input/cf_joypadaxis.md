@@ -26,6 +26,7 @@ JOYPAD_AXIS_COUNT | (null)
 
 ## Related Pages
 
-[cf_joypad_axis](/input/cf_joypad_axis.md)  
+[CF_JoypadType](/input/cf_joypadtype.md)  
 [cf_joypad_axis_to_string](/input/cf_joypad_axis_to_string.md)  
 [CF_Joypad](/input/cf_joypad.md)  
+[cf_joypad_axis](/input/cf_joypad_axis.md)  

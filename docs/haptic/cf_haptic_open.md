@@ -12,7 +12,7 @@ GitHub: [cute_haptics.h](https://github.com/RandyGaul/cute_framework/blob/master
 Attempts to open a joypad for haptics use.
 
 ```cpp
-CF_Haptic* cf_haptic_open(CF_Joypad* joypad);
+CF_Haptic cf_haptic_open(CF_Joypad joypad);
 ```
 
 Parameters | Description

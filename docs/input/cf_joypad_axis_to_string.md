@@ -22,5 +22,6 @@ state | The state to convert to a string.
 ## Related Pages
 
 [CF_JoypadAxis](/input/cf_joypadaxis.md)  
-[cf_joypad_axis](/input/cf_joypad_axis.md)  
+[CF_JoypadType](/input/cf_joypadtype.md)  
 [CF_Joypad](/input/cf_joypad.md)  
+[cf_joypad_axis](/input/cf_joypad_axis.md)  

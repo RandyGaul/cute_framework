@@ -12,7 +12,7 @@ GitHub: [cute_haptics.h](https://github.com/RandyGaul/cute_framework/blob/master
 Pause all haptics on the device.
 
 ```cpp
-void cf_haptic_pause(CF_Haptic* haptic);
+void cf_haptic_pause(CF_Haptic haptic);
 ```
 
 Parameters | Description

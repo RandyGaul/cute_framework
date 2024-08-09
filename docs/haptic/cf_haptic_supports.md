@@ -12,7 +12,7 @@ GitHub: [cute_haptics.h](https://github.com/RandyGaul/cute_framework/blob/master
 Checks to see if a certain type of haptic is supported on this device.
 
 ```cpp
-bool cf_haptic_supports(CF_Haptic* haptic, CF_HapticType type);
+bool cf_haptic_supports(CF_Haptic haptic, CF_HapticType type);
 ```
 
 Parameters | Description

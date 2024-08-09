@@ -12,8 +12,7 @@ int main(int argc, char* argv[])
 	int frame_index = 0;
 	float fps = 0;
 
-	// Attempt to render + update at about 30fps.
-	set_target_framerate(30);
+	set_target_framerate(60);
 
 	while (app_is_running()) {
 		app_update();

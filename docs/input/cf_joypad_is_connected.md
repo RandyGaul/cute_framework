@@ -12,7 +12,7 @@ GitHub: [cute_joypad.h](https://github.com/RandyGaul/cute_framework/blob/master/
 Returns true if a joypad is connected.
 
 ```cpp
-bool cf_joypad_is_connected(CF_Joypad* joypad);
+bool cf_joypad_is_connected(CF_Joypad joypad);
 ```
 
 Parameters | Description

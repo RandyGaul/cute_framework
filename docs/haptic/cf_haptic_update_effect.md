@@ -12,7 +12,7 @@ GitHub: [cute_haptics.h](https://github.com/RandyGaul/cute_framework/blob/master
 Dynamically updates an effect on the device. This _can not_ change the effect type.
 
 ```cpp
-void cf_haptic_update_effect(CF_Haptic* haptic, CF_HapticEffect effect, CF_HapticData data);
+void cf_haptic_update_effect(CF_Haptic haptic, CF_HapticEffect effect, CF_HapticData data);
 ```
 
 Parameters | Description

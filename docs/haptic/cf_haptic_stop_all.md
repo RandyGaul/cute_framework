@@ -12,7 +12,7 @@ GitHub: [cute_haptics.h](https://github.com/RandyGaul/cute_framework/blob/master
 Stops all haptics on the device.
 
 ```cpp
-void cf_haptic_stop_all(CF_Haptic* haptic);
+void cf_haptic_stop_all(CF_Haptic haptic);
 ```
 
 Parameters | Description

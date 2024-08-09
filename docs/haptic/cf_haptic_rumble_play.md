@@ -12,7 +12,7 @@ GitHub: [cute_haptics.h](https://github.com/RandyGaul/cute_framework/blob/master
 Starts playing a simple rumble effect
 
 ```cpp
-void cf_haptic_rumble_play(CF_Haptic* haptic, float strength, int duration_milliseconds);
+void cf_haptic_rumble_play(CF_Haptic haptic, float strength, int duration_milliseconds);
 ```
 
 Parameters | Description

@@ -21,10 +21,10 @@ extern "C" {
 /**
  * @struct   CF_Joypad
  * @category input
- * @brief    An opaque pointer representing a joypad.
+ * @brief    An opaque handle representing a joypad.
  * @related  CF_Joypad cf_joypad_open cf_joypad_button_down cf_joypad_axis
  */
-typedef struct CF_Joypad CF_Joypad;
+	typedef struct CF_Joypad { uint64_t id; } CF_Joypad;
 // @end
 
 /**
@@ -145,7 +145,7 @@ CF_INLINE const char* cf_joypad_button_to_string(CF_JoypadButton button)
  * @enum     CF_JoypadAxis
  * @category input
  * @brief    Various axis actions on a `CF_Joypad`.
- * @related  CF_JoypadAxis cf_joypad_axis_to_string CF_Joypad cf_joypad_axis
+ * @related  CF_JoypadAxis cf_joypad_axis_to_string CF_Joypad cf_joypad_axis CF_JoypadType
  */
 #define CF_JOYPAD_AXIS_DEFS \
 	/* @entry */ \
@@ -178,13 +178,76 @@ typedef enum CF_JoypadAxis
  * @category input
  * @brief    Convert an enum `CF_JoypadAxis` to a c-style string.
  * @param    state        The state to convert to a string.
- * @related  CF_JoypadAxis cf_joypad_axis_to_string CF_Joypad cf_joypad_axis
+ * @related  CF_JoypadAxis cf_joypad_axis_to_string CF_Joypad cf_joypad_axis CF_JoypadType
  */
 CF_INLINE const char* cf_joypad_axis_to_string(CF_JoypadAxis axis)
 {
 	switch (axis) {
 	#define CF_ENUM(K, V) case CF_##K: return CF_STRINGIZE(CF_##K);
 	CF_JOYPAD_AXIS_DEFS
+	#undef CF_ENUM
+	default: return NULL;
+	}
+}
+
+/**
+ * @enum     CF_JoypadType
+ * @category input
+ * @brief    Various types of joypads by enum name.
+ * @related  CF_Joypad CF_JoypadType cf_joypad_type_to_string cf_joypad_type
+ */
+#define CF_JOYPAD_TYPE_DEFS \
+	/* @entry */ \
+	CF_ENUM(JOYPAD_TYPE_UNKNOWN, 0) \
+	/* @entry */ \
+	CF_ENUM(JOYPAD_TYPE_XBOX360, 1) \
+	/* @entry */ \
+	CF_ENUM(JOYPAD_TYPE_XBOXONE, 2) \
+	/* @entry */ \
+	CF_ENUM(JOYPAD_TYPE_PS3, 3) \
+	/* @entry */ \
+	CF_ENUM(JOYPAD_TYPE_PS4, 4) \
+	/* @entry */ \
+	CF_ENUM(JOYPAD_TYPE_NINENTDO_SWITCH_PRO, 5) \
+	/* @entry */ \
+	CF_ENUM(JOYPAD_TYPE_VIRTUAL, 6) \
+	/* @entry */ \
+	CF_ENUM(JOYPAD_TYPE_PS5, 7) \
+	/* @entry */ \
+	CF_ENUM(JOYPAD_TYPE_AMAZON_LUNA, 8) \
+	/* @entry */ \
+	CF_ENUM(JOYPAD_TYPE_GOOGLE_STADIA, 9) \
+	/* @entry */ \
+	CF_ENUM(JOYPAD_TYPE_NVIDIA_SHIELD, 10) \
+	/* @entry */ \
+	CF_ENUM(JOYPAD_TYPE_NINTENDO_SWITCH_JOYCON_LEFT, 11) \
+	/* @entry */ \
+	CF_ENUM(JOYPAD_TYPE_NINTENDO_SWITCH_JOYCON_RIGHT, 12) \
+	/* @entry */ \
+	CF_ENUM(JOYPAD_TYPE_NINTENDO_SWITCH_JOYCON_PAIR, 13) \
+	/* @entry */ \
+	CF_ENUM(JOYPAD_TYPE_COUNT, 14) \
+	/* @end */
+
+typedef enum CF_JoypadType
+{
+	#define CF_ENUM(K, V) CF_##K = V,
+	CF_JOYPAD_TYPE_DEFS
+	#undef CF_ENUM
+} CF_JoypadType;
+
+/**
+ * @function cf_joypad_type_to_string
+ * @category input
+ * @brief    Convert an enum `CF_JoypadType` to a c-style string.
+ * @param    state        The state to convert to a string.
+ * @related  CF_Joypad CF_JoypadType cf_joypad_type_to_string cf_joypad_type
+ */
+CF_INLINE const char* cf_joypad_type_to_string(CF_JoypadType type)
+{
+	switch (type) {
+	#define CF_ENUM(K, V) case CF_##K: return CF_STRINGIZE(CF_##K);
+	CF_JOYPAD_TYPE_DEFS
 	#undef CF_ENUM
 	default: return NULL;
 	}
@@ -218,7 +281,7 @@ CF_API int CF_CALL cf_joypad_count();
  * @remarks  The first joypad connected to the system is 0, the second is 1, and so on.
  * @related  CF_Joypad cf_joypad_count cf_joypad_open cf_joypad_close
  */
-CF_API CF_Joypad* CF_CALL cf_joypad_open(int index);
+CF_API CF_Joypad CF_CALL cf_joypad_open(int index);
 
 /**
  * @function cf_joypad_close
@@ -227,7 +290,7 @@ CF_API CF_Joypad* CF_CALL cf_joypad_open(int index);
  * @param    joypad     The joypad.
  * @related  CF_Joypad cf_joypad_count cf_joypad_open cf_joypad_close
  */
-CF_API void CF_CALL cf_joypad_close(CF_Joypad* joypad);
+CF_API void CF_CALL cf_joypad_close(CF_Joypad joypad);
 
 /**
  * @function cf_joypad_is_connected
@@ -236,7 +299,7 @@ CF_API void CF_CALL cf_joypad_close(CF_Joypad* joypad);
  * @param    joypad     The joypad.
  * @related  CF_Joypad cf_joypad_count cf_joypad_open cf_joypad_close
  */
-CF_API bool CF_CALL cf_joypad_is_connected(CF_Joypad* joypad);
+CF_API bool CF_CALL cf_joypad_is_connected(CF_Joypad joypad);
 
 /**
  * @function cf_joypad_power_level
@@ -245,7 +308,7 @@ CF_API bool CF_CALL cf_joypad_is_connected(CF_Joypad* joypad);
  * @param    joypad     The joypad.
  * @related  CF_JoypadPowerLevel cf_joypad_power_level_to_string cf_joypad_power_level CF_Joypad
  */
-CF_API CF_JoypadPowerLevel CF_CALL cf_joypad_power_level(CF_Joypad* joypad);
+CF_API CF_JoypadPowerLevel CF_CALL cf_joypad_power_level(CF_Joypad joypad);
 
 /**
  * @function cf_joypad_name
@@ -254,7 +317,66 @@ CF_API CF_JoypadPowerLevel CF_CALL cf_joypad_power_level(CF_Joypad* joypad);
  * @param    joypad     The joypad.
  * @related  CF_Joypad cf_joypad_count cf_joypad_open cf_joypad_close
  */
-CF_API const char* CF_CALL cf_joypad_name(CF_Joypad* joypad);
+CF_API const char* CF_CALL cf_joypad_name(CF_Joypad joypad);
+
+/**
+ * @function cf_joypad_type
+ * @category input
+ * @brief    Returns the type of the joypad.
+ * @param    joypad     The joypad.
+ * @related  CF_Joypad CF_JoypadType
+ */
+CF_API CF_JoypadType CF_CALL cf_joypad_type(CF_Joypad joypad);
+
+/**
+ * @function cf_joypad_vendor
+ * @category input
+ * @brief    Returns the USB vendor ID.
+ * @param    joypad     The joypad.
+ * @remarks  Returns 0 if not available.
+ * @related  CF_Joypad CF_JoypadType
+ */
+CF_API uint16_t CF_CALL cf_joypad_vendor(CF_Joypad joypad);
+
+/**
+ * @function cf_joypad_product_id
+ * @category input
+ * @brief    Returns the USB product ID.
+ * @param    joypad     The joypad.
+ * @remarks  Returns 0 if not available.
+ * @related  CF_Joypad CF_JoypadType
+ */
+CF_API uint16_t CF_CALL cf_joypad_product_id(CF_Joypad joypad);
+
+/**
+ * @function cf_joypad_serial_number
+ * @category input
+ * @brief    Returns the serial number.
+ * @param    joypad     The joypad.
+ * @remarks  Returns 0 if not available.
+ * @related  CF_Joypad CF_JoypadType
+ */
+CF_API const char* CF_CALL cf_joypad_serial_number(CF_Joypad joypad);
+
+/**
+ * @function cf_joypad_firmware_version
+ * @category input
+ * @brief    Returns the firmware version.
+ * @param    joypad     The joypad.
+ * @remarks  Returns 0 if not available.
+ * @related  CF_Joypad CF_JoypadType
+ */
+CF_API uint16_t CF_CALL cf_joypad_firmware_version(CF_Joypad joypad);
+
+/**
+ * @function cf_joypad_product_version
+ * @category input
+ * @brief    Returns the product version.
+ * @param    joypad     The joypad.
+ * @remarks  Returns 0 if not available.
+ * @related  CF_Joypad CF_JoypadType
+ */
+CF_API uint16_t CF_CALL cf_joypad_product_version(CF_Joypad joypad);
 
 /**
  * @function cf_joypad_button_down
@@ -264,7 +386,7 @@ CF_API const char* CF_CALL cf_joypad_name(CF_Joypad* joypad);
  * @param    button     The button.
  * @related  CF_Joypad CF_JoypadButton cf_joypad_button_down cf_joypad_button_just_pressed cf_joypad_button_just_released cf_joypad_axis
  */
-CF_API bool CF_CALL cf_joypad_button_down(CF_Joypad* joypad, CF_JoypadButton button);
+CF_API bool CF_CALL cf_joypad_button_down(CF_Joypad joypad, CF_JoypadButton button);
 
 /**
  * @function cf_joypad_button_just_pressed
@@ -274,7 +396,7 @@ CF_API bool CF_CALL cf_joypad_button_down(CF_Joypad* joypad, CF_JoypadButton but
  * @param    button     The button.
  * @related  CF_Joypad CF_JoypadButton cf_joypad_button_down cf_joypad_button_just_pressed cf_joypad_button_just_released cf_joypad_axis
  */
-CF_API bool CF_CALL cf_joypad_button_just_pressed(CF_Joypad* joypad, CF_JoypadButton button);
+CF_API bool CF_CALL cf_joypad_button_just_pressed(CF_Joypad joypad, CF_JoypadButton button);
 
 /**
  * @function cf_joypad_button_just_released
@@ -284,7 +406,7 @@ CF_API bool CF_CALL cf_joypad_button_just_pressed(CF_Joypad* joypad, CF_JoypadBu
  * @param    button     The button.
  * @related  CF_Joypad CF_JoypadButton cf_joypad_button_down cf_joypad_button_just_pressed cf_joypad_button_just_released cf_joypad_axis
  */
-CF_API bool CF_CALL cf_joypad_button_just_released(CF_Joypad* joypad, CF_JoypadButton button);
+CF_API bool CF_CALL cf_joypad_button_just_released(CF_Joypad joypad, CF_JoypadButton button);
 
 /**
  * @function cf_joypad_axis
@@ -294,7 +416,7 @@ CF_API bool CF_CALL cf_joypad_button_just_released(CF_Joypad* joypad, CF_JoypadB
  * @param    axis       The axis.
  * @related  CF_Joypad CF_JoypadButton cf_joypad_button_down cf_joypad_button_just_pressed cf_joypad_button_just_released cf_joypad_axis
  */
-CF_API int16_t CF_CALL cf_joypad_axis(CF_Joypad* joypad, CF_JoypadAxis axis);
+CF_API int16_t CF_CALL cf_joypad_axis(CF_Joypad joypad, CF_JoypadAxis axis);
 
 #ifdef __cplusplus
 }
@@ -355,17 +477,38 @@ CF_INLINE const char* to_string(JoypadAxis axis)
 	}
 }
 
-CF_INLINE CF_Result joypad_add_mapping(const char* mapping) { return cf_joypad_add_mapping(mapping); }
+using JoypadType = CF_JoypadType;
+#define CF_ENUM(K, V) CF_INLINE constexpr JoypadType K = CF_##K;
+CF_JOYPAD_TYPE_DEFS
+#undef CF_ENUM
+
+CF_INLINE const char* to_string(JoypadType type)
+{
+	switch (type) {
+	#define CF_ENUM(K, V) case CF_##K: return #K;
+	CF_JOYPAD_TYPE_DEFS
+	#undef CF_ENUM
+	default: return NULL;
+	}
+}
+
+CF_INLINE Result joypad_add_mapping(const char* mapping) { return cf_joypad_add_mapping(mapping); }
 CF_INLINE int joypad_count() { return cf_joypad_count(); }
-CF_INLINE CF_Joypad* joypad_open(int index) { return cf_joypad_open(index); }
-CF_INLINE void joypad_close(Joypad* joypad) { cf_joypad_close(joypad); }
-CF_INLINE bool joypad_is_connected(Joypad* joypad) { return cf_joypad_is_connected(joypad); }
-CF_INLINE JoypadPowerLevel joypad_power_level(Joypad* joypad) { return cf_joypad_power_level(joypad); }
-CF_INLINE const char* joypad_name(Joypad* joypad) { return cf_joypad_name(joypad); }
-CF_INLINE bool joypad_button_down(Joypad* joypad, JoypadButton button) { return cf_joypad_button_down(joypad, button); }
-CF_INLINE bool joypad_button_was_pressed(Joypad* joypad, JoypadButton button) { return cf_joypad_button_just_pressed(joypad, button); }
-CF_INLINE bool joypad_button_was_released(Joypad* joypad, JoypadButton button) { return cf_joypad_button_just_released(joypad, button); }
-CF_INLINE int16_t joypad_axis(Joypad* joypad, JoypadAxis axis) { return cf_joypad_axis(joypad, axis); }
+CF_INLINE Joypad joypad_open(int index) { return cf_joypad_open(index); }
+CF_INLINE void joypad_close(Joypad joypad) { cf_joypad_close(joypad); }
+CF_INLINE bool joypad_is_connected(Joypad joypad) { return cf_joypad_is_connected(joypad); }
+CF_INLINE JoypadPowerLevel joypad_power_level(Joypad joypad) { return cf_joypad_power_level(joypad); }
+CF_INLINE const char* joypad_name(Joypad joypad) { return cf_joypad_name(joypad); }
+CF_INLINE CF_JoypadType joypad_type(CF_Joypad joypad) { return cf_joypad_type(joypad); }
+CF_INLINE uint16_t joypad_vendor(CF_Joypad joypad) { return cf_joypad_vendor(joypad); }
+CF_INLINE uint16_t joypad_product_id(CF_Joypad joypad) { return cf_joypad_product_id(joypad); }
+CF_INLINE const char* joypad_serial_number(CF_Joypad joypad) { return cf_joypad_serial_number(joypad); }
+CF_INLINE uint16_t joypad_firmware_version(CF_Joypad joypad) { return cf_joypad_firmware_version(joypad); }
+CF_INLINE uint16_t joypad_product_version(CF_Joypad joypad) { return cf_joypad_product_version(joypad); }
+CF_INLINE bool joypad_button_down(Joypad joypad, JoypadButton button) { return cf_joypad_button_down(joypad, button); }
+CF_INLINE bool joypad_button_was_pressed(Joypad joypad, JoypadButton button) { return cf_joypad_button_just_pressed(joypad, button); }
+CF_INLINE bool joypad_button_was_released(Joypad joypad, JoypadButton button) { return cf_joypad_button_just_released(joypad, button); }
+CF_INLINE int16_t joypad_axis(Joypad joypad, JoypadAxis axis) { return cf_joypad_axis(joypad, axis); }
 
 }
 

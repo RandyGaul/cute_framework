@@ -12,7 +12,7 @@ GitHub: [cute_joypad.h](https://github.com/RandyGaul/cute_framework/blob/master/
 Opens a joypad on the system.
 
 ```cpp
-CF_Joypad* cf_joypad_open(int index);
+CF_Joypad cf_joypad_open(int index);
 ```
 
 Parameters | Description

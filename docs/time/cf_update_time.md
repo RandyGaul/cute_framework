@@ -19,6 +19,11 @@ Parameters | Description
 --- | ---
 on_update | Can be `NULL`. Called once per update. Mostly just useful for the fixed-timestep case (see [cf_set_fixed_timestep](/time/cf_set_fixed_timestep.md)).
 
+## Remarks
+
+Typically you will want to call this function just after [cf_app_update](/app/cf_app_update.md), or, alternatively pass
+  in `on_update` to [cf_app_update](/app/cf_app_update.md) instead of calling this function at all.
+
 ## Related Pages
 
 [cf_set_fixed_timestep](/time/cf_set_fixed_timestep.md)  

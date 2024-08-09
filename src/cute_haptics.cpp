@@ -13,37 +13,42 @@
 
 #include <SDL.h>
 
-struct CF_Haptic
+struct CF_HapticInstance
 {
 	SDL_Haptic* ptr = NULL;
 	bool rumble_initialized = false;
 };
 
-CF_Haptic* cf_haptic_open(CF_Joypad* joypad)
+CF_Haptic cf_haptic_open(CF_Joypad joypad_handle)
 {
-	CF_Haptic* haptic = CF_NEW(CF_Haptic);
+	CF_JoypadInstance* joypad = (CF_JoypadInstance*)joypad_handle.id;
+	CF_HapticInstance* haptic = CF_NEW(CF_HapticInstance);
+	CF_Haptic handle = { 0 };
 	SDL_Joystick* joy = SDL_GameControllerGetJoystick(joypad->controller);
 	if (!joy) {
 		CF_FREE(haptic);
-		return NULL;
+		return handle;
 	}
 	haptic->ptr = SDL_HapticOpenFromJoystick(joy);
 	if (!haptic->ptr) {
 		CF_FREE(haptic);
-		return NULL;
+		return handle;
 	}
-	joypad->haptic = haptic;
-	return haptic;
+	handle.id = (uint64_t)haptic;
+	joypad->haptic = handle;
+	return handle;
 }
 
-void cf_haptic_close(CF_Haptic* haptic)
+void cf_haptic_close(CF_Haptic haptic_handle)
 {
+	CF_HapticInstance* haptic = (CF_HapticInstance*)haptic_handle.id;
 	SDL_HapticClose(haptic->ptr);
 	CF_FREE(haptic);
 }
 
-bool cf_haptic_supports(CF_Haptic* haptic, CF_HapticType type)
+bool cf_haptic_supports(CF_Haptic haptic_handle, CF_HapticType type)
 {
+	CF_HapticInstance* haptic = (CF_HapticInstance*)haptic_handle.id;
 	int result = SDL_HapticQuery(haptic->ptr);
 	if (type == CF_HAPTIC_TYPE_LEFTRIGHT) {
 		if (result & SDL_HAPTIC_LEFTRIGHT) {
@@ -61,8 +66,9 @@ bool cf_haptic_supports(CF_Haptic* haptic, CF_HapticType type)
 	return false;
 }
 
-void cf_haptic_set_gain(CF_Haptic* haptic, float gain)
+void cf_haptic_set_gain(CF_Haptic haptic_handle, float gain)
 {
+	CF_HapticInstance* haptic = (CF_HapticInstance*)haptic_handle.id;
 	if (gain > 1.0f) gain = 1.0f;
 	else if (gain < 0) gain = 0;
 	SDL_HapticSetGain(haptic->ptr, (int)(gain * 100.0f + 0.5f));
@@ -130,58 +136,68 @@ static SDL_HapticEffect s_cute_to_sdl(CF_HapticData data)
 	return effect;
 }
 
-CF_HapticEffect cf_haptic_create_effect(CF_Haptic* haptic, CF_HapticData data)
+CF_HapticEffect cf_haptic_create_effect(CF_Haptic haptic_handle, CF_HapticData data)
 {
+	CF_HapticInstance* haptic = (CF_HapticInstance*)haptic_handle.id;
 	SDL_HapticEffect effect = s_cute_to_sdl(data);
 	int id = SDL_HapticNewEffect(haptic->ptr, &effect);
 	CF_HapticEffect result = { id };
 	return result;
 }
 
-void cf_haptic_run_effect(CF_Haptic* haptic, CF_HapticEffect effect, int iterations)
+void cf_haptic_run_effect(CF_Haptic haptic_handle, CF_HapticEffect effect, int iterations)
 {
+	CF_HapticInstance* haptic = (CF_HapticInstance*)haptic_handle.id;
 	SDL_HapticRunEffect(haptic->ptr, effect.id, s_saturate32(iterations));
 }
 
-void cf_haptic_update_effect(CF_Haptic* haptic, CF_HapticEffect effect, CF_HapticData data)
+void cf_haptic_update_effect(CF_Haptic haptic_handle, CF_HapticEffect effect, CF_HapticData data)
 {
+	CF_HapticInstance* haptic = (CF_HapticInstance*)haptic_handle.id;
 	SDL_HapticEffect update = s_cute_to_sdl(data);
 	SDL_HapticUpdateEffect(haptic->ptr, effect.id, &update);
 }
 
-void cf_haptic_stop_effect(CF_Haptic* haptic, CF_HapticEffect effect)
+void cf_haptic_stop_effect(CF_Haptic haptic_handle, CF_HapticEffect effect)
 {
+	CF_HapticInstance* haptic = (CF_HapticInstance*)haptic_handle.id;
 	SDL_HapticStopEffect(haptic->ptr, effect.id);
 }
 
-void cf_haptic_destroy_effect(CF_Haptic* haptic, CF_HapticEffect effect)
+void cf_haptic_destroy_effect(CF_Haptic haptic_handle, CF_HapticEffect effect)
 {
+	CF_HapticInstance* haptic = (CF_HapticInstance*)haptic_handle.id;
 	SDL_HapticDestroyEffect(haptic->ptr, effect.id);
 }
 
-void cf_haptic_pause(CF_Haptic* haptic)
+void cf_haptic_pause(CF_Haptic haptic_handle)
 {
+	CF_HapticInstance* haptic = (CF_HapticInstance*)haptic_handle.id;
 	SDL_HapticPause(haptic->ptr);
 }
 
-void cf_haptic_unpause(CF_Haptic* haptic)
+void cf_haptic_unpause(CF_Haptic haptic_handle)
 {
+	CF_HapticInstance* haptic = (CF_HapticInstance*)haptic_handle.id;
 	SDL_HapticUnpause(haptic->ptr);
 }
 
-void cf_haptic_stop_all(CF_Haptic* haptic)
+void cf_haptic_stop_all(CF_Haptic haptic_handle)
 {
+	CF_HapticInstance* haptic = (CF_HapticInstance*)haptic_handle.id;
 	SDL_HapticStopAll(haptic->ptr);
 }
 
-bool cf_haptic_rumble_supported(CF_Haptic* haptic)
+bool cf_haptic_rumble_supported(CF_Haptic haptic_handle)
 {
+	CF_HapticInstance* haptic = (CF_HapticInstance*)haptic_handle.id;
 	int result = SDL_HapticRumbleSupported(haptic->ptr);
 	return result == SDL_TRUE ? true : false;
 }
 
-void cf_haptic_rumble_play(CF_Haptic* haptic, float strength, int duration_milliseconds)
+void cf_haptic_rumble_play(CF_Haptic haptic_handle, float strength, int duration_milliseconds)
 {
+	CF_HapticInstance* haptic = (CF_HapticInstance*)haptic_handle.id;
 	if (!haptic->rumble_initialized) {
 		SDL_HapticRumbleInit(haptic->ptr);
 		haptic->rumble_initialized = true;
@@ -189,7 +205,8 @@ void cf_haptic_rumble_play(CF_Haptic* haptic, float strength, int duration_milli
 	SDL_HapticRumblePlay(haptic->ptr, strength, s_saturate32(duration_milliseconds));
 }
 
-void cf_haptic_rumble_stop(CF_Haptic* haptic)
+void cf_haptic_rumble_stop(CF_Haptic haptic_handle)
 {
+	CF_HapticInstance* haptic = (CF_HapticInstance*)haptic_handle.id;
 	SDL_HapticRumbleStop(haptic->ptr);
 }

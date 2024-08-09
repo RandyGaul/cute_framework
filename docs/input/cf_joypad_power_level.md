@@ -12,7 +12,7 @@ GitHub: [cute_joypad.h](https://github.com/RandyGaul/cute_framework/blob/master/
 Returns the power level of the joypad.
 
 ```cpp
-CF_JoypadPowerLevel cf_joypad_power_level(CF_Joypad* joypad);
+CF_JoypadPowerLevel cf_joypad_power_level(CF_Joypad joypad);
 ```
 
 Parameters | Description

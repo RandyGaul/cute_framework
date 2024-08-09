@@ -109,7 +109,8 @@ static void s_precise_sleep(double seconds)
 		m2 += delta * (observed - mean);
 		double stddev = sqrt(m2 / (count - 1));
 		estimate = mean + stddev;
-	
+
+		// Reset metrics over time to prevent innaccuracies to build up for large divisors.
 		if (count > 100000) {
 			estimate = 5e-3;
 			mean = 5e-3;

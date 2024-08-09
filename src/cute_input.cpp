@@ -436,10 +436,10 @@ bool cf_touch_get(uint64_t id, CF_Touch* touch)
 	return false;
 }
 
-static CF_Joypad* s_joy(SDL_JoystickID id)
+static CF_JoypadInstance* s_joy(SDL_JoystickID id)
 {
 	for (CF_ListNode* n = cf_list_begin(&app->joypads); n != cf_list_end(&app->joypads); n = n->next) {
-		CF_Joypad* joypad = CF_LIST_HOST(CF_Joypad, node, n);
+		CF_JoypadInstance* joypad = CF_LIST_HOST(CF_JoypadInstance, node, n);
 		if (joypad->id == id) return joypad;
 	}
 	return NULL;
@@ -454,7 +454,7 @@ void cf_pump_input_msgs()
 	CF_MEMCPY(&app->mouse_prev, &app->mouse, sizeof(app->mouse));
 	CF_MEMCPY(&app->window_state_prev, &app->window_state, sizeof(app->window_state));
 	for (CF_ListNode* n = cf_list_begin(&app->joypads); n != cf_list_end(&app->joypads); n = n->next) {
-		CF_Joypad* joypad = CF_LIST_HOST(CF_Joypad, node, n);
+		CF_JoypadInstance* joypad = CF_LIST_HOST(CF_JoypadInstance, node, n);
 		CF_MEMCPY(joypad->buttons_prev, joypad->buttons, sizeof(joypad->buttons));
 	}
 	app->mouse.wheel_motion = 0;
@@ -611,7 +611,7 @@ void cf_pump_input_msgs()
 		case SDL_CONTROLLERBUTTONUP:
 		{
 			SDL_JoystickID id = event.cbutton.which;
-			CF_Joypad* joypad = s_joy(id);
+			CF_JoypadInstance* joypad = s_joy(id);
 			if (joypad) {
 				int button = (int)event.cbutton.button;
 				CF_ASSERT(button >= 0 && button < CF_JOYPAD_BUTTON_COUNT);
@@ -622,7 +622,7 @@ void cf_pump_input_msgs()
 		case SDL_CONTROLLERBUTTONDOWN:
 		{
 			SDL_JoystickID id = event.cbutton.which;
-			CF_Joypad* joypad = s_joy(id);
+			CF_JoypadInstance* joypad = s_joy(id);
 			if (joypad) {
 				int button = (int)event.cbutton.button;
 				CF_ASSERT(button >= 0 && button < CF_JOYPAD_BUTTON_COUNT);
@@ -633,7 +633,7 @@ void cf_pump_input_msgs()
 		case SDL_CONTROLLERAXISMOTION:
 		{
 			SDL_JoystickID id = event.caxis.which;
-			CF_Joypad* joypad = s_joy(id);
+			CF_JoypadInstance* joypad = s_joy(id);
 			if (joypad) {
 				int axis = (int)event.caxis.axis;
 				int value = (int)event.caxis.value;

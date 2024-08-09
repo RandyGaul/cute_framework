@@ -9,6 +9,7 @@
 #define CF_HAPTICS_H
 
 #include "cute_defines.h"
+#include "cute_joypad.h"
 
 //--------------------------------------------------------------------------------------------------
 // C API
@@ -33,7 +34,7 @@ extern "C" {
  *           TODO - Open haptic on the device itself (e.g. for phones).
  * @related  CF_Haptic CF_HapticType cf_haptic_open cf_haptic_close CF_HapticEffect
  */
-typedef struct CF_Haptic CF_Haptic;
+typedef struct CF_Haptic { uint64_t id; } CF_Haptic;
 // @end
 
 /**
@@ -254,8 +255,6 @@ typedef struct CF_HapticData
 
 // -------------------------------------------------------------------------------------------------
 
-typedef struct CF_Joypad CF_Joypad;
-
 /**
  * @function cf_haptic_open
  * @category haptic
@@ -265,7 +264,7 @@ typedef struct CF_Joypad CF_Joypad;
  * @remarks  Returns `NULL` upon any errors, including missing support from the underlying device.
  * @related  CF_Haptic CF_Joypad cf_haptic_open cf_haptic_close cf_haptic_create_effect cf_haptic_run_effect cf_haptic_rumble_play
  */
-CF_API CF_Haptic* CF_CALL cf_haptic_open(CF_Joypad* joypad);
+CF_API CF_Haptic CF_CALL cf_haptic_open(CF_Joypad joypad);
 
 /**
  * @function cf_haptic_close
@@ -274,7 +273,7 @@ CF_API CF_Haptic* CF_CALL cf_haptic_open(CF_Joypad* joypad);
  * @param    haptic         The haptic.
  * @related  CF_Haptic cf_haptic_open cf_haptic_close cf_haptic_create_effect cf_haptic_run_effect cf_haptic_rumble_play
  */
-CF_API void CF_CALL cf_haptic_close(CF_Haptic* haptic);
+CF_API void CF_CALL cf_haptic_close(CF_Haptic haptic);
 
 /**
  * @function cf_haptic_supports
@@ -285,7 +284,7 @@ CF_API void CF_CALL cf_haptic_close(CF_Haptic* haptic);
  * @return   Returns true if supported, false otherwise.
  * @related  CF_Haptic cf_haptic_open cf_haptic_close cf_haptic_create_effect cf_haptic_run_effect
  */
-CF_API bool CF_CALL cf_haptic_supports(CF_Haptic* haptic, CF_HapticType type);
+CF_API bool CF_CALL cf_haptic_supports(CF_Haptic haptic, CF_HapticType type);
 
 /**
  * @function cf_haptic_set_gain
@@ -295,7 +294,7 @@ CF_API bool CF_CALL cf_haptic_supports(CF_Haptic* haptic, CF_HapticType type);
  * @param    gain           Must be from 0 to 1. This is like a global "volume" for the strength of all haptics that run on this device.
  * @related  CF_Haptic cf_haptic_open cf_haptic_close cf_haptic_create_effect cf_haptic_run_effect
  */
-CF_API void CF_CALL cf_haptic_set_gain(CF_Haptic* haptic, float gain);
+CF_API void CF_CALL cf_haptic_set_gain(CF_Haptic haptic, float gain);
 
 /**
  * @struct   CF_HapticEffect
@@ -315,7 +314,7 @@ typedef struct CF_HapticEffect { int id; } CF_HapticEffect;
  * @remarks  Run the haptic with `haptic_run_effect`.
  * @related  CF_Haptic cf_haptic_open CF_HapticEffect cf_haptic_create_effect cf_haptic_run_effect
  */
-CF_API CF_HapticEffect CF_CALL cf_haptic_create_effect(CF_Haptic* haptic, CF_HapticData data);
+CF_API CF_HapticEffect CF_CALL cf_haptic_create_effect(CF_Haptic haptic, CF_HapticData data);
 
 /**
  * @function cf_haptic_run_effect
@@ -326,7 +325,7 @@ CF_API CF_HapticEffect CF_CALL cf_haptic_create_effect(CF_Haptic* haptic, CF_Hap
  * @param    iterations     A number of times to play the effect.
  * @related  CF_Haptic cf_haptic_open CF_HapticEffect cf_haptic_create_effect cf_haptic_run_effect cf_haptic_stop_effect
  */
-CF_API void CF_CALL cf_haptic_run_effect(CF_Haptic* haptic, CF_HapticEffect effect, int iterations);
+CF_API void CF_CALL cf_haptic_run_effect(CF_Haptic haptic, CF_HapticEffect effect, int iterations);
 
 /**
  * @function cf_haptic_update_effect
@@ -337,7 +336,7 @@ CF_API void CF_CALL cf_haptic_run_effect(CF_Haptic* haptic, CF_HapticEffect effe
  * @param    data           The updated haptic specification.
  * @related  CF_Haptic cf_haptic_open CF_HapticData CF_HapticEffect cf_haptic_create_effect cf_haptic_run_effect cf_haptic_stop_effect
  */
-CF_API void CF_CALL cf_haptic_update_effect(CF_Haptic* haptic, CF_HapticEffect effect, CF_HapticData data);
+CF_API void CF_CALL cf_haptic_update_effect(CF_Haptic haptic, CF_HapticEffect effect, CF_HapticData data);
 
 /**
  * @function cf_haptic_stop_effect
@@ -348,7 +347,7 @@ CF_API void CF_CALL cf_haptic_update_effect(CF_Haptic* haptic, CF_HapticEffect e
  * @remarks  The effect is not destroyed.
  * @related  CF_Haptic cf_haptic_open CF_HapticEffect cf_haptic_create_effect cf_haptic_stop_effect cf_haptic_destroy_effect cf_haptic_pause cf_haptic_unpause cf_haptic_stop_all
  */
-CF_API void CF_CALL cf_haptic_stop_effect(CF_Haptic* haptic, CF_HapticEffect effect);
+CF_API void CF_CALL cf_haptic_stop_effect(CF_Haptic haptic, CF_HapticEffect effect);
 
 /**
  * @function cf_haptic_destroy_effect
@@ -358,7 +357,7 @@ CF_API void CF_CALL cf_haptic_stop_effect(CF_Haptic* haptic, CF_HapticEffect eff
  * @param    effect         The haptic effect created by `cf_haptic_create_effect`.
  * @related  CF_Haptic cf_haptic_open CF_HapticEffect cf_haptic_create_effect cf_haptic_stop_effect cf_haptic_destroy_effect cf_haptic_pause cf_haptic_unpause cf_haptic_stop_all
  */
-CF_API void CF_CALL cf_haptic_destroy_effect(CF_Haptic* haptic, CF_HapticEffect effect);
+CF_API void CF_CALL cf_haptic_destroy_effect(CF_Haptic haptic, CF_HapticEffect effect);
 
 /**
  * @function cf_haptic_pause
@@ -367,7 +366,7 @@ CF_API void CF_CALL cf_haptic_destroy_effect(CF_Haptic* haptic, CF_HapticEffect 
  * @param    haptic         The haptic.
  * @related  CF_Haptic cf_haptic_open CF_HapticEffect cf_haptic_create_effect cf_haptic_stop_effect cf_haptic_destroy_effect cf_haptic_pause cf_haptic_unpause cf_haptic_stop_all
  */
-CF_API void CF_CALL cf_haptic_pause(CF_Haptic* haptic);
+CF_API void CF_CALL cf_haptic_pause(CF_Haptic haptic);
 
 /**
  * @function cf_haptic_unpause
@@ -376,7 +375,7 @@ CF_API void CF_CALL cf_haptic_pause(CF_Haptic* haptic);
  * @param    haptic         The haptic.
  * @related  CF_Haptic cf_haptic_open CF_HapticEffect cf_haptic_create_effect cf_haptic_stop_effect cf_haptic_destroy_effect cf_haptic_pause cf_haptic_unpause cf_haptic_stop_all
  */
-CF_API void CF_CALL cf_haptic_unpause(CF_Haptic* haptic);
+CF_API void CF_CALL cf_haptic_unpause(CF_Haptic haptic);
 
 /**
  * @function cf_haptic_stop_all
@@ -386,7 +385,7 @@ CF_API void CF_CALL cf_haptic_unpause(CF_Haptic* haptic);
  * @remarks  The effects are not destroyed.
  * @related  CF_Haptic cf_haptic_open CF_HapticEffect cf_haptic_create_effect cf_haptic_stop_effect cf_haptic_destroy_effect cf_haptic_pause cf_haptic_unpause cf_haptic_stop_all
  */
-CF_API void CF_CALL cf_haptic_stop_all(CF_Haptic* haptic);
+CF_API void CF_CALL cf_haptic_stop_all(CF_Haptic haptic);
 
 // -------------------------------------------------------------------------------------------------
 
@@ -398,7 +397,7 @@ CF_API void CF_CALL cf_haptic_stop_all(CF_Haptic* haptic);
  * @remarks  Creates a set of decent parameters to play a rumbling effect in an easy to use way.
  * @related  CF_Haptic cf_haptic_open cf_haptic_rumble_supported cf_haptic_rumble_play cf_haptic_rumble_stop
  */
-CF_API bool CF_CALL cf_haptic_rumble_supported(CF_Haptic* haptic);
+CF_API bool CF_CALL cf_haptic_rumble_supported(CF_Haptic haptic);
 
 /**
  * @function cf_haptic_rumble_play
@@ -410,7 +409,7 @@ CF_API bool CF_CALL cf_haptic_rumble_supported(CF_Haptic* haptic);
  * @remarks  Successive calls on this function will update the underlying rumble effect, instead of creating and playing multiple different effect instances.
  * @related  CF_Haptic cf_haptic_open cf_haptic_rumble_supported cf_haptic_rumble_play cf_haptic_rumble_stop
  */
-CF_API void CF_CALL cf_haptic_rumble_play(CF_Haptic* haptic, float strength, int duration_milliseconds);
+CF_API void CF_CALL cf_haptic_rumble_play(CF_Haptic haptic, float strength, int duration_milliseconds);
 
 /**
  * @function cf_haptic_rumble_stop
@@ -420,7 +419,7 @@ CF_API void CF_CALL cf_haptic_rumble_play(CF_Haptic* haptic, float strength, int
  * @remarks  See `cf_haptic_rumble_play` for more details.
  * @related  CF_Haptic cf_haptic_open cf_haptic_rumble_supported cf_haptic_rumble_play cf_haptic_rumble_stop
  */
-CF_API void CF_CALL cf_haptic_rumble_stop(CF_Haptic* haptic);
+CF_API void CF_CALL cf_haptic_rumble_stop(CF_Haptic haptic);
 
 #ifdef __cplusplus
 }
@@ -440,7 +439,6 @@ using HapticLeftRight = CF_HapticLeftRight;
 using HapticPeriodic = CF_HapticPeriodic;
 using HapticRamp = CF_HapticRamp;
 using HapticData = CF_HapticData;
-using Joypad = CF_Joypad;
 using HapticEffect = CF_HapticEffect;
 
 using HapticType = CF_HapticType;
@@ -473,21 +471,21 @@ CF_INLINE const char* to_string(HapticWaveType type)
 	}
 }
 
-CF_INLINE Haptic* haptic_open(Joypad* joypad) { return cf_haptic_open(joypad); }
-CF_INLINE void haptic_close(Haptic* haptic) { cf_haptic_close(haptic); }
-CF_INLINE bool haptic_supports(Haptic* haptic, HapticType type) { return cf_haptic_supports(haptic,type); }
-CF_INLINE void haptic_set_gain(Haptic* haptic, float gain) { cf_haptic_set_gain(haptic,gain); }
-CF_INLINE HapticEffect haptic_create_effect(Haptic* haptic, HapticData data) { return cf_haptic_create_effect(haptic,data); }
-CF_INLINE void haptic_run_effect(Haptic* haptic, HapticEffect effect, int iterations) { cf_haptic_run_effect(haptic,effect,iterations); }
-CF_INLINE void haptic_update_effect(Haptic* haptic, HapticEffect effect, HapticData data) { cf_haptic_update_effect(haptic,effect,data); }
-CF_INLINE void haptic_stop_effect(Haptic* haptic, HapticEffect effect) { cf_haptic_stop_effect(haptic,effect); }
-CF_INLINE void haptic_destroy_effect(Haptic* haptic, HapticEffect effect) { cf_haptic_destroy_effect(haptic,effect); }
-CF_INLINE void haptic_pause(Haptic* haptic) { cf_haptic_pause(haptic); }
-CF_INLINE void haptic_unpause(Haptic* haptic) { cf_haptic_unpause(haptic); }
-CF_INLINE void haptic_stop_all(Haptic* haptic) { cf_haptic_stop_all(haptic); }
-CF_INLINE bool haptic_rumble_supported(Haptic* haptic) { return cf_haptic_rumble_supported(haptic); }
-CF_INLINE void haptic_rumble_play(Haptic* haptic, float strength, int duration_milliseconds) { cf_haptic_rumble_play(haptic,strength,duration_milliseconds); }
-CF_INLINE void haptic_rumble_stop(Haptic* haptic) { cf_haptic_rumble_stop(haptic); }
+CF_INLINE Haptic haptic_open(Joypad joypad) { return cf_haptic_open(joypad); }
+CF_INLINE void haptic_close(Haptic haptic) { cf_haptic_close(haptic); }
+CF_INLINE bool haptic_supports(Haptic haptic, HapticType type) { return cf_haptic_supports(haptic,type); }
+CF_INLINE void haptic_set_gain(Haptic haptic, float gain) { cf_haptic_set_gain(haptic,gain); }
+CF_INLINE HapticEffect haptic_create_effect(Haptic haptic, HapticData data) { return cf_haptic_create_effect(haptic,data); }
+CF_INLINE void haptic_run_effect(Haptic haptic, HapticEffect effect, int iterations) { cf_haptic_run_effect(haptic,effect,iterations); }
+CF_INLINE void haptic_update_effect(Haptic haptic, HapticEffect effect, HapticData data) { cf_haptic_update_effect(haptic,effect,data); }
+CF_INLINE void haptic_stop_effect(Haptic haptic, HapticEffect effect) { cf_haptic_stop_effect(haptic,effect); }
+CF_INLINE void haptic_destroy_effect(Haptic haptic, HapticEffect effect) { cf_haptic_destroy_effect(haptic,effect); }
+CF_INLINE void haptic_pause(Haptic haptic) { cf_haptic_pause(haptic); }
+CF_INLINE void haptic_unpause(Haptic haptic) { cf_haptic_unpause(haptic); }
+CF_INLINE void haptic_stop_all(Haptic haptic) { cf_haptic_stop_all(haptic); }
+CF_INLINE bool haptic_rumble_supported(Haptic haptic) { return cf_haptic_rumble_supported(haptic); }
+CF_INLINE void haptic_rumble_play(Haptic haptic, float strength, int duration_milliseconds) { cf_haptic_rumble_play(haptic,strength,duration_milliseconds); }
+CF_INLINE void haptic_rumble_stop(Haptic haptic) { cf_haptic_rumble_stop(haptic); }
 
 }
 

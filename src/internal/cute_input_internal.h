@@ -10,6 +10,7 @@
 
 #include <cute_input.h>
 #include <cute_joypad.h>
+#include <cute_haptics.h>
 #include <cute_doubly_list.h>
 
 #include <SDL.h>
@@ -22,11 +23,11 @@ enum CF_MouseClick
 
 struct CF_Haptic;
 
-struct CF_Joypad
+struct CF_JoypadInstance
 {
 	CF_ListNode node;
 	SDL_GameController* controller = NULL;
-	CF_Haptic* haptic = NULL;
+	CF_Haptic haptic = { 0 };
 	SDL_JoystickID id = -1;
 	int buttons[CF_JOYPAD_BUTTON_COUNT] = { 0 };
 	int buttons_prev[CF_JOYPAD_BUTTON_COUNT] = { 0 };
@@ -41,7 +42,7 @@ namespace Cute
 {
 
 using MouseClick = CF_MouseClick;
-using Joypad = CF_Joypad;
+using JoypadInstance = CF_JoypadInstance;
 
 }
 
