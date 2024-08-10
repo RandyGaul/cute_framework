@@ -186,9 +186,6 @@ set(CF_HDRS
 	src/internal/cute_aseprite_cache_internal.h
 	src/internal/cute_alloc_internal.h
 	src/internal/yyjson.h
-
-	src/shaders/sprite_shader.h
-	src/shaders/backbuffer_shader.h
 )
 
 if(CF_FRAMEWORK_STATIC)
