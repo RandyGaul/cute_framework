@@ -1,238 +1,250 @@
 #include <cute.h>
 using namespace Cute;
 
-#include <imgui.h>
+#include <glslang/Public/ShaderLang.h>
+#include <glslang/Public/ResourceLimits.h>
+#include <SPIRV/GlslangToSpv.h>
+#define SDL_GPU_SHADERCROSS_IMPLEMENTATION
+#define SDL_GPU_SHADERCROSS_STATIC
+#include <SDL_gpu_shadercross/SDL_gpu_shadercross.h>
+#include <SDL_gpu_shadercross/spirv.h>
+#include <SPIRV-Reflect/spirv_reflect.h>
+
+#include <internal/cute_app_internal.h>
 
 // This isn't really a sample, but a scratch pad for the CF author to experiment.
 
+/**
+ * @enum     CF_ShaderStage
+ * @category graphics
+ * @brief    
+ * @related  
+ */
+#define CF_SHADER_STAGE_DEFS \
+	/* @entry */ \
+	CF_ENUM(SHADER_STAGE_VERTEX,   0) \
+	/* @entry */ \
+	CF_ENUM(SHADER_STAGE_FRAGMENT, 1) \
+	/* @entry */ \
+	CF_ENUM(SHADER_STAGE_GEOMETRY, 2) \
+	/* @entry */ \
+	CF_ENUM(SHADER_STAGE_COMPUTE,  3) \
+	/* @entry */ \
+	CF_ENUM(SHADER_STAGE_COUNT,    4) \
+	/* @end */
+
+typedef enum CF_ShaderStage
+{
+	#define CF_ENUM(K, V) CF_##K = V,
+	CF_SHADER_STAGE_DEFS
+	#undef CF_ENUM
+} CF_ShaderStage;
+
+dyna uint32_t* cf_compile_shader_to_bytecode(const char* shader_src, CF_ShaderStage cf_stage)
+{
+	EShLanguage stage = EShLangVertex;
+	switch (cf_stage) {
+	default: CF_ASSERT(false); break; // No valid stage provided.
+	case CF_SHADER_STAGE_VERTEX: stage = EShLangVertex; break;
+	case CF_SHADER_STAGE_FRAGMENT: stage = EShLangFragment; break;
+	case CF_SHADER_STAGE_GEOMETRY: stage = EShLangGeometry; break;
+	case CF_SHADER_STAGE_COMPUTE: stage = EShLangCompute; break;
+	}
+
+	glslang::TShader shader(stage);
+
+	const char* shader_strings[1];
+	shader_strings[0] = shader_src;
+	shader.setStrings(shader_strings, 1);
+
+	shader.setEnvInput(glslang::EShSourceGlsl, stage, glslang::EShClientVulkan, 450);
+	shader.setEnvClient(glslang::EShClientVulkan, glslang::EShTargetVulkan_1_2);
+	shader.setEnvTarget(glslang::EShTargetSpv, glslang::EShTargetSpv_1_6);
+	shader.setEntryPoint("main");
+	shader.setSourceEntryPoint("main");
+	shader.setAutoMapLocations(true);
+	shader.setAutoMapBindings(true);
+
+	if (!shader.parse(GetDefaultResources(), 450, false, EShMsgDefault)) {
+		fprintf(stderr, "GLSL parsing failed...\n");
+		fprintf(stderr, "%s\n\n%s\n", shader.getInfoLog(), shader.getInfoDebugLog());
+		return NULL;
+	}
+
+	glslang::TProgram program;
+	program.addShader(&shader);
+
+	if (!program.link(EShMsgDefault)) {
+		fprintf(stderr, "GLSL linking failed...\n");
+		fprintf(stderr, "%s\n\n%s\n", program.getInfoLog(), program.getInfoDebugLog());
+		return NULL;
+	}
+
+	std::vector<uint32_t> spirv;
+	glslang::SpvOptions options;
+	options.generateDebugInfo = false;
+	options.stripDebugInfo = false;
+	options.disableOptimizer = false;
+	options.optimizeSize = false;
+	options.disassemble = false;
+	options.validate = false;
+	glslang::GlslangToSpv(*program.getIntermediate(stage), spirv, &options);
+
+	dyna uint32_t* bytecode = NULL;
+	afit(bytecode, (int)spirv.size());
+	CF_MEMCPY(bytecode, spirv.data(), sizeof(uint32_t) * spirv.size());
+	alen(bytecode) = (int)spirv.size();
+
+	return bytecode;
+}
+
+const char* spv_type_string(const SpvReflectTypeDescription* type_desc)
+{
+	switch (type_desc->op) {
+		case SpvOpTypeVoid: return "void";
+		case SpvOpTypeBool: return "bool";
+		case SpvOpTypeInt:
+			return type_desc->traits.numeric.scalar.signedness ? "int" : "uint";
+		case SpvOpTypeFloat: return "float";
+		case SpvOpTypeVector:
+			if (type_desc->type_flags & SPV_REFLECT_TYPE_FLAG_INT) {
+			} else {
+				switch (type_desc->traits.numeric.vector.component_count) {
+					case 2: return "vec2";
+					case 3: return "vec3";
+					case 4: return "vec4";
+					default: return "unknown";
+				}
+			}
+		case SpvOpTypeMatrix:
+			return "mat";
+		case SpvOpTypeStruct:
+			return "struct";
+		case SpvOpTypeArray:
+			return "array";
+		default:
+			return "unknown";
+	}
+}
+
 int main(int argc, char* argv[])
 {
-	int w = 640/1;
-	int h = 480/1;
-	int options = APP_OPTIONS_WINDOW_POS_CENTERED | APP_OPTIONS_RESIZABLE;
-	Result result = make_app("Development Scratch", 0, 0, 0, w, h, options, argv[0]);
-	if (is_error(result)) return -1;
-
-	app_init_imgui();
-
-	int draw_calls = 0;
-
-	Sprite s = cf_make_demo_sprite();
-	s.scale.x = 2.0f;
-	s.scale.y = 2.0f;
-	s.play("spin");
-
-	Color c = color_white();
+	int w = 640;
+	int h = 480;
+	make_app("Development Scratch", 0, 0, 0, w, h, APP_OPTIONS_WINDOW_POS_CENTERED, argv[0]);
 	cf_clear_color(0, 0, 0, 0);
 
-	float fps = 0;
-	bool pause = false;
-	float pause_t = 0;
+	glslang::InitializeProcess();
+
+	const char* shader_src = R"(
+		#version 450
+		layout (location = 0) out vec4 v_color;
+
+		layout(binding = 0) uniform fs_params {
+			vec4 u_color;
+		};
+
+		void main()
+		{
+			vec2 pos;
+
+			if (gl_VertexIndex == 0)
+			{
+				pos = vec2(-1, -1);
+				v_color = vec4(1, 0, 0, 1);
+			}
+			else if (gl_VertexIndex == 1)
+			{
+				pos = vec2(1, -1);
+				v_color = vec4(0, 1, 0, 1);
+			}
+			else if (gl_VertexIndex == 2)
+			{
+				pos = vec2(0, 1);
+				v_color = vec4(0, 0, 1, 1);
+			}
+
+			v_color = u_color;
+			gl_Position = vec4(pos, 0, 1) * u_color;
+		})";
+
+	dyna uint32_t* bytecode = cf_compile_shader_to_bytecode(shader_src, CF_SHADER_STAGE_VERTEX);
+
+	SpvReflectShaderModule module;
+	SpvReflectResult result = spvReflectCreateShaderModule(asize(bytecode) * sizeof(uint32_t), bytecode, &module);
+
+	// Enumerate descriptor bindings (uniforms)
+	uint32_t binding_count = 0;
+	result = spvReflectEnumerateDescriptorBindings(&module, &binding_count, nullptr);
+
+	SpvReflectDescriptorBinding** bindings = NULL;
+	afit(bindings, (int)binding_count);
+	alen(bindings) = binding_count;
+	result = spvReflectEnumerateDescriptorBindings(&module, &binding_count, bindings);
+
+	int samplerCount = 0;
+	int storageTextureCount = 0;
+	int storageBufferCount = 0;
+	int uniformBufferCount = 0;
+
+	// Check if the name is correctly captured
+	for (int i = 0; i < (int)binding_count; ++i) {
+		SpvReflectDescriptorBinding* binding = bindings[i];
+		
+		switch (binding->descriptor_type) {
+			case SPV_REFLECT_DESCRIPTOR_TYPE_SAMPLER: samplerCount++; break;
+			case SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_IMAGE: storageTextureCount++; break;
+			case SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_BUFFER: storageBufferCount++; break;
+			case SPV_REFLECT_DESCRIPTOR_TYPE_UNIFORM_BUFFER: uniformBufferCount++; break;
+		}
+
+		// Check if the binding is a uniform block
+		if (binding->descriptor_type == SPV_REFLECT_DESCRIPTOR_TYPE_UNIFORM_BUFFER) {
+			printf("Uniform Block: %s\n", binding->name);
+
+			// Enumerate the members of the uniform block
+			uint32_t member_count = binding->block.member_count;
+			for (uint32_t j = 0; j < member_count; ++j) {
+				SpvReflectBlockVariable* member = &(binding->block.members[j]);
+
+				// Print member name and type
+				printf("  Member: %s\n", member->name);
+				printf("  Type: %s\n", spv_type_string(member->type_description));
+				printf("  Size: %d bytes\n", member->size);
+			}
+		}
+	}
+	afree(bindings);
+
+	SDL_GpuShaderCreateInfo shaderCreateInfo = {};
+	shaderCreateInfo.codeSize = asize(bytecode) * sizeof(*bytecode);
+	shaderCreateInfo.code = (uint8_t*)bytecode;
+	shaderCreateInfo.entryPointName = "main";
+	shaderCreateInfo.format = SDL_GPU_SHADERFORMAT_DXBC;
+	shaderCreateInfo.stage = SDL_GPU_SHADERSTAGE_VERTEX;
+	shaderCreateInfo.samplerCount = samplerCount;
+	shaderCreateInfo.storageTextureCount = storageTextureCount;
+	shaderCreateInfo.storageBufferCount = storageBufferCount;
+	shaderCreateInfo.uniformBufferCount = uniformBufferCount;
+
+	// @NOTE " vs < in SDL_gpu_shadercross
+	// @NOTE Why is this returning void*?
+	// @NOTE newCreateInfo.code = (const uint8_t*)blob->lpVtbl->GetBufferPointer(blob);
+	// @NOTE newCreateInfo.code = (const uint8_t*)blob->lpVtbl->GetBufferPointer(blob);
+	// @QUESTION Can I just call SDL_GpuCreateShader if I'm targeting Vulkan? It's weird and annoying to have to if-else to SDL_GpuCreateShader.
+	// @NOTE spirvcross_dll -- Add an option to SFH in case the user has static linked SPIRV-Cross.
+	SDL_GpuShader* shader = (SDL_GpuShader*)SDL_CompileFromSPIRV(app->dev, &shaderCreateInfo, false);
 
 	while (app_is_running()) {
 		app_update();
 
-		if (fps == 0) {
-			fps = 1.0f / CF_DELTA_TIME;
-		} else {
-			fps = Cute::lerp(fps, 1.0f / CF_DELTA_TIME, 1.0f / 500.0f);
-		}
-		static float t = 0;
-
-		static v2 v = V2(0,0);
-		ImGui::Begin("what");
-		ImGui::SliderFloat2("pt", &v.x, -200, 200);
-		static v2 cam_p = V2(0,0);
-		static float cam_scale = 1.0f;
-		static float cam_rot = 0;
-		static bool aa = false;
-		static float aaf = 1.5f;
-		static float chubbiness = 5.0f;
-		ImGui::SliderFloat2("cam_p", &cam_p.x, -200, 200);
-		ImGui::SliderFloat("cam_scale", &cam_scale, 0.1f, 10);
-		ImGui::SliderFloat("cam_rot", &cam_rot, -10, 10);
-		ImGui::SliderFloat("aaf", &aaf, 0, 10);
-		ImGui::SliderFloat("chubbiness", &chubbiness, 0, 10);
-		ImGui::Checkbox("aa", &aa);
-		draw_translate(cam_p);
-		draw_rotate(cam_rot);
-		draw_scale(cam_scale, cam_scale);
-		draw_push_antialias(aa);
-		draw_push_antialias_scale(aaf);
-		ImGui::End();
-
-		if (1) {
-			v2 m = V2((float)cf_mouse_x(), (float)cf_mouse_y());
-			v2 m2 = cf_screen_to_world(m);
-			draw_circle(m2, 5);
-		}
-
-		if (0) {
-			draw_push();
-			draw_text("Hello world1", V2(0,0));
-			draw_translate(100,0);
-			draw_text("Hello world2", V2(0,0));
-			draw_rotate(1);
-			draw_text("Hello world3", V2(0,0));
-			draw_translate(100,0);
-			draw_text("Hello world4", V2(0,0));
-			draw_scale(2,2);
-			draw_rotate(t);
-			draw_text("Hello world5", V2(0,0));
-			s.draw();
-			draw_pop();
-		}
-
-		if (0) {
-			const char* text = "This <fade hello=\"some string\">sample\n is a\n blah blah blah\n haha\n test\n ground</fade> for CF development.";
-			v2 at = V2(-text_width(text) * 0.5f, 225);
-			draw_text(text, at);
-
-			auto markups = [](const char* text, CF_MarkupInfo info, const CF_TextEffect* fx) {
-				const char* hello = cf_text_effect_get_string(fx, "hello", NULL);
-				for (int i = 0; i < info.bounds_count; ++i) {
-					draw_box(info.bounds[i]);
-				}
-			};
-			cf_text_get_markup_info(markups, text, at, -1);
-		}
-
-		if (0) {
-			draw_push_antialias(aa);
-			//draw_circle_fill(v, 100);
-			draw_capsule(v,v+V2(100,100),20);
-			//draw_capsule_fill(v,v+V2(100,100),20);
-			draw_pop_antialias();
-		}
-
-		if (0) {
-			draw_push_antialias(true);
-			draw_circle_fill(V2(sinf(t*0.25f) * 250.0f,0), (cosf(t) * 0.5f + 0.5f) * 50.0f + 50.0f);
-			draw_circle(V2(sinf(t+2.0f) * 50.0f,0), (cosf(t) * 0.5f + 0.5f) * 50.0f + 50.0f, 5);
-			draw_line(V2(0,0), V2(cosf(t*0.5f+CF_PI),sinf(t*0.5f+CF_PI))*100.0f,10);
-			draw_pop_antialias();
-
-			draw_circle_fill(V2(sinf(t*0.25f) * 250.0f,100), (cosf(t) * 0.5f + 0.5f) * 50.0f + 50.0f);
-			draw_circle(V2(20,sinf(t+2.0f) * 50.0f), (cosf(t) * 0.5f + 0.5f) * 50.0f + 50.0f, 5);
-			draw_line(V2(0,0), V2(cosf(t*0.5f),sinf(t*0.5f))*100.0f,10);
-		}
-
-		if (0) {
-			v2 o = V2(sinf(t),cosf(t));
-			draw_push_antialias(true);
-			draw_quad(cf_make_aabb(V2(-20,-20)+o*25.0f, V2(20,20)+o*25.0f), 5);
-			draw_quad_fill(cf_make_aabb(V2(-60,-60)+o*25.0f, V2(-40,-30)+o*25.0f));
-			draw_pop_antialias();
-			draw_quad(cf_make_aabb(V2(-20,-20)-o*25.0f, V2(20,20)-o*25.0f), 5);
-			draw_quad_fill(cf_make_aabb(V2(-60,-60)-o*25.0f, V2(-40,-30)-o*25.0f));
-		}
-
-		if (0) {
-			v2 box[4];
-			Aabb bb = make_aabb(V2(-20,-30), V2(30,50));
-			aabb_verts(box, bb);
-			M3x2 m = make_rotation(mod(t*0.25f, CF_PI*2));
-			for (int i = 0; i < 4; ++i) box[i] = mul(m, box[i]);
-			draw_push_antialias(true);
-			draw_quad(box[0], box[1], box[2], box[3], 5, chubbiness);
-			draw_pop_antialias();
-			m = make_translation(-150,0);
-			for (int i = 0; i < 4; ++i) box[i] = mul(m, box[i]);
-			draw_quad(box[0], box[1], box[2], box[3], 5, chubbiness);
-
-			m = make_translation(0,150);
-			for (int i = 0; i < 4; ++i) box[i] = mul(m, box[i]);
-			draw_quad_fill(box[0], box[1], box[2], box[3], chubbiness);
-
-			m = make_translation(150,0);
-			for (int i = 0; i < 4; ++i) box[i] = mul(m, box[i]);
-			draw_push_antialias(true);
-			draw_quad_fill(box[0], box[1], box[2], box[3], chubbiness);
-			draw_pop_antialias();
-		}
-
-		if (0) {
-			draw_capsule(V2(-100,100), V2(100,150), 20, 3);
-			draw_push_antialias(true);
-			draw_capsule(V2(-100,0), V2(100,50), 20, 3);
-			draw_pop_antialias();
-		}
-
-		if (0) {
-			draw_tri_fill(V2(-100,-100), V2(-50,80), V2(120,15), chubbiness);
-			draw_push_antialias(true);
-			draw_tri_fill(V2(-50,-50-100), V2(-70,30-100), V2(150,25-100), chubbiness);
-			draw_pop_antialias();
-
-			//draw_push_layer(1);
-			//s.update();
-			//s.draw();
-			//draw_push_color(color_red());
-			//draw_text("testing <wave>some</wave> text", V2(-100,0));
-			//draw_pop_color();
-			//draw_pop_layer();
-		}
-
-		if (0) {
-			v2 pts[] = {
-				V2(0,0),
-				V2(100,0),
-				V2(150,50),
-				V2(150,100),
-			};
-			Rnd rnd = rnd_seed(0);
-			for (int i = 0; i < CF_ARRAY_SIZE(pts); ++i) {
-				auto f = [&](float s) { return rnd_range(rnd, 1.0f, 3.0f) * s; };
-				if (i%2) {
-					pts[i] += V2(cosf(t*f(0.5f)*0.5f + f(3)), sinf(t*f(0.5f)*0.5f + f(3))) * f(50);
-				} else {
-					pts[i] += V2(sinf(t*f(0.5f)*0.5f + f(3)), cosf(t*f(0.5f)*0.5f + f(3))) * f(50);
-				}
-			}
-			draw_push_antialias(true);
-			cf_draw_polyline(pts, CF_ARRAY_SIZE(pts), 25, true);
-			draw_pop_antialias();
-
-			if (key_just_pressed(KEY_SPACE)) {
-				pause = !pause;
-				printf("v2 pts[] = {\n");
-				printf("\tV2(%ff,%ff),\n", pts[0].x, pts[0].y);
-				printf("\tV2(%ff,%ff),\n", pts[1].x, pts[1].y);
-				printf("\tV2(%ff,%ff),\n", pts[2].x, pts[2].y);
-				printf("\tV2(%ff,%ff),\n", pts[3].x, pts[3].y);
-				printf("};\n");
-			}
-		}
-
-		if (0) {
-			v2 pts[] = {
-				V2(0,0),
-				v,
-				V2(0,100),
-			};
-			draw_push_antialias(true);
-			cf_draw_polyline(pts, CF_ARRAY_SIZE(pts), 10, true);
-			draw_pop_antialias();
-		}
-
-		s.update();
-		s.draw();
-
-		String s = fps;
-		draw_text(s.c_str(), V2(-w/2.0f,-h/2.0f)+V2(2,35));
-		s = CF_DELTA_TIME;
-		draw_text(s.c_str(), V2(-w/2.0f,-h/2.0f)+V2(2,20));
-
-		if (!pause || key_just_pressed(KEY_F)) {
-			t += CF_DELTA_TIME;
-		}
-
-		ImGui::ShowDemoWindow();
-
-		draw_calls = app_draw_onto_screen();
+		app_draw_onto_screen();
 	}
 
+	glslang::FinalizeProcess();
 	destroy_app();
 
 	return 0;
 }
+
+#include <SPIRV-Reflect/spirv_reflect.c>

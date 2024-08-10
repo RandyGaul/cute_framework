@@ -159,7 +159,7 @@ void *SDL_CompileFromHLSL(
     if (shaderProfile[0] == 'c' && shaderProfile[1] == 's') {
         SDL_GpuComputePipelineCreateInfo newCreateInfo;
         newCreateInfo = *(SDL_GpuComputePipelineCreateInfo *)createInfo;
-        newCreateInfo.code = blob->lpVtbl->GetBufferPointer(blob);
+        newCreateInfo.code = (const uint8_t*)blob->lpVtbl->GetBufferPointer(blob);
         newCreateInfo.codeSize = blob->lpVtbl->GetBufferSize(blob);
         newCreateInfo.format = SDL_GPU_SHADERFORMAT_DXBC;
 
@@ -167,7 +167,7 @@ void *SDL_CompileFromHLSL(
     } else {
         SDL_GpuShaderCreateInfo newCreateInfo;
         newCreateInfo = *(SDL_GpuShaderCreateInfo *)createInfo;
-        newCreateInfo.code = blob->lpVtbl->GetBufferPointer(blob);
+        newCreateInfo.code = (const uint8_t*)blob->lpVtbl->GetBufferPointer(blob);
         newCreateInfo.codeSize = blob->lpVtbl->GetBufferSize(blob);
         newCreateInfo.format = SDL_GPU_SHADERFORMAT_DXBC;
 
@@ -187,8 +187,9 @@ void *SDL_CompileFromHLSL(
 #error SDL_GPU_SHADERCROSS_HLSL must be enabled for SDL_GPU_SHADERCROSS_SPIRVCROSS!
 #endif
 
-#include <spirv_cross_c.h>
+#include "spirv_cross_c.h"
 
+#ifndef SDL_GPU_SHADERCROSS_STATIC
 #if defined(_WIN32)
 #define SPIRV_CROSS_DLL "spirv-cross-c-shared.dll"
 #elif defined(__APPLE__)
@@ -196,9 +197,6 @@ void *SDL_CompileFromHLSL(
 #else
 #define SPIRV_CROSS_DLL "libspirv-cross-c-shared.so.0"
 #endif
-
-#define SPVC_ERROR(func) \
-    SDL_SetError(#func " failed: %s", SDL_spvc_context_get_last_error_string(context))
 
 static void *spirvcross_dll = NULL;
 
@@ -225,6 +223,22 @@ static pfn_spvc_compiler_compile SDL_spvc_compiler_compile = NULL;
 static pfn_spvc_context_get_last_error_string SDL_spvc_context_get_last_error_string = NULL;
 static pfn_spvc_compiler_get_execution_model SDL_spvc_compiler_get_execution_model = NULL;
 static pfn_spvc_compiler_get_cleansed_entry_point_name SDL_spvc_compiler_get_cleansed_entry_point_name = NULL;
+#else // SDL_GPU_SHADERCROSS_STATIC
+#define SDL_spvc_context_create spvc_context_create
+#define SDL_spvc_context_destroy spvc_context_destroy
+#define SDL_spvc_context_parse_spirv spvc_context_parse_spirv
+#define SDL_spvc_context_create_compiler spvc_context_create_compiler
+#define SDL_spvc_compiler_create_compiler_options spvc_compiler_create_compiler_options
+#define SDL_spvc_compiler_options_set_uint spvc_compiler_options_set_uint
+#define SDL_spvc_compiler_install_compiler_options spvc_compiler_install_compiler_options
+#define SDL_spvc_compiler_compile spvc_compiler_compile
+#define SDL_spvc_context_get_last_error_string spvc_context_get_last_error_string
+#define SDL_spvc_compiler_get_execution_model spvc_compiler_get_execution_model
+#define SDL_spvc_compiler_get_cleansed_entry_point_name spvc_compiler_get_cleansed_entry_point_name
+#endif // SDL_GPU_SHADERCROSS_STATIC
+
+#define SPVC_ERROR(func) \
+    SDL_SetError(#func " failed: %s", SDL_spvc_context_get_last_error_string(context))
 
 void *SDL_CompileFromSPIRV(
     SDL_GpuDevice *device,
@@ -266,6 +280,7 @@ void *SDL_CompileFromSPIRV(
     }
 
     /* FIXME: spirv-cross could probably be loaded in a better spot */
+#ifndef SDL_GPU_SHADERCROSS_STATIC
     if (spirvcross_dll == NULL) {
         spirvcross_dll = SDL_LoadObject(SPIRV_CROSS_DLL);
         if (spirvcross_dll == NULL) {
@@ -292,6 +307,7 @@ void *SDL_CompileFromSPIRV(
     CHECK_FUNC(spvc_compiler_get_execution_model)
     CHECK_FUNC(spvc_compiler_get_cleansed_entry_point_name)
 #undef CHECK_FUNC
+#endif // SDL_GPU_SHADERCROSS_STATIC
 
     /* Create the SPIRV-Cross context */
     result = SDL_spvc_context_create(&context);
