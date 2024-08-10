@@ -1725,7 +1725,7 @@ static bool _simgui_is_osx(void) {
         return false;
     #elif defined(__EMSCRIPTEN__)
         return simgui_js_is_osx();
-    #elif defined(__APPLE__)
+    #elif defined(SDL_PLATFORM_APPLE)
         return true;
     #else
         return false;

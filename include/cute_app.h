@@ -105,7 +105,7 @@ CF_API int CF_CALL cf_display_height(int display_index);
  * @param    display_index  The index of the display. See `cf_display_count`.
  * @related  cf_make_app cf_display_count cf_display_x cf_display_y cf_display_width cf_display_height cf_display_refresh_rate cf_display_bounds cf_display_name cf_display_orientation
  */
-CF_API int CF_CALL cf_display_refresh_rate(int display_index);
+CF_API float CF_CALL cf_display_refresh_rate(int display_index);
 
 /**
  * @function cf_display_bounds
@@ -561,17 +561,6 @@ CF_API bool CF_CALL cf_app_mouse_inside();
 CF_API ImGuiContext* CF_CALL cf_app_init_imgui(bool no_default_font /*= false*/);
 
 /**
- * @function cf_app_get_sokol_imgui
- * @category app
- * @brief    Fetches a sokol Dear ImGui debug context.
- * @remarks  Internally Cute Framework uses [sokol_gfx.h](https://github.com/floooh/sokol) for wrapping low-level graphics APIs.
- *           As an optional feature you can access `sokol_imgui_t` to use Dear ImGui to debug inspect all of sokol_gfx's primitives.
- *           You must call `cf_app_init_imgui` to use this function.
- * @related  cf_app_init_imgui
- */
-CF_API sg_imgui_t* CF_CALL cf_app_get_sokol_imgui();
-
-/**
  * @function cf_app_get_canvas
  * @category app
  * @brief    Fetches the app's internal canvas for displaying content on the screen.
@@ -781,7 +770,7 @@ CF_INLINE int display_x(int display_index = 0) { return cf_display_x(display_ind
 CF_INLINE int display_y(int display_index = 0) { return cf_display_y(display_index); }
 CF_INLINE int display_width(int display_index = 0) { return cf_display_width(display_index); }
 CF_INLINE int display_height(int display_index = 0) { return cf_display_height(display_index); }
-CF_INLINE int display_refresh_rate(int display_index = 0) { return cf_display_refresh_rate(display_index); }
+CF_INLINE float display_refresh_rate(int display_index = 0) { return cf_display_refresh_rate(display_index); }
 CF_INLINE Rect display_bounds(int display_index = 0) { return cf_display_bounds(display_index); }
 CF_INLINE const char* display_name(int display_index = 0) { return cf_display_name(display_index); }
 CF_INLINE DisplayOrientation display_orientation(int display_index = 0) { return cf_display_orientation(display_index); }
@@ -825,7 +814,6 @@ CF_INLINE void app_set_title(const char* title) { cf_app_set_title(title); }
 CF_INLINE void app_set_icon(const char* virtual_path_to_png) { cf_app_set_icon(virtual_path_to_png); }
 
 CF_INLINE ImGuiContext* app_init_imgui(bool no_default_font = false) { return cf_app_init_imgui(no_default_font); }
-CF_INLINE sg_imgui_t* app_get_sokol_imgui() { return cf_app_get_sokol_imgui(); }
 CF_INLINE CF_Canvas app_get_canvas() { return cf_app_get_canvas(); }
 CF_INLINE void app_set_canvas_size(int w, int h) { cf_app_set_canvas_size(w, h); }
 CF_INLINE PowerInfo app_power_info() { return cf_app_power_info(); }

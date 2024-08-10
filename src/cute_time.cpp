@@ -13,7 +13,7 @@
 
 using namespace Cute;
 
-#include <SDL.h>
+#include <SDL3/SDL.h>
 
 #include <stdio.h>
 #include <inttypes.h>

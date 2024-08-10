@@ -13,9 +13,6 @@
 #include "cute_color.h"
 #include "cute_c_runtime.h"
 
-#define SOKOL_ASSERT CF_ASSERT
-#include "sokol/sokol_gfx.h"
-
 //--------------------------------------------------------------------------------------------------
 // C API
 
@@ -722,101 +719,6 @@ CF_API void CF_CALL cf_update_texture(CF_Texture texture, void* data, int size);
 // Shader.
 
 /**
- * @function CF_MAKE_SOKOL_SHADER
- * @category graphics
- * @brief    Creates a shader from a shader compiled by sokol-shdc.
- * @param    prefix     The name of your sokol-shdc compiled shader. See remarks for details.
- * @remarks  There's an industry-wide problem where cross-platform shaders are difficult to setup. We have many
- *           different shading languages and many different devices to deal with, but very little work has gone
- *           into making high-quality and easy to use shader solutions. Most shader cross-compilers are way too
- *           complex and riddled with giant dependencies, making them a poor fit for CF's style.
- *           
- *           The best option (besides writing our own cross-compiler) is to use sokol_gfx.h, a very well written
- *           thin wrapper around low-level 3D APIs. It supports a variety of backends:
- *           
- *            - Metal
- *            - OpenGL Core 3.3
- *            - OpenGL ES2
- *            - OpenGL ES3
- *            - D3D11
- *            - WebGPU
- *           
- *           This lets CF run basically anywhere, including phones and web browsers. In the future SDL (Simple
- *           Direct Media Library) will implement a GPU API that exposes a shader compiler. But until then we're
- *           stuck using an offline compiler solution. It's still a pretty good solution though! It just means
- *           a little extra work to generate shaders.
- *           
- *           Cute Framework comes with compatible binaries Windows, Linux and MacOS to compile shaders onto
- *           all supported platforms using the tool [sokol-shdc](https://github.com/floooh/sokol-tools/blob/master/docs/sokol-shdc.md). They are found in the `tools` folder.
- *           The basic idea is to write your shader _one time_ in GLSL, then sokol-shdc will cross-compiler the shader
- *           into a header file that's compatible with all supported backends.
- *           
- *           Just make sure to call the sokol-shdc compiler with the `--reflection` parameter. Once done, `my_shader.h`
- *           is ready to go! Include `my_shader.h` and get a `CF_SokolShader` with a single call to `cf_make_shader`.
- *           
- *           ```cpp
- *           #include "my_shader.h"
- *           CF_Shader my_shd = CF_MAKE_SOKOL_SHADER(my_shader);
- *           ```
- * @related  CF_MAKE_SOKOL_SHADER CF_SokolShader CF_Shader cf_make_shader cf_destroy_shader cf_apply_shader CF_Material
- */
-#ifdef __cplusplus
-#define CF_MAKE_SOKOL_SHADER(prefix) \
-	cf_make_shader({ \
-		prefix##_shader_desc, \
-		prefix##_attr_slot, \
-		prefix##_image_slot, \
-		prefix##_uniformblock_slot, \
-		prefix##_uniformblock_size, \
-		prefix##_uniform_offset, \
-		prefix##_uniform_desc \
-	})
-#else
-#define CF_MAKE_SOKOL_SHADER(prefix) \
-	cf_make_shader((CF_SokolShader){ \
-		prefix##_shader_desc, \
-		prefix##_attr_slot, \
-		prefix##_image_slot, \
-		prefix##_uniformblock_slot, \
-		prefix##_uniformblock_size, \
-		prefix##_uniform_offset, \
-		prefix##_uniform_desc \
-	})
-#endif
-
-/**
- * @struct   CF_SokolShader
- * @category graphics
- * @brief    A virtual table for a sokol-shdc compiled shader.
- * @remarks  See `CF_MAKE_SOKOL_SHADER` for an overview.
- * @related  CF_MAKE_SOKOL_SHADER CF_SokolShader CF_Shader cf_make_shader cf_destroy_shader cf_apply_shader CF_Material
- */
-typedef struct CF_SokolShader
-{
-	/* This is setup automagically by `CF_MAKE_SOKOL_SHADER`. */
-	const sg_shader_desc* (*get_desc_fn)(sg_backend backend);
-
-	/* This is setup automagically by `CF_MAKE_SOKOL_SHADER`. */
-	int (*get_attr_slot)(const char* attr_name);
-
-	/* This is setup automagically by `CF_MAKE_SOKOL_SHADER`. */
-	int (*get_image_slot)(sg_shader_stage stage, const char* img_name);
-
-	/* This is setup automagically by `CF_MAKE_SOKOL_SHADER`. */
-	int (*get_uniformblock_slot)(sg_shader_stage stage, const char* ub_name);
-
-	/* This is setup automagically by `CF_MAKE_SOKOL_SHADER`. */
-	size_t (*get_uniformblock_size)(sg_shader_stage stage, const char* ub_name);
-
-	/* This is setup automagically by `CF_MAKE_SOKOL_SHADER`. */
-	int (*get_uniform_offset)(sg_shader_stage stage, const char* ub_name, const char* u_name);
-
-	/* This is setup automagically by `CF_MAKE_SOKOL_SHADER`. */
-	sg_shader_uniform_desc (*get_uniform_desc)(sg_shader_stage stage, const char* ub_name, const char* u_name);
-} CF_SokolShader;
-// @end
-
-/**
  * @function cf_make_shader
  * @category graphics
  * @brief    Creates a shader from a shader compiled by sokol-shdc.
@@ -824,7 +726,7 @@ typedef struct CF_SokolShader
  * @remarks  You should instead call `CF_MAKE_SOKOL_SHADER` unless you really know what you're doing.
  * @related  CF_MAKE_SOKOL_SHADER CF_SokolShader CF_Shader cf_make_shader cf_destroy_shader cf_apply_shader CF_Material
  */
-CF_API CF_Shader CF_CALL cf_make_shader(CF_SokolShader sokol_shader);
+CF_API CF_Shader CF_CALL cf_make_shader();
 
 /**
  * @function cf_destroy_shader
@@ -1936,7 +1838,6 @@ using Mesh = CF_Mesh;
 using Material = CF_Material;
 using Shader = CF_Shader;
 using TextureParams = CF_TextureParams;
-using SokolShader = CF_SokolShader;
 using CanvasParams = CF_CanvasParams;
 using VertexAttribute = CF_VertexAttribute;
 using StencilFunction = CF_StencilFunction;
@@ -2161,7 +2062,7 @@ CF_INLINE TextureParams texture_defaults(int w, int h) { return cf_texture_defau
 CF_INLINE Texture make_texture(TextureParams texture_params) { return cf_make_texture(texture_params); }
 CF_INLINE void destroy_texture(Texture texture) { cf_destroy_texture(texture); }
 CF_INLINE void update_texture(Texture texture, void* data, int size) { cf_update_texture(texture, data, size); }
-CF_INLINE Shader make_shader(SokolShader sokol_shader) { return cf_make_shader(sokol_shader); }
+CF_INLINE Shader make_shader() { return cf_make_shader(); }
 CF_INLINE void destroy_shader(Shader shader) { cf_destroy_shader(shader); }
 CF_INLINE CanvasParams canvas_defaults(int w, int h) { return cf_canvas_defaults(w, h); }
 CF_INLINE Canvas make_canvas(CanvasParams pass_params) { return cf_make_canvas(pass_params); }

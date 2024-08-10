@@ -7,25 +7,6 @@ set(CMAKE_CXX_STANDARD 20)
 # These are needed for how we use FetchContent.
 include(FetchContent)
 Set(FETCHCONTENT_QUIET FALSE)
-set_property(GLOBAL PROPERTY USE_FOLDERS ON)
-define_property(
-	TARGET
-	PROPERTY FOLDER
-	INHERITED
-	BRIEF_DOCS "Set the folder name."
-	FULL_DOCS  "Use to organize targets in an IDE."
-)
-function(fetch_content_with_folder _name)
-	FetchContent_Declare(
-		${_name}
-		${ARGN}
-		GIT_PROGRESS TRUE
-	)
-	FetchContent_Populate(${_name})
-	string(TOLOWER "${_name}" lc_name)
-	add_subdirectory(${${lc_name}_SOURCE_DIR} ${${lc_name}_BINARY_DIR} EXCLUDE_FROM_ALL)
-	set_property(DIRECTORY "${${lc_name}_SOURCE_DIR}" PROPERTY FOLDER "${_name}")
-endfunction()
 
 # Todo - Fix how turning some of these off breaks the build.
 option(CF_FRAMEWORK_STATIC "Build static library for Cute Framework." ON)
@@ -109,10 +90,7 @@ set(CF_SRCS
 	src/cute_result.cpp
 	src/cute_noise.cpp
 
-	src/internal/cute_dx11.cpp
 	src/internal/yyjson.c
-
-	libraries/cimgui/imgui/backends/imgui_impl_sdl.cpp
 
 	libraries/cimgui/imgui/imgui.cpp
 	libraries/cimgui/imgui/imgui_demo.cpp
@@ -124,12 +102,7 @@ set(CF_SRCS
 )
 if(APPLE)
 	set(CF_SRCS ${CF_SRCS}
-		src/internal/cute_metal.mm
 		src/internal/cute_tls.m
-	)
-else()
-	set(CF_SRCS ${CF_SRCS}
-		src/internal/cute_metal.cpp
 	)
 endif()
 
@@ -194,23 +167,15 @@ set(CIMGUI_HDRS
 	libraries/cimgui/cimgui.h
 )
 
-set(SOKOL_HDRS
-	libraries/sokol/sokol_gfx.h
-	libraries/sokol/sokol_gfx_imgui.h
-)
-
 set(CF_HDRS
 	${CF_PUBLIC_HDRS}
 	${IMGUI_HDRS}
 	${CIMGUI_HDRS}
-	${SOKOL_HDRS}
 
 	src/internal/cute_app_internal.h
 	src/internal/cute_input_internal.h
 	src/internal/cute_serialize_internal.h
 	src/internal/cute_ecs_internal.h
-	src/internal/cute_dx11.h
-	src/internal/cute_metal.h
 	src/internal/cute_png_cache_internal.h
 	src/internal/cute_draw_internal.h
 	src/internal/cute_font_internal.h
@@ -218,9 +183,6 @@ set(CF_HDRS
 	src/internal/cute_aseprite_cache_internal.h
 	src/internal/cute_alloc_internal.h
 	src/internal/yyjson.h
-
-	src/internal/imgui/sokol_imgui.h
-	libraries/cimgui/imgui/backends/imgui_impl_sdl.h
 
 	src/shaders/sprite_shader.h
 	src/shaders/backbuffer_shader.h
@@ -290,10 +252,11 @@ set(CF_LINK_LIBS ${CF_LINK_LIBS} physfs)
 
 # Add s2n for Linux builds.
 if(LINUX)
-	fetch_content_with_folder(
+	FetchContent_Declare(
 		s2n
 		URL https://github.com/aws/s2n-tls/archive/refs/tags/v1.3.46.zip
 	)
+	FetchContent_MakeAvailable(s2n)
 	set(CF_LINK_LIBS ${CF_LINK_LIBS} s2n)
 endif()
 
@@ -302,26 +265,34 @@ if(WINDOWS AND NOT MSVC)
 	set(CF_LINK_LIBS ${CF_LINK_LIBS} ws2_32 secur32 shlwapi)
 endif()
 
-# SDL2 for platform support.
+# SDL for platform support.
 # Just don't build the shared library at all, it's not needed.
 set(SDL_SHARED_ENABLED_BY_DEFAULT OFF)
-set(CF_SDL_VERSION 2.30.5)
 if(EMSCRIPTEN)
-	# Emscripten provides its own SDL2.
+	# Emscripten provides its own SDL.
 else()
-	fetch_content_with_folder(
-		SDL2
-		URL https://github.com/libsdl-org/SDL/releases/download/release-${CF_SDL_VERSION}/SDL2-${CF_SDL_VERSION}.tar.gz
+	set(SDL_STATIC ON CACHE BOOL "Build SDL as a static library")
+	set(SDL_SHARED OFF CACHE BOOL "Do not build SDL as a shared library")
+	set(SDL_TEST_LIBRARY OFF CACHE BOOL "Do not build SDL tests")
+	set(SDL_EXAMPLES OFF CACHE BOOL "Do not build SDL examples")
+	FetchContent_Declare(
+		SDL3
+		GIT_REPOSITORY https://github.com/thatcosmonaut/SDL.git
+		GIT_TAG gpu
+		CMAKE_ARGS -DSDL_SHARED=OFF -DSDL_STATIC=ON -DSDL_TEST_LIBRARY=OFF -DSDL_TESTS=OFF -DSDL_EXAMPLES=OFF
+		GIT_SHALLOW TRUE
+		GIT_PROGRESS TRUE
 	)
-	set(CF_LINK_LIBS ${CF_LINK_LIBS} SDL2main SDL2-static)
+	FetchContent_MakeAvailable(SDL3)
+	set(CF_LINK_LIBS ${CF_LINK_LIBS} SDL3::SDL3-static)
 endif()
-target_include_directories(cute PUBLIC ${SDL2_INCLUDE_DIRS})
+target_include_directories(cute PUBLIC ${SDL3_INCLUDE_DIRS})
 
 # Some platform specific settings.
 if(EMSCRIPTEN)
 	target_compile_options(cute PUBLIC -O1 -fno-rtti -fno-exceptions)
-	set_target_properties(cute PROPERTIES COMPILE_FLAGS "-s USE_SDL=2")
-	target_link_libraries(cute PRIVATE "-s USE_WEBGL2=1 -s ASSERTIONS=1 -s MAX_WEBGL_VERSION=2 -s USE_SDL=2 -s ALLOW_MEMORY_GROWTH=1 -O1 -s ASYNCIFY=1")
+	set_target_properties(cute PROPERTIES COMPILE_FLAGS "-s USE_SDL=3")
+	target_link_libraries(cute PRIVATE "-s USE_WEBGL2=1 -s ASSERTIONS=1 -s MAX_WEBGL_VERSION=2 -s USE_SDL=3 -s ALLOW_MEMORY_GROWTH=1 -O1 -s ASYNCIFY=1")
 elseif(MINGW)
 	set(CF_LINK_LIBS ${CF_LINK_LIBS} d3d11 crypt32)
 elseif(WINDOWS)
@@ -467,10 +438,3 @@ target_include_directories(cute PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_
 target_include_directories(cute PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/libraries>)
 target_include_directories(cute PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/libraries/cimgui>)
 target_include_directories(cute PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/libraries/cimgui/imgui>)
-
-# These are not properly tested!!!
-# install(TARGETS cute EXPORT cute DESTINATION "lib")
-# install(FILES ${CF_PUBLIC_HDRS} DESTINATION "include/cute")
-# install(FILES ${IMGUI_HDRS} DESTINATION "include/cute/imgui")
-# install(FILES ${CIMGUI_HDRS} DESTINATION "include/cute/cimgui")
-# install(FILES ${SOKOL_HDRS} DESTINATION "include/cute/sokol")

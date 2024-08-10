@@ -24,7 +24,7 @@
 #include <internal/cute_font_internal.h>
 #include <internal/cute_ecs_internal.h>
 
-#include <sokol/sokol_gfx_imgui.h>
+#include <SDL3/SDL.h>
 
 struct SDL_Window;
 struct cs_context_t;
@@ -36,11 +36,11 @@ struct CF_MouseState
 	int left_button = 0;
 	int right_button = 0;
 	int middle_button = 0;
-	int wheel_motion = 0;
-	int x = 0;
-	int y = 0;
-	int xrel = 0;
-	int yrel = 0;
+	float wheel_motion = 0;
+	float x = 0;
+	float y = 0;
+	float xrel = 0;
+	float yrel = 0;
 	int click_type = 0;
 };
 
@@ -63,11 +63,11 @@ struct CF_App
 	void* platform_handle = NULL;
 	CF_OnUpdateFn* user_on_update = NULL;
 	SDL_Window* window = NULL;
+	SDL_GpuDevice* dev = NULL;
 	cs_context_t* cute_sound = NULL;
 	bool spawned_mix_thread = false;
 	CF_Threadpool* threadpool = NULL;
 	bool gfx_enabled = false;
-	sg_context_desc gfx_ctx_params;
 	float dpi_scale = 1.0f;
 	float dpi_scale_prev = 1.0f;
 	bool dpi_scale_was_changed = false;
@@ -86,7 +86,6 @@ struct CF_App
 	CF_WindowState window_state;
 	CF_WindowState window_state_prev;
 	bool using_imgui = false;
-	sg_imgui_t sg_imgui;
 	uint64_t default_image_id = CF_PNG_ID_RANGE_LO;
 	bool vsync = false;
 	bool use_gl = false;

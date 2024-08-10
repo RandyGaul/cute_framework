@@ -61,7 +61,7 @@
 #include "cute_routine.h"
 
 #ifndef CF_EMSCRIPTEN
-#	include <SDL_main.h>
+#	include <SDL3/SDL_main.h>
 #endif
 
 #endif // CF_H

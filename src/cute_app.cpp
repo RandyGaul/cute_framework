@@ -19,37 +19,22 @@
 #include <internal/cute_input_internal.h>
 #include <internal/cute_graphics_internal.h>
 #include <internal/cute_draw_internal.h>
-#include <internal/cute_dx11.h>
-#include <internal/cute_metal.h>
 #include <internal/cute_png_cache_internal.h>
 #include <internal/cute_aseprite_cache_internal.h>
 
 #include <data/fonts/calibri.h>
 
-#include <SDL.h>
+#include <SDL3/SDL.h>
 
-#ifdef CF_WINDOWS
-#	include <SDL_syswm.h>
-#endif
-
-#ifdef CF_WINDOWS
-#	pragma comment (lib, "dxgi.lib")
-#	pragma comment (lib, "d3d11.lib")
-#	pragma comment (lib, "dxguid.lib")
-#endif
+// @TODO Needed w/SDL3?
+//#ifdef CF_WINDOWS
+//#	pragma comment (lib, "dxgi.lib")
+//#	pragma comment (lib, "d3d11.lib")
+//#	pragma comment (lib, "dxguid.lib")
+//#endif
 
 #define CUTE_SOUND_FORCE_SDL
 #include <cute/cute_sound.h>
-
-#define SOKOL_IMGUI_NO_SOKOL_APP
-#include <internal/imgui/sokol_imgui.h>
-#include <imgui/backends/imgui_impl_sdl.h>
-#include <sokol/sokol_gfx_imgui.h>
-
-#define SOKOL_LOG_IMPL
-#include <sokol/sokol_log.h>
-
-#include <shaders/backbuffer_shader.h>
 
 CF_STATIC_ASSERT(sizeof(uint64_t) >= sizeof(void*), "Must be equal for opaque id implementations throughout CF.");
 
@@ -58,14 +43,15 @@ static void s_init_video()
 	static bool init = false;
 	if (init) return;
 	init = true;
-	SDL_SetMainReady();
 	SDL_Init(SDL_INIT_VIDEO);
 }
 
 int cf_display_count()
 {
 	s_init_video();
-	return SDL_GetNumVideoDisplays();
+	int count = 0;
+	SDL_GetDisplays(&count);
+	return count;
 }
 
 int cf_display_x(int display_index)
@@ -100,12 +86,11 @@ int cf_display_height(int display_index)
 	return rect.h;
 }
 
-int cf_display_refresh_rate(int display_index)
+float cf_display_refresh_rate(int display_index)
 {
 	s_init_video();
-	SDL_DisplayMode mode;
-	SDL_GetCurrentDisplayMode(display_index, &mode);
-	return mode.refresh_rate;
+	const SDL_DisplayMode* mode = SDL_GetCurrentDisplayMode(display_index);
+	return mode->refresh_rate;
 }
 
 CF_Rect cf_display_bounds(int display_index)
@@ -126,7 +111,7 @@ const char* cf_display_name(int display_index)
 CF_DisplayOrientation cf_display_orientation(int display_index)
 {
 	s_init_video();
-	SDL_DisplayOrientation orientation = SDL_GetDisplayOrientation(display_index);
+	SDL_DisplayOrientation orientation = SDL_GetCurrentDisplayOrientation(display_index);
 	switch (orientation)
 	{
 	default:
@@ -200,8 +185,6 @@ static void s_canvas(int w, int h)
 
 CF_Result cf_make_app(const char* window_title, int display_index, int x, int y, int w, int h, int options, const char* argv0)
 {
-	SDL_SetMainReady();
-
 	bool use_dx11 = false;
 	bool use_gl33 = false;
 	bool use_gles3 = false;
@@ -218,26 +201,43 @@ CF_Result cf_make_app(const char* window_title, int display_index, int x, int y,
 	bool use_gfx = (use_dx11|use_gl33|use_gles3|use_metal) && !(options & APP_OPTIONS_NO_GFX);
 
 #ifdef CF_EMSCRIPTEN
-	Uint32 sdl_options = SDL_INIT_EVENTS | SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER;
+	Uint32 sdl_options = SDL_INIT_EVENTS | SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMEPAD;
 #else
-	Uint32 sdl_options = SDL_INIT_EVENTS | SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER | SDL_INIT_HAPTIC;
+	Uint32 sdl_options = SDL_INIT_EVENTS | SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMEPAD | SDL_INIT_HAPTIC;
 	if (options & APP_OPTIONS_NO_GFX) {
 		sdl_options &= ~SDL_INIT_VIDEO;
 	}
 #endif
+	if (!(options & APP_OPTIONS_NO_AUDIO)) {
+		SDL_Init(SDL_INIT_AUDIO);
+	}
 
 	// Turn on high DPI support for all platforms.
-	options |= SDL_WINDOW_ALLOW_HIGHDPI;
+	options |= SDL_WINDOW_HIGH_PIXEL_DENSITY;
 	
 	if (SDL_Init(sdl_options)) {
 		return cf_result_error("SDL_Init failed");
 	}
 
+	SDL_GpuDevice* dev = NULL;
 	if (use_gfx) {
 		// Some backends don't support window size of zero.
 		w = w <= 0 ? 1 : w;
 		h = h <= 0 ? 1 : h;
+
+		// Create the GPU device.
+		SDL_PropertiesID props = SDL_CreateProperties();
+		SDL_SetStringProperty(props, SDL_PROP_GPU_CREATEDEVICE_NAME_STRING, "D3D11");
+		// "Vulkan"
+		// "D3D12"
+		// "Metal"
+		dev = SDL_GpuCreateDevice(true, false, props);
+		SDL_DestroyProperties(props);
+		if (!dev) {
+			return cf_result_error("Failed to create GPU Device.");
+		}
 	}
+
 
 	Uint32 flags = 0;
 	if (use_gl33) flags |= SDL_WINDOW_OPENGL;
@@ -260,13 +260,22 @@ CF_Result cf_make_app(const char* window_title, int display_index, int x, int y,
 	}
 
 	SDL_Window* window;
+	SDL_PropertiesID props = SDL_CreateProperties();
+	SDL_SetStringProperty(props, SDL_PROP_WINDOW_CREATE_TITLE_STRING, window_title);
+	SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER, w);
+	SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER, h);
+	SDL_SetNumberProperty(props, "flags", flags);
 	if (options & APP_OPTIONS_WINDOW_POS_CENTERED) {
-		window = SDL_CreateWindow(window_title, SDL_WINDOWPOS_CENTERED_DISPLAY(display_index), SDL_WINDOWPOS_CENTERED_DISPLAY(display_index), w, h, flags);
+		SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_X_NUMBER, SDL_WINDOWPOS_CENTERED_DISPLAY(display_index));
+		SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_Y_NUMBER, SDL_WINDOWPOS_CENTERED_DISPLAY(display_index));
 	} else {
 		int x_offset = display_x(display_index);
 		int y_offset = display_y(display_index);
-		window = SDL_CreateWindow(window_title, x_offset+x, y_offset+y, w, h, flags);
+		SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_X_NUMBER, x_offset+x);
+		SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_Y_NUMBER, y_offset+y);
 	}
+	window = SDL_CreateWindowWithProperties(props);
+	SDL_DestroyProperties(props);
 	CF_App* app = (CF_App*)CF_ALLOC(sizeof(CF_App));
 	CF_PLACEMENT_NEW(app) CF_App;
 	app->options = options;
@@ -276,13 +285,14 @@ CF_Result cf_make_app(const char* window_title, int display_index, int x, int y,
 	SDL_GetWindowPosition(app->window, &app->x, &app->y);
 	list_init(&app->joypads);
 	::app = app;
+	if (use_gfx) {
+		app->dev = dev;
+		SDL_GpuClaimWindow(app->dev, app->window, SDL_GPU_SWAPCHAINCOMPOSITION_SDR, SDL_GPU_PRESENTMODE_IMMEDIATE);
+		cf_make_draw();
+	}
 
 #ifdef CF_WINDOWS
-	SDL_SysWMinfo wmInfo;
-	SDL_VERSION(&wmInfo.version);
-	SDL_GetWindowWMInfo(window, &wmInfo);
-	HWND hwnd = wmInfo.info.win.window;
-	app->platform_handle = hwnd;
+	app->platform_handle = SDL_GetPointerProperty(SDL_GetWindowProperties(window), SDL_PROP_WINDOW_WIN32_HWND_POINTER, NULL);;
 #else
 	void* hwnd = NULL;
 #endif
@@ -295,34 +305,37 @@ CF_Result cf_make_app(const char* window_title, int display_index, int x, int y,
 			CF_FREE(app);
 			return cf_result_error("Unable to create OpenGL context.");
 		}
-		CF_MEMSET(&app->gfx_ctx_params, 0, sizeof(app->gfx_ctx_params));
-		app->gfx_ctx_params.color_format = SG_PIXELFORMAT_RGBA8;
-		app->gfx_ctx_params.depth_format = SG_PIXELFORMAT_DEPTH_STENCIL;
-		sg_desc params = { };
-		params.context = app->gfx_ctx_params;
-		params.logger.func = slog_func;
-		sg_setup(params);
-		app->gfx_enabled = true;
+		//CF_MEMSET(&app->gfx_ctx_params, 0, sizeof(app->gfx_ctx_params));
+		// @TODO
+		//app->gfx_ctx_params.color_format = SG_PIXELFORMAT_RGBA8;
+		//app->gfx_ctx_params.depth_format = SG_PIXELFORMAT_DEPTH_STENCIL;
+		//sg_desc params = { };
+		//params.context = app->gfx_ctx_params;
+		//params.logger.func = slog_func;
+		//sg_setup(params);
+		//app->gfx_enabled = true;
 	}
 
 	if (use_dx11 && use_gfx) {
-		cf_dx11_init(hwnd, w, h, 1);
-		app->gfx_ctx_params = cf_dx11_get_context();
-		sg_desc params = { };
-		params.context = app->gfx_ctx_params;
-		params.logger.func = slog_func;
-		sg_setup(params);
-		app->gfx_enabled = true;
+		// @TODO
+		//cf_dx11_init(hwnd, w, h, 1);
+		//app->gfx_ctx_params = cf_dx11_get_context();
+		//sg_desc params = { };
+		//params.context = app->gfx_ctx_params;
+		//params.logger.func = slog_func;
+		//sg_setup(params);
+		//app->gfx_enabled = true;
 	}
 	
 	if (use_metal && use_gfx) {
-		cf_metal_init(window, w, h, 1);
-		app->gfx_ctx_params = cf_metal_get_context();
-		sg_desc params = { };
-		params.context = app->gfx_ctx_params;
-		params.logger.func = slog_func;
-		sg_setup(params);
-		app->gfx_enabled = true;
+		// @TODO
+		//cf_metal_init(window, w, h, 1);
+		//app->gfx_ctx_params = cf_metal_get_context();
+		//sg_desc params = { };
+		//params.context = app->gfx_ctx_params;
+		//params.logger.func = slog_func;
+		//sg_setup(params);
+		//app->gfx_enabled = true;
 	}
 
 	cf_make_aseprite_cache();
@@ -346,7 +359,8 @@ CF_Result cf_make_app(const char* window_title, int display_index, int x, int y,
 		}
 		{
 			app->backbuffer_material = cf_make_material();
-			app->backbuffer_shader = CF_MAKE_SOKOL_SHADER(backbuffer_shd);
+			// @TODO
+			//app->backbuffer_shader = CF_MAKE_SOKOL_SHADER(backbuffer_shd);
 		}
 		s_canvas(app->w, app->h);
 		cf_make_draw();
@@ -410,13 +424,15 @@ CF_Result cf_make_app(const char* window_title, int display_index, int x, int y,
 void cf_destroy_app()
 {
 	if (app->using_imgui) {
-		ImGui_ImplSDL2_Shutdown();
-		simgui_shutdown();
-		sg_imgui_discard(&app->sg_imgui);
+		// @TODO
+		//ImGui_ImplSDL2_Shutdown();
+		//simgui_shutdown();
+		//sg_imgui_discard(&app->sg_imgui);
 		app->using_imgui = false;
 	}
 	if (app->gfx_enabled) {
-		sg_end_pass();
+		// @TODO
+		//sg_end_pass();
 		cf_destroy_draw();
 		cf_destroy_canvas(app->offscreen_canvas);
 		cf_destroy_canvas(app->backbuffer_canvas);
@@ -429,8 +445,9 @@ void cf_destroy_app()
 			cf_destroy_shader(app->blit_shader);
 		}
 		cf_destroy_graphics();
-		sg_shutdown();
-		cf_dx11_shutdown();
+		// @TODO
+		//sg_shutdown();
+		//cf_dx11_shutdown();
 		cf_clear_graphics_static_pointers();
 	}
 	cf_destroy_aseprite_cache();
@@ -441,7 +458,9 @@ void cf_destroy_app()
 	}
 	cs_shutdown();
 	destroy_mutex(&app->on_sound_finish_mutex);
+	if (app->dev) SDL_GpuUnclaimWindow(app->dev, app->window);
 	SDL_DestroyWindow(app->window);
+	if (app->dev) SDL_GpuDestroyDevice(app->dev);
 	SDL_Quit();
 	destroy_threadpool(app->threadpool);
 	cs_shutdown();
@@ -500,13 +519,14 @@ void cf_app_update(CF_OnUpdateFn* on_update)
 		}
 
 		if (app->using_imgui) {
-			simgui_frame_desc_t desc = { };
-			desc.delta_time = DELTA_TIME;
-			desc.width = app->w;
-			desc.height = app->h;
-			desc.dpi_scale = app->dpi_scale;
-			ImGui_ImplSDL2_NewFrame(app->window);
-			simgui_new_frame(&desc);
+			// @TODO
+			//simgui_frame_desc_t desc = { };
+			//desc.delta_time = DELTA_TIME;
+			//desc.width = app->w;
+			//desc.height = app->h;
+			//desc.dpi_scale = app->dpi_scale;
+			//ImGui_ImplSDL2_NewFrame(app->window);
+			//simgui_new_frame(&desc);
 		}
 	}
 	app->user_on_update = on_update;
@@ -516,9 +536,10 @@ void cf_app_update(CF_OnUpdateFn* on_update)
 static void s_imgui_present()
 {
 	if (app->using_imgui) {
-		ImGui::EndFrame();
-		ImGui::Render();
-		simgui_render();
+		// @TODO
+		//ImGui::EndFrame();
+		//ImGui::Render();
+		//simgui_render();
 	}
 }
 
@@ -553,15 +574,17 @@ int cf_app_draw_onto_screen(bool clear)
 	cf_apply_canvas(app->backbuffer_canvas, true);
 	{
 		cf_apply_mesh(app->backbuffer_quad);
-		cf_apply_shader(app->backbuffer_shader, app->backbuffer_material);
+		// @TODO
+		//cf_apply_shader(app->backbuffer_shader, app->backbuffer_material);
 		v2 u_texture_size = V2((float)app->w, (float)app->h);
-		cf_material_set_uniform_fs(app->backbuffer_material, "fs_params", "u_texture_size", &u_texture_size, CF_UNIFORM_TYPE_FLOAT2, 1);
+		//cf_material_set_uniform_fs(app->backbuffer_material, "fs_params", "u_texture_size", &u_texture_size, CF_UNIFORM_TYPE_FLOAT2, 1);
 		cf_draw_elements();
 	}
 
 	// Dear ImGui draw.
 	if (app->using_imgui) {
-		sg_imgui_draw(&app->sg_imgui);
+		// @TODO
+		//sg_imgui_draw(&app->sg_imgui);
 		s_imgui_present();
 	}
 
@@ -576,8 +599,9 @@ int cf_app_draw_onto_screen(bool clear)
 
 	// Flip to screen.
 	cf_commit();
-	cf_dx11_present(app->vsync);
-	cf_metal_present(app->vsync);
+	// @TODO
+	//cf_dx11_present(app->vsync);
+	//cf_metal_present(app->vsync);
 	if (app->use_gl) {
 		SDL_GL_SwapWindow(app->window);
 	}
@@ -764,6 +788,7 @@ int cf_app_get_canvas_height()
 void cf_app_set_vsync(bool true_turn_on_vsync)
 {
 	app->vsync = true_turn_on_vsync;
+	SDL_GpuSetSwapchainParameters(app->dev, app->window, SDL_GPU_SWAPCHAINCOMPOSITION_SDR, app->vsync ? SDL_GPU_PRESENTMODE_VSYNC : SDL_GPU_PRESENTMODE_IMMEDIATE);
 }
 
 bool cf_app_get_vsync()
@@ -778,7 +803,7 @@ void cf_app_set_windowed_mode()
 
 void cf_app_set_borderless_fullscreen_mode()
 {
-	SDL_SetWindowFullscreen(app->window, SDL_WINDOW_FULLSCREEN_DESKTOP);
+	SDL_SetWindowFullscreen(app->window, true);
 }
 
 void cf_app_set_fullscreen_mode()
@@ -791,6 +816,12 @@ void cf_app_set_title(const char* title)
 	SDL_SetWindowTitle(app->window, title);
 }
 
+// Here for easy porting from SDL2.
+SDL_Surface *SDL_CreateRGBSurfaceFrom(void *pixels, int width, int height, int depth, int pitch, Uint32 Rmask, Uint32 Gmask, Uint32 Bmask, Uint32 Amask)
+{
+	return SDL_CreateSurfaceFrom(width, height, SDL_GetPixelFormatForMasks(depth, Rmask, Gmask, Bmask, Amask), pixels, pitch);
+}
+
 void cf_app_set_icon(const char* virtual_path_to_png)
 {
 	CF_Image img;
@@ -800,45 +831,41 @@ void cf_app_set_icon(const char* virtual_path_to_png)
 	}
 	SDL_Surface* icon = SDL_CreateRGBSurfaceFrom(img.pix, img.w, img.h, 32, img.w * 4, 0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000);
 	SDL_SetWindowIcon(app->window, icon);
-	SDL_FreeSurface(icon);
+	SDL_DestroySurface(icon);
 	cf_image_free(&img);
 }
 
 ImGuiContext* cf_app_init_imgui(bool no_default_font)
 {
-	if (!app->gfx_enabled) return NULL;
-
-	IMGUI_CHECKVERSION();
-	ImGui::CreateContext();
-	app->using_imgui = true;
-
-	ImGui::StyleColorsDark();
-	
-	sg_backend backend = sg_query_backend();
-	switch (backend) {
-		case SG_BACKEND_GLCORE33: ImGui_ImplSDL2_InitForOpenGL(app->window, NULL); break;
-		case SG_BACKEND_GLES3: ImGui_ImplSDL2_InitForOpenGL(app->window, NULL); break;
-		case SG_BACKEND_D3D11: ImGui_ImplSDL2_InitForD3D(app->window); break;
-		case SG_BACKEND_METAL_IOS: ImGui_ImplSDL2_InitForMetal(app->window); break;
-		case SG_BACKEND_METAL_MACOS: ImGui_ImplSDL2_InitForMetal(app->window); break;
-		case SG_BACKEND_METAL_SIMULATOR: ImGui_ImplSDL2_InitForMetal(app->window); break;
-		case SG_BACKEND_WGPU: ImGui_ImplSDL2_InitForOpenGL(app->window, NULL); break;
-	}
-	
-	simgui_desc_t imgui_params = { 0 };
-	imgui_params.no_default_font = no_default_font;
-	imgui_params.ini_filename = "imgui.ini";
-	simgui_setup(imgui_params);
-	sg_imgui_desc_t sg_imgui_desc = { };
-	sg_imgui_init(&app->sg_imgui, &sg_imgui_desc);
-
-	return ::ImGui::GetCurrentContext();
-}
-
-sg_imgui_t* cf_app_get_sokol_imgui()
-{
-	if (!app->using_imgui) return NULL;
-	return &app->sg_imgui;
+	// @TODO
+	//if (!app->gfx_enabled) return NULL;
+	//
+	//IMGUI_CHECKVERSION();
+	//ImGui::CreateContext();
+	//app->using_imgui = true;
+	//
+	//ImGui::StyleColorsDark();
+	//
+	//sg_backend backend = sg_query_backend();
+	//switch (backend) {
+	//	case SG_BACKEND_GLCORE33: ImGui_ImplSDL2_InitForOpenGL(app->window, NULL); break;
+	//	case SG_BACKEND_GLES3: ImGui_ImplSDL2_InitForOpenGL(app->window, NULL); break;
+	//	case SG_BACKEND_D3D11: ImGui_ImplSDL2_InitForD3D(app->window); break;
+	//	case SG_BACKEND_METAL_IOS: ImGui_ImplSDL2_InitForMetal(app->window); break;
+	//	case SG_BACKEND_METAL_MACOS: ImGui_ImplSDL2_InitForMetal(app->window); break;
+	//	case SG_BACKEND_METAL_SIMULATOR: ImGui_ImplSDL2_InitForMetal(app->window); break;
+	//	case SG_BACKEND_WGPU: ImGui_ImplSDL2_InitForOpenGL(app->window, NULL); break;
+	//}
+	//
+	//simgui_desc_t imgui_params = { 0 };
+	//imgui_params.no_default_font = no_default_font;
+	//imgui_params.ini_filename = "imgui.ini";
+	//simgui_setup(imgui_params);
+	//sg_imgui_desc_t sg_imgui_desc = { };
+	//sg_imgui_init(&app->sg_imgui, &sg_imgui_desc);
+	//
+	//return ::ImGui::GetCurrentContext();
+	return NULL;
 }
 
 CF_PowerInfo cf_app_power_info()

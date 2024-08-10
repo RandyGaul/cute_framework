@@ -8,7 +8,7 @@
 #include "cute_metal.h"
 
 #include <cute_c_runtime.h>
-#include <SDL.h>
+#include <SDL3/SDL.h>
 #include <sokol/sokol_gfx.h>
 
 #ifdef SOKOL_METAL

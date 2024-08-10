@@ -8,7 +8,7 @@
 #include <cute_multithreading.h>
 #include <cute_alloc.h>
 
-#include <SDL.h>
+#include <SDL3/SDL.h>
 
 #define CUTE_SYNC_IMPLEMENTATION
 #define CUTE_SYNC_SDL
@@ -26,20 +26,14 @@ void cf_destroy_mutex(CF_Mutex* mutex)
 	cute_mutex_destroy(mutex);
 }
 
-CF_Result cf_mutex_lock(CF_Mutex* mutex)
+void cf_mutex_lock(CF_Mutex* mutex)
 {
-	CF_Result result;
-	result.code = cute_lock(mutex);
-	result.details = NULL;
-	return result;
+	cute_lock(mutex);
 }
 
-CF_Result cf_mutex_unlock(CF_Mutex* mutex)
+void cf_mutex_unlock(CF_Mutex* mutex)
 {
-	CF_Result result;
-	result.code = cute_unlock(mutex);
-	result.details = NULL;
-	return result;
+	cute_unlock(mutex);
 }
 
 bool cf_mutex_try_lock(CF_Mutex* mutex)

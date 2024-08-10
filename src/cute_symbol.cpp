@@ -7,7 +7,7 @@
 
 #include <cute_symbol.h>
 
-#include <SDL.h>
+#include <SDL3/SDL.h>
 
 CF_SharedLibrary* cf_load_shared_library(const char* path)
 {

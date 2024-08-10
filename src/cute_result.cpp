@@ -8,7 +8,7 @@
 #include <cute_result.h>
 
 #include <internal/cute_app_internal.h>
-#include <SDL.h>
+#include <SDL3/SDL.h>
 
 static int s_message_box_flags(CF_MessageBoxType type)
 {

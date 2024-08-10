@@ -19,8 +19,6 @@
 #include <internal/cute_aseprite_cache_internal.h>
 #include <internal/cute_font_internal.h>
 
-#include <shaders/sprite_shader.h>
-
 struct CF_Draw* draw;
 
 #define SPRITEBATCH_IMPLEMENTATION
@@ -389,8 +387,8 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 	cf_material_set_render_state(draw->material, draw->render_states.last());
 
 	// Kick off a draw call.
-	cf_apply_shader(draw->shaders.last(), draw->material);
-	cf_draw_elements();
+	//cf_apply_shader(draw->shaders.last(), draw->material);
+	//cf_draw_elements();
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -485,7 +483,7 @@ void cf_make_draw()
 	cf_mesh_set_attributes(draw->mesh, attrs, CF_ARRAY_SIZE(attrs), sizeof(CF_Vertex), 0);
 
 	// Shaders.
-	draw->shaders.add(CF_MAKE_SOKOL_SHADER(sprite_shader));
+	//draw->shaders.add(CF_MAKE_SOKOL_SHADER(sprite_shader));
 
 	// Material.
 	draw->material = cf_make_material();

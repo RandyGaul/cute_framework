@@ -12,9 +12,8 @@
 
 #include <internal/cute_app_internal.h>
 #include <internal/cute_input_internal.h>
-#include <imgui/backends/imgui_impl_sdl.h>
 
-#include <SDL.h>
+#include <SDL3/SDL.h>
 
 using namespace Cute;
 
@@ -163,16 +162,11 @@ static int s_map_SDL_keys(int key)
 		case SDLK_RALT: return KEY_RALT;
 		case SDLK_RGUI: return KEY_RGUI;
 		case SDLK_MODE: return KEY_MODE;
-		case SDLK_AUDIONEXT: return KEY_AUDIONEXT;
-		case SDLK_AUDIOPREV: return KEY_AUDIOPREV;
-		case SDLK_AUDIOSTOP: return KEY_AUDIOSTOP;
-		case SDLK_AUDIOPLAY: return KEY_AUDIOPLAY;
-		case SDLK_AUDIOMUTE: return KEY_AUDIOMUTE;
-		case SDLK_MEDIASELECT: return KEY_MEDIASELECT;
-		case SDLK_WWW: return KEY_WWW;
-		case SDLK_MAIL: return KEY_MAIL;
-		case SDLK_CALCULATOR: return KEY_CALCULATOR;
-		case SDLK_COMPUTER: return KEY_COMPUTER;
+		case SDLK_MEDIA_NEXT_TRACK: return KEY_AUDIONEXT;
+		case SDLK_MEDIA_PREVIOUS_TRACK: return KEY_AUDIOPREV;
+		case SDLK_MEDIA_STOP: return KEY_AUDIOSTOP;
+		case SDLK_MEDIA_PLAY: return KEY_AUDIOPLAY;
+		case SDLK_MEDIA_SELECT: return KEY_MEDIASELECT;
 		case SDLK_AC_SEARCH: return KEY_AC_SEARCH;
 		case SDLK_AC_HOME: return KEY_AC_HOME;
 		case SDLK_AC_BACK: return KEY_AC_BACK;
@@ -180,13 +174,7 @@ static int s_map_SDL_keys(int key)
 		case SDLK_AC_STOP: return KEY_AC_STOP;
 		case SDLK_AC_REFRESH: return KEY_AC_REFRESH;
 		case SDLK_AC_BOOKMARKS: return KEY_AC_BOOKMARKS;
-		case SDLK_BRIGHTNESSDOWN: return KEY_BRIGHTNESSDOWN;
-		case SDLK_BRIGHTNESSUP: return KEY_BRIGHTNESSUP;
-		case SDLK_DISPLAYSWITCH: return KEY_DISPLAYSWITCH;
-		case SDLK_KBDILLUMTOGGLE: return KEY_KBDILLUMTOGGLE;
-		case SDLK_KBDILLUMDOWN: return KEY_KBDILLUMDOWN;
-		case SDLK_KBDILLUMUP: return KEY_KBDILLUMUP;
-		case SDLK_EJECT: return KEY_EJECT;
+		case SDLK_MEDIA_EJECT: return KEY_EJECT;
 		case SDLK_SLEEP: return KEY_SLEEP;
 	}
 	return 0;
@@ -265,12 +253,12 @@ void cf_register_key_callback(void (*key_callback)(CF_KeyButton key, bool true_d
 	app->key_callback = key_callback;
 }
 
-int cf_mouse_x()
+float cf_mouse_x()
 {
 	return app->mouse.x;
 }
 
-int cf_mouse_y()
+float cf_mouse_y()
 {
 	return app->mouse.y;
 }
@@ -308,7 +296,7 @@ bool cf_mouse_just_released(CF_MouseButton button)
 	return 0;
 }
 
-int cf_mouse_wheel_motion()
+float cf_mouse_wheel_motion()
 {
 	return app->mouse.wheel_motion;
 }
@@ -325,12 +313,16 @@ bool cf_mouse_double_clicked(CF_MouseButton button)
 
 void cf_mouse_hide(bool true_to_hide)
 {
-	SDL_ShowCursor(true_to_hide ? SDL_DISABLE : SDL_ENABLE);
+	if (true_to_hide) {
+		SDL_ShowCursor();
+	} else {
+		SDL_HideCursor();
+	}
 }
 
 bool cf_mouse_hidden()
 {
-	return SDL_ShowCursor(SDL_QUERY);
+	return SDL_CursorVisible();
 }
 
 void cf_mouse_lock_inside_window(bool true_to_lock)
@@ -370,17 +362,17 @@ void cf_input_text_clear()
 }
 void cf_input_enable_ime()
 {
-	SDL_StartTextInput();
+	SDL_StartTextInput(app->window);
 }
 
 void cf_input_disable_ime()
 {
-	SDL_StopTextInput();
+	SDL_StopTextInput(app->window);
 }
 
 bool cf_input_is_ime_enabled()
 {
-	return SDL_IsTextInputActive();
+	return SDL_TextInputActive(app->window);
 }
 
 bool cf_input_has_ime_keyboard_support()
@@ -390,13 +382,13 @@ bool cf_input_has_ime_keyboard_support()
 
 bool cf_input_is_ime_keyboard_shown()
 {
-	return SDL_IsScreenKeyboardShown(app->window);
+	return SDL_ScreenKeyboardShown(app->window);
 }
 
 void cf_input_set_ime_rect(int x, int y, int w, int h)
 {
 	SDL_Rect r = { x, y, w, h };
-	SDL_SetTextInputRect(&r);
+	SDL_SetTextInputArea(app->window, &r, 0);
 }
 
 bool cf_input_get_ime_composition(CF_ImeComposition* composition)
@@ -473,64 +465,59 @@ void cf_pump_input_msgs()
 	SDL_Event event;
 	while (SDL_PollEvent(&event)) {
 		if (app->using_imgui) {
-			ImGui_ImplSDL2_ProcessEvent(&event);
+			//ImGui_ImplSDL2_ProcessEvent(&event);
 		}
 
 		switch (event.type)
 		{
-		case SDL_QUIT:
+		case SDL_EVENT_QUIT:
 			app->running = false;
 			break;
 
-		case SDL_WINDOWEVENT:
-			switch (event.window.event)
-			{
-			case SDL_WINDOWEVENT_RESIZED:
-				app->window_state.resized = true;
-				app->w = event.window.data1;
-				app->h = event.window.data2;
-				break;
-
-			case SDL_WINDOWEVENT_MOVED:
-				app->window_state.moved = true;
-				app->x = event.window.data1;
-				app->y = event.window.data2;
-				break;
-
-			case SDL_WINDOWEVENT_MINIMIZED:
-				app->window_state.minimized = true;
-				break;
-
-			case SDL_WINDOWEVENT_MAXIMIZED:
-				app->window_state.maximized = true;
-				break;
-
-			case SDL_WINDOWEVENT_RESTORED:
-				app->window_state.restored = true;
-				break;
-
-			case SDL_WINDOWEVENT_ENTER:
-				app->window_state.mouse_inside_window = true;
-				break;
-
-			case SDL_WINDOWEVENT_LEAVE:
-				app->window_state.mouse_inside_window = false;
-				break;
-
-			case SDL_WINDOWEVENT_FOCUS_GAINED:
-				app->window_state.has_keyboard_focus = true;
-				break;
-
-			case SDL_WINDOWEVENT_FOCUS_LOST:
-				app->window_state.has_keyboard_focus = false;
-				break;
-			}
+		case SDL_EVENT_WINDOW_RESIZED:
+			app->window_state.resized = true;
+			app->w = event.window.data1;
+			app->h = event.window.data2;
 			break;
 
-		case SDL_KEYDOWN:
+		case SDL_EVENT_WINDOW_MOVED:
+			app->window_state.moved = true;
+			app->x = event.window.data1;
+			app->y = event.window.data2;
+			break;
+
+		case SDL_EVENT_WINDOW_MINIMIZED:
+			app->window_state.minimized = true;
+			break;
+
+		case SDL_EVENT_WINDOW_MAXIMIZED:
+			app->window_state.maximized = true;
+			break;
+
+		case SDL_EVENT_WINDOW_RESTORED:
+			app->window_state.restored = true;
+			break;
+
+		case SDL_EVENT_WINDOW_MOUSE_ENTER:
+			app->window_state.mouse_inside_window = true;
+			break;
+
+		case SDL_EVENT_WINDOW_MOUSE_LEAVE:
+			app->window_state.mouse_inside_window = false;
+			break;
+
+		case SDL_EVENT_WINDOW_FOCUS_GAINED:
+			app->window_state.has_keyboard_focus = true;
+			break;
+
+		case SDL_EVENT_WINDOW_FOCUS_LOST:
+			app->window_state.has_keyboard_focus = false;
+			break;
+
+		case SDL_EVENT_KEY_DOWN:
 		{
 			if (event.key.repeat) continue;
-			int key = SDL_GetKeyFromScancode(event.key.keysym.scancode);
+			int key = SDL_GetKeyFromScancode(event.key.scancode, event.key.mod, true);
 			key = s_map_SDL_keys(key);
 			CF_ASSERT(key >= 0 && key < 512);
 			app->keys[key] = 1;
@@ -539,17 +526,17 @@ void cf_pump_input_msgs()
 			if (app->key_callback) app->key_callback((CF_KeyButton)key, true);
 		}	break;
 
-		case SDL_KEYUP:
+		case SDL_EVENT_KEY_UP:
 		{
 			if (event.key.repeat) continue;
-			int key = SDL_GetKeyFromScancode(event.key.keysym.scancode);
+			int key = SDL_GetKeyFromScancode(event.key.scancode, event.key.mod, true);
 			key = s_map_SDL_keys(key);
 			CF_ASSERT(key >= 0 && key < 512);
 			app->keys[key] = 0;
 			if (app->key_callback) app->key_callback((CF_KeyButton)key, false);
 		}	break;
 
-		case SDL_TEXTINPUT:
+		case SDL_EVENT_TEXT_INPUT:
 		{
 			cf_input_text_add_utf8(event.text.text);
 			app->ime_composition.clear();
@@ -557,7 +544,7 @@ void cf_pump_input_msgs()
 			app->ime_composition_selection_len = 0;
 		}	break;
 
-		case SDL_TEXTEDITING:
+		case SDL_EVENT_TEXT_EDITING:
 		{
 			const char* text = event.edit.text;
 			while (*text) app->ime_composition.add(*text++);
@@ -565,14 +552,14 @@ void cf_pump_input_msgs()
 			app->ime_composition_selection_len = event.edit.length;
 		}	break;
 
-		case SDL_MOUSEMOTION:
+		case SDL_EVENT_MOUSE_MOTION:
 			app->mouse.x = event.motion.x;
 			app->mouse.y = event.motion.y;
 			app->mouse.xrel = event.motion.xrel;
 			app->mouse.yrel = -event.motion.yrel;
 			break;
 
-		case SDL_MOUSEBUTTONDOWN:
+		case SDL_EVENT_MOUSE_BUTTON_DOWN:
 			switch (event.button.button)
 			{
 			case SDL_BUTTON_LEFT: app->mouse.left_button = 1; break;
@@ -588,7 +575,7 @@ void cf_pump_input_msgs()
 			}
 			break;
 
-		case SDL_MOUSEBUTTONUP:
+		case SDL_EVENT_MOUSE_BUTTON_UP:
 			switch (event.button.button)
 			{
 			case SDL_BUTTON_LEFT: app->mouse.left_button = 0; break;
@@ -604,47 +591,47 @@ void cf_pump_input_msgs()
 			}
 			break;
 
-		case SDL_MOUSEWHEEL:
+		case SDL_EVENT_MOUSE_WHEEL:
 			app->mouse.wheel_motion = event.wheel.y;
 			break;
 
-		case SDL_CONTROLLERBUTTONUP:
+		case SDL_EVENT_GAMEPAD_BUTTON_UP:
 		{
-			SDL_JoystickID id = event.cbutton.which;
+			SDL_JoystickID id = event.gbutton.which;
 			CF_JoypadInstance* joypad = s_joy(id);
 			if (joypad) {
-				int button = (int)event.cbutton.button;
+				int button = (int)event.gbutton.button;
 				CF_ASSERT(button >= 0 && button < CF_JOYPAD_BUTTON_COUNT);
 				joypad->buttons[button] = 0;
 			}
 		}	break;
 
-		case SDL_CONTROLLERBUTTONDOWN:
+		case SDL_EVENT_GAMEPAD_BUTTON_DOWN:
 		{
-			SDL_JoystickID id = event.cbutton.which;
+			SDL_JoystickID id = event.gbutton.which;
 			CF_JoypadInstance* joypad = s_joy(id);
 			if (joypad) {
-				int button = (int)event.cbutton.button;
+				int button = (int)event.gbutton.button;
 				CF_ASSERT(button >= 0 && button < CF_JOYPAD_BUTTON_COUNT);
 				joypad->buttons[button] = 1;
 			}
 		}	break;
 
-		case SDL_CONTROLLERAXISMOTION:
+		case SDL_EVENT_GAMEPAD_AXIS_MOTION:
 		{
-			SDL_JoystickID id = event.caxis.which;
+			SDL_JoystickID id = event.gaxis.which;
 			CF_JoypadInstance* joypad = s_joy(id);
 			if (joypad) {
-				int axis = (int)event.caxis.axis;
-				int value = (int)event.caxis.value;
+				int axis = (int)event.gaxis.axis;
+				int value = (int)event.gaxis.value;
 				CF_ASSERT(axis >= 0 && axis < CF_JOYPAD_AXIS_COUNT);
 				joypad->axes[axis] = value;
 			}
 		}	break;
 
-		case SDL_FINGERDOWN:
+		case SDL_EVENT_FINGER_DOWN:
 		{
-			uint64_t id = (uint64_t)event.tfinger.fingerId;
+			uint64_t id = (uint64_t)event.tfinger.fingerID;
 			s_touch_remove(id);
 			CF_Touch& touch = app->touches.add();
 			touch.id = id;
@@ -653,9 +640,9 @@ void cf_pump_input_msgs()
 			touch.y = event.tfinger.y * app->h; // NOTE: Probably wrong for high-DPI.
 		}	break;
 
-		case SDL_FINGERMOTION:
+		case SDL_EVENT_FINGER_MOTION:
 		{
-			uint64_t id = (uint64_t)event.tfinger.fingerId;
+			uint64_t id = (uint64_t)event.tfinger.fingerID;
 			CF_Touch touch;
 			if (cf_touch_get(id, &touch)) {
 				touch.pressure = event.tfinger.pressure;
@@ -670,9 +657,9 @@ void cf_pump_input_msgs()
 			}
 		}	break;
 
-		case SDL_FINGERUP:
+		case SDL_EVENT_FINGER_UP:
 		{
-			uint64_t id = (uint64_t)event.tfinger.fingerId;
+			uint64_t id = (uint64_t)event.tfinger.fingerID;
 			s_touch_remove(id);
 		}	break;
 		}
