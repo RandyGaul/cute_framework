@@ -218,7 +218,7 @@ CF_Result cf_make_app(const char* window_title, int display_index, int x, int y,
 		return cf_result_error("SDL_Init failed");
 	}
 
-	SDL_GpuDevice* dev = NULL;
+	SDL_GpuDevice* device = NULL;
 	if (use_gfx) {
 		// Some backends don't support window size of zero.
 		w = w <= 0 ? 1 : w;
@@ -230,9 +230,9 @@ CF_Result cf_make_app(const char* window_title, int display_index, int x, int y,
 		// "Vulkan"
 		// "D3D12"
 		// "Metal"
-		dev = SDL_GpuCreateDevice(true, false, props);
+		device = SDL_GpuCreateDevice(true, false, props);
 		SDL_DestroyProperties(props);
-		if (!dev) {
+		if (!device) {
 			return cf_result_error("Failed to create GPU Device.");
 		}
 	}
@@ -270,8 +270,8 @@ CF_Result cf_make_app(const char* window_title, int display_index, int x, int y,
 	list_init(&app->joypads);
 	::app = app;
 	if (use_gfx) {
-		app->dev = dev;
-		SDL_GpuClaimWindow(app->dev, app->window, SDL_GPU_SWAPCHAINCOMPOSITION_SDR, SDL_GPU_PRESENTMODE_IMMEDIATE);
+		app->device = device;
+		SDL_GpuClaimWindow(app->device, app->window, SDL_GPU_SWAPCHAINCOMPOSITION_SDR, SDL_GPU_PRESENTMODE_IMMEDIATE);
 		cf_make_draw();
 	}
 
@@ -317,7 +317,7 @@ CF_Result cf_make_app(const char* window_title, int display_index, int x, int y,
 
 		// This will clear the initial offscreen canvas to prevent the first frame from starting off
 		// with a black background.
-		cf_apply_canvas(app->offscreen_canvas, true);
+		cf_apply_canvas(app->offscreen_canvas);
 
 		// Create a default font.
 		make_font_from_memory(calibri_data, calibri_sz, "Calibri");
@@ -400,9 +400,9 @@ void cf_destroy_app()
 	}
 	cs_shutdown();
 	destroy_mutex(&app->on_sound_finish_mutex);
-	if (app->dev) SDL_GpuUnclaimWindow(app->dev, app->window);
+	if (app->device) SDL_GpuUnclaimWindow(app->device, app->window);
 	SDL_DestroyWindow(app->window);
-	if (app->dev) SDL_GpuDestroyDevice(app->dev);
+	if (app->device) SDL_GpuDestroyDevice(app->device);
 	SDL_Quit();
 	destroy_threadpool(app->threadpool);
 	cs_shutdown();
@@ -513,7 +513,7 @@ int cf_app_draw_onto_screen(bool clear)
 	cf_render_to(app->offscreen_canvas, clear);
 
 	// Stretch the app canvas onto the backbuffer canvas.
-	cf_apply_canvas(app->backbuffer_canvas, true);
+	cf_apply_canvas(app->backbuffer_canvas);
 	{
 		cf_apply_mesh(app->backbuffer_quad);
 		// @TODO
@@ -730,7 +730,7 @@ int cf_app_get_canvas_height()
 void cf_app_set_vsync(bool true_turn_on_vsync)
 {
 	app->vsync = true_turn_on_vsync;
-	SDL_GpuSetSwapchainParameters(app->dev, app->window, SDL_GPU_SWAPCHAINCOMPOSITION_SDR, app->vsync ? SDL_GPU_PRESENTMODE_VSYNC : SDL_GPU_PRESENTMODE_IMMEDIATE);
+	SDL_GpuSetSwapchainParameters(app->device, app->window, SDL_GPU_SWAPCHAINCOMPOSITION_SDR, app->vsync ? SDL_GPU_PRESENTMODE_VSYNC : SDL_GPU_PRESENTMODE_IMMEDIATE);
 }
 
 bool cf_app_get_vsync()

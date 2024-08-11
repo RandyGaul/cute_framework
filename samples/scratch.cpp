@@ -14,7 +14,7 @@ int main(int argc, char* argv[])
 		layout (location = 0) in vec2 in_pos;
 		layout (location = 0) out vec4 v_color;
 
-		layout(binding = 0) uniform fs_params {
+		layout(binding = 0) uniform uniform_block {
 			vec4 u_color;
 		};
 
@@ -29,7 +29,7 @@ int main(int argc, char* argv[])
 		layout (location = 0) in vec4 v_color;
 		layout (location = 0) out vec4 result;
 
-		layout(binding = 0) uniform fs_params {
+		layout(binding = 0) uniform uniform_block {
 			vec4 u_params;
 		};
 
@@ -39,8 +39,14 @@ int main(int argc, char* argv[])
 			result = color;
 		})";
 
-	CF_Shader shdv = cf_make_shader(CF_SHADER_FORMAT_SPIRV, vert, CF_SHADER_STAGE_VERTEX);
-	CF_Shader shdf = cf_make_shader(CF_SHADER_FORMAT_SPIRV, frag, CF_SHADER_STAGE_FRAGMENT);
+	CF_Shader shd = cf_make_shader(CF_SHADER_FORMAT_SPIRV, vert, frag);
+	CF_Material mat = cf_make_material();
+	CF_Canvas canvas = cf_make_canvas(cf_canvas_defaults(w, h));
+
+	CF_Color color = cf_color_blue();
+	CF_Color params = { 0.5f, 0.5f, 0.5f, 0.5f };
+	cf_material_set_uniform_vs(mat, "u_color", &color, CF_UNIFORM_TYPE_FLOAT4, 0);
+	cf_material_set_uniform_fs(mat, "u_params", &params, CF_UNIFORM_TYPE_FLOAT4, 0);
 
 	while (app_is_running()) {
 		app_update();

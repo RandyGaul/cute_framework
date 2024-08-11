@@ -155,20 +155,14 @@ typedef struct CF_Shader { uint64_t id; } CF_Shader;
  * @related  CF_BackendType cf_backend_type_to_string cf_query_backend
  */
 #define CF_BACKEND_TYPE_DEFS \
-	/* @entry OpenGL 3.3 Core Profile. */    \
-	CF_ENUM(BACKEND_TYPE_GLCORE33,        0) \
-	/* @entry OpenGL ES 3.0. */              \
-	CF_ENUM(BACKEND_TYPE_GLES3,           1) \
-	/* @entry DirectX 11. */                 \
-	CF_ENUM(BACKEND_TYPE_D3D11,           2) \
-	/* @entry Metal for iOS. */              \
-	CF_ENUM(BACKEND_TYPE_METAL_IOS,       3) \
-	/* @entry Metal for MacOS. */            \
-	CF_ENUM(BACKEND_TYPE_METAL_MACOS,     4) \
-	/* @entry Metal for debug simulator (XCode). */ \
-	CF_ENUM(BACKEND_TYPE_METAL_SIMULATOR, 5) \
-	/* @entry WebGPU (for browsers). */      \
-	CF_ENUM(BACKEND_TYPE_WGPU,            6) \
+	/* @entry */    \
+	CF_ENUM(BACKEND_TYPE_VULKAN, 0) \
+	/* @entry */    \
+	CF_ENUM(BACKEND_TYPE_D3D11,  1) \
+	/* @entry */    \
+	CF_ENUM(BACKEND_TYPE_D3D12,  2) \
+	/* @entry */    \
+	CF_ENUM(BACKEND_TYPE_METAL,  3) \
 	/* @end */
 
 typedef enum CF_BackendType
@@ -730,10 +724,6 @@ CF_API void CF_CALL cf_update_texture(CF_Texture texture, void* data, int size);
 	/* @entry */ \
 	CF_ENUM(SHADER_STAGE_FRAGMENT, 1) \
 	/* @entry */ \
-	CF_ENUM(SHADER_STAGE_GEOMETRY, 2) \
-	/* @entry */ \
-	CF_ENUM(SHADER_STAGE_COMPUTE,  3) \
-	/* @entry */ \
 	CF_ENUM(SHADER_STAGE_COUNT,    4) \
 	/* @end */
 
@@ -772,8 +762,6 @@ typedef enum CF_ShaderFormat
 	#undef CF_ENUM
 } CF_ShaderFormat;
 
-dyna uint8_t* cf_compile_shader_to_bytecode(const char* shader_src, CF_ShaderStage cf_stage);
-
 /**
  * @function cf_make_shader
  * @category graphics
@@ -782,7 +770,11 @@ dyna uint8_t* cf_compile_shader_to_bytecode(const char* shader_src, CF_ShaderSta
  * @remarks  You should instead call `CF_MAKE_SOKOL_SHADER` unless you really know what you're doing.
  * @related  CF_Shader cf_make_shader cf_destroy_shader cf_apply_shader CF_Material
  */
-CF_API CF_Shader CF_CALL cf_make_shader(CF_ShaderFormat format, const char* shader_src, CF_ShaderStage stage);
+CF_API CF_Shader CF_CALL cf_make_shader(CF_ShaderFormat format, const char* vertex, const char* fragment);
+
+const dyna uint8_t* cf_compile_shader_to_bytecode(const char* shader_src, CF_ShaderStage cf_stage);
+
+CF_API CF_Shader CF_CALL cf_make_shader_from_bytecode(const dyna uint8_t* vertex_bytecode, const dyna uint8_t* fragment_bytecode);
 
 /**
  * @function cf_destroy_shader
@@ -905,28 +897,32 @@ CF_API void CF_CALL cf_canvas_blit(CF_Canvas src, CF_V2 u0, CF_V2 v0, CF_Canvas 
  * @related  CF_VertexFormat cf_vertex_format_string CF_VertexAttribute cf_mesh_set_attributes
  */
 #define CF_VERTEX_FORMAT_DEFS  \
-	/* @entry Invalid. */                                           \
-	CF_ENUM(VERTEX_FORMAT_INVALID,  0 )                             \
-	/* @entry A single 32-bit float. */                             \
-	CF_ENUM(VERTEX_FORMAT_FLOAT,    1 )                             \
-	/* @entry Two 32-bit floats. */                                 \
-	CF_ENUM(VERTEX_FORMAT_FLOAT2,   2 )                             \
-	/* @entry Three 32-bit floats. */                               \
-	CF_ENUM(VERTEX_FORMAT_FLOAT3,   3 )                             \
-	/* @entry Four 32-bit floats. */                                \
-	CF_ENUM(VERTEX_FORMAT_FLOAT4,   4 )                             \
-	/* @entry Four 8-bit signed bytes, in normalized form. */       \
-	CF_ENUM(VERTEX_FORMAT_BYTE4N,   5 )                             \
-	/* @entry Four 8-bit unsigned bytes, in normalized form. */     \
-	CF_ENUM(VERTEX_FORMAT_UBYTE4N,  6 )                             \
-	/* @entry Two 16-bit signed bytes, in normalized form. */       \
-	CF_ENUM(VERTEX_FORMAT_SHORT2N,  7 )                             \
-	/* @entry Two 16-bit unsigned bytes, in normalized form. */     \
-	CF_ENUM(VERTEX_FORMAT_USHORT2N, 8 )                             \
-	/* @entry Four 16-bit signed bytes, in normalized form. */      \
-	CF_ENUM(VERTEX_FORMAT_SHORT4N,  9 )                             \
-	/* @entry Four 16-bit unsigned bytes, in normalized form. */    \
-	CF_ENUM(VERTEX_FORMAT_USHORT4N, 10)                             \
+	/* @entry Invalid. */                                        \
+	CF_ENUM(VERTEX_FORMAT_INVALID,          0 )                  \
+	/* @entry A single 32-bit unsigned integer. */               \
+	CF_ENUM(VERTEX_FORMAT_UINT,             1 )                  \
+	/* @entry A single 32-bit float. */                          \
+	CF_ENUM(VERTEX_FORMAT_FLOAT,            2 )                  \
+	/* @entry Two 32-bit floats. */                              \
+	CF_ENUM(VERTEX_FORMAT_FLOAT2,           3 )                  \
+	/* @entry Three 32-bit floats. */                            \
+	CF_ENUM(VERTEX_FORMAT_FLOAT3,           4 )                  \
+	/* @entry Four 32-bit floats. */                             \
+	CF_ENUM(VERTEX_FORMAT_FLOAT4,           5 )                  \
+	/* @entry Four 8-bit unsigned bytes, in normalized form. */  \
+	CF_ENUM(VERTEX_FORMAT_UBYTE4N,          6 )                  \
+	/* @entry Two 16-bit signed shorts. */                       \
+	CF_ENUM(VERTEX_FORMAT_SHORT2,           7 )                  \
+	/* @entry Four 16-bit signed shorts. */                      \
+	CF_ENUM(VERTEX_FORMAT_SHORT4,           8 )                  \
+	/* @entry Two 16-bit signed shorts, in normalized form. */   \
+	CF_ENUM(VERTEX_FORMAT_SHORT2N,          9 )                  \
+	/* @entry Four 16-bit signed shorts, in normalized form. */  \
+	CF_ENUM(VERTEX_FORMAT_SHORT4N,          10)                  \
+	/* @entry Two 16-bit half floats. */                         \
+	CF_ENUM(VERTEX_FORMAT_HALFVECTOR2,      11)                  \
+	/* @entry Four 16-bit half floats. */                        \
+	CF_ENUM(VERTEX_FORMAT_HALFVECTOR4,      12)                  \
 	/* @end */
 
 typedef enum CF_VertexFormat
@@ -1030,6 +1026,8 @@ CF_API CF_Mesh CF_CALL cf_make_mesh(CF_UsageType usage_type, int vertex_buffer_s
  * @related  CF_Mesh cf_make_mesh cf_destroy_mesh cf_mesh_set_attributes cf_mesh_update_vertex_data cf_mesh_update_instance_data cf_mesh_update_index_data
  */
 CF_API void CF_CALL cf_destroy_mesh(CF_Mesh mesh);
+
+#define CF_MESH_MAX_VERTEX_ATTRIBUTES (32)
 
 /**
  * @function cf_mesh_set_attributes
@@ -1329,6 +1327,10 @@ CF_INLINE const char* cf_stencil_op_string(CF_StencilOp op) {
 	CF_ENUM(BLEND_OP_SUBTRACT,         1) \
 	/* @entry Reverse subtract, B - A. */ \
 	CF_ENUM(BLEND_OP_REVERSE_SUBTRACT, 2) \
+	/* @entry Minimum value. */           \
+	CF_ENUM(BLEND_OP_MIN,              3) \
+	/* @entry Maximum value. */           \
+	CF_ENUM(BLEND_OP_MAX,              4) \
 	/* @end */
 
 typedef enum CF_BlendOp
@@ -1615,19 +1617,21 @@ CF_API CF_RenderState CF_CALL cf_render_state_defaults();
  */
 #define CF_UNIFORM_TYPE_DEFS \
 	/* @entry In a shader: `uniform float` */  \
-	CF_ENUM(UNIFORM_TYPE_FLOAT,  0)            \
+	CF_ENUM(UNIFORM_TYPE_UNKNOWN, -1)          \
+	/* @entry In a shader: `uniform float` */  \
+	CF_ENUM(UNIFORM_TYPE_FLOAT,    0)          \
 	/* @entry In a shader: `uniform vec2` */   \
-	CF_ENUM(UNIFORM_TYPE_FLOAT2, 1)            \
+	CF_ENUM(UNIFORM_TYPE_FLOAT2,   1)          \
 	/* @entry In a shader: `uniform vec4` */   \
-	CF_ENUM(UNIFORM_TYPE_FLOAT4, 2)            \
+	CF_ENUM(UNIFORM_TYPE_FLOAT4,   2)          \
 	/* @entry In a shader: `uniform int` */    \
-	CF_ENUM(UNIFORM_TYPE_INT,    3)            \
+	CF_ENUM(UNIFORM_TYPE_INT,      3)          \
 	/* @entry In a shader: `uniform int[2]` */ \
-	CF_ENUM(UNIFORM_TYPE_INT2,   4)            \
+	CF_ENUM(UNIFORM_TYPE_INT2,     4)          \
 	/* @entry In a shader: `uniform int[4]` */ \
-	CF_ENUM(UNIFORM_TYPE_INT4,   5)            \
+	CF_ENUM(UNIFORM_TYPE_INT4,     5)          \
 	/* @entry In a shader: `uniform mat4` */   \
-	CF_ENUM(UNIFORM_TYPE_MAT4,   6)            \
+	CF_ENUM(UNIFORM_TYPE_MAT4,     6)          \
 	/* @end */
 
 typedef enum CF_UniformType
@@ -1720,8 +1724,6 @@ CF_API void CF_CALL cf_material_clear_textures(CF_Material material);
  * @category graphics
  * @brief    Sets up a uniform value, used for inputs to vertex shaders.
  * @param    material      The material.
- * @param    block_name    The block name acts like namespace, and groups together uniforms in a single contiguous chunk of memory. You should place
- *                         uniforms that are related to each other, and accessed at the same time, into the same block.
  * @param    name          The name of the uniform as it appears in the shader.
  * @param    data          The value of the uniform.
  * @param    type          The type of the uniform. See `CF_UniformType`.
@@ -1735,15 +1737,13 @@ CF_API void CF_CALL cf_material_clear_textures(CF_Material material);
  *           grouped up into uniform blocks the performance overhead is usually quite minimal for setting a variety of uniform and shader combinations.
  * @related  CF_UniformType CF_Material cf_make_material cf_destroy_material cf_material_set_render_state cf_material_set_texture_vs cf_material_set_texture_fs cf_material_set_uniform_vs cf_material_set_uniform_fs
  */
-CF_API void CF_CALL cf_material_set_uniform_vs(CF_Material material, const char* block_name, const char* name, void* data, CF_UniformType type, int array_length);
+CF_API void CF_CALL cf_material_set_uniform_vs(CF_Material material, const char* name, void* data, CF_UniformType type, int array_length);
 
 /**
  * @function cf_material_set_uniform_fs
  * @category graphics
  * @brief    Sets up a uniform value, used for inputs to fragment shaders.
  * @param    material      The material.
- * @param    block_name    The block name acts like namespace, and groups together uniforms in a single contiguous chunk of memory. You should place
- *                         uniforms that are related to each other, and accessed at the same time, into the same block.
  * @param    name          The name of the uniform as it appears in the shader.
  * @param    data          The value of the uniform.
  * @param    type          The type of the uniform. See `CF_UniformType`.
@@ -1757,7 +1757,7 @@ CF_API void CF_CALL cf_material_set_uniform_vs(CF_Material material, const char*
  *           grouped up into uniform blocks the performance overhead is usually quite minimal for setting a variety of uniform and shader combinations.
  * @related  CF_UniformType CF_Material cf_make_material cf_destroy_material cf_material_set_render_state cf_material_set_texture_vs cf_material_set_texture_fs cf_material_set_uniform_vs cf_material_set_uniform_fs
  */
-CF_API void CF_CALL cf_material_set_uniform_fs(CF_Material material, const char* block_name, const char* name, void* data, CF_UniformType type, int array_length);
+CF_API void CF_CALL cf_material_set_uniform_fs(CF_Material material, const char* name, void* data, CF_UniformType type, int array_length);
 
 /**
  * @function cf_material_clear_uniforms
@@ -1790,7 +1790,7 @@ CF_API void CF_CALL cf_clear_depth_stencil(float depth, uint32_t stencil);
  * @param    clear      Clears the screen to `cf_clear_color` if true.
  * @related  CF_Canvas cf_clear_color cf_apply_viewport cf_apply_scissor
  */
-CF_API void CF_CALL cf_apply_canvas(CF_Canvas canvas, bool clear);
+CF_API void CF_CALL cf_apply_canvas(CF_Canvas canvas);
 
 /**
  * @function cf_apply_viewport
@@ -2104,7 +2104,7 @@ CF_INLINE TextureParams texture_defaults(int w, int h) { return cf_texture_defau
 CF_INLINE Texture make_texture(TextureParams texture_params) { return cf_make_texture(texture_params); }
 CF_INLINE void destroy_texture(Texture texture) { cf_destroy_texture(texture); }
 CF_INLINE void update_texture(Texture texture, void* data, int size) { cf_update_texture(texture, data, size); }
-CF_INLINE Shader make_shader(CF_ShaderFormat format, const char* shader_src, ShaderStage stage) { return cf_make_shader(format, shader_src, stage); }
+CF_INLINE Shader make_shader(CF_ShaderFormat format, const char* vertex, const char* fragment) { return cf_make_shader(format, vertex, fragment); }
 CF_INLINE void destroy_shader(Shader shader) { cf_destroy_shader(shader); }
 CF_INLINE CanvasParams canvas_defaults(int w, int h) { return cf_canvas_defaults(w, h); }
 CF_INLINE Canvas make_canvas(CanvasParams pass_params) { return cf_make_canvas(pass_params); }
@@ -2133,10 +2133,10 @@ CF_INLINE void material_set_render_state(Material material, RenderState render_s
 CF_INLINE void material_set_texture_vs(Material material, const char* name, Texture texture) { cf_material_set_texture_vs(material, name, texture); }
 CF_INLINE void material_set_texture_fs(Material material, const char* name, Texture texture) { cf_material_set_texture_fs(material, name, texture); }
 CF_INLINE void material_clear_textures(Material material) { cf_material_clear_textures(material); }
-CF_INLINE void material_set_uniform_vs(Material material, const char* block_name, const char* name, void* data, UniformType type, int array_length) { cf_material_set_uniform_vs(material, block_name, name, data, type, array_length); }
-CF_INLINE void material_set_uniform_fs(Material material, const char* block_name, const char* name, void* data, UniformType type, int array_length) { cf_material_set_uniform_fs(material, block_name, name, data, type, array_length); }
+CF_INLINE void material_set_uniform_vs(Material material, const char* name, void* data, UniformType type, int array_length) { cf_material_set_uniform_vs(material, name, data, type, array_length); }
+CF_INLINE void material_set_uniform_fs(Material material, const char* name, void* data, UniformType type, int array_length) { cf_material_set_uniform_fs(material, name, data, type, array_length); }
 CF_INLINE void material_clear_uniforms(Material material) { cf_material_clear_uniforms(material); }
-CF_INLINE void apply_canvas(Canvas canvas, bool clear = true) { cf_apply_canvas(canvas, clear); }
+CF_INLINE void apply_canvas(Canvas canvas) { cf_apply_canvas(canvas); }
 CF_INLINE void apply_viewport(int x, int y, int w, int h) { cf_apply_viewport(x, y, w, h); }
 CF_INLINE void apply_scissor(int x, int y, int w, int h) { cf_apply_scissor(x, y, w, h); }
 CF_INLINE void apply_mesh(Mesh mesh) { cf_apply_mesh(mesh); }

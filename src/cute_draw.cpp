@@ -379,10 +379,10 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 	cf_material_set_texture_fs(draw->material, "u_image", atlas);
 
 	// Apply uniforms.
-	v2 u_texture_size = cf_v2((float)texture_w, (float)texture_h);
-	cf_material_set_uniform_fs(draw->material, "fs_params", "u_texture_size", &u_texture_size, CF_UNIFORM_TYPE_FLOAT2, 1);
-	v2 u_texel_size = cf_v2(1.0f / (float)texture_w, 1.0f / (float)texture_h);
-	cf_material_set_uniform_fs(draw->material, "fs_params", "u_texel_size", &u_texel_size, CF_UNIFORM_TYPE_FLOAT2, 1);
+	//v2 u_texture_size = cf_v2((float)texture_w, (float)texture_h);
+	//cf_material_set_uniform_fs(draw->material, "fs_params", "u_texture_size", &u_texture_size, CF_UNIFORM_TYPE_FLOAT2, 1);
+	//v2 u_texel_size = cf_v2(1.0f / (float)texture_w, 1.0f / (float)texture_h);
+	//cf_material_set_uniform_fs(draw->material, "fs_params", "u_texel_size", &u_texel_size, CF_UNIFORM_TYPE_FLOAT2, 1);
 
 	// Apply render state.
 	cf_material_set_render_state(draw->material, draw->render_states.last());
@@ -2357,32 +2357,32 @@ void cf_render_settings_push_texture(const char* name, CF_Texture texture)
 
 void cf_render_settings_push_uniform(const char* name, void* data, CF_UniformType type, int array_length)
 {
-	material_set_uniform_fs(draw->material, "shader_uniforms", name, data, type, array_length);
+	material_set_uniform_fs(draw->material, name, data, type, array_length);
 }
 
 void cf_render_settings_push_uniform_int(const char* name, int val)
 {
-	material_set_uniform_fs(draw->material, "shader_uniforms", name, &val, CF_UNIFORM_TYPE_INT, 1);
+	material_set_uniform_fs(draw->material, name, &val, CF_UNIFORM_TYPE_INT, 1);
 }
 
 void cf_render_settings_push_uniform_float(const char* name, float val)
 {
-	material_set_uniform_fs(draw->material, "shader_uniforms", name, &val, CF_UNIFORM_TYPE_FLOAT, 1);
+	material_set_uniform_fs(draw->material, name, &val, CF_UNIFORM_TYPE_FLOAT, 1);
 }
 
 void cf_render_settings_push_uniform_v2(const char* name, CF_V2 val)
 {
-	material_set_uniform_fs(draw->material, "shader_uniforms", name, &val, CF_UNIFORM_TYPE_FLOAT2, 1);
+	material_set_uniform_fs(draw->material, name, &val, CF_UNIFORM_TYPE_FLOAT2, 1);
 }
 
 void cf_render_settings_push_uniform_color(const char* name, CF_Color val)
 {
-	material_set_uniform_fs(draw->material, "shader_uniforms", name, &val, CF_UNIFORM_TYPE_FLOAT4, 1);
+	material_set_uniform_fs(draw->material, name, &val, CF_UNIFORM_TYPE_FLOAT4, 1);
 }
 
 void cf_render_to(CF_Canvas canvas, bool clear)
 {
-	cf_apply_canvas(canvas, clear);
+	cf_apply_canvas(canvas);
 	spritebatch_flush(&draw->sb);
 	draw->verts.clear();
 }
