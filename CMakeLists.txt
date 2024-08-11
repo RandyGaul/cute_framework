@@ -290,6 +290,7 @@ target_include_directories(cute PUBLIC ${SDL3_INCLUDE_DIRS})
 
 # glslang + SPIRV stuff for online shader compilation (optional).
 if (CF_GLSLANG)
+	add_definitions(-DCF_RUNTIME_SHADER_COMPILATION)
 	set(GLSLANG_TESTS_DEFAULT OFF CACHE BOOL "Do not build glslang tests.")
 	set(BUILD_SHARED_LIBS OFF CACHE BOOL "Do not build glslang as a shared lib.")
 	SET(ENABLE_OPT CF_GLSLANG_OPTIMIZER CACHE BOOL "Do not use SPIR-V Tools.")

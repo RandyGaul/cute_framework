@@ -39,6 +39,7 @@ struct CF_Draw* draw;
 #include <cimgui.h>
 
 #include <algorithm>
+#include <glslang/Public/ShaderLang.h>
 
 #define DEBUG_VERT(v, c) batch_quad(make_aabb(v, 3, 3), c)
 
@@ -437,6 +438,10 @@ void CF_Draw::set_aaf()
 
 void cf_make_draw()
 {
+#ifdef CF_RUNTIME_SHADER_COMPILATION
+	glslang::InitializeProcess();
+#endif
+
 	draw = CF_NEW(CF_Draw);
 	draw->projection = ortho_2d(0, 0, (float)app->w, (float)app->h);
 	draw->reset_cam();
@@ -510,6 +515,10 @@ void cf_destroy_draw()
 	cf_destroy_shader(draw->shaders[0]);
 	draw->~CF_Draw();
 	CF_FREE(draw);
+
+#ifdef CF_RUNTIME_SHADER_COMPIILATION
+	glslang::FinalizeProcess();
+#endif CF_RUNTIME_SHADER_COMPIILATION
 }
 
 //--------------------------------------------------------------------------------------------------

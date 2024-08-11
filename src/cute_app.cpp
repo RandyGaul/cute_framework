@@ -186,19 +186,18 @@ static void s_canvas(int w, int h)
 CF_Result cf_make_app(const char* window_title, int display_index, int x, int y, int w, int h, int options, const char* argv0)
 {
 	bool use_dx11 = false;
-	bool use_gl33 = false;
-	bool use_gles3 = false;
 	bool use_metal = false;
+	bool use_vulkan = false;
 	#if defined(CF_WINDOWS)
 	use_dx11 = true;
 	#elif defined(CF_LINUX)
-	use_gl33 = true;
+	use_vulkan = true;
 	#elif defined(CF_APPLE)
 	use_metal = true;
 	#elif defined(CF_EMSCRIPTEN)
-	use_gles3 = true;
+	assert(false); // Not yet available via SDL3.
 	#endif
-	bool use_gfx = (use_dx11|use_gl33|use_gles3|use_metal) && !(options & APP_OPTIONS_NO_GFX);
+	bool use_gfx = (use_dx11|use_vulkan|use_metal) && !(options & APP_OPTIONS_NO_GFX);
 
 #ifdef CF_EMSCRIPTEN
 	Uint32 sdl_options = SDL_INIT_EVENTS | SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMEPAD;
@@ -238,26 +237,11 @@ CF_Result cf_make_app(const char* window_title, int display_index, int x, int y,
 		}
 	}
 
-
 	Uint32 flags = 0;
-	if (use_gl33) flags |= SDL_WINDOW_OPENGL;
-	if (use_gles3) flags |= SDL_WINDOW_OPENGL;
 	if (use_metal) flags |= SDL_WINDOW_METAL;
 	if (options & APP_OPTIONS_FULLSCREEN) flags |= SDL_WINDOW_FULLSCREEN;
 	if (options & APP_OPTIONS_RESIZABLE) flags |= SDL_WINDOW_RESIZABLE;
 	if (options & APP_OPTIONS_HIDDEN) flags |= (SDL_WINDOW_HIDDEN | SDL_WINDOW_MINIMIZED);
-
-	if (use_gl33) {
-		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
-		SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-	}
-
-	if (use_gles3) {
-		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
-		SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
-	}
 
 	SDL_Window* window;
 	SDL_PropertiesID props = SDL_CreateProperties();
@@ -296,47 +280,6 @@ CF_Result cf_make_app(const char* window_title, int display_index, int x, int y,
 #else
 	void* hwnd = NULL;
 #endif
-
-	if ((use_gl33 || use_gles3) && use_gfx) {
-		app->use_gl = true;
-		SDL_GL_SetSwapInterval(app->vsync);
-		SDL_GLContext ctx = SDL_GL_CreateContext(window);
-		if (!ctx) {
-			CF_FREE(app);
-			return cf_result_error("Unable to create OpenGL context.");
-		}
-		//CF_MEMSET(&app->gfx_ctx_params, 0, sizeof(app->gfx_ctx_params));
-		// @TODO
-		//app->gfx_ctx_params.color_format = SG_PIXELFORMAT_RGBA8;
-		//app->gfx_ctx_params.depth_format = SG_PIXELFORMAT_DEPTH_STENCIL;
-		//sg_desc params = { };
-		//params.context = app->gfx_ctx_params;
-		//params.logger.func = slog_func;
-		//sg_setup(params);
-		//app->gfx_enabled = true;
-	}
-
-	if (use_dx11 && use_gfx) {
-		// @TODO
-		//cf_dx11_init(hwnd, w, h, 1);
-		//app->gfx_ctx_params = cf_dx11_get_context();
-		//sg_desc params = { };
-		//params.context = app->gfx_ctx_params;
-		//params.logger.func = slog_func;
-		//sg_setup(params);
-		//app->gfx_enabled = true;
-	}
-	
-	if (use_metal && use_gfx) {
-		// @TODO
-		//cf_metal_init(window, w, h, 1);
-		//app->gfx_ctx_params = cf_metal_get_context();
-		//sg_desc params = { };
-		//params.context = app->gfx_ctx_params;
-		//params.logger.func = slog_func;
-		//sg_setup(params);
-		//app->gfx_enabled = true;
-	}
 
 	cf_make_aseprite_cache();
 	cf_make_png_cache();
@@ -448,7 +391,6 @@ void cf_destroy_app()
 		// @TODO
 		//sg_shutdown();
 		//cf_dx11_shutdown();
-		cf_clear_graphics_static_pointers();
 	}
 	cf_destroy_aseprite_cache();
 	cf_destroy_png_cache();

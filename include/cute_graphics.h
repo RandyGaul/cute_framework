@@ -719,21 +719,77 @@ CF_API void CF_CALL cf_update_texture(CF_Texture texture, void* data, int size);
 // Shader.
 
 /**
+ * @enum     CF_ShaderStage
+ * @category graphics
+ * @brief    
+ * @related  
+ */
+#define CF_SHADER_STAGE_DEFS \
+	/* @entry */ \
+	CF_ENUM(SHADER_STAGE_VERTEX,   0) \
+	/* @entry */ \
+	CF_ENUM(SHADER_STAGE_FRAGMENT, 1) \
+	/* @entry */ \
+	CF_ENUM(SHADER_STAGE_GEOMETRY, 2) \
+	/* @entry */ \
+	CF_ENUM(SHADER_STAGE_COMPUTE,  3) \
+	/* @entry */ \
+	CF_ENUM(SHADER_STAGE_COUNT,    4) \
+	/* @end */
+
+typedef enum CF_ShaderStage
+{
+	#define CF_ENUM(K, V) CF_##K = V,
+	CF_SHADER_STAGE_DEFS
+	#undef CF_ENUM
+} CF_ShaderStage;
+
+/**
+ * @enum     CF_ShaderFormat
+ * @category graphics
+ * @brief    
+ * @related  
+ */
+#define CF_SHADER_FORMAT_DEFS \
+	/* @entry */ \
+	CF_ENUM(SHADER_FORMAT_SECRET_NDA, 0) \
+	/* @entry */ \
+	CF_ENUM(SHADER_FORMAT_SPIRV,      1) \
+	/* @entry */ \
+	CF_ENUM(SHADER_FORMAT_DXBC,       2) \
+	/* @entry */ \
+	CF_ENUM(SHADER_FORMAT_DXIL,       3) \
+	/* @entry */ \
+	CF_ENUM(SHADER_FORMAT_MSL,        4) \
+	/* @entry */ \
+	CF_ENUM(SHADER_FORMAT_COUNT,      5) \
+	/* @end */
+
+typedef enum CF_ShaderFormat
+{
+	#define CF_ENUM(K, V) CF_##K = V,
+	CF_SHADER_FORMAT_DEFS
+	#undef CF_ENUM
+} CF_ShaderFormat;
+
+dyna uint8_t* cf_compile_shader_to_bytecode(const char* shader_src, CF_ShaderStage cf_stage);
+
+/**
  * @function cf_make_shader
  * @category graphics
  * @brief    Creates a shader from a shader compiled by sokol-shdc.
  * @param    sokol_shader  A compiled shader.
  * @remarks  You should instead call `CF_MAKE_SOKOL_SHADER` unless you really know what you're doing.
- * @related  CF_MAKE_SOKOL_SHADER CF_SokolShader CF_Shader cf_make_shader cf_destroy_shader cf_apply_shader CF_Material
+ * @related  CF_Shader cf_make_shader cf_destroy_shader cf_apply_shader CF_Material
  */
-CF_API CF_Shader CF_CALL cf_make_shader();
+CF_API CF_Shader CF_CALL cf_make_shader(CF_ShaderFormat format, const char* shader_src, CF_ShaderStage stage);
 
 /**
  * @function cf_destroy_shader
  * @category graphics
  * @brief    Frees up a `CF_Shader` created by `cf_make_shader`.
  * @param    shader     A shader.
- * @related  CF_MAKE_SOKOL_SHADER CF_SokolShader CF_Shader cf_make_shader cf_destroy_shader cf_apply_shader CF_Material
+ * @related  CF_Shader cf_make_shader cf_destroy_shader cf_apply_shader CF_Material
  */
 CF_API void CF_CALL cf_destroy_shader(CF_Shader shader);
 
@@ -1715,32 +1771,16 @@ CF_API void CF_CALL cf_material_clear_uniforms(CF_Material material);
 //--------------------------------------------------------------------------------------------------
 // Rendering Functions.
 
-/**
- * @function cf_clear_color
- * @category graphics
- * @brief    Sets the color used when clearing a canvas.
- * @remarks  This will get used when `cf_apply_canvas` or when `cf_app_draw_onto_screen` is called.
- * @related  cf_clear_color cf_clear_color2 cf_clear_depth_stencil cf_apply_canvas cf_app_draw_onto_screen
- */
-CF_API void CF_CALL cf_clear_color(float red, float green, float blue, float alpha);
-
-/**
- * @function cf_clear_color2
- * @category graphics
- * @brief    Sets the color used when clearing a canvas.
- * @remarks  This will get used when `cf_apply_canvas` or when `cf_app_draw_onto_screen` is called.
- * @related  cf_clear_color cf_clear_color2 cf_clear_depth_stencil cf_apply_canvas cf_app_draw_onto_screen
- */
-CF_API void CF_CALL cf_clear_color2(CF_Color color);
+CF_API void CF_CALL cf_clear_screen(float red, float green, float blue, float alpha);
 
 /**
  * @function cf_clear_depth_stencil
  * @category graphics
  * @brief    Sets the depth/stencil values used when clearing a canvas, if depth/stencil are enabled (see `CF_RenderState`).
  * @remarks  This will get used when `cf_apply_canvas` or when `cf_app_draw_onto_screen` is called.
- * @related  cf_clear_color cf_clear_color2 cf_clear_depth_stencil cf_apply_canvas cf_app_draw_onto_screen
+ * @related  cf_clear_screen cf_clear_depth_stencil
  */
-CF_API void CF_CALL cf_clear_depth_stencil(float depth, float stencil);
+CF_API void CF_CALL cf_clear_depth_stencil(float depth, uint32_t stencil);
 
 /**
  * @function cf_apply_canvas
@@ -2054,6 +2094,8 @@ CF_INLINE constexpr const char* to_string(UniformType type) { switch(type) {
 	}
 }
 
+using ShaderStage = CF_ShaderStage;
+
 CF_INLINE BackendType query_backend() { return cf_query_backend(); }
 CF_INLINE bool query_pixel_format(PixelFormat format, PixelFormatOp op) { return cf_query_pixel_format(format, op); }
 CF_INLINE bool query_device_feature(DeviceFeature feature) { return cf_query_device_feature(feature); }
@@ -2062,7 +2104,7 @@ CF_INLINE TextureParams texture_defaults(int w, int h) { return cf_texture_defau
 CF_INLINE Texture make_texture(TextureParams texture_params) { return cf_make_texture(texture_params); }
 CF_INLINE void destroy_texture(Texture texture) { cf_destroy_texture(texture); }
 CF_INLINE void update_texture(Texture texture, void* data, int size) { cf_update_texture(texture, data, size); }
-CF_INLINE Shader make_shader() { return cf_make_shader(); }
+CF_INLINE Shader make_shader(CF_ShaderFormat format, const char* shader_src, ShaderStage stage) { return cf_make_shader(format, shader_src, stage); }
 CF_INLINE void destroy_shader(Shader shader) { cf_destroy_shader(shader); }
 CF_INLINE CanvasParams canvas_defaults(int w, int h) { return cf_canvas_defaults(w, h); }
 CF_INLINE Canvas make_canvas(CanvasParams pass_params) { return cf_make_canvas(pass_params); }
@@ -2101,8 +2143,6 @@ CF_INLINE void apply_mesh(Mesh mesh) { cf_apply_mesh(mesh); }
 CF_INLINE void apply_shader(Shader shader, Material material) { cf_apply_shader(shader, material); }
 CF_INLINE void draw_elements() { cf_draw_elements(); }
 CF_INLINE void unapply_canvas() { cf_unapply_canvas(); }
-CF_INLINE void clear_color(float r, float g, float b, float a) { cf_clear_color(r, g, b, a); }
-CF_INLINE void clear_color(Color color) { cf_clear_color2(color); }
 
 }
 

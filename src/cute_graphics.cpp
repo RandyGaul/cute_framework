@@ -12,23 +12,18 @@
 #include <internal/cute_alloc_internal.h>
 #include <internal/cute_app_internal.h>
 
+#include <glslang/Public/ShaderLang.h>
+#include <glslang/Public/ResourceLimits.h>
+#include <SPIRV/GlslangToSpv.h>
+#define SDL_GPU_SHADERCROSS_IMPLEMENTATION
+#define SDL_GPU_SHADERCROSS_STATIC
+#include <SDL_gpu_shadercross/SDL_gpu_shadercross.h>
+#include <SDL_gpu_shadercross/spirv.h>
+#include <SPIRV-Reflect/spirv_reflect.h>
+
 // Override sokol_gfx macros for the default clear color with our own values.
 // This is a simple way to control sokol's default clear color, as well as custom clear
 // colors all in the same place.
-
-static float s_clear_red     = 0.5f;
-static float s_clear_green   = 0.5f;
-static float s_clear_blue    = 0.5f;
-static float s_clear_alpha   = 1.0f;
-static float s_clear_depth   = 1.0f;
-static float s_clear_stencil = 0;
-
-#define SG_DEFAULT_CLEAR_RED     (s_clear_red)
-#define SG_DEFAULT_CLEAR_GREEN   (s_clear_green)
-#define SG_DEFAULT_CLEAR_BLUE    (s_clear_blue)
-#define SG_DEFAULT_CLEAR_ALPHA   (s_clear_alpha)
-#define SG_DEFAULT_CLEAR_DEPTH   (s_clear_depth)
-#define SG_DEFAULT_CLEAR_STENCIL (s_clear_stencil)
 
 struct CF_CanvasInternal;
 static CF_CanvasInternal* s_canvas = NULL;
@@ -43,9 +38,7 @@ using namespace Cute;
 
 struct CF_ShaderInternal
 {
-	//CF_SokolShader table;
-	//const sg_shader_desc* desc;
-	//sg_shader shd;
+	SDL_GpuShader* shader;
 	int uniform_block_size;
 	void* uniform_block;
 };
@@ -195,15 +188,184 @@ void cf_update_texture(CF_Texture texture, void* data, int size)
 	//sg_update_image(sgi, sgid);
 }
 
-CF_Shader cf_make_shader()
+dyna uint8_t* cf_compile_shader_to_bytecode(const char* shader_src, CF_ShaderStage cf_stage)
 {
-	//CF_ShaderInternal* shader = (CF_ShaderInternal*)CF_ALLOC(sizeof(CF_ShaderInternal));
-	//shader->table = sokol_shader;
-	//const sg_shader_desc* desc = shader->table.get_desc_fn(sg_query_backend());
-	//shader->desc = desc;
-	//shader->shd = sg_make_shader(desc);
+	EShLanguage stage = EShLangVertex;
+	switch (cf_stage) {
+	default: CF_ASSERT(false); break; // No valid stage provided.
+	case CF_SHADER_STAGE_VERTEX: stage = EShLangVertex; break;
+	case CF_SHADER_STAGE_FRAGMENT: stage = EShLangFragment; break;
+	case CF_SHADER_STAGE_GEOMETRY: stage = EShLangGeometry; break;
+	case CF_SHADER_STAGE_COMPUTE: stage = EShLangCompute; break;
+	}
+
+	glslang::TShader shader(stage);
+
+	const char* shader_strings[1];
+	shader_strings[0] = shader_src;
+	shader.setStrings(shader_strings, 1);
+
+	shader.setEnvInput(glslang::EShSourceGlsl, stage, glslang::EShClientVulkan, 450);
+	shader.setEnvClient(glslang::EShClientVulkan, glslang::EShTargetVulkan_1_2);
+	shader.setEnvTarget(glslang::EShTargetSpv, glslang::EShTargetSpv_1_6);
+	shader.setEntryPoint("main");
+	shader.setSourceEntryPoint("main");
+	shader.setAutoMapLocations(true);
+	shader.setAutoMapBindings(true);
+
+	if (!shader.parse(GetDefaultResources(), 450, false, EShMsgDefault)) {
+		fprintf(stderr, "GLSL parsing failed...\n");
+		fprintf(stderr, "%s\n\n%s\n", shader.getInfoLog(), shader.getInfoDebugLog());
+		return NULL;
+	}
+
+	glslang::TProgram program;
+	program.addShader(&shader);
+
+	if (!program.link(EShMsgDefault)) {
+		fprintf(stderr, "GLSL linking failed...\n");
+		fprintf(stderr, "%s\n\n%s\n", program.getInfoLog(), program.getInfoDebugLog());
+		return NULL;
+	}
+
+	std::vector<uint32_t> spirv;
+	glslang::SpvOptions options;
+	options.generateDebugInfo = false;
+	options.stripDebugInfo = false;
+	options.disableOptimizer = false;
+	options.optimizeSize = false;
+	options.disassemble = false;
+	options.validate = false;
+	glslang::GlslangToSpv(*program.getIntermediate(stage), spirv, &options);
+
+	dyna uint8_t* bytecode = NULL;
+	int size = (int)(sizeof(uint32_t) * spirv.size());
+	afit(bytecode, size);
+	CF_MEMCPY(bytecode, spirv.data(), size);
+	alen(bytecode) = size;
+
+	return bytecode;
+}
+
+const char* spv_type_string(const SpvReflectTypeDescription* type_desc)
+{
+	switch (type_desc->op) {
+		case SpvOpTypeVoid: return "void";
+		case SpvOpTypeBool: return "bool";
+		case SpvOpTypeInt:
+			return type_desc->traits.numeric.scalar.signedness ? "int" : "uint";
+		case SpvOpTypeFloat: return "float";
+		case SpvOpTypeVector:
+			if (type_desc->type_flags & SPV_REFLECT_TYPE_FLAG_INT) {
+			} else {
+				switch (type_desc->traits.numeric.vector.component_count) {
+					case 2: return "vec2";
+					case 3: return "vec3";
+					case 4: return "vec4";
+					default: return "unknown";
+				}
+			}
+		case SpvOpTypeMatrix:
+			return "mat";
+		case SpvOpTypeStruct:
+			return "struct";
+		case SpvOpTypeArray:
+			return "array";
+		default:
+			return "unknown";
+	}
+}
+
+static CF_INLINE SDL_GpuShaderFormat s_wrap(CF_ShaderFormat format)
+{
+	switch (format) {
+	case CF_SHADER_FORMAT_SECRET_NDA: return SDL_GPU_SHADERFORMAT_SECRET;
+	case CF_SHADER_FORMAT_SPIRV: return SDL_GPU_SHADERFORMAT_SPIRV;
+	case CF_SHADER_FORMAT_DXBC: return SDL_GPU_SHADERFORMAT_DXBC;
+	case CF_SHADER_FORMAT_DXIL: return SDL_GPU_SHADERFORMAT_DXIL;
+	case CF_SHADER_FORMAT_MSL: return SDL_GPU_SHADERFORMAT_MSL;
+	default: return SDL_GPU_SHADERFORMAT_INVALID;
+	}
+}
+
+static CF_INLINE SDL_GpuShaderStage s_wrap(CF_ShaderStage stage)
+{
+	switch (stage) {
+	case CF_SHADER_STAGE_VERTEX: return SDL_GPU_SHADERSTAGE_VERTEX;
+	case CF_SHADER_STAGE_FRAGMENT: return SDL_GPU_SHADERSTAGE_FRAGMENT;
+	default: return SDL_GPU_SHADERSTAGE_VERTEX;
+	}
+}
+
+CF_Shader cf_make_shader(CF_ShaderFormat format, const char* shader_src, CF_ShaderStage stage)
+{
+	dyna uint8_t* bytecode = cf_compile_shader_to_bytecode(shader_src, stage);
+
+	SpvReflectShaderModule module;
+	SpvReflectResult code = spvReflectCreateShaderModule(asize(bytecode), bytecode, &module);
+
+	// Enumerate descriptor bindings (uniforms)
+	uint32_t binding_count = 0;
+	code = spvReflectEnumerateDescriptorBindings(&module, &binding_count, nullptr);
+
+	SpvReflectDescriptorBinding** bindings = NULL;
+	afit(bindings, (int)binding_count);
+	alen(bindings) = binding_count;
+	code = spvReflectEnumerateDescriptorBindings(&module, &binding_count, bindings);
+
+	int samplerCount = 0;
+	int storageTextureCount = 0;
+	int storageBufferCount = 0;
+	int uniformBufferCount = 0;
+
+	// Check if the name is correctly captured
+	for (int i = 0; i < (int)binding_count; ++i) {
+		SpvReflectDescriptorBinding* binding = bindings[i];
+		
+		switch (binding->descriptor_type) {
+			case SPV_REFLECT_DESCRIPTOR_TYPE_SAMPLER: samplerCount++; break;
+			case SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_IMAGE: storageTextureCount++; break;
+			case SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_BUFFER: storageBufferCount++; break;
+			case SPV_REFLECT_DESCRIPTOR_TYPE_UNIFORM_BUFFER: uniformBufferCount++; break;
+		}
+
+		// Check if the binding is a uniform block
+		if (binding->descriptor_type == SPV_REFLECT_DESCRIPTOR_TYPE_UNIFORM_BUFFER) {
+			printf("Uniform Block: %s\n", binding->name);
+
+			// Enumerate the members of the uniform block
+			uint32_t member_count = binding->block.member_count;
+			for (uint32_t j = 0; j < member_count; ++j) {
+				SpvReflectBlockVariable* member = &(binding->block.members[j]);
+
+				// Print member name and type
+				printf("  Member: %s\n", member->name);
+				printf("  Type: %s\n", spv_type_string(member->type_description));
+				printf("  Size: %d bytes\n", member->size);
+			}
+		}
+	}
+	afree(bindings);
+
+	SDL_GpuShaderCreateInfo shaderCreateInfo = {};
+	shaderCreateInfo.codeSize = asize(bytecode);
+	shaderCreateInfo.code = bytecode;
+	shaderCreateInfo.entryPointName = "main";
+	shaderCreateInfo.format = SDL_GPU_SHADERFORMAT_SPIRV;
+	shaderCreateInfo.stage = s_wrap(stage);
+	shaderCreateInfo.samplerCount = samplerCount;
+	shaderCreateInfo.storageTextureCount = storageTextureCount;
+	shaderCreateInfo.storageBufferCount = storageBufferCount;
+	shaderCreateInfo.uniformBufferCount = uniformBufferCount;
+
+	SDL_GpuShader* sdl_shader = (SDL_GpuShader*)SDL_CompileFromSPIRV(app->dev, &shaderCreateInfo, false);
+	CF_ShaderInternal* shader_internal = CF_NEW(CF_ShaderInternal);
+	CF_MEMSET(shader_internal, 0, sizeof(*shader_internal));
+	shader_internal->shader = sdl_shader;
+	afree(bytecode);
+
 	CF_Shader result;
-	result.id = { (uint64_t)0 };
+	result.id = { (uint64_t)sdl_shader };
 	return result;
 }
 
@@ -824,26 +986,43 @@ static void s_end_pass()
 	}
 }
 
-void cf_clear_color(float red, float green, float blue, float alpha)
+void cf_clear_screen(float red, float green, float blue, float alpha)
 {
-	s_clear_red = red;
-	s_clear_green = green;
-	s_clear_blue = blue;
-	s_clear_alpha = alpha;
+	SDL_GpuCommandBuffer* cmdbuf = SDL_GpuAcquireCommandBuffer(app->dev);
+	Uint32 w, h;
+	SDL_GpuTexture* swapchain_tex = SDL_GpuAcquireSwapchainTexture(cmdbuf, app->window, &w, &h);
+	if (swapchain_tex != NULL) {
+		SDL_GpuColorAttachmentInfo info = { 0 };
+		info.textureSlice.texture = swapchain_tex;
+		info.clearColor = { red, green, blue , alpha };
+		info.loadOp = SDL_GPU_LOADOP_CLEAR;
+		info.storeOp = SDL_GPU_STOREOP_STORE;
+
+		SDL_GpuRenderPass* pass = SDL_GpuBeginRenderPass(cmdbuf, &info, 1, NULL);
+		SDL_GpuEndRenderPass(pass);
+	}
+	SDL_GpuSubmit(cmdbuf);
 }
 
-void cf_clear_color2(CF_Color color)
+void cf_clear_depth_stencil(float depth, uint32_t stencil)
 {
-	s_clear_red = color.r;
-	s_clear_green = color.g;
-	s_clear_blue = color.b;
-	s_clear_alpha = color.a;
-}
+	SDL_GpuCommandBuffer* cmdbuf = SDL_GpuAcquireCommandBuffer(app->dev);
+	Uint32 w, h;
+	SDL_GpuTexture* swapchain_tex = SDL_GpuAcquireSwapchainTexture(cmdbuf, app->window, &w, &h);
+	if (swapchain_tex != NULL) {
+		SDL_GpuDepthStencilAttachmentInfo info = { 0 };
+		info.textureSlice.texture = swapchain_tex;
+		info.depthStencilClearValue.depth = depth;
+		info.depthStencilClearValue.stencil = stencil;
+		info.loadOp = SDL_GPU_LOADOP_CLEAR;
+		info.storeOp = SDL_GPU_STOREOP_STORE;
+		info.stencilLoadOp = SDL_GPU_LOADOP_CLEAR;
+		info.stencilStoreOp = SDL_GPU_STOREOP_STORE;
 
-void cf_clear_depth_stencil(float depth, float stencil)
-{
-	s_clear_depth = depth;
-	s_clear_stencil = stencil;
+		SDL_GpuRenderPass* pass = SDL_GpuBeginRenderPass(cmdbuf, NULL, 0, &info);
+		SDL_GpuEndRenderPass(pass);
+	}
+	SDL_GpuSubmit(cmdbuf);
 }
 
 void cf_apply_canvas(CF_Canvas pass_handle, bool clear)
@@ -1043,18 +1222,6 @@ void cf_commit()
 	//sg_commit();
 }
 
-void cf_clear_graphics_static_pointers()
-{
-	s_canvas = NULL;
-	s_default_canvas = NULL;
-	s_clear_red     = 0.5f;
-	s_clear_green   = 0.5f;
-	s_clear_blue    = 0.5f;
-	s_clear_alpha   = 1.0f;
-	s_clear_depth   = 1.0f;
-	s_clear_stencil = 0;
-}
-
 void cf_destroy_graphics()
 {
 	if (s_default_canvas) {
@@ -1062,3 +1229,5 @@ void cf_destroy_graphics()
 		s_default_canvas = NULL;
 	}
 }
+
+#include <SPIRV-Reflect/spirv_reflect.c>
