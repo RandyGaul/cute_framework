@@ -8,7 +8,6 @@
 #ifndef CF_GRAPHICS_INTERNAL_H
 #define CF_GRAPHICS_INTERNAL_H
 
-void cf_destroy_graphics();
-void cf_commit();
+void cf_load_internal_shaders();
 
 #endif // CF_GRAPHICS_INTERNAL_H

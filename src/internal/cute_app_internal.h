@@ -19,10 +19,12 @@
 #include <cute_input.h>
 #include <cute_string.h>
 #include <cute_image.h>
+#include <cute_file_system.h>
 
 #include <internal/cute_draw_internal.h>
 #include <internal/cute_font_internal.h>
 #include <internal/cute_ecs_internal.h>
+#include <internal/cute_graphics_internal.h>
 
 #include <SDL3/SDL.h>
 
@@ -67,6 +69,10 @@ struct CF_App
 	cs_context_t* cute_sound = NULL;
 	bool spawned_mix_thread = false;
 	CF_Threadpool* threadpool = NULL;
+	void (*on_shader_changed_fn)(const char* path, void* udata) = NULL;
+	void* on_shader_changed_udata = NULL;
+	Cute::Map<const char*, CF_Stat> shader_file_infos;
+	Cute::Map<const char*, const char*> builtin_shaders;
 	bool gfx_enabled = false;
 	float dpi_scale = 1.0f;
 	float dpi_scale_prev = 1.0f;
@@ -81,6 +87,7 @@ struct CF_App
 	CF_Canvas offscreen_canvas = { };
 	CF_Canvas backbuffer_canvas = { };
 	CF_Mesh backbuffer_quad = { };
+	CF_Shader draw_shader = { };
 	CF_Shader backbuffer_shader = { };
 	CF_Material backbuffer_material = { };
 	CF_WindowState window_state;
@@ -88,7 +95,6 @@ struct CF_App
 	bool using_imgui = false;
 	uint64_t default_image_id = CF_PNG_ID_RANGE_LO;
 	bool vsync = false;
-	bool use_gl = false;
 	bool audio_needs_updates = false;
 	void* update_udata = NULL;
 	bool canvas_blit_init = false;

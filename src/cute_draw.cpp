@@ -41,8 +41,6 @@ struct CF_Draw* draw;
 #include <algorithm>
 #include <glslang/Public/ShaderLang.h>
 
-#define DEBUG_VERT(v, c) batch_quad(make_aabb(v, 3, 3), c)
-
 // Initial design of this API comes from Noel Berry's Blah framework here:
 // https://github.com/NoelFB/blah/blob/master/include/blah_draw.h
 
@@ -60,9 +58,8 @@ SPRITEBATCH_U64 cf_generate_texture_handle(void* pixels, int w, int h, void* uda
 	CF_UNUSED(udata);
 	CF_TextureParams params = cf_texture_defaults(w, h);
 	params.filter = draw->filter;
-	params.initial_data = pixels;
-	params.initial_data_size = w * h * sizeof(CF_Pixel);
 	CF_Texture texture = cf_make_texture(params);
+	cf_update_texture(texture, pixels, w * h * sizeof(CF_Pixel));
 	return texture.id;
 }
 
@@ -371,7 +368,7 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 	}
 
 	// Map the vertex buffer with sprite vertex data.
-	cf_mesh_append_vertex_data(draw->mesh, verts, vert_count);
+	cf_mesh_update_vertex_data(draw->mesh, verts, vert_count);
 	cf_apply_mesh(draw->mesh);
 
 	// Apply the atlas texture.
@@ -379,17 +376,17 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 	cf_material_set_texture_fs(draw->material, "u_image", atlas);
 
 	// Apply uniforms.
-	//v2 u_texture_size = cf_v2((float)texture_w, (float)texture_h);
-	//cf_material_set_uniform_fs(draw->material, "fs_params", "u_texture_size", &u_texture_size, CF_UNIFORM_TYPE_FLOAT2, 1);
-	//v2 u_texel_size = cf_v2(1.0f / (float)texture_w, 1.0f / (float)texture_h);
-	//cf_material_set_uniform_fs(draw->material, "fs_params", "u_texel_size", &u_texel_size, CF_UNIFORM_TYPE_FLOAT2, 1);
+	v2 u_texture_size = cf_v2((float)texture_w, (float)texture_h);
+	cf_material_set_uniform_fs(draw->material, "u_texture_size", &u_texture_size, CF_UNIFORM_TYPE_FLOAT2, 1);
+	v2 u_texel_size = cf_v2(1.0f / (float)texture_w, 1.0f / (float)texture_h);
+	cf_material_set_uniform_fs(draw->material, "u_texel_size", &u_texel_size, CF_UNIFORM_TYPE_FLOAT2, 1);
 
 	// Apply render state.
 	cf_material_set_render_state(draw->material, draw->render_states.last());
 
 	// Kick off a draw call.
-	//cf_apply_shader(draw->shaders.last(), draw->material);
-	//cf_draw_elements();
+	cf_apply_shader(draw->shaders.last(), draw->material);
+	cf_draw_elements();
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -447,7 +444,7 @@ void cf_make_draw()
 	draw->reset_cam();
 
 	// Mesh + vertex attributes.
-	draw->mesh = cf_make_mesh(CF_USAGE_TYPE_STREAM, CF_MB * 25, 0, 0);
+	draw->mesh = cf_make_mesh(CF_MB * 5, 0);
 	CF_VertexAttribute attrs[12] = { };
 	attrs[0].name = "in_pos";
 	attrs[0].format = CF_VERTEX_FORMAT_FLOAT2;
@@ -485,7 +482,7 @@ void cf_make_draw()
 	attrs[11].name = "in_user_params";
 	attrs[11].format = CF_VERTEX_FORMAT_FLOAT4;
 	attrs[11].offset = CF_OFFSET_OF(CF_Vertex, attributes);
-	cf_mesh_set_attributes(draw->mesh, attrs, CF_ARRAY_SIZE(attrs), sizeof(CF_Vertex), 0);
+	cf_mesh_set_attributes(draw->mesh, attrs, CF_ARRAY_SIZE(attrs), sizeof(CF_Vertex));
 
 	// Shaders.
 	//draw->shaders.add(CF_MAKE_SOKOL_SHADER(sprite_shader));
@@ -2380,11 +2377,12 @@ void cf_render_settings_push_uniform_color(const char* name, CF_Color val)
 	material_set_uniform_fs(draw->material, name, &val, CF_UNIFORM_TYPE_FLOAT4, 1);
 }
 
-void cf_render_to(CF_Canvas canvas, bool clear)
+void cf_render_to(CF_Canvas canvas)
 {
 	cf_apply_canvas(canvas);
 	spritebatch_flush(&draw->sb);
 	draw->verts.clear();
+	cf_commit();
 }
 
 void cf_draw_transform(CF_M3x2 m)

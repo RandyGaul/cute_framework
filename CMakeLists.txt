@@ -345,7 +345,7 @@ if (CF_GLSLANG)
 	set(SPIRV_CROSS_C_API ON CACHE BOOL "Enable the C API")
 	set(SPIRV_CROSS_EXCEPTIONS_TO_ASSERTIONS ON CACHE BOOL "Turn off exceptions in SPIRV-Cross.")
 	FetchContent_MakeAvailable(SPIRV_CROSS)
-	set(CF_LINK_LIBS ${CF_LINK_LIBS} glslang glslang-default-resource-limits SPIRV SPIRV-Tools SPIRV-Tools-opt spirv-cross-c)
+	set(CF_LINK_LIBS ${CF_LINK_LIBS} glslang glslang-default-resource-limits SPIRV SPIRV-Tools SPIRV-Tools-opt spirv-cross-c-shared)
 endif()
 
 # Some platform specific settings.

@@ -7,7 +7,7 @@ int main(int argc, char* argv[])
 {
 	int w = 640;
 	int h = 480;
-	make_app("Development Scratch", 0, 0, 0, w, h, APP_OPTIONS_WINDOW_POS_CENTERED, argv[0]);
+	make_app("Development Scratch", 0, 0, 0, w, h, APP_OPTIONS_WINDOW_POS_CENTERED_BIT, argv[0]);
 
 	const char* vert = R"(
 		#version 450
@@ -39,14 +39,14 @@ int main(int argc, char* argv[])
 			result = color;
 		})";
 
-	CF_Shader shd = cf_make_shader(CF_SHADER_FORMAT_SPIRV, vert, frag);
+	CF_Shader shd = cf_make_shader(vert, frag);
 	CF_Material mat = cf_make_material();
 	CF_Canvas canvas = cf_make_canvas(cf_canvas_defaults(w, h));
 
-	CF_Color color = cf_color_blue();
-	CF_Color params = { 0.5f, 0.5f, 0.5f, 0.5f };
-	cf_material_set_uniform_vs(mat, "u_color", &color, CF_UNIFORM_TYPE_FLOAT4, 0);
-	cf_material_set_uniform_fs(mat, "u_params", &params, CF_UNIFORM_TYPE_FLOAT4, 0);
+	CF_Color u_color = cf_color_blue();
+	CF_Color u_params = { 0.5f, 0.5f, 0.5f, 0.5f };
+	cf_material_set_uniform_vs(mat, "u_color", &u_color, CF_UNIFORM_TYPE_FLOAT4, 0);
+	cf_material_set_uniform_fs(mat, "u_params", &u_params, CF_UNIFORM_TYPE_FLOAT4, 0);
 
 	while (app_is_running()) {
 		app_update();

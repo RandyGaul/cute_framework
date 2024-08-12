@@ -26,13 +26,6 @@
 
 #include <SDL3/SDL.h>
 
-// @TODO Needed w/SDL3?
-//#ifdef CF_WINDOWS
-//#	pragma comment (lib, "dxgi.lib")
-//#	pragma comment (lib, "d3d11.lib")
-//#	pragma comment (lib, "dxguid.lib")
-//#endif
-
 #define CUTE_SOUND_FORCE_SDL
 #include <cute/cute_sound.h>
 
@@ -112,8 +105,7 @@ CF_DisplayOrientation cf_display_orientation(int display_index)
 {
 	s_init_video();
 	SDL_DisplayOrientation orientation = SDL_GetCurrentDisplayOrientation(display_index);
-	switch (orientation)
-	{
+	switch (orientation) {
 	default:
 	case SDL_ORIENTATION_UNKNOWN: return CF_DISPLAY_ORIENTATION_UNKNOWN;
 	case SDL_ORIENTATION_LANDSCAPE: return CF_DISPLAY_ORIENTATION_LANDSCAPE;
@@ -183,7 +175,7 @@ static void s_canvas(int w, int h)
 	cf_material_set_texture_fs(app->backbuffer_material, "u_image", cf_canvas_get_target(app->offscreen_canvas));
 }
 
-CF_Result cf_make_app(const char* window_title, int display_index, int x, int y, int w, int h, int options, const char* argv0)
+CF_Result cf_make_app(const char* window_title, int display_index, int x, int y, int w, int h, CF_AppOptionFlags options, const char* argv0)
 {
 	bool use_dx11 = false;
 	bool use_metal = false;
@@ -197,17 +189,17 @@ CF_Result cf_make_app(const char* window_title, int display_index, int x, int y,
 	#elif defined(CF_EMSCRIPTEN)
 	assert(false); // Not yet available via SDL3.
 	#endif
-	bool use_gfx = (use_dx11|use_vulkan|use_metal) && !(options & APP_OPTIONS_NO_GFX);
+	bool use_gfx = (use_dx11|use_vulkan|use_metal) && !(options & APP_OPTIONS_NO_GFX_BIT);
 
 #ifdef CF_EMSCRIPTEN
 	Uint32 sdl_options = SDL_INIT_EVENTS | SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMEPAD;
 #else
 	Uint32 sdl_options = SDL_INIT_EVENTS | SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMEPAD | SDL_INIT_HAPTIC;
-	if (options & APP_OPTIONS_NO_GFX) {
+	if (options & APP_OPTIONS_NO_GFX_BIT) {
 		sdl_options &= ~SDL_INIT_VIDEO;
 	}
 #endif
-	if (!(options & APP_OPTIONS_NO_AUDIO)) {
+	if (!(options & APP_OPTIONS_NO_AUDIO_BIT)) {
 		SDL_Init(SDL_INIT_AUDIO);
 	}
 
@@ -239,9 +231,9 @@ CF_Result cf_make_app(const char* window_title, int display_index, int x, int y,
 
 	Uint32 flags = 0;
 	if (use_metal) flags |= SDL_WINDOW_METAL;
-	if (options & APP_OPTIONS_FULLSCREEN) flags |= SDL_WINDOW_FULLSCREEN;
-	if (options & APP_OPTIONS_RESIZABLE) flags |= SDL_WINDOW_RESIZABLE;
-	if (options & APP_OPTIONS_HIDDEN) flags |= (SDL_WINDOW_HIDDEN | SDL_WINDOW_MINIMIZED);
+	if (options & APP_OPTIONS_FULLSCREEN_BIT) flags |= SDL_WINDOW_FULLSCREEN;
+	if (options & APP_OPTIONS_RESIZABLE_BIT) flags |= SDL_WINDOW_RESIZABLE;
+	if (options & APP_OPTIONS_HIDDEN_BIT) flags |= (SDL_WINDOW_HIDDEN | SDL_WINDOW_MINIMIZED);
 
 	SDL_Window* window;
 	SDL_PropertiesID props = SDL_CreateProperties();
@@ -249,7 +241,7 @@ CF_Result cf_make_app(const char* window_title, int display_index, int x, int y,
 	SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER, w);
 	SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER, h);
 	SDL_SetNumberProperty(props, "flags", flags);
-	if (options & APP_OPTIONS_WINDOW_POS_CENTERED) {
+	if (options & APP_OPTIONS_WINDOW_POS_CENTERED_BIT) {
 		SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_X_NUMBER, SDL_WINDOWPOS_CENTERED_DISPLAY(display_index));
 		SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_Y_NUMBER, SDL_WINDOWPOS_CENTERED_DISPLAY(display_index));
 	} else {
@@ -273,6 +265,7 @@ CF_Result cf_make_app(const char* window_title, int display_index, int x, int y,
 		app->device = device;
 		SDL_GpuClaimWindow(app->device, app->window, SDL_GPU_SWAPCHAINCOMPOSITION_SDR, SDL_GPU_PRESENTMODE_IMMEDIATE);
 		cf_make_draw();
+		cf_load_internal_shaders();
 	}
 
 #ifdef CF_WINDOWS
@@ -287,7 +280,7 @@ CF_Result cf_make_app(const char* window_title, int display_index, int x, int y,
 	if (app->gfx_enabled) {
 		// Setup the backbuffer fullscreen mesh and canvas.
 		{
-			app->backbuffer_quad = cf_make_mesh(CF_USAGE_TYPE_IMMUTABLE, sizeof(Vertex) * 6, 0, 0);
+			app->backbuffer_quad = cf_make_mesh(sizeof(Vertex) * 6, 0);
 			CF_VertexAttribute attrs[2] = { };
 			attrs[0].name = "in_pos";
 			attrs[0].format = CF_VERTEX_FORMAT_FLOAT2;
@@ -295,7 +288,7 @@ CF_Result cf_make_app(const char* window_title, int display_index, int x, int y,
 			attrs[1].name = "in_uv";
 			attrs[1].format = CF_VERTEX_FORMAT_FLOAT2;
 			attrs[1].offset = CF_OFFSET_OF(Vertex, u);
-			cf_mesh_set_attributes(app->backbuffer_quad, attrs, CF_ARRAY_SIZE(attrs), sizeof(Vertex), 0);
+			cf_mesh_set_attributes(app->backbuffer_quad, attrs, CF_ARRAY_SIZE(attrs), sizeof(Vertex));
 			Vertex quad[6];
 			s_quad(0, 0, 2, -2, quad); // Flip y-axis to achieve uv as (0,0) for bottom-left of screen.
 			cf_mesh_update_vertex_data(app->backbuffer_quad, quad, 6);
@@ -323,7 +316,7 @@ CF_Result cf_make_app(const char* window_title, int display_index, int x, int y,
 		make_font_from_memory(calibri_data, calibri_sz, "Calibri");
 	}
 
-	if (!(options & APP_OPTIONS_NO_AUDIO)) {
+	if (!(options & APP_OPTIONS_NO_AUDIO_BIT)) {
 		int more_on_emscripten = 1;
 	#ifdef CF_EMSCRIPTEN
 		more_on_emscripten = 4;
@@ -352,7 +345,7 @@ CF_Result cf_make_app(const char* window_title, int display_index, int x, int y,
 	CF_Result err = cf_fs_init(argv0);
 	if (cf_is_error(err)) {
 		CF_ASSERT(0);
-	} else if (!(options & APP_OPTIONS_FILE_SYSTEM_DONT_DEFAULT_MOUNT)) {
+	} else if (!(options & APP_OPTIONS_FILE_SYSTEM_DONT_DEFAULT_MOUNT_BIT)) {
 		// Put the base directory (the path to the exe) onto the file system search path.
 		cf_fs_mount(cf_fs_get_base_directory(), "", true);
 	}
@@ -374,8 +367,6 @@ void cf_destroy_app()
 		app->using_imgui = false;
 	}
 	if (app->gfx_enabled) {
-		// @TODO
-		//sg_end_pass();
 		cf_destroy_draw();
 		cf_destroy_canvas(app->offscreen_canvas);
 		cf_destroy_canvas(app->backbuffer_canvas);
@@ -387,10 +378,6 @@ void cf_destroy_app()
 			cf_destroy_material(app->blit_material);
 			cf_destroy_shader(app->blit_shader);
 		}
-		cf_destroy_graphics();
-		// @TODO
-		//sg_shutdown();
-		//cf_dx11_shutdown();
 	}
 	cf_destroy_aseprite_cache();
 	cf_destroy_png_cache();
@@ -510,16 +497,16 @@ int cf_app_draw_onto_screen(bool clear)
 	}
 
 	// Render any remaining geometry in the draw API.
-	cf_render_to(app->offscreen_canvas, clear);
+	cf_render_to(app->offscreen_canvas);
 
 	// Stretch the app canvas onto the backbuffer canvas.
 	cf_apply_canvas(app->backbuffer_canvas);
 	{
 		cf_apply_mesh(app->backbuffer_quad);
 		// @TODO
-		//cf_apply_shader(app->backbuffer_shader, app->backbuffer_material);
 		v2 u_texture_size = V2((float)app->w, (float)app->h);
-		//cf_material_set_uniform_fs(app->backbuffer_material, "fs_params", "u_texture_size", &u_texture_size, CF_UNIFORM_TYPE_FLOAT2, 1);
+		cf_material_set_uniform_fs(app->backbuffer_material, "u_texture_size", &u_texture_size, CF_UNIFORM_TYPE_FLOAT2, 1);
+		cf_apply_shader(app->backbuffer_shader, app->backbuffer_material);
 		cf_draw_elements();
 	}
 
@@ -541,12 +528,6 @@ int cf_app_draw_onto_screen(bool clear)
 
 	// Flip to screen.
 	cf_commit();
-	// @TODO
-	//cf_dx11_present(app->vsync);
-	//cf_metal_present(app->vsync);
-	if (app->use_gl) {
-		SDL_GL_SwapWindow(app->window);
-	}
 
 	// Clear all pushed draw parameters.
 	draw->colors.set_count(1);
@@ -713,7 +694,6 @@ CF_Canvas cf_app_get_canvas()
 
 void cf_app_set_canvas_size(int w, int h)
 {
-	unapply_canvas();
 	s_canvas(w, h);
 }
 

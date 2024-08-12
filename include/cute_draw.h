@@ -1435,13 +1435,12 @@ CF_V2 cf_screen_to_world(CF_V2 point);
  * @category draw
  * @brief    Renders to a `CF_Canvas`.
  * @param    canvas     The canvas to render to.
- * @param    clear      True to clear the canvas's previous contents, false otherwise.
  * @remarks  This is advanced function. It's useful for off-screen rendering for certain rendering effects, such as multi-pass
  *           effects like reflections, or advanced lighting techniques. By default, everything will get renderered to the app's
  *           canvas, so this function is not necessary to call at all. Instead, calling `cf_app_draw_onto_screen` should be the go-to.
  * @related  cf_draw_scale cf_draw_translate cf_draw_rotate cf_draw_push cf_draw_pop cf_app_draw_onto_screen cf_render_to
  */
-CF_API void CF_CALL cf_render_to(CF_Canvas canvas, bool clear);
+CF_API void CF_CALL cf_render_to(CF_Canvas canvas);
 
 /**
  * @struct   CF_TemporaryImage
@@ -1722,7 +1721,7 @@ CF_INLINE void draw_projection(M3x2 projection) { cf_draw_projection(projection)
 CF_INLINE v2 world_to_screen(v2 point) { return cf_world_to_screen(point); }
 CF_INLINE v2 screen_to_world(v2 point) { return cf_screen_to_world(point); }
 
-CF_INLINE void render_to(CF_Canvas canvas, bool clear = false) { cf_render_to(canvas, clear); }
+CF_INLINE void render_to(CF_Canvas canvas) { cf_render_to(canvas); }
 
 CF_INLINE TemporaryImage fetch_image(const CF_Sprite* sprite) { return cf_fetch_image(sprite); }
 CF_INLINE TemporaryImage fetch_image(const CF_Sprite& sprite) { return cf_fetch_image(&sprite); }

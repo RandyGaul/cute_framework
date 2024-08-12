@@ -8,6 +8,7 @@
 #include <cute_defines.h>
 #include <cute_c_runtime.h>
 #include <cute_graphics.h>
+#include <cute_file_system.h>
 
 #include <internal/cute_alloc_internal.h>
 #include <internal/cute_app_internal.h>
@@ -28,6 +29,373 @@ static CF_CanvasInternal* s_default_canvas = NULL;
 #include <float.h>
 
 using namespace Cute;
+
+const char* s_gamma = R"(
+	vec4 gamma(vec4 c)
+	{
+		return vec4(pow(abs(c.rgb), vec3(1.0/2.2)), c.a);
+	}
+
+	vec4 de_gamma(vec4 c)
+	{
+		return vec4(pow(abs(c.rgb), vec3(2.2)), c.a);
+	}
+)";
+
+const char* s_blend = R"(
+	// HSV <-> RGB from : http://lolengine.net/blog/2013/07/27/rgb-to-hsv-in-glsl
+	// And https://www.shadertoy.com/view/MsS3Wc
+
+	vec3 rgb_to_hsv(vec3 c)
+	{
+		vec4 K = vec4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);
+		vec4 p = c.g < c.b ? vec4(c.bg, K.wz) : vec4(c.gb, K.xy);
+		vec4 q = c.r < p.x ? vec4(p.xyw, c.r) : vec4(c.r, p.yzx);
+		float d = q.x - min(q.w, q.y);
+		float e = 1.0e-10;
+		return vec3(abs(q.z + (q.w - q.y) / (6.0 * d + e)), d / (q.x + e), q.x);
+	}
+
+	vec3 hsv_to_rgb(vec3 c)
+	{
+		vec3 rgb = clamp(abs(mod(c.x*6.0+vec3(0.0,4.0,2.0),6.0)-3.0)-1.0, 0.0, 1.0);
+		rgb = rgb*rgb*(3.0-2.0*rgb);
+		return c.z * mix(vec3(1.0), rgb, c.y);
+	}
+
+	vec3 hue(vec3 base, vec3 tint)
+	{
+		base = rgb_to_hsv(base);
+		tint = rgb_to_hsv(tint);
+		return hsv_to_rgb(vec3(tint.r, base.gb));
+	}
+
+	vec4 hue(vec4 base, vec4 tint)
+	{
+		return vec4(hue(base.rgb, tint.rgb), base.a);
+	}
+
+	float overlay(float base, float blend)
+	{
+		return (base <= 0.5) ? 2*base * blend : 1-2*(1-base) * (1-blend);
+	}
+
+	vec3 overlay(vec3 base, vec3 blend)
+	{
+		return vec3(overlay(base.r, blend.r), overlay(base.g, blend.g), overlay(base.b, blend.b));
+	}
+
+	vec4 overlay(vec4 base, vec4 blend)
+	{
+		return vec4(overlay(base.rgb, blend.rgb), base.a);
+	}
+
+	float softlight(float base, float blend)
+	{
+		if (blend <= 0.5) return base - (1-2*blend)*base*(1-base);
+		else return base + (2.0 * blend - 1) * (((base <= 0.25) ? ((16.0 * base - 12.0) * base + 4.0) * base : sqrt(base)) - base);
+	}
+
+	vec3 softlight(vec3 base, vec3 blend)
+	{
+		return vec3(softlight(base.r, blend.r), softlight(base.g, blend.g), softlight(base.b, blend.b));
+	}
+
+	vec4 softlight(vec4 base, vec4 blend)
+	{
+		return vec4(softlight(base.rgb, blend.rgb), base.a);
+	}
+)";
+
+const char* s_distance = R"(
+	float safe_div(float a, float b)
+	{
+		return b == 0.0 ? 0.0 : a / b;
+	}
+
+	float safe_len(vec2 v)
+	{
+		float d = dot(v,v);
+		return d == 0.0 ? 0.0 : sqrt(d);
+	}
+
+	vec2 safe_norm(vec2 v, float l)
+	{
+		return mix(vec2(0), v / l, l == 0.0 ? 0.0 : 1.0);
+	}
+
+	vec2 skew(vec2 v)
+	{
+		return vec2(-v.y, v.x);
+	}
+
+	float det2(vec2 a, vec2 b)
+	{
+		return a.x * b.y - a.y * b.x;
+	}
+
+	float sdf_stroke(float d)
+	{
+		return abs(d) - v_stroke;
+	}
+
+	float sdf_intersect(float a, float b)
+	{
+		return max(a, b);
+	}
+
+	float sdf_union(float a, float b)
+	{
+		return min(a, b);
+	}
+
+	float sdf_subtract(float d0, float d1)
+	{
+		return max(d0, -d1);
+	}
+
+	float dd(float d)
+	{
+		return length(vec2(dFdx(d), dFdy(d)));
+	}
+
+	vec4 sdf(vec4 a, vec4 b, float d)
+	{
+		float wire_d = sdf_stroke(d);
+		vec4 stroke_aa = mix(b, a, smoothstep(0.0, v_aa, wire_d));
+		vec4 stroke_no_aa = wire_d <= 0.0 ? b : a;
+
+		vec4 fill_aa = mix(b, a, smoothstep(0.0, v_aa, d));
+		vec4 fill_no_aa = clamp(d, -1.0, 1.0) <= 0.0 ? b : a;
+
+		vec4 stroke = mix(stroke_aa, stroke_aa, v_aa > 0.0 ? 1.0 : 0.0);
+		vec4 fill = mix(fill_no_aa, fill_aa, v_aa > 0.0 ? 1.0 : 0.0);
+
+		result = mix(stroke, fill, v_fill);
+		return result;
+	}
+
+	float distance_aabb(vec2 p, vec2 he)
+	{
+		vec2 d = abs(p) - he;
+		return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0);
+	}
+
+	float distance_box(vec2 p, vec2 c, vec2 he, vec2 u)
+	{
+		mat2 m = transpose(mat2(u, skew(u)));
+		p = p - c;
+		p = m * p;
+		return distance_aabb(p, he);
+	}
+
+	// Referenced from: https://www.shadertoy.com/view/3tdSDj
+	float distance_segment(vec2 p, vec2 a, vec2 b)
+	{
+		vec2 n = b - a;
+		vec2 pa = p - a;
+		float d = safe_div(dot(pa,n), dot(n,n));
+		float h = clamp(d, 0.0, 1.0);
+		return safe_len(pa - h * n);
+	}
+
+	// Referenced from: https://www.shadertoy.com/view/XsXSz4
+	float distance_triangle(vec2 p, vec2 a, vec2 b, vec2 c)
+	{
+		vec2 e0 = b - a;
+		vec2 e1 = c - b;
+		vec2 e2 = a - c;
+
+		vec2 v0 = p - a;
+		vec2 v1 = p - b;
+		vec2 v2 = p - c;
+
+		vec2 pq0 = v0 - e0 * clamp(safe_div(dot(v0, e0), dot(e0, e0)), 0.0, 1.0);
+		vec2 pq1 = v1 - e1 * clamp(safe_div(dot(v1, e1), dot(e1, e1)), 0.0, 1.0);
+		vec2 pq2 = v2 - e2 * clamp(safe_div(dot(v2, e2), dot(e2, e2)), 0.0, 1.0);
+
+		float s = det2(e0, e2);
+		vec2 d = min(min(vec2(dot(pq0, pq0), s * det2(v0, e0)),
+						 vec2(dot(pq1, pq1), s * det2(v1, e1))),
+						 vec2(dot(pq2, pq2), s * det2(v2, e2)));
+
+		return -sqrt(d.x) * sign(d.y);
+	}
+)";
+
+const char* s_smooth_uv = R"(
+	vec2 smooth_uv(vec2 uv, vec2 texture_size)
+	{
+		vec2 pixel = uv * texture_size;
+		vec2 seam = floor(pixel + 0.5);
+		pixel = seam + clamp((pixel - seam) / fwidth(pixel), -0.5, 0.5);
+		return pixel / texture_size;
+	}
+)";
+
+const char* s_shader_stub = R"(
+	vec4 shader(vec4 color, vec2 pos, vec2 atlas_uv, vec2 screen_uv, vec4 params)
+	{
+		return color;
+	}
+)";
+
+const char* s_draw_vs = R"(
+	layout (location = 0) in vec2 in_pos;
+	layout (location = 1) in vec2 in_posH;
+	layout (location = 2) in vec2 in_a;
+	layout (location = 3) in vec2 in_b;
+	layout (location = 4) in vec2 in_c;
+	layout (location = 5) in vec2 in_uv;
+	layout (location = 6) in vec4 in_col;
+	layout (location = 7) in float in_radius;
+	layout (location = 8) in float in_stroke;
+	layout (location = 9) in float in_aa;
+	layout (location = 10) in vec4 in_params;
+	layout (location = 11) in vec4 in_user_params;
+
+	layout (location = 0) out vec2 v_pos;
+	layout (location = 1) out vec2 v_a;
+	layout (location = 2) out vec2 v_b;
+	layout (location = 3) out vec2 v_c;
+	layout (location = 4) out vec2 v_uv;
+	layout (location = 5) out vec4 v_col;
+	layout (location = 6) out float v_radius;
+	layout (location = 7) out float v_stroke;
+	layout (location = 8) out float v_aa;
+	layout (location = 9) out float v_type;
+	layout (location = 10) out float v_alpha;
+	layout (location = 11) out float v_fill;
+	layout (location = 12) out vec2 v_posH;
+	layout (location = 13) out vec4 v_user;
+
+	layout (binding = 0) uniform uniform_block {
+		vec2 u_cam_pos;
+		vec2 u_cam_scale;
+		float u_cam_angle;
+	};
+
+	void main()
+	{
+		v_pos = in_pos;
+		v_a = in_a;
+		v_b = in_b;
+		v_c = in_c;
+		v_uv = in_uv;
+		v_col = in_col;
+		v_radius = in_radius;
+		v_stroke = in_stroke;
+		v_aa = in_aa;
+		v_type = in_params.r;
+		v_alpha = in_params.g;
+		v_fill = in_params.b;
+		// = in_params.a;
+
+		vec4 posH = vec4(in_posH, 0, 1);
+		gl_Position = posH;
+		v_posH = in_posH;
+		v_user = in_user_params;
+	}
+)";
+
+const char* s_draw_fs = R"(
+	layout (location = 0) in vec2 v_pos;
+	layout (location = 1) in vec2 v_a;
+	layout (location = 2) in vec2 v_b;
+	layout (location = 3) in vec2 v_c;
+	layout (location = 4) in vec2 v_uv;
+	layout (location = 5) in vec4 v_col;
+	layout (location = 6) in float v_radius;
+	layout (location = 7) in float v_stroke;
+	layout (location = 8) in float v_aa;
+	layout (location = 9) in float v_type;
+	layout (location = 10) in float v_alpha;
+	layout (location = 11) in float v_fill;
+	layout (location = 12) in vec2 v_posH;
+	layout (location = 13) in vec4 v_user;
+
+	out vec4 result;
+
+	layout (binding = 0) uniform sampler2D u_image;
+
+	layout (binding = 0) uniform uniform_block {
+		vec2 u_texture_size;
+	};
+
+	#include "blend.shd"
+	#include "gamma.shd"
+	#include "smooth_uv.shd"
+	#include "shader_stub.shd"
+
+	void main()
+	{
+		bool is_sprite  = v_type >= (0.0/255.0) && v_type < (0.5/255.0);
+		bool is_text    = v_type >  (0.5/255.0) && v_type < (1.5/255.0);
+		bool is_box     = v_type >  (1.5/255.0) && v_type < (2.5/255.0);
+		bool is_seg     = v_type >  (2.5/255.0) && v_type < (3.5/255.0);
+		bool is_tri     = v_type >  (3.5/255.0) && v_type < (4.5/255.0);
+		bool is_tri_sdf = v_type >  (4.5/255.0) && v_type < (5.5/255.0);
+
+		// Traditional sprite/text/tri cases.
+		vec4 c = vec4(0);
+		c = !(is_sprite && is_text) ? de_gamma(texture(u_image, smooth_uv(v_uv, u_texture_size))) : c;
+		c = is_sprite ? gamma(overlay(c, v_col)) : c;
+		c = is_text ? v_col * c.a : c;
+		c = is_tri ? v_col : c;
+
+		// SDF cases.
+		float d = 0;
+		if (is_box) {
+			d = distance_box(v_pos, v_a, v_b, v_c);
+		} else if (is_seg) {
+			d = distance_segment(v_pos, v_a, v_b);
+			d = min(d, distance_segment(v_pos, v_b, v_c));
+		} else if (is_tri_sdf) {
+			d = distance_triangle(v_pos, v_a, v_b, v_c);
+		}
+		c = (!is_sprite && !is_text && !is_tri) ? sdf(c, v_col, d - v_radius) : c;
+
+		c *= v_alpha;
+		vec2 screen_position = (v_posH + vec2(1,1)) * 0.5;
+		c = shader(c, v_pos, v_uv, screen_position, v_user);
+		if (c.a == 0) discard;
+		result = c;
+	}
+)";
+
+const char* s_backbuffer_vs = R"(
+	layout (location = 0) in vec2 in_pos;
+	layout (location = 1) in vec2 in_uv;
+
+	layout (location = 0) out vec2 uv;
+
+	void main()
+	{
+		vec4 posH = vec4(in_pos, 0, 1);
+		uv = in_uv;
+		gl_Position = posH;
+	}
+)";
+
+const char* s_backbuffer_fs = R"(
+	layout (location = 0) in vec2 uv;
+
+	out vec4 result;
+
+	layout (binding = 0) uniform sampler2D u_image;
+
+	layout (binding = 0) uniform uniform_block {
+		vec2 u_texture_size;
+	};
+
+	#include "smooth_uv.shd"
+
+	void main()
+	{
+		vec4 color = texture(u_image, smooth_uv(uv, u_texture_size));
+		result = color;
+	}
+)";
 
 typedef enum CF_ShaderInputFormat
 {
@@ -111,23 +479,18 @@ struct CF_ShaderInternal
 
 struct CF_Buffer
 {
-	bool was_appended;
 	int element_count;
 	int size;
-	int offset;
+	//int offset; // @TODO Unused for now as SDL_Gpu has no way to stream map'd portions of buffers.
 	int stride;
-	//sg_buffer handle;
+	SDL_GpuBuffer* buffer;
+	SDL_GpuTransferBuffer* transfer_buffer;
 };
 
 struct CF_MeshInternal
 {
-	//sg_usage usage;
-	bool need_vertex_sync;
-	bool need_index_sync;
-	bool need_instance_sync;
 	CF_Buffer vertices;
 	CF_Buffer indices;
-	CF_Buffer instances;
 	int attribute_count;
 	CF_VertexAttribute attributes[CF_MESH_MAX_VERTEX_ATTRIBUTES];
 };
@@ -138,129 +501,251 @@ struct CF_CanvasInternal
 	CF_Texture cf_depth_stencil;
 	SDL_GpuTexture* texture;
 	SDL_GpuTexture* depth_stencil;
-	CF_MeshInternal* mesh;
 
+	// These get set by cf_apply_* functions.
+	CF_MeshInternal* mesh;
 	SDL_GpuGraphicsPipeline* pip;
 	SDL_GpuRenderPass* pass;
 	SDL_GpuCommandBuffer* cmd;
 };
 
+struct CF_TextureInternal
+{
+	int w, h;
+	SDL_GpuFilter filter;
+	SDL_GpuTexture* tex;
+	SDL_GpuSampler* sampler;
+};
+
 CF_BackendType cf_query_backend()
 {
-	//sg_backend backend = sg_query_backend();
 	return BACKEND_TYPE_D3D11;
 }
-
-bool cf_query_pixel_format(CF_PixelFormat format, CF_PixelFormatOp op)
-{
-	//sg_pixel_format sgfmt = SG_PIXELFORMAT_NONE;
-	//switch (format) {
-	//case CF_PIXELFORMAT_DEFAULT: sgfmt = _SG_PIXELFORMAT_DEFAULT; break;
-	//default:                  sgfmt = s_wrap(format);          break;
-	//}
-	//
-	//sg_pixelformat_info info = sg_query_pixelformat(sgfmt);
-	//bool result = false;
-	//
-	//switch (op) {
-	//case CF_PIXELFORMAT_OP_NEAREST_FILTER:  result = info.sample; break;
-	//case CF_PIXELFORMAT_OP_BILINEAR_FILTER: result = info.filter; break;
-	//case CF_PIXELFORMAT_OP_RENDER_TARGET:   result = info.render; break;
-	//case CF_PIXELFORMAT_OP_ALPHA_BLENDING:  result = info.blend;  break;
-	//case CF_PIXELFORMAT_OP_MSAA:            result = info.msaa;   break;
-	//case CF_PIXELFORMAT_OP_DEPTH:           result = info.depth;  break;
-	//}
-
-	return false;
-}
-
-//bool cf_query_device_feature(CF_DeviceFeature feature)
-//{
-//	sg_features sgf = sg_query_features();
-//	bool result = false;
-//	switch (feature) {
-//	case CF_DEVICE_FEATURE_TEXTURE_CLAMP:    result = sgf.image_clamp_to_border;       break;
-//	}
-//	return result;
-//}
-
-//int cf_query_resource_limit(CF_ResourceLimit resource_limit)
-//{
-//	sg_limits sgl = sg_query_limits();
-//	int result = 0;
-//	switch (resource_limit) {
-//	case CF_RESOURCE_LIMIT_TEXTURE_DIMENSION:       result = sgl.max_image_size_2d; break;
-//	case CF_RESOURCE_LIMIT_VERTEX_ATTRIBUTE_MAX:    result = sgl.max_vertex_attrs; break;
-//	}
-//	return result;
-//}
 
 CF_TextureParams cf_texture_defaults(int w, int h)
 {
 	CF_TextureParams params;
-	params.pixel_format = CF_PIXELFORMAT_DEFAULT;
+	params.pixel_format = CF_PIXEL_FORMAT_R8G8B8A8;
 	params.filter = CF_FILTER_NEAREST;
-	params.usage = CF_USAGE_TYPE_IMMUTABLE;
-	params.wrap_u = CF_WRAP_MODE_DEFAULT;
-	params.wrap_v = CF_WRAP_MODE_DEFAULT;
+	params.usage = CF_TEXTURE_USAGE_SAMPLER_BIT;
+	params.wrap_u = CF_WRAP_MODE_REPEAT;
+	params.wrap_v = CF_WRAP_MODE_REPEAT;
 	params.width = w;
 	params.height = h;
-	params.render_target = false;
-	params.initial_data = NULL;
-	params.initial_data_size = 0;
 	return params;
 }
 
-CF_Texture cf_make_texture(CF_TextureParams texture_params)
+SDL_GpuSamplerCreateInfo SDL_GpuSamplerCreateInfoDefaults()
 {
-	SDL_GpuTextureCreateInfo tex_info;
-	CF_MEMSET(&tex_info, 0, sizeof(tex_info));
-	tex_info.width = (Uint32)texture_params.width;
-	tex_info.height = (Uint32)texture_params.height;
-	tex_info.sampleCount = SDL_GPU_SAMPLECOUNT_1;
-
-	// WORKING HERE.
-
-	SDL_GpuCreateTexture(app->device, &tex_info);
-	//sg_image_desc desc;
-	//CF_MEMSET(&desc, 0, sizeof(desc));
-	//desc.type = SG_IMAGETYPE_2D;
-	//desc.render_target = texture_params.render_target;
-	//desc.width = texture_params.width;
-	//desc.height = texture_params.height;
-	//desc.num_slices = 0;
-	//desc.num_mipmaps = 0;
-	//desc.usage = s_wrap(texture_params.usage);
-	//desc.pixel_format = s_wrap(texture_params.pixel_format);
-	//desc.min_filter = s_wrap(texture_params.filter);
-	//desc.mag_filter = s_wrap(texture_params.filter);
-	//desc.wrap_u = s_wrap(texture_params.wrap_u);
-	//desc.wrap_v = s_wrap(texture_params.wrap_v);
-	//desc.wrap_w = s_wrap(texture_params.wrap_v);
-	//desc.border_color = _SG_BORDERCOLOR_DEFAULT;
-	//desc.max_anisotropy = 1;
-	//desc.min_lod = 0;
-	//desc.max_lod = FLT_MAX;
-	//desc.data.subimage[0][0].ptr = texture_params.initial_data;
-	//desc.data.subimage[0][0].size = texture_params.initial_data_size;
-	//sg_image sgi = sg_make_image(desc);
-	CF_Texture texture = { 0 };
-	return texture;
+	SDL_GpuSamplerCreateInfo samplerInfo;
+	CF_MEMSET(&samplerInfo, 0, sizeof(samplerInfo));
+	samplerInfo.minFilter = SDL_GPU_FILTER_NEAREST;
+	samplerInfo.magFilter = SDL_GPU_FILTER_NEAREST;
+	samplerInfo.mipmapMode = SDL_GPU_SAMPLERMIPMAPMODE_LINEAR;
+	samplerInfo.addressModeU = SDL_GPU_SAMPLERADDRESSMODE_REPEAT;
+	samplerInfo.addressModeV = SDL_GPU_SAMPLERADDRESSMODE_REPEAT;
+	samplerInfo.addressModeW = SDL_GPU_SAMPLERADDRESSMODE_REPEAT;
+	samplerInfo.mipLodBias = 0.0f;
+	samplerInfo.anisotropyEnable = SDL_FALSE;
+	samplerInfo.maxAnisotropy = 1.0f;
+	samplerInfo.compareEnable = SDL_FALSE;
+	samplerInfo.compareOp = SDL_GPU_COMPAREOP_ALWAYS;
+	samplerInfo.minLod = 0.0f;
+	samplerInfo.maxLod = FLT_MAX;
+	return samplerInfo;
 }
 
-void cf_destroy_texture(CF_Texture texture)
+static SDL_GpuTextureFormat s_wrap(CF_PixelFormat format)
 {
-	//sg_image sgi = { (uint32_t)texture.id };
-	//sg_destroy_image(sgi);
+	switch (format) {
+	case CF_PIXEL_FORMAT_INVALID:              return SDL_GPU_TEXTUREFORMAT_INVALID;
+	case CF_PIXEL_FORMAT_R8G8B8A8:             return SDL_GPU_TEXTUREFORMAT_R8G8B8A8;
+	case CF_PIXEL_FORMAT_B8G8R8A8:             return SDL_GPU_TEXTUREFORMAT_B8G8R8A8;
+	case CF_PIXEL_FORMAT_B5G6R5:               return SDL_GPU_TEXTUREFORMAT_B5G6R5;
+	case CF_PIXEL_FORMAT_B5G5R5A1:             return SDL_GPU_TEXTUREFORMAT_B5G5R5A1;
+	case CF_PIXEL_FORMAT_B4G4R4A4:             return SDL_GPU_TEXTUREFORMAT_B4G4R4A4;
+	case CF_PIXEL_FORMAT_R10G10B10A2:          return SDL_GPU_TEXTUREFORMAT_R10G10B10A2;
+	case CF_PIXEL_FORMAT_R16G16:               return SDL_GPU_TEXTUREFORMAT_R16G16;
+	case CF_PIXEL_FORMAT_R16G16B16A16:         return SDL_GPU_TEXTUREFORMAT_R16G16B16A16;
+	case CF_PIXEL_FORMAT_R8:                   return SDL_GPU_TEXTUREFORMAT_R8;
+	case CF_PIXEL_FORMAT_A8:                   return SDL_GPU_TEXTUREFORMAT_A8;
+	case CF_PIXEL_FORMAT_R8_UINT:              return SDL_GPU_TEXTUREFORMAT_R8_UINT;
+	case CF_PIXEL_FORMAT_R8G8_UINT:            return SDL_GPU_TEXTUREFORMAT_R8G8_UINT;
+	case CF_PIXEL_FORMAT_R8G8B8A8_UINT:        return SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UINT;
+	case CF_PIXEL_FORMAT_R16_UINT:             return SDL_GPU_TEXTUREFORMAT_R16_UINT;
+	case CF_PIXEL_FORMAT_R16G16_UINT:          return SDL_GPU_TEXTUREFORMAT_R16G16_UINT;
+	case CF_PIXEL_FORMAT_R16G16B16A16_UINT:    return SDL_GPU_TEXTUREFORMAT_R16G16B16A16_UINT;
+	case CF_PIXEL_FORMAT_BC1:                  return SDL_GPU_TEXTUREFORMAT_BC1;
+	case CF_PIXEL_FORMAT_BC2:                  return SDL_GPU_TEXTUREFORMAT_BC2;
+	case CF_PIXEL_FORMAT_BC3:                  return SDL_GPU_TEXTUREFORMAT_BC3;
+	case CF_PIXEL_FORMAT_BC7:                  return SDL_GPU_TEXTUREFORMAT_BC7;
+	case CF_PIXEL_FORMAT_R8G8_SNORM:           return SDL_GPU_TEXTUREFORMAT_R8G8_SNORM;
+	case CF_PIXEL_FORMAT_R8G8B8A8_SNORM:       return SDL_GPU_TEXTUREFORMAT_R8G8B8A8_SNORM;
+	case CF_PIXEL_FORMAT_R16_SFLOAT:           return SDL_GPU_TEXTUREFORMAT_R16_SFLOAT;
+	case CF_PIXEL_FORMAT_R16G16_SFLOAT:        return SDL_GPU_TEXTUREFORMAT_R16G16_SFLOAT;
+	case CF_PIXEL_FORMAT_R16G16B16A16_SFLOAT:  return SDL_GPU_TEXTUREFORMAT_R16G16B16A16_SFLOAT;
+	case CF_PIXEL_FORMAT_R32_SFLOAT:           return SDL_GPU_TEXTUREFORMAT_R32_SFLOAT;
+	case CF_PIXEL_FORMAT_R32G32_SFLOAT:        return SDL_GPU_TEXTUREFORMAT_R32G32_SFLOAT;
+	case CF_PIXEL_FORMAT_R32G32B32A32_SFLOAT:  return SDL_GPU_TEXTUREFORMAT_R32G32B32A32_SFLOAT;
+	case CF_PIXEL_FORMAT_R8G8B8A8_SRGB:        return SDL_GPU_TEXTUREFORMAT_R8G8B8A8_SRGB;
+	case CF_PIXEL_FORMAT_B8G8R8A8_SRGB:        return SDL_GPU_TEXTUREFORMAT_B8G8R8A8_SRGB;
+	case CF_PIXEL_FORMAT_BC3_SRGB:             return SDL_GPU_TEXTUREFORMAT_BC3_SRGB;
+	case CF_PIXEL_FORMAT_BC7_SRGB:             return SDL_GPU_TEXTUREFORMAT_BC7_SRGB;
+	case CF_PIXEL_FORMAT_D16_UNORM:            return SDL_GPU_TEXTUREFORMAT_D16_UNORM;
+	case CF_PIXEL_FORMAT_D24_UNORM:            return SDL_GPU_TEXTUREFORMAT_D24_UNORM;
+	case CF_PIXEL_FORMAT_D32_SFLOAT:           return SDL_GPU_TEXTUREFORMAT_D32_SFLOAT;
+	case CF_PIXEL_FORMAT_D24_UNORM_S8_UINT:    return SDL_GPU_TEXTUREFORMAT_D24_UNORM_S8_UINT;
+	case CF_PIXEL_FORMAT_D32_SFLOAT_S8_UINT:   return SDL_GPU_TEXTUREFORMAT_D32_SFLOAT_S8_UINT;
+	default:                                   return SDL_GPU_TEXTUREFORMAT_INVALID;
+	}
 }
 
-void cf_update_texture(CF_Texture texture, void* data, int size)
+static SDL_GpuTextureCreateInfo SDL_GpuTextureCreateInfoDefaults(int w, int h)
 {
-	//sg_image_data sgid = { };
-	//sgid.subimage[0][0].ptr = data;
-	//sgid.subimage[0][0].size = size;
-	//sg_image sgi = { (uint32_t)texture.id };
-	//sg_update_image(sgi, sgid);
+	SDL_GpuTextureCreateInfo createInfo;
+	CF_MEMSET(&createInfo, 0, sizeof(createInfo));
+	createInfo.width = (int)w;
+	createInfo.height = (int)h;
+	createInfo.depth = 1;
+	createInfo.isCube = SDL_FALSE;
+	createInfo.layerCount = 1;
+	createInfo.levelCount = 1;
+	createInfo.sampleCount = SDL_GPU_SAMPLECOUNT_1;
+	createInfo.format = SDL_GPU_TEXTUREFORMAT_R8G8B8A8;
+	createInfo.usageFlags = SDL_GPU_TEXTUREUSAGE_SAMPLER_BIT | SDL_GPU_TEXTUREUSAGE_COLOR_TARGET_BIT;
+	return createInfo;
+}
+
+static SDL_GpuFilter s_wrap(CF_Filter filter)
+{
+	switch (filter) {
+	default: return SDL_GPU_FILTER_NEAREST;
+	case CF_FILTER_NEAREST: return SDL_GPU_FILTER_NEAREST;
+	case CF_FILTER_LINEAR: return SDL_GPU_FILTER_LINEAR;
+	}
+}
+
+static SDL_GpuSamplerAddressMode s_wrap(CF_WrapMode mode)
+{
+	switch (mode)
+	{
+	case CF_WRAP_MODE_REPEAT:           return SDL_GPU_SAMPLERADDRESSMODE_REPEAT;
+	case CF_WRAP_MODE_CLAMP_TO_EDGE:    return SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE;
+	case CF_WRAP_MODE_MIRRORED_REPEAT:  return SDL_GPU_SAMPLERADDRESSMODE_MIRRORED_REPEAT;
+	default:                            return SDL_GPU_SAMPLERADDRESSMODE_REPEAT;
+	}
+}
+
+CF_Texture cf_make_texture(CF_TextureParams params)
+{
+	SDL_GpuTextureCreateInfo tex_info = SDL_GpuTextureCreateInfoDefaults(params.width, params.height);
+	tex_info.width = (Uint32)params.width;
+	tex_info.height = (Uint32)params.height;
+	tex_info.format = s_wrap(params.pixel_format);
+	tex_info.usageFlags = params.usage;
+	SDL_GpuTexture* tex = SDL_GpuCreateTexture(app->device, &tex_info);
+	if (!tex) return { 0 };
+
+	SDL_GpuSamplerCreateInfo sampler_info = SDL_GpuSamplerCreateInfoDefaults();
+	sampler_info.minFilter = s_wrap(params.filter);
+	sampler_info.magFilter = s_wrap(params.filter);
+	sampler_info.addressModeU = s_wrap(params.wrap_u);
+	sampler_info.addressModeV = s_wrap(params.wrap_v);
+	SDL_GpuSampler* sampler = SDL_GpuCreateSampler(app->device, &sampler_info);
+	if (!sampler) {
+		SDL_GpuReleaseTexture(app->device, tex);
+		return { 0 };
+	}
+
+	CF_TextureInternal* tex_internal = CF_NEW(CF_TextureInternal);
+	tex_internal->w = params.width;
+	tex_internal->h = params.height;
+	tex_internal->filter = sampler_info.minFilter;
+	tex_internal->tex = tex;
+	tex_internal->sampler = sampler;
+	CF_Texture result;
+	result.id = { (uint64_t)tex_internal };
+	return result;
+}
+
+void cf_destroy_texture(CF_Texture texture_handle)
+{
+	CF_TextureInternal* tex = (CF_TextureInternal*)texture_handle.id;
+	SDL_GpuReleaseTexture(app->device, tex->tex);
+	SDL_GpuReleaseSampler(app->device, tex->sampler);
+	CF_FREE(tex);
+}
+
+static SDL_GpuTextureLocation SDL_GpuTextureLocationDefaults(CF_TextureInternal* tex, float x, float y)
+{
+	SDL_GpuTextureLocation location;
+	CF_MEMSET(&location, 0, sizeof(location));
+	location.textureSlice.texture = tex->tex;
+	location.x = (Uint32)(x * tex->w);
+	location.y = (Uint32)(y * tex->h);
+	return location;
+}
+
+static SDL_GpuTextureRegion SDL_GpuTextureRegionDefaults(CF_TextureInternal* tex, float minx, float maxx, float miny, float maxy)
+{
+	SDL_GpuTextureRegion region;
+	CF_MEMSET(&region, 0, sizeof(region));
+	region.textureSlice.texture = tex->tex;
+	region.x = (Uint32)(minx * tex->w);
+	region.y = (Uint32)(miny * tex->h);
+	region.w = (Uint32)((maxx - minx) * tex->w);
+	region.h = (Uint32)((maxy - miny) * tex->h);
+	return region;
+}
+
+void cf_update_texture(CF_Texture texture_handle, void* data, int size)
+{
+	CF_TextureInternal* tex = (CF_TextureInternal*)texture_handle.id;
+
+	// Copy bytes over to the driver.
+	SDL_GpuTransferBuffer* buf = SDL_GpuCreateTransferBuffer(app->device, SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD, size);
+	uint8_t* p;
+	SDL_GpuMapTransferBuffer(app->device, buf, SDL_FALSE, (void**)&p);
+	SDL_memcpy(p, data, size);
+	SDL_GpuUnmapTransferBuffer(app->device, buf);
+
+	// Tell the driver to upload the bytes to the GPU.
+	SDL_GpuCommandBuffer* cmd = SDL_GpuAcquireCommandBuffer(app->device);
+	SDL_GpuCopyPass* pass = SDL_GpuBeginCopyPass(cmd);
+	SDL_GpuTextureTransferInfo src;
+	src.transferBuffer = buf;
+	src.offset = 0;
+	src.imagePitch = tex->w;
+	src.imageHeight = tex->h;
+	SDL_GpuTextureRegion dst = SDL_GpuTextureRegionDefaults(tex, 0, 0, 1, 1);
+	SDL_GpuUploadToTexture(pass, &src, &dst, SDL_FALSE);
+	SDL_GpuEndCopyPass(pass);
+	SDL_GpuSubmit(cmd);
+	SDL_GpuReleaseTransferBuffer(app->device, buf);
+}
+
+void cf_shader_directory(const char* path)
+{
+	Array<Path> dir = Directory::enumerate(path);
+	for (int i = 0; i < dir.size(); ++i) {
+		if (dir[i].is_directory()) {
+			cf_shader_directory(dir[i]);
+		} else {
+			CF_Stat stat;
+			fs_stat(dir[i], &stat);
+			String ext = dir[i].ext();
+			if (ext == ".vs" || ext == ".fs" || ext == ".shd") {
+				app->shader_file_infos.add(sintern(dir[i]), stat);
+			}
+		}
+	}
+}
+
+void cf_shader_on_changed(void (*on_changed_fn)(const char* path, void* udata), void* udata)
+{
+	// @TODO Implement in app.
+	app->on_shader_changed_fn = on_changed_fn;
+	app->on_shader_changed_udata = udata;
 }
 
 const dyna uint8_t* cf_compile_shader_to_bytecode(const char* shader_src, CF_ShaderStage cf_stage)
@@ -320,18 +805,6 @@ const dyna uint8_t* cf_compile_shader_to_bytecode(const char* shader_src, CF_Sha
 	return bytecode;
 }
 
-static CF_INLINE SDL_GpuShaderFormat s_wrap(CF_ShaderFormat format)
-{
-	switch (format) {
-	case CF_SHADER_FORMAT_SECRET_NDA: return SDL_GPU_SHADERFORMAT_SECRET;
-	case CF_SHADER_FORMAT_SPIRV: return SDL_GPU_SHADERFORMAT_SPIRV;
-	case CF_SHADER_FORMAT_DXBC: return SDL_GPU_SHADERFORMAT_DXBC;
-	case CF_SHADER_FORMAT_DXIL: return SDL_GPU_SHADERFORMAT_DXIL;
-	case CF_SHADER_FORMAT_MSL: return SDL_GPU_SHADERFORMAT_MSL;
-	default: return SDL_GPU_SHADERFORMAT_INVALID;
-	}
-}
-
 static CF_INLINE SDL_GpuShaderStage s_wrap(CF_ShaderStage stage)
 {
 	switch (stage) {
@@ -367,14 +840,14 @@ static CF_UniformType s_uniform_type(SpvReflectTypeDescription* type_desc)
 	case SpvOpTypeFloat: return CF_UNIFORM_TYPE_FLOAT;
 	case SpvOpTypeInt: return CF_UNIFORM_TYPE_INT;
 	case SpvOpTypeVector:
-		if (type_desc->traits.numeric.scalar.width == 32) { // Check if it's a 32-bit type
-			if (type_desc->traits.numeric.scalar.signedness == 0) { // unsigned int or float
+		if (type_desc->traits.numeric.scalar.width == 32) {
+			if (type_desc->traits.numeric.scalar.signedness == 0) {
 				switch (type_desc->traits.numeric.vector.component_count) {
-					case 2: return CF_UNIFORM_TYPE_FLOAT2; // Assuming vector is float
-					case 4: return CF_UNIFORM_TYPE_FLOAT4; // Assuming vector is float
+					case 2: return CF_UNIFORM_TYPE_FLOAT2;
+					case 4: return CF_UNIFORM_TYPE_FLOAT4;
 					default: return CF_UNIFORM_TYPE_UNKNOWN;
 				}
-			} else { // signed int
+			} else {
 				switch (type_desc->traits.numeric.vector.component_count) {
 					case 2: return CF_UNIFORM_TYPE_INT2;
 					case 4: return CF_UNIFORM_TYPE_INT4;
@@ -415,43 +888,43 @@ static SDL_GpuShader* s_compile(CF_ShaderInternal* shader_internal, const dyna u
 		SpvReflectDescriptorBinding* binding = bindings[i];
 
 		switch (binding->descriptor_type) {
-			case SPV_REFLECT_DESCRIPTOR_TYPE_SAMPLER: sampler_count++; break;
-			case SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_IMAGE: storage_texture_count++; break;
-			case SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_BUFFER: storage_buffer_count++; break;
-			case SPV_REFLECT_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
-			{
-				uniform_buffer_count++;
+		case SPV_REFLECT_DESCRIPTOR_TYPE_SAMPLER: sampler_count++; break;
+		case SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_IMAGE: storage_texture_count++; break;
+		case SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_BUFFER: storage_buffer_count++; break;
+		case SPV_REFLECT_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
+		{
+			uniform_buffer_count++;
 
-				// Grab information about the uniform block.
-				// ...This allows CF_Material to dynamically match uniforms to a shader.
-				CF_ASSERT(sequ(binding->type_description->type_name, "uniform_block"));
+			// Grab information about the uniform block.
+			// ...This allows CF_Material to dynamically match uniforms to a shader.
+			CF_ASSERT(sequ(binding->type_description->type_name, "uniform_block"));
+			if (vs) {
+				shader_internal->vs_block_size = binding->block.size;
+			} else {
+				shader_internal->fs_block_size = binding->block.size;
+			}
+			for (uint32_t i = 0; i < binding->block.member_count; ++i) {
+				const SpvReflectBlockVariable* member = &binding->block.members[i];
+				CF_UniformType uniform_type = s_uniform_type(member->type_description);
+				CF_ASSERT(uniform_type != CF_UNIFORM_TYPE_UNKNOWN);
+				int array_length = 1;
+				if (member->type_description->type_flags & SPV_REFLECT_TYPE_FLAG_ARRAY && member->type_description->traits.array.dims_count > 0) {
+					array_length = (int)member->type_description->traits.array.dims[0];
+				}
+
+				CF_UniformBlockMember block_member;
+				block_member.name = sintern(member->name);
+				block_member.type = uniform_type;
+				block_member.array_element_count = array_length;
+				block_member.size = s_uniform_size(block_member.type) * array_length;
+				block_member.offset = (int)member->offset;
 				if (vs) {
-					shader_internal->vs_block_size = binding->block.size;
+					shader_internal->vs_uniform_block_members.add(block_member);
 				} else {
-					shader_internal->fs_block_size = binding->block.size;
+					shader_internal->fs_uniform_block_members.add(block_member);
 				}
-				for (uint32_t i = 0; i < binding->block.member_count; ++i) {
-					const SpvReflectBlockVariable* member = &binding->block.members[i];
-					CF_UniformType uniform_type = s_uniform_type(member->type_description);
-					CF_ASSERT(uniform_type != CF_UNIFORM_TYPE_UNKNOWN);
-					int array_length = 1;
-					if (member->type_description->type_flags & SPV_REFLECT_TYPE_FLAG_ARRAY && member->type_description->traits.array.dims_count > 0) {
-						array_length = (int)member->type_description->traits.array.dims[0];
-					}
-
-					CF_UniformBlockMember block_member;
-					block_member.name = sintern(member->name);
-					block_member.type = uniform_type;
-					block_member.array_element_count = array_length;
-					block_member.size = s_uniform_size(block_member.type) * array_length;
-					block_member.offset = (int)member->offset;
-					if (vs) {
-						shader_internal->vs_uniform_block_members.add(block_member);
-					} else {
-						shader_internal->fs_uniform_block_members.add(block_member);
-					}
-				}
-			} break;
+			}
+		} break;
 		}
 	}
 	afree(bindings);
@@ -505,14 +978,88 @@ CF_Shader cf_make_shader_from_bytecode(const dyna uint8_t* vertex_bytecode, cons
 	return result;
 }
 
-CF_Shader cf_make_shader(CF_ShaderFormat format, const char* vertex, const char* fragment)
+// Return the index of the first #include that's not in a comment.
+static int s_find_first_include(const char *src)
 {
+	const char *in = src;
+	while (*in) {
+		if (*in == '/' && *(in + 1) == '/') {
+			in += 2;
+			while (*in && *in != '\n') {
+				in++;
+			}
+		} else if (*in == '/' && *(in + 1) == '*') {
+			in += 2;
+			while (*in && !(*in == '*' && *(in + 1) == '/')) {
+				in++;
+			}
+			if (*in) {
+				in += 2;
+			}
+		} else if (*in == '#' && !sequ(in, "#include")) {
+			return (int)(in - src);
+		} else {
+			in++;
+		}
+	}
+	return -1;
+}
+
+// Parse + perform include directives across shaders.
+static String s_include(String shd, bool builtin, const char* user_shd)
+{
+	while (1) {
+		int idx = s_find_first_include(shd);
+		if (idx < 0) break;
+
+		// Cut out the #include substring, and record the path.
+		char* s = shd + idx + 8;
+		int n = 0;
+		while (*s++ != '\n') ++n;
+		String path = String(shd + idx + 8, s).trim();
+		shd.erase(idx, n + 8);
+		path.replace("\"", "");
+		path.replace("'", "");
+
+		// Search for the shader to include.
+		if (fs_file_exists(path)) {
+			String ext = Path(path).ext();
+			if (ext == ".vs" || ext == ".fs" || ext == ".shd") {
+				const char* incl = NULL;
+				if (builtin) {
+					if (path == "shader_stub.shd") {
+						incl = user_shd ? user_shd : s_shader_stub;
+					} else {
+						incl = app->builtin_shaders.find(sintern(path));
+					}
+				} else {
+					incl = fs_read_entire_file_to_memory_and_nul_terminate(path);
+				}
+
+				// Perform the actual string inclusion.
+				if (incl) {
+					shd = String(shd, shd + idx).append(incl).append(shd + idx);
+				}
+			}
+		}
+	}
+	return shd;
+}
+
+static CF_Shader s_compile(const char* vs_src, const char* fs_src, bool builtin = false, const char* user_shd = NULL)
+{
+	// Support #include directives.
+	String vs = s_include(vs_src, builtin, user_shd);
+	String fs = s_include(fs_src, builtin, user_shd);
+
+	// Compile to bytecode.
+	const char* vertex = vs.c_str();
+	const char* fragment = fs.c_str();
 	const dyna uint8_t* vs_bytecode = cf_compile_shader_to_bytecode(vertex, CF_SHADER_STAGE_VERTEX);
 	if (!vs_bytecode) {
 		CF_Shader result = { 0 };
 		return result;
 	}
-
 	const dyna uint8_t* fs_bytecode = cf_compile_shader_to_bytecode(fragment, CF_SHADER_STAGE_FRAGMENT);
 	if (!fs_bytecode) {
 		afree(vs_bytecode);
@@ -520,14 +1067,40 @@ CF_Shader cf_make_shader(CF_ShaderFormat format, const char* vertex, const char*
 		return result;
 	}
 
+	// Create the actual shader object.
 	return cf_make_shader_from_bytecode(vs_bytecode, fs_bytecode);
 }
 
-void cf_destroy_shader(CF_Shader shader)
+void cf_load_internal_shaders()
 {
-	CF_ShaderInternal* shader_internal = (CF_ShaderInternal*)shader.id;
-	//sg_destroy_shader(shader_internal->shd);
-	CF_FREE(shader_internal);
+	// Map out all the builtin includable shaders.
+	app->builtin_shaders.add(sintern("shader_stub.shd"), s_shader_stub);
+	app->builtin_shaders.add(sintern("gamma.shd"), s_gamma);
+	app->builtin_shaders.add(sintern("distance.shd"), s_distance);
+	app->builtin_shaders.add(sintern("smooth_uv.shd"), s_smooth_uv);
+	app->builtin_shaders.add(sintern("blend.shd"), s_blend);
+
+	app->draw_shader = s_compile(s_draw_vs, s_draw_fs, true);
+	app->backbuffer_shader = s_compile(s_backbuffer_vs, s_backbuffer_fs, true);
+}
+
+CF_Shader cf_make_shader(const char* vertex_path, const char* fragment_path)
+{
+	// Make sure each file can be found.
+	const char* vs = fs_read_entire_file_to_memory_and_nul_terminate(vertex_path);
+	const char* fs = fs_read_entire_file_to_memory_and_nul_terminate(fragment_path);
+	CF_ASSERT(vs);
+	CF_ASSERT(fs);
+	return s_compile(vs, fs);
+}
+
+void cf_destroy_shader(CF_Shader shader_handle)
+{
+	CF_ShaderInternal* shd = (CF_ShaderInternal*)shader_handle.id;
+	SDL_GpuReleaseShader(app->device, shd->vs);
+	SDL_GpuReleaseShader(app->device, shd->fs);
+	shd->~CF_ShaderInternal();
+	CF_FREE(shd);
 }
 
 CF_CanvasParams cf_canvas_defaults(int w, int h)
@@ -540,48 +1113,27 @@ CF_CanvasParams cf_canvas_defaults(int w, int h)
 	} else {
 		params.name = NULL;
 		params.target = cf_texture_defaults(w, h);
-		params.target.render_target = true;
+		params.target.usage |= CF_TEXTURE_USAGE_COLOR_TARGET_BIT;
+		params.depth_stencil_enable = false;
 		params.depth_stencil_target = cf_texture_defaults(w, h);
-		params.depth_stencil_target.pixel_format = CF_PIXELFORMAT_DEPTH_STENCIL;
-		params.depth_stencil_target.render_target = true;
+		params.depth_stencil_target.pixel_format = CF_PIXEL_FORMAT_D24_UNORM_S8_UINT;
+		params.depth_stencil_target.usage = CF_TEXTURE_USAGE_DEPTH_STENCIL_TARGET_BIT;
 	}
 	return params;
 }
 
-static void s_canvas_clear_settings(CF_CanvasInternal* canvas)
-{
-	//canvas->action.colors[0].load_action = SG_LOADACTION_CLEAR;
-	//canvas->action.colors[0].clear_value.r = s_clear_red;
-	//canvas->action.colors[0].clear_value.g = s_clear_green;
-	//canvas->action.colors[0].clear_value.b = s_clear_blue;
-	//canvas->action.colors[0].clear_value.a = s_clear_alpha;
-	//canvas->action.depth.load_action = canvas->action.colors[0].load_action;
-	//canvas->action.depth.clear_value = s_clear_depth;
-	//canvas->action.stencil.load_action = canvas->action.colors[0].load_action;
-	//canvas->action.stencil.clear_value = (uint8_t)(s_clear_stencil * 255.0f);
-}
-
-CF_Canvas cf_make_canvas(CF_CanvasParams canvas_params)
+CF_Canvas cf_make_canvas(CF_CanvasParams params)
 {
 	CF_CanvasInternal* canvas = (CF_CanvasInternal*)CF_CALLOC(sizeof(CF_CanvasInternal));
-	if (canvas_params.target.width > 0 && canvas_params.target.height > 0) {
-		canvas->cf_texture = cf_make_texture(canvas_params.target);
-		canvas->cf_depth_stencil = cf_make_texture(canvas_params.depth_stencil_target);
-
-		//sg_pass_desc desc;
-		//CF_MEMSET(&desc, 0, sizeof(desc));
-		//desc.color_attachments[0].image = { (uint32_t)canvas->cf_texture.id };
-		//desc.depth_stencil_attachment.image = { (uint32_t)canvas->cf_depth_stencil.id };
-		//canvas->texture = desc.color_attachments[0].image;
-		//canvas->depth_stencil = desc.depth_stencil_attachment.image;
-		//desc.label = canvas_params.name;
-		//canvas->pass = sg_make_pass(desc);
+	if (params.target.width > 0 && params.target.height > 0) {
+		canvas->cf_texture = cf_make_texture(params.target);
+		if (params.depth_stencil_enable) {
+			canvas->cf_depth_stencil = cf_make_texture(params.depth_stencil_target);
+		} else {
+			canvas->cf_depth_stencil = { 0 };
+		}
 	} else {
-		//canvas->cf_texture.id = CF_INVALID_HANDLE;
-		//canvas->cf_depth_stencil.id = CF_INVALID_HANDLE;
-		//canvas->texture.id = SG_INVALID_ID;
-		//canvas->depth_stencil.id = SG_INVALID_ID;
-		//canvas->pass_is_default = true;
+		return { 0 };
 	}
 	CF_Canvas result;
 	result.id = (uint64_t)canvas;
@@ -591,7 +1143,40 @@ CF_Canvas cf_make_canvas(CF_CanvasParams canvas_params)
 void cf_destroy_canvas(CF_Canvas canvas_handle)
 {
 	CF_CanvasInternal* canvas = (CF_CanvasInternal*)canvas_handle.id;
+	cf_destroy_texture(canvas->cf_texture);
+	if (canvas->depth_stencil) cf_destroy_texture(canvas->cf_depth_stencil);
 	CF_FREE(canvas);
+}
+
+void cf_canvas_clear(CF_Canvas canvas_handle, float r, float g, float b, float a)
+{
+	CF_CanvasInternal* canvas = (CF_CanvasInternal*)canvas_handle.id;
+	SDL_GpuCommandBuffer* cmd = SDL_GpuAcquireCommandBuffer(app->device);
+	SDL_GpuColorAttachmentInfo info = { 0 };
+	info.textureSlice.texture = canvas->texture;
+	info.clearColor = { r, g, b , a };
+	info.loadOp = SDL_GPU_LOADOP_CLEAR;
+	info.storeOp = SDL_GPU_STOREOP_STORE;
+	SDL_GpuRenderPass* pass = SDL_GpuBeginRenderPass(cmd, &info, 1, NULL);
+	SDL_GpuEndRenderPass(pass);
+	SDL_GpuSubmit(cmd);
+}
+
+void cf_canvas_clear_depth_stencil(CF_Canvas canvas_handle, float depth, uint32_t stencil)
+{
+	CF_CanvasInternal* canvas = (CF_CanvasInternal*)canvas_handle.id;
+	SDL_GpuCommandBuffer* cmd = SDL_GpuAcquireCommandBuffer(app->device);
+	SDL_GpuDepthStencilAttachmentInfo info = { 0 };
+	info.textureSlice.texture = canvas->depth_stencil;
+	info.depthStencilClearValue.depth = depth;
+	info.depthStencilClearValue.stencil = stencil;
+	info.loadOp = SDL_GPU_LOADOP_CLEAR;
+	info.storeOp = SDL_GPU_STOREOP_STORE;
+	info.stencilLoadOp = SDL_GPU_LOADOP_CLEAR;
+	info.stencilStoreOp = SDL_GPU_STOREOP_STORE;
+	SDL_GpuRenderPass* pass = SDL_GpuBeginRenderPass(cmd, NULL, 0, &info);
+	SDL_GpuEndRenderPass(pass);
+	SDL_GpuSubmit(cmd);
 }
 
 CF_Texture cf_canvas_get_target(CF_Canvas canvas_handle)
@@ -606,115 +1191,41 @@ CF_Texture cf_canvas_get_depth_stencil_target(CF_Canvas canvas_handle)
 	return canvas->cf_depth_stencil;
 }
 
-uint64_t cf_canvas_get_backend_target_handle(CF_Canvas canvas_handle)
+void cf_canvas_blit(CF_Canvas src_handle, CF_V2 u0, CF_V2 v0, CF_Canvas dst_handle, CF_V2 u1, CF_V2 v1)
 {
-	CF_CanvasInternal* canvas = (CF_CanvasInternal*)canvas_handle.id;
-	//return (uint64_t)canvas->texture.id;
-	return 0;
-}
+	CF_CanvasInternal* src = (CF_CanvasInternal*)src_handle.id;
+	CF_CanvasInternal* dst = (CF_CanvasInternal*)dst_handle.id;
+	CF_TextureInternal* src_tex = (CF_TextureInternal*)src->cf_texture.id;
+	CF_TextureInternal* dst_tex = (CF_TextureInternal*)dst->cf_texture.id;
+	CF_TextureInternal* src_depth_stencil = (CF_TextureInternal*)src->cf_depth_stencil.id;
+	CF_TextureInternal* dst_depth_stencil = (CF_TextureInternal*)dst->cf_depth_stencil.id;
 
-uint64_t cf_canvas_get_backend_depth_stencil_handle(CF_Canvas canvas_handle)
-{
-	CF_CanvasInternal* canvas = (CF_CanvasInternal*)canvas_handle.id;
-	//return (uint64_t)canvas->depth_stencil.id;
-	return 0;
-}
+	SDL_GpuCommandBuffer* cmd = SDL_GpuAcquireCommandBuffer(app->device);
+	SDL_GpuTextureRegion src_tex_region = SDL_GpuTextureRegionDefaults(src_tex, u0.x, u0.y, v0.x, v0.y);
+	SDL_GpuTextureRegion dst_tex_region = SDL_GpuTextureRegionDefaults(dst_tex, u0.x, u0.y, v0.x, v0.y);
+	SDL_GpuBlit(cmd, &src_tex_region, &dst_tex_region, src_tex->filter, false);
 
-void cf_canvas_blit(CF_Canvas src, CF_V2 u0, CF_V2 v0, CF_Canvas dst, CF_V2 u1, CF_V2 v1)
-{
-	typedef struct Vertex
-	{
-		float x, y;
-		float u, v;
-	} Vertex;
-
-	if (!app->canvas_blit_init) {
-		app->canvas_blit_init = true;
-
-		// Create a full-screen quad mesh.
-		CF_Mesh blit_mesh = cf_make_mesh(USAGE_TYPE_STREAM, sizeof(Vertex) * 1024, 0, 0);
-		CF_VertexAttribute attrs[2] = { 0 };
-		attrs[0].name = "in_pos";
-		attrs[0].format = CF_VERTEX_FORMAT_FLOAT2;
-		attrs[0].offset = CF_OFFSET_OF(Vertex, x);
-		attrs[1].name = "in_uv";
-		attrs[1].format = CF_VERTEX_FORMAT_FLOAT2;
-		attrs[1].offset = CF_OFFSET_OF(Vertex, u);
-		cf_mesh_set_attributes(blit_mesh, attrs, CF_ARRAY_SIZE(attrs), sizeof(Vertex), 0);
-		app->blit_mesh = blit_mesh;
-
-		// Create material + shader for blitting.
-		CF_Material blit_material = cf_make_material();
-		cf_material_set_texture_fs(blit_material, "u_image", cf_canvas_get_target(src));
-		CF_RenderState state = cf_render_state_defaults();
-		state.blend.enabled = true;
-		state.blend.rgb_src_blend_factor = CF_BLENDFACTOR_ONE;
-		state.blend.rgb_dst_blend_factor = CF_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
-		state.blend.rgb_op = CF_BLEND_OP_ADD;
-		state.blend.alpha_src_blend_factor = CF_BLENDFACTOR_ONE;
-		state.blend.alpha_dst_blend_factor = CF_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
-		state.blend.alpha_op = CF_BLEND_OP_ADD;
-		cf_material_set_render_state(blit_material, state);
-		//CF_Shader blit_shader = CF_MAKE_SOKOL_SHADER(blit_shader);
-		app->blit_material = blit_material;
-		//app->blit_shader = blit_shader;
+	if (src_depth_stencil && dst_depth_stencil) {
+		SDL_GpuTextureRegion src_depth_stencil_region = SDL_GpuTextureRegionDefaults(src_depth_stencil, u0.x, u0.y, v0.x, v0.y);
+		SDL_GpuTextureRegion dst_depth_stencil_region = SDL_GpuTextureRegionDefaults(dst_depth_stencil, u0.x, u0.y, v0.x, v0.y);
+		SDL_GpuBlit(cmd, &src_depth_stencil_region, &dst_depth_stencil_region, src_depth_stencil->filter, false);
 	}
-
-	// UV (0,0) is top-left of the screen, while UV (1,1) is bottom right. We flip the y-axis for UVs to make the y-axis point up.
-	// Coordinate (-1,1) is top left, while (1,-1) is bottom right.
-	auto fill_quad = [](float x, float y, float sx, float sy, v2 u, v2 v, Vertex verts[6])
-	{
-		u.y = 1.0f - u.y;
-		v.y = 1.0f - v.y;
-
-		// Build a quad from (-1.0f,-1.0f) to (1.0f,1.0f).
-		verts[0].x = -1.0f; verts[0].y =  1.0f; verts[0].u = u.x; verts[0].v = v.y;
-		verts[1].x =  1.0f; verts[1].y = -1.0f; verts[1].u = v.x; verts[1].v = u.y;
-		verts[2].x =  1.0f; verts[2].y =  1.0f; verts[2].u = v.x; verts[2].v = v.y;
-
-		verts[3].x = -1.0f; verts[3].y =  1.0f; verts[3].u = u.x; verts[3].v = v.y;
-		verts[4].x = -1.0f; verts[4].y = -1.0f; verts[4].u = u.x; verts[4].v = u.y;
-		verts[5].x =  1.0f; verts[5].y = -1.0f; verts[5].u = v.x; verts[5].v = u.y;
-
-		// Scale the quad about the origin by (sx,sy), then translate it by (x,y).
-		for (int i = 0; i < 6; ++i) {
-			verts[i].x = verts[i].x * sx + x;
-			verts[i].y = verts[i].y * sy + y;
-		}
-	};
-
-	// We're going to blit onto dst.
-	cf_apply_canvas(dst);
-
-	// Create a quad where positions come from dst, and UV's come from src.
-	float w = v1.x - u1.x;
-	float h = v1.y - u1.y;
-	float x = (u1.x + v1.x) - 1.0f;
-	float y = (u1.y + v1.y) - 1.0f;
-	Vertex verts[6];
-	fill_quad(x, y, w, h, u0, v0, verts);
-	cf_mesh_append_vertex_data(app->blit_mesh, verts, 6);
-
-	// Read pixels from src.
-	cf_material_set_texture_fs(app->blit_material, "u_image", cf_canvas_get_target(src));
-
-	// Blit onto dst.
-	cf_apply_mesh(app->blit_mesh);
-	cf_apply_shader(app->blit_shader, app->blit_material);
-	cf_draw_elements();
 }
 
-CF_Mesh cf_make_mesh(CF_UsageType usage_type, int vertex_buffer_size, int index_buffer_size, int instance_buffer_size)
+CF_Mesh cf_make_mesh(int vertex_buffer_size, int index_buffer_size)
 {
 	CF_MeshInternal* mesh = (CF_MeshInternal*)CF_CALLOC(sizeof(CF_MeshInternal));
-	mesh->need_vertex_sync = true;
-	mesh->need_index_sync = true;
-	mesh->need_instance_sync = true;
 	mesh->vertices.size = vertex_buffer_size;
 	mesh->indices.size = index_buffer_size;
-	mesh->instances.size = instance_buffer_size;
 	mesh->indices.stride = sizeof(uint32_t);
-	//mesh->usage = s_wrap(usage_type);
+	if (vertex_buffer_size) {
+		mesh->vertices.buffer = SDL_GpuCreateBuffer(app->device, SDL_GPU_BUFFERUSAGE_VERTEX_BIT, vertex_buffer_size);
+		mesh->vertices.transfer_buffer = SDL_GpuCreateTransferBuffer(app->device, SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD, vertex_buffer_size);
+	}
+	if (index_buffer_size) {
+		mesh->indices.buffer = SDL_GpuCreateBuffer(app->device, SDL_GPU_BUFFERUSAGE_INDEX_BIT, index_buffer_size);
+		mesh->indices.transfer_buffer = SDL_GpuCreateTransferBuffer(app->device, SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD, index_buffer_size);
+	}
 	CF_Mesh result = { (uint64_t)mesh };
 	return result;
 }
@@ -722,205 +1233,51 @@ CF_Mesh cf_make_mesh(CF_UsageType usage_type, int vertex_buffer_size, int index_
 void cf_destroy_mesh(CF_Mesh mesh_handle)
 {
 	CF_MeshInternal* mesh = (CF_MeshInternal*)mesh_handle.id;
-	//if (mesh->vertices.handle.id) sg_destroy_buffer(mesh->vertices.handle);
-	//if (mesh->indices.handle.id) sg_destroy_buffer(mesh->indices.handle);
-	//if (mesh->instances.handle.id) sg_destroy_buffer(mesh->instances.handle);
+	if (mesh->vertices.buffer) {
+		SDL_GpuReleaseBuffer(app->device, mesh->vertices.buffer);
+		SDL_GpuReleaseTransferBuffer(app->device, mesh->vertices.transfer_buffer);
+	}
+	if (mesh->indices.buffer) {
+		SDL_GpuReleaseBuffer(app->device, mesh->indices.buffer);
+		SDL_GpuReleaseTransferBuffer(app->device, mesh->indices.transfer_buffer);
+	}
 	CF_FREE(mesh);
 }
 
-void cf_mesh_set_attributes(CF_Mesh mesh_handle, const CF_VertexAttribute* attributes, int attribute_count, int vertex_stride, int instance_stride)
+void cf_mesh_set_attributes(CF_Mesh mesh_handle, const CF_VertexAttribute* attributes, int attribute_count, int vertex_stride)
 {
 	CF_MeshInternal* mesh = (CF_MeshInternal*)mesh_handle.id;
-	//attribute_count = min(attribute_count, CF_MESH_MAX_VERTEX_ATTRIBUTES);
+	attribute_count = min(attribute_count, CF_MESH_MAX_VERTEX_ATTRIBUTES);
 	mesh->attribute_count = attribute_count;
 	mesh->vertices.stride = vertex_stride;
-	mesh->instances.stride = instance_stride;
 	for (int i = 0; i < attribute_count; ++i) {
-		//mesh->attributes[i] = attributes[i];
-		//mesh->attributes[i].name = sintern(attributes[i].name);
+		mesh->attributes[i] = attributes[i];
+		mesh->attributes[i].name = sintern(attributes[i].name);
 	}
-}
-
-static void s_sync_vertex_buffer(CF_MeshInternal* mesh, void* data, int size)
-{
-	mesh->need_vertex_sync = false;
-	//if (mesh->vertices.handle.id) sg_destroy_buffer(mesh->vertices.handle);
-	//sg_buffer_desc desc = { };
-	//desc.size = mesh->vertices.size;
-	//desc.type = SG_BUFFERTYPE_VERTEXBUFFER;
-	//desc.usage = mesh->usage;
-	//desc.data.ptr = data;
-	//desc.data.size = size;
-	//mesh->vertices.handle = sg_make_buffer(desc);
-	//mesh->vertices.offset = 0;
 }
 
 void cf_mesh_update_vertex_data(CF_Mesh mesh_handle, void* data, int count)
 {
 	CF_MeshInternal* mesh = (CF_MeshInternal*)mesh_handle.id;
+	CF_ASSERT(mesh->attribute_count);
 	int size = count * mesh->vertices.stride;
-	if (size > mesh->vertices.size) {
-		mesh->vertices.size = size;
-		mesh->need_vertex_sync = true;
-	}
-	CF_ASSERT(mesh->attribute_count);
-	if (mesh->need_vertex_sync) {
-		//s_sync_vertex_buffer(mesh, mesh->usage == SG_USAGE_IMMUTABLE ? data : NULL, size);
-	} else {
-		//sg_range range = { data, (size_t)size };
-		//sg_update_buffer(mesh->vertices.handle, range);
-	}
+	void* p = NULL;
+	SDL_GpuMapTransferBuffer(app->device, mesh->vertices.transfer_buffer, true, &p);
+	CF_MEMCPY(p, data, size);
+	SDL_GpuUnmapTransferBuffer(app->device, mesh->vertices.transfer_buffer);
 	mesh->vertices.element_count = count;
-}
-
-int cf_mesh_append_vertex_data(CF_Mesh mesh_handle, void* data, int append_count)
-{
-	CF_MeshInternal* mesh = (CF_MeshInternal*)mesh_handle.id;
-	int size = append_count * mesh->vertices.stride;
-	CF_ASSERT(mesh->attribute_count);
-	CF_ASSERT(mesh->vertices.size >= size);
-	if (mesh->need_vertex_sync) {
-		s_sync_vertex_buffer(mesh, NULL, mesh->vertices.size);
-	}
-	//sg_range range = { data, (size_t)size };
-	//if (!sg_query_buffer_will_overflow(mesh->vertices.handle, size)) {
-	//	int offset = sg_append_buffer(mesh->vertices.handle, range);
-	//	mesh->vertices.offset = offset;
-	//	mesh->vertices.element_count = append_count;
-	//	mesh->vertices.was_appended = true;
-	//	return offset;
-	//} else {
-	//	return 0;
-	//}
-	return 0;
-}
-
-bool cf_mesh_will_overflow_vertex_data(CF_Mesh mesh_handle, int append_count)
-{
-	CF_MeshInternal* mesh = (CF_MeshInternal*)mesh_handle.id;
-	//return sg_query_buffer_will_overflow(mesh->vertices.handle, append_count * mesh->vertices.stride);
-	return false;
-}
-
-static void s_sync_instance_buffer(CF_MeshInternal* mesh, void* data, int size)
-{
-	mesh->need_instance_sync = false;
-	//if (mesh->instances.handle.id) sg_destroy_buffer(mesh->instances.handle);
-	//sg_buffer_desc desc = { };
-	//desc.size = mesh->instances.size;
-	//desc.type = SG_BUFFERTYPE_VERTEXBUFFER;
-	//desc.usage = mesh->usage;
-	//desc.data.ptr = data;
-	//desc.data.size = size;
-	//mesh->instances.handle = sg_make_buffer(desc);
-	//mesh->instances.offset = 0;
-}
-
-void cf_mesh_update_instance_data(CF_Mesh mesh_handle, void* data, int count)
-{
-	CF_MeshInternal* mesh = (CF_MeshInternal*)mesh_handle.id;
-	int size = count * mesh->instances.stride;
-	if (size > mesh->instances.size) {
-		mesh->instances.size = size;
-		mesh->need_instance_sync = true;
-	}
-	CF_ASSERT(mesh->attribute_count);
-	if (mesh->need_instance_sync) {
-		//s_sync_instance_buffer(mesh, mesh->usage == SG_USAGE_IMMUTABLE ? data : NULL, size);
-	} else {
-		//sg_range range = { data, (size_t)size };
-		//sg_update_buffer(mesh->instances.handle, range);
-	}
-	mesh->instances.element_count = count;
-}
-
-int cf_mesh_append_instance_data(CF_Mesh mesh_handle, void* data, int append_count)
-{
-	CF_MeshInternal* mesh = (CF_MeshInternal*)mesh_handle.id;
-	int size = append_count * mesh->instances.stride;
-	CF_ASSERT(mesh->attribute_count);
-	CF_ASSERT(mesh->instances.size >= size);
-	if (mesh->need_instance_sync) {
-		s_sync_instance_buffer(mesh, NULL, mesh->instances.size);
-	}
-	//sg_range range = { data, (size_t)size };
-	//if (!sg_query_buffer_will_overflow(mesh->instances.handle, size)) {
-	//	int offset = sg_append_buffer(mesh->instances.handle, range);
-	//	mesh->instances.offset = offset;
-	//	mesh->instances.element_count = append_count;
-	//	mesh->instances.was_appended = true;
-	//	return offset;
-	//} else {
-	//	return 0;
-	//}
-	return 0;
-}
-
-bool cf_mesh_will_overflow_instance_data(CF_Mesh mesh_handle, int append_count)
-{
-	CF_MeshInternal* mesh = (CF_MeshInternal*)mesh_handle.id;
-	//return sg_query_buffer_will_overflow(mesh->instances.handle, append_count * mesh->instances.stride);
-	return 0;
-}
-
-static void s_sync_index_buffer(CF_MeshInternal* mesh, uint32_t* indices, int size)
-{
-	mesh->need_index_sync = false;
-	//if (mesh->indices.handle.id) sg_destroy_buffer(mesh->indices.handle);
-	//sg_buffer_desc desc = { };
-	//desc.size = mesh->indices.size;
-	//desc.type = SG_BUFFERTYPE_INDEXBUFFER;
-	//desc.usage = mesh->usage;
-	//desc.data.ptr = indices;
-	//desc.data.size = size;
-	//mesh->indices.handle = sg_make_buffer(desc);
-	//mesh->indices.offset = 0;
 }
 
 void cf_mesh_update_index_data(CF_Mesh mesh_handle, uint32_t* indices, int count)
 {
 	CF_MeshInternal* mesh = (CF_MeshInternal*)mesh_handle.id;
-	int size = count * sizeof(uint32_t);
-	if (size > mesh->indices.size) {
-		mesh->indices.size = size;
-		mesh->need_index_sync = true;
-	}
 	CF_ASSERT(mesh->attribute_count);
-	if (mesh->need_index_sync) {
-		//s_sync_index_buffer(mesh, mesh->usage == SG_USAGE_IMMUTABLE ? indices : NULL, size);
-	} else {
-		//sg_range range = { indices, (size_t)size };
-		//sg_update_buffer(mesh->indices.handle, range);
-	}
+	int size = count * mesh->indices.stride;
+	void* p = NULL;
+	SDL_GpuMapTransferBuffer(app->device, mesh->indices.transfer_buffer, true, &p);
+	CF_MEMCPY(p, indices, size);
+	SDL_GpuUnmapTransferBuffer(app->device, mesh->indices.transfer_buffer);
 	mesh->indices.element_count = count;
-}
-
-int cf_mesh_append_index_data(CF_Mesh mesh_handle, uint32_t* indices, int append_count)
-{
-	CF_MeshInternal* mesh = (CF_MeshInternal*)mesh_handle.id;
-	int size = append_count * sizeof(uint32_t);
-	CF_ASSERT(mesh->indices.size >= size);
-	if (mesh->need_index_sync) {
-		s_sync_index_buffer(mesh, NULL, mesh->indices.size);
-	}
-	//sg_range range = { indices, (size_t)size };
-	//if (!sg_query_buffer_will_overflow(mesh->indices.handle, size)) {
-	//	int offset = sg_append_buffer(mesh->indices.handle, range);
-	//	mesh->indices.offset = offset;
-	//	mesh->indices.element_count = append_count;
-	//	mesh->indices.was_appended = true;
-	//	return offset;
-	//} else {
-	//	return 0;
-	//}
-	return 0;
-}
-
-bool cf_mesh_will_overflow_index_data(CF_Mesh mesh_handle, int append_count)
-{
-	CF_MeshInternal* mesh = (CF_MeshInternal*)mesh_handle.id;
-	//return sg_query_buffer_will_overflow(mesh->indices.handle, append_count * sizeof(uint32_t));
-	return 0;
 }
 
 CF_RenderState cf_render_state_defaults()
@@ -928,7 +1285,7 @@ CF_RenderState cf_render_state_defaults()
 	CF_RenderState state;
 	state.blend.enabled = false;
 	state.cull_mode = CF_CULL_MODE_NONE;
-	state.blend.pixel_format = CF_PIXELFORMAT_DEFAULT;
+	state.blend.pixel_format = CF_PIXEL_FORMAT_R8G8B8A8;
 	state.blend.write_R_enabled = true;
 	state.blend.write_G_enabled = true;
 	state.blend.write_B_enabled = true;
@@ -1097,28 +1454,6 @@ void cf_material_clear_uniforms(CF_Material material_handle)
 	material->fs.uniforms.clear();
 }
 
-static void s_end_pass()
-{
-	if (s_canvas) {
-		SDL_GpuSubmit(s_canvas->cmd);
-		CF_MeshInternal* mesh = s_canvas->mesh;
-		if (mesh) {
-			if (mesh->vertices.was_appended) {
-				mesh->vertices.was_appended = false;
-				mesh->vertices.element_count = 0;
-			}
-			if (mesh->indices.was_appended) {
-				mesh->indices.was_appended = false;
-				mesh->indices.element_count = 0;
-			}
-			if (mesh->instances.was_appended) {
-				mesh->instances.was_appended = false;
-				mesh->instances.element_count = 0;
-			}
-		}
-	}
-}
-
 void cf_clear_screen(float red, float green, float blue, float alpha)
 {
 	SDL_GpuCommandBuffer* cmd = SDL_GpuAcquireCommandBuffer(app->device);
@@ -1130,7 +1465,6 @@ void cf_clear_screen(float red, float green, float blue, float alpha)
 		info.clearColor = { red, green, blue , alpha };
 		info.loadOp = SDL_GPU_LOADOP_CLEAR;
 		info.storeOp = SDL_GPU_STOREOP_STORE;
-
 		SDL_GpuRenderPass* pass = SDL_GpuBeginRenderPass(cmd, &info, 1, NULL);
 		SDL_GpuEndRenderPass(pass);
 	}
@@ -1151,7 +1485,6 @@ void cf_clear_depth_stencil(float depth, uint32_t stencil)
 		info.storeOp = SDL_GPU_STOREOP_STORE;
 		info.stencilLoadOp = SDL_GPU_LOADOP_CLEAR;
 		info.stencilStoreOp = SDL_GPU_STOREOP_STORE;
-
 		SDL_GpuRenderPass* pass = SDL_GpuBeginRenderPass(cmd, NULL, 0, &info);
 		SDL_GpuEndRenderPass(pass);
 	}
@@ -1160,41 +1493,41 @@ void cf_clear_depth_stencil(float depth, uint32_t stencil)
 
 void cf_apply_canvas(CF_Canvas canvas_handle)
 {
-	//CF_CanvasInternal* canvas = (CF_CanvasInternal*)pass_handle.id;
-	//s_end_pass();
-	//s_canvas = canvas;
-	//s_canvas_clear_settings(canvas);
-	//if (clear) {
-	//	//canvas->action.colors[0].load_action = SG_LOADACTION_CLEAR;
-	//	//canvas->action.depth.load_action = SG_LOADACTION_CLEAR;
-	//	//canvas->action.stencil.load_action = SG_LOADACTION_CLEAR;
-	//} else {
-	//	//canvas->action.colors[0].load_action = SG_LOADACTION_LOAD;
-	//	//canvas->action.depth.load_action = SG_LOADACTION_LOAD;
-	//	//canvas->action.stencil.load_action = SG_LOADACTION_LOAD;
-	//}
-	//if (canvas->pass_is_default) {
-	//	//sg_begin_default_pass(&canvas->action, app->w, app->h);
-	//} else {
-	//	//sg_begin_pass(canvas->pass, &canvas->action);
-	//}
+	CF_CanvasInternal* canvas = (CF_CanvasInternal*)canvas_handle.id;
+	s_canvas = canvas;
 }
 
-void cf_apply_viewport(int x, int y, int width, int height)
+void cf_apply_viewport(int x, int y, int w, int h)
 {
-	//sg_apply_viewport(x, y, width, height, false);
+	CF_ASSERT(s_canvas);
+	CF_ASSERT(s_canvas->pass);
+	SDL_GpuViewport viewport;
+	viewport.x = (float)x;
+	viewport.y = (float)y;
+	viewport.w = (float)w;
+	viewport.h = (float)h;
+	viewport.minDepth = 0;
+	viewport.maxDepth = 1;
+	SDL_GpuSetViewport(s_canvas->pass, &viewport);
 }
 
-void cf_apply_scissor(int x, int y, int width, int height)
+void cf_apply_scissor(int x, int y, int w, int h)
 {
-	//sg_apply_scissor_rect(x, y, width, height, false);
+	CF_ASSERT(s_canvas);
+	CF_ASSERT(s_canvas->pass);
+	SDL_Rect scissor;
+	scissor.x = x;
+	scissor.y = y;
+	scissor.w = w;
+	scissor.y = h;
+	SDL_GpuSetScissor(s_canvas->pass, &scissor);
 }
 
 void cf_apply_mesh(CF_Mesh mesh_handle)
 {
-	//CF_ASSERT(s_canvas);
-	//CF_MeshInternal* mesh = (CF_MeshInternal*)mesh_handle.id;
-	//s_canvas->mesh = mesh;
+	CF_ASSERT(s_canvas);
+	CF_MeshInternal* mesh = (CF_MeshInternal*)mesh_handle.id;
+	s_canvas->mesh = mesh;
 }
 
 static void s_copy_uniforms(SDL_GpuCommandBuffer* cmd, CF_Arena* arena, CF_ShaderInternal* shd, CF_MaterialState* mstate, bool vs)
@@ -1221,12 +1554,15 @@ static void s_copy_uniforms(SDL_GpuCommandBuffer* cmd, CF_Arena* arena, CF_Shade
 		SDL_GpuPushFragmentUniformData(cmd, 0, block, (uint32_t)block_size);
 	}
 
+	// @TODO Use a different allocation scheme that caches better.
 	cf_arena_reset(arena);
 }
 
 static SDL_GpuVertexElementFormat s_wrap(CF_VertexFormat format)
 {
 	switch (format) {
+	default:
+	case CF_VERTEX_FORMAT_INVALID: return SDL_GPU_VERTEXELEMENTFORMAT_UINT;
 	case CF_VERTEX_FORMAT_UINT: return SDL_GPU_VERTEXELEMENTFORMAT_UINT;
 	case CF_VERTEX_FORMAT_FLOAT: return SDL_GPU_VERTEXELEMENTFORMAT_FLOAT;
 	case CF_VERTEX_FORMAT_FLOAT2: return SDL_GPU_VERTEXELEMENTFORMAT_VECTOR2;
@@ -1290,11 +1626,11 @@ static SDL_GpuBlendOp s_wrap(CF_BlendOp blend_op)
 void cf_apply_shader(CF_Shader shader_handle, CF_Material material_handle)
 {
 	CF_ASSERT(s_canvas);
+	CF_ASSERT(s_canvas->mesh);
 	CF_MeshInternal* mesh = s_canvas->mesh;
 	CF_MaterialInternal* material = (CF_MaterialInternal*)material_handle.id;
 	CF_ShaderInternal* shader = (CF_ShaderInternal*)shader_handle.id;
 	CF_RenderState* state = &material->state;
-	bool has_instance_data = mesh->instances.size > 0;
 
 	SDL_GpuColorAttachmentDescription color_info;
 	CF_MEMSET(&color_info, 0, sizeof(color_info));
@@ -1343,15 +1679,15 @@ void cf_apply_shader(CF_Shader shader_handle, CF_Material material_handle)
 	vertex_bindings[0].inputRate = SDL_GPU_VERTEXINPUTRATE_VERTEX;
 	vertex_bindings[0].stepRate = 0;
 	pip_info.vertexInputState.vertexBindings = vertex_bindings;
-	if (has_instance_data) {
-		vertex_bindings[1].binding = 1;
-		vertex_bindings[1].stride = mesh->instances.stride;
-		vertex_bindings[1].inputRate = SDL_GPU_VERTEXINPUTRATE_INSTANCE;
-		vertex_bindings[1].stepRate = 0;
-		pip_info.vertexInputState.vertexBindingCount = 2;
-	} else {
+	//if (has_instance_data) {
+	//	vertex_bindings[1].binding = 1;
+	//	vertex_bindings[1].stride = mesh->instances.stride;
+	//	vertex_bindings[1].inputRate = SDL_GPU_VERTEXINPUTRATE_INSTANCE;
+	//	vertex_bindings[1].stepRate = 0;
+	//	pip_info.vertexInputState.vertexBindingCount = 2;
+	//} else {
 		pip_info.vertexInputState.vertexBindingCount = 1;
-	}
+	//}
 
 	pip_info.primitiveType = SDL_GPU_PRIMITIVETYPE_TRIANGLELIST;
 	pip_info.rasterizerState.fillMode = SDL_GPU_FILLMODE_FILL;
@@ -1395,8 +1731,8 @@ void cf_apply_shader(CF_Shader shader_handle, CF_Material material_handle)
 	SDL_GpuRenderPass* pass = SDL_GpuBeginRenderPass(cmd, &pass_color_info, 1, NULL);
 	SDL_GpuBindGraphicsPipeline(pass, pip);
 	SDL_GpuBufferBinding bind;
-	bind.buffer = NULL; // @TODO.
-	bind.offset = 0; // @TODO.
+	bind.buffer = mesh->vertices.buffer;
+	bind.offset = 0; // @TODO Update this for streaming later.
 	SDL_GpuBindVertexBuffers(pass, 0, &bind, 1);
 	// @TODO
 	//SDL_GpuBindIndexBuffer
@@ -1408,31 +1744,35 @@ void cf_apply_shader(CF_Shader shader_handle, CF_Material material_handle)
 
 void cf_draw_elements()
 {
-	//CF_MeshInternal* mesh = s_canvas->mesh;
-	//sg_draw(0, mesh->vertices.element_count, mesh->instances.element_count + 1); // TODO - +1??
-	//sg_destroy_pipeline(s_canvas->pip);
+	CF_MeshInternal* mesh = s_canvas->mesh;
+	if (mesh->indices.buffer) {
+		// @TODO
+		//SDL_GpuDrawIndexedPrimitives(s_canvas->pass, 0, mesh->vertices.element_count);
+		CF_ASSERT(false);
+	} else {
+		SDL_GpuDrawPrimitives(s_canvas->pass, 0, mesh->vertices.element_count);
+	}
 	app->draw_call_count++;
-}
-
-void cf_unapply_canvas()
-{
-	s_end_pass();
-	s_canvas = NULL;
 }
 
 void cf_commit()
 {
-	s_end_pass();
-	//sg_commit();
-	//sg_commit();
-}
-
-void cf_destroy_graphics()
-{
-	if (s_default_canvas) {
-		cf_destroy_canvas({ (uint64_t)s_default_canvas });
-		s_default_canvas = NULL;
+	if (s_canvas) {
+		SDL_GpuEndRenderPass(s_canvas->pass);
+		SDL_GpuSubmit(s_canvas->cmd);
+		CF_MeshInternal* mesh = s_canvas->mesh;
+		if (mesh) {
+			// @TODO Do these need to be reset?
+			mesh->vertices.element_count = 0;
+			mesh->indices.element_count = 0;
+		}
+		SDL_GpuReleaseGraphicsPipeline(app->device, s_canvas->pip);
+		s_canvas->mesh = NULL;
+		s_canvas->pip = NULL;
+		s_canvas->pass = NULL;
+		s_canvas->cmd = NULL;
 	}
+	s_canvas = NULL;
 }
 
 #include <SPIRV-Reflect/spirv_reflect.c>

@@ -135,7 +135,7 @@ CF_API const char* CF_CALL cf_display_name(int display_index);
 CF_API CF_DisplayOrientation CF_CALL cf_display_orientation(int display_index);
 
 /**
- * @enum     CF_AppOptions
+ * @enum     CF_AppOptionFlagBits
  * @category app
  * @brief    Various options to control how the application starts up, such as fullscreen, or selecting a graphics backend.
  * @example > Creating a basic window and immediately destroying it.
@@ -149,31 +149,45 @@ CF_API CF_DisplayOrientation CF_CALL cf_display_orientation(int display_index);
  *         return 0;
  *     }
  * @remarks  The `app_options` parameter of `cf_make_app` is a bitmask flag. Simply take the `APP_OPTIONS_*` flags listed above and OR them together.
- * @related  CF_AppOptions cf_make_app cf_destroy_app
+ * @related  CF_AppOptionFlagBits cf_make_app cf_destroy_app
  */
 #define CF_APP_OPTION_DEFS \
 	/* @entry Does not initialize any graphics backend at all (for servers or headless mode). */ \
-	CF_ENUM(APP_OPTIONS_NO_GFX,                         1 << 0)  \
-	/* @entry Starts the application in borderless full-screen mode. */ \
-	CF_ENUM(APP_OPTIONS_FULLSCREEN,                     1 << 1)  \
-	/* @entry Allows the window to be resized. */                \
-	CF_ENUM(APP_OPTIONS_RESIZABLE,                      1 << 2)  \
-	/* @entry Starts the application with the window hidden. */  \
-	CF_ENUM(APP_OPTIONS_HIDDEN,                         1 << 3)  \
+	CF_ENUM(APP_OPTIONS_NO_GFX_BIT,                             1 << 0)  \
+	/* @entry Starts the application in borderless full-screen mode. */  \
+	CF_ENUM(APP_OPTIONS_FULLSCREEN_BIT,                         1 << 1)  \
+	/* @entry Allows the window to be resized. */                        \
+	CF_ENUM(APP_OPTIONS_RESIZABLE_BIT,                          1 << 2)  \
+	/* @entry Starts the application with the window hidden. */          \
+	CF_ENUM(APP_OPTIONS_HIDDEN_BIT,                             1 << 3)  \
 	/* @entry Starts the application with the window centered on the screen. Does not affect any later adjustments to window size/position. */ \
-	CF_ENUM(APP_OPTIONS_WINDOW_POS_CENTERED,            1 << 4)  \
+	CF_ENUM(APP_OPTIONS_WINDOW_POS_CENTERED_BIT,                1 << 4)  \
 	/* @entry Disables automatically mounting the folder the executable runs from to "/". See `cf_fs_mount` for more details. */ \
-	CF_ENUM(APP_OPTIONS_FILE_SYSTEM_DONT_DEFAULT_MOUNT, 1 << 5) \
-	/* @entry Starts the application with no audio. */           \
-	CF_ENUM(APP_OPTIONS_NO_AUDIO,                       1 << 6) \
+	CF_ENUM(APP_OPTIONS_FILE_SYSTEM_DONT_DEFAULT_MOUNT_BIT,     1 << 5)  \
+	/* @entry Starts the application with no audio. */                   \
+	CF_ENUM(APP_OPTIONS_NO_AUDIO_BIT,                           1 << 6)  \
 	/* @end */
 
-typedef enum CF_AppOptions
+#if 0
+	/* @entry Starts the application with a D3D11 backend. */            \
+	CF_ENUM(APP_OPTIONS_GFX_D3D11_BIT,                          1 << 7)  \
+	/* @entry Starts the application with a D3D12 backend. */            \
+	CF_ENUM(APP_OPTIONS_GFX_D3D12_BIT,                          1 << 8)  \
+	/* @entry Starts the application with a Metal backend. */            \
+	CF_ENUM(APP_OPTIONS_GFX_METAL_BIT,                          1 << 9)  \
+	/* @entry Starts the application with a Vulkan backend. */           \
+	CF_ENUM(APP_OPTIONS_GFX_VULKAN_BIT,                         1 << 10) \
+	/* @end */
+#endif
+
+typedef int CF_AppOptionFlags;
+
+typedef enum CF_AppOptionFlagBits
 {
 	#define CF_ENUM(K, V) CF_##K = V,
 	CF_APP_OPTION_DEFS
 	#undef CF_ENUM
-} CF_AppOptions;
+} CF_AppOptionFlagBits;
 
 /**
  * @function cf_make_app
@@ -210,9 +224,9 @@ typedef enum CF_AppOptions
  *     }
  * @remarks  The options parameter is an enum from `app_options`. Different options can be OR'd together.
  *           Parameters `w` and `h` are ignored if the window is initialized to fullscreen mode with `APP_OPTIONS_FULLSCREEN`.
- * @related  CF_AppOptions cf_app_is_running cf_app_signal_shutdown cf_destroy_app
+ * @related  CF_AppOptionFlagBits cf_app_is_running cf_app_signal_shutdown cf_destroy_app
  */
-CF_API CF_Result CF_CALL cf_make_app(const char* window_title, int display_index, int x, int y, int w, int h, int options, const char* argv0);
+CF_API CF_Result CF_CALL cf_make_app(const char* window_title, int display_index, int x, int y, int w, int h, CF_AppOptionFlags options, const char* argv0);
 
 /**
  * @function cf_destroy_app

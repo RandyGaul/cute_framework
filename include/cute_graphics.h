@@ -67,10 +67,9 @@ extern "C" {
  *                 }
  *             }
  *         }
+ *         cf_commit();
  *     }
  */
-
-#define CF_GRAPHICS_IS_VALID(X) (X.id != 0)
 
 /**
  * @struct   CF_Texture
@@ -95,18 +94,15 @@ typedef struct CF_Canvas { uint64_t id; } CF_Canvas;
  * @struct   CF_Mesh
  * @category graphics
  * @brief    An opaque handle representing a mesh.
- * @remarks  A mesh is a container of triangles, along with optional indices and instance data. After a mesh
+ * @remarks  A mesh is a container of triangles, along with optional indices. After a mesh
  *           is created the layout of the vertices in memory must be described. We use an array of
  *           `CF_VertexAttribute` to define how the GPU will interpret the vertices we send it.
- *           
- *           `CF_VertexAttribute` are also used to specify instance data by setting `step_type` to
- *           `CF_ATTRIBUTE_STEP_PER_INSTANCE` instead of the default `CF_ATTRIBUTE_STEP_PER_VERTEX`.
  *           
  *           Data for meshes can be immutable, dynamic, or streamed, just like textures. Immutable meshes are
  *           perfect for terrain or building rendering, anything static in the world. Dynamic meshes can be
  *           occasionally updated, but are still more like an immutable mesh in terms of performance. Streamed
  *           meshes can be updated each frame, perfect for streaming data to the GPU.
- * @related  CF_Texture CF_Canvas CF_Material CF_Shader cf_make_mesh cf_destroy_mesh cf_mesh_set_attributes cf_mesh_update_vertex_data cf_mesh_update_instance_data cf_mesh_update_index_data cf_apply_mesh
+ * @related  CF_Texture CF_Canvas CF_Material CF_Shader cf_make_mesh cf_destroy_mesh cf_mesh_set_attributes cf_mesh_update_vertex_data cf_mesh_update_index_data cf_apply_mesh
  */
 typedef struct CF_Mesh { uint64_t id; } CF_Mesh;
 // @end
@@ -202,159 +198,91 @@ CF_API CF_BackendType CF_CALL cf_query_backend();
  * @remarks  Not all types are supported on each backend. Be sure to check with `cf_query_pixel_format` if a particular pixel format
  *           is available for your use-case. If unsure, just use `CF_PIXELFORMAT_DEFAULT` for red-green-blue-alpha, 8 bits per component (32 bits total),
  *           which get mapped to 4 floats on the GPU from [0,1].
- *           
- *           This table helps understand how to read the pixel format notation.
- *           
- *           Notation | Description
- *           --- | ---
- *           RGBA | R stands for red, G stands for green, B stands for blue, A stands for alpha.
- *           XX | A number, describes the number of bits used by the pixel format. For example `CF_PIXELFORMAT_R8` uses 8 bits, while `PIXELFORMAT_RG16F` uses 16 bits.
- *           N | A normalized number from [0,1]. All the bits of the format will be treated as an integer. For example, `CF_PIXELFORMAT_R8` starts as an 8-bit value on the CPU, but is mapped from [0,255] to [0,1] as a float on the GPU.
- *           UI | The GPU will interpret the bits of a pixel as an unsigned integer.
- *           SI | The GPU will interpret the bits of a pixel as a signed integer.
- *           F | The GPU will interpret the bits of a pixel as a floating point value.
- *           N | Stands for "normalized". The pixel's bits are mapped from [0,2^##] to floating point [0,1] on the GPU.
- *           SN | Signed-normalized. The same as N, but mapped to floating point [-1,1] on the GPU.
- *           
- *           The other formats such as BC (Block Compression for DirectX), PVRTC (for iOS), and ETC2 (OpenGL ES and ARM devices) are common compression formats.
- *           These can potentially save a lot of memory on the GPU, but are only good for certain games (mainly 3D games), and are only available on certain backends.
  * @related  CF_PixelFormat cf_pixel_format_to_string CF_PixelFormatOp cf_query_pixel_format
  */
-#define CF_PIXELFORMAT_DEFS \
-	/* @entry The default pixel format.  */                                                            \
-	CF_ENUM(PIXELFORMAT_DEFAULT,         0 )                                                           \
-	/* @entry 8-bit red-only channel.    */                                                            \
-	CF_ENUM(PIXELFORMAT_R8,              1 )                                                           \
-	/* @entry 8-bit red-only channel, in signed normalized form. */                                    \
-	CF_ENUM(PIXELFORMAT_R8SN,            2 )                                                           \
-	/* @entry 8-bit red-only channel, in unsigned integer form. */                                     \
-	CF_ENUM(PIXELFORMAT_R8UI,            3 )                                                           \
-	/* @entry 8-bit red-only channel, in signed integer form. */                                       \
-	CF_ENUM(PIXELFORMAT_R8SI,            4 )                                                           \
-	/* @entry 16-bit red-only channel.    */                                                           \
-	CF_ENUM(PIXELFORMAT_R16,             5 )                                                           \
-	/* @entry 16-bit red-only channel, in signed normalized form. */                                   \
-	CF_ENUM(PIXELFORMAT_R16SN,           6 )                                                           \
-	/* @entry 16-bit red-only channel, in unsigned integer form. */                                    \
-	CF_ENUM(PIXELFORMAT_R16UI,           7 )                                                           \
-	/* @entry 16-bit red-only channel, in signed integer form. */                                      \
-	CF_ENUM(PIXELFORMAT_R16SI,           8 )                                                           \
-	/* @entry 16-bit red-only channel, in floating point form. */                                      \
-	CF_ENUM(PIXELFORMAT_R16F,            9 )                                                           \
-	/* @entry 8-bit red/green channels, 16 bits total. */                                              \
-	CF_ENUM(PIXELFORMAT_RG8,             10)                                                           \
-	/* @entry 8-bit red/green channels, in signed normalized form, 16 bits total. */                   \
-	CF_ENUM(PIXELFORMAT_RG8SN,           11)                                                           \
-	/* @entry 8-bit red/green channels, in unsigned integer form, 16 bits total. */                    \
-	CF_ENUM(PIXELFORMAT_RG8UI,           12)                                                           \
-	/* @entry 8-bit red/green channels, in signed integer form, 16 bits total. */                      \
-	CF_ENUM(PIXELFORMAT_RG8SI,           13)                                                           \
-	/* @entry 32-bit red-only channel, in unsigned integer form. */                                    \
-	CF_ENUM(PIXELFORMAT_R32UI,           14)                                                           \
-	/* @entry 32-bit red-only channel, in signed integer form. */                                      \
-	CF_ENUM(PIXELFORMAT_R32SI,           15)                                                           \
-	/* @entry 32-bit red-only channel, in floating point form. */                                      \
-	CF_ENUM(PIXELFORMAT_R32F,            16)                                                           \
-	/* @entry 16-bit red-green channels, 32 bits total. */                                             \
-	CF_ENUM(PIXELFORMAT_RG16,            17)                                                           \
-	/* @entry 16-bit red-green channels, in signed normalized form, 32 bits total. */                  \
-	CF_ENUM(PIXELFORMAT_RG16SN,          18)                                                           \
-	/* @entry 16-bit red-green channels, in unsigned integer form, 32 bits total. */                   \
-	CF_ENUM(PIXELFORMAT_RG16UI,          19)                                                           \
-	/* @entry 16-bit red-green channels, in signed integer form, 32 bits total. */                     \
-	CF_ENUM(PIXELFORMAT_RG16SI,          20)                                                           \
-	/* @entry 16-bit red-green channels, in floating point form, 32 bits total. */                     \
-	CF_ENUM(PIXELFORMAT_RG16F,           21)                                                           \
-	/* @entry 8-bit red-green-blue-alpha channels, 32 bits total. */                                   \
-	CF_ENUM(PIXELFORMAT_RGBA8,           22)                                                           \
-	/* @entry TODO. */                                                                                 \
-	CF_ENUM(PIXELFORMAT_SRGB8A8,         23)                                                           \
-	/* @entry 8-bit red-green-blue-alpha channels, in signed normalized form, 32 bits total. */        \
-	CF_ENUM(PIXELFORMAT_RGBA8SN,         24)                                                           \
-	/* @entry 8-bit red-green-blue-alpha channels, in unsigned integer form, 32 bits total. */         \
-	CF_ENUM(PIXELFORMAT_RGBA8UI,         25)                                                           \
-	/* @entry 8-bit red-green-blue-alpha channels, in signed integer form, 32 bits total. */           \
-	CF_ENUM(PIXELFORMAT_RGBA8SI,         26)                                                           \
-	/* @entry 8-bit blue-green-red-alpha channels, 32 bits total. */                                   \
-	CF_ENUM(PIXELFORMAT_BGRA8,           27)                                                           \
-	/* @entry 10-bit red-green-blue channels, 2-bit alpha channel, 32 bits total. */                   \
-	CF_ENUM(PIXELFORMAT_RGB10A2,         28)                                                           \
-	/* @entry 11-bit red-green channels, 10-bit blue channel, in floating point form, 32 bits total. */\
-	CF_ENUM(PIXELFORMAT_RG11B10F,        29)                                                           \
-	/* @entry 32-bit red-green channels, in unsigned integer form, 64 bits total. */                   \
-	CF_ENUM(PIXELFORMAT_RG32UI,          30)                                                           \
-	/* @entry 32-bit red-green channels, in signed integer form, 64 bits total. */                     \
-	CF_ENUM(PIXELFORMAT_RG32SI,          31)                                                           \
-	/* @entry 32-bit red-green channels, in floating point form, 64 bits total. */                     \
-	CF_ENUM(PIXELFORMAT_RG32F,           32)                                                           \
-	/* @entry 16-bit red-green-blue-alpha channels, 64 bits total. */                                  \
-	CF_ENUM(PIXELFORMAT_RGBA16,          33)                                                           \
-	/* @entry 16-bit red-green-blue-alpha channels, in signed normalized form, 64 bits total. */       \
-	CF_ENUM(PIXELFORMAT_RGBA16SN,        34)                                                           \
-	/* @entry 16-bit red-green-blue-alpha channels, in unsigned integer form, 64 bits total. */        \
-	CF_ENUM(PIXELFORMAT_RGBA16UI,        35)                                                           \
-	/* @entry 16-bit red-green-blue-alpha channels, in signed integer form, 64 bits total. */          \
-	CF_ENUM(PIXELFORMAT_RGBA16SI,        36)                                                           \
-	/* @entry 16-bit red-green-blue-alpha channels, in floating point form, 64 bits total. */          \
-	CF_ENUM(PIXELFORMAT_RGBA16F,         37)                                                           \
-	/* @entry 32-bit red-green-blue-alpha channels, in unsigned integer form, 128 bits total. */       \
-	CF_ENUM(PIXELFORMAT_RGBA32UI,        38)                                                           \
-	/* @entry 32-bit red-green-blue-alpha channels, in signed integer form, 128 bits total. */         \
-	CF_ENUM(PIXELFORMAT_RGBA32SI,        39)                                                           \
-	/* @entry 32-bit red-green-blue-alpha channels, in floating point form, 128 bits total. */         \
-	CF_ENUM(PIXELFORMAT_RGBA32F,         40)                                                           \
-	/* @entry 32-bit red-green-blue-alpha channels, in floating point form, 128 bits total. */         \
-	CF_ENUM(PIXELFORMAT_DEPTH,           41)                                                           \
-	/* @entry 24-bit depth channel, 8-bit stencil channel. */                                          \
-	CF_ENUM(PIXELFORMAT_DEPTH_STENCIL,   42)                                                           \
-	/* @entry Block Compression 1. */                                                                  \
-	CF_ENUM(PIXELFORMAT_BC1_RGBA,        43)                                                           \
-	/* @entry Block Compression 2. */                                                                  \
-	CF_ENUM(PIXELFORMAT_BC2_RGBA,        44)                                                           \
-	/* @entry Block Compression 3. */                                                                  \
-	CF_ENUM(PIXELFORMAT_BC3_RGBA,        45)                                                           \
-	/* @entry Block Compression 4. */                                                                  \
-	CF_ENUM(PIXELFORMAT_BC4_R,           46)                                                           \
-	/* @entry Block Compression 4 (signed normalized). */                                              \
-	CF_ENUM(PIXELFORMAT_BC4_RSN,         47)                                                           \
-	/* @entry Block Compression 5. */                                                                  \
-	CF_ENUM(PIXELFORMAT_BC5_RG,          48)                                                           \
-	/* @entry Block Compression 5 (signed normalized). */                                              \
-	CF_ENUM(PIXELFORMAT_BC5_RGSN,        49)                                                           \
-	/* @entry Block Compression 6. */                                                                  \
-	CF_ENUM(PIXELFORMAT_BC6H_RGBF,       50)                                                           \
-	/* @entry Block Compression 6 (unsigned). */                                                       \
-	CF_ENUM(PIXELFORMAT_BC6H_RGBUF,      51)                                                           \
-	/* @entry Block Compression 7. */                                                                  \
-	CF_ENUM(PIXELFORMAT_BC7_RGBA,        52)                                                           \
-	/* @entry PVRTC compression 7. */                                                                  \
-	CF_ENUM(PIXELFORMAT_PVRTC_RGB_2BPP,  53)                                                           \
-	/* @entry PVRTC red-green-blue 2-bits-per-pixel. */                                                \
-	CF_ENUM(PIXELFORMAT_PVRTC_RGB_4BPP,  54)                                                           \
-	/* @entry PVRTC red-green-blue 4-bits-per-pixel. */                                                \
-	CF_ENUM(PIXELFORMAT_PVRTC_RGBA_2BPP, 55)                                                           \
-	/* @entry PVRTC red-green-blue-alpha 2-bits-per-pixel. */                                          \
-	CF_ENUM(PIXELFORMAT_PVRTC_RGBA_4BPP, 56)                                                           \
-	/* @entry PVRTC red-green-blue-alpha 4-bits-per-pixel. */                                          \
-	CF_ENUM(PIXELFORMAT_ETC2_RGB8,       57)                                                           \
-	/* @entry ETC2 red-green-blue 8-bit channels. */                                                   \
-	CF_ENUM(PIXELFORMAT_ETC2_RGB8A1,     58)                                                           \
-	/* @entry ETC2 red-green-blue 8-bit channels, 1-bit alpha channel. */                              \
-	CF_ENUM(PIXELFORMAT_ETC2_RGBA8,      59)                                                           \
-	/* @entry ETC2 red-green-blue-alpha 8-bit channels. */                                             \
-	CF_ENUM(PIXELFORMAT_ETC2_RG11,       60)                                                           \
-	/* @entry ETC2 red-green 11-bit channels. */                                                       \
-	CF_ENUM(PIXELFORMAT_ETC2_RG11SN,     61)                                                           \
-	/* @entry TODO. */                                                                                 \
-	CF_ENUM(PIXELFORMAT_RGB9E5,          62)                                                           \
-	/* @entry ETC2 red-green 11-bit channels, in signed-normalized form. */                            \
-	CF_ENUM(PIXELFORMAT_COUNT,           63)                                                           \
+#define CF_PIXEL_FORMAT_DEFS \
+	/* @entry Invalid texture format. */                                                         \
+	CF_ENUM(PIXEL_FORMAT_INVALID,               -1)                                              \
+	/* @entry 8-bit red/green/blue/alpha channels, 32 bits total. */                             \
+	CF_ENUM(PIXEL_FORMAT_R8G8B8A8,               0)                                              \
+	/* @entry 8-bit blue/green/red/alpha channels, 32 bits total. */                             \
+	CF_ENUM(PIXEL_FORMAT_B8G8R8A8,               1)                                              \
+	/* @entry 5-bit blue/green channels, 6-bit red channel, 16 bits total. */                    \
+	CF_ENUM(PIXEL_FORMAT_B5G6R5,                 2)                                              \
+	/* @entry 5-bit blue/green/red channels, 1-bit alpha channel, 16 bits total. */              \
+	CF_ENUM(PIXEL_FORMAT_B5G5R5A1,               3)                                              \
+	/* @entry 4-bit blue/green/red/alpha channels, 16 bits total. */                             \
+	CF_ENUM(PIXEL_FORMAT_B4G4R4A4,               4)                                              \
+	/* @entry 10-bit red/green/blue channels, 2-bit alpha channel, 32 bits total. */             \
+	CF_ENUM(PIXEL_FORMAT_R10G10B10A2,            5)                                              \
+	/* @entry 16-bit red/green channels, 32 bits total. */                                       \
+	CF_ENUM(PIXEL_FORMAT_R16G16,                 6)                                              \
+	/* @entry 16-bit red/green/blue/alpha channels, 64 bits total. */                            \
+	CF_ENUM(PIXEL_FORMAT_R16G16B16A16,           7)                                              \
+	/* @entry 8-bit red-only channel. */                                                         \
+	CF_ENUM(PIXEL_FORMAT_R8,                     8)                                              \
+	/* @entry 8-bit alpha-only channel. */                                                       \
+	CF_ENUM(PIXEL_FORMAT_A8,                     9)                                              \
+	/* @entry 8-bit red-only channel, in unsigned integer form. */                               \
+	CF_ENUM(PIXEL_FORMAT_R8_UINT,               10)                                              \
+	/* @entry 8-bit red/green channels, in unsigned integer form, 16 bits total. */              \
+	CF_ENUM(PIXEL_FORMAT_R8G8_UINT,             11)                                              \
+	/* @entry 8-bit red/green/blue/alpha channels, in unsigned integer form, 32 bits total. */   \
+	CF_ENUM(PIXEL_FORMAT_R8G8B8A8_UINT,         12)                                              \
+	/* @entry 16-bit red-only channel, in unsigned integer form. */                              \
+	CF_ENUM(PIXEL_FORMAT_R16_UINT,              13)                                              \
+	/* @entry 16-bit red/green channels, in unsigned integer form, 32 bits total. */             \
+	CF_ENUM(PIXEL_FORMAT_R16G16_UINT,           14)                                              \
+	/* @entry 16-bit red/green/blue/alpha channels, in unsigned integer form, 64 bits total. */  \
+	CF_ENUM(PIXEL_FORMAT_R16G16B16A16_UINT,     15)                                              \
+	/* @entry Block Compression 1. */                                                            \
+	CF_ENUM(PIXEL_FORMAT_BC1,                   16)                                              \
+	/* @entry Block Compression 2. */                                                            \
+	CF_ENUM(PIXEL_FORMAT_BC2,                   17)                                              \
+	/* @entry Block Compression 3. */                                                            \
+	CF_ENUM(PIXEL_FORMAT_BC3,                   18)                                              \
+	/* @entry Block Compression 7. */                                                            \
+	CF_ENUM(PIXEL_FORMAT_BC7,                   19)                                              \
+	/* @entry 8-bit red/green channels, signed normalized, 16 bits total. */                     \
+	CF_ENUM(PIXEL_FORMAT_R8G8_SNORM,            20)                                              \
+	/* @entry 8-bit red/green/blue/alpha channels, signed normalized, 32 bits total. */          \
+	CF_ENUM(PIXEL_FORMAT_R8G8B8A8_SNORM,        21)                                              \
+	/* @entry 16-bit red-only channel, floating point, 16 bits total. */                         \
+	CF_ENUM(PIXEL_FORMAT_R16_SFLOAT,            22)                                              \
+	/* @entry 16-bit red/green channels, floating point, 32 bits total. */                       \
+	CF_ENUM(PIXEL_FORMAT_R16G16_SFLOAT,         23)                                              \
+	/* @entry 16-bit red/green/blue/alpha channels, floating point, 64 bits total. */            \
+	CF_ENUM(PIXEL_FORMAT_R16G16B16A16_SFLOAT,   24)                                              \
+	/* @entry 32-bit red-only channel, floating point, 32 bits total. */                         \
+	CF_ENUM(PIXEL_FORMAT_R32_SFLOAT,            25)                                              \
+	/* @entry 32-bit red/green channels, floating point, 64 bits total. */                       \
+	CF_ENUM(PIXEL_FORMAT_R32G32_SFLOAT,         26)                                              \
+	/* @entry 32-bit red/green/blue/alpha channels, floating point, 128 bits total. */           \
+	CF_ENUM(PIXEL_FORMAT_R32G32B32A32_SFLOAT,   27)                                              \
+	/* @entry 8-bit red/green/blue/alpha channels, in sRGB color space, 32 bits total. */        \
+	CF_ENUM(PIXEL_FORMAT_R8G8B8A8_SRGB,        28)                                               \
+	/* @entry 8-bit blue/green/red/alpha channels, in sRGB color space, 32 bits total. */        \
+	CF_ENUM(PIXEL_FORMAT_B8G8R8A8_SRGB,        29)                                               \
+	/* @entry Block Compression 3, in sRGB color space. */                                       \
+	CF_ENUM(PIXEL_FORMAT_BC3_SRGB,             30)                                               \
+	/* @entry Block Compression 7, in sRGB color space. */                                       \
+	CF_ENUM(PIXEL_FORMAT_BC7_SRGB,             31)                                               \
+	/* @entry 16-bit depth channel. */                                                           \
+	CF_ENUM(PIXEL_FORMAT_D16_UNORM,            32)                                               \
+	/* @entry 24-bit depth channel. */                                                           \
+	CF_ENUM(PIXEL_FORMAT_D24_UNORM,            33)                                               \
+	/* @entry 32-bit depth channel, floating point. */                                           \
+	CF_ENUM(PIXEL_FORMAT_D32_SFLOAT,           34)                                               \
+	/* @entry 24-bit depth channel, 8-bit stencil channel. */                                    \
+	CF_ENUM(PIXEL_FORMAT_D24_UNORM_S8_UINT,    35)                                               \
+	/* @entry 32-bit depth channel, floating point, 8-bit stencil channel. */                    \
+	CF_ENUM(PIXEL_FORMAT_D32_SFLOAT_S8_UINT,   36)                                               \
 	/* @end */
 
 typedef enum CF_PixelFormat
 {
 	#define CF_ENUM(K, V) CF_##K = V,
-	CF_PIXELFORMAT_DEFS
+	CF_PIXEL_FORMAT_DEFS
 	#undef CF_ENUM
 } CF_PixelFormat;
 
@@ -367,7 +295,7 @@ typedef enum CF_PixelFormat
 CF_INLINE const char* cf_pixel_format_to_string(CF_PixelFormat format) {
 	switch (format) {
 	#define CF_ENUM(K, V) case CF_##K: return CF_STRINGIZE(CF_##K);
-	CF_PIXELFORMAT_DEFS
+	CF_PIXEL_FORMAT_DEFS
 	#undef CF_ENUM
 	default: return NULL;
 	}
@@ -418,140 +346,40 @@ CF_INLINE const char* cf_pixel_format_op_to_string(CF_PixelFormatOp op) {
 	}
 }
 
-/**
- * @function cf_query_pixel_format
- * @category graphics
- * @brief    Returns true if a particular `CF_PixelFormat` is compatible with a certain `CF_PixelFormatOp`.
- * @remarks  Not all backends support each combination of format and operation, some backends don't support particular pixel formats at all.
- *           Be sure to query the device with this function to make sure your use-case is supported.
- * @related  CF_PixelFormat cf_pixel_format_op_to_string CF_PixelFormatOp cf_query_pixel_format
- */
-CF_API bool CF_CALL cf_query_pixel_format(CF_PixelFormat format, CF_PixelFormatOp op);
-
-/**
- * @enum     CF_DeviceFeature
- * @category graphics
- * @brief    Some various device features that may or may not be supported on various backends.
- * @remarks  Check to see if a particular feature is available on your backend with `cf_query_device_feature`.
- * @related  CF_DeviceFeature cf_device_feature_to_string cf_query_device_feature
- */
-#define CF_DEVICE_FEATURE_DEFS \
-	/* @entry Texture clamp addressing style, e.g. `CF_WRAP_MODE_CLAMP_TO_EDGE` or `CF_WRAP_MODE_CLAMP_TO_BORDER` . */ \
-	CF_ENUM(DEVICE_FEATURE_TEXTURE_CLAMP,    0)                                                                        \
-	/* @end */
-
-typedef enum CF_DeviceFeature
-{
-	#define CF_ENUM(K, V) CF_##K = V,
-	CF_DEVICE_FEATURE_DEFS
-	#undef CF_ENUM
-} CF_DeviceFeature;
-
-/**
- * @function cf_device_feature_to_string
- * @category graphics
- * @brief    Returns a `CF_DeviceFeature` converted to a C string.
- * @related  CF_DeviceFeature cf_device_feature_to_string cf_query_device_feature
- */
-CF_INLINE const char* cf_device_feature_to_string(CF_DeviceFeature feature) {
-	switch (feature) {
-	#define CF_ENUM(K, V) case CF_##K: return CF_STRINGIZE(CF_##K);
-	CF_DEVICE_FEATURE_DEFS
-	#undef CF_ENUM
-	default: return NULL;
-	}
-}
-
-/**
- * @function cf_query_device_feature
- * @category graphics
- * @brief    Query to see if the device can support a particular feature.
- * @related  CF_PixelFormat cf_pixel_format_op_to_string CF_PixelFormatOp cf_query_pixel_format
- */
-CF_API bool CF_CALL cf_query_device_feature(CF_DeviceFeature feature);
-
-/**
- * @enum     CF_ResourceLimit
- * @category graphics
- * @brief    Some backends have limits on specific GPU resources.
- * @related  CF_ResourceLimit cf_resource_limit_to_string cf_query_resource_limit
- */
-#define CF_RESOURCE_LIMIT_DEFS \
-	/* @entry Limit on the number of dimensions a texture can have, e.g. 2 or 3. */ \
-	CF_ENUM(RESOURCE_LIMIT_TEXTURE_DIMENSION,       0)                              \
-	/* @entry Limit on the number of vertex attributes. */                          \
-	CF_ENUM(RESOURCE_LIMIT_VERTEX_ATTRIBUTE_MAX,    1)                              \
-	/* @end */
-
-typedef enum CF_ResourceLimit
-{
-	#define CF_ENUM(K, V) CF_##K = V,
-	CF_RESOURCE_LIMIT_DEFS
-	#undef CF_ENUM
-} CF_ResourceLimit;
-
-/**
- * @function cf_resource_limit_to_string
- * @category graphics
- * @brief    Returns a `CF_ResourceLimit` converted to a C string.
- * @related  CF_ResourceLimit cf_resource_limit_to_string cf_query_resource_limit
- */
-CF_INLINE const char* cf_resource_limit_to_string(CF_ResourceLimit limit) {
-	switch (limit) {
-	#define CF_ENUM(K, V) case CF_##K: return CF_STRINGIZE(CF_##K);
-	CF_RESOURCE_LIMIT_DEFS
-	#undef CF_ENUM
-	default: return NULL;
-	}
-}
-
-/**
- * @function cf_query_resource_limit
- * @category graphics
- * @brief    Query the device for resource limits.
- * @related  CF_ResourceLimit cf_resource_limit_to_string cf_query_resource_limit
- */
-CF_API int CF_CALL cf_query_resource_limit(CF_ResourceLimit limit);
-
 //--------------------------------------------------------------------------------------------------
 // Texture.
 
 /**
- * @enum     CF_UsageType
+ * @enum     CF_TextureUsageFlagBits
  * @category graphics
- * @brief    The access pattern for data sent to the GPU.
- * @related  CF_UsageType cf_usage_type_to_string CF_TextureParams cf_make_mesh
+ * @brief    Bitmask flags that indicate the intended usage of a texture.
+ * @remarks  These flags define how a texture will be utilized in graphics and compute pipelines.
+ *           Multiple flags can be combined using a bitwise OR operation.
+ * @related  CF_TextureUsageFlagBits CF_TextureUsageFlags
  */
-#define CF_USAGE_TYPE_DEFS \
-	/* @entry Can not be changed once created. */                        \
-	CF_ENUM(USAGE_TYPE_IMMUTABLE, 0)                                     \
-	/* @entry Can be changed occasionally, but not once per frame. */    \
-	CF_ENUM(USAGE_TYPE_DYNAMIC,   1)                                     \
-	/* @entry Intended to be altered each frame, e.g. streaming data. */ \
-	CF_ENUM(USAGE_TYPE_STREAM,    2)                                     \
+#define CF_TEXTURE_USAGE_DEFS \
+	/* @entry The texture will be used as a sampler in shaders. */                    \
+	CF_ENUM(TEXTURE_USAGE_SAMPLER_BIT,              0x00000001)                       \
+	/* @entry The texture will be used as a color render target. */                   \
+	CF_ENUM(TEXTURE_USAGE_COLOR_TARGET_BIT,         0x00000002)                       \
+	/* @entry The texture will be used as a depth or stencil render target. */        \
+	CF_ENUM(TEXTURE_USAGE_DEPTH_STENCIL_TARGET_BIT, 0x00000004)                       \
+	/* @entry The texture will be used as read-only storage in graphics pipelines. */ \
+	CF_ENUM(TEXTURE_USAGE_GRAPHICS_STORAGE_READ_BIT, 0x00000008)                      \
+	/* @entry The texture will be used as read-only storage in compute pipelines. */  \
+	CF_ENUM(TEXTURE_USAGE_COMPUTE_STORAGE_READ_BIT,  0x00000020)                      \
+	/* @entry The texture will be used as writeable storage in compute pipelines. */  \
+	CF_ENUM(TEXTURE_USAGE_COMPUTE_STORAGE_WRITE_BIT, 0x00000040)                      \
 	/* @end */
 
-typedef enum CF_UsageType
+typedef uint32_t CF_TextureUsageFlags;
+
+typedef enum CF_TextureUsageBits
 {
 	#define CF_ENUM(K, V) CF_##K = V,
-	CF_USAGE_TYPE_DEFS
+	CF_TEXTURE_USAGE_DEFS
 	#undef CF_ENUM
-} CF_UsageType;
-
-/**
- * @function cf_usage_type_to_string
- * @category graphics
- * @brief    Returns a `CF_UsageType` converted to a C string.
- * @related  CF_UsageType cf_usage_type_to_string CF_TextureParams cf_make_mesh
- */
-CF_INLINE const char* cf_usage_type_to_string(CF_UsageType type) {
-	switch (type) {
-	#define CF_ENUM(K, V) case CF_##K: return CF_STRINGIZE(CF_##K);
-	CF_USAGE_TYPE_DEFS
-	#undef CF_ENUM
-	default: return NULL;
-	}
-}
+} CF_TextureUsageBits;
 
 /**
  * @enum     CF_Filter
@@ -595,16 +423,12 @@ CF_INLINE const char* cf_filter_to_string(CF_Filter filter) {
  * @related  CF_WrapMode cf_wrap_mode_string CF_TextureParams
  */
 #define CF_WRAP_MODE_DEFS \
-	/* @entry The default is `CF_WRAP_MODE_REPEAT`. */                         \
-	CF_ENUM(WRAP_MODE_DEFAULT,         0)                                      \
 	/* @entry Repeats the image. */                                            \
-	CF_ENUM(WRAP_MODE_REPEAT,          1)                                      \
+	CF_ENUM(WRAP_MODE_REPEAT,          0)                                      \
 	/* @entry Clamps a UV coordinate to the nearest edge pixel. */             \
-	CF_ENUM(WRAP_MODE_CLAMP_TO_EDGE,   2)                                      \
-	/* @entry Clamps a UV coordinate to the border color. */                   \
-	CF_ENUM(WRAP_MODE_CLAMP_TO_BORDER, 3)                                      \
+	CF_ENUM(WRAP_MODE_CLAMP_TO_EDGE,   1)                                      \
 	/* @entry The same as `CF_WRAP_MODE_REPEAT` but mirrors back and forth. */ \
-	CF_ENUM(WRAP_MODE_MIRRORED_REPEAT, 4)                                      \
+	CF_ENUM(WRAP_MODE_MIRRORED_REPEAT, 2)                                      \
 	/* @end */
 
 typedef enum CF_WrapMode
@@ -641,8 +465,8 @@ typedef struct CF_TextureParams
 	/* @member The pixel format for this texture's data. See `CF_PixelFormat`. */
 	CF_PixelFormat pixel_format;
 
-	/* @member The memory access pattern for this texture on the GPU. See `CF_UsageType`. */
-	CF_UsageType usage;
+	/* @member The memory access pattern for this texture on the GPU. See `CF_TextureUsageBits`. */
+	CF_TextureUsageFlags usage;
 
 	/* @member The filtering operation to use when fetching data out of the texture, on the GPU. See `CF_Filter`. */
 	CF_Filter filter;
@@ -658,15 +482,6 @@ typedef struct CF_TextureParams
 
 	/* @member Number of elements (usually pixels) along the height of the texture. */
 	int height;
-
-	/* @member If true you can render to this texture via `CF_Canvas`. */
-	bool render_target;
-
-	/* @member The size of the `initial_data` member. Must be non-zero for immutable textures. */
-	int initial_data_size;
-
-	/* @member The intial byte data to fill the texture in with. Must not be `NULL` for immutable textures. See `CF_USAGE_TYPE_IMMUTABLE`. */
-	void* initial_data;
 } CF_TextureParams;
 // @end
 
@@ -734,33 +549,14 @@ typedef enum CF_ShaderStage
 	#undef CF_ENUM
 } CF_ShaderStage;
 
-/**
- * @enum     CF_ShaderFormat
- * @category graphics
- * @brief    
- * @related  
- */
-#define CF_SHADER_FORMAT_DEFS \
-	/* @entry */ \
-	CF_ENUM(SHADER_FORMAT_SECRET_NDA, 0) \
-	/* @entry */ \
-	CF_ENUM(SHADER_FORMAT_SPIRV,      1) \
-	/* @entry */ \
-	CF_ENUM(SHADER_FORMAT_DXBC,       2) \
-	/* @entry */ \
-	CF_ENUM(SHADER_FORMAT_DXIL,       3) \
-	/* @entry */ \
-	CF_ENUM(SHADER_FORMAT_MSL,        4) \
-	/* @entry */ \
-	CF_ENUM(SHADER_FORMAT_COUNT,      5) \
-	/* @end */
+// Add shader folder
+// ...scans subdirectories
+// ...makes a table of all shaders by path name
+// on shader changed
 
-typedef enum CF_ShaderFormat
-{
-	#define CF_ENUM(K, V) CF_##K = V,
-	CF_SHADER_FORMAT_DEFS
-	#undef CF_ENUM
-} CF_ShaderFormat;
+CF_API void CF_CALL cf_shader_directory(const char* path);
+
+CF_API void CF_CALL cf_shader_on_changed(void (*on_changed_fn)(const char* path, void* udata), void* udata);
 
 /**
  * @function cf_make_shader
@@ -770,7 +566,7 @@ typedef enum CF_ShaderFormat
  * @remarks  You should instead call `CF_MAKE_SOKOL_SHADER` unless you really know what you're doing.
  * @related  CF_Shader cf_make_shader cf_destroy_shader cf_apply_shader CF_Material
  */
-CF_API CF_Shader CF_CALL cf_make_shader(CF_ShaderFormat format, const char* vertex, const char* fragment);
+CF_API CF_Shader CF_CALL cf_make_shader(const char* vertex_path, const char* fragment_path);
 
 const dyna uint8_t* cf_compile_shader_to_bytecode(const char* shader_src, CF_ShaderStage cf_stage);
 
@@ -806,6 +602,9 @@ typedef struct CF_CanvasParams
 	/* @member The texture used to store pixel information when rendering to the canvas. See `CF_TextureParams`. */
 	CF_TextureParams target;
 
+	/* @member Defaults to false. If true enables a depth-stencil buffer attachment. */
+	bool depth_stencil_enable;
+
 	/* @member The texture used to store depth and stencil information when rendering to the canvas. See `CF_TextureParams`. */
 	CF_TextureParams depth_stencil_target;
 } CF_CanvasParams;
@@ -835,6 +634,9 @@ CF_API CF_Canvas CF_CALL cf_make_canvas(CF_CanvasParams canvas_params);
  */
 CF_API void CF_CALL cf_destroy_canvas(CF_Canvas canvas);
 
+CF_API void CF_CALL cf_canvas_clear(CF_Canvas canvas, float r, float g, float b, float a);
+CF_API void CF_CALL cf_canvas_clear_depth_stencil(CF_Canvas canvas, float depth, uint32_t stencil);
+
 /**
  * @function cf_canvas_get_target
  * @category graphics
@@ -850,22 +652,6 @@ CF_API CF_Texture CF_CALL cf_canvas_get_target(CF_Canvas canvas);
  * @related  CF_CanvasParams cf_canvas_defaults cf_make_canvas cf_destroy_canvas cf_apply_canvas cf_clear_color
  */
 CF_API CF_Texture CF_CALL cf_canvas_get_depth_stencil_target(CF_Canvas canvas);
-
-/**
- * @function cf_canvas_get_backend_target_handle
- * @category graphics
- * @brief    Returns a backend-specific handle to the underlying pixel texture of a canvas.
- * @related  CF_CanvasParams cf_canvas_defaults cf_make_canvas cf_canvas_get_backend_target_handle cf_canvas_get_backend_depth_stencil_handle
- */
-CF_API uint64_t CF_CALL cf_canvas_get_backend_target_handle(CF_Canvas canvas);
-
-/**
- * @function cf_canvas_get_backend_depth_stencil_handle
- * @category graphics
- * @brief    Returns a backend-specific handle to the underlying depth-stencil texture of a canvas.
- * @related  CF_CanvasParams cf_canvas_defaults cf_make_canvas cf_canvas_get_backend_target_handle cf_canvas_get_backend_depth_stencil_handle
- */
-CF_API uint64_t CF_CALL cf_canvas_get_backend_depth_stencil_handle(CF_Canvas canvas);
 
 /**
  * @function cf_canvas_blit
@@ -948,41 +734,6 @@ CF_INLINE const char* cf_vertex_format_string(CF_VertexFormat format) {
 }
 
 /**
- * @enum     CF_AttributeStep
- * @category graphics
- * @brief    Describes how attribute data is interpreted between each invocation of a vertex shader.
- * @related  CF_AttributeStep cf_attribute_step_string CF_VertexAttribute cf_mesh_set_attributes
- */
-#define CF_ATTRIBUTE_STEP_DEFS  \
-	/* @entry Take a step forward in the vertex buffer (the `stride`) once per vertex. */   \
-	CF_ENUM(ATTRIBUTE_STEP_PER_VERTEX,   0 )                                                \
-	/* @entry Take a step forward in the vertex buffer (the `stride`) once per instance. */ \
-	CF_ENUM(ATTRIBUTE_STEP_PER_INSTANCE, 1 )                                                \
-	/* @end */
-
-typedef enum CF_AttributeStep
-{
-	#define CF_ENUM(K, V) CF_##K = V,
-	CF_ATTRIBUTE_STEP_DEFS
-	#undef CF_ENUM
-} CF_AttributeStep;
-
-/**
- * @function cf_attribute_step_string
- * @category graphics
- * @brief    Returns a `CF_AttributeStep` converted to a C string.
- * @related  CF_AttributeStep cf_attribute_step_string CF_VertexAttribute cf_mesh_set_attributes
- */
-CF_INLINE const char* cf_attribute_step_string(CF_AttributeStep step) {
-	switch (step) {
-	#define CF_ENUM(K, V) case CF_##K: return CF_STRINGIZE(CF_##K);
-	CF_ATTRIBUTE_STEP_DEFS
-	#undef CF_ENUM
-	default: return NULL;
-	}
-}
-
-/**
  * @struct   CF_VertexAttribute
  * @category graphics
  * @brief    Describes the memory layout of vertex attributes.
@@ -1000,9 +751,6 @@ typedef struct CF_VertexAttribute
 
 	/* @member The offset in memory from the beginning of a vertex to this attribute. */
 	int offset;
-
-	/* @member The step behavior to distinguish between vertex-stepping and instance-stepping. See `CF_AttributeStep`. */
-	CF_AttributeStep step_type;
 } CF_VertexAttribute;
 // @end
 
@@ -1010,20 +758,18 @@ typedef struct CF_VertexAttribute
  * @function cf_make_mesh
  * @category graphics
  * @brief    Returns a `CF_Mesh`.
- * @param    usage_type            Distinguish between per-vertex or per-attribute stepping. See `CF_UsageType`.
  * @param    vertex_buffer_size    The size of the mesh's vertex buffer.
  * @param    index_buffer_size     The size of the mesh's index buffer. Set to 0 if you're not using indices.
- * @param    instance_buffer_size  The size of the mesh's instance buffer. Set to 0 if you're not using instancing.
- * @related  CF_Mesh cf_make_mesh cf_destroy_mesh cf_mesh_set_attributes cf_mesh_update_vertex_data cf_mesh_update_instance_data cf_mesh_update_index_data
+ * @related  CF_Mesh cf_make_mesh cf_destroy_mesh cf_mesh_set_attributes cf_mesh_update_vertex_data cf_mesh_update_index_data
  */
-CF_API CF_Mesh CF_CALL cf_make_mesh(CF_UsageType usage_type, int vertex_buffer_size, int index_buffer_size, int instance_buffer_size);
+CF_API CF_Mesh CF_CALL cf_make_mesh(int vertex_buffer_size, int index_buffer_size);
 
 /**
  * @function cf_destroy_mesh
  * @category graphics
  * @brief    Frees up a `CF_Mesh` previously created with `cf_make_mesh`.
  * @param    mesh       The mesh.
- * @related  CF_Mesh cf_make_mesh cf_destroy_mesh cf_mesh_set_attributes cf_mesh_update_vertex_data cf_mesh_update_instance_data cf_mesh_update_index_data
+ * @related  CF_Mesh cf_make_mesh cf_destroy_mesh cf_mesh_set_attributes cf_mesh_update_vertex_data cf_mesh_update_index_data
  */
 CF_API void CF_CALL cf_destroy_mesh(CF_Mesh mesh);
 
@@ -1032,16 +778,15 @@ CF_API void CF_CALL cf_destroy_mesh(CF_Mesh mesh);
 /**
  * @function cf_mesh_set_attributes
  * @category graphics
- * @brief    Informs CF and the GPU what the memory layout of your vertices and instance data looks like.
+ * @brief    Informs CF and the GPU what the memory layout of your verticex data looks like.
  * @param    mesh             The mesh.
  * @param    attributes       Vertex attributes to define the memory layout of the mesh vertices.
  * @param    attribute_count  Number of attributes in `attributes`.
  * @param    vertex_stride    Number of bytes between each vertex.
- * @param    instance_stride  Number of bytes between each instance.
  * @remarks  You must call this before uploading any data to the GPU. The max number of attributes is 16. Any more attributes beyond 16 will be ignored.
- * @related  CF_Mesh cf_make_mesh cf_destroy_mesh cf_mesh_set_attributes cf_mesh_update_vertex_data cf_mesh_update_instance_data cf_mesh_update_index_data
+ * @related  CF_Mesh cf_make_mesh cf_destroy_mesh cf_mesh_set_attributes cf_mesh_update_vertex_data cf_mesh_update_index_data
  */
-CF_API void CF_CALL cf_mesh_set_attributes(CF_Mesh mesh, const CF_VertexAttribute* attributes, int attribute_count, int vertex_stride, int instance_stride);
+CF_API void CF_CALL cf_mesh_set_attributes(CF_Mesh mesh, const CF_VertexAttribute* attributes, int attribute_count, int vertex_stride);
 
 /**
  * @function cf_mesh_update_vertex_data
@@ -1054,85 +799,9 @@ CF_API void CF_CALL cf_mesh_set_attributes(CF_Mesh mesh, const CF_VertexAttribut
  * @remarks  The mesh must have been created with `CF_USAGE_TYPE_DYNAMIC` or `CF_USAGE_TYPE_STREAM` in order to call this function more
  *           than once. For `CF_USAGE_TYPE_IMMUTABLE` this function can only be called once. For dynamic/stream cases you can only call
  *           this function once per frame.
- * @related  CF_Mesh cf_make_mesh cf_destroy_mesh cf_mesh_set_attributes cf_mesh_update_vertex_data cf_mesh_update_instance_data cf_mesh_update_index_data
+ * @related  CF_Mesh cf_make_mesh cf_destroy_mesh cf_mesh_set_attributes cf_mesh_update_vertex_data cf_mesh_update_index_data
  */
 CF_API void CF_CALL cf_mesh_update_vertex_data(CF_Mesh mesh, void* data, int count);
-
-/**
- * @function cf_mesh_append_vertex_data
- * @category graphics
- * @brief    Appends vertex data onto the end of the mesh's internal vertex buffer.
- * @param    mesh       The mesh.
- * @param    data       A pointer to vertex data.
- * @param    count      Number of bytes in `data`.
- * @return   Returns the number of bytes appended.
- * @remarks  The mesh must have been created with `CF_USAGE_TYPE_DYNAMIC` or `CF_USAGE_TYPE_STREAM` in order
- *           to call this function more than once. This function can be called multiple times per frame. The
- *           intended use-case is to stream bits of data to the GPU and issue a `cf_draw_elements` call. The
- *           only elements that will be drawn are the elements from the last call to `cf_mesh_append_index_data`,
- *           all previously appended data will remain untouched.
- * @related  CF_Mesh cf_make_mesh cf_destroy_mesh cf_mesh_set_attributes cf_mesh_update_vertex_data cf_mesh_update_instance_data cf_mesh_update_index_data
- */
-CF_API int CF_CALL cf_mesh_append_vertex_data(CF_Mesh mesh, void* data, int count);
-
-/**
- * @function cf_mesh_will_overflow_vertex_data
- * @category graphics
- * @brief    Returns true if a number of bytes to append would overflow the internal vertex buffer.
- * @param    mesh          The mesh.
- * @param    append_count  A number of bytes to append.
- * @remarks  Use this when streaming data to the GPU to make sure the internal streaming buffers are not overrun.
- *           You specified this size when creating the mesh. Use this function to understand if you're sending
- *           too much to the GPU all at once. You might need to send less data or increase the size of your mesh's
- *           internal buffers.
- * @related  CF_Mesh cf_make_mesh cf_destroy_mesh cf_mesh_set_attributes cf_mesh_update_vertex_data cf_mesh_update_instance_data cf_mesh_update_index_data
- */
-CF_API bool CF_CALL cf_mesh_will_overflow_vertex_data(CF_Mesh mesh, int append_count);
-
-/**
- * @function cf_mesh_update_instance_data
- * @category graphics
- * @brief    Overwrites the instance data of a mesh.
- * @param    mesh       The mesh.
- * @param    data       A pointer to instance data.
- * @param    count      Number of bytes in `data`.
- * @remarks  The mesh must have been created with `CF_USAGE_TYPE_DYNAMIC` or `CF_USAGE_TYPE_STREAM` in order to call this function more
- *           than once. For `CF_USAGE_TYPE_IMMUTABLE` this function can only be called once. For dynamic/stream cases you can only call
- *           this function once per frame.
- * @related  CF_Mesh cf_make_mesh cf_destroy_mesh cf_mesh_set_attributes cf_mesh_update_vertex_data cf_mesh_update_instance_data cf_mesh_update_index_data
- */
-CF_API void CF_CALL cf_mesh_update_instance_data(CF_Mesh mesh, void* data, int count);
-
-/**
- * @function cf_mesh_append_instance_data
- * @category graphics
- * @brief    Appends instance data onto the end of the mesh's internal instance buffer.
- * @param    mesh       The mesh.
- * @param    data       A pointer to instance data.
- * @param    count      Number of bytes in `data`.
- * @return   Returns the number of bytes appended.
- * @remarks  The mesh must have been created with `CF_USAGE_TYPE_DYNAMIC` or `CF_USAGE_TYPE_STREAM` in order
- *           to call this function more than once. This function can be called multiple times per frame. The
- *           intended use-case is to stream bits of data to the GPU and issue a `cf_draw_elements` call. The
- *           only elements that will be drawn are the elements from the last call to `cf_mesh_append_index_data`,
- *           all previously appended data will remain untouched.
- * @related  CF_Mesh cf_make_mesh cf_destroy_mesh cf_mesh_set_attributes cf_mesh_update_vertex_data cf_mesh_update_instance_data cf_mesh_update_index_data
- */
-CF_API int CF_CALL cf_mesh_append_instance_data(CF_Mesh mesh, void* data, int count);
-
-/**
- * @function cf_mesh_will_overflow_instance_data
- * @category graphics
- * @brief    Returns true if a number of bytes to append would overflow the internal vertex buffer.
- * @param    mesh          The mesh.
- * @param    append_count  A number of bytes to append.
- * @remarks  Use this when streaming data to the GPU to make sure the internal streaming buffers are not overrun.
- *           You specified this size when creating the mesh. Use this function to understand if you're sending
- *           too much to the GPU all at once. You might need to send less data or increase the size of your mesh's
- *           internal buffers.
- * @related  CF_Mesh cf_make_mesh cf_destroy_mesh cf_mesh_set_attributes cf_mesh_update_vertex_data cf_mesh_update_instance_data cf_mesh_update_index_data
- */
-CF_API bool CF_CALL cf_mesh_will_overflow_instance_data(CF_Mesh mesh, int append_count);
 
 /**
  * @function cf_mesh_update_index_data
@@ -1144,40 +813,9 @@ CF_API bool CF_CALL cf_mesh_will_overflow_instance_data(CF_Mesh mesh, int append
  * @remarks  The mesh must have been created with `CF_USAGE_TYPE_DYNAMIC` or `CF_USAGE_TYPE_STREAM` in order to call this function more
  *           than once. For `CF_USAGE_TYPE_IMMUTABLE` this function can only be called once. For dynamic/stream cases you can only call
  *           this function once per frame.
- * @related  CF_Mesh cf_make_mesh cf_destroy_mesh cf_mesh_set_attributes cf_mesh_update_vertex_data cf_mesh_update_instance_data cf_mesh_update_index_data
+ * @related  CF_Mesh cf_make_mesh cf_destroy_mesh cf_mesh_set_attributes cf_mesh_update_vertex_data cf_mesh_update_index_data
  */
 CF_API void CF_CALL cf_mesh_update_index_data(CF_Mesh mesh, uint32_t* indices, int count);
-
-/**
- * @function cf_mesh_append_index_data
- * @category graphics
- * @brief    Appends index data onto the end of the mesh's internal index buffer.
- * @param    mesh       The mesh.
- * @param    indices    A pointer to index data.
- * @param    count      Number of bytes in `data`.
- * @return   Returns the number of bytes appended.
- * @remarks  The mesh must have been created with `CF_USAGE_TYPE_DYNAMIC` or `CF_USAGE_TYPE_STREAM` in order
- *           to call this function more than once. This function can be called multiple times per frame. The
- *           intended use-case is to stream bits of data to the GPU and issue a `cf_draw_elements` call. The
- *           only elements that will be drawn are the elements from the last call to `cf_mesh_append_index_data`,
- *           all previously appended data will remain untouched.
- * @related  CF_Mesh cf_make_mesh cf_destroy_mesh cf_mesh_set_attributes cf_mesh_update_vertex_data cf_mesh_update_instance_data cf_mesh_update_index_data
- */
-CF_API int CF_CALL cf_mesh_append_index_data(CF_Mesh mesh, uint32_t* indices, int count);
-
-/**
- * @function cf_mesh_will_overflow_index_data
- * @category graphics
- * @brief    Returns true if a number of bytes to append would overflow the internal index buffer.
- * @param    mesh          The mesh.
- * @param    append_count  A number of bytes to append.
- * @remarks  Use this when streaming data to the GPU to make sure the internal streaming buffers are not overrun.
- *           You specified this size when creating the mesh. Use this function to understand if you're sending
- *           too much to the GPU all at once. You might need to send less data or increase the size of your mesh's
- *           internal buffers.
- * @related  CF_Mesh cf_make_mesh cf_destroy_mesh cf_mesh_set_attributes cf_mesh_update_vertex_data cf_mesh_update_instance_data cf_mesh_update_index_data
- */
-CF_API bool CF_CALL cf_mesh_will_overflow_index_data(CF_Mesh mesh, int append_count);
 
 //--------------------------------------------------------------------------------------------------
 // Render state.
@@ -1798,12 +1436,12 @@ CF_API void CF_CALL cf_apply_canvas(CF_Canvas canvas);
  * @brief    Sets up a viewport to render within.
  * @param    x          Center of the viewport on the x-axis.
  * @param    y          Center of the viewport on the y-axis.
- * @param    width      Width of the viewport in pixels.
- * @param    height     Height of the viewport in pixels.
+ * @param    w          Width of the viewport in pixels.
+ * @param    h          Height of the viewport in pixels.
  * @remarks  The viewport is a window on the screen to render within. The canvas will be stretched to fit onto the viewport.
  * @related  cf_apply_canvas cf_apply_viewport cf_apply_scissor
  */
-CF_API void CF_CALL cf_apply_viewport(int x, int y, int width, int height);
+CF_API void CF_CALL cf_apply_viewport(int x, int y, int w, int h);
 
 /**
  * @function cf_apply_scissor
@@ -1811,13 +1449,13 @@ CF_API void CF_CALL cf_apply_viewport(int x, int y, int width, int height);
  * @brief    Sets up a scissor box to clip rendering within.
  * @param    x          Center of the scissor box on the x-axis.
  * @param    y          Center of the scissor box on the y-axis.
- * @param    width      Width of the scissor box in pixels.
- * @param    height     Height of the scissor box in pixels.
+ * @param    w          Width of the scissor box in pixels.
+ * @param    h          Height of the scissor box in pixels.
  * @remarks  The scissor box is a window on the screen that rendering will be clipped within. Any rendering that occurs outside the
  *           scissor box will simply be ignored, rendering nothing and leaving the previous pixel contents untouched.
  * @related  cf_apply_canvas cf_apply_viewport cf_apply_scissor
  */
-CF_API void CF_CALL cf_apply_scissor(int x, int y, int width, int height);
+CF_API void CF_CALL cf_apply_scissor(int x, int y, int w, int h);
 
 /**
  * @function cf_apply_mesh
@@ -1851,14 +1489,12 @@ CF_API void CF_CALL cf_apply_shader(CF_Shader shader, CF_Material material);
 CF_API void CF_CALL cf_draw_elements();
 
 /**
- * @function cf_unapply_canvas
+ * @function cf_commit
  * @category graphics
- * @brief    An optional function to end the current rendering pass.
- * @remarks  This is only useful when a particular canvas needs to be destroyed, though it may be currently applied. For example, if the screen is
- *           resized and you want to resize some of your canvases as well.
- * @related  CF_Canvas cf_apply_canvas
+ * @brief    Submits all previous draw commands to the GPU.
+ * @related  CF_Canvas cf_apply_canvas cf_apply_mesh cf_apply_shader
  */
-CF_API void CF_CALL cf_unapply_canvas();
+CF_API void CF_CALL cf_commit();
 
 #ifdef __cplusplus
 }
@@ -1899,27 +1535,14 @@ CF_INLINE constexpr const char* to_string(CF_BackendType type) { switch(type) {
 	}
 }
 
-using DeviceFeature = CF_DeviceFeature;
-#define CF_ENUM(K, V) CF_INLINE constexpr DeviceFeature K = CF_##K;
-CF_DEVICE_FEATURE_DEFS
-#undef CF_ENUM
-
-CF_INLINE constexpr const char* to_string(DeviceFeature type) { switch(type) {
-	#define CF_ENUM(K, V) case CF_##K: return #K;
-	CF_DEVICE_FEATURE_DEFS
-	#undef CF_ENUM
-	default: return NULL;
-	}
-}
-
 using PixelFormat = CF_PixelFormat;
 #define CF_ENUM(K, V) CF_INLINE constexpr PixelFormat K = CF_##K;
-CF_PIXELFORMAT_DEFS
+CF_PIXEL_FORMAT_DEFS
 #undef CF_ENUM
 
 CF_INLINE constexpr const char* to_string(PixelFormat type) { switch(type) {
 	#define CF_ENUM(K, V) case CF_##K: return #K;
-	CF_PIXELFORMAT_DEFS
+	CF_PIXEL_FORMAT_DEFS
 	#undef CF_ENUM
 	default: return NULL;
 	}
@@ -1933,32 +1556,6 @@ CF_PIXELFORMAT_OP_DEFS
 CF_INLINE constexpr const char* to_string(PixelFormatOp type) { switch(type) {
 	#define CF_ENUM(K, V) case CF_##K: return #K;
 	CF_PIXELFORMAT_OP_DEFS
-	#undef CF_ENUM
-	default: return NULL;
-	}
-}
-
-using ResourceLimit = CF_ResourceLimit;
-#define CF_ENUM(K, V) CF_INLINE constexpr ResourceLimit K = CF_##K;
-CF_RESOURCE_LIMIT_DEFS
-#undef CF_ENUM
-
-CF_INLINE constexpr const char* to_string(ResourceLimit type) { switch(type) {
-	#define CF_ENUM(K, V) case CF_##K: return #K;
-	CF_RESOURCE_LIMIT_DEFS
-	#undef CF_ENUM
-	default: return NULL;
-	}
-}
-
-using UsageType = CF_UsageType;
-#define CF_ENUM(K, V) CF_INLINE constexpr UsageType K = CF_##K;
-CF_USAGE_TYPE_DEFS
-#undef CF_ENUM
-
-CF_INLINE constexpr const char* to_string(UsageType type) { switch(type) {
-	#define CF_ENUM(K, V) case CF_##K: return #K;
-	CF_USAGE_TYPE_DEFS
 	#undef CF_ENUM
 	default: return NULL;
 	}
@@ -1998,19 +1595,6 @@ CF_VERTEX_FORMAT_DEFS
 CF_INLINE constexpr const char* to_string(VertexFormat type) { switch(type) {
 	#define CF_ENUM(K, V) case CF_##K: return #K;
 	CF_VERTEX_FORMAT_DEFS
-	#undef CF_ENUM
-	default: return NULL;
-	}
-}
-
-using AttributeStep = CF_AttributeStep;
-#define CF_ENUM(K, V) CF_INLINE constexpr AttributeStep K = CF_##K;
-CF_ATTRIBUTE_STEP_DEFS
-#undef CF_ENUM
-
-CF_INLINE constexpr const char* to_string(AttributeStep type) { switch(type) {
-	#define CF_ENUM(K, V) case CF_##K: return #K;
-	CF_ATTRIBUTE_STEP_DEFS
 	#undef CF_ENUM
 	default: return NULL;
 	}
@@ -2097,35 +1681,23 @@ CF_INLINE constexpr const char* to_string(UniformType type) { switch(type) {
 using ShaderStage = CF_ShaderStage;
 
 CF_INLINE BackendType query_backend() { return cf_query_backend(); }
-CF_INLINE bool query_pixel_format(PixelFormat format, PixelFormatOp op) { return cf_query_pixel_format(format, op); }
-CF_INLINE bool query_device_feature(DeviceFeature feature) { return cf_query_device_feature(feature); }
-CF_INLINE int query_resource_limit(ResourceLimit resource_limit) { return cf_query_resource_limit(resource_limit); }
 CF_INLINE TextureParams texture_defaults(int w, int h) { return cf_texture_defaults(w, h); }
 CF_INLINE Texture make_texture(TextureParams texture_params) { return cf_make_texture(texture_params); }
 CF_INLINE void destroy_texture(Texture texture) { cf_destroy_texture(texture); }
 CF_INLINE void update_texture(Texture texture, void* data, int size) { cf_update_texture(texture, data, size); }
-CF_INLINE Shader make_shader(CF_ShaderFormat format, const char* vertex, const char* fragment) { return cf_make_shader(format, vertex, fragment); }
+CF_INLINE Shader make_shader(const char* vertex, const char* fragment) { return cf_make_shader(vertex, fragment); }
 CF_INLINE void destroy_shader(Shader shader) { cf_destroy_shader(shader); }
 CF_INLINE CanvasParams canvas_defaults(int w, int h) { return cf_canvas_defaults(w, h); }
 CF_INLINE Canvas make_canvas(CanvasParams pass_params) { return cf_make_canvas(pass_params); }
 CF_INLINE void destroy_canvas(Canvas canvas) { cf_destroy_canvas(canvas); }
 CF_INLINE Texture canvas_get_target(Canvas canvas) { return cf_canvas_get_target(canvas); }
 CF_INLINE Texture canvas_get_depth_stencil_target(Canvas canvas) { return cf_canvas_get_depth_stencil_target(canvas); }
-CF_INLINE uint64_t canvas_get_backend_target_handle(Canvas canvas) { return cf_canvas_get_backend_target_handle(canvas); }
-CF_INLINE uint64_t canvas_get_backend_depth_stencil_handle(Canvas canvas) { return cf_canvas_get_backend_depth_stencil_handle(canvas); }
 CF_INLINE void canvas_blit(Canvas src, v2 u0, v2 v0, Canvas dst, v2 u1, v2 v1) { cf_canvas_blit(src, u0, v0, dst, u1, v1); }
-CF_INLINE Mesh make_mesh(UsageType usage_type, int vertex_buffer_size, int index_buffer_size, int instance_buffer_size) { return cf_make_mesh(usage_type, vertex_buffer_size, index_buffer_size, instance_buffer_size); }
+CF_INLINE Mesh make_mesh(int vertex_buffer_size, int index_buffer_size) { return cf_make_mesh(vertex_buffer_size, index_buffer_size); }
 CF_INLINE void destroy_mesh(Mesh mesh) { cf_destroy_mesh(mesh); }
-CF_INLINE void mesh_set_attributes(Mesh mesh, const VertexAttribute* attributes, int attribute_count, int vertex_stride, int instance_stride) { cf_mesh_set_attributes(mesh, attributes, attribute_count, vertex_stride, instance_stride); }
+CF_INLINE void mesh_set_attributes(Mesh mesh, const VertexAttribute* attributes, int attribute_count, int vertex_stride) { cf_mesh_set_attributes(mesh, attributes, attribute_count, vertex_stride); }
 CF_INLINE void mesh_update_vertex_data(Mesh mesh, void* data, int count) { cf_mesh_update_vertex_data(mesh, data, count); }
-CF_INLINE int mesh_append_vertex_data(Mesh mesh, void* data, int append_count) { return cf_mesh_append_vertex_data(mesh, data, append_count); }
-CF_INLINE bool mesh_will_overflow_vertex_data(Mesh mesh, int append_count) { return cf_mesh_will_overflow_vertex_data(mesh, append_count); }
-CF_INLINE void mesh_update_instance_data(Mesh mesh, void* data, int count) { cf_mesh_update_instance_data(mesh, data, count); }
-CF_INLINE int mesh_append_instance_data(Mesh mesh, void* data, int append_count) { return cf_mesh_append_instance_data(mesh, data, append_count); }
-CF_INLINE bool mesh_will_overflow_instance_data(Mesh mesh, int append_count) { return cf_mesh_will_overflow_instance_data(mesh, append_count); }
 CF_INLINE void mesh_update_index_data(Mesh mesh, uint32_t* indices, int count) { cf_mesh_update_index_data(mesh, indices, count); }
-CF_INLINE int mesh_append_index_data(Mesh mesh, uint32_t* indices, int append_count) { return cf_mesh_append_index_data(mesh, indices, append_count); }
-CF_INLINE bool mesh_will_overflow_index_data(Mesh mesh, int append_count) { return cf_mesh_will_overflow_index_data(mesh, append_count); }
 CF_INLINE RenderState render_state_defaults() { return cf_render_state_defaults(); }
 CF_INLINE Material make_material() { return cf_make_material(); }
 CF_INLINE void destroy_material(Material material) { cf_destroy_material(material); }
@@ -2142,7 +1714,7 @@ CF_INLINE void apply_scissor(int x, int y, int w, int h) { cf_apply_scissor(x, y
 CF_INLINE void apply_mesh(Mesh mesh) { cf_apply_mesh(mesh); }
 CF_INLINE void apply_shader(Shader shader, Material material) { cf_apply_shader(shader, material); }
 CF_INLINE void draw_elements() { cf_draw_elements(); }
-CF_INLINE void unapply_canvas() { cf_unapply_canvas(); }
+CF_INLINE void commit() { cf_commit(); }
 
 }
 
