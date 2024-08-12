@@ -1036,13 +1036,6 @@ struct String
 
 	CF_INLINE String& add(char ch) { spush(m_str, ch); return *this; }
 	CF_INLINE String& append(const char* s) { sappend(m_str, s); return *this; }
-	CF_INLINE String& operator+(const char* s) { sappend(m_str, s); return *this; }
-	CF_INLINE String& operator+(int i) { sfmt_append(m_str, "%d", i); return *this; }
-	CF_INLINE String& operator+(uint64_t uint) { sfmt_append(m_str, "%" PRIu64, uint); return *this; }
-	CF_INLINE String& operator+(float f) { sfmt_append(m_str, "%f", f); return *this; }
-	CF_INLINE String& operator+(double f) { sfmt_append(m_str, "%f", f); return *this; }
-	CF_INLINE String& operator+(bool b) { sfmt_append(m_str, "%s", b ? "true" : "false"); return *this; }
-	CF_INLINE String& operator+(v2 v) { sfmt_append(m_str, "{ %f, %f }", v.x, v.y); return *this; }
 	CF_INLINE String& append(const char* start, const char* end) { sappend_range(m_str, start, end); return *this; }
 	CF_INLINE String& append(int codepoint) { sappend_UTF8(m_str, codepoint); return *this; }
 	static CF_INLINE String fmt(const char* fmt, ...) { String result; va_list args; va_start(args, fmt); svfmt(result.m_str, fmt, args); va_end(args); return result; }
@@ -1091,6 +1084,7 @@ private:
 	CF_INLINE void s_chki(int i) const { CF_ASSERT(i >= 0 && i < scount(m_str)); }
 };
 
+CF_INLINE char* operator+(const String& a, int i) { return (char*)a.c_str() + i; }
 CF_INLINE String operator+(const String& a, const String& b) { String result = a; result.append(b); return result; }
 CF_INLINE String to_string(const char* s) { return String(s); }
 CF_INLINE String to_string(int i) { return String(i); }
