@@ -567,6 +567,7 @@ CF_API void CF_CALL cf_shader_on_changed(void (*on_changed_fn)(const char* path,
  * @related  CF_Shader cf_make_shader cf_destroy_shader cf_apply_shader CF_Material
  */
 CF_API CF_Shader CF_CALL cf_make_shader(const char* vertex_path, const char* fragment_path);
+CF_API CF_Shader CF_CALL cf_make_shader_from_source(const char* vertex_src, const char* fragment_src);
 
 const dyna uint8_t* cf_compile_shader_to_bytecode(const char* shader_src, CF_ShaderStage cf_stage);
 
@@ -1000,43 +1001,40 @@ CF_INLINE const char* cf_blend_op_string(CF_BlendOp op) {
  * @remarks  See `CF_BlendState` for an overview.
  * @related  CF_BlendFactor cf_blend_factor_string CF_BlendState
  */
-#define CF_BLEND_FACTOR_DEFS \
-	/* @entry 0 */                                 \
-	CF_ENUM(BLENDFACTOR_ZERO,                  0 ) \
-	/* @entry 1 */                                 \
-	CF_ENUM(BLENDFACTOR_ONE,                   1 ) \
-	/* @entry S.color */                           \
-	CF_ENUM(BLENDFACTOR_SRC_COLOR,             2 ) \
-	/* @entry (1 - S.rgb) */                       \
-	CF_ENUM(BLENDFACTOR_ONE_MINUS_SRC_COLOR,   3 ) \
-	/* @entry S.alpha */                           \
-	CF_ENUM(BLENDFACTOR_SRC_ALPHA,             4 ) \
-	/* @entry (1 - S.alpha) */                     \
-	CF_ENUM(BLENDFACTOR_ONE_MINUS_SRC_ALPHA,   5 ) \
-	/* @entry D.rgb */                             \
-	CF_ENUM(BLENDFACTOR_DST_COLOR,             6 ) \
-	/* @entry (1 - D.rgb) */                       \
-	CF_ENUM(BLENDFACTOR_ONE_MINUS_DST_COLOR,   7 ) \
-	/* @entry D.alpha */                           \
-	CF_ENUM(BLENDFACTOR_DST_ALPHA,             8 ) \
-	/* @entry (1 - D.alpha) */                     \
-	CF_ENUM(BLENDFACTOR_ONE_MINUS_DST_ALPHA,   9 ) \
-	/* @entry min(S.alpha, 1 - D.alpha) */         \
-	CF_ENUM(BLENDFACTOR_SRC_ALPHA_SATURATED,   10) \
-	/* @entry C (constant color not currently supported) */ \
-	CF_ENUM(BLENDFACTOR_BLEND_COLOR,           11) \
-	/* @entry 1 - C.rgb (constant color not currently supported) */ \
-	CF_ENUM(BLENDFACTOR_ONE_MINUS_BLEND_COLOR, 12) \
-	/* @entry C.alpha (constant color not currently supported) */ \
-	CF_ENUM(BLENDFACTOR_BLEND_ALPHA,           13) \
-	/* @entry (1 - C.alpha) (constant color not currently supported) */ \
-	CF_ENUM(BLENDFACTOR_ONE_MINUS_BLEND_ALPHA, 14) \
+#define CF_BLENDFACTOR_DEFS \
+	/* @entry 0 */                                    \
+	CF_ENUM(BLENDFACTOR_ZERO,                      0) \
+	/* @entry 1 */                                    \
+	CF_ENUM(BLENDFACTOR_ONE,                       1) \
+	/* @entry S.color */                              \
+	CF_ENUM(BLENDFACTOR_SRC_COLOR,                 2) \
+	/* @entry (1 - S.rgb) */                          \
+	CF_ENUM(BLENDFACTOR_ONE_MINUS_SRC_COLOR,       3) \
+	/* @entry D.rgb */                                \
+	CF_ENUM(BLENDFACTOR_DST_COLOR,                 4) \
+	/* @entry (1 - D.rgb) */                          \
+	CF_ENUM(BLENDFACTOR_ONE_MINUS_DST_COLOR,       5) \
+	/* @entry S.alpha */                              \
+	CF_ENUM(BLENDFACTOR_SRC_ALPHA,                 6) \
+	/* @entry (1 - S.alpha) */                        \
+	CF_ENUM(BLENDFACTOR_ONE_MINUS_SRC_ALPHA,       7) \
+	/* @entry D.alpha */                              \
+	CF_ENUM(BLENDFACTOR_DST_ALPHA,                 8) \
+	/* @entry (1 - D.alpha) */                        \
+	CF_ENUM(BLENDFACTOR_ONE_MINUS_DST_ALPHA,       9) \
+	/* @entry C */                                    \
+	CF_ENUM(BLENDFACTOR_CONSTANT_COLOR,           10) \
+	/* @entry (1 - C.rgb) */                          \
+	CF_ENUM(BLENDFACTOR_ONE_MINUS_CONSTANT_COLOR, 11) \
+	/* @entry min(S.alpha, 1 - D.alpha) */            \
+	CF_ENUM(BLENDFACTOR_SRC_ALPHA_SATURATE,       12) \
 	/* @end */
+
 
 typedef enum CF_BlendFactor
 {
 	#define CF_ENUM(K, V) CF_##K = V,
-	CF_BLEND_FACTOR_DEFS
+	CF_BLENDFACTOR_DEFS
 	#undef CF_ENUM
 } CF_BlendFactor;
 
@@ -1049,7 +1047,7 @@ typedef enum CF_BlendFactor
 CF_INLINE const char* cf_blend_factor_string(CF_BlendFactor factor) {
 	switch (factor) {
 	#define CF_ENUM(K, V) case CF_##K: return CF_STRINGIZE(CF_##K);
-	CF_BLEND_FACTOR_DEFS
+	CF_BLENDFACTOR_DEFS
 	#undef CF_ENUM
 	default: return NULL;
 	}
@@ -1654,12 +1652,12 @@ CF_INLINE constexpr const char* to_string(BlendOp type) { switch(type) {
 
 using BlendFactor = CF_BlendFactor;
 #define CF_ENUM(K, V) CF_INLINE constexpr BlendFactor K = CF_##K;
-CF_BLEND_FACTOR_DEFS
+CF_BLENDFACTOR_DEFS
 #undef CF_ENUM
 
 CF_INLINE constexpr const char* to_string(BlendFactor type) { switch(type) {
 	#define CF_ENUM(K, V) case CF_##K: return #K;
-	CF_BLEND_FACTOR_DEFS
+	CF_BLENDFACTOR_DEFS
 	#undef CF_ENUM
 	default: return NULL;
 	}

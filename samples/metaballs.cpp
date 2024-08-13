@@ -1,23 +1,21 @@
 #include <cute.h>
 using namespace Cute;
 
-#include "metaballs_data/metaballs_shader.h"
-
 int w = 480*2;
 int h = 270*2;
 float scale = 1;
 
 int main(int argc, char* argv[])
 {
-	make_app("Metaballs", 0, 0, 0, (int)(w*scale), (int)(h*scale), APP_OPTIONS_WINDOW_POS_CENTERED, argv[0]);
+	make_app("Metaballs", 0, 0, 0, (int)(w*scale), (int)(h*scale), APP_OPTIONS_WINDOW_POS_CENTERED_BIT, argv[0]);
+	cf_shader_directory("/metaballs_data");
 	CF_Canvas soft_circles = make_canvas(canvas_defaults(w, h));
-	CF_Shader shd = CF_MAKE_SOKOL_SHADER(metaballs_shader);
-	clear_color(0,0,0,1);
+	CF_Shader shd = cf_make_draw_shader("metaballs.shd");
 	float t = 0;
 
-	while (app_is_running())
-	{
+	while (app_is_running()) {
 		app_update();
+		cf_clear_screen(0,0,0,1);
 		draw_scale(scale, scale);
 		t = t + DELTA_TIME;
 
@@ -42,7 +40,8 @@ int main(int argc, char* argv[])
 		}
 		if (!toggle) {
 			// Render soft circles onto their own canvas, to feed into the metaballs filter shader.
-			render_to(soft_circles, true);
+			cf_canvas_clear(soft_circles, 0,0,0,1);
+			render_to(soft_circles);
 
 			// Apply the metaball filter to the soft circle render.
 			render_settings_push_shader(shd);

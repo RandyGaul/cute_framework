@@ -325,6 +325,7 @@ layout (binding = 0) uniform uniform_block {
 #include "blend.shd"
 #include "gamma.shd"
 #include "smooth_uv.shd"
+#include "distance.shd"
 #include "shader_stub.shd"
 
 void main()
@@ -724,21 +725,39 @@ void cf_update_texture(CF_Texture texture_handle, void* data, int size)
 	SDL_GpuReleaseTransferBuffer(app->device, buf);
 }
 
-void cf_shader_directory(const char* path)
+static void s_shader_directory(Path path)
 {
-	Array<Path> dir = Directory::enumerate(path);
+	Array<Path> dir = Directory::enumerate(app->shader_directory + path);
 	for (int i = 0; i < dir.size(); ++i) {
-		if (dir[i].is_directory()) {
-			cf_shader_directory(dir[i]);
+		Path p = app->shader_directory + path + dir[i];
+		if (p.is_directory()) {
+			cf_shader_directory(p);
 		} else {
 			CF_Stat stat;
-			fs_stat(dir[i], &stat);
-			String ext = dir[i].ext();
+			fs_stat(p, &stat);
+			String ext = p.ext();
 			if (ext == ".vs" || ext == ".fs" || ext == ".shd") {
-				app->shader_file_infos.add(sintern(dir[i]), stat);
+				// Exclude app->shader_directory for easier lookups.
+				// e.g. app->shader_directory is "/shaders" and contains
+				// "/shaders/my_shader.shd", the user needs to only reference it by:
+				// "my_shader.shd".
+				CF_ShaderFileInfo info;
+				info.stat = stat;
+				info.path = sintern(p);
+				const char* key = sintern(path + dir[i]);
+				app->shader_file_infos.add(key, info);
 			}
 		}
 	}
+}
+
+void cf_shader_directory(const char* path)
+{
+	CF_ASSERT(!app->shader_directory_set);
+	if (app->shader_directory_set) return;
+	app->shader_directory_set = true;
+	app->shader_directory = path;
+	s_shader_directory("/");
 }
 
 void cf_shader_on_changed(void (*on_changed_fn)(const char* path, void* udata), void* udata)
@@ -878,7 +897,7 @@ static SDL_GpuShader* s_compile(CF_ShaderInternal* shader_internal, const dyna u
 	spvReflectEnumerateDescriptorBindings(&module, &binding_count, nullptr);
 	dyna SpvReflectDescriptorBinding** bindings = NULL;
 	afit(bindings, (int)binding_count);
-	alen(bindings) = binding_count;
+	if (binding_count) alen(bindings) = binding_count;
 	spvReflectEnumerateDescriptorBindings(&module, &binding_count, bindings);
 	int sampler_count = 0;
 	int storage_texture_count = 0;
@@ -978,7 +997,7 @@ CF_Shader cf_make_shader_from_bytecode(const dyna uint8_t* vertex_bytecode, cons
 	return result;
 }
 
-// Return the index of the first #include that's not in a comment.
+// Return the index of the first #include substring that's not in a comment.
 static int s_find_first_include(const char *src)
 {
 	const char *in = src;
@@ -1005,10 +1024,10 @@ static int s_find_first_include(const char *src)
 	return -1;
 }
 
-// Parse + perform include directives across shaders.
-static String s_include(String shd, bool builtin, const char* user_shd)
+// Recursively apply #include directives in shaders.
+// ...A cache is used to protect against multiple includes and infinite loops.
+static String s_include_recurse(Map<const char*, const char*>& incl_protection, String shd, bool builtin, const char* user_shd)
 {
-	// TODO: Infinite recursion protection via cache.
 	while (1) {
 		int idx = s_find_first_include(shd);
 		if (idx < 0) break;
@@ -1035,15 +1054,18 @@ static String s_include(String shd, bool builtin, const char* user_shd)
 						incl = user_shd ? user_shd : s_shader_stub;
 						found = true;
 					} else {
-						// Builtin shaders can only include each other (nothing from disk).
+						// Builtin shaders can include other builtin shaders.
 						const char* result = app->builtin_shaders.find(sintern(path));
 						if (result) {
 							incl = result;
 							found = true;
 						}
 					}
-				} else {
-					// Processing a user-include file.
+				}
+
+				// Wasn't a builtin shader, try including a user shader.
+				if (!found) {
+					// Processing a user-include shader.
 					const char* result = fs_read_entire_file_to_memory_and_nul_terminate(path);
 					if (result) {
 						incl = result;
@@ -1052,18 +1074,24 @@ static String s_include(String shd, bool builtin, const char* user_shd)
 					}
 				}
 
-				// Perform the actual string inclusion.
 				if (found) {
-					incl = s_include(incl, builtin, user_shd);
-					shd = String(shd, shd + idx)
-						.append("// -- begin include ")
-						.append(path)
-						.append(" --")
-						.append(incl)
-						.append("// -- end include ")
-						.append(path)
-						.append(" --\n\n")
-						.append(shd + idx);
+					// Prevent infinite include loops.
+					const char* incl_path = sintern(path);
+					if (!incl_protection.has(incl_path)) {
+						incl_protection.add(incl_path);
+						incl = s_include_recurse(incl_protection, incl, builtin, user_shd);
+						
+						// Perform the actual string splice + inclusion.
+						shd = String(shd, shd + idx)
+							.append("// -- begin include ")
+							.append(path)
+							.append(" --\n")
+							.append(incl)
+							.append("// -- end include ")
+							.append(path)
+							.append(" --\n")
+							.append(shd + idx);
+					}
 				}
 			}
 		}
@@ -1071,16 +1099,25 @@ static String s_include(String shd, bool builtin, const char* user_shd)
 	return shd;
 }
 
+// Parse + perform include directives across shaders.
+static String s_include(String shd, bool builtin, const char* user_shd)
+{
+	Map<const char*, const char*> incl_protection;
+	return s_include_recurse(incl_protection, shd, builtin, user_shd);
+}
+
 static CF_Shader s_compile(const char* vs_src, const char* fs_src, bool builtin = false, const char* user_shd = NULL)
 {
 	// Support #include directives.
-	String vs = s_include(vs_src, builtin, user_shd);
+	String vs = s_include(vs_src, builtin, NULL);
 	String fs = s_include(fs_src, builtin, user_shd);
 
+#if 1
 	printf(vs.c_str());
 	printf("---\n");
 	printf(fs.c_str());
 	printf("---\n");
+#endif
 
 	// Compile to bytecode.
 	const char* vertex = vs.c_str();
@@ -1103,6 +1140,10 @@ static CF_Shader s_compile(const char* vs_src, const char* fs_src, bool builtin 
 
 void cf_load_internal_shaders()
 {
+#ifdef CF_RUNTIME_SHADER_COMPILATION
+	glslang::InitializeProcess();
+#endif
+
 	// Map out all the builtin includable shaders.
 	app->builtin_shaders.add(sintern("shader_stub.shd"), s_shader_stub);
 	app->builtin_shaders.add(sintern("gamma.shd"), s_gamma);
@@ -1114,6 +1155,24 @@ void cf_load_internal_shaders()
 	app->backbuffer_shader = s_compile(s_backbuffer_vs, s_backbuffer_fs, true, NULL);
 }
 
+void cf_unload_shader_compiler()
+{
+#ifdef CF_RUNTIME_SHADER_COMPIILATION
+	glslang::FinalizeProcess();
+#endif CF_RUNTIME_SHADER_COMPIILATION
+}
+
+CF_Shader cf_make_draw_shader_internal(const char* path)
+{
+	Path p = Path("/") + path;
+	const char* path_s = sintern(p);
+	CF_ShaderFileInfo info = app->shader_file_infos.find(path_s);
+	if (!info.path) return { 0 };
+	const char* shd = fs_read_entire_file_to_memory_and_nul_terminate(info.path);
+	if (!shd) return { 0 };
+	return s_compile(s_draw_vs, s_draw_fs, true, shd);
+}
+
 CF_Shader cf_make_shader(const char* vertex_path, const char* fragment_path)
 {
 	// Make sure each file can be found.
@@ -1122,6 +1181,11 @@ CF_Shader cf_make_shader(const char* vertex_path, const char* fragment_path)
 	CF_ASSERT(vs);
 	CF_ASSERT(fs);
 	return s_compile(vs, fs);
+}
+
+CF_Shader cf_make_shader_from_source(const char* vertex_src, const char* fragment_src)
+{
+	return s_compile(vertex_src, fragment_src);
 }
 
 void cf_destroy_shader(CF_Shader shader_handle)
@@ -1157,8 +1221,14 @@ CF_Canvas cf_make_canvas(CF_CanvasParams params)
 	CF_CanvasInternal* canvas = (CF_CanvasInternal*)CF_CALLOC(sizeof(CF_CanvasInternal));
 	if (params.target.width > 0 && params.target.height > 0) {
 		canvas->cf_texture = cf_make_texture(params.target);
+		if (canvas->cf_texture.id) {
+			canvas->texture = ((CF_TextureInternal*)canvas->cf_texture.id)->tex;
+		}
 		if (params.depth_stencil_enable) {
 			canvas->cf_depth_stencil = cf_make_texture(params.depth_stencil_target);
+			if (canvas->cf_depth_stencil.id) {
+				canvas->depth_stencil = ((CF_TextureInternal*)canvas->cf_depth_stencil.id)->tex;
+			}
 		} else {
 			canvas->cf_depth_stencil = { 0 };
 		}
@@ -1288,14 +1358,29 @@ void cf_mesh_set_attributes(CF_Mesh mesh_handle, const CF_VertexAttribute* attri
 
 void cf_mesh_update_vertex_data(CF_Mesh mesh_handle, void* data, int count)
 {
+	// Copy vertices over to the driver.
 	CF_MeshInternal* mesh = (CF_MeshInternal*)mesh_handle.id;
 	CF_ASSERT(mesh->attribute_count);
 	int size = count * mesh->vertices.stride;
+	CF_ASSERT(size <= mesh->vertices.size);
 	void* p = NULL;
 	SDL_GpuMapTransferBuffer(app->device, mesh->vertices.transfer_buffer, true, &p);
 	CF_MEMCPY(p, data, size);
 	SDL_GpuUnmapTransferBuffer(app->device, mesh->vertices.transfer_buffer);
 	mesh->vertices.element_count = count;
+
+	// Submit the upload command to the GPU.
+	SDL_GpuCommandBuffer* cmd = SDL_GpuAcquireCommandBuffer(app->device);
+	SDL_GpuCopyPass *pass = SDL_GpuBeginCopyPass(cmd);
+	SDL_GpuTransferBufferLocation location;
+	location.offset = 0;
+	location.transferBuffer = mesh->vertices.transfer_buffer;
+	SDL_GpuBufferRegion region;
+	region.buffer = mesh->vertices.buffer;
+	region.offset = 0;
+	region.size = size;
+	SDL_GpuUploadToBuffer(pass, &location, &region, true);
+	SDL_GpuEndCopyPass(pass);
 }
 
 void cf_mesh_update_index_data(CF_Mesh mesh_handle, uint32_t* indices, int count)
@@ -1653,6 +1738,26 @@ static SDL_GpuBlendOp s_wrap(CF_BlendOp blend_op)
 	}
 }
 
+SDL_GpuBlendFactor s_wrap(CF_BlendFactor factor)
+{
+	switch (factor) {
+	case CF_BLENDFACTOR_ZERO:                    return SDL_GPU_BLENDFACTOR_ZERO;
+	case CF_BLENDFACTOR_ONE:                     return SDL_GPU_BLENDFACTOR_ONE;
+	case CF_BLENDFACTOR_SRC_COLOR:               return SDL_GPU_BLENDFACTOR_SRC_COLOR;
+	case CF_BLENDFACTOR_ONE_MINUS_SRC_COLOR:     return SDL_GPU_BLENDFACTOR_ONE_MINUS_SRC_COLOR;
+	case CF_BLENDFACTOR_DST_COLOR:               return SDL_GPU_BLENDFACTOR_DST_COLOR;
+	case CF_BLENDFACTOR_ONE_MINUS_DST_COLOR:     return SDL_GPU_BLENDFACTOR_ONE_MINUS_DST_COLOR;
+	case CF_BLENDFACTOR_SRC_ALPHA:               return SDL_GPU_BLENDFACTOR_SRC_ALPHA;
+	case CF_BLENDFACTOR_ONE_MINUS_SRC_ALPHA:     return SDL_GPU_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
+	case CF_BLENDFACTOR_DST_ALPHA:               return SDL_GPU_BLENDFACTOR_DST_ALPHA;
+	case CF_BLENDFACTOR_ONE_MINUS_DST_ALPHA:     return SDL_GPU_BLENDFACTOR_ONE_MINUS_DST_ALPHA;
+	case CF_BLENDFACTOR_CONSTANT_COLOR:          return SDL_GPU_BLENDFACTOR_CONSTANT_COLOR;
+	case CF_BLENDFACTOR_ONE_MINUS_CONSTANT_COLOR:return SDL_GPU_BLENDFACTOR_ONE_MINUS_CONSTANT_COLOR;
+	case CF_BLENDFACTOR_SRC_ALPHA_SATURATE:      return SDL_GPU_BLENDFACTOR_SRC_ALPHA_SATURATE;
+	default:                                     return SDL_GPU_BLENDFACTOR_ZERO;
+	}
+}
+
 void cf_apply_shader(CF_Shader shader_handle, CF_Material material_handle)
 {
 	CF_ASSERT(s_canvas);
@@ -1668,10 +1773,10 @@ void cf_apply_shader(CF_Shader shader_handle, CF_Material material_handle)
 	color_info.blendState.blendEnable = state->blend.enabled;
 	color_info.blendState.alphaBlendOp = s_wrap(state->blend.alpha_op);
 	color_info.blendState.colorBlendOp = s_wrap(state->blend.rgb_op);
-	color_info.blendState.srcColorBlendFactor = SDL_GPU_BLENDFACTOR_ONE;
-	color_info.blendState.srcAlphaBlendFactor = SDL_GPU_BLENDFACTOR_ONE;
-	color_info.blendState.dstColorBlendFactor = SDL_GPU_BLENDFACTOR_ZERO;
-	color_info.blendState.dstAlphaBlendFactor = SDL_GPU_BLENDFACTOR_ZERO;
+	color_info.blendState.srcColorBlendFactor = s_wrap(state->blend.rgb_src_blend_factor);
+	color_info.blendState.srcAlphaBlendFactor = s_wrap(state->blend.alpha_src_blend_factor);
+	color_info.blendState.dstColorBlendFactor = s_wrap(state->blend.rgb_dst_blend_factor);
+	color_info.blendState.dstAlphaBlendFactor = s_wrap(state->blend.alpha_dst_blend_factor);
 	int mask_r = (int)state->blend.write_R_enabled << 0;
 	int mask_g = (int)state->blend.write_G_enabled << 1;
 	int mask_b = (int)state->blend.write_B_enabled << 2;

@@ -1204,6 +1204,8 @@ CF_API CF_RenderState CF_CALL cf_render_settings_peek_render_state();
  */
 CF_API void CF_CALL cf_render_settings_set_atlas_dimensions(int width_in_pixels, int height_in_pixels);
 
+CF_API CF_Shader CF_CALL cf_make_draw_shader(const char* path);
+
 /**
  * @function cf_render_settings_push_shader
  * @category draw

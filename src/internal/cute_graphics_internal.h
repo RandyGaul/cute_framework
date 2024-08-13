@@ -8,6 +8,8 @@
 #ifndef CF_GRAPHICS_INTERNAL_H
 #define CF_GRAPHICS_INTERNAL_H
 
+CF_Shader cf_make_draw_shader_internal(const char* path);
 void cf_load_internal_shaders();
+void cf_unload_shader_compiler();
 
 #endif // CF_GRAPHICS_INTERNAL_H

@@ -261,23 +261,15 @@ CF_Result cf_make_app(const char* window_title, int display_index, int x, int y,
 	SDL_GetWindowPosition(app->window, &app->x, &app->y);
 	list_init(&app->joypads);
 	::app = app;
-	if (use_gfx) {
-		app->device = device;
-		SDL_GpuClaimWindow(app->device, app->window, SDL_GPU_SWAPCHAINCOMPOSITION_SDR, SDL_GPU_PRESENTMODE_IMMEDIATE);
-		cf_make_draw();
-		cf_load_internal_shaders();
-	}
-
-#ifdef CF_WINDOWS
-	app->platform_handle = SDL_GetPointerProperty(SDL_GetWindowProperties(window), SDL_PROP_WINDOW_WIN32_HWND_POINTER, NULL);;
-#else
-	void* hwnd = NULL;
-#endif
-
 	cf_make_aseprite_cache();
 	cf_make_png_cache();
 
-	if (app->gfx_enabled) {
+	if (use_gfx) {
+		app->device = device;
+		SDL_GpuClaimWindow(app->device, app->window, SDL_GPU_SWAPCHAINCOMPOSITION_SDR, SDL_GPU_PRESENTMODE_IMMEDIATE);
+		cf_load_internal_shaders();
+		cf_make_draw();
+		
 		// Setup the backbuffer fullscreen mesh and canvas.
 		{
 			app->backbuffer_quad = cf_make_mesh(sizeof(Vertex) * 6, 0);
@@ -293,13 +285,8 @@ CF_Result cf_make_app(const char* window_title, int display_index, int x, int y,
 			s_quad(0, 0, 2, -2, quad); // Flip y-axis to achieve uv as (0,0) for bottom-left of screen.
 			cf_mesh_update_vertex_data(app->backbuffer_quad, quad, 6);
 		}
-		{
-			app->backbuffer_material = cf_make_material();
-			// @TODO
-			//app->backbuffer_shader = CF_MAKE_SOKOL_SHADER(backbuffer_shd);
-		}
+		app->backbuffer_material = cf_make_material();
 		s_canvas(app->w, app->h);
-		cf_make_draw();
 
 		// Load up a default image of 1x1 white pixel.
 		// Used in various places as a placeholder or default.
@@ -308,13 +295,17 @@ CF_Result cf_make_app(const char* window_title, int display_index, int x, int y,
 		app->default_image_id = img.id;
 		CF_ASSERT(app->default_image_id == CF_PNG_ID_RANGE_LO);
 
-		// This will clear the initial offscreen canvas to prevent the first frame from starting off
-		// with a black background.
-		cf_apply_canvas(app->offscreen_canvas);
-
-		// Create a default font.
+		// Create the default font.
 		make_font_from_memory(calibri_data, calibri_sz, "Calibri");
 	}
+
+#ifdef CF_WINDOWS
+	app->platform_handle = SDL_GetPointerProperty(SDL_GetWindowProperties(window), SDL_PROP_WINDOW_WIN32_HWND_POINTER, NULL);;
+#else
+	void* hwnd = NULL;
+#endif
+
+	app->gfx_enabled = use_gfx;
 
 	if (!(options & APP_OPTIONS_NO_AUDIO_BIT)) {
 		int more_on_emscripten = 1;
@@ -368,6 +359,7 @@ void cf_destroy_app()
 	}
 	if (app->gfx_enabled) {
 		cf_destroy_draw();
+		cf_unload_shader_compiler();
 		cf_destroy_canvas(app->offscreen_canvas);
 		cf_destroy_canvas(app->backbuffer_canvas);
 		cf_destroy_mesh(app->backbuffer_quad);
@@ -503,7 +495,6 @@ int cf_app_draw_onto_screen(bool clear)
 	cf_apply_canvas(app->backbuffer_canvas);
 	{
 		cf_apply_mesh(app->backbuffer_quad);
-		// @TODO
 		v2 u_texture_size = V2((float)app->w, (float)app->h);
 		cf_material_set_uniform_fs(app->backbuffer_material, "u_texture_size", &u_texture_size, CF_UNIFORM_TYPE_FLOAT2, 1);
 		cf_apply_shader(app->backbuffer_shader, app->backbuffer_material);
@@ -512,7 +503,6 @@ int cf_app_draw_onto_screen(bool clear)
 
 	// Dear ImGui draw.
 	if (app->using_imgui) {
-		// @TODO
 		//sg_imgui_draw(&app->sg_imgui);
 		s_imgui_present();
 	}

@@ -435,10 +435,6 @@ void CF_Draw::set_aaf()
 
 void cf_make_draw()
 {
-#ifdef CF_RUNTIME_SHADER_COMPILATION
-	glslang::InitializeProcess();
-#endif
-
 	draw = CF_NEW(CF_Draw);
 	draw->projection = ortho_2d(0, 0, (float)app->w, (float)app->h);
 	draw->reset_cam();
@@ -485,7 +481,7 @@ void cf_make_draw()
 	cf_mesh_set_attributes(draw->mesh, attrs, CF_ARRAY_SIZE(attrs), sizeof(CF_Vertex));
 
 	// Shaders.
-	//draw->shaders.add(CF_MAKE_SOKOL_SHADER(sprite_shader));
+	draw->shaders.add(app->draw_shader);
 
 	// Material.
 	draw->material = cf_make_material();
@@ -512,10 +508,6 @@ void cf_destroy_draw()
 	cf_destroy_shader(draw->shaders[0]);
 	draw->~CF_Draw();
 	CF_FREE(draw);
-
-#ifdef CF_RUNTIME_SHADER_COMPIILATION
-	glslang::FinalizeProcess();
-#endif CF_RUNTIME_SHADER_COMPIILATION
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -2330,6 +2322,11 @@ void cf_render_settings_set_atlas_dimensions(int width_in_pixels, int height_in_
 	draw->atlas_dims.y = (float)height_in_pixels;
 	draw->texel_dims.x = 1.0f / draw->atlas_dims.x;
 	draw->texel_dims.y = 1.0f / draw->atlas_dims.y;
+}
+
+CF_Shader cf_make_draw_shader(const char* path)
+{
+	return cf_make_draw_shader_internal(path);
 }
 
 void cf_render_settings_push_shader(CF_Shader shader)

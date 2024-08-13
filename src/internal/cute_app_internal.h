@@ -57,6 +57,12 @@ struct CF_WindowState
 	bool moved = false;
 };
 
+struct CF_ShaderFileInfo
+{
+	CF_Stat stat;
+	const char* path;
+};
+
 struct CF_App
 {
 	// App stuff.
@@ -71,7 +77,9 @@ struct CF_App
 	CF_Threadpool* threadpool = NULL;
 	void (*on_shader_changed_fn)(const char* path, void* udata) = NULL;
 	void* on_shader_changed_udata = NULL;
-	Cute::Map<const char*, CF_Stat> shader_file_infos;
+	bool shader_directory_set = false;
+	Cute::Path shader_directory;
+	Cute::Map<const char*, CF_ShaderFileInfo> shader_file_infos;
 	Cute::Map<const char*, const char*> builtin_shaders;
 	bool gfx_enabled = false;
 	float dpi_scale = 1.0f;
