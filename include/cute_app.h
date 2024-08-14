@@ -248,7 +248,7 @@ CF_API void CF_CALL cf_destroy_app();
  *     int main(int argc, const char** argv)
  *     {
  *         // Create a window with a resolution of 640 x 480, along with a DirectX 11 context.
- *         app_make("Fancy Window Title", 50, 50, 640, 480, CF_APP_OPTIONS_D3D11_CONTEXT, argv[0]);
+ *         app_make("Fancy Window Title", 0, 50, 50, 640, 480, CF_APP_OPTIONS_D3D11_CONTEXT, argv[0]);
  *         
  *         while (app_is_running())
  *         {
@@ -279,7 +279,7 @@ CF_API bool CF_CALL cf_app_is_running();
  *     int main(int argc, const char** argv)
  *     {
  *         // Create a window with a resolution of 640 x 480, along with a DirectX 11 context.
- *         app_make("Fancy Window Title", 50, 50, 640, 480, CF_APP_OPTIONS_D3D11_CONTEXT, argv[0]);
+ *         app_make("Fancy Window Title", 0, 50, 50, 640, 480, CF_APP_OPTIONS_D3D11_CONTEXT, argv[0]);
  *         
  *         while (app_is_running())
  *         {
@@ -313,7 +313,6 @@ CF_API void CF_CALL cf_app_update(CF_OnUpdateFn* on_update);
  * @function cf_app_draw_onto_screen
  * @category app
  * @brief    Draws the app onto the screen.
- * @param    clear       Default to true. Will clear the previous screen's contents to the clear color if true.
  * @return   Returns the number of draw calls for this frame.
  * @example > Creating a basic 640x480 window for your game.
  *     #include <cute.h>
@@ -322,7 +321,7 @@ CF_API void CF_CALL cf_app_update(CF_OnUpdateFn* on_update);
  *     int main(int argc, const char** argv)
  *     {
  *         // Create a window with a resolution of 640 x 480, along with a DirectX 11 context.
- *         app_make("Fancy Window Title", 50, 50, 640, 480, CF_APP_OPTIONS_D3D11_CONTEXT, argv[0]);
+ *         app_make("Fancy Window Title", 0, 50, 50, 640, 480, CF_APP_OPTIONS_D3D11_CONTEXT, argv[0]);
  *         
  *         while (app_is_running())
  *         {
@@ -338,7 +337,7 @@ CF_API void CF_CALL cf_app_update(CF_OnUpdateFn* on_update);
  * @remarks  Call this at the *end* of your main loop. You may only call this function once per game tick.
  * @related  cf_make_app cf_app_is_running cf_app_signal_shutdown cf_destroy_app
  */
-CF_API int CF_CALL cf_app_draw_onto_screen(bool clear);
+CF_API int CF_CALL cf_app_draw_onto_screen();
 
 /**
  * @function cf_app_get_size
@@ -794,7 +793,7 @@ CF_INLINE void destroy_app() { cf_destroy_app(); }
 CF_INLINE bool app_is_running() { return cf_app_is_running(); }
 CF_INLINE void app_signal_shutdown() { cf_app_signal_shutdown(); }
 CF_INLINE void app_update(OnUpdateFn* on_update = NULL) { cf_app_update(on_update); }
-CF_INLINE int app_draw_onto_screen(bool clear = true) { return cf_app_draw_onto_screen(clear); }
+CF_INLINE int app_draw_onto_screen() { return cf_app_draw_onto_screen(); }
 CF_INLINE void app_get_size(int* w, int* h) { return cf_app_get_size(w, h); }
 CF_INLINE void app_set_size(int w, int h) { return cf_app_set_size(w, h); }
 CF_INLINE void app_get_position(int* x, int* y) { return cf_app_get_position(x, y); }

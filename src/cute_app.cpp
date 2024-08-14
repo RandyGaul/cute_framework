@@ -154,25 +154,69 @@ unsigned char default_png_data[81] = {
 
 static void s_canvas(int w, int h)
 {
-	{
-		CF_CanvasParams params = cf_canvas_defaults(w, h);
-		if (app->offscreen_canvas.id) {
-			cf_destroy_canvas(app->offscreen_canvas);
-		}
-		app->offscreen_canvas = cf_make_canvas(params);
+	CF_CanvasParams params = cf_canvas_defaults(w, h);
+	if (app->offscreen_canvas.id) {
+		cf_destroy_canvas(app->offscreen_canvas);
 	}
-	{
-		// Size (0,0) is a hidden feature to use sokol's default canvas. This let's us
-		// get pixels to the actual screen as a final pass.
-		CF_CanvasParams params = cf_canvas_defaults(0, 0);
-		if (app->backbuffer_canvas.id) {
-			cf_destroy_canvas(app->backbuffer_canvas);
-		}
-		app->backbuffer_canvas = cf_make_canvas(params);
-	}
+	app->offscreen_canvas = cf_make_canvas(params);
 	app->canvas_w = w;
 	app->canvas_h = h;
 	cf_material_set_texture_fs(app->backbuffer_material, "u_image", cf_canvas_get_target(app->offscreen_canvas));
+
+	// Create the app's canvas manually, since it requiers some special APIs from SDL regarding the backbuffer.
+	SDL_GpuTextureCreateInfo tex_info = SDL_GpuTextureCreateInfoDefaults(w, h);
+	tex_info.format = SDL_GPU_TEXTUREFORMAT_D24_UNORM_S8_UINT;
+	tex_info.usageFlags = SDL_GPU_TEXTUREUSAGE_DEPTH_STENCIL_TARGET_BIT;
+	SDL_GpuTexture* depth_stencil = NULL;
+	if (app->use_depth_stencil) {
+		depth_stencil = SDL_GpuCreateTexture(app->device, &tex_info);
+		CF_ASSERT(depth_stencil);
+	}
+
+	SDL_GpuSamplerCreateInfo sampler_info = SDL_GpuSamplerCreateInfoDefaults();
+	sampler_info.minFilter = SDL_GPU_FILTER_NEAREST;
+	sampler_info.magFilter = SDL_GPU_FILTER_NEAREST;
+	sampler_info.addressModeU = SDL_GPU_SAMPLERADDRESSMODE_REPEAT;
+	sampler_info.addressModeV = SDL_GPU_SAMPLERADDRESSMODE_REPEAT;
+	sampler_info.addressModeW = SDL_GPU_SAMPLERADDRESSMODE_REPEAT;
+	SDL_GpuSampler* sampler = SDL_GpuCreateSampler(app->device, &sampler_info);
+	CF_ASSERT(sampler);
+
+	CF_TextureInternal* depth_stencil_internal = NULL;
+	if (app->use_depth_stencil) {
+		depth_stencil_internal = CF_NEW(CF_TextureInternal);
+		CF_MEMSET(depth_stencil_internal, 0, sizeof(*depth_stencil_internal));
+		depth_stencil_internal->w = w;
+		depth_stencil_internal->h = h;
+		depth_stencil_internal->filter = SDL_GPU_FILTER_NEAREST;
+		depth_stencil_internal->format = SDL_GPU_TEXTUREFORMAT_D24_UNORM_S8_UINT;
+		depth_stencil_internal->sampler = sampler;
+		depth_stencil_internal->tex = depth_stencil;
+	}
+
+	CF_TextureInternal* tex_internal = CF_NEW(CF_TextureInternal);
+	CF_MEMSET(tex_internal, 0, sizeof(*tex_internal));
+	tex_internal->w = w;
+	tex_internal->h = h;
+	tex_internal->filter = SDL_GPU_FILTER_NEAREST;
+	tex_internal->format = SDL_GpuGetSwapchainTextureFormat(app->device, app->window);
+	tex_internal->sampler = sampler;
+	tex_internal->tex = NULL; // The actual SDL texture handle will be filled later via SDL_GpuAcquireSwapchainTexture.
+	
+	if (app->canvas.id) {
+		if (app->use_depth_stencil) SDL_GpuReleaseTexture(app->device, ((CF_CanvasInternal*)app->canvas.id)->depth_stencil);
+		SDL_GpuReleaseSampler(app->device, ((CF_CanvasInternal*)app->canvas.id)->sampler);
+	}
+
+	CF_CanvasInternal* canvas = CF_NEW(CF_CanvasInternal);
+	CF_MEMSET(canvas, 0, sizeof(*canvas));
+	canvas->cf_depth_stencil = { (uint64_t)depth_stencil_internal };
+	canvas->cf_texture = { (uint64_t)tex_internal };
+	canvas->depth_stencil = depth_stencil;
+	canvas->texture = NULL; // The actual SDL texture handle will be filled later via SDL_GpuAcquireSwapchainTexture.
+	canvas->sampler = sampler;
+
+	app->canvas.id = { (uint64_t)canvas };
 }
 
 CF_Result cf_make_app(const char* window_title, int display_index, int x, int y, int w, int h, CF_AppOptionFlags options, const char* argv0)
@@ -361,15 +405,18 @@ void cf_destroy_app()
 		cf_destroy_draw();
 		cf_unload_shader_compiler();
 		cf_destroy_canvas(app->offscreen_canvas);
-		cf_destroy_canvas(app->backbuffer_canvas);
 		cf_destroy_mesh(app->backbuffer_quad);
-		cf_destroy_shader(app->backbuffer_shader);
 		cf_destroy_material(app->backbuffer_material);
 		if (app->canvas_blit_init) {
 			cf_destroy_mesh(app->blit_mesh);
 			cf_destroy_material(app->blit_material);
 			cf_destroy_shader(app->blit_shader);
 		}
+		CF_CanvasInternal* canvas = (CF_CanvasInternal*)app->canvas.id;
+		SDL_GpuReleaseTexture(app->device, canvas->depth_stencil);
+		SDL_GpuReleaseSampler(app->device, canvas->sampler);
+		if (app->use_depth_stencil) cf_free((void*)canvas->cf_depth_stencil.id);
+		cf_free(canvas);
 	}
 	cf_destroy_aseprite_cache();
 	cf_destroy_png_cache();
@@ -449,6 +496,8 @@ void cf_app_update(CF_OnUpdateFn* on_update)
 			//ImGui_ImplSDL2_NewFrame(app->window);
 			//simgui_new_frame(&desc);
 		}
+
+		app->cmd = SDL_GpuAcquireCommandBuffer(app->device);
 	}
 	app->user_on_update = on_update;
 	cf_update_time(s_on_update);
@@ -464,7 +513,7 @@ static void s_imgui_present()
 	}
 }
 
-int cf_app_draw_onto_screen(bool clear)
+int cf_app_draw_onto_screen()
 {
 	// Update lifteime of all text effects.
 	const char** keys = app->text_effect_states.keys();
@@ -489,10 +538,11 @@ int cf_app_draw_onto_screen(bool clear)
 	}
 
 	// Render any remaining geometry in the draw API.
-	cf_render_to(app->offscreen_canvas);
+	cf_render_to(app->offscreen_canvas, false);
 
 	// Stretch the app canvas onto the backbuffer canvas.
-	cf_apply_canvas(app->backbuffer_canvas);
+#if 0
+	cf_apply_canvas(app->canvas);
 	{
 		cf_apply_mesh(app->backbuffer_quad);
 		v2 u_texture_size = V2((float)app->w, (float)app->h);
@@ -500,6 +550,7 @@ int cf_app_draw_onto_screen(bool clear)
 		cf_apply_shader(app->backbuffer_shader, app->backbuffer_material);
 		cf_draw_elements();
 	}
+#endif
 
 	// Dear ImGui draw.
 	if (app->using_imgui) {
@@ -516,8 +567,34 @@ int cf_app_draw_onto_screen(bool clear)
 		draw->delay_defrag = false;
 	}
 
-	// Flip to screen.
-	cf_commit();
+	// Blit to the swapchain (get pixels onto the screen).
+	SDL_GpuCommandBuffer* cmd = app->cmd;
+	CF_TextureInternal src_tex = { 0 };
+	Uint32 w, h;
+	src_tex.tex = ((CF_CanvasInternal*)app->offscreen_canvas.id)->texture;
+	src_tex.w = app->w;
+	src_tex.h = app->h;
+	CF_TextureInternal dst_tex = { 0 };
+	dst_tex.tex = SDL_GpuAcquireSwapchainTexture(cmd, app->window, &w, &h);
+	if (dst_tex.tex) {
+		CF_ASSERT(dst_tex.tex);
+		dst_tex.w = app->w;
+		dst_tex.h = app->h;
+		SDL_GpuTextureRegion src_tex_region = SDL_GpuTextureRegionDefaults(&src_tex, 0,0, 1,1);
+		SDL_GpuTextureRegion dst_tex_region = SDL_GpuTextureRegionDefaults(&dst_tex, 0,0, 1,1);
+		SDL_GpuBlit(cmd, &src_tex_region, &dst_tex_region, SDL_GPU_FILTER_NEAREST, false);
+	} else {
+		printf("Frame skip.\n");
+	}
+
+	// TODO.
+	//if (src_depth_stencil && dst_depth_stencil) {
+	//	SDL_GpuTextureRegion src_depth_stencil_region = SDL_GpuTextureRegionDefaults(src_depth_stencil, u0.x, u0.y, v0.x, v0.y);
+	//	SDL_GpuTextureRegion dst_depth_stencil_region = SDL_GpuTextureRegionDefaults(dst_depth_stencil, u0.x, u0.y, v0.x, v0.y);
+	//	SDL_GpuBlit(cmd, &src_depth_stencil_region, &dst_depth_stencil_region, src_depth_stencil->filter, false);
+	//}
+	SDL_GpuSubmit(app->cmd);
+	app->cmd = NULL;
 
 	// Clear all pushed draw parameters.
 	draw->colors.set_count(1);

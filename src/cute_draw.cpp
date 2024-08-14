@@ -387,6 +387,7 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 	// Kick off a draw call.
 	cf_apply_shader(draw->shaders.last(), draw->material);
 	cf_draw_elements();
+	cf_commit();
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -2374,12 +2375,11 @@ void cf_render_settings_push_uniform_color(const char* name, CF_Color val)
 	material_set_uniform_fs(draw->material, name, &val, CF_UNIFORM_TYPE_FLOAT4, 1);
 }
 
-void cf_render_to(CF_Canvas canvas)
+void cf_render_to(CF_Canvas canvas, bool clear)
 {
-	cf_apply_canvas(canvas);
+	cf_apply_canvas(canvas, clear);
 	spritebatch_flush(&draw->sb);
 	draw->verts.clear();
-	cf_commit();
 }
 
 void cf_draw_transform(CF_M3x2 m)

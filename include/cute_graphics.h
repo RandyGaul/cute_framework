@@ -482,6 +482,9 @@ typedef struct CF_TextureParams
 
 	/* @member Number of elements (usually pixels) along the height of the texture. */
 	int height;
+
+	/* @member Set this to true if you plan to update the texture contents each frame. */
+	bool stream;
 } CF_TextureParams;
 // @end
 
@@ -635,9 +638,6 @@ CF_API CF_Canvas CF_CALL cf_make_canvas(CF_CanvasParams canvas_params);
  */
 CF_API void CF_CALL cf_destroy_canvas(CF_Canvas canvas);
 
-CF_API void CF_CALL cf_canvas_clear(CF_Canvas canvas, float r, float g, float b, float a);
-CF_API void CF_CALL cf_canvas_clear_depth_stencil(CF_Canvas canvas, float depth, uint32_t stencil);
-
 /**
  * @function cf_canvas_get_target
  * @category graphics
@@ -684,20 +684,20 @@ CF_API void CF_CALL cf_canvas_blit(CF_Canvas src, CF_V2 u0, CF_V2 v0, CF_Canvas 
  * @related  CF_VertexFormat cf_vertex_format_string CF_VertexAttribute cf_mesh_set_attributes
  */
 #define CF_VERTEX_FORMAT_DEFS  \
-	/* @entry Invalid. */                                        \
-	CF_ENUM(VERTEX_FORMAT_INVALID,          0 )                  \
 	/* @entry A single 32-bit unsigned integer. */               \
-	CF_ENUM(VERTEX_FORMAT_UINT,             1 )                  \
+	CF_ENUM(VERTEX_FORMAT_UINT,             0 )                  \
 	/* @entry A single 32-bit float. */                          \
-	CF_ENUM(VERTEX_FORMAT_FLOAT,            2 )                  \
+	CF_ENUM(VERTEX_FORMAT_FLOAT,            1 )                  \
 	/* @entry Two 32-bit floats. */                              \
-	CF_ENUM(VERTEX_FORMAT_FLOAT2,           3 )                  \
+	CF_ENUM(VERTEX_FORMAT_FLOAT2,           2 )                  \
 	/* @entry Three 32-bit floats. */                            \
-	CF_ENUM(VERTEX_FORMAT_FLOAT3,           4 )                  \
+	CF_ENUM(VERTEX_FORMAT_FLOAT3,           3 )                  \
 	/* @entry Four 32-bit floats. */                             \
-	CF_ENUM(VERTEX_FORMAT_FLOAT4,           5 )                  \
+	CF_ENUM(VERTEX_FORMAT_FLOAT4,           4 )                  \
 	/* @entry Four 8-bit unsigned bytes, in normalized form. */  \
-	CF_ENUM(VERTEX_FORMAT_UBYTE4N,          6 )                  \
+	CF_ENUM(VERTEX_FORMAT_UBYTE4N,          5 )                  \
+	/* @entry Four 8-bit unsigned bytes. */                      \
+	CF_ENUM(VERTEX_FORMAT_UBYTE4,           6 )                  \
 	/* @entry Two 16-bit signed shorts. */                       \
 	CF_ENUM(VERTEX_FORMAT_SHORT2,           7 )                  \
 	/* @entry Four 16-bit signed shorts. */                      \
@@ -705,7 +705,7 @@ CF_API void CF_CALL cf_canvas_blit(CF_Canvas src, CF_V2 u0, CF_V2 v0, CF_Canvas 
 	/* @entry Two 16-bit signed shorts, in normalized form. */   \
 	CF_ENUM(VERTEX_FORMAT_SHORT2N,          9 )                  \
 	/* @entry Four 16-bit signed shorts, in normalized form. */  \
-	CF_ENUM(VERTEX_FORMAT_SHORT4N,          10)                  \
+	CF_ENUM(VERTEX_FORMAT_SHORT4N,          10 )                 \
 	/* @entry Two 16-bit half floats. */                         \
 	CF_ENUM(VERTEX_FORMAT_HALFVECTOR2,      11)                  \
 	/* @entry Four 16-bit half floats. */                        \
@@ -1407,7 +1407,7 @@ CF_API void CF_CALL cf_material_clear_uniforms(CF_Material material);
 //--------------------------------------------------------------------------------------------------
 // Rendering Functions.
 
-CF_API void CF_CALL cf_clear_screen(float red, float green, float blue, float alpha);
+CF_API void CF_CALL cf_clear_color(float red, float green, float blue, float alpha);
 
 /**
  * @function cf_clear_depth_stencil
@@ -1426,7 +1426,7 @@ CF_API void CF_CALL cf_clear_depth_stencil(float depth, uint32_t stencil);
  * @param    clear      Clears the screen to `cf_clear_color` if true.
  * @related  CF_Canvas cf_clear_color cf_apply_viewport cf_apply_scissor
  */
-CF_API void CF_CALL cf_apply_canvas(CF_Canvas canvas);
+CF_API void CF_CALL cf_apply_canvas(CF_Canvas canvas, bool clear);
 
 /**
  * @function cf_apply_viewport
@@ -1706,7 +1706,7 @@ CF_INLINE void material_clear_textures(Material material) { cf_material_clear_te
 CF_INLINE void material_set_uniform_vs(Material material, const char* name, void* data, UniformType type, int array_length) { cf_material_set_uniform_vs(material, name, data, type, array_length); }
 CF_INLINE void material_set_uniform_fs(Material material, const char* name, void* data, UniformType type, int array_length) { cf_material_set_uniform_fs(material, name, data, type, array_length); }
 CF_INLINE void material_clear_uniforms(Material material) { cf_material_clear_uniforms(material); }
-CF_INLINE void apply_canvas(Canvas canvas) { cf_apply_canvas(canvas); }
+CF_INLINE void apply_canvas(Canvas canvas, bool clear = false) { cf_apply_canvas(canvas, false); }
 CF_INLINE void apply_viewport(int x, int y, int w, int h) { cf_apply_viewport(x, y, w, h); }
 CF_INLINE void apply_scissor(int x, int y, int w, int h) { cf_apply_scissor(x, y, w, h); }
 CF_INLINE void apply_mesh(Mesh mesh) { cf_apply_mesh(mesh); }
