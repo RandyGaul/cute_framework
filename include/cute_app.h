@@ -337,7 +337,7 @@ CF_API void CF_CALL cf_app_update(CF_OnUpdateFn* on_update);
  * @remarks  Call this at the *end* of your main loop. You may only call this function once per game tick.
  * @related  cf_make_app cf_app_is_running cf_app_signal_shutdown cf_destroy_app
  */
-CF_API int CF_CALL cf_app_draw_onto_screen();
+CF_API int CF_CALL cf_app_draw_onto_screen(bool clear);
 
 /**
  * @function cf_app_get_size
@@ -793,7 +793,7 @@ CF_INLINE void destroy_app() { cf_destroy_app(); }
 CF_INLINE bool app_is_running() { return cf_app_is_running(); }
 CF_INLINE void app_signal_shutdown() { cf_app_signal_shutdown(); }
 CF_INLINE void app_update(OnUpdateFn* on_update = NULL) { cf_app_update(on_update); }
-CF_INLINE int app_draw_onto_screen() { return cf_app_draw_onto_screen(); }
+CF_INLINE int app_draw_onto_screen(bool clear = false) { return cf_app_draw_onto_screen(clear); }
 CF_INLINE void app_get_size(int* w, int* h) { return cf_app_get_size(w, h); }
 CF_INLINE void app_set_size(int w, int h) { return cf_app_set_size(w, h); }
 CF_INLINE void app_get_position(int* x, int* y) { return cf_app_get_position(x, y); }

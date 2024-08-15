@@ -262,11 +262,12 @@ CF_Result cf_make_app(const char* window_title, int display_index, int x, int y,
 
 		// Create the GPU device.
 		SDL_PropertiesID props = SDL_CreateProperties();
-		SDL_SetStringProperty(props, SDL_PROP_GPU_CREATEDEVICE_NAME_STRING, "D3D11");
+		SDL_SetStringProperty(props, SDL_PROP_GPU_CREATEDEVICE_NAME_STRING, "D3D12");
 		// "Vulkan"
+		// "D3D11"
 		// "D3D12"
 		// "Metal"
-		device = SDL_GpuCreateDevice(true, false, props);
+		device = SDL_GpuCreateDevice(false, false, props);
 		SDL_DestroyProperties(props);
 		if (!device) {
 			return cf_result_error("Failed to create GPU Device.");
@@ -513,7 +514,7 @@ static void s_imgui_present()
 	}
 }
 
-int cf_app_draw_onto_screen()
+int cf_app_draw_onto_screen(bool clear)
 {
 	// Update lifteime of all text effects.
 	const char** keys = app->text_effect_states.keys();
@@ -538,34 +539,7 @@ int cf_app_draw_onto_screen()
 	}
 
 	// Render any remaining geometry in the draw API.
-	cf_render_to(app->offscreen_canvas, false);
-
-	// Stretch the app canvas onto the backbuffer canvas.
-#if 0
-	cf_apply_canvas(app->canvas);
-	{
-		cf_apply_mesh(app->backbuffer_quad);
-		v2 u_texture_size = V2((float)app->w, (float)app->h);
-		cf_material_set_uniform_fs(app->backbuffer_material, "u_texture_size", &u_texture_size, CF_UNIFORM_TYPE_FLOAT2, 1);
-		cf_apply_shader(app->backbuffer_shader, app->backbuffer_material);
-		cf_draw_elements();
-	}
-#endif
-
-	// Dear ImGui draw.
-	if (app->using_imgui) {
-		//sg_imgui_draw(&app->sg_imgui);
-		s_imgui_present();
-	}
-
-	// Do defrag down here after rendering ImGui to avoid thrashing any texture IDs. Generally we want to defrag
-	// before doing final rendering to reduce draw call count, but in the case where ImGui is rendered it's acceptable
-	// to have the perf-hit and delay until next frame.
-	if (draw->delay_defrag) {
-		spritebatch_tick(&draw->sb);
-		spritebatch_defrag(&draw->sb);
-		draw->delay_defrag = false;
-	}
+	cf_render_to(app->offscreen_canvas, clear);
 
 	// Blit to the swapchain (get pixels onto the screen).
 	SDL_GpuCommandBuffer* cmd = app->cmd;
@@ -584,7 +558,23 @@ int cf_app_draw_onto_screen()
 		SDL_GpuTextureRegion dst_tex_region = SDL_GpuTextureRegionDefaults(&dst_tex, 0,0, 1,1);
 		SDL_GpuBlit(cmd, &src_tex_region, &dst_tex_region, SDL_GPU_FILTER_NEAREST, true);
 	} else {
-		printf("Frame skip.\n");
+		// GPU bound.
+		// @TODO: Optional user callback to inform. Recommendation to sleep/throttle the app.
+	}
+
+	// Dear ImGui draw.
+	if (app->using_imgui) {
+		//sg_imgui_draw(&app->sg_imgui);
+		s_imgui_present();
+	}
+
+	// Do defrag down here after rendering ImGui to avoid thrashing any texture IDs. Generally we want to defrag
+	// before doing final rendering to reduce draw call count, but in the case where ImGui is rendered it's acceptable
+	// to have the perf-hit and delay until next frame.
+	if (draw->delay_defrag) {
+		spritebatch_tick(&draw->sb);
+		spritebatch_defrag(&draw->sb);
+		draw->delay_defrag = false;
 	}
 
 	// TODO.

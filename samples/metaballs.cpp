@@ -17,6 +17,8 @@ int main(int argc, char* argv[])
 	int frame_index = 0;
 	float fps = 0;
 
+	set_target_framerate(200);
+
 	while (app_is_running()) {
 		app_update();
 
@@ -65,13 +67,12 @@ int main(int argc, char* argv[])
 		}
 
 		draw_push();
-		draw_scale(5,5);
 		draw_text("press space", -V2(text_width("press_space") * 0.5f, 0));
 		draw_pop();
 
 		//cf_canvas_blit(soft_circles, V2(0,0), V2(1,1), app_get_canvas(), V2(0,0), V2(1,1));
 
-		app_draw_onto_screen();
+		app_draw_onto_screen(toggle ? true : false);
 	}
 
 	destroy_canvas(soft_circles);

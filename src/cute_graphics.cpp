@@ -1008,7 +1008,12 @@ static SDL_GpuShader* s_compile(CF_ShaderInternal* shader_internal, const dyna u
 	shaderCreateInfo.storageTextureCount = storage_texture_count;
 	shaderCreateInfo.storageBufferCount = storage_buffer_count;
 	shaderCreateInfo.uniformBufferCount = uniform_buffer_count;
-	SDL_GpuShader* sdl_shader = (SDL_GpuShader*)SDL_CompileFromSPIRV(app->device, &shaderCreateInfo, false);
+	SDL_GpuShader* sdl_shader = NULL;
+	if (SDL_GpuGetDriver(app->device) == SDL_GPU_DRIVER_VULKAN) {
+		sdl_shader = (SDL_GpuShader*)SDL_GpuCreateShader(app->device, &shaderCreateInfo);
+	} else {
+		sdl_shader = (SDL_GpuShader*)SDL_CompileFromSPIRV(app->device, &shaderCreateInfo, false);
+	}
 	afree(bytecode);
 	return sdl_shader;
 }
@@ -1020,6 +1025,8 @@ CF_Shader cf_make_shader_from_bytecode(const dyna uint8_t* vertex_bytecode, cons
 
 	shader_internal->vs = s_compile(shader_internal, vertex_bytecode, CF_SHADER_STAGE_VERTEX);
 	shader_internal->fs = s_compile(shader_internal, fragment_bytecode, CF_SHADER_STAGE_FRAGMENT);
+	CF_ASSERT(shader_internal->vs);
+	CF_ASSERT(shader_internal->fs);
 
 	CF_Shader result;
 	result.id = { (uint64_t)shader_internal };
