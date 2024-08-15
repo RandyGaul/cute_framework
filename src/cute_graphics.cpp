@@ -481,6 +481,44 @@ struct CF_UniformBlockMember
 	int offset;
 };
 
+struct CF_Uniform
+{
+	const char* name;
+	CF_UniformType type;
+	int array_length;
+	void* data;
+	int size;
+};
+
+struct CF_MaterialTex
+{
+	const char* name;
+	CF_Texture handle;
+};
+
+struct CF_MaterialState
+{
+	Array<CF_Uniform> uniforms;
+	Array<CF_MaterialTex> textures;
+};
+
+struct CF_MaterialInternal
+{
+	bool dirty = false;
+	CF_RenderState state;
+	CF_MaterialState vs;
+	CF_MaterialState fs;
+	CF_Arena uniform_arena;
+	CF_Arena block_arena;
+};
+
+struct CF_Pipeline
+{
+	CF_MaterialInternal* material = NULL;
+	SDL_GpuGraphicsPipeline* pip = NULL;
+	CF_MeshInternal* mesh = NULL;
+};
+
 struct CF_ShaderInternal
 {
 	SDL_GpuShader* vs;
@@ -494,6 +532,7 @@ struct CF_ShaderInternal
 	Array<CF_UniformBlockMember> fs_uniform_block_members;
 	Array<CF_UniformBlockMember> vs_uniform_block_members;
 	Array<const char*> image_names;
+	Array<CF_Pipeline> pip_cache;
 
 	CF_INLINE int get_input_index(const char* name)
 	{
@@ -1267,12 +1306,12 @@ void cf_canvas_blit(CF_Canvas src_handle, CF_V2 u0, CF_V2 v0, CF_Canvas dst_hand
 	SDL_GpuCommandBuffer* cmd = app->cmd;
 	SDL_GpuTextureRegion src_tex_region = SDL_GpuTextureRegionDefaults(src_tex, u0.x, u0.y, v0.x, v0.y);
 	SDL_GpuTextureRegion dst_tex_region = SDL_GpuTextureRegionDefaults(dst_tex, u0.x, u0.y, v0.x, v0.y);
-	SDL_GpuBlit(cmd, &src_tex_region, &dst_tex_region, src_tex->filter, false);
+	SDL_GpuBlit(cmd, &src_tex_region, &dst_tex_region, src_tex->filter, true);
 
 	if (src_depth_stencil && dst_depth_stencil) {
 		SDL_GpuTextureRegion src_depth_stencil_region = SDL_GpuTextureRegionDefaults(src_depth_stencil, u0.x, u0.y, v0.x, v0.y);
 		SDL_GpuTextureRegion dst_depth_stencil_region = SDL_GpuTextureRegionDefaults(dst_depth_stencil, u0.x, u0.y, v0.x, v0.y);
-		SDL_GpuBlit(cmd, &src_depth_stencil_region, &dst_depth_stencil_region, src_depth_stencil->filter, false);
+		SDL_GpuBlit(cmd, &src_depth_stencil_region, &dst_depth_stencil_region, src_depth_stencil->filter, true);
 	}
 }
 
@@ -1392,36 +1431,6 @@ CF_RenderState cf_render_state_defaults()
 	return state;
 }
 
-struct CF_Uniform
-{
-	const char* name;
-	CF_UniformType type;
-	int array_length;
-	void* data;
-	int size;
-};
-
-struct CF_MaterialTex
-{
-	const char* name;
-	CF_Texture handle;
-};
-
-struct CF_MaterialState
-{
-	Array<CF_Uniform> uniforms;
-	Array<CF_MaterialTex> textures;
-};
-
-struct CF_MaterialInternal
-{
-	CF_RenderState state;
-	CF_MaterialState vs;
-	CF_MaterialState fs;
-	CF_Arena uniform_arena;
-	CF_Arena block_arena;
-};
-
 CF_Material cf_make_material()
 {
 	CF_MaterialInternal* material = CF_NEW(CF_MaterialInternal);
@@ -1444,10 +1453,13 @@ void cf_destroy_material(CF_Material material_handle)
 void cf_material_set_render_state(CF_Material material_handle, CF_RenderState render_state)
 {
 	CF_MaterialInternal* material = (CF_MaterialInternal*)material_handle.id;
-	material->state = render_state;
+	if (CF_MEMCMP(&material->state, &render_state, sizeof(material->state))) {
+		material->state = render_state;
+		material->dirty = true;
+	}
 }
 
-static void s_material_set_texture(CF_MaterialState* state, const char* name, CF_Texture texture)
+static void s_material_set_texture(CF_MaterialInternal* material, CF_MaterialState* state, const char* name, CF_Texture texture)
 {
 	bool found = false;
 	for (int i = 0; i < state->textures.count(); ++i) {
@@ -1462,6 +1474,7 @@ static void s_material_set_texture(CF_MaterialState* state, const char* name, CF
 		tex.name = name;
 		tex.handle = texture;
 		state->textures.add(tex);
+		material->dirty = true;
 	}
 }
 
@@ -1469,14 +1482,14 @@ void cf_material_set_texture_vs(CF_Material material_handle, const char* name, C
 {
 	CF_MaterialInternal* material = (CF_MaterialInternal*)material_handle.id;
 	name = sintern(name);
-	s_material_set_texture(&material->vs, name, texture);
+	s_material_set_texture(material, &material->vs, name, texture);
 }
 
 void cf_material_set_texture_fs(CF_Material material_handle, const char* name, CF_Texture texture)
 {
 	CF_MaterialInternal* material = (CF_MaterialInternal*)material_handle.id;
 	name = sintern(name);
-	s_material_set_texture(&material->fs, name, texture);
+	s_material_set_texture(material, &material->fs, name, texture);
 }
 
 void cf_material_clear_textures(CF_Material material_handle)
@@ -1484,6 +1497,7 @@ void cf_material_clear_textures(CF_Material material_handle)
 	CF_MaterialInternal* material = (CF_MaterialInternal*)material_handle.id;
 	material->vs.textures.clear();
 	material->fs.textures.clear();
+	material->dirty = true;
 }
 
 static void s_material_set_uniform(CF_Arena* arena, CF_MaterialState* state, const char* name, void* data, CF_UniformType type, int array_length)
@@ -1672,15 +1686,8 @@ SDL_GpuBlendFactor s_wrap(CF_BlendFactor factor)
 	}
 }
 
-void cf_apply_shader(CF_Shader shader_handle, CF_Material material_handle)
+static SDL_GpuGraphicsPipeline* s_build_pipeline(CF_ShaderInternal* shader, CF_RenderState* state, CF_MeshInternal* mesh)
 {
-	CF_ASSERT(s_canvas);
-	CF_ASSERT(s_canvas->mesh);
-	CF_MeshInternal* mesh = s_canvas->mesh;
-	CF_MaterialInternal* material = (CF_MaterialInternal*)material_handle.id;
-	CF_ShaderInternal* shader = (CF_ShaderInternal*)shader_handle.id;
-	CF_RenderState* state = &material->state;
-
 	SDL_GpuColorAttachmentDescription color_info;
 	CF_MEMSET(&color_info, 0, sizeof(color_info));
 	CF_ASSERT(s_canvas->texture);
@@ -1774,6 +1781,44 @@ void cf_apply_shader(CF_Shader shader_handle, CF_Material material_handle)
 
 	SDL_GpuGraphicsPipeline* pip = SDL_GpuCreateGraphicsPipeline(app->device, &pip_info);
 	CF_ASSERT(pip);
+	return pip;
+}
+
+void cf_apply_shader(CF_Shader shader_handle, CF_Material material_handle)
+{
+	CF_ASSERT(s_canvas);
+	CF_ASSERT(s_canvas->mesh);
+	CF_MeshInternal* mesh = s_canvas->mesh;
+	CF_MaterialInternal* material = (CF_MaterialInternal*)material_handle.id;
+	CF_ShaderInternal* shader = (CF_ShaderInternal*)shader_handle.id;
+	CF_RenderState* state = &material->state;
+
+	// Cache the pipeline to avoid create/release each frame.
+	// ...Build a new one if the material marks itself as dirty.
+	SDL_GpuGraphicsPipeline* pip = NULL;
+	bool found = false;
+	for (int i = 0; i < shader->pip_cache.count(); ++i) {
+		CF_Pipeline pip_cache = shader->pip_cache[i];
+		if (pip_cache.material == material && pip_cache.mesh == mesh) {
+			found = true;
+			if (material->dirty) {
+				material->dirty = false;
+				pip = s_build_pipeline(shader, state, mesh);
+				if (pip_cache.pip) {
+					SDL_GpuReleaseGraphicsPipeline(app->device, pip_cache.pip);
+				}
+				shader->pip_cache[i].pip = pip;
+			} else {
+				pip = pip_cache.pip;
+			}
+		}
+	}
+	if (!found) {
+		pip = s_build_pipeline(shader, state, mesh);
+		shader->pip_cache.add({ material, pip, mesh });
+	}
+	CF_ASSERT(pip);
+
 	SDL_GpuCommandBuffer* cmd = app->cmd;
 	s_canvas->pip = pip;
 
@@ -1783,7 +1828,7 @@ void cf_apply_shader(CF_Shader shader_handle, CF_Material material_handle)
 	pass_color_info.loadOp = s_canvas->clear ? SDL_GPU_LOADOP_CLEAR : SDL_GPU_LOADOP_LOAD;
 	pass_color_info.storeOp = SDL_GPU_STOREOP_STORE;
 	s_canvas->clear = false;
-	pass_color_info.cycle = false;
+	pass_color_info.cycle = s_canvas->clear ? true : false;
 	SDL_GpuDepthStencilAttachmentInfo pass_depth_stencil_info = { 0 };
 	pass_depth_stencil_info.textureSlice.texture = s_canvas->depth_stencil;
 	if (s_canvas->depth_stencil) {
@@ -1791,7 +1836,7 @@ void cf_apply_shader(CF_Shader shader_handle, CF_Material material_handle)
 		pass_depth_stencil_info.storeOp = SDL_GPU_STOREOP_STORE;
 		pass_depth_stencil_info.stencilLoadOp = SDL_GPU_LOADOP_LOAD;
 		pass_depth_stencil_info.stencilStoreOp = SDL_GPU_STOREOP_DONT_CARE;
-		pass_depth_stencil_info.cycle = false;
+		pass_depth_stencil_info.cycle = s_canvas->clear ? true : false;
 	}
 	SDL_GpuRenderPass* pass = SDL_GpuBeginRenderPass(cmd, &pass_color_info, 1, NULL);
 	CF_ASSERT(pass);
@@ -1822,8 +1867,8 @@ void cf_apply_shader(CF_Shader shader_handle, CF_Material material_handle)
 	SDL_GpuBindFragmentSamplers(pass, 0, sampler_bindings, (Uint32)found_image_count);
 
 	// Copy over uniform data.
-	//s_copy_uniforms(cmd, &material->block_arena, shader, &material->vs, true);
-	//s_copy_uniforms(cmd, &material->block_arena, shader, &material->fs, false);
+	s_copy_uniforms(cmd, &material->block_arena, shader, &material->vs, true);
+	s_copy_uniforms(cmd, &material->block_arena, shader, &material->fs, false);
 }
 
 void cf_draw_elements()
@@ -1847,7 +1892,6 @@ void cf_commit()
 		mesh->vertices.element_count = 0;
 		mesh->indices.element_count = 0;
 	}
-	SDL_GpuReleaseGraphicsPipeline(app->device, s_canvas->pip);
 }
 
 #include <SPIRV-Reflect/spirv_reflect.c>

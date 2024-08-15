@@ -582,7 +582,7 @@ int cf_app_draw_onto_screen()
 		dst_tex.h = app->h;
 		SDL_GpuTextureRegion src_tex_region = SDL_GpuTextureRegionDefaults(&src_tex, 0,0, 1,1);
 		SDL_GpuTextureRegion dst_tex_region = SDL_GpuTextureRegionDefaults(&dst_tex, 0,0, 1,1);
-		SDL_GpuBlit(cmd, &src_tex_region, &dst_tex_region, SDL_GPU_FILTER_NEAREST, false);
+		SDL_GpuBlit(cmd, &src_tex_region, &dst_tex_region, SDL_GPU_FILTER_NEAREST, true);
 	} else {
 		printf("Frame skip.\n");
 	}
@@ -615,8 +615,8 @@ int cf_app_draw_onto_screen()
 	draw->vertical.set_count(1);
 	draw->user_params.set_count(1);
 	draw->shaders.set_count(1);
-	material_clear_textures(draw->material);
-	material_clear_uniforms(draw->material);
+	//material_clear_textures(draw->material);
+	//material_clear_uniforms(draw->material);
 
 	// Report the number of draw calls.
 	// This is always user draw call count +1.
