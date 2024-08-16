@@ -745,8 +745,7 @@ void cs_set_global_user_allocator_context(void* user_allocator_context);
 
 #else // CUTE_SOUND_SCALAR_MODE
 
-	#include <xmmintrin.h>
-	#include <emmintrin.h>
+	#include <immintrin.h>
 
 	#define cs__m128 __m128
 	#define cs__m128i __m128i
