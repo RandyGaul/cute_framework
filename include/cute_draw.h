@@ -1574,6 +1574,7 @@ CF_INLINE void draw_box_rounded(Aabb bb, float thickness = 1.0f, float chubbines
 CF_INLINE void draw_box_rounded_fill(Aabb bb, float chubbiness = 0) { cf_draw_box_rounded_fill(bb, chubbiness); }
 CF_INLINE void draw_box_fill(Aabb bb, float chubbiness = 0) { cf_draw_quad_fill(bb, chubbiness); }
 CF_INLINE void draw_box_fill(v2 p0, v2 p1, v2 p2, v2 p3, float chubbiness = 0) { cf_draw_quad_fill2(p0, p1, p2, p3, chubbiness); }
+CF_INLINE void draw_box_fill(v2 p, float w, float h, float chubbiness = 0) { cf_draw_quad_fill(make_aabb(p, w, h), chubbiness); }
 CF_INLINE void draw_circle(Circle circle, float thickness = 1.0f) { cf_draw_circle(circle, thickness); }
 CF_INLINE void draw_circle(v2 p, float r, float thickness = 1.0f) { cf_draw_circle2(p, r, thickness); }
 CF_INLINE void draw_circle_fill(Circle circle) { cf_draw_circle_fill(circle); }

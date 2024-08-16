@@ -21,6 +21,9 @@
 #include <internal/cute_draw_internal.h>
 #include <internal/cute_png_cache_internal.h>
 #include <internal/cute_aseprite_cache_internal.h>
+#include <internal/cute_imgui_internal.h>
+
+#include <imgui/backends/imgui_impl_sdl3.h>
 
 #include <data/fonts/calibri.h>
 
@@ -163,7 +166,7 @@ static void s_canvas(int w, int h)
 	app->canvas_h = h;
 	cf_material_set_texture_fs(app->backbuffer_material, "u_image", cf_canvas_get_target(app->offscreen_canvas));
 
-	// Create the app's canvas manually, since it requiers some special APIs from SDL regarding the backbuffer.
+	// Create the app's canvas manually, since it requires some special APIs from SDL regarding the backbuffer.
 	SDL_GpuTextureCreateInfo tex_info = SDL_GpuTextureCreateInfoDefaults(w, h);
 	tex_info.format = SDL_GPU_TEXTUREFORMAT_D24_UNORM_S8_UINT;
 	tex_info.usageFlags = SDL_GPU_TEXTUREUSAGE_DEPTH_STENCIL_TARGET_BIT;
@@ -221,19 +224,33 @@ static void s_canvas(int w, int h)
 
 CF_Result cf_make_app(const char* window_title, int display_index, int x, int y, int w, int h, CF_AppOptionFlags options, const char* argv0)
 {
-	bool use_dx11 = false;
-	bool use_metal = false;
-	bool use_vulkan = false;
-	#if defined(CF_WINDOWS)
-	use_dx11 = true;
-	#elif defined(CF_LINUX)
-	use_vulkan = true;
-	#elif defined(CF_APPLE)
-	use_metal = true;
-	#elif defined(CF_EMSCRIPTEN)
-	assert(false); // Not yet available via SDL3.
-	#endif
-	bool use_gfx = (use_dx11|use_vulkan|use_metal) && !(options & APP_OPTIONS_NO_GFX_BIT);
+	bool use_dx11 = options & APP_OPTIONS_GFX_D3D11_BIT;
+	bool use_dx12 = options & APP_OPTIONS_GFX_D3D12_BIT;
+	bool use_metal = options & APP_OPTIONS_GFX_METAL_BIT;
+	bool use_vulkan = options & APP_OPTIONS_GFX_VULKAN_BIT;
+	bool use_gfx = !(options & APP_OPTIONS_NO_GFX_BIT);
+
+	// Ensure the user selected only one backend, if they selected one at all.
+	if (use_dx11) {
+		CF_ASSERT(!use_dx12);
+		CF_ASSERT(!use_metal);
+		CF_ASSERT(!use_vulkan);
+	}
+	if (use_dx12) {
+		CF_ASSERT(!use_dx11);
+		CF_ASSERT(!use_metal);
+		CF_ASSERT(!use_vulkan);
+	}
+	if (use_metal) {
+		CF_ASSERT(!use_dx11);
+		CF_ASSERT(!use_dx12);
+		CF_ASSERT(!use_vulkan);
+	}
+	if (use_vulkan) {
+		CF_ASSERT(!use_dx11);
+		CF_ASSERT(!use_dx12);
+		CF_ASSERT(!use_metal);
+	}
 
 #ifdef CF_EMSCRIPTEN
 	Uint32 sdl_options = SDL_INIT_EVENTS | SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMEPAD;
@@ -262,12 +279,11 @@ CF_Result cf_make_app(const char* window_title, int display_index, int x, int y,
 
 		// Create the GPU device.
 		SDL_PropertiesID props = SDL_CreateProperties();
-		SDL_SetStringProperty(props, SDL_PROP_GPU_CREATEDEVICE_NAME_STRING, "D3D12");
-		// "Vulkan"
-		// "D3D11"
-		// "D3D12"
-		// "Metal"
-		device = SDL_GpuCreateDevice(false, false, props);
+		if (use_dx11) SDL_SetStringProperty(props, SDL_PROP_GPU_CREATEDEVICE_NAME_STRING, "D3D11");
+		else if (use_dx12) SDL_SetStringProperty(props, SDL_PROP_GPU_CREATEDEVICE_NAME_STRING, "D3D12");
+		else if (use_metal) SDL_SetStringProperty(props, SDL_PROP_GPU_CREATEDEVICE_NAME_STRING, "Metal");
+		else if (use_vulkan) SDL_SetStringProperty(props, SDL_PROP_GPU_CREATEDEVICE_NAME_STRING, "Vulkan");
+		device = SDL_GpuCreateDevice(true, false, props);
 		SDL_DestroyProperties(props);
 		if (!device) {
 			return cf_result_error("Failed to create GPU Device.");
@@ -312,14 +328,15 @@ CF_Result cf_make_app(const char* window_title, int display_index, int x, int y,
 	if (use_gfx) {
 		app->device = device;
 		SDL_GpuClaimWindow(app->device, app->window, SDL_GPU_SWAPCHAINCOMPOSITION_SDR, SDL_GPU_PRESENTMODE_IMMEDIATE);
+		app->cmd = SDL_GpuAcquireCommandBuffer(app->device);
 		cf_load_internal_shaders();
 		cf_make_draw();
 		
 		// Setup the backbuffer fullscreen mesh and canvas.
 		{
-			app->backbuffer_quad = cf_make_mesh(sizeof(Vertex) * 6, 0);
+			app->backbuffer_quad = cf_make_mesh(sizeof(Vertex) * 6);
 			CF_VertexAttribute attrs[2] = { };
-			attrs[0].name = "in_pos";
+			attrs[0].name = "in_posH";
 			attrs[0].format = CF_VERTEX_FORMAT_FLOAT2;
 			attrs[0].offset = CF_OFFSET_OF(Vertex, x);
 			attrs[1].name = "in_uv";
@@ -327,7 +344,7 @@ CF_Result cf_make_app(const char* window_title, int display_index, int x, int y,
 			attrs[1].offset = CF_OFFSET_OF(Vertex, u);
 			cf_mesh_set_attributes(app->backbuffer_quad, attrs, CF_ARRAY_SIZE(attrs), sizeof(Vertex));
 			Vertex quad[6];
-			s_quad(0, 0, 2, -2, quad); // Flip y-axis to achieve uv as (0,0) for bottom-left of screen.
+			s_quad(0, 0, 2, -2, quad);
 			cf_mesh_update_vertex_data(app->backbuffer_quad, quad, 6);
 		}
 		app->backbuffer_material = cf_make_material();
@@ -342,6 +359,8 @@ CF_Result cf_make_app(const char* window_title, int display_index, int x, int y,
 
 		// Create the default font.
 		make_font_from_memory(calibri_data, calibri_sz, "Calibri");
+		SDL_GpuSubmit(app->cmd);
+		app->cmd = NULL;
 	}
 
 #ifdef CF_WINDOWS
@@ -396,10 +415,8 @@ CF_Result cf_make_app(const char* window_title, int display_index, int x, int y,
 void cf_destroy_app()
 {
 	if (app->using_imgui) {
-		// @TODO
-		//ImGui_ImplSDL2_Shutdown();
-		//simgui_shutdown();
-		//sg_imgui_discard(&app->sg_imgui);
+		ImGui_ImplSDL3_Shutdown();
+		cf_imgui_shutdown();
 		app->using_imgui = false;
 	}
 	if (app->gfx_enabled) {
@@ -488,29 +505,23 @@ void cf_app_update(CF_OnUpdateFn* on_update)
 		}
 
 		if (app->using_imgui) {
-			// @TODO
-			//simgui_frame_desc_t desc = { };
-			//desc.delta_time = DELTA_TIME;
-			//desc.width = app->w;
-			//desc.height = app->h;
-			//desc.dpi_scale = app->dpi_scale;
-			//ImGui_ImplSDL2_NewFrame(app->window);
-			//simgui_new_frame(&desc);
+			ImGui_ImplSDL3_NewFrame();
+			ImGui::NewFrame();
 		}
 
 		app->cmd = SDL_GpuAcquireCommandBuffer(app->device);
+		cf_shader_watch();
 	}
 	app->user_on_update = on_update;
 	cf_update_time(s_on_update);
 }
 
-static void s_imgui_present()
+static void s_imgui_present(SDL_GpuTexture* swapchain_texture)
 {
 	if (app->using_imgui) {
-		// @TODO
-		//ImGui::EndFrame();
-		//ImGui::Render();
-		//simgui_render();
+		ImGui::EndFrame();
+		ImGui::Render();
+		cf_imgui_draw(swapchain_texture);
 	}
 }
 
@@ -541,31 +552,26 @@ int cf_app_draw_onto_screen(bool clear)
 	// Render any remaining geometry in the draw API.
 	cf_render_to(app->offscreen_canvas, clear);
 
-	// Blit to the swapchain (get pixels onto the screen).
-	SDL_GpuCommandBuffer* cmd = app->cmd;
-	CF_TextureInternal src_tex = { 0 };
+	// Stretch the app canvas onto the backbuffer canvas.
 	Uint32 w, h;
-	src_tex.tex = ((CF_CanvasInternal*)app->offscreen_canvas.id)->texture;
-	src_tex.w = app->w;
-	src_tex.h = app->h;
-	CF_TextureInternal dst_tex = { 0 };
-	dst_tex.tex = SDL_GpuAcquireSwapchainTexture(cmd, app->window, &w, &h);
-	if (dst_tex.tex) {
-		CF_ASSERT(dst_tex.tex);
-		dst_tex.w = app->w;
-		dst_tex.h = app->h;
-		SDL_GpuTextureRegion src_tex_region = SDL_GpuTextureRegionDefaults(&src_tex, 0,0, 1,1);
-		SDL_GpuTextureRegion dst_tex_region = SDL_GpuTextureRegionDefaults(&dst_tex, 0,0, 1,1);
-		SDL_GpuBlit(cmd, &src_tex_region, &dst_tex_region, SDL_GPU_FILTER_NEAREST, true);
-	} else {
-		// GPU bound.
-		// @TODO: Optional user callback to inform. Recommendation to sleep/throttle the app.
-	}
+	SDL_GpuTexture* swapchain_tex = SDL_GpuAcquireSwapchainTexture(app->cmd, app->window, &w, &h);
+	((CF_CanvasInternal*)app->canvas.id)->texture = swapchain_tex;
+	//((CF_CanvasInternal*)app->canvas.id)->depth_stencil = depth_stencil;
+	if (swapchain_tex) {
+		cf_apply_canvas(app->canvas, true);
+		{
+			cf_apply_mesh(app->backbuffer_quad);
+			v2 u_texture_size = V2((float)app->w, (float)app->h);
+			cf_material_set_uniform_fs(app->backbuffer_material, "u_texture_size", &u_texture_size, CF_UNIFORM_TYPE_FLOAT2, 1);
+			cf_apply_shader(app->backbuffer_shader, app->backbuffer_material);
+			cf_draw_elements();
+			cf_commit();
+		}
 
-	// Dear ImGui draw.
-	if (app->using_imgui) {
-		//sg_imgui_draw(&app->sg_imgui);
-		s_imgui_present();
+		// Dear ImGui draw.
+		if (app->using_imgui) {
+			s_imgui_present(swapchain_tex);
+		}
 	}
 
 	// Do defrag down here after rendering ImGui to avoid thrashing any texture IDs. Generally we want to defrag
@@ -577,12 +583,6 @@ int cf_app_draw_onto_screen(bool clear)
 		draw->delay_defrag = false;
 	}
 
-	// TODO.
-	//if (src_depth_stencil && dst_depth_stencil) {
-	//	SDL_GpuTextureRegion src_depth_stencil_region = SDL_GpuTextureRegionDefaults(src_depth_stencil, u0.x, u0.y, v0.x, v0.y);
-	//	SDL_GpuTextureRegion dst_depth_stencil_region = SDL_GpuTextureRegionDefaults(dst_depth_stencil, u0.x, u0.y, v0.x, v0.y);
-	//	SDL_GpuBlit(cmd, &src_depth_stencil_region, &dst_depth_stencil_region, src_depth_stencil->filter, false);
-	//}
 	SDL_GpuSubmit(app->cmd);
 	app->cmd = NULL;
 
@@ -605,8 +605,6 @@ int cf_app_draw_onto_screen(bool clear)
 	draw->vertical.set_count(1);
 	draw->user_params.set_count(1);
 	draw->shaders.set_count(1);
-	//material_clear_textures(draw->material);
-	//material_clear_uniforms(draw->material);
 
 	// Report the number of draw calls.
 	// This is always user draw call count +1.
@@ -814,37 +812,27 @@ void cf_app_set_icon(const char* virtual_path_to_png)
 	cf_image_free(&img);
 }
 
-ImGuiContext* cf_app_init_imgui(bool no_default_font)
+ImGuiContext* cf_app_init_imgui()
 {
-	// @TODO
-	//if (!app->gfx_enabled) return NULL;
-	//
-	//IMGUI_CHECKVERSION();
-	//ImGui::CreateContext();
-	//app->using_imgui = true;
-	//
-	//ImGui::StyleColorsDark();
-	//
-	//sg_backend backend = sg_query_backend();
-	//switch (backend) {
-	//	case SG_BACKEND_GLCORE33: ImGui_ImplSDL2_InitForOpenGL(app->window, NULL); break;
-	//	case SG_BACKEND_GLES3: ImGui_ImplSDL2_InitForOpenGL(app->window, NULL); break;
-	//	case SG_BACKEND_D3D11: ImGui_ImplSDL2_InitForD3D(app->window); break;
-	//	case SG_BACKEND_METAL_IOS: ImGui_ImplSDL2_InitForMetal(app->window); break;
-	//	case SG_BACKEND_METAL_MACOS: ImGui_ImplSDL2_InitForMetal(app->window); break;
-	//	case SG_BACKEND_METAL_SIMULATOR: ImGui_ImplSDL2_InitForMetal(app->window); break;
-	//	case SG_BACKEND_WGPU: ImGui_ImplSDL2_InitForOpenGL(app->window, NULL); break;
-	//}
-	//
-	//simgui_desc_t imgui_params = { 0 };
-	//imgui_params.no_default_font = no_default_font;
-	//imgui_params.ini_filename = "imgui.ini";
-	//simgui_setup(imgui_params);
-	//sg_imgui_desc_t sg_imgui_desc = { };
-	//sg_imgui_init(&app->sg_imgui, &sg_imgui_desc);
-	//
-	//return ::ImGui::GetCurrentContext();
-	return NULL;
+	if (!app->gfx_enabled) return NULL;
+	
+	IMGUI_CHECKVERSION();
+	ImGui::CreateContext();
+	app->using_imgui = true;
+
+	ImGui::StyleColorsDark();
+	
+	SDL_GpuDriver driver = SDL_GpuGetDriver(app->device);
+	switch (driver) {
+	case SDL_GPU_DRIVER_VULKAN: ImGui_ImplSDL3_InitForVulkan(app->window); break;
+	case SDL_GPU_DRIVER_D3D11:  // Fall-thru.
+	case SDL_GPU_DRIVER_D3D12:  ImGui_ImplSDL3_InitForD3D(app->window);    break;
+	case SDL_GPU_DRIVER_METAL:  ImGui_ImplSDL3_InitForMetal(app->window);  break;
+	}
+
+	cf_imgui_init();
+
+	return ::ImGui::GetCurrentContext();
 }
 
 CF_PowerInfo cf_app_power_info()

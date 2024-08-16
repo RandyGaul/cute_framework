@@ -25,31 +25,28 @@ extern "C" {
  * Framework, not this one. This header is for implementing your own custom rendering stuff, and is
  * intended only for advanced users.
  * 
- * If you want to draw sprites, see: cute_draw.h
- * If you want to draw lines or shapes, see: cute_draw.h
- * If you want to draw text, see: cute_draw.h
+ * If you want to draw sprites, lines/shapes, or text, see: cute_draw.h
  * 
- * Quick list of unsupported features to keep the initial API really tiny and simple. These can be
- * potentially added later, but are not slated for v1.00 of CF's initial release. Most of these
- * features make more sense for the 3D use-case as opposed to 2D. The ones marked with stars are
- * currently considered higher priority for adding in the future.
+ * Quick list of unsupported features. CF's focus is on the 2D use case, so most of these features are
+ * omit since they aren't super useful for 2D.
  * 
- *     - Mipmaps *
+ *     - Mipmaps
  *     - MSAA
  *     - Blend color constant
- *     - Multiple render targets (aka color/texture attachments) *
+ *     - Multiple render targets (aka color/texture attachments)
  *     - Depth bias tunables
- *     - uint16_t indices (only uint32_t supported) *
  *     - Cube map
  *     - 3D textures
- *     - Texture arrays *
- *     - Sampler types signed/unsigned int (only float supported)
+ *     - Texture arrays
  *     - Other primitive types besides triangles
- *     - UV wrap border colors
  *     - Face winding order (defaults to CCW only)
  *     - Anisotropy tunable
  *     - Min/max LOD tunable
- *     - No direct access to the underlying device *
+ *
+ * These features are to be added to CF in the future:
+ * 
+ *     - Indexed meshes
+ *     - Compute shaders
  * 
  * The basic flow of rendering a frame looks something like this:
  * 
@@ -97,11 +94,6 @@ typedef struct CF_Canvas { uint64_t id; } CF_Canvas;
  * @remarks  A mesh is a container of triangles, along with optional indices. After a mesh
  *           is created the layout of the vertices in memory must be described. We use an array of
  *           `CF_VertexAttribute` to define how the GPU will interpret the vertices we send it.
- *           
- *           Data for meshes can be immutable, dynamic, or streamed, just like textures. Immutable meshes are
- *           perfect for terrain or building rendering, anything static in the world. Dynamic meshes can be
- *           occasionally updated, but are still more like an immutable mesh in terms of performance. Streamed
- *           meshes can be updated each frame, perfect for streaming data to the GPU.
  * @related  CF_Texture CF_Canvas CF_Material CF_Shader cf_make_mesh cf_destroy_mesh cf_mesh_set_attributes cf_mesh_update_vertex_data cf_mesh_update_index_data cf_apply_mesh
  */
 typedef struct CF_Mesh { uint64_t id; } CF_Mesh;
@@ -115,17 +107,6 @@ typedef struct CF_Mesh { uint64_t id; } CF_Mesh;
  *           variables inside of a shader stage (either the vertex or fragment shaders). For efficiency, all
  *           uniforms are packed into a "uniform buffer", a contiguous chunk of memory on the GPU. We must
  *           specify which uniform buffer each uniform belongs to.
- *           
- *           A material can hold a large number of inputs, though there are hard-limits on how many inputs
- *           an individual shader can accept, especially to keep shaders as cross-platform compatible as
- *           possible.
- *           
- *           When using sokol-shdc (see `CF_MAKE_SOKOL_SHADER`) it will naturally enforce these limits for you, such as:
- *           
- *           - Max number of uniform buffers for each shader stage (4)
- *           - Max number of uniforms in a uniform buffer (16)
- *           - Max number of vertex attributes (16)
- *           - Max number of textures for each shader stag (12)
  * @related  CF_Texture CF_Canvas CF_Material CF_Shader cf_make_material cf_destroy_material cf_material_set_render_state cf_material_set_texture_vs cf_material_set_texture_fs cf_material_set_uniform_vs cf_material_set_uniform_fs cf_apply_shader
  */
 typedef struct CF_Material { uint64_t id; } CF_Material;
@@ -135,8 +116,8 @@ typedef struct CF_Material { uint64_t id; } CF_Material;
  * @struct   CF_Shader
  * @category graphics
  * @brief    An opaque handle representing a shader.
- * @remarks  A shader is a small program that runs on the GPU. They come in the form of vertex and fragment shaders. See `CF_MAKE_SOKOL_SHADER` for an overview.
- * @related  CF_Texture CF_Canvas CF_Material CF_Shader CF_SokolShader CF_MAKE_SOKOL_SHADER cf_make_shader cf_destroy_shader cf_apply_shader
+ * @remarks  A shader is a small program that runs on the GPU. They come in the form of vertex and fragment shaders.
+ * @related  CF_Texture CF_Canvas CF_Material CF_Shader cf_make_shader cf_destroy_shader cf_apply_shader
  */
 typedef struct CF_Shader { uint64_t id; } CF_Shader;
 // @end
@@ -359,11 +340,11 @@ CF_INLINE const char* cf_pixel_format_op_to_string(CF_PixelFormatOp op) {
  */
 #define CF_TEXTURE_USAGE_DEFS \
 	/* @entry The texture will be used as a sampler in shaders. */                    \
-	CF_ENUM(TEXTURE_USAGE_SAMPLER_BIT,              0x00000001)                       \
+	CF_ENUM(TEXTURE_USAGE_SAMPLER_BIT,               0x00000001)                      \
 	/* @entry The texture will be used as a color render target. */                   \
-	CF_ENUM(TEXTURE_USAGE_COLOR_TARGET_BIT,         0x00000002)                       \
+	CF_ENUM(TEXTURE_USAGE_COLOR_TARGET_BIT,          0x00000002)                      \
 	/* @entry The texture will be used as a depth or stencil render target. */        \
-	CF_ENUM(TEXTURE_USAGE_DEPTH_STENCIL_TARGET_BIT, 0x00000004)                       \
+	CF_ENUM(TEXTURE_USAGE_DEPTH_STENCIL_TARGET_BIT,  0x00000004)                      \
 	/* @entry The texture will be used as read-only storage in graphics pipelines. */ \
 	CF_ENUM(TEXTURE_USAGE_GRAPHICS_STORAGE_READ_BIT, 0x00000008)                      \
 	/* @entry The texture will be used as read-only storage in compute pipelines. */  \
@@ -552,28 +533,105 @@ typedef enum CF_ShaderStage
 	#undef CF_ENUM
 } CF_ShaderStage;
 
-// Add shader folder
-// ...scans subdirectories
-// ...makes a table of all shaders by path name
-// on shader changed
-
+/**
+ * @function cf_shader_directory
+ * @category graphics
+ * @brief    Sets up the app's shader directory.
+ * @param    path     A virtual path to the folder with your shaders (subfolders supported). See [Virtual File System](https://randygaul.github.io/cute_framework/#/topics/virtual_file_system).
+ * @remarks  Shaders can #include each other as long as they exist in this directory. Changes to shaders on disk
+ *           may also be watched via `cf_shader_on_changed` to support shader reloading during development.
+ * @related  CF_Shader cf_make_shader cf_destroy_shader cf_apply_shader CF_Material
+ */
 CF_API void CF_CALL cf_shader_directory(const char* path);
 
+/**
+ * @function cf_shader_on_changed
+ * @category graphics
+ * @brief    Reports when a shader within the shader directory (see `cf_shader_directory`) changes on-disk.
+ * @param    on_changed_fn   The reporting callback.
+ * @param    udata           An optional `void*` passed back to you whenever `on_changed_fn` is called.
+ * @remarks  This is an optional function intended to help facilitate runtime shader reloading during development.
+ *           Callbacks are issued when `cf_app_update` is called.
+ * @related  CF_Shader cf_make_shader cf_destroy_shader cf_apply_shader CF_Material
+ */
 CF_API void CF_CALL cf_shader_on_changed(void (*on_changed_fn)(const char* path, void* udata), void* udata);
 
 /**
  * @function cf_make_shader
  * @category graphics
- * @brief    Creates a shader from a shader compiled by sokol-shdc.
- * @param    sokol_shader  A compiled shader.
- * @remarks  You should instead call `CF_MAKE_SOKOL_SHADER` unless you really know what you're doing.
- * @related  CF_Shader cf_make_shader cf_destroy_shader cf_apply_shader CF_Material
+ * @brief    Creates a shader from glsl source code.
+ * @param    vertex_path   A virtual path to the shader. See [Virtual File System](https://randygaul.github.io/cute_framework/#/topics/virtual_file_system).
+ * @remarks  The shader paths must be in the shader directory. See `cf_shader_directory`. Note the expected glsl version is 450.
+ *           
+ *           You must setup shader inputs (max of 32 inputs, e.g. `in` keyword) and resources sets in a specific way. Use the
+             following resource sets and ordering in your shaders:
+ *           
+ *           For _VERTEX_ shaders:
+ *            0: Sampled textures, followed by storage textures, followed by storage buffers
+ *            1: Uniform buffers
+ *           For _FRAGMENT_ shaders:
+ *            2: Sampled textures, followed by storage textures, followed by storage buffers
+ *            3: Uniform buffers
+ *           
+ *           Example _VERTEX shader:
+ *           layout (set = 0, binding = 0) uniform sampler2D u_image;
+ *           
+ *           layout (set = 1, binding = 0) uniform uniform_block {
+ *               vec2 u_texture_size;
+ *           };
+ *           
+ *           Example _FRAGMENT_ shader:
+ *           
+ *           layout (set = 2, binding = 0) uniform sampler2D u_image;
+ *           
+ *           layout (set = 3, binding = 0) uniform uniform_block {
+ *               vec2 u_texture_size;
+ *           };
+ *           
+ *           For uniforms you only have one uniform block available, and it *must* be named `uniform_block`.
+ *           
+ *           Shaders that sit in the shader directory may be `#include`'d into another shader. Though, it doesn't work
+ *           quite exactly like a C/C++ include, it's very similar -- each shader may be included into another
+ *           shader *only once*. If you try to include a file multiple times (such as circular dependencies,
+ *           or if two files try to include the same file) subsequent includes will be ignored.
+ * @related  CF_Shader cf_make_shader cf_shader_directory cf_apply_shader CF_Material
  */
 CF_API CF_Shader CF_CALL cf_make_shader(const char* vertex_path, const char* fragment_path);
+
+/**
+ * @function cf_make_shader_from_source
+ * @category graphics
+ * @brief    Creates a shader from strings containing glsl source code.
+ * @param    vertex_path   A virtual path to the shader. See [Virtual File System](https://randygaul.github.io/cute_framework/#/topics/virtual_file_system).
+ * @remarks  The shader paths must be in the shader directory. See `cf_shader_directory`.
+ * @related  CF_Shader cf_make_shader cf_shader_directory cf_apply_shader CF_Material
+ */
 CF_API CF_Shader CF_CALL cf_make_shader_from_source(const char* vertex_src, const char* fragment_src);
 
-const dyna uint8_t* cf_compile_shader_to_bytecode(const char* shader_src, CF_ShaderStage cf_stage);
+/**
+ * @function cf_compile_shader_to_bytecode
+ * @category graphics
+ * @brief    Compiles a shader to SPIR-V bytecode.
+ * @param    shader_src   Raw glsl, version 450, for the shader as a string.
+ * @param    stage        The shaderstrage to differentiate between vertex or fragment shaders.
+ * @remarks  This function is good for precompiling shaders to bytecode, which can help speed up app
+ *           startup times. SPIR-V blobs can be saved straight to disk and shipped with your game. Load
+ *           the bytecode blob pair (vertex + fragment shader blobs) into a `CF_Shader` via `cf_make_shader_from_bytecode`.
+ * @related  CF_Shader cf_make_shader_from_bytecode cf_make_shader_from_bytecode
+ */
+const dyna uint8_t* cf_compile_shader_to_bytecode(const char* shader_src, CF_ShaderStage stage);
 
+/**
+ * @function cf_make_shader_from_bytecode
+ * @category graphics
+ * @brief    Creates a shader from SPIR-V bytecode.
+ * @param    vertex_bytecode    A bytecode blob from `cf_compile_shader_to_bytecode` for the vertex shader.
+ * @param    fragment_bytecode  A bytecode blob from `cf_compile_shader_to_bytecode` for the fragment shader.
+ * @remarks  This function is good for precompiling shaders from bytecode, which can help speed up app
+ *           startup times. SPIR-V blobs can be saved straight to disk and shipped with your game. Create the
+ *           bytecode blob with `cf_make_shader_from_bytecode`.
+ * @related  CF_Shader cf_make_shader_from_bytecode cf_make_shader_from_bytecode
+ */
 CF_API CF_Shader CF_CALL cf_make_shader_from_bytecode(const dyna uint8_t* vertex_bytecode, const dyna uint8_t* fragment_bytecode);
 
 /**
@@ -760,10 +818,9 @@ typedef struct CF_VertexAttribute
  * @category graphics
  * @brief    Returns a `CF_Mesh`.
  * @param    vertex_buffer_size    The size of the mesh's vertex buffer.
- * @param    index_buffer_size     The size of the mesh's index buffer. Set to 0 if you're not using indices.
  * @related  CF_Mesh cf_make_mesh cf_destroy_mesh cf_mesh_set_attributes cf_mesh_update_vertex_data cf_mesh_update_index_data
  */
-CF_API CF_Mesh CF_CALL cf_make_mesh(int vertex_buffer_size, int index_buffer_size);
+CF_API CF_Mesh CF_CALL cf_make_mesh(int vertex_buffer_size);
 
 /**
  * @function cf_destroy_mesh
@@ -774,6 +831,7 @@ CF_API CF_Mesh CF_CALL cf_make_mesh(int vertex_buffer_size, int index_buffer_siz
  */
 CF_API void CF_CALL cf_destroy_mesh(CF_Mesh mesh);
 
+// Max number of vertex attributes allowed on a mesh.
 #define CF_MESH_MAX_VERTEX_ATTRIBUTES (32)
 
 /**
@@ -784,7 +842,7 @@ CF_API void CF_CALL cf_destroy_mesh(CF_Mesh mesh);
  * @param    attributes       Vertex attributes to define the memory layout of the mesh vertices.
  * @param    attribute_count  Number of attributes in `attributes`.
  * @param    vertex_stride    Number of bytes between each vertex.
- * @remarks  You must call this before uploading any data to the GPU. The max number of attributes is 16. Any more attributes beyond 16 will be ignored.
+ * @remarks  You must call this before uploading any data to the GPU. The max number of attributes is `CF_MESH_MAX_VERTEX_ATTRIBUTES` (32). Any more attributes beyond 32 will be ignored.
  * @related  CF_Mesh cf_make_mesh cf_destroy_mesh cf_mesh_set_attributes cf_mesh_update_vertex_data cf_mesh_update_index_data
  */
 CF_API void CF_CALL cf_mesh_set_attributes(CF_Mesh mesh, const CF_VertexAttribute* attributes, int attribute_count, int vertex_stride);
@@ -797,26 +855,9 @@ CF_API void CF_CALL cf_mesh_set_attributes(CF_Mesh mesh, const CF_VertexAttribut
  * @param    data       A pointer to vertex data.
  * @param    count      Number of bytes in `data`.
  * @return   Returns the number of bytes written.
- * @remarks  The mesh must have been created with `CF_USAGE_TYPE_DYNAMIC` or `CF_USAGE_TYPE_STREAM` in order to call this function more
- *           than once. For `CF_USAGE_TYPE_IMMUTABLE` this function can only be called once. For dynamic/stream cases you can only call
- *           this function once per frame.
  * @related  CF_Mesh cf_make_mesh cf_destroy_mesh cf_mesh_set_attributes cf_mesh_update_vertex_data cf_mesh_update_index_data
  */
 CF_API void CF_CALL cf_mesh_update_vertex_data(CF_Mesh mesh, void* data, int count);
-
-/**
- * @function cf_mesh_update_index_data
- * @category graphics
- * @brief    Overwrites the index data of a mesh.
- * @param    mesh       The mesh.
- * @param    indices    A pointer to index data.
- * @param    count      Number of bytes in `data`.
- * @remarks  The mesh must have been created with `CF_USAGE_TYPE_DYNAMIC` or `CF_USAGE_TYPE_STREAM` in order to call this function more
- *           than once. For `CF_USAGE_TYPE_IMMUTABLE` this function can only be called once. For dynamic/stream cases you can only call
- *           this function once per frame.
- * @related  CF_Mesh cf_make_mesh cf_destroy_mesh cf_mesh_set_attributes cf_mesh_update_vertex_data cf_mesh_update_index_data
- */
-CF_API void CF_CALL cf_mesh_update_index_data(CF_Mesh mesh, uint32_t* indices, int count);
 
 //--------------------------------------------------------------------------------------------------
 // Render state.
@@ -1030,7 +1071,6 @@ CF_INLINE const char* cf_blend_op_string(CF_BlendOp op) {
 	CF_ENUM(BLENDFACTOR_SRC_ALPHA_SATURATE,       12) \
 	/* @end */
 
-
 typedef enum CF_BlendFactor
 {
 	#define CF_ENUM(K, V) CF_##K = V,
@@ -1142,7 +1182,6 @@ typedef struct CF_StencilParams
  *           Which can be setup with this kind of code:
  *           
  *           ```cpp
- *           draw->material = cf_make_material();
  *           CF_RenderState state = cf_render_state_defaults();
  *           state.blend.enabled = true;
  *           state.blend.rgb_src_blend_factor = CF_BLENDFACTOR_ONE;
@@ -1151,8 +1190,7 @@ typedef struct CF_StencilParams
  *           state.blend.alpha_src_blend_factor = CF_BLENDFACTOR_ONE;
  *           state.blend.alpha_dst_blend_factor = CF_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
  *           state.blend.alpha_op = CF_BLEND_OP_ADD;
- *           draw->render_states.add(state);
- *           cf_material_set_render_state(draw->material, state);
+ *           cf_material_set_render_state(my_material, state);
  *           ```
  *           
  *           You can of course define your own blend state in any way you like to perform all kinds of compositing effects. However, dynamically changing the
@@ -1413,7 +1451,7 @@ CF_API void CF_CALL cf_clear_color(float red, float green, float blue, float alp
  * @function cf_clear_depth_stencil
  * @category graphics
  * @brief    Sets the depth/stencil values used when clearing a canvas, if depth/stencil are enabled (see `CF_RenderState`).
- * @remarks  This will get used when `cf_apply_canvas` or when `cf_app_draw_onto_screen` is called.
+ * @remarks  This will get used when `cf_apply_canvas` or when `cf_app_draw_onto_screen` is called and `clear` parameter is true.
  * @related  cf_clear_screen cf_clear_depth_stencil
  */
 CF_API void CF_CALL cf_clear_depth_stencil(float depth, uint32_t stencil);
@@ -1436,7 +1474,8 @@ CF_API void CF_CALL cf_apply_canvas(CF_Canvas canvas, bool clear);
  * @param    y          Center of the viewport on the y-axis.
  * @param    w          Width of the viewport in pixels.
  * @param    h          Height of the viewport in pixels.
- * @remarks  The viewport is a window on the screen to render within. The canvas will be stretched to fit onto the viewport.
+ * @remarks  The viewport is a window on the screen to render within. The canvas will be stretched to fit onto the viewport. You must only call this
+ *           after calling `cf_apply_shader`.
  * @related  cf_apply_canvas cf_apply_viewport cf_apply_scissor
  */
 CF_API void CF_CALL cf_apply_viewport(int x, int y, int w, int h);
@@ -1450,7 +1489,8 @@ CF_API void CF_CALL cf_apply_viewport(int x, int y, int w, int h);
  * @param    w          Width of the scissor box in pixels.
  * @param    h          Height of the scissor box in pixels.
  * @remarks  The scissor box is a window on the screen that rendering will be clipped within. Any rendering that occurs outside the
- *           scissor box will simply be ignored, rendering nothing and leaving the previous pixel contents untouched.
+ *           scissor box will simply be ignored, rendering nothing and leaving the previous pixel contents untouched. You must only call this
+ *           after calling `cf_apply_shader`.
  * @related  cf_apply_canvas cf_apply_viewport cf_apply_scissor
  */
 CF_API void CF_CALL cf_apply_scissor(int x, int y, int w, int h);
@@ -1479,9 +1519,6 @@ CF_API void CF_CALL cf_apply_shader(CF_Shader shader, CF_Material material);
  * @function cf_draw_elements
  * @category graphics
  * @brief    Draws all elements within the last applied mesh.
- * @remarks  If the mesh is a static mesh with usage `CF_USAGE_TYPE_IMMUTABLE` the number of elements drawn will always be consistent with the mesh's
- *           initial data. For `USAGE_TYPE_DYNAMIC` and `CF_USAGE_TYPE_STREAM` the number of elements will always match the previous call to
- *           `cf_mesh_update_***` or `cf_mesh_append_***`.
  * @related  CF_Mesh cf_create_mesh cf_apply_shader cf_apply_canvas
  */
 CF_API void CF_CALL cf_draw_elements();
@@ -1490,6 +1527,7 @@ CF_API void CF_CALL cf_draw_elements();
  * @function cf_commit
  * @category graphics
  * @brief    Submits all previous draw commands to the GPU.
+ * @remarks  You must call this after calling `cf_apply_shader` to "complete" the rendering pass.
  * @related  CF_Canvas cf_apply_canvas cf_apply_mesh cf_apply_shader
  */
 CF_API void CF_CALL cf_commit();
@@ -1691,11 +1729,11 @@ CF_INLINE void destroy_canvas(Canvas canvas) { cf_destroy_canvas(canvas); }
 CF_INLINE Texture canvas_get_target(Canvas canvas) { return cf_canvas_get_target(canvas); }
 CF_INLINE Texture canvas_get_depth_stencil_target(Canvas canvas) { return cf_canvas_get_depth_stencil_target(canvas); }
 CF_INLINE void canvas_blit(Canvas src, v2 u0, v2 v0, Canvas dst, v2 u1, v2 v1) { cf_canvas_blit(src, u0, v0, dst, u1, v1); }
-CF_INLINE Mesh make_mesh(int vertex_buffer_size, int index_buffer_size) { return cf_make_mesh(vertex_buffer_size, index_buffer_size); }
+CF_INLINE Mesh make_mesh(int vertex_buffer_size) { return cf_make_mesh(vertex_buffer_size); }
 CF_INLINE void destroy_mesh(Mesh mesh) { cf_destroy_mesh(mesh); }
 CF_INLINE void mesh_set_attributes(Mesh mesh, const VertexAttribute* attributes, int attribute_count, int vertex_stride) { cf_mesh_set_attributes(mesh, attributes, attribute_count, vertex_stride); }
 CF_INLINE void mesh_update_vertex_data(Mesh mesh, void* data, int count) { cf_mesh_update_vertex_data(mesh, data, count); }
-CF_INLINE void mesh_update_index_data(Mesh mesh, uint32_t* indices, int count) { cf_mesh_update_index_data(mesh, indices, count); }
+//CF_INLINE void mesh_update_index_data(Mesh mesh, uint32_t* indices, int count) { cf_mesh_update_index_data(mesh, indices, count); }
 CF_INLINE RenderState render_state_defaults() { return cf_render_state_defaults(); }
 CF_INLINE Material make_material() { return cf_make_material(); }
 CF_INLINE void destroy_material(Material material) { cf_destroy_material(material); }

@@ -35,8 +35,8 @@ struct CF_Draw* draw;
 #define IM_ASSERT CF_ASSERT
 #include <imgui.h>
 #include <imgui_internal.h>
-#define CIMGUI_DEFINE_ENUMS_AND_STRUCTS
-#include <cimgui.h>
+//#define CIMGUI_DEFINE_ENUMS_AND_STRUCTS
+//#include <cimgui.h>
 
 #include <algorithm>
 #include <glslang/Public/ShaderLang.h>
@@ -441,7 +441,7 @@ void cf_make_draw()
 	draw->reset_cam();
 
 	// Mesh + vertex attributes.
-	draw->mesh = cf_make_mesh(CF_MB * 5, 0);
+	draw->mesh = cf_make_mesh(CF_MB * 5);
 	CF_VertexAttribute attrs[12] = { };
 	attrs[0].name = "in_pos";
 	attrs[0].format = CF_VERTEX_FORMAT_FLOAT2;

@@ -92,6 +92,7 @@ set(CF_SRCS
 	src/cute_alloc.cpp
 	src/cute_result.cpp
 	src/cute_noise.cpp
+	src/cute_imgui.cpp
 
 	src/internal/yyjson.c
 
@@ -175,6 +176,7 @@ set(CF_HDRS
 	${IMGUI_HDRS}
 	${CIMGUI_HDRS}
 
+	src/internal/cute_imgui_internal.h
 	src/internal/cute_app_internal.h
 	src/internal/cute_input_internal.h
 	src/internal/cute_serialize_internal.h

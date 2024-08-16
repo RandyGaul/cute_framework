@@ -166,9 +166,6 @@ CF_API CF_DisplayOrientation CF_CALL cf_display_orientation(int display_index);
 	CF_ENUM(APP_OPTIONS_FILE_SYSTEM_DONT_DEFAULT_MOUNT_BIT,     1 << 5)  \
 	/* @entry Starts the application with no audio. */                   \
 	CF_ENUM(APP_OPTIONS_NO_AUDIO_BIT,                           1 << 6)  \
-	/* @end */
-
-#if 0
 	/* @entry Starts the application with a D3D11 backend. */            \
 	CF_ENUM(APP_OPTIONS_GFX_D3D11_BIT,                          1 << 7)  \
 	/* @entry Starts the application with a D3D12 backend. */            \
@@ -178,7 +175,6 @@ CF_API CF_DisplayOrientation CF_CALL cf_display_orientation(int display_index);
 	/* @entry Starts the application with a Vulkan backend. */           \
 	CF_ENUM(APP_OPTIONS_GFX_VULKAN_BIT,                         1 << 10) \
 	/* @end */
-#endif
 
 typedef int CF_AppOptionFlags;
 
@@ -209,7 +205,7 @@ typedef enum CF_AppOptionFlagBits
  *     int main(int argc, const char** argv)
  *     {
  *         // Create a window with a resolution of 640 x 480, along with a DirectX 11 context.
- *         app_make("Fancy Window Title", 50, 50, 640, 480, CF_APP_OPTIONS_D3D11_CONTEXT, argv[0]);
+ *         app_make("Fancy Window Title", 0, 50, 50, 640, 480, CF_APP_OPTIONS_RESIZABLE_BIT, argv[0]);
  *         
  *         while (app_is_running())
  *         {
@@ -565,13 +561,11 @@ CF_API bool CF_CALL cf_app_mouse_inside();
  * @function cf_app_init_imgui
  * @category app
  * @brief    Initializes Dear ImGui.
- * @param    no_default_font  Prevents Dear ImGui from loading up it's own default font to save a small bit of memory.
- *                            You must then supply your own font.
  * @remarks  [Dear ImGui](https://github.com/ocornut/imgui) is an excellent UI library for debugging, great for making tools and editors.
  *           After calling this init function you can call into Dear ImGui's functions.
  * @related  cf_app_get_sokol_imgui
  */
-CF_API ImGuiContext* CF_CALL cf_app_init_imgui(bool no_default_font /*= false*/);
+CF_API ImGuiContext* CF_CALL cf_app_init_imgui();
 
 /**
  * @function cf_app_get_canvas
@@ -826,7 +820,7 @@ CF_INLINE void app_set_fullscreen_mode() { cf_app_set_fullscreen_mode(); }
 CF_INLINE void app_set_title(const char* title) { cf_app_set_title(title); }
 CF_INLINE void app_set_icon(const char* virtual_path_to_png) { cf_app_set_icon(virtual_path_to_png); }
 
-CF_INLINE ImGuiContext* app_init_imgui(bool no_default_font = false) { return cf_app_init_imgui(no_default_font); }
+CF_INLINE ImGuiContext* app_init_imgui() { return cf_app_init_imgui(); }
 CF_INLINE CF_Canvas app_get_canvas() { return cf_app_get_canvas(); }
 CF_INLINE void app_set_canvas_size(int w, int h) { cf_app_set_canvas_size(w, h); }
 CF_INLINE PowerInfo app_power_info() { return cf_app_power_info(); }

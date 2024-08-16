@@ -5,10 +5,16 @@ int w = 480*2;
 int h = 270*2;
 float scale = 1;
 
+void on_shader_changed(const char* path, void* udata)
+{
+	printf("Shader altered: %s\n", path);
+}
+
 int main(int argc, char* argv[])
 {
-	make_app("Metaballs", 0, 0, 0, (int)(w*scale), (int)(h*scale), APP_OPTIONS_WINDOW_POS_CENTERED_BIT, argv[0]);
+	make_app("Metaballs", 0, 0, 0, (int)(w*scale), (int)(h*scale), APP_OPTIONS_GFX_VULKAN_BIT | APP_OPTIONS_WINDOW_POS_CENTERED_BIT, argv[0]);
 	cf_shader_directory("/metaballs_data");
+	cf_shader_on_changed(on_shader_changed, NULL);
 	CF_Canvas soft_circles = make_canvas(canvas_defaults(w, h));
 	CF_Shader shd = cf_make_draw_shader("metaballs.shd");
 	float t = 0;
@@ -18,6 +24,8 @@ int main(int argc, char* argv[])
 	float fps = 0;
 
 	set_target_framerate(200);
+
+	app_init_imgui();
 
 	while (app_is_running()) {
 		app_update();
@@ -37,8 +45,7 @@ int main(int argc, char* argv[])
 
 		// Draw soft-circles.
 		Rnd rnd = rnd_seed(0);
-		for (int i = 0; i < 100; ++i)
-		{
+		for (int i = 0; i < 100; ++i) {
 			float o = rnd_range(rnd, -10.0f,10.0f);
 			float x = rnd_range(rnd, -w/scale*0.5f, w/scale*0.5f) + cosf(t+o) * 10;
 			float y = rnd_range(rnd, -h/scale*0.5f, h/scale*0.5f) + sinf(t+o) * 10;
@@ -66,11 +73,8 @@ int main(int argc, char* argv[])
 			render_settings_pop_shader();
 		}
 
-		draw_push();
 		draw_text("press space", -V2(text_width("press_space") * 0.5f, 0));
-		draw_pop();
 
-		//cf_canvas_blit(soft_circles, V2(0,0), V2(1,1), app_get_canvas(), V2(0,0), V2(1,1));
 
 		app_draw_onto_screen(toggle ? true : false);
 	}

@@ -31,6 +31,93 @@ static CF_CanvasInternal* s_default_canvas = NULL;
 
 using namespace Cute;
 
+//--------------------------------------------------------------------------------------------------
+// Builtin shaders. These get cross-compiled at runtime.
+
+// Render as white -- for testing.
+const char* s_basic_vs = R"(
+layout (location = 0) in vec2 in_posH;
+
+void main()
+{
+	vec4 posH = vec4(in_posH, 0, 1);
+	gl_Position = posH;
+}
+)";
+const char* s_basic_fs = R"(
+layout(location = 0) out vec4 result;
+
+void main()
+{
+	result = vec4(1);
+}
+)";
+
+// Blit one rect onto another.
+const char* s_blit_vs = R"(
+layout (location = 0) in vec2 in_posH;
+layout (location = 1) in vec2 in_uv;
+
+layout (location = 0) out vec2 uv;
+
+void main()
+{
+	vec4 posH = vec4(in_posH, 0, 1);
+	uv = in_uv;
+	gl_Position = posH;
+}
+)";
+const char* s_blit_fs = R"(
+layout (location = 0) in vec2 uv;
+
+layout(location = 0) out vec4 result;
+
+layout (set = 2, binding = 0) uniform sampler2D u_image;
+
+void main()
+{
+	vec4 color = texture(u_image, uv);
+	result = color;
+}
+)";
+
+// Copy the app's offscreen canvas onto the swapchain texture (backfbuffer).
+const char* s_backbuffer_vs = R"(
+layout (location = 0) in vec2 in_posH;
+layout (location = 1) in vec2 in_uv;
+
+layout (location = 0) out vec2 uv;
+
+void main()
+{
+	vec4 posH = vec4(in_posH, 0, 1);
+	uv = in_uv;
+	gl_Position = posH;
+}
+)";
+const char* s_backbuffer_fs = R"(
+layout (location = 0) in vec2 uv;
+
+layout(location = 0) out vec4 result;
+
+layout (set = 2, binding = 0) uniform sampler2D u_image;
+
+layout (set = 3, binding = 0) uniform uniform_block {
+	vec2 u_texture_size;
+};
+
+#include "smooth_uv.shd"
+
+void main()
+{
+	vec4 color = texture(u_image, smooth_uv(uv, u_texture_size));
+	result = color;
+}
+)";
+
+//--------------------------------------------------------------------------------------------------
+// Utility shaders (included into other shaders).
+
 const char* s_gamma = R"(
 vec4 gamma(vec4 c)
 {
@@ -234,12 +321,16 @@ vec2 smooth_uv(vec2 uv, vec2 texture_size)
 }
 )";
 
+// Stub function. This gets replaced by injected user-shader code via #include.
 const char* s_shader_stub = R"(
 vec4 shader(vec4 color, vec2 pos, vec2 atlas_uv, vec2 screen_uv, vec4 params)
 {
 	return color;
 }
 )";
+
+//--------------------------------------------------------------------------------------------------
+// Primary cute_draw.h shader.
 
 const char* s_draw_vs = R"(
 layout (location = 0) in vec2 in_pos;
@@ -309,7 +400,7 @@ layout (location = 11) in float v_fill;
 layout (location = 12) in vec2 v_posH;
 layout (location = 13) in vec4 v_user;
 
-out vec4 result;
+layout(location = 0) out vec4 result;
 
 layout (set = 2, binding = 0) uniform sampler2D u_image;
 
@@ -352,212 +443,69 @@ void main()
 	c = (!is_sprite && !is_text && !is_tri) ? sdf(c, v_col, d - v_radius) : c;
 
 	c *= v_alpha;
-	vec2 screen_position = (v_posH + vec2(1,1)) * 0.5;
-	c = shader(c, v_pos, v_uv, screen_position, v_user);
+	vec2 screen_uv = (v_posH + vec2(1,1)) * 0.5;
+	screen_uv = vec2(screen_uv.x, 1.0-screen_uv.y);
+	c = shader(c, v_pos, v_uv, screen_uv, v_user);
 	if (c.a == 0) discard;
 	result = c;
 }
 )";
 
-const char* s_base_vs = R"(
-layout (location = 0) in vec2 in_posH;
+//--------------------------------------------------------------------------------------------------
+// SDL_Gpu wrapping implementation of cute_graphics.h.
+// ...Variety of enum converters/struct initializers are in cute_graphics_internal.h.
 
-void main()
+CF_INLINE CF_UniformType s_uniform_type(SpvReflectTypeDescription* type_desc)
 {
-	vec4 posH = vec4(in_posH, 0, 1);
-	gl_Position = posH;
-}
-)";
-
-const char* s_base_fs = R"(
-layout (location = 0) out vec4 result;
-
-void main()
-{
-	result = vec4(1);
-}
-)";
-
-typedef enum CF_ShaderInputFormat
-{
-	CF_SHADER_INPUT_FORMAT_UNKNOWN,
-	CF_SHADER_INPUT_FORMAT_UINT,
-	CF_SHADER_INPUT_FORMAT_INT,
-	CF_SHADER_INPUT_FORMAT_FLOAT,
-	CF_SHADER_INPUT_FORMAT_UVEC2,
-	CF_SHADER_INPUT_FORMAT_IVEC2,
-	CF_SHADER_INPUT_FORMAT_VEC2,
-	CF_SHADER_INPUT_FORMAT_UVEC3,
-	CF_SHADER_INPUT_FORMAT_IVEC3,
-	CF_SHADER_INPUT_FORMAT_VEC3,
-	CF_SHADER_INPUT_FORMAT_UVEC4,
-	CF_SHADER_INPUT_FORMAT_IVEC4,
-	CF_SHADER_INPUT_FORMAT_VEC4,
-} CF_ShaderInputFormat;
-
-static bool s_is_compatible(CF_ShaderInputFormat input_format, CF_VertexFormat vertex_format)
-{
-	switch (input_format)
-	{
-	case CF_SHADER_INPUT_FORMAT_UINT:
-		return vertex_format == CF_VERTEX_FORMAT_UINT;
-
-	case CF_SHADER_INPUT_FORMAT_FLOAT:
-		return vertex_format == CF_VERTEX_FORMAT_FLOAT;
-
-	case CF_SHADER_INPUT_FORMAT_VEC2:
-		return vertex_format == CF_VERTEX_FORMAT_FLOAT2;
-
-	case CF_SHADER_INPUT_FORMAT_VEC3:
-		return vertex_format == CF_VERTEX_FORMAT_FLOAT3;
-
-	case CF_SHADER_INPUT_FORMAT_VEC4:
-		return vertex_format == CF_VERTEX_FORMAT_FLOAT4 || vertex_format == CF_VERTEX_FORMAT_UBYTE4N || vertex_format == CF_VERTEX_FORMAT_UBYTE4;
-
-	case CF_SHADER_INPUT_FORMAT_UVEC4:
-		return vertex_format == CF_VERTEX_FORMAT_UBYTE4N || vertex_format == CF_VERTEX_FORMAT_UBYTE4;
-
-	case CF_SHADER_INPUT_FORMAT_IVEC4:
-		return vertex_format == CF_VERTEX_FORMAT_SHORT4 || vertex_format == CF_VERTEX_FORMAT_SHORT4N;
-
-	case CF_SHADER_INPUT_FORMAT_IVEC2:
-		return vertex_format == CF_VERTEX_FORMAT_SHORT2 || vertex_format == CF_VERTEX_FORMAT_SHORT2N;
-
-	case CF_SHADER_INPUT_FORMAT_UVEC2:
-		return vertex_format == CF_VERTEX_FORMAT_HALFVECTOR2;
-
-	// Not supported.
-	case CF_SHADER_INPUT_FORMAT_UVEC3:
-	case CF_SHADER_INPUT_FORMAT_IVEC3:
-	case CF_SHADER_INPUT_FORMAT_UNKNOWN:
+	switch (type_desc->op) {
+	case SpvOpTypeFloat: return CF_UNIFORM_TYPE_FLOAT;
+	case SpvOpTypeInt: return CF_UNIFORM_TYPE_INT;
+	case SpvOpTypeVector:
+		if (type_desc->traits.numeric.scalar.width == 32) {
+			if (type_desc->traits.numeric.scalar.signedness == 0) {
+				switch (type_desc->traits.numeric.vector.component_count) {
+					case 2: return CF_UNIFORM_TYPE_FLOAT2;
+					case 4: return CF_UNIFORM_TYPE_FLOAT4;
+					default: return CF_UNIFORM_TYPE_UNKNOWN;
+				}
+			} else {
+				switch (type_desc->traits.numeric.vector.component_count) {
+					case 2: return CF_UNIFORM_TYPE_INT2;
+					case 4: return CF_UNIFORM_TYPE_INT4;
+					default: return CF_UNIFORM_TYPE_UNKNOWN;
+				}
+			}
+		}
+		break;
+	case SpvOpTypeMatrix:
+		if (type_desc->traits.numeric.matrix.column_count == 4 && type_desc->traits.numeric.matrix.row_count == 4)
+			return CF_UNIFORM_TYPE_MAT4;
+		break;
 	default:
-		return false;
+		return CF_UNIFORM_TYPE_UNKNOWN;
 	}
+	return CF_UNIFORM_TYPE_UNKNOWN;
 }
 
-
-static SDL_GpuVertexElementFormat s_wrap(CF_VertexFormat format)
+CF_INLINE CF_ShaderInputFormat s_wrap(SpvReflectFormat format)
 {
 	switch (format) {
-	default: return SDL_GPU_VERTEXELEMENTFORMAT_UINT;
-	case CF_VERTEX_FORMAT_UINT: return SDL_GPU_VERTEXELEMENTFORMAT_UINT;
-	case CF_VERTEX_FORMAT_FLOAT: return SDL_GPU_VERTEXELEMENTFORMAT_FLOAT;
-	case CF_VERTEX_FORMAT_FLOAT2: return SDL_GPU_VERTEXELEMENTFORMAT_VECTOR2;
-	case CF_VERTEX_FORMAT_FLOAT3: return SDL_GPU_VERTEXELEMENTFORMAT_VECTOR3;
-	case CF_VERTEX_FORMAT_FLOAT4: return SDL_GPU_VERTEXELEMENTFORMAT_VECTOR4;
-	case CF_VERTEX_FORMAT_UBYTE4N: return SDL_GPU_VERTEXELEMENTFORMAT_COLOR;
-	case CF_VERTEX_FORMAT_UBYTE4: return SDL_GPU_VERTEXELEMENTFORMAT_BYTE4;
-	case CF_VERTEX_FORMAT_SHORT2: return SDL_GPU_VERTEXELEMENTFORMAT_SHORT2;
-	case CF_VERTEX_FORMAT_SHORT4: return SDL_GPU_VERTEXELEMENTFORMAT_SHORT4;
-	case CF_VERTEX_FORMAT_SHORT2N: return SDL_GPU_VERTEXELEMENTFORMAT_NORMALIZEDSHORT2;
-	case CF_VERTEX_FORMAT_SHORT4N: return SDL_GPU_VERTEXELEMENTFORMAT_NORMALIZEDSHORT4;
-	case CF_VERTEX_FORMAT_HALFVECTOR2: return SDL_GPU_VERTEXELEMENTFORMAT_HALFVECTOR2;
-	case CF_VERTEX_FORMAT_HALFVECTOR4: return SDL_GPU_VERTEXELEMENTFORMAT_HALFVECTOR4;
+	case SPV_REFLECT_FORMAT_UNDEFINED:           return CF_SHADER_INPUT_FORMAT_UNKNOWN;
+	case SPV_REFLECT_FORMAT_R32_UINT:            return CF_SHADER_INPUT_FORMAT_UINT;
+	case SPV_REFLECT_FORMAT_R32_SINT:            return CF_SHADER_INPUT_FORMAT_INT;
+	case SPV_REFLECT_FORMAT_R32_SFLOAT:          return CF_SHADER_INPUT_FORMAT_FLOAT;
+	case SPV_REFLECT_FORMAT_R32G32_UINT:         return CF_SHADER_INPUT_FORMAT_UVEC2;
+	case SPV_REFLECT_FORMAT_R32G32_SINT:         return CF_SHADER_INPUT_FORMAT_IVEC2;
+	case SPV_REFLECT_FORMAT_R32G32_SFLOAT:       return CF_SHADER_INPUT_FORMAT_VEC2;
+	case SPV_REFLECT_FORMAT_R32G32B32_UINT:      return CF_SHADER_INPUT_FORMAT_UVEC3;
+	case SPV_REFLECT_FORMAT_R32G32B32_SINT:      return CF_SHADER_INPUT_FORMAT_IVEC3;
+	case SPV_REFLECT_FORMAT_R32G32B32_SFLOAT:    return CF_SHADER_INPUT_FORMAT_VEC3;
+	case SPV_REFLECT_FORMAT_R32G32B32A32_UINT:   return CF_SHADER_INPUT_FORMAT_UVEC4;
+	case SPV_REFLECT_FORMAT_R32G32B32A32_SINT:   return CF_SHADER_INPUT_FORMAT_IVEC4;
+	case SPV_REFLECT_FORMAT_R32G32B32A32_SFLOAT: return CF_SHADER_INPUT_FORMAT_VEC4;
+	default: return CF_SHADER_INPUT_FORMAT_UNKNOWN;
 	}
 }
-
-static int s_uniform_size(CF_UniformType type)
-{
-	switch (type) {
-	case CF_UNIFORM_TYPE_FLOAT:  return 4;
-	case CF_UNIFORM_TYPE_FLOAT2: return 8;
-	case CF_UNIFORM_TYPE_FLOAT4: return 16;
-	case CF_UNIFORM_TYPE_INT:    return 4;
-	case CF_UNIFORM_TYPE_INT2:   return 8;
-	case CF_UNIFORM_TYPE_INT4:   return 16;
-	case CF_UNIFORM_TYPE_MAT4:   return 64;
-	default:                     return 0;
-	}
-}
-
-#define CF_MAX_SHADER_INPUTS (32)
-
-struct CF_UniformBlockMember
-{
-	const char* name;
-	CF_UniformType type;
-	int array_element_count;
-	int size; // In bytes. If an array, it's the size in bytes of the whole array.
-	int offset;
-};
-
-struct CF_Uniform
-{
-	const char* name;
-	CF_UniformType type;
-	int array_length;
-	void* data;
-	int size;
-};
-
-struct CF_MaterialTex
-{
-	const char* name;
-	CF_Texture handle;
-};
-
-struct CF_MaterialState
-{
-	Array<CF_Uniform> uniforms;
-	Array<CF_MaterialTex> textures;
-};
-
-struct CF_MaterialInternal
-{
-	bool dirty = false;
-	CF_RenderState state;
-	CF_MaterialState vs;
-	CF_MaterialState fs;
-	CF_Arena uniform_arena;
-	CF_Arena block_arena;
-};
-
-struct CF_Pipeline
-{
-	CF_MaterialInternal* material = NULL;
-	SDL_GpuGraphicsPipeline* pip = NULL;
-	CF_MeshInternal* mesh = NULL;
-};
-
-struct CF_ShaderInternal
-{
-	SDL_GpuShader* vs;
-	SDL_GpuShader* fs;
-	int input_count;
-	const char* input_names[CF_MAX_SHADER_INPUTS];
-	int input_locations[CF_MAX_SHADER_INPUTS];
-	CF_ShaderInputFormat input_formats[CF_MAX_SHADER_INPUTS];
-	int vs_block_size;
-	int fs_block_size;
-	Array<CF_UniformBlockMember> fs_uniform_block_members;
-	Array<CF_UniformBlockMember> vs_uniform_block_members;
-	Array<const char*> image_names;
-	Array<CF_Pipeline> pip_cache;
-
-	CF_INLINE int get_input_index(const char* name)
-	{
-		for (int i = 0; i < input_count; ++i) {
-			if (input_names[i] == name) return i;
-		}
-		return -1;
-	}
-
-	CF_INLINE int fs_index(const char* name)
-	{
-		for (int i = 0; i < fs_uniform_block_members.size(); ++i) {
-			if (fs_uniform_block_members[i].name == name) return i;
-		}
-		return -1;
-	}
-
-	CF_INLINE int vs_index(const char* name)
-	{
-		for (int i = 0; i < vs_uniform_block_members.size(); ++i) {
-			if (vs_uniform_block_members[i].name == name) return i;
-		}
-		return -1;
-	}
-};
 
 struct CF_Buffer
 {
@@ -594,71 +542,6 @@ CF_TextureParams cf_texture_defaults(int w, int h)
 	params.height = h;
 	params.stream = false;
 	return params;
-}
-
-static SDL_GpuTextureFormat s_wrap(CF_PixelFormat format)
-{
-	switch (format) {
-	case CF_PIXEL_FORMAT_INVALID:              return SDL_GPU_TEXTUREFORMAT_INVALID;
-	case CF_PIXEL_FORMAT_R8G8B8A8:             return SDL_GPU_TEXTUREFORMAT_R8G8B8A8;
-	case CF_PIXEL_FORMAT_B8G8R8A8:             return SDL_GPU_TEXTUREFORMAT_B8G8R8A8;
-	case CF_PIXEL_FORMAT_B5G6R5:               return SDL_GPU_TEXTUREFORMAT_B5G6R5;
-	case CF_PIXEL_FORMAT_B5G5R5A1:             return SDL_GPU_TEXTUREFORMAT_B5G5R5A1;
-	case CF_PIXEL_FORMAT_B4G4R4A4:             return SDL_GPU_TEXTUREFORMAT_B4G4R4A4;
-	case CF_PIXEL_FORMAT_R10G10B10A2:          return SDL_GPU_TEXTUREFORMAT_R10G10B10A2;
-	case CF_PIXEL_FORMAT_R16G16:               return SDL_GPU_TEXTUREFORMAT_R16G16;
-	case CF_PIXEL_FORMAT_R16G16B16A16:         return SDL_GPU_TEXTUREFORMAT_R16G16B16A16;
-	case CF_PIXEL_FORMAT_R8:                   return SDL_GPU_TEXTUREFORMAT_R8;
-	case CF_PIXEL_FORMAT_A8:                   return SDL_GPU_TEXTUREFORMAT_A8;
-	case CF_PIXEL_FORMAT_R8_UINT:              return SDL_GPU_TEXTUREFORMAT_R8_UINT;
-	case CF_PIXEL_FORMAT_R8G8_UINT:            return SDL_GPU_TEXTUREFORMAT_R8G8_UINT;
-	case CF_PIXEL_FORMAT_R8G8B8A8_UINT:        return SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UINT;
-	case CF_PIXEL_FORMAT_R16_UINT:             return SDL_GPU_TEXTUREFORMAT_R16_UINT;
-	case CF_PIXEL_FORMAT_R16G16_UINT:          return SDL_GPU_TEXTUREFORMAT_R16G16_UINT;
-	case CF_PIXEL_FORMAT_R16G16B16A16_UINT:    return SDL_GPU_TEXTUREFORMAT_R16G16B16A16_UINT;
-	case CF_PIXEL_FORMAT_BC1:                  return SDL_GPU_TEXTUREFORMAT_BC1;
-	case CF_PIXEL_FORMAT_BC2:                  return SDL_GPU_TEXTUREFORMAT_BC2;
-	case CF_PIXEL_FORMAT_BC3:                  return SDL_GPU_TEXTUREFORMAT_BC3;
-	case CF_PIXEL_FORMAT_BC7:                  return SDL_GPU_TEXTUREFORMAT_BC7;
-	case CF_PIXEL_FORMAT_R8G8_SNORM:           return SDL_GPU_TEXTUREFORMAT_R8G8_SNORM;
-	case CF_PIXEL_FORMAT_R8G8B8A8_SNORM:       return SDL_GPU_TEXTUREFORMAT_R8G8B8A8_SNORM;
-	case CF_PIXEL_FORMAT_R16_SFLOAT:           return SDL_GPU_TEXTUREFORMAT_R16_SFLOAT;
-	case CF_PIXEL_FORMAT_R16G16_SFLOAT:        return SDL_GPU_TEXTUREFORMAT_R16G16_SFLOAT;
-	case CF_PIXEL_FORMAT_R16G16B16A16_SFLOAT:  return SDL_GPU_TEXTUREFORMAT_R16G16B16A16_SFLOAT;
-	case CF_PIXEL_FORMAT_R32_SFLOAT:           return SDL_GPU_TEXTUREFORMAT_R32_SFLOAT;
-	case CF_PIXEL_FORMAT_R32G32_SFLOAT:        return SDL_GPU_TEXTUREFORMAT_R32G32_SFLOAT;
-	case CF_PIXEL_FORMAT_R32G32B32A32_SFLOAT:  return SDL_GPU_TEXTUREFORMAT_R32G32B32A32_SFLOAT;
-	case CF_PIXEL_FORMAT_R8G8B8A8_SRGB:        return SDL_GPU_TEXTUREFORMAT_R8G8B8A8_SRGB;
-	case CF_PIXEL_FORMAT_B8G8R8A8_SRGB:        return SDL_GPU_TEXTUREFORMAT_B8G8R8A8_SRGB;
-	case CF_PIXEL_FORMAT_BC3_SRGB:             return SDL_GPU_TEXTUREFORMAT_BC3_SRGB;
-	case CF_PIXEL_FORMAT_BC7_SRGB:             return SDL_GPU_TEXTUREFORMAT_BC7_SRGB;
-	case CF_PIXEL_FORMAT_D16_UNORM:            return SDL_GPU_TEXTUREFORMAT_D16_UNORM;
-	case CF_PIXEL_FORMAT_D24_UNORM:            return SDL_GPU_TEXTUREFORMAT_D24_UNORM;
-	case CF_PIXEL_FORMAT_D32_SFLOAT:           return SDL_GPU_TEXTUREFORMAT_D32_SFLOAT;
-	case CF_PIXEL_FORMAT_D24_UNORM_S8_UINT:    return SDL_GPU_TEXTUREFORMAT_D24_UNORM_S8_UINT;
-	case CF_PIXEL_FORMAT_D32_SFLOAT_S8_UINT:   return SDL_GPU_TEXTUREFORMAT_D32_SFLOAT_S8_UINT;
-	default:                                   return SDL_GPU_TEXTUREFORMAT_INVALID;
-	}
-}
-
-static SDL_GpuFilter s_wrap(CF_Filter filter)
-{
-	switch (filter) {
-	default: return SDL_GPU_FILTER_NEAREST;
-	case CF_FILTER_NEAREST: return SDL_GPU_FILTER_NEAREST;
-	case CF_FILTER_LINEAR: return SDL_GPU_FILTER_LINEAR;
-	}
-}
-
-static SDL_GpuSamplerAddressMode s_wrap(CF_WrapMode mode)
-{
-	switch (mode)
-	{
-	case CF_WRAP_MODE_REPEAT:           return SDL_GPU_SAMPLERADDRESSMODE_REPEAT;
-	case CF_WRAP_MODE_CLAMP_TO_EDGE:    return SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE;
-	case CF_WRAP_MODE_MIRRORED_REPEAT:  return SDL_GPU_SAMPLERADDRESSMODE_MIRRORED_REPEAT;
-	default:                            return SDL_GPU_SAMPLERADDRESSMODE_REPEAT;
-	}
 }
 
 CF_Texture cf_make_texture(CF_TextureParams params)
@@ -731,7 +614,7 @@ void cf_update_texture(CF_Texture texture_handle, void* data, int size)
 	}
 	uint8_t* p;
 	SDL_GpuMapTransferBuffer(app->device, buf, tex->buf ? true : false, (void**)&p);
-	SDL_memcpy(p, data, size);
+	CF_MEMCPY(p, data, size);
 	SDL_GpuUnmapTransferBuffer(app->device, buf);
 
 	// Tell the driver to upload the bytes to the GPU.
@@ -742,7 +625,7 @@ void cf_update_texture(CF_Texture texture_handle, void* data, int size)
 	src.offset = 0;
 	src.imagePitch = tex->w;
 	src.imageHeight = tex->h;
-	SDL_GpuTextureRegion dst = SDL_GpuTextureRegionDefaults(tex, 0, 0, 1, 1);
+	SDL_GpuTextureRegion dst = SDL_GpuTextureRegionDefaults(tex, tex->w, tex->h);
 	SDL_GpuUploadToTexture(pass, &src, &dst, tex->buf ? true : false);
 	SDL_GpuEndCopyPass(pass);
 	if (!tex->buf) {
@@ -750,13 +633,13 @@ void cf_update_texture(CF_Texture texture_handle, void* data, int size)
 	}
 }
 
-static void s_shader_directory(Path path)
+static void s_shader_directory_recursive(Path path)
 {
 	Array<Path> dir = Directory::enumerate(app->shader_directory + path);
 	for (int i = 0; i < dir.size(); ++i) {
 		Path p = app->shader_directory + path + dir[i];
 		if (p.is_directory()) {
-			cf_shader_directory(p);
+			s_shader_directory_recursive(p);
 		} else {
 			CF_Stat stat;
 			fs_stat(p, &stat);
@@ -782,14 +665,42 @@ void cf_shader_directory(const char* path)
 	if (app->shader_directory_set) return;
 	app->shader_directory_set = true;
 	app->shader_directory = path;
-	s_shader_directory("/");
+	s_shader_directory_recursive("/");
 }
 
 void cf_shader_on_changed(void (*on_changed_fn)(const char* path, void* udata), void* udata)
 {
-	// @TODO Implement in app.
 	app->on_shader_changed_fn = on_changed_fn;
 	app->on_shader_changed_udata = udata;
+}
+
+static void s_shader_watch_recursive(Path path)
+{
+	Array<Path> dir = Directory::enumerate(app->shader_directory + path);
+	for (int i = 0; i < dir.size(); ++i) {
+		Path p = app->shader_directory + path + dir[i];
+		if (p.is_directory()) {
+			s_shader_directory_recursive(p);
+		} else {
+			CF_Stat stat;
+			fs_stat(p, &stat);
+			String ext = p.ext();
+			if (ext == ".vs" || ext == ".fs" || ext == ".shd") {
+				const char* key = sintern(path + dir[i]);
+				CF_ShaderFileInfo& info = app->shader_file_infos.find(key);
+				if (info.stat.last_modified_time < stat.last_modified_time) {
+					info.stat.last_modified_time = stat.last_modified_time;
+					app->on_shader_changed_fn(key, app->on_shader_changed_udata);
+				}
+			}
+		}
+	}
+}
+
+void cf_shader_watch()
+{
+	if (!app->on_shader_changed_fn) return;
+	s_shader_watch_recursive("/");
 }
 
 const dyna uint8_t* cf_compile_shader_to_bytecode(const char* shader_src, CF_ShaderStage cf_stage)
@@ -808,8 +719,8 @@ const dyna uint8_t* cf_compile_shader_to_bytecode(const char* shader_src, CF_Sha
 	shader.setStrings(shader_strings, 1);
 
 	shader.setEnvInput(glslang::EShSourceGlsl, stage, glslang::EShClientVulkan, 450);
-	shader.setEnvClient(glslang::EShClientVulkan, glslang::EShTargetVulkan_1_2);
-	shader.setEnvTarget(glslang::EShTargetSpv, glslang::EShTargetSpv_1_6);
+	shader.setEnvClient(glslang::EShClientVulkan, glslang::EShTargetVulkan_1_3);
+	shader.setEnvTarget(glslang::EShTargetSpv, glslang::EShTargetSpv_1_3);
 	shader.setEntryPoint("main");
 	shader.setSourceEntryPoint("main");
 	shader.setAutoMapLocations(true);
@@ -847,67 +758,6 @@ const dyna uint8_t* cf_compile_shader_to_bytecode(const char* shader_src, CF_Sha
 	alen(bytecode) = size;
 
 	return bytecode;
-}
-
-static CF_INLINE SDL_GpuShaderStage s_wrap(CF_ShaderStage stage)
-{
-	switch (stage) {
-	case CF_SHADER_STAGE_VERTEX: return SDL_GPU_SHADERSTAGE_VERTEX;
-	case CF_SHADER_STAGE_FRAGMENT: return SDL_GPU_SHADERSTAGE_FRAGMENT;
-	default: return SDL_GPU_SHADERSTAGE_VERTEX;
-	}
-}
-
-static CF_ShaderInputFormat s_wrap(SpvReflectFormat format)
-{
-	switch (format) {
-	case SPV_REFLECT_FORMAT_UNDEFINED:           return CF_SHADER_INPUT_FORMAT_UNKNOWN;
-	case SPV_REFLECT_FORMAT_R32_UINT:            return CF_SHADER_INPUT_FORMAT_UINT;
-	case SPV_REFLECT_FORMAT_R32_SINT:            return CF_SHADER_INPUT_FORMAT_INT;
-	case SPV_REFLECT_FORMAT_R32_SFLOAT:          return CF_SHADER_INPUT_FORMAT_FLOAT;
-	case SPV_REFLECT_FORMAT_R32G32_UINT:         return CF_SHADER_INPUT_FORMAT_UVEC2;
-	case SPV_REFLECT_FORMAT_R32G32_SINT:         return CF_SHADER_INPUT_FORMAT_IVEC2;
-	case SPV_REFLECT_FORMAT_R32G32_SFLOAT:       return CF_SHADER_INPUT_FORMAT_VEC2;
-	case SPV_REFLECT_FORMAT_R32G32B32_UINT:      return CF_SHADER_INPUT_FORMAT_UVEC3;
-	case SPV_REFLECT_FORMAT_R32G32B32_SINT:      return CF_SHADER_INPUT_FORMAT_IVEC3;
-	case SPV_REFLECT_FORMAT_R32G32B32_SFLOAT:    return CF_SHADER_INPUT_FORMAT_VEC3;
-	case SPV_REFLECT_FORMAT_R32G32B32A32_UINT:   return CF_SHADER_INPUT_FORMAT_UVEC4;
-	case SPV_REFLECT_FORMAT_R32G32B32A32_SINT:   return CF_SHADER_INPUT_FORMAT_IVEC4;
-	case SPV_REFLECT_FORMAT_R32G32B32A32_SFLOAT: return CF_SHADER_INPUT_FORMAT_VEC4;
-	default: return CF_SHADER_INPUT_FORMAT_UNKNOWN;
-	}
-}
-
-static CF_UniformType s_uniform_type(SpvReflectTypeDescription* type_desc)
-{
-	switch (type_desc->op) {
-	case SpvOpTypeFloat: return CF_UNIFORM_TYPE_FLOAT;
-	case SpvOpTypeInt: return CF_UNIFORM_TYPE_INT;
-	case SpvOpTypeVector:
-		if (type_desc->traits.numeric.scalar.width == 32) {
-			if (type_desc->traits.numeric.scalar.signedness == 0) {
-				switch (type_desc->traits.numeric.vector.component_count) {
-					case 2: return CF_UNIFORM_TYPE_FLOAT2;
-					case 4: return CF_UNIFORM_TYPE_FLOAT4;
-					default: return CF_UNIFORM_TYPE_UNKNOWN;
-				}
-			} else {
-				switch (type_desc->traits.numeric.vector.component_count) {
-					case 2: return CF_UNIFORM_TYPE_INT2;
-					case 4: return CF_UNIFORM_TYPE_INT4;
-					default: return CF_UNIFORM_TYPE_UNKNOWN;
-				}
-			}
-		}
-		break;
-	case SpvOpTypeMatrix:
-		if (type_desc->traits.numeric.matrix.column_count == 4 && type_desc->traits.numeric.matrix.row_count == 4)
-			return CF_UNIFORM_TYPE_MAT4;
-		break;
-	default:
-		return CF_UNIFORM_TYPE_UNKNOWN;
-	}
-	return CF_UNIFORM_TYPE_UNKNOWN;
 }
 
 static SDL_GpuShader* s_compile(CF_ShaderInternal* shader_internal, const dyna uint8_t* bytecode, CF_ShaderStage stage)
@@ -1148,7 +998,7 @@ static CF_Shader s_compile(const char* vs_src, const char* fs_src, bool builtin 
 	String vs = s_include(vs_src, builtin, NULL);
 	String fs = s_include(fs_src, builtin, user_shd);
 
-#if 1
+#if 0
 	printf(vs.c_str());
 	printf("---\n");
 	printf(fs.c_str());
@@ -1186,8 +1036,12 @@ void cf_load_internal_shaders()
 	app->builtin_shaders.add(sintern("distance.shd"), s_distance);
 	app->builtin_shaders.add(sintern("smooth_uv.shd"), s_smooth_uv);
 	app->builtin_shaders.add(sintern("blend.shd"), s_blend);
+
+	// Compile built-in shaders.
 	app->draw_shader = s_compile(s_draw_vs, s_draw_fs, true, NULL);
-	app->basic = s_compile(s_base_vs, s_base_fs, true, NULL);
+	app->basic_shader = s_compile(s_basic_vs, s_basic_fs, true, NULL);
+	app->blit_shader = s_compile(s_blit_vs, s_blit_fs, true, NULL);
+	app->backbuffer_shader = s_compile(s_backbuffer_vs, s_backbuffer_fs, true, NULL);
 }
 
 void cf_unload_shader_compiler()
@@ -1197,6 +1051,7 @@ void cf_unload_shader_compiler()
 #endif CF_RUNTIME_SHADER_COMPIILATION
 }
 
+// Create a user shader by injecting their `shader` function into CF's draw shader.
 CF_Shader cf_make_draw_shader_internal(const char* path)
 {
 	Path p = Path("/") + path;
@@ -1301,41 +1156,107 @@ CF_Texture cf_canvas_get_depth_stencil_target(CF_Canvas canvas_handle)
 	return canvas->cf_depth_stencil;
 }
 
-void cf_canvas_blit(CF_Canvas src_handle, CF_V2 u0, CF_V2 v0, CF_Canvas dst_handle, CF_V2 u1, CF_V2 v1)
+void cf_canvas_blit(CF_Canvas src, CF_V2 u0, CF_V2 v0, CF_Canvas dst, CF_V2 u1, CF_V2 v1)
 {
-	CF_CanvasInternal* src = (CF_CanvasInternal*)src_handle.id;
-	CF_CanvasInternal* dst = (CF_CanvasInternal*)dst_handle.id;
-	CF_TextureInternal* src_tex = (CF_TextureInternal*)src->cf_texture.id;
-	CF_TextureInternal* dst_tex = (CF_TextureInternal*)dst->cf_texture.id;
-	CF_TextureInternal* src_depth_stencil = (CF_TextureInternal*)src->cf_depth_stencil.id;
-	CF_TextureInternal* dst_depth_stencil = (CF_TextureInternal*)dst->cf_depth_stencil.id;
+	typedef struct Vertex
+	{
+		float x, y;
+		float u, v;
+	} Vertex;
 
-	SDL_GpuCommandBuffer* cmd = app->cmd;
-	SDL_GpuTextureRegion src_tex_region = SDL_GpuTextureRegionDefaults(src_tex, u0.x, u0.y, v0.x, v0.y);
-	SDL_GpuTextureRegion dst_tex_region = SDL_GpuTextureRegionDefaults(dst_tex, u0.x, u0.y, v0.x, v0.y);
-	SDL_GpuBlit(cmd, &src_tex_region, &dst_tex_region, src_tex->filter, true);
+	if (!app->canvas_blit_init) {
+		app->canvas_blit_init = true;
 
-	if (src_depth_stencil && dst_depth_stencil) {
-		SDL_GpuTextureRegion src_depth_stencil_region = SDL_GpuTextureRegionDefaults(src_depth_stencil, u0.x, u0.y, v0.x, v0.y);
-		SDL_GpuTextureRegion dst_depth_stencil_region = SDL_GpuTextureRegionDefaults(dst_depth_stencil, u0.x, u0.y, v0.x, v0.y);
-		SDL_GpuBlit(cmd, &src_depth_stencil_region, &dst_depth_stencil_region, src_depth_stencil->filter, true);
+		// Create a full-screen quad mesh.
+		CF_Mesh blit_mesh = cf_make_mesh(sizeof(Vertex) * 1024);
+		CF_VertexAttribute attrs[2] = { 0 };
+		attrs[0].name = "in_posH";
+		attrs[0].format = CF_VERTEX_FORMAT_FLOAT2;
+		attrs[0].offset = CF_OFFSET_OF(Vertex, x);
+		attrs[1].name = "in_uv";
+		attrs[1].format = CF_VERTEX_FORMAT_FLOAT2;
+		attrs[1].offset = CF_OFFSET_OF(Vertex, u);
+		cf_mesh_set_attributes(blit_mesh, attrs, CF_ARRAY_SIZE(attrs), sizeof(Vertex));
+		app->blit_mesh = blit_mesh;
+
+		// Create material for blitting.
+		CF_Material blit_material = cf_make_material();
+		cf_material_set_texture_fs(blit_material, "u_image", cf_canvas_get_target(src));
+		CF_RenderState state = cf_render_state_defaults();
+		state.blend.enabled = true;
+		state.blend.rgb_src_blend_factor = CF_BLENDFACTOR_ONE;
+		state.blend.rgb_dst_blend_factor = CF_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
+		state.blend.rgb_op = CF_BLEND_OP_ADD;
+		state.blend.alpha_src_blend_factor = CF_BLENDFACTOR_ONE;
+		state.blend.alpha_dst_blend_factor = CF_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
+		state.blend.alpha_op = CF_BLEND_OP_ADD;
+		cf_material_set_render_state(blit_material, state);
+		app->blit_material = blit_material;
+		CF_ASSERT(app->blit_shader.id);
 	}
+
+	// UV (0,0) is top-left of the screen, while UV (1,1) is bottom right. We flip the y-axis for UVs to make the y-axis point up.
+	// Coordinate (-1,1) is top left, while (1,-1) is bottom right.
+	auto fill_quad = [](float x, float y, float sx, float sy, v2 u, v2 v, Vertex verts[6])
+	{
+		u.y = 1.0f - u.y;
+		v.y = 1.0f - v.y;
+
+		// Build a quad from (-1.0f,-1.0f) to (1.0f,1.0f).
+		verts[0].x = -1.0f; verts[0].y =  1.0f; verts[0].u = u.x; verts[0].v = v.y;
+		verts[1].x =  1.0f; verts[1].y = -1.0f; verts[1].u = v.x; verts[1].v = u.y;
+		verts[2].x =  1.0f; verts[2].y =  1.0f; verts[2].u = v.x; verts[2].v = v.y;
+
+		verts[3].x = -1.0f; verts[3].y =  1.0f; verts[3].u = u.x; verts[3].v = v.y;
+		verts[4].x = -1.0f; verts[4].y = -1.0f; verts[4].u = u.x; verts[4].v = u.y;
+		verts[5].x =  1.0f; verts[5].y = -1.0f; verts[5].u = v.x; verts[5].v = u.y;
+
+		// Scale the quad about the origin by (sx,sy), then translate it by (x,y).
+		for (int i = 0; i < 6; ++i) {
+			verts[i].x = verts[i].x * sx + x;
+			verts[i].y = verts[i].y * sy + y;
+		}
+	};
+
+	// We're going to blit onto dst.
+	cf_apply_canvas(dst, false);
+
+	// Create a quad where positions come from dst, and UV's come from src.
+	float w = v1.x - u1.x;
+	float h = v1.y - u1.y;
+	float x = (u1.x + v1.x) - 1.0f;
+	float y = (u1.y + v1.y) - 1.0f;
+	Vertex verts[6];
+	fill_quad(x, y, w, h, u0, v0, verts);
+	cf_mesh_update_vertex_data(app->blit_mesh, verts, 6);
+
+	// Read pixels from src.
+	cf_material_set_texture_fs(app->blit_material, "u_image", cf_canvas_get_target(src));
+
+	// Blit onto dst.
+	cf_apply_mesh(app->blit_mesh);
+	cf_apply_shader(app->blit_shader, app->blit_material);
+	cf_draw_elements();
+	cf_commit();
 }
 
-CF_Mesh cf_make_mesh(int vertex_buffer_size, int index_buffer_size)
+// @TODO Index support.
+//CF_Mesh cf_make_mesh(int vertex_buffer_size, int index_buffer_size)
+CF_Mesh cf_make_mesh(int vertex_buffer_size)
 {
 	CF_MeshInternal* mesh = (CF_MeshInternal*)CF_CALLOC(sizeof(CF_MeshInternal));
 	mesh->vertices.size = vertex_buffer_size;
-	mesh->indices.size = index_buffer_size;
+	//mesh->indices.size = index_buffer_size;
+	mesh->indices.size = 0;
 	mesh->indices.stride = sizeof(uint32_t);
 	if (vertex_buffer_size) {
 		mesh->vertices.buffer = SDL_GpuCreateBuffer(app->device, SDL_GPU_BUFFERUSAGE_VERTEX_BIT, vertex_buffer_size);
 		mesh->vertices.transfer_buffer = SDL_GpuCreateTransferBuffer(app->device, SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD, vertex_buffer_size);
 	}
-	if (index_buffer_size) {
-		mesh->indices.buffer = SDL_GpuCreateBuffer(app->device, SDL_GPU_BUFFERUSAGE_INDEX_BIT, index_buffer_size);
-		mesh->indices.transfer_buffer = SDL_GpuCreateTransferBuffer(app->device, SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD, index_buffer_size);
-	}
+	//if (index_buffer_size) {
+	//	mesh->indices.buffer = SDL_GpuCreateBuffer(app->device, SDL_GPU_BUFFERUSAGE_INDEX_BIT, index_buffer_size);
+	//	mesh->indices.transfer_buffer = SDL_GpuCreateTransferBuffer(app->device, SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD, index_buffer_size);
+	//}
 	CF_Mesh result = { (uint64_t)mesh };
 	return result;
 }
@@ -1395,6 +1316,7 @@ void cf_mesh_update_vertex_data(CF_Mesh mesh_handle, void* data, int count)
 
 void cf_mesh_update_index_data(CF_Mesh mesh_handle, uint32_t* indices, int count)
 {
+	// @TODO Index support.
 	//CF_MeshInternal* mesh = (CF_MeshInternal*)mesh_handle.id;
 	//CF_ASSERT(mesh->attribute_count);
 	//int size = count * mesh->indices.stride;
@@ -1559,6 +1481,12 @@ void cf_clear_color(float red, float green, float blue, float alpha)
 	app->clear_color = make_color(red, green, blue, alpha);
 }
 
+void cf_clear_depth_stencil(float depth, uint32_t stencil)
+{
+	app->clear_depth = depth;
+	app->clear_stencil = stencil;
+}
+
 void cf_apply_canvas(CF_Canvas canvas_handle, bool clear)
 {
 	CF_CanvasInternal* canvas = (CF_CanvasInternal*)canvas_handle.id;
@@ -1626,71 +1554,6 @@ static void s_copy_uniforms(SDL_GpuCommandBuffer* cmd, CF_Arena* arena, CF_Shade
 
 	// @TODO Use a different allocation scheme that caches better.
 	cf_arena_reset(arena);
-}
-
-static SDL_GpuCompareOp s_wrap(CF_CompareFunction compare_function)
-{
-	switch (compare_function)
-	{
-	case CF_COMPARE_FUNCTION_ALWAYS:                return SDL_GPU_COMPAREOP_ALWAYS;
-	case CF_COMPARE_FUNCTION_NEVER:                 return SDL_GPU_COMPAREOP_NEVER;
-	case CF_COMPARE_FUNCTION_LESS_THAN:             return SDL_GPU_COMPAREOP_LESS;
-	case CF_COMPARE_FUNCTION_EQUAL:                 return SDL_GPU_COMPAREOP_EQUAL;
-	case CF_COMPARE_FUNCTION_NOT_EQUAL:             return SDL_GPU_COMPAREOP_NOT_EQUAL;
-	case CF_COMPARE_FUNCTION_LESS_THAN_OR_EQUAL:    return SDL_GPU_COMPAREOP_LESS_OR_EQUAL;
-	case CF_COMPARE_FUNCTION_GREATER_THAN:          return SDL_GPU_COMPAREOP_GREATER;
-	case CF_COMPARE_FUNCTION_GREATER_THAN_OR_EQUAL: return SDL_GPU_COMPAREOP_GREATER_OR_EQUAL;
-	default:                                        return SDL_GPU_COMPAREOP_ALWAYS;
-	}
-}
-
-static SDL_GpuStencilOp s_wrap(CF_StencilOp stencil_op)
-{
-	switch (stencil_op)
-	{
-	case CF_STENCIL_OP_KEEP:            return SDL_GPU_STENCILOP_KEEP;
-	case CF_STENCIL_OP_ZERO:            return SDL_GPU_STENCILOP_ZERO;
-	case CF_STENCIL_OP_REPLACE:         return SDL_GPU_STENCILOP_REPLACE;
-	case CF_STENCIL_OP_INCREMENT_CLAMP: return SDL_GPU_STENCILOP_INCREMENT_AND_CLAMP;
-	case CF_STENCIL_OP_DECREMENT_CLAMP: return SDL_GPU_STENCILOP_DECREMENT_AND_CLAMP;
-	case CF_STENCIL_OP_INVERT:          return SDL_GPU_STENCILOP_INVERT;
-	case CF_STENCIL_OP_INCREMENT_WRAP:  return SDL_GPU_STENCILOP_INCREMENT_AND_WRAP;
-	case CF_STENCIL_OP_DECREMENT_WRAP:  return SDL_GPU_STENCILOP_DECREMENT_AND_WRAP;
-	default:                            return SDL_GPU_STENCILOP_KEEP;
-	}
-}
-
-static SDL_GpuBlendOp s_wrap(CF_BlendOp blend_op)
-{
-	switch (blend_op)
-	{
-	case CF_BLEND_OP_ADD:              return SDL_GPU_BLENDOP_ADD;
-	case CF_BLEND_OP_SUBTRACT:         return SDL_GPU_BLENDOP_SUBTRACT;
-	case CF_BLEND_OP_REVERSE_SUBTRACT: return SDL_GPU_BLENDOP_REVERSE_SUBTRACT;
-	case CF_BLEND_OP_MIN:              return SDL_GPU_BLENDOP_MIN;
-	case CF_BLEND_OP_MAX:              return SDL_GPU_BLENDOP_MAX;
-	default:                           return SDL_GPU_BLENDOP_ADD;
-	}
-}
-
-SDL_GpuBlendFactor s_wrap(CF_BlendFactor factor)
-{
-	switch (factor) {
-	case CF_BLENDFACTOR_ZERO:                    return SDL_GPU_BLENDFACTOR_ZERO;
-	case CF_BLENDFACTOR_ONE:                     return SDL_GPU_BLENDFACTOR_ONE;
-	case CF_BLENDFACTOR_SRC_COLOR:               return SDL_GPU_BLENDFACTOR_SRC_COLOR;
-	case CF_BLENDFACTOR_ONE_MINUS_SRC_COLOR:     return SDL_GPU_BLENDFACTOR_ONE_MINUS_SRC_COLOR;
-	case CF_BLENDFACTOR_DST_COLOR:               return SDL_GPU_BLENDFACTOR_DST_COLOR;
-	case CF_BLENDFACTOR_ONE_MINUS_DST_COLOR:     return SDL_GPU_BLENDFACTOR_ONE_MINUS_DST_COLOR;
-	case CF_BLENDFACTOR_SRC_ALPHA:               return SDL_GPU_BLENDFACTOR_SRC_ALPHA;
-	case CF_BLENDFACTOR_ONE_MINUS_SRC_ALPHA:     return SDL_GPU_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
-	case CF_BLENDFACTOR_DST_ALPHA:               return SDL_GPU_BLENDFACTOR_DST_ALPHA;
-	case CF_BLENDFACTOR_ONE_MINUS_DST_ALPHA:     return SDL_GPU_BLENDFACTOR_ONE_MINUS_DST_ALPHA;
-	case CF_BLENDFACTOR_CONSTANT_COLOR:          return SDL_GPU_BLENDFACTOR_CONSTANT_COLOR;
-	case CF_BLENDFACTOR_ONE_MINUS_CONSTANT_COLOR:return SDL_GPU_BLENDFACTOR_ONE_MINUS_CONSTANT_COLOR;
-	case CF_BLENDFACTOR_SRC_ALPHA_SATURATE:      return SDL_GPU_BLENDFACTOR_SRC_ALPHA_SATURATE;
-	default:                                     return SDL_GPU_BLENDFACTOR_ZERO;
-	}
 }
 
 static SDL_GpuGraphicsPipeline* s_build_pipeline(CF_ShaderInternal* shader, CF_RenderState* state, CF_MeshInternal* mesh)
@@ -1896,8 +1759,8 @@ void cf_commit()
 	SDL_GpuEndRenderPass(s_canvas->pass);
 	CF_MeshInternal* mesh = s_canvas->mesh;
 	if (mesh) {
-		mesh->vertices.element_count = 0;
-		mesh->indices.element_count = 0;
+		//mesh->vertices.element_count = 0;
+		//mesh->indices.element_count = 0;
 	}
 }
 
