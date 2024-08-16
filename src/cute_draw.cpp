@@ -35,8 +35,6 @@ struct CF_Draw* draw;
 #define IM_ASSERT CF_ASSERT
 #include <imgui.h>
 #include <imgui_internal.h>
-//#define CIMGUI_DEFINE_ENUMS_AND_STRUCTS
-//#include <cimgui.h>
 
 #include <algorithm>
 #include <glslang/Public/ShaderLang.h>
@@ -59,7 +57,7 @@ SPRITEBATCH_U64 cf_generate_texture_handle(void* pixels, int w, int h, void* uda
 	CF_TextureParams params = cf_texture_defaults(w, h);
 	params.filter = draw->filter;
 	CF_Texture texture = cf_make_texture(params);
-	cf_update_texture(texture, pixels, w * h * sizeof(CF_Pixel));
+	cf_texture_update(texture, pixels, w * h * sizeof(CF_Pixel));
 	return texture.id;
 }
 
@@ -2345,34 +2343,38 @@ CF_Shader cf_render_settings_peek_shader()
 	return draw->shaders.last();
 }
 
+// In cute_graphics.cpp.
+void cf_material_set_uniform_vs_internal(CF_Material material_handle, const char* block_name, const char* name, void* data, CF_UniformType type, int array_length);
+void cf_material_set_uniform_fs_internal(CF_Material material_handle, const char* block_name, const char* name, void* data, CF_UniformType type, int array_length);
+
 void cf_render_settings_push_texture(const char* name, CF_Texture texture)
 {
 	material_set_texture_fs(draw->material, name, texture);
 }
 
-void cf_render_settings_push_uniform(const char* name, void* data, CF_UniformType type, int array_length)
+void cf_render_settings_set_uniform(const char* name, void* data, CF_UniformType type, int array_length)
 {
-	material_set_uniform_fs(draw->material, name, data, type, array_length);
+	cf_material_set_uniform_fs_internal(draw->material, "shd_uniforms", name, data, type, array_length);
 }
 
-void cf_render_settings_push_uniform_int(const char* name, int val)
+void cf_render_settings_set_uniform_int(const char* name, int val)
 {
-	material_set_uniform_fs(draw->material, name, &val, CF_UNIFORM_TYPE_INT, 1);
+	cf_material_set_uniform_fs_internal(draw->material, "shd_uniforms", name, &val, CF_UNIFORM_TYPE_INT, 1);
 }
 
-void cf_render_settings_push_uniform_float(const char* name, float val)
+void cf_render_settings_set_uniform_float(const char* name, float val)
 {
-	material_set_uniform_fs(draw->material, name, &val, CF_UNIFORM_TYPE_FLOAT, 1);
+	cf_material_set_uniform_fs_internal(draw->material, "shd_uniforms", name, &val, CF_UNIFORM_TYPE_FLOAT, 1);
 }
 
-void cf_render_settings_push_uniform_v2(const char* name, CF_V2 val)
+void cf_render_settings_set_uniform_v2(const char* name, CF_V2 val)
 {
-	material_set_uniform_fs(draw->material, name, &val, CF_UNIFORM_TYPE_FLOAT2, 1);
+	cf_material_set_uniform_fs_internal(draw->material, "shd_uniforms", name, &val, CF_UNIFORM_TYPE_FLOAT2, 1);
 }
 
-void cf_render_settings_push_uniform_color(const char* name, CF_Color val)
+void cf_render_settings_set_uniform_color(const char* name, CF_Color val)
 {
-	material_set_uniform_fs(draw->material, name, &val, CF_UNIFORM_TYPE_FLOAT4, 1);
+	cf_material_set_uniform_fs_internal(draw->material, "shd_uniforms", name, &val, CF_UNIFORM_TYPE_FLOAT4, 1);
 }
 
 void cf_render_to(CF_Canvas canvas, bool clear)

@@ -5,8 +5,7 @@
 
 int main(int argc, char* argv[])
 {
-	int options = CF_APP_OPTIONS_WINDOW_POS_CENTERED;
-	CF_Result result = cf_make_app("Dear ImGui", 0, 0, 0, 640, 480, options, argv[0]);
+	CF_Result result = cf_make_app("Dear ImGui", 0, 0, 0, 640, 480, CF_APP_OPTIONS_WINDOW_POS_CENTERED_BIT, argv[0]);
 	if (cf_is_error(result)) return -1;
 
 	cf_app_init_imgui(false);

@@ -12,7 +12,7 @@ using namespace Cute;
 
 TEST_CASE(test_markups_basic)
 {
-	REQUIRE(!is_error(make_app(NULL, 0, 0, 0, 0, APP_OPTIONS_HIDDEN | APP_OPTIONS_NO_AUDIO, NULL)));
+	REQUIRE(!is_error(make_app(NULL, 0, 0, 0, 0, APP_OPTIONS_HIDDEN_BIT | APP_OPTIONS_NO_AUDIO_BIT, NULL)));
 
 	auto markup_info_fn = [](const char* text, MarkupInfo info, const TextEffect* fx) {
 		REQUIRE(info.effect_name == sintern("fake"));
@@ -36,7 +36,7 @@ static bool hit = false;
 
 TEST_CASE(test_markups_bad_inputs)
 {
-	REQUIRE(!is_error(make_app(NULL, 0, 0, 0, 0, APP_OPTIONS_HIDDEN | APP_OPTIONS_NO_AUDIO, NULL)));
+	REQUIRE(!is_error(make_app(NULL, 0, 0, 0, 0, APP_OPTIONS_HIDDEN_BIT | APP_OPTIONS_NO_AUDIO_BIT, NULL)));
 
 	hit = false;
 	auto markup_info_fn = [](const char* text, MarkupInfo info, const TextEffect* fx) {

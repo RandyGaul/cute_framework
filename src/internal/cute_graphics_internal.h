@@ -319,6 +319,7 @@ CF_INLINE int s_uniform_size(CF_UniformType type)
 struct CF_UniformBlockMember
 {
 	const char* name;
+	const char* block_name;
 	CF_UniformType type;
 	int array_element_count;
 	int size; // In bytes. If an array, it's the size in bytes of the whole array.
@@ -330,6 +331,7 @@ struct CF_UniformBlockMember
 struct CF_Uniform
 {
 	const char* name;
+	const char* block_name;
 	CF_UniformType type;
 	int array_length;
 	void* data;
@@ -365,18 +367,21 @@ struct CF_Pipeline
 	CF_MeshInternal* mesh = NULL;
 };
 
+#define CF_MAX_UNIFORM_BLOCK_COUNT (4)
+
 struct CF_ShaderInternal
 {
-	SDL_GpuShader* vs;
-	SDL_GpuShader* fs;
-	int input_count;
+	SDL_GpuShader* vs = NULL;
+	SDL_GpuShader* fs = NULL;
+	int input_count = 0;
 	const char* input_names[CF_MAX_SHADER_INPUTS];
 	int input_locations[CF_MAX_SHADER_INPUTS];
 	CF_ShaderInputFormat input_formats[CF_MAX_SHADER_INPUTS];
-	int vs_block_size;
-	int fs_block_size;
-	Cute::Array<CF_UniformBlockMember> fs_uniform_block_members;
-	Cute::Array<CF_UniformBlockMember> vs_uniform_block_members;
+	int uniform_block_count = 0;
+	int vs_block_sizes[CF_MAX_UNIFORM_BLOCK_COUNT];
+	int fs_block_sizes[CF_MAX_UNIFORM_BLOCK_COUNT];
+	Cute::Array<CF_UniformBlockMember> fs_uniform_block_members[CF_MAX_UNIFORM_BLOCK_COUNT];
+	Cute::Array<CF_UniformBlockMember> vs_uniform_block_members[CF_MAX_UNIFORM_BLOCK_COUNT];
 	Cute::Array<const char*> image_names;
 	Cute::Array<CF_Pipeline> pip_cache;
 
@@ -388,18 +393,18 @@ struct CF_ShaderInternal
 		return -1;
 	}
 
-	CF_INLINE int fs_index(const char* name)
+	CF_INLINE int fs_index(const char* name, int block_index)
 	{
-		for (int i = 0; i < fs_uniform_block_members.size(); ++i) {
-			if (fs_uniform_block_members[i].name == name) return i;
+		for (int i = 0; i < fs_uniform_block_members[block_index].size(); ++i) {
+			if (fs_uniform_block_members[block_index][i].name == name) return i;
 		}
 		return -1;
 	}
 
-	CF_INLINE int vs_index(const char* name)
+	CF_INLINE int vs_index(const char* name, int block_index)
 	{
-		for (int i = 0; i < vs_uniform_block_members.size(); ++i) {
-			if (vs_uniform_block_members[i].name == name) return i;
+		for (int i = 0; i < vs_uniform_block_members[block_index].size(); ++i) {
+			if (vs_uniform_block_members[block_index][i].name == name) return i;
 		}
 		return -1;
 	}

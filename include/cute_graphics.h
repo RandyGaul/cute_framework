@@ -73,7 +73,7 @@ extern "C" {
  * @category graphics
  * @brief    An opaque handle representing a texture.
  * @remarks  A texture is a buffer of data sent to the GPU for random access. Usually textures are used to store image data.
- * @related  CF_Texture CF_Canvas CF_Material CF_Shader CF_TextureParams cf_texture_defaults cf_make_texture cf_destroy_texture cf_update_texture cf_material_set_texture_vs cf_material_set_texture_fs
+ * @related  CF_Texture CF_Canvas CF_Material CF_Shader CF_TextureParams cf_texture_defaults cf_make_texture cf_destroy_texture cf_texture_update cf_material_set_texture_vs cf_material_set_texture_fs
  */
 typedef struct CF_Texture { uint64_t id; } CF_Texture;
 // @end
@@ -439,7 +439,7 @@ CF_INLINE const char* cf_wrap_mode_string(CF_WrapMode mode) {
  * @category graphics
  * @brief    A collection of parameters to create a `CF_Texture` with `cf_make_texture`.
  * @remarks  You may get a set of good default values by calling `cf_texture_defaults`.
- * @related  CF_TextureParams cf_texture_defaults CF_Texture cf_make_texture cf_destroy_texture cf_update_texture
+ * @related  CF_TextureParams cf_texture_defaults CF_Texture cf_make_texture cf_destroy_texture cf_texture_update
  */
 typedef struct CF_TextureParams
 {
@@ -483,7 +483,7 @@ CF_API CF_TextureParams CF_CALL cf_texture_defaults(int w, int h);
  * @brief    Returns a new `CF_Texture`.
  * @param    texture_params  The texture parameters as a `CF_TextureParams`.
  * @return   Free it up with `cf_destroy_texture` when done.
- * @related  CF_TextureParams CF_Texture cf_make_texture cf_destroy_texture cf_update_texture
+ * @related  CF_TextureParams CF_Texture cf_make_texture cf_destroy_texture cf_texture_update
  */
 CF_API CF_Texture CF_CALL cf_make_texture(CF_TextureParams texture_params);
 
@@ -492,21 +492,29 @@ CF_API CF_Texture CF_CALL cf_make_texture(CF_TextureParams texture_params);
  * @category graphics
  * @brief    Destroys a `CF_Texture` created by `cf_make_texture`.
  * @param    texture   The texture.
- * @related  CF_TextureParams CF_Texture cf_make_texture cf_destroy_texture cf_update_texture
+ * @related  CF_TextureParams CF_Texture cf_make_texture cf_destroy_texture cf_texture_update
  */
 CF_API void CF_CALL cf_destroy_texture(CF_Texture texture);
 
 /**
- * @function cf_update_texture
+ * @function cf_texture_update
  * @category graphics
  * @brief    Updates the contents of a `CF_Texture`.
  * @param    texture    The texture.
  * @param    data       The data to upload to the texture.
  * @param    size       The size in bytes of `data`.
  * @remarks  The texture must not have been created with `CF_USAGE_TYPE_IMMUTABLE`.
- * @related  CF_TextureParams CF_Texture cf_make_texture cf_destroy_texture cf_update_texture
+ * @related  CF_TextureParams CF_Texture cf_make_texture cf_destroy_texture cf_texture_update
  */
-CF_API void CF_CALL cf_update_texture(CF_Texture texture, void* data, int size);
+CF_API void CF_CALL cf_texture_update(CF_Texture texture, void* data, int size);
+
+/**
+ * @function cf_texture_handle
+ * @category graphics
+ * @brief    Returns an SDL_GpuTexture* casted to a `uint64_t`.
+ * @related  CF_TextureParams CF_Texture cf_make_texture
+ */
+CF_API uint64_t CF_CALL cf_texture_handle(CF_Texture texture);
 
 //--------------------------------------------------------------------------------------------------
 // Shader.
@@ -588,7 +596,8 @@ CF_API void CF_CALL cf_shader_on_changed(void (*on_changed_fn)(const char* path,
  *               vec2 u_texture_size;
  *           };
  *           
- *           For uniforms you only have one uniform block available, and it *must* be named `uniform_block`.
+ *           For uniforms you only have one uniform block available, and it *must* be named `uniform_block`. However, if your
+ *           shader is make from the draw api (`cf_make_draw_shader`) uniform blocks must be named user_uniforms.
  *           
  *           Shaders that sit in the shader directory may be `#include`'d into another shader. Though, it doesn't work
  *           quite exactly like a C/C++ include, it's very similar -- each shader may be included into another
@@ -1445,6 +1454,12 @@ CF_API void CF_CALL cf_material_clear_uniforms(CF_Material material);
 //--------------------------------------------------------------------------------------------------
 // Rendering Functions.
 
+/**
+ * @function cf_clear_color
+ * @category graphics
+ * @brief    Sets the color the app will use to clear the screen/canvases.
+ * @related  cf_clear_screen cf_clear_depth_stencil
+ */
 CF_API void CF_CALL cf_clear_color(float red, float green, float blue, float alpha);
 
 /**
@@ -1716,11 +1731,13 @@ CF_INLINE constexpr const char* to_string(UniformType type) { switch(type) {
 
 using ShaderStage = CF_ShaderStage;
 
+CF_INLINE void clear_color(float r, float b, float g, float a) { cf_clear_color(r, g, b, a); }
+CF_INLINE void clear_color(CF_Color color) { cf_clear_color(color.r, color.g, color.b, color.a); }
 CF_INLINE BackendType query_backend() { return cf_query_backend(); }
 CF_INLINE TextureParams texture_defaults(int w, int h) { return cf_texture_defaults(w, h); }
 CF_INLINE Texture make_texture(TextureParams texture_params) { return cf_make_texture(texture_params); }
 CF_INLINE void destroy_texture(Texture texture) { cf_destroy_texture(texture); }
-CF_INLINE void update_texture(Texture texture, void* data, int size) { cf_update_texture(texture, data, size); }
+CF_INLINE void texture_update(Texture texture, void* data, int size) { cf_texture_update(texture, data, size); }
 CF_INLINE Shader make_shader(const char* vertex, const char* fragment) { return cf_make_shader(vertex, fragment); }
 CF_INLINE void destroy_shader(Shader shader) { cf_destroy_shader(shader); }
 CF_INLINE CanvasParams canvas_defaults(int w, int h) { return cf_canvas_defaults(w, h); }

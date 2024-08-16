@@ -5,7 +5,7 @@ int main(int argc, char* argv[])
 {
 	int w = 640;
 	int h = 480;
-	Result result = make_app("Timestep", 0, 0, 0, w, h, APP_OPTIONS_WINDOW_POS_CENTERED, argv[0]);
+	Result result = make_app("Timestep", 0, 0, 0, w, h, APP_OPTIONS_WINDOW_POS_CENTERED_BIT, argv[0]);
 	if (is_error(result)) return -1;
 
 	float frame_times[10] = { 0 };

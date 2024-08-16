@@ -336,18 +336,18 @@ if (CF_GLSLANG)
 		SPIRV_CROSS
 		GIT_REPOSITORY https://github.com/KhronosGroup/SPIRV-Cross.git
 		GIT_TAG main
-		CMAKE_ARGS -DSPIRV_CROSS_EXCEPTIONS_TO_ASSERTIONS=ON -DSPIRV_CROSS_CLI=OFF
+		CMAKE_ARGS -DSPIRV_CROSS_EXCEPTIONS_TO_ASSERTIONS=ON -DSPIRV_CROSS_CLI=OFF -DSPIRV_CROSS_SHARED=OFF -DSPIRV_CROSS_STATIC=ON
 		GIT_SHALLOW TRUE
 		GIT_PROGRESS TRUE
 	)
 	set(SPIRV_CROSS_ENABLE_TESTS OFF CACHE BOOL "Disable SPIRV-Cross tests")
 	set(SPIRV_CROSS_ENABLE_GLSLANG_INSTALL OFF CACHE BOOL "Disable GLSLANG install")
-	set(SPIRV_CROSS_SHARED ON CACHE BOOL "Build SPIRV-Cross as shared library")
-	set(SPIRV_CROSS_STATIC OFF CACHE BOOL "Do not build SPIRV-Cross as static library")
+	set(SPIRV_CROSS_SHARED OFF CACHE BOOL "Build SPIRV-Cross as shared library")
+	set(SPIRV_CROSS_STATIC ON CACHE BOOL "Do not build SPIRV-Cross as static library")
 	set(SPIRV_CROSS_C_API ON CACHE BOOL "Enable the C API")
 	set(SPIRV_CROSS_EXCEPTIONS_TO_ASSERTIONS ON CACHE BOOL "Turn off exceptions in SPIRV-Cross.")
 	FetchContent_MakeAvailable(SPIRV_CROSS)
-	set(CF_LINK_LIBS ${CF_LINK_LIBS} glslang glslang-default-resource-limits SPIRV SPIRV-Tools SPIRV-Tools-opt spirv-cross-c-shared)
+	set(CF_LINK_LIBS ${CF_LINK_LIBS} glslang glslang-default-resource-limits SPIRV SPIRV-Tools SPIRV-Tools-opt spirv-cross-c)
 endif()
 
 # Some platform specific settings.
@@ -435,7 +435,6 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 		add_executable(tint samples/tint.cpp)
 		add_executable(docsparser samples/docs_parser.cpp)
 		add_executable(scratch samples/scratch.cpp)
-		add_executable(echo samples/echo.cpp)
 		add_executable(https samples/https.c)
 		add_executable(spaceshooter samples/spaceshooter.cpp)
 		add_executable(draw_to_texture samples/draw_to_texture.c)
@@ -462,7 +461,6 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 			tint
 			docsparser
 			scratch
-			echo
 			https
 			spaceshooter
 			draw_to_texture

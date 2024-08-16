@@ -130,13 +130,13 @@ struct Vertex
 
 static void s_quad(float x, float y, float sx, float sy, Vertex quad[6])
 {
-	quad[0].x = -0.5f; quad[0].y =  0.5f; quad[0].u = 0; quad[0].v = 1;
-	quad[1].x =  0.5f; quad[1].y = -0.5f; quad[1].u = 1; quad[1].v = 0;
-	quad[2].x =  0.5f; quad[2].y =  0.5f; quad[2].u = 1; quad[2].v = 1;
+	quad[0].x = -0.5f; quad[0].y =  0.5f; quad[0].u = 0; quad[0].v = 0;
+	quad[1].x =  0.5f; quad[1].y = -0.5f; quad[1].u = 1; quad[1].v = 1;
+	quad[2].x =  0.5f; quad[2].y =  0.5f; quad[2].u = 1; quad[2].v = 0;
 
-	quad[3].x = -0.5f; quad[3].y =  0.5f; quad[3].u = 0; quad[3].v = 1;
-	quad[4].x = -0.5f; quad[4].y = -0.5f; quad[4].u = 0; quad[4].v = 0;
-	quad[5].x =  0.5f; quad[5].y = -0.5f; quad[5].u = 1; quad[5].v = 0;
+	quad[3].x = -0.5f; quad[3].y =  0.5f; quad[3].u = 0; quad[3].v = 0;
+	quad[4].x = -0.5f; quad[4].y = -0.5f; quad[4].u = 0; quad[4].v = 1;
+	quad[5].x =  0.5f; quad[5].y = -0.5f; quad[5].u = 1; quad[5].v = 1;
 
 	for (int i = 0; i < 6; ++i) {
 		quad[i].x = quad[i].x * sx + x;
@@ -344,7 +344,7 @@ CF_Result cf_make_app(const char* window_title, int display_index, int x, int y,
 			attrs[1].offset = CF_OFFSET_OF(Vertex, u);
 			cf_mesh_set_attributes(app->backbuffer_quad, attrs, CF_ARRAY_SIZE(attrs), sizeof(Vertex));
 			Vertex quad[6];
-			s_quad(0, 0, 2, -2, quad);
+			s_quad(0, 0, 2, 2, quad);
 			cf_mesh_update_vertex_data(app->backbuffer_quad, quad, 6);
 		}
 		app->backbuffer_material = cf_make_material();
@@ -415,7 +415,6 @@ CF_Result cf_make_app(const char* window_title, int display_index, int x, int y,
 void cf_destroy_app()
 {
 	if (app->using_imgui) {
-		ImGui_ImplSDL3_Shutdown();
 		cf_imgui_shutdown();
 		app->using_imgui = false;
 	}
@@ -520,8 +519,10 @@ static void s_imgui_present(SDL_GpuTexture* swapchain_texture)
 {
 	if (app->using_imgui) {
 		ImGui::EndFrame();
-		ImGui::Render();
-		cf_imgui_draw(swapchain_texture);
+		if (swapchain_texture) {
+			ImGui::Render();
+			cf_imgui_draw(swapchain_texture);
+		}
 	}
 }
 
@@ -549,15 +550,15 @@ int cf_app_draw_onto_screen(bool clear)
 		spritebatch_defrag(&draw->sb);
 	}
 
-	// Render any remaining geometry in the draw API.
-	cf_render_to(app->offscreen_canvas, clear);
-
 	// Stretch the app canvas onto the backbuffer canvas.
 	Uint32 w, h;
 	SDL_GpuTexture* swapchain_tex = SDL_GpuAcquireSwapchainTexture(app->cmd, app->window, &w, &h);
 	((CF_CanvasInternal*)app->canvas.id)->texture = swapchain_tex;
 	//((CF_CanvasInternal*)app->canvas.id)->depth_stencil = depth_stencil;
 	if (swapchain_tex) {
+		// Render any remaining geometry in the draw API.
+		cf_render_to(app->offscreen_canvas, clear);
+
 		cf_apply_canvas(app->canvas, true);
 		{
 			cf_apply_mesh(app->backbuffer_quad);
@@ -567,11 +568,11 @@ int cf_app_draw_onto_screen(bool clear)
 			cf_draw_elements();
 			cf_commit();
 		}
+	}
 
-		// Dear ImGui draw.
-		if (app->using_imgui) {
-			s_imgui_present(swapchain_tex);
-		}
+	// Dear ImGui draw.
+	if (app->using_imgui) {
+		s_imgui_present(swapchain_tex);
 	}
 
 	// Do defrag down here after rendering ImGui to avoid thrashing any texture IDs. Generally we want to defrag

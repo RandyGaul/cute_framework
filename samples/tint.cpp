@@ -3,12 +3,14 @@ using namespace Cute;
 
 int main(int argc, char* argv[])
 {
-	Result result = make_app("Tint Demo", 0, 0, 0, 640, 480, APP_OPTIONS_WINDOW_POS_CENTERED, argv[0]);
+	Result result = make_app("Tint Demo", 0, 0, 0, 640, 480, APP_OPTIONS_WINDOW_POS_CENTERED_BIT, argv[0]);
 	if (is_error(result)) return -1;
 
 	Sprite s = cf_make_demo_sprite();
 	s.play("idle");
 	float t = 0;
+
+	set_target_framerate(300);
 
 	while (app_is_running()) {
 		app_update();
@@ -46,7 +48,7 @@ int main(int argc, char* argv[])
 		draw_push_layer(-1);
 		draw_circle(V2(0,10), radius + motion, 1.0f + motion / 4);
 		draw_pop_layer();
-		app_draw_onto_screen();
+		app_draw_onto_screen(true);
 	}
 
 	destroy_app();

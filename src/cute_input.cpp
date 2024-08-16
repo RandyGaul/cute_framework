@@ -15,6 +15,8 @@
 
 #include <SDL3/SDL.h>
 
+#include <imgui/backends/imgui_impl_sdl3.h>
+
 using namespace Cute;
 
 static int s_map_SDL_keys(int key)
@@ -465,7 +467,7 @@ void cf_pump_input_msgs()
 	SDL_Event event;
 	while (SDL_PollEvent(&event)) {
 		if (app->using_imgui) {
-			//ImGui_ImplSDL2_ProcessEvent(&event);
+			ImGui_ImplSDL3_ProcessEvent(&event);
 		}
 
 		switch (event.type)

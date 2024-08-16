@@ -40,8 +40,7 @@ layout (location = 0) in vec2 in_posH;
 
 void main()
 {
-	vec4 posH = vec4(in_posH, 0, 1);
-	gl_Position = posH;
+	gl_Position = vec4(in_posH, 0, 1);
 }
 )";
 const char* s_basic_fs = R"(
@@ -62,9 +61,8 @@ layout (location = 0) out vec2 uv;
 
 void main()
 {
-	vec4 posH = vec4(in_posH, 0, 1);
 	uv = in_uv;
-	gl_Position = posH;
+	gl_Position = vec4(in_posH, 0, 1);
 }
 )";
 const char* s_blit_fs = R"(
@@ -90,9 +88,8 @@ layout (location = 0) out vec2 uv;
 
 void main()
 {
-	vec4 posH = vec4(in_posH, 0, 1);
 	uv = in_uv;
-	gl_Position = posH;
+	gl_Position = vec4(in_posH, 0, 1);
 }
 )";
 const char* s_backbuffer_fs = R"(
@@ -443,8 +440,7 @@ void main()
 	c = (!is_sprite && !is_text && !is_tri) ? sdf(c, v_col, d - v_radius) : c;
 
 	c *= v_alpha;
-	vec2 screen_uv = (v_posH + vec2(1,1)) * 0.5;
-	screen_uv = vec2(screen_uv.x, 1.0-screen_uv.y);
+	vec2 screen_uv = (v_posH + vec2(1,-1)) * 0.5 * vec2(1,-1);
 	c = shader(c, v_pos, v_uv, screen_uv, v_user);
 	if (c.a == 0) discard;
 	result = c;
@@ -603,7 +599,7 @@ static SDL_GpuTextureLocation SDL_GpuTextureLocationDefaults(CF_TextureInternal*
 	return location;
 }
 
-void cf_update_texture(CF_Texture texture_handle, void* data, int size)
+void cf_texture_update(CF_Texture texture_handle, void* data, int size)
 {
 	CF_TextureInternal* tex = (CF_TextureInternal*)texture_handle.id;
 
@@ -618,7 +614,7 @@ void cf_update_texture(CF_Texture texture_handle, void* data, int size)
 	SDL_GpuUnmapTransferBuffer(app->device, buf);
 
 	// Tell the driver to upload the bytes to the GPU.
-	SDL_GpuCommandBuffer* cmd = app->cmd;
+	SDL_GpuCommandBuffer* cmd = app->cmd ? app->cmd : SDL_GpuAcquireCommandBuffer(app->device);
 	SDL_GpuCopyPass* pass = SDL_GpuBeginCopyPass(cmd);
 	SDL_GpuTextureTransferInfo src;
 	src.transferBuffer = buf;
@@ -628,9 +624,13 @@ void cf_update_texture(CF_Texture texture_handle, void* data, int size)
 	SDL_GpuTextureRegion dst = SDL_GpuTextureRegionDefaults(tex, tex->w, tex->h);
 	SDL_GpuUploadToTexture(pass, &src, &dst, tex->buf ? true : false);
 	SDL_GpuEndCopyPass(pass);
-	if (!tex->buf) {
-		SDL_GpuReleaseTransferBuffer(app->device, buf);
-	}
+	if (!tex->buf) SDL_GpuReleaseTransferBuffer(app->device, buf);
+	if (!app->cmd) SDL_GpuSubmit(cmd);
+}
+
+uint64_t cf_texture_handle(CF_Texture texture)
+{
+	return (uint64_t)((CF_TextureInternal*)texture.id)->tex;
 }
 
 static void s_shader_directory_recursive(Path path)
@@ -791,15 +791,14 @@ static SDL_GpuShader* s_compile(CF_ShaderInternal* shader_internal, const dyna u
 		case SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_BUFFER: storage_buffer_count++; break;
 		case SPV_REFLECT_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
 		{
-			uniform_buffer_count++;
-
 			// Grab information about the uniform block.
 			// ...This allows CF_Material to dynamically match uniforms to a shader.
-			CF_ASSERT(sequ(binding->type_description->type_name, "uniform_block"));
+			uniform_buffer_count++;
+			int block_index = binding->binding;
 			if (vs) {
-				shader_internal->vs_block_size = binding->block.size;
+				shader_internal->vs_block_sizes[block_index] = binding->block.size;
 			} else {
-				shader_internal->fs_block_size = binding->block.size;
+				shader_internal->fs_block_sizes[block_index] = binding->block.size;
 			}
 			for (uint32_t i = 0; i < binding->block.member_count; ++i) {
 				const SpvReflectBlockVariable* member = &binding->block.members[i];
@@ -812,20 +811,22 @@ static SDL_GpuShader* s_compile(CF_ShaderInternal* shader_internal, const dyna u
 
 				CF_UniformBlockMember block_member;
 				block_member.name = sintern(member->name);
+				block_member.block_name = sintern(binding->type_description->type_name);
 				block_member.type = uniform_type;
 				block_member.array_element_count = array_length;
 				block_member.size = s_uniform_size(block_member.type) * array_length;
 				block_member.offset = (int)member->offset;
 				if (vs) {
-					shader_internal->vs_uniform_block_members.add(block_member);
+					shader_internal->vs_uniform_block_members[block_index].add(block_member);
 				} else {
-					shader_internal->fs_uniform_block_members.add(block_member);
+					shader_internal->fs_uniform_block_members[block_index].add(block_member);
 				}
 			}
 		} break;
 		}
 	}
 	afree(bindings);
+	shader_internal->uniform_block_count = uniform_buffer_count;
 
 	// Gather up type information on shader inputs.
 	if (vs) {
@@ -1289,6 +1290,8 @@ void cf_mesh_set_attributes(CF_Mesh mesh_handle, const CF_VertexAttribute* attri
 
 void cf_mesh_update_vertex_data(CF_Mesh mesh_handle, void* data, int count)
 {
+	// @TODO Destroy/recreate for a larger size.
+
 	// Copy vertices over to the driver.
 	CF_MeshInternal* mesh = (CF_MeshInternal*)mesh_handle.id;
 	CF_ASSERT(mesh->attribute_count);
@@ -1301,7 +1304,7 @@ void cf_mesh_update_vertex_data(CF_Mesh mesh_handle, void* data, int count)
 	mesh->vertices.element_count = count;
 
 	// Submit the upload command to the GPU.
-	SDL_GpuCommandBuffer* cmd = app->cmd;
+	SDL_GpuCommandBuffer* cmd = app->cmd ? app->cmd : SDL_GpuAcquireCommandBuffer(app->device);
 	SDL_GpuCopyPass *pass = SDL_GpuBeginCopyPass(cmd);
 	SDL_GpuTransferBufferLocation location;
 	location.offset = 0;
@@ -1312,6 +1315,7 @@ void cf_mesh_update_vertex_data(CF_Mesh mesh_handle, void* data, int count)
 	region.size = size;
 	SDL_GpuUploadToBuffer(pass, &location, &region, true);
 	SDL_GpuEndCopyPass(pass);
+	if (!app->cmd) SDL_GpuSubmit(cmd);
 }
 
 void cf_mesh_update_index_data(CF_Mesh mesh_handle, uint32_t* indices, int count)
@@ -1429,13 +1433,13 @@ void cf_material_clear_textures(CF_Material material_handle)
 	material->dirty = true;
 }
 
-static void s_material_set_uniform(CF_Arena* arena, CF_MaterialState* state, const char* name, void* data, CF_UniformType type, int array_length)
+static void s_material_set_uniform(CF_Arena* arena, CF_MaterialState* state, const char* block_name, const char* name, void* data, CF_UniformType type, int array_length)
 {
 	if (array_length <= 0) array_length = 1;
 	CF_Uniform* uniform = NULL;
 	for (int i = 0; i < state->uniforms.count(); ++i) {
 		CF_Uniform* u = state->uniforms + i;
-		if (u->name == name) {
+		if (u->block_name == block_name && u->name == name) {
 			uniform = u;
 			break;
 		}
@@ -1444,6 +1448,7 @@ static void s_material_set_uniform(CF_Arena* arena, CF_MaterialState* state, con
 	if (!uniform) {
 		uniform = &state->uniforms.add();
 		uniform->name = name;
+		uniform->block_name = block_name;
 		uniform->data = cf_arena_alloc(arena, size);
 		uniform->size = size;
 		uniform->type = type;
@@ -1458,14 +1463,28 @@ void cf_material_set_uniform_vs(CF_Material material_handle, const char* name, v
 {
 	CF_MaterialInternal* material = (CF_MaterialInternal*)material_handle.id;
 	name = sintern(name);
-	s_material_set_uniform(&material->uniform_arena, &material->vs, name, data, type, array_length);
+	s_material_set_uniform(&material->uniform_arena, &material->vs, sintern("uniform_block"), name, data, type, array_length);
+}
+
+void cf_material_set_uniform_vs_internal(CF_Material material_handle, const char* block_name, const char* name, void* data, CF_UniformType type, int array_length)
+{
+	CF_MaterialInternal* material = (CF_MaterialInternal*)material_handle.id;
+	name = sintern(name);
+	s_material_set_uniform(&material->uniform_arena, &material->vs, sintern(block_name), name, data, type, array_length);
 }
 
 void cf_material_set_uniform_fs(CF_Material material_handle, const char* name, void* data, CF_UniformType type, int array_length)
 {
 	CF_MaterialInternal* material = (CF_MaterialInternal*)material_handle.id;
 	name = sintern(name);
-	s_material_set_uniform(&material->uniform_arena, &material->fs, name, data, type, array_length);
+	s_material_set_uniform(&material->uniform_arena, &material->fs, sintern("uniform_block"), name, data, type, array_length);
+}
+
+void cf_material_set_uniform_fs_internal(CF_Material material_handle, const char* block_name, const char* name, void* data, CF_UniformType type, int array_length)
+{
+	CF_MaterialInternal* material = (CF_MaterialInternal*)material_handle.id;
+	name = sintern(name);
+	s_material_set_uniform(&material->uniform_arena, &material->fs, sintern(block_name), name, data, type, array_length);
 }
 
 void cf_material_clear_uniforms(CF_Material material_handle)
@@ -1532,24 +1551,42 @@ static void s_copy_uniforms(SDL_GpuCommandBuffer* cmd, CF_Arena* arena, CF_Shade
 {
 	// Create any required uniform blocks for all uniforms matching between which uniforms
 	// the material has and the shader needs.
-	int block_size = vs ? shd->vs_block_size : shd->fs_block_size;
-	if (!block_size) return;
-	void* block = cf_arena_alloc(arena, block_size);
-	for (int i = 0; i < mstate->uniforms.count(); ++i) {
-		CF_Uniform uniform = mstate->uniforms[i];
-		int idx = vs ? shd->vs_index(uniform.name) : shd->fs_index(uniform.name);
-		if (idx >= 0) {
-			int offset = vs ? shd->vs_uniform_block_members[idx].offset : shd->fs_uniform_block_members[idx].offset;
-			void* dst = (void*)(((uintptr_t)block) + offset);
-			CF_MEMCPY(dst, uniform.data, uniform.size);
+	void* ub_ptrs[CF_MAX_UNIFORM_BLOCK_COUNT] = { };
+	int ub_sizes[CF_MAX_UNIFORM_BLOCK_COUNT] = { };
+	for (int block_index = 0; block_index < shd->uniform_block_count; ++block_index) {
+		for (int i = 0; i < mstate->uniforms.count(); ++i) {
+			CF_Uniform uniform = mstate->uniforms[i];
+			int idx = vs ? shd->vs_index(uniform.name, block_index) : shd->fs_index(uniform.name, block_index);
+			if (idx >= 0) {
+				if (!ub_ptrs[block_index]) {
+					// Create temporary space for a uniform block.
+					int size = vs ? shd->vs_block_sizes[block_index] : shd->fs_block_sizes[block_index];
+					void* block = cf_arena_alloc(arena, size);
+					CF_MEMSET(block, 0, size);
+					ub_ptrs[block_index] = block;
+					ub_sizes[block_index] = size;
+				}
+
+				// Copy in the uniform's value into the block.
+				int offset = vs ? shd->vs_uniform_block_members[block_index][idx].offset : shd->fs_uniform_block_members[block_index][idx].offset;
+				void* block = ub_ptrs[block_index];
+				void* dst = (void*)(((uintptr_t)block) + offset);
+				CF_MEMCPY(dst, uniform.data, uniform.size);
+			}
 		}
 	}
 
 	// Send uniform data to the GPU.
-	if (vs) {
-		SDL_GpuPushVertexUniformData(cmd, 0, block, (uint32_t)block_size);
-	} else {
-		SDL_GpuPushFragmentUniformData(cmd, 0, block, (uint32_t)block_size);
+	for (int i = 0; i < CF_MAX_UNIFORM_BLOCK_COUNT; ++i) {
+		if (ub_ptrs[i]) {
+			void* block = ub_ptrs[i];
+			int size = ub_sizes[i];
+			if (vs) {
+				SDL_GpuPushVertexUniformData(cmd, i, block, (uint32_t)size);
+			} else {
+				SDL_GpuPushFragmentUniformData(cmd, i, block, (uint32_t)size);
+			}
+		}
 	}
 
 	// @TODO Use a different allocation scheme that caches better.
@@ -1690,6 +1727,7 @@ void cf_apply_shader(CF_Shader shader_handle, CF_Material material_handle)
 	CF_ASSERT(pip);
 
 	SDL_GpuCommandBuffer* cmd = app->cmd;
+	CF_ASSERT(cmd);
 	s_canvas->pip = pip;
 
 	SDL_GpuColorAttachmentInfo pass_color_info = { 0 };
@@ -1697,8 +1735,7 @@ void cf_apply_shader(CF_Shader shader_handle, CF_Material material_handle)
 	pass_color_info.clearColor = { app->clear_color.r, app->clear_color.g, app->clear_color.b, app->clear_color.a };
 	pass_color_info.loadOp = s_canvas->clear ? SDL_GPU_LOADOP_CLEAR : SDL_GPU_LOADOP_LOAD;
 	pass_color_info.storeOp = SDL_GPU_STOREOP_STORE;
-	s_canvas->clear = false;
-	pass_color_info.cycle = s_canvas->clear ? true : false;
+	pass_color_info.cycle = true;
 	SDL_GpuDepthStencilAttachmentInfo pass_depth_stencil_info = { 0 };
 	pass_depth_stencil_info.textureSlice.texture = s_canvas->depth_stencil;
 	if (s_canvas->depth_stencil) {
@@ -1706,7 +1743,7 @@ void cf_apply_shader(CF_Shader shader_handle, CF_Material material_handle)
 		pass_depth_stencil_info.storeOp = SDL_GPU_STOREOP_STORE;
 		pass_depth_stencil_info.stencilLoadOp = SDL_GPU_LOADOP_LOAD;
 		pass_depth_stencil_info.stencilStoreOp = SDL_GPU_STOREOP_DONT_CARE;
-		pass_depth_stencil_info.cycle = s_canvas->clear ? true : false;
+		pass_depth_stencil_info.cycle = true;
 	}
 	SDL_GpuRenderPass* pass = SDL_GpuBeginRenderPass(cmd, &pass_color_info, 1, NULL);
 	CF_ASSERT(pass);

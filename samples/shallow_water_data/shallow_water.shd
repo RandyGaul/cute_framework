@@ -1,15 +1,8 @@
-@module shallow_water
+layout (set = 2, binding = 1) uniform sampler2D wavelets_tex;
+layout (set = 2, binding = 2) uniform sampler2D noise_tex;
+layout (set = 2, binding = 3) uniform sampler2D scene_tex;
 
-@ctype mat4 CF_Matrix4x4
-@ctype vec4 CF_Color
-@ctype vec2 CF_V2
-
-@block shader_block
-uniform sampler2D wavelets_tex;
-uniform sampler2D noise_tex;
-uniform sampler2D scene_tex;
-
-uniform shader_uniforms {
+layout (set = 3, binding = 1) uniform shd_uniforms {
 	float show_normals;
 	float show_noise;
 };
@@ -44,6 +37,3 @@ vec4 shader(vec4 color, vec2 pos, vec2 atlas_uv, vec2 screen_uv, vec4 params)
 
 	return c;
 }
-@end
-
-@include ../../include/shaders/draw.glsl

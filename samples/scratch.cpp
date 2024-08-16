@@ -12,8 +12,6 @@ int main(int argc, char* argv[])
 	while (app_is_running()) {
 		app_update();
 
-		cf_clear_screen(1,0,0,1);
-
 		app_draw_onto_screen();
 	}
 

@@ -139,11 +139,14 @@ struct CF_App
 	// Dear ImGui stuff.
 	bool using_imgui = false;
 	SDL_GpuSampler* imgui_sampler = NULL;
+	int imgui_vertex_count = 0;
+	int imgui_index_count = 0;
 	SDL_GpuBuffer* imgui_vbuf = NULL;
 	SDL_GpuBuffer* imgui_ibuf = NULL;
 	SDL_GpuTransferBuffer* imgui_vtbuf = NULL;
 	SDL_GpuTransferBuffer* imgui_itbuf = NULL;
 	SDL_GpuGraphicsPipeline* imgui_pip = NULL;
+	SDL_GpuTexture* imgui_font_tex = NULL;
 
 	// ECS stuff.
 	CF_SystemInternal system_internal_builder;

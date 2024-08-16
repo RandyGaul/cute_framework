@@ -1090,8 +1090,6 @@ void mount_content_directory_as(const char* dir)
 	fs_mount(path.c_str(), dir);
 }
 
-#include "spaceshooter_data/flash_shader.h"
-
 void push_flash(CF_Color color)
 {
 	draw_push_vertex_attributes(color);
@@ -1105,9 +1103,8 @@ CF_Color pop_flash()
 int main(int argc, char* argv[])
 {
 	// Create a window with a resolution of 640 x 480.
-	int options = APP_OPTIONS_WINDOW_POS_CENTERED;
-	Result result = make_app("Space Shooter", 0, 0, 0, 640, 480, options, argv[0]);
-	if (is_error(result)) return -1;
+	make_app("Space Shooter", 0, 0, 0, 640, 480, APP_OPTIONS_WINDOW_POS_CENTERED_BIT, argv[0]);
+	cf_shader_directory("/spaceshooter_data");
 
 	mount_content_directory_as("/");
 	clear_color(color_black());
@@ -1117,7 +1114,7 @@ int main(int argc, char* argv[])
 	g->player.reset();
 	g->boss1 = true;
 
-	CF_Shader flash_shader = CF_MAKE_SOKOL_SHADER(flash_shader);
+	CF_Shader flash_shader = cf_make_draw_shader("flash.shd");
 
 	while (app_is_running()) {
 		app_update();
@@ -1201,7 +1198,7 @@ int main(int argc, char* argv[])
 		g->animations.draw();
 
 		render_settings_push_shader(flash_shader);
-		app_draw_onto_screen();
+		app_draw_onto_screen(true);
 	}
 
 	destroy_app();

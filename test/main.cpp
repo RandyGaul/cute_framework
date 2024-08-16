@@ -18,7 +18,7 @@
 #include <crtdbg.h>
 #endif
 
-#include <SDL.h>
+#include <SDL3/SDL.h>
 
 #define PICO_UNIT_IMPLEMENTATION
 #include <pico/pico_unit.h>

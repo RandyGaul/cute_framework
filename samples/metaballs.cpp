@@ -16,6 +16,7 @@ int main(int argc, char* argv[])
 	cf_shader_directory("/metaballs_data");
 	cf_shader_on_changed(on_shader_changed, NULL);
 	CF_Canvas soft_circles = make_canvas(canvas_defaults(w, h));
+	CF_Canvas tmp = make_canvas(canvas_defaults(w, h));
 	CF_Shader shd = cf_make_draw_shader("metaballs.shd");
 	float t = 0;
 
@@ -24,8 +25,6 @@ int main(int argc, char* argv[])
 	float fps = 0;
 
 	set_target_framerate(200);
-
-	app_init_imgui();
 
 	while (app_is_running()) {
 		app_update();
@@ -57,6 +56,8 @@ int main(int argc, char* argv[])
 			draw_pop_antialias_scale();
 		}
 
+		draw_box_fill(V2(-200, -200), 30, 30);
+
 		static int toggle = false;
 		if (key_just_pressed(KEY_SPACE)) {
 			toggle = !toggle;
@@ -74,7 +75,6 @@ int main(int argc, char* argv[])
 		}
 
 		draw_text("press space", -V2(text_width("press_space") * 0.5f, 0));
-
 
 		app_draw_onto_screen(toggle ? true : false);
 	}
