@@ -21,5 +21,5 @@ void cf_unload_shared_library(CF_SharedLibrary* library)
 
 void* cf_load_function(CF_SharedLibrary* library, const char* function_name)
 {
-	return SDL_LoadFunction(library, function_name);
+	return (void*)SDL_LoadFunction(library, function_name);
 }
