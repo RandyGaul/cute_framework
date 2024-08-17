@@ -564,7 +564,12 @@ CF_Texture cf_make_texture(CF_TextureParams params)
 	SDL_GpuTransferBuffer* buf = NULL;
 	if (params.stream) {
 		int texel_size = (int)SDL_GpuTextureFormatTexelBlockSize(tex_info.format);
-		SDL_GpuTransferBuffer* buf = SDL_GpuCreateTransferBuffer(app->device, SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD, texel_size * params.width * params.height);
+		SDL_GpuTransferBufferCreateInfo tbuf_info = {
+			.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD,
+			.sizeInBytes = (Uint32)(texel_size * params.width * params.height),
+			.props = 0,
+		};
+		SDL_GpuTransferBuffer* buf = SDL_GpuCreateTransferBuffer(app->device, &tbuf_info);
 	}
 
 	CF_TextureInternal* tex_internal = CF_NEW(CF_TextureInternal);
@@ -593,7 +598,7 @@ static SDL_GpuTextureLocation SDL_GpuTextureLocationDefaults(CF_TextureInternal*
 {
 	SDL_GpuTextureLocation location;
 	CF_MEMSET(&location, 0, sizeof(location));
-	location.textureSlice.texture = tex->tex;
+	location.texture = tex->tex;
 	location.x = (Uint32)(x * tex->w);
 	location.y = (Uint32)(y * tex->h);
 	return location;
@@ -606,7 +611,12 @@ void cf_texture_update(CF_Texture texture_handle, void* data, int size)
 	// Copy bytes over to the driver.
 	SDL_GpuTransferBuffer* buf = tex->buf;
 	if (!buf) {
-		buf = SDL_GpuCreateTransferBuffer(app->device, SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD, size);
+		SDL_GpuTransferBufferCreateInfo tbuf_info = {
+			.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD,
+			.sizeInBytes = (Uint32)size,
+			.props = 0,
+		};
+		buf = SDL_GpuCreateTransferBuffer(app->device, &tbuf_info);
 	}
 	uint8_t* p;
 	SDL_GpuMapTransferBuffer(app->device, buf, tex->buf ? true : false, (void**)&p);
@@ -1251,8 +1261,18 @@ CF_Mesh cf_make_mesh(int vertex_buffer_size)
 	mesh->indices.size = 0;
 	mesh->indices.stride = sizeof(uint32_t);
 	if (vertex_buffer_size) {
-		mesh->vertices.buffer = SDL_GpuCreateBuffer(app->device, SDL_GPU_BUFFERUSAGE_VERTEX_BIT, vertex_buffer_size);
-		mesh->vertices.transfer_buffer = SDL_GpuCreateTransferBuffer(app->device, SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD, vertex_buffer_size);
+		SDL_GpuBufferCreateInfo buf_info = {
+			.usageFlags = SDL_GPU_BUFFERUSAGE_VERTEX_BIT,
+			.sizeInBytes = (Uint32)vertex_buffer_size,
+			.props = 0,
+		};
+		mesh->vertices.buffer = SDL_GpuCreateBuffer(app->device, &buf_info);
+		SDL_GpuTransferBufferCreateInfo tbuf_info = {
+			.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD,
+			.sizeInBytes = (Uint32)vertex_buffer_size,
+			.props = 0,
+		};
+		mesh->vertices.transfer_buffer = SDL_GpuCreateTransferBuffer(app->device, &tbuf_info);
 	}
 	//if (index_buffer_size) {
 	//	mesh->indices.buffer = SDL_GpuCreateBuffer(app->device, SDL_GPU_BUFFERUSAGE_INDEX_BIT, index_buffer_size);
@@ -1730,14 +1750,16 @@ void cf_apply_shader(CF_Shader shader_handle, CF_Material material_handle)
 	CF_ASSERT(cmd);
 	s_canvas->pip = pip;
 
-	SDL_GpuColorAttachmentInfo pass_color_info = { 0 };
-	pass_color_info.textureSlice.texture = s_canvas->texture;
+	SDL_GpuColorAttachmentInfo pass_color_info;
+	CF_MEMSET(&pass_color_info, 0, sizeof(pass_color_info));
+	pass_color_info.texture = s_canvas->texture;
 	pass_color_info.clearColor = { app->clear_color.r, app->clear_color.g, app->clear_color.b, app->clear_color.a };
 	pass_color_info.loadOp = s_canvas->clear ? SDL_GPU_LOADOP_CLEAR : SDL_GPU_LOADOP_LOAD;
 	pass_color_info.storeOp = SDL_GPU_STOREOP_STORE;
 	pass_color_info.cycle = true;
-	SDL_GpuDepthStencilAttachmentInfo pass_depth_stencil_info = { 0 };
-	pass_depth_stencil_info.textureSlice.texture = s_canvas->depth_stencil;
+	SDL_GpuDepthStencilAttachmentInfo pass_depth_stencil_info;
+	CF_MEMSET(&pass_depth_stencil_info, 0, sizeof(pass_depth_stencil_info));
+	pass_depth_stencil_info.texture = s_canvas->depth_stencil;
 	if (s_canvas->depth_stencil) {
 		pass_depth_stencil_info.loadOp = SDL_GPU_LOADOP_LOAD;
 		pass_depth_stencil_info.storeOp = SDL_GPU_STOREOP_STORE;

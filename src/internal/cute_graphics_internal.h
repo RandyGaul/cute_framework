@@ -18,7 +18,7 @@ CF_INLINE SDL_GpuTextureCreateInfo SDL_GpuTextureCreateInfoDefaults(int w, int h
 	createInfo.width = (int)w;
 	createInfo.height = (int)h;
 	createInfo.depth = 1;
-	createInfo.isCube = SDL_FALSE;
+	createInfo.type = SDL_GPU_TEXTURETYPE_2D;
 	createInfo.layerCount = 1;
 	createInfo.levelCount = 1;
 	createInfo.sampleCount = SDL_GPU_SAMPLECOUNT_1;
@@ -77,9 +77,7 @@ CF_INLINE SDL_GpuTextureRegion SDL_GpuTextureRegionDefaults(CF_TextureInternal* 
 {
 	SDL_GpuTextureRegion region;
 	CF_MEMSET(&region, 0, sizeof(region));
-	region.textureSlice.texture = tex->tex;
-	region.x = 0;
-	region.y = 0;
+	region.texture = tex->tex;
 	region.w = (Uint32)w;
 	region.h = (Uint32)h;
 	region.d = 1;

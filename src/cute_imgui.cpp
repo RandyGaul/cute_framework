@@ -68,14 +68,45 @@ static void s_make_buffers(int vertex_count, int index_count)
 		SDL_GpuReleaseTransferBuffer(app->device, app->imgui_itbuf);
 	}
 
-	app->imgui_vbuf = SDL_GpuCreateBuffer(app->device, SDL_GPU_BUFFERUSAGE_VERTEX_BIT, sizeof(ImDrawVert) * vertex_count);
-	CF_ASSERT(app->imgui_vbuf);
-	app->imgui_vtbuf = SDL_GpuCreateTransferBuffer(app->device, SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD, sizeof(ImDrawVert) * vertex_count);
-	CF_ASSERT(app->imgui_vtbuf);
-	app->imgui_ibuf = SDL_GpuCreateBuffer(app->device, SDL_GPU_BUFFERUSAGE_INDEX_BIT, sizeof(ImDrawIdx) * index_count);
-	CF_ASSERT(app->imgui_ibuf);
-	app->imgui_itbuf = SDL_GpuCreateTransferBuffer(app->device, SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD, sizeof(ImDrawIdx) * index_count);
-	CF_ASSERT(app->imgui_itbuf);
+	{
+		SDL_GpuBufferCreateInfo buf_info = {
+			.usageFlags = SDL_GPU_BUFFERUSAGE_VERTEX_BIT,
+			.sizeInBytes = sizeof(ImDrawVert) * vertex_count,
+			.props = 0
+		};
+		app->imgui_vbuf = SDL_GpuCreateBuffer(app->device, &buf_info);
+		CF_ASSERT(app->imgui_vbuf);
+	}
+
+	{
+		SDL_GpuTransferBufferCreateInfo tbuf_info = {
+			.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD,
+			.sizeInBytes = sizeof(ImDrawVert) * vertex_count,
+			.props = 0,
+		};
+		app->imgui_vtbuf = SDL_GpuCreateTransferBuffer(app->device, &tbuf_info);
+		CF_ASSERT(app->imgui_vtbuf);
+	}
+
+	{
+		SDL_GpuBufferCreateInfo buf_info = {
+			.usageFlags = SDL_GPU_BUFFERUSAGE_INDEX_BIT,
+			.sizeInBytes = sizeof(ImDrawIdx) * index_count,
+			.props = 0
+		};
+		app->imgui_ibuf = SDL_GpuCreateBuffer(app->device, &buf_info);
+		CF_ASSERT(app->imgui_ibuf);
+	}
+
+	{
+		SDL_GpuTransferBufferCreateInfo tbuf_info = {
+			.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD,
+			.sizeInBytes = sizeof(ImDrawIdx) * index_count,
+			.props = 0,
+		};
+		app->imgui_itbuf = SDL_GpuCreateTransferBuffer(app->device, &tbuf_info);
+		CF_ASSERT(app->imgui_itbuf);
+	}
 }
 
 void cf_imgui_init()
@@ -186,7 +217,7 @@ void cf_imgui_init()
 		.width = (uint32_t)width,
 		.height = (uint32_t)height,
 		.depth = 1,
-		.isCube = false,
+		.type = SDL_GPU_TEXTURETYPE_2D,
 		.layerCount = 1,
 		.levelCount = 1,
 		.sampleCount = {},
@@ -200,12 +231,17 @@ void cf_imgui_init()
 
 	SDL_GpuTextureRegion region;
 	CF_MEMSET(&region, 0, sizeof(region));
-	region.textureSlice.texture = font_tex;
+	region.texture = font_tex;
 	region.w = (uint32_t)width;
 	region.h = (uint32_t)height;
 	region.d = 1;
 
-	SDL_GpuTransferBuffer* tbuf = SDL_GpuCreateTransferBuffer(app->device, SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD, width * height * sizeof(uint8_t) * 4);
+	SDL_GpuTransferBufferCreateInfo tbuf_info = {
+		.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD,
+		.sizeInBytes = width * height * sizeof(uint8_t) * 4,
+		.props = 0,
+	};
+	SDL_GpuTransferBuffer* tbuf = SDL_GpuCreateTransferBuffer(app->device, &tbuf_info);
 	void* memory = NULL;
 	SDL_GpuMapTransferBuffer(app->device, tbuf, false, &memory);
 	CF_MEMCPY(memory, pixels, sz);
@@ -297,13 +333,13 @@ void cf_imgui_draw(SDL_GpuTexture* swapchain_texture)
 	// Setup rendering commands.
 	SDL_GpuColorAttachmentInfo color_info;
 	CF_MEMSET(&color_info, 0, sizeof(color_info));
-	color_info.textureSlice.texture = swapchain_texture;
+	color_info.texture = swapchain_texture;
 	color_info.loadOp = SDL_GPU_LOADOP_LOAD;
 	color_info.storeOp = SDL_GPU_STOREOP_STORE;
 
 	SDL_GpuDepthStencilAttachmentInfo depth_stencil_info;
 	CF_MEMSET(&depth_stencil_info, 0, sizeof(depth_stencil_info));
-	//depth_stencil_info.textureSlice.texture = app->depth_buffer;
+	//depth_stencil_info.texture = app->depth_buffer;
 	depth_stencil_info.cycle = true;
 	depth_stencil_info.depthStencilClearValue.depth = 0;
 	depth_stencil_info.depthStencilClearValue.stencil = 0;
