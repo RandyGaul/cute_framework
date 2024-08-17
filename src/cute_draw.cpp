@@ -59,7 +59,6 @@ SPRITEBATCH_U64 cf_generate_texture_handle(void* pixels, int w, int h, void* uda
 	params.filter = draw->filter;
 	CF_Texture texture = cf_make_texture(params);
 	cf_texture_update(texture, pixels, w * h * sizeof(CF_Pixel));
-	printf("tex\n");
 	return texture.id;
 }
 

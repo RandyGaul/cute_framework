@@ -56,8 +56,6 @@ int main(int argc, char* argv[])
 			draw_pop_antialias_scale();
 		}
 
-		draw_box_fill(V2(-200, -200), 30, 30);
-
 		static int toggle = false;
 		if (key_just_pressed(KEY_SPACE)) {
 			toggle = !toggle;

@@ -85,6 +85,7 @@ struct CF_App
 	float dpi_scale = 1.0f;
 	float dpi_scale_prev = 1.0f;
 	bool dpi_scale_was_changed = false;
+	bool sync_window = false;
 	int w;
 	int h;
 	int x;
@@ -104,7 +105,6 @@ struct CF_App
 	CF_Material backbuffer_material = { };
 	CF_WindowState window_state;
 	CF_WindowState window_state_prev;
-	CF_Canvas canvas = { };
 	SDL_GpuCommandBuffer* cmd = NULL;
 	bool use_depth_stencil = false;
 	uint64_t default_image_id = CF_PNG_ID_RANGE_LO;

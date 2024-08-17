@@ -406,7 +406,7 @@ CF_API void CF_CALL cf_app_set_size(int w, int h);
  * @brief    Gets the position of the window in pixels.
  * @param    x          The x position of the window in pixels.
  * @param    y          The y position of the window in pixels.
- * @related  cf_app_get_size cf_app_set_size cf_app_set_position
+ * @related  cf_app_get_size cf_app_set_size cf_app_set_position cf_app_center_window
  */
 CF_API void CF_CALL cf_app_get_position(int* x, int* y);
 
@@ -416,9 +416,17 @@ CF_API void CF_CALL cf_app_get_position(int* x, int* y);
  * @brief    Sets the position of the window in pixels.
  * @param    x          The x position of the window in pixels.
  * @param    y          The y position of the window in pixels.
- * @related  cf_app_get_size cf_app_set_size cf_app_get_position
+ * @related  cf_app_get_size cf_app_set_size cf_app_get_position cf_app_center_window
  */
 CF_API void CF_CALL cf_app_set_position(int x, int y);
+
+/**
+ * @function cf_app_center_window
+ * @category app
+ * @brief    Sets the window position centered on the screen.
+ * @related  cf_app_get_size cf_app_set_size cf_app_get_position cf_app_center_window
+ */
+CF_API void CF_CALL cf_app_center_window();
 
 /**
  * @function cf_app_was_resized
