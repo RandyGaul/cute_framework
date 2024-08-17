@@ -12,7 +12,7 @@ void on_shader_changed(const char* path, void* udata)
 
 int main(int argc, char* argv[])
 {
-	make_app("Metaballs", 0, 0, 0, (int)(w*scale), (int)(h*scale), APP_OPTIONS_WINDOW_POS_CENTERED_BIT, argv[0]);
+	make_app("Metaballs", 0, 0, 0, (int)(w*scale), (int)(h*scale), APP_OPTIONS_RESIZABLE_BIT | APP_OPTIONS_WINDOW_POS_CENTERED_BIT, argv[0]);
 	cf_shader_directory("/metaballs_data");
 	cf_shader_on_changed(on_shader_changed, NULL);
 	CF_Canvas soft_circles = make_canvas(canvas_defaults(w, h));
