@@ -567,6 +567,8 @@ int cf_app_draw_onto_screen(bool clear)
 			cf_draw_elements();
 			cf_commit();
 		}
+	} else {
+		printf("Swapchain failed\n");
 	}
 
 	// Dear ImGui draw.
@@ -605,6 +607,8 @@ int cf_app_draw_onto_screen(bool clear)
 	draw->vertical.set_count(1);
 	draw->user_params.set_count(1);
 	draw->shaders.set_count(1);
+	draw->verts.clear();
+	spritebatch_clear(&draw->sb);
 
 	// Report the number of draw calls.
 	// This is always user draw call count +1.

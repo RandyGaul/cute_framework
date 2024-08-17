@@ -548,6 +548,7 @@ CF_Texture cf_make_texture(CF_TextureParams params)
 	tex_info.format = s_wrap(params.pixel_format);
 	tex_info.usageFlags = params.usage;
 	SDL_GpuTexture* tex = SDL_GpuCreateTexture(app->device, &tex_info);
+	CF_ASSERT(tex);
 	if (!tex) return { 0 };
 
 	SDL_GpuSamplerCreateInfo sampler_info = SDL_GpuSamplerCreateInfoDefaults();
@@ -556,6 +557,7 @@ CF_Texture cf_make_texture(CF_TextureParams params)
 	sampler_info.addressModeU = s_wrap(params.wrap_u);
 	sampler_info.addressModeV = s_wrap(params.wrap_v);
 	SDL_GpuSampler* sampler = SDL_GpuCreateSampler(app->device, &sampler_info);
+	CF_ASSERT(sampler);
 	if (!sampler) {
 		SDL_GpuReleaseTexture(app->device, tex);
 		return { 0 };
@@ -1798,6 +1800,9 @@ void cf_apply_shader(CF_Shader shader_handle, CF_Material material_handle)
 	// Copy over uniform data.
 	s_copy_uniforms(cmd, &material->block_arena, shader, &material->vs, true);
 	s_copy_uniforms(cmd, &material->block_arena, shader, &material->fs, false);
+
+	// Prevent the same canvas from clearing itself more than once.
+	s_canvas->clear = false;
 }
 
 void cf_draw_elements()

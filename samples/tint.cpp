@@ -7,10 +7,10 @@ int main(int argc, char* argv[])
 	if (is_error(result)) return -1;
 
 	Sprite s = cf_make_demo_sprite();
-	s.play("idle");
+	s.play("spin");
 	float t = 0;
 
-	set_target_framerate(300);
+	set_target_framerate(200);
 
 	while (app_is_running()) {
 		app_update();
@@ -20,8 +20,7 @@ int main(int argc, char* argv[])
 		draw_scale(4,4);
 
 		static int which = 0;
-		if (key_just_pressed(KEY_1))
-			which = 1;
+		if (key_just_pressed(KEY_1)) which = 1;
 		if (key_just_pressed(KEY_2)) which = 2;
 		if (key_just_pressed(KEY_3)) which = 3;
 		if (key_just_pressed(KEY_4)) which = 4;
