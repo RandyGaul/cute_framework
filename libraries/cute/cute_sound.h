@@ -589,7 +589,48 @@ void cs_set_global_user_allocator_context(void* user_allocator_context);
 
 #endif
 
-#ifdef CUTE_SOUND_SCALAR_MODE
+// Automatically select SSE/NEON, or default to scalar if `CUTE_SOUND_SCALAR_MODE` is defined.
+#if !defined(CUTE_SOUND_SCALAR_MODE) && defined(__ARM_NEON) || defined(__ARM_NEON__)
+
+	#include <arm_neon.h>
+
+	#define cs__m128 float32x4_t
+	#define cs__m128i int32x4_t
+
+	#define cs_mm_set_ps(e3, e2, e1, e0) vsetq_lane_f32(e3, vsetq_lane_f32(e2, vsetq_lane_f32(e1, vsetq_lane_f32(e0, vdupq_n_f32(0), 0), 1), 2), 3)
+	#define cs_mm_set1_ps(e) vdupq_n_f32(e)
+	#define cs_mm_add_ps(a, b) vaddq_f32(a, b)
+	#define cs_mm_sub_ps(a, b) vsubq_f32(a, b)
+	#define cs_mm_mul_ps(a, b) vmulq_f32(a, b)
+	#define cs_mm_cvtps_epi32(a) vcvtq_s32_f32(a)
+	#define cs_mm_unpacklo_epi32(a, b) vzipq_s32(a, b).val[0]
+	#define cs_mm_unpackhi_epi32(a, b) vzipq_s32(a, b).val[1]
+	#define cs_mm_packs_epi32(a, b) vcombine_s16(vqmovn_s32(a), vqmovn_s32(b))
+	#define cs_mm_cvttps_epi32(a) vcvtq_s32_f32(a)
+	#define cs_mm_cvtepi32_ps(a) vcvtq_f32_s32(a)
+	#define cs_mm_extract_epi32(a, imm8) vgetq_lane_s32(a, imm8)
+
+#elif !defined(CUTE_SOUND_SCALAR_MODE) && defined(__SSE__) || defined(__SSE2__) || defined(__SSE3__) || defined(__SSE4_1__) || defined(__SSE4_2__)
+
+	#include <immintrin.h>
+
+	#define cs__m128 __m128
+	#define cs__m128i __m128i
+
+	#define cs_mm_set_ps _mm_set_ps
+	#define cs_mm_set1_ps _mm_set1_ps
+	#define cs_mm_add_ps _mm_add_ps
+	#define cs_mm_sub_ps _mm_sub_ps
+	#define cs_mm_mul_ps _mm_mul_ps
+	#define cs_mm_cvtps_epi32 _mm_cvtps_epi32
+	#define cs_mm_unpacklo_epi32 _mm_unpacklo_epi32
+	#define cs_mm_unpackhi_epi32 _mm_unpackhi_epi32
+	#define cs_mm_packs_epi32 _mm_packs_epi32
+	#define cs_mm_cvttps_epi32 _mm_cvttps_epi32
+	#define cs_mm_cvtepi32_ps _mm_cvtepi32_ps
+	#define cs_mm_extract_epi32 _mm_extract_epi32
+
+#else // Scalar mode as fallback.
 
 	#include <limits.h>
 
@@ -743,27 +784,7 @@ void cs_set_global_user_allocator_context(void* user_allocator_context);
 		}
 	}
 
-#else // CUTE_SOUND_SCALAR_MODE
-
-	#include <immintrin.h>
-
-	#define cs__m128 __m128
-	#define cs__m128i __m128i
-
-	#define cs_mm_set_ps _mm_set_ps
-	#define cs_mm_set1_ps _mm_set1_ps
-	#define cs_mm_add_ps _mm_add_ps
-	#define cs_mm_sub_ps _mm_sub_ps
-	#define cs_mm_mul_ps _mm_mul_ps
-	#define cs_mm_cvtps_epi32 _mm_cvtps_epi32
-	#define cs_mm_unpacklo_epi32 _mm_unpacklo_epi32
-	#define cs_mm_unpackhi_epi32 _mm_unpackhi_epi32
-	#define cs_mm_packs_epi32 _mm_packs_epi32
-	#define cs_mm_cvttps_epi32 _mm_cvttps_epi32
-	#define cs_mm_cvtepi32_ps _mm_cvtepi32_ps
-	#define cs_mm_extract_epi32 _mm_extract_epi32
-
-#endif // CUTE_SOUND_SCALAR_MODE
+#endif // End of SIMD wrappers.
 
 #define CUTE_SOUND_ALIGN(X, Y) ((((size_t)X) + ((Y) - 1)) & ~((Y) - 1))
 #define CUTE_SOUND_TRUNC(X, Y) ((size_t)(X) & ~((Y) - 1))

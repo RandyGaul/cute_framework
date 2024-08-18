@@ -224,11 +224,20 @@ CF_Result cf_make_app(const char* window_title, int display_index, int x, int y,
 
 		// Create the GPU device.
 		const char* device_name = NULL;
-		if (use_dx11) device_name = "D3D11";
-		else if (use_dx12) device_name = "D3D12";
-		else if (use_metal) device_name = "Metal";
-		else if (use_vulkan) device_name = "Vulkan";
-		device = SDL_GpuCreateDevice(SDL_GPU_SHADERFORMAT_SPIRV, true, false, device_name);
+		SDL_GpuShaderFormat format_flags = SDL_GPU_SHADERFORMAT_SPIRV;
+		if (use_dx11) {
+			device_name = "D3D11";
+			format_flags |= SDL_GPU_SHADERFORMAT_DXBC;
+		} else if (use_dx12) {
+			device_name = "D3D12";
+			format_flags |= SDL_GPU_SHADERFORMAT_DXIL;
+		} else if (use_metal) {
+			device_name = "Metal";
+			format_flags |= SDL_GPU_SHADERFORMAT_MSL;
+		} else if (use_vulkan) {
+			device_name = "Vulkan";
+		}
+		device = SDL_GpuCreateDevice(format_flags, true, false, device_name);
 		if (!device) {
 			return cf_result_error("Failed to create GPU Device.");
 		}
