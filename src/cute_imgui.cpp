@@ -71,7 +71,7 @@ static void s_make_buffers(int vertex_count, int index_count)
 	{
 		SDL_GpuBufferCreateInfo buf_info = {
 			.usageFlags = SDL_GPU_BUFFERUSAGE_VERTEX_BIT,
-			.sizeInBytes = sizeof(ImDrawVert) * vertex_count,
+			.sizeInBytes = (Uint32)(sizeof(ImDrawVert) * vertex_count),
 			.props = 0
 		};
 		app->imgui_vbuf = SDL_GpuCreateBuffer(app->device, &buf_info);
@@ -81,7 +81,7 @@ static void s_make_buffers(int vertex_count, int index_count)
 	{
 		SDL_GpuTransferBufferCreateInfo tbuf_info = {
 			.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD,
-			.sizeInBytes = sizeof(ImDrawVert) * vertex_count,
+			.sizeInBytes = (Uint32)(sizeof(ImDrawVert) * vertex_count),
 			.props = 0,
 		};
 		app->imgui_vtbuf = SDL_GpuCreateTransferBuffer(app->device, &tbuf_info);
@@ -91,7 +91,7 @@ static void s_make_buffers(int vertex_count, int index_count)
 	{
 		SDL_GpuBufferCreateInfo buf_info = {
 			.usageFlags = SDL_GPU_BUFFERUSAGE_INDEX_BIT,
-			.sizeInBytes = sizeof(ImDrawIdx) * index_count,
+			.sizeInBytes = (Uint32)(sizeof(ImDrawIdx) * index_count),
 			.props = 0
 		};
 		app->imgui_ibuf = SDL_GpuCreateBuffer(app->device, &buf_info);
@@ -101,7 +101,7 @@ static void s_make_buffers(int vertex_count, int index_count)
 	{
 		SDL_GpuTransferBufferCreateInfo tbuf_info = {
 			.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD,
-			.sizeInBytes = sizeof(ImDrawIdx) * index_count,
+			.sizeInBytes = (Uint32)(sizeof(ImDrawIdx) * index_count),
 			.props = 0,
 		};
 		app->imgui_itbuf = SDL_GpuCreateTransferBuffer(app->device, &tbuf_info);
@@ -238,7 +238,7 @@ void cf_imgui_init()
 
 	SDL_GpuTransferBufferCreateInfo tbuf_info = {
 		.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD,
-		.sizeInBytes = width * height * sizeof(uint8_t) * 4,
+		.sizeInBytes = (Uint32)(width * height * sizeof(uint8_t) * 4),
 		.props = 0,
 	};
 	SDL_GpuTransferBuffer* tbuf = SDL_GpuCreateTransferBuffer(app->device, &tbuf_info);
