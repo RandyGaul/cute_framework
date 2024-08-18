@@ -10,5 +10,5 @@
 
 const char* cf_version_string_linked()
 {
-	return "Cute Framework Version 1.0";
+	return "Cute Framework Version 1.0.1";
 }
