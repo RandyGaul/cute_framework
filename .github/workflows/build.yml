@@ -29,15 +29,6 @@ jobs:
     steps:
       - uses: actions/checkout@master
 
-      # It's been a little difficult to get MinGW to have proper DX12 headers.
-      - name: Set up MinGW-w64 for DirectX 12
-        if: matrix.platform.name == 'Windows (MinGW-w64)'
-        run: |
-          choco install mingw -y --version=9.0.0
-          choco install windows-sdk-10-version-1903-all -y
-          echo "::add-path::C:\tools\mingw64\bin"
-          echo "::add-path::C:\Program Files (x86)\Windows Kits\10\bin\10.0.18362.0\x64"
-
       # Linux needs to install various dependencies.
       # This could potentially be removed by using SOKOL_EXTERNAL_GL_LOADER.
       - name: Install OpenGL + Audio
