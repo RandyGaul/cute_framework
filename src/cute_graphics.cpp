@@ -1558,7 +1558,7 @@ void cf_apply_scissor(int x, int y, int w, int h)
 	scissor.x = x;
 	scissor.y = y;
 	scissor.w = w;
-	scissor.y = h;
+	scissor.h = h;
 	SDL_GpuSetScissor(s_canvas->pass, &scissor);
 }
 
