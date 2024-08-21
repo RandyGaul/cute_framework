@@ -1061,7 +1061,7 @@ void cf_unload_shader_compiler()
 {
 #ifdef CF_RUNTIME_SHADER_COMPIILATION
 	glslang::FinalizeProcess();
-#endif CF_RUNTIME_SHADER_COMPIILATION
+#endif
 }
 
 // Create a user shader by injecting their `shader` function into CF's draw shader.
