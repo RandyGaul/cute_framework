@@ -1157,6 +1157,7 @@ typedef struct cute_threadpool_t
 	int task_count;
 	cute_task_t* tasks;
 	cute_mutex_t task_mutex;
+	cute_atomic_int_t tasks_running;
 
 	int thread_count;
 	cute_thread_t** threads;
@@ -1188,6 +1189,7 @@ int cute_worker_thread_internal(void* udata)
 		cute_task_t task;
 		if (cute_try_pop_task_internal(pool, &task)) {
 			task.do_work(task.param);
+			cute_atomic_add(&pool->tasks_running, -1);
 		}
 
 		cute_semaphore_wait(&pool->semaphore);
@@ -1203,6 +1205,7 @@ cute_threadpool_t* cute_threadpool_create(int thread_count, void* mem_ctx)
 	pool->task_capacity = 64;
 	pool->task_count = 0;
 	pool->tasks = (cute_task_t*)cute_malloc_aligned(sizeof(cute_task_t) * pool->task_capacity, CUTE_SYNC_CACHELINE_SIZE, mem_ctx);
+	cute_atomic_set(&pool->tasks_running, 0);
 	pool->task_mutex = cute_mutex_create();
 	pool->thread_count = thread_count;
 	pool->threads = (cute_thread_t**)cute_malloc_aligned(sizeof(cute_thread_t*) * thread_count, CUTE_SYNC_CACHELINE_SIZE, mem_ctx);
@@ -1235,6 +1238,7 @@ void cute_threadpool_add_task(cute_threadpool_t* pool, void (*func)(void*), void
 	task.do_work = func;
 	task.param = param;
 	pool->tasks[pool->task_count++] = task;
+	cute_atomic_add(&pool->tasks_running, 1);
 
 	cute_unlock(&pool->task_mutex);
 }
@@ -1248,7 +1252,12 @@ void cute_threadpool_kick_and_wait(cute_threadpool_t* pool)
 		if (cute_try_pop_task_internal(pool, &task)) {
 			cute_semaphore_try(&pool->semaphore);
 			task.do_work(task.param);
+			cute_atomic_add(&pool->tasks_running, -1);
 		}
+		CUTE_SYNC_YIELD();
+	}
+
+	while (cute_atomic_get(&pool->tasks_running)) {
 		CUTE_SYNC_YIELD();
 	}
 }
