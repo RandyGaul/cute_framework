@@ -1318,11 +1318,11 @@ void cf_mesh_update_vertex_data(CF_Mesh mesh_handle, void* data, int count)
 	int size = count * mesh->vertices.stride;
 
 	// Resize buffers if necessary
-	if (size > mesh->vertices.size)
-	{
+	if (size > mesh->vertices.size) {
 		SDL_GpuReleaseBuffer(app->device, mesh->vertices.buffer);
 		SDL_GpuReleaseTransferBuffer(app->device, mesh->vertices.transfer_buffer);
 
+		size *= 2;
 		mesh->vertices.size = size;
 		SDL_GpuBufferCreateInfo buf_info = {
 				.usageFlags = SDL_GPU_BUFFERUSAGE_VERTEX_BIT,
