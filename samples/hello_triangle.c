@@ -38,8 +38,10 @@ const char* s_tri_fs = STR(
 
 int main(int argc, char* argv[])
 {
-	int options = CF_APP_OPTIONS_WINDOW_POS_CENTERED_BIT | CF_APP_OPTIONS_RESIZABLE_BIT;
-	CF_Result result = cf_make_app("Hello Triangle", 0, 0, 0, 640, 480, options, argv[0]);
+	int options = CF_APP_OPTIONS_GFX_D3D11_BIT;
+	//int options = CF_APP_OPTIONS_GFX_D3D12_BIT;
+	//int options = CF_APP_OPTIONS_GFX_VULKAN_BIT;
+	CF_Result result = cf_make_app("Hello Triangle", 0, 0, 0, 640, 480, options | CF_APP_OPTIONS_WINDOW_POS_CENTERED_BIT | CF_APP_OPTIONS_RESIZABLE_BIT, argv[0]);
 	if (cf_is_error(result)) return -1;
 
 	// Example program to get going with custom rendering. Most of the time you want to draw sprites or shapes,
@@ -62,7 +64,7 @@ int main(int argc, char* argv[])
 	attrs[0].format = CF_VERTEX_FORMAT_FLOAT2;
 	attrs[0].offset = CF_OFFSET_OF(Vertex, position);
 	attrs[1].name = "in_col";
-	attrs[1].format = CF_VERTEX_FORMAT_UBYTE4N;
+	attrs[1].format = CF_VERTEX_FORMAT_UBYTE4_NORM;
 	attrs[1].offset = CF_OFFSET_OF(Vertex, color);
 	cf_mesh_set_attributes(mesh, attrs, CF_ARRAY_SIZE(attrs), sizeof(Vertex));
 	cf_mesh_update_vertex_data(mesh, verts, 3);

@@ -12,7 +12,7 @@ void on_shader_changed(const char* path, void* udata)
 
 int main(int argc, char* argv[])
 {
-	int options = APP_OPTIONS_GFX_D3D11_BIT | APP_OPTIONS_RESIZABLE_BIT | APP_OPTIONS_WINDOW_POS_CENTERED_BIT;
+	int options = APP_OPTIONS_RESIZABLE_BIT | APP_OPTIONS_WINDOW_POS_CENTERED_BIT;
 	make_app("Metaballs", 0, 0, 0, (int)(w*scale), (int)(h*scale), options, argv[0]);
 	cf_shader_directory("/metaballs_data");
 	cf_shader_on_changed(on_shader_changed, NULL);

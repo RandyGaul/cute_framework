@@ -268,6 +268,18 @@ if(WINDOWS AND NOT MSVC)
 	set(CF_LINK_LIBS ${CF_LINK_LIBS} ws2_32 secur32 shlwapi)
 endif()
 
+# Check for Windows platform and link dxcompiler.dll and dxil.dll
+if (WINDOWS)
+	set(DXC_DLL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/libraries/dxc")
+	set(DXC_DLLS "${DXC_DLL_DIR}/dxcompiler.dll" "${DXC_DLL_DIR}/dxil.dll")
+	# Add a post-build step to copy the DLLs to the output directory
+	add_custom_command(TARGET cute POST_BUILD
+		COMMAND ${CMAKE_COMMAND} -E copy_if_different
+		${DXC_DLLS}
+		$<TARGET_FILE_DIR:cute>
+	)
+endif()
+
 # SDL for platform support.
 # Just don't build the shared library at all, it's not needed.
 set(SDL_SHARED_ENABLED_BY_DEFAULT OFF)

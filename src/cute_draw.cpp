@@ -461,7 +461,7 @@ void cf_make_draw()
 	attrs[5].format = CF_VERTEX_FORMAT_FLOAT2;
 	attrs[5].offset = CF_OFFSET_OF(CF_Vertex, uv);
 	attrs[6].name = "in_col";
-	attrs[6].format = CF_VERTEX_FORMAT_UBYTE4N;
+	attrs[6].format = CF_VERTEX_FORMAT_UBYTE4_NORM;
 	attrs[6].offset = CF_OFFSET_OF(CF_Vertex, color);
 	attrs[7].name = "in_radius";
 	attrs[7].format = CF_VERTEX_FORMAT_FLOAT;
@@ -473,7 +473,7 @@ void cf_make_draw()
 	attrs[9].format = CF_VERTEX_FORMAT_FLOAT;
 	attrs[9].offset = CF_OFFSET_OF(CF_Vertex, aa);
 	attrs[10].name = "in_params";
-	attrs[10].format = CF_VERTEX_FORMAT_UBYTE4N;
+	attrs[10].format = CF_VERTEX_FORMAT_UBYTE4_NORM;
 	attrs[10].offset = CF_OFFSET_OF(CF_Vertex, type);
 	attrs[11].name = "in_user_params";
 	attrs[11].format = CF_VERTEX_FORMAT_FLOAT4;

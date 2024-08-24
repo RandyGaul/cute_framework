@@ -146,25 +146,25 @@ void cf_imgui_init()
 	vertex_binding.binding = 0;
 	vertex_binding.stride = sizeof(ImDrawVert);
 	vertex_binding.inputRate = SDL_GPU_VERTEXINPUTRATE_VERTEX;
-	vertex_binding.stepRate = 0;
+	vertex_binding.instanceStepRate = 0;
 
 	SDL_GpuVertexAttribute vertex_attributes[] = {
 		{
 			.location = 0,
 			.binding = 0,
-			.format = SDL_GPU_VERTEXELEMENTFORMAT_VECTOR2,
+			.format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT2,
 			.offset = 0
 		},
 		{
 			.location = 1,
 			.binding = 0,
-			.format = SDL_GPU_VERTEXELEMENTFORMAT_VECTOR2,
+			.format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT2,
 			.offset = sizeof(float) * 2,
 		},
 		{
 			.location = 2,
 			.binding = 0,
-			.format = SDL_GPU_VERTEXELEMENTFORMAT_COLOR,
+			.format = SDL_GPU_VERTEXELEMENTFORMAT_UBYTE4_NORM,
 			.offset = sizeof(float) * 4,
 		},
 	};
@@ -214,15 +214,14 @@ void cf_imgui_init()
 	int sz = (int)(width * height * sizeof(uint8_t) * 4);
 
 	SDL_GpuTextureCreateInfo texture_info = {
+		.type = SDL_GPU_TEXTURETYPE_2D,
+		.format = SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM,
+		.usageFlags = SDL_GPU_TEXTUREUSAGE_SAMPLER_BIT,
 		.width = (uint32_t)width,
 		.height = (uint32_t)height,
-		.depth = 1,
-		.type = SDL_GPU_TEXTURETYPE_2D,
-		.layerCount = 1,
+		.layerCountOrDepth = 1,
 		.levelCount = 1,
 		.sampleCount = {},
-		.format = SDL_GPU_TEXTUREFORMAT_R8G8B8A8,
-		.usageFlags = SDL_GPU_TEXTUREUSAGE_SAMPLER_BIT
 	};
 
 	SDL_GpuTexture* font_tex = SDL_GpuCreateTexture(app->device, &texture_info);
@@ -242,8 +241,7 @@ void cf_imgui_init()
 		.props = 0,
 	};
 	SDL_GpuTransferBuffer* tbuf = SDL_GpuCreateTransferBuffer(app->device, &tbuf_info);
-	void* memory = NULL;
-	SDL_GpuMapTransferBuffer(app->device, tbuf, false, &memory);
+	void* memory = SDL_GpuMapTransferBuffer(app->device, tbuf, false);
 	CF_MEMCPY(memory, pixels, sz);
 	SDL_GpuUnmapTransferBuffer(app->device, tbuf);
 	SDL_GpuCommandBuffer* cmd = SDL_GpuAcquireCommandBuffer(app->device);
@@ -294,10 +292,8 @@ void cf_imgui_draw(SDL_GpuTexture* swapchain_texture)
 	}
 
 	// Map data onto GPU driver staging space.
-	uint8_t* vertices = nullptr;
-	SDL_GpuMapTransferBuffer(app->device, app->imgui_vtbuf, true, (void**)&vertices);
-	uint8_t* indices = nullptr;
-	SDL_GpuMapTransferBuffer(app->device, app->imgui_itbuf, true, (void**)&indices);
+	uint8_t* vertices = (uint8_t*)SDL_GpuMapTransferBuffer(app->device, app->imgui_vtbuf, true);
+	uint8_t* indices = (uint8_t*)SDL_GpuMapTransferBuffer(app->device, app->imgui_itbuf, true);
 		for (int n = 0; n < draw_data->CmdListsCount; n++) {
 			ImDrawList* cmdList = draw_data->CmdLists[n];
 
@@ -420,7 +416,7 @@ void cf_imgui_draw(SDL_GpuTexture* swapchain_texture)
 				};
 
 				SDL_GpuBindFragmentSamplers(pass, 0, &samplerBinding, 1);
-				SDL_GpuDrawIndexedPrimitives(pass, vtx_offset + pcmd->VtxOffset, idx_offset + pcmd->IdxOffset, pcmd->ElemCount, 1);
+				SDL_GpuDrawIndexedPrimitives(pass, vtx_offset + pcmd->VtxOffset, idx_offset + pcmd->IdxOffset, pcmd->ElemCount, 1, 0);
 			}
 		}
 

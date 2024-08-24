@@ -24,6 +24,7 @@
 #include <internal/cute_imgui_internal.h>
 
 #include <imgui/backends/imgui_impl_sdl3.h>
+#include <SDL_gpu_shadercross/SDL_gpu_shadercross.h>
 
 #include <data/fonts/calibri.h>
 
@@ -224,20 +225,16 @@ CF_Result cf_make_app(const char* window_title, int display_index, int x, int y,
 
 		// Create the GPU device.
 		const char* device_name = NULL;
-		SDL_GpuShaderFormat format_flags = SDL_GPU_SHADERFORMAT_SPIRV;
 		if (use_dx11) {
 			device_name = "D3D11";
-			format_flags |= SDL_GPU_SHADERFORMAT_DXBC;
 		} else if (use_dx12) {
 			device_name = "D3D12";
-			format_flags |= SDL_GPU_SHADERFORMAT_DXIL;
 		} else if (use_metal) {
 			device_name = "Metal";
-			format_flags |= SDL_GPU_SHADERFORMAT_MSL;
 		} else if (use_vulkan) {
 			device_name = "Vulkan";
 		}
-		device = SDL_GpuCreateDevice(format_flags, true, false, device_name);
+		device = SDL_GpuCreateDevice(SDL_ShaderCross_GetShaderFormats(), true, false, device_name);
 		if (!device) {
 			return cf_result_error("Failed to create GPU Device.");
 		}
@@ -280,7 +277,7 @@ CF_Result cf_make_app(const char* window_title, int display_index, int x, int y,
 
 	if (use_gfx) {
 		app->device = device;
-		SDL_GpuClaimWindow(app->device, app->window, SDL_GPU_SWAPCHAINCOMPOSITION_SDR, SDL_GPU_PRESENTMODE_IMMEDIATE);
+		SDL_GpuClaimWindow(app->device, app->window);
 		app->cmd = SDL_GpuAcquireCommandBuffer(app->device);
 		cf_load_internal_shaders();
 		cf_make_draw();
@@ -511,19 +508,17 @@ int cf_app_draw_onto_screen(bool clear)
 	SDL_GpuTexture* swapchain_tex = SDL_GpuAcquireSwapchainTexture(app->cmd, app->window, &w, &h);
 	if (swapchain_tex) {
 		// Blit onto the screen.
-		SDL_GpuTextureRegion src = {
+		SDL_GpuBlitRegion src = {
 			.texture = (SDL_GpuTexture*)cf_texture_handle(cf_canvas_get_target(app->offscreen_canvas)),
 			.w = w,
 			.h = h,
-			.d = 1,
 		};
-		SDL_GpuTextureRegion dst = {
+		SDL_GpuBlitRegion dst = {
 			.texture = swapchain_tex,
 			.w = w,
 			.h = h,
-			.d = 1
 		};
-		SDL_GpuBlit(app->cmd, &src, &dst, SDL_GPU_FILTER_NEAREST, SDL_FALSE);
+		SDL_GpuBlit(app->cmd, &src, &dst, SDL_FLIP_NONE, SDL_GPU_FILTER_NEAREST, SDL_FALSE);
 	}
 
 	// Dear ImGui draw.

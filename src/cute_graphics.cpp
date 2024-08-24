@@ -529,7 +529,7 @@ CF_BackendType cf_query_backend()
 CF_TextureParams cf_texture_defaults(int w, int h)
 {
 	CF_TextureParams params;
-	params.pixel_format = CF_PIXEL_FORMAT_R8G8B8A8;
+	params.pixel_format = CF_PIXEL_FORMAT_R8G8B8A8_UNORM;
 	params.filter = CF_FILTER_NEAREST;
 	params.usage = CF_TEXTURE_USAGE_SAMPLER_BIT;
 	params.wrap_u = CF_WRAP_MODE_REPEAT;
@@ -620,8 +620,7 @@ void cf_texture_update(CF_Texture texture_handle, void* data, int size)
 		};
 		buf = SDL_GpuCreateTransferBuffer(app->device, &tbuf_info);
 	}
-	uint8_t* p;
-	SDL_GpuMapTransferBuffer(app->device, buf, tex->buf ? true : false, (void**)&p);
+	void* p = SDL_GpuMapTransferBuffer(app->device, buf, tex->buf ? true : false);
 	CF_MEMCPY(p, data, size);
 	SDL_GpuUnmapTransferBuffer(app->device, buf);
 
@@ -862,8 +861,8 @@ static SDL_GpuShader* s_compile(CF_ShaderInternal* shader_internal, const dyna u
 
 	// Create the actual shader.
 	SDL_GpuShaderCreateInfo shaderCreateInfo = {};
-	shaderCreateInfo.codeSize = asize(bytecode);
 	shaderCreateInfo.code = bytecode;
+	shaderCreateInfo.codeSize = asize(bytecode);
 	shaderCreateInfo.entryPointName = "main";
 	shaderCreateInfo.format = SDL_GPU_SHADERFORMAT_SPIRV;
 	shaderCreateInfo.stage = s_wrap(stage);
@@ -875,9 +874,10 @@ static SDL_GpuShader* s_compile(CF_ShaderInternal* shader_internal, const dyna u
 	if (SDL_GpuGetDriver(app->device) == SDL_GPU_DRIVER_VULKAN) {
 		sdl_shader = (SDL_GpuShader*)SDL_GpuCreateShader(app->device, &shaderCreateInfo);
 	} else {
-		sdl_shader = (SDL_GpuShader*)SDL_CompileFromSPIRV(app->device, &shaderCreateInfo, false);
+		sdl_shader = (SDL_GpuShader*)SDL_ShaderCross_CompileFromSPIRV(app->device, &shaderCreateInfo, false);
 	}
 	afree(bytecode);
+	CF_ASSERT(sdl_shader);
 	return sdl_shader;
 }
 
@@ -1339,8 +1339,7 @@ void cf_mesh_update_vertex_data(CF_Mesh mesh_handle, void* data, int count)
 	}
 
 	CF_ASSERT(size <= mesh->vertices.size);
-	void* p = NULL;
-	SDL_GpuMapTransferBuffer(app->device, mesh->vertices.transfer_buffer, true, &p);
+	void* p = SDL_GpuMapTransferBuffer(app->device, mesh->vertices.transfer_buffer, true);
 	CF_MEMCPY(p, data, size);
 	SDL_GpuUnmapTransferBuffer(app->device, mesh->vertices.transfer_buffer);
 	mesh->vertices.element_count = count;
@@ -1378,7 +1377,7 @@ CF_RenderState cf_render_state_defaults()
 	CF_RenderState state;
 	state.blend.enabled = false;
 	state.cull_mode = CF_CULL_MODE_NONE;
-	state.blend.pixel_format = CF_PIXEL_FORMAT_R8G8B8A8;
+	state.blend.pixel_format = PIXEL_FORMAT_R8G8B8A8_UNORM;
 	state.blend.write_R_enabled = true;
 	state.blend.write_G_enabled = true;
 	state.blend.write_B_enabled = true;
@@ -1689,13 +1688,13 @@ static SDL_GpuGraphicsPipeline* s_build_pipeline(CF_ShaderInternal* shader, CF_R
 	vertex_bindings[0].binding = 0;
 	vertex_bindings[0].stride = mesh->vertices.stride;
 	vertex_bindings[0].inputRate = SDL_GPU_VERTEXINPUTRATE_VERTEX;
-	vertex_bindings[0].stepRate = 0;
+	vertex_bindings[0].instanceStepRate = 0;
 	pip_info.vertexInputState.vertexBindings = vertex_bindings;
 	//if (has_instance_data) {
 	//	vertex_bindings[1].binding = 1;
 	//	vertex_bindings[1].stride = mesh->instances.stride;
 	//	vertex_bindings[1].inputRate = SDL_GPU_VERTEXINPUTRATE_INSTANCE;
-	//	vertex_bindings[1].stepRate = 0;
+	//	vertex_bindings[1].instanceStepRate = 0;
 	//	pip_info.vertexInputState.vertexBindingCount = 2;
 	//} else {
 		pip_info.vertexInputState.vertexBindingCount = 1;
@@ -1833,7 +1832,7 @@ void cf_draw_elements()
 		//SDL_GpuDrawIndexedPrimitives(s_canvas->pass, 0, mesh->vertices.element_count);
 		CF_ASSERT(false);
 	} else {
-		SDL_GpuDrawPrimitives(s_canvas->pass, 0, mesh->vertices.element_count);
+		SDL_GpuDrawPrimitives(s_canvas->pass, 0, mesh->vertices.element_count, 1, 0);
 	}
 	app->draw_call_count++;
 }
