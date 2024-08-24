@@ -9,30 +9,50 @@ Category: [graphics](/api_reference?id=graphics)
 GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_graphics.h)  
 ---
 
-The possible formats for vertex attributes (inputs to vertex shader, coming from [CF_Mesh](/graphics/cf_mesh.md)).
+The various supported vertex formats.
 
 ## Values
 
 Enum | Description
 --- | ---
-VERTEX_FORMAT_INVALID | Invalid.
-VERTEX_FORMAT_FLOAT | A single 32-bit float.
-VERTEX_FORMAT_FLOAT2 | Two 32-bit floats.
-VERTEX_FORMAT_FLOAT3 | Three 32-bit floats.
-VERTEX_FORMAT_FLOAT4 | Four 32-bit floats.
-VERTEX_FORMAT_BYTE4N | Four 8-bit signed bytes, in normalized form.
-VERTEX_FORMAT_UBYTE4N | Four 8-bit unsigned bytes, in normalized form.
-VERTEX_FORMAT_SHORT2N | Two 16-bit signed bytes, in normalized form.
-VERTEX_FORMAT_USHORT2N | Two 16-bit unsigned bytes, in normalized form.
-VERTEX_FORMAT_SHORT4N | Four 16-bit signed bytes, in normalized form.
-VERTEX_FORMAT_USHORT4N | Four 16-bit unsigned bytes, in normalized form.
+VERTEX_FORMAT_INT | 32-bit signed integer.
+VERTEX_FORMAT_INT2 | Two 32-bit signed integers.
+VERTEX_FORMAT_INT3 | Three 32-bit signed integers.
+VERTEX_FORMAT_INT4 | Four 32-bit signed integers.
+VERTEX_FORMAT_UINT | 32-bit unsigned integer.
+VERTEX_FORMAT_UINT2 | Two 32-bit unsigned integers.
+VERTEX_FORMAT_UINT3 | Three 32-bit unsigned integers.
+VERTEX_FORMAT_UINT4 | Four 32-bit unsigned integers.
+VERTEX_FORMAT_FLOAT | 32-bit floating point number.
+VERTEX_FORMAT_FLOAT2 | Two 32-bit floating point numbers.
+VERTEX_FORMAT_FLOAT3 | Three 32-bit floating point numbers.
+VERTEX_FORMAT_FLOAT4 | Four 32-bit floating point numbers.
+VERTEX_FORMAT_BYTE2 | Two 8-bit signed integers.
+VERTEX_FORMAT_BYTE4 | Four 8-bit signed integers.
+VERTEX_FORMAT_UBYTE2 | Two 8-bit unsigned integers.
+VERTEX_FORMAT_UBYTE4 | Four 8-bit unsigned integers.
+VERTEX_FORMAT_BYTE2_NORM | Two 8-bit signed normalized integers.
+VERTEX_FORMAT_BYTE4_NORM | Four 8-bit signed normalized integers.
+VERTEX_FORMAT_UBYTE2_NORM | Two 8-bit unsigned normalized integers.
+VERTEX_FORMAT_UBYTE4_NORM | Four 8-bit unsigned normalized integers.
+VERTEX_FORMAT_SHORT2 | Two 16-bit signed integers.
+VERTEX_FORMAT_SHORT4 | Four 16-bit signed integers.
+VERTEX_FORMAT_USHORT2 | Two 16-bit unsigned integers.
+VERTEX_FORMAT_USHORT4 | Four 16-bit unsigned integers.
+VERTEX_FORMAT_SHORT2_NORM | Two 16-bit signed normalized integers.
+VERTEX_FORMAT_SHORT4_NORM | Four 16-bit signed normalized integers.
+VERTEX_FORMAT_USHORT2_NORM | Two 16-bit unsigned normalized integers.
+VERTEX_FORMAT_USHORT4_NORM | Four 16-bit unsigned normalized integers.
+VERTEX_FORMAT_HALF2 | Two 16-bit floating point numbers.
+VERTEX_FORMAT_HALF4 | Four 16-bit floating point numbers.
 
 ## Remarks
 
-To help understand the notation see [CF_PixelFormat](/graphics/cf_pixelformat.md).
+Vertex formats define the type and size of vertex attributes in a vertex buffer.
+Not all formats are supported on all hardware; check compatibility before use.
 
 ## Related Pages
 
-[cf_mesh_set_attributes](/graphics/cf_mesh_set_attributes.md)  
-[cf_vertex_format_string](/graphics/cf_vertex_format_string.md)  
-[CF_VertexAttribute](/graphics/cf_vertexattribute.md)  
+cf_query_vertex_format  
+cf_vertex_format_to_string  
+CF_VertexFormatOp  

@@ -278,7 +278,7 @@ CF_Result cf_make_app(const char* window_title, int display_index, int x, int y,
 	if (use_gfx) {
 		app->device = device;
 		SDL_GpuClaimWindow(app->device, app->window);
-		cf_app_set_vsync(app->vsync);
+		cf_app_set_vsync_mailbox(app->vsync);
 		app->cmd = SDL_GpuAcquireCommandBuffer(app->device);
 		cf_load_internal_shaders();
 		cf_make_draw();
@@ -723,6 +723,12 @@ void cf_app_set_vsync(bool true_turn_on_vsync)
 {
 	app->vsync = true_turn_on_vsync;
 	SDL_GpuSetSwapchainParameters(app->device, app->window, SDL_GPU_SWAPCHAINCOMPOSITION_SDR, app->vsync ? SDL_GPU_PRESENTMODE_VSYNC : SDL_GPU_PRESENTMODE_IMMEDIATE);
+}
+
+void cf_app_set_vsync_mailbox(bool true_turn_on_mailbox)
+{
+	app->vsync = true_turn_on_mailbox;
+	SDL_GpuSetSwapchainParameters(app->device, app->window, SDL_GPU_SWAPCHAINCOMPOSITION_SDR, app->vsync ? SDL_GPU_PRESENTMODE_MAILBOX : SDL_GPU_PRESENTMODE_IMMEDIATE);
 }
 
 bool cf_app_get_vsync()

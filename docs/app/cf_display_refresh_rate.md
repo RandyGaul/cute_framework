@@ -12,7 +12,7 @@ GitHub: [cute_app.h](https://github.com/RandyGaul/cute_framework/blob/master/inc
 Returns the refresh rate, in hz, of the display.
 
 ```cpp
-int cf_display_refresh_rate(int display_index);
+float cf_display_refresh_rate(int display_index);
 ```
 
 Parameters | Description

@@ -617,15 +617,25 @@ CF_API int CF_CALL cf_app_get_canvas_height();
  * @function cf_app_set_vsync
  * @category app
  * @brief    Turns on vsync via the graphical backend (if supported).
- * @related  cf_app_get_canvas cf_app_set_canvas_size cf_app_get_canvas_width cf_app_set_vsync cf_app_get_vsync
+ * @related  cf_app_get_canvas cf_app_set_canvas_size cf_app_get_canvas_width cf_app_set_vsync cf_app_get_vsync cf_app_set_vsync_mailbox
  */
 CF_API void CF_CALL cf_app_set_vsync(bool true_turn_on_vsync);
+
+/**
+ * @function cf_app_set_vsync_mailbox
+ * @category app
+ * @brief    Turns on vsync via the graphical backend (if supported) in mailbox mode.
+ * @remarks  Similar to vsync but with reduced latency. When rendering too quickly the frame may be updated
+ *           more than once before it is sent off the GPU.
+ * @related  cf_app_get_canvas cf_app_set_canvas_size cf_app_get_canvas_width cf_app_set_vsync cf_app_get_vsync cf_app_set_vsync_mailbox
+ */
+CF_API void CF_CALL cf_app_set_vsync_mailbox(bool true_turn_on_mailbox);
 
 /**
  * @function cf_app_get_vsync
  * @category app
  * @brief    Returns the vsync state (true for on).
- * @related  cf_app_get_canvas cf_app_set_canvas_size cf_app_get_canvas_width cf_app_set_vsync cf_app_get_vsync
+ * @related  cf_app_get_canvas cf_app_set_canvas_size cf_app_get_canvas_width cf_app_set_vsync cf_app_get_vsync cf_app_set_vsync_mailbox
  */
 CF_API bool CF_CALL cf_app_get_vsync();
 

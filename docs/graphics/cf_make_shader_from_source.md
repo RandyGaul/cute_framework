@@ -3,23 +3,30 @@
 [//]: # (See: https://github.com/RandyGaul/cute_framework/blob/master/samples/docs_parser.cpp)
 [](../header.md ':include')
 
-# CF_SokolShader
+# cf_make_shader_from_source
 
 Category: [graphics](/api_reference?id=graphics)  
 GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_graphics.h)  
 ---
 
-A virtual table for a sokol-shdc compiled shader.
+Creates a shader from strings containing glsl source code.
+
+```cpp
+CF_Shader cf_make_shader_from_source(const char* vertex_src, const char* fragment_src);
+```
+
+Parameters | Description
+--- | ---
+vertex_path | A virtual path to the shader. See [Virtual File System](https://randygaul.github.io/cute_framework/#/topics/virtual_file_system).
 
 ## Remarks
 
-See [CF_MAKE_SOKOL_SHADER](/graphics/cf_make_sokol_shader.md) for an overview.
+The shader paths must be in the shader directory. See [cf_shader_directory](/graphics/cf_shader_directory.md).
 
 ## Related Pages
 
-[CF_MAKE_SOKOL_SHADER](/graphics/cf_make_sokol_shader.md)  
-[CF_Material](/graphics/cf_material.md)  
 [CF_Shader](/graphics/cf_shader.md)  
 [cf_make_shader](/graphics/cf_make_shader.md)  
-[cf_destroy_shader](/graphics/cf_destroy_shader.md)  
+[cf_shader_directory](/graphics/cf_shader_directory.md)  
 [cf_apply_shader](/graphics/cf_apply_shader.md)  
+[CF_Material](/graphics/cf_material.md)  

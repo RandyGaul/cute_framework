@@ -18,5 +18,4 @@ const char* cf_pixel_format_to_string(CF_PixelFormat format)
 ## Related Pages
 
 [CF_PixelFormat](/graphics/cf_pixelformat.md)  
-[cf_query_pixel_format](/graphics/cf_query_pixel_format.md)  
 [CF_PixelFormatOp](/graphics/cf_pixelformatop.md)  

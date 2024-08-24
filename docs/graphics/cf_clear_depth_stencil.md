@@ -12,16 +12,13 @@ GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/maste
 Sets the depth/stencil values used when clearing a canvas, if depth/stencil are enabled (see [CF_RenderState](/graphics/cf_renderstate.md)).
 
 ```cpp
-void cf_clear_depth_stencil(float depth, float stencil);
+void cf_clear_depth_stencil(float depth, uint32_t stencil);
 ```
 
 ## Remarks
 
-This will get used when [cf_apply_canvas](/graphics/cf_apply_canvas.md) or when [cf_app_draw_onto_screen](/app/cf_app_draw_onto_screen.md) is called.
+This will get used when [cf_apply_canvas](/graphics/cf_apply_canvas.md) or when [cf_app_draw_onto_screen](/app/cf_app_draw_onto_screen.md) is called and `clear` parameter is true.
 
 ## Related Pages
 
-[cf_clear_color](/graphics/cf_clear_color.md)  
-[cf_clear_color2](/graphics/cf_clear_color2.md)  
-[cf_app_draw_onto_screen](/app/cf_app_draw_onto_screen.md)  
-[cf_apply_canvas](/graphics/cf_apply_canvas.md)  
+cf_clear_screen  

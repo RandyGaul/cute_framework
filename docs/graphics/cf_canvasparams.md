@@ -15,6 +15,7 @@ Struct Members | Description
 --- | ---
 `const char* name` | The name of the canvas, for debug purposes.
 `CF_TextureParams target` | The texture used to store pixel information when rendering to the canvas. See [CF_TextureParams](/graphics/cf_textureparams.md).
+`bool depth_stencil_enable` | Defaults to false. If true enables a depth-stencil buffer attachment.
 `CF_TextureParams depth_stencil_target` | The texture used to store depth and stencil information when rendering to the canvas. See [CF_TextureParams](/graphics/cf_textureparams.md).
 
 ## Remarks

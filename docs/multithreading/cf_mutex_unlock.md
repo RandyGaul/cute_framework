@@ -12,16 +12,12 @@ GitHub: [cute_multithreading.h](https://github.com/RandyGaul/cute_framework/blob
 Unlocks a [CF_Mutex](/multithreading/cf_mutex.md).
 
 ```cpp
-CF_Result cf_mutex_unlock(CF_Mutex* mutex);
+void cf_mutex_unlock(CF_Mutex* mutex);
 ```
 
 Parameters | Description
 --- | ---
 mutex | The mutex.
-
-## Return Value
-
-Returns any errors as a [CF_Result](/utility/cf_result.md).
 
 ## Related Pages
 

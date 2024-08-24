@@ -3,20 +3,20 @@
 [//]: # (See: https://github.com/RandyGaul/cute_framework/blob/master/samples/docs_parser.cpp)
 [](../header.md ':include')
 
-# cf_usage_type_to_string
+# cf_texture_handle
 
 Category: [graphics](/api_reference?id=graphics)  
 GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_graphics.h)  
 ---
 
-Returns a [CF_UsageType](/graphics/cf_usagetype.md) converted to a C string.
+Returns an SDL_GpuTexture casted to a `uint64_t`.
 
 ```cpp
-const char* cf_usage_type_to_string(CF_UsageType type)
+uint64_t cf_texture_handle(CF_Texture texture);
 ```
 
 ## Related Pages
 
-[CF_UsageType](/graphics/cf_usagetype.md)  
-[cf_make_mesh](/graphics/cf_make_mesh.md)  
 [CF_TextureParams](/graphics/cf_textureparams.md)  
+[CF_Texture](/graphics/cf_texture.md)  
+[cf_make_texture](/graphics/cf_make_texture.md)  

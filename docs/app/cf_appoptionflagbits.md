@@ -3,7 +3,7 @@
 [//]: # (See: https://github.com/RandyGaul/cute_framework/blob/master/samples/docs_parser.cpp)
 [](../header.md ':include')
 
-# CF_AppOptions
+# CF_AppOptionFlagBits
 
 Category: [app](/api_reference?id=app)  
 GitHub: [cute_app.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_app.h)  
@@ -15,13 +15,17 @@ Various options to control how the application starts up, such as fullscreen, or
 
 Enum | Description
 --- | ---
-APP_OPTIONS_NO_GFX | Does not initialize any graphics backend at all (for servers or headless mode).
-APP_OPTIONS_FULLSCREEN | Starts the application in borderless full-screen mode.
-APP_OPTIONS_RESIZABLE | Allows the window to be resized.
-APP_OPTIONS_HIDDEN | Starts the application with the window hidden.
-APP_OPTIONS_WINDOW_POS_CENTERED | Starts the application with the window centered on the screen. Does not affect any later adjustments to window size/position.
-APP_OPTIONS_FILE_SYSTEM_DONT_DEFAULT_MOUNT | Disables automatically mounting the folder the executable runs from to "/". See [cf_fs_mount](/file/cf_fs_mount.md) for more details.
-APP_OPTIONS_NO_AUDIO | Starts the application with no audio.
+APP_OPTIONS_NO_GFX_BIT | Does not initialize any graphics backend at all (for servers or headless mode).
+APP_OPTIONS_FULLSCREEN_BIT | Starts the application in borderless full-screen mode.
+APP_OPTIONS_RESIZABLE_BIT | Allows the window to be resized.
+APP_OPTIONS_HIDDEN_BIT | Starts the application with the window hidden.
+APP_OPTIONS_WINDOW_POS_CENTERED_BIT | Starts the application with the window centered on the screen. Does not affect any later adjustments to window size/position.
+APP_OPTIONS_FILE_SYSTEM_DONT_DEFAULT_MOUNT_BIT | Disables automatically mounting the folder the executable runs from to "/". See [cf_fs_mount](/file/cf_fs_mount.md) for more details.
+APP_OPTIONS_NO_AUDIO_BIT | Starts the application with no audio.
+APP_OPTIONS_GFX_D3D11_BIT | Starts the application with a D3D11 backend.
+APP_OPTIONS_GFX_D3D12_BIT | Starts the application with a D3D12 backend.
+APP_OPTIONS_GFX_METAL_BIT | Starts the application with a Metal backend.
+APP_OPTIONS_GFX_VULKAN_BIT | Starts the application with a Vulkan backend.
 
 ## Code Example
 

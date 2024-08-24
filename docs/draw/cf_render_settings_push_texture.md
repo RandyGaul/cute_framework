@@ -26,8 +26,8 @@ This is useful for custom shaders. See [cf_render_settings_push_shader](/draw/cf
 
 ## Related Pages
 
-[cf_render_settings_push_uniform_color](/draw/cf_render_settings_push_uniform_color.md)  
-[cf_render_settings_push_uniform](/draw/cf_render_settings_push_uniform.md)  
-[cf_render_settings_push_uniform_int](/draw/cf_render_settings_push_uniform_int.md)  
-[cf_render_settings_push_uniform_float](/draw/cf_render_settings_push_uniform_float.md)  
-[cf_render_settings_push_uniform_v2](/draw/cf_render_settings_push_uniform_v2.md)  
+[cf_render_settings_set_uniform_color](/draw/cf_render_settings_set_uniform_color.md)  
+[cf_render_settings_set_uniform](/draw/cf_render_settings_set_uniform.md)  
+[cf_render_settings_set_uniform_int](/draw/cf_render_settings_set_uniform_int.md)  
+[cf_render_settings_set_uniform_float](/draw/cf_render_settings_set_uniform_float.md)  
+[cf_render_settings_set_uniform_v2](/draw/cf_render_settings_set_uniform_v2.md)  

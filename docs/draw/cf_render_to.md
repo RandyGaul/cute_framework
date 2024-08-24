@@ -18,7 +18,6 @@ void cf_render_to(CF_Canvas canvas, bool clear);
 Parameters | Description
 --- | ---
 canvas | The canvas to render to.
-clear | True to clear the canvas's previous contents, false otherwise.
 
 ## Remarks
 

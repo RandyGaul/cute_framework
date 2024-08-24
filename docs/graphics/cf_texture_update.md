@@ -3,7 +3,7 @@
 [//]: # (See: https://github.com/RandyGaul/cute_framework/blob/master/samples/docs_parser.cpp)
 [](../header.md ':include')
 
-# cf_update_texture
+# cf_texture_update
 
 Category: [graphics](/api_reference?id=graphics)  
 GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_graphics.h)  
@@ -12,7 +12,7 @@ GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/maste
 Updates the contents of a [CF_Texture](/graphics/cf_texture.md).
 
 ```cpp
-void cf_update_texture(CF_Texture texture, void* data, int size);
+void cf_texture_update(CF_Texture texture, void* data, int size);
 ```
 
 Parameters | Description

@@ -522,8 +522,8 @@ CF_API uint64_t CF_CALL cf_texture_handle(CF_Texture texture);
 /**
  * @enum     CF_ShaderStage
  * @category graphics
- * @brief    
- * @related  
+ * @brief    TODO
+ * @related  TODO
  */
 #define CF_SHADER_STAGE_DEFS \
 	/* @entry */ \

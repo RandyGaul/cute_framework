@@ -27,5 +27,5 @@ Free it up with [cf_destroy_texture](/graphics/cf_destroy_texture.md) when done.
 
 [CF_TextureParams](/graphics/cf_textureparams.md)  
 [CF_Texture](/graphics/cf_texture.md)  
-[cf_update_texture](/graphics/cf_update_texture.md)  
+[cf_texture_update](/graphics/cf_texture_update.md)  
 [cf_destroy_texture](/graphics/cf_destroy_texture.md)  

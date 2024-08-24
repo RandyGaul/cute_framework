@@ -3,17 +3,22 @@
 [//]: # (See: https://github.com/RandyGaul/cute_framework/blob/master/samples/docs_parser.cpp)
 [](../header.md ':include')
 
-# cf_app_get_vsync
+# cf_app_set_vsync_mailbox
 
 Category: [app](/api_reference?id=app)  
 GitHub: [cute_app.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_app.h)  
 ---
 
-Returns the vsync state (true for on).
+Turns on vsync via the graphical backend (if supported) in mailbox mode.
 
 ```cpp
-bool cf_app_get_vsync();
+void cf_app_set_vsync_mailbox(bool true_turn_on_mailbox);
 ```
+
+## Remarks
+
+Similar to vsync but with reduced latency. When rendering too quickly the frame may be updated
+more than once before it is sent off the GPU.
 
 ## Related Pages
 
@@ -21,4 +26,4 @@ bool cf_app_get_vsync();
 [cf_app_set_canvas_size](/app/cf_app_set_canvas_size.md)  
 [cf_app_get_canvas_width](/app/cf_app_get_canvas_width.md)  
 [cf_app_set_vsync](/app/cf_app_set_vsync.md)  
-[cf_app_set_vsync_mailbox](/app/cf_app_set_vsync_mailbox.md)  
+[cf_app_get_vsync](/app/cf_app_get_vsync.md)  

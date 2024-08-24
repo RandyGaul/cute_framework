@@ -10,7 +10,7 @@ Here's a good starting program to copy + paste. It creates a window in the cente
 int main(int argc, char* argv[])
 {
 	// Create a window with a resolution of 640 x 480.
-	CF_Result result = cf_make_app("Fancy Window Title", 0, 0, 0, 640, 480, CF_APP_OPTIONS_WINDOW_POS_CENTERED, argv[0]);
+	CF_Result result = cf_make_app("Fancy Window Title", 0, 0, 0, 640, 480, CF_APP_OPTIONS_WINDOW_POS_CENTERED_BIT, argv[0]);
 	if (is_error(result)) {
 		printf("Error: %s\n", result.details);
 		return -1;
@@ -45,7 +45,7 @@ Here is a basic demonstration of capturing keyboard and mouse inputs.
 
 int main(int argc, char* argv[])
 {
-	CF_Result result = cf_make_app("Input", 0, 0, 0, 640, 480, CF_APP_OPTIONS_WINDOW_POS_CENTERED, argv[0]);
+	CF_Result result = cf_make_app("Input", 0, 0, 0, 640, 480, CF_APP_OPTIONS_WINDOW_POS_CENTERED_BIT, argv[0]);
 	if (cf_is_error(result)) return -1;
 
 	while (cf_app_is_running())

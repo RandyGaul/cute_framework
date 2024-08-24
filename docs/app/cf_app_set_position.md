@@ -25,3 +25,4 @@ y | The y position of the window in pixels.
 [cf_app_get_size](/app/cf_app_get_size.md)  
 [cf_app_set_size](/app/cf_app_set_size.md)  
 [cf_app_get_position](/app/cf_app_get_position.md)  
+[cf_app_center_window](/app/cf_app_center_window.md)  

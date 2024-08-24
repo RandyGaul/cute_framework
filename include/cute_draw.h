@@ -1172,6 +1172,14 @@ CF_API CF_RenderState CF_CALL cf_render_settings_peek_render_state();
  */
 CF_API void CF_CALL cf_render_settings_set_atlas_dimensions(int width_in_pixels, int height_in_pixels);
 
+/**
+ * @function cf_make_draw_shader
+ * @category draw
+ * @brief    Creates a custom draw shader.
+ * @remarks  Your shader must be written in GLSL 450, and must follow some specific rules to be compatible with the draw API. For more in-depth explanations,
+ *           see CF's docs on [Draw Shaders](https://randygaul.github.io/cute_framework/#/topics/drawing?id=shaders). Make sure to call `cf_shader_directory` first.
+ * @related  CF_Shader cf_render_settings_push_shader cf_render_settings_pop_shader cf_render_settings_peek_shader
+ */
 CF_API CF_Shader CF_CALL cf_make_draw_shader(const char* path);
 
 /**

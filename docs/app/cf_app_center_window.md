@@ -3,22 +3,20 @@
 [//]: # (See: https://github.com/RandyGaul/cute_framework/blob/master/samples/docs_parser.cpp)
 [](../header.md ':include')
 
-# cf_app_get_vsync
+# cf_app_center_window
 
 Category: [app](/api_reference?id=app)  
 GitHub: [cute_app.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_app.h)  
 ---
 
-Returns the vsync state (true for on).
+Sets the window position centered on the screen.
 
 ```cpp
-bool cf_app_get_vsync();
+void cf_app_center_window();
 ```
 
 ## Related Pages
 
-[cf_app_get_canvas](/app/cf_app_get_canvas.md)  
-[cf_app_set_canvas_size](/app/cf_app_set_canvas_size.md)  
-[cf_app_get_canvas_width](/app/cf_app_get_canvas_width.md)  
-[cf_app_set_vsync](/app/cf_app_set_vsync.md)  
-[cf_app_set_vsync_mailbox](/app/cf_app_set_vsync_mailbox.md)  
+[cf_app_get_size](/app/cf_app_get_size.md)  
+[cf_app_set_size](/app/cf_app_set_size.md)  
+[cf_app_get_position](/app/cf_app_get_position.md)  

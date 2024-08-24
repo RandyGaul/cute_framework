@@ -3,22 +3,22 @@
 [//]: # (See: https://github.com/RandyGaul/cute_framework/blob/master/samples/docs_parser.cpp)
 [](../header.md ':include')
 
-# cf_render_settings_push_uniform_v2
+# cf_render_settings_set_uniform_float
 
 Category: [draw](/api_reference?id=draw)  
 GitHub: [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_draw.h)  
 ---
 
-Pushes a vector uniform by name.
+Pushes a float uniform by name.
 
 ```cpp
-void cf_render_settings_push_uniform_v2(const char* name, CF_V2 val);
+void cf_render_settings_set_uniform_float(const char* name, float val);
 ```
 
 ## Related Pages
 
 [cf_render_settings_push_texture](/draw/cf_render_settings_push_texture.md)  
-[cf_render_settings_push_uniform](/draw/cf_render_settings_push_uniform.md)  
-[cf_render_settings_push_uniform_int](/draw/cf_render_settings_push_uniform_int.md)  
-[cf_render_settings_push_uniform_float](/draw/cf_render_settings_push_uniform_float.md)  
-[cf_render_settings_push_uniform_color](/draw/cf_render_settings_push_uniform_color.md)  
+[cf_render_settings_set_uniform](/draw/cf_render_settings_set_uniform.md)  
+[cf_render_settings_set_uniform_int](/draw/cf_render_settings_set_uniform_int.md)  
+[cf_render_settings_set_uniform_color](/draw/cf_render_settings_set_uniform_color.md)  
+[cf_render_settings_set_uniform_v2](/draw/cf_render_settings_set_uniform_v2.md)  

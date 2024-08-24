@@ -9,25 +9,56 @@ Category: [graphics](/api_reference?id=graphics)
 GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_graphics.h)  
 ---
 
-Creates a shader from a shader compiled by sokol-shdc.
+Creates a shader from glsl source code.
 
 ```cpp
-CF_Shader cf_make_shader(CF_SokolShader sokol_shader);
+CF_Shader cf_make_shader(const char* vertex_path, const char* fragment_path);
 ```
 
 Parameters | Description
 --- | ---
-sokol_shader | A compiled shader.
+vertex_path | A virtual path to the shader. See [Virtual File System](https://randygaul.github.io/cute_framework/#/topics/virtual_file_system).
 
 ## Remarks
 
-You should instead call [CF_MAKE_SOKOL_SHADER](/graphics/cf_make_sokol_shader.md) unless you really know what you're doing.
+The shader paths must be in the shader directory. See [cf_shader_directory](/graphics/cf_shader_directory.md). Note the expected glsl version is 450.
+
+You must setup shader inputs (max of 32 inputs, e.g. `in` keyword) and resources sets in a specific way. Use the
+  following resource sets and ordering in your shaders:
+
+For _VERTEX_ shaders:
+ 0: Sampled textures, followed by storage textures, followed by storage buffers
+ 1: Uniform buffers
+For _FRAGMENT_ shaders:
+ 2: Sampled textures, followed by storage textures, followed by storage buffers
+ 3: Uniform buffers
+
+Example _VERTEX shader:
+layout (set = 0, binding = 0) uniform sampler2D u_image;
+
+layout (set = 1, binding = 0) uniform uniform_block {
+    vec2 u_texture_size;
+};
+
+Example _FRAGMENT_ shader:
+
+layout (set = 2, binding = 0) uniform sampler2D u_image;
+
+layout (set = 3, binding = 0) uniform uniform_block {
+    vec2 u_texture_size;
+};
+
+For uniforms you only have one uniform block available, and it must be named `uniform_block`. However, if your
+shader is make from the draw api ([cf_make_draw_shader](/draw/cf_make_draw_shader.md)) uniform blocks must be named user_uniforms.
+
+Shaders that sit in the shader directory may be `#include`'d into another shader. Though, it doesn't work
+quite exactly like a C/C++ include, it's very similar -- each shader may be included into another
+shader only once. If you try to include a file multiple times (such as circular dependencies,
+or if two files try to include the same file) subsequent includes will be ignored.
 
 ## Related Pages
 
-[CF_MAKE_SOKOL_SHADER](/graphics/cf_make_sokol_shader.md)  
-[CF_SokolShader](/graphics/cf_sokolshader.md)  
 [CF_Shader](/graphics/cf_shader.md)  
 [CF_Material](/graphics/cf_material.md)  
-[cf_destroy_shader](/graphics/cf_destroy_shader.md)  
+[cf_shader_directory](/graphics/cf_shader_directory.md)  
 [cf_apply_shader](/graphics/cf_apply_shader.md)  

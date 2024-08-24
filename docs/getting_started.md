@@ -18,7 +18,7 @@ Make sure you have a compiler installed that you're familiar with beforehand. If
 2. Copy CMakeLists.txt ([this one here](https://github.com/RandyGaul/cute_framework_project_template/blob/main/CMakeLists.txt)) into the top-level of your project directory.
 3. Find + replace "my_project_name".
 4. Make a folder called `src` in the top-level of your project, and place your initial `main.cpp` there.
-5. Run CMake on your project folder. If you need help with this step, try reading the [CMake 101 section here](https://github.com/RandyGaul/cute_framework_project_template#cmake-101-walkthrough).
+5. Run CMake on your project folder. If you need help with this step, try reading the [CF + CMake 101 section here](https://github.com/RandyGaul/cute_framework_project_template#cmake-101-walkthrough).
 
 ## Example Game Window
 
@@ -31,7 +31,7 @@ using namespace Cute;
 int main(int argc, char* argv[])
 {
 	// Create a window with a resolution of 640 x 480.
-	Result result = make_app("Fancy Window Title", 0, 0, 0, 640, 480, APP_OPTIONS_WINDOW_POS_CENTERED, argv[0]);
+	Result result = make_app("Fancy Window Title", 0, 0, 0, 640, 480, APP_OPTIONS_WINDOW_POS_CENTERED_BIT, argv[0]);
 	if (is_error(result)) {
 		printf("Error: %s\n", result.details);
 		return -1;

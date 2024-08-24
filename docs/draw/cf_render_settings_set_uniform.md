@@ -3,7 +3,7 @@
 [//]: # (See: https://github.com/RandyGaul/cute_framework/blob/master/samples/docs_parser.cpp)
 [](../header.md ':include')
 
-# cf_render_settings_push_uniform
+# cf_render_settings_set_uniform
 
 Category: [draw](/api_reference?id=draw)  
 GitHub: [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_draw.h)  
@@ -12,7 +12,7 @@ GitHub: [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Pushes a uniform and binds it by name.
 
 ```cpp
-void cf_render_settings_push_uniform(const char* name, void* data, CF_UniformType type, int array_length);
+void cf_render_settings_set_uniform(const char* name, void* data, CF_UniformType type, int array_length);
 ```
 
 Parameters | Description
@@ -25,7 +25,7 @@ array_length | The numeber of elements of [CF_UniformType](/graphics/cf_uniformt
 ## Related Pages
 
 [cf_render_settings_push_texture](/draw/cf_render_settings_push_texture.md)  
-[cf_render_settings_push_uniform_color](/draw/cf_render_settings_push_uniform_color.md)  
-[cf_render_settings_push_uniform_int](/draw/cf_render_settings_push_uniform_int.md)  
-[cf_render_settings_push_uniform_float](/draw/cf_render_settings_push_uniform_float.md)  
-[cf_render_settings_push_uniform_v2](/draw/cf_render_settings_push_uniform_v2.md)  
+[cf_render_settings_set_uniform_color](/draw/cf_render_settings_set_uniform_color.md)  
+[cf_render_settings_set_uniform_int](/draw/cf_render_settings_set_uniform_int.md)  
+[cf_render_settings_set_uniform_float](/draw/cf_render_settings_set_uniform_float.md)  
+[cf_render_settings_set_uniform_v2](/draw/cf_render_settings_set_uniform_v2.md)  
