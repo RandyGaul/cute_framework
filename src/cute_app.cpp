@@ -278,6 +278,7 @@ CF_Result cf_make_app(const char* window_title, int display_index, int x, int y,
 	if (use_gfx) {
 		app->device = device;
 		SDL_GpuClaimWindow(app->device, app->window);
+		cf_app_set_vsync(app->vsync);
 		app->cmd = SDL_GpuAcquireCommandBuffer(app->device);
 		cf_load_internal_shaders();
 		cf_make_draw();
