@@ -100,7 +100,6 @@ struct CF_App
 	CF_Mesh backbuffer_quad = { };
 	CF_Shader draw_shader = { };
 	CF_Shader basic_shader = { };
-	CF_Shader blit_shader = { };
 	CF_Shader backbuffer_shader = { };
 	CF_Material backbuffer_material = { };
 	CF_WindowState window_state;
@@ -111,9 +110,6 @@ struct CF_App
 	bool vsync = false;
 	bool audio_needs_updates = false;
 	void* update_udata = NULL;
-	bool canvas_blit_init = false;
-	CF_Mesh blit_mesh;
-	CF_Material blit_material;
 	bool on_sound_finish_single_threaded = false;
 	Cute::Array<CF_Sound> on_sound_finish_queue;
 	void (*on_sound_finish)(CF_Sound, void*) = NULL;

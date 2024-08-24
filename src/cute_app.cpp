@@ -375,11 +375,6 @@ void cf_destroy_app()
 		cf_destroy_canvas(app->offscreen_canvas);
 		cf_destroy_mesh(app->backbuffer_quad);
 		cf_destroy_material(app->backbuffer_material);
-		if (app->canvas_blit_init) {
-			cf_destroy_mesh(app->blit_mesh);
-			cf_destroy_material(app->blit_material);
-			cf_destroy_shader(app->blit_shader);
-		}
 	}
 	cf_destroy_aseprite_cache();
 	cf_destroy_png_cache();
