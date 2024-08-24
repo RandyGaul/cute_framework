@@ -396,7 +396,7 @@ void main()
 	// Traditional sprite/text/tri cases.
 	vec4 c = vec4(0);
 	c = !(is_sprite && is_text) ? de_gamma(texture(u_image, smooth_uv(v_uv, u_texture_size))) : c;
-	c = is_sprite ? gamma(overlay(c, v_col)) : c;
+	c = is_sprite ? gamma(c) : c;
 	c = is_text ? v_col * c.a : c;
 	c = is_tri ? v_col : c;
 

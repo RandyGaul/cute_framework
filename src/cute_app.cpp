@@ -506,8 +506,8 @@ int cf_app_draw_onto_screen(bool clear)
 		// Blit onto the screen.
 		SDL_GpuBlitRegion src = {
 			.texture = (SDL_GpuTexture*)cf_texture_handle(cf_canvas_get_target(app->offscreen_canvas)),
-			.w = w,
-			.h = h,
+			.w = (Uint32)app->canvas_w,
+			.h = (Uint32)app->canvas_h,
 		};
 		SDL_GpuBlitRegion dst = {
 			.texture = swapchain_tex,
@@ -536,7 +536,6 @@ int cf_app_draw_onto_screen(bool clear)
 
 	// Clear all pushed draw parameters.
 	draw->colors.set_count(1);
-	draw->tints.set_count(1);
 	draw->antialias.set_count(1);
 	draw->antialias_scale.set_count(1);
 	draw->render_states.set_count(1);

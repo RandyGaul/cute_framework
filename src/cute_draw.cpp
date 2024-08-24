@@ -565,7 +565,7 @@ void cf_draw_sprite(const CF_Sprite* sprite)
 	s.geom.d = mul(m, quad[3]);
 	s.geom.is_sprite = true;
 
-	s.geom.color = premultiply(to_pixel(draw->tints.last()));
+	s.geom.color = premultiply(pixel_white());
 	s.geom.alpha = sprite->opacity;
 	s.geom.user_params = draw->user_params.last();
 	s.sort_bits = draw->layers.last();
@@ -603,7 +603,7 @@ static void s_draw_quad(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float stroke, fl
 	s.geom.b = he;
 	s.geom.c = u;
 
-	s.geom.color = premultiply(to_pixel(cf_overlay_color(draw->colors.last(), draw->tints.last())));
+	s.geom.color = premultiply(to_pixel(draw->colors.last()));
 	s.geom.alpha = 1.0f;
 	s.geom.radius = radius;
 	s.geom.stroke = stroke;
@@ -685,7 +685,7 @@ static void s_draw_circle(v2 position, float stroke, float radius, bool fill)
 	s.geom.b = position;
 	s.geom.c = position;
 
-	s.geom.color = premultiply(to_pixel(cf_overlay_color(draw->colors.last(), draw->tints.last())));
+	s.geom.color = premultiply(to_pixel(draw->colors.last()));
 	s.geom.alpha = 1.0f;
 	s.geom.radius = radius;
 	s.geom.stroke = stroke;
@@ -744,7 +744,7 @@ static void s_draw_capsule(v2 a, v2 b, float stroke, float radius, bool fill)
 	s.geom.b = b;
 	s.geom.c = a;
 
-	s.geom.color = premultiply(to_pixel(cf_overlay_color(draw->colors.last(), draw->tints.last())));
+	s.geom.color = premultiply(to_pixel(draw->colors.last()));
 	s.geom.alpha = 1.0f;
 	s.geom.radius = radius;
 	s.geom.stroke = stroke;
@@ -836,7 +836,7 @@ static void s_cf_draw_tri(v2 a, v2 b, v2 c, float stroke, float radius, bool fil
 		s.geom.c = mul(m, c);
 	}
 
-	s.geom.color = premultiply(to_pixel(cf_overlay_color(draw->colors.last(), draw->tints.last())));
+	s.geom.color = premultiply(to_pixel(draw->colors.last()));
 	s.geom.alpha = 1.0f;
 	s.geom.radius = radius;
 	s.geom.stroke = stroke;
@@ -878,7 +878,7 @@ void cf_draw_polyline(CF_V2* pts, int count, float thickness, bool loop)
 	CF_M3x2 m = draw->mvp;
 	spritebatch_sprite_t s = { };
 	s.image_id = app->default_image_id;
-	s.geom.color = premultiply(to_pixel(cf_overlay_color(draw->colors.last(), draw->tints.last())));
+	s.geom.color = premultiply(to_pixel(draw->colors.last()));
 	s.geom.alpha = 1.0f;
 	s.geom.radius = radius;
 	s.geom.stroke = 0;
@@ -2159,25 +2159,6 @@ CF_Color cf_draw_pop_color()
 CF_Color cf_draw_peek_color()
 {
 	return draw->colors.last();
-}
-
-void cf_draw_push_tint(CF_Color c)
-{
-	draw->tints.add(c);
-}
-
-CF_Color cf_draw_pop_tint()
-{
-	if (draw->tints.count() > 1) {
-		return draw->tints.pop();
-	} else {
-		return draw->tints.last();
-	}
-}
-
-CF_Color cf_draw_peek_tint()
-{
-	return draw->tints.last();
 }
 
 void cf_draw_push_antialias(bool antialias)

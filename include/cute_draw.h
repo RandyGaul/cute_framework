@@ -386,38 +386,6 @@ CF_API CF_Color CF_CALL cf_draw_pop_color();
 CF_API CF_Color CF_CALL cf_draw_peek_color();
 
 /**
- * @function cf_draw_push_tint
- * @category draw
- * @brief    Pushes a tint color.
- * @param    c          The color.
- * @remarks  Sprites and shapes can be tinted. This is useful for certain effects such as damage flashes, or
- *           dynamic color variations. Tint is implemented under the hood with an overlay operation. If you want
- *           to push a no-op, use `cf_color_grey` to apply no tinting at all.
- * @related  cf_draw_push_tint cf_draw_pop_tint cf_draw_peek_tint
- */
-CF_API void CF_CALL cf_draw_push_tint(CF_Color c);
-
-/**
- * @function cf_draw_pop_tint
- * @category draw
- * @brief    Pops and returns the last tint color.
- * @remarks  Sprites and shapes can be tinted. This is useful for certain effects such as damage flashes.
- *           Tint is implemented under the hood with an overlay operation. If you want to push a no-op, use
- *           `cf_color_grey` to apply no tinting at all.
- * @related  cf_draw_push_tint cf_draw_pop_tint cf_draw_peek_tint
- */
-CF_API CF_Color CF_CALL cf_draw_pop_tint();
-
-/**
- * @function cf_draw_peek_tint
- * @category draw
- * @brief    Returns the last tint color.
- * @remarks  Sprites and shapes can be tinted. This is useful for certain effects such as damage flashes.
- * @related  cf_draw_push_tint cf_draw_pop_tint cf_draw_peek_tint
- */
-CF_API CF_Color CF_CALL cf_draw_peek_tint();
-
-/**
  * @function cf_draw_push_antialias
  * @category draw
  * @brief    Pushes whether or not to apply antialiasing.
@@ -1597,9 +1565,6 @@ CF_INLINE int draw_peek_layer() { return cf_draw_peek_layer(); }
 CF_INLINE void draw_push_color(Color c) { cf_draw_push_color(c); }
 CF_INLINE Color draw_pop_color() { return cf_draw_pop_color(); }
 CF_INLINE Color draw_peek_color() { return cf_draw_peek_color(); }
-CF_INLINE void draw_push_tint(Color c) { cf_draw_push_tint(c); }
-CF_INLINE Color draw_pop_tint() { return cf_draw_pop_tint(); }
-CF_INLINE Color draw_peek_tint() { return cf_draw_peek_tint(); }
 CF_INLINE void draw_push_antialias(bool antialias) { cf_draw_push_antialias(antialias); }
 CF_INLINE bool draw_pop_antialias() { return cf_draw_pop_antialias(); }
 CF_INLINE bool draw_peek_antialias() { return cf_draw_peek_antialias(); }

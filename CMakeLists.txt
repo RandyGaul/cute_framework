@@ -447,7 +447,6 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 		add_executable(basicinput samples/basic_input.c)
 		add_executable(windowevents samples/window_events.c)
 		add_executable(window samples/window.cpp)
-		add_executable(tint samples/tint.cpp)
 		add_executable(docsparser samples/docs_parser.cpp)
 		add_executable(scratch samples/scratch.cpp)
 		add_executable(https samples/https.c)
@@ -473,7 +472,6 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 			basicinput
 			windowevents
 			window
-			tint
 			docsparser
 			scratch
 			https
