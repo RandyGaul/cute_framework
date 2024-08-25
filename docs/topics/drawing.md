@@ -202,7 +202,7 @@ The `color` param is the color that would be rendered if you don't make any modi
 
 `atlas_uv` is the uv corresponding to the texel within `u_image`, the atlas CF has generated behinds the scenes for any sprites to be drawn. You can freely access `u_image` and use `atlas_uv` for this particular fragment, such as for multisampling algorithms. For pixel art games it's important to sample using the function `smooth_uv`, something like so: `smooth_uv(v_uv, u_texture_size)` to generate a uv coordinate that will scale pixel art correctly.
 
-`screen_uv` is a position relative to the screen, where (0,0) is the bottom left, and (1,1) is the top right of the screen.
+`screen_uv` is a position relative to the screen, where (0,0) is the top-left, and (1,1) is the bottom-right of the screen.
 
 `params` are four optional floats. They come from vertex attributes set by [cf_draw_push_vertex_attributes](https://randygaul.github.io/cute_framework/#/draw/cf_draw_push_vertex_attributes). Each different item drawn through CF's draw API will attach the previously pushed attributes onto their vertices. These four floats are general-purpose, and only used to pass into the `shader` function. Use them to pack information to implement your own custom visual FX. In the above example `pamams.a` is used to mix between the draw color or from a custom color packed into `params.rgb`.
 
