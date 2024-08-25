@@ -255,6 +255,9 @@ set(CF_LINK_LIBS ${CF_LINK_LIBS} physfs)
 
 # Add s2n for Linux builds.
 if(LINUX)
+	# Ensure tests are not built.
+	set(BUILD_TESTING OFF CACHE BOOL "Disable building s2n tests." FORCE)
+	
 	FetchContent_Declare(
 		s2n
 		URL https://github.com/aws/s2n-tls/archive/refs/tags/v1.3.46.zip
