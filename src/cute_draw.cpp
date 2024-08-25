@@ -505,7 +505,6 @@ void cf_destroy_draw()
 	spritebatch_term(&draw->sb);
 	cf_destroy_mesh(draw->mesh);
 	cf_destroy_material(draw->material);
-	cf_destroy_shader(draw->shaders[0]);
 	draw->~CF_Draw();
 	CF_FREE(draw);
 }

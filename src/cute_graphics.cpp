@@ -1052,7 +1052,7 @@ void cf_unload_internal_shaders()
 	cf_destroy_shader(app->draw_shader);
 	cf_destroy_shader(app->basic_shader);
 	cf_destroy_shader(app->backbuffer_shader);
-#ifdef CF_RUNTIME_SHADER_COMPIILATION
+#ifdef CF_RUNTIME_SHADER_COMPILATION
 	glslang::FinalizeProcess();
 #endif
 }
