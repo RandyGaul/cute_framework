@@ -1942,6 +1942,7 @@ void cs_shutdown()
 
 	SDL_DestroyMutex(s_ctx->mutex);
 	SDL_CloseAudioDevice(s_ctx->dev);
+	SDL_WaitThread(s_ctx->thread, NULL);
 
 #endif
 

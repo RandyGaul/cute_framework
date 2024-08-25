@@ -1047,8 +1047,11 @@ void cf_load_internal_shaders()
 	app->backbuffer_shader = s_compile(s_backbuffer_vs, s_backbuffer_fs, true, NULL);
 }
 
-void cf_unload_shader_compiler()
+void cf_unload_internal_shaders()
 {
+	cf_destroy_shader(app->draw_shader);
+	cf_destroy_shader(app->basic_shader);
+	cf_destroy_shader(app->backbuffer_shader);
 #ifdef CF_RUNTIME_SHADER_COMPIILATION
 	glslang::FinalizeProcess();
 #endif
@@ -1093,6 +1096,9 @@ void cf_destroy_shader(CF_Shader shader_handle)
 	CF_ShaderInternal* shd = (CF_ShaderInternal*)shader_handle.id;
 	SDL_GpuReleaseShader(app->device, shd->vs);
 	SDL_GpuReleaseShader(app->device, shd->fs);
+	for (int i = 0; i < shd->pip_cache.count(); ++i) {
+		SDL_GpuReleaseGraphicsPipeline(app->device, shd->pip_cache[i].pip);
+	}
 	shd->~CF_ShaderInternal();
 	CF_FREE(shd);
 }

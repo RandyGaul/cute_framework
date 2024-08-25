@@ -372,7 +372,7 @@ void cf_destroy_app()
 	}
 	if (app->gfx_enabled) {
 		cf_destroy_draw();
-		cf_unload_shader_compiler();
+		cf_unload_internal_shaders();
 		cf_destroy_canvas(app->offscreen_canvas);
 		cf_destroy_mesh(app->backbuffer_quad);
 		cf_destroy_material(app->backbuffer_material);

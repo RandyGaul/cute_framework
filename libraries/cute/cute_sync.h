@@ -1284,6 +1284,9 @@ void cute_threadpool_destroy(cute_threadpool_t* pool)
 		cute_thread_wait(pool->threads[i]);
 	}
 
+	cute_semaphore_destroy(&pool->semaphore);
+	cute_mutex_destroy(&pool->sem_mutex);
+	cute_mutex_destroy(&pool->task_mutex);
 	cute_free_aligned(pool->tasks, pool->mem_ctx);
 	cute_free_aligned(pool->threads, pool->mem_ctx);
 	void* mem_ctx = pool->mem_ctx;
