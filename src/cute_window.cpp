@@ -8,5 +8,5 @@
 #include <cute_window.h>
 
 #include <internal/cute_app_internal.h>
-#include <SDL.h>
+#include <SDL3/SDL.h>
 

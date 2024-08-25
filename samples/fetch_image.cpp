@@ -1,16 +1,15 @@
 #include <cute.h>
 #include "imgui.h"
-#include <sokol/sokol_gfx_imgui.h>
 
 // Example program showing cf_fetch_image for rendering textures within Dear ImGui windows
 
 int main(int argc, char *argv[])
 {
-	int options = CF_APP_OPTIONS_WINDOW_POS_CENTERED | CF_APP_OPTIONS_RESIZABLE;
+	int options = CF_APP_OPTIONS_WINDOW_POS_CENTERED_BIT | CF_APP_OPTIONS_RESIZABLE_BIT;
 	CF_Result result = cf_make_app("cute imgui image test", 0, 0, 0, 640, 480, options, argv[0]);
 	if (cf_is_error(result)) return -1;
 	
-	cf_app_init_imgui(false);
+	cf_app_init_imgui();
 	
 	CF_Sprite sprite = cf_make_demo_sprite();
 	sprite.scale = cf_mul_v2_f(sprite.scale, 3.0f);
@@ -39,8 +38,8 @@ int main(int argc, char *argv[])
 		ImGui::Begin("Sprite");
 		{
 			CF_TemporaryImage image = cf_fetch_image(&sprite);
-			
-			ImTextureID id = (ImTextureID)image.tex.id;
+
+			ImTextureID id = (ImTextureID)cf_texture_handle(image.tex);
 			ImVec2 size = { (float)image.w * 5.0f, (float)image.h * 5.0f };
 			// y is flipped
 			ImVec2 uv0 = { image.u.x, image.v.y };
@@ -51,22 +50,6 @@ int main(int argc, char *argv[])
 			ImGui::Image(id, size, uv0, uv1, color, border_color);
 		}
 		ImGui::End();
-		
-		sg_imgui_t* sg_imgui = cf_app_get_sokol_imgui();
-		if (ImGui::BeginMainMenuBar()) 
-		{
-			if (ImGui::BeginMenu("sokol-gfx", true)) 
-			{
-				ImGui::MenuItem("Buffers", NULL, &sg_imgui->buffers.open, true);
-				ImGui::MenuItem("Images", NULL, &sg_imgui->images.open, true);
-				ImGui::MenuItem("Shaders", NULL, &sg_imgui->shaders.open, true);
-				ImGui::MenuItem("Pipelines", NULL, &sg_imgui->pipelines.open, true);
-				ImGui::MenuItem("Passes", NULL, &sg_imgui->passes.open, true);
-				ImGui::MenuItem("Calls", NULL, &sg_imgui->capture.open, true);
-				ImGui::EndMenu();
-			}
-			ImGui::EndMainMenuBar();
-		}
 
 		cf_app_draw_onto_screen(true);
 	}

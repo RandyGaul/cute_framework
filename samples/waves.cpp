@@ -1,8 +1,6 @@
 #include <cute.h>
 #include <imgui/imgui.h>
 
-#include "waves_data/waves_shader.h"
-
 using namespace Cute;
 
 void mount_content_directory_as(const char* dir)
@@ -15,10 +13,8 @@ void mount_content_directory_as(const char* dir)
 
 int main(int argc, char* argv[])
 {
-	int options = APP_OPTIONS_WINDOW_POS_CENTERED | APP_OPTIONS_RESIZABLE;
-	CF_Result result = make_app("Waves Sample", 0, 0, 0, 640, 480, options, argv[0]);
-	if (is_error(result)) return -1;
-
+	make_app("Waves Sample", 0, 0, 0, 640, 480, APP_OPTIONS_WINDOW_POS_CENTERED_BIT | APP_OPTIONS_RESIZABLE_BIT, argv[0]);
+	cf_shader_directory("/waves_data");
 	mount_content_directory_as("/");
 	app_init_imgui();
 
@@ -27,12 +23,11 @@ int main(int argc, char* argv[])
 	CF_ASSERT(png.w == 128);
 	CF_ASSERT(png.h == 128);
 
-	CF_Shader shader = CF_MAKE_SOKOL_SHADER(waves_shader);
+	CF_Shader shader = cf_make_draw_shader("waves.shd");
 
 	CF_TextureParams tex_params = texture_defaults(128, 128);
-	tex_params.initial_data = png.pix;
-	tex_params.initial_data_size = sizeof(CF_Pixel) * png.w * png.h;
 	CF_Texture tex = make_texture(tex_params);
+	texture_update(tex, png.pix, sizeof(CF_Pixel) * png.w * png.h);
 
 	CF_Sprite water1 = make_sprite("/water1.ase");
 	CF_Sprite water2 = make_sprite("/water2.ase");
@@ -78,15 +73,15 @@ int main(int argc, char* argv[])
 		static float time;
 		time += CF_DELTA_TIME * 0.125f * speed;
 		render_settings_push_shader(shader);
-		render_settings_push_uniform("amplitude", amplitude);
-		render_settings_push_uniform("time", time);
-		render_settings_push_uniform("show_noise", show_noise ? 1.0f : 0.0f);
+		render_settings_set_uniform("amplitude", amplitude);
+		render_settings_set_uniform("time", time);
+		render_settings_set_uniform("show_noise", show_noise ? 1.0f : 0.0f);
 		render_settings_push_texture("water_tex", canvas_get_target(offscreen));
 		render_settings_push_texture("noise_tex", tex);
 		draw_push_antialias(false);
 		draw_box_fill(make_aabb(V2(0,0), 640, 480));
 
-		app_draw_onto_screen();
+		app_draw_onto_screen(true);
 	}
 
 	destroy_shader(shader);

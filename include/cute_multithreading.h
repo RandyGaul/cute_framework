@@ -134,21 +134,19 @@ CF_API void CF_CALL cf_destroy_mutex(CF_Mutex* mutex);
  * @category multithreading
  * @brief    Locks a `CF_Mutex`.
  * @param    mutex      The mutex.
- * @return   Returns any errors as a `CF_Result`.
  * @remarks  Will cause the thread to wait until the lock is available if it's currently locked.
  * @related  CF_Mutex cf_make_mutex cf_destroy_mutex cf_mutex_lock cf_mutex_unlock cf_mutex_try_lock
  */
-CF_API CF_Result CF_CALL cf_mutex_lock(CF_Mutex* mutex);
+CF_API void CF_CALL cf_mutex_lock(CF_Mutex* mutex);
 
 /**
  * @function cf_mutex_unlock
  * @category multithreading
  * @brief    Unlocks a `CF_Mutex`.
  * @param    mutex      The mutex.
- * @return   Returns any errors as a `CF_Result`.
  * @related  CF_Mutex cf_make_mutex cf_destroy_mutex cf_mutex_lock cf_mutex_unlock cf_mutex_try_lock
  */
-CF_API CF_Result CF_CALL cf_mutex_unlock(CF_Mutex* mutex);
+CF_API void CF_CALL cf_mutex_unlock(CF_Mutex* mutex);
 
 /**
  * @function cf_mutex_try_lock
@@ -593,8 +591,8 @@ using TaskFn = CF_TaskFn;
 
 CF_INLINE Mutex make_mutex() { return cf_make_mutex(); }
 CF_INLINE void destroy_mutex(Mutex* mutex) { cf_destroy_mutex(mutex); }
-CF_INLINE Result mutex_lock(Mutex* mutex) { return cf_mutex_lock(mutex); }
-CF_INLINE Result mutex_unlock(Mutex* mutex) { return cf_mutex_unlock(mutex); }
+CF_INLINE void mutex_lock(Mutex* mutex) { cf_mutex_lock(mutex); }
+CF_INLINE void mutex_unlock(Mutex* mutex) { cf_mutex_unlock(mutex); }
 CF_INLINE bool Mutexrylock(Mutex* mutex) { return cf_mutex_try_lock(mutex); }
 
 CF_INLINE ConditionVariable make_cv() { return cf_make_cv(); }

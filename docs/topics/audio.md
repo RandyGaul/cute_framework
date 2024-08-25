@@ -30,6 +30,7 @@ You can control music specific settings such as volume, looping, and pause with 
 
 - [`cf_music_set_volume`](https://randygaul.github.io/cute_framework/#/audio/cf_music_set_volume)
 - [`cf_music_set_loop`](https://randygaul.github.io/cute_framework/#/audio/cf_music_set_loop)
+- [`cf_music_set_pitch`](https://randygaul.github.io/cute_framework/#/audio/cf_music_set_pitch)
 - [`cf_music_pause`](https://randygaul.github.io/cute_framework/#/audio/cf_music_pause)
 
 ## Sound FX
@@ -63,7 +64,7 @@ void PlaySound(SoundFX fx, bool loop = false)
 }
 ```
 
-See the page [`CF_SoundParams`](https://randygaul.github.io/cute_framework/#/audio/cf_soundparams) to view all the different settings available. There's more than just looping, including pan, volume, pause state, etc.
+See the page [`CF_SoundParams`](https://randygaul.github.io/cute_framework/#/audio/cf_soundparams) to view all the different settings available. There's more than just looping, including pan, volume, pause state, pitch, etc.
 
 You can play many sound FX all simultaneously, up to many thousands without hitting any kind of performance difference on many platforms.
 

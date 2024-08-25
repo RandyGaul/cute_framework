@@ -227,7 +227,7 @@ struct spritebatch_sprite_t
 };
 
 // Pushes a sprite onto an internal buffer. Does no other logic.
-int spritebatch_push(spritebatch_t* sb, spritebatch_sprite_t sprite);
+void spritebatch_push(spritebatch_t* sb, spritebatch_sprite_t sprite);
 
 // Ensures the image associated with your unique `image_id` is loaded up into spritebatch. This
 // function pretends to draw a sprite referencing `image_id` but doesn't actually do any
@@ -259,6 +259,10 @@ void spritebatch_tick(spritebatch_t* sb);
 // from the image via `get_pixels_fn` and request a texture handle via `generate_texture_handle_fn`.
 // Returns the number of batches created and submitted.
 int spritebatch_flush(spritebatch_t* sb);
+
+// Clears buffers from `spritebatch_flush` in case you need to bail on rendering for any reason, such
+// as working with deferred contexts.
+void spritebatch_clear(spritebatch_t* sb);
 
 // All textures created so far by `spritebatch_flush` will be considered as candidates for creating
 // new internal texture atlases. Internal texture atlases compress images together inside of one
@@ -1202,12 +1206,11 @@ void spritebatch_internal_append_sprite(spritebatch_t* sb, spritebatch_internal_
 	sb->input_buffer[sb->input_count++] = sprite;
 }
 
-int spritebatch_push(spritebatch_t* sb, spritebatch_sprite_t sprite)
+void spritebatch_push(spritebatch_t* sb, spritebatch_sprite_t sprite)
 {
 	spritebatch_internal_sprite_t sprite_out;
 	spritebatch_internal_fill_internal_sprite(sb, sprite, &sprite_out);
 	sb->input_buffer[sb->input_count++] = sprite_out;
-	return 1;
 }
 
 void spritebatch_register_premade_atlas(spritebatch_t* sb, SPRITEBATCH_U64 texture_id, int w, int h, int sprite_count, spritebatch_premade_sprite_t* sprites)
@@ -1546,7 +1549,9 @@ int spritebatch_flush(spritebatch_t* sb)
 	for (int i = 0; i < texture_count; ++i)
 	{
 		spritebatch_internal_lonely_texture_t* lonely = lonely_textures + i;
-		if (lonely->texture_id == ~0) lonely->texture_id = spritebatch_internal_generate_texture_handle(sb, lonely->image_id, lonely->w, lonely->h);
+		if (lonely->texture_id == ~0) {
+			lonely->texture_id = spritebatch_internal_generate_texture_handle(sb, lonely->image_id, lonely->w, lonely->h);
+		}
 	}
 
 	// sort internal sprite buffer and submit batches
@@ -1621,6 +1626,12 @@ int spritebatch_flush(spritebatch_t* sb)
 	}
 
 	return count;
+}
+
+void spritebatch_clear(spritebatch_t* sb)
+{
+	sb->input_count = 0;
+	sb->sprite_count = 0;
 }
 
 typedef struct

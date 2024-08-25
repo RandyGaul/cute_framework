@@ -24,4 +24,4 @@ texture | The texture.
 [CF_TextureParams](/graphics/cf_textureparams.md)  
 [CF_Texture](/graphics/cf_texture.md)  
 [cf_make_texture](/graphics/cf_make_texture.md)  
-[cf_update_texture](/graphics/cf_update_texture.md)  
+[cf_texture_update](/graphics/cf_texture_update.md)  

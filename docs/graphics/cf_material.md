@@ -18,17 +18,6 @@ variables inside of a shader stage (either the vertex or fragment shaders). For 
 uniforms are packed into a "uniform buffer", a contiguous chunk of memory on the GPU. We must
 specify which uniform buffer each uniform belongs to.
 
-A material can hold a large number of inputs, though there are hard-limits on how many inputs
-an individual shader can accept, especially to keep shaders as cross-platform compatible as
-possible.
-
-When using sokol-shdc (see [CF_MAKE_SOKOL_SHADER](/graphics/cf_make_sokol_shader.md)) it will naturally enforce these limits for you, such as:
-
-- Max number of uniform buffers for each shader stage (4)
-- Max number of uniforms in a uniform buffer (16)
-- Max number of vertex attributes (16)
-- Max number of textures for each shader stag (12)
-
 ## Related Pages
 
 [CF_Texture](/graphics/cf_texture.md)  

@@ -24,11 +24,10 @@ PIXELFORMAT_OP_DEPTH | Performs hardware-accelerated depth-culling.
 
 ## Remarks
 
-Not all types are supported on each backend. Be sure to check with [cf_query_pixel_format](/graphics/cf_query_pixel_format.md) if a particular pixel format
+Not all types are supported on each backend. Be sure to check with `cf_query_pixel_format` if a particular pixel format
 is available for your use-case.
 
 ## Related Pages
 
 [CF_PixelFormat](/graphics/cf_pixelformat.md)  
 [cf_pixel_format_op_to_string](/graphics/cf_pixel_format_op_to_string.md)  
-[cf_query_pixel_format](/graphics/cf_query_pixel_format.md)  

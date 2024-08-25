@@ -18,6 +18,8 @@ Enum | Description
 BLEND_OP_ADD | Add.
 BLEND_OP_SUBTRACT | Subtract, A - B.
 BLEND_OP_REVERSE_SUBTRACT | Reverse subtract, B - A.
+BLEND_OP_MIN | Minimum value.
+BLEND_OP_MAX | Maximum value.
 
 ## Remarks
 

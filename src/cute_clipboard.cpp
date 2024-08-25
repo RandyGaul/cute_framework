@@ -6,7 +6,7 @@
 */
 
 #include <cute_clipboard.h>
-#include <SDL_clipboard.h>
+#include <SDL3/SDL_clipboard.h>
 
 char* cf_clipboard_get()
 {

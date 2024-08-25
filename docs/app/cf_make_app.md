@@ -12,7 +12,7 @@ GitHub: [cute_app.h](https://github.com/RandyGaul/cute_framework/blob/master/inc
 Use this function to construct an instance of your application window and (optionally) initialize graphics.
 
 ```cpp
-CF_Result cf_make_app(const char* window_title, int display_index, int x, int y, int w, int h, int options, const char* argv0);
+CF_Result cf_make_app(const char* window_title, int display_index, int x, int y, int w, int h, CF_AppOptionFlags options, const char* argv0);
 ```
 
 Parameters | Description
@@ -41,7 +41,7 @@ using namespace cute;
 int main(int argc, const char argv)
 {
     // Create a window with a resolution of 640 x 480, along with a DirectX 11 context.
-    app_make("Fancy Window Title", 50, 50, 640, 480, CF_APP_OPTIONS_D3D11_CONTEXT, argv[0]);
+    app_make("Fancy Window Title", 0, 50, 50, 640, 480, CF_APP_OPTIONS_RESIZABLE_BIT, argv[0]);
     
     while (app_is_running())
     {
@@ -63,7 +63,7 @@ Parameters `w` and `h` are ignored if the window is initialized to fullscreen mo
 
 ## Related Pages
 
-[CF_AppOptions](/app/cf_appoptions.md)  
+[CF_AppOptionFlagBits](/app/cf_appoptionflagbits.md)  
 [cf_app_is_running](/app/cf_app_is_running.md)  
 [cf_app_signal_shutdown](/app/cf_app_signal_shutdown.md)  
 [cf_destroy_app](/app/cf_destroy_app.md)  

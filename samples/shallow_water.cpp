@@ -1,8 +1,6 @@
 #include <cute.h>
 #include <imgui/imgui.h>
 
-#include "shallow_water_data/shallow_water_shader.h"
-
 using namespace Cute;
 
 void mount_content_directory_as(const char* dir)
@@ -26,17 +24,15 @@ CF_Pixel* get_noise(int w, int h, float time)
 
 int main(int argc, char* argv[])
 {
-	int options = APP_OPTIONS_WINDOW_POS_CENTERED | APP_OPTIONS_RESIZABLE;
-	CF_Result result = make_app("Shallow Water Sample", 0, 0, 0, 640, 480, options, argv[0]);
-	if (is_error(result)) return -1;
-
+	make_app("Shallow Water Sample", 0, 0, 0, 640, 480, APP_OPTIONS_WINDOW_POS_CENTERED_BIT | APP_OPTIONS_RESIZABLE_BIT, argv[0]);
+	cf_shader_directory("/shallow_water_data");
 	mount_content_directory_as("/");
 	app_init_imgui();
 
 	int W = 160;
 	int H = 120;
 
-	CF_Shader shader = CF_MAKE_SOKOL_SHADER(shallow_water_shader);
+	CF_Shader shader = cf_make_draw_shader("shallow_water.shd");
 	CF_Canvas offscreen = make_canvas(canvas_defaults(160, 120));
 	CF_Canvas scene_canvas = make_canvas(canvas_defaults(160, 120));
 
@@ -73,14 +69,13 @@ int main(int argc, char* argv[])
 
 	float time = 0;
 	CF_TextureParams tex_params = texture_defaults(W, H);
-	tex_params.usage = USAGE_TYPE_STREAM;
 	CF_Texture noise_tex = make_texture(tex_params);
 	CF_Sprite scene = make_sprite("/scene.ase");
 
 	while (app_is_running()) {
 		time += CF_DELTA_TIME;
 		CF_Pixel* noise = get_noise(W, H, time);
-		update_texture(noise_tex, noise, sizeof(CF_Pixel) * W * H);
+		texture_update(noise_tex, noise, sizeof(CF_Pixel) * W * H);
 		cf_free(noise);
 
 		app_update();
@@ -94,7 +89,7 @@ int main(int argc, char* argv[])
 		ImGui::End();
 
 		if (mouse_just_pressed(MOUSE_BUTTON_LEFT)) {
-			add_spawner(mouse_x(), mouse_y());
+			add_spawner((int)mouse_x(), (int)mouse_y());
 		}
 
 		for (int i = 0; i < spawners.size(); ++i) {
@@ -138,11 +133,11 @@ int main(int argc, char* argv[])
 		render_settings_push_texture("wavelets_tex", canvas_get_target(offscreen));
 		render_settings_push_texture("noise_tex", noise_tex);
 		render_settings_push_texture("scene_tex", canvas_get_target(scene_canvas));
-		render_settings_push_uniform("show_noise", show_noise ? 1.0f : 0.0f);
-		render_settings_push_uniform("show_normals", show_normals ? 1.0f : 0.0f);
+		render_settings_set_uniform("show_noise", show_noise ? 1.0f : 0.0f);
+		render_settings_set_uniform("show_normals", show_normals ? 1.0f : 0.0f);
 		draw_push_antialias(false);
 		draw_box(V2(0,0), (float)W, (float)H);
-		app_draw_onto_screen();
+		app_draw_onto_screen(false);
 	}
 
 	destroy_shader(shader);

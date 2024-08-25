@@ -3,7 +3,7 @@
 
 int main(int argc, char* argv[])
 {
-	int options = CF_APP_OPTIONS_WINDOW_POS_CENTERED | CF_APP_OPTIONS_RESIZABLE;
+	int options = CF_APP_OPTIONS_WINDOW_POS_CENTERED_BIT | CF_APP_OPTIONS_RESIZABLE_BIT;
 	CF_Result result = cf_make_app("Noise Sample", 0, 0, 0, 640, 480, options, argv[0]);
 	if (cf_is_error(result)) return -1;
 

@@ -15,10 +15,6 @@ Draws the app onto the screen.
 int cf_app_draw_onto_screen(bool clear);
 ```
 
-Parameters | Description
---- | ---
-clear | Default to true. Will clear the previous screen's contents to the clear color if true.
-
 ## Return Value
 
 Returns the number of draw calls for this frame.
@@ -34,7 +30,7 @@ using namespace cute;
 int main(int argc, const char argv)
 {
     // Create a window with a resolution of 640 x 480, along with a DirectX 11 context.
-    app_make("Fancy Window Title", 50, 50, 640, 480, CF_APP_OPTIONS_D3D11_CONTEXT, argv[0]);
+    app_make("Fancy Window Title", 0, 50, 50, 640, 480, CF_APP_OPTIONS_D3D11_CONTEXT, argv[0]);
     
     while (app_is_running())
     {

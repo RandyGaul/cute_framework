@@ -659,7 +659,7 @@ CF_API void CF_CALL cf_register_key_callback(void (*key_callback)(CF_KeyButton k
  * @remarks  (0, 0) is the top-left of the screen, y-downards.
  * @related  CF_MouseButton cf_mouse_down cf_mouse_x cf_mouse_y
  */
-CF_API int CF_CALL cf_mouse_x();
+CF_API float CF_CALL cf_mouse_x();
 
 /**
  * @function cf_mouse_y
@@ -668,7 +668,7 @@ CF_API int CF_CALL cf_mouse_x();
  * @remarks  (0, 0) is the top-left of the screen, y-downwards.
  * @related  CF_MouseButton cf_mouse_down cf_mouse_x cf_mouse_y
  */
-CF_API int CF_CALL cf_mouse_y();
+CF_API float CF_CALL cf_mouse_y();
 
 /**
  * @function cf_mouse_down
@@ -700,7 +700,7 @@ CF_API bool CF_CALL cf_mouse_just_released(CF_MouseButton button);
  * @brief    Returns a signed integer representing by how much the mouse wheel was rotated.
  * @related  CF_MouseButton cf_mouse_down cf_mouse_x cf_mouse_y cf_mouse_just_pressed cf_mouse_just_released cf_mouse_wheel_motion cf_mouse_double_click_held cf_mouse_double_clicked
  */
-CF_API int CF_CALL cf_mouse_wheel_motion();
+CF_API float CF_CALL cf_mouse_wheel_motion();
 
 /**
  * @function cf_mouse_double_click_held
@@ -983,13 +983,13 @@ CF_INLINE bool key_alt() { return cf_key_alt(); }
 CF_INLINE bool key_gui() { return cf_key_gui(); }
 CF_INLINE void clear_key_states() { cf_clear_key_states(); }
 
-CF_INLINE int mouse_x() { return cf_mouse_x(); }
-CF_INLINE int mouse_y() { return cf_mouse_y(); }
+CF_INLINE float mouse_x() { return cf_mouse_x(); }
+CF_INLINE float mouse_y() { return cf_mouse_y(); }
 
 CF_INLINE bool mouse_down(MouseButton button) { return cf_mouse_down(button); }
 CF_INLINE bool mouse_just_pressed(MouseButton button) { return cf_mouse_just_pressed(button); }
 CF_INLINE bool mouse_just_released(MouseButton button) { return cf_mouse_just_released(button); }
-CF_INLINE int mouse_wheel_motion() { return cf_mouse_wheel_motion(); }
+CF_INLINE float mouse_wheel_motion() { return cf_mouse_wheel_motion(); }
 CF_INLINE bool mouse_double_click_held(MouseButton button) { return cf_mouse_double_click_held(button); }
 CF_INLINE bool mouse_double_clicked(MouseButton button) { return cf_mouse_double_clicked(button); }
 CF_INLINE void mouse_hide(bool true_to_hide) { cf_mouse_hide(true_to_hide); }

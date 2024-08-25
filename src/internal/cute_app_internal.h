@@ -19,12 +19,14 @@
 #include <cute_input.h>
 #include <cute_string.h>
 #include <cute_image.h>
+#include <cute_file_system.h>
 
 #include <internal/cute_draw_internal.h>
 #include <internal/cute_font_internal.h>
 #include <internal/cute_ecs_internal.h>
+#include <internal/cute_graphics_internal.h>
 
-#include <sokol/sokol_gfx_imgui.h>
+#include <SDL3/SDL.h>
 
 struct SDL_Window;
 struct cs_context_t;
@@ -36,11 +38,11 @@ struct CF_MouseState
 	int left_button = 0;
 	int right_button = 0;
 	int middle_button = 0;
-	int wheel_motion = 0;
-	int x = 0;
-	int y = 0;
-	int xrel = 0;
-	int yrel = 0;
+	float wheel_motion = 0;
+	float x = 0;
+	float y = 0;
+	float xrel = 0;
+	float yrel = 0;
 	int click_type = 0;
 };
 
@@ -55,6 +57,12 @@ struct CF_WindowState
 	bool moved = false;
 };
 
+struct CF_ShaderFileInfo
+{
+	CF_Stat stat;
+	const char* path;
+};
+
 struct CF_App
 {
 	// App stuff.
@@ -63,14 +71,21 @@ struct CF_App
 	void* platform_handle = NULL;
 	CF_OnUpdateFn* user_on_update = NULL;
 	SDL_Window* window = NULL;
+	SDL_GpuDevice* device = NULL;
 	cs_context_t* cute_sound = NULL;
 	bool spawned_mix_thread = false;
 	CF_Threadpool* threadpool = NULL;
+	void (*on_shader_changed_fn)(const char* path, void* udata) = NULL;
+	void* on_shader_changed_udata = NULL;
+	bool shader_directory_set = false;
+	Cute::Path shader_directory;
+	Cute::Map<const char*, CF_ShaderFileInfo> shader_file_infos;
+	Cute::Map<const char*, const char*> builtin_shaders;
 	bool gfx_enabled = false;
-	sg_context_desc gfx_ctx_params;
 	float dpi_scale = 1.0f;
 	float dpi_scale_prev = 1.0f;
 	bool dpi_scale_was_changed = false;
+	bool sync_window = false;
 	int w;
 	int h;
 	int x;
@@ -78,24 +93,23 @@ struct CF_App
 	int draw_call_count = 0;
 	int canvas_w;
 	int canvas_h;
+	CF_Color clear_color = cf_color_black();
+	float clear_depth = 1.0f;
+	uint32_t clear_stencil = 0;
 	CF_Canvas offscreen_canvas = { };
-	CF_Canvas backbuffer_canvas = { };
 	CF_Mesh backbuffer_quad = { };
+	CF_Shader draw_shader = { };
+	CF_Shader basic_shader = { };
 	CF_Shader backbuffer_shader = { };
 	CF_Material backbuffer_material = { };
 	CF_WindowState window_state;
 	CF_WindowState window_state_prev;
-	bool using_imgui = false;
-	sg_imgui_t sg_imgui;
+	SDL_GpuCommandBuffer* cmd = NULL;
+	bool use_depth_stencil = false;
 	uint64_t default_image_id = CF_PNG_ID_RANGE_LO;
 	bool vsync = false;
-	bool use_gl = false;
 	bool audio_needs_updates = false;
 	void* update_udata = NULL;
-	bool canvas_blit_init = false;
-	CF_Mesh blit_mesh;
-	CF_Material blit_material;
-	CF_Shader blit_shader;
 	bool on_sound_finish_single_threaded = false;
 	Cute::Array<CF_Sound> on_sound_finish_queue;
 	void (*on_sound_finish)(CF_Sound, void*) = NULL;
@@ -117,6 +131,18 @@ struct CF_App
 	CF_MouseState mouse, mouse_prev;
 	CF_List joypads;
 	Cute::Array<CF_Touch> touches;
+
+	// Dear ImGui stuff.
+	bool using_imgui = false;
+	SDL_GpuSampler* imgui_sampler = NULL;
+	int imgui_vertex_count = 0;
+	int imgui_index_count = 0;
+	SDL_GpuBuffer* imgui_vbuf = NULL;
+	SDL_GpuBuffer* imgui_ibuf = NULL;
+	SDL_GpuTransferBuffer* imgui_vtbuf = NULL;
+	SDL_GpuTransferBuffer* imgui_itbuf = NULL;
+	SDL_GpuGraphicsPipeline* imgui_pip = NULL;
+	SDL_GpuTexture* imgui_font_tex = NULL;
 
 	// ECS stuff.
 	CF_SystemInternal system_internal_builder;

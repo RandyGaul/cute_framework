@@ -21,8 +21,6 @@ shader | A shader.
 
 ## Related Pages
 
-[CF_MAKE_SOKOL_SHADER](/graphics/cf_make_sokol_shader.md)  
-[CF_SokolShader](/graphics/cf_sokolshader.md)  
 [CF_Shader](/graphics/cf_shader.md)  
 [cf_make_shader](/graphics/cf_make_shader.md)  
 [CF_Material](/graphics/cf_material.md)  

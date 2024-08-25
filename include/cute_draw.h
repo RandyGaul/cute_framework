@@ -386,38 +386,6 @@ CF_API CF_Color CF_CALL cf_draw_pop_color();
 CF_API CF_Color CF_CALL cf_draw_peek_color();
 
 /**
- * @function cf_draw_push_tint
- * @category draw
- * @brief    Pushes a tint color.
- * @param    c          The color.
- * @remarks  Sprites and shapes can be tinted. This is useful for certain effects such as damage flashes, or
- *           dynamic color variations. Tint is implemented under the hood with an overlay operation. If you want
- *           to push a no-op, use `cf_color_grey` to apply no tinting at all.
- * @related  cf_draw_push_tint cf_draw_pop_tint cf_draw_peek_tint
- */
-CF_API void CF_CALL cf_draw_push_tint(CF_Color c);
-
-/**
- * @function cf_draw_pop_tint
- * @category draw
- * @brief    Pops and returns the last tint color.
- * @remarks  Sprites and shapes can be tinted. This is useful for certain effects such as damage flashes.
- *           Tint is implemented under the hood with an overlay operation. If you want to push a no-op, use
- *           `cf_color_grey` to apply no tinting at all.
- * @related  cf_draw_push_tint cf_draw_pop_tint cf_draw_peek_tint
- */
-CF_API CF_Color CF_CALL cf_draw_pop_tint();
-
-/**
- * @function cf_draw_peek_tint
- * @category draw
- * @brief    Returns the last tint color.
- * @remarks  Sprites and shapes can be tinted. This is useful for certain effects such as damage flashes.
- * @related  cf_draw_push_tint cf_draw_pop_tint cf_draw_peek_tint
- */
-CF_API CF_Color CF_CALL cf_draw_peek_tint();
-
-/**
  * @function cf_draw_push_antialias
  * @category draw
  * @brief    Pushes whether or not to apply antialiasing.
@@ -1205,6 +1173,27 @@ CF_API CF_RenderState CF_CALL cf_render_settings_peek_render_state();
 CF_API void CF_CALL cf_render_settings_set_atlas_dimensions(int width_in_pixels, int height_in_pixels);
 
 /**
+ * @function cf_make_draw_shader
+ * @category draw
+ * @brief    Creates a custom draw shader.
+ * @remarks  Your shader must be written in GLSL 450, and must follow some specific rules to be compatible with the draw API. For more in-depth explanations,
+ *           see CF's docs on [Draw Shaders](https://randygaul.github.io/cute_framework/#/topics/drawing?id=shaders). Make sure to call `cf_shader_directory` first.
+ * @related  CF_Shader cf_render_settings_push_shader cf_render_settings_pop_shader cf_render_settings_peek_shader cf_make_draw_shader_from_source
+ */
+CF_API CF_Shader CF_CALL cf_make_draw_shader(const char* path);
+
+/**
+ * @function cf_make_draw_shader_from_source
+ * @category draw
+ * @brief    Creates a custom draw shader from source string.
+ * @remarks  Your shader must be written in GLSL 450, and must follow some specific rules to be compatible with the draw API. For more in-depth explanations,
+ *           see CF's docs on [Draw Shaders](https://randygaul.github.io/cute_framework/#/topics/drawing?id=shaders). If you wish to include other files into
+ *           your shader via `#include` make sure to call `cf_shader_directory` first.
+ * @related  CF_Shader cf_render_settings_push_shader cf_render_settings_pop_shader cf_render_settings_peek_shader
+ */
+CF_API CF_Shader CF_CALL cf_make_draw_shader_from_source(const char* src);
+
+/**
  * @function cf_render_settings_push_shader
  * @category draw
  * @brief    Pushes a custom shader.
@@ -1238,53 +1227,53 @@ CF_API CF_Shader CF_CALL cf_render_settings_peek_shader();
  * @param    name     The name of the uniform this texture will bind to.
  * @param    texture  The texture to bind.
  * @remarks  This is useful for custom shaders. See `cf_render_settings_push_shader`.
- * @related  cf_render_settings_push_texture cf_render_settings_push_uniform cf_render_settings_push_uniform_int cf_render_settings_push_uniform_float cf_render_settings_push_uniform_v2 cf_render_settings_push_uniform_color
+ * @related  cf_render_settings_push_texture cf_render_settings_set_uniform cf_render_settings_set_uniform_int cf_render_settings_set_uniform_float cf_render_settings_set_uniform_v2 cf_render_settings_set_uniform_color
  */
 CF_API void CF_CALL cf_render_settings_push_texture(const char* name, CF_Texture texture);
 
 /**
- * @function cf_render_settings_push_uniform
+ * @function cf_render_settings_set_uniform
  * @category draw
  * @brief    Pushes a uniform and binds it by name.
  * @param    name          The name of the uniform in the shader.
  * @param    data          A pointer to the data to send to the shader.
  * @param    type          The `CF_UniformType` of data to send.
  * @param    array_length  The numeber of elements of `CF_UniformType` to send.
- * @related  cf_render_settings_push_texture cf_render_settings_push_uniform cf_render_settings_push_uniform_int cf_render_settings_push_uniform_float cf_render_settings_push_uniform_v2 cf_render_settings_push_uniform_color
+ * @related  cf_render_settings_push_texture cf_render_settings_set_uniform cf_render_settings_set_uniform_int cf_render_settings_set_uniform_float cf_render_settings_set_uniform_v2 cf_render_settings_set_uniform_color
  */
-CF_API void CF_CALL cf_render_settings_push_uniform(const char* name, void* data, CF_UniformType type, int array_length);
+CF_API void CF_CALL cf_render_settings_set_uniform(const char* name, void* data, CF_UniformType type, int array_length);
 
 /**
- * @function cf_render_settings_push_uniform_int
+ * @function cf_render_settings_set_uniform_int
  * @category draw
  * @brief    Pushes an integer uniform by name.
- * @related  cf_render_settings_push_texture cf_render_settings_push_uniform cf_render_settings_push_uniform_int cf_render_settings_push_uniform_float cf_render_settings_push_uniform_v2 cf_render_settings_push_uniform_color
+ * @related  cf_render_settings_push_texture cf_render_settings_set_uniform cf_render_settings_set_uniform_int cf_render_settings_set_uniform_float cf_render_settings_set_uniform_v2 cf_render_settings_set_uniform_color
  */
-CF_API void CF_CALL cf_render_settings_push_uniform_int(const char* name, int val);
+CF_API void CF_CALL cf_render_settings_set_uniform_int(const char* name, int val);
 
 /**
- * @function cf_render_settings_push_uniform_float
+ * @function cf_render_settings_set_uniform_float
  * @category draw
  * @brief    Pushes a float uniform by name.
- * @related  cf_render_settings_push_texture cf_render_settings_push_uniform cf_render_settings_push_uniform_int cf_render_settings_push_uniform_float cf_render_settings_push_uniform_v2 cf_render_settings_push_uniform_color
+ * @related  cf_render_settings_push_texture cf_render_settings_set_uniform cf_render_settings_set_uniform_int cf_render_settings_set_uniform_float cf_render_settings_set_uniform_v2 cf_render_settings_set_uniform_color
  */
-CF_API void CF_CALL cf_render_settings_push_uniform_float(const char* name, float val);
+CF_API void CF_CALL cf_render_settings_set_uniform_float(const char* name, float val);
 
 /**
- * @function cf_render_settings_push_uniform_v2
+ * @function cf_render_settings_set_uniform_v2
  * @category draw
  * @brief    Pushes a vector uniform by name.
- * @related  cf_render_settings_push_texture cf_render_settings_push_uniform cf_render_settings_push_uniform_int cf_render_settings_push_uniform_float cf_render_settings_push_uniform_v2 cf_render_settings_push_uniform_color
+ * @related  cf_render_settings_push_texture cf_render_settings_set_uniform cf_render_settings_set_uniform_int cf_render_settings_set_uniform_float cf_render_settings_set_uniform_v2 cf_render_settings_set_uniform_color
  */
-CF_API void CF_CALL cf_render_settings_push_uniform_v2(const char* name, CF_V2 val);
+CF_API void CF_CALL cf_render_settings_set_uniform_v2(const char* name, CF_V2 val);
 
 /**
- * @function cf_render_settings_push_uniform_color
+ * @function cf_render_settings_set_uniform_color
  * @category draw
  * @brief    Pushes a color uniform by name.
- * @related  cf_render_settings_push_texture cf_render_settings_push_uniform cf_render_settings_push_uniform_int cf_render_settings_push_uniform_float cf_render_settings_push_uniform_v2 cf_render_settings_push_uniform_color
+ * @related  cf_render_settings_push_texture cf_render_settings_set_uniform cf_render_settings_set_uniform_int cf_render_settings_set_uniform_float cf_render_settings_set_uniform_v2 cf_render_settings_set_uniform_color
  */
-CF_API void CF_CALL cf_render_settings_push_uniform_color(const char* name, CF_Color val);
+CF_API void CF_CALL cf_render_settings_set_uniform_color(const char* name, CF_Color val);
 
 /**
  * @function cf_draw_transform
@@ -1435,7 +1424,6 @@ CF_V2 cf_screen_to_world(CF_V2 point);
  * @category draw
  * @brief    Renders to a `CF_Canvas`.
  * @param    canvas     The canvas to render to.
- * @param    clear      True to clear the canvas's previous contents, false otherwise.
  * @remarks  This is advanced function. It's useful for off-screen rendering for certain rendering effects, such as multi-pass
  *           effects like reflections, or advanced lighting techniques. By default, everything will get renderered to the app's
  *           canvas, so this function is not necessary to call at all. Instead, calling `cf_app_draw_onto_screen` should be the go-to.
@@ -1573,6 +1561,7 @@ CF_INLINE void draw_box_rounded(Aabb bb, float thickness = 1.0f, float chubbines
 CF_INLINE void draw_box_rounded_fill(Aabb bb, float chubbiness = 0) { cf_draw_box_rounded_fill(bb, chubbiness); }
 CF_INLINE void draw_box_fill(Aabb bb, float chubbiness = 0) { cf_draw_quad_fill(bb, chubbiness); }
 CF_INLINE void draw_box_fill(v2 p0, v2 p1, v2 p2, v2 p3, float chubbiness = 0) { cf_draw_quad_fill2(p0, p1, p2, p3, chubbiness); }
+CF_INLINE void draw_box_fill(v2 p, float w, float h, float chubbiness = 0) { cf_draw_quad_fill(make_aabb(p, w, h), chubbiness); }
 CF_INLINE void draw_circle(Circle circle, float thickness = 1.0f) { cf_draw_circle(circle, thickness); }
 CF_INLINE void draw_circle(v2 p, float r, float thickness = 1.0f) { cf_draw_circle2(p, r, thickness); }
 CF_INLINE void draw_circle_fill(Circle circle) { cf_draw_circle_fill(circle); }
@@ -1595,9 +1584,6 @@ CF_INLINE int draw_peek_layer() { return cf_draw_peek_layer(); }
 CF_INLINE void draw_push_color(Color c) { cf_draw_push_color(c); }
 CF_INLINE Color draw_pop_color() { return cf_draw_pop_color(); }
 CF_INLINE Color draw_peek_color() { return cf_draw_peek_color(); }
-CF_INLINE void draw_push_tint(Color c) { cf_draw_push_tint(c); }
-CF_INLINE Color draw_pop_tint() { return cf_draw_pop_tint(); }
-CF_INLINE Color draw_peek_tint() { return cf_draw_peek_tint(); }
 CF_INLINE void draw_push_antialias(bool antialias) { cf_draw_push_antialias(antialias); }
 CF_INLINE bool draw_pop_antialias() { return cf_draw_pop_antialias(); }
 CF_INLINE bool draw_peek_antialias() { return cf_draw_peek_antialias(); }
@@ -1702,11 +1688,11 @@ CF_INLINE void render_settings_push_shader(Shader shader) { cf_render_settings_p
 CF_INLINE Shader render_settings_pop_shader() { return cf_render_settings_pop_shader(); }
 CF_INLINE Shader render_settings_peek_shader() { return cf_render_settings_peek_shader(); }
 CF_INLINE void render_settings_push_texture(const char* name, Texture texture) { cf_render_settings_push_texture(name, texture); }
-CF_INLINE void render_settings_push_uniform(const char* name, void* data, UniformType type, int array_length) { cf_render_settings_push_uniform(name, data, type, array_length); }
-CF_INLINE void render_settings_push_uniform(const char* name, int val) { cf_render_settings_push_uniform_int(name, val); }
-CF_INLINE void render_settings_push_uniform(const char* name, float val) { cf_render_settings_push_uniform_float(name, val); }
-CF_INLINE void render_settings_push_uniform(const char* name, v2 val) { cf_render_settings_push_uniform_v2(name, val); }
-CF_INLINE void render_settings_push_uniform(const char* name, Color val) { cf_render_settings_push_uniform_color(name, val); }
+CF_INLINE void render_settings_set_uniform(const char* name, void* data, UniformType type, int array_length) { cf_render_settings_set_uniform(name, data, type, array_length); }
+CF_INLINE void render_settings_set_uniform(const char* name, int val) { cf_render_settings_set_uniform_int(name, val); }
+CF_INLINE void render_settings_set_uniform(const char* name, float val) { cf_render_settings_set_uniform_float(name, val); }
+CF_INLINE void render_settings_set_uniform(const char* name, v2 val) { cf_render_settings_set_uniform_v2(name, val); }
+CF_INLINE void render_settings_set_uniform(const char* name, Color val) { cf_render_settings_set_uniform_color(name, val); }
 
 CF_INLINE void draw_scale(float w, float h) { cf_draw_scale(w, h); }
 CF_INLINE void draw_scale(v2 scale) { cf_draw_scale_v2(scale); }

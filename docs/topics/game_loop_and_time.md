@@ -4,8 +4,6 @@
 
 The [`Time API`](https://randygaul.github.io/cute_framework/#/api_reference?id=time) is all about updating the game and controlling the game's main loop. There are two styles: variable timestep (default) and fixed-timestemp. If you're a beginner then read just the next section on Variable Timestep (and the [Time Utilities](https://randygaul.github.io/cute_framework/#/topics/game_loop_and_time?id=time-utilities) section). The rest of the document covers more advanced use cases.
 
-For beginners: You're just going to want to read the [Variable Timestep](https://randygaul.github.io/cute_framework/#/topics/game_loop_and_time?id=variable-timestep) and the [Time Utilities](https://randygaul.github.io/cute_framework/#/topics/game_loop_and_time?id=time-utilities) section. The other sections are for the advanced use-case [Fixed Timestep](https://randygaul.github.io/cute_framework/#/topics/game_loop_and_time?id=fixed-timestep).
-
 ## Variable Timestep
 
 For many games variable timestep is a good choice. This means the game-tick runs as fast as possible and updates once per visually rendered frame. Each game-tick runs for a slightly variable time duration, since the hardware state changes each frame, and the game itself changes each frame. A time-slice is used to update everything in the game, usually called `dt` or  _delta time_.
@@ -45,19 +43,21 @@ if (cf_between_interval(1.0f)) {
 }
 ```
 
+## Target Framerate
+
+CF has a nifty function called [`cf_set_target_framerate`](https://randygaul.github.io/cute_framework/#/time/cf_set_target_framerate) to try and control how often the application renders. This is _NOT_ the same as the next section on *fixed timestep*. This option will only affect how often the game renders by applying sleeps under the hood. This is a great way to reduce energy consumption and prevent excessive draining of user batteries or electricity. This can effectively pick a target rendering framerate, sort of like vsync. A good number to start with is 60 frames per second.
+
 ## Fixed Timestep
 
 Fixed timestep updates upon a _specific frequency_, as opposed to variable timestep at _some_ frequency. The main benefit is _determinism_, which means to get the same results given the same inputs. Determinism is essential for games that want to things like replays, certain kinds of network synchronization, and in general have predictable or repeatable behavior. For example many platformer games will make sure the game is deterministic so players can achieve very high levels of precision while practicing.
 
 Fixed timestep can be turned on by calling [`cf_set_fixed_timestep`](https://randygaul.github.io/cute_framework/#/time/cf_set_fixed_timestep). You will need to also implement [`CF_OnUpdateFn`](https://randygaul.github.io/cute_framework/#/time/CF_OnUpdateFn) and hand it to [`cf_app_update`](https://randygaul.github.io/cute_framework/#/app/cf_app_update). It will get called once per fixed-timestep.
 
-The application itself can then be setup to run at a target frequency by calling [`cf_set_target_framerate`](https://randygaul.github.io/cute_framework/#/time/cf_set_target_framerate), which is turned off by default. This will sleep the application if it runs too fast, sort of like vsync.
-
 ### Render vs Update Frequency
 
-When fixed timestep is turned on (see previous section) there are two different update frequencies. One is the application update frequency, while the other is the fixed timestep frequency. The default behavior is to run the application as fast as possible, while performing occasional fixed updates. The fixed updates will be issued through [`CF_OnUpdateFn`](https://randygaul.github.io/cute_framework/#/time/CF_OnUpdateFn). It's entirely possible for multiple fixed updates to occur within a single frame, so be prepared!
+When fixed timestep is turned on (see previous section) there are two different update frequencies. One is the application rendering frequency, while the other is the fixed timestep frequency. The default behavior is to run the application as fast as possible, while performing occasional fixed updates. The fixed updates will be issued through [`CF_OnUpdateFn`](https://randygaul.github.io/cute_framework/#/time/CF_OnUpdateFn). It's entirely possible for multiple fixed updates to occur within a single frame, so be prepared!
 
-The application frequency itself can also be controlled with [`cf_set_target_framerate`](https://randygaul.github.io/cute_framework/#/time/cf_set_target_framerate). This can effectively pick a target rendering framerate, sort of like vsync. A good number to start with is 60 frames per second, with a fixed timestep of 30 frames per second, which will give you usually one fixed timestep update every couple of rendered frames.
+The rendering frequency can also be limited with [`cf_set_target_framerate`](https://randygaul.github.io/cute_framework/#/time/cf_set_target_framerate). Please be aware that the rendering frequency, aka the *target framerate* is not the same as the fixed update. Fixed updates happen in discrete chunks, while the rendering speed will oscillate somewhat from frame to frame.
 
 ## Determinism
 
