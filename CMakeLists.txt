@@ -271,19 +271,44 @@ if(WINDOWS AND NOT MSVC)
 	set(CF_LINK_LIBS ${CF_LINK_LIBS} ws2_32 secur32 shlwapi)
 endif()
 
-# Check for Windows platform and link dxcompiler.dll and dxil.dll.
+# This function should be used if you have specified a target-specific runtime output directory,
+# or if you do not wish to specify a default runtime output directory.
+function(target_copy_dxc TARGET)
+	if (DEFINED DXC_DLLS)
+		add_custom_command(TARGET ${TARGET} POST_BUILD
+				COMMAND ${CMAKE_COMMAND} -E copy_if_different
+				${DXC_DLLS}
+				$<TARGET_FILE_DIR:${TARGET}>
+				COMMENT "Copying dxcompiler.dll and dxil.dll to output directory after build."
+		)
+	endif()
+endfunction()
+
+# Check for Windows platform and specify dxcompiler.dll and dxil.dll locations.
 if (WINDOWS)
 	set(DXC_DLL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/libraries/dxc")
 	set(DXC_DLLS "${DXC_DLL_DIR}/dxcompiler.dll" "${DXC_DLL_DIR}/dxil.dll")
 
 	# Check if this project is being included as a subproject.
 	if (NOT CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
-		add_custom_command(TARGET cute POST_BUILD
-			COMMAND ${CMAKE_COMMAND} -E copy_if_different
-			${DXC_DLLS}
-			$<OUTPUT_CONFIG:$<CONFIG>>
-			COMMENT "Copying dxcompiler.dll and dxil.dll to output directory after build."
-		)
+		# Try to copy to a user-defined runtime output directory.
+		foreach (CONFIG_TYPE ${CMAKE_CONFIGURATION_TYPES})
+			string(TOUPPER ${CONFIG_TYPE} CONFIG_TYPE)
+			add_custom_command(TARGET cute POST_BUILD
+					COMMAND ${CMAKE_COMMAND} -E copy_if_different
+					${DXC_DLLS}
+					${CMAKE_RUNTIME_OUTPUT_DIRECTORY_${CONFIG_TYPE}}
+					COMMENT "Copying dxcompiler.dll and dxil.dll to output directory after build."
+			)
+		endforeach()
+		if (DEFINED CMAKE_RUNTIME_OUTPUT_DIRECTORY)
+			add_custom_command(TARGET cute POST_BUILD
+					COMMAND ${CMAKE_COMMAND} -E copy_if_different
+					${DXC_DLLS}
+					${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+					COMMENT "Copying dxcompiler.dll and dxil.dll to output directory after build."
+			)
+		endif()
 	endif()
 endif()
 
@@ -506,11 +531,7 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 				)
 			endif()
 			set_target_properties(${CURRENT_TARGET} PROPERTIES FOLDER "samples")
-			add_custom_command(TARGET ${CURRENT_TARGET} POST_BUILD
-				COMMAND ${CMAKE_COMMAND} -E copy_if_different
-				${DXC_DLLS}
-				$<TARGET_FILE_DIR:${CURRENT_TARGET}>
-			)
+			target_copy_dxc(${CURRENT_TARGET})
 		endforeach()
 
 		# Copy over some folders for certain samples.
