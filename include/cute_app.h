@@ -831,6 +831,7 @@ CF_INLINE bool app_mouse_inside() { return cf_app_mouse_inside(); }
 CF_INLINE int app_get_canvas_width() { return cf_app_get_canvas_width(); }
 CF_INLINE int app_get_canvas_height() { return cf_app_get_canvas_height(); }
 CF_INLINE void app_set_vsync(bool true_turn_on_vsync) { cf_app_set_vsync(true_turn_on_vsync); }
+CF_INLINE void app_set_vsync_mailbox(bool true_turn_on_vsync) { cf_app_set_vsync_mailbox(true_turn_on_vsync); }
 CF_INLINE bool app_get_vsync() { return cf_app_get_vsync(); }
 CF_INLINE void app_set_windowed_mode() { cf_app_set_windowed_mode(); }
 CF_INLINE void app_set_borderless_fullscreen_mode() { cf_app_set_borderless_fullscreen_mode(); }

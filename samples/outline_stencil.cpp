@@ -17,8 +17,11 @@ void set_imgui_scale(float scale)
 
 int main(int argc, char* argv[])
 {
-	make_app("Stencil Outline", 0, 0, 0, (int)(w*scale), (int)(h*scale), APP_OPTIONS_GFX_D3D12_BIT | APP_OPTIONS_RESIZABLE_BIT | APP_OPTIONS_WINDOW_POS_CENTERED_BIT, argv[0]);
-	set_target_framerate(60);
+	//int options = APP_OPTIONS_GFX_VULKAN_BIT;
+	//int options = APP_OPTIONS_GFX_D3D11_BIT;
+	//int options = APP_OPTIONS_GFX_D3D12_BIT;
+	make_app("Stencil Outline", 0, 0, 0, (int)(w*scale), (int)(h*scale), options | APP_OPTIONS_RESIZABLE_BIT | APP_OPTIONS_WINDOW_POS_CENTERED_BIT, argv[0]);
+	set_target_framerate(200);
 	app_init_imgui();
 	set_imgui_scale(scale/2);
 	Sprite sprite = make_demo_sprite();
