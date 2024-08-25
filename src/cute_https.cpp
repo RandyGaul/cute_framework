@@ -14,7 +14,7 @@
 
 #include <internal/cute_alloc_internal.h>
 
-#include <SDL.h>
+#include <SDL3/SDL.h>
 
 #ifndef CF_APPLE
 #	define CUTE_TLS_IMPLEMENTATION

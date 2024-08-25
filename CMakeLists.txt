@@ -1,34 +1,18 @@
 cmake_minimum_required(VERSION 3.14)
 project(cute_framework)
 
-# Must have at least C++17.
+# Must have at least C++20.
 set(CMAKE_CXX_STANDARD 20)
 
 # These are needed for how we use FetchContent.
 include(FetchContent)
 Set(FETCHCONTENT_QUIET FALSE)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
-define_property(
-	TARGET
-	PROPERTY FOLDER
-	INHERITED
-	BRIEF_DOCS "Set the folder name."
-	FULL_DOCS  "Use to organize targets in an IDE."
-)
-function(fetch_content_with_folder _name)
-	FetchContent_Declare(
-		${_name}
-		${ARGN}
-		GIT_PROGRESS TRUE
-	)
-	FetchContent_Populate(${_name})
-	string(TOLOWER "${_name}" lc_name)
-	add_subdirectory(${${lc_name}_SOURCE_DIR} ${${lc_name}_BINARY_DIR} EXCLUDE_FROM_ALL)
-	set_property(DIRECTORY "${${lc_name}_SOURCE_DIR}" PROPERTY FOLDER "${_name}")
-endfunction()
 
 # Todo - Fix how turning some of these off breaks the build.
 option(CF_FRAMEWORK_STATIC "Build static library for Cute Framework." ON)
+option(CF_GLSLANG "Build CF with online shader compilation support." ON)
+option(CF_GLSLANG_OPTIMIZER "Build CF with online shader compilation + optmization support (requires python 3.x installation)." ON)
 
 # Platform detection.
 if(CMAKE_SYSTEM_NAME MATCHES "Emscripten")
@@ -45,6 +29,7 @@ elseif(UNIX AND NOT APPLE)
 		message(FATAL_ERROR, "No supported platform detected.")
 	endif()
 elseif(APPLE)
+	enable_language(OBJC)
 	if(CMAKE_SYSTEM_NAME MATCHES ".*MacOS.*" OR CMAKE_SYSTEM_NAME MATCHES ".*Darwin.*")
 		set(MACOSX TRUE)
 	elseif(CMAKE_SYSTEM_NAME MATCHES ".*iOS.*")
@@ -108,11 +93,9 @@ set(CF_SRCS
 	src/cute_alloc.cpp
 	src/cute_result.cpp
 	src/cute_noise.cpp
+	src/cute_imgui.cpp
 
-	src/internal/cute_dx11.cpp
 	src/internal/yyjson.c
-
-	libraries/cimgui/imgui/backends/imgui_impl_sdl.cpp
 
 	libraries/cimgui/imgui/imgui.cpp
 	libraries/cimgui/imgui/imgui_demo.cpp
@@ -124,12 +107,7 @@ set(CF_SRCS
 )
 if(APPLE)
 	set(CF_SRCS ${CF_SRCS}
-		src/internal/cute_metal.mm
 		src/internal/cute_tls.m
-	)
-else()
-	set(CF_SRCS ${CF_SRCS}
-		src/internal/cute_metal.cpp
 	)
 endif()
 
@@ -194,23 +172,16 @@ set(CIMGUI_HDRS
 	libraries/cimgui/cimgui.h
 )
 
-set(SOKOL_HDRS
-	libraries/sokol/sokol_gfx.h
-	libraries/sokol/sokol_gfx_imgui.h
-)
-
 set(CF_HDRS
 	${CF_PUBLIC_HDRS}
 	${IMGUI_HDRS}
 	${CIMGUI_HDRS}
-	${SOKOL_HDRS}
 
+	src/internal/cute_imgui_internal.h
 	src/internal/cute_app_internal.h
 	src/internal/cute_input_internal.h
 	src/internal/cute_serialize_internal.h
 	src/internal/cute_ecs_internal.h
-	src/internal/cute_dx11.h
-	src/internal/cute_metal.h
 	src/internal/cute_png_cache_internal.h
 	src/internal/cute_draw_internal.h
 	src/internal/cute_font_internal.h
@@ -218,12 +189,6 @@ set(CF_HDRS
 	src/internal/cute_aseprite_cache_internal.h
 	src/internal/cute_alloc_internal.h
 	src/internal/yyjson.h
-
-	src/internal/imgui/sokol_imgui.h
-	libraries/cimgui/imgui/backends/imgui_impl_sdl.h
-
-	src/shaders/sprite_shader.h
-	src/shaders/backbuffer_shader.h
 )
 
 if(CF_FRAMEWORK_STATIC)
@@ -290,10 +255,14 @@ set(CF_LINK_LIBS ${CF_LINK_LIBS} physfs)
 
 # Add s2n for Linux builds.
 if(LINUX)
-	fetch_content_with_folder(
+	# Ensure tests are not built.
+	set(BUILD_TESTING OFF CACHE BOOL "Disable building s2n tests." FORCE)
+	
+	FetchContent_Declare(
 		s2n
 		URL https://github.com/aws/s2n-tls/archive/refs/tags/v1.3.46.zip
 	)
+	FetchContent_MakeAvailable(s2n)
 	set(CF_LINK_LIBS ${CF_LINK_LIBS} s2n)
 endif()
 
@@ -302,30 +271,112 @@ if(WINDOWS AND NOT MSVC)
 	set(CF_LINK_LIBS ${CF_LINK_LIBS} ws2_32 secur32 shlwapi)
 endif()
 
-# SDL2 for platform support.
+# Check for Windows platform and link dxcompiler.dll and dxil.dll
+if (WINDOWS)
+	set(DXC_DLL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/libraries/dxc")
+	set(DXC_DLLS "${DXC_DLL_DIR}/dxcompiler.dll" "${DXC_DLL_DIR}/dxil.dll")
+	# Add a post-build step to copy the DLLs to the output directory
+	add_custom_command(TARGET cute POST_BUILD
+		COMMAND ${CMAKE_COMMAND} -E copy_if_different
+		${DXC_DLLS}
+		$<TARGET_FILE_DIR:cute>
+	)
+endif()
+
+# SDL for platform support.
 # Just don't build the shared library at all, it's not needed.
 set(SDL_SHARED_ENABLED_BY_DEFAULT OFF)
-set(CF_SDL_VERSION 2.30.5)
 if(EMSCRIPTEN)
-	# Emscripten provides its own SDL2.
+	# Emscripten provides its own SDL.
 else()
-	fetch_content_with_folder(
-		SDL2
-		URL https://github.com/libsdl-org/SDL/releases/download/release-${CF_SDL_VERSION}/SDL2-${CF_SDL_VERSION}.tar.gz
+	set(SDL_STATIC ON CACHE BOOL "Build SDL as a static library")
+	set(SDL_SHARED OFF CACHE BOOL "Do not build SDL as a shared library")
+	set(SDL_TEST_LIBRARY OFF CACHE BOOL "Do not build SDL tests")
+	set(SDL_EXAMPLES OFF CACHE BOOL "Do not build SDL examples")
+	FetchContent_Declare(
+		SDL3
+		GIT_REPOSITORY https://github.com/thatcosmonaut/SDL.git
+		GIT_TAG gpu
+		CMAKE_ARGS -DSDL_SHARED=OFF -DSDL_STATIC=ON -DSDL_TEST_LIBRARY=OFF -DSDL_TESTS=OFF -DSDL_EXAMPLES=OFF
+		GIT_SHALLOW TRUE
+		GIT_PROGRESS TRUE
 	)
-	set(CF_LINK_LIBS ${CF_LINK_LIBS} SDL2main SDL2-static)
+	FetchContent_MakeAvailable(SDL3)
+	set(CF_LINK_LIBS ${CF_LINK_LIBS} SDL3::SDL3-static)
 endif()
-target_include_directories(cute PUBLIC ${SDL2_INCLUDE_DIRS})
+target_include_directories(cute PUBLIC ${SDL3_INCLUDE_DIRS})
+
+# glslang + SPIRV stuff for online shader compilation (optional).
+if (CF_GLSLANG)
+	add_definitions(-DCF_RUNTIME_SHADER_COMPILATION)
+	set(GLSLANG_TESTS_DEFAULT OFF CACHE BOOL "Do not build glslang tests.")
+	set(BUILD_SHARED_LIBS OFF CACHE BOOL "Do not build glslang as a shared lib.")
+	SET(ENABLE_OPT CF_GLSLANG_OPTIMIZER CACHE BOOL "Do not use SPIR-V Tools.")
+	set(SKIP_SPIRV_TOOLS_INSTALL OFF CACHE BOOL "Don't install the SPIR-V Tools as they are built.")
+	set(SPIRV_SKIP_EXECUTABLES ON CACHE BOOL "Don't build any SPIR-V Tools executables/tests.")
+	set(SPIRV_WERROR OFF CACHE BOOL "Turn off SPIR-V warnings as error.")
+
+	# Can't seem to use fetch content here as we need to run this stupid update_glslang_sources.py file _before_ CMake starts configuring it.
+	set(GLSLANG_ZIP "${CMAKE_BINARY_DIR}/glslang-14.3.0.zip")
+	set(GLSLANG_SOURCE_DIR "${CMAKE_BINARY_DIR}/glslang-14.3.0")
+	
+	if(NOT EXISTS ${GLSLANG_SOURCE_DIR})
+		message(STATUS "Downloading glslang...")
+		file(DOWNLOAD "https://github.com/KhronosGroup/glslang/archive/refs/tags/14.3.0.zip" ${GLSLANG_ZIP} SHOW_PROGRESS)
+		
+		execute_process(COMMAND ${CMAKE_COMMAND} -E tar xzf ${GLSLANG_ZIP} WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+	endif()
+	
+	# Run this stupid update_glslang_sources.py script to get access to the SPIR-V optimizer.
+	if (CF_GLSLANG_OPTIMIZER)
+		find_package(Python3 REQUIRED)
+		execute_process(
+			COMMAND ${Python3_EXECUTABLE} ${GLSLANG_SOURCE_DIR}/update_glslang_sources.py
+			WORKING_DIRECTORY ${GLSLANG_SOURCE_DIR}
+			RESULT_VARIABLE result
+			ERROR_VARIABLE error_output
+			OUTPUT_VARIABLE output
+		)
+		if(NOT EXISTS ${GLSLANG_SOURCE_DIR}/External/spirv-tools)
+			message(STATUS "Downloading SPIR-V Tools...")
+			if(NOT result EQUAL 0)
+				message(FATAL_ERROR "Running update_glslang_sources.py failed: ${error_output}")
+			else()
+				message(STATUS "Running update_glslang_sources.py succeeded: ${output}")
+			endif()
+		endif()
+	endif()
+	add_subdirectory(${GLSLANG_SOURCE_DIR} ${CMAKE_BINARY_DIR}/glslang-build)
+	set(SPIRV_CROSS_CLI OFF CACHE BOOL "Turn off building SPIR-Cross CLI.")
+	FetchContent_Declare(
+		SPIRV_CROSS
+		GIT_REPOSITORY https://github.com/KhronosGroup/SPIRV-Cross.git
+		GIT_TAG main
+		CMAKE_ARGS -DSPIRV_CROSS_EXCEPTIONS_TO_ASSERTIONS=ON -DSPIRV_CROSS_CLI=OFF -DSPIRV_CROSS_SHARED=OFF -DSPIRV_CROSS_STATIC=ON
+		GIT_SHALLOW TRUE
+		GIT_PROGRESS TRUE
+	)
+	set(SPIRV_CROSS_ENABLE_TESTS OFF CACHE BOOL "Disable SPIRV-Cross tests")
+	set(SPIRV_CROSS_ENABLE_GLSLANG_INSTALL OFF CACHE BOOL "Disable GLSLANG install")
+	set(SPIRV_CROSS_SHARED OFF CACHE BOOL "Build SPIRV-Cross as shared library")
+	set(SPIRV_CROSS_STATIC ON CACHE BOOL "Do not build SPIRV-Cross as static library")
+	set(SPIRV_CROSS_C_API ON CACHE BOOL "Enable the C API")
+	set(SPIRV_CROSS_EXCEPTIONS_TO_ASSERTIONS ON CACHE BOOL "Turn off exceptions in SPIRV-Cross.")
+	FetchContent_MakeAvailable(SPIRV_CROSS)
+	set(CF_LINK_LIBS ${CF_LINK_LIBS} glslang glslang-default-resource-limits SPIRV SPIRV-Tools SPIRV-Tools-opt spirv-cross-c)
+endif()
 
 # Some platform specific settings.
 if(EMSCRIPTEN)
 	target_compile_options(cute PUBLIC -O1 -fno-rtti -fno-exceptions)
-	set_target_properties(cute PROPERTIES COMPILE_FLAGS "-s USE_SDL=2")
-	target_link_libraries(cute PRIVATE "-s USE_WEBGL2=1 -s ASSERTIONS=1 -s MAX_WEBGL_VERSION=2 -s USE_SDL=2 -s ALLOW_MEMORY_GROWTH=1 -O1 -s ASYNCIFY=1")
+	set_target_properties(cute PROPERTIES COMPILE_FLAGS "-s USE_SDL=3")
+	target_link_libraries(cute PRIVATE "-s USE_WEBGL2=1 -s ASSERTIONS=1 -s MAX_WEBGL_VERSION=2 -s USE_SDL=3 -s ALLOW_MEMORY_GROWTH=1 -O1 -s ASYNCIFY=1")
 elseif(MINGW)
 	set(CF_LINK_LIBS ${CF_LINK_LIBS} d3d11 crypt32)
 elseif(WINDOWS)
 	set(CF_LINK_LIBS ${CF_LINK_LIBS} crypt32)
+elseif(LINUX)
+	target_compile_options(cute PRIVATE -msse4.1)
 elseif(APPLE)
 	set_target_properties(cute PROPERTIES FRAMEWORK TRUE)
 	if (CF_FRAMEWORK_STATIC)
@@ -399,10 +450,8 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 		add_executable(basicinput samples/basic_input.c)
 		add_executable(windowevents samples/window_events.c)
 		add_executable(window samples/window.cpp)
-		add_executable(tint samples/tint.cpp)
 		add_executable(docsparser samples/docs_parser.cpp)
 		add_executable(scratch samples/scratch.cpp)
-		add_executable(echo samples/echo.cpp)
 		add_executable(https samples/https.c)
 		add_executable(spaceshooter samples/spaceshooter.cpp)
 		add_executable(draw_to_texture samples/draw_to_texture.c)
@@ -414,6 +463,7 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 		add_executable(metaballs samples/metaballs.cpp)
 		add_executable(timestep samples/timestep.cpp)
 		add_executable(joypad samples/joypad.c)
+		add_executable(outline_stencil samples/outline_stencil.cpp)
 		set(SAMPLE_EXECUTABLES
 			easysprite
 			basicecs
@@ -426,10 +476,8 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 			basicinput
 			windowevents
 			window
-			tint
 			docsparser
 			scratch
-			echo
 			https
 			spaceshooter
 			draw_to_texture
@@ -441,6 +489,7 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 			metaballs
 			timestep
 			joypad
+			outline_stencil
 		)
 
 		foreach(CURRENT_TARGET ${SAMPLE_EXECUTABLES})
@@ -459,6 +508,7 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 		add_custom_command(TARGET spaceshooter PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/samples/spaceshooter_data $<TARGET_FILE_DIR:spaceshooter>/spaceshooter_data)
 		add_custom_command(TARGET waves PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/samples/waves_data $<TARGET_FILE_DIR:waves>/waves_data)
 		add_custom_command(TARGET shallow_water PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/samples/shallow_water_data $<TARGET_FILE_DIR:shallow_water>/shallow_water_data)
+		add_custom_command(TARGET metaballs PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/samples/metaballs_data $<TARGET_FILE_DIR:metaballs>/metaballs_data)
 	endif()
 endif()
 
@@ -467,10 +517,3 @@ target_include_directories(cute PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_
 target_include_directories(cute PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/libraries>)
 target_include_directories(cute PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/libraries/cimgui>)
 target_include_directories(cute PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/libraries/cimgui/imgui>)
-
-# These are not properly tested!!!
-# install(TARGETS cute EXPORT cute DESTINATION "lib")
-# install(FILES ${CF_PUBLIC_HDRS} DESTINATION "include/cute")
-# install(FILES ${IMGUI_HDRS} DESTINATION "include/cute/imgui")
-# install(FILES ${CIMGUI_HDRS} DESTINATION "include/cute/cimgui")
-# install(FILES ${SOKOL_HDRS} DESTINATION "include/cute/sokol")

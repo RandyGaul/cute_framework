@@ -12,14 +12,12 @@ GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/maste
 Sets up a uniform value, used for inputs to fragment shaders.
 
 ```cpp
-void cf_material_set_uniform_fs(CF_Material material, const char* block_name, const char* name, void* data, CF_UniformType type, int array_length);
+void cf_material_set_uniform_fs(CF_Material material, const char* name, void* data, CF_UniformType type, int array_length);
 ```
 
 Parameters | Description
 --- | ---
 material | The material.
-block_name | The block name acts like namespace, and groups together uniforms in a single contiguous chunk of memory. You should place
-              uniforms that are related to each other, and accessed at the same time, into the same block.
 name | The name of the uniform as it appears in the shader.
 data | The value of the uniform.
 type | The type of the uniform. See [CF_UniformType](/graphics/cf_uniformtype.md).

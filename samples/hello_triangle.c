@@ -1,7 +1,5 @@
 #include <cute.h>
 
-#include "hello_triangle_data/color_fill_shader.h"
-
 typedef struct Vertex
 {
 	CF_V2 position;
@@ -11,10 +9,36 @@ typedef struct Vertex
 	CF_Pixel color;
 } Vertex;
 
+#define STR(X) #X
+// ---
+const char* s_tri_vs = STR(
+	layout (location = 0) in vec2 in_pos;
+	layout (location = 1) in vec4 in_col;
+
+	layout (location = 0) out vec4 v_col;
+
+	void main()
+	{
+		v_col = in_col;
+		gl_Position = vec4(in_pos, 0, 1);
+	}
+);
+// ---
+const char* s_tri_fs = STR(
+	layout(location = 0) in vec4 v_col;
+
+	layout(location = 0) out vec4 result;
+
+	void main()
+	{
+		result = v_col;
+	}
+);
+// ---
+
 int main(int argc, char* argv[])
 {
-	int options = CF_APP_OPTIONS_WINDOW_POS_CENTERED | CF_APP_OPTIONS_RESIZABLE;
-	CF_Result result = cf_make_app("Hello Triangle", 0, 0, 0, 640, 480, options, argv[0]);
+	CF_Result result = cf_make_app("Hello Triangle", 0, 0, 0, 640, 480, CF_APP_OPTIONS_WINDOW_POS_CENTERED_BIT | CF_APP_OPTIONS_RESIZABLE_BIT, argv[0]);
 	if (cf_is_error(result)) return -1;
 
 	// Example program to get going with custom rendering. Most of the time you want to draw sprites or shapes,
@@ -24,32 +48,31 @@ int main(int argc, char* argv[])
 
 	// Setup triangle mesh covering most of the screen.
 	Vertex verts[3];
-	verts[0].position = cf_v2(-1,1);
+	verts[0].position = cf_v2(-1,-1);
 	verts[0].color = cf_pixel_red();
-	verts[1].position = cf_v2(1,1);
+	verts[1].position = cf_v2(1,-1);
 	verts[1].color = cf_pixel_blue();
-	verts[2].position = cf_v2(0,-1);
+	verts[2].position = cf_v2(0,1);
 	verts[2].color = cf_pixel_green();
 
-	CF_Mesh mesh = cf_make_mesh(CF_USAGE_TYPE_IMMUTABLE, sizeof(Vertex) * 3, 0, 0);
+	CF_Mesh mesh = cf_make_mesh(sizeof(Vertex) * 3);
 	CF_VertexAttribute attrs[2] = { 0 };
 	attrs[0].name = "in_pos";
 	attrs[0].format = CF_VERTEX_FORMAT_FLOAT2;
 	attrs[0].offset = CF_OFFSET_OF(Vertex, position);
 	attrs[1].name = "in_col";
-	attrs[1].format = CF_VERTEX_FORMAT_UBYTE4N;
+	attrs[1].format = CF_VERTEX_FORMAT_UBYTE4_NORM;
 	attrs[1].offset = CF_OFFSET_OF(Vertex, color);
-	cf_mesh_set_attributes(mesh, attrs, CF_ARRAY_SIZE(attrs), sizeof(Vertex), 0);
+	cf_mesh_set_attributes(mesh, attrs, CF_ARRAY_SIZE(attrs), sizeof(Vertex));
 	cf_mesh_update_vertex_data(mesh, verts, 3);
 
 	// Create material and shader. The material could potentially hold render state, uniforms, or texture bindings. For this
 	// example none of these features are used. The shader simply interpolates color based on colors providing as vertex attributes.
 	// Therefor, the material is just empty in this case.
 	CF_Material material = cf_make_material();
-	CF_Shader shader = CF_MAKE_SOKOL_SHADER(color_fill_shader);
+	CF_Shader shader = cf_make_shader_from_source(s_tri_vs, s_tri_fs);
 
-	while (cf_app_is_running())
-	{
+	while (cf_app_is_running()) {
 		cf_app_update(NULL);
 
 		// Whenever we draw with low-level graphics a canvas must be selected to draw upon.
@@ -61,8 +84,9 @@ int main(int argc, char* argv[])
 		cf_apply_mesh(mesh);
 		cf_apply_shader(shader, material);
 		cf_draw_elements();
+		cf_commit();
 
-		cf_app_draw_onto_screen(false);
+		cf_app_draw_onto_screen(true);
 	}
 
 	cf_destroy_shader(shader);

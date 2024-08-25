@@ -15,6 +15,7 @@ The available types of uniforms.
 
 Enum | Description
 --- | ---
+UNIFORM_TYPE_UNKNOWN | In a shader: `uniform float`
 UNIFORM_TYPE_FLOAT | In a shader: `uniform float`
 UNIFORM_TYPE_FLOAT2 | In a shader: `uniform vec2`
 UNIFORM_TYPE_FLOAT4 | In a shader: `uniform vec4`

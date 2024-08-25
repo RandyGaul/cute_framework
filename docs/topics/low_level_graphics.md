@@ -8,11 +8,11 @@ This page talks about the low level graphics API in CF. If you want to draw shap
 
 CF wraps [low level 3D rendering APIs](https://randygaul.github.io/cute_framework/#/api_reference?id=graphics). The backends supported are:
 
-- OpenGL 3.3 Core Profile
-- OpenGL ES 3.0
+- Vulkan
 - DirectX 11
+- DirectX 12
 - Metal
-- WebGPU
+- ~~WebGPU~~ - This is disabled due to SDL_Gpu not supporting OpenGL ES3, CF is currently seeking alternative solutions
 
 The major primitives that make up the graphics layer of CF are:
 
@@ -40,6 +40,7 @@ for each canvas {
             }
         }
     }
+    cf_commit();
 }
 ```
 
@@ -48,6 +49,8 @@ The important functions are are the apply functions. Each apply function is used
 - [`cf_apply_canvas`](https://randygaul.github.io/cute_framework/#/graphics/cf_apply_canvas)
 - [`cf_apply_mesh`](https://randygaul.github.io/cute_framework/#/graphics/cf_apply_mesh)
 - [`cf_apply_shader`](https://randygaul.github.io/cute_framework/#/graphics/cf_apply_shader)
+- [`cf_draw_elements`](https://randygaul.github.io/cute_framework/#/graphics/cf_draw_elements)
+- [`cf_commit`](https://randygaul.github.io/cute_framework/#/graphics/cf_commit)
 
 ## Meshes
 
@@ -68,7 +71,7 @@ attrs[1].name = "in_uv";
 attrs[1].format = CF_VERTEX_FORMAT_FLOAT2;
 attrs[1].offset = CF_OFFSET_OF(DrawVertex, uv);
 attrs[2].name = "in_col";
-attrs[2].format = CF_VERTEX_FORMAT_UBYTE4N;
+attrs[2].format = CF_VERTEX_FORMAT_UBYTE4_NORM;
 attrs[2].offset = CF_OFFSET_OF(DrawVertex, color);
 cf_mesh_set_attributes(draw->mesh, attrs, CF_ARRAY_SIZE(attrs), sizeof(DrawVertex), 0);
 ```
@@ -79,84 +82,94 @@ The `"name"` in the above snippet corresponds to the name of vertex attribute in
 
 Shaders are small programs that run on the GPU and transform vertices into pixels on the screen. The vertices match `"name"` of vertex attributes from the previous section. Let's check out a full vertex and fragment shader file.
 
-> A simplified version of CF's sprite shader.
+> A simplified version of CF's internal sprite shader.
 
 ```glsl
-@module sprite
+layout (location = 0) in vec2 in_pos;
+layout (location = 1) in vec2 in_uv;
+layout (location = 2) in vec4 in_col;
 
-@ctype vec4 CF_Color
-@ctype vec2 CF_V2
+layout (location = 0) out vec2 v_uv;
+layout (location = 1) out vec4 v_col;
 
-@include includes/smooth_uv.glsl
-
-@vs vs
-	layout (location = 0) in vec2 in_pos;
-	layout (location = 1) in vec2 in_uv;
-	layout (location = 2) in vec4 in_col;
-
-	layout (location = 0) out vec2 v_uv;
-	layout (location = 1) out vec4 v_col;
-
-	void main()
-	{
-		vec4 posH = vec4(in_pos, 0, 1);
-		v_uv = in_uv;
-		v_col = in_col;
-		gl_Position = posH;
-	}
-@end
-
-@fs fs
-	layout (location = 0) in vec2 v_uv;
-	layout (location = 1) in vec4 v_col;
-
-	out vec4 result;
-
-	layout (binding = 0) uniform sampler2D u_image;
-
-	layout (binding = 0) uniform fs_params {
-		vec2 u_texture_size;
-	};
-
-	@include_block smooth_uv
-
-	void main()
-	{
-		vec4 c = de_gamma(texture(u_image, smooth_uv(v_uv, u_texture_size)));
-		if (c.a == 0) discard;
-		result = c;
-	}
-@end
-
-@program shd vs fs
+void main()
+{
+	vec4 posH = vec4(in_pos, 0, 1);
+	v_uv = in_uv;
+	v_col = in_col;
+	gl_Position = posH;
+}
 ```
 
-In CF shaders are written in GLSL (OpenGL Shading Language). This does not necessarily mean the backend powering the shaders is OpenGL, as the shaders are cross-compiled for all available backends. CF uses a third-party tool called [sokol-shdc](https://github.com/floooh/sokol-tools/blob/master/docs/sokol-shdc.md), which stands for Sokol Shader Compiler. The shader compiler also outputs a header file in plain C code we use to automate all the details of setting up shaders.
+```glsl
+layout (location = 0) in vec2 v_uv;
+layout (location = 1) in vec4 v_col;
 
-?> Don't worry about fully understanding the above code snippet! Learning about low level graphics and shaders requires a lot of knowledge. More resources for learning are found below.
+layout(location = 0) out vec4 result;
 
-### Special sokol-shdc Features
+layout (set = 2, binding = 0) uniform sampler2D u_image;
 
-sokol-shdc has a number of special features added to glsl we use, as seen in the above example. Let's cover the really important ones right now.
+layout (set = 3, binding = 0) uniform uniform_block {
+	vec2 u_texture_size;
+};
 
-| Keyword | Description |
-| --- | --- |
-| @module | Name of the shader. |
-| @ctype | Maps a glsl type to a C-type. These should match with CF types. |
-| @include | Allows us to include (copy + paste) another .glsl file into a shader with @include_block. |
-| @include_block | Includes a block of shader code from another file. Blocks are named sections of glsl code. See the [sokol-shdc](https://github.com/floooh/sokol-tools/blob/master/docs/sokol-shdc.md) docs for more details. |
-| @vs | Starts the vertex shader block of code, and gives the vertex shader block a name. |
-| @fs | Starts the fragment shader block of code, and gives the fragment shader block a name. |
-| @program | Glues a vertex and fragment shader together to make the final named shader. |
+#include "smooth_uv.shd"
 
-It's highly recommended to copy this format when writing your own shaders, including the name chosen for @vs, @fs and @shd to make things simple. It's also highly recommended to name your glsl file the same name as the module. For example, if we chose `@module sprite` a good matching file name would be `sprite.glsl`. This will make a lot of sense later when we want to load up a shader from C/C++, which will look like so:
+void main()
+{
+	vec4 c = de_gamma(texture(u_image, smooth_uv(v_uv, u_texture_size)));
+	if (c.a == 0) discard;
+	result = c;
+}
+```
+
+In CF shaders are written in GLSL (OpenGL Shading Language) version 450. This does not necessarily mean the backend powering the shaders is OpenGL, as the shaders are cross-compiled for all available backends.
+
+CF compiles shaders online making it very easy to write shaders once and have them _just work_ on all other platforms. As of now CF takes on some annoying dependencies to support runtime shader compilation. However, since CF is using SDL3 and SDL_Gpu internally, eventually SDL will release a tool called SDL_Shader_Tools to entirely rememedy this dependency situation. For now though, a variety of open source tools for SPIRV cross-compilation get statically linked into cute. This does bloat library size by ~8mb in release builds, and does negatively affect initial compile times.
+
+Okay! And with the bad news out of the way, let's focus on how to write your shaders and ship them with your game in a cross-platform way. You have a few options:
+
+- Compile shaders from glsl source on-disk
+- Compile shaders from glsl source from string (in-memory)
+- Compile shaders from bytecode (SPIRV)
+- Compile [draw-API compatible fragment shaders](https://randygaul.github.io/cute_framework/#/topics/drawing?id=shaders)
+
+To compile shaders from glsl source code on-disk you must first call [cf_shader_directory](https://randygaul.github.io/cute_framework/#/graphics/cf_shader_directory). This tells the application where the shader folder is. You may then optionally setup a callback via [cf_shader_on_changed](https://randygaul.github.io/cute_framework/#/graphics/cf_shader_on_changed) to receive notifications when shaders change on-disk, in order to support shader live-reloading during development. Once done you may then call [cf_make_shader](https://randygaul.github.io/cute_framework/#/graphics/cf_make_shader)
+
+To compile shaders from glsl source code from string (in-memory) simply call [cf_make_shader_from_source](https://randygaul.github.io/cute_framework/#/graphics/cf_make_shader_from_source).
+
+To compile shaders from bytecode (SPIRV) you must first compile them to a bytecode blob. This is a good way to speed up shader compilation when you ship your game, as the bytecode blobs can be shipped alongside your game. Call [cf_compile_shader_to_bytecode](https://randygaul.github.io/cute_framework/#/graphics/cf_compile_shader_to_bytecode) to generate a bytecode blob. You can then create a finalized shader by calling [cf_make_shader_from_bytecode](https://randygaul.github.io/cute_framework/#/graphics/cf_make_shader_from_bytecode).
+
+Be aware that shaders must adhere to strict rules for resource sets. Here's the notes from CF's source:
 
 ```cpp
-#include "my_shader.h"
-CF_Shader my_shd = CF_MAKE_SOKOL_SHADER(my_shader);
+/**
+ * For _VERTEX_ shaders:
+ *  0: Sampled textures, followed by storage textures, followed by storage buffers
+ *  1: Uniform buffers
+ * For _FRAGMENT_ shaders:
+ *  2: Sampled textures, followed by storage textures, followed by storage buffers
+ *  3: Uniform buffers
+ * 
+ * Example _VERTEX shader:
+ * layout (set = 0, binding = 0) uniform sampler2D u_image;
+ * 
+ * layout (set = 1, binding = 0) uniform uniform_block {
+ *     vec2 u_texture_size;
+ * };
+ * 
+ * Example _FRAGMENT_ shader:
+ * 
+ * layout (set = 2, binding = 0) uniform sampler2D u_image;
+ * 
+ * layout (set = 3, binding = 0) uniform uniform_block {
+ *     vec2 u_texture_size;
+ * };
+ */
 ```
 
-Check out this page on [`CF_SOKOL_MAKE_SHADER`](https://randygaul.github.io/cute_framework/#/graphics/cf_make_sokol_shader) to learn how to compile your shader and set it up in C++. You can find a copy of the shader compiler for Linux/MacOS/Windows development in the `tools` folder where you downloaded CF.
+For uniforms you only have one uniform block available, and it *must* be named `uniform_block`. However, if your
+shader is make from the draw api (`cf_make_draw_shader`) uniform blocks must be named `shd_uniforms`.
 
 ### Learning to Write Shaders
 
@@ -222,12 +235,14 @@ These steps are a little simplified, but give one option for a good (but abstrac
 A uniform is a global variable within either a vertex or fragment shader. The uniforms are defined in the shader itself using the `uniform` keyword. The sprite shader example from earlier specified some uniforms in the fragment shader like so:
 
 ```glsl
-layout (binding = 0) uniform sampler2D u_image;
+layout (set = 0, binding = 0) uniform sampler2D u_image;
 
-layout (binding = 0) uniform fs_params {
+layout (set = 1, binding = 0) uniform fs_params {
 	vec2 u_texture_size;
 };
 ```
+
+For vertex shaders textures have `set = 0`, while the uniform block has `set = 1`. For fragment shaders textures use `set = 2`, while the uniform block must use `set = 3`.
 
 In C++ we can set values for these uniforms by name using [`cf_material_set_uniform_vs`](https://randygaul.github.io/cute_framework/#/graphics/cf_material_set_uniform_vs) for vertex shaders, or [`cf_material_set_uniform_fs`](https://randygaul.github.io/cute_framework/#/graphics/cf_material_set_uniform_fs) for fragment shaders.
 
@@ -254,24 +269,3 @@ UV-coordinates are two floats, each in the range from `[0,1]`. The coordinate (0
 The app window itself has a [default canvas](https://randygaul.github.io/cute_framework/#/topics/application_window?id=resizing-windows). This canvas is used for higher-level [`Drawing API`](https://randygaul.github.io/cute_framework/#/topics/drawing) to get things onto the screen. By default CF collects everything and automatically displays it onto the default canvas.
 
 However, for custom rendering techniques you must fetch and render to the app's canvas to display rendered contents on the screen. Use [`cf_app_get_canvas`](https://randygaul.github.io/cute_framework/#/app/cf_app_get_canvas) along with [`cf_app_get_canvas_height`](https://randygaul.github.io/cute_framework/#/app/cf_app_get_canvas_height) and [`cf_app_get_canvas_width`](https://randygaul.github.io/cute_framework/#/app/cf_app_get_canvas_width). You may then render to this canvas (or any other canvas) with [`cf_render_to`](https://randygaul.github.io/cute_framework/#/draw/cf_render_to).
-
-## Limitations
-
-Here is a quick list of unsupported graphics features. These can be potentially added to CF later, but are not slated for v1.00 of CF's initial release. Most of these features make more sense for the 3D use-case as opposed to 2D games. The ones marked with stars are currently considered higher priority for adding in the future.
-
-- Mipmaps *
-- MSAA
-- Blend color constant
-- Multiple render targets (aka color/texture attachments) *
-- Depth bias tunables
-- uint16_t indices (only uint32_t supported) *
-- Cube map
-- 3D textures
-- Texture arrays *
-- Sampler types signed/unsigned int (only float supported)
-- Other primitive types besides triangles
-- UV wrap border colors
-- Face winding order (defaults to CCW only)
-- Anisotropy tunable
-- Min/max LOD tunable
-- No direct access to the underlying device *

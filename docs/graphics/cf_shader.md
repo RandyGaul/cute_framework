@@ -13,7 +13,7 @@ An opaque handle representing a shader.
 
 ## Remarks
 
-A shader is a small program that runs on the GPU. They come in the form of vertex and fragment shaders. See [CF_MAKE_SOKOL_SHADER](/graphics/cf_make_sokol_shader.md) for an overview.
+A shader is a small program that runs on the GPU. They come in the form of vertex and fragment shaders.
 
 ## Related Pages
 
@@ -21,7 +21,5 @@ A shader is a small program that runs on the GPU. They come in the form of verte
 [CF_Canvas](/graphics/cf_canvas.md)  
 [CF_Material](/graphics/cf_material.md)  
 [cf_apply_shader](/graphics/cf_apply_shader.md)  
-[CF_SokolShader](/graphics/cf_sokolshader.md)  
-[CF_MAKE_SOKOL_SHADER](/graphics/cf_make_sokol_shader.md)  
 [cf_make_shader](/graphics/cf_make_shader.md)  
 [cf_destroy_shader](/graphics/cf_destroy_shader.md)  

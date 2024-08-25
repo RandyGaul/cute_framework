@@ -176,7 +176,7 @@ void debuff_system(CF_ComponentList component_list, int entity_count, void* udat
 
 int main(int argc, char* argv[])
 {
-	CF_Result result = cf_make_app("Hitpoints ECS", 0, 0, 0, 800, 800, CF_APP_OPTIONS_WINDOW_POS_CENTERED, argv[0]);
+	CF_Result result = cf_make_app("Hitpoints ECS", 0, 0, 0, 800, 800, CF_APP_OPTIONS_WINDOW_POS_CENTERED_BIT, argv[0]);
 	if (cf_is_error(result)) return -1;
 
 	// Register component types.
@@ -250,14 +250,14 @@ int main(int argc, char* argv[])
 	}
 
 	// Initialize imgui.
-	cf_app_init_imgui(false);
+	cf_app_init_imgui();
 
 	while (cf_app_is_running()) {
 		cf_app_update(NULL);
 
 		// React to user-input.
-		ImGui::SetWindowPos(V2(406,214), ImGuiCond_FirstUseEver);
-		ImGui::SetWindowSize(V2(264,323), ImGuiCond_FirstUseEver);
+		ImGui::SetNextWindowPos(V2(406,214), ImGuiCond_FirstUseEver);
+		ImGui::SetNextWindowSize(V2(264,323), ImGuiCond_FirstUseEver);
 		ImGui::Begin("Apply Hits/Shields");
 		const char* entity_combos[] = { "#1", "#2", "#3", "#4", "All" };
 		static int entity_index = 0;

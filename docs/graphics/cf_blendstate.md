@@ -59,7 +59,6 @@ P = S x CF_BLENDFACTOR_ONE CF_BLEND_OP_ADD D x CF_BLENDFACTOR_ONE_MINUS_SRC_ALPH
 Which can be setup with this kind of code:
 
 ```cpp
-draw->material = cf_make_material();
 CF_RenderState state = cf_render_state_defaults();
 state.blend.enabled = true;
 state.blend.rgb_src_blend_factor = CF_BLENDFACTOR_ONE;
@@ -68,8 +67,7 @@ state.blend.rgb_op = CF_BLEND_OP_ADD;
 state.blend.alpha_src_blend_factor = CF_BLENDFACTOR_ONE;
 state.blend.alpha_dst_blend_factor = CF_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
 state.blend.alpha_op = CF_BLEND_OP_ADD;
-draw->render_states.add(state);
-cf_material_set_render_state(draw->material, state);
+cf_material_set_render_state(my_material, state);
 ```
 
 You can of course define your own blend state in any way you like to perform all kinds of compositing effects. However, dynamically changing the

@@ -23,7 +23,7 @@ using namespace Cute;
 int main(int argc, char* argv[])
 {
 	// Create a window with a resolution of 640 x 480.
-	Result result = make_app("Fancy Window Title", 0, 0, 0, 640, 480, APP_OPTIONS_WINDOW_POS_CENTERED, argv[0]);
+	Result result = make_app("Fancy Window Title", 0, 0, 0, 640, 480, APP_OPTIONS_WINDOW_POS_CENTERED_BIT, argv[0]);
 	if (is_error(result)) return -1;
 
 	while (app_is_running())
@@ -51,16 +51,14 @@ It's highly recommended to use CF's [Cmake project template](https://github.com/
 4. Make a folder called `src` in the top-level of your project, and place your initial `main.cpp` there.
 5. Run CMake on your project folder. If you need help with this step, try reading a setup guide for CF here: [CF - CMake 101](https://github.com/RandyGaul/cute_framework_project_template#cmake-101-walkthrough).
 
-> **Note** For Linux users make sure to you have OpenGL, gcc/g++, etc. installed and setup. You can try these commands:
+> **Note** For Linux users make sure to you have Vulkan, gcc/g++, etc. installed and setup. You can try these commands:
 ```cpp
 sudo apt-get update -qq
 sudo apt-get install build-essential gcc-multilib cmake
-sudo apt-get install libasound2-dev libpulse-dev 
-sudo apt-get install -y --no-install-recommends libglfw3 libglfw3-dev libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libxext-dev libxfixes-dev
+sudo apt-get install libasound2-dev libpulse-dev
+sudo apt-get install -y --no-install-recommends libvulkan-dev libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libxext-dev libxfixes-dev
 ```
 > **Note** On WSL2 you may also need `sudo apt install libpulse0`.
-
-> **Note** For non-Apple ARM platforms (like Raspberry/Orange Pi) you may need to define CUTE_SOUND_SCALAR_MODE to disable SSE intrinsics. Ideally CF could use preprocessor directives to define this for you -- pull requests are highly appreciated here!
 
 # Resources
 

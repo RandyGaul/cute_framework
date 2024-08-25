@@ -25,5 +25,5 @@ A texture is a buffer of data sent to the GPU for random access. Usually texture
 [cf_texture_defaults](/graphics/cf_texture_defaults.md)  
 [cf_make_texture](/graphics/cf_make_texture.md)  
 [cf_destroy_texture](/graphics/cf_destroy_texture.md)  
-[cf_update_texture](/graphics/cf_update_texture.md)  
+[cf_texture_update](/graphics/cf_texture_update.md)  
 [cf_material_set_texture_vs](/graphics/cf_material_set_texture_vs.md)  

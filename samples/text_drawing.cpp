@@ -6,9 +6,7 @@ using namespace Cute;
 
 int main(int argc, char* argv[])
 {
-	int options = APP_OPTIONS_WINDOW_POS_CENTERED | APP_OPTIONS_RESIZABLE;
-	Result result = make_app("Text Drawing", 0, 0, 0, 640, 480, options, argv[0]);
-	if (is_error(result)) return -1;
+	make_app("Text Drawing", 0, 0, 0, 640, 480, APP_OPTIONS_WINDOW_POS_CENTERED_BIT | APP_OPTIONS_RESIZABLE_BIT, argv[0]);
 
 	draw_push_antialias(true);
 	make_font_from_memory(proggy_data, proggy_sz, "ProggyClean");
@@ -80,7 +78,7 @@ int main(int argc, char* argv[])
 		push_font_size(30);
 		draw_text("Some <shake freq=35 x=2 y=2>shaking</shake> text.", round(V2(sinf(t*0.25f)*100,cosf(t*0.25f)*100)));
 
-		draw_calls = app_draw_onto_screen();
+		draw_calls = app_draw_onto_screen(true);
 	}
 
 	destroy_app();

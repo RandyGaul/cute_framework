@@ -3,7 +3,7 @@
 
 int main(int argc, char* argv[])
 {
-	cf_make_app("Joypad", 0, 0, 0, 640, 480, CF_APP_OPTIONS_WINDOW_POS_CENTERED, argv[0]);
+	cf_make_app("Joypad", 0, 0, 0, 640, 480, CF_APP_OPTIONS_WINDOW_POS_CENTERED_BIT, argv[0]);
 
 	CF_Joypad joypad = cf_joypad_open(0);
 

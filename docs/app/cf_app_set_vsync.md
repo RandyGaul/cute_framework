@@ -20,4 +20,5 @@ void cf_app_set_vsync(bool true_turn_on_vsync);
 [cf_app_get_canvas](/app/cf_app_get_canvas.md)  
 [cf_app_set_canvas_size](/app/cf_app_set_canvas_size.md)  
 [cf_app_get_canvas_width](/app/cf_app_get_canvas_width.md)  
+[cf_app_set_vsync_mailbox](/app/cf_app_set_vsync_mailbox.md)  
 [cf_app_get_vsync](/app/cf_app_get_vsync.md)  

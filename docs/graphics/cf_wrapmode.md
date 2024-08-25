@@ -15,10 +15,8 @@ Wrap modes to define behavior when addressing a texture beyond the [0,1] range.
 
 Enum | Description
 --- | ---
-WRAP_MODE_DEFAULT | The default is `CF_WRAP_MODE_REPEAT`.
 WRAP_MODE_REPEAT | Repeats the image.
 WRAP_MODE_CLAMP_TO_EDGE | Clamps a UV coordinate to the nearest edge pixel.
-WRAP_MODE_CLAMP_TO_BORDER | Clamps a UV coordinate to the border color.
 WRAP_MODE_MIRRORED_REPEAT | The same as `CF_WRAP_MODE_REPEAT` but mirrors back and forth.
 
 ## Related Pages

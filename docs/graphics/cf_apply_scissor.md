@@ -12,20 +12,21 @@ GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/maste
 Sets up a scissor box to clip rendering within.
 
 ```cpp
-void cf_apply_scissor(int x, int y, int width, int height);
+void cf_apply_scissor(int x, int y, int w, int h);
 ```
 
 Parameters | Description
 --- | ---
 x | Center of the scissor box on the x-axis.
 y | Center of the scissor box on the y-axis.
-width | Width of the scissor box in pixels.
-height | Height of the scissor box in pixels.
+w | Width of the scissor box in pixels.
+h | Height of the scissor box in pixels.
 
 ## Remarks
 
 The scissor box is a window on the screen that rendering will be clipped within. Any rendering that occurs outside the
-scissor box will simply be ignored, rendering nothing and leaving the previous pixel contents untouched.
+scissor box will simply be ignored, rendering nothing and leaving the previous pixel contents untouched. You must only call this
+after calling [cf_apply_shader](/graphics/cf_apply_shader.md).
 
 ## Related Pages
 

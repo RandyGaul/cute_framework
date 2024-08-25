@@ -12,7 +12,7 @@ GitHub: [cute_input.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Returns the current mouse y-coordinate in pixels.
 
 ```cpp
-int cf_mouse_y();
+float cf_mouse_y();
 ```
 
 ## Remarks
