@@ -276,4 +276,8 @@ The canvas's internal texture can be sent to a shader as a uniform with [canvas_
 
 First you must call [cf_shader_directory](https://randygaul.github.io/cute_framework/#/graphics/cf_shader_directory) to tell the application where your shaders reside on disk. Then you may call [cf_make_draw_shader](https://randygaul.github.io/cute_framework/#/draw/cf_make_draw_shader) to create a shader compatible with [cf_render_settings_push_shader](https://randygaul.github.io/cute_framework/#/draw/cf_render_settings_push_shader). You may then optionally setup a callback via [cf_shader_on_changed](https://randygaul.github.io/cute_framework/#/graphics/cf_shader_on_changed) to receive notifications when shaders change on-disk, in order to support shader live-reloading during development.
 
-Once done your custom shader will be able to apply itself to anything drawn through CF's draw API! A good example is the [metaballs sample](https://github.com/RandyGaul/cute_framework/blob/master/samples/metaballs.cpp))
+Once done your custom shader will be able to apply itself to anything drawn through CF's draw API! A good example is the [metaballs sample](https://github.com/RandyGaul/cute_framework/blob/master/samples/metaballs.cpp)).
+
+<p align="center">
+<img src=https://github.com/RandyGaul/cute_framework/blob/master/assets/metaballs.gif?raw=true>
+</p>
