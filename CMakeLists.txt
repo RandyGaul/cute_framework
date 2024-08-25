@@ -273,15 +273,17 @@ endif()
 
 # This function should be used if you have specified a target-specific runtime output directory,
 # or if you do not wish to specify a default runtime output directory.
-function(target_copy_dxc TARGET)
-	if (DEFINED DXC_DLLS)
-		add_custom_command(TARGET ${TARGET} POST_BUILD
-				COMMAND ${CMAKE_COMMAND} -E copy_if_different
-				${DXC_DLLS}
-				$<TARGET_FILE_DIR:${TARGET}>
-				COMMENT "Copying dxcompiler.dll and dxil.dll to output directory after build."
-		)
-	endif()
+function(target_dxc_copy TARGET)
+	get_target_property(cute_SOURCE_DIR cute SOURCE_DIR)
+	set(DXC_DLL_DIR "${cute_SOURCE_DIR}/libraries/dxc")
+	set(DXC_DLLS "${DXC_DLL_DIR}/dxcompiler.dll" "${DXC_DLL_DIR}/dxil.dll")
+
+	add_custom_command(TARGET ${TARGET} POST_BUILD
+			COMMAND ${CMAKE_COMMAND} -E copy_if_different
+			${DXC_DLLS}
+			$<TARGET_FILE_DIR:${TARGET}>
+			COMMENT "Copying dxcompiler.dll and dxil.dll to output directory after build."
+	)
 endfunction()
 
 # Check for Windows platform and specify dxcompiler.dll and dxil.dll locations.
