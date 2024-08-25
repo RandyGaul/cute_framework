@@ -271,24 +271,21 @@ if(WINDOWS AND NOT MSVC)
 	set(CF_LINK_LIBS ${CF_LINK_LIBS} ws2_32 secur32 shlwapi)
 endif()
 
-# Check for Windows platform and link dxcompiler.dll and dxil.dll
+# Check for Windows platform and link dxcompiler.dll and dxil.dll.
 if (WINDOWS)
 	set(DXC_DLL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/libraries/dxc")
 	set(DXC_DLLS "${DXC_DLL_DIR}/dxcompiler.dll" "${DXC_DLL_DIR}/dxil.dll")
 
-	# Check if a custom runtime output directory has been set; if not, use the default target directory
-	if (DEFINED CMAKE_RUNTIME_OUTPUT_DIRECTORY)
-		set(TARGET_OUTPUT_DIR ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
-	else()
-		set(TARGET_OUTPUT_DIR $<TARGET_FILE_DIR:cute>)
+	# Check if this project is being included as a subproject
+	if (NOT CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+		# The project is being included as a subproject (either added via add_subdirectory or FetchContent)
+		add_custom_command(TARGET cute POST_BUILD
+			COMMAND ${CMAKE_COMMAND} -E copy_if_different
+			${DXC_DLLS}
+			${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/$<CONFIG>
+			COMMENT "Copying dxcompiler.dll and dxil.dll to output directory after build"
+		)
 	endif()
-
-	# Add a post-build step to copy the DLLs to the output directory
-	add_custom_command(TARGET cute POST_BUILD
-		COMMAND ${CMAKE_COMMAND} -E copy_if_different
-		${DXC_DLLS}
-		${TARGET_OUTPUT_DIR}
-	)
 endif()
 
 # SDL for platform support.
@@ -501,15 +498,20 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 		)
 
 		foreach(CURRENT_TARGET ${SAMPLE_EXECUTABLES})
-			target_link_libraries("${CURRENT_TARGET}" PRIVATE cute)
+			target_link_libraries(${CURRENT_TARGET} PRIVATE cute)
 			if (APPLE)
-				set_target_properties("${CURRENT_TARGET}" PROPERTIES
+				set_target_properties(${CURRENT_TARGET} PROPERTIES
 					MACOSX_BUNDLE_GUI_IDENTIFIER "com.cuteframework.${CURRENT_TARGET}"
 					MACOSX_BUNDLE_BUNDLE_VERSION "1.0.0"
 					MACOSX_BUNDLE_SHORT_VERSION_STRING "1.0.0"
 				)
 			endif()
-			set_target_properties("${CURRENT_TARGET}" PROPERTIES FOLDER "samples")
+			set_target_properties(${CURRENT_TARGET} PROPERTIES FOLDER "samples")
+			add_custom_command(TARGET ${CURRENT_TARGET} POST_BUILD
+				COMMAND ${CMAKE_COMMAND} -E copy_if_different
+				${DXC_DLLS}
+				$<TARGET_FILE_DIR:${CURRENT_TARGET}>
+			)
 		endforeach()
 
 		# Copy over some folders for certain samples.

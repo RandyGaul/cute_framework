@@ -1684,6 +1684,9 @@ CF_INLINE Rect render_settings_peek_scissor() { return cf_render_settings_peek_s
 CF_INLINE void render_settings_push_render_state(RenderState render_state) { cf_render_settings_push_render_state(render_state); }
 CF_INLINE RenderState render_settings_pop_render_state() { return cf_render_settings_pop_render_state(); }
 CF_INLINE RenderState render_settings_peek_render_state() { return cf_render_settings_peek_render_state(); }
+CF_INLINE void render_settings_set_atlas_dimensions(int width_in_pixels, int height_in_pixels) { cf_render_settings_set_atlas_dimensions(width_in_pixels, height_in_pixels); }
+CF_INLINE CF_Shader make_draw_shader(const char* path) { return cf_make_draw_shader(path); }
+CF_INLINE CF_Shader make_draw_shader_from_source(const char* src) { return cf_make_draw_shader_from_source(src); }
 CF_INLINE void render_settings_push_shader(Shader shader) { cf_render_settings_push_shader(shader); }
 CF_INLINE Shader render_settings_pop_shader() { return cf_render_settings_pop_shader(); }
 CF_INLINE Shader render_settings_peek_shader() { return cf_render_settings_peek_shader(); }
