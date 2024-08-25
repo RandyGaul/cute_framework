@@ -275,11 +275,19 @@ endif()
 if (WINDOWS)
 	set(DXC_DLL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/libraries/dxc")
 	set(DXC_DLLS "${DXC_DLL_DIR}/dxcompiler.dll" "${DXC_DLL_DIR}/dxil.dll")
+
+	# Check if a custom runtime output directory has been set; if not, use the default target directory
+	if (DEFINED CMAKE_RUNTIME_OUTPUT_DIRECTORY)
+		set(TARGET_OUTPUT_DIR ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+	else()
+		set(TARGET_OUTPUT_DIR $<TARGET_FILE_DIR:cute>)
+	endif()
+
 	# Add a post-build step to copy the DLLs to the output directory
 	add_custom_command(TARGET cute POST_BUILD
 		COMMAND ${CMAKE_COMMAND} -E copy_if_different
 		${DXC_DLLS}
-		$<TARGET_FILE_DIR:cute>
+		${TARGET_OUTPUT_DIR}
 	)
 endif()
 

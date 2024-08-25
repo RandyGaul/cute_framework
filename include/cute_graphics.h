@@ -634,7 +634,7 @@ CF_API CF_Shader CF_CALL cf_make_shader_from_source(const char* vertex_src, cons
  *           the bytecode blob pair (vertex + fragment shader blobs) into a `CF_Shader` via `cf_make_shader_from_bytecode`.
  * @related  CF_Shader cf_make_shader_from_bytecode cf_make_shader_from_bytecode
  */
-const dyna uint8_t* cf_compile_shader_to_bytecode(const char* shader_src, CF_ShaderStage stage);
+CF_API const dyna uint8_t* CF_CALL cf_compile_shader_to_bytecode(const char* shader_src, CF_ShaderStage stage);
 
 /**
  * @function cf_make_shader_from_bytecode
@@ -1780,6 +1780,11 @@ CF_INLINE Texture make_texture(TextureParams texture_params) { return cf_make_te
 CF_INLINE void destroy_texture(Texture texture) { cf_destroy_texture(texture); }
 CF_INLINE void texture_update(Texture texture, void* data, int size) { cf_texture_update(texture, data, size); }
 CF_INLINE Shader make_shader(const char* vertex, const char* fragment) { return cf_make_shader(vertex, fragment); }
+CF_INLINE void shader_directory(const char* path) { cf_shader_directory(path); }
+CF_INLINE void shader_on_changed(void (*on_changed_fn)(const char* path, void* udata), void* udata) { cf_shader_on_changed(on_changed_fn, udata); }
+CF_INLINE Shader make_shader_from_source(const char* vertex_src, const char* fragment_src) { return cf_make_shader_from_source(vertex_src, fragment_src); }
+CF_INLINE const dyna uint8_t* compile_shader_to_bytecode(const char* shader_src, ShaderStage stage) { return cf_compile_shader_to_bytecode(shader_src, stage); }
+CF_INLINE Shader make_shader_from_bytecode(const dyna uint8_t* vertex_bytecode, const dyna uint8_t* fragment_bytecode) { return cf_make_shader_from_bytecode(vertex_bytecode, fragment_bytecode); }
 CF_INLINE void destroy_shader(Shader shader) { cf_destroy_shader(shader); }
 CF_INLINE CanvasParams canvas_defaults(int w, int h) { return cf_canvas_defaults(w, h); }
 CF_INLINE Canvas make_canvas(CanvasParams pass_params) { return cf_make_canvas(pass_params); }
