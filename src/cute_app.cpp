@@ -43,6 +43,11 @@ static void s_init_video()
 	SDL_Init(SDL_INIT_VIDEO);
 }
 
+CF_DisplayID cf_default_display()
+{
+	return { SDL_GetPrimaryDisplay() };
+}
+
 int cf_display_count()
 {
 	s_init_video();
@@ -51,64 +56,78 @@ int cf_display_count()
 	return count;
 }
 
-int cf_display_x(int display_index)
+CF_DisplayID* cf_get_display_list()
 {
 	s_init_video();
+	int count = 0;
+	SDL_DisplayID* ids = SDL_GetDisplays(&count);
+	return (CF_DisplayID*)ids;
+}
+
+void cf_free_display_list(CF_DisplayID* display_list)
+{
+	SDL_free(display_list);
+}
+
+int cf_display_x(CF_DisplayID display_id)
+{
+	SDL_GetPrimaryDisplay();
+	s_init_video();
 	SDL_Rect rect;
-	SDL_GetDisplayBounds(display_index, &rect);
+	SDL_GetDisplayBounds(display_id, &rect);
 	return rect.x;
 }
 
-int cf_display_y(int display_index)
+int cf_display_y(CF_DisplayID display_id)
 {
 	s_init_video();
 	SDL_Rect rect;
-	SDL_GetDisplayBounds(display_index, &rect);
+	SDL_GetDisplayBounds(display_id, &rect);
 	return rect.y;
 }
 
-int cf_display_width(int display_index)
+int cf_display_width(CF_DisplayID display_id)
 {
 	s_init_video();
 	SDL_Rect rect;
-	SDL_GetDisplayBounds(display_index, &rect);
+	SDL_GetDisplayBounds(display_id, &rect);
 	return rect.w;
 }
 
-int cf_display_height(int display_index)
+int cf_display_height(CF_DisplayID display_id)
 {
 	s_init_video();
 	SDL_Rect rect;
-	SDL_GetDisplayBounds(display_index, &rect);
+	SDL_GetDisplayBounds(display_id, &rect);
 	return rect.h;
 }
 
-float cf_display_refresh_rate(int display_index)
+float cf_display_refresh_rate(CF_DisplayID display_id)
 {
 	s_init_video();
-	const SDL_DisplayMode* mode = SDL_GetCurrentDisplayMode(display_index);
+	const SDL_DisplayMode* mode = SDL_GetCurrentDisplayMode(display_id);
 	return mode->refresh_rate;
 }
 
-CF_Rect cf_display_bounds(int display_index)
+CF_Rect cf_display_bounds(CF_DisplayID display_id)
 {
 	s_init_video();
 	SDL_Rect rect;
-	SDL_GetDisplayBounds(display_index, &rect);
+	SDL_GetDisplayBounds(display_id, &rect);
 	CF_Rect result = { rect.x, rect.y, rect.w, rect.h };
 	return result;
 }
 
-const char* cf_display_name(int display_index)
+const char* cf_display_name(CF_DisplayID display_id)
 {
 	s_init_video();
-	return SDL_GetDisplayName(display_index);
+	return SDL_GetDisplayName(display_id);
 }
 
-CF_DisplayOrientation cf_display_orientation(int display_index)
+CF_DisplayOrientation cf_display_orientation(CF_DisplayID display_id)
 {
 	s_init_video();
-	SDL_DisplayOrientation orientation = SDL_GetCurrentDisplayOrientation(display_index);
+	SDL_DisplayOrientation orientation = SDL_GetCurrentDisplayOrientation(display_id);
 	switch (orientation) {
 	default:
 	case SDL_ORIENTATION_UNKNOWN: return CF_DISPLAY_ORIENTATION_UNKNOWN;
@@ -169,7 +188,7 @@ static void s_canvas(int w, int h)
 	cf_material_set_texture_fs(app->backbuffer_material, "u_image", cf_canvas_get_target(app->offscreen_canvas));
 }
 
-CF_Result cf_make_app(const char* window_title, int display_index, int x, int y, int w, int h, CF_AppOptionFlags options, const char* argv0)
+CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, int y, int w, int h, CF_AppOptionFlags options, const char* argv0)
 {
 	bool use_dx11 = options & APP_OPTIONS_GFX_D3D11_BIT;
 	bool use_dx12 = options & APP_OPTIONS_GFX_D3D12_BIT;
@@ -254,11 +273,12 @@ CF_Result cf_make_app(const char* window_title, int display_index, int x, int y,
 	SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER, h);
 	SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_FLAGS_NUMBER, flags);
 	if (options & APP_OPTIONS_WINDOW_POS_CENTERED_BIT) {
-		SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_X_NUMBER, SDL_WINDOWPOS_CENTERED_DISPLAY(display_index));
-		SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_Y_NUMBER, SDL_WINDOWPOS_CENTERED_DISPLAY(display_index));
+		SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_X_NUMBER, SDL_WINDOWPOS_CENTERED_DISPLAY(display_id));
+		SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_Y_NUMBER, SDL_WINDOWPOS_CENTERED_DISPLAY(display_id));
 	} else {
-		int x_offset = display_x(display_index);
-		int y_offset = display_y(display_index);
+		if (display_id == 0) display_id = SDL_GetPrimaryDisplay();
+		int x_offset = display_x(display_id);
+		int y_offset = display_y(display_id);
 		SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_X_NUMBER, x_offset+x);
 		SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_Y_NUMBER, y_offset+y);
 	}

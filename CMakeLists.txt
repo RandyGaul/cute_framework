@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 3.14)
 project(cute_framework)
 
 # Must have at least C++20.
@@ -531,7 +531,9 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 				)
 			endif()
 			set_target_properties(${CURRENT_TARGET} PROPERTIES FOLDER "samples")
-			target_copy_dxc(${CURRENT_TARGET})
+			if (WINDOWS)
+                target_copy_dxc(${CURRENT_TARGET})
+			endif()
 		endforeach()
 
 		# Copy over some folders for certain samples.
