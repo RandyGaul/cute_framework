@@ -846,6 +846,7 @@ CF_INLINE int app_get_width() { return cf_app_get_width(); }
 CF_INLINE int app_get_height() { return cf_app_get_height(); }
 CF_INLINE float app_get_dpi_scale() { return cf_app_get_dpi_scale(); }
 CF_INLINE bool app_dpi_scaled_was_changed() { return cf_app_dpi_scale_was_changed(); }
+CF_INLINE void app_center_window() { cf_app_center_window(); }
 CF_INLINE bool app_was_resized() { return cf_app_was_resized(); }
 CF_INLINE bool app_was_moved() { return cf_app_was_moved(); }
 CF_INLINE bool app_lost_focus() { return cf_app_lost_focus(); }

@@ -506,11 +506,13 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 				)
 			endif()
 			set_target_properties(${CURRENT_TARGET} PROPERTIES FOLDER "samples")
-			add_custom_command(TARGET ${CURRENT_TARGET} POST_BUILD
-				COMMAND ${CMAKE_COMMAND} -E copy_if_different
-				${DXC_DLLS}
-				$<TARGET_FILE_DIR:${CURRENT_TARGET}>
-			)
+			if (WINDOWS)
+				add_custom_command(TARGET ${CURRENT_TARGET} POST_BUILD
+					COMMAND ${CMAKE_COMMAND} -E copy_if_different
+					${DXC_DLLS}
+					$<TARGET_FILE_DIR:${CURRENT_TARGET}>
+				)
+			endif()
 		endforeach()
 
 		# Copy over some folders for certain samples.
