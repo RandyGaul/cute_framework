@@ -1178,9 +1178,20 @@ CF_API void CF_CALL cf_render_settings_set_atlas_dimensions(int width_in_pixels,
  * @brief    Creates a custom draw shader.
  * @remarks  Your shader must be written in GLSL 450, and must follow some specific rules to be compatible with the draw API. For more in-depth explanations,
  *           see CF's docs on [Draw Shaders](https://randygaul.github.io/cute_framework/#/topics/drawing?id=shaders). Make sure to call `cf_shader_directory` first.
- * @related  CF_Shader cf_render_settings_push_shader cf_render_settings_pop_shader cf_render_settings_peek_shader
+ * @related  CF_Shader cf_render_settings_push_shader cf_render_settings_pop_shader cf_render_settings_peek_shader cf_make_draw_shader_from_source
  */
 CF_API CF_Shader CF_CALL cf_make_draw_shader(const char* path);
+
+/**
+ * @function cf_make_draw_shader_from_source
+ * @category draw
+ * @brief    Creates a custom draw shader from source string.
+ * @remarks  Your shader must be written in GLSL 450, and must follow some specific rules to be compatible with the draw API. For more in-depth explanations,
+ *           see CF's docs on [Draw Shaders](https://randygaul.github.io/cute_framework/#/topics/drawing?id=shaders). If you wish to include other files into
+ *           your shader via `#include` make sure to call `cf_shader_directory` first.
+ * @related  CF_Shader cf_render_settings_push_shader cf_render_settings_pop_shader cf_render_settings_peek_shader
+ */
+CF_API CF_Shader CF_CALL cf_make_draw_shader_from_source(const char* src);
 
 /**
  * @function cf_render_settings_push_shader

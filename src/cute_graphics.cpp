@@ -480,7 +480,6 @@ struct CF_Buffer
 {
 	int element_count;
 	int size;
-	//int offset; // @TODO Unused for now as SDL_Gpu has no way to stream map'd portions of buffers.
 	int stride;
 	SDL_GpuBuffer* buffer;
 	SDL_GpuTransferBuffer* transfer_buffer;
@@ -496,7 +495,16 @@ struct CF_MeshInternal
 
 CF_BackendType cf_query_backend()
 {
-	return BACKEND_TYPE_D3D11;
+	SDL_GpuDriver driver = SDL_GpuGetDriver(app->device);
+	switch (driver) {
+	case SDL_GPU_DRIVER_INVALID: return CF_BACKEND_TYPE_INVALID;
+	case SDL_GPU_DRIVER_SECRET:  return CF_BACKEND_TYPE_SECRET_NDA;
+	case SDL_GPU_DRIVER_VULKAN:  return CF_BACKEND_TYPE_VULKAN;
+	case SDL_GPU_DRIVER_D3D11:   return CF_BACKEND_TYPE_D3D11;
+	case SDL_GPU_DRIVER_D3D12:   return CF_BACKEND_TYPE_D3D12;
+	case SDL_GPU_DRIVER_METAL:   return CF_BACKEND_TYPE_METAL;
+	default: return CF_BACKEND_TYPE_INVALID;
+	}
 }
 
 CF_TextureParams cf_texture_defaults(int w, int h)
@@ -513,6 +521,11 @@ CF_TextureParams cf_texture_defaults(int w, int h)
 	return params;
 }
 
+CF_INLINE bool s_is_depth(CF_PixelFormat format)
+{
+	return format >= PIXEL_FORMAT_D16_UNORM;
+}
+
 CF_Texture cf_make_texture(CF_TextureParams params)
 {
 	SDL_GpuTextureCreateInfo tex_info = SDL_GpuTextureCreateInfoDefaults(params.width, params.height);
@@ -524,16 +537,21 @@ CF_Texture cf_make_texture(CF_TextureParams params)
 	CF_ASSERT(tex);
 	if (!tex) return { 0 };
 
-	SDL_GpuSamplerCreateInfo sampler_info = SDL_GpuSamplerCreateInfoDefaults();
-	sampler_info.minFilter = s_wrap(params.filter);
-	sampler_info.magFilter = s_wrap(params.filter);
-	sampler_info.addressModeU = s_wrap(params.wrap_u);
-	sampler_info.addressModeV = s_wrap(params.wrap_v);
-	SDL_GpuSampler* sampler = SDL_GpuCreateSampler(app->device, &sampler_info);
-	CF_ASSERT(sampler);
-	if (!sampler) {
-		SDL_GpuReleaseTexture(app->device, tex);
-		return { 0 };
+	SDL_GpuSampler* sampler = NULL;
+	// Depth/stencil textures don't need their own sampler, as the associated color
+	// texture in the owning canvas already has a sampler attached.
+	if (!s_is_depth(params.pixel_format)) {
+		SDL_GpuSamplerCreateInfo sampler_info = SDL_GpuSamplerCreateInfoDefaults();
+		sampler_info.minFilter = s_wrap(params.filter);
+		sampler_info.magFilter = s_wrap(params.filter);
+		sampler_info.addressModeU = s_wrap(params.wrap_u);
+		sampler_info.addressModeV = s_wrap(params.wrap_v);
+		sampler = SDL_GpuCreateSampler(app->device, &sampler_info);
+		CF_ASSERT(sampler);
+		if (!sampler) {
+			SDL_GpuReleaseTexture(app->device, tex);
+			return { 0 };
+		}
 	}
 
 	SDL_GpuTransferBuffer* buf = NULL;
@@ -550,7 +568,7 @@ CF_Texture cf_make_texture(CF_TextureParams params)
 	CF_TextureInternal* tex_internal = CF_NEW(CF_TextureInternal);
 	tex_internal->w = params.width;
 	tex_internal->h = params.height;
-	tex_internal->filter = sampler_info.minFilter;
+	tex_internal->filter = sampler ? s_wrap(params.filter) : SDL_GPU_FILTER_NEAREST;
 	tex_internal->tex = tex;
 	tex_internal->buf = buf;
 	tex_internal->sampler = sampler;
@@ -564,7 +582,7 @@ void cf_destroy_texture(CF_Texture texture_handle)
 {
 	CF_TextureInternal* tex = (CF_TextureInternal*)texture_handle.id;
 	SDL_GpuReleaseTexture(app->device, tex->tex);
-	SDL_GpuReleaseSampler(app->device, tex->sampler);
+	if (tex->sampler) SDL_GpuReleaseSampler(app->device, tex->sampler);
 	if (tex->buf) SDL_GpuReleaseTransferBuffer(app->device, tex->buf);
 	CF_FREE(tex);
 }
@@ -1043,9 +1061,16 @@ CF_Shader cf_make_draw_shader_internal(const char* path)
 	const char* path_s = sintern(p);
 	CF_ShaderFileInfo info = app->shader_file_infos.find(path_s);
 	if (!info.path) return { 0 };
-	const char* shd = fs_read_entire_file_to_memory_and_nul_terminate(info.path);
+	char* shd = fs_read_entire_file_to_memory_and_nul_terminate(info.path);
 	if (!shd) return { 0 };
-	return s_compile(s_draw_vs, s_draw_fs, true, shd);
+	CF_Shader result = cf_make_draw_shader_from_source_internal(shd);
+	cf_free(shd);
+	return result;
+}
+
+CF_Shader cf_make_draw_shader_from_source_internal(const char* src)
+{
+	return s_compile(s_draw_vs, s_draw_fs, true, src);
 }
 
 CF_Shader cf_make_shader(const char* vertex_path, const char* fragment_path)
@@ -1122,11 +1147,6 @@ void cf_destroy_canvas(CF_Canvas canvas_handle)
 	cf_destroy_texture(canvas->cf_texture);
 	if (canvas->depth_stencil) cf_destroy_texture(canvas->cf_depth_stencil);
 	CF_FREE(canvas);
-}
-
-void cf_canvas_clear_depth_stencil(CF_Canvas canvas_handle, float depth, uint32_t stencil)
-{
-	// @TODO.
 }
 
 CF_Texture cf_canvas_get_target(CF_Canvas canvas_handle)
@@ -1314,7 +1334,7 @@ void cf_mesh_update_index_data(CF_Mesh mesh_handle, uint32_t* indices, int count
 CF_RenderState cf_render_state_defaults()
 {
 	CF_RenderState state;
-	state.blend.enabled = false;
+	state.blend.enabled = true;
 	state.cull_mode = CF_CULL_MODE_NONE;
 	state.blend.pixel_format = PIXEL_FORMAT_R8G8B8A8_UNORM;
 	state.blend.write_R_enabled = true;
@@ -1601,6 +1621,7 @@ static SDL_GpuGraphicsPipeline* s_build_pipeline(CF_ShaderInternal* shader, CF_R
 	pip_info.attachmentInfo.hasDepthStencilAttachment = state->depth_write_enabled;
 	if (s_canvas->cf_depth_stencil.id) {
 		pip_info.attachmentInfo.depthStencilFormat = ((CF_TextureInternal*)s_canvas->cf_depth_stencil.id)->format;
+		pip_info.attachmentInfo.hasDepthStencilAttachment = true;
 	}
 
 	// Make sure the mesh vertex format is fully compatible with the vertex shader inputs.
@@ -1641,7 +1662,7 @@ static SDL_GpuGraphicsPipeline* s_build_pipeline(CF_ShaderInternal* shader, CF_R
 
 	pip_info.primitiveType = SDL_GPU_PRIMITIVETYPE_TRIANGLELIST;
 	pip_info.rasterizerState.fillMode = SDL_GPU_FILLMODE_FILL;
-	pip_info.rasterizerState.cullMode = SDL_GPU_CULLMODE_NONE;
+	pip_info.rasterizerState.cullMode = s_wrap(state->cull_mode);
 	pip_info.rasterizerState.frontFace = SDL_GPU_FRONTFACE_COUNTER_CLOCKWISE;
 	pip_info.rasterizerState.depthBiasEnable = false;
 	pip_info.rasterizerState.depthBiasConstantFactor = 0;
@@ -1721,13 +1742,15 @@ void cf_apply_shader(CF_Shader shader_handle, CF_Material material_handle)
 	CF_MEMSET(&pass_depth_stencil_info, 0, sizeof(pass_depth_stencil_info));
 	pass_depth_stencil_info.texture = s_canvas->depth_stencil;
 	if (s_canvas->depth_stencil) {
-		pass_depth_stencil_info.loadOp = SDL_GPU_LOADOP_LOAD;
+		pass_depth_stencil_info.depthStencilClearValue.depth = app->clear_depth;
+		pass_depth_stencil_info.depthStencilClearValue.stencil = app->clear_stencil;
+		pass_depth_stencil_info.loadOp = s_canvas->clear ? SDL_GPU_LOADOP_CLEAR : SDL_GPU_LOADOP_LOAD;
 		pass_depth_stencil_info.storeOp = SDL_GPU_STOREOP_STORE;
-		pass_depth_stencil_info.stencilLoadOp = SDL_GPU_LOADOP_LOAD;
+		pass_depth_stencil_info.stencilLoadOp = s_canvas->clear ? SDL_GPU_LOADOP_CLEAR : SDL_GPU_LOADOP_LOAD;
 		pass_depth_stencil_info.stencilStoreOp = SDL_GPU_STOREOP_DONT_CARE;
 		pass_depth_stencil_info.cycle = true;
 	}
-	SDL_GpuRenderPass* pass = SDL_GpuBeginRenderPass(cmd, &pass_color_info, 1, NULL);
+	SDL_GpuRenderPass* pass = SDL_GpuBeginRenderPass(cmd, &pass_color_info, 1, s_canvas->depth_stencil ? &pass_depth_stencil_info : NULL);
 	CF_ASSERT(pass);
 	s_canvas->pass = pass;
 	SDL_GpuBindGraphicsPipeline(pass, pip);
@@ -1766,6 +1789,7 @@ void cf_apply_shader(CF_Shader shader_handle, CF_Material material_handle)
 void cf_draw_elements()
 {
 	CF_MeshInternal* mesh = s_canvas->mesh;
+	// @TODO Instanced rendering.
 	if (mesh->indices.buffer) {
 		// @TODO
 		//SDL_GpuDrawIndexedPrimitives(s_canvas->pass, 0, mesh->vertices.element_count);
@@ -1779,11 +1803,6 @@ void cf_draw_elements()
 void cf_commit()
 {
 	SDL_GpuEndRenderPass(s_canvas->pass);
-	CF_MeshInternal* mesh = s_canvas->mesh;
-	if (mesh) {
-		//mesh->vertices.element_count = 0;
-		//mesh->indices.element_count = 0;
-	}
 }
 
 #include <SPIRV-Reflect/spirv_reflect.c>

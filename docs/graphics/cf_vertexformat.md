@@ -49,7 +49,6 @@ VERTEX_FORMAT_HALF4 | Four 16-bit floating point numbers.
 ## Remarks
 
 Vertex formats define the type and size of vertex attributes in a vertex buffer.
-Not all formats are supported on all hardware; check compatibility before use.
 
 ## Related Pages
 

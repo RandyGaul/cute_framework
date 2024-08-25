@@ -21,7 +21,7 @@ path | A virtual path to the folder with your shaders (subfolders supported). Se
 
 ## Remarks
 
-Shaders can #include each other as long as they exist in this directory. Changes to shaders on disk
+Shaders can `#include` each other as long as they exist in this directory. Changes to shaders on disk
 may also be watched via [cf_shader_on_changed](/graphics/cf_shader_on_changed.md) to support shader reloading during development.
 
 ## Related Pages

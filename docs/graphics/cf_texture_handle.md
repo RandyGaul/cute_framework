@@ -15,6 +15,10 @@ Returns an SDL_GpuTexture casted to a `uint64_t`.
 uint64_t cf_texture_handle(CF_Texture texture);
 ```
 
+## Remarks
+
+This is useful for e.g. rendering textures in an external system like Dear ImGui.
+
 ## Related Pages
 
 [CF_TextureParams](/graphics/cf_textureparams.md)  

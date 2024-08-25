@@ -15,10 +15,12 @@ The various supported graphics backends.
 
 Enum | Description
 --- | ---
-BACKEND_TYPE_VULKAN | (null)
-BACKEND_TYPE_D3D11 | (null)
-BACKEND_TYPE_D3D12 | (null)
-BACKEND_TYPE_METAL | (null)
+BACKEND_TYPE_INVALID | Invalid backend type (unitialized or failed to create).
+BACKEND_TYPE_VULKAN | Vulkan backend.
+BACKEND_TYPE_D3D11 | DirectX 11 backend (legacy support).
+BACKEND_TYPE_D3D12 | DirectX 12 backend.
+BACKEND_TYPE_METAL | Metal backend.
+BACKEND_TYPE_SECRET_NDA | A "secret" backend for platforms under non-disclosure agreement.
 
 ## Related Pages
 

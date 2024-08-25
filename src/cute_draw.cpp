@@ -2310,6 +2310,11 @@ CF_Shader cf_make_draw_shader(const char* path)
 	return cf_make_draw_shader_internal(path);
 }
 
+CF_Shader cf_make_draw_shader_from_source(const char* src)
+{
+	return cf_make_draw_shader_from_source_internal(src);
+}
+
 void cf_render_settings_push_shader(CF_Shader shader)
 {
 	draw->shaders.add(shader);

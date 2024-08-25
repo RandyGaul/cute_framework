@@ -748,6 +748,7 @@ struct Sprite : public CF_Sprite
 CF_INLINE Sprite easy_make_sprite(const char* png_path, Result* result) { return cf_make_easy_sprite_from_png(png_path, result); }
 CF_INLINE Sprite easy_make_sprite(const Pixel* pixels, int w, int h) { return cf_make_easy_sprite_from_pixels(pixels, w, h); }
 CF_INLINE Sprite make_sprite(const char* aseprite_path) { return cf_make_sprite(aseprite_path); }
+CF_INLINE Sprite make_demo_sprite() { return cf_make_demo_sprite(); }
 CF_INLINE void sprite_unload(const char* aseprite_path) { cf_sprite_unload(aseprite_path); }
 CF_INLINE Sprite sprite_reload(const Sprite* sprite) { return cf_sprite_reload(sprite); }
 CF_INLINE Sprite sprite_reload(Sprite& sprite) { return (sprite = cf_sprite_reload(&sprite)); }

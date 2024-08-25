@@ -16,7 +16,6 @@ int main(int argc, char* argv[])
 	cf_shader_directory("/metaballs_data");
 	cf_shader_on_changed(on_shader_changed, NULL);
 	CF_Canvas soft_circles = make_canvas(canvas_defaults(w, h));
-	CF_Canvas tmp = make_canvas(canvas_defaults(w, h));
 	CF_Shader shd = cf_make_draw_shader("metaballs.shd");
 	float t = 0;
 

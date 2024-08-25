@@ -34,19 +34,22 @@ For _FRAGMENT_ shaders:
  3: Uniform buffers
 
 Example _VERTEX shader:
+```glsl
 layout (set = 0, binding = 0) uniform sampler2D u_image;
 
 layout (set = 1, binding = 0) uniform uniform_block {
     vec2 u_texture_size;
 };
+```
 
 Example _FRAGMENT_ shader:
-
+```glsl
 layout (set = 2, binding = 0) uniform sampler2D u_image;
 
 layout (set = 3, binding = 0) uniform uniform_block {
     vec2 u_texture_size;
 };
+```
 
 For uniforms you only have one uniform block available, and it must be named `uniform_block`. However, if your
 shader is make from the draw api ([cf_make_draw_shader](/draw/cf_make_draw_shader.md)) uniform blocks must be named user_uniforms.

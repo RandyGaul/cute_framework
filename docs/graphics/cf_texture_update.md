@@ -23,7 +23,8 @@ size | The size in bytes of `data`.
 
 ## Remarks
 
-The texture must not have been created with `CF_USAGE_TYPE_IMMUTABLE`.
+If you plan to frequently update the texture once per frame, it's recommended to set `stream` to
+true in the creation params [CF_TextureParams](/graphics/cf_textureparams.md).
 
 ## Related Pages
 

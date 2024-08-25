@@ -39,13 +39,13 @@ extern "C" {
  *     - 3D textures
  *     - Texture arrays
  *     - Other primitive types besides triangles
- *     - Face winding order (defaults to CCW only)
  *     - Anisotropy tunable
  *     - Min/max LOD tunable
  *
  * These features are to be added to CF in the future:
  * 
  *     - Indexed meshes
+ *     - Instance rendering
  *     - Compute shaders
  * 
  * The basic flow of rendering a frame looks something like this:
@@ -132,14 +132,18 @@ typedef struct CF_Shader { uint64_t id; } CF_Shader;
  * @related  CF_BackendType cf_backend_type_to_string cf_query_backend
  */
 #define CF_BACKEND_TYPE_DEFS \
-	/* @entry */    \
-	CF_ENUM(BACKEND_TYPE_VULKAN, 0) \
-	/* @entry */    \
-	CF_ENUM(BACKEND_TYPE_D3D11,  1) \
-	/* @entry */    \
-	CF_ENUM(BACKEND_TYPE_D3D12,  2) \
-	/* @entry */    \
-	CF_ENUM(BACKEND_TYPE_METAL,  3) \
+	/* @entry Invalid backend type (unitialized or failed to create). */           \
+	CF_ENUM(BACKEND_TYPE_INVALID, -1)                                              \
+	/* @entry Vulkan backend. */                                                   \
+	CF_ENUM(BACKEND_TYPE_VULKAN, 0)                                                \
+	/* @entry DirectX 11 backend (legacy support). */                              \
+	CF_ENUM(BACKEND_TYPE_D3D11,  1)                                                \
+	/* @entry DirectX 12 backend. */                                               \
+	CF_ENUM(BACKEND_TYPE_D3D12,  2)                                                \
+	/* @entry Metal backend. */                                                    \
+	CF_ENUM(BACKEND_TYPE_METAL,  3)                                                \
+	/* @entry A "secret" backend for platforms under non-disclosure agreement. */  \
+	CF_ENUM(BACKEND_TYPE_SECRET_NDA,  4)                                           \
 	/* @end */
 
 typedef enum CF_BackendType
@@ -258,7 +262,6 @@ CF_API CF_BackendType CF_CALL cf_query_backend();
 	/* @entry 32-bit depth channel, 8-bit stencil channel, floating point. */                  \
 	CF_ENUM(PIXEL_FORMAT_D32_FLOAT_S8_UINT,      36)                                           \
 	/* @end */
-
 
 typedef enum CF_PixelFormat
 {
@@ -503,7 +506,8 @@ CF_API void CF_CALL cf_destroy_texture(CF_Texture texture);
  * @param    texture    The texture.
  * @param    data       The data to upload to the texture.
  * @param    size       The size in bytes of `data`.
- * @remarks  The texture must not have been created with `CF_USAGE_TYPE_IMMUTABLE`.
+ * @remarks  If you plan to frequently update the texture once per frame, it's recommended to set `stream` to
+ *           true in the creation params `CF_TextureParams`.
  * @related  CF_TextureParams CF_Texture cf_make_texture cf_destroy_texture cf_texture_update
  */
 CF_API void CF_CALL cf_texture_update(CF_Texture texture, void* data, int size);
@@ -512,6 +516,7 @@ CF_API void CF_CALL cf_texture_update(CF_Texture texture, void* data, int size);
  * @function cf_texture_handle
  * @category graphics
  * @brief    Returns an SDL_GpuTexture* casted to a `uint64_t`.
+ * @remarks  This is useful for e.g. rendering textures in an external system like Dear ImGui.
  * @related  CF_TextureParams CF_Texture cf_make_texture
  */
 CF_API uint64_t CF_CALL cf_texture_handle(CF_Texture texture);
@@ -522,16 +527,14 @@ CF_API uint64_t CF_CALL cf_texture_handle(CF_Texture texture);
 /**
  * @enum     CF_ShaderStage
  * @category graphics
- * @brief    TODO
- * @related  TODO
+ * @brief    Distinction between vertex and fragment shaders.
+ * @related  CF_Shader cf_shader_directory cf_make_shader
  */
 #define CF_SHADER_STAGE_DEFS \
 	/* @entry */ \
 	CF_ENUM(SHADER_STAGE_VERTEX,   0) \
 	/* @entry */ \
 	CF_ENUM(SHADER_STAGE_FRAGMENT, 1) \
-	/* @entry */ \
-	CF_ENUM(SHADER_STAGE_COUNT,    4) \
 	/* @end */
 
 typedef enum CF_ShaderStage
@@ -546,7 +549,7 @@ typedef enum CF_ShaderStage
  * @category graphics
  * @brief    Sets up the app's shader directory.
  * @param    path     A virtual path to the folder with your shaders (subfolders supported). See [Virtual File System](https://randygaul.github.io/cute_framework/#/topics/virtual_file_system).
- * @remarks  Shaders can #include each other as long as they exist in this directory. Changes to shaders on disk
+ * @remarks  Shaders can `#include` each other as long as they exist in this directory. Changes to shaders on disk
  *           may also be watched via `cf_shader_on_changed` to support shader reloading during development.
  * @related  CF_Shader cf_make_shader cf_destroy_shader cf_apply_shader CF_Material
  */
@@ -582,19 +585,22 @@ CF_API void CF_CALL cf_shader_on_changed(void (*on_changed_fn)(const char* path,
  *            3: Uniform buffers
  *           
  *           Example _VERTEX shader:
+ *           ```glsl
  *           layout (set = 0, binding = 0) uniform sampler2D u_image;
  *           
  *           layout (set = 1, binding = 0) uniform uniform_block {
  *               vec2 u_texture_size;
  *           };
+ *           ```
  *           
  *           Example _FRAGMENT_ shader:
- *           
+ *           ```glsl
  *           layout (set = 2, binding = 0) uniform sampler2D u_image;
  *           
  *           layout (set = 3, binding = 0) uniform uniform_block {
  *               vec2 u_texture_size;
  *           };
+ *           ```
  *           
  *           For uniforms you only have one uniform block available, and it *must* be named `uniform_block`. However, if your
  *           shader is make from the draw api (`cf_make_draw_shader`) uniform blocks must be named user_uniforms.
@@ -748,7 +754,6 @@ CF_API void CF_CALL cf_canvas_blit(CF_Canvas src, CF_V2 u0, CF_V2 v0, CF_Canvas 
  * @category graphics
  * @brief    The various supported vertex formats.
  * @remarks  Vertex formats define the type and size of vertex attributes in a vertex buffer.
- *           Not all formats are supported on all hardware; check compatibility before use.
  * @related  CF_VertexFormat cf_vertex_format_to_string CF_VertexFormatOp cf_query_vertex_format
  */
 #define CF_VERTEX_FORMAT_DEFS \

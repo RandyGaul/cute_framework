@@ -9,7 +9,7 @@ Category: [graphics](/api_reference?id=graphics)
 GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_graphics.h)  
 ---
 
-TODO
+Distinction between vertex and fragment shaders.
 
 ## Values
 
@@ -17,8 +17,9 @@ Enum | Description
 --- | ---
 SHADER_STAGE_VERTEX | (null)
 SHADER_STAGE_FRAGMENT | (null)
-SHADER_STAGE_COUNT | (null)
 
 ## Related Pages
 
-TODO  
+[CF_Shader](/graphics/cf_shader.md)  
+[cf_shader_directory](/graphics/cf_shader_directory.md)  
+[cf_make_shader](/graphics/cf_make_shader.md)  
