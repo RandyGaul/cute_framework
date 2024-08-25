@@ -276,14 +276,13 @@ if (WINDOWS)
 	set(DXC_DLL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/libraries/dxc")
 	set(DXC_DLLS "${DXC_DLL_DIR}/dxcompiler.dll" "${DXC_DLL_DIR}/dxil.dll")
 
-	# Check if this project is being included as a subproject
+	# Check if this project is being included as a subproject.
 	if (NOT CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
-		# The project is being included as a subproject (either added via add_subdirectory or FetchContent)
 		add_custom_command(TARGET cute POST_BUILD
 			COMMAND ${CMAKE_COMMAND} -E copy_if_different
 			${DXC_DLLS}
 			${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/$<CONFIG>
-			COMMENT "Copying dxcompiler.dll and dxil.dll to output directory after build"
+			COMMENT "Copying dxcompiler.dll and dxil.dll to output directory after build."
 		)
 	endif()
 endif()
