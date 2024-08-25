@@ -1737,7 +1737,9 @@ void cf_apply_shader(CF_Shader shader_handle, CF_Material material_handle)
 	pass_color_info.clearColor = { app->clear_color.r, app->clear_color.g, app->clear_color.b, app->clear_color.a };
 	pass_color_info.loadOp = s_canvas->clear ? SDL_GPU_LOADOP_CLEAR : SDL_GPU_LOADOP_LOAD;
 	pass_color_info.storeOp = SDL_GPU_STOREOP_STORE;
-	pass_color_info.cycle = true;
+	// @TODO Figure out why cycling here doens't work well on D3D11 (causes flickering).
+	// https://github.com/thatcosmonaut/SDL/issues/238
+	pass_color_info.cycle = SDL_GpuGetDriver(app->device) == SDL_GPU_DRIVER_D3D11 ? false : true;
 	SDL_GpuDepthStencilAttachmentInfo pass_depth_stencil_info;
 	CF_MEMSET(&pass_depth_stencil_info, 0, sizeof(pass_depth_stencil_info));
 	pass_depth_stencil_info.texture = s_canvas->depth_stencil;
@@ -1748,7 +1750,7 @@ void cf_apply_shader(CF_Shader shader_handle, CF_Material material_handle)
 		pass_depth_stencil_info.storeOp = SDL_GPU_STOREOP_STORE;
 		pass_depth_stencil_info.stencilLoadOp = s_canvas->clear ? SDL_GPU_LOADOP_CLEAR : SDL_GPU_LOADOP_LOAD;
 		pass_depth_stencil_info.stencilStoreOp = SDL_GPU_STOREOP_DONT_CARE;
-		pass_depth_stencil_info.cycle = true;
+		pass_depth_stencil_info.cycle = pass_color_info.cycle;
 	}
 	SDL_GpuRenderPass* pass = SDL_GpuBeginRenderPass(cmd, &pass_color_info, 1, s_canvas->depth_stencil ? &pass_depth_stencil_info : NULL);
 	CF_ASSERT(pass);

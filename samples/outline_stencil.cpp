@@ -19,7 +19,7 @@ int main(int argc, char* argv[])
 {
 	int options = 0;
 	//options = APP_OPTIONS_GFX_VULKAN_BIT;
-	//options = APP_OPTIONS_GFX_D3D11_BIT;
+	options = APP_OPTIONS_GFX_D3D11_BIT;
 	//options = APP_OPTIONS_GFX_D3D12_BIT;
 	make_app("Stencil Outline", 0, 0, 0, (int)(w*scale), (int)(h*scale), options | APP_OPTIONS_RESIZABLE_BIT | APP_OPTIONS_WINDOW_POS_CENTERED_BIT, argv[0]);
 	set_target_framerate(200);
