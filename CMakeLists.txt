@@ -288,8 +288,7 @@ endfunction()
 
 # Check for Windows platform and specify dxcompiler.dll and dxil.dll locations.
 if (WINDOWS)
-	get_target_property(cute_SOURCE_DIR cute SOURCE_DIR)
-	set(DXC_DLL_DIR "${cute_SOURCE_DIR}/libraries/dxc")
+	set(DXC_DLL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/libraries/dxc")
 	set(DXC_DLLS "${DXC_DLL_DIR}/dxcompiler.dll" "${DXC_DLL_DIR}/dxil.dll")
 
 	# Check if this project is being included as a subproject.
@@ -535,7 +534,7 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 			endif()
 			set_target_properties(${CURRENT_TARGET} PROPERTIES FOLDER "samples")
 			if (WINDOWS)
-                target_copy_dxc(${CURRENT_TARGET})
+                target_dxc_copy(${CURRENT_TARGET})
 			endif()
 		endforeach()
 
