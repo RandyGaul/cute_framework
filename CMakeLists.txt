@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.14)
+cmake_minimum_required(VERSION 3.20)
 project(cute_framework)
 
 # Must have at least C++20.
@@ -281,7 +281,7 @@ if (WINDOWS)
 		add_custom_command(TARGET cute POST_BUILD
 			COMMAND ${CMAKE_COMMAND} -E copy_if_different
 			${DXC_DLLS}
-			${RUNTIME_OUTPUT_DIRECTORY}
+			$<OUTPUT_CONFIG:$<CONFIG>>
 			COMMENT "Copying dxcompiler.dll and dxil.dll to output directory after build."
 		)
 	endif()
