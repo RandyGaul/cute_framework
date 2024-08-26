@@ -36,7 +36,7 @@ int main(int argc, char* argv[])
 		ImGui::End();
 
 		render_settings_push_shader(recolor);
-		cf_draw_push_vertex_attributes(color.r, color.b, color.g, strength);
+		cf_draw_push_vertex_attributes(color.r, color.g, color.b, strength);
 		girl.update();
 		girl.draw();
 
