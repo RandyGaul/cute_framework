@@ -13,7 +13,7 @@
 //--------------------------------------------------------------------------------------------------
 // C API
 
-#define CF_VERSION_STRING_COMPILED "Cute Framework Version 1.0.2 (WIP)"
+#define CF_VERSION_STRING_COMPILED "Cute Framework Version 1.1.0 (WIP)"
 
 #ifdef __cplusplus
 extern "C" {
