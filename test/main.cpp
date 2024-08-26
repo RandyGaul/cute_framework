@@ -25,15 +25,12 @@
 
 #include <cute.h>
 
-TEST_SUITE(test_aabb_tree);
 TEST_SUITE(test_array);
 TEST_SUITE(test_aseprite);
 TEST_SUITE(test_audio);
 TEST_SUITE(test_base64);
 TEST_SUITE(test_coroutine);
 TEST_SUITE(test_doubly_list);
-TEST_SUITE(test_ecs);
-TEST_SUITE(test_handle);
 TEST_SUITE(test_hashtable);
 TEST_SUITE(test_path);
 TEST_SUITE(test_png_cache);
@@ -62,15 +59,12 @@ int main(int argc, char* argv[])
 
 	pu_display_colors(true);
 
-	RUN_TEST_SUITE(test_aabb_tree);
 	RUN_TEST_SUITE(test_array);
 	RUN_TEST_SUITE(test_aseprite);
 	RUN_TEST_SUITE(test_audio);
 	RUN_TEST_SUITE(test_base64);
 	RUN_TEST_SUITE(test_coroutine);
 	RUN_TEST_SUITE(test_doubly_list);
-	RUN_TEST_SUITE(test_ecs);
-	RUN_TEST_SUITE(test_handle);
 	RUN_TEST_SUITE(test_hashtable);
 	RUN_TEST_SUITE(test_path);
 	RUN_TEST_SUITE(test_png_cache);

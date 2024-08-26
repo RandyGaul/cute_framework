@@ -491,6 +491,7 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 		add_executable(timestep samples/timestep.cpp)
 		add_executable(joypad samples/joypad.c)
 		add_executable(outline_stencil samples/outline_stencil.cpp)
+		add_executable(recolor samples/recolor.cpp)
 		set(SAMPLE_EXECUTABLES
 			easysprite
 			basicserialization
@@ -516,6 +517,7 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 			timestep
 			joypad
 			outline_stencil
+			recolor
 		)
 
 		foreach(CURRENT_TARGET ${SAMPLE_EXECUTABLES})
