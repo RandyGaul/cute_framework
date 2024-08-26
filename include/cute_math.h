@@ -2708,7 +2708,7 @@ CF_INLINE v2 abs(v2 a) { return cf_abs_v2(a); }
 CF_INLINE float hmin(v2 a) { return cf_hmin(a); }
 CF_INLINE float hmax(v2 a) { return cf_hmax(a); }
 CF_INLINE float len(v2 a) { return cf_len(a); }
-CF_INLINE float len_sq(v2 a) { return cf_len(a); }
+CF_INLINE float len_sq(v2 a) { return cf_len_sq(a); }
 CF_INLINE float distance(v2 a, v2 b) { return cf_distance(a, b); }
 CF_INLINE v2 norm(v2 a) { return cf_norm(a); }
 CF_INLINE v2 safe_norm(v2 a) { return cf_safe_norm(a); }
