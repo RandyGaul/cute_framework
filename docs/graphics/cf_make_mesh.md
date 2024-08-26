@@ -12,17 +12,22 @@ GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/maste
 Returns a [CF_Mesh](/graphics/cf_mesh.md).
 
 ```cpp
-CF_Mesh cf_make_mesh(int vertex_buffer_size);
+CF_Mesh cf_make_mesh(int vertex_buffer_size_in_bytes, const CF_VertexAttribute* attributes, int attribute_count, int vertex_stride);
 ```
 
 Parameters | Description
 --- | ---
-vertex_buffer_size | The size of the mesh's vertex buffer.
+vertex_buffer_size_in_bytes | The size of the mesh's vertex buffer.
+attributes | Vertex attributes to define the memory layout of the mesh vertices.
+attribute_count | Number of attributes in `attributes`.
+vertex_stride | Number of bytes between each vertex.
+
+## Remarks
+
+The max number of attributes is `CF_MESH_MAX_VERTEX_ATTRIBUTES` (32). Any more attributes beyond 32 will be ignored.
 
 ## Related Pages
 
 [CF_Mesh](/graphics/cf_mesh.md)  
-cf_mesh_update_index_data  
-[cf_destroy_mesh](/graphics/cf_destroy_mesh.md)  
-[cf_mesh_set_attributes](/graphics/cf_mesh_set_attributes.md)  
 [cf_mesh_update_vertex_data](/graphics/cf_mesh_update_vertex_data.md)  
+[cf_destroy_mesh](/graphics/cf_destroy_mesh.md)  

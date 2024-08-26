@@ -25,7 +25,5 @@ is created the layout of the vertices in memory must be described. We use an arr
 [CF_Shader](/graphics/cf_shader.md)  
 [cf_make_mesh](/graphics/cf_make_mesh.md)  
 [cf_destroy_mesh](/graphics/cf_destroy_mesh.md)  
-[cf_mesh_set_attributes](/graphics/cf_mesh_set_attributes.md)  
 [cf_mesh_update_vertex_data](/graphics/cf_mesh_update_vertex_data.md)  
-cf_mesh_update_index_data  
 [cf_apply_mesh](/graphics/cf_apply_mesh.md)  

@@ -440,7 +440,6 @@ void cf_make_draw()
 	draw->reset_cam();
 
 	// Mesh + vertex attributes.
-	draw->mesh = cf_make_mesh(CF_MB * 5);
 	CF_VertexAttribute attrs[12] = { };
 	attrs[0].name = "in_pos";
 	attrs[0].format = CF_VERTEX_FORMAT_FLOAT2;
@@ -478,7 +477,7 @@ void cf_make_draw()
 	attrs[11].name = "in_user_params";
 	attrs[11].format = CF_VERTEX_FORMAT_FLOAT4;
 	attrs[11].offset = CF_OFFSET_OF(CF_Vertex, attributes);
-	cf_mesh_set_attributes(draw->mesh, attrs, CF_ARRAY_SIZE(attrs), sizeof(CF_Vertex));
+	draw->mesh = cf_make_mesh(CF_MB * 5, attrs, CF_ARRAY_SIZE(attrs), sizeof(CF_Vertex));
 
 	// Shaders.
 	draw->shaders.add(app->draw_shader);

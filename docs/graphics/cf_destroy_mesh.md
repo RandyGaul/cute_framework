@@ -23,6 +23,4 @@ mesh | The mesh.
 
 [CF_Mesh](/graphics/cf_mesh.md)  
 [cf_make_mesh](/graphics/cf_make_mesh.md)  
-cf_mesh_update_index_data  
-[cf_mesh_set_attributes](/graphics/cf_mesh_set_attributes.md)  
 [cf_mesh_update_vertex_data](/graphics/cf_mesh_update_vertex_data.md)  

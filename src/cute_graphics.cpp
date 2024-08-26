@@ -1220,7 +1220,7 @@ void cf_canvas_blit(CF_Canvas src, CF_V2 u0, CF_V2 v0, CF_Canvas dst, CF_V2 u1, 
 
 // @TODO Index support.
 //CF_Mesh cf_make_mesh(int vertex_buffer_size, int index_buffer_size)
-CF_Mesh cf_make_mesh(int vertex_buffer_size)
+CF_Mesh cf_make_mesh(int vertex_buffer_size, const CF_VertexAttribute* attributes, int attribute_count, int vertex_stride)
 {
 	CF_MeshInternal* mesh = (CF_MeshInternal*)CF_CALLOC(sizeof(CF_MeshInternal));
 	mesh->vertices.size = vertex_buffer_size;
@@ -1245,6 +1245,13 @@ CF_Mesh cf_make_mesh(int vertex_buffer_size)
 	//	mesh->indices.buffer = SDL_GpuCreateBuffer(app->device, SDL_GPU_BUFFERUSAGE_INDEX_BIT, index_buffer_size);
 	//	mesh->indices.transfer_buffer = SDL_GpuCreateTransferBuffer(app->device, SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD, index_buffer_size);
 	//}
+	attribute_count = min(attribute_count, CF_MESH_MAX_VERTEX_ATTRIBUTES);
+	mesh->attribute_count = attribute_count;
+	mesh->vertices.stride = vertex_stride;
+	for (int i = 0; i < attribute_count; ++i) {
+		mesh->attributes[i] = attributes[i];
+		mesh->attributes[i].name = sintern(attributes[i].name);
+	}
 	CF_Mesh result = { (uint64_t)mesh };
 	return result;
 }
@@ -1261,18 +1268,6 @@ void cf_destroy_mesh(CF_Mesh mesh_handle)
 		SDL_GpuReleaseTransferBuffer(app->device, mesh->indices.transfer_buffer);
 	}
 	CF_FREE(mesh);
-}
-
-void cf_mesh_set_attributes(CF_Mesh mesh_handle, const CF_VertexAttribute* attributes, int attribute_count, int vertex_stride)
-{
-	CF_MeshInternal* mesh = (CF_MeshInternal*)mesh_handle.id;
-	attribute_count = min(attribute_count, CF_MESH_MAX_VERTEX_ATTRIBUTES);
-	mesh->attribute_count = attribute_count;
-	mesh->vertices.stride = vertex_stride;
-	for (int i = 0; i < attribute_count; ++i) {
-		mesh->attributes[i] = attributes[i];
-		mesh->attributes[i].name = sintern(attributes[i].name);
-	}
 }
 
 void cf_mesh_update_vertex_data(CF_Mesh mesh_handle, void* data, int count)

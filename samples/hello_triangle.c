@@ -54,8 +54,7 @@ int main(int argc, char* argv[])
 	verts[1].color = cf_pixel_blue();
 	verts[2].position = cf_v2(0,1);
 	verts[2].color = cf_pixel_green();
-
-	CF_Mesh mesh = cf_make_mesh(sizeof(Vertex) * 3);
+	
 	CF_VertexAttribute attrs[2] = { 0 };
 	attrs[0].name = "in_pos";
 	attrs[0].format = CF_VERTEX_FORMAT_FLOAT2;
@@ -63,7 +62,7 @@ int main(int argc, char* argv[])
 	attrs[1].name = "in_col";
 	attrs[1].format = CF_VERTEX_FORMAT_UBYTE4_NORM;
 	attrs[1].offset = CF_OFFSET_OF(Vertex, color);
-	cf_mesh_set_attributes(mesh, attrs, CF_ARRAY_SIZE(attrs), sizeof(Vertex));
+	CF_Mesh mesh = cf_make_mesh(sizeof(Vertex) * 3, attrs, CF_ARRAY_SIZE(attrs), sizeof(Vertex));
 	cf_mesh_update_vertex_data(mesh, verts, 3);
 
 	// Create material and shader. The material could potentially hold render state, uniforms, or texture bindings. For this

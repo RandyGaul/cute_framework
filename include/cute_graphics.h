@@ -94,7 +94,7 @@ typedef struct CF_Canvas { uint64_t id; } CF_Canvas;
  * @remarks  A mesh is a container of triangles, along with optional indices. After a mesh
  *           is created the layout of the vertices in memory must be described. We use an array of
  *           `CF_VertexAttribute` to define how the GPU will interpret the vertices we send it.
- * @related  CF_Texture CF_Canvas CF_Material CF_Shader cf_make_mesh cf_destroy_mesh cf_mesh_set_attributes cf_mesh_update_vertex_data cf_mesh_update_index_data cf_apply_mesh
+ * @related  CF_Texture CF_Canvas CF_Material CF_Shader cf_make_mesh cf_destroy_mesh cf_mesh_update_vertex_data cf_apply_mesh
  */
 typedef struct CF_Mesh { uint64_t id; } CF_Mesh;
 // @end
@@ -863,39 +863,30 @@ typedef struct CF_VertexAttribute
 } CF_VertexAttribute;
 // @end
 
+// Max number of vertex attributes allowed on a mesh.
+#define CF_MESH_MAX_VERTEX_ATTRIBUTES (32)
+
 /**
  * @function cf_make_mesh
  * @category graphics
  * @brief    Returns a `CF_Mesh`.
- * @param    vertex_buffer_size    The size of the mesh's vertex buffer.
- * @related  CF_Mesh cf_make_mesh cf_destroy_mesh cf_mesh_set_attributes cf_mesh_update_vertex_data cf_mesh_update_index_data
+ * @param    vertex_buffer_size_in_bytes  The size of the mesh's vertex buffer.
+ * @param    attributes                   Vertex attributes to define the memory layout of the mesh vertices.
+ * @param    attribute_count              Number of attributes in `attributes`.
+ * @param    vertex_stride                Number of bytes between each vertex.
+ * @remarks  The max number of attributes is `CF_MESH_MAX_VERTEX_ATTRIBUTES` (32). Any more attributes beyond 32 will be ignored.
+ * @related  CF_Mesh cf_make_mesh cf_destroy_mesh cf_mesh_update_vertex_data
  */
-CF_API CF_Mesh CF_CALL cf_make_mesh(int vertex_buffer_size);
+CF_API CF_Mesh CF_CALL cf_make_mesh(int vertex_buffer_size_in_bytes, const CF_VertexAttribute* attributes, int attribute_count, int vertex_stride);
 
 /**
  * @function cf_destroy_mesh
  * @category graphics
  * @brief    Frees up a `CF_Mesh` previously created with `cf_make_mesh`.
  * @param    mesh       The mesh.
- * @related  CF_Mesh cf_make_mesh cf_destroy_mesh cf_mesh_set_attributes cf_mesh_update_vertex_data cf_mesh_update_index_data
+ * @related  CF_Mesh cf_make_mesh cf_destroy_mesh cf_mesh_update_vertex_data
  */
 CF_API void CF_CALL cf_destroy_mesh(CF_Mesh mesh);
-
-// Max number of vertex attributes allowed on a mesh.
-#define CF_MESH_MAX_VERTEX_ATTRIBUTES (32)
-
-/**
- * @function cf_mesh_set_attributes
- * @category graphics
- * @brief    Informs CF and the GPU what the memory layout of your verticex data looks like.
- * @param    mesh             The mesh.
- * @param    attributes       Vertex attributes to define the memory layout of the mesh vertices.
- * @param    attribute_count  Number of attributes in `attributes`.
- * @param    vertex_stride    Number of bytes between each vertex.
- * @remarks  You must call this before uploading any data to the GPU. The max number of attributes is `CF_MESH_MAX_VERTEX_ATTRIBUTES` (32). Any more attributes beyond 32 will be ignored.
- * @related  CF_Mesh cf_make_mesh cf_destroy_mesh cf_mesh_set_attributes cf_mesh_update_vertex_data cf_mesh_update_index_data
- */
-CF_API void CF_CALL cf_mesh_set_attributes(CF_Mesh mesh, const CF_VertexAttribute* attributes, int attribute_count, int vertex_stride);
 
 /**
  * @function cf_mesh_update_vertex_data
@@ -905,7 +896,7 @@ CF_API void CF_CALL cf_mesh_set_attributes(CF_Mesh mesh, const CF_VertexAttribut
  * @param    data       A pointer to vertex data.
  * @param    count      Number of bytes in `data`.
  * @return   Returns the number of bytes written.
- * @related  CF_Mesh cf_make_mesh cf_destroy_mesh cf_mesh_set_attributes cf_mesh_update_vertex_data cf_mesh_update_index_data
+ * @related  CF_Mesh cf_make_mesh cf_destroy_mesh cf_mesh_update_vertex_data
  */
 CF_API void CF_CALL cf_mesh_update_vertex_data(CF_Mesh mesh, void* data, int count);
 
@@ -1792,11 +1783,10 @@ CF_INLINE void destroy_canvas(Canvas canvas) { cf_destroy_canvas(canvas); }
 CF_INLINE Texture canvas_get_target(Canvas canvas) { return cf_canvas_get_target(canvas); }
 CF_INLINE Texture canvas_get_depth_stencil_target(Canvas canvas) { return cf_canvas_get_depth_stencil_target(canvas); }
 CF_INLINE void canvas_blit(Canvas src, v2 u0, v2 v0, Canvas dst, v2 u1, v2 v1) { cf_canvas_blit(src, u0, v0, dst, u1, v1); }
-CF_INLINE Mesh make_mesh(int vertex_buffer_size) { return cf_make_mesh(vertex_buffer_size); }
+CF_INLINE Mesh make_mesh(int vertex_buffer_size_in_bytes, const VertexAttribute* attributes, int attribute_count, int vertex_stride) { return cf_make_mesh(vertex_buffer_size_in_bytes, attributes, attribute_count, vertex_stride); }
 CF_INLINE void destroy_mesh(Mesh mesh) { cf_destroy_mesh(mesh); }
-CF_INLINE void mesh_set_attributes(Mesh mesh, const VertexAttribute* attributes, int attribute_count, int vertex_stride) { cf_mesh_set_attributes(mesh, attributes, attribute_count, vertex_stride); }
 CF_INLINE void mesh_update_vertex_data(Mesh mesh, void* data, int count) { cf_mesh_update_vertex_data(mesh, data, count); }
-//CF_INLINE void mesh_update_index_data(Mesh mesh, uint32_t* indices, int count) { cf_mesh_update_index_data(mesh, indices, count); }
+//CF_INLINE void mesh_update_index_data(Mesh mesh, uint32_t* indices, int count) {(mesh, indices, count); }
 CF_INLINE RenderState render_state_defaults() { return cf_render_state_defaults(); }
 CF_INLINE Material make_material() { return cf_make_material(); }
 CF_INLINE void destroy_material(Material material) { cf_destroy_material(material); }

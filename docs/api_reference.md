@@ -1085,7 +1085,6 @@ This is a list of all functions in Cute Framework organized by categories. This 
 - [cf_material_set_texture_vs](/graphics/cf_material_set_texture_vs.md)
 - [cf_material_set_uniform_fs](/graphics/cf_material_set_uniform_fs.md)
 - [cf_material_set_uniform_vs](/graphics/cf_material_set_uniform_vs.md)
-- [cf_mesh_set_attributes](/graphics/cf_mesh_set_attributes.md)
 - [cf_mesh_update_vertex_data](/graphics/cf_mesh_update_vertex_data.md)
 - [cf_mod_color](/graphics/cf_mod_color.md)
 - [cf_mul_color](/graphics/cf_mul_color.md)

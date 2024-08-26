@@ -18,5 +18,5 @@ const char* cf_vertex_format_string(CF_VertexFormat format)
 ## Related Pages
 
 [CF_VertexFormat](/graphics/cf_vertexformat.md)  
-[cf_mesh_set_attributes](/graphics/cf_mesh_set_attributes.md)  
+cf_mesh_set_attributes  
 [CF_VertexAttribute](/graphics/cf_vertexattribute.md)  

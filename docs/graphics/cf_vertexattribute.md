@@ -24,4 +24,4 @@ to a vertex shader. A [CF_Mesh](/graphics/cf_mesh.md) is a collection of vertice
 
 ## Related Pages
 
-[cf_mesh_set_attributes](/graphics/cf_mesh_set_attributes.md)  
+cf_mesh_set_attributes  

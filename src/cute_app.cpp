@@ -306,7 +306,6 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 		
 		// Setup the backbuffer fullscreen mesh and canvas.
 		{
-			app->backbuffer_quad = cf_make_mesh(sizeof(Vertex) * 6);
 			CF_VertexAttribute attrs[2] = { };
 			attrs[0].name = "in_posH";
 			attrs[0].format = CF_VERTEX_FORMAT_FLOAT2;
@@ -314,7 +313,7 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 			attrs[1].name = "in_uv";
 			attrs[1].format = CF_VERTEX_FORMAT_FLOAT2;
 			attrs[1].offset = CF_OFFSET_OF(Vertex, u);
-			cf_mesh_set_attributes(app->backbuffer_quad, attrs, CF_ARRAY_SIZE(attrs), sizeof(Vertex));
+			app->backbuffer_quad = cf_make_mesh(sizeof(Vertex) * 6, attrs, CF_ARRAY_SIZE(attrs), sizeof(Vertex));
 			Vertex quad[6];
 			s_quad(0, 0, 2, 2, quad);
 			cf_mesh_update_vertex_data(app->backbuffer_quad, quad, 6);
