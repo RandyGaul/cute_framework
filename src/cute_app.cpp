@@ -377,10 +377,6 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 		cf_fs_mount(cf_fs_get_base_directory(), "", true);
 	}
 
-	// Initialize a default ECS world.
-	app->world = cf_make_world();
-	app->worlds.add(app->world);
-
 	return cf_result_success();
 }
 
@@ -399,10 +395,6 @@ void cf_destroy_app()
 	}
 	cf_destroy_aseprite_cache();
 	cf_destroy_png_cache();
-	// Mainly here to cleanup the default world, but, as a convenience we can just clean them all up.
-	for (int i = 0; i < app->worlds.count(); ++i) {
-		cf_destroy_world(app->worlds[i]);
-	}
 	cs_shutdown();
 	destroy_mutex(&app->on_sound_finish_mutex);
 	if (app->device) SDL_GpuUnclaimWindow(app->device, app->window);

@@ -12,12 +12,12 @@ GitHub: [cute_app.h](https://github.com/RandyGaul/cute_framework/blob/master/inc
 Returns the bounds, in pixels, of the display.
 
 ```cpp
-CF_Rect cf_display_bounds(int display_index);
+CF_Rect cf_display_bounds(CF_DisplayID display_id);
 ```
 
 Parameters | Description
 --- | ---
-display_index | The index of the display. See [cf_display_count](/app/cf_display_count.md).
+display_id | The id of the display. See [cf_get_display_list](/app/cf_get_display_list.md).
 
 ## Related Pages
 

@@ -12,13 +12,13 @@ GitHub: [cute_app.h](https://github.com/RandyGaul/cute_framework/blob/master/inc
 Use this function to construct an instance of your application window and (optionally) initialize graphics.
 
 ```cpp
-CF_Result cf_make_app(const char* window_title, int display_index, int x, int y, int w, int h, CF_AppOptionFlags options, const char* argv0);
+CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, int y, int w, int h, CF_AppOptionFlags options, const char* argv0);
 ```
 
 Parameters | Description
 --- | ---
 window_title | The title of the window in utf8 encoding.
-display_index | The index of the display to spawn upon. Set this to zero for the primary display. See [cf_display_count](/app/cf_display_count.md).
+display_index | The index of the display to spawn upon. Set this to zero for the primary display. See [cf_get_display_list](/app/cf_get_display_list.md).
 x | The x position of the window.
 y | The y position of the window.
 w | The width of the window in pixels.

@@ -26,7 +26,6 @@
  */
 
 
-#include "cute_aabb_tree.h"
 #include "cute_alloc.h"
 #include "cute_app.h"
 #include "cute_array.h"
@@ -39,7 +38,6 @@
 #include "cute_defer.h"
 #include "cute_doubly_list.h"
 #include "cute_draw.h"
-#include "cute_ecs.h"
 #include "cute_file_system.h"
 #include "cute_graphics.h"
 #include "cute_haptics.h"

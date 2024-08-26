@@ -64,16 +64,13 @@ set(CF_SRCS
 	src/cute_clipboard.cpp
 	src/cute_multithreading.cpp
 	src/cute_file_system.cpp
-	src/cute_handle_table.cpp
 	src/cute_input.cpp
 	src/cute_time.cpp
 	src/cute_version.cpp
 	src/cute_json.cpp
 	src/cute_base64.cpp
 	src/cute_hashtable.cpp
-	src/cute_ecs.cpp
 	src/cute_string.cpp
-	src/cute_typeless_array.cpp
 	src/cute_math.cpp
 	src/cute_draw.cpp
 	src/cute_image.cpp
@@ -82,8 +79,6 @@ set(CF_SRCS
 	src/cute_png_cache.cpp
 	src/cute_https.cpp
 	src/cute_joypad.cpp
-	src/cute_a_star.cpp
-	src/cute_aabb_tree.cpp
 	src/cute_symbol.cpp
 	src/cute_haptics.cpp
 	src/cute_sprite.cpp
@@ -122,7 +117,6 @@ set(CF_PUBLIC_HDRS
 	include/cute_defines.h
 	include/cute_result.h
 	include/cute_file_system.h
-	include/cute_handle_table.h
 	include/cute_input.h
 	include/cute_time.h
 	include/cute_version.h
@@ -131,7 +125,6 @@ set(CF_PUBLIC_HDRS
 	include/cute_base64.h
 	include/cute_array.h
 	include/cute_hashtable.h
-	include/cute_ecs.h
 	include/cute_string.h
 	include/cute_typeless_array.h
 	include/cute_defer.h
@@ -148,8 +141,6 @@ set(CF_PUBLIC_HDRS
 	include/cute_https.h
 	include/cute_joypad.h
 	include/cute_priority_queue.h
-	include/cute_a_star.h
-	include/cute_aabb_tree.h
 	include/cute_symbol.h
 	include/cute_haptics.h
 	include/cute_coroutine.h
@@ -181,7 +172,6 @@ set(CF_HDRS
 	src/internal/cute_app_internal.h
 	src/internal/cute_input_internal.h
 	src/internal/cute_serialize_internal.h
-	src/internal/cute_ecs_internal.h
 	src/internal/cute_png_cache_internal.h
 	src/internal/cute_draw_internal.h
 	src/internal/cute_font_internal.h
@@ -282,7 +272,6 @@ function(target_dxc_copy TARGET)
 			COMMAND ${CMAKE_COMMAND} -E copy_if_different
 			${DXC_DLLS}
 			$<TARGET_FILE_DIR:${TARGET}>
-			COMMENT "Copying dxcompiler.dll and dxil.dll to output directory after build."
 	)
 endfunction()
 
@@ -346,6 +335,8 @@ if (CF_GLSLANG)
 	set(SKIP_SPIRV_TOOLS_INSTALL OFF CACHE BOOL "Don't install the SPIR-V Tools as they are built.")
 	set(SPIRV_SKIP_EXECUTABLES ON CACHE BOOL "Don't build any SPIR-V Tools executables/tests.")
 	set(SPIRV_WERROR OFF CACHE BOOL "Turn off SPIR-V warnings as error.")
+	set(ENABLE_GLSLANG_BINARIES OFF CACHE BOOL "Turn off some standalone binary tools for glslang.")
+	set(GLSLANG_ENABLE_INSTALL OFF CACHE BOOL "Disable installation option for glslang.")
 
 	# Can't seem to use fetch content here as we need to run this stupid update_glslang_sources.py file _before_ CMake starts configuring it.
 	set(GLSLANG_ZIP "${CMAKE_BINARY_DIR}/glslang-14.3.0.zip")
@@ -393,6 +384,16 @@ if (CF_GLSLANG)
 	set(SPIRV_CROSS_STATIC ON CACHE BOOL "Do not build SPIRV-Cross as static library")
 	set(SPIRV_CROSS_C_API ON CACHE BOOL "Enable the C API")
 	set(SPIRV_CROSS_EXCEPTIONS_TO_ASSERTIONS ON CACHE BOOL "Turn off exceptions in SPIRV-Cross.")
+	set(SPIRV_CROSS_ENABLE_REFLECT OFF CACHE BOOL "Turn off reflection in SPIRV-Cross.")
+	set(SPIRV_CROSS_SKIP_INSTALL OFF CACHE BOOL "Turn off install targets in SPIRV-Cross.")
+	set(SPIRV_CROSS_ENABLE_UTIL OFF CACHE BOOL "Turn off utils in SPIRV-Cross.")
+	set(SPIRV_CROSS_ENABLE_CPP OFF CACHE BOOL "Turn off CPP target support in SPIRV-Cross.")
+	if (WINDOWS)
+		set(SPIRV_CROSS_ENABLE_MSL OFF CACHE BOOL "Turn off MSL support when on windows.")
+	endif()
+	if (APPLE)
+		set(SPIRV_CROSS_ENABLE_HLSL OFF CACHE BOOL "Turn off HLSL support when on windows.")
+	endif()
 	FetchContent_MakeAvailable(SPIRV_CROSS)
 	set(CF_LINK_LIBS ${CF_LINK_LIBS} glslang glslang-default-resource-limits SPIRV SPIRV-Tools SPIRV-Tools-opt spirv-cross-c)
 endif()
@@ -438,15 +439,12 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 			test/test_base64.cpp
 			test/test_coroutine.cpp
 			test/test_doubly_list.cpp
-			test/test_ecs.cpp
-			test/test_handle.cpp
 			test/test_hashtable.cpp
 			test/test_path.cpp
 			test/test_png_cache.cpp
 			test/test_sprite.cpp
 			test/test_string.cpp
 			test/test_json.cpp
-			test/test_aabb_tree.cpp
 			test/test_markups.cpp
 			)
 		set(CF_TEST_HDRS test/test_harness.h)
@@ -471,7 +469,6 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 	# Cute sample prgrams (optional, defaulted to also build).
 	if (CF_FRAMEWORK_BUILD_SAMPLES)
 		add_executable(easysprite samples/easy_sprite.c)
-		add_executable(basicecs samples/basic_ecs.cpp)
 		add_executable(basicserialization samples/basic_serialization.c)
 		add_executable(imgui samples/imgui.c)
 		add_executable(textdrawing samples/text_drawing.cpp)
@@ -497,7 +494,6 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 		add_executable(outline_stencil samples/outline_stencil.cpp)
 		set(SAMPLE_EXECUTABLES
 			easysprite
-			basicecs
 			basicserialization
 			imgui
 			textdrawing
@@ -534,7 +530,7 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 			endif()
 			set_target_properties(${CURRENT_TARGET} PROPERTIES FOLDER "samples")
 			if (WINDOWS)
-                target_dxc_copy(${CURRENT_TARGET})
+				target_dxc_copy(${CURRENT_TARGET})
 			endif()
 		endforeach()
 

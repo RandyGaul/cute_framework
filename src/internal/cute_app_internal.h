@@ -11,7 +11,6 @@
 #include <cute_app.h>
 #include <cute_audio.h>
 #include <cute_array.h>
-#include <cute_ecs.h>
 #include <cute_math.h>
 #include <cute_doubly_list.h>
 #include <cute_png_cache.h>
@@ -23,7 +22,6 @@
 
 #include <internal/cute_draw_internal.h>
 #include <internal/cute_font_internal.h>
-#include <internal/cute_ecs_internal.h>
 #include <internal/cute_graphics_internal.h>
 
 #include <SDL3/SDL.h>
@@ -143,23 +141,6 @@ struct CF_App
 	SDL_GpuTransferBuffer* imgui_itbuf = NULL;
 	SDL_GpuGraphicsPipeline* imgui_pip = NULL;
 	SDL_GpuTexture* imgui_font_tex = NULL;
-
-	// ECS stuff.
-	CF_SystemInternal system_internal_builder;
-	Cute::Array<CF_SystemInternal> systems;
-	CF_EntityConfig entity_config_builder;
-	CF_EntityType entity_type_gen = 0;
-	Cute::Map<const char*, CF_EntityType> entity_type_string_to_id;
-	Cute::Array<const char*> entity_type_id_to_string;
-	CF_EntityType current_collection_type_being_iterated = ~0;
-	CF_EntityCollection* current_collection_being_updated = NULL;
-	CF_ComponentListInternal component_list;
-
-	CF_ComponentConfig component_config_builder;
-	Cute::Map<const char*, CF_ComponentConfig> component_configs;
-
-	CF_World world;
-	Cute::Array<CF_World> worlds;
 
 	// Font stuff.
 	uint64_t font_image_id_gen = CF_FONT_ID_RANGE_LO;

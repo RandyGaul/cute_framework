@@ -82,6 +82,7 @@ This is a list of all functions in Cute Framework organized by categories. This 
 - [cf_app_was_resized](/app/cf_app_was_resized.md)
 - [cf_app_was_restored](/app/cf_app_was_restored.md)
 - [cf_assert_fn](/app/cf_assert_fn.md)
+- [cf_default_display](/app/cf_default_display.md)
 - [cf_destroy_app](/app/cf_destroy_app.md)
 - [cf_display_bounds](/app/cf_display_bounds.md)
 - [cf_display_count](/app/cf_display_count.md)
@@ -92,6 +93,8 @@ This is a list of all functions in Cute Framework organized by categories. This 
 - [cf_display_width](/app/cf_display_width.md)
 - [cf_display_x](/app/cf_display_x.md)
 - [cf_display_y](/app/cf_display_y.md)
+- [cf_free_display_list](/app/cf_free_display_list.md)
+- [cf_get_display_list](/app/cf_get_display_list.md)
 - [cf_make_app](/app/cf_make_app.md)
 - [cf_power_state_to_string](/app/cf_power_state_to_string.md)
 - [cf_set_assert_handler](/app/cf_set_assert_handler.md)
@@ -399,6 +402,7 @@ This is a list of all functions in Cute Framework organized by categories. This 
 - [cf_draw_TRS_absolute](/draw/cf_draw_trs_absolute.md)
 - [cf_fetch_image](/draw/cf_fetch_image.md)
 - [cf_make_draw_shader](/draw/cf_make_draw_shader.md)
+- [cf_make_draw_shader_from_source](/draw/cf_make_draw_shader_from_source.md)
 - [cf_make_premade_sprite](/draw/cf_make_premade_sprite.md)
 - [cf_register_premade_atlas](/draw/cf_register_premade_atlas.md)
 - [cf_render_settings_filter](/draw/cf_render_settings_filter.md)
@@ -432,71 +436,6 @@ This is a list of all functions in Cute Framework organized by categories. This 
 - [CF_AtlasSubImage](/draw/cf_atlassubimage.md)
 - [CF_TemporaryImage](/draw/cf_temporaryimage.md)
 - [CF_Vertex](/draw/cf_vertex.md)
-
-
-## ecs
-
-### functions
-- [cf_component_begin](/ecs/cf_component_begin.md)
-- [cf_component_end](/ecs/cf_component_end.md)
-- [cf_component_rename](/ecs/cf_component_rename.md)
-- [cf_component_set_name](/ecs/cf_component_set_name.md)
-- [cf_component_set_optional_cleanup](/ecs/cf_component_set_optional_cleanup.md)
-- [cf_component_set_optional_initializer](/ecs/cf_component_set_optional_initializer.md)
-- [cf_component_set_size](/ecs/cf_component_set_size.md)
-- [CF_ComponentFn](/ecs/cf_componentfn.md)
-- [cf_destroy_entity](/ecs/cf_destroy_entity.md)
-- [cf_destroy_entity_delayed](/ecs/cf_destroy_entity_delayed.md)
-- [cf_destroy_world](/ecs/cf_destroy_world.md)
-- [cf_entity_activate](/ecs/cf_entity_activate.md)
-- [cf_entity_add_component](/ecs/cf_entity_add_component.md)
-- [cf_entity_begin](/ecs/cf_entity_begin.md)
-- [cf_entity_change_type](/ecs/cf_entity_change_type.md)
-- [cf_entity_deactivate](/ecs/cf_entity_deactivate.md)
-- [cf_entity_delayed_activate](/ecs/cf_entity_delayed_activate.md)
-- [cf_entity_delayed_change_type](/ecs/cf_entity_delayed_change_type.md)
-- [cf_entity_delayed_deactivate](/ecs/cf_entity_delayed_deactivate.md)
-- [cf_entity_end](/ecs/cf_entity_end.md)
-- [cf_entity_equals](/ecs/cf_entity_equals.md)
-- [cf_entity_get_component](/ecs/cf_entity_get_component.md)
-- [cf_entity_get_type_string](/ecs/cf_entity_get_type_string.md)
-- [cf_entity_has_component](/ecs/cf_entity_has_component.md)
-- [cf_entity_is_active](/ecs/cf_entity_is_active.md)
-- [cf_entity_is_type](/ecs/cf_entity_is_type.md)
-- [cf_entity_is_valid](/ecs/cf_entity_is_valid.md)
-- [cf_entity_set_name](/ecs/cf_entity_set_name.md)
-- [cf_entity_type_rename](/ecs/cf_entity_type_rename.md)
-- [cf_get_component_list](/ecs/cf_get_component_list.md)
-- [cf_get_component_list_for_entity_type](/ecs/cf_get_component_list_for_entity_type.md)
-- [cf_get_components](/ecs/cf_get_components.md)
-- [cf_get_entities](/ecs/cf_get_entities.md)
-- [cf_get_entity_list](/ecs/cf_get_entity_list.md)
-- [cf_get_system_list](/ecs/cf_get_system_list.md)
-- [cf_is_entity_type_valid](/ecs/cf_is_entity_type_valid.md)
-- [cf_make_entity](/ecs/cf_make_entity.md)
-- [cf_make_world](/ecs/cf_make_world.md)
-- [cf_run_systems](/ecs/cf_run_systems.md)
-- [cf_system_begin](/ecs/cf_system_begin.md)
-- [cf_system_end](/ecs/cf_system_end.md)
-- [cf_system_require_component](/ecs/cf_system_require_component.md)
-- [cf_system_set_name](/ecs/cf_system_set_name.md)
-- [cf_system_set_optional_post_update](/ecs/cf_system_set_optional_post_update.md)
-- [cf_system_set_optional_pre_update](/ecs/cf_system_set_optional_pre_update.md)
-- [cf_system_set_optional_udata](/ecs/cf_system_set_optional_udata.md)
-- [cf_system_set_update](/ecs/cf_system_set_update.md)
-- [CF_SystemUpdateFn](/ecs/cf_systemupdatefn.md)
-- [cf_world_equals](/ecs/cf_world_equals.md)
-- [cf_world_peek](/ecs/cf_world_peek.md)
-- [cf_world_pop](/ecs/cf_world_pop.md)
-- [cf_world_push](/ecs/cf_world_push.md)
-
-
-### structs
-- [CF_ComponentList](/ecs/cf_componentlist.md)
-- [CF_Entity](/ecs/cf_entity.md)
-- [CF_INVALID_ENTITY](/ecs/cf_invalid_entity.md)
-- [CF_INVALID_WORLD](/ecs/cf_invalid_world.md)
-- [CF_World](/ecs/cf_world.md)
 
 
 ## file
@@ -931,6 +870,135 @@ This is a list of all functions in Cute Framework organized by categories. This 
 - [CF_V2](/math/cf_v2.md)
 
 
+## multithreading
+
+### functions
+- [cf_cv_wait](/multithreading/cf_cv_wait.md)
+- [cf_cv_wake_all](/multithreading/cf_cv_wake_all.md)
+- [cf_cv_wake_one](/multithreading/cf_cv_wake_one.md)
+- [cf_destroy_cv](/multithreading/cf_destroy_cv.md)
+- [cf_destroy_mutex](/multithreading/cf_destroy_mutex.md)
+- [cf_destroy_rw_lock](/multithreading/cf_destroy_rw_lock.md)
+- [cf_destroy_sem](/multithreading/cf_destroy_sem.md)
+- [cf_destroy_threadpool](/multithreading/cf_destroy_threadpool.md)
+- [cf_make_cv](/multithreading/cf_make_cv.md)
+- [cf_make_mutex](/multithreading/cf_make_mutex.md)
+- [cf_make_rw_lock](/multithreading/cf_make_rw_lock.md)
+- [cf_make_sem](/multithreading/cf_make_sem.md)
+- [cf_make_threadpool](/multithreading/cf_make_threadpool.md)
+- [cf_mutex_lock](/multithreading/cf_mutex_lock.md)
+- [cf_mutex_try_lock](/multithreading/cf_mutex_try_lock.md)
+- [cf_mutex_unlock](/multithreading/cf_mutex_unlock.md)
+- [cf_read_lock](/multithreading/cf_read_lock.md)
+- [cf_read_unlock](/multithreading/cf_read_unlock.md)
+- [cf_sem_post](/multithreading/cf_sem_post.md)
+- [cf_sem_try](/multithreading/cf_sem_try.md)
+- [cf_sem_value](/multithreading/cf_sem_value.md)
+- [cf_sem_wait](/multithreading/cf_sem_wait.md)
+- [CF_TaskFn](/multithreading/cf_taskfn.md)
+- [cf_thread_create](/multithreading/cf_thread_create.md)
+- [cf_thread_detach](/multithreading/cf_thread_detach.md)
+- [cf_thread_get_id](/multithreading/cf_thread_get_id.md)
+- [cf_thread_id](/multithreading/cf_thread_id.md)
+- [cf_thread_wait](/multithreading/cf_thread_wait.md)
+- [cf_threadpool_add_task](/multithreading/cf_threadpool_add_task.md)
+- [cf_threadpool_kick](/multithreading/cf_threadpool_kick.md)
+- [cf_threadpool_kick_and_wait](/multithreading/cf_threadpool_kick_and_wait.md)
+- [cf_write_lock](/multithreading/cf_write_lock.md)
+- [cf_write_unlock](/multithreading/cf_write_unlock.md)
+
+
+### structs
+- [CF_ConditionVariable](/multithreading/cf_conditionvariable.md)
+- [CF_Mutex](/multithreading/cf_mutex.md)
+- [CF_ReadWriteLock](/multithreading/cf_readwritelock.md)
+- [CF_Semaphore](/multithreading/cf_semaphore.md)
+- [CF_Thread](/multithreading/cf_thread.md)
+- [CF_ThreadFn](/multithreading/cf_threadfn.md)
+- [CF_ThreadId](/multithreading/cf_threadid.md)
+- [CF_Threadpool](/multithreading/cf_threadpool.md)
+
+
+## input
+
+### functions
+- [cf_clear_key_states](/input/cf_clear_key_states.md)
+- [cf_clipboard_get](/input/cf_clipboard_get.md)
+- [cf_clipboard_set](/input/cf_clipboard_set.md)
+- [cf_input_disable_ime](/input/cf_input_disable_ime.md)
+- [cf_input_enable_ime](/input/cf_input_enable_ime.md)
+- [cf_input_get_ime_composition](/input/cf_input_get_ime_composition.md)
+- [cf_input_has_ime_keyboard_support](/input/cf_input_has_ime_keyboard_support.md)
+- [cf_input_is_ime_enabled](/input/cf_input_is_ime_enabled.md)
+- [cf_input_is_ime_keyboard_shown](/input/cf_input_is_ime_keyboard_shown.md)
+- [cf_input_set_ime_rect](/input/cf_input_set_ime_rect.md)
+- [cf_input_text_add_utf8](/input/cf_input_text_add_utf8.md)
+- [cf_input_text_clear](/input/cf_input_text_clear.md)
+- [cf_input_text_has_data](/input/cf_input_text_has_data.md)
+- [cf_input_text_pop_utf32](/input/cf_input_text_pop_utf32.md)
+- [cf_joypad_add_mapping](/input/cf_joypad_add_mapping.md)
+- [cf_joypad_axis](/input/cf_joypad_axis.md)
+- [cf_joypad_axis_to_string](/input/cf_joypad_axis_to_string.md)
+- [cf_joypad_button_down](/input/cf_joypad_button_down.md)
+- [cf_joypad_button_just_pressed](/input/cf_joypad_button_just_pressed.md)
+- [cf_joypad_button_just_released](/input/cf_joypad_button_just_released.md)
+- [cf_joypad_button_to_string](/input/cf_joypad_button_to_string.md)
+- [cf_joypad_close](/input/cf_joypad_close.md)
+- [cf_joypad_count](/input/cf_joypad_count.md)
+- [cf_joypad_firmware_version](/input/cf_joypad_firmware_version.md)
+- [cf_joypad_is_connected](/input/cf_joypad_is_connected.md)
+- [cf_joypad_name](/input/cf_joypad_name.md)
+- [cf_joypad_open](/input/cf_joypad_open.md)
+- [cf_joypad_power_level](/input/cf_joypad_power_level.md)
+- [cf_joypad_power_level_to_string](/input/cf_joypad_power_level_to_string.md)
+- [cf_joypad_product_id](/input/cf_joypad_product_id.md)
+- [cf_joypad_product_version](/input/cf_joypad_product_version.md)
+- [cf_joypad_serial_number](/input/cf_joypad_serial_number.md)
+- [cf_joypad_type](/input/cf_joypad_type.md)
+- [cf_joypad_type_to_string](/input/cf_joypad_type_to_string.md)
+- [cf_joypad_vendor](/input/cf_joypad_vendor.md)
+- [cf_key_alt](/input/cf_key_alt.md)
+- [cf_key_button_to_string](/input/cf_key_button_to_string.md)
+- [cf_key_ctrl](/input/cf_key_ctrl.md)
+- [cf_key_down](/input/cf_key_down.md)
+- [cf_key_gui](/input/cf_key_gui.md)
+- [cf_key_just_pressed](/input/cf_key_just_pressed.md)
+- [cf_key_just_released](/input/cf_key_just_released.md)
+- [cf_key_repeating](/input/cf_key_repeating.md)
+- [cf_key_shift](/input/cf_key_shift.md)
+- [cf_key_up](/input/cf_key_up.md)
+- [cf_mouse_button_to_string](/input/cf_mouse_button_to_string.md)
+- [cf_mouse_double_click_held](/input/cf_mouse_double_click_held.md)
+- [cf_mouse_double_clicked](/input/cf_mouse_double_clicked.md)
+- [cf_mouse_down](/input/cf_mouse_down.md)
+- [cf_mouse_hidden](/input/cf_mouse_hidden.md)
+- [cf_mouse_hide](/input/cf_mouse_hide.md)
+- [cf_mouse_just_pressed](/input/cf_mouse_just_pressed.md)
+- [cf_mouse_just_released](/input/cf_mouse_just_released.md)
+- [cf_mouse_lock_inside_window](/input/cf_mouse_lock_inside_window.md)
+- [cf_mouse_wheel_motion](/input/cf_mouse_wheel_motion.md)
+- [cf_mouse_x](/input/cf_mouse_x.md)
+- [cf_mouse_y](/input/cf_mouse_y.md)
+- [cf_register_key_callback](/input/cf_register_key_callback.md)
+- [cf_touch_get](/input/cf_touch_get.md)
+- [cf_touch_get_all](/input/cf_touch_get_all.md)
+
+
+### structs
+- [CF_ImeComposition](/input/cf_imecomposition.md)
+- [CF_Joypad](/input/cf_joypad.md)
+- [CF_Touch](/input/cf_touch.md)
+
+
+### enums
+- [CF_JoypadAxis](/input/cf_joypadaxis.md)
+- [CF_JoypadButton](/input/cf_joypadbutton.md)
+- [CF_JoypadPowerLevel](/input/cf_joypadpowerlevel.md)
+- [CF_JoypadType](/input/cf_joypadtype.md)
+- [CF_KeyButton](/input/cf_keybutton.md)
+- [CF_MouseButton](/input/cf_mousebutton.md)
+
+
 ## graphics
 
 ### functions
@@ -1101,135 +1169,6 @@ This is a list of all functions in Cute Framework organized by categories. This 
 - [CF_WrapMode](/graphics/cf_wrapmode.md)
 
 
-## input
-
-### functions
-- [cf_clear_key_states](/input/cf_clear_key_states.md)
-- [cf_clipboard_get](/input/cf_clipboard_get.md)
-- [cf_clipboard_set](/input/cf_clipboard_set.md)
-- [cf_input_disable_ime](/input/cf_input_disable_ime.md)
-- [cf_input_enable_ime](/input/cf_input_enable_ime.md)
-- [cf_input_get_ime_composition](/input/cf_input_get_ime_composition.md)
-- [cf_input_has_ime_keyboard_support](/input/cf_input_has_ime_keyboard_support.md)
-- [cf_input_is_ime_enabled](/input/cf_input_is_ime_enabled.md)
-- [cf_input_is_ime_keyboard_shown](/input/cf_input_is_ime_keyboard_shown.md)
-- [cf_input_set_ime_rect](/input/cf_input_set_ime_rect.md)
-- [cf_input_text_add_utf8](/input/cf_input_text_add_utf8.md)
-- [cf_input_text_clear](/input/cf_input_text_clear.md)
-- [cf_input_text_has_data](/input/cf_input_text_has_data.md)
-- [cf_input_text_pop_utf32](/input/cf_input_text_pop_utf32.md)
-- [cf_joypad_add_mapping](/input/cf_joypad_add_mapping.md)
-- [cf_joypad_axis](/input/cf_joypad_axis.md)
-- [cf_joypad_axis_to_string](/input/cf_joypad_axis_to_string.md)
-- [cf_joypad_button_down](/input/cf_joypad_button_down.md)
-- [cf_joypad_button_just_pressed](/input/cf_joypad_button_just_pressed.md)
-- [cf_joypad_button_just_released](/input/cf_joypad_button_just_released.md)
-- [cf_joypad_button_to_string](/input/cf_joypad_button_to_string.md)
-- [cf_joypad_close](/input/cf_joypad_close.md)
-- [cf_joypad_count](/input/cf_joypad_count.md)
-- [cf_joypad_firmware_version](/input/cf_joypad_firmware_version.md)
-- [cf_joypad_is_connected](/input/cf_joypad_is_connected.md)
-- [cf_joypad_name](/input/cf_joypad_name.md)
-- [cf_joypad_open](/input/cf_joypad_open.md)
-- [cf_joypad_power_level](/input/cf_joypad_power_level.md)
-- [cf_joypad_power_level_to_string](/input/cf_joypad_power_level_to_string.md)
-- [cf_joypad_product_id](/input/cf_joypad_product_id.md)
-- [cf_joypad_product_version](/input/cf_joypad_product_version.md)
-- [cf_joypad_serial_number](/input/cf_joypad_serial_number.md)
-- [cf_joypad_type](/input/cf_joypad_type.md)
-- [cf_joypad_type_to_string](/input/cf_joypad_type_to_string.md)
-- [cf_joypad_vendor](/input/cf_joypad_vendor.md)
-- [cf_key_alt](/input/cf_key_alt.md)
-- [cf_key_button_to_string](/input/cf_key_button_to_string.md)
-- [cf_key_ctrl](/input/cf_key_ctrl.md)
-- [cf_key_down](/input/cf_key_down.md)
-- [cf_key_gui](/input/cf_key_gui.md)
-- [cf_key_just_pressed](/input/cf_key_just_pressed.md)
-- [cf_key_just_released](/input/cf_key_just_released.md)
-- [cf_key_repeating](/input/cf_key_repeating.md)
-- [cf_key_shift](/input/cf_key_shift.md)
-- [cf_key_up](/input/cf_key_up.md)
-- [cf_mouse_button_to_string](/input/cf_mouse_button_to_string.md)
-- [cf_mouse_double_click_held](/input/cf_mouse_double_click_held.md)
-- [cf_mouse_double_clicked](/input/cf_mouse_double_clicked.md)
-- [cf_mouse_down](/input/cf_mouse_down.md)
-- [cf_mouse_hidden](/input/cf_mouse_hidden.md)
-- [cf_mouse_hide](/input/cf_mouse_hide.md)
-- [cf_mouse_just_pressed](/input/cf_mouse_just_pressed.md)
-- [cf_mouse_just_released](/input/cf_mouse_just_released.md)
-- [cf_mouse_lock_inside_window](/input/cf_mouse_lock_inside_window.md)
-- [cf_mouse_wheel_motion](/input/cf_mouse_wheel_motion.md)
-- [cf_mouse_x](/input/cf_mouse_x.md)
-- [cf_mouse_y](/input/cf_mouse_y.md)
-- [cf_register_key_callback](/input/cf_register_key_callback.md)
-- [cf_touch_get](/input/cf_touch_get.md)
-- [cf_touch_get_all](/input/cf_touch_get_all.md)
-
-
-### structs
-- [CF_ImeComposition](/input/cf_imecomposition.md)
-- [CF_Joypad](/input/cf_joypad.md)
-- [CF_Touch](/input/cf_touch.md)
-
-
-### enums
-- [CF_JoypadAxis](/input/cf_joypadaxis.md)
-- [CF_JoypadButton](/input/cf_joypadbutton.md)
-- [CF_JoypadPowerLevel](/input/cf_joypadpowerlevel.md)
-- [CF_JoypadType](/input/cf_joypadtype.md)
-- [CF_KeyButton](/input/cf_keybutton.md)
-- [CF_MouseButton](/input/cf_mousebutton.md)
-
-
-## multithreading
-
-### functions
-- [cf_cv_wait](/multithreading/cf_cv_wait.md)
-- [cf_cv_wake_all](/multithreading/cf_cv_wake_all.md)
-- [cf_cv_wake_one](/multithreading/cf_cv_wake_one.md)
-- [cf_destroy_cv](/multithreading/cf_destroy_cv.md)
-- [cf_destroy_mutex](/multithreading/cf_destroy_mutex.md)
-- [cf_destroy_rw_lock](/multithreading/cf_destroy_rw_lock.md)
-- [cf_destroy_sem](/multithreading/cf_destroy_sem.md)
-- [cf_destroy_threadpool](/multithreading/cf_destroy_threadpool.md)
-- [cf_make_cv](/multithreading/cf_make_cv.md)
-- [cf_make_mutex](/multithreading/cf_make_mutex.md)
-- [cf_make_rw_lock](/multithreading/cf_make_rw_lock.md)
-- [cf_make_sem](/multithreading/cf_make_sem.md)
-- [cf_make_threadpool](/multithreading/cf_make_threadpool.md)
-- [cf_mutex_lock](/multithreading/cf_mutex_lock.md)
-- [cf_mutex_try_lock](/multithreading/cf_mutex_try_lock.md)
-- [cf_mutex_unlock](/multithreading/cf_mutex_unlock.md)
-- [cf_read_lock](/multithreading/cf_read_lock.md)
-- [cf_read_unlock](/multithreading/cf_read_unlock.md)
-- [cf_sem_post](/multithreading/cf_sem_post.md)
-- [cf_sem_try](/multithreading/cf_sem_try.md)
-- [cf_sem_value](/multithreading/cf_sem_value.md)
-- [cf_sem_wait](/multithreading/cf_sem_wait.md)
-- [CF_TaskFn](/multithreading/cf_taskfn.md)
-- [cf_thread_create](/multithreading/cf_thread_create.md)
-- [cf_thread_detach](/multithreading/cf_thread_detach.md)
-- [cf_thread_get_id](/multithreading/cf_thread_get_id.md)
-- [cf_thread_id](/multithreading/cf_thread_id.md)
-- [cf_thread_wait](/multithreading/cf_thread_wait.md)
-- [cf_threadpool_add_task](/multithreading/cf_threadpool_add_task.md)
-- [cf_threadpool_kick](/multithreading/cf_threadpool_kick.md)
-- [cf_threadpool_kick_and_wait](/multithreading/cf_threadpool_kick_and_wait.md)
-- [cf_write_lock](/multithreading/cf_write_lock.md)
-- [cf_write_unlock](/multithreading/cf_write_unlock.md)
-
-
-### structs
-- [CF_ConditionVariable](/multithreading/cf_conditionvariable.md)
-- [CF_Mutex](/multithreading/cf_mutex.md)
-- [CF_ReadWriteLock](/multithreading/cf_readwritelock.md)
-- [CF_Semaphore](/multithreading/cf_semaphore.md)
-- [CF_Thread](/multithreading/cf_thread.md)
-- [CF_ThreadFn](/multithreading/cf_threadfn.md)
-- [CF_ThreadId](/multithreading/cf_threadid.md)
-- [CF_Threadpool](/multithreading/cf_threadpool.md)
-
-
 ## net
 
 ### functions
@@ -1317,22 +1256,6 @@ This is a list of all functions in Cute Framework organized by categories. This 
 - [sppop](/path/sppop.md)
 - [sppopn](/path/sppopn.md)
 - [sptop_of](/path/sptop_of.md)
-
-
-## pathfinding
-
-### functions
-- [cf_a_star](/pathfinding/cf_a_star.md)
-- [cf_a_star_grid_get_cost](/pathfinding/cf_a_star_grid_get_cost.md)
-- [cf_a_star_grid_set_cost](/pathfinding/cf_a_star_grid_set_cost.md)
-- [cf_destroy_a_star_grid](/pathfinding/cf_destroy_a_star_grid.md)
-- [cf_free_a_star_output](/pathfinding/cf_free_a_star_output.md)
-- [cf_make_a_star_grid](/pathfinding/cf_make_a_star_grid.md)
-
-
-### structs
-- [CF_AStarGrid](/pathfinding/cf_astargrid.md)
-- [CF_AStarOutput](/pathfinding/cf_astaroutput.md)
 
 
 ## png_cache
@@ -1614,24 +1537,11 @@ This is a list of all functions in Cute Framework organized by categories. This 
 ## utility
 
 ### functions
-- [cf_destroy_handle_allocator](/utility/cf_destroy_handle_allocator.md)
 - [cf_guid_equal](/utility/cf_guid_equal.md)
-- [cf_handle_allocator_activate](/utility/cf_handle_allocator_activate.md)
-- [cf_handle_allocator_active](/utility/cf_handle_allocator_active.md)
-- [cf_handle_allocator_alloc](/utility/cf_handle_allocator_alloc.md)
-- [cf_handle_allocator_deactivate](/utility/cf_handle_allocator_deactivate.md)
-- [cf_handle_allocator_free](/utility/cf_handle_allocator_free.md)
-- [cf_handle_allocator_get_index](/utility/cf_handle_allocator_get_index.md)
-- [cf_handle_allocator_get_type](/utility/cf_handle_allocator_get_type.md)
-- [cf_handle_allocator_handle_valid](/utility/cf_handle_allocator_handle_valid.md)
-- [cf_handle_allocator_update_index](/utility/cf_handle_allocator_update_index.md)
-- [cf_handle_allocator_update_type](/utility/cf_handle_allocator_update_type.md)
-- [CF_INVALID_HANDLE](/utility/cf_invalid_handle.md)
 - [cf_is_error](/utility/cf_is_error.md)
 - [cf_load_function](/utility/cf_load_function.md)
 - [cf_load_shared_library](/utility/cf_load_shared_library.md)
 - [cf_make_guid](/utility/cf_make_guid.md)
-- [cf_make_handle_allocator](/utility/cf_make_handle_allocator.md)
 - [cf_message_box](/utility/cf_message_box.md)
 - [cf_message_box_type_to_string](/utility/cf_message_box_type_to_string.md)
 - [cf_result_error](/utility/cf_result_error.md)
@@ -1641,8 +1551,6 @@ This is a list of all functions in Cute Framework organized by categories. This 
 
 ### structs
 - [CF_Guid](/utility/cf_guid.md)
-- [CF_Handle](/utility/cf_handle.md)
-- [CF_HandleTable](/utility/cf_handletable.md)
 - [CF_Result](/utility/cf_result.md)
 
 

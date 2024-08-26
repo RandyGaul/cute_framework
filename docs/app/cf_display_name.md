@@ -12,12 +12,12 @@ GitHub: [cute_app.h](https://github.com/RandyGaul/cute_framework/blob/master/inc
 Returns the name of the display.
 
 ```cpp
-const char* cf_display_name(int display_index);
+const char* cf_display_name(CF_DisplayID display_id);
 ```
 
 Parameters | Description
 --- | ---
-display_index | The index of the display. See [cf_display_count](/app/cf_display_count.md).
+display_id | The id of the display. See [cf_get_display_list](/app/cf_get_display_list.md).
 
 ## Related Pages
 
