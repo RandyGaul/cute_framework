@@ -1287,17 +1287,17 @@ void cf_mesh_update_vertex_data(CF_Mesh mesh_handle, void* data, int count)
 		SDL_GpuReleaseBuffer(app->device, mesh->vertices.buffer);
 		SDL_GpuReleaseTransferBuffer(app->device, mesh->vertices.transfer_buffer);
 
-		size *= 2;
-		mesh->vertices.size = size;
+		int new_size = size * 2;
+		mesh->vertices.size = new_size;
 		SDL_GpuBufferCreateInfo buf_info = {
 				.usageFlags = SDL_GPU_BUFFERUSAGE_VERTEX_BIT,
-				.sizeInBytes = (Uint32)size,
+				.sizeInBytes = (Uint32)new_size,
 				.props = 0,
 		};
 		mesh->vertices.buffer = SDL_GpuCreateBuffer(app->device, &buf_info);
 		SDL_GpuTransferBufferCreateInfo tbuf_info = {
 				.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD,
-				.sizeInBytes = (Uint32)size,
+				.sizeInBytes = (Uint32)new_size,
 				.props = 0,
 		};
 		mesh->vertices.transfer_buffer = SDL_GpuCreateTransferBuffer(app->device, &tbuf_info);
