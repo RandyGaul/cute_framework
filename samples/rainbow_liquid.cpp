@@ -358,8 +358,7 @@ int main(int argc, char* argv[])
 			CF_Color color = p.color;
 			cf_draw_push_color(color);
 
-			CF_Aabb rect = cf_make_aabb(p.curr_pos - v2{p.r,p.r} , p.curr_pos + v2{p.r,p.r});
-			cf_draw_box_fill(rect, 0.0f);
+			cf_draw_circle_fill2(p.curr_pos, p.r);
 			cf_draw_pop_color();
 		}
 
