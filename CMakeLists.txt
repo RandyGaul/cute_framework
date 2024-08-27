@@ -492,6 +492,7 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 		add_executable(joypad samples/joypad.c)
 		add_executable(outline_stencil samples/outline_stencil.cpp)
 		add_executable(recolor samples/recolor.cpp)
+		add_executable(rainbow_liquid samples/rainbow_liquid.cpp)
 		set(SAMPLE_EXECUTABLES
 			easysprite
 			basicserialization
@@ -518,6 +519,7 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 			joypad
 			outline_stencil
 			recolor
+			rainbow_liquid
 		)
 
 		foreach(CURRENT_TARGET ${SAMPLE_EXECUTABLES})
