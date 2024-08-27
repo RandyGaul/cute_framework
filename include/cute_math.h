@@ -602,7 +602,7 @@ CF_INLINE float cf_cube_out(float x) { float f = (x - 1); return f * f * f + 1.0
  * @remarks  Here is a great link to [visualize each easing function](https://easings.net/).
  * @related  cf_cube_in cf_cube_out cf_cube_in_out
  */
-CF_INLINE float cf_cube_in_out(float x) { if (x < 0.5f) return 4.0f * x * x * x; else { float f = ((2.0f * x) - 2.0f); return 0.5f * x * x * x + 1.0f; } }
+CF_INLINE float cf_cube_in_out(float x) { if (x < 0.5f) return 4.0f * x * x * x; else { return 0.5f * x * x * x + 1.0f; } }
 
 /**
  * @function cf_quart_in
