@@ -15,12 +15,6 @@ Pushes a custom shader.
 void cf_render_settings_push_shader(CF_Shader shader);
 ```
 
-## Remarks
-
-Your shader can be created via `CF_MAKE_SOKOL_SHADER`, but must be written
-in a specific way to be compatible with the draw API. For more in-depth explanations,
-see CF's docs on [Draw Shaders](https://randygaul.github.io/cute_framework/#/topics/drawing?id=shaders).
-
 ## Related Pages
 
 [CF_Shader](/graphics/cf_shader.md)  

@@ -40,13 +40,6 @@
 #include <stdbool.h>
 #include <string.h>
 #include <stddef.h>
-#if !defined(SOKOL_SHDC_ALIGN)
-  #if defined(_MSC_VER)
-    #define SOKOL_SHDC_ALIGN(a) __declspec(align(a))
-  #else
-    #define SOKOL_SHDC_ALIGN(a) __attribute__((aligned(a)))
-  #endif
-#endif
 #define ATTR_color_fill_vs_in_pos (0)
 #define ATTR_color_fill_vs_in_col (1)
 /*
@@ -590,9 +583,6 @@ static const char color_fill_fs_source_metal_sim[303] = {
     0x20,0x3d,0x20,0x69,0x6e,0x2e,0x63,0x6f,0x6c,0x3b,0x0a,0x20,0x20,0x20,0x20,0x72,
     0x65,0x74,0x75,0x72,0x6e,0x20,0x6f,0x75,0x74,0x3b,0x0a,0x7d,0x0a,0x0a,0x00,
 };
-#if !defined(SOKOL_GFX_INCLUDED)
-  #error "Please include sokol_gfx.h before color_fill_shader.h"
-#endif
 static inline const sg_shader_desc* color_fill_shader_shader_desc(sg_backend backend) {
   if (backend == SG_BACKEND_GLCORE33) {
     static sg_shader_desc desc;

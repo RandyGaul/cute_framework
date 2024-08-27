@@ -78,7 +78,6 @@
 #			define CF_API
 #		endif
 #	endif
-#	define SOKOL_DLL
 #else
 #	define CF_API
 #endif
@@ -115,19 +114,6 @@
 #	ifndef CF_NO_CPP
 #		define CF_CPP
 #	endif
-#endif
-
-#define SOKOL_API_DECL CF_API
-
-#if defined(CF_WINDOWS)
-#	define SOKOL_D3D11
-#elif defined(CF_LINUX)
-#	define SOKOL_GLCORE33
-#elif defined(CF_APPLE)
-#	define SOKOL_METAL
-#elif defined(CF_EMSCRIPTEN)
-#	define SOKOL_GLES3
-#	include <emscripten.h>
 #endif
 
 #define IMGUI_INCLUDE_IMCONFIG_H
