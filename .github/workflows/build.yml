@@ -3,6 +3,9 @@ name: Build CF
 # This workflow will work for pushes, pull requests, or a manual trigger (workflow_dispatch).
 on: [push, pull_request, workflow_dispatch]
 
+env:
+  CMAKE_BUILD_PARALLEL_LEVEL: 6
+
 jobs:
   build:
     # Matrix feature for cross-platform coverage. Names the build "Build X"
