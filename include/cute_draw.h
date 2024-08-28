@@ -545,9 +545,9 @@ typedef struct CF_Vertex
  *           `Count` is always a multiple of three, as this function always processes large batched arrays of
  *           triangles. Since all shapes are rendered with signed-distance functions, most shapes merely generate
  *           a single quad, so you may find triangle counts lower than originally anticipated.
- *           
+ *
  *           Call `cf_set_vertex_callback` to setup your callback.
- *           
+ *
  *           There is no adjecancy info provided. If you need to know which triangles connect to others you
  *           should probably redesign your feature to not require adjecancy information, or use your own custom
  *           rendering solution. With a custom solution you may use low-level graphics in cute_graphics.h, where
@@ -871,7 +871,7 @@ typedef struct CF_TextEffect
  * @example  > Internally the text shake effect is implemented something like this.
  *     // Given a string like this:
  *     "Some <shake freq=50 x=2.5 y=1>shaking text</shake> drawing!"
- *     
+ *
  *     static bool s_text_fx_shake(TextEffect* effect)
  *     {
  *         double freq = effect->get_number("freq", 35);
@@ -902,7 +902,7 @@ typedef bool (CF_TextEffectFn)(CF_TextEffect* fx);
  * @example  > Internally the text shake effect is implemented something like this.
  *     // Given a string like this:
  *     "Some <shake freq=50 x=2.5 y=1>shaking text</shake> drawing!"
- *     
+ *
  *     static bool s_text_fx_shake(TextEffect* effect)
  *     {
  *         double freq = effect->get_number("freq", 35);
@@ -915,7 +915,7 @@ typedef bool (CF_TextEffectFn)(CF_TextEffect* fx);
  *         effect->q1 += offset;
  *         return true;
  *     }
- *     
+ *
  *     // Register it like so:
  *     cf_text_effect_register("shake", s_text_fx_shake);
  * @remarks  The `name` of the text effect will be used within the string text codes. For example, for the "shake" effect in the above
@@ -1160,10 +1160,10 @@ CF_API CF_RenderState CF_CALL cf_render_settings_peek_render_state();
  *           graphics backends have different texture size limits. A very safe max size is 2048x2048 (the default), but you
  *           can likely get away with 4096 on most devices. Larger internal atlases can be useful to decrease the number of
  *           draw calls used, and also enables support for high-res image rendering.
- *           
+ *
  *           Please not you should put in power of 2 atlases sizes to make the hardware happy. Here are the recommended range
  *           of sizes available:
- *           
+ *
  *           - 256
  *           - 512
  *           - 1024
@@ -1197,9 +1197,6 @@ CF_API CF_Shader CF_CALL cf_make_draw_shader_from_source(const char* src);
  * @function cf_render_settings_push_shader
  * @category draw
  * @brief    Pushes a custom shader.
- * @remarks  Your shader can be created via `CF_MAKE_SOKOL_SHADER`, but must be written
- *           in a specific way to be compatible with the draw API. For more in-depth explanations,
- *           see CF's docs on [Draw Shaders](https://randygaul.github.io/cute_framework/#/topics/drawing?id=shaders).
  * @related  CF_Shader cf_render_settings_push_shader cf_render_settings_pop_shader cf_render_settings_peek_shader
  */
 CF_API void CF_CALL cf_render_settings_push_shader(CF_Shader shader);
@@ -1632,7 +1629,7 @@ struct TextEffect : public CF_TextEffect
 			return default_val;
 		}
 	}
-	
+
 	CF_INLINE CF_Color get_color(const char* key, CF_Color default_val = cf_color_white()) const
 	{
 		const CF_TextCodeVal* v = params->try_find(sintern(key));
@@ -1642,7 +1639,7 @@ struct TextEffect : public CF_TextEffect
 			return default_val;
 		}
 	}
-	
+
 	CF_INLINE const char* get_string(const char* key, const char* default_val = NULL) const
 	{
 		const CF_TextCodeVal* v = params->try_find(sintern(key));
