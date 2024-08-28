@@ -1796,7 +1796,7 @@ void cf_draw_elements()
 		//SDL_GpuDrawIndexedPrimitives(s_canvas->pass, 0, mesh->vertices.element_count);
 		CF_ASSERT(false);
 	} else {
-		SDL_GpuDrawPrimitives(s_canvas->pass, 0, mesh->vertices.element_count, 1, 0);
+		SDL_GpuDrawPrimitives(s_canvas->pass, mesh->vertices.element_count, 1, 0, 0);
 	}
 	app->draw_call_count++;
 }

@@ -416,7 +416,7 @@ void cf_imgui_draw(SDL_GpuTexture* swapchain_texture)
 				};
 
 				SDL_GpuBindFragmentSamplers(pass, 0, &samplerBinding, 1);
-				SDL_GpuDrawIndexedPrimitives(pass, vtx_offset + pcmd->VtxOffset, idx_offset + pcmd->IdxOffset, pcmd->ElemCount, 1, 0);
+				SDL_GpuDrawIndexedPrimitives(pass, pcmd->ElemCount, 1, idx_offset + pcmd->IdxOffset, vtx_offset + pcmd->VtxOffset, 0);
 			}
 		}
 
