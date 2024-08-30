@@ -56,55 +56,55 @@ void main()
 static void s_make_buffers(int vertex_count, int index_count)
 {
 	if (app->imgui_vbuf) {
-		SDL_GpuReleaseBuffer(app->device, app->imgui_vbuf);
+		SDL_ReleaseGPUBuffer(app->device, app->imgui_vbuf);
 	}
 	if (app->imgui_vtbuf) {
-		SDL_GpuReleaseTransferBuffer(app->device, app->imgui_vtbuf);
+		SDL_ReleaseGPUTransferBuffer(app->device, app->imgui_vtbuf);
 	}
 	if (app->imgui_ibuf) {
-		SDL_GpuReleaseBuffer(app->device, app->imgui_ibuf);
+		SDL_ReleaseGPUBuffer(app->device, app->imgui_ibuf);
 	}
 	if (app->imgui_itbuf) {
-		SDL_GpuReleaseTransferBuffer(app->device, app->imgui_itbuf);
+		SDL_ReleaseGPUTransferBuffer(app->device, app->imgui_itbuf);
 	}
 
 	{
-		SDL_GpuBufferCreateInfo buf_info = {
+		SDL_GPUBufferCreateInfo buf_info = {
 			.usageFlags = SDL_GPU_BUFFERUSAGE_VERTEX_BIT,
 			.sizeInBytes = (Uint32)(sizeof(ImDrawVert) * vertex_count),
 			.props = 0
 		};
-		app->imgui_vbuf = SDL_GpuCreateBuffer(app->device, &buf_info);
+		app->imgui_vbuf = SDL_CreateGPUBuffer(app->device, &buf_info);
 		CF_ASSERT(app->imgui_vbuf);
 	}
 
 	{
-		SDL_GpuTransferBufferCreateInfo tbuf_info = {
+		SDL_GPUTransferBufferCreateInfo tbuf_info = {
 			.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD,
 			.sizeInBytes = (Uint32)(sizeof(ImDrawVert) * vertex_count),
 			.props = 0,
 		};
-		app->imgui_vtbuf = SDL_GpuCreateTransferBuffer(app->device, &tbuf_info);
+		app->imgui_vtbuf = SDL_CreateGPUTransferBuffer(app->device, &tbuf_info);
 		CF_ASSERT(app->imgui_vtbuf);
 	}
 
 	{
-		SDL_GpuBufferCreateInfo buf_info = {
+		SDL_GPUBufferCreateInfo buf_info = {
 			.usageFlags = SDL_GPU_BUFFERUSAGE_INDEX_BIT,
 			.sizeInBytes = (Uint32)(sizeof(ImDrawIdx) * index_count),
 			.props = 0
 		};
-		app->imgui_ibuf = SDL_GpuCreateBuffer(app->device, &buf_info);
+		app->imgui_ibuf = SDL_CreateGPUBuffer(app->device, &buf_info);
 		CF_ASSERT(app->imgui_ibuf);
 	}
 
 	{
-		SDL_GpuTransferBufferCreateInfo tbuf_info = {
+		SDL_GPUTransferBufferCreateInfo tbuf_info = {
 			.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD,
 			.sizeInBytes = (Uint32)(sizeof(ImDrawIdx) * index_count),
 			.props = 0,
 		};
-		app->imgui_itbuf = SDL_GpuCreateTransferBuffer(app->device, &tbuf_info);
+		app->imgui_itbuf = SDL_CreateGPUTransferBuffer(app->device, &tbuf_info);
 		CF_ASSERT(app->imgui_itbuf);
 	}
 }
@@ -112,12 +112,12 @@ static void s_make_buffers(int vertex_count, int index_count)
 void cf_imgui_init()
 {
 	CF_Shader shader = cf_make_shader_from_source(s_imgui_vs, s_imgui_fs);
-	SDL_GpuShader* vs = ((CF_ShaderInternal*)shader.id)->vs;
-	SDL_GpuShader* fs = ((CF_ShaderInternal*)shader.id)->fs;
+	SDL_GPUShader* vs = ((CF_ShaderInternal*)shader.id)->vs;
+	SDL_GPUShader* fs = ((CF_ShaderInternal*)shader.id)->fs;
 
-	SDL_GpuColorAttachmentDescription color_info;
+	SDL_GPUColorAttachmentDescription color_info;
 	CF_MEMSET(&color_info, 0, sizeof(color_info));
-	color_info.format = SDL_GpuGetSwapchainTextureFormat(app->device, app->window);
+	color_info.format = SDL_GetGPUSwapchainTextureFormat(app->device, app->window);
 	color_info.blendState.blendEnable = true;
 	color_info.blendState.alphaBlendOp = SDL_GPU_BLENDOP_ADD;
 	color_info.blendState.colorBlendOp = SDL_GPU_BLENDOP_ADD;
@@ -127,7 +127,7 @@ void cf_imgui_init()
 	color_info.blendState.dstAlphaBlendFactor = SDL_GPU_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
 	color_info.blendState.colorWriteMask = 0xF;
 
-	SDL_GpuGraphicsPipelineCreateInfo pip_info;
+	SDL_GPUGraphicsPipelineCreateInfo pip_info;
 	CF_MEMSET(&pip_info, 0, sizeof(pip_info));
 	pip_info.vertexShader = vs;
 	pip_info.fragmentShader = fs;
@@ -141,14 +141,14 @@ void cf_imgui_init()
 	pip_info.depthStencilState.depthWriteEnable = false;
 	pip_info.depthStencilState.compareOp = SDL_GPU_COMPAREOP_GREATER_OR_EQUAL;
 
-	SDL_GpuVertexBinding vertex_binding;
+	SDL_GPUVertexBinding vertex_binding;
 	CF_MEMSET(&vertex_binding, 0, sizeof(vertex_binding));
 	vertex_binding.binding = 0;
 	vertex_binding.stride = sizeof(ImDrawVert);
 	vertex_binding.inputRate = SDL_GPU_VERTEXINPUTRATE_VERTEX;
 	vertex_binding.instanceStepRate = 0;
 
-	SDL_GpuVertexAttribute vertex_attributes[] = {
+	SDL_GPUVertexAttribute vertex_attributes[] = {
 		{
 			.location = 0,
 			.binding = 0,
@@ -169,14 +169,14 @@ void cf_imgui_init()
 		},
 	};
 
-	pip_info.vertexInputState = SDL_GpuVertexInputState {
+	pip_info.vertexInputState = SDL_GPUVertexInputState {
 		.vertexBindings = &vertex_binding,
 		.vertexBindingCount = 1,
 		.vertexAttributes = vertex_attributes,
 		.vertexAttributeCount = 3,
 	};
 
-	pip_info.rasterizerState = SDL_GpuRasterizerState {
+	pip_info.rasterizerState = SDL_GPURasterizerState {
 		.fillMode = SDL_GPU_FILLMODE_FILL,
 		.cullMode = SDL_GPU_CULLMODE_NONE,
 		.frontFace = {},
@@ -186,16 +186,16 @@ void cf_imgui_init()
 		.depthBiasSlopeFactor = {},
 	};
 
-	app->imgui_pip = SDL_GpuCreateGraphicsPipeline(app->device, &pip_info);
+	app->imgui_pip = SDL_CreateGPUGraphicsPipeline(app->device, &pip_info);
 	CF_ASSERT(app->imgui_pip);
-	SDL_GpuReleaseShader(app->device, vs);
-	SDL_GpuReleaseShader(app->device, fs);
+	SDL_ReleaseGPUShader(app->device, vs);
+	SDL_ReleaseGPUShader(app->device, fs);
 
 	int vertex_count = 1024 * 64;
 	int index_count = 1024 * 64;
 	s_make_buffers(vertex_count, index_count);
 
-	SDL_GpuSamplerCreateInfo sampler_info = {
+	SDL_GPUSamplerCreateInfo sampler_info = {
 		.minFilter = SDL_GPU_FILTER_NEAREST,
 		.magFilter = SDL_GPU_FILTER_NEAREST,
 		.mipmapMode = SDL_GPU_SAMPLERMIPMAPMODE_NEAREST,
@@ -204,7 +204,7 @@ void cf_imgui_init()
 		.addressModeW = SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE,
 	};
 
-	app->imgui_sampler = SDL_GpuCreateSampler(app->device, &sampler_info);
+	app->imgui_sampler = SDL_CreateGPUSampler(app->device, &sampler_info);
 	CF_ASSERT(app->imgui_sampler);
 
 	unsigned char* pixels;
@@ -213,7 +213,7 @@ void cf_imgui_init()
 
 	int sz = (int)(width * height * sizeof(uint8_t) * 4);
 
-	SDL_GpuTextureCreateInfo texture_info = {
+	SDL_GPUTextureCreateInfo texture_info = {
 		.type = SDL_GPU_TEXTURETYPE_2D,
 		.format = SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM,
 		.usageFlags = SDL_GPU_TEXTUREUSAGE_SAMPLER_BIT,
@@ -224,37 +224,37 @@ void cf_imgui_init()
 		.sampleCount = {},
 	};
 
-	SDL_GpuTexture* font_tex = SDL_GpuCreateTexture(app->device, &texture_info);
+	SDL_GPUTexture* font_tex = SDL_CreateGPUTexture(app->device, &texture_info);
 	CF_ASSERT(font_tex);
 	app->imgui_font_tex = font_tex;
 
-	SDL_GpuTextureRegion region;
+	SDL_GPUTextureRegion region;
 	CF_MEMSET(&region, 0, sizeof(region));
 	region.texture = font_tex;
 	region.w = (uint32_t)width;
 	region.h = (uint32_t)height;
 	region.d = 1;
 
-	SDL_GpuTransferBufferCreateInfo tbuf_info = {
+	SDL_GPUTransferBufferCreateInfo tbuf_info = {
 		.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD,
 		.sizeInBytes = (Uint32)(width * height * sizeof(uint8_t) * 4),
 		.props = 0,
 	};
-	SDL_GpuTransferBuffer* tbuf = SDL_GpuCreateTransferBuffer(app->device, &tbuf_info);
-	void* memory = SDL_GpuMapTransferBuffer(app->device, tbuf, false);
+	SDL_GPUTransferBuffer* tbuf = SDL_CreateGPUTransferBuffer(app->device, &tbuf_info);
+	void* memory = SDL_MapGPUTransferBuffer(app->device, tbuf, false);
 	CF_MEMCPY(memory, pixels, sz);
-	SDL_GpuUnmapTransferBuffer(app->device, tbuf);
-	SDL_GpuCommandBuffer* cmd = SDL_GpuAcquireCommandBuffer(app->device);
-	SDL_GpuCopyPass* pass = SDL_GpuBeginCopyPass(cmd);
-	SDL_GpuTextureTransferInfo src;
+	SDL_UnmapGPUTransferBuffer(app->device, tbuf);
+	SDL_GPUCommandBuffer* cmd = SDL_AcquireGPUCommandBuffer(app->device);
+	SDL_GPUCopyPass* pass = SDL_BeginGPUCopyPass(cmd);
+	SDL_GPUTextureTransferInfo src;
 	src.imageHeight = height;
 	src.imagePitch = width;
 	src.offset = 0;
 	src.transferBuffer = tbuf;
-	SDL_GpuUploadToTexture(pass, &src, &region, false);
-	SDL_GpuEndCopyPass(pass);
-	SDL_GpuSubmit(cmd);
-	SDL_GpuReleaseTransferBuffer(app->device, tbuf);
+	SDL_UploadToGPUTexture(pass, &src, &region, false);
+	SDL_EndGPUCopyPass(pass);
+	SDL_SubmitGPU(cmd);
+	SDL_ReleaseGPUTransferBuffer(app->device, tbuf);
 
 	auto& io = ImGui::GetIO();
 	io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;
@@ -263,17 +263,17 @@ void cf_imgui_init()
 
 void cf_imgui_shutdown()
 {
-	SDL_GpuReleaseSampler(app->device, app->imgui_sampler);
-	SDL_GpuReleaseBuffer(app->device, app->imgui_vbuf);
-	SDL_GpuReleaseBuffer(app->device, app->imgui_ibuf);
-	SDL_GpuReleaseTransferBuffer(app->device, app->imgui_vtbuf);
-	SDL_GpuReleaseTransferBuffer(app->device, app->imgui_itbuf);
-	SDL_GpuReleaseGraphicsPipeline(app->device, app->imgui_pip);
-	SDL_GpuReleaseTexture(app->device, app->imgui_font_tex);
+	SDL_ReleaseGPUSampler(app->device, app->imgui_sampler);
+	SDL_ReleaseGPUBuffer(app->device, app->imgui_vbuf);
+	SDL_ReleaseGPUBuffer(app->device, app->imgui_ibuf);
+	SDL_ReleaseGPUTransferBuffer(app->device, app->imgui_vtbuf);
+	SDL_ReleaseGPUTransferBuffer(app->device, app->imgui_itbuf);
+	SDL_ReleaseGPUGraphicsPipeline(app->device, app->imgui_pip);
+	SDL_ReleaseGPUTexture(app->device, app->imgui_font_tex);
 	ImGui_ImplSDL3_Shutdown();
 }
 
-void cf_imgui_draw(SDL_GpuTexture* swapchain_texture)
+void cf_imgui_draw(SDL_GPUTexture* swapchain_texture)
 {
 	ImDrawData* draw_data = ImGui::GetDrawData();
 	if (draw_data->TotalVtxCount == 0)
@@ -292,8 +292,8 @@ void cf_imgui_draw(SDL_GpuTexture* swapchain_texture)
 	}
 
 	// Map data onto GPU driver staging space.
-	uint8_t* vertices = (uint8_t*)SDL_GpuMapTransferBuffer(app->device, app->imgui_vtbuf, true);
-	uint8_t* indices = (uint8_t*)SDL_GpuMapTransferBuffer(app->device, app->imgui_itbuf, true);
+	uint8_t* vertices = (uint8_t*)SDL_MapGPUTransferBuffer(app->device, app->imgui_vtbuf, true);
+	uint8_t* indices = (uint8_t*)SDL_MapGPUTransferBuffer(app->device, app->imgui_itbuf, true);
 		for (int n = 0; n < draw_data->CmdListsCount; n++) {
 			ImDrawList* cmdList = draw_data->CmdLists[n];
 
@@ -305,35 +305,35 @@ void cf_imgui_draw(SDL_GpuTexture* swapchain_texture)
 			CF_MEMCPY(indices, cmdList->IdxBuffer.Data, index_sz);
 			indices += index_sz;
 		}
-	SDL_GpuUnmapTransferBuffer(app->device, app->imgui_vtbuf);
-	SDL_GpuUnmapTransferBuffer(app->device, app->imgui_itbuf);
+	SDL_UnmapGPUTransferBuffer(app->device, app->imgui_vtbuf);
+	SDL_UnmapGPUTransferBuffer(app->device, app->imgui_itbuf);
 
 	// Submit commands to upload buffers to the GPU.
-	SDL_GpuCopyPass* copy_pass = SDL_GpuBeginCopyPass(app->cmd);
-		SDL_GpuTransferBufferLocation src;
+	SDL_GPUCopyPass* copy_pass = SDL_BeginGPUCopyPass(app->cmd);
+		SDL_GPUTransferBufferLocation src;
 		src.offset = 0;
 		src.transferBuffer = app->imgui_vtbuf;
-		SDL_GpuBufferRegion region;
+		SDL_GPUBufferRegion region;
 		region.buffer = app->imgui_vbuf;
 		region.offset = 0;
 		region.size = (uint32_t)(draw_data->TotalVtxCount * sizeof(ImDrawVert));
-		SDL_GpuUploadToBuffer(copy_pass, &src, &region, true);
+		SDL_UploadToGPUBuffer(copy_pass, &src, &region, true);
 
 		src.transferBuffer = app->imgui_itbuf;
 		region.buffer = app->imgui_ibuf;
 		region.offset = 0;
 		region.size = (uint32_t)(draw_data->TotalIdxCount * sizeof(ImDrawIdx));
-		SDL_GpuUploadToBuffer(copy_pass, &src, &region, false);
-	SDL_GpuEndCopyPass(copy_pass);
+		SDL_UploadToGPUBuffer(copy_pass, &src, &region, false);
+	SDL_EndGPUCopyPass(copy_pass);
 
 	// Setup rendering commands.
-	SDL_GpuColorAttachmentInfo color_info;
+	SDL_GPUColorAttachmentInfo color_info;
 	CF_MEMSET(&color_info, 0, sizeof(color_info));
 	color_info.texture = swapchain_texture;
 	color_info.loadOp = SDL_GPU_LOADOP_LOAD;
 	color_info.storeOp = SDL_GPU_STOREOP_STORE;
 
-	SDL_GpuDepthStencilAttachmentInfo depth_stencil_info;
+	SDL_GPUDepthStencilAttachmentInfo depth_stencil_info;
 	CF_MEMSET(&depth_stencil_info, 0, sizeof(depth_stencil_info));
 	//depth_stencil_info.texture = app->depth_buffer;
 	depth_stencil_info.cycle = true;
@@ -345,10 +345,10 @@ void cf_imgui_draw(SDL_GpuTexture* swapchain_texture)
 	depth_stencil_info.stencilStoreOp = SDL_GPU_STOREOP_DONT_CARE;
 
 	// Submit the actual rendering commands.
-	SDL_GpuRenderPass* pass = SDL_GpuBeginRenderPass(app->cmd, &color_info, 1, NULL);
-	SDL_GpuBindGraphicsPipeline(pass, app->imgui_pip);
+	SDL_GPURenderPass* pass = SDL_BeginGPURenderPass(app->cmd, &color_info, 1, NULL);
+	SDL_BindGPUGraphicsPipeline(pass, app->imgui_pip);
 
-	SDL_GpuViewport viewport = {
+	SDL_GPUViewport viewport = {
 		.x = 0.0f,
 		.y = 0.0f,
 		.w = draw_data->DisplaySize.x,
@@ -356,7 +356,7 @@ void cf_imgui_draw(SDL_GpuTexture* swapchain_texture)
 		.minDepth = 0.0f,
 		.maxDepth = 1.0f,
 	};
-	SDL_GpuSetViewport(pass, &viewport);
+	SDL_SetGPUViewport(pass, &viewport);
 
 	float L = draw_data->DisplayPos.x;
 	float R = draw_data->DisplayPos.x + draw_data->DisplaySize.x;
@@ -368,18 +368,18 @@ void cf_imgui_draw(SDL_GpuTexture* swapchain_texture)
 		{ 0.0f,               0.0f,              0.5f,  0.0f },
 		{ (R + L) / (L - R),  (T + B) / (B - T), 0.5f,  1.0f },
 	};
-	SDL_GpuPushVertexUniformData(app->cmd, 0, mvp, sizeof(mvp));
+	SDL_PushGPUVertexUniformData(app->cmd, 0, mvp, sizeof(mvp));
 
-	SDL_GpuBufferBinding vertexBufferBinding = {
+	SDL_GPUBufferBinding vertexBufferBinding = {
 		.buffer = app->imgui_vbuf,
 		.offset = 0
 	};
-	SDL_GpuBindVertexBuffers(pass, 0, &vertexBufferBinding, 1);
-	SDL_GpuBufferBinding indexBufferBinding = {
+	SDL_BindGPUVertexBuffers(pass, 0, &vertexBufferBinding, 1);
+	SDL_GPUBufferBinding indexBufferBinding = {
 		.buffer = app->imgui_ibuf,
 		.offset = 0
 	};
-	SDL_GpuBindIndexBuffer(pass, &indexBufferBinding, sizeof(ImDrawIdx) == sizeof(uint16_t) ? SDL_GPU_INDEXELEMENTSIZE_16BIT : SDL_GPU_INDEXELEMENTSIZE_32BIT);
+	SDL_BindGPUIndexBuffer(pass, &indexBufferBinding, sizeof(ImDrawIdx) == sizeof(uint16_t) ? SDL_GPU_INDEXELEMENTSIZE_16BIT : SDL_GPU_INDEXELEMENTSIZE_32BIT);
 
 	uint32_t idx_offset = 0;
 	uint32_t vtx_offset = 0;
@@ -390,7 +390,7 @@ void cf_imgui_draw(SDL_GpuTexture* swapchain_texture)
 			const ImDrawCmd* pcmd = &cmd_list->CmdBuffer[cmd_i];
 			if (pcmd->UserCallback != nullptr) {
 				if (pcmd->UserCallback == ImDrawCallback_ResetRenderState) {
-					SDL_GpuBindGraphicsPipeline(pass, app->imgui_pip);
+					SDL_BindGPUGraphicsPipeline(pass, app->imgui_pip);
 				} else {
 					pcmd->UserCallback(cmd_list, pcmd);
 				}
@@ -408,15 +408,15 @@ void cf_imgui_draw(SDL_GpuTexture* swapchain_texture)
 					.w = (Sint32)(clip_max.x - clip_min.x),
 					.h = (Sint32)(clip_max.y - clip_min.y)
 				};
-				SDL_GpuSetScissor(pass, &scissorDesc);
+				SDL_SetGPUScissor(pass, &scissorDesc);
 
-				SDL_GpuTextureSamplerBinding samplerBinding = {
-					.texture = (SDL_GpuTexture*)pcmd->GetTexID(),
+				SDL_GPUTextureSamplerBinding samplerBinding = {
+					.texture = (SDL_GPUTexture*)pcmd->GetTexID(),
 					.sampler = app->imgui_sampler
 				};
 
-				SDL_GpuBindFragmentSamplers(pass, 0, &samplerBinding, 1);
-				SDL_GpuDrawIndexedPrimitives(pass, pcmd->ElemCount, 1, idx_offset + pcmd->IdxOffset, vtx_offset + pcmd->VtxOffset, 0);
+				SDL_BindGPUFragmentSamplers(pass, 0, &samplerBinding, 1);
+				SDL_DrawGPUIndexedPrimitives(pass, pcmd->ElemCount, 1, idx_offset + pcmd->IdxOffset, vtx_offset + pcmd->VtxOffset, 0);
 			}
 		}
 
@@ -424,7 +424,7 @@ void cf_imgui_draw(SDL_GpuTexture* swapchain_texture)
 		vtx_offset += cmd_list->VtxBuffer.Size;
 	}
 
-	SDL_GpuEndRenderPass(pass);
+	SDL_EndGPURenderPass(pass);
 }
 
 #include <imgui/backends/imgui_impl_sdl3.cpp>

@@ -9,7 +9,7 @@ Category: [graphics](/api_reference?id=graphics)
 GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_graphics.h)  
 ---
 
-Returns an SDL_GpuTexture casted to a `uint64_t`.
+Returns an SDL_GPUTexture casted to a `uint64_t`.
 
 ```cpp
 uint64_t cf_texture_handle(CF_Texture texture);

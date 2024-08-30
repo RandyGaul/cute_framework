@@ -12,6 +12,6 @@
 
 void cf_imgui_init();
 void cf_imgui_shutdown();
-void cf_imgui_draw(SDL_GpuTexture* swapchain_texture);
+void cf_imgui_draw(SDL_GPUTexture* swapchain_texture);
 
 #endif // CF_IMGUI_INTERNAL_H

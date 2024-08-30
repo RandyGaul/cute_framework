@@ -69,7 +69,7 @@ struct CF_App
 	void* platform_handle = NULL;
 	CF_OnUpdateFn* user_on_update = NULL;
 	SDL_Window* window = NULL;
-	SDL_GpuDevice* device = NULL;
+	SDL_GPUDevice* device = NULL;
 	cs_context_t* cute_sound = NULL;
 	bool spawned_mix_thread = false;
 	CF_Threadpool* threadpool = NULL;
@@ -102,7 +102,7 @@ struct CF_App
 	CF_Material backbuffer_material = { };
 	CF_WindowState window_state;
 	CF_WindowState window_state_prev;
-	SDL_GpuCommandBuffer* cmd = NULL;
+	SDL_GPUCommandBuffer* cmd = NULL;
 	bool use_depth_stencil = false;
 	uint64_t default_image_id = CF_PNG_ID_RANGE_LO;
 	bool vsync = false;
@@ -132,15 +132,15 @@ struct CF_App
 
 	// Dear ImGui stuff.
 	bool using_imgui = false;
-	SDL_GpuSampler* imgui_sampler = NULL;
+	SDL_GPUSampler* imgui_sampler = NULL;
 	int imgui_vertex_count = 0;
 	int imgui_index_count = 0;
-	SDL_GpuBuffer* imgui_vbuf = NULL;
-	SDL_GpuBuffer* imgui_ibuf = NULL;
-	SDL_GpuTransferBuffer* imgui_vtbuf = NULL;
-	SDL_GpuTransferBuffer* imgui_itbuf = NULL;
-	SDL_GpuGraphicsPipeline* imgui_pip = NULL;
-	SDL_GpuTexture* imgui_font_tex = NULL;
+	SDL_GPUBuffer* imgui_vbuf = NULL;
+	SDL_GPUBuffer* imgui_ibuf = NULL;
+	SDL_GPUTransferBuffer* imgui_vtbuf = NULL;
+	SDL_GPUTransferBuffer* imgui_itbuf = NULL;
+	SDL_GPUGraphicsPipeline* imgui_pip = NULL;
+	SDL_GPUTexture* imgui_font_tex = NULL;
 
 	// Font stuff.
 	uint64_t font_image_id_gen = CF_FONT_ID_RANGE_LO;
