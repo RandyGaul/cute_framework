@@ -515,7 +515,7 @@ CF_API void CF_CALL cf_texture_update(CF_Texture texture, void* data, int size);
 /**
  * @function cf_texture_handle
  * @category graphics
- * @brief    Returns an SDL_GpuTexture* casted to a `uint64_t`.
+ * @brief    Returns an SDL_GPUTexture* casted to a `uint64_t`.
  * @remarks  This is useful for e.g. rendering textures in an external system like Dear ImGui.
  * @related  CF_TextureParams CF_Texture cf_make_texture
  */

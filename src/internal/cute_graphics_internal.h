@@ -11,9 +11,9 @@
 #include <SDL3/SDL.h>
 #include <cute_array.h>
 
-CF_INLINE SDL_GpuTextureCreateInfo SDL_GpuTextureCreateInfoDefaults(int w, int h)
+CF_INLINE SDL_GPUTextureCreateInfo SDL_GPUTextureCreateInfoDefaults(int w, int h)
 {
-	SDL_GpuTextureCreateInfo createInfo;
+	SDL_GPUTextureCreateInfo createInfo;
 	CF_MEMSET(&createInfo, 0, sizeof(createInfo));
 	createInfo.width = (int)w;
 	createInfo.height = (int)h;
@@ -30,31 +30,31 @@ struct CF_CanvasInternal
 {
 	CF_Texture cf_texture;
 	CF_Texture cf_depth_stencil;
-	SDL_GpuTexture* texture;
-	SDL_GpuSampler* sampler;
-	SDL_GpuTexture* depth_stencil;
+	SDL_GPUTexture* texture;
+	SDL_GPUSampler* sampler;
+	SDL_GPUTexture* depth_stencil;
 
 	bool clear;
 
 	// These get set by cf_apply_* functions.
 	struct CF_MeshInternal* mesh;
-	SDL_GpuGraphicsPipeline* pip;
-	SDL_GpuRenderPass* pass;
+	SDL_GPUGraphicsPipeline* pip;
+	SDL_GPURenderPass* pass;
 };
 
 struct CF_TextureInternal
 {
 	int w, h;
-	SDL_GpuFilter filter;
-	SDL_GpuTexture* tex;
-	SDL_GpuTransferBuffer* buf;
-	SDL_GpuSampler* sampler;
-	SDL_GpuTextureFormat format;
+	SDL_GPUFilter filter;
+	SDL_GPUTexture* tex;
+	SDL_GPUTransferBuffer* buf;
+	SDL_GPUSampler* sampler;
+	SDL_GPUTextureFormat format;
 };
 
-CF_INLINE SDL_GpuSamplerCreateInfo SDL_GpuSamplerCreateInfoDefaults()
+CF_INLINE SDL_GPUSamplerCreateInfo SDL_GPUSamplerCreateInfoDefaults()
 {
-	SDL_GpuSamplerCreateInfo samplerInfo;
+	SDL_GPUSamplerCreateInfo samplerInfo;
 	CF_MEMSET(&samplerInfo, 0, sizeof(samplerInfo));
 	samplerInfo.minFilter = SDL_GPU_FILTER_NEAREST;
 	samplerInfo.magFilter = SDL_GPU_FILTER_NEAREST;
@@ -72,9 +72,9 @@ CF_INLINE SDL_GpuSamplerCreateInfo SDL_GpuSamplerCreateInfoDefaults()
 	return samplerInfo;
 }
 
-CF_INLINE SDL_GpuTextureRegion SDL_GpuTextureRegionDefaults(CF_TextureInternal* tex, int w, int h)
+CF_INLINE SDL_GPUTextureRegion SDL_GPUTextureRegionDefaults(CF_TextureInternal* tex, int w, int h)
 {
-	SDL_GpuTextureRegion region;
+	SDL_GPUTextureRegion region;
 	CF_MEMSET(&region, 0, sizeof(region));
 	region.texture = tex->tex;
 	region.w = (Uint32)w;
@@ -83,7 +83,7 @@ CF_INLINE SDL_GpuTextureRegion SDL_GpuTextureRegionDefaults(CF_TextureInternal* 
 	return region;
 }
 
-CF_INLINE SDL_GpuCompareOp s_wrap(CF_CompareFunction compare_function)
+CF_INLINE SDL_GPUCompareOp s_wrap(CF_CompareFunction compare_function)
 {
 	switch (compare_function)
 	{
@@ -99,7 +99,7 @@ CF_INLINE SDL_GpuCompareOp s_wrap(CF_CompareFunction compare_function)
 	}
 }
 
-CF_INLINE SDL_GpuCullMode s_wrap(CF_CullMode mode)
+CF_INLINE SDL_GPUCullMode s_wrap(CF_CullMode mode)
 {
     switch (mode)
     {
@@ -110,7 +110,7 @@ CF_INLINE SDL_GpuCullMode s_wrap(CF_CullMode mode)
     }
 }
 
-CF_INLINE SDL_GpuStencilOp s_wrap(CF_StencilOp stencil_op)
+CF_INLINE SDL_GPUStencilOp s_wrap(CF_StencilOp stencil_op)
 {
 	switch (stencil_op)
 	{
@@ -126,7 +126,7 @@ CF_INLINE SDL_GpuStencilOp s_wrap(CF_StencilOp stencil_op)
 	}
 }
 
-CF_INLINE SDL_GpuBlendOp s_wrap(CF_BlendOp blend_op)
+CF_INLINE SDL_GPUBlendOp s_wrap(CF_BlendOp blend_op)
 {
 	switch (blend_op)
 	{
@@ -139,7 +139,7 @@ CF_INLINE SDL_GpuBlendOp s_wrap(CF_BlendOp blend_op)
 	}
 }
 
-CF_INLINE SDL_GpuBlendFactor s_wrap(CF_BlendFactor factor)
+CF_INLINE SDL_GPUBlendFactor s_wrap(CF_BlendFactor factor)
 {
 	switch (factor) {
 	case CF_BLENDFACTOR_ZERO:                    return SDL_GPU_BLENDFACTOR_ZERO;
@@ -159,7 +159,7 @@ CF_INLINE SDL_GpuBlendFactor s_wrap(CF_BlendFactor factor)
 	}
 }
 
-CF_INLINE SDL_GpuShaderStage s_wrap(CF_ShaderStage stage)
+CF_INLINE SDL_GPUShaderStage s_wrap(CF_ShaderStage stage)
 {
 	switch (stage) {
 	case CF_SHADER_STAGE_VERTEX: return SDL_GPU_SHADERSTAGE_VERTEX;
@@ -168,7 +168,7 @@ CF_INLINE SDL_GpuShaderStage s_wrap(CF_ShaderStage stage)
 	}
 }
 
-CF_INLINE SDL_GpuTextureFormat s_wrap(CF_PixelFormat format)
+CF_INLINE SDL_GPUTextureFormat s_wrap(CF_PixelFormat format)
 {
 	switch (format)
 	{
@@ -214,7 +214,7 @@ CF_INLINE SDL_GpuTextureFormat s_wrap(CF_PixelFormat format)
 	}
 }
 
-CF_INLINE SDL_GpuFilter s_wrap(CF_Filter filter)
+CF_INLINE SDL_GPUFilter s_wrap(CF_Filter filter)
 {
 	switch (filter) {
 	default: return SDL_GPU_FILTER_NEAREST;
@@ -223,7 +223,7 @@ CF_INLINE SDL_GpuFilter s_wrap(CF_Filter filter)
 	}
 }
 
-CF_INLINE SDL_GpuSamplerAddressMode s_wrap(CF_WrapMode mode)
+CF_INLINE SDL_GPUSamplerAddressMode s_wrap(CF_WrapMode mode)
 {
 	switch (mode)
 	{
@@ -291,7 +291,7 @@ CF_INLINE bool s_is_compatible(CF_ShaderInputFormat input_format, CF_VertexForma
 	}
 }
 
-CF_INLINE SDL_GpuVertexElementFormat s_wrap(CF_VertexFormat format)
+CF_INLINE SDL_GPUVertexElementFormat s_wrap(CF_VertexFormat format)
 {
 	switch (format)
 	{
@@ -390,7 +390,7 @@ struct CF_MaterialInternal
 struct CF_Pipeline
 {
 	CF_MaterialInternal* material = NULL;
-	SDL_GpuGraphicsPipeline* pip = NULL;
+	SDL_GPUGraphicsPipeline* pip = NULL;
 	CF_MeshInternal* mesh = NULL;
 };
 
@@ -398,8 +398,8 @@ struct CF_Pipeline
 
 struct CF_ShaderInternal
 {
-	SDL_GpuShader* vs = NULL;
-	SDL_GpuShader* fs = NULL;
+	SDL_GPUShader* vs = NULL;
+	SDL_GPUShader* fs = NULL;
 	int input_count = 0;
 	const char* input_names[CF_MAX_SHADER_INPUTS];
 	int input_locations[CF_MAX_SHADER_INPUTS];

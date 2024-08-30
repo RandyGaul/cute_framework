@@ -1828,7 +1828,7 @@ cs_error_t cs_init(void* os_handle, unsigned play_frequency_in_Hz, int buffered_
 #elif CUTE_SOUND_PLATFORM == CUTE_SOUND_SDL
 
 	SDL_AudioSpec wanted = { SDL_AUDIO_S16, 2, (int)play_frequency_in_Hz };
-	int ret = SDL_InitSubSystem(SDL_INIT_AUDIO);
+	int ret = !SDL_InitSubSystem(SDL_INIT_AUDIO);
 	if (ret < 0) return CUTE_SOUND_ERROR_CANT_INIT_SDL_AUDIO;
 
 #endif

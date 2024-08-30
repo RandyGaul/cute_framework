@@ -314,8 +314,8 @@ else()
 	set(SDL_EXAMPLES OFF CACHE BOOL "Do not build SDL examples")
 	FetchContent_Declare(
 		SDL3
-		GIT_REPOSITORY https://github.com/thatcosmonaut/SDL.git
-		GIT_TAG gpu
+		GIT_REPOSITORY https://github.com/libsdl-org/SDL.git
+		GIT_TAG main
 		CMAKE_ARGS -DSDL_SHARED=OFF -DSDL_STATIC=ON -DSDL_TEST_LIBRARY=OFF -DSDL_TESTS=OFF -DSDL_EXAMPLES=OFF
 		GIT_SHALLOW TRUE
 		GIT_PROGRESS TRUE

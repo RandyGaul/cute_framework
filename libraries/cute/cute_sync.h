@@ -310,6 +310,10 @@ struct cute_rw_lock_t
 #define CUTE_SYNC_IMPLEMENTATION_ONCE
 
 #if defined(CUTE_SYNC_SDL)
+#include <SDL3/SDL_atomic.h>
+#include <SDL3/SDL_cpuinfo.h>
+#include <SDL3/SDL_mutex.h>
+#include <SDL3/SDL_thread.h>
 #elif defined(CUTE_SYNC_WINDOWS)
 	#define WIN32_LEAN_AND_MEAN
 	// To use GetThreadId and other methods we must require Windows Vista minimum.
@@ -532,17 +536,20 @@ cute_cv_t cute_cv_create()
 
 int cute_cv_wake_all(cute_cv_t* cv)
 {
-	return !SDL_BroadcastCondition((SDL_Condition*)cv->align);
+	SDL_BroadcastCondition((SDL_Condition*)cv->align);
+	return 1;
 }
 
 int cute_cv_wake_one(cute_cv_t* cv)
 {
-	return !SDL_SignalCondition((SDL_Condition*)cv->align);
+	SDL_SignalCondition((SDL_Condition*)cv->align);
+	return 1;
 }
 
 int cute_cv_wait(cute_cv_t* cv, cute_mutex_t* mutex)
 {
-	return !SDL_WaitCondition((SDL_Condition*)cv, (SDL_Mutex*)mutex->align);
+	SDL_WaitCondition((SDL_Condition*)cv, (SDL_Mutex*)mutex->align);
+	return 1;
 }
 
 void cute_cv_destroy(cute_cv_t* cv)
@@ -560,7 +567,8 @@ cute_semaphore_t cute_semaphore_create(int initial_count)
 
 int cute_semaphore_post(cute_semaphore_t* semaphore)
 {
-	return !SDL_SignalSemaphore((SDL_Semaphore*)semaphore->id);
+	SDL_SignalSemaphore((SDL_Semaphore*)semaphore->id);
+	return 1;
 }
 
 int cute_semaphore_try(cute_semaphore_t* semaphore)
@@ -570,7 +578,8 @@ int cute_semaphore_try(cute_semaphore_t* semaphore)
 
 int cute_semaphore_wait(cute_semaphore_t* semaphore)
 {
-	return !SDL_WaitSemaphore((SDL_Semaphore*)semaphore->id);
+	SDL_WaitSemaphore((SDL_Semaphore*)semaphore->id);
+	return 1;
 }
 
 int cute_semaphore_value(cute_semaphore_t* semaphore)

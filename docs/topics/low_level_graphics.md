@@ -12,7 +12,7 @@ CF wraps [low level 3D rendering APIs](https://randygaul.github.io/cute_framewor
 - DirectX 11
 - DirectX 12
 - Metal
-- ~~WebGPU~~ - This is disabled due to SDL_Gpu not supporting OpenGL ES3, CF is currently seeking alternative solutions
+- ~~WebGPU~~ - This is disabled due to SDL_GPU not supporting OpenGL ES3, CF is currently seeking alternative solutions
 
 The major primitives that make up the graphics layer of CF are:
 
@@ -125,7 +125,7 @@ void main()
 
 In CF shaders are written in GLSL (OpenGL Shading Language) version 450. This does not necessarily mean the backend powering the shaders is OpenGL, as the shaders are cross-compiled for all available backends.
 
-CF compiles shaders online making it very easy to write shaders once and have them _just work_ on all other platforms. As of now CF takes on some annoying dependencies to support runtime shader compilation. However, since CF is using SDL3 and SDL_Gpu internally, eventually SDL will release a tool called SDL_Shader_Tools to entirely rememedy this dependency situation. For now though, a variety of open source tools for SPIRV cross-compilation get statically linked into cute. This does bloat library size by ~8mb in release builds, and does negatively affect initial compile times.
+CF compiles shaders online making it very easy to write shaders once and have them _just work_ on all other platforms. As of now CF takes on some annoying dependencies to support runtime shader compilation. However, since CF is using SDL3 and SDL_GPU internally, eventually SDL will release a tool called SDL_Shader_Tools to entirely rememedy this dependency situation. For now though, a variety of open source tools for SPIRV cross-compilation get statically linked into cute. This does bloat library size by ~8mb in release builds, and does negatively affect initial compile times.
 
 Okay! And with the bad news out of the way, let's focus on how to write your shaders and ship them with your game in a cross-platform way. You have a few options:
 

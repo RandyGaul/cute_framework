@@ -233,11 +233,11 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 	// Turn on high DPI support for all platforms.
 	options |= SDL_WINDOW_HIGH_PIXEL_DENSITY;
 	
-	if (SDL_Init(sdl_options)) {
+	if (!SDL_Init(sdl_options)) {
 		return cf_result_error("SDL_Init failed");
 	}
 
-	SDL_GpuDevice* device = NULL;
+	SDL_GPUDevice* device = NULL;
 	if (use_gfx) {
 		// Some backends don't support window size of zero.
 		w = w <= 0 ? 1 : w;
@@ -254,7 +254,7 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 		} else if (use_vulkan) {
 			device_name = "Vulkan";
 		}
-		device = SDL_GpuCreateDevice(SDL_ShaderCross_GetShaderFormats(), true, false, device_name);
+		device = SDL_CreateGPUDevice(SDL_ShaderCross_GetShaderFormats(), false, device_name);
 		if (!device) {
 			return cf_result_error("Failed to create GPU Device.");
 		}
@@ -298,9 +298,9 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 
 	if (use_gfx) {
 		app->device = device;
-		SDL_GpuClaimWindow(app->device, app->window);
+		SDL_ClaimGPUWindow(app->device, app->window);
 		cf_app_set_vsync_mailbox(app->vsync);
-		app->cmd = SDL_GpuAcquireCommandBuffer(app->device);
+		app->cmd = SDL_AcquireGPUCommandBuffer(app->device);
 		cf_load_internal_shaders();
 		cf_make_draw();
 		
@@ -330,7 +330,7 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 
 		// Create the default font.
 		make_font_from_memory(calibri_data, calibri_sz, "Calibri");
-		SDL_GpuSubmit(app->cmd);
+		SDL_SubmitGPU(app->cmd);
 		app->cmd = NULL;
 	}
 
@@ -396,9 +396,9 @@ void cf_destroy_app()
 	cf_destroy_png_cache();
 	cs_shutdown();
 	destroy_mutex(&app->on_sound_finish_mutex);
-	if (app->device) SDL_GpuUnclaimWindow(app->device, app->window);
+	if (app->device) SDL_UnclaimGPUWindow(app->device, app->window);
 	SDL_DestroyWindow(app->window);
-	if (app->device) SDL_GpuDestroyDevice(app->device);
+	if (app->device) SDL_DestroyGPUDevice(app->device);
 	SDL_Quit();
 	destroy_threadpool(app->threadpool);
 	cs_shutdown();
@@ -461,14 +461,14 @@ void cf_app_update(CF_OnUpdateFn* on_update)
 			ImGui::NewFrame();
 		}
 
-		app->cmd = SDL_GpuAcquireCommandBuffer(app->device);
+		app->cmd = SDL_AcquireGPUCommandBuffer(app->device);
 		cf_shader_watch();
 	}
 	app->user_on_update = on_update;
 	cf_update_time(s_on_update);
 }
 
-static void s_imgui_present(SDL_GpuTexture* swapchain_texture)
+static void s_imgui_present(SDL_GPUTexture* swapchain_texture)
 {
 	if (app->using_imgui) {
 		ImGui::EndFrame();
@@ -513,20 +513,20 @@ int cf_app_draw_onto_screen(bool clear)
 
 	// Stretch the app canvas onto the backbuffer canvas.
 	Uint32 w, h;
-	SDL_GpuTexture* swapchain_tex = SDL_GpuAcquireSwapchainTexture(app->cmd, app->window, &w, &h);
+	SDL_GPUTexture* swapchain_tex = SDL_AcquireGPUSwapchainTexture(app->cmd, app->window, &w, &h);
 	if (swapchain_tex) {
 		// Blit onto the screen.
-		SDL_GpuBlitRegion src = {
-			.texture = (SDL_GpuTexture*)cf_texture_handle(cf_canvas_get_target(app->offscreen_canvas)),
+		SDL_GPUBlitRegion src = {
+			.texture = (SDL_GPUTexture*)cf_texture_handle(cf_canvas_get_target(app->offscreen_canvas)),
 			.w = (Uint32)app->canvas_w,
 			.h = (Uint32)app->canvas_h,
 		};
-		SDL_GpuBlitRegion dst = {
+		SDL_GPUBlitRegion dst = {
 			.texture = swapchain_tex,
 			.w = w,
 			.h = h,
 		};
-		SDL_GpuBlit(app->cmd, &src, &dst, SDL_FLIP_NONE, SDL_GPU_FILTER_NEAREST, SDL_FALSE);
+		SDL_BlitGPU(app->cmd, &src, &dst, SDL_FLIP_NONE, SDL_GPU_FILTER_NEAREST, SDL_FALSE);
 	}
 
 	// Dear ImGui draw.
@@ -543,7 +543,7 @@ int cf_app_draw_onto_screen(bool clear)
 		draw->delay_defrag = false;
 	}
 
-	SDL_GpuSubmit(app->cmd);
+	SDL_SubmitGPU(app->cmd);
 	app->cmd = NULL;
 
 	// Clear all pushed draw parameters.
@@ -734,13 +734,13 @@ int cf_app_get_canvas_height()
 void cf_app_set_vsync(bool true_turn_on_vsync)
 {
 	app->vsync = true_turn_on_vsync;
-	SDL_GpuSetSwapchainParameters(app->device, app->window, SDL_GPU_SWAPCHAINCOMPOSITION_SDR, app->vsync ? SDL_GPU_PRESENTMODE_VSYNC : SDL_GPU_PRESENTMODE_IMMEDIATE);
+	SDL_SetGPUSwapchainParameters(app->device, app->window, SDL_GPU_SWAPCHAINCOMPOSITION_SDR, app->vsync ? SDL_GPU_PRESENTMODE_VSYNC : SDL_GPU_PRESENTMODE_IMMEDIATE);
 }
 
 void cf_app_set_vsync_mailbox(bool true_turn_on_mailbox)
 {
 	app->vsync = true_turn_on_mailbox;
-	SDL_GpuSetSwapchainParameters(app->device, app->window, SDL_GPU_SWAPCHAINCOMPOSITION_SDR, app->vsync ? SDL_GPU_PRESENTMODE_MAILBOX : SDL_GPU_PRESENTMODE_IMMEDIATE);
+	SDL_SetGPUSwapchainParameters(app->device, app->window, SDL_GPU_SWAPCHAINCOMPOSITION_SDR, app->vsync ? SDL_GPU_PRESENTMODE_MAILBOX : SDL_GPU_PRESENTMODE_IMMEDIATE);
 }
 
 bool cf_app_get_vsync()
@@ -797,7 +797,7 @@ ImGuiContext* cf_app_init_imgui()
 
 	ImGui::StyleColorsDark();
 	
-	SDL_GpuDriver driver = SDL_GpuGetDriver(app->device);
+	SDL_GPUDriver driver = SDL_GetGPUDriver(app->device);
 	switch (driver) {
 	case SDL_GPU_DRIVER_VULKAN: ImGui_ImplSDL3_InitForVulkan(app->window); break;
 	case SDL_GPU_DRIVER_D3D11:  // Fall-thru.
