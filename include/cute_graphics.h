@@ -871,6 +871,9 @@ typedef struct CF_VertexAttribute
 
 	/* @member The offset in memory from the beginning of a vertex to this attribute. */
 	int offset;
+
+	/* @member Set to true if you want this attribute bound to the mesh's instance buffer, instead of the vertex buffer. */
+	bool per_instance;
 } CF_VertexAttribute;
 // @end
 
@@ -886,9 +889,31 @@ typedef struct CF_VertexAttribute
  * @param    attribute_count              Number of attributes in `attributes`.
  * @param    vertex_stride                Number of bytes between each vertex.
  * @remarks  The max number of attributes is `CF_MESH_MAX_VERTEX_ATTRIBUTES` (32). Any more attributes beyond 32 will be ignored.
- * @related  CF_Mesh cf_make_mesh cf_destroy_mesh cf_mesh_update_vertex_data
+ * @related  CF_Mesh cf_make_mesh cf_destroy_mesh cf_mesh_update_vertex_data cf_mesh_set_index_buffer cf_mesh_set_instance_buffer
  */
 CF_API CF_Mesh CF_CALL cf_make_mesh(int vertex_buffer_size_in_bytes, const CF_VertexAttribute* attributes, int attribute_count, int vertex_stride);
+
+/**
+ * @function cf_mesh_set_index_buffer
+ * @category graphics
+ * @brief    Sets up an index buffer on the mesh, for indexed style rendering.
+ * @param    mesh                         The mesh.
+ * @param    index_buffer_size_in_bytes   The size of the mesh's index buffer.
+ * @param    index_bit_count              The number of bits to use for indices, must be either 16 or 32.
+ * @related  CF_Mesh cf_make_mesh cf_mesh_update_index_data
+ */
+CF_API void CF_CALL cf_mesh_set_index_buffer(CF_Mesh mesh, int index_buffer_size_in_bytes, int index_bit_count);
+
+/**
+ * @function cf_mesh_set_instance_buffer
+ * @category graphics
+ * @brief    Sets up an instance buffer on the mesh, for instanced style rendering.
+ * @param    mesh                         The mesh.
+ * @param    instance_buffer_size_in_bytes  The size of the mesh's index buffer.
+ * @param    instance_stride                The number of bytes for each instance data.
+ * @related  CF_Mesh cf_make_mesh cf_mesh_update_instance_data
+ */
+CF_API void CF_CALL cf_mesh_set_instance_buffer(CF_Mesh mesh, int instance_buffer_size_in_bytes, int instance_stride);
 
 /**
  * @function cf_destroy_mesh
@@ -905,11 +930,32 @@ CF_API void CF_CALL cf_destroy_mesh(CF_Mesh mesh);
  * @brief    Overwrites the vertex data of a mesh.
  * @param    mesh       The mesh.
  * @param    data       A pointer to vertex data.
- * @param    count      Number of bytes in `data`.
- * @return   Returns the number of bytes written.
+ * @param    count      Number of vertices in `data`.
  * @related  CF_Mesh cf_make_mesh cf_destroy_mesh cf_mesh_update_vertex_data
  */
 CF_API void CF_CALL cf_mesh_update_vertex_data(CF_Mesh mesh, void* data, int count);
+
+/**
+ * @function cf_mesh_update_index_data
+ * @category graphics
+ * @brief    Overwrites the index data of a mesh.
+ * @param    mesh       The mesh.
+ * @param    data       A pointer to index data.
+ * @param    count      Number of indices in `data`.
+ * @related  CF_Mesh cf_make_mesh cf_destroy_mesh cf_mesh_set_index_buffer
+ */
+CF_API void CF_CALL cf_mesh_update_index_data(CF_Mesh mesh, void* data, int count);
+
+/**
+ * @function cf_mesh_update_instance_data
+ * @category graphics
+ * @brief    Overwrites the instance data of a mesh.
+ * @param    mesh       The mesh.
+ * @param    data       A pointer to instance data.
+ * @param    count      Number of isntances in `data`.
+ * @related  CF_Mesh cf_make_mesh cf_destroy_mesh cf_mesh_set_instance_buffer
+ */
+CF_API void CF_CALL cf_mesh_update_instance_data(CF_Mesh mesh, void* data, int count);
 
 //--------------------------------------------------------------------------------------------------
 // Render state.

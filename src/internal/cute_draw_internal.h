@@ -57,6 +57,39 @@ struct CF_Strike
 	float thickness;
 };
 
+struct CF_Instance
+{
+	/* @member For internal use -- For signed-distance functions for rendering shapes. */
+	CF_V2 a, b, c;
+
+	/* @member Color for rendering shapes (ignored for sprites). */
+	CF_Pixel color;
+
+	/* @member For internal use -- For applying "chubbiness" factor for shapes, or radii on circle/capsule. */
+	float radius;
+
+	/* @member For internal use -- For shape rendering for border style stroke rendering (no fill). */
+	float stroke;
+
+	/* @member For internal use -- Factor for the size of antialiasing. */
+	float aa;
+
+	/* @member For internal use -- The type of shape to be rendered, used by the signed-distance functions within CF's internal fragment shader. */
+	uint8_t type;
+
+	/* @member Used for the alpha-component (transparency). */
+	uint8_t alpha;
+
+	/* @member For internal use -- Whether or not to render shapes as filled or stroked. */
+	uint8_t fill;
+
+	/* @member For internal use -- Reserved for a future purpose, simply fulfills byte alignment for now. */
+	uint8_t not_used;
+
+	/* @member Four general purpose floats passed into custom user shaders. */
+	CF_Color attributes;
+};
+
 struct CF_Draw
 {
 	CF_V2 atlas_dims = cf_v2(2048, 2048);
@@ -83,6 +116,7 @@ struct CF_Draw
 	Cute::Array<CF_Shader> shaders;
 	Cute::Array<CF_V2> temp;
 	Cute::Array<CF_Vertex> verts;
+	Cute::Array<CF_Instance> instances;
 	Cute::Array<float> font_sizes = { 18 };
 	Cute::Array<const char*> fonts = { sintern("Calibri") };
 	Cute::Array<int> blurs = { 0 };
