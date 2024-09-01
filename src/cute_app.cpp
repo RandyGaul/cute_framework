@@ -246,13 +246,13 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 		// Create the GPU device.
 		const char* device_name = NULL;
 		if (use_dx11) {
-			device_name = "D3D11";
+			device_name = "direct3d11";
 		} else if (use_dx12) {
-			device_name = "D3D12";
+			device_name = "direct3d12";
 		} else if (use_metal) {
-			device_name = "Metal";
+			device_name = "metal";
 		} else if (use_vulkan) {
-			device_name = "Vulkan";
+			device_name = "vulkan";
 		}
 		device = SDL_CreateGPUDevice(SDL_ShaderCross_GetShaderFormats(), false, device_name);
 		if (!device) {
