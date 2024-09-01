@@ -22,7 +22,9 @@ path | A virtual path to the folder with your shaders (subfolders supported). Se
 ## Remarks
 
 Shaders can `#include` each other as long as they exist in this directory. Changes to shaders on disk
-may also be watched via [cf_shader_on_changed](/graphics/cf_shader_on_changed.md) to support shader reloading during development.
+may also be watched via [cf_shader_on_changed](/graphics/cf_shader_on_changed.md) to support shader reloading during development. If you call [cf_shader_directory](/graphics/cf_shader_directory.md) with
+the path `"/assets/shaders"`, you should then supply paths to [cf_make_shader](/graphics/cf_make_shader.md) relative to the shader directory, and
+simply pass in paths such as `"/shader.vert`" or `"shader.frag"`. This also applies to `#include` between shaders.
 
 ## Related Pages
 

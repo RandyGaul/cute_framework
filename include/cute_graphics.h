@@ -550,7 +550,9 @@ typedef enum CF_ShaderStage
  * @brief    Sets up the app's shader directory.
  * @param    path     A virtual path to the folder with your shaders (subfolders supported). See [Virtual File System](https://randygaul.github.io/cute_framework/#/topics/virtual_file_system).
  * @remarks  Shaders can `#include` each other as long as they exist in this directory. Changes to shaders on disk
- *           may also be watched via `cf_shader_on_changed` to support shader reloading during development.
+ *           may also be watched via `cf_shader_on_changed` to support shader reloading during development. If you call `cf_shader_directory` with
+ *           the path `"/assets/shaders"`, you should then supply paths to `cf_make_shader` relative to the shader directory, and
+ *           simply pass in paths such as `"/shader.vert`" or `"shader.frag"`. This also applies to `#include` between shaders.
  * @related  CF_Shader cf_make_shader cf_destroy_shader cf_apply_shader CF_Material
  */
 CF_API void CF_CALL cf_shader_directory(const char* path);
@@ -627,9 +629,7 @@ CF_API CF_Shader CF_CALL cf_make_shader(const char* vertex_path, const char* fra
  * @category graphics
  * @brief    Creates a shader from strings containing glsl source code.
  * @param    vertex_path   A virtual path to the shader. See [Virtual File System](https://randygaul.github.io/cute_framework/#/topics/virtual_file_system).
- * @remarks  The shader paths must be in the shader directory. See `cf_shader_directory`. For example, if you call `cf_shader_directory` with
- *           the path `"/assets/shaders"`, you should then supply paths to `cf_make_shader` relative to the shader directory, and
- *           simply pass in paths such as `"/shader.vert`" or `"shader.frag"`. This also applies to `#include` between shaders.
+ * @remarks  The shader paths must be in the shader directory. See `cf_shader_directory`.
  * @related  CF_Shader cf_make_shader cf_shader_directory cf_apply_shader CF_Material
  */
 CF_API CF_Shader CF_CALL cf_make_shader_from_source(const char* vertex_src, const char* fragment_src);
