@@ -572,19 +572,28 @@ CF_API void CF_CALL cf_shader_on_changed(void (*on_changed_fn)(const char* path,
  * @category graphics
  * @brief    Creates a shader from glsl source code.
  * @param    vertex_path   A virtual path to the shader. See [Virtual File System](https://randygaul.github.io/cute_framework/#/topics/virtual_file_system).
- * @remarks  The shader paths must be in the shader directory. See `cf_shader_directory`. Note the expected glsl version is 450.
+ * @remarks  The shader paths must be in the shader directory. See `cf_shader_directory`. For example, if you call `cf_shader_directory` with
+ *           the path `"/assets/shaders"`, you should then supply paths to `cf_make_shader` relative to the shader directory, and
+ *           simply pass in paths such as `"/shader.vert`" or `"shader.frag"`. This also applies to `#include` between shaders.
+ *           
+ *           Note the expected glsl version is 450.
  *           
  *           You must setup shader inputs (max of 32 inputs, e.g. `in` keyword) and resources sets in a specific way. Use the
              following resource sets and ordering in your shaders:
  *           
  *           For _VERTEX_ shaders:
- *            0: Sampled textures, followed by storage textures, followed by storage buffers
- *            1: Uniform buffers
- *           For _FRAGMENT_ shaders:
- *            2: Sampled textures, followed by storage textures, followed by storage buffers
- *            3: Uniform buffers
+ *           ```
+ *               0: Sampled textures, followed by storage textures, followed by storage buffers
+ *               1: Uniform buffers
+ *           ```
  *           
- *           Example _VERTEX shader:
+ *           For _FRAGMENT_ shaders:
+ *           ```
+ *               2: Sampled textures, followed by storage textures, followed by storage buffers
+ *               3: Uniform buffers
+ *           ```
+ *           
+ *           Example _VERTEX_ shader:
  *           ```glsl
  *           layout (set = 0, binding = 0) uniform sampler2D u_image;
  *           
@@ -618,7 +627,9 @@ CF_API CF_Shader CF_CALL cf_make_shader(const char* vertex_path, const char* fra
  * @category graphics
  * @brief    Creates a shader from strings containing glsl source code.
  * @param    vertex_path   A virtual path to the shader. See [Virtual File System](https://randygaul.github.io/cute_framework/#/topics/virtual_file_system).
- * @remarks  The shader paths must be in the shader directory. See `cf_shader_directory`.
+ * @remarks  The shader paths must be in the shader directory. See `cf_shader_directory`. For example, if you call `cf_shader_directory` with
+ *           the path `"/assets/shaders"`, you should then supply paths to `cf_make_shader` relative to the shader directory, and
+ *           simply pass in paths such as `"/shader.vert`" or `"shader.frag"`. This also applies to `#include` between shaders.
  * @related  CF_Shader cf_make_shader cf_shader_directory cf_apply_shader CF_Material
  */
 CF_API CF_Shader CF_CALL cf_make_shader_from_source(const char* vertex_src, const char* fragment_src);

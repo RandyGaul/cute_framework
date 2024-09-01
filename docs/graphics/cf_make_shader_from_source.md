@@ -21,7 +21,9 @@ vertex_path | A virtual path to the shader. See [Virtual File System](https://ra
 
 ## Remarks
 
-The shader paths must be in the shader directory. See [cf_shader_directory](/graphics/cf_shader_directory.md).
+The shader paths must be in the shader directory. See [cf_shader_directory](/graphics/cf_shader_directory.md). For example, if you call [cf_shader_directory](/graphics/cf_shader_directory.md) with
+the path `"/assets/shaders"`, you should then supply paths to [cf_make_shader](/graphics/cf_make_shader.md) relative to the shader directory, and
+simply pass in paths such as `"/shader.vert`" or `"shader.frag"`. This also applies to `#include` between shaders.
 
 ## Related Pages
 
