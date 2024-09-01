@@ -465,52 +465,52 @@ void cf_make_draw()
 	attrs[2].name = "in_a";
 	attrs[2].format = CF_VERTEX_FORMAT_FLOAT2;
 	attrs[2].offset = CF_OFFSET_OF(CF_Instance, a);
-	attrs[1].per_instance = true;
+	attrs[2].per_instance = true;
 
 	attrs[3].name = "in_b";
 	attrs[3].format = CF_VERTEX_FORMAT_FLOAT2;
 	attrs[3].offset = CF_OFFSET_OF(CF_Instance, b);
-	attrs[0].per_instance = true;
+	attrs[3].per_instance = true;
 
 	attrs[4].name = "in_c";
 	attrs[4].format = CF_VERTEX_FORMAT_FLOAT2;
 	attrs[4].offset = CF_OFFSET_OF(CF_Instance, c);
-	attrs[0].per_instance = true;
+	attrs[4].per_instance = true;
 
 	attrs[5].name = "in_uv";
 	attrs[5].format = CF_VERTEX_FORMAT_FLOAT2;
 	attrs[5].offset = CF_OFFSET_OF(CF_Vertex, uv);
-	attrs[0].per_instance = false;
+	attrs[5].per_instance = false;
 
 	attrs[6].name = "in_col";
 	attrs[6].format = CF_VERTEX_FORMAT_UBYTE4_NORM;
 	attrs[6].offset = CF_OFFSET_OF(CF_Instance, color);
-	attrs[0].per_instance = true;
+	attrs[6].per_instance = true;
 
 	attrs[7].name = "in_radius";
 	attrs[7].format = CF_VERTEX_FORMAT_FLOAT;
 	attrs[7].offset = CF_OFFSET_OF(CF_Instance, radius);
-	attrs[0].per_instance = true;
+	attrs[7].per_instance = true;
 
 	attrs[8].name = "in_stroke";
 	attrs[8].format = CF_VERTEX_FORMAT_FLOAT;
 	attrs[8].offset = CF_OFFSET_OF(CF_Instance, stroke);
-	attrs[0].per_instance = true;
+	attrs[8].per_instance = true;
 
 	attrs[9].name = "in_aa";
 	attrs[9].format = CF_VERTEX_FORMAT_FLOAT;
 	attrs[9].offset = CF_OFFSET_OF(CF_Instance, aa);
-	attrs[0].per_instance = true;
+	attrs[9].per_instance = true;
 
 	attrs[10].name = "in_params";
 	attrs[10].format = CF_VERTEX_FORMAT_UBYTE4_NORM;
 	attrs[10].offset = CF_OFFSET_OF(CF_Instance, type);
-	attrs[0].per_instance = true;
+	attrs[10].per_instance = true;
 
 	attrs[11].name = "in_user_params";
 	attrs[11].format = CF_VERTEX_FORMAT_FLOAT4;
 	attrs[11].offset = CF_OFFSET_OF(CF_Instance, attributes);
-	attrs[0].per_instance = true;
+	attrs[11].per_instance = true;
 	draw->mesh = cf_make_mesh(CF_MB * 5, attrs, CF_ARRAY_SIZE(attrs), sizeof(CF_Vertex));
 	cf_mesh_set_instance_buffer(draw->mesh, CF_MB * 5, sizeof(CF_Instance));
 

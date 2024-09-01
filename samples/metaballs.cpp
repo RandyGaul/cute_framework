@@ -23,7 +23,7 @@ int main(int argc, char* argv[])
 	int frame_index = 0;
 	float fps = 0;
 
-	set_target_framerate(200);
+	//set_target_framerate(200);
 
 	while (app_is_running()) {
 		app_update();

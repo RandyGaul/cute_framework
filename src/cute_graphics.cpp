@@ -305,10 +305,11 @@ vec4 shader(vec4 color, vec2 pos, vec2 atlas_uv, vec2 screen_uv, vec4 params)
 const char* s_draw_vs = R"(
 layout (location = 0) in vec2 in_pos;
 layout (location = 1) in vec2 in_posH;
-layout (location = 2) in vec2 in_a;
-layout (location = 3) in vec2 in_b;
-layout (location = 4) in vec2 in_c;
-layout (location = 5) in vec2 in_uv;
+layout (location = 2) in vec2 in_uv;
+
+layout (location = 3) in vec2 in_a;
+layout (location = 4) in vec2 in_b;
+layout (location = 5) in vec2 in_c;
 layout (location = 6) in vec4 in_col;
 layout (location = 7) in float in_radius;
 layout (location = 8) in float in_stroke;
@@ -1360,13 +1361,13 @@ void cf_mesh_update_vertex_data(CF_Mesh mesh_handle, void* data, int count)
 void cf_mesh_update_index_data(CF_Mesh mesh_handle, void* data, int count)
 {
 	CF_MeshInternal* mesh = (CF_MeshInternal*)mesh_handle.id;
-	s_update_buffer(&mesh->indices, count, data, count * mesh->indices.stride * count, SDL_GPU_BUFFERUSAGE_INDEX_BIT);
+	s_update_buffer(&mesh->indices, count, data, count * mesh->indices.stride, SDL_GPU_BUFFERUSAGE_INDEX_BIT);
 }
 
 void cf_mesh_update_instance_data(CF_Mesh mesh_handle, void* data, int count)
 {
 	CF_MeshInternal* mesh = (CF_MeshInternal*)mesh_handle.id;
-	s_update_buffer(&mesh->instances, count, data, count * mesh->instances.stride * count, SDL_GPU_BUFFERUSAGE_VERTEX_BIT);
+	s_update_buffer(&mesh->instances, count, data, count * mesh->instances.stride, SDL_GPU_BUFFERUSAGE_VERTEX_BIT);
 }
 
 CF_RenderState cf_render_state_defaults()
