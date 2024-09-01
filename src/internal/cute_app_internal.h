@@ -103,7 +103,6 @@ struct CF_App
 	CF_WindowState window_state;
 	CF_WindowState window_state_prev;
 	SDL_GPUCommandBuffer* cmd = NULL;
-	SDL_GPUCopyPass* copy_pass = NULL;
 	bool use_depth_stencil = false;
 	uint64_t default_image_id = CF_PNG_ID_RANGE_LO;
 	bool vsync = false;

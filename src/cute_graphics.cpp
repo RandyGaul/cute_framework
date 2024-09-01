@@ -483,7 +483,6 @@ struct CF_Buffer
 	int size;
 	int stride;
 	SDL_GPUBuffer* buffer;
-	SDL_GPUTransferBuffer* transfer_buffer;
 };
 
 struct CF_MeshInternal
@@ -492,6 +491,7 @@ struct CF_MeshInternal
 	CF_Buffer indices;
 	CF_Buffer instances;
 	int attribute_count;
+	SDL_GPUTransferBuffer* transfer_buffer;
 	CF_VertexAttribute attributes[CF_MESH_MAX_VERTEX_ATTRIBUTES];
 };
 
@@ -1231,13 +1231,13 @@ CF_Mesh cf_make_mesh(int vertex_buffer_size, const CF_VertexAttribute* attribute
 			.props = 0,
 		};
 		mesh->vertices.buffer = SDL_CreateGPUBuffer(app->device, &buf_info);
-		SDL_GPUTransferBufferCreateInfo tbuf_info = {
-			.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD,
-			.sizeInBytes = (Uint32)vertex_buffer_size,
-			.props = 0,
-		};
-		mesh->vertices.transfer_buffer = SDL_CreateGPUTransferBuffer(app->device, &tbuf_info);
 	}
+	SDL_GPUTransferBufferCreateInfo tbuf_info = {
+		.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD,
+		.sizeInBytes = (Uint32)vertex_buffer_size,
+		.props = 0,
+	};
+	mesh->transfer_buffer = SDL_CreateGPUTransferBuffer(app->device, &tbuf_info);
 	attribute_count = min(attribute_count, CF_MESH_MAX_VERTEX_ATTRIBUTES);
 	mesh->attribute_count = attribute_count;
 	mesh->vertices.stride = vertex_stride;
@@ -1266,7 +1266,6 @@ void cf_mesh_set_index_buffer(CF_Mesh mesh_handle, int index_buffer_size_in_byte
 		.sizeInBytes = (Uint32)index_buffer_size_in_bytes,
 		.props = 0,
 	};
-	mesh->indices.transfer_buffer = SDL_CreateGPUTransferBuffer(app->device, &tbuf_info);
 }
 
 void cf_mesh_set_instance_buffer(CF_Mesh mesh_handle, int instance_buffer_size_in_bytes, int instance_stride)
@@ -1285,7 +1284,6 @@ void cf_mesh_set_instance_buffer(CF_Mesh mesh_handle, int instance_buffer_size_i
 		.sizeInBytes = (Uint32)instance_buffer_size_in_bytes,
 		.props = 0,
 	};
-	mesh->instances.transfer_buffer = SDL_CreateGPUTransferBuffer(app->device, &tbuf_info);
 }
 
 void cf_destroy_mesh(CF_Mesh mesh_handle)
@@ -1293,25 +1291,22 @@ void cf_destroy_mesh(CF_Mesh mesh_handle)
 	CF_MeshInternal* mesh = (CF_MeshInternal*)mesh_handle.id;
 	if (mesh->vertices.buffer) {
 		SDL_ReleaseGPUBuffer(app->device, mesh->vertices.buffer);
-		SDL_ReleaseGPUTransferBuffer(app->device, mesh->vertices.transfer_buffer);
 	}
 	if (mesh->indices.buffer) {
 		SDL_ReleaseGPUBuffer(app->device, mesh->indices.buffer);
-		SDL_ReleaseGPUTransferBuffer(app->device, mesh->indices.transfer_buffer);
 	}
 	if (mesh->instances.buffer) {
 		SDL_ReleaseGPUBuffer(app->device, mesh->instances.buffer);
-		SDL_ReleaseGPUTransferBuffer(app->device, mesh->instances.transfer_buffer);
 	}
+	SDL_ReleaseGPUTransferBuffer(app->device, mesh->transfer_buffer);
 	CF_FREE(mesh);
 }
 
-static void s_update_buffer(CF_Buffer* buffer, int element_count, void* data, int size, SDL_GPUBufferUsageFlags flags)
+static void s_update_buffer(SDL_GPUTransferBuffer* transfer_buffer, CF_Buffer* buffer, int element_count, void* data, int size, SDL_GPUBufferUsageFlags flags)
 {
 	// Resize buffer if necessary.
 	if (size > buffer->size) {
 		SDL_ReleaseGPUBuffer(app->device, buffer->buffer);
-		SDL_ReleaseGPUTransferBuffer(app->device, buffer->transfer_buffer);
 
 		int new_size = size * 2;
 		buffer->size = new_size;
@@ -1321,19 +1316,13 @@ static void s_update_buffer(CF_Buffer* buffer, int element_count, void* data, in
 				.props = 0,
 		};
 		buffer->buffer = SDL_CreateGPUBuffer(app->device, &buf_info);
-		SDL_GPUTransferBufferCreateInfo tbuf_info = {
-				.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD,
-				.sizeInBytes = (Uint32)new_size,
-				.props = 0,
-		};
-		buffer->transfer_buffer = SDL_CreateGPUTransferBuffer(app->device, &tbuf_info);
 	}
 
 	// Copy vertices over to the driver.
 	CF_ASSERT(size <= buffer->size);
-	void* p = SDL_MapGPUTransferBuffer(app->device, buffer->transfer_buffer, true);
+	void* p = SDL_MapGPUTransferBuffer(app->device, transfer_buffer, true);
 	CF_MEMCPY(p, data, size);
-	SDL_UnmapGPUTransferBuffer(app->device, buffer->transfer_buffer);
+	SDL_UnmapGPUTransferBuffer(app->device, transfer_buffer);
 	buffer->element_count = element_count;
 
 	// Submit the upload command to the GPU.
@@ -1341,7 +1330,7 @@ static void s_update_buffer(CF_Buffer* buffer, int element_count, void* data, in
 	SDL_GPUCopyPass *pass = SDL_BeginGPUCopyPass(cmd);
 	SDL_GPUTransferBufferLocation location;
 	location.offset = 0;
-	location.transferBuffer = buffer->transfer_buffer;
+	location.transferBuffer = transfer_buffer;
 	SDL_GPUBufferRegion region;
 	region.buffer = buffer->buffer;
 	region.offset = 0;
@@ -1355,19 +1344,19 @@ void cf_mesh_update_vertex_data(CF_Mesh mesh_handle, void* data, int count)
 {
 	CF_MeshInternal* mesh = (CF_MeshInternal*)mesh_handle.id;
 	CF_ASSERT(mesh->attribute_count);
-	s_update_buffer(&mesh->vertices, count, data, count * mesh->vertices.stride, SDL_GPU_BUFFERUSAGE_VERTEX_BIT);
+	s_update_buffer(mesh->transfer_buffer, &mesh->vertices, count, data, count * mesh->vertices.stride, SDL_GPU_BUFFERUSAGE_VERTEX_BIT);
 }
 
 void cf_mesh_update_index_data(CF_Mesh mesh_handle, void* data, int count)
 {
 	CF_MeshInternal* mesh = (CF_MeshInternal*)mesh_handle.id;
-	s_update_buffer(&mesh->indices, count, data, count * mesh->indices.stride, SDL_GPU_BUFFERUSAGE_INDEX_BIT);
+	s_update_buffer(mesh->transfer_buffer, &mesh->indices, count, data, count * mesh->indices.stride, SDL_GPU_BUFFERUSAGE_INDEX_BIT);
 }
 
 void cf_mesh_update_instance_data(CF_Mesh mesh_handle, void* data, int count)
 {
 	CF_MeshInternal* mesh = (CF_MeshInternal*)mesh_handle.id;
-	s_update_buffer(&mesh->instances, count, data, count * mesh->instances.stride, SDL_GPU_BUFFERUSAGE_VERTEX_BIT);
+	s_update_buffer(mesh->transfer_buffer, &mesh->instances, count, data, count * mesh->instances.stride, SDL_GPU_BUFFERUSAGE_VERTEX_BIT);
 }
 
 CF_RenderState cf_render_state_defaults()
@@ -1664,6 +1653,8 @@ static SDL_GPUGraphicsPipeline* s_build_pipeline(CF_ShaderInternal* shader, CF_R
 	}
 
 	// Make sure the mesh vertex format is fully compatible with the vertex shader inputs.
+	bool has_vertex_data = mesh->vertices.buffer ? true : false;
+	bool has_instance_data = mesh->instances.buffer ? true : false;
 	SDL_GPUVertexAttribute* attributes = SDL_stack_alloc(SDL_GPUVertexAttribute, mesh->attribute_count);
 	int attribute_count = 0;
 	for (int i = 0; i < mesh->attribute_count; ++i) {
@@ -1673,7 +1664,11 @@ static SDL_GPUGraphicsPipeline* s_build_pipeline(CF_ShaderInternal* shader, CF_R
 			CF_ShaderInputFormat input_fmt = shader->input_formats[idx];
 			CF_VertexFormat mesh_fmt = mesh->attributes[i].format;
 			CF_ASSERT(s_is_compatible(input_fmt, mesh_fmt));
-			attr->binding = mesh->attributes[i].per_instance ? 1 : 0; // Index in `vertex_bindings` below.
+			if (has_vertex_data) {
+				attr->binding = mesh->attributes[i].per_instance ? 1 : 0; // Index in `vertex_bindings` below.
+			} else {
+				attr->binding = 0;
+			}
 			attr->location = shader->input_locations[idx];
 			attr->format = s_wrap(mesh->attributes[i].format);
 			attr->offset = mesh->attributes[i].offset;
@@ -1684,21 +1679,23 @@ static SDL_GPUGraphicsPipeline* s_build_pipeline(CF_ShaderInternal* shader, CF_R
 	pip_info.vertexInputState.vertexAttributeCount = attribute_count;
 	pip_info.vertexInputState.vertexAttributes = attributes;
 	SDL_GPUVertexBinding vertex_bindings[2];
-	vertex_bindings[0].binding = 0;
-	vertex_bindings[0].stride = mesh->vertices.stride;
-	vertex_bindings[0].inputRate = SDL_GPU_VERTEXINPUTRATE_VERTEX;
-	vertex_bindings[0].instanceStepRate = 0;
-	pip_info.vertexInputState.vertexBindings = vertex_bindings;
-	bool has_instance_data = mesh->instances.buffer ? true : false;
-	if (has_instance_data) {
-		vertex_bindings[1].binding = 1;
-		vertex_bindings[1].stride = mesh->instances.stride;
-		vertex_bindings[1].inputRate = SDL_GPU_VERTEXINPUTRATE_INSTANCE;
-		vertex_bindings[1].instanceStepRate = 1;
-		pip_info.vertexInputState.vertexBindingCount = 2;
-	} else {
-		pip_info.vertexInputState.vertexBindingCount = 1;
+	int vertex_bindings_count = 0;
+	if (has_vertex_data) {
+		vertex_bindings[vertex_bindings_count].binding = 0;
+		vertex_bindings[vertex_bindings_count].stride = mesh->vertices.stride;
+		vertex_bindings[vertex_bindings_count].inputRate = SDL_GPU_VERTEXINPUTRATE_VERTEX;
+		vertex_bindings[vertex_bindings_count].instanceStepRate = 0;
+		vertex_bindings_count++;
 	}
+	if (has_instance_data) {
+		vertex_bindings[vertex_bindings_count].binding = 1;
+		vertex_bindings[vertex_bindings_count].stride = mesh->instances.stride;
+		vertex_bindings[vertex_bindings_count].inputRate = SDL_GPU_VERTEXINPUTRATE_INSTANCE;
+		vertex_bindings[vertex_bindings_count].instanceStepRate = 1;
+		vertex_bindings_count++;
+	}
+	pip_info.vertexInputState.vertexBindingCount = vertex_bindings_count;
+	pip_info.vertexInputState.vertexBindings = vertex_bindings;
 
 	pip_info.primitiveType = SDL_GPU_PRIMITIVETYPE_TRIANGLELIST;
 	pip_info.rasterizerState.fillMode = SDL_GPU_FILLMODE_FILL;

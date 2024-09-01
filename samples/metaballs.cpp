@@ -23,7 +23,7 @@ int main(int argc, char* argv[])
 	int frame_index = 0;
 	float fps = 0;
 
-	//set_target_framerate(200);
+	set_target_framerate(200);
 
 	while (app_is_running()) {
 		app_update();
@@ -43,7 +43,7 @@ int main(int argc, char* argv[])
 
 		// Draw soft-circles.
 		Rnd rnd = rnd_seed(0);
-		for (int i = 0; i < 100; ++i) {
+		for (int i = 0; i < 200; ++i) {
 			float o = rnd_range(rnd, -10.0f,10.0f);
 			float x = rnd_range(rnd, -w/scale*0.5f, w/scale*0.5f) + cosf(t+o) * 10;
 			float y = rnd_range(rnd, -h/scale*0.5f, h/scale*0.5f) + sinf(t+o) * 10;

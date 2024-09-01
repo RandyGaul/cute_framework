@@ -110,17 +110,12 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 	int vert_count = 0;
 	draw->verts.ensure_count(count * 6);
 	CF_Vertex* verts = draw->verts.data();
-	int instance_count = 0;
-	draw->instances.ensure_count(count * 2);
-	CF_Instance* instances = draw->instances.data();
 	CF_MEMSET(verts, 0, sizeof(CF_Vertex) * count * 6);
-	CF_MEMSET(instances, 0, sizeof(instances) * count * 2);
 
 	for (int i = 0; i < count; ++i) {
 		spritebatch_sprite_t* s = sprites + i;
 		BatchGeometry geom = s->geom;
-		CF_Vertex* outv = verts + vert_count;
-		CF_Instance* outi = instances + instance_count;
+		CF_Vertex* out = verts + vert_count;
 
 		v2 quad[6] = {
 			geom.box[0],
@@ -141,82 +136,82 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 		};
 
 		switch (geom.type) {
-		case BATCH_GEOMETRY_TYPE_TRI: {
-			outi->color = s->geom.color;
-			outi->radius = 0;
-			outi->stroke = 0;
-			outi->type = VA_TYPE_TRIANGLE;
-			outi->alpha = (uint8_t)(s->geom.alpha * 255.0f);
-			outi->fill = 255;
-			outi->aa = 0;
-			outi->attributes = geom.user_params;
+		case BATCH_GEOMETRY_TYPE_TRI:
+		{
+			for (int i = 0; i < 3; ++i) {
+				out[i].color = s->geom.color;
+				out[i].radius = 0;
+				out[i].stroke = 0;
+				out[i].type = VA_TYPE_TRIANGLE;
+				out[i].alpha = (uint8_t)(s->geom.alpha * 255.0f);
+				out[i].fill = 255;
+				out[i].aa = 0;
+				out[i].attributes = geom.user_params;
+			}
 
-			outv[0].posH = geom.a;
-			outv[1].posH = geom.b;
-			outv[2].posH = geom.c;
+			out[0].posH = geom.a;
+			out[1].posH = geom.b;
+			out[2].posH = geom.c;
 		
 			vert_count += 3;
-			instance_count++;
 		}	break;
 
-		case BATCH_GEOMETRY_TYPE_TRI_SDF: {
-			for (int i = 0; i < 2; ++i) {
-				outi[i].a = geom.a;
-				outi[i].b = geom.b;
-				outi[i].c = geom.c;
-				outi[i].color = s->geom.color;
-				outi[i].radius = s->geom.radius;
-				outi[i].stroke = s->geom.stroke;
-				outi[i].aa = s->geom.aa;
-				outi[i].type = VA_TYPE_TRIANGLE_SDF;
-				outi[i].alpha = (uint8_t)(s->geom.alpha * 255.0f);
-				outi[i].fill = s->geom.fill ? 255 : 0;
-				outi[i].attributes = geom.user_params;
-			}
-
+		case BATCH_GEOMETRY_TYPE_TRI_SDF:
+		{
 			for (int i = 0; i < 6; ++i) {
-				outv[i].p = quad[i];
-				outv[i].posH = quadH[i];
+				out[i].p = quad[i];
+				out[i].posH = quadH[i];
+				out[i].a = geom.a;
+				out[i].b = geom.b;
+				out[i].c = geom.c;
+				out[i].color = s->geom.color;
+				out[i].radius = s->geom.radius;
+				out[i].stroke = s->geom.stroke;
+				out[i].aa = s->geom.aa;
+				out[i].type = VA_TYPE_TRIANGLE_SDF;
+				out[i].alpha = (uint8_t)(s->geom.alpha * 255.0f);
+				out[i].fill = s->geom.fill ? 255 : 0;
+				out[i].attributes = geom.user_params;
 			}
 
 			vert_count += 6;
-			instance_count += 2;
 		}	break;
 
-		case BATCH_GEOMETRY_TYPE_QUAD: {
-			for (int i = 0; i < 2; ++i) {
-				outi[i].a = geom.a;
-				outi[i].b = geom.b;
-				outi[i].c = geom.c;
-				outi[i].color = s->geom.color;
-				outi[i].radius = s->geom.radius;
-				outi[i].stroke = s->geom.stroke;
-				outi[i].aa = s->geom.aa;
-				outi[i].type = VA_TYPE_BOX;
-				outi[i].alpha = (uint8_t)(s->geom.alpha * 255.0f);
-				outi[i].fill = s->geom.fill ? 255 : 0;
-				outi[i].attributes = geom.user_params;
+		case BATCH_GEOMETRY_TYPE_QUAD:
+		{
+			for (int i = 0; i < 6; ++i) {
+				out[i].a = geom.a;
+				out[i].b = geom.b;
+				out[i].c = geom.c;
+				out[i].color = s->geom.color;
+				out[i].radius = s->geom.radius;
+				out[i].stroke = s->geom.stroke;
+				out[i].aa = s->geom.aa;
+				out[i].type = VA_TYPE_BOX;
+				out[i].alpha = (uint8_t)(s->geom.alpha * 255.0f);
+				out[i].fill = s->geom.fill ? 255 : 0;
+				out[i].attributes = geom.user_params;
 			}
 
-			outv[0].p = quad[0];
-			outv[1].p = quad[1];
-			outv[2].p = quad[2];
-			outv[3].p = quad[3];
-			outv[4].p = quad[4];
-			outv[5].p = quad[5];
+			out[0].p = quad[0];
+			out[1].p = quad[1];
+			out[2].p = quad[2];
+			out[3].p = quad[3];
+			out[4].p = quad[4];
+			out[5].p = quad[5];
 
-			outv[0].posH = quadH[0];
-			outv[1].posH = quadH[1];
-			outv[2].posH = quadH[2];
-			outv[3].posH = quadH[3];
-			outv[4].posH = quadH[4];
-			outv[5].posH = quadH[5];
+			out[0].posH = quadH[0];
+			out[1].posH = quadH[1];
+			out[2].posH = quadH[2];
+			out[3].posH = quadH[3];
+			out[4].posH = quadH[4];
+			out[5].posH = quadH[5];
 		
 			vert_count += 6;
-			instance_count += 2;
 		}	break;
 
-		case BATCH_GEOMETRY_TYPE_SPRITE: {
+		case BATCH_GEOMETRY_TYPE_SPRITE:
+		{
 			bool clipped_away = false;
 			if (geom.do_clipping) {
 				CF_ASSERT(geom.is_text);
@@ -263,101 +258,96 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 				geom.d = bb.min;
 			}
 
-			for (int i = 0; i < 2; ++i) {
-				outi[i].alpha = (uint8_t)(s->geom.alpha * 255.0f);
+			for (int i = 0; i < 6; ++i) {
+				out[i].alpha = (uint8_t)(s->geom.alpha * 255.0f);
 				if (s->geom.is_sprite) {
-					outi[i].type = VA_TYPE_SPRITE;
+					out[i].type = VA_TYPE_SPRITE;
 				} else if (s->geom.is_text) {
-					outi[i].type = VA_TYPE_TEXT;
+					out[i].type = VA_TYPE_TEXT;
 				} else {
 					CF_ASSERT(false);
 				}
-				outi[i].color = s->geom.color;
-				outi[i].attributes = geom.user_params;
+				out[i].color = s->geom.color;
+				out[i].attributes = geom.user_params;
 			}
 
-			outv[0].posH = geom.a;
-			outv[0].uv.x = s->minx;
-			outv[0].uv.y = s->maxy;
+			out[0].posH = geom.a;
+			out[0].uv.x = s->minx;
+			out[0].uv.y = s->maxy;
 
-			outv[1].posH = geom.d;
-			outv[1].uv.x = s->minx;
-			outv[1].uv.y = s->miny;
+			out[1].posH = geom.d;
+			out[1].uv.x = s->minx;
+			out[1].uv.y = s->miny;
 
-			outv[2].posH = geom.b;
-			outv[2].uv.x = s->maxx;
-			outv[2].uv.y = s->maxy;
+			out[2].posH = geom.b;
+			out[2].uv.x = s->maxx;
+			out[2].uv.y = s->maxy;
 
-			outv[3].posH = geom.b;
-			outv[3].uv.x = s->maxx;
-			outv[3].uv.y = s->maxy;
+			out[3].posH = geom.b;
+			out[3].uv.x = s->maxx;
+			out[3].uv.y = s->maxy;
 
-			outv[4].posH = geom.d;
-			outv[4].uv.x = s->minx;
-			outv[4].uv.y = s->miny;
+			out[4].posH = geom.d;
+			out[4].uv.x = s->minx;
+			out[4].uv.y = s->miny;
 
-			outv[5].posH = geom.c;
-			outv[5].uv.x = s->maxx;
-			outv[5].uv.y = s->miny;
+			out[5].posH = geom.c;
+			out[5].uv.x = s->maxx;
+			out[5].uv.y = s->miny;
 
 			vert_count += 6;
-			instance_count += 2;
 		}	break;
 
 		case BATCH_GEOMETRY_TYPE_CIRCLE: // Use the capsule path for circle rendering.
-		case BATCH_GEOMETRY_TYPE_CAPSULE: {
-			for (int i = 0; i < 2; ++i) {
-				outi[i].a = geom.a;
-				outi[i].b = geom.b;
-				outi[i].c = geom.c;
-				outi[i].color = s->geom.color;
-				outi[i].radius = s->geom.radius;
-				outi[i].stroke = s->geom.stroke;
-				outi[i].aa = s->geom.aa;
-				outi[i].type = VA_TYPE_SEGMENT;
-				outi[i].alpha = (uint8_t)(s->geom.alpha * 255.0f);
-				outi[i].fill = s->geom.fill ? 255 : 0;
-				outi[i].attributes = geom.user_params;
-			}
-
+		case BATCH_GEOMETRY_TYPE_CAPSULE:
+		{
 			for (int i = 0; i < 6; ++i) {
-				outv[i].p = quad[i];
-				outv[i].posH = quadH[i];
+				out[i].p = quad[i];
+				out[i].posH = quadH[i];
+				out[i].a = geom.a;
+				out[i].b = geom.b;
+				out[i].c = geom.c;
+				out[i].color = s->geom.color;
+				out[i].radius = s->geom.radius;
+				out[i].stroke = s->geom.stroke;
+				out[i].aa = s->geom.aa;
+				out[i].type = VA_TYPE_SEGMENT;
+				out[i].alpha = (uint8_t)(s->geom.alpha * 255.0f);
+				out[i].fill = s->geom.fill ? 255 : 0;
+				out[i].attributes = geom.user_params;
 			}
 
 			vert_count += 6;
-			instance_count += 2;
 		}	break;
 
 		case BATCH_GEOMETRY_TYPE_SEGMENT:
 		{
-			outi->a = geom.a;
-			outi->b = geom.b;
-			outi->c = geom.c;
-			outi->color = s->geom.color;
-			outi->radius = s->geom.radius;
-			outi->stroke = s->geom.stroke;
-			outi->aa = s->geom.aa;
-			outi->type = VA_TYPE_SEGMENT;
-			outi->alpha = (uint8_t)(s->geom.alpha * 255.0f);
-			outi->fill = s->geom.fill ? 255 : 0;
-			outi->attributes = geom.user_params;
+			for (int i = 0; i < 3; ++i) {
+				out[i].a = geom.a;
+				out[i].b = geom.b;
+				out[i].c = geom.c;
+				out[i].color = s->geom.color;
+				out[i].radius = s->geom.radius;
+				out[i].stroke = s->geom.stroke;
+				out[i].aa = s->geom.aa;
+				out[i].type = VA_TYPE_SEGMENT;
+				out[i].alpha = (uint8_t)(s->geom.alpha * 255.0f);
+				out[i].fill = s->geom.fill ? 255 : 0;
+				out[i].attributes = geom.user_params;
+			}
+			
+			out[0].p = geom.box[0];
+			out[1].p = geom.box[1];
+			out[2].p = geom.box[2];
 
-			outv[0].p = geom.box[0];
-			outv[1].p = geom.box[1];
-			outv[2].p = geom.box[2];
-
-			outv[0].posH = geom.boxH[0];
-			outv[1].posH = geom.boxH[1];
-			outv[2].posH = geom.boxH[2];
-
+			out[0].posH = geom.boxH[0];
+			out[1].posH = geom.boxH[1];
+			out[2].posH = geom.boxH[2];
+		
 			vert_count += 3;
-			instance_count++;
 		}	break;
 		}
 	}
-
-	CF_ASSERT(vert_count / 3 == instance_count);
 
 	// Allow users to optionally modulate vertices.
 	if (draw->vertex_fn) {
@@ -378,7 +368,6 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 
 	// Map the vertex buffer with sprite vertex data.
 	cf_mesh_update_vertex_data(draw->mesh, verts, vert_count);
-	cf_mesh_update_instance_data(draw->mesh, instances, instance_count);
 	cf_apply_mesh(draw->mesh);
 
 	// Apply the atlas texture.
@@ -450,69 +439,45 @@ void cf_make_draw()
 	draw->projection = ortho_2d(0, 0, (float)app->w, (float)app->h);
 	draw->reset_cam();
 
-	// Mesh + vertex/instance attributes.
+	// Mesh + vertex attributes.
 	CF_VertexAttribute attrs[12] = { };
 	attrs[0].name = "in_pos";
 	attrs[0].format = CF_VERTEX_FORMAT_FLOAT2;
 	attrs[0].offset = CF_OFFSET_OF(CF_Vertex, p);
-	attrs[0].per_instance = false;
-
 	attrs[1].name = "in_posH";
 	attrs[1].format = CF_VERTEX_FORMAT_FLOAT2;
 	attrs[1].offset = CF_OFFSET_OF(CF_Vertex, posH);
-	attrs[1].per_instance = false;
-
 	attrs[2].name = "in_a";
 	attrs[2].format = CF_VERTEX_FORMAT_FLOAT2;
-	attrs[2].offset = CF_OFFSET_OF(CF_Instance, a);
-	attrs[2].per_instance = true;
-
+	attrs[2].offset = CF_OFFSET_OF(CF_Vertex, a);
 	attrs[3].name = "in_b";
 	attrs[3].format = CF_VERTEX_FORMAT_FLOAT2;
-	attrs[3].offset = CF_OFFSET_OF(CF_Instance, b);
-	attrs[3].per_instance = true;
-
+	attrs[3].offset = CF_OFFSET_OF(CF_Vertex, b);
 	attrs[4].name = "in_c";
 	attrs[4].format = CF_VERTEX_FORMAT_FLOAT2;
-	attrs[4].offset = CF_OFFSET_OF(CF_Instance, c);
-	attrs[4].per_instance = true;
-
+	attrs[4].offset = CF_OFFSET_OF(CF_Vertex, c);
 	attrs[5].name = "in_uv";
 	attrs[5].format = CF_VERTEX_FORMAT_FLOAT2;
 	attrs[5].offset = CF_OFFSET_OF(CF_Vertex, uv);
-	attrs[5].per_instance = false;
-
 	attrs[6].name = "in_col";
 	attrs[6].format = CF_VERTEX_FORMAT_UBYTE4_NORM;
-	attrs[6].offset = CF_OFFSET_OF(CF_Instance, color);
-	attrs[6].per_instance = true;
-
+	attrs[6].offset = CF_OFFSET_OF(CF_Vertex, color);
 	attrs[7].name = "in_radius";
 	attrs[7].format = CF_VERTEX_FORMAT_FLOAT;
-	attrs[7].offset = CF_OFFSET_OF(CF_Instance, radius);
-	attrs[7].per_instance = true;
-
+	attrs[7].offset = CF_OFFSET_OF(CF_Vertex, radius);
 	attrs[8].name = "in_stroke";
 	attrs[8].format = CF_VERTEX_FORMAT_FLOAT;
-	attrs[8].offset = CF_OFFSET_OF(CF_Instance, stroke);
-	attrs[8].per_instance = true;
-
+	attrs[8].offset = CF_OFFSET_OF(CF_Vertex, stroke);
 	attrs[9].name = "in_aa";
 	attrs[9].format = CF_VERTEX_FORMAT_FLOAT;
-	attrs[9].offset = CF_OFFSET_OF(CF_Instance, aa);
-	attrs[9].per_instance = true;
-
+	attrs[9].offset = CF_OFFSET_OF(CF_Vertex, aa);
 	attrs[10].name = "in_params";
 	attrs[10].format = CF_VERTEX_FORMAT_UBYTE4_NORM;
-	attrs[10].offset = CF_OFFSET_OF(CF_Instance, type);
-	attrs[10].per_instance = true;
-
+	attrs[10].offset = CF_OFFSET_OF(CF_Vertex, type);
 	attrs[11].name = "in_user_params";
 	attrs[11].format = CF_VERTEX_FORMAT_FLOAT4;
-	attrs[11].offset = CF_OFFSET_OF(CF_Instance, attributes);
-	attrs[11].per_instance = true;
+	attrs[11].offset = CF_OFFSET_OF(CF_Vertex, attributes);
 	draw->mesh = cf_make_mesh(CF_MB * 5, attrs, CF_ARRAY_SIZE(attrs), sizeof(CF_Vertex));
-	cf_mesh_set_instance_buffer(draw->mesh, CF_MB * 5, sizeof(CF_Instance));
 
 	// Shaders.
 	draw->shaders.add(app->draw_shader);
@@ -531,7 +496,6 @@ void cf_make_draw()
 	cf_material_set_render_state(draw->material, state);
 
 	// Spritebatcher.
-	// ...Compiles atlases internally based on what gets drawn recently, driving down draw call counts dramatically.
 	s_init_sb(2048, 2048);
 }
 
