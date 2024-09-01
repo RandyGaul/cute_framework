@@ -250,6 +250,7 @@ if(LINUX)
 	FetchContent_Declare(
 		s2n
 		URL https://github.com/aws/s2n-tls/archive/refs/tags/v1.3.46.zip
+		GIT_PROGRESS TRUE
 	)
 	FetchContent_MakeAvailable(s2n)
 	set(CF_LINK_LIBS ${CF_LINK_LIBS} s2n)

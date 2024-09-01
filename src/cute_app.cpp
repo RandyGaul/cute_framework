@@ -298,7 +298,7 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 
 	if (use_gfx) {
 		app->device = device;
-		SDL_ClaimGPUWindow(app->device, app->window);
+		SDL_ClaimWindowForGPUDevice(app->device, app->window);
 		cf_app_set_vsync_mailbox(app->vsync);
 		app->cmd = SDL_AcquireGPUCommandBuffer(app->device);
 		cf_load_internal_shaders();
@@ -330,7 +330,7 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 
 		// Create the default font.
 		make_font_from_memory(calibri_data, calibri_sz, "Calibri");
-		SDL_SubmitGPU(app->cmd);
+		SDL_SubmitGPUCommandBuffer(app->cmd);
 		app->cmd = NULL;
 	}
 
@@ -396,7 +396,7 @@ void cf_destroy_app()
 	cf_destroy_png_cache();
 	cs_shutdown();
 	destroy_mutex(&app->on_sound_finish_mutex);
-	if (app->device) SDL_UnclaimGPUWindow(app->device, app->window);
+	if (app->device) SDL_ReleaseWindowFromGPUDevice(app->device, app->window);
 	SDL_DestroyWindow(app->window);
 	if (app->device) SDL_DestroyGPUDevice(app->device);
 	SDL_Quit();
@@ -526,7 +526,7 @@ int cf_app_draw_onto_screen(bool clear)
 			.w = w,
 			.h = h,
 		};
-		SDL_BlitGPU(app->cmd, &src, &dst, SDL_FLIP_NONE, SDL_GPU_FILTER_NEAREST, SDL_FALSE);
+		SDL_BlitGPUTexture(app->cmd, &src, &dst, SDL_FLIP_NONE, SDL_GPU_FILTER_NEAREST, SDL_FALSE);
 	}
 
 	// Dear ImGui draw.
@@ -543,7 +543,7 @@ int cf_app_draw_onto_screen(bool clear)
 		draw->delay_defrag = false;
 	}
 
-	SDL_SubmitGPU(app->cmd);
+	SDL_SubmitGPUCommandBuffer(app->cmd);
 	app->cmd = NULL;
 
 	// Clear all pushed draw parameters.

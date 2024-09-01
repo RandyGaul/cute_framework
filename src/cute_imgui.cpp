@@ -253,7 +253,7 @@ void cf_imgui_init()
 	src.transferBuffer = tbuf;
 	SDL_UploadToGPUTexture(pass, &src, &region, false);
 	SDL_EndGPUCopyPass(pass);
-	SDL_SubmitGPU(cmd);
+	SDL_SubmitGPUCommandBuffer(cmd);
 	SDL_ReleaseGPUTransferBuffer(app->device, tbuf);
 
 	auto& io = ImGui::GetIO();

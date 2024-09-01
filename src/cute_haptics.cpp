@@ -191,8 +191,7 @@ void cf_haptic_stop_all(CF_Haptic haptic_handle)
 bool cf_haptic_rumble_supported(CF_Haptic haptic_handle)
 {
 	CF_HapticInstance* haptic = (CF_HapticInstance*)haptic_handle.id;
-	int result = SDL_HapticRumbleSupported(haptic->ptr);
-	return result == SDL_TRUE ? true : false;
+	return SDL_HapticRumbleSupported(haptic->ptr);
 }
 
 void cf_haptic_rumble_play(CF_Haptic haptic_handle, float strength, int duration_milliseconds)

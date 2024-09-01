@@ -400,12 +400,12 @@ int cute_atomic_cas(cute_atomic_int_t* atomic, int expected, int value)
 
 void* cute_atomic_ptr_set(void** atomic, void* value)
 {
-	return SDL_AtomicSetPtr(atomic, value);
+	return SDL_AtomicSetPointer(atomic, value);
 }
 
 void* cute_atomic_ptr_get(void** atomic)
 {
-	return SDL_AtomicGetPtr(atomic);
+	return SDL_AtomicGetPointer(atomic);
 }
 
 int cute_atomic_ptr_cas(void** atomic, void* expected, void* value)

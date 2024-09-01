@@ -240,7 +240,7 @@ void physics_update_entities_task(void* udata)
 		particle_t* p = physics->particles + i;
 
 		const v2 vel            = (p->curr_pos - p->prev_pos);
-		const float damping = 1.0 - 0.0005f;
+		const float damping = 1.0f - 0.0005f;
 
 		const v2 new_position = p->curr_pos + (vel + (gravity * params->dt * params->dt)) * damping;
 

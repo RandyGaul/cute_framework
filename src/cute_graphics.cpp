@@ -627,7 +627,7 @@ void cf_texture_update(CF_Texture texture_handle, void* data, int size)
 	SDL_UploadToGPUTexture(pass, &src, &dst, tex->buf ? true : false);
 	SDL_EndGPUCopyPass(pass);
 	if (!tex->buf) SDL_ReleaseGPUTransferBuffer(app->device, buf);
-	if (!app->cmd) SDL_SubmitGPU(cmd);
+	if (!app->cmd) SDL_SubmitGPUCommandBuffer(cmd);
 }
 
 uint64_t cf_texture_handle(CF_Texture texture)
@@ -1215,7 +1215,7 @@ void cf_canvas_blit(CF_Canvas src, CF_V2 u0, CF_V2 v0, CF_Canvas dst, CF_V2 u1, 
 		.h = (Uint32)dst_h
 	};
 
-	SDL_BlitGPU(app->cmd, &src_region, &dst_region, (SDL_FlipMode)flip, SDL_GPU_FILTER_NEAREST, SDL_FALSE);
+	SDL_BlitGPUTexture(app->cmd, &src_region, &dst_region, (SDL_FlipMode)flip, SDL_GPU_FILTER_NEAREST, SDL_FALSE);
 }
 
 // @TODO Index support.
@@ -1316,7 +1316,7 @@ void cf_mesh_update_vertex_data(CF_Mesh mesh_handle, void* data, int count)
 	region.size = size;
 	SDL_UploadToGPUBuffer(pass, &location, &region, true);
 	SDL_EndGPUCopyPass(pass);
-	if (!app->cmd) SDL_SubmitGPU(cmd);
+	if (!app->cmd) SDL_SubmitGPUCommandBuffer(cmd);
 }
 
 void cf_mesh_update_index_data(CF_Mesh mesh_handle, uint32_t* indices, int count)
