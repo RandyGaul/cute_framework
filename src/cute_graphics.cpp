@@ -509,6 +509,16 @@ CF_BackendType cf_query_backend()
 	}
 }
 
+bool cf_texture_supports_format(CF_PixelFormat format, CF_TextureUsageBits usage)
+{
+	return SDL_GPUTextureSupportsFormat(
+			app->device,
+			s_wrap(format),
+			SDL_GPU_TEXTURETYPE_2D,
+			usage
+			);
+}
+
 CF_TextureParams cf_texture_defaults(int w, int h)
 {
 	CF_TextureParams params;
@@ -1118,7 +1128,10 @@ CF_CanvasParams cf_canvas_defaults(int w, int h)
 		params.target.usage |= CF_TEXTURE_USAGE_COLOR_TARGET_BIT;
 		params.depth_stencil_enable = false;
 		params.depth_stencil_target = cf_texture_defaults(w, h);
-		params.depth_stencil_target.pixel_format = CF_PIXEL_FORMAT_D24_UNORM_S8_UINT;
+		params.depth_stencil_target.pixel_format = CF_PIXEL_FORMAT_D32_FLOAT_S8_UINT;
+    if (cf_texture_supports_format(CF_PIXEL_FORMAT_D24_UNORM_S8_UINT, CF_TEXTURE_USAGE_DEPTH_STENCIL_TARGET_BIT)) {
+      params.depth_stencil_target.pixel_format = CF_PIXEL_FORMAT_D24_UNORM_S8_UINT;
+    }
 		params.depth_stencil_target.usage = CF_TEXTURE_USAGE_DEPTH_STENCIL_TARGET_BIT;
 	}
 	return params;
