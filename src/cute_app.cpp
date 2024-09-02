@@ -72,7 +72,6 @@ void cf_free_display_list(CF_DisplayID* display_list)
 
 int cf_display_x(CF_DisplayID display_id)
 {
-	SDL_GetPrimaryDisplay();
 	s_init_video();
 	SDL_Rect rect;
 	SDL_GetDisplayBounds(display_id, &rect);
