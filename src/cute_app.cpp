@@ -39,8 +39,7 @@ static void s_init_video()
 {
 	static bool init = false;
 	if (init) return;
-	init = true;
-	SDL_Init(SDL_INIT_VIDEO);
+	init = SDL_Init(SDL_INIT_VIDEO);
 }
 
 CF_DisplayID cf_default_display()
