@@ -39,12 +39,12 @@ static void s_init_video()
 {
 	static bool init = false;
 	if (init) return;
-	init = true;
-	SDL_Init(SDL_INIT_VIDEO);
+	init = SDL_Init(SDL_INIT_VIDEO);
 }
 
 CF_DisplayID cf_default_display()
 {
+	s_init_video();
 	return { SDL_GetPrimaryDisplay() };
 }
 
@@ -71,7 +71,6 @@ void cf_free_display_list(CF_DisplayID* display_list)
 
 int cf_display_x(CF_DisplayID display_id)
 {
-	SDL_GetPrimaryDisplay();
 	s_init_video();
 	SDL_Rect rect;
 	SDL_GetDisplayBounds(display_id, &rect);
