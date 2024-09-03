@@ -387,6 +387,8 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 	cf_apply_shader(draw->shaders.last(), draw->material);
 	cf_draw_elements();
 	cf_commit();
+
+	draw->has_drawn_something = true;
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -2367,6 +2369,10 @@ void cf_render_to(CF_Canvas canvas, bool clear)
 	cf_apply_canvas(canvas, clear);
 	spritebatch_flush(&draw->sb);
 	draw->verts.clear();
+	if (clear && !draw->has_drawn_something) {
+		cf_clear_canvas(canvas);
+	}
+	draw->has_drawn_something = false;
 }
 
 void cf_draw_transform(CF_M3x2 m)

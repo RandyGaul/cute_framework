@@ -1115,6 +1115,35 @@ void cf_destroy_shader(CF_Shader shader_handle)
 	CF_FREE(shd);
 }
 
+void cf_clear_canvas(CF_Canvas canvas_handle)
+{
+	CF_CanvasInternal* canvas = (CF_CanvasInternal*)canvas_handle.id;
+	SDL_GPUCommandBuffer* cmd = app->cmd ? app->cmd : SDL_AcquireGPUCommandBuffer(app->device);
+
+	SDL_GPUColorAttachmentInfo color_info = {
+		.texture = canvas->texture,
+		.clearColor = { app->clear_color.r, app->clear_color.g, app->clear_color.b, app->clear_color.a },
+		.loadOp = SDL_GPU_LOADOP_CLEAR,
+		.storeOp = SDL_GPU_STOREOP_STORE,
+		.cycle = true,
+	};
+	SDL_GPUDepthStencilAttachmentInfo depth_stencil_info = {
+		.texture = canvas->depth_stencil,
+		.depthStencilClearValue = {
+			.depth = 1.0f,
+			.stencil = 0,
+		},
+		.loadOp = SDL_GPU_LOADOP_CLEAR,
+		.storeOp = SDL_GPU_STOREOP_STORE,
+		.cycle = true,
+	};
+	SDL_GPURenderPass* renderPass = SDL_BeginGPURenderPass(cmd, &color_info, 1, canvas->depth_stencil ? &depth_stencil_info : NULL);
+	SDL_EndGPURenderPass(renderPass);
+	canvas->clear = false;
+
+	if (!app->cmd) SDL_SubmitGPUCommandBuffer(cmd);
+}
+
 CF_CanvasParams cf_canvas_defaults(int w, int h)
 {
 	CF_CanvasParams params;
