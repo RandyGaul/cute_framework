@@ -500,7 +500,7 @@ CF_BackendType cf_query_backend()
 	SDL_GPUDriver driver = SDL_GetGPUDriver(app->device);
 	switch (driver) {
 	case SDL_GPU_DRIVER_INVALID: return CF_BACKEND_TYPE_INVALID;
-	case SDL_GPU_DRIVER_PRIVATE:  return CF_BACKEND_TYPE_PRIVATE;
+	case SDL_GPU_DRIVER_PRIVATE: return CF_BACKEND_TYPE_PRIVATE;
 	case SDL_GPU_DRIVER_VULKAN:  return CF_BACKEND_TYPE_VULKAN;
 	case SDL_GPU_DRIVER_D3D11:   return CF_BACKEND_TYPE_D3D11;
 	case SDL_GPU_DRIVER_D3D12:   return CF_BACKEND_TYPE_D3D12;
