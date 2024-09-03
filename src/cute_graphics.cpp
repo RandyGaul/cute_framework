@@ -500,7 +500,7 @@ CF_BackendType cf_query_backend()
 	SDL_GPUDriver driver = SDL_GetGPUDriver(app->device);
 	switch (driver) {
 	case SDL_GPU_DRIVER_INVALID: return CF_BACKEND_TYPE_INVALID;
-	case SDL_GPU_DRIVER_SECRET:  return CF_BACKEND_TYPE_SECRET_NDA;
+	case SDL_GPU_DRIVER_PRIVATE: return CF_BACKEND_TYPE_SECRET_NDA;
 	case SDL_GPU_DRIVER_VULKAN:  return CF_BACKEND_TYPE_VULKAN;
 	case SDL_GPU_DRIVER_D3D11:   return CF_BACKEND_TYPE_D3D11;
 	case SDL_GPU_DRIVER_D3D12:   return CF_BACKEND_TYPE_D3D12;
@@ -1239,7 +1239,7 @@ CF_Mesh cf_make_mesh(int vertex_buffer_size, const CF_VertexAttribute* attribute
 	mesh->vertices.size = vertex_buffer_size;
 	if (vertex_buffer_size) {
 		SDL_GPUBufferCreateInfo buf_info = {
-			.usageFlags = SDL_GPU_BUFFERUSAGE_VERTEX_BIT,
+			.usageFlags = SDL_GPU_BUFFERUSAGE_VERTEX,
 			.sizeInBytes = (Uint32)vertex_buffer_size,
 			.props = 0,
 		};
@@ -1269,7 +1269,7 @@ void cf_mesh_set_index_buffer(CF_Mesh mesh_handle, int index_buffer_size_in_byte
 	mesh->indices.size = index_buffer_size_in_bytes;
 	mesh->indices.stride = index_bit_count / 8;
 	SDL_GPUBufferCreateInfo buf_info = {
-		.usageFlags = SDL_GPU_BUFFERUSAGE_INDEX_BIT,
+		.usageFlags = SDL_GPU_BUFFERUSAGE_INDEX,
 		.sizeInBytes = (Uint32)index_buffer_size_in_bytes,
 		.props = 0,
 	};
@@ -1287,7 +1287,7 @@ void cf_mesh_set_instance_buffer(CF_Mesh mesh_handle, int instance_buffer_size_i
 	mesh->instances.size = instance_buffer_size_in_bytes;
 	mesh->instances.stride = instance_stride;
 	SDL_GPUBufferCreateInfo buf_info = {
-		.usageFlags = SDL_GPU_BUFFERUSAGE_VERTEX_BIT,
+		.usageFlags = SDL_GPU_BUFFERUSAGE_VERTEX,
 		.sizeInBytes = (Uint32)instance_buffer_size_in_bytes,
 		.props = 0,
 	};
@@ -1357,19 +1357,19 @@ void cf_mesh_update_vertex_data(CF_Mesh mesh_handle, void* data, int count)
 {
 	CF_MeshInternal* mesh = (CF_MeshInternal*)mesh_handle.id;
 	CF_ASSERT(mesh->attribute_count);
-	s_update_buffer(mesh->transfer_buffer, &mesh->vertices, count, data, count * mesh->vertices.stride, SDL_GPU_BUFFERUSAGE_VERTEX_BIT);
+	s_update_buffer(mesh->transfer_buffer, &mesh->vertices, count, data, count * mesh->vertices.stride, SDL_GPU_BUFFERUSAGE_VERTEX);
 }
 
 void cf_mesh_update_index_data(CF_Mesh mesh_handle, void* data, int count)
 {
 	CF_MeshInternal* mesh = (CF_MeshInternal*)mesh_handle.id;
-	s_update_buffer(mesh->transfer_buffer, &mesh->indices, count, data, count * mesh->indices.stride, SDL_GPU_BUFFERUSAGE_INDEX_BIT);
+	s_update_buffer(mesh->transfer_buffer, &mesh->indices, count, data, count * mesh->indices.stride, SDL_GPU_BUFFERUSAGE_INDEX);
 }
 
 void cf_mesh_update_instance_data(CF_Mesh mesh_handle, void* data, int count)
 {
 	CF_MeshInternal* mesh = (CF_MeshInternal*)mesh_handle.id;
-	s_update_buffer(mesh->transfer_buffer, &mesh->instances, count, data, count * mesh->instances.stride, SDL_GPU_BUFFERUSAGE_VERTEX_BIT);
+	s_update_buffer(mesh->transfer_buffer, &mesh->instances, count, data, count * mesh->instances.stride, SDL_GPU_BUFFERUSAGE_VERTEX);
 }
 
 CF_RenderState cf_render_state_defaults()

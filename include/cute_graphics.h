@@ -187,80 +187,118 @@ CF_API CF_BackendType CF_CALL cf_query_backend();
 #define CF_PIXEL_FORMAT_DEFS \
 	/* @entry Invalid pixel format. */                                                         \
 	CF_ENUM(PIXEL_FORMAT_INVALID,                -1)                                           \
+	/* @entry 8-bit alpha channel, 8 bits total, unsigned normalized. */                       \
+	CF_ENUM(PIXEL_FORMAT_A8_UNORM,                0)                                           \
+	/* @entry 8-bit red channel, 8 bits total, unsigned normalized. */                         \
+	CF_ENUM(PIXEL_FORMAT_R8_UNORM,                1)                                           \
+	/* @entry 8-bit red/green channels, 16 bits total, unsigned normalized. */                 \
+	CF_ENUM(PIXEL_FORMAT_R8G8_UNORM,              2)                                           \
 	/* @entry 8-bit red/green/blue/alpha channels, 32 bits total, unsigned normalized. */      \
-	CF_ENUM(PIXEL_FORMAT_R8G8B8A8_UNORM,          0)                                           \
-	/* @entry 8-bit blue/green/red/alpha channels, 32 bits total, unsigned normalized. */      \
-	CF_ENUM(PIXEL_FORMAT_B8G8R8A8_UNORM,          1)                                           \
-	/* @entry 5-bit blue/green channels, 6-bit red channel, 16 bits total, unsigned normalized. */\
-	CF_ENUM(PIXEL_FORMAT_B5G6R5_UNORM,            2)                                           \
-	/* @entry 5-bit blue/green/red channels, 1-bit alpha channel, 16 bits total, unsigned normalized. */\
-	CF_ENUM(PIXEL_FORMAT_B5G5R5A1_UNORM,          3)                                           \
-	/* @entry 4-bit blue/green/red/alpha channels, 16 bits total, unsigned normalized. */      \
-	CF_ENUM(PIXEL_FORMAT_B4G4R4A4_UNORM,          4)                                           \
-	/* @entry 10-bit red/green/blue channels, 2-bit alpha channel, 32 bits total, unsigned normalized. */\
-	CF_ENUM(PIXEL_FORMAT_R10G10B10A2_UNORM,       5)                                           \
+	CF_ENUM(PIXEL_FORMAT_R8G8B8A8_UNORM,          3)                                           \
+	/* @entry 16-bit red channel, 16 bits total, unsigned normalized. */                       \
+	CF_ENUM(PIXEL_FORMAT_R16_UNORM,               4)                                           \
 	/* @entry 16-bit red/green channels, 32 bits total, unsigned normalized. */                \
-	CF_ENUM(PIXEL_FORMAT_R16G16_UNORM,            6)                                           \
+	CF_ENUM(PIXEL_FORMAT_R16G16_UNORM,            5)                                           \
 	/* @entry 16-bit red/green/blue/alpha channels, 64 bits total, unsigned normalized. */     \
-	CF_ENUM(PIXEL_FORMAT_R16G16B16A16_UNORM,      7)                                           \
-	/* @entry 8-bit red-only channel, unsigned normalized. */                                  \
-	CF_ENUM(PIXEL_FORMAT_R8_UNORM,                8)                                           \
-	/* @entry 8-bit alpha-only channel, unsigned normalized. */                                \
-	CF_ENUM(PIXEL_FORMAT_A8_UNORM,                9)                                           \
-	/* @entry Block Compression 1, unsigned normalized. */                                     \
-	CF_ENUM(PIXEL_FORMAT_BC1_UNORM,              10)                                           \
-	/* @entry Block Compression 2, unsigned normalized. */                                     \
-	CF_ENUM(PIXEL_FORMAT_BC2_UNORM,              11)                                           \
-	/* @entry Block Compression 3, unsigned normalized. */                                     \
-	CF_ENUM(PIXEL_FORMAT_BC3_UNORM,              12)                                           \
-	/* @entry Block Compression 7, unsigned normalized. */                                     \
-	CF_ENUM(PIXEL_FORMAT_BC7_UNORM,              13)                                           \
+	CF_ENUM(PIXEL_FORMAT_R16G16B16A16_UNORM,      6)                                           \
+	/* @entry 10-bit red/green/blue channels, 2-bit alpha channel, 32 bits total, unsigned normalized. */ \
+	CF_ENUM(PIXEL_FORMAT_R10G10B10A2_UNORM,       7)                                           \
+	/* @entry 5-bit blue, 6-bit green, 5-bit red channels, 16 bits total, unsigned normalized. */ \
+	CF_ENUM(PIXEL_FORMAT_B5G6R5_UNORM,            8)                                           \
+	/* @entry 5-bit blue/green/red channels, 1-bit alpha channel, 16 bits total, unsigned normalized. */ \
+	CF_ENUM(PIXEL_FORMAT_B5G5R5A1_UNORM,          9)                                           \
+	/* @entry 4-bit blue/green/red/alpha channels, 16 bits total, unsigned normalized. */      \
+	CF_ENUM(PIXEL_FORMAT_B4G4R4A4_UNORM,         10)                                           \
+	/* @entry 8-bit blue/green/red/alpha channels, 32 bits total, unsigned normalized. */      \
+	CF_ENUM(PIXEL_FORMAT_B8G8R8A8_UNORM,         11)                                           \
+	/* @entry BC1 compressed format, unsigned normalized. */                                   \
+	CF_ENUM(PIXEL_FORMAT_BC1_RGBA_UNORM,         12)                                           \
+	/* @entry BC2 compressed format, unsigned normalized. */                                   \
+	CF_ENUM(PIXEL_FORMAT_BC2_RGBA_UNORM,         13)                                           \
+	/* @entry BC3 compressed format, unsigned normalized. */                                   \
+	CF_ENUM(PIXEL_FORMAT_BC3_RGBA_UNORM,         14)                                           \
+	/* @entry BC4 compressed format, unsigned normalized. */                                   \
+	CF_ENUM(PIXEL_FORMAT_BC4_R_UNORM,            15)                                           \
+	/* @entry BC5 compressed format, unsigned normalized. */                                   \
+	CF_ENUM(PIXEL_FORMAT_BC5_RG_UNORM,           16)                                           \
+	/* @entry BC7 compressed format, unsigned normalized. */                                   \
+	CF_ENUM(PIXEL_FORMAT_BC7_RGBA_UNORM,         17)                                           \
+	/* @entry BC6H compressed format, signed float. */                                         \
+	CF_ENUM(PIXEL_FORMAT_BC6H_RGB_FLOAT,         18)                                           \
+	/* @entry BC6H compressed format, unsigned float. */                                       \
+	CF_ENUM(PIXEL_FORMAT_BC6H_RGB_UFLOAT,        19)                                           \
+	/* @entry 8-bit red channel, 8 bits total, signed normalized. */                           \
+	CF_ENUM(PIXEL_FORMAT_R8_SNORM,               20)                                           \
 	/* @entry 8-bit red/green channels, 16 bits total, signed normalized. */                   \
-	CF_ENUM(PIXEL_FORMAT_R8G8_SNORM,             14)                                           \
+	CF_ENUM(PIXEL_FORMAT_R8G8_SNORM,             21)                                           \
 	/* @entry 8-bit red/green/blue/alpha channels, 32 bits total, signed normalized. */        \
-	CF_ENUM(PIXEL_FORMAT_R8G8B8A8_SNORM,         15)                                           \
-	/* @entry 16-bit red-only channel, floating point. */                                      \
-	CF_ENUM(PIXEL_FORMAT_R16_FLOAT,              16)                                           \
-	/* @entry 16-bit red/green channels, 32 bits total, floating point. */                     \
-	CF_ENUM(PIXEL_FORMAT_R16G16_FLOAT,           17)                                           \
-	/* @entry 16-bit red/green/blue/alpha channels, 64 bits total, floating point. */          \
-	CF_ENUM(PIXEL_FORMAT_R16G16B16A16_FLOAT,     18)                                           \
-	/* @entry 32-bit red-only channel, floating point. */                                      \
-	CF_ENUM(PIXEL_FORMAT_R32_FLOAT,              19)                                           \
-	/* @entry 32-bit red/green channels, 64 bits total, floating point. */                     \
-	CF_ENUM(PIXEL_FORMAT_R32G32_FLOAT,           20)                                           \
-	/* @entry 32-bit red/green/blue/alpha channels, 128 bits total, floating point. */         \
-	CF_ENUM(PIXEL_FORMAT_R32G32B32A32_FLOAT,     21)                                           \
-	/* @entry 8-bit red-only channel, unsigned integer. */                                     \
-	CF_ENUM(PIXEL_FORMAT_R8_UINT,                22)                                           \
+	CF_ENUM(PIXEL_FORMAT_R8G8B8A8_SNORM,         22)                                           \
+	/* @entry 16-bit red channel, 16 bits total, signed normalized. */                         \
+	CF_ENUM(PIXEL_FORMAT_R16_SNORM,              23)                                           \
+	/* @entry 16-bit red/green channels, 32 bits total, signed normalized. */                  \
+	CF_ENUM(PIXEL_FORMAT_R16G16_SNORM,           24)                                           \
+	/* @entry 16-bit red/green/blue/alpha channels, 64 bits total, signed normalized. */       \
+	CF_ENUM(PIXEL_FORMAT_R16G16B16A16_SNORM,     25)                                           \
+	/* @entry 16-bit red channel, 16 bits total, float. */                                     \
+	CF_ENUM(PIXEL_FORMAT_R16_FLOAT,              26)                                           \
+	/* @entry 16-bit red/green channels, 32 bits total, float. */                              \
+	CF_ENUM(PIXEL_FORMAT_R16G16_FLOAT,           27)                                           \
+	/* @entry 16-bit red/green/blue/alpha channels, 64 bits total, float. */                   \
+	CF_ENUM(PIXEL_FORMAT_R16G16B16A16_FLOAT,     28)                                           \
+	/* @entry 32-bit red channel, 32 bits total, float. */                                     \
+	CF_ENUM(PIXEL_FORMAT_R32_FLOAT,              29)                                           \
+	/* @entry 32-bit red/green channels, 64 bits total, float. */                              \
+	CF_ENUM(PIXEL_FORMAT_R32G32_FLOAT,           30)                                           \
+	/* @entry 32-bit red/green/blue/alpha channels, 128 bits total, float. */                  \
+	CF_ENUM(PIXEL_FORMAT_R32G32B32A32_FLOAT,     31)                                           \
+	/* @entry 11-bit red/green channels, 10-bit blue channel, 32 bits total, unsigned float. */\
+	CF_ENUM(PIXEL_FORMAT_R11G11B10_UFLOAT,       32)                                           \
+	/* @entry 8-bit red channel, 8 bits total, unsigned integer. */                            \
+	CF_ENUM(PIXEL_FORMAT_R8_UINT,                33)                                           \
 	/* @entry 8-bit red/green channels, 16 bits total, unsigned integer. */                    \
-	CF_ENUM(PIXEL_FORMAT_R8G8_UINT,              23)                                           \
+	CF_ENUM(PIXEL_FORMAT_R8G8_UINT,              34)                                           \
 	/* @entry 8-bit red/green/blue/alpha channels, 32 bits total, unsigned integer. */         \
-	CF_ENUM(PIXEL_FORMAT_R8G8B8A8_UINT,          24)                                           \
-	/* @entry 16-bit red-only channel, unsigned integer. */                                    \
-	CF_ENUM(PIXEL_FORMAT_R16_UINT,               25)                                           \
+	CF_ENUM(PIXEL_FORMAT_R8G8B8A8_UINT,          35)                                           \
+	/* @entry 16-bit red channel, 16 bits total, unsigned integer. */                          \
+	CF_ENUM(PIXEL_FORMAT_R16_UINT,               36)                                           \
 	/* @entry 16-bit red/green channels, 32 bits total, unsigned integer. */                   \
-	CF_ENUM(PIXEL_FORMAT_R16G16_UINT,            26)                                           \
+	CF_ENUM(PIXEL_FORMAT_R16G16_UINT,            37)                                           \
 	/* @entry 16-bit red/green/blue/alpha channels, 64 bits total, unsigned integer. */        \
-	CF_ENUM(PIXEL_FORMAT_R16G16B16A16_UINT,      27)                                           \
-	/* @entry 8-bit red/green/blue/alpha channels, 32 bits total, sRGB color space. */         \
-	CF_ENUM(PIXEL_FORMAT_R8G8B8A8_UNORM_SRGB,    28)                                           \
-	/* @entry 8-bit blue/green/red/alpha channels, 32 bits total, sRGB color space. */         \
-	CF_ENUM(PIXEL_FORMAT_B8G8R8A8_UNORM_SRGB,    29)                                           \
-	/* @entry Block Compression 3, sRGB color space. */                                        \
-	CF_ENUM(PIXEL_FORMAT_BC3_UNORM_SRGB,         30)                                           \
-	/* @entry Block Compression 7, sRGB color space. */                                        \
-	CF_ENUM(PIXEL_FORMAT_BC7_UNORM_SRGB,         31)                                           \
-	/* @entry 16-bit depth channel, unsigned normalized. */                                    \
-	CF_ENUM(PIXEL_FORMAT_D16_UNORM,              32)                                           \
-	/* @entry 24-bit depth channel, unsigned normalized. */                                    \
-	CF_ENUM(PIXEL_FORMAT_D24_UNORM,              33)                                           \
-	/* @entry 32-bit depth channel, floating point. */                                         \
-	CF_ENUM(PIXEL_FORMAT_D32_FLOAT,              34)                                           \
-	/* @entry 24-bit depth channel, 8-bit stencil channel, unsigned normalized. */             \
-	CF_ENUM(PIXEL_FORMAT_D24_UNORM_S8_UINT,      35)                                           \
-	/* @entry 32-bit depth channel, 8-bit stencil channel, floating point. */                  \
-	CF_ENUM(PIXEL_FORMAT_D32_FLOAT_S8_UINT,      36)                                           \
+	CF_ENUM(PIXEL_FORMAT_R16G16B16A16_UINT,      38)                                           \
+	/* @entry 8-bit red channel, 8 bits total, signed integer. */                              \
+	CF_ENUM(PIXEL_FORMAT_R8_INT,                 39)                                           \
+	/* @entry 8-bit red/green channels, 16 bits total, signed integer. */                      \
+	CF_ENUM(PIXEL_FORMAT_R8G8_INT,               40)                                           \
+	/* @entry 8-bit red/green/blue/alpha channels, 32 bits total, signed integer. */           \
+	CF_ENUM(PIXEL_FORMAT_R8G8B8A8_INT,           41)                                           \
+	/* @entry 16-bit red channel, 16 bits total, signed integer. */                            \
+	CF_ENUM(PIXEL_FORMAT_R16_INT,                42)                                           \
+	/* @entry 16-bit red/green channels, 32 bits total, signed integer. */                     \
+	CF_ENUM(PIXEL_FORMAT_R16G16_INT,             43)                                           \
+	/* @entry 16-bit red/green/blue/alpha channels, 64 bits total, signed integer. */          \
+	CF_ENUM(PIXEL_FORMAT_R16G16B16A16_INT,       44)                                           \
+	/* @entry 8-bit red/green/blue/alpha channels, 32 bits total, unsigned normalized, sRGB. */\
+	CF_ENUM(PIXEL_FORMAT_R8G8B8A8_UNORM_SRGB,    45)                                           \
+	/* @entry 8-bit blue/green/red/alpha channels, 32 bits total, unsigned normalized, sRGB. */\
+	CF_ENUM(PIXEL_FORMAT_B8G8R8A8_UNORM_SRGB,    46)                                           \
+	/* @entry BC1 compressed format, unsigned normalized, sRGB. */                             \
+	CF_ENUM(PIXEL_FORMAT_BC1_RGBA_UNORM_SRGB,    47)                                           \
+	/* @entry BC2 compressed format, unsigned normalized, sRGB. */                             \
+	CF_ENUM(PIXEL_FORMAT_BC2_RGBA_UNORM_SRGB,    48)                                           \
+	/* @entry BC3 compressed format, unsigned normalized, sRGB. */                             \
+	CF_ENUM(PIXEL_FORMAT_BC3_RGBA_UNORM_SRGB,    49)                                           \
+	/* @entry BC7 compressed format, unsigned normalized, sRGB. */                             \
+	CF_ENUM(PIXEL_FORMAT_BC7_RGBA_UNORM_SRGB,    50)                                           \
+	/* @entry 16-bit depth, 16 bits total, unsigned normalized. */                             \
+	CF_ENUM(PIXEL_FORMAT_D16_UNORM,              51)                                           \
+	/* @entry 24-bit depth, 24 bits total, unsigned normalized. */                             \
+	CF_ENUM(PIXEL_FORMAT_D24_UNORM,              52)                                           \
+	/* @entry 32-bit depth, 32 bits total, float. */                                           \
+	CF_ENUM(PIXEL_FORMAT_D32_FLOAT,              53)                                           \
+	/* @entry 24-bit depth, 8-bit stencil, 32 bits total, unsigned normalized depth, unsigned integer stencil. */ \
+	CF_ENUM(PIXEL_FORMAT_D24_UNORM_S8_UINT,      54)                                           \
+	/* @entry 32-bit depth, 8-bit stencil, 40 bits total, float depth, unsigned integer stencil. */ \
+	CF_ENUM(PIXEL_FORMAT_D32_FLOAT_S8_UINT,      55)
 	/* @end */
 
 typedef enum CF_PixelFormat
@@ -343,17 +381,17 @@ CF_INLINE const char* cf_pixel_format_op_to_string(CF_PixelFormatOp op) {
  */
 #define CF_TEXTURE_USAGE_DEFS \
 	/* @entry The texture will be used as a sampler in shaders. */                    \
-	CF_ENUM(TEXTURE_USAGE_SAMPLER_BIT,               0x00000001)                      \
+	CF_ENUM(TEXTURE_USAGE_SAMPLER_BIT,               (1u << 0))                      \
 	/* @entry The texture will be used as a color render target. */                   \
-	CF_ENUM(TEXTURE_USAGE_COLOR_TARGET_BIT,          0x00000002)                      \
+	CF_ENUM(TEXTURE_USAGE_COLOR_TARGET_BIT,          (1u << 1))                      \
 	/* @entry The texture will be used as a depth or stencil render target. */        \
-	CF_ENUM(TEXTURE_USAGE_DEPTH_STENCIL_TARGET_BIT,  0x00000004)                      \
+	CF_ENUM(TEXTURE_USAGE_DEPTH_STENCIL_TARGET_BIT,  (1u << 2))                      \
 	/* @entry The texture will be used as read-only storage in graphics pipelines. */ \
-	CF_ENUM(TEXTURE_USAGE_GRAPHICS_STORAGE_READ_BIT, 0x00000008)                      \
+	CF_ENUM(TEXTURE_USAGE_GRAPHICS_STORAGE_READ_BIT, (1u << 3))                      \
 	/* @entry The texture will be used as read-only storage in compute pipelines. */  \
-	CF_ENUM(TEXTURE_USAGE_COMPUTE_STORAGE_READ_BIT,  0x00000020)                      \
+	CF_ENUM(TEXTURE_USAGE_COMPUTE_STORAGE_READ_BIT,  (1u << 4))                      \
 	/* @entry The texture will be used as writeable storage in compute pipelines. */  \
-	CF_ENUM(TEXTURE_USAGE_COMPUTE_STORAGE_WRITE_BIT, 0x00000040)                      \
+	CF_ENUM(TEXTURE_USAGE_COMPUTE_STORAGE_WRITE_BIT, (1u << 5))                      \
 	/* @end */
 
 typedef uint32_t CF_TextureUsageFlags;
