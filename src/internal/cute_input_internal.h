@@ -34,6 +34,8 @@ struct CF_JoypadInstance
 	int axes[CF_JOYPAD_AXIS_COUNT] = { 0 };
 };
 
+void cf_begin_frame_input();
+void cf_end_frame_input();
 void cf_pump_input_msgs();
 
 #ifdef CF_CPP

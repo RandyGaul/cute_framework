@@ -469,7 +469,9 @@ void cf_app_update(CF_OnUpdateFn* on_update)
 		cf_shader_watch();
 	}
 	app->user_on_update = on_update;
+	cf_begin_frame_input();
 	cf_update_time(s_on_update);
+	cf_end_frame_input();
 }
 
 static void s_imgui_present(SDL_GPUTexture* swapchain_texture)

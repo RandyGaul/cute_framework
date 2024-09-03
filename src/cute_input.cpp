@@ -439,7 +439,7 @@ static CF_JoypadInstance* s_joy(SDL_JoystickID id)
 	return NULL;
 }
 
-void cf_pump_input_msgs()
+void cf_begin_frame_input()
 {
 	// Clear any necessary single-frame state and copy to `prev` states.
 	app->mouse.xrel = 0;
@@ -462,7 +462,25 @@ void cf_pump_input_msgs()
 			app->keys_timestamp[i] = 0;
 		}
 	}
+}
 
+void cf_end_frame_input()
+{
+	// Support held timer on KEY_ANY.
+	bool none_pressed = true;
+	for (int i = 0; i < CF_ARRAY_SIZE(app->keys); ++i) {
+		if (i != KEY_ANY && app->keys[i]) {
+			none_pressed = false;
+			break;
+		}
+	}
+	if (none_pressed) {
+		app->keys[KEY_ANY] = 0;
+	}
+}
+
+void cf_pump_input_msgs()
+{
 	// Handle SDL messages.
 	SDL_Event event;
 	while (SDL_PollEvent(&event)) {
@@ -665,18 +683,6 @@ void cf_pump_input_msgs()
 			s_touch_remove(id);
 		}	break;
 		}
-	}
-
-	// Support held timer on KEY_ANY.
-	bool none_pressed = true;
-	for (int i = 0; i < CF_ARRAY_SIZE(app->keys); ++i) {
-		if (i != KEY_ANY && app->keys[i]) {
-			none_pressed = false;
-			break;
-		}
-	}
-	if (none_pressed) {
-		app->keys[KEY_ANY] = 0;
 	}
 }
 
