@@ -438,7 +438,7 @@ struct CF_ShaderInternal
 };
 
 CF_Shader cf_make_draw_shader_internal(const char* path);
-CF_Shader cf_make_draw_shader_from_source_internal(const char* src);;
+CF_Shader cf_make_draw_shader_from_source_internal(const char* src);
 void cf_load_internal_shaders();
 void cf_unload_internal_shaders();
 void cf_shader_watch();

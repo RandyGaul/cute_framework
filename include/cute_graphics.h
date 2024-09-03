@@ -749,7 +749,7 @@ CF_API CF_Texture CF_CALL cf_canvas_get_depth_stencil_target(CF_Canvas canvas);
  * @param    u1            The normalized coordinate of the top-left of the destination rect.
  * @param    v1            The normalized coordinate of the bottom-right of the destination rect.
  * @param    dst           The destination canvas where pixels are copied to.
- * @remarks  The texture formats of the underlying canvas's must be PIXELFORMAT_DEFAULT. Each u/v coordinate
+ * @remarks  The texture formats of the underlying canvas's must be `PIXEL_FORMAT_R8G8B8A8_UNORM`. Each u/v coordinate
  *           is normalized, meaning a number from 0 to 1. This lets the function operate on canvas's of any
  *           size. To convert a coordinate to a normalized coordinate, simply divide the x/y of your coordinate
  *           by the width/height of the canvas.
