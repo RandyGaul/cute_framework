@@ -5,18 +5,23 @@ int w = 480*2;
 int h = 270*2;
 float scale = 1;
 
-void on_shader_changed(const char* path, void* udata)
+#define STR(X) #X
+const char* s_shd = STR(
+layout(set = 2, binding = 1) uniform sampler2D tex;
+
+vec4 shader(vec4 color, vec2 pos, vec2 atlas_uv, vec2 screen_uv, vec4 params)
 {
-	printf("Shader altered: %s\n", path);
+	float d = texture(tex, screen_uv).x;
+	d = d > 0.5 ? 1.0 : 0.0;
+	return vec4(vec3(d), 1);
 }
+);
 
 int main(int argc, char* argv[])
 {
 	make_app("Metaballs", 0, 0, 0, (int)(w*scale), (int)(h*scale), APP_OPTIONS_RESIZABLE_BIT | APP_OPTIONS_WINDOW_POS_CENTERED_BIT, argv[0]);
-	cf_shader_directory("/metaballs_data");
-	cf_shader_on_changed(on_shader_changed, NULL);
 	CF_Canvas soft_circles = make_canvas(canvas_defaults(w, h));
-	CF_Shader shd = cf_make_draw_shader("metaballs.shd");
+	CF_Shader shd = cf_make_draw_shader_from_source(s_shd);
 	float t = 0;
 
 	float frame_times[10] = { 0 };
