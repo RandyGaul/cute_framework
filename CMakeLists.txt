@@ -282,22 +282,30 @@ if (WINDOWS)
 
 	# Check if this project is being included as a subproject.
 	if (NOT CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
-		# Try to copy to a user-defined runtime output directory.
-		foreach (CONFIG_TYPE ${CMAKE_CONFIGURATION_TYPES})
-			string(TOUPPER ${CONFIG_TYPE} CONFIG_TYPE)
-			add_custom_command(TARGET cute POST_BUILD
-					COMMAND ${CMAKE_COMMAND} -E copy_if_different
-					${DXC_DLLS}
-					${CMAKE_RUNTIME_OUTPUT_DIRECTORY_${CONFIG_TYPE}}
-			)
-		endforeach()
-		if (DEFINED CMAKE_RUNTIME_OUTPUT_DIRECTORY)
-			add_custom_command(TARGET cute POST_BUILD
-					COMMAND ${CMAKE_COMMAND} -E copy_if_different
-					${DXC_DLLS}
-					${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-			)
+		# Set default runtime output directory if not defined.
+		if (NOT DEFINED CMAKE_RUNTIME_OUTPUT_DIRECTORY)
+			set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIG>")
 		endif()
+
+		# Iterate over the configuration types.
+		# ...Try and support custom user output directories.
+		foreach (CONFIG_TYPE ${CMAKE_CONFIGURATION_TYPES})
+			string(TOUPPER ${CONFIG_TYPE} CONFIG_TYPE_UPPER)
+			if (DEFINED CMAKE_RUNTIME_OUTPUT_DIRECTORY_${CONFIG_TYPE_UPPER})
+				set(DEST_DIR "${CMAKE_RUNTIME_OUTPUT_DIRECTORY_${CONFIG_TYPE_UPPER}}")
+			else()
+				set(DEST_DIR "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/$<CONFIG>")
+			endif()
+
+			if (DEST_DIR)
+				add_custom_command(TARGET cute POST_BUILD
+					COMMAND ${CMAKE_COMMAND} -E copy_if_different
+					"${DXC_DLL_DIR}/dxcompiler.dll" "${DEST_DIR}"
+					COMMAND ${CMAKE_COMMAND} -E copy_if_different
+					"${DXC_DLL_DIR}/dxil.dll" "${DEST_DIR}"
+				)
+			endif()
+		endforeach()
 	endif()
 endif()
 
