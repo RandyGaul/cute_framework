@@ -280,14 +280,8 @@ if (WINDOWS)
 	set(DXC_DLL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/libraries/dxc")
 	set(DXC_DLLS "${DXC_DLL_DIR}/dxcompiler.dll" "${DXC_DLL_DIR}/dxil.dll")
 
-	# Copies into the default /Debug or /Release folders for MSVC.
+	# Check if this project is being included as a subproject.
 	if (NOT CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
-		add_custom_command(TARGET cute POST_BUILD
-			COMMAND ${CMAKE_COMMAND} -E copy_if_different
-			${DXC_DLLS}
-			${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/$<CONFIG>
-		)
-		
 		# Try to copy to a user-defined runtime output directory.
 		foreach (CONFIG_TYPE ${CMAKE_CONFIGURATION_TYPES})
 			string(TOUPPER ${CONFIG_TYPE} CONFIG_TYPE)
