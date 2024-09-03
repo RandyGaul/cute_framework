@@ -1843,7 +1843,8 @@ CF_INLINE void canvas_blit(Canvas src, v2 u0, v2 v0, Canvas dst, v2 u1, v2 v1) {
 CF_INLINE Mesh make_mesh(int vertex_buffer_size_in_bytes, const VertexAttribute* attributes, int attribute_count, int vertex_stride) { return cf_make_mesh(vertex_buffer_size_in_bytes, attributes, attribute_count, vertex_stride); }
 CF_INLINE void destroy_mesh(Mesh mesh) { cf_destroy_mesh(mesh); }
 CF_INLINE void mesh_update_vertex_data(Mesh mesh, void* data, int count) { cf_mesh_update_vertex_data(mesh, data, count); }
-//CF_INLINE void mesh_update_index_data(Mesh mesh, uint32_t* indices, int count) {(mesh, indices, count); }
+CF_INLINE void mesh_update_index_data(Mesh mesh, void* data, int count) { cf_mesh_update_index_data(mesh, data, count); }
+CF_INLINE void mesh_update_instance_data(Mesh mesh, void* data, int count) { cf_mesh_update_instance_data(mesh, data, count); }
 CF_INLINE RenderState render_state_defaults() { return cf_render_state_defaults(); }
 CF_INLINE Material make_material() { return cf_make_material(); }
 CF_INLINE void destroy_material(Material material) { cf_destroy_material(material); }
