@@ -70,7 +70,7 @@ static void s_make_buffers(int vertex_count, int index_count)
 
 	{
 		SDL_GPUBufferCreateInfo buf_info = {
-			.usageFlags = SDL_GPU_BUFFERUSAGE_VERTEX_BIT,
+			.usageFlags = SDL_GPU_BUFFERUSAGE_VERTEX,
 			.sizeInBytes = (Uint32)(sizeof(ImDrawVert) * vertex_count),
 			.props = 0
 		};
@@ -90,7 +90,7 @@ static void s_make_buffers(int vertex_count, int index_count)
 
 	{
 		SDL_GPUBufferCreateInfo buf_info = {
-			.usageFlags = SDL_GPU_BUFFERUSAGE_INDEX_BIT,
+			.usageFlags = SDL_GPU_BUFFERUSAGE_INDEX,
 			.sizeInBytes = (Uint32)(sizeof(ImDrawIdx) * index_count),
 			.props = 0
 		};
@@ -216,7 +216,7 @@ void cf_imgui_init()
 	SDL_GPUTextureCreateInfo texture_info = {
 		.type = SDL_GPU_TEXTURETYPE_2D,
 		.format = SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM,
-		.usageFlags = SDL_GPU_TEXTUREUSAGE_SAMPLER_BIT,
+		.usageFlags = SDL_GPU_TEXTUREUSAGE_SAMPLER,
 		.width = (uint32_t)width,
 		.height = (uint32_t)height,
 		.layerCountOrDepth = 1,

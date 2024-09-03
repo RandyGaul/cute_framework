@@ -143,7 +143,7 @@ typedef struct CF_Shader { uint64_t id; } CF_Shader;
 	/* @entry Metal backend. */                                                    \
 	CF_ENUM(BACKEND_TYPE_METAL,  3)                                                \
 	/* @entry A "secret" backend for platforms under non-disclosure agreement. */  \
-	CF_ENUM(BACKEND_TYPE_SECRET_NDA,  4)                                           \
+	CF_ENUM(BACKEND_TYPE_PRIVATE,  4)                                           \
 	/* @end */
 
 typedef enum CF_BackendType
@@ -208,13 +208,13 @@ CF_API CF_BackendType CF_CALL cf_query_backend();
 	/* @entry 8-bit alpha-only channel, unsigned normalized. */                                \
 	CF_ENUM(PIXEL_FORMAT_A8_UNORM,                9)                                           \
 	/* @entry Block Compression 1, unsigned normalized. */                                     \
-	CF_ENUM(PIXEL_FORMAT_BC1_UNORM,              10)                                           \
+	CF_ENUM(PIXEL_FORMAT_BC1_RGBA_UNORM,         10)                                           \
 	/* @entry Block Compression 2, unsigned normalized. */                                     \
-	CF_ENUM(PIXEL_FORMAT_BC2_UNORM,              11)                                           \
+	CF_ENUM(PIXEL_FORMAT_BC2_RGBA_UNORM,         11)                                           \
 	/* @entry Block Compression 3, unsigned normalized. */                                     \
-	CF_ENUM(PIXEL_FORMAT_BC3_UNORM,              12)                                           \
+	CF_ENUM(PIXEL_FORMAT_BC3_RGBA_UNORM,         12)                                           \
 	/* @entry Block Compression 7, unsigned normalized. */                                     \
-	CF_ENUM(PIXEL_FORMAT_BC7_UNORM,              13)                                           \
+	CF_ENUM(PIXEL_FORMAT_BC7_RGBA_UNORM,         13)                                           \
 	/* @entry 8-bit red/green channels, 16 bits total, signed normalized. */                   \
 	CF_ENUM(PIXEL_FORMAT_R8G8_SNORM,             14)                                           \
 	/* @entry 8-bit red/green/blue/alpha channels, 32 bits total, signed normalized. */        \
