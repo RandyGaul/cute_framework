@@ -462,10 +462,7 @@ void cf_begin_frame_input()
 			app->keys_timestamp[i] = 0;
 		}
 	}
-}
 
-void cf_end_frame_input()
-{
 	// Support held timer on KEY_ANY.
 	bool none_pressed = true;
 	for (int i = 0; i < CF_ARRAY_SIZE(app->keys); ++i) {

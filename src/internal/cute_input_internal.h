@@ -35,7 +35,6 @@ struct CF_JoypadInstance
 };
 
 void cf_begin_frame_input();
-void cf_end_frame_input();
 void cf_pump_input_msgs();
 
 #ifdef CF_CPP
