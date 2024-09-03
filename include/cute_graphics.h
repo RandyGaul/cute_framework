@@ -143,7 +143,7 @@ typedef struct CF_Shader { uint64_t id; } CF_Shader;
 	/* @entry Metal backend. */                                                    \
 	CF_ENUM(BACKEND_TYPE_METAL,  3)                                                \
 	/* @entry A "secret" backend for platforms under non-disclosure agreement. */  \
-	CF_ENUM(BACKEND_TYPE_SECRET_NDA,  4)                                           \
+	CF_ENUM(BACKEND_TYPE_PRIVATE,  4)                                           \
 	/* @end */
 
 typedef enum CF_BackendType
