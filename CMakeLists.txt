@@ -13,6 +13,7 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 option(CF_FRAMEWORK_STATIC "Build static library for Cute Framework." ON)
 option(CF_GLSLANG "Build CF with online shader compilation support." ON)
 option(CF_GLSLANG_OPTIMIZER "Build CF with online shader compilation + optmization support (requires python 3.x installation)." ON)
+option(CF_FRAMEWORK_APPLE_FRAMEWORK "Build CF libraries as Apple Framework" OFF)
 
 # Platform detection.
 if(CMAKE_SYSTEM_NAME MATCHES "Emscripten")
@@ -416,17 +417,19 @@ elseif(WINDOWS)
 elseif(LINUX)
 	target_compile_options(cute PRIVATE -msse4.1)
 elseif(APPLE)
-	set_target_properties(cute PROPERTIES FRAMEWORK TRUE)
-	if (CF_FRAMEWORK_STATIC)
-	set_target_properties(cute PROPERTIES
-		FRAMEWORK_VERSION "1.0.0"
-		MACOSX_FRAMEWORK_IDENTIFIER "com.cuteframework.static"
-	)
-	else()
-	set_target_properties(cute PROPERTIES
-		FRAMEWORK_VERSION "1.0.0"
-		MACOSX_FRAMEWORK_IDENTIFIER "com.cuteframework.shared"
-	)
+	if(CF_FRAMEWORK_APPLE_FRAMEWORK)
+		set_target_properties(cute PROPERTIES FRAMEWORK TRUE)
+		if (CF_FRAMEWORK_STATIC)
+		set_target_properties(cute PROPERTIES
+			FRAMEWORK_VERSION "1.0.0"
+			MACOSX_FRAMEWORK_IDENTIFIER "com.cuteframework.static"
+		)
+		else()
+		set_target_properties(cute PROPERTIES
+			FRAMEWORK_VERSION "1.0.0"
+			MACOSX_FRAMEWORK_IDENTIFIER "com.cuteframework.shared"
+		)
+		endif()
 	endif()
 endif()
 

@@ -110,7 +110,7 @@ jobs:
         run: |
           mkdir -p ./dist
           cp -v ./include/*.h ./dist
-          cp -R -v ./build_folder/cute.framework ./dist
+          cp -R -v ./build_folder/libcute.a ./dist
           tar -czvf ${{ matrix.platform.artifact }}.tar.gz -C dist .
         if: runner.os == 'macOS'
 
