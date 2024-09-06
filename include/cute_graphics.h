@@ -1638,6 +1638,25 @@ CF_API void CF_CALL cf_apply_viewport(int x, int y, int w, int h);
 CF_API void CF_CALL cf_apply_scissor(int x, int y, int w, int h);
 
 /**
+ * @function cf_apply_stencil_reference
+ * @category graphics
+ * @brief    Sets the stencil reference value.
+ * @param    reference      The value to set the stencil reference to.
+ */
+CF_API void CF_CALL cf_apply_stencil_reference(int reference);
+
+/**
+ * @function cf_apply_blend_constants
+ * @category graphics
+ * @brief    Sets the stencil reference value.
+ * @param    r      The red blend constant.
+ * @param    g      The green blend constant.
+ * @param    b      The blue blend constant.
+ * @param    a      The alpha blend constant.
+ */
+CF_API void CF_CALL cf_apply_blend_constants(float r, float g, float b, float a);
+
+/**
  * @function cf_apply_mesh
  * @category graphics
  * @brief    Uses a specific mesh for rendering.

@@ -1678,6 +1678,25 @@ void cf_apply_scissor(int x, int y, int w, int h)
 	SDL_SetGPUScissor(s_canvas->pass, &scissor);
 }
 
+void cf_apply_stencil_reference(int reference)
+{
+  CF_ASSERT(s_canvas);
+  CF_ASSERT(s_canvas->pass);
+  SDL_SetGPUStencilReference(s_canvas->pass, reference);
+}
+
+void cf_apply_blend_constants(float r, float g, float b, float a)
+{
+  CF_ASSERT(s_canvas);
+  CF_ASSERT(s_canvas->pass);
+  SDL_FColor color;
+  color.r = r;
+  color.g = g;
+  color.b = b;
+  color.a = a;
+  SDL_SetGPUBlendConstants(s_canvas->pass, color);
+}
+
 void cf_apply_mesh(CF_Mesh mesh_handle)
 {
 	CF_ASSERT(s_canvas);
@@ -1832,7 +1851,6 @@ static SDL_GPUGraphicsPipeline* s_build_pipeline(CF_ShaderInternal* shader, CF_R
 	pip_info.depthStencilState.frontStencilState.compareOp = s_wrap(state->stencil.front.compare);
 	pip_info.depthStencilState.compareMask = state->stencil.read_mask;
 	pip_info.depthStencilState.writeMask = state->stencil.write_mask;
-	pip_info.depthStencilState.reference = state->stencil.reference;
 
 	SDL_GPUGraphicsPipeline* pip = SDL_CreateGPUGraphicsPipeline(app->device, &pip_info);
 	CF_ASSERT(pip);
