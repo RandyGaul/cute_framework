@@ -1956,6 +1956,8 @@ void cf_apply_shader(CF_Shader shader_handle, CF_Material material_handle)
 	s_copy_uniforms(cmd, &material->block_arena, shader, &material->vs, true);
 	s_copy_uniforms(cmd, &material->block_arena, shader, &material->fs, false);
 
+	SDL_SetGPUStencilReference(pass, state->stencil.reference);
+
 	// Prevent the same canvas from clearing itself more than once.
 	s_canvas->clear = false;
 }
