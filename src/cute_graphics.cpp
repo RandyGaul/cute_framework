@@ -1832,7 +1832,6 @@ static SDL_GPUGraphicsPipeline* s_build_pipeline(CF_ShaderInternal* shader, CF_R
 	pip_info.depthStencilState.frontStencilState.compareOp = s_wrap(state->stencil.front.compare);
 	pip_info.depthStencilState.compareMask = state->stencil.read_mask;
 	pip_info.depthStencilState.writeMask = state->stencil.write_mask;
-	pip_info.depthStencilState.reference = state->stencil.reference;
 
 	SDL_GPUGraphicsPipeline* pip = SDL_CreateGPUGraphicsPipeline(app->device, &pip_info);
 	CF_ASSERT(pip);
@@ -1937,6 +1936,8 @@ void cf_apply_shader(CF_Shader shader_handle, CF_Material material_handle)
 	// Copy over uniform data.
 	s_copy_uniforms(cmd, &material->block_arena, shader, &material->vs, true);
 	s_copy_uniforms(cmd, &material->block_arena, shader, &material->fs, false);
+
+	SDL_SetGPUStencilReference(pass, state->stencil.reference);
 
 	// Prevent the same canvas from clearing itself more than once.
 	s_canvas->clear = false;
