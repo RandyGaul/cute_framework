@@ -18,11 +18,11 @@ CF_INLINE SDL_GPUTextureCreateInfo SDL_GPUTextureCreateInfoDefaults(int w, int h
 	createInfo.width = (int)w;
 	createInfo.height = (int)h;
 	createInfo.type = SDL_GPU_TEXTURETYPE_2D;
-	createInfo.layerCountOrDepth = 1;
-	createInfo.levelCount = 1;
-	createInfo.sampleCount = SDL_GPU_SAMPLECOUNT_1;
+	createInfo.layer_count_or_depth = 1;
+	createInfo.num_levels = 1;
+	createInfo.sample_count = SDL_GPU_SAMPLECOUNT_1;
 	createInfo.format = SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM;
-	createInfo.usageFlags = SDL_GPU_TEXTUREUSAGE_SAMPLER | SDL_GPU_TEXTUREUSAGE_COLOR_TARGET;
+	createInfo.usage = SDL_GPU_TEXTUREUSAGE_SAMPLER | SDL_GPU_TEXTUREUSAGE_COLOR_TARGET;
 	return createInfo;
 }
 
@@ -56,19 +56,19 @@ CF_INLINE SDL_GPUSamplerCreateInfo SDL_GPUSamplerCreateInfoDefaults()
 {
 	SDL_GPUSamplerCreateInfo samplerInfo;
 	CF_MEMSET(&samplerInfo, 0, sizeof(samplerInfo));
-	samplerInfo.minFilter = SDL_GPU_FILTER_NEAREST;
-	samplerInfo.magFilter = SDL_GPU_FILTER_NEAREST;
-	samplerInfo.mipmapMode = SDL_GPU_SAMPLERMIPMAPMODE_LINEAR;
-	samplerInfo.addressModeU = SDL_GPU_SAMPLERADDRESSMODE_REPEAT;
-	samplerInfo.addressModeV = SDL_GPU_SAMPLERADDRESSMODE_REPEAT;
-	samplerInfo.addressModeW = SDL_GPU_SAMPLERADDRESSMODE_REPEAT;
-	samplerInfo.mipLodBias = 0.0f;
-	samplerInfo.anisotropyEnable = SDL_FALSE;
-	samplerInfo.maxAnisotropy = 1.0f;
-	samplerInfo.compareEnable = SDL_FALSE;
-	samplerInfo.compareOp = SDL_GPU_COMPAREOP_ALWAYS;
-	samplerInfo.minLod = 0.0f;
-	samplerInfo.maxLod = FLT_MAX;
+	samplerInfo.min_filter = SDL_GPU_FILTER_NEAREST;
+	samplerInfo.mag_filter = SDL_GPU_FILTER_NEAREST;
+	samplerInfo.mipmap_mode = SDL_GPU_SAMPLERMIPMAPMODE_LINEAR;
+	samplerInfo.address_mode_u = SDL_GPU_SAMPLERADDRESSMODE_REPEAT;
+	samplerInfo.address_mode_v = SDL_GPU_SAMPLERADDRESSMODE_REPEAT;
+	samplerInfo.address_mode_w = SDL_GPU_SAMPLERADDRESSMODE_REPEAT;
+	samplerInfo.mip_lod_bias = 0.0f;
+	samplerInfo.enable_anisotropy = SDL_FALSE;
+	samplerInfo.max_anisotropy = 1.0f;
+	samplerInfo.enable_compare = SDL_FALSE;
+	samplerInfo.compare_op = SDL_GPU_COMPAREOP_ALWAYS;
+	samplerInfo.min_lod = 0.0f;
+	samplerInfo.max_lod = FLT_MAX;
 	return samplerInfo;
 }
 

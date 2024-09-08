@@ -544,7 +544,7 @@ CF_Texture cf_make_texture(CF_TextureParams params)
 	tex_info.width = (Uint32)params.width;
 	tex_info.height = (Uint32)params.height;
 	tex_info.format = s_wrap(params.pixel_format);
-	tex_info.usageFlags = params.usage;
+	tex_info.usage = params.usage;
 	SDL_GPUTexture* tex = SDL_CreateGPUTexture(app->device, &tex_info);
 	CF_ASSERT(tex);
 	if (!tex) return { 0 };
@@ -554,10 +554,10 @@ CF_Texture cf_make_texture(CF_TextureParams params)
 	// texture in the owning canvas already has a sampler attached.
 	if (!s_is_depth(params.pixel_format)) {
 		SDL_GPUSamplerCreateInfo sampler_info = SDL_GPUSamplerCreateInfoDefaults();
-		sampler_info.minFilter = s_wrap(params.filter);
-		sampler_info.magFilter = s_wrap(params.filter);
-		sampler_info.addressModeU = s_wrap(params.wrap_u);
-		sampler_info.addressModeV = s_wrap(params.wrap_v);
+		sampler_info.min_filter = s_wrap(params.filter);
+		sampler_info.mag_filter = s_wrap(params.filter);
+		sampler_info.address_mode_u = s_wrap(params.wrap_u);
+		sampler_info.address_mode_v = s_wrap(params.wrap_v);
 		sampler = SDL_CreateGPUSampler(app->device, &sampler_info);
 		CF_ASSERT(sampler);
 		if (!sampler) {
@@ -571,7 +571,7 @@ CF_Texture cf_make_texture(CF_TextureParams params)
 		int texel_size = (int)SDL_GPUTextureFormatTexelBlockSize(tex_info.format);
 		SDL_GPUTransferBufferCreateInfo tbuf_info = {
 			.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD,
-			.sizeInBytes = (Uint32)(texel_size * params.width * params.height),
+			.size = (Uint32)(texel_size * params.width * params.height),
 			.props = 0,
 		};
 		SDL_GPUTransferBuffer* buf = SDL_CreateGPUTransferBuffer(app->device, &tbuf_info);
@@ -618,7 +618,7 @@ void cf_texture_update(CF_Texture texture_handle, void* data, int size)
 	if (!buf) {
 		SDL_GPUTransferBufferCreateInfo tbuf_info = {
 			.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD,
-			.sizeInBytes = (Uint32)size,
+			.size = (Uint32)size,
 			.props = 0,
 		};
 		buf = SDL_CreateGPUTransferBuffer(app->device, &tbuf_info);
@@ -631,10 +631,10 @@ void cf_texture_update(CF_Texture texture_handle, void* data, int size)
 	SDL_GPUCommandBuffer* cmd = app->cmd ? app->cmd : SDL_AcquireGPUCommandBuffer(app->device);
 	SDL_GPUCopyPass* pass = SDL_BeginGPUCopyPass(cmd);
 	SDL_GPUTextureTransferInfo src;
-	src.transferBuffer = buf;
+	src.transfer_buffer = buf;
 	src.offset = 0;
-	src.imagePitch = tex->w;
-	src.imageHeight = tex->h;
+	src.pixels_per_row = tex->w;
+	src.rows_per_layer = tex->h;
 	SDL_GPUTextureRegion dst = SDL_GPUTextureRegionDefaults(tex, tex->w, tex->h);
 	SDL_UploadToGPUTexture(pass, &src, &dst, tex->buf ? true : false);
 	SDL_EndGPUCopyPass(pass);
@@ -865,14 +865,14 @@ static SDL_GPUShader* s_compile(CF_ShaderInternal* shader_internal, const dyna u
 	// Create the actual shader.
 	SDL_GPUShaderCreateInfo shaderCreateInfo = {};
 	shaderCreateInfo.code = bytecode;
-	shaderCreateInfo.codeSize = asize(bytecode);
-	shaderCreateInfo.entryPointName = "main";
+	shaderCreateInfo.code_size = asize(bytecode);
+	shaderCreateInfo.entrypoint = "main";
 	shaderCreateInfo.format = SDL_GPU_SHADERFORMAT_SPIRV;
 	shaderCreateInfo.stage = s_wrap(stage);
-	shaderCreateInfo.samplerCount = sampler_count;
-	shaderCreateInfo.storageTextureCount = storage_texture_count;
-	shaderCreateInfo.storageBufferCount = storage_buffer_count;
-	shaderCreateInfo.uniformBufferCount = uniform_buffer_count;
+	shaderCreateInfo.num_samplers = sampler_count;
+	shaderCreateInfo.num_storage_textures = storage_texture_count;
+	shaderCreateInfo.num_storage_buffers = storage_buffer_count;
+	shaderCreateInfo.num_uniform_buffers = uniform_buffer_count;
 	SDL_GPUShader* sdl_shader = NULL;
 	if (SDL_GetGPUDriver(app->device) == SDL_GPU_DRIVER_VULKAN) {
 		sdl_shader = (SDL_GPUShader*)SDL_CreateGPUShader(app->device, &shaderCreateInfo);
@@ -1120,21 +1120,21 @@ void cf_clear_canvas(CF_Canvas canvas_handle)
 	CF_CanvasInternal* canvas = (CF_CanvasInternal*)canvas_handle.id;
 	SDL_GPUCommandBuffer* cmd = app->cmd ? app->cmd : SDL_AcquireGPUCommandBuffer(app->device);
 
-	SDL_GPUColorAttachmentInfo color_info = {
+	SDL_GPUColorTargetInfo color_info = {
 		.texture = canvas->texture,
-		.clearColor = { app->clear_color.r, app->clear_color.g, app->clear_color.b, app->clear_color.a },
-		.loadOp = SDL_GPU_LOADOP_CLEAR,
-		.storeOp = SDL_GPU_STOREOP_STORE,
+		.clear_color = { app->clear_color.r, app->clear_color.g, app->clear_color.b, app->clear_color.a },
+		.load_op = SDL_GPU_LOADOP_CLEAR,
+		.store_op = SDL_GPU_STOREOP_STORE,
 		.cycle = true,
 	};
-	SDL_GPUDepthStencilAttachmentInfo depth_stencil_info = {
+	SDL_GPUDepthStencilTargetInfo depth_stencil_info = {
 		.texture = canvas->depth_stencil,
-		.depthStencilClearValue = {
+		.clear_value = {
 			.depth = 1.0f,
 			.stencil = 0,
 		},
-		.loadOp = SDL_GPU_LOADOP_CLEAR,
-		.storeOp = SDL_GPU_STOREOP_STORE,
+		.load_op = SDL_GPU_LOADOP_CLEAR,
+		.store_op = SDL_GPU_STOREOP_STORE,
 		.cycle = true,
 	};
 	SDL_GPURenderPass* renderPass = SDL_BeginGPURenderPass(cmd, &color_info, 1, canvas->depth_stencil ? &depth_stencil_info : NULL);
@@ -1325,14 +1325,14 @@ CF_Mesh cf_make_mesh(int vertex_buffer_size, const CF_VertexAttribute* attribute
 	mesh->vertices.size = vertex_buffer_size;
 	if (vertex_buffer_size) {
 		SDL_GPUBufferCreateInfo buf_info = {
-			.usageFlags = SDL_GPU_BUFFERUSAGE_VERTEX,
-			.sizeInBytes = (Uint32)vertex_buffer_size,
+			.usage = SDL_GPU_BUFFERUSAGE_VERTEX,
+			.size = (Uint32)vertex_buffer_size,
 			.props = 0,
 		};
 		mesh->vertices.buffer = SDL_CreateGPUBuffer(app->device, &buf_info);
 		SDL_GPUTransferBufferCreateInfo tbuf_info = {
 			.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD,
-			.sizeInBytes = (Uint32)vertex_buffer_size,
+			.size = (Uint32)vertex_buffer_size,
 			.props = 0,
 		};
 		mesh->vertices.transfer_buffer = SDL_CreateGPUTransferBuffer(app->device, &tbuf_info);
@@ -1355,14 +1355,14 @@ void cf_mesh_set_index_buffer(CF_Mesh mesh_handle, int index_buffer_size_in_byte
 	mesh->indices.size = index_buffer_size_in_bytes;
 	mesh->indices.stride = index_bit_count / 8;
 	SDL_GPUBufferCreateInfo buf_info = {
-		.usageFlags = SDL_GPU_BUFFERUSAGE_INDEX,
-		.sizeInBytes = (Uint32)index_buffer_size_in_bytes,
+		.usage = SDL_GPU_BUFFERUSAGE_INDEX,
+		.size = (Uint32)index_buffer_size_in_bytes,
 		.props = 0,
 	};
 	mesh->indices.buffer = SDL_CreateGPUBuffer(app->device, &buf_info);
 	SDL_GPUTransferBufferCreateInfo tbuf_info = {
 		.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD,
-		.sizeInBytes = (Uint32)index_buffer_size_in_bytes,
+		.size = (Uint32)index_buffer_size_in_bytes,
 		.props = 0,
 	};
 	mesh->indices.transfer_buffer = SDL_CreateGPUTransferBuffer(app->device, &tbuf_info);
@@ -1374,14 +1374,14 @@ void cf_mesh_set_instance_buffer(CF_Mesh mesh_handle, int instance_buffer_size_i
 	mesh->instances.size = instance_buffer_size_in_bytes;
 	mesh->instances.stride = instance_stride;
 	SDL_GPUBufferCreateInfo buf_info = {
-		.usageFlags = SDL_GPU_BUFFERUSAGE_VERTEX,
-		.sizeInBytes = (Uint32)instance_buffer_size_in_bytes,
+		.usage = SDL_GPU_BUFFERUSAGE_VERTEX,
+		.size = (Uint32)instance_buffer_size_in_bytes,
 		.props = 0,
 	};
 	mesh->instances.buffer = SDL_CreateGPUBuffer(app->device, &buf_info);
 	SDL_GPUTransferBufferCreateInfo tbuf_info = {
 		.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD,
-		.sizeInBytes = (Uint32)instance_buffer_size_in_bytes,
+		.size = (Uint32)instance_buffer_size_in_bytes,
 		.props = 0,
 	};
 	mesh->instances.transfer_buffer = SDL_CreateGPUTransferBuffer(app->device, &tbuf_info);
@@ -1415,14 +1415,14 @@ static void s_update_buffer(CF_Buffer* buffer, int element_count, void* data, in
 		int new_size = size * 2;
 		buffer->size = new_size;
 		SDL_GPUBufferCreateInfo buf_info = {
-				.usageFlags = flags,
-				.sizeInBytes = (Uint32)new_size,
+				.usage = flags,
+				.size = (Uint32)new_size,
 				.props = 0,
 		};
 		buffer->buffer = SDL_CreateGPUBuffer(app->device, &buf_info);
 		SDL_GPUTransferBufferCreateInfo tbuf_info = {
 			.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD,
-			.sizeInBytes = (Uint32)new_size,
+			.size = (Uint32)new_size,
 			.props = 0,
 		};
 		buffer->transfer_buffer = SDL_CreateGPUTransferBuffer(app->device, &tbuf_info);
@@ -1440,7 +1440,7 @@ static void s_update_buffer(CF_Buffer* buffer, int element_count, void* data, in
 	SDL_GPUCopyPass *pass = SDL_BeginGPUCopyPass(cmd);
 	SDL_GPUTransferBufferLocation location;
 	location.offset = 0;
-	location.transferBuffer = buffer->transfer_buffer;
+	location.transfer_buffer = buffer->transfer_buffer;
 	SDL_GPUBufferRegion region;
 	region.buffer = buffer->buffer;
 	region.offset = 0;
@@ -1661,8 +1661,8 @@ void cf_apply_viewport(int x, int y, int w, int h)
 	viewport.y = (float)y;
 	viewport.w = (float)w;
 	viewport.h = (float)h;
-	viewport.minDepth = 0;
-	viewport.maxDepth = 1;
+	viewport.min_depth = 0;
+	viewport.max_depth = 1;
 	SDL_SetGPUViewport(s_canvas->pass, &viewport);
 }
 
@@ -1752,33 +1752,33 @@ static void s_copy_uniforms(SDL_GPUCommandBuffer* cmd, CF_Arena* arena, CF_Shade
 
 static SDL_GPUGraphicsPipeline* s_build_pipeline(CF_ShaderInternal* shader, CF_RenderState* state, CF_MeshInternal* mesh)
 {
-	SDL_GPUColorAttachmentDescription color_info;
+	SDL_GPUColorTargetDescription color_info;
 	CF_MEMSET(&color_info, 0, sizeof(color_info));
 	CF_ASSERT(s_canvas->texture);
 	color_info.format = ((CF_TextureInternal*)s_canvas->cf_texture.id)->format;
-	color_info.blendState.blendEnable = state->blend.enabled;
-	color_info.blendState.alphaBlendOp = s_wrap(state->blend.alpha_op);
-	color_info.blendState.colorBlendOp = s_wrap(state->blend.rgb_op);
-	color_info.blendState.srcColorBlendFactor = s_wrap(state->blend.rgb_src_blend_factor);
-	color_info.blendState.srcAlphaBlendFactor = s_wrap(state->blend.alpha_src_blend_factor);
-	color_info.blendState.dstColorBlendFactor = s_wrap(state->blend.rgb_dst_blend_factor);
-	color_info.blendState.dstAlphaBlendFactor = s_wrap(state->blend.alpha_dst_blend_factor);
+	color_info.blend_state.enable_blend = state->blend.enabled;
+	color_info.blend_state.alpha_blend_op = s_wrap(state->blend.alpha_op);
+	color_info.blend_state.color_blend_op = s_wrap(state->blend.rgb_op);
+	color_info.blend_state.src_color_blendfactor = s_wrap(state->blend.rgb_src_blend_factor);
+	color_info.blend_state.src_alpha_blendfactor = s_wrap(state->blend.alpha_src_blend_factor);
+	color_info.blend_state.dst_color_blendfactor = s_wrap(state->blend.rgb_dst_blend_factor);
+	color_info.blend_state.dst_alpha_blendfactor = s_wrap(state->blend.alpha_dst_blend_factor);
 	int mask_r = (int)state->blend.write_R_enabled << 0;
 	int mask_g = (int)state->blend.write_G_enabled << 1;
 	int mask_b = (int)state->blend.write_B_enabled << 2;
 	int mask_a = (int)state->blend.write_A_enabled << 3;
-	color_info.blendState.colorWriteMask = (uint32_t)(mask_r | mask_g | mask_b | mask_a);
+	color_info.blend_state.color_write_mask = (uint32_t)(mask_r | mask_g | mask_b | mask_a);
 
 	SDL_GPUGraphicsPipelineCreateInfo pip_info;
 	CF_MEMSET(&pip_info, 0, sizeof(pip_info));
-	pip_info.attachmentInfo.colorAttachmentCount = 1;
-	pip_info.attachmentInfo.colorAttachmentDescriptions = &color_info;
-	pip_info.vertexShader = shader->vs;
-	pip_info.fragmentShader = shader->fs;
-	pip_info.attachmentInfo.hasDepthStencilAttachment = state->depth_write_enabled;
+	pip_info.target_info.num_color_targets = 1;
+	pip_info.target_info.color_target_descriptions = &color_info;
+	pip_info.vertex_shader = shader->vs;
+	pip_info.fragment_shader = shader->fs;
+	pip_info.target_info.has_depth_stencil_target = state->depth_write_enabled;
 	if (s_canvas->cf_depth_stencil.id) {
-		pip_info.attachmentInfo.depthStencilFormat = ((CF_TextureInternal*)s_canvas->cf_depth_stencil.id)->format;
-		pip_info.attachmentInfo.hasDepthStencilAttachment = true;
+		pip_info.target_info.depth_stencil_format = ((CF_TextureInternal*)s_canvas->cf_depth_stencil.id)->format;
+		pip_info.target_info.has_depth_stencil_target = true;
 	}
 
 	// Make sure the mesh vertex format is fully compatible with the vertex shader inputs.
@@ -1794,9 +1794,9 @@ static SDL_GPUGraphicsPipeline* s_build_pipeline(CF_ShaderInternal* shader, CF_R
 			CF_VertexFormat mesh_fmt = mesh->attributes[i].format;
 			CF_ASSERT(s_is_compatible(input_fmt, mesh_fmt));
 			if (has_vertex_data) {
-				attr->binding = mesh->attributes[i].per_instance ? 1 : 0; // Index in `vertex_bindings` below.
+				attr->binding_index = mesh->attributes[i].per_instance ? 1 : 0; // Index in `vertex_bindings` below.
 			} else {
-				attr->binding = 0;
+				attr->binding_index = 0;
 			}
 			attr->location = shader->input_locations[idx];
 			attr->format = s_wrap(mesh->attributes[i].format);
@@ -1805,52 +1805,52 @@ static SDL_GPUGraphicsPipeline* s_build_pipeline(CF_ShaderInternal* shader, CF_R
 		}
 	}
 	CF_ASSERT(attribute_count == shader->input_count);
-	pip_info.vertexInputState.vertexAttributeCount = attribute_count;
-	pip_info.vertexInputState.vertexAttributes = attributes;
+	pip_info.vertex_input_state.num_vertex_attributes = attribute_count;
+	pip_info.vertex_input_state.vertex_attributes = attributes;
 	SDL_GPUVertexBinding vertex_bindings[2];
 	int vertex_bindings_count = 0;
 	if (has_vertex_data) {
-		vertex_bindings[vertex_bindings_count].binding = 0;
-		vertex_bindings[vertex_bindings_count].stride = mesh->vertices.stride;
-		vertex_bindings[vertex_bindings_count].inputRate = SDL_GPU_VERTEXINPUTRATE_VERTEX;
-		vertex_bindings[vertex_bindings_count].instanceStepRate = 0;
+		vertex_bindings[vertex_bindings_count].index = 0;
+		vertex_bindings[vertex_bindings_count].pitch = mesh->vertices.stride;
+		vertex_bindings[vertex_bindings_count].input_rate = SDL_GPU_VERTEXINPUTRATE_VERTEX;
+		vertex_bindings[vertex_bindings_count].instance_step_rate = 0;
 		vertex_bindings_count++;
 	}
 	if (has_instance_data) {
-		vertex_bindings[vertex_bindings_count].binding = 1;
-		vertex_bindings[vertex_bindings_count].stride = mesh->instances.stride;
-		vertex_bindings[vertex_bindings_count].inputRate = SDL_GPU_VERTEXINPUTRATE_INSTANCE;
-		vertex_bindings[vertex_bindings_count].instanceStepRate = 1;
+		vertex_bindings[vertex_bindings_count].index = 1;
+		vertex_bindings[vertex_bindings_count].pitch = mesh->instances.stride;
+		vertex_bindings[vertex_bindings_count].input_rate = SDL_GPU_VERTEXINPUTRATE_INSTANCE;
+		vertex_bindings[vertex_bindings_count].instance_step_rate = 1;
 		vertex_bindings_count++;
 	}
-	pip_info.vertexInputState.vertexBindingCount = vertex_bindings_count;
-	pip_info.vertexInputState.vertexBindings = vertex_bindings;
+	pip_info.vertex_input_state.num_vertex_bindings = vertex_bindings_count;
+	pip_info.vertex_input_state.vertex_bindings = vertex_bindings;
 
-	pip_info.primitiveType = SDL_GPU_PRIMITIVETYPE_TRIANGLELIST;
-	pip_info.rasterizerState.fillMode = SDL_GPU_FILLMODE_FILL;
-	pip_info.rasterizerState.cullMode = s_wrap(state->cull_mode);
-	pip_info.rasterizerState.frontFace = SDL_GPU_FRONTFACE_COUNTER_CLOCKWISE;
-	pip_info.rasterizerState.depthBiasEnable = false;
-	pip_info.rasterizerState.depthBiasConstantFactor = 0;
-	pip_info.rasterizerState.depthBiasClamp = 0;
-	pip_info.rasterizerState.depthBiasSlopeFactor = 0;
-	pip_info.multisampleState.sampleCount = SDL_GPU_SAMPLECOUNT_1;
-	pip_info.multisampleState.sampleMask = 0xFFFF;
+	pip_info.primitive_type = SDL_GPU_PRIMITIVETYPE_TRIANGLELIST;
+	pip_info.rasterizer_state.fill_mode = SDL_GPU_FILLMODE_FILL;
+	pip_info.rasterizer_state.cull_mode = s_wrap(state->cull_mode);
+	pip_info.rasterizer_state.front_face = SDL_GPU_FRONTFACE_COUNTER_CLOCKWISE;
+	pip_info.rasterizer_state.enable_depth_bias = false;
+	pip_info.rasterizer_state.depth_bias_constant_factor = 0;
+	pip_info.rasterizer_state.depth_bias_clamp = 0;
+	pip_info.rasterizer_state.depth_bias_slope_factor = 0;
+	pip_info.multisample_state.sample_count = SDL_GPU_SAMPLECOUNT_1;
+	pip_info.multisample_state.sample_mask = 0xFFFF;
 
-	pip_info.depthStencilState.depthTestEnable = state->depth_write_enabled;
-	pip_info.depthStencilState.depthWriteEnable = state->depth_write_enabled;
-	pip_info.depthStencilState.compareOp = s_wrap(state->depth_compare);
-	pip_info.depthStencilState.stencilTestEnable = state->stencil.enabled;
-	pip_info.depthStencilState.backStencilState.failOp = s_wrap(state->stencil.back.fail_op);
-	pip_info.depthStencilState.backStencilState.passOp = s_wrap(state->stencil.back.pass_op);
-	pip_info.depthStencilState.backStencilState.depthFailOp = s_wrap(state->stencil.back.depth_fail_op);
-	pip_info.depthStencilState.backStencilState.compareOp = s_wrap(state->stencil.back.compare);
-	pip_info.depthStencilState.frontStencilState.failOp = s_wrap(state->stencil.front.fail_op);
-	pip_info.depthStencilState.frontStencilState.passOp = s_wrap(state->stencil.front.pass_op);
-	pip_info.depthStencilState.frontStencilState.depthFailOp = s_wrap(state->stencil.front.depth_fail_op);
-	pip_info.depthStencilState.frontStencilState.compareOp = s_wrap(state->stencil.front.compare);
-	pip_info.depthStencilState.compareMask = state->stencil.read_mask;
-	pip_info.depthStencilState.writeMask = state->stencil.write_mask;
+	pip_info.depth_stencil_state.enable_depth_test = state->depth_write_enabled;
+	pip_info.depth_stencil_state.enable_depth_write = state->depth_write_enabled;
+	pip_info.depth_stencil_state.compare_op = s_wrap(state->depth_compare);
+	pip_info.depth_stencil_state.enable_stencil_test = state->stencil.enabled;
+	pip_info.depth_stencil_state.back_stencil_state.fail_op = s_wrap(state->stencil.back.fail_op);
+	pip_info.depth_stencil_state.back_stencil_state.pass_op = s_wrap(state->stencil.back.pass_op);
+	pip_info.depth_stencil_state.back_stencil_state.depth_fail_op = s_wrap(state->stencil.back.depth_fail_op);
+	pip_info.depth_stencil_state.back_stencil_state.compare_op = s_wrap(state->stencil.back.compare);
+	pip_info.depth_stencil_state.front_stencil_state.fail_op = s_wrap(state->stencil.front.fail_op);
+	pip_info.depth_stencil_state.front_stencil_state.pass_op = s_wrap(state->stencil.front.pass_op);
+	pip_info.depth_stencil_state.front_stencil_state.depth_fail_op = s_wrap(state->stencil.front.depth_fail_op);
+	pip_info.depth_stencil_state.front_stencil_state.compare_op = s_wrap(state->stencil.front.compare);
+	pip_info.depth_stencil_state.compare_mask = state->stencil.read_mask;
+	pip_info.depth_stencil_state.write_mask = state->stencil.write_mask;
 
 	SDL_GPUGraphicsPipeline* pip = SDL_CreateGPUGraphicsPipeline(app->device, &pip_info);
 	CF_ASSERT(pip);
@@ -1896,23 +1896,23 @@ void cf_apply_shader(CF_Shader shader_handle, CF_Material material_handle)
 	CF_ASSERT(cmd);
 	s_canvas->pip = pip;
 
-	SDL_GPUColorAttachmentInfo pass_color_info;
+	SDL_GPUColorTargetInfo pass_color_info;
 	CF_MEMSET(&pass_color_info, 0, sizeof(pass_color_info));
 	pass_color_info.texture = s_canvas->texture;
-	pass_color_info.clearColor = { app->clear_color.r, app->clear_color.g, app->clear_color.b, app->clear_color.a };
-	pass_color_info.loadOp = s_canvas->clear ? SDL_GPU_LOADOP_CLEAR : SDL_GPU_LOADOP_LOAD;
-	pass_color_info.storeOp = SDL_GPU_STOREOP_STORE;
+	pass_color_info.clear_color = { app->clear_color.r, app->clear_color.g, app->clear_color.b, app->clear_color.a };
+	pass_color_info.load_op = s_canvas->clear ? SDL_GPU_LOADOP_CLEAR : SDL_GPU_LOADOP_LOAD;
+	pass_color_info.store_op = SDL_GPU_STOREOP_STORE;
 	pass_color_info.cycle = s_canvas->clear ? true : false;
-	SDL_GPUDepthStencilAttachmentInfo pass_depth_stencil_info;
+	SDL_GPUDepthStencilTargetInfo pass_depth_stencil_info;
 	CF_MEMSET(&pass_depth_stencil_info, 0, sizeof(pass_depth_stencil_info));
 	pass_depth_stencil_info.texture = s_canvas->depth_stencil;
 	if (s_canvas->depth_stencil) {
-		pass_depth_stencil_info.depthStencilClearValue.depth = app->clear_depth;
-		pass_depth_stencil_info.depthStencilClearValue.stencil = app->clear_stencil;
-		pass_depth_stencil_info.loadOp = s_canvas->clear ? SDL_GPU_LOADOP_CLEAR : SDL_GPU_LOADOP_LOAD;
-		pass_depth_stencil_info.storeOp = SDL_GPU_STOREOP_STORE;
-		pass_depth_stencil_info.stencilLoadOp = s_canvas->clear ? SDL_GPU_LOADOP_CLEAR : SDL_GPU_LOADOP_LOAD;
-		pass_depth_stencil_info.stencilStoreOp = SDL_GPU_STOREOP_DONT_CARE;
+		pass_depth_stencil_info.clear_value.depth = app->clear_depth;
+		pass_depth_stencil_info.clear_value.stencil = app->clear_stencil;
+		pass_depth_stencil_info.load_op = s_canvas->clear ? SDL_GPU_LOADOP_CLEAR : SDL_GPU_LOADOP_LOAD;
+		pass_depth_stencil_info.store_op = SDL_GPU_STOREOP_STORE;
+		pass_depth_stencil_info.stencil_load_op = s_canvas->clear ? SDL_GPU_LOADOP_CLEAR : SDL_GPU_LOADOP_LOAD;
+		pass_depth_stencil_info.stencil_store_op = SDL_GPU_STOREOP_DONT_CARE;
 		pass_depth_stencil_info.cycle = pass_color_info.cycle;
 	}
 	SDL_GPURenderPass* pass = SDL_BeginGPURenderPass(cmd, &pass_color_info, 1, s_canvas->depth_stencil ? &pass_depth_stencil_info : NULL);
