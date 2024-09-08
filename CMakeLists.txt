@@ -345,37 +345,16 @@ if (CF_GLSLANG)
 	set(ENABLE_GLSLANG_BINARIES OFF CACHE BOOL "Turn off some standalone binary tools for glslang.")
 	set(GLSLANG_ENABLE_INSTALL OFF CACHE BOOL "Disable installation option for glslang.")
 
-	# Can't seem to use fetch content here as we need to run this stupid update_glslang_sources.py file _before_ CMake starts configuring it.
-	set(GLSLANG_ZIP "${CMAKE_BINARY_DIR}/glslang-14.3.0.zip")
-	set(GLSLANG_SOURCE_DIR "${CMAKE_BINARY_DIR}/glslang-14.3.0")
-	
-	if(NOT EXISTS ${GLSLANG_SOURCE_DIR})
-		message(STATUS "Downloading glslang...")
-		file(DOWNLOAD "https://github.com/KhronosGroup/glslang/archive/refs/tags/14.3.0.zip" ${GLSLANG_ZIP} SHOW_PROGRESS)
-		
-		execute_process(COMMAND ${CMAKE_COMMAND} -E tar xzf ${GLSLANG_ZIP} WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
-	endif()
-	
-	# Run this stupid update_glslang_sources.py script to get access to the SPIR-V optimizer.
 	if (CF_GLSLANG_OPTIMIZER)
 		find_package(Python3 REQUIRED)
-		execute_process(
-			COMMAND ${Python3_EXECUTABLE} ${GLSLANG_SOURCE_DIR}/update_glslang_sources.py
-			WORKING_DIRECTORY ${GLSLANG_SOURCE_DIR}
-			RESULT_VARIABLE result
-			ERROR_VARIABLE error_output
-			OUTPUT_VARIABLE output
+		FetchContent_Declare(
+			glslang
+			URL https://github.com/KhronosGroup/glslang/archive/refs/tags/14.3.0.zip
+			DOWNLOAD_EXTRACT_TIMESTAMP ON
+			PATCH_COMMAND ${Python3_EXECUTABLE} update_glslang_sources.py
 		)
-		if(NOT EXISTS ${GLSLANG_SOURCE_DIR}/External/spirv-tools)
-			message(STATUS "Downloading SPIR-V Tools...")
-			if(NOT result EQUAL 0)
-				message(FATAL_ERROR "Running update_glslang_sources.py failed: ${error_output}")
-			else()
-				message(STATUS "Running update_glslang_sources.py succeeded: ${output}")
-			endif()
-		endif()
+		FetchContent_MakeAvailable(glslang)
 	endif()
-	add_subdirectory(${GLSLANG_SOURCE_DIR} ${CMAKE_BINARY_DIR}/glslang-build)
 	set(SPIRV_CROSS_CLI OFF CACHE BOOL "Turn off building SPIR-Cross CLI.")
 	FetchContent_Declare(
 		SPIRV_CROSS

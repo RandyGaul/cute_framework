@@ -7,7 +7,7 @@ int main(int argc, char* argv[])
 	CF_Result result = cf_make_app("Noise Sample", 0, 0, 0, 640, 480, options, argv[0]);
 	if (cf_is_error(result)) return -1;
 
-	cf_app_init_imgui(false);
+	cf_app_init_imgui();
 
 	float scale = 1.5f;
 	float lacunarity = 2.0f;
