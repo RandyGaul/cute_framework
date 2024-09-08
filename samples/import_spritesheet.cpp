@@ -30,8 +30,8 @@ Atlas load_sub_images(const char* path, int tile_size, int* w_out, int* h_out)
 	uint64_t base_id = image_id;
 	int w, h;
 	get_png_wh(path, &w, &h);
-	w = w / 16;
-	h = h / 16;
+	w = w / tile_size;
+	h = h / tile_size;
 	if (w_out) *w_out = w;
 	if (h_out) *h_out = h;
 
