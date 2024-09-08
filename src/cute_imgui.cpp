@@ -70,8 +70,8 @@ static void s_make_buffers(int vertex_count, int index_count)
 
 	{
 		SDL_GPUBufferCreateInfo buf_info = {
-			.usageFlags = SDL_GPU_BUFFERUSAGE_VERTEX,
-			.sizeInBytes = (Uint32)(sizeof(ImDrawVert) * vertex_count),
+			.usage = SDL_GPU_BUFFERUSAGE_VERTEX,
+			.size = (Uint32)(sizeof(ImDrawVert) * vertex_count),
 			.props = 0
 		};
 		app->imgui_vbuf = SDL_CreateGPUBuffer(app->device, &buf_info);
@@ -81,7 +81,7 @@ static void s_make_buffers(int vertex_count, int index_count)
 	{
 		SDL_GPUTransferBufferCreateInfo tbuf_info = {
 			.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD,
-			.sizeInBytes = (Uint32)(sizeof(ImDrawVert) * vertex_count),
+			.size = (Uint32)(sizeof(ImDrawVert) * vertex_count),
 			.props = 0,
 		};
 		app->imgui_vtbuf = SDL_CreateGPUTransferBuffer(app->device, &tbuf_info);
@@ -90,8 +90,8 @@ static void s_make_buffers(int vertex_count, int index_count)
 
 	{
 		SDL_GPUBufferCreateInfo buf_info = {
-			.usageFlags = SDL_GPU_BUFFERUSAGE_INDEX,
-			.sizeInBytes = (Uint32)(sizeof(ImDrawIdx) * index_count),
+			.usage = SDL_GPU_BUFFERUSAGE_INDEX,
+			.size = (Uint32)(sizeof(ImDrawIdx) * index_count),
 			.props = 0
 		};
 		app->imgui_ibuf = SDL_CreateGPUBuffer(app->device, &buf_info);
@@ -101,7 +101,7 @@ static void s_make_buffers(int vertex_count, int index_count)
 	{
 		SDL_GPUTransferBufferCreateInfo tbuf_info = {
 			.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD,
-			.sizeInBytes = (Uint32)(sizeof(ImDrawIdx) * index_count),
+			.size = (Uint32)(sizeof(ImDrawIdx) * index_count),
 			.props = 0,
 		};
 		app->imgui_itbuf = SDL_CreateGPUTransferBuffer(app->device, &tbuf_info);
@@ -115,75 +115,75 @@ void cf_imgui_init()
 	SDL_GPUShader* vs = ((CF_ShaderInternal*)shader.id)->vs;
 	SDL_GPUShader* fs = ((CF_ShaderInternal*)shader.id)->fs;
 
-	SDL_GPUColorAttachmentDescription color_info;
+	SDL_GPUColorTargetDescription color_info;
 	CF_MEMSET(&color_info, 0, sizeof(color_info));
 	color_info.format = SDL_GetGPUSwapchainTextureFormat(app->device, app->window);
-	color_info.blendState.blendEnable = true;
-	color_info.blendState.alphaBlendOp = SDL_GPU_BLENDOP_ADD;
-	color_info.blendState.colorBlendOp = SDL_GPU_BLENDOP_ADD;
-	color_info.blendState.srcColorBlendFactor = SDL_GPU_BLENDFACTOR_SRC_ALPHA;
-	color_info.blendState.srcAlphaBlendFactor = SDL_GPU_BLENDFACTOR_ONE;
-	color_info.blendState.dstColorBlendFactor = SDL_GPU_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
-	color_info.blendState.dstAlphaBlendFactor = SDL_GPU_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
-	color_info.blendState.colorWriteMask = 0xF;
+	color_info.blend_state.enable_blend = true;
+	color_info.blend_state.alpha_blend_op = SDL_GPU_BLENDOP_ADD;
+	color_info.blend_state.color_blend_op = SDL_GPU_BLENDOP_ADD;
+	color_info.blend_state.src_color_blendfactor = SDL_GPU_BLENDFACTOR_SRC_ALPHA;
+	color_info.blend_state.src_alpha_blendfactor = SDL_GPU_BLENDFACTOR_ONE;
+	color_info.blend_state.dst_color_blendfactor = SDL_GPU_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
+	color_info.blend_state.dst_alpha_blendfactor = SDL_GPU_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
+	color_info.blend_state.color_write_mask = 0xF;
 
 	SDL_GPUGraphicsPipelineCreateInfo pip_info;
 	CF_MEMSET(&pip_info, 0, sizeof(pip_info));
-	pip_info.vertexShader = vs;
-	pip_info.fragmentShader = fs;
-	pip_info.primitiveType = SDL_GPU_PRIMITIVETYPE_TRIANGLELIST;
-	pip_info.multisampleState.sampleMask = 0xFFFF;
-	pip_info.attachmentInfo.colorAttachmentCount = 1;
-	pip_info.attachmentInfo.colorAttachmentDescriptions = &color_info;
-	pip_info.attachmentInfo.hasDepthStencilAttachment = false; // @TODO.
-	pip_info.attachmentInfo.depthStencilFormat = SDL_GPU_TEXTUREFORMAT_D24_UNORM_S8_UINT;
-	pip_info.depthStencilState.depthTestEnable = false;
-	pip_info.depthStencilState.depthWriteEnable = false;
-	pip_info.depthStencilState.compareOp = SDL_GPU_COMPAREOP_GREATER_OR_EQUAL;
+	pip_info.vertex_shader = vs;
+	pip_info.fragment_shader = fs;
+	pip_info.primitive_type = SDL_GPU_PRIMITIVETYPE_TRIANGLELIST;
+	pip_info.multisample_state.sample_mask = 0xFFFF;
+	pip_info.target_info.num_color_targets = 1;
+	pip_info.target_info.color_target_descriptions = &color_info;
+	pip_info.target_info.has_depth_stencil_target = false; // @TODO.
+	pip_info.target_info.depth_stencil_format = SDL_GPU_TEXTUREFORMAT_D24_UNORM_S8_UINT;
+	pip_info.depth_stencil_state.enable_depth_test = false;
+	pip_info.depth_stencil_state.enable_depth_write = false;
+	pip_info.depth_stencil_state.compare_op = SDL_GPU_COMPAREOP_GREATER_OR_EQUAL;
 
 	SDL_GPUVertexBinding vertex_binding;
 	CF_MEMSET(&vertex_binding, 0, sizeof(vertex_binding));
-	vertex_binding.binding = 0;
-	vertex_binding.stride = sizeof(ImDrawVert);
-	vertex_binding.inputRate = SDL_GPU_VERTEXINPUTRATE_VERTEX;
-	vertex_binding.instanceStepRate = 0;
+	vertex_binding.index = 0;
+	vertex_binding.pitch = sizeof(ImDrawVert);
+	vertex_binding.input_rate = SDL_GPU_VERTEXINPUTRATE_VERTEX;
+	vertex_binding.instance_step_rate = 0;
 
 	SDL_GPUVertexAttribute vertex_attributes[] = {
 		{
 			.location = 0,
-			.binding = 0,
+			.binding_index = 0,
 			.format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT2,
 			.offset = 0
 		},
 		{
 			.location = 1,
-			.binding = 0,
+			.binding_index = 0,
 			.format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT2,
 			.offset = sizeof(float) * 2,
 		},
 		{
 			.location = 2,
-			.binding = 0,
+			.binding_index = 0,
 			.format = SDL_GPU_VERTEXELEMENTFORMAT_UBYTE4_NORM,
 			.offset = sizeof(float) * 4,
 		},
 	};
 
-	pip_info.vertexInputState = SDL_GPUVertexInputState {
-		.vertexBindings = &vertex_binding,
-		.vertexBindingCount = 1,
-		.vertexAttributes = vertex_attributes,
-		.vertexAttributeCount = 3,
+	pip_info.vertex_input_state = SDL_GPUVertexInputState {
+		.vertex_bindings = &vertex_binding,
+		.num_vertex_bindings = 1,
+		.vertex_attributes = vertex_attributes,
+		.num_vertex_attributes = 3,
 	};
 
-	pip_info.rasterizerState = SDL_GPURasterizerState {
-		.fillMode = SDL_GPU_FILLMODE_FILL,
-		.cullMode = SDL_GPU_CULLMODE_NONE,
-		.frontFace = {},
-		.depthBiasEnable = SDL_FALSE,
-		.depthBiasConstantFactor = {},
-		.depthBiasClamp = {},
-		.depthBiasSlopeFactor = {},
+	pip_info.rasterizer_state = SDL_GPURasterizerState {
+		.fill_mode = SDL_GPU_FILLMODE_FILL,
+		.cull_mode = SDL_GPU_CULLMODE_NONE,
+		.front_face = {},
+		.enable_depth_bias = SDL_FALSE,
+		.depth_bias_constant_factor = {},
+		.depth_bias_clamp = {},
+		.depth_bias_slope_factor = {},
 	};
 
 	app->imgui_pip = SDL_CreateGPUGraphicsPipeline(app->device, &pip_info);
@@ -196,12 +196,12 @@ void cf_imgui_init()
 	s_make_buffers(vertex_count, index_count);
 
 	SDL_GPUSamplerCreateInfo sampler_info = {
-		.minFilter = SDL_GPU_FILTER_NEAREST,
-		.magFilter = SDL_GPU_FILTER_NEAREST,
-		.mipmapMode = SDL_GPU_SAMPLERMIPMAPMODE_NEAREST,
-		.addressModeU = SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE,
-		.addressModeV = SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE,
-		.addressModeW = SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE,
+		.min_filter = SDL_GPU_FILTER_NEAREST,
+		.mag_filter = SDL_GPU_FILTER_NEAREST,
+		.mipmap_mode = SDL_GPU_SAMPLERMIPMAPMODE_NEAREST,
+		.address_mode_u = SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE,
+		.address_mode_v = SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE,
+		.address_mode_w = SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE,
 	};
 
 	app->imgui_sampler = SDL_CreateGPUSampler(app->device, &sampler_info);
@@ -216,12 +216,12 @@ void cf_imgui_init()
 	SDL_GPUTextureCreateInfo texture_info = {
 		.type = SDL_GPU_TEXTURETYPE_2D,
 		.format = SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM,
-		.usageFlags = SDL_GPU_TEXTUREUSAGE_SAMPLER,
+		.usage = SDL_GPU_TEXTUREUSAGE_SAMPLER,
 		.width = (uint32_t)width,
 		.height = (uint32_t)height,
-		.layerCountOrDepth = 1,
-		.levelCount = 1,
-		.sampleCount = {},
+		.layer_count_or_depth = 1,
+		.num_levels = 1,
+		.sample_count = {},
 	};
 
 	SDL_GPUTexture* font_tex = SDL_CreateGPUTexture(app->device, &texture_info);
@@ -237,7 +237,7 @@ void cf_imgui_init()
 
 	SDL_GPUTransferBufferCreateInfo tbuf_info = {
 		.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD,
-		.sizeInBytes = (Uint32)(width * height * sizeof(uint8_t) * 4),
+		.size = (Uint32)(width * height * sizeof(uint8_t) * 4),
 		.props = 0,
 	};
 	SDL_GPUTransferBuffer* tbuf = SDL_CreateGPUTransferBuffer(app->device, &tbuf_info);
@@ -247,10 +247,10 @@ void cf_imgui_init()
 	SDL_GPUCommandBuffer* cmd = SDL_AcquireGPUCommandBuffer(app->device);
 	SDL_GPUCopyPass* pass = SDL_BeginGPUCopyPass(cmd);
 	SDL_GPUTextureTransferInfo src;
-	src.imageHeight = height;
-	src.imagePitch = width;
+	src.rows_per_layer = height;
+	src.pixels_per_row = width;
 	src.offset = 0;
-	src.transferBuffer = tbuf;
+	src.transfer_buffer = tbuf;
 	SDL_UploadToGPUTexture(pass, &src, &region, false);
 	SDL_EndGPUCopyPass(pass);
 	SDL_SubmitGPUCommandBuffer(cmd);
@@ -312,14 +312,14 @@ void cf_imgui_draw(SDL_GPUTexture* swapchain_texture)
 	SDL_GPUCopyPass* copy_pass = SDL_BeginGPUCopyPass(app->cmd);
 		SDL_GPUTransferBufferLocation src;
 		src.offset = 0;
-		src.transferBuffer = app->imgui_vtbuf;
+		src.transfer_buffer = app->imgui_vtbuf;
 		SDL_GPUBufferRegion region;
 		region.buffer = app->imgui_vbuf;
 		region.offset = 0;
 		region.size = (uint32_t)(draw_data->TotalVtxCount * sizeof(ImDrawVert));
 		SDL_UploadToGPUBuffer(copy_pass, &src, &region, true);
 
-		src.transferBuffer = app->imgui_itbuf;
+		src.transfer_buffer = app->imgui_itbuf;
 		region.buffer = app->imgui_ibuf;
 		region.offset = 0;
 		region.size = (uint32_t)(draw_data->TotalIdxCount * sizeof(ImDrawIdx));
@@ -327,22 +327,22 @@ void cf_imgui_draw(SDL_GPUTexture* swapchain_texture)
 	SDL_EndGPUCopyPass(copy_pass);
 
 	// Setup rendering commands.
-	SDL_GPUColorAttachmentInfo color_info;
+	SDL_GPUColorTargetInfo color_info;
 	CF_MEMSET(&color_info, 0, sizeof(color_info));
 	color_info.texture = swapchain_texture;
-	color_info.loadOp = SDL_GPU_LOADOP_LOAD;
-	color_info.storeOp = SDL_GPU_STOREOP_STORE;
+	color_info.load_op = SDL_GPU_LOADOP_LOAD;
+	color_info.store_op = SDL_GPU_STOREOP_STORE;
 
-	SDL_GPUDepthStencilAttachmentInfo depth_stencil_info;
+	SDL_GPUDepthStencilTargetInfo depth_stencil_info;
 	CF_MEMSET(&depth_stencil_info, 0, sizeof(depth_stencil_info));
 	//depth_stencil_info.texture = app->depth_buffer;
 	depth_stencil_info.cycle = true;
-	depth_stencil_info.depthStencilClearValue.depth = 0;
-	depth_stencil_info.depthStencilClearValue.stencil = 0;
-	depth_stencil_info.loadOp = SDL_GPU_LOADOP_CLEAR;
-	depth_stencil_info.storeOp = SDL_GPU_STOREOP_DONT_CARE;
-	depth_stencil_info.stencilLoadOp = SDL_GPU_LOADOP_CLEAR;
-	depth_stencil_info.stencilStoreOp = SDL_GPU_STOREOP_DONT_CARE;
+	depth_stencil_info.clear_value.depth = 0;
+	depth_stencil_info.clear_value.stencil = 0;
+	depth_stencil_info.load_op = SDL_GPU_LOADOP_CLEAR;
+	depth_stencil_info.store_op = SDL_GPU_STOREOP_DONT_CARE;
+	depth_stencil_info.stencil_load_op = SDL_GPU_LOADOP_CLEAR;
+	depth_stencil_info.stencil_store_op = SDL_GPU_STOREOP_DONT_CARE;
 
 	// Submit the actual rendering commands.
 	SDL_GPURenderPass* pass = SDL_BeginGPURenderPass(app->cmd, &color_info, 1, NULL);
@@ -353,8 +353,8 @@ void cf_imgui_draw(SDL_GPUTexture* swapchain_texture)
 		.y = 0.0f,
 		.w = draw_data->DisplaySize.x,
 		.h = draw_data->DisplaySize.y,
-		.minDepth = 0.0f,
-		.maxDepth = 1.0f,
+		.min_depth = 0.0f,
+		.max_depth = 1.0f,
 	};
 	SDL_SetGPUViewport(pass, &viewport);
 

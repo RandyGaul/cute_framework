@@ -599,6 +599,7 @@ void c2Collide(const void* A, const c2x* ax, C2_TYPE typeA, const void* B, const
 		case C2_TYPE_AABB:    c2CircletoAABBManifold(*(c2Circle*)A, *(c2AABB*)B, m); break;
 		case C2_TYPE_CAPSULE: c2CircletoCapsuleManifold(*(c2Circle*)A, *(c2Capsule*)B, m); break;
 		case C2_TYPE_POLY:    c2CircletoPolyManifold(*(c2Circle*)A, (const c2Poly*)B, bx, m); break;
+		default: break;
 		}
 		break;
 
@@ -609,6 +610,7 @@ void c2Collide(const void* A, const c2x* ax, C2_TYPE typeA, const void* B, const
 		case C2_TYPE_AABB:    c2AABBtoAABBManifold(*(c2AABB*)A, *(c2AABB*)B, m); break;
 		case C2_TYPE_CAPSULE: c2AABBtoCapsuleManifold(*(c2AABB*)A, *(c2Capsule*)B, m); break;
 		case C2_TYPE_POLY:    c2AABBtoPolyManifold(*(c2AABB*)A, (const c2Poly*)B, bx, m); break;
+		default: break;
 		}
 		break;
 
@@ -619,6 +621,7 @@ void c2Collide(const void* A, const c2x* ax, C2_TYPE typeA, const void* B, const
 		case C2_TYPE_AABB:    c2AABBtoCapsuleManifold(*(c2AABB*)B, *(c2Capsule*)A, m); m->n = c2Neg(m->n); break;
 		case C2_TYPE_CAPSULE: c2CapsuletoCapsuleManifold(*(c2Capsule*)A, *(c2Capsule*)B, m); break;
 		case C2_TYPE_POLY:    c2CapsuletoPolyManifold(*(c2Capsule*)A, (const c2Poly*)B, bx, m); break;
+		default: break;
 		}
 		break;
 
@@ -629,8 +632,10 @@ void c2Collide(const void* A, const c2x* ax, C2_TYPE typeA, const void* B, const
 		case C2_TYPE_AABB:    c2AABBtoPolyManifold(*(c2AABB*)B, (const c2Poly*)A, ax, m); m->n = c2Neg(m->n); break;
 		case C2_TYPE_CAPSULE: c2CapsuletoPolyManifold(*(c2Capsule*)B, (const c2Poly*)A, ax, m); m->n = c2Neg(m->n); break;
 		case C2_TYPE_POLY:    c2PolytoPolyManifold((const c2Poly*)A, ax, (const c2Poly*)B, bx, m); break;
+		default: break;
 		}
 		break;
+	default: break;
 	}
 }
 
@@ -642,9 +647,8 @@ int c2CastRay(c2Ray A, const void* B, const c2x* bx, C2_TYPE typeB, c2Raycast* o
 	case C2_TYPE_AABB:    return c2RaytoAABB(A, *(c2AABB*)B, out);
 	case C2_TYPE_CAPSULE: return c2RaytoCapsule(A, *(c2Capsule*)B, out);
 	case C2_TYPE_POLY:    return c2RaytoPoly(A, (const c2Poly*)B, bx, out);
+	default: return 0;
 	}
-
-	return 0;
 }
 
 #define C2_GJK_ITERS 20
@@ -709,6 +713,7 @@ static C2_INLINE void c2MakeProxy(const void* shape, C2_TYPE type, c2Proxy* p)
 		p->count = poly->count;
 		for (int i = 0; i < p->count; ++i) p->verts[i] = poly->verts[i];
 	}	break;
+	default: break;
 	}
 }
 
@@ -1352,6 +1357,7 @@ void c2Inflate(void* shape, C2_TYPE type, float skin_factor)
 		c2Poly* poly = (c2Poly*)shape;
 		*poly = c2InflatePoly(*poly, skin_factor);
 	}	break;
+	default: break;
 	}
 }
 
