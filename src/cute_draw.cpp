@@ -89,6 +89,8 @@ void cf_get_pixels(SPRITEBATCH_U64 image_id, void* buffer, int bytes_to_fill, vo
 		CF_Pixel* pixels = app->easy_sprites.get(image_id).pix;
 		CF_MEMCPY(buffer, pixels, bytes_to_fill);
 	} else if (image_id >= CF_PREMADE_ID_RANGE_LO && image_id <= CF_PREMADE_ID_RANGE_LO) {
+		// These are handled externally by the user, so spritebatch should never ask for pixels.
+		// It's assumed premade atlases are generated properly externally.
 		CF_ASSERT(false);
 		CF_MEMSET(buffer, 0, sizeof(bytes_to_fill));
 	} else {
@@ -525,7 +527,7 @@ void cf_draw_sprite(const CF_Sprite* sprite)
 		s.miny = sub_image.miny;
 		s.maxy = sub_image.maxy;
 		s.image_id = sprite->easy_sprite_id;
-		s.texture_id = draw->premade_sub_image_id_to_texture_id_map.find(sprite->easy_sprite_id);
+		s.texture_id = sub_image.image_id; // @JANK - Hijacked to store texture_id and avoid an extra hashtable lookup.
 		apply_border_scale = false;
 	} else {
 		s.image_id = sprite->easy_sprite_id;
@@ -2513,6 +2515,7 @@ CF_Texture cf_register_premade_atlas(const char* png_path, int sub_image_count, 
 	for (int i = 0; i < sub_image_count; ++i) {
 		spritebatch_premade_sprite_t s = { 0 };
 		s.image_id = sub_images[i].image_id + CF_PREMADE_ID_RANGE_LO;
+		sub_images[i].image_id = texture.id; // @JANK - Hijack this to store texture_id, and avoid an extra hashtable lookup later in sprite_push.
 		s.w = sub_images[i].w;
 		s.h = sub_images[i].h;
 		s.minx = sub_images[i].minx;
@@ -2520,7 +2523,6 @@ CF_Texture cf_register_premade_atlas(const char* png_path, int sub_image_count, 
 		s.miny = sub_images[i].miny;
 		s.maxy = sub_images[i].maxy;
 		premades.add(s);
-		draw->premade_sub_image_id_to_texture_id_map.add(s.image_id, texture.id);
 		draw->premade_sub_image_id_to_sub_image.add(s.image_id, sub_images[i]);
 	}
 	spritebatch_register_premade_atlas(&draw->sb, texture.id, img.w, img.h, sub_image_count, premades.data());
