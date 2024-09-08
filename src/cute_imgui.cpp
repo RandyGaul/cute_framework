@@ -259,6 +259,7 @@ void cf_imgui_init()
 	auto& io = ImGui::GetIO();
 	io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;
 	io.Fonts->SetTexID((ImTextureID)font_tex);
+	io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 }
 
 void cf_imgui_shutdown()
