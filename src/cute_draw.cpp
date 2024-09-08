@@ -89,8 +89,8 @@ void cf_get_pixels(SPRITEBATCH_U64 image_id, void* buffer, int bytes_to_fill, vo
 		CF_Pixel* pixels = app->easy_sprites.get(image_id).pix;
 		CF_MEMCPY(buffer, pixels, bytes_to_fill);
 	} else if (image_id >= CF_PREMADE_ID_RANGE_LO && image_id <= CF_PREMADE_ID_RANGE_LO) {
-		uint64_t png_id = draw->premade_sub_image_id_to_png_atlas_map.find(image_id);
-		cf_png_cache_get_pixels(png_id, buffer, bytes_to_fill);
+		CF_ASSERT(false);
+		CF_MEMSET(buffer, 0, sizeof(bytes_to_fill));
 	} else {
 		CF_ASSERT(false);
 		CF_MEMSET(buffer, 0, sizeof(bytes_to_fill));
@@ -515,8 +515,18 @@ void cf_destroy_draw()
 void cf_draw_sprite(const CF_Sprite* sprite)
 {
 	spritebatch_sprite_t s = { };
+	bool apply_border_scale = true;
 	if (sprite->animation) {
 		s.image_id = sprite->animation->frames[sprite->frame_index].id;
+	} else if (sprite->easy_sprite_id >= CF_PREMADE_ID_RANGE_LO && sprite->easy_sprite_id <= CF_PREMADE_ID_RANGE_HI) {
+		CF_AtlasSubImage sub_image = draw->premade_sub_image_id_to_sub_image.find(sprite->easy_sprite_id);
+		s.minx = sub_image.minx;
+		s.maxx = sub_image.maxx;
+		s.miny = sub_image.miny;
+		s.maxy = sub_image.maxy;
+		s.image_id = sprite->easy_sprite_id;
+		s.texture_id = draw->premade_sub_image_id_to_texture_id_map.find(sprite->easy_sprite_id);
+		apply_border_scale = false;
 	} else {
 		s.image_id = sprite->easy_sprite_id;
 	}
@@ -526,10 +536,12 @@ void cf_draw_sprite(const CF_Sprite* sprite)
 
 	v2 p = cf_add_v2(sprite->transform.p, cf_mul_v2(sprite->local_offset, sprite->scale));
 
-	// Expand sprite's scale to account for border pixels in the atlas.
 	v2 scale = V2(sprite->scale.x * s.w, sprite->scale.y * s.h);
-	scale.x = scale.x + (scale.x / (float)sprite->w) * 2.0f;
-	scale.y = scale.y + (scale.y / (float)sprite->h) * 2.0f;
+	if (apply_border_scale) {
+		// Expand sprite's scale to account for border pixels in the atlas.
+		scale.x = scale.x + (scale.x / (float)sprite->w) * 2.0f;
+		scale.y = scale.y + (scale.y / (float)sprite->h) * 2.0f;
+	}
 
 	CF_V2 quad[] = {
 		{ -0.5f,  0.5f },
@@ -569,6 +581,7 @@ void cf_draw_sprite(const CF_Sprite* sprite)
 	s.geom.alpha = sprite->opacity;
 	s.geom.user_params = draw->user_params.last();
 	s.sort_bits = draw->layers.last();
+
 	spritebatch_push(&draw->sb, s);
 }
 
@@ -2486,13 +2499,16 @@ CF_TemporaryImage cf_fetch_image(const CF_Sprite* sprite)
 	return image;
 }
 
-void cf_register_premade_atlas(const char* png_path, int sub_image_count, CF_AtlasSubImage* sub_images)
+CF_Texture cf_register_premade_atlas(const char* png_path, int sub_image_count, CF_AtlasSubImage* sub_images)
 {
-	Png png;
-	if (is_error(png_cache_load(png_path, &png))) {
-		CF_ASSERT(false);
-		return;
-	}
+	CF_Image img = { 0 };
+	image_load_png(png_path, &img);
+	image_flip_horizontal(&img);
+	CF_ASSERT(img.pix);
+	CF_TextureParams params = cf_texture_defaults(img.w, img.h);
+	params.filter = draw->filter;
+	CF_Texture texture = cf_make_texture(params);
+	cf_texture_update(texture, img.pix, img.w * img.h * sizeof(CF_Pixel));
 	Array<spritebatch_premade_sprite_t> premades;
 	for (int i = 0; i < sub_image_count; ++i) {
 		spritebatch_premade_sprite_t s = { 0 };
@@ -2504,10 +2520,12 @@ void cf_register_premade_atlas(const char* png_path, int sub_image_count, CF_Atl
 		s.miny = sub_images[i].miny;
 		s.maxy = sub_images[i].maxy;
 		premades.add(s);
-		draw->premade_sub_image_id_to_png_atlas_map.add(s.image_id, png.id);
+		draw->premade_sub_image_id_to_texture_id_map.add(s.image_id, texture.id);
 		draw->premade_sub_image_id_to_sub_image.add(s.image_id, sub_images[i]);
 	}
-	spritebatch_register_premade_atlas(&draw->sb, png.id, png.w, png.h, sub_image_count, premades.data());
+	spritebatch_register_premade_atlas(&draw->sb, texture.id, img.w, img.h, sub_image_count, premades.data());
+	image_free(&img);
+	return texture;
 }
 
 CF_Sprite cf_make_premade_sprite(uint64_t image_id)
@@ -2516,7 +2534,7 @@ CF_Sprite cf_make_premade_sprite(uint64_t image_id)
 	CF_AtlasSubImage sub_image = draw->premade_sub_image_id_to_sub_image.find(image_id);
 	CF_Sprite s = cf_sprite_defaults();
 	s.name = "premade_sprite";
-	s.easy_sprite_id = sub_image.image_id;
+	s.easy_sprite_id = image_id;
 	s.w = sub_image.w;
 	s.h = sub_image.h;
 	return s;

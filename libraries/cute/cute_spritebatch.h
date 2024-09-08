@@ -202,7 +202,7 @@ struct spritebatch_sprite_t
 
 	// `texture_id` can be set to zero. This value will be overwritten with a valid
 	// texture id before batches are reported back to you. This id will map to an
-	// atlas created internally.
+	// atlas created internally. For premade atlases you must set this yourself.
 	SPRITEBATCH_U64 texture_id;
 
 	// Contains all of the sprite's geometry. By default this is just a scale +
@@ -211,8 +211,8 @@ struct spritebatch_sprite_t
 	SPRITEBATCH_SPRITE_GEOMETRY geom;
 
 	int w, h;         // width and height of this sprite's image in pixels
-	float minx, miny; // u coordinate - this will be overwritten
-	float maxx, maxy; // v coordinate - this will be overwritten
+	float minx, miny; // u coordinate - this will be overwritten, except for premade sprites
+	float maxx, maxy; // v coordinate - this will be overwritten, except for premade sprites
 
 	// This field is *completely optional* -- just set it to zero if you don't want to bother.
 	// User-defined sorting key, see: http://realtimecollisiondetection.net/blog/?p=86

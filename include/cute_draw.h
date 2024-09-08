@@ -1496,16 +1496,18 @@ typedef struct CF_AtlasSubImage
  * @remarks  This function is useful if you want to load up atlases into CF. However, internally CF employs
  *           it's own online atlas compiler, so baking atlases is not necessary. This function is here just
  *           for convenience.
- * @related  CF_AtlasSubImage cf_register_premade_atlas cf_make_premade_sprite
+ *           
+ *           Call `cf_destroy_texture` on the return value when done.
+ * @related  CF_AtlasSubImage cf_register_premade_atlas cf_make_premade_sprite cf_destroy_premade_atlas
  */
-CF_API void CF_CALL cf_register_premade_atlas(const char* png_path, int sub_image_count, CF_AtlasSubImage* sub_images);
+CF_API CF_Texture CF_CALL cf_register_premade_atlas(const char* png_path, int sub_image_count, CF_AtlasSubImage* sub_images);
 
 /**
  * @function cf_make_premade_sprite
  * @category draw
  * @brief    Initializes a single-frame drawable sprite from a premade atlas `image_id`.
  * @param    image_id   The id from `cf_register_premade_atlas`.
- * @related  CF_AtlasSubImage cf_register_premade_atlas cf_make_premade_sprite
+ * @related  CF_AtlasSubImage cf_register_premade_atlas cf_make_premade_sprite cf_destroy_premade_atlas
  */
 CF_API CF_Sprite CF_CALL cf_make_premade_sprite(uint64_t image_id);
 
