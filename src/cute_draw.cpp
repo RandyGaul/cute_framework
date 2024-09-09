@@ -517,6 +517,7 @@ void cf_destroy_draw()
 
 void cf_draw_sprite(const CF_Sprite* sprite)
 {
+	CF_ASSERT(sprite);
 	spritebatch_sprite_t s = { };
 	bool apply_border_scale = true;
 	if (sprite->animation) {
