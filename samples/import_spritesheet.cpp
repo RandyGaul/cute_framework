@@ -51,10 +51,11 @@ Atlas load_sub_images(const char* path, int tile_size, int* w_out, int* h_out)
 
 		// Calculate normalized uv coordinates. Each uv coordinate is a number from
 		// 0 to 1, where (0,0) is the top-left of the image, and (1,1) is the bottom right.
+		// Flip y to match CF convention.
 		sub_image->minx = (float)x / (float)w;       // Top-left X
-		sub_image->miny = (float)y / (float)h;       // Top-left Y
+		sub_image->miny = (float)(y + 1) / (float)h; // Top-left Y
 		sub_image->maxx = (float)(x + 1) / (float)w; // Bottom-right X
-		sub_image->maxy = (float)(y + 1) / (float)h; // Bottom-right Y
+		sub_image->maxy = (float)y / (float)h;       // Bottom-right Y
 	}
 
 	Atlas atlas;
@@ -78,7 +79,7 @@ void draw_sprite(CF_Sprite sprite, float x, float y)
 {
 	draw_push();
 	x = roundf(x) + sprite.w * 0.5f;
-	y = roundf(y) + sprite.w * 0.5f;
+	y = roundf(y) + sprite.h * 0.5f;
 	draw_translate(x, y);
 	draw_sprite(sprite);
 	draw_pop();
@@ -110,7 +111,7 @@ int main(int argc, char* argv[])
 				CF_Sprite s = sub_sprite(atlas.base_id, sub_image_index);
 
 				// Draw each tile.
-				draw_sprite(s, i * 16.0f - center_x, j * 16.0f - center_y);
+				draw_sprite(s, i * 16.0f - center_x, -j * 16.0f + center_y);
 			}
 		}
 

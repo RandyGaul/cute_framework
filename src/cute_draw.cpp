@@ -88,13 +88,13 @@ void cf_get_pixels(SPRITEBATCH_U64 image_id, void* buffer, int bytes_to_fill, vo
 	} else if (image_id >= CF_EASY_ID_RANGE_LO && image_id <= CF_EASY_ID_RANGE_HI) {
 		CF_Pixel* pixels = app->easy_sprites.get(image_id).pix;
 		CF_MEMCPY(buffer, pixels, bytes_to_fill);
-	} else if (image_id >= CF_PREMADE_ID_RANGE_LO && image_id <= CF_PREMADE_ID_RANGE_LO) {
+	} else if (image_id >= CF_PREMADE_ID_RANGE_LO && image_id <= CF_PREMADE_ID_RANGE_HI) {
 		// These are handled externally by the user, so spritebatch should never ask for pixels.
 		// It's assumed premade atlases are generated properly externally.
-		CF_ASSERT(false);
+		CF_ASSERT(!"This should never be hit -- Invalid image_id sent to spritebatch.");
 		CF_MEMSET(buffer, 0, sizeof(bytes_to_fill));
 	} else {
-		CF_ASSERT(false);
+		CF_ASSERT(!"Invalid image_id when attempting to fetch pixels.");
 		CF_MEMSET(buffer, 0, sizeof(bytes_to_fill));
 	}
 }
@@ -410,6 +410,7 @@ static void s_init_sb(int w, int h)
 	config.lonely_buffer_count_till_flush = 0;
 	config.atlas_height_in_pixels = w;
 	config.atlas_width_in_pixels = h;
+	draw->atlas_dims = V2((float)w, (float)h);
 
 	if (spritebatch_init(&draw->sb, &config, NULL)) {
 		CF_FREE(draw);
@@ -2485,27 +2486,46 @@ CF_V2 cf_screen_to_world(CF_V2 point)
 CF_TemporaryImage cf_fetch_image(const CF_Sprite* sprite)
 {
 	draw->delay_defrag = true;
-	uint64_t image_id;
-	if (sprite->animation) {
-		image_id = sprite->animation->frames[sprite->frame_index].id;
+
+	if (sprite->easy_sprite_id >= CF_PREMADE_ID_RANGE_LO && sprite->easy_sprite_id <= CF_PREMADE_ID_RANGE_HI) {
+		CF_AtlasSubImage sub_image = draw->premade_sub_image_id_to_sub_image.find(sprite->easy_sprite_id);
+		spritebatch_sprite_t s = spritebatch_fetch(&draw->sb, sprite->easy_sprite_id, sprite->w, sprite->h);
+		CF_TemporaryImage image;
+		image.tex = { sub_image.image_id }; // @JANK - Hijacked to store texture_id and avoid an extra hashtable lookup.
+		image.w = sub_image.w;
+		image.h = sub_image.h;
+		image.u = cf_v2(sub_image.minx, sub_image.miny);
+		image.v = cf_v2(sub_image.maxx, sub_image.maxy);
+		return image;
 	} else {
-		image_id = sprite->easy_sprite_id;
+		uint64_t image_id;
+		if (sprite->animation) {
+			image_id = sprite->animation->frames[sprite->frame_index].id;
+		} else {
+			image_id = sprite->easy_sprite_id;
+		}
+		
+		spritebatch_sprite_t s = spritebatch_fetch(&draw->sb, image_id, sprite->w, sprite->h);
+		CF_TemporaryImage image;
+		image.tex = { s.texture_id };
+		image.w = sprite->w;
+		image.h = sprite->h;
+		v2 inv_dims = V2(1.0f / draw->atlas_dims.x, 1.0f / draw->atlas_dims.y);
+		s.minx += inv_dims.x;
+		s.maxx -= inv_dims.x;
+		s.miny -= inv_dims.y;
+		s.maxy += inv_dims.y;
+		image.u = cf_v2(s.minx, s.miny);
+		image.v = cf_v2(s.maxx, s.maxy);
+		return image;
 	}
-	spritebatch_sprite_t s = spritebatch_fetch(&draw->sb, image_id, sprite->w, sprite->h);
-	CF_TemporaryImage image;
-	image.tex = { s.texture_id };
-	image.w = sprite->w;
-	image.h = sprite->h;
-	image.u = cf_v2(s.minx, s.miny);
-	image.v = cf_v2(s.maxx, s.maxy);
-	return image;
 }
+
 
 CF_Texture cf_register_premade_atlas(const char* png_path, int sub_image_count, CF_AtlasSubImage* sub_images)
 {
 	CF_Image img = { 0 };
 	image_load_png(png_path, &img);
-	image_flip_horizontal(&img);
 	CF_ASSERT(img.pix);
 	CF_TextureParams params = cf_texture_defaults(img.w, img.h);
 	params.filter = draw->filter;
