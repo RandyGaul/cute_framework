@@ -531,7 +531,14 @@ int cf_app_draw_onto_screen(bool clear)
 			.w = w,
 			.h = h,
 		};
-		SDL_BlitGPUTexture(app->cmd, &src, &dst, SDL_FLIP_NONE, SDL_GPU_FILTER_NEAREST, SDL_FALSE);
+		SDL_GPUBlitInfo blit_info = {
+			.source = src,
+			.destination = dst,
+			.flip_mode = SDL_FLIP_NONE,
+			.filter = SDL_GPU_FILTER_NEAREST,
+			.cycle = SDL_FALSE,
+		};
+		SDL_BlitGPUTexture(app->cmd, &blit_info);
 	}
 
 	// Dear ImGui draw.
