@@ -1129,10 +1129,8 @@ void cf_clear_canvas(CF_Canvas canvas_handle)
 	};
 	SDL_GPUDepthStencilTargetInfo depth_stencil_info = {
 		.texture = canvas->depth_stencil,
-		.clear_value = {
-			.depth = 1.0f,
-			.stencil = 0,
-		},
+		.clear_depth = 1.0f,
+		.clear_stencil = 0,
 		.load_op = SDL_GPU_LOADOP_CLEAR,
 		.store_op = SDL_GPU_STOREOP_STORE,
 		.cycle = true,
@@ -1907,8 +1905,8 @@ void cf_apply_shader(CF_Shader shader_handle, CF_Material material_handle)
 	CF_MEMSET(&pass_depth_stencil_info, 0, sizeof(pass_depth_stencil_info));
 	pass_depth_stencil_info.texture = s_canvas->depth_stencil;
 	if (s_canvas->depth_stencil) {
-		pass_depth_stencil_info.clear_value.depth = app->clear_depth;
-		pass_depth_stencil_info.clear_value.stencil = app->clear_stencil;
+		pass_depth_stencil_info.clear_depth = app->clear_depth;
+		pass_depth_stencil_info.clear_stencil = app->clear_stencil;
 		pass_depth_stencil_info.load_op = s_canvas->clear ? SDL_GPU_LOADOP_CLEAR : SDL_GPU_LOADOP_LOAD;
 		pass_depth_stencil_info.store_op = SDL_GPU_STOREOP_STORE;
 		pass_depth_stencil_info.stencil_load_op = s_canvas->clear ? SDL_GPU_LOADOP_CLEAR : SDL_GPU_LOADOP_LOAD;
