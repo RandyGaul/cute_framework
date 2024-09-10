@@ -1130,10 +1130,10 @@ void cf_clear_canvas(CF_Canvas canvas_handle)
 	SDL_GPUDepthStencilTargetInfo depth_stencil_info = {
 		.texture = canvas->depth_stencil,
 		.clear_depth = 1.0f,
-		.clear_stencil = 0,
 		.load_op = SDL_GPU_LOADOP_CLEAR,
 		.store_op = SDL_GPU_STOREOP_STORE,
 		.cycle = true,
+		.clear_stencil = 0,
 	};
 	SDL_GPURenderPass* renderPass = SDL_BeginGPURenderPass(cmd, &color_info, 1, canvas->depth_stencil ? &depth_stencil_info : NULL);
 	SDL_EndGPURenderPass(renderPass);
