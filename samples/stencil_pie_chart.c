@@ -66,8 +66,8 @@ int main(int argc, char* argv[])
 		cf_render_settings_pop_render_state();
 
 		// Draw yellow border.
+		cf_draw_push_antialias(true);
 		cf_render_settings_set_uniform_int("no_discard", 0);
-		cf_render_settings_push_render_state(cf_render_state_defaults());
 		cf_draw_push_color(cf_color_yellow());
 		cf_draw_circle2(cf_v2(0,0), 100, 3);
 
