@@ -483,6 +483,7 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 		add_executable(recolor samples/recolor.cpp)
 		add_executable(rainbow_liquid samples/rainbow_liquid.cpp)
 		add_executable(import_spritesheet samples/import_spritesheet.cpp)
+		add_executable(stencil_pie_chart samples/stencil_pie_chart.c)
 		set(SAMPLE_EXECUTABLES
 			easysprite
 			basicserialization
@@ -511,6 +512,7 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 			recolor
 			rainbow_liquid
 			import_spritesheet
+			stencil_pie_chart
 		)
 
 		foreach(CURRENT_TARGET ${SAMPLE_EXECUTABLES})
