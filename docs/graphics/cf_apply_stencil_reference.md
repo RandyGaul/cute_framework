@@ -3,26 +3,19 @@
 [//]: # (See: https://github.com/RandyGaul/cute_framework/blob/master/samples/docs_parser.cpp)
 [](../header.md ':include')
 
-# cf_mesh_update_vertex_data
+# cf_apply_stencil_reference
 
 Category: [graphics](/api_reference?id=graphics)  
 GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_graphics.h)  
 ---
 
-Overwrites the vertex data of a mesh.
+Sets the stencil reference value.
 
 ```cpp
-void cf_mesh_update_vertex_data(CF_Mesh mesh, void* data, int count);
+void cf_apply_stencil_reference(int reference);
 ```
 
 Parameters | Description
 --- | ---
-mesh | The mesh.
-data | A pointer to vertex data.
-count | Number of vertices in `data`.
+reference | The value to set the stencil reference to.
 
-## Related Pages
-
-[CF_Mesh](/graphics/cf_mesh.md)  
-[cf_make_mesh](/graphics/cf_make_mesh.md)  
-[cf_destroy_mesh](/graphics/cf_destroy_mesh.md)  

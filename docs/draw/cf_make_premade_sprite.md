@@ -23,3 +23,4 @@ image_id | The id from [cf_register_premade_atlas](/draw/cf_register_premade_atl
 
 [CF_AtlasSubImage](/draw/cf_atlassubimage.md)  
 [cf_register_premade_atlas](/draw/cf_register_premade_atlas.md)  
+cf_destroy_premade_atlas  

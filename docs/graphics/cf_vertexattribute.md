@@ -16,6 +16,7 @@ Struct Members | Description
 `const char* name` | The name of the vertex attribute as it appears in the shader.
 `CF_VertexFormat format` | The layout in memory of one vertex. See [CF_VertexFormat](/graphics/cf_vertexformat.md).
 `int offset` | The offset in memory from the beginning of a vertex to this attribute.
+`bool per_instance` | Set to true if you want this attribute bound to the mesh's instance buffer, instead of the vertex buffer.
 
 ## Remarks
 

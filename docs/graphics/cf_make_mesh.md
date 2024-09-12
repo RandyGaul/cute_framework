@@ -29,5 +29,7 @@ The max number of attributes is `CF_MESH_MAX_VERTEX_ATTRIBUTES` (32). Any more a
 ## Related Pages
 
 [CF_Mesh](/graphics/cf_mesh.md)  
-[cf_mesh_update_vertex_data](/graphics/cf_mesh_update_vertex_data.md)  
+[cf_mesh_set_instance_buffer](/graphics/cf_mesh_set_instance_buffer.md)  
 [cf_destroy_mesh](/graphics/cf_destroy_mesh.md)  
+[cf_mesh_update_vertex_data](/graphics/cf_mesh_update_vertex_data.md)  
+[cf_mesh_set_index_buffer](/graphics/cf_mesh_set_index_buffer.md)  

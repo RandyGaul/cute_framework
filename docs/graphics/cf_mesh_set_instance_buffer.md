@@ -3,26 +3,26 @@
 [//]: # (See: https://github.com/RandyGaul/cute_framework/blob/master/samples/docs_parser.cpp)
 [](../header.md ':include')
 
-# cf_mesh_update_vertex_data
+# cf_mesh_set_instance_buffer
 
 Category: [graphics](/api_reference?id=graphics)  
 GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_graphics.h)  
 ---
 
-Overwrites the vertex data of a mesh.
+Sets up an instance buffer on the mesh, for instanced style rendering.
 
 ```cpp
-void cf_mesh_update_vertex_data(CF_Mesh mesh, void* data, int count);
+void cf_mesh_set_instance_buffer(CF_Mesh mesh, int instance_buffer_size_in_bytes, int instance_stride);
 ```
 
 Parameters | Description
 --- | ---
 mesh | The mesh.
-data | A pointer to vertex data.
-count | Number of vertices in `data`.
+instance_buffer_size_in_bytes | The size of the mesh's index buffer.
+instance_stride | The number of bytes for each instance data.
 
 ## Related Pages
 
 [CF_Mesh](/graphics/cf_mesh.md)  
 [cf_make_mesh](/graphics/cf_make_mesh.md)  
-[cf_destroy_mesh](/graphics/cf_destroy_mesh.md)  
+[cf_mesh_update_instance_data](/graphics/cf_mesh_update_instance_data.md)  

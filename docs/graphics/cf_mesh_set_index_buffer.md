@@ -3,26 +3,26 @@
 [//]: # (See: https://github.com/RandyGaul/cute_framework/blob/master/samples/docs_parser.cpp)
 [](../header.md ':include')
 
-# cf_mesh_update_vertex_data
+# cf_mesh_set_index_buffer
 
 Category: [graphics](/api_reference?id=graphics)  
 GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_graphics.h)  
 ---
 
-Overwrites the vertex data of a mesh.
+Sets up an index buffer on the mesh, for indexed style rendering.
 
 ```cpp
-void cf_mesh_update_vertex_data(CF_Mesh mesh, void* data, int count);
+void cf_mesh_set_index_buffer(CF_Mesh mesh, int index_buffer_size_in_bytes, int index_bit_count);
 ```
 
 Parameters | Description
 --- | ---
 mesh | The mesh.
-data | A pointer to vertex data.
-count | Number of vertices in `data`.
+index_buffer_size_in_bytes | The size of the mesh's index buffer.
+index_bit_count | The number of bits to use for indices, must be either 16 or 32.
 
 ## Related Pages
 
 [CF_Mesh](/graphics/cf_mesh.md)  
 [cf_make_mesh](/graphics/cf_make_mesh.md)  
-[cf_destroy_mesh](/graphics/cf_destroy_mesh.md)  
+[cf_mesh_update_index_data](/graphics/cf_mesh_update_index_data.md)  

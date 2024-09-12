@@ -27,7 +27,7 @@ dst | The destination canvas where pixels are copied to.
 
 ## Remarks
 
-The texture formats of the underlying canvas's must be PIXELFORMAT_DEFAULT. Each u/v coordinate
+The texture formats of the underlying canvas's must be `PIXEL_FORMAT_R8G8B8A8_UNORM`. Each u/v coordinate
 is normalized, meaning a number from 0 to 1. This lets the function operate on canvas's of any
 size. To convert a coordinate to a normalized coordinate, simply divide the x/y of your coordinate
 by the width/height of the canvas.

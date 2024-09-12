@@ -12,7 +12,7 @@ GitHub: [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Registers a premade atlas within the draw system.
 
 ```cpp
-void cf_register_premade_atlas(const char* png_path, int sub_image_count, CF_AtlasSubImage* sub_images);
+CF_Texture cf_register_premade_atlas(const char* png_path, int sub_image_count, CF_AtlasSubImage* sub_images);
 ```
 
 Parameters | Description
@@ -25,7 +25,10 @@ This function is useful if you want to load up atlases into CF. However, interna
 it's own online atlas compiler, so baking atlases is not necessary. This function is here just
 for convenience.
 
+Call [cf_destroy_texture](/graphics/cf_destroy_texture.md) on the return value when done.
+
 ## Related Pages
 
 [CF_AtlasSubImage](/draw/cf_atlassubimage.md)  
+cf_destroy_premade_atlas  
 [cf_make_premade_sprite](/draw/cf_make_premade_sprite.md)  
