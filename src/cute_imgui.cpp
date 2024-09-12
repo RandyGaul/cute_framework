@@ -338,8 +338,8 @@ void cf_imgui_draw(SDL_GPUTexture* swapchain_texture)
 	CF_MEMSET(&depth_stencil_info, 0, sizeof(depth_stencil_info));
 	//depth_stencil_info.texture = app->depth_buffer;
 	depth_stencil_info.cycle = true;
-	depth_stencil_info.clear_value.depth = 0;
-	depth_stencil_info.clear_value.stencil = 0;
+	depth_stencil_info.clear_depth = 0;
+	depth_stencil_info.clear_stencil = 0;
 	depth_stencil_info.load_op = SDL_GPU_LOADOP_CLEAR;
 	depth_stencil_info.store_op = SDL_GPU_STOREOP_DONT_CARE;
 	depth_stencil_info.stencil_load_op = SDL_GPU_LOADOP_CLEAR;
