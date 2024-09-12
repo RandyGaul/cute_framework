@@ -13,7 +13,7 @@ int main(int argc, char* argv[])
 		state.stencil.enabled = true;
 
 		cf_draw_push_antialias(false);
-		cf_render_settings_set_uniform_int("no_discard", 0);
+		cf_render_settings_set_uniform_int("no_discard", 0); // "Hidden" feature to turn off alpha-discard in the draw API.
 
 		// Render a full white circle.
 		// Increment stencil buffer.
