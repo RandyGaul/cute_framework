@@ -377,6 +377,7 @@ layout (set = 2, binding = 0) uniform sampler2D u_image;
 
 layout (set = 3, binding = 0) uniform uniform_block {
 	vec2 u_texture_size;
+	int no_discard;
 };
 
 #include "blend.shd"
@@ -416,7 +417,7 @@ void main()
 	c *= v_alpha;
 	vec2 screen_uv = (v_posH + vec2(1,-1)) * 0.5 * vec2(1,-1);
 	c = shader(c, v_pos, v_uv, screen_uv, v_user);
-	if (c.a == 0) discard;
+	if (no_discard == 0 && c.a == 0) discard;
 	result = c;
 }
 )";

@@ -180,10 +180,10 @@ void cf_imgui_init()
 		.fill_mode = SDL_GPU_FILLMODE_FILL,
 		.cull_mode = SDL_GPU_CULLMODE_NONE,
 		.front_face = {},
-		.enable_depth_bias = SDL_FALSE,
 		.depth_bias_constant_factor = {},
 		.depth_bias_clamp = {},
 		.depth_bias_slope_factor = {},
+		.enable_depth_bias = SDL_FALSE,
 	};
 
 	app->imgui_pip = SDL_CreateGPUGraphicsPipeline(app->device, &pip_info);
