@@ -1229,6 +1229,15 @@ CF_API CF_Shader CF_CALL cf_render_settings_peek_shader();
 CF_API void CF_CALL cf_render_settings_push_texture(const char* name, CF_Texture texture);
 
 /**
+ * @function cf_render_settings_set_alpha_discard
+ * @category draw
+ * @brief    Sets whether or not alpha discarding is enabled.
+ * @remarks  Alpha discarding is useful to throw away pixels with zero alpha, for cutouts or as an optimization, or for certain blending techniques.
+ * @related  cf_render_settings_push_texture cf_render_settings_set_uniform cf_render_settings_set_uniform_int cf_render_settings_set_uniform_float cf_render_settings_set_uniform_v2 cf_render_settings_set_uniform_color
+ */
+CF_API void CF_CALL cf_render_settings_set_alpha_discard(bool true_enable_alpha_discard);
+
+/**
  * @function cf_render_settings_set_uniform
  * @category draw
  * @brief    Pushes a uniform and binds it by name.

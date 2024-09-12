@@ -13,7 +13,7 @@ int main(int argc, char* argv[])
 		state.stencil.enabled = true;
 
 		cf_draw_push_antialias(false);
-		cf_render_settings_set_uniform_int("no_discard", 0); // "Hidden" feature to turn off alpha-discard in the draw API.
+		cf_render_settings_set_alpha_discard(true);
 
 		// Render a full white circle.
 		// Increment stencil buffer.
@@ -49,7 +49,7 @@ int main(int argc, char* argv[])
 		cf_render_settings_pop_render_state();
 
 		// Clear everything except the intersection.
-		cf_render_settings_set_uniform_int("no_discard", 1);
+		cf_render_settings_set_alpha_discard(false);
 		state.stencil.back = state.stencil.front = (CF_StencilFunction) {
 			.compare = CF_COMPARE_FUNCTION_NOT_EQUAL,
 			.pass_op = CF_STENCIL_OP_ZERO,
@@ -67,7 +67,7 @@ int main(int argc, char* argv[])
 
 		// Draw yellow border.
 		cf_draw_push_antialias(true);
-		cf_render_settings_set_uniform_int("no_discard", 0);
+		cf_render_settings_set_alpha_discard(true);
 		cf_draw_push_color(cf_color_yellow());
 		cf_draw_circle2(cf_v2(0,0), 100, 3);
 

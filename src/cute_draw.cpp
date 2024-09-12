@@ -381,6 +381,7 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 	cf_material_set_uniform_fs(draw->material, "u_texture_size", &u_texture_size, CF_UNIFORM_TYPE_FLOAT2, 1);
 	v2 u_texel_size = cf_v2(1.0f / (float)texture_w, 1.0f / (float)texture_h);
 	cf_material_set_uniform_fs(draw->material, "u_texel_size", &u_texel_size, CF_UNIFORM_TYPE_FLOAT2, 1);
+	cf_material_set_uniform_fs(draw->material, "u_alpha_discard", &draw->alpha_discard, CF_UNIFORM_TYPE_FLOAT, 1);
 
 	// Apply render state.
 	cf_material_set_render_state(draw->material, draw->render_states.last());
@@ -2354,6 +2355,11 @@ void cf_material_set_uniform_fs_internal(CF_Material material_handle, const char
 void cf_render_settings_push_texture(const char* name, CF_Texture texture)
 {
 	material_set_texture_fs(draw->material, name, texture);
+}
+
+void cf_render_settings_set_alpha_discard(bool true_enable_alpha_discard)
+{
+	draw->alpha_discard = true_enable_alpha_discard ? 1 : 0;
 }
 
 void cf_render_settings_set_uniform(const char* name, void* data, CF_UniformType type, int array_length)
