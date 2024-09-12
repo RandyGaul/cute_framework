@@ -64,9 +64,9 @@ CF_Sprite cf_make_sprite(const char* aseprite_path)
 {
 	CF_Sprite s = cf_sprite_defaults();
 	CF_Result err = cf_aseprite_cache_load(aseprite_path, &s);
-	char buf[1024];
 	if (cf_is_error(err)) {
-		sprintf(buf, "Unable to load sprite at path \"%s\".\n", aseprite_path);
+		char buf[1024];
+		snprintf(buf, sizeof buf, "Unable to load sprite at path \"%s\".\n", aseprite_path);
 		cf_message_box(CF_MESSAGE_BOX_TYPE_ERROR, "ERROR", buf);
 	}
 	return s;
@@ -76,9 +76,9 @@ CF_Sprite cf_make_sprite_from_memory(const char* unique_name, const void* asepri
 {
 	CF_Sprite s = cf_sprite_defaults();
 	CF_Result err = cf_aseprite_cache_load_from_memory(unique_name, aseprite_data, size, &s);
-	char buf[1024];
 	if (cf_is_error(err)) {
-		sprintf(buf, "Unable to load sprite from memory with name \"%s\".\n", unique_name);
+		char buf[1024];
+		snprintf(buf, sizeof buf, "Unable to load sprite from memory with name \"%s\".\n", unique_name);
 		cf_message_box(CF_MESSAGE_BOX_TYPE_ERROR, "ERROR", buf);
 	}
 	return s;
