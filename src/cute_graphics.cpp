@@ -498,14 +498,15 @@ struct CF_MeshInternal
 
 CF_BackendType cf_query_backend()
 {
-	SDL_GPUDriver driver = SDL_GetGPUDriver(app->device);
-	switch (driver) {
-	case SDL_GPU_DRIVER_INVALID: return CF_BACKEND_TYPE_INVALID;
-	case SDL_GPU_DRIVER_PRIVATE: return CF_BACKEND_TYPE_PRIVATE;
-	case SDL_GPU_DRIVER_VULKAN:  return CF_BACKEND_TYPE_VULKAN;
-	case SDL_GPU_DRIVER_D3D11:   return CF_BACKEND_TYPE_D3D11;
-	case SDL_GPU_DRIVER_D3D12:   return CF_BACKEND_TYPE_D3D12;
-	case SDL_GPU_DRIVER_METAL:   return CF_BACKEND_TYPE_METAL;
+	SDL_GPUShaderFormat format = SDL_GetGPUShaderFormats(app->device);
+	switch (format) {
+	case SDL_GPU_SHADERFORMAT_INVALID:  return CF_BACKEND_TYPE_INVALID;
+	case SDL_GPU_SHADERFORMAT_PRIVATE:  return CF_BACKEND_TYPE_PRIVATE;
+	case SDL_GPU_SHADERFORMAT_SPIRV:    return CF_BACKEND_TYPE_VULKAN;
+	case SDL_GPU_SHADERFORMAT_DXBC:     return CF_BACKEND_TYPE_D3D11;
+	case SDL_GPU_SHADERFORMAT_DXIL:     return CF_BACKEND_TYPE_D3D12;
+	case SDL_GPU_SHADERFORMAT_MSL:      // Fall through.
+        case SDL_GPU_SHADERFORMAT_METALLIB: return CF_BACKEND_TYPE_METAL;
 	default: return CF_BACKEND_TYPE_INVALID;
 	}
 }
@@ -875,7 +876,7 @@ static SDL_GPUShader* s_compile(CF_ShaderInternal* shader_internal, const dyna u
 	shaderCreateInfo.num_storage_buffers = storage_buffer_count;
 	shaderCreateInfo.num_uniform_buffers = uniform_buffer_count;
 	SDL_GPUShader* sdl_shader = NULL;
-	if (SDL_GetGPUDriver(app->device) == SDL_GPU_DRIVER_VULKAN) {
+	if (SDL_GetGPUShaderFormats(app->device) == SDL_GPU_SHADERFORMAT_SPIRV) {
 		sdl_shader = (SDL_GPUShader*)SDL_CreateGPUShader(app->device, &shaderCreateInfo);
 	} else {
 		sdl_shader = (SDL_GPUShader*)SDL_ShaderCross_CompileFromSPIRV(app->device, &shaderCreateInfo, false);
@@ -1793,9 +1794,9 @@ static SDL_GPUGraphicsPipeline* s_build_pipeline(CF_ShaderInternal* shader, CF_R
 			CF_VertexFormat mesh_fmt = mesh->attributes[i].format;
 			CF_ASSERT(s_is_compatible(input_fmt, mesh_fmt));
 			if (has_vertex_data) {
-				attr->binding_index = mesh->attributes[i].per_instance ? 1 : 0; // Index in `vertex_bindings` below.
+				attr->buffer_slot = mesh->attributes[i].per_instance ? 1 : 0; // Slot in `vertex_buffer_descriptions` below.
 			} else {
-				attr->binding_index = 0;
+				attr->buffer_slot = 0;
 			}
 			attr->location = shader->input_locations[idx];
 			attr->format = s_wrap(mesh->attributes[i].format);
@@ -1806,24 +1807,24 @@ static SDL_GPUGraphicsPipeline* s_build_pipeline(CF_ShaderInternal* shader, CF_R
 	CF_ASSERT(attribute_count == shader->input_count);
 	pip_info.vertex_input_state.num_vertex_attributes = attribute_count;
 	pip_info.vertex_input_state.vertex_attributes = attributes;
-	SDL_GPUVertexBinding vertex_bindings[2];
-	int vertex_bindings_count = 0;
+	SDL_GPUVertexBufferDescription vertex_buffer_descriptions[2];
+	int vertex_buffer_descriptions_count = 0;
 	if (has_vertex_data) {
-		vertex_bindings[vertex_bindings_count].index = 0;
-		vertex_bindings[vertex_bindings_count].pitch = mesh->vertices.stride;
-		vertex_bindings[vertex_bindings_count].input_rate = SDL_GPU_VERTEXINPUTRATE_VERTEX;
-		vertex_bindings[vertex_bindings_count].instance_step_rate = 0;
-		vertex_bindings_count++;
+		vertex_buffer_descriptions[vertex_buffer_descriptions_count].slot = 0;
+		vertex_buffer_descriptions[vertex_buffer_descriptions_count].pitch = mesh->vertices.stride;
+		vertex_buffer_descriptions[vertex_buffer_descriptions_count].input_rate = SDL_GPU_VERTEXINPUTRATE_VERTEX;
+		vertex_buffer_descriptions[vertex_buffer_descriptions_count].instance_step_rate = 0;
+		vertex_buffer_descriptions_count++;
 	}
 	if (has_instance_data) {
-		vertex_bindings[vertex_bindings_count].index = 1;
-		vertex_bindings[vertex_bindings_count].pitch = mesh->instances.stride;
-		vertex_bindings[vertex_bindings_count].input_rate = SDL_GPU_VERTEXINPUTRATE_INSTANCE;
-		vertex_bindings[vertex_bindings_count].instance_step_rate = 1;
-		vertex_bindings_count++;
+		vertex_buffer_descriptions[vertex_buffer_descriptions_count].slot = 1;
+		vertex_buffer_descriptions[vertex_buffer_descriptions_count].pitch = mesh->instances.stride;
+		vertex_buffer_descriptions[vertex_buffer_descriptions_count].input_rate = SDL_GPU_VERTEXINPUTRATE_INSTANCE;
+		vertex_buffer_descriptions[vertex_buffer_descriptions_count].instance_step_rate = 1;
+		vertex_buffer_descriptions_count++;
 	}
-	pip_info.vertex_input_state.num_vertex_bindings = vertex_bindings_count;
-	pip_info.vertex_input_state.vertex_bindings = vertex_bindings;
+	pip_info.vertex_input_state.num_vertex_buffers = vertex_buffer_descriptions_count;
+	pip_info.vertex_input_state.vertex_buffer_descriptions = vertex_buffer_descriptions;
 
 	pip_info.primitive_type = SDL_GPU_PRIMITIVETYPE_TRIANGLELIST;
 	pip_info.rasterizer_state.fill_mode = SDL_GPU_FILLMODE_FILL;

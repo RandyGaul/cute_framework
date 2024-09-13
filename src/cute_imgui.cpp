@@ -141,37 +141,37 @@ void cf_imgui_init()
 	pip_info.depth_stencil_state.enable_depth_write = false;
 	pip_info.depth_stencil_state.compare_op = SDL_GPU_COMPAREOP_GREATER_OR_EQUAL;
 
-	SDL_GPUVertexBinding vertex_binding;
-	CF_MEMSET(&vertex_binding, 0, sizeof(vertex_binding));
-	vertex_binding.index = 0;
-	vertex_binding.pitch = sizeof(ImDrawVert);
-	vertex_binding.input_rate = SDL_GPU_VERTEXINPUTRATE_VERTEX;
-	vertex_binding.instance_step_rate = 0;
+	SDL_GPUVertexBufferDescription vertex_buffer_description;
+	CF_MEMSET(&vertex_buffer_description, 0, sizeof(vertex_buffer_description));
+	vertex_buffer_description.slot = 0;
+	vertex_buffer_description.pitch = sizeof(ImDrawVert);
+	vertex_buffer_description.input_rate = SDL_GPU_VERTEXINPUTRATE_VERTEX;
+	vertex_buffer_description.instance_step_rate = 0;
 
 	SDL_GPUVertexAttribute vertex_attributes[] = {
 		{
 			.location = 0,
-			.binding_index = 0,
+			.buffer_slot = 0,
 			.format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT2,
 			.offset = 0
 		},
 		{
 			.location = 1,
-			.binding_index = 0,
+			.buffer_slot = 0,
 			.format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT2,
 			.offset = sizeof(float) * 2,
 		},
 		{
 			.location = 2,
-			.binding_index = 0,
+			.buffer_slot = 0,
 			.format = SDL_GPU_VERTEXELEMENTFORMAT_UBYTE4_NORM,
 			.offset = sizeof(float) * 4,
 		},
 	};
 
 	pip_info.vertex_input_state = SDL_GPUVertexInputState {
-		.vertex_bindings = &vertex_binding,
-		.num_vertex_bindings = 1,
+		.vertex_buffer_descriptions = &vertex_buffer_description,
+		.num_vertex_buffers = 1,
 		.vertex_attributes = vertex_attributes,
 		.num_vertex_attributes = 3,
 	};

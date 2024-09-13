@@ -809,12 +809,13 @@ ImGuiContext* cf_app_init_imgui()
 
 	ImGui::StyleColorsDark();
 	
-	SDL_GPUDriver driver = SDL_GetGPUDriver(app->device);
-	switch (driver) {
-	case SDL_GPU_DRIVER_VULKAN: ImGui_ImplSDL3_InitForVulkan(app->window); break;
-	case SDL_GPU_DRIVER_D3D11:  // Fall-thru.
-	case SDL_GPU_DRIVER_D3D12:  ImGui_ImplSDL3_InitForD3D(app->window);    break;
-	case SDL_GPU_DRIVER_METAL:  ImGui_ImplSDL3_InitForMetal(app->window);  break;
+	SDL_GPUShaderFormat format = SDL_GetGPUShaderFormats(app->device);
+	switch (format) {
+	case SDL_GPU_SHADERFORMAT_SPIRV:    ImGui_ImplSDL3_InitForVulkan(app->window); break;
+	case SDL_GPU_SHADERFORMAT_DXBC:     // Fall through.
+	case SDL_GPU_SHADERFORMAT_DXIL:     ImGui_ImplSDL3_InitForD3D(app->window);    break;
+	case SDL_GPU_SHADERFORMAT_MSL:      // Fall through.
+        case SDL_GPU_SHADERFORMAT_METALLIB: ImGui_ImplSDL3_InitForMetal(app->window);  break;
 	}
 
 	cf_imgui_init();

@@ -594,12 +594,12 @@ extern void *SDL_ShaderCross_CompileFromHLSL(SDL_GPUDevice *device,
                                              const char *hlslSource,
                                              const char *shaderProfile)
 {
-    switch (SDL_GetGPUDriver(device)) {
-    case SDL_GPU_DRIVER_D3D11:
+    switch (SDL_GetGPUShaderFormats(device)) {
+    case SDL_GPU_SHADERFORMAT_DXBC:
         return SDL_ShaderCross_INTERNAL_CompileFXC(device, createInfo, hlslSource, shaderProfile);
-    case SDL_GPU_DRIVER_D3D12:
+    case SDL_GPU_SHADERFORMAT_DXIL:
         return SDL_ShaderCross_INTERNAL_CompileDXC(device, createInfo, hlslSource, shaderProfile, SDL_FALSE);
-    case SDL_GPU_DRIVER_VULKAN:
+    case SDL_GPU_SHADERFORMAT_SPIRV:
         return SDL_ShaderCross_INTERNAL_CompileDXC(device, createInfo, hlslSource, shaderProfile, SDL_TRUE);
     default:
         SDL_SetError("SDL_ShaderCross_CompileFromHLSL: Unexpected SDL_GPUBackend");
@@ -692,22 +692,23 @@ void *SDL_ShaderCross_CompileFromSPIRV(
     const char *cleansed_entrypoint;
     void *compiledResult;
 
-    switch (SDL_GetGPUDriver(device)) {
-    case SDL_GPU_DRIVER_VULKAN:
+    switch (SDL_GetGPUShaderFormats(device)) {
+    case SDL_GPU_SHADERFORMAT_SPIRV:
         if (isCompute) {
             return SDL_CreateGPUComputePipeline(device, (SDL_GPUComputePipelineCreateInfo*) originalCreateInfo);
         } else {
             return SDL_CreateGPUShader(device, (SDL_GPUShaderCreateInfo*) originalCreateInfo);
         }
-    case SDL_GPU_DRIVER_D3D11:
+    case SDL_GPU_SHADERFORMAT_DXBC:
         backend = SPVC_BACKEND_HLSL;
         format = SDL_GPU_SHADERFORMAT_DXBC;
         break;
-    case SDL_GPU_DRIVER_D3D12:
+    case SDL_GPU_SHADERFORMAT_DXIL:
         backend = SPVC_BACKEND_HLSL;
         format = SDL_GPU_SHADERFORMAT_DXIL;
         break;
-    case SDL_GPU_DRIVER_METAL:
+    case SDL_GPU_SHADERFORMAT_MSL: // Fall through.
+    case SDL_GPU_SHADERFORMAT_METALLIB:
         backend = SPVC_BACKEND_MSL;
         format = SDL_GPU_SHADERFORMAT_MSL;
         break;
@@ -784,7 +785,7 @@ void *SDL_ShaderCross_CompileFromSPIRV(
     }
 
     if (backend == SPVC_BACKEND_HLSL) {
-        if (SDL_GetGPUDriver(device) == SDL_GPU_DRIVER_D3D11) {
+        if (SDL_GetGPUShaderFormats(device) == SDL_GPU_SHADERFORMAT_DXBC) {
             shadermodel = 50;
         } else {
             shadermodel = 60;
