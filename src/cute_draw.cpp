@@ -2359,7 +2359,7 @@ void cf_render_settings_push_texture(const char* name, CF_Texture texture)
 
 void cf_render_settings_set_alpha_discard(bool true_enable_alpha_discard)
 {
-	draw->alpha_discard = true_enable_alpha_discard ? 1 : 0;
+	draw->alpha_discard = true_enable_alpha_discard ? 1.0f : 0.0f;
 }
 
 void cf_render_settings_set_uniform(const char* name, void* data, CF_UniformType type, int array_length)
