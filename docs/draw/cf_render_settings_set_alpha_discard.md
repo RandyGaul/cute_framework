@@ -9,7 +9,7 @@ Category: [draw](/api_reference?id=draw)
 GitHub: [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_draw.h)  
 ---
 
-Sets whether or not alpha discarding is enabled.
+Sets whether or not alpha discarding is enabled (on by default).
 
 ```cpp
 void cf_render_settings_set_alpha_discard(bool true_enable_alpha_discard);

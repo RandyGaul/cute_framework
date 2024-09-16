@@ -131,7 +131,6 @@ struct CF_App
 	double keys_timestamp[512] = { 0 };
 	void (*key_callback)(CF_KeyButton key, bool true_down_false_up) = NULL;
 	CF_MouseState mouse, mouse_prev;
-	CF_List joypads;
 	Cute::Array<CF_Touch> touches;
 
 	// Dear ImGui stuff.

@@ -12,16 +12,16 @@ GitHub: [cute_joypad.h](https://github.com/RandyGaul/cute_framework/blob/master/
 Returns true if a joypad is connected.
 
 ```cpp
-bool cf_joypad_is_connected(CF_Joypad joypad);
+bool cf_joypad_is_connected(int player_index);
 ```
 
 Parameters | Description
 --- | ---
-joypad | The joypad.
+player_index | An index represeting the joypad for a particular player, starting at 0.
 
 ## Related Pages
 
-[CF_Joypad](/input/cf_joypad.md)  
+CF_Joypad  
 [cf_joypad_count](/input/cf_joypad_count.md)  
-[cf_joypad_open](/input/cf_joypad_open.md)  
-[cf_joypad_close](/input/cf_joypad_close.md)  
+cf_joypad_open  
+cf_joypad_close  

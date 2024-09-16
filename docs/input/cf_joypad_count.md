@@ -15,8 +15,13 @@ Returns the number of joypads currently connected to the system.
 int cf_joypad_count();
 ```
 
+## Remarks
+
+This may return a number larger than `CF_MAX_JOYPADS` (8), though, only up to 8 will
+be seen by Cute Framework.
+
 ## Related Pages
 
-[CF_Joypad](/input/cf_joypad.md)  
-[cf_joypad_close](/input/cf_joypad_close.md)  
-[cf_joypad_open](/input/cf_joypad_open.md)  
+CF_Joypad  
+cf_joypad_close  
+cf_joypad_open  

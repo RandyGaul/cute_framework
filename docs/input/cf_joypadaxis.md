@@ -9,7 +9,7 @@ Category: [input](/api_reference?id=input)
 GitHub: [cute_joypad.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_joypad.h)  
 ---
 
-Various axis actions on a [CF_Joypad](/input/cf_joypad.md).
+Various axis actions on a `CF_Joypad`.
 
 ## Values
 
@@ -28,5 +28,5 @@ JOYPAD_AXIS_COUNT | (null)
 
 [CF_JoypadType](/input/cf_joypadtype.md)  
 [cf_joypad_axis_to_string](/input/cf_joypad_axis_to_string.md)  
-[CF_Joypad](/input/cf_joypad.md)  
+CF_Joypad  
 [cf_joypad_axis](/input/cf_joypad_axis.md)  

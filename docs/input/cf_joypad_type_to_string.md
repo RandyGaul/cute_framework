@@ -21,6 +21,6 @@ state | The state to convert to a string.
 
 ## Related Pages
 
-[CF_Joypad](/input/cf_joypad.md)  
+CF_Joypad  
 [CF_JoypadType](/input/cf_joypadtype.md)  
 [cf_joypad_type](/input/cf_joypad_type.md)  

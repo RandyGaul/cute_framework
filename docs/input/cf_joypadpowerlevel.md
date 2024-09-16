@@ -9,7 +9,7 @@ Category: [input](/api_reference?id=input)
 GitHub: [cute_joypad.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_joypad.h)  
 ---
 
-The states of power for a [CF_Joypad](/input/cf_joypad.md).
+The states of power for a `CF_Joypad`.
 
 ## Values
 
@@ -25,6 +25,6 @@ JOYPAD_POWER_LEVEL_COUNT | (null)
 
 ## Related Pages
 
-[CF_Joypad](/input/cf_joypad.md)  
+CF_Joypad  
 [cf_joypad_power_level_to_string](/input/cf_joypad_power_level_to_string.md)  
 [cf_joypad_power_level](/input/cf_joypad_power_level.md)  

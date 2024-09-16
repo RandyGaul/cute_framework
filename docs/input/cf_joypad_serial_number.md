@@ -12,12 +12,12 @@ GitHub: [cute_joypad.h](https://github.com/RandyGaul/cute_framework/blob/master/
 Returns the serial number.
 
 ```cpp
-const char* cf_joypad_serial_number(CF_Joypad joypad);
+const char* cf_joypad_serial_number(int player_index);
 ```
 
 Parameters | Description
 --- | ---
-joypad | The joypad.
+player_index | An index represeting the joypad for a particular player, starting at 0.
 
 ## Remarks
 
@@ -25,5 +25,5 @@ Returns 0 if not available.
 
 ## Related Pages
 
-[CF_Joypad](/input/cf_joypad.md)  
+CF_Joypad  
 [CF_JoypadType](/input/cf_joypadtype.md)  

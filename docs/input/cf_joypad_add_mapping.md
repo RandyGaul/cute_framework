@@ -24,4 +24,4 @@ to ever call this function.
 
 ## Related Pages
 
-[CF_Joypad](/input/cf_joypad.md)  
+CF_Joypad  

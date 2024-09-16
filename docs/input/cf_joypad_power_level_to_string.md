@@ -22,5 +22,5 @@ state | The state to convert to a string.
 ## Related Pages
 
 [CF_JoypadPowerLevel](/input/cf_joypadpowerlevel.md)  
-[CF_Joypad](/input/cf_joypad.md)  
+CF_Joypad  
 [cf_joypad_power_level](/input/cf_joypad_power_level.md)  

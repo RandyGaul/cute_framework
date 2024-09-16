@@ -1077,16 +1077,15 @@ This is a list of all functions in Cute Framework organized by categories. This 
 - [cf_joypad_button_just_pressed](/input/cf_joypad_button_just_pressed.md)
 - [cf_joypad_button_just_released](/input/cf_joypad_button_just_released.md)
 - [cf_joypad_button_to_string](/input/cf_joypad_button_to_string.md)
-- [cf_joypad_close](/input/cf_joypad_close.md)
 - [cf_joypad_count](/input/cf_joypad_count.md)
 - [cf_joypad_firmware_version](/input/cf_joypad_firmware_version.md)
 - [cf_joypad_is_connected](/input/cf_joypad_is_connected.md)
 - [cf_joypad_name](/input/cf_joypad_name.md)
-- [cf_joypad_open](/input/cf_joypad_open.md)
 - [cf_joypad_power_level](/input/cf_joypad_power_level.md)
 - [cf_joypad_power_level_to_string](/input/cf_joypad_power_level_to_string.md)
 - [cf_joypad_product_id](/input/cf_joypad_product_id.md)
 - [cf_joypad_product_version](/input/cf_joypad_product_version.md)
+- [cf_joypad_rumble](/input/cf_joypad_rumble.md)
 - [cf_joypad_serial_number](/input/cf_joypad_serial_number.md)
 - [cf_joypad_type](/input/cf_joypad_type.md)
 - [cf_joypad_type_to_string](/input/cf_joypad_type_to_string.md)
@@ -1120,7 +1119,6 @@ This is a list of all functions in Cute Framework organized by categories. This 
 
 ### structs
 - [CF_ImeComposition](/input/cf_imecomposition.md)
-- [CF_Joypad](/input/cf_joypad.md)
 - [CF_Touch](/input/cf_touch.md)
 
 
@@ -1301,6 +1299,7 @@ This is a list of all functions in Cute Framework organized by categories. This 
 - [cf_sprite_flip_y](/sprite/cf_sprite_flip_y.md)
 - [cf_sprite_frame_count](/sprite/cf_sprite_frame_count.md)
 - [cf_sprite_frame_delay](/sprite/cf_sprite_frame_delay.md)
+- [cf_sprite_get_local_offset](/sprite/cf_sprite_get_local_offset.md)
 - [cf_sprite_get_loop_count](/sprite/cf_sprite_get_loop_count.md)
 - [cf_sprite_get_offset_x](/sprite/cf_sprite_get_offset_x.md)
 - [cf_sprite_get_offset_y](/sprite/cf_sprite_get_offset_y.md)

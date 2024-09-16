@@ -12,12 +12,12 @@ GitHub: [cute_joypad.h](https://github.com/RandyGaul/cute_framework/blob/master/
 Returns the USB vendor ID.
 
 ```cpp
-uint16_t cf_joypad_vendor(CF_Joypad joypad);
+uint16_t cf_joypad_vendor(int player_index);
 ```
 
 Parameters | Description
 --- | ---
-joypad | The joypad.
+player_index | An index represeting the joypad for a particular player, starting at 0.
 
 ## Remarks
 
@@ -25,5 +25,5 @@ Returns 0 if not available.
 
 ## Related Pages
 
-[CF_Joypad](/input/cf_joypad.md)  
+CF_Joypad  
 [CF_JoypadType](/input/cf_joypadtype.md)  

@@ -12,17 +12,17 @@ GitHub: [cute_joypad.h](https://github.com/RandyGaul/cute_framework/blob/master/
 Returns a signed 16-bit integer representing how much a joypad axis is activated by.
 
 ```cpp
-int16_t cf_joypad_axis(CF_Joypad joypad, CF_JoypadAxis axis);
+int16_t cf_joypad_axis(int player_index, CF_JoypadAxis axis);
 ```
 
 Parameters | Description
 --- | ---
-joypad | The joypad.
+player_index | An index represeting the joypad for a particular player, starting at 0.
 axis | The axis.
 
 ## Related Pages
 
-[CF_Joypad](/input/cf_joypad.md)  
+CF_Joypad  
 [CF_JoypadButton](/input/cf_joypadbutton.md)  
 [cf_joypad_button_down](/input/cf_joypad_button_down.md)  
 [cf_joypad_button_just_pressed](/input/cf_joypad_button_just_pressed.md)  

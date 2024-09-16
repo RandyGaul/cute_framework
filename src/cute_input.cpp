@@ -430,15 +430,6 @@ bool cf_touch_get(uint64_t id, CF_Touch* touch)
 	return false;
 }
 
-static CF_JoypadInstance* s_joy(SDL_JoystickID id)
-{
-	for (CF_ListNode* n = cf_list_begin(&app->joypads); n != cf_list_end(&app->joypads); n = n->next) {
-		CF_JoypadInstance* joypad = CF_LIST_HOST(CF_JoypadInstance, node, n);
-		if (joypad->id == id) return joypad;
-	}
-	return NULL;
-}
-
 void cf_begin_frame_input()
 {
 	// Clear any necessary single-frame state and copy to `prev` states.
@@ -447,14 +438,11 @@ void cf_begin_frame_input()
 	CF_MEMCPY(app->keys_prev, app->keys, sizeof(app->keys));
 	CF_MEMCPY(&app->mouse_prev, &app->mouse, sizeof(app->mouse));
 	CF_MEMCPY(&app->window_state_prev, &app->window_state, sizeof(app->window_state));
-	for (CF_ListNode* n = cf_list_begin(&app->joypads); n != cf_list_end(&app->joypads); n = n->next) {
-		CF_JoypadInstance* joypad = CF_LIST_HOST(CF_JoypadInstance, node, n);
-		CF_MEMCPY(joypad->buttons_prev, joypad->buttons, sizeof(joypad->buttons));
-	}
 	app->mouse.wheel_motion = 0;
 	app->window_state.moved = false;
 	app->window_state.restored = false;
 	app->window_state.resized = false;
+	cf_joypad_update();
 
 	// Update key durations to simulate "press and hold" style for `key_repeating`.
 	for (int i = 0; i < 512; ++i) {
@@ -615,35 +603,19 @@ void cf_pump_input_msgs()
 		case SDL_EVENT_GAMEPAD_BUTTON_UP:
 		{
 			SDL_JoystickID id = event.gbutton.which;
-			CF_JoypadInstance* joypad = s_joy(id);
-			if (joypad) {
-				int button = (int)event.gbutton.button;
-				CF_ASSERT(button >= 0 && button < CF_JOYPAD_BUTTON_COUNT);
-				joypad->buttons[button] = 0;
-			}
+			cf_joypad_on_button_up(id, (int)event.gbutton.button);
 		}	break;
 
 		case SDL_EVENT_GAMEPAD_BUTTON_DOWN:
 		{
 			SDL_JoystickID id = event.gbutton.which;
-			CF_JoypadInstance* joypad = s_joy(id);
-			if (joypad) {
-				int button = (int)event.gbutton.button;
-				CF_ASSERT(button >= 0 && button < CF_JOYPAD_BUTTON_COUNT);
-				joypad->buttons[button] = 1;
-			}
+			cf_joypad_on_button_down(id, (int)event.gbutton.button);
 		}	break;
 
 		case SDL_EVENT_GAMEPAD_AXIS_MOTION:
 		{
 			SDL_JoystickID id = event.gaxis.which;
-			CF_JoypadInstance* joypad = s_joy(id);
-			if (joypad) {
-				int axis = (int)event.gaxis.axis;
-				int value = (int)event.gaxis.value;
-				CF_ASSERT(axis >= 0 && axis < CF_JOYPAD_AXIS_COUNT);
-				joypad->axes[axis] = value;
-			}
+			cf_joypad_on_axis_motion(id, (int)event.gaxis.axis, (int)event.gaxis.value);
 		}	break;
 
 		case SDL_EVENT_FINGER_DOWN:

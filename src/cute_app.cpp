@@ -290,7 +290,6 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 	app->w = w;
 	app->h = h;
 	SDL_GetWindowPosition(app->window, &app->x, &app->y);
-	list_init(&app->joypads);
 	::app = app;
 	cf_make_aseprite_cache();
 	cf_make_png_cache();

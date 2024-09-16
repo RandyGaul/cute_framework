@@ -81,7 +81,6 @@ set(CF_SRCS
 	src/cute_https.cpp
 	src/cute_joypad.cpp
 	src/cute_symbol.cpp
-	src/cute_haptics.cpp
 	src/cute_sprite.cpp
 	src/cute_coroutine.cpp
 	src/cute_networking.cpp
@@ -142,7 +141,6 @@ set(CF_PUBLIC_HDRS
 	include/cute_joypad.h
 	include/cute_priority_queue.h
 	include/cute_symbol.h
-	include/cute_haptics.h
 	include/cute_coroutine.h
 	include/cute_networking.h
 	include/cute_guid.h

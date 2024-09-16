@@ -12,12 +12,12 @@ GitHub: [cute_haptics.h](https://github.com/RandyGaul/cute_framework/blob/master
 Attempts to open a joypad for haptics use.
 
 ```cpp
-CF_Haptic cf_haptic_open(CF_Joypad joypad);
+CF_Haptic cf_haptic_open(int player_index);
 ```
 
 Parameters | Description
 --- | ---
-joypad | A joypad (see [CF_Joypad](/input/cf_joypad.md)).
+player_index | An index represeting the joypad for a particular player, starting at 0.
 
 ## Return Value
 
@@ -30,7 +30,7 @@ Returns `NULL` upon any errors, including missing support from the underlying de
 ## Related Pages
 
 [CF_Haptic](/haptic/cf_haptic.md)  
-[CF_Joypad](/input/cf_joypad.md)  
+CF_Joypad  
 [cf_haptic_rumble_play](/haptic/cf_haptic_rumble_play.md)  
 [cf_haptic_close](/haptic/cf_haptic_close.md)  
 [cf_haptic_create_effect](/haptic/cf_haptic_create_effect.md)  

@@ -12,14 +12,14 @@ GitHub: [cute_joypad.h](https://github.com/RandyGaul/cute_framework/blob/master/
 Returns the type of the joypad.
 
 ```cpp
-CF_JoypadType cf_joypad_type(CF_Joypad joypad);
+CF_JoypadType cf_joypad_type(int player_index);
 ```
 
 Parameters | Description
 --- | ---
-joypad | The joypad.
+player_index | An index represeting the joypad for a particular player, starting at 0.
 
 ## Related Pages
 
-[CF_Joypad](/input/cf_joypad.md)  
+CF_Joypad  
 [CF_JoypadType](/input/cf_joypadtype.md)  

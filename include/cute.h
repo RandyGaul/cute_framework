@@ -22,6 +22,7 @@
  * MetalMaxMX
  * empyreanx
  * kagami
+ * Piotr
  * 
  */
 
@@ -40,7 +41,6 @@
 #include "cute_draw.h"
 #include "cute_file_system.h"
 #include "cute_graphics.h"
-#include "cute_haptics.h"
 #include "cute_hashtable.h"
 #include "cute_https.h"
 #include "cute_image.h"

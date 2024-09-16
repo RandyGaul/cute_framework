@@ -12,17 +12,17 @@ GitHub: [cute_joypad.h](https://github.com/RandyGaul/cute_framework/blob/master/
 Returns true if the button is currently down.
 
 ```cpp
-bool cf_joypad_button_down(CF_Joypad joypad, CF_JoypadButton button);
+bool cf_joypad_button_down(int player_index, CF_JoypadButton button);
 ```
 
 Parameters | Description
 --- | ---
-joypad | The joypad.
+player_index | An index represeting the joypad for a particular player, starting at 0.
 button | The button.
 
 ## Related Pages
 
-[CF_Joypad](/input/cf_joypad.md)  
+CF_Joypad  
 [CF_JoypadButton](/input/cf_joypadbutton.md)  
 [cf_joypad_axis](/input/cf_joypad_axis.md)  
 [cf_joypad_button_just_pressed](/input/cf_joypad_button_just_pressed.md)  

@@ -23,4 +23,4 @@ state | The state to convert to a string.
 
 [CF_JoypadButton](/input/cf_joypadbutton.md)  
 [cf_joypad_button_down](/input/cf_joypad_button_down.md)  
-[CF_Joypad](/input/cf_joypad.md)  
+CF_Joypad  

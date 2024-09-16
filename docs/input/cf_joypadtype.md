@@ -33,6 +33,6 @@ JOYPAD_TYPE_COUNT | (null)
 
 ## Related Pages
 
-[CF_Joypad](/input/cf_joypad.md)  
+CF_Joypad  
 [cf_joypad_type](/input/cf_joypad_type.md)  
 [cf_joypad_type_to_string](/input/cf_joypad_type_to_string.md)  

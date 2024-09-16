@@ -9,7 +9,7 @@ Category: [input](/api_reference?id=input)
 GitHub: [cute_joypad.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_joypad.h)  
 ---
 
-Various buttons on a [CF_Joypad](/input/cf_joypad.md).
+Various buttons on a `CF_Joypad`.
 
 ## Values
 
@@ -37,4 +37,4 @@ JOYPAD_BUTTON_COUNT | (null)
 
 [cf_joypad_button_down](/input/cf_joypad_button_down.md)  
 [cf_joypad_button_to_string](/input/cf_joypad_button_to_string.md)  
-[CF_Joypad](/input/cf_joypad.md)  
+CF_Joypad  
