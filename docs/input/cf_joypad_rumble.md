@@ -9,7 +9,7 @@ Category: [input](/api_reference?id=input)
 GitHub: [cute_joypad.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_joypad.h)  
 ---
 
-Rumbles the gamepad.
+Rumbles the joypad.
 
 ```cpp
 void cf_joypad_rumble(int player_index, uint16_t lo_frequency_rumble, uint16_t hi_frequency_rumble, int duration_ms);
