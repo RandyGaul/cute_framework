@@ -621,7 +621,7 @@ int cute_thread_wait(cute_thread_t* thread)
 
 int cute_core_count()
 {
-	return SDL_GetCPUCount();
+	return SDL_GetNumLogicalCPUCores();
 }
 
 int cute_cacheline_size()
