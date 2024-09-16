@@ -291,7 +291,7 @@ CF_INLINE void cf_sprite_draw(CF_Sprite* sprite)
  * @brief    Returns the sprite's width in pixels.
  * @related  CF_Sprite cf_sprite_width cf_sprite_height
  */
-CF_INLINE int cf_sprite_width(CF_Sprite* sprite) { return sprite->w; }
+CF_INLINE int cf_sprite_width(CF_Sprite* sprite) { CF_ASSERT(sprite); return sprite->w; }
 
 /**
  * @function cf_sprite_height
@@ -299,7 +299,7 @@ CF_INLINE int cf_sprite_width(CF_Sprite* sprite) { return sprite->w; }
  * @brief    Returns the sprite's height in pixels.
  * @related  CF_Sprite cf_sprite_width cf_sprite_height
  */
-CF_INLINE int cf_sprite_height(CF_Sprite* sprite) { return sprite->h; }
+CF_INLINE int cf_sprite_height(CF_Sprite* sprite) { CF_ASSERT(sprite); return sprite->h; }
 
 /**
  * @function cf_sprite_get_scale_x
@@ -307,7 +307,7 @@ CF_INLINE int cf_sprite_height(CF_Sprite* sprite) { return sprite->h; }
  * @brief    Returns the sprite's scale on the x-axis.
  * @related  CF_Sprite cf_sprite_get_scale_x cf_sprite_get_scale_y cf_sprite_set_scale_x cf_sprite_set_scale_y cf_sprite_set_scale
  */
-CF_INLINE float cf_sprite_get_scale_x(CF_Sprite* sprite) { return sprite->scale.x; }
+CF_INLINE float cf_sprite_get_scale_x(CF_Sprite* sprite) { CF_ASSERT(sprite); return sprite->scale.x; }
 
 /**
  * @function cf_sprite_get_scale_y
@@ -315,7 +315,7 @@ CF_INLINE float cf_sprite_get_scale_x(CF_Sprite* sprite) { return sprite->scale.
  * @brief    Returns the sprite's scale on the y-axis.
  * @related  CF_Sprite cf_sprite_get_scale_x cf_sprite_get_scale_y cf_sprite_set_scale_x cf_sprite_set_scale_y cf_sprite_set_scale
  */
-CF_INLINE float cf_sprite_get_scale_y(CF_Sprite* sprite) { return sprite->scale.y; }
+CF_INLINE float cf_sprite_get_scale_y(CF_Sprite* sprite) { CF_ASSERT(sprite); return sprite->scale.y; }
 
 /**
  * @function cf_sprite_set_scale
@@ -323,7 +323,7 @@ CF_INLINE float cf_sprite_get_scale_y(CF_Sprite* sprite) { return sprite->scale.
  * @brief    Returns the sprite's scale on the x-axis.
  * @related  CF_Sprite cf_sprite_get_scale_x cf_sprite_get_scale_y cf_sprite_set_scale_x cf_sprite_set_scale_y cf_sprite_set_scale
  */
-CF_INLINE void cf_sprite_set_scale(CF_Sprite* sprite, CF_V2 scale) { sprite->scale = scale; }
+CF_INLINE void cf_sprite_set_scale(CF_Sprite* sprite, CF_V2 scale) { CF_ASSERT(sprite); sprite->scale = scale; }
 
 /**
  * @function cf_sprite_set_scale_x
@@ -331,7 +331,7 @@ CF_INLINE void cf_sprite_set_scale(CF_Sprite* sprite, CF_V2 scale) { sprite->sca
  * @brief    Returns the sprite's scale on the x-axis.
  * @related  CF_Sprite cf_sprite_get_scale_x cf_sprite_get_scale_y cf_sprite_set_scale_x cf_sprite_set_scale_y cf_sprite_set_scale
  */
-CF_INLINE void cf_sprite_set_scale_x(CF_Sprite* sprite, float x) { sprite->scale.x = x; }
+CF_INLINE void cf_sprite_set_scale_x(CF_Sprite* sprite, float x) { CF_ASSERT(sprite); sprite->scale.x = x; }
 
 /**
  * @function cf_sprite_set_scale_y
@@ -339,7 +339,7 @@ CF_INLINE void cf_sprite_set_scale_x(CF_Sprite* sprite, float x) { sprite->scale
  * @brief    Returns the sprite's scale on the y-axis.
  * @related  CF_Sprite cf_sprite_get_scale_x cf_sprite_get_scale_y cf_sprite_set_scale_x cf_sprite_set_scale_y cf_sprite_set_scale
  */
-CF_INLINE void cf_sprite_set_scale_y(CF_Sprite* sprite, float y) { sprite->scale.y = y; }
+CF_INLINE void cf_sprite_set_scale_y(CF_Sprite* sprite, float y) { CF_ASSERT(sprite); sprite->scale.y = y; }
 
 /**
  * @function cf_sprite_get_offset_x
@@ -347,7 +347,7 @@ CF_INLINE void cf_sprite_set_scale_y(CF_Sprite* sprite, float y) { sprite->scale
  * @brief    Returns the sprite's local offset on the x-axis.
  * @related  CF_Sprite cf_sprite_get_offset_x cf_sprite_get_offset_y cf_sprite_set_offset_x cf_sprite_set_offset_y
  */
-CF_INLINE float cf_sprite_get_offset_x(CF_Sprite* sprite) { return sprite->local_offset.x; }
+CF_INLINE float cf_sprite_get_offset_x(CF_Sprite* sprite) { CF_ASSERT(sprite); return sprite->local_offset.x; }
 
 /**
  * @function cf_sprite_get_offset_y
@@ -355,7 +355,7 @@ CF_INLINE float cf_sprite_get_offset_x(CF_Sprite* sprite) { return sprite->local
  * @brief    Returns the sprite's local offset on the y-axis.
  * @related  CF_Sprite cf_sprite_get_offset_x cf_sprite_get_offset_y cf_sprite_set_offset_x cf_sprite_set_offset_y
  */
-CF_INLINE float cf_sprite_get_offset_y(CF_Sprite* sprite) { return sprite->local_offset.y; }
+CF_INLINE float cf_sprite_get_offset_y(CF_Sprite* sprite) { CF_ASSERT(sprite); return sprite->local_offset.y; }
 
 /**
  * @function cf_sprite_set_offset_x
@@ -363,7 +363,7 @@ CF_INLINE float cf_sprite_get_offset_y(CF_Sprite* sprite) { return sprite->local
  * @brief    Returns the sprite's local offset on the x-axis.
  * @related  CF_Sprite cf_sprite_get_offset_x cf_sprite_get_offset_y cf_sprite_set_offset_x cf_sprite_set_offset_y
  */
-CF_INLINE void cf_sprite_set_offset_x(CF_Sprite* sprite, float offset) { sprite->local_offset.x = offset; }
+CF_INLINE void cf_sprite_set_offset_x(CF_Sprite* sprite, float offset) { CF_ASSERT(sprite); sprite->local_offset.x = offset; }
 
 /**
  * @function cf_sprite_set_offset_y
@@ -371,42 +371,48 @@ CF_INLINE void cf_sprite_set_offset_x(CF_Sprite* sprite, float offset) { sprite-
  * @brief    Returns the sprite's local offset on the y-axis.
  * @related  CF_Sprite cf_sprite_get_offset_x cf_sprite_get_offset_y cf_sprite_set_offset_x cf_sprite_set_offset_y
  */
-CF_INLINE void cf_sprite_set_offset_y(CF_Sprite* sprite, float offset) { sprite->local_offset.y = offset; }
+CF_INLINE void cf_sprite_set_offset_y(CF_Sprite* sprite, float offset) { CF_ASSERT(sprite); sprite->local_offset.y = offset; }
 
 /**
  * @function cf_sprite_get_opacity
  * @category sprite
  * @brief    Returns the sprite's opacity, a value from 0-1.
  */
-CF_INLINE float cf_sprite_get_opacity(CF_Sprite* sprite) { return sprite->opacity; }
+CF_INLINE float cf_sprite_get_opacity(CF_Sprite* sprite) { CF_ASSERT(sprite); return sprite->opacity; }
 
 /**
  * @function cf_sprite_set_opacity
  * @category sprite
  * @brief    Sets the sprite's opacity, a value from 0-1.
  */
-CF_INLINE void cf_sprite_set_opacity(CF_Sprite* sprite, float opacity) { sprite->opacity = opacity; }
+CF_INLINE void cf_sprite_set_opacity(CF_Sprite* sprite, float opacity) { CF_ASSERT(sprite); sprite->opacity = opacity; }
 
 /**
  * @function cf_sprite_get_play_speed_multiplier
  * @category sprite
  * @brief    Returns the sprite's playing speed multiplier.
  */
-CF_INLINE float cf_sprite_get_play_speed_multiplier(CF_Sprite* sprite) { return sprite->play_speed_multiplier; }
+CF_INLINE float cf_sprite_get_play_speed_multiplier(CF_Sprite* sprite) { CF_ASSERT(sprite); return sprite->play_speed_multiplier; }
 
 /**
  * @function cf_sprite_set_play_speed_multiplier
  * @category sprite
  * @brief    Sets the sprite's playing speed multiplier.
  */
-CF_INLINE void cf_sprite_set_play_speed_multiplier(CF_Sprite* sprite, float multiplier) { sprite->play_speed_multiplier = multiplier; }
+CF_INLINE void cf_sprite_set_play_speed_multiplier(CF_Sprite* sprite, float multiplier) { CF_ASSERT(sprite); sprite->play_speed_multiplier = multiplier; }
 
 /**
  * @function cf_sprite_get_loop_count
  * @category sprite
  * @brief    Returns the sprite's loop count.
  */
-CF_INLINE int cf_sprite_get_loop_count(CF_Sprite* sprite) { return sprite->loop_count; }
+CF_INLINE int cf_sprite_get_loop_count(CF_Sprite* sprite) { CF_ASSERT(sprite); return sprite->loop_count; }
+/**
+ * @function cf_sprite_get_local_offset
+ * @category sprite
+ * @brief    Returns the sprite's local offset, set by loading the .ase file if a slice named "origin" exists.
+ */
+CF_INLINE CF_V2 cf_sprite_get_local_offset(CF_Sprite* sprite) { CF_ASSERT(sprite); return sprite->local_offset; }
 
 /**
  * @function cf_sprite_update
@@ -418,6 +424,7 @@ CF_INLINE int cf_sprite_get_loop_count(CF_Sprite* sprite) { return sprite->loop_
  */
 CF_INLINE void cf_sprite_update(CF_Sprite* sprite)
 {
+	CF_ASSERT(sprite);
 	if (sprite->paused) return;
 	if (!sprite->animation) return;
 
@@ -471,6 +478,7 @@ CF_INLINE void cf_sprite_update(CF_Sprite* sprite)
  */
 CF_INLINE void cf_sprite_reset(CF_Sprite* sprite)
 {
+	CF_ASSERT(sprite);
 	sprite->paused = false;
 	sprite->frame_index = 0;
 	sprite->loop_count = 0;
@@ -488,6 +496,7 @@ CF_INLINE void cf_sprite_reset(CF_Sprite* sprite)
  */
 CF_INLINE void cf_sprite_play(CF_Sprite* sprite, const char* animation)
 {
+	CF_ASSERT(sprite);
 	if (!sprite->animations) return;
 	sprite->animation = hfind(sprite->animations, sintern(animation));
 	CF_ASSERT(sprite->animation);
@@ -504,6 +513,7 @@ CF_INLINE void cf_sprite_play(CF_Sprite* sprite, const char* animation)
  */
 CF_INLINE bool cf_sprite_is_playing(CF_Sprite* sprite, const char* animation)
 {
+	CF_ASSERT(sprite);
 	if (!sprite->animation) return false;
 	return !CF_STRCMP(animation, sprite->animation->name);
 }
@@ -517,6 +527,7 @@ CF_INLINE bool cf_sprite_is_playing(CF_Sprite* sprite, const char* animation)
  */
 CF_INLINE void cf_sprite_pause(CF_Sprite* sprite)
 {
+	CF_ASSERT(sprite);
 	sprite->paused = true;
 }
 
@@ -529,6 +540,7 @@ CF_INLINE void cf_sprite_pause(CF_Sprite* sprite)
  */
 CF_INLINE void cf_sprite_unpause(CF_Sprite* sprite)
 {
+	CF_ASSERT(sprite);
 	sprite->paused = false;
 }
 
@@ -541,6 +553,7 @@ CF_INLINE void cf_sprite_unpause(CF_Sprite* sprite)
  */
 CF_INLINE void cf_sprite_toggle_pause(CF_Sprite* sprite)
 {
+	CF_ASSERT(sprite);
 	sprite->paused = !sprite->paused;
 }
 
@@ -554,6 +567,7 @@ CF_INLINE void cf_sprite_toggle_pause(CF_Sprite* sprite)
  */
 CF_INLINE void cf_sprite_flip_x(CF_Sprite* sprite)
 {
+	CF_ASSERT(sprite);
 	sprite->scale.x *= -1.0f;
 }
 
@@ -567,6 +581,7 @@ CF_INLINE void cf_sprite_flip_x(CF_Sprite* sprite)
  */
 CF_INLINE void cf_sprite_flip_y(CF_Sprite* sprite)
 {
+	CF_ASSERT(sprite);
 	sprite->scale.y *= -1.0f;
 }
 
@@ -579,6 +594,7 @@ CF_INLINE void cf_sprite_flip_y(CF_Sprite* sprite)
  */
 CF_INLINE int cf_sprite_frame_count(const CF_Sprite* sprite)
 {
+	CF_ASSERT(sprite);
 	if (!sprite->animation) return 0;
 	return alen(sprite->animation->frames);
 }
@@ -592,6 +608,7 @@ CF_INLINE int cf_sprite_frame_count(const CF_Sprite* sprite)
  */
 CF_INLINE int cf_sprite_current_frame(const CF_Sprite* sprite)
 {
+	CF_ASSERT(sprite);
 	return sprite->frame_index;
 }
 
@@ -604,6 +621,7 @@ CF_INLINE int cf_sprite_current_frame(const CF_Sprite* sprite)
  */
 CF_INLINE float cf_sprite_frame_delay(CF_Sprite* sprite)
 {
+	CF_ASSERT(sprite);
 	if (!sprite->animation) return 0;
 	return sprite->animation->frames[sprite->frame_index].delay;
 }
@@ -617,6 +635,7 @@ CF_INLINE float cf_sprite_frame_delay(CF_Sprite* sprite)
  */
 CF_INLINE float cf_sprite_animation_delay(CF_Sprite* sprite)
 {
+	CF_ASSERT(sprite);
 	if (!sprite->animation) return 0;
 	int count = cf_sprite_frame_count(sprite);
 	float delay = 0;
@@ -636,6 +655,7 @@ CF_INLINE float cf_sprite_animation_delay(CF_Sprite* sprite)
  */
 CF_INLINE float cf_sprite_animation_interpolant(CF_Sprite* sprite)
 {
+	CF_ASSERT(sprite);
 	// TODO -- Backwards and pingpong.
 	if (!sprite->animation) return 0;
 	float delay = cf_sprite_animation_delay(sprite);
@@ -653,6 +673,7 @@ CF_INLINE float cf_sprite_animation_interpolant(CF_Sprite* sprite)
  */
 CF_INLINE bool cf_sprite_will_finish(CF_Sprite* sprite)
 {
+	CF_ASSERT(sprite);
 	// TODO -- Backwards and pingpong.
 	if (!sprite->animation) return false;
 	if (sprite->frame_index == cf_sprite_frame_count(sprite) - 1) {
@@ -672,6 +693,7 @@ CF_INLINE bool cf_sprite_will_finish(CF_Sprite* sprite)
  */
 CF_INLINE bool cf_sprite_on_loop(CF_Sprite* sprite)
 {
+	CF_ASSERT(sprite);
 	if (sprite->frame_index == 0 && sprite->t == 0) {
 		return true;
 	} else {
@@ -689,7 +711,7 @@ CF_INLINE bool cf_sprite_on_loop(CF_Sprite* sprite)
  *           loads a full sprite out of a .ase file. But, this function provides another low-level option if desired.
  * @related  CF_Sprite CF_Animation CF_Frame dyna htbl
  */
-CF_INLINE void cf_animation_add_frame(CF_Animation* animation, CF_Frame frame) { apush(animation->frames, frame); }
+CF_INLINE void cf_animation_add_frame(CF_Animation* animation, CF_Frame frame) { CF_ASSERT(animation); apush(animation->frames, frame); }
 
 #ifdef __cplusplus
 }
