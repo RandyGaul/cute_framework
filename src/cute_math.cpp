@@ -352,5 +352,9 @@ void cf_collide(const void* A, const CF_Transform* ax, CF_ShapeType typeA, const
 
 bool cf_cast_ray(CF_Ray A, const void* B, const CF_Transform* bx, CF_ShapeType typeB, CF_Raycast* out)
 {
-	return c2CastRay(*(c2Ray*)&A, B, (c2x*)bx, (C2_TYPE)typeB, (c2Raycast*)out);
+	c2Raycast cast;
+	out->hit = !!c2CastRay(*(c2Ray*)&A, B, (c2x*)bx, (C2_TYPE)typeB, (c2Raycast*)&cast);
+	out->n = *(v2*)&cast.n;
+	out->t = cast.t;
+	return out->hit;
 }
