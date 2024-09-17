@@ -211,6 +211,8 @@ void cf_joypad_update()
 		}
 	}
 
+	SDL_free(gamepad_ids);
+
 	// Handle disconnections (close gamepads that are no longer connected).
 	for (int i = 0; i < CF_MAX_JOYPADS; ++i) {
 		CF_Joypad* joypad = &joypads[i];
@@ -220,7 +222,11 @@ void cf_joypad_update()
 		}
 	}
 
-	SDL_free(gamepad_ids);
+	// Copy over prev inputs.
+	for (int i = 0; i < CF_MAX_JOYPADS; ++i) {
+		CF_Joypad* joypad = &joypads[i];
+		CF_MEMCPY(joypad->buttons_prev, joypad->buttons, sizeof(joypad->buttons));
+	}
 }
 
 void cf_joypad_on_button_up(SDL_JoystickID id, int button)
@@ -229,7 +235,6 @@ void cf_joypad_on_button_up(SDL_JoystickID id, int button)
 	if (player_index < 0 || player_index >= CF_MAX_JOYPADS) return;
 	CF_Joypad* joypad = &joypads[player_index];
 	if (joypad->id && joypad->id == id) {
-		joypad->buttons_prev[button] = joypad->buttons[button];
 		joypad->buttons[button] = 0;
 	}
 }
@@ -238,10 +243,8 @@ void cf_joypad_on_button_down(SDL_JoystickID id, int button)
 {
 	int player_index = SDL_GetGamepadPlayerIndexForID(id);
 	if (player_index < 0 || player_index >= CF_MAX_JOYPADS) return;
-
 	CF_Joypad* joypad = &joypads[player_index];
 	if (joypad->id && joypad->id == id) {
-		joypad->buttons_prev[button] = joypad->buttons[button];
 		joypad->buttons[button] = 1;
 	}
 }
