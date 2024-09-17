@@ -475,6 +475,14 @@ void cf_pump_input_msgs()
 
 		switch (event.type)
 		{
+		case SDL_EVENT_JOYSTICK_ADDED:
+			printf("connect event %d\n", event.jdevice.which);
+			break;
+
+		case SDL_EVENT_JOYSTICK_REMOVED:
+			printf("disconnect event %d\n", event.jdevice.which);
+			break;
+
 		case SDL_EVENT_QUIT:
 			app->running = false;
 			break;

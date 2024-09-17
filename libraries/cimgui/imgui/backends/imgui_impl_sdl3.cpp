@@ -104,8 +104,10 @@ struct ImGui_ImplSDL3_Data
     bool                    MouseCanReportHoveredViewport;  // This is hard to use/unreliable on SDL so we'll set ImGuiBackendFlags_HasMouseHoveredViewport dynamically based on state.
 
     // Gamepad handling
+#if 0
     ImVector<SDL_Gamepad*>  Gamepads;
     ImGui_ImplSDL3_GamepadMode  GamepadMode;
+#endif
     bool                    WantUpdateGamepadsList;
 
     ImGui_ImplSDL3_Data()   { memset((void*)this, 0, sizeof(*this)); }
@@ -486,7 +488,9 @@ static bool ImGui_ImplSDL3_Init(SDL_Window* window, SDL_Renderer* renderer, void
     io.PlatformSetImeDataFn = ImGui_ImplSDL3_PlatformSetImeData;
 
     // Gamepad handling
+#if 0
     bd->GamepadMode = ImGui_ImplSDL3_GamepadMode_AutoFirst;
+#endif
     bd->WantUpdateGamepadsList = true;
 
     // Load mouse cursors
@@ -679,14 +683,17 @@ static void ImGui_ImplSDL3_UpdateMouseCursor()
 static void ImGui_ImplSDL3_CloseGamepads()
 {
     ImGui_ImplSDL3_Data* bd = ImGui_ImplSDL3_GetBackendData();
+#if 0
     if (bd->GamepadMode != ImGui_ImplSDL3_GamepadMode_Manual)
         for (SDL_Gamepad* gamepad : bd->Gamepads)
             SDL_CloseGamepad(gamepad);
     bd->Gamepads.resize(0);
+#endif
 }
 
 void ImGui_ImplSDL3_SetGamepadMode(ImGui_ImplSDL3_GamepadMode mode, SDL_Gamepad** manual_gamepads_array, int manual_gamepads_count)
 {
+#if 0
     ImGui_ImplSDL3_Data* bd = ImGui_ImplSDL3_GetBackendData();
     ImGui_ImplSDL3_CloseGamepads();
     if (mode == ImGui_ImplSDL3_GamepadMode_Manual)
@@ -701,19 +708,23 @@ void ImGui_ImplSDL3_SetGamepadMode(ImGui_ImplSDL3_GamepadMode mode, SDL_Gamepad*
         bd->WantUpdateGamepadsList = true;
     }
     bd->GamepadMode = mode;
+#endif
 }
 
 static void ImGui_ImplSDL3_UpdateGamepadButton(ImGui_ImplSDL3_Data* bd, ImGuiIO& io, ImGuiKey key, SDL_GamepadButton button_no)
 {
+#if 0
     bool merged_value = false;
     for (SDL_Gamepad* gamepad : bd->Gamepads)
         merged_value |= SDL_GetGamepadButton(gamepad, button_no) != 0;
     io.AddKeyEvent(key, merged_value);
+#endif
 }
 
 static inline float Saturate(float v) { return v < 0.0f ? 0.0f : v  > 1.0f ? 1.0f : v; }
 static void ImGui_ImplSDL3_UpdateGamepadAnalog(ImGui_ImplSDL3_Data* bd, ImGuiIO& io, ImGuiKey key, SDL_GamepadAxis axis_no, float v0, float v1)
 {
+#if 0
     float merged_value = 0.0f;
     for (SDL_Gamepad* gamepad : bd->Gamepads)
     {
@@ -722,6 +733,7 @@ static void ImGui_ImplSDL3_UpdateGamepadAnalog(ImGui_ImplSDL3_Data* bd, ImGuiIO&
             merged_value = vn;
     }
     io.AddKeyAnalogEvent(key, merged_value > 0.1f, merged_value);
+#endif
 }
 
 static void ImGui_ImplSDL3_UpdateGamepads()
@@ -729,6 +741,11 @@ static void ImGui_ImplSDL3_UpdateGamepads()
     ImGuiIO& io = ImGui::GetIO();
     ImGui_ImplSDL3_Data* bd = ImGui_ImplSDL3_GetBackendData();
 
+	// @NOTE -- Disabling this in CF for now since it closes gamepads, leading to erroneous behavior
+	// elsewhere when detecting controller connect/disconnects. This code needs to be refactored to
+	// *NOT* call SDL_CloseGamepad. We should probably hook this directly into CF's joypad rather than
+	// dealing with SDL directly.
+#if 0
     // Update list of gamepads to use
     if (bd->WantUpdateGamepadsList && bd->GamepadMode != ImGui_ImplSDL3_GamepadMode_Manual)
     {
@@ -779,6 +796,7 @@ static void ImGui_ImplSDL3_UpdateGamepads()
     ImGui_ImplSDL3_UpdateGamepadAnalog(bd, io, ImGuiKey_GamepadRStickRight, SDL_GAMEPAD_AXIS_RIGHTX, +thumb_dead_zone, +32767);
     ImGui_ImplSDL3_UpdateGamepadAnalog(bd, io, ImGuiKey_GamepadRStickUp,    SDL_GAMEPAD_AXIS_RIGHTY, -thumb_dead_zone, -32768);
     ImGui_ImplSDL3_UpdateGamepadAnalog(bd, io, ImGuiKey_GamepadRStickDown,  SDL_GAMEPAD_AXIS_RIGHTY, +thumb_dead_zone, +32767);
+#endif
 }
 
 static void ImGui_ImplSDL3_UpdateMonitors()

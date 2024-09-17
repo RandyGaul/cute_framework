@@ -18,6 +18,8 @@
 struct CF_Joypad
 {
 	SDL_Gamepad* gamepad = NULL;
+	SDL_JoystickID id = 0;
+	const char* serial = NULL;
 	int buttons[CF_JOYPAD_BUTTON_COUNT] = { 0 };
 	int buttons_prev[CF_JOYPAD_BUTTON_COUNT] = { 0 };
 	int axes[CF_JOYPAD_AXIS_COUNT] = { 0 };
@@ -46,7 +48,7 @@ int cf_joypad_count()
 {
 	int count = 0;
 	for (int i = 0; i < CF_MAX_JOYPADS; i++) {
-		if (joypads[i].gamepad) count++;
+		if (joypads[i].id) count++;
 	}
 	return count;
 }
@@ -54,14 +56,14 @@ int cf_joypad_count()
 bool cf_joypad_is_connected(int player_index)
 {
 	CF_ASSERT(player_index >= 0 && player_index < CF_MAX_JOYPADS);
-	return joypads[player_index].gamepad;
+	return joypads[player_index].id ? true : false;
 }
 
 CF_JoypadPowerLevel cf_joypad_power_level(int player_index)
 {
 	CF_ASSERT(player_index >= 0 && player_index < CF_MAX_JOYPADS);
 	CF_Joypad* joypad = &joypads[player_index];
-	if (!joypad->gamepad) return CF_JOYPAD_POWER_LEVEL_UNKNOWN;
+	if (!joypad->id) return CF_JOYPAD_POWER_LEVEL_UNKNOWN;
 	int percent = 0;
 	SDL_PowerState state = SDL_GetGamepadPowerInfo(joypad->gamepad, &percent);
 
@@ -80,84 +82,84 @@ CF_JoypadPowerLevel cf_joypad_power_level(int player_index)
 const char* cf_joypad_name(int player_index)
 {
 	CF_ASSERT(player_index >= 0 && player_index < CF_MAX_JOYPADS);
-	if (!joypads[player_index].gamepad) return NULL;
+	if (!joypads[player_index].id) return NULL;
 	return SDL_GetGamepadName(joypads[player_index].gamepad);
 }
 
 CF_JoypadType cf_joypad_type(int player_index)
 {
 	CF_ASSERT(player_index >= 0 && player_index < CF_MAX_JOYPADS);
-	if (!joypads[player_index].gamepad) return CF_JOYPAD_TYPE_UNKNOWN;
+	if (!joypads[player_index].id) return CF_JOYPAD_TYPE_UNKNOWN;
 	return (CF_JoypadType)SDL_GetGamepadType(joypads[player_index].gamepad);
 }
 
 uint16_t cf_joypad_vendor(int player_index)
 {
 	CF_ASSERT(player_index >= 0 && player_index < CF_MAX_JOYPADS);
-	if (!joypads[player_index].gamepad) return 0;
+	if (!joypads[player_index].id) return 0;
 	return SDL_GetGamepadVendor(joypads[player_index].gamepad);
 }
 
 uint16_t cf_joypad_product_id(int player_index)
 {
 	CF_ASSERT(player_index >= 0 && player_index < CF_MAX_JOYPADS);
-	if (!joypads[player_index].gamepad) return 0;
+	if (!joypads[player_index].id) return 0;
 	return SDL_GetGamepadProduct(joypads[player_index].gamepad);
 }
 
 const char* cf_joypad_serial_number(int player_index)
 {
 	CF_ASSERT(player_index >= 0 && player_index < CF_MAX_JOYPADS);
-	if (!joypads[player_index].gamepad) return NULL;
+	if (!joypads[player_index].id) return NULL;
 	return SDL_GetGamepadSerial(joypads[player_index].gamepad);
 }
 
 uint16_t cf_joypad_firmware_version(int player_index)
 {
 	CF_ASSERT(player_index >= 0 && player_index < CF_MAX_JOYPADS);
-	if (!joypads[player_index].gamepad) return 0;
+	if (!joypads[player_index].id) return 0;
 	return SDL_GetGamepadFirmwareVersion(joypads[player_index].gamepad);
 }
 
 uint16_t cf_joypad_product_version(int player_index)
 {
 	CF_ASSERT(player_index >= 0 && player_index < CF_MAX_JOYPADS);
-	if (!joypads[player_index].gamepad) return 0;
+	if (!joypads[player_index].id) return 0;
 	return SDL_GetGamepadProductVersion(joypads[player_index].gamepad);
 }
 
 bool cf_joypad_button_down(int player_index, CF_JoypadButton button)
 {
 	CF_ASSERT(player_index >= 0 && player_index < CF_MAX_JOYPADS);
-	if (!joypads[player_index].gamepad) return false;
+	if (!joypads[player_index].id) return false;
 	return joypads[player_index].buttons[button];
 }
 
 bool cf_joypad_button_just_pressed(int player_index, CF_JoypadButton button)
 {
 	CF_ASSERT(player_index >= 0 && player_index < CF_MAX_JOYPADS);
-	if (!joypads[player_index].gamepad) return false;
+	if (!joypads[player_index].id) return false;
 	return joypads[player_index].buttons[button] && !joypads[player_index].buttons_prev[button];
 }
 
 bool cf_joypad_button_just_released(int player_index, CF_JoypadButton button)
 {
 	CF_ASSERT(player_index >= 0 && player_index < CF_MAX_JOYPADS);
-	if (!joypads[player_index].gamepad) return false;
+	if (!joypads[player_index].id) return false;
 	return !joypads[player_index].buttons[button] && joypads[player_index].buttons_prev[button];
 }
 
 int16_t cf_joypad_axis(int player_index, CF_JoypadAxis axis)
 {
 	CF_ASSERT(player_index >= 0 && player_index < CF_MAX_JOYPADS);
-	if (!joypads[player_index].gamepad) return 0;
+	if (!joypads[player_index].id) return 0;
 	return joypads[player_index].axes[axis];
 }
 
 void cf_joypad_rumble(int player_index, uint16_t lo_frequency_rumble, uint16_t hi_frequency_rumble, int duration_ms)
 {
 	CF_ASSERT(player_index >= 0 && player_index < CF_MAX_JOYPADS);
-	if (!joypads[player_index].gamepad) return;
+	if (!joypads[player_index].id) return;
 	SDL_RumbleGamepad(joypads[player_index].gamepad, lo_frequency_rumble, hi_frequency_rumble, (Uint32)duration_ms);
 }
 
@@ -183,7 +185,8 @@ void cf_joypad_update()
 		// Skip if already connected.
 		bool already_connected = false;
 		for (int i = 0; i < CF_MAX_JOYPADS; ++i) {
-			if (joypads[i].gamepad == gamepad) {
+			const char* serial = SDL_GetGamepadSerial(gamepad);
+			if (joypads[i].id == id || (serial && sequ(joypads->serial, serial))) {
 				already_connected = true;
 				break;
 			}
@@ -193,15 +196,16 @@ void cf_joypad_update()
 		// This is a new gamepad instance, map it to next available player index.
 		int player_index = -1;
 		for (int i = 0; i < CF_MAX_JOYPADS; ++i) {
-			if (!joypads[i].gamepad) {
+			if (!joypads[i].id) {
 				player_index = i;
 				break;
 			}
 		}
 		if (player_index != -1) {
 			SDL_SetGamepadPlayerIndex(gamepad, player_index);
-			joypads[player_index] = {};
+			joypads[player_index].id = id;
 			joypads[player_index].gamepad = gamepad;
+			joypads[player_index].serial = SDL_GetGamepadSerial(gamepad);
 		} else {
 			SDL_CloseGamepad(gamepad);
 		}
@@ -210,9 +214,9 @@ void cf_joypad_update()
 	// Handle disconnections (close gamepads that are no longer connected).
 	for (int i = 0; i < CF_MAX_JOYPADS; ++i) {
 		CF_Joypad* joypad = &joypads[i];
-		if (joypad->gamepad && !SDL_GamepadConnected(joypad->gamepad)) {
+		if (joypad->id && !SDL_GamepadConnected(joypad->gamepad)) {
 			SDL_CloseGamepad(joypad->gamepad);
-			joypad->gamepad = NULL;
+			*joypad = {};
 		}
 	}
 
@@ -224,7 +228,7 @@ void cf_joypad_on_button_up(SDL_JoystickID id, int button)
 	int player_index = SDL_GetGamepadPlayerIndexForID(id);
 	if (player_index < 0 || player_index >= CF_MAX_JOYPADS) return;
 	CF_Joypad* joypad = &joypads[player_index];
-	if (joypad->gamepad && SDL_GetGamepadID(joypad->gamepad) == id) {
+	if (joypad->id && joypad->id == id) {
 		joypad->buttons_prev[button] = joypad->buttons[button];
 		joypad->buttons[button] = 0;
 	}
@@ -236,7 +240,7 @@ void cf_joypad_on_button_down(SDL_JoystickID id, int button)
 	if (player_index < 0 || player_index >= CF_MAX_JOYPADS) return;
 
 	CF_Joypad* joypad = &joypads[player_index];
-	if (joypad->gamepad && SDL_GetGamepadID(joypad->gamepad) == id) {
+	if (joypad->id && joypad->id == id) {
 		joypad->buttons_prev[button] = joypad->buttons[button];
 		joypad->buttons[button] = 1;
 	}
@@ -247,7 +251,7 @@ void cf_joypad_on_axis_motion(SDL_JoystickID id, int axis, int value)
 	int player_index = SDL_GetGamepadPlayerIndexForID(id);
 	if (player_index < 0 || player_index >= CF_MAX_JOYPADS) return;
 	CF_Joypad* joypad = &joypads[player_index];
-	if (joypad->gamepad && SDL_GetGamepadID(joypad->gamepad) == id) {
+	if (joypad->id && joypad->id == id) {
 		joypad->axes[axis] = value;
 	}
 }
