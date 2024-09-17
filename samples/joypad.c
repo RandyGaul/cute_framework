@@ -11,7 +11,7 @@ int main(int argc, char* argv[])
 		for (int player_index = 0; player_index < CF_MAX_JOYPADS; ++player_index) {
 			if (cf_joypad_button_just_pressed(player_index, CF_JOYPAD_BUTTON_A)) {
 				printf("Player index %d pressed A (applying a rumble)\n", player_index);
-				cf_joypad_rumble(player_index, 0xFFFF/2, 0xFFFF/2, 10);
+				cf_joypad_rumble(player_index, 0xFFFF/2, 0xFFFF/2, 200);
 			}
 
 			if (cf_joypad_button_just_pressed(player_index, CF_JOYPAD_BUTTON_B)) {
