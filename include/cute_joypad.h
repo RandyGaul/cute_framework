@@ -395,6 +395,16 @@ CF_API bool CF_CALL cf_joypad_button_just_released(int player_index, CF_JoypadBu
 CF_API int16_t CF_CALL cf_joypad_axis(int player_index, CF_JoypadAxis axis);
 
 /**
+ * @function cf_joypad_axis_prev
+ * @category input
+ * @brief    Returns the previous axis value from the last frame.
+ * @param    player_index     An index represeting the joypad for a particular player, starting at 0.
+ * @param    axis       The axis.
+ * @related  CF_Joypad CF_JoypadButton cf_joypad_button_down cf_joypad_button_just_pressed cf_joypad_button_just_released cf_joypad_axis
+ */
+CF_API int16_t CF_CALL cf_joypad_axis_prev(int player_index, CF_JoypadAxis axis);
+
+/**
  * @function cf_joypad_rumble
  * @category input
  * @brief    Rumbles the joypad.
@@ -493,6 +503,7 @@ CF_INLINE bool joypad_button_down(int player_index, JoypadButton button) { retur
 CF_INLINE bool joypad_button_just_pressed(int player_index, JoypadButton button) { return cf_joypad_button_just_pressed(player_index, button); }
 CF_INLINE bool joypad_button_just_released(int player_index, JoypadButton button) { return cf_joypad_button_just_released(player_index, button); }
 CF_INLINE int16_t joypad_axis(int player_index, JoypadAxis axis) { return cf_joypad_axis(player_index, axis); }
+CF_INLINE int16_t joypad_axis_prev(int player_index, JoypadAxis axis) { return cf_joypad_axis_prev(player_index, axis); }
 CF_INLINE void joypad_rumble(int player_index, uint16_t lo_frequency_rumble, uint16_t hi_frequency_rumble, int duration_ms) { cf_joypad_rumble(player_index, lo_frequency_rumble, hi_frequency_rumble, duration_ms); }
 
 }

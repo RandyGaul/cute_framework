@@ -23,6 +23,7 @@ struct CF_Joypad
 	int buttons[CF_JOYPAD_BUTTON_COUNT] = { 0 };
 	int buttons_prev[CF_JOYPAD_BUTTON_COUNT] = { 0 };
 	int axes[CF_JOYPAD_AXIS_COUNT] = { 0 };
+	int axes_prev[CF_JOYPAD_AXIS_COUNT] = { 0 };
 };
 
 CF_Joypad joypads[CF_MAX_JOYPADS];
@@ -156,6 +157,13 @@ int16_t cf_joypad_axis(int player_index, CF_JoypadAxis axis)
 	return joypads[player_index].axes[axis];
 }
 
+int16_t cf_joypad_axis_prev(int player_index, CF_JoypadAxis axis)
+{
+	CF_ASSERT(player_index >= 0 && player_index < CF_MAX_JOYPADS);
+	if (!joypads[player_index].id) return 0;
+	return joypads[player_index].axes_prev[axis];
+}
+
 void cf_joypad_rumble(int player_index, uint16_t lo_frequency_rumble, uint16_t hi_frequency_rumble, int duration_ms)
 {
 	CF_ASSERT(player_index >= 0 && player_index < CF_MAX_JOYPADS);
@@ -226,6 +234,7 @@ void cf_joypad_update()
 	for (int i = 0; i < CF_MAX_JOYPADS; ++i) {
 		CF_Joypad* joypad = &joypads[i];
 		CF_MEMCPY(joypad->buttons_prev, joypad->buttons, sizeof(joypad->buttons));
+		CF_MEMCPY(joypad->axes_prev, joypad->axes, sizeof(joypad->axes));
 	}
 }
 
