@@ -1072,6 +1072,7 @@ This is a list of all functions in Cute Framework organized by categories. This 
 - [cf_input_text_pop_utf32](/input/cf_input_text_pop_utf32.md)
 - [cf_joypad_add_mapping](/input/cf_joypad_add_mapping.md)
 - [cf_joypad_axis](/input/cf_joypad_axis.md)
+- [cf_joypad_axis_prev](/input/cf_joypad_axis_prev.md)
 - [cf_joypad_axis_to_string](/input/cf_joypad_axis_to_string.md)
 - [cf_joypad_button_down](/input/cf_joypad_button_down.md)
 - [cf_joypad_button_just_pressed](/input/cf_joypad_button_just_pressed.md)
