@@ -380,37 +380,37 @@ struct cute_rw_lock_t
 
 int cute_atomic_add(cute_atomic_int_t* atomic, int addend)
 {
-	return SDL_AtomicAdd((SDL_AtomicInt*)atomic, addend);
+	return SDL_AddAtomicInt((SDL_AtomicInt*)atomic, addend);
 }
 
 int cute_atomic_set(cute_atomic_int_t* atomic, int value)
 {
-	return SDL_AtomicSet((SDL_AtomicInt*)atomic, value);
+	return SDL_SetAtomicInt((SDL_AtomicInt*)atomic, value);
 }
 
 int cute_atomic_get(cute_atomic_int_t* atomic)
 {
-	return SDL_AtomicGet((SDL_AtomicInt*)atomic);
+	return SDL_GetAtomicInt((SDL_AtomicInt*)atomic);
 }
 
 int cute_atomic_cas(cute_atomic_int_t* atomic, int expected, int value)
 {
-	return SDL_AtomicCompareAndSwap((SDL_AtomicInt*)atomic, expected, value);
+	return SDL_CompareAndSwapAtomicInt((SDL_AtomicInt*)atomic, expected, value);
 }
 
 void* cute_atomic_ptr_set(void** atomic, void* value)
 {
-	return SDL_AtomicSetPointer(atomic, value);
+	return SDL_SetAtomicPointer(atomic, value);
 }
 
 void* cute_atomic_ptr_get(void** atomic)
 {
-	return SDL_AtomicGetPointer(atomic);
+	return SDL_GetAtomicPointer(atomic);
 }
 
 int cute_atomic_ptr_cas(void** atomic, void* expected, void* value)
 {
-	return SDL_AtomicCompareAndSwapPointer(atomic, expected, value);
+	return SDL_CompareAndSwapAtomicPointer(atomic, expected, value);
 }
 
 #elif defined(CUTE_SYNC_WINDOWS)
