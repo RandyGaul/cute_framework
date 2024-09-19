@@ -16,7 +16,7 @@ extern SDL_GPUShaderFormat SDL_ShaderCross_GetShaderFormats(void);
 #if SDL_GPU_SHADERCROSS_SPIRVCROSS
 extern void *SDL_ShaderCross_CompileFromSPIRV(SDL_GPUDevice *device,
                                               void *createInfo,
-                                              SDL_bool isCompute);
+                                              bool isCompute);
 #endif /* SDL_GPU_SHADERCROSS_SPIRVCROSS */
 
 #if SDL_GPU_SHADERCROSS_HLSL
@@ -297,7 +297,7 @@ static void *SDL_ShaderCross_INTERNAL_CompileDXC(
     void *createInfo,
     const char *hlslSource,
     const char *shaderProfile,
-    SDL_bool spirv)
+    bool spirv)
 {
     DxcBuffer source;
     IDxcResult *dxcResult;
@@ -598,9 +598,9 @@ extern void *SDL_ShaderCross_CompileFromHLSL(SDL_GPUDevice *device,
     case SDL_GPU_SHADERFORMAT_DXBC:
         return SDL_ShaderCross_INTERNAL_CompileFXC(device, createInfo, hlslSource, shaderProfile);
     case SDL_GPU_SHADERFORMAT_DXIL:
-        return SDL_ShaderCross_INTERNAL_CompileDXC(device, createInfo, hlslSource, shaderProfile, SDL_FALSE);
+        return SDL_ShaderCross_INTERNAL_CompileDXC(device, createInfo, hlslSource, shaderProfile, false);
     case SDL_GPU_SHADERFORMAT_SPIRV:
-        return SDL_ShaderCross_INTERNAL_CompileDXC(device, createInfo, hlslSource, shaderProfile, SDL_TRUE);
+        return SDL_ShaderCross_INTERNAL_CompileDXC(device, createInfo, hlslSource, shaderProfile, true);
     default:
         SDL_SetError("SDL_ShaderCross_CompileFromHLSL: Unexpected SDL_GPUBackend");
         return NULL;
@@ -677,7 +677,7 @@ static pfn_spvc_compiler_get_cleansed_entry_point_name SDL_spvc_compiler_get_cle
 void *SDL_ShaderCross_CompileFromSPIRV(
     SDL_GPUDevice *device,
     void *originalCreateInfo,
-    SDL_bool isCompute)
+    bool isCompute)
 {
     SDL_GPUShaderCreateInfo *createInfo;
     spvc_result result;

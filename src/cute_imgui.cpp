@@ -183,7 +183,7 @@ void cf_imgui_init()
 		.depth_bias_constant_factor = {},
 		.depth_bias_clamp = {},
 		.depth_bias_slope_factor = {},
-		.enable_depth_bias = SDL_FALSE,
+		.enable_depth_bias = false,
 	};
 
 	app->imgui_pip = SDL_CreateGPUGraphicsPipeline(app->device, &pip_info);
