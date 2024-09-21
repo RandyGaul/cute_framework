@@ -14,6 +14,7 @@ int main(int argc, char* argv[])
 	int draw_calls = 0;
 
 	const char* sample = (const char*)sample_text_data;
+	clear_color(0.5f, 0.5f, 0.5f, 1.0f);
 
 	while (app_is_running()) {
 		app_update();
