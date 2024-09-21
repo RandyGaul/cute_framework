@@ -236,7 +236,7 @@ CF_INLINE SDL_GPUTextureFormat s_wrap(CF_PixelFormat format)
 CF_INLINE SDL_GPUFilter s_wrap(CF_Filter filter)
 {
 	switch (filter) {
-	default: return SDL_GPU_FILTER_NEAREST;
+	default: return SDL_GPU_FILTER_LINEAR;
 	case CF_FILTER_NEAREST: return SDL_GPU_FILTER_NEAREST;
 	case CF_FILTER_LINEAR: return SDL_GPU_FILTER_LINEAR;
 	}

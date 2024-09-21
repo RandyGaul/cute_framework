@@ -525,7 +525,7 @@ CF_TextureParams cf_texture_defaults(int w, int h)
 {
 	CF_TextureParams params;
 	params.pixel_format = CF_PIXEL_FORMAT_R8G8B8A8_UNORM;
-	params.filter = CF_FILTER_NEAREST;
+	params.filter = CF_FILTER_LINEAR;
 	params.usage = CF_TEXTURE_USAGE_SAMPLER_BIT;
 	params.wrap_u = CF_WRAP_MODE_REPEAT;
 	params.wrap_v = CF_WRAP_MODE_REPEAT;

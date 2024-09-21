@@ -1753,7 +1753,7 @@ static bool s_text_fx_shake(TextEffect* effect)
 	float x = (float)effect->get_number("x", 2);
 	float y = (float)effect->get_number("y", 2);
 	CF_RndState rnd = rnd_seed(seed);
-	v2 offset = round(V2(rnd_range(rnd, -x, x), rnd_range(rnd, -y, y)));
+	v2 offset = V2(rnd_range(rnd, -x, x), rnd_range(rnd, -y, y));
 	effect->q0 += offset;
 	effect->q1 += offset;
 	return true;
@@ -1876,7 +1876,8 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 	float h = (font->ascent + font->descent) * scale;
 	float w = font->width * scale;
 	float x = position.x;
-	float initial_y = position.y - font->ascent * scale;
+	float inv_cam_scale = 1.0f / len(draw->cam_stack.last().m.y);
+	float initial_y = roundf(position.y - font->ascent * scale) * inv_cam_scale;
 	float y = initial_y;
 	int index = 0;
 	int code_index = 0;

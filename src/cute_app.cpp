@@ -177,6 +177,7 @@ unsigned char default_png_data[81] = {
 static void s_canvas(int w, int h)
 {
 	CF_CanvasParams params = cf_canvas_defaults(w, h);
+	params.target.filter = CF_FILTER_LINEAR;
 	if (app->offscreen_canvas.id) {
 		cf_destroy_canvas(app->offscreen_canvas);
 	}

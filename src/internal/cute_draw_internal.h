@@ -66,7 +66,7 @@ struct CF_Draw
 	spritebatch_t sb;
 	CF_Mesh mesh;
 	CF_Material material;
-	CF_Filter filter = CF_FILTER_NEAREST;
+	CF_Filter filter = CF_FILTER_LINEAR;
 	Cute::Array<CF_Color> colors = { cf_color_white() };
 	Cute::Array<bool> antialias = { true };
 	Cute::Array<float> antialias_scale = { 1.5f };
