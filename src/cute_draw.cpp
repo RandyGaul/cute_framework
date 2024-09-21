@@ -1875,10 +1875,15 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 	const char* end_of_line = NULL;
 	float h = (font->ascent + font->descent) * scale;
 	float w = font->width * scale;
-	float x = position.x;
-	float inv_cam_scale = 1.0f / len(draw->cam_stack.last().m.y);
-	float initial_y = roundf(position.y - font->ascent * scale) * inv_cam_scale;
+
+	// @NOTE -- Not 100% sure snapping to pixel is the best thing here, but it really does make
+	// text rendering feel a lot more robust, especially for nearest-neighbor rendering.
+	float inv_cam_scale_y = 1.0f / len(draw->cam_stack.last().m.y);
+	float inv_cam_scale_x = 1.0f / len(draw->cam_stack.last().m.x);
+	float x = roundf(position.x * inv_cam_scale_x);
+	float initial_y = roundf((position.y - font->ascent * scale) * inv_cam_scale_y);
 	float y = initial_y;
+
 	int index = 0;
 	int code_index = 0;
 	int newline_count = 0;
