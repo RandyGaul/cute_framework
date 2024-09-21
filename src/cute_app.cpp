@@ -219,9 +219,9 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 	}
 
 #ifdef CF_EMSCRIPTEN
-	Uint32 sdl_options = SDL_INIT_EVENTS | SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMEPAD;
+	Uint32 sdl_options = SDL_INIT_EVENTS | SDL_INIT_VIDEO | SDL_INIT_GAMEPAD;
 #else
-	Uint32 sdl_options = SDL_INIT_EVENTS | SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMEPAD | SDL_INIT_HAPTIC;
+	Uint32 sdl_options = SDL_INIT_EVENTS | SDL_INIT_VIDEO | SDL_INIT_GAMEPAD | SDL_INIT_HAPTIC;
 	if (options & APP_OPTIONS_NO_GFX_BIT) {
 		sdl_options &= ~SDL_INIT_VIDEO;
 	}
@@ -536,7 +536,7 @@ int cf_app_draw_onto_screen(bool clear)
 			.destination = dst,
 			.flip_mode = SDL_FLIP_NONE,
 			.filter = SDL_GPU_FILTER_NEAREST,
-			.cycle = SDL_FALSE,
+			.cycle = false,
 		};
 		SDL_BlitGPUTexture(app->cmd, &blit_info);
 	}

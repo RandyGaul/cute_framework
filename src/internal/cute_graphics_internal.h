@@ -63,9 +63,9 @@ CF_INLINE SDL_GPUSamplerCreateInfo SDL_GPUSamplerCreateInfoDefaults()
 	samplerInfo.address_mode_v = SDL_GPU_SAMPLERADDRESSMODE_REPEAT;
 	samplerInfo.address_mode_w = SDL_GPU_SAMPLERADDRESSMODE_REPEAT;
 	samplerInfo.mip_lod_bias = 0.0f;
-	samplerInfo.enable_anisotropy = SDL_FALSE;
+	samplerInfo.enable_anisotropy = false;
 	samplerInfo.max_anisotropy = 1.0f;
-	samplerInfo.enable_compare = SDL_FALSE;
+	samplerInfo.enable_compare = false;
 	samplerInfo.compare_op = SDL_GPU_COMPAREOP_ALWAYS;
 	samplerInfo.min_lod = 0.0f;
 	samplerInfo.max_lod = FLT_MAX;
