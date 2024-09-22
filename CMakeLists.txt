@@ -482,6 +482,7 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 		add_executable(stencil_pie_chart samples/stencil_pie_chart.c)
 		add_executable(platformer samples/platformer.cpp)
 		add_executable(polygon samples/polygon.cpp)
+		add_executable(scissor samples/scissor.c)
 		set(SAMPLE_EXECUTABLES
 			easysprite
 			basicserialization
@@ -513,6 +514,7 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 			stencil_pie_chart
 			platformer
 			polygon
+			scissor
 		)
 
 		foreach(CURRENT_TARGET ${SAMPLE_EXECUTABLES})
