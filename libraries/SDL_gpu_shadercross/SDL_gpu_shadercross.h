@@ -709,6 +709,7 @@ void *SDL_ShaderCross_CompileFromSPIRV(
         break;
     case SDL_GPU_SHADERFORMAT_MSL: // Fall through.
     case SDL_GPU_SHADERFORMAT_METALLIB:
+    case SDL_GPU_SHADERFORMAT_MSL | SDL_GPU_SHADERFORMAT_METALLIB:
         backend = SPVC_BACKEND_MSL;
         format = SDL_GPU_SHADERFORMAT_MSL;
         break;
