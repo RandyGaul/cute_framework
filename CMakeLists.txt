@@ -320,11 +320,9 @@ else()
 	set(SDL_EXAMPLES OFF CACHE BOOL "Do not build SDL examples")
 	FetchContent_Declare(
 		SDL3
-		GIT_REPOSITORY https://github.com/libsdl-org/SDL.git
-		GIT_TAG 88a01fbc964fbea1203071ea3ca2c6f799d4f571
+		URL https://github.com/libsdl-org/SDL/archive/88a01fbc964fbea1203071ea3ca2c6f799d4f571.zip
+		DOWNLOAD_EXTRACT_TIMESTAMP ON
 		CMAKE_ARGS -DSDL_SHARED=OFF -DSDL_STATIC=ON -DSDL_TEST_LIBRARY=OFF -DSDL_TESTS=OFF -DSDL_EXAMPLES=OFF
-		GIT_SHALLOW TRUE
-		GIT_PROGRESS TRUE
 	)
 	FetchContent_MakeAvailable(SDL3)
 	set(CF_LINK_LIBS ${CF_LINK_LIBS} SDL3::SDL3-static)
