@@ -323,7 +323,7 @@ else()
 		GIT_REPOSITORY https://github.com/libsdl-org/SDL.git
 		GIT_TAG 88a01fbc964fbea1203071ea3ca2c6f799d4f571
 		CMAKE_ARGS -DSDL_SHARED=OFF -DSDL_STATIC=ON -DSDL_TEST_LIBRARY=OFF -DSDL_TESTS=OFF -DSDL_EXAMPLES=OFF
-		GIT_SHALLOW TRUE
+		GIT_SHALLOW FALSE  # Cannot be shallow until SDL has tag
 		GIT_PROGRESS TRUE
 	)
 	FetchContent_MakeAvailable(SDL3)
