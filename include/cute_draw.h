@@ -267,7 +267,7 @@ CF_API void CF_CALL cf_draw_tri_fill(CF_V2 p0, CF_V2 p1, CF_V2 p2, float chubbin
  * @param    p0         An endpoint of the line.
  * @param    p1         An endpoint of the line.
  * @param    thickness  The thickness of the line to draw.
- * @related  cf_draw_line cf_draw_polyline cf_draw_bezier_line cf_draw_bezier_line2 cf_draw_arrow
+ * @related  cf_draw_line cf_draw_polyline cf_draw_bezier_line cf_draw_bezier_line2 cf_draw_arrow cf_draw_polygon_fill
  */
 CF_API void CF_CALL cf_draw_line(CF_V2 p0, CF_V2 p1, float thickness);
 
@@ -280,9 +280,21 @@ CF_API void CF_CALL cf_draw_line(CF_V2 p0, CF_V2 p1, float thickness);
  * @param    thickness    The thickness of the line to draw.
  * @param    loop         True to connect the first and last point to form a loop. False otherwise.
  * @param    bevel_count  The number of edges used to smooth corners.
- * @related  cf_draw_line cf_draw_polyline cf_draw_bezier_line cf_draw_bezier_line2 cf_draw_arrow
+ * @related  cf_draw_line cf_draw_polyline cf_draw_bezier_line cf_draw_bezier_line2 cf_draw_arrow cf_draw_polygon_fill
  */
 CF_API void CF_CALL cf_draw_polyline(CF_V2* points, int count, float thickness, bool loop);
+
+/**
+ * @function cf_draw_polygon_fill
+ * @category draw
+ * @brief    Draws a filled polygon.
+ * @param    points       An array of points to define the polygon surface.
+ * @param    count        The number of points in the polygon.
+ * @param    chubbiness Inflates the shape, similar to corner-rounding. Makes the shape chubbier.
+ * @remarks  This function has a hard-limit of up to 8 points.
+ * @related  cf_draw_line cf_draw_polyline cf_draw_bezier_line cf_draw_bezier_line2 cf_draw_arrow cf_draw_polygon_fill
+ */
+CF_API void CF_CALL cf_draw_polygon_fill(CF_V2* points, int count, float chubbiness);
 
 /**
  * @function cf_draw_bezier_line
@@ -503,7 +515,10 @@ typedef struct CF_Vertex
 	CF_V2 posH;
 
 	/* @member For internal use -- For signed-distance functions for rendering shapes. */
-	CF_V2 a, b, c;
+	int n;
+
+	/* @member For internal use -- For signed-distance functions for rendering shapes. */
+	CF_V2 shape[8];
 
 	/* @member For internal use -- For sprite rendering. */
 	CF_V2 uv;
@@ -526,11 +541,11 @@ typedef struct CF_Vertex
 	/* @member Used for the alpha-component (transparency). */
 	uint8_t alpha;
 
-	/* @member For internal use -- Whether or not to render shapes as filled or strokedx. */
+	/* @member For internal use -- Whether or not to render shapes as filled or stroked. */
 	uint8_t fill;
 
-	/* @member For internal use -- Reserved for a future purpose, simply fulfills byte alignment for now. */
-	uint8_t not_used;
+	/* @member For internal use -- Currently unused but fills needed padding space. */
+	uint8_t unused;
 
 	/* @member Four general purpose floats passed into custom user shaders. */
 	CF_Color attributes;

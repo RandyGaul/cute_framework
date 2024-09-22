@@ -217,6 +217,8 @@ float dd(float d)
 	return length(vec2(dFdx(d), dFdy(d)));
 }
 
+// Given two colors a and b, and a distance to the isosurface of a shape,
+// apply antialiasing, fill, and surface stroke FX.
 vec4 sdf(vec4 a, vec4 b, float d)
 {
 	float wire_d = sdf_stroke(d);
@@ -274,10 +276,32 @@ float distance_triangle(vec2 p, vec2 a, vec2 b, vec2 c)
 
 	float s = det2(e0, e2);
 	vec2 d = min(min(vec2(dot(pq0, pq0), s * det2(v0, e0)),
-						vec2(dot(pq1, pq1), s * det2(v1, e1))),
-						vec2(dot(pq2, pq2), s * det2(v2, e2)));
+	                 vec2(dot(pq1, pq1), s * det2(v1, e1))),
+	                 vec2(dot(pq2, pq2), s * det2(v2, e2)));
 
 	return -sqrt(d.x) * sign(d.y);
+}
+
+// Referenced from: https://www.shadertoy.com/view/wdBXRW
+float distance_polygon(vec2 p, vec2[8] v, int N)
+{
+	float d = dot(p-v[0], p-v[0]);
+	float s = 1.0;
+	for (int i=0, j=N-1; i<N; j=i, i++) {
+		vec2 e = v[j] - v[i];
+		vec2 w = p - v[i];
+		vec2 b = w - e * clamp(dot(w,e)/dot(e,e), 0.0, 1.0);
+		d = min(d, dot(b,b));
+
+		bvec3 cond = bvec3(p.y     >= v[i].y,
+		                   p.y     <  v[j].y,
+		                   e.x*w.y >  e.y*w.x);
+		if (all(cond) || all(not(cond))) {
+			s =- s;
+		}
+	}
+
+	return s * sqrt(d);
 }
 )";
 
@@ -307,37 +331,43 @@ layout (location = 0) in vec2 in_pos;
 layout (location = 1) in vec2 in_posH;
 layout (location = 2) in vec2 in_uv;
 
-layout (location = 3) in vec2 in_a;
-layout (location = 4) in vec2 in_b;
-layout (location = 5) in vec2 in_c;
-layout (location = 6) in vec4 in_col;
-layout (location = 7) in float in_radius;
-layout (location = 8) in float in_stroke;
-layout (location = 9) in float in_aa;
-layout (location = 10) in vec4 in_params;
-layout (location = 11) in vec4 in_user_params;
+layout (location = 3) in int in_n;
+layout (location = 4) in vec4 in_ab;
+layout (location = 5) in vec4 in_cd;
+layout (location = 6) in vec4 in_ef;
+layout (location = 7) in vec4 in_gh;
+layout (location = 8) in vec4 in_col;
+layout (location = 9) in float in_radius;
+layout (location = 10) in float in_stroke;
+layout (location = 11) in float in_aa;
+layout (location = 12) in vec4 in_params;
+layout (location = 13) in vec4 in_user_params;
 
 layout (location = 0) out vec2 v_pos;
-layout (location = 1) out vec2 v_a;
-layout (location = 2) out vec2 v_b;
-layout (location = 3) out vec2 v_c;
-layout (location = 4) out vec2 v_uv;
-layout (location = 5) out vec4 v_col;
-layout (location = 6) out float v_radius;
-layout (location = 7) out float v_stroke;
-layout (location = 8) out float v_aa;
-layout (location = 9) out float v_type;
-layout (location = 10) out float v_alpha;
-layout (location = 11) out float v_fill;
-layout (location = 12) out vec2 v_posH;
-layout (location = 13) out vec4 v_user;
+layout (location = 1) out int v_n;
+layout (location = 2) out vec4 v_ab;
+layout (location = 3) out vec4 v_cd;
+layout (location = 4) out vec4 v_ef;
+layout (location = 5) out vec4 v_gh;
+layout (location = 6) out vec2 v_uv;
+layout (location = 7) out vec4 v_col;
+layout (location = 8) out float v_radius;
+layout (location = 9) out float v_stroke;
+layout (location = 10) out float v_aa;
+layout (location = 11) out float v_type;
+layout (location = 12) out float v_alpha;
+layout (location = 13) out float v_fill;
+layout (location = 14) out vec2 v_posH;
+layout (location = 15) out vec4 v_user;
 
 void main()
 {
 	v_pos = in_pos;
-	v_a = in_a;
-	v_b = in_b;
-	v_c = in_c;
+	v_n = in_n;
+	v_ab = in_ab;
+	v_cd = in_cd;
+	v_ef = in_ef;
+	v_gh = in_gh;
 	v_uv = in_uv;
 	v_col = in_col;
 	v_radius = in_radius;
@@ -346,7 +376,7 @@ void main()
 	v_type = in_params.r;
 	v_alpha = in_params.g;
 	v_fill = in_params.b;
-	// = in_params.a;
+	// unused = in_params.a;
 
 	vec4 posH = vec4(in_posH, 0, 1);
 	gl_Position = posH;
@@ -357,19 +387,21 @@ void main()
 
 const char* s_draw_fs = R"(
 layout (location = 0) in vec2 v_pos;
-layout (location = 1) in vec2 v_a;
-layout (location = 2) in vec2 v_b;
-layout (location = 3) in vec2 v_c;
-layout (location = 4) in vec2 v_uv;
-layout (location = 5) in vec4 v_col;
-layout (location = 6) in float v_radius;
-layout (location = 7) in float v_stroke;
-layout (location = 8) in float v_aa;
-layout (location = 9) in float v_type;
-layout (location = 10) in float v_alpha;
-layout (location = 11) in float v_fill;
-layout (location = 12) in vec2 v_posH;
-layout (location = 13) in vec4 v_user;
+layout (location = 1) in flat int v_n;
+layout (location = 2) in vec4 v_ab;
+layout (location = 3) in vec4 v_cd;
+layout (location = 4) in vec4 v_ef;
+layout (location = 5) in vec4 v_gh;
+layout (location = 6) in vec2 v_uv;
+layout (location = 7) in vec4 v_col;
+layout (location = 8) in float v_radius;
+layout (location = 9) in float v_stroke;
+layout (location = 10) in float v_aa;
+layout (location = 11) in float v_type;
+layout (location = 12) in float v_alpha;
+layout (location = 13) in float v_fill;
+layout (location = 14) in vec2 v_posH;
+layout (location = 15) in vec4 v_user;
 
 layout(location = 0) out vec4 result;
 
@@ -386,6 +418,9 @@ layout (set = 3, binding = 0) uniform uniform_block {
 #include "distance.shd"
 #include "shader_stub.shd"
 
+// Used only for polygon SDF.
+vec2 pts[8];
+
 void main()
 {
 	bool is_sprite  = v_type >= (0.0/255.0) && v_type < (0.5/255.0);
@@ -394,6 +429,7 @@ void main()
 	bool is_seg     = v_type >  (2.5/255.0) && v_type < (3.5/255.0);
 	bool is_tri     = v_type >  (3.5/255.0) && v_type < (4.5/255.0);
 	bool is_tri_sdf = v_type >  (4.5/255.0) && v_type < (5.5/255.0);
+	bool is_poly    = v_type >  (5.5/255.0) && v_type < (6.5/255.0);
 
 	// Traditional sprite/text/tri cases.
 	vec4 c = vec4(0);
@@ -405,12 +441,22 @@ void main()
 	// SDF cases.
 	float d = 0;
 	if (is_box) {
-		d = distance_box(v_pos, v_a, v_b, v_c);
+		d = distance_box(v_pos, v_ab.xy, v_ab.zw, v_cd.xy);
 	} else if (is_seg) {
-		d = distance_segment(v_pos, v_a, v_b);
-		d = min(d, distance_segment(v_pos, v_b, v_c));
+		d = distance_segment(v_pos, v_ab.xy, v_ab.zw);
+		d = min(d, distance_segment(v_pos, v_ab.zw, v_cd.xy));
 	} else if (is_tri_sdf) {
-		d = distance_triangle(v_pos, v_a, v_b, v_c);
+		d = distance_triangle(v_pos, v_ab.xy, v_ab.zw, v_cd.xy);
+	} else if (is_poly) {
+		pts[0] = v_ab.xy;
+		pts[1] = v_ab.zw;
+		pts[2] = v_cd.xy;
+		pts[3] = v_cd.zw;
+		pts[4] = v_ef.xy;
+		pts[5] = v_ef.zw;
+		pts[6] = v_gh.xy;
+		pts[7] = v_gh.zw;
+		d = distance_polygon(v_pos, pts, v_n);
 	}
 	c = (!is_sprite && !is_text && !is_tri) ? sdf(c, v_col, d - v_radius) : c;
 

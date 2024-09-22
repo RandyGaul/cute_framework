@@ -274,6 +274,9 @@ CF_INLINE bool s_is_compatible(CF_ShaderInputFormat input_format, CF_VertexForma
 {
 	switch (input_format)
 	{
+	case CF_SHADER_INPUT_FORMAT_INT:
+		return vertex_format == CF_VERTEX_FORMAT_INT;
+
 	case CF_SHADER_INPUT_FORMAT_UINT:
 		return vertex_format == CF_VERTEX_FORMAT_UINT;
 

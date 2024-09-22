@@ -9,7 +9,7 @@ Category: [collision](/api_reference?id=collision)
 GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_math.h)  
 ---
 
-2D polygon.
+2D polygon, used for collision detection functions.
 
 Struct Members | Description
 --- | ---
@@ -19,7 +19,7 @@ Struct Members | Description
 
 ## Remarks
 
-Verts are ordered in counter-clockwise order (CCW).
+Verts are ordered in counter-clockwise order (CCW). Not to be confused with `CF_Polygon` which is used for rendering.
 
 ## Related Pages
 

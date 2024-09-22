@@ -25,6 +25,7 @@ enum BatchGeometryType : int
 	BATCH_GEOMETRY_TYPE_CIRCLE,
 	BATCH_GEOMETRY_TYPE_CAPSULE,
 	BATCH_GEOMETRY_TYPE_SEGMENT,
+	BATCH_GEOMETRY_TYPE_POLYGON,
 };
 
 struct BatchGeometry
@@ -34,7 +35,8 @@ struct BatchGeometry
 	CF_Aabb clip;
 	CF_V2 box[4];
 	CF_V2 boxH[4];
-	CF_V2 a, b, c, d;
+	int n; // Only needed/used for polygon.
+	CF_V2 shape[8];
 	float alpha;
 	float radius;
 	float stroke;
@@ -43,6 +45,7 @@ struct BatchGeometry
 	bool is_text;
 	bool is_sprite;
 	bool fill;
+	bool unused;
 	CF_Color user_params;
 };
 

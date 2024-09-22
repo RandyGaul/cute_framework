@@ -102,7 +102,7 @@
 #define CF_STATIC_ASSERT(condition, error_message_string) static_assert(condition, error_message_string)
 #define CF_STRINGIZE_INTERNAL(...) #__VA_ARGS__
 #define CF_STRINGIZE(...) CF_STRINGIZE_INTERNAL(__VA_ARGS__)
-#define CF_OFFSET_OF(T, member) ((size_t)((uintptr_t)(&(((T*)0)->member))))
+#define CF_OFFSET_OF(T, member) ((int)((uintptr_t)(&(((T*)0)->member))))
 #define CF_DEBUG_PRINTF(...)
 #define CF_ALIGN_TRUNCATE(v, n) ((v) & ~((n) - 1))
 #define CF_ALIGN_FORWARD(v, n) CF_ALIGN_TRUNCATE((v) + (n) - 1, (n))

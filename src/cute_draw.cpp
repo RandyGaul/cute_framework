@@ -51,6 +51,7 @@ using namespace Cute;
 #define VA_TYPE_SEGMENT       (3)
 #define VA_TYPE_TRIANGLE      (4)
 #define VA_TYPE_TRIANGLE_SDF  (5)
+#define VA_TYPE_POLYGON       (6)
 
 SPRITEBATCH_U64 cf_generate_texture_handle(void* pixels, int w, int h, void* udata)
 {
@@ -151,9 +152,9 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 				out[i].attributes = geom.user_params;
 			}
 
-			out[0].posH = geom.a;
-			out[1].posH = geom.b;
-			out[2].posH = geom.c;
+			out[0].posH = geom.shape[0];
+			out[1].posH = geom.shape[1];
+			out[2].posH = geom.shape[2];
 		
 			vert_count += 3;
 		}	break;
@@ -163,9 +164,9 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 			for (int i = 0; i < 6; ++i) {
 				out[i].p = quad[i];
 				out[i].posH = quadH[i];
-				out[i].a = geom.a;
-				out[i].b = geom.b;
-				out[i].c = geom.c;
+				out[i].shape[0] = geom.shape[0];
+				out[i].shape[1] = geom.shape[1];
+				out[i].shape[2] = geom.shape[2];
 				out[i].color = s->geom.color;
 				out[i].radius = s->geom.radius;
 				out[i].stroke = s->geom.stroke;
@@ -182,9 +183,9 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 		case BATCH_GEOMETRY_TYPE_QUAD:
 		{
 			for (int i = 0; i < 6; ++i) {
-				out[i].a = geom.a;
-				out[i].b = geom.b;
-				out[i].c = geom.c;
+				out[i].shape[0] = geom.shape[0];
+				out[i].shape[1] = geom.shape[1];
+				out[i].shape[2] = geom.shape[2];
 				out[i].color = s->geom.color;
 				out[i].radius = s->geom.radius;
 				out[i].stroke = s->geom.stroke;
@@ -218,7 +219,7 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 			if (geom.do_clipping) {
 				CF_ASSERT(geom.is_text);
 
-				CF_Aabb bb = make_aabb(geom.d, geom.b);
+				CF_Aabb bb = make_aabb(geom.shape[3], geom.shape[1]);
 				CF_Aabb clip = geom.clip;
 				float top = clip.max.y;
 				float left = clip.min.x;
@@ -254,10 +255,10 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 					continue;
 				}
 
-				geom.a = V2(bb.min.x, bb.max.y);
-				geom.b = bb.max;
-				geom.c = V2(bb.max.x, bb.min.y);
-				geom.d = bb.min;
+				geom.shape[0] = V2(bb.min.x, bb.max.y);
+				geom.shape[1] = bb.max;
+				geom.shape[2] = V2(bb.max.x, bb.min.y);
+				geom.shape[3] = bb.min;
 			}
 
 			for (int i = 0; i < 6; ++i) {
@@ -273,27 +274,27 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 				out[i].attributes = geom.user_params;
 			}
 
-			out[0].posH = geom.a;
+			out[0].posH = geom.shape[0];
 			out[0].uv.x = s->minx;
 			out[0].uv.y = s->maxy;
 
-			out[1].posH = geom.d;
+			out[1].posH = geom.shape[3];
 			out[1].uv.x = s->minx;
 			out[1].uv.y = s->miny;
 
-			out[2].posH = geom.b;
+			out[2].posH = geom.shape[1];
 			out[2].uv.x = s->maxx;
 			out[2].uv.y = s->maxy;
 
-			out[3].posH = geom.b;
+			out[3].posH = geom.shape[1];
 			out[3].uv.x = s->maxx;
 			out[3].uv.y = s->maxy;
 
-			out[4].posH = geom.d;
+			out[4].posH = geom.shape[3];
 			out[4].uv.x = s->minx;
 			out[4].uv.y = s->miny;
 
-			out[5].posH = geom.c;
+			out[5].posH = geom.shape[2];
 			out[5].uv.x = s->maxx;
 			out[5].uv.y = s->miny;
 
@@ -306,9 +307,9 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 			for (int i = 0; i < 6; ++i) {
 				out[i].p = quad[i];
 				out[i].posH = quadH[i];
-				out[i].a = geom.a;
-				out[i].b = geom.b;
-				out[i].c = geom.c;
+				out[i].shape[0] = geom.shape[0];
+				out[i].shape[1] = geom.shape[1];
+				out[i].shape[2] = geom.shape[2];
 				out[i].color = s->geom.color;
 				out[i].radius = s->geom.radius;
 				out[i].stroke = s->geom.stroke;
@@ -325,9 +326,9 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 		case BATCH_GEOMETRY_TYPE_SEGMENT:
 		{
 			for (int i = 0; i < 3; ++i) {
-				out[i].a = geom.a;
-				out[i].b = geom.b;
-				out[i].c = geom.c;
+				out[i].shape[0] = geom.shape[0];
+				out[i].shape[1] = geom.shape[1];
+				out[i].shape[2] = geom.shape[2];
 				out[i].color = s->geom.color;
 				out[i].radius = s->geom.radius;
 				out[i].stroke = s->geom.stroke;
@@ -347,6 +348,27 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 			out[2].posH = geom.boxH[2];
 		
 			vert_count += 3;
+		}	break;
+
+		case BATCH_GEOMETRY_TYPE_POLYGON:
+		{
+			for (int i = 0; i < 6; ++i) {
+				out[i].p = quad[i];
+				out[i].posH = quadH[i];
+				out[i].n = geom.n;
+				for (int j = 0; j < geom.n; ++j) {
+					out[i].shape[j] = geom.shape[j];
+				}
+				out[i].color = s->geom.color;
+				out[i].radius = s->geom.radius;
+				out[i].aa = s->geom.aa;
+				out[i].type = VA_TYPE_POLYGON;
+				out[i].alpha = (uint8_t)(s->geom.alpha * 255.0f);
+				out[i].fill = 255;
+				out[i].attributes = geom.user_params;
+			}
+
+			vert_count += 6;
 		}	break;
 		}
 	}
@@ -446,44 +468,91 @@ void cf_make_draw()
 	draw->reset_cam();
 
 	// Mesh + vertex attributes.
-	CF_VertexAttribute attrs[12] = { };
-	attrs[0].name = "in_pos";
-	attrs[0].format = CF_VERTEX_FORMAT_FLOAT2;
-	attrs[0].offset = CF_OFFSET_OF(CF_Vertex, p);
-	attrs[1].name = "in_posH";
-	attrs[1].format = CF_VERTEX_FORMAT_FLOAT2;
-	attrs[1].offset = CF_OFFSET_OF(CF_Vertex, posH);
-	attrs[2].name = "in_a";
-	attrs[2].format = CF_VERTEX_FORMAT_FLOAT2;
-	attrs[2].offset = CF_OFFSET_OF(CF_Vertex, a);
-	attrs[3].name = "in_b";
-	attrs[3].format = CF_VERTEX_FORMAT_FLOAT2;
-	attrs[3].offset = CF_OFFSET_OF(CF_Vertex, b);
-	attrs[4].name = "in_c";
-	attrs[4].format = CF_VERTEX_FORMAT_FLOAT2;
-	attrs[4].offset = CF_OFFSET_OF(CF_Vertex, c);
-	attrs[5].name = "in_uv";
-	attrs[5].format = CF_VERTEX_FORMAT_FLOAT2;
-	attrs[5].offset = CF_OFFSET_OF(CF_Vertex, uv);
-	attrs[6].name = "in_col";
-	attrs[6].format = CF_VERTEX_FORMAT_UBYTE4_NORM;
-	attrs[6].offset = CF_OFFSET_OF(CF_Vertex, color);
-	attrs[7].name = "in_radius";
-	attrs[7].format = CF_VERTEX_FORMAT_FLOAT;
-	attrs[7].offset = CF_OFFSET_OF(CF_Vertex, radius);
-	attrs[8].name = "in_stroke";
-	attrs[8].format = CF_VERTEX_FORMAT_FLOAT;
-	attrs[8].offset = CF_OFFSET_OF(CF_Vertex, stroke);
-	attrs[9].name = "in_aa";
-	attrs[9].format = CF_VERTEX_FORMAT_FLOAT;
-	attrs[9].offset = CF_OFFSET_OF(CF_Vertex, aa);
-	attrs[10].name = "in_params";
-	attrs[10].format = CF_VERTEX_FORMAT_UBYTE4_NORM;
-	attrs[10].offset = CF_OFFSET_OF(CF_Vertex, type);
-	attrs[11].name = "in_user_params";
-	attrs[11].format = CF_VERTEX_FORMAT_FLOAT4;
-	attrs[11].offset = CF_OFFSET_OF(CF_Vertex, attributes);
-	draw->mesh = cf_make_mesh(CF_MB * 5, attrs, CF_ARRAY_SIZE(attrs), sizeof(CF_Vertex));
+	Array<CF_VertexAttribute> attrs;
+	attrs.add({
+		.name = "in_pos",
+		.format = CF_VERTEX_FORMAT_FLOAT2,
+		.offset = CF_OFFSET_OF(CF_Vertex, p)
+	});
+
+	attrs.add({
+		.name = "in_posH",
+		.format = CF_VERTEX_FORMAT_FLOAT2,
+		.offset = CF_OFFSET_OF(CF_Vertex, posH),
+	});
+
+	attrs.add({
+		.name = "in_n",
+		.format = CF_VERTEX_FORMAT_INT,
+		.offset = CF_OFFSET_OF(CF_Vertex, n),
+	});
+
+	attrs.add({
+		.name = "in_ab",
+		.format = CF_VERTEX_FORMAT_FLOAT4,
+		.offset = CF_OFFSET_OF(CF_Vertex, shape[0]),
+	});
+
+	attrs.add({
+		.name = "in_cd",
+		.format = CF_VERTEX_FORMAT_FLOAT4,
+		.offset = CF_OFFSET_OF(CF_Vertex, shape[2]),
+	});
+
+	attrs.add({
+		.name = "in_ef",
+		.format = CF_VERTEX_FORMAT_FLOAT4,
+		.offset = CF_OFFSET_OF(CF_Vertex, shape[4]),
+	});
+
+	attrs.add({
+		.name = "in_gh",
+		.format = CF_VERTEX_FORMAT_FLOAT4,
+		.offset = CF_OFFSET_OF(CF_Vertex, shape[6]),
+	});
+
+	attrs.add({
+		.name = "in_uv",
+		.format = CF_VERTEX_FORMAT_FLOAT2,
+		.offset = CF_OFFSET_OF(CF_Vertex, uv),
+	});
+
+	attrs.add({
+		.name = "in_col",
+		.format = CF_VERTEX_FORMAT_UBYTE4_NORM,
+		.offset = CF_OFFSET_OF(CF_Vertex, color),
+	});
+
+	attrs.add({
+		.name = "in_radius",
+		.format = CF_VERTEX_FORMAT_FLOAT,
+		.offset = CF_OFFSET_OF(CF_Vertex, radius),
+	});
+
+	attrs.add({
+		.name = "in_stroke",
+		.format = CF_VERTEX_FORMAT_FLOAT,
+		.offset = CF_OFFSET_OF(CF_Vertex, stroke),
+	});
+
+	attrs.add({
+		.name = "in_aa",
+		.format = CF_VERTEX_FORMAT_FLOAT,
+		.offset = CF_OFFSET_OF(CF_Vertex, aa),
+	});
+
+	attrs.add({
+		.name = "in_params",
+		.format = CF_VERTEX_FORMAT_UBYTE4_NORM,
+		.offset = CF_OFFSET_OF(CF_Vertex, type),
+	});
+
+	attrs.add({
+		.name = "in_user_params",
+		.format = CF_VERTEX_FORMAT_FLOAT4,
+		.offset = CF_OFFSET_OF(CF_Vertex, attributes),
+	});
+	draw->mesh = cf_make_mesh(CF_MB * 5, attrs.data(), attrs.count(), sizeof(CF_Vertex));
 
 	// Shaders.
 	draw->shaders.add(app->draw_shader);
@@ -576,10 +645,10 @@ void cf_draw_sprite(const CF_Sprite* sprite)
 	}
 
 	CF_M3x2 m = draw->mvp;
-	s.geom.a = mul(m, quad[0]);
-	s.geom.b = mul(m, quad[1]);
-	s.geom.c = mul(m, quad[2]);
-	s.geom.d = mul(m, quad[3]);
+	s.geom.shape[0] = mul(m, quad[0]);
+	s.geom.shape[1] = mul(m, quad[1]);
+	s.geom.shape[2] = mul(m, quad[2]);
+	s.geom.shape[3] = mul(m, quad[3]);
 	s.geom.is_sprite = true;
 
 	s.geom.color = premultiply(pixel_white());
@@ -617,9 +686,9 @@ static void s_draw_quad(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float stroke, fl
 	s.geom.boxH[1] = mul(m, p1);
 	s.geom.boxH[2] = mul(m, p2);
 	s.geom.boxH[3] = mul(m, p3);
-	s.geom.a = c;
-	s.geom.b = he;
-	s.geom.c = u;
+	s.geom.shape[0] = c;
+	s.geom.shape[1] = he;
+	s.geom.shape[2] = u;
 
 	s.geom.color = premultiply(to_pixel(draw->colors.last()));
 	s.geom.alpha = 1.0f;
@@ -699,9 +768,9 @@ static void s_draw_circle(v2 position, float stroke, float radius, bool fill)
 	s.geom.boxH[1] = mul(m, s.geom.box[1]);
 	s.geom.boxH[2] = mul(m, s.geom.box[2]);
 	s.geom.boxH[3] = mul(m, s.geom.box[3]);
-	s.geom.a = position;
-	s.geom.b = position;
-	s.geom.c = position;
+	s.geom.shape[0] = position;
+	s.geom.shape[1] = position;
+	s.geom.shape[2] = position;
 
 	s.geom.color = premultiply(to_pixel(draw->colors.last()));
 	s.geom.alpha = 1.0f;
@@ -758,9 +827,9 @@ static void s_draw_capsule(v2 a, v2 b, float stroke, float radius, bool fill)
 	s.geom.boxH[1] = mul(m, s.geom.box[1]);
 	s.geom.boxH[2] = mul(m, s.geom.box[2]);
 	s.geom.boxH[3] = mul(m, s.geom.box[3]);
-	s.geom.a = a;
-	s.geom.b = b;
-	s.geom.c = a;
+	s.geom.shape[0] = a;
+	s.geom.shape[1] = b;
+	s.geom.shape[2] = a;
 
 	s.geom.color = premultiply(to_pixel(draw->colors.last()));
 	s.geom.alpha = 1.0f;
@@ -844,14 +913,14 @@ static void s_cf_draw_tri(v2 a, v2 b, v2 c, float stroke, float radius, bool fil
 		s.geom.boxH[1] = mul(m, s.geom.box[1]);
 		s.geom.boxH[2] = mul(m, s.geom.box[2]);
 		s.geom.boxH[3] = mul(m, s.geom.box[3]);
-		s.geom.a = a;
-		s.geom.b = b;
-		s.geom.c = c;
+		s.geom.shape[0] = a;
+		s.geom.shape[1] = b;
+		s.geom.shape[2] = c;
 	} else {
 		s.geom.type = BATCH_GEOMETRY_TYPE_TRI;
-		s.geom.a = mul(m, a);
-		s.geom.b = mul(m, b);
-		s.geom.c = mul(m, c);
+		s.geom.shape[0] = mul(m, a);
+		s.geom.shape[1] = mul(m, b);
+		s.geom.shape[2] = mul(m, c);
 	}
 
 	s.geom.color = premultiply(to_pixel(draw->colors.last()));
@@ -937,9 +1006,9 @@ void cf_draw_polyline(CF_V2* pts, int count, float thickness, bool loop)
 			draw_tri_fill(a, b, c);
 			draw_pop_antialias();
 		} else {
-			s.geom.a = p0;
-			s.geom.b = p1;
-			s.geom.c = solo ? p0 : p2;
+			s.geom.shape[0] = p0;
+			s.geom.shape[1] = p1;
+			s.geom.shape[2] = solo ? p0 : p2;
 			s.geom.box[0] = a;
 			s.geom.box[1] = b;
 			s.geom.box[2] = c;
@@ -950,7 +1019,7 @@ void cf_draw_polyline(CF_V2* pts, int count, float thickness, bool loop)
 		}
 	};
 
-#define DBG_POINT(P, C) \
+#define DBG_CF_V2(P, C) \
 	draw_push_color(color_##C()); \
 	draw_quad(make_aabb(P, 2.0f, 2.0f)); \
 	draw_text(#P, P + V2(0, 5)); \
@@ -1058,6 +1127,140 @@ void cf_draw_polyline(CF_V2* pts, int count, float thickness, bool loop)
 		submit(a, b, c);
 		submit(c, a, d);
 	}
+}
+
+float signed_area_2d(v2 A, v2 B, v2 C)
+{
+	return (B.x - A.x) * (C.y - A.y) - (B.y - A.y) * (C.x - A.x);
+}
+
+bool is_pt_in_triangle(v2 A, v2 B, v2 C, v2 P)
+{
+	float a1 = signed_area_2d(A, B, P);
+	float a2 = signed_area_2d(B, C, P);
+	float a3 = signed_area_2d(C, A, P);
+	return (a1 > 0 && a2 > 0 && a3 > 0);
+}
+
+bool is_ear(const v2* polygon, int i, int num_vertices)
+{
+	int prev = (i == 0) ? num_vertices - 1 : i - 1;
+	int next = (i + 1) % num_vertices;
+
+	if (signed_area_2d(polygon[prev], polygon[i], polygon[next]) <= 0) {
+		return false; // Not convex.
+	}
+
+	// Check if any other vertex is inside this triangle.
+	for (int j = 0; j < num_vertices; j++) {
+		if (j == prev || j == i || j == next) {
+			continue;
+		}
+		if (is_pt_in_triangle(polygon[prev], polygon[i], polygon[next], polygon[j])) {
+			// Another vertex is inside, not an ear.
+			return false;
+		}
+	}
+
+	return true;
+}
+
+v2* triangulate(v2* polygon, int num_vertices, int* num_triangles)
+{
+	if (num_vertices < 3) {
+		*num_triangles = 0;
+		return NULL;
+	}
+
+	int max_triangles = num_vertices - 2;
+	v2* triangles = (v2*)cf_alloc(max_triangles * 3 * sizeof(v2));
+	int triangle_count = 0;
+
+	int remaining_vertices = num_vertices;
+	while (remaining_vertices > 2) {
+		bool ear_found = false;
+		for (int i = 0; i < remaining_vertices; i++) {
+			if (is_ear(polygon, i, remaining_vertices)) {
+				int prev = (i == 0) ? remaining_vertices - 1 : i - 1;
+				int next = (i + 1) % remaining_vertices;
+				triangles[triangle_count * 3 + 0] = polygon[prev];
+				triangles[triangle_count * 3 + 1] = polygon[i];
+				triangles[triangle_count * 3 + 2] = polygon[next];
+				triangle_count++;
+
+				// Remove the ear vertex by shifting the array.
+				for (int j = i; j < remaining_vertices - 1; j++) {
+					polygon[j] = polygon[j + 1];
+				}
+				remaining_vertices--;
+				ear_found = true;
+				break;
+			}
+		}
+
+		if (!ear_found) {
+			// If we can't find an ear, the polygon might be invalid (e.g. self-intersecting).
+			cf_free(triangles);
+			*num_triangles = 0;
+			return NULL;
+		}
+	}
+
+	*num_triangles = triangle_count * 3;
+	return triangles;
+}
+
+#if 0
+CF_Polygon cf_make_polygon(const v2* points, int count)
+{
+	CF_ASSERT(count >= 3);
+	CF_PolygonInternal* poly = CF_NEW(CF_PolygonInternal);
+
+	v2* points_copy = (v2*)cf_alloc(sizeof(v2) * count);
+	CF_MEMCPY(points_copy, points, sizeof(v2) * count);
+	CF_DEFER(cf_free(points_copy));
+
+	int vert_count = 0;
+	poly->points = triangulate(points_copy, count, &vert_count);
+	poly->count = vert_count;
+
+	CF_Polygon result = { (uint64_t)poly };
+	return result;
+}
+#endif
+
+void cf_draw_polygon_fill(CF_V2* points, int count, float chubbiness)
+{
+	CF_ASSERT(count >= 3 && count <= 8);
+	CF_M3x2 m = draw->mvp;
+	spritebatch_sprite_t s = { };
+	s.image_id = app->default_image_id;
+	s.w = s.h = 1;
+
+	s.geom.type = BATCH_GEOMETRY_TYPE_POLYGON;
+	CF_Aabb bb = expand(make_aabb(points, count), draw->aaf+chubbiness);
+	CF_V2 box[4];
+	aabb_verts(box, bb);
+	s.geom.box[0] = box[0];
+	s.geom.box[1] = box[1];
+	s.geom.box[2] = box[2];
+	s.geom.box[3] = box[3];
+	s.geom.boxH[0] = mul(m, s.geom.box[0]);
+	s.geom.boxH[1] = mul(m, s.geom.box[1]);
+	s.geom.boxH[2] = mul(m, s.geom.box[2]);
+	s.geom.boxH[3] = mul(m, s.geom.box[3]);
+	s.geom.n = count;
+	for (int i = 0; i < count; ++i) {
+		s.geom.shape[i] = points[i];
+	}
+
+	s.geom.color = premultiply(to_pixel(draw->colors.last()));
+	s.geom.alpha = 1.0f;
+	s.geom.radius = chubbiness;
+	s.geom.aa = draw->aaf;
+	s.geom.user_params = draw->user_params.last();
+	s.sort_bits = draw->layers.last();
+	spritebatch_push(&draw->sb, s);
 }
 
 void cf_draw_bezier_line(CF_V2 a, CF_V2 c0, CF_V2 b, int iters, float thickness)
@@ -1303,14 +1506,14 @@ static void s_render(CF_Font* font, CF_Glyph* glyph, float font_size, int blur)
 	font->image_ids.add(glyph->image_id);
 }
 
-CF_Glyph* cf_font_get_glyph(CF_Font* font, int codepoint, float font_size, int blur)
+CF_Glyph* cf_font_get_glyph(CF_Font* font, int codeCF_V2, float font_size, int blur)
 {
-	uint64_t glyph_key = cf_glyph_key(codepoint, font_size, blur);
+	uint64_t glyph_key = cf_glyph_key(codeCF_V2, font_size, blur);
 	CF_Glyph* glyph = font->glyphs.try_get(glyph_key);
 	if (!glyph) {
-		int glyph_index = stbtt_FindGlyphIndex(&font->info, codepoint);
+		int glyph_index = stbtt_FindGlyphIndex(&font->info, codeCF_V2);
 		if (!glyph_index) {
-			// This codepoint doesn't exist in this font.
+			// This codeCF_V2 doesn't exist in this font.
 			// Try and use a backup glyph instead.
 			glyph_index = 0xFFFD;
 		}
@@ -1325,9 +1528,9 @@ CF_Glyph* cf_font_get_glyph(CF_Font* font, int codepoint, float font_size, int b
 	return glyph;
 }
 
-float cf_font_get_kern(CF_Font* font, float font_size, int codepoint0, int codepoint1)
+float cf_font_get_kern(CF_Font* font, float font_size, int codeCF_V20, int codeCF_V21)
 {
-	uint64_t key = CF_KERN_KEY(codepoint0, codepoint1);
+	uint64_t key = CF_KERN_KEY(codeCF_V20, codeCF_V21);
 	return font->kerning.get(key) * stbtt_ScaleForPixelHeight(&font->info, font_size);
 }
 
@@ -1835,7 +2038,7 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 	CF_ASSERT(font);
 	if (!font) return V2(0,0);
 
-	// Cache effect state key'd by input text pointer.
+	// Cache effect state key'd by input text CF_V2er.
 	CF_TextEffectState* effect_state = app->text_effect_states.try_find(text);
 	if (!effect_state) {
 		effect_state = app->text_effect_states.insert(text);
@@ -2085,10 +2288,10 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 			// Actually render the sprite.
 			if (visible && render) {
 				M3x2 m = draw->mvp;
-				s.geom.a = mul(m, V2(q0.x, q1.y));
-				s.geom.b = mul(m, V2(q1.x, q1.y));
-				s.geom.c = mul(m, V2(q1.x, q0.y));
-				s.geom.d = mul(m, V2(q0.x, q0.y));
+				s.geom.shape[0] = mul(m, V2(q0.x, q1.y));
+				s.geom.shape[1] = mul(m, V2(q1.x, q1.y));
+				s.geom.shape[2] = mul(m, V2(q1.x, q0.y));
+				s.geom.shape[3] = mul(m, V2(q0.x, q0.y));
 				s.geom.color = premultiply(to_pixel(color));
 				s.geom.clip = make_aabb(mul(m, clip.min), mul(m, clip.max));
 				s.geom.do_clipping = do_clipping;
@@ -2480,20 +2683,20 @@ void cf_draw_projection(CF_M3x2 projection)
 	draw->mvp = mul(projection, draw->cam_stack.last());
 }
 
-CF_V2 cf_world_to_screen(CF_V2 point)
+CF_V2 cf_world_to_screen(CF_V2 CF_V2)
 {
-	point = mul(draw->mvp, point);
-	point.x = (point.x + 1.0f) * (float)app->w * 0.5f;
-	point.y = (1.0f - point.y) * (float)app->h * 0.5f;
-	return point;
+	CF_V2 = mul(draw->mvp, CF_V2);
+	CF_V2.x = (CF_V2.x + 1.0f) * (float)app->w * 0.5f;
+	CF_V2.y = (1.0f - CF_V2.y) * (float)app->h * 0.5f;
+	return CF_V2;
 }
 
-CF_V2 cf_screen_to_world(CF_V2 point)
+CF_V2 cf_screen_to_world(CF_V2 CF_V2)
 {
-	point.x = (point.x / (float)app->w) * 2.0f - 1.0f;
-	point.y = -((point.y / (float)app->h) * 2.0f - 1.0f);
-	point = mul(invert(draw->mvp), point);
-	return point;
+	CF_V2.x = (CF_V2.x / (float)app->w) * 2.0f - 1.0f;
+	CF_V2.y = -((CF_V2.y / (float)app->h) * 2.0f - 1.0f);
+	CF_V2 = mul(invert(draw->mvp), CF_V2);
+	return CF_V2;
 }
 
 CF_TemporaryImage cf_fetch_image(const CF_Sprite* sprite)
