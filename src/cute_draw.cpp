@@ -378,18 +378,6 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 		draw->vertex_fn(verts, vert_count);
 	}
 
-	// Apply viewport.
-	Rect viewport = draw->viewports.last();
-	if (viewport.w >= 0 && viewport.h >= 0) {
-		cf_apply_viewport(viewport.x, viewport.y, viewport.w, viewport.h);
-	}
-
-	// Apply scissor.
-	Rect scissor = draw->scissors.last();
-	if (scissor.w >= 0 && scissor.h >= 0) {
-		cf_apply_scissor(scissor.x, scissor.y, scissor.w, scissor.h);
-	}
-
 	// Map the vertex buffer with sprite vertex data.
 	cf_mesh_update_vertex_data(draw->mesh, verts, vert_count);
 	cf_apply_mesh(draw->mesh);
@@ -408,8 +396,22 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 	// Apply render state.
 	cf_material_set_render_state(draw->material, draw->render_states.last());
 
-	// Kick off a draw call.
+	// Apply shader.
 	cf_apply_shader(draw->shaders.last(), draw->material);
+
+	// Apply viewport.
+	Rect viewport = draw->viewports.last();
+	if (viewport.w >= 0 && viewport.h >= 0) {
+		cf_apply_viewport(viewport.x, viewport.y, viewport.w, viewport.h);
+	}
+
+	// Apply scissor.
+	Rect scissor = draw->scissors.last();
+	if (scissor.w >= 0 && scissor.h >= 0) {
+		cf_apply_scissor(scissor.x, scissor.y, scissor.w, scissor.h);
+	}
+
+	// Kick off a draw call.
 	cf_draw_elements();
 	cf_commit();
 
