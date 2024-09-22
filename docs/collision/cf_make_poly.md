@@ -17,7 +17,7 @@ void cf_make_poly(CF_Poly* p);
 
 ## Remarks
 
-Runs [cf_hull](/collision/cf_hull.md) and [cf_norms](/collision/cf_norms.md), assumes p->verts and p->count are both set to valid values. Not to be confused with `cf_make_polygon`, which is used for rendering.
+Runs [cf_hull](/collision/cf_hull.md) and [cf_norms](/collision/cf_norms.md), assumes p->verts and p->count are both set to valid values.
 
 ## Related Pages
 

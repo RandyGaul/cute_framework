@@ -26,6 +26,7 @@ APP_OPTIONS_GFX_D3D11_BIT | Starts the application with a D3D11 backend.
 APP_OPTIONS_GFX_D3D12_BIT | Starts the application with a D3D12 backend.
 APP_OPTIONS_GFX_METAL_BIT | Starts the application with a Metal backend.
 APP_OPTIONS_GFX_VULKAN_BIT | Starts the application with a Vulkan backend.
+APP_OPTIONS_GFX_DEBUG_BIT | Starts the application with a debug mode graphics context.
 
 ## Code Example
 

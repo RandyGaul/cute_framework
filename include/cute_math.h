@@ -283,7 +283,7 @@ typedef struct CF_Rect
  * @struct   CF_Poly
  * @category collision
  * @brief    2D polygon, used for collision detection functions.
- * @remarks  Verts are ordered in counter-clockwise order (CCW). Not to be confused with `CF_Polygon` which is used for rendering.
+ * @remarks  Verts are ordered in counter-clockwise order (CCW).
  * @related  CF_POLY_MAX_VERTS CF_Poly cf_circle_to_poly cf_aabb_to_poly cf_capsule_to_poly cf_poly_to_poly cf_ray_to_poly cf_circle_to_poly_manifold cf_aabb_to_poly_manifold cf_capsule_to_poly_manifold cf_poly_to_poly_manifold
  */
 typedef struct CF_Poly
@@ -2159,7 +2159,7 @@ CF_API void CF_CALL cf_norms(CF_V2* verts, CF_V2* norms, int count);
  * @function cf_make_poly
  * @category collision
  * @brief    Fills out the polygon with values.
- * @remarks  Runs `cf_hull` and `cf_norms`, assumes p->verts and p->count are both set to valid values. Not to be confused with `cf_make_polygon`, which is used for rendering.
+ * @remarks  Runs `cf_hull` and `cf_norms`, assumes p->verts and p->count are both set to valid values.
  * @related  CF_Poly cf_hull cf_norms
  */
 CF_API void CF_CALL cf_make_poly(CF_Poly* p);

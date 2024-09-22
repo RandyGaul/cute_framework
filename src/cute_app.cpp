@@ -254,7 +254,7 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 		} else if (use_vulkan) {
 			device_name = "vulkan";
 		}
-		device = SDL_CreateGPUDevice(SDL_ShaderCross_GetShaderFormats(), true, device_name);
+		device = SDL_CreateGPUDevice(SDL_ShaderCross_GetShaderFormats(), options & APP_OPTIONS_GFX_DEBUG_BIT, device_name);
 		if (!device) {
 			return cf_result_error("Failed to create GPU Device.");
 		}

@@ -895,7 +895,7 @@ void CF_INLINE s_bounding_box_of_triangle(v2 a, v2 b, v2 c, float radius, float 
 	}
 }
 
-static void s_cf_draw_tri(v2 a, v2 b, v2 c, float stroke, float radius, bool fill)
+static void s_draw_tri(v2 a, v2 b, v2 c, float stroke, float radius, bool fill)
 {
 	CF_M3x2 m = draw->mvp;
 	spritebatch_sprite_t s = { };
@@ -936,12 +936,12 @@ static void s_cf_draw_tri(v2 a, v2 b, v2 c, float stroke, float radius, bool fil
 
 void cf_draw_tri(CF_V2 p0, CF_V2 p1, CF_V2 p2, float thickness, float chubbiness)
 {
-	s_cf_draw_tri(p0, p1, p2, thickness, chubbiness, false);
+	s_draw_tri(p0, p1, p2, thickness, chubbiness, false);
 }
 
 void cf_draw_tri_fill(CF_V2 p0, CF_V2 p1, CF_V2 p2, float chubbiness)
 {
-	s_cf_draw_tri(p0, p1, p2, 0, chubbiness, true);
+	s_draw_tri(p0, p1, p2, 0, chubbiness, true);
 }
 
 void cf_draw_line(CF_V2 p0, CF_V2 p1, float thickness)
@@ -1129,106 +1129,6 @@ void cf_draw_polyline(CF_V2* pts, int count, float thickness, bool loop)
 	}
 }
 
-float signed_area_2d(v2 A, v2 B, v2 C)
-{
-	return (B.x - A.x) * (C.y - A.y) - (B.y - A.y) * (C.x - A.x);
-}
-
-bool is_pt_in_triangle(v2 A, v2 B, v2 C, v2 P)
-{
-	float a1 = signed_area_2d(A, B, P);
-	float a2 = signed_area_2d(B, C, P);
-	float a3 = signed_area_2d(C, A, P);
-	return (a1 > 0 && a2 > 0 && a3 > 0);
-}
-
-bool is_ear(const v2* polygon, int i, int num_vertices)
-{
-	int prev = (i == 0) ? num_vertices - 1 : i - 1;
-	int next = (i + 1) % num_vertices;
-
-	if (signed_area_2d(polygon[prev], polygon[i], polygon[next]) <= 0) {
-		return false; // Not convex.
-	}
-
-	// Check if any other vertex is inside this triangle.
-	for (int j = 0; j < num_vertices; j++) {
-		if (j == prev || j == i || j == next) {
-			continue;
-		}
-		if (is_pt_in_triangle(polygon[prev], polygon[i], polygon[next], polygon[j])) {
-			// Another vertex is inside, not an ear.
-			return false;
-		}
-	}
-
-	return true;
-}
-
-v2* triangulate(v2* polygon, int num_vertices, int* num_triangles)
-{
-	if (num_vertices < 3) {
-		*num_triangles = 0;
-		return NULL;
-	}
-
-	int max_triangles = num_vertices - 2;
-	v2* triangles = (v2*)cf_alloc(max_triangles * 3 * sizeof(v2));
-	int triangle_count = 0;
-
-	int remaining_vertices = num_vertices;
-	while (remaining_vertices > 2) {
-		bool ear_found = false;
-		for (int i = 0; i < remaining_vertices; i++) {
-			if (is_ear(polygon, i, remaining_vertices)) {
-				int prev = (i == 0) ? remaining_vertices - 1 : i - 1;
-				int next = (i + 1) % remaining_vertices;
-				triangles[triangle_count * 3 + 0] = polygon[prev];
-				triangles[triangle_count * 3 + 1] = polygon[i];
-				triangles[triangle_count * 3 + 2] = polygon[next];
-				triangle_count++;
-
-				// Remove the ear vertex by shifting the array.
-				for (int j = i; j < remaining_vertices - 1; j++) {
-					polygon[j] = polygon[j + 1];
-				}
-				remaining_vertices--;
-				ear_found = true;
-				break;
-			}
-		}
-
-		if (!ear_found) {
-			// If we can't find an ear, the polygon might be invalid (e.g. self-intersecting).
-			cf_free(triangles);
-			*num_triangles = 0;
-			return NULL;
-		}
-	}
-
-	*num_triangles = triangle_count * 3;
-	return triangles;
-}
-
-#if 0
-CF_Polygon cf_make_polygon(const v2* points, int count)
-{
-	CF_ASSERT(count >= 3);
-	CF_PolygonInternal* poly = CF_NEW(CF_PolygonInternal);
-
-	v2* points_copy = (v2*)cf_alloc(sizeof(v2) * count);
-	CF_MEMCPY(points_copy, points, sizeof(v2) * count);
-	CF_DEFER(cf_free(points_copy));
-
-	int vert_count = 0;
-	poly->points = triangulate(points_copy, count, &vert_count);
-	poly->count = vert_count;
-
-	CF_Polygon result = { (uint64_t)poly };
-	return result;
-}
-#endif
-
 void cf_draw_polygon_fill(CF_V2* points, int count, float chubbiness)
 {
 	CF_ASSERT(count >= 3 && count <= 8);
@@ -1261,6 +1161,110 @@ void cf_draw_polygon_fill(CF_V2* points, int count, float chubbiness)
 	s.geom.user_params = draw->user_params.last();
 	s.sort_bits = draw->layers.last();
 	spritebatch_push(&draw->sb, s);
+	V2(0,0);
+}
+
+// Calculates the signed area of an oriented triangle.
+// ...Implemented as a macro to force-inline for slightly better debug perf.
+#define SIGNED_AREA_2D(A, B, C) \
+	(((B).x - (A).x) * ((C).y - (A).y) - ((B).y - (A).y) * ((C).x - (A).x))
+
+// Returns true if a point is within an oriented triangle.
+// ...Implemented as a macro to force-inline for slightly better debug perf.
+#define IS_PT_IN_TRIANGLE(A, B, C, P) \
+	(SIGNED_AREA_2D(A, B, P) > 0 && \
+	 SIGNED_AREA_2D(B, C, P) > 0 && \
+	 SIGNED_AREA_2D(C, A, P) > 0)
+
+bool is_ear(const v2* polygon, int i, int n)
+{
+	int prev = i - 1 < 0 ? n - 1 : i - 1;
+	int next = i + 1 == n ? 0 : i + 1;
+
+	if (SIGNED_AREA_2D(polygon[prev], polygon[i], polygon[next]) <= 0) {
+		return false; // Not convex.
+	}
+
+	// Check if any other vertex is inside this triangle.
+	for (int j = 0; j < n; j++) {
+		if (j == prev || j == i || j == next) {
+			continue;
+		}
+		if (IS_PT_IN_TRIANGLE(polygon[prev], polygon[i], polygon[next], polygon[j])) {
+			// Another vertex is inside, not an ear.
+			return false;
+		}
+	}
+
+	return true;
+}
+
+// Converts a polygon into renderable triangles.
+// ...Uses a simple ear-clipping routine.
+// ...Will produce incorrect results for: complex polygons (self-intersecting), duplicate/repeat verts,
+//    non-CCW ordering of inputs.
+v2* triangulate(v2* polygon, int n, int* out_count)
+{
+	CF_ASSERT(out_count);
+	if (n < 3) {
+		*out_count = 0;
+		return NULL;
+	}
+
+	int max_triangles = n - 2;
+	v2* triangles = (v2*)cf_alloc(max_triangles * 3 * sizeof(v2));
+	int count = 0;
+
+	int remaining = n;
+	while (remaining > 2) {
+		bool ear_found = false;
+		for (int i = 0; i < remaining; i++) {
+			if (is_ear(polygon, i, remaining)) {
+				int prev = i - 1 < 0 ? remaining - 1 : i - 1;
+				int next = i + 1 == remaining ? 0 : i + 1;
+				triangles[count] = polygon[prev];
+				triangles[count+1] = polygon[i];
+				triangles[count+2] = polygon[next];
+				count += 3;
+
+				// Remove the ear vertex by shifting the array.
+				for (int j = i; j < remaining - 1; j++) {
+					polygon[j] = polygon[j + 1];
+				}
+				remaining--;
+				ear_found = true;
+				break;
+			}
+		}
+
+		if (!ear_found) {
+			// If we can't find an ear, the polygon might be invalid (e.g. self-intersecting).
+			cf_free(triangles);
+			*out_count = 0;
+			return NULL;
+		}
+	}
+
+	*out_count = count;
+	return triangles;
+}
+
+void cf_draw_polygon_fill_simple(CF_V2* points, int count)
+{
+	v2* points_copy = (v2*)cf_alloc(sizeof(v2) * count);
+	CF_MEMCPY(points_copy, points, sizeof(v2) * count);
+
+	int n = 0;
+	v2* triangles = triangulate(points_copy, count, &n);
+	for (int i = 0; i < n; i += 3) {
+		v2 a = triangles[i];
+		v2 b = triangles[i+1];
+		v2 c = triangles[i+2];
+		s_draw_tri(a, b, c, 0, 0, true);
+	}
+
+	cf_free(triangles);
+	cf_free(points_copy);
 }
 
 void cf_draw_bezier_line(CF_V2 a, CF_V2 c0, CF_V2 b, int iters, float thickness)

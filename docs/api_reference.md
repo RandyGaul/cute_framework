@@ -329,6 +329,7 @@ This is a list of all functions in Cute Framework organized by categories. This 
 - [cf_draw_peek_layer](/draw/cf_draw_peek_layer.md)
 - [cf_draw_peek_vertex_attributes](/draw/cf_draw_peek_vertex_attributes.md)
 - [cf_draw_polygon_fill](/draw/cf_draw_polygon_fill.md)
+- [cf_draw_polygon_fill_simple](/draw/cf_draw_polygon_fill_simple.md)
 - [cf_draw_polyline](/draw/cf_draw_polyline.md)
 - [cf_draw_pop](/draw/cf_draw_pop.md)
 - [cf_draw_pop_antialias](/draw/cf_draw_pop_antialias.md)

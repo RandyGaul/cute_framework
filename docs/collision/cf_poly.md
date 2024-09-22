@@ -19,7 +19,7 @@ Struct Members | Description
 
 ## Remarks
 
-Verts are ordered in counter-clockwise order (CCW). Not to be confused with `CF_Polygon` which is used for rendering.
+Verts are ordered in counter-clockwise order (CCW).
 
 ## Related Pages
 
