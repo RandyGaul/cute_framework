@@ -2262,7 +2262,7 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 	}
 	draw->strikes.clear();
 
-	return V2(max_x, min_y);
+	return V2(max_x - position.x, position.y - min_y);
 }
 
 void cf_draw_text(const char* text, CF_V2 position, int text_length)

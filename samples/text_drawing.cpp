@@ -13,7 +13,7 @@ static void draw_text_boxed(const char* text, v2 pos, int len = -1)
 	if (draw_text_bound)
 	{
 		v2 size = text_size(text, len);
-		draw_box(make_aabb_from_top_left(V2(pos.x, pos.y), size.x, size.y), 0.f);
+		draw_box(cf_make_aabb_from_top_left(pos, size.x, size.y), 0.f);
 	}
 }
 
