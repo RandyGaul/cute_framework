@@ -245,10 +245,11 @@ set(CF_LINK_LIBS ${CF_LINK_LIBS} physfs)
 if(LINUX)
 	# Ensure tests are not built.
 	set(BUILD_TESTING OFF CACHE BOOL "Disable building s2n tests." FORCE)
-	
+
 	FetchContent_Declare(
 		s2n
 		URL https://github.com/aws/s2n-tls/archive/refs/tags/v1.3.46.zip
+		DOWNLOAD_EXTRACT_TIMESTAMP ON
 		GIT_PROGRESS TRUE
 	)
 	FetchContent_MakeAvailable(s2n)
@@ -314,18 +315,22 @@ set(SDL_SHARED_ENABLED_BY_DEFAULT OFF)
 if(EMSCRIPTEN)
 	# Emscripten provides its own SDL.
 else()
-	set(SDL_STATIC ON CACHE BOOL "Build SDL as a static library")
-	set(SDL_SHARED OFF CACHE BOOL "Do not build SDL as a shared library")
+	set(SDL_STATIC ${CF_FRAMEWORK_STATIC} CACHE BOOL "Build SDL as a static library")
+	set(SDL_SHARED $<NOT:${CF_FRAMEWORK_STATIC}> CACHE BOOL "Do not build SDL as a shared library")
 	set(SDL_TEST_LIBRARY OFF CACHE BOOL "Do not build SDL tests")
 	set(SDL_EXAMPLES OFF CACHE BOOL "Do not build SDL examples")
 	FetchContent_Declare(
 		SDL3
 		URL https://github.com/libsdl-org/SDL/archive/88a01fbc964fbea1203071ea3ca2c6f799d4f571.zip
 		DOWNLOAD_EXTRACT_TIMESTAMP ON
-		CMAKE_ARGS -DSDL_SHARED=OFF -DSDL_STATIC=ON -DSDL_TEST_LIBRARY=OFF -DSDL_TESTS=OFF -DSDL_EXAMPLES=OFF
+		CMAKE_ARGS -DSDL_SHARED=$<NOT:${CF_FRAMEWORK_STATIC}> -DSDL_STATIC=${CF_FRAMEWORK_STATIC} -DSDL_TEST_LIBRARY=OFF -DSDL_TESTS=OFF -DSDL_EXAMPLES=OFF
 	)
 	FetchContent_MakeAvailable(SDL3)
-	set(CF_LINK_LIBS ${CF_LINK_LIBS} SDL3::SDL3-static)
+	if(CF_FRAMEWORK_STATIC)
+		set(CF_LINK_LIBS ${CF_LINK_LIBS} SDL3::SDL3-static)
+	else ()
+		set(CF_LINK_LIBS ${CF_LINK_LIBS} SDL3::SDL3)
+	endif()
 endif()
 target_include_directories(cute PUBLIC ${SDL3_INCLUDE_DIRS})
 
@@ -370,6 +375,7 @@ if (CF_GLSLANG)
 	set(SPIRV_CROSS_SKIP_INSTALL OFF CACHE BOOL "Turn off install targets in SPIRV-Cross.")
 	set(SPIRV_CROSS_ENABLE_UTIL OFF CACHE BOOL "Turn off utils in SPIRV-Cross.")
 	set(SPIRV_CROSS_ENABLE_CPP OFF CACHE BOOL "Turn off CPP target support in SPIRV-Cross.")
+	set(SPIRV_CROSS_FORCE_PIC $<NOT:${CF_FRAMEWORK_STATIC}> CACHE BOOL "Force position-independent code for all targets.")
 	if (WINDOWS)
 		set(SPIRV_CROSS_ENABLE_MSL OFF CACHE BOOL "Turn off MSL support when on windows.")
 	endif()
