@@ -1742,8 +1742,8 @@ CF_INLINE void draw_push_shader(Shader shader) { cf_draw_push_shader(shader); }
 CF_INLINE Shader draw_pop_shader() { return cf_draw_pop_shader(); }
 CF_INLINE Shader draw_peek_shader() { return cf_draw_peek_shader(); }
 CF_INLINE void draw_push_alpha_discard(bool true_to_enable_alpha_discard) { return cf_draw_push_alpha_discard(true_to_enable_alpha_discard); }
-CF_INLINE bool draw_pop_alpha_discard() { cf_draw_pop_alpha_discard(); }
-CF_INLINE bool draw_peek_alpha_discard() { cf_draw_peek_alpha_discard(); }
+CF_INLINE bool draw_pop_alpha_discard() { return cf_draw_pop_alpha_discard(); }
+CF_INLINE bool draw_peek_alpha_discard() { return cf_draw_peek_alpha_discard(); }
 CF_INLINE void draw_set_texture(const char* name, Texture texture) { cf_draw_set_texture(name, texture); }
 CF_INLINE void draw_set_uniform(const char* name, void* data, UniformType type, int array_length) { cf_draw_set_uniform(name, data, type, array_length); }
 CF_INLINE void draw_set_uniform(const char* name, int val) { cf_draw_set_uniform_int(name, val); }
