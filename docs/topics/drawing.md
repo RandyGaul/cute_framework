@@ -13,6 +13,7 @@ CF can render a variety of shape types:
 - Triangle
 - Line segment
 - Polyline
+- Polygon (fill)
 - Capsule
 - Bezier polyline
 
@@ -77,6 +78,8 @@ The draw API has some settings that can be pushed and popped. Pushing and poppin
 - antialias scale
 - layer
 - chubbiness
+- shader
+- render state (blend modes/stencil)
 
 Whenever a setting is pushed it will be used by subsequent drawing functions. For example, if we push a color with [`cf_draw_push_color`](https://randygaul.github.io/cute_framework/#/draw/cf_draw_push_color) it will get used until a new setting is pushed or popped. When we pop a setting the previously pushed state is restored. This is a great way to use your own settings locally, and then restore anything previous without messing up the settings for the rest of your code. You may nest push/pop pairs as many times as needed.
 
@@ -169,8 +172,8 @@ You can see the [Text Effect](https://randygaul.github.io/cute_framework/#/text/
 
 ## Shaders
 
-You can apply customizable shaders that work with the draw API by using functions like [cf_render_settings_push_shader](https://randygaul.github.io/cute_framework/#/draw/cf_render_settings_push_shader)
- and [cf_render_settings_pop_shader](https://randygaul.github.io/cute_framework/#/draw/cf_render_settings_pop_shader). These shaders are written in glsl version 450. By creating custom FX you can implement interesting visuals like the following wavelet example:
+You can apply customizable shaders that work with the draw API by using functions like [cf_draw_push_shader](https://randygaul.github.io/cute_framework/#/draw/cf_draw_push_shader)
+ and [cf_draw_pop_shader](https://randygaul.github.io/cute_framework/#/draw/cf_draw_pop_shader). These shaders are written in glsl version 450. By creating custom FX you can implement interesting visuals like the following wavelet example:
 
 <p align="center">
 <img src=https://github.com/RandyGaul/cute_framework/blob/master/assets/wavelets.gif?raw=true>
@@ -179,7 +182,7 @@ You can apply customizable shaders that work with the draw API by using function
 The draw API passes *all* geometry into an optional shader function, within the fragment shader, called `shader`. This function is the final step in the entire fragment shader, granting the opportunity to alter the final output pixel color. Let us look at the custom shader skeleton/stub (does no-op).
 
 ```glsl
-vec4 shader(vec4 color, vec2 pos, vec2 atlas_uv, vec2 screen_uv, vec4 params)
+vec4 shader(vec4 color, vec2 pos, vec2 screen_uv, vec4 params)
 {
 	return vec4(mix(color.rgb, params.rgb, params.a), color.a);
 }
@@ -189,13 +192,13 @@ The `color` param is the color that would be rendered if you don't make any modi
 
 `pos` was the rendering position used when calling an associated draw function like `cf_draw_sprite`.
 
-`atlas_uv` is the uv corresponding to the texel within `u_image`, the atlas CF has generated behinds the scenes for any sprites to be drawn. This isn't a particularly useful thing to have access to, but is here just in case. You can freely access `u_image` and use `atlas_uv` for this particular fragment, such as for multisampling algorithms. For pixel art games it's important to sample using the function `smooth_uv`, something like so: `smooth_uv(v_uv, u_texture_size)` to generate a uv coordinate that will scale pixel art correctly.
+For pixel art games it's important to sample using the function `smooth_uv`, something like so: `smooth_uv(v_uv, u_texture_size)` to generate a uv coordinate that will scale pixel art correctly.
 
 `screen_uv` is a position relative to the screen, where (0,0) is the top-left, and (1,1) is the bottom-right of the screen.
 
 `params` are four optional floats. They come from vertex attributes set by [cf_draw_push_vertex_attributes](https://randygaul.github.io/cute_framework/#/draw/cf_draw_push_vertex_attributes). Each different item drawn through CF's draw API will attach the previously pushed attributes onto their vertices. These four floats are general-purpose, and only used to pass into the `shader` function. Use them to pack information to implement your own custom visual FX, such as color tinting, or anything else on a per-object basis.
 
-You may also add in uniforms and textures as-needed. The draw API has some functions for setting uniforms and textures via [cf_render_settings_push_uniform](https://randygaul.github.io/cute_framework/#/draw/cf_render_settings_push_uniform) and [cf_render_settings_push_texture](https://randygaul.github.io/cute_framework/#/draw/cf_render_settings_push_texture). These will get auto-magically hooked up and send values to your shader. When you add in your own uniforms just be sure to place them inside of a uniform block like in the below sample (see `shd_uniforms`, and don't change this name either! It must be called `shd_uniforms`).
+You may also add in uniforms and textures as-needed. The draw API has some functions for setting uniforms and textures via [cf_draw_set_uniform](https://randygaul.github.io/cute_framework/#/draw/cf_draw_set_uniform) and [cf_draw_set_texture](https://randygaul.github.io/cute_framework/#/draw/cf_draw_set_texture). These will get auto-magically hooked up and send values to your shader. When you add in your own uniforms just be sure to place them inside of a uniform block like in the below sample (see `shd_uniforms`, and don't change this name either! It must be called `shd_uniforms`).
 
 Here's a full example shader from the wavelets (called [shallow water on github](https://github.com/RandyGaul/cute_framework/blob/master/samples/shallow_water.cpp)) demo:
 
@@ -223,7 +226,7 @@ vec4 normal_to_color(vec2 n)
 	return vec4(n * 0.5 + 0.5, 1.0, 1.0);
 }
 
-vec4 shader(vec4 color, vec2 pos, vec2 atlas_uv, vec2 screen_uv, vec4 params)
+vec4 shader(vec4 color, vec2 pos, vec2 screen_uv, vec4 params)
 {
 	vec2 uv = screen_uv;
 	vec2 dim = vec2(1.0/160.0,1.0/120.0);
@@ -246,12 +249,12 @@ vec4 shader(vec4 color, vec2 pos, vec2 atlas_uv, vec2 screen_uv, vec4 params)
 The custom textures are `wavelets_tex`, `noise_tex` and `scene_tex`. The custom uniforms are `show_normals` and `show_noise`. In C++ it's quite easy to hook up your custom shader, textures, and uniforms (snippet from the [wavelets sample](https://github.com/RandyGaul/cute_framework/blob/master/samples/shallow_water.cpp)): If you want to learn about the fundamentals of writing shader code in CF take a look at the low-level graphics page here for an overview: [Low Level Graphics](https://randygaul.github.io/cute_framework/#/topics/low_level_graphics). This page assumes you know the basics of writing GLSL code to hook up to CF's draw API.
 
 ```cpp
-render_settings_push_shader(shader);
-render_settings_push_texture("wavelets_tex", canvas_get_target(offscreen));
-render_settings_push_texture("noise_tex", noise_tex);
-render_settings_push_texture("scene_tex", canvas_get_target(scene_canvas));
-render_settings_push_uniform("show_noise", show_noise ? 1.0f : 0.0f);
-render_settings_push_uniform("show_normals", show_normals ? 1.0f : 0.0f);
+draw_push_shader(shader);
+draw_set_texture("wavelets_tex", canvas_get_target(offscreen));
+draw_set_texture("noise_tex", noise_tex);
+draw_set_texture("scene_tex", canvas_get_target(scene_canvas));
+draw_set_uniform("show_noise", show_noise ? 1.0f : 0.0f);
+draw_set_uniform("show_normals", show_normals ? 1.0f : 0.0f);
 draw_push_antialias(false);
 draw_box(V2(0,0), (float)W, (float)H);
 ```
@@ -274,7 +277,7 @@ The canvas's internal texture can be sent to a shader as a uniform with [canvas_
 
 ## Loading Shaders
 
-First you must call [cf_shader_directory](https://randygaul.github.io/cute_framework/#/graphics/cf_shader_directory) to tell the application where your shaders reside on disk. Then you may call [cf_make_draw_shader](https://randygaul.github.io/cute_framework/#/draw/cf_make_draw_shader) to create a shader compatible with [cf_render_settings_push_shader](https://randygaul.github.io/cute_framework/#/draw/cf_render_settings_push_shader). You may then optionally setup a callback via [cf_shader_on_changed](https://randygaul.github.io/cute_framework/#/graphics/cf_shader_on_changed) to receive notifications when shaders change on-disk, in order to support shader live-reloading during development.
+First you must call [cf_shader_directory](https://randygaul.github.io/cute_framework/#/graphics/cf_shader_directory) to tell the application where your shaders reside on disk. Then you may call [cf_make_draw_shader](https://randygaul.github.io/cute_framework/#/draw/cf_make_draw_shader) to create a shader compatible with [cf_draw_push_shader](https://randygaul.github.io/cute_framework/#/draw/cf_draw_push_shader). You may then optionally setup a callback via [cf_shader_on_changed](https://randygaul.github.io/cute_framework/#/graphics/cf_shader_on_changed) to receive notifications when shaders change on-disk, in order to support shader live-reloading during development.
 
 Once done your custom shader will be able to apply itself to anything drawn through CF's draw API! A good example is the [metaballs sample](https://github.com/RandyGaul/cute_framework/blob/master/samples/metaballs.cpp)).
 
