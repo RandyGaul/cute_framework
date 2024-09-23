@@ -3,22 +3,21 @@
 [//]: # (See: https://github.com/RandyGaul/cute_framework/blob/master/samples/docs_parser.cpp)
 [](../header.md ':include')
 
-# cf_draw_mul
+# cf_draw_peek_alpha_discard
 
 Category: [draw](/api_reference?id=draw)  
 GitHub: [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_draw.h)  
 ---
 
-Applies the current draw transform to a point.
+TODO
 
 ```cpp
-CF_V2 cf_draw_mul(CF_M3x2 m, CF_V2 p);
+bool cf_draw_peek_alpha_discard();
 ```
 
-Parameters | Description
---- | ---
-m | The transform to apply.
-p | The point to transform.
+## Remarks
+
+Alpha discarding is useful to throw away pixels with zero alpha, for cutouts or as an optimization, or for certain blending techniques.
 
 ## Related Pages
 

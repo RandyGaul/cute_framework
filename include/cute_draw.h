@@ -1081,7 +1081,21 @@ CF_API bool CF_CALL cf_peek_text_effect_active();
  * @related  TODO
  */
 CF_API void CF_CALL cf_draw_push_viewport(CF_Rect viewport);
+
+/**
+ * @function cf_draw_pop_viewport
+ * @category draw
+ * @brief    TODO
+ * @related  TODO
+ */
 CF_API CF_Rect CF_CALL cf_draw_pop_viewport();
+
+/**
+ * @function cf_draw_peek_viewport
+ * @category draw
+ * @brief    TODO
+ * @related  TODO
+ */
 CF_API CF_Rect CF_CALL cf_draw_peek_viewport();
 
 /**
