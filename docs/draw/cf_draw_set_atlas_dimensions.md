@@ -3,7 +3,7 @@
 [//]: # (See: https://github.com/RandyGaul/cute_framework/blob/master/samples/docs_parser.cpp)
 [](../header.md ':include')
 
-# cf_render_settings_set_atlas_dimensions
+# cf_draw_set_atlas_dimensions
 
 Category: [draw](/api_reference?id=draw)  
 GitHub: [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_draw.h)  
@@ -12,7 +12,7 @@ GitHub: [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Sets the internal atlas size for batching sprites. The default is 2048x2048.
 
 ```cpp
-void cf_render_settings_set_atlas_dimensions(int width_in_pixels, int height_in_pixels);
+void cf_draw_set_atlas_dimensions(int width_in_pixels, int height_in_pixels);
 ```
 
 ## Remarks

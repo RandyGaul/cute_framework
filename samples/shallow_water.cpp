@@ -22,6 +22,49 @@ CF_Pixel* get_noise(int w, int h, float time)
 	return cf_noise_fbm_pixels_wrapped(w, h, 0, scale, lacunarity, octaves, falloff, time * frequency, time_amplitude);
 }
 
+#define STR(X) #X
+const char* s_shd = STR(
+layout(set = 2, binding = 1) uniform sampler2D wavelets_tex;
+layout(set = 2, binding = 2) uniform sampler2D noise_tex;
+layout(set = 2, binding = 3) uniform sampler2D scene_tex;
+
+layout(set = 3, binding = 1) uniform shd_uniforms {
+	float show_normals;
+	float show_noise;
+};
+
+vec2 normal_from_heightmap(sampler2D tex, vec2 uv)
+{
+	float ha = textureOffset(tex, uv, ivec2(-1, 1)).r;
+	float hb = textureOffset(tex, uv, ivec2(1, 1)).r;
+	float hc = textureOffset(tex, uv, ivec2(0, -1)).r;
+	vec2 n = vec2(ha - hc, hb - hc);
+	return n;
+}
+
+vec4 normal_to_color(vec2 n)
+{
+	return vec4(n * 0.5 + 0.5, 1.0, 1.0);
+}
+
+vec4 shader(vec4 color, vec2 pos, vec2 atlas_uv, vec2 screen_uv, vec4 params)
+{
+	vec2 uv = screen_uv;
+	vec2 dim = vec2(1.0 / 160.0, 1.0 / 120.0);
+	vec2 n = normal_from_heightmap(noise_tex, uv);
+	vec2 w = normal_from_heightmap(wavelets_tex, uv + n * dim * 10.0);
+	vec4 c = mix(normal_to_color(n), normal_to_color(w), 0.25);
+	c = texture(scene_tex, uv + (n + w) * dim * 10.0);
+	c = mix(c, vec4(1), length(n + w) > 0.2 ? 0.1 : 0.0);
+
+	c = show_normals > 0.0 ? mix(normal_to_color(n), normal_to_color(w), 0.25) : c;
+
+	c = show_noise > 0.0 ? texture(noise_tex, uv) : c;
+
+	return c;
+}
+);
+
 int main(int argc, char* argv[])
 {
 	make_app("Shallow Water Sample", 0, 0, 0, 640, 480, APP_OPTIONS_WINDOW_POS_CENTERED_BIT | APP_OPTIONS_RESIZABLE_BIT, argv[0]);
@@ -32,7 +75,7 @@ int main(int argc, char* argv[])
 	int W = 160;
 	int H = 120;
 
-	CF_Shader shader = cf_make_draw_shader("shallow_water.shd");
+	CF_Shader shader = cf_make_draw_shader_from_source(s_shd);
 	CF_Canvas offscreen = make_canvas(canvas_defaults(160, 120));
 	CF_Canvas scene_canvas = make_canvas(canvas_defaults(160, 120));
 
@@ -129,12 +172,12 @@ int main(int argc, char* argv[])
 		draw_sprite(scene);
 		render_to(scene_canvas, true);
 
-		render_settings_push_shader(shader);
-		render_settings_push_texture("wavelets_tex", canvas_get_target(offscreen));
-		render_settings_push_texture("noise_tex", noise_tex);
-		render_settings_push_texture("scene_tex", canvas_get_target(scene_canvas));
-		render_settings_set_uniform("show_noise", show_noise ? 1.0f : 0.0f);
-		render_settings_set_uniform("show_normals", show_normals ? 1.0f : 0.0f);
+		draw_push_shader(shader);
+		draw_set_texture("wavelets_tex", canvas_get_target(offscreen));
+		draw_set_texture("noise_tex", noise_tex);
+		draw_set_texture("scene_tex", canvas_get_target(scene_canvas));
+		draw_set_uniform("show_noise", show_noise ? 1.0f : 0.0f);
+		draw_set_uniform("show_normals", show_normals ? 1.0f : 0.0f);
 		draw_push_antialias(false);
 		draw_box(V2(0,0), (float)W, (float)H);
 		app_draw_onto_screen(false);

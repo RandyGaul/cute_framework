@@ -733,31 +733,6 @@ CF_API float CF_CALL cf_pop_text_wrap_width();
 CF_API float CF_CALL cf_peek_text_wrap_width();
 
 /**
- * @function cf_push_text_clip_box
- * @category text
- * @brief    Pushes a text clip box to use for text drawing.
- * @param    clip_box   The text clip box to use for text drawing.
- * @related  cf_make_font cf_push_font cf_push_text_wrap_width cf_push_text_clip_box cf_pop_text_clip_box cf_peek_text_clip_box cf_draw_text
- */
-CF_API void CF_CALL cf_push_text_clip_box(CF_Aabb clip_box);
-
-/**
- * @function cf_pop_text_clip_box
- * @category text
- * @brief    Pops and returns the last text clip box.
- * @related  cf_make_font cf_push_font cf_push_text_wrap_width cf_push_text_clip_box cf_pop_text_clip_box cf_peek_text_clip_box cf_draw_text
- */
-CF_API CF_Aabb CF_CALL cf_pop_text_clip_box();
-
-/**
- * @function cf_peek_text_clip_box
- * @category text
- * @brief    Returns the last text clip box.
- * @related  cf_make_font cf_push_font cf_push_text_wrap_width cf_push_text_clip_box cf_pop_text_clip_box cf_peek_text_clip_box cf_draw_text
- */
-CF_API CF_Aabb CF_CALL cf_peek_text_clip_box();
-
-/**
  * @function cf_push_text_vertical_layout
  * @category text
  * @brief    Pushes a whether or not to layout text vertically (as opposed to the default or horizontally).
@@ -1099,89 +1074,66 @@ CF_API bool CF_CALL cf_pop_text_effect_active();
 CF_API bool CF_CALL cf_peek_text_effect_active();
 
 /**
- * @function cf_render_settings_filter
- * @category draw
- * @brief    Sets a rendering `CF_Filter`, used for sampling from textures.
- * @param    filter       The filter.
- * @related  cf_render_settings_filter cf_render_settings_push_viewport cf_render_settings_push_scissor cf_render_settings_push_render_state cf_render_to cf_app_draw_onto_screen
- */
-CF_API void CF_CALL cf_render_settings_filter(CF_Filter filter);
-
-/**
- * @function cf_render_settings_push_viewport
+ * @function cf_draw_push_viewport
  * @category draw
  * @brief    Pushes a `CF_Rect` for the viewport to render within.
  * @param    viewport     The viewport.
- * @related  cf_render_settings_filter cf_render_settings_push_viewport cf_render_settings_pop_viewport cf_render_settings_peek_viewport cf_render_settings_push_scissor cf_render_settings_push_render_state cf_render_to cf_app_draw_onto_screen
+ * @related  TODO
  */
-CF_API void CF_CALL cf_render_settings_push_viewport(CF_Rect viewport);
+CF_API void CF_CALL cf_draw_push_viewport(CF_Rect viewport);
+CF_API CF_Rect CF_CALL cf_draw_pop_viewport();
+CF_API CF_Rect CF_CALL cf_draw_peek_viewport();
 
 /**
- * @function cf_render_settings_pop_viewport
- * @category draw
- * @brief    Pops and returns the last `CF_Rect` for the viewport.
- * @related  cf_render_settings_filter cf_render_settings_push_viewport cf_render_settings_pop_viewport cf_render_settings_peek_viewport cf_render_settings_push_scissor cf_render_settings_push_render_state cf_render_to cf_app_draw_onto_screen
- */
-CF_API CF_Rect CF_CALL cf_render_settings_pop_viewport();
-
-/**
- * @function cf_render_settings_peek_viewport
- * @category draw
- * @brief    Returns the last `CF_Rect` for the viewport.
- * @related  cf_render_settings_filter cf_render_settings_push_viewport cf_render_settings_pop_viewport cf_render_settings_peek_viewport cf_render_settings_push_scissor cf_render_settings_push_render_state cf_render_to cf_app_draw_onto_screen
- */
-CF_API CF_Rect CF_CALL cf_render_settings_peek_viewport();
-
-/**
- * @function cf_render_settings_push_scissor
+ * @function cf_draw_push_scissor
  * @category draw
  * @brief    Pushes a `CF_Rect` for the scissor to render within.
  * @param    scissor      The scissor box.
- * @related  cf_render_settings_filter cf_render_settings_push_viewport cf_render_settings_push_scissor cf_render_settings_pop_scissor cf_render_settings_peek_scissor cf_render_settings_push_render_state cf_render_to cf_app_draw_onto_screen
+ * @related  TODO
  */
-CF_API void CF_CALL cf_render_settings_push_scissor(CF_Rect scissor);
+CF_API void CF_CALL cf_draw_push_scissor(CF_Rect scissor);
 
 /**
- * @function cf_render_settings_pop_scissor
+ * @function cf_draw_pop_scissor
  * @category draw
  * @brief    Pops and returns the last `CF_Rect` for the scissor box.
- * @related  cf_render_settings_filter cf_render_settings_push_viewport cf_render_settings_push_scissor cf_render_settings_pop_scissor cf_render_settings_peek_scissor cf_render_settings_push_render_state cf_render_to cf_app_draw_onto_screen
+ * @related  TODO
  */
-CF_API CF_Rect CF_CALL cf_render_settings_pop_scissor();
+CF_API CF_Rect CF_CALL cf_draw_pop_scissor();
 
 /**
- * @function cf_render_settings_peek_scissor
+ * @function cf_draw_peek_scissor
  * @category draw
  * @brief    Returns the last `CF_Rect` for the scissor box.
- * @related  cf_render_settings_filter cf_render_settings_push_viewport cf_render_settings_push_scissor cf_render_settings_pop_scissor cf_render_settings_peek_scissor cf_render_settings_push_render_state cf_render_to cf_app_draw_onto_screen
+ * @related  TODO
  */
-CF_API CF_Rect CF_CALL cf_render_settings_peek_scissor();
+CF_API CF_Rect CF_CALL cf_draw_peek_scissor();
 
 /**
- * @function cf_render_settings_push_render_state
+ * @function cf_draw_push_render_state
  * @category draw
  * @brief    Pushes a `CF_RenderState` for controlling various rendering settings.
  * @param    render_state  Various types of rendering states.
- * @related  CF_RenderState cf_render_settings_filter cf_render_settings_push_viewport cf_render_settings_push_scissor cf_render_settings_push_render_state cf_render_settings_pop_render_state cf_render_settings_peek_render_state cf_render_to cf_app_draw_onto_screen
+ * @related  TODO
  */
-CF_API void CF_CALL cf_render_settings_push_render_state(CF_RenderState render_state);
+CF_API void CF_CALL cf_draw_push_render_state(CF_RenderState render_state);
 
 /**
- * @function cf_render_settings_pop_render_state
+ * @function cf_draw_pop_render_state
  * @category draw
- * @brief    Pops and returns the last `CF_RenderState`.* @related  CF_RenderState cf_render_settings_filter cf_render_settings_push_viewport cf_render_settings_push_scissor cf_render_settings_push_render_state cf_render_settings_pop_render_state cf_render_settings_peek_render_state cf_render_to cf_app_draw_onto_screen
+ * @brief    Pops and returns the last `CF_RenderState`.* @related  CF_RenderState cf_draw_filter cf_draw_push_viewport cf_draw_push_scissor cf_draw_push_render_state cf_draw_pop_render_state cf_draw_peek_render_state cf_render_to cf_app_draw_onto_screen
  */
-CF_API CF_RenderState CF_CALL cf_render_settings_pop_render_state();
+CF_API CF_RenderState CF_CALL cf_draw_pop_render_state();
 
 /**
- * @function cf_render_settings_peek_render_state
+ * @function cf_draw_peek_render_state
  * @category draw
- * @brief    Returns the last `CF_RenderState`.* @related  CF_RenderState cf_render_settings_filter cf_render_settings_push_viewport cf_render_settings_push_scissor cf_render_settings_push_render_state cf_render_settings_pop_render_state cf_render_settings_peek_render_state cf_render_to cf_app_draw_onto_screen
+ * @brief    Returns the last `CF_RenderState`.* @related  CF_RenderState cf_draw_filter cf_draw_push_viewport cf_draw_push_scissor cf_draw_push_render_state cf_draw_pop_render_state cf_draw_peek_render_state cf_render_to cf_app_draw_onto_screen
  */
-CF_API CF_RenderState CF_CALL cf_render_settings_peek_render_state();
+CF_API CF_RenderState CF_CALL cf_draw_peek_render_state();
 
 /**
- * @function cf_render_settings_set_atlas_dimensions
+ * @function cf_draw_set_atlas_dimensions
  * @category draw
  * @brief    Sets the internal atlas size for batching sprites. The default is 2048x2048.
  * @remarks  This function will completely invalidate the current cache, causing a noticeable perf cost -- do not call this
@@ -1199,7 +1151,7 @@ CF_API CF_RenderState CF_CALL cf_render_settings_peek_render_state();
  *           - 2048
  *           - 4096
  */
-CF_API void CF_CALL cf_render_settings_set_atlas_dimensions(int width_in_pixels, int height_in_pixels);
+CF_API void CF_CALL cf_draw_set_atlas_dimensions(int width_in_pixels, int height_in_pixels);
 
 /**
  * @function cf_make_draw_shader
@@ -1207,7 +1159,7 @@ CF_API void CF_CALL cf_render_settings_set_atlas_dimensions(int width_in_pixels,
  * @brief    Creates a custom draw shader.
  * @remarks  Your shader must be written in GLSL 450, and must follow some specific rules to be compatible with the draw API. For more in-depth explanations,
  *           see CF's docs on [Draw Shaders](https://randygaul.github.io/cute_framework/#/topics/drawing?id=shaders). Make sure to call `cf_shader_directory` first.
- * @related  CF_Shader cf_render_settings_push_shader cf_render_settings_pop_shader cf_render_settings_peek_shader cf_make_draw_shader_from_source
+ * @related  CF_Shader cf_draw_push_shader cf_draw_pop_shader cf_draw_peek_shader cf_make_draw_shader_from_source
  */
 CF_API CF_Shader CF_CALL cf_make_draw_shader(const char* path);
 
@@ -1218,97 +1170,108 @@ CF_API CF_Shader CF_CALL cf_make_draw_shader(const char* path);
  * @remarks  Your shader must be written in GLSL 450, and must follow some specific rules to be compatible with the draw API. For more in-depth explanations,
  *           see CF's docs on [Draw Shaders](https://randygaul.github.io/cute_framework/#/topics/drawing?id=shaders). If you wish to include other files into
  *           your shader via `#include` make sure to call `cf_shader_directory` first.
- * @related  CF_Shader cf_render_settings_push_shader cf_render_settings_pop_shader cf_render_settings_peek_shader
+ * @related  CF_Shader cf_draw_push_shader cf_draw_pop_shader cf_draw_peek_shader
  */
 CF_API CF_Shader CF_CALL cf_make_draw_shader_from_source(const char* src);
 
 /**
- * @function cf_render_settings_push_shader
+ * @function cf_draw_push_shader
  * @category draw
  * @brief    Pushes a custom shader.
- * @related  CF_Shader cf_render_settings_push_shader cf_render_settings_pop_shader cf_render_settings_peek_shader
+ * @related  CF_Shader cf_draw_push_shader cf_draw_pop_shader cf_draw_peek_shader
  */
-CF_API void CF_CALL cf_render_settings_push_shader(CF_Shader shader);
+CF_API void CF_CALL cf_draw_push_shader(CF_Shader shader);
 
 /**
- * @function cf_render_settings_pop_shader
+ * @function cf_draw_pop_shader
  * @category draw
  * @brief    Pops the custom shader and restores the previous state.
- * @related  CF_Shader cf_render_settings_push_shader cf_render_settings_pop_shader cf_render_settings_peek_shader
+ * @related  CF_Shader cf_draw_push_shader cf_draw_pop_shader cf_draw_peek_shader
  */
-CF_API CF_Shader CF_CALL cf_render_settings_pop_shader();
+CF_API CF_Shader CF_CALL cf_draw_pop_shader();
 
 /**
- * @function cf_render_settings_peek_shader
+ * @function cf_draw_peek_shader
  * @category draw
  * @brief    Returns the current custom shader.
- * @related  CF_Shader cf_render_settings_push_shader cf_render_settings_pop_shader cf_render_settings_peek_shader
+ * @related  CF_Shader cf_draw_push_shader cf_draw_pop_shader cf_draw_peek_shader
  */
-CF_API CF_Shader CF_CALL cf_render_settings_peek_shader();
+CF_API CF_Shader CF_CALL cf_draw_peek_shader();
 
 /**
- * @function cf_render_settings_push_texture
+ * @function cf_draw_push_alpha_discard
+ * @category draw
+ * @brief    Sets whether or not alpha discarding is enabled (on by default).
+ * @remarks  Alpha discarding is useful to throw away pixels with zero alpha, for cutouts or as an optimization, or for certain blending techniques.
+ * @related  cf_draw_set_texture cf_draw_set_uniform cf_draw_set_uniform_int cf_draw_set_uniform_float cf_draw_set_uniform_v2 cf_draw_set_uniform_color
+ */
+CF_API void CF_CALL cf_draw_push_alpha_discard(bool true_enable_alpha_discard);
+CF_API bool CF_CALL cf_draw_pop_alpha_discard();
+CF_API bool CF_CALL cf_draw_peek_alpha_discard();
+
+/**
+ * @function cf_draw_set_texture
  * @category draw
  * @brief    Pushes a texture onto a texture slot by name.
  * @param    name     The name of the uniform this texture will bind to.
  * @param    texture  The texture to bind.
- * @remarks  This is useful for custom shaders. See `cf_render_settings_push_shader`.
- * @related  cf_render_settings_push_texture cf_render_settings_set_uniform cf_render_settings_set_uniform_int cf_render_settings_set_uniform_float cf_render_settings_set_uniform_v2 cf_render_settings_set_uniform_color
+ * @remarks  This is useful for custom shaders. See `cf_draw_push_shader`.
+ * @related  cf_draw_set_texture cf_draw_set_uniform cf_draw_set_uniform_int cf_draw_set_uniform_float cf_draw_set_uniform_v2 cf_draw_set_uniform_color
  */
-CF_API void CF_CALL cf_render_settings_push_texture(const char* name, CF_Texture texture);
+CF_API void CF_CALL cf_draw_set_texture(const char* name, CF_Texture texture);
 
 /**
- * @function cf_render_settings_set_alpha_discard
- * @category draw
- * @brief    Sets whether or not alpha discarding is enabled (on by default).
- * @remarks  Alpha discarding is useful to throw away pixels with zero alpha, for cutouts or as an optimization, or for certain blending techniques.
- * @related  cf_render_settings_push_texture cf_render_settings_set_uniform cf_render_settings_set_uniform_int cf_render_settings_set_uniform_float cf_render_settings_set_uniform_v2 cf_render_settings_set_uniform_color
- */
-CF_API void CF_CALL cf_render_settings_set_alpha_discard(bool true_enable_alpha_discard);
-
-/**
- * @function cf_render_settings_set_uniform
+ * @function cf_draw_set_uniform
  * @category draw
  * @brief    Pushes a uniform and binds it by name.
  * @param    name          The name of the uniform in the shader.
  * @param    data          A pointer to the data to send to the shader.
  * @param    type          The `CF_UniformType` of data to send.
- * @param    array_length  The numeber of elements of `CF_UniformType` to send.
- * @related  cf_render_settings_push_texture cf_render_settings_set_uniform cf_render_settings_set_uniform_int cf_render_settings_set_uniform_float cf_render_settings_set_uniform_v2 cf_render_settings_set_uniform_color
+ * @param    array_length  The number of elements of `CF_UniformType` to send.
+ * @related  cf_draw_set_texture cf_draw_set_uniform cf_draw_set_uniform_int cf_draw_set_uniform_float cf_draw_set_uniform_v2 cf_draw_set_uniform_color
  */
-CF_API void CF_CALL cf_render_settings_set_uniform(const char* name, void* data, CF_UniformType type, int array_length);
+CF_API void CF_CALL cf_draw_set_uniform(const char* name, void* data, CF_UniformType type, int array_length);
 
 /**
- * @function cf_render_settings_set_uniform_int
+ * @function cf_draw_set_uniform_int
  * @category draw
  * @brief    Pushes an integer uniform by name.
- * @related  cf_render_settings_push_texture cf_render_settings_set_uniform cf_render_settings_set_uniform_int cf_render_settings_set_uniform_float cf_render_settings_set_uniform_v2 cf_render_settings_set_uniform_color
+ * @related  cf_draw_set_texture cf_draw_set_uniform cf_draw_set_uniform_int cf_draw_set_uniform_float cf_draw_set_uniform_v2 cf_draw_set_uniform_color
  */
-CF_API void CF_CALL cf_render_settings_set_uniform_int(const char* name, int val);
+CF_API void CF_CALL cf_draw_set_uniform_int(const char* name, int val);
 
 /**
- * @function cf_render_settings_set_uniform_float
+ * @function cf_draw_set_uniform_float
  * @category draw
  * @brief    Pushes a float uniform by name.
- * @related  cf_render_settings_push_texture cf_render_settings_set_uniform cf_render_settings_set_uniform_int cf_render_settings_set_uniform_float cf_render_settings_set_uniform_v2 cf_render_settings_set_uniform_color
+ * @related  cf_draw_set_texture cf_draw_set_uniform cf_draw_set_uniform_int cf_draw_set_uniform_float cf_draw_set_uniform_v2 cf_draw_set_uniform_color
  */
-CF_API void CF_CALL cf_render_settings_set_uniform_float(const char* name, float val);
+CF_API void CF_CALL cf_draw_set_uniform_float(const char* name, float val);
 
 /**
- * @function cf_render_settings_set_uniform_v2
+ * @function cf_draw_set_uniform_v2
  * @category draw
  * @brief    Pushes a vector uniform by name.
- * @related  cf_render_settings_push_texture cf_render_settings_set_uniform cf_render_settings_set_uniform_int cf_render_settings_set_uniform_float cf_render_settings_set_uniform_v2 cf_render_settings_set_uniform_color
+ * @related  cf_draw_set_texture cf_draw_set_uniform cf_draw_set_uniform_int cf_draw_set_uniform_float cf_draw_set_uniform_v2 cf_draw_set_uniform_color
  */
-CF_API void CF_CALL cf_render_settings_set_uniform_v2(const char* name, CF_V2 val);
+CF_API void CF_CALL cf_draw_set_uniform_v2(const char* name, CF_V2 val);
 
 /**
- * @function cf_render_settings_set_uniform_color
+ * @function cf_draw_set_uniform_color
  * @category draw
  * @brief    Pushes a color uniform by name.
- * @related  cf_render_settings_push_texture cf_render_settings_set_uniform cf_render_settings_set_uniform_int cf_render_settings_set_uniform_float cf_render_settings_set_uniform_v2 cf_render_settings_set_uniform_color
+ * @related  cf_draw_set_texture cf_draw_set_uniform cf_draw_set_uniform_int cf_draw_set_uniform_float cf_draw_set_uniform_v2 cf_draw_set_uniform_color
  */
-CF_API void CF_CALL cf_render_settings_set_uniform_color(const char* name, CF_Color val);
+CF_API void CF_CALL cf_draw_set_uniform_color(const char* name, CF_Color val);
+
+/**
+ * @function cf_draw_mul
+ * @category draw
+ * @brief    TODO
+ * @param    m      The transform to apply.
+ * @related  TODO
+ */
+CF_API CF_V2 CF_CALL cf_draw_mul(CF_M3x2 m, CF_V2 v);
 
 /**
  * @function cf_draw_transform
@@ -1499,7 +1462,7 @@ typedef struct CF_TemporaryImage
  * @brief    Returns a `CF_TemporaryImage` for a given sprite.
  * @param    sprite     The sprite.
  * @remarks  Useful to render a sprite in an external system, e.g. Dear ImGui. This struct is only valid until the next time
- *           `cf_app_draw_onto_screen` is called.
+ *           `cf_app_draw_onto_screen` is called. This function can have a negative impact on rendering perf.
  * @related  CF_TemporaryImage cf_fetch_image
  */
 CF_API CF_TemporaryImage CF_CALL cf_fetch_image(const CF_Sprite* sprite);
@@ -1649,9 +1612,6 @@ CF_INLINE int peek_font_blur() { return cf_peek_font_blur(); }
 CF_INLINE void push_text_wrap_width(float width) { cf_push_text_wrap_width(width); }
 CF_INLINE float pop_text_wrap_width() { return cf_pop_text_wrap_width(); }
 CF_INLINE float peek_text_wrap_width() { return cf_peek_text_wrap_width(); }
-CF_INLINE void push_text_clip_box(Aabb clip_box) { cf_push_text_clip_box(clip_box); }
-CF_INLINE Aabb pop_text_clip_box() { return cf_pop_text_clip_box(); }
-CF_INLINE Aabb peek_text_clip_box() { return cf_peek_text_clip_box(); }
 CF_INLINE float text_width(const char* text, int num_chars_to_render = -1) { return cf_text_width(text, num_chars_to_render); }
 CF_INLINE float text_height(const char* text, int num_chars_to_render = -1) { return cf_text_height(text, num_chars_to_render); }
 CF_INLINE v2 text_size(const char* text, int num_chars_to_render = -1) { return cf_text_size(text, num_chars_to_render); }
@@ -1713,29 +1673,30 @@ CF_INLINE void push_text_effect_active(bool effects_on) { cf_push_text_effect_ac
 CF_INLINE bool pop_text_effect_active() { return cf_pop_text_effect_active(); }
 CF_INLINE bool peek_text_effect_active() { return cf_peek_text_effect_active(); }
 
-CF_INLINE void render_settings_filter(Filter filter) { cf_render_settings_filter(filter); }
-CF_INLINE void render_settings_push_viewport(Rect viewport) { cf_render_settings_push_viewport(viewport); }
-CF_INLINE Rect render_settings_pop_viewport() { return cf_render_settings_pop_viewport(); }
-CF_INLINE Rect render_settings_peek_viewport() { return cf_render_settings_peek_viewport(); }
-CF_INLINE void render_settings_push_scissor(Rect scissor) { cf_render_settings_push_scissor(scissor); }
-CF_INLINE Rect render_settings_pop_scissor() { return cf_render_settings_pop_scissor(); }
-CF_INLINE Rect render_settings_peek_scissor() { return cf_render_settings_peek_scissor(); }
-CF_INLINE void render_settings_push_render_state(RenderState render_state) { cf_render_settings_push_render_state(render_state); }
-CF_INLINE RenderState render_settings_pop_render_state() { return cf_render_settings_pop_render_state(); }
-CF_INLINE RenderState render_settings_peek_render_state() { return cf_render_settings_peek_render_state(); }
-CF_INLINE void render_settings_set_atlas_dimensions(int width_in_pixels, int height_in_pixels) { cf_render_settings_set_atlas_dimensions(width_in_pixels, height_in_pixels); }
-CF_INLINE CF_Shader make_draw_shader(const char* path) { return cf_make_draw_shader(path); }
-CF_INLINE CF_Shader make_draw_shader_from_source(const char* src) { return cf_make_draw_shader_from_source(src); }
-CF_INLINE void render_settings_push_shader(Shader shader) { cf_render_settings_push_shader(shader); }
-CF_INLINE Shader render_settings_pop_shader() { return cf_render_settings_pop_shader(); }
-CF_INLINE Shader render_settings_peek_shader() { return cf_render_settings_peek_shader(); }
-CF_INLINE void render_settings_push_texture(const char* name, Texture texture) { cf_render_settings_push_texture(name, texture); }
-CF_INLINE void render_settings_set_uniform(const char* name, void* data, UniformType type, int array_length) { cf_render_settings_set_uniform(name, data, type, array_length); }
-CF_INLINE void render_settings_set_uniform(const char* name, int val) { cf_render_settings_set_uniform_int(name, val); }
-CF_INLINE void render_settings_set_uniform(const char* name, float val) { cf_render_settings_set_uniform_float(name, val); }
-CF_INLINE void render_settings_set_uniform(const char* name, v2 val) { cf_render_settings_set_uniform_v2(name, val); }
-CF_INLINE void render_settings_set_uniform(const char* name, Color val) { cf_render_settings_set_uniform_color(name, val); }
+CF_INLINE void draw_push_viewport(Rect viewport) { cf_draw_push_viewport(viewport); }
+CF_INLINE Rect draw_pop_viewport() { return cf_draw_pop_viewport(); }
+CF_INLINE Rect draw_peek_viewport() { return cf_draw_peek_viewport(); }
+CF_INLINE void draw_push_scissor(Rect scissor) { cf_draw_push_scissor(scissor); }
+CF_INLINE Rect draw_pop_scissor() { return cf_draw_pop_scissor(); }
+CF_INLINE Rect draw_peek_scissor() { return cf_draw_peek_scissor(); }
+CF_INLINE void draw_push_render_state(RenderState render_state) { cf_draw_push_render_state(render_state); }
+CF_INLINE RenderState draw_pop_render_state() { return cf_draw_pop_render_state(); }
+CF_INLINE RenderState draw_peek_render_state() { return cf_draw_peek_render_state(); }
+CF_INLINE void draw_set_atlas_dimensions(int width_in_pixels, int height_in_pixels) { cf_draw_set_atlas_dimensions(width_in_pixels, height_in_pixels); }
+CF_INLINE Shader make_draw_shader(const char* path) { return cf_make_draw_shader(path); }
+CF_INLINE Shader make_draw_shader_from_source(const char* src) { return cf_make_draw_shader_from_source(src); }
+CF_INLINE void draw_push_shader(Shader shader) { cf_draw_push_shader(shader); }
+CF_INLINE Shader draw_pop_shader() { return cf_draw_pop_shader(); }
+CF_INLINE Shader draw_peek_shader() { return cf_draw_peek_shader(); }
+CF_INLINE void draw_set_texture(const char* name, Texture texture) { cf_draw_set_texture(name, texture); }
+CF_INLINE void draw_set_uniform(const char* name, void* data, UniformType type, int array_length) { cf_draw_set_uniform(name, data, type, array_length); }
+CF_INLINE void draw_set_uniform(const char* name, int val) { cf_draw_set_uniform_int(name, val); }
+CF_INLINE void draw_set_uniform(const char* name, float val) { cf_draw_set_uniform_float(name, val); }
+CF_INLINE void draw_set_uniform(const char* name, v2 val) { cf_draw_set_uniform_v2(name, val); }
+CF_INLINE void draw_set_uniform(const char* name, Color val) { cf_draw_set_uniform_color(name, val); }
 
+CF_INLINE v2 draw_mul(M3x2 m, v2 v) { return cf_draw_mul(m, v); }
+CF_INLINE void draw_transform(M3x2 m) { cf_draw_transform(m); }
 CF_INLINE void draw_scale(float w, float h) { cf_draw_scale(w, h); }
 CF_INLINE void draw_scale(v2 scale) { cf_draw_scale_v2(scale); }
 CF_INLINE void draw_translate(float x, float y) { cf_draw_translate(x, y); }
@@ -1750,10 +1711,10 @@ CF_INLINE void draw_projection(M3x2 projection) { cf_draw_projection(projection)
 CF_INLINE v2 world_to_screen(v2 point) { return cf_world_to_screen(point); }
 CF_INLINE v2 screen_to_world(v2 point) { return cf_screen_to_world(point); }
 
-CF_INLINE void render_to(CF_Canvas canvas, bool clear = false) { cf_render_to(canvas, clear); }
+CF_INLINE void render_to(Canvas canvas, bool clear = false) { cf_render_to(canvas, clear); }
 
-CF_INLINE TemporaryImage fetch_image(const CF_Sprite* sprite) { return cf_fetch_image(sprite); }
-CF_INLINE TemporaryImage fetch_image(const CF_Sprite& sprite) { return cf_fetch_image(&sprite); }
+CF_INLINE TemporaryImage fetch_image(const Sprite* sprite) { return cf_fetch_image(sprite); }
+CF_INLINE TemporaryImage fetch_image(const Sprite& sprite) { return cf_fetch_image(&sprite); }
 
 using AtlasSubImage = CF_AtlasSubImage;
 CF_INLINE void register_premade_atlas(const char* png_path, int sub_image_count, AtlasSubImage* sub_images) { cf_register_premade_atlas(png_path, sub_image_count, sub_images); }

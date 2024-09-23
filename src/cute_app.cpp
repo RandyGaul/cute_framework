@@ -507,7 +507,7 @@ int cf_app_draw_onto_screen(bool clear)
 
 	// Update the spritebatch itself.
 	// This does atlas management internally.
-	// All references to backend texture id's are now invalid (fetch_image or canvas_get_backend_target_handle).
+	// All references to backend texture id's are now invalid (fetch_image or cf_texture_handle).
 	if (!draw->delay_defrag) {
 		spritebatch_tick(&draw->sb);
 		spritebatch_defrag(&draw->sb);
@@ -559,6 +559,7 @@ int cf_app_draw_onto_screen(bool clear)
 	app->cmd = NULL;
 
 	// Clear all pushed draw parameters.
+	draw->alpha_discards.set_count(1);
 	draw->colors.set_count(1);
 	draw->antialias.set_count(1);
 	draw->antialias_scale.set_count(1);
@@ -566,21 +567,20 @@ int cf_app_draw_onto_screen(bool clear)
 	draw->scissors.set_count(1);
 	draw->viewports.set_count(1);
 	draw->layers.set_count(1);
-	draw->layers.set_count(1);
 	draw->reset_cam();
 	draw->font_sizes.set_count(1);
 	draw->fonts.set_count(1);
 	draw->blurs.set_count(1);
 	draw->text_wrap_widths.set_count(1);
-	draw->text_clip_boxes.set_count(1);
 	draw->vertical.set_count(1);
 	draw->user_params.set_count(1);
 	draw->shaders.set_count(1);
 	draw->verts.clear();
-	spritebatch_clear(&draw->sb);
+	draw->draw_item_order = 0;
+	draw->cmds.clear();
+	draw->add_cmd();
 
 	// Report the number of draw calls.
-	// This is always user draw call count +1.
 	int draw_call_count = app->draw_call_count;
 	app->draw_call_count = 0;
 	return draw_call_count;

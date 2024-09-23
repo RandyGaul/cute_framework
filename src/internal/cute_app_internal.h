@@ -84,11 +84,11 @@ struct CF_App
 	float dpi_scale_prev = 1.0f;
 	bool dpi_scale_was_changed = false;
 	bool sync_window = false;
+	int draw_call_count = 0;
 	int w;
 	int h;
 	int x;
 	int y;
-	int draw_call_count = 0;
 	int canvas_w;
 	int canvas_h;
 	CF_Color clear_color = cf_color_black();

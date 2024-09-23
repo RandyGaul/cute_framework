@@ -72,12 +72,12 @@ int main(int argc, char* argv[])
 
 		static float time;
 		time += CF_DELTA_TIME * 0.125f * speed;
-		render_settings_push_shader(shader);
-		render_settings_set_uniform("amplitude", amplitude);
-		render_settings_set_uniform("time", time);
-		render_settings_set_uniform("show_noise", show_noise ? 1.0f : 0.0f);
-		render_settings_push_texture("water_tex", canvas_get_target(offscreen));
-		render_settings_push_texture("noise_tex", tex);
+		draw_push_shader(shader);
+		draw_set_uniform("amplitude", amplitude);
+		draw_set_uniform("time", time);
+		draw_set_uniform("show_noise", show_noise ? 1.0f : 0.0f);
+		draw_set_texture("water_tex", canvas_get_target(offscreen));
+		draw_set_texture("noise_tex", tex);
 		draw_push_antialias(false);
 		draw_box_fill(make_aabb(V2(0,0), 640, 480));
 

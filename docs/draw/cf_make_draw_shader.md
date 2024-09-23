@@ -23,7 +23,7 @@ see CF's docs on [Draw Shaders](https://randygaul.github.io/cute_framework/#/top
 ## Related Pages
 
 [CF_Shader](/graphics/cf_shader.md)  
-[cf_render_settings_push_shader](/draw/cf_render_settings_push_shader.md)  
-[cf_render_settings_pop_shader](/draw/cf_render_settings_pop_shader.md)  
-[cf_render_settings_peek_shader](/draw/cf_render_settings_peek_shader.md)  
+[cf_draw_push_shader](/draw/cf_draw_push_shader.md)  
+[cf_draw_pop_shader](/draw/cf_draw_pop_shader.md)  
+[cf_draw_peek_shader](/draw/cf_draw_peek_shader.md)  
 [cf_make_draw_shader_from_source](/draw/cf_make_draw_shader_from_source.md)  

@@ -1922,6 +1922,9 @@ CF_INLINE void commit() { cf_commit(); }
 
 }
 
+CF_INLINE bool operator==(const CF_RenderState& a, const CF_RenderState& b) { return !CF_MEMCMP(&a, &b, sizeof(a)); }
+CF_INLINE bool operator==(CF_Shader a, CF_Shader b) { return a.id == b.id; }
+
 #endif // CF_CPP
 
 #endif // CF_GRAPHICS_H

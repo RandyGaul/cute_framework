@@ -18,6 +18,7 @@
 #include <internal/cute_png_cache_internal.h>
 #include <internal/cute_aseprite_cache_internal.h>
 #include <internal/cute_font_internal.h>
+#include <internal/cute_graphics_internal.h>
 
 struct CF_Draw* draw;
 
@@ -57,7 +58,7 @@ SPRITEBATCH_U64 cf_generate_texture_handle(void* pixels, int w, int h, void* uda
 {
 	CF_UNUSED(udata);
 	CF_TextureParams params = cf_texture_defaults(w, h);
-	params.filter = draw->filter;
+	params.filter = FILTER_LINEAR;
 	CF_Texture texture = cf_make_texture(params);
 	cf_texture_update(texture, pixels, w * h * sizeof(CF_Pixel));
 	return texture.id;
@@ -215,52 +216,6 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 
 		case BATCH_GEOMETRY_TYPE_SPRITE:
 		{
-			bool clipped_away = false;
-			if (geom.do_clipping) {
-				CF_ASSERT(geom.is_text);
-
-				CF_Aabb bb = make_aabb(geom.shape[3], geom.shape[1]);
-				CF_Aabb clip = geom.clip;
-				float top = clip.max.y;
-				float left = clip.min.x;
-				float bottom = clip.min.y;
-				float right = clip.max.x;
-
-				int separating_x_axis = (bb.max.x < left) | (bb.min.x > right);
-				if (separating_x_axis) {
-					continue;
-				}
-
-				if (bb.min.x < left) {
-					s->minx = s_intersect(bb.min.x, bb.max.x, s->minx, s->maxx, left);
-					bb.min.x = left;
-				}
-
-				if (bb.max.x > right) {
-					s->maxx = s_intersect(bb.min.x, bb.max.x, s->minx, s->maxx, right);
-					bb.max.x = right;
-				}
-
-				if (bb.min.y < bottom) {
-					s->miny = s_intersect(bb.min.y, bb.max.y, s->miny, s->maxy, bottom);
-					bb.min.y = bottom;
-				}
-
-				if (bb.max.y > top) {
-					s->maxy = s_intersect(bb.min.y, bb.max.y, s->miny, s->maxy, top);
-					bb.max.y = top;
-				}
-
-				if ((bb.min.x >= bb.max.x) | (bb.min.y >= bb.max.y)) {
-					continue;
-				}
-
-				geom.shape[0] = V2(bb.min.x, bb.max.y);
-				geom.shape[1] = bb.max;
-				geom.shape[2] = V2(bb.max.x, bb.min.y);
-				geom.shape[3] = bb.min;
-			}
-
 			for (int i = 0; i < 6; ++i) {
 				out[i].alpha = (uint8_t)(s->geom.alpha * 255.0f);
 				if (s->geom.is_sprite) {
@@ -378,14 +333,16 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 		draw->vertex_fn(verts, vert_count);
 	}
 
+	CF_Command& cmd = draw->cmds[draw->cmd_index];
+
 	// Apply viewport.
-	Rect viewport = draw->viewports.last();
+	Rect viewport = cmd.viewport;
 	if (viewport.w >= 0 && viewport.h >= 0) {
 		cf_apply_viewport(viewport.x, viewport.y, viewport.w, viewport.h);
 	}
 
 	// Apply scissor.
-	Rect scissor = draw->scissors.last();
+	Rect scissor = cmd.scissor;
 	if (scissor.w >= 0 && scissor.h >= 0) {
 		cf_apply_scissor(scissor.x, scissor.y, scissor.w, scissor.h);
 	}
@@ -403,13 +360,13 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 	cf_material_set_uniform_fs(draw->material, "u_texture_size", &u_texture_size, CF_UNIFORM_TYPE_FLOAT2, 1);
 	v2 u_texel_size = cf_v2(1.0f / (float)texture_w, 1.0f / (float)texture_h);
 	cf_material_set_uniform_fs(draw->material, "u_texel_size", &u_texel_size, CF_UNIFORM_TYPE_FLOAT2, 1);
-	cf_material_set_uniform_fs(draw->material, "u_alpha_discard", &draw->alpha_discard, CF_UNIFORM_TYPE_FLOAT, 1);
+	cf_material_set_uniform_fs(draw->material, "u_alpha_discard", &cmd.alpha_discard, CF_UNIFORM_TYPE_FLOAT, 1);
 
 	// Apply render state.
-	cf_material_set_render_state(draw->material, draw->render_states.last());
+	cf_material_set_render_state(draw->material, cmd.render_state);
 
 	// Kick off a draw call.
-	cf_apply_shader(draw->shaders.last(), draw->material);
+	cf_apply_shader(cmd.shader, draw->material);
 	cf_draw_elements();
 	cf_commit();
 
@@ -466,6 +423,7 @@ void cf_make_draw()
 	draw = CF_NEW(CF_Draw);
 	draw->projection = ortho_2d(0, 0, (float)app->w, (float)app->h);
 	draw->reset_cam();
+	cf_arena_init(&draw->uniform_arena, 32, CF_MB);
 
 	// Mesh + vertex attributes.
 	Array<CF_VertexAttribute> attrs;
@@ -572,6 +530,9 @@ void cf_make_draw()
 
 	// Spritebatcher.
 	s_init_sb(2048, 2048);
+
+	// Create an initial draw command.
+	draw->add_cmd();
 }
 
 void cf_destroy_draw()
@@ -650,13 +611,11 @@ void cf_draw_sprite(const CF_Sprite* sprite)
 	s.geom.shape[2] = mul(m, quad[2]);
 	s.geom.shape[3] = mul(m, quad[3]);
 	s.geom.is_sprite = true;
-
 	s.geom.color = premultiply(pixel_white());
 	s.geom.alpha = sprite->opacity;
 	s.geom.user_params = draw->user_params.last();
-	s.sort_bits = draw->layers.last();
-
-	spritebatch_push(&draw->sb, s);
+	spritebatch_prefetch(&draw->sb, s.image_id, s.w, s.h);
+	DRAW_PUSH_ITEM(s);
 }
 
 static void s_draw_quad(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float stroke, float radius, bool fill)
@@ -689,7 +648,6 @@ static void s_draw_quad(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float stroke, fl
 	s.geom.shape[0] = c;
 	s.geom.shape[1] = he;
 	s.geom.shape[2] = u;
-
 	s.geom.color = premultiply(to_pixel(draw->colors.last()));
 	s.geom.alpha = 1.0f;
 	s.geom.radius = radius;
@@ -697,8 +655,7 @@ static void s_draw_quad(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float stroke, fl
 	s.geom.fill = fill;
 	s.geom.aa = aaf;
 	s.geom.user_params = draw->user_params.last();
-	s.sort_bits = draw->layers.last();
-	spritebatch_push(&draw->sb, s);
+	DRAW_PUSH_ITEM(s);
 }
 
 void cf_draw_quad(CF_Aabb bb, float thickness, float chubbiness)
@@ -771,7 +728,6 @@ static void s_draw_circle(v2 position, float stroke, float radius, bool fill)
 	s.geom.shape[0] = position;
 	s.geom.shape[1] = position;
 	s.geom.shape[2] = position;
-
 	s.geom.color = premultiply(to_pixel(draw->colors.last()));
 	s.geom.alpha = 1.0f;
 	s.geom.radius = radius;
@@ -779,8 +735,7 @@ static void s_draw_circle(v2 position, float stroke, float radius, bool fill)
 	s.geom.fill = fill;
 	s.geom.aa = aaf;
 	s.geom.user_params = draw->user_params.last();
-	s.sort_bits = draw->layers.last();
-	spritebatch_push(&draw->sb, s);
+	DRAW_PUSH_ITEM(s);
 }
 
 void cf_draw_circle(CF_Circle circle, float thickness)
@@ -830,7 +785,6 @@ static void s_draw_capsule(v2 a, v2 b, float stroke, float radius, bool fill)
 	s.geom.shape[0] = a;
 	s.geom.shape[1] = b;
 	s.geom.shape[2] = a;
-
 	s.geom.color = premultiply(to_pixel(draw->colors.last()));
 	s.geom.alpha = 1.0f;
 	s.geom.radius = radius;
@@ -838,9 +792,7 @@ static void s_draw_capsule(v2 a, v2 b, float stroke, float radius, bool fill)
 	s.geom.fill = fill;
 	s.geom.aa = draw->aaf;
 	s.geom.user_params = draw->user_params.last();
-	s.sort_bits = draw->layers.last();
-
-	spritebatch_push(&draw->sb, s);
+	DRAW_PUSH_ITEM(s);
 }
 
 void cf_draw_capsule(CF_Capsule capsule, float thickness)
@@ -930,8 +882,7 @@ static void s_draw_tri(v2 a, v2 b, v2 c, float stroke, float radius, bool fill)
 	s.geom.fill = fill;
 	s.geom.aa = draw->aaf;
 	s.geom.user_params = draw->user_params.last();
-	s.sort_bits = draw->layers.last();
-	spritebatch_push(&draw->sb, s);
+	DRAW_PUSH_ITEM(s);
 }
 
 void cf_draw_tri(CF_V2 p0, CF_V2 p1, CF_V2 p2, float thickness, float chubbiness)
@@ -1015,7 +966,7 @@ void cf_draw_polyline(CF_V2* pts, int count, float thickness, bool loop)
 			s.geom.boxH[0] = mul(m, a);
 			s.geom.boxH[1] = mul(m, b);
 			s.geom.boxH[2] = mul(m, c);
-			spritebatch_push(&draw->sb, s);
+			DRAW_PUSH_ITEM(s);
 		}
 	};
 
@@ -1159,9 +1110,7 @@ void cf_draw_polygon_fill(CF_V2* points, int count, float chubbiness)
 	s.geom.radius = chubbiness;
 	s.geom.aa = draw->aaf;
 	s.geom.user_params = draw->user_params.last();
-	s.sort_bits = draw->layers.last();
-	spritebatch_push(&draw->sb, s);
-	V2(0,0);
+	DRAW_PUSH_ITEM(s);
 }
 
 // Calculates the signed area of an oriented triangle.
@@ -1451,6 +1400,8 @@ static void s_blur(unsigned char* dst, int w, int h, int stride, int blur)
 	s_blur_cols(dst, w, h, stride, alpha);
 }
 
+// Unused, was for debugging atlases and rasterized text glyphs at one point.
+#if 0
 static void s_save(const char* path, uint8_t* pixels, int w, int h)
 {
 	cp_image_t img;
@@ -1466,6 +1417,7 @@ static void s_save(const char* path, uint8_t* pixels, int w, int h)
 	cp_save_png(path, &img);
 	CF_FREE(img.pix);
 }
+#endif
 
 static void s_render(CF_Font* font, CF_Glyph* glyph, float font_size, int blur)
 {
@@ -1612,25 +1564,6 @@ float cf_pop_text_wrap_width()
 float cf_peek_text_wrap_width()
 {
 	return draw->text_wrap_widths.last();
-}
-
-void cf_push_text_clip_box(CF_Aabb clip_box)
-{
-	draw->text_clip_boxes.add(clip_box);
-}
-
-CF_Aabb cf_pop_text_clip_box()
-{
-	if (draw->text_clip_boxes.count() > 1) {
-		return draw->text_clip_boxes.pop();
-	} else {
-		return draw->text_clip_boxes.last();
-	}
-}
-
-CF_Aabb cf_peek_text_clip_box()
-{
-	return draw->text_clip_boxes.last();
 }
 
 void cf_push_text_vertical_layout(bool layout_vertically)
@@ -2072,8 +2005,6 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 	// Gather up all state required for rendering.
 	float font_size = draw->font_sizes.last();
 	int blur = draw->blurs.last();
-	bool do_clipping = draw->text_clip_boxes.size() > 1;
-	CF_Aabb clip = draw->text_clip_boxes.last();
 	float wrap_w = draw->text_wrap_widths.last();
 	float scale = stbtt_ScaleForPixelHeight(&font->info, font_size);
 	float line_height = font->line_height * scale;
@@ -2297,12 +2228,8 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 				s.geom.shape[2] = mul(m, V2(q1.x, q0.y));
 				s.geom.shape[3] = mul(m, V2(q0.x, q0.y));
 				s.geom.color = premultiply(to_pixel(color));
-				s.geom.clip = make_aabb(mul(m, clip.min), mul(m, clip.max));
-				s.geom.do_clipping = do_clipping;
 				s.geom.is_text = true;
-				s.sort_bits = draw->layers.last();
-
-				spritebatch_push(&draw->sb, s);
+				DRAW_PUSH_ITEM(s);
 			}
 		}
 
@@ -2356,16 +2283,12 @@ void cf_text_get_markup_info(cf_text_markup_info_fn* fn, const char* text, CF_V2
 
 void cf_draw_push_layer(int layer)
 {
-	draw->layers.add(layer);
+	PUSH_DRAW_VAR(layer);
 }
 
 int cf_draw_pop_layer()
 {
-	if (draw->layers.count() > 1) {
-		return draw->layers.pop();
-	} else {
-		return draw->layers.last();
-	}
+	POP_DRAW_VAR(layer);
 }
 
 int cf_draw_peek_layer()
@@ -2461,72 +2384,52 @@ void cf_set_vertex_callback(CF_VertexFn* vertex_fn)
 	draw->vertex_fn = vertex_fn;
 }
 
-void cf_render_settings_filter(CF_Filter filter)
+void cf_draw_push_viewport(CF_Rect viewport)
 {
-	draw->filter = filter;
+	PUSH_DRAW_VAR_AND_ADD_CMD_IF_NEEDED(viewport);
 }
 
-void cf_render_settings_push_viewport(CF_Rect viewport)
+CF_Rect cf_draw_pop_viewport()
 {
-	draw->viewports.add(viewport);
+	POP_DRAW_VAR_AND_ADD_CMD_IF_NEEDED(viewport);
 }
 
-CF_Rect cf_render_settings_pop_viewport()
-{
-	if (draw->viewports.count()) {
-		CF_Rect result = draw->viewports.pop();
-		return result;
-	} else {
-		return draw->viewports.last();
-	}
-}
-
-CF_Rect cf_render_settings_peek_viewport()
+CF_Rect cf_draw_peek_viewport()
 {
 	return draw->viewports.last();
 }
 
-void cf_render_settings_push_scissor(CF_Rect scissor)
+void cf_draw_push_scissor(CF_Rect scissor)
 {
-	draw->scissors.add(scissor);
+	PUSH_DRAW_VAR_AND_ADD_CMD_IF_NEEDED(scissor);
 }
 
-CF_Rect cf_render_settings_pop_scissor()
+CF_Rect cf_draw_pop_scissor()
 {
-	if (draw->scissors.count()) {
-		CF_Rect result = draw->scissors.pop();
-		return result;
-	} else {
-		return draw->scissors.last();
-	}
+	POP_DRAW_VAR_AND_ADD_CMD_IF_NEEDED(scissor);
 }
 
-CF_Rect cf_render_settings_peek_scissor()
+CF_Rect cf_draw_peek_scissor()
 {
 	return draw->scissors.last();
 }
 
-void cf_render_settings_push_render_state(CF_RenderState render_state)
+void cf_draw_push_render_state(CF_RenderState render_state)
 {
-	draw->render_states.add(render_state);
+	PUSH_DRAW_VAR_AND_ADD_CMD_IF_NEEDED(render_state);
 }
 
-CF_RenderState cf_render_settings_pop_render_state()
+CF_RenderState cf_draw_pop_render_state()
 {
-	if (draw->render_states.count()) {
-		CF_RenderState result = draw->render_states.pop();
-		return result;
-	} else {
-		return draw->render_states.last();
-	}
+	POP_DRAW_VAR_AND_ADD_CMD_IF_NEEDED(render_state);
 }
 
-CF_RenderState cf_render_settings_peek_render_state()
+CF_RenderState cf_draw_peek_render_state()
 {
 	return draw->render_states.last();
 }
 
-void cf_render_settings_set_atlas_dimensions(int width_in_pixels, int height_in_pixels)
+void cf_draw_set_atlas_dimensions(int width_in_pixels, int height_in_pixels)
 {
 	spritebatch_term(&draw->sb);
 	s_init_sb(width_in_pixels, height_in_pixels);
@@ -2546,17 +2449,17 @@ CF_Shader cf_make_draw_shader_from_source(const char* src)
 	return cf_make_draw_shader_from_source_internal(src);
 }
 
-void cf_render_settings_push_shader(CF_Shader shader)
+void cf_draw_push_shader(CF_Shader shader)
 {
-	draw->shaders.add(shader);
+	PUSH_DRAW_VAR_AND_ADD_CMD_IF_NEEDED(shader);
 }
 
-CF_Shader cf_render_settings_pop_shader()
+CF_Shader cf_draw_pop_shader()
 {
-	return draw->shaders.count() > 1 ? draw->shaders.pop() : draw->shaders.last();
+	POP_DRAW_VAR_AND_ADD_CMD_IF_NEEDED(shader);
 }
 
-CF_Shader cf_render_settings_peek_shader()
+CF_Shader cf_draw_peek_shader()
 {
 	return draw->shaders.last();
 }
@@ -2565,50 +2468,186 @@ CF_Shader cf_render_settings_peek_shader()
 void cf_material_set_uniform_vs_internal(CF_Material material_handle, const char* block_name, const char* name, void* data, CF_UniformType type, int array_length);
 void cf_material_set_uniform_fs_internal(CF_Material material_handle, const char* block_name, const char* name, void* data, CF_UniformType type, int array_length);
 
-void cf_render_settings_push_texture(const char* name, CF_Texture texture)
+void cf_draw_push_texture(const char* name, CF_Texture texture)
 {
 	material_set_texture_fs(draw->material, name, texture);
 }
 
-void cf_render_settings_set_alpha_discard(bool true_enable_alpha_discard)
+void cf_draw_push_alpha_discard(bool true_enable_alpha_discard)
 {
-	draw->alpha_discard = true_enable_alpha_discard ? 1.0f : 0.0f;
+	float alpha_discard = true_enable_alpha_discard ? 1.0f : 0.0f;
+	PUSH_DRAW_VAR_AND_ADD_CMD_IF_NEEDED(alpha_discard);
 }
 
-void cf_render_settings_set_uniform(const char* name, void* data, CF_UniformType type, int array_length)
+static float s_pop_alpha_discard()
 {
-	cf_material_set_uniform_fs_internal(draw->material, "shd_uniforms", name, data, type, array_length);
+	POP_DRAW_VAR_AND_ADD_CMD_IF_NEEDED(alpha_discard);
 }
 
-void cf_render_settings_set_uniform_int(const char* name, int val)
+bool cf_draw_pop_alpha_discard()
 {
-	cf_material_set_uniform_fs_internal(draw->material, "shd_uniforms", name, &val, CF_UNIFORM_TYPE_INT, 1);
+	float alpha_discard = s_pop_alpha_discard();
+	return alpha_discard == 0 ? false : true;
 }
 
-void cf_render_settings_set_uniform_float(const char* name, float val)
+bool cf_draw_peek_alpha_discard()
 {
-	cf_material_set_uniform_fs_internal(draw->material, "shd_uniforms", name, &val, CF_UNIFORM_TYPE_FLOAT, 1);
+	return draw->alpha_discards.last() == 0 ? false : true;
 }
 
-void cf_render_settings_set_uniform_v2(const char* name, CF_V2 val)
+void cf_draw_set_texture(const char* name, CF_Texture texture)
 {
-	cf_material_set_uniform_fs_internal(draw->material, "shd_uniforms", name, &val, CF_UNIFORM_TYPE_FLOAT2, 1);
+	CF_DrawUniform u;
+	u.name = sintern(name);
+	u.texture = texture;
+	u.is_texture = true;
+	ADD_UNIFORM(u);
 }
 
-void cf_render_settings_set_uniform_color(const char* name, CF_Color val)
+void cf_draw_set_uniform(const char* name, void* data, CF_UniformType type, int array_length)
 {
-	cf_material_set_uniform_fs_internal(draw->material, "shd_uniforms", name, &val, CF_UNIFORM_TYPE_FLOAT4, 1);
+	CF_DrawUniform u;
+	u.name = sintern(name);
+	u.type = type;
+	u.array_length = array_length;
+	u.size = s_uniform_size(type) * array_length;
+	u.data = cf_arena_alloc(&draw->uniform_arena, u.size);
+	CF_MEMCPY(u.data, data, u.size);
+	ADD_UNIFORM(u);
+}
+
+void cf_draw_set_uniform_int(const char* name, int val)
+{
+	CF_DrawUniform u;
+	u.name = sintern(name);
+	u.type = CF_UNIFORM_TYPE_INT;
+	u.array_length = 1;
+	u.size = s_uniform_size(CF_UNIFORM_TYPE_INT);
+	u.data = cf_arena_alloc(&draw->uniform_arena, u.size);
+	CF_ASSERT(u.size == sizeof(val));
+	CF_MEMCPY(u.data, &val, u.size);
+	ADD_UNIFORM(u);
+}
+
+void cf_draw_set_uniform_float(const char* name, float val)
+{
+	CF_DrawUniform u;
+	u.name = sintern(name);
+	u.type = CF_UNIFORM_TYPE_FLOAT;
+	u.array_length = 1;
+	u.size = s_uniform_size(CF_UNIFORM_TYPE_FLOAT);
+	u.data = cf_arena_alloc(&draw->uniform_arena, u.size);
+	CF_ASSERT(u.size == sizeof(val));
+	CF_MEMCPY(u.data, &val, u.size);
+	ADD_UNIFORM(u);
+}
+
+void cf_draw_set_uniform_v2(const char* name, CF_V2 val)
+{
+	CF_DrawUniform u;
+	u.name = sintern(name);
+	u.type = CF_UNIFORM_TYPE_FLOAT2;
+	u.array_length = 1;
+	u.size = s_uniform_size(CF_UNIFORM_TYPE_FLOAT2);
+	u.data = cf_arena_alloc(&draw->uniform_arena, u.size);
+	CF_ASSERT(u.size == sizeof(val));
+	CF_MEMCPY(u.data, &val, u.size);
+	ADD_UNIFORM(u);
+}
+
+void cf_draw_set_uniform_color(const char* name, CF_Color val)
+{
+	CF_DrawUniform u;
+	u.name = sintern(name);
+	u.type = CF_UNIFORM_TYPE_FLOAT4;
+	u.array_length = 1;
+	u.size = s_uniform_size(CF_UNIFORM_TYPE_FLOAT4);
+	u.data = cf_arena_alloc(&draw->uniform_arena, u.size);
+	CF_ASSERT(u.size == sizeof(val));
+	CF_MEMCPY(u.data, &val, u.size);
+	ADD_UNIFORM(u);
 }
 
 void cf_render_to(CF_Canvas canvas, bool clear)
 {
 	cf_apply_canvas(canvas, clear);
-	spritebatch_flush(&draw->sb);
-	draw->verts.clear();
+
+	// Defrag early to avoid large numbers of individual draw calls for isolated sprites that
+	// just appeared this frame. This avoids first-frame stalls.
+	if (!draw->delay_defrag) {
+		spritebatch_tick(&draw->sb);
+		spritebatch_defrag(&draw->sb);
+	}
+
+	// Sort the commands by layer first, then by age (to maintain relative ordering).
+	std::stable_sort(draw->cmds.begin(), draw->cmds.end(), [](const CF_Command& a, const CF_Command& b) {
+		if (a.layer == b.layer) return a.id < b.id;
+		else return a.layer < b.layer;
+	});
+
+	int count = draw->cmds.count();
+	for (int i = 0; i < count; ++i) {
+		draw->cmd_index = i;
+		CF_Command* cmd = &draw->cmds[i];
+
+		// Apply uniforms.
+		CF_DrawUniform* u = &cmd->u;
+		if (u->is_texture) {
+			material_set_texture_fs(draw->material, u->name, u->texture);
+		} else if (u->data) {
+			cf_material_set_uniform_fs_internal(draw->material, "shd_uniforms", u->name, u->data, u->type, u->array_length);
+		}
+
+		// Collate all of the drawable items into the spritebatch.
+		if (!cmd->items.count()) continue;
+		for (int j = 0; j < cmd->items.count(); ++j) {
+			spritebatch_push(&draw->sb, cmd->items[j]);
+		}
+
+		// Merge with the next command if identical.
+		CF_Command* next = i + 1 == count ? NULL : draw->cmds + (i + 1);
+		if (next) {
+			if (next->u.size != cmd->u.size) {
+				continue;
+			}
+			if (next->u.type != cmd->u.type) {
+				continue;
+			}
+			if (next->u.texture.id != cmd->u.texture.id) {
+				continue;
+			}
+			if (next->u.name != cmd->u.name) {
+				continue;
+			}
+			if (CF_MEMCMP(next->u.data, cmd->u.data, next->u.size)) {
+				continue;
+			}
+			if (next->alpha_discard == cmd->alpha_discard &&
+			    next->render_state == cmd->render_state &&
+			    next->scissor == cmd->scissor &&
+			    next->shader == cmd->shader &&
+			    next->viewport == cmd->viewport) {
+				continue;
+			}
+		}
+
+		// Process the collated drawable items. Might get split up into multiple draw calls depending on
+		// the atlas compiler.
+		spritebatch_flush(&draw->sb);
+	}
 	if (clear && !draw->has_drawn_something) {
 		cf_clear_canvas(canvas);
 	}
 	draw->has_drawn_something = false;
+	cf_arena_reset(&draw->uniform_arena);
+	draw->cmds.clear();
+	draw->add_cmd();
+	draw->verts.clear();
+}
+
+CF_V2 cf_draw_mul(CF_M3x2 m, CF_V2 v)
+{
+	return mul(draw->cam_stack.last(), v);
 }
 
 void cf_draw_transform(CF_M3x2 m)
@@ -2741,14 +2780,13 @@ CF_TemporaryImage cf_fetch_image(const CF_Sprite* sprite)
 	}
 }
 
-
 CF_Texture cf_register_premade_atlas(const char* png_path, int sub_image_count, CF_AtlasSubImage* sub_images)
 {
 	CF_Image img = { 0 };
 	image_load_png(png_path, &img);
 	CF_ASSERT(img.pix);
 	CF_TextureParams params = cf_texture_defaults(img.w, img.h);
-	params.filter = draw->filter;
+	params.filter = FILTER_LINEAR;
 	CF_Texture texture = cf_make_texture(params);
 	cf_texture_update(texture, img.pix, img.w * img.h * sizeof(CF_Pixel));
 	Array<spritebatch_premade_sprite_t> premades;

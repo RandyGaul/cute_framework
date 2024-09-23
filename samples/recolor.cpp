@@ -35,8 +35,8 @@ int main(int argc, char* argv[])
 		ImGui::DragFloat("Strength", &strength, 0.01f, 0, 1);
 		ImGui::End();
 
-		render_settings_push_shader(recolor);
-		cf_draw_push_vertex_attributes(color.r, color.g, color.b, strength);
+		draw_push_shader(recolor);
+		draw_push_vertex_attributes(color.r, color.g, color.b, strength);
 		girl.update();
 		girl.draw();
 

@@ -49,7 +49,7 @@ int main(int argc, char* argv[])
 		state.stencil.read_mask = 0;
 		state.stencil.write_mask = 0xFF;
 		state.stencil.reference = 1;
-		render_settings_push_render_state(state);
+		draw_push_render_state(state);
 		{
 			// Draw sprite up/down/left/right to fill in border pixels.
 			sprite.transform.p.x = -1;
@@ -74,7 +74,7 @@ int main(int argc, char* argv[])
 			render_to(app_get_canvas(), true);
 			sprite.transform.p = V2(0, 0);
 		}
-		render_settings_pop_render_state();
+		draw_pop_render_state();
 		
 		// Color in the border pixels as white.
 		state = cf_render_state_defaults();
@@ -86,12 +86,12 @@ int main(int argc, char* argv[])
 		state.stencil.read_mask = 0xFF;
 		state.stencil.write_mask = 0;
 		state.stencil.reference = 1;
-		render_settings_push_render_state(state);
+		draw_push_render_state(state);
 		{
 			draw_box_fill(V2(0,0), (float)w, (float)h);
 			render_to(app_get_canvas());
 		}
-		render_settings_pop_render_state();
+		draw_pop_render_state();
 		
 		// Draw the sprite normally, centered within the border.
 		sprite.draw();

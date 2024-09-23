@@ -3,26 +3,25 @@
 [//]: # (See: https://github.com/RandyGaul/cute_framework/blob/master/samples/docs_parser.cpp)
 [](../header.md ':include')
 
-# cf_render_settings_filter
+# cf_draw_peek_render_state
 
 Category: [draw](/api_reference?id=draw)  
 GitHub: [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_draw.h)  
 ---
 
-Sets a rendering [CF_Filter](/graphics/cf_filter.md), used for sampling from textures.
+Returns the last [CF_RenderState](/graphics/cf_renderstate.md).
 
 ```cpp
-void cf_render_settings_filter(CF_Filter filter);
+CF_RenderState cf_draw_peek_render_state();
 ```
-
-Parameters | Description
---- | ---
-filter | The filter.
 
 ## Related Pages
 
+[CF_RenderState](/graphics/cf_renderstate.md)  
+cf_draw_filter  
+[cf_draw_push_viewport](/draw/cf_draw_push_viewport.md)  
+[cf_draw_push_scissor](/draw/cf_draw_push_scissor.md)  
+[cf_draw_push_render_state](/draw/cf_draw_push_render_state.md)  
+[cf_draw_pop_render_state](/draw/cf_draw_pop_render_state.md)  
 [cf_app_draw_onto_screen](/app/cf_app_draw_onto_screen.md)  
-[cf_render_settings_push_viewport](/draw/cf_render_settings_push_viewport.md)  
-[cf_render_settings_push_scissor](/draw/cf_render_settings_push_scissor.md)  
-[cf_render_settings_push_render_state](/draw/cf_render_settings_push_render_state.md)  
 [cf_render_to](/draw/cf_render_to.md)  

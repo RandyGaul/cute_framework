@@ -69,11 +69,11 @@ int main(int argc, char* argv[])
 			render_to(soft_circles, true);
 		
 			// Apply the metaball filter to the soft circle render.
-			render_settings_push_shader(shd);
-			render_settings_push_texture("tex", canvas_get_target(soft_circles));
+			draw_push_shader(shd);
+			draw_set_texture("tex", canvas_get_target(soft_circles));
 			draw_box_fill(make_aabb(V2(-w/scale, -h/scale), V2(w/scale, h/scale)));
 			render_to(app_get_canvas());
-			render_settings_pop_shader();
+			draw_pop_shader();
 		}
 
 		draw_text("press space", -V2(text_width("press_space") * 0.5f, 0));

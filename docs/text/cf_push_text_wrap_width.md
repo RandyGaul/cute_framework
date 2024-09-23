@@ -26,4 +26,4 @@ width | The text wrap width to use for text drawing.
 [cf_draw_text](/text/cf_draw_text.md)  
 [cf_pop_text_wrap_width](/text/cf_pop_text_wrap_width.md)  
 [cf_peek_text_wrap_width](/text/cf_peek_text_wrap_width.md)  
-[cf_push_text_clip_box](/text/cf_push_text_clip_box.md)  
+cf_push_text_clip_box  

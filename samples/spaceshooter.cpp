@@ -1197,7 +1197,7 @@ int main(int argc, char* argv[])
 		g->animations.update();
 		g->animations.draw();
 
-		render_settings_push_shader(flash_shader);
+		draw_push_shader(flash_shader);
 		app_draw_onto_screen(true);
 	}
 

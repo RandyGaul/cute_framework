@@ -26,12 +26,14 @@ int main(int argc, char* argv[])
 
 		// Clip text within a box.
 		v2 o = V2(cosf(t),sinf(t)) * 25.0f;
-		Aabb clip = make_aabb(V2(-75,-75) + o, V2(75,50) + o);
-		draw_quad(clip, 0);
-		push_text_clip_box(clip);
-		push_font_size(13);
-		draw_text("Clip this text within a box.", V2(-100,0));
-		pop_text_clip_box();
+
+		// @TODO -- Fix + refactor scissor/viewport coordinate frame.
+		//Aabb clip = make_aabb(V2(-75,-75) + o, V2(75,50) + o);
+		//draw_quad(clip, 0);
+		//push_text_clip_box(clip);
+		//push_font_size(13);
+		//draw_text("Clip this text within a box.", V2(-100,0));
+		//pop_text_clip_box();
 
 		// Draw text with a limited width.
 		push_font_size(13);

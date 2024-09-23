@@ -21,5 +21,5 @@ Not used for collision detection, but still sometimes useful.
 
 ## Related Pages
 
-[cf_render_settings_push_scissor](/draw/cf_render_settings_push_scissor.md)  
-[cf_render_settings_push_viewport](/draw/cf_render_settings_push_viewport.md)  
+cf_render_settings_push_scissor  
+cf_render_settings_push_viewport  

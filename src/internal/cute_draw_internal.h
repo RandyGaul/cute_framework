@@ -11,6 +11,7 @@
 #include <cute_array.h>
 #include <cute_math.h>
 #include <cute_draw.h>
+#include <cute_graphics.h>
 
 #include <float.h>
 
@@ -32,7 +33,6 @@ struct BatchGeometry
 {
 	BatchGeometryType type;
 	CF_Pixel color;
-	CF_Aabb clip;
 	CF_V2 box[4];
 	CF_V2 boxH[4];
 	int n; // Only needed/used for polygon.
@@ -41,7 +41,6 @@ struct BatchGeometry
 	float radius;
 	float stroke;
 	float aa;
-	bool do_clipping;
 	bool is_text;
 	bool is_sprite;
 	bool fill;
@@ -60,16 +59,92 @@ struct CF_Strike
 	float thickness;
 };
 
+struct CF_DrawUniform
+{
+	const char* name = NULL;
+	void* data = NULL;
+	int size = 0;
+	CF_UniformType type = CF_UNIFORM_TYPE_UNKNOWN;
+	int array_length = 0;
+	bool is_texture = false;
+	CF_Texture texture = { 0 };
+};
+
+struct CF_Command
+{
+	int id = 0; // Simply increments for each command, used for sort ordering within a layer.
+	int layer = 0;
+	CF_Rect scissor = { 0, 0, -1, -1 };
+	CF_Rect viewport = { 0, 0, -1, -1 };
+	float alpha_discard = 1.0f;
+	CF_RenderState render_state;
+	CF_Shader shader;
+	Cute::Array<spritebatch_sprite_t> items;
+	CF_DrawUniform u;
+};
+
+#define DRAW_PUSH_ITEM(s) \
+	draw->cmds.last().items.add(s)
+
+#define PUSH_DRAW_VAR(var) \
+	draw->var##s.add(var)
+
+#define POP_DRAW_VAR(var) \
+	if (draw->var##s.count() > 1) { \
+		auto var = draw->var##s.pop(); \
+		return var; \
+	} else { \
+		return draw->var##s.last(); \
+	}
+
+#define PUSH_DRAW_VAR_AND_ADD_CMD_IF_NEEDED(var) \
+	if (draw->var##s.last() != var) { \
+		CF_Command& cmd = draw->add_cmd(); \
+		cmd.var = var; \
+	} \
+	PUSH_DRAW_VAR(var)
+
+#define POP_DRAW_VAR_AND_ADD_CMD_IF_NEEDED(var) \
+	if (draw->var##s.count() > 1) { \
+		auto result = draw->var##s.pop(); \
+		if (draw->var##s.last() != result) { \
+			CF_Command& cmd = draw->add_cmd(); \
+			cmd.var = draw->var##s.last(); \
+		} \
+		return result; \
+	} else { \
+		return draw->var##s.last(); \
+	}
+
+#define ADD_UNIFORM(u) \
+	draw->add_cmd(); \
+	draw->cmds.last().u = u
+
 struct CF_Draw
 {
+	CF_INLINE CF_Command& add_cmd() {
+		CF_Command& cmd = cmds.add();
+		cmd.id = draw_item_order++;
+		cmd.layer = layers.last();
+		cmd.scissor = scissors.last();
+		cmd.viewport = viewports.last();
+		cmd.alpha_discard = alpha_discards.last();
+		cmd.render_state = render_states.last();
+		cmd.shader = shaders.last();
+		return cmd;
+	}
+	int cmd_index = 0;
+	int draw_item_order = 0;
+	Cute::Array<CF_Command> cmds;
+	Cute::Array<CF_Vertex> verts;
 	CF_V2 atlas_dims = cf_v2(2048, 2048);
 	CF_V2 texel_dims = cf_v2(1.0f/2048.0f, 1.0f/2048.0f);
-	float alpha_discard = 1.0f;
 	bool delay_defrag = false;
 	spritebatch_t sb;
 	CF_Mesh mesh;
 	CF_Material material;
-	CF_Filter filter = CF_FILTER_LINEAR;
+	CF_Arena uniform_arena;
+	Cute::Array<float> alpha_discards = { true };
 	Cute::Array<CF_Color> colors = { cf_color_white() };
 	Cute::Array<bool> antialias = { true };
 	Cute::Array<float> antialias_scale = { 1.5f };
@@ -86,12 +161,10 @@ struct CF_Draw
 	Cute::Array<CF_Color> user_params = { cf_make_color_hex(0) };
 	Cute::Array<CF_Shader> shaders;
 	Cute::Array<CF_V2> temp;
-	Cute::Array<CF_Vertex> verts;
 	Cute::Array<float> font_sizes = { 18 };
 	Cute::Array<const char*> fonts = { sintern("Calibri") };
 	Cute::Array<int> blurs = { 0 };
 	Cute::Array<float> text_wrap_widths = { FLT_MAX };
-	Cute::Array<CF_Aabb> text_clip_boxes = { cf_make_aabb(cf_v2(-FLT_MAX, -FLT_MAX), cf_v2(FLT_MAX, FLT_MAX)) };
 	Cute::Array<bool> vertical = { false };
 	Cute::Array<CF_Strike> strikes;
 	Cute::Array<bool> text_effects = { true };
