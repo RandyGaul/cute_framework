@@ -4,6 +4,19 @@ using namespace Cute;
 #include "proggy.h"
 #include "sample_text.h"
 
+static bool draw_text_bound = false;
+
+static void draw_text_boxed(const char* text, v2 pos, int len = -1)
+{
+	draw_text(text, pos, len);
+
+	if (draw_text_bound)
+	{
+		v2 size = text_size(text, len);
+		draw_box(cf_make_aabb_from_top_left(pos, size.x, size.y), 0.f);
+	}
+}
+
 int main(int argc, char* argv[])
 {
 	make_app("Text Drawing", 0, 0, 0, 640, 480, APP_OPTIONS_WINDOW_POS_CENTERED_BIT | APP_OPTIONS_RESIZABLE_BIT, argv[0]);
@@ -21,6 +34,11 @@ int main(int argc, char* argv[])
 
 		static float t = 0;
 		t += DELTA_TIME;
+
+		if (key_just_pressed(KEY_SPACE))
+		{
+			draw_text_bound = !draw_text_bound;
+		}
 
 		push_font("ProggyClean");
 
@@ -40,46 +58,51 @@ int main(int argc, char* argv[])
 		push_text_wrap_width(100.0f + cosf(t) * 75.0f);
 		o = V2(-200, 150);
 		cf_draw_line(V2(cosf(t) * 75.0f,0) + o, V2(cosf(t) * 75.0f,-75) + o, 0);
-		draw_text("This text width is animating over time and wrapping the words dynamically.", V2(-100,0) + o);
+		draw_text_boxed("This text width is animating over time and wrapping the words dynamically.", V2(-100,0) + o);
 		pop_text_wrap_width();
 
 		// Draw utf8 encoded text loaded from a text file.
 		push_font("Calibri");
 		push_font_size(20);
-		draw_text(sample, V2(-300,200));
+		draw_text_boxed(sample, V2(-300,200));
 		pop_font_size();
 
 		// Coloring text.
 		push_font_size(26);
 		draw_push_color(make_color(0x55b6f2));
-		draw_text("Some bigger and blue text.", V2(-100,150));
+		draw_text_boxed("Some bigger and blue text.", V2(-100,150));
 		draw_pop_color();
 
 		// Using font blurring for a glowing effect.
 		push_font_size(13 * 5);
 		push_font_blur(10);
-		draw_text("glowing~", V2(-200-10,-90+10));
+		draw_text_boxed("glowing~", V2(-200-10,-90+10));
 		pop_font_blur();
-		draw_text("<fade>glowing~</fade>", V2(-200,-90));
+		draw_text_boxed("<fade>glowing~</fade>", V2(-200,-90));
 
 		// Using font blurring for a shadow effect.
 		push_font_size(13 * 5);
 		push_font_blur(10);
 		draw_push_color(color_black());
-		draw_text("shadow", V2(-150-10-2.5f,-150+5));
+		draw_text_boxed("shadow", V2(-150-10-2.5f,-150+5));
 		draw_pop_color();
 		pop_font_blur();
-		draw_text("shadow", V2(-150,-150));
+		draw_text_boxed("shadow", V2(-150,-150));
 
 		// Drawing a formatted string.
 		String draws = String::fmt("Draw calls: %d", draw_calls);
 		push_font_size(13);
-		draw_text(draws.c_str(), V2(-640/2.0f + 10,-480/2.0f + 20));
+		draw_text_boxed(draws.c_str(), V2(-640/2.0f + 10,-480/2.0f + 20));
 
 		// Text shake effect.
 		// For moving text it helps to round positions.
 		push_font_size(30);
-		draw_text("Some <shake freq=35 x=2 y=2>shaking</shake> text.", round(V2(sinf(t*0.25f)*100,cosf(t*0.25f)*100)));
+		draw_text_boxed("Some <shake freq=35 x=2 y=2>shaking</shake> text.", round(V2(sinf(t*0.25f)*100,cosf(t*0.25f)*100)));
+
+		// Instructions
+		const char* instructions = "Press Space to toggle bounding boxes";
+		v2 size = text_size(instructions);
+		draw_text_boxed(instructions, V2(-size.x * 0.5f, 0.f));
 
 		draw_calls = app_draw_onto_screen(true);
 	}
