@@ -335,18 +335,6 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 
 	CF_Command& cmd = draw->cmds[draw->cmd_index];
 
-	// Apply viewport.
-	Rect viewport = cmd.viewport;
-	if (viewport.w >= 0 && viewport.h >= 0) {
-		cf_apply_viewport(viewport.x, viewport.y, viewport.w, viewport.h);
-	}
-
-	// Apply scissor.
-	Rect scissor = cmd.scissor;
-	if (scissor.w >= 0 && scissor.h >= 0) {
-		cf_apply_scissor(scissor.x, scissor.y, scissor.w, scissor.h);
-	}
-
 	// Map the vertex buffer with sprite vertex data.
 	cf_mesh_update_vertex_data(draw->mesh, verts, vert_count);
 	cf_apply_mesh(draw->mesh);
@@ -367,6 +355,19 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 
 	// Kick off a draw call.
 	cf_apply_shader(cmd.shader, draw->material);
+
+	// Apply viewport.
+	Rect viewport = cmd.viewport;
+	if (viewport.w >= 0 && viewport.h >= 0) {
+		cf_apply_viewport(viewport.x, viewport.y, viewport.w, viewport.h);
+	}
+
+	// Apply scissor.
+	Rect scissor = cmd.scissor;
+	if (scissor.w >= 0 && scissor.h >= 0) {
+		cf_apply_scissor(scissor.x, scissor.y, scissor.w, scissor.h);
+	}
+
 	cf_draw_elements();
 	cf_commit();
 
