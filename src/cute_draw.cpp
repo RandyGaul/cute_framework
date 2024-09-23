@@ -2087,9 +2087,9 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 	auto advance_to_next_glyph = [&](CF_Glyph* last_glyph) {
 		// Max bound covers the entire glyph without kerning so we use w instead
 		// of xadvance
-		max_x = fmax(max_x, x + last_glyph->w);
+		max_x = fmaxf(max_x, x + last_glyph->w);
 		if (vertical) {
-			min_y = fmin(min_y, y + font->descent * scale);
+			min_y = fminf(min_y, y + font->descent * scale);
 
 			y -= line_height;
 		} else {
@@ -2103,12 +2103,12 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 			x += w;
 			y = initial_y;
 
-			max_x = fmax(max_x, x);
+			max_x = fmaxf(max_x, x);
 		} else {
 			x = position.x;
 			y -= line_height;
 
-			min_y = fmin(min_y, y + font->descent * scale);
+			min_y = fminf(min_y, y + font->descent * scale);
 		}
 		hit_newline = true;
 		++newline_count;
