@@ -2022,6 +2022,10 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 	float x = roundf(position.x * inv_cam_scale_x);
 	float initial_y = roundf((position.y - font->ascent * scale) * inv_cam_scale_y);
 	float y = initial_y;
+	float max_x = x;
+	// Extend the height by descent to include spaces below the baseline.
+	// e.g: Characters such as "g", "y"...
+	float min_y = y + font->descent * scale;
 
 	int index = 0;
 	int code_index = 0;
@@ -2080,11 +2084,16 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 
 	bool vertical = draw->vertical.last();
 
-	auto advance_to_next_glyph = [&](float xadvance = 0) {
+	auto advance_to_next_glyph = [&](CF_Glyph* last_glyph) {
+		// Max bound covers the entire glyph without kerning so we use w instead
+		// of xadvance
+		max_x = max(max_x, x + last_glyph->w);
 		if (vertical) {
+			min_y = min(min_y, y + font->descent * scale);
+
 			y -= line_height;
 		} else {
-			x += xadvance;
+			x += last_glyph->xadvance;
 		}
 	};
 
@@ -2093,9 +2102,13 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 		if (vertical) {
 			x += w;
 			y = initial_y;
+
+			max_x = max(max_x, x);
 		} else {
 			x = position.x;
 			y -= line_height;
+
+			min_y = min(min_y, y + font->descent * scale);
 		}
 		hit_newline = true;
 		++newline_count;
@@ -2234,8 +2247,8 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 			}
 		}
 
-		advance_to_next_glyph(xadvance);
-		hit_newline = false; 
+		advance_to_next_glyph(glyph);
+		hit_newline = false;
 	}
 
 	if (render) {
@@ -2249,7 +2262,7 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 	}
 	draw->strikes.clear();
 
-	return V2(x, y - h * 0.25f);
+	return V2(max_x - position.x, position.y - min_y);
 }
 
 void cf_draw_text(const char* text, CF_V2 position, int text_length)
