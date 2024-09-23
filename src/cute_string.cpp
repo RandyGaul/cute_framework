@@ -346,7 +346,7 @@ char* cf_sreplace(char* s, const char* replace_me, const char* with_me)
 	while ((find = sfind(search, replace_me))) {
 		int find_offset = (int)(find - s);
 		if (replace_len > with_len) {
-			int remaining = scount(s) - find_offset - (int)with_len;
+			int remaining = scount(s) - find_offset - (int)replace_len;
 			int diff = (int)(replace_len - with_len);
 			CF_MEMCPY(find, with_me, with_len);
 			CF_MEMMOVE(find + with_len, find + replace_len, remaining);
@@ -404,7 +404,7 @@ char* cf_serase(char* s, int index, int count)
 		s[index] = 0;
 		return s;
 	} else {
-		int remaining = scount(s) - (count + index) + 1;
+		int remaining = scount(s) - (count + index);
 		CF_MEMMOVE(s + index, s + count + index, remaining);
 		alen(s) -= count;
 	}
