@@ -385,7 +385,6 @@ void cf_destroy_app()
 		app->using_imgui = false;
 	}
 	if (app->gfx_enabled) {
-		cf_destroy_draw();
 		cf_unload_internal_shaders();
 		cf_destroy_canvas(app->offscreen_canvas);
 		cf_destroy_mesh(app->backbuffer_quad);
@@ -395,6 +394,7 @@ void cf_destroy_app()
 			cf_destroy_shader(app->blit_shader);
 			cf_destroy_material(app->blit_material);
 		}
+		cf_destroy_draw();
 	}
 	cf_destroy_aseprite_cache();
 	cf_destroy_png_cache();

@@ -3,28 +3,23 @@
 [//]: # (See: https://github.com/RandyGaul/cute_framework/blob/master/samples/docs_parser.cpp)
 [](../header.md ':include')
 
-# cf_screen_to_world
+# cf_screen_bounds_to_world
 
 Category: [draw](/api_reference?id=draw)  
 GitHub: [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_draw.h)  
 ---
 
-Converts a coordinate from screen space to world space.
+Returns a [CF_Aabb](/math/cf_aabb.md) of the screen bounds in world space.
 
 ```cpp
-CF_V2 cf_screen_to_world(CF_V2 point);
+CF_Aabb cf_screen_bounds_to_world();
 ```
 
 ## Remarks
 
-Screen space has the origin at the top-left of the screen with the y-axis pointing down. This
-matches the coordinate space mouse coordinates are given. Example:
-```c
-CF_V2 p = cf_v2((float)mouse_x(), (float)mouse_y());
-p = cf_screen_to_world(p);
-```
+This can be useful for colliding against the screen, or implementing occlusion occlusion culling.
 
 ## Related Pages
 
 [cf_world_to_screen](/draw/cf_world_to_screen.md)  
-[cf_screen_bounds_to_world](/draw/cf_screen_bounds_to_world.md)  
+[cf_screen_to_world](/draw/cf_screen_to_world.md)  

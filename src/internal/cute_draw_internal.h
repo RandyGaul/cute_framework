@@ -81,6 +81,10 @@ struct CF_Command
 	CF_Shader shader;
 	Cute::Array<spritebatch_sprite_t> items;
 	CF_DrawUniform u;
+	bool is_canvas = false;
+	CF_Canvas canvas = { 0 };
+	CF_V2 canvas_pos, canvas_scale;
+	CF_Color canvas_attributes = cf_color_clear();
 };
 
 #define DRAW_PUSH_ITEM(s) \
@@ -169,6 +173,9 @@ struct CF_Draw
 	Cute::Array<CF_Strike> strikes;
 	Cute::Array<bool> text_effects = { true };
 	Cute::Map<uint64_t, CF_AtlasSubImage> premade_sub_image_id_to_sub_image;
+	Cute::Map<uint64_t, uint64_t> draw_shd_to_blit_shd;
+	bool blit_init = false;
+	CF_Mesh blit_mesh = { 0 };
 	CF_VertexFn* vertex_fn = NULL;
 	bool has_drawn_something = false;
 };

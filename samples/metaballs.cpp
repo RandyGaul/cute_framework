@@ -9,7 +9,7 @@ float scale = 1;
 const char* s_shd = STR(
 layout(set = 2, binding = 1) uniform sampler2D tex;
 
-vec4 shader(vec4 color, vec2 pos, vec2 atlas_uv, vec2 screen_uv, vec4 params)
+vec4 shader(vec4 color, vec2 pos, vec2 screen_uv, vec4 params)
 {
 	float d = texture(tex, screen_uv).x;
 	d = d > 0.5 ? 1.0 : 0.0;

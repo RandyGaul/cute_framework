@@ -1206,7 +1206,23 @@ CF_API CF_Shader CF_CALL cf_draw_peek_shader();
  * @related  cf_draw_set_texture cf_draw_set_uniform cf_draw_set_uniform_int cf_draw_set_uniform_float cf_draw_set_uniform_v2 cf_draw_set_uniform_color
  */
 CF_API void CF_CALL cf_draw_push_alpha_discard(bool true_enable_alpha_discard);
+
+/**
+ * @function cf_draw_pop_alpha_discard
+ * @category draw
+ * @brief    TODO
+ * @remarks  Alpha discarding is useful to throw away pixels with zero alpha, for cutouts or as an optimization, or for certain blending techniques.
+ * @related  TODO
+ */
 CF_API bool CF_CALL cf_draw_pop_alpha_discard();
+
+/**
+ * @function cf_draw_peek_alpha_discard
+ * @category draw
+ * @brief    TODO
+ * @remarks  Alpha discarding is useful to throw away pixels with zero alpha, for cutouts or as an optimization, or for certain blending techniques.
+ * @related  TODO
+ */
 CF_API bool CF_CALL cf_draw_peek_alpha_discard();
 
 /**
@@ -1267,11 +1283,12 @@ CF_API void CF_CALL cf_draw_set_uniform_color(const char* name, CF_Color val);
 /**
  * @function cf_draw_mul
  * @category draw
- * @brief    TODO
+ * @brief    Applies the current draw transform to a point.
  * @param    m      The transform to apply.
+ * @param    p      The point to transform.
  * @related  TODO
  */
-CF_API CF_V2 CF_CALL cf_draw_mul(CF_M3x2 m, CF_V2 v);
+CF_API CF_V2 CF_CALL cf_draw_mul(CF_M3x2 m, CF_V2 p);
 
 /**
  * @function cf_draw_transform
@@ -1399,9 +1416,9 @@ CF_API void CF_CALL cf_draw_projection(CF_M3x2 projection);
  * @brief    Converts a coordinate from world space into screen space.
  * @remarks  Screen space has the origin at the top-left of the screen with the y-axis pointing down. This
  *           matches the coordinate space mouse coordinates are given.
- * @related  cf_world_to_screen cf_screen_to_world
+ * @related  cf_world_to_screen cf_screen_to_world cf_screen_bounds_to_world
  */
-CF_V2 cf_world_to_screen(CF_V2 point);
+CF_API CF_V2 CF_CALL cf_world_to_screen(CF_V2 point);
 
 /**
  * @function cf_screen_to_world
@@ -1413,9 +1430,31 @@ CF_V2 cf_world_to_screen(CF_V2 point);
  *           CF_V2 p = cf_v2((float)mouse_x(), (float)mouse_y());
  *           p = cf_screen_to_world(p);
  *           ```
- * @related  cf_world_to_screen cf_screen_to_world
+ * @related  cf_world_to_screen cf_screen_to_world cf_screen_bounds_to_world
  */
-CF_V2 cf_screen_to_world(CF_V2 point);
+CF_API CF_V2 CF_CALL cf_screen_to_world(CF_V2 point);
+
+/**
+ * @function cf_screen_bounds_to_world
+ * @category draw
+ * @brief    Returns a `CF_Aabb` of the screen bounds in world space.
+ * @remarks  This can be useful for colliding against the screen, or implementing occlusion occlusion culling.
+ * @related  cf_world_to_screen cf_screen_to_world cf_screen_bounds_to_world
+ */
+CF_API CF_Aabb CF_CALL cf_screen_bounds_to_world();
+
+/**
+ * @function cf_draw_canvas
+ * @category draw
+ * @brief    Draws a canvas.
+ * @param    canvas     The canvas to draw.
+ * @param    position   The position to draw at.
+ * @param    scale      The scale of the canvas, w/h.
+ * @remarks  This function creates an entire dedicated draw call internally. This means it's a fairly expensive
+ *           function, so be sure to use it sparingly.
+ * @related  cf_app_draw_onto_screen cf_render_to cf_draw_canvas
+ */
+CF_API void CF_CALL cf_draw_canvas(CF_Canvas canvas, CF_V2 position, CF_V2 scale);
 
 /**
  * @function cf_render_to
@@ -1425,7 +1464,7 @@ CF_V2 cf_screen_to_world(CF_V2 point);
  * @remarks  This is advanced function. It's useful for off-screen rendering for certain rendering effects, such as multi-pass
  *           effects like reflections, or advanced lighting techniques. By default, everything will get renderered to the app's
  *           canvas, so this function is not necessary to call at all. Instead, calling `cf_app_draw_onto_screen` should be the go-to.
- * @related  cf_draw_scale cf_draw_translate cf_draw_rotate cf_draw_push cf_draw_pop cf_app_draw_onto_screen cf_render_to
+ * @related  cf_draw_scale cf_draw_translate cf_draw_rotate cf_draw_push cf_draw_pop cf_app_draw_onto_screen cf_render_to cf_draw_canvas
  */
 CF_API void CF_CALL cf_render_to(CF_Canvas canvas, bool clear);
 
@@ -1710,6 +1749,9 @@ CF_INLINE M3x2 draw_peek() { return cf_draw_peek(); }
 CF_INLINE void draw_projection(M3x2 projection) { cf_draw_projection(projection); }
 CF_INLINE v2 world_to_screen(v2 point) { return cf_world_to_screen(point); }
 CF_INLINE v2 screen_to_world(v2 point) { return cf_screen_to_world(point); }
+CF_INLINE CF_Aabb screen_bounds_to_world() { return cf_screen_bounds_to_world(); }
+CF_INLINE void draw_canvas(CF_Canvas canvas, CF_V2 position, CF_V2 scale) { cf_draw_canvas(canvas, position, scale); }
+CF_INLINE void draw_canvas(CF_Canvas canvas, float x, float y, float sx, float sy) { cf_draw_canvas(canvas, V2(x,y), V2(sx,sy)); }
 
 CF_INLINE void render_to(Canvas canvas, bool clear = false) { cf_render_to(canvas, clear); }
 

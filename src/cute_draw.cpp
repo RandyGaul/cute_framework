@@ -538,6 +538,9 @@ void cf_make_draw()
 
 void cf_destroy_draw()
 {
+	if (draw->blit_init) {
+		cf_destroy_mesh(draw->blit_mesh);
+	}
 	spritebatch_term(&draw->sb);
 	cf_destroy_mesh(draw->mesh);
 	cf_destroy_material(draw->material);
@@ -1338,7 +1341,7 @@ CF_INLINE uint64_t cf_glyph_key(int cp, float font_size, int blur)
 	return key;
 }
 
-// From fontastash.h, memononen
+// From fontstash.h, memononen
 // Based on Exponential blur, Jani Huhtanen, 2006
 
 #define APREC 16
@@ -1463,14 +1466,14 @@ static void s_render(CF_Font* font, CF_Glyph* glyph, float font_size, int blur)
 	font->image_ids.add(glyph->image_id);
 }
 
-CF_Glyph* cf_font_get_glyph(CF_Font* font, int codeCF_V2, float font_size, int blur)
+CF_Glyph* cf_font_get_glyph(CF_Font* font, int code, float font_size, int blur)
 {
-	uint64_t glyph_key = cf_glyph_key(codeCF_V2, font_size, blur);
+	uint64_t glyph_key = cf_glyph_key(code, font_size, blur);
 	CF_Glyph* glyph = font->glyphs.try_get(glyph_key);
 	if (!glyph) {
-		int glyph_index = stbtt_FindGlyphIndex(&font->info, codeCF_V2);
+		int glyph_index = stbtt_FindGlyphIndex(&font->info, code);
 		if (!glyph_index) {
-			// This codeCF_V2 doesn't exist in this font.
+			// This code doesn't exist in this font.
 			// Try and use a backup glyph instead.
 			glyph_index = 0xFFFD;
 		}
@@ -1485,9 +1488,9 @@ CF_Glyph* cf_font_get_glyph(CF_Font* font, int codeCF_V2, float font_size, int b
 	return glyph;
 }
 
-float cf_font_get_kern(CF_Font* font, float font_size, int codeCF_V20, int codeCF_V21)
+float cf_font_get_kern(CF_Font* font, float font_size, int code0, int code1)
 {
-	uint64_t key = CF_KERN_KEY(codeCF_V20, codeCF_V21);
+	uint64_t key = CF_KERN_KEY(code0, code1);
 	return font->kerning.get(key) * stbtt_ScaleForPixelHeight(&font->info, font_size);
 }
 
@@ -2284,12 +2287,12 @@ void cf_text_get_markup_info(cf_text_markup_info_fn* fn, const char* text, CF_V2
 
 void cf_draw_push_layer(int layer)
 {
-	PUSH_DRAW_VAR(layer);
+	PUSH_DRAW_VAR_AND_ADD_CMD_IF_NEEDED(layer);
 }
 
 int cf_draw_pop_layer()
 {
-	POP_DRAW_VAR(layer);
+	POP_DRAW_VAR_AND_ADD_CMD_IF_NEEDED(layer);
 }
 
 int cf_draw_peek_layer()
@@ -2442,16 +2445,25 @@ void cf_draw_set_atlas_dimensions(int width_in_pixels, int height_in_pixels)
 
 CF_Shader cf_make_draw_shader(const char* path)
 {
-	return cf_make_draw_shader_internal(path);
+	// Also make an attached blit shader to apply when drawing canvases.
+	CF_Shader blit_shd = cf_make_draw_blit_shader_internal(path);
+	CF_Shader draw_shd = cf_make_draw_shader_internal(path);
+	draw->draw_shd_to_blit_shd.add(draw_shd.id, blit_shd.id);
+	return draw_shd;
 }
 
 CF_Shader cf_make_draw_shader_from_source(const char* src)
 {
-	return cf_make_draw_shader_from_source_internal(src);
+	// Also make an attached blit shader to apply when drawing canvases.
+	CF_Shader blit_shd = cf_make_draw_blit_shader_from_source_internal(src);
+	CF_Shader draw_shd = cf_make_draw_shader_from_source_internal(src);
+	draw->draw_shd_to_blit_shd.add(draw_shd.id, blit_shd.id);
+	return draw_shd;
 }
 
 void cf_draw_push_shader(CF_Shader shader)
 {
+	CF_ASSERT(shader.id);
 	PUSH_DRAW_VAR_AND_ADD_CMD_IF_NEEDED(shader);
 }
 
@@ -2466,13 +2478,7 @@ CF_Shader cf_draw_peek_shader()
 }
 
 // In cute_graphics.cpp.
-void cf_material_set_uniform_vs_internal(CF_Material material_handle, const char* block_name, const char* name, void* data, CF_UniformType type, int array_length);
 void cf_material_set_uniform_fs_internal(CF_Material material_handle, const char* block_name, const char* name, void* data, CF_UniformType type, int array_length);
-
-void cf_draw_push_texture(const char* name, CF_Texture texture)
-{
-	material_set_texture_fs(draw->material, name, texture);
-}
 
 void cf_draw_push_alpha_discard(bool true_enable_alpha_discard)
 {
@@ -2569,6 +2575,129 @@ void cf_draw_set_uniform_color(const char* name, CF_Color val)
 	ADD_UNIFORM(u);
 }
 
+void cf_draw_canvas(CF_Canvas canvas, CF_V2 position, CF_V2 scale)
+{
+	CF_Command& cmd = draw->add_cmd();
+	cmd.is_canvas = true;
+	cmd.canvas = canvas;
+	cmd.canvas_pos = position;
+	cmd.canvas_scale = scale;
+	cmd.canvas_attributes = draw->user_params.last();
+}
+
+// Modified version of `cf_canvas_blit` to inject user-shader code.
+void static s_blit(CF_Command* cmd, CF_Canvas src, Aabb canvas_bb, CF_V2 u0, CF_V2 v0, CF_Canvas dst, CF_V2 u1, CF_V2 v1)
+{
+	typedef struct Vertex
+	{
+		float wx, wy; // World space x/y.
+		float x, y;
+		float u, v;
+		CF_Color params;
+	} Vertex;
+
+	if (!draw->blit_init) {
+		draw->blit_init = true;
+
+		// Create a full-screen quad mesh.
+		CF_VertexAttribute attrs[4] = { 0 };
+		attrs[0].name = "in_pos";
+		attrs[0].format = CF_VERTEX_FORMAT_FLOAT2;
+		attrs[0].offset = CF_OFFSET_OF(Vertex, wx);
+		attrs[1].name = "in_posH";
+		attrs[1].format = CF_VERTEX_FORMAT_FLOAT2;
+		attrs[1].offset = CF_OFFSET_OF(Vertex, x);
+		attrs[2].name = "in_uv";
+		attrs[2].format = CF_VERTEX_FORMAT_FLOAT2;
+		attrs[2].offset = CF_OFFSET_OF(Vertex, u);
+		attrs[3].name = "in_params";
+		attrs[3].format = CF_VERTEX_FORMAT_FLOAT4;
+		attrs[3].offset = CF_OFFSET_OF(Vertex, params);
+		CF_Mesh blit_mesh = cf_make_mesh(sizeof(Vertex) * 1024, attrs, CF_ARRAY_SIZE(attrs), sizeof(Vertex));
+		draw->blit_mesh = blit_mesh;
+	}
+
+	// UV (0,0) is top-left of the screen, while UV (1,1) is bottom right.
+	// Coordinate (-1,1) is top left, while (1,-1) is bottom right.
+	auto fill_quad = [=](float x, float y, float sx, float sy, v2 u, v2 v, CF_Aabb canvas_bb, Vertex verts[6])
+	{
+		// Build a quad from (-1.0f,-1.0f) to (1.0f,1.0f).
+		verts[0].x = -1.0f; verts[0].y =  1.0f; verts[0].u = u.x; verts[0].v = u.y;
+		verts[1].x =  1.0f; verts[1].y = -1.0f; verts[1].u = v.x; verts[1].v = v.y;
+		verts[2].x =  1.0f; verts[2].y =  1.0f; verts[2].u = v.x; verts[2].v = u.y;
+
+		verts[3].x = -1.0f; verts[3].y =  1.0f; verts[3].u = u.x; verts[3].v = u.y;
+		verts[4].x = -1.0f; verts[4].y = -1.0f; verts[4].u = u.x; verts[4].v = v.y;
+		verts[5].x =  1.0f; verts[5].y = -1.0f; verts[5].u = v.x; verts[5].v = v.y;
+
+		// Assign world space coordinates (wx, wy) from `canvas_bb`.
+		// ...These get passed into the user shader as the world space `pos` parameter.
+		verts[0].wx = canvas_bb.min.x; verts[0].wy = canvas_bb.max.y;
+		verts[1].wx = canvas_bb.max.x; verts[1].wy = canvas_bb.min.y;
+		verts[2].wx = canvas_bb.max.x; verts[2].wy = canvas_bb.max.y;
+
+		verts[3].wx = canvas_bb.min.x; verts[3].wy = canvas_bb.max.y;
+		verts[4].wx = canvas_bb.min.x; verts[4].wy = canvas_bb.min.y;
+		verts[5].wx = canvas_bb.max.x; verts[5].wy = canvas_bb.min.y;
+
+		// Scale the quad about the origin by (sx,sy), then translate it by (x,y).
+		for (int i = 0; i < 6; ++i) {
+			verts[i].x = verts[i].x * sx + x;
+			verts[i].y = verts[i].y * sy + y;
+			verts[i].params = cmd->canvas_attributes;
+		}
+	};
+
+	CF_Shader* blit = (CF_Shader*)draw->draw_shd_to_blit_shd.try_get(cmd->shader.id);
+
+	if (blit) {
+		// Custom shader supplied by the user.
+
+		cf_apply_canvas(dst, false);
+
+		// Create a quad where positions come from dst, and UV's come from src.
+		float w = v1.x - u1.x;
+		float h = v1.y - u1.y;
+		float x = (u1.x + v1.x) - 1.0f;
+		float y = (u1.y + v1.y) - 1.0f;
+		Vertex verts[6];
+		fill_quad(x, y, w, h, u0, v0, canvas_bb, verts);
+		cf_mesh_update_vertex_data(draw->blit_mesh, verts, 6);
+		cf_apply_mesh(draw->blit_mesh);
+
+		// Read pixels from src.
+		cf_material_set_texture_fs(draw->material, "u_image", cf_canvas_get_target(src));
+
+		// Apply uniforms.
+		cf_material_set_uniform_fs(draw->material, "u_texture_size", &cmd->canvas_scale, CF_UNIFORM_TYPE_FLOAT2, 1);
+		cf_material_set_uniform_fs(draw->material, "u_alpha_discard", &cmd->alpha_discard, CF_UNIFORM_TYPE_FLOAT, 1);
+	
+		// Apply render state.
+		cf_material_set_render_state(draw->material, cmd->render_state);
+
+		// Apply shader.
+		cf_apply_shader(*blit, draw->material);
+
+		// Apply viewport.
+		Rect viewport = cmd->viewport;
+		if (viewport.w >= 0 && viewport.h >= 0) {
+			cf_apply_viewport(viewport.x, viewport.y, viewport.w, viewport.h);
+		}
+
+		// Apply scissor.
+		Rect scissor = cmd->scissor;
+		if (scissor.w >= 0 && scissor.h >= 0) {
+			cf_apply_scissor(scissor.x, scissor.y, scissor.w, scissor.h);
+		}
+
+		// Blit onto dst.
+		cf_draw_elements();
+	} else {
+		// No custom shader supplied, use the default one.
+		cf_canvas_blit(src, u0, v0, dst, u1, v1);
+	}
+}
+
 void cf_render_to(CF_Canvas canvas, bool clear)
 {
 	cf_apply_canvas(canvas, clear);
@@ -2585,7 +2714,7 @@ void cf_render_to(CF_Canvas canvas, bool clear)
 		if (a.layer == b.layer) return a.id < b.id;
 		else return a.layer < b.layer;
 	});
-
+	
 	int count = draw->cmds.count();
 	for (int i = 0; i < count; ++i) {
 		draw->cmd_index = i;
@@ -2597,6 +2726,29 @@ void cf_render_to(CF_Canvas canvas, bool clear)
 			material_set_texture_fs(draw->material, u->name, u->texture);
 		} else if (u->data) {
 			cf_material_set_uniform_fs_internal(draw->material, "shd_uniforms", u->name, u->data, u->type, u->array_length);
+		}
+
+		// Blit canvas.
+		// ...Incurs an entire extra draw call by itself.
+		if (cmd->is_canvas) {
+			Aabb canvas_bb = make_aabb(cmd->canvas_pos, cmd->canvas_scale.x, cmd->canvas_scale.y);
+			Aabb screen_bb = screen_bounds_to_world();
+			if (aabb_to_aabb(canvas_bb, screen_bb)) {
+				v2 lo = max(canvas_bb.min, screen_bb.min);
+				v2 hi = min(canvas_bb.max, screen_bb.max);
+				float src_w = canvas_bb.max.x - canvas_bb.min.x;
+				float src_h = (canvas_bb.max.y - canvas_bb.min.y);
+				float dst_w = (screen_bb.max.x - screen_bb.min.x);
+				float dst_h = (screen_bb.max.y - screen_bb.min.y);
+				if (src_w == 0 || src_h == 0 || dst_w == 0 || dst_h == 0) continue;
+				v2 src_lo = V2((lo.x-canvas_bb.min.x)/src_w, 1.0f - (lo.y-canvas_bb.min.y)/src_h);
+				v2 src_hi = V2((hi.x-canvas_bb.min.x)/src_w, 1.0f - (hi.y-canvas_bb.min.y)/src_h);
+				v2 dst_lo = V2((lo.x-screen_bb.min.x)/dst_w, 1.0f - (lo.y-screen_bb.min.y)/dst_h);
+				v2 dst_hi = V2((hi.x-screen_bb.min.x)/dst_w, 1.0f - (hi.y-screen_bb.min.y)/dst_h);
+				s_blit(cmd, cmd->canvas, canvas_bb, src_lo, src_hi, canvas, dst_lo, dst_hi);
+			}
+			draw->has_drawn_something = true;
+			continue;
 		}
 
 		// Collate all of the drawable items into the spritebatch.
@@ -2741,6 +2893,15 @@ CF_V2 cf_screen_to_world(CF_V2 CF_V2)
 	CF_V2.y = -((CF_V2.y / (float)app->h) * 2.0f - 1.0f);
 	CF_V2 = mul(invert(draw->mvp), CF_V2);
 	return CF_V2;
+}
+
+CF_Aabb cf_screen_bounds_to_world()
+{
+	float w = (float)app->w;
+	float h = (float)app->h;
+	v2 lo = cf_screen_to_world(V2(0,h));
+	v2 hi = cf_screen_to_world(V2(w,0));
+	return make_aabb(lo, hi);
 }
 
 CF_TemporaryImage cf_fetch_image(const CF_Sprite* sprite)

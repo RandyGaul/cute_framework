@@ -33,3 +33,4 @@ canvas, so this function is not necessary to call at all. Instead, calling [cf_a
 [cf_draw_push](/draw/cf_draw_push.md)  
 [cf_draw_pop](/draw/cf_draw_pop.md)  
 [cf_app_draw_onto_screen](/app/cf_app_draw_onto_screen.md)  
+[cf_draw_canvas](/draw/cf_draw_canvas.md)  

@@ -5,7 +5,7 @@ using namespace Cute;
 
 #define STR(X) #X
 const char* s_recolor = STR(
-	vec4 shader(vec4 color, vec2 pos, vec2 atlas_uv, vec2 screen_uv, vec4 params)
+	vec4 shader(vec4 color, vec2 pos, vec2 screen_uv, vec4 params)
 	{
 		vec3 a = rgb_to_hsv(color.rgb);
 		vec3 b = rgb_to_hsv(params.rgb);

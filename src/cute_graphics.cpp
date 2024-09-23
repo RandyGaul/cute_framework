@@ -317,7 +317,7 @@ vec2 smooth_uv(vec2 uv, vec2 texture_size)
 
 // Stub function. This gets replaced by injected user-shader code via #include.
 const char* s_shader_stub = R"(
-vec4 shader(vec4 color, vec2 pos, vec2 atlas_uv, vec2 screen_uv, vec4 params)
+vec4 shader(vec4 color, vec2 pos, vec2 screen_uv, vec4 params)
 {
 	return color;
 }
@@ -462,9 +462,55 @@ void main()
 
 	c *= v_alpha;
 	vec2 screen_uv = (v_posH + vec2(1,-1)) * 0.5 * vec2(1,-1);
-	c = shader(c, v_pos, v_uv, screen_uv, v_user);
+	c = shader(c, v_pos, screen_uv, v_user);
 	if (u_alpha_discard != 0 && c.a == 0) discard;
 	result = c;
+}
+)";
+
+
+//--------------------------------------------------------------------------------------------------
+// Primary blit shader.
+const char* s_blit_vs = R"(
+layout (location = 0) in vec2 in_pos;
+layout (location = 1) in vec2 in_posH;
+layout (location = 2) in vec2 in_uv;
+layout (location = 3) in vec4 in_params;
+
+layout (location = 0) out vec2 v_uv;
+layout (location = 1) out vec2 v_pos;
+layout (location = 2) out vec2 v_posH;
+layout (location = 3) out vec4 v_params;
+
+void main() {
+	v_uv = in_uv;
+	v_pos = in_pos;
+	v_posH = in_posH;
+	v_params = in_params;
+	gl_Position = vec4(in_posH, 0, 1);
+}
+)";
+
+const char* s_blit_fs = R"(
+layout (location = 0) in vec2 v_uv;
+layout (location = 1) in vec2 v_pos;
+layout (location = 2) in vec2 v_posH;
+layout (location = 3) in vec4 v_params;
+
+layout (location = 0) out vec4 result;
+
+layout (set = 2, binding = 0) uniform sampler2D u_image;
+
+#include "shader_stub.shd"
+
+layout (set = 3, binding = 0) uniform uniform_block {
+	vec2 u_texture_size;
+	int u_alpha_discard;
+};
+
+void main() {
+	vec4 color = texture(u_image, v_uv);
+	result = shader(color, v_pos, v_uv, v_params);
 }
 )";
 
@@ -1131,9 +1177,28 @@ CF_Shader cf_make_draw_shader_internal(const char* path)
 	return result;
 }
 
+// Create a user shader by injecting their `shader` function into CF's draw shader.
+CF_Shader cf_make_draw_blit_shader_internal(const char* path)
+{
+	Path p = Path("/") + path;
+	const char* path_s = sintern(p);
+	CF_ShaderFileInfo info = app->shader_file_infos.find(path_s);
+	if (!info.path) return { 0 };
+	char* shd = fs_read_entire_file_to_memory_and_nul_terminate(info.path);
+	if (!shd) return { 0 };
+	CF_Shader result = cf_make_draw_blit_shader_from_source_internal(shd);
+	cf_free(shd);
+	return result;
+}
+
 CF_Shader cf_make_draw_shader_from_source_internal(const char* src)
 {
 	return s_compile(s_draw_vs, s_draw_fs, true, src);
+}
+
+CF_Shader cf_make_draw_blit_shader_from_source_internal(const char* src)
+{
+	return s_compile(s_blit_vs, s_blit_fs, true, src);
 }
 
 CF_Shader cf_make_shader(const char* vertex_path, const char* fragment_path)
@@ -1153,6 +1218,13 @@ CF_Shader cf_make_shader_from_source(const char* vertex_src, const char* fragmen
 
 void cf_destroy_shader(CF_Shader shader_handle)
 {
+	// Draw shaders automatically have blit shaders generated, so clean that up as well,
+	// if it exists. See `cf_make_draw_shader`.
+	CF_Shader* blit = (CF_Shader*)draw->draw_shd_to_blit_shd.try_get(shader_handle.id);
+	if (blit) {
+		cf_destroy_shader(*blit);
+	}
+
 	CF_ShaderInternal* shd = (CF_ShaderInternal*)shader_handle.id;
 	SDL_ReleaseGPUShader(app->device, shd->vs);
 	SDL_ReleaseGPUShader(app->device, shd->fs);
@@ -1329,13 +1401,13 @@ void cf_canvas_blit(CF_Canvas src, CF_V2 u0, CF_V2 v0, CF_Canvas dst, CF_V2 u1, 
 	auto fill_quad = [](float x, float y, float sx, float sy, v2 u, v2 v, Vertex verts[6])
 	{
 		// Build a quad from (-1.0f,-1.0f) to (1.0f,1.0f).
-		verts[0].x = -1.0f; verts[0].y =  1.0f; verts[0].u = u.x; verts[0].v = v.y;
-		verts[1].x =  1.0f; verts[1].y = -1.0f; verts[1].u = v.x; verts[1].v = u.y;
-		verts[2].x =  1.0f; verts[2].y =  1.0f; verts[2].u = v.x; verts[2].v = v.y;
+		verts[0].x = -1.0f; verts[0].y =  1.0f; verts[0].u = u.x; verts[0].v = u.y;
+		verts[1].x =  1.0f; verts[1].y = -1.0f; verts[1].u = v.x; verts[1].v = v.y;
+		verts[2].x =  1.0f; verts[2].y =  1.0f; verts[2].u = v.x; verts[2].v = u.y;
 
-		verts[3].x = -1.0f; verts[3].y =  1.0f; verts[3].u = u.x; verts[3].v = v.y;
-		verts[4].x = -1.0f; verts[4].y = -1.0f; verts[4].u = u.x; verts[4].v = u.y;
-		verts[5].x =  1.0f; verts[5].y = -1.0f; verts[5].u = v.x; verts[5].v = u.y;
+		verts[3].x = -1.0f; verts[3].y =  1.0f; verts[3].u = u.x; verts[3].v = u.y;
+		verts[4].x = -1.0f; verts[4].y = -1.0f; verts[4].u = u.x; verts[4].v = v.y;
+		verts[5].x =  1.0f; verts[5].y = -1.0f; verts[5].u = v.x; verts[5].v = v.y;
 
 		// Scale the quad about the origin by (sx,sy), then translate it by (x,y).
 		for (int i = 0; i < 6; ++i) {

@@ -658,6 +658,14 @@ CF_INLINE char* cf_color_to_string(CF_Color c) { char* s = NULL; return shex(s, 
 CF_INLINE CF_Color cf_color_invisible() { return cf_make_color_rgba_f(0.0f, 0.0f, 0.0f, 0.0f); }
 
 /**
+ * @function cf_color_clear
+ * @category graphics
+ * @brief    Helper function to return an invisible `CF_Color`.
+ * @related  cf_color_invisible cf_color_black cf_color_white cf_color_red cf_color_green cf_color_blue cf_color_yellow cf_color_orange cf_color_purple cf_color_grey cf_color_cyan cf_color_magenta
+ */
+CF_INLINE CF_Color cf_color_clear() { return cf_make_color_rgba_f(0.0f, 0.0f, 0.0f, 0.0f); }
+
+/**
  * @function cf_color_black
  * @category graphics
  * @brief    Helper function to return a black `CF_Color`.
@@ -760,6 +768,14 @@ CF_INLINE CF_Color cf_color_brown() { return cf_make_color_rgb(150, 105, 25); }
  * @related  cf_pixel_invisible cf_pixel_black cf_pixel_white cf_pixel_red cf_pixel_green cf_pixel_blue cf_pixel_yellow cf_pixel_orange cf_pixel_purple cf_pixel_grey cf_pixel_cyan cf_pixel_magenta
  */
 CF_INLINE CF_Pixel cf_pixel_invisible() { return cf_make_pixel_hex(0); }
+
+/**
+ * @function cf_pixel_clear
+ * @category graphics
+ * @brief    Helper function to return a invisible `CF_Pixel`.
+ * @related  cf_pixel_invisible cf_pixel_black cf_pixel_white cf_pixel_red cf_pixel_green cf_pixel_blue cf_pixel_yellow cf_pixel_orange cf_pixel_purple cf_pixel_grey cf_pixel_cyan cf_pixel_magenta
+ */
+CF_INLINE CF_Pixel cf_pixel_clear() { return cf_make_pixel_hex(0); }
 
 /**
  * @function cf_pixel_black
@@ -929,6 +945,7 @@ CF_INLINE uint32_t to_int_rgba(Color c) { return cf_color_to_pixel(c).val; }
 CF_INLINE String to_string(Color c) { char* s = NULL; return shex(s, cf_color_to_pixel(c).val); }
 
 CF_INLINE Color color_invisible() { return cf_color_invisible(); }
+CF_INLINE Color color_clear() { return cf_color_clear(); }
 CF_INLINE Color color_black() { return cf_color_black(); }
 CF_INLINE Color color_white() { return cf_color_white(); }
 CF_INLINE Color color_red() { return cf_color_red(); }
@@ -942,6 +959,7 @@ CF_INLINE Color color_cyan() { return cf_color_cyan(); }
 CF_INLINE Color color_magenta() { return cf_color_magenta(); }
 
 CF_INLINE Pixel pixel_invisible() { return cf_pixel_invisible(); }
+CF_INLINE Pixel pixel_clear() { return cf_pixel_clear(); }
 CF_INLINE Pixel pixel_black() { return cf_pixel_black(); }
 CF_INLINE Pixel pixel_white() { return cf_pixel_white(); }
 CF_INLINE Pixel pixel_red() { return cf_pixel_red(); }

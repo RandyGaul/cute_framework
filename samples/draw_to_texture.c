@@ -22,14 +22,11 @@ int main(int argc, char* argv[])
 		cf_draw_circle2(cf_v2(0,0), 100, 5);
 		cf_render_to(offscreen, true);
 
-		// Fetch this each frame, as it's invalidated during window-resizing.
-		CF_Canvas app_canvas = cf_app_get_canvas();
+		// Draw twice at half-size on the left and right of the screen.
+		cf_draw_canvas(offscreen, cf_v2(-w*0.25f,0), cf_v2(w*0.5f,h*0.5f));
+		cf_draw_canvas(offscreen, cf_v2( w*0.25f,0), cf_v2(w*0.5f,h*0.5f));
 
-		cf_canvas_blit(offscreen, cf_v2(0,0), cf_v2(1,1), app_canvas, cf_v2(0.0f,0.25f), cf_v2(0.5f,0.75f));
-		cf_canvas_blit(offscreen, cf_v2(0,0), cf_v2(1,1), app_canvas, cf_v2(0.5f,0.25f), cf_v2(1.0f,0.75f));
-
-		// Send the app's canvas to the screen.
-		cf_app_draw_onto_screen(false);
+		cf_app_draw_onto_screen(true);
 	}
 
 	cf_destroy_canvas(offscreen);

@@ -7,7 +7,7 @@ layout (set = 3, binding = 1) uniform shd_uniforms {
 	float show_noise;
 };
 
-vec4 shader(vec4 color, vec2 pos, vec2 atlas_uv, vec2 screen_uv, vec4 params)
+vec4 shader(vec4 color, vec2 pos, vec2 screen_uv, vec4 params)
 {
 	vec2 noise_uv = screen_uv;
 	noise_uv.x *= 640.0 / 128.0;
