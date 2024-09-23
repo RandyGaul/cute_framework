@@ -1979,7 +1979,7 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 	CF_ASSERT(font);
 	if (!font) return V2(0,0);
 
-	// Cache effect state key'd by input text CF_V2er.
+	// Cache effect state key'd by input text code.
 	CF_TextEffectState* effect_state = app->text_effect_states.try_find(text);
 	if (!effect_state) {
 		effect_state = app->text_effect_states.insert(text);
