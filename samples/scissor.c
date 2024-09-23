@@ -8,7 +8,7 @@ int main(int argc, char* argv[])
 
 	while (cf_app_is_running()) {
 		cf_app_update(NULL);
-		cf_render_settings_push_scissor((CF_Rect){
+		cf_draw_push_scissor((CF_Rect){
 			.x = 0,
 			.y = 0,
 			.w = 320,
