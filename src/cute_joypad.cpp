@@ -133,6 +133,7 @@ bool cf_joypad_button_down(int player_index, CF_JoypadButton button)
 {
 	CF_ASSERT(player_index >= 0 && player_index < CF_MAX_JOYPADS);
 	if (!joypads[player_index].id) return false;
+	if (button < 0 || button >= CF_JOYPAD_BUTTON_COUNT) return false;
 	return joypads[player_index].buttons[button];
 }
 
@@ -140,6 +141,7 @@ bool cf_joypad_button_just_pressed(int player_index, CF_JoypadButton button)
 {
 	CF_ASSERT(player_index >= 0 && player_index < CF_MAX_JOYPADS);
 	if (!joypads[player_index].id) return false;
+	if (button < 0 || button >= CF_JOYPAD_BUTTON_COUNT) return false;
 	return joypads[player_index].buttons[button] && !joypads[player_index].buttons_prev[button];
 }
 
@@ -147,6 +149,7 @@ bool cf_joypad_button_just_released(int player_index, CF_JoypadButton button)
 {
 	CF_ASSERT(player_index >= 0 && player_index < CF_MAX_JOYPADS);
 	if (!joypads[player_index].id) return false;
+	if (button < 0 || button >= CF_JOYPAD_BUTTON_COUNT) return false;
 	return !joypads[player_index].buttons[button] && joypads[player_index].buttons_prev[button];
 }
 
@@ -194,7 +197,7 @@ void cf_joypad_update()
 		bool already_connected = false;
 		for (int i = 0; i < CF_MAX_JOYPADS; ++i) {
 			const char* serial = SDL_GetGamepadSerial(gamepad);
-			if (joypads[i].id == id || (serial && sequ(joypads->serial, serial))) {
+			if (joypads[i].id == id || (serial && joypads[i].serial && sequ(joypads[i].serial, serial))) {
 				already_connected = true;
 				break;
 			}
@@ -242,6 +245,7 @@ void cf_joypad_on_button_up(SDL_JoystickID id, int button)
 {
 	int player_index = SDL_GetGamepadPlayerIndexForID(id);
 	if (player_index < 0 || player_index >= CF_MAX_JOYPADS) return;
+	if (button < 0 || button >= CF_JOYPAD_BUTTON_COUNT) return;
 	CF_Joypad* joypad = &joypads[player_index];
 	if (joypad->id && joypad->id == id) {
 		joypad->buttons[button] = 0;
@@ -252,6 +256,7 @@ void cf_joypad_on_button_down(SDL_JoystickID id, int button)
 {
 	int player_index = SDL_GetGamepadPlayerIndexForID(id);
 	if (player_index < 0 || player_index >= CF_MAX_JOYPADS) return;
+	if (button < 0 || button >= CF_JOYPAD_BUTTON_COUNT) return;
 	CF_Joypad* joypad = &joypads[player_index];
 	if (joypad->id && joypad->id == id) {
 		joypad->buttons[button] = 1;
