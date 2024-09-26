@@ -1309,7 +1309,7 @@ CF_API CF_V2 CF_CALL cf_draw_mul(CF_M3x2 m, CF_V2 p);
  * @category draw
  * @brief    Applies this transform to current coordinate system.
  * @param    m      The transform to apply.
- * @related  cf_draw_transform cf_draw_translate cf_draw_scale cf_draw_rotate cf_draw_TRS cf_draw_push cf_draw_pop
+ * @related  cf_draw_transform cf_draw_translate cf_draw_scale cf_draw_rotate cf_draw_TSR cf_draw_push cf_draw_pop
  */
 CF_API void CF_CALL cf_draw_transform(CF_M3x2 m);
 
@@ -1319,7 +1319,7 @@ CF_API void CF_CALL cf_draw_transform(CF_M3x2 m);
  * @brief    Translates the current coordinate system.
  * @param    x      The x position to translate by.
  * @param    y      The y position to translate by.
- * @related  cf_draw_translate_v2 cf_draw_transform cf_draw_translate cf_draw_scale cf_draw_rotate cf_draw_TRS cf_draw_push cf_draw_pop
+ * @related  cf_draw_translate_v2 cf_draw_transform cf_draw_translate cf_draw_scale cf_draw_rotate cf_draw_TSR cf_draw_push cf_draw_pop
  */
 CF_API void CF_CALL cf_draw_translate(float x, float y);
 
@@ -1328,7 +1328,7 @@ CF_API void CF_CALL cf_draw_translate(float x, float y);
  * @category draw
  * @brief    Translates the current coordinate system.
  * @param    position   The position to translate by.
- * @related  cf_draw_translate cf_draw_transform cf_draw_translate cf_draw_scale cf_draw_rotate cf_draw_TRS cf_draw_push cf_draw_pop
+ * @related  cf_draw_translate cf_draw_transform cf_draw_translate cf_draw_scale cf_draw_rotate cf_draw_TSR cf_draw_push cf_draw_pop
  */
 CF_API void CF_CALL cf_draw_translate_v2(CF_V2 position);
 
@@ -1338,7 +1338,7 @@ CF_API void CF_CALL cf_draw_translate_v2(CF_V2 position);
  * @brief    Scales the current coordinate system.
  * @param    w      The width to scale the x-axis by.
  * @param    h      The height to scale the y-axis by.
- * @related  cf_draw_scale_v2 cf_draw_translate cf_draw_transform cf_draw_translate cf_draw_scale cf_draw_rotate cf_draw_TRS cf_draw_push cf_draw_pop
+ * @related  cf_draw_scale_v2 cf_draw_translate cf_draw_transform cf_draw_translate cf_draw_scale cf_draw_rotate cf_draw_TSR cf_draw_push cf_draw_pop
  */
 CF_API void CF_CALL cf_draw_scale(float w, float h);
 
@@ -1346,7 +1346,7 @@ CF_API void CF_CALL cf_draw_scale(float w, float h);
  * @function cf_draw_scale_v2
  * @category draw
  * @brief    Scales the current coordinate system.
- * @related  cf_draw_scale cf_draw_translate cf_draw_transform cf_draw_translate cf_draw_scale cf_draw_rotate cf_draw_TRS cf_draw_push cf_draw_pop
+ * @related  cf_draw_scale cf_draw_translate cf_draw_transform cf_draw_translate cf_draw_scale cf_draw_rotate cf_draw_TSR cf_draw_push cf_draw_pop
  */
 CF_API void CF_CALL cf_draw_scale_v2(CF_V2 scale);
 
@@ -1355,25 +1355,25 @@ CF_API void CF_CALL cf_draw_scale_v2(CF_V2 scale);
  * @category draw
  * @brief    Rotates the current coordinate system.
  * @param    radians    The angle to rotate by.
- * @related  cf_draw_translate cf_draw_transform cf_draw_translate cf_draw_scale cf_draw_rotate cf_draw_TRS cf_draw_push cf_draw_pop
+ * @related  cf_draw_translate cf_draw_transform cf_draw_translate cf_draw_scale cf_draw_rotate cf_draw_TSR cf_draw_push cf_draw_pop
  */
 CF_API void CF_CALL cf_draw_rotate(float radians);
 
 /**
- * @function cf_draw_TRS
+ * @function cf_draw_TSR
  * @category draw
  * @brief    Transforms the current coordinate system by a rotation, then a scale, then a translation.
- * @related  cf_draw_TRS_absolute cf_draw_translate cf_draw_transform cf_draw_translate cf_draw_scale cf_draw_rotate cf_draw_TRS cf_draw_push cf_draw_pop
+ * @related  cf_draw_TSR_absolute cf_draw_translate cf_draw_transform cf_draw_translate cf_draw_scale cf_draw_rotate cf_draw_TSR cf_draw_push cf_draw_pop
  */
-CF_API void CF_CALL cf_draw_TRS(CF_V2 position, CF_V2 scale, float radians);
+CF_API void CF_CALL cf_draw_TSR(CF_V2 position, CF_V2 scale, float radians);
 
 /**
- * @function cf_draw_TRS_absolute
+ * @function cf_draw_TSR_absolute
  * @category draw
  * @brief    Sets the current coordinate system.
- * @related  cf_draw_translate cf_draw_transform cf_draw_translate cf_draw_scale cf_draw_rotate cf_draw_TRS cf_draw_push cf_draw_pop
+ * @related  cf_draw_translate cf_draw_transform cf_draw_translate cf_draw_scale cf_draw_rotate cf_draw_TSR cf_draw_push cf_draw_pop
  */
-CF_API void CF_CALL cf_draw_TRS_absolute(CF_V2 position, CF_V2 scale, float radians);
+CF_API void CF_CALL cf_draw_TSR_absolute(CF_V2 position, CF_V2 scale, float radians);
 
 /**
  * @function cf_draw_push
@@ -1389,7 +1389,7 @@ CF_API void CF_CALL cf_draw_TRS_absolute(CF_V2 position, CF_V2 scale, float radi
  *           cf_draw_line(a, b); // Draw using the previous translate then rotate.
  *           cf_draw_pop(); // Restore the prior coordinate system.
  *           ```
- * @related  cf_draw_push cf_draw_pop cf_draw_peek cf_draw_translate cf_draw_transform cf_draw_translate cf_draw_scale cf_draw_rotate cf_draw_TRS
+ * @related  cf_draw_push cf_draw_pop cf_draw_peek cf_draw_translate cf_draw_transform cf_draw_translate cf_draw_scale cf_draw_rotate cf_draw_TSR
  */
 CF_API void CF_CALL cf_draw_push();
 
@@ -1399,7 +1399,7 @@ CF_API void CF_CALL cf_draw_push();
  * @brief    Restores the previous coordinate system.
  * @remarks  This function is essential for drawing things locally without affecting the coordinate
  *           system of anything else that needs to draw. See `cf_draw_push` for details.
- * @related  cf_draw_push cf_draw_pop cf_draw_peek cf_draw_translate cf_draw_transform cf_draw_translate cf_draw_scale cf_draw_rotate cf_draw_TRS
+ * @related  cf_draw_push cf_draw_pop cf_draw_peek cf_draw_translate cf_draw_transform cf_draw_translate cf_draw_scale cf_draw_rotate cf_draw_TSR
  */
 CF_API void CF_CALL cf_draw_pop();
 
@@ -1452,7 +1452,7 @@ CF_API CF_V2 CF_CALL cf_screen_to_world(CF_V2 point);
  * @function cf_screen_bounds_to_world
  * @category draw
  * @brief    Returns a `CF_Aabb` of the screen bounds in world space.
- * @remarks  This can be useful for colliding against the screen, or implementing occlusion occlusion culling.
+ * @remarks  This can be useful for colliding against the screen, or implementing occlusion culling.
  * @related  cf_world_to_screen cf_screen_to_world cf_screen_bounds_to_world
  */
 CF_API CF_Aabb CF_CALL cf_screen_bounds_to_world();
@@ -1758,8 +1758,8 @@ CF_INLINE void draw_scale(v2 scale) { cf_draw_scale_v2(scale); }
 CF_INLINE void draw_translate(float x, float y) { cf_draw_translate(x, y); }
 CF_INLINE void draw_translate(v2 pos) { cf_draw_translate_v2(pos); }
 CF_INLINE void draw_rotate(float radians) { cf_draw_rotate(radians); }
-CF_INLINE void draw_TRS(v2 pos, v2 scale, float radians) { cf_draw_TRS(pos, scale, radians); }
-CF_INLINE void draw_TRS_absolute(v2 pos, v2 scale, float radians) { cf_draw_TRS_absolute(pos, scale, radians); }
+CF_INLINE void draw_TSR(v2 pos, v2 scale, float radians) { cf_draw_TSR(pos, scale, radians); }
+CF_INLINE void draw_TSR_absolute(v2 pos, v2 scale, float radians) { cf_draw_TSR_absolute(pos, scale, radians); }
 CF_INLINE void draw_push() { cf_draw_push(); }
 CF_INLINE void draw_pop() { cf_draw_pop(); }
 CF_INLINE M3x2 draw_peek() { return cf_draw_peek(); }

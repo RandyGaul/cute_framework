@@ -2723,11 +2723,12 @@ void cf_render_to(CF_Canvas canvas, bool clear)
 	}
 
 	// Sort the commands by layer first, then by age (to maintain relative ordering).
+	// @NOTE -- Perhaps std::sort would be better than stable_sort, since the predicate has stability built-in?
 	std::stable_sort(draw->cmds.begin(), draw->cmds.end(), [](const CF_Command& a, const CF_Command& b) {
 		if (a.layer == b.layer) return a.id < b.id;
 		else return a.layer < b.layer;
 	});
-	
+
 	int count = draw->cmds.count();
 	for (int i = 0; i < count; ++i) {
 		draw->cmd_index = i;
@@ -2852,12 +2853,12 @@ void cf_draw_rotate(float radians)
 	cf_draw_transform(m);
 }
 
-void cf_draw_TRS(CF_V2 position, CF_V2 scale, float radians)
+void cf_draw_TSR(CF_V2 position, CF_V2 scale, float radians)
 {
 	cf_draw_transform(make_transform(position, scale, radians));
 }
 
-void cf_draw_TRS_absolute(CF_V2 position, CF_V2 scale, float radians)
+void cf_draw_TSR_absolute(CF_V2 position, CF_V2 scale, float radians)
 {
 	CF_M3x2 m = make_transform(position, scale, radians);
 	draw->cam_stack.last() = m;

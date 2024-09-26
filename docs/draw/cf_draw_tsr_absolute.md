@@ -3,25 +3,25 @@
 [//]: # (See: https://github.com/RandyGaul/cute_framework/blob/master/samples/docs_parser.cpp)
 [](../header.md ':include')
 
-# cf_draw_TRS
+# cf_draw_TSR_absolute
 
 Category: [draw](/api_reference?id=draw)  
 GitHub: [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_draw.h)  
 ---
 
-Transforms the current coordinate system by a rotation, then a scale, then a translation.
+Sets the current coordinate system.
 
 ```cpp
-void cf_draw_TRS(CF_V2 position, CF_V2 scale, float radians);
+void cf_draw_TSR_absolute(CF_V2 position, CF_V2 scale, float radians);
 ```
 
 ## Related Pages
 
-[cf_draw_TRS_absolute](/draw/cf_draw_trs_absolute.md)  
 [cf_draw_translate](/draw/cf_draw_translate.md)  
 [cf_draw_transform](/draw/cf_draw_transform.md)  
 [cf_draw_translate](/draw/cf_draw_translate.md)  
 [cf_draw_scale](/draw/cf_draw_scale.md)  
 [cf_draw_rotate](/draw/cf_draw_rotate.md)  
-[cf_draw_pop](/draw/cf_draw_pop.md)  
+[cf_draw_TSR](/draw/cf_draw_tsr.md)  
 [cf_draw_push](/draw/cf_draw_push.md)  
+[cf_draw_pop](/draw/cf_draw_pop.md)  

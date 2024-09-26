@@ -17,7 +17,7 @@ CF_Aabb cf_screen_bounds_to_world();
 
 ## Remarks
 
-This can be useful for colliding against the screen, or implementing occlusion occlusion culling.
+This can be useful for colliding against the screen, or implementing occlusion culling.
 
 ## Related Pages
 
