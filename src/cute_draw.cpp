@@ -85,11 +85,19 @@ void cf_get_pixels(SPRITEBATCH_U64 image_id, void* buffer, int bytes_to_fill, vo
 	} else if (image_id >= CF_PNG_ID_RANGE_LO && image_id <= CF_PNG_ID_RANGE_HI) {
 		cf_png_cache_get_pixels(image_id, buffer, bytes_to_fill);
 	} else if (image_id >= CF_FONT_ID_RANGE_LO && image_id <= CF_FONT_ID_RANGE_HI) {
-		CF_Pixel* pixels = app->font_pixels.get(image_id);
-		CF_MEMCPY(buffer, pixels, bytes_to_fill);
+		CF_Pixel** pixels = app->font_pixels.try_get(image_id);
+		if (pixels) {
+			CF_MEMCPY(buffer, *pixels, bytes_to_fill);
+		} else {
+			CF_MEMSET(buffer, 0, bytes_to_fill);
+		}
 	} else if (image_id >= CF_EASY_ID_RANGE_LO && image_id <= CF_EASY_ID_RANGE_HI) {
-		CF_Pixel* pixels = app->easy_sprites.get(image_id).pix;
-		CF_MEMCPY(buffer, pixels, bytes_to_fill);
+		CF_Image* img = app->easy_sprites.try_get(image_id);
+		if (img) {
+			CF_MEMCPY(buffer, img->pix, bytes_to_fill);
+		} else {
+			CF_MEMSET(buffer, 0, bytes_to_fill);
+		}
 	} else if (image_id >= CF_PREMADE_ID_RANGE_LO && image_id <= CF_PREMADE_ID_RANGE_HI) {
 		// These are handled externally by the user, so spritebatch should never ask for pixels.
 		// It's assumed premade atlases are generated properly externally.
