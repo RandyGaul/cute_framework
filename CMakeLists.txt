@@ -489,6 +489,7 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 		add_executable(platformer samples/platformer.cpp)
 		add_executable(polygon samples/polygon.cpp)
 		add_executable(scissor samples/scissor.c)
+		add_executable(ime samples/ime.c)
 		set(SAMPLE_EXECUTABLES
 			easysprite
 			basicserialization
@@ -521,6 +522,7 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 			platformer
 			polygon
 			scissor
+			ime
 		)
 
 		foreach(CURRENT_TARGET ${SAMPLE_EXECUTABLES})

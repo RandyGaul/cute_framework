@@ -358,6 +358,13 @@ bool cf_input_text_has_data()
 	return app->input_text.count() > 0 ? true : false;
 }
 
+bool cf_input_text_get_buffer(CF_InputTextBuffer* buffer)
+{
+	buffer->len = app->input_text.count();
+	buffer->codepoints = app->input_text.data();
+	return app->input_text.count() > 0;
+}
+
 void cf_input_text_clear()
 {
 	app->input_text.clear();
@@ -551,8 +558,10 @@ void cf_pump_input_msgs()
 
 		case SDL_EVENT_TEXT_EDITING:
 		{
+			app->ime_composition.clear();
 			const char* text = event.edit.text;
 			while (*text) app->ime_composition.add(*text++);
+			app->ime_composition.add(0);
 			app->ime_composition_cursor = event.edit.start;
 			app->ime_composition_selection_len = event.edit.length;
 		}	break;
