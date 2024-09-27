@@ -2655,13 +2655,12 @@ void static s_blit(CF_Command* cmd, CF_Canvas src, CF_Canvas dst, bool clear_dst
 		draw->blit_mesh = blit_mesh;
 	}
 
+	// Try and fetch a custom shader supplied by the user, otherwise fallback to the default blit shader.
 	CF_Shader* blit = (CF_Shader*)draw->draw_shd_to_blit_shd.try_get(cmd->shader.id);
 	if (!blit) {
 		CF_ASSERT(app->blit_shader.id);
 		blit = (CF_Shader*)&app->blit_shader;
 	}
-
-	// Custom shader supplied by the user.
 
 	cf_apply_canvas(dst, clear_dst);
 
