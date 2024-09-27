@@ -116,10 +116,7 @@ struct CF_App
 	void* on_sound_finish_udata = NULL;
 	void* on_music_finish_udata = NULL;
 	CF_Mutex on_sound_finish_mutex = cf_make_mutex();
-	bool blit_init = false;
-	CF_Mesh blit_mesh = { 0 };
 	CF_Shader blit_shader = { 0 };
-	CF_Material blit_material = { 0 };
 
 	// Input stuff.
 	Cute::Array<char> ime_composition;

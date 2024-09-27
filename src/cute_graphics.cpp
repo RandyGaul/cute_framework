@@ -1155,6 +1155,7 @@ void cf_load_internal_shaders()
 	app->draw_shader = s_compile(s_draw_vs, s_draw_fs, true, NULL);
 	app->basic_shader = s_compile(s_basic_vs, s_basic_fs, true, NULL);
 	app->backbuffer_shader = s_compile(s_backbuffer_vs, s_backbuffer_fs, true, NULL);
+	app->blit_shader = s_compile(s_blit_vs, s_blit_fs, true, NULL);
 }
 
 void cf_unload_internal_shaders()
@@ -1292,6 +1293,8 @@ CF_Canvas cf_make_canvas(CF_CanvasParams params)
 {
 	CF_CanvasInternal* canvas = (CF_CanvasInternal*)CF_CALLOC(sizeof(CF_CanvasInternal));
 	if (params.target.width > 0 && params.target.height > 0) {
+		canvas->w = params.target.width;
+		canvas->h = params.target.height;
 		canvas->cf_texture = cf_make_texture(params.target);
 		if (canvas->cf_texture.id) {
 			canvas->texture = ((CF_TextureInternal*)canvas->cf_texture.id)->tex;
@@ -1331,114 +1334,6 @@ CF_Texture cf_canvas_get_depth_stencil_target(CF_Canvas canvas_handle)
 {
 	CF_CanvasInternal* canvas = (CF_CanvasInternal*)canvas_handle.id;
 	return canvas->cf_depth_stencil;
-}
-
-void cf_canvas_blit(CF_Canvas src, CF_V2 u0, CF_V2 v0, CF_Canvas dst, CF_V2 u1, CF_V2 v1, bool clear_dst)
-{
-	typedef struct Vertex
-	{
-		float x, y;
-		float u, v;
-	} Vertex;
-
-	if (!app->blit_init) {
-		app->blit_init = true;
-
-		// Create a full-screen quad mesh.
-		CF_VertexAttribute attrs[2] = { 0 };
-		attrs[0].name = "in_pos";
-		attrs[0].format = CF_VERTEX_FORMAT_FLOAT2;
-		attrs[0].offset = CF_OFFSET_OF(Vertex, x);
-		attrs[1].name = "in_uv";
-		attrs[1].format = CF_VERTEX_FORMAT_FLOAT2;
-		attrs[1].offset = CF_OFFSET_OF(Vertex, u);
-		CF_Mesh blit_mesh = cf_make_mesh(sizeof(Vertex) * 1024, attrs, 2, sizeof(Vertex));
-		app->blit_mesh = blit_mesh;
-
-		// Create material + shader for blitting.
-		CF_Material blit_material = cf_make_material();
-		cf_material_set_texture_fs(blit_material, "u_image", cf_canvas_get_target(src));
-		CF_RenderState state = cf_render_state_defaults();
-		state.blend.enabled = true;
-		state.blend.rgb_src_blend_factor = CF_BLENDFACTOR_ONE;
-		state.blend.rgb_dst_blend_factor = CF_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
-		state.blend.rgb_op = CF_BLEND_OP_ADD;
-		state.blend.alpha_src_blend_factor = CF_BLENDFACTOR_ONE;
-		state.blend.alpha_dst_blend_factor = CF_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
-		state.blend.alpha_op = CF_BLEND_OP_ADD;
-		cf_material_set_render_state(blit_material, state);
-
-		const char* vs = R"(
-			layout (location = 0) in vec2 in_pos;
-			layout (location = 1) in vec2 in_uv;
-
-			layout (location = 0) out vec2 uv;
-
-			void main() {
-				vec4 posH = vec4(in_pos, 0, 1);
-				uv = in_uv;
-				gl_Position = posH;
-			}
-		)";
-
-		const char* fs = R"(
-			layout (location = 0) in vec2 uv;
-
-			layout (location = 0) out vec4 result;
-
-			layout (set = 2, binding = 0) uniform sampler2D u_image;
-
-			void main() {
-				vec4 color = texture(u_image, uv);
-				result = color;
-			}
-		)";
-
-		CF_Shader blit_shader = cf_make_shader_from_source(vs, fs);
-
-		app->blit_material = blit_material;
-		app->blit_shader = blit_shader;
-	}
-
-	// UV (0,0) is top-left of the screen, while UV (1,1) is bottom right.
-	// Coordinate (-1,1) is top left, while (1,-1) is bottom right.
-	auto fill_quad = [](float x, float y, float sx, float sy, v2 u, v2 v, Vertex verts[6])
-	{
-		// Build a quad from (-1.0f,-1.0f) to (1.0f,1.0f).
-		verts[0].x = -1.0f; verts[0].y =  1.0f; verts[0].u = u.x; verts[0].v = u.y;
-		verts[1].x =  1.0f; verts[1].y = -1.0f; verts[1].u = v.x; verts[1].v = v.y;
-		verts[2].x =  1.0f; verts[2].y =  1.0f; verts[2].u = v.x; verts[2].v = u.y;
-
-		verts[3].x = -1.0f; verts[3].y =  1.0f; verts[3].u = u.x; verts[3].v = u.y;
-		verts[4].x = -1.0f; verts[4].y = -1.0f; verts[4].u = u.x; verts[4].v = v.y;
-		verts[5].x =  1.0f; verts[5].y = -1.0f; verts[5].u = v.x; verts[5].v = v.y;
-
-		// Scale the quad about the origin by (sx,sy), then translate it by (x,y).
-		for (int i = 0; i < 6; ++i) {
-			verts[i].x = verts[i].x * sx + x;
-			verts[i].y = verts[i].y * sy + y;
-		}
-	};
-
-	// We're going to blit onto dst.
-	cf_apply_canvas(dst, clear_dst);
-
-	// Create a quad where positions come from dst, and UV's come from src.
-	float w = v1.x - u1.x;
-	float h = v1.y - u1.y;
-	float x = (u1.x + v1.x) - 1.0f;
-	float y = (u1.y + v1.y) - 1.0f;
-	Vertex verts[6];
-	fill_quad(x, -y, w, h, u0, v0, verts);
-	cf_mesh_update_vertex_data(app->blit_mesh, verts, 6);
-
-	// Read pixels from src.
-	cf_material_set_texture_fs(app->blit_material, "u_image", cf_canvas_get_target(src));
-
-	// Blit onto dst.
-	cf_apply_mesh(app->blit_mesh);
-	cf_apply_shader(app->blit_shader, app->blit_material);
-	cf_draw_elements();
 }
 
 CF_Mesh cf_make_mesh(int vertex_buffer_size, const CF_VertexAttribute* attributes, int attribute_count, int vertex_stride)

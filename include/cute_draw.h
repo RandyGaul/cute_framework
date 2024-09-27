@@ -1298,11 +1298,10 @@ CF_API void CF_CALL cf_draw_set_uniform_color(const char* name, CF_Color val);
  * @function cf_draw_mul
  * @category draw
  * @brief    Applies the current draw transform to a point.
- * @param    m      The transform to apply.
  * @param    p      The point to transform.
  * @related  TODO
  */
-CF_API CF_V2 CF_CALL cf_draw_mul(CF_M3x2 m, CF_V2 p);
+CF_API CF_V2 CF_CALL cf_draw_mul(CF_V2 p);
 
 /**
  * @function cf_draw_transform
@@ -1751,7 +1750,7 @@ CF_INLINE void draw_set_uniform(const char* name, float val) { cf_draw_set_unifo
 CF_INLINE void draw_set_uniform(const char* name, v2 val) { cf_draw_set_uniform_v2(name, val); }
 CF_INLINE void draw_set_uniform(const char* name, Color val) { cf_draw_set_uniform_color(name, val); }
 
-CF_INLINE v2 draw_mul(M3x2 m, v2 v) { return cf_draw_mul(m, v); }
+CF_INLINE v2 draw_mul(v2 v) { return cf_draw_mul(v); }
 CF_INLINE void draw_transform(M3x2 m) { cf_draw_transform(m); }
 CF_INLINE void draw_scale(float w, float h) { cf_draw_scale(w, h); }
 CF_INLINE void draw_scale(v2 scale) { cf_draw_scale_v2(scale); }

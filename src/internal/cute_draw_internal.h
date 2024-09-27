@@ -83,7 +83,8 @@ struct CF_Command
 	CF_DrawUniform u;
 	bool is_canvas = false;
 	CF_Canvas canvas = { 0 };
-	CF_V2 canvas_pos, canvas_scale;
+	CF_V2 canvas_verts[4];
+	CF_V2 canvas_verts_posH[4];
 	CF_Color canvas_attributes = cf_color_clear();
 };
 

@@ -28,6 +28,7 @@ CF_INLINE SDL_GPUTextureCreateInfo SDL_GPUTextureCreateInfoDefaults(int w, int h
 
 struct CF_CanvasInternal
 {
+	int w, h;
 	CF_Texture cf_texture;
 	CF_Texture cf_depth_stencil;
 	SDL_GPUTexture* texture;

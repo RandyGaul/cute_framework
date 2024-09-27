@@ -24,8 +24,10 @@ int main(int argc, char* argv[])
 	while (app_is_running()) {
 		app_update();
 
-		draw_circle(V2(-200,0), 30, 5);
-		draw_circle(V2( 200,0), 30, 5);
+		draw_circle(V2(-200,100), 30, 5);
+		draw_push_color(color_red());
+		draw_circle(V2( 200,100), 30, 5);
+		draw_pop_color();
 		render_to(plain, true);
 
 		draw_push_shader(shadow_shd);
@@ -34,7 +36,11 @@ int main(int argc, char* argv[])
 		render_to(shadows, true);
 
 		draw_canvas(shadows, 5, -5, w, h);
+		draw_push();
+		//draw_scale(-1,-1);
+		//draw_translate(0,0);
 		draw_canvas(plain, 0, 0, w, h);
+		//draw_pop();
 		render_to(app_get_canvas(), true);
 
 		app_draw_onto_screen();

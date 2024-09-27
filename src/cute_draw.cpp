@@ -2601,19 +2601,36 @@ void cf_draw_canvas(CF_Canvas canvas, CF_V2 position, CF_V2 scale)
 	CF_Command& cmd = draw->add_cmd();
 	cmd.is_canvas = true;
 	cmd.canvas = canvas;
-	cmd.canvas_pos = position;
-	cmd.canvas_scale = scale;
+	Aabb bb = make_aabb(position, fabsf(scale.x), fabsf(scale.y));
+	aabb_verts(cmd.canvas_verts, bb);
+	bool flip_x = scale.x < 0;
+	bool flip_y = scale.y < 0;
+	auto swap = [](v2& a, v2& b) {
+		v2 t = a;
+		a = b;
+		b = t;
+	};
+	if (flip_x) {
+		swap(cmd.canvas_verts[0], cmd.canvas_verts[1]);
+		swap(cmd.canvas_verts[2], cmd.canvas_verts[3]);
+	}
+	if (flip_y) {
+		swap(cmd.canvas_verts[0], cmd.canvas_verts[3]);
+		swap(cmd.canvas_verts[1], cmd.canvas_verts[2]);
+	}
+	for (int i = 0; i < 4; ++i) {
+		cmd.canvas_verts_posH[i] = mul(draw->mvp, cmd.canvas_verts[i]);
+	}
 	cmd.canvas_attributes = draw->user_params.last();
 }
 
-// Modified version of `cf_canvas_blit` to inject user-shader code.
-void static s_blit(CF_Command* cmd, CF_Canvas src, Aabb canvas_bb, CF_V2 u0, CF_V2 v0, CF_Canvas dst, CF_V2 u1, CF_V2 v1, bool clear_dst)
+void static s_blit(CF_Command* cmd, CF_Canvas src, CF_Canvas dst, bool clear_dst)
 {
 	typedef struct Vertex
 	{
-		float wx, wy; // World space x/y.
-		float x, y;   // posH.
-		float u, v;   // Source UV.
+		v2 pos;  // World space x/y.
+		v2 posH; // posH, homogenous (multiplied by mvp).
+		v2 uv;   // UV to read from src.
 		CF_Color params;
 	} Vertex;
 
@@ -2624,13 +2641,13 @@ void static s_blit(CF_Command* cmd, CF_Canvas src, Aabb canvas_bb, CF_V2 u0, CF_
 		CF_VertexAttribute attrs[4] = { 0 };
 		attrs[0].name = "in_pos";
 		attrs[0].format = CF_VERTEX_FORMAT_FLOAT2;
-		attrs[0].offset = CF_OFFSET_OF(Vertex, wx);
+		attrs[0].offset = CF_OFFSET_OF(Vertex, pos);
 		attrs[1].name = "in_posH";
 		attrs[1].format = CF_VERTEX_FORMAT_FLOAT2;
-		attrs[1].offset = CF_OFFSET_OF(Vertex, x);
+		attrs[1].offset = CF_OFFSET_OF(Vertex, posH);
 		attrs[2].name = "in_uv";
 		attrs[2].format = CF_VERTEX_FORMAT_FLOAT2;
-		attrs[2].offset = CF_OFFSET_OF(Vertex, u);
+		attrs[2].offset = CF_OFFSET_OF(Vertex, uv);
 		attrs[3].name = "in_params";
 		attrs[3].format = CF_VERTEX_FORMAT_FLOAT4;
 		attrs[3].offset = CF_OFFSET_OF(Vertex, params);
@@ -2638,85 +2655,77 @@ void static s_blit(CF_Command* cmd, CF_Canvas src, Aabb canvas_bb, CF_V2 u0, CF_
 		draw->blit_mesh = blit_mesh;
 	}
 
-	// UV (0,0) is top-left of the screen, while UV (1,1) is bottom right.
-	// Coordinate (-1,1) is top left, while (1,-1) is bottom right.
-	auto fill_quad = [=](float x, float y, float sx, float sy, v2 u, v2 v, CF_Aabb canvas_bb, Vertex verts[6])
-	{
-		// Build a quad from (-1.0f,-1.0f) to (1.0f,1.0f).
-		verts[0].x = -1.0f; verts[0].y =  1.0f; verts[0].u = u.x; verts[0].v = u.y;
-		verts[1].x =  1.0f; verts[1].y = -1.0f; verts[1].u = v.x; verts[1].v = v.y;
-		verts[2].x =  1.0f; verts[2].y =  1.0f; verts[2].u = v.x; verts[2].v = u.y;
-
-		verts[3].x = -1.0f; verts[3].y =  1.0f; verts[3].u = u.x; verts[3].v = u.y;
-		verts[4].x = -1.0f; verts[4].y = -1.0f; verts[4].u = u.x; verts[4].v = v.y;
-		verts[5].x =  1.0f; verts[5].y = -1.0f; verts[5].u = v.x; verts[5].v = v.y;
-
-		// Assign world space coordinates (wx, wy) from `canvas_bb`.
-		// ...These get passed into the user shader as the world space `pos` parameter.
-		verts[0].wx = canvas_bb.min.x; verts[0].wy = canvas_bb.max.y;
-		verts[1].wx = canvas_bb.max.x; verts[1].wy = canvas_bb.min.y;
-		verts[2].wx = canvas_bb.max.x; verts[2].wy = canvas_bb.max.y;
-
-		verts[3].wx = canvas_bb.min.x; verts[3].wy = canvas_bb.max.y;
-		verts[4].wx = canvas_bb.min.x; verts[4].wy = canvas_bb.min.y;
-		verts[5].wx = canvas_bb.max.x; verts[5].wy = canvas_bb.min.y;
-
-		// Scale the quad about the origin by (sx,sy), then translate it by (x,y).
-		for (int i = 0; i < 6; ++i) {
-			verts[i].x = verts[i].x * sx + x;
-			verts[i].y = verts[i].y * sy + y;
-			verts[i].params = cmd->canvas_attributes;
-		}
-	};
-
 	CF_Shader* blit = (CF_Shader*)draw->draw_shd_to_blit_shd.try_get(cmd->shader.id);
-
-	if (blit) {
-		// Custom shader supplied by the user.
-
-		cf_apply_canvas(dst, clear_dst);
-
-		// Create a quad where positions come from dst, and UV's come from src.
-		float w = v1.x - u1.x;
-		float h = v1.y - u1.y;
-		float x = (u1.x + v1.x) - 1.0f;
-		float y = (u1.y + v1.y) - 1.0f;
-		Vertex verts[6];
-		fill_quad(x, -y, w, h, u0, v0, canvas_bb, verts);
-		cf_mesh_update_vertex_data(draw->blit_mesh, verts, 6);
-		cf_apply_mesh(draw->blit_mesh);
-
-		// Read pixels from src.
-		cf_material_set_texture_fs(draw->material, "u_image", cf_canvas_get_target(src));
-
-		// Apply uniforms.
-		cf_material_set_uniform_fs(draw->material, "u_texture_size", &cmd->canvas_scale, CF_UNIFORM_TYPE_FLOAT2, 1);
-		cf_material_set_uniform_fs(draw->material, "u_alpha_discard", &cmd->alpha_discard, CF_UNIFORM_TYPE_FLOAT, 1);
-	
-		// Apply render state.
-		cf_material_set_render_state(draw->material, cmd->render_state);
-
-		// Apply shader.
-		cf_apply_shader(*blit, draw->material);
-
-		// Apply viewport.
-		Rect viewport = cmd->viewport;
-		if (viewport.w >= 0 && viewport.h >= 0) {
-			cf_apply_viewport(viewport.x, viewport.y, viewport.w, viewport.h);
-		}
-
-		// Apply scissor.
-		Rect scissor = cmd->scissor;
-		if (scissor.w >= 0 && scissor.h >= 0) {
-			cf_apply_scissor(scissor.x, scissor.y, scissor.w, scissor.h);
-		}
-
-		// Blit onto dst.
-		cf_draw_elements();
-	} else {
-		// No custom shader supplied, use the default one.
-		cf_canvas_blit(src, u0, v0, dst, u1, v1, clear_dst);
+	if (!blit) {
+		CF_ASSERT(app->blit_shader.id);
+		blit = (CF_Shader*)&app->blit_shader;
 	}
+
+	// Custom shader supplied by the user.
+
+	cf_apply_canvas(dst, clear_dst);
+
+	// Matches index convention from `bb_verts` function.
+	v2 verts_world[6] = {
+		cmd->canvas_verts[0],
+		cmd->canvas_verts[1],
+		cmd->canvas_verts[3],
+		cmd->canvas_verts[1],
+		cmd->canvas_verts[2],
+		cmd->canvas_verts[3],
+	};
+	v2 verts_posH[6] = {
+		cmd->canvas_verts_posH[0],
+		cmd->canvas_verts_posH[1],
+		cmd->canvas_verts_posH[3],
+		cmd->canvas_verts_posH[1],
+		cmd->canvas_verts_posH[2],
+		cmd->canvas_verts_posH[3],
+	};
+	Vertex verts[6];
+	for (int i = 0; i < 6; ++i) {
+		verts[i].pos = verts_world[i];
+		verts[i].posH = verts_posH[i];
+	}
+	verts[0].uv = V2(0,1);
+	verts[1].uv = V2(1,1);
+	verts[2].uv = V2(0,0);
+	verts[3].uv = V2(1,1);
+	verts[4].uv = V2(1,0);
+	verts[5].uv = V2(0,0);
+
+	cf_mesh_update_vertex_data(draw->blit_mesh, verts, 6);
+	cf_apply_mesh(draw->blit_mesh);
+
+	// Read pixels from src.
+	cf_material_set_texture_fs(draw->material, "u_image", cf_canvas_get_target(src));
+
+	// Apply uniforms.
+	CF_CanvasInternal* canvas_internal = (CF_CanvasInternal*)cmd->canvas.id;
+	v2 canvas_dims = V2((float)canvas_internal->w, (float)canvas_internal->h);
+	cf_material_set_uniform_fs(draw->material, "u_texture_size", &canvas_dims, CF_UNIFORM_TYPE_FLOAT2, 1);
+	cf_material_set_uniform_fs(draw->material, "u_alpha_discard", &cmd->alpha_discard, CF_UNIFORM_TYPE_FLOAT, 1);
+	
+	// Apply render state.
+	cf_material_set_render_state(draw->material, cmd->render_state);
+
+	// Apply shader.
+	cf_apply_shader(*blit, draw->material);
+
+	// Apply viewport.
+	Rect viewport = cmd->viewport;
+	if (viewport.w >= 0 && viewport.h >= 0) {
+		cf_apply_viewport(viewport.x, viewport.y, viewport.w, viewport.h);
+	}
+
+	// Apply scissor.
+	Rect scissor = cmd->scissor;
+	if (scissor.w >= 0 && scissor.h >= 0) {
+		cf_apply_scissor(scissor.x, scissor.y, scissor.w, scissor.h);
+	}
+
+	// Blit onto dst.
+	cf_draw_elements();
 }
 
 void cf_render_to(CF_Canvas canvas, bool clear)
@@ -2753,28 +2762,8 @@ void cf_render_to(CF_Canvas canvas, bool clear)
 		// Blit canvas.
 		// ...Incurs an entire extra draw call by itself.
 		if (cmd->is_canvas) {
-			Aabb canvas_bb_world = make_aabb(cmd->canvas_pos, cmd->canvas_scale.x, cmd->canvas_scale.y);
-
-			// Move the canvas_bb to screen space.
-			v2 a = world_to_screen(canvas_bb_world.min);
-			v2 b = world_to_screen(canvas_bb_world.max);
-			Aabb canvas_bb = make_aabb(min(a, b), max(a, b));
-			Aabb screen_bb = make_aabb(V2(0,0), V2((float)app->w, (float)app->h));
-			if (aabb_to_aabb(canvas_bb, screen_bb)) {
-				v2 lo = max(canvas_bb.min, screen_bb.min);
-				v2 hi = min(canvas_bb.max, screen_bb.max);
-				float src_w = canvas_bb.max.x - canvas_bb.min.x;
-				float src_h = (canvas_bb.max.y - canvas_bb.min.y);
-				float dst_w = (screen_bb.max.x - screen_bb.min.x);
-				float dst_h = (screen_bb.max.y - screen_bb.min.y);
-				if (src_w == 0 || src_h == 0 || dst_w == 0 || dst_h == 0) continue;
-				v2 src_lo = V2((lo.x-canvas_bb.min.x)/src_w, (lo.y-canvas_bb.min.y)/src_h);
-				v2 src_hi = V2((hi.x-canvas_bb.min.x)/src_w, (hi.y-canvas_bb.min.y)/src_h);
-				v2 dst_lo = V2((lo.x-screen_bb.min.x)/dst_w, (lo.y-screen_bb.min.y)/dst_h);
-				v2 dst_hi = V2((hi.x-screen_bb.min.x)/dst_w, (hi.y-screen_bb.min.y)/dst_h);
-				s_blit(cmd, cmd->canvas, canvas_bb_world, src_lo, src_hi, canvas, dst_lo, dst_hi, clear);
-				clear = false; // Only clear `canvas` once.
-			}
+			s_blit(cmd, cmd->canvas, canvas, clear);
+			clear = false; // Only clear `canvas` once.
 			draw->has_drawn_something = true;
 			continue;
 		}
@@ -2826,7 +2815,7 @@ void cf_render_to(CF_Canvas canvas, bool clear)
 	draw->verts.clear();
 }
 
-CF_V2 cf_draw_mul(CF_M3x2 m, CF_V2 v)
+CF_V2 cf_draw_mul(CF_V2 v)
 {
 	return mul(draw->cam_stack.last(), v);
 }
