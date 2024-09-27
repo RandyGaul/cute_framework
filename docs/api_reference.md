@@ -852,7 +852,6 @@ This is a list of all functions in Cute Framework organized by categories. This 
 - [cf_backend_type_to_string](/graphics/cf_backend_type_to_string.md)
 - [cf_blend_factor_string](/graphics/cf_blend_factor_string.md)
 - [cf_blend_op_string](/graphics/cf_blend_op_string.md)
-- [cf_canvas_blit](/graphics/cf_canvas_blit.md)
 - [cf_canvas_defaults](/graphics/cf_canvas_defaults.md)
 - [cf_canvas_get_depth_stencil_target](/graphics/cf_canvas_get_depth_stencil_target.md)
 - [cf_canvas_get_target](/graphics/cf_canvas_get_target.md)
@@ -1076,6 +1075,7 @@ This is a list of all functions in Cute Framework organized by categories. This 
 - [cf_input_set_ime_rect](/input/cf_input_set_ime_rect.md)
 - [cf_input_text_add_utf8](/input/cf_input_text_add_utf8.md)
 - [cf_input_text_clear](/input/cf_input_text_clear.md)
+- [cf_input_text_get_buffer](/input/cf_input_text_get_buffer.md)
 - [cf_input_text_has_data](/input/cf_input_text_has_data.md)
 - [cf_input_text_pop_utf32](/input/cf_input_text_pop_utf32.md)
 - [cf_joypad_add_mapping](/input/cf_joypad_add_mapping.md)
@@ -1128,6 +1128,7 @@ This is a list of all functions in Cute Framework organized by categories. This 
 
 ### structs
 - [CF_ImeComposition](/input/cf_imecomposition.md)
+- [CF_InputTextBuffer](/input/cf_inputtextbuffer.md)
 - [CF_Touch](/input/cf_touch.md)
 
 

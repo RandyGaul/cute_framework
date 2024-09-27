@@ -12,12 +12,11 @@ GitHub: [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Applies the current draw transform to a point.
 
 ```cpp
-CF_V2 cf_draw_mul(CF_M3x2 m, CF_V2 p);
+CF_V2 cf_draw_mul(CF_V2 p);
 ```
 
 Parameters | Description
 --- | ---
-m | The transform to apply.
 p | The point to transform.
 
 ## Related Pages
