@@ -358,6 +358,13 @@ bool cf_input_text_has_data()
 	return app->input_text.count() > 0 ? true : false;
 }
 
+bool cf_input_text_get_buffer(CF_InputTextBuffer* buffer)
+{
+	buffer->len = app->input_text.count();
+	buffer->codepoints = app->input_text.data();
+	return app->input_text.count() > 0;
+}
+
 void cf_input_text_clear()
 {
 	app->input_text.clear();
