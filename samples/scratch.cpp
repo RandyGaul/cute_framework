@@ -39,8 +39,9 @@ int main(int argc, char* argv[])
 		draw_push();
 		//draw_scale(-1,-1);
 		//draw_translate(0,0);
+		//draw_rotate((float)CF_SECONDS);
 		draw_canvas(plain, 0, 0, w, h);
-		//draw_pop();
+		draw_pop();
 		render_to(app_get_canvas(), true);
 
 		app_draw_onto_screen();

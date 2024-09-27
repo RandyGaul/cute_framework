@@ -91,7 +91,7 @@ int main(int argc, char* argv[])
 		cf_draw_text(instruction, (CF_V2){ 0, 0 }, -1);
 
 		// Draw input box slightly below
-		cf_draw_translate(0.f, -cf_text_size(instruction, -1).y * 1.5);
+		cf_draw_translate(0, -cf_text_size(instruction, -1).y * 1.5f);
 
 		// Append the text from the buffer
 		CF_InputTextBuffer buffer;
