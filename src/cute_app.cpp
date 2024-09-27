@@ -254,7 +254,10 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 		} else if (use_vulkan) {
 			device_name = "vulkan";
 		}
-		device = SDL_CreateGPUDevice(SDL_ShaderCross_GetShaderFormats(), options & APP_OPTIONS_GFX_DEBUG_BIT, device_name);
+		if(!SDL_ShaderCross_Init()) {
+			return cf_result_error("Failed to initialize SDL_ShaderCross.");
+		}
+		device = SDL_CreateGPUDevice(SDL_ShaderCross_GetSPIRVShaderFormats(), options & APP_OPTIONS_GFX_DEBUG_BIT, device_name);
 		if (!device) {
 			return cf_result_error("Failed to create GPU Device.");
 		}

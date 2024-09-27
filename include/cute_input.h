@@ -745,6 +745,22 @@ CF_API bool CF_CALL cf_mouse_hidden();
 CF_API void CF_CALL cf_mouse_lock_inside_window(bool true_to_lock);
 
 /**
+ * @struct   CF_InputTextBuffer
+ * @category input
+ * @brief    Represents the application's input text buffer.
+ * @related  cf_input_enable_ime cf_input_disable_ime cf_input_text_get_buffer cf_input_text_clear
+ */
+typedef struct CF_InputTextBuffer
+{
+	/* @member The length of the buffer. */
+	int len;
+
+	/* @member The buffer's data which is a sequence of utf32 codepoints. */
+	const int* codepoints;
+} CF_InputTextBuffer;
+// @end
+
+/**
  * @function cf_input_text_add_utf8
  * @category input
  * @brief    Adds a utf8 codepoint to the input buffer of the application.
@@ -773,6 +789,17 @@ CF_API int CF_CALL cf_input_text_pop_utf32();
  * @related  cf_input_text_add_utf8 cf_input_text_pop_utf32 cf_input_text_has_data cf_input_text_clear
  */
 CF_API bool CF_CALL cf_input_text_has_data();
+
+/**
+ * @function cf_input_text_get_buffer
+ * @category input
+ * @brief    Returns the content of the text input buffer.
+ * @return   Returns true if the input buffer of the application has any text within.
+ * @remarks  The input text functions are for dealing with text input. Not all text inputs come from a single key-stroke, as some are comprised of
+ *           multiple keystrokes, especially when dealing with non-Latin based inputs.
+ * @related  cf_input_enable_ime cf_input_disable_ime cf_input_text_clear
+ */
+CF_API bool CF_CALL cf_input_text_get_buffer(CF_InputTextBuffer* buffer);
 
 /**
  * @function cf_input_text_clear
@@ -970,6 +997,7 @@ CF_INLINE const char* to_string(MouseButton button)
 }
 
 using ImeComposition = CF_ImeComposition;
+using InputTextBuffer = CF_InputTextBuffer;
 using Touch = CF_Touch;
 
 CF_INLINE bool key_down(KeyButton key) { return cf_key_down(key); }
@@ -999,6 +1027,7 @@ CF_INLINE void mouse_lock_inside_window(bool true_to_lock) { cf_mouse_lock_insid
 CF_INLINE void input_text_add_utf8(const char* text) { cf_input_text_add_utf8(text); }
 CF_INLINE int input_text_pop_utf32() { return cf_input_text_pop_utf32(); }
 CF_INLINE bool input_text_has_data() { return cf_input_text_has_data(); }
+CF_INLINE bool input_text_get_buffer(CF_InputTextBuffer* buffer) { return cf_input_text_get_buffer(buffer); }
 CF_INLINE void input_text_clear() {  cf_input_text_clear(); }
 	 
 CF_INLINE void input_enable_ime() { cf_input_enable_ime(); }
