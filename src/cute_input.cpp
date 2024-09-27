@@ -551,6 +551,7 @@ void cf_pump_input_msgs()
 
 		case SDL_EVENT_TEXT_EDITING:
 		{
+			app->ime_composition.clear();
 			const char* text = event.edit.text;
 			while (*text) app->ime_composition.add(*text++);
 			app->ime_composition_cursor = event.edit.start;
