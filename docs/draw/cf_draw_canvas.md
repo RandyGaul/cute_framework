@@ -24,7 +24,9 @@ scale | The scale of the canvas, w/h.
 ## Remarks
 
 This function creates an entire dedicated draw call internally. This means it's a fairly expensive
-function, so be sure to use it sparingly.
+function, so be sure to use it sparingly. If you apply a custom shader you may read pixels from the
+canvas as it's draw by `texture(u_image, v_uv)`. Feel free to copy `v_uv` into your own `vec2 uv = v_uv;`
+and sample from the canvas as-needed.
 
 ## Related Pages
 

@@ -1464,7 +1464,9 @@ CF_API CF_Aabb CF_CALL cf_screen_bounds_to_world();
  * @param    position   The position to draw at.
  * @param    scale      The scale of the canvas, w/h.
  * @remarks  This function creates an entire dedicated draw call internally. This means it's a fairly expensive
- *           function, so be sure to use it sparingly.
+ *           function, so be sure to use it sparingly. If you apply a custom shader you may read pixels from the
+ *           canvas as it's draw by `texture(u_image, v_uv)`. Feel free to copy `v_uv` into your own `vec2 uv = v_uv;`
+ *           and sample from the canvas as-needed.
  * @related  cf_app_draw_onto_screen cf_render_to cf_draw_canvas
  */
 CF_API void CF_CALL cf_draw_canvas(CF_Canvas canvas, CF_V2 position, CF_V2 scale);

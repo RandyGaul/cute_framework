@@ -200,6 +200,12 @@ For pixel art games it's important to sample using the function `smooth_uv`, som
 
 You may also add in uniforms and textures as-needed. The draw API has some functions for setting uniforms and textures via [cf_draw_set_uniform](https://randygaul.github.io/cute_framework/#/draw/cf_draw_set_uniform) and [cf_draw_set_texture](https://randygaul.github.io/cute_framework/#/draw/cf_draw_set_texture). These will get auto-magically hooked up and send values to your shader. When you add in your own uniforms just be sure to place them inside of a uniform block like in the below sample (see `shd_uniforms`, and don't change this name either! It must be called `shd_uniforms`).
 
+Shaders have access to some "hidden" environment variables. In particular you have access to:
+
+- `v_uv` if you're drawing a canvas with [cf_draw_canvas](https://randygaul.github.io/cute_framework/#/draw/cf_draw_canvas) it's often very helpful to sample from the canvas. You may do this via: `texture(u_image, v_uv)`.
+- `u_image` if you're drawing a canvas with [cf_draw_canvas](https://randygaul.github.io/cute_framework/#/draw/cf_draw_canvas) can be quite useful if you need to, for any reason, sample the canvas. See the above point on `v_uv`.
+- `u_texture_size` if you're drawing a canvas with [cf_draw_canvas](https://randygaul.github.io/cute_framework/#/draw/cf_draw_canvas) is sometimes useful for certain algorithms that need to calcualte texel sizes, or know the size of the texture they are sampling from.
+
 Here's a full example shader from the wavelets (called [shallow water on github](https://github.com/RandyGaul/cute_framework/blob/master/samples/shallow_water.cpp)) demo:
 
 ```glsl
