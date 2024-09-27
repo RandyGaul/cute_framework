@@ -787,13 +787,14 @@ CF_API CF_Texture CF_CALL cf_canvas_get_depth_stencil_target(CF_Canvas canvas);
  * @param    u1            The normalized coordinate of the top-left of the destination rect.
  * @param    v1            The normalized coordinate of the bottom-right of the destination rect.
  * @param    dst           The destination canvas where pixels are copied to.
+ * @param    clear_dst     Whether or not the `dst` canvas should be cleared. This matters for alpha compositing.
  * @remarks  The texture formats of the underlying canvas's must be `PIXEL_FORMAT_R8G8B8A8_UNORM`. Each u/v coordinate
  *           is normalized, meaning a number from 0 to 1. This lets the function operate on canvas's of any
  *           size. To convert a coordinate to a normalized coordinate, simply divide the x/y of your coordinate
  *           by the width/height of the canvas.
  * @related  CF_Canvas
  */
-CF_API void CF_CALL cf_canvas_blit(CF_Canvas src, CF_V2 u0, CF_V2 v0, CF_Canvas dst, CF_V2 u1, CF_V2 v1);
+CF_API void CF_CALL cf_canvas_blit(CF_Canvas src, CF_V2 u0, CF_V2 v0, CF_Canvas dst, CF_V2 u1, CF_V2 v1, bool clear_dst);
 
 //--------------------------------------------------------------------------------------------------
 // Mesh.
@@ -1896,7 +1897,7 @@ CF_INLINE Canvas make_canvas(CanvasParams pass_params) { return cf_make_canvas(p
 CF_INLINE void destroy_canvas(Canvas canvas) { cf_destroy_canvas(canvas); }
 CF_INLINE Texture canvas_get_target(Canvas canvas) { return cf_canvas_get_target(canvas); }
 CF_INLINE Texture canvas_get_depth_stencil_target(Canvas canvas) { return cf_canvas_get_depth_stencil_target(canvas); }
-CF_INLINE void canvas_blit(Canvas src, v2 u0, v2 v0, Canvas dst, v2 u1, v2 v1) { cf_canvas_blit(src, u0, v0, dst, u1, v1); }
+CF_INLINE void canvas_blit(Canvas src, v2 u0, v2 v0, Canvas dst, v2 u1, v2 v1, bool clear_dst = false) { cf_canvas_blit(src, u0, v0, dst, u1, v1, clear_dst); }
 CF_INLINE Mesh make_mesh(int vertex_buffer_size_in_bytes, const VertexAttribute* attributes, int attribute_count, int vertex_stride) { return cf_make_mesh(vertex_buffer_size_in_bytes, attributes, attribute_count, vertex_stride); }
 CF_INLINE void destroy_mesh(Mesh mesh) { cf_destroy_mesh(mesh); }
 CF_INLINE void mesh_update_vertex_data(Mesh mesh, void* data, int count) { cf_mesh_update_vertex_data(mesh, data, count); }
@@ -1912,7 +1913,7 @@ CF_INLINE void material_clear_textures(Material material) { cf_material_clear_te
 CF_INLINE void material_set_uniform_vs(Material material, const char* name, void* data, UniformType type, int array_length) { cf_material_set_uniform_vs(material, name, data, type, array_length); }
 CF_INLINE void material_set_uniform_fs(Material material, const char* name, void* data, UniformType type, int array_length) { cf_material_set_uniform_fs(material, name, data, type, array_length); }
 CF_INLINE void material_clear_uniforms(Material material) { cf_material_clear_uniforms(material); }
-CF_INLINE void apply_canvas(Canvas canvas, bool clear = false) { cf_apply_canvas(canvas, false); }
+CF_INLINE void apply_canvas(Canvas canvas, bool clear = false) { cf_apply_canvas(canvas, clear); }
 CF_INLINE void apply_viewport(int x, int y, int w, int h) { cf_apply_viewport(x, y, w, h); }
 CF_INLINE void apply_scissor(int x, int y, int w, int h) { cf_apply_scissor(x, y, w, h); }
 CF_INLINE void apply_mesh(Mesh mesh) { cf_apply_mesh(mesh); }

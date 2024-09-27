@@ -2607,13 +2607,13 @@ void cf_draw_canvas(CF_Canvas canvas, CF_V2 position, CF_V2 scale)
 }
 
 // Modified version of `cf_canvas_blit` to inject user-shader code.
-void static s_blit(CF_Command* cmd, CF_Canvas src, Aabb canvas_bb, CF_V2 u0, CF_V2 v0, CF_Canvas dst, CF_V2 u1, CF_V2 v1)
+void static s_blit(CF_Command* cmd, CF_Canvas src, Aabb canvas_bb, CF_V2 u0, CF_V2 v0, CF_Canvas dst, CF_V2 u1, CF_V2 v1, bool clear_dst)
 {
 	typedef struct Vertex
 	{
 		float wx, wy; // World space x/y.
-		float x, y;
-		float u, v;
+		float x, y;   // posH.
+		float u, v;   // Source UV.
 		CF_Color params;
 	} Vertex;
 
@@ -2674,7 +2674,7 @@ void static s_blit(CF_Command* cmd, CF_Canvas src, Aabb canvas_bb, CF_V2 u0, CF_
 	if (blit) {
 		// Custom shader supplied by the user.
 
-		cf_apply_canvas(dst, false);
+		cf_apply_canvas(dst, clear_dst);
 
 		// Create a quad where positions come from dst, and UV's come from src.
 		float w = v1.x - u1.x;
@@ -2682,7 +2682,7 @@ void static s_blit(CF_Command* cmd, CF_Canvas src, Aabb canvas_bb, CF_V2 u0, CF_
 		float x = (u1.x + v1.x) - 1.0f;
 		float y = (u1.y + v1.y) - 1.0f;
 		Vertex verts[6];
-		fill_quad(x, y, w, h, u0, v0, canvas_bb, verts);
+		fill_quad(x, -y, w, h, u0, v0, canvas_bb, verts);
 		cf_mesh_update_vertex_data(draw->blit_mesh, verts, 6);
 		cf_apply_mesh(draw->blit_mesh);
 
@@ -2715,7 +2715,7 @@ void static s_blit(CF_Command* cmd, CF_Canvas src, Aabb canvas_bb, CF_V2 u0, CF_
 		cf_draw_elements();
 	} else {
 		// No custom shader supplied, use the default one.
-		cf_canvas_blit(src, u0, v0, dst, u1, v1);
+		cf_canvas_blit(src, u0, v0, dst, u1, v1, clear_dst);
 	}
 }
 
@@ -2753,8 +2753,13 @@ void cf_render_to(CF_Canvas canvas, bool clear)
 		// Blit canvas.
 		// ...Incurs an entire extra draw call by itself.
 		if (cmd->is_canvas) {
-			Aabb canvas_bb = make_aabb(cmd->canvas_pos, cmd->canvas_scale.x, cmd->canvas_scale.y);
-			Aabb screen_bb = screen_bounds_to_world();
+			Aabb canvas_bb_world = make_aabb(cmd->canvas_pos, cmd->canvas_scale.x, cmd->canvas_scale.y);
+
+			// Move the canvas_bb to screen space.
+			v2 a = world_to_screen(canvas_bb_world.min);
+			v2 b = world_to_screen(canvas_bb_world.max);
+			Aabb canvas_bb = make_aabb(min(a, b), max(a, b));
+			Aabb screen_bb = make_aabb(V2(0,0), V2((float)app->w, (float)app->h));
 			if (aabb_to_aabb(canvas_bb, screen_bb)) {
 				v2 lo = max(canvas_bb.min, screen_bb.min);
 				v2 hi = min(canvas_bb.max, screen_bb.max);
@@ -2763,11 +2768,12 @@ void cf_render_to(CF_Canvas canvas, bool clear)
 				float dst_w = (screen_bb.max.x - screen_bb.min.x);
 				float dst_h = (screen_bb.max.y - screen_bb.min.y);
 				if (src_w == 0 || src_h == 0 || dst_w == 0 || dst_h == 0) continue;
-				v2 src_lo = V2((lo.x-canvas_bb.min.x)/src_w, 1.0f - (lo.y-canvas_bb.min.y)/src_h);
-				v2 src_hi = V2((hi.x-canvas_bb.min.x)/src_w, 1.0f - (hi.y-canvas_bb.min.y)/src_h);
-				v2 dst_lo = V2((lo.x-screen_bb.min.x)/dst_w, 1.0f - (lo.y-screen_bb.min.y)/dst_h);
-				v2 dst_hi = V2((hi.x-screen_bb.min.x)/dst_w, 1.0f - (hi.y-screen_bb.min.y)/dst_h);
-				s_blit(cmd, cmd->canvas, canvas_bb, src_lo, src_hi, canvas, dst_lo, dst_hi);
+				v2 src_lo = V2((lo.x-canvas_bb.min.x)/src_w, (lo.y-canvas_bb.min.y)/src_h);
+				v2 src_hi = V2((hi.x-canvas_bb.min.x)/src_w, (hi.y-canvas_bb.min.y)/src_h);
+				v2 dst_lo = V2((lo.x-screen_bb.min.x)/dst_w, (lo.y-screen_bb.min.y)/dst_h);
+				v2 dst_hi = V2((hi.x-screen_bb.min.x)/dst_w, (hi.y-screen_bb.min.y)/dst_h);
+				s_blit(cmd, cmd->canvas, canvas_bb_world, src_lo, src_hi, canvas, dst_lo, dst_hi, clear);
+				clear = false; // Only clear `canvas` once.
 			}
 			draw->has_drawn_something = true;
 			continue;

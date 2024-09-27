@@ -501,6 +501,7 @@ layout (location = 0) out vec4 result;
 
 layout (set = 2, binding = 0) uniform sampler2D u_image;
 
+#include "smooth_uv.shd"
 #include "shader_stub.shd"
 
 layout (set = 3, binding = 0) uniform uniform_block {
@@ -509,8 +510,11 @@ layout (set = 3, binding = 0) uniform uniform_block {
 };
 
 void main() {
-	vec4 color = texture(u_image, v_uv);
-	result = shader(color, v_pos, v_uv, v_params);
+	vec4 color = texture(u_image, smooth_uv(v_uv, u_texture_size));
+	vec2 screen_uv = (v_posH + vec2(1,-1)) * 0.5 * vec2(1,-1);
+	vec4 c = shader(color, v_pos, screen_uv, v_params);
+	if (u_alpha_discard != 0 && c.a == 0) discard;
+	result = c;
 }
 )";
 
@@ -1329,7 +1333,7 @@ CF_Texture cf_canvas_get_depth_stencil_target(CF_Canvas canvas_handle)
 	return canvas->cf_depth_stencil;
 }
 
-void cf_canvas_blit(CF_Canvas src, CF_V2 u0, CF_V2 v0, CF_Canvas dst, CF_V2 u1, CF_V2 v1)
+void cf_canvas_blit(CF_Canvas src, CF_V2 u0, CF_V2 v0, CF_Canvas dst, CF_V2 u1, CF_V2 v1, bool clear_dst)
 {
 	typedef struct Vertex
 	{
@@ -1417,7 +1421,7 @@ void cf_canvas_blit(CF_Canvas src, CF_V2 u0, CF_V2 v0, CF_Canvas dst, CF_V2 u1, 
 	};
 
 	// We're going to blit onto dst.
-	cf_apply_canvas(dst, false);
+	cf_apply_canvas(dst, clear_dst);
 
 	// Create a quad where positions come from dst, and UV's come from src.
 	float w = v1.x - u1.x;
@@ -1425,7 +1429,7 @@ void cf_canvas_blit(CF_Canvas src, CF_V2 u0, CF_V2 v0, CF_Canvas dst, CF_V2 u1, 
 	float x = (u1.x + v1.x) - 1.0f;
 	float y = (u1.y + v1.y) - 1.0f;
 	Vertex verts[6];
-	fill_quad(x, y, w, h, u0, v0, verts);
+	fill_quad(x, -y, w, h, u0, v0, verts);
 	cf_mesh_update_vertex_data(app->blit_mesh, verts, 6);
 
 	// Read pixels from src.
