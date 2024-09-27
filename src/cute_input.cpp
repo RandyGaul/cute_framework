@@ -561,6 +561,7 @@ void cf_pump_input_msgs()
 			app->ime_composition.clear();
 			const char* text = event.edit.text;
 			while (*text) app->ime_composition.add(*text++);
+			app->ime_composition.add(0);
 			app->ime_composition_cursor = event.edit.start;
 			app->ime_composition_selection_len = event.edit.length;
 		}	break;

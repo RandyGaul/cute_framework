@@ -57,9 +57,10 @@ void update_ime_rect(CF_V2 text_pos, TextBoxData* textbox) {
 	CF_V2 text_size = textbox->utf8 ? cf_text_size(textbox->utf8, -1) : cf_text_size("", -1);
 	CF_V2 box_pos = cf_world_to_screen((CF_V2){ text_pos.x + text_size.x, text_pos.y - text_size.y });
 	// TODO: what should width and height be?
-	// Unikey (Vietnamese IME) always ignores size.
-	// Maybe setting size to 0 will tell the IME to do whatever.
-	cf_input_set_ime_rect((int)box_pos.x, (int)box_pos.y, 0, 0);
+	// * Unikey (Vietnamese IME) always ignores size.
+	// * If we need an IME rect, it means the OS does not send us composition
+	//   to render so there is nothing to measure.
+	cf_input_set_ime_rect((int)box_pos.x, (int)box_pos.y, 1, 1);
 }
 
 int main(int argc, char* argv[])
@@ -103,14 +104,37 @@ int main(int argc, char* argv[])
 		}
 
 		// Draw the text input
-		if (text.utf8) {
+		if (text.utf8) {  // cf_draw_text on NULL should noop
 			cf_draw_text(text.utf8, (CF_V2){ 0.f, 0.f }, -1);
+		}
+
+		CF_V2 text_size = text.utf8 ? cf_text_size(text.utf8, -1) : cf_text_size("", -1);
+
+		// Draw composition.
+		// TODO: what about multiline?
+		// TODO: what about selection?
+		CF_ImeComposition composition;
+		if (cf_input_get_ime_composition(&composition)) {
+			cf_draw_text(
+				composition.composition,
+				(CF_V2){ text_size.x, 0.f },
+				-1
+			);
+			CF_V2 composition_size = cf_text_size(composition.composition, -1);
+			cf_draw_box(
+				(CF_Aabb){
+					.min.x = text_size.x,
+					.min.y = -text_size.y,
+					.max.x = text_size.x + composition_size.x,
+					.max.y = 0,
+				},
+				0.f,
+				0.f
+			);
 		}
 
 		// Draw cursor
 		if (text_input_enabled) {
-			CF_V2 text_size = text.utf8 ? cf_text_size(text.utf8, -1) : cf_text_size("", -1);
-
 			CF_Color color = cf_draw_peek_color();
 			color.a = sinf(t * 8.f) * 0.5f + 0.5f;
 			cf_draw_push_color(color);
@@ -120,6 +144,14 @@ int main(int argc, char* argv[])
 				0.f
 			);
 			cf_draw_pop_color();
+
+			// Draw origin of IME rect
+			if (!render_composition) {
+				cf_draw_circle(
+					(CF_Circle){ .p.x = text_size.x, .p.y = -text_size.y, .r = 1.f },
+					1.f
+				);
+			}
 		}
 
 		// Some IME uses Enter to submit composition so we only toggle if no
@@ -145,6 +177,12 @@ int main(int argc, char* argv[])
 		) {
 			text_pop(&text);
 			update_ime_rect((CF_V2){ 0 }, &text);
+		}
+
+		// Toggle composition rendering
+		if (cf_key_just_pressed(CF_KEY_F1)) {
+			render_composition = !render_composition;
+			SDL_SetHint(SDL_HINT_IME_IMPLEMENTED_UI, render_composition ? "composition" : "none");
 		}
 
 		cf_app_draw_onto_screen(true);
