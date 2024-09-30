@@ -23,6 +23,7 @@ Struct Members | Description
 `int loop_count` | The number of times this sprite has completed an animation.
 `float play_speed_multiplier` | A speed multiplier for updating frames. Default of 1.0f.
 `bool paused` | Whether or not to pause updates to the animation.
+`bool loop` | Whether or not to loop animations.
 `float t` | The current elapsed time within a frame of animation.
 `uint64_t easy_sprite_id` | For internal use only.
 `CF_PlayDirection play_direction` | Controls the animation play direction. This gets set each time [cf_sprite_play](/sprite/cf_sprite_play.md) is called to the animation's play direction. You may override this member yourself after calling [cf_sprite_play](/sprite/cf_sprite_play.md).

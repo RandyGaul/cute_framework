@@ -138,6 +138,9 @@ typedef struct CF_Sprite
 	/* @member Whether or not to pause updates to the animation. */
 	bool paused;
 
+	/* @member Whether or not to loop animations. */
+	bool loop;
+
 	/* @member The current elapsed time within a frame of animation. */
 	float t;
 
@@ -173,6 +176,7 @@ CF_INLINE CF_Sprite cf_sprite_defaults()
 	sprite.opacity = 1.0f;
 	sprite.play_speed_multiplier = 1.0f;
 	sprite.transform = cf_make_transform();
+	sprite.loop = true;
 	return sprite;
 }
 
@@ -388,6 +392,20 @@ CF_INLINE float cf_sprite_get_opacity(CF_Sprite* sprite) { CF_ASSERT(sprite); re
 CF_INLINE void cf_sprite_set_opacity(CF_Sprite* sprite, float opacity) { CF_ASSERT(sprite); sprite->opacity = opacity; }
 
 /**
+ * @function cf_sprite_set_loop
+ * @category sprite
+ * @brief    Sets whether or not the sprite can loop. True for looping. If false the animation will pause on the final frame.
+ */
+CF_INLINE void cf_sprite_set_loop(CF_Sprite* sprite, bool loop) { CF_ASSERT(sprite); sprite->loop = loop; }
+
+/**
+ * @function cf_sprite_get_loop
+ * @category sprite
+ * @brief    Gets whether or not the sprite can loop. True for looping. If false the animation will pause on the final frame.
+ */
+CF_INLINE bool cf_sprite_get_loop(CF_Sprite* sprite) { CF_ASSERT(sprite); return sprite->loop; }
+
+/**
  * @function cf_sprite_get_play_speed_multiplier
  * @category sprite
  * @brief    Returns the sprite's playing speed multiplier.
@@ -436,8 +454,12 @@ CF_INLINE void cf_sprite_update(CF_Sprite* sprite)
 			sprite->frame_index++;
 			sprite->t = 0;
 			if (sprite->frame_index == frame_count) {
-				sprite->loop_count++;
-				sprite->frame_index = 0;
+				if (sprite->loop) {
+					sprite->loop_count++;
+					sprite->frame_index = 0;
+				} else {
+					sprite->frame_index--;
+				}
 			}
 		}
 	} else if (direction == CF_PLAY_DIRECTION_BACKWARDS) {
@@ -445,8 +467,12 @@ CF_INLINE void cf_sprite_update(CF_Sprite* sprite)
 			sprite->frame_index--;
 			sprite->t = 0;
 			if (sprite->frame_index < 0) {
-				sprite->loop_count++;
-				sprite->frame_index = cf_min(1, frame_count);
+				if (sprite->loop) {
+					sprite->loop_count++;
+					sprite->frame_index = frame_count - 1;
+				} else {
+					sprite->frame_index++;
+				}
 			}
 		}
 	} else if (direction == CF_PLAY_DIRECTION_PINGPONG) {
@@ -455,14 +481,22 @@ CF_INLINE void cf_sprite_update(CF_Sprite* sprite)
 			if (sprite->loop_count % 2) {
 				sprite->frame_index--;
 				if (sprite->frame_index < 0) {
-					sprite->loop_count++;
-					sprite->frame_index = cf_min(1, frame_count);
+					if (sprite->loop) {
+						sprite->loop_count++;
+						sprite->frame_index = frame_count - 1;
+					} else  {
+						sprite->frame_index++;
+					}
 				}
 			} else {
 				sprite->frame_index++;
 				if (sprite->frame_index == frame_count) {
-					sprite->loop_count++;
-					sprite->frame_index = cf_max(0, frame_count - 2);
+					if (sprite->loop) {
+						sprite->loop_count++;
+						sprite->frame_index = 0;
+					} else {
+						sprite->frame_index--;
+					}
 				}
 			}
 		}
@@ -613,7 +647,7 @@ CF_INLINE int cf_sprite_current_frame(const CF_Sprite* sprite)
 }
 
 /**
- * @function cf_sprite_current_frame
+ * @function cf_sprite_set_frame
  * @category sprite
  * @brief    Sets the frame of the sprite.
  * @param    sprite     The sprite.
