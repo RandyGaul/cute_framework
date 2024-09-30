@@ -613,6 +613,24 @@ CF_INLINE int cf_sprite_current_frame(const CF_Sprite* sprite)
 }
 
 /**
+ * @function cf_sprite_current_frame
+ * @category sprite
+ * @brief    Sets the frame of the sprite.
+ * @param    sprite     The sprite.
+ * @param    frame      The frame number to set.
+ * @related  CF_Sprite cf_sprite_frame_count cf_sprite_current_frame cf_sprite_frame_delay cf_sprite_animation_delay
+ */
+CF_INLINE void cf_sprite_set_frame(CF_Sprite* sprite, int frame)
+{
+	CF_ASSERT(sprite);
+	if (!sprite->animation) return;
+	int frame_count = alen(sprite->animation->frames);
+	CF_ASSERT(frame >= 0 && frame < frame_count);
+	sprite->frame_index = frame;
+	sprite->t = 0;
+}
+
+/**
  * @function cf_sprite_frame_delay
  * @category sprite
  * @brief    Returns the `delay` member of the currently playing frame, in milliseconds.

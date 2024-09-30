@@ -626,7 +626,6 @@ void cf_draw_sprite(const CF_Sprite* sprite)
 	s.geom.color = premultiply(pixel_white());
 	s.geom.alpha = sprite->opacity;
 	s.geom.user_params = draw->user_params.last();
-	spritebatch_prefetch(&draw->sb, s.image_id, s.w, s.h);
 	DRAW_PUSH_ITEM(s);
 }
 
@@ -2730,13 +2729,6 @@ void static s_blit(CF_Command* cmd, CF_Canvas src, CF_Canvas dst, bool clear_dst
 void cf_render_to(CF_Canvas canvas, bool clear)
 {
 	cf_apply_canvas(canvas, clear);
-
-	// Defrag early to avoid large numbers of individual draw calls for isolated sprites that
-	// just appeared this frame. This avoids first-frame stalls.
-	if (!draw->delay_defrag) {
-		spritebatch_tick(&draw->sb);
-		spritebatch_defrag(&draw->sb);
-	}
 
 	// Sort the commands by layer first, then by age (to maintain relative ordering).
 	// @NOTE -- Perhaps std::sort would be better than stable_sort, since the predicate has stability built-in?
