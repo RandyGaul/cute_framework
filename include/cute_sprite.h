@@ -99,6 +99,26 @@ typedef struct CF_Animation
 // @end
 
 /**
+ * @struct   CF_SpriteSlice
+ * @category sprite
+ * @brief    A box defined within a .ase file.
+ * @remarks  Each frame can have different slices.
+ * @related  CF_Frame CF_Animation CF_Sprite
+ */
+typedef struct CF_SpriteSlice
+{
+	/* @member Which frame this slice belongs to. It's valid on all subsequent frames. */
+	int frame_index;
+
+	/* @member The name of the slice. */
+	const char* name;
+
+	/* @member The box defining the slice. */
+	CF_Aabb box;
+} CF_SpriteSlice;
+// @end
+
+/**
  * @struct   CF_Sprite
  * @category sprite
  * @brief    A sprite represents a drawable entity, made of 2D animations/images.
@@ -120,8 +140,14 @@ typedef struct CF_Sprite
 	/* @member Scale factor for the sprite when drawing. Default of `(1, 1)`. See `cf_draw_sprite`. */
 	CF_V2 scale;
 
-	/* @member A local offset/origin for the sprite when drawing. See `cf_draw_sprite`. This value is automatically set for .ase files if a slice called "origin" is present. */
-	CF_V2 local_offset;
+	/* @member A local offset/origin for the sprite when drawing. Defaults to `(0, 0)`. */
+	CF_V2 offset;
+
+	/* @member A local pivot (offset) per-frame. This value comes from an aseprite slice on a particular frame if the `pivot` box is checked. Make sure to only have one pivot per frame when authoring your .ase file or they will overwrite each other upon loading. */
+	dyna CF_V2* pivots;
+
+	/* @member All the `CF_SpriteSlice`'s in the sprite. These get loaded from the .ase file.  */
+	dyna const CF_SpriteSlice* slices;
 
 	/* @member An opacity value for the entire sprite. Default of 1.0f. See `cf_draw_sprite`. */
 	float opacity;
@@ -351,7 +377,7 @@ CF_INLINE void cf_sprite_set_scale_y(CF_Sprite* sprite, float y) { CF_ASSERT(spr
  * @brief    Returns the sprite's local offset on the x-axis.
  * @related  CF_Sprite cf_sprite_get_offset_x cf_sprite_get_offset_y cf_sprite_set_offset_x cf_sprite_set_offset_y
  */
-CF_INLINE float cf_sprite_get_offset_x(CF_Sprite* sprite) { CF_ASSERT(sprite); return sprite->local_offset.x; }
+CF_INLINE float cf_sprite_get_offset_x(CF_Sprite* sprite) { CF_ASSERT(sprite); return sprite->offset.x; }
 
 /**
  * @function cf_sprite_get_offset_y
@@ -359,7 +385,7 @@ CF_INLINE float cf_sprite_get_offset_x(CF_Sprite* sprite) { CF_ASSERT(sprite); r
  * @brief    Returns the sprite's local offset on the y-axis.
  * @related  CF_Sprite cf_sprite_get_offset_x cf_sprite_get_offset_y cf_sprite_set_offset_x cf_sprite_set_offset_y
  */
-CF_INLINE float cf_sprite_get_offset_y(CF_Sprite* sprite) { CF_ASSERT(sprite); return sprite->local_offset.y; }
+CF_INLINE float cf_sprite_get_offset_y(CF_Sprite* sprite) { CF_ASSERT(sprite); return sprite->offset.y; }
 
 /**
  * @function cf_sprite_set_offset_x
@@ -367,7 +393,7 @@ CF_INLINE float cf_sprite_get_offset_y(CF_Sprite* sprite) { CF_ASSERT(sprite); r
  * @brief    Returns the sprite's local offset on the x-axis.
  * @related  CF_Sprite cf_sprite_get_offset_x cf_sprite_get_offset_y cf_sprite_set_offset_x cf_sprite_set_offset_y
  */
-CF_INLINE void cf_sprite_set_offset_x(CF_Sprite* sprite, float offset) { CF_ASSERT(sprite); sprite->local_offset.x = offset; }
+CF_INLINE void cf_sprite_set_offset_x(CF_Sprite* sprite, float offset) { CF_ASSERT(sprite); sprite->offset.x = offset; }
 
 /**
  * @function cf_sprite_set_offset_y
@@ -375,7 +401,7 @@ CF_INLINE void cf_sprite_set_offset_x(CF_Sprite* sprite, float offset) { CF_ASSE
  * @brief    Returns the sprite's local offset on the y-axis.
  * @related  CF_Sprite cf_sprite_get_offset_x cf_sprite_get_offset_y cf_sprite_set_offset_x cf_sprite_set_offset_y
  */
-CF_INLINE void cf_sprite_set_offset_y(CF_Sprite* sprite, float offset) { CF_ASSERT(sprite); sprite->local_offset.y = offset; }
+CF_INLINE void cf_sprite_set_offset_y(CF_Sprite* sprite, float offset) { CF_ASSERT(sprite); sprite->offset.y = offset; }
 
 /**
  * @function cf_sprite_get_opacity
@@ -406,6 +432,24 @@ CF_INLINE void cf_sprite_set_loop(CF_Sprite* sprite, bool loop) { CF_ASSERT(spri
 CF_INLINE bool cf_sprite_get_loop(CF_Sprite* sprite) { CF_ASSERT(sprite); return sprite->loop; }
 
 /**
+ * @function cf_sprite_get_slice
+ * @category sprite
+ * @brief    Searches for and returns a particular slice. A zero'd out `CF_Aabb` is returned if no match was found.
+ */
+CF_INLINE CF_Aabb cf_sprite_get_slice(CF_Sprite* sprite, int frame_index, const char* name)
+{
+	CF_ASSERT(sprite);
+	name = sintern(name);
+	for (int i = 0; i < asize(sprite->slices); ++i) {
+		if (sprite->slices[i].name == name && sprite->slices[i].frame_index == frame_index) {
+			return sprite->slices[i].box;
+		}
+	}
+	CF_Aabb not_found = { 0 };
+	return not_found;
+}
+
+/**
  * @function cf_sprite_get_play_speed_multiplier
  * @category sprite
  * @brief    Returns the sprite's playing speed multiplier.
@@ -430,7 +474,7 @@ CF_INLINE int cf_sprite_get_loop_count(CF_Sprite* sprite) { CF_ASSERT(sprite); r
  * @category sprite
  * @brief    Returns the sprite's local offset, set by loading the .ase file if a slice named "origin" exists.
  */
-CF_INLINE CF_V2 cf_sprite_get_local_offset(CF_Sprite* sprite) { CF_ASSERT(sprite); return sprite->local_offset; }
+CF_INLINE CF_V2 cf_sprite_get_local_offset(CF_Sprite* sprite) { CF_ASSERT(sprite); return sprite->offset; }
 
 /**
  * @function cf_sprite_update

@@ -110,7 +110,8 @@ struct State
 		doc.path = path;
 		doc.file = file;
 		if (page_to_doc_index.has(sintern(title))) {
-			panic(String::fmt("Tried to add a duplicate page for %s.", title.c_str()));
+			Doc& other_doc = docs[page_to_doc_index.get(sintern(title))];
+			panic(String::fmt("Tried to add a duplicate page for %s (found in file %s, previously seen in file %s).", title.c_str(), doc.file.c_str(), other_doc.file.c_str()));
 		}
 		page_to_doc_index.insert(sintern(title), docs.count());
 		docs.add(doc);

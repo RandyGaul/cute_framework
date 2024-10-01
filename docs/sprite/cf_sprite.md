@@ -17,7 +17,9 @@ Struct Members | Description
 `int w` | Width of the sprite in pixels.
 `int h` | Height of the sprite in pixels.
 `CF_V2 scale` | Scale factor for the sprite when drawing. Default of `(1, 1)`. See [cf_draw_sprite](/draw/cf_draw_sprite.md).
-`CF_V2 local_offset` | A local offset/origin for the sprite when drawing. See [cf_draw_sprite](/draw/cf_draw_sprite.md). This value is automatically set for .ase files if a slice called "origin" is present.
+`CF_V2 offset` | A local offset/origin for the sprite when drawing. Defaults to `(0, 0)`.
+`dyna CF_V2* pivots` | A local pivot (offset) per-frame. This value comes from an aseprite slice on a particular frame if the `pivot` box is checked. Make sure to only have one pivot per frame when authoring your .ase file or they will overwrite each other upon loading.
+`dyna const CF_SpriteSlice* slices` | All the [CF_SpriteSlice](/sprite/cf_spriteslice.md)'s in the sprite. These get loaded from the .ase file.
 `float opacity` | An opacity value for the entire sprite. Default of 1.0f. See [cf_draw_sprite](/draw/cf_draw_sprite.md).
 `int frame_index` | The current frame within `animation` to display.
 `int loop_count` | The number of times this sprite has completed an animation.

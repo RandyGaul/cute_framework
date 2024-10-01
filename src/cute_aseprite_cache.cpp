@@ -23,7 +23,8 @@ struct CF_AsepriteCacheEntry
 	const char* path = NULL;
 	ase_t* ase = NULL;
 	htbl Animation** animations = NULL;
-	CF_V2 local_offset = V2(0, 0);
+	dyna CF_SpriteSlice* slices = NULL;
+	dyna v2* pivots = NULL;
 };
 
 struct CF_AsepriteCache
@@ -65,6 +66,8 @@ void cf_destroy_aseprite_cache()
 		}
 
 		hfree(entry->animations);
+		afree(entry->slices);
+		afree(entry->pivots);
 		cute_aseprite_free(entry->ase);
 	}
 	cache->~CF_AsepriteCache();
@@ -87,7 +90,7 @@ static void s_sprite(CF_AsepriteCacheEntry entry, CF_Sprite* sprite)
 	sprite->animations = (const Animation**)entry.animations;
 	sprite->w = entry.ase->w;
 	sprite->h = entry.ase->h;
-	sprite->local_offset = entry.local_offset;
+	sprite->pivots = entry.pivots;
 	if (entry.ase->tag_count == 0) {
 		cf_sprite_play(sprite, "default");
 	} else {
@@ -103,9 +106,12 @@ CF_Result cf_aseprite_cache_load_from_memory(const char* unique_name, const void
 	// Allocate internal cache data structure entries.
 	Animation** animations = NULL;
 	Array<uint64_t> ids;
+	v2* pivots = NULL;
+	afit(pivots, ase->frame_count);
 	ids.ensure_capacity(ase->frame_count);
 
 	for (int i = 0; i < ase->frame_count; ++i) {
+		// Unique sprite id.
 		uint64_t id = cache->id_gen++;
 		ids.add(id);
 
@@ -125,8 +131,11 @@ CF_Result cf_aseprite_cache_load_from_memory(const char* unique_name, const void
 				pix[i * ase->w + j].b = (uint8_t)(b * 255.0f);
 			}
 		}
-
 		cache->id_to_pixels.insert(id, ase->frames[i].pixels);
+
+		// Fill in zero'd out pivots initially. These can get overwritten from slice data
+		// if a slice has a pivot.
+		apush(pivots, V2(0,0));
 	}
 
 	// Fill out the animation table from the aseprite file.
@@ -167,22 +176,41 @@ CF_Result cf_aseprite_cache_load_from_memory(const char* unique_name, const void
 		hadd(animations, animation->name, animation);
 	}
 
+	// Fill out slices.
 	// Look for slice information to define the sprite's local offset.
 	// The slice named "origin"'s center is used to define the local offset.
 	CF_AsepriteCacheEntry entry;
+	entry.pivots = pivots;
+	afit(entry.slices, ase->slice_count);
+	float sw = (float)ase->w;
+	float sh = (float)ase->h;
 	for (int i = 0; i < ase->slice_count; ++i) {
 		ase_slice_t* slice = ase->slices + i;
-		if (!CF_STRCMP(slice->name, "origin")) {
-			// Invert y-axis since ase saves slice as (0, 0) top-left.
-			float y = (float)slice->origin_y + (float)slice->h * 0.25f;
-			y = (float)ase->h - y - 1;
-			float x = (float)slice->origin_x + (float)slice->w * 0.25f;
+		float x = (float)slice->origin_x - sw*0.5f;
+		float y = (float)slice->origin_y;
+		float w = (float)slice->w;
+		float h = (float)slice->h;
 
-			// Transform from top-left coordinates to center of sprite.
-			CF_V2 origin = cf_v2(x, y);
-			CF_V2 offset = cf_v2((float)ase->w - 1, (float)ase->h - 1) * 0.5f - origin;
-			entry.local_offset = offset;
-			break;
+		// Invert y-axis since ase saves slice as (0, 0) top-left.
+		y = (sh - 1) - y;
+		y = y - sw*0.5f;
+
+		// Record the slice.
+		CF_Aabb bb = make_aabb(V2(x,y), V2(x+w,y+h));
+		apush(entry.slices, CF_SpriteSlice {
+			.frame_index = i,
+			.name = sintern(slice->name),
+			.box = bb
+		});
+
+		if (slice->has_center_as_9_slice) {
+			// Ignored, as this is mostly intended for UI.
+		}
+		if (slice->has_pivot) {
+			v2 pivot = V2((float)slice->pivot_x, (float)slice->pivot_y);
+			pivot.y = (h - 1) - pivot.y;
+			pivot = pivot - center(bb);
+			entry.pivots[slice->frame_number] = pivot;
 		}
 	}
 

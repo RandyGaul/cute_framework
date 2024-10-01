@@ -1318,6 +1318,7 @@ This is a list of all functions in Cute Framework organized by categories. This 
 - [cf_sprite_get_play_speed_multiplier](/sprite/cf_sprite_get_play_speed_multiplier.md)
 - [cf_sprite_get_scale_x](/sprite/cf_sprite_get_scale_x.md)
 - [cf_sprite_get_scale_y](/sprite/cf_sprite_get_scale_y.md)
+- [cf_sprite_get_slice](/sprite/cf_sprite_get_slice.md)
 - [cf_sprite_height](/sprite/cf_sprite_height.md)
 - [cf_sprite_is_playing](/sprite/cf_sprite_is_playing.md)
 - [cf_sprite_on_loop](/sprite/cf_sprite_on_loop.md)
@@ -1346,6 +1347,7 @@ This is a list of all functions in Cute Framework organized by categories. This 
 - [CF_Animation](/sprite/cf_animation.md)
 - [CF_Frame](/sprite/cf_frame.md)
 - [CF_Sprite](/sprite/cf_sprite.md)
+- [CF_SpriteSlice](/sprite/cf_spriteslice.md)
 
 
 ### enums

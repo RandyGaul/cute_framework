@@ -143,11 +143,9 @@ Here's an example of drawing a more full looking scene with various sprites. Sim
 
 ### Sprite Origin
 
-The sprite may have a local origin to offset itself whenever drawn. Set the `local_offset` member of any [CF_Sprite](https://randygaul.github.io/cute_framework/#/sprite/cf_sprite) struct. This field gets automatically populated if loading a sprite from a .ase file, if the .ase file contains a [slice](https://www.aseprite.org/docs/slices/) called `origin`.
+The sprite may have a local origin to offset itself whenever drawn. Set the `offset` member of any [CF_Sprite](https://randygaul.github.io/cute_framework/#/sprite/cf_sprite) struct. If the sprite has a [slice](https://www.aseprite.org/docs/slices/) on a particular frame with the `pivot` checkbox marked, the pivot will be recorded for that frame applied, in addition to the sprite's `offset`, to draw relative to that frame's pivot.
 
-<p align="center">
-<img src=https://github.com/RandyGaul/cute_framework/blob/master/assets/origin_slice.png?raw=true>
-</p>
+Be sure not to author your aseprite files with more than one slice on a given frame marked as pivot, otherwise the pivot data will overwrite one another when loading.
 
 ## Drawing Text
 
