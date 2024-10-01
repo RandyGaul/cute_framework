@@ -909,7 +909,7 @@ void cf_draw_tri_fill(CF_V2 p0, CF_V2 p1, CF_V2 p2, float chubbiness)
 
 void cf_draw_line(CF_V2 p0, CF_V2 p1, float thickness)
 {
-	s_draw_capsule(p0, p1, 0, thickness, true);
+	s_draw_capsule(p0, p1, 0, thickness * 0.5f, true);
 }
 
 void cf_draw_polyline(CF_V2* pts, int count, float thickness, bool loop)
@@ -919,9 +919,9 @@ void cf_draw_polyline(CF_V2* pts, int count, float thickness, bool loop)
 	if (count <= 0) {
 		return;
 	} else if (count == 1) {
-		cf_draw_circle_fill2(pts[0], radius);
+		cf_draw_circle_fill2(pts[0], thickness);
 	} else if (count == 2) {
-		cf_draw_capsule_fill2(pts[0], pts[1], radius);
+		cf_draw_line(pts[0], pts[1], thickness);
 	}
 
 	// Each portion of the polyline will be rendered with a single triangle per spritebatch entry.
@@ -1261,7 +1261,7 @@ void cf_draw_arrow(CF_V2 a, CF_V2 b, float thickness, float arrow_width)
 	v2 n = norm(b - a);
 	v2 t = skew(n) * arrow_width;
 	n = n * arrow_width;
-	cf_draw_capsule_fill2(a, b - n, thickness * 0.5f);
+	cf_draw_line(a, b - n, thickness);
 	cf_draw_tri_fill(b, b - n + t, b - n - t, 0);
 }
 

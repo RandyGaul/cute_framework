@@ -371,7 +371,7 @@ void main()
 	v_uv = in_uv;
 	v_col = in_col;
 	v_radius = in_radius;
-	v_stroke = in_stroke;
+	v_stroke = in_stroke * 0.5;
 	v_aa = in_aa;
 	v_type = in_params.r;
 	v_alpha = in_params.g;
