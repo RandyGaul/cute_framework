@@ -144,6 +144,8 @@
 		                  etry in sprites. Added `spritebatch_register_premade_atlas`, a
 		                  way to inject premade atlases into spritebatch
 		1.06 (03/24/2023) added `spritebatch_invalidate`, useful for updating pixels NOW
+		1.07 (10/01/2024) Removed public `sort_bits` since it's not actually useful, and
+		                  reused it internally to implement stable sorting (bugfix).
 */
 
 /*
@@ -205,6 +207,9 @@ struct spritebatch_sprite_t
 	// atlas created internally. For premade atlases you must set this yourself.
 	SPRITEBATCH_U64 texture_id;
 
+	// For internal use. Will get overwritten.
+	int sort_bits;
+
 	// Contains all of the sprite's geometry. By default this is just a scale +
 	// translation + rotation. However, you can overload this macro to use your own
 	// geometry definition. See comments at this macro definition above for more info.
@@ -213,10 +218,6 @@ struct spritebatch_sprite_t
 	int w, h;         // width and height of this sprite's image in pixels
 	float minx, miny; // u coordinate - this will be overwritten, except for premade sprites
 	float maxx, maxy; // v coordinate - this will be overwritten, except for premade sprites
-
-	// This field is *completely optional* -- just set it to zero if you don't want to bother.
-	// User-defined sorting key, see: http://realtimecollisiondetection.net/blog/?p=86
-	int sort_bits;
 
 	// This is a *completely optional* feature. You can insert your own user data
 	// struct into each sprite. It is *never* touched internally, and simply handed
@@ -334,9 +335,7 @@ typedef void (destroy_texture_handle_fn)(SPRITEBATCH_U64 texture_id, void* udata
 //     {
 //         std::sort(sprites, sprites + count,
 //         [](const spritebatch_sprite_t& a, const spritebatch_sprite_t& b) {
-//             if (a.sort_bits < b.sort_bits) return true;
-//             if (a.sort_bits == b.sort_bits && a.texture_id < b.texture_id) return true;
-//             return false;
+//             return a.texture_id < b.texture_id;
 //         });
 //     };
 typedef void (sprites_sorter_fn)(spritebatch_sprite_t* sprites, int count);
@@ -532,6 +531,7 @@ struct spritebatch_t
 
 	spritebatch_internal_atlas_t* atlases;
 
+	int sort_id;
 	int pixel_stride;
 	int atlas_width_in_pixels;
 	int atlas_height_in_pixels;
@@ -1032,6 +1032,7 @@ int spritebatch_init(spritebatch_t* sb, spritebatch_config_t* config, void* udat
 {
 	// read config params
 	if (!config | !sb) return 1;
+	sb->sort_id = 0;
 	sb->pixel_stride = config->pixel_stride;
 	sb->atlas_width_in_pixels = config->atlas_width_in_pixels;
 	sb->atlas_height_in_pixels = config->atlas_height_in_pixels;
@@ -1180,7 +1181,7 @@ int spritebatch_internal_fill_internal_sprite(spritebatch_t* sb, spritebatch_spr
 	SPRITEBATCH_CHECK_BUFFER_GROW(sb, input_count, input_capacity, input_buffer, spritebatch_internal_sprite_t);
 
 	out->image_id = sprite.image_id;
-	out->sort_bits = sprite.sort_bits;
+	out->sort_bits = sb->sort_id++;
 	out->geom = sprite.geom;
 	out->w = sprite.w;
 	out->h = sprite.h;
@@ -1280,8 +1281,7 @@ spritebatch_sprite_t spritebatch_fetch(spritebatch_t* sb, SPRITEBATCH_U64 image_
 static int spritebatch_internal_sprite_less_than_or_equal(spritebatch_sprite_t* a, spritebatch_sprite_t* b)
 {
 	if (a->sort_bits < b->sort_bits) return 1;
-	if (a->sort_bits == b->sort_bits && a->texture_id <= b->texture_id) return 1;
-	return 0;
+	return a->texture_id <= b->texture_id;
 }
 
 void spritebatch_internal_merge_sort_iteration(spritebatch_sprite_t* a, int lo, int split, int hi, spritebatch_sprite_t* b)
@@ -1538,6 +1538,7 @@ void spritebatch_tick(spritebatch_t* sb)
 
 int spritebatch_flush(spritebatch_t* sb)
 {
+
 	// process input buffer, make any necessary lonely textures
 	// convert user sprites to internal format
 	// lookup uv coordinates
@@ -1553,6 +1554,9 @@ int spritebatch_flush(spritebatch_t* sb)
 			lonely->texture_id = spritebatch_internal_generate_texture_handle(sb, lonely->image_id, lonely->w, lonely->h);
 		}
 	}
+
+	// Reset each flush, since it's only used to id sprites on a per-sort basis.
+	sb->sort_id = 0;
 
 	// sort internal sprite buffer and submit batches
 	spritebatch_internal_sort_sprites(sb);

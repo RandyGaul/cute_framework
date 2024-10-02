@@ -936,7 +936,6 @@ void cf_draw_polyline(CF_V2* pts, int count, float thickness, bool loop)
 	s.geom.aa = draw->aaf;
 	s.geom.type = BATCH_GEOMETRY_TYPE_SEGMENT;
 	s.geom.user_params = draw->user_params.last();
-	s.sort_bits = draw->layers.last();
 	s.w = s.h = 1;
 
 	// Expand to account for aa.
