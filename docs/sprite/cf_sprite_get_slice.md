@@ -12,6 +12,10 @@ GitHub: [cute_sprite.h](https://github.com/RandyGaul/cute_framework/blob/master/
 Searches for and returns a particular slice. A zero'd out [CF_Aabb](/math/cf_aabb.md) is returned if no match was found.
 
 ```cpp
-CF_Aabb cf_sprite_get_slice(CF_Sprite* sprite, int frame_index, const char* name)
+CF_Aabb cf_sprite_get_slice(CF_Sprite* sprite, const char* name)
 ```
+
+## Remarks
+
+Only fetches for slices within the current frame of the current animation.
 

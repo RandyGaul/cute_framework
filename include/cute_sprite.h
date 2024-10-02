@@ -95,6 +95,9 @@ typedef struct CF_Animation
 
 	/* The frames of the animation. See `dyna`. */
 	dyna CF_Frame* frames;
+	
+	/* For internal use. */
+	int frame_offset;
 } CF_Animation;
 // @end
 
@@ -435,17 +438,20 @@ CF_INLINE bool cf_sprite_get_loop(CF_Sprite* sprite) { CF_ASSERT(sprite); return
  * @function cf_sprite_get_slice
  * @category sprite
  * @brief    Searches for and returns a particular slice. A zero'd out `CF_Aabb` is returned if no match was found.
+ * @remarks  Only fetches for slices within the current frame of the current animation.
  */
-CF_INLINE CF_Aabb cf_sprite_get_slice(CF_Sprite* sprite, int frame_index, const char* name)
+CF_INLINE CF_Aabb cf_sprite_get_slice(CF_Sprite* sprite, const char* name)
 {
 	CF_ASSERT(sprite);
+	CF_Aabb not_found = { 0 };
 	name = sintern(name);
+	int frame = sprite->frame_index + (sprite->animation ? sprite->animation->frame_offset : 0);
 	for (int i = 0; i < asize(sprite->slices); ++i) {
-		if (sprite->slices[i].name == name && sprite->slices[i].frame_index == frame_index) {
+		// >= here used according to Aseprite file spec, says they are valid for subsequent frames.
+		if (sprite->slices[i].name == name && sprite->slices[i].frame_index >= frame) {
 			return sprite->slices[i].box;
 		}
 	}
-	CF_Aabb not_found = { 0 };
 	return not_found;
 }
 

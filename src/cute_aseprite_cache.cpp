@@ -91,6 +91,7 @@ static void s_sprite(CF_AsepriteCacheEntry entry, CF_Sprite* sprite)
 	sprite->w = entry.ase->w;
 	sprite->h = entry.ase->h;
 	sprite->pivots = entry.pivots;
+	sprite->slices = entry.slices;
 	if (entry.ase->tag_count == 0) {
 		cf_sprite_play(sprite, "default");
 	} else {
@@ -150,6 +151,7 @@ CF_Result cf_aseprite_cache_load_from_memory(const char* unique_name, const void
 
 			animation->name = sintern(tag->name);
 			animation->play_direction = s_play_direction(tag->loop_animation_direction);
+			animation->frame_offset = from;
 			for (int i = from; i <= to; ++i) {
 				uint64_t id = ids[i];
 				CF_Frame frame;
@@ -192,13 +194,13 @@ CF_Result cf_aseprite_cache_load_from_memory(const char* unique_name, const void
 		float h = (float)slice->h;
 
 		// Invert y-axis since ase saves slice as (0, 0) top-left.
-		y = (sh - 1) - y;
-		y = y - sw*0.5f;
+		y = sh - y;
+		y = y - sh*0.5f;
 
 		// Record the slice.
-		CF_Aabb bb = make_aabb(V2(x,y), V2(x+w,y+h));
+		CF_Aabb bb = make_aabb(V2(x,y-h), V2(x+w,y));
 		apush(entry.slices, CF_SpriteSlice {
-			.frame_index = i,
+			.frame_index = slice->frame_number,
 			.name = sintern(slice->name),
 			.box = bb
 		});

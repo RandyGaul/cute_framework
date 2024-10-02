@@ -26,6 +26,8 @@ int main(int argc, char* argv[])
 
 		animated_box_with_pivots.update();
 		animated_box_with_pivots.draw();
+		CF_Aabb pivot = cf_sprite_get_slice(&animated_box_with_pivots, "pivot");
+		draw_box(pivot);
 
 		app_draw_onto_screen(true);
 	}
