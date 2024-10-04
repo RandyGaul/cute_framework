@@ -697,6 +697,19 @@ CF_INLINE int cf_sprite_current_frame(const CF_Sprite* sprite)
 }
 
 /**
+ * @function cf_sprite_current_global_frame
+ * @category sprite
+ * @brief    Returns the index of the currently playing frame, relative to the whole aseprite file (not the current animation).
+ * @param    sprite     The sprite.
+ * @related  CF_Sprite cf_sprite_frame_count cf_sprite_current_frame cf_sprite_frame_delay cf_sprite_animation_delay
+ */
+CF_INLINE int cf_sprite_current_global_frame(const CF_Sprite* sprite)
+{
+	CF_ASSERT(sprite);
+	return sprite->frame_index + (sprite->animation ? sprite->animation->frame_offset : 0);
+}
+
+/**
  * @function cf_sprite_set_frame
  * @category sprite
  * @brief    Sets the frame of the sprite.
