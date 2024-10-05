@@ -266,19 +266,16 @@ endif()
 function(target_dxc_copy TARGET)
 	get_target_property(cute_SOURCE_DIR cute SOURCE_DIR)
 	set(DXC_DLL_DIR "${cute_SOURCE_DIR}/libraries/dxc")
-	set(DXC_DLLS "${DXC_DLL_DIR}/dxcompiler.dll" "${DXC_DLL_DIR}/dxil.dll")
 
 	add_custom_command(TARGET ${TARGET} POST_BUILD
-			COMMAND ${CMAKE_COMMAND} -E copy_if_different
-			${DXC_DLLS}
-			$<TARGET_FILE_DIR:${TARGET}>
+		COMMAND ${CMAKE_COMMAND} -E copy_if_different "${DXC_DLL_DIR}/dxcompiler.dll" "$<TARGET_FILE_DIR:${TARGET}>/dxcompiler.dll"
+		COMMAND ${CMAKE_COMMAND} -E copy_if_different "${DXC_DLL_DIR}/dxil.dll" "$<TARGET_FILE_DIR:${TARGET}>/dxil.dll"
 	)
 endfunction()
 
 # Check for Windows platform and specify dxcompiler.dll and dxil.dll locations.
 if (WINDOWS)
 	set(DXC_DLL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/libraries/dxc")
-	set(DXC_DLLS "${DXC_DLL_DIR}/dxcompiler.dll" "${DXC_DLL_DIR}/dxil.dll")
 
 	# Check if this project is being included as a subproject.
 	if (NOT CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
@@ -299,10 +296,8 @@ if (WINDOWS)
 
 			if (DEST_DIR)
 				add_custom_command(TARGET cute POST_BUILD
-					COMMAND ${CMAKE_COMMAND} -E copy_if_different
-					"${DXC_DLL_DIR}/dxcompiler.dll" "${DEST_DIR}"
-					COMMAND ${CMAKE_COMMAND} -E copy_if_different
-					"${DXC_DLL_DIR}/dxil.dll" "${DEST_DIR}"
+					COMMAND ${CMAKE_COMMAND} -E copy_if_different "${DXC_DLL_DIR}/dxcompiler.dll" "${DEST_DIR}/dxcompiler.dll"
+					COMMAND ${CMAKE_COMMAND} -E copy_if_different "${DXC_DLL_DIR}/dxil.dll" "${DEST_DIR}/dxil.dll"
 				)
 			endif()
 		endforeach()
