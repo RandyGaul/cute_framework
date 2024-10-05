@@ -276,7 +276,6 @@ endfunction()
 # Check for Windows platform and specify dxcompiler.dll and dxil.dll locations.
 if (WINDOWS)
 	set(DXC_DLL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/libraries/dxc")
-	set(DXC_DLLS "${DXC_DLL_DIR}/dxcompiler.dll" "${DXC_DLL_DIR}/dxil.dll")
 
 	# Check if this project is being included as a subproject.
 	if (NOT CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
