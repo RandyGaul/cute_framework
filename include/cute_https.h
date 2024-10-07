@@ -282,38 +282,19 @@ CF_API htbl const CF_HttpsHeader* CF_CALL cf_https_response_headers(CF_HttpsResp
 namespace Cute
 {
 
-using HttpsRequest = CF_HttpsRequest;
-using HttpsResponse = CF_HttpsResponse;
-using HttpsHeader = CF_HttpsHeader;
+CF_INLINE CF_HttpsRequest https_get(const char* host, int port, const char* uri, bool verify_cert = true) { return cf_https_get(host, port, uri, verify_cert); }
+CF_INLINE CF_HttpsRequest https_post(const char* host, int port, const char* uri, const void* content, int content_length, bool verify_cert = true) { return cf_https_post(host, port, uri, content, content_length, verify_cert); }
+CF_INLINE void https_add_header(CF_HttpsRequest request, const char* name, const char* value) { cf_https_add_header(request, name, value); }
+CF_INLINE void https_destroy(CF_HttpsRequest request) { cf_https_destroy(request); }
 
-CF_INLINE HttpsRequest https_get(const char* host, int port, const char* uri, bool verify_cert = true) { return cf_https_get(host, port, uri, verify_cert); }
-CF_INLINE HttpsRequest https_post(const char* host, int port, const char* uri, const void* content, int content_length, bool verify_cert = true) { return cf_https_post(host, port, uri, content, content_length, verify_cert); }
-CF_INLINE void https_add_header(HttpsRequest request, const char* name, const char* value) { cf_https_add_header(request, name, value); }
-CF_INLINE void https_destroy(HttpsRequest request) { cf_https_destroy(request); }
-
-using HttpsResult = CF_HttpsResult;
-#define CF_ENUM(K, V) CF_INLINE constexpr HttpsResult K = CF_##K;
-CF_HTTPS_RESULT_DEFS
-#undef CF_ENUM
-
-CF_INLINE const char* to_string(HttpsResult result)
-{
-	switch (result) {
-	#define CF_ENUM(K, V) case CF_##K: return #K;
-	CF_HTTPS_RESULT_DEFS
-	#undef CF_ENUM
-	default: return NULL;
-	}
-}
-
-CF_INLINE HttpsResult https_process(HttpsRequest request) { return cf_https_process(request); }
-CF_INLINE HttpsResponse https_response(HttpsRequest request) { return cf_https_response(request); }
-CF_INLINE int https_response_code(HttpsResponse response) { return cf_https_response_code(response); }
-CF_INLINE int https_response_content_length(HttpsResponse response) { return cf_https_response_content_length(response); }
-CF_INLINE char* https_response_content(HttpsResponse response) { return cf_https_response_content(response); }
-CF_INLINE HttpsHeader https_response_find_header(HttpsResponse response, const char* header_name) { return cf_https_response_find_header(response, header_name); }
-CF_INLINE int https_response_headers_count(HttpsResponse response) { return cf_https_response_headers_count(response); }
-CF_INLINE htbl const HttpsHeader* https_response_headers(HttpsResponse response) { return cf_https_response_headers(response); }
+CF_INLINE CF_HttpsResult https_process(CF_HttpsRequest request) { return cf_https_process(request); }
+CF_INLINE CF_HttpsResponse https_response(CF_HttpsRequest request) { return cf_https_response(request); }
+CF_INLINE int https_response_code(CF_HttpsResponse response) { return cf_https_response_code(response); }
+CF_INLINE int https_response_content_length(CF_HttpsResponse response) { return cf_https_response_content_length(response); }
+CF_INLINE char* https_response_content(CF_HttpsResponse response) { return cf_https_response_content(response); }
+CF_INLINE CF_HttpsHeader https_response_find_header(CF_HttpsResponse response, const char* header_name) { return cf_https_response_find_header(response, header_name); }
+CF_INLINE int https_response_headers_count(CF_HttpsResponse response) { return cf_https_response_headers_count(response); }
+CF_INLINE htbl const CF_HttpsHeader* https_response_headers(CF_HttpsResponse response) { return cf_https_response_headers(response); }
 
 }
 

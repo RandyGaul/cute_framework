@@ -668,7 +668,7 @@ CF_INLINE int address_equals(Address a, Address b) { return cf_address_equals(a,
 CF_INLINE CryptoKey crypto_generate_key() { return cf_crypto_generate_key(); }
 CF_INLINE void crypto_random_bytes(void* data, int byte_count) { cf_crypto_random_bytes(data,byte_count); }
 CF_INLINE void crypto_sign_keygen(CryptoSignPublic* public_key, CryptoSignSecret* secret_key) { cf_crypto_sign_keygen(public_key,secret_key); }
-CF_INLINE Result generate_connect_token(
+CF_INLINE CF_Result generate_connect_token(
 	uint64_t application_id,
 	uint64_t creation_timestamp,
 	const CryptoKey* client_to_server_key,
@@ -717,12 +717,12 @@ CF_INLINE const char* to_string(ClientState state)
 
 CF_INLINE Client* make_client(uint16_t port, uint64_t application_id, bool use_ipv6 = false) { return cf_make_client(port,application_id,use_ipv6); }
 CF_INLINE void destroy_client(Client* client) { cf_destroy_client(client); }
-CF_INLINE Result client_connect(Client* client, const uint8_t* connect_token) { return cf_client_connect(client,connect_token); }
+CF_INLINE CF_Result client_connect(Client* client, const uint8_t* connect_token) { return cf_client_connect(client,connect_token); }
 CF_INLINE void client_disconnect(Client* client) { cf_client_disconnect(client); }
 CF_INLINE void client_update(Client* client, double dt, uint64_t current_time) { cf_client_update(client,dt,current_time); }
 CF_INLINE bool client_pop_packet(Client* client, void** packet, int* size, bool* was_sent_reliably = NULL) { return cf_client_pop_packet(client,packet,size,was_sent_reliably); }
 CF_INLINE void client_free_packet(Client* client, void* packet) { cf_client_free_packet(client,packet); }
-CF_INLINE Result client_send(Client* client, const void* packet, int size, bool send_reliably) { return cf_client_send(client,packet,size,send_reliably); }
+CF_INLINE CF_Result client_send(Client* client, const void* packet, int size, bool send_reliably) { return cf_client_send(client,packet,size,send_reliably); }
 CF_INLINE ClientState client_state_get(const Client* client) { return cf_client_state_get(client); }
 CF_INLINE void client_enable_network_simulator(Client* client, double latency, double jitter, double drop_chance, double duplicate_chance) { cf_client_enable_network_simulator(client,latency,jitter,drop_chance,duplicate_chance); }
 
@@ -750,7 +750,7 @@ CF_INLINE const char* to_string(ServerEventType type)
 CF_INLINE ServerConfig server_config_defaults() { return cf_server_config_defaults(); }
 CF_INLINE Server* make_server(ServerConfig config) { return cf_make_server(config); }
 CF_INLINE void destroy_server(Server* server) { cf_destroy_server(server); }
-CF_INLINE Result server_start(Server* server, const char* address_and_port) { return cf_server_start(server,address_and_port); }
+CF_INLINE CF_Result server_start(Server* server, const char* address_and_port) { return cf_server_start(server,address_and_port); }
 CF_INLINE void server_stop(Server* server) { cf_server_stop(server); }
 CF_INLINE bool server_pop_event(Server* server, ServerEvent* event) { return cf_server_pop_event(server,event); }
 CF_INLINE void server_free_packet(Server* server, int client_index, void* data) { cf_server_free_packet(server,client_index,data); }

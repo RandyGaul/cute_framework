@@ -87,7 +87,7 @@ void draw_sprite(CF_Sprite sprite, float x, float y)
 
 int main(int argc, char* argv[])
 {
-	make_app("Spritesheet", 0, 0, 0, 480*2, 270*2, APP_OPTIONS_RESIZABLE_BIT | APP_OPTIONS_WINDOW_POS_CENTERED_BIT, argv[0]);
+	make_app("Spritesheet", 0, 0, 0, 480*2, 270*2, CF_APP_OPTIONS_RESIZABLE_BIT | CF_APP_OPTIONS_WINDOW_POS_CENTERED_BIT, argv[0]);
 	mount_directory_as("import_spritesheet_data", "/");
 	set_target_framerate(60);
 

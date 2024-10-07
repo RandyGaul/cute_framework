@@ -791,35 +791,6 @@ CF_API CF_PowerInfo CF_CALL cf_app_power_info();
 namespace Cute
 {
 
-enum : int
-{
-	#define CF_ENUM(K, V) K = V,
-	CF_APP_OPTION_DEFS
-	#undef CF_ENUM
-};
-
-using PowerInfo = CF_PowerInfo;
-
-using DisplayOrientation = CF_DisplayOrientation;
-#define CF_ENUM(K, V) CF_INLINE constexpr DisplayOrientation K = CF_##K;
-CF_DISPLAY_ORIENTATION_DEFS
-#undef CF_ENUM
-
-using PowerState = CF_PowerState;
-#define CF_ENUM(K, V) CF_INLINE constexpr PowerState K = CF_##K;
-CF_POWER_STATE_DEFS
-#undef CF_ENUM
-
-CF_INLINE const char* power_state_to_string(PowerState state) { switch (state) {
-	#define CF_ENUM(K, V) case K: return #K;
-	CF_POWER_STATE_DEFS
-	#undef CF_ENUM
-	default: return NULL;
-	}
-}
-
-using DisplayID = CF_DisplayID;
-
 CF_INLINE CF_DisplayID default_display() { return cf_default_display(); }
 CF_INLINE CF_DisplayID* get_display_list() { return cf_get_display_list(); }
 CF_INLINE void free_display_list(CF_DisplayID* display_list) { cf_free_display_list(display_list); }
@@ -829,15 +800,15 @@ CF_INLINE int display_y(CF_DisplayID display_id = cf_default_display()) { return
 CF_INLINE int display_width(CF_DisplayID display_id = cf_default_display()) { return cf_display_width(display_id); }
 CF_INLINE int display_height(CF_DisplayID display_id = cf_default_display()) { return cf_display_height(display_id); }
 CF_INLINE float display_refresh_rate(CF_DisplayID display_id = cf_default_display()) { return cf_display_refresh_rate(display_id); }
-CF_INLINE Rect display_bounds(CF_DisplayID display_id = cf_default_display()) { return cf_display_bounds(display_id); }
+CF_INLINE CF_Rect display_bounds(CF_DisplayID display_id = cf_default_display()) { return cf_display_bounds(display_id); }
 CF_INLINE const char* display_name(CF_DisplayID display_id = cf_default_display()) { return cf_display_name(display_id); }
-CF_INLINE DisplayOrientation display_orientation(CF_DisplayID display_id = cf_default_display()) { return cf_display_orientation(display_id); }
+CF_INLINE CF_DisplayOrientation display_orientation(CF_DisplayID display_id = cf_default_display()) { return cf_display_orientation(display_id); }
 
-CF_INLINE Result make_app(const char* window_title, CF_DisplayID display_id, int x, int y, int w, int h, int options = 0, const char* argv0 = NULL) { return cf_make_app(window_title, display_id, x, y, w, h, options, argv0); }
+CF_INLINE CF_Result make_app(const char* window_title, CF_DisplayID display_id, int x, int y, int w, int h, int options = 0, const char* argv0 = NULL) { return cf_make_app(window_title, display_id, x, y, w, h, options, argv0); }
 CF_INLINE void destroy_app() { cf_destroy_app(); }
 CF_INLINE bool app_is_running() { return cf_app_is_running(); }
 CF_INLINE void app_signal_shutdown() { cf_app_signal_shutdown(); }
-CF_INLINE void app_update(OnUpdateFn* on_update = NULL) { cf_app_update(on_update); }
+CF_INLINE void app_update(CF_OnUpdateFn* on_update = NULL) { cf_app_update(on_update); }
 CF_INLINE int app_draw_onto_screen(bool clear = false) { return cf_app_draw_onto_screen(clear); }
 CF_INLINE void app_get_size(int* w, int* h) { return cf_app_get_size(w, h); }
 CF_INLINE void app_set_size(int w, int h) { return cf_app_set_size(w, h); }
@@ -876,7 +847,7 @@ CF_INLINE void app_set_icon(const char* virtual_path_to_png) { cf_app_set_icon(v
 CF_INLINE ImGuiContext* app_init_imgui() { return cf_app_init_imgui(); }
 CF_INLINE CF_Canvas app_get_canvas() { return cf_app_get_canvas(); }
 CF_INLINE void app_set_canvas_size(int w, int h) { cf_app_set_canvas_size(w, h); }
-CF_INLINE PowerInfo app_power_info() { return cf_app_power_info(); }
+CF_INLINE CF_PowerInfo app_power_info() { return cf_app_power_info(); }
 
 }
 

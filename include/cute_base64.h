@@ -88,8 +88,8 @@ CF_API CF_Result CF_CALL cf_base64_decode(void* dst, size_t dst_size, const void
 namespace Cute
 {
 
-CF_INLINE Result base64_encode(void* dst, size_t dst_size, const void* src, size_t src_size) { return cf_base64_encode(dst, dst_size, src, src_size); }
-CF_INLINE Result base64_decode(void* dst, size_t dst_size, const void* src, size_t src_size) { return cf_base64_decode(dst, dst_size, src, src_size); }
+CF_INLINE CF_Result base64_encode(void* dst, size_t dst_size, const void* src, size_t src_size) { return cf_base64_encode(dst, dst_size, src, src_size); }
+CF_INLINE CF_Result base64_decode(void* dst, size_t dst_size, const void* src, size_t src_size) { return cf_base64_decode(dst, dst_size, src, src_size); }
 
 }
 

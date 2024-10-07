@@ -93,3 +93,36 @@ void cf_image_flip_horizontal(CF_Image* img)
 	cp_flip_image_horizontal((cp_image_t*)img);
 }
 
+void cf_debug_dump_greyscale_pixels(const char* path, uint8_t* pixels, int w, int h)
+{
+	cp_image_t img;
+	img.w = w;
+	img.h = h;
+	img.pix = (cp_pixel_t*)CF_ALLOC(sizeof(cp_pixel_t) * w * h);
+	for (int i = 0; i < w * h; ++i) {
+		cp_pixel_t pix;
+		pix.r = pix.g = pix.b = pixels[i];
+		pix.a = 255;
+		img.pix[i] = pix;
+	}
+	cp_save_png(path, &img);
+	CF_FREE(img.pix);
+}
+
+void cf_debug_dump_pixels(const char* path, CF_Pixel* pixels, int w, int h)
+{
+	cp_image_t img;
+	img.w = w;
+	img.h = h;
+	img.pix = (cp_pixel_t*)CF_ALLOC(sizeof(cp_pixel_t) * w * h);
+	for (int i = 0; i < w * h; ++i) {
+		cp_pixel_t pix;
+		pix.r = pixels[i].colors.r;
+		pix.g = pixels[i].colors.g;
+		pix.b = pixels[i].colors.b;
+		pix.a = pixels[i].colors.a;
+		img.pix[i] = pix;
+	}
+	cp_save_png(path, &img);
+	CF_FREE(img.pix);
+}

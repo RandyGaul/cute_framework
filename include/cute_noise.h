@@ -195,10 +195,8 @@ CF_API CF_Pixel* CF_CALL cf_noise_fbm_pixels_wrapped(int w, int h, uint64_t seed
 namespace Cute
 {
 
-using Noise = CF_Noise;
-
-CF_INLINE Noise make_noise(uint64_t seed) { return cf_make_noise(seed); }
-CF_INLINE Noise make_noise_fbm(uint64_t seed, float scale, float lacunarity, int octaves, float falloff) { return cf_make_noise_fbm(seed, scale, lacunarity, octaves, falloff); }
+CF_INLINE CF_Noise make_noise(uint64_t seed) { return cf_make_noise(seed); }
+CF_INLINE CF_Noise make_noise_fbm(uint64_t seed, float scale, float lacunarity, int octaves, float falloff) { return cf_make_noise_fbm(seed, scale, lacunarity, octaves, falloff); }
 CF_INLINE void destroy_noise(CF_Noise noise) { cf_destroy_noise(noise); }
 CF_INLINE float noise(CF_Noise noise, v2 p) { return cf_noise2(noise, p.x, p.y); }
 CF_INLINE float noise(CF_Noise noise, float x, float y) { return cf_noise2(noise, x, y); }

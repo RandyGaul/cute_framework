@@ -267,19 +267,15 @@ namespace Cute
 CF_INLINE void* aligned_alloc(size_t size, int alignment) { return cf_aligned_alloc(size, alignment); }
 CF_INLINE void aligned_free(void* ptr) { return cf_aligned_free(ptr); }
 
-using Arena = CF_Arena;
-
 CF_INLINE void arena_init(CF_Arena* arena, int alignment, int block_size) { cf_arena_init(arena, alignment, block_size); }
 CF_INLINE void* arena_alloc(CF_Arena* arena, size_t size) { return cf_arena_alloc(arena, size); }
 CF_INLINE void arena_reset(CF_Arena* arena) { return cf_arena_reset(arena); }
 
-using MemoryPool = CF_MemoryPool;
-
-CF_INLINE MemoryPool* make_memory_pool(int element_size, int element_count, int alignment) { return cf_make_memory_pool(element_size, element_count, alignment); }
-CF_INLINE void destroy_memory_pool(MemoryPool* pool) { cf_destroy_memory_pool(pool); }
-CF_INLINE void* memory_pool_alloc(MemoryPool* pool) { return cf_memory_pool_alloc(pool); }
-CF_INLINE void* memory_pool_try_alloc(MemoryPool* pool) { return cf_memory_pool_try_alloc(pool); }
-CF_INLINE void memory_pool_free(MemoryPool* pool, void* element) { return cf_memory_pool_free(pool, element); }
+CF_INLINE CF_MemoryPool* make_memory_pool(int element_size, int element_count, int alignment) { return cf_make_memory_pool(element_size, element_count, alignment); }
+CF_INLINE void destroy_memory_pool(CF_MemoryPool* pool) { cf_destroy_memory_pool(pool); }
+CF_INLINE void* memory_pool_alloc(CF_MemoryPool* pool) { return cf_memory_pool_alloc(pool); }
+CF_INLINE void* memory_pool_try_alloc(CF_MemoryPool* pool) { return cf_memory_pool_try_alloc(pool); }
+CF_INLINE void memory_pool_free(CF_MemoryPool* pool, void* element) { return cf_memory_pool_free(pool, element); }
 
 }
 

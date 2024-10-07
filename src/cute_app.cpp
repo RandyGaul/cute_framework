@@ -190,11 +190,11 @@ static void s_canvas(int w, int h)
 
 CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, int y, int w, int h, CF_AppOptionFlags options, const char* argv0)
 {
-	bool use_dx11 = options & APP_OPTIONS_GFX_D3D11_BIT;
-	bool use_dx12 = options & APP_OPTIONS_GFX_D3D12_BIT;
-	bool use_metal = options & APP_OPTIONS_GFX_METAL_BIT;
-	bool use_vulkan = options & APP_OPTIONS_GFX_VULKAN_BIT;
-	bool use_gfx = !(options & APP_OPTIONS_NO_GFX_BIT);
+	bool use_dx11 = options & CF_APP_OPTIONS_GFX_D3D11_BIT;
+	bool use_dx12 = options & CF_APP_OPTIONS_GFX_D3D12_BIT;
+	bool use_metal = options & CF_APP_OPTIONS_GFX_METAL_BIT;
+	bool use_vulkan = options & CF_APP_OPTIONS_GFX_VULKAN_BIT;
+	bool use_gfx = !(options & CF_APP_OPTIONS_NO_GFX_BIT);
 
 	// Ensure the user selected only one backend, if they selected one at all.
 	if (use_dx11) {
@@ -222,11 +222,11 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 	Uint32 sdl_options = SDL_INIT_EVENTS | SDL_INIT_VIDEO | SDL_INIT_GAMEPAD;
 #else
 	Uint32 sdl_options = SDL_INIT_EVENTS | SDL_INIT_VIDEO | SDL_INIT_GAMEPAD | SDL_INIT_HAPTIC;
-	if (options & APP_OPTIONS_NO_GFX_BIT) {
+	if (options & CF_APP_OPTIONS_NO_GFX_BIT) {
 		sdl_options &= ~SDL_INIT_VIDEO;
 	}
 #endif
-	if (!(options & APP_OPTIONS_NO_AUDIO_BIT)) {
+	if (!(options & CF_APP_OPTIONS_NO_AUDIO_BIT)) {
 		SDL_Init(SDL_INIT_AUDIO);
 	}
 
@@ -257,7 +257,7 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 		if(!SDL_ShaderCross_Init()) {
 			return cf_result_error("Failed to initialize SDL_ShaderCross.");
 		}
-		device = SDL_CreateGPUDevice(SDL_ShaderCross_GetSPIRVShaderFormats(), options & APP_OPTIONS_GFX_DEBUG_BIT, device_name);
+		device = SDL_CreateGPUDevice(SDL_ShaderCross_GetSPIRVShaderFormats(), options & CF_APP_OPTIONS_GFX_DEBUG_BIT, device_name);
 		if (!device) {
 			return cf_result_error("Failed to create GPU Device.");
 		}
@@ -265,9 +265,9 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 
 	Uint32 flags = 0;
 	if (use_metal) flags |= SDL_WINDOW_METAL;
-	if (options & APP_OPTIONS_FULLSCREEN_BIT) flags |= SDL_WINDOW_FULLSCREEN;
-	if (options & APP_OPTIONS_RESIZABLE_BIT) flags |= SDL_WINDOW_RESIZABLE;
-	if (options & APP_OPTIONS_HIDDEN_BIT) flags |= (SDL_WINDOW_HIDDEN | SDL_WINDOW_MINIMIZED);
+	if (options & CF_APP_OPTIONS_FULLSCREEN_BIT) flags |= SDL_WINDOW_FULLSCREEN;
+	if (options & CF_APP_OPTIONS_RESIZABLE_BIT) flags |= SDL_WINDOW_RESIZABLE;
+	if (options & CF_APP_OPTIONS_HIDDEN_BIT) flags |= (SDL_WINDOW_HIDDEN | SDL_WINDOW_MINIMIZED);
 
 	SDL_Window* window;
 	SDL_PropertiesID props = SDL_CreateProperties();
@@ -275,7 +275,7 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 	SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER, w);
 	SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER, h);
 	SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_FLAGS_NUMBER, flags);
-	if (options & APP_OPTIONS_WINDOW_POS_CENTERED_BIT) {
+	if (options & CF_APP_OPTIONS_WINDOW_POS_CENTERED_BIT) {
 		SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_X_NUMBER, SDL_WINDOWPOS_CENTERED_DISPLAY(display_id));
 		SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_Y_NUMBER, SDL_WINDOWPOS_CENTERED_DISPLAY(display_id));
 	} else {
@@ -344,7 +344,7 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 
 	app->gfx_enabled = use_gfx;
 
-	if (!(options & APP_OPTIONS_NO_AUDIO_BIT)) {
+	if (!(options & CF_APP_OPTIONS_NO_AUDIO_BIT)) {
 		int more_on_emscripten = 1;
 	#ifdef CF_EMSCRIPTEN
 		more_on_emscripten = 4;
@@ -373,7 +373,7 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 	CF_Result err = cf_fs_init(argv0);
 	if (cf_is_error(err)) {
 		CF_ASSERT(0);
-	} else if (!(options & APP_OPTIONS_FILE_SYSTEM_DONT_DEFAULT_MOUNT_BIT)) {
+	} else if (!(options & CF_APP_OPTIONS_FILE_SYSTEM_DONT_DEFAULT_MOUNT_BIT)) {
 		// Put the base directory (the path to the exe) onto the file system search path.
 		cf_fs_mount(cf_fs_get_base_directory(), "", true);
 	}
@@ -428,7 +428,7 @@ static void s_on_update(void* udata)
 {
 	cf_pump_input_msgs();
 	if (app->audio_needs_updates) {
-		cs_update(DELTA_TIME);
+		cs_update(CF_DELTA_TIME);
 		if (app->on_sound_finish_single_threaded) {
 			mutex_lock(&app->on_sound_finish_mutex);
 			Array<CF_Sound> on_finish = app->on_sound_finish_queue;

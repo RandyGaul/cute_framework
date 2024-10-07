@@ -633,7 +633,7 @@ CF_TextureParams cf_texture_defaults(int w, int h)
 
 CF_INLINE bool s_is_depth(CF_PixelFormat format)
 {
-	return format >= PIXEL_FORMAT_D16_UNORM;
+	return format >= CF_PIXEL_FORMAT_D16_UNORM;
 }
 
 CF_Texture cf_make_texture(CF_TextureParams params)
@@ -745,11 +745,11 @@ uint64_t cf_texture_handle(CF_Texture texture)
 	return (uint64_t)((CF_TextureInternal*)texture.id)->tex;
 }
 
-static void s_shader_directory_recursive(Path path)
+static void s_shader_directory_recursive(CF_Path path)
 {
-	Array<Path> dir = Directory::enumerate(app->shader_directory + path);
+	Array<CF_Path> dir = CF_Directory::enumerate(app->shader_directory + path);
 	for (int i = 0; i < dir.size(); ++i) {
-		Path p = app->shader_directory + path + dir[i];
+		CF_Path p = app->shader_directory + path + dir[i];
 		if (p.is_directory()) {
 			s_shader_directory_recursive(p);
 		} else {
@@ -786,11 +786,11 @@ void cf_shader_on_changed(void (*on_changed_fn)(const char* path, void* udata), 
 	app->on_shader_changed_udata = udata;
 }
 
-static void s_shader_watch_recursive(Path path)
+static void s_shader_watch_recursive(CF_Path path)
 {
-	Array<Path> dir = Directory::enumerate(app->shader_directory + path);
+	Array<CF_Path> dir = CF_Directory::enumerate(app->shader_directory + path);
 	for (int i = 0; i < dir.size(); ++i) {
-		Path p = app->shader_directory + path + dir[i];
+		CF_Path p = app->shader_directory + path + dir[i];
 		if (p.is_directory()) {
 			s_shader_directory_recursive(p);
 		} else {
@@ -1044,7 +1044,7 @@ static String s_include_recurse(Map<const char*, const char*>& incl_protection, 
 
 		// Search for the shader to include.
 		if (builtin || fs_file_exists(path)) {
-			String ext = Path(path).ext();
+			String ext = CF_Path(path).ext();
 			if (ext == ".vs" || ext == ".fs" || ext == ".shd") {
 				String incl;
 				bool found = false;
@@ -1171,7 +1171,7 @@ void cf_unload_internal_shaders()
 // Create a user shader by injecting their `shader` function into CF's draw shader.
 CF_Shader cf_make_draw_shader_internal(const char* path)
 {
-	Path p = Path("/") + path;
+	CF_Path p = CF_Path("/") + path;
 	const char* path_s = sintern(p);
 	CF_ShaderFileInfo info = app->shader_file_infos.find(path_s);
 	if (!info.path) return { 0 };
@@ -1185,7 +1185,7 @@ CF_Shader cf_make_draw_shader_internal(const char* path)
 // Create a user shader by injecting their `shader` function into CF's draw shader.
 CF_Shader cf_make_draw_blit_shader_internal(const char* path)
 {
-	Path p = Path("/") + path;
+	CF_Path p = CF_Path("/") + path;
 	const char* path_s = sintern(p);
 	CF_ShaderFileInfo info = app->shader_file_infos.find(path_s);
 	if (!info.path) return { 0 };
@@ -1491,7 +1491,7 @@ CF_RenderState cf_render_state_defaults()
 	CF_RenderState state;
 	state.blend.enabled = true;
 	state.cull_mode = CF_CULL_MODE_NONE;
-	state.blend.pixel_format = PIXEL_FORMAT_R8G8B8A8_UNORM;
+	state.blend.pixel_format = CF_PIXEL_FORMAT_R8G8B8A8_UNORM;
 	state.blend.write_R_enabled = true;
 	state.blend.write_G_enabled = true;
 	state.blend.write_B_enabled = true;

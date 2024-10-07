@@ -5,7 +5,7 @@ int main(int argc, char* argv[])
 {
 	int w = 640;
 	int h = 480;
-	make_app("Window Resizing", 0, 0, 0, w, h, APP_OPTIONS_WINDOW_POS_CENTERED_BIT | APP_OPTIONS_RESIZABLE_BIT, argv[0]);
+	make_app("Window Resizing", 0, 0, 0, w, h, CF_APP_OPTIONS_WINDOW_POS_CENTERED_BIT | CF_APP_OPTIONS_RESIZABLE_BIT, argv[0]);
 
 	draw_push_antialias(true);
 
@@ -16,7 +16,7 @@ int main(int argc, char* argv[])
 	while (app_is_running()) {
 		app_update();
 
-		if (key_just_pressed(KEY_SPACE)) {
+		if (key_just_pressed(CF_KEY_SPACE)) {
 			auto_resize = !auto_resize;
 			printf("Canvas auto-resizing is now %s\n", auto_resize ? "enabled" : "disabled");
 		}

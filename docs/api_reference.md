@@ -389,6 +389,7 @@ This is a list of all functions in Cute Framework organized by categories. This 
 - [cf_make_draw_shader_from_source](/draw/cf_make_draw_shader_from_source.md)
 - [cf_make_premade_sprite](/draw/cf_make_premade_sprite.md)
 - [cf_register_premade_atlas](/draw/cf_register_premade_atlas.md)
+- [cf_render_layers_to](/draw/cf_render_layers_to.md)
 - [cf_render_to](/draw/cf_render_to.md)
 - [cf_screen_bounds_to_world](/draw/cf_screen_bounds_to_world.md)
 - [cf_screen_to_world](/draw/cf_screen_to_world.md)
@@ -513,6 +514,8 @@ This is a list of all functions in Cute Framework organized by categories. This 
 ## image
 
 ### functions
+- [cf_debug_dump_greyscale_pixels](/image/cf_debug_dump_greyscale_pixels.md)
+- [cf_debug_dump_pixels](/image/cf_debug_dump_pixels.md)
 - [cf_image_depallete](/image/cf_image_depallete.md)
 - [cf_image_flip_horizontal](/image/cf_image_flip_horizontal.md)
 - [cf_image_free](/image/cf_image_free.md)
@@ -1275,7 +1278,6 @@ This is a list of all functions in Cute Framework organized by categories. This 
 ## random
 
 ### functions
-- [cf_rnd](/random/cf_rnd.md)
 - [cf_rnd_double](/random/cf_rnd_double.md)
 - [cf_rnd_float](/random/cf_rnd_float.md)
 - [cf_rnd_range_double](/random/cf_rnd_range_double.md)
@@ -1283,10 +1285,11 @@ This is a list of all functions in Cute Framework organized by categories. This 
 - [cf_rnd_range_int](/random/cf_rnd_range_int.md)
 - [cf_rnd_range_uint64](/random/cf_rnd_range_uint64.md)
 - [cf_rnd_seed](/random/cf_rnd_seed.md)
+- [cf_rnd_uint](/random/cf_rnd_uint.md)
 
 
 ### structs
-- [CF_RndState](/random/cf_rndstate.md)
+- [CF_Rnd](/random/cf_rnd.md)
 
 
 ## sprite
@@ -1304,6 +1307,7 @@ This is a list of all functions in Cute Framework organized by categories. This 
 - [cf_sprite_animation_delay](/sprite/cf_sprite_animation_delay.md)
 - [cf_sprite_animation_interpolant](/sprite/cf_sprite_animation_interpolant.md)
 - [cf_sprite_current_frame](/sprite/cf_sprite_current_frame.md)
+- [cf_sprite_current_global_frame](/sprite/cf_sprite_current_global_frame.md)
 - [cf_sprite_defaults](/sprite/cf_sprite_defaults.md)
 - [cf_sprite_flip_x](/sprite/cf_sprite_flip_x.md)
 - [cf_sprite_flip_y](/sprite/cf_sprite_flip_y.md)

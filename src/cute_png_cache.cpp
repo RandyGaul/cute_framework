@@ -201,11 +201,11 @@ CF_Sprite cf_make_png_cache_sprite(const char* sprite_name, const CF_Animation**
 namespace Cute
 {
 
-const Animation* make_png_cache_animation(const char* name, const Array<Png>& pngs, const Array<float>& delays)
+const CF_Animation* make_png_cache_animation(const char* name, const Array<CF_Png>& pngs, const Array<float>& delays)
 {
 	return cf_make_png_cache_animation(name, pngs.data(), pngs.count(), delays.data(), delays.count());
 }
-const Animation** make_png_cache_animation_table(const char* sprite_name, const Array<const Animation*>& animations)
+const CF_Animation** make_png_cache_animation_table(const char* sprite_name, const Array<const CF_Animation*>& animations)
 {
 	return cf_make_png_cache_animation_table(sprite_name, animations.data(), animations.count());
 }

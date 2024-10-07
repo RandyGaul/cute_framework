@@ -67,7 +67,7 @@ vec4 shader(vec4 color, vec2 pos, vec2 screen_uv, vec4 params)
 
 int main(int argc, char* argv[])
 {
-	make_app("Shallow Water Sample", 0, 0, 0, 640, 480, APP_OPTIONS_WINDOW_POS_CENTERED_BIT | APP_OPTIONS_RESIZABLE_BIT, argv[0]);
+	make_app("Shallow Water Sample", 0, 0, 0, 640, 480, CF_APP_OPTIONS_WINDOW_POS_CENTERED_BIT | CF_APP_OPTIONS_RESIZABLE_BIT, argv[0]);
 	cf_shader_directory("/shallow_water_data");
 	mount_content_directory_as("/");
 	app_init_imgui();
@@ -94,7 +94,7 @@ int main(int argc, char* argv[])
 		v2 p = V2(0,0);
 		int count = 3;
 		float opacity = 1.0f;
-		Routine rt = { };
+		CF_Routine rt = { };
 	};
 
 	Array<Spawner> spawners;
@@ -131,7 +131,7 @@ int main(int argc, char* argv[])
 		ImGui::Checkbox("Show normals", &show_normals);
 		ImGui::End();
 
-		if (mouse_just_pressed(MOUSE_BUTTON_LEFT)) {
+		if (mouse_just_pressed(CF_MOUSE_BUTTON_LEFT)) {
 			add_spawner((int)mouse_x(), (int)mouse_y());
 		}
 

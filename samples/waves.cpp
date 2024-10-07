@@ -13,7 +13,7 @@ void mount_content_directory_as(const char* dir)
 
 int main(int argc, char* argv[])
 {
-	make_app("Waves Sample", 0, 0, 0, 640, 480, APP_OPTIONS_WINDOW_POS_CENTERED_BIT | APP_OPTIONS_RESIZABLE_BIT, argv[0]);
+	make_app("Waves Sample", 0, 0, 0, 640, 480, CF_APP_OPTIONS_WINDOW_POS_CENTERED_BIT | CF_APP_OPTIONS_RESIZABLE_BIT, argv[0]);
 	cf_shader_directory("/waves_data");
 	mount_content_directory_as("/");
 	app_init_imgui();
@@ -38,8 +38,7 @@ int main(int argc, char* argv[])
 
 	CF_Canvas offscreen = make_canvas(canvas_defaults(640, 480));
 
-	while (app_is_running())
-	{
+	while (app_is_running()) {
 		app_update();
 
 		ImGui::SetNextWindowSize(V2(250,100));

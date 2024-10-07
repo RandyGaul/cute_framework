@@ -16,13 +16,13 @@ const char* s_recolor = STR(
 
 int main(int argc, char* argv[])
 {
-	Result result = make_app("Recolor", 0, 0, 0, 720, 480, APP_OPTIONS_WINDOW_POS_CENTERED_BIT, argv[0]);
+	CF_Result result = make_app("Recolor", 0, 0, 0, 720, 480, CF_APP_OPTIONS_WINDOW_POS_CENTERED_BIT, argv[0]);
 	if (is_error(result)) return -1;
-	Shader recolor = make_draw_shader_from_source(s_recolor);
+	CF_Shader recolor = make_draw_shader_from_source(s_recolor);
 	app_init_imgui();
 
-	Sprite girl = cf_make_demo_sprite();
-	girl.play("spin");
+	CF_Sprite girl = cf_make_demo_sprite();
+	sprite_play(girl, "spin");
 	girl.scale = V2(4,4);
 
 	while (app_is_running()) {
@@ -37,8 +37,8 @@ int main(int argc, char* argv[])
 
 		draw_push_shader(recolor);
 		draw_push_vertex_attributes(color.r, color.g, color.b, strength);
-		girl.update();
-		girl.draw();
+		sprite_update(girl);
+		sprite_draw(girl);
 
 		app_draw_onto_screen(true);
 	}

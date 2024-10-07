@@ -22,7 +22,7 @@ struct CF_AsepriteCacheEntry
 {
 	const char* path = NULL;
 	ase_t* ase = NULL;
-	htbl Animation** animations = NULL;
+	htbl CF_Animation** animations = NULL;
 	dyna CF_SpriteSlice* slices = NULL;
 	dyna v2* pivots = NULL;
 };
@@ -87,7 +87,7 @@ static CF_PlayDirection s_play_direction(ase_animation_direction_t direction)
 static void s_sprite(CF_AsepriteCacheEntry entry, CF_Sprite* sprite)
 {
 	sprite->name = entry.path;
-	sprite->animations = (const Animation**)entry.animations;
+	sprite->animations = (const CF_Animation**)entry.animations;
 	sprite->w = entry.ase->w;
 	sprite->h = entry.ase->h;
 	sprite->pivots = entry.pivots;
@@ -105,7 +105,7 @@ CF_Result cf_aseprite_cache_load_from_memory(const char* unique_name, const void
 	if (!ase) return cf_result_error("Unable to open ase file at `aseprite_path`.");
 
 	// Allocate internal cache data structure entries.
-	Animation** animations = NULL;
+	CF_Animation** animations = NULL;
 	Array<uint64_t> ids;
 	v2* pivots = NULL;
 	afit(pivots, ase->frame_count);

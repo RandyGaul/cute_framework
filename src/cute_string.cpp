@@ -434,8 +434,8 @@ using intern_t = cf_intern_t;
 struct intern_table_t
 {
 	htbl intern_t** interns;
-	Arena arena;
-	ReadWriteLock lock;
+	CF_Arena arena;
+	CF_ReadWriteLock lock;
 
 	CF_INLINE void read_lock() { cf_read_lock(&lock); }
 	CF_INLINE void read_unlock() { cf_read_unlock(&lock); }
@@ -460,7 +460,7 @@ static intern_table_t* s_inst()
 
 		// Try and set the global pointer. If this fails it means another thread
 		// has raced us and completed first, so then just destroy ours and use theirs.
-		Result result = cf_atomic_ptr_cas((void**)&g_intern_table, NULL, inst);
+		CF_Result result = cf_atomic_ptr_cas((void**)&g_intern_table, NULL, inst);
 		if (is_error(result)) {
 			cf_destroy_rw_lock(&inst->lock);
 			CF_FREE(inst);

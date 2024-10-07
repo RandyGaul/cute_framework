@@ -50,7 +50,7 @@ CF_INLINE uint64_t constexpr rt_fnv1a(const char* name)
 // local variables but they don't persist, so be careful with them. A block will
 // run for one frame.
 
-struct Routine
+struct CF_Routine
 {
 	// A "hidden feature" - Goes from 0 to 1 over X seconds during `rt_seconds`.
 	// Useful for animating things.
@@ -111,7 +111,7 @@ struct Routine
 // Begins the routine.
 #define rt_begin(routine, dt)                                                \
     do {                                                                     \
-        Routine& __rt = routine;                                             \
+        CF_Routine& __rt = routine;                                             \
         bool __mn = true;                                                    \
         float __dt = dt;                                                     \
         if (__rt.wait_elapsed > 0) __rt.wait_elapsed -= __dt;                \

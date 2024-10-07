@@ -185,22 +185,14 @@ CF_API CF_Sprite CF_CALL cf_make_png_cache_sprite(const char* sprite_name, const
 namespace Cute
 {
 
-using Animation = CF_Animation;
-
-struct Png : public CF_Png
-{
-	Png() { *(CF_Png*)this = cf_png_defaults(); }
-	Png(CF_Png png) { *(CF_Png*)this = png; }
-};
-
-CF_INLINE Result png_cache_load(const char* png_path, Png* png = NULL) { return cf_png_cache_load(png_path, (CF_Png*)png); }
-CF_INLINE Result png_cache_load_mem(const char* png_path, const void* memory, size_t size, CF_Png* png = NULL) { return cf_png_cache_load_from_memory(png_path, memory, size, png); }
-CF_INLINE void png_cache_unload(Png png) { cf_png_cache_unload(png); }
-CF_API const Animation* CF_CALL make_png_cache_animation(const char* name, const Array<CF_Png>& pngs, const Array<float>& delays);
-CF_INLINE const Animation* png_cache_get_animation(const char* name) { return cf_png_cache_get_animation(name); }
-CF_API const Animation** CF_CALL make_png_cache_animation_table(const char* sprite_name, const Array<const Animation*>& animations);
-CF_INLINE const Animation** png_cache_get_animation_table(const char* sprite_name) { return cf_png_cache_get_animation_table(sprite_name); }
-CF_INLINE Sprite make_png_cache_sprite(const char* sprite_name, const CF_Animation** table = NULL) { return cf_make_png_cache_sprite(sprite_name, table); }
+CF_INLINE CF_Result png_cache_load(const char* png_path, CF_Png* png = NULL) { return cf_png_cache_load(png_path, (CF_Png*)png); }
+CF_INLINE CF_Result png_cache_load_mem(const char* png_path, const void* memory, size_t size, CF_Png* png = NULL) { return cf_png_cache_load_from_memory(png_path, memory, size, png); }
+CF_INLINE void png_cache_unload(CF_Png png) { cf_png_cache_unload(png); }
+CF_API const CF_Animation* CF_CALL make_png_cache_animation(const char* name, const Array<CF_Png>& pngs, const Array<float>& delays);
+CF_INLINE const CF_Animation* png_cache_get_animation(const char* name) { return cf_png_cache_get_animation(name); }
+CF_API const CF_Animation** CF_CALL make_png_cache_animation_table(const char* sprite_name, const Array<const CF_Animation*>& animations);
+CF_INLINE const CF_Animation** png_cache_get_animation_table(const char* sprite_name) { return cf_png_cache_get_animation_table(sprite_name); }
+CF_INLINE CF_Sprite make_png_cache_sprite(const char* sprite_name, const CF_Animation** table = NULL) { return cf_make_png_cache_sprite(sprite_name, table); }
 
 }
 

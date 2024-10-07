@@ -19,7 +19,7 @@ static void draw_text_boxed(const char* text, v2 pos, int len = -1)
 
 int main(int argc, char* argv[])
 {
-	make_app("Text Drawing", 0, 0, 0, 640, 480, APP_OPTIONS_WINDOW_POS_CENTERED_BIT | APP_OPTIONS_RESIZABLE_BIT, argv[0]);
+	make_app("Text Drawing", 0, 0, 0, 640, 480, CF_APP_OPTIONS_WINDOW_POS_CENTERED_BIT | CF_APP_OPTIONS_RESIZABLE_BIT, argv[0]);
 
 	draw_push_antialias(true);
 	make_font_from_memory(proggy_data, proggy_sz, "ProggyClean");
@@ -32,18 +32,14 @@ int main(int argc, char* argv[])
 	while (app_is_running()) {
 		app_update();
 
-		static float t = 0;
-		t += DELTA_TIME;
-
-		if (key_just_pressed(KEY_SPACE))
-		{
+		if (key_just_pressed(CF_KEY_SPACE)) {
 			draw_text_bound = !draw_text_bound;
 		}
 
 		push_font("ProggyClean");
 
 		// Clip text within a box.
-		v2 o = V2(cosf(t),sinf(t)) * 25.0f;
+		v2 o = V2(cosf((float)CF_SECONDS),sinf((float)CF_SECONDS)) * 25.0f;
 
 		// @TODO -- Fix + refactor scissor/viewport coordinate frame.
 		//Aabb clip = make_aabb(V2(-75,-75) + o, V2(75,50) + o);
@@ -55,9 +51,9 @@ int main(int argc, char* argv[])
 
 		// Draw text with a limited width.
 		push_font_size(13);
-		push_text_wrap_width(100.0f + cosf(t) * 75.0f);
+		push_text_wrap_width(100.0f + cosf((float)CF_SECONDS) * 75.0f);
 		o = V2(-200, 150);
-		cf_draw_line(V2(cosf(t) * 75.0f,0) + o, V2(cosf(t) * 75.0f,-75) + o, 0);
+		cf_draw_line(V2(cosf((float)CF_SECONDS) * 75.0f,0) + o, V2(cosf((float)CF_SECONDS) * 75.0f,-75) + o, 0);
 		draw_text_boxed("This text width is animating over time and wrapping the words dynamically.", V2(-100,0) + o);
 		pop_text_wrap_width();
 
@@ -97,7 +93,7 @@ int main(int argc, char* argv[])
 		// Text shake effect.
 		// For moving text it helps to round positions.
 		push_font_size(30);
-		draw_text_boxed("Some <shake freq=35 x=2 y=2>shaking</shake> text.", round(V2(sinf(t*0.25f)*100,cosf(t*0.25f)*100)));
+		draw_text_boxed("Some <shake freq=35 x=2 y=2>shaking</shake> text.", round(V2(sinf((float)CF_SECONDS*0.25f)*100,cosf((float)CF_SECONDS*0.25f)*100)));
 
 		// Instructions
 		const char* instructions = "Press Space to toggle bounding boxes";

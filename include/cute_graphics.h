@@ -1686,217 +1686,45 @@ CF_API void CF_CALL cf_commit();
 namespace Cute
 {
 
-using Texture  = CF_Texture;
-using Canvas = CF_Canvas;
-using Mesh = CF_Mesh;
-using Material = CF_Material;
-using Shader = CF_Shader;
-using TextureParams = CF_TextureParams;
-using CanvasParams = CF_CanvasParams;
-using VertexAttribute = CF_VertexAttribute;
-using StencilFunction = CF_StencilFunction;
-using StencilParams = CF_StencilParams;
-using BlendState = CF_BlendState;
-using RenderState = CF_RenderState;
-using BackendType = CF_BackendType;
-
-using BackendType = CF_BackendType;
-#define CF_ENUM(K, V) CF_INLINE constexpr CF_BackendType K = CF_##K;
-CF_BACKEND_TYPE_DEFS
-#undef CF_ENUM
-
-CF_INLINE constexpr const char* to_string(CF_BackendType type) { switch(type) {
-	#define CF_ENUM(K, V) case CF_##K: return #K;
-	CF_BACKEND_TYPE_DEFS
-	#undef CF_ENUM
-	default: return NULL;
-	}
-}
-
-using PixelFormat = CF_PixelFormat;
-#define CF_ENUM(K, V) CF_INLINE constexpr PixelFormat K = CF_##K;
-CF_PIXEL_FORMAT_DEFS
-#undef CF_ENUM
-
-CF_INLINE constexpr const char* to_string(PixelFormat type) { switch(type) {
-	#define CF_ENUM(K, V) case CF_##K: return #K;
-	CF_PIXEL_FORMAT_DEFS
-	#undef CF_ENUM
-	default: return NULL;
-	}
-}
-
-using PixelFormatOp = CF_PixelFormatOp;
-#define CF_ENUM(K, V) CF_INLINE constexpr PixelFormatOp K = CF_##K;
-CF_PIXELFORMAT_OP_DEFS
-#undef CF_ENUM
-
-CF_INLINE constexpr const char* to_string(PixelFormatOp type) { switch(type) {
-	#define CF_ENUM(K, V) case CF_##K: return #K;
-	CF_PIXELFORMAT_OP_DEFS
-	#undef CF_ENUM
-	default: return NULL;
-	}
-}
-
-using Filter = CF_Filter;
-#define CF_ENUM(K, V) CF_INLINE constexpr Filter K = CF_##K;
-CF_FILTER_DEFS
-#undef CF_ENUM
-
-CF_INLINE constexpr const char* to_string(Filter type) { switch(type) {
-	#define CF_ENUM(K, V) case CF_##K: return #K;
-	CF_FILTER_DEFS
-	#undef CF_ENUM
-	default: return NULL;
-	}
-}
-
-using WrapMode = CF_WrapMode;
-#define CF_ENUM(K, V) CF_INLINE constexpr WrapMode K = CF_##K;
-CF_WRAP_MODE_DEFS
-#undef CF_ENUM
-
-CF_INLINE constexpr const char* to_string(WrapMode type) { switch(type) {
-	#define CF_ENUM(K, V) case CF_##K: return #K;
-	CF_WRAP_MODE_DEFS
-	#undef CF_ENUM
-	default: return NULL;
-	}
-}
-
-using VertexFormat = CF_VertexFormat;
-#define CF_ENUM(K, V) CF_INLINE constexpr VertexFormat K = CF_##K;
-CF_VERTEX_FORMAT_DEFS
-#undef CF_ENUM
-
-CF_INLINE constexpr const char* to_string(VertexFormat type) { switch(type) {
-	#define CF_ENUM(K, V) case CF_##K: return #K;
-	CF_VERTEX_FORMAT_DEFS
-	#undef CF_ENUM
-	default: return NULL;
-	}
-}
-
-using CullMode = CF_CullMode;
-#define CF_ENUM(K, V) CF_INLINE constexpr CullMode K = CF_##K;
-CF_CULL_MODE_DEFS
-#undef CF_ENUM
-
-CF_INLINE constexpr const char* to_string(CullMode type) { switch(type) {
-	#define CF_ENUM(K, V) case CF_##K: return #K;
-	CF_CULL_MODE_DEFS
-	#undef CF_ENUM
-	default: return NULL;
-	}
-}
-
-using CompareFunction = CF_CompareFunction;
-#define CF_ENUM(K, V) CF_INLINE constexpr CompareFunction K = CF_##K;
-CF_COMPARE_FUNCTION_DEFS
-#undef CF_ENUM
-
-CF_INLINE constexpr const char* to_string(CompareFunction type) { switch(type) {
-	#define CF_ENUM(K, V) case CF_##K: return #K;
-	CF_COMPARE_FUNCTION_DEFS
-	#undef CF_ENUM
-	default: return NULL;
-	}
-}
-
-using StencilOp = CF_StencilOp;
-#define CF_ENUM(K, V) CF_INLINE constexpr StencilOp K = CF_##K;
-CF_STENCIL_OP_DEFS
-#undef CF_ENUM
-
-CF_INLINE constexpr const char* to_string(StencilOp type) { switch(type) {
-	#define CF_ENUM(K, V) case CF_##K: return #K;
-	CF_STENCIL_OP_DEFS
-	#undef CF_ENUM
-	default: return NULL;
-	}
-}
-
-using BlendOp = CF_BlendOp;
-#define CF_ENUM(K, V) CF_INLINE constexpr BlendOp K = CF_##K;
-CF_BLEND_OP_DEFS
-#undef CF_ENUM
-
-CF_INLINE constexpr const char* to_string(BlendOp type) { switch(type) {
-	#define CF_ENUM(K, V) case CF_##K: return #K;
-	CF_BLEND_OP_DEFS
-	#undef CF_ENUM
-	default: return NULL;
-	}
-}
-
-using BlendFactor = CF_BlendFactor;
-#define CF_ENUM(K, V) CF_INLINE constexpr BlendFactor K = CF_##K;
-CF_BLENDFACTOR_DEFS
-#undef CF_ENUM
-
-CF_INLINE constexpr const char* to_string(BlendFactor type) { switch(type) {
-	#define CF_ENUM(K, V) case CF_##K: return #K;
-	CF_BLENDFACTOR_DEFS
-	#undef CF_ENUM
-	default: return NULL;
-	}
-}
-
-using UniformType = CF_UniformType;
-#define CF_ENUM(K, V) CF_INLINE constexpr UniformType K = CF_##K;
-CF_UNIFORM_TYPE_DEFS
-#undef CF_ENUM
-
-CF_INLINE constexpr const char* to_string(UniformType type) { switch(type) {
-	#define CF_ENUM(K, V) case CF_##K: return #K;
-	CF_UNIFORM_TYPE_DEFS
-	#undef CF_ENUM
-	default: return NULL;
-	}
-}
-
-using ShaderStage = CF_ShaderStage;
-
 CF_INLINE void clear_color(float r, float b, float g, float a) { cf_clear_color(r, g, b, a); }
 CF_INLINE void clear_color(CF_Color color) { cf_clear_color(color.r, color.g, color.b, color.a); }
-CF_INLINE BackendType query_backend() { return cf_query_backend(); }
-CF_INLINE TextureParams texture_defaults(int w, int h) { return cf_texture_defaults(w, h); }
-CF_INLINE Texture make_texture(TextureParams texture_params) { return cf_make_texture(texture_params); }
-CF_INLINE void destroy_texture(Texture texture) { cf_destroy_texture(texture); }
-CF_INLINE void texture_update(Texture texture, void* data, int size) { cf_texture_update(texture, data, size); }
-CF_INLINE Shader make_shader(const char* vertex, const char* fragment) { return cf_make_shader(vertex, fragment); }
+CF_INLINE CF_BackendType query_backend() { return cf_query_backend(); }
+CF_INLINE CF_TextureParams texture_defaults(int w, int h) { return cf_texture_defaults(w, h); }
+CF_INLINE CF_Texture make_texture(CF_TextureParams texture_params) { return cf_make_texture(texture_params); }
+CF_INLINE void destroy_texture(CF_Texture texture) { cf_destroy_texture(texture); }
+CF_INLINE void texture_update(CF_Texture texture, void* data, int size) { cf_texture_update(texture, data, size); }
+CF_INLINE CF_Shader make_shader(const char* vertex, const char* fragment) { return cf_make_shader(vertex, fragment); }
 CF_INLINE void shader_directory(const char* path) { cf_shader_directory(path); }
 CF_INLINE void shader_on_changed(void (*on_changed_fn)(const char* path, void* udata), void* udata) { cf_shader_on_changed(on_changed_fn, udata); }
-CF_INLINE Shader make_shader_from_source(const char* vertex_src, const char* fragment_src) { return cf_make_shader_from_source(vertex_src, fragment_src); }
-CF_INLINE const dyna uint8_t* compile_shader_to_bytecode(const char* shader_src, ShaderStage stage) { return cf_compile_shader_to_bytecode(shader_src, stage); }
-CF_INLINE Shader make_shader_from_bytecode(const dyna uint8_t* vertex_bytecode, const dyna uint8_t* fragment_bytecode) { return cf_make_shader_from_bytecode(vertex_bytecode, fragment_bytecode); }
-CF_INLINE void destroy_shader(Shader shader) { cf_destroy_shader(shader); }
-CF_INLINE CanvasParams canvas_defaults(int w, int h) { return cf_canvas_defaults(w, h); }
-CF_INLINE Canvas make_canvas(CanvasParams pass_params) { return cf_make_canvas(pass_params); }
-CF_INLINE void destroy_canvas(Canvas canvas) { cf_destroy_canvas(canvas); }
-CF_INLINE Texture canvas_get_target(Canvas canvas) { return cf_canvas_get_target(canvas); }
-CF_INLINE Texture canvas_get_depth_stencil_target(Canvas canvas) { return cf_canvas_get_depth_stencil_target(canvas); }
-CF_INLINE Mesh make_mesh(int vertex_buffer_size_in_bytes, const VertexAttribute* attributes, int attribute_count, int vertex_stride) { return cf_make_mesh(vertex_buffer_size_in_bytes, attributes, attribute_count, vertex_stride); }
-CF_INLINE void destroy_mesh(Mesh mesh) { cf_destroy_mesh(mesh); }
-CF_INLINE void mesh_update_vertex_data(Mesh mesh, void* data, int count) { cf_mesh_update_vertex_data(mesh, data, count); }
-CF_INLINE void mesh_update_index_data(Mesh mesh, void* data, int count) { cf_mesh_update_index_data(mesh, data, count); }
-CF_INLINE void mesh_update_instance_data(Mesh mesh, void* data, int count) { cf_mesh_update_instance_data(mesh, data, count); }
-CF_INLINE RenderState render_state_defaults() { return cf_render_state_defaults(); }
-CF_INLINE Material make_material() { return cf_make_material(); }
-CF_INLINE void destroy_material(Material material) { cf_destroy_material(material); }
-CF_INLINE void material_set_render_state(Material material, RenderState render_state) { cf_material_set_render_state(material, render_state); }
-CF_INLINE void material_set_texture_vs(Material material, const char* name, Texture texture) { cf_material_set_texture_vs(material, name, texture); }
-CF_INLINE void material_set_texture_fs(Material material, const char* name, Texture texture) { cf_material_set_texture_fs(material, name, texture); }
-CF_INLINE void material_clear_textures(Material material) { cf_material_clear_textures(material); }
-CF_INLINE void material_set_uniform_vs(Material material, const char* name, void* data, UniformType type, int array_length) { cf_material_set_uniform_vs(material, name, data, type, array_length); }
-CF_INLINE void material_set_uniform_fs(Material material, const char* name, void* data, UniformType type, int array_length) { cf_material_set_uniform_fs(material, name, data, type, array_length); }
-CF_INLINE void material_clear_uniforms(Material material) { cf_material_clear_uniforms(material); }
-CF_INLINE void apply_canvas(Canvas canvas, bool clear = false) { cf_apply_canvas(canvas, clear); }
+CF_INLINE CF_Shader make_shader_from_source(const char* vertex_src, const char* fragment_src) { return cf_make_shader_from_source(vertex_src, fragment_src); }
+CF_INLINE const dyna uint8_t* compile_shader_to_bytecode(const char* shader_src, CF_ShaderStage stage) { return cf_compile_shader_to_bytecode(shader_src, stage); }
+CF_INLINE CF_Shader make_shader_from_bytecode(const dyna uint8_t* vertex_bytecode, const dyna uint8_t* fragment_bytecode) { return cf_make_shader_from_bytecode(vertex_bytecode, fragment_bytecode); }
+CF_INLINE void destroy_shader(CF_Shader shader) { cf_destroy_shader(shader); }
+CF_INLINE CF_CanvasParams canvas_defaults(int w, int h) { return cf_canvas_defaults(w, h); }
+CF_INLINE CF_Canvas make_canvas(CF_CanvasParams pass_params) { return cf_make_canvas(pass_params); }
+CF_INLINE void destroy_canvas(CF_Canvas canvas) { cf_destroy_canvas(canvas); }
+CF_INLINE CF_Texture canvas_get_target(CF_Canvas canvas) { return cf_canvas_get_target(canvas); }
+CF_INLINE CF_Texture canvas_get_depth_stencil_target(CF_Canvas canvas) { return cf_canvas_get_depth_stencil_target(canvas); }
+CF_INLINE CF_Mesh make_mesh(int vertex_buffer_size_in_bytes, const CF_VertexAttribute* attributes, int attribute_count, int vertex_stride) { return cf_make_mesh(vertex_buffer_size_in_bytes, attributes, attribute_count, vertex_stride); }
+CF_INLINE void destroy_mesh(CF_Mesh mesh) { cf_destroy_mesh(mesh); }
+CF_INLINE void mesh_update_vertex_data(CF_Mesh mesh, void* data, int count) { cf_mesh_update_vertex_data(mesh, data, count); }
+CF_INLINE void mesh_update_index_data(CF_Mesh mesh, void* data, int count) { cf_mesh_update_index_data(mesh, data, count); }
+CF_INLINE void mesh_update_instance_data(CF_Mesh mesh, void* data, int count) { cf_mesh_update_instance_data(mesh, data, count); }
+CF_INLINE CF_RenderState render_state_defaults() { return cf_render_state_defaults(); }
+CF_INLINE CF_Material make_material() { return cf_make_material(); }
+CF_INLINE void destroy_material(CF_Material material) { cf_destroy_material(material); }
+CF_INLINE void material_set_render_state(CF_Material material, CF_RenderState render_state) { cf_material_set_render_state(material, render_state); }
+CF_INLINE void material_set_texture_vs(CF_Material material, const char* name, CF_Texture texture) { cf_material_set_texture_vs(material, name, texture); }
+CF_INLINE void material_set_texture_fs(CF_Material material, const char* name, CF_Texture texture) { cf_material_set_texture_fs(material, name, texture); }
+CF_INLINE void material_clear_textures(CF_Material material) { cf_material_clear_textures(material); }
+CF_INLINE void material_set_uniform_vs(CF_Material material, const char* name, void* data, CF_UniformType type, int array_length) { cf_material_set_uniform_vs(material, name, data, type, array_length); }
+CF_INLINE void material_set_uniform_fs(CF_Material material, const char* name, void* data, CF_UniformType type, int array_length) { cf_material_set_uniform_fs(material, name, data, type, array_length); }
+CF_INLINE void material_clear_uniforms(CF_Material material) { cf_material_clear_uniforms(material); }
+CF_INLINE void apply_canvas(CF_Canvas canvas, bool clear = false) { cf_apply_canvas(canvas, clear); }
 CF_INLINE void apply_viewport(int x, int y, int w, int h) { cf_apply_viewport(x, y, w, h); }
 CF_INLINE void apply_scissor(int x, int y, int w, int h) { cf_apply_scissor(x, y, w, h); }
-CF_INLINE void apply_mesh(Mesh mesh) { cf_apply_mesh(mesh); }
-CF_INLINE void apply_shader(Shader shader, Material material) { cf_apply_shader(shader, material); }
+CF_INLINE void apply_mesh(CF_Mesh mesh) { cf_apply_mesh(mesh); }
+CF_INLINE void apply_shader(CF_Shader shader, CF_Material material) { cf_apply_shader(shader, material); }
 CF_INLINE void draw_elements() { cf_draw_elements(); }
 CF_INLINE void commit() { cf_commit(); }
 

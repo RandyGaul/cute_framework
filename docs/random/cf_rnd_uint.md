@@ -3,16 +3,16 @@
 [//]: # (See: https://github.com/RandyGaul/cute_framework/blob/master/samples/docs_parser.cpp)
 [](../header.md ':include')
 
-# cf_rnd_float
+# cf_rnd_uint
 
 Category: [random](/api_reference?id=random)  
 GitHub: [cute_rnd.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_rnd.h)  
 ---
 
-Returns a random `float`.
+Returns a random `uint64_t`.
 
 ```cpp
-float    cf_rnd_float(CF_Rnd* rnd);
+uint64_t cf_rnd_uint64(CF_Rnd* rnd);
 ```
 
 Parameters | Description
@@ -24,8 +24,9 @@ rnd | The random number generator state.
 [CF_Rnd](/random/cf_rnd.md)  
 [cf_rnd_seed](/random/cf_rnd_seed.md)  
 [cf_rnd](/random/cf_rnd.md)  
-[cf_rnd_range_double](/random/cf_rnd_range_double.md)  
+[cf_rnd_float](/random/cf_rnd_float.md)  
 [cf_rnd_double](/random/cf_rnd_double.md)  
 [cf_rnd_range_int](/random/cf_rnd_range_int.md)  
 [cf_rnd_range_uint64](/random/cf_rnd_range_uint64.md)  
 [cf_rnd_range_float](/random/cf_rnd_range_float.md)  
+[cf_rnd_range_double](/random/cf_rnd_range_double.md)  

@@ -85,7 +85,7 @@ int main(int argc, char* argv[])
 		cf_draw_elements();
 		cf_commit();
 
-		cf_app_draw_onto_screen(true);
+		cf_app_draw_onto_screen(false);
 	}
 
 	cf_destroy_shader(shader);

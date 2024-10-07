@@ -840,55 +840,93 @@ CF_INLINE void cf_animation_add_frame(CF_Animation* animation, CF_Frame frame) {
 namespace Cute
 {
 
-using Frame = CF_Frame;
-using Animation = CF_Animation;
+CF_INLINE int sprite_width(CF_Sprite* sprite) { return cf_sprite_width(sprite); }
+CF_INLINE int sprite_height(CF_Sprite* sprite) { return cf_sprite_height(sprite); }
+CF_INLINE float sprite_get_scale_x(CF_Sprite* sprite) { return cf_sprite_get_scale_x(sprite); }
+CF_INLINE float sprite_get_scale_y(CF_Sprite* sprite) { return cf_sprite_get_scale_y(sprite); }
+CF_INLINE void sprite_set_scale(CF_Sprite* sprite, CF_V2 scale) { cf_sprite_set_scale(sprite, scale); }
+CF_INLINE void sprite_set_scale_x(CF_Sprite* sprite, float x) { cf_sprite_set_scale_x(sprite, x); }
+CF_INLINE void sprite_set_scale_y(CF_Sprite* sprite, float y) { cf_sprite_set_scale_y(sprite, y); }
+CF_INLINE float sprite_get_offset_x(CF_Sprite* sprite) { return cf_sprite_get_offset_x(sprite); }
+CF_INLINE float sprite_get_offset_y(CF_Sprite* sprite) { return cf_sprite_get_offset_y(sprite); }
+CF_INLINE void sprite_set_offset_x(CF_Sprite* sprite, float offset) { cf_sprite_set_offset_x(sprite, offset); }
+CF_INLINE void sprite_set_offset_y(CF_Sprite* sprite, float offset) { cf_sprite_set_offset_y(sprite, offset); }
+CF_INLINE float sprite_get_opacity(CF_Sprite* sprite) { return cf_sprite_get_opacity(sprite); }
+CF_INLINE void sprite_set_opacity(CF_Sprite* sprite, float opacity) { cf_sprite_set_opacity(sprite, opacity); }
+CF_INLINE void sprite_set_loop(CF_Sprite* sprite, bool loop) { cf_sprite_set_loop(sprite, loop); }
+CF_INLINE bool sprite_get_loop(CF_Sprite* sprite) { return cf_sprite_get_loop(sprite); }
+CF_INLINE CF_Aabb sprite_get_slice(CF_Sprite* sprite, const char* name) { return cf_sprite_get_slice(sprite, name); }
+CF_INLINE float sprite_get_play_speed_multiplier(CF_Sprite* sprite) { return cf_sprite_get_play_speed_multiplier(sprite); }
+CF_INLINE void sprite_set_play_speed_multiplier(CF_Sprite* sprite, float multiplier) { cf_sprite_set_play_speed_multiplier(sprite, multiplier); }
+CF_INLINE int sprite_get_loop_count(CF_Sprite* sprite) { return cf_sprite_get_loop_count(sprite); }
+CF_INLINE CF_V2 sprite_get_local_offset(CF_Sprite* sprite) { return cf_sprite_get_local_offset(sprite); }
+CF_INLINE void sprite_update(CF_Sprite* sprite) { cf_sprite_update(sprite); }
+CF_INLINE void sprite_reset(CF_Sprite* sprite) { cf_sprite_reset(sprite); }
+CF_INLINE void sprite_play(CF_Sprite* sprite, const char* animation) { cf_sprite_play(sprite, animation); }
+CF_INLINE bool sprite_is_playing(CF_Sprite* sprite, const char* animation) { return cf_sprite_is_playing(sprite, animation); }
+CF_INLINE void sprite_pause(CF_Sprite* sprite) { cf_sprite_pause(sprite); }
+CF_INLINE void sprite_unpause(CF_Sprite* sprite) { cf_sprite_unpause(sprite); }
+CF_INLINE void sprite_toggle_pause(CF_Sprite* sprite) { cf_sprite_toggle_pause(sprite); }
+CF_INLINE void sprite_flip_x(CF_Sprite* sprite) { cf_sprite_flip_x(sprite); }
+CF_INLINE void sprite_flip_y(CF_Sprite* sprite) { cf_sprite_flip_y(sprite); }
+CF_INLINE int sprite_frame_count(const CF_Sprite* sprite) { return cf_sprite_frame_count(sprite); }
+CF_INLINE int sprite_current_frame(const CF_Sprite* sprite) { return cf_sprite_current_frame(sprite); }
+CF_INLINE int sprite_current_global_frame(const CF_Sprite* sprite) { return cf_sprite_current_global_frame(sprite); }
+CF_INLINE void sprite_set_frame(CF_Sprite* sprite, int frame) { cf_sprite_set_frame(sprite, frame); }
+CF_INLINE float sprite_frame_delay(CF_Sprite* sprite) { return cf_sprite_frame_delay(sprite); }
+CF_INLINE float sprite_animation_delay(CF_Sprite* sprite) { return cf_sprite_animation_delay(sprite); }
+CF_INLINE float sprite_animation_interpolant(CF_Sprite* sprite) { return cf_sprite_animation_interpolant(sprite); }
+CF_INLINE bool sprite_will_finish(CF_Sprite* sprite) { return cf_sprite_will_finish(sprite); }
+CF_INLINE bool sprite_on_loop(CF_Sprite* sprite) { return cf_sprite_on_loop(sprite); }
+CF_INLINE void animation_add_frame(CF_Animation* animation, CF_Frame frame) { cf_animation_add_frame(animation, frame); }
 
-using PlayDirection = CF_PlayDirection;
-#define CF_ENUM(K, V) CF_INLINE constexpr PlayDirection K = CF_##K;
-CF_PLAY_DIRECTION_DEFS
-#undef CF_ENUM
+CF_INLINE int sprite_width(CF_Sprite& sprite) { return cf_sprite_width(&sprite); }
+CF_INLINE int sprite_height(CF_Sprite& sprite) { return cf_sprite_height(&sprite); }
+CF_INLINE float sprite_get_scale_x(CF_Sprite& sprite) { return cf_sprite_get_scale_x(&sprite); }
+CF_INLINE float sprite_get_scale_y(CF_Sprite& sprite) { return cf_sprite_get_scale_y(&sprite); }
+CF_INLINE void sprite_set_scale(CF_Sprite& sprite, CF_V2 scale) { cf_sprite_set_scale(&sprite, scale); }
+CF_INLINE void sprite_set_scale_x(CF_Sprite& sprite, float x) { cf_sprite_set_scale_x(&sprite, x); }
+CF_INLINE void sprite_set_scale_y(CF_Sprite& sprite, float y) { cf_sprite_set_scale_y(&sprite, y); }
+CF_INLINE float sprite_get_offset_x(CF_Sprite& sprite) { return cf_sprite_get_offset_x(&sprite); }
+CF_INLINE float sprite_get_offset_y(CF_Sprite& sprite) { return cf_sprite_get_offset_y(&sprite); }
+CF_INLINE void sprite_set_offset_x(CF_Sprite& sprite, float offset) { cf_sprite_set_offset_x(&sprite, offset); }
+CF_INLINE void sprite_set_offset_y(CF_Sprite& sprite, float offset) { cf_sprite_set_offset_y(&sprite, offset); }
+CF_INLINE float sprite_get_opacity(CF_Sprite& sprite) { return cf_sprite_get_opacity(&sprite); }
+CF_INLINE void sprite_set_opacity(CF_Sprite& sprite, float opacity) { cf_sprite_set_opacity(&sprite, opacity); }
+CF_INLINE void sprite_set_loop(CF_Sprite& sprite, bool loop) { cf_sprite_set_loop(&sprite, loop); }
+CF_INLINE bool sprite_get_loop(CF_Sprite& sprite) { return cf_sprite_get_loop(&sprite); }
+CF_INLINE CF_Aabb sprite_get_slice(CF_Sprite& sprite, const char* name) { return cf_sprite_get_slice(&sprite, name); }
+CF_INLINE float sprite_get_play_speed_multiplier(CF_Sprite& sprite) { return cf_sprite_get_play_speed_multiplier(&sprite); }
+CF_INLINE void sprite_set_play_speed_multiplier(CF_Sprite& sprite, float multiplier) { cf_sprite_set_play_speed_multiplier(&sprite, multiplier); }
+CF_INLINE int sprite_get_loop_count(CF_Sprite& sprite) { return cf_sprite_get_loop_count(&sprite); }
+CF_INLINE CF_V2 sprite_get_local_offset(CF_Sprite& sprite) { return cf_sprite_get_local_offset(&sprite); }
+CF_INLINE void sprite_update(CF_Sprite& sprite) { cf_sprite_update(&sprite); }
+CF_INLINE void sprite_reset(CF_Sprite& sprite) { cf_sprite_reset(&sprite); }
+CF_INLINE void sprite_play(CF_Sprite& sprite, const char* animation) { cf_sprite_play(&sprite, animation); }
+CF_INLINE bool sprite_is_playing(CF_Sprite& sprite, const char* animation) { return cf_sprite_is_playing(&sprite, animation); }
+CF_INLINE void sprite_pause(CF_Sprite& sprite) { cf_sprite_pause(&sprite); }
+CF_INLINE void sprite_unpause(CF_Sprite& sprite) { cf_sprite_unpause(&sprite); }
+CF_INLINE void sprite_toggle_pause(CF_Sprite& sprite) { cf_sprite_toggle_pause(&sprite); }
+CF_INLINE void sprite_flip_x(CF_Sprite& sprite) { cf_sprite_flip_x(&sprite); }
+CF_INLINE void sprite_flip_y(CF_Sprite& sprite) { cf_sprite_flip_y(&sprite); }
+CF_INLINE int sprite_frame_count(const CF_Sprite& sprite) { return cf_sprite_frame_count(&sprite); }
+CF_INLINE int sprite_current_frame(const CF_Sprite& sprite) { return cf_sprite_current_frame(&sprite); }
+CF_INLINE int sprite_current_global_frame(const CF_Sprite& sprite) { return cf_sprite_current_global_frame(&sprite); }
+CF_INLINE void sprite_set_frame(CF_Sprite& sprite, int frame) { cf_sprite_set_frame(&sprite, frame); }
+CF_INLINE float sprite_frame_delay(CF_Sprite& sprite) { return cf_sprite_frame_delay(&sprite); }
+CF_INLINE float sprite_animation_delay(CF_Sprite& sprite) { return cf_sprite_animation_delay(&sprite); }
+CF_INLINE float sprite_animation_interpolant(CF_Sprite& sprite) { return cf_sprite_animation_interpolant(&sprite); }
+CF_INLINE bool sprite_will_finish(CF_Sprite& sprite) { return cf_sprite_will_finish(&sprite); }
+CF_INLINE bool sprite_on_loop(CF_Sprite& sprite) { return cf_sprite_on_loop(&sprite); }
+CF_INLINE void animation_add_frame(CF_Animation& animation, CF_Frame frame) { cf_animation_add_frame(&animation, frame); }
 
-CF_INLINE const char* to_string(PlayDirection dir)
-{
-	switch (dir) {
-	#define CF_ENUM(K, V) case CF_##K: return #K;
-	CF_PLAY_DIRECTION_DEFS
-	#undef CF_ENUM
-	default: return NULL;
-	}
-}
-
-struct Sprite : public CF_Sprite
-{
-	Sprite() { *(CF_Sprite*)this = cf_sprite_defaults(); }
-	Sprite(CF_Sprite s) { *(CF_Sprite*)this = s; }
-
-	CF_INLINE void draw() { cf_sprite_draw(this); }
-	CF_INLINE void update() { return cf_sprite_update(this); }
-	CF_INLINE void play(const char* animation) { return cf_sprite_play(this, animation); }
-	CF_INLINE bool is_playing(const char* animation) { return cf_sprite_is_playing(this, animation); }
-	CF_INLINE void reset() { return cf_sprite_reset(this); }
-	CF_INLINE void pause() { return cf_sprite_pause(this); }
-	CF_INLINE void unpause() { return cf_sprite_unpause(this); }
-	CF_INLINE void toggle_pause() { return cf_sprite_toggle_pause(this); }
-	CF_INLINE void flip_x() { return cf_sprite_flip_x(this); }
-	CF_INLINE void flip_y() { return cf_sprite_flip_y(this); }
-	CF_INLINE int frame_count() const { return cf_sprite_frame_count(this); }
-	CF_INLINE int current_frame() const { return cf_sprite_current_frame(this); }
-	CF_INLINE float frame_delay() { return cf_sprite_frame_delay(this); }
-	CF_INLINE float animation_delay() { return cf_sprite_animation_delay(this); }
-	CF_INLINE float animation_interpolant() { return cf_sprite_animation_interpolant(this); }
-	CF_INLINE bool will_finish() { return cf_sprite_will_finish(this); }
-	CF_INLINE bool on_loop() { return cf_sprite_on_loop(this); }
-};
-
-CF_INLINE Sprite easy_make_sprite(const char* png_path, Result* result) { return cf_make_easy_sprite_from_png(png_path, result); }
-CF_INLINE Sprite easy_make_sprite(const Pixel* pixels, int w, int h) { return cf_make_easy_sprite_from_pixels(pixels, w, h); }
-CF_INLINE Sprite make_sprite(const char* aseprite_path) { return cf_make_sprite(aseprite_path); }
-CF_INLINE Sprite make_demo_sprite() { return cf_make_demo_sprite(); }
+CF_INLINE CF_Sprite easy_make_sprite(const char* png_path, CF_Result* result) { return cf_make_easy_sprite_from_png(png_path, result); }
+CF_INLINE CF_Sprite easy_make_sprite(const CF_Pixel* pixels, int w, int h) { return cf_make_easy_sprite_from_pixels(pixels, w, h); }
+CF_INLINE CF_Sprite make_sprite(const char* aseprite_path) { return cf_make_sprite(aseprite_path); }
+CF_INLINE CF_Sprite make_demo_sprite() { return cf_make_demo_sprite(); }
 CF_INLINE void sprite_unload(const char* aseprite_path) { cf_sprite_unload(aseprite_path); }
-CF_INLINE Sprite sprite_reload(const Sprite* sprite) { return cf_sprite_reload(sprite); }
-CF_INLINE Sprite sprite_reload(Sprite& sprite) { return (sprite = cf_sprite_reload(&sprite)); }
+CF_INLINE CF_Sprite sprite_reload(const CF_Sprite* sprite) { return cf_sprite_reload(sprite); }
+CF_INLINE CF_Sprite sprite_reload(CF_Sprite& sprite) { return (sprite = cf_sprite_reload(&sprite)); }
 
 }
 

@@ -61,11 +61,9 @@ CF_API void* cf_load_function(CF_SharedLibrary* library, const char* function_na
 namespace Cute
 {
 
-using shared_library_t = CF_SharedLibrary;
-
-CF_INLINE shared_library_t* load_shared_library(const char* path) { return cf_load_shared_library(path); }
-CF_INLINE void unload_shared_library(shared_library_t* library) { cf_unload_shared_library(library); }
-CF_INLINE void* load_function(shared_library_t* library, const char* function_name) { return cf_load_function(library,function_name); }
+CF_INLINE CF_SharedLibrary* load_shared_library(const char* path) { return cf_load_shared_library(path); }
+CF_INLINE void unload_shared_library(CF_SharedLibrary* library) { cf_unload_shared_library(library); }
+CF_INLINE void* load_function(CF_SharedLibrary* library, const char* function_name) { return cf_load_function(library,function_name); }
 
 }
 

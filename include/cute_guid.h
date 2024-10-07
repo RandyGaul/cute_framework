@@ -62,13 +62,12 @@ CF_INLINE bool cf_guid_equal(CF_Guid a, CF_Guid b) { return !CF_MEMCMP(&a, &b, s
 namespace Cute
 {
 
-using Guid = CF_Guid;
-CF_INLINE bool operator==(Guid a, Guid b) { return cf_guid_equal(a, b); }
-CF_INLINE bool operator!=(Guid a, Guid b) { return !cf_guid_equal(a, b); }
-
-CF_INLINE Guid make_guid() { return cf_make_guid(); }
+CF_INLINE CF_Guid make_guid() { return cf_make_guid(); }
 
 }
+
+CF_INLINE bool operator==(CF_Guid a, CF_Guid b) { return cf_guid_equal(a, b); }
+CF_INLINE bool operator!=(CF_Guid a, CF_Guid b) { return !cf_guid_equal(a, b); }
 
 #endif // CF_CPP
 

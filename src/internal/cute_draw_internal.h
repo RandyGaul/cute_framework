@@ -72,6 +72,7 @@ struct CF_DrawUniform
 
 struct CF_Command
 {
+	bool processed = false;
 	int id = 0; // Simply increments for each command, used for sort ordering within a layer.
 	int layer = 0;
 	CF_Rect scissor = { 0, 0, -1, -1 };
