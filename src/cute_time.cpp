@@ -56,6 +56,13 @@ static void s_init()
 
 void cf_set_fixed_timestep(int frames_per_second)
 {
+	if (frames_per_second <= 0)
+	{
+		CF_DELTA_TIME_FIXED = 0.f;
+		ticks_per_timestep = 0;
+		return;
+	}
+	
 	s_init();
 	CF_DELTA_TIME_FIXED = 1.0f / frames_per_second;
 	ticks_per_timestep = (uint64_t)((1.0 / frames_per_second) * freq);
