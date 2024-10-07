@@ -117,7 +117,7 @@ typedef void (CF_OnUpdateFn)(void* udata);
  * @function cf_set_fixed_timestep
  * @category time
  * @brief    Sets the frequency for fixed timestep updates to occur.
- * @param    frames_per_second  The frequency for fixed-timestep updates to occur, e.g. 30 is a good default number.
+ * @param    frames_per_second  The frequency for fixed-timestep updates to occur, e.g. 30 is a good default number. Set to 0 to disable fixed timestep.
  * @remarks  Often times a fixed-timestep can occur multiple times in one frame. In this case, `CF_OnUpdateFn` will be called once
  *           per update to simulate a fixed-timestep (see `CF_OnUpdateFn` and `cf_update_time`). The max number of updates possible 
  *           is clamped below `cf_set_fixed_timestep_max_updates`.
