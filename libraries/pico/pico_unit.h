@@ -341,7 +341,7 @@ pu_run_test (const char* const name, pu_test_fn test_fp)
 
     printf("\n");
 
-    pu_num_passed++;
+    pu_num_passed++;_CrtDumpMemoryLeaks();
 
     if (NULL != pu_teardown_fp)
     {

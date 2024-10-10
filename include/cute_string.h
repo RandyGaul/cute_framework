@@ -146,7 +146,7 @@ extern "C" {
  * @remarks  The string will be overwritten from the beginning. Will automatically adjust capacity as needed.
  * @related  sfmt sfmt_append svfmt svfmt_append sset
  */
-#define sfmt(s, fmt, ...) cf_string_fmt(s, fmt, (__VA_ARGS__))
+#define sfmt(s, fmt, ...) cf_string_fmt(s, fmt, __VA_ARGS__)
 
 /**
  * @function sfmt_append
@@ -158,7 +158,7 @@ extern "C" {
  * @remarks  All printed data is appended to the end of the string. Will automatically adjust it's capacity as needed.
  * @related  sfmt sfmt_append svfmt svfmt_append sset
  */
-#define sfmt_append(s, fmt, ...) cf_string_fmt_append(s, fmt, (__VA_ARGS__))
+#define sfmt_append(s, fmt, ...) cf_string_fmt_append(s, fmt, __VA_ARGS__)
 
 /**
  * @function svfmt

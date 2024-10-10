@@ -16,6 +16,9 @@ using namespace Cute;
 #include "thingy.h"
 #include "jump.h"
 
+#define _CRTDBG_MAP_ALLOC
+#include <crtdbg.h>
+
 /* Load and free wav/ogg files synchronously. */
 TEST_CASE(test_audio_load_synchronous)
 {

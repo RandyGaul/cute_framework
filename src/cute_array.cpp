@@ -60,6 +60,10 @@ void* cf_astatic(const void* a, int buffer_size, size_t element_size)
 void* cf_aset(const void* a, const void* b, size_t element_size)
 {
 	CF_ACANARY(a);
+	if (!b) {
+		aclear(a);
+		return (void*)a;
+	}
 	CF_ACANARY(b);
 	if (acap(a) < asize(b)) {
 		int len = asize(b);

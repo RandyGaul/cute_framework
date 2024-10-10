@@ -186,7 +186,7 @@ void cf_destroy_memory_pool(CF_MemoryPool* pool)
 		// Attempted to destroy pool without freeing all overflow allocations.
 		CF_ASSERT(pool->overflow_count == 0);
 	}
-	CF_FREE(pool);
+	cf_aligned_free(pool);
 }
 
 void* cf_memory_pool_alloc(CF_MemoryPool* pool)

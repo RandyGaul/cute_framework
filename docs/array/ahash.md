@@ -34,4 +34,5 @@ a | The array.
 [aset](/array/aset.md)  
 [arev](/array/arev.md)  
 [afree](/array/afree.md)  
+[adel](/array/adel.md)  
 [astatic](/array/astatic.md)  

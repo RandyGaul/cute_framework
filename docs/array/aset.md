@@ -39,4 +39,5 @@ Returns a pointer to `a`. `a` will automatically be reassigned to any new pointe
 [afree](/array/afree.md)  
 [arev](/array/arev.md)  
 [ahash](/array/ahash.md)  
+[adel](/array/adel.md)  
 [astatic](/array/astatic.md)  

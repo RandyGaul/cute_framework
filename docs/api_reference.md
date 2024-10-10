@@ -116,6 +116,7 @@ This is a list of all functions in Cute Framework organized by categories. This 
 - [acap](/array/acap.md)
 - [aclear](/array/aclear.md)
 - [acount](/array/acount.md)
+- [adel](/array/adel.md)
 - [aend](/array/aend.md)
 - [afit](/array/afit.md)
 - [afree](/array/afree.md)

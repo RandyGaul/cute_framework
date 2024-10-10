@@ -96,7 +96,7 @@
  * @function hget
  * @category hash
  * @brief    Fetches the item that `k` maps to.
- * @param    h        The hashtable. Can be `NULL`. Needs to be a pointer to the type of items in the table.
+ * @param    h        The hashtable. Can not be `NULL`. Needs to be a pointer to the type of items in the table.
  * @param    k        The key for lookups. Each {key, item} pair must be unique. Keys are always typecasted to `uint64_t` e.g. you can use pointers as keys.
  * @example > Set and get a few elements from a hashtable.
  *     htbl int* table = NULL;
@@ -117,7 +117,7 @@
  * @function hfind
  * @category hash
  * @brief    Fetches the item that `k` maps to.
- * @param    h        The hashtable. Can be `NULL`. Needs to be a pointer to the type of items in the table.
+ * @param    h        The hashtable. Can not be `NULL`. Needs to be a pointer to the type of items in the table.
  * @param    k        The key for lookups. Each {key, item} pair must be unique. Keys are always typecasted to `uint64_t` e.g. you can use pointers as keys.
  * @example > Set and get a few elements from a hashtable.
  *     htbl int* table = NULL;
@@ -344,7 +344,7 @@
 // Longform C API.
 
 #define cf_htbl
-#define cf_hashtable_set(h, k, ...) ((h) ? (h) : (*(void**)&(h) = cf_hashtable_make_impl(sizeof(uint64_t), sizeof(*(h)), 1)), CF_HCANARY(h), h[-1] = (__VA_ARGS__), *(void**)&(h) = cf_hashtable_insert_impl(CF_HHDR(h), (uint64_t)k), h + CF_HHDR(h)->return_index)
+#define cf_hashtable_set(h, k, ...) ((h) ? (h) : (*(void**)&(h) = cf_hashtable_make_impl(sizeof(uint64_t), sizeof(*(h)), 1)), CF_HCANARY(h), (h)[-1] = (__VA_ARGS__), *(void**)&(h) = cf_hashtable_insert_impl(CF_HHDR(h), (uint64_t)k), (h) + CF_HHDR(h)->return_index)
 #define cf_hashtable_add(h, k, ...) cf_hashtable_set(h, k, (__VA_ARGS__))
 #define cf_hashtable_get(h, k) ((h)[cf_hashtable_find_impl(CF_HHDR(h), (uint64_t)k)])
 #define cf_hashtable_find(h, k) cf_hashtable_get(h, k)
@@ -352,7 +352,7 @@
 #define cf_hashtable_find_ptr(h, k) cf_hashtable_get_ptr(h, k)
 #define cf_hashtable_has(h, k) ((h) ? cf_hashtable_has_impl(CF_HHDR(h), (uint64_t)k) : false)
 #define cf_hashtable_del(h, k) ((h) ? cf_hashtable_remove_impl(CF_HHDR(h), (uint64_t)k) : (void)0)
-#define cf_hashtable_clear(h) (CF_HCANARY(h), cf_hashtable_clear_impl(CF_HHDR(h)))
+#define cf_hashtable_clear(h) ((h) ? CF_HCANARY(h), cf_hashtable_clear_impl(CF_HHDR(h)) : (void)0)
 #define cf_hashtable_keys(h) (CF_HCANARY(h), h ? (const uint64_t*)cf_hashtable_keys_impl(CF_HHDR(h)) : (const uint64_t*)NULL)
 #define cf_hashtable_items(h) (CF_HCANARY(h), h)
 #define cf_hashtable_swap(h, index_a, index_b) (CF_HCANARY(h), cf_hashtable_swap_impl(CF_HHDR(h), index_a, index_b))

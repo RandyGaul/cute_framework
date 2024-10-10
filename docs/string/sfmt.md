@@ -12,7 +12,7 @@ GitHub: [cute_string.h](https://github.com/RandyGaul/cute_framework/blob/master/
 Printf's into the string using the format string `fmt`.
 
 ```cpp
-#define sfmt(s, fmt, ...) cf_string_fmt(s, fmt, (__VA_ARGS__))
+#define sfmt(s, fmt, ...) cf_string_fmt(s, fmt, __VA_ARGS__)
 ```
 
 Parameters | Description

@@ -46,4 +46,5 @@ dynamically grow into the heap.
 [aset](/array/aset.md)  
 [arev](/array/arev.md)  
 [ahash](/array/ahash.md)  
+[adel](/array/adel.md)  
 [afree](/array/afree.md)  

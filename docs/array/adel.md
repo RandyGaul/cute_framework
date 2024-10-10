@@ -3,21 +3,27 @@
 [//]: # (See: https://github.com/RandyGaul/cute_framework/blob/master/samples/docs_parser.cpp)
 [](../header.md ':include')
 
-# arev
+# adel
 
 Category: [array](/api_reference?id=array)  
 GitHub: [cute_array.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_array.h)  
 ---
 
-Reverses the elements in an array.
+Performs an unordered removal of the element at index i.
 
 ```cpp
-#define arev(a) cf_array_reverse(a)
+#define adel(a, i) cf_array_del(a)
 ```
 
 Parameters | Description
 --- | ---
-a | The array. Can be `NULL`.
+a | The array.
+i | The index of the element to remove.
+
+## Remarks
+
+The last element of the array is swapped into the index `i`. This is a constant time
+operation, but does not preserve order of the array.
 
 ## Related Pages
 
@@ -32,7 +38,7 @@ a | The array. Can be `NULL`.
 [alast](/array/alast.md)  
 [aclear](/array/aclear.md)  
 [aset](/array/aset.md)  
-[afree](/array/afree.md)  
+[arev](/array/arev.md)  
 [ahash](/array/ahash.md)  
-[adel](/array/adel.md)  
+[afree](/array/afree.md)  
 [astatic](/array/astatic.md)  

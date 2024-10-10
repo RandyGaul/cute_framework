@@ -49,4 +49,5 @@ afree(a);
 [aset](/array/aset.md)  
 [arev](/array/arev.md)  
 [ahash](/array/ahash.md)  
+[adel](/array/adel.md)  
 [astatic](/array/astatic.md)  

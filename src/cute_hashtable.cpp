@@ -165,7 +165,17 @@ static CF_Hhdr* s_expand_items(CF_Hhdr* table)
 void* cf_hashtable_insert_impl2(CF_Hhdr* table, const void* key, const void* item)
 {
 	uint32_t hash = (uint32_t)fnv1a(key, table->key_size);
-	CF_ASSERT(s_find_slot(table, hash, key) < 0);
+	int slot = s_find_slot(table, hash, key);
+	if (slot >= 0) {
+		int item_index = table->slots[slot].item_index;
+		void* item_dst = s_get_item(table, item_index);
+		if (item) {
+			CF_MEMCPY(item_dst, item, table->item_size);
+		} else {
+			CF_MEMSET(item_dst, 0, table->item_size);
+		}
+		return s_get_item(table, 0);
+	}
 
 	if (table->count >= (table->slot_capacity - table->slot_capacity / 3)) {
 		s_expand_slots(table);
@@ -174,7 +184,7 @@ void* cf_hashtable_insert_impl2(CF_Hhdr* table, const void* key, const void* ite
 	uint32_t slot_capacity = (uint32_t)table->slot_capacity;
 	int base_slot = (int)(hash % slot_capacity);
 	int base_count = table->slots[base_slot].base_count;
-	int slot = base_slot;
+	slot = base_slot;
 	int first_free = slot;
 	while (base_count) {
 		if (table->slots[slot].item_index < 0 && table->slots[first_free].item_index >= 0) first_free = slot;
@@ -207,7 +217,11 @@ void* cf_hashtable_insert_impl2(CF_Hhdr* table, const void* key, const void* ite
 
 	void* item_dst = s_get_item(table, table->count);
 	void* key_dst = s_get_key(table, table->count);
-	if (item) CF_MEMCPY(item_dst, item, table->item_size);
+	if (item) {
+		CF_MEMCPY(item_dst, item, table->item_size);
+	} else {
+		CF_MEMSET(item_dst, 0, table->item_size);
+	}
 	CF_MEMCPY(key_dst, key, table->key_size);
 	table->items_slot_index[table->count] = slot;
 	table->return_index = table->count++;
