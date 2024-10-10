@@ -47,8 +47,6 @@ int main(int argc, char* argv[])
 	printf("Tests are running from \"%s\"\n\n", cf_fs_get_base_directory());
 	cf_fs_destroy();
 
-	_CrtSetBreakAlloc(4277);
-
 #ifdef _MSC_VER
 	_CrtSetDbgFlag(_CRTDBG_REPORT_FLAG | _CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
 	_CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_FILE);
