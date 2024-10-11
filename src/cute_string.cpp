@@ -291,7 +291,7 @@ static uint64_t s_stoint(const char* s)
 {
 	char* end;
 	uint64_t result = CF_STRTOLL(s, &end, 10);
-	CF_ASSERT(end == s + CF_STRLEN(s));
+	//CF_ASSERT(end == s + CF_STRLEN(s));
 	return result;
 }
 
@@ -309,7 +309,7 @@ static double s_stod(const char* s)
 {
 	char* end;
 	double result = CF_STRTOD(s, &end);
-	CF_ASSERT(end == s + CF_STRLEN(s));
+	//CF_ASSERT(end == s + CF_STRLEN(s));
 	return result;
 }
 
@@ -331,7 +331,7 @@ uint64_t cf_stohex(const char* s)
 	if (len != 6 && len != 8) return 0;
 	char* end;
 	uint64_t result = CF_STRTOLL(s, &end, 16);
-	CF_ASSERT(end == s + len);
+	//CF_ASSERT(end == s + len);
 	return len == 6 ? ((result << 16) | 0xFF) : result;
 }
 

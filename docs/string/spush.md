@@ -26,6 +26,7 @@ Does not overwite the nul-byte. If the string is empty a nul-byte is pushed afte
 
 ## Related Pages
 
+[sdyna](/string/sdyna.md)  
 [sset](/string/sset.md)  
 [spop](/string/spop.md)  
 [sfit](/string/sfit.md)  

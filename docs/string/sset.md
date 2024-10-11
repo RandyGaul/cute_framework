@@ -22,6 +22,7 @@ b | Source for copying.
 
 ## Related Pages
 
+[sdyna](/string/sdyna.md)  
 [sfmt](/string/sfmt.md)  
 [sfmt_append](/string/sfmt_append.md)  
 [svfmt](/string/svfmt.md)  

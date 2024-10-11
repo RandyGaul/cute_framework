@@ -27,6 +27,7 @@ All printed data is appended to the end of the string. Will automatically adjust
 
 ## Related Pages
 
+[sdyna](/string/sdyna.md)  
 [sfmt](/string/sfmt.md)  
 [sset](/string/sset.md)  
 [svfmt](/string/svfmt.md)  

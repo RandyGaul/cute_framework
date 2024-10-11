@@ -25,7 +25,7 @@ codepoint | An `int` codepoint in UTF32 form.
 > Example of suggested way to use this function within a loop.
 
 ```cpp
-char s = NULL;
+sdyna char s = NULL;
 while (has_codepoint()) {
     sappend_UTF8(s, get_codepoint());
 }

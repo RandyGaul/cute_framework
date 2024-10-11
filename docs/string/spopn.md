@@ -22,6 +22,7 @@ n | Number of characters to pop.
 
 ## Related Pages
 
+[sdyna](/string/sdyna.md)  
 [spop](/string/spop.md)  
 [slast](/string/slast.md)  
 [serase](/string/serase.md)  

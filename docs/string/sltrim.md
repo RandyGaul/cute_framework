@@ -21,6 +21,7 @@ s | The string.
 
 ## Related Pages
 
+[sdyna](/string/sdyna.md)  
 [strim](/string/strim.md)  
 [serase](/string/serase.md)  
 [srtrim](/string/srtrim.md)  

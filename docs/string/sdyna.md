@@ -3,30 +3,29 @@
 [//]: # (See: https://github.com/RandyGaul/cute_framework/blob/master/samples/docs_parser.cpp)
 [](../header.md ':include')
 
-# sclear
+# sdyna
 
 Category: [string](/api_reference?id=string)  
 GitHub: [cute_string.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_string.h)  
 ---
 
-Sets the string size to zero.
+An empty macro used in the C API to markup dynamic strings.
 
 ```cpp
-#define sclear(s) cf_string_clear(s)
+#define sdyna
 ```
-
-Parameters | Description
---- | ---
-s | The string. Can be `NULL`.
 
 ## Remarks
 
-Does not free up any resources.
+This is an optional and _completely_ empty macro. It's only purpose is to provide a bit of visual indication a type is a
+dynamic string.
 
 ## Related Pages
 
-[sdyna](/string/sdyna.md)  
-[spush](/string/spush.md)  
-[spop](/string/spop.md)  
-[sfirst](/string/sfirst.md)  
-[slast](/string/slast.md)  
+[smake](/string/smake.md)  
+[sfmt](/string/sfmt.md)  
+[sfmt_append](/string/sfmt_append.md)  
+[svfmt](/string/svfmt.md)  
+[svfmt_append](/string/svfmt_append.md)  
+[sset](/string/sset.md)  
+[sdup](/string/sdup.md)  

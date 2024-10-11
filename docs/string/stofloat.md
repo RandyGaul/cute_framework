@@ -21,6 +21,7 @@ s | The string.
 
 ## Related Pages
 
+[sdyna](/string/sdyna.md)  
 [sint](/string/sint.md)  
 [suint](/string/suint.md)  
 [sfloat](/string/sfloat.md)  

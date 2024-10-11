@@ -25,6 +25,7 @@ Both "" and NULL count as empty.
 
 ## Related Pages
 
+[sdyna](/string/sdyna.md)  
 [slen](/string/slen.md)  
 [scount](/string/scount.md)  
 [scap](/string/scap.md)  

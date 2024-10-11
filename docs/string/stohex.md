@@ -25,6 +25,7 @@ Supports srings that start with "0x", "#", or no prefix.
 
 ## Related Pages
 
+[sdyna](/string/sdyna.md)  
 [sint](/string/sint.md)  
 [suint](/string/suint.md)  
 [sfloat](/string/sfloat.md)  

@@ -1378,6 +1378,7 @@ This is a list of all functions in Cute Framework organized by categories. This 
 - [sdedup](/string/sdedup.md)
 - [sdouble](/string/sdouble.md)
 - [sdup](/string/sdup.md)
+- [sdyna](/string/sdyna.md)
 - [sempty](/string/sempty.md)
 - [sequ](/string/sequ.md)
 - [serase](/string/serase.md)

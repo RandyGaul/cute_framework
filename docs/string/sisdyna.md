@@ -29,6 +29,7 @@ This can be evaluated at compile time for string literals.
 
 ## Related Pages
 
+[sdyna](/string/sdyna.md)  
 [sstatic](/string/sstatic.md)  
 [sset](/string/sset.md)  
 [spush](/string/spush.md)  

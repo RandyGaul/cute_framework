@@ -37,4 +37,5 @@ an array of strings.
 
 ## Related Pages
 
+[sdyna](/string/sdyna.md)  
 [ssplit](/string/ssplit.md)  

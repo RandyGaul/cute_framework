@@ -27,6 +27,7 @@ Will grow onto the heap if the size becomes too large. Call [sfree](/string/sfre
 
 ## Related Pages
 
+[sdyna](/string/sdyna.md)  
 [sset](/string/sset.md)  
 [sisdyna](/string/sisdyna.md)  
 [spush](/string/spush.md)  

@@ -26,5 +26,6 @@ Returns -1 if none are found.
 
 ## Related Pages
 
+[sdyna](/string/sdyna.md)  
 [sfind](/string/sfind.md)  
 [slast_index_of](/string/slast_index_of.md)  

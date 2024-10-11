@@ -26,6 +26,7 @@ You can technically do this with [sfmt](/string/sfmt.md), but this function is o
 
 ## Related Pages
 
+[sdyna](/string/sdyna.md)  
 [sappend](/string/sappend.md)  
 [scat](/string/scat.md)  
 [sfmt_append](/string/sfmt_append.md)  

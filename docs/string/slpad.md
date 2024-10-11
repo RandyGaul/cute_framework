@@ -23,6 +23,7 @@ n | Number of times to insert `ch`.
 
 ## Related Pages
 
+[sdyna](/string/sdyna.md)  
 [strim](/string/strim.md)  
 [sltrim](/string/sltrim.md)  
 [srtrim](/string/srtrim.md)  
