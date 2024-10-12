@@ -203,7 +203,7 @@ typedef struct CF_MemoryPool CF_MemoryPool;
  * @param    element_count  The number of elements in the internal pool.
  * @param    alignment      An alignment boundary, must be a power of two.
  * @return   Returns a memory pool pointer.
- * @related  cf_destroy_memory_pool cf_memory_pool_alloc cf_memory_pool_try_alloc cf_memory_pool_free
+ * @related  cf_destroy_memory_pool cf_memory_pool_alloc cf_memory_pool_free
  */
 CF_API CF_MemoryPool* CF_CALL cf_make_memory_pool(int element_size, int element_count, int alignment);
 
@@ -212,8 +212,7 @@ CF_API CF_MemoryPool* CF_CALL cf_make_memory_pool(int element_size, int element_
  * @category allocator
  * @brief    Destroys a memory pool.
  * @param    pool           The pool to destroy.
- * @remarks  Does not clean up any allocations that overflowed to `malloc` backup. See `cf_memory_pool_alloc` for more details.
- * @related  cf_make_memory_pool cf_memory_pool_alloc cf_memory_pool_try_alloc cf_memory_pool_free
+ * @related  cf_make_memory_pool cf_memory_pool_alloc cf_memory_pool_free
  */
 CF_API void CF_CALL cf_destroy_memory_pool(CF_MemoryPool* pool);
 
@@ -223,32 +222,17 @@ CF_API void CF_CALL cf_destroy_memory_pool(CF_MemoryPool* pool);
  * @brief    Allocates a chunk of memory from the pool. The allocation size was determined by `element_size` in `cf_make_memory_pool`.
  * @param    pool           The pool.
  * @return   Returns an aligned pointer of `size` bytes.
- * @remarks  Attempts to allocate from the internal pool. If the pool is empty a call to `malloc` is made as a backup. All
- *           backup allocations are not tracked anywhere, so you must call `cf_memory_pool_free` on each allocation to be
- *           sure they all properly cleaned up.
- * @related  cf_make_memory_pool cf_destroy_memory_pool cf_memory_pool_try_alloc cf_memory_pool_free
+ * @related  cf_make_memory_pool cf_destroy_memory_pool cf_memory_pool_free
  */
 CF_API void* CF_CALL cf_memory_pool_alloc(CF_MemoryPool* pool);
 
 /**
- * @function cf_memory_pool_try_alloc
- * @category allocator
- * @brief    Allocates a chunk of memory from the pool. The allocation size was determined by `element_size` in `cf_make_memory_pool`.
- * @param    pool           The pool.
- * @return   Returns an aligned pointer of `size` bytes.
- * @remarks  Does not return an allocation if the internal pool is full, and will instead return `NULL` in this case. See
- *           `cf_memory_pool_alloc` for more details about overflowing the pool to use `malloc` as a backup.
- * @related  cf_make_memory_pool cf_destroy_memory_pool cf_memory_pool_alloc cf_memory_pool_free
- */
-CF_API void* CF_CALL cf_memory_pool_try_alloc(CF_MemoryPool* pool);
-
-/**
  * @function cf_memory_pool_free
  * @category allocator
- * @brief    Frees an allocation made by `cf_memory_pool_alloc` or `cf_memory_pool_try_alloc`.
+ * @brief    Frees an allocation made by `cf_memory_pool_alloc`.
  * @param    pool           The pool.
  * @param    element        The pointer to deallocate.
- * @related  cf_make_memory_pool cf_destroy_memory_pool cf_memory_pool_alloc cf_memory_pool_try_alloc
+ * @related  cf_make_memory_pool cf_destroy_memory_pool cf_memory_pool_alloc
  */
 CF_API void CF_CALL cf_memory_pool_free(CF_MemoryPool* pool, void* element);
 
@@ -274,7 +258,6 @@ CF_INLINE void arena_reset(CF_Arena* arena) { return cf_arena_reset(arena); }
 CF_INLINE CF_MemoryPool* make_memory_pool(int element_size, int element_count, int alignment) { return cf_make_memory_pool(element_size, element_count, alignment); }
 CF_INLINE void destroy_memory_pool(CF_MemoryPool* pool) { cf_destroy_memory_pool(pool); }
 CF_INLINE void* memory_pool_alloc(CF_MemoryPool* pool) { return cf_memory_pool_alloc(pool); }
-CF_INLINE void* memory_pool_try_alloc(CF_MemoryPool* pool) { return cf_memory_pool_try_alloc(pool); }
 CF_INLINE void memory_pool_free(CF_MemoryPool* pool, void* element) { return cf_memory_pool_free(pool, element); }
 
 }

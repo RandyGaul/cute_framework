@@ -70,7 +70,8 @@ void* cf_aset(const void* a, const void* b, size_t element_size)
 		a = cf_agrow(a, asize(b), element_size);
 	}
 	CF_MEMCPY((void*)a, b, asize(b) * element_size);
-	alen(a) = asize(b);
+	if (a) alen(a) = asize(b);
+	else CF_ASSERT(!asize(b));
 	return (void*)a;
 }
 

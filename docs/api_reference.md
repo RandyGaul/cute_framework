@@ -25,7 +25,6 @@ This is a list of all functions in Cute Framework organized by categories. This 
 - [cf_make_memory_pool](/allocator/cf_make_memory_pool.md)
 - [cf_memory_pool_alloc](/allocator/cf_memory_pool_alloc.md)
 - [cf_memory_pool_free](/allocator/cf_memory_pool_free.md)
-- [cf_memory_pool_try_alloc](/allocator/cf_memory_pool_try_alloc.md)
 - [cf_realloc](/allocator/cf_realloc.md)
 
 

@@ -142,39 +142,47 @@ void cf_arena_reset(CF_Arena* arena)
 
 //--------------------------------------------------------------------------------------------------
 
+struct CF_MemoryBlock
+{
+	uint8_t* memory;
+	CF_MemoryBlock* next;
+};
+
 struct CF_MemoryPool
 {
-	int unaligned_element_size;
 	int element_size;
-	size_t arena_size;
+	size_t block_size;
 	int alignment;
-	uint8_t* arena;
 	void* free_list;
-	int overflow_count;
+	CF_MemoryBlock* blocks;
+	int element_count_per_block;
 };
 
 CF_MemoryPool* cf_make_memory_pool(int element_size, int element_count, int alignment)
 {
 	element_size = element_size > sizeof(void*) ? element_size : sizeof(void*);
-	int unaligned_element_size = element_size;
 	element_size = CF_ALIGN_FORWARD(element_size, alignment);
-	size_t header_size = CF_ALIGN_FORWARD(sizeof(CF_MemoryPool), alignment);
-	CF_MemoryPool* pool = (CF_MemoryPool*)cf_aligned_alloc(header_size + element_size * element_count, alignment);
+	size_t block_size = element_size * element_count;
 
-	pool->unaligned_element_size = unaligned_element_size;
+	CF_MemoryPool* pool = (CF_MemoryPool*)cf_aligned_alloc(sizeof(CF_MemoryPool), alignment);
 	pool->element_size = element_size;
-	pool->arena_size = (size_t)element_size * element_count;
-	pool->arena = (uint8_t*)((uintptr_t)pool + header_size);
-	pool->free_list = pool->arena;
-	pool->overflow_count = 0;
+	pool->block_size = block_size;
+	pool->alignment = alignment;
+	pool->free_list = NULL;
+	pool->element_count_per_block = element_count;
 
+	// Allocate the first block and initialize the free list.
+	CF_MemoryBlock* block = (CF_MemoryBlock*)cf_aligned_alloc(sizeof(CF_MemoryBlock), alignment);
+	block->memory = (uint8_t*)cf_aligned_alloc(block_size, alignment);
+	block->next = NULL;
+	pool->blocks = block;
+	pool->free_list = block->memory;
 	for (int i = 0; i < element_count - 1; ++i) {
-		void** element = (void**)(pool->arena + element_size * i);
-		void* next = (void*)(pool->arena + element_size * (i + 1));
+		void** element = (void**)(block->memory + element_size * i);
+		void* next = (void*)(block->memory + element_size * (i + 1));
 		*element = next;
-	};
-
-	void** last_element = (void**)(pool->arena + element_size * (element_count - 1));
+	}
+	void** last_element = (void**)(block->memory + element_size * (element_count - 1));
 	*last_element = NULL;
 
 	return pool;
@@ -182,48 +190,44 @@ CF_MemoryPool* cf_make_memory_pool(int element_size, int element_count, int alig
 
 void cf_destroy_memory_pool(CF_MemoryPool* pool)
 {
-	if (pool->overflow_count) {
-		// Attempted to destroy pool without freeing all overflow allocations.
-		CF_ASSERT(pool->overflow_count == 0);
+	CF_MemoryBlock* block = pool->blocks;
+	while (block) {
+		CF_MemoryBlock* next = block->next;
+		cf_aligned_free(block->memory);
+		cf_aligned_free(block);
+		block = next;
 	}
 	cf_aligned_free(pool);
 }
 
 void* cf_memory_pool_alloc(CF_MemoryPool* pool)
 {
-	void *mem = cf_memory_pool_try_alloc(pool);
-	if (!mem) {
-		mem = cf_aligned_alloc(pool->unaligned_element_size, pool->alignment);
-		if (mem) {
-			pool->overflow_count++;
-		}
-	}
-	return mem;
-}
-
-void* cf_memory_pool_try_alloc(CF_MemoryPool* pool)
-{
+	// Try to allocate from the free list first.
 	if (pool->free_list) {
-		void *mem = pool->free_list;
-		pool->free_list = *((void**)pool->free_list);
+		void* mem = pool->free_list;
+		pool->free_list = *(void**)pool->free_list;
 		return mem;
-	} else {
-		return NULL;
 	}
+
+	// If no free elements, allocate a new block and initialize its free list.
+	CF_MemoryBlock* new_block = (CF_MemoryBlock*)cf_aligned_alloc(sizeof(CF_MemoryBlock), pool->alignment);
+	new_block->memory = (uint8_t*)cf_aligned_alloc(pool->block_size, pool->alignment);
+	new_block->next = pool->blocks;
+	pool->blocks = new_block;
+	pool->free_list = new_block->memory;
+	for (int i = 0; i < pool->element_count_per_block - 1; ++i) {
+		void** element = (void**)(new_block->memory + pool->element_size * i);
+		void* next = (void*)(new_block->memory + pool->element_size * (i + 1));
+		*element = next;
+	}
+	void** last_element = (void**)(new_block->memory + pool->element_size * (pool->element_count_per_block - 1));
+	*last_element = NULL;
+
+	return cf_memory_pool_alloc(pool);
 }
 
 void cf_memory_pool_free(CF_MemoryPool* pool, void* element)
 {
-	int difference = (int)((uint8_t*)element - pool->arena);
-	bool in_bounds = (void*)element >= pool->arena && difference <= (pool->arena_size - pool->element_size);
-	if (pool->overflow_count && !in_bounds) {
-		cf_aligned_free(element);
-		pool->overflow_count--;
-	} else if (in_bounds) {
-		*(void**)element = pool->free_list;
-		pool->free_list = element;
-	} else {
-		// Tried to free something that definitely didn't come from this pool.
-		CF_ASSERT(false);
-	}
+	*(void**)element = pool->free_list;
+	pool->free_list = element;
 }
