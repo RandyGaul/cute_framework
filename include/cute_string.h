@@ -852,7 +852,7 @@ CF_API const uint16_t* CF_CALL cf_decode_UTF16(const uint16_t* s, int* codepoint
 //--------------------------------------------------------------------------------------------------
 // Longform C API.
 
-#define cf_string_len(s) (s ? (int)((size_t)cf_array_count(s) - 1) : 0)
+#define cf_string_len(s) (s ? (cf_array_count(s) ? cf_array_count(s)-1 : cf_array_count(s)) : 0)
 #define cf_string_empty(s) (s ? cf_string_len(s) < 1 : 1)
 #define cf_string_push(s, ch) do { if (!s) cf_array_push(s, ch); else s[cf_string_len(s)] = ch; cf_array_push(s, 0); } while (0)
 #define cf_string_free(s) cf_array_free(s)

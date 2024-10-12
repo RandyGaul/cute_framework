@@ -83,6 +83,28 @@ TEST_CASE(test_string_macros_simple)
 	REQUIRE(sequ(s, long_string));
 	sfree(s);
 
+	// Test out sfmt and variants.
+	sfmt(s, "%d,%d,%d,", 0,1,2);
+	REQUIRE(slen(s) == 6);
+	REQUIRE(scount(s) == 7);
+	REQUIRE(sequ(s, "0,1,2,"));
+	sfmt(s, "%d,%d,%d,", 0,1,2);
+	REQUIRE(slen(s) == 6);
+	REQUIRE(scount(s) == 7);
+	REQUIRE(sequ(s, "0,1,2,"));
+	sfree(s);
+	REQUIRE(slen(s) == 0);
+	sfmt_append(s, "%d,%d,%d,", 0,1,2);
+	REQUIRE(slen(s) == 6);
+	REQUIRE(scount(s) == 7);
+	REQUIRE(sequ(s, "0,1,2,"));
+	sfmt_append(s, "%d,%d,%d,", 0,1,2);
+	REQUIRE(slen(s) == 12);
+	REQUIRE(scount(s) == 13);
+	REQUIRE(sequ(s, "0,1,2,0,1,2,"));
+	sclear(s);
+	REQUIRE(slen(s) == 0);
+
 	return true;
 }
 
