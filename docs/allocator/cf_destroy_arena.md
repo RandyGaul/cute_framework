@@ -3,29 +3,25 @@
 [//]: # (See: https://github.com/RandyGaul/cute_framework/blob/master/samples/docs_parser.cpp)
 [](../header.md ':include')
 
-# cf_arena_alloc
+# cf_destroy_arena
 
 Category: [allocator](/api_reference?id=allocator)  
 GitHub: [cute_alloc.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_alloc.h)  
 ---
 
-Allocates a block of memory aligned along a byte boundary.
+Free's up all resources used by the allocator.
 
 ```cpp
-void* cf_arena_alloc(CF_Arena* arena, int size);
+void cf_destroy_arena(CF_Arena* arena);
 ```
 
 Parameters | Description
 --- | ---
-arena | The arena to allocate from.
-size | The size of the allocation, it cannot be larger than `block_size` from [cf_arena_init](/allocator/cf_arena_init.md).
-
-## Return Value
-
-Returns an aligned pointer of `size` bytes.
+arena | The arena to free.
 
 ## Related Pages
 
 [cf_arena_init](/allocator/cf_arena_init.md)  
-[cf_arena_free](/allocator/cf_arena_free.md)  
+[cf_arena_alloc](/allocator/cf_arena_alloc.md)  
 [cf_arena_reset](/allocator/cf_arena_reset.md)  
+[cf_arena_free](/allocator/cf_arena_free.md)  

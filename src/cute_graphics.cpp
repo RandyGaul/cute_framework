@@ -1522,8 +1522,8 @@ CF_RenderState cf_render_state_defaults()
 CF_Material cf_make_material()
 {
 	CF_MaterialInternal* material = CF_NEW(CF_MaterialInternal);
-	cf_arena_init(&material->uniform_arena, 4, 1024);
-	cf_arena_init(&material->block_arena, 4, 1024);
+	material->uniform_arena = cf_make_arena(4, 1024);
+	material->block_arena = cf_make_arena(4, 1024);
 	material->state = cf_render_state_defaults();
 	CF_Material result = { (uint64_t)material };
 	return result;
@@ -1763,7 +1763,6 @@ static void s_copy_uniforms(SDL_GPUCommandBuffer* cmd, CF_Arena* arena, CF_Shade
 		}
 	}
 
-	// @TODO Use a different allocation scheme that caches better.
 	cf_arena_reset(arena);
 }
 

@@ -107,7 +107,9 @@
 #define CF_ALIGN_TRUNCATE(v, n) ((v) & ~((n) - 1))
 #define CF_ALIGN_FORWARD(v, n) CF_ALIGN_TRUNCATE((v) + (n) - 1, (n))
 #define CF_ALIGN_TRUNCATE_PTR(p, n) ((void*)CF_ALIGN_TRUNCATE((uintptr_t)(p), n))
-#define CF_ALIGN_FORWARD_PTR(p, n) ((void*)CF_ALIGN_FORWARD((uintptr_t)(p), n))
+#define CF_ALIGN_FORWARD_PTR(p, n) ((void*)CF_ALIGN_FORWARD((uintptr_t)(p), n))// Align a value backward (truncate it down to the nearest alignment boundary)
+#define CF_ALIGN_BACKWARD(v, n) CF_ALIGN_TRUNCATE((v), (n))
+#define CF_ALIGN_BACKWARD_PTR(p, n) ((void*)CF_ALIGN_BACKWARD((uintptr_t)(p), n))
 #define CF_GLOBAL
 
 #ifdef __cplusplus

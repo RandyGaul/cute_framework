@@ -105,32 +105,77 @@ void cf_aligned_free(void* p)
 
 //--------------------------------------------------------------------------------------------------
 
-void cf_arena_init(CF_Arena* arena, int alignment, int block_size)
+CF_Arena cf_make_arena(int alignment, int block_size)
 {
-	CF_MEMSET(arena, 0, sizeof(*arena));
-	arena->alignment = alignment;
-	arena->block_size = block_size;
+	CF_Arena arena;
+	CF_MEMSET(&arena, 0, sizeof(arena));
+	arena.alignment = alignment;
+	arena.block_size = block_size;
+	return arena;
 }
 
-void* cf_arena_alloc(CF_Arena* arena, size_t size)
+void* cf_arena_alloc(CF_Arena* arena, int size)
 {
 	CF_ASSERT((int)size < arena->block_size);
-	if (size > (size_t)(arena->end - arena->ptr)) {
-		arena->ptr = (char*)cf_aligned_alloc(arena->block_size, arena->alignment);
+	if (size > (int)(arena->end - arena->ptr)) {
+		if (arena->block_index < asize(arena->blocks)) {
+			arena->ptr = arena->blocks[arena->block_index];
+		} else {
+			arena->ptr = (char*)cf_aligned_alloc(arena->block_size, arena->alignment);
+			apush(arena->blocks, arena->ptr);
+		}
 		arena->end = arena->ptr + arena->block_size;
-		apush(arena->blocks, arena->ptr);
+		arena->block_index++;
 	}
 	void* result = arena->ptr;
 	arena->ptr = (char*)CF_ALIGN_FORWARD_PTR(arena->ptr + size, arena->alignment);
-	CF_ASSERT(!(((size_t)(arena->ptr)) & (arena->alignment - 1)));
+	CF_ASSERT(!(((int)(uintptr_t)(arena->ptr)) & (arena->alignment - 1)));
 	CF_ASSERT(arena->ptr <= arena->end);
 	return result;
 }
 
+void cf_arena_free(CF_Arena* arena, int size)
+{
+	CF_ASSERT(arena->block_index > 0);
+	char* aligned_ptr = (char*)CF_ALIGN_BACKWARD_PTR(arena->ptr - size, arena->alignment);
+	if (aligned_ptr >= arena->blocks[arena->block_index - 1]) {
+		arena->ptr = aligned_ptr;
+	} else {
+		int remaining_size = (int)(arena->ptr - arena->blocks[arena->block_index - 1]);
+		size -= remaining_size;
+		while (size > 0 && arena->block_index > 0) {
+			arena->block_index--;
+			CF_ASSERT(arena->block_index >= 0);
+			arena->ptr = arena->blocks[arena->block_index];
+			arena->end = arena->ptr + arena->block_size;
+			if (size < arena->block_size) {
+				arena->ptr = (char*)CF_ALIGN_BACKWARD_PTR(arena->end - size, arena->alignment);
+				size = 0;
+			} else {
+				size -= arena->block_size;
+			}
+		}
+		CF_ASSERT(size == 0);
+	}
+}
+
 void cf_arena_reset(CF_Arena* arena)
 {
+	if (arena->blocks && asize(arena->blocks) > 0) {
+		arena->ptr = arena->blocks[0];
+		arena->end = arena->ptr + arena->block_size;
+		arena->block_index = 1;
+	} else {
+		arena->ptr = NULL;
+		arena->end = NULL;
+		arena->block_index = 0;
+	}
+}
+
+void cf_destroy_arena(CF_Arena* arena)
+{
 	if (arena->blocks) {
-		for (int i = 0; i < alen(arena->blocks); ++i) {
+		for (int i = 0; i < asize(arena->blocks); ++i) {
 			cf_aligned_free(arena->blocks[i]);
 		}
 		afree(arena->blocks);
@@ -138,6 +183,7 @@ void cf_arena_reset(CF_Arena* arena)
 	arena->ptr = NULL;
 	arena->end = NULL;
 	arena->blocks = NULL;
+	arena->block_index = 0;
 }
 
 //--------------------------------------------------------------------------------------------------

@@ -155,7 +155,8 @@ typedef struct CF_Arena
 	int block_size;
 	char* ptr;
 	char* end;
-	char** blocks;
+	int block_index;
+	/* dyna */ char** blocks;
 } CF_Arena;
 // @end
 
@@ -166,9 +167,9 @@ typedef struct CF_Arena
  * @param    arena         The arena to initialize.
  * @param    alignment     An alignment boundary, must be a power of two.
  * @param    block_size    The default size of each internal call to `malloc` to form pages to further allocate from.
- * @related  cf_arena_alloc cf_arena_reset
+ * @related  cf_arena_init cf_arena_alloc cf_arena_reset cf_arena_free
  */
-CF_API void CF_CALL cf_arena_init(CF_Arena* arena, int alignment, int block_size);
+CF_API CF_Arena CF_CALL cf_make_arena(int alignment, int block_size);
 
 /**
  * @function cf_arena_alloc
@@ -177,18 +178,43 @@ CF_API void CF_CALL cf_arena_init(CF_Arena* arena, int alignment, int block_size
  * @param    arena         The arena to allocate from.
  * @param    size          The size of the allocation, it cannot be larger than `block_size` from `cf_arena_init`.
  * @return   Returns an aligned pointer of `size` bytes.
- * @related  cf_arena_init cf_arena_reset
+ * @related  cf_arena_init cf_arena_alloc cf_arena_reset cf_arena_free
  */
-CF_API void* CF_CALL cf_arena_alloc(CF_Arena* arena, size_t size);
+CF_API void* CF_CALL cf_arena_alloc(CF_Arena* arena, int size);
+
+/**
+ * @function cf_arena_free
+ * @category allocator
+ * @brief    Frees the most recent allocation(s) from the arena.
+ * @param    arena         The arena from which to free memory.
+ * @param    size          The size of the most recent allocation to free.
+ * @remarks  This supports freeing memory in a Last-In-First-Out (LIFO) order, meaning 
+ *           only the most recent allocation(s) can be freed. It does not support freeing allocations in 
+ *           arbitrary order. Minimal error checking is performed, so only call this function if you
+ *           know what you're doing, otherwise you'll get memory corruption issues.
+ * @related  cf_arena_init cf_arena_alloc cf_arena_reset cf_arena_free
+ */
+CF_API void CF_CALL cf_arena_free(CF_Arena* arena, int ptr);
 
 /**
  * @function cf_arena_reset
  * @category allocator
- * @brief    Free's up all resources used by the allocator and places it back into an initialized state.
+ * @brief    Resets the allocator.
  * @param    arena         The arena to reset.
- * @related  cf_arena_init cf_arena_alloc
+ * @remarks  This does not free up internal resources, and will reuse all previously allocated
+ *           resources to fulfill subsequent `cf_arena_alloc` calls.
+ * @related  cf_arena_init cf_arena_alloc cf_arena_reset cf_arena_free
  */
 CF_API void CF_CALL cf_arena_reset(CF_Arena* arena);
+
+/**
+ * @function cf_destroy_arena
+ * @category allocator
+ * @brief    Free's up all resources used by the allocator.
+ * @param    arena         The arena to free.
+ * @related  cf_arena_init cf_arena_alloc cf_arena_reset cf_arena_free
+ */
+CF_API void CF_CALL cf_destroy_arena(CF_Arena* arena);
 
 //--------------------------------------------------------------------------------------------------
 // Memory pool allocator.
@@ -251,9 +277,11 @@ namespace Cute
 CF_INLINE void* aligned_alloc(size_t size, int alignment) { return cf_aligned_alloc(size, alignment); }
 CF_INLINE void aligned_free(void* ptr) { return cf_aligned_free(ptr); }
 
-CF_INLINE void arena_init(CF_Arena* arena, int alignment, int block_size) { cf_arena_init(arena, alignment, block_size); }
-CF_INLINE void* arena_alloc(CF_Arena* arena, size_t size) { return cf_arena_alloc(arena, size); }
-CF_INLINE void arena_reset(CF_Arena* arena) { return cf_arena_reset(arena); }
+CF_INLINE CF_Arena make_arena(int alignment, int block_size) { return cf_make_arena(alignment, block_size); }
+CF_INLINE void* arena_alloc(CF_Arena* arena, int size) { return cf_arena_alloc(arena, size); }
+CF_INLINE void arena_free(CF_Arena* arena, int size) { cf_arena_free(arena, size); }
+CF_INLINE void arena_reset(CF_Arena* arena) { cf_arena_reset(arena); }
+CF_INLINE void destroy_arena(CF_Arena* arena) { cf_destroy_arena(arena); }
 
 CF_INLINE CF_MemoryPool* make_memory_pool(int element_size, int element_count, int alignment) { return cf_make_memory_pool(element_size, element_count, alignment); }
 CF_INLINE void destroy_memory_pool(CF_MemoryPool* pool) { cf_destroy_memory_pool(pool); }

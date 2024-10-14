@@ -432,7 +432,7 @@ void cf_make_draw()
 	draw = CF_NEW(CF_Draw);
 	draw->projection = ortho_2d(0, 0, (float)app->w, (float)app->h);
 	draw->reset_cam();
-	cf_arena_init(&draw->uniform_arena, 32, CF_MB);
+	draw->uniform_arena = cf_make_arena(32, CF_MB);
 
 	// Mesh + vertex attributes.
 	Array<CF_VertexAttribute> attrs;
