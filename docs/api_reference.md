@@ -351,6 +351,7 @@ This is a list of all functions in Cute Framework organized by categories. This 
 - [cf_draw_pop_shader](/draw/cf_draw_pop_shader.md)
 - [cf_draw_pop_vertex_attributes](/draw/cf_draw_pop_vertex_attributes.md)
 - [cf_draw_pop_viewport](/draw/cf_draw_pop_viewport.md)
+- [cf_draw_prefetch](/draw/cf_draw_prefetch.md)
 - [cf_draw_projection](/draw/cf_draw_projection.md)
 - [cf_draw_push](/draw/cf_draw_push.md)
 - [cf_draw_push_alpha_discard](/draw/cf_draw_push_alpha_discard.md)

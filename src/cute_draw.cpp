@@ -630,6 +630,23 @@ void cf_draw_sprite(const CF_Sprite* sprite)
 	DRAW_PUSH_ITEM(s);
 }
 
+void cf_draw_prefetch(const CF_Sprite* sprite)
+{
+	if (sprite->animation) {
+		for (int i = 0; i < hsize(sprite->animations); ++i) {
+			const CF_Animation* animation = sprite->animations[i];
+			for (int j = 0; j < asize(animation->frames); ++j) {
+				CF_Frame* frame = animation->frames + j;
+				spritebatch_prefetch(&draw->sb, frame->id, sprite->w, sprite->h);
+			}
+		}
+	} else if (sprite->easy_sprite_id >= CF_PREMADE_ID_RANGE_LO && sprite->easy_sprite_id <= CF_PREMADE_ID_RANGE_HI) {
+		spritebatch_prefetch(&draw->sb, sprite->easy_sprite_id, sprite->w, sprite->h);
+	} else {
+		spritebatch_prefetch(&draw->sb, sprite->easy_sprite_id, sprite->w, sprite->h);
+	}
+}
+
 static void s_draw_quad(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float stroke, float radius, bool fill)
 {
 	CF_M3x2 m = draw->mvp;
@@ -2755,6 +2772,7 @@ static void s_process_command(CF_Canvas canvas, CF_Command* cmd, CF_Command* nex
 
 	// Collate all of the drawable items into the spritebatch.
 	if (!cmd->items.count()) return;
+	draw->need_flush = true;
 	for (int j = 0; j < cmd->items.count(); ++j) {
 		spritebatch_push(&draw->sb, cmd->items[j]);
 	}
@@ -2787,6 +2805,7 @@ static void s_process_command(CF_Canvas canvas, CF_Command* cmd, CF_Command* nex
 
 	// Process the collated drawable items. Might get split up into multiple draw calls depending on
 	// the atlas compiler.
+	draw->need_flush = false;
 	spritebatch_flush(&draw->sb);
 }
 
@@ -2817,6 +2836,10 @@ void cf_render_layers_to(CF_Canvas canvas, int layer_lo, int layer_hi, bool clea
 	// Reset internal state.
 	if (clear && !draw->has_drawn_something) {
 		cf_clear_canvas(canvas);
+	}
+	if (draw->need_flush) {
+		draw->need_flush = false;
+		spritebatch_flush(&draw->sb);
 	}
 	draw->has_drawn_something = false;
 	cf_arena_reset(&draw->uniform_arena);

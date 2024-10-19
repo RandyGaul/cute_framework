@@ -179,6 +179,7 @@ struct CF_Draw
 	bool blit_init = false;
 	CF_Mesh blit_mesh = { 0 };
 	CF_VertexFn* vertex_fn = NULL;
+	bool need_flush = false;
 	bool has_drawn_something = false;
 };
 

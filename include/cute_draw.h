@@ -31,6 +31,17 @@ extern "C" {
 CF_API void CF_CALL cf_draw_sprite(const CF_Sprite* sprite);
 
 /**
+ * @function cf_draw_prefetch
+ * @category draw
+ * @brief    Prefetches a sprite.
+ * @param    sprite     The sprite.
+ * @remarks  This function ensures the sprite is fully loaded into memory without actually rendering anything.
+ *           This is a good way to avoid disk io at inconvenient times.
+ * @related  cf_draw_sprite cf_draw_quad draw_look_at cf_draw_to cf_app_draw_onto_screen
+ */
+CF_API void CF_CALL cf_draw_prefetch(const CF_Sprite* sprite);
+
+/**
  * @function cf_draw_quad
  * @category draw
  * @brief    Draws a quad wireframe.
