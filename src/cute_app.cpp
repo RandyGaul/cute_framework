@@ -535,7 +535,7 @@ int cf_app_draw_onto_screen(bool clear)
 			.destination = dst,
 			.flip_mode = SDL_FLIP_NONE,
 			.filter = SDL_GPU_FILTER_NEAREST,
-			.cycle = false,
+			.cycle = true,
 		};
 		SDL_BlitGPUTexture(app->cmd, &blit_info);
 	}

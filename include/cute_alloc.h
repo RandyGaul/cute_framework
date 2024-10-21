@@ -227,6 +227,7 @@ typedef struct CF_MemoryPool CF_MemoryPool;
  * @brief    Creates a memory pool.
  * @param    element_size   The size of each allocation.
  * @param    element_count  The number of elements in the internal pool.
+
  * @param    alignment      An alignment boundary, must be a power of two.
  * @return   Returns a memory pool pointer.
  * @related  cf_destroy_memory_pool cf_memory_pool_alloc cf_memory_pool_free
