@@ -2778,35 +2778,33 @@ static void s_process_command(CF_Canvas canvas, CF_Command* cmd, CF_Command* nex
 	}
 
 	// Merge with the next command if identical.
+	bool same = true;
 	if (next) {
 		if (next->u.size != cmd->u.size) {
-			return;
-		}
-		if (next->u.type != cmd->u.type) {
-			return;
-		}
-		if (next->u.texture.id != cmd->u.texture.id) {
-			return;
-		}
-		if (next->u.name != cmd->u.name) {
-			return;
-		}
-		if (CF_MEMCMP(next->u.data, cmd->u.data, next->u.size)) {
-			return;
-		}
-		if (next->alpha_discard == cmd->alpha_discard &&
+			same = false;
+		} else if (next->u.type != cmd->u.type) {
+			same = false;
+		} else if (next->u.texture.id != cmd->u.texture.id) {
+			same = false;
+		} else if (next->u.name != cmd->u.name) {
+			same = false;
+		} else if (CF_MEMCMP(next->u.data, cmd->u.data, next->u.size)) {
+			same = false;
+		} else if (next->alpha_discard == cmd->alpha_discard &&
 			next->render_state == cmd->render_state &&
 			next->scissor == cmd->scissor &&
 			next->shader == cmd->shader &&
 			next->viewport == cmd->viewport) {
-			return;
+			same = false;
 		}
 	}
 
-	// Process the collated drawable items. Might get split up into multiple draw calls depending on
-	// the atlas compiler.
-	draw->need_flush = false;
-	spritebatch_flush(&draw->sb);
+	if (!same) {
+		// Process the collated drawable items. Might get split up into multiple draw calls depending on
+		// the atlas compiler.
+		draw->need_flush = false;
+		spritebatch_flush(&draw->sb);
+	}
 }
 
 void cf_render_layers_to(CF_Canvas canvas, int layer_lo, int layer_hi, bool clear)
