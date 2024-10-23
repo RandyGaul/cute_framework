@@ -1957,8 +1957,8 @@ void cf_apply_shader(CF_Shader shader_handle, CF_Material material_handle)
 	int found_image_count = 0;
 	for (int i = 0; found_image_count < sampler_count && i < material->fs.textures.count(); ++i) {
 		const char* image_name = material->fs.textures[i].name;
-		for (int i = 0; i < shader->image_names.size(); ++i) {
-			if (shader->image_names[i] == image_name) {
+		for (int j = 0; j < shader->image_names.size(); ++j) {
+			if (shader->image_names[j] == image_name) {
 				sampler_bindings[found_image_count].sampler = ((CF_TextureInternal*)material->fs.textures[i].handle.id)->sampler;
 				sampler_bindings[found_image_count].texture = ((CF_TextureInternal*)material->fs.textures[i].handle.id)->tex;
 				found_image_count++;
