@@ -40,6 +40,7 @@ static void s_init_video()
 	static bool init = false;
 	if (init) return;
 	init = SDL_Init(SDL_INIT_VIDEO);
+	SDL_ShaderCross_Init();
 }
 
 CF_DisplayID cf_default_display()
@@ -517,8 +518,8 @@ int cf_app_draw_onto_screen(bool clear)
 
 	// Stretch the app canvas onto the backbuffer canvas.
 	Uint32 w, h;
-	SDL_GPUTexture* swapchain_tex = SDL_AcquireGPUSwapchainTexture(app->cmd, app->window, &w, &h);
-	if (swapchain_tex) {
+	SDL_GPUTexture* swapchain_tex;
+	if (SDL_AcquireGPUSwapchainTexture(app->cmd, app->window, &swapchain_tex, &w, &h) && swapchain_tex) {
 		// Blit onto the screen.
 		SDL_GPUBlitRegion src = {
 			.texture = (SDL_GPUTexture*)cf_texture_handle(cf_canvas_get_target(app->offscreen_canvas)),
@@ -538,6 +539,11 @@ int cf_app_draw_onto_screen(bool clear)
 			.cycle = true,
 		};
 		SDL_BlitGPUTexture(app->cmd, &blit_info);
+	} else {
+		// @Hack - Avoid large resource cycle chains gobbling up RAM when GPU-bound.
+		// Waiting on response from Evan on proper fix:
+		// https://discourse.libsdl.org/t/sdl-gpu-cycle-difficulties/55188
+		SDL_WaitForGPUIdle(app->device);
 	}
 
 	// Dear ImGui draw.
@@ -578,6 +584,8 @@ int cf_app_draw_onto_screen(bool clear)
 	draw->draw_item_order = 0;
 	draw->cmds.clear();
 	draw->add_cmd();
+
+	SDL_WaitForGPUIdle(app->device);
 
 	// Report the number of draw calls.
 	int draw_call_count = app->draw_call_count;

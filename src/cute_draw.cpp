@@ -2797,6 +2797,8 @@ static void s_process_command(CF_Canvas canvas, CF_Command* cmd, CF_Command* nex
 			next->viewport == cmd->viewport) {
 			same = false;
 		}
+	} else {
+		same = false;
 	}
 
 	if (!same) {

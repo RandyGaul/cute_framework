@@ -721,7 +721,7 @@ void cf_texture_update(CF_Texture texture_handle, void* data, int size)
 		};
 		buf = SDL_CreateGPUTransferBuffer(app->device, &tbuf_info);
 	}
-	void* p = SDL_MapGPUTransferBuffer(app->device, buf, tex->buf ? true : false);
+	void* p = SDL_MapGPUTransferBuffer(app->device, buf, true);
 	CF_MEMCPY(p, data, size);
 	SDL_UnmapGPUTransferBuffer(app->device, buf);
 
@@ -734,7 +734,7 @@ void cf_texture_update(CF_Texture texture_handle, void* data, int size)
 	src.pixels_per_row = tex->w;
 	src.rows_per_layer = tex->h;
 	SDL_GPUTextureRegion dst = SDL_GPUTextureRegionDefaults(tex, tex->w, tex->h);
-	SDL_UploadToGPUTexture(pass, &src, &dst, tex->buf ? true : false);
+	SDL_UploadToGPUTexture(pass, &src, &dst, true);
 	SDL_EndGPUCopyPass(pass);
 	if (!tex->buf) SDL_ReleaseGPUTransferBuffer(app->device, buf);
 	if (!app->cmd) SDL_SubmitGPUCommandBuffer(cmd);
@@ -975,7 +975,7 @@ static SDL_GPUShader* s_compile(CF_ShaderInternal* shader_internal, const dyna u
 	if (SDL_GetGPUShaderFormats(app->device) == SDL_GPU_SHADERFORMAT_SPIRV) {
 		sdl_shader = (SDL_GPUShader*)SDL_CreateGPUShader(app->device, &shaderCreateInfo);
 	} else {
-		sdl_shader = (SDL_GPUShader*)SDL_ShaderCross_CompileFromSPIRV(app->device, &shaderCreateInfo, false);
+		sdl_shader = (SDL_GPUShader*)SDL_ShaderCross_CompileGraphicsShaderFromSPIRV(app->device, &shaderCreateInfo);
 	}
 	afree(bytecode);
 	CF_ASSERT(sdl_shader);
@@ -1432,9 +1432,9 @@ static void s_update_buffer(CF_Buffer* buffer, int element_count, void* data, in
 		int new_size = size * 2;
 		buffer->size = new_size;
 		SDL_GPUBufferCreateInfo buf_info = {
-				.usage = flags,
-				.size = (Uint32)new_size,
-				.props = 0,
+			.usage = flags,
+			.size = (Uint32)new_size,
+			.props = 0,
 		};
 		buffer->buffer = SDL_CreateGPUBuffer(app->device, &buf_info);
 		SDL_GPUTransferBufferCreateInfo tbuf_info = {

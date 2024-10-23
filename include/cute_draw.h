@@ -1748,6 +1748,7 @@ CF_INLINE void draw_canvas(CF_Canvas canvas, CF_V2 position, CF_V2 scale) { cf_d
 CF_INLINE void draw_canvas(CF_Canvas canvas, float x, float y, float sx, float sy) { cf_draw_canvas(canvas, V2(x,y), V2(sx,sy)); }
 
 CF_INLINE void render_to(CF_Canvas canvas, bool clear = false) { cf_render_to(canvas, clear); }
+CF_INLINE void render_layers_to(CF_Canvas canvas, int layer_lo, int layer_hi, bool clear = false) { cf_render_layers_to(canvas, layer_lo, layer_hi, clear); }
 
 CF_INLINE CF_TemporaryImage fetch_image(const CF_Sprite* sprite) { return cf_fetch_image(sprite); }
 CF_INLINE CF_TemporaryImage fetch_image(const CF_Sprite& sprite) { return cf_fetch_image(&sprite); }
