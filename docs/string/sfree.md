@@ -21,6 +21,7 @@ s | The string. Can be `NULL`.
 
 ## Related Pages
 
+[sdyna](/string/sdyna.md)  
 [spush](/string/spush.md)  
 [spop](/string/spop.md)  
 [sfit](/string/sfit.md)  

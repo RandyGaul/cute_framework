@@ -328,7 +328,7 @@ int main(int argc, char* argv[])
 	//options = APP_OPTIONS_GFX_VULKAN_BIT;
 	//options = APP_OPTIONS_GFX_D3D11_BIT;
 	//options = APP_OPTIONS_GFX_D3D12_BIT;
-	make_app("Liquid Rainbow", 0, 0, 0, (int)(w * scale), (int)(h * scale), options | APP_OPTIONS_WINDOW_POS_CENTERED_BIT, argv[0]);
+	make_app("Liquid Rainbow", 0, 0, 0, (int)(w * scale), (int)(h * scale), options | CF_APP_OPTIONS_WINDOW_POS_CENTERED_BIT, argv[0]);
 	cf_set_fixed_timestep(60);
 	cf_set_target_framerate(60);
 	cf_app_set_vsync(false);

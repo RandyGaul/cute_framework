@@ -58,4 +58,5 @@ dynamic array is allocated on-the-spot for you, and assigned back to `a`.
 [aset](/array/aset.md)  
 [arev](/array/arev.md)  
 [ahash](/array/ahash.md)  
+[adel](/array/adel.md)  
 [astatic](/array/astatic.md)  

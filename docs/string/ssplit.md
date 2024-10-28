@@ -29,7 +29,7 @@ Returns a dynamic array of all delimited strings (see [dyna](/array/dyna.md)).
 > Splitting a string about '.'.
 
 ```cpp
-char s = NULL;
+sdyna char s = NULL;
 sset(s, "split.here.in.a.loop");
 const char splits_expected[] = {
     "split",
@@ -38,7 +38,7 @@ const char splits_expected[] = {
     "a",
     "loop",
 };
-char array_of_splits = ssplit(s, '.');
+dyna char array_of_splits = ssplit(s, '.');
 for (int i = 0; i < alen(array_of_splits); ++i) {
     const char split = array_of_splits[i];
     CF_TEST_ASSERT(sequ(split, splits_expected[i]));
@@ -53,4 +53,5 @@ afree(array_of_splits);
 
 ## Related Pages
 
+[sdyna](/string/sdyna.md)  
 [ssplit_once](/string/ssplit_once.md)  

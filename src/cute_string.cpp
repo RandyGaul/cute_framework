@@ -45,12 +45,12 @@ char* cf_sfmt(char* s, const char* fmt, ...)
 	CF_ACANARY(s);
 	va_list args;
 	va_start(args, fmt);
-	int n = 1 + vsnprintf(s, scap(s), fmt, args);
+	int n = 1+vsnprintf(s, scap(s), fmt, args);
 	va_end(args);
 	if (n > scap(s)) {
 		sfit(s, n);
 		va_start(args, fmt);
-		n = 1 + vsnprintf(s, scap(s), fmt, args);
+		n = 1+vsnprintf(s, scap(s), fmt, args);
 		va_end(args);
 	}
 	alen(s) = n;
@@ -62,18 +62,19 @@ char* cf_sfmt_append(char* s, const char* fmt, ...)
 	CF_ACANARY(s);
 	va_list args;
 	va_start(args, fmt);
+	int nul = !!s;
 	int capacity = scap(s) - scount(s);
-	int n = 1 + vsnprintf(s + slen(s), capacity, fmt, args);
+	int n = 1+vsnprintf(s + slen(s), capacity, fmt, args);
 	va_end(args);
 	if (n > capacity) {
 		afit(s, n + scount(s));
 		va_start(args, fmt);
 		int new_capacity = scap(s) - scount(s);
-		n = 1 + vsnprintf(s + slen(s), new_capacity, fmt, args);
+		n = 1+vsnprintf(s + slen(s), new_capacity, fmt, args);
 		CF_ASSERT(n <= new_capacity);
 		va_end(args);
 	}
-	alen(s) += n - 1;
+	alen(s) += n-nul;
 	return s;
 }
 
@@ -82,10 +83,10 @@ char* cf_svfmt(char* s, const char* fmt, va_list args)
 	CF_ACANARY(s);
 	va_list copy_args;
 	va_copy(copy_args, args);
-	int n = 1 + vsnprintf(s, scap(s), fmt, args);
+	int n = 1+vsnprintf(s, scap(s), fmt, args);
 	if (n > scap(s)) {
 		sfit(s, n);
-		n = 1 + vsnprintf(s, scap(s), fmt, copy_args);
+		n = 1+vsnprintf(s, scap(s), fmt, copy_args);
 		va_end(copy_args);
 	}
 	alen(s) = n;
@@ -97,16 +98,17 @@ char* cf_svfmt_append(char* s, const char* fmt, va_list args)
 	CF_ACANARY(s);
 	va_list copy_args;
 	va_copy(copy_args, args);
+	int nul = !!s;
 	int capacity = scap(s) - scount(s);
-	int n = 1 + vsnprintf(s + slen(s), capacity, fmt, copy_args);
+	int n = 1+vsnprintf(s + slen(s), capacity, fmt, copy_args);
 	va_end(copy_args);
 	if (n > capacity) {
 		afit(s, n + scount(s));
 		int new_capacity = scap(s) - scount(s);
-		n = 1 + vsnprintf(s + slen(s), new_capacity, fmt, args);
+		n = 1+vsnprintf(s + slen(s), new_capacity, fmt, args);
 		CF_ASSERT(n <= new_capacity);
 	}
-	alen(s) += n - 1;
+	alen(s) += n-nul;
 	return s;
 }
 
@@ -434,8 +436,8 @@ using intern_t = cf_intern_t;
 struct intern_table_t
 {
 	htbl intern_t** interns;
-	Arena arena;
-	ReadWriteLock lock;
+	CF_Arena arena;
+	CF_ReadWriteLock lock;
 
 	CF_INLINE void read_lock() { cf_read_lock(&lock); }
 	CF_INLINE void read_unlock() { cf_read_unlock(&lock); }
@@ -460,7 +462,7 @@ static intern_table_t* s_inst()
 
 		// Try and set the global pointer. If this fails it means another thread
 		// has raced us and completed first, so then just destroy ours and use theirs.
-		Result result = cf_atomic_ptr_cas((void**)&g_intern_table, NULL, inst);
+		CF_Result result = cf_atomic_ptr_cas((void**)&g_intern_table, NULL, inst);
 		if (is_error(result)) {
 			cf_destroy_rw_lock(&inst->lock);
 			CF_FREE(inst);

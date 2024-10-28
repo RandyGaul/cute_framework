@@ -21,6 +21,7 @@ s | The string. Can be `NULL`.
 
 ## Related Pages
 
+[sdyna](/string/sdyna.md)  
 [sempty](/string/sempty.md)  
 [scount](/string/scount.md)  
 [scap](/string/scap.md)  

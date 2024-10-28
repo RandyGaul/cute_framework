@@ -31,6 +31,17 @@ extern "C" {
 CF_API void CF_CALL cf_draw_sprite(const CF_Sprite* sprite);
 
 /**
+ * @function cf_draw_prefetch
+ * @category draw
+ * @brief    Prefetches a sprite.
+ * @param    sprite     The sprite.
+ * @remarks  This function ensures the sprite is fully loaded into memory without actually rendering anything.
+ *           This is a good way to avoid disk io at inconvenient times.
+ * @related  cf_draw_sprite cf_draw_quad draw_look_at cf_draw_to cf_app_draw_onto_screen
+ */
+CF_API void CF_CALL cf_draw_prefetch(const CF_Sprite* sprite);
+
+/**
  * @function cf_draw_quad
  * @category draw
  * @brief    Draws a quad wireframe.
@@ -1484,6 +1495,20 @@ CF_API void CF_CALL cf_draw_canvas(CF_Canvas canvas, CF_V2 position, CF_V2 scale
 CF_API void CF_CALL cf_render_to(CF_Canvas canvas, bool clear);
 
 /**
+ * @function cf_render_layers_to
+ * @category draw
+ * @brief    Renders to a `CF_Canvas` between a lo/hi range (inclusive).
+ * @param    canvas     The canvas to render to.
+ * @param    layer_lo   The layer to start rendering with.
+ * @param    layer_hi   The layer to stop rendering after.
+ * @param    clear      If true the canvas gets cleared before rendering.
+ * @remarks  Renders a range of layers to a canvas. All `draw_***` functions called on other layers will not be executed. Everything queued up between
+ *           `layer_lo` and `layer_hi` will get processed and rendered to the canvas, and then removed from the internal command queue (won't be rendered again later).
+ * @related  cf_draw_scale cf_draw_translate cf_draw_rotate cf_draw_push cf_draw_pop cf_app_draw_onto_screen cf_render_to cf_draw_canvas
+ */
+CF_API void CF_CALL cf_render_layers_to(CF_Canvas canvas, int layer_lo, int layer_hi, bool clear);
+
+/**
  * @struct   CF_TemporaryImage
  * @category draw
  * @brief    Returns temporal information about a sprite's rendering internals.
@@ -1599,37 +1624,37 @@ struct CF_TextCodeVal
 
 namespace Cute
 {
-
-using TemporaryImage = CF_TemporaryImage;
-
-CF_INLINE void draw_sprite(const Sprite* sprite) { cf_draw_sprite(sprite); }
-CF_INLINE void draw_sprite(const Sprite& sprite) { cf_draw_sprite(&sprite); }
-CF_INLINE void draw_quad(Aabb bb, float thickness = 1.0f, float chubbiness = 0) { cf_draw_quad(bb, thickness, chubbiness); }
+	
+CF_INLINE void draw_sprite(const CF_Sprite* sprite) { cf_draw_sprite(sprite); }
+CF_INLINE void draw_sprite(const CF_Sprite& sprite) { cf_draw_sprite(&sprite); }
+CF_INLINE void sprite_draw(const CF_Sprite* sprite) { cf_draw_sprite(sprite); }
+CF_INLINE void sprite_draw(const CF_Sprite& sprite) { cf_draw_sprite(&sprite); }
+CF_INLINE void draw_quad(CF_Aabb bb, float thickness = 1.0f, float chubbiness = 0) { cf_draw_quad(bb, thickness, chubbiness); }
 CF_INLINE void draw_quad(v2 p0, v2 p1, v2 p2, v2 p3, float thickness = 1.0f, float chubbiness = 0) { cf_draw_quad2(p0, p1, p2, p3, thickness, chubbiness); }
-CF_INLINE void draw_quad_fill(Aabb bb, float chubbiness = 0) { cf_draw_quad_fill(bb, chubbiness); }
+CF_INLINE void draw_quad_fill(CF_Aabb bb, float chubbiness = 0) { cf_draw_quad_fill(bb, chubbiness); }
 CF_INLINE void draw_quad_fill(v2 p0, v2 p1, v2 p2, v2 p3, float chubbiness = 0) { cf_draw_quad_fill2(p0, p1, p2, p3, chubbiness); }
-CF_INLINE void draw_box(Aabb bb, float thickness = 1.0f, float chubbiness = 0) { cf_draw_quad(bb, thickness, chubbiness); }
+CF_INLINE void draw_box(CF_Aabb bb, float thickness = 1.0f, float chubbiness = 0) { cf_draw_quad(bb, thickness, chubbiness); }
 CF_INLINE void draw_box(v2 p0, v2 p1, v2 p2, v2 p3, float thickness = 1.0f, float chubbiness = 0) { cf_draw_quad2(p0, p1, p2, p3, thickness, chubbiness); }
 CF_INLINE void draw_box(v2 p, float w, float h, float thickness = 1.0f, float chubbiness = 0) { cf_draw_quad(make_aabb(p, w, h), thickness, chubbiness); }
-CF_INLINE void draw_box_rounded(Aabb bb, float thickness = 1.0f, float chubbiness = 0) { cf_draw_box_rounded(bb, thickness, chubbiness); }
-CF_INLINE void draw_box_rounded_fill(Aabb bb, float chubbiness = 0) { cf_draw_box_rounded_fill(bb, chubbiness); }
-CF_INLINE void draw_box_fill(Aabb bb, float chubbiness = 0) { cf_draw_quad_fill(bb, chubbiness); }
+CF_INLINE void draw_box_rounded(CF_Aabb bb, float thickness = 1.0f, float chubbiness = 0) { cf_draw_box_rounded(bb, thickness, chubbiness); }
+CF_INLINE void draw_box_rounded_fill(CF_Aabb bb, float chubbiness = 0) { cf_draw_box_rounded_fill(bb, chubbiness); }
+CF_INLINE void draw_box_fill(CF_Aabb bb, float chubbiness = 0) { cf_draw_quad_fill(bb, chubbiness); }
 CF_INLINE void draw_box_fill(v2 p0, v2 p1, v2 p2, v2 p3, float chubbiness = 0) { cf_draw_quad_fill2(p0, p1, p2, p3, chubbiness); }
 CF_INLINE void draw_box_fill(v2 p, float w, float h, float chubbiness = 0) { cf_draw_quad_fill(make_aabb(p, w, h), chubbiness); }
-CF_INLINE void draw_circle(Circle circle, float thickness = 1.0f) { cf_draw_circle(circle, thickness); }
+CF_INLINE void draw_circle(CF_Circle circle, float thickness = 1.0f) { cf_draw_circle(circle, thickness); }
 CF_INLINE void draw_circle(v2 p, float r, float thickness = 1.0f) { cf_draw_circle2(p, r, thickness); }
-CF_INLINE void draw_circle_fill(Circle circle) { cf_draw_circle_fill(circle); }
+CF_INLINE void draw_circle_fill(CF_Circle circle) { cf_draw_circle_fill(circle); }
 CF_INLINE void draw_circle_fill(v2 p, float r) { cf_draw_circle_fill2(p, r); }
-CF_INLINE void draw_capsule(Capsule capsule, float thickness = 1.0f) { cf_draw_capsule(capsule, thickness); }
+CF_INLINE void draw_capsule(CF_Capsule capsule, float thickness = 1.0f) { cf_draw_capsule(capsule, thickness); }
 CF_INLINE void draw_capsule(v2 p0, v2 p1, float r, float thickness = 1.0f) { cf_draw_capsule2(p0, p1, r, thickness); }
-CF_INLINE void draw_capsule_fill(Capsule capsule) { cf_draw_capsule_fill(capsule); }
+CF_INLINE void draw_capsule_fill(CF_Capsule capsule) { cf_draw_capsule_fill(capsule); }
 CF_INLINE void draw_capsule_fill(v2 p0, v2 p1, float r) { cf_draw_capsule_fill2(p0, p1, r); }
 CF_INLINE void draw_tri(v2 p0, v2 p1, v2 p2, float thickness = 1.0f, float chubbiness = 0) { cf_draw_tri(p0, p1, p2, thickness, chubbiness); }
 CF_INLINE void draw_tri_fill(v2 p0, v2 p1, v2 p2, float chubbiness = 0) { cf_draw_tri_fill(p0, p1, p2, chubbiness); }
 CF_INLINE void draw_line(v2 p0, v2 p1, float thickness = 1.0f) { cf_draw_line(p0, p1, thickness); }
 CF_INLINE void draw_polyline(v2* points, int count, float thickness = 1.0f, bool loop = false) { cf_draw_polyline(points, count, thickness, loop); }
-CF_INLINE void draw_polygon_fill(CF_V2* points, int count, float chubbiness) { cf_draw_polygon_fill(points, count, chubbiness); }
-CF_INLINE void draw_polygon_fill_simple(CF_V2* points, int count) { cf_draw_polygon_fill_simple(points, count); }
+CF_INLINE void draw_polygon_fill(v2* points, int count, float chubbiness) { cf_draw_polygon_fill(points, count, chubbiness); }
+CF_INLINE void draw_polygon_fill_simple(v2* points, int count) { cf_draw_polygon_fill_simple(points, count); }
 CF_INLINE void draw_bezier_line(v2 a, v2 c0, v2 b, int iters, float thickness) { cf_draw_bezier_line(a, c0, b, iters, thickness); }
 CF_INLINE void draw_bezier_line(v2 a, v2 c0, v2 c1, v2 b, int iters, float thickness) { cf_draw_bezier_line2(a, c0, c1, b, iters, thickness); }
 CF_INLINE void draw_arrow(v2 a, v2 b, float thickness, float arrow_width) { cf_draw_arrow(a, b, thickness, arrow_width); }
@@ -1637,9 +1662,9 @@ CF_INLINE void draw_arrow(v2 a, v2 b, float thickness, float arrow_width) { cf_d
 CF_INLINE void draw_push_layer(int layer) { cf_draw_push_layer(layer); }
 CF_INLINE int draw_pop_layer() { return cf_draw_pop_layer(); }
 CF_INLINE int draw_peek_layer() { return cf_draw_peek_layer(); }
-CF_INLINE void draw_push_color(Color c) { cf_draw_push_color(c); }
-CF_INLINE Color draw_pop_color() { return cf_draw_pop_color(); }
-CF_INLINE Color draw_peek_color() { return cf_draw_peek_color(); }
+CF_INLINE void draw_push_color(CF_Color c) { cf_draw_push_color(c); }
+CF_INLINE CF_Color draw_pop_color() { return cf_draw_pop_color(); }
+CF_INLINE CF_Color draw_peek_color() { return cf_draw_peek_color(); }
 CF_INLINE void draw_push_antialias(bool antialias) { cf_draw_push_antialias(antialias); }
 CF_INLINE bool draw_pop_antialias() { return cf_draw_pop_antialias(); }
 CF_INLINE bool draw_peek_antialias() { return cf_draw_peek_antialias(); }
@@ -1647,12 +1672,12 @@ CF_INLINE void draw_push_antialias_scale(float scale) { return cf_draw_push_anti
 CF_INLINE float draw_pop_antialias_scale() { return cf_draw_pop_antialias_scale(); }
 CF_INLINE float draw_peek_antialias_scale() { return cf_draw_peek_antialias_scale(); }
 CF_INLINE void draw_push_vertex_attributes(float r, float g, float b, float a) { cf_draw_push_vertex_attributes(r, g, b, a); }
-CF_INLINE void draw_push_vertex_attributes(Color attributes) { cf_draw_push_vertex_attributes2(attributes); }
-CF_INLINE Color draw_pop_vertex_attributes() { return cf_draw_pop_vertex_attributes(); }
-CF_INLINE Color draw_peek_vertex_attributes() { return cf_draw_peek_vertex_attributes(); }
+CF_INLINE void draw_push_vertex_attributes(CF_Color attributes) { cf_draw_push_vertex_attributes2(attributes); }
+CF_INLINE CF_Color draw_pop_vertex_attributes() { return cf_draw_pop_vertex_attributes(); }
+CF_INLINE CF_Color draw_peek_vertex_attributes() { return cf_draw_peek_vertex_attributes(); }
 
-CF_INLINE Result make_font(const char* path, const char* font_name) { return cf_make_font(path, font_name); }
-CF_INLINE Result make_font_from_memory(void* data, int size, const char* font_name) { return cf_make_font_from_memory(data, size, font_name); }
+CF_INLINE CF_Result make_font(const char* path, const char* font_name) { return cf_make_font(path, font_name); }
+CF_INLINE CF_Result make_font_from_memory(void* data, int size, const char* font_name) { return cf_make_font_from_memory(data, size, font_name); }
 CF_INLINE void destroy_font(const char* font_name) { cf_destroy_font(font_name); }
 CF_INLINE void push_font(const char* font_name) { cf_push_font(font_name); }
 CF_INLINE const char* pop_font() { return cf_pop_font(); }
@@ -1671,89 +1696,40 @@ CF_INLINE float text_height(const char* text, int num_chars_to_render = -1) { re
 CF_INLINE v2 text_size(const char* text, int num_chars_to_render = -1) { return cf_text_size(text, num_chars_to_render); }
 CF_INLINE void draw_text(const char* text, v2 position, int num_chars_to_render = -1) { cf_draw_text(text, position, num_chars_to_render); }
 
-struct TextEffect : public CF_TextEffect
-{
-	CF_INLINE bool on_start() const { return index_into_effect == 0; }
-	CF_INLINE bool on_finish() const { return index_into_effect == glyph_count - 1; }
+CF_INLINE void text_effect_register(const char* name, CF_TextEffectFn* fn) { cf_text_effect_register(name, fn); }
 
-	CF_INLINE double get_number(const char* key, double default_val = 0) const
-	{
-		const CF_TextCodeVal* v = params->try_find(sintern(key));
-		if (v && v->type == CF_TEXT_CODE_VAL_TYPE_NUMBER) {
-			return v->u.number;
-		} else {
-			return default_val;
-		}
-	}
-
-	CF_INLINE CF_Color get_color(const char* key, CF_Color default_val = cf_color_white()) const
-	{
-		const CF_TextCodeVal* v = params->try_find(sintern(key));
-		if (v && v->type == CF_TEXT_CODE_VAL_TYPE_COLOR) {
-			return v->u.color;
-		} else {
-			return default_val;
-		}
-	}
-
-	CF_INLINE const char* get_string(const char* key, const char* default_val = NULL) const
-	{
-		const CF_TextCodeVal* v = params->try_find(sintern(key));
-		if (v && v->type == CF_TEXT_CODE_VAL_TYPE_STRING) {
-			return v->u.string;
-		} else {
-			return default_val;
-		}
-	}
-
-	// "private" state -- don't touch.
-	int initial_index;
-	const Cute::Map<const char*, CF_TextCodeVal>* params;
-	CF_TextEffectFn* fn;
-	bool line_bound_init = false;
-	Aabb line_bound;
-	Array<Aabb> bounds;
-};
-
-typedef bool (TextEffectFn)(TextEffect* fx);
-
-CF_INLINE void text_effect_register(const char* name, TextEffectFn* fn) { cf_text_effect_register(name, (CF_TextEffectFn*)fn); }
-
-using MarkupInfo = CF_MarkupInfo;
-typedef bool (text_markup_info_fn)(const char* text, MarkupInfo info, const TextEffect* fx);
-
-CF_INLINE void text_get_markup_info(text_markup_info_fn* fn, const char* text, v2 position, int num_chars_to_draw = -1) { cf_text_get_markup_info((cf_text_markup_info_fn*)fn, text, position, num_chars_to_draw); }
+CF_INLINE void text_get_markup_info(cf_text_markup_info_fn* fn, const char* text, v2 position, int num_chars_to_draw = -1) { cf_text_get_markup_info(fn, text, position, num_chars_to_draw); }
 CF_INLINE void push_text_effect_active(bool effects_on) { cf_push_text_effect_active(effects_on); }
 CF_INLINE bool pop_text_effect_active() { return cf_pop_text_effect_active(); }
 CF_INLINE bool peek_text_effect_active() { return cf_peek_text_effect_active(); }
 
-CF_INLINE void draw_push_viewport(Rect viewport) { cf_draw_push_viewport(viewport); }
-CF_INLINE Rect draw_pop_viewport() { return cf_draw_pop_viewport(); }
-CF_INLINE Rect draw_peek_viewport() { return cf_draw_peek_viewport(); }
-CF_INLINE void draw_push_scissor(Rect scissor) { cf_draw_push_scissor(scissor); }
-CF_INLINE Rect draw_pop_scissor() { return cf_draw_pop_scissor(); }
-CF_INLINE Rect draw_peek_scissor() { return cf_draw_peek_scissor(); }
-CF_INLINE void draw_push_render_state(RenderState render_state) { cf_draw_push_render_state(render_state); }
-CF_INLINE RenderState draw_pop_render_state() { return cf_draw_pop_render_state(); }
-CF_INLINE RenderState draw_peek_render_state() { return cf_draw_peek_render_state(); }
+CF_INLINE void draw_push_viewport(CF_Rect viewport) { cf_draw_push_viewport(viewport); }
+CF_INLINE CF_Rect draw_pop_viewport() { return cf_draw_pop_viewport(); }
+CF_INLINE CF_Rect draw_peek_viewport() { return cf_draw_peek_viewport(); }
+CF_INLINE void draw_push_scissor(CF_Rect scissor) { cf_draw_push_scissor(scissor); }
+CF_INLINE CF_Rect draw_pop_scissor() { return cf_draw_pop_scissor(); }
+CF_INLINE CF_Rect draw_peek_scissor() { return cf_draw_peek_scissor(); }
+CF_INLINE void draw_push_render_state(CF_RenderState render_state) { cf_draw_push_render_state(render_state); }
+CF_INLINE CF_RenderState draw_pop_render_state() { return cf_draw_pop_render_state(); }
+CF_INLINE CF_RenderState draw_peek_render_state() { return cf_draw_peek_render_state(); }
 CF_INLINE void draw_set_atlas_dimensions(int width_in_pixels, int height_in_pixels) { cf_draw_set_atlas_dimensions(width_in_pixels, height_in_pixels); }
-CF_INLINE Shader make_draw_shader(const char* path) { return cf_make_draw_shader(path); }
-CF_INLINE Shader make_draw_shader_from_source(const char* src) { return cf_make_draw_shader_from_source(src); }
-CF_INLINE void draw_push_shader(Shader shader) { cf_draw_push_shader(shader); }
-CF_INLINE Shader draw_pop_shader() { return cf_draw_pop_shader(); }
-CF_INLINE Shader draw_peek_shader() { return cf_draw_peek_shader(); }
+CF_INLINE CF_Shader make_draw_shader(const char* path) { return cf_make_draw_shader(path); }
+CF_INLINE CF_Shader make_draw_shader_from_source(const char* src) { return cf_make_draw_shader_from_source(src); }
+CF_INLINE void draw_push_shader(CF_Shader shader) { cf_draw_push_shader(shader); }
+CF_INLINE CF_Shader draw_pop_shader() { return cf_draw_pop_shader(); }
+CF_INLINE CF_Shader draw_peek_shader() { return cf_draw_peek_shader(); }
 CF_INLINE void draw_push_alpha_discard(bool true_to_enable_alpha_discard) { return cf_draw_push_alpha_discard(true_to_enable_alpha_discard); }
 CF_INLINE bool draw_pop_alpha_discard() { return cf_draw_pop_alpha_discard(); }
 CF_INLINE bool draw_peek_alpha_discard() { return cf_draw_peek_alpha_discard(); }
-CF_INLINE void draw_set_texture(const char* name, Texture texture) { cf_draw_set_texture(name, texture); }
-CF_INLINE void draw_set_uniform(const char* name, void* data, UniformType type, int array_length) { cf_draw_set_uniform(name, data, type, array_length); }
+CF_INLINE void draw_set_texture(const char* name, CF_Texture texture) { cf_draw_set_texture(name, texture); }
+CF_INLINE void draw_set_uniform(const char* name, void* data, CF_UniformType type, int array_length) { cf_draw_set_uniform(name, data, type, array_length); }
 CF_INLINE void draw_set_uniform(const char* name, int val) { cf_draw_set_uniform_int(name, val); }
 CF_INLINE void draw_set_uniform(const char* name, float val) { cf_draw_set_uniform_float(name, val); }
 CF_INLINE void draw_set_uniform(const char* name, v2 val) { cf_draw_set_uniform_v2(name, val); }
-CF_INLINE void draw_set_uniform(const char* name, Color val) { cf_draw_set_uniform_color(name, val); }
+CF_INLINE void draw_set_uniform(const char* name, CF_Color val) { cf_draw_set_uniform_color(name, val); }
 
 CF_INLINE v2 draw_mul(v2 v) { return cf_draw_mul(v); }
-CF_INLINE void draw_transform(M3x2 m) { cf_draw_transform(m); }
+CF_INLINE void draw_transform(CF_M3x2 m) { cf_draw_transform(m); }
 CF_INLINE void draw_scale(float w, float h) { cf_draw_scale(w, h); }
 CF_INLINE void draw_scale(v2 scale) { cf_draw_scale_v2(scale); }
 CF_INLINE void draw_translate(float x, float y) { cf_draw_translate(x, y); }
@@ -1763,22 +1739,22 @@ CF_INLINE void draw_TSR(v2 pos, v2 scale, float radians) { cf_draw_TSR(pos, scal
 CF_INLINE void draw_TSR_absolute(v2 pos, v2 scale, float radians) { cf_draw_TSR_absolute(pos, scale, radians); }
 CF_INLINE void draw_push() { cf_draw_push(); }
 CF_INLINE void draw_pop() { cf_draw_pop(); }
-CF_INLINE M3x2 draw_peek() { return cf_draw_peek(); }
-CF_INLINE void draw_projection(M3x2 projection) { cf_draw_projection(projection); }
+CF_INLINE CF_M3x2 draw_peek() { return cf_draw_peek(); }
+CF_INLINE void draw_projection(CF_M3x2 projection) { cf_draw_projection(projection); }
 CF_INLINE v2 world_to_screen(v2 point) { return cf_world_to_screen(point); }
 CF_INLINE v2 screen_to_world(v2 point) { return cf_screen_to_world(point); }
 CF_INLINE CF_Aabb screen_bounds_to_world() { return cf_screen_bounds_to_world(); }
 CF_INLINE void draw_canvas(CF_Canvas canvas, CF_V2 position, CF_V2 scale) { cf_draw_canvas(canvas, position, scale); }
 CF_INLINE void draw_canvas(CF_Canvas canvas, float x, float y, float sx, float sy) { cf_draw_canvas(canvas, V2(x,y), V2(sx,sy)); }
 
-CF_INLINE void render_to(Canvas canvas, bool clear = false) { cf_render_to(canvas, clear); }
+CF_INLINE void render_to(CF_Canvas canvas, bool clear = false) { cf_render_to(canvas, clear); }
+CF_INLINE void render_layers_to(CF_Canvas canvas, int layer_lo, int layer_hi, bool clear = false) { cf_render_layers_to(canvas, layer_lo, layer_hi, clear); }
 
-CF_INLINE TemporaryImage fetch_image(const Sprite* sprite) { return cf_fetch_image(sprite); }
-CF_INLINE TemporaryImage fetch_image(const Sprite& sprite) { return cf_fetch_image(&sprite); }
+CF_INLINE CF_TemporaryImage fetch_image(const CF_Sprite* sprite) { return cf_fetch_image(sprite); }
+CF_INLINE CF_TemporaryImage fetch_image(const CF_Sprite& sprite) { return cf_fetch_image(&sprite); }
 
-using AtlasSubImage = CF_AtlasSubImage;
-CF_INLINE void register_premade_atlas(const char* png_path, int sub_image_count, AtlasSubImage* sub_images) { cf_register_premade_atlas(png_path, sub_image_count, sub_images); }
-CF_INLINE Sprite make_premade_sprite(uint64_t image_id) { return cf_make_premade_sprite(image_id); }
+CF_INLINE void register_premade_atlas(const char* png_path, int sub_image_count, CF_AtlasSubImage* sub_images) { cf_register_premade_atlas(png_path, sub_image_count, sub_images); }
+CF_INLINE CF_Sprite make_premade_sprite(uint64_t image_id) { return cf_make_premade_sprite(image_id); }
 
 }
 

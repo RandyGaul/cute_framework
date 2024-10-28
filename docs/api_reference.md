@@ -17,15 +17,16 @@ This is a list of all functions in Cute Framework organized by categories. This 
 - [cf_allocator_override](/allocator/cf_allocator_override.md)
 - [cf_allocator_restore_default](/allocator/cf_allocator_restore_default.md)
 - [cf_arena_alloc](/allocator/cf_arena_alloc.md)
+- [cf_arena_free](/allocator/cf_arena_free.md)
 - [cf_arena_init](/allocator/cf_arena_init.md)
 - [cf_arena_reset](/allocator/cf_arena_reset.md)
 - [cf_calloc](/allocator/cf_calloc.md)
+- [cf_destroy_arena](/allocator/cf_destroy_arena.md)
 - [cf_destroy_memory_pool](/allocator/cf_destroy_memory_pool.md)
 - [cf_free](/allocator/cf_free.md)
 - [cf_make_memory_pool](/allocator/cf_make_memory_pool.md)
 - [cf_memory_pool_alloc](/allocator/cf_memory_pool_alloc.md)
 - [cf_memory_pool_free](/allocator/cf_memory_pool_free.md)
-- [cf_memory_pool_try_alloc](/allocator/cf_memory_pool_try_alloc.md)
 - [cf_realloc](/allocator/cf_realloc.md)
 
 
@@ -116,6 +117,7 @@ This is a list of all functions in Cute Framework organized by categories. This 
 - [acap](/array/acap.md)
 - [aclear](/array/aclear.md)
 - [acount](/array/acount.md)
+- [adel](/array/adel.md)
 - [aend](/array/aend.md)
 - [afit](/array/afit.md)
 - [afree](/array/afree.md)
@@ -349,6 +351,7 @@ This is a list of all functions in Cute Framework organized by categories. This 
 - [cf_draw_pop_shader](/draw/cf_draw_pop_shader.md)
 - [cf_draw_pop_vertex_attributes](/draw/cf_draw_pop_vertex_attributes.md)
 - [cf_draw_pop_viewport](/draw/cf_draw_pop_viewport.md)
+- [cf_draw_prefetch](/draw/cf_draw_prefetch.md)
 - [cf_draw_projection](/draw/cf_draw_projection.md)
 - [cf_draw_push](/draw/cf_draw_push.md)
 - [cf_draw_push_alpha_discard](/draw/cf_draw_push_alpha_discard.md)
@@ -389,6 +392,7 @@ This is a list of all functions in Cute Framework organized by categories. This 
 - [cf_make_draw_shader_from_source](/draw/cf_make_draw_shader_from_source.md)
 - [cf_make_premade_sprite](/draw/cf_make_premade_sprite.md)
 - [cf_register_premade_atlas](/draw/cf_register_premade_atlas.md)
+- [cf_render_layers_to](/draw/cf_render_layers_to.md)
 - [cf_render_to](/draw/cf_render_to.md)
 - [cf_screen_bounds_to_world](/draw/cf_screen_bounds_to_world.md)
 - [cf_screen_to_world](/draw/cf_screen_to_world.md)
@@ -513,6 +517,8 @@ This is a list of all functions in Cute Framework organized by categories. This 
 ## image
 
 ### functions
+- [cf_debug_dump_greyscale_pixels](/image/cf_debug_dump_greyscale_pixels.md)
+- [cf_debug_dump_pixels](/image/cf_debug_dump_pixels.md)
 - [cf_image_depallete](/image/cf_image_depallete.md)
 - [cf_image_flip_horizontal](/image/cf_image_flip_horizontal.md)
 - [cf_image_free](/image/cf_image_free.md)
@@ -1275,7 +1281,6 @@ This is a list of all functions in Cute Framework organized by categories. This 
 ## random
 
 ### functions
-- [cf_rnd](/random/cf_rnd.md)
 - [cf_rnd_double](/random/cf_rnd_double.md)
 - [cf_rnd_float](/random/cf_rnd_float.md)
 - [cf_rnd_range_double](/random/cf_rnd_range_double.md)
@@ -1283,10 +1288,11 @@ This is a list of all functions in Cute Framework organized by categories. This 
 - [cf_rnd_range_int](/random/cf_rnd_range_int.md)
 - [cf_rnd_range_uint64](/random/cf_rnd_range_uint64.md)
 - [cf_rnd_seed](/random/cf_rnd_seed.md)
+- [cf_rnd_uint](/random/cf_rnd_uint.md)
 
 
 ### structs
-- [CF_RndState](/random/cf_rndstate.md)
+- [CF_Rnd](/random/cf_rnd.md)
 
 
 ## sprite
@@ -1304,6 +1310,7 @@ This is a list of all functions in Cute Framework organized by categories. This 
 - [cf_sprite_animation_delay](/sprite/cf_sprite_animation_delay.md)
 - [cf_sprite_animation_interpolant](/sprite/cf_sprite_animation_interpolant.md)
 - [cf_sprite_current_frame](/sprite/cf_sprite_current_frame.md)
+- [cf_sprite_current_global_frame](/sprite/cf_sprite_current_global_frame.md)
 - [cf_sprite_defaults](/sprite/cf_sprite_defaults.md)
 - [cf_sprite_flip_x](/sprite/cf_sprite_flip_x.md)
 - [cf_sprite_flip_y](/sprite/cf_sprite_flip_y.md)
@@ -1318,6 +1325,7 @@ This is a list of all functions in Cute Framework organized by categories. This 
 - [cf_sprite_get_play_speed_multiplier](/sprite/cf_sprite_get_play_speed_multiplier.md)
 - [cf_sprite_get_scale_x](/sprite/cf_sprite_get_scale_x.md)
 - [cf_sprite_get_scale_y](/sprite/cf_sprite_get_scale_y.md)
+- [cf_sprite_get_slice](/sprite/cf_sprite_get_slice.md)
 - [cf_sprite_height](/sprite/cf_sprite_height.md)
 - [cf_sprite_is_playing](/sprite/cf_sprite_is_playing.md)
 - [cf_sprite_on_loop](/sprite/cf_sprite_on_loop.md)
@@ -1346,6 +1354,7 @@ This is a list of all functions in Cute Framework organized by categories. This 
 - [CF_Animation](/sprite/cf_animation.md)
 - [CF_Frame](/sprite/cf_frame.md)
 - [CF_Sprite](/sprite/cf_sprite.md)
+- [CF_SpriteSlice](/sprite/cf_spriteslice.md)
 
 
 ### enums
@@ -1371,6 +1380,7 @@ This is a list of all functions in Cute Framework organized by categories. This 
 - [sdedup](/string/sdedup.md)
 - [sdouble](/string/sdouble.md)
 - [sdup](/string/sdup.md)
+- [sdyna](/string/sdyna.md)
 - [sempty](/string/sempty.md)
 - [sequ](/string/sequ.md)
 - [serase](/string/serase.md)

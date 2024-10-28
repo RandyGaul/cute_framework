@@ -492,28 +492,15 @@ CF_API void CF_CALL cf_sound_stop(CF_Sound sound);
 namespace Cute
 {
 
-using Audio = CF_Audio;
-
-struct SoundParams : public CF_SoundParams
-{
-	SoundParams() { *(CF_SoundParams*)this = cf_sound_params_defaults(); }
-	SoundParams(CF_SoundParams sp) { *(CF_SoundParams*)this = sp; }
-};
-
-struct Sound : public CF_Sound
-{
-	Sound() { id = -1; }
-	Sound(CF_Sound s) { *(CF_Sound*)this = s; }
-};
-CF_INLINE Audio audio_load_ogg(const char* path) { return cf_audio_load_ogg(path); }
-CF_INLINE Audio audio_load_wav(const char* path) { return cf_audio_load_wav(path); }
-CF_INLINE Audio audio_load_ogg_from_memory(void* memory, int byte_count) { return cf_audio_load_ogg_from_memory(memory, byte_count); }
-CF_INLINE Audio audio_load_wav_from_memory(void* memory, int byte_count) { return cf_audio_load_wav_from_memory(memory, byte_count); }
-CF_INLINE void audio_destroy(Audio audio) { cf_audio_destroy(audio); }
+CF_INLINE CF_Audio audio_load_ogg(const char* path) { return cf_audio_load_ogg(path); }
+CF_INLINE CF_Audio audio_load_wav(const char* path) { return cf_audio_load_wav(path); }
+CF_INLINE CF_Audio audio_load_ogg_from_memory(void* memory, int byte_count) { return cf_audio_load_ogg_from_memory(memory, byte_count); }
+CF_INLINE CF_Audio audio_load_wav_from_memory(void* memory, int byte_count) { return cf_audio_load_wav_from_memory(memory, byte_count); }
+CF_INLINE void audio_destroy(CF_Audio audio) { cf_audio_destroy(audio); }
 CF_INLINE void audio_cull_duplicates(bool true_to_cull_duplicates = false) { cf_audio_cull_duplicates(true_to_cull_duplicates); }
-CF_INLINE int audio_sample_rate(Audio audio) { return cf_audio_sample_rate(audio); }
-CF_INLINE int audio_sample_count(Audio audio) { return cf_audio_sample_count(audio); }
-CF_INLINE int audio_channel_count(Audio audio) { return cf_audio_channel_count(audio); }
+CF_INLINE int audio_sample_rate(CF_Audio audio) { return cf_audio_sample_rate(audio); }
+CF_INLINE int audio_sample_count(CF_Audio audio) { return cf_audio_sample_count(audio); }
+CF_INLINE int audio_channel_count(CF_Audio audio) { return cf_audio_channel_count(audio); }
 
 // -------------------------------------------------------------------------------------------------
 
@@ -524,37 +511,37 @@ CF_INLINE void audio_set_pause(bool true_for_paused) { cf_audio_set_pause(true_f
 
 // -------------------------------------------------------------------------------------------------
 
-CF_INLINE void music_play(Audio audio_source, float fade_in_time = 0) { cf_music_play(audio_source, fade_in_time); }
+CF_INLINE void music_play(CF_Audio audio_source, float fade_in_time = 0) { cf_music_play(audio_source, fade_in_time); }
 CF_INLINE void music_stop(float fade_out_time = 0) { cf_music_stop(fade_out_time); }
-CF_INLINE void play_music(Audio audio_source, float fade_in_time = 0) { cf_music_play(audio_source, fade_in_time); }
+CF_INLINE void play_music(CF_Audio audio_source, float fade_in_time = 0) { cf_music_play(audio_source, fade_in_time); }
 CF_INLINE void stop_music(float fade_out_time = 0) { cf_music_stop(fade_out_time); }
 CF_INLINE void music_set_volume(float volume) { cf_music_set_volume(volume); }
 CF_INLINE void music_set_loop(bool true_to_loop) { cf_music_set_loop(true_to_loop); }
 CF_INLINE void music_set_pitch(float pitch = 1.0f) { cf_music_set_pitch(pitch); }
 CF_INLINE void music_pause() { cf_music_pause(); }
 CF_INLINE void music_resume() { cf_music_resume(); }
-CF_INLINE void music_switch_to(Audio audio_source, float fade_out_time = 0, float fade_in_time = 0) { cf_music_switch_to(audio_source, fade_out_time, fade_in_time); }
-CF_INLINE void music_crossfade(Audio audio_source, float cross_fade_time = 0) { cf_music_crossfade(audio_source, cross_fade_time); }
+CF_INLINE void music_switch_to(CF_Audio audio_source, float fade_out_time = 0, float fade_in_time = 0) { cf_music_switch_to(audio_source, fade_out_time, fade_in_time); }
+CF_INLINE void music_crossfade(CF_Audio audio_source, float cross_fade_time = 0) { cf_music_crossfade(audio_source, cross_fade_time); }
 CF_INLINE void music_set_sample_index(int sample_index) { cf_music_set_sample_index(sample_index); }
 CF_INLINE int music_get_sample_index() { return cf_music_get_sample_index(); }
 
 // -------------------------------------------------------------------------------------------------
 
-CF_INLINE Sound sound_play(Audio audio_source, SoundParams params = SoundParams()) { return cf_play_sound(audio_source, params); }
-CF_INLINE Sound play_sound(Audio audio_source, SoundParams params = SoundParams()) { return cf_play_sound(audio_source, params); }
+CF_INLINE CF_Sound sound_play(CF_Audio audio_source, CF_SoundParams params = cf_sound_params_defaults()) { return cf_play_sound(audio_source, params); }
+CF_INLINE CF_Sound play_sound(CF_Audio audio_source, CF_SoundParams params = cf_sound_params_defaults()) { return cf_play_sound(audio_source, params); }
 
-CF_INLINE bool sound_is_active(Sound sound) { return cf_sound_is_active(sound); }
-CF_INLINE bool sound_get_is_paused(Sound sound) { return cf_sound_get_is_paused(sound); }
-CF_INLINE bool sound_get_is_looped(Sound sound) { return cf_sound_get_is_looped(sound); }
-CF_INLINE float sound_get_volume(Sound sound) { return cf_sound_get_volume(sound); }
-CF_INLINE float sound_get_pitch(Sound sound) { return cf_sound_get_pitch(sound); }
-CF_INLINE int sound_get_sample_index(Sound sound) { return cf_sound_get_sample_index(sound); }
-CF_INLINE void sound_set_is_paused(Sound sound, bool true_for_paused) { cf_sound_set_is_paused(sound, true_for_paused); }
-CF_INLINE void sound_set_is_looped(Sound sound, bool true_for_looped) { cf_sound_set_is_looped(sound, true_for_looped); }
-CF_INLINE void sound_set_volume(Sound sound, float volume) { cf_sound_set_volume(sound, volume); }
-CF_INLINE void sound_set_pitch(Sound sound, float pitch = 1.0f) { cf_sound_set_pitch(sound, pitch); }
-CF_INLINE void sound_set_sample_index(Sound sound, int sample_index) { cf_sound_set_sample_index(sound, sample_index); }
-CF_INLINE void sound_stop(Sound sound) { cf_sound_stop(sound); }
+CF_INLINE bool sound_is_active(CF_Sound sound) { return cf_sound_is_active(sound); }
+CF_INLINE bool sound_get_is_paused(CF_Sound sound) { return cf_sound_get_is_paused(sound); }
+CF_INLINE bool sound_get_is_looped(CF_Sound sound) { return cf_sound_get_is_looped(sound); }
+CF_INLINE float sound_get_volume(CF_Sound sound) { return cf_sound_get_volume(sound); }
+CF_INLINE float sound_get_pitch(CF_Sound sound) { return cf_sound_get_pitch(sound); }
+CF_INLINE int sound_get_sample_index(CF_Sound sound) { return cf_sound_get_sample_index(sound); }
+CF_INLINE void sound_set_is_paused(CF_Sound sound, bool true_for_paused) { cf_sound_set_is_paused(sound, true_for_paused); }
+CF_INLINE void sound_set_is_looped(CF_Sound sound, bool true_for_looped) { cf_sound_set_is_looped(sound, true_for_looped); }
+CF_INLINE void sound_set_volume(CF_Sound sound, float volume) { cf_sound_set_volume(sound, volume); }
+CF_INLINE void sound_set_pitch(CF_Sound sound, float pitch = 1.0f) { cf_sound_set_pitch(sound, pitch); }
+CF_INLINE void sound_set_sample_index(CF_Sound sound, int sample_index) { cf_sound_set_sample_index(sound, sample_index); }
+CF_INLINE void sound_stop(CF_Sound sound) { cf_sound_stop(sound); }
 
 }
 

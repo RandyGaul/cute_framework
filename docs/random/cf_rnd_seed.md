@@ -12,7 +12,7 @@ GitHub: [cute_rnd.h](https://github.com/RandyGaul/cute_framework/blob/master/inc
 Returns an initialized [CF_Rnd](/random/cf_rnd.md) based on an initial `seed` value.
 
 ```cpp
-CF_RndState cf_rnd_seed(uint64_t seed);
+CF_Rnd cf_rnd_seed(uint64_t seed);
 ```
 
 Parameters | Description
@@ -26,5 +26,5 @@ deterministic way, so it's often important for many games to control or note whi
 
 ## Related Pages
 
-[CF_RndState](/random/cf_rndstate.md)  
+[CF_Rnd](/random/cf_rnd.md)  
 [cf_rnd](/random/cf_rnd.md)  

@@ -26,5 +26,6 @@ Does not change the size/count of the string, or the len. This function is just 
 
 ## Related Pages
 
+[sdyna](/string/sdyna.md)  
 [sclear](/string/sclear.md)  
 [scap](/string/scap.md)  

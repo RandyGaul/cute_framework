@@ -25,6 +25,7 @@ Does not free up any resources.
 
 ## Related Pages
 
+[sdyna](/string/sdyna.md)  
 [spush](/string/spush.md)  
 [spop](/string/spop.md)  
 [sfirst](/string/sfirst.md)  

@@ -25,6 +25,7 @@ Returns '\0' if `s` is `NULL`.
 
 ## Related Pages
 
+[sdyna](/string/sdyna.md)  
 [spush](/string/spush.md)  
 [spop](/string/spop.md)  
 [sfirst](/string/sfirst.md)  

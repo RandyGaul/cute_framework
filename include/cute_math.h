@@ -2608,38 +2608,6 @@ namespace Cute
 
 using v2 = CF_V2;
 
-using SinCos = CF_SinCos;
-using M2x2 = CF_M2x2;
-using M3x2 = CF_M3x2;
-using Transform = CF_Transform;
-using Halfspace = CF_Halfspace;
-using Ray = CF_Ray;
-using Raycast = CF_Raycast;
-using Circle = CF_Circle;
-using Aabb = CF_Aabb;
-using Rect = CF_Rect;
-using Poly = CF_Poly;
-using SliceOutput = CF_SliceOutput;
-using Capsule = CF_Capsule;
-using Manifold = CF_Manifold;
-using GjkCache = CF_GjkCache;
-using ToiResult = CF_ToiResult;
-
-using ShapeType = CF_ShapeType;
-#define CF_ENUM(K, V) CF_INLINE constexpr ShapeType K = CF_##K;
-CF_SHAPE_TYPE_DEFS
-#undef CF_ENUM
-
-CF_INLINE const char* to_string(ShapeType type)
-{
-	switch (type) {
-	#define CF_ENUM(K, V) case CF_##K: return #K;
-	CF_SHAPE_TYPE_DEFS
-	#undef CF_ENUM
-	default: return NULL;
-	}
-}
-
 CF_INLINE float min(float a, float b) { return cf_min(a, b); }
 CF_INLINE float max(float a, float b) { return cf_max(a, b); }
 CF_INLINE float clamp(float a, float lo, float hi) { return cf_clamp(a, lo, hi); }
@@ -2725,165 +2693,165 @@ CF_INLINE v2 round(v2 a) { return cf_round(a); }
 CF_INLINE v2 safe_invert(v2 a) { return cf_safe_invert_v2(a); }
 CF_INLINE v2 sign(v2 a) { return cf_sign_v2(a); }
 
-CF_INLINE SinCos sincos(float radians) { return cf_sincos_f(radians); }
-CF_INLINE SinCos sincos() { return cf_sincos(); }
-CF_INLINE v2 x_axis(SinCos r) { return cf_x_axis(r); }
-CF_INLINE v2 y_axis(SinCos r) { return cf_y_axis(r); }
-CF_INLINE v2 mul(SinCos a, v2 b) { return cf_mul_sc_v2(a, b); }
-CF_INLINE v2 mulT(SinCos a, v2 b) { return cf_mulT_sc_v2(a, b); }
-CF_INLINE SinCos mul(SinCos a, SinCos b) { return cf_mul_sc(a, b); }
-CF_INLINE SinCos mulT(SinCos a, SinCos b) { return cf_mulT_sc(a, b); }
+CF_INLINE CF_SinCos sincos(float radians) { return cf_sincos_f(radians); }
+CF_INLINE CF_SinCos sincos() { return cf_sincos(); }
+CF_INLINE v2 x_axis(CF_SinCos r) { return cf_x_axis(r); }
+CF_INLINE v2 y_axis(CF_SinCos r) { return cf_y_axis(r); }
+CF_INLINE v2 mul(CF_SinCos a, v2 b) { return cf_mul_sc_v2(a, b); }
+CF_INLINE v2 mulT(CF_SinCos a, v2 b) { return cf_mulT_sc_v2(a, b); }
+CF_INLINE CF_SinCos mul(CF_SinCos a, CF_SinCos b) { return cf_mul_sc(a, b); }
+CF_INLINE CF_SinCos mulT(CF_SinCos a, CF_SinCos b) { return cf_mulT_sc(a, b); }
 
 CF_INLINE float atan2_360(float y, float x) { return cf_atan2_360(y, x); }
 CF_INLINE float atan2_360(v2 v) { return cf_atan2_360_v2(v); }
-CF_INLINE float atan2_360(SinCos r) { return cf_atan2_360_sc(r); }
+CF_INLINE float atan2_360(CF_SinCos r) { return cf_atan2_360_sc(r); }
 
 CF_INLINE float shortest_arc(v2 a, v2 b) { return cf_shortest_arc(a, b); }
 
 CF_INLINE float angle_diff(float radians_a, float radians_b) { return cf_angle_diff(radians_a, radians_b); }
 CF_INLINE v2 from_angle(float radians) { return cf_from_angle(radians); }
 
-CF_INLINE v2 mul(M2x2 a, v2 b) { return cf_mul_m2_v2(a, b); }
-CF_INLINE M2x2 mul(M2x2 a, M2x2 b) { return cf_mul_m2(a, b); }
+CF_INLINE v2 mul(CF_M2x2 a, v2 b) { return cf_mul_m2_v2(a, b); }
+CF_INLINE CF_M2x2 mul(CF_M2x2 a, CF_M2x2 b) { return cf_mul_m2(a, b); }
 
-CF_INLINE v2 mul(M3x2 a, v2 b) { return cf_mul_m32_v2(a, b); }
-CF_INLINE M3x2 mul(M3x2 a, M3x2 b) { return cf_mul_m32(a, b); }
-CF_INLINE M3x2 make_identity() { return cf_make_identity(); }
-CF_INLINE M3x2 make_translation(float x, float y) { return cf_make_translation_f(x, y); }
-CF_INLINE M3x2 make_translation(v2 p) { return cf_make_translation(p); }
-CF_INLINE M3x2 make_scale(v2 s) { return cf_make_scale(s); }
-CF_INLINE M3x2 make_scale(float s) { return cf_make_scale_f(s); }
-CF_INLINE M3x2 make_scale(float sx, float sy) { return cf_make_scale(cf_v2(sx, sy)); }
-CF_INLINE M3x2 make_scale(v2 s, v2 p) { return cf_make_scale_translation(s, p); }
-CF_INLINE M3x2 make_scale(float s, v2 p) { return cf_make_scale_translation_f(s, p); }
-CF_INLINE M3x2 make_scale_translation(float sx, float sy, v2 p) { return cf_make_scale_translation_f_f(sx, sy, p); }
-CF_INLINE M3x2 make_rotation(float radians) { return cf_make_rotation(radians); }
-CF_INLINE M3x2 make_transform(v2 p, v2 s, float radians) { return cf_make_transform_TSR(p, s, radians); }
-CF_INLINE M3x2 invert(M3x2 m) { return cf_invert(m); }
-CF_INLINE M3x2 ortho_2d(float x, float y, float scale_x, float scale_y) { return cf_ortho_2d(x, y, scale_x, scale_y); }
+CF_INLINE v2 mul(CF_M3x2 a, v2 b) { return cf_mul_m32_v2(a, b); }
+CF_INLINE CF_M3x2 mul(CF_M3x2 a, CF_M3x2 b) { return cf_mul_m32(a, b); }
+CF_INLINE CF_M3x2 make_identity() { return cf_make_identity(); }
+CF_INLINE CF_M3x2 make_translation(float x, float y) { return cf_make_translation_f(x, y); }
+CF_INLINE CF_M3x2 make_translation(v2 p) { return cf_make_translation(p); }
+CF_INLINE CF_M3x2 make_scale(v2 s) { return cf_make_scale(s); }
+CF_INLINE CF_M3x2 make_scale(float s) { return cf_make_scale_f(s); }
+CF_INLINE CF_M3x2 make_scale(float sx, float sy) { return cf_make_scale(cf_v2(sx, sy)); }
+CF_INLINE CF_M3x2 make_scale(v2 s, v2 p) { return cf_make_scale_translation(s, p); }
+CF_INLINE CF_M3x2 make_scale(float s, v2 p) { return cf_make_scale_translation_f(s, p); }
+CF_INLINE CF_M3x2 make_scale_translation(float sx, float sy, v2 p) { return cf_make_scale_translation_f_f(sx, sy, p); }
+CF_INLINE CF_M3x2 make_rotation(float radians) { return cf_make_rotation(radians); }
+CF_INLINE CF_M3x2 make_transform(v2 p, v2 s, float radians) { return cf_make_transform_TSR(p, s, radians); }
+CF_INLINE CF_M3x2 invert(CF_M3x2 m) { return cf_invert(m); }
+CF_INLINE CF_M3x2 ortho_2d(float x, float y, float scale_x, float scale_y) { return cf_ortho_2d(x, y, scale_x, scale_y); }
 
-CF_INLINE Transform make_transform() { return cf_make_transform(); }
-CF_INLINE Transform make_transform(v2 p, float radians) { return cf_make_transform_TR(p, radians); }
-CF_INLINE v2 mul(Transform a, v2 b) { return cf_mul_tf_v2(a, b); }
-CF_INLINE v2 mulT(Transform a, v2 b) { return cf_mulT_tf_v2(a, b); }
-CF_INLINE Transform mul(Transform a, Transform b) { return cf_mul_tf(a, b); }
-CF_INLINE Transform mulT(Transform a, Transform b) { return cf_mulT_tf(a, b); }
+CF_INLINE CF_Transform make_transform() { return cf_make_transform(); }
+CF_INLINE CF_Transform make_transform(v2 p, float radians) { return cf_make_transform_TR(p, radians); }
+CF_INLINE v2 mul(CF_Transform a, v2 b) { return cf_mul_tf_v2(a, b); }
+CF_INLINE v2 mulT(CF_Transform a, v2 b) { return cf_mulT_tf_v2(a, b); }
+CF_INLINE CF_Transform mul(CF_Transform a, CF_Transform b) { return cf_mul_tf(a, b); }
+CF_INLINE CF_Transform mulT(CF_Transform a, CF_Transform b) { return cf_mulT_tf(a, b); }
 
-CF_INLINE Halfspace plane(v2 n, float d) { return cf_plane(n, d); }
-CF_INLINE Halfspace plane(v2 n, v2 p) { return cf_plane2(n, p); }
-CF_INLINE v2 origin(Halfspace h) { return cf_origin(h); }
-CF_INLINE float distance(Halfspace h, v2 p) { return cf_distance_hs(h, p); }
-CF_INLINE v2 project(Halfspace h, v2 p) { return cf_project(h, p); }
-CF_INLINE Halfspace mul(Transform a, Halfspace b) { return cf_mul_tf_hs(a, b); }
-CF_INLINE Halfspace mulT(Transform a, Halfspace b) { return cf_mulT_tf_hs(a, b); }
+CF_INLINE CF_Halfspace plane(v2 n, float d) { return cf_plane(n, d); }
+CF_INLINE CF_Halfspace plane(v2 n, v2 p) { return cf_plane2(n, p); }
+CF_INLINE v2 origin(CF_Halfspace h) { return cf_origin(h); }
+CF_INLINE float distance(CF_Halfspace h, v2 p) { return cf_distance_hs(h, p); }
+CF_INLINE v2 project(CF_Halfspace h, v2 p) { return cf_project(h, p); }
+CF_INLINE CF_Halfspace mul(CF_Transform a, CF_Halfspace b) { return cf_mul_tf_hs(a, b); }
+CF_INLINE CF_Halfspace mulT(CF_Transform a, CF_Halfspace b) { return cf_mulT_tf_hs(a, b); }
 CF_INLINE v2 intersect(v2 a, v2 b, float da, float db) { return cf_intersect_halfspace(a, b, da, db); }
-CF_INLINE v2 intersect(Halfspace h, v2 a, v2 b) { return cf_intersect_halfspace2(h, a, b); }
-CF_INLINE v2 intersect(Halfspace a, Halfspace b) { return cf_intersect_halfspace3(a, b); }
-CF_INLINE Halfspace shift(Halfspace h, float d) { return cf_shift(h, d); }
+CF_INLINE v2 intersect(CF_Halfspace h, v2 a, v2 b) { return cf_intersect_halfspace2(h, a, b); }
+CF_INLINE v2 intersect(CF_Halfspace a, CF_Halfspace b) { return cf_intersect_halfspace3(a, b); }
+CF_INLINE CF_Halfspace shift(CF_Halfspace h, float d) { return cf_shift(h, d); }
 CF_INLINE bool parallel(v2 a, v2 b, float tol) { return cf_parallel(a, b, tol); }
 CF_INLINE bool parallel(v2 a, v2 b, v2 c, float tol) { return cf_parallel2(a, b, c, tol); }
 
-CF_INLINE Circle make_circle(v2 pos, float radius) { return cf_make_circle(pos, radius); }
-CF_INLINE Capsule make_capsule(v2 a, v2 b, float radius) { return cf_make_capsule(a, b, radius); }
-CF_INLINE Capsule make_capsule(v2 p, float height, float radius) { return cf_make_capsule2(p, height, radius); }
-CF_INLINE Aabb make_aabb(v2 min, v2 max) { return cf_make_aabb(min, max); }
-CF_INLINE Aabb make_aabb(v2 pos, float w, float h) { return cf_make_aabb_pos_w_h(pos, w, h); }
-CF_INLINE Aabb make_aabb_center_half_extents(v2 center, v2 half_extents) { return cf_make_aabb_center_half_extents(center, half_extents); }
-CF_INLINE Aabb make_aabb_from_top_left(v2 top_left, float w, float h) { return cf_make_aabb_from_top_left(top_left, w, h); }
-CF_INLINE float width(Aabb bb) { return cf_width(bb); }
-CF_INLINE float height(Aabb bb) { return cf_height(bb); }
-CF_INLINE float half_width(Aabb bb) { return cf_half_width(bb); }
-CF_INLINE float half_height(Aabb bb) { return cf_half_height(bb); }
-CF_INLINE v2 half_extents(Aabb bb) { return cf_half_extents(bb); }
-CF_INLINE v2 extents(Aabb aabb) { return cf_extents(aabb); }
-CF_INLINE Aabb expand(Aabb aabb, v2 v) { return cf_expand_aabb(aabb, v); }
-CF_INLINE Aabb expand(Aabb aabb, float v) { return cf_expand_aabb_f(aabb, v); }
-CF_INLINE v2 min(Aabb bb) { return cf_min_aabb(bb); }
-CF_INLINE v2 max(Aabb bb) { return cf_max_aabb(bb); }
-CF_INLINE v2 midpoint(Aabb bb) { return cf_midpoint(bb); }
-CF_INLINE v2 center(Aabb bb) { return cf_center(bb); }
-CF_INLINE v2 top_left(Aabb bb) { return cf_top_left(bb); }
-CF_INLINE v2 top_right(Aabb bb) { return cf_top_right(bb); }
-CF_INLINE v2 bottom_left(Aabb bb) { return cf_bottom_left(bb); }
-CF_INLINE v2 bottom_right(Aabb bb) { return cf_bottom_right(bb); }
-CF_INLINE v2 top(Aabb bb) { return cf_top(bb); }
-CF_INLINE v2 left(Aabb bb) { return cf_left(bb); }
-CF_INLINE v2 bottom(Aabb bb) { return cf_bottom(bb); }
-CF_INLINE v2 right(Aabb bb) { return cf_right(bb); }
-CF_INLINE bool contains(Aabb bb, v2 p) { return cf_contains_point(bb, p); }
-CF_INLINE bool contains(Aabb a, Aabb b) { return cf_contains_aabb(a, b); }
-CF_INLINE float surface_area(Aabb bb) { return cf_surface_area_aabb(bb); }
-CF_INLINE float area(Aabb bb) { return cf_area_aabb(bb); }
-CF_INLINE v2 clamp(Aabb bb, v2 p) { return cf_clamp_aabb_v2(bb, p); }
-CF_INLINE Aabb clamp(Aabb a, Aabb b) { return cf_clamp_aabb(a, b); }
-CF_INLINE Aabb combine(Aabb a, Aabb b) { return cf_combine(a, b); }
+CF_INLINE CF_Circle make_circle(v2 pos, float radius) { return cf_make_circle(pos, radius); }
+CF_INLINE CF_Capsule make_capsule(v2 a, v2 b, float radius) { return cf_make_capsule(a, b, radius); }
+CF_INLINE CF_Capsule make_capsule(v2 p, float height, float radius) { return cf_make_capsule2(p, height, radius); }
+CF_INLINE CF_Aabb make_aabb(v2 min, v2 max) { return cf_make_aabb(min, max); }
+CF_INLINE CF_Aabb make_aabb(v2 pos, float w, float h) { return cf_make_aabb_pos_w_h(pos, w, h); }
+CF_INLINE CF_Aabb make_aabb_center_half_extents(v2 center, v2 half_extents) { return cf_make_aabb_center_half_extents(center, half_extents); }
+CF_INLINE CF_Aabb make_aabb_from_top_left(v2 top_left, float w, float h) { return cf_make_aabb_from_top_left(top_left, w, h); }
+CF_INLINE float width(CF_Aabb bb) { return cf_width(bb); }
+CF_INLINE float height(CF_Aabb bb) { return cf_height(bb); }
+CF_INLINE float half_width(CF_Aabb bb) { return cf_half_width(bb); }
+CF_INLINE float half_height(CF_Aabb bb) { return cf_half_height(bb); }
+CF_INLINE v2 half_extents(CF_Aabb bb) { return cf_half_extents(bb); }
+CF_INLINE v2 extents(CF_Aabb aabb) { return cf_extents(aabb); }
+CF_INLINE CF_Aabb expand(CF_Aabb aabb, v2 v) { return cf_expand_aabb(aabb, v); }
+CF_INLINE CF_Aabb expand(CF_Aabb aabb, float v) { return cf_expand_aabb_f(aabb, v); }
+CF_INLINE v2 min(CF_Aabb bb) { return cf_min_aabb(bb); }
+CF_INLINE v2 max(CF_Aabb bb) { return cf_max_aabb(bb); }
+CF_INLINE v2 midpoint(CF_Aabb bb) { return cf_midpoint(bb); }
+CF_INLINE v2 center(CF_Aabb bb) { return cf_center(bb); }
+CF_INLINE v2 top_left(CF_Aabb bb) { return cf_top_left(bb); }
+CF_INLINE v2 top_right(CF_Aabb bb) { return cf_top_right(bb); }
+CF_INLINE v2 bottom_left(CF_Aabb bb) { return cf_bottom_left(bb); }
+CF_INLINE v2 bottom_right(CF_Aabb bb) { return cf_bottom_right(bb); }
+CF_INLINE v2 top(CF_Aabb bb) { return cf_top(bb); }
+CF_INLINE v2 left(CF_Aabb bb) { return cf_left(bb); }
+CF_INLINE v2 bottom(CF_Aabb bb) { return cf_bottom(bb); }
+CF_INLINE v2 right(CF_Aabb bb) { return cf_right(bb); }
+CF_INLINE bool contains(CF_Aabb bb, v2 p) { return cf_contains_point(bb, p); }
+CF_INLINE bool contains(CF_Aabb a, CF_Aabb b) { return cf_contains_aabb(a, b); }
+CF_INLINE float surface_area(CF_Aabb bb) { return cf_surface_area_aabb(bb); }
+CF_INLINE float area(CF_Aabb bb) { return cf_area_aabb(bb); }
+CF_INLINE v2 clamp(CF_Aabb bb, v2 p) { return cf_clamp_aabb_v2(bb, p); }
+CF_INLINE CF_Aabb clamp(CF_Aabb a, CF_Aabb b) { return cf_clamp_aabb(a, b); }
+CF_INLINE CF_Aabb combine(CF_Aabb a, CF_Aabb b) { return cf_combine(a, b); }
 
-CF_INLINE int overlaps(Aabb a, Aabb b) { return cf_overlaps(a, b); }
-CF_INLINE int collide(Aabb a, Aabb b) { return cf_collide_aabb(a, b); }
+CF_INLINE int overlaps(CF_Aabb a, CF_Aabb b) { return cf_overlaps(a, b); }
+CF_INLINE int collide(CF_Aabb a, CF_Aabb b) { return cf_collide_aabb(a, b); }
 
-CF_INLINE Aabb make_aabb(v2* verts, int count) { return cf_make_aabb_verts((CF_V2*)verts, count); }
-CF_INLINE void aabb_verts(v2* out, Aabb bb) { return cf_aabb_verts((CF_V2*)out, bb); }
+CF_INLINE CF_Aabb make_aabb(v2* verts, int count) { return cf_make_aabb_verts((v2*)verts, count); }
+CF_INLINE void aabb_verts(v2* out, CF_Aabb bb) { return cf_aabb_verts((v2*)out, bb); }
 
-CF_INLINE float area(Circle c) { return cf_area_circle(c); }
-CF_INLINE float surface_area(Circle c) { return cf_surface_area_circle(c); }
-CF_INLINE Circle mul(Transform tx, Circle a) { return cf_mul_tf_circle(tx, a); }
+CF_INLINE float area(CF_Circle c) { return cf_area_circle(c); }
+CF_INLINE float surface_area(CF_Circle c) { return cf_surface_area_circle(c); }
+CF_INLINE CF_Circle mul(CF_Transform tx, CF_Circle a) { return cf_mul_tf_circle(tx, a); }
 
-CF_INLINE Ray make_ray(v2 start, v2 direction_normalized, float length) { return cf_make_ray(start, direction_normalized, length); }
-CF_INLINE v2 impact(Ray r, float t) { return cf_impact(r, t); }
-CF_INLINE v2 endpoint(Ray r) { return cf_endpoint(r); }
+CF_INLINE CF_Ray make_ray(v2 start, v2 direction_normalized, float length) { return cf_make_ray(start, direction_normalized, length); }
+CF_INLINE v2 impact(CF_Ray r, float t) { return cf_impact(r, t); }
+CF_INLINE v2 endpoint(CF_Ray r) { return cf_endpoint(r); }
 
-CF_INLINE Raycast ray_to_halfspace(Ray A, Halfspace B) { return cf_ray_to_halfspace(A, B); }
+CF_INLINE CF_Raycast ray_to_halfspace(CF_Ray A, CF_Halfspace B) { return cf_ray_to_halfspace(A, B); }
 CF_INLINE float distance_sq(v2 a, v2 b, v2 p) { return cf_distance_sq(a, b, p); }
 
-CF_INLINE v2 center_of_mass(Poly poly) { return cf_center_of_mass(poly); }
-CF_INLINE float calc_area(Poly poly) { return cf_calc_area(poly); }
-CF_INLINE SliceOutput slice(Halfspace slice_plane, Poly slice_me, const float k_epsilon = 1.e-4f) { return cf_slice(slice_plane, slice_me, k_epsilon); }
-CF_INLINE void inflate(void* shape, ShapeType type, float skin_factor) { return cf_inflate(shape, type, skin_factor); }
-CF_INLINE int hull(v2* verts, int count) { return cf_hull((CF_V2*)verts, count); }
-CF_INLINE void norms(v2* verts, v2* norms, int count) { return cf_norms((CF_V2*)verts, (CF_V2*)norms, count); }
-CF_INLINE void make_poly(Poly* p) { return cf_make_poly(p); }
-CF_INLINE v2 centroid(const v2* verts, int count) { return cf_centroid((CF_V2*)verts, count); }
+CF_INLINE v2 center_of_mass(CF_Poly poly) { return cf_center_of_mass(poly); }
+CF_INLINE float calc_area(CF_Poly poly) { return cf_calc_area(poly); }
+CF_INLINE CF_SliceOutput slice(CF_Halfspace slice_plane, CF_Poly slice_me, const float k_epsilon = 1.e-4f) { return cf_slice(slice_plane, slice_me, k_epsilon); }
+CF_INLINE void inflate(void* shape, CF_ShapeType type, float skin_factor) { return cf_inflate(shape, type, skin_factor); }
+CF_INLINE int hull(v2* verts, int count) { return cf_hull((v2*)verts, count); }
+CF_INLINE void norms(v2* verts, v2* norms, int count) { return cf_norms((v2*)verts, (v2*)norms, count); }
+CF_INLINE void make_poly(CF_Poly* p) { return cf_make_poly(p); }
+CF_INLINE v2 centroid(const v2* verts, int count) { return cf_centroid((v2*)verts, count); }
 
-CF_INLINE bool circle_to_circle(Circle A, Circle B) { return cf_circle_to_circle(A, B); }
-CF_INLINE bool circle_to_aabb(Circle A, Aabb B) { return cf_circle_to_aabb(A, B); }
-CF_INLINE bool circle_to_capsule(Circle A, Capsule B) { return cf_circle_to_capsule(A, B); }
-CF_INLINE bool aabb_to_aabb(Aabb A, Aabb B) { return cf_aabb_to_aabb(A, B); }
-CF_INLINE bool aabb_to_capsule(Aabb A, Capsule B) { return cf_aabb_to_capsule(A, B); }
-CF_INLINE bool capsule_to_capsule(Capsule A, Capsule B) { return cf_capsule_to_capsule(A, B); }
-CF_INLINE bool circle_to_poly(Circle A, const Poly* B, const Transform* bx) { return cf_circle_to_poly(A, B, bx); }
-CF_INLINE bool aabb_to_poly(Aabb A, const Poly* B, const Transform* bx) { return cf_aabb_to_poly(A, B, bx); }
-CF_INLINE bool capsule_to_poly(Capsule A, const Poly* B, const Transform* bx) { return cf_capsule_to_poly(A, B, bx); }
-CF_INLINE bool poly_to_poly(const Poly* A, const Transform* ax, const Poly* B, const Transform* bx) { return cf_poly_to_poly(A, ax, B, bx); }
+CF_INLINE bool circle_to_circle(CF_Circle A, CF_Circle B) { return cf_circle_to_circle(A, B); }
+CF_INLINE bool circle_to_aabb(CF_Circle A, CF_Aabb B) { return cf_circle_to_aabb(A, B); }
+CF_INLINE bool circle_to_capsule(CF_Circle A, CF_Capsule B) { return cf_circle_to_capsule(A, B); }
+CF_INLINE bool aabb_to_aabb(CF_Aabb A, CF_Aabb B) { return cf_aabb_to_aabb(A, B); }
+CF_INLINE bool aabb_to_capsule(CF_Aabb A, CF_Capsule B) { return cf_aabb_to_capsule(A, B); }
+CF_INLINE bool capsule_to_capsule(CF_Capsule A, CF_Capsule B) { return cf_capsule_to_capsule(A, B); }
+CF_INLINE bool circle_to_poly(CF_Circle A, const CF_Poly* B, const CF_Transform* bx) { return cf_circle_to_poly(A, B, bx); }
+CF_INLINE bool aabb_to_poly(CF_Aabb A, const CF_Poly* B, const CF_Transform* bx) { return cf_aabb_to_poly(A, B, bx); }
+CF_INLINE bool capsule_to_poly(CF_Capsule A, const CF_Poly* B, const CF_Transform* bx) { return cf_capsule_to_poly(A, B, bx); }
+CF_INLINE bool poly_to_poly(const CF_Poly* A, const CF_Transform* ax, const CF_Poly* B, const CF_Transform* bx) { return cf_poly_to_poly(A, ax, B, bx); }
 
-CF_INLINE Raycast ray_to_circle(Ray A, Circle B) { return cf_ray_to_circle(A, B); }
-CF_INLINE Raycast ray_to_aabb(Ray A, Aabb B) { return cf_ray_to_aabb(A, B); }
-CF_INLINE Raycast ray_to_capsule(Ray A, Capsule B) { return cf_ray_to_capsule(A, B); }
-CF_INLINE Raycast ray_to_poly(Ray A, const Poly* B, const Transform* bx_ptr = NULL) { return cf_ray_to_poly(A, B, bx_ptr); }
+CF_INLINE CF_Raycast ray_to_circle(CF_Ray A, CF_Circle B) { return cf_ray_to_circle(A, B); }
+CF_INLINE CF_Raycast ray_to_aabb(CF_Ray A, CF_Aabb B) { return cf_ray_to_aabb(A, B); }
+CF_INLINE CF_Raycast ray_to_capsule(CF_Ray A, CF_Capsule B) { return cf_ray_to_capsule(A, B); }
+CF_INLINE CF_Raycast ray_to_poly(CF_Ray A, const CF_Poly* B, const CF_Transform* bx_ptr = NULL) { return cf_ray_to_poly(A, B, bx_ptr); }
 
-CF_INLINE Manifold circle_to_circle_manifold(Circle A, Circle B) { return cf_circle_to_circle_manifold(A, B); }
-CF_INLINE Manifold circle_to_aabb_manifold(Circle A, Aabb B) { return cf_circle_to_aabb_manifold(A, B); }
-CF_INLINE Manifold circle_to_capsule_manifold(Circle A, Capsule B) { return cf_circle_to_capsule_manifold(A, B); }
-CF_INLINE Manifold aabb_to_aabb_manifold(Aabb A, Aabb B) { return cf_aabb_to_aabb_manifold(A, B); }
-CF_INLINE Manifold aabb_to_capsule_manifold(Aabb A, Capsule B) { return cf_aabb_to_capsule_manifold(A, B); }
-CF_INLINE Manifold capsule_to_capsule_manifold(Capsule A, Capsule B) { return cf_capsule_to_capsule_manifold(A, B); }
-CF_INLINE Manifold circle_to_poly_manifold(Circle A, const Poly* B, const Transform* bx) { return cf_circle_to_poly_manifold(A, B, bx); }
-CF_INLINE Manifold aabb_to_poly_manifold(Aabb A, const Poly* B, const Transform* bx) { return cf_aabb_to_poly_manifold(A, B, bx); }
-CF_INLINE Manifold capsule_to_poly_manifold(Capsule A, const Poly* B, const Transform* bx) { return cf_capsule_to_poly_manifold(A, B, bx); }
-CF_INLINE Manifold poly_to_poly_manifold(const Poly* A, const Transform* ax, const Poly* B, const Transform* bx) { return cf_poly_to_poly_manifold(A, ax, B, bx); }
+CF_INLINE CF_Manifold circle_to_circle_manifold(CF_Circle A, CF_Circle B) { return cf_circle_to_circle_manifold(A, B); }
+CF_INLINE CF_Manifold circle_to_aabb_manifold(CF_Circle A, CF_Aabb B) { return cf_circle_to_aabb_manifold(A, B); }
+CF_INLINE CF_Manifold circle_to_capsule_manifold(CF_Circle A, CF_Capsule B) { return cf_circle_to_capsule_manifold(A, B); }
+CF_INLINE CF_Manifold aabb_to_aabb_manifold(CF_Aabb A, CF_Aabb B) { return cf_aabb_to_aabb_manifold(A, B); }
+CF_INLINE CF_Manifold aabb_to_capsule_manifold(CF_Aabb A, CF_Capsule B) { return cf_aabb_to_capsule_manifold(A, B); }
+CF_INLINE CF_Manifold capsule_to_capsule_manifold(CF_Capsule A, CF_Capsule B) { return cf_capsule_to_capsule_manifold(A, B); }
+CF_INLINE CF_Manifold circle_to_poly_manifold(CF_Circle A, const CF_Poly* B, const CF_Transform* bx) { return cf_circle_to_poly_manifold(A, B, bx); }
+CF_INLINE CF_Manifold aabb_to_poly_manifold(CF_Aabb A, const CF_Poly* B, const CF_Transform* bx) { return cf_aabb_to_poly_manifold(A, B, bx); }
+CF_INLINE CF_Manifold capsule_to_poly_manifold(CF_Capsule A, const CF_Poly* B, const CF_Transform* bx) { return cf_capsule_to_poly_manifold(A, B, bx); }
+CF_INLINE CF_Manifold poly_to_poly_manifold(const CF_Poly* A, const CF_Transform* ax, const CF_Poly* B, const CF_Transform* bx) { return cf_poly_to_poly_manifold(A, ax, B, bx); }
 
-CF_INLINE float gjk(const void* A, ShapeType typeA, const Transform* ax_ptr, const void* B, ShapeType typeB, const Transform* bx_ptr, v2* outA, v2* outB, int use_radius, int* iterations, GjkCache* cache)
+CF_INLINE float gjk(const void* A, CF_ShapeType typeA, const CF_Transform* ax_ptr, const void* B, CF_ShapeType typeB, const CF_Transform* bx_ptr, v2* outA, v2* outB, int use_radius, int* iterations, CF_GjkCache* cache)
 {
 	return cf_gjk(A, typeA, ax_ptr, B, typeB, bx_ptr, (CF_V2*)outA, (CF_V2*)outB, use_radius, iterations, cache);
 }
 
-CF_INLINE ToiResult toi(const void* A, ShapeType typeA, const Transform* ax_ptr, v2 vA, const void* B, ShapeType typeB, const Transform* bx_ptr, v2 vB, int use_radius)
+CF_INLINE CF_ToiResult toi(const void* A, CF_ShapeType typeA, const CF_Transform* ax_ptr, v2 vA, const void* B, CF_ShapeType typeB, const CF_Transform* bx_ptr, v2 vB, int use_radius)
 {
 	return cf_toi(A, typeA, ax_ptr, vA, B, typeB, bx_ptr, vB, use_radius);
 }
 
-CF_INLINE int collided(const void* A, const Transform* ax, ShapeType typeA, const void* B, const Transform* bx, ShapeType typeB) { return cf_collided(A, ax, typeA, B, bx, typeB); }
-CF_INLINE void collide(const void* A, const Transform* ax, ShapeType typeA, const void* B, const Transform* bx, ShapeType typeB, Manifold* m) { return cf_collide(A, ax, typeA, B, bx, typeB, m); }
-CF_INLINE bool cast_ray(Ray A, const void* B, const Transform* bx, ShapeType typeB, Raycast* out) { return cf_cast_ray(A, B, bx, typeB, out); }
+CF_INLINE int collided(const void* A, const CF_Transform* ax, CF_ShapeType typeA, const void* B, const CF_Transform* bx, CF_ShapeType typeB) { return cf_collided(A, ax, typeA, B, bx, typeB); }
+CF_INLINE void collide(const void* A, const CF_Transform* ax, CF_ShapeType typeA, const void* B, const CF_Transform* bx, CF_ShapeType typeB, CF_Manifold* m) { return cf_collide(A, ax, typeA, B, bx, typeB, m); }
+CF_INLINE bool cast_ray(CF_Ray A, const void* B, const CF_Transform* bx, CF_ShapeType typeB, CF_Raycast* out) { return cf_cast_ray(A, B, bx, typeB, out); }
 
 }
 
@@ -2893,8 +2861,10 @@ CF_INLINE Cute::v2 operator-(Cute::v2 a, Cute::v2 b) { return V2(a.x - b.x, a.y 
 CF_INLINE Cute::v2& operator+=(Cute::v2& a, Cute::v2 b) { return a = a + b; }
 CF_INLINE Cute::v2& operator-=(Cute::v2& a, Cute::v2 b) { return a = a - b; }
 CF_INLINE Cute::v2 operator*(Cute::v2 a, float b) { return V2(a.x * b, a.y * b); }
+CF_INLINE Cute::v2 operator*(float a, Cute::v2 b) { return V2(a * b.x, a * b.y); }
 CF_INLINE Cute::v2 operator*(Cute::v2 a, Cute::v2 b) { return V2(a.x * b.x, a.y * b.y); }
 CF_INLINE Cute::v2& operator*=(Cute::v2& a, float b) { return a = a * b; }
+CF_INLINE Cute::v2& operator*=(float a, Cute::v2& b) { return b = a * b; }
 CF_INLINE Cute::v2& operator*=(Cute::v2& a, Cute::v2 b) { return a = a * b; }
 CF_INLINE Cute::v2 operator/(Cute::v2 a, float b) { return V2(a.x / b, a.y / b); }
 CF_INLINE Cute::v2 operator/(Cute::v2 a, Cute::v2 b) { return V2(a.x / b.x, a.y / b.y); }

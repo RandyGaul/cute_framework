@@ -133,35 +133,11 @@ CF_API void CF_CALL cf_message_box(CF_MessageBoxType type, const char* title, co
 namespace Cute
 {
 
-using Result = CF_Result;
+CF_INLINE bool is_error(CF_Result error) { return cf_is_error(error); }
 
-enum : int
-{
-	#define CF_ENUM(K, V) K = V,
-	CF_RESULT_DEFS
-	#undef CF_ENUM
-};
-
-using MessageBoxType = CF_MessageBoxType;
-#define CF_ENUM(K, V) CF_INLINE constexpr MessageBoxType K = CF_##K;
-CF_MESSAGE_BOX_TYPE_DEFS
-#undef CF_ENUM
-
-CF_INLINE const char* to_string(MessageBoxType type)
-{
-	switch (type) {
-	#define CF_ENUM(K, V) case CF_##K: return #K;
-	CF_MESSAGE_BOX_TYPE_DEFS
-	#undef CF_ENUM
-	default: return NULL;
-	}
-}
-
-CF_INLINE bool is_error(Result error) { return cf_is_error(error); }
-
-CF_INLINE Result result_failure(const char* details) { return cf_result_error(details); }
-CF_INLINE Result result_success() { return cf_result_success(); }
-CF_INLINE void message_box(MessageBoxType type, const char* title, const char* text) { return cf_message_box(type, title, text); }
+CF_INLINE CF_Result result_failure(const char* details) { return cf_result_error(details); }
+CF_INLINE CF_Result result_success() { return cf_result_success(); }
+CF_INLINE void message_box(CF_MessageBoxType type, const char* title, const char* text) { return cf_message_box(type, title, text); }
 
 }
 

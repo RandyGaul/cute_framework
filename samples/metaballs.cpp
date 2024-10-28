@@ -19,10 +19,9 @@ vec4 shader(vec4 color, vec2 pos, vec2 screen_uv, vec4 params)
 
 int main(int argc, char* argv[])
 {
-	make_app("Metaballs", 0, 0, 0, (int)(w*scale), (int)(h*scale), APP_OPTIONS_RESIZABLE_BIT | APP_OPTIONS_WINDOW_POS_CENTERED_BIT, argv[0]);
+	make_app("Metaballs", 0, 0, 0, (int)(w*scale), (int)(h*scale), CF_APP_OPTIONS_RESIZABLE_BIT | CF_APP_OPTIONS_WINDOW_POS_CENTERED_BIT, argv[0]);
 	CF_Canvas soft_circles = make_canvas(canvas_defaults(w, h));
 	CF_Shader shd = cf_make_draw_shader_from_source(s_shd);
-	float t = 0;
 
 	float frame_times[10] = { 0 };
 	int frame_index = 0;
@@ -33,7 +32,7 @@ int main(int argc, char* argv[])
 	while (app_is_running()) {
 		app_update();
 
-		frame_times[frame_index] = DELTA_TIME;
+		frame_times[frame_index] = CF_DELTA_TIME;
 		frame_index = (frame_index + 1) % 10;
 		float sum = 0;
 		for (int i = 0; i < 10; ++i) {
@@ -44,14 +43,13 @@ int main(int argc, char* argv[])
 		if (frame_index % 10 == 0) printf("%f\n", fps);
 
 		draw_scale(scale, scale);
-		t = t + DELTA_TIME;
 
 		// Draw soft-circles.
-		Rnd rnd = rnd_seed(0);
+		CF_Rnd rnd = rnd_seed(0);
 		for (int i = 0; i < 200; ++i) {
 			float o = rnd_range(rnd, -10.0f,10.0f);
-			float x = rnd_range(rnd, -w/scale*0.5f, w/scale*0.5f) + cosf(t+o) * 10;
-			float y = rnd_range(rnd, -h/scale*0.5f, h/scale*0.5f) + sinf(t+o) * 10;
+			float x = rnd_range(rnd, -w/scale*0.5f, w/scale*0.5f) + cosf((float)CF_SECONDS+o) * 10;
+			float y = rnd_range(rnd, -h/scale*0.5f, h/scale*0.5f) + sinf((float)CF_SECONDS+o) * 10;
 			float r = rnd_range(rnd, 10.0f,60.0f);
 		
 			// Render a perfect soft-circle using anti-alias scaling and zero-radius.
@@ -61,7 +59,7 @@ int main(int argc, char* argv[])
 		}
 
 		static int toggle = false;
-		if (key_just_pressed(KEY_SPACE)) {
+		if (key_just_pressed(CF_KEY_SPACE)) {
 			toggle = !toggle;
 		}
 		if (!toggle) {

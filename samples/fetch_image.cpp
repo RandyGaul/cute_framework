@@ -19,12 +19,10 @@ int main(int argc, char *argv[])
 	
 	int animation_index = 0;
 	
-	while (cf_app_is_running())
-	{
+	while (cf_app_is_running()) {
 		cf_app_update(nullptr);
 		
-		if (cf_key_just_pressed(CF_KEY_SPACE))
-		{
+		if (cf_key_just_pressed(CF_KEY_SPACE)) {
 			animation_index = (animation_index + 1) % count;
 			cf_sprite_play(&sprite, names[animation_index]);
 		}

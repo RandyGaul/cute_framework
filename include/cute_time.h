@@ -117,7 +117,7 @@ typedef void (CF_OnUpdateFn)(void* udata);
  * @function cf_set_fixed_timestep
  * @category time
  * @brief    Sets the frequency for fixed timestep updates to occur.
- * @param    frames_per_second  The frequency for fixed-timestep updates to occur, e.g. 30 is a good default number.
+ * @param    frames_per_second  The frequency for fixed-timestep updates to occur, e.g. 30 is a good default number. Set to 0 to disable fixed timestep.
  * @remarks  Often times a fixed-timestep can occur multiple times in one frame. In this case, `CF_OnUpdateFn` will be called once
  *           per update to simulate a fixed-timestep (see `CF_OnUpdateFn` and `cf_update_time`). The max number of updates possible 
  *           is clamped below `cf_set_fixed_timestep_max_updates`.
@@ -323,16 +323,10 @@ CF_API double CF_CALL cf_stopwatch_microseconds(CF_Stopwatch stopwatch);
 namespace Cute
 {
 
-#define DELTA_TIME (CF_DELTA_TIME)
-#define DELTA_TIME_FIXED (CF_DELTA_TIME_FIXED)
-#define DELTA_TIME_INTERPOLANT (CF_DELTA_TIME_INTERPOLANT)
-using OnUpdateFn = CF_OnUpdateFn;
-using Stopwatch = CF_Stopwatch;
-
 CF_INLINE void set_fixed_timestep(int frames_per_second = 60) { cf_set_fixed_timestep(frames_per_second); }
 CF_INLINE void set_fixed_timestep_max_updates(int max_updates = 5) { cf_set_fixed_timestep_max_updates(max_updates); }
 CF_INLINE void set_target_framerate(int frames_per_second = -1) { cf_set_target_framerate(frames_per_second); }
-CF_INLINE void update_time(OnUpdateFn* on_update = NULL) { cf_update_time(on_update); }
+CF_INLINE void update_time(CF_OnUpdateFn* on_update = NULL) { cf_update_time(on_update); }
 CF_INLINE void pause_for(float seconds) { cf_pause_for(seconds); }
 CF_INLINE void pause_for_ticks(uint64_t pause_ticks) { cf_pause_for_ticks(pause_ticks); }
 

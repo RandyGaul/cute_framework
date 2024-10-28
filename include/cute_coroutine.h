@@ -226,38 +226,20 @@ CF_API CF_Coroutine CF_CALL cf_coroutine_currently_running();
 namespace Cute
 {
 
-using Coroutine = CF_Coroutine;
-using CoroutineFn = CF_CoroutineFn;
-
-using CoroutineState = CF_CoroutineState;
-#define CF_ENUM(K, V) CF_INLINE constexpr CoroutineState K = CF_##K;
-CF_COROUTINE_STATE_DEFS
-#undef CF_ENUM
-
-CF_INLINE const char* to_string(CoroutineState type)
-{
-	switch (type) {
-	#define CF_ENUM(K, V) case CF_##K: return #K;
-	CF_COROUTINE_STATE_DEFS
-	#undef CF_ENUM
-	default: return NULL;
-	}
-}
-
-CF_INLINE Coroutine make_coroutine(CoroutineFn* fn, int stack_size = 0, void* udata = NULL) { return cf_make_coroutine(fn, stack_size, udata); }
-CF_INLINE void destroy_coroutine(Coroutine co) { cf_destroy_coroutine(co); }
+CF_INLINE CF_Coroutine make_coroutine(CF_CoroutineFn* fn, int stack_size = 0, void* udata = NULL) { return cf_make_coroutine(fn, stack_size, udata); }
+CF_INLINE void destroy_coroutine(CF_Coroutine co) { cf_destroy_coroutine(co); }
 	 
-CF_INLINE Result coroutine_resume(Coroutine co) { return cf_coroutine_resume(co); }
-CF_INLINE Result coroutine_yield(Coroutine co) { return cf_coroutine_yield(co); }
-CF_INLINE CoroutineState coroutine_state(Coroutine co) { return cf_coroutine_state(co); }
-CF_INLINE void* coroutine_get_udata(Coroutine co) { return cf_coroutine_get_udata(co); }
+CF_INLINE CF_Result coroutine_resume(CF_Coroutine co) { return cf_coroutine_resume(co); }
+CF_INLINE CF_Result coroutine_yield(CF_Coroutine co) { return cf_coroutine_yield(co); }
+CF_INLINE CF_CoroutineState coroutine_state(CF_Coroutine co) { return cf_coroutine_state(co); }
+CF_INLINE void* coroutine_get_udata(CF_Coroutine co) { return cf_coroutine_get_udata(co); }
 	 
-CF_INLINE Result coroutine_push(Coroutine co, const void* data, size_t size) { return cf_coroutine_push(co, data, size); }
-CF_INLINE Result coroutine_pop(Coroutine co, void* data, size_t size) { return cf_coroutine_pop(co, data, size); }
-CF_INLINE size_t coroutine_bytes_pushed(Coroutine co) { return cf_coroutine_bytes_pushed(co); }
-CF_INLINE size_t coroutine_space_remaining(Coroutine co) { return cf_coroutine_space_remaining(co); }
+CF_INLINE CF_Result coroutine_push(CF_Coroutine co, const void* data, size_t size) { return cf_coroutine_push(co, data, size); }
+CF_INLINE CF_Result coroutine_pop(CF_Coroutine co, void* data, size_t size) { return cf_coroutine_pop(co, data, size); }
+CF_INLINE size_t coroutine_bytes_pushed(CF_Coroutine co) { return cf_coroutine_bytes_pushed(co); }
+CF_INLINE size_t coroutine_space_remaining(CF_Coroutine co) { return cf_coroutine_space_remaining(co); }
 	 
-CF_INLINE Coroutine coroutine_currently_running() { return cf_coroutine_currently_running(); }
+CF_INLINE CF_Coroutine coroutine_currently_running() { return cf_coroutine_currently_running(); }
 
 }
 

@@ -51,4 +51,5 @@ parameters or struct member definitions. It's saying "Hey, I'm a dynamic array!"
 [aset](/array/aset.md)  
 [arev](/array/arev.md)  
 [ahash](/array/ahash.md)  
+[adel](/array/adel.md)  
 [astatic](/array/astatic.md)  

@@ -19,7 +19,7 @@ using namespace Cute;
 /* Load and free wav/ogg files synchronously. */
 TEST_CASE(test_audio_load_synchronous)
 {
-	CHECK(cf_is_error(cf_make_app(NULL, 0, 0, 0, 0, 0, APP_OPTIONS_HIDDEN_BIT | APP_OPTIONS_NO_GFX_BIT, NULL)));
+	CHECK(cf_is_error(cf_make_app(NULL, 0, 0, 0, 0, 0, CF_APP_OPTIONS_HIDDEN_BIT | CF_APP_OPTIONS_NO_GFX_BIT, NULL)));
 	CF_Audio audio = cf_audio_load_ogg_from_memory(thingy_data, thingy_sz);
 	REQUIRE(audio.id);
 	cf_audio_destroy(audio);

@@ -428,70 +428,10 @@ CF_API void CF_CALL cf_joypad_rumble(int player_index, uint16_t lo_frequency_rum
 namespace Cute
 {
 
-using JoypadPowerLevel = CF_JoypadPowerLevel;
-#define CF_ENUM(K, V) CF_INLINE constexpr JoypadPowerLevel K = CF_##K;
-CF_JOYPAD_POWER_LEVEL_DEFS
-#undef CF_ENUM
-
-CF_INLINE const char* to_string(JoypadPowerLevel level)
-{
-	switch (level) {
-	#define CF_ENUM(K, V) case CF_##K: return #K;
-	CF_JOYPAD_POWER_LEVEL_DEFS
-	#undef CF_ENUM
-	default: return NULL;
-	}
-}
-
-using JoypadButton = CF_JoypadButton;
-#define CF_ENUM(K, V) CF_INLINE constexpr JoypadButton K = CF_##K;
-CF_JOYPAD_BUTTON_DEFS
-#undef CF_ENUM
-
-CF_INLINE const char* to_string(JoypadButton button)
-{
-	switch (button) {
-	#define CF_ENUM(K, V) case CF_##K: return #K;
-	CF_JOYPAD_BUTTON_DEFS
-	#undef CF_ENUM
-	default: return NULL;
-	}
-}
-
-using JoypadAxis = CF_JoypadAxis;
-#define CF_ENUM(K, V) CF_INLINE constexpr JoypadAxis K = CF_##K;
-CF_JOYPAD_AXIS_DEFS
-#undef CF_ENUM
-
-CF_INLINE const char* to_string(JoypadAxis axis)
-{
-	switch (axis) {
-	#define CF_ENUM(K, V) case CF_##K: return #K;
-	CF_JOYPAD_AXIS_DEFS
-	#undef CF_ENUM
-	default: return NULL;
-	}
-}
-
-using JoypadType = CF_JoypadType;
-#define CF_ENUM(K, V) CF_INLINE constexpr JoypadType K = CF_##K;
-CF_JOYPAD_TYPE_DEFS
-#undef CF_ENUM
-
-CF_INLINE const char* to_string(JoypadType type)
-{
-	switch (type) {
-	#define CF_ENUM(K, V) case CF_##K: return #K;
-	CF_JOYPAD_TYPE_DEFS
-	#undef CF_ENUM
-	default: return NULL;
-	}
-}
-
-CF_INLINE Result joypad_add_mapping(const char* mapping) { return cf_joypad_add_mapping(mapping); }
+CF_INLINE CF_Result joypad_add_mapping(const char* mapping) { return cf_joypad_add_mapping(mapping); }
 CF_INLINE int joypad_count() { return cf_joypad_count(); }
 CF_INLINE bool joypad_is_connected(int player_index) { return cf_joypad_is_connected(player_index); }
-CF_INLINE JoypadPowerLevel joypad_power_level(int player_index) { return cf_joypad_power_level(player_index); }
+CF_INLINE CF_JoypadPowerLevel joypad_power_level(int player_index) { return cf_joypad_power_level(player_index); }
 CF_INLINE const char* joypad_name(int player_index) { return cf_joypad_name(player_index); }
 CF_INLINE CF_JoypadType joypad_type(int player_index) { return cf_joypad_type(player_index); }
 CF_INLINE uint16_t joypad_vendor(int player_index) { return cf_joypad_vendor(player_index); }
@@ -499,11 +439,11 @@ CF_INLINE uint16_t joypad_product_id(int player_index) { return cf_joypad_produc
 CF_INLINE const char* joypad_serial_number(int player_index) { return cf_joypad_serial_number(player_index); }
 CF_INLINE uint16_t joypad_firmware_version(int player_index) { return cf_joypad_firmware_version(player_index); }
 CF_INLINE uint16_t joypad_product_version(int player_index) { return cf_joypad_product_version(player_index); }
-CF_INLINE bool joypad_button_down(int player_index, JoypadButton button) { return cf_joypad_button_down(player_index, button); }
-CF_INLINE bool joypad_button_just_pressed(int player_index, JoypadButton button) { return cf_joypad_button_just_pressed(player_index, button); }
-CF_INLINE bool joypad_button_just_released(int player_index, JoypadButton button) { return cf_joypad_button_just_released(player_index, button); }
-CF_INLINE int16_t joypad_axis(int player_index, JoypadAxis axis) { return cf_joypad_axis(player_index, axis); }
-CF_INLINE int16_t joypad_axis_prev(int player_index, JoypadAxis axis) { return cf_joypad_axis_prev(player_index, axis); }
+CF_INLINE bool joypad_button_down(int player_index, CF_JoypadButton button) { return cf_joypad_button_down(player_index, button); }
+CF_INLINE bool joypad_button_just_pressed(int player_index, CF_JoypadButton button) { return cf_joypad_button_just_pressed(player_index, button); }
+CF_INLINE bool joypad_button_just_released(int player_index, CF_JoypadButton button) { return cf_joypad_button_just_released(player_index, button); }
+CF_INLINE int16_t joypad_axis(int player_index, CF_JoypadAxis axis) { return cf_joypad_axis(player_index, axis); }
+CF_INLINE int16_t joypad_axis_prev(int player_index, CF_JoypadAxis axis) { return cf_joypad_axis_prev(player_index, axis); }
 CF_INLINE void joypad_rumble(int player_index, uint16_t lo_frequency_rumble, uint16_t hi_frequency_rumble, int duration_ms) { cf_joypad_rumble(player_index, lo_frequency_rumble, hi_frequency_rumble, duration_ms); }
 
 }

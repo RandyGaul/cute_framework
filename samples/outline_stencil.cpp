@@ -21,18 +21,18 @@ int main(int argc, char* argv[])
 	//options = APP_OPTIONS_GFX_VULKAN_BIT;
 	//options = APP_OPTIONS_GFX_D3D11_BIT;
 	//options = APP_OPTIONS_GFX_D3D12_BIT;
-	make_app("Stencil Outline", 0, 0, 0, (int)(w*scale), (int)(h*scale), options | APP_OPTIONS_RESIZABLE_BIT | APP_OPTIONS_WINDOW_POS_CENTERED_BIT, argv[0]);
+	make_app("Stencil Outline", 0, 0, 0, (int)(w*scale), (int)(h*scale), options | CF_APP_OPTIONS_RESIZABLE_BIT | CF_APP_OPTIONS_WINDOW_POS_CENTERED_BIT, argv[0]);
 	set_target_framerate(200);
 	app_init_imgui();
 	set_imgui_scale(scale/2);
-	Sprite sprite = make_demo_sprite();
-	sprite.play("spin");
+	CF_Sprite sprite = make_demo_sprite();
+	sprite_play(sprite, "spin");
 
 	while (app_is_running()) {
 		app_update();
 
 		draw_scale(scale, scale);
-		sprite.update();
+		sprite_update(sprite);
 
 		static bool corners = false;
 		ImGui::Begin("Settings", NULL, ImGuiWindowFlags_AlwaysAutoResize);
@@ -53,23 +53,23 @@ int main(int argc, char* argv[])
 		{
 			// Draw sprite up/down/left/right to fill in border pixels.
 			sprite.transform.p.x = -1;
-			sprite.draw();
+			sprite_draw(sprite);
 			sprite.transform.p.x = 1;
-			sprite.draw();
+			sprite_draw(sprite);
 			sprite.transform.p.x = 0;
 			sprite.transform.p.y = -1;
-			sprite.draw();
+			sprite_draw(sprite);
 			sprite.transform.p.y = 1;
-			sprite.draw();
+			sprite_draw(sprite);
 			if (corners) {
 				sprite.transform.p = V2(-1,-1);
-				sprite.draw();
+				sprite_draw(sprite);
 				sprite.transform.p = V2( 1,-1);
-				sprite.draw();
+				sprite_draw(sprite);
 				sprite.transform.p = V2(-1, 1);
-				sprite.draw();
+				sprite_draw(sprite);
 				sprite.transform.p = V2( 1, 1);
-				sprite.draw();
+				sprite_draw(sprite);
 			}
 			render_to(app_get_canvas(), true);
 			sprite.transform.p = V2(0, 0);
@@ -94,7 +94,7 @@ int main(int argc, char* argv[])
 		draw_pop_render_state();
 		
 		// Draw the sprite normally, centered within the border.
-		sprite.draw();
+		sprite_draw(sprite);
 		app_draw_onto_screen();
 	}
 

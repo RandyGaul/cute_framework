@@ -21,6 +21,7 @@ s | The string. Can be `NULL`.
 
 ## Related Pages
 
+[sdyna](/string/sdyna.md)  
 [stoupper](/string/stoupper.md)  
 [sicmp](/string/sicmp.md)  
 [siequ](/string/siequ.md)  

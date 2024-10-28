@@ -76,7 +76,7 @@ struct CF_App
 	void (*on_shader_changed_fn)(const char* path, void* udata) = NULL;
 	void* on_shader_changed_udata = NULL;
 	bool shader_directory_set = false;
-	Cute::Path shader_directory;
+	Cute::CF_Path shader_directory;
 	Cute::Map<const char*, CF_ShaderFileInfo> shader_file_infos;
 	Cute::Map<const char*, const char*> builtin_shaders;
 	bool gfx_enabled = false;

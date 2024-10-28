@@ -12,7 +12,7 @@ GitHub: [cute_alloc.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Allocates a block of memory aligned along a byte boundary.
 
 ```cpp
-void* cf_arena_alloc(CF_Arena* arena, size_t size);
+void* cf_arena_alloc(CF_Arena* arena, int size);
 ```
 
 Parameters | Description
@@ -27,4 +27,5 @@ Returns an aligned pointer of `size` bytes.
 ## Related Pages
 
 [cf_arena_init](/allocator/cf_arena_init.md)  
+[cf_arena_free](/allocator/cf_arena_free.md)  
 [cf_arena_reset](/allocator/cf_arena_reset.md)  

@@ -42,4 +42,5 @@ The last element of the array is fetched and will be returned. The size of the a
 [aset](/array/aset.md)  
 [arev](/array/arev.md)  
 [ahash](/array/ahash.md)  
+[adel](/array/adel.md)  
 [astatic](/array/astatic.md)  

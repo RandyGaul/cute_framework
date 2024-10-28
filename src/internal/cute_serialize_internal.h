@@ -9,6 +9,7 @@
 #define CF_SERIALIZE_INTERNAL_H
 
 #include <cute_defines.h>
+#include <cute_c_runtime.h>
 #include <cute_networking.h>
 
 CF_INLINE void cf_write_uint8(uint8_t** p, uint8_t value)

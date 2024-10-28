@@ -14,8 +14,7 @@ int main(int argc, char* argv[])
 	// Create an offscreen canvas.
 	CF_Canvas offscreen = cf_make_canvas(cf_canvas_defaults((int)(w*0.5f), (int)(h*0.5f)));
 
-	while (cf_app_is_running())
-	{
+	while (cf_app_is_running()) {
 		cf_app_update(NULL);
 
 		// Draw offscreen.

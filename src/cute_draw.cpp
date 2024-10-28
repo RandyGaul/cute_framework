@@ -58,7 +58,7 @@ SPRITEBATCH_U64 cf_generate_texture_handle(void* pixels, int w, int h, void* uda
 {
 	CF_UNUSED(udata);
 	CF_TextureParams params = cf_texture_defaults(w, h);
-	params.filter = FILTER_LINEAR;
+	params.filter = CF_FILTER_LINEAR;
 	CF_Texture texture = cf_make_texture(params);
 	cf_texture_update(texture, pixels, w * h * sizeof(CF_Pixel));
 	return texture.id;
@@ -365,13 +365,13 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 	cf_apply_shader(cmd.shader, draw->material);
 
 	// Apply viewport.
-	Rect viewport = cmd.viewport;
+	CF_Rect viewport = cmd.viewport;
 	if (viewport.w >= 0 && viewport.h >= 0) {
 		cf_apply_viewport(viewport.x, viewport.y, viewport.w, viewport.h);
 	}
 
 	// Apply scissor.
-	Rect scissor = cmd.scissor;
+	CF_Rect scissor = cmd.scissor;
 	if (scissor.w >= 0 && scissor.h >= 0) {
 		cf_apply_scissor(scissor.x, scissor.y, scissor.w, scissor.h);
 	}
@@ -432,7 +432,7 @@ void cf_make_draw()
 	draw = CF_NEW(CF_Draw);
 	draw->projection = ortho_2d(0, 0, (float)app->w, (float)app->h);
 	draw->reset_cam();
-	cf_arena_init(&draw->uniform_arena, 32, CF_MB);
+	draw->uniform_arena = cf_make_arena(32, CF_MB);
 
 	// Mesh + vertex attributes.
 	Array<CF_VertexAttribute> attrs;
@@ -581,7 +581,8 @@ void cf_draw_sprite(const CF_Sprite* sprite)
 	s.h = sprite->h;
 	s.geom.type = BATCH_GEOMETRY_TYPE_SPRITE;
 
-	v2 p = cf_add_v2(sprite->transform.p, cf_mul_v2(sprite->local_offset, sprite->scale));
+	v2 offset = sprite->offset + (sprite->pivots ? sprite->pivots[sprite->frame_index] : V2(0,0));
+	v2 p = cf_add_v2(sprite->transform.p, cf_mul_v2(offset, sprite->scale));
 
 	v2 scale = V2(sprite->scale.x * s.w, sprite->scale.y * s.h);
 	if (apply_border_scale) {
@@ -627,6 +628,23 @@ void cf_draw_sprite(const CF_Sprite* sprite)
 	s.geom.alpha = sprite->opacity;
 	s.geom.user_params = draw->user_params.last();
 	DRAW_PUSH_ITEM(s);
+}
+
+void cf_draw_prefetch(const CF_Sprite* sprite)
+{
+	if (sprite->animation) {
+		for (int i = 0; i < hsize(sprite->animations); ++i) {
+			const CF_Animation* animation = sprite->animations[i];
+			for (int j = 0; j < asize(animation->frames); ++j) {
+				CF_Frame* frame = animation->frames + j;
+				spritebatch_prefetch(&draw->sb, frame->id, sprite->w, sprite->h);
+			}
+		}
+	} else if (sprite->easy_sprite_id >= CF_PREMADE_ID_RANGE_LO && sprite->easy_sprite_id <= CF_PREMADE_ID_RANGE_HI) {
+		spritebatch_prefetch(&draw->sb, sprite->easy_sprite_id, sprite->w, sprite->h);
+	} else {
+		spritebatch_prefetch(&draw->sb, sprite->easy_sprite_id, sprite->w, sprite->h);
+	}
 }
 
 static void s_draw_quad(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float stroke, float radius, bool fill)
@@ -908,7 +926,7 @@ void cf_draw_tri_fill(CF_V2 p0, CF_V2 p1, CF_V2 p2, float chubbiness)
 
 void cf_draw_line(CF_V2 p0, CF_V2 p1, float thickness)
 {
-	s_draw_capsule(p0, p1, 0, thickness, true);
+	s_draw_capsule(p0, p1, 0, thickness * 0.5f, true);
 }
 
 void cf_draw_polyline(CF_V2* pts, int count, float thickness, bool loop)
@@ -918,9 +936,9 @@ void cf_draw_polyline(CF_V2* pts, int count, float thickness, bool loop)
 	if (count <= 0) {
 		return;
 	} else if (count == 1) {
-		cf_draw_circle_fill2(pts[0], radius);
+		cf_draw_circle_fill2(pts[0], thickness);
 	} else if (count == 2) {
-		cf_draw_capsule_fill2(pts[0], pts[1], radius);
+		cf_draw_line(pts[0], pts[1], thickness);
 	}
 
 	// Each portion of the polyline will be rendered with a single triangle per spritebatch entry.
@@ -935,7 +953,6 @@ void cf_draw_polyline(CF_V2* pts, int count, float thickness, bool loop)
 	s.geom.aa = draw->aaf;
 	s.geom.type = BATCH_GEOMETRY_TYPE_SEGMENT;
 	s.geom.user_params = draw->user_params.last();
-	s.sort_bits = draw->layers.last();
 	s.w = s.h = 1;
 
 	// Expand to account for aa.
@@ -1001,14 +1018,14 @@ void cf_draw_polyline(CF_V2* pts, int count, float thickness, bool loop)
 
 		float p0p1_x_p1p2 = cross(n0, n1);
 		float d = dot(n0, n1);
-		Halfspace h0 = plane(t0, a);
-		Halfspace h1 = plane(-t0, b);
-		Halfspace h2 = plane(-t1, p2 - t1 * radius);
-		Halfspace h3 = plane(t1, p2 + t1 * radius);
+		CF_Halfspace h0 = plane(t0, a);
+		CF_Halfspace h1 = plane(-t0, b);
+		CF_Halfspace h2 = plane(-t1, p2 - t1 * radius);
+		CF_Halfspace h3 = plane(t1, p2 + t1 * radius);
 		v2 n = norm(n0 - n1);
-		Halfspace h4 = plane(n, p1 + n * radius);
-		Halfspace x = plane(n1, p2);
-		Halfspace y = plane(-n0, p0);
+		CF_Halfspace h4 = plane(n, p1 + n * radius);
+		CF_Halfspace x = plane(n1, p2);
+		CF_Halfspace y = plane(-n0, p0);
 
 		if (p0p1_x_p1p2 < 0) {
 			if (d < 0) {
@@ -1033,7 +1050,7 @@ void cf_draw_polyline(CF_V2* pts, int count, float thickness, bool loop)
 				}
 			} else {
 				// Obtuse.
-				Halfspace hn = plane(norm(n0 + n1), p1);
+				CF_Halfspace hn = plane(norm(n0 + n1), p1);
 				v2 c = intersect(hn, h0);
 				v2 d = intersect(hn, h1);
 				submit(a, b, c);
@@ -1064,7 +1081,7 @@ void cf_draw_polyline(CF_V2* pts, int count, float thickness, bool loop)
 				}
 			} else {
 				// Obtuse.
-				Halfspace hn = plane(norm(n0 + n1), p1);
+				CF_Halfspace hn = plane(norm(n0 + n1), p1);
 				v2 c = intersect(hn, h0);
 				v2 d = intersect(hn, h1);
 				submit(a, b, c);
@@ -1260,7 +1277,7 @@ void cf_draw_arrow(CF_V2 a, CF_V2 b, float thickness, float arrow_width)
 	v2 n = norm(b - a);
 	v2 t = skew(n) * arrow_width;
 	n = n * arrow_width;
-	cf_draw_capsule_fill2(a, b - n, thickness * 0.5f);
+	cf_draw_line(a, b - n, thickness);
 	cf_draw_tri_fill(b, b - n + t, b - n - t, 0);
 }
 
@@ -1890,54 +1907,59 @@ static void s_parse_code(CF_CodeParseState* s)
 	}
 }
 
-static bool s_text_fx_color(TextEffect* fx)
+static bool s_text_fx_color(CF_TextEffect* fx_ptr)
 {
+	TextEffect* fx = (TextEffect*)fx_ptr;
 	CF_Color c = fx->get_color("color");
 	fx->color = c;
 	return true;
 }
 
-static bool s_text_fx_shake(TextEffect* effect)
+static bool s_text_fx_shake(CF_TextEffect* fx_ptr)
 {
-	double freq = effect->get_number("freq", 35);
-	int seed = (int)(effect->elapsed * freq);
-	float x = (float)effect->get_number("x", 2);
-	float y = (float)effect->get_number("y", 2);
-	CF_RndState rnd = rnd_seed(seed);
+	TextEffect* fx = (TextEffect*)fx_ptr;
+	double freq = fx->get_number("freq", 35);
+	int seed = (int)(fx->elapsed * freq);
+	float x = (float)fx->get_number("x", 2);
+	float y = (float)fx->get_number("y", 2);
+	CF_Rnd rnd = rnd_seed(seed);
 	v2 offset = V2(rnd_range(rnd, -x, x), rnd_range(rnd, -y, y));
-	effect->q0 += offset;
-	effect->q1 += offset;
+	fx->q0 += offset;
+	fx->q1 += offset;
 	return true;
 }
 
-static bool s_text_fx_fade(TextEffect* effect)
+static bool s_text_fx_fade(CF_TextEffect* fx_ptr)
 {
-	double speed = effect->get_number("speed", 2);
-	double span = effect->get_number("span", 5);
-	effect->opacity = CF_COSF((float)(effect->elapsed * speed + effect->index_into_effect / span)) * 0.5f + 0.5f;
+	TextEffect* fx = (TextEffect*)fx_ptr;
+	double speed = fx->get_number("speed", 2);
+	double span = fx->get_number("span", 5);
+	fx->opacity = CF_COSF((float)(fx->elapsed * speed + fx->index_into_effect / span)) * 0.5f + 0.5f;
 	return true;
 }
 
-static bool s_text_fx_wave(TextEffect* effect)
+static bool s_text_fx_wave(CF_TextEffect* fx_ptr)
 {
-	double speed = effect->get_number("speed", 5);
-	double span = effect->get_number("span", 10);
-	double height = effect->get_number("height", 5);
-	float offset = (CF_COSF((float)(effect->elapsed * speed + effect->index_into_effect / span)) * 0.5f + 0.5f) * (float)height;
-	effect->q0.y += offset;
-	effect->q1.y += offset;
+	TextEffect* fx = (TextEffect*)fx_ptr;
+	double speed = fx->get_number("speed", 5);
+	double span = fx->get_number("span", 10);
+	double height = fx->get_number("height", 5);
+	float offset = (CF_COSF((float)(fx->elapsed * speed + fx->index_into_effect / span)) * 0.5f + 0.5f) * (float)height;
+	fx->q0.y += offset;
+	fx->q1.y += offset;
 	return true;
 }
 
-static bool s_text_fx_strike(TextEffect* effect)
+static bool s_text_fx_strike(CF_TextEffect* fx_ptr)
 {
-	if (!s_is_space(effect->character) || effect->character == ' ') {
-		v2 hw = V2((float)effect->xadvance, 0) * 0.5f;
-		float h = effect->font_size / 20.0f;
-		h = (float)effect->get_number("strike", (double)h);
+	TextEffect* fx = (TextEffect*)fx_ptr;
+	if (!s_is_space(fx->character) || fx->character == ' ') {
+		v2 hw = V2((float)fx->xadvance, 0) * 0.5f;
+		float h = fx->font_size / 20.0f;
+		h = (float)fx->get_number("strike", (double)h);
 		CF_Strike strike;
-		strike.p0 = effect->center - hw;
-		strike.p1 = effect->center + hw;
+		strike.p0 = fx->center - hw;
+		strike.p1 = fx->center + hw;
 		strike.thickness = h;
 		draw->strikes.add(strike);
 	}
@@ -2246,7 +2268,7 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 
 			// Actually render the sprite.
 			if (visible && render) {
-				M3x2 m = draw->mvp;
+				CF_M3x2 m = draw->mvp;
 				s.geom.shape[0] = mul(m, V2(q0.x, q1.y));
 				s.geom.shape[1] = mul(m, V2(q1.x, q1.y));
 				s.geom.shape[2] = mul(m, V2(q1.x, q0.y));
@@ -2600,7 +2622,7 @@ void cf_draw_canvas(CF_Canvas canvas, CF_V2 position, CF_V2 scale)
 	CF_Command& cmd = draw->add_cmd();
 	cmd.is_canvas = true;
 	cmd.canvas = canvas;
-	Aabb bb = make_aabb(position, fabsf(scale.x), fabsf(scale.y));
+	CF_Aabb bb = make_aabb(position, fabsf(scale.x), fabsf(scale.y));
 	aabb_verts(cmd.canvas_verts, bb);
 	bool flip_x = scale.x < 0;
 	bool flip_y = scale.y < 0;
@@ -2711,13 +2733,13 @@ void static s_blit(CF_Command* cmd, CF_Canvas src, CF_Canvas dst, bool clear_dst
 	cf_apply_shader(*blit, draw->material);
 
 	// Apply viewport.
-	Rect viewport = cmd->viewport;
+	CF_Rect viewport = cmd->viewport;
 	if (viewport.w >= 0 && viewport.h >= 0) {
 		cf_apply_viewport(viewport.x, viewport.y, viewport.w, viewport.h);
 	}
 
 	// Apply scissor.
-	Rect scissor = cmd->scissor;
+	CF_Rect scissor = cmd->scissor;
 	if (scissor.w >= 0 && scissor.h >= 0) {
 		cf_apply_scissor(scissor.x, scissor.y, scissor.w, scissor.h);
 	}
@@ -2726,84 +2748,119 @@ void static s_blit(CF_Command* cmd, CF_Canvas src, CF_Canvas dst, bool clear_dst
 	cf_draw_elements();
 }
 
-void cf_render_to(CF_Canvas canvas, bool clear)
+static void s_process_command(CF_Canvas canvas, CF_Command* cmd, CF_Command* next, bool& clear)
 {
+	if (cmd->processed) return;
+	cmd->processed = true;
+
+	// Apply uniforms.
+	CF_DrawUniform* u = &cmd->u;
+	if (u->is_texture) {
+		material_set_texture_fs(draw->material, u->name, u->texture);
+	} else if (u->data) {
+		cf_material_set_uniform_fs_internal(draw->material, "shd_uniforms", u->name, u->data, u->type, u->array_length);
+	}
+
+	// Blit canvas.
+	// ...Incurs an entire extra draw call by itself.
+	if (cmd->is_canvas) {
+		s_blit(cmd, cmd->canvas, canvas, clear);
+		clear = false; // Only clear `canvas` once.
+		draw->has_drawn_something = true;
+		return;
+	}
+
+	// Collate all of the drawable items into the spritebatch.
+	if (!cmd->items.count()) return;
+	draw->need_flush = true;
+	for (int j = 0; j < cmd->items.count(); ++j) {
+		spritebatch_push(&draw->sb, cmd->items[j]);
+	}
+
+	// Merge with the next command if identical.
+	bool same = true;
+	if (next) {
+		if (next->u.size != cmd->u.size) {
+			same = false;
+		} else if (next->u.type != cmd->u.type) {
+			same = false;
+		} else if (next->u.texture.id != cmd->u.texture.id) {
+			same = false;
+		} else if (next->u.name != cmd->u.name) {
+			same = false;
+		} else if (CF_MEMCMP(next->u.data, cmd->u.data, next->u.size)) {
+			same = false;
+		} else if (next->alpha_discard == cmd->alpha_discard &&
+			next->render_state == cmd->render_state &&
+			next->scissor == cmd->scissor &&
+			next->shader == cmd->shader &&
+			next->viewport == cmd->viewport) {
+			same = false;
+		}
+	} else {
+		same = false;
+	}
+
+	if (!same) {
+		// Process the collated drawable items. Might get split up into multiple draw calls depending on
+		// the atlas compiler.
+		draw->need_flush = false;
+		spritebatch_flush(&draw->sb);
+	}
+}
+
+void cf_render_layers_to(CF_Canvas canvas, int layer_lo, int layer_hi, bool clear)
+{
+	// We will render to this canvas.
 	cf_apply_canvas(canvas, clear);
 
 	// Sort the commands by layer first, then by age (to maintain relative ordering).
-	// @NOTE -- Perhaps std::sort would be better than stable_sort, since the predicate has stability built-in?
 	std::stable_sort(draw->cmds.begin(), draw->cmds.end(), [](const CF_Command& a, const CF_Command& b) {
 		if (a.layer == b.layer) return a.id < b.id;
 		else return a.layer < b.layer;
 	});
 
+	// Process each rendering command.
 	int count = draw->cmds.count();
 	for (int i = 0; i < count; ++i) {
 		draw->cmd_index = i;
 		CF_Command* cmd = &draw->cmds[i];
-
-		// Apply uniforms.
-		CF_DrawUniform* u = &cmd->u;
-		if (u->is_texture) {
-			material_set_texture_fs(draw->material, u->name, u->texture);
-		} else if (u->data) {
-			cf_material_set_uniform_fs_internal(draw->material, "shd_uniforms", u->name, u->data, u->type, u->array_length);
-		}
-
-		// Blit canvas.
-		// ...Incurs an entire extra draw call by itself.
-		if (cmd->is_canvas) {
-			s_blit(cmd, cmd->canvas, canvas, clear);
-			clear = false; // Only clear `canvas` once.
-			draw->has_drawn_something = true;
-			continue;
-		}
-
-		// Collate all of the drawable items into the spritebatch.
-		if (!cmd->items.count()) continue;
-		for (int j = 0; j < cmd->items.count(); ++j) {
-			spritebatch_push(&draw->sb, cmd->items[j]);
-		}
-
-		// Merge with the next command if identical.
 		CF_Command* next = i + 1 == count ? NULL : draw->cmds + (i + 1);
-		if (next) {
-			if (next->u.size != cmd->u.size) {
-				continue;
-			}
-			if (next->u.type != cmd->u.type) {
-				continue;
-			}
-			if (next->u.texture.id != cmd->u.texture.id) {
-				continue;
-			}
-			if (next->u.name != cmd->u.name) {
-				continue;
-			}
-			if (CF_MEMCMP(next->u.data, cmd->u.data, next->u.size)) {
-				continue;
-			}
-			if (next->alpha_discard == cmd->alpha_discard &&
-			    next->render_state == cmd->render_state &&
-			    next->scissor == cmd->scissor &&
-			    next->shader == cmd->shader &&
-			    next->viewport == cmd->viewport) {
-				continue;
-			}
+		if (cmd->layer >= layer_lo && cmd->layer <= layer_hi) {
+			s_process_command(canvas, cmd, next, clear);
+		} else if (cmd->layer > layer_hi) {
+			break;
 		}
-
-		// Process the collated drawable items. Might get split up into multiple draw calls depending on
-		// the atlas compiler.
-		spritebatch_flush(&draw->sb);
 	}
+
+	// Reset internal state.
 	if (clear && !draw->has_drawn_something) {
 		cf_clear_canvas(canvas);
 	}
+	if (draw->need_flush) {
+		draw->need_flush = false;
+		spritebatch_flush(&draw->sb);
+	}
 	draw->has_drawn_something = false;
 	cf_arena_reset(&draw->uniform_arena);
-	draw->cmds.clear();
-	draw->add_cmd();
 	draw->verts.clear();
+
+	// Remove commands that were processed.
+	for (int i = 0; i < draw->cmds.size();) {
+		if (draw->cmds[i].processed) {
+			draw->cmds.unordered_remove(i);
+		} else {
+			++i;
+		}
+	}
+
+	// Ensure there's at least one "default" command for convenience use-cases.
+	draw->add_cmd();
+}
+
+void cf_render_to(CF_Canvas canvas, bool clear)
+{
+	cf_render_layers_to(canvas, -INT_MAX, INT_MAX, clear);
 }
 
 CF_V2 cf_draw_mul(CF_V2 v)
@@ -2821,7 +2878,7 @@ void cf_draw_transform(CF_M3x2 m)
 
 void cf_draw_translate(float x, float y)
 {
-	M3x2 m = make_translation(x, y);
+	CF_M3x2 m = make_translation(x, y);
 	cf_draw_transform(m);
 }
 
@@ -2832,7 +2889,7 @@ void cf_draw_translate_v2(CF_V2 position)
 
 void cf_draw_scale(float w, float h)
 {
-	M3x2 m = make_scale(w, h);
+	CF_M3x2 m = make_scale(w, h);
 	cf_draw_transform(m);
 }
 
@@ -2956,7 +3013,7 @@ CF_Texture cf_register_premade_atlas(const char* png_path, int sub_image_count, 
 	image_load_png(png_path, &img);
 	CF_ASSERT(img.pix);
 	CF_TextureParams params = cf_texture_defaults(img.w, img.h);
-	params.filter = FILTER_LINEAR;
+	params.filter = CF_FILTER_LINEAR;
 	CF_Texture texture = cf_make_texture(params);
 	cf_texture_update(texture, img.pix, img.w * img.h * sizeof(CF_Pixel));
 	Array<spritebatch_premade_sprite_t> premades;

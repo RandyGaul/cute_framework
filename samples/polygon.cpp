@@ -41,7 +41,7 @@ int main(int argc, char* argv[])
 		draw_polygon_fill(polygon, CF_ARRAY_SIZE(polygon), chubbiness);
 
 		if (!ImGui::GetIO().WantCaptureMouse) {
-			if (mouse_just_pressed(MOUSE_BUTTON_LEFT)) {
+			if (mouse_just_pressed(CF_MOUSE_BUTTON_LEFT)) {
 				v2 p = screen_to_world(V2(mouse_x(), mouse_y()));
 				polygon[index] = p;
 				index = index + 1 == 8 ? 0 : index + 1;

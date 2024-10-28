@@ -22,6 +22,7 @@ i | The value to convert.
 
 ## Related Pages
 
+[sdyna](/string/sdyna.md)  
 [stobool](/string/stobool.md)  
 [suint](/string/suint.md)  
 [sfloat](/string/sfloat.md)  

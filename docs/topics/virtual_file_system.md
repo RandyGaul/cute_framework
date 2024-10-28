@@ -85,20 +85,20 @@ If you have all your loadable files in a folder called `content` right beside a 
 ```cpp
 void mount_content_folder()
 {
-	char* path = spnorm(fs_get_base_dir());
+	char* path = spnorm(cf_fs_get_base_directory());
 	int n = 1;
-	char* dir = spdir_of(path);
-	if (siequ(dir, "Debug") || siequ(dir, "Release")) {
+	if (ssuffix(path, "Debug") || ssuffix(path, "Release")) {
 		// MSVC/XCode places the .exe into one-level deeper /Debug or /Release folders.
 		n = 2;
 	}
-	sfree(dir);
 	path = sppopn(path, n);
 	scat(path, "/content");
-	fs_mount(path, "/");
+	cf_fs_mount(path, "/", true);
 	sfree(path);
 }
 ```
+
+Of course, when you release your game for people to install and play on their own machines you will need to modify this function. In all likelihood your content folder would sit next to your executable, instead of a build folder, so the call to `sppopn` wouldn't be necessary.
 
 ## The Write Directory
 

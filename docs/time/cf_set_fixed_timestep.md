@@ -17,7 +17,7 @@ void cf_set_fixed_timestep(int frames_per_second);
 
 Parameters | Description
 --- | ---
-frames_per_second | The frequency for fixed-timestep updates to occur, e.g. 30 is a good default number.
+frames_per_second | The frequency for fixed-timestep updates to occur, e.g. 30 is a good default number. Set to 0 to disable fixed timestep.
 
 ## Remarks
 

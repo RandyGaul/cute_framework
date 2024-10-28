@@ -371,7 +371,7 @@ void main()
 	v_uv = in_uv;
 	v_col = in_col;
 	v_radius = in_radius;
-	v_stroke = in_stroke;
+	v_stroke = in_stroke * 0.5;
 	v_aa = in_aa;
 	v_type = in_params.r;
 	v_alpha = in_params.g;
@@ -633,7 +633,7 @@ CF_TextureParams cf_texture_defaults(int w, int h)
 
 CF_INLINE bool s_is_depth(CF_PixelFormat format)
 {
-	return format >= PIXEL_FORMAT_D16_UNORM;
+	return format >= CF_PIXEL_FORMAT_D16_UNORM;
 }
 
 CF_Texture cf_make_texture(CF_TextureParams params)
@@ -721,7 +721,7 @@ void cf_texture_update(CF_Texture texture_handle, void* data, int size)
 		};
 		buf = SDL_CreateGPUTransferBuffer(app->device, &tbuf_info);
 	}
-	void* p = SDL_MapGPUTransferBuffer(app->device, buf, tex->buf ? true : false);
+	void* p = SDL_MapGPUTransferBuffer(app->device, buf, true);
 	CF_MEMCPY(p, data, size);
 	SDL_UnmapGPUTransferBuffer(app->device, buf);
 
@@ -734,7 +734,7 @@ void cf_texture_update(CF_Texture texture_handle, void* data, int size)
 	src.pixels_per_row = tex->w;
 	src.rows_per_layer = tex->h;
 	SDL_GPUTextureRegion dst = SDL_GPUTextureRegionDefaults(tex, tex->w, tex->h);
-	SDL_UploadToGPUTexture(pass, &src, &dst, tex->buf ? true : false);
+	SDL_UploadToGPUTexture(pass, &src, &dst, true);
 	SDL_EndGPUCopyPass(pass);
 	if (!tex->buf) SDL_ReleaseGPUTransferBuffer(app->device, buf);
 	if (!app->cmd) SDL_SubmitGPUCommandBuffer(cmd);
@@ -745,11 +745,11 @@ uint64_t cf_texture_handle(CF_Texture texture)
 	return (uint64_t)((CF_TextureInternal*)texture.id)->tex;
 }
 
-static void s_shader_directory_recursive(Path path)
+static void s_shader_directory_recursive(CF_Path path)
 {
-	Array<Path> dir = Directory::enumerate(app->shader_directory + path);
+	Array<CF_Path> dir = CF_Directory::enumerate(app->shader_directory + path);
 	for (int i = 0; i < dir.size(); ++i) {
-		Path p = app->shader_directory + path + dir[i];
+		CF_Path p = app->shader_directory + path + dir[i];
 		if (p.is_directory()) {
 			s_shader_directory_recursive(p);
 		} else {
@@ -786,11 +786,11 @@ void cf_shader_on_changed(void (*on_changed_fn)(const char* path, void* udata), 
 	app->on_shader_changed_udata = udata;
 }
 
-static void s_shader_watch_recursive(Path path)
+static void s_shader_watch_recursive(CF_Path path)
 {
-	Array<Path> dir = Directory::enumerate(app->shader_directory + path);
+	Array<CF_Path> dir = CF_Directory::enumerate(app->shader_directory + path);
 	for (int i = 0; i < dir.size(); ++i) {
-		Path p = app->shader_directory + path + dir[i];
+		CF_Path p = app->shader_directory + path + dir[i];
 		if (p.is_directory()) {
 			s_shader_directory_recursive(p);
 		} else {
@@ -975,7 +975,7 @@ static SDL_GPUShader* s_compile(CF_ShaderInternal* shader_internal, const dyna u
 	if (SDL_GetGPUShaderFormats(app->device) == SDL_GPU_SHADERFORMAT_SPIRV) {
 		sdl_shader = (SDL_GPUShader*)SDL_CreateGPUShader(app->device, &shaderCreateInfo);
 	} else {
-		sdl_shader = (SDL_GPUShader*)SDL_ShaderCross_CompileFromSPIRV(app->device, &shaderCreateInfo, false);
+		sdl_shader = (SDL_GPUShader*)SDL_ShaderCross_CompileGraphicsShaderFromSPIRV(app->device, &shaderCreateInfo);
 	}
 	afree(bytecode);
 	CF_ASSERT(sdl_shader);
@@ -1044,7 +1044,7 @@ static String s_include_recurse(Map<const char*, const char*>& incl_protection, 
 
 		// Search for the shader to include.
 		if (builtin || fs_file_exists(path)) {
-			String ext = Path(path).ext();
+			String ext = CF_Path(path).ext();
 			if (ext == ".vs" || ext == ".fs" || ext == ".shd") {
 				String incl;
 				bool found = false;
@@ -1171,7 +1171,7 @@ void cf_unload_internal_shaders()
 // Create a user shader by injecting their `shader` function into CF's draw shader.
 CF_Shader cf_make_draw_shader_internal(const char* path)
 {
-	Path p = Path("/") + path;
+	CF_Path p = CF_Path("/") + path;
 	const char* path_s = sintern(p);
 	CF_ShaderFileInfo info = app->shader_file_infos.find(path_s);
 	if (!info.path) return { 0 };
@@ -1185,7 +1185,7 @@ CF_Shader cf_make_draw_shader_internal(const char* path)
 // Create a user shader by injecting their `shader` function into CF's draw shader.
 CF_Shader cf_make_draw_blit_shader_internal(const char* path)
 {
-	Path p = Path("/") + path;
+	CF_Path p = CF_Path("/") + path;
 	const char* path_s = sintern(p);
 	CF_ShaderFileInfo info = app->shader_file_infos.find(path_s);
 	if (!info.path) return { 0 };
@@ -1432,9 +1432,9 @@ static void s_update_buffer(CF_Buffer* buffer, int element_count, void* data, in
 		int new_size = size * 2;
 		buffer->size = new_size;
 		SDL_GPUBufferCreateInfo buf_info = {
-				.usage = flags,
-				.size = (Uint32)new_size,
-				.props = 0,
+			.usage = flags,
+			.size = (Uint32)new_size,
+			.props = 0,
 		};
 		buffer->buffer = SDL_CreateGPUBuffer(app->device, &buf_info);
 		SDL_GPUTransferBufferCreateInfo tbuf_info = {
@@ -1491,7 +1491,7 @@ CF_RenderState cf_render_state_defaults()
 	CF_RenderState state;
 	state.blend.enabled = true;
 	state.cull_mode = CF_CULL_MODE_NONE;
-	state.blend.pixel_format = PIXEL_FORMAT_R8G8B8A8_UNORM;
+	state.blend.pixel_format = CF_PIXEL_FORMAT_R8G8B8A8_UNORM;
 	state.blend.write_R_enabled = true;
 	state.blend.write_G_enabled = true;
 	state.blend.write_B_enabled = true;
@@ -1522,8 +1522,8 @@ CF_RenderState cf_render_state_defaults()
 CF_Material cf_make_material()
 {
 	CF_MaterialInternal* material = CF_NEW(CF_MaterialInternal);
-	cf_arena_init(&material->uniform_arena, 4, 1024);
-	cf_arena_init(&material->block_arena, 4, 1024);
+	material->uniform_arena = cf_make_arena(4, 1024);
+	material->block_arena = cf_make_arena(4, 1024);
 	material->state = cf_render_state_defaults();
 	CF_Material result = { (uint64_t)material };
 	return result;
@@ -1763,7 +1763,6 @@ static void s_copy_uniforms(SDL_GPUCommandBuffer* cmd, CF_Arena* arena, CF_Shade
 		}
 	}
 
-	// @TODO Use a different allocation scheme that caches better.
 	cf_arena_reset(arena);
 }
 
@@ -1958,8 +1957,8 @@ void cf_apply_shader(CF_Shader shader_handle, CF_Material material_handle)
 	int found_image_count = 0;
 	for (int i = 0; found_image_count < sampler_count && i < material->fs.textures.count(); ++i) {
 		const char* image_name = material->fs.textures[i].name;
-		for (int i = 0; i < shader->image_names.size(); ++i) {
-			if (shader->image_names[i] == image_name) {
+		for (int j = 0; j < shader->image_names.size(); ++j) {
+			if (shader->image_names[j] == image_name) {
 				sampler_bindings[found_image_count].sampler = ((CF_TextureInternal*)material->fs.textures[i].handle.id)->sampler;
 				sampler_bindings[found_image_count].texture = ((CF_TextureInternal*)material->fs.textures[i].handle.id)->tex;
 				found_image_count++;

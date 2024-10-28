@@ -12,7 +12,7 @@ GitHub: [cute_alloc.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Initializes an arena for later allocations.
 
 ```cpp
-void cf_arena_init(CF_Arena* arena, int alignment, int block_size);
+CF_Arena cf_make_arena(int alignment, int block_size);
 ```
 
 Parameters | Description
@@ -23,5 +23,6 @@ block_size | The default size of each internal call to `malloc` to form pages to
 
 ## Related Pages
 
+[cf_arena_free](/allocator/cf_arena_free.md)  
 [cf_arena_alloc](/allocator/cf_arena_alloc.md)  
 [cf_arena_reset](/allocator/cf_arena_reset.md)  

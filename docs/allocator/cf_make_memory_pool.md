@@ -29,5 +29,4 @@ Returns a memory pool pointer.
 
 [cf_destroy_memory_pool](/allocator/cf_destroy_memory_pool.md)  
 [cf_memory_pool_alloc](/allocator/cf_memory_pool_alloc.md)  
-[cf_memory_pool_try_alloc](/allocator/cf_memory_pool_try_alloc.md)  
 [cf_memory_pool_free](/allocator/cf_memory_pool_free.md)  

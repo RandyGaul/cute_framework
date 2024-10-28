@@ -3,29 +3,29 @@
 [//]: # (See: https://github.com/RandyGaul/cute_framework/blob/master/samples/docs_parser.cpp)
 [](../header.md ':include')
 
-# cf_rnd
+# CF_Rnd
 
 Category: [random](/api_reference?id=random)  
 GitHub: [cute_rnd.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_rnd.h)  
 ---
 
-Returns a random `uint64_t`.
+A random number generator.
 
-```cpp
-uint64_t cf_rnd(CF_RndState* rnd);
-```
-
-Parameters | Description
+Struct Members | Description
 --- | ---
-rnd | The random number generator state.
+`uint64_t state[2]` | Just two `uint64_t`'s for the internal state. Very small! These are setup by [cf_rnd_seed](/random/cf_rnd_seed.md).
+
+## Remarks
+
+A random number generator of the type LFSR (linear feedback shift registers). This specific
+implementation uses the XorShift+ variation, and returns 64-bit random numbers. More information
+can be found on Wikipedia.
+https://en.wikipedia.org/wiki/Xorshift
+
+This implementation comes from Mattias Gustavsson's single-file header collection.
+https://github.com/mattiasgustavsson/libs/blob/main/rnd.h
 
 ## Related Pages
 
-[CF_RndState](/random/cf_rndstate.md)  
+[cf_rnd](/random/cf_rnd.md)  
 [cf_rnd_seed](/random/cf_rnd_seed.md)  
-[cf_rnd_range_double](/random/cf_rnd_range_double.md)  
-[cf_rnd_float](/random/cf_rnd_float.md)  
-[cf_rnd_double](/random/cf_rnd_double.md)  
-[cf_rnd_range_int](/random/cf_rnd_range_int.md)  
-[cf_rnd_range_uint64](/random/cf_rnd_range_uint64.md)  
-[cf_rnd_range_float](/random/cf_rnd_range_float.md)  

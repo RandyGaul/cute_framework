@@ -46,7 +46,7 @@ instance in UTF8 form given a UTF16 string.
 char utf8(uint16_t text)
 {
 int cp;
-char s = NULL;
+sdyna char s = NULL;
 while (text) {
     text = cf_decode_UTF16(text, &cp);
     s = sappend_UTF8(s, cp);

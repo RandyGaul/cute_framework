@@ -88,7 +88,7 @@ static CF_INLINE CF_HttpsResult s_tls_state_to_https_result(TLS_State state)
 	return CF_HTTPS_RESULT_FAILED;
 }
 
-static void s_get_line(Coroutine co, CF_Response* response)
+static void s_get_line(CF_Coroutine co, CF_Response* response)
 {
 	response->parse.clear();
 	while (1) {
@@ -113,7 +113,7 @@ static void s_get_line(Coroutine co, CF_Response* response)
 	}
 }
 
-static bool s_status(Coroutine co, CF_Response* response)
+static bool s_status(CF_Coroutine co, CF_Response* response)
 {
 	s_get_line(co, response);
 	const char* in = response->parse.c_str();
@@ -138,7 +138,7 @@ static bool s_status(Coroutine co, CF_Response* response)
 	return true;
 }
 
-static bool s_header(Coroutine co, CF_Response* response)
+static bool s_header(CF_Coroutine co, CF_Response* response)
 {
 	const char* in = response->parse.c_str();
 
@@ -203,7 +203,7 @@ static bool s_header(Coroutine co, CF_Response* response)
 	return true;
 }
 
-static void s_headers(Coroutine co, CF_Response* response)
+static void s_headers(CF_Coroutine co, CF_Response* response)
 {
 	while (1) {
 		s_get_line(co, response);
@@ -217,7 +217,7 @@ static void s_headers(Coroutine co, CF_Response* response)
 	}
 }
 
-static void s_decode(Coroutine co)
+static void s_decode(CF_Coroutine co)
 {
 	CF_Response* response = (CF_Response*)coroutine_get_udata(co);
 	// Read status line.
@@ -319,7 +319,7 @@ static void s_decode(Coroutine co)
 	}
 }
 
-static void s_https_process(Coroutine co)
+static void s_https_process(CF_Coroutine co)
 {
 	CF_Request* request = (CF_Request*)coroutine_get_udata(co);
 

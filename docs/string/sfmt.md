@@ -12,7 +12,7 @@ GitHub: [cute_string.h](https://github.com/RandyGaul/cute_framework/blob/master/
 Printf's into the string using the format string `fmt`.
 
 ```cpp
-#define sfmt(s, fmt, ...) cf_string_fmt(s, fmt, (__VA_ARGS__))
+#define sfmt(s, fmt, ...) cf_string_fmt(s, fmt, __VA_ARGS__)
 ```
 
 Parameters | Description
@@ -27,6 +27,7 @@ The string will be overwritten from the beginning. Will automatically adjust cap
 
 ## Related Pages
 
+[sdyna](/string/sdyna.md)  
 [sset](/string/sset.md)  
 [sfmt_append](/string/sfmt_append.md)  
 [svfmt](/string/svfmt.md)  

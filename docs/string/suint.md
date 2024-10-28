@@ -22,6 +22,7 @@ uint | The value to convert.
 
 ## Related Pages
 
+[sdyna](/string/sdyna.md)  
 [sint](/string/sint.md)  
 [stobool](/string/stobool.md)  
 [sfloat](/string/sfloat.md)  

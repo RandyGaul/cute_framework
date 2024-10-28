@@ -21,6 +21,7 @@ s | The string.
 
 ## Related Pages
 
+[sdyna](/string/sdyna.md)  
 [slen](/string/slen.md)  
 [sempty](/string/sempty.md)  
 [scap](/string/scap.md)  

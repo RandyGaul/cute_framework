@@ -22,6 +22,7 @@ b | The second string.
 
 ## Related Pages
 
+[sdyna](/string/sdyna.md)  
 [scmp](/string/scmp.md)  
 [sicmp](/string/sicmp.md)  
 [siequ](/string/siequ.md)  

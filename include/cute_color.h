@@ -885,38 +885,35 @@ CF_INLINE CF_Pixel cf_pixel_brown() { return cf_make_pixel_rgb(150, 105, 25); }
 namespace Cute
 {
 
-using Pixel = CF_Pixel;
-using Color = CF_Color;
+CF_INLINE CF_Color make_color(float r, float g, float b) { return cf_make_color_rgb_f(r, g, b); }
+CF_INLINE CF_Color make_color(float r, float g, float b, float a) { return cf_make_color_rgba_f(r, g, b, a); }
+CF_INLINE CF_Color make_color(uint8_t r, uint8_t g, uint8_t b) { return cf_make_color_rgb(r, g, b); }
+CF_INLINE CF_Color make_color(uint8_t r, uint8_t g, uint8_t b, uint8_t a) { return cf_make_color_rgba(r, g, b, a); }
+CF_INLINE CF_Color make_color(int hex) { return cf_make_color_hex(hex); }
+CF_INLINE CF_Color make_color(const char* s) { return make_color((int)stohex(s)); }
 
-CF_INLINE Color make_color(float r, float g, float b) { return cf_make_color_rgb_f(r, g, b); }
-CF_INLINE Color make_color(float r, float g, float b, float a) { return cf_make_color_rgba_f(r, g, b, a); }
-CF_INLINE Color make_color(uint8_t r, uint8_t g, uint8_t b) { return cf_make_color_rgb(r, g, b); }
-CF_INLINE Color make_color(uint8_t r, uint8_t g, uint8_t b, uint8_t a) { return cf_make_color_rgba(r, g, b, a); }
-CF_INLINE Color make_color(int hex) { return cf_make_color_hex(hex); }
-CF_INLINE Color make_color(const char* s) { return make_color((int)stohex(s)); }
+CF_INLINE CF_Pixel make_pixel(float r, float g, float b) { return cf_make_pixel_rgb_f(r, g, b); }
+CF_INLINE CF_Pixel make_pixel(float r, float g, float b, float a) { return cf_make_pixel_rgba_f(r, g, b, a); }
+CF_INLINE CF_Pixel make_pixel(uint8_t r, uint8_t g, uint8_t b) { return cf_make_pixel_rgb(r, g, b); }
+CF_INLINE CF_Pixel make_pixel(uint8_t r, uint8_t g, uint8_t b, uint8_t a) { return cf_make_pixel_rgba(r, g, b, a); }
+CF_INLINE CF_Pixel make_pixel(int hex) { return cf_make_pixel_hex(hex); }
+CF_INLINE CF_Pixel make_pixel(const char* hex) { return cf_make_pixel_hex((int)stohex(hex)); }
 
-CF_INLINE Pixel make_pixel(float r, float g, float b) { return cf_make_pixel_rgb_f(r, g, b); }
-CF_INLINE Pixel make_pixel(float r, float g, float b, float a) { return cf_make_pixel_rgba_f(r, g, b, a); }
-CF_INLINE Pixel make_pixel(uint8_t r, uint8_t g, uint8_t b) { return cf_make_pixel_rgb(r, g, b); }
-CF_INLINE Pixel make_pixel(uint8_t r, uint8_t g, uint8_t b, uint8_t a) { return cf_make_pixel_rgba(r, g, b, a); }
-CF_INLINE Pixel make_pixel(int hex) { return cf_make_pixel_hex(hex); }
-CF_INLINE Pixel make_pixel(const char* hex) { return cf_make_pixel_hex((int)stohex(hex)); }
-
-CF_INLINE Color operator*(Color a, float s) { return cf_mul_color(a, s); }
-CF_INLINE Color operator/(Color a, float s) { return cf_div_color(a, s); }
-CF_INLINE Color operator+(Color a, Color b) { return cf_add_color(a, b); }
-CF_INLINE Color operator-(Color a, Color b) { return cf_sub_color(a, b); }
-CF_INLINE Color operator*(Color a, Color b) { CF_Color c; c.r = a.r * b.r; c.g = a.g * b.g; c.b = a.b * b.b; c.a = a.a * b.a; return c; }
-CF_INLINE bool operator==(Color a, Color b) { return a.r == b.r && a.g == b.g && a.b == b.b && a.a == b.a; }
-CF_INLINE bool operator!=(Color a, Color b) { return !(a == b); }
+CF_INLINE CF_Color operator*(CF_Color a, float s) { return cf_mul_color(a, s); }
+CF_INLINE CF_Color operator/(CF_Color a, float s) { return cf_div_color(a, s); }
+CF_INLINE CF_Color operator+(CF_Color a, CF_Color b) { return cf_add_color(a, b); }
+CF_INLINE CF_Color operator-(CF_Color a, CF_Color b) { return cf_sub_color(a, b); }
+CF_INLINE CF_Color operator*(CF_Color a, CF_Color b) { CF_Color c; c.r = a.r * b.r; c.g = a.g * b.g; c.b = a.b * b.b; c.a = a.a * b.a; return c; }
+CF_INLINE bool operator==(CF_Color a, CF_Color b) { return a.r == b.r && a.g == b.g && a.b == b.b && a.a == b.a; }
+CF_INLINE bool operator!=(CF_Color a, CF_Color b) { return !(a == b); }
 CF_INLINE CF_Color abs(CF_Color a) { return cf_abs_color(a); }
 CF_INLINE CF_Color fract(CF_Color a) { return cf_fract_color(a); }
 CF_INLINE CF_Color mod(CF_Color a, float m) { return cf_mod_color(a, m); }
 CF_INLINE CF_Color splat(float v) { return cf_splat_color(v); }
 CF_INLINE CF_Color clamp(CF_Color a, CF_Color lo, CF_Color hi) { return cf_clamp_color(a, lo, hi); }
 CF_INLINE CF_Color clamp01(CF_Color a) { return cf_clamp_color01(a); }
-CF_INLINE Color lerp(Color a, Color b, float s) { return cf_color_lerp(a, b, s); }
-CF_INLINE Color premultiply(Color c) { return cf_color_premultiply(c); }
+CF_INLINE CF_Color lerp(CF_Color a, CF_Color b, float s) { return cf_color_lerp(a, b, s); }
+CF_INLINE CF_Color premultiply(CF_Color c) { return cf_color_premultiply(c); }
 CF_INLINE CF_Color rgb_to_hsv(CF_Color c) { return cf_rgb_to_hsv(c); }
 CF_INLINE CF_Color hsv_to_rgb(CF_Color c) { return cf_hsv_to_rgb(c); }
 CF_INLINE CF_Color hue(CF_Color base, CF_Color tint) { return cf_hue(base, tint); }
@@ -925,52 +922,52 @@ CF_INLINE float softlight(float base, float blend) { return cf_softlight(base, b
 CF_INLINE CF_Color overlay(CF_Color base, CF_Color blend) { return cf_overlay_color(base, blend); }
 CF_INLINE CF_Color softlight(CF_Color base, CF_Color blend) { return cf_softlight_color(base, blend); }
 
-CF_INLINE Pixel operator*(Pixel a, int s) { return cf_mul_pixel(a, s); }
-CF_INLINE Pixel operator/(Pixel a, int s) { return cf_div_pixel(a, s); }
-CF_INLINE Pixel operator+(Pixel a, Pixel b) { return cf_add_pixel(a, b); }
-CF_INLINE Pixel operator-(Pixel a, Pixel b) { return cf_sub_pixel(a, b); }
-CF_INLINE bool operator==(Pixel a, Pixel b) { return a.val == b.val; }
-CF_INLINE bool operator!=(Pixel a, Pixel b) { return a.val != b.val; }
-CF_INLINE Pixel lerp(Pixel a, Pixel b, uint8_t s) { return cf_pixel_lerp(a, b, s); }
-CF_INLINE Pixel premultiply(Pixel p) { return cf_pixel_premultiply(p); }
+CF_INLINE CF_Pixel operator*(CF_Pixel a, int s) { return cf_mul_pixel(a, s); }
+CF_INLINE CF_Pixel operator/(CF_Pixel a, int s) { return cf_div_pixel(a, s); }
+CF_INLINE CF_Pixel operator+(CF_Pixel a, CF_Pixel b) { return cf_add_pixel(a, b); }
+CF_INLINE CF_Pixel operator-(CF_Pixel a, CF_Pixel b) { return cf_sub_pixel(a, b); }
+CF_INLINE bool operator==(CF_Pixel a, CF_Pixel b) { return a.val == b.val; }
+CF_INLINE bool operator!=(CF_Pixel a, CF_Pixel b) { return a.val != b.val; }
+CF_INLINE CF_Pixel lerp(CF_Pixel a, CF_Pixel b, uint8_t s) { return cf_pixel_lerp(a, b, s); }
+CF_INLINE CF_Pixel premultiply(CF_Pixel p) { return cf_pixel_premultiply(p); }
 
-CF_INLINE Color to_color(Pixel p) { return cf_make_color_rgba(p.colors.r, p.colors.g, p.colors.b, p.colors.a); }
-CF_INLINE uint32_t to_int_rgba(Pixel p) { return p.val; }
-CF_INLINE uint32_t to_int_rgb(Pixel p) { return p.val | 0xFF000000; }
-CF_INLINE String to_string(Pixel p) { char* s = NULL; return shex(s, p.val); }
+CF_INLINE CF_Color to_color(CF_Pixel p) { return cf_make_color_rgba(p.colors.r, p.colors.g, p.colors.b, p.colors.a); }
+CF_INLINE uint32_t to_int_rgba(CF_Pixel p) { return p.val; }
+CF_INLINE uint32_t to_int_rgb(CF_Pixel p) { return p.val | 0xFF000000; }
+CF_INLINE String to_string(CF_Pixel p) { char* s = NULL; return shex(s, p.val); }
 
-CF_INLINE Pixel to_pixel(Color c) { return cf_color_to_pixel(c); }
-CF_INLINE uint32_t to_int_rgb(Color c) { return cf_color_to_pixel(c).val | 0xFF000000; }
-CF_INLINE uint32_t to_int_rgba(Color c) { return cf_color_to_pixel(c).val; }
-CF_INLINE String to_string(Color c) { char* s = NULL; return shex(s, cf_color_to_pixel(c).val); }
+CF_INLINE CF_Pixel to_pixel(CF_Color c) { return cf_color_to_pixel(c); }
+CF_INLINE uint32_t to_int_rgb(CF_Color c) { return cf_color_to_pixel(c).val | 0xFF000000; }
+CF_INLINE uint32_t to_int_rgba(CF_Color c) { return cf_color_to_pixel(c).val; }
+CF_INLINE String to_string(CF_Color c) { char* s = NULL; return shex(s, cf_color_to_pixel(c).val); }
 
-CF_INLINE Color color_invisible() { return cf_color_invisible(); }
-CF_INLINE Color color_clear() { return cf_color_clear(); }
-CF_INLINE Color color_black() { return cf_color_black(); }
-CF_INLINE Color color_white() { return cf_color_white(); }
-CF_INLINE Color color_red() { return cf_color_red(); }
-CF_INLINE Color color_green() { return cf_color_green(); }
-CF_INLINE Color color_blue() { return cf_color_blue(); }
-CF_INLINE Color color_yellow() { return cf_color_yellow(); }
-CF_INLINE Color color_orange() { return cf_color_orange(); }
-CF_INLINE Color color_purple() { return cf_color_purple(); }
-CF_INLINE Color color_grey() { return cf_color_grey(); }
-CF_INLINE Color color_cyan() { return cf_color_cyan(); }
-CF_INLINE Color color_magenta() { return cf_color_magenta(); }
+CF_INLINE CF_Color color_invisible() { return cf_color_invisible(); }
+CF_INLINE CF_Color color_clear() { return cf_color_clear(); }
+CF_INLINE CF_Color color_black() { return cf_color_black(); }
+CF_INLINE CF_Color color_white() { return cf_color_white(); }
+CF_INLINE CF_Color color_red() { return cf_color_red(); }
+CF_INLINE CF_Color color_green() { return cf_color_green(); }
+CF_INLINE CF_Color color_blue() { return cf_color_blue(); }
+CF_INLINE CF_Color color_yellow() { return cf_color_yellow(); }
+CF_INLINE CF_Color color_orange() { return cf_color_orange(); }
+CF_INLINE CF_Color color_purple() { return cf_color_purple(); }
+CF_INLINE CF_Color color_grey() { return cf_color_grey(); }
+CF_INLINE CF_Color color_cyan() { return cf_color_cyan(); }
+CF_INLINE CF_Color color_magenta() { return cf_color_magenta(); }
 
-CF_INLINE Pixel pixel_invisible() { return cf_pixel_invisible(); }
-CF_INLINE Pixel pixel_clear() { return cf_pixel_clear(); }
-CF_INLINE Pixel pixel_black() { return cf_pixel_black(); }
-CF_INLINE Pixel pixel_white() { return cf_pixel_white(); }
-CF_INLINE Pixel pixel_red() { return cf_pixel_red(); }
-CF_INLINE Pixel pixel_green() { return cf_pixel_green(); }
-CF_INLINE Pixel pixel_blue() { return cf_pixel_blue(); }
-CF_INLINE Pixel pixel_yellow() { return cf_pixel_yellow(); }
-CF_INLINE Pixel pixel_orange() { return cf_pixel_orange(); }
-CF_INLINE Pixel pixel_purple() { return cf_pixel_purple(); }
-CF_INLINE Pixel pixel_grey() { return cf_pixel_grey(); }
-CF_INLINE Pixel pixel_cyan() { return cf_pixel_cyan(); }
-CF_INLINE Pixel pixel_magenta() { return cf_pixel_magenta(); }
+CF_INLINE CF_Pixel pixel_invisible() { return cf_pixel_invisible(); }
+CF_INLINE CF_Pixel pixel_clear() { return cf_pixel_clear(); }
+CF_INLINE CF_Pixel pixel_black() { return cf_pixel_black(); }
+CF_INLINE CF_Pixel pixel_white() { return cf_pixel_white(); }
+CF_INLINE CF_Pixel pixel_red() { return cf_pixel_red(); }
+CF_INLINE CF_Pixel pixel_green() { return cf_pixel_green(); }
+CF_INLINE CF_Pixel pixel_blue() { return cf_pixel_blue(); }
+CF_INLINE CF_Pixel pixel_yellow() { return cf_pixel_yellow(); }
+CF_INLINE CF_Pixel pixel_orange() { return cf_pixel_orange(); }
+CF_INLINE CF_Pixel pixel_purple() { return cf_pixel_purple(); }
+CF_INLINE CF_Pixel pixel_grey() { return cf_pixel_grey(); }
+CF_INLINE CF_Pixel pixel_cyan() { return cf_pixel_cyan(); }
+CF_INLINE CF_Pixel pixel_magenta() { return cf_pixel_magenta(); }
 
 }
 

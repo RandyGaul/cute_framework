@@ -26,5 +26,6 @@ You must free the copy with [sfree](/string/sfree.md) when done. Does the same t
 
 ## Related Pages
 
+[sdyna](/string/sdyna.md)  
 [sset](/string/sset.md)  
 [sdup](/string/sdup.md)  

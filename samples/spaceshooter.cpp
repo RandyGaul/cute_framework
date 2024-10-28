@@ -12,7 +12,7 @@ struct RocketBarn
 	bool alive[ROCKETS_MAX];
 	float elapsed[ROCKETS_MAX];
 	float hang_time[ROCKETS_MAX];
-	Routine rt[ROCKETS_MAX];
+	CF_Routine rt[ROCKETS_MAX];
 	v2 p[ROCKETS_MAX];
 	v2 c0[ROCKETS_MAX];
 	v2 c1[ROCKETS_MAX];
@@ -81,9 +81,9 @@ struct PlayerShip
 {
 	v2 p;
 	CF_Aabb bounds;
-	Routine rt_movement;
-	Routine rt_weapons;
-	Routine rt_trail;
+	CF_Routine rt_movement;
+	CF_Routine rt_weapons;
+	CF_Routine rt_trail;
 	bool charging_laser;
 	int charging_shot;
 	bool fired_laser;
@@ -93,8 +93,8 @@ struct PlayerShip
 	RocketBarn rockets;
 	BulletBarn bullets;
 	CF_Ray laser_trail;
-	Sprite sprite;
-	Sprite charge_sprite;
+	CF_Sprite sprite;
+	CF_Sprite charge_sprite;
 	int facing_index;
 	float booster_time;
 	float turn_time;
@@ -110,11 +110,11 @@ struct PlayerShip
 // Stores a single sprite and plays it one time. Once played, the sprite the sprite gets removed.
 struct AnimationBarn
 {
-	inline void add(Sprite sprite) { sprites.add(sprite); }
+	inline void add(CF_Sprite sprite) { sprites.add(sprite); }
 	inline void update()
 	{
 		for (int i = 0; i < sprites.count(); ++i) {
-			sprites[i].update();
+			sprite_update(sprites[i]);
 			if (sprites[i].loop_count) {
 				sprites.unordered_remove(i);
 				--i;
@@ -124,21 +124,21 @@ struct AnimationBarn
 	inline void draw()
 	{
 		for (int i = 0; i < sprites.count(); ++i) {
-			sprites[i].draw();
+			sprite_draw(sprites[i]);
 		}
 	}
-	Array<Sprite> sprites;
+	Array<CF_Sprite> sprites;
 };
 
 // Draws a sprite fading over a time. Does not animate the sprite, but stays locked on that frame.
 struct FadeBarn
 {
-	inline void add(Sprite sprite, float time = 0.5f) { times_original.add(time); times.add(time); sprites.add(sprite); }
+	inline void add(CF_Sprite sprite, float time = 0.5f) { times_original.add(time); times.add(time); sprites.add(sprite); }
 	inline void update()
 	{
 		for (int i = 0; i < times.count(); ++i) {
 
-			times[i] -= DELTA_TIME;
+			times[i] -= CF_DELTA_TIME;
 			if (times[i] <= 0) {
 				times_original.unordered_remove(i);
 				times.unordered_remove(i);
@@ -152,12 +152,12 @@ struct FadeBarn
 		for (int i = 0; i < sprites.count(); ++i) {
 			float opacity = fade(1.0f - times[i] / times_original[i], 0.0f, 1.0f);
 			sprites[i].opacity = opacity;
-			sprites[i].draw();
+			sprite_draw(sprites[i]);
 		}
 	}
 	Array<float> times_original;
 	Array<float> times;
-	Array<Sprite> sprites;
+	Array<CF_Sprite> sprites;
 };
 
 // Animates circles with a velocity, fading out over time.
@@ -165,7 +165,7 @@ struct ParticleBarn
 {
 	struct Particle
 	{
-		Circle c;
+		CF_Circle c;
 		v2 v;
 		float t0;
 		float t;
@@ -174,13 +174,13 @@ struct ParticleBarn
 	inline void update_and_draw()
 	{
 		for (int i = 0; i < particles.count(); ++i) {
-			particles[i].t -= DELTA_TIME;
+			particles[i].t -= CF_DELTA_TIME;
 			if (particles[i].t <= 0) {
 				particles.unordered_remove(i);
 				--i;
 				continue;
 			}
-			particles[i].c.p += particles[i].v * DELTA_TIME;
+			particles[i].c.p += particles[i].v * CF_DELTA_TIME;
 			float opacity = particles[i].t / particles[i].t0;
 			draw_push_color(color_white() * opacity);
 			draw_circle_fill(particles[i].c);
@@ -191,9 +191,9 @@ struct ParticleBarn
 
 struct ChargeShot
 {
-	Routine rt;
-	Sprite shot_spawn;
-	Sprite shot;
+	CF_Routine rt;
+	CF_Sprite shot_spawn;
+	CF_Sprite shot;
 	v2 at;
 	bool start = false;
 	bool alive = false;
@@ -222,7 +222,7 @@ struct LineParticleBarn
 		p.t = p.t0 = lifetime;
 		particles.add(p);
 	}
-	inline void add(Poly poly, v2 v, float spin, float lifetime)
+	inline void add(CF_Poly poly, v2 v, float spin, float lifetime)
 	{
 		v2 com = center_of_mass(poly);
 		for (int i = 0; i < poly.count; ++i) {
@@ -238,18 +238,18 @@ struct LineParticleBarn
 	{
 		for (int i = 0; i < particles.count(); ++i) {
 			Particle* p = particles + i;
-			p->t -= DELTA_TIME;
+			p->t -= CF_DELTA_TIME;
 			if (p->t <= 0) {
 				particles.unordered_remove(i);
 				--i;
 				continue;
 			}
-			p->a += p->v * DELTA_TIME;
-			p->b += p->v * DELTA_TIME;
+			p->a += p->v * CF_DELTA_TIME;
+			p->b += p->v * CF_DELTA_TIME;
 			v2 c = (p->a + p->b) * 0.5f;
 			v2 a = p->a - c;
 			v2 b = p->b - c;
-			SinCos r = sincos(p->spin * DELTA_TIME);
+			CF_SinCos r = sincos(p->spin * CF_DELTA_TIME);
 			a = mul(r, a);
 			b = mul(r, b);
 			p->a = a + c;
@@ -264,7 +264,7 @@ struct LineParticleBarn
 
 struct Game
 {
-	CF_RndState rnd;
+	CF_Rnd rnd;
 	PlayerShip player;
 	AsteroidBarn asteroids;
 	TrailBarn trails;
@@ -279,9 +279,9 @@ struct Game
 	bool boss_hurt_small;
 	bool boss1;
 	int boss_state;
-	Routine rt;
-	Routine rt_hurt;
-	Routine rt_hurt_small;
+	CF_Routine rt;
+	CF_Routine rt_hurt;
+	CF_Routine rt_hurt_small;
 	v2 boss_p, boss_last_p;
 };
 
@@ -306,7 +306,7 @@ void TrailBarn::update()
 {
 	for (int i = 0; i < TRAIL_MAX; ++i) {
 		if (!alive[i]) continue;
-		time_left[i] -= DELTA_TIME;
+		time_left[i] -= CF_DELTA_TIME;
 		if (time_left[i] < 0) alive[i] = false;
 	}
 }
@@ -340,7 +340,7 @@ bool RocketBarn::add(v2 start, v2 end, float duration)
 			alive[i] = true;
 			hang_time[i] = duration;
 			elapsed[i] = 0;
-			rt[i] = Routine();
+			rt[i] = CF_Routine();
 			v2 d = norm(end - start);
 			p[i] = start;
 			c0[i] = (start - d * 150.0f + skew(d) * rnd_range(25.0f, 250.0f) * sign(rnd_range(-1.0f, 1.0f)));
@@ -355,11 +355,11 @@ bool RocketBarn::add(v2 start, v2 end, float duration)
 
 void RocketBarn::update()
 {
-	prev_dt = DELTA_TIME;
+	prev_dt = CF_DELTA_TIME;
 	hit_count = 0;
 	for (int i = 0; i < ROCKETS_MAX; ++i) {
 		if (!alive[i]) continue;
-		rt_begin(rt[i], DELTA_TIME);
+		rt_begin(rt[i], CF_DELTA_TIME);
 		rt_seconds(hang_time[i])
 		{
 			elapsed[i] = rt.elapsed;
@@ -372,7 +372,7 @@ void RocketBarn::update()
 		rt_once()
 		{
 			alive[i] = false;
-			Sprite s = make_sprite("explosion.ase");
+			CF_Sprite s = make_sprite("explosion.ase");
 			s.transform.p = target[i];
 			g->animations.add(s);
 			hits[hit_count++] = target[i];
@@ -424,7 +424,7 @@ bool BulletBarn::add()
 
 void BulletBarn::hit(int i)
 {
-	Sprite s = make_sprite("bullet_pop.ase");
+	CF_Sprite s = make_sprite("bullet_pop.ase");
 	s.transform.p = p[i];
 	g->animations.add(s);
 	alive[i] = false;
@@ -436,7 +436,7 @@ void BulletBarn::update()
 {
 	for (int i = 0; i < BULLETS_MAX; ++i) {
 		if (!alive[i]) continue;
-		p[i] += V2(0,1) * 300.0f * DELTA_TIME;
+		p[i] += V2(0,1) * 300.0f * CF_DELTA_TIME;
 		if (p[i].y > 240.0f + 10.0f) {
 			alive[i] = false;
 		} else {
@@ -519,7 +519,7 @@ void AsteroidBarn::update()
 		}
 
 		// Integrate positions.
-		v2 delta = velocity[i] * DELTA_TIME;
+		v2 delta = velocity[i] * CF_DELTA_TIME;
 		for (int j = 0; j < poly[i].count; ++j) {
 			poly[i].verts[j] += delta;
 		}
@@ -527,7 +527,7 @@ void AsteroidBarn::update()
 
 		// Rotate about center of mass.
 		// Integrate orientation.
-		float angular_delta = angular_velocity[i] * DELTA_TIME;
+		float angular_delta = angular_velocity[i] * CF_DELTA_TIME;
 		CF_SinCos r = sincos(angular_delta);
 		v2 c = center_mass[i];
 		for (int j = 0; j < poly[i].count; ++j) {
@@ -536,7 +536,7 @@ void AsteroidBarn::update()
 		norms(poly[i].verts, poly[i].norms, poly[i].count);
 
 		if (slice_timeout[i] > 0) {
-			slice_timeout[i] = max(0.0f, slice_timeout[i] - DELTA_TIME);
+			slice_timeout[i] = max(0.0f, slice_timeout[i] - CF_DELTA_TIME);
 		}
 	}
 }
@@ -548,7 +548,7 @@ void AsteroidBarn::slice(CF_Ray r)
 		if (!alive[i]) continue;
 		if (slice_timeout[i] > 0) continue;
 		if (!ray_to_poly(r, &poly[i]).hit) continue;
-		SliceOutput sho = Cute::slice(h, poly[i]);
+		CF_SliceOutput sho = Cute::slice(h, poly[i]);
 		if (!sho.front.count | !sho.back.count) continue;
 		v2 c = center_mass[i];
 		v2 v = velocity[i];
@@ -572,7 +572,7 @@ void AsteroidBarn::draw()
 
 void AsteroidBarn::hit(v2 hit, float radius)
 {
-	Circle c = make_circle(hit, radius);
+	CF_Circle c = make_circle(hit, radius);
 	for (int i = 0; i < ASTEROIDS_MAX; ++i) {
 		if (!alive[i]) continue;
 		if (circle_to_poly(c, poly + i, NULL)) {
@@ -589,8 +589,8 @@ void AsteroidBarn::explode(int i)
 
 void player_movement_routine()
 {
-	g->player.iframes -= DELTA_TIME;
-	rt_begin(g->player.rt_movement, DELTA_TIME)
+	g->player.iframes -= CF_DELTA_TIME;
+	rt_begin(g->player.rt_movement, CF_DELTA_TIME)
 	{
 		if (g->player.fired_laser) {
 			nav_goto("knockback");
@@ -600,7 +600,7 @@ void player_movement_routine()
 			// Detect running into asteroids.
 			for (int i = 0; i < ASTEROIDS_MAX; ++i) {
 				if (!g->asteroids.alive[i]) continue;
-				Circle c = make_circle(g->player.sprite.transform.p, 12.5f);
+				CF_Circle c = make_circle(g->player.sprite.transform.p, 12.5f);
 				if (circle_to_poly(c, g->asteroids.poly + i, NULL)) {
 					nav_goto("hurt");
 				}
@@ -608,16 +608,16 @@ void player_movement_routine()
 		}
 
 		v2 dir = V2(0,0);
-		if (key_down(KEY_LEFT)) {
+		if (key_down(CF_KEY_LEFT)) {
 			dir += V2(-1,0);
 		}
-		if (key_down(KEY_UP)) {
+		if (key_down(CF_KEY_UP)) {
 			dir += V2(0,1);
 		}
-		if (key_down(KEY_RIGHT)) {
+		if (key_down(CF_KEY_RIGHT)) {
 			dir += V2(1,0);
 		}
-		if (key_down(KEY_DOWN)) {
+		if (key_down(CF_KEY_DOWN)) {
 			dir += V2(0,-1);
 		}
 		g->player.old_dir = g->player.dir;
@@ -629,7 +629,7 @@ void player_movement_routine()
 		// the player is pressing.
 		// We store two sets of the player's ship animation and go toggle them frequently to
 		// implement the flame booster effect.
-		g->player.turn_time += DELTA_TIME;
+		g->player.turn_time += CF_DELTA_TIME;
 		if (g->player.turn_time > 0.05f) {
 			g->player.turn_time = 0;
 			int target;
@@ -647,7 +647,7 @@ void player_movement_routine()
 		}
 
 		bool go_slow = g->player.charging_laser | g->player.shielding | g->player.firing_rockets;
-		g->player.p += safe_norm(dir) * (go_slow ? 100.0f : 200.0f) * DELTA_TIME;
+		g->player.p += safe_norm(dir) * (go_slow ? 100.0f : 200.0f) * CF_DELTA_TIME;
 		nav_restart();
 	}
 
@@ -655,7 +655,7 @@ void player_movement_routine()
 	{
 		v2 offset = V2(0,-15);
 		int n = 5;
-		Sprite s = g->player.sprite;
+		CF_Sprite s = g->player.sprite;
 		v2 p = s.transform.p;
 		for (int i = 0; i < n; ++i) {
 			float t = (float)i / (float)n;
@@ -687,7 +687,7 @@ void player_movement_routine()
 
 	// Toggle back and forth between two sets of animation frames to implement the flame
 	// booster effect for the back of the player's ship.
-	g->player.booster_time += DELTA_TIME;
+	g->player.booster_time += CF_DELTA_TIME;
 	if (g->player.booster_time > 0.025f) {
 		g->player.booster_time = 0;
 		if (g->player.facing_index < 7) {
@@ -701,15 +701,15 @@ void player_movement_routine()
 
 void player_weapons_routine()
 {
-	rt_begin(g->player.rt_weapons, DELTA_TIME)
+	rt_begin(g->player.rt_weapons, CF_DELTA_TIME)
 	{
-		if (key_down(KEY_X)) {
+		if (key_down(CF_KEY_X)) {
 			nav_goto("laser");
-		} else if (key_just_pressed(KEY_Z)) {
+		} else if (key_just_pressed(CF_KEY_Z)) {
 			nav_goto("bullet");
-		} else if (key_just_pressed(KEY_C)) {
+		} else if (key_just_pressed(CF_KEY_C)) {
 			nav_goto("rocket");
-		} else if (key_just_pressed(KEY_SPACE)) {
+		} else if (key_just_pressed(CF_KEY_SPACE)) {
 			nav_goto("shield");
 		} else {
 			nav_restart();
@@ -723,7 +723,7 @@ void player_weapons_routine()
 	// Charging laser.
 	rt_seconds(1.0f)
 	{
-		if (key_down(KEY_X)) {
+		if (key_down(CF_KEY_X)) {
 			v2 p = top(g->player.bounds) + V2(0, 10.0f);
 			draw_circle(make_circle(p, cf_lerp(3.0f, 10.0f, rt.elapsed)));
 		} else {
@@ -763,20 +763,20 @@ void player_weapons_routine()
 	}
 	rt_seconds(0.5f)
 	{
-		if (!key_down(KEY_Z)) {
+		if (!key_down(CF_KEY_Z)) {
 			nav_restart();
 		}
 	}
 	rt_seconds(1.25f)
 	{
 		g->player.charging_shot = 1;
-		if (!key_down(KEY_Z)) {
+		if (!key_down(CF_KEY_Z)) {
 			g->player.charging_shot = 0;
 			g->player.bullets.add();
 			nav_goto("bullet_cooldown");
 		}
 	}
-	rt_while(key_down(KEY_Z))
+	rt_while(key_down(CF_KEY_Z))
 	{
 		g->player.charging_shot = 2;
 	}
@@ -818,8 +818,8 @@ void player_weapons_routine()
 	rt_label("shield")
 	{
 		g->player.shielding = true;
-		g->player.shield_time += DELTA_TIME;
-		if (key_down(KEY_SPACE) && g->player.shield_time < player_shield_max) {
+		g->player.shield_time += CF_DELTA_TIME;
+		if (key_down(CF_KEY_SPACE) && g->player.shield_time < player_shield_max) {
 			// Collide with asteroids.
 			for (int i = 0; i < ASTEROIDS_MAX; ++i) {
 				if (!g->asteroids.alive[i]) continue;
@@ -834,7 +834,7 @@ void player_weapons_routine()
 		g->player.shielding = false;
 	}
 	rt_wait(0.5f) { }
-	rt_while(key_down(KEY_SPACE)) { }
+	rt_while(key_down(CF_KEY_SPACE)) { }
 	rt_once()
 	{
 		nav_restart();
@@ -847,7 +847,7 @@ void boss1()
 	#define BOSS1_RADIUS 20
 	#define BOSS1_ASTEROID_RADIUS 15
 
-	rt_begin(g->rt, DELTA_TIME) { }
+	rt_begin(g->rt, CF_DELTA_TIME) { }
 	rt_seconds(2)
 	{
 		g->boss1 = true;
@@ -936,7 +936,7 @@ void boss1()
 
 void boss_hurt()
 {
-	rt_begin(g->rt_hurt, DELTA_TIME) { }
+	rt_begin(g->rt_hurt, CF_DELTA_TIME) { }
 	rt_wait(1)
 	{
 		g->rt.set_next("main");
@@ -948,7 +948,7 @@ void boss_hurt()
 
 void boss_hurt_small()
 {
-	rt_begin(g->rt_hurt_small, DELTA_TIME) { }
+	rt_begin(g->rt_hurt_small, CF_DELTA_TIME) { }
 	rt_wait(0.1f)
 	{
 		g->boss_hurt_small = false;
@@ -1019,11 +1019,11 @@ void draw_bosses()
 
 void ChargeShot::hit()
 {
-	Sprite s = make_sprite("explosion.ase");
+	CF_Sprite s = make_sprite("explosion.ase");
 	s.transform.p = shot.transform.p;
 	g->animations.add(s);
 	for (int i = 0; i < 10; ++i) {
-		SinCos r = sincos(rnd_range(-CF_PI*0.25f, CF_PI*0.25f));
+		CF_SinCos r = sincos(rnd_range(-CF_PI*0.25f, CF_PI*0.25f));
 		g->particles.add(shot.transform.p, 3.0f, mul(r,V2(0,rnd_range(50,250))), rnd_range(0.25f, 0.5f));
 	}
 	alive = false;
@@ -1032,7 +1032,7 @@ void ChargeShot::hit()
 
 void ChargeShot::update_and_draw()
 {
-	rt_begin(rt, DELTA_TIME)
+	rt_begin(rt, CF_DELTA_TIME)
 	{
 		if (!start) {
 			nav_redo();
@@ -1046,20 +1046,20 @@ void ChargeShot::update_and_draw()
 	}
 	rt_always()
 	{
-		shot_spawn.update();
+		sprite_update(shot_spawn);
 		if (shot_spawn.loop_count) {
 			nav_goto("shot");
 		}
-		shot_spawn.draw();
+		sprite_draw(shot_spawn);
 	}
 	rt_label("shot")
 	{
 		// Draw the charge shot with trails.
 		alive = true;
-		shot.update();
-		shot.draw();
+		sprite_update(shot);
+		sprite_draw(shot);
 		v2 v = V2(0,400);
-		shot.transform.p += v * DELTA_TIME;
+		shot.transform.p += v * CF_DELTA_TIME;
 		at = shot.transform.p;
 		if (on_interval(0.075f)) {
 			v2 offset = rnd_range(V2(-5,0), V2(5,0));
@@ -1084,7 +1084,7 @@ void ChargeShot::update_and_draw()
 
 void mount_content_directory_as(const char* dir)
 {
-	Path path = fs_get_base_directory();
+	CF_Path path = fs_get_base_directory();
 	path.normalize();
 	path += "/spaceshooter_data";
 	fs_mount(path.c_str(), dir);
@@ -1103,7 +1103,7 @@ CF_Color pop_flash()
 int main(int argc, char* argv[])
 {
 	// Create a window with a resolution of 640 x 480.
-	make_app("Space Shooter", 0, 0, 0, 640, 480, APP_OPTIONS_WINDOW_POS_CENTERED_BIT, argv[0]);
+	make_app("Space Shooter", 0, 0, 0, 640, 480, CF_APP_OPTIONS_WINDOW_POS_CENTERED_BIT, argv[0]);
 	cf_shader_directory("/spaceshooter_data");
 
 	mount_content_directory_as("/");
@@ -1122,9 +1122,9 @@ int main(int argc, char* argv[])
 
 		// Draw hearts for HP.
 		for (int i = 0; i < g->player.hp; ++i) {
-			Sprite s = make_sprite("heart.ase");
+			CF_Sprite s = make_sprite("heart.ase");
 			s.transform.p = V2(-300.0f + i * (s.w + 3.0f), 220);
-			s.draw();
+			sprite_draw(s);
 		}
 
 		player_movement_routine();
@@ -1135,8 +1135,8 @@ int main(int argc, char* argv[])
 			g->player.charge_sprite.opacity = opacity;
 			g->player.charge_sprite.transform = g->player.sprite.transform;
 			g->player.charge_sprite.transform.p += V2(0, 22);
-			g->player.charge_sprite.update();
-			g->player.charge_sprite.draw();
+			sprite_update(g->player.charge_sprite);
+			sprite_draw(g->player.charge_sprite);
 		}
 
 		// Update + draw rockets.
@@ -1163,7 +1163,7 @@ int main(int argc, char* argv[])
 		} else {
 			push_flash(color_invisible());
 		}
-		g->player.sprite.draw();
+		sprite_draw(g->player.sprite);
 		pop_flash();
 		if (g->player.shielding) {
 			float shield_alpha = remap(1.0f - g->player.shield_time / player_shield_max, 0.4f, 1.0f);

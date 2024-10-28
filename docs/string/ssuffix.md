@@ -26,6 +26,7 @@ Returns true if `suffix` is the suffix of `s`, false otherwise.
 
 ## Related Pages
 
+[sdyna](/string/sdyna.md)  
 [sprefix](/string/sprefix.md)  
 [sfind](/string/sfind.md)  
 [scontains](/string/scontains.md)  

@@ -287,21 +287,31 @@ CF_INLINE CF_ListNode* cf_list_back(CF_List* list)
 namespace Cute
 {
 
-using list_t = CF_List;
-using list_node_t = CF_ListNode;
+CF_INLINE void list_init_node(CF_ListNode* node) { cf_list_init_node((CF_ListNode*)node); };
+CF_INLINE void list_init(CF_List* list) { cf_list_init(list); };
+CF_INLINE void list_push_front(CF_List* list, CF_ListNode* node) { cf_list_push_front(list, (CF_ListNode*)node); };
+CF_INLINE void list_push_back(CF_List* list, CF_ListNode* node) { cf_list_push_back(list, (CF_ListNode*)node); };
+CF_INLINE void list_remove(CF_ListNode* node) { cf_list_remove((CF_ListNode*)node); };
+CF_INLINE CF_ListNode* list_pop_front(CF_List* list) { return (CF_ListNode*)cf_list_pop_front(list); };
+CF_INLINE CF_ListNode* list_pop_back(CF_List* list) { return (CF_ListNode*)cf_list_pop_back(list); };
+CF_INLINE int list_empty(CF_List* list) { return cf_list_empty(list); };
+CF_INLINE CF_ListNode* list_begin(CF_List* list) { return (CF_ListNode*)cf_list_begin(list); };
+CF_INLINE CF_ListNode* list_end(CF_List* list) { return (CF_ListNode*)cf_list_end(list); };
+CF_INLINE CF_ListNode* list_front(CF_List* list) { return (CF_ListNode*)cf_list_front(list); };
+CF_INLINE CF_ListNode* list_back(CF_List* list) { return (CF_ListNode*)cf_list_back(list); };
 
-CF_INLINE void list_init_node(list_node_t* node) { cf_list_init_node((CF_ListNode*)node); };
-CF_INLINE void list_init(list_t* list) { cf_list_init(list); };
-CF_INLINE void list_push_front(list_t* list, list_node_t* node) { cf_list_push_front(list, (CF_ListNode*)node); };
-CF_INLINE void list_push_back(list_t* list, list_node_t* node) { cf_list_push_back(list, (CF_ListNode*)node); };
-CF_INLINE void list_remove(list_node_t* node) { cf_list_remove((CF_ListNode*)node); };
-CF_INLINE list_node_t* list_pop_front(list_t* list) { return (list_node_t*)cf_list_pop_front(list); };
-CF_INLINE list_node_t* list_pop_back(list_t* list) { return (list_node_t*)cf_list_pop_back(list); };
-CF_INLINE int list_empty(list_t* list) { return cf_list_empty(list); };
-CF_INLINE list_node_t* list_begin(list_t* list) { return (list_node_t*)cf_list_begin(list); };
-CF_INLINE list_node_t* list_end(list_t* list) { return (list_node_t*)cf_list_end(list); };
-CF_INLINE list_node_t* list_front(list_t* list) { return (list_node_t*)cf_list_front(list); };
-CF_INLINE list_node_t* list_back(list_t* list) { return (list_node_t*)cf_list_back(list); };
+CF_INLINE void list_init_node(CF_ListNode& node) { cf_list_init_node((CF_ListNode*)&node); };
+CF_INLINE void list_init(CF_List& list) { cf_list_init(&list); };
+CF_INLINE void list_push_front(CF_List& list, CF_ListNode& node) { cf_list_push_front(&list, (CF_ListNode*)&node); };
+CF_INLINE void list_push_back(CF_List& list, CF_ListNode& node) { cf_list_push_back(&list, (CF_ListNode*)&node); };
+CF_INLINE void list_remove(CF_ListNode& node) { cf_list_remove((CF_ListNode*)&node); };
+CF_INLINE CF_ListNode& list_pop_front(CF_List& list) { return *(CF_ListNode*)cf_list_pop_front(&list); };
+CF_INLINE CF_ListNode& list_pop_back(CF_List& list) { return *(CF_ListNode*)cf_list_pop_back(&list); };
+CF_INLINE int list_empty(CF_List& list) { return cf_list_empty(&list); };
+CF_INLINE CF_ListNode& list_begin(CF_List& list) { return *(CF_ListNode*)cf_list_begin(&list); };
+CF_INLINE CF_ListNode& list_end(CF_List& list) { return *(CF_ListNode*)cf_list_end(&list); };
+CF_INLINE CF_ListNode& list_front(CF_List& list) { return *(CF_ListNode*)cf_list_front(&list); };
+CF_INLINE CF_ListNode& list_back(CF_List& list) { return *(CF_ListNode*)cf_list_back(&list); };
 
 }
 

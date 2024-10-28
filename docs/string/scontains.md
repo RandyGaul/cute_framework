@@ -22,6 +22,7 @@ contains_me | A substring to search for.
 
 ## Related Pages
 
+[sdyna](/string/sdyna.md)  
 [sprefix](/string/sprefix.md)  
 [ssuffix](/string/ssuffix.md)  
 [sfind](/string/sfind.md)  

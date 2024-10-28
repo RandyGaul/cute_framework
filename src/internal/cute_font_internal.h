@@ -57,13 +57,57 @@ struct CF_TextCode
 	Cute::Map<const char*, CF_TextCodeVal> params;
 };
 
+struct TextEffect : public CF_TextEffect
+{
+	CF_INLINE bool on_start() const { return index_into_effect == 0; }
+	CF_INLINE bool on_finish() const { return index_into_effect == glyph_count - 1; }
+
+	CF_INLINE double get_number(const char* key, double default_val = 0) const
+	{
+		const CF_TextCodeVal* v = params->try_find(sintern(key));
+		if (v && v->type == CF_TEXT_CODE_VAL_TYPE_NUMBER) {
+			return v->u.number;
+		} else {
+			return default_val;
+		}
+	}
+
+	CF_INLINE CF_Color get_color(const char* key, CF_Color default_val = cf_color_white()) const
+	{
+		const CF_TextCodeVal* v = params->try_find(sintern(key));
+		if (v && v->type == CF_TEXT_CODE_VAL_TYPE_COLOR) {
+			return v->u.color;
+		} else {
+			return default_val;
+		}
+	}
+
+	CF_INLINE const char* get_string(const char* key, const char* default_val = NULL) const
+	{
+		const CF_TextCodeVal* v = params->try_find(sintern(key));
+		if (v && v->type == CF_TEXT_CODE_VAL_TYPE_STRING) {
+			return v->u.string;
+		} else {
+			return default_val;
+		}
+	}
+
+	// "private" state -- don't touch.
+	int initial_index;
+	const Cute::Map<const char*, CF_TextCodeVal>* params;
+	CF_TextEffectFn* fn;
+	bool line_bound_init = false;
+	CF_Aabb line_bound;
+	Cute::Array<CF_Aabb> bounds;
+};
+
 struct CF_TextEffectState
 {
 	Cute::String sanitized;
 	uint64_t hash = 0;
 	float elapsed = 0;
 	bool alive = false;
-	Cute::Array<Cute::TextEffect> effects;
+	Cute::Array<TextEffect> effects;
 	Cute::Array<CF_TextCode> codes;
 	Cute::Array<CF_TextCode> parse_stack;
 

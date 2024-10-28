@@ -26,6 +26,7 @@ Returns 0 if the two strings are equivalent. Otherwise returns 1 if a[i] > b[i],
 
 ## Related Pages
 
+[sdyna](/string/sdyna.md)  
 [siequ](/string/siequ.md)  
 [sicmp](/string/sicmp.md)  
 [sequ](/string/sequ.md)  

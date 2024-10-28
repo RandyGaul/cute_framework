@@ -39,6 +39,8 @@ TEST_SUITE(test_string);
 TEST_SUITE(test_json);
 TEST_SUITE(test_markups);
 
+#include <SDL3/SDL.h>
+
 int main(int argc, char* argv[])
 {
 	cf_fs_init(argv[0]);
@@ -54,7 +56,7 @@ int main(int argc, char* argv[])
 	_CrtSetReportFile(_CRT_ERROR, _CRTDBG_FILE_STDERR);
 	_CrtSetReportFile(_CRT_ASSERT, _CRTDBG_FILE_STDERR);
 	#undef RUN_TEST_SUITE
-	#define RUN_TEST_SUITE(suite_fp) pu_run_suite(#suite_fp, suite_fp); sinuke(); _CrtDumpMemoryLeaks();
+	#define RUN_TEST_SUITE(suite_fp) pu_run_suite(#suite_fp, suite_fp); sinuke(); SDL_Quit(); _CrtDumpMemoryLeaks();
 #endif
 
 	pu_display_colors(true);

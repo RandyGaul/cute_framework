@@ -966,45 +966,11 @@ CF_API bool CF_CALL cf_touch_get(uint64_t id, CF_Touch* touch);
 namespace Cute
 {
 
-using KeyButton = CF_KeyButton;
-#define CF_ENUM(K, V) CF_INLINE constexpr KeyButton K = CF_##K;
-CF_KEY_BUTTON_DEFS
-#undef CF_ENUM
-
-CF_INLINE const char* to_string(KeyButton button)
-{
-	switch (button) {
-	#define CF_ENUM(K, V) case CF_##K: return #K;
-	CF_KEY_BUTTON_DEFS
-	#undef CF_ENUM
-	default: return NULL;
-	}
-}
-
-using MouseButton = CF_MouseButton;
-#define CF_ENUM(K, V) CF_INLINE constexpr MouseButton K = CF_##K;
-CF_MOUSE_BUTTON_DEFS
-#undef CF_ENUM
-
-CF_INLINE const char* to_string(MouseButton button)
-{
-	switch (button) {
-	#define CF_ENUM(K, V) case CF_##K: return #K;
-	CF_MOUSE_BUTTON_DEFS
-	#undef CF_ENUM
-	default: return NULL;
-	}
-}
-
-using ImeComposition = CF_ImeComposition;
-using InputTextBuffer = CF_InputTextBuffer;
-using Touch = CF_Touch;
-
-CF_INLINE bool key_down(KeyButton key) { return cf_key_down(key); }
-CF_INLINE bool key_up(KeyButton key) { return cf_key_up(key); }
-CF_INLINE bool key_just_pressed(KeyButton key) { return cf_key_just_pressed(key); }
-CF_INLINE bool key_just_released(KeyButton key) { return cf_key_just_released(key); }
-CF_INLINE bool key_repeating(KeyButton key) { return cf_key_repeating(key); }
+CF_INLINE bool key_down(CF_KeyButton key) { return cf_key_down(key); }
+CF_INLINE bool key_up(CF_KeyButton key) { return cf_key_up(key); }
+CF_INLINE bool key_just_pressed(CF_KeyButton key) { return cf_key_just_pressed(key); }
+CF_INLINE bool key_just_released(CF_KeyButton key) { return cf_key_just_released(key); }
+CF_INLINE bool key_repeating(CF_KeyButton key) { return cf_key_repeating(key); }
 CF_INLINE bool key_ctrl() { return cf_key_ctrl(); }
 CF_INLINE bool key_shift() { return cf_key_shift(); }
 CF_INLINE bool key_alt() { return cf_key_alt(); }
@@ -1014,12 +980,12 @@ CF_INLINE void clear_key_states() { cf_clear_key_states(); }
 CF_INLINE float mouse_x() { return cf_mouse_x(); }
 CF_INLINE float mouse_y() { return cf_mouse_y(); }
 
-CF_INLINE bool mouse_down(MouseButton button) { return cf_mouse_down(button); }
-CF_INLINE bool mouse_just_pressed(MouseButton button) { return cf_mouse_just_pressed(button); }
-CF_INLINE bool mouse_just_released(MouseButton button) { return cf_mouse_just_released(button); }
+CF_INLINE bool mouse_down(CF_MouseButton button) { return cf_mouse_down(button); }
+CF_INLINE bool mouse_just_pressed(CF_MouseButton button) { return cf_mouse_just_pressed(button); }
+CF_INLINE bool mouse_just_released(CF_MouseButton button) { return cf_mouse_just_released(button); }
 CF_INLINE float mouse_wheel_motion() { return cf_mouse_wheel_motion(); }
-CF_INLINE bool mouse_double_click_held(MouseButton button) { return cf_mouse_double_click_held(button); }
-CF_INLINE bool mouse_double_clicked(MouseButton button) { return cf_mouse_double_clicked(button); }
+CF_INLINE bool mouse_double_click_held(CF_MouseButton button) { return cf_mouse_double_click_held(button); }
+CF_INLINE bool mouse_double_clicked(CF_MouseButton button) { return cf_mouse_double_clicked(button); }
 CF_INLINE void mouse_hide(bool true_to_hide) { cf_mouse_hide(true_to_hide); }
 CF_INLINE bool mouse_hidden() { return cf_mouse_hidden(); }
 CF_INLINE void mouse_lock_inside_window(bool true_to_lock) { cf_mouse_lock_inside_window(true_to_lock); }
@@ -1037,9 +1003,9 @@ CF_INLINE bool input_has_ime_keyboard_support() { return cf_input_has_ime_keyboa
 CF_INLINE bool input_is_ime_keyboard_shown() { return cf_input_is_ime_keyboard_shown(); }
 CF_INLINE void input_set_ime_rect(int x, int y, int w, int h) { cf_input_set_ime_rect(x, y, w, h); }
 
-CF_INLINE bool input_get_ime_composition(ImeComposition* composition) { return cf_input_get_ime_composition(composition); }
+CF_INLINE bool input_get_ime_composition(CF_ImeComposition* composition) { return cf_input_get_ime_composition(composition); }
 
-CF_INLINE bool touch_get(uint64_t id, Touch* touch) { return cf_touch_get(id,touch); }
+CF_INLINE bool touch_get(uint64_t id, CF_Touch* touch) { return cf_touch_get(id,touch); }
 
 }
 

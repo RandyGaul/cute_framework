@@ -12,7 +12,7 @@ GitHub: [cute_rnd.h](https://github.com/RandyGaul/cute_framework/blob/master/inc
 Returns a random `int` from the range `min` to `max` (inclusive).
 
 ```cpp
-int      cf_rnd_range_int(CF_RndState* rnd, int min, int max);
+int      cf_rnd_range_int(CF_Rnd* rnd, int min, int max);
 ```
 
 Parameters | Description
@@ -21,7 +21,7 @@ rnd | The random number generator state.
 
 ## Related Pages
 
-[CF_RndState](/random/cf_rndstate.md)  
+[CF_Rnd](/random/cf_rnd.md)  
 [cf_rnd_seed](/random/cf_rnd_seed.md)  
 [cf_rnd](/random/cf_rnd.md)  
 [cf_rnd_float](/random/cf_rnd_float.md)  

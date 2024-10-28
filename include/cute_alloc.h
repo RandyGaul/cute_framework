@@ -155,7 +155,8 @@ typedef struct CF_Arena
 	int block_size;
 	char* ptr;
 	char* end;
-	char** blocks;
+	int block_index;
+	/* dyna */ char** blocks;
 } CF_Arena;
 // @end
 
@@ -166,9 +167,9 @@ typedef struct CF_Arena
  * @param    arena         The arena to initialize.
  * @param    alignment     An alignment boundary, must be a power of two.
  * @param    block_size    The default size of each internal call to `malloc` to form pages to further allocate from.
- * @related  cf_arena_alloc cf_arena_reset
+ * @related  cf_arena_init cf_arena_alloc cf_arena_reset cf_arena_free
  */
-CF_API void CF_CALL cf_arena_init(CF_Arena* arena, int alignment, int block_size);
+CF_API CF_Arena CF_CALL cf_make_arena(int alignment, int block_size);
 
 /**
  * @function cf_arena_alloc
@@ -177,18 +178,43 @@ CF_API void CF_CALL cf_arena_init(CF_Arena* arena, int alignment, int block_size
  * @param    arena         The arena to allocate from.
  * @param    size          The size of the allocation, it cannot be larger than `block_size` from `cf_arena_init`.
  * @return   Returns an aligned pointer of `size` bytes.
- * @related  cf_arena_init cf_arena_reset
+ * @related  cf_arena_init cf_arena_alloc cf_arena_reset cf_arena_free
  */
-CF_API void* CF_CALL cf_arena_alloc(CF_Arena* arena, size_t size);
+CF_API void* CF_CALL cf_arena_alloc(CF_Arena* arena, int size);
+
+/**
+ * @function cf_arena_free
+ * @category allocator
+ * @brief    Frees the most recent allocation(s) from the arena.
+ * @param    arena         The arena from which to free memory.
+ * @param    size          The size of the most recent allocation to free.
+ * @remarks  This supports freeing memory in a Last-In-First-Out (LIFO) order, meaning 
+ *           only the most recent allocation(s) can be freed. It does not support freeing allocations in 
+ *           arbitrary order. Minimal error checking is performed, so only call this function if you
+ *           know what you're doing, otherwise you'll get memory corruption issues.
+ * @related  cf_arena_init cf_arena_alloc cf_arena_reset cf_arena_free
+ */
+CF_API void CF_CALL cf_arena_free(CF_Arena* arena, int ptr);
 
 /**
  * @function cf_arena_reset
  * @category allocator
- * @brief    Free's up all resources used by the allocator and places it back into an initialized state.
+ * @brief    Resets the allocator.
  * @param    arena         The arena to reset.
- * @related  cf_arena_init cf_arena_alloc
+ * @remarks  This does not free up internal resources, and will reuse all previously allocated
+ *           resources to fulfill subsequent `cf_arena_alloc` calls.
+ * @related  cf_arena_init cf_arena_alloc cf_arena_reset cf_arena_free
  */
 CF_API void CF_CALL cf_arena_reset(CF_Arena* arena);
+
+/**
+ * @function cf_destroy_arena
+ * @category allocator
+ * @brief    Free's up all resources used by the allocator.
+ * @param    arena         The arena to free.
+ * @related  cf_arena_init cf_arena_alloc cf_arena_reset cf_arena_free
+ */
+CF_API void CF_CALL cf_destroy_arena(CF_Arena* arena);
 
 //--------------------------------------------------------------------------------------------------
 // Memory pool allocator.
@@ -201,9 +227,10 @@ typedef struct CF_MemoryPool CF_MemoryPool;
  * @brief    Creates a memory pool.
  * @param    element_size   The size of each allocation.
  * @param    element_count  The number of elements in the internal pool.
+
  * @param    alignment      An alignment boundary, must be a power of two.
  * @return   Returns a memory pool pointer.
- * @related  cf_destroy_memory_pool cf_memory_pool_alloc cf_memory_pool_try_alloc cf_memory_pool_free
+ * @related  cf_destroy_memory_pool cf_memory_pool_alloc cf_memory_pool_free
  */
 CF_API CF_MemoryPool* CF_CALL cf_make_memory_pool(int element_size, int element_count, int alignment);
 
@@ -212,8 +239,7 @@ CF_API CF_MemoryPool* CF_CALL cf_make_memory_pool(int element_size, int element_
  * @category allocator
  * @brief    Destroys a memory pool.
  * @param    pool           The pool to destroy.
- * @remarks  Does not clean up any allocations that overflowed to `malloc` backup. See `cf_memory_pool_alloc` for more details.
- * @related  cf_make_memory_pool cf_memory_pool_alloc cf_memory_pool_try_alloc cf_memory_pool_free
+ * @related  cf_make_memory_pool cf_memory_pool_alloc cf_memory_pool_free
  */
 CF_API void CF_CALL cf_destroy_memory_pool(CF_MemoryPool* pool);
 
@@ -223,32 +249,17 @@ CF_API void CF_CALL cf_destroy_memory_pool(CF_MemoryPool* pool);
  * @brief    Allocates a chunk of memory from the pool. The allocation size was determined by `element_size` in `cf_make_memory_pool`.
  * @param    pool           The pool.
  * @return   Returns an aligned pointer of `size` bytes.
- * @remarks  Attempts to allocate from the internal pool. If the pool is empty a call to `malloc` is made as a backup. All
- *           backup allocations are not tracked anywhere, so you must call `cf_memory_pool_free` on each allocation to be
- *           sure they all properly cleaned up.
- * @related  cf_make_memory_pool cf_destroy_memory_pool cf_memory_pool_try_alloc cf_memory_pool_free
+ * @related  cf_make_memory_pool cf_destroy_memory_pool cf_memory_pool_free
  */
 CF_API void* CF_CALL cf_memory_pool_alloc(CF_MemoryPool* pool);
 
 /**
- * @function cf_memory_pool_try_alloc
- * @category allocator
- * @brief    Allocates a chunk of memory from the pool. The allocation size was determined by `element_size` in `cf_make_memory_pool`.
- * @param    pool           The pool.
- * @return   Returns an aligned pointer of `size` bytes.
- * @remarks  Does not return an allocation if the internal pool is full, and will instead return `NULL` in this case. See
- *           `cf_memory_pool_alloc` for more details about overflowing the pool to use `malloc` as a backup.
- * @related  cf_make_memory_pool cf_destroy_memory_pool cf_memory_pool_alloc cf_memory_pool_free
- */
-CF_API void* CF_CALL cf_memory_pool_try_alloc(CF_MemoryPool* pool);
-
-/**
  * @function cf_memory_pool_free
  * @category allocator
- * @brief    Frees an allocation made by `cf_memory_pool_alloc` or `cf_memory_pool_try_alloc`.
+ * @brief    Frees an allocation made by `cf_memory_pool_alloc`.
  * @param    pool           The pool.
  * @param    element        The pointer to deallocate.
- * @related  cf_make_memory_pool cf_destroy_memory_pool cf_memory_pool_alloc cf_memory_pool_try_alloc
+ * @related  cf_make_memory_pool cf_destroy_memory_pool cf_memory_pool_alloc
  */
 CF_API void CF_CALL cf_memory_pool_free(CF_MemoryPool* pool, void* element);
 
@@ -267,19 +278,16 @@ namespace Cute
 CF_INLINE void* aligned_alloc(size_t size, int alignment) { return cf_aligned_alloc(size, alignment); }
 CF_INLINE void aligned_free(void* ptr) { return cf_aligned_free(ptr); }
 
-using Arena = CF_Arena;
+CF_INLINE CF_Arena make_arena(int alignment, int block_size) { return cf_make_arena(alignment, block_size); }
+CF_INLINE void* arena_alloc(CF_Arena* arena, int size) { return cf_arena_alloc(arena, size); }
+CF_INLINE void arena_free(CF_Arena* arena, int size) { cf_arena_free(arena, size); }
+CF_INLINE void arena_reset(CF_Arena* arena) { cf_arena_reset(arena); }
+CF_INLINE void destroy_arena(CF_Arena* arena) { cf_destroy_arena(arena); }
 
-CF_INLINE void arena_init(CF_Arena* arena, int alignment, int block_size) { cf_arena_init(arena, alignment, block_size); }
-CF_INLINE void* arena_alloc(CF_Arena* arena, size_t size) { return cf_arena_alloc(arena, size); }
-CF_INLINE void arena_reset(CF_Arena* arena) { return cf_arena_reset(arena); }
-
-using MemoryPool = CF_MemoryPool;
-
-CF_INLINE MemoryPool* make_memory_pool(int element_size, int element_count, int alignment) { return cf_make_memory_pool(element_size, element_count, alignment); }
-CF_INLINE void destroy_memory_pool(MemoryPool* pool) { cf_destroy_memory_pool(pool); }
-CF_INLINE void* memory_pool_alloc(MemoryPool* pool) { return cf_memory_pool_alloc(pool); }
-CF_INLINE void* memory_pool_try_alloc(MemoryPool* pool) { return cf_memory_pool_try_alloc(pool); }
-CF_INLINE void memory_pool_free(MemoryPool* pool, void* element) { return cf_memory_pool_free(pool, element); }
+CF_INLINE CF_MemoryPool* make_memory_pool(int element_size, int element_count, int alignment) { return cf_make_memory_pool(element_size, element_count, alignment); }
+CF_INLINE void destroy_memory_pool(CF_MemoryPool* pool) { cf_destroy_memory_pool(pool); }
+CF_INLINE void* memory_pool_alloc(CF_MemoryPool* pool) { return cf_memory_pool_alloc(pool); }
+CF_INLINE void memory_pool_free(CF_MemoryPool* pool, void* element) { return cf_memory_pool_free(pool, element); }
 
 }
 

@@ -183,6 +183,26 @@ CF_API void CF_CALL cf_image_premultiply(CF_Image* img);
  */
 CF_API void CF_CALL cf_image_flip_horizontal(CF_Image* img);
 
+/**
+ * @function cf_debug_dump_greyscale_pixels
+ * @category image
+ * @brief    Saves out greyscale image to a png file on disk.
+ * @remarks  Does *not* use the virtual file system. Instead it uses plain old platform-dependent path notation. This
+ *           function is not really optimized whatsoever and outputs poorly compressed file sizes.
+ * @related  CF_Image cf_debug_dump_greyscale_pixels cf_debug_dump_pixels
+ */
+CF_API void CF_CALL cf_debug_dump_greyscale_pixels(const char* path, uint8_t* pixels, int w, int h);
+
+/**
+ * @function cf_debug_dump_pixels
+ * @category image
+ * @brief    Saves out an image to a png file on disk.
+ * @remarks  Does *not* use the virtual file system. Instead it uses plain old platform-dependent path notation. This
+ *           function is not really optimized whatsoever and outputs poorly compressed file sizes.
+ * @related  CF_Image cf_debug_dump_greyscale_pixels cf_debug_dump_pixels
+ */
+CF_API void CF_CALL cf_debug_dump_pixels(const char* path, CF_Pixel* pixels, int w, int h);
+
 #ifdef __cplusplus
 }
 #endif // __cplusplus
@@ -195,27 +215,26 @@ CF_API void CF_CALL cf_image_flip_horizontal(CF_Image* img);
 namespace Cute
 {
 
-using Image = CF_Image;
-using ImageIndexed = CF_ImageIndexed;
-
 // -------------------------------------------------------------------------------------------------
 // PNG loading.
 
-CF_INLINE Result image_load_png(const char* virtual_path, Image* img) { return cf_image_load_png(virtual_path, img); }
-CF_INLINE Result image_load_png_mem(const void* data, int size, Image* img) { return cf_image_load_png_from_memory(data, size, img); }
-CF_INLINE Result image_load_png_wh(const void* data, int size, int* w, int* h) { return cf_image_load_png_wh(data, size, w, h); }
-CF_INLINE void image_free(Image* img) { cf_image_free(img); }
+CF_INLINE CF_Result image_load_png(const char* virtual_path, CF_Image* img) { return cf_image_load_png(virtual_path, img); }
+CF_INLINE CF_Result image_load_png_mem(const void* data, int size, CF_Image* img) { return cf_image_load_png_from_memory(data, size, img); }
+CF_INLINE CF_Result image_load_png_wh(const void* data, int size, int* w, int* h) { return cf_image_load_png_wh(data, size, w, h); }
+CF_INLINE void image_free(CF_Image* img) { cf_image_free(img); }
 
-CF_INLINE Result image_load_png_indexed(const char* virtual_path, ImageIndexed* img) { return cf_image_load_png_indexed(virtual_path, img); }
-CF_INLINE Result image_load_png_mem_indexed(const void* data, int size, ImageIndexed* img) { return cf_image_load_png_from_memory_indexed(data, size, img); }
-CF_INLINE void image_free(ImageIndexed* img) { cf_image_free_indexed(img); }
+CF_INLINE CF_Result image_load_png_indexed(const char* virtual_path, CF_ImageIndexed* img) { return cf_image_load_png_indexed(virtual_path, img); }
+CF_INLINE CF_Result image_load_png_mem_indexed(const void* data, int size, CF_ImageIndexed* img) { return cf_image_load_png_from_memory_indexed(data, size, img); }
+CF_INLINE void image_free(CF_ImageIndexed* img) { cf_image_free_indexed(img); }
 
 // -------------------------------------------------------------------------------------------------
 // Image operations.
 
-CF_INLINE Image image_depallete(ImageIndexed* img) { return cf_image_depallete(img); }
-CF_INLINE void image_premultiply(Image* img) { cf_image_premultiply(img); }
-CF_INLINE void image_flip_horizontal(Image* img) { cf_image_flip_horizontal(img); }
+CF_INLINE CF_Image image_depallete(CF_ImageIndexed* img) { return cf_image_depallete(img); }
+CF_INLINE void image_premultiply(CF_Image* img) { cf_image_premultiply(img); }
+CF_INLINE void image_flip_horizontal(CF_Image* img) { cf_image_flip_horizontal(img); }
+CF_INLINE void debug_dump_greyscale_pixels(const char* path, uint8_t* pixels, int w, int h) { cf_debug_dump_greyscale_pixels(path, pixels, w, h); }
+CF_INLINE void debug_dump_pixels(const char* path, CF_Pixel* pixels, int w, int h) { cf_debug_dump_pixels(path, pixels, w, h); }
 
 }
 

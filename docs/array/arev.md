@@ -34,4 +34,5 @@ a | The array. Can be `NULL`.
 [aset](/array/aset.md)  
 [afree](/array/afree.md)  
 [ahash](/array/ahash.md)  
+[adel](/array/adel.md)  
 [astatic](/array/astatic.md)  

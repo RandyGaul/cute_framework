@@ -266,19 +266,16 @@ endif()
 function(target_dxc_copy TARGET)
 	get_target_property(cute_SOURCE_DIR cute SOURCE_DIR)
 	set(DXC_DLL_DIR "${cute_SOURCE_DIR}/libraries/dxc")
-	set(DXC_DLLS "${DXC_DLL_DIR}/dxcompiler.dll" "${DXC_DLL_DIR}/dxil.dll")
 
 	add_custom_command(TARGET ${TARGET} POST_BUILD
-			COMMAND ${CMAKE_COMMAND} -E copy_if_different
-			${DXC_DLLS}
-			$<TARGET_FILE_DIR:${TARGET}>
+		COMMAND ${CMAKE_COMMAND} -E copy_if_different "${DXC_DLL_DIR}/dxcompiler.dll" "$<TARGET_FILE_DIR:${TARGET}>/dxcompiler.dll"
+		COMMAND ${CMAKE_COMMAND} -E copy_if_different "${DXC_DLL_DIR}/dxil.dll" "$<TARGET_FILE_DIR:${TARGET}>/dxil.dll"
 	)
 endfunction()
 
 # Check for Windows platform and specify dxcompiler.dll and dxil.dll locations.
 if (WINDOWS)
 	set(DXC_DLL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/libraries/dxc")
-	set(DXC_DLLS "${DXC_DLL_DIR}/dxcompiler.dll" "${DXC_DLL_DIR}/dxil.dll")
 
 	# Check if this project is being included as a subproject.
 	if (NOT CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
@@ -299,10 +296,8 @@ if (WINDOWS)
 
 			if (DEST_DIR)
 				add_custom_command(TARGET cute POST_BUILD
-					COMMAND ${CMAKE_COMMAND} -E copy_if_different
-					"${DXC_DLL_DIR}/dxcompiler.dll" "${DEST_DIR}"
-					COMMAND ${CMAKE_COMMAND} -E copy_if_different
-					"${DXC_DLL_DIR}/dxil.dll" "${DEST_DIR}"
+					COMMAND ${CMAKE_COMMAND} -E copy_if_different "${DXC_DLL_DIR}/dxcompiler.dll" "${DEST_DIR}/dxcompiler.dll"
+					COMMAND ${CMAKE_COMMAND} -E copy_if_different "${DXC_DLL_DIR}/dxil.dll" "${DEST_DIR}/dxil.dll"
 				)
 			endif()
 		endforeach()
@@ -321,7 +316,7 @@ else()
 	set(SDL_EXAMPLES OFF CACHE BOOL "Do not build SDL examples")
 	FetchContent_Declare(
 		SDL3
-		URL https://github.com/libsdl-org/SDL/archive/88a01fbc964fbea1203071ea3ca2c6f799d4f571.zip
+		URL https://github.com/libsdl-org/SDL/archive/d9e6fe0b7a22dae7835c62a120f1a22585b0d9c0.zip
 		DOWNLOAD_EXTRACT_TIMESTAMP ON
 		CMAKE_ARGS -DSDL_SHARED=$<NOT:${CF_FRAMEWORK_STATIC}> -DSDL_STATIC=${CF_FRAMEWORK_STATIC} -DSDL_TEST_LIBRARY=OFF -DSDL_TESTS=OFF -DSDL_EXAMPLES=OFF
 	)
@@ -490,6 +485,7 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 		add_executable(polygon samples/polygon.cpp)
 		add_executable(scissor samples/scissor.c)
 		add_executable(ime samples/ime.c)
+		add_executable(pivot samples/pivot.cpp)
 		set(SAMPLE_EXECUTABLES
 			easysprite
 			basicserialization
@@ -523,6 +519,7 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 			polygon
 			scissor
 			ime
+			pivot
 		)
 
 		foreach(CURRENT_TARGET ${SAMPLE_EXECUTABLES})
@@ -545,6 +542,7 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 		add_custom_command(TARGET waves PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/samples/waves_data $<TARGET_FILE_DIR:waves>/waves_data)
 		add_custom_command(TARGET shallow_water PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/samples/shallow_water_data $<TARGET_FILE_DIR:shallow_water>/shallow_water_data)
 		add_custom_command(TARGET import_spritesheet PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/samples/import_spritesheet_data $<TARGET_FILE_DIR:import_spritesheet>/import_spritesheet_data)
+		add_custom_command(TARGET pivot PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/samples/pivot_data $<TARGET_FILE_DIR:pivot>/pivot_data)
 	endif()
 endif()
 

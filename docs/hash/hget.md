@@ -17,7 +17,7 @@ Fetches the item that `k` maps to.
 
 Parameters | Description
 --- | ---
-h | The hashtable. Can be `NULL`. Needs to be a pointer to the type of items in the table.
+h | The hashtable. Can not be `NULL`. Needs to be a pointer to the type of items in the table.
 k | The key for lookups. Each {key, item} pair must be unique. Keys are always typecasted to `uint64_t` e.g. you can use pointers as keys.
 
 ## Return Value
