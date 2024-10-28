@@ -45,6 +45,8 @@
 #	define CF_ANDROID 1
 #elif defined(__EMSCRIPTEN__)
 #	define CF_EMSCRIPTEN 1
+#elif defined(__CYGWIN__)
+#	define CF_CYGWIN 1
 #endif
 
 // Vista and later only. This helps MingW builds.
@@ -65,11 +67,19 @@
 #endif
 
 #ifndef CF_STATIC
-#	ifdef _MSC_VER
+#	if defined CF_WINDOWS || defined CF_CYGWIN
 #		ifdef CF_EXPORT
-#			define CF_API __declspec(dllexport)
+#			ifdef __GNUC__
+#				define CF_API __attribute__ ((dllexport))
+#			else
+#				define CF_API __declspec(dllexport)
+#			endif
 #		else
-#			define CF_API __declspec(dllimport)
+#			ifdef __GNUC__
+#				define CF_API __attribute__ ((dllimport))
+#			else
+#				define CF_API __declspec(dllimport)
+#			endif
 #		endif
 #	else
 #		if ((__GNUC__ >= 4) || defined(__clang__))
