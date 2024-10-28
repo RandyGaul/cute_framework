@@ -70,13 +70,13 @@
 #	if defined CF_WINDOWS || defined CF_CYGWIN
 #		ifdef CF_EXPORT
 #			ifdef __GNUC__
-#				define CF_API __attribute__ ((dllexport))
+#				define CF_API __attribute__((dllexport))
 #			else
 #				define CF_API __declspec(dllexport)
 #			endif
 #		else
 #			ifdef __GNUC__
-#				define CF_API __attribute__ ((dllimport))
+#				define CF_API __attribute__((dllimport))
 #			else
 #				define CF_API __declspec(dllimport)
 #			endif
