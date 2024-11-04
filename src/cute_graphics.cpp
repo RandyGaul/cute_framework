@@ -1227,6 +1227,7 @@ void cf_destroy_shader(CF_Shader shader_handle)
 	// if it exists. See `cf_make_draw_shader`.
 	CF_Shader* blit = (CF_Shader*)draw->draw_shd_to_blit_shd.try_get(shader_handle.id);
 	if (blit) {
+		draw->draw_shd_to_blit_shd.remove(shader_handle.id);
 		cf_destroy_shader(*blit);
 	}
 
