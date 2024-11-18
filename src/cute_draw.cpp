@@ -28,6 +28,10 @@ struct CF_Draw* draw;
 
 #define CUTE_PNG_IMPLEMENTATION
 #define CUTE_PNG_ASSERT CF_ASSERT
+#define CUTE_PNG_ALLOC cf_alloc
+#define CUTE_PNG_FREE cf_free
+#define CUTE_PNG_CALLOC cf_calloc
+#define CUTE_PNG_REALLOC cf_realloc
 #include <cute/cute_png.h>
 
 #define STB_TRUETYPE_IMPLEMENTATION
