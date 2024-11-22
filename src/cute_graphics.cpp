@@ -14,9 +14,7 @@
 #include <internal/cute_app_internal.h>
 #include <internal/cute_graphics_internal.h>
 
-#include <glslang/Public/ShaderLang.h>
-#include <glslang/Public/ResourceLimits.h>
-#include <SPIRV/GlslangToSpv.h>
+#include <cute_shader.h>
 #define SDL_GPU_SHADERCROSS_IMPLEMENTATION
 #define SDL_GPU_SHADERCROSS_STATIC
 #include <SDL_gpu_shadercross/SDL_gpu_shadercross.h>
@@ -518,6 +516,14 @@ void main() {
 }
 )";
 
+static cute_shader_file_t s_builtin_includes[] = {
+	{ "shader_stub.shd", s_shader_stub },
+	{ "gamma.shd", s_gamma },
+	{ "distance.shd", s_distance },
+	{ "smooth_uv.shd", s_smooth_uv },
+	{ "blend.shd", s_blend },
+};
+
 //--------------------------------------------------------------------------------------------------
 // SDL_GPU wrapping implementation of cute_graphics.h.
 // ...Variety of enum converters/struct initializers are in cute_graphics_internal.h.
@@ -817,59 +823,37 @@ void cf_shader_watch()
 
 const dyna uint8_t* cf_compile_shader_to_bytecode(const char* shader_src, CF_ShaderStage cf_stage)
 {
-	EShLanguage stage = EShLangVertex;
+	cute_shader_stage_t stage = CUTE_SHADER_STAGE_VERTEX;
 	switch (cf_stage) {
 	default: CF_ASSERT(false); break; // No valid stage provided.
-	case CF_SHADER_STAGE_VERTEX: stage = EShLangVertex; break;
-	case CF_SHADER_STAGE_FRAGMENT: stage = EShLangFragment; break;
+	case CF_SHADER_STAGE_VERTEX: stage = CUTE_SHADER_STAGE_VERTEX; break;
+	case CF_SHADER_STAGE_FRAGMENT: stage = CUTE_SHADER_STAGE_FRAGMENT; break;
 	}
 
-	glslang::TShader shader(stage);
+	cute_shader_config_t config;
+	config.automatic_include_guard = true;
+	config.num_builtin_includes = sizeof(s_builtin_includes) / sizeof(s_builtin_includes[0]);
+	config.builtin_includes = s_builtin_includes;
+	config.num_include_dirs = 0;
+	config.include_dirs = NULL;
+	config.num_builtin_defines = 0;
+	config.builtin_defines = NULL;
 
-	const char* shader_strings[1];
-	shader_strings[0] = shader_src;
-	shader.setStrings(shader_strings, 1);
+	cute_shader_result_t result = cute_shader_compile(shader_src, stage, config);
+	if (result.success) {
+		dyna uint8_t* bytecode = NULL;
+		int size = (int)result.bytecode_size;
+		afit(bytecode, size);
+		CF_MEMCPY(bytecode, result.bytecode, size);
+		alen(bytecode) = size;
 
-	shader.setEnvInput(glslang::EShSourceGlsl, stage, glslang::EShClientVulkan, 450);
-	shader.setEnvClient(glslang::EShClientVulkan, glslang::EShTargetVulkan_1_3);
-	shader.setEnvTarget(glslang::EShTargetSpv, glslang::EShTargetSpv_1_3);
-	shader.setEntryPoint("main");
-	shader.setSourceEntryPoint("main");
-	shader.setAutoMapLocations(true);
-	shader.setAutoMapBindings(true);
-
-	if (!shader.parse(GetDefaultResources(), 450, false, EShMsgDefault)) {
-		fprintf(stderr, "GLSL parsing failed...\n");
-		fprintf(stderr, "%s\n\n%s\n", shader.getInfoLog(), shader.getInfoDebugLog());
+		cute_shader_free_result(result);
+		return bytecode;
+	} else {
+		fprintf(stderr, "%s\n", result.error_message);
+		cute_shader_free_result(result);
 		return NULL;
 	}
-
-	glslang::TProgram program;
-	program.addShader(&shader);
-
-	if (!program.link(EShMsgDefault)) {
-		fprintf(stderr, "GLSL linking failed...\n");
-		fprintf(stderr, "%s\n\n%s\n", program.getInfoLog(), program.getInfoDebugLog());
-		return NULL;
-	}
-
-	std::vector<uint32_t> spirv;
-	glslang::SpvOptions options;
-	options.generateDebugInfo = false;
-	options.stripDebugInfo = false;
-	options.disableOptimizer = false;
-	options.optimizeSize = false;
-	options.disassemble = false;
-	options.validate = false;
-	glslang::GlslangToSpv(*program.getIntermediate(stage), spirv, &options);
-
-	dyna uint8_t* bytecode = NULL;
-	int size = (int)(sizeof(uint32_t) * spirv.size());
-	afit(bytecode, size);
-	CF_MEMCPY(bytecode, spirv.data(), size);
-	alen(bytecode) = size;
-
-	return bytecode;
 }
 
 static SDL_GPUShader* s_compile(CF_ShaderInternal* shader_internal, const dyna uint8_t* bytecode, CF_ShaderStage stage)
@@ -998,137 +982,15 @@ CF_Shader cf_make_shader_from_bytecode(const dyna uint8_t* vertex_bytecode, cons
 	return result;
 }
 
-// Return the index of the first #include substring that's not in a comment.
-static int s_find_first_include(const char *src)
-{
-	const char *in = src;
-	while (*in) {
-		if (*in == '/' && *(in + 1) == '/') {
-			in += 2;
-			while (*in && *in != '\n') {
-				in++;
-			}
-		} else if (*in == '/' && *(in + 1) == '*') {
-			in += 2;
-			while (*in && !(*in == '*' && *(in + 1) == '/')) {
-				in++;
-			}
-			if (*in) {
-				in += 2;
-			}
-		} else if (*in == '#' && !sequ(in, "#include")) {
-			return (int)(in - src);
-		} else {
-			in++;
-		}
-	}
-	return -1;
-}
-
-// Recursively apply #include directives in shaders.
-// ...A cache is used to protect against multiple includes and infinite loops.
-static String s_include_recurse(Map<const char*, const char*>& incl_protection, String shd, bool builtin, const char* user_shd)
-{
-	while (1) {
-		int idx = s_find_first_include(shd);
-		if (idx < 0) break;
-
-		// Cut out the #include substring, and record the path.
-		char* s = shd + idx + 8;
-		int n = 0;
-		while (*s++ != '\n') ++n;
-		++n; // skip '\n'
-		String path = String(shd + idx + 8, s).trim();
-		shd.erase(idx, n + 8);
-		path.replace("\"", "");
-		path.replace("'", "");
-
-		// Search for the shader to include.
-		if (builtin || fs_file_exists(path)) {
-			String ext = CF_Path(path).ext();
-			if (ext == ".vs" || ext == ".fs" || ext == ".shd") {
-				String incl;
-				bool found = false;
-				if (builtin) {
-					if (sequ(path.c_str(), "shader_stub.shd")) {
-						// Inject the user shader if-applicable, stub if not.
-						incl = user_shd ? user_shd : s_shader_stub;
-						found = true;
-					} else {
-						// Builtin shaders can include other builtin shaders.
-						const char* result = app->builtin_shaders.find(sintern(path));
-						if (result) {
-							incl = result;
-							found = true;
-						}
-					}
-				}
-
-				// Wasn't a builtin shader, try including a user shader.
-				if (!found) {
-					// Processing a user-include shader.
-					const char* result = fs_read_entire_file_to_memory_and_nul_terminate(path);
-					if (result) {
-						incl = result;
-						found = true;
-						cf_free((void*)result);
-					}
-				}
-
-				if (found) {
-					// Prevent infinite include loops.
-					const char* incl_path = sintern(path);
-					if (!incl_protection.has(incl_path)) {
-						incl_protection.add(incl_path);
-						incl = s_include_recurse(incl_protection, incl, builtin, user_shd);
-						
-						// Perform the actual string splice + inclusion.
-						shd = String(shd, shd + idx)
-							.append("// -- begin include ")
-							.append(path)
-							.append(" --\n")
-							.append(incl)
-							.append("// -- end include ")
-							.append(path)
-							.append(" --\n")
-							.append(shd + idx);
-					}
-				}
-			}
-		}
-	}
-	return shd;
-}
-
-// Parse + perform include directives across shaders.
-static String s_include(String shd, bool builtin, const char* user_shd)
-{
-	Map<const char*, const char*> incl_protection;
-	return s_include_recurse(incl_protection, shd, builtin, user_shd);
-}
-
 static CF_Shader s_compile(const char* vs_src, const char* fs_src, bool builtin = false, const char* user_shd = NULL)
 {
-	// Support #include directives.
-	String vs = s_include(vs_src, builtin, NULL);
-	String fs = s_include(fs_src, builtin, user_shd);
-
-#if 0
-	printf(vs.c_str());
-	printf("---\n");
-	printf(fs.c_str());
-	printf("---\n");
-#endif
-
 	// Compile to bytecode.
-	const char* vertex = vs.c_str();
-	const char* fragment = fs.c_str();
-	const dyna uint8_t* vs_bytecode = cf_compile_shader_to_bytecode(vertex, CF_SHADER_STAGE_VERTEX);
+	const dyna uint8_t* vs_bytecode = cf_compile_shader_to_bytecode(vs_src, CF_SHADER_STAGE_VERTEX);
 	if (!vs_bytecode) {
 		CF_Shader result = { 0 };
 		return result;
 	}
-	const dyna uint8_t* fs_bytecode = cf_compile_shader_to_bytecode(fragment, CF_SHADER_STAGE_FRAGMENT);
+	const dyna uint8_t* fs_bytecode = cf_compile_shader_to_bytecode(fs_src, CF_SHADER_STAGE_FRAGMENT);
 	if (!fs_bytecode) {
 		afree(vs_bytecode);
 		CF_Shader result = { 0 };
@@ -1142,15 +1004,8 @@ static CF_Shader s_compile(const char* vs_src, const char* fs_src, bool builtin 
 void cf_load_internal_shaders()
 {
 #ifdef CF_RUNTIME_SHADER_COMPILATION
-	glslang::InitializeProcess();
+	cute_shader_init();
 #endif
-
-	// Map out all the builtin includable shaders.
-	app->builtin_shaders.add(sintern("shader_stub.shd"), s_shader_stub);
-	app->builtin_shaders.add(sintern("gamma.shd"), s_gamma);
-	app->builtin_shaders.add(sintern("distance.shd"), s_distance);
-	app->builtin_shaders.add(sintern("smooth_uv.shd"), s_smooth_uv);
-	app->builtin_shaders.add(sintern("blend.shd"), s_blend);
 
 	// Compile built-in shaders.
 	app->draw_shader = s_compile(s_draw_vs, s_draw_fs, true, NULL);
@@ -1165,7 +1020,7 @@ void cf_unload_internal_shaders()
 	cf_destroy_shader(app->basic_shader);
 	cf_destroy_shader(app->backbuffer_shader);
 #ifdef CF_RUNTIME_SHADER_COMPILATION
-	glslang::FinalizeProcess();
+	cute_shader_cleanup();
 #endif
 }
 
