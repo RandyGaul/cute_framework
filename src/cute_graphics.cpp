@@ -874,11 +874,11 @@ const dyna uint8_t* cf_compile_shader_to_bytecode(const char* shader_src, CF_Sha
 	return cf_compile_shader_to_bytecode_internal(shader_src, cf_stage, NULL);
 }
 
-static SDL_GPUShader* s_compile(CF_ShaderInternal* shader_internal, const dyna uint8_t* bytecode, CF_ShaderStage stage)
+static SDL_GPUShader* s_compile(CF_ShaderInternal* shader_internal, CF_ShaderBytecode bytecode, CF_ShaderStage stage)
 {
 	bool vs = stage == CF_SHADER_STAGE_VERTEX ? true : false;
 	SpvReflectShaderModule module;
-	spvReflectCreateShaderModule(asize(bytecode), bytecode, &module);
+	spvReflectCreateShaderModule(bytecode.size, bytecode.content, &module);
 
 	// Gather up counts for samplers/textures/buffers.
 	// ...SDL_GPU needs these counts.
@@ -965,8 +965,8 @@ static SDL_GPUShader* s_compile(CF_ShaderInternal* shader_internal, const dyna u
 
 	// Create the actual shader.
 	SDL_GPUShaderCreateInfo shaderCreateInfo = {};
-	shaderCreateInfo.code = bytecode;
-	shaderCreateInfo.code_size = asize(bytecode);
+	shaderCreateInfo.code = bytecode.content;
+	shaderCreateInfo.code_size = bytecode.size;
 	shaderCreateInfo.entrypoint = "main";
 	shaderCreateInfo.format = SDL_GPU_SHADERFORMAT_SPIRV;
 	shaderCreateInfo.stage = s_wrap(stage);
@@ -980,12 +980,11 @@ static SDL_GPUShader* s_compile(CF_ShaderInternal* shader_internal, const dyna u
 	} else {
 		sdl_shader = (SDL_GPUShader*)SDL_ShaderCross_CompileGraphicsShaderFromSPIRV(app->device, &shaderCreateInfo);
 	}
-	afree(bytecode);
 	CF_ASSERT(sdl_shader);
 	return sdl_shader;
 }
 
-CF_Shader cf_make_shader_from_bytecode(const dyna uint8_t* vertex_bytecode, const dyna uint8_t* fragment_bytecode)
+CF_Shader cf_make_shader_from_bytecode(CF_ShaderBytecode vertex_bytecode, CF_ShaderBytecode fragment_bytecode)
 {
 	CF_ShaderInternal* shader_internal = CF_NEW(CF_ShaderInternal);
 	CF_MEMSET(shader_internal, 0, sizeof(*shader_internal));
@@ -1017,7 +1016,18 @@ static CF_Shader s_compile(const char* vs_src, const char* fs_src, bool builtin 
 	}
 
 	// Create the actual shader object.
-	return cf_make_shader_from_bytecode(vs_bytecode, fs_bytecode);
+	CF_ShaderBytecode vs_blob = {
+		.content = vs_bytecode,
+		.size = (size_t)alen(vs_bytecode),
+	};
+	CF_ShaderBytecode fs_blob = {
+		.content = fs_bytecode,
+		.size = (size_t)alen(fs_bytecode),
+	};
+	CF_Shader shader = cf_make_shader_from_bytecode(vs_blob, fs_blob);
+	afree(vs_bytecode);
+	afree(fs_bytecode);
+	return shader;
 }
 
 void cf_load_internal_shaders()
