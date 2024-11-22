@@ -583,7 +583,7 @@ typedef enum CF_ShaderStage
 } CF_ShaderStage;
 
 /**
- * @struct   CF_CanvasParams
+ * @struct   CF_ShaderBytecode
  * @category graphics
  * @brief    A SPIR-V shader bytecode blob.
  * @remarks  This can be created either through `cf_compile_shader_to_bytecode` or the `cute-shaderc` compiler.

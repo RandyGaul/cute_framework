@@ -14,7 +14,7 @@
 #define FLAG_TYPE "-type="
 #define FLAG_INVALID "-"
 #define MAX_INCLUDES 64
-#define HEADER_LINE_SIZE 8
+#define HEADER_LINE_SIZE 16
 
 #define PARSE_FLAG(ARG, FLAG) parse_flag(ARG, FLAG, sizeof(FLAG) - 1)
 
@@ -67,27 +67,77 @@ static char* read_file(const char* path) {
 
 static bool write_bytecode_struct(
 	FILE* file,
-	uint8_t* content, size_t content_len,
-	const char* var_name
+	cute_shader_result_t compile_result,
+	const char* var_name,
+	const char* suffix
 ) {
-	fprintf(file, "static const CF_ShaderBytecode %s = {\n", var_name);
+	const uint8_t* content = (const uint8_t*)compile_result.bytecode;
+	fprintf(file, "static const CF_ShaderBytecode %s%s = {\n", var_name, suffix);
 	fprintf(file, "    .content = {");
-	for (size_t i = 0; i < content_len; ++i) {
+	for (size_t i = 0; i < compile_result.bytecode_size; ++i) {
 		if ((i % HEADER_LINE_SIZE) == 0) {
 			fprintf(file, "\n       ");
 		}
 		fprintf(file, " 0x%02X,", content[i]);
 	}
 	fprintf(file, "\n    },\n");
-	fprintf(file, "    .size = %zu,\n", content_len);
+	fprintf(file, "    .size = %zu,\n", compile_result.bytecode_size);
 	fprintf(file, "};\n");
 
 	return ferror(file) == 0;
 }
 
+static bool write_draw_header_file(
+	const char* path,
+	cute_shader_result_t draw_result,
+	cute_shader_result_t blit_result,
+	int argc, const char* argv[],
+	const char* var_name
+) {
+	errno = 0;
+	FILE* file = fopen(path, "wb");
+	if (file == NULL) {
+		return false;
+	}
+
+	fprintf(file, "#pragma once\n\n");
+	// Write the command for reference
+	fprintf(file, "//");
+	for (int i = 0; i < argc; ++i) {
+		fprintf(file, " %s", argv[i]);
+	}
+	fprintf(file, "\n\n");
+
+	// Write the constant
+	if (!write_bytecode_struct(file, draw_result, var_name, "_draw")) {
+		fclose(file);
+		return false;
+	}
+	if (!write_bytecode_struct(file, blit_result, var_name, "_blit")) {
+		fclose(file);
+		return false;
+	}
+
+	fprintf(file, "static const CF_DrawShaderBytecode %s = {\n", var_name);
+	fprintf(file, "    .draw_shader = %s_draw,\n", var_name);
+	fprintf(file, "    .blit_shader = %s_blit,\n", var_name);
+	fprintf(file, "};\n");
+	if (ferror(file) != 0) {
+		fclose(file);
+		return false;
+	}
+
+	if (fflush(file) != 0) {
+		fclose(file);
+		return false;
+	}
+
+	return fclose(file) == 0;
+}
+
 static bool write_standalone_header_file(
 	const char* path,
-	uint8_t* content, size_t content_len,
+	cute_shader_result_t compile_result,
 	int argc, const char* argv[],
 	const char* var_name
 ) {
@@ -105,7 +155,7 @@ static bool write_standalone_header_file(
 	}
 	fprintf(file, "\n\n");
 	// Write the constant
-	if (!write_bytecode_struct(file, content, content_len, var_name)) {
+	if (!write_bytecode_struct(file, compile_result, var_name, "")) {
 		fclose(file);
 		return false;
 	}
@@ -245,6 +295,45 @@ int main(int argc, const char* argv[]) {
 
 			.automatic_include_guard = true,
 		};
+
+		cute_shader_result_t draw_shader_result = cute_shader_compile(
+			s_draw_fs,
+			CUTE_SHADER_STAGE_FRAGMENT,
+			config
+		);
+		if (!draw_shader_result.success) {
+			fprintf(stderr, "%s\n", draw_shader_result.error_message);
+			cute_shader_free_result(draw_shader_result);
+			goto end;
+		}
+		cute_shader_result_t blit_shader_result = cute_shader_compile(
+			s_blit_fs,
+			CUTE_SHADER_STAGE_FRAGMENT,
+			config
+		);
+		if (!blit_shader_result.success) {
+			fprintf(stderr, "%s\n", blit_shader_result.error_message);
+			cute_shader_free_result(draw_shader_result);
+			cute_shader_free_result(blit_shader_result);
+			goto end;
+		}
+
+		if (output_header_path != NULL) {
+			if (!write_draw_header_file(
+				output_header_path,
+				draw_shader_result, blit_shader_result,
+				argc, argv,
+				var_name
+			)) {
+				perror("Error while writing header");
+				cute_shader_free_result(draw_shader_result);
+				cute_shader_free_result(blit_shader_result);
+				goto end;
+			}
+		}
+
+		cute_shader_free_result(draw_shader_result);
+		cute_shader_free_result(blit_shader_result);
 	} else {
 		builtin_includes[num_builtin_includes++] = {
 			.name = "shader_stub.shd",
@@ -277,7 +366,7 @@ int main(int argc, const char* argv[]) {
 		if (output_header_path != NULL) {
 			if (!write_standalone_header_file(
 				output_header_path,
-				(uint8_t*)result.bytecode, result.bytecode_size,
+				result,
 				argc, argv,
 				var_name
 			)) {

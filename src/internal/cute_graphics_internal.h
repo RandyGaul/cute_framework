@@ -462,8 +462,10 @@ struct CF_ShaderInternal
 
 CF_Shader cf_make_draw_shader_internal(const char* path);
 CF_Shader cf_make_draw_shader_from_source_internal(const char* src);
+CF_Shader cf_make_draw_shader_from_bytecode_internal(CF_ShaderBytecode bytecode);
 CF_Shader cf_make_draw_blit_shader_internal(const char* path);
 CF_Shader cf_make_draw_blit_shader_from_source_internal(const char* src);
+CF_Shader cf_make_draw_blit_shader_from_bytecode_internal(CF_ShaderBytecode bytecode);
 void cf_load_internal_shaders();
 void cf_unload_internal_shaders();
 void cf_shader_watch();
