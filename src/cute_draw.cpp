@@ -43,7 +43,6 @@ struct CF_Draw* draw;
 #include <imgui_internal.h>
 
 #include <algorithm>
-#include <glslang/Public/ShaderLang.h>
 
 // Initial design of this API comes from Noel Berry's Blah framework here:
 // https://github.com/NoelFB/blah/blob/master/include/blah_draw.h
