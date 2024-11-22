@@ -388,7 +388,7 @@ target_link_libraries(cute-shaderc cute-shader)
 
 # Online shader compilation (optional).
 if (CF_GLSLANG)
-	add_definitions(-DCF_RUNTIME_SHADER_COMPILATION)
+	target_compile_definitions(cute PUBLIC CF_RUNTIME_SHADER_COMPILATION)
 	set(CF_LINK_LIBS ${CF_LINK_LIBS} cute-shader)
 endif()
 # SPIRV-cross is still needed
@@ -481,7 +481,7 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 		add_executable(https samples/https.c)
 		add_executable(spaceshooter samples/spaceshooter.cpp)
 		add_executable(draw_to_texture samples/draw_to_texture.c)
-		add_executable(hello_triangle samples/hello_triangle.c)
+		add_executable(hello_triangle samples/hello_triangle.c samples/hello_triangle_data/tri_fs.h samples/hello_triangle_data/tri_vs.h)
 		add_executable(waves samples/waves.cpp)
 		add_executable(shallow_water samples/shallow_water.cpp)
 		add_executable(noise samples/noise.c)
@@ -550,7 +550,28 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 			endif()
 		endforeach()
 
+		# Pre-compile shaders for certain samples.
+		add_custom_command(
+			OUTPUT samples/hello_triangle_data/tri_vs.h
+			COMMAND cute-shaderc
+				-type=vertex
+				-varname=s_tri_vs_bytecode
+				-oheader=${CMAKE_CURRENT_SOURCE_DIR}/samples/hello_triangle_data/tri_vs.h
+				${CMAKE_CURRENT_SOURCE_DIR}/samples/hello_triangle_data/tri_vs.shd
+			DEPENDS samples/hello_triangle_data/tri_vs.shd
+		)
+		add_custom_command(
+			OUTPUT samples/hello_triangle_data/tri_fs.h
+			COMMAND cute-shaderc
+				-type=fragment
+				-varname=s_tri_fs_bytecode
+				-oheader=${CMAKE_CURRENT_SOURCE_DIR}/samples/hello_triangle_data/tri_fs.h
+				${CMAKE_CURRENT_SOURCE_DIR}/samples/hello_triangle_data/tri_fs.shd
+			DEPENDS samples/hello_triangle_data/tri_fs.shd
+		)
+
 		# Copy over some folders for certain samples.
+		add_custom_command(TARGET hello_triangle PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/samples/hello_triangle_data $<TARGET_FILE_DIR:import_spritesheet>/hello_triangle_data)
 		add_custom_command(TARGET spaceshooter PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/samples/spaceshooter_data $<TARGET_FILE_DIR:spaceshooter>/spaceshooter_data)
 		add_custom_command(TARGET waves PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/samples/waves_data $<TARGET_FILE_DIR:waves>/waves_data)
 		add_custom_command(TARGET shallow_water PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/samples/shallow_water_data $<TARGET_FILE_DIR:shallow_water>/shallow_water_data)

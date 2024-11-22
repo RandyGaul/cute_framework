@@ -92,7 +92,6 @@ static bool write_draw_header_file(
 	const char* path,
 	cute_shader_result_t draw_result,
 	cute_shader_result_t blit_result,
-	int argc, const char* argv[],
 	const char* var_name
 ) {
 	errno = 0;
@@ -102,12 +101,6 @@ static bool write_draw_header_file(
 	}
 
 	fprintf(file, "#pragma once\n\n");
-	// Write the command for reference
-	fprintf(file, "//");
-	for (int i = 0; i < argc; ++i) {
-		fprintf(file, " %s", argv[i]);
-	}
-	fprintf(file, "\n\n");
 
 	// Write the constant
 	if (!write_bytecode_struct(file, draw_result, var_name, "_draw")) {
@@ -139,7 +132,6 @@ static bool write_draw_header_file(
 static bool write_standalone_header_file(
 	const char* path,
 	cute_shader_result_t compile_result,
-	int argc, const char* argv[],
 	const char* var_name
 ) {
 	errno = 0;
@@ -149,13 +141,7 @@ static bool write_standalone_header_file(
 	}
 
 	fprintf(file, "#pragma once\n\n");
-	// Write the command for reference
-	fprintf(file, "//");
-	for (int i = 0; i < argc; ++i) {
-		fprintf(file, " %s", argv[i]);
-	}
-	fprintf(file, "\n\n");
-	// Write the constant
+
 	if (!write_bytecode_struct(file, compile_result, var_name, "")) {
 		fclose(file);
 		return false;
@@ -333,7 +319,6 @@ int main(int argc, const char* argv[]) {
 			if (!write_draw_header_file(
 				output_header_path,
 				draw_shader_result, blit_shader_result,
-				argc, argv,
 				var_name
 			)) {
 				perror("Error while writing header");
@@ -353,12 +338,6 @@ int main(int argc, const char* argv[]) {
 		}
 
 		fprintf(output_file, "#pragma once\n\n");
-		// Write the command for reference
-		fprintf(output_file, "//");
-		for (int i = 0; i < argc; ++i) {
-			fprintf(output_file, " %s", argv[i]);
-		}
-		fprintf(output_file, "\n\n");
 
 		// Compile and write each builtin shader
 		builtin_includes[num_builtin_includes++] = {
@@ -462,7 +441,6 @@ int main(int argc, const char* argv[]) {
 			if (!write_standalone_header_file(
 				output_header_path,
 				result,
-				argc, argv,
 				var_name
 			)) {
 				perror("Error while writing header");
