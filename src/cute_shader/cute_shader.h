@@ -13,6 +13,17 @@ typedef struct cute_shader_file_t {
 	const char* content;
 } cute_shader_file_t;
 
+typedef struct cute_shader_str_t {
+	size_t len;
+	char* chars;
+} cute_shader_str_t;
+
+typedef struct cute_shader_vfs_t {
+	char* (*read_file_content)(const char* path, size_t* len, void* fcontext);
+	void (*free_file_content)(char* content, void* context);
+	void* context;
+} cute_shader_vfs_t;
+
 typedef enum {
 	CUTE_SHADER_STAGE_VERTEX,
 	CUTE_SHADER_STAGE_FRAGMENT,
@@ -29,6 +40,8 @@ typedef struct cute_shader_config_t {
 	const char** include_dirs;
 
 	bool automatic_include_guard;
+
+	cute_shader_vfs_t* vfs;
 } cute_shader_config_t;
 
 typedef struct cute_shader_result_t {

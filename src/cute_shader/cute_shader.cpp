@@ -6,8 +6,8 @@
 #include <unordered_map>
 #include <glslang/Public/ShaderLang.h>
 #include <glslang/Public/ResourceLimits.h>
-#include <StandAlone/DirStackFileIncluder.h>
 #include <SPIRV/GlslangToSpv.h>
+#include "DirStackFileIncluder.h"
 
 #define CUTE_SHADER_GLSL_VERSION 450
 
@@ -20,7 +20,10 @@ struct BuiltinInclude {
 
 class Includer: public glslang::TShader::Includer {
 public:
-	Includer(bool automatic_include_guard): automatic_include_guard(automatic_include_guard) {
+	Includer(bool automatic_include_guard, const cute_shader_vfs_t& vfs)
+		: automatic_include_guard(automatic_include_guard)
+		, dir_stack_includer(vfs)
+	{
 	}
 
 	void add_include_dir(const char *path) {
@@ -90,6 +93,51 @@ private:
 	std::unordered_map<std::string, BuiltinInclude> builtin_includes;
 };
 
+static char s_empty = 0;
+
+static char* libc_read_file_content(const char* path, size_t* len, void* context) {
+	(void)context;
+	FILE* file = fopen(path, "rb");
+	if (file == NULL) { return NULL; }
+
+	if (fseek(file, 0, SEEK_END) != 0) {
+		fclose(file);
+		return NULL;
+	}
+	long size = ftell(file);
+	if (size < 0) {
+		fclose(file);
+		return NULL;
+	}
+
+	// malloc(0) can return NULL which is the same as error
+	if (size == 0) {
+		if (len != NULL) { *len = 0; }
+		return &s_empty;
+	}
+
+	char* content = (char*)malloc(size);
+	fread(content, (size_t)size, 1, file);
+	if (ferror(file) != 0) {
+		fclose(file);
+		return NULL;
+	}
+
+	if (len != 0) { *len = (size_t)size; }
+	return content;
+}
+
+static void libc_free_file_content(char* content, void* context) {
+	if (content != &s_empty) {
+		free(content);
+	}
+}
+
+cute_shader_vfs_t libc_vfs = {
+	.read_file_content = libc_read_file_content,
+	.free_file_content = libc_free_file_content,
+};
+
 }
 
 static cute_shader_result_t
@@ -153,7 +201,10 @@ cute_shader_compile(
 	shader.setPreamble(preamble.c_str());
 
 	// Setup include
-	cute_shader::Includer includer(config.automatic_include_guard);
+	cute_shader::Includer includer(
+		config.automatic_include_guard,
+		config.vfs != NULL ? *config.vfs : cute_shader::libc_vfs
+	);
 	for (int i = 0; i < config.num_builtin_includes; ++i) {
 		includer.add_builtin_include(
 			config.builtin_includes[i].name, config.builtin_includes[i].content

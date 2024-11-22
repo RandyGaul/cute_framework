@@ -358,6 +358,7 @@ const dyna uint8_t* cf_compile_shader_to_bytecode_internal(const char* shader_sr
 	config.include_dirs = NULL;
 	config.num_builtin_defines = 0;
 	config.builtin_defines = NULL;
+	config.vfs = NULL;
 
 	cute_shader_result_t result = cute_shader_compile(shader_src, stage, config);
 	if (result.success) {
