@@ -959,6 +959,7 @@ static SDL_GPUShader* s_compile(CF_ShaderInternal* shader_internal, const dyna u
 		}
 		afree(inputs);
 	}
+	spvReflectDestroyShaderModule(&module);
 
 	// Create the actual shader.
 	SDL_GPUShaderCreateInfo shaderCreateInfo = {};
