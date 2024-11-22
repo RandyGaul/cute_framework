@@ -16,42 +16,13 @@
 #include <imgui/imgui.h>
 #include <imgui/backends/imgui_impl_sdl3.h>
 
+#ifdef CF_RUNTIME_SHADER_COMPILATION
+#include "cute_shader/builtin_shaders.h"
+#else
+#include "data/builtin_shaders_bytecode.h"
+#endif
+
 using namespace Cute;
-
-const char* s_imgui_vs = R"(
-layout (location = 0) in vec2 pos;
-layout (location = 1) in vec2 uv;
-layout (location = 2) in vec4 col;
-
-layout (location = 0) out vec4 v_col;
-layout (location = 1) out vec2 v_uv;
-
-layout (set = 1, binding = 0) uniform uniform_block {
-	mat4 ProjectionMatrix;
-};
-
-void main()
-{
-	v_col = col;
-	v_uv  = uv;
-	gl_Position = ProjectionMatrix * vec4(pos.xy, 0, 1);
-}
-)";
-
-const char* s_imgui_fs = R"(
-layout (location = 0) in vec4 v_col;
-layout (location = 1) in vec2 v_uv;
-
-layout(location = 0) out vec4 result;
-
-layout (set = 2, binding = 0) uniform sampler2D u_image;
-
-void main()
-{
-	vec4 color = v_col * texture(u_image, v_uv);
-	result = color;
-}
-)";
 
 static void s_make_buffers(int vertex_count, int index_count)
 {
@@ -111,7 +82,11 @@ static void s_make_buffers(int vertex_count, int index_count)
 
 void cf_imgui_init()
 {
+#if CF_RUNTIME_SHADER_COMPILATION
 	CF_Shader shader = cf_make_shader_from_source(s_imgui_vs, s_imgui_fs);
+#else
+	CF_Shader shader = cf_make_shader_from_bytecode(s_imgui_vs_bytecode, s_imgui_fs_bytecode);
+#endif
 	SDL_GPUShader* vs = ((CF_ShaderInternal*)shader.id)->vs;
 	SDL_GPUShader* fs = ((CF_ShaderInternal*)shader.id)->fs;
 
