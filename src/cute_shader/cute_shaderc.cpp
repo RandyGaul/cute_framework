@@ -72,15 +72,16 @@ static bool write_bytecode_struct(
 	const char* suffix
 ) {
 	const uint8_t* content = (const uint8_t*)compile_result.bytecode;
-	fprintf(file, "static const CF_ShaderBytecode %s%s = {\n", var_name, suffix);
-	fprintf(file, "    .content = {");
+	fprintf(file, "static const uint8_t %s%s_content[%zu] = {", var_name, suffix, compile_result.bytecode_size);
 	for (size_t i = 0; i < compile_result.bytecode_size; ++i) {
 		if ((i % HEADER_LINE_SIZE) == 0) {
-			fprintf(file, "\n       ");
+			fprintf(file, "\n   ");
 		}
 		fprintf(file, " 0x%02X,", content[i]);
 	}
-	fprintf(file, "\n    },\n");
+	fprintf(file, "\n};\n");
+	fprintf(file, "static const CF_ShaderBytecode %s%s = {\n", var_name, suffix);
+	fprintf(file, "    .content = %s%s_content,\n", var_name, suffix);
 	fprintf(file, "    .size = %zu,\n", compile_result.bytecode_size);
 	fprintf(file, "};\n");
 
