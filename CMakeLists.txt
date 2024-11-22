@@ -486,7 +486,7 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 		add_executable(shallow_water samples/shallow_water.cpp samples/shallow_water_data/shader.h)
 		add_executable(noise samples/noise.c)
 		add_executable(fetch_image samples/fetch_image.cpp)
-		add_executable(metaballs samples/metaballs.cpp)
+		add_executable(metaballs samples/metaballs.cpp samples/metaballs_data/shader_shd.h)
 		add_executable(timestep samples/timestep.cpp)
 		add_executable(joypad samples/joypad.c)
 		add_executable(outline_stencil samples/outline_stencil.cpp)
@@ -605,6 +605,15 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 				${CMAKE_CURRENT_SOURCE_DIR}/samples/waves_data/waves.shd
 			DEPENDS samples/waves_data/waves.shd
 		)
+		add_custom_command(
+			OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/samples/metaballs_data/shader_shd.h
+			COMMAND cute-shaderc
+				-type=draw
+				-varname=s_shd_bytecode
+				-oheader=${CMAKE_CURRENT_SOURCE_DIR}/samples/metaballs_data/shader_shd.h
+				${CMAKE_CURRENT_SOURCE_DIR}/samples/metaballs_data/shader.shd
+			DEPENDS samples/metaballs_data/shader.shd
+		)
 
 		# Copy over some folders for certain samples.
 		add_custom_command(TARGET hello_triangle PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/samples/hello_triangle_data $<TARGET_FILE_DIR:hello_triangle>/hello_triangle_data)
@@ -614,6 +623,7 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 		add_custom_command(TARGET import_spritesheet PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/samples/import_spritesheet_data $<TARGET_FILE_DIR:import_spritesheet>/import_spritesheet_data)
 		add_custom_command(TARGET pivot PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/samples/pivot_data $<TARGET_FILE_DIR:pivot>/pivot_data)
 		add_custom_command(TARGET recolor PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/samples/recolor_data $<TARGET_FILE_DIR:recolor>/recolor_data)
+		add_custom_command(TARGET metaballs PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/samples/metaballs_data $<TARGET_FILE_DIR:metaballs>/metaballs_data)
 	endif()
 endif()
 

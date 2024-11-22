@@ -1,27 +1,24 @@
 #include <cute.h>
 using namespace Cute;
 
+#ifndef CF_RUNTIME_SHADER_COMPILATION
+#include "metaballs_data/shader_shd.h"
+#endif
+
 int w = 480*2;
 int h = 270*2;
 float scale = 1;
-
-#define STR(X) #X
-const char* s_shd = STR(
-layout(set = 2, binding = 1) uniform sampler2D tex;
-
-vec4 shader(vec4 color, vec2 pos, vec2 screen_uv, vec4 params)
-{
-	float d = texture(tex, screen_uv).x;
-	d = d > 0.5 ? 1.0 : 0.0;
-	return vec4(vec3(d), 1);
-}
-);
 
 int main(int argc, char* argv[])
 {
 	make_app("Metaballs", 0, 0, 0, (int)(w*scale), (int)(h*scale), CF_APP_OPTIONS_RESIZABLE_BIT | CF_APP_OPTIONS_WINDOW_POS_CENTERED_BIT, argv[0]);
 	CF_Canvas soft_circles = make_canvas(canvas_defaults(w, h));
-	CF_Shader shd = cf_make_draw_shader_from_source(s_shd);
+#ifdef CF_RUNTIME_SHADER_COMPILATION
+	cf_shader_directory("/metaballs_data");
+	CF_Shader shd = cf_make_draw_shader("shader.shd");
+#else
+	CF_Shader shd = cf_make_draw_shader_from_bytecode(s_shd_bytecode);
+#endif
 
 	float frame_times[10] = { 0 };
 	int frame_index = 0;
