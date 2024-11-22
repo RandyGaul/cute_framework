@@ -339,21 +339,20 @@ const dyna uint8_t* cf_compile_shader_to_bytecode_internal(const char* shader_sr
 	}
 
 	// Setup builtin includes
-	dyna cute_shader_file_t* builtin_includes = NULL;
 	int num_builtin_includes = sizeof(s_builtin_includes) / sizeof(s_builtin_includes[0]);
-	afit(builtin_includes, num_builtin_includes + 1);
+	dyna cute_shader_file_t builtin_includes[sizeof(s_builtin_includes) / sizeof(s_builtin_includes[0]) + 1];
 	// Use user shader as stub if provided
+	for (int i = 0; i < num_builtin_includes; ++i) {
+		builtin_includes[i] =  s_builtin_includes[i];
+	}
 	cute_shader_file_t shader_stub;
 	shader_stub.name = "shader_stub.shd";
 	shader_stub.content = user_shd != NULL ? user_shd : s_shader_stub;
-	apush(builtin_includes, shader_stub);
-	for (int i = 0; i < num_builtin_includes; ++i) {
-		apush(builtin_includes, s_builtin_includes[i]);
-	}
+	builtin_includes[num_builtin_includes++] = shader_stub;
 
 	cute_shader_config_t config;
 	config.automatic_include_guard = true;
-	config.num_builtin_includes = num_builtin_includes + 1;
+	config.num_builtin_includes = num_builtin_includes;
 	config.builtin_includes = builtin_includes;
 	config.num_include_dirs = 0;
 	config.include_dirs = NULL;
@@ -368,13 +367,11 @@ const dyna uint8_t* cf_compile_shader_to_bytecode_internal(const char* shader_sr
 		CF_MEMCPY(bytecode, result.bytecode, size);
 		alen(bytecode) = size;
 
-		afree(builtin_includes);
 		cute_shader_free_result(result);
 		return bytecode;
 	} else {
 		fprintf(stderr, "%s\n", result.error_message);
 
-		afree(builtin_includes);
 		cute_shader_free_result(result);
 		return NULL;
 	}
