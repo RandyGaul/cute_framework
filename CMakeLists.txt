@@ -177,6 +177,7 @@ set(CF_HDRS
 	src/internal/cute_aseprite_cache_internal.h
 	src/internal/cute_alloc_internal.h
 	src/internal/yyjson.h
+	src/data/builtin_shaders_bytecode.h
 )
 
 if(CF_FRAMEWORK_STATIC)
@@ -421,6 +422,14 @@ elseif(APPLE)
 		endif()
 	endif()
 endif()
+
+# Precompile builtin shaders
+add_custom_command(
+	OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/src/data/builtin_shaders_bytecode.h
+	COMMAND cute-shaderc
+		-type=builtin
+		-oheader=${CMAKE_CURRENT_SOURCE_DIR}/src/data/builtin_shaders_bytecode.h
+)
 
 # Link up all dependencies to Cute.
 target_link_libraries(cute PUBLIC ${CF_LINK_LIBS})
