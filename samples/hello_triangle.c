@@ -48,11 +48,7 @@ int main(int argc, char* argv[])
 	// Therefor, the material is just empty in this case.
 	CF_Material material = cf_make_material();
 #ifdef CF_RUNTIME_SHADER_COMPILATION
-	char* tri_vs = cf_fs_read_entire_file_to_memory_and_nul_terminate("/hello_triangle_data/tri_vs.shd", NULL);
-	char* tri_fs = cf_fs_read_entire_file_to_memory_and_nul_terminate("/hello_triangle_data/tri_fs.shd", NULL);
-	CF_Shader shader = cf_make_shader_from_source(tri_vs, tri_fs);
-	cf_free(tri_vs);
-	cf_free(tri_fs);
+	CF_Shader shader = cf_make_shader("/hello_triangle_data/tri_vs.shd", "/hello_triangle_data/tri_fs.shd");
 #else
 	CF_Shader shader = cf_make_shader_from_bytecode(s_tri_vs_bytecode, s_tri_fs_bytecode);
 #endif
