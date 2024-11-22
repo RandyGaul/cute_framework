@@ -490,11 +490,24 @@ void main() {
 }
 )";
 
+typedef struct CF_BuiltinShaderSource {
+	const char* name;
+	const char* vertex;
+	const char* fragment;
+} CF_BuiltinShaderSource;
+
 static cute_shader_file_t s_builtin_includes[] = {
 	{ "gamma.shd", s_gamma },
 	{ "distance.shd", s_distance },
 	{ "smooth_uv.shd", s_smooth_uv },
 	{ "blend.shd", s_blend },
+};
+
+static CF_BuiltinShaderSource s_builtin_shader_sources[] = {
+	{ "s_draw", s_draw_vs, s_draw_fs },
+	{ "s_basic", s_basic_vs, s_basic_fs },
+	{ "s_backbuffer", s_basic_vs, s_basic_fs },
+	{ "s_blit", s_blit_vs, s_blit_fs },
 };
 
 #endif

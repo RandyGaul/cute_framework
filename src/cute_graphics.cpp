@@ -16,6 +16,7 @@
 
 #include "cute_shader/cute_shader.h"
 #include "cute_shader/builtin_shaders.h"
+#include "data/builtin_shaders_bytecode.h"
 #define SDL_GPU_SHADERCROSS_IMPLEMENTATION
 #define SDL_GPU_SHADERCROSS_STATIC
 #include <SDL_gpu_shadercross/SDL_gpu_shadercross.h>
@@ -329,6 +330,7 @@ void cf_shader_watch()
 
 const dyna uint8_t* cf_compile_shader_to_bytecode_internal(const char* shader_src, CF_ShaderStage cf_stage, const char* user_shd)
 {
+#ifdef CF_RUNTIME_SHADER_COMPILATION
 	cute_shader_stage_t stage = CUTE_SHADER_STAGE_VERTEX;
 	switch (cf_stage) {
 	default: CF_ASSERT(false); break; // No valid stage provided.
@@ -370,10 +372,16 @@ const dyna uint8_t* cf_compile_shader_to_bytecode_internal(const char* shader_sr
 		cute_shader_free_result(result);
 		return bytecode;
 	} else {
+		fprintf(stderr, "%s\n", result.error_message);
+
 		afree(builtin_includes);
 		cute_shader_free_result(result);
 		return NULL;
 	}
+#else
+	fprintf(stderr, "CF was not built with runtime shader compilation enabled\n");
+	return NULL;
+#endif
 }
 
 const dyna uint8_t* cf_compile_shader_to_bytecode(const char* shader_src, CF_ShaderStage cf_stage)
@@ -541,13 +549,18 @@ void cf_load_internal_shaders()
 {
 #ifdef CF_RUNTIME_SHADER_COMPILATION
 	cute_shader_init();
-#endif
 
 	// Compile built-in shaders.
 	app->draw_shader = s_compile(s_draw_vs, s_draw_fs, true, NULL);
 	app->basic_shader = s_compile(s_basic_vs, s_basic_fs, true, NULL);
 	app->backbuffer_shader = s_compile(s_backbuffer_vs, s_backbuffer_fs, true, NULL);
 	app->blit_shader = s_compile(s_blit_vs, s_blit_fs, true, NULL);
+#else
+	app->draw_shader = cf_make_shader_from_bytecode(s_draw_vs_bytecode, s_draw_fs_bytecode);
+	app->basic_shader = cf_make_shader_from_bytecode(s_basic_vs_bytecode, s_basic_fs_bytecode);
+	app->backbuffer_shader = cf_make_shader_from_bytecode(s_backbuffer_vs_bytecode, s_backbuffer_fs_bytecode);
+	app->blit_shader = cf_make_shader_from_bytecode(s_blit_vs_bytecode, s_blit_fs_bytecode);
+#endif
 }
 
 void cf_unload_internal_shaders()

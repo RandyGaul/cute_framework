@@ -380,7 +380,7 @@ FetchContent_MakeAvailable(SPIRV_CROSS)
 
 set(CUTE_SHADER_SRCS src/cute_shader/cute_shader.cpp)
 add_library(cute-shader STATIC ${CUTE_SHADER_SRCS})
-target_link_libraries(cute-shader PRIVATE glslang glslang-default-resource-limits SPIRV SPIRV-Tools SPIRV-Tools-opt spirv-cross-c)
+target_link_libraries(cute-shader PRIVATE glslang glslang-default-resource-limits SPIRV)
 
 set(CUTE_SHADERC_SRCS src/cute_shader/cute_shaderc.cpp)
 add_executable(cute-shaderc ${CUTE_SHADERC_SRCS})
@@ -391,6 +391,8 @@ if (CF_GLSLANG)
 	add_definitions(-DCF_RUNTIME_SHADER_COMPILATION)
 	set(CF_LINK_LIBS ${CF_LINK_LIBS} cute-shader)
 endif()
+# SPIRV-cross is still needed
+set(CF_LINK_LIBS ${CF_LINK_LIBS} SPIRV-Tools SPIRV-Tools-opt spirv-cross-c)
 
 # Some platform specific settings.
 if(EMSCRIPTEN)

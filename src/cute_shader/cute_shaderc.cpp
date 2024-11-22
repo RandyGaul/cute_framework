@@ -183,16 +183,14 @@ int main(int argc, const char* argv[]) {
 		if ((flag_value = PARSE_FLAG(arg, FLAG_HELP)) != NULL) {
 			fprintf(stderr,
 				"Usage: cute-shaderc [options] <input>\n"
-				"Compile GLSL into SPIRV bytecode and generate a header.\n"
-				"\n"
+				"Compile GLSL into SPIRV bytecode and generate a C header for embedding.\n"
 				"\n"
 				"--help             Print this message.\n"
 				"-I<dir>            Add directory to #include search path.\n"
-				"-type=<type>       The shader type.\n"
-				"                   Valid values are:\n"
-				"                   * draw (default): Draw shader for cf_make_draw_shader_from_bytecode.\n"
-				"                   * vertex: Standalone vertex shader for cf_make_shader_from_bytecode.\n"
-				"                   * fragment: Standalone fragment shader for cf_make_shader_from_bytecode.\n"
+				"-type=<type>       The shader type. Valid values are:\n"
+				"                   * draw (default): Draw shader for `cf_make_draw_shader_from_bytecode`.\n"
+				"                   * vertex: Standalone vertex shader for `cf_make_shader_from_bytecode`.\n"
+				"                   * fragment: Standalone fragment shader for `cf_make_shader_from_bytecode`.\n"
 				"-oheader=<file>    Where to write the C header file.\n"
 				"                   Also requires -varname.\n"
 				"-varname=<file>    The variable name inside the C header.\n"
@@ -217,6 +215,8 @@ int main(int argc, const char* argv[]) {
 				type = SHADER_TYPE_FRAGMENT;
 			} else if (strcmp(flag_value, "draw") == 0) {
 				type = SHADER_TYPE_DRAW;
+			} else if (strcmp(flag_value, "builtin") == 0) {
+				type = SHADER_TYPE_BUILTIN;
 			} else {
 				fprintf(stderr, "Invalid shader type: %s\n", flag_value);
 				return 1;
@@ -249,14 +249,21 @@ int main(int argc, const char* argv[]) {
 		}
 	}
 
-	if (input_path == NULL) {
-		fprintf(stderr, "Please specify an input\n");
-		return 1;
-	}
+	if (type == SHADER_TYPE_BUILTIN) {
+		if (output_header_path == NULL) {
+			fprintf(stderr, "Please specify %s\n", FLAG_HEADER_OUT);
+			return 1;
+		}
+	} else {
+		if (input_path == NULL) {
+			fprintf(stderr, "Please specify an input\n");
+			return 1;
+		}
 
-	if (output_header_path != NULL && var_name == NULL) {
-		fprintf(stderr, "%s also requires %s\n", FLAG_HEADER_OUT, FLAG_VARNAME);
-		return 1;
+		if (output_header_path != NULL && var_name == NULL) {
+			fprintf(stderr, "%s also requires %s\n", FLAG_HEADER_OUT, FLAG_VARNAME);
+			return 1;
+		}
 	}
 
 	cute_shader_init();
@@ -275,10 +282,13 @@ int main(int argc, const char* argv[]) {
 	};
 
 	int return_code = 1;
-	char* input_content = read_file(input_path);
-	if (input_content == NULL) {
-		perror("Error while reading input");
-		goto end;
+	char* input_content = NULL;
+	if (type != SHADER_TYPE_BUILTIN) {
+		input_content = read_file(input_path);
+		if (input_content == NULL) {
+			perror("Error while reading input");
+			goto end;
+		}
 	}
 
 	if (type == SHADER_TYPE_DRAW) {
@@ -335,6 +345,90 @@ int main(int argc, const char* argv[]) {
 
 		cute_shader_free_result(draw_shader_result);
 		cute_shader_free_result(blit_shader_result);
+	} else if (type == SHADER_TYPE_BUILTIN) {
+		FILE* output_file = fopen(output_header_path, "wb");
+		if (output_file == NULL) {
+			perror("Error while writing header");
+			goto end;
+		}
+
+		fprintf(output_file, "#pragma once\n\n");
+		// Write the command for reference
+		fprintf(output_file, "//");
+		for (int i = 0; i < argc; ++i) {
+			fprintf(output_file, " %s", argv[i]);
+		}
+		fprintf(output_file, "\n\n");
+
+		// Compile and write each builtin shader
+		builtin_includes[num_builtin_includes++] = {
+			.name = "shader_stub.shd",
+			.content = s_shader_stub,
+		};
+		cute_shader_config_t config = {
+			.num_builtin_includes = num_builtin_includes,
+			.builtin_includes = builtin_includes,
+
+			.num_include_dirs = num_includes,
+			.include_dirs = include_dirs,
+
+			.automatic_include_guard = true,
+		};
+
+		int num_builtin_shaders = sizeof(s_builtin_shader_sources) / sizeof(s_builtin_shader_sources[0]);
+		for (int i = 0; i < num_builtin_shaders; ++i) {
+			CF_BuiltinShaderSource source = s_builtin_shader_sources[i];
+
+			cute_shader_result_t vertex_result = cute_shader_compile(
+				source.vertex, CUTE_SHADER_STAGE_VERTEX, config
+			);
+			if (!vertex_result.success) {
+				fprintf(stderr, "%s\n", vertex_result.error_message);
+				cute_shader_free_result(vertex_result);
+				fclose(output_file);
+				goto end;
+			}
+			if (!write_bytecode_struct(
+				output_file,
+				vertex_result,
+				source.name, "_vs_bytecode"
+			)) {
+				perror("Error while writing header");
+				cute_shader_free_result(vertex_result);
+				fclose(output_file);
+				goto end;
+			}
+			cute_shader_free_result(vertex_result);
+
+			cute_shader_result_t fragment_result = cute_shader_compile(
+				source.fragment, CUTE_SHADER_STAGE_FRAGMENT, config
+			);
+			if (!fragment_result.success) {
+				fprintf(stderr, "%s\n", fragment_result.error_message);
+				cute_shader_free_result(fragment_result);
+				fclose(output_file);
+				goto end;
+			}
+			if (!write_bytecode_struct(
+				output_file,
+				fragment_result,
+				source.name, "_fs_bytecode"
+			)) {
+				perror("Error while writing header");
+				cute_shader_free_result(fragment_result);
+				fclose(output_file);
+				goto end;
+			}
+			cute_shader_free_result(fragment_result);
+		}
+
+		if (fflush(output_file) != 0) {
+			perror("Error while writing header");
+			fclose(output_file);
+			goto end;
+		}
+
+		fclose(output_file);
 	} else {
 		builtin_includes[num_builtin_includes++] = {
 			.name = "shader_stub.shd",
@@ -353,9 +447,9 @@ int main(int argc, const char* argv[]) {
 
 		cute_shader_result_t result = cute_shader_compile(
 			input_content,
-			type == SHADER_TYPE_FRAGMENT
-				? CUTE_SHADER_STAGE_FRAGMENT
-				: CUTE_SHADER_STAGE_VERTEX,
+			type == SHADER_TYPE_VERTEX
+				? CUTE_SHADER_STAGE_VERTEX
+				: CUTE_SHADER_STAGE_FRAGMENT,
 			config
 		);
 		if (!result.success) {
