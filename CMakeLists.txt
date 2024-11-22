@@ -566,6 +566,7 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 		add_custom_command(
 			OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/samples/hello_triangle_data/tri_vs.h
 			COMMAND cute-shaderc
+				-I${CMAKE_CURRENT_SOURCE_DIR}/samples/hello_triangle_data
 				-type=vertex
 				-varname=s_tri_vs_bytecode
 				-oheader=${CMAKE_CURRENT_SOURCE_DIR}/samples/hello_triangle_data/tri_vs.h

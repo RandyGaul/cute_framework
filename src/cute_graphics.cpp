@@ -328,6 +328,23 @@ void cf_shader_watch()
 	s_shader_watch_recursive("/");
 }
 
+#ifdef CF_RUNTIME_SHADER_COMPILATION
+static char* s_cute_shader_vfs_read(const char* path, size_t* len, void* context) {
+	CF_UNUSED(context);
+	return (char*)fs_read_entire_file_to_memory(path, len);
+}
+
+static void s_cute_shader_vfs_free(char* content, void* context) {
+	CF_UNUSED(context);
+	cf_free(content);
+}
+
+static cute_shader_vfs_t s_cute_shader_vfs = {
+	.read_file_content = s_cute_shader_vfs_read,
+	.free_file_content = s_cute_shader_vfs_free,
+};
+#endif
+
 const dyna uint8_t* cf_compile_shader_to_bytecode_internal(const char* shader_src, CF_ShaderStage cf_stage, const char* user_shd)
 {
 #ifdef CF_RUNTIME_SHADER_COMPILATION
@@ -350,15 +367,21 @@ const dyna uint8_t* cf_compile_shader_to_bytecode_internal(const char* shader_sr
 	shader_stub.content = user_shd != NULL ? user_shd : s_shader_stub;
 	builtin_includes[num_builtin_includes++] = shader_stub;
 
+	int num_include_dirs = 0;
+	const char* include_dirs[1];
+	if (app->shader_directory_set) {
+		include_dirs[num_include_dirs++] = app->shader_directory.c_str();
+	}
+
 	cute_shader_config_t config;
 	config.automatic_include_guard = true;
 	config.num_builtin_includes = num_builtin_includes;
 	config.builtin_includes = builtin_includes;
-	config.num_include_dirs = 0;
-	config.include_dirs = NULL;
+	config.num_include_dirs = num_include_dirs;
+	config.include_dirs = include_dirs;
 	config.num_builtin_defines = 0;
 	config.builtin_defines = NULL;
-	config.vfs = NULL;
+	config.vfs = &s_cute_shader_vfs;
 
 	cute_shader_result_t result = cute_shader_compile(shader_src, stage, config);
 	if (result.success) {

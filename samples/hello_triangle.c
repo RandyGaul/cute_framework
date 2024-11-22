@@ -48,6 +48,7 @@ int main(int argc, char* argv[])
 	// Therefor, the material is just empty in this case.
 	CF_Material material = cf_make_material();
 #ifdef CF_RUNTIME_SHADER_COMPILATION
+	cf_shader_directory("/hello_triangle_data");
 	CF_Shader shader = cf_make_shader("/hello_triangle_data/tri_vs.shd", "/hello_triangle_data/tri_fs.shd");
 #else
 	CF_Shader shader = cf_make_shader_from_bytecode(s_tri_vs_bytecode, s_tri_fs_bytecode);

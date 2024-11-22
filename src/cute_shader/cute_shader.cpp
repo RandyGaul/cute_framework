@@ -7,91 +7,10 @@
 #include <glslang/Public/ShaderLang.h>
 #include <glslang/Public/ResourceLimits.h>
 #include <SPIRV/GlslangToSpv.h>
-#include "DirStackFileIncluder.h"
 
 #define CUTE_SHADER_GLSL_VERSION 450
 
 namespace cute_shader {
-
-struct BuiltinInclude {
-	const char* content;
-	size_t size;
-};
-
-class Includer: public glslang::TShader::Includer {
-public:
-	Includer(bool automatic_include_guard, const cute_shader_vfs_t& vfs)
-		: automatic_include_guard(automatic_include_guard)
-		, dir_stack_includer(vfs)
-	{
-	}
-
-	void add_include_dir(const char *path) {
-		dir_stack_includer.pushExternalLocalDirectory(path);
-	}
-
-	void add_builtin_include(const char* name, const char* content) {
-		builtin_includes.insert({ name, { content, strlen(content) }});
-	}
-
-	IncludeResult* includeSystem(const char* header_name, const char* includer_name, size_t inclusion_depth) override {
-		// Include guard has to be done against full path so we resolve first
-		// and guard later
-		auto builtin_include = builtin_includes.find(header_name);
-		IncludeResult* result = nullptr;
-		if (builtin_include == builtin_includes.end()) {
-			result = dir_stack_includer.includeSystem(header_name, includer_name, inclusion_depth);
-		} else {
-			std::string resolved_name = "builtin:";
-			resolved_name += header_name;
-			result = new IncludeResult(
-				resolved_name,
-				builtin_include->second.content,
-				builtin_include->second.size,
-				nullptr
-			);
-		}
-
-		return include_guard(result);
-	}
-
-	IncludeResult* includeLocal(const char* header_name, const char* includer_name, size_t inclusion_depth) override {
-		return include_guard(dir_stack_includer.includeLocal(header_name, includer_name, inclusion_depth));
-	}
-
-	void releaseInclude(IncludeResult* result) override {
-		if (result == nullptr) { return; }
-
-		if (result->userData != nullptr) {
-			dir_stack_includer.releaseInclude(result);
-		} else {
-			delete result;
-		}
-	}
-private:
-	IncludeResult* include_guard(IncludeResult* include) {
-		if (include == nullptr || !automatic_include_guard) { return include; }
-
-		if (included_files.contains(include->headerName)) {
-			IncludeResult* guarded = new IncludeResult(
-				include->headerName,
-				"",
-				0,
-				nullptr
-			);
-			releaseInclude(include);
-			return guarded;
-		} else {
-			included_files.insert(include->headerName);
-			return include;
-		}
-	}
-
-	bool automatic_include_guard;
-	DirStackFileIncluder dir_stack_includer;
-	std::unordered_set<std::string> included_files;
-	std::unordered_map<std::string, BuiltinInclude> builtin_includes;
-};
 
 static char s_empty = 0;
 
@@ -113,7 +32,12 @@ static char* libc_read_file_content(const char* path, size_t* len, void* context
 	// malloc(0) can return NULL which is the same as error
 	if (size == 0) {
 		if (len != NULL) { *len = 0; }
+		fclose(file);
 		return &s_empty;
+	}
+	if (fseek(file, 0, SEEK_SET) != 0) {
+		fclose(file);
+		return NULL;
 	}
 
 	char* content = (char*)malloc(size);
@@ -133,9 +57,93 @@ static void libc_free_file_content(char* content, void* context) {
 	}
 }
 
-cute_shader_vfs_t libc_vfs = {
+static cute_shader_vfs_t libc_vfs = {
 	.read_file_content = libc_read_file_content,
 	.free_file_content = libc_free_file_content,
+};
+
+struct BuiltinInclude {
+	const char* content;
+	size_t size;
+};
+
+class Includer: public glslang::TShader::Includer {
+public:
+	Includer(const cute_shader_config_t& config)
+		: automatic_include_guard(config.automatic_include_guard)
+		, vfs(config.vfs != NULL ? config.vfs : &libc_vfs)
+		, num_include_dirs(config.num_include_dirs)
+		, include_dirs(config.include_dirs)
+	{
+		for (int i = 0; i < config.num_builtin_includes; ++i) {
+			cute_shader_file_t file = config.builtin_includes[i];
+			builtin_includes.insert({
+				file.name,
+				{ file.content, strlen(file.content) }
+			});
+		}
+	}
+
+	IncludeResult* includeSystem(const char* header_name, const char* includer_name, size_t inclusion_depth) override {
+		std::string include_name = header_name;
+
+		// Since all includes are system include, we can resolve include guard immediately
+		if (automatic_include_guard && included_files.contains(include_name)) {
+			return new IncludeResult(include_name, "", 0, nullptr);
+		}
+
+		auto builtin_include = builtin_includes.find(include_name);
+		IncludeResult* result = nullptr;
+		if (builtin_include == builtin_includes.end()) {
+			for (int i = 0; i < num_include_dirs; ++i) {
+				std::string file_path = include_dirs[i];
+				file_path += "/";
+				file_path += include_name;
+				size_t len;
+				char* content = vfs->read_file_content(file_path.c_str(), &len, vfs->context);
+				if (content != NULL) {
+					if (automatic_include_guard) {
+						included_files.insert(include_name);
+					}
+					return new IncludeResult(include_name, content, len, content);
+				}
+			}
+
+			return nullptr;
+		} else {
+			if (automatic_include_guard) {
+				included_files.insert(include_name);
+			}
+			return new IncludeResult(
+				include_name,
+				builtin_include->second.content,
+				builtin_include->second.size,
+				nullptr
+			);
+		}
+	}
+
+	IncludeResult* includeLocal(const char* header_name, const char* includer_name, size_t inclusion_depth) override {
+		// Treat all includes as system include
+		return nullptr;
+	}
+
+	void releaseInclude(IncludeResult* result) override {
+		if (result == nullptr) { return; }
+
+		if (result->userData != nullptr) {
+			vfs->free_file_content((char*)result->userData, vfs->context);
+		}
+
+		delete result;
+	}
+private:
+	bool automatic_include_guard;
+	int num_include_dirs;
+	const char** include_dirs;
+	std::unordered_set<std::string> included_files;
+	std::unordered_map<std::string, BuiltinInclude> builtin_includes;
+	cute_shader_vfs_t* vfs;
 };
 
 }
@@ -200,23 +208,10 @@ cute_shader_compile(
 	preamble += "#line 1 0\n";
 	shader.setPreamble(preamble.c_str());
 
-	// Setup include
-	cute_shader::Includer includer(
-		config.automatic_include_guard,
-		config.vfs != NULL ? *config.vfs : cute_shader::libc_vfs
-	);
-	for (int i = 0; i < config.num_builtin_includes; ++i) {
-		includer.add_builtin_include(
-			config.builtin_includes[i].name, config.builtin_includes[i].content
-		);
-	}
-	for (int i = 0; i < config.num_include_dirs; ++i) {
-		includer.add_include_dir(config.include_dirs[i]);
-	}
-
 	// Preprocess
 	shader.setStrings(&source, 1);
 	std::string preprocessed_source;
+	cute_shader::Includer includer(config);
 	if (!shader.preprocess(
 		GetDefaultResources(),
 		CUTE_SHADER_GLSL_VERSION,
