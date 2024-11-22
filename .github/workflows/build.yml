@@ -23,8 +23,8 @@ jobs:
       fail-fast: false
       matrix:
         runtime_shader_compilation:
-          - { with: 'with', cmake_arg: '-DCF_GLSLANG=ON' }
-          - { with: 'without', cmake_arg: '-DCF_GLSLANG=OFF' }
+          - { value: 'ON', with: 'with', cmake_arg: '-DCF_GLSLANG=ON' }
+          - { value: 'OFF', with: 'without', cmake_arg: '-DCF_GLSLANG=OFF' }
         platform:
           # Diabled MinGW as it was having trouble with DX12 headers being out of date.
           # - { name: "Windows (MinGW-w64)",     os: windows-latest, artifact: 'mingw-w64', generate: '-G "MinGW Makefiles"' }
@@ -132,3 +132,4 @@ jobs:
           if-no-files-found: error
           name: ${{ matrix.platform.artifact }}
           path: ./dist/
+        if: matrix.runtime_shader_compilation.value == 'ON'
