@@ -517,7 +517,6 @@ void main() {
 )";
 
 static cute_shader_file_t s_builtin_includes[] = {
-	{ "shader_stub.shd", s_shader_stub },
 	{ "gamma.shd", s_gamma },
 	{ "distance.shd", s_distance },
 	{ "smooth_uv.shd", s_smooth_uv },
@@ -821,7 +820,7 @@ void cf_shader_watch()
 	s_shader_watch_recursive("/");
 }
 
-const dyna uint8_t* cf_compile_shader_to_bytecode(const char* shader_src, CF_ShaderStage cf_stage)
+const dyna uint8_t* cf_compile_shader_to_bytecode_internal(const char* shader_src, CF_ShaderStage cf_stage, const char* user_shd)
 {
 	cute_shader_stage_t stage = CUTE_SHADER_STAGE_VERTEX;
 	switch (cf_stage) {
@@ -830,10 +829,23 @@ const dyna uint8_t* cf_compile_shader_to_bytecode(const char* shader_src, CF_Sha
 	case CF_SHADER_STAGE_FRAGMENT: stage = CUTE_SHADER_STAGE_FRAGMENT; break;
 	}
 
+	// Setup builtin includes
+	dyna cute_shader_file_t* builtin_includes = NULL;
+	int num_builtin_includes = sizeof(s_builtin_includes) / sizeof(s_builtin_includes[0]);
+	afit(builtin_includes, num_builtin_includes + 1);
+	// Use user shader as stub if provided
+	cute_shader_file_t shader_stub;
+	shader_stub.name = "shader_stub.shd";
+	shader_stub.content = user_shd != NULL ? user_shd : s_shader_stub;
+	apush(builtin_includes, shader_stub);
+	for (int i = 0; i < num_builtin_includes; ++i) {
+		apush(builtin_includes, s_builtin_includes[i]);
+	}
+
 	cute_shader_config_t config;
 	config.automatic_include_guard = true;
-	config.num_builtin_includes = sizeof(s_builtin_includes) / sizeof(s_builtin_includes[0]);
-	config.builtin_includes = s_builtin_includes;
+	config.num_builtin_includes = num_builtin_includes + 1;
+	config.builtin_includes = builtin_includes;
 	config.num_include_dirs = 0;
 	config.include_dirs = NULL;
 	config.num_builtin_defines = 0;
@@ -847,13 +859,19 @@ const dyna uint8_t* cf_compile_shader_to_bytecode(const char* shader_src, CF_Sha
 		CF_MEMCPY(bytecode, result.bytecode, size);
 		alen(bytecode) = size;
 
+		afree(builtin_includes);
 		cute_shader_free_result(result);
 		return bytecode;
 	} else {
-		fprintf(stderr, "%s\n", result.error_message);
+		afree(builtin_includes);
 		cute_shader_free_result(result);
 		return NULL;
 	}
+}
+
+const dyna uint8_t* cf_compile_shader_to_bytecode(const char* shader_src, CF_ShaderStage cf_stage)
+{
+	return cf_compile_shader_to_bytecode_internal(shader_src, cf_stage, NULL);
 }
 
 static SDL_GPUShader* s_compile(CF_ShaderInternal* shader_internal, const dyna uint8_t* bytecode, CF_ShaderStage stage)
@@ -984,13 +1002,14 @@ CF_Shader cf_make_shader_from_bytecode(const dyna uint8_t* vertex_bytecode, cons
 
 static CF_Shader s_compile(const char* vs_src, const char* fs_src, bool builtin = false, const char* user_shd = NULL)
 {
+	// TODO: builtin flag is redundant
 	// Compile to bytecode.
-	const dyna uint8_t* vs_bytecode = cf_compile_shader_to_bytecode(vs_src, CF_SHADER_STAGE_VERTEX);
+	const dyna uint8_t* vs_bytecode = cf_compile_shader_to_bytecode_internal(vs_src, CF_SHADER_STAGE_VERTEX, user_shd);
 	if (!vs_bytecode) {
 		CF_Shader result = { 0 };
 		return result;
 	}
-	const dyna uint8_t* fs_bytecode = cf_compile_shader_to_bytecode(fs_src, CF_SHADER_STAGE_FRAGMENT);
+	const dyna uint8_t* fs_bytecode = cf_compile_shader_to_bytecode_internal(fs_src, CF_SHADER_STAGE_FRAGMENT, user_shd);
 	if (!fs_bytecode) {
 		afree(vs_bytecode);
 		CF_Shader result = { 0 };

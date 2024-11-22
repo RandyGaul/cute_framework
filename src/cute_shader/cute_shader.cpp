@@ -41,7 +41,6 @@ public:
 		} else {
 			std::string resolved_name = "builtin:";
 			resolved_name += header_name;
-			printf("Include %s\n", header_name);
 			result = new IncludeResult(
 				resolved_name,
 				builtin_include->second.content,
