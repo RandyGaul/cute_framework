@@ -149,6 +149,7 @@ cute_shader_compile(
 		preamble += config.builtin_defines[i].value;
 		preamble += "\n";
 	}
+	preamble += "#line 1 0\n";
 	shader.setPreamble(preamble.c_str());
 
 	// Setup include
