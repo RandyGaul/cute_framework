@@ -482,7 +482,7 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 		add_executable(spaceshooter samples/spaceshooter.cpp samples/spaceshooter_data/flash_shd.h)
 		add_executable(draw_to_texture samples/draw_to_texture.c)
 		add_executable(hello_triangle samples/hello_triangle.c samples/hello_triangle_data/tri_fs.h samples/hello_triangle_data/tri_vs.h)
-		add_executable(waves samples/waves.cpp)
+		add_executable(waves samples/waves.cpp samples/waves_data/waves_shd.h)
 		add_executable(shallow_water samples/shallow_water.cpp samples/shallow_water_data/shader.h)
 		add_executable(noise samples/noise.c)
 		add_executable(fetch_image samples/fetch_image.cpp)
@@ -595,6 +595,15 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 				-oheader=${CMAKE_CURRENT_SOURCE_DIR}/samples/spaceshooter_data/flash_shd.h
 				${CMAKE_CURRENT_SOURCE_DIR}/samples/spaceshooter_data/flash.shd
 			DEPENDS samples/spaceshooter_data/flash.shd
+		)
+		add_custom_command(
+			OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/samples/waves_data/waves_shd.h
+			COMMAND cute-shaderc
+				-type=draw
+				-varname=s_waves_shd_bytecode
+				-oheader=${CMAKE_CURRENT_SOURCE_DIR}/samples/waves_data/waves_shd.h
+				${CMAKE_CURRENT_SOURCE_DIR}/samples/waves_data/waves.shd
+			DEPENDS samples/waves_data/waves.shd
 		)
 
 		# Copy over some folders for certain samples.
