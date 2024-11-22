@@ -479,7 +479,7 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 		add_executable(docsparser samples/docs_parser.cpp)
 		add_executable(scratch samples/scratch.cpp)
 		add_executable(https samples/https.c)
-		add_executable(spaceshooter samples/spaceshooter.cpp)
+		add_executable(spaceshooter samples/spaceshooter.cpp samples/spaceshooter_data/flash_shd.h)
 		add_executable(draw_to_texture samples/draw_to_texture.c)
 		add_executable(hello_triangle samples/hello_triangle.c samples/hello_triangle_data/tri_fs.h samples/hello_triangle_data/tri_vs.h)
 		add_executable(waves samples/waves.cpp)
@@ -586,6 +586,15 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 				-oheader=${CMAKE_CURRENT_SOURCE_DIR}/samples/recolor_data/recolor_shd.h
 				${CMAKE_CURRENT_SOURCE_DIR}/samples/recolor_data/recolor.shd
 			DEPENDS samples/recolor_data/recolor.shd
+		)
+		add_custom_command(
+			OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/samples/spaceshooter_data/flash_shd.h
+			COMMAND cute-shaderc
+				-type=draw
+				-varname=s_flash_shd_bytecode
+				-oheader=${CMAKE_CURRENT_SOURCE_DIR}/samples/spaceshooter_data/flash_shd.h
+				${CMAKE_CURRENT_SOURCE_DIR}/samples/spaceshooter_data/flash.shd
+			DEPENDS samples/spaceshooter_data/flash.shd
 		)
 
 		# Copy over some folders for certain samples.

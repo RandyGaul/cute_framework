@@ -13,7 +13,7 @@ int main(int argc, char* argv[])
 	if (is_error(result)) return -1;
 #ifdef CF_RUNTIME_SHADER_COMPILATION
 	cf_shader_directory("/recolor_data");
-	CF_Shader recolor = make_draw_shader("recolor.shd");
+	CF_Shader recolor = cf_make_draw_shader("recolor.shd");
 #else
 	CF_Shader recolor = cf_make_draw_shader_from_bytecode(s_recolor_bytecode);
 #endif
