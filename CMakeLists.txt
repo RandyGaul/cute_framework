@@ -483,7 +483,7 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 		add_executable(draw_to_texture samples/draw_to_texture.c)
 		add_executable(hello_triangle samples/hello_triangle.c samples/hello_triangle_data/tri_fs.h samples/hello_triangle_data/tri_vs.h)
 		add_executable(waves samples/waves.cpp)
-		add_executable(shallow_water samples/shallow_water.cpp)
+		add_executable(shallow_water samples/shallow_water.cpp samples/shallow_water_data/shader.h)
 		add_executable(noise samples/noise.c)
 		add_executable(fetch_image samples/fetch_image.cpp)
 		add_executable(metaballs samples/metaballs.cpp)
@@ -552,7 +552,7 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 
 		# Pre-compile shaders for certain samples.
 		add_custom_command(
-			OUTPUT samples/hello_triangle_data/tri_vs.h
+			OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/samples/hello_triangle_data/tri_vs.h
 			COMMAND cute-shaderc
 				-type=vertex
 				-varname=s_tri_vs_bytecode
@@ -561,13 +561,22 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 			DEPENDS samples/hello_triangle_data/tri_vs.shd
 		)
 		add_custom_command(
-			OUTPUT samples/hello_triangle_data/tri_fs.h
+			OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/samples/hello_triangle_data/tri_fs.h
 			COMMAND cute-shaderc
 				-type=fragment
 				-varname=s_tri_fs_bytecode
 				-oheader=${CMAKE_CURRENT_SOURCE_DIR}/samples/hello_triangle_data/tri_fs.h
 				${CMAKE_CURRENT_SOURCE_DIR}/samples/hello_triangle_data/tri_fs.shd
 			DEPENDS samples/hello_triangle_data/tri_fs.shd
+		)
+		add_custom_command(
+			OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/samples/shallow_water_data/shader.h
+			COMMAND cute-shaderc
+				-type=draw
+				-varname=s_shd_bytecode
+				-oheader=${CMAKE_CURRENT_SOURCE_DIR}/samples/shallow_water_data/shader.h
+				${CMAKE_CURRENT_SOURCE_DIR}/samples/shallow_water_data/shader.shd
+			DEPENDS samples/shallow_water_data/shader.shd
 		)
 
 		# Copy over some folders for certain samples.

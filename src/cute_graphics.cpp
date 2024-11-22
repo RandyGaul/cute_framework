@@ -606,9 +606,19 @@ CF_Shader cf_make_draw_shader_from_source_internal(const char* src)
 	return s_compile(s_draw_vs, s_draw_fs, true, src);
 }
 
+CF_Shader cf_make_draw_shader_from_bytecode_internal(CF_ShaderBytecode bytecode)
+{
+	return cf_make_shader_from_bytecode(s_draw_vs_bytecode, bytecode);
+}
+
 CF_Shader cf_make_draw_blit_shader_from_source_internal(const char* src)
 {
 	return s_compile(s_blit_vs, s_blit_fs, true, src);
+}
+
+CF_Shader cf_make_draw_blit_shader_from_bytecode_internal(CF_ShaderBytecode bytecode)
+{
+	return cf_make_shader_from_bytecode(s_blit_vs_bytecode, bytecode);
 }
 
 CF_Shader cf_make_shader(const char* vertex_path, const char* fragment_path)
