@@ -36,9 +36,7 @@ int main(int argc, char* argv[])
 	int H = 120;
 
 #if CF_RUNTIME_SHADER_COMPILATION
-	char* shader_source = cf_fs_read_entire_file_to_memory_and_nul_terminate("/shallow_water_data/shader.shd", NULL);
-	CF_Shader shader = cf_make_draw_shader_from_source(shader_source);
-	cf_free(shader_source);
+	CF_Shader shader = cf_make_draw_shader("shader.shd");
 #else
 	CF_Shader shader = cf_make_draw_shader_from_bytecode(s_shd_bytecode);
 #endif
