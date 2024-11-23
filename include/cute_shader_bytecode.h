@@ -117,11 +117,21 @@ typedef struct CF_ShaderUniformInfo
 } CF_ShaderUniformInfo;
 // @end
 
+/**
+ * @struct   CF_ShaderInputInfo
+ * @category graphics
+ * @brief    Information about an input of a vertex shader.
+ * @related  CF_ShaderBytecode
+ */
 typedef struct CF_ShaderInputInfo {
+	/* @member Number of the input. */
 	const char* name;
+	/* @member Location of the input. */
 	int location;
+	/* @member Input format. */
 	CF_ShaderInfoDataType format;
 } CF_ShaderInputInfo;
+// @end
 
 /**
  * @struct   CF_ShaderInfo
