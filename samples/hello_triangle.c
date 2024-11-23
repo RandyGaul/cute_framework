@@ -1,10 +1,5 @@
 #include <cute.h>
 
-#ifndef CF_RUNTIME_SHADER_COMPILATION
-#include "hello_triangle_data/tri_fs.h"
-#include "hello_triangle_data/tri_vs.h"
-#endif
-
 typedef struct Vertex
 {
 	CF_V2 position;
@@ -13,6 +8,33 @@ typedef struct Vertex
 	// Make sure to swap `CF_VERTEX_FORMAT_UBYTE4N` to `CF_VERTEX_FORMAT_FLOAT4`, and `cf_pixel_red` -> `cf_color_red`, etc.
 	CF_Pixel color;
 } Vertex;
+
+#define STR(X) #X
+// ---
+const char* s_tri_vs = STR(
+	layout (location = 0) in vec2 in_pos;
+	layout (location = 1) in vec4 in_col;
+
+	layout (location = 0) out vec4 v_col;
+
+	void main()
+	{
+		v_col = in_col;
+		gl_Position = vec4(in_pos, 0, 1);
+	}
+);
+// ---
+const char* s_tri_fs = STR(
+	layout(location = 0) in vec4 v_col;
+
+	layout(location = 0) out vec4 result;
+
+	void main()
+	{
+		result = v_col;
+	}
+);
+// ---
 
 int main(int argc, char* argv[])
 {
@@ -47,12 +69,7 @@ int main(int argc, char* argv[])
 	// example none of these features are used. The shader simply interpolates color based on colors providing as vertex attributes.
 	// Therefor, the material is just empty in this case.
 	CF_Material material = cf_make_material();
-#ifdef CF_RUNTIME_SHADER_COMPILATION
-	cf_shader_directory("/hello_triangle_data");
-	CF_Shader shader = cf_make_shader("/hello_triangle_data/tri_vs.shd", "/hello_triangle_data/tri_fs.shd");
-#else
-	CF_Shader shader = cf_make_shader_from_bytecode(s_tri_vs_bytecode, s_tri_fs_bytecode);
-#endif
+	CF_Shader shader = cf_make_shader_from_source(s_tri_vs, s_tri_fs);
 
 	while (cf_app_is_running()) {
 		cf_app_update(NULL);

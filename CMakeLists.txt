@@ -493,16 +493,16 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 		add_executable(https samples/https.c)
 		add_executable(spaceshooter samples/spaceshooter.cpp samples/spaceshooter_data/flash_shd.h)
 		add_executable(draw_to_texture samples/draw_to_texture.c)
-		add_executable(hello_triangle samples/hello_triangle.c samples/hello_triangle_data/tri_fs.h samples/hello_triangle_data/tri_vs.h)
+		add_executable(hello_triangle samples/hello_triangle.c)
 		add_executable(waves samples/waves.cpp samples/waves_data/waves_shd.h)
-		add_executable(shallow_water samples/shallow_water.cpp samples/shallow_water_data/shader.h)
+		add_executable(shallow_water samples/shallow_water.cpp)
 		add_executable(noise samples/noise.c)
 		add_executable(fetch_image samples/fetch_image.cpp)
-		add_executable(metaballs samples/metaballs.cpp samples/metaballs_data/shader_shd.h)
+		add_executable(metaballs samples/metaballs.cpp)
 		add_executable(timestep samples/timestep.cpp)
 		add_executable(joypad samples/joypad.c)
 		add_executable(outline_stencil samples/outline_stencil.cpp)
-		add_executable(recolor samples/recolor.cpp samples/recolor_data/recolor_shd.h)
+		add_executable(recolor samples/recolor.cpp)
 		add_executable(rainbow_liquid samples/rainbow_liquid.cpp)
 		add_executable(import_spritesheet samples/import_spritesheet.cpp)
 		add_executable(stencil_pie_chart samples/stencil_pie_chart.c)
@@ -564,43 +564,6 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 
 		# Pre-compile shaders for certain samples.
 		add_custom_command(
-			OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/samples/hello_triangle_data/tri_vs.h
-			COMMAND cute-shaderc
-				-I${CMAKE_CURRENT_SOURCE_DIR}/samples/hello_triangle_data
-				-type=vertex
-				-varname=s_tri_vs_bytecode
-				-oheader=${CMAKE_CURRENT_SOURCE_DIR}/samples/hello_triangle_data/tri_vs.h
-				${CMAKE_CURRENT_SOURCE_DIR}/samples/hello_triangle_data/tri_vs.shd
-			DEPENDS samples/hello_triangle_data/tri_vs.shd
-		)
-		add_custom_command(
-			OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/samples/hello_triangle_data/tri_fs.h
-			COMMAND cute-shaderc
-				-type=fragment
-				-varname=s_tri_fs_bytecode
-				-oheader=${CMAKE_CURRENT_SOURCE_DIR}/samples/hello_triangle_data/tri_fs.h
-				${CMAKE_CURRENT_SOURCE_DIR}/samples/hello_triangle_data/tri_fs.shd
-			DEPENDS samples/hello_triangle_data/tri_fs.shd
-		)
-		add_custom_command(
-			OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/samples/shallow_water_data/shader.h
-			COMMAND cute-shaderc
-				-type=draw
-				-varname=s_shd_bytecode
-				-oheader=${CMAKE_CURRENT_SOURCE_DIR}/samples/shallow_water_data/shader.h
-				${CMAKE_CURRENT_SOURCE_DIR}/samples/shallow_water_data/shader.shd
-			DEPENDS samples/shallow_water_data/shader.shd
-		)
-		add_custom_command(
-			OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/samples/recolor_data/recolor_shd.h
-			COMMAND cute-shaderc
-				-type=draw
-				-varname=s_recolor_bytecode
-				-oheader=${CMAKE_CURRENT_SOURCE_DIR}/samples/recolor_data/recolor_shd.h
-				${CMAKE_CURRENT_SOURCE_DIR}/samples/recolor_data/recolor.shd
-			DEPENDS samples/recolor_data/recolor.shd
-		)
-		add_custom_command(
 			OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/samples/spaceshooter_data/flash_shd.h
 			COMMAND cute-shaderc
 				-type=draw
@@ -618,25 +581,13 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 				${CMAKE_CURRENT_SOURCE_DIR}/samples/waves_data/waves.shd
 			DEPENDS samples/waves_data/waves.shd
 		)
-		add_custom_command(
-			OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/samples/metaballs_data/shader_shd.h
-			COMMAND cute-shaderc
-				-type=draw
-				-varname=s_shd_bytecode
-				-oheader=${CMAKE_CURRENT_SOURCE_DIR}/samples/metaballs_data/shader_shd.h
-				${CMAKE_CURRENT_SOURCE_DIR}/samples/metaballs_data/shader.shd
-			DEPENDS samples/metaballs_data/shader.shd
-		)
 
 		# Copy over some folders for certain samples.
-		add_custom_command(TARGET hello_triangle PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/samples/hello_triangle_data $<TARGET_FILE_DIR:hello_triangle>/hello_triangle_data)
 		add_custom_command(TARGET spaceshooter PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/samples/spaceshooter_data $<TARGET_FILE_DIR:spaceshooter>/spaceshooter_data)
 		add_custom_command(TARGET waves PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/samples/waves_data $<TARGET_FILE_DIR:waves>/waves_data)
 		add_custom_command(TARGET shallow_water PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/samples/shallow_water_data $<TARGET_FILE_DIR:shallow_water>/shallow_water_data)
 		add_custom_command(TARGET import_spritesheet PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/samples/import_spritesheet_data $<TARGET_FILE_DIR:import_spritesheet>/import_spritesheet_data)
 		add_custom_command(TARGET pivot PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/samples/pivot_data $<TARGET_FILE_DIR:pivot>/pivot_data)
-		add_custom_command(TARGET recolor PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/samples/recolor_data $<TARGET_FILE_DIR:recolor>/recolor_data)
-		add_custom_command(TARGET metaballs PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/samples/metaballs_data $<TARGET_FILE_DIR:metaballs>/metaballs_data)
 	endif()
 endif()
 
