@@ -1185,7 +1185,8 @@ CF_API void CF_CALL cf_draw_set_atlas_dimensions(int width_in_pixels, int height
  * @remarks  This can be created using the `cute-shaderc` compiler.
  * @related  CF_Shader cf_draw_push_shader cf_draw_pop_shader cf_draw_peek_shader cf_make_draw_shader_from_bytecode
  */
-typedef struct CF_DrawShaderBytecode {
+typedef struct CF_DrawShaderBytecode
+{
 	CF_ShaderBytecode draw_shader;
 	CF_ShaderBytecode blit_shader;
 } CF_DrawShaderBytecode;
