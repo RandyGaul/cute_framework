@@ -2,11 +2,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <vector>
 #include <unordered_set>
 #include <unordered_map>
 #include <glslang/Public/ShaderLang.h>
 #include <glslang/Public/ResourceLimits.h>
 #include <SPIRV/GlslangToSpv.h>
+#include <SDL_gpu_shadercross/spirv.h>
+#include <SPIRV-Reflect/spirv_reflect.h>
 
 #define CUTE_SHADER_GLSL_VERSION 450
 
@@ -146,6 +149,58 @@ private:
 	cute_shader_vfs_t* vfs;
 };
 
+static CF_ShaderInfoDataType
+s_uniform_type(SpvReflectTypeDescription* type_desc) {
+	switch (type_desc->op) {
+	case SpvOpTypeFloat: return CF_SHADER_INFO_TYPE_FLOAT;
+	case SpvOpTypeInt: return CF_SHADER_INFO_TYPE_SINT;
+	case SpvOpTypeVector:
+		if (type_desc->traits.numeric.scalar.width == 32) {
+			if (type_desc->traits.numeric.scalar.signedness == 0) {
+				switch (type_desc->traits.numeric.vector.component_count) {
+					case 2: return CF_SHADER_INFO_TYPE_FLOAT2;
+					case 4: return CF_SHADER_INFO_TYPE_FLOAT4;
+					default: return CF_SHADER_INFO_TYPE_UNKNOWN;
+				}
+			} else {
+				switch (type_desc->traits.numeric.vector.component_count) {
+					case 2: return CF_SHADER_INFO_TYPE_SINT2;
+					case 4: return CF_SHADER_INFO_TYPE_SINT4;
+					default: return CF_SHADER_INFO_TYPE_UNKNOWN;
+				}
+			}
+		}
+		break;
+	case SpvOpTypeMatrix:
+		if (type_desc->traits.numeric.matrix.column_count == 4 && type_desc->traits.numeric.matrix.row_count == 4)
+			return CF_SHADER_INFO_TYPE_MAT4;
+		break;
+	default:
+		return CF_SHADER_INFO_TYPE_UNKNOWN;
+	}
+	return CF_SHADER_INFO_TYPE_UNKNOWN;
+}
+
+static CF_ShaderInfoDataType
+s_wrap(SpvReflectFormat format) {
+	switch (format) {
+	case SPV_REFLECT_FORMAT_UNDEFINED:           return CF_SHADER_INFO_TYPE_UNKNOWN;
+	case SPV_REFLECT_FORMAT_R32_UINT:            return CF_SHADER_INFO_TYPE_UINT;
+	case SPV_REFLECT_FORMAT_R32_SINT:            return CF_SHADER_INFO_TYPE_SINT;
+	case SPV_REFLECT_FORMAT_R32_SFLOAT:          return CF_SHADER_INFO_TYPE_FLOAT;
+	case SPV_REFLECT_FORMAT_R32G32_UINT:         return CF_SHADER_INFO_TYPE_UINT2;
+	case SPV_REFLECT_FORMAT_R32G32_SINT:         return CF_SHADER_INFO_TYPE_SINT2;
+	case SPV_REFLECT_FORMAT_R32G32_SFLOAT:       return CF_SHADER_INFO_TYPE_FLOAT2;
+	case SPV_REFLECT_FORMAT_R32G32B32_UINT:      return CF_SHADER_INFO_TYPE_UINT3;
+	case SPV_REFLECT_FORMAT_R32G32B32_SINT:      return CF_SHADER_INFO_TYPE_SINT3;
+	case SPV_REFLECT_FORMAT_R32G32B32_SFLOAT:    return CF_SHADER_INFO_TYPE_FLOAT3;
+	case SPV_REFLECT_FORMAT_R32G32B32A32_UINT:   return CF_SHADER_INFO_TYPE_UINT4;
+	case SPV_REFLECT_FORMAT_R32G32B32A32_SINT:   return CF_SHADER_INFO_TYPE_SINT4;
+	case SPV_REFLECT_FORMAT_R32G32B32A32_SFLOAT: return CF_SHADER_INFO_TYPE_FLOAT4;
+	default: return CF_SHADER_INFO_TYPE_UNKNOWN;
+	}
+}
+
 }
 
 static cute_shader_result_t
@@ -277,19 +332,170 @@ cute_shader_compile(
 	size_t bytecode_size = sizeof(uint32_t) * spirv.size();
 	void* bytecode = malloc(bytecode_size);
 	memcpy(bytecode, spirv.data(), bytecode_size);
+
+	// Reflection
+	int num_samplers = 0;
+	int num_storage_textures = 0;
+	int num_storage_buffers = 0;
+	int num_images;
+	const char** image_names = NULL;
+	int num_uniforms;
+	CF_ShaderUniformInfo* uniforms = NULL;
+	int num_uniform_members;
+	CF_ShaderUniformMemberInfo* uniform_members = NULL;
+	uint32_t num_inputs = 0;
+	CF_ShaderInputInfo* inputs = NULL;
+	{
+		std::vector<const char*> image_names_vec;
+		std::vector<CF_ShaderUniformInfo> uniforms_vec;
+		std::vector<CF_ShaderUniformMemberInfo> uniform_members_vec;
+
+		SpvReflectShaderModule module;
+		spvReflectCreateShaderModule(bytecode_size, bytecode, &module);
+
+		uint32_t num_bindings = 0;
+		spvReflectEnumerateDescriptorBindings(&module, &num_bindings, nullptr);
+		SpvReflectDescriptorBinding** bindings = (SpvReflectDescriptorBinding**)malloc(num_bindings * sizeof(SpvReflectDescriptorBinding*));
+		spvReflectEnumerateDescriptorBindings(&module, &num_bindings, bindings);
+		for (uint32_t binding_index = 0; binding_index < num_bindings; ++binding_index) {
+			SpvReflectDescriptorBinding* binding = bindings[binding_index];
+
+			switch (binding->descriptor_type) {
+			case SPV_REFLECT_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
+			{
+				image_names_vec.push_back(strdup(binding->name));
+			}    // Fall-thru.
+			case SPV_REFLECT_DESCRIPTOR_TYPE_SAMPLER: ++num_samplers; break;
+			case SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_IMAGE: ++num_storage_textures; break;
+			case SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_BUFFER: ++num_storage_buffers; break;
+			case SPV_REFLECT_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
+			{
+				// Grab information about the uniform block.
+				CF_ShaderUniformInfo uniform;
+				uniform.block_index = binding->binding;
+				uniform.block_size = binding->block.size;
+				uniform.block_name = strdup(binding->type_description->type_name);
+				uniform.num_members = binding->block.member_count;
+				uniforms_vec.push_back(uniform);
+
+				for (uint32_t member_index = 0; member_index < binding->block.member_count; ++member_index) {
+					const SpvReflectBlockVariable* reflected_member = &binding->block.members[member_index];
+
+					CF_ShaderUniformMemberInfo uniform_member;
+					uniform_member.name = strdup(reflected_member->name);
+					uniform_member.type = cute_shader::s_uniform_type(reflected_member->type_description);
+					uniform_member.offset = (int)reflected_member->offset;
+
+					uniform_member.array_length = 1;
+					if (
+						reflected_member->type_description->type_flags & SPV_REFLECT_TYPE_FLAG_ARRAY
+						&& reflected_member->type_description->traits.array.dims_count > 0
+					) {
+						uniform_member.array_length = (int)reflected_member->type_description->traits.array.dims[0];
+					}
+
+					uniform_members_vec.push_back(uniform_member);
+				}
+			} break;
+			default: break;
+			}
+		}
+		free(bindings);
+
+		// Prepare the returned reflection info
+		num_images = image_names_vec.size();
+		if (num_images > 0) {
+			image_names = (const char**)malloc(sizeof(char*) * num_images);
+			memcpy(image_names, image_names_vec.data(), sizeof(char*) * num_images);
+		}
+
+		num_uniforms = uniforms_vec.size();
+		if (num_uniforms > 0) {
+			uniforms = (CF_ShaderUniformInfo*)malloc(sizeof(CF_ShaderUniformInfo) * num_uniforms);
+			memcpy(uniforms, uniforms_vec.data(), sizeof(CF_ShaderUniformInfo) * num_uniforms);
+		}
+
+		num_uniform_members = uniform_members_vec.size();
+		if (num_uniform_members > 0) {
+			uniform_members = (CF_ShaderUniformMemberInfo*)malloc(sizeof(CF_ShaderUniformMemberInfo) * num_uniform_members);
+			memcpy(uniform_members, uniform_members_vec.data(), sizeof(CF_ShaderUniformMemberInfo) * num_uniform_members);
+		}
+
+		// Gather up type information on shader inputs.
+		if (stage == CUTE_SHADER_STAGE_VERTEX) {
+			spvReflectEnumerateInputVariables(&module, &num_inputs, nullptr);
+			SpvReflectInterfaceVariable** reflected_inputs = (SpvReflectInterfaceVariable**)malloc(num_inputs * sizeof(SpvReflectInterfaceVariable*));
+			spvReflectEnumerateInputVariables(&module, &num_inputs, reflected_inputs);
+			inputs = (CF_ShaderInputInfo*)malloc(sizeof(CF_ShaderInputInfo) * num_inputs);
+			for (uint32_t input_index = 0; input_index < num_inputs; ++input_index) {
+				SpvReflectInterfaceVariable* reflected_input = reflected_inputs[input_index];
+
+				CF_ShaderInputInfo* input = &inputs[input_index];
+				input->name = strdup(reflected_input->name);
+				input->location = reflected_input->location;
+				input->format = cute_shader::s_wrap(reflected_input->format);
+			}
+			free(reflected_inputs);
+		}
+
+		spvReflectDestroyShaderModule(&module);
+	}
+
 	cute_shader_result_t result = {
 		.success = true,
+
 		.bytecode = bytecode,
 		.bytecode_size = bytecode_size,
+
 		.preprocessed_source = preprocessed_source_copy,
 		.preprocessed_source_size = preprocessed_source_size,
+
+		.info = {
+			.num_samplers = num_samplers,
+			.num_storage_textures = num_storage_textures,
+			.num_storage_buffers = num_storage_buffers,
+
+			.num_images = num_images,
+			.image_names = image_names,
+
+			.num_uniforms = num_uniforms,
+			.uniforms = uniforms,
+
+			.num_uniform_members = num_uniform_members,
+			.uniform_members = uniform_members,
+
+			.num_inputs = (int)num_inputs,
+			.inputs = inputs,
+		},
 	};
 	return result;
 }
 
 void
 cute_shader_free_result(cute_shader_result_t result) {
+	for (int i = 0; i < result.info.num_inputs; ++i) {
+		free((char*)result.info.inputs[i].name);
+	}
+	free(result.info.inputs);
+
+	for (int i = 0; i < result.info.num_uniform_members; ++i) {
+		free((char*)result.info.uniform_members[i].name);
+	}
+	free(result.info.uniform_members);
+
+	for (int i = 0; i < result.info.num_uniforms; ++i) {
+		free((char*)result.info.uniforms[i].block_name);
+	}
+	free(result.info.uniforms);
+
+	for (int i = 0; i < result.info.num_images; ++i) {
+		free((char*)result.info.image_names[i]);
+	}
+	free(result.info.image_names);
+
 	free(result.bytecode);
 	free((char*)result.preprocessed_source);
 	free((char*)result.error_message);
 }
+
+#include <SPIRV-Reflect/spirv_reflect.c>

@@ -12,6 +12,7 @@
 #include "cute_result.h"
 #include "cute_color.h"
 #include "cute_c_runtime.h"
+#include "cute_shader_info.h"
 
 //--------------------------------------------------------------------------------------------------
 // C API
@@ -595,6 +596,8 @@ typedef struct CF_ShaderBytecode
 	const uint8_t* content;
 	/* @member Size of the bytecode blob. */
 	size_t size;
+	/* @member For internal use. */
+	CF_ShaderInfo info;
 } CF_ShaderBytecode;
 
 /**
@@ -698,7 +701,9 @@ CF_API CF_Shader CF_CALL cf_make_shader_from_source(const char* vertex_src, cons
  *           the bytecode blob pair (vertex + fragment shader blobs) into a `CF_Shader` via `cf_make_shader_from_bytecode`.
  * @related  CF_Shader cf_make_shader_from_bytecode cf_make_shader_from_bytecode
  */
-CF_API const dyna uint8_t* CF_CALL cf_compile_shader_to_bytecode(const char* shader_src, CF_ShaderStage stage);
+CF_API CF_ShaderBytecode CF_CALL cf_compile_shader_to_bytecode(const char* shader_src, CF_ShaderStage stage);
+
+CF_API void CF_CALL cf_free_bytecode(CF_ShaderBytecode bytecode);
 
 /**
  * @function cf_make_shader_from_bytecode

@@ -385,6 +385,7 @@ target_link_libraries(cute-shader PRIVATE glslang glslang-default-resource-limit
 if (NOT MSVC AND NOT CF_FRAMEWORK_STATIC)
 	target_compile_options(cute-shader PRIVATE -fPIC)
 endif ()
+target_include_directories(cute-shader PUBLIC include)  # For cute_shader_info.h
 
 set(CUTE_SHADERC_SRCS src/cute_shader/cute_shaderc.cpp)
 add_executable(cute-shaderc ${CUTE_SHADERC_SRCS})

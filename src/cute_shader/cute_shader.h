@@ -2,6 +2,7 @@
 #define CUTE_SHADER_H
 
 #include <stddef.h>
+#include <cute_shader_info.h>
 
 typedef struct cute_shader_define_t {
 	const char* name;
@@ -42,6 +43,7 @@ typedef struct cute_shader_config_t {
 
 typedef struct cute_shader_result_t {
 	bool success;
+	const char* error_message;
 
 	void* bytecode;
 	size_t bytecode_size;
@@ -49,7 +51,7 @@ typedef struct cute_shader_result_t {
 	const char* preprocessed_source;
 	size_t preprocessed_source_size;
 
-	const char* error_message;
+	CF_ShaderInfo info;
 } cute_shader_result_t;
 
 #ifdef __cplusplus

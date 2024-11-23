@@ -78,7 +78,7 @@ static bool write_bytecode_struct(
 	fprintf(file, "%.*s\n", (int)compile_result.preprocessed_source_size, compile_result.preprocessed_source);
 	fprintf(file, "*/\n");
 
-	// Write the actual struct
+	// Write the bytecode
 	fprintf(file, "static const uint8_t %s%s_content[%zu] = {", var_name, suffix, compile_result.bytecode_size);
 	for (size_t i = 0; i < compile_result.bytecode_size; ++i) {
 		if ((i % HEADER_LINE_SIZE) == 0) {
@@ -87,9 +87,81 @@ static bool write_bytecode_struct(
 		fprintf(file, " 0x%02X,", content[i]);
 	}
 	fprintf(file, "\n};\n");
+
+	// Write reflection info
+	CF_ShaderInfo* info = &compile_result.info;
+
+	if (info->num_images > 0) {
+		fprintf(file, "static const char* %s%s_image_names[%d] = {\n   ", var_name, suffix, info->num_images);
+		for (int i = 0; i < info->num_images; ++i) {
+			fprintf(file, " \"%s\",", info->image_names[i]);
+		}
+		fprintf(file, "\n};\n");
+	} else {
+		fprintf(file, "static const char** %s%s_image_names = NULL;\n", var_name, suffix);
+	}
+
+	if (info->num_uniforms > 0) {
+		fprintf(file, "static CF_ShaderUniformInfo %s%s_uniforms[%d] = {\n", var_name, suffix, info->num_uniforms);
+		for (int i = 0; i < info->num_uniforms; ++i) {
+			fprintf(file, "    {\n");
+			fprintf(file, "        .block_index = %d,\n", info->uniforms[i].block_index);
+			fprintf(file, "        .block_size = %d,\n", info->uniforms[i].block_size);
+			fprintf(file, "        .block_name = \"%s\",\n", info->uniforms[i].block_name);
+			fprintf(file, "        .num_members = %d,\n", info->uniforms[i].num_members);
+			fprintf(file, "    },\n");
+		}
+		fprintf(file, "};\n");
+	} else {
+		fprintf(file, "static CF_ShaderUniformInfo* %s%s_uniforms = NULL;\n", var_name, suffix);
+	}
+
+	if (info->num_uniform_members > 0) {
+		fprintf(file, "static CF_ShaderUniformMemberInfo %s%s_uniform_members[%d] = {\n", var_name, suffix, info->num_uniform_members);
+		for (int i = 0; i < info->num_uniform_members; ++i) {
+			fprintf(file, "    {\n");
+			fprintf(file, "        .name = \"%s\",\n", info->uniform_members[i].name);
+			fprintf(file, "        .type = %s,\n", cf_shader_info_data_type_to_string(info->uniform_members[i].type));
+			fprintf(file, "        .offset = %d,\n", info->uniform_members[i].offset);
+			fprintf(file, "        .array_length = %d,\n", info->uniform_members[i].array_length);
+			fprintf(file, "    },\n");
+		}
+		fprintf(file, "};\n");
+	} else {
+		fprintf(file, "static CF_ShaderUniformMemberInfo* %s%s_uniform_members = NULL;\n", var_name, suffix);
+	}
+
+	if (info->num_inputs > 0) {
+		fprintf(file, "static CF_ShaderInputInfo %s%s_inputs[%d] = {\n", var_name, suffix, info->num_inputs);
+		for (int i = 0; i < info->num_inputs; ++i) {
+			fprintf(file, "    {\n");
+			fprintf(file, "        .name = \"%s\",\n", info->inputs[i].name);
+			fprintf(file, "        .location = %d,\n", info->inputs[i].location);
+			fprintf(file, "        .format = %s,\n", cf_shader_info_data_type_to_string(info->inputs[i].format));
+			fprintf(file, "    },\n");
+		}
+		fprintf(file, "};\n");
+	} else {
+		fprintf(file, "static CF_ShaderInputInfo* %s%s_inputs = NULL;\n", var_name, suffix);
+	}
+
+	// Write the struct
 	fprintf(file, "static const CF_ShaderBytecode %s%s = {\n", var_name, suffix);
 	fprintf(file, "    .content = %s%s_content,\n", var_name, suffix);
 	fprintf(file, "    .size = %zu,\n", compile_result.bytecode_size);
+	fprintf(file, "    .info = {\n");
+	fprintf(file, "        .num_samplers = %d,\n", info->num_samplers);
+	fprintf(file, "        .num_storage_textures = %d,\n", info->num_storage_textures);
+	fprintf(file, "        .num_storage_buffers = %d,\n", info->num_storage_buffers);
+	fprintf(file, "        .num_images = %d,\n", info->num_images);
+	fprintf(file, "        .image_names = %s%s_image_names,\n", var_name, suffix);
+	fprintf(file, "        .num_uniforms = %d,\n", info->num_uniforms);
+	fprintf(file, "        .uniforms = %s%s_uniforms,\n", var_name, suffix);
+	fprintf(file, "        .num_uniform_members = %d,\n", info->num_uniform_members);
+	fprintf(file, "        .uniform_members = %s%s_uniform_members,\n", var_name, suffix);
+	fprintf(file, "        .num_inputs = %d,\n", info->num_inputs);
+	fprintf(file, "        .inputs = %s%s_inputs,\n", var_name, suffix);
+	fprintf(file, "    },\n");
 	fprintf(file, "};\n");
 
 	return ferror(file) == 0;

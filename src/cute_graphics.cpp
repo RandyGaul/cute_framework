@@ -20,8 +20,6 @@
 #define SDL_GPU_SHADERCROSS_IMPLEMENTATION
 #define SDL_GPU_SHADERCROSS_STATIC
 #include <SDL_gpu_shadercross/SDL_gpu_shadercross.h>
-#include <SDL_gpu_shadercross/spirv.h>
-#include <SPIRV-Reflect/spirv_reflect.h>
 
 struct CF_CanvasInternal;
 static CF_CanvasInternal* s_canvas = NULL;
@@ -35,54 +33,37 @@ using namespace Cute;
 // SDL_GPU wrapping implementation of cute_graphics.h.
 // ...Variety of enum converters/struct initializers are in cute_graphics_internal.h.
 
-CF_INLINE CF_UniformType s_uniform_type(SpvReflectTypeDescription* type_desc)
+CF_INLINE CF_UniformType s_uniform_type(CF_ShaderInfoDataType type)
 {
-	switch (type_desc->op) {
-	case SpvOpTypeFloat: return CF_UNIFORM_TYPE_FLOAT;
-	case SpvOpTypeInt: return CF_UNIFORM_TYPE_INT;
-	case SpvOpTypeVector:
-		if (type_desc->traits.numeric.scalar.width == 32) {
-			if (type_desc->traits.numeric.scalar.signedness == 0) {
-				switch (type_desc->traits.numeric.vector.component_count) {
-					case 2: return CF_UNIFORM_TYPE_FLOAT2;
-					case 4: return CF_UNIFORM_TYPE_FLOAT4;
-					default: return CF_UNIFORM_TYPE_UNKNOWN;
-				}
-			} else {
-				switch (type_desc->traits.numeric.vector.component_count) {
-					case 2: return CF_UNIFORM_TYPE_INT2;
-					case 4: return CF_UNIFORM_TYPE_INT4;
-					default: return CF_UNIFORM_TYPE_UNKNOWN;
-				}
-			}
-		}
-		break;
-	case SpvOpTypeMatrix:
-		if (type_desc->traits.numeric.matrix.column_count == 4 && type_desc->traits.numeric.matrix.row_count == 4)
-			return CF_UNIFORM_TYPE_MAT4;
-		break;
-	default:
-		return CF_UNIFORM_TYPE_UNKNOWN;
+	switch (type) {
+	case CF_SHADER_INFO_TYPE_UNKNOWN: return CF_UNIFORM_TYPE_UNKNOWN;
+	case CF_SHADER_INFO_TYPE_FLOAT:   return CF_UNIFORM_TYPE_FLOAT;
+	case CF_SHADER_INFO_TYPE_FLOAT2:  return CF_UNIFORM_TYPE_FLOAT2;
+	case CF_SHADER_INFO_TYPE_FLOAT4:  return CF_UNIFORM_TYPE_FLOAT4;
+	case CF_SHADER_INFO_TYPE_SINT:    return CF_UNIFORM_TYPE_INT;
+	case CF_SHADER_INFO_TYPE_SINT2:   return CF_UNIFORM_TYPE_INT2;
+	case CF_SHADER_INFO_TYPE_SINT4:   return CF_UNIFORM_TYPE_INT4;
+	case CF_SHADER_INFO_TYPE_MAT4:    return CF_UNIFORM_TYPE_MAT4;
+	default: return CF_UNIFORM_TYPE_UNKNOWN;
 	}
-	return CF_UNIFORM_TYPE_UNKNOWN;
 }
 
-CF_INLINE CF_ShaderInputFormat s_wrap(SpvReflectFormat format)
+CF_INLINE CF_ShaderInputFormat s_wrap(CF_ShaderInfoDataType type)
 {
-	switch (format) {
-	case SPV_REFLECT_FORMAT_UNDEFINED:           return CF_SHADER_INPUT_FORMAT_UNKNOWN;
-	case SPV_REFLECT_FORMAT_R32_UINT:            return CF_SHADER_INPUT_FORMAT_UINT;
-	case SPV_REFLECT_FORMAT_R32_SINT:            return CF_SHADER_INPUT_FORMAT_INT;
-	case SPV_REFLECT_FORMAT_R32_SFLOAT:          return CF_SHADER_INPUT_FORMAT_FLOAT;
-	case SPV_REFLECT_FORMAT_R32G32_UINT:         return CF_SHADER_INPUT_FORMAT_UVEC2;
-	case SPV_REFLECT_FORMAT_R32G32_SINT:         return CF_SHADER_INPUT_FORMAT_IVEC2;
-	case SPV_REFLECT_FORMAT_R32G32_SFLOAT:       return CF_SHADER_INPUT_FORMAT_VEC2;
-	case SPV_REFLECT_FORMAT_R32G32B32_UINT:      return CF_SHADER_INPUT_FORMAT_UVEC3;
-	case SPV_REFLECT_FORMAT_R32G32B32_SINT:      return CF_SHADER_INPUT_FORMAT_IVEC3;
-	case SPV_REFLECT_FORMAT_R32G32B32_SFLOAT:    return CF_SHADER_INPUT_FORMAT_VEC3;
-	case SPV_REFLECT_FORMAT_R32G32B32A32_UINT:   return CF_SHADER_INPUT_FORMAT_UVEC4;
-	case SPV_REFLECT_FORMAT_R32G32B32A32_SINT:   return CF_SHADER_INPUT_FORMAT_IVEC4;
-	case SPV_REFLECT_FORMAT_R32G32B32A32_SFLOAT: return CF_SHADER_INPUT_FORMAT_VEC4;
+	switch (type) {
+	case CF_SHADER_INFO_TYPE_UNKNOWN: return CF_SHADER_INPUT_FORMAT_UNKNOWN;
+	case CF_SHADER_INFO_TYPE_UINT:    return CF_SHADER_INPUT_FORMAT_UINT;
+	case CF_SHADER_INFO_TYPE_SINT:    return CF_SHADER_INPUT_FORMAT_INT;
+	case CF_SHADER_INFO_TYPE_FLOAT:   return CF_SHADER_INPUT_FORMAT_FLOAT;
+	case CF_SHADER_INFO_TYPE_UINT2:   return CF_SHADER_INPUT_FORMAT_UVEC2;
+	case CF_SHADER_INFO_TYPE_SINT2:   return CF_SHADER_INPUT_FORMAT_IVEC2;
+	case CF_SHADER_INFO_TYPE_FLOAT2:  return CF_SHADER_INPUT_FORMAT_VEC2;
+	case CF_SHADER_INFO_TYPE_UINT3:   return CF_SHADER_INPUT_FORMAT_UVEC3;
+	case CF_SHADER_INFO_TYPE_SINT3:   return CF_SHADER_INPUT_FORMAT_IVEC3;
+	case CF_SHADER_INFO_TYPE_FLOAT3:  return CF_SHADER_INPUT_FORMAT_VEC3;
+	case CF_SHADER_INFO_TYPE_UINT4:   return CF_SHADER_INPUT_FORMAT_UVEC4;
+	case CF_SHADER_INFO_TYPE_SINT4:   return CF_SHADER_INPUT_FORMAT_IVEC4;
+	case CF_SHADER_INFO_TYPE_FLOAT4: return CF_SHADER_INPUT_FORMAT_VEC4;
 	default: return CF_SHADER_INPUT_FORMAT_UNKNOWN;
 	}
 }
@@ -345,7 +326,7 @@ static cute_shader_vfs_t s_cute_shader_vfs = {
 };
 #endif
 
-const dyna uint8_t* cf_compile_shader_to_bytecode_internal(const char* shader_src, CF_ShaderStage cf_stage, const char* user_shd)
+CF_ShaderBytecode cf_compile_shader_to_bytecode_internal(const char* shader_src, CF_ShaderStage cf_stage, const char* user_shd)
 {
 #ifdef CF_RUNTIME_SHADER_COMPILATION
 	cute_shader_stage_t stage = CUTE_SHADER_STAGE_VERTEX;
@@ -391,27 +372,32 @@ const dyna uint8_t* cf_compile_shader_to_bytecode_internal(const char* shader_sr
 
 	cute_shader_result_t result = cute_shader_compile(shader_src, stage, config);
 	if (result.success) {
-		dyna uint8_t* bytecode = NULL;
-		int size = (int)result.bytecode_size;
-		afit(bytecode, size);
-		CF_MEMCPY(bytecode, result.bytecode, size);
-		alen(bytecode) = size;
+		uint8_t* bytecode_content = (uint8_t*)CF_ALLOC(result.bytecode_size);
+		CF_MEMCPY(bytecode_content, result.bytecode, result.bytecode_size);
 
+		CF_ShaderBytecode bytecode = {
+			.content = bytecode_content,
+			.size = result.bytecode_size,
+			.info = result.info,
+		};
 		cute_shader_free_result(result);
 		return bytecode;
 	} else {
 		fprintf(stderr, "%s\n", result.error_message);
-
 		cute_shader_free_result(result);
-		return NULL;
+
+		CF_ShaderBytecode bytecode = { 0 };
+		return bytecode;
 	}
 #else
 	fprintf(stderr, "CF was not built with runtime shader compilation enabled\n");
-	return NULL;
+
+	CF_ShaderBytecode bytecode = { 0 };
+	return bytecode;
 #endif
 }
 
-const dyna uint8_t* cf_compile_shader_to_bytecode(const char* shader_src, CF_ShaderStage cf_stage)
+CF_ShaderBytecode cf_compile_shader_to_bytecode(const char* shader_src, CF_ShaderStage cf_stage)
 {
 	return cf_compile_shader_to_bytecode_internal(shader_src, cf_stage, NULL);
 }
@@ -419,91 +405,57 @@ const dyna uint8_t* cf_compile_shader_to_bytecode(const char* shader_src, CF_Sha
 static SDL_GPUShader* s_compile(CF_ShaderInternal* shader_internal, CF_ShaderBytecode bytecode, CF_ShaderStage stage)
 {
 	bool vs = stage == CF_SHADER_STAGE_VERTEX ? true : false;
-	SpvReflectShaderModule module;
-	spvReflectCreateShaderModule(bytecode.size, bytecode.content, &module);
 
-	// Gather up counts for samplers/textures/buffers.
-	// ...SDL_GPU needs these counts.
-	uint32_t binding_count = 0;
-	spvReflectEnumerateDescriptorBindings(&module, &binding_count, nullptr);
-	dyna SpvReflectDescriptorBinding** bindings = NULL;
-	afit(bindings, (int)binding_count);
-	if (binding_count) alen(bindings) = binding_count;
-	spvReflectEnumerateDescriptorBindings(&module, &binding_count, bindings);
-	int sampler_count = 0;
-	int storage_texture_count = 0;
-	int storage_buffer_count = 0;
-	int uniform_buffer_count = 0;
-	for (int i = 0; i < (int)binding_count; ++i) {
-		SpvReflectDescriptorBinding* binding = bindings[i];
+	// Load reflection info
 
-		switch (binding->descriptor_type) {
-		case SPV_REFLECT_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
-		{
-			shader_internal->image_names.add(sintern(binding->name));
-		}    // Fall-thru.
-		case SPV_REFLECT_DESCRIPTOR_TYPE_SAMPLER: sampler_count++; break;
-		case SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_IMAGE: storage_texture_count++; break;
-		case SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_BUFFER: storage_buffer_count++; break;
-		case SPV_REFLECT_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
-		{
-			// Grab information about the uniform block.
-			// ...This allows CF_Material to dynamically match uniforms to a shader.
-			uniform_buffer_count++;
-			int block_index = binding->binding;
-			if (vs) {
-				shader_internal->vs_block_sizes[block_index] = binding->block.size;
-			} else {
-				shader_internal->fs_block_sizes[block_index] = binding->block.size;
-			}
-			for (uint32_t i = 0; i < binding->block.member_count; ++i) {
-				const SpvReflectBlockVariable* member = &binding->block.members[i];
-				CF_UniformType uniform_type = s_uniform_type(member->type_description);
-				CF_ASSERT(uniform_type != CF_UNIFORM_TYPE_UNKNOWN);
-				int array_length = 1;
-				if (member->type_description->type_flags & SPV_REFLECT_TYPE_FLAG_ARRAY && member->type_description->traits.array.dims_count > 0) {
-					array_length = (int)member->type_description->traits.array.dims[0];
-				}
-
-				CF_UniformBlockMember block_member;
-				block_member.name = sintern(member->name);
-				block_member.block_name = sintern(binding->type_description->type_name);
-				block_member.type = uniform_type;
-				block_member.array_element_count = array_length;
-				block_member.size = s_uniform_size(block_member.type) * array_length;
-				block_member.offset = (int)member->offset;
-				if (vs) {
-					shader_internal->vs_uniform_block_members[block_index].add(block_member);
-				} else {
-					shader_internal->fs_uniform_block_members[block_index].add(block_member);
-				}
-			}
-		} break;
-		}
+	for (int i = 0; i < bytecode.info.num_images; ++i) {
+		shader_internal->image_names.add(sintern(bytecode.info.image_names[i]));
 	}
-	afree(bindings);
-	shader_internal->uniform_block_count = uniform_buffer_count;
 
-	// Gather up type information on shader inputs.
+	shader_internal->uniform_block_count = bytecode.info.num_uniforms;
+	const CF_ShaderUniformMemberInfo* member_infos = bytecode.info.uniform_members;
+	for (int i = 0; i < bytecode.info.num_uniforms; ++i) {
+		const CF_ShaderUniformInfo* block_info = &bytecode.info.uniforms[i];
+		int block_index = block_info->block_index;
+
+		if (vs) {
+			shader_internal->vs_block_sizes[block_index] = block_info->block_size;
+		} else {
+			shader_internal->fs_block_sizes[block_index] = block_info->block_size;
+		}
+
+		const char* block_name = sintern(block_info->block_name);
+		for (int j = 0; j < block_info->num_members; ++j) {
+			const CF_ShaderUniformMemberInfo* member_info = &member_infos[j];
+
+			CF_UniformBlockMember block_member;
+			block_member.name = sintern(member_info->name);
+			block_member.block_name = block_name;
+			block_member.type = s_uniform_type(member_info->type);
+			CF_ASSERT(block_member.type != CF_UNIFORM_TYPE_UNKNOWN);
+			block_member.array_element_count = member_info->array_length;
+			block_member.size = s_uniform_size(block_member.type) * member_info->array_length;
+			block_member.offset = member_info->offset;
+
+			if (vs) {
+				shader_internal->vs_uniform_block_members[block_index].add(block_member);
+			} else {
+				shader_internal->fs_uniform_block_members[block_index].add(block_member);
+			}
+		}
+
+		member_infos += block_info->num_members;
+	}
+
 	if (vs) {
-		uint32_t input_count = 0;
-		spvReflectEnumerateInputVariables(&module, &input_count, nullptr);
-		CF_ASSERT(input_count <= CF_MAX_SHADER_INPUTS); // Increase `CF_MAX_SHADER_INPUTS`, or refactor the shader with less vertex attributes.
-		shader_internal->input_count = input_count;
-		dyna SpvReflectInterfaceVariable** inputs = NULL;
-		afit(inputs, (int)input_count);
-		alen(inputs) = (int)input_count;
-		spvReflectEnumerateInputVariables(&module, &input_count, inputs);
-		for (int i = 0; i < alen(inputs); ++i) {
-			SpvReflectInterfaceVariable* input = inputs[i];
-
+		CF_ASSERT(bytecode.info.num_inputs <= CF_MAX_SHADER_INPUTS); // Increase `CF_MAX_SHADER_INPUTS`, or refactor the shader with less vertex attributes.
+		for (int i = 0; bytecode.info.num_inputs; ++i) {
+			CF_ShaderInputInfo* input = &bytecode.info.inputs[i];
 			shader_internal->input_names[i] = sintern(input->name);
 			shader_internal->input_locations[i] = input->location;
 			shader_internal->input_formats[i] = s_wrap(input->format);
 		}
-		afree(inputs);
 	}
-	spvReflectDestroyShaderModule(&module);
 
 	// Create the actual shader.
 	SDL_GPUShaderCreateInfo shaderCreateInfo = {};
@@ -512,10 +464,10 @@ static SDL_GPUShader* s_compile(CF_ShaderInternal* shader_internal, CF_ShaderByt
 	shaderCreateInfo.entrypoint = "main";
 	shaderCreateInfo.format = SDL_GPU_SHADERFORMAT_SPIRV;
 	shaderCreateInfo.stage = s_wrap(stage);
-	shaderCreateInfo.num_samplers = sampler_count;
-	shaderCreateInfo.num_storage_textures = storage_texture_count;
-	shaderCreateInfo.num_storage_buffers = storage_buffer_count;
-	shaderCreateInfo.num_uniform_buffers = uniform_buffer_count;
+	shaderCreateInfo.num_samplers = bytecode.info.num_samplers;
+	shaderCreateInfo.num_storage_textures = bytecode.info.num_storage_textures;
+	shaderCreateInfo.num_storage_buffers = bytecode.info.num_storage_buffers;
+	shaderCreateInfo.num_uniform_buffers = bytecode.info.num_uniforms;
 	SDL_GPUShader* sdl_shader = NULL;
 	if (SDL_GetGPUShaderFormats(app->device) == SDL_GPU_SHADERFORMAT_SPIRV) {
 		sdl_shader = (SDL_GPUShader*)SDL_CreateGPUShader(app->device, &shaderCreateInfo);
@@ -1444,5 +1396,3 @@ void cf_commit()
 {
 	SDL_EndGPURenderPass(s_canvas->pass);
 }
-
-#include <SPIRV-Reflect/spirv_reflect.c>
