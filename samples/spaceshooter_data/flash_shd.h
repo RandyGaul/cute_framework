@@ -1631,9 +1631,48 @@ static const uint8_t s_flash_shd_bytecode_draw_content[21016] = {
     0x4F, 0x02, 0x00, 0x00, 0x50, 0x02, 0x00, 0x00, 0x4D, 0x02, 0x00, 0x00, 0xFE, 0x00, 0x02, 0x00,
     0x51, 0x02, 0x00, 0x00, 0x38, 0x00, 0x01, 0x00,
 };
+static const char* s_flash_shd_bytecode_draw_image_names[1] = {
+    "u_image",
+};
+static CF_ShaderUniformInfo s_flash_shd_bytecode_draw_uniforms[1] = {
+    {
+        .block_name = "uniform_block",
+        .block_index = 0,
+        .block_size = 16,
+        .num_members = 2,
+    },
+};
+static CF_ShaderUniformMemberInfo s_flash_shd_bytecode_draw_uniform_members[2] = {
+    {
+        .name = "u_texture_size",
+        .type = CF_SHADER_INFO_TYPE_FLOAT2,
+        .offset = 0,
+        .array_length = 1,
+    },
+    {
+        .name = "u_alpha_discard",
+        .type = CF_SHADER_INFO_TYPE_SINT,
+        .offset = 8,
+        .array_length = 1,
+    },
+};
+static CF_ShaderInputInfo* s_flash_shd_bytecode_draw_inputs = NULL;
 static const CF_ShaderBytecode s_flash_shd_bytecode_draw = {
     .content = s_flash_shd_bytecode_draw_content,
     .size = 21016,
+    .info = {
+        .num_samplers = 1,
+        .num_storage_textures = 0,
+        .num_storage_buffers = 0,
+        .num_images = 1,
+        .image_names = s_flash_shd_bytecode_draw_image_names,
+        .num_uniforms = 1,
+        .uniforms = s_flash_shd_bytecode_draw_uniforms,
+        .num_uniform_members = 2,
+        .uniform_members = s_flash_shd_bytecode_draw_uniform_members,
+        .num_inputs = 0,
+        .inputs = s_flash_shd_bytecode_draw_inputs,
+    },
 };
 /*
 #extension GL_ARB_shading_language_include : require
@@ -1893,9 +1932,48 @@ static const uint8_t s_flash_shd_bytecode_blit_content[3364] = {
     0x42, 0x00, 0x00, 0x00, 0x3F, 0x00, 0x00, 0x00, 0xFE, 0x00, 0x02, 0x00, 0x43, 0x00, 0x00, 0x00,
     0x38, 0x00, 0x01, 0x00,
 };
+static const char* s_flash_shd_bytecode_blit_image_names[1] = {
+    "u_image",
+};
+static CF_ShaderUniformInfo s_flash_shd_bytecode_blit_uniforms[1] = {
+    {
+        .block_name = "uniform_block",
+        .block_index = 0,
+        .block_size = 16,
+        .num_members = 2,
+    },
+};
+static CF_ShaderUniformMemberInfo s_flash_shd_bytecode_blit_uniform_members[2] = {
+    {
+        .name = "u_texture_size",
+        .type = CF_SHADER_INFO_TYPE_FLOAT2,
+        .offset = 0,
+        .array_length = 1,
+    },
+    {
+        .name = "u_alpha_discard",
+        .type = CF_SHADER_INFO_TYPE_SINT,
+        .offset = 8,
+        .array_length = 1,
+    },
+};
+static CF_ShaderInputInfo* s_flash_shd_bytecode_blit_inputs = NULL;
 static const CF_ShaderBytecode s_flash_shd_bytecode_blit = {
     .content = s_flash_shd_bytecode_blit_content,
     .size = 3364,
+    .info = {
+        .num_samplers = 1,
+        .num_storage_textures = 0,
+        .num_storage_buffers = 0,
+        .num_images = 1,
+        .image_names = s_flash_shd_bytecode_blit_image_names,
+        .num_uniforms = 1,
+        .uniforms = s_flash_shd_bytecode_blit_uniforms,
+        .num_uniform_members = 2,
+        .uniform_members = s_flash_shd_bytecode_blit_uniform_members,
+        .num_inputs = 0,
+        .inputs = s_flash_shd_bytecode_blit_inputs,
+    },
 };
 static const CF_DrawShaderBytecode s_flash_shd_bytecode = {
     .draw_shader = s_flash_shd_bytecode_draw,

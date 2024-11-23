@@ -1725,9 +1725,72 @@ static const uint8_t s_waves_shd_bytecode_draw_content[22272] = {
     0x81, 0x02, 0x00, 0x00, 0x3D, 0x00, 0x04, 0x00, 0x07, 0x00, 0x00, 0x00, 0x82, 0x02, 0x00, 0x00,
     0x6E, 0x02, 0x00, 0x00, 0xFE, 0x00, 0x02, 0x00, 0x82, 0x02, 0x00, 0x00, 0x38, 0x00, 0x01, 0x00,
 };
+static const char* s_waves_shd_bytecode_draw_image_names[3] = {
+    "u_image", "water_tex", "noise_tex",
+};
+static CF_ShaderUniformInfo s_waves_shd_bytecode_draw_uniforms[2] = {
+    {
+        .block_name = "uniform_block",
+        .block_index = 0,
+        .block_size = 16,
+        .num_members = 2,
+    },
+    {
+        .block_name = "shd_uniforms",
+        .block_index = 1,
+        .block_size = 16,
+        .num_members = 3,
+    },
+};
+static CF_ShaderUniformMemberInfo s_waves_shd_bytecode_draw_uniform_members[5] = {
+    {
+        .name = "u_texture_size",
+        .type = CF_SHADER_INFO_TYPE_FLOAT2,
+        .offset = 0,
+        .array_length = 1,
+    },
+    {
+        .name = "u_alpha_discard",
+        .type = CF_SHADER_INFO_TYPE_SINT,
+        .offset = 8,
+        .array_length = 1,
+    },
+    {
+        .name = "amplitude",
+        .type = CF_SHADER_INFO_TYPE_FLOAT,
+        .offset = 0,
+        .array_length = 1,
+    },
+    {
+        .name = "time",
+        .type = CF_SHADER_INFO_TYPE_FLOAT,
+        .offset = 4,
+        .array_length = 1,
+    },
+    {
+        .name = "show_noise",
+        .type = CF_SHADER_INFO_TYPE_FLOAT,
+        .offset = 8,
+        .array_length = 1,
+    },
+};
+static CF_ShaderInputInfo* s_waves_shd_bytecode_draw_inputs = NULL;
 static const CF_ShaderBytecode s_waves_shd_bytecode_draw = {
     .content = s_waves_shd_bytecode_draw_content,
     .size = 22272,
+    .info = {
+        .num_samplers = 3,
+        .num_storage_textures = 0,
+        .num_storage_buffers = 0,
+        .num_images = 3,
+        .image_names = s_waves_shd_bytecode_draw_image_names,
+        .num_uniforms = 2,
+        .uniforms = s_waves_shd_bytecode_draw_uniforms,
+        .num_uniform_members = 5,
+        .uniform_members = s_waves_shd_bytecode_draw_uniform_members,
+        .num_inputs = 0,
+        .inputs = s_waves_shd_bytecode_draw_inputs,
+    },
 };
 /*
 #extension GL_ARB_shading_language_include : require
@@ -2083,9 +2146,72 @@ static const uint8_t s_waves_shd_bytecode_blit_content[4652] = {
     0x3D, 0x00, 0x04, 0x00, 0x0E, 0x00, 0x00, 0x00, 0x79, 0x00, 0x00, 0x00, 0x63, 0x00, 0x00, 0x00,
     0xFE, 0x00, 0x02, 0x00, 0x79, 0x00, 0x00, 0x00, 0x38, 0x00, 0x01, 0x00,
 };
+static const char* s_waves_shd_bytecode_blit_image_names[3] = {
+    "u_image", "water_tex", "noise_tex",
+};
+static CF_ShaderUniformInfo s_waves_shd_bytecode_blit_uniforms[2] = {
+    {
+        .block_name = "uniform_block",
+        .block_index = 0,
+        .block_size = 16,
+        .num_members = 2,
+    },
+    {
+        .block_name = "shd_uniforms",
+        .block_index = 1,
+        .block_size = 16,
+        .num_members = 3,
+    },
+};
+static CF_ShaderUniformMemberInfo s_waves_shd_bytecode_blit_uniform_members[5] = {
+    {
+        .name = "u_texture_size",
+        .type = CF_SHADER_INFO_TYPE_FLOAT2,
+        .offset = 0,
+        .array_length = 1,
+    },
+    {
+        .name = "u_alpha_discard",
+        .type = CF_SHADER_INFO_TYPE_SINT,
+        .offset = 8,
+        .array_length = 1,
+    },
+    {
+        .name = "amplitude",
+        .type = CF_SHADER_INFO_TYPE_FLOAT,
+        .offset = 0,
+        .array_length = 1,
+    },
+    {
+        .name = "time",
+        .type = CF_SHADER_INFO_TYPE_FLOAT,
+        .offset = 4,
+        .array_length = 1,
+    },
+    {
+        .name = "show_noise",
+        .type = CF_SHADER_INFO_TYPE_FLOAT,
+        .offset = 8,
+        .array_length = 1,
+    },
+};
+static CF_ShaderInputInfo* s_waves_shd_bytecode_blit_inputs = NULL;
 static const CF_ShaderBytecode s_waves_shd_bytecode_blit = {
     .content = s_waves_shd_bytecode_blit_content,
     .size = 4652,
+    .info = {
+        .num_samplers = 3,
+        .num_storage_textures = 0,
+        .num_storage_buffers = 0,
+        .num_images = 3,
+        .image_names = s_waves_shd_bytecode_blit_image_names,
+        .num_uniforms = 2,
+        .uniforms = s_waves_shd_bytecode_blit_uniforms,
+        .num_uniform_members = 5,
+        .uniform_members = s_waves_shd_bytecode_blit_uniform_members,
+        .num_inputs = 0,
+        .inputs = s_waves_shd_bytecode_blit_inputs,
+    },
 };
 static const CF_DrawShaderBytecode s_waves_shd_bytecode = {
     .draw_shader = s_waves_shd_bytecode_draw,

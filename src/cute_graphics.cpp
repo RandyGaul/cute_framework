@@ -372,15 +372,11 @@ CF_ShaderBytecode cf_compile_shader_to_bytecode_internal(const char* shader_src,
 
 	cute_shader_result_t result = cute_shader_compile(shader_src, stage, config);
 	if (result.success) {
-		uint8_t* bytecode_content = (uint8_t*)CF_ALLOC(result.bytecode_size);
-		CF_MEMCPY(bytecode_content, result.bytecode, result.bytecode_size);
-
 		CF_ShaderBytecode bytecode = {
-			.content = bytecode_content,
+			.content = (uint8_t*)result.bytecode,
 			.size = result.bytecode_size,
 			.info = result.info,
 		};
-		cute_shader_free_result(result);
 		return bytecode;
 	} else {
 		fprintf(stderr, "%s\n", result.error_message);
@@ -400,6 +396,17 @@ CF_ShaderBytecode cf_compile_shader_to_bytecode_internal(const char* shader_src,
 CF_ShaderBytecode cf_compile_shader_to_bytecode(const char* shader_src, CF_ShaderStage cf_stage)
 {
 	return cf_compile_shader_to_bytecode_internal(shader_src, cf_stage, NULL);
+}
+
+void cf_free_bytecode(CF_ShaderBytecode bytecode)
+{
+#ifdef CF_RUNTIME_SHADER_COMPILATION
+	cute_shader_result_t compile_result = {
+		.bytecode = (void*)bytecode.content,
+		.info = bytecode.info,
+	};
+	cute_shader_free_result(compile_result);
+#endif
 }
 
 static SDL_GPUShader* s_compile(CF_ShaderInternal* shader_internal, CF_ShaderBytecode bytecode, CF_ShaderStage stage)
@@ -449,7 +456,8 @@ static SDL_GPUShader* s_compile(CF_ShaderInternal* shader_internal, CF_ShaderByt
 
 	if (vs) {
 		CF_ASSERT(bytecode.info.num_inputs <= CF_MAX_SHADER_INPUTS); // Increase `CF_MAX_SHADER_INPUTS`, or refactor the shader with less vertex attributes.
-		for (int i = 0; bytecode.info.num_inputs; ++i) {
+		shader_internal->input_count = bytecode.info.num_inputs;
+		for (int i = 0; i < bytecode.info.num_inputs; ++i) {
 			CF_ShaderInputInfo* input = &bytecode.info.inputs[i];
 			shader_internal->input_names[i] = sintern(input->name);
 			shader_internal->input_locations[i] = input->location;
@@ -497,30 +505,22 @@ static CF_Shader s_compile(const char* vs_src, const char* fs_src, bool builtin 
 {
 	// TODO: builtin flag is redundant
 	// Compile to bytecode.
-	const dyna uint8_t* vs_bytecode = cf_compile_shader_to_bytecode_internal(vs_src, CF_SHADER_STAGE_VERTEX, user_shd);
-	if (!vs_bytecode) {
+	CF_ShaderBytecode vs_bytecode = cf_compile_shader_to_bytecode_internal(vs_src, CF_SHADER_STAGE_VERTEX, user_shd);
+	if (vs_bytecode.content == NULL) {
 		CF_Shader result = { 0 };
 		return result;
 	}
-	const dyna uint8_t* fs_bytecode = cf_compile_shader_to_bytecode_internal(fs_src, CF_SHADER_STAGE_FRAGMENT, user_shd);
-	if (!fs_bytecode) {
-		afree(vs_bytecode);
+	CF_ShaderBytecode fs_bytecode = cf_compile_shader_to_bytecode_internal(fs_src, CF_SHADER_STAGE_FRAGMENT, user_shd);
+	if (fs_bytecode.content == NULL) {
+		cf_free_bytecode(vs_bytecode);
 		CF_Shader result = { 0 };
 		return result;
 	}
 
 	// Create the actual shader object.
-	CF_ShaderBytecode vs_blob = {
-		.content = vs_bytecode,
-		.size = (size_t)alen(vs_bytecode),
-	};
-	CF_ShaderBytecode fs_blob = {
-		.content = fs_bytecode,
-		.size = (size_t)alen(fs_bytecode),
-	};
-	CF_Shader shader = cf_make_shader_from_bytecode(vs_blob, fs_blob);
-	afree(vs_bytecode);
-	afree(fs_bytecode);
+	CF_Shader shader = cf_make_shader_from_bytecode(vs_bytecode, fs_bytecode);
+	cf_free_bytecode(vs_bytecode);
+	cf_free_bytecode(fs_bytecode);
 	return shader;
 }
 

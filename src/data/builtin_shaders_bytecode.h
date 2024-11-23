@@ -264,9 +264,97 @@ static const uint8_t s_draw_vs_bytecode_content[3176] = {
     0x56, 0x00, 0x00, 0x00, 0x3E, 0x00, 0x03, 0x00, 0x55, 0x00, 0x00, 0x00, 0x57, 0x00, 0x00, 0x00,
     0xFD, 0x00, 0x01, 0x00, 0x38, 0x00, 0x01, 0x00,
 };
+static const char** s_draw_vs_bytecode_image_names = NULL;
+static CF_ShaderUniformInfo* s_draw_vs_bytecode_uniforms = NULL;
+static CF_ShaderUniformMemberInfo* s_draw_vs_bytecode_uniform_members = NULL;
+static CF_ShaderInputInfo s_draw_vs_bytecode_inputs[14] = {
+    {
+        .name = "in_pos",
+        .location = 0,
+        .format = CF_SHADER_INFO_TYPE_FLOAT2,
+    },
+    {
+        .name = "in_n",
+        .location = 3,
+        .format = CF_SHADER_INFO_TYPE_SINT,
+    },
+    {
+        .name = "in_ab",
+        .location = 4,
+        .format = CF_SHADER_INFO_TYPE_FLOAT4,
+    },
+    {
+        .name = "in_cd",
+        .location = 5,
+        .format = CF_SHADER_INFO_TYPE_FLOAT4,
+    },
+    {
+        .name = "in_ef",
+        .location = 6,
+        .format = CF_SHADER_INFO_TYPE_FLOAT4,
+    },
+    {
+        .name = "in_gh",
+        .location = 7,
+        .format = CF_SHADER_INFO_TYPE_FLOAT4,
+    },
+    {
+        .name = "in_uv",
+        .location = 2,
+        .format = CF_SHADER_INFO_TYPE_FLOAT2,
+    },
+    {
+        .name = "in_col",
+        .location = 8,
+        .format = CF_SHADER_INFO_TYPE_FLOAT4,
+    },
+    {
+        .name = "in_radius",
+        .location = 9,
+        .format = CF_SHADER_INFO_TYPE_FLOAT,
+    },
+    {
+        .name = "in_stroke",
+        .location = 10,
+        .format = CF_SHADER_INFO_TYPE_FLOAT,
+    },
+    {
+        .name = "in_aa",
+        .location = 11,
+        .format = CF_SHADER_INFO_TYPE_FLOAT,
+    },
+    {
+        .name = "in_params",
+        .location = 12,
+        .format = CF_SHADER_INFO_TYPE_FLOAT4,
+    },
+    {
+        .name = "in_posH",
+        .location = 1,
+        .format = CF_SHADER_INFO_TYPE_FLOAT2,
+    },
+    {
+        .name = "in_user_params",
+        .location = 13,
+        .format = CF_SHADER_INFO_TYPE_FLOAT4,
+    },
+};
 static const CF_ShaderBytecode s_draw_vs_bytecode = {
     .content = s_draw_vs_bytecode_content,
     .size = 3176,
+    .info = {
+        .num_samplers = 0,
+        .num_storage_textures = 0,
+        .num_storage_buffers = 0,
+        .num_images = 0,
+        .image_names = s_draw_vs_bytecode_image_names,
+        .num_uniforms = 0,
+        .uniforms = s_draw_vs_bytecode_uniforms,
+        .num_uniform_members = 0,
+        .uniform_members = s_draw_vs_bytecode_uniform_members,
+        .num_inputs = 14,
+        .inputs = s_draw_vs_bytecode_inputs,
+    },
 };
 /*
 #extension GL_ARB_shading_language_include : require
@@ -1881,9 +1969,48 @@ static const uint8_t s_draw_fs_bytecode_content[20720] = {
     0x5D, 0x00, 0x00, 0x00, 0x3D, 0x00, 0x04, 0x00, 0x07, 0x00, 0x00, 0x00, 0x44, 0x02, 0x00, 0x00,
     0x58, 0x00, 0x00, 0x00, 0xFE, 0x00, 0x02, 0x00, 0x44, 0x02, 0x00, 0x00, 0x38, 0x00, 0x01, 0x00,
 };
+static const char* s_draw_fs_bytecode_image_names[1] = {
+    "u_image",
+};
+static CF_ShaderUniformInfo s_draw_fs_bytecode_uniforms[1] = {
+    {
+        .block_name = "uniform_block",
+        .block_index = 0,
+        .block_size = 16,
+        .num_members = 2,
+    },
+};
+static CF_ShaderUniformMemberInfo s_draw_fs_bytecode_uniform_members[2] = {
+    {
+        .name = "u_texture_size",
+        .type = CF_SHADER_INFO_TYPE_FLOAT2,
+        .offset = 0,
+        .array_length = 1,
+    },
+    {
+        .name = "u_alpha_discard",
+        .type = CF_SHADER_INFO_TYPE_SINT,
+        .offset = 8,
+        .array_length = 1,
+    },
+};
+static CF_ShaderInputInfo* s_draw_fs_bytecode_inputs = NULL;
 static const CF_ShaderBytecode s_draw_fs_bytecode = {
     .content = s_draw_fs_bytecode_content,
     .size = 20720,
+    .info = {
+        .num_samplers = 1,
+        .num_storage_textures = 0,
+        .num_storage_buffers = 0,
+        .num_images = 1,
+        .image_names = s_draw_fs_bytecode_image_names,
+        .num_uniforms = 1,
+        .uniforms = s_draw_fs_bytecode_uniforms,
+        .num_uniform_members = 2,
+        .uniform_members = s_draw_fs_bytecode_uniform_members,
+        .num_inputs = 0,
+        .inputs = s_draw_fs_bytecode_inputs,
+    },
 };
 /*
 #extension GL_ARB_shading_language_include : require
@@ -1956,9 +2083,32 @@ static const uint8_t s_basic_vs_bytecode_content[896] = {
     0x1A, 0x00, 0x00, 0x00, 0x0D, 0x00, 0x00, 0x00, 0x0F, 0x00, 0x00, 0x00, 0x3E, 0x00, 0x03, 0x00,
     0x1A, 0x00, 0x00, 0x00, 0x18, 0x00, 0x00, 0x00, 0xFD, 0x00, 0x01, 0x00, 0x38, 0x00, 0x01, 0x00,
 };
+static const char** s_basic_vs_bytecode_image_names = NULL;
+static CF_ShaderUniformInfo* s_basic_vs_bytecode_uniforms = NULL;
+static CF_ShaderUniformMemberInfo* s_basic_vs_bytecode_uniform_members = NULL;
+static CF_ShaderInputInfo s_basic_vs_bytecode_inputs[1] = {
+    {
+        .name = "in_posH",
+        .location = 0,
+        .format = CF_SHADER_INFO_TYPE_FLOAT2,
+    },
+};
 static const CF_ShaderBytecode s_basic_vs_bytecode = {
     .content = s_basic_vs_bytecode_content,
     .size = 896,
+    .info = {
+        .num_samplers = 0,
+        .num_storage_textures = 0,
+        .num_storage_buffers = 0,
+        .num_images = 0,
+        .image_names = s_basic_vs_bytecode_image_names,
+        .num_uniforms = 0,
+        .uniforms = s_basic_vs_bytecode_uniforms,
+        .num_uniform_members = 0,
+        .uniform_members = s_basic_vs_bytecode_uniform_members,
+        .num_inputs = 1,
+        .inputs = s_basic_vs_bytecode_inputs,
+    },
 };
 /*
 #extension GL_ARB_shading_language_include : require
@@ -2001,9 +2151,26 @@ static const uint8_t s_basic_fs_bytecode_content[408] = {
     0x05, 0x00, 0x00, 0x00, 0x3E, 0x00, 0x03, 0x00, 0x09, 0x00, 0x00, 0x00, 0x0B, 0x00, 0x00, 0x00,
     0xFD, 0x00, 0x01, 0x00, 0x38, 0x00, 0x01, 0x00,
 };
+static const char** s_basic_fs_bytecode_image_names = NULL;
+static CF_ShaderUniformInfo* s_basic_fs_bytecode_uniforms = NULL;
+static CF_ShaderUniformMemberInfo* s_basic_fs_bytecode_uniform_members = NULL;
+static CF_ShaderInputInfo* s_basic_fs_bytecode_inputs = NULL;
 static const CF_ShaderBytecode s_basic_fs_bytecode = {
     .content = s_basic_fs_bytecode_content,
     .size = 408,
+    .info = {
+        .num_samplers = 0,
+        .num_storage_textures = 0,
+        .num_storage_buffers = 0,
+        .num_images = 0,
+        .image_names = s_basic_fs_bytecode_image_names,
+        .num_uniforms = 0,
+        .uniforms = s_basic_fs_bytecode_uniforms,
+        .num_uniform_members = 0,
+        .uniform_members = s_basic_fs_bytecode_uniform_members,
+        .num_inputs = 0,
+        .inputs = s_basic_fs_bytecode_inputs,
+    },
 };
 /*
 #extension GL_ARB_shading_language_include : require
@@ -2076,9 +2243,32 @@ static const uint8_t s_backbuffer_vs_bytecode_content[896] = {
     0x1A, 0x00, 0x00, 0x00, 0x0D, 0x00, 0x00, 0x00, 0x0F, 0x00, 0x00, 0x00, 0x3E, 0x00, 0x03, 0x00,
     0x1A, 0x00, 0x00, 0x00, 0x18, 0x00, 0x00, 0x00, 0xFD, 0x00, 0x01, 0x00, 0x38, 0x00, 0x01, 0x00,
 };
+static const char** s_backbuffer_vs_bytecode_image_names = NULL;
+static CF_ShaderUniformInfo* s_backbuffer_vs_bytecode_uniforms = NULL;
+static CF_ShaderUniformMemberInfo* s_backbuffer_vs_bytecode_uniform_members = NULL;
+static CF_ShaderInputInfo s_backbuffer_vs_bytecode_inputs[1] = {
+    {
+        .name = "in_posH",
+        .location = 0,
+        .format = CF_SHADER_INFO_TYPE_FLOAT2,
+    },
+};
 static const CF_ShaderBytecode s_backbuffer_vs_bytecode = {
     .content = s_backbuffer_vs_bytecode_content,
     .size = 896,
+    .info = {
+        .num_samplers = 0,
+        .num_storage_textures = 0,
+        .num_storage_buffers = 0,
+        .num_images = 0,
+        .image_names = s_backbuffer_vs_bytecode_image_names,
+        .num_uniforms = 0,
+        .uniforms = s_backbuffer_vs_bytecode_uniforms,
+        .num_uniform_members = 0,
+        .uniform_members = s_backbuffer_vs_bytecode_uniform_members,
+        .num_inputs = 1,
+        .inputs = s_backbuffer_vs_bytecode_inputs,
+    },
 };
 /*
 #extension GL_ARB_shading_language_include : require
@@ -2121,9 +2311,26 @@ static const uint8_t s_backbuffer_fs_bytecode_content[408] = {
     0x05, 0x00, 0x00, 0x00, 0x3E, 0x00, 0x03, 0x00, 0x09, 0x00, 0x00, 0x00, 0x0B, 0x00, 0x00, 0x00,
     0xFD, 0x00, 0x01, 0x00, 0x38, 0x00, 0x01, 0x00,
 };
+static const char** s_backbuffer_fs_bytecode_image_names = NULL;
+static CF_ShaderUniformInfo* s_backbuffer_fs_bytecode_uniforms = NULL;
+static CF_ShaderUniformMemberInfo* s_backbuffer_fs_bytecode_uniform_members = NULL;
+static CF_ShaderInputInfo* s_backbuffer_fs_bytecode_inputs = NULL;
 static const CF_ShaderBytecode s_backbuffer_fs_bytecode = {
     .content = s_backbuffer_fs_bytecode_content,
     .size = 408,
+    .info = {
+        .num_samplers = 0,
+        .num_storage_textures = 0,
+        .num_storage_buffers = 0,
+        .num_images = 0,
+        .image_names = s_backbuffer_fs_bytecode_image_names,
+        .num_uniforms = 0,
+        .uniforms = s_backbuffer_fs_bytecode_uniforms,
+        .num_uniform_members = 0,
+        .uniform_members = s_backbuffer_fs_bytecode_uniform_members,
+        .num_inputs = 0,
+        .inputs = s_backbuffer_fs_bytecode_inputs,
+    },
 };
 /*
 #extension GL_ARB_shading_language_include : require
@@ -2240,9 +2447,47 @@ static const uint8_t s_blit_vs_bytecode_content[1412] = {
     0x3E, 0x00, 0x03, 0x00, 0x27, 0x00, 0x00, 0x00, 0x26, 0x00, 0x00, 0x00, 0xFD, 0x00, 0x01, 0x00,
     0x38, 0x00, 0x01, 0x00,
 };
+static const char** s_blit_vs_bytecode_image_names = NULL;
+static CF_ShaderUniformInfo* s_blit_vs_bytecode_uniforms = NULL;
+static CF_ShaderUniformMemberInfo* s_blit_vs_bytecode_uniform_members = NULL;
+static CF_ShaderInputInfo s_blit_vs_bytecode_inputs[4] = {
+    {
+        .name = "in_uv",
+        .location = 2,
+        .format = CF_SHADER_INFO_TYPE_FLOAT2,
+    },
+    {
+        .name = "in_pos",
+        .location = 0,
+        .format = CF_SHADER_INFO_TYPE_FLOAT2,
+    },
+    {
+        .name = "in_posH",
+        .location = 1,
+        .format = CF_SHADER_INFO_TYPE_FLOAT2,
+    },
+    {
+        .name = "in_params",
+        .location = 3,
+        .format = CF_SHADER_INFO_TYPE_FLOAT4,
+    },
+};
 static const CF_ShaderBytecode s_blit_vs_bytecode = {
     .content = s_blit_vs_bytecode_content,
     .size = 1412,
+    .info = {
+        .num_samplers = 0,
+        .num_storage_textures = 0,
+        .num_storage_buffers = 0,
+        .num_images = 0,
+        .image_names = s_blit_vs_bytecode_image_names,
+        .num_uniforms = 0,
+        .uniforms = s_blit_vs_bytecode_uniforms,
+        .num_uniform_members = 0,
+        .uniform_members = s_blit_vs_bytecode_uniform_members,
+        .num_inputs = 4,
+        .inputs = s_blit_vs_bytecode_inputs,
+    },
 };
 /*
 #extension GL_ARB_shading_language_include : require
@@ -2483,9 +2728,48 @@ static const uint8_t s_blit_fs_bytecode_content[3052] = {
     0x3D, 0x00, 0x04, 0x00, 0x0E, 0x00, 0x00, 0x00, 0x32, 0x00, 0x00, 0x00, 0x11, 0x00, 0x00, 0x00,
     0xFE, 0x00, 0x02, 0x00, 0x32, 0x00, 0x00, 0x00, 0x38, 0x00, 0x01, 0x00,
 };
+static const char* s_blit_fs_bytecode_image_names[1] = {
+    "u_image",
+};
+static CF_ShaderUniformInfo s_blit_fs_bytecode_uniforms[1] = {
+    {
+        .block_name = "uniform_block",
+        .block_index = 0,
+        .block_size = 16,
+        .num_members = 2,
+    },
+};
+static CF_ShaderUniformMemberInfo s_blit_fs_bytecode_uniform_members[2] = {
+    {
+        .name = "u_texture_size",
+        .type = CF_SHADER_INFO_TYPE_FLOAT2,
+        .offset = 0,
+        .array_length = 1,
+    },
+    {
+        .name = "u_alpha_discard",
+        .type = CF_SHADER_INFO_TYPE_SINT,
+        .offset = 8,
+        .array_length = 1,
+    },
+};
+static CF_ShaderInputInfo* s_blit_fs_bytecode_inputs = NULL;
 static const CF_ShaderBytecode s_blit_fs_bytecode = {
     .content = s_blit_fs_bytecode_content,
     .size = 3052,
+    .info = {
+        .num_samplers = 1,
+        .num_storage_textures = 0,
+        .num_storage_buffers = 0,
+        .num_images = 1,
+        .image_names = s_blit_fs_bytecode_image_names,
+        .num_uniforms = 1,
+        .uniforms = s_blit_fs_bytecode_uniforms,
+        .num_uniform_members = 2,
+        .uniform_members = s_blit_fs_bytecode_uniform_members,
+        .num_inputs = 0,
+        .inputs = s_blit_fs_bytecode_inputs,
+    },
 };
 /*
 #extension GL_ARB_shading_language_include : require
@@ -2606,9 +2890,56 @@ static const uint8_t s_imgui_vs_bytecode_content[1480] = {
     0x1A, 0x00, 0x00, 0x00, 0x3E, 0x00, 0x03, 0x00, 0x2A, 0x00, 0x00, 0x00, 0x29, 0x00, 0x00, 0x00,
     0xFD, 0x00, 0x01, 0x00, 0x38, 0x00, 0x01, 0x00,
 };
+static const char** s_imgui_vs_bytecode_image_names = NULL;
+static CF_ShaderUniformInfo s_imgui_vs_bytecode_uniforms[1] = {
+    {
+        .block_name = "uniform_block",
+        .block_index = 0,
+        .block_size = 64,
+        .num_members = 1,
+    },
+};
+static CF_ShaderUniformMemberInfo s_imgui_vs_bytecode_uniform_members[1] = {
+    {
+        .name = "ProjectionMatrix",
+        .type = CF_SHADER_INFO_TYPE_MAT4,
+        .offset = 0,
+        .array_length = 1,
+    },
+};
+static CF_ShaderInputInfo s_imgui_vs_bytecode_inputs[3] = {
+    {
+        .name = "col",
+        .location = 2,
+        .format = CF_SHADER_INFO_TYPE_FLOAT4,
+    },
+    {
+        .name = "uv",
+        .location = 1,
+        .format = CF_SHADER_INFO_TYPE_FLOAT2,
+    },
+    {
+        .name = "pos",
+        .location = 0,
+        .format = CF_SHADER_INFO_TYPE_FLOAT2,
+    },
+};
 static const CF_ShaderBytecode s_imgui_vs_bytecode = {
     .content = s_imgui_vs_bytecode_content,
     .size = 1480,
+    .info = {
+        .num_samplers = 0,
+        .num_storage_textures = 0,
+        .num_storage_buffers = 0,
+        .num_images = 0,
+        .image_names = s_imgui_vs_bytecode_image_names,
+        .num_uniforms = 1,
+        .uniforms = s_imgui_vs_bytecode_uniforms,
+        .num_uniform_members = 1,
+        .uniform_members = s_imgui_vs_bytecode_uniform_members,
+        .num_inputs = 3,
+        .inputs = s_imgui_vs_bytecode_inputs,
+    },
 };
 /*
 #extension GL_ARB_shading_language_include : require
@@ -2682,7 +3013,26 @@ static const uint8_t s_imgui_fs_bytecode_content[808] = {
     0x09, 0x00, 0x00, 0x00, 0x3E, 0x00, 0x03, 0x00, 0x19, 0x00, 0x00, 0x00, 0x1A, 0x00, 0x00, 0x00,
     0xFD, 0x00, 0x01, 0x00, 0x38, 0x00, 0x01, 0x00,
 };
+static const char* s_imgui_fs_bytecode_image_names[1] = {
+    "u_image",
+};
+static CF_ShaderUniformInfo* s_imgui_fs_bytecode_uniforms = NULL;
+static CF_ShaderUniformMemberInfo* s_imgui_fs_bytecode_uniform_members = NULL;
+static CF_ShaderInputInfo* s_imgui_fs_bytecode_inputs = NULL;
 static const CF_ShaderBytecode s_imgui_fs_bytecode = {
     .content = s_imgui_fs_bytecode_content,
     .size = 808,
+    .info = {
+        .num_samplers = 1,
+        .num_storage_textures = 0,
+        .num_storage_buffers = 0,
+        .num_images = 1,
+        .image_names = s_imgui_fs_bytecode_image_names,
+        .num_uniforms = 0,
+        .uniforms = s_imgui_fs_bytecode_uniforms,
+        .num_uniform_members = 0,
+        .uniform_members = s_imgui_fs_bytecode_uniform_members,
+        .num_inputs = 0,
+        .inputs = s_imgui_fs_bytecode_inputs,
+    },
 };

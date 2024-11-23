@@ -38,10 +38,10 @@ typedef struct CF_ShaderUniformMemberInfo
 
 typedef struct CF_ShaderUniformInfo
 {
+	const char* block_name;
 	int block_index;
 	int block_size;
 	int num_members;
-	const char* block_name;
 } CF_ShaderUniformInfo;
 
 typedef struct CF_ShaderInputInfo {

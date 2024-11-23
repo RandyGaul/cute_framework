@@ -1717,7 +1717,8 @@ CF_INLINE CF_Shader make_shader(const char* vertex, const char* fragment) { retu
 CF_INLINE void shader_directory(const char* path) { cf_shader_directory(path); }
 CF_INLINE void shader_on_changed(void (*on_changed_fn)(const char* path, void* udata), void* udata) { cf_shader_on_changed(on_changed_fn, udata); }
 CF_INLINE CF_Shader make_shader_from_source(const char* vertex_src, const char* fragment_src) { return cf_make_shader_from_source(vertex_src, fragment_src); }
-CF_INLINE const dyna uint8_t* compile_shader_to_bytecode(const char* shader_src, CF_ShaderStage stage) { return cf_compile_shader_to_bytecode(shader_src, stage); }
+CF_INLINE CF_ShaderBytecode compile_shader_to_bytecode(const char* shader_src, CF_ShaderStage stage) { return cf_compile_shader_to_bytecode(shader_src, stage); }
+CF_INLINE void free_bytecode(CF_ShaderBytecode bytecode) { return cf_free_bytecode(bytecode); }
 CF_INLINE CF_Shader make_shader_from_bytecode(CF_ShaderBytecode vertex_bytecode, CF_ShaderBytecode fragment_bytecode) { return cf_make_shader_from_bytecode(vertex_bytecode, fragment_bytecode); }
 CF_INLINE void destroy_shader(CF_Shader shader) { cf_destroy_shader(shader); }
 CF_INLINE CF_CanvasParams canvas_defaults(int w, int h) { return cf_canvas_defaults(w, h); }

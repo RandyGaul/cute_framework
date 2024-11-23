@@ -105,9 +105,9 @@ static bool write_bytecode_struct(
 		fprintf(file, "static CF_ShaderUniformInfo %s%s_uniforms[%d] = {\n", var_name, suffix, info->num_uniforms);
 		for (int i = 0; i < info->num_uniforms; ++i) {
 			fprintf(file, "    {\n");
+			fprintf(file, "        .block_name = \"%s\",\n", info->uniforms[i].block_name);
 			fprintf(file, "        .block_index = %d,\n", info->uniforms[i].block_index);
 			fprintf(file, "        .block_size = %d,\n", info->uniforms[i].block_size);
-			fprintf(file, "        .block_name = \"%s\",\n", info->uniforms[i].block_name);
 			fprintf(file, "        .num_members = %d,\n", info->uniforms[i].num_members);
 			fprintf(file, "    },\n");
 		}

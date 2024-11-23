@@ -434,6 +434,7 @@ add_custom_command(
 		-type=builtin
 		-oheader=${CMAKE_CURRENT_SOURCE_DIR}/src/data/builtin_shaders_bytecode.h
 	DEPENDS src/cute_shader/builtin_shaders.h
+	DEPENDS cute-shaderc
 )
 
 # Link up all dependencies to Cute.
@@ -573,6 +574,7 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 				-oheader=${CMAKE_CURRENT_SOURCE_DIR}/samples/spaceshooter_data/flash_shd.h
 				${CMAKE_CURRENT_SOURCE_DIR}/samples/spaceshooter_data/flash.shd
 			DEPENDS samples/spaceshooter_data/flash.shd
+			DEPENDS cute-shaderc
 		)
 		add_custom_command(
 			OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/samples/waves_data/waves_shd.h
@@ -582,6 +584,7 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 				-oheader=${CMAKE_CURRENT_SOURCE_DIR}/samples/waves_data/waves_shd.h
 				${CMAKE_CURRENT_SOURCE_DIR}/samples/waves_data/waves.shd
 			DEPENDS samples/waves_data/waves.shd
+			DEPENDS cute-shaderc
 		)
 
 		# Copy over some folders for certain samples.
