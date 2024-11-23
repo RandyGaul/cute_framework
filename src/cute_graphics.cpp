@@ -372,12 +372,7 @@ CF_ShaderBytecode cf_compile_shader_to_bytecode_internal(const char* shader_src,
 
 	cute_shader_result_t result = cute_shader_compile(shader_src, stage, config);
 	if (result.success) {
-		CF_ShaderBytecode bytecode = {
-			.content = (uint8_t*)result.bytecode,
-			.size = result.bytecode_size,
-			.info = result.info,
-		};
-		return bytecode;
+		return result.bytecode;
 	} else {
 		fprintf(stderr, "%s\n", result.error_message);
 		cute_shader_free_result(result);
@@ -398,12 +393,11 @@ CF_ShaderBytecode cf_compile_shader_to_bytecode(const char* shader_src, CF_Shade
 	return cf_compile_shader_to_bytecode_internal(shader_src, cf_stage, NULL);
 }
 
-void cf_free_bytecode(CF_ShaderBytecode bytecode)
+void cf_free_shader_bytecode(CF_ShaderBytecode bytecode)
 {
 #ifdef CF_RUNTIME_SHADER_COMPILATION
 	cute_shader_result_t compile_result = {
-		.bytecode = (void*)bytecode.content,
-		.info = bytecode.info,
+		.bytecode = bytecode,
 	};
 	cute_shader_free_result(compile_result);
 #endif
@@ -414,15 +408,16 @@ static SDL_GPUShader* s_compile(CF_ShaderInternal* shader_internal, CF_ShaderByt
 	bool vs = stage == CF_SHADER_STAGE_VERTEX ? true : false;
 
 	// Load reflection info
+	const CF_ShaderInfo* shader_info = &bytecode.shader_info;
 
-	for (int i = 0; i < bytecode.info.num_images; ++i) {
-		shader_internal->image_names.add(sintern(bytecode.info.image_names[i]));
+	for (int i = 0; i < shader_info->num_images; ++i) {
+		shader_internal->image_names.add(sintern(shader_info->image_names[i]));
 	}
 
-	shader_internal->uniform_block_count = bytecode.info.num_uniforms;
-	const CF_ShaderUniformMemberInfo* member_infos = bytecode.info.uniform_members;
-	for (int i = 0; i < bytecode.info.num_uniforms; ++i) {
-		const CF_ShaderUniformInfo* block_info = &bytecode.info.uniforms[i];
+	shader_internal->uniform_block_count = shader_info->num_uniforms;
+	const CF_ShaderUniformMemberInfo* member_infos = shader_info->uniform_members;
+	for (int i = 0; i < shader_info->num_uniforms; ++i) {
+		const CF_ShaderUniformInfo* block_info = &shader_info->uniforms[i];
 		int block_index = block_info->block_index;
 
 		if (vs) {
@@ -455,10 +450,10 @@ static SDL_GPUShader* s_compile(CF_ShaderInternal* shader_internal, CF_ShaderByt
 	}
 
 	if (vs) {
-		CF_ASSERT(bytecode.info.num_inputs <= CF_MAX_SHADER_INPUTS); // Increase `CF_MAX_SHADER_INPUTS`, or refactor the shader with less vertex attributes.
-		shader_internal->input_count = bytecode.info.num_inputs;
-		for (int i = 0; i < bytecode.info.num_inputs; ++i) {
-			CF_ShaderInputInfo* input = &bytecode.info.inputs[i];
+		CF_ASSERT(shader_info->num_inputs <= CF_MAX_SHADER_INPUTS); // Increase `CF_MAX_SHADER_INPUTS`, or refactor the shader with less vertex attributes.
+		shader_internal->input_count = shader_info->num_inputs;
+		for (int i = 0; i < shader_info->num_inputs; ++i) {
+			CF_ShaderInputInfo* input = &shader_info->inputs[i];
 			shader_internal->input_names[i] = sintern(input->name);
 			shader_internal->input_locations[i] = input->location;
 			shader_internal->input_formats[i] = s_wrap(input->format);
@@ -472,10 +467,10 @@ static SDL_GPUShader* s_compile(CF_ShaderInternal* shader_internal, CF_ShaderByt
 	shaderCreateInfo.entrypoint = "main";
 	shaderCreateInfo.format = SDL_GPU_SHADERFORMAT_SPIRV;
 	shaderCreateInfo.stage = s_wrap(stage);
-	shaderCreateInfo.num_samplers = bytecode.info.num_samplers;
-	shaderCreateInfo.num_storage_textures = bytecode.info.num_storage_textures;
-	shaderCreateInfo.num_storage_buffers = bytecode.info.num_storage_buffers;
-	shaderCreateInfo.num_uniform_buffers = bytecode.info.num_uniforms;
+	shaderCreateInfo.num_samplers = shader_info->num_samplers;
+	shaderCreateInfo.num_storage_textures = shader_info->num_storage_textures;
+	shaderCreateInfo.num_storage_buffers = shader_info->num_storage_buffers;
+	shaderCreateInfo.num_uniform_buffers = shader_info->num_uniforms;
 	SDL_GPUShader* sdl_shader = NULL;
 	if (SDL_GetGPUShaderFormats(app->device) == SDL_GPU_SHADERFORMAT_SPIRV) {
 		sdl_shader = (SDL_GPUShader*)SDL_CreateGPUShader(app->device, &shaderCreateInfo);
@@ -512,15 +507,15 @@ static CF_Shader s_compile(const char* vs_src, const char* fs_src, bool builtin 
 	}
 	CF_ShaderBytecode fs_bytecode = cf_compile_shader_to_bytecode_internal(fs_src, CF_SHADER_STAGE_FRAGMENT, user_shd);
 	if (fs_bytecode.content == NULL) {
-		cf_free_bytecode(vs_bytecode);
+		cf_free_shader_bytecode(vs_bytecode);
 		CF_Shader result = { 0 };
 		return result;
 	}
 
 	// Create the actual shader object.
 	CF_Shader shader = cf_make_shader_from_bytecode(vs_bytecode, fs_bytecode);
-	cf_free_bytecode(vs_bytecode);
-	cf_free_bytecode(fs_bytecode);
+	cf_free_shader_bytecode(vs_bytecode);
+	cf_free_shader_bytecode(fs_bytecode);
 	return shader;
 }
 

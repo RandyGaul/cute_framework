@@ -444,56 +444,59 @@ cute_shader_compile(
 	cute_shader_result_t result = {
 		.success = true,
 
-		.bytecode = bytecode,
-		.bytecode_size = bytecode_size,
+		.bytecode = {
+			.content = (uint8_t*)bytecode,
+			.size = bytecode_size,
+
+			.shader_info = {
+				.num_samplers = num_samplers,
+				.num_storage_textures = num_storage_textures,
+				.num_storage_buffers = num_storage_buffers,
+
+				.num_images = num_images,
+				.image_names = image_names,
+
+				.num_uniforms = num_uniforms,
+				.uniforms = uniforms,
+
+				.num_uniform_members = num_uniform_members,
+				.uniform_members = uniform_members,
+
+				.num_inputs = (int)num_inputs,
+				.inputs = inputs,
+			},
+		},
 
 		.preprocessed_source = preprocessed_source_copy,
 		.preprocessed_source_size = preprocessed_source_size,
-
-		.info = {
-			.num_samplers = num_samplers,
-			.num_storage_textures = num_storage_textures,
-			.num_storage_buffers = num_storage_buffers,
-
-			.num_images = num_images,
-			.image_names = image_names,
-
-			.num_uniforms = num_uniforms,
-			.uniforms = uniforms,
-
-			.num_uniform_members = num_uniform_members,
-			.uniform_members = uniform_members,
-
-			.num_inputs = (int)num_inputs,
-			.inputs = inputs,
-		},
 	};
 	return result;
 }
 
 void
 cute_shader_free_result(cute_shader_result_t result) {
-	for (int i = 0; i < result.info.num_inputs; ++i) {
-		free((char*)result.info.inputs[i].name);
+	CF_ShaderInfo* shader_info = &result.bytecode.shader_info;
+	for (int i = 0; i < shader_info->num_inputs; ++i) {
+		free((char*)shader_info->inputs[i].name);
 	}
-	free(result.info.inputs);
+	free(shader_info->inputs);
 
-	for (int i = 0; i < result.info.num_uniform_members; ++i) {
-		free((char*)result.info.uniform_members[i].name);
+	for (int i = 0; i < shader_info->num_uniform_members; ++i) {
+		free((char*)shader_info->uniform_members[i].name);
 	}
-	free(result.info.uniform_members);
+	free(shader_info->uniform_members);
 
-	for (int i = 0; i < result.info.num_uniforms; ++i) {
-		free((char*)result.info.uniforms[i].block_name);
+	for (int i = 0; i < shader_info->num_uniforms; ++i) {
+		free((char*)shader_info->uniforms[i].block_name);
 	}
-	free(result.info.uniforms);
+	free(shader_info->uniforms);
 
-	for (int i = 0; i < result.info.num_images; ++i) {
-		free((char*)result.info.image_names[i]);
+	for (int i = 0; i < shader_info->num_images; ++i) {
+		free((char*)shader_info->image_names[i]);
 	}
-	free(result.info.image_names);
+	free(shader_info->image_names);
 
-	free(result.bytecode);
+	free((void*)result.bytecode.content);
 	free((char*)result.preprocessed_source);
 	free((char*)result.error_message);
 }

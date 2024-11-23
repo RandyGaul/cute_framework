@@ -1187,9 +1187,12 @@ CF_API void CF_CALL cf_draw_set_atlas_dimensions(int width_in_pixels, int height
  */
 typedef struct CF_DrawShaderBytecode
 {
+	/* @member Bytecode for draw shader. */
 	CF_ShaderBytecode draw_shader;
+	/* @member Bytecode for blit shader. */
 	CF_ShaderBytecode blit_shader;
 } CF_DrawShaderBytecode;
+// @end
 
 /**
  * @function cf_make_draw_shader
