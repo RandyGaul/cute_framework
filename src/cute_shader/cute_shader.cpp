@@ -156,11 +156,10 @@ cute_shader_failure(const char* message, const char* info_log, const char* debug
 	snprintf(full_msg, msg_size, "%s\n%s\n\n%s\n", message, info_log, debug_log);
 	full_msg[msg_size] = '\0';
 
-	cute_shader_result_t result;
-	result.success = false;
-	result.bytecode = NULL;
-	result.bytecode_size = 0;
-	result.error_message = full_msg;
+	cute_shader_result_t result = {
+		.success = false,
+		.error_message = full_msg,
+	};
 	return result;
 }
 
@@ -266,19 +265,31 @@ cute_shader_compile(
 	options.validate = false;
 	glslang::GlslangToSpv(*program.getIntermediate(glslang_stage), spirv, &options);
 
+	char* preprocessed_source_copy = NULL;
+	size_t preprocessed_source_size = 0;
+	if (config.return_preprocessed_source) {
+		preprocessed_source_size = preprocessed_source.size();
+		preprocessed_source_copy = (char*)malloc(preprocessed_source_size + 1);
+		memcpy(preprocessed_source_copy, preprocessed_source.c_str(), preprocessed_source_size);
+		preprocessed_source_copy[preprocessed_source_size] = '\0';
+	}
+
 	size_t bytecode_size = sizeof(uint32_t) * spirv.size();
 	void* bytecode = malloc(bytecode_size);
 	memcpy(bytecode, spirv.data(), bytecode_size);
-	cute_shader_result_t result;
-	result.success = true;
-	result.bytecode = bytecode;
-	result.bytecode_size = bytecode_size;
-	result.error_message = NULL;
+	cute_shader_result_t result = {
+		.success = true,
+		.bytecode = bytecode,
+		.bytecode_size = bytecode_size,
+		.preprocessed_source = preprocessed_source_copy,
+		.preprocessed_source_size = preprocessed_source_size,
+	};
 	return result;
 }
 
 void
 cute_shader_free_result(cute_shader_result_t result) {
 	free(result.bytecode);
+	free((char*)result.preprocessed_source);
 	free((char*)result.error_message);
 }

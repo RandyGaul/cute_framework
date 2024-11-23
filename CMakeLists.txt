@@ -432,6 +432,7 @@ add_custom_command(
 	COMMAND cute-shaderc
 		-type=builtin
 		-oheader=${CMAKE_CURRENT_SOURCE_DIR}/src/data/builtin_shaders_bytecode.h
+	DEPENDS src/cute_shader/builtin_shaders.h
 )
 
 # Link up all dependencies to Cute.

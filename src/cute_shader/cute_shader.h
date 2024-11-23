@@ -13,11 +13,6 @@ typedef struct cute_shader_file_t {
 	const char* content;
 } cute_shader_file_t;
 
-typedef struct cute_shader_str_t {
-	size_t len;
-	char* chars;
-} cute_shader_str_t;
-
 typedef struct cute_shader_vfs_t {
 	char* (*read_file_content)(const char* path, size_t* len, void* fcontext);
 	void (*free_file_content)(char* content, void* context);
@@ -40,14 +35,20 @@ typedef struct cute_shader_config_t {
 	const char** include_dirs;
 
 	bool automatic_include_guard;
+	bool return_preprocessed_source;
 
 	cute_shader_vfs_t* vfs;
 } cute_shader_config_t;
 
 typedef struct cute_shader_result_t {
 	bool success;
+
 	void* bytecode;
 	size_t bytecode_size;
+
+	const char* preprocessed_source;
+	size_t preprocessed_source_size;
+
 	const char* error_message;
 } cute_shader_result_t;
 

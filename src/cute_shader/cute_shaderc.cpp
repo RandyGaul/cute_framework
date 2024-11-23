@@ -72,6 +72,13 @@ static bool write_bytecode_struct(
 	const char* suffix
 ) {
 	const uint8_t* content = (const uint8_t*)compile_result.bytecode;
+
+	// Write preprocessed shader as comment
+	fprintf(file, "/*\n");
+	fprintf(file, "%.*s\n", (int)compile_result.preprocessed_source_size, compile_result.preprocessed_source);
+	fprintf(file, "*/\n");
+
+	// Write the actual struct
 	fprintf(file, "static const uint8_t %s%s_content[%zu] = {", var_name, suffix, compile_result.bytecode_size);
 	for (size_t i = 0; i < compile_result.bytecode_size; ++i) {
 		if ((i % HEADER_LINE_SIZE) == 0) {
@@ -291,6 +298,7 @@ int main(int argc, const char* argv[]) {
 			.include_dirs = include_dirs,
 
 			.automatic_include_guard = true,
+			.return_preprocessed_source = true,
 		};
 
 		cute_shader_result_t draw_shader_result = cute_shader_compile(
@@ -352,6 +360,7 @@ int main(int argc, const char* argv[]) {
 			.include_dirs = include_dirs,
 
 			.automatic_include_guard = true,
+			.return_preprocessed_source = true,
 		};
 
 		int num_builtin_shaders = sizeof(s_builtin_shader_sources) / sizeof(s_builtin_shader_sources[0]);
@@ -422,6 +431,7 @@ int main(int argc, const char* argv[]) {
 			.include_dirs = include_dirs,
 
 			.automatic_include_guard = true,
+			.return_preprocessed_source = true,
 		};
 
 		cute_shader_result_t result = cute_shader_compile(

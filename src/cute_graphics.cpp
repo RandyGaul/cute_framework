@@ -373,15 +373,21 @@ const dyna uint8_t* cf_compile_shader_to_bytecode_internal(const char* shader_sr
 		include_dirs[num_include_dirs++] = app->shader_directory.c_str();
 	}
 
-	cute_shader_config_t config;
-	config.automatic_include_guard = true;
-	config.num_builtin_includes = num_builtin_includes;
-	config.builtin_includes = builtin_includes;
-	config.num_include_dirs = num_include_dirs;
-	config.include_dirs = include_dirs;
-	config.num_builtin_defines = 0;
-	config.builtin_defines = NULL;
-	config.vfs = &s_cute_shader_vfs;
+	cute_shader_config_t config = {
+		.num_builtin_defines = 0,
+		.builtin_defines = NULL,
+
+		.num_builtin_includes = num_builtin_includes,
+		.builtin_includes = builtin_includes,
+
+		.num_include_dirs = num_include_dirs,
+		.include_dirs = include_dirs,
+
+		.automatic_include_guard = true,
+		.return_preprocessed_source = false,
+
+		.vfs = &s_cute_shader_vfs,
+	};
 
 	cute_shader_result_t result = cute_shader_compile(shader_src, stage, config);
 	if (result.success) {
