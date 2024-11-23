@@ -396,7 +396,7 @@ if (CF_GLSLANG)
 	set(CF_LINK_LIBS ${CF_LINK_LIBS} cute-shader)
 endif()
 # SPIRV-cross is still needed
-set(CF_LINK_LIBS ${CF_LINK_LIBS} SPIRV-Tools SPIRV-Tools-opt spirv-cross-c)
+set(CF_LINK_LIBS ${CF_LINK_LIBS} spirv-cross-c)
 
 # Some platform specific settings.
 if(EMSCRIPTEN)
