@@ -11,6 +11,10 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
+
 // Shared structures between cute-shader and cute framework.
 // There should be little to no external includes since cute-shader is not depending on cute framework.
 
@@ -181,5 +185,9 @@ static inline const char* cf_shader_info_data_type_to_string(CF_ShaderInfoDataTy
 	#undef CF_ENUM
 	}
 }
+
+#ifdef __cplusplus
+}
+#endif // __cplusplus
 
 #endif
