@@ -10,7 +10,7 @@ jobs:
   build:
     # Matrix feature for cross-platform coverage. Names the build "Build X"
     # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
-    name: "Build ${{ matrix.platform.name }} ${{ matrix.runtime_shader_compilation.with }} runtime shader compilation"
+    name: "Build ${{ matrix.platform.name }} (CF_RUNTIME_SHADER_COMPILATION=${{ matrix.runtime_shader_compilation.value }})"
     runs-on: ${{ matrix.platform.os }}
     timeout-minutes: 20
 
@@ -23,8 +23,8 @@ jobs:
       fail-fast: false
       matrix:
         runtime_shader_compilation:
-          - { value: 'ON', with: 'with', cmake_arg: '-DCF_GLSLANG=ON' }
-          - { value: 'OFF', with: 'without', cmake_arg: '-DCF_GLSLANG=OFF' }
+          - { value: 'ON', cmake_arg: '-DCF_RUNTIME_SHADER_COMPILATION=ON' }
+          - { value: 'OFF', cmake_arg: '-DCF_RUNTIME_SHADER_COMPILATION=OFF' }
         platform:
           # Diabled MinGW as it was having trouble with DX12 headers being out of date.
           # - { name: "Windows (MinGW-w64)",     os: windows-latest, artifact: 'mingw-w64', generate: '-G "MinGW Makefiles"' }
