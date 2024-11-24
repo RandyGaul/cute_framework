@@ -338,7 +338,7 @@ CF_ShaderBytecode cf_compile_shader_to_bytecode_internal(const char* shader_src,
 
 	// Setup builtin includes
 	int num_builtin_includes = sizeof(s_builtin_includes) / sizeof(s_builtin_includes[0]);
-	dyna cute_shader_file_t builtin_includes[sizeof(s_builtin_includes) / sizeof(s_builtin_includes[0]) + 1];
+	cute_shader_file_t builtin_includes[sizeof(s_builtin_includes) / sizeof(s_builtin_includes[0]) + 1];
 	// Use user shader as stub if provided
 	for (int i = 0; i < num_builtin_includes; ++i) {
 		builtin_includes[i] =  s_builtin_includes[i];
@@ -381,7 +381,7 @@ CF_ShaderBytecode cf_compile_shader_to_bytecode_internal(const char* shader_src,
 		return bytecode;
 	}
 #else
-	fprintf(stderr, "CF was not built with runtime shader compilation enabled\n");
+	fprintf(stderr, "CF was built with CF_RUNTIME_SHADER_COMPILATION=OFF\n");
 
 	CF_ShaderBytecode bytecode = { 0 };
 	return bytecode;
@@ -500,7 +500,7 @@ static CF_Shader s_compile(const char* vs_src, const char* fs_src, bool builtin 
 {
 	// TODO: builtin flag is redundant
 	// Compile to bytecode.
-	CF_ShaderBytecode vs_bytecode = cf_compile_shader_to_bytecode_internal(vs_src, CF_SHADER_STAGE_VERTEX, user_shd);
+	CF_ShaderBytecode vs_bytecode = cf_compile_shader_to_bytecode_internal(vs_src, CF_SHADER_STAGE_VERTEX, NULL);
 	if (vs_bytecode.content == NULL) {
 		CF_Shader result = { 0 };
 		return result;

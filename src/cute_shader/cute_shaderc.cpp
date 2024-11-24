@@ -16,8 +16,6 @@
 #define MAX_INCLUDES 64
 #define HEADER_LINE_SIZE 16
 
-#define PARSE_FLAG(ARG, FLAG) parse_flag(ARG, FLAG, sizeof(FLAG) - 1)
-
 typedef enum {
 	SHADER_TYPE_VERTEX,
 	SHADER_TYPE_FRAGMENT,
@@ -25,7 +23,8 @@ typedef enum {
 	SHADER_TYPE_BUILTIN,
 } shader_type_t;
 
-static const char* parse_flag(const char* arg, const char* flag_name, size_t flag_len) {
+static const char* parse_flag(const char* arg, const char* flag_name) {
+	size_t flag_len = strlen(flag_name);
 	if (strncmp(flag_name, arg, flag_len) == 0) {
 		return arg + flag_len;
 	} else {
@@ -245,7 +244,7 @@ int main(int argc, const char* argv[]) {
 	for (int i = 1; i < argc; ++i) {
 		const char* flag_value;
 		const char* arg = argv[i];
-		if ((flag_value = PARSE_FLAG(arg, FLAG_HELP)) != NULL) {
+		if ((flag_value = parse_flag(arg, FLAG_HELP)) != NULL) {
 			fprintf(stderr,
 				"Usage: cute-shaderc [options] <input>\n"
 				"Compile GLSL into SPIRV bytecode and generate a C header for embedding.\n"
@@ -261,14 +260,14 @@ int main(int argc, const char* argv[]) {
 				"-varname=<file>    The variable name inside the C header.\n"
 			);
 			return 0;
-		} else if ((flag_value = PARSE_FLAG(arg, FLAG_INCLUDE)) != NULL) {
+		} else if ((flag_value = parse_flag(arg, FLAG_INCLUDE)) != NULL) {
 			if (num_includes <= MAX_INCLUDES) {
 				include_dirs[num_includes++] = flag_value;
 			} else {
 				fprintf(stderr, "Too many includes\n");
 				return 1;
 			}
-		} else if ((flag_value = PARSE_FLAG(arg, FLAG_TYPE)) != NULL) {
+		} else if ((flag_value = parse_flag(arg, FLAG_TYPE)) != NULL) {
 			if (type_set) {
 				fprintf(stderr, "%s can only be specified once\n", FLAG_TYPE);
 				return 1;
@@ -287,21 +286,21 @@ int main(int argc, const char* argv[]) {
 				return 1;
 			}
 			type_set = true;
-		} else if ((flag_value = PARSE_FLAG(arg, FLAG_HEADER_OUT)) != NULL) {
+		} else if ((flag_value = parse_flag(arg, FLAG_HEADER_OUT)) != NULL) {
 			if (output_header_path == NULL) {
 				output_header_path = flag_value;
 			} else {
 				fprintf(stderr, "%s can only be specified once\n", FLAG_HEADER_OUT);
 				return 1;
 			}
-		} else if ((flag_value = PARSE_FLAG(arg, FLAG_VARNAME)) != NULL) {
+		} else if ((flag_value = parse_flag(arg, FLAG_VARNAME)) != NULL) {
 			if (var_name == NULL) {
 				var_name = flag_value;
 			} else {
 				fprintf(stderr, "%s can only be specified once\n", FLAG_VARNAME);
 				return 1;
 			}
-		} else if ((flag_value = PARSE_FLAG(arg, FLAG_INVALID)) != NULL) {
+		} else if ((flag_value = parse_flag(arg, FLAG_INVALID)) != NULL) {
 			fprintf(stderr, "Invalid option: %s\n", arg);
 			return 1;
 		} else {
