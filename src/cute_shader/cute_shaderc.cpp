@@ -10,6 +10,7 @@
 #define FLAG_INCLUDE "-I"
 #define FLAG_HELP "--help"
 #define FLAG_HEADER_OUT "-oheader="
+#define FLAG_BYTECODE_OUT "-obytecode="
 #define FLAG_VARNAME "-varname="
 #define FLAG_TYPE "-type="
 #define FLAG_INVALID "-"
@@ -232,9 +233,31 @@ static bool write_standalone_header_file(
 	return fclose(file) == 0;
 }
 
+static bool write_bytecode_file(
+	const char* path,
+	cute_shader_result_t compile_result
+) {
+	errno = 0;
+	FILE* file = fopen(path, "wb");
+	if (file == NULL) { return false; }
+
+	fwrite(compile_result.bytecode.content, compile_result.bytecode.size, 1, file);
+	if (ferror(file) != 0) {
+		fclose(file);
+		return false;
+	}
+	if (fflush(file) != 0) {
+		fclose(file);
+		return false;
+	}
+
+	return fclose(file) == 0;
+}
+
 int main(int argc, const char* argv[]) {
 	const char* input_path = NULL;
 	const char* output_header_path = NULL;
+	const char* output_bytecode_path = NULL;
 	const char* var_name = NULL;
 	int num_includes = 0;
 	bool type_set = false;
@@ -258,6 +281,7 @@ int main(int argc, const char* argv[]) {
 				"-oheader=<file>    Where to write the C header file.\n"
 				"                   Also requires -varname.\n"
 				"-varname=<file>    The variable name inside the C header.\n"
+				"-obytecode=<file>  (Optional) Where to write the raw SPIRV blob.\n"
 			);
 			return 0;
 		} else if ((flag_value = parse_flag(arg, FLAG_INCLUDE)) != NULL) {
@@ -300,6 +324,13 @@ int main(int argc, const char* argv[]) {
 				fprintf(stderr, "%s can only be specified once\n", FLAG_VARNAME);
 				return 1;
 			}
+		} else if ((flag_value = parse_flag(arg, FLAG_BYTECODE_OUT)) != NULL) {
+			if (output_bytecode_path == NULL) {
+				output_bytecode_path = flag_value;
+			} else {
+				fprintf(stderr, "%s can only be specified once\n", FLAG_BYTECODE_OUT);
+				return 1;
+			}
 		} else if ((flag_value = parse_flag(arg, FLAG_INVALID)) != NULL) {
 			fprintf(stderr, "Invalid option: %s\n", arg);
 			return 1;
@@ -326,6 +357,14 @@ int main(int argc, const char* argv[]) {
 
 		if (output_header_path != NULL && var_name == NULL) {
 			fprintf(stderr, "%s also requires %s\n", FLAG_HEADER_OUT, FLAG_VARNAME);
+			return 1;
+		}
+
+		if (
+			!(type == SHADER_TYPE_VERTEX || type == SHADER_TYPE_FRAGMENT)
+			&& output_bytecode_path != NULL
+		) {
+			fprintf(stderr, "%s is only valid for shader of type 'vertex' or 'fragment'\n", FLAG_BYTECODE_OUT);
 			return 1;
 		}
 	}
@@ -525,6 +564,14 @@ int main(int argc, const char* argv[]) {
 				var_name
 			)) {
 				perror("Error while writing header");
+				cute_shader_free_result(result);
+				goto end;
+			}
+		}
+
+		if (output_bytecode_path != NULL) {
+			if (!write_bytecode_file(output_bytecode_path, result)) {
+				perror("Error while writing bytecode");
 				cute_shader_free_result(result);
 				goto end;
 			}
