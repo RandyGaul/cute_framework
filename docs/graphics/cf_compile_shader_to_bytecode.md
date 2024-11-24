@@ -12,7 +12,7 @@ GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/maste
 Compiles a shader to SPIR-V bytecode.
 
 ```cpp
-const dyna uint8_t* cf_compile_shader_to_bytecode(const char* shader_src, CF_ShaderStage stage);
+CF_ShaderBytecode cf_compile_shader_to_bytecode(const char* shader_src, CF_ShaderStage stage);
 ```
 
 Parameters | Description
@@ -25,9 +25,11 @@ stage | The shaderstrage to differentiate between vertex or fragment shaders.
 This function is good for precompiling shaders to bytecode, which can help speed up app
 startup times. SPIR-V blobs can be saved straight to disk and shipped with your game. Load
 the bytecode blob pair (vertex + fragment shader blobs) into a [CF_Shader](/graphics/cf_shader.md) via [cf_make_shader_from_bytecode](/graphics/cf_make_shader_from_bytecode.md).
+The value returned from this function should be passed to [cf_free_shader_bytecode](/graphics/cf_free_shader_bytecode.md) when it is no longer needed.
 
 ## Related Pages
 
 [CF_Shader](/graphics/cf_shader.md)  
+[CF_ShaderBytecode](/graphics/cf_shaderbytecode.md)  
 [cf_make_shader_from_bytecode](/graphics/cf_make_shader_from_bytecode.md)  
-[cf_make_shader_from_bytecode](/graphics/cf_make_shader_from_bytecode.md)  
+[cf_free_shader_bytecode](/graphics/cf_free_shader_bytecode.md)  

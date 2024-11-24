@@ -140,6 +140,8 @@ To compile shaders from glsl source code from string (in-memory) simply call [cf
 
 To compile shaders from bytecode (SPIRV) you must first compile them to a bytecode blob. This is a good way to speed up shader compilation when you ship your game, as the bytecode blobs can be shipped alongside your game. Call [cf_compile_shader_to_bytecode](https://randygaul.github.io/cute_framework/#/graphics/cf_compile_shader_to_bytecode) to generate a bytecode blob. You can then create a finalized shader by calling [cf_make_shader_from_bytecode](https://randygaul.github.io/cute_framework/#/graphics/cf_make_shader_from_bytecode).
 
+Shader compilation is explained in more details [here](/topics/shader_compilation.md).
+
 Be aware that shaders must adhere to strict rules for resource sets. Here's the notes from CF's source:
 
 ```cpp

@@ -288,3 +288,7 @@ Once done your custom shader will be able to apply itself to anything drawn thro
 <p align="center">
 <img src=https://github.com/RandyGaul/cute_framework/blob/master/assets/metaballs.gif?raw=true>
 </p>
+
+## Compiling Shaders
+
+While the above is all you need to get started with shaders, to learn more about shader compilation, refer to [Shader Compilation](https://randygaul.github.io/cute_framework/#/topics/shader_compilation).

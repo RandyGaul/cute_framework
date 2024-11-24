@@ -124,7 +124,7 @@ typedef struct CF_ShaderUniformInfo
  * @related  CF_ShaderBytecode
  */
 typedef struct CF_ShaderInputInfo {
-	/* @member Number of the input. */
+	/* @member Name of the input. */
 	const char* name;
 	/* @member Location of the input. */
 	int location;

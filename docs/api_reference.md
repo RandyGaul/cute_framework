@@ -389,6 +389,7 @@ This is a list of all functions in Cute Framework organized by categories. This 
 - [cf_draw_TSR_absolute](/draw/cf_draw_tsr_absolute.md)
 - [cf_fetch_image](/draw/cf_fetch_image.md)
 - [cf_make_draw_shader](/draw/cf_make_draw_shader.md)
+- [cf_make_draw_shader_from_bytecode](/draw/cf_make_draw_shader_from_bytecode.md)
 - [cf_make_draw_shader_from_source](/draw/cf_make_draw_shader_from_source.md)
 - [cf_make_premade_sprite](/draw/cf_make_premade_sprite.md)
 - [cf_register_premade_atlas](/draw/cf_register_premade_atlas.md)
@@ -403,6 +404,7 @@ This is a list of all functions in Cute Framework organized by categories. This 
 
 ### structs
 - [CF_AtlasSubImage](/draw/cf_atlassubimage.md)
+- [CF_DrawShaderBytecode](/draw/cf_drawshaderbytecode.md)
 - [CF_TemporaryImage](/draw/cf_temporaryimage.md)
 - [CF_Vertex](/draw/cf_vertex.md)
 
@@ -900,6 +902,7 @@ This is a list of all functions in Cute Framework organized by categories. This 
 - [cf_draw_elements](/graphics/cf_draw_elements.md)
 - [cf_filter_to_string](/graphics/cf_filter_to_string.md)
 - [cf_fract_color](/graphics/cf_fract_color.md)
+- [cf_free_shader_bytecode](/graphics/cf_free_shader_bytecode.md)
 - [cf_hsv_to_rgb](/graphics/cf_hsv_to_rgb.md)
 - [cf_hue](/graphics/cf_hue.md)
 - [cf_make_canvas](/graphics/cf_make_canvas.md)
@@ -993,6 +996,11 @@ This is a list of all functions in Cute Framework organized by categories. This 
 - [CF_Pixel](/graphics/cf_pixel.md)
 - [CF_RenderState](/graphics/cf_renderstate.md)
 - [CF_Shader](/graphics/cf_shader.md)
+- [CF_ShaderBytecode](/graphics/cf_shaderbytecode.md)
+- [CF_ShaderInfo](/graphics/cf_shaderinfo.md)
+- [CF_ShaderInputInfo](/graphics/cf_shaderinputinfo.md)
+- [CF_ShaderUniformInfo](/graphics/cf_shaderuniforminfo.md)
+- [CF_ShaderUniformMemberInfo](/graphics/cf_shaderuniformmemberinfo.md)
 - [CF_StencilFunction](/graphics/cf_stencilfunction.md)
 - [CF_StencilParams](/graphics/cf_stencilparams.md)
 - [CF_Texture](/graphics/cf_texture.md)
@@ -1009,6 +1017,7 @@ This is a list of all functions in Cute Framework organized by categories. This 
 - [CF_Filter](/graphics/cf_filter.md)
 - [CF_PixelFormat](/graphics/cf_pixelformat.md)
 - [CF_PixelFormatOp](/graphics/cf_pixelformatop.md)
+- [CF_ShaderInfoDataType](/graphics/cf_shaderinfodatatype.md)
 - [CF_ShaderStage](/graphics/cf_shaderstage.md)
 - [CF_StencilOp](/graphics/cf_stencilop.md)
 - [CF_TextureUsageFlagBits](/graphics/cf_textureusageflagbits.md)
