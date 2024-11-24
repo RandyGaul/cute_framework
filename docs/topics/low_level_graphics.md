@@ -258,7 +258,7 @@ UV-coordinates are two floats, each in the range from `[0,1]`. The coordinate (0
 
 ## Canvases
 
-[`CF_Cavas`](https://randygaul.github.io/cute_framework/#/graphics/cf_canvas) represents a texture the GPU can render within. Instead of rendering to the screen itself, sometimes advanced rendering techniques require first rendering to a texture. This is common for some techniques such as reflections, or shadows. Here's an example image showing some basic reflections, using a canvas and some [stenciling techniques](https://en.wikipedia.org/wiki/Stencil_buffer).
+[`CF_Canvas`](https://randygaul.github.io/cute_framework/#/graphics/cf_canvas) represents a texture the GPU can render within. Instead of rendering to the screen itself, sometimes advanced rendering techniques require first rendering to a texture. This is common for some techniques such as reflections, or shadows. Here's an example image showing some basic reflections, using a canvas and some [stenciling techniques](https://en.wikipedia.org/wiki/Stencil_buffer).
 
 <p align="center">
 <img src=https://github.com/RandyGaul/cute_framework/blob/master/assets/block_man_final.gif?raw=true>
