@@ -4,33 +4,38 @@
 #include <stddef.h>
 #include <cute_shader_bytecode.h>
 
-typedef struct cute_shader_define_t {
+typedef struct CF_ShaderCompilerDefine
+{
 	const char* name;
 	const char* value;
-} cute_shader_define_t;
+} CF_ShaderCompilerDefine;
 
-typedef struct cute_shader_file_t {
+typedef struct CF_ShaderCompilerFile
+{
 	const char* name;
 	const char* content;
-} cute_shader_file_t;
+} CF_ShaderCompilerFile;
 
-typedef struct cute_shader_vfs_t {
-	char* (*read_file_content)(const char* path, size_t* len, void* fcontext);
+typedef struct CF_ShaderCompilerVfs
+{
+	char* (*read_file_content)(const char* path, size_t* len, void* context);
 	void (*free_file_content)(char* content, void* context);
 	void* context;
-} cute_shader_vfs_t;
+} CF_ShaderCompilerVfs;
 
-typedef enum {
+typedef enum CF_ShaderCompilerStage
+{
 	CUTE_SHADER_STAGE_VERTEX,
 	CUTE_SHADER_STAGE_FRAGMENT,
-} cute_shader_stage_t;
+} CF_ShaderCompilerStage;
 
-typedef struct cute_shader_config_t {
+typedef struct CF_ShaderCompilerConfig
+{
 	int num_builtin_defines;
-	cute_shader_define_t* builtin_defines;
+	CF_ShaderCompilerDefine* builtin_defines;
 
 	int num_builtin_includes;
-	cute_shader_file_t* builtin_includes;
+	CF_ShaderCompilerFile* builtin_includes;
 
 	int num_include_dirs;
 	const char** include_dirs;
@@ -38,10 +43,11 @@ typedef struct cute_shader_config_t {
 	bool automatic_include_guard;
 	bool return_preprocessed_source;
 
-	cute_shader_vfs_t* vfs;
-} cute_shader_config_t;
+	CF_ShaderCompilerVfs* vfs;
+} CF_ShaderCompilerConfig;
 
-typedef struct cute_shader_result_t {
+typedef struct CF_ShaderCompilerResult
+{
 	bool success;
 	const char* error_message;
 
@@ -49,27 +55,19 @@ typedef struct cute_shader_result_t {
 
 	const char* preprocessed_source;
 	size_t preprocessed_source_size;
-} cute_shader_result_t;
+} CF_ShaderCompilerResult;
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-void
-cute_shader_init(void);
+void cute_shader_init(void);
 
-void
-cute_shader_cleanup(void);
+void cute_shader_cleanup(void);
 
-cute_shader_result_t
-cute_shader_compile(
-	const char* source,
-	cute_shader_stage_t stage,
-	cute_shader_config_t config
-);
+CF_ShaderCompilerResult cute_shader_compile(const char* source, CF_ShaderCompilerStage stage, CF_ShaderCompilerConfig config);
 
-void
-cute_shader_free_result(cute_shader_result_t result);
+void cute_shader_free_result(CF_ShaderCompilerResult result);
 
 #ifdef __cplusplus
 }

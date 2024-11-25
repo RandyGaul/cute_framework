@@ -60,26 +60,27 @@ static void libc_free_file_content(char* content, void* context) {
 	}
 }
 
-static cute_shader_vfs_t libc_vfs = {
+static CF_ShaderCompilerVfs libc_vfs = {
 	.read_file_content = libc_read_file_content,
 	.free_file_content = libc_free_file_content,
 };
 
-struct BuiltinInclude {
+struct BuiltinInclude
+{
 	const char* content;
 	size_t size;
 };
 
 class Includer: public glslang::TShader::Includer {
 public:
-	Includer(const cute_shader_config_t& config)
+	Includer(const CF_ShaderCompilerConfig& config)
 		: automatic_include_guard(config.automatic_include_guard)
 		, vfs(config.vfs != NULL ? config.vfs : &libc_vfs)
 		, num_include_dirs(config.num_include_dirs)
 		, include_dirs(config.include_dirs)
 	{
 		for (int i = 0; i < config.num_builtin_includes; ++i) {
-			cute_shader_file_t file = config.builtin_includes[i];
+			CF_ShaderCompilerFile file = config.builtin_includes[i];
 			builtin_includes.insert({
 				file.name,
 				{ file.content, strlen(file.content) }
@@ -87,7 +88,8 @@ public:
 		}
 	}
 
-	IncludeResult* includeSystem(const char* header_name, const char* includer_name, size_t inclusion_depth) override {
+	IncludeResult* includeSystem(const char* header_name, const char* includer_name, size_t inclusion_depth) override
+	{
 		std::string include_name = header_name;
 
 		// Since all includes are system include, we can resolve include guard immediately
@@ -126,12 +128,14 @@ public:
 		}
 	}
 
-	IncludeResult* includeLocal(const char* header_name, const char* includer_name, size_t inclusion_depth) override {
+	IncludeResult* includeLocal(const char* header_name, const char* includer_name, size_t inclusion_depth) override
+	{
 		// Treat all includes as system include
 		return nullptr;
 	}
 
-	void releaseInclude(IncludeResult* result) override {
+	void releaseInclude(IncludeResult* result) override
+	{
 		if (result == nullptr) { return; }
 
 		if (result->userData != nullptr) {
@@ -146,11 +150,11 @@ private:
 	const char** include_dirs;
 	std::unordered_set<std::string> included_files;
 	std::unordered_map<std::string, BuiltinInclude> builtin_includes;
-	cute_shader_vfs_t* vfs;
+	CF_ShaderCompilerVfs* vfs;
 };
 
-static CF_ShaderInfoDataType
-s_uniform_type(SpvReflectTypeDescription* type_desc) {
+static CF_ShaderInfoDataType s_uniform_type(SpvReflectTypeDescription* type_desc)
+{
 	switch (type_desc->op) {
 	case SpvOpTypeFloat: return CF_SHADER_INFO_TYPE_FLOAT;
 	case SpvOpTypeInt: return CF_SHADER_INFO_TYPE_SINT;
@@ -181,8 +185,8 @@ s_uniform_type(SpvReflectTypeDescription* type_desc) {
 	return CF_SHADER_INFO_TYPE_UNKNOWN;
 }
 
-static CF_ShaderInfoDataType
-s_wrap(SpvReflectFormat format) {
+static CF_ShaderInfoDataType s_wrap(SpvReflectFormat format)
+{
 	switch (format) {
 	case SPV_REFLECT_FORMAT_UNDEFINED:           return CF_SHADER_INFO_TYPE_UNKNOWN;
 	case SPV_REFLECT_FORMAT_R32_UINT:            return CF_SHADER_INFO_TYPE_UINT;
@@ -203,37 +207,33 @@ s_wrap(SpvReflectFormat format) {
 
 }
 
-static cute_shader_result_t
-cute_shader_failure(const char* message, const char* info_log, const char* debug_log) {
+static CF_ShaderCompilerResult cute_shader_failure(const char* message, const char* info_log, const char* debug_log)
+{
 	int msg_size = snprintf(NULL, 0, "%s\n%s\n\n%s\n", message, info_log, debug_log);
 	// TODO: use allocator?
 	char* full_msg = (char*)malloc(msg_size + 1);
 	snprintf(full_msg, msg_size, "%s\n%s\n\n%s\n", message, info_log, debug_log);
 	full_msg[msg_size] = '\0';
 
-	cute_shader_result_t result = {
+	CF_ShaderCompilerResult result = {
 		.success = false,
 		.error_message = full_msg,
 	};
 	return result;
 }
 
-void
-cute_shader_init(void) {
+void cute_shader_init(void)
+{
 	glslang::InitializeProcess();
 }
 
-void
-cute_shader_cleanup(void) {
+void cute_shader_cleanup(void)
+{
 	glslang::FinalizeProcess();
 }
 
-cute_shader_result_t
-cute_shader_compile(
-	const char* source,
-	cute_shader_stage_t stage,
-	cute_shader_config_t config
-) {
+CF_ShaderCompilerResult cute_shader_compile( const char* source, CF_ShaderCompilerStage stage, CF_ShaderCompilerConfig config)
+{
 	EShLanguage glslang_stage = EShLangVertex;
 	switch (stage) {
 		case CUTE_SHADER_STAGE_VERTEX: glslang_stage = EShLangVertex; break;
@@ -441,7 +441,7 @@ cute_shader_compile(
 		spvReflectDestroyShaderModule(&module);
 	}
 
-	cute_shader_result_t result = {
+	CF_ShaderCompilerResult result = {
 		.success = true,
 
 		.bytecode = {
@@ -473,8 +473,8 @@ cute_shader_compile(
 	return result;
 }
 
-void
-cute_shader_free_result(cute_shader_result_t result) {
+void cute_shader_free_result(CF_ShaderCompilerResult result)
+{
 	CF_ShaderInfo* shader_info = &result.bytecode.shader_info;
 	for (int i = 0; i < shader_info->num_inputs; ++i) {
 		free((char*)shader_info->inputs[i].name);

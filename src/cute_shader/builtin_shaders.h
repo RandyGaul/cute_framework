@@ -532,7 +532,7 @@ typedef struct CF_BuiltinShaderSource {
 	const char* fragment;
 } CF_BuiltinShaderSource;
 
-static cute_shader_file_t s_builtin_includes[] = {
+static CF_ShaderCompilerFile s_builtin_includes[] = {
 	{ "gamma.shd", s_gamma },
 	{ "distance.shd", s_distance },
 	{ "smooth_uv.shd", s_smooth_uv },

@@ -320,7 +320,7 @@ static void s_cute_shader_vfs_free(char* content, void* context) {
 	cf_free(content);
 }
 
-static cute_shader_vfs_t s_cute_shader_vfs = {
+static CF_ShaderCompilerVfs s_cute_shader_vfs = {
 	.read_file_content = s_cute_shader_vfs_read,
 	.free_file_content = s_cute_shader_vfs_free,
 };
@@ -329,7 +329,7 @@ static cute_shader_vfs_t s_cute_shader_vfs = {
 CF_ShaderBytecode cf_compile_shader_to_bytecode_internal(const char* shader_src, CF_ShaderStage cf_stage, const char* user_shd)
 {
 #ifdef CF_RUNTIME_SHADER_COMPILATION
-	cute_shader_stage_t stage = CUTE_SHADER_STAGE_VERTEX;
+	CF_ShaderCompilerStage stage = CUTE_SHADER_STAGE_VERTEX;
 	switch (cf_stage) {
 	default: CF_ASSERT(false); break; // No valid stage provided.
 	case CF_SHADER_STAGE_VERTEX: stage = CUTE_SHADER_STAGE_VERTEX; break;
@@ -338,12 +338,12 @@ CF_ShaderBytecode cf_compile_shader_to_bytecode_internal(const char* shader_src,
 
 	// Setup builtin includes
 	int num_builtin_includes = sizeof(s_builtin_includes) / sizeof(s_builtin_includes[0]);
-	cute_shader_file_t builtin_includes[sizeof(s_builtin_includes) / sizeof(s_builtin_includes[0]) + 1];
+	CF_ShaderCompilerFile builtin_includes[sizeof(s_builtin_includes) / sizeof(s_builtin_includes[0]) + 1];
 	// Use user shader as stub if provided
 	for (int i = 0; i < num_builtin_includes; ++i) {
 		builtin_includes[i] =  s_builtin_includes[i];
 	}
-	cute_shader_file_t shader_stub;
+	CF_ShaderCompilerFile shader_stub;
 	shader_stub.name = "shader_stub.shd";
 	shader_stub.content = user_shd != NULL ? user_shd : s_shader_stub;
 	builtin_includes[num_builtin_includes++] = shader_stub;
@@ -354,7 +354,7 @@ CF_ShaderBytecode cf_compile_shader_to_bytecode_internal(const char* shader_src,
 		include_dirs[num_include_dirs++] = app->shader_directory.c_str();
 	}
 
-	cute_shader_config_t config = {
+	CF_ShaderCompilerConfig config = {
 		.num_builtin_defines = 0,
 		.builtin_defines = NULL,
 
@@ -370,7 +370,7 @@ CF_ShaderBytecode cf_compile_shader_to_bytecode_internal(const char* shader_src,
 		.vfs = &s_cute_shader_vfs,
 	};
 
-	cute_shader_result_t result = cute_shader_compile(shader_src, stage, config);
+	CF_ShaderCompilerResult result = cute_shader_compile(shader_src, stage, config);
 	if (result.success) {
 		return result.bytecode;
 	} else {
@@ -396,7 +396,7 @@ CF_ShaderBytecode cf_compile_shader_to_bytecode(const char* shader_src, CF_Shade
 void cf_free_shader_bytecode(CF_ShaderBytecode bytecode)
 {
 #ifdef CF_RUNTIME_SHADER_COMPILATION
-	cute_shader_result_t compile_result = {
+	CF_ShaderCompilerResult compile_result = {
 		.bytecode = bytecode,
 	};
 	cute_shader_free_result(compile_result);

@@ -123,7 +123,8 @@ typedef struct CF_ShaderUniformInfo
  * @brief    Information about an input of a vertex shader.
  * @related  CF_ShaderBytecode
  */
-typedef struct CF_ShaderInputInfo {
+typedef struct CF_ShaderInputInfo
+{
 	/* @member Name of the input. */
 	const char* name;
 	/* @member Location of the input. */
@@ -188,7 +189,8 @@ typedef struct CF_ShaderBytecode
 } CF_ShaderBytecode;
 // @end
 
-static inline const char* cf_shader_info_data_type_to_string(CF_ShaderInfoDataType type) {
+static inline const char* cf_shader_info_data_type_to_string(CF_ShaderInfoDataType type)
+{
 	switch (type) {
 	#define CF_ENUM(K, V) case CF_##K: return "CF_" #K;
 	CF_SHADER_INFO_DATA_TYPE_DEFS

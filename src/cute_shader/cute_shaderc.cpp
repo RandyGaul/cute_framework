@@ -17,14 +17,16 @@
 #define MAX_INCLUDES 64
 #define HEADER_LINE_SIZE 16
 
-typedef enum {
+typedef enum
+{
 	SHADER_TYPE_VERTEX,
 	SHADER_TYPE_FRAGMENT,
 	SHADER_TYPE_DRAW,
 	SHADER_TYPE_BUILTIN,
 } shader_type_t;
 
-static const char* parse_flag(const char* arg, const char* flag_name) {
+static const char* parse_flag(const char* arg, const char* flag_name)
+{
 	size_t flag_len = strlen(flag_name);
 	if (strncmp(flag_name, arg, flag_len) == 0) {
 		return arg + flag_len;
@@ -33,7 +35,8 @@ static const char* parse_flag(const char* arg, const char* flag_name) {
 	}
 }
 
-static char* read_file(const char* path) {
+static char* read_file(const char* path)
+{
 	errno = 0;
 	FILE* file = fopen(path, "rb");
 	if (file == NULL) {
@@ -67,10 +70,11 @@ static char* read_file(const char* path) {
 
 static bool write_bytecode_struct(
 	FILE* file,
-	cute_shader_result_t compile_result,
+	CF_ShaderCompilerResult compile_result,
 	const char* var_name,
 	const char* suffix
-) {
+)
+{
 	const uint8_t* content = compile_result.bytecode.content;
 
 	// Write preprocessed shader as comment
@@ -169,10 +173,11 @@ static bool write_bytecode_struct(
 
 static bool write_draw_header_file(
 	const char* path,
-	cute_shader_result_t draw_result,
-	cute_shader_result_t blit_result,
+	CF_ShaderCompilerResult draw_result,
+	CF_ShaderCompilerResult blit_result,
 	const char* var_name
-) {
+)
+{
 	errno = 0;
 	FILE* file = fopen(path, "wb");
 	if (file == NULL) {
@@ -210,9 +215,10 @@ static bool write_draw_header_file(
 
 static bool write_standalone_header_file(
 	const char* path,
-	cute_shader_result_t compile_result,
+	CF_ShaderCompilerResult compile_result,
 	const char* var_name
-) {
+)
+{
 	errno = 0;
 	FILE* file = fopen(path, "wb");
 	if (file == NULL) {
@@ -235,8 +241,9 @@ static bool write_standalone_header_file(
 
 static bool write_bytecode_file(
 	const char* path,
-	cute_shader_result_t compile_result
-) {
+	CF_ShaderCompilerResult compile_result
+)
+{
 	errno = 0;
 	FILE* file = fopen(path, "wb");
 	if (file == NULL) { return false; }
@@ -371,13 +378,13 @@ int main(int argc, const char* argv[]) {
 
 	cute_shader_init();
 
-	cute_shader_file_t builtin_includes[sizeof(s_builtin_includes) / sizeof(s_builtin_includes[0]) + 1];
+	CF_ShaderCompilerFile builtin_includes[sizeof(s_builtin_includes) / sizeof(s_builtin_includes[0]) + 1];
 	int num_builtin_includes = sizeof(s_builtin_includes) / sizeof(s_builtin_includes[0]);
 	for (int i = 0; i < num_builtin_includes; ++i) {
 		builtin_includes[i] = s_builtin_includes[i];
 	}
 
-	cute_shader_config_t config = {
+	CF_ShaderCompilerConfig config = {
 		.num_builtin_includes = num_builtin_includes,
 		.num_include_dirs = num_includes,
 		.include_dirs = include_dirs,
@@ -400,7 +407,7 @@ int main(int argc, const char* argv[]) {
 			.content = input_content,
 		};
 
-		cute_shader_config_t config = {
+		CF_ShaderCompilerConfig config = {
 			.num_builtin_includes = num_builtin_includes,
 			.builtin_includes = builtin_includes,
 
@@ -411,7 +418,7 @@ int main(int argc, const char* argv[]) {
 			.return_preprocessed_source = true,
 		};
 
-		cute_shader_result_t draw_shader_result = cute_shader_compile(
+		CF_ShaderCompilerResult draw_shader_result = cute_shader_compile(
 			s_draw_fs,
 			CUTE_SHADER_STAGE_FRAGMENT,
 			config
@@ -421,7 +428,7 @@ int main(int argc, const char* argv[]) {
 			cute_shader_free_result(draw_shader_result);
 			goto end;
 		}
-		cute_shader_result_t blit_shader_result = cute_shader_compile(
+		CF_ShaderCompilerResult blit_shader_result = cute_shader_compile(
 			s_blit_fs,
 			CUTE_SHADER_STAGE_FRAGMENT,
 			config
@@ -462,7 +469,7 @@ int main(int argc, const char* argv[]) {
 			.name = "shader_stub.shd",
 			.content = s_shader_stub,
 		};
-		cute_shader_config_t config = {
+		CF_ShaderCompilerConfig config = {
 			.num_builtin_includes = num_builtin_includes,
 			.builtin_includes = builtin_includes,
 
@@ -477,7 +484,7 @@ int main(int argc, const char* argv[]) {
 		for (int i = 0; i < num_builtin_shaders; ++i) {
 			CF_BuiltinShaderSource source = s_builtin_shader_sources[i];
 
-			cute_shader_result_t vertex_result = cute_shader_compile(
+			CF_ShaderCompilerResult vertex_result = cute_shader_compile(
 				source.vertex, CUTE_SHADER_STAGE_VERTEX, config
 			);
 			if (!vertex_result.success) {
@@ -498,7 +505,7 @@ int main(int argc, const char* argv[]) {
 			}
 			cute_shader_free_result(vertex_result);
 
-			cute_shader_result_t fragment_result = cute_shader_compile(
+			CF_ShaderCompilerResult fragment_result = cute_shader_compile(
 				source.fragment, CUTE_SHADER_STAGE_FRAGMENT, config
 			);
 			if (!fragment_result.success) {
@@ -533,7 +540,7 @@ int main(int argc, const char* argv[]) {
 			.content = s_shader_stub,
 		};
 
-		cute_shader_config_t config = {
+		CF_ShaderCompilerConfig config = {
 			.num_builtin_includes = num_builtin_includes,
 			.builtin_includes = builtin_includes,
 
@@ -544,7 +551,7 @@ int main(int argc, const char* argv[]) {
 			.return_preprocessed_source = true,
 		};
 
-		cute_shader_result_t result = cute_shader_compile(
+		CF_ShaderCompilerResult result = cute_shader_compile(
 			input_content,
 			type == SHADER_TYPE_VERTEX
 				? CUTE_SHADER_STAGE_VERTEX

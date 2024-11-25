@@ -25,7 +25,7 @@ To access them use the following code:
 
 ```c
 CF_ShaderInfo shader_info = bytecode.shader_info;
-CF_ShaderUniformMemberInfo members = shader_info.uniform_member;
+CF_ShaderUniformMemberInfo members = shader_info.uniform_members;
 for (int uniform_index = 0; uniform_index < shader_info.num_uniforms; ++uniform_index) {
     const CF_ShaderUniformInfo uniform_info = &shader_info.uniforms[uniform_index]);
     printf("Uniform block %s has the following members:\n", uniform_info->block_name);
