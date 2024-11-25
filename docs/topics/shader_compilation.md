@@ -21,7 +21,7 @@ Take note that online compilation functions such as [`cf_make_shader_from_source
 
 ## Offline compilation
 
-If you have a lot of shaders and want to avoid runtime compilation overhead, CF provides its own offline compiller: `cute-shaderc`.
+If you have a lot of shaders and want to avoid runtime compilation overhead, CF provides its own offline compiler: `cute-shaderc`.
 
 ```
 Usage: cute-shaderc [options] <input>
@@ -44,14 +44,15 @@ Compile GLSL into SPIRV bytecode and generate a C header for embedding.
 `-oheader=` indicates where you want to output the header file.
 
 `-varname=` indicates the name of the static variable of the type [`CF_ShaderBytecode`](/graphics/cf_shaderbytecode.md).
-This variable is defined in the generated header.
+This variable will be defined in the generated header.
 It can be passed to related shader functions (explained below).
 
-The `-type=` flag indicates which type of shader you want to compile.
-`vertex` and `fragment` are for compiling [low level shaders](https://randygaul.github.io/cute_framework/#/topics/low_level_graphics?id=shaders).
-The result should be passed into [`cf_make_shader_from_bytecode`](/graphics/cf_make_shader_from_bytecode.md).
-`draw` is for compiling [custom draw shaders](https://randygaul.github.io/cute_framework/#/topics/drawing?id=shaders).
-The result should be passed into [`cf_make_draw_shader_from_bytecode`](/draw/cf_make_draw_shader_from_bytecode.md).
+The `-type=` flag indicates which type of shader you want to compile:
+
+* `vertex` and `fragment` are for compiling [low level shaders](https://randygaul.github.io/cute_framework/#/topics/low_level_graphics?id=shaders).
+  The result should be passed into [`cf_make_shader_from_bytecode`](/graphics/cf_make_shader_from_bytecode.md).
+* `draw` is for compiling [custom draw shaders](https://randygaul.github.io/cute_framework/#/topics/drawing?id=shaders).
+  The result should be passed into [`cf_make_draw_shader_from_bytecode`](/draw/cf_make_draw_shader_from_bytecode.md).
 
 The `-I` flag will be explained in the "Shader inclusion" section below.
 
@@ -148,7 +149,7 @@ Take note that while two styles of includes are accepted: "system" (i.e: `#inclu
 In other words, included shaders are **always** searched in the shader directory regardless of where the including shader is located.
 This is to provide consistent behaviour for both offline compilation from a source file and online compilation from a runtime string.
 
-CF also provides several builtin utility shaders: `gamma.shd`, `distance.shd`, `smooth_uv.shd`, `blend.shd`.
+CF also provides several builtin utility modules: `gamma.shd`, `distance.shd`, `smooth_uv.shd`, `blend.shd`.
 These can always be `#include`-d by your shader without setting the include path.
 
 ## Draw shader quirks
@@ -156,13 +157,13 @@ These can always be `#include`-d by your shader without setting the include path
 Due to the way [custom draw shaders](https://randygaul.github.io/cute_framework/#/topics/drawing?id=shaders) are compiled, any errors in your shader will be reported as being from `shader_stub.shd`.
 Do not look for this file and just take it as the errors are coming from whatever shader you are trying to compile.
 
-## Migrating into SDL_GPU official shader tool
+## Migrating to SDL_GPU official shader tool
 
 The current shader tooling is temporary until SDL's own shader tooling is mature enough.
 It is still in early development so we do not know what will change.
 To ensure as little friction as possible during migration, the following practice is advised.
 
-The `CF_ShaderBytecode` structure, whether coming from [`cf_compile_shader_to_bytecode`](/graphics/cf_compile_shader_to_bytecode.md) or the `cute-shaderc` should be treated as opaque.
+The `CF_ShaderBytecode` struct, whether coming from [`cf_compile_shader_to_bytecode`](/graphics/cf_compile_shader_to_bytecode.md) or the `cute-shaderc` compiler should be treated as opaque.
 It should not be modified in anyway and only passed verbatim to related functions: [`cf_make_shader_from_bytecode`](/graphics/cf_make_shader_from_bytecode.md) and [`cf_make_draw_shader_from_bytecode`](/draw/cf_make_draw_shader_from_bytecode.md).
 There is no guarantee on how the inner structure may change but the signature of the above functions will remain the same regardless of compilation backend.
 In other words, the API should remain stable at source level but there is no guarantee on the ABI.
@@ -172,5 +173,5 @@ Its various flags and their behaviours will remain the same.
 The generated header will still declare a variable of the type [`CF_ShaderBytecode`](/graphics/cf_shaderbytecode.md).
 The actual content of the output, however, might change with compilation backend.
 
-Beyond the above, binary shader content or even the shading langauge syntax might not be compatible when we adopt SDL's official shader tooling.
+Beyond the above, binary shader content or even the shading language syntax might not be compatible when we adopt SDL's official shader tooling.
 This section will be updated when further information is available.
