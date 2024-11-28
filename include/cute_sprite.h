@@ -536,17 +536,17 @@ CF_INLINE void cf_sprite_update(CF_Sprite* sprite)
 						sprite->loop_count++;
 						sprite->frame_index++;
 					} else  {
-						sprite->frame_index = frame_count - 1;
+						sprite->frame_index = 0;
 					}
 				}
 			} else {
 				sprite->frame_index++;
 				if (sprite->frame_index == frame_count) {
+					sprite->loop_count++;
 					if (sprite->loop) {
-						sprite->loop_count++;
 						sprite->frame_index--;
 					} else {
-						sprite->frame_index = 0;
+						sprite->frame_index = frame_count - 1;
 					}
 				}
 			}
