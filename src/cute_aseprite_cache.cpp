@@ -186,6 +186,7 @@ CF_Result cf_aseprite_cache_load_from_memory(const char* unique_name, const void
 	afit(entry.slices, ase->slice_count);
 	float sw = (float)ase->w;
 	float sh = (float)ase->h;
+	const char* origin_slice_name = sintern("origin");
 	for (int i = 0; i < ase->slice_count; ++i) {
 		ase_slice_t* slice = ase->slices + i;
 		float x = (float)slice->origin_x - sw*0.5f;
@@ -199,20 +200,23 @@ CF_Result cf_aseprite_cache_load_from_memory(const char* unique_name, const void
 
 		// Record the slice.
 		CF_Aabb bb = make_aabb(V2(x,y-h), V2(x+w,y));
+		const char* slice_name = sintern(slice->name);
 		apush(entry.slices, CF_SpriteSlice {
 			.frame_index = slice->frame_number,
-			.name = sintern(slice->name),
+			.name = slice_name,
 			.box = bb
 		});
 
 		if (slice->has_center_as_9_slice) {
 			// Ignored, as this is mostly intended for UI.
 		}
-		if (slice->has_pivot) {
+		if (slice->has_pivot && slice_name == origin_slice_name) {
 			v2 pivot = V2((float)slice->pivot_x, (float)slice->pivot_y);
 			pivot.y = (h - 1) - pivot.y;
 			pivot = pivot - center(bb);
-			entry.pivots[slice->frame_number] = pivot;
+			for (int frame_number = slice->frame_number; frame_number < ase->frame_count; ++frame_number) {
+				entry.pivots[frame_number] = pivot;
+			}
 		}
 	}
 
