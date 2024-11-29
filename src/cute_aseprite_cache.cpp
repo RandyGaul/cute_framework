@@ -212,8 +212,10 @@ CF_Result cf_aseprite_cache_load_from_memory(const char* unique_name, const void
 		}
 		if (slice->has_pivot && slice_name == origin_slice_name) {
 			v2 pivot = V2((float)slice->pivot_x, (float)slice->pivot_y);
-			pivot.y = (h - 1) - pivot.y;
-			pivot = pivot - center(bb);
+			// Transform from CF's (0, 0) at center to ase's (0, 0) at top-left.
+			pivot.x = pivot.x - sw * 0.5f + 0.5f;
+			pivot.y = pivot.y - sh * 0.5f + 0.5f;
+
 			for (int frame_number = slice->frame_number; frame_number < ase->frame_count; ++frame_number) {
 				entry.pivots[frame_number] = pivot;
 			}
