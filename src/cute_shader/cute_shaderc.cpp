@@ -102,7 +102,7 @@ static bool write_bytecode_struct(
 		}
 		fprintf(file, "\n};\n");
 	} else {
-		fprintf(file, "static const char** %s%s_image_names = NULL;\n", var_name, suffix);
+		fprintf(file, "static const char** const %s%s_image_names = NULL;\n", var_name, suffix);
 	}
 
 	if (shader_info->num_uniforms > 0) {
@@ -117,7 +117,7 @@ static bool write_bytecode_struct(
 		}
 		fprintf(file, "};\n");
 	} else {
-		fprintf(file, "static CF_ShaderUniformInfo* %s%s_uniforms = NULL;\n", var_name, suffix);
+		fprintf(file, "static CF_ShaderUniformInfo* const %s%s_uniforms = NULL;\n", var_name, suffix);
 	}
 
 	if (shader_info->num_uniform_members > 0) {
@@ -132,7 +132,7 @@ static bool write_bytecode_struct(
 		}
 		fprintf(file, "};\n");
 	} else {
-		fprintf(file, "static CF_ShaderUniformMemberInfo* %s%s_uniform_members = NULL;\n", var_name, suffix);
+		fprintf(file, "static CF_ShaderUniformMemberInfo* const %s%s_uniform_members = NULL;\n", var_name, suffix);
 	}
 
 	if (shader_info->num_inputs > 0) {
@@ -146,7 +146,7 @@ static bool write_bytecode_struct(
 		}
 		fprintf(file, "};\n");
 	} else {
-		fprintf(file, "static CF_ShaderInputInfo* %s%s_inputs = NULL;\n", var_name, suffix);
+		fprintf(file, "static CF_ShaderInputInfo* const %s%s_inputs = NULL;\n", var_name, suffix);
 	}
 
 	// Write the struct
