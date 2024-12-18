@@ -1,6 +1,10 @@
 #include <cute.h>
 using namespace Cute;
 
+#ifndef CF_RUNTIME_SHADER_COMPILATION
+#include "spaceshooter_data/flash_shd.h"
+#endif
+
 inline float fade(float t, float lo, float hi) { return remap(1.0f - smoothstep(t), lo, hi); }
 
 #define ROCKETS_MAX 16
@@ -1114,7 +1118,11 @@ int main(int argc, char* argv[])
 	g->player.reset();
 	g->boss1 = true;
 
+#ifdef CF_RUNTIME_SHADER_COMPILATION
 	CF_Shader flash_shader = cf_make_draw_shader("flash.shd");
+#else
+	CF_Shader flash_shader = cf_make_draw_shader_from_bytecode(s_flash_shd_bytecode);
+#endif
 
 	while (app_is_running()) {
 		app_update();

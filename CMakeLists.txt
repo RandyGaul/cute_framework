@@ -11,8 +11,8 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 # Todo - Fix how turning some of these off breaks the build.
 option(CF_FRAMEWORK_STATIC "Build static library for Cute Framework." ON)
-option(CF_GLSLANG "Build CF with online shader compilation support." ON)
-option(CF_GLSLANG_OPTIMIZER "Build CF with online shader compilation + optmization support (requires python 3.x installation)." ON)
+option(CF_RUNTIME_SHADER_COMPILATION "Build CF with online shader compilation support (requires python 3.x installation)." ON)
+option(CF_CUTE_SHADERC "Build cute-shaderc, an offline shader compiler (requires python 3.x installation)." ON)
 option(CF_FRAMEWORK_APPLE_FRAMEWORK "Build CF libraries as Apple Framework" OFF)
 
 # Platform detection.
@@ -177,6 +177,7 @@ set(CF_HDRS
 	src/internal/cute_aseprite_cache_internal.h
 	src/internal/cute_alloc_internal.h
 	src/internal/yyjson.h
+	src/data/builtin_shaders_bytecode.h
 )
 
 if(CF_FRAMEWORK_STATIC)
@@ -329,57 +330,77 @@ else()
 endif()
 target_include_directories(cute PUBLIC ${SDL3_INCLUDE_DIRS})
 
-# glslang + SPIRV stuff for online shader compilation (optional).
-if (CF_GLSLANG)
-	add_definitions(-DCF_RUNTIME_SHADER_COMPILATION)
+if (CF_RUNTIME_SHADER_COMPILATION OR CF_CUTE_SHADERC)
+	# glslang for shader compilation.
 	set(GLSLANG_TESTS_DEFAULT OFF CACHE BOOL "Do not build glslang tests.")
 	set(BUILD_SHARED_LIBS OFF CACHE BOOL "Do not build glslang as a shared lib.")
-	SET(ENABLE_OPT CF_GLSLANG_OPTIMIZER CACHE BOOL "Do not use SPIR-V Tools.")
+	set(ENABLE_OPT ON CACHE BOOL "Enable optimization.")
 	set(SKIP_SPIRV_TOOLS_INSTALL OFF CACHE BOOL "Don't install the SPIR-V Tools as they are built.")
 	set(SPIRV_SKIP_EXECUTABLES ON CACHE BOOL "Don't build any SPIR-V Tools executables/tests.")
 	set(SPIRV_WERROR OFF CACHE BOOL "Turn off SPIR-V warnings as error.")
 	set(ENABLE_GLSLANG_BINARIES OFF CACHE BOOL "Turn off some standalone binary tools for glslang.")
 	set(GLSLANG_ENABLE_INSTALL OFF CACHE BOOL "Disable installation option for glslang.")
-
-	if (CF_GLSLANG_OPTIMIZER)
-		find_package(Python3 REQUIRED)
-		FetchContent_Declare(
-			glslang
-			URL https://github.com/KhronosGroup/glslang/archive/refs/tags/14.3.0.zip
-			DOWNLOAD_EXTRACT_TIMESTAMP ON
-			PATCH_COMMAND ${Python3_EXECUTABLE} update_glslang_sources.py
-		)
-		FetchContent_MakeAvailable(glslang)
-	endif()
-	set(SPIRV_CROSS_CLI OFF CACHE BOOL "Turn off building SPIR-Cross CLI.")
+	find_package(Python3 REQUIRED)
 	FetchContent_Declare(
-		SPIRV_CROSS
-		GIT_REPOSITORY https://github.com/KhronosGroup/SPIRV-Cross.git
-		GIT_TAG main
-		CMAKE_ARGS -DSPIRV_CROSS_EXCEPTIONS_TO_ASSERTIONS=ON -DSPIRV_CROSS_CLI=OFF -DSPIRV_CROSS_SHARED=OFF -DSPIRV_CROSS_STATIC=ON
-		GIT_SHALLOW TRUE
-		GIT_PROGRESS TRUE
+		glslang
+		URL https://github.com/KhronosGroup/glslang/archive/refs/tags/14.3.0.zip
+		DOWNLOAD_EXTRACT_TIMESTAMP ON
+		PATCH_COMMAND ${Python3_EXECUTABLE} update_glslang_sources.py
 	)
-	set(SPIRV_CROSS_ENABLE_TESTS OFF CACHE BOOL "Disable SPIRV-Cross tests")
-	set(SPIRV_CROSS_ENABLE_GLSLANG_INSTALL OFF CACHE BOOL "Disable GLSLANG install")
-	set(SPIRV_CROSS_SHARED OFF CACHE BOOL "Build SPIRV-Cross as shared library")
-	set(SPIRV_CROSS_STATIC ON CACHE BOOL "Do not build SPIRV-Cross as static library")
-	set(SPIRV_CROSS_C_API ON CACHE BOOL "Enable the C API")
-	set(SPIRV_CROSS_EXCEPTIONS_TO_ASSERTIONS ON CACHE BOOL "Turn off exceptions in SPIRV-Cross.")
-	set(SPIRV_CROSS_ENABLE_REFLECT OFF CACHE BOOL "Turn off reflection in SPIRV-Cross.")
-	set(SPIRV_CROSS_SKIP_INSTALL OFF CACHE BOOL "Turn off install targets in SPIRV-Cross.")
-	set(SPIRV_CROSS_ENABLE_UTIL OFF CACHE BOOL "Turn off utils in SPIRV-Cross.")
-	set(SPIRV_CROSS_ENABLE_CPP OFF CACHE BOOL "Turn off CPP target support in SPIRV-Cross.")
-	set(SPIRV_CROSS_FORCE_PIC $<NOT:${CF_FRAMEWORK_STATIC}> CACHE BOOL "Force position-independent code for all targets.")
-	if (WINDOWS)
-		set(SPIRV_CROSS_ENABLE_MSL OFF CACHE BOOL "Turn off MSL support when on windows.")
+	FetchContent_MakeAvailable(glslang)
+
+	# cute-shader, a glslang wrapper
+	set(CUTE_SHADER_SRCS src/cute_shader/cute_shader.cpp)
+	add_library(cute-shader STATIC ${CUTE_SHADER_SRCS})
+	target_link_libraries(cute-shader PRIVATE glslang glslang-default-resource-limits SPIRV)
+	if (NOT MSVC AND NOT CF_FRAMEWORK_STATIC)
+		target_compile_options(cute-shader PRIVATE -fPIC)
 	endif()
-	if (APPLE)
-		set(SPIRV_CROSS_ENABLE_HLSL OFF CACHE BOOL "Turn off HLSL support when on windows.")
+	target_include_directories(cute-shader PUBLIC include)  # For cute_shader_info.h
+
+	# Linking cute-shader for online shader compilation (optional).
+	if (CF_RUNTIME_SHADER_COMPILATION)
+		target_compile_definitions(cute PUBLIC CF_RUNTIME_SHADER_COMPILATION)
+		set(CF_LINK_LIBS ${CF_LINK_LIBS} cute-shader)
 	endif()
-	FetchContent_MakeAvailable(SPIRV_CROSS)
-	set(CF_LINK_LIBS ${CF_LINK_LIBS} glslang glslang-default-resource-limits SPIRV SPIRV-Tools SPIRV-Tools-opt spirv-cross-c)
+
+	# cute-shaderc, an offline shader compiler
+	if (CF_CUTE_SHADERC)
+		set(CUTE_SHADERC_SRCS src/cute_shader/cute_shaderc.cpp)
+		add_executable(cute-shaderc ${CUTE_SHADERC_SRCS})
+		target_link_libraries(cute-shaderc cute-shader)
+	endif()
 endif()
+
+# SPIRV-Cross for SDL_gpu_shadercross
+set(SPIRV_CROSS_CLI OFF CACHE BOOL "Turn off building SPIRV-Cross CLI.")
+FetchContent_Declare(
+	SPIRV_CROSS
+	GIT_REPOSITORY https://github.com/KhronosGroup/SPIRV-Cross.git
+	GIT_TAG main
+	CMAKE_ARGS -DSPIRV_CROSS_EXCEPTIONS_TO_ASSERTIONS=ON -DSPIRV_CROSS_CLI=OFF -DSPIRV_CROSS_SHARED=OFF -DSPIRV_CROSS_STATIC=ON
+	GIT_SHALLOW TRUE
+	GIT_PROGRESS TRUE
+)
+set(SPIRV_CROSS_ENABLE_TESTS OFF CACHE BOOL "Disable SPIRV-Cross tests")
+set(SPIRV_CROSS_ENABLE_GLSLANG_INSTALL OFF CACHE BOOL "Disable GLSLANG install")
+set(SPIRV_CROSS_SHARED OFF CACHE BOOL "Build SPIRV-Cross as shared library")
+set(SPIRV_CROSS_STATIC ON CACHE BOOL "Do not build SPIRV-Cross as static library")
+set(SPIRV_CROSS_C_API ON CACHE BOOL "Enable the C API")
+set(SPIRV_CROSS_EXCEPTIONS_TO_ASSERTIONS ON CACHE BOOL "Turn off exceptions in SPIRV-Cross.")
+set(SPIRV_CROSS_ENABLE_REFLECT OFF CACHE BOOL "Turn off reflection in SPIRV-Cross.")
+set(SPIRV_CROSS_SKIP_INSTALL OFF CACHE BOOL "Turn off install targets in SPIRV-Cross.")
+set(SPIRV_CROSS_ENABLE_UTIL OFF CACHE BOOL "Turn off utils in SPIRV-Cross.")
+set(SPIRV_CROSS_ENABLE_CPP OFF CACHE BOOL "Turn off CPP target support in SPIRV-Cross.")
+set(SPIRV_CROSS_FORCE_PIC $<NOT:${CF_FRAMEWORK_STATIC}> CACHE BOOL "Force position-independent code for all targets.")
+if (WINDOWS)
+	set(SPIRV_CROSS_ENABLE_MSL OFF CACHE BOOL "Turn off MSL support when on windows.")
+endif()
+if (APPLE)
+	set(SPIRV_CROSS_ENABLE_HLSL OFF CACHE BOOL "Turn off HLSL support when on windows.")
+endif()
+FetchContent_MakeAvailable(SPIRV_CROSS)
+set(CF_LINK_LIBS ${CF_LINK_LIBS} spirv-cross-c)
 
 # Some platform specific settings.
 if(EMSCRIPTEN)
@@ -407,6 +428,18 @@ elseif(APPLE)
 		)
 		endif()
 	endif()
+endif()
+
+# Precompile builtin shaders
+if (CF_CUTE_SHADERC)
+	add_custom_command(
+		OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/src/data/builtin_shaders_bytecode.h
+		COMMAND cute-shaderc
+			-type=builtin
+			-oheader=${CMAKE_CURRENT_SOURCE_DIR}/src/data/builtin_shaders_bytecode.h
+		DEPENDS src/cute_shader/builtin_shaders.h
+		DEPENDS cute-shaderc
+	)
 endif()
 
 # Link up all dependencies to Cute.
@@ -466,10 +499,10 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 		add_executable(docsparser samples/docs_parser.cpp)
 		add_executable(scratch samples/scratch.cpp)
 		add_executable(https samples/https.c)
-		add_executable(spaceshooter samples/spaceshooter.cpp)
+		add_executable(spaceshooter samples/spaceshooter.cpp samples/spaceshooter_data/flash_shd.h)
 		add_executable(draw_to_texture samples/draw_to_texture.c)
 		add_executable(hello_triangle samples/hello_triangle.c)
-		add_executable(waves samples/waves.cpp)
+		add_executable(waves samples/waves.cpp samples/waves_data/waves_shd.h)
 		add_executable(shallow_water samples/shallow_water.cpp)
 		add_executable(noise samples/noise.c)
 		add_executable(fetch_image samples/fetch_image.cpp)
@@ -536,6 +569,30 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 				target_dxc_copy(${CURRENT_TARGET})
 			endif()
 		endforeach()
+
+		# Pre-compile shaders for certain samples.
+		if (CF_CUTE_SHADERC)
+			add_custom_command(
+				OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/samples/spaceshooter_data/flash_shd.h
+				COMMAND cute-shaderc
+					-type=draw
+					-varname=s_flash_shd_bytecode
+					-oheader=${CMAKE_CURRENT_SOURCE_DIR}/samples/spaceshooter_data/flash_shd.h
+					${CMAKE_CURRENT_SOURCE_DIR}/samples/spaceshooter_data/flash.shd
+				DEPENDS samples/spaceshooter_data/flash.shd
+				DEPENDS cute-shaderc
+			)
+			add_custom_command(
+				OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/samples/waves_data/waves_shd.h
+				COMMAND cute-shaderc
+					-type=draw
+					-varname=s_waves_shd_bytecode
+					-oheader=${CMAKE_CURRENT_SOURCE_DIR}/samples/waves_data/waves_shd.h
+					${CMAKE_CURRENT_SOURCE_DIR}/samples/waves_data/waves.shd
+				DEPENDS samples/waves_data/waves.shd
+				DEPENDS cute-shaderc
+			)
+		endif()
 
 		# Copy over some folders for certain samples.
 		add_custom_command(TARGET spaceshooter PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/samples/spaceshooter_data $<TARGET_FILE_DIR:spaceshooter>/spaceshooter_data)

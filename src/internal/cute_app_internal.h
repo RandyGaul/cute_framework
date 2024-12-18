@@ -78,7 +78,6 @@ struct CF_App
 	bool shader_directory_set = false;
 	Cute::CF_Path shader_directory;
 	Cute::Map<const char*, CF_ShaderFileInfo> shader_file_infos;
-	Cute::Map<const char*, const char*> builtin_shaders;
 	bool gfx_enabled = false;
 	float dpi_scale = 1.0f;
 	float dpi_scale_prev = 1.0f;

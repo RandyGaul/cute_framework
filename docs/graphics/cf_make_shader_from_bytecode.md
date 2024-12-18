@@ -12,13 +12,13 @@ GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/maste
 Creates a shader from SPIR-V bytecode.
 
 ```cpp
-CF_Shader cf_make_shader_from_bytecode(const dyna uint8_t* vertex_bytecode, const dyna uint8_t* fragment_bytecode);
+CF_Shader cf_make_shader_from_bytecode(CF_ShaderBytecode vertex_bytecode, CF_ShaderBytecode fragment_bytecode);
 ```
 
 Parameters | Description
 --- | ---
-vertex_bytecode | A bytecode blob from [cf_compile_shader_to_bytecode](/graphics/cf_compile_shader_to_bytecode.md) for the vertex shader.
-fragment_bytecode | A bytecode blob from [cf_compile_shader_to_bytecode](/graphics/cf_compile_shader_to_bytecode.md) for the fragment shader.
+vertex_bytecode | A bytecode blob from [cf_compile_shader_to_bytecode](/graphics/cf_compile_shader_to_bytecode.md) or the cute-shaderc compiler for the vertex shader.
+fragment_bytecode | A bytecode blob from [cf_compile_shader_to_bytecode](/graphics/cf_compile_shader_to_bytecode.md) or the cute-shaderc compiler for the fragment shader.
 
 ## Remarks
 

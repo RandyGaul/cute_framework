@@ -22,6 +22,7 @@
 - [Multithreading](/topics/multithreading.md)
 - [Networking](/topics/networking.md)
 - [Random Numbers](/topics/random_numbers.md)
+- [Shader compilation](/topics/shader_compilation.md)
 - [Strings](/topics/strings.md)
 - [Virtual File System](/topics/virtual_file_system.md)
 - [Web](/topics/web.md)

@@ -1179,6 +1179,22 @@ CF_API CF_RenderState CF_CALL cf_draw_peek_render_state();
 CF_API void CF_CALL cf_draw_set_atlas_dimensions(int width_in_pixels, int height_in_pixels);
 
 /**
+ * @struct   CF_DrawShaderBytecode
+ * @category draw
+ * @brief    Bytecode for a draw shader.
+ * @remarks  This can be created using the `cute-shaderc` compiler.
+ * @related  CF_Shader cf_draw_push_shader cf_draw_pop_shader cf_draw_peek_shader cf_make_draw_shader_from_bytecode
+ */
+typedef struct CF_DrawShaderBytecode
+{
+	/* @member Bytecode for draw shader. */
+	CF_ShaderBytecode draw_shader;
+	/* @member Bytecode for blit shader. */
+	CF_ShaderBytecode blit_shader;
+} CF_DrawShaderBytecode;
+// @end
+
+/**
  * @function cf_make_draw_shader
  * @category draw
  * @brief    Creates a custom draw shader.
@@ -1198,6 +1214,16 @@ CF_API CF_Shader CF_CALL cf_make_draw_shader(const char* path);
  * @related  CF_Shader cf_draw_push_shader cf_draw_pop_shader cf_draw_peek_shader
  */
 CF_API CF_Shader CF_CALL cf_make_draw_shader_from_source(const char* src);
+
+/**
+ * @function cf_make_draw_shader_from_bytecode
+ * @category draw
+ * @brief    Creates a custom draw shader from bytecode.
+ * @remarks  Your shader must be written in GLSL 450, and must follow some specific rules to be compatible with the draw API. For more in-depth explanations,
+ *           see CF's docs on [Draw Shaders](https://randygaul.github.io/cute_framework/#/topics/drawing?id=shaders).
+ * @related  CF_Shader CF_DrawShaderBytecode cf_draw_push_shader cf_draw_pop_shader cf_draw_peek_shader
+ */
+CF_API CF_Shader CF_CALL cf_make_draw_shader_from_bytecode(CF_DrawShaderBytecode bytecode);
 
 /**
  * @function cf_draw_push_shader

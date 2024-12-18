@@ -43,7 +43,6 @@ struct CF_Draw* draw;
 #include <imgui_internal.h>
 
 #include <algorithm>
-#include <glslang/Public/ShaderLang.h>
 
 // Initial design of this API comes from Noel Berry's Blah framework here:
 // https://github.com/NoelFB/blah/blob/master/include/blah_draw.h
@@ -2503,6 +2502,15 @@ CF_Shader cf_make_draw_shader_from_source(const char* src)
 	// Also make an attached blit shader to apply when drawing canvases.
 	CF_Shader blit_shd = cf_make_draw_blit_shader_from_source_internal(src);
 	CF_Shader draw_shd = cf_make_draw_shader_from_source_internal(src);
+	draw->draw_shd_to_blit_shd.add(draw_shd.id, blit_shd.id);
+	return draw_shd;
+}
+
+CF_Shader cf_make_draw_shader_from_bytecode(CF_DrawShaderBytecode bytecode)
+{
+	// Also make an attached blit shader to apply when drawing canvases.
+	CF_Shader blit_shd = cf_make_draw_blit_shader_from_bytecode_internal(bytecode.blit_shader);
+	CF_Shader draw_shd = cf_make_draw_shader_from_bytecode_internal(bytecode.draw_shader);
 	draw->draw_shd_to_blit_shd.add(draw_shd.id, blit_shd.id);
 	return draw_shd;
 }

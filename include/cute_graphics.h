@@ -12,6 +12,7 @@
 #include "cute_result.h"
 #include "cute_color.h"
 #include "cute_c_runtime.h"
+#include "cute_shader_bytecode.h"
 
 //--------------------------------------------------------------------------------------------------
 // C API
@@ -681,22 +682,33 @@ CF_API CF_Shader CF_CALL cf_make_shader_from_source(const char* vertex_src, cons
  * @remarks  This function is good for precompiling shaders to bytecode, which can help speed up app
  *           startup times. SPIR-V blobs can be saved straight to disk and shipped with your game. Load
  *           the bytecode blob pair (vertex + fragment shader blobs) into a `CF_Shader` via `cf_make_shader_from_bytecode`.
- * @related  CF_Shader cf_make_shader_from_bytecode cf_make_shader_from_bytecode
+ *           The value returned from this function should be passed to `cf_free_shader_bytecode` when it is no longer needed.
+ * @related  CF_Shader CF_ShaderBytecode cf_make_shader_from_bytecode cf_free_shader_bytecode
  */
-CF_API const dyna uint8_t* CF_CALL cf_compile_shader_to_bytecode(const char* shader_src, CF_ShaderStage stage);
+CF_API CF_ShaderBytecode CF_CALL cf_compile_shader_to_bytecode(const char* shader_src, CF_ShaderStage stage);
+
+/**
+ * @function cf_free_shader_bytecode
+ * @category graphics
+ * @brief    Free a bytecode blob previously returned from `cf_compile_shader_to_bytecode`.
+ * @param    bytecode   The bytecode blob to free.
+ * @remarks  This function must only be called on the bytecode blob returned from `cf_compile_shader_to_bytecode`.
+ *           It cannot be called on the bytecode blob generated as a header from the `cute-shaderc` compiler.
+ */
+CF_API void CF_CALL cf_free_shader_bytecode(CF_ShaderBytecode bytecode);
 
 /**
  * @function cf_make_shader_from_bytecode
  * @category graphics
  * @brief    Creates a shader from SPIR-V bytecode.
- * @param    vertex_bytecode    A bytecode blob from `cf_compile_shader_to_bytecode` for the vertex shader.
- * @param    fragment_bytecode  A bytecode blob from `cf_compile_shader_to_bytecode` for the fragment shader.
+ * @param    vertex_bytecode    A bytecode blob from `cf_compile_shader_to_bytecode` or the cute-shaderc compiler for the vertex shader.
+ * @param    fragment_bytecode  A bytecode blob from `cf_compile_shader_to_bytecode` or the cute-shaderc compiler for the fragment shader.
  * @remarks  This function is good for precompiling shaders from bytecode, which can help speed up app
  *           startup times. SPIR-V blobs can be saved straight to disk and shipped with your game. Create the
  *           bytecode blob with `cf_make_shader_from_bytecode`.
  * @related  CF_Shader cf_make_shader_from_bytecode cf_make_shader_from_bytecode
  */
-CF_API CF_Shader CF_CALL cf_make_shader_from_bytecode(const dyna uint8_t* vertex_bytecode, const dyna uint8_t* fragment_bytecode);
+CF_API CF_Shader CF_CALL cf_make_shader_from_bytecode(CF_ShaderBytecode vertex_bytecode, CF_ShaderBytecode fragment_bytecode);
 
 /**
  * @function cf_destroy_shader
@@ -1697,8 +1709,9 @@ CF_INLINE CF_Shader make_shader(const char* vertex, const char* fragment) { retu
 CF_INLINE void shader_directory(const char* path) { cf_shader_directory(path); }
 CF_INLINE void shader_on_changed(void (*on_changed_fn)(const char* path, void* udata), void* udata) { cf_shader_on_changed(on_changed_fn, udata); }
 CF_INLINE CF_Shader make_shader_from_source(const char* vertex_src, const char* fragment_src) { return cf_make_shader_from_source(vertex_src, fragment_src); }
-CF_INLINE const dyna uint8_t* compile_shader_to_bytecode(const char* shader_src, CF_ShaderStage stage) { return cf_compile_shader_to_bytecode(shader_src, stage); }
-CF_INLINE CF_Shader make_shader_from_bytecode(const dyna uint8_t* vertex_bytecode, const dyna uint8_t* fragment_bytecode) { return cf_make_shader_from_bytecode(vertex_bytecode, fragment_bytecode); }
+CF_INLINE CF_ShaderBytecode compile_shader_to_bytecode(const char* shader_src, CF_ShaderStage stage) { return cf_compile_shader_to_bytecode(shader_src, stage); }
+CF_INLINE void free_shader_bytecode(CF_ShaderBytecode bytecode) { return cf_free_shader_bytecode(bytecode); }
+CF_INLINE CF_Shader make_shader_from_bytecode(CF_ShaderBytecode vertex_bytecode, CF_ShaderBytecode fragment_bytecode) { return cf_make_shader_from_bytecode(vertex_bytecode, fragment_bytecode); }
 CF_INLINE void destroy_shader(CF_Shader shader) { cf_destroy_shader(shader); }
 CF_INLINE CF_CanvasParams canvas_defaults(int w, int h) { return cf_canvas_defaults(w, h); }
 CF_INLINE CF_Canvas make_canvas(CF_CanvasParams pass_params) { return cf_make_canvas(pass_params); }
