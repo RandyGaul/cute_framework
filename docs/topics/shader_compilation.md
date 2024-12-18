@@ -3,25 +3,29 @@
 <br>
 
 CF uses SDL_Gpu under the hood for rendering.
-Since SDL_Gpu will, at some point, offer their own [shader tools](https://github.com/libsdl-org/SDL_shader_tools) to provide an easy way to support cross-platform shaders. For now, CF has its own shader tooling based on [glslang](https://github.com/KhronosGroup/glslang) as a temporary solution, to be removed once SDL_Gpu shader tools gets going.
+SDL_Gpu will, at some point, offer their own [shader tools](https://github.com/libsdl-org/SDL_shader_tools) to provide an easy way to support cross-platform shaders. For now, CF has its own shader tooling based on [glslang](https://github.com/KhronosGroup/glslang) as a temporary solution, to be removed once SDL_Gpu shader tools gets going.
 
 ## Runtime Shader Compilation
 
 CF compiles shaders of the format GLSL 450. Shaders can be compiled at runtime, or precompiled into bytecode blobs. By default shaders are compiled at runtime, though this is adjustable via by the CMake option `CF_RUNTIME_SHADER_COMPILATION` (`ON` by default).
 You can compile a shader by calling [`cf_make_shader_from_source`](/graphics/cf_make_shader_from_source.md).
 
-Unfortunately, when runtime shaders are enabled the build process will involve pulling in [glslang](https://github.com/KhronosGroup/glslang), which requires Python 3.x installation on your machine.
+!> **Note** Unfortunately, when runtime shaders are enabled the build process will involve pulling in [glslang](https://github.com/KhronosGroup/glslang), which requires Python 3.x installation on your machine.
 
 To remove the online compiler from CF, set `CF_RUNTIME_SHADER_COMPILATION` to `OFF`.
 Take note that online compilation functions such as [`cf_make_shader_from_source`](/graphics/cf_make_shader_from_source.md) will always fail if this is the case. Turning off runtime shader compilation can dramatically reduce the size and complexity of building CF. This is because [glslang](https://github.com/KhronosGroup/glslang) and similar alternatives to SDL's (unfinished) [shader tools](https://github.com/libsdl-org/SDL_shader_tools) are heavily bloated libraries, not written for fast compilation or load times. These will be removed at a later date from CF once SDL's shader tools get going.
 
 ## Precompiling Shaders
 
-CF provides its own offline compiler called `cute-shaderc`. You may want to disable runtime shader compilation, and instead precompile your shaders. Here are some reasons why this may make sense for you:
+CF provides its own offline compiler called `cute-shaderc`.
+
+You may want to disable runtime shader compilation, and instead precompile your shaders. Here are some reasons why this may make sense for you:
 
 - Reduce compilation size and time of CF itself
 - Reduce the time it takes to load shaders when your game is running
 - Reduce the number of dependencies your build process involves (reduced bug/breakage risk)
+
+!> **Note** By default (when using CMake) `CF_CUTE_SHADERC` is set to `ON` which will output `cute-shaderc`, an executable for precompiling shaders, in the same directory as where the `cute` library is placed when building CF. You may freely take a copy of `cute-shaderc` and place/use it wherever you like to support precompiled shaders.
 
 ```
 Usage: cute-shaderc [options] <input>
@@ -122,7 +126,7 @@ add_executable(my_game SOURCES)
 
 ## Minimal Build (Turning Off Runtime Shader Compilation)
 
-If you do not need custom shaders then set both `CF_RUNTIME_SHADER_COMPILATION` and `CF_CUTE_SHADERC` to `OFF`. This will reduce build and load times for CF (though, may increase load times for shaders themselves). You can still use all other CF features.
+If you do not need custom shaders then set both `CF_RUNTIME_SHADER_COMPILATION` and `CF_CUTE_SHADERC` to `OFF`. This will reduce build and load times for CF and shaders. You can still use all other CF features.
 
 You may want to use a minimal build if you plan to build a copy of `cute-shaderc` and call it on your own, managing shader compilation outside of building CF.
 
