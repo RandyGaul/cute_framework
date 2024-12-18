@@ -1,7 +1,6 @@
 #ifndef CUTE_SHADER_H
 #define CUTE_SHADER_H
 
-#include <stddef.h>
 #include <cute_shader_bytecode.h>
 
 typedef struct CF_ShaderCompilerDefine

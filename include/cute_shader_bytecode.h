@@ -8,8 +8,7 @@
 #ifndef CF_SHADER_BYTECODE_H
 #define CF_SHADER_BYTECODE_H
 
-#include <stddef.h>
-#include <stdint.h>
+#include <cute_defines.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -196,6 +195,7 @@ static inline const char* cf_shader_info_data_type_to_string(CF_ShaderInfoDataTy
 	CF_SHADER_INFO_DATA_TYPE_DEFS
 	#undef CF_ENUM
 	}
+	return NULL;
 }
 
 #ifdef __cplusplus

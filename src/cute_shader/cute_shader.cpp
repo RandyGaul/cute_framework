@@ -1,4 +1,5 @@
 #include "cute_shader.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -403,19 +404,19 @@ CF_ShaderCompilerResult cute_shader_compile( const char* source, CF_ShaderCompil
 		free(bindings);
 
 		// Prepare the returned reflection info
-		num_images = image_names_vec.size();
+		num_images = (int)image_names_vec.size();
 		if (num_images > 0) {
 			image_names = (const char**)malloc(sizeof(char*) * num_images);
 			memcpy(image_names, image_names_vec.data(), sizeof(char*) * num_images);
 		}
 
-		num_uniforms = uniforms_vec.size();
+		num_uniforms = (int)uniforms_vec.size();
 		if (num_uniforms > 0) {
 			uniforms = (CF_ShaderUniformInfo*)malloc(sizeof(CF_ShaderUniformInfo) * num_uniforms);
 			memcpy(uniforms, uniforms_vec.data(), sizeof(CF_ShaderUniformInfo) * num_uniforms);
 		}
 
-		num_uniform_members = uniform_members_vec.size();
+		num_uniform_members = (int)uniform_members_vec.size();
 		if (num_uniform_members > 0) {
 			uniform_members = (CF_ShaderUniformMemberInfo*)malloc(sizeof(CF_ShaderUniformMemberInfo) * num_uniform_members);
 			memcpy(uniform_members, uniform_members_vec.data(), sizeof(CF_ShaderUniformMemberInfo) * num_uniform_members);
