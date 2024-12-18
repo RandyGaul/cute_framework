@@ -16,6 +16,7 @@ int main(int argc, char* argv[])
 		});
 
 		cf_draw_circle((CF_Circle){ .p = { 0, 0 }, .r = 100.0f}, 10.0f);
+		cf_draw_pop_scissor();
 
 		cf_app_draw_onto_screen(true);
 	}

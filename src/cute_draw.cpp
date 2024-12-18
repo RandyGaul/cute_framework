@@ -2794,11 +2794,13 @@ static void s_process_command(CF_Canvas canvas, CF_Command* cmd, CF_Command* nex
 			same = false;
 		} else if (CF_MEMCMP(next->u.data, cmd->u.data, next->u.size)) {
 			same = false;
-		} else if (next->alpha_discard == cmd->alpha_discard &&
+		} else if (!(
+			next->alpha_discard == cmd->alpha_discard &&
 			next->render_state == cmd->render_state &&
 			next->scissor == cmd->scissor &&
 			next->shader == cmd->shader &&
-			next->viewport == cmd->viewport) {
+			next->viewport == cmd->viewport
+		)) {
 			same = false;
 		}
 	} else {
