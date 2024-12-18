@@ -534,20 +534,16 @@ CF_INLINE void cf_sprite_update(CF_Sprite* sprite)
 				if (sprite->frame_index < 0) {
 					if (sprite->loop) {
 						sprite->loop_count++;
-						sprite->frame_index = frame_count - 1;
-					} else  {
 						sprite->frame_index++;
+					} else  {
+						sprite->frame_index = 0;
 					}
 				}
 			} else {
 				sprite->frame_index++;
 				if (sprite->frame_index == frame_count) {
-					if (sprite->loop) {
-						sprite->loop_count++;
-						sprite->frame_index = 0;
-					} else {
-						sprite->frame_index--;
-					}
+					sprite->loop_count++;
+					sprite->frame_index--;
 				}
 			}
 		}
