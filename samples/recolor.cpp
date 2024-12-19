@@ -5,6 +5,7 @@ using namespace Cute;
 
 #define STR(X) #X
 const char* s_recolor = STR(
+	#include "blend.shd"\n
 	vec4 shader(vec4 color, vec2 pos, vec2 screen_uv, vec4 params)
 	{
 		vec3 a = rgb_to_hsv(color.rgb);

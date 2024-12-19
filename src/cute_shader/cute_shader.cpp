@@ -238,7 +238,7 @@ void cute_shader_cleanup(void)
 	glslang::FinalizeProcess();
 }
 
-CF_ShaderCompilerResult cute_shader_compile( const char* source, CF_ShaderCompilerStage stage, CF_ShaderCompilerConfig config)
+CF_ShaderCompilerResult cute_shader_compile(const char* source, CF_ShaderCompilerStage stage, CF_ShaderCompilerConfig config)
 {
 	EShLanguage glslang_stage = EShLangVertex;
 	switch (stage) {
