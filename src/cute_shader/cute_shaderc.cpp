@@ -1,3 +1,8 @@
+// This is a standalone shader compiler for Cute Framework, used to precompile shaders into
+// cross-platform bytecode blobs, either as direct binary files, or C-headers.
+//
+// See: https://randygaul.github.io/cute_framework/#/topics/shader_compilation
+
 #include <string.h>
 #include <stdio.h>
 #include <stdint.h>
@@ -77,12 +82,12 @@ static bool write_bytecode_struct(
 {
 	const uint8_t* content = compile_result.bytecode.content;
 
-	// Write preprocessed shader as comment
+	// Write preprocessed shader as comment.
 	fprintf(file, "/*\n");
 	fprintf(file, "%.*s\n", (int)compile_result.preprocessed_source_size, compile_result.preprocessed_source);
 	fprintf(file, "*/\n");
 
-	// Write the bytecode
+	// Write the bytecode.
 	fprintf(file, "static const uint8_t %s%s_content[%zu] = {", var_name, suffix, compile_result.bytecode.size);
 	for (size_t i = 0; i < compile_result.bytecode.size; ++i) {
 		if ((i % HEADER_LINE_SIZE) == 0) {
@@ -92,7 +97,7 @@ static bool write_bytecode_struct(
 	}
 	fprintf(file, "\n};\n");
 
-	// Write reflection info
+	// Write reflection info.
 	const CF_ShaderInfo* shader_info = &compile_result.bytecode.shader_info;
 
 	if (shader_info->num_images > 0) {
@@ -149,7 +154,7 @@ static bool write_bytecode_struct(
 		fprintf(file, "static CF_ShaderInputInfo* const %s%s_inputs = NULL;\n", var_name, suffix);
 	}
 
-	// Write the struct
+	// Write the struct.
 	fprintf(file, "static const CF_ShaderBytecode %s%s = {\n", var_name, suffix);
 	fprintf(file, "    .content = %s%s_content,\n", var_name, suffix);
 	fprintf(file, "    .size = %zu,\n", compile_result.bytecode.size);
@@ -186,7 +191,7 @@ static bool write_draw_header_file(
 
 	fprintf(file, "#pragma once\n\n");
 
-	// Write the constant
+	// Write the constant.
 	if (!write_bytecode_struct(file, draw_result, var_name, "_draw")) {
 		fclose(file);
 		return false;
