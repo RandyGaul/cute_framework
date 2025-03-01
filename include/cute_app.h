@@ -710,6 +710,22 @@ CF_API void CF_CALL cf_app_set_title(const char* title);
 CF_API void CF_CALL cf_app_set_icon(const char* virtual_path_to_png);
 
 /**
+ * @function cf_app_get_framerate
+ * @category app
+ * @brief    Returns the current framerate of the application.
+ * @related  cf_app_get_framerate cf_app_get_smoothed_framerate
+ */
+CF_API float CF_CALL cf_app_get_framerate();
+
+/**
+ * @function cf_app_get_smoothed_framerate
+ * @category app
+ * @brief    Returns the smoothed framerate of the application.
+ * @related  cf_app_get_framerate cf_app_get_smoothed_framerate
+ */
+CF_API float CF_CALL cf_app_get_smoothed_framerate();
+
+/**
  * @enum     CF_PowerState
  * @category app
  * @brief    The states of power for the application.
@@ -843,6 +859,8 @@ CF_INLINE void app_set_borderless_fullscreen_mode() { cf_app_set_borderless_full
 CF_INLINE void app_set_fullscreen_mode() { cf_app_set_fullscreen_mode(); }
 CF_INLINE void app_set_title(const char* title) { cf_app_set_title(title); }
 CF_INLINE void app_set_icon(const char* virtual_path_to_png) { cf_app_set_icon(virtual_path_to_png); }
+CF_INLINE float app_get_framerate() { return cf_app_get_framerate(); }
+CF_INLINE float app_get_smoothed_framerate() { return cf_app_get_smoothed_framerate(); }
 
 CF_INLINE ImGuiContext* app_init_imgui() { return cf_app_init_imgui(); }
 CF_INLINE CF_Canvas app_get_canvas() { return cf_app_get_canvas(); }
