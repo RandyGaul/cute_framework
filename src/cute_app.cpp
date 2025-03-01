@@ -286,6 +286,7 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 		SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_X_NUMBER, x_offset+x);
 		SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_Y_NUMBER, y_offset+y);
 	}
+	SDL_SetBooleanProperty(props, SDL_PROP_WINDOW_CREATE_HIGH_PIXEL_DENSITY_BOOLEAN, options & SDL_WINDOW_HIGH_PIXEL_DENSITY);
 	window = SDL_CreateWindowWithProperties(props);
 	SDL_DestroyProperties(props);
 	CF_App* app = (CF_App*)CF_ALLOC(sizeof(CF_App));
