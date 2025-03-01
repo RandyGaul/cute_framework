@@ -806,6 +806,24 @@ void cf_app_set_icon(const char* virtual_path_to_png)
 	cf_image_free(&img);
 }
 
+float cf_app_get_framerate()
+{
+	return 1.0f / CF_DELTA_TIME;
+}
+
+float cf_app_get_smoothed_framerate()
+{
+	static float fps[10] = { 0 };
+	static int frame_index = 0;
+	fps[frame_index] = 1.0f / CF_DELTA_TIME;
+	frame_index = (frame_index + 1) % 10;
+	float sum = 0;
+	for (int i = 0; i < 10; ++i) {
+		sum += fps[i];
+	}
+	return sum / 10.0f;
+}
+
 ImGuiContext* cf_app_init_imgui()
 {
 	if (!app->gfx_enabled) return NULL;
