@@ -231,9 +231,6 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 		SDL_Init(SDL_INIT_AUDIO);
 	}
 
-	// Turn on high DPI support for all platforms.
-	options |= SDL_WINDOW_HIGH_PIXEL_DENSITY;
-	
 	if (!SDL_Init(sdl_options)) {
 		return cf_result_error("SDL_Init failed");
 	}
@@ -265,6 +262,8 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 	}
 
 	Uint32 flags = 0;
+	// Turn on high DPI support for all platforms.
+	flags |= SDL_WINDOW_HIGH_PIXEL_DENSITY;
 	if (use_metal) flags |= SDL_WINDOW_METAL;
 	if (options & CF_APP_OPTIONS_FULLSCREEN_BIT) flags |= SDL_WINDOW_FULLSCREEN;
 	if (options & CF_APP_OPTIONS_RESIZABLE_BIT) flags |= SDL_WINDOW_RESIZABLE;
