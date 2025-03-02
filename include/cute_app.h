@@ -720,7 +720,7 @@ CF_API float CF_CALL cf_app_get_framerate();
 /**
  * @function cf_app_get_smoothed_framerate
  * @category app
- * @brief    Returns the smoothed framerate of the application.
+ * @brief    Returns the smoothed framerate of the application. Last 10 frames are averaged.
  * @related  cf_app_get_framerate cf_app_get_smoothed_framerate
  */
 CF_API float CF_CALL cf_app_get_smoothed_framerate();
