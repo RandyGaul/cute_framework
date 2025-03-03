@@ -402,8 +402,8 @@ void cf_destroy_app()
 	if (app->device) SDL_ReleaseWindowFromGPUDevice(app->device, app->window);
 	SDL_DestroyWindow(app->window);
 	if (app->device) SDL_DestroyGPUDevice(app->device);
-	SDL_Quit();
 	destroy_threadpool(app->threadpool);
+	SDL_Quit();
 	cs_shutdown();
 	CF_Image* easy_sprites = app->easy_sprites.items();
 	for (int i = 0; i < app->easy_sprites.count(); ++i) {
