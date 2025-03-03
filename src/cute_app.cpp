@@ -821,7 +821,8 @@ ImGuiContext* cf_app_init_imgui()
 	case SDL_GPU_SHADERFORMAT_DXBC:     // Fall through.
 	case SDL_GPU_SHADERFORMAT_DXIL:     ImGui_ImplSDL3_InitForD3D(app->window);    break;
 	case SDL_GPU_SHADERFORMAT_MSL:      // Fall through.
-        case SDL_GPU_SHADERFORMAT_METALLIB: ImGui_ImplSDL3_InitForMetal(app->window);  break;
+	case SDL_GPU_SHADERFORMAT_METALLIB: // Fall through.
+	case SDL_GPU_SHADERFORMAT_MSL | SDL_GPU_SHADERFORMAT_METALLIB: ImGui_ImplSDL3_InitForMetal(app->window);  break; // format is 48
 	}
 
 	cf_imgui_init();
