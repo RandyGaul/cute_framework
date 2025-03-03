@@ -811,17 +811,15 @@ float cf_app_get_framerate()
 	return 1.0f / CF_DELTA_TIME;
 }
 
+#ifndef CF_FRAMERATE_SMOOTHING
+#define CF_FRAMERATE_SMOOTHING 60.0f
+#endif
+
 float cf_app_get_smoothed_framerate()
 {
-	static float fps[10] = { 0 };
-	static int frame_index = 0;
-	fps[frame_index] = 1.0f / CF_DELTA_TIME;
-	frame_index = (frame_index + 1) % 10;
-	float sum = 0;
-	for (int i = 0; i < 10; ++i) {
-		sum += fps[i];
-	}
-	return sum / 10.0f;
+	static float fps = 0;
+	fps = cf_lerp(fps, 1.0f / CF_DELTA_TIME, 1 / CF_FRAMERATE_SMOOTHING);
+	return fps;
 }
 
 ImGuiContext* cf_app_init_imgui()
