@@ -28,7 +28,7 @@ jobs:
         platform:
           # Diabled MinGW as it was having trouble with DX12 headers being out of date.
           # - { name: "Windows (MinGW-w64)",     os: windows-latest, artifact: 'mingw-w64', generate: '-G "MinGW Makefiles"' }
-          - { name: "Windows (MSCV 17 2022)",  os: windows-latest, artifact: 'mscv17',    generate: '-G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release' }
+          - { name: "Windows (MSCV 17 2022)",  os: windows-2025,   artifact: 'mscv17',    generate: '-G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release' }
           - { name: "MacOS",                   os: macos-latest,   artifact: 'macos',     generate: '-G "Unix Makefiles"' }
           - { name: "Linux",                   os: ubuntu-latest,  artifact: 'linux',     generate: '-G "Unix Makefiles"' }
           # TODO - Add iOS and Android platforms. Waiting on better support from GitHub.
