@@ -15,6 +15,7 @@ The states of power for the application.
 
 Enum | Description
 --- | ---
+POWER_STATE_ERROR | error determining power status.
 POWER_STATE_UNKNOWN | Cannot determine power status.
 POWER_STATE_ON_BATTERY | Not plugged in and running on battery.
 POWER_STATE_NO_BATTERY | Plugged in with no battery available.

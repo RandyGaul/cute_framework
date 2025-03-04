@@ -12,7 +12,7 @@ const char* get_relative_path()
 	if (!g_relative_path) {
 		CF_Path path = cf_fs_get_base_directory();
 		path.normalize();
-		CF_Path dir = path.my_directory();
+		String dir = path.filename();
 		if (siequ(dir.c_str(), "debug") || siequ(dir.c_str(), "release")) {
 			g_relative_path = "../../docs";
 		} else {
@@ -838,6 +838,8 @@ int main(int argc, char* argv[])
 		}
 	}
 #endif
+
+	printf("docsparser: Success!\n");
 
 	return 0;
 }
