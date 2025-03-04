@@ -46,7 +46,7 @@ static void s_init_video()
 CF_DisplayID cf_default_display()
 {
 	s_init_video();
-	return { SDL_GetPrimaryDisplay() };
+	return SDL_GetPrimaryDisplay();
 }
 
 int cf_display_count()
