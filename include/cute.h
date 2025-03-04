@@ -26,7 +26,6 @@
  * 
  */
 
-
 #include "cute_alloc.h"
 #include "cute_app.h"
 #include "cute_array.h"

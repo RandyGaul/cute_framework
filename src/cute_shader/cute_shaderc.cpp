@@ -266,7 +266,8 @@ static bool write_bytecode_file(
 	return fclose(file) == 0;
 }
 
-int main(int argc, const char* argv[]) {
+int main(int argc, const char* argv[])
+{
 	const char* input_path = NULL;
 	const char* output_header_path = NULL;
 	const char* output_bytecode_path = NULL;
