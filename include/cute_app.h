@@ -732,6 +732,8 @@ CF_API float CF_CALL cf_app_get_smoothed_framerate();
  * @related  CF_PowerInfo cf_app_power_info
  */
 #define CF_POWER_STATE_DEFS \
+	/* @entry error determining power status. */        \
+	CF_ENUM(POWER_STATE_ERROR, -1)                      \
 	/* @entry Cannot determine power status. */         \
 	CF_ENUM(POWER_STATE_UNKNOWN, 0)                     \
 	/* @entry Not plugged in and running on battery. */ \

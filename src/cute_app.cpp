@@ -851,6 +851,7 @@ CF_PowerInfo cf_app_power_info()
 	CF_PowerInfo info;
 	SDL_PowerState state = SDL_GetPowerInfo(&info.seconds_left, &info.percentage_left);
 	switch (state) {
+	case SDL_POWERSTATE_ERROR: info.state = CF_POWER_STATE_ERROR;
 	case SDL_POWERSTATE_UNKNOWN: info.state = CF_POWER_STATE_UNKNOWN;
 	case SDL_POWERSTATE_ON_BATTERY: info.state = CF_POWER_STATE_ON_BATTERY;
 	case SDL_POWERSTATE_NO_BATTERY: info.state = CF_POWER_STATE_NO_BATTERY;
