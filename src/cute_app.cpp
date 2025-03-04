@@ -365,11 +365,6 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 		}
 	}
 
-	int num_threads_to_spawn = cf_core_count() - 1;
-	if (num_threads_to_spawn) {
-		app->threadpool = cf_make_threadpool(num_threads_to_spawn);
-	}
-
 	CF_Result err = cf_fs_init(argv0);
 	if (cf_is_error(err)) {
 		CF_ASSERT(0);
@@ -402,7 +397,6 @@ void cf_destroy_app()
 	if (app->device) SDL_ReleaseWindowFromGPUDevice(app->device, app->window);
 	SDL_DestroyWindow(app->window);
 	if (app->device) SDL_DestroyGPUDevice(app->device);
-	destroy_threadpool(app->threadpool);
 	SDL_Quit();
 	cs_shutdown();
 	CF_Image* easy_sprites = app->easy_sprites.items();

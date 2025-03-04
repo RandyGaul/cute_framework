@@ -72,7 +72,6 @@ struct CF_App
 	SDL_GPUDevice* device = NULL;
 	cs_context_t* cute_sound = NULL;
 	bool spawned_mix_thread = false;
-	CF_Threadpool* threadpool = NULL;
 	void (*on_shader_changed_fn)(const char* path, void* udata) = NULL;
 	void* on_shader_changed_udata = NULL;
 	bool shader_directory_set = false;
