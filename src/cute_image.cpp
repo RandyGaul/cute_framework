@@ -21,7 +21,11 @@ CF_Result cf_image_load_png(const char* path, CF_Image* img)
 {
 	size_t sz;
 	void* data = cf_fs_read_entire_file_to_memory(path, &sz);
-	if (!data) return cf_result_error("Unable to open png file.");
+	if (!data) {
+		char* details = NULL;
+		sfmt(details, "Unable to open png file: %s", path);
+		return cf_result_error(details);
+	}
 	CF_Result err = cf_image_load_png_from_memory(data, (int)sz, img);
 	CF_FREE(data);
 	return err;
@@ -52,7 +56,11 @@ CF_Result cf_image_load_png_indexed(const char* path, CF_ImageIndexed* img)
 {
 	size_t sz;
 	void* data = cf_fs_read_entire_file_to_memory(path, &sz);
-	if (!data) return cf_result_error("Unable to open png file.");
+	if (!data) {
+		char* details = NULL;
+		sfmt(details, "Unable to open png file: %s", path);
+		return cf_result_error(details);
+	}
 	return cf_image_load_png_from_memory_indexed(data, (int)sz, img);
 }
 
