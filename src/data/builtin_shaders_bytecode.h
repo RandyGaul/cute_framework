@@ -533,7 +533,6 @@ vec4 sdf(vec4 a, vec4 b, float d)
 {
  float wire_d = sdf_stroke(d);
  vec4 stroke_aa = mix(b, a, smoothstep(0.0, v_aa, wire_d));
- vec4 stroke_no_aa = wire_d <= 0.0 ? b : a;
 
  vec4 fill_aa = mix(b, a, smoothstep(0.0, v_aa, d));
  vec4 fill_no_aa = clamp(d, - 1.0, 1.0) <= 0.0 ? b : a;
