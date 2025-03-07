@@ -512,7 +512,7 @@ int cf_app_draw_onto_screen(bool clear)
 	// Stretch the app canvas onto the backbuffer canvas.
 	Uint32 w, h;
 	SDL_GPUTexture* swapchain_tex;
-	if (SDL_AcquireGPUSwapchainTexture(app->cmd, app->window, &swapchain_tex, &w, &h) && swapchain_tex) {
+	if (SDL_WaitAndAcquireGPUSwapchainTexture(app->cmd, app->window, &swapchain_tex, &w, &h)) {
 		// Blit onto the screen.
 		SDL_GPUBlitRegion src = {
 			.texture = (SDL_GPUTexture*)cf_texture_handle(cf_canvas_get_target(app->offscreen_canvas)),
