@@ -532,11 +532,6 @@ int cf_app_draw_onto_screen(bool clear)
 			.cycle = true,
 		};
 		SDL_BlitGPUTexture(app->cmd, &blit_info);
-	} else {
-		// @Hack - Avoid large resource cycle chains gobbling up RAM when GPU-bound.
-		// Waiting on response from Evan on proper fix:
-		// https://discourse.libsdl.org/t/sdl-gpu-cycle-difficulties/55188
-		SDL_WaitForGPUIdle(app->device);
 	}
 
 	// Dear ImGui draw.
