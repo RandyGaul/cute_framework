@@ -511,7 +511,7 @@ int cf_app_draw_onto_screen(bool clear)
 
 	// Stretch the app canvas onto the backbuffer canvas.
 	Uint32 w, h;
-	SDL_GPUTexture* swapchain_tex;
+	SDL_GPUTexture* swapchain_tex = NULL;
 	if (SDL_AcquireGPUSwapchainTexture(app->cmd, app->window, &swapchain_tex, &w, &h) && swapchain_tex) {
 		// Blit onto the screen.
 		SDL_GPUBlitRegion src = {
@@ -533,10 +533,9 @@ int cf_app_draw_onto_screen(bool clear)
 		};
 		SDL_BlitGPUTexture(app->cmd, &blit_info);
 	} else {
-		// @Hack - Avoid large resource cycle chains gobbling up RAM when GPU-bound.
-		// Waiting on response from Evan on proper fix:
+		// Avoid large resource cycle chains gobbling up RAM when GPU-bound.
 		// https://discourse.libsdl.org/t/sdl-gpu-cycle-difficulties/55188
-		SDL_WaitForGPUIdle(app->device);
+		SDL_CancelGPUCommandBuffer(app->cmd);
 	}
 
 	// Dear ImGui draw.
