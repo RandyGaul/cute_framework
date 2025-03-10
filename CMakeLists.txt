@@ -317,7 +317,7 @@ else()
 	set(SDL_EXAMPLES OFF CACHE BOOL "Do not build SDL examples")
 	FetchContent_Declare(
 		SDL3
-		URL https://github.com/libsdl-org/SDL/releases/download/release-3.2.6/SDL3-3.2.6.zip
+		URL https://github.com/libsdl-org/SDL/releases/download/release-3.2.8/SDL3-3.2.8.zip
 		DOWNLOAD_EXTRACT_TIMESTAMP ON
 		CMAKE_ARGS -DSDL_SHARED=$<NOT:${CF_FRAMEWORK_STATIC}> -DSDL_STATIC=${CF_FRAMEWORK_STATIC} -DSDL_TEST_LIBRARY=OFF -DSDL_TESTS=OFF -DSDL_EXAMPLES=OFF
 	)
