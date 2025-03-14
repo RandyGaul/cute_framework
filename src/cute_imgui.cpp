@@ -293,7 +293,7 @@ void cf_imgui_draw(SDL_GPUTexture* swapchain_texture)
 		region.buffer = app->imgui_vbuf;
 		region.offset = 0;
 		region.size = (uint32_t)(draw_data->TotalVtxCount * sizeof(ImDrawVert));
-		SDL_UploadToGPUBuffer(copy_pass, &src, &region, true);
+		SDL_UploadToGPUBuffer(copy_pass, &src, &region, false);
 
 		src.transfer_buffer = app->imgui_itbuf;
 		region.buffer = app->imgui_ibuf;

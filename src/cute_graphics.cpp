@@ -229,7 +229,7 @@ void cf_texture_update(CF_Texture texture_handle, void* data, int size)
 	src.pixels_per_row = tex->w;
 	src.rows_per_layer = tex->h;
 	SDL_GPUTextureRegion dst = SDL_GPUTextureRegionDefaults(tex, tex->w, tex->h);
-	SDL_UploadToGPUTexture(pass, &src, &dst, true);
+	SDL_UploadToGPUTexture(pass, &src, &dst, false);
 	SDL_EndGPUCopyPass(pass);
 	if (!tex->buf) SDL_ReleaseGPUTransferBuffer(app->device, buf);
 	if (!app->cmd) SDL_SubmitGPUCommandBuffer(cmd);
@@ -853,7 +853,7 @@ static void s_update_buffer(CF_Buffer* buffer, int element_count, void* data, in
 	region.buffer = buffer->buffer;
 	region.offset = 0;
 	region.size = size;
-	SDL_UploadToGPUBuffer(pass, &location, &region, true);
+	SDL_UploadToGPUBuffer(pass, &location, &region, false);
 	SDL_EndGPUCopyPass(pass);
 	if (!app->cmd) SDL_SubmitGPUCommandBuffer(cmd);
 }
