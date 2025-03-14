@@ -101,6 +101,7 @@ struct CF_App
 	CF_WindowState window_state;
 	CF_WindowState window_state_prev;
 	SDL_GPUCommandBuffer* cmd = NULL;
+	bool rendered_first_frame = false;
 	bool use_depth_stencil = false;
 	uint64_t default_image_id = CF_PNG_ID_RANGE_LO;
 	bool vsync = false;

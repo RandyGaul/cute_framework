@@ -838,7 +838,7 @@ static void s_update_buffer(CF_Buffer* buffer, int element_count, void* data, in
 
 	// Copy vertices over to the driver.
 	CF_ASSERT(size <= buffer->size);
-	void* p = SDL_MapGPUTransferBuffer(app->device, buffer->transfer_buffer, true);
+	void* p = SDL_MapGPUTransferBuffer(app->device, buffer->transfer_buffer, app->rendered_first_frame);
 	CF_MEMCPY(p, data, size);
 	SDL_UnmapGPUTransferBuffer(app->device, buffer->transfer_buffer);
 	buffer->element_count = element_count;

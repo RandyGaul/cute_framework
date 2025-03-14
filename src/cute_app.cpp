@@ -554,6 +554,7 @@ int cf_app_draw_onto_screen(bool clear)
 
 	SDL_SubmitGPUCommandBuffer(app->cmd);
 	app->cmd = NULL;
+	app->rendered_first_frame = true;
 
 	// Clear all pushed draw parameters.
 	draw->alpha_discards.set_count(1);
