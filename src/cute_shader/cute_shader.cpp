@@ -159,31 +159,50 @@ private:
 	CF_ShaderCompilerVfs* vfs;
 };
 
+static CF_ShaderInfoDataType s_uniform_vector_type(SpvReflectTypeDescription* type_desc)
+{
+	if (type_desc->traits.numeric.scalar.width == 32) {
+		if (type_desc->traits.numeric.scalar.signedness == 0) {
+			switch (type_desc->traits.numeric.vector.component_count) {
+				case 2: return CF_SHADER_INFO_TYPE_FLOAT2;
+				case 3: return CF_SHADER_INFO_TYPE_FLOAT3;
+				case 4: return CF_SHADER_INFO_TYPE_FLOAT4;
+				default: return CF_SHADER_INFO_TYPE_UNKNOWN;
+			}
+		} else {
+			switch (type_desc->traits.numeric.vector.component_count) {
+				case 2: return CF_SHADER_INFO_TYPE_SINT2;
+				case 3: return CF_SHADER_INFO_TYPE_SINT3;
+				case 4: return CF_SHADER_INFO_TYPE_SINT4;
+				default: return CF_SHADER_INFO_TYPE_UNKNOWN;
+			}
+		}
+	}
+	return CF_SHADER_INFO_TYPE_UNKNOWN;
+}
+
 static CF_ShaderInfoDataType s_uniform_type(SpvReflectTypeDescription* type_desc)
 {
 	switch (type_desc->op) {
 	case SpvOpTypeFloat: return CF_SHADER_INFO_TYPE_FLOAT;
 	case SpvOpTypeInt: return CF_SHADER_INFO_TYPE_SINT;
-	case SpvOpTypeVector:
-		if (type_desc->traits.numeric.scalar.width == 32) {
-			if (type_desc->traits.numeric.scalar.signedness == 0) {
-				switch (type_desc->traits.numeric.vector.component_count) {
-					case 2: return CF_SHADER_INFO_TYPE_FLOAT2;
-					case 4: return CF_SHADER_INFO_TYPE_FLOAT4;
-					default: return CF_SHADER_INFO_TYPE_UNKNOWN;
-				}
-			} else {
-				switch (type_desc->traits.numeric.vector.component_count) {
-					case 2: return CF_SHADER_INFO_TYPE_SINT2;
-					case 4: return CF_SHADER_INFO_TYPE_SINT4;
-					default: return CF_SHADER_INFO_TYPE_UNKNOWN;
-				}
-			}
-		}
-		break;
+	case SpvOpTypeVector: return s_uniform_vector_type(type_desc);
 	case SpvOpTypeMatrix:
 		if (type_desc->traits.numeric.matrix.column_count == 4 && type_desc->traits.numeric.matrix.row_count == 4)
 			return CF_SHADER_INFO_TYPE_MAT4;
+		break;
+	case SpvOpTypeArray:
+		if (type_desc->type_flags & SPV_REFLECT_TYPE_FLAG_VECTOR) {
+			return s_uniform_vector_type(type_desc);
+		} else if (type_desc->type_flags & SPV_REFLECT_TYPE_FLAG_MATRIX) {
+			if (type_desc->traits.numeric.matrix.column_count == 4 && type_desc->traits.numeric.matrix.row_count == 4 && (type_desc->type_flags & SPV_REFLECT_TYPE_FLAG_FLOAT))
+				return CF_SHADER_INFO_TYPE_MAT4;
+			break;
+		} else if (type_desc->type_flags & SPV_REFLECT_TYPE_FLAG_INT) {
+			return CF_SHADER_INFO_TYPE_SINT;
+		} else if (type_desc->type_flags & SPV_REFLECT_TYPE_FLAG_FLOAT) {
+			return CF_SHADER_INFO_TYPE_FLOAT;
+		}
 		break;
 	default:
 		return CF_SHADER_INFO_TYPE_UNKNOWN;
