@@ -913,8 +913,8 @@ CF_RenderState cf_render_state_defaults()
 CF_Material cf_make_material()
 {
 	CF_MaterialInternal* material = CF_NEW(CF_MaterialInternal);
-	material->uniform_arena = cf_make_arena(4, 1024);
-	material->block_arena = cf_make_arena(4, 1024);
+	material->uniform_arena = cf_make_arena(4, CF_KB * 16);
+	material->block_arena = cf_make_arena(4, CF_KB * 16);
 	material->state = cf_render_state_defaults();
 	CF_Material result = { (uint64_t)material };
 	return result;
