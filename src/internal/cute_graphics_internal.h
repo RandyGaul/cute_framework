@@ -357,6 +357,7 @@ CF_INLINE int s_uniform_size(CF_UniformType type)
 	switch (type) {
 	case CF_UNIFORM_TYPE_FLOAT:  return 4;
 	case CF_UNIFORM_TYPE_FLOAT2: return 8;
+	case CF_UNIFORM_TYPE_FLOAT3: return 12;
 	case CF_UNIFORM_TYPE_FLOAT4: return 16;
 	case CF_UNIFORM_TYPE_INT:    return 4;
 	case CF_UNIFORM_TYPE_INT2:   return 8;
