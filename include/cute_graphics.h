@@ -1425,16 +1425,18 @@ CF_API CF_RenderState CF_CALL cf_render_state_defaults();
 	CF_ENUM(UNIFORM_TYPE_FLOAT,    0)          \
 	/* @entry In a shader: `uniform vec2` */   \
 	CF_ENUM(UNIFORM_TYPE_FLOAT2,   1)          \
+	/* @entry In a shader: `uniform vec3` */   \
+	CF_ENUM(UNIFORM_TYPE_FLOAT3,   2)          \
 	/* @entry In a shader: `uniform vec4` */   \
-	CF_ENUM(UNIFORM_TYPE_FLOAT4,   2)          \
+	CF_ENUM(UNIFORM_TYPE_FLOAT4,   3)          \
 	/* @entry In a shader: `uniform int` */    \
-	CF_ENUM(UNIFORM_TYPE_INT,      3)          \
+	CF_ENUM(UNIFORM_TYPE_INT,      4)          \
 	/* @entry In a shader: `uniform int[2]` */ \
-	CF_ENUM(UNIFORM_TYPE_INT2,     4)          \
+	CF_ENUM(UNIFORM_TYPE_INT2,     5)          \
 	/* @entry In a shader: `uniform int[4]` */ \
-	CF_ENUM(UNIFORM_TYPE_INT4,     5)          \
+	CF_ENUM(UNIFORM_TYPE_INT4,     6)          \
 	/* @entry In a shader: `uniform mat4` */   \
-	CF_ENUM(UNIFORM_TYPE_MAT4,     6)          \
+	CF_ENUM(UNIFORM_TYPE_MAT4,     7)          \
 	/* @end */
 
 typedef enum CF_UniformType
