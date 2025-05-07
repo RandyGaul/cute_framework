@@ -2091,7 +2091,7 @@ typedef enum CF_ShapeType
 	#define CF_ENUM(K, V) CF_##K = V,
 	CF_SHAPE_TYPE_DEFS
 	#undef CF_ENUM
-} CF_ShapeType;
+} CF_CLOSED_ENUM CF_ShapeType;
 
 /**
  * @function cf_shape_type_to_string

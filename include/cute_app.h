@@ -49,7 +49,7 @@ typedef enum CF_DisplayOrientation
 	#define CF_ENUM(K, V) CF_##K = V,
 	CF_DISPLAY_ORIENTATION_DEFS
 	#undef CF_ENUM
-} CF_DisplayOrientation;
+} CF_CLOSED_ENUM CF_DisplayOrientation;
 
 typedef uint32_t CF_DisplayID;
 
@@ -211,7 +211,7 @@ typedef enum CF_AppOptionFlagBits
 	#define CF_ENUM(K, V) CF_##K = V,
 	CF_APP_OPTION_DEFS
 	#undef CF_ENUM
-} CF_AppOptionFlagBits;
+} CF_CLOSED_ENUM CF_AppOptionFlagBits;
 
 /**
  * @function cf_make_app
@@ -751,7 +751,7 @@ typedef enum CF_PowerState
 	#define CF_ENUM(K, V) CF_##K = V,
 	CF_POWER_STATE_DEFS
 	#undef CF_ENUM
-} CF_PowerState;
+} CF_CLOSED_ENUM CF_PowerState;
 
 /**
  * @function cf_power_state_to_string

@@ -67,7 +67,7 @@ typedef enum CF_JType
 	#define CF_ENUM(K, V) CF_##K = V,
 	CF_JTYPE_DEFS
 	#undef CF_ENUM
-} CF_JType;
+} CF_CLOSED_ENUM CF_JType;
 
 /**
  * @function cf_json_type_to_string

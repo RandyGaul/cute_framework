@@ -98,6 +98,22 @@
 #	define CF_CALL
 #endif
 
+#ifndef CF_HAS_ATTR
+#	ifdef __has_attribute
+#		define CF_HAS_ATTR(attr) __has_attribute(attr)
+#	else
+#		define CF_HAS_ATTR(attr) 0
+#	endif
+#endif
+
+#if defined(__clang__) || CF_HAS_ATTR(enum_extensibility)
+#	define CF_OPEN_ENUM __attribute__((enum_extensibility(open)))
+#	define CF_CLOSED_ENUM __attribute__((enum_extensibility(closed)))
+#else
+#	define CF_OPEN_ENUM
+#	define CF_CLOSED_ENUM
+#endif
+
 #define CF_UNUSED(x) (void)x
 #define CF_ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
 #ifdef __cplusplus

@@ -278,7 +278,7 @@ typedef enum CF_FileType
 	#define CF_ENUM(K, V) CF_##K = V,
 	CF_FILE_TYPE_DEFS
 	#undef CF_ENUM
-} CF_FileType;
+} CF_CLOSED_ENUM CF_FileType;
 
 /**
  * @function cf_file_type_to_string

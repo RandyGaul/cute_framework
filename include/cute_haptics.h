@@ -105,7 +105,7 @@ typedef enum CF_HapticType
 	#define CF_ENUM(K, V) CF_##K = V,
 	CF_HAPTIC_TYPE_DEFS
 	#undef CF_ENUM
-} CF_HapticType;
+} CF_CLOSED_ENUM CF_HapticType;
 
 /**
  * @function cf_haptic_type_to_string
@@ -163,7 +163,7 @@ typedef enum CF_HapticWaveType
 	#define CF_ENUM(K, V) CF_##K = V,
 	CF_HAPTIC_WAVE_TYPE_DEFS
 	#undef CF_ENUM
-} CF_HapticWaveType;
+} CF_CLOSED_ENUM CF_HapticWaveType;
 
 /**
  * @function cf_haptic_wave_type_to_string

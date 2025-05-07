@@ -176,7 +176,7 @@ typedef enum CF_HttpsResult
 	#define CF_ENUM(K, V) CF_##K = V,
 	CF_HTTPS_RESULT_DEFS
 	#undef CF_ENUM
-} CF_HttpsResult;
+} CF_CLOSED_ENUM CF_HttpsResult;
 
 /**
  * @function cf_https_result_to_string

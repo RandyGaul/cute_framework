@@ -90,7 +90,7 @@ typedef enum CF_CoroutineState
 	#define CF_ENUM(K, V) CF_##K = V,
 	CF_COROUTINE_STATE_DEFS
 	#undef CF_ENUM
-} CF_CoroutineState;
+} CF_CLOSED_ENUM CF_CoroutineState;
 
 /**
  * @function cf_coroutine_state_to_string

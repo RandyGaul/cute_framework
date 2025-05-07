@@ -48,7 +48,7 @@ typedef enum CF_JoypadPowerLevel
 	#define CF_ENUM(K, V) CF_##K = V,
 	CF_JOYPAD_POWER_LEVEL_DEFS
 	#undef CF_ENUM
-} CF_JoypadPowerLevel;
+} CF_CLOSED_ENUM CF_JoypadPowerLevel;
 
 /**
  * @function cf_joypad_power_level_to_string
@@ -115,7 +115,7 @@ typedef enum CF_JoypadButton
 	#define CF_ENUM(K, V) CF_##K = V,
 	CF_JOYPAD_BUTTON_DEFS
 	#undef CF_ENUM
-} CF_JoypadButton;
+} CF_CLOSED_ENUM CF_JoypadButton;
 
 /**
  * @function cf_joypad_button_to_string
@@ -164,7 +164,7 @@ typedef enum CF_JoypadAxis
 	#define CF_ENUM(K, V) CF_##K = V,
 	CF_JOYPAD_AXIS_DEFS
 	#undef CF_ENUM
-} CF_JoypadAxis;
+} CF_CLOSED_ENUM CF_JoypadAxis;
 
 /**
  * @function cf_joypad_axis_to_string
@@ -227,7 +227,7 @@ typedef enum CF_JoypadType
 	#define CF_ENUM(K, V) CF_##K = V,
 	CF_JOYPAD_TYPE_DEFS
 	#undef CF_ENUM
-} CF_JoypadType;
+} CF_CLOSED_ENUM CF_JoypadType;
 
 /**
  * @function cf_joypad_type_to_string

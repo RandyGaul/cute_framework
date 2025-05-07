@@ -37,7 +37,7 @@ typedef enum CF_MouseButton
 	#define CF_ENUM(K, V) CF_##K = V,
 	CF_MOUSE_BUTTON_DEFS
 	#undef CF_ENUM
-} CF_MouseButton;
+} CF_CLOSED_ENUM CF_MouseButton;
 
 /**
  * @function cf_mouse_button_to_string
@@ -544,7 +544,7 @@ typedef enum CF_KeyButton
 	#define CF_ENUM(K, V) CF_##K = V,
 	CF_KEY_BUTTON_DEFS
 	#undef CF_ENUM
-} CF_KeyButton;
+} CF_CLOSED_ENUM CF_KeyButton;
 
 /**
  * @function cf_key_button_to_string

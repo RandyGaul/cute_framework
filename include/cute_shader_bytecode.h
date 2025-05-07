@@ -59,7 +59,7 @@ typedef enum CF_ShaderInfoDataType
 	#define CF_ENUM(K, V) CF_##K = V,
 	CF_SHADER_INFO_DATA_TYPE_DEFS
 	#undef CF_ENUM
-} CF_ShaderInfoDataType;
+} CF_CLOSED_ENUM CF_ShaderInfoDataType;
 
 /**
  * @struct   CF_ShaderUniformMemberInfo
