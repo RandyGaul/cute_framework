@@ -130,7 +130,7 @@ void slice_sprite(CF_Sprite* sprite, CF_V2 start, CF_V2 end, SpriteChunk* chunks
     CF_Ray ray;
     ray.p = start;
     ray.d = cf_sub_v2(end, start);
-    ray.d = cf_norm(ray.d);
+    ray.d = cf_safe_norm(ray.d);
     ray.t = cf_distance(end, start);
     
     CF_Raycast hit_result = cf_ray_to_aabb(ray, aabb);
