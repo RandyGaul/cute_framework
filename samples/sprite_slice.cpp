@@ -133,37 +133,40 @@ void slice_sprite(CF_Sprite* sprite, CF_V2 start, CF_V2 end, SpriteChunk* chunks
     ray.d = cf_safe_norm(ray.d);
     ray.t = cf_distance(end, start);
     
-    CF_Raycast hit_result = cf_ray_to_aabb(ray, aabb);
-    if (hit_result.hit)
+    if (ray.t > 0)
     {
-        cf_array_clear(chunks);
+        CF_Raycast hit_result = cf_ray_to_aabb(ray, aabb);
+        if (hit_result.hit)
+        {
+            cf_array_clear(chunks);
         
-        CF_V2 hit_point = cf_mul_v2_f(ray.d, hit_result.t);
-        hit_point = cf_add_v2(start, hit_point);
+            CF_V2 hit_point = cf_mul_v2_f(ray.d, hit_result.t);
+            hit_point = cf_add_v2(start, hit_point);
         
-        CF_Poly sprite_poly;
-        sprite_poly.verts[0] = sprite_min;
-        sprite_poly.verts[1] = cf_v2(sprite_min.x, sprite_max.y);
-        sprite_poly.verts[2] = cf_v2(sprite_max.x, sprite_min.y);
-        sprite_poly.verts[3] = sprite_max;
-        sprite_poly.count = 4;
-        cf_make_poly(&sprite_poly);
+            CF_Poly sprite_poly;
+            sprite_poly.verts[0] = sprite_min;
+            sprite_poly.verts[1] = cf_v2(sprite_min.x, sprite_max.y);
+            sprite_poly.verts[2] = cf_v2(sprite_max.x, sprite_min.y);
+            sprite_poly.verts[3] = sprite_max;
+            sprite_poly.count = 4;
+            cf_make_poly(&sprite_poly);
         
-        const float epsilon = (float)1e-4;
-        CF_V2 n = cf_perp(ray.d);
+            const float epsilon = (float)1e-4;
+            CF_V2 n = cf_perp(ray.d);
         
-        CF_Halfspace slice_plane = cf_plane2(n, hit_point);
-        CF_SliceOutput output = cf_slice(slice_plane, sprite_poly, epsilon);
+            CF_Halfspace slice_plane = cf_plane2(n, hit_point);
+            CF_SliceOutput output = cf_slice(slice_plane, sprite_poly, epsilon);
         
-        SpriteChunk chunk = {};
-        chunk.opacity = (uint8_t)(sprite->opacity * 255.0f);
-        chunk.color = color;
+            SpriteChunk chunk = {};
+            chunk.opacity = (uint8_t)(sprite->opacity * 255.0f);
+            chunk.color = color;
         
-        set_sprite_chunk(&chunk, &output.front, sprite, push_strength);
-        cf_array_push(chunks, chunk);
+            set_sprite_chunk(&chunk, &output.front, sprite, push_strength);
+            cf_array_push(chunks, chunk);
         
-        set_sprite_chunk(&chunk, &output.back, sprite, push_strength);
-        cf_array_push(chunks, chunk);
+            set_sprite_chunk(&chunk, &output.back, sprite, push_strength);
+            cf_array_push(chunks, chunk);
+        }
     }
 }
 
