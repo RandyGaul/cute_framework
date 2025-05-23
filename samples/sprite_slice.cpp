@@ -4,7 +4,7 @@
 #define STR(X) #X
 
 const char* shader_str = STR(
-    vec4 shader(vec4 color, vec2 pos, vec2 screen_uv, vec4 params)
+vec4 shader(vec4 color, vec2 pos, vec2 screen_uv, vec4 params)
 {
     return texture(u_image, smooth_uv(v_uv, u_texture_size));
 }
