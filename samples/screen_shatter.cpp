@@ -20,7 +20,7 @@ struct
     CF_Vertex* verts;
 } draw;
 
-CF_Rnd random;
+CF_Rnd rnd;
 
 struct ScreenChunk
 {
@@ -80,7 +80,7 @@ void init(int w, int h)
     
     cf_array_free(attrs);
     
-    random = cf_rnd_seed(0);
+    rnd = cf_rnd_seed(0);
 }
 
 void screen_chunk(CF_V2 screen_dims, ScreenChunk* chunks)
@@ -101,7 +101,7 @@ void screen_chunk(CF_V2 screen_dims, ScreenChunk* chunks)
     while (cf_array_count(aabbs) > 0)
     {
         int count = cf_array_count(aabbs);
-        int index = cf_rnd_range_int(&random, 0, count - 1);
+        int index = cf_rnd_range_int(&rnd, 0, count - 1);
         
         CF_Aabb aabb = aabbs[index];
         aabbs[index] = aabbs[count - 1];
@@ -177,11 +177,11 @@ void screen_chunk(CF_V2 screen_dims, ScreenChunk* chunks)
             CF_V2 new_extents = extents;
             if (ds.x > min_size.x)
             {
-                new_extents.x = cf_rnd_range_float(&random, min_size.x, extents.x);
+                new_extents.x = cf_rnd_range_float(&rnd, min_size.x, extents.x);
             }
             if (ds.y > min_size.y)
             {
-                new_extents.y = cf_rnd_range_float(&random, min_size.y, extents.y);
+                new_extents.y = cf_rnd_range_float(&rnd, min_size.y, extents.y);
             }
             
             // p0----p1--------p2
