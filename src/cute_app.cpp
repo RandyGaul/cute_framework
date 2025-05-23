@@ -24,6 +24,7 @@
 #include <internal/cute_imgui_internal.h>
 
 #include <imgui/backends/imgui_impl_sdl3.h>
+#include <imgui/backends/imgui_impl_sdlgpu3.h>
 #include <SDL_gpu_shadercross/SDL_gpu_shadercross.h>
 
 #include <data/fonts/calibri.h>
@@ -305,7 +306,7 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 		app->cmd = SDL_AcquireGPUCommandBuffer(app->device);
 		cf_load_internal_shaders();
 		cf_make_draw();
-		
+
 		// Setup the backbuffer fullscreen mesh and canvas.
 		{
 			CF_VertexAttribute attrs[2] = { };
@@ -454,6 +455,7 @@ void cf_app_update(CF_OnUpdateFn* on_update)
 		}
 
 		if (app->using_imgui) {
+  		ImGui_ImplSDLGPU3_NewFrame();
 			ImGui_ImplSDL3_NewFrame();
 			ImGui::NewFrame();
 		}
@@ -817,22 +819,19 @@ float cf_app_get_smoothed_framerate()
 ImGuiContext* cf_app_init_imgui()
 {
 	if (!app->gfx_enabled) return NULL;
-	
+
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
 	app->using_imgui = true;
 
 	ImGui::StyleColorsDark();
-	
-	SDL_GPUShaderFormat format = SDL_GetGPUShaderFormats(app->device);
-	switch (format) {
-	case SDL_GPU_SHADERFORMAT_SPIRV:    ImGui_ImplSDL3_InitForVulkan(app->window); break;
-	case SDL_GPU_SHADERFORMAT_DXBC:     // Fall through.
-	case SDL_GPU_SHADERFORMAT_DXIL:     ImGui_ImplSDL3_InitForD3D(app->window);    break;
-	case SDL_GPU_SHADERFORMAT_MSL:      // Fall through.
-	case SDL_GPU_SHADERFORMAT_METALLIB: // Fall through.
-	case SDL_GPU_SHADERFORMAT_MSL | SDL_GPU_SHADERFORMAT_METALLIB: ImGui_ImplSDL3_InitForMetal(app->window);  break; // format is 48
-	}
+
+	ImGui_ImplSDL3_InitForSDLGPU(app->window);
+	ImGui_ImplSDLGPU3_InitInfo init_info = {};
+	init_info.Device = app->device;
+	init_info.ColorTargetFormat = SDL_GetGPUSwapchainTextureFormat(app->device, app->window);
+	init_info.MSAASamples = SDL_GPU_SAMPLECOUNT_1;
+	ImGui_ImplSDLGPU3_Init(&init_info);
 
 	cf_imgui_init();
 

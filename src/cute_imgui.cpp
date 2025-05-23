@@ -15,6 +15,7 @@
 
 #include <imgui/imgui.h>
 #include <imgui/backends/imgui_impl_sdl3.h>
+#include <imgui/backends/imgui_impl_sdlgpu3.h>
 
 #ifdef CF_RUNTIME_SHADER_COMPILATION
 #include "cute_shader/builtin_shaders.h"
@@ -81,6 +82,39 @@ static void s_make_buffers(int vertex_count, int index_count)
 }
 
 void cf_imgui_init()
+{
+ //  SDL_GPUTextureCreateInfo texture_info = {
+	// 	.type = SDL_GPU_TEXTURETYPE_2D,
+	// 	.format = SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM,
+	// 	.usage = SDL_GPU_TEXTUREUSAGE_SAMPLER,
+	// 	.width = (uint32_t)width,
+	// 	.height = (uint32_t)height,
+	// 	.layer_count_or_depth = 1,
+	// 	.num_levels = 1,
+	// 	.sample_count = {},
+	// };
+
+ //  SDL_GPUTexture* font_tex = SDL_CreateGPUTexture(app->device, &texture_info);
+	// CF_ASSERT(font_tex);
+	// app->imgui_font_tex = font_tex;
+
+ 	auto& io = ImGui::GetIO();
+  io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
+  io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+	// io.Fonts->SetTexID((ImTextureID)font_tex);
+	// io.ConfigFlags |= ImGuiConfigFlags_DockingEnable
+	//
+  // ImGui_ImplSDL3_InitForSDLGPU(app->window);
+  // ImGui_ImplSDLGPU3_InitInfo init_info = {};
+  // init_info.Device = app->device;
+  // init_info.ColorTargetFormat = SDL_GetGPUSwapchainTextureFormat(app->device, app->window);
+  // init_info.MSAASamples = SDL_GPU_SAMPLECOUNT_1;
+  // ImGui_ImplSDLGPU3_Init(&init_info);
+
+  // this is now in cute_app.cpp -> cf_app_init_imgui
+}
+
+void cf_imgui_init_old()
 {
 #if CF_RUNTIME_SHADER_COMPILATION
 	CF_Shader shader = cf_make_shader_from_source(s_imgui_vs, s_imgui_fs);
@@ -234,7 +268,7 @@ void cf_imgui_init()
 	auto& io = ImGui::GetIO();
 	io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;
 	io.Fonts->SetTexID((ImTextureID)font_tex);
-	io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+	// io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 }
 
 void cf_imgui_shutdown()
@@ -247,9 +281,37 @@ void cf_imgui_shutdown()
 	SDL_ReleaseGPUGraphicsPipeline(app->device, app->imgui_pip);
 	SDL_ReleaseGPUTexture(app->device, app->imgui_font_tex);
 	ImGui_ImplSDL3_Shutdown();
+	ImGui_ImplSDLGPU3_Shutdown();
 }
 
-void cf_imgui_draw(SDL_GPUTexture* swapchain_texture)
+void cf_imgui_draw(SDL_GPUTexture* swapchain_texture) {
+	ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
+	ImDrawData* draw_data = ImGui::GetDrawData();
+	const bool is_minimized = (draw_data->DisplaySize.x <= 0.0f || draw_data->DisplaySize.y <= 0.0f);
+
+	if (swapchain_texture != nullptr && !is_minimized) {
+		// This is mandatory: call Imgui_ImplSDLGPU3_PrepareDrawData() to upload the vertex/index buffer!
+		Imgui_ImplSDLGPU3_PrepareDrawData(draw_data, app->cmd); // TODO: Update function name to ImGui_ImplSDLGPU3_PrepareDrawData
+
+		// Setup and start a render pass
+		SDL_GPUColorTargetInfo target_info = {};
+		target_info.texture = swapchain_texture;
+		target_info.clear_color = SDL_FColor { clear_color.x, clear_color.y, clear_color.z, clear_color.w };
+		target_info.load_op = SDL_GPU_LOADOP_CLEAR;
+		target_info.store_op = SDL_GPU_STOREOP_STORE;
+		target_info.mip_level = 0;
+		target_info.layer_or_depth_plane = 0;
+		target_info.cycle = false;
+		SDL_GPURenderPass* render_pass = SDL_BeginGPURenderPass(app->cmd, &target_info, 1, nullptr);
+
+		// Render ImGui
+		ImGui_ImplSDLGPU3_RenderDrawData(draw_data, app->cmd, render_pass);
+
+		SDL_EndGPURenderPass(render_pass);
+	}
+}
+
+void cf_imgui_draw_old(SDL_GPUTexture* swapchain_texture)
 {
 	ImDrawData* draw_data = ImGui::GetDrawData();
 	if (draw_data->TotalVtxCount == 0)
@@ -404,3 +466,4 @@ void cf_imgui_draw(SDL_GPUTexture* swapchain_texture)
 }
 
 #include <imgui/backends/imgui_impl_sdl3.cpp>
+#include <imgui/backends/imgui_impl_sdlgpu3.cpp>
