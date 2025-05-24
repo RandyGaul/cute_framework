@@ -152,7 +152,7 @@ typedef enum CF_BackendType
 	#define CF_ENUM(K, V) CF_##K = V,
 	CF_BACKEND_TYPE_DEFS
 	#undef CF_ENUM
-} CF_BackendType;
+} CF_CLOSED_ENUM CF_BackendType;
 
 /**
  * @function cf_backend_type_to_string
@@ -307,7 +307,7 @@ typedef enum CF_PixelFormat
 	#define CF_ENUM(K, V) CF_##K = V,
 	CF_PIXEL_FORMAT_DEFS
 	#undef CF_ENUM
-} CF_PixelFormat;
+} CF_CLOSED_ENUM CF_PixelFormat;
 
 /**
  * @function cf_pixel_format_to_string
@@ -352,7 +352,7 @@ typedef enum CF_PixelFormatOp
 	#define CF_ENUM(K, V) CF_##K = V,
 	CF_PIXELFORMAT_OP_DEFS
 	#undef CF_ENUM
-} CF_PixelFormatOp;
+} CF_CLOSED_ENUM CF_PixelFormatOp;
 
 /**
  * @function cf_pixel_format_op_to_string
@@ -402,7 +402,7 @@ typedef enum CF_TextureUsageBits
 	#define CF_ENUM(K, V) CF_##K = V,
 	CF_TEXTURE_USAGE_DEFS
 	#undef CF_ENUM
-} CF_TextureUsageBits;
+} CF_CLOSED_ENUM CF_TextureUsageBits;
 
 /**
  * @enum     CF_Filter
@@ -422,7 +422,7 @@ typedef enum CF_Filter
 	#define CF_ENUM(K, V) CF_##K = V,
 	CF_FILTER_DEFS
 	#undef CF_ENUM
-} CF_Filter;
+} CF_CLOSED_ENUM CF_Filter;
 
 /**
  * @function cf_filter_to_string
@@ -459,7 +459,7 @@ typedef enum CF_WrapMode
 	#define CF_ENUM(K, V) CF_##K = V,
 	CF_WRAP_MODE_DEFS
 	#undef CF_ENUM
-} CF_WrapMode;
+} CF_CLOSED_ENUM CF_WrapMode;
 
 /**
  * @function cf_wrap_mode_string
@@ -581,7 +581,7 @@ typedef enum CF_ShaderStage
 	#define CF_ENUM(K, V) CF_##K = V,
 	CF_SHADER_STAGE_DEFS
 	#undef CF_ENUM
-} CF_ShaderStage;
+} CF_CLOSED_ENUM CF_ShaderStage;
 
 /**
  * @function cf_shader_directory
@@ -867,7 +867,7 @@ typedef enum CF_VertexFormat
 	#define CF_ENUM(K, V) CF_##K = V,
 	CF_VERTEX_FORMAT_DEFS
 	#undef CF_ENUM
-} CF_VertexFormat;
+} CF_CLOSED_ENUM CF_VertexFormat;
 
 /**
  * @function cf_vertex_format_string
@@ -1011,7 +1011,7 @@ typedef enum CF_CullMode
 	#define CF_ENUM(K, V) CF_##K = V,
 	CF_CULL_MODE_DEFS
 	#undef CF_ENUM
-} CF_CullMode;
+} CF_CLOSED_ENUM CF_CullMode;
 
 /**
  * @function cf_cull_mode_string
@@ -1058,7 +1058,7 @@ typedef enum CF_CompareFunction
 	#define CF_ENUM(K, V) CF_##K = V,
 	CF_COMPARE_FUNCTION_DEFS
 	#undef CF_ENUM
-} CF_CompareFunction;
+} CF_CLOSED_ENUM CF_CompareFunction;
 
 /**
  * @function cf_compare_function_string
@@ -1105,7 +1105,7 @@ typedef enum CF_StencilOp
 	#define CF_ENUM(K, V) CF_##K = V,
 	CF_STENCIL_OP_DEFS
 	#undef CF_ENUM
-} CF_StencilOp;
+} CF_CLOSED_ENUM CF_StencilOp;
 
 /**
  * @function cf_stencil_op_string
@@ -1147,7 +1147,7 @@ typedef enum CF_BlendOp
 	#define CF_ENUM(K, V) CF_##K = V,
 	CF_BLEND_OP_DEFS
 	#undef CF_ENUM
-} CF_BlendOp;
+} CF_CLOSED_ENUM CF_BlendOp;
 
 /**
  * @function cf_blend_op_string
@@ -1205,7 +1205,7 @@ typedef enum CF_BlendFactor
 	#define CF_ENUM(K, V) CF_##K = V,
 	CF_BLENDFACTOR_DEFS
 	#undef CF_ENUM
-} CF_BlendFactor;
+} CF_CLOSED_ENUM CF_BlendFactor;
 
 /**
  * @function cf_blend_factor_string
@@ -1444,7 +1444,7 @@ typedef enum CF_UniformType
 	#define CF_ENUM(K, V) CF_##K = V,
 	CF_UNIFORM_TYPE_DEFS
 	#undef CF_ENUM
-} CF_UniformType;
+} CF_CLOSED_ENUM CF_UniformType;
 
 /**
  * @function cf_uniform_type_string

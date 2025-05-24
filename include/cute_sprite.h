@@ -62,7 +62,7 @@ typedef enum CF_PlayDirection
 	#define CF_ENUM(K, V) CF_##K = V,
 	CF_PLAY_DIRECTION_DEFS
 	#undef CF_ENUM
-} CF_PlayDirection;
+} CF_CLOSED_ENUM CF_PlayDirection;
 
 /**
  * @function cf_play_direction_to_string

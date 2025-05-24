@@ -342,7 +342,7 @@ typedef enum CF_ClientState
 	#define CF_ENUM(K, V) CF_##K = V,
 	CF_CLIENT_STATE_DEFS
 	#undef CF_ENUM
-} CF_ClientState;
+} CF_CLOSED_ENUM CF_ClientState;
 
 /**
  * @function cf_client_state_to_string
@@ -492,7 +492,7 @@ typedef enum CF_ServerEventType
 	#define CF_ENUM(K, V) CF_##K = V,
 	CF_SERVER_EVENT_TYPE_DEFS
 	#undef CF_ENUM
-} CF_ServerEventType;
+} CF_CLOSED_ENUM CF_ServerEventType;
 
 /**
  * @function cf_server_event_type_to_string

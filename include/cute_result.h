@@ -91,7 +91,7 @@ typedef enum CF_MessageBoxType
 	#define CF_ENUM(K, V) CF_##K = V,
 	CF_MESSAGE_BOX_TYPE_DEFS
 	#undef CF_ENUM
-} CF_MessageBoxType;
+} CF_CLOSED_ENUM CF_MessageBoxType;
 
 /**
  * @function cf_message_box_type_to_string
