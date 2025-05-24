@@ -519,6 +519,9 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 		add_executable(scissor samples/scissor.c)
 		add_executable(ime samples/ime.c)
 		add_executable(pivot samples/pivot.cpp)
+		add_executable(sprite_slice samples/sprite_slice.cpp)
+		add_executable(sprite_shatter samples/sprite_shatter.cpp)
+		add_executable(screen_shatter samples/screen_shatter.cpp)
 		set(SAMPLE_EXECUTABLES
 			easysprite
 			basicserialization
@@ -553,6 +556,9 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 			scissor
 			ime
 			pivot
+			sprite_slice
+			sprite_shatter
+			screen_shatter
 		)
 
 		foreach(CURRENT_TARGET ${SAMPLE_EXECUTABLES})
