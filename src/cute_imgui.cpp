@@ -83,35 +83,16 @@ static void s_make_buffers(int vertex_count, int index_count)
 
 void cf_imgui_init()
 {
- //  SDL_GPUTextureCreateInfo texture_info = {
-	// 	.type = SDL_GPU_TEXTURETYPE_2D,
-	// 	.format = SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM,
-	// 	.usage = SDL_GPU_TEXTUREUSAGE_SAMPLER,
-	// 	.width = (uint32_t)width,
-	// 	.height = (uint32_t)height,
-	// 	.layer_count_or_depth = 1,
-	// 	.num_levels = 1,
-	// 	.sample_count = {},
-	// };
+	auto& io = ImGui::GetIO();
+	io.ConfigFlags |= ImGuiBackendFlags_RendererHasVtxOffset;     // Enable Keyboard Controls
+	io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 
- //  SDL_GPUTexture* font_tex = SDL_CreateGPUTexture(app->device, &texture_info);
-	// CF_ASSERT(font_tex);
-	// app->imgui_font_tex = font_tex;
-
- 	auto& io = ImGui::GetIO();
-  io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
-  io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
-	// io.Fonts->SetTexID((ImTextureID)font_tex);
-	// io.ConfigFlags |= ImGuiConfigFlags_DockingEnable
-	//
-  // ImGui_ImplSDL3_InitForSDLGPU(app->window);
-  // ImGui_ImplSDLGPU3_InitInfo init_info = {};
-  // init_info.Device = app->device;
-  // init_info.ColorTargetFormat = SDL_GetGPUSwapchainTextureFormat(app->device, app->window);
-  // init_info.MSAASamples = SDL_GPU_SAMPLECOUNT_1;
-  // ImGui_ImplSDLGPU3_Init(&init_info);
-
-  // this is now in cute_app.cpp -> cf_app_init_imgui
+	ImGui_ImplSDL3_InitForSDLGPU(app->window);
+	ImGui_ImplSDLGPU3_InitInfo init_info = {};
+	init_info.Device = app->device;
+	init_info.ColorTargetFormat = SDL_GetGPUSwapchainTextureFormat(app->device, app->window);
+	init_info.MSAASamples = SDL_GPU_SAMPLECOUNT_1;
+	ImGui_ImplSDLGPU3_Init(&init_info);
 }
 
 void cf_imgui_shutdown()

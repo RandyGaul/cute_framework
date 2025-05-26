@@ -824,15 +824,6 @@ ImGuiContext* cf_app_init_imgui()
 	ImGui::CreateContext();
 	app->using_imgui = true;
 
-	ImGui::StyleColorsDark();
-
-	ImGui_ImplSDL3_InitForSDLGPU(app->window);
-	ImGui_ImplSDLGPU3_InitInfo init_info = {};
-	init_info.Device = app->device;
-	init_info.ColorTargetFormat = SDL_GetGPUSwapchainTextureFormat(app->device, app->window);
-	init_info.MSAASamples = SDL_GPU_SAMPLECOUNT_1;
-	ImGui_ImplSDLGPU3_Init(&init_info);
-
 	cf_imgui_init();
 
 	return ::ImGui::GetCurrentContext();
