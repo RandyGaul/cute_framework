@@ -84,7 +84,6 @@ static void s_make_buffers(int vertex_count, int index_count)
 void cf_imgui_init()
 {
 	auto& io = ImGui::GetIO();
-	io.ConfigFlags |= ImGuiBackendFlags_RendererHasVtxOffset;     // Enable Keyboard Controls
 	io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 
 	ImGui_ImplSDL3_InitForSDLGPU(app->window);
