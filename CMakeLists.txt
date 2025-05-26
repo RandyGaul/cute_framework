@@ -99,6 +99,8 @@ set(CF_SRCS
 	libraries/cimgui/imgui/imgui_draw.cpp
 	libraries/cimgui/imgui/imgui_tables.cpp
 	libraries/cimgui/imgui/imgui_widgets.cpp
+	libraries/cimgui/imgui/backends/imgui_impl_sdl3.cpp
+	libraries/cimgui/imgui/backends/imgui_impl_sdlgpu3.cpp
 
 	libraries/cimgui/cimgui.cpp
 )
