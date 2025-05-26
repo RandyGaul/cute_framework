@@ -119,13 +119,10 @@ void cf_imgui_draw(SDL_GPUTexture* swapchain_texture) {
 		// Setup and start a render pass
 		SDL_GPUColorTargetInfo target_info = {};
 		target_info.texture = swapchain_texture;
-		target_info.clear_color = SDL_FColor { clear_color.x, clear_color.y, clear_color.z, clear_color.w };
-		target_info.load_op = SDL_GPU_LOADOP_CLEAR;
+		target_info.load_op = SDL_GPU_LOADOP_LOAD;
 		target_info.store_op = SDL_GPU_STOREOP_STORE;
-		target_info.mip_level = 0;
-		target_info.layer_or_depth_plane = 0;
-		target_info.cycle = false;
 		SDL_GPURenderPass* render_pass = SDL_BeginGPURenderPass(app->cmd, &target_info, 1, nullptr);
+		SDL_BindGPUGraphicsPipeline(render_pass, app->imgui_pip);
 
 		// Render ImGui
 		ImGui_ImplSDLGPU3_RenderDrawData(draw_data, app->cmd, render_pass);
