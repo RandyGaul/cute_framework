@@ -17,12 +17,6 @@
 #include <imgui/backends/imgui_impl_sdl3.h>
 #include <imgui/backends/imgui_impl_sdlgpu3.h>
 
-#ifdef CF_RUNTIME_SHADER_COMPILATION
-#include "cute_shader/builtin_shaders.h"
-#else
-#include "data/builtin_shaders_bytecode.h"
-#endif
-
 using namespace Cute;
 
 void cf_imgui_init()
