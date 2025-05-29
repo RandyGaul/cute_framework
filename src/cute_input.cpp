@@ -316,9 +316,9 @@ bool cf_mouse_double_clicked(CF_MouseButton button)
 void cf_mouse_hide(bool true_to_hide)
 {
 	if (true_to_hide) {
-		SDL_ShowCursor();
-	} else {
 		SDL_HideCursor();
+	} else {
+		SDL_ShowCursor();
 	}
 }
 
