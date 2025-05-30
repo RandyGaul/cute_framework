@@ -54,6 +54,8 @@ if(CF_FRAMEWORK_WITH_HTTPS MATCHES OFF)
 	add_definitions(-DCF_NO_HTTPS)
 endif()
 
+add_definitions("-DIMGUI_USER_CONFIG=\"cimgui/cimconfig.h\"")
+
 # Common directories for compiler/linker path.
 include_directories(src libraries test)
 
@@ -97,6 +99,8 @@ set(CF_SRCS
 	libraries/cimgui/imgui/imgui_draw.cpp
 	libraries/cimgui/imgui/imgui_tables.cpp
 	libraries/cimgui/imgui/imgui_widgets.cpp
+	libraries/cimgui/imgui/backends/imgui_impl_sdl3.cpp
+	libraries/cimgui/imgui/backends/imgui_impl_sdlgpu3.cpp
 
 	libraries/cimgui/cimgui.cpp
 )

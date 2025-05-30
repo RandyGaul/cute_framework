@@ -490,42 +490,6 @@ void main() {
 }
 )";
 
-static const char* s_imgui_vs = R"(
-layout (location = 0) in vec2 pos;
-layout (location = 1) in vec2 uv;
-layout (location = 2) in vec4 col;
-
-layout (location = 0) out vec4 v_col;
-layout (location = 1) out vec2 v_uv;
-
-layout (set = 1, binding = 0) uniform uniform_block {
-	mat4 ProjectionMatrix;
-};
-
-void main()
-{
-	v_col = col;
-	v_uv  = uv;
-	gl_Position = ProjectionMatrix * vec4(pos.xy, 0, 1);
-}
-)";
-
-static const char* s_imgui_fs = R"(
-layout (location = 0) in vec4 v_col;
-layout (location = 1) in vec2 v_uv;
-
-layout(location = 0) out vec4 result;
-
-layout (set = 2, binding = 0) uniform sampler2D u_image;
-
-void main()
-{
-	vec4 color = v_col * texture(u_image, v_uv);
-	result = color;
-}
-)";
-
-
 typedef struct CF_BuiltinShaderSource {
 	const char* name;
 	const char* vertex;
@@ -544,7 +508,6 @@ static CF_BuiltinShaderSource s_builtin_shader_sources[] = {
 	{ "s_basic", s_basic_vs, s_basic_fs },
 	{ "s_backbuffer", s_basic_vs, s_basic_fs },
 	{ "s_blit", s_blit_vs, s_blit_fs },
-	{ "s_imgui", s_imgui_vs, s_imgui_fs },
 };
 
 #endif

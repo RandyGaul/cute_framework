@@ -130,15 +130,6 @@ struct CF_App
 
 	// Dear ImGui stuff.
 	bool using_imgui = false;
-	SDL_GPUSampler* imgui_sampler = NULL;
-	int imgui_vertex_count = 0;
-	int imgui_index_count = 0;
-	SDL_GPUBuffer* imgui_vbuf = NULL;
-	SDL_GPUBuffer* imgui_ibuf = NULL;
-	SDL_GPUTransferBuffer* imgui_vtbuf = NULL;
-	SDL_GPUTransferBuffer* imgui_itbuf = NULL;
-	SDL_GPUGraphicsPipeline* imgui_pip = NULL;
-	SDL_GPUTexture* imgui_font_tex = NULL;
 
 	// Font stuff.
 	uint64_t font_image_id_gen = CF_FONT_ID_RANGE_LO;
