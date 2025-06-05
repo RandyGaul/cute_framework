@@ -99,6 +99,8 @@ set(CF_SRCS
 	libraries/cimgui/imgui/imgui_widgets.cpp
 
 	libraries/cimgui/cimgui.cpp
+
+	libraries/SDL3_shadercross/SDL_shadercross.c
 )
 if(APPLE)
 	set(CF_SRCS ${CF_SRCS}
