@@ -17,9 +17,7 @@
 #include "cute_shader/cute_shader.h"
 #include "cute_shader/builtin_shaders.h"
 #include "data/builtin_shaders_bytecode.h"
-#define SDL_GPU_SHADERCROSS_IMPLEMENTATION
-#define SDL_GPU_SHADERCROSS_STATIC
-#include <SDL_gpu_shadercross/SDL_gpu_shadercross.h>
+#include <SDL3_shadercross/SDL_shadercross.h>
 
 struct CF_CanvasInternal;
 static CF_CanvasInternal* s_canvas = NULL;

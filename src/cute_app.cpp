@@ -24,7 +24,7 @@
 #include <internal/cute_imgui_internal.h>
 
 #include <imgui/backends/imgui_impl_sdl3.h>
-#include <SDL_gpu_shadercross/SDL_gpu_shadercross.h>
+#include <SDL3_shadercross/SDL_shadercross.h>
 
 #include <data/fonts/calibri.h>
 
