@@ -374,7 +374,7 @@ if (CF_RUNTIME_SHADER_COMPILATION OR CF_CUTE_SHADERC)
 	endif()
 endif()
 
-# SPIRV-Cross for SDL_gpu_shadercross
+# SPIRV-Cross for SDL_shadercross
 set(SPIRV_CROSS_CLI OFF CACHE BOOL "Turn off building SPIRV-Cross CLI.")
 FetchContent_Declare(
 	SPIRV_CROSS
