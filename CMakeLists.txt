@@ -15,6 +15,10 @@ option(CF_RUNTIME_SHADER_COMPILATION "Build CF with online shader compilation su
 option(CF_CUTE_SHADERC "Build cute-shaderc, an offline shader compiler (requires python 3.x installation)." ON)
 option(CF_FRAMEWORK_APPLE_FRAMEWORK "Build CF libraries as Apple Framework" OFF)
 
+# Make sure all libraries are placed into the same output folder.
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+
 # Platform detection.
 if(CMAKE_SYSTEM_NAME MATCHES "Emscripten")
 	set(EMSCRIPTEN TRUE)
