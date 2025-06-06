@@ -103,6 +103,8 @@ set(CF_SRCS
 	libraries/cimgui/imgui/backends/imgui_impl_sdlgpu3.cpp
 
 	libraries/cimgui/cimgui.cpp
+
+	libraries/SDL3_shadercross/SDL_shadercross.c
 )
 if(APPLE)
 	set(CF_SRCS ${CF_SRCS}
@@ -376,7 +378,7 @@ if (CF_RUNTIME_SHADER_COMPILATION OR CF_CUTE_SHADERC)
 	endif()
 endif()
 
-# SPIRV-Cross for SDL_gpu_shadercross
+# SPIRV-Cross for SDL_shadercross
 set(SPIRV_CROSS_CLI OFF CACHE BOOL "Turn off building SPIRV-Cross CLI.")
 FetchContent_Declare(
 	SPIRV_CROSS

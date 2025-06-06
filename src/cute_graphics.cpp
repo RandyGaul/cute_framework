@@ -17,9 +17,7 @@
 #include "cute_shader/cute_shader.h"
 #include "cute_shader/builtin_shaders.h"
 #include "data/builtin_shaders_bytecode.h"
-#define SDL_GPU_SHADERCROSS_IMPLEMENTATION
-#define SDL_GPU_SHADERCROSS_STATIC
-#include <SDL_gpu_shadercross/SDL_gpu_shadercross.h>
+#include <SDL3_shadercross/SDL_shadercross.h>
 
 struct CF_CanvasInternal;
 static CF_CanvasInternal* s_canvas = NULL;
@@ -477,7 +475,21 @@ static SDL_GPUShader* s_compile(CF_ShaderInternal* shader_internal, CF_ShaderByt
 	if (SDL_GetGPUShaderFormats(app->device) == SDL_GPU_SHADERFORMAT_SPIRV) {
 		sdl_shader = (SDL_GPUShader*)SDL_CreateGPUShader(app->device, &shaderCreateInfo);
 	} else {
-		sdl_shader = (SDL_GPUShader*)SDL_ShaderCross_CompileGraphicsShaderFromSPIRV(app->device, &shaderCreateInfo);
+  	SDL_ShaderCross_GraphicsShaderMetadata metadata = {};
+  	metadata.num_samplers = shader_info->num_samplers;
+  	metadata.num_storage_textures = shader_info->num_storage_textures;
+  	metadata.num_storage_buffers = shader_info->num_storage_buffers;
+  	metadata.num_uniform_buffers = shader_info->num_uniforms;
+
+	  SDL_ShaderCross_SPIRV_Info spirvInfo;
+		spirvInfo.bytecode = bytecode.content;
+		spirvInfo.bytecode_size = bytecode.size;
+		spirvInfo.entrypoint = "main";
+		spirvInfo.shader_stage = stage == CF_SHADER_STAGE_VERTEX ? SDL_SHADERCROSS_SHADERSTAGE_VERTEX : SDL_SHADERCROSS_SHADERSTAGE_FRAGMENT;
+		spirvInfo.enable_debug = false;
+		spirvInfo.name = "shader.shd";
+		spirvInfo.props = SDL_CreateProperties();
+		sdl_shader = (SDL_GPUShader*)SDL_ShaderCross_CompileGraphicsShaderFromSPIRV(app->device, &spirvInfo, &metadata);
 	}
 	CF_ASSERT(sdl_shader);
 	return sdl_shader;

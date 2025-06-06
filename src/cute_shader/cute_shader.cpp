@@ -14,7 +14,7 @@
 #include <glslang/Public/ShaderLang.h>
 #include <glslang/Public/ResourceLimits.h>
 #include <SPIRV/GlslangToSpv.h>
-#include <SDL_gpu_shadercross/spirv.h>
+#include <SDL3_shadercross/spirv.h>
 #include <SPIRV-Reflect/spirv_reflect.h>
 
 #define CUTE_SHADER_GLSL_VERSION 450
