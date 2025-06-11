@@ -104,7 +104,7 @@ jobs:
         shell: cmd
         run: |
           robocopy include dist *.h
-          robocopy build_folder\Release\lib dist cute.lib 
+          robocopy build_folder\Release\lib dist cute*.lib 
           robocopy build_folder\lib dist libcute*.a
           7z a ${{ matrix.platform.artifact }}.zip .\dist\*
         if: runner.os == 'Windows'
