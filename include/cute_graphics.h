@@ -31,8 +31,6 @@ extern "C" {
  * Quick list of unsupported features. CF's focus is on the 2D use case, so most of these features are
  * omit since they aren't super useful for 2D.
  * 
- *     - Mipmaps
- *     - MSAA
  *     - Blend color constant
  *     - Multiple render targets (aka color/texture attachments)
  *     - Depth bias tunables
@@ -42,12 +40,6 @@ extern "C" {
  *     - Other primitive types besides triangles
  *     - Anisotropy tunable
  *     - Min/max LOD tunable
- *
- * These features are to be added to CF in the future:
- * 
- *     - Indexed meshes
- *     - Instance rendering
- *     - Compute shaders
  * 
  * The basic flow of rendering a frame looks something like this:
  * 

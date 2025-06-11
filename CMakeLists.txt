@@ -509,6 +509,7 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 		add_executable(spaceshooter samples/spaceshooter.cpp)
 		add_executable(draw_to_texture samples/draw_to_texture.c)
 		add_executable(hello_triangle samples/hello_triangle.c)
+		add_executable(basicinstancing samples/basic_instancing.c)
 		add_executable(waves samples/waves.cpp)
 		add_executable(shallow_water samples/shallow_water.cpp)
 		add_executable(noise samples/noise.c)
@@ -546,6 +547,7 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 			spaceshooter
 			draw_to_texture
 			hello_triangle
+			basicinstancing
 			waves
 			shallow_water
 			noise

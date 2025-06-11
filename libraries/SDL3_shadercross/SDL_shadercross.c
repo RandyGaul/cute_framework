@@ -1786,10 +1786,10 @@ bool SDL_ShaderCross_ReflectGraphicsSPIRV(
 
     spvc_context_destroy(context);
 
-    metadata->num_samplers = num_texture_samplers;
-    metadata->num_storage_textures = num_storage_textures;
-    metadata->num_storage_buffers = num_storage_buffers;
-    metadata->num_uniform_buffers = num_uniform_buffers;
+    metadata->num_samplers = (Uint32)num_texture_samplers;
+    metadata->num_storage_textures = (Uint32)num_storage_textures;
+    metadata->num_storage_buffers = (Uint32)num_storage_buffers;
+    metadata->num_uniform_buffers = (Uint32)num_uniform_buffers;
     return true;
 }
 
@@ -1998,12 +1998,12 @@ bool SDL_ShaderCross_ReflectComputeSPIRV(
 
     spvc_context_destroy(context);
 
-    metadata->num_samplers = num_texture_samplers;
-    metadata->num_readonly_storage_textures = num_readonly_storage_textures;
-    metadata->num_readonly_storage_buffers = num_readonly_storage_buffers;
-    metadata->num_readwrite_storage_textures = num_readwrite_storage_textures;
-    metadata->num_readwrite_storage_buffers = num_readwrite_storage_buffers;
-    metadata->num_uniform_buffers = num_uniform_buffers;
+    metadata->num_samplers = (Uint32)num_texture_samplers;
+    metadata->num_readonly_storage_textures = (Uint32)num_readonly_storage_textures;
+    metadata->num_readonly_storage_buffers = (Uint32)num_readonly_storage_buffers;
+    metadata->num_readwrite_storage_textures = (Uint32)num_readwrite_storage_textures;
+    metadata->num_readwrite_storage_buffers = (Uint32)num_readwrite_storage_buffers;
+    metadata->num_uniform_buffers = (Uint32)num_uniform_buffers;
     return true;
 }
 
