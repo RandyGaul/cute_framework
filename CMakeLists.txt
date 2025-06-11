@@ -510,6 +510,7 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 		add_executable(draw_to_texture samples/draw_to_texture.c)
 		add_executable(hello_triangle samples/hello_triangle.c)
 		add_executable(basicinstancing samples/basic_instancing.c)
+		add_executable(basicindexedrendering samples/basic_indexed_rendering.c)
 		add_executable(waves samples/waves.cpp)
 		add_executable(shallow_water samples/shallow_water.cpp)
 		add_executable(noise samples/noise.c)
@@ -548,6 +549,7 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 			draw_to_texture
 			hello_triangle
 			basicinstancing
+			basicindexedrendering
 			waves
 			shallow_water
 			noise
