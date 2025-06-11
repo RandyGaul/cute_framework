@@ -146,7 +146,7 @@ CF_Texture cf_make_texture(CF_TextureParams params)
 	if (params.generate_mipmaps) {
 		tex_info.num_levels = params.mip_count > 0
 			? (Uint32)params.mip_count
-			: (Uint32)(1 + (int)CF_FLOORF(CF_LOG2F(cf_max(params.width, params.height))));
+			: (Uint32)(1 + (int)CF_FLOORF(CF_LOG2F((float)cf_max(params.width, params.height))));
 	}
 
 	SDL_GPUTexture* tex = SDL_CreateGPUTexture(app->device, &tex_info);

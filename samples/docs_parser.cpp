@@ -6,19 +6,34 @@ using namespace Cute;
 
 // Parses all the Cute headers and generates documentation pages in .md format.
 
+static void panic(String msg)
+{
+	printf("ERROR: %s\n", msg.c_str());
+	exit(-1);
+}
+
 const char* g_relative_path;
 const char* get_relative_path()
 {
 	if (!g_relative_path) {
-		CF_Path path = cf_fs_get_base_directory();
+		g_relative_path = "../docs";
+
+		// Try and search up a couple directories for the docs folder.
+		// On different cmake generators we can get placed into various folder depths.
+		CF_Path path = cf_fs_get_working_directory();
 		path.normalize();
-		String dir = path.filename();
-		if (siequ(dir.c_str(), "debug") || siequ(dir.c_str(), "release")) {
+		path.pop();
+		path.add("/docs");
+		if (!std::filesystem::is_directory(path.c_str())) {
+			path.pop(2);
+			path.add("/docs");
 			g_relative_path = "../../docs";
-		} else {
-			g_relative_path = "../docs";
+			if (!std::filesystem::is_directory(path.c_str())) {
+				panic("Can't find the /docs folder.");
+			}
 		}
 	}
+
 	return g_relative_path;
 }
 
@@ -33,12 +48,6 @@ static bool s_is_space(int cp)
 	case '\r': return true;
 	default:   return false;
 	}
-}
-
-static void panic(String msg)
-{
-	printf("ERROR: %s\n", msg.c_str());
-	exit(-1);
 }
 
 enum DocType

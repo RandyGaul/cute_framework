@@ -18,6 +18,7 @@ Enum | Description
 UNIFORM_TYPE_UNKNOWN | In a shader: `uniform float`
 UNIFORM_TYPE_FLOAT | In a shader: `uniform float`
 UNIFORM_TYPE_FLOAT2 | In a shader: `uniform vec2`
+UNIFORM_TYPE_FLOAT3 | In a shader: `uniform vec3`
 UNIFORM_TYPE_FLOAT4 | In a shader: `uniform vec4`
 UNIFORM_TYPE_INT | In a shader: `uniform int`
 UNIFORM_TYPE_INT2 | In a shader: `uniform int[2]`

@@ -3,26 +3,25 @@
 [//]: # (See: https://github.com/RandyGaul/cute_framework/blob/master/samples/docs_parser.cpp)
 [](../header.md ':include')
 
-# cf_fs_get_base_directory
+# cf_fs_get_working_directory
 
 Category: [file](/api_reference?id=file)  
 GitHub: [cute_file_system.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_file_system.h)  
 ---
 
-Returns the path of the base directory.
+Returns the current working directory in platform-dependent notation.
 
 ```cpp
-const char* cf_fs_get_base_directory();
+const char* cf_fs_get_working_directory();
 ```
 
 ## Remarks
 
-This is not a virtual path, but the actual OS-path where the executable was run from. This might not be the working directory,
-but probably is. You should probably mount the base directory with [cf_fs_mount](/file/cf_fs_mount.md). See [Virtual File System](https://randygaul.github.io/cute_framework/#/topics/virtual_file_system) for an overview.
+Not all platforms have the concept of a working directory, but this function will sill try to return something sane in these cases.
 
 ## Related Pages
 
-[cf_fs_get_working_directory](/file/cf_fs_get_working_directory.md)  
+[cf_fs_get_base_directory](/file/cf_fs_get_base_directory.md)  
 [cf_fs_set_write_directory](/file/cf_fs_set_write_directory.md)  
 [cf_fs_get_user_directory](/file/cf_fs_get_user_directory.md)  
 [cf_fs_mount](/file/cf_fs_mount.md)  

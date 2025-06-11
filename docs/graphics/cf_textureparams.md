@@ -16,10 +16,16 @@ Struct Members | Description
 `CF_PixelFormat pixel_format` | The pixel format for this texture's data. See [CF_PixelFormat](/graphics/cf_pixelformat.md).
 `CF_TextureUsageFlags usage` | The memory access pattern for this texture on the GPU. See `CF_TextureUsageBits`.
 `CF_Filter filter` | The filtering operation to use when fetching data out of the texture, on the GPU. See [CF_Filter](/graphics/cf_filter.md).
-`CF_WrapMode wrap_u` | The texture wrapping behavior when addressing beyond [0,1] for the u-coordinate. See [CF_WrapMode](/graphics/cf_wrapmode.md).
-`CF_WrapMode wrap_v` | The texture wrapping behavior when addressing beyond [0,1] for the v-coordinate. See [CF_WrapMode](/graphics/cf_wrapmode.md).
+`CF_WrapMode wrap_u` | The texture wrapping behavior when addressing beyond [0,1) for the u-coordinate. See [CF_WrapMode](/graphics/cf_wrapmode.md).
+`CF_WrapMode wrap_v` | The texture wrapping behavior when addressing beyond [0,1) for the v-coordinate. See [CF_WrapMode](/graphics/cf_wrapmode.md).
+`CF_MipFilter mip_filter` | The filtering operation to use when fetching data out of a mipmap, on the GPU. See [CF_MipFilter](/graphics/cf_mipfilter.md).
 `int width` | Number of elements (usually pixels) along the width of the texture.
 `int height` | Number of elements (usually pixels) along the height of the texture.
+`CF_SampleCount sample_count` | MSAA sample count for render target use; must be 1, 2, 4, or 8 (see [CF_SampleCount](/graphics/cf_samplecount.md)). Defaults to 1 (no MSAA). Note: This only applies to textures render to as a canvas.
+`int mip_count` | 0 = auto compute from dimensions if `generate_mipmaps` is true, else specify an explicit number.
+`bool generate_mipmaps` | Defaulted to false, true to enable mipmap generation and will be initialized with full mipmaps.
+`float mip_lod_bias` | Mipmap level bias; positive = blurrier, negative = sharper.
+`float max_anisotropy` | Maximum anisotropy level; 1.0 disables anisotropic filtering.
 `bool stream` | Set this to true if you plan to update the texture contents each frame.
 
 ## Remarks

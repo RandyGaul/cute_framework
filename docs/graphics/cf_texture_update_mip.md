@@ -3,28 +3,29 @@
 [//]: # (See: https://github.com/RandyGaul/cute_framework/blob/master/samples/docs_parser.cpp)
 [](../header.md ':include')
 
-# cf_texture_update
+# cf_texture_update_mip
 
 Category: [graphics](/api_reference?id=graphics)  
 GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_graphics.h)  
 ---
 
-Updates the contents of a [CF_Texture](/graphics/cf_texture.md).
+Updates the contents of a specific mip level of a [CF_Texture](/graphics/cf_texture.md).
 
 ```cpp
-void cf_texture_update(CF_Texture texture, void* data, int size);
+void cf_texture_update_mip(CF_Texture texture, void* data, int size, int mip_level);
 ```
 
 Parameters | Description
 --- | ---
-texture | The texture.
-data | The data to upload to the texture.
-size | The size in bytes of `data`.
+texture | The texture to update.
+data | Pointer to the raw pixel data to upload.
+size | Size in bytes of `data`.
+mip_level | The mipmap level to update (0 = base level).
 
 ## Remarks
 
-If you plan to frequently update the texture once per frame, it's recommended to set `stream` to
-true in the creation params [CF_TextureParams](/graphics/cf_textureparams.md).
+If you update the texture frequently (e.g., once per frame), it's recommended to set `stream = true`
+when creating the texture using [CF_TextureParams](/graphics/cf_textureparams.md).
 
 ## Related Pages
 
@@ -32,5 +33,5 @@ true in the creation params [CF_TextureParams](/graphics/cf_textureparams.md).
 [CF_Texture](/graphics/cf_texture.md)  
 [cf_make_texture](/graphics/cf_make_texture.md)  
 [cf_destroy_texture](/graphics/cf_destroy_texture.md)  
+[cf_texture_update](/graphics/cf_texture_update.md)  
 [cf_generate_mipmaps](/graphics/cf_generate_mipmaps.md)  
-[cf_texture_update_mip](/graphics/cf_texture_update_mip.md)  

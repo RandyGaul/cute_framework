@@ -330,9 +330,18 @@ typedef struct CF_Stat
  * @brief    Returns the path of the base directory.
  * @remarks  This is not a virtual path, but the actual OS-path where the executable was run from. This might not be the working directory,
  *           but probably is. You should probably mount the base directory with `cf_fs_mount`. See [Virtual File System](https://randygaul.github.io/cute_framework/#/topics/virtual_file_system) for an overview.
- * @related  cf_fs_get_base_directory cf_fs_set_write_directory cf_fs_get_user_directory cf_fs_mount cf_fs_dismount
+ * @related  cf_fs_get_base_directory cf_fs_set_write_directory cf_fs_get_user_directory cf_fs_mount cf_fs_dismount cf_fs_get_working_directory
  */
 CF_API const char* CF_CALL cf_fs_get_base_directory();
+
+/**
+ * @function cf_fs_get_working_directory
+ * @category file
+ * @brief    Returns the current working directory in platform-dependent notation.
+ * @remarks  Not all platforms have the concept of a working directory, but this function will sill try to return something sane in these cases.
+ * @related  cf_fs_get_base_directory cf_fs_set_write_directory cf_fs_get_user_directory cf_fs_mount cf_fs_dismount cf_fs_get_working_directory
+ */
+CF_API const char* CF_CALL cf_fs_get_working_directory();
 
 /**
  * @function cf_fs_set_write_directory

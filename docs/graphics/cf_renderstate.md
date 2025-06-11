@@ -18,6 +18,11 @@ Struct Members | Description
 `CF_CompareFunction depth_compare` | Defines how to perform depth-testing. See [CF_CompareFunction](/graphics/cf_comparefunction.md).
 `bool depth_write_enabled` | Must be true to enable depth-testing and use of the depth buffer.
 `CF_StencilParams stencil` | Sets up how to perform (if at all) stencil testing. See [CF_StencilParams](/graphics/cf_stencilparams.md).
+`float depth_bias_constant_factor` | A scalar factor controlling the depth value added to each fragment.
+`float depth_bias_clamp` | The maximum depth bias of a fragment.
+`float depth_bias_slope_factor` | A scalar factor applied to a fragment's slope in depth calculations.
+`bool enable_depth_bias` | True to bias fragment depth values.
+`bool enable_depth_clip` | True to enable depth clip, false to enable depth clamp.
 
 ## Remarks
 
