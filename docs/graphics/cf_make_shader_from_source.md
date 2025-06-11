@@ -17,11 +17,8 @@ CF_Shader cf_make_shader_from_source(const char* vertex_src, const char* fragmen
 
 Parameters | Description
 --- | ---
-vertex_path | A virtual path to the shader. See [Virtual File System](https://randygaul.github.io/cute_framework/#/topics/virtual_file_system).
-
-## Remarks
-
-The shader paths must be in the shader directory. See [cf_shader_directory](/graphics/cf_shader_directory.md).
+vertex_src | The vertex shader source as C-string.
+fragment_src | The fragment shader source as C-string.
 
 ## Related Pages
 
