@@ -759,8 +759,8 @@ CF_API CF_Shader CF_CALL cf_make_shader(const char* vertex_path, const char* fra
  * @function cf_make_shader_from_source
  * @category graphics
  * @brief    Creates a shader from strings containing glsl source code.
- * @param    vertex_path   A virtual path to the shader. See [Virtual File System](https://randygaul.github.io/cute_framework/#/topics/virtual_file_system).
- * @remarks  The shader paths must be in the shader directory. See `cf_shader_directory`.
+ * @param    vertex_src    The vertex shader source as C-string.
+ * @param    fragment_src  The fragment shader source as C-string.
  * @related  CF_Shader cf_make_shader cf_shader_directory cf_apply_shader CF_Material
  */
 CF_API CF_Shader CF_CALL cf_make_shader_from_source(const char* vertex_src, const char* fragment_src);
