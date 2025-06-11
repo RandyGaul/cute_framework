@@ -115,12 +115,18 @@ CF_TextureParams cf_texture_defaults(int w, int h)
 {
 	CF_TextureParams params;
 	params.pixel_format = CF_PIXEL_FORMAT_R8G8B8A8_UNORM;
-	params.filter = CF_FILTER_LINEAR;
 	params.usage = CF_TEXTURE_USAGE_SAMPLER_BIT;
+	params.filter = CF_FILTER_LINEAR;
 	params.wrap_u = CF_WRAP_MODE_REPEAT;
 	params.wrap_v = CF_WRAP_MODE_REPEAT;
+	params.mip_filter = CF_MIP_FILTER_LINEAR;
 	params.width = w;
 	params.height = h;
+	params.mip_count = 0;
+	params.generate_mipmaps = false;
+	params.sample_count = CF_SAMPLE_COUNT_1;
+	params.mip_lod_bias = 0.0f;
+	params.max_anisotropy = 1.0f;
 	params.stream = false;
 	return params;
 }
@@ -137,6 +143,12 @@ CF_Texture cf_make_texture(CF_TextureParams params)
 	tex_info.height = (Uint32)params.height;
 	tex_info.format = s_wrap(params.pixel_format);
 	tex_info.usage = params.usage;
+	if (params.generate_mipmaps) {
+		tex_info.num_levels = params.mip_count > 0
+			? (Uint32)params.mip_count
+			: (Uint32)(1 + (int)CF_FLOORF(CF_LOG2F(cf_max(params.width, params.height))));
+	}
+
 	SDL_GPUTexture* tex = SDL_CreateGPUTexture(app->device, &tex_info);
 	CF_ASSERT(tex);
 	if (!tex) return { 0 };
@@ -146,8 +158,11 @@ CF_Texture cf_make_texture(CF_TextureParams params)
 	// texture in the owning canvas already has a sampler attached.
 	if (!s_is_depth(params.pixel_format)) {
 		SDL_GPUSamplerCreateInfo sampler_info = SDL_GPUSamplerCreateInfoDefaults();
+		sampler_info.mip_lod_bias = params.mip_lod_bias;
+		sampler_info.max_anisotropy = params.max_anisotropy;
 		sampler_info.min_filter = s_wrap(params.filter);
 		sampler_info.mag_filter = s_wrap(params.filter);
+		sampler_info.mipmap_mode = s_wrap(params.mip_filter);
 		sampler_info.address_mode_u = s_wrap(params.wrap_u);
 		sampler_info.address_mode_v = s_wrap(params.wrap_v);
 		sampler = SDL_CreateGPUSampler(app->device, &sampler_info);
@@ -166,7 +181,7 @@ CF_Texture cf_make_texture(CF_TextureParams params)
 			.size = (Uint32)(texel_size * params.width * params.height),
 			.props = 0,
 		};
-		SDL_GPUTransferBuffer* buf = SDL_CreateGPUTransferBuffer(app->device, &tbuf_info);
+		buf = SDL_CreateGPUTransferBuffer(app->device, &tbuf_info);
 	}
 
 	CF_TextureInternal* tex_internal = CF_NEW(CF_TextureInternal);
@@ -178,9 +193,10 @@ CF_Texture cf_make_texture(CF_TextureParams params)
 	tex_internal->sampler = sampler;
 	tex_internal->format = tex_info.format;
 	CF_Texture result;
-	result.id = { (uint64_t)tex_internal };
+	result.id = (uint64_t)(uintptr_t)tex_internal;
 	return result;
 }
+
 
 void cf_destroy_texture(CF_Texture texture_handle)
 {
@@ -231,6 +247,53 @@ void cf_texture_update(CF_Texture texture_handle, void* data, int size)
 	SDL_UploadToGPUTexture(pass, &src, &dst, true);
 	SDL_EndGPUCopyPass(pass);
 	if (!tex->buf) SDL_ReleaseGPUTransferBuffer(app->device, buf);
+	if (!app->cmd) SDL_SubmitGPUCommandBuffer(cmd);
+}
+
+void cf_texture_update_mip(CF_Texture texture_handle, void* data, int size, int mip_level)
+{
+	CF_TextureInternal* tex = (CF_TextureInternal*)texture_handle.id;
+
+	// Create a temporary transfer buffer if needed.
+	SDL_GPUTransferBuffer* buf = tex->buf;
+	if (!buf) {
+		SDL_GPUTransferBufferCreateInfo tbuf_info = {
+			.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD,
+			.size = (Uint32)size,
+			.props = 0,
+		};
+		buf = SDL_CreateGPUTransferBuffer(app->device, &tbuf_info);
+	}
+
+	// Copy data into the transfer buffer
+	void* p = SDL_MapGPUTransferBuffer(app->device, buf, true);
+	CF_MEMCPY(p, data, size);
+	SDL_UnmapGPUTransferBuffer(app->device, buf);
+
+	// Compute dimensions for the mip level.
+	int w = cf_max(tex->w >> mip_level, 1);
+	int h = cf_max(tex->h >> mip_level, 1);
+
+	// Tell the driver to upload the bytes to the GPU.
+	SDL_GPUCommandBuffer* cmd = app->cmd ? app->cmd : SDL_AcquireGPUCommandBuffer(app->device);
+	SDL_GPUCopyPass* pass = SDL_BeginGPUCopyPass(cmd);
+	SDL_GPUTextureTransferInfo src;
+	src.transfer_buffer = buf;
+	src.pixels_per_row = w;
+	src.rows_per_layer = h;
+	SDL_GPUTextureRegion dst = SDL_GPUTextureRegionDefaults(tex, w, h);
+	dst.mip_level = (Uint32)mip_level;
+	SDL_UploadToGPUTexture(pass, &src, &dst, true);
+	SDL_EndGPUCopyPass(pass);
+	if (!tex->buf) SDL_ReleaseGPUTransferBuffer(app->device, buf);
+	if (!app->cmd) SDL_SubmitGPUCommandBuffer(cmd);
+}
+
+void cf_generate_mipmaps(CF_Texture texture_handle)
+{
+	CF_TextureInternal* tex = (CF_TextureInternal*)texture_handle.id;
+	SDL_GPUCommandBuffer* cmd = app->cmd ? app->cmd : SDL_AcquireGPUCommandBuffer(app->device);
+	SDL_GenerateMipmapsForGPUTexture(cmd, tex->tex);
 	if (!app->cmd) SDL_SubmitGPUCommandBuffer(cmd);
 }
 
@@ -920,6 +983,11 @@ CF_RenderState cf_render_state_defaults()
 	state.stencil.back.fail_op = CF_STENCIL_OP_KEEP;
 	state.stencil.back.depth_fail_op = CF_STENCIL_OP_KEEP;
 	state.stencil.back.pass_op = CF_STENCIL_OP_KEEP;
+	state.depth_bias_constant_factor = 0;
+	state.depth_bias_clamp = 0;
+	state.depth_bias_slope_factor = 0;
+	state.enable_depth_bias = false;
+	state.enable_depth_clip = true;
 	return state;
 }
 
@@ -1250,10 +1318,11 @@ static SDL_GPUGraphicsPipeline* s_build_pipeline(CF_ShaderInternal* shader, CF_R
 	pip_info.rasterizer_state.fill_mode = SDL_GPU_FILLMODE_FILL;
 	pip_info.rasterizer_state.cull_mode = s_wrap(state->cull_mode);
 	pip_info.rasterizer_state.front_face = SDL_GPU_FRONTFACE_COUNTER_CLOCKWISE;
-	pip_info.rasterizer_state.enable_depth_bias = false;
-	pip_info.rasterizer_state.depth_bias_constant_factor = 0;
-	pip_info.rasterizer_state.depth_bias_clamp = 0;
-	pip_info.rasterizer_state.depth_bias_slope_factor = 0;
+	pip_info.rasterizer_state.depth_bias_constant_factor = state->depth_bias_constant_factor;
+	pip_info.rasterizer_state.depth_bias_clamp = state->depth_bias_clamp;
+	pip_info.rasterizer_state.depth_bias_slope_factor = state->depth_bias_slope_factor;
+	pip_info.rasterizer_state.enable_depth_bias = state->enable_depth_bias;
+	pip_info.rasterizer_state.enable_depth_clip = state->enable_depth_clip;
 	pip_info.multisample_state.sample_count = SDL_GPU_SAMPLECOUNT_1;
 	pip_info.multisample_state.sample_mask = 0xFFFF;
 

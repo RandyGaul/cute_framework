@@ -33,13 +33,10 @@ extern "C" {
  * 
  *     - Blend color constant
  *     - Multiple render targets (aka color/texture attachments)
- *     - Depth bias tunables
  *     - Cube map
  *     - 3D textures
  *     - Texture arrays
  *     - Other primitive types besides triangles
- *     - Anisotropy tunable
- *     - Min/max LOD tunable
  * 
  * The basic flow of rendering a frame looks something like this:
  * 
@@ -432,6 +429,41 @@ CF_INLINE const char* cf_filter_to_string(CF_Filter filter) {
 }
 
 /**
+ * @enum     CF_MipFilter
+ * @category graphics
+ * @brief    Describes how the GPU samples between mipmap levels.
+ * @related  CF_MipFilter cf_mip_filter_to_string CF_TextureParams
+ */
+#define CF_MIP_FILTER_DEFS                                                  \
+	/* @entry Samples the nearest mip level without blending. */            \
+	CF_ENUM(MIP_FILTER_NEAREST, 0)                                          \
+	/* @entry Linearly blends between mip levels for smooth transitions. */ \
+	CF_ENUM(MIP_FILTER_LINEAR, 1)                                           \
+	/* @end */
+
+typedef enum CF_MipFilter
+{
+	#define CF_ENUM(K, V) CF_##K = V,
+	CF_MIP_FILTER_DEFS
+	#undef CF_ENUM
+} CF_MipFilter;
+
+/**
+ * @function cf_mip_filter_to_string
+ * @category graphics
+ * @brief    Returns a `CF_MipFilter` converted to a C string.
+ * @related  CF_MipFilter cf_mip_filter_to_string CF_TextureParams
+ */
+CF_INLINE const char* cf_mip_filter_to_string(CF_MipFilter filter) {
+	switch (filter) {
+	#define CF_ENUM(K, V) case CF_##K: return CF_STRINGIZE(CF_##K);
+	CF_MIP_FILTER_DEFS
+	#undef CF_ENUM
+	default: return NULL;
+	}
+}
+
+/**
  * @enum     CF_WrapMode
  * @category graphics
  * @brief    Wrap modes to define behavior when addressing a texture beyond the [0,1] range.
@@ -469,6 +501,31 @@ CF_INLINE const char* cf_wrap_mode_string(CF_WrapMode mode) {
 }
 
 /**
+ * @enum     CF_SampleCount
+ * @category graphics
+ * @brief    Multisample count used for MSAA render targets.
+ * @remarks  Only applies to textures used as render targets.
+ * @related  CF_SampleCount cf_sample_count_string CF_TextureParams
+ */
+#define CF_SAMPLE_COUNT_DEFS \
+	/* @entry No multisampling. */        \
+	CF_ENUM(SAMPLE_COUNT_1, 1)            \
+	/* @entry Multisample anti-aliasing with 2x samples. */ \
+	CF_ENUM(SAMPLE_COUNT_2, 2)            \
+	/* @entry Multisample anti-aliasing with 4x samples. */ \
+	CF_ENUM(SAMPLE_COUNT_4, 4)            \
+	/* @entry Multisample anti-aliasing with 8x samples. */ \
+	CF_ENUM(SAMPLE_COUNT_8, 8)            \
+	/* @end */
+
+typedef enum CF_SampleCount
+{
+	#define CF_ENUM(K, V) CF_##K = V,
+	CF_SAMPLE_COUNT_DEFS
+	#undef CF_ENUM
+} CF_SampleCount;
+
+/**
  * @struct   CF_TextureParams
  * @category graphics
  * @brief    A collection of parameters to create a `CF_Texture` with `cf_make_texture`.
@@ -486,17 +543,35 @@ typedef struct CF_TextureParams
 	/* @member The filtering operation to use when fetching data out of the texture, on the GPU. See `CF_Filter`. */
 	CF_Filter filter;
 
-	/* @member The texture wrapping behavior when addressing beyond [0,1] for the u-coordinate. See `CF_WrapMode`. */
+	/* @member The texture wrapping behavior when addressing beyond [0,1) for the u-coordinate. See `CF_WrapMode`. */
 	CF_WrapMode wrap_u;
 
-	/* @member The texture wrapping behavior when addressing beyond [0,1] for the v-coordinate. See `CF_WrapMode`. */
+	/* @member The texture wrapping behavior when addressing beyond [0,1) for the v-coordinate. See `CF_WrapMode`. */
 	CF_WrapMode wrap_v;
+
+	/* @member The filtering operation to use when fetching data out of a mipmap, on the GPU. See `CF_MipFilter`. */
+	CF_MipFilter mip_filter;
 
 	/* @member Number of elements (usually pixels) along the width of the texture. */
 	int width;
 
 	/* @member Number of elements (usually pixels) along the height of the texture. */
 	int height;
+
+	/* @member MSAA sample count for render target use; must be 1, 2, 4, or 8 (see `CF_SampleCount`). Defaults to 1 (no MSAA). Note: This only applies to textures render to as a canvas. */
+	CF_SampleCount sample_count;
+
+	/* @member 0 = auto compute from dimensions if `generate_mipmaps` is true, else specify an explicit number. */
+	int mip_count;
+
+	/* @member Defaulted to false, true to enable mipmap generation and will be initialized with full mipmaps. */
+	bool generate_mipmaps;
+
+	/* @member Mipmap level bias; positive = blurrier, negative = sharper. */
+	float mip_lod_bias;
+
+	/* @member Maximum anisotropy level; 1.0 disables anisotropic filtering. */
+	float max_anisotropy;
 
 	/* @member Set this to true if you plan to update the texture contents each frame. */
 	bool stream;
@@ -539,9 +614,34 @@ CF_API void CF_CALL cf_destroy_texture(CF_Texture texture);
  * @param    size       The size in bytes of `data`.
  * @remarks  If you plan to frequently update the texture once per frame, it's recommended to set `stream` to
  *           true in the creation params `CF_TextureParams`.
- * @related  CF_TextureParams CF_Texture cf_make_texture cf_destroy_texture cf_texture_update
+ * @related  CF_TextureParams CF_Texture cf_make_texture cf_destroy_texture cf_texture_update cf_texture_update_mip cf_generate_mipmaps
  */
 CF_API void CF_CALL cf_texture_update(CF_Texture texture, void* data, int size);
+
+/**
+ * @function cf_texture_update_mip
+ * @category graphics
+ * @brief    Updates the contents of a specific mip level of a `CF_Texture`.
+ * @param    texture    The texture to update.
+ * @param    data       Pointer to the raw pixel data to upload.
+ * @param    size       Size in bytes of `data`.
+ * @param    mip_level  The mipmap level to update (0 = base level).
+ * @remarks  If you update the texture frequently (e.g., once per frame), it's recommended to set `stream = true`
+ *           when creating the texture using `CF_TextureParams`.
+ * @related  CF_TextureParams CF_Texture cf_make_texture cf_destroy_texture cf_texture_update cf_texture_update_mip cf_generate_mipmaps
+ */
+CF_API void CF_CALL cf_texture_update_mip(CF_Texture texture, void* data, int size, int mip_level);
+
+/**
+ * @function cf_generate_mipmaps
+ * @category graphics
+ * @brief    Generates all remaining mip levels from the base level of the texture.
+ * @param    texture    The texture to generate mipmaps for.
+ * @remarks  This is useful when the base level has been updated manually (e.g., for dynamic or render target textures)
+ *           and you want to downsample to fill in the full mip chain.
+ * @related  CF_TextureParams CF_Texture cf_make_texture cf_destroy_texture cf_texture_update cf_texture_update_mip cf_generate_mipmaps
+ */
+CF_API void CF_CALL cf_generate_mipmaps(CF_Texture texture);
 
 /**
  * @function cf_texture_handle
@@ -1389,6 +1489,21 @@ typedef struct CF_RenderState
 
 	/* @member Sets up how to perform (if at all) stencil testing. See `CF_StencilParams`. */
 	CF_StencilParams stencil;
+
+	/* @member A scalar factor controlling the depth value added to each fragment. */
+	float depth_bias_constant_factor;
+
+	/* @member The maximum depth bias of a fragment. */
+	float depth_bias_clamp;
+
+	/* @member A scalar factor applied to a fragment's slope in depth calculations. */
+	float depth_bias_slope_factor;
+
+	/* @member True to bias fragment depth values. */
+	bool enable_depth_bias;
+
+	/* @member True to enable depth clip, false to enable depth clamp. */
+	bool enable_depth_clip;
 } CF_RenderState;
 // @end
 

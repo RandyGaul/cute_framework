@@ -61,6 +61,11 @@
 	#define CF_FMODF fmodf
 #endif
 
+#ifndef CF_LOG2F
+	#include <math.h>
+	#define CF_LOG2F log2f
+#endif
+
 //--------------------------------------------------------------------------------------------------
 // C API
 
