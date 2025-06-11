@@ -133,7 +133,7 @@ typedef struct CF_Shader { uint64_t id; } CF_Shader;
 	/* @entry Metal backend. */                                                    \
 	CF_ENUM(BACKEND_TYPE_METAL,  3)                                                \
 	/* @entry A "secret" backend for platforms under non-disclosure agreement. */  \
-	CF_ENUM(BACKEND_TYPE_PRIVATE,  4)                                           \
+	CF_ENUM(BACKEND_TYPE_PRIVATE,  4)                                              \
 	/* @end */
 
 typedef enum CF_BackendType
@@ -508,14 +508,14 @@ CF_INLINE const char* cf_wrap_mode_string(CF_WrapMode mode) {
  * @related  CF_SampleCount cf_sample_count_string CF_TextureParams
  */
 #define CF_SAMPLE_COUNT_DEFS \
-	/* @entry No multisampling. */        \
-	CF_ENUM(SAMPLE_COUNT_1, 1)            \
+	/* @entry No multisampling. */                          \
+	CF_ENUM(SAMPLE_COUNT_1, 1)                              \
 	/* @entry Multisample anti-aliasing with 2x samples. */ \
-	CF_ENUM(SAMPLE_COUNT_2, 2)            \
+	CF_ENUM(SAMPLE_COUNT_2, 2)                              \
 	/* @entry Multisample anti-aliasing with 4x samples. */ \
-	CF_ENUM(SAMPLE_COUNT_4, 4)            \
+	CF_ENUM(SAMPLE_COUNT_4, 4)                              \
 	/* @entry Multisample anti-aliasing with 8x samples. */ \
-	CF_ENUM(SAMPLE_COUNT_8, 8)            \
+	CF_ENUM(SAMPLE_COUNT_8, 8)                              \
 	/* @end */
 
 typedef enum CF_SampleCount
@@ -662,9 +662,9 @@ CF_API uint64_t CF_CALL cf_texture_handle(CF_Texture texture);
  * @related  CF_Shader cf_shader_directory cf_make_shader
  */
 #define CF_SHADER_STAGE_DEFS \
-	/* @entry */ \
+	/* @entry */                      \
 	CF_ENUM(SHADER_STAGE_VERTEX,   0) \
-	/* @entry */ \
+	/* @entry */                      \
 	CF_ENUM(SHADER_STAGE_FRAGMENT, 1) \
 	/* @end */
 
