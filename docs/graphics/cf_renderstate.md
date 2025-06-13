@@ -13,6 +13,7 @@ A bag of rendering related settings.
 
 Struct Members | Description
 --- | ---
+`CF_PrimitiveType primitive_type` | The type of primitive to draw, as in triangles or lines (triangle list by default). See [CF_PrimitiveType](/graphics/cf_primitivetype.md).
 `CF_CullMode cull_mode` | Controls whether or not to cull triangles based on their winding order. See [CF_CullMode](/graphics/cf_cullmode.md).
 `CF_BlendState blend` | Controls how the GPU blends pixels together during compositing. See [CF_BlendState](/graphics/cf_blendstate.md).
 `CF_CompareFunction depth_compare` | Defines how to perform depth-testing. See [CF_CompareFunction](/graphics/cf_comparefunction.md).

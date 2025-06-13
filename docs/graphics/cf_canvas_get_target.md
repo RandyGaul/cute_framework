@@ -15,6 +15,10 @@ Returns the `target` texture the canvas renders upon.
 CF_Texture cf_canvas_get_target(CF_Canvas canvas);
 ```
 
+## Remarks
+
+If you turn on MSAA you may not sample from this texture.
+
 ## Related Pages
 
 [CF_CanvasParams](/graphics/cf_canvasparams.md)  

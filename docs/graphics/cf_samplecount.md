@@ -22,7 +22,8 @@ SAMPLE_COUNT_8 | Multisample anti-aliasing with 8x samples.
 
 ## Remarks
 
-Only applies to textures used as render targets.
+Turning this on will attempt to use hardware to blur everything you render.
+You may not sample from canvas textures with sample counts greater than 1.
 
 ## Related Pages
 

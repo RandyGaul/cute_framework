@@ -21,6 +21,8 @@ This is an advanced function. If you just want to draw things on screen, try che
 The app's canvas can be used to implement low-level graphics features, such as multi-pass algorithms. Be careful about
 calling [cf_app_set_canvas_size](/app/cf_app_set_canvas_size.md), as it will invalidate any references to the app's canvas.
 
+If you fetch this canvas and have MSAA on (see [cf_app_set_msaa](/app/cf_app_set_msaa.md)) you may not sample from the canvas.
+
 ## Related Pages
 
 [cf_app_set_canvas_size](/app/cf_app_set_canvas_size.md)  

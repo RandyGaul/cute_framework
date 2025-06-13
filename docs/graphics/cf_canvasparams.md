@@ -17,6 +17,7 @@ Struct Members | Description
 `CF_TextureParams target` | The texture used to store pixel information when rendering to the canvas. See [CF_TextureParams](/graphics/cf_textureparams.md).
 `bool depth_stencil_enable` | Defaults to false. If true enables a depth-stencil buffer attachment.
 `CF_TextureParams depth_stencil_target` | The texture used to store depth and stencil information when rendering to the canvas. See [CF_TextureParams](/graphics/cf_textureparams.md).
+`CF_SampleCount sample_count` | MSAA sample count; must be 1, 2, 4, or 8 (see [CF_SampleCount](/graphics/cf_samplecount.md)). Defaults to 1 (no MSAA).
 
 ## Remarks
 

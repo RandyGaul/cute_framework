@@ -70,6 +70,7 @@ This is a list of all functions in Cute Framework organized by categories. This 
 - [cf_app_set_canvas_size](/app/cf_app_set_canvas_size.md)
 - [cf_app_set_fullscreen_mode](/app/cf_app_set_fullscreen_mode.md)
 - [cf_app_set_icon](/app/cf_app_set_icon.md)
+- [cf_app_set_msaa](/app/cf_app_set_msaa.md)
 - [cf_app_set_position](/app/cf_app_set_position.md)
 - [cf_app_set_size](/app/cf_app_set_size.md)
 - [cf_app_set_title](/app/cf_app_set_title.md)
@@ -99,6 +100,7 @@ This is a list of all functions in Cute Framework organized by categories. This 
 - [cf_free_display_list](/app/cf_free_display_list.md)
 - [cf_get_display_list](/app/cf_get_display_list.md)
 - [cf_make_app](/app/cf_make_app.md)
+- [cf_msaa_string](/app/cf_msaa_string.md)
 - [cf_power_state_to_string](/app/cf_power_state_to_string.md)
 - [cf_set_assert_handler](/app/cf_set_assert_handler.md)
 
@@ -109,6 +111,7 @@ This is a list of all functions in Cute Framework organized by categories. This 
 
 ### enums
 - [CF_AppOptionFlagBits](/app/cf_appoptionflagbits.md)
+- [CF_MSAA](/app/cf_msaa.md)
 - [CF_PowerState](/app/cf_powerstate.md)
 - [Display Orientation](/app/display_orientation.md)
 
@@ -971,9 +974,11 @@ This is a list of all functions in Cute Framework organized by categories. This 
 - [cf_pixel_to_string](/graphics/cf_pixel_to_string.md)
 - [cf_pixel_white](/graphics/cf_pixel_white.md)
 - [cf_pixel_yellow](/graphics/cf_pixel_yellow.md)
+- [cf_primitive_type_string](/graphics/cf_primitive_type_string.md)
 - [cf_query_backend](/graphics/cf_query_backend.md)
 - [cf_render_state_defaults](/graphics/cf_render_state_defaults.md)
 - [cf_rgb_to_hsv](/graphics/cf_rgb_to_hsv.md)
+- [cf_samplecount_string](/graphics/cf_samplecount_string.md)
 - [cf_shader_directory](/graphics/cf_shader_directory.md)
 - [cf_shader_on_changed](/graphics/cf_shader_on_changed.md)
 - [cf_softlight](/graphics/cf_softlight.md)
@@ -1024,6 +1029,7 @@ This is a list of all functions in Cute Framework organized by categories. This 
 - [CF_MipFilter](/graphics/cf_mipfilter.md)
 - [CF_PixelFormat](/graphics/cf_pixelformat.md)
 - [CF_PixelFormatOp](/graphics/cf_pixelformatop.md)
+- [CF_PrimitiveType](/graphics/cf_primitivetype.md)
 - [CF_SampleCount](/graphics/cf_samplecount.md)
 - [CF_ShaderInfoDataType](/graphics/cf_shaderinfodatatype.md)
 - [CF_ShaderStage](/graphics/cf_shaderstage.md)
