@@ -647,7 +647,8 @@ CF_INLINE const char* cf_msaa_string(CF_MSAA msaa) {
  * @function cf_app_set_msaa
  * @category app
  * @brief    Sets the MSAA sample count for the app's offscreen canvas.
- * @param    sample_count The number of MSAA samples (e.g. 1, 2, 4, 8).
+ * @param    sample_count  The number of MSAA samples (e.g. 1, 2, 4, 8).
+ * @return   Returns true if the `sample_count` was valid for the given GPU.
  * @remarks  This affects rendering quality by enabling or disabling multisample anti-aliasing.
  *           If `sample_count` is 1, MSAA is disabled (default). Higher values enable smoother edge rendering.
  *           The value should match a supported sample count for the current GPU.
@@ -655,7 +656,7 @@ CF_INLINE const char* cf_msaa_string(CF_MSAA msaa) {
  *           effectively write-only.
  * @related  CF_MSAA cf_app_get_msaa CF_Canvas
  */
-CF_API void CF_CALL cf_app_set_msaa(int sample_count);
+CF_API bool CF_CALL cf_app_set_msaa(int sample_count);
 
 /**
  * @function cf_app_get_canvas

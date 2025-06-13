@@ -726,11 +726,18 @@ bool cf_app_mouse_inside()
 	return app->window_state.mouse_inside_window;
 }
 
-void cf_app_set_msaa(int sample_count)
+bool cf_app_set_msaa(int sample_count)
 {
-	if (app->sample_count != sample_count) {
-		app->sample_count = sample_count;
-		s_canvas(app->w, app->h);
+	SDL_GPUTextureFormat fmt = SDL_GetGPUSwapchainTextureFormat(app->device, app->window);
+	SDL_GPUSampleCount msaa =  (SDL_GPUSampleCount)cf_clamp_int((app->sample_count >> 1), 0, 3);
+	if (SDL_GPUTextureSupportsSampleCount(app->device, fmt, msaa)) {
+		if (app->sample_count != sample_count) {
+			app->sample_count = sample_count;
+			s_canvas(app->w, app->h);
+		}
+		return true;
+	} else {
+		return false;
 	}
 }
 
