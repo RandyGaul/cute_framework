@@ -184,6 +184,7 @@ static void s_canvas(int w, int h)
 		cf_destroy_canvas(app->offscreen_canvas);
 	}
 	params.depth_stencil_enable = true;
+	params.sample_count = (CF_SampleCount)cf_clamp_int((app->sample_count >> 1), 0, 3);
 	app->offscreen_canvas = cf_make_canvas(params);
 	app->canvas_w = w;
 	app->canvas_h = h;
@@ -516,8 +517,9 @@ int cf_app_draw_onto_screen(bool clear)
 	SDL_GPUTexture* swapchain_tex = NULL;
 	if (SDL_AcquireGPUSwapchainTexture(app->cmd, app->window, &swapchain_tex, &w, &h) && swapchain_tex) {
 		// Blit onto the screen.
+		CF_CanvasInternal* canvas = (CF_CanvasInternal*)app->offscreen_canvas.id;
 		SDL_GPUBlitRegion src = {
-			.texture = (SDL_GPUTexture*)cf_texture_handle(cf_canvas_get_target(app->offscreen_canvas)),
+			.texture = canvas->resolve_texture ? canvas->resolve_texture : canvas->texture,
 			.w = (Uint32)app->canvas_w,
 			.h = (Uint32)app->canvas_h,
 		};
@@ -722,6 +724,14 @@ bool cf_app_mouse_exited()
 bool cf_app_mouse_inside()
 {
 	return app->window_state.mouse_inside_window;
+}
+
+void cf_app_set_msaa(int sample_count)
+{
+	if (app->sample_count != sample_count) {
+		app->sample_count = sample_count;
+		s_canvas(app->w, app->h);
+	}
 }
 
 CF_Canvas cf_app_get_canvas()

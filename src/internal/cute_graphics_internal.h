@@ -30,8 +30,11 @@ struct CF_CanvasInternal
 {
 	int w, h;
 	CF_Texture cf_texture;
+	CF_Texture cf_resolve_texture;
 	CF_Texture cf_depth_stencil;
+	CF_SampleCount sample_count;
 	SDL_GPUTexture* texture;
+	SDL_GPUTexture* resolve_texture;
 	SDL_GPUSampler* sampler;
 	SDL_GPUTexture* depth_stencil;
 
@@ -157,6 +160,18 @@ CF_INLINE SDL_GPUBlendFactor s_wrap(CF_BlendFactor factor)
 	case CF_BLENDFACTOR_ONE_MINUS_CONSTANT_COLOR:return SDL_GPU_BLENDFACTOR_ONE_MINUS_CONSTANT_COLOR;
 	case CF_BLENDFACTOR_SRC_ALPHA_SATURATE:      return SDL_GPU_BLENDFACTOR_SRC_ALPHA_SATURATE;
 	default:                                     return SDL_GPU_BLENDFACTOR_ZERO;
+	}
+}
+
+CF_INLINE SDL_GPUPrimitiveType s_wrap(CF_PrimitiveType type)
+{
+	switch (type)
+	{
+	case CF_PRIMITIVE_TYPE_TRIANGLELIST:   return SDL_GPU_PRIMITIVETYPE_TRIANGLELIST;
+	case CF_PRIMITIVE_TYPE_TRIANGLESTRIP:  return SDL_GPU_PRIMITIVETYPE_TRIANGLESTRIP;
+	case CF_PRIMITIVE_TYPE_LINELIST:       return SDL_GPU_PRIMITIVETYPE_LINELIST;
+	case CF_PRIMITIVE_TYPE_LINESTRIP:      return SDL_GPU_PRIMITIVETYPE_LINESTRIP;
+	default:                               return SDL_GPU_PRIMITIVETYPE_TRIANGLELIST;
 	}
 }
 
@@ -422,6 +437,7 @@ struct CF_MaterialInternal
 
 struct CF_Pipeline
 {
+	int sample_count = 0;
 	CF_MaterialInternal* material = NULL;
 	SDL_GPUGraphicsPipeline* pip = NULL;
 	CF_MeshInternal* mesh = NULL;

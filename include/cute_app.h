@@ -604,12 +604,68 @@ CF_API bool CF_CALL cf_app_mouse_inside();
 CF_API ImGuiContext* CF_CALL cf_app_init_imgui();
 
 /**
+ * @enum     CF_MSAA
+ * @category app
+ * @brief    Multisample count used for MSAA for the app's offscreen canvas.
+ * @remarks  This function turns on .
+ * @related  cf_app_set_msaa cf_msaa_string
+ */
+#define CF_MSAA_DEFS \
+	/* @entry No multisampling. */                          \
+	CF_ENUM(MSAA_NONE, 0)                                   \
+	/* @entry Multisample anti-aliasing with 2x samples. */ \
+	CF_ENUM(MSAA_2X,   1)                                   \
+	/* @entry Multisample anti-aliasing with 4x samples. */ \
+	CF_ENUM(MSAA_4X,   2)                                   \
+	/* @entry Multisample anti-aliasing with 8x samples. */ \
+	CF_ENUM(MSAA_8X,   3)                                   \
+	/* @end */
+
+typedef enum CF_MSAA
+{
+	#define CF_ENUM(K, V) CF_##K = V,
+	CF_MSAA_DEFS
+	#undef CF_ENUM
+} CF_MSAA;
+
+/**
+ * @function cf_msaa_string
+ * @category app
+ * @brief    Returns a `CF_MSAA` value as a string.
+ * @related  cf_app_set_msaa CF_MSAA
+ */
+CF_INLINE const char* cf_msaa_string(CF_MSAA msaa) {
+	switch (msaa) {
+	#define CF_ENUM(K, V) case CF_##K: return CF_STRINGIZE(CF_##K);
+	CF_MSAA_DEFS
+	#undef CF_ENUM
+	default: return NULL;
+	}
+}
+
+/**
+ * @function cf_app_set_msaa
+ * @category app
+ * @brief    Sets the MSAA sample count for the app's offscreen canvas.
+ * @param    sample_count The number of MSAA samples (e.g. 1, 2, 4, 8).
+ * @remarks  This affects rendering quality by enabling or disabling multisample anti-aliasing.
+ *           If `sample_count` is 1, MSAA is disabled (default). Higher values enable smoother edge rendering.
+ *           The value should match a supported sample count for the current GPU.
+ *           Note: If this is enabled you can not sample from the app's canvas, i.e. `cf_app_get_canvas` is then
+ *           effectively write-only.
+ * @related  CF_MSAA cf_app_get_msaa CF_Canvas
+ */
+CF_API void CF_CALL cf_app_set_msaa(int sample_count);
+
+/**
  * @function cf_app_get_canvas
  * @category app
  * @brief    Fetches the app's internal canvas for displaying content on the screen.
  * @remarks  This is an advanced function. If you just want to draw things on screen, try checking out `CF_Sprite`.
  *           The app's canvas can be used to implement low-level graphics features, such as multi-pass algorithms. Be careful about
  *           calling `cf_app_set_canvas_size`, as it will invalidate any references to the app's canvas.
+ *           
+ *           If you fetch this canvas and have MSAA on (see `cf_app_set_msaa`) you may *not* sample from the canvas.
  * @related  cf_app_set_canvas_size cf_app_get_canvas_width cf_app_get_canvas_height cf_app_set_vsync cf_app_get_vsync
  */
 CF_API CF_Canvas CF_CALL cf_app_get_canvas();

@@ -38,7 +38,7 @@ const char* s_tri_fs = STR(
 
 int main(int argc, char* argv[])
 {
-	CF_Result result = cf_make_app("Instancing", 0, 0, 0, 640, 480, CF_APP_OPTIONS_WINDOW_POS_CENTERED_BIT | CF_APP_OPTIONS_RESIZABLE_BIT, argv[0]);
+	CF_Result result = cf_make_app("Instancing", 0, 0, 0, 640, 480, CF_APP_OPTIONS_GFX_DEBUG_BIT|CF_APP_OPTIONS_WINDOW_POS_CENTERED_BIT | CF_APP_OPTIONS_RESIZABLE_BIT, argv[0]);
 	if (cf_is_error(result)) return -1;
 
 	// Vertex data for a single triangle.

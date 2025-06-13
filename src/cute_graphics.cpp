@@ -124,7 +124,6 @@ CF_TextureParams cf_texture_defaults(int w, int h)
 	params.height = h;
 	params.mip_count = 0;
 	params.generate_mipmaps = false;
-	params.sample_count = CF_SAMPLE_COUNT_1;
 	params.mip_lod_bias = 0.0f;
 	params.max_anisotropy = 1.0f;
 	params.stream = false;
@@ -136,13 +135,17 @@ CF_INLINE bool s_is_depth(CF_PixelFormat format)
 	return format >= CF_PIXEL_FORMAT_D16_UNORM;
 }
 
-CF_Texture cf_make_texture(CF_TextureParams params)
+static CF_Texture s_make_texture(CF_TextureParams params, CF_SampleCount sample_count)
 {
 	SDL_GPUTextureCreateInfo tex_info = SDL_GPUTextureCreateInfoDefaults(params.width, params.height);
 	tex_info.width = (Uint32)params.width;
 	tex_info.height = (Uint32)params.height;
 	tex_info.format = s_wrap(params.pixel_format);
-	tex_info.usage = params.usage;
+
+	// Not allowed to sample from MSAA textures.
+	tex_info.usage = sample_count == CF_SAMPLE_COUNT_1 ? params.usage : (params.usage & ~(SDL_GPU_TEXTUREUSAGE_SAMPLER));
+
+	tex_info.sample_count = (SDL_GPUSampleCount)sample_count;
 	if (params.generate_mipmaps) {
 		tex_info.num_levels = params.mip_count > 0
 			? (Uint32)params.mip_count
@@ -197,6 +200,10 @@ CF_Texture cf_make_texture(CF_TextureParams params)
 	return result;
 }
 
+CF_Texture cf_make_texture(CF_TextureParams params)
+{
+	return s_make_texture(params, CF_SAMPLE_COUNT_1);
+}
 
 void cf_destroy_texture(CF_Texture texture_handle)
 {
@@ -762,18 +769,26 @@ CF_Canvas cf_make_canvas(CF_CanvasParams params)
 	if (params.target.width > 0 && params.target.height > 0) {
 		canvas->w = params.target.width;
 		canvas->h = params.target.height;
-		canvas->cf_texture = cf_make_texture(params.target);
+		canvas->cf_texture = s_make_texture(params.target, params.sample_count);
+		canvas->sample_count = params.sample_count;
 		if (canvas->cf_texture.id) {
 			canvas->texture = ((CF_TextureInternal*)canvas->cf_texture.id)->tex;
 			canvas->sampler = ((CF_TextureInternal*)canvas->cf_texture.id)->sampler;
 		}
 		if (params.depth_stencil_enable) {
-			canvas->cf_depth_stencil = cf_make_texture(params.depth_stencil_target);
+			canvas->cf_depth_stencil = s_make_texture(params.depth_stencil_target, params.sample_count);
 			if (canvas->cf_depth_stencil.id) {
 				canvas->depth_stencil = ((CF_TextureInternal*)canvas->cf_depth_stencil.id)->tex;
 			}
 		} else {
 			canvas->cf_depth_stencil = { 0 };
+		}
+		if (canvas->sample_count != CF_SAMPLE_COUNT_1) {
+			params.target.usage = CF_TEXTURE_USAGE_COLOR_TARGET_BIT | CF_TEXTURE_USAGE_SAMPLER_BIT;
+			canvas->cf_resolve_texture = cf_make_texture(params.target);
+			if (canvas->cf_resolve_texture.id) {
+				canvas->resolve_texture = ((CF_TextureInternal*)canvas->cf_resolve_texture.id)->tex;
+			}
 		}
 	} else {
 		return { 0 };
@@ -787,6 +802,7 @@ void cf_destroy_canvas(CF_Canvas canvas_handle)
 {
 	CF_CanvasInternal* canvas = (CF_CanvasInternal*)canvas_handle.id;
 	cf_destroy_texture(canvas->cf_texture);
+	if (canvas->resolve_texture) cf_destroy_texture(canvas->cf_resolve_texture);
 	if (canvas->depth_stencil) cf_destroy_texture(canvas->cf_depth_stencil);
 	CF_FREE(canvas);
 }
@@ -794,7 +810,7 @@ void cf_destroy_canvas(CF_Canvas canvas_handle)
 CF_Texture cf_canvas_get_target(CF_Canvas canvas_handle)
 {
 	CF_CanvasInternal* canvas = (CF_CanvasInternal*)canvas_handle.id;
-	return canvas->cf_texture;
+	return canvas->resolve_texture ? canvas->cf_resolve_texture : canvas->cf_texture;
 }
 
 CF_Texture cf_canvas_get_depth_stencil_target(CF_Canvas canvas_handle)
@@ -956,6 +972,7 @@ void cf_mesh_update_instance_data(CF_Mesh mesh_handle, void* data, int count)
 CF_RenderState cf_render_state_defaults()
 {
 	CF_RenderState state;
+	state.primitive_type = CF_PRIMITIVE_TYPE_TRIANGLELIST;
 	state.blend.enabled = true;
 	state.cull_mode = CF_CULL_MODE_NONE;
 	state.blend.pixel_format = CF_PIXEL_FORMAT_R8G8B8A8_UNORM;
@@ -1240,10 +1257,11 @@ static void s_copy_uniforms(SDL_GPUCommandBuffer* cmd, CF_Arena* arena, CF_Shade
 
 static SDL_GPUGraphicsPipeline* s_build_pipeline(CF_ShaderInternal* shader, CF_RenderState* state, CF_MeshInternal* mesh)
 {
+	CF_TextureInternal* tex = (CF_TextureInternal*)s_canvas->cf_texture.id;
 	SDL_GPUColorTargetDescription color_info;
 	CF_MEMSET(&color_info, 0, sizeof(color_info));
 	CF_ASSERT(s_canvas->texture);
-	color_info.format = ((CF_TextureInternal*)s_canvas->cf_texture.id)->format;
+	color_info.format = tex->format;
 	color_info.blend_state.enable_blend = state->blend.enabled;
 	color_info.blend_state.alpha_blend_op = s_wrap(state->blend.alpha_op);
 	color_info.blend_state.color_blend_op = s_wrap(state->blend.rgb_op);
@@ -1259,6 +1277,7 @@ static SDL_GPUGraphicsPipeline* s_build_pipeline(CF_ShaderInternal* shader, CF_R
 
 	SDL_GPUGraphicsPipelineCreateInfo pip_info;
 	CF_MEMSET(&pip_info, 0, sizeof(pip_info));
+	pip_info.primitive_type = s_wrap(state->primitive_type);
 	pip_info.target_info.num_color_targets = 1;
 	pip_info.target_info.color_target_descriptions = &color_info;
 	pip_info.vertex_shader = shader->vs;
@@ -1308,7 +1327,7 @@ static SDL_GPUGraphicsPipeline* s_build_pipeline(CF_ShaderInternal* shader, CF_R
 		vertex_buffer_descriptions[vertex_buffer_descriptions_count].slot = 1;
 		vertex_buffer_descriptions[vertex_buffer_descriptions_count].pitch = mesh->instances.stride;
 		vertex_buffer_descriptions[vertex_buffer_descriptions_count].input_rate = SDL_GPU_VERTEXINPUTRATE_INSTANCE;
-		vertex_buffer_descriptions[vertex_buffer_descriptions_count].instance_step_rate = 1;
+		vertex_buffer_descriptions[vertex_buffer_descriptions_count].instance_step_rate = 0;
 		vertex_buffer_descriptions_count++;
 	}
 	pip_info.vertex_input_state.num_vertex_buffers = vertex_buffer_descriptions_count;
@@ -1323,8 +1342,8 @@ static SDL_GPUGraphicsPipeline* s_build_pipeline(CF_ShaderInternal* shader, CF_R
 	pip_info.rasterizer_state.depth_bias_slope_factor = state->depth_bias_slope_factor;
 	pip_info.rasterizer_state.enable_depth_bias = state->enable_depth_bias;
 	pip_info.rasterizer_state.enable_depth_clip = state->enable_depth_clip;
-	pip_info.multisample_state.sample_count = SDL_GPU_SAMPLECOUNT_1;
-	pip_info.multisample_state.sample_mask = 0xFFFF;
+	pip_info.multisample_state.sample_count = (SDL_GPUSampleCount)s_canvas->sample_count;
+	pip_info.multisample_state.sample_mask = 0;
 
 	pip_info.depth_stencil_state.enable_depth_test = state->depth_write_enabled;
 	pip_info.depth_stencil_state.enable_depth_write = state->depth_write_enabled;
@@ -1361,7 +1380,9 @@ void cf_apply_shader(CF_Shader shader_handle, CF_Material material_handle)
 	bool found = false;
 	for (int i = 0; i < shader->pip_cache.count(); ++i) {
 		CF_Pipeline pip_cache = shader->pip_cache[i];
-		if (pip_cache.material == material && pip_cache.mesh == mesh) {
+		if (pip_cache.material == material &&
+			pip_cache.mesh == mesh &&
+			s_canvas->sample_count == (CF_SampleCount)pip_cache.sample_count) {
 			found = true;
 			if (material->dirty) {
 				material->dirty = false;
@@ -1377,7 +1398,7 @@ void cf_apply_shader(CF_Shader shader_handle, CF_Material material_handle)
 	}
 	if (!found) {
 		pip = s_build_pipeline(shader, state, mesh);
-		shader->pip_cache.add({ material, pip, mesh });
+		shader->pip_cache.add({ (SDL_GPUSampleCount)s_canvas->sample_count, material, pip, mesh });
 	}
 	CF_ASSERT(pip);
 
@@ -1390,8 +1411,14 @@ void cf_apply_shader(CF_Shader shader_handle, CF_Material material_handle)
 	pass_color_info.texture = s_canvas->texture;
 	pass_color_info.clear_color = { app->clear_color.r, app->clear_color.g, app->clear_color.b, app->clear_color.a };
 	pass_color_info.load_op = s_canvas->clear ? SDL_GPU_LOADOP_CLEAR : SDL_GPU_LOADOP_LOAD;
-	pass_color_info.store_op = SDL_GPU_STOREOP_STORE;
 	pass_color_info.cycle = s_canvas->clear ? true : false;
+	if (s_canvas->sample_count == CF_SAMPLE_COUNT_1) {
+		pass_color_info.store_op = SDL_GPU_STOREOP_STORE;
+	} else {
+		pass_color_info.store_op = SDL_GPU_STOREOP_RESOLVE_AND_STORE;
+		pass_color_info.resolve_texture = s_canvas->resolve_texture;
+	}
+
 	SDL_GPUDepthStencilTargetInfo pass_depth_stencil_info;
 	CF_MEMSET(&pass_depth_stencil_info, 0, sizeof(pass_depth_stencil_info));
 	pass_depth_stencil_info.texture = s_canvas->depth_stencil;

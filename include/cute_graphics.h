@@ -36,7 +36,6 @@ extern "C" {
  *     - Cube map
  *     - 3D textures
  *     - Texture arrays
- *     - Other primitive types besides triangles
  * 
  * The basic flow of rendering a frame looks something like this:
  * 
@@ -501,31 +500,6 @@ CF_INLINE const char* cf_wrap_mode_string(CF_WrapMode mode) {
 }
 
 /**
- * @enum     CF_SampleCount
- * @category graphics
- * @brief    Multisample count used for MSAA render targets.
- * @remarks  Only applies to textures used as render targets.
- * @related  CF_SampleCount cf_sample_count_string CF_TextureParams
- */
-#define CF_SAMPLE_COUNT_DEFS \
-	/* @entry No multisampling. */                          \
-	CF_ENUM(SAMPLE_COUNT_1, 1)                              \
-	/* @entry Multisample anti-aliasing with 2x samples. */ \
-	CF_ENUM(SAMPLE_COUNT_2, 2)                              \
-	/* @entry Multisample anti-aliasing with 4x samples. */ \
-	CF_ENUM(SAMPLE_COUNT_4, 4)                              \
-	/* @entry Multisample anti-aliasing with 8x samples. */ \
-	CF_ENUM(SAMPLE_COUNT_8, 8)                              \
-	/* @end */
-
-typedef enum CF_SampleCount
-{
-	#define CF_ENUM(K, V) CF_##K = V,
-	CF_SAMPLE_COUNT_DEFS
-	#undef CF_ENUM
-} CF_SampleCount;
-
-/**
  * @struct   CF_TextureParams
  * @category graphics
  * @brief    A collection of parameters to create a `CF_Texture` with `cf_make_texture`.
@@ -557,9 +531,6 @@ typedef struct CF_TextureParams
 
 	/* @member Number of elements (usually pixels) along the height of the texture. */
 	int height;
-
-	/* @member MSAA sample count for render target use; must be 1, 2, 4, or 8 (see `CF_SampleCount`). Defaults to 1 (no MSAA). Note: This only applies to textures render to as a canvas. */
-	CF_SampleCount sample_count;
 
 	/* @member 0 = auto compute from dimensions if `generate_mipmaps` is true, else specify an explicit number. */
 	int mip_count;
@@ -815,6 +786,47 @@ CF_API void CF_CALL cf_destroy_shader(CF_Shader shader);
 // Render Canvases.
 
 /**
+ * @enum     CF_SampleCount
+ * @category graphics
+ * @brief    Multisample count used for MSAA render targets.
+ * @remarks  Turning this on will attempt to use hardware to blur everything you render.
+ *           You may not sample from canvas textures with sample counts greater than 1.
+ * @related  CF_SampleCount cf_sample_count_string CF_TextureParams
+ */
+#define CF_SAMPLE_COUNT_DEFS \
+	/* @entry No multisampling. */                          \
+	CF_ENUM(SAMPLE_COUNT_1, 0)                              \
+	/* @entry Multisample anti-aliasing with 2x samples. */ \
+	CF_ENUM(SAMPLE_COUNT_2, 1)                              \
+	/* @entry Multisample anti-aliasing with 4x samples. */ \
+	CF_ENUM(SAMPLE_COUNT_4, 2)                              \
+	/* @entry Multisample anti-aliasing with 8x samples. */ \
+	CF_ENUM(SAMPLE_COUNT_8, 3)                              \
+	/* @end */
+
+typedef enum CF_SampleCount
+{
+	#define CF_ENUM(K, V) CF_##K = V,
+	CF_SAMPLE_COUNT_DEFS
+	#undef CF_ENUM
+} CF_SampleCount;
+
+/**
+ * @function cf_samplecount_string
+ * @category graphics
+ * @brief    Returns a `CF_SampleCount` as a string.
+ * @related  CF_SampleCount CF_TextureParams
+ */
+CF_INLINE const char* cf_samplecount_string(CF_SampleCount count) {
+	switch (count) {
+	#define CF_ENUM(K, V) case CF_##K: return CF_STRINGIZE(CF_##K);
+	CF_SAMPLE_COUNT_DEFS
+	#undef CF_ENUM
+	default: return NULL;
+	}
+}
+
+/**
  * @struct   CF_CanvasParams
  * @category graphics
  * @brief    A texture the GPU can draw upon (with an optional depth/stencil texture).
@@ -837,6 +849,9 @@ typedef struct CF_CanvasParams
 
 	/* @member The texture used to store depth and stencil information when rendering to the canvas. See `CF_TextureParams`. */
 	CF_TextureParams depth_stencil_target;
+
+	/* @member MSAA sample count; must be 1, 2, 4, or 8 (see `CF_SampleCount`). Defaults to 1 (no MSAA). */
+	CF_SampleCount sample_count;
 } CF_CanvasParams;
 // @end
 
@@ -868,6 +883,7 @@ CF_API void CF_CALL cf_destroy_canvas(CF_Canvas canvas);
  * @function cf_canvas_get_target
  * @category graphics
  * @brief    Returns the `target` texture the canvas renders upon.
+ * @remarks  If you turn on MSAA you may not sample from this texture.
  * @related  CF_CanvasParams cf_canvas_defaults cf_make_canvas cf_destroy_canvas cf_apply_canvas cf_clear_color
  */
 CF_API CF_Texture CF_CALL cf_canvas_get_target(CF_Canvas canvas);
@@ -1313,6 +1329,46 @@ CF_INLINE const char* cf_blend_factor_string(CF_BlendFactor factor) {
 	default: return NULL;
 	}
 }
+/**
+ * @enum     CF_PrimitiveType
+ * @category graphics
+ * @brief    Primitive topology used for rendering geometry.
+ * @remarks  Controls how vertex input is interpreted as geometry.
+ * @related  CF_PrimitiveType cf_primitive_type_string
+ */
+#define CF_PRIMITIVE_TYPE_DEFS \
+	/* @entry A series of separate triangles. */       \
+	CF_ENUM(PRIMITIVE_TYPE_TRIANGLELIST,    0)         \
+	/* @entry A series of connected triangles. */      \
+	CF_ENUM(PRIMITIVE_TYPE_TRIANGLESTRIP,   1)         \
+	/* @entry A series of separate lines. */           \
+	CF_ENUM(PRIMITIVE_TYPE_LINELIST,        2)         \
+	/* @entry A series of connected lines. */          \
+	CF_ENUM(PRIMITIVE_TYPE_LINESTRIP,       3)         \
+	/* @end */
+
+typedef enum CF_PrimitiveType
+{
+	#define CF_ENUM(K, V) CF_##K = V,
+	CF_PRIMITIVE_TYPE_DEFS
+	#undef CF_ENUM
+} CF_PrimitiveType;
+
+/**
+ * @function cf_primitive_type_string
+ * @category graphics
+ * @brief    Returns a `CF_PrimitiveType` converted to a C string.
+ * @related  CF_PrimitiveType
+ */
+CF_INLINE const char* cf_primitive_type_string(CF_PrimitiveType type) {
+	switch (type) {
+	#define CF_ENUM(K, V) case CF_##K: return CF_STRINGIZE(CF_##K);
+	CF_PRIMITIVE_TYPE_DEFS
+	#undef CF_ENUM
+	default: return NULL;
+	}
+}
+
 
 /**
  * @struct   CF_StencilFunction
@@ -1475,6 +1531,9 @@ typedef struct CF_BlendState
  */
 typedef struct CF_RenderState
 {
+	/* @member The type of primitive to draw, as in triangles or lines (triangle list by default). See `CF_PrimitiveType`. */
+	CF_PrimitiveType primitive_type;
+
 	/* @member Controls whether or not to cull triangles based on their winding order. See `CF_CullMode`. */
 	CF_CullMode cull_mode;
 
