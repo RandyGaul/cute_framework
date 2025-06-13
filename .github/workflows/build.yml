@@ -104,8 +104,8 @@ jobs:
         shell: cmd
         run: |
           robocopy include dist *.h
-          robocopy build_folder\Release dist cute.lib 
-          robocopy build_folder dist libcute.a
+          robocopy build_folder\Release\lib dist cute*.lib 
+          robocopy build_folder\lib dist libcute*.a
           7z a ${{ matrix.platform.artifact }}.zip .\dist\*
         if: runner.os == 'Windows'
 
@@ -113,7 +113,7 @@ jobs:
         run: |
           mkdir -p ./dist
           cp -v ./include/*.h ./dist
-          cp -R -v ./build_folder/libcute.a ./dist
+          cp -R -v ./build_folder/lib/libcute*.a ./dist
           tar -czvf ${{ matrix.platform.artifact }}.tar.gz -C dist .
         if: runner.os == 'macOS'
 
@@ -121,7 +121,7 @@ jobs:
         run: |
           mkdir -p ./dist
           cp -v ./include/*.h ./dist
-          cp -v ./build_folder/libcute.a ./dist
+          cp -v ./build_folder/lib/libcute*.a ./dist
           tar -czvf ${{ matrix.platform.artifact }}.tar.gz -C dist .
         if: runner.os == 'Linux'
           
