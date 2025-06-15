@@ -484,7 +484,11 @@ static SDL_GPUShader* s_compile(CF_ShaderInternal* shader_internal, CF_ShaderByt
 		shader_internal->image_names.add(sintern(shader_info->image_names[i]));
 	}
 
-	shader_internal->uniform_block_count = shader_info->num_uniforms;
+	if (stage == CF_SHADER_STAGE_VERTEX) {
+		shader_internal->vs_uniform_block_count = shader_info->num_uniforms;
+	} else {
+		shader_internal->fs_uniform_block_count = shader_info->num_uniforms;
+	}
 	const CF_ShaderUniformMemberInfo* member_infos = shader_info->uniform_members;
 	for (int i = 0; i < shader_info->num_uniforms; ++i) {
 		const CF_ShaderUniformInfo* block_info = &shader_info->uniforms[i];
@@ -1216,7 +1220,8 @@ static void s_copy_uniforms(SDL_GPUCommandBuffer* cmd, CF_Arena* arena, CF_Shade
 	// the material has and the shader needs.
 	void* ub_ptrs[CF_MAX_UNIFORM_BLOCK_COUNT] = { };
 	int ub_sizes[CF_MAX_UNIFORM_BLOCK_COUNT] = { };
-	for (int block_index = 0; block_index < shd->uniform_block_count; ++block_index) {
+	int block_count = vs ? shd->vs_uniform_block_count : shd->fs_uniform_block_count;
+	for (int block_index = 0; block_index < block_count; ++block_index) {
 		for (int i = 0; i < mstate->uniforms.count(); ++i) {
 			CF_Uniform uniform = mstate->uniforms[i];
 			int idx = vs ? shd->vs_index(uniform.name, block_index) : shd->fs_index(uniform.name, block_index);

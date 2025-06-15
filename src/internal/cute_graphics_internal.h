@@ -453,7 +453,8 @@ struct CF_ShaderInternal
 	const char* input_names[CF_MAX_SHADER_INPUTS];
 	int input_locations[CF_MAX_SHADER_INPUTS];
 	CF_ShaderInputFormat input_formats[CF_MAX_SHADER_INPUTS];
-	int uniform_block_count = 0;
+	int vs_uniform_block_count = 0;
+	int fs_uniform_block_count = 0;
 	int vs_block_sizes[CF_MAX_UNIFORM_BLOCK_COUNT];
 	int fs_block_sizes[CF_MAX_UNIFORM_BLOCK_COUNT];
 	Cute::Array<CF_UniformBlockMember> fs_uniform_block_members[CF_MAX_UNIFORM_BLOCK_COUNT];
