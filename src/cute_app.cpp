@@ -531,6 +531,7 @@ int cf_app_draw_onto_screen(bool clear)
 		SDL_GPUBlitInfo blit_info = {
 			.source = src,
 			.destination = dst,
+			.load_op = SDL_GPU_LOADOP_CLEAR,
 			.flip_mode = SDL_FLIP_NONE,
 			.filter = SDL_GPU_FILTER_NEAREST,
 			.cycle = true,

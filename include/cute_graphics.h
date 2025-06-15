@@ -1534,7 +1534,7 @@ typedef struct CF_RenderState
 	/* @member The type of primitive to draw, as in triangles or lines (triangle list by default). See `CF_PrimitiveType`. */
 	CF_PrimitiveType primitive_type;
 
-	/* @member Controls whether or not to cull triangles based on their winding order. See `CF_CullMode`. */
+	/* @member Controls whether or not to cull triangles based on their winding order (default no culling). See `CF_CullMode`. */
 	CF_CullMode cull_mode;
 
 	/* @member Controls how the GPU blends pixels together during compositing. See `CF_BlendState`. */
