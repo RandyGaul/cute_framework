@@ -747,7 +747,7 @@ void cf_clear_canvas(CF_Canvas canvas_handle)
 
 CF_CanvasParams cf_canvas_defaults(int w, int h)
 {
-	CF_CanvasParams params;
+	CF_CanvasParams params = { 0 };
 	if (w == 0 || h == 0) {
 		params.name = NULL;
 		params.target = { };
