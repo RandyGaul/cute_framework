@@ -1338,7 +1338,6 @@ static SDL_GPUGraphicsPipeline* s_build_pipeline(CF_ShaderInternal* shader, CF_R
 	pip_info.vertex_input_state.num_vertex_buffers = vertex_buffer_descriptions_count;
 	pip_info.vertex_input_state.vertex_buffer_descriptions = vertex_buffer_descriptions;
 
-	pip_info.primitive_type = SDL_GPU_PRIMITIVETYPE_TRIANGLELIST;
 	pip_info.rasterizer_state.fill_mode = SDL_GPU_FILLMODE_FILL;
 	pip_info.rasterizer_state.cull_mode = s_wrap(state->cull_mode);
 	pip_info.rasterizer_state.front_face = SDL_GPU_FRONTFACE_COUNTER_CLOCKWISE;
@@ -1404,6 +1403,7 @@ void cf_apply_shader(CF_Shader shader_handle, CF_Material material_handle)
 	if (!found) {
 		pip = s_build_pipeline(shader, state, mesh);
 		shader->pip_cache.add({ (SDL_GPUSampleCount)s_canvas->sample_count, material, pip, mesh });
+		material->dirty = false;
 	}
 	CF_ASSERT(pip);
 
