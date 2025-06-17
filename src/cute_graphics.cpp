@@ -735,6 +735,8 @@ void cf_clear_canvas(CF_Canvas canvas_handle)
 		.clear_depth = 1.0f,
 		.load_op = SDL_GPU_LOADOP_CLEAR,
 		.store_op = SDL_GPU_STOREOP_STORE,
+		.stencil_load_op = SDL_GPU_LOADOP_CLEAR,
+		.stencil_store_op = SDL_GPU_STOREOP_STORE,
 		.cycle = true,
 		.clear_stencil = 0,
 	};
@@ -758,10 +760,10 @@ CF_CanvasParams cf_canvas_defaults(int w, int h)
 		params.target.usage |= CF_TEXTURE_USAGE_COLOR_TARGET_BIT;
 		params.depth_stencil_enable = false;
 		params.depth_stencil_target = cf_texture_defaults(w, h);
-		params.depth_stencil_target.pixel_format = CF_PIXEL_FORMAT_D32_FLOAT_S8_UINT;
-    if (cf_texture_supports_format(CF_PIXEL_FORMAT_D24_UNORM_S8_UINT, CF_TEXTURE_USAGE_DEPTH_STENCIL_TARGET_BIT)) {
-      params.depth_stencil_target.pixel_format = CF_PIXEL_FORMAT_D24_UNORM_S8_UINT;
-    }
+		params.depth_stencil_target.pixel_format = CF_PIXEL_FORMAT_D16_UNORM;
+		if (cf_texture_supports_format(CF_PIXEL_FORMAT_D24_UNORM_S8_UINT, CF_TEXTURE_USAGE_DEPTH_STENCIL_TARGET_BIT)) {
+			params.depth_stencil_target.pixel_format = CF_PIXEL_FORMAT_D24_UNORM_S8_UINT;
+		}
 		params.depth_stencil_target.usage = CF_TEXTURE_USAGE_DEPTH_STENCIL_TARGET_BIT;
 	}
 	return params;
@@ -1287,8 +1289,7 @@ static SDL_GPUGraphicsPipeline* s_build_pipeline(CF_ShaderInternal* shader, CF_R
 	pip_info.target_info.color_target_descriptions = &color_info;
 	pip_info.vertex_shader = shader->vs;
 	pip_info.fragment_shader = shader->fs;
-	pip_info.target_info.has_depth_stencil_target = state->depth_write_enabled;
-	if (s_canvas->cf_depth_stencil.id) {
+	if (s_canvas->cf_depth_stencil.id && state->depth_write_enabled) {
 		pip_info.target_info.depth_stencil_format = ((CF_TextureInternal*)s_canvas->cf_depth_stencil.id)->format;
 		pip_info.target_info.has_depth_stencil_target = true;
 	}
@@ -1436,7 +1437,8 @@ void cf_apply_shader(CF_Shader shader_handle, CF_Material material_handle)
 		pass_depth_stencil_info.stencil_store_op = SDL_GPU_STOREOP_DONT_CARE;
 		pass_depth_stencil_info.cycle = pass_color_info.cycle;
 	}
-	SDL_GPURenderPass* pass = SDL_BeginGPURenderPass(cmd, &pass_color_info, 1, s_canvas->depth_stencil ? &pass_depth_stencil_info : NULL);
+	SDL_GPUDepthStencilTargetInfo* depth_stencil_ptr = state->depth_write_enabled && s_canvas->depth_stencil ? &pass_depth_stencil_info : NULL;
+	SDL_GPURenderPass* pass = SDL_BeginGPURenderPass(cmd, &pass_color_info, 1, depth_stencil_ptr);
 	CF_ASSERT(pass);
 	s_canvas->pass = pass;
 	SDL_BindGPUGraphicsPipeline(pass, pip);

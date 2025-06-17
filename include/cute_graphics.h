@@ -896,6 +896,17 @@ CF_API CF_Texture CF_CALL cf_canvas_get_target(CF_Canvas canvas);
  */
 CF_API CF_Texture CF_CALL cf_canvas_get_depth_stencil_target(CF_Canvas canvas);
 
+/**
+ * @function cf_clear_canvas
+ * @category graphics
+ * @brief    Clears the color and depth-stencil targets of the given canvas.
+ * @param    canvas  The canvas to clear.
+ * @remarks  This clears the canvas to its configured clear color and clears depth to 1.0 (furthest depth).
+ *           If the canvas has no depth-stencil target, only the color target will be cleared.
+ * @related  cf_make_canvas cf_clear_color cf_clear_depth_stencil
+ */
+CF_API void CF_CALL cf_clear_canvas(CF_Canvas canvas);
+
 //--------------------------------------------------------------------------------------------------
 // Mesh.
 
@@ -1534,7 +1545,7 @@ typedef struct CF_RenderState
 	/* @member The type of primitive to draw, as in triangles or lines (triangle list by default). See `CF_PrimitiveType`. */
 	CF_PrimitiveType primitive_type;
 
-	/* @member Controls whether or not to cull triangles based on their winding order (default no culling). See `CF_CullMode`. */
+	/* @member Controls whether or not to cull triangles based on their winding order. See `CF_CullMode`. */
 	CF_CullMode cull_mode;
 
 	/* @member Controls how the GPU blends pixels together during compositing. See `CF_BlendState`. */
@@ -1886,6 +1897,7 @@ CF_INLINE CF_Canvas make_canvas(CF_CanvasParams pass_params) { return cf_make_ca
 CF_INLINE void destroy_canvas(CF_Canvas canvas) { cf_destroy_canvas(canvas); }
 CF_INLINE CF_Texture canvas_get_target(CF_Canvas canvas) { return cf_canvas_get_target(canvas); }
 CF_INLINE CF_Texture canvas_get_depth_stencil_target(CF_Canvas canvas) { return cf_canvas_get_depth_stencil_target(canvas); }
+CF_INLINE void clear_canvas(CF_Canvas canvas) { cf_clear_canvas(canvas); }
 CF_INLINE CF_Mesh make_mesh(int vertex_buffer_size_in_bytes, const CF_VertexAttribute* attributes, int attribute_count, int vertex_stride) { return cf_make_mesh(vertex_buffer_size_in_bytes, attributes, attribute_count, vertex_stride); }
 CF_INLINE void destroy_mesh(CF_Mesh mesh) { cf_destroy_mesh(mesh); }
 CF_INLINE void mesh_update_vertex_data(CF_Mesh mesh, void* data, int count) { cf_mesh_update_vertex_data(mesh, data, count); }
@@ -1910,6 +1922,7 @@ CF_INLINE void draw_elements() { cf_draw_elements(); }
 CF_INLINE void commit() { cf_commit(); }
 
 }
+void cf_clear_canvas(CF_Canvas canvas_handle);
 
 CF_INLINE bool operator==(const CF_RenderState& a, const CF_RenderState& b) { return !CF_MEMCMP(&a, &b, sizeof(a)); }
 CF_INLINE bool operator==(CF_Shader a, CF_Shader b) { return a.id == b.id; }

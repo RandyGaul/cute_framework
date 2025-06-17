@@ -922,6 +922,7 @@ CF_INLINE float app_get_framerate() { return cf_app_get_framerate(); }
 CF_INLINE float app_get_smoothed_framerate() { return cf_app_get_smoothed_framerate(); }
 
 CF_INLINE ImGuiContext* app_init_imgui() { return cf_app_init_imgui(); }
+CF_INLINE void app_set_msaa(int msaa) { cf_app_set_msaa(msaa); }
 CF_INLINE CF_Canvas app_get_canvas() { return cf_app_get_canvas(); }
 CF_INLINE void app_set_canvas_size(int w, int h) { cf_app_set_canvas_size(w, h); }
 CF_INLINE CF_PowerInfo app_power_info() { return cf_app_power_info(); }
