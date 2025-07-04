@@ -609,7 +609,7 @@ cute_thread_id_t cute_thread_get_id(cute_thread_t* thread)
 
 cute_thread_id_t cute_thread_id()
 {
-	return SDL_ThreadID();
+	return SDL_GetCurrentThreadID();
 }
 
 int cute_thread_wait(cute_thread_t* thread)
