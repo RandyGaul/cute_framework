@@ -680,7 +680,7 @@ CF_API float CF_CALL cf_mouse_y();
  * @function cf_mouse_motion_x
  * @category input
  * @brief    Returns the current mouse motion x-coordinates in pixels.
- * @remarks  (0, 0) is the top-left of the screen, y-downwards.
+ * @remarks  (0, 0) means there is no mouse movement, y-downwards.
  * @related  CF_MouseButton cf_mouse_down cf_mouse_x cf_mouse_y cf_mouse_motion_x cf_mouse_motion_y
  */
 CF_API float CF_CALL cf_mouse_motion_x();
@@ -689,7 +689,7 @@ CF_API float CF_CALL cf_mouse_motion_x();
  * @function cf_mouse_motion_y
  * @category input
  * @brief    Returns the current mouse motion y-coordinates in pixels.
- * @remarks  (0, 0) is the top-left of the screen, y-downwards.
+ * @remarks  (0, 0) means there is no mouse movement, y-downwards.
  * @related  CF_MouseButton cf_mouse_down cf_mouse_x cf_mouse_y cf_mouse_motion_x cf_mouse_motion_y
  */
 CF_API float CF_CALL cf_mouse_motion_y();

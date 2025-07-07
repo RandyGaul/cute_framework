@@ -17,7 +17,7 @@ float cf_mouse_motion_x();
 
 ## Remarks
 
-(0, 0) is the top-left of the screen, y-downwards.
+(0, 0) means there is no mouse movement, y-downwards.
 
 ## Related Pages
 
