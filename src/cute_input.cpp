@@ -282,6 +282,8 @@ bool cf_mouse_down(CF_MouseButton button)
 	case CF_MOUSE_BUTTON_LEFT:   return app->mouse.left_button;
 	case CF_MOUSE_BUTTON_RIGHT:  return app->mouse.right_button;
 	case CF_MOUSE_BUTTON_MIDDLE: return app->mouse.middle_button;
+	case CF_MOUSE_BUTTON_X1:     return app->mouse.x1_button;
+	case CF_MOUSE_BUTTON_X2:     return app->mouse.x2_button;
 	}
 	return 0;
 }
@@ -293,6 +295,8 @@ bool cf_mouse_just_pressed(CF_MouseButton button)
 	case CF_MOUSE_BUTTON_LEFT:   return app->mouse.left_button   && !app->mouse_prev.left_button;
 	case CF_MOUSE_BUTTON_RIGHT:  return app->mouse.right_button  && !app->mouse_prev.right_button;
 	case CF_MOUSE_BUTTON_MIDDLE: return app->mouse.middle_button && !app->mouse_prev.middle_button;
+	case CF_MOUSE_BUTTON_X1:     return app->mouse.x1_button     && !app->mouse_prev.x1_button;
+	case CF_MOUSE_BUTTON_X2:     return app->mouse.x2_button     && !app->mouse_prev.x2_button;
 	}
 	return 0;
 }
@@ -304,6 +308,8 @@ bool cf_mouse_just_released(CF_MouseButton button)
 	case CF_MOUSE_BUTTON_LEFT:   return !app->mouse.left_button   && app->mouse_prev.left_button;
 	case CF_MOUSE_BUTTON_RIGHT:  return !app->mouse.right_button  && app->mouse_prev.right_button;
 	case CF_MOUSE_BUTTON_MIDDLE: return !app->mouse.middle_button && app->mouse_prev.middle_button;
+	case CF_MOUSE_BUTTON_X1:     return !app->mouse.x1_button     && app->mouse_prev.x1_button;
+	case CF_MOUSE_BUTTON_X2:     return !app->mouse.x2_button     && app->mouse_prev.x2_button;
 	}
 	return 0;
 }
@@ -594,6 +600,8 @@ void cf_pump_input_msgs()
 			case SDL_BUTTON_LEFT: app->mouse.left_button = 1; break;
 			case SDL_BUTTON_RIGHT: app->mouse.right_button = 1; break;
 			case SDL_BUTTON_MIDDLE: app->mouse.middle_button = 1; break;
+			case SDL_BUTTON_X1: app->mouse.x1_button = 1; break;
+			case SDL_BUTTON_X2: app->mouse.x2_button = 1; break;
 			}
 			app->mouse.x = event.button.x;
 			app->mouse.y = event.button.y;
@@ -610,6 +618,8 @@ void cf_pump_input_msgs()
 			case SDL_BUTTON_LEFT: app->mouse.left_button = 0; break;
 			case SDL_BUTTON_RIGHT: app->mouse.right_button = 0; break;
 			case SDL_BUTTON_MIDDLE: app->mouse.middle_button = 0; break;
+			case SDL_BUTTON_X1: app->mouse.x1_button = 0; break;
+			case SDL_BUTTON_X2: app->mouse.x2_button = 0; break;
 			}
 			app->mouse.x = event.button.x;
 			app->mouse.y = event.button.y;
