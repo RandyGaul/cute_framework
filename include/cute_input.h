@@ -30,6 +30,12 @@ extern "C" {
 	CF_ENUM(MOUSE_BUTTON_RIGHT, 1) \
 	/* @entry */ \
 	CF_ENUM(MOUSE_BUTTON_MIDDLE, 2) \
+	/* @entry */ \
+	CF_ENUM(MOUSE_BUTTON_X1, 3) \
+	/* @entry */ \
+	CF_ENUM(MOUSE_BUTTON_X2, 4) \
+	/* @entry */ \
+	CF_ENUM(MOUSE_BUTTON_COUNT, 5) \
 	/* @end */
 
 typedef enum CF_MouseButton
@@ -670,6 +676,9 @@ CF_API float CF_CALL cf_mouse_x();
  */
 CF_API float CF_CALL cf_mouse_y();
 
+CF_API float CF_CALL cf_mouse_x_motion();
+CF_API float CF_CALL cf_mouse_y_motion();
+
 /**
  * @function cf_mouse_down
  * @category input
@@ -743,6 +752,8 @@ CF_API bool CF_CALL cf_mouse_hidden();
  * @related  cf_mouse_hide cf_mouse_hidden cf_mouse_lock_inside_window
  */
 CF_API void CF_CALL cf_mouse_lock_inside_window(bool true_to_lock);
+
+CF_API void CF_CALL cf_mouse_set_relative_mode(bool true_to_set_relative);
 
 /**
  * @struct   CF_InputTextBuffer

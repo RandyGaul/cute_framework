@@ -265,6 +265,16 @@ float cf_mouse_y()
 	return app->mouse.y;
 }
 
+float cf_mouse_motion_x()
+{
+    return app->mouse.xrel;
+}
+
+float cf_mouse_motion_y()
+{
+    return app->mouse.yrel;
+}
+
 bool cf_mouse_down(CF_MouseButton button)
 {
 	switch (button)
@@ -331,6 +341,11 @@ void cf_mouse_lock_inside_window(bool true_to_lock)
 {
 	SDL_SetWindowMouseGrab(app->window, true_to_lock);
 	SDL_WINDOWPOS_CENTERED_DISPLAY(3);
+}
+
+void cf_mouse_set_relative_mode(bool true_to_set_relative)
+{
+    SDL_SetWindowRelativeMouseMode(app->window, true_to_set_relative);
 }
 
 void cf_clear_all_mouse_state()
