@@ -38,7 +38,7 @@ using namespace cute;
 
 int main(int argc, const char argv)
 {
-    app_make("Fancy Window Title", 0, 0, 0, 640, 480, APP_OPTIONS_WINDOW_POS_CENTERED, argv[0]);
+    app_make("Fancy Window Title", 0, 0, 0, 640, 480, CF_APP_OPTIONS_WINDOW_POS_CENTERED_BIT, argv[0]);
     app_destroy();
     return 0;
 }
