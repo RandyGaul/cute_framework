@@ -676,8 +676,8 @@ CF_API float CF_CALL cf_mouse_x();
  */
 CF_API float CF_CALL cf_mouse_y();
 
-CF_API float CF_CALL cf_mouse_x_motion();
-CF_API float CF_CALL cf_mouse_y_motion();
+CF_API float CF_CALL cf_mouse_motion_x();
+CF_API float CF_CALL cf_mouse_motion_y();
 
 /**
  * @function cf_mouse_down
