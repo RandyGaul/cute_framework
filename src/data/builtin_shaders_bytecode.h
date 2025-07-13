@@ -2503,6 +2503,11 @@ layout(location = 0) out vec4 result;
 
 layout(set = 2, binding = 0) uniform sampler2D u_image;
 
+layout(set = 3, binding = 0) uniform uniform_block {
+ vec2 u_texture_size;
+ int u_alpha_discard;
+};
+
 #line 1 "smooth_uv.shd"
 
 vec2 smooth_uv(vec2 uv, vec2 texture_size)
@@ -2512,19 +2517,14 @@ vec2 smooth_uv(vec2 uv, vec2 texture_size)
  pixel = seam + clamp( (pixel - seam) / fwidth(pixel), - 0.5, 0.5);
  return pixel / texture_size;
 }
-#line 12 0
+#line 17 0
 #line 1 "shader_stub.shd"
 
 vec4 shader(vec4 color, vec2 pos, vec2 screen_uv, vec4 params)
 {
  return color;
 }
-#line 13 0
-
-layout(set = 3, binding = 0) uniform uniform_block {
- vec2 u_texture_size;
- int u_alpha_discard;
-};
+#line 18 0
 
 void main() {
  vec4 color = texture(u_image, smooth_uv(v_uv, u_texture_size));

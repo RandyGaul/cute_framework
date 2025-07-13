@@ -473,13 +473,13 @@ layout (location = 0) out vec4 result;
 
 layout (set = 2, binding = 0) uniform sampler2D u_image;
 
-#include "smooth_uv.shd"
-#include "shader_stub.shd"
-
 layout (set = 3, binding = 0) uniform uniform_block {
 	vec2 u_texture_size;
 	int u_alpha_discard;
 };
+
+#include "smooth_uv.shd"
+#include "shader_stub.shd"
 
 void main() {
 	vec4 color = texture(u_image, smooth_uv(v_uv, u_texture_size));
