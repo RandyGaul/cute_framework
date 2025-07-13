@@ -12,12 +12,16 @@ GitHub: [cute_app.h](https://github.com/RandyGaul/cute_framework/blob/master/inc
 Sets the MSAA sample count for the app's offscreen canvas.
 
 ```cpp
-void cf_app_set_msaa(int sample_count);
+bool cf_app_set_msaa(int sample_count);
 ```
 
 Parameters | Description
 --- | ---
 sample_count | The number of MSAA samples (e.g. 1, 2, 4, 8).
+
+## Return Value
+
+Returns true if the `sample_count` was valid for the given GPU.
 
 ## Remarks
 

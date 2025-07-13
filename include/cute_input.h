@@ -30,6 +30,12 @@ extern "C" {
 	CF_ENUM(MOUSE_BUTTON_RIGHT, 1) \
 	/* @entry */ \
 	CF_ENUM(MOUSE_BUTTON_MIDDLE, 2) \
+	/* @entry */ \
+	CF_ENUM(MOUSE_BUTTON_X1, 3) \
+	/* @entry */ \
+	CF_ENUM(MOUSE_BUTTON_X2, 4) \
+	/* @entry */ \
+	CF_ENUM(MOUSE_BUTTON_COUNT, 5) \
 	/* @end */
 
 typedef enum CF_MouseButton
@@ -657,7 +663,7 @@ CF_API void CF_CALL cf_register_key_callback(void (*key_callback)(CF_KeyButton k
  * @category input
  * @brief    Returns the current mouse x-coordinate in pixels.
  * @remarks  (0, 0) is the top-left of the screen, y-downards.
- * @related  CF_MouseButton cf_mouse_down cf_mouse_x cf_mouse_y
+ * @related  CF_MouseButton cf_mouse_down cf_mouse_x cf_mouse_y cf_mouse_motion_x cf_mouse_motion_y
  */
 CF_API float CF_CALL cf_mouse_x();
 
@@ -666,9 +672,27 @@ CF_API float CF_CALL cf_mouse_x();
  * @category input
  * @brief    Returns the current mouse y-coordinate in pixels.
  * @remarks  (0, 0) is the top-left of the screen, y-downwards.
- * @related  CF_MouseButton cf_mouse_down cf_mouse_x cf_mouse_y
+ * @related  CF_MouseButton cf_mouse_down cf_mouse_x cf_mouse_y cf_mouse_motion_x cf_mouse_motion_y
  */
 CF_API float CF_CALL cf_mouse_y();
+
+/**
+ * @function cf_mouse_motion_x
+ * @category input
+ * @brief    Returns the current mouse motion x-coordinates in pixels.
+ * @remarks  (0, 0) means there is no mouse movement, y-downwards.
+ * @related  CF_MouseButton cf_mouse_down cf_mouse_x cf_mouse_y cf_mouse_motion_x cf_mouse_motion_y
+ */
+CF_API float CF_CALL cf_mouse_motion_x();
+
+/**
+ * @function cf_mouse_motion_y
+ * @category input
+ * @brief    Returns the current mouse motion y-coordinates in pixels.
+ * @remarks  (0, 0) means there is no mouse movement, y-downwards.
+ * @related  CF_MouseButton cf_mouse_down cf_mouse_x cf_mouse_y cf_mouse_motion_x cf_mouse_motion_y
+ */
+CF_API float CF_CALL cf_mouse_motion_y();
 
 /**
  * @function cf_mouse_down
@@ -740,9 +764,18 @@ CF_API bool CF_CALL cf_mouse_hidden();
  * @category input
  * @brief    Locks the mouse within the window's borders.
  * @remarks  This is off by default, meaning the mouse is free to leave the border of the window.
- * @related  cf_mouse_hide cf_mouse_hidden cf_mouse_lock_inside_window
+ * @related  cf_mouse_hide cf_mouse_hidden cf_mouse_lock_inside_window cf_mouse_set_relative_mode
  */
 CF_API void CF_CALL cf_mouse_lock_inside_window(bool true_to_lock);
+
+/**
+ * @function cf_mouse_set_relative_mode
+ * @category input
+ * @brief    Locks the mouse within the window's borders and hides the mouse.
+ * @remarks  This is off by default, meaning the mouse is free to leave the border of the window.
+ * @related  cf_mouse_hide cf_mouse_hidden cf_mouse_lock_inside_window cf_mouse_set_relative_mode
+ */
+CF_API void CF_CALL cf_mouse_set_relative_mode(bool true_to_set_relative);
 
 /**
  * @struct   CF_InputTextBuffer

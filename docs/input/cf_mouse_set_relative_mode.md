@@ -3,26 +3,24 @@
 [//]: # (See: https://github.com/RandyGaul/cute_framework/blob/master/samples/docs_parser.cpp)
 [](../header.md ':include')
 
-# cf_mouse_x
+# cf_mouse_set_relative_mode
 
 Category: [input](/api_reference?id=input)  
 GitHub: [cute_input.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_input.h)  
 ---
 
-Returns the current mouse x-coordinate in pixels.
+Locks the mouse within the window's borders and hides the mouse.
 
 ```cpp
-float cf_mouse_x();
+void cf_mouse_set_relative_mode(bool true_to_set_relative);
 ```
 
 ## Remarks
 
-(0, 0) is the top-left of the screen, y-downards.
+This is off by default, meaning the mouse is free to leave the border of the window.
 
 ## Related Pages
 
-[CF_MouseButton](/input/cf_mousebutton.md)  
-[cf_mouse_down](/input/cf_mouse_down.md)  
-[cf_mouse_motion_y](/input/cf_mouse_motion_y.md)  
-[cf_mouse_y](/input/cf_mouse_y.md)  
-[cf_mouse_motion_x](/input/cf_mouse_motion_x.md)  
+[cf_mouse_hide](/input/cf_mouse_hide.md)  
+[cf_mouse_hidden](/input/cf_mouse_hidden.md)  
+[cf_mouse_lock_inside_window](/input/cf_mouse_lock_inside_window.md)  

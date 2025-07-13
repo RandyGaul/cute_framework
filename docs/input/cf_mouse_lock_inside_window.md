@@ -23,3 +23,4 @@ This is off by default, meaning the mouse is free to leave the border of the win
 
 [cf_mouse_hide](/input/cf_mouse_hide.md)  
 [cf_mouse_hidden](/input/cf_mouse_hidden.md)  
+[cf_mouse_set_relative_mode](/input/cf_mouse_set_relative_mode.md)  

@@ -3,26 +3,26 @@
 [//]: # (See: https://github.com/RandyGaul/cute_framework/blob/master/samples/docs_parser.cpp)
 [](../header.md ':include')
 
-# CF_MouseButton
+# cf_mouse_motion_x
 
 Category: [input](/api_reference?id=input)  
 GitHub: [cute_input.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_input.h)  
 ---
 
-The mouse buttons.
+Returns the current mouse motion x-coordinates in pixels.
 
-## Values
+```cpp
+float cf_mouse_motion_x();
+```
 
-Enum | Description
---- | ---
-MOUSE_BUTTON_LEFT | (null)
-MOUSE_BUTTON_RIGHT | (null)
-MOUSE_BUTTON_MIDDLE | (null)
-MOUSE_BUTTON_X1 | (null)
-MOUSE_BUTTON_X2 | (null)
-MOUSE_BUTTON_COUNT | (null)
+## Remarks
+
+(0, 0) means there is no mouse movement, y-downwards.
 
 ## Related Pages
 
+[CF_MouseButton](/input/cf_mousebutton.md)  
 [cf_mouse_down](/input/cf_mouse_down.md)  
-[cf_mouse_button_to_string](/input/cf_mouse_button_to_string.md)  
+[cf_mouse_x](/input/cf_mouse_x.md)  
+[cf_mouse_y](/input/cf_mouse_y.md)  
+[cf_mouse_motion_y](/input/cf_mouse_motion_y.md)  

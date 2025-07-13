@@ -24,3 +24,5 @@ float cf_mouse_y();
 [CF_MouseButton](/input/cf_mousebutton.md)  
 [cf_mouse_down](/input/cf_mouse_down.md)  
 [cf_mouse_x](/input/cf_mouse_x.md)  
+[cf_mouse_motion_y](/input/cf_mouse_motion_y.md)  
+[cf_mouse_motion_x](/input/cf_mouse_motion_x.md)  

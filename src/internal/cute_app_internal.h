@@ -36,6 +36,8 @@ struct CF_MouseState
 	int left_button = 0;
 	int right_button = 0;
 	int middle_button = 0;
+	int x1_button = 0;
+	int x2_button = 0;
 	float wheel_motion = 0;
 	float x = 0;
 	float y = 0;
