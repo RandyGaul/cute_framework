@@ -2,9 +2,7 @@
 
 Multithreading is a rather advanced topic. Many games need zero, or near-zero, multithreading. Multithreading is purely an optimization topic, only necessary to try and run multiple cores on a single CPU in parallel. Some good candidate areas for multithreading include collision detection, loading resources, the network stack, block updating large chunks of objects/entities, particle systems, etc.
 
-Multithreading is all about understanding _synchronization primitives_, the various types available for synchronizing data from one _thread of execution_ to another. CF has a variety of primitives available:
-
-[](../multithreading/structs.md ':include')
+Multithreading is all about understanding _synchronization primitives_, the various types available for synchronizing data from one _thread of execution_ to another. CF has a variety of primitives available.
 
 We will briefly go over each one and link to some recommended readings if you want to learn more.
 
