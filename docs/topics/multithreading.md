@@ -10,7 +10,7 @@ Multithreading is all about understanding _synchronization primitives_, the vari
 
 We will briefly go over each one and link to some recommended readings if you want to learn more.
 
-See also: [Atomics](/topics/atomics.md).
+See also: [Atomics](atomics.md).
 
 ## Thread
 
@@ -46,7 +46,7 @@ The test thread ran.
 Thread spawned.
 ```
 
-Depending on the operating system's thread scheduling logic, it's entirely possible for the order of print statements to flip from one application run to another. To control the order we would have to use a _synchronization primitive_, such as an [atomics](/topics/atomics.md).
+Depending on the operating system's thread scheduling logic, it's entirely possible for the order of print statements to flip from one application run to another. To control the order we would have to use a _synchronization primitive_, such as an [atomics](atomics.md).
 
 If the underlying system has multiple CPU cores, then separate threads can be scheduled by the operating system to actually run in parallel. However, even if the system has a single core (meaning it is single-threaded) you can usually still create threads perfectly fine -- they just won't give any performance boost, and instead usually cause a slight performance cost.
 
@@ -82,6 +82,6 @@ The thread pool is a great tool for games. For a CPU with N cores the thread poo
 
 After loading up the threadpool with tasks they can be kicked off. Once kicked, threads will wake and grab tasks from the pool and perform them until all tasks are complete, and the threads go back to sleep. The pool can be kicked off in two styles: _blocking_ and _non-blocking_.
 
-[`cf_threadpool_kick_and_wait`](https://randygaul.github.io/cute_framework/#/multithreading/cf_threadpool_kick_and_wait) will kick off all tasks and return only once all the tasks are completed. In this way it is a _blocking_ function, as it blocks the thread's execution until it finishes. If you'd like to continue on while the tasks are performed, use [`cf_threadpool_kick`](https://randygaul.github.io/cute_framework/#/multithreading/cf_threadpool_kick), as it's a _non-blocking_ function, meaning the function will immediately return after kicking, without waiting for any tasks to complete.
+[`cf_threadpool_kick_and_wait`](../multithreading/cf_threadpool_kick_and_wait.md) will kick off all tasks and return only once all the tasks are completed. In this way it is a _blocking_ function, as it blocks the thread's execution until it finishes. If you'd like to continue on while the tasks are performed, use [`cf_threadpool_kick`](https://randygaul.github.io/cute_framework/#/multithreading/cf_threadpool_kick), as it's a _non-blocking_ function, meaning the function will immediately return after kicking, without waiting for any tasks to complete.
 
 Great uses cases for threadpools in games include perform collision checks, as well as block-updating large chunks of independent entities/objects/systems.

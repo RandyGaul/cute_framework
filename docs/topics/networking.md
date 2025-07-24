@@ -12,7 +12,7 @@ CF's networking model uses a [client server networking architecture](https://en.
 * Packet fragmentation and reassembly, for larger packets over the [MTU](https://en.wikipedia.org/wiki/Maximum_transmission_unit).
 * Basic client and server abstractions.
 
-For those curious, the lower level guts of the client server API are implemented on top of the [Cute Protocol](/topics/protocol.md).
+For those curious, the lower level guts of the client server API are implemented on top of the [Cute Protocol](protocol.md).
 
 ## Connect Tokens
 
