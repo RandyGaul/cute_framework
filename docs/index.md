@@ -7,6 +7,8 @@
 - 100% free and open source
 - Works nearly everwhere (Desktops, Mobile, Web, and more...)
 
-[Get Started](getting_started.md)
-[GitHub](https://github.com/RandyGaul/cute_framework/)
-[Discord](https://discord.gg/ZvxfCyjZCj)
+---
+
+  * [Get Started](getting_started.md)
+  * [GitHub](https://github.com/RandyGaul/cute_framework/)
+  * [Discord](https://discord.gg/ZvxfCyjZCj)

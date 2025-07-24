@@ -1,4 +1,6 @@
 site_name: Cute Framework
+repo_url: https://github.com/RandyGaul/cute_framework
+repo_name: RandyGaul/cute_framework
 theme:
   name: material
   logo: assets/logo.png
@@ -31,4 +33,13 @@ nav:
       - Strings: topics/strings.md
       - Virtual File System: topics/virtual_file_system.md
       - Web: topics/web.md
+  - Samples: samples.md
+  - Community / Ask for Help: community_ask_for_help.md
   - API Reference: api_reference.md
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/RandyGaul/cute_framework
+    - icon: fontawesome/brands/discord
+      link: https://discord.gg/ZvxfCyjZCj
