@@ -553,7 +553,7 @@ void save_api_reference_links(FILE* fp, const char* category, Array<const char*>
 			String page = pages[i];
 			String page_lower = page;
 			page_lower.to_lower().replace(" ", "_");
-			fprintf(fp, "- [%s](../%s/%s)\n", page.c_str(), category, page_lower.c_str());
+			fprintf(fp, "- [%s](%s/%s.md)\n", page.c_str(), category, page_lower.c_str());
 		}
 		fprintf(fp, "\n\n");
 	}
