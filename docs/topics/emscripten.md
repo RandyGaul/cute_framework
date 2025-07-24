@@ -1,6 +1,4 @@
-[](../header.md ':include')
-
-<br>
+# Emscripten Builds
 
 CF can not currently build for the web, as CF switched to SDL's SDL_GPU API. SDL_GPU has deprecated all OpenGL support, which unfortunately means no access to OpenGLES, which was used to cross-compile for the web via a compiler called [Emscripten](https://emscripten.org/). The rest of this page details old steps to get emscripten builds going. In the future CF will seek out a replacement technology to enable web builds.
 

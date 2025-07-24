@@ -1,6 +1,4 @@
-[](../header.md ':include')
-
-<br>
+# Dear ImGui
 
 [Dear ImGui](https://github.com/ocornut/imgui) is a free to use C/C++ library for creating tools or debug user-interfaces (UI). It's an absolutely splendid tool for game development, and comes baked right into CF's source code, ready to use right out of the box.
 

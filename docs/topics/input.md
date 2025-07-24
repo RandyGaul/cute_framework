@@ -1,6 +1,4 @@
-[](../header.md ':include')
-
-<br>
+# Input
 
 There are four main ways to gather input: keyboard, mouse, touch, input text, and IME (input method editor).
 

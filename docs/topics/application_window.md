@@ -1,6 +1,4 @@
-[](../header.md ':include')
-
-## Creating a Window
+# Creating a Window
 
 Here's a good starting program to copy + paste. It creates a window in the center of the screen with dimensions 640x480 pixels. This snippet runs a typical game loop after window creation.
 

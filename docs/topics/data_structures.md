@@ -1,6 +1,4 @@
-[](../header.md ':include')
-
-<br>
+# Data Structures
 
 Data structures are used as work-horse tools to implement all kinds of features or tools in games. The data structures available include:
 

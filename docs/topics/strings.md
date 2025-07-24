@@ -1,6 +1,4 @@
-[](../header.md ':include')
-
-<br>
+# Strings
 
 CF has a [dynamic string API](https://randygaul.github.io/cute_framework/#/api_reference?id=string) where strings are 100% compatible with normal C-strings. Dynamic strings can be modified and grow onto the heap as necessary. They come with a wide variety of manipulation functions such as removing certain characters, trimming whitespace, find + replace, and a whole lot more. In C++ we also have the `String` class which wraps the dynamic C string API.
 

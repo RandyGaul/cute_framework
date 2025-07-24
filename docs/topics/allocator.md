@@ -1,4 +1,4 @@
-[](../header.md ':include')
+# Allocators
 
 The topic of custom allocators is only relevant for certain games trying to eek out performance, i.e. for more advanced users. For most games, simply calling `malloc` or `new` is quite sufficient. However, in the event where some kind of custom allocator is needed [`cf_allocator_override`](https://randygaul.github.io/cute_framework/#/allocator/cf_allocator_override) provides a way to supply a custom [`CF_Allocator`](https://randygaul.github.io/cute_framework/#/allocator/cf_allocator). This lets you hook in your own allocation model and do whatever you want with all allocations internal to Cute Framework. For example, some games might need to reduce memory fragmentation and can't afford simply call `malloc` alone, but instead want to wrap it up inside of their implementation.
 

@@ -1,7 +1,4 @@
-[](../header.md ':include')
-
-<br>
-
+# Networking
 
 !> **Note** CF's networking is implemented by [cute_net.h](https://github.com/RandyGaul/cute_headers/blob/master/cute_net.h), a low level networking header. This code has not yet reached stable maturity -- use at your own risk! CF would like to release networking features officially in a future release.
 

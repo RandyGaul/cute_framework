@@ -1,6 +1,4 @@
-[](../header.md ':include')
-
-<br>
+# Multithreading
 
 Multithreading is a rather advanced topic. Many games need zero, or near-zero, multithreading. Multithreading is purely an optimization topic, only necessary to try and run multiple cores on a single CPU in parallel. Some good candidate areas for multithreading include collision detection, loading resources, the network stack, block updating large chunks of objects/entities, particle systems, etc.
 

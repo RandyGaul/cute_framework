@@ -1,6 +1,4 @@
-[](../header.md ':include')
-
-<br>
+# Virtual File System
 
 Cute Framework uses a Virtual File System (VFS) to access the disk. You can of course simply call `fopen` and `fclose` (or similar) functions on your own and entirely bypass the VFS, but, all of CF's functions that access the disk make use of the VFS. It works by _mounting_ folders under new names. You game can then operate purely on _mounted_ folders and file paths. This has some major benefits:
 

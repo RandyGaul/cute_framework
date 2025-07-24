@@ -1,6 +1,4 @@
-[](../header.md ':include')
-
-<br>
+# File I/O
 
 CF uses a virtual file system (VFS). Here's the [page on VFS](https://randygaul.github.io/cute_framework/#/topics/virtual_file_system) to learn in-depth details. In contrast, the page here gets you up and running very quickly with the VFS so you can practice opening sprites or font files in the next section: [Drawing](https://randygaul.github.io/cute_framework/#/topics/drawing).
 

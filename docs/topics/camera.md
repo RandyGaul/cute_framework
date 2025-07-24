@@ -1,6 +1,4 @@
-[](../header.md ':include')
-
-<br>
+# Camera
 
 Everything in the [Drawing API](https://randygaul.github.io/cute_framework/#/topics/drawing) is drawn relative to the current coordinate system. We can transform this coordinate system to adjust the position, scale, and rotation of anything drawn.
 

@@ -1,6 +1,4 @@
-[](../header.md ':include')
-
-<br>
+# Collision
 
 CF comes with a full-featured [`Collision API`](https://randygaul.github.io/cute_framework/#/api_reference?id=collision). Here's a quick list of the features available:
 

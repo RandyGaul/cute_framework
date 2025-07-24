@@ -1,7 +1,3 @@
-[](../header.md ':include')
-
-<br>
-
 To learn about a specific area in Cute Framework visit one of these topic articles. Each article introduces a major feature of Cute Framework and provides an overview on how to piece things together for making games. These are listed the **recommended reading order**.
 
 1. [Application Window](./application_window.md)

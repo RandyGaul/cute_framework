@@ -1,6 +1,4 @@
-[](../header.md ':include')
-
-<br>
+# Web Builds
 
 To access the web, as in websites, CF can make [HTTPS](https://en.wikipedia.org/wiki/HTTPS) requests. This can be used to download a webpage, or send a generic request to some webserver. Common usecases are to submit some high score information to a webserver, perform some authentication like a login system, or implement a [REST API](https://en.wikipedia.org/wiki/REST).
 
