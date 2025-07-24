@@ -2,3 +2,33 @@ site_name: Cute Framework
 theme:
   name: material
   logo: assets/logo.png
+nav:
+  - Home: index.md
+  - Getting Started:
+      - Introduction: getting_started.md
+      - Application Window: topics/application_window.md
+      - Game Loop and Time: topics/game_loop_and_time.md
+      - File I/O: topics/file_io.md
+      - Drawing: topics/drawing.md
+      - Transforms: topics/camera.md
+      - Debug/Tools UI: topics/dear_imgui.md
+  - Topics:
+      - Introduction: topics/index.md
+      - Allocators: topics/allocator.md
+      - Atomics: topics/atomics.md
+      - Audio: topics/audio.md
+      - Collision: topics/collision.md
+      - Coroutines: topics/coroutines.md
+      - Data Structures: topics/data_structures.md
+      - Web Builds with Emscripten: topics/emscripten.md
+      - Input: topics/input.md
+      - Low Level Graphics: topics/low_level_graphics.md
+      - macOS + iOS Builds: topics/ios.md
+      - Multithreading: topics/multithreading.md
+      - Networking: topics/networking.md
+      - Random Numbers: topics/random_numbers.md
+      - Shader Compilation: topics/shader_compilation.md
+      - Strings: topics/strings.md
+      - Virtual File System: topics/virtual_file_system.md
+      - Web: topics/web.md
+  - API Reference: api_reference.md
