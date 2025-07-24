@@ -4,10 +4,14 @@ repo_name: RandyGaul/cute_framework
 theme:
   name: material
   logo: assets/logo.png
+  features:
+    - navigation.path
+    - navigation.indexes
+
 nav:
   - Home: index.md
   - Getting Started:
-      - Introduction: getting_started.md
+      - getting_started.md
       - Application Window: topics/application_window.md
       - Game Loop and Time: topics/game_loop_and_time.md
       - File I/O: topics/file_io.md
@@ -15,7 +19,7 @@ nav:
       - Transforms: topics/camera.md
       - Debug/Tools UI: topics/dear_imgui.md
   - Topics:
-      - Introduction: topics/index.md
+      - Topics: topics/index.md
       - Allocators: topics/allocator.md
       - Atomics: topics/atomics.md
       - Audio: topics/audio.md
