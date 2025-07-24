@@ -185,7 +185,7 @@ void Doc::emit_title(FILE* fp)
 	fprintf(fp, "[](../header.md ':include')\n\n");
 	fprintf(fp, "# %s\n\n", title.c_str());
 	String link = linkify(web_category, web_category, false);
-	fprintf(fp, "Category: [%s](../api_reference.md?id=%s)  \n", web_category.c_str(), link.c_str());
+	fprintf(fp, "Category: [%s](../api_reference.md#%s)  \n", web_category.c_str(), link.c_str());
 	fprintf(fp, "GitHub: [%s](https://github.com/RandyGaul/cute_framework/blob/master/include/%s)  \n---\n\n", file.c_str(), file.c_str());
 }
 
