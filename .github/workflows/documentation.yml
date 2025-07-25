@@ -38,7 +38,7 @@ jobs:
 
       - name: Docs parser
         run: |
-          cmake -B build/debug -DCF_RUNTIME_SHADER_COMPILATION=OFF -DCF_CUTE_SHADERC=OFF -DCF_FRAMEWORK_STATIC=OFF
+          cmake -B build/debug -DCF_RUNTIME_SHADER_COMPILATION=OFF -DCF_CUTE_SHADERC=OFF
           cmake --build build/debug --parallel 8 --target docsparser
           cd build/debug
           ./docsparser
