@@ -70,6 +70,10 @@ nav:
   - Community / Ask for Help: community_ask_for_help.md
   - API Reference: api_reference.md
 
+# Plugins
+plugins:
+  - social
+
 extra:
   social:
     - icon: fontawesome/brands/github
