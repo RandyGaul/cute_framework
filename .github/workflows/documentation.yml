@@ -34,6 +34,13 @@ jobs:
         run: |
           pip install mkdocs mkdocs-material
 
+      - name: Install OpenGL + Audio
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install gcc-multilib
+          sudo apt-get install libasound2-dev libpulse-dev
+          sudo apt-get install -y --no-install-recommends libglfw3 libglfw3-dev libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libxext-dev libxfixes-dev
+
       - name: Docs parser
         run: |
           cmake -B build/debug -DCF_RUNTIME_SHADER_COMPILATION=OFF -DCF_CUTE_SHADERC=OFF -DCF_FRAMEWORK_STATIC=OFF
