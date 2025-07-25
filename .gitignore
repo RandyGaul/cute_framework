@@ -1,4 +1,6 @@
 build*/
+docs/*/*.md
+!docs/topics/*.md
 .cache
 .DS_Store
 cute_framework.zip
