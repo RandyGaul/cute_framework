@@ -284,6 +284,8 @@ bool cf_mouse_down(CF_MouseButton button)
 	case CF_MOUSE_BUTTON_MIDDLE: return app->mouse.middle_button;
 	case CF_MOUSE_BUTTON_X1:     return app->mouse.x1_button;
 	case CF_MOUSE_BUTTON_X2:     return app->mouse.x2_button;
+	case CF_MOUSE_BUTTON_COUNT:  // This is a special case for counting buttons, not a real button.
+	default:                     CF_ASSERT(0 && "Invalid mouse button"); return 0;
 	}
 	return 0;
 }
@@ -297,6 +299,8 @@ bool cf_mouse_just_pressed(CF_MouseButton button)
 	case CF_MOUSE_BUTTON_MIDDLE: return app->mouse.middle_button && !app->mouse_prev.middle_button;
 	case CF_MOUSE_BUTTON_X1:     return app->mouse.x1_button     && !app->mouse_prev.x1_button;
 	case CF_MOUSE_BUTTON_X2:     return app->mouse.x2_button     && !app->mouse_prev.x2_button;
+	case CF_MOUSE_BUTTON_COUNT:  // This is a special case for counting buttons, not a real button.
+	default:                     CF_ASSERT(0 && "Invalid mouse button"); return 0;
 	}
 	return 0;
 }
@@ -310,6 +314,8 @@ bool cf_mouse_just_released(CF_MouseButton button)
 	case CF_MOUSE_BUTTON_MIDDLE: return !app->mouse.middle_button && app->mouse_prev.middle_button;
 	case CF_MOUSE_BUTTON_X1:     return !app->mouse.x1_button     && app->mouse_prev.x1_button;
 	case CF_MOUSE_BUTTON_X2:     return !app->mouse.x2_button     && app->mouse_prev.x2_button;
+	case CF_MOUSE_BUTTON_COUNT:  // This is a special case for counting buttons, not a real button.
+	default:                     CF_ASSERT(0 && "Invalid mouse button"); return 0;
 	}
 	return 0;
 }
