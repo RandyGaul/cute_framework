@@ -31,7 +31,7 @@ jobs:
         run: |
           pip install mkdocs mkdocs-material
 
-      - name: Install OpenGL + Audio
+      - name: Install dependencies
         run: |
           sudo apt-get install -y --no-install-recommends pngquant gcc-multilib libasound2-dev libpulse-dev \
             libglfw3 libglfw3-dev libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libxext-dev libxfixes-dev
