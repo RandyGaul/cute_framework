@@ -1,5 +1,6 @@
 build*/
 docs/*/*.md
+docs/api_reference.md
 !docs/topics/*.md
 site/
 .cache
