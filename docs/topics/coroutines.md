@@ -1,7 +1,3 @@
-[](../header.md ':include')
-
-<br>
-
 # Coroutines
 
 A [CF_Coroutine](https://randygaul.github.io/cute_framework/#/coroutine/cf_coroutine) is a function that can be paused and resumed at a later time. The function can be paused and resumed any number of times before finally exiting. This provides a great way to implement state machines, cutscenes, or anything else that requires doing some actions over a number of frames.

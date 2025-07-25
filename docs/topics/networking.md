@@ -1,7 +1,4 @@
-[](../header.md ':include')
-
-<br>
-
+# Networking
 
 !> **Note** CF's networking is implemented by [cute_net.h](https://github.com/RandyGaul/cute_headers/blob/master/cute_net.h), a low level networking header. This code has not yet reached stable maturity -- use at your own risk! CF would like to release networking features officially in a future release.
 
@@ -12,7 +9,7 @@ CF's networking model uses a [client server networking architecture](https://en.
 * Packet fragmentation and reassembly, for larger packets over the [MTU](https://en.wikipedia.org/wiki/Maximum_transmission_unit).
 * Basic client and server abstractions.
 
-For those curious, the lower level guts of the client server API are implemented on top of the [Cute Protocol](/topics/protocol.md).
+For those curious, the lower level guts of the client server API are implemented on top of the [Cute Protocol](protocol.md).
 
 ## Connect Tokens
 

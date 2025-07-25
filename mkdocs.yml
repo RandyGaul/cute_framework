@@ -1,0 +1,167 @@
+# Project information
+site_name: Cute Framework
+site_url: https://RandyGaul.github.io/cute_framework/
+site_author: Randy Gaul
+site_description: >-
+  The cutest framework available for making 2D games in C/C++
+
+# Repository information
+repo_url: https://github.com/RandyGaul/cute_framework
+repo_name: RandyGaul/cute_framework
+
+# Configuration
+theme:
+  name: material
+  logo: assets/logo.png
+  features:
+    - navigation.path
+    - navigation.indexes
+    - content.code.copy
+  palette:
+    - media: "(prefers-color-scheme)"
+      toggle:
+        icon: material/link
+        name: Switch to light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: red
+      accent: red
+      toggle:
+        icon: material/toggle-switch
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: red
+      accent: red
+      toggle:
+        icon: material/toggle-switch-off
+        name: Switch to system preference
+
+# Navigation
+not_in_nav: |
+  /CPU/*.md
+  /allocator/*.md
+  /app/*.md
+  /array/*.md
+  /atomic/*.md
+  /audio/*.md
+  /base64/*.md
+  /collision/*.md
+  /coroutine/*.md
+  /draw/*.md
+  /file/*.md
+  /graphics/*.md
+  /haptic/*.md
+  /hash/*.md
+  /image/*.md
+  /input/*.md
+  /json/*.md
+  /list/*.md
+  /math/*.md
+  /multithreading/*.md
+  /net/*.md
+  /noise/*.md
+  /path/*.md
+  /png_cache/*.md
+  /random/*.md
+  /sprite/*.md
+  /string/*.md
+  /text/*.md
+  /time/*.md
+  /utility/*.md
+  /web/*.md
+
+nav:
+  - Home: index.md
+  - Getting Started: getting_started.md
+  - Topics:
+      - Topics: topics/index.md
+      - Application Window: topics/application_window.md
+      - Game Loop and Time: topics/game_loop_and_time.md
+      - File I/O: topics/file_io.md
+      - Drawing: topics/drawing.md
+      - Transforms: topics/camera.md
+      - Debug/Tools UI: topics/dear_imgui.md
+      - Allocators: topics/allocator.md
+      - Atomics: topics/atomics.md
+      - Audio: topics/audio.md
+      - Collision: topics/collision.md
+      - Coroutines: topics/coroutines.md
+      - Data Structures: topics/data_structures.md
+      - Web Builds with Emscripten: topics/emscripten.md
+      - Input: topics/input.md
+      - Low Level Graphics: topics/low_level_graphics.md
+      - macOS + iOS Builds: topics/ios.md
+      - Multithreading: topics/multithreading.md
+      - Networking: topics/networking.md
+      - Cute Protocol Standard: topics/protocol.md
+      - Random Numbers: topics/random_numbers.md
+      - Shader Compilation: topics/shader_compilation.md
+      - Strings: topics/strings.md
+      - Virtual File System: topics/virtual_file_system.md
+      - Web: topics/web.md
+  - Samples: samples.md
+  - Community / Ask for Help: community_ask_for_help.md
+  - API Reference: api_reference.md
+
+# Plugins
+plugins:
+  - search
+  - social
+
+# Extensions
+markdown_extensions:
+  - abbr
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - toc:
+      permalink: true
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.betterem:
+      smart_enable: all
+  - pymdownx.caret
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.magiclink:
+      normalize_issue_symbols: true
+      repo_url_shorthand: true
+      user: squidfunk
+      repo: mkdocs-material
+  - pymdownx.mark
+  - pymdownx.smartsymbols
+  - pymdownx.snippets:
+      auto_append:
+        - includes/mkdocs.md
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+      combine_header_slug: true
+      slugify: !!python/object/apply:pymdownx.slugs.slugify
+        kwds:
+          case: lower
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/RandyGaul/cute_framework
+    - icon: fontawesome/brands/discord
+      link: https://discord.gg/ZvxfCyjZCj

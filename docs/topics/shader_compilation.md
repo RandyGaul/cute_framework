@@ -1,6 +1,4 @@
-[](../header.md ':include')
-
-<br>
+# Shader Compilation
 
 CF uses SDL_Gpu under the hood for rendering.
 SDL_Gpu will, at some point, offer their own [shader tools](https://github.com/libsdl-org/SDL_shader_tools) to provide an easy way to support cross-platform shaders. For now, CF has its own shader tooling based on [glslang](https://github.com/KhronosGroup/glslang) as a temporary solution, to be removed once SDL_Gpu shader tools gets going.
@@ -8,12 +6,12 @@ SDL_Gpu will, at some point, offer their own [shader tools](https://github.com/l
 ## Runtime Shader Compilation
 
 CF compiles shaders of the format GLSL 450. Shaders can be compiled at runtime, or precompiled into bytecode blobs. By default shaders are compiled at runtime, though this is adjustable via by the CMake option `CF_RUNTIME_SHADER_COMPILATION` (`ON` by default).
-You can compile a shader by calling [`cf_make_shader_from_source`](/graphics/cf_make_shader_from_source.md).
+You can compile a shader by calling [`cf_make_shader_from_source`](../graphics/cf_make_shader_from_source.md).
 
 !> **Note** Unfortunately, when runtime shaders are enabled the build process will involve pulling in [glslang](https://github.com/KhronosGroup/glslang), which requires Python 3.x installation on your machine.
 
 To remove the online compiler from CF, set `CF_RUNTIME_SHADER_COMPILATION` to `OFF`.
-Take note that online compilation functions such as [`cf_make_shader_from_source`](/graphics/cf_make_shader_from_source.md) will always fail if this is the case. Turning off runtime shader compilation can dramatically reduce the size and complexity of building CF. This is because [glslang](https://github.com/KhronosGroup/glslang) and similar alternatives to SDL's (unfinished) [shader tools](https://github.com/libsdl-org/SDL_shader_tools) are heavily bloated libraries, not written for fast compilation or load times. These will be removed at a later date from CF once SDL's shader tools get going.
+Take note that online compilation functions such as [`cf_make_shader_from_source`](../graphics/cf_make_shader_from_source.md) will always fail if this is the case. Turning off runtime shader compilation can dramatically reduce the size and complexity of building CF. This is because [glslang](https://github.com/KhronosGroup/glslang) and similar alternatives to SDL's (unfinished) [shader tools](https://github.com/libsdl-org/SDL_shader_tools) are heavily bloated libraries, not written for fast compilation or load times. These will be removed at a later date from CF once SDL's shader tools get going.
 
 ## Precompiling Shaders
 
@@ -48,16 +46,16 @@ cute-shaderc -I./my_shaders -type=draw -oheader=my_shader.h -varname=my_shader m
 
 `-oheader=` indicates where you want to output the header file.
 
-`-varname=` indicates the name of the static variable of the type [`CF_ShaderBytecode`](/graphics/cf_shaderbytecode.md).
+`-varname=` indicates the name of the static variable of the type [`CF_ShaderBytecode`](../graphics/cf_shaderbytecode.md).
 This variable will be defined in the generated header.
 It can be passed to related shader functions (explained below).
 
 The `-type=` flag indicates which type of shader you want to compile:
 
 * `vertex` and `fragment` are for compiling [low level shaders](https://randygaul.github.io/cute_framework/#/topics/low_level_graphics?id=shaders).
-  The result should be passed into [`cf_make_shader_from_bytecode`](/graphics/cf_make_shader_from_bytecode.md).
+  The result should be passed into [`cf_make_shader_from_bytecode`](../graphics/cf_make_shader_from_bytecode.md).
 * `draw` is for compiling [custom draw shaders](https://randygaul.github.io/cute_framework/#/topics/drawing?id=shaders).
-  The result should be passed into [`cf_make_draw_shader_from_bytecode`](/draw/cf_make_draw_shader_from_bytecode.md).
+  The result should be passed into [`cf_make_draw_shader_from_bytecode`](../draw/cf_make_draw_shader_from_bytecode.md).
 
 The `-I` flag will be explained in the "Shader inclusion" section below.
 
@@ -136,9 +134,9 @@ To make reusable utility functions, CF supports shaders including each other wit
 
 "Include guard", usually seen in C/C++, is not needed (e.g. `#pragma once`). Each file will only be included once and subsequent inclusions are ignored.
 
-With online compilation, the include directory must be set with [`cf_shader_directory`](/graphics/cf_shader_directory.md). For example: `cf_shader_directory("/shaders")`. Take note that this is a path in the [VFS](/topics/virtual_file_system.md), hence, the leading slash ('/'). When shaders inclusions occur they always search relative to this shader directory, and *never* search outside of it. You may organize your shaders _within the shader directory_ however you like, but they cannot exist outside the shader directory.
+With online compilation, the include directory must be set with [`cf_shader_directory`](../graphics/cf_shader_directory.md). For example: `cf_shader_directory("/shaders")`. Take note that this is a path in the [VFS](./virtual_file_system.md), hence, the leading slash ('/'). When shaders inclusions occur they always search relative to this shader directory, and *never* search outside of it. You may organize your shaders _within the shader directory_ however you like, but they cannot exist outside the shader directory.
 
-With offline compilation, the include directory is set with the `-I` flag. You run the shader compiler on the command line, after building the shader compiler `scute-shaderc`. For example: `cute-shaderc -Ishaders -o src/my_shader_shd.h my_shader.shd`. Take note that this is a path in your actual filesystem, and not a path in the [VFS](/topics/virtual_file_system.md).
+With offline compilation, the include directory is set with the `-I` flag. You run the shader compiler on the command line, after building the shader compiler `scute-shaderc`. For example: `cute-shaderc -Ishaders -o src/my_shader_shd.h my_shader.shd`. Take note that this is a path in your actual filesystem, and not a path in the [VFS](./virtual_file_system.md).
 The include directory is relative to wherever you run the command.
 
 When using CMake, prefix the path with `${CMAKE_CURRENT_SOURCE_DIR}` to make it independent of the build directory.
@@ -156,8 +154,8 @@ Do not look for this file and just take it as the errors are coming from whateve
 
 The current shader tooling is temporary until SDL's own [shader tools](https://github.com/libsdl-org/SDL_shader_tools) are mature enough. It is still in early development so we do not know what will change. To ensure as little friction as possible during migration, the following practice is advised.
 
-The `CF_ShaderBytecode` struct, whether coming from [`cf_compile_shader_to_bytecode`](/graphics/cf_compile_shader_to_bytecode.md) or the `cute-shaderc` compiler should be treated as opaque. It should not be modified in anyway and only passed verbatim to related functions: [`cf_make_shader_from_bytecode`](/graphics/cf_make_shader_from_bytecode.md) and [`cf_make_draw_shader_from_bytecode`](/draw/cf_make_draw_shader_from_bytecode.md).
+The `CF_ShaderBytecode` struct, whether coming from [`cf_compile_shader_to_bytecode`](../graphics/cf_compile_shader_to_bytecode.md) or the `cute-shaderc` compiler should be treated as opaque. It should not be modified in anyway and only passed verbatim to related functions: [`cf_make_shader_from_bytecode`](../graphics/cf_make_shader_from_bytecode.md) and [`cf_make_draw_shader_from_bytecode`](../draw/cf_make_draw_shader_from_bytecode.md).
 
 There is no guarantee on how the inner structure may change but the signature of the above functions will remain the same regardless of compilation backend. In other words, the API should remain stable at source level but there is no guarantee on the ABI (binary data compatibility with future versions of SDL).
 
-`cute-shaderc` will still be provided as an offline compilation tool. Its various flags and their behaviours will remain the same. The generated header will still declare a variable of the type [`CF_ShaderBytecode`](/graphics/cf_shaderbytecode.md). The actual content of the output, however, might change with compilation backend.
+`cute-shaderc` will still be provided as an offline compilation tool. Its various flags and their behaviours will remain the same. The generated header will still declare a variable of the type [`CF_ShaderBytecode`](../graphics/cf_shaderbytecode.md). The actual content of the output, however, might change with compilation backend.

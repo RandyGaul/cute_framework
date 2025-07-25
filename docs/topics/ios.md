@@ -1,6 +1,4 @@
-[](../header.md ':include')
-
-<br>
+# macOS and iOS Builds
 
 Building a game for iOS requires you to setup a developer account, and slightly complicates a few CMake commands. However, once setup it's very easy to build and install your game onto iOS devices through Xcode. Building your game for MacOS is even simpler than on iOS!
 

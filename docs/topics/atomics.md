@@ -1,6 +1,4 @@
-[](../header.md ':include')
-
-<br>
+# Atomics
 
 Atomics are a rather advanced topic in programming. They aren't unique to Cute Framework, but CF does support atomics. You can check out the [API Reference for Atomics](https://randygaul.github.io/cute_framework/#/api_reference?id=atomics) to see all of the available functions.
 

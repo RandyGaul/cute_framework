@@ -1,0 +1,63 @@
+name: Documentation
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+env:
+  PYTHON_VERSION: 3.x
+
+permissions:
+  contents: write
+  id-token: write
+  pages: write
+
+jobs:
+  documentation:
+    name: Build documentation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get install -y --no-install-recommends libcairo2-dev libfreetype6-dev libffi-dev libjpeg-dev libpng-dev libz-dev
+          sudo apt-get install -y --no-install-recommends pngquant gcc-multilib libasound2-dev libpulse-dev \
+            libglfw3 libglfw3-dev libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libxext-dev libxfixes-dev
+
+      - name: Set up Python runtime
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install Python dependencies
+        run: |
+          pip install mkdocs mkdocs-material "mkdocs-material[imaging]"
+
+      - name: Docs parser
+        run: |
+          cmake -B build/debug -DCF_RUNTIME_SHADER_COMPILATION=OFF -DCF_CUTE_SHADERC=OFF
+          cmake --build build/debug --parallel 8 --target docsparser
+          cd build/debug
+          ./docsparser
+
+      - name: Build documentation
+        run: |
+          mkdocs build --clean
+          mkdocs --version
+
+      - name: Adjust permissions
+        run: |
+          chmod -c -R +rX site/ | while read line; do
+            echo "::warning title=Invalid file permissions automatically fixed::$line"
+          done
+
+      - name: Upload to GitHub Pages
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - name: Deploy to GitHub Pages
+        uses: actions/deploy-pages@v4

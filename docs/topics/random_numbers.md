@@ -1,6 +1,4 @@
-[](../header.md ':include')
-
-<br>
+# Random Numbers
 
 You may already know about the [`rand`](https://en.cppreference.com/w/c/numeric/random/rand) function in C to generate random numbers. This is a great starting point, as it returns a random number from 0 to `RAND_MAX`. However, there's no guarantee the quality of the random numbers is any good, and also refers to global state, meaning you can only have a single random number generator. Instead, CF provides it's own method for generating random numbers that overcomes these issues.
 
