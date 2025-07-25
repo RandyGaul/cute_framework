@@ -184,7 +184,7 @@ void Doc::emit_title(FILE* fp)
 	fprintf(fp, "[//]: # (See: https://github.com/RandyGaul/cute_framework/blob/master/samples/docs_parser.cpp)\n");
 	fprintf(fp, "# %s\n\n", title.c_str());
 	String link = linkify(web_category, web_category, false);
-	fprintf(fp, "Category: [%s](../api_reference.md#%s)  \n", web_category.c_str(), link.c_str());
+	fprintf(fp, "Category: [%s](../api_reference.md#%s)  \n", web_category.c_str(), link.to_lower().c_str());
 	fprintf(fp, "GitHub: [%s](https://github.com/RandyGaul/cute_framework/blob/master/include/%s)  \n---\n\n", file.c_str(), file.c_str());
 }
 
