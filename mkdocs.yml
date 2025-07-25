@@ -38,6 +38,39 @@ theme:
         name: Switch to system preference
 
 # Navigation
+not_in_nav: |
+  /CPU/*.md
+  /allocator/*.md
+  /app/*.md
+  /array/*.md
+  /atomic/*.md
+  /audio/*.md
+  /base64/*.md
+  /collision/*.md
+  /coroutine/*.md
+  /draw/*.md
+  /file/*.md
+  /graphics/*.md
+  /haptic/*.md
+  /hash/*.md
+  /image/*.md
+  /input/*.md
+  /json/*.md
+  /list/*.md
+  /math/*.md
+  /multithreading/*.md
+  /net/*.md
+  /noise/*.md
+  /path/*.md
+  /png_cache/*.md
+  /random/*.md
+  /sprite/*.md
+  /string/*.md
+  /text/*.md
+  /time/*.md
+  /utility/*.md
+  /web/*.md
+
 nav:
   - Home: index.md
   - Getting Started: getting_started.md
@@ -61,6 +94,7 @@ nav:
       - macOS + iOS Builds: topics/ios.md
       - Multithreading: topics/multithreading.md
       - Networking: topics/networking.md
+      - Cute Protocol Standard: topics/protocol.md
       - Random Numbers: topics/random_numbers.md
       - Shader Compilation: topics/shader_compilation.md
       - Strings: topics/strings.md
