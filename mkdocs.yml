@@ -1,6 +1,15 @@
+# Project information
 site_name: Cute Framework
+site_url: https://RandyGaul.github.io/cute_framework/
+site_author: Randy Gaul
+site_description: >-
+  The cutest framework available for making 2D games in C/C++
+
+# Repository information
 repo_url: https://github.com/RandyGaul/cute_framework
 repo_name: RandyGaul/cute_framework
+
+# Configuration
 theme:
   name: material
   logo: assets/logo.png
@@ -8,6 +17,7 @@ theme:
     - navigation.path
     - navigation.indexes
 
+# Navigation
 nav:
   - Home: index.md
   - Getting Started: getting_started.md
