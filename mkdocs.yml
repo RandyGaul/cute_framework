@@ -16,6 +16,7 @@ theme:
   features:
     - navigation.path
     - navigation.indexes
+    - content.code.copy
 
 # Navigation
 nav:
