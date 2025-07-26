@@ -8,13 +8,8 @@ on:
 env:
   PYTHON_VERSION: 3.x
 
-permissions:
-  contents: write
-  id-token: write
-  pages: write
-
 jobs:
-  documentation:
+  build:
     name: Build documentation
     runs-on: ubuntu-latest
     steps:
@@ -44,6 +39,7 @@ jobs:
           ./docsparser
 
       - name: Build documentation
+        id: build
         run: |
           mkdocs build --clean
           mkdocs --version
@@ -55,9 +51,27 @@ jobs:
           done
 
       - name: Upload to GitHub Pages
+        id: deployment
         uses: actions/upload-pages-artifact@v3
         with:
           path: site
 
+  deploy:
+    # Add a dependency to the build job
+    needs: build
+
+    # Grant GITHUB_TOKEN the permissions required to make a Pages deployment
+    permissions:
+      pages: write # to deploy to Pages
+      id-token: write # to verify the deployment originates from an appropriate source
+
+    # Deploy to the github-pages environment
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    runs-on: ubuntu-latest
+    steps:
       - name: Deploy to GitHub Pages
+        id: deployment
         uses: actions/deploy-pages@v4
