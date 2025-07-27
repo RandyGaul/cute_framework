@@ -1,7 +1,7 @@
 // This file hides a lot of glslang, and related, dependencies. It's a bit gnarly, but
 // totally temporary until SDL_Gpu gets its shader tools up and going.
 //
-// See: https://randygaul.github.io/cute_framework/#/topics/shader_compilation
+// See: https://randygaul.github.io/cute_framework/topics/shader_compilation
 
 #include "cute_shader.h"
 
