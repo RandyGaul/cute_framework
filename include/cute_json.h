@@ -102,7 +102,7 @@ CF_API CF_JDoc CF_CALL cf_make_json(const void* data, size_t size);
  * @function cf_make_json_from_file
  * @category json
  * @brief    Loads a json blob from a file.
- * @param    virtual_path  A virtual path to the json file. See [Virtual File System](https://randygaul.github.io/cute_framework/#/topics/virtual_file_system).
+ * @param    virtual_path  A virtual path to the json file. See [Virtual File System](https://randygaul.github.io/cute_framework/topics/virtual_file_system).
  * @return   Returns a `CF_JDoc`.
  * @remarks  You should call `cf_json_get_root` on this document to begin fetching values out of it.
  * @related  CF_JDoc cf_make_json cf_make_json_from_file cf_json_get_root cf_destroy_json cf_json_get_root cf_json_to_string cf_json_to_file
@@ -336,7 +336,7 @@ typedef struct CF_JIter
  *               const char* val = cf_json_get_string(cf_json_iter_val(i));
  *               printf("%s\n", val);
  *           }
- *           
+ *
  *           // Traverse key/val pairs on an objects:
  *           for (CF_JIter i = cf_json_iter(v); !cf_json_iter_done(i); iter = cf_json_iter_next(i)) {
  *               const char* val = cf_json_get_string(cf_json_iter_val(i));
@@ -918,7 +918,7 @@ CF_API dyna char* CF_CALL cf_json_to_string_minimal(CF_JDoc doc);
  * @function cf_json_to_file
  * @category json
  * @param    doc           The json document to save.
- * @param    virtual_path  A virtual path to the json file. Make sure to setup your write directory with `cf_fs_set_write_directory`. See [Virtual File System](https://randygaul.github.io/cute_framework/#/topics/virtual_file_system).
+ * @param    virtual_path  A virtual path to the json file. Make sure to setup your write directory with `cf_fs_set_write_directory`. See [Virtual File System](https://randygaul.github.io/cute_framework/topics/virtual_file_system).
  * @brief    Saves the json document to a file.
  * @remarks  If you want to remove all unnecessary formatting/whitespace then use `cf_json_to_file_minimal`.
  * @related  CF_JDoc cf_make_json cf_make_json_from_file cf_json_get_root cf_destroy_json cf_json_get_root cf_json_to_string cf_json_to_file cf_json_to_string_minimal cf_json_to_file_minimal
@@ -929,7 +929,7 @@ CF_API CF_Result CF_CALL cf_json_to_file(CF_JDoc doc, const char* virtual_path);
  * @function cf_json_to_file_minimal
  * @category json
  * @param    doc           The json document to save.
- * @param    virtual_path  A virtual path to the json file. Make sure to setup your write directory with `cf_fs_set_write_directory`. See [Virtual File System](https://randygaul.github.io/cute_framework/#/topics/virtual_file_system).
+ * @param    virtual_path  A virtual path to the json file. Make sure to setup your write directory with `cf_fs_set_write_directory`. See [Virtual File System](https://randygaul.github.io/cute_framework/topics/virtual_file_system).
  * @brief    Saves the json document to a file.
  * @related  CF_JDoc cf_make_json cf_make_json_from_file cf_json_get_root cf_destroy_json cf_json_get_root cf_json_to_string cf_json_to_file cf_json_to_string_minimal cf_json_to_file_minimal
  */

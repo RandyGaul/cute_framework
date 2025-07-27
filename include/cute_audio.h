@@ -41,7 +41,7 @@ typedef struct CF_Audio { uint64_t id; } CF_Audio;
  * @function cf_audio_load_ogg
  * @category audio
  * @brief    Loads a .ogg audio file.
- * @param    path         The virtual path to a .ogg file. See [Virtual File System](https://randygaul.github.io/cute_framework/#/topics/virtual_file_system).
+ * @param    path         The virtual path to a .ogg file. See [Virtual File System](https://randygaul.github.io/cute_framework/topics/virtual_file_system).
  * @return   Returns a pointer to `CF_Audio`. Free it up with `cf_audio_destroy` when done.
  * @related  CF_Audio cf_audio_load_ogg cf_audio_load_ogg_from_memory cf_audio_load_wav cf_audio_load_wav_from_memory cf_audio_destroy
  */
@@ -51,7 +51,7 @@ CF_API CF_Audio CF_CALL cf_audio_load_ogg(const char* path);
  * @function cf_audio_load_wav
  * @category audio
  * @brief    Loads a .wav audio file.
- * @param    path         The virtual path to a .wav file. See [Virtual File System](https://randygaul.github.io/cute_framework/#/topics/virtual_file_system).
+ * @param    path         The virtual path to a .wav file. See [Virtual File System](https://randygaul.github.io/cute_framework/topics/virtual_file_system).
  * @return   Returns a pointer to `CF_Audio`. Free it up with `cf_audio_destroy` when done.
  * @related  CF_Audio cf_audio_load_ogg cf_audio_load_ogg_from_memory cf_audio_load_wav cf_audio_load_wav_from_memory cf_audio_destroy
  */
@@ -95,10 +95,10 @@ CF_API void CF_CALL cf_audio_destroy(CF_Audio audio);
  * @remarks  This is turned on by default. If the exact same sound is played more than once on a given audio update it will simply
  *           amplify the volume of the sound. This can create an audio bug where the sound plays way louder than intended. This
  *           setting simply culls away any extra calls to `play_sound` for a particular sound.
- *           
+ *
  *           The audio update rate is determined by how quickly the audio mixing thread runs, meaning exactly how many sounds can
  *           get culled within a particular timespan is variable -- but usually you still want this option turned on.
- *           
+ *
  *           When on this applies to both sound FX and music.
  * @related  CF_SoundParams CF_Sound cf_sound_params_defaults cf_play_sound cf_sound_is_active cf_sound_get_is_paused cf_sound_get_is_looped cf_sound_get_volume cf_sound_get_sample_index cf_sound_set_sample_index cf_sound_set_is_paused cf_sound_set_is_looped cf_sound_set_volume
  */
