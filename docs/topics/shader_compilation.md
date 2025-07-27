@@ -52,9 +52,9 @@ It can be passed to related shader functions (explained below).
 
 The `-type=` flag indicates which type of shader you want to compile:
 
-* `vertex` and `fragment` are for compiling [low level shaders](https://randygaul.github.io/cute_framework/#/topics/low_level_graphics?id=shaders).
+* `vertex` and `fragment` are for compiling [low level shaders](../topics/low_level_graphics.md?id=shaders).
   The result should be passed into [`cf_make_shader_from_bytecode`](../graphics/cf_make_shader_from_bytecode.md).
-* `draw` is for compiling [custom draw shaders](https://randygaul.github.io/cute_framework/#/topics/drawing?id=shaders).
+* `draw` is for compiling [custom draw shaders](../topics/drawing.md?id=shaders).
   The result should be passed into [`cf_make_draw_shader_from_bytecode`](../draw/cf_make_draw_shader_from_bytecode.md).
 
 The `-I` flag will be explained in the "Shader inclusion" section below.
@@ -146,7 +146,7 @@ These can always be `#include`-d by your shader without setting the include path
 
 ## Draw Shader Quirks
 
-Due to the way [custom draw shaders](https://randygaul.github.io/cute_framework/#/topics/drawing?id=shaders) are compiled, any errors in your shader will be reported as being from `shader_stub.shd`.
+Due to the way [custom draw shaders](../topics/drawing.md?id=shaders) are compiled, any errors in your shader will be reported as being from `shader_stub.shd`.
 
 Do not look for this file and just take it as the errors are coming from whatever shader you are trying to compile.
 

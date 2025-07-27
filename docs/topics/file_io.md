@@ -1,6 +1,6 @@
 # File I/O
 
-CF uses a virtual file system (VFS). Here's the [page on VFS](https://randygaul.github.io/cute_framework/#/topics/virtual_file_system) to learn in-depth details. In contrast, the page here gets you up and running very quickly with the VFS so you can practice opening sprites or font files in the next section: [Drawing](https://randygaul.github.io/cute_framework/#/topics/drawing).
+CF uses a virtual file system (VFS). Here's the [page on VFS](../topics/virtual_file_system.md) to learn in-depth details. In contrast, the page here gets you up and running very quickly with the VFS so you can practice opening sprites or font files in the next section: [Drawing](../topics/drawing.md).
 
 ## Mounting
 
@@ -58,9 +58,9 @@ void mount_content_directory_as(const char* dir)
 }
 ```
 
-Simply call this function from `main` before your main loop. [`cf_fs_get_base_directory`](https://randygaul.github.io/cute_framework/#/file/cf_fs_get_base_directory) returns the full path to the folder the game was run from. If you are already familiar with the _working directory_ this is not quite the same -- it's merely where the game's executable resides.
+Simply call this function from `main` before your main loop. [`cf_fs_get_base_directory`](../file/cf_fs_get_base_directory.md) returns the full path to the folder the game was run from. If you are already familiar with the _working directory_ this is not quite the same -- it's merely where the game's executable resides.
 
-This renames the content folder to `"/"`, an empty path. To load up a music file, the virtual path the game will use now becomes `"/music/song1.ogg"`, which could be passed to [`cf_audio_load_ogg`](https://randygaul.github.io/cute_framework/#/audio/cf_audio_load_ogg). To load up a sprite call [`cf_make_sprite`](https://randygaul.github.io/cute_framework/#/sprite/cf_make_sprite) with a path like `"/sprites/player.ase"` or `"/sprites/bomb.ase"`.
+This renames the content folder to `"/"`, an empty path. To load up a music file, the virtual path the game will use now becomes `"/music/song1.ogg"`, which could be passed to [`cf_audio_load_ogg`](../audio/cf_audio_load_ogg.md). To load up a sprite call [`cf_make_sprite`](../sprite/cf_make_sprite.md) with a path like `"/sprites/player.ase"` or `"/sprites/bomb.ase"`.
 
 ## Benefits
 
@@ -72,13 +72,13 @@ Boosted versatility comes with the VFS -- you may at any time change the folder 
 
 ## Mounting Archives
 
-You may also mount archive files, and not just folders. The VFS will auto-magically open the archive and treat it like any other normal folder. This works for all popular archive formats. For a full list, see the [detailed VFS page](https://randygaul.github.io/cute_framework/#/topics/virtual_file_system).
+You may also mount archive files, and not just folders. The VFS will auto-magically open the archive and treat it like any other normal folder. This works for all popular archive formats. For a full list, see the [detailed VFS page](../topics/virtual_file_system.md).
 
 ## Write Directory
 
-The application gets a single directory to write files to (along with its subdirectories). This grants extra security. You must set up a write directory before opening any files with the VFS for writing (e.g. [`cf_fs_open_file_for_write`](https://randygaul.github.io/cute_framework/#/file/cf_fs_open_file_for_write)). To setup your write directory, call [`cf_fs_set_write_directory`](https://randygaul.github.io/cute_framework/#/file/cf_fs_set_write_directory).
+The application gets a single directory to write files to (along with its subdirectories). This grants extra security. You must set up a write directory before opening any files with the VFS for writing (e.g. [`cf_fs_open_file_for_write`](../file/cf_fs_open_file_for_write.md)). To setup your write directory, call [`cf_fs_set_write_directory`](../file/cf_fs_set_write_directory.md).
 
-It's highly recommended to call [`cf_fs_set_write_directory`](https://randygaul.github.io/cute_framework/#/file/cf_fs_set_write_directory) by passing in [`cf_fs_get_user_directory`](https://randygaul.github.io/cute_framework/#/file/cf_fs_get_user_directory), like so:
+It's highly recommended to call [`cf_fs_set_write_directory`](../file/cf_fs_set_write_directory.md) by passing in [`cf_fs_get_user_directory`](../file/cf_fs_get_user_directory.md), like so:
 
 ```cpp
 const char* write_directory = cf_fs_get_user_directory("my_game_company_name", "my_game_name");
@@ -87,4 +87,4 @@ cf_fs_set_write_directory(write_directory);
 
 ## Directories and Paths
 
-To learn about creating directories and traversing them check out the docs on [Paths and Directories here](https://randygaul.github.io/cute_framework/#/topics/strings?id=paths).
+To learn about creating directories and traversing them check out the docs on [Paths and Directories here](../topics/strings.md?id=paths).

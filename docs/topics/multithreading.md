@@ -10,7 +10,7 @@ See also: [Atomics](atomics.md).
 
 ## Thread
 
-A thread is the thing that runs your code. By default the application starts up in the _main thread_. The application can spin up many different threads as-necessary. Threads are best used to perform isolated tasks that can be done completely independent from any other task. You may spawn another thread with [`cf_thread_create`](https://randygaul.github.io/cute_framework/#/multithreading/cf_thread_create). It will call your thread function. When your thread function returns, the thread can then be cleaned up with [`cf_thread_wait`](https://randygaul.github.io/cute_framework/#/multithreading/cf_thread_wait).
+A thread is the thing that runs your code. By default the application starts up in the _main thread_. The application can spin up many different threads as-necessary. Threads are best used to perform isolated tasks that can be done completely independent from any other task. You may spawn another thread with [`cf_thread_create`](../multithreading/cf_thread_create.md). It will call your thread function. When your thread function returns, the thread can then be cleaned up with [`cf_thread_wait`](../multithreading/cf_thread_wait.md).
 
 ```cpp
 int my_thread_fn(void udata)
@@ -50,7 +50,7 @@ A great use case for threads in games is asynchronous resource loading. For furt
 
 ## Condition Variable
 
-A [`CF_ConditionVariable`](https://randygaul.github.io/cute_framework/#/multithreading/cf_conditionvariable) is used to put threads to sleep. The condition variable can wake a single thread, or wake all the threads. Usually you must pair the condition variable with some extra state to make it really useful, such as an integer (e.g. to implement a semaphore, more on this later), or a boolean. For further reading you can try [this article by IBM](https://www.ibm.com/docs/en/aix/7.2?topic=programming-using-condition-variables) on condition variables.
+A [`CF_ConditionVariable`](../multithreading/cf_conditionvariable.md) is used to put threads to sleep. The condition variable can wake a single thread, or wake all the threads. Usually you must pair the condition variable with some extra state to make it really useful, such as an integer (e.g. to implement a semaphore, more on this later), or a boolean. For further reading you can try [this article by IBM](https://www.ibm.com/docs/en/aix/7.2?topic=programming-using-condition-variables) on condition variables.
 
 Usually condition variables are not used on their own, and higher level primitives are instead used, such as thread pools or semaphores (more on these later).
 
@@ -74,10 +74,10 @@ A common use of semaphores is to implement a thread pool (see below). CF actuall
 
 ## Thread Pool
 
-The thread pool is a great tool for games. For a CPU with N cores the thread pool is initialized with N-1 threads (N-1 to account for the main thread as well). The threads are initially asleep. The thread pool can then be loaded up with _tasks_ (each represented by a function pointer and `void*` pair [`CF_TaskFn`])(https://randygaul.github.io/cute_framework/#/multithreading/cf_taskfn)).
+The thread pool is a great tool for games. For a CPU with N cores the thread pool is initialized with N-1 threads (N-1 to account for the main thread as well). The threads are initially asleep. The thread pool can then be loaded up with _tasks_ (each represented by a function pointer and `void*` pair [`CF_TaskFn`])(../multithreading/cf_taskfn.md)).
 
 After loading up the threadpool with tasks they can be kicked off. Once kicked, threads will wake and grab tasks from the pool and perform them until all tasks are complete, and the threads go back to sleep. The pool can be kicked off in two styles: _blocking_ and _non-blocking_.
 
-[`cf_threadpool_kick_and_wait`](../multithreading/cf_threadpool_kick_and_wait.md) will kick off all tasks and return only once all the tasks are completed. In this way it is a _blocking_ function, as it blocks the thread's execution until it finishes. If you'd like to continue on while the tasks are performed, use [`cf_threadpool_kick`](https://randygaul.github.io/cute_framework/#/multithreading/cf_threadpool_kick), as it's a _non-blocking_ function, meaning the function will immediately return after kicking, without waiting for any tasks to complete.
+[`cf_threadpool_kick_and_wait`](../multithreading/cf_threadpool_kick_and_wait.md) will kick off all tasks and return only once all the tasks are completed. In this way it is a _blocking_ function, as it blocks the thread's execution until it finishes. If you'd like to continue on while the tasks are performed, use [`cf_threadpool_kick`](../multithreading/cf_threadpool_kick.md), as it's a _non-blocking_ function, meaning the function will immediately return after kicking, without waiting for any tasks to complete.
 
 Great uses cases for threadpools in games include perform collision checks, as well as block-updating large chunks of independent entities/objects/systems.
