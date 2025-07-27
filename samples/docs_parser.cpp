@@ -575,6 +575,7 @@ int main(int argc, char* argv[])
 	path.popn(2);
 	path.add("/include");
 	cf_fs_mount(path.c_str(), "/", true);
+	printf("Mounted %s as /.\n", path.c_str());
 
 	// Mount docs folder as "/docs".
 	path = cf_fs_get_base_directory();
@@ -582,12 +583,14 @@ int main(int argc, char* argv[])
 	path.popn(2);
 	path.add("/docs");
 	cf_fs_mount(path.c_str(), "/docs", true);
+	printf("Mounted %s as /docs.\n", path.c_str());
 
 	// Allow us to freely write in the project directory.
 	path = cf_fs_get_base_directory();
 	path = path.normalize();
 	path.popn(2);
 	cf_fs_set_write_directory(path.c_str());
+	printf("Set write directory to %s.\n", path.c_str());
 
 	// Parse each header into docs.
 	CF_Directory headers = CF_Directory::open("");
@@ -668,6 +671,7 @@ int main(int argc, char* argv[])
 			doc.emit_remarks(fp);
 			doc.emit_related(fp);
 		}
+		printf("Wrote %s\n", doc.path.c_str());
 		fclose(fp);
 	}
 
@@ -819,6 +823,7 @@ int main(int argc, char* argv[])
 				save_api_reference_links(fp, category, enums, "enums", related);
 			}
 		}
+		printf("Wrote %s\n", path.c_str());
 
 		fclose(fp);
 	}
