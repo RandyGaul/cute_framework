@@ -86,7 +86,8 @@ struct CF_Ray
 
 Rays are stored in parametric form. A start position defines the initial point the ray is cast from. A normalized direction vector and distance along that vector define the end point: `endpoint = ray.p + ray.d * t`. If needed, a helper function called [`cf_endpoint`](../collision/cf_endpoint.md) can be used to calculate this point.
 
-!> It's extremely important to **normalize** your ray direction. If you fail to normalize your ray direction the internal math algorithms can numerically fail due to sensitivity to large vectors in certain cases.
+!!! note
+    It's extremely important to **normalize** your ray direction. If you fail to normalize your ray direction the internal math algorithms can numerically fail due to sensitivity to large vectors in certain cases.
 
 To cast a ray simply call one of the `cf_ray_to_***` functions:
 
@@ -120,7 +121,8 @@ Two calculate the closest points between two _non-intersecting_ shapes you may c
 
 This function is generic and requires the use of `void*` + [`cf_shapetype`](../collision/cf_shapetype.md) calling, much like the previously mentioned generic functions.
 
-!> Large shapes will degrade the performance of [`cf_gjk`](../collision/cf_gjk.md) and can cause bugs. It's highly recommended to use smaller shapes (with a volume preferably < 1000 units. If you need big shapes you should instead store all of your physics shapes in small form and simply render them at a much larger size.
+!!! note
+    Large shapes will degrade the performance of [`cf_gjk`](../collision/cf_gjk.md) and can cause bugs. It's highly recommended to use smaller shapes (with a volume preferably < 1000 units. If you need big shapes you should instead store all of your physics shapes in small form and simply render them at a much larger size.
 
 ## Swept Collision
 

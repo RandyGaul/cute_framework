@@ -2,7 +2,8 @@
 
 A [CF_Coroutine](../coroutine/cf_coroutine.md) is a function that can be paused and resumed at a later time. The function can be paused and resumed any number of times before finally exiting. This provides a great way to implement state machines, cutscenes, or anything else that requires doing some actions over a number of frames.
 
-!> **Note** You should beef up the stack_size to 1 or 2 MB (you may use e.g. `CF_MB * 2`) if you wish to call into APIs such as DirectX. A variety of APIs and libraries out there have very deep or complex call stacks -- so the default size may cause stack overflows in such cases.
+!!! note
+    You should beef up the stack_size to 1 or 2 MB (you may use e.g. `CF_MB * 2`) if you wish to call into APIs such as DirectX. A variety of APIs and libraries out there have very deep or complex call stacks -- so the default size may cause stack overflows in such cases.
 
 ## Why use Coroutines?
 
