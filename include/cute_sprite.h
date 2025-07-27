@@ -218,7 +218,7 @@ CF_INLINE CF_Sprite cf_sprite_defaults()
  * @return   Returns a `CF_Sprite` that can be drawn with `cf_sprite_draw`. The sprite is not animated,
  *           as it's only a single-frame made from a png file.
  * @remarks  The preferred way to make a sprite is `cf_make_sprite`, but this function provides a very simple way to get started
- *           by merely loading a single .png image, or for games that don't require animations. See [Virtual File System](https://randygaul.github.io/cute_framework/#/topics/virtual_file_system).
+ *           by merely loading a single .png image, or for games that don't require animations. See [Virtual File System](https://randygaul.github.io/cute_framework/topics/virtual_file_system).
  * @related  CF_Sprite cf_make_easy_sprite_from_png cf_make_easy_sprite_from_pixels cf_easy_sprite_update_pixels cf_easy_sprite_unload
  */
 CF_API CF_Sprite CF_CALL cf_make_easy_sprite_from_png(const char* png_path, CF_Result* result_out);
@@ -258,7 +258,7 @@ CF_API void CF_CALL cf_easy_sprite_unload(CF_Sprite *sprite);
  * @remarks  This function caches the sprite internally. Subsequent calls to load the same sprite will be very fast; you can use
  *           this function directly to fetch sprites that were already loaded. If you want to load sprites with your own custom
  *           animation data, instead of using the .ase/.aseprite format, you can try out `cf_png_cache_load` for a more low-level option.
- *           See [Virtual File System](https://randygaul.github.io/cute_framework/#/topics/virtual_file_system).
+ *           See [Virtual File System](https://randygaul.github.io/cute_framework/topics/virtual_file_system).
  * @related  CF_Sprite cf_make_easy_sprite_from_png cf_make_easy_sprite_from_pixels cf_easy_sprite_update_pixels cf_make_sprite_from_memory
  */
 CF_API CF_Sprite CF_CALL cf_make_sprite(const char* aseprite_path);
@@ -272,7 +272,7 @@ CF_API CF_Sprite CF_CALL cf_make_sprite(const char* aseprite_path);
  * @remarks  This function caches the sprite internally. Subsequent calls to load the same sprite will be very fast; you can use
  *           this function directly to fetch sprites that were already loaded. If you want to load sprites with your own custom
  *           animation data, instead of using the .ase/.aseprite format, you can try out `cf_png_cache_load` for a more low-level option.
- *           See [Virtual File System](https://randygaul.github.io/cute_framework/#/topics/virtual_file_system).
+ *           See [Virtual File System](https://randygaul.github.io/cute_framework/topics/virtual_file_system).
  * @related  CF_Sprite cf_make_easy_sprite_from_png cf_make_easy_sprite_from_pixels cf_easy_sprite_update_pixels
  */
 CF_API CF_Sprite CF_CALL cf_make_sprite_from_memory(const char* unique_name, const void* aseprite_data, int size);
@@ -291,7 +291,7 @@ CF_API CF_Sprite CF_CALL cf_make_demo_sprite();
  * @category sprite
  * @brief    Unloads the sprite's image resources from the internal cache.
  * @param    aseprite_path  Virtual path to a .ase file.
- * @remarks  Any live `CF_Sprite` instances for `aseprite_path` will now by "dangling". See [Virtual File System](https://randygaul.github.io/cute_framework/#/topics/virtual_file_system).
+ * @remarks  Any live `CF_Sprite` instances for `aseprite_path` will now by "dangling". See [Virtual File System](https://randygaul.github.io/cute_framework/topics/virtual_file_system).
  * @related  CF_Sprite cf_make_sprite cf_sprite_unload cf_sprite_reload
  */
 CF_API void CF_CALL cf_sprite_unload(const char* aseprite_path);
