@@ -1898,7 +1898,7 @@ CF_INLINE int cf_collide_aabb(CF_Aabb a, CF_Aabb b) { return cf_overlaps(a, b); 
  * @brief    Returns a `CF_Aabb` that tightly contains all input verts.
  * @related  CF_Aabb cf_make_aabb_verts cf_aabb_verts
  */
-CF_INLINE CF_Aabb cf_make_aabb_verts(CF_V2* verts, int count)
+CF_INLINE CF_Aabb cf_make_aabb_verts(const CF_V2* verts, int count)
 {
 	CF_V2 vmin = verts[0];
 	CF_V2 vmax = vmin;
@@ -2794,7 +2794,7 @@ CF_INLINE CF_Aabb combine(CF_Aabb a, CF_Aabb b) { return cf_combine(a, b); }
 CF_INLINE int overlaps(CF_Aabb a, CF_Aabb b) { return cf_overlaps(a, b); }
 CF_INLINE int collide(CF_Aabb a, CF_Aabb b) { return cf_collide_aabb(a, b); }
 
-CF_INLINE CF_Aabb make_aabb(v2* verts, int count) { return cf_make_aabb_verts((v2*)verts, count); }
+CF_INLINE CF_Aabb make_aabb(const v2* verts, int count) { return cf_make_aabb_verts((const v2*)verts, count); }
 CF_INLINE void aabb_verts(v2* out, CF_Aabb bb) { return cf_aabb_verts((v2*)out, bb); }
 
 CF_INLINE float area(CF_Circle c) { return cf_area_circle(c); }

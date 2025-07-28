@@ -293,7 +293,7 @@ CF_API void CF_CALL cf_draw_line(CF_V2 p0, CF_V2 p1, float thickness);
  * @param    bevel_count  The number of edges used to smooth corners.
  * @related  cf_draw_line cf_draw_polyline cf_draw_bezier_line cf_draw_bezier_line2 cf_draw_arrow cf_draw_polygon_fill
  */
-CF_API void CF_CALL cf_draw_polyline(CF_V2* points, int count, float thickness, bool loop);
+CF_API void CF_CALL cf_draw_polyline(const CF_V2* points, int count, float thickness, bool loop);
 
 /**
  * @function cf_draw_polygon_fill
@@ -305,7 +305,7 @@ CF_API void CF_CALL cf_draw_polyline(CF_V2* points, int count, float thickness, 
  * @remarks  This function has a hard-limit of up to 8 points.
  * @related  cf_draw_line cf_draw_polyline cf_draw_bezier_line cf_draw_bezier_line2 cf_draw_arrow cf_draw_polygon_fill cf_draw_polygon_fill_simple
  */
-CF_API void CF_CALL cf_draw_polygon_fill(CF_V2* points, int count, float chubbiness);
+CF_API void CF_CALL cf_draw_polygon_fill(const CF_V2* points, int count, float chubbiness);
 
 /**
  * @function cf_draw_polygon_fill_simple
@@ -319,7 +319,7 @@ CF_API void CF_CALL cf_draw_polygon_fill(CF_V2* points, int count, float chubbin
  *           polygon and renders a series of triangles under the hood. Please be sure to submit your vertices in CCW order.
  * @related  cf_draw_line cf_draw_polyline cf_draw_bezier_line cf_draw_bezier_line2 cf_draw_arrow cf_draw_polygon_fill cf_draw_polygon_fill_simple
  */
-CF_API void CF_CALL cf_draw_polygon_fill_simple(CF_V2* points, int count);
+CF_API void CF_CALL cf_draw_polygon_fill_simple(const CF_V2* points, int count);
 
 /**
  * @function cf_draw_bezier_line
@@ -1678,9 +1678,9 @@ CF_INLINE void draw_capsule_fill(v2 p0, v2 p1, float r) { cf_draw_capsule_fill2(
 CF_INLINE void draw_tri(v2 p0, v2 p1, v2 p2, float thickness = 1.0f, float chubbiness = 0) { cf_draw_tri(p0, p1, p2, thickness, chubbiness); }
 CF_INLINE void draw_tri_fill(v2 p0, v2 p1, v2 p2, float chubbiness = 0) { cf_draw_tri_fill(p0, p1, p2, chubbiness); }
 CF_INLINE void draw_line(v2 p0, v2 p1, float thickness = 1.0f) { cf_draw_line(p0, p1, thickness); }
-CF_INLINE void draw_polyline(v2* points, int count, float thickness = 1.0f, bool loop = false) { cf_draw_polyline(points, count, thickness, loop); }
-CF_INLINE void draw_polygon_fill(v2* points, int count, float chubbiness) { cf_draw_polygon_fill(points, count, chubbiness); }
-CF_INLINE void draw_polygon_fill_simple(v2* points, int count) { cf_draw_polygon_fill_simple(points, count); }
+CF_INLINE void draw_polyline(const v2* points, int count, float thickness = 1.0f, bool loop = false) { cf_draw_polyline(points, count, thickness, loop); }
+CF_INLINE void draw_polygon_fill(const v2* points, int count, float chubbiness) { cf_draw_polygon_fill(points, count, chubbiness); }
+CF_INLINE void draw_polygon_fill_simple(const v2* points, int count) { cf_draw_polygon_fill_simple(points, count); }
 CF_INLINE void draw_bezier_line(v2 a, v2 c0, v2 b, int iters, float thickness) { cf_draw_bezier_line(a, c0, b, iters, thickness); }
 CF_INLINE void draw_bezier_line(v2 a, v2 c0, v2 c1, v2 b, int iters, float thickness) { cf_draw_bezier_line2(a, c0, c1, b, iters, thickness); }
 CF_INLINE void draw_arrow(v2 a, v2 b, float thickness, float arrow_width) { cf_draw_arrow(a, b, thickness, arrow_width); }
