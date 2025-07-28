@@ -1,7 +1,7 @@
 // This is a standalone shader compiler for Cute Framework, used to precompile shaders into
 // cross-platform bytecode blobs, either as direct binary files, or C-headers.
 //
-// See: https://randygaul.github.io/cute_framework/#/topics/shader_compilation
+// See: https://randygaul.github.io/cute_framework/topics/shader_compilation
 
 #include <string.h>
 #include <stdio.h>

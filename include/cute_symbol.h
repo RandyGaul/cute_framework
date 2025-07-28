@@ -23,7 +23,7 @@ typedef void CF_SharedLibrary;
  * @param    path        Path to the shared library in platform-dependent notation.
  * @return   Returns `NULL` in the case of errors, and can be unloaded by calling `unload_shared_library`.
  * @remarks  Does not use the virtual file system. Once loaded, individual functions can be loaded from the shared
- *           library be called `cf_load_function`. See [Virtual File System](https://randygaul.github.io/cute_framework/#/topics/virtual_file_system).
+ *           library be called `cf_load_function`. See [Virtual File System](https://randygaul.github.io/cute_framework/topics/virtual_file_system).
  * @related  cf_load_shared_library cf_unload_shared_library cf_load_function
  */
 CF_API CF_SharedLibrary* CF_CALL cf_load_shared_library(const char* path);

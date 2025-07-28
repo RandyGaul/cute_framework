@@ -203,7 +203,8 @@ Once the vertex shader processes a vertex it outputs a color. The color is then 
 
 The fragment shader finally outputs the color for a single pixel within the triangle, once for each pixel. This produces the final image on the screen.
 
-?> When we say "interpolated" it means the `varying` glsl keyword. We can see these interpolated values as outputs from the vertex shader in the [above sprite shader example](low_level_graphics.md#shaders). The vertex shaders specifies it's interpolated outputs with `out`, and the fragment shader collects those inputs with the same `in` keyword.
+!!! note
+    When we say "interpolated" it means the `varying` glsl keyword. We can see these interpolated values as outputs from the vertex shader in the [above sprite shader example](low_level_graphics.md#shaders). The vertex shaders specifies it's interpolated outputs with `out`, and the fragment shader collects those inputs with the same `in` keyword.
 
 We can visualize a set of steps a vertex will travel along to go from a sprite sitting on the CPU, to a pixel on the screen, for CF:
 

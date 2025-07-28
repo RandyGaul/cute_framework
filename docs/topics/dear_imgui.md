@@ -4,7 +4,7 @@
 
 ## Setup Dear ImGui
 
-Before using Dear ImGui you must call [`cf_app_init_imgui`](https://randygaul.github.io/cute_framework/#/app/cf_app_init_imgui). You can call this before your main loop just once. Once done you may draw Dear ImGui debug windows like this one:
+Before using Dear ImGui you must call [`cf_app_init_imgui`](../app/cf_app_init_imgui.md). You can call this before your main loop just once. Once done you may draw Dear ImGui debug windows like this one:
 
 ```cpp
 static bool hello = true;

@@ -760,7 +760,7 @@ CF_API void CF_CALL cf_app_set_title(const char* title);
  * @function cf_app_set_icon
  * @category app
  * @brief    Sets the icon for the application.
- * @param    virtual_path_to_png  A path to a png file. See [Virtual File System](https://randygaul.github.io/cute_framework/#/topics/virtual_file_system).
+ * @param    virtual_path_to_png  A path to a png file. See [Virtual File System](https://randygaul.github.io/cute_framework/topics/virtual_file_system).
  * @remarks  The icon file must be a png image. Suggested image dimensions are 32x32, 48x48, or 64x64.
  * @related  cf_app_set_title cf_app_set_icon
  */

@@ -609,7 +609,7 @@ CF_API void CF_CALL cf_set_vertex_callback(CF_VertexFn* vertex_fn);
  * @function cf_make_font
  * @category text
  * @brief    Constructs a font for rendering text.
- * @param    path        A virtual path to the font file. See [Virtual File System](https://randygaul.github.io/cute_framework/#/topics/virtual_file_system).
+ * @param    path        A virtual path to the font file. See [Virtual File System](https://randygaul.github.io/cute_framework/topics/virtual_file_system).
  * @param    font_name   A unique name for this font. Used by `cf_push_font` and friends.
  * @return   Returns any errors as `CF_Result`.
  * @remarks  Memory is only consumed when you draw a certain glyph (text character). Just loading up the font initially is
@@ -1199,7 +1199,7 @@ typedef struct CF_DrawShaderBytecode
  * @category draw
  * @brief    Creates a custom draw shader.
  * @remarks  Your shader must be written in GLSL 450, and must follow some specific rules to be compatible with the draw API. For more in-depth explanations,
- *           see CF's docs on [Draw Shaders](https://randygaul.github.io/cute_framework/#/topics/drawing?id=shaders). Make sure to call `cf_shader_directory` first.
+ *           see CF's docs on [Draw Shaders](https://randygaul.github.io/cute_framework/topics/drawing#shaders). Make sure to call `cf_shader_directory` first.
  * @related  CF_Shader cf_draw_push_shader cf_draw_pop_shader cf_draw_peek_shader cf_make_draw_shader_from_source
  */
 CF_API CF_Shader CF_CALL cf_make_draw_shader(const char* path);
@@ -1209,7 +1209,7 @@ CF_API CF_Shader CF_CALL cf_make_draw_shader(const char* path);
  * @category draw
  * @brief    Creates a custom draw shader from source string.
  * @remarks  Your shader must be written in GLSL 450, and must follow some specific rules to be compatible with the draw API. For more in-depth explanations,
- *           see CF's docs on [Draw Shaders](https://randygaul.github.io/cute_framework/#/topics/drawing?id=shaders). If you wish to include other files into
+ *           see CF's docs on [Draw Shaders](https://randygaul.github.io/cute_framework/topics/drawing#shaders). If you wish to include other files into
  *           your shader via `#include` make sure to call `cf_shader_directory` first.
  * @related  CF_Shader cf_draw_push_shader cf_draw_pop_shader cf_draw_peek_shader
  */
@@ -1220,7 +1220,7 @@ CF_API CF_Shader CF_CALL cf_make_draw_shader_from_source(const char* src);
  * @category draw
  * @brief    Creates a custom draw shader from bytecode.
  * @remarks  Your shader must be written in GLSL 450, and must follow some specific rules to be compatible with the draw API. For more in-depth explanations,
- *           see CF's docs on [Draw Shaders](https://randygaul.github.io/cute_framework/#/topics/drawing?id=shaders).
+ *           see CF's docs on [Draw Shaders](https://randygaul.github.io/cute_framework/topics/drawing#shaders).
  * @related  CF_Shader CF_DrawShaderBytecode cf_draw_push_shader cf_draw_pop_shader cf_draw_peek_shader
  */
 CF_API CF_Shader CF_CALL cf_make_draw_shader_from_bytecode(CF_DrawShaderBytecode bytecode);
@@ -1598,11 +1598,11 @@ typedef struct CF_AtlasSubImage
  * @function cf_register_premade_atlas
  * @category draw
  * @brief    Registers a premade atlas within the draw system.
- * @param    png_path   A virtual path to the png_file for the atlas. See [Virtual File System](https://randygaul.github.io/cute_framework/#/topics/virtual_file_system).
+ * @param    png_path   A virtual path to the png_file for the atlas. See [Virtual File System](https://randygaul.github.io/cute_framework/topics/virtual_file_system).
  * @remarks  This function is useful if you want to load up atlases into CF. However, internally CF employs
  *           it's own online atlas compiler, so baking atlases is not necessary. This function is here just
  *           for convenience.
- *           
+ *
  *           Call `cf_destroy_texture` on the return value when done.
  * @related  CF_AtlasSubImage cf_register_premade_atlas cf_make_premade_sprite cf_destroy_premade_atlas
  */
@@ -1650,7 +1650,7 @@ struct CF_TextCodeVal
 
 namespace Cute
 {
-	
+
 CF_INLINE void draw_sprite(const CF_Sprite* sprite) { cf_draw_sprite(sprite); }
 CF_INLINE void draw_sprite(const CF_Sprite& sprite) { cf_draw_sprite(&sprite); }
 CF_INLINE void sprite_draw(const CF_Sprite* sprite) { cf_draw_sprite(sprite); }

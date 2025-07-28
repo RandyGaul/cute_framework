@@ -8,7 +8,7 @@ Cute Framework uses a Virtual File System (VFS) to access the disk. You can of c
 
 ## Mounting
 
-Mounting a folder gives it a new alias and optionally appends it to the search path. Call [`cf_fs_mount`](https://randygaul.github.io/cute_framework/#/file/cf_fs_mount).
+Mounting a folder gives it a new alias and optionally appends it to the search path. Call [`cf_fs_mount`](../file/cf_fs_mount.md).
 
 ```cpp
 bool append_to_path = true;
@@ -17,7 +17,8 @@ cf_fs_mount("C:/Users/Randy/Documents/data", "/data", append_to_path);
 
 The above snippet will give the folder `"C:/Users/Randy/Documents/data"`, which is specified in platform-dependent notation, a new alias `"/data"`.
 
-?> **Platform-dependent notation** means a full folder path, and not a relative path, according to the platform your game is currently running on. On Windows machines folders start with the drive like, such as `C:/`, while on Linux machines a path will start simply with a slash `/`.
+!!! note
+    **Platform-dependent notation** means a full folder path, and not a relative path, according to the platform your game is currently running on. On Windows machines folders start with the drive like, such as `C:/`, while on Linux machines a path will start simply with a slash `/`.
 
  The alias folder `/data` is called a virtual path, and is specified in platform-independent notation. This means:
 
@@ -26,13 +27,14 @@ The above snippet will give the folder `"C:/Users/Randy/Documents/data"`, which 
 - No Windows style slashes `\\`
 - No colons `:`
 
-?> **Normalizing** a path is the process of removing relative directories, removing redundant or Windows style slashes, and attempting to convert the string to a more platform-independant form. You can still normalize platform-dependent paths too though. Call [`spnorm`](https://randygaul.github.io/cute_framework/#/path/spnorm) to normalize a string path.
+!!! note
+    **Normalizing** a path is the process of removing relative directories, removing redundant or Windows style slashes, and attempting to convert the string to a more platform-independant form. You can still normalize platform-dependent paths too though. Call [`spnorm`](../path/spnorm.md) to normalize a string path.
 
 By mounting we achieve great portability by using platform-independent paths within our game. The paths are also more secure by removing relative paths (which reduce the chances of anyone accessing unanticipated directories), and most important of all grants versatility.
 
 ## Mounting Archives
 
-Since a folder can be mounted, wouldn't it be cool if you could also mount an archive, such as a .zip or .7z file? Turns out, you can! The first parameter of [`cf_fs_mount`](https://randygaul.github.io/cute_framework/#/file/cf_fs_mount) can be a number of different archive files, and not just a plain folder.
+Since a folder can be mounted, wouldn't it be cool if you could also mount an archive, such as a .zip or .7z file? Turns out, you can! The first parameter of [`cf_fs_mount`](../file/cf_fs_mount.md) can be a number of different archive files, and not just a plain folder.
 
 - .ZIP (pkZip/WinZip/Info-ZIP compatible)
 - .7Z  (7zip archives)
@@ -47,17 +49,17 @@ Since a folder can be mounted, wouldn't it be cool if you could also mount an ar
 
 This grants a lot of flexibility. We can move entire directories around on disk and then rename the mount point without changing the rest of the game code. Whenever an archive is mounted the file system treats it like a normal directory. No extra work is needed. This lets us do really cool things, like deploy patches by downloading new archive files and appending them to an earlier place in the search path. This also works to add mod support to your game, and provides a simple way of storing multiple versions of a single file without overwriting each other on the actual disk.
 
-By default CF mounts the base directory (mentioned in the next section). when you call [`cf_make_app`](https://randygaul.github.io/cute_framework/#/app/cf_make_app). This can be disabled by passing the [`CF_APP_OPTIONS_FILE_SYSTEM_DONT_DEFAULT_MOUNT`](https://randygaul.github.io/cute_framework/#/app/app_options) flag to [`cf_make_app`](https://randygaul.github.io/cute_framework/#/app/cf_make_app).
+By default CF mounts the base directory (mentioned in the next section). when you call [`cf_make_app`](../app/cf_make_app.md). This can be disabled by passing the [`CF_APP_OPTIONS_FILE_SYSTEM_DONT_DEFAULT_MOUNT`](../app/cf_appoptionflagbits.md) flag to [`cf_make_app`](../app/cf_make_app.md).
 
 ### Search Path
 
-The search path of the VFS is defined as a list of directories. When attempting to locate a file (or directory) you can mount multiple real folders/archives onto a single alias. This alias then represents the list of mounts in the order they were mounted, so long as you append to the path when mounting (true in the third parameter of [`cf_fs_mount`](https://randygaul.github.io/cute_framework/#/file/cf_fs_mount)). If any two files have the same path after mounting, they are added to a list. When searching for any file, only the most recently added file will be seen by the VFS. This allows for an easy way to support downloadable patches or mods. You may mount additional archives onto the same alias and "hide" any older previously mounted files with overlapping paths.
+The search path of the VFS is defined as a list of directories. When attempting to locate a file (or directory) you can mount multiple real folders/archives onto a single alias. This alias then represents the list of mounts in the order they were mounted, so long as you append to the path when mounting (true in the third parameter of [`cf_fs_mount`](../file/cf_fs_mount.md)). If any two files have the same path after mounting, they are added to a list. When searching for any file, only the most recently added file will be seen by the VFS. This allows for an easy way to support downloadable patches or mods. You may mount additional archives onto the same alias and "hide" any older previously mounted files with overlapping paths.
 
 ## Base and User Directories
 
-The base directory is the actual path to the directory the executable for your game was run from. This is not a virtual path, but the actual OS-path in platform-dependent notation. This might not be the working directory, but probably is. You should probably mount the base directory with [`cf_fs_mount`](https://randygaul.github.io/cute_framework/#/file/cf_fs_mount). A very common strategy is to mount the base folder as `"/"`. You can fetch the base directory be calling [`cf_fs_get_base_directory`](https://randygaul.github.io/cute_framework/#/file/cf_fs_get_base_directory).
+The base directory is the actual path to the directory the executable for your game was run from. This is not a virtual path, but the actual OS-path in platform-dependent notation. This might not be the working directory, but probably is. You should probably mount the base directory with [`cf_fs_mount`](../file/cf_fs_mount.md). A very common strategy is to mount the base folder as `"/"`. You can fetch the base directory be calling [`cf_fs_get_base_directory`](../file/cf_fs_get_base_directory.md).
 
-The user directory is a safe place for your game to write files. It's unique per user and per application. On Windows it will probably live in AppData/Roaming, on Linux in user/.local, and so on. You should assume this directory is the only safe place to write files. You can fetch the user directory with [`cf_fs_get_user_directory`](https://randygaul.github.io/cute_framework/#/file/cf_fs_get_user_directory).
+The user directory is a safe place for your game to write files. It's unique per user and per application. On Windows it will probably live in AppData/Roaming, on Linux in user/.local, and so on. You should assume this directory is the only safe place to write files. You can fetch the user directory with [`cf_fs_get_user_directory`](../file/cf_fs_get_user_directory.md).
 
 Imagine you have a folder structure for your game like so:
 
@@ -100,7 +102,7 @@ Of course, when you release your game for people to install and play on their ow
 
 ## The Write Directory
 
-Your application gets a single write directory. You set it with [`cf_fs_set_write_directory`](https://randygaul.github.io/cute_framework/#/file/cf_fs_set_write_directory). This greatly aids security and keeps writing operations locked within a single directory for simplicity. It's highly recommended to setup your write directory as the user directory from [`cf_fs_get_user_directory`](https://randygaul.github.io/cute_framework/#/file/cf_fs_get_user_directory). This directory is guaranteed to be a write-enabled and safe place to store game-specific files for your player.
+Your application gets a single write directory. You set it with [`cf_fs_set_write_directory`](../file/cf_fs_set_write_directory.md). This greatly aids security and keeps writing operations locked within a single directory for simplicity. It's highly recommended to setup your write directory as the user directory from [`cf_fs_get_user_directory`](../file/cf_fs_get_user_directory.md). This directory is guaranteed to be a write-enabled and safe place to store game-specific files for your player.
 
 > Setting the user directory as the write directory as recommended.
 
@@ -113,15 +115,15 @@ CF_ASSERT(!cf_is_error(result));
 
 Sometimes it is necessary to convert a virtual path to an actual platform-dependant path. For example, if you're building an editor and wish to modify assets on disk, you'll of course need access to the real path. Similarly, if you want to watch files on disk and see when they're modified to perform asset hotloading, real paths are again going to be necessary.
 
-You can convert a virtual path to a real path with [`cf_fs_get_actual_path`](https://randygaul.github.io/cute_framework/#/file/cf_fs_get_actual_path).
+You can convert a virtual path to a real path with [`cf_fs_get_actual_path`](../file/cf_fs_get_actual_path.md).
 
 ## Just Open a File
 
-If you just want to read an entire file's contents to memory then try using [`cf_fs_read_entire_file_to_memory`](https://randygaul.github.io/cute_framework/#/file/cf_fs_read_entire_file_to_memory); it does just that. Similarly, if you want to read an entire file's contents to memory as a string try using [`cf_fs_read_entire_file_to_memory_and_nul_terminate`](https://randygaul.github.io/cute_framework/#/file/cf_fs_read_entire_file_to_memory_and_nul_terminate).
+If you just want to read an entire file's contents to memory then try using [`cf_fs_read_entire_file_to_memory`](../file/cf_fs_read_entire_file_to_memory.md); it does just that. Similarly, if you want to read an entire file's contents to memory as a string try using [`cf_fs_read_entire_file_to_memory_and_nul_terminate`](../file/cf_fs_read_entire_file_to_memory_and_nul_terminate.md).
 
 ## Enumerating Directories
 
-The function [`cf_fs_enumerate_directory`](https://randygaul.github.io/cute_framework/#/file/cf_fs_enumerate_directory) returns an array of strings of all filse within a directory. This is great for looping over the names of files within a particular folder.
+The function [`cf_fs_enumerate_directory`](../file/cf_fs_enumerate_directory.md) returns an array of strings of all filse within a directory. This is great for looping over the names of files within a particular folder.
 
 ```cpp
 const char** dirs_ptr = cf_fs_enumerate_directory("/data");

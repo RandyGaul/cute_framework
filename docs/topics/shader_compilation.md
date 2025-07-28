@@ -8,7 +8,8 @@ SDL_Gpu will, at some point, offer their own [shader tools](https://github.com/l
 CF compiles shaders of the format GLSL 450. Shaders can be compiled at runtime, or precompiled into bytecode blobs. By default shaders are compiled at runtime, though this is adjustable via by the CMake option `CF_RUNTIME_SHADER_COMPILATION` (`ON` by default).
 You can compile a shader by calling [`cf_make_shader_from_source`](../graphics/cf_make_shader_from_source.md).
 
-!> **Note** Unfortunately, when runtime shaders are enabled the build process will involve pulling in [glslang](https://github.com/KhronosGroup/glslang), which requires Python 3.x installation on your machine.
+!!! note
+    Unfortunately, when runtime shaders are enabled the build process will involve pulling in [glslang](https://github.com/KhronosGroup/glslang), which requires Python 3.x installation on your machine.
 
 To remove the online compiler from CF, set `CF_RUNTIME_SHADER_COMPILATION` to `OFF`.
 Take note that online compilation functions such as [`cf_make_shader_from_source`](../graphics/cf_make_shader_from_source.md) will always fail if this is the case. Turning off runtime shader compilation can dramatically reduce the size and complexity of building CF. This is because [glslang](https://github.com/KhronosGroup/glslang) and similar alternatives to SDL's (unfinished) [shader tools](https://github.com/libsdl-org/SDL_shader_tools) are heavily bloated libraries, not written for fast compilation or load times. These will be removed at a later date from CF once SDL's shader tools get going.
@@ -23,7 +24,8 @@ You may want to disable runtime shader compilation, and instead precompile your 
 - Reduce the time it takes to load shaders when your game is running
 - Reduce the number of dependencies your build process involves (reduced bug/breakage risk)
 
-!> **Note** By default (when using CMake) `CF_CUTE_SHADERC` is set to `ON` which will output `cute-shaderc`, an executable for precompiling shaders, in the same directory as where the `cute` library is placed when building CF. You may freely take a copy of `cute-shaderc` and place/use it wherever you like to support precompiled shaders.
+!!! note
+    By default (when using CMake) `CF_CUTE_SHADERC` is set to `ON` which will output `cute-shaderc`, an executable for precompiling shaders, in the same directory as where the `cute` library is placed when building CF. You may freely take a copy of `cute-shaderc` and place/use it wherever you like to support precompiled shaders.
 
 ```
 Usage: cute-shaderc [options] <input>
@@ -52,9 +54,9 @@ It can be passed to related shader functions (explained below).
 
 The `-type=` flag indicates which type of shader you want to compile:
 
-* `vertex` and `fragment` are for compiling [low level shaders](https://randygaul.github.io/cute_framework/#/topics/low_level_graphics?id=shaders).
+* `vertex` and `fragment` are for compiling [low level shaders](../topics/low_level_graphics.md?id=shaders).
   The result should be passed into [`cf_make_shader_from_bytecode`](../graphics/cf_make_shader_from_bytecode.md).
-* `draw` is for compiling [custom draw shaders](https://randygaul.github.io/cute_framework/#/topics/drawing?id=shaders).
+* `draw` is for compiling [custom draw shaders](../topics/drawing.md?id=shaders).
   The result should be passed into [`cf_make_draw_shader_from_bytecode`](../draw/cf_make_draw_shader_from_bytecode.md).
 
 The `-I` flag will be explained in the "Shader inclusion" section below.
@@ -146,7 +148,7 @@ These can always be `#include`-d by your shader without setting the include path
 
 ## Draw Shader Quirks
 
-Due to the way [custom draw shaders](https://randygaul.github.io/cute_framework/#/topics/drawing?id=shaders) are compiled, any errors in your shader will be reported as being from `shader_stub.shd`.
+Due to the way [custom draw shaders](../topics/drawing.md?id=shaders) are compiled, any errors in your shader will be reported as being from `shader_stub.shd`.
 
 Do not look for this file and just take it as the errors are coming from whatever shader you are trying to compile.
 

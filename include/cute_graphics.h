@@ -25,20 +25,20 @@ extern "C" {
  * This header wraps low-level 3D rendering APIs. You're probably looking for other headers in Cute
  * Framework, not this one. This header is for implementing your own custom rendering stuff, and is
  * intended only for advanced users.
- * 
+ *
  * If you want to draw sprites, lines/shapes, or text, see: cute_draw.h
- * 
+ *
  * Quick list of unsupported features. CF's focus is on the 2D use case, so most of these features are
  * omit since they aren't super useful for 2D.
- * 
+ *
  *     - Blend color constant
  *     - Multiple render targets (aka color/texture attachments)
  *     - Cube map
  *     - 3D textures
  *     - Texture arrays
- * 
+ *
  * The basic flow of rendering a frame looks something like this:
- * 
+ *
  *     for each canvas {
  *         cf_apply_canvas(canvas);
  *         for each mesh {
@@ -650,7 +650,7 @@ typedef enum CF_ShaderStage
  * @function cf_shader_directory
  * @category graphics
  * @brief    Sets up the app's shader directory.
- * @param    path     A virtual path to the folder with your shaders (subfolders supported). See [Virtual File System](https://randygaul.github.io/cute_framework/#/topics/virtual_file_system).
+ * @param    path     A virtual path to the folder with your shaders (subfolders supported). See [Virtual File System](https://randygaul.github.io/cute_framework/topics/virtual_file_system).
  * @remarks  Shaders can `#include` each other as long as they exist in this directory. Changes to shaders on disk
  *           may also be watched via `cf_shader_on_changed` to support shader reloading during development. If you call `cf_shader_directory` with
  *           the path `"/assets/shaders"`, you should then supply paths to `cf_make_shader` relative to the shader directory, and
@@ -675,49 +675,49 @@ CF_API void CF_CALL cf_shader_on_changed(void (*on_changed_fn)(const char* path,
  * @function cf_make_shader
  * @category graphics
  * @brief    Creates a shader from glsl source code.
- * @param    vertex_path   A virtual path to the shader. See [Virtual File System](https://randygaul.github.io/cute_framework/#/topics/virtual_file_system).
+ * @param    vertex_path   A virtual path to the shader. See [Virtual File System](https://randygaul.github.io/cute_framework/topics/virtual_file_system).
  * @remarks  The shader paths must be in the shader directory. See `cf_shader_directory`. For example, if you call `cf_shader_directory` with
  *           the path `"/assets/shaders"`, you should then supply paths to `cf_make_shader` relative to the shader directory, and
  *           simply pass in paths such as `"/shader.vert`" or `"shader.frag"`. This also applies to `#include` between shaders.
- *           
+ *
  *           Note the expected glsl version is 450.
- *           
+ *
  *           You must setup shader inputs (max of 32 inputs, e.g. `in` keyword) and resources sets in a specific way. Use the
              following resource sets and ordering in your shaders:
- *           
+ *
  *           For _VERTEX_ shaders:
  *           ```
  *               0: Sampled textures, followed by storage textures, followed by storage buffers
  *               1: Uniform buffers
  *           ```
- *           
+ *
  *           For _FRAGMENT_ shaders:
  *           ```
  *               2: Sampled textures, followed by storage textures, followed by storage buffers
  *               3: Uniform buffers
  *           ```
- *           
+ *
  *           Example _VERTEX_ shader:
  *           ```glsl
  *           layout (set = 0, binding = 0) uniform sampler2D u_image;
- *           
+ *
  *           layout (set = 1, binding = 0) uniform uniform_block {
  *               vec2 u_texture_size;
  *           };
  *           ```
- *           
+ *
  *           Example _FRAGMENT_ shader:
  *           ```glsl
  *           layout (set = 2, binding = 0) uniform sampler2D u_image;
- *           
+ *
  *           layout (set = 3, binding = 0) uniform uniform_block {
  *               vec2 u_texture_size;
  *           };
  *           ```
- *           
+ *
  *           For uniforms you only have one uniform block available, and it *must* be named `uniform_block`. However, if your
  *           shader is make from the draw api (`cf_make_draw_shader`) uniform blocks must be named user_uniforms.
- *           
+ *
  *           Shaders that sit in the shader directory may be `#include`'d into another shader. Though, it doesn't work
  *           quite exactly like a C/C++ include, it's very similar -- each shader may be included into another
  *           shader *only once*. If you try to include a file multiple times (such as circular dependencies,
@@ -1442,33 +1442,33 @@ typedef struct CF_StencilParams
  * @remarks  There are many ways to blend two colors together to create all kinds of different effects. Defining how we draw one thing atop
  *           another is called "compositing", or "image compositing". The actual operation of mixing two colors together to form a
  *           a pixel is called blending. We describe blend equations as little math equations.
- *           
+ *
  *           We can say the pixel is called P, while the input colors are S and D (source and destination). Modern GPUs provide some
  *           common _operators_ for defining blend functions: add, subtract, reverse subtract, min and max (see `CF_BlendOp`). Cute Framework only
  *           uses add, subtract, and reverse subtract, as min/max are not very cross-platform compatible. On each side of an _operator_ are the
  *           _factors_ (see `CF_BlendFactor`).
- *           
+ *
  *           Here is the add operator `CF_BLEND_OP_ADD`:
- *           
+ *
  *           P = S + D
- *           
+ *
  *           Recap: P is the pixel to write, S is the source factor, while D is the destination factor. Usually the D (destination factor) is
  *           the old pixel value, while S (source factor) is a new image getting draw over old pixel contents. Therefor, P is the final color
  *           after compositing a new image on top of an old image.
- *           
+ *
  *           Blend factors (see `CF_BlendFactor`) are components of a color, including the alpha component. The most common setup for your
  *           blend state is to use [premultiplied alpha](https://blog.demofox.org/2015/06/19/what-is-pre-multiplied-alpha-and-why-does-it-matter/) when loading your images.
  *           Cute Framework internally loads up images in premultiplied alpha format for you. Cute Framework's default blend state is to use
  *           _additive blending_. The blend function looks like this:
- *           
+ *
  *           P = 1 x S + D x (1 - S.alpha)
- *           
+ *
  *           Or re-written with Cute Framework enums:
- *           
+ *
  *           P = S x CF_BLENDFACTOR_ONE CF_BLEND_OP_ADD D x CF_BLENDFACTOR_ONE_MINUS_SRC_ALPHA
- *           
+ *
  *           Which can be setup with this kind of code:
- *           
+ *
  *           ```cpp
  *           CF_RenderState state = cf_render_state_defaults();
  *           state.blend.enabled = true;
@@ -1480,7 +1480,7 @@ typedef struct CF_StencilParams
  *           state.blend.alpha_op = CF_BLEND_OP_ADD;
  *           cf_material_set_render_state(my_material, state);
  *           ```
- *           
+ *
  *           You can of course define your own blend state in any way you like to perform all kinds of compositing effects. However, dynamically changing the
  *           blend state will result in more draw calls to the GPU, which negatively affects performance. A major win for premultiplied alpha and
  *           additive blending is that some common rendering needs can all be batched together within one draw call, without requiring a change to
@@ -1714,7 +1714,7 @@ CF_API void CF_CALL cf_material_clear_textures(CF_Material material);
  *           Once the material is applied via `cf_apply_shader`, all shader input uniforms (e.g. `uniform vec4 u_my_color`) are dynamically matched up
  *           with uniform values stored in the `CF_Material`. Any uniforms in the material that don't match up will simply be ignored, and cleared to 0
  *           in the shader.
- *           
+ *
  *           `CF_Material`'s design supports using one material with various shaders, or using various materials with one shader. Since uniforms are
  *           grouped up into uniform blocks the performance overhead is usually quite minimal for setting a variety of uniform and shader combinations.
  * @related  CF_UniformType CF_Material cf_make_material cf_destroy_material cf_material_set_render_state cf_material_set_texture_vs cf_material_set_texture_fs cf_material_set_uniform_vs cf_material_set_uniform_fs
@@ -1734,7 +1734,7 @@ CF_API void CF_CALL cf_material_set_uniform_vs(CF_Material material, const char*
  *           Once the material is applied via `cf_apply_shader`, all shader input uniforms (e.g. `uniform vec4 u_my_color`) are dynamically matched up
  *           with uniform values stored in the `CF_Material`. Any uniforms in the material that don't match up will simply be ignored, and cleared to 0
  *           in the shader.
- *           
+ *
  *           `CF_Material`'s design supports using one material with various shaders, or using various materials with one shader. Since uniforms are
  *           grouped up into uniform blocks the performance overhead is usually quite minimal for setting a variety of uniform and shader combinations.
  * @related  CF_UniformType CF_Material cf_make_material cf_destroy_material cf_material_set_render_state cf_material_set_texture_vs cf_material_set_texture_fs cf_material_set_uniform_vs cf_material_set_uniform_fs
