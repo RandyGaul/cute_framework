@@ -932,7 +932,7 @@ void cf_draw_line(CF_V2 p0, CF_V2 p1, float thickness)
 	s_draw_capsule(p0, p1, 0, thickness * 0.5f, true);
 }
 
-void cf_draw_polyline(CF_V2* pts, int count, float thickness, bool loop)
+void cf_draw_polyline(const CF_V2* pts, int count, float thickness, bool loop)
 {
 	float radius = thickness * 0.5f;
 
@@ -1111,7 +1111,7 @@ void cf_draw_polyline(CF_V2* pts, int count, float thickness, bool loop)
 	}
 }
 
-void cf_draw_polygon_fill(CF_V2* points, int count, float chubbiness)
+void cf_draw_polygon_fill(const CF_V2* points, int count, float chubbiness)
 {
 	CF_ASSERT(count >= 3 && count <= 8);
 	CF_M3x2 m = draw->mvp;
@@ -1229,7 +1229,7 @@ v2* triangulate(v2* polygon, int n, int* out_count)
 	return triangles;
 }
 
-void cf_draw_polygon_fill_simple(CF_V2* points, int count)
+void cf_draw_polygon_fill_simple(const CF_V2* points, int count)
 {
 	v2* points_copy = (v2*)cf_alloc(sizeof(v2) * count);
 	CF_MEMCPY(points_copy, points, sizeof(v2) * count);
