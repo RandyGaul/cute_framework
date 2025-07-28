@@ -9,6 +9,9 @@ site_description: >-
 repo_url: https://github.com/RandyGaul/cute_framework
 repo_name: RandyGaul/cute_framework
 
+# Copyright
+copyright: Copyright &copy; 2019—2025 Randy Gaul
+
 # Configuration
 theme:
   name: material
