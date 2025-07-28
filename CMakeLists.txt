@@ -365,7 +365,7 @@ if (CF_RUNTIME_SHADER_COMPILATION OR CF_CUTE_SHADERC)
 	add_library(cute-shader STATIC ${CUTE_SHADER_SRCS})
 	target_link_libraries(cute-shader PRIVATE glslang glslang-default-resource-limits SPIRV)
 	if (NOT MSVC AND NOT CF_FRAMEWORK_STATIC)
-		target_compile_options(cute-shader PRIVATE -fPIC)
+		set_target_properties(cute-shader PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
 	endif()
 	target_include_directories(cute-shader PUBLIC include)  # For cute_shader_info.h
 
