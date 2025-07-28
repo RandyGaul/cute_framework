@@ -1,0 +1,91 @@
+:root > * {
+  /* #fea3a8 */
+  --cute-primary-hue: 357;
+  --cute-primary-saturation: 98%;
+  --cute-primary-light: 82%;
+
+  /* #530004 */
+  --cute-primary-saturation--dark: 100%;
+  --cute-primary-light--dark: 16%;
+
+  /* #96dec6 */
+  --cute-accent-hue: 160;
+  --cute-accent-saturation: 52%;
+  --cute-accent-light: 73%;
+}
+
+[data-md-color-scheme="cute"] {
+  --md-primary-fg-color: hsla(
+    var(--cute-primary-hue),
+    var(--cute-primary-saturation),
+    var(--cute-primary-light),
+    1
+  );
+  --md-primary-fg-color--light: hsla(
+    var(--cute-primary-hue),
+    var(--cute-primary-saturation),
+    calc(var(--cute-primary-light) + 10%),
+    1
+  );
+  --md-primary-fg-color--dark: hsla(
+    var(--cute-primary-hue),
+    var(--cute-primary-saturation),
+    calc(var(--cute-primary-light) - 10%),
+    1
+  );
+
+  --md-accent-fg-color: hsla(
+    var(--cute-accent-hue),
+    var(--cute-accent-saturation),
+    calc(var(--cute-accent-light) - 10%),
+    1
+  );
+  --md-accent-fg-color--transparent: hsla(
+    var(--cute-accent-hue),
+    var(--cute-accent-saturation),
+    var(--cute-accent-light),
+    0.1
+  );
+
+  --md-typeset-a-color: var(--md-primary-fg-color--dark);
+}
+
+[data-md-color-primary="cute"] {
+  --md-primary-fg-color: hsla(
+    var(--cute-primary-hue),
+    var(--cute-primary-saturation),
+    var(--cute-primary-light),
+    1
+  );
+  --md-primary-fg-color--light: hsla(
+    var(--cute-primary-hue),
+    var(--cute-primary-saturation),
+    calc(var(--cute-primary-light) + 10%),
+    1
+  );
+  --md-primary-fg-color--dark: hsla(
+    var(--cute-primary-hue),
+    var(--cute-primary-saturation),
+    calc(var(--cute-primary-light) - 10%),
+    1
+  );
+}
+
+[data-md-color-accent="cute"] {
+  --md-accent-fg-color: hsla(
+    var(--cute-accent-hue),
+    var(--cute-accent-saturation),
+    var(--cute-accent-light),
+    1
+  );
+  --md-accent-fg-color--transparent: hsla(
+    var(--cute-accent-hue),
+    var(--cute-accent-saturation),
+    var(--cute-accent-light),
+    0.1
+  );
+}
+
+[data-md-color-scheme="slate"] {
+  --md-hue: var(--cute-primary-hue);
+}

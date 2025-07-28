@@ -19,23 +19,25 @@ theme:
     - content.code.copy
   palette:
     - media: "(prefers-color-scheme)"
+      scheme: cute
       toggle:
         icon: material/link
         name: Switch to light mode
     - media: "(prefers-color-scheme: light)"
-      scheme: default
-      primary: red
-      accent: red
+      scheme: cute
       toggle:
         icon: material/toggle-switch
         name: Switch to dark mode
     - media: "(prefers-color-scheme: dark)"
       scheme: slate
-      primary: red
-      accent: red
+      primary: cute
+      accent: cute
       toggle:
         icon: material/toggle-switch-off
         name: Switch to system preference
+
+extra_css:
+  - stylesheets/cute.css
 
 # Navigation
 not_in_nav: |
