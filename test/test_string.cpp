@@ -23,7 +23,7 @@ TEST_CASE(test_array_macros_simple)
 	REQUIRE(vec[2] == 3);
 	REQUIRE(apop(vec) == 3);
 	REQUIRE(alen(vec) == 2);
-	apop(vec);
+	CF_UNUSED(apop(vec));
 	REQUIRE(apop(vec) == 1);
 	REQUIRE(alen(vec) == 0);
 	for (int i = 0; i < 32; ++i) {

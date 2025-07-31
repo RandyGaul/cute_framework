@@ -43,7 +43,6 @@ struct CF_Draw* draw;
 #include <imgui_internal.h>
 
 #include <algorithm>
-#include <glslang/Public/ShaderLang.h>
 
 // Initial design of this API comes from Noel Berry's Blah framework here:
 // https://github.com/NoelFB/blah/blob/master/include/blah_draw.h
@@ -933,7 +932,7 @@ void cf_draw_line(CF_V2 p0, CF_V2 p1, float thickness)
 	s_draw_capsule(p0, p1, 0, thickness * 0.5f, true);
 }
 
-void cf_draw_polyline(CF_V2* pts, int count, float thickness, bool loop)
+void cf_draw_polyline(const CF_V2* pts, int count, float thickness, bool loop)
 {
 	float radius = thickness * 0.5f;
 
@@ -1112,7 +1111,7 @@ void cf_draw_polyline(CF_V2* pts, int count, float thickness, bool loop)
 	}
 }
 
-void cf_draw_polygon_fill(CF_V2* points, int count, float chubbiness)
+void cf_draw_polygon_fill(const CF_V2* points, int count, float chubbiness)
 {
 	CF_ASSERT(count >= 3 && count <= 8);
 	CF_M3x2 m = draw->mvp;
@@ -1230,7 +1229,7 @@ v2* triangulate(v2* polygon, int n, int* out_count)
 	return triangles;
 }
 
-void cf_draw_polygon_fill_simple(CF_V2* points, int count)
+void cf_draw_polygon_fill_simple(const CF_V2* points, int count)
 {
 	v2* points_copy = (v2*)cf_alloc(sizeof(v2) * count);
 	CF_MEMCPY(points_copy, points, sizeof(v2) * count);
@@ -2507,6 +2506,15 @@ CF_Shader cf_make_draw_shader_from_source(const char* src)
 	return draw_shd;
 }
 
+CF_Shader cf_make_draw_shader_from_bytecode(CF_DrawShaderBytecode bytecode)
+{
+	// Also make an attached blit shader to apply when drawing canvases.
+	CF_Shader blit_shd = cf_make_draw_blit_shader_from_bytecode_internal(bytecode.blit_shader);
+	CF_Shader draw_shd = cf_make_draw_shader_from_bytecode_internal(bytecode.draw_shader);
+	draw->draw_shd_to_blit_shd.add(draw_shd.id, blit_shd.id);
+	return draw_shd;
+}
+
 void cf_draw_push_shader(CF_Shader shader)
 {
 	CF_ASSERT(shader.id);
@@ -2794,11 +2802,13 @@ static void s_process_command(CF_Canvas canvas, CF_Command* cmd, CF_Command* nex
 			same = false;
 		} else if (CF_MEMCMP(next->u.data, cmd->u.data, next->u.size)) {
 			same = false;
-		} else if (next->alpha_discard == cmd->alpha_discard &&
+		} else if (!(
+			next->alpha_discard == cmd->alpha_discard &&
 			next->render_state == cmd->render_state &&
 			next->scissor == cmd->scissor &&
 			next->shader == cmd->shader &&
-			next->viewport == cmd->viewport) {
+			next->viewport == cmd->viewport
+		)) {
 			same = false;
 		}
 	} else {
@@ -2809,6 +2819,7 @@ static void s_process_command(CF_Canvas canvas, CF_Command* cmd, CF_Command* nex
 		// Process the collated drawable items. Might get split up into multiple draw calls depending on
 		// the atlas compiler.
 		draw->need_flush = false;
+		spritebatch_defrag(&draw->sb);
 		spritebatch_flush(&draw->sb);
 	}
 }
@@ -2843,6 +2854,7 @@ void cf_render_layers_to(CF_Canvas canvas, int layer_lo, int layer_hi, bool clea
 	}
 	if (draw->need_flush) {
 		draw->need_flush = false;
+		spritebatch_defrag(&draw->sb);
 		spritebatch_flush(&draw->sb);
 	}
 	draw->has_drawn_something = false;

@@ -1,12 +1,10 @@
-[](../header.md ':include')
-
-<br>
+# Dear ImGui
 
 [Dear ImGui](https://github.com/ocornut/imgui) is a free to use C/C++ library for creating tools or debug user-interfaces (UI). It's an absolutely splendid tool for game development, and comes baked right into CF's source code, ready to use right out of the box.
 
 ## Setup Dear ImGui
 
-Before using Dear ImGui you must call [`cf_app_init_imgui`](https://randygaul.github.io/cute_framework/#/app/cf_app_init_imgui). You can call this before your main loop just once. Once done you may draw Dear ImGui debug windows like this one:
+Before using Dear ImGui you must call [`cf_app_init_imgui`](../app/cf_app_init_imgui.md). You can call this before your main loop just once. Once done you may draw Dear ImGui debug windows like this one:
 
 ```cpp
 static bool hello = true;

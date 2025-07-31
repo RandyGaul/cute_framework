@@ -293,7 +293,7 @@ CF_API void CF_CALL cf_draw_line(CF_V2 p0, CF_V2 p1, float thickness);
  * @param    bevel_count  The number of edges used to smooth corners.
  * @related  cf_draw_line cf_draw_polyline cf_draw_bezier_line cf_draw_bezier_line2 cf_draw_arrow cf_draw_polygon_fill
  */
-CF_API void CF_CALL cf_draw_polyline(CF_V2* points, int count, float thickness, bool loop);
+CF_API void CF_CALL cf_draw_polyline(const CF_V2* points, int count, float thickness, bool loop);
 
 /**
  * @function cf_draw_polygon_fill
@@ -305,7 +305,7 @@ CF_API void CF_CALL cf_draw_polyline(CF_V2* points, int count, float thickness, 
  * @remarks  This function has a hard-limit of up to 8 points.
  * @related  cf_draw_line cf_draw_polyline cf_draw_bezier_line cf_draw_bezier_line2 cf_draw_arrow cf_draw_polygon_fill cf_draw_polygon_fill_simple
  */
-CF_API void CF_CALL cf_draw_polygon_fill(CF_V2* points, int count, float chubbiness);
+CF_API void CF_CALL cf_draw_polygon_fill(const CF_V2* points, int count, float chubbiness);
 
 /**
  * @function cf_draw_polygon_fill_simple
@@ -319,7 +319,7 @@ CF_API void CF_CALL cf_draw_polygon_fill(CF_V2* points, int count, float chubbin
  *           polygon and renders a series of triangles under the hood. Please be sure to submit your vertices in CCW order.
  * @related  cf_draw_line cf_draw_polyline cf_draw_bezier_line cf_draw_bezier_line2 cf_draw_arrow cf_draw_polygon_fill cf_draw_polygon_fill_simple
  */
-CF_API void CF_CALL cf_draw_polygon_fill_simple(CF_V2* points, int count);
+CF_API void CF_CALL cf_draw_polygon_fill_simple(const CF_V2* points, int count);
 
 /**
  * @function cf_draw_bezier_line
@@ -609,7 +609,7 @@ CF_API void CF_CALL cf_set_vertex_callback(CF_VertexFn* vertex_fn);
  * @function cf_make_font
  * @category text
  * @brief    Constructs a font for rendering text.
- * @param    path        A virtual path to the font file. See [Virtual File System](https://randygaul.github.io/cute_framework/#/topics/virtual_file_system).
+ * @param    path        A virtual path to the font file. See [Virtual File System](https://randygaul.github.io/cute_framework/topics/virtual_file_system).
  * @param    font_name   A unique name for this font. Used by `cf_push_font` and friends.
  * @return   Returns any errors as `CF_Result`.
  * @remarks  Memory is only consumed when you draw a certain glyph (text character). Just loading up the font initially is
@@ -1179,11 +1179,27 @@ CF_API CF_RenderState CF_CALL cf_draw_peek_render_state();
 CF_API void CF_CALL cf_draw_set_atlas_dimensions(int width_in_pixels, int height_in_pixels);
 
 /**
+ * @struct   CF_DrawShaderBytecode
+ * @category draw
+ * @brief    Bytecode for a draw shader.
+ * @remarks  This can be created using the `cute-shaderc` compiler.
+ * @related  CF_Shader cf_draw_push_shader cf_draw_pop_shader cf_draw_peek_shader cf_make_draw_shader_from_bytecode
+ */
+typedef struct CF_DrawShaderBytecode
+{
+	/* @member Bytecode for draw shader. */
+	CF_ShaderBytecode draw_shader;
+	/* @member Bytecode for blit shader. */
+	CF_ShaderBytecode blit_shader;
+} CF_DrawShaderBytecode;
+// @end
+
+/**
  * @function cf_make_draw_shader
  * @category draw
  * @brief    Creates a custom draw shader.
  * @remarks  Your shader must be written in GLSL 450, and must follow some specific rules to be compatible with the draw API. For more in-depth explanations,
- *           see CF's docs on [Draw Shaders](https://randygaul.github.io/cute_framework/#/topics/drawing?id=shaders). Make sure to call `cf_shader_directory` first.
+ *           see CF's docs on [Draw Shaders](https://randygaul.github.io/cute_framework/topics/drawing#shaders). Make sure to call `cf_shader_directory` first.
  * @related  CF_Shader cf_draw_push_shader cf_draw_pop_shader cf_draw_peek_shader cf_make_draw_shader_from_source
  */
 CF_API CF_Shader CF_CALL cf_make_draw_shader(const char* path);
@@ -1193,11 +1209,21 @@ CF_API CF_Shader CF_CALL cf_make_draw_shader(const char* path);
  * @category draw
  * @brief    Creates a custom draw shader from source string.
  * @remarks  Your shader must be written in GLSL 450, and must follow some specific rules to be compatible with the draw API. For more in-depth explanations,
- *           see CF's docs on [Draw Shaders](https://randygaul.github.io/cute_framework/#/topics/drawing?id=shaders). If you wish to include other files into
+ *           see CF's docs on [Draw Shaders](https://randygaul.github.io/cute_framework/topics/drawing#shaders). If you wish to include other files into
  *           your shader via `#include` make sure to call `cf_shader_directory` first.
  * @related  CF_Shader cf_draw_push_shader cf_draw_pop_shader cf_draw_peek_shader
  */
 CF_API CF_Shader CF_CALL cf_make_draw_shader_from_source(const char* src);
+
+/**
+ * @function cf_make_draw_shader_from_bytecode
+ * @category draw
+ * @brief    Creates a custom draw shader from bytecode.
+ * @remarks  Your shader must be written in GLSL 450, and must follow some specific rules to be compatible with the draw API. For more in-depth explanations,
+ *           see CF's docs on [Draw Shaders](https://randygaul.github.io/cute_framework/topics/drawing#shaders).
+ * @related  CF_Shader CF_DrawShaderBytecode cf_draw_push_shader cf_draw_pop_shader cf_draw_peek_shader
+ */
+CF_API CF_Shader CF_CALL cf_make_draw_shader_from_bytecode(CF_DrawShaderBytecode bytecode);
 
 /**
  * @function cf_draw_push_shader
@@ -1572,11 +1598,11 @@ typedef struct CF_AtlasSubImage
  * @function cf_register_premade_atlas
  * @category draw
  * @brief    Registers a premade atlas within the draw system.
- * @param    png_path   A virtual path to the png_file for the atlas. See [Virtual File System](https://randygaul.github.io/cute_framework/#/topics/virtual_file_system).
+ * @param    png_path   A virtual path to the png_file for the atlas. See [Virtual File System](https://randygaul.github.io/cute_framework/topics/virtual_file_system).
  * @remarks  This function is useful if you want to load up atlases into CF. However, internally CF employs
  *           it's own online atlas compiler, so baking atlases is not necessary. This function is here just
  *           for convenience.
- *           
+ *
  *           Call `cf_destroy_texture` on the return value when done.
  * @related  CF_AtlasSubImage cf_register_premade_atlas cf_make_premade_sprite cf_destroy_premade_atlas
  */
@@ -1624,7 +1650,7 @@ struct CF_TextCodeVal
 
 namespace Cute
 {
-	
+
 CF_INLINE void draw_sprite(const CF_Sprite* sprite) { cf_draw_sprite(sprite); }
 CF_INLINE void draw_sprite(const CF_Sprite& sprite) { cf_draw_sprite(&sprite); }
 CF_INLINE void sprite_draw(const CF_Sprite* sprite) { cf_draw_sprite(sprite); }
@@ -1652,9 +1678,9 @@ CF_INLINE void draw_capsule_fill(v2 p0, v2 p1, float r) { cf_draw_capsule_fill2(
 CF_INLINE void draw_tri(v2 p0, v2 p1, v2 p2, float thickness = 1.0f, float chubbiness = 0) { cf_draw_tri(p0, p1, p2, thickness, chubbiness); }
 CF_INLINE void draw_tri_fill(v2 p0, v2 p1, v2 p2, float chubbiness = 0) { cf_draw_tri_fill(p0, p1, p2, chubbiness); }
 CF_INLINE void draw_line(v2 p0, v2 p1, float thickness = 1.0f) { cf_draw_line(p0, p1, thickness); }
-CF_INLINE void draw_polyline(v2* points, int count, float thickness = 1.0f, bool loop = false) { cf_draw_polyline(points, count, thickness, loop); }
-CF_INLINE void draw_polygon_fill(v2* points, int count, float chubbiness) { cf_draw_polygon_fill(points, count, chubbiness); }
-CF_INLINE void draw_polygon_fill_simple(v2* points, int count) { cf_draw_polygon_fill_simple(points, count); }
+CF_INLINE void draw_polyline(const v2* points, int count, float thickness = 1.0f, bool loop = false) { cf_draw_polyline(points, count, thickness, loop); }
+CF_INLINE void draw_polygon_fill(const v2* points, int count, float chubbiness) { cf_draw_polygon_fill(points, count, chubbiness); }
+CF_INLINE void draw_polygon_fill_simple(const v2* points, int count) { cf_draw_polygon_fill_simple(points, count); }
 CF_INLINE void draw_bezier_line(v2 a, v2 c0, v2 b, int iters, float thickness) { cf_draw_bezier_line(a, c0, b, iters, thickness); }
 CF_INLINE void draw_bezier_line(v2 a, v2 c0, v2 c1, v2 b, int iters, float thickness) { cf_draw_bezier_line2(a, c0, c1, b, iters, thickness); }
 CF_INLINE void draw_arrow(v2 a, v2 b, float thickness, float arrow_width) { cf_draw_arrow(a, b, thickness, arrow_width); }

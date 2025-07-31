@@ -7,8 +7,7 @@
 
 #include <cute_version.h>
 
-
 const char* cf_version_string_linked()
 {
-	return "Cute Framework Version 1.1.0 (WIP)";
+	return "Cute Framework Version 1.1.0";
 }

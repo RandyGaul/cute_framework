@@ -36,6 +36,8 @@ struct CF_MouseState
 	int left_button = 0;
 	int right_button = 0;
 	int middle_button = 0;
+	int x1_button = 0;
+	int x2_button = 0;
 	float wheel_motion = 0;
 	float x = 0;
 	float y = 0;
@@ -72,13 +74,11 @@ struct CF_App
 	SDL_GPUDevice* device = NULL;
 	cs_context_t* cute_sound = NULL;
 	bool spawned_mix_thread = false;
-	CF_Threadpool* threadpool = NULL;
 	void (*on_shader_changed_fn)(const char* path, void* udata) = NULL;
 	void* on_shader_changed_udata = NULL;
 	bool shader_directory_set = false;
 	Cute::CF_Path shader_directory;
 	Cute::Map<const char*, CF_ShaderFileInfo> shader_file_infos;
-	Cute::Map<const char*, const char*> builtin_shaders;
 	bool gfx_enabled = false;
 	float dpi_scale = 1.0f;
 	float dpi_scale_prev = 1.0f;
@@ -103,6 +103,7 @@ struct CF_App
 	CF_WindowState window_state;
 	CF_WindowState window_state_prev;
 	SDL_GPUCommandBuffer* cmd = NULL;
+	int sample_count = 0;
 	bool use_depth_stencil = false;
 	uint64_t default_image_id = CF_PNG_ID_RANGE_LO;
 	bool vsync = false;
@@ -132,15 +133,6 @@ struct CF_App
 
 	// Dear ImGui stuff.
 	bool using_imgui = false;
-	SDL_GPUSampler* imgui_sampler = NULL;
-	int imgui_vertex_count = 0;
-	int imgui_index_count = 0;
-	SDL_GPUBuffer* imgui_vbuf = NULL;
-	SDL_GPUBuffer* imgui_ibuf = NULL;
-	SDL_GPUTransferBuffer* imgui_vtbuf = NULL;
-	SDL_GPUTransferBuffer* imgui_itbuf = NULL;
-	SDL_GPUGraphicsPipeline* imgui_pip = NULL;
-	SDL_GPUTexture* imgui_font_tex = NULL;
 
 	// Font stuff.
 	uint64_t font_image_id_gen = CF_FONT_ID_RANGE_LO;

@@ -206,6 +206,11 @@ const char* cf_fs_get_base_directory()
 	return PHYSFS_getBaseDir();
 }
 
+const char* cf_fs_get_working_directory()
+{
+	return SDL_GetCurrentDirectory();
+}
+
 CF_Result cf_fs_set_write_directory(const char* platform_dependent_directory)
 {
 	if (!PHYSFS_setWriteDir(platform_dependent_directory)) {

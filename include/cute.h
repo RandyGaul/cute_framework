@@ -22,10 +22,9 @@
  * MetalMaxMX
  * empyreanx
  * kagami
- * Piotr
+ * pusewicz
  * 
  */
-
 
 #include "cute_alloc.h"
 #include "cute_app.h"

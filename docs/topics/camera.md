@@ -1,8 +1,6 @@
-[](../header.md ':include')
+# Camera
 
-<br>
-
-Everything in the [Drawing API](https://randygaul.github.io/cute_framework/#/topics/drawing) is drawn relative to the current coordinate system. We can transform this coordinate system to adjust the position, scale, and rotation of anything drawn.
+Everything in the [Drawing API](../topics/drawing.md) is drawn relative to the current coordinate system. We can transform this coordinate system to adjust the position, scale, and rotation of anything drawn.
 
 ## Default System
 
@@ -10,21 +8,21 @@ In games typically the center of the screen is defined as position `(0, 0)`, wit
 
 ## Translating
 
-We can move coordinate system by calling [`cf_draw_translate`](https://randygaul.github.io/cute_framework/#/draw/cf_draw_translate), which will shift the location of anything drawn thereafter. By default the coordinate system starts out at the origin `(0, 0)`. For example, call `cf_draw_translate(100, 0)` everything drawn thereafter will shift to the right by `100` units.
+We can move coordinate system by calling [`cf_draw_translate`](../draw/cf_draw_translate.md), which will shift the location of anything drawn thereafter. By default the coordinate system starts out at the origin `(0, 0)`. For example, call `cf_draw_translate(100, 0)` everything drawn thereafter will shift to the right by `100` units.
 
 ## Rotating
 
-We can rotate the coordinate system by calling [`cf_draw_rotate`](https://randygaul.github.io/cute_framework/#/draw/cf_draw_rotate). A positive parameter will rotate everything drawn thereafter clockwise by a number of radians.
+We can rotate the coordinate system by calling [`cf_draw_rotate`](../draw/cf_draw_rotate.md). A positive parameter will rotate everything drawn thereafter clockwise by a number of radians.
 
 ## Scaling
 
-We can scale the coordinate system by calling [`cf_draw_scale`](https://randygaul.github.io/cute_framework/#/draw/cf_draw_scale). Numbers greater than 1 will zoom in, while numbers less than one will zoom out. Negative numbers will flip the screen on the x or y axis.
+We can scale the coordinate system by calling [`cf_draw_scale`](../draw/cf_draw_scale.md). Numbers greater than 1 will zoom in, while numbers less than one will zoom out. Negative numbers will flip the screen on the x or y axis.
 
 ## Transform State
 
 Whenever we adjust the coordinate system (by scaling, rotating, or translating) all subsequent draw commands will be drawn within the adjusted coordinate system. It's important to learn how to save coordinate systems restore them later. This allows you to draw something specific without affecting the coordinate system used by the rest of your code.
 
-By using [`cf_draw_push`](https://randygaul.github.io/cute_framework/#/draw/cf_draw_push) and [`cf_draw_pop`](https://randygaul.github.io/cute_framework/#/draw/cf_draw_pop) you can save and restore coordinate systems. This technique lets you draw things locally without affecting anything else. Here's an example:
+By using [`cf_draw_push`](../draw/cf_draw_push.md) and [`cf_draw_pop`](../draw/cf_draw_pop.md) you can save and restore coordinate systems. This technique lets you draw things locally without affecting anything else. Here's an example:
 
 ```cpp
 cf_draw_push(); // Save the prior transform (coordinate system).

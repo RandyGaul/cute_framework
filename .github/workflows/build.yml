@@ -10,7 +10,7 @@ jobs:
   build:
     # Matrix feature for cross-platform coverage. Names the build "Build X"
     # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
-    name: "Build ${{ matrix.platform.name }}"
+    name: "Build ${{ matrix.platform.name }} (CF_RUNTIME_SHADER_COMPILATION=${{ matrix.runtime_shader_compilation.value }})"
     runs-on: ${{ matrix.platform.os }}
     timeout-minutes: 20
 
@@ -22,10 +22,13 @@ jobs:
       # Don't cancel other in-progress jobs if one fails.
       fail-fast: false
       matrix:
+        runtime_shader_compilation:
+          - { value: 'ON', cmake_arg: '-DCF_RUNTIME_SHADER_COMPILATION=ON' }
+          - { value: 'OFF', cmake_arg: '-DCF_RUNTIME_SHADER_COMPILATION=OFF' }
         platform:
           # Diabled MinGW as it was having trouble with DX12 headers being out of date.
           # - { name: "Windows (MinGW-w64)",     os: windows-latest, artifact: 'mingw-w64', generate: '-G "MinGW Makefiles"' }
-          - { name: "Windows (MSCV 17 2022)",  os: windows-latest, artifact: 'mscv17',    generate: '-G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release' }
+          - { name: "Windows (MSCV 17 2022)",  os: windows-2025,   artifact: 'mscv17',    generate: '-G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release' }
           - { name: "MacOS",                   os: macos-latest,   artifact: 'macos',     generate: '-G "Unix Makefiles"' }
           - { name: "Linux",                   os: ubuntu-latest,  artifact: 'linux',     generate: '-G "Unix Makefiles"' }
           # TODO - Add iOS and Android platforms. Waiting on better support from GitHub.
@@ -45,7 +48,7 @@ jobs:
 
       - name: Create build folder with CMake
         run: |
-            cmake ${{ matrix.platform.generate }} -B build_folder
+            cmake ${{ matrix.platform.generate }} ${{ matrix.runtime_shader_compilation.cmake_arg }} -B build_folder
 
       - name: Build project binary (non-MSVC)
         run: |
@@ -101,8 +104,8 @@ jobs:
         shell: cmd
         run: |
           robocopy include dist *.h
-          robocopy build_folder\Release dist cute.lib 
-          robocopy build_folder dist libcute.a
+          robocopy build_folder\Release\lib dist cute*.lib 
+          robocopy build_folder\lib dist libcute*.a
           7z a ${{ matrix.platform.artifact }}.zip .\dist\*
         if: runner.os == 'Windows'
 
@@ -110,7 +113,7 @@ jobs:
         run: |
           mkdir -p ./dist
           cp -v ./include/*.h ./dist
-          cp -R -v ./build_folder/libcute.a ./dist
+          cp -R -v ./build_folder/lib/libcute*.a ./dist
           tar -czvf ${{ matrix.platform.artifact }}.tar.gz -C dist .
         if: runner.os == 'macOS'
 
@@ -118,7 +121,7 @@ jobs:
         run: |
           mkdir -p ./dist
           cp -v ./include/*.h ./dist
-          cp -v ./build_folder/libcute.a ./dist
+          cp -v ./build_folder/lib/libcute*.a ./dist
           tar -czvf ${{ matrix.platform.artifact }}.tar.gz -C dist .
         if: runner.os == 'Linux'
           
@@ -129,3 +132,4 @@ jobs:
           if-no-files-found: error
           name: ${{ matrix.platform.artifact }}
           path: ./dist/
+        if: matrix.runtime_shader_compilation.value == 'ON'

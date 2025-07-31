@@ -99,7 +99,7 @@ static void s_sprite(CF_AsepriteCacheEntry entry, CF_Sprite* sprite)
 	}
 }
 
-CF_Result cf_aseprite_cache_load_from_memory(const char* unique_name, const void* data, int sz, CF_Sprite* sprite_out)
+static CF_Result s_aseprite_cache_load_from_memory(const char* unique_name, const void* data, int sz, CF_Sprite* sprite_out)
 {
 	ase_t* ase = cute_aseprite_load_from_memory(data, (int)sz, NULL);
 	if (!ase) return cf_result_error("Unable to open ase file at `aseprite_path`.");
@@ -232,6 +232,19 @@ CF_Result cf_aseprite_cache_load_from_memory(const char* unique_name, const void
 	return cf_result_success();
 }
 
+CF_Result cf_aseprite_cache_load_from_memory(const char* unique_name, const void* data, int sz, CF_Sprite* sprite_out)
+{
+	// First see if this ase was already cached.
+	unique_name = sintern(unique_name);
+	auto entry_ptr = cache->aseprites.try_find(unique_name);
+	if (entry_ptr) {
+		s_sprite(*entry_ptr, sprite_out);
+		return cf_result_success();
+	}
+
+	return s_aseprite_cache_load_from_memory(unique_name, data, sz, sprite_out);
+}
+
 CF_Result cf_aseprite_cache_load(const char* aseprite_path, CF_Sprite* sprite)
 {
 	// First see if this ase was already cached.
@@ -248,7 +261,7 @@ CF_Result cf_aseprite_cache_load(const char* aseprite_path, CF_Sprite* sprite)
 	if (!data) return cf_result_error("Unable to open ase file at `aseprite_path`.");
 	CF_DEFER(CF_FREE(data));
 
-	return cf_aseprite_cache_load_from_memory(aseprite_path, data, (int)sz, sprite);
+	return s_aseprite_cache_load_from_memory(aseprite_path, data, (int)sz, sprite);
 }
 
 void cf_aseprite_cache_unload(const char* aseprite_path)

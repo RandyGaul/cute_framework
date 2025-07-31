@@ -265,6 +265,16 @@ float cf_mouse_y()
 	return app->mouse.y;
 }
 
+float cf_mouse_motion_x()
+{
+    return app->mouse.xrel;
+}
+
+float cf_mouse_motion_y()
+{
+    return app->mouse.yrel;
+}
+
 bool cf_mouse_down(CF_MouseButton button)
 {
 	switch (button)
@@ -272,6 +282,10 @@ bool cf_mouse_down(CF_MouseButton button)
 	case CF_MOUSE_BUTTON_LEFT:   return app->mouse.left_button;
 	case CF_MOUSE_BUTTON_RIGHT:  return app->mouse.right_button;
 	case CF_MOUSE_BUTTON_MIDDLE: return app->mouse.middle_button;
+	case CF_MOUSE_BUTTON_X1:     return app->mouse.x1_button;
+	case CF_MOUSE_BUTTON_X2:     return app->mouse.x2_button;
+	case CF_MOUSE_BUTTON_COUNT:  // This is a special case for counting buttons, not a real button.
+	default:                     CF_ASSERT(0 && "Invalid mouse button"); return 0;
 	}
 	return 0;
 }
@@ -283,6 +297,10 @@ bool cf_mouse_just_pressed(CF_MouseButton button)
 	case CF_MOUSE_BUTTON_LEFT:   return app->mouse.left_button   && !app->mouse_prev.left_button;
 	case CF_MOUSE_BUTTON_RIGHT:  return app->mouse.right_button  && !app->mouse_prev.right_button;
 	case CF_MOUSE_BUTTON_MIDDLE: return app->mouse.middle_button && !app->mouse_prev.middle_button;
+	case CF_MOUSE_BUTTON_X1:     return app->mouse.x1_button     && !app->mouse_prev.x1_button;
+	case CF_MOUSE_BUTTON_X2:     return app->mouse.x2_button     && !app->mouse_prev.x2_button;
+	case CF_MOUSE_BUTTON_COUNT:  // This is a special case for counting buttons, not a real button.
+	default:                     CF_ASSERT(0 && "Invalid mouse button"); return 0;
 	}
 	return 0;
 }
@@ -294,6 +312,10 @@ bool cf_mouse_just_released(CF_MouseButton button)
 	case CF_MOUSE_BUTTON_LEFT:   return !app->mouse.left_button   && app->mouse_prev.left_button;
 	case CF_MOUSE_BUTTON_RIGHT:  return !app->mouse.right_button  && app->mouse_prev.right_button;
 	case CF_MOUSE_BUTTON_MIDDLE: return !app->mouse.middle_button && app->mouse_prev.middle_button;
+	case CF_MOUSE_BUTTON_X1:     return !app->mouse.x1_button     && app->mouse_prev.x1_button;
+	case CF_MOUSE_BUTTON_X2:     return !app->mouse.x2_button     && app->mouse_prev.x2_button;
+	case CF_MOUSE_BUTTON_COUNT:  // This is a special case for counting buttons, not a real button.
+	default:                     CF_ASSERT(0 && "Invalid mouse button"); return 0;
 	}
 	return 0;
 }
@@ -316,9 +338,9 @@ bool cf_mouse_double_clicked(CF_MouseButton button)
 void cf_mouse_hide(bool true_to_hide)
 {
 	if (true_to_hide) {
-		SDL_ShowCursor();
-	} else {
 		SDL_HideCursor();
+	} else {
+		SDL_ShowCursor();
 	}
 }
 
@@ -331,6 +353,11 @@ void cf_mouse_lock_inside_window(bool true_to_lock)
 {
 	SDL_SetWindowMouseGrab(app->window, true_to_lock);
 	SDL_WINDOWPOS_CENTERED_DISPLAY(3);
+}
+
+void cf_mouse_set_relative_mode(bool true_to_set_relative)
+{
+    SDL_SetWindowRelativeMouseMode(app->window, true_to_set_relative);
 }
 
 void cf_clear_all_mouse_state()
@@ -579,6 +606,8 @@ void cf_pump_input_msgs()
 			case SDL_BUTTON_LEFT: app->mouse.left_button = 1; break;
 			case SDL_BUTTON_RIGHT: app->mouse.right_button = 1; break;
 			case SDL_BUTTON_MIDDLE: app->mouse.middle_button = 1; break;
+			case SDL_BUTTON_X1: app->mouse.x1_button = 1; break;
+			case SDL_BUTTON_X2: app->mouse.x2_button = 1; break;
 			}
 			app->mouse.x = event.button.x;
 			app->mouse.y = event.button.y;
@@ -595,6 +624,8 @@ void cf_pump_input_msgs()
 			case SDL_BUTTON_LEFT: app->mouse.left_button = 0; break;
 			case SDL_BUTTON_RIGHT: app->mouse.right_button = 0; break;
 			case SDL_BUTTON_MIDDLE: app->mouse.middle_button = 0; break;
+			case SDL_BUTTON_X1: app->mouse.x1_button = 0; break;
+			case SDL_BUTTON_X2: app->mouse.x2_button = 0; break;
 			}
 			app->mouse.x = event.button.x;
 			app->mouse.y = event.button.y;

@@ -858,7 +858,7 @@ void update_stars(Game *game)
             {
                 int last_index = cf_array_count(game->stars) - 1;
                 CF_MEMCPY(game->stars + index, game->stars + last_index, sizeof(stars[0]));
-                cf_array_pop(game->stars);
+                CF_UNUSED(cf_array_pop(game->stars));
                 continue;
             }
             
@@ -1264,7 +1264,7 @@ void update_players(Game *game)
             {
                 int last_index = cf_array_count(game->players) - 1;
                 CF_MEMCPY(players + index, players + last_index, sizeof(players[0]));
-                cf_array_pop(game->players);
+                CF_UNUSED(cf_array_pop(game->players));
                 continue;
             }
             
@@ -1322,7 +1322,7 @@ void update_star_particles(Game *game)
             {
                 int last_index = cf_array_count(particles) - 1;
                 CF_MEMCPY(particles + index, particles + last_index, sizeof(particles[0]));
-                cf_array_pop(particles);
+                CF_UNUSED(cf_array_pop(particles));
                 continue;
             }
             

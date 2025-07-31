@@ -24,7 +24,8 @@
 #include <internal/cute_imgui_internal.h>
 
 #include <imgui/backends/imgui_impl_sdl3.h>
-#include <SDL_gpu_shadercross/SDL_gpu_shadercross.h>
+#include <imgui/backends/imgui_impl_sdlgpu3.h>
+#include <SDL3_shadercross/SDL_shadercross.h>
 
 #include <data/fonts/calibri.h>
 
@@ -46,7 +47,7 @@ static void s_init_video()
 CF_DisplayID cf_default_display()
 {
 	s_init_video();
-	return { SDL_GetPrimaryDisplay() };
+	return SDL_GetPrimaryDisplay();
 }
 
 int cf_display_count()
@@ -183,6 +184,7 @@ static void s_canvas(int w, int h)
 		cf_destroy_canvas(app->offscreen_canvas);
 	}
 	params.depth_stencil_enable = true;
+	params.sample_count = (CF_SampleCount)cf_clamp_int((app->sample_count >> 1), 0, 3);
 	app->offscreen_canvas = cf_make_canvas(params);
 	app->canvas_w = w;
 	app->canvas_h = h;
@@ -231,9 +233,6 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 		SDL_Init(SDL_INIT_AUDIO);
 	}
 
-	// Turn on high DPI support for all platforms.
-	options |= SDL_WINDOW_HIGH_PIXEL_DENSITY;
-	
 	if (!SDL_Init(sdl_options)) {
 		return cf_result_error("SDL_Init failed");
 	}
@@ -265,6 +264,8 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 	}
 
 	Uint32 flags = 0;
+	// Turn on high DPI support for all platforms.
+	flags |= SDL_WINDOW_HIGH_PIXEL_DENSITY;
 	if (use_metal) flags |= SDL_WINDOW_METAL;
 	if (options & CF_APP_OPTIONS_FULLSCREEN_BIT) flags |= SDL_WINDOW_FULLSCREEN;
 	if (options & CF_APP_OPTIONS_RESIZABLE_BIT) flags |= SDL_WINDOW_RESIZABLE;
@@ -306,7 +307,7 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 		app->cmd = SDL_AcquireGPUCommandBuffer(app->device);
 		cf_load_internal_shaders();
 		cf_make_draw();
-		
+
 		// Setup the backbuffer fullscreen mesh and canvas.
 		{
 			CF_VertexAttribute attrs[2] = { };
@@ -366,11 +367,6 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 		}
 	}
 
-	int num_threads_to_spawn = cf_core_count() - 1;
-	if (num_threads_to_spawn) {
-		app->threadpool = cf_make_threadpool(num_threads_to_spawn);
-	}
-
 	CF_Result err = cf_fs_init(argv0);
 	if (cf_is_error(err)) {
 		CF_ASSERT(0);
@@ -404,7 +400,6 @@ void cf_destroy_app()
 	SDL_DestroyWindow(app->window);
 	if (app->device) SDL_DestroyGPUDevice(app->device);
 	SDL_Quit();
-	destroy_threadpool(app->threadpool);
 	cs_shutdown();
 	CF_Image* easy_sprites = app->easy_sprites.items();
 	for (int i = 0; i < app->easy_sprites.count(); ++i) {
@@ -461,6 +456,7 @@ void cf_app_update(CF_OnUpdateFn* on_update)
 		}
 
 		if (app->using_imgui) {
+  		ImGui_ImplSDLGPU3_NewFrame();
 			ImGui_ImplSDL3_NewFrame();
 			ImGui::NewFrame();
 		}
@@ -518,11 +514,12 @@ int cf_app_draw_onto_screen(bool clear)
 
 	// Stretch the app canvas onto the backbuffer canvas.
 	Uint32 w, h;
-	SDL_GPUTexture* swapchain_tex;
+	SDL_GPUTexture* swapchain_tex = NULL;
 	if (SDL_AcquireGPUSwapchainTexture(app->cmd, app->window, &swapchain_tex, &w, &h) && swapchain_tex) {
 		// Blit onto the screen.
+		CF_CanvasInternal* canvas = (CF_CanvasInternal*)app->offscreen_canvas.id;
 		SDL_GPUBlitRegion src = {
-			.texture = (SDL_GPUTexture*)cf_texture_handle(cf_canvas_get_target(app->offscreen_canvas)),
+			.texture = canvas->resolve_texture ? canvas->resolve_texture : canvas->texture,
 			.w = (Uint32)app->canvas_w,
 			.h = (Uint32)app->canvas_h,
 		};
@@ -534,16 +531,16 @@ int cf_app_draw_onto_screen(bool clear)
 		SDL_GPUBlitInfo blit_info = {
 			.source = src,
 			.destination = dst,
+			.load_op = SDL_GPU_LOADOP_CLEAR,
 			.flip_mode = SDL_FLIP_NONE,
 			.filter = SDL_GPU_FILTER_NEAREST,
 			.cycle = true,
 		};
 		SDL_BlitGPUTexture(app->cmd, &blit_info);
 	} else {
-		// @Hack - Avoid large resource cycle chains gobbling up RAM when GPU-bound.
-		// Waiting on response from Evan on proper fix:
+		// Avoid large resource cycle chains gobbling up RAM when GPU-bound.
 		// https://discourse.libsdl.org/t/sdl-gpu-cycle-difficulties/55188
-		SDL_WaitForGPUIdle(app->device);
+		SDL_CancelGPUCommandBuffer(app->cmd);
 	}
 
 	// Dear ImGui draw.
@@ -730,6 +727,21 @@ bool cf_app_mouse_inside()
 	return app->window_state.mouse_inside_window;
 }
 
+bool cf_app_set_msaa(int sample_count)
+{
+	SDL_GPUTextureFormat fmt = SDL_GetGPUSwapchainTextureFormat(app->device, app->window);
+	SDL_GPUSampleCount msaa =  (SDL_GPUSampleCount)cf_clamp_int((app->sample_count >> 1), 0, 3);
+	if (SDL_GPUTextureSupportsSampleCount(app->device, fmt, msaa)) {
+		if (app->sample_count != sample_count) {
+			app->sample_count = sample_count;
+			s_canvas(app->w, app->h);
+		}
+		return true;
+	} else {
+		return false;
+	}
+}
+
 CF_Canvas cf_app_get_canvas()
 {
 	return app->offscreen_canvas;
@@ -806,24 +818,29 @@ void cf_app_set_icon(const char* virtual_path_to_png)
 	cf_image_free(&img);
 }
 
+float cf_app_get_framerate()
+{
+	return 1.0f / CF_DELTA_TIME;
+}
+
+#ifndef CF_FRAMERATE_SMOOTHING
+#define CF_FRAMERATE_SMOOTHING 60.0f
+#endif
+
+float cf_app_get_smoothed_framerate()
+{
+	static float fps = 0;
+	fps = cf_lerp(fps, 1.0f / CF_DELTA_TIME, 1 / CF_FRAMERATE_SMOOTHING);
+	return fps;
+}
+
 ImGuiContext* cf_app_init_imgui()
 {
 	if (!app->gfx_enabled) return NULL;
-	
+
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
 	app->using_imgui = true;
-
-	ImGui::StyleColorsDark();
-	
-	SDL_GPUShaderFormat format = SDL_GetGPUShaderFormats(app->device);
-	switch (format) {
-	case SDL_GPU_SHADERFORMAT_SPIRV:    ImGui_ImplSDL3_InitForVulkan(app->window); break;
-	case SDL_GPU_SHADERFORMAT_DXBC:     // Fall through.
-	case SDL_GPU_SHADERFORMAT_DXIL:     ImGui_ImplSDL3_InitForD3D(app->window);    break;
-	case SDL_GPU_SHADERFORMAT_MSL:      // Fall through.
-        case SDL_GPU_SHADERFORMAT_METALLIB: ImGui_ImplSDL3_InitForMetal(app->window);  break;
-	}
 
 	cf_imgui_init();
 
@@ -835,6 +852,7 @@ CF_PowerInfo cf_app_power_info()
 	CF_PowerInfo info;
 	SDL_PowerState state = SDL_GetPowerInfo(&info.seconds_left, &info.percentage_left);
 	switch (state) {
+	case SDL_POWERSTATE_ERROR: info.state = CF_POWER_STATE_ERROR;
 	case SDL_POWERSTATE_UNKNOWN: info.state = CF_POWER_STATE_UNKNOWN;
 	case SDL_POWERSTATE_ON_BATTERY: info.state = CF_POWER_STATE_ON_BATTERY;
 	case SDL_POWERSTATE_NO_BATTERY: info.state = CF_POWER_STATE_NO_BATTERY;

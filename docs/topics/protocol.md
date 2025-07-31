@@ -1,7 +1,3 @@
-[](../header.md ':include')
-
-<br>
-
 # Cute Protocol Standard
 
 The Cute Protocol implements a client-server based transport layer for securely connecting and authenticating with backend game servers over UDP. The purpose of this document is to aid users in making educated decisions about how to use the Cute Protocol in their own game, or act as a reference during implementation. The intent is not for average users of Cute Framework (CF) to read or care about this document. Instead, if you happen to find yourself here randomly, you're probably looking for the Client/Server API (TODO - link here), which is the recommended API for implementing games.

@@ -1,6 +1,6 @@
-[](../header.md ':include')
+# Allocators
 
-The topic of custom allocators is only relevant for certain games trying to eek out performance, i.e. for more advanced users. For most games, simply calling `malloc` or `new` is quite sufficient. However, in the event where some kind of custom allocator is needed [`cf_allocator_override`](https://randygaul.github.io/cute_framework/#/allocator/cf_allocator_override) provides a way to supply a custom [`CF_Allocator`](https://randygaul.github.io/cute_framework/#/allocator/cf_allocator). This lets you hook in your own allocation model and do whatever you want with all allocations internal to Cute Framework. For example, some games might need to reduce memory fragmentation and can't afford simply call `malloc` alone, but instead want to wrap it up inside of their implementation.
+The topic of custom allocators is only relevant for certain games trying to eek out performance, i.e. for more advanced users. For most games, simply calling `malloc` or `new` is quite sufficient. However, in the event where some kind of custom allocator is needed [`cf_allocator_override`](../allocator/cf_allocator_override.md) provides a way to supply a custom [`CF_Allocator`](../allocator/cf_allocator.md). This lets you hook in your own allocation model and do whatever you want with all allocations internal to Cute Framework. For example, some games might need to reduce memory fragmentation and can't afford simply call `malloc` alone, but instead want to wrap it up inside of their implementation.
 
 ## Overriding the Default Allocator
 
@@ -11,7 +11,7 @@ To override the default allocator a few functions must be defined and passed to 
 - calloc_fn
 - realoc_fn
 
-You can see the protoypes of each function in the definition of [`CF_Allocator`](https://randygaul.github.io/cute_framework/#/allocator/cf_allocator):
+You can see the protoypes of each function in the definition of [`CF_Allocator`](../allocator/cf_allocator.md):
 
 ```cpp
 typedef struct CF_Allocator
@@ -56,7 +56,7 @@ void* my_realloc(void* ptr, size_t size, void* udata)
 }
 ```
 
-Then simply assign each function to a [`CF_Allocator`](https://randygaul.github.io/cute_framework/#/allocator/cf_allocator) struct, and pass it onto [`cf_allocator_override`](https://randygaul.github.io/cute_framework/#/allocator/cf_allocator_override).
+Then simply assign each function to a [`CF_Allocator`](../allocator/cf_allocator.md) struct, and pass it onto [`cf_allocator_override`](../allocator/cf_allocator_override.md).
 
 ```cpp
 CF_Allocator allocator;
@@ -69,4 +69,4 @@ allocator.realloc_fn = my_realloc;
 
 ## Restoring the Default Allocator
 
-If for any reason you need to restore the default allocator, simply call [`cf_allocator_restore_default`](https://randygaul.github.io/cute_framework/#/allocator/cf_allocator_restore_default).
+If for any reason you need to restore the default allocator, simply call [`cf_allocator_restore_default`](../allocator/cf_allocator_restore_default.md).

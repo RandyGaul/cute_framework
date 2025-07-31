@@ -170,7 +170,7 @@ CF_API CF_DisplayOrientation CF_CALL cf_display_orientation(CF_DisplayID display
  *     
  *     int main(int argc, const char** argv)
  *     {
- *         app_make("Fancy Window Title", 0, 0, 0, 640, 480, APP_OPTIONS_WINDOW_POS_CENTERED, argv[0]);
+ *         app_make("Fancy Window Title", 0, 0, 0, 640, 480, CF_APP_OPTIONS_WINDOW_POS_CENTERED_BIT, argv[0]);
  *         app_destroy();
  *         return 0;
  *     }
@@ -604,12 +604,69 @@ CF_API bool CF_CALL cf_app_mouse_inside();
 CF_API ImGuiContext* CF_CALL cf_app_init_imgui();
 
 /**
+ * @enum     CF_MSAA
+ * @category app
+ * @brief    Multisample count used for MSAA for the app's offscreen canvas.
+ * @remarks  This function turns on .
+ * @related  cf_app_set_msaa cf_msaa_string
+ */
+#define CF_MSAA_DEFS \
+	/* @entry No multisampling. */                          \
+	CF_ENUM(MSAA_NONE, 0)                                   \
+	/* @entry Multisample anti-aliasing with 2x samples. */ \
+	CF_ENUM(MSAA_2X,   1)                                   \
+	/* @entry Multisample anti-aliasing with 4x samples. */ \
+	CF_ENUM(MSAA_4X,   2)                                   \
+	/* @entry Multisample anti-aliasing with 8x samples. */ \
+	CF_ENUM(MSAA_8X,   3)                                   \
+	/* @end */
+
+typedef enum CF_MSAA
+{
+	#define CF_ENUM(K, V) CF_##K = V,
+	CF_MSAA_DEFS
+	#undef CF_ENUM
+} CF_MSAA;
+
+/**
+ * @function cf_msaa_string
+ * @category app
+ * @brief    Returns a `CF_MSAA` value as a string.
+ * @related  cf_app_set_msaa CF_MSAA
+ */
+CF_INLINE const char* cf_msaa_string(CF_MSAA msaa) {
+	switch (msaa) {
+	#define CF_ENUM(K, V) case CF_##K: return CF_STRINGIZE(CF_##K);
+	CF_MSAA_DEFS
+	#undef CF_ENUM
+	default: return NULL;
+	}
+}
+
+/**
+ * @function cf_app_set_msaa
+ * @category app
+ * @brief    Sets the MSAA sample count for the app's offscreen canvas.
+ * @param    sample_count  The number of MSAA samples (e.g. 1, 2, 4, 8).
+ * @return   Returns true if the `sample_count` was valid for the given GPU.
+ * @remarks  This affects rendering quality by enabling or disabling multisample anti-aliasing.
+ *           If `sample_count` is 1, MSAA is disabled (default). Higher values enable smoother edge rendering.
+ *           The value should match a supported sample count for the current GPU.
+ *           Note: If this is enabled you can not sample from the app's canvas, i.e. `cf_app_get_canvas` is then
+ *           effectively write-only.
+ * @related  CF_MSAA cf_app_get_msaa CF_Canvas
+ */
+CF_API bool CF_CALL cf_app_set_msaa(int sample_count);
+
+/**
  * @function cf_app_get_canvas
  * @category app
  * @brief    Fetches the app's internal canvas for displaying content on the screen.
  * @remarks  This is an advanced function. If you just want to draw things on screen, try checking out `CF_Sprite`.
  *           The app's canvas can be used to implement low-level graphics features, such as multi-pass algorithms. Be careful about
  *           calling `cf_app_set_canvas_size`, as it will invalidate any references to the app's canvas.
+ *           
+ *           If you fetch this canvas and have MSAA on (see `cf_app_set_msaa`) you may *not* sample from the canvas.
  * @related  cf_app_set_canvas_size cf_app_get_canvas_width cf_app_get_canvas_height cf_app_set_vsync cf_app_get_vsync
  */
 CF_API CF_Canvas CF_CALL cf_app_get_canvas();
@@ -703,11 +760,27 @@ CF_API void CF_CALL cf_app_set_title(const char* title);
  * @function cf_app_set_icon
  * @category app
  * @brief    Sets the icon for the application.
- * @param    virtual_path_to_png  A path to a png file. See [Virtual File System](https://randygaul.github.io/cute_framework/#/topics/virtual_file_system).
+ * @param    virtual_path_to_png  A path to a png file. See [Virtual File System](https://randygaul.github.io/cute_framework/topics/virtual_file_system).
  * @remarks  The icon file must be a png image. Suggested image dimensions are 32x32, 48x48, or 64x64.
  * @related  cf_app_set_title cf_app_set_icon
  */
 CF_API void CF_CALL cf_app_set_icon(const char* virtual_path_to_png);
+
+/**
+ * @function cf_app_get_framerate
+ * @category app
+ * @brief    Returns the current framerate of the application.
+ * @related  cf_app_get_framerate cf_app_get_smoothed_framerate
+ */
+CF_API float CF_CALL cf_app_get_framerate();
+
+/**
+ * @function cf_app_get_smoothed_framerate
+ * @category app
+ * @brief    Returns the smoothed framerate of the application. Last 60 frames are averaged. This values is controlled by `CF_FRAMERATE_SMOOTHING`.
+ * @related  cf_app_get_framerate cf_app_get_smoothed_framerate
+ */
+CF_API float CF_CALL cf_app_get_smoothed_framerate();
 
 /**
  * @enum     CF_PowerState
@@ -716,6 +789,8 @@ CF_API void CF_CALL cf_app_set_icon(const char* virtual_path_to_png);
  * @related  CF_PowerInfo cf_app_power_info
  */
 #define CF_POWER_STATE_DEFS \
+	/* @entry error determining power status. */        \
+	CF_ENUM(POWER_STATE_ERROR, -1)                      \
 	/* @entry Cannot determine power status. */         \
 	CF_ENUM(POWER_STATE_UNKNOWN, 0)                     \
 	/* @entry Not plugged in and running on battery. */ \
@@ -843,8 +918,11 @@ CF_INLINE void app_set_borderless_fullscreen_mode() { cf_app_set_borderless_full
 CF_INLINE void app_set_fullscreen_mode() { cf_app_set_fullscreen_mode(); }
 CF_INLINE void app_set_title(const char* title) { cf_app_set_title(title); }
 CF_INLINE void app_set_icon(const char* virtual_path_to_png) { cf_app_set_icon(virtual_path_to_png); }
+CF_INLINE float app_get_framerate() { return cf_app_get_framerate(); }
+CF_INLINE float app_get_smoothed_framerate() { return cf_app_get_smoothed_framerate(); }
 
 CF_INLINE ImGuiContext* app_init_imgui() { return cf_app_init_imgui(); }
+CF_INLINE void app_set_msaa(int msaa) { cf_app_set_msaa(msaa); }
 CF_INLINE CF_Canvas app_get_canvas() { return cf_app_get_canvas(); }
 CF_INLINE void app_set_canvas_size(int w, int h) { cf_app_set_canvas_size(w, h); }
 CF_INLINE CF_PowerInfo app_power_info() { return cf_app_power_info(); }

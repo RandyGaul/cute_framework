@@ -24,7 +24,7 @@ extern "C" {
  * @category image
  * @brief    An array of pixels.
  * @remarks  You probably do not need this. In Cute Framework loading images manually is not often
- *           necessary, as most games can use CF's [Draw API](https://randygaul.github.io/cute_framework/#/topics/drawing) to get sprites onto the screen.
+ *           necessary, as most games can use CF's [Draw API](https://randygaul.github.io/cute_framework/topics/drawing) to get sprites onto the screen.
  *           However, a good use case is, for example, if you want to implement some custom shader and feed it a texture.
  * @related  CF_Image CF_ImageIndexed cf_image_load_png cf_image_premultiply
  */
@@ -46,7 +46,7 @@ typedef struct CF_Image
  * @category image
  * @brief    An array of pixels, where each pixel is an index into a palette.
  * @remarks  You probably do not need this. In Cute Framework loading images manually is not often
- *           necessary, as most games can use CF's [Draw API](https://randygaul.github.io/cute_framework/#/topics/drawing) to get sprites onto the screen.
+ *           necessary, as most games can use CF's [Draw API](https://randygaul.github.io/cute_framework/topics/drawing) to get sprites onto the screen.
  *           However, a good use case is, for example, if you want to implement some custom shader and feed it a texture.
  * @related  CF_Image CF_ImageIndexed cf_image_load_png
  */
@@ -76,7 +76,7 @@ typedef struct CF_ImageIndexed
  * @function cf_image_load_png
  * @category image
  * @brief    Loads a png image.
- * @param    virtual_path  A virtual path to the image file. See [Virtual File System](https://randygaul.github.io/cute_framework/#/topics/virtual_file_system).
+ * @param    virtual_path  A virtual path to the image file. See [Virtual File System](https://randygaul.github.io/cute_framework/topics/virtual_file_system).
  * @param    img           Out parameter for the image.
  * @return   Check the `CF_Result` for errors.
  * @related  CF_Image cf_image_load_png cf_image_free cf_image_load_png_from_memory cf_image_load_png_wh cf_image_load_png_indexed cf_image_premultiply
@@ -122,7 +122,7 @@ CF_API void CF_CALL cf_image_free(CF_Image* img);
  * @function cf_image_load_png_indexed
  * @category image
  * @brief    Loads a png image in paletted form.
- * @param    virtual_path  A virtual path to the image file. See [Virtual File System](https://randygaul.github.io/cute_framework/#/topics/virtual_file_system).
+ * @param    virtual_path  A virtual path to the image file. See [Virtual File System](https://randygaul.github.io/cute_framework/topics/virtual_file_system).
  * @param    img           Out parameter for the image.
  * @return   Check the `CF_Result` for errors.
  * @related  CF_ImageIndexed cf_image_load_png_indexed cf_image_load_png_from_memory_indexed cf_image_free_indexed cf_image_depallete

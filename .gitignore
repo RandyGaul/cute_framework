@@ -1,4 +1,10 @@
 build*/
+docs/*/*.md
+docs/api_reference.md
+!docs/topics/*.md
+site/
+.cache
 .DS_Store
 cute_framework.zip
 github_release
+imgui.ini

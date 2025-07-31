@@ -30,8 +30,11 @@ struct CF_CanvasInternal
 {
 	int w, h;
 	CF_Texture cf_texture;
+	CF_Texture cf_resolve_texture;
 	CF_Texture cf_depth_stencil;
+	CF_SampleCount sample_count;
 	SDL_GPUTexture* texture;
+	SDL_GPUTexture* resolve_texture;
 	SDL_GPUSampler* sampler;
 	SDL_GPUTexture* depth_stencil;
 
@@ -160,6 +163,18 @@ CF_INLINE SDL_GPUBlendFactor s_wrap(CF_BlendFactor factor)
 	}
 }
 
+CF_INLINE SDL_GPUPrimitiveType s_wrap(CF_PrimitiveType type)
+{
+	switch (type)
+	{
+	case CF_PRIMITIVE_TYPE_TRIANGLELIST:   return SDL_GPU_PRIMITIVETYPE_TRIANGLELIST;
+	case CF_PRIMITIVE_TYPE_TRIANGLESTRIP:  return SDL_GPU_PRIMITIVETYPE_TRIANGLESTRIP;
+	case CF_PRIMITIVE_TYPE_LINELIST:       return SDL_GPU_PRIMITIVETYPE_LINELIST;
+	case CF_PRIMITIVE_TYPE_LINESTRIP:      return SDL_GPU_PRIMITIVETYPE_LINESTRIP;
+	default:                               return SDL_GPU_PRIMITIVETYPE_TRIANGLELIST;
+	}
+}
+
 CF_INLINE SDL_GPUShaderStage s_wrap(CF_ShaderStage stage)
 {
 	switch (stage) {
@@ -240,6 +255,15 @@ CF_INLINE SDL_GPUFilter s_wrap(CF_Filter filter)
 	default: return SDL_GPU_FILTER_LINEAR;
 	case CF_FILTER_NEAREST: return SDL_GPU_FILTER_NEAREST;
 	case CF_FILTER_LINEAR: return SDL_GPU_FILTER_LINEAR;
+	}
+}
+
+CF_INLINE SDL_GPUSamplerMipmapMode s_wrap(CF_MipFilter filter)
+{
+	switch (filter) {
+	default: return SDL_GPU_SAMPLERMIPMAPMODE_LINEAR;
+	case CF_MIP_FILTER_NEAREST: return SDL_GPU_SAMPLERMIPMAPMODE_NEAREST;
+	case CF_MIP_FILTER_LINEAR: return SDL_GPU_SAMPLERMIPMAPMODE_LINEAR;
 	}
 }
 
@@ -357,6 +381,7 @@ CF_INLINE int s_uniform_size(CF_UniformType type)
 	switch (type) {
 	case CF_UNIFORM_TYPE_FLOAT:  return 4;
 	case CF_UNIFORM_TYPE_FLOAT2: return 8;
+	case CF_UNIFORM_TYPE_FLOAT3: return 12;
 	case CF_UNIFORM_TYPE_FLOAT4: return 16;
 	case CF_UNIFORM_TYPE_INT:    return 4;
 	case CF_UNIFORM_TYPE_INT2:   return 8;
@@ -412,6 +437,7 @@ struct CF_MaterialInternal
 
 struct CF_Pipeline
 {
+	int sample_count = 0;
 	CF_MaterialInternal* material = NULL;
 	SDL_GPUGraphicsPipeline* pip = NULL;
 	CF_MeshInternal* mesh = NULL;
@@ -427,7 +453,8 @@ struct CF_ShaderInternal
 	const char* input_names[CF_MAX_SHADER_INPUTS];
 	int input_locations[CF_MAX_SHADER_INPUTS];
 	CF_ShaderInputFormat input_formats[CF_MAX_SHADER_INPUTS];
-	int uniform_block_count = 0;
+	int vs_uniform_block_count = 0;
+	int fs_uniform_block_count = 0;
 	int vs_block_sizes[CF_MAX_UNIFORM_BLOCK_COUNT];
 	int fs_block_sizes[CF_MAX_UNIFORM_BLOCK_COUNT];
 	Cute::Array<CF_UniformBlockMember> fs_uniform_block_members[CF_MAX_UNIFORM_BLOCK_COUNT];
@@ -462,8 +489,10 @@ struct CF_ShaderInternal
 
 CF_Shader cf_make_draw_shader_internal(const char* path);
 CF_Shader cf_make_draw_shader_from_source_internal(const char* src);
+CF_Shader cf_make_draw_shader_from_bytecode_internal(CF_ShaderBytecode bytecode);
 CF_Shader cf_make_draw_blit_shader_internal(const char* path);
 CF_Shader cf_make_draw_blit_shader_from_source_internal(const char* src);
+CF_Shader cf_make_draw_blit_shader_from_bytecode_internal(CF_ShaderBytecode bytecode);
 void cf_load_internal_shaders();
 void cf_unload_internal_shaders();
 void cf_shader_watch();
