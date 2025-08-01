@@ -512,6 +512,7 @@ int cf_app_draw_onto_screen(bool clear)
 	// Render any remaining geometry in the draw API.
 	cf_render_to(app->offscreen_canvas, clear);
 
+	bool canceled_command_buffer = false;
 	// Stretch the app canvas onto the backbuffer canvas.
 	Uint32 w, h;
 	SDL_GPUTexture* swapchain_tex = NULL;
@@ -541,6 +542,7 @@ int cf_app_draw_onto_screen(bool clear)
 		// Avoid large resource cycle chains gobbling up RAM when GPU-bound.
 		// https://discourse.libsdl.org/t/sdl-gpu-cycle-difficulties/55188
 		SDL_CancelGPUCommandBuffer(app->cmd);
+		canceled_command_buffer = true;
 	}
 
 	// Dear ImGui draw.
@@ -557,7 +559,11 @@ int cf_app_draw_onto_screen(bool clear)
 		draw->delay_defrag = false;
 	}
 
-	SDL_SubmitGPUCommandBuffer(app->cmd);
+	// When using Vulkan, don't submit canceled command buffers. This will cause a crash due to DescriptorSetCache being
+	// NULL. Cases where this can happen is when you minimize the window.
+	if (!canceled_command_buffer) {
+		SDL_SubmitGPUCommandBuffer(app->cmd);
+	}
 	app->cmd = NULL;
 
 	// Clear all pushed draw parameters.
