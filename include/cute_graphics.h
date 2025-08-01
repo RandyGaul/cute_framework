@@ -624,13 +624,13 @@ CF_API void CF_CALL cf_generate_mipmaps(CF_Texture texture);
 CF_API uint64_t CF_CALL cf_texture_handle(CF_Texture texture);
 
 /**
- * @function cf_binding_handle
+ * @function cf_texture_binding_handle
  * @category graphics
  * @brief    Returns an SDL_GPUTextureSamplerBinding* casted to a `uint64_t`.
  * @remarks  This is useful for e.g. rendering textures in an external system like Dear ImGui.
  * @related  CF_TextureParams CF_Texture cf_make_texture
  */
-CF_API uint64_t CF_CALL cf_binding_handle(CF_Texture texture);
+CF_API uint64_t CF_CALL cf_texture_binding_handle(CF_Texture texture);
 
 //--------------------------------------------------------------------------------------------------
 // Shader.

@@ -311,7 +311,7 @@ uint64_t cf_texture_handle(CF_Texture texture)
 	return (uint64_t)((CF_TextureInternal*)texture.id)->tex;
 }
 
-uint64_t cf_binding_handle(CF_Texture texture)
+uint64_t cf_texture_binding_handle(CF_Texture texture)
 {
 	return (uint64_t)&((CF_TextureInternal*)texture.id)->binding;
 }
