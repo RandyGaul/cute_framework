@@ -195,6 +195,8 @@ static CF_Texture s_make_texture(CF_TextureParams params, CF_SampleCount sample_
 	tex_internal->buf = buf;
 	tex_internal->sampler = sampler;
 	tex_internal->format = tex_info.format;
+	tex_internal->binding.texture = tex;
+	tex_internal->binding.sampler = sampler;
 	CF_Texture result;
 	result.id = (uint64_t)(uintptr_t)tex_internal;
 	return result;
@@ -307,6 +309,11 @@ void cf_generate_mipmaps(CF_Texture texture_handle)
 uint64_t cf_texture_handle(CF_Texture texture)
 {
 	return (uint64_t)((CF_TextureInternal*)texture.id)->tex;
+}
+
+uint64_t cf_binding_handle(CF_Texture texture)
+{
+	return (uint64_t)&((CF_TextureInternal*)texture.id)->binding;
 }
 
 static void s_shader_directory_recursive(CF_Path path)

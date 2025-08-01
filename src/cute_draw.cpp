@@ -2819,7 +2819,7 @@ static void s_process_command(CF_Canvas canvas, CF_Command* cmd, CF_Command* nex
 		// Process the collated drawable items. Might get split up into multiple draw calls depending on
 		// the atlas compiler.
 		draw->need_flush = false;
-		spritebatch_defrag(&draw->sb);
+		//spritebatch_defrag(&draw->sb);
 		spritebatch_flush(&draw->sb);
 	}
 }
@@ -2854,7 +2854,7 @@ void cf_render_layers_to(CF_Canvas canvas, int layer_lo, int layer_hi, bool clea
 	}
 	if (draw->need_flush) {
 		draw->need_flush = false;
-		spritebatch_defrag(&draw->sb);
+		//spritebatch_defrag(&draw->sb);
 		spritebatch_flush(&draw->sb);
 	}
 	draw->has_drawn_something = false;

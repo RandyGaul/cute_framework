@@ -54,6 +54,7 @@ struct CF_TextureInternal
 	SDL_GPUTransferBuffer* buf;
 	SDL_GPUSampler* sampler;
 	SDL_GPUTextureFormat format;
+	SDL_GPUTextureSamplerBinding binding;
 };
 
 CF_INLINE SDL_GPUSamplerCreateInfo SDL_GPUSamplerCreateInfoDefaults()

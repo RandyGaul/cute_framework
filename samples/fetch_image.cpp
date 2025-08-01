@@ -5,7 +5,7 @@
 
 int main(int argc, char *argv[])
 {
-	int options = CF_APP_OPTIONS_WINDOW_POS_CENTERED_BIT | CF_APP_OPTIONS_RESIZABLE_BIT;
+	int options = CF_APP_OPTIONS_WINDOW_POS_CENTERED_BIT | CF_APP_OPTIONS_RESIZABLE_BIT | CF_APP_OPTIONS_GFX_DEBUG_BIT;
 	CF_Result result = cf_make_app("cute imgui image test", 0, 0, 0, 640, 480, options, argv[0]);
 	if (cf_is_error(result)) return -1;
 	
@@ -37,7 +37,7 @@ int main(int argc, char *argv[])
 		{
 			CF_TemporaryImage image = cf_fetch_image(&sprite);
 
-			ImTextureID id = (ImTextureID)cf_texture_handle(image.tex);
+			ImTextureID id = (ImTextureID)cf_binding_handle(image.tex);
 			ImVec2 size = { (float)image.w * 5.0f, (float)image.h * 5.0f };
 			// y is flipped
 			ImVec2 uv0 = { image.u.x, image.v.y };
