@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.14)
 project(cute_framework
 	DESCRIPTION "The cutest framework out there for creating 2D games in C++!"
+	HOMEPAGE_URL "https://github.com/RandyGaul/cute_framework"
 	LANGUAGES C CXX
 	VERSION 1.1.0
 )
