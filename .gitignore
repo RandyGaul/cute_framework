@@ -8,3 +8,5 @@ site/
 cute_framework.zip
 github_release
 imgui.ini
+src/cute_version.cpp
+include/cute_version.h

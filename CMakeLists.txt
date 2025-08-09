@@ -64,6 +64,17 @@ if(CF_FRAMEWORK_WITH_HTTPS MATCHES OFF)
 endif()
 
 add_definitions("-DIMGUI_USER_CONFIG=\"cimgui/cimconfig.h\"")
+configure_file(
+	"${CMAKE_CURRENT_SOURCE_DIR}/include/cute_version.h.in"
+	"${CMAKE_CURRENT_SOURCE_DIR}/include/cute_version.h"
+	@ONLY
+)
+configure_file(
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/cute_version.cpp.in"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/cute_version.cpp"
+	@ONLY
+)
+
 
 # Common directories for compiler/linker path.
 include_directories(src libraries test)
