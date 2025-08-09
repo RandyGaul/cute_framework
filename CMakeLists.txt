@@ -1,5 +1,10 @@
 cmake_minimum_required(VERSION 3.14)
-project(cute_framework)
+project(cute_framework
+	DESCRIPTION "The cutest framework out there for creating 2D games in C++!"
+	HOMEPAGE_URL "https://github.com/RandyGaul/cute_framework"
+	LANGUAGES C CXX
+	VERSION 1.1.0
+)
 
 # Must have at least C++20.
 set(CMAKE_CXX_STANDARD 20)
@@ -429,12 +434,12 @@ elseif(APPLE)
 		set_target_properties(cute PROPERTIES FRAMEWORK TRUE)
 		if (CF_FRAMEWORK_STATIC)
 		set_target_properties(cute PROPERTIES
-			FRAMEWORK_VERSION "1.0.0"
+			FRAMEWORK_VERSION "${PROJECT_VERSION}"
 			MACOSX_FRAMEWORK_IDENTIFIER "com.cuteframework.static"
 		)
 		else()
 		set_target_properties(cute PROPERTIES
-			FRAMEWORK_VERSION "1.0.0"
+			FRAMEWORK_VERSION "${PROJECT_VERSION}"
 			MACOSX_FRAMEWORK_IDENTIFIER "com.cuteframework.shared"
 		)
 		endif()
@@ -581,8 +586,8 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 			if (APPLE)
 				set_target_properties(${CURRENT_TARGET} PROPERTIES
 					MACOSX_BUNDLE_GUI_IDENTIFIER "com.cuteframework.${CURRENT_TARGET}"
-					MACOSX_BUNDLE_BUNDLE_VERSION "1.0.0"
-					MACOSX_BUNDLE_SHORT_VERSION_STRING "1.0.0"
+					MACOSX_BUNDLE_BUNDLE_VERSION "${PROJECT_VERSION}"
+					MACOSX_BUNDLE_SHORT_VERSION_STRING "${PROJECT_VERSION}"
 				)
 			endif()
 			set_target_properties(${CURRENT_TARGET} PROPERTIES FOLDER "samples")
