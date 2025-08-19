@@ -56,6 +56,9 @@ int main(int argc, char* argv[])
     int glyph_index = 0;
     int text_glyph_length = 0;
 
+    int new_line_codepoint = 0;
+    cf_decode_UTF8("\n", &new_line_codepoint);
+
     while (cf_app_is_running())
     {
         cf_app_update(NULL);
@@ -92,6 +95,7 @@ int main(int argc, char* argv[])
         }
         if (font_state & font_state_glyph)
         {
+            int line_count = 0;
             float x_offset = 0;
             // find glyph to draw glyph metric lines
             int current_glyph_index = 0;
@@ -101,6 +105,7 @@ int main(int argc, char* argv[])
                 {
                     prev_codepoint = codepoint;
                     s = cf_decode_UTF8(s, &codepoint);
+                    bool is_new_line = new_line_codepoint == codepoint;
 
                     if (current_glyph_index == glyph_index)
                     {
@@ -113,7 +118,16 @@ int main(int argc, char* argv[])
                     }
 
                     CF_Glyph* glyph = cf_font_get_glyph(font, codepoint, font_size, 0);
-                    x_offset += glyph->xadvance;
+
+                    if (is_new_line)
+                    {
+                        line_count++;
+                        x_offset = 0;
+                    }
+                    else
+                    {
+                        x_offset += glyph->xadvance;
+                    }
 
                     current_glyph_index++;
                 }
@@ -125,7 +139,7 @@ int main(int argc, char* argv[])
                 kerning = cf_font_get_kern(font, font_size, prev_codepoint, codepoint);
 
                 CF_V2 glyph_position = text_position;
-                glyph_position.y -= ascent;
+                glyph_position.y -= ascent + line_count * line_height;
                 glyph_position.x += x_offset;
 
                 CF_V2 glyph_min = glyph_position;
@@ -215,7 +229,7 @@ int main(int argc, char* argv[])
         {
             igBeginChild_Str("##font_input", { 250.0f, 0.0f }, ImGuiChildFlags_None, ImGuiWindowFlags_None);
             {
-                igInputText("Text", text, sizeof(text), ImGuiInputTextFlags_None, NULL, NULL);
+                igInputTextMultiline("Text", text, sizeof(text), {250.0f, 100.0f}, ImGuiInputTextFlags_None, NULL, NULL);
                 igListBox_Str_arr("Font", &font_index, font_names, cf_array_count(font_names), 2);
 
                 igCheckboxFlags_IntPtr("Text Aabb", &font_state, font_state_text_aabb);
