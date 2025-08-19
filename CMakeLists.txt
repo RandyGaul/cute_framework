@@ -354,7 +354,7 @@ if (CF_RUNTIME_SHADER_COMPILATION OR CF_CUTE_SHADERC)
 	find_package(Python3 REQUIRED)
 	FetchContent_Declare(
 		glslang
-		URL https://github.com/KhronosGroup/glslang/archive/refs/tags/14.3.0.zip
+		URL https://github.com/KhronosGroup/glslang/archive/refs/tags/15.4.0.zip
 		DOWNLOAD_EXTRACT_TIMESTAMP ON
 		PATCH_COMMAND ${Python3_EXECUTABLE} update_glslang_sources.py
 	)
