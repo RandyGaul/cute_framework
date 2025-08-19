@@ -551,6 +551,7 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 		add_executable(sprite_slice samples/sprite_slice.cpp)
 		add_executable(sprite_shatter samples/sprite_shatter.cpp)
 		add_executable(screen_shatter samples/screen_shatter.cpp)
+		add_executable(font_debug samples/font_debug.cpp)
 		set(SAMPLE_EXECUTABLES
 			easysprite
 			basicserialization
@@ -590,6 +591,7 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 			sprite_slice
 			sprite_shatter
 			screen_shatter
+			font_debug
 		)
 
 		foreach(CURRENT_TARGET ${SAMPLE_EXECUTABLES})
