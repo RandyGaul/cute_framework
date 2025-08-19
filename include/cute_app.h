@@ -59,7 +59,7 @@ typedef uint32_t CF_DisplayID;
  * @brief    TODO
  * @related  TODO
  */
-CF_API CF_DisplayID CF_CALL cf_default_display();
+CF_API CF_DisplayID CF_CALL cf_default_display(void);
 
 /**
  * @function cf_display_count
@@ -68,7 +68,7 @@ CF_API CF_DisplayID CF_CALL cf_default_display();
  * @remarks  Inidices >= 0 and < the return value are valid display indices.
  * @related  cf_make_app cf_display_count cf_display_x cf_display_y cf_display_width cf_display_height cf_display_refresh_rate cf_display_bounds cf_display_name cf_display_orientation
  */
-CF_API int CF_CALL cf_display_count();
+CF_API int CF_CALL cf_display_count(void);
 
 /**
  * @function cf_get_display_list
@@ -76,7 +76,7 @@ CF_API int CF_CALL cf_display_count();
  * @brief    TODO
  * @related  TODO
  */
-CF_API CF_DisplayID* CF_CALL cf_get_display_list();
+CF_API CF_DisplayID* CF_CALL cf_get_display_list(void);
 
 /**
  * @function cf_free_display_list
@@ -258,7 +258,7 @@ CF_API CF_Result CF_CALL cf_make_app(const char* window_title, CF_DisplayID disp
  * @brief    Cleans up all resources used by the application. Call `cf_app_signal_shutdown` first.
  * @related  cf_make_app cf_app_is_running cf_app_signal_shutdown
  */
-CF_API void CF_CALL cf_destroy_app();
+CF_API void CF_CALL cf_destroy_app(void);
 
 /**
  * @function cf_app_is_running
@@ -290,7 +290,7 @@ CF_API void CF_CALL cf_destroy_app();
  *           to signal a shutdown.
  * @related  cf_make_app cf_destroy_app cf_app_signal_shutdown
  */
-CF_API bool CF_CALL cf_app_is_running();
+CF_API bool CF_CALL cf_app_is_running(void);
 
 /**
  * @function cf_app_signal_shutdown
@@ -322,7 +322,7 @@ CF_API bool CF_CALL cf_app_is_running();
  *     }
  * @related  cf_make_app cf_destroy_app cf_app_is_running
  */
-CF_API void CF_CALL cf_app_signal_shutdown();
+CF_API void CF_CALL cf_app_signal_shutdown(void);
 
 /**
  * @function cf_app_update
@@ -379,7 +379,7 @@ CF_API void CF_CALL cf_app_get_size(int* w, int* h);
  * @brief    Returns the size of the window width in pixels.
  * @related  cf_app_set_size cf_app_get_position cf_app_set_position cf_app_get_width cf_app_get_height cf_app_get_dpi_scale
  */
-CF_API int CF_CALL cf_app_get_width();
+CF_API int CF_CALL cf_app_get_width(void);
 
 /**
  * @function cf_app_get_height
@@ -387,7 +387,7 @@ CF_API int CF_CALL cf_app_get_width();
  * @brief    Returns the size of the window height in pixels.
  * @related  cf_app_set_size cf_app_get_position cf_app_set_position cf_app_get_width cf_app_get_height cf_app_get_dpi_scale
  */
-CF_API int CF_CALL cf_app_get_height();
+CF_API int CF_CALL cf_app_get_height(void);
 
 /**
  * @function cf_app_show_window
@@ -395,7 +395,7 @@ CF_API int CF_CALL cf_app_get_height();
  * @brief    Brings the app out of a minimized/hidden state.
  * @related  cf_app_set_size cf_app_get_position cf_app_set_position cf_app_get_width cf_app_get_height cf_app_get_dpi_scale
  */
-CF_API void CF_CALL cf_app_show_window();
+CF_API void CF_CALL cf_app_show_window(void);
 
 /**
  * @function cf_app_get_dpi_scale
@@ -408,7 +408,7 @@ CF_API void CF_CALL cf_app_show_window();
  *           pixels are clustered for you under the hood.
  * @related  cf_app_set_size cf_app_get_position cf_app_set_position cf_app_get_width cf_app_get_height cf_app_get_dpi_scale cf_app_dpi_scale_was_changed
  */
-CF_API float CF_CALL cf_app_get_dpi_scale();
+CF_API float CF_CALL cf_app_get_dpi_scale(void);
 
 /**
  * @function cf_app_dpi_scale_was_changed
@@ -416,7 +416,7 @@ CF_API float CF_CALL cf_app_get_dpi_scale();
  * @brief    Returns true if the DPI scaling changed, such as moving from one screen to another.
  * @related  cf_app_get_dpi_scale cf_app_dpi_scale_was_changed
  */
-CF_API bool CF_CALL cf_app_dpi_scale_was_changed();
+CF_API bool CF_CALL cf_app_dpi_scale_was_changed(void);
 
 /**
  * @function cf_app_set_size
@@ -454,7 +454,7 @@ CF_API void CF_CALL cf_app_set_position(int x, int y);
  * @brief    Sets the window position centered on the screen.
  * @related  cf_app_get_size cf_app_set_size cf_app_get_position cf_app_center_window
  */
-CF_API void CF_CALL cf_app_center_window();
+CF_API void CF_CALL cf_app_center_window(void);
 
 /**
  * @function cf_app_was_resized
@@ -462,7 +462,7 @@ CF_API void CF_CALL cf_app_center_window();
  * @brief    Returns true if the app was resized last frame.
  * @related  cf_app_was_moved
  */
-CF_API bool CF_CALL cf_app_was_resized();
+CF_API bool CF_CALL cf_app_was_resized(void);
 
 /**
  * @function cf_app_was_moved
@@ -470,7 +470,7 @@ CF_API bool CF_CALL cf_app_was_resized();
  * @brief    Returns true if the app was moved (not resized) last frame.
  * @related  cf_app_was_resized
  */
-CF_API bool CF_CALL cf_app_was_moved();
+CF_API bool CF_CALL cf_app_was_moved(void);
 
 /**
  * @function cf_app_lost_focus
@@ -479,7 +479,7 @@ CF_API bool CF_CALL cf_app_was_moved();
  * @remarks  The app has focus if user inputs will go to the app, such as after clicking on or selecting the app.
  * @related  cf_app_gained_focus cf_app_has_focus cf_app_was_restored
  */
-CF_API bool CF_CALL cf_app_lost_focus();
+CF_API bool CF_CALL cf_app_lost_focus(void);
 
 /**
  * @function cf_app_gained_focus
@@ -488,7 +488,7 @@ CF_API bool CF_CALL cf_app_lost_focus();
  * @remarks  The app has focus if user inputs will go to the app, such as after clicking on or selecting the app.
  * @related  cf_app_lost_focus cf_app_has_focus cf_app_was_restored
  */
-CF_API bool CF_CALL cf_app_gained_focus();
+CF_API bool CF_CALL cf_app_gained_focus(void);
 
 /**
  * @function cf_app_has_focus
@@ -497,7 +497,7 @@ CF_API bool CF_CALL cf_app_gained_focus();
  * @remarks  The app has focus if user inputs will go to the app, such as after clicking on or selecting the app.
  * @related  cf_app_lost_focus cf_app_gained_focus cf_app_was_restored
  */
-CF_API bool CF_CALL cf_app_has_focus();
+CF_API bool CF_CALL cf_app_has_focus(void);
 
 /**
  * @function cf_app_request_attention
@@ -506,7 +506,7 @@ CF_API bool CF_CALL cf_app_has_focus();
  * @remarks  On Windows this flashes the tab icon, and bounces the dock icon on OSX.
  * @related  cf_app_request_attention cf_app_request_attention_continuously cf_app_request_attention_cancel
  */
-CF_API void CF_CALL cf_app_request_attention();
+CF_API void CF_CALL cf_app_request_attention(void);
 
 /**
  * @function cf_app_request_attention_continuously
@@ -515,7 +515,7 @@ CF_API void CF_CALL cf_app_request_attention();
  * @remarks  On Windows this flashes the tab icon, and bounces the dock icon on OSX.
  * @related  cf_app_request_attention cf_app_request_attention_continuously cf_app_request_attention_cancel
  */
-CF_API void CF_CALL cf_app_request_attention_continuously();
+CF_API void CF_CALL cf_app_request_attention_continuously(void);
 
 /**
  * @function cf_app_request_attention_cancel
@@ -523,7 +523,7 @@ CF_API void CF_CALL cf_app_request_attention_continuously();
  * @brief    Cancels any previous requests for attention.
  * @related  cf_app_request_attention cf_app_request_attention_continuously cf_app_request_attention_cancel
  */
-CF_API void CF_CALL cf_app_request_attention_cancel();
+CF_API void CF_CALL cf_app_request_attention_cancel(void);
 
 /**
  * @function cf_app_was_minimized
@@ -531,7 +531,7 @@ CF_API void CF_CALL cf_app_request_attention_cancel();
  * @brief    Returns true if the app was minimized last frame.
  * @related  cf_app_was_maximized cf_app_minimized cf_app_maximized cf_app_was_restored
  */
-CF_API bool CF_CALL cf_app_was_minimized();
+CF_API bool CF_CALL cf_app_was_minimized(void);
 
 /**
  * @function cf_app_was_maximized
@@ -539,7 +539,7 @@ CF_API bool CF_CALL cf_app_was_minimized();
  * @brief    Returns true if the app was maximized last frame.
  * @related  cf_app_was_minimized cf_app_minimized cf_app_maximized cf_app_was_restored
  */
-CF_API bool CF_CALL cf_app_was_maximized();
+CF_API bool CF_CALL cf_app_was_maximized(void);
 
 /**
  * @function cf_app_minimized
@@ -547,7 +547,7 @@ CF_API bool CF_CALL cf_app_was_maximized();
  * @brief    Returns true while the app is currently minimized.
  * @related  cf_app_was_minimized cf_app_was_maximized cf_app_maximized cf_app_was_restored
  */
-CF_API bool CF_CALL cf_app_minimized();
+CF_API bool CF_CALL cf_app_minimized(void);
 
 /**
  * @function cf_app_maximized
@@ -555,7 +555,7 @@ CF_API bool CF_CALL cf_app_minimized();
  * @brief    Returns true while the app is currently maximized.
  * @related  cf_app_was_minimized cf_app_was_maximized cf_app_minimized cf_app_was_restored
  */
-CF_API bool CF_CALL cf_app_maximized();
+CF_API bool CF_CALL cf_app_maximized(void);
 
 /**
  * @function cf_app_was_restored
@@ -564,7 +564,7 @@ CF_API bool CF_CALL cf_app_maximized();
  * @remarks  Restored means a window's size/position was restored from a minimized/maximized state.
  * @related  cf_app_was_minimized cf_app_was_maximized cf_app_minimized cf_app_maximized cf_app_was_restored
  */
-CF_API bool CF_CALL cf_app_was_restored();
+CF_API bool CF_CALL cf_app_was_restored(void);
 
 /**
  * @function cf_app_mouse_entered
@@ -573,7 +573,7 @@ CF_API bool CF_CALL cf_app_was_restored();
  * @remarks  This function only deals with mouse coordinates, not focus (such as `cf_app_has_focus`).
  * @related  cf_app_mouse_exited cf_app_mouse_inside
  */
-CF_API bool CF_CALL cf_app_mouse_entered();
+CF_API bool CF_CALL cf_app_mouse_entered(void);
 
 /**
  * @function cf_app_mouse_exited
@@ -582,7 +582,7 @@ CF_API bool CF_CALL cf_app_mouse_entered();
  * @remarks  This function only deals with mouse coordinates, not focus (such as `cf_app_has_focus`).
  * @related  cf_app_mouse_entered cf_app_mouse_inside
  */
-CF_API bool CF_CALL cf_app_mouse_exited();
+CF_API bool CF_CALL cf_app_mouse_exited(void);
 
 /**
  * @function cf_app_mouse_inside
@@ -591,7 +591,7 @@ CF_API bool CF_CALL cf_app_mouse_exited();
  * @remarks  This function only deals with mouse coordinates, not focus (such as `cf_app_has_focus`).
  * @related  cf_app_mouse_entered cf_app_mouse_exited
  */
-CF_API bool CF_CALL cf_app_mouse_inside();
+CF_API bool CF_CALL cf_app_mouse_inside(void);
 
 /**
  * @function cf_app_init_imgui
@@ -601,7 +601,7 @@ CF_API bool CF_CALL cf_app_mouse_inside();
  *           After calling this init function you can call into Dear ImGui's functions.
  * @related  cf_app_get_sokol_imgui
  */
-CF_API ImGuiContext* CF_CALL cf_app_init_imgui();
+CF_API ImGuiContext* CF_CALL cf_app_init_imgui(void);
 
 /**
  * @enum     CF_MSAA
@@ -669,7 +669,7 @@ CF_API bool CF_CALL cf_app_set_msaa(int sample_count);
  *           If you fetch this canvas and have MSAA on (see `cf_app_set_msaa`) you may *not* sample from the canvas.
  * @related  cf_app_set_canvas_size cf_app_get_canvas_width cf_app_get_canvas_height cf_app_set_vsync cf_app_get_vsync
  */
-CF_API CF_Canvas CF_CALL cf_app_get_canvas();
+CF_API CF_Canvas CF_CALL cf_app_get_canvas(void);
 
 /**
  * @function cf_app_set_canvas_size
@@ -688,7 +688,7 @@ CF_API void CF_CALL cf_app_set_canvas_size(int w, int h);
  * @brief    Gets the app's canvas width in pixels.
  * @related  cf_app_get_canvas cf_app_set_canvas_size cf_app_get_canvas_height cf_app_set_vsync cf_app_get_vsync
  */
-CF_API int CF_CALL cf_app_get_canvas_width();
+CF_API int CF_CALL cf_app_get_canvas_width(void);
 
 /**
  * @function cf_app_get_canvas_height
@@ -696,7 +696,7 @@ CF_API int CF_CALL cf_app_get_canvas_width();
  * @brief    Gets the app's canvas height in pixels.
  * @related  cf_app_get_canvas cf_app_set_canvas_size cf_app_get_canvas_width cf_app_set_vsync cf_app_get_vsync
  */
-CF_API int CF_CALL cf_app_get_canvas_height();
+CF_API int CF_CALL cf_app_get_canvas_height(void);
 
 /**
  * @function cf_app_set_vsync
@@ -722,7 +722,7 @@ CF_API void CF_CALL cf_app_set_vsync_mailbox(bool true_turn_on_mailbox);
  * @brief    Returns the vsync state (true for on).
  * @related  cf_app_get_canvas cf_app_set_canvas_size cf_app_get_canvas_width cf_app_set_vsync cf_app_get_vsync cf_app_set_vsync_mailbox
  */
-CF_API bool CF_CALL cf_app_get_vsync();
+CF_API bool CF_CALL cf_app_get_vsync(void);
 
 /**
  * @function cf_app_set_windowed_mode
@@ -730,7 +730,7 @@ CF_API bool CF_CALL cf_app_get_vsync();
  * @brief    Sets the application to windowed mode.
  * @related  cf_app_set_windowed_mode cf_app_set_borderless_fullscreen_mode cf_app_set_fullscreen_mode cf_app_set_title
  */
-CF_API void CF_CALL cf_app_set_windowed_mode();
+CF_API void CF_CALL cf_app_set_windowed_mode(void);
 
 /**
  * @function cf_app_set_borderless_fullscreen_mode
@@ -738,7 +738,7 @@ CF_API void CF_CALL cf_app_set_windowed_mode();
  * @brief    Sets the application mode to "fake fullscreen" without a border.
  * @related  cf_app_set_windowed_mode cf_app_set_borderless_fullscreen_mode cf_app_set_fullscreen_mode cf_app_set_title
  */
-CF_API void CF_CALL cf_app_set_borderless_fullscreen_mode();
+CF_API void CF_CALL cf_app_set_borderless_fullscreen_mode(void);
 
 /**
  * @function cf_app_set_fullscreen_mode
@@ -746,7 +746,7 @@ CF_API void CF_CALL cf_app_set_borderless_fullscreen_mode();
  * @brief    Sets the application true fullscreen mode.
  * @related  cf_app_set_windowed_mode cf_app_set_borderless_fullscreen_mode cf_app_set_fullscreen_mode cf_app_set_title
  */
-CF_API void CF_CALL cf_app_set_fullscreen_mode();
+CF_API void CF_CALL cf_app_set_fullscreen_mode(void);
 
 /**
  * @function cf_app_set_title
@@ -772,7 +772,7 @@ CF_API void CF_CALL cf_app_set_icon(const char* virtual_path_to_png);
  * @brief    Returns the current framerate of the application.
  * @related  cf_app_get_framerate cf_app_get_smoothed_framerate
  */
-CF_API float CF_CALL cf_app_get_framerate();
+CF_API float CF_CALL cf_app_get_framerate(void);
 
 /**
  * @function cf_app_get_smoothed_framerate
@@ -780,7 +780,7 @@ CF_API float CF_CALL cf_app_get_framerate();
  * @brief    Returns the smoothed framerate of the application. Last 60 frames are averaged. This values is controlled by `CF_FRAMERATE_SMOOTHING`.
  * @related  cf_app_get_framerate cf_app_get_smoothed_framerate
  */
-CF_API float CF_CALL cf_app_get_smoothed_framerate();
+CF_API float CF_CALL cf_app_get_smoothed_framerate(void);
 
 /**
  * @enum     CF_PowerState
@@ -852,7 +852,7 @@ typedef struct CF_PowerInfo
  * @return   Returns a `CF_PowerInfo` struct.
  * @related  CF_PowerInfo cf_power_state_to_string CF_PowerState
  */
-CF_API CF_PowerInfo CF_CALL cf_app_power_info();
+CF_API CF_PowerInfo CF_CALL cf_app_power_info(void);
 
 #ifdef __cplusplus
 }

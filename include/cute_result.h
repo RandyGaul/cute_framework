@@ -69,7 +69,7 @@ CF_INLINE CF_Result cf_result_error(const char* details) { CF_Result result; res
  * @brief    Returns a `CF_Result` as a success, containing no error information.
  * @related  CF_Result cf_is_error cf_result_make cf_result_error cf_result_success
  */
-CF_INLINE CF_Result cf_result_success() { CF_Result result; result.code = CF_RESULT_SUCCESS; result.details = NULL; return result; }
+CF_INLINE CF_Result cf_result_success(void) { CF_Result result; result.code = CF_RESULT_SUCCESS; result.details = NULL; return result; }
 
 /**
  * @enum     CF_MessageBoxType

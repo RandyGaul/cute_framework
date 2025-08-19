@@ -24,7 +24,7 @@ extern "C" {
  * @brief    Returns a UTF-8 string of the clipboard contents.
  * @related  cf_clipboard_get cf_clipboard_set
  */
-CF_API char* CF_CALL cf_clipboard_get();
+CF_API char* CF_CALL cf_clipboard_get(void);
 
 /**
  * @function cf_clipboard_set

@@ -149,7 +149,7 @@ CF_API int CF_CALL cf_address_equals(CF_Address a, CF_Address b);
  * @brief    Returns a cryptography key in a cryptographically secure way.
  * @related  CF_CryptoKey cf_crypto_generate_key cf_generate_connect_token
  */
-CF_API CF_CryptoKey CF_CALL cf_crypto_generate_key();
+CF_API CF_CryptoKey CF_CALL cf_crypto_generate_key(void);
 
 /**
  * @function cf_crypto_random_bytes
@@ -426,7 +426,7 @@ typedef struct CF_ServerConfig
  * @brief    Returns a good set of default parameters for `cf_make_server`.
  * @related  CF_ServerConfig cf_server_config_defaults cf_make_server
  */
-CF_INLINE CF_ServerConfig CF_CALL cf_server_config_defaults()
+CF_INLINE CF_ServerConfig CF_CALL cf_server_config_defaults(void)
 {
 	CF_ServerConfig config;
 	config.application_id = 0;
