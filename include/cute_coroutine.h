@@ -212,7 +212,7 @@ CF_API size_t CF_CALL cf_coroutine_space_remaining(CF_Coroutine co);
  *           this function.
  * @related  CF_Coroutine CF_CoroutineFn CF_CoroutineState cf_make_coroutine cf_destroy_coroutine cf_coroutine_state_to_string cf_coroutine_resume cf_coroutine_yield cf_coroutine_state cf_coroutine_get_udata cf_coroutine_push cf_coroutine_pop cf_coroutine_bytes_pushed cf_coroutine_space_remaining cf_coroutine_currently_running
  */
-CF_API CF_Coroutine CF_CALL cf_coroutine_currently_running();
+CF_API CF_Coroutine CF_CALL cf_coroutine_currently_running(void);
 
 #ifdef __cplusplus
 }

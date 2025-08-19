@@ -615,7 +615,7 @@ CF_API bool CF_CALL cf_key_repeating(CF_KeyButton key);
  * @brief    Returns true if the left or right control key is currently down.
  * @related  CF_KeyButton cf_key_down cf_key_up cf_key_just_pressed cf_key_just_released cf_key_ctrl cf_key_shift cf_key_alt cf_key_gui cf_clear_key_states cf_key_repeating
  */
-CF_API bool CF_CALL cf_key_ctrl();
+CF_API bool CF_CALL cf_key_ctrl(void);
 
 /**
  * @function cf_key_shift
@@ -623,7 +623,7 @@ CF_API bool CF_CALL cf_key_ctrl();
  * @brief    Returns true if the left or right shift key is currently down.
  * @related  CF_KeyButton cf_key_down cf_key_up cf_key_just_pressed cf_key_just_released cf_key_ctrl cf_key_shift cf_key_alt cf_key_gui cf_clear_key_states
  */
-CF_API bool CF_CALL cf_key_shift();
+CF_API bool CF_CALL cf_key_shift(void);
 
 /**
  * @function cf_key_alt
@@ -631,7 +631,7 @@ CF_API bool CF_CALL cf_key_shift();
  * @brief    Returns true if the left or right alt key is currently down.
  * @related  CF_KeyButton cf_key_down cf_key_up cf_key_just_pressed cf_key_just_released cf_key_ctrl cf_key_shift cf_key_alt cf_key_gui cf_clear_key_states
  */
-CF_API bool CF_CALL cf_key_alt();
+CF_API bool CF_CALL cf_key_alt(void);
 
 /**
  * @function cf_key_gui
@@ -640,7 +640,7 @@ CF_API bool CF_CALL cf_key_alt();
  * @remarks  Windows key in Windows, Command key in OSX.
  * @related  CF_KeyButton cf_key_down cf_key_up cf_key_just_pressed cf_key_just_released cf_key_ctrl cf_key_shift cf_key_alt cf_key_gui cf_clear_key_states
  */
-CF_API bool CF_CALL cf_key_gui();
+CF_API bool CF_CALL cf_key_gui(void);
 
 /**
  * @function cf_clear_key_states
@@ -648,7 +648,7 @@ CF_API bool CF_CALL cf_key_gui();
  * @brief    Zeroes out all internal keyboard state.
  * @related  CF_KeyButton cf_key_down cf_key_up cf_key_just_pressed cf_key_just_released cf_key_ctrl cf_key_shift cf_key_alt cf_key_gui cf_clear_key_states
  */
-CF_API void CF_CALL cf_clear_key_states();
+CF_API void CF_CALL cf_clear_key_states(void);
 
 /**
  * @function cf_register_key_callback
@@ -665,7 +665,7 @@ CF_API void CF_CALL cf_register_key_callback(void (*key_callback)(CF_KeyButton k
  * @remarks  (0, 0) is the top-left of the screen, y-downards.
  * @related  CF_MouseButton cf_mouse_down cf_mouse_x cf_mouse_y cf_mouse_motion_x cf_mouse_motion_y
  */
-CF_API float CF_CALL cf_mouse_x();
+CF_API float CF_CALL cf_mouse_x(void);
 
 /**
  * @function cf_mouse_y
@@ -674,7 +674,7 @@ CF_API float CF_CALL cf_mouse_x();
  * @remarks  (0, 0) is the top-left of the screen, y-downwards.
  * @related  CF_MouseButton cf_mouse_down cf_mouse_x cf_mouse_y cf_mouse_motion_x cf_mouse_motion_y
  */
-CF_API float CF_CALL cf_mouse_y();
+CF_API float CF_CALL cf_mouse_y(void);
 
 /**
  * @function cf_mouse_motion_x
@@ -683,7 +683,7 @@ CF_API float CF_CALL cf_mouse_y();
  * @remarks  (0, 0) means there is no mouse movement, y-downwards.
  * @related  CF_MouseButton cf_mouse_down cf_mouse_x cf_mouse_y cf_mouse_motion_x cf_mouse_motion_y
  */
-CF_API float CF_CALL cf_mouse_motion_x();
+CF_API float CF_CALL cf_mouse_motion_x(void);
 
 /**
  * @function cf_mouse_motion_y
@@ -692,7 +692,7 @@ CF_API float CF_CALL cf_mouse_motion_x();
  * @remarks  (0, 0) means there is no mouse movement, y-downwards.
  * @related  CF_MouseButton cf_mouse_down cf_mouse_x cf_mouse_y cf_mouse_motion_x cf_mouse_motion_y
  */
-CF_API float CF_CALL cf_mouse_motion_y();
+CF_API float CF_CALL cf_mouse_motion_y(void);
 
 /**
  * @function cf_mouse_down
@@ -724,7 +724,7 @@ CF_API bool CF_CALL cf_mouse_just_released(CF_MouseButton button);
  * @brief    Returns a signed integer representing by how much the mouse wheel was rotated.
  * @related  CF_MouseButton cf_mouse_down cf_mouse_x cf_mouse_y cf_mouse_just_pressed cf_mouse_just_released cf_mouse_wheel_motion cf_mouse_double_click_held cf_mouse_double_clicked
  */
-CF_API float CF_CALL cf_mouse_wheel_motion();
+CF_API float CF_CALL cf_mouse_wheel_motion(void);
 
 /**
  * @function cf_mouse_double_click_held
@@ -757,7 +757,7 @@ CF_API void CF_CALL cf_mouse_hide(bool true_to_hide);
  * @return   True means hidden, false means not hidden.
  * @related  cf_mouse_hide cf_mouse_hidden cf_mouse_lock_inside_window
  */
-CF_API bool CF_CALL cf_mouse_hidden();
+CF_API bool CF_CALL cf_mouse_hidden(void);
 
 /**
  * @function cf_mouse_lock_inside_window
@@ -811,7 +811,7 @@ CF_API void CF_CALL cf_input_text_add_utf8(const char* text);
  *           multiple keystrokes, especially when dealing with non-Latin based inputs.
  * @related  cf_input_text_add_utf8 cf_input_text_pop_utf32 cf_input_text_has_data cf_input_text_clear
  */
-CF_API int CF_CALL cf_input_text_pop_utf32();
+CF_API int CF_CALL cf_input_text_pop_utf32(void);
 
 /**
  * @function cf_input_text_has_data
@@ -821,7 +821,7 @@ CF_API int CF_CALL cf_input_text_pop_utf32();
  *           multiple keystrokes, especially when dealing with non-Latin based inputs.
  * @related  cf_input_text_add_utf8 cf_input_text_pop_utf32 cf_input_text_has_data cf_input_text_clear
  */
-CF_API bool CF_CALL cf_input_text_has_data();
+CF_API bool CF_CALL cf_input_text_has_data(void);
 
 /**
  * @function cf_input_text_get_buffer
@@ -842,7 +842,7 @@ CF_API bool CF_CALL cf_input_text_get_buffer(CF_InputTextBuffer* buffer);
  *           multiple keystrokes, especially when dealing with non-Latin based inputs.
  * @related  cf_input_text_add_utf8 cf_input_text_pop_utf32 cf_input_text_has_data cf_input_text_clear
  */
-CF_API void CF_CALL cf_input_text_clear();
+CF_API void CF_CALL cf_input_text_clear(void);
 
 /**
  * @function cf_input_enable_ime
@@ -852,7 +852,7 @@ CF_API void CF_CALL cf_input_text_clear();
  *           of different language inputs. This is usually a feature of the underlying operating system.
  * @related  cf_input_enable_ime cf_input_disable_ime cf_input_is_ime_enabled cf_input_has_ime_keyboard_support cf_input_is_ime_keyboard_shown cf_input_set_ime_rect
  */
-CF_API void CF_CALL cf_input_enable_ime();
+CF_API void CF_CALL cf_input_enable_ime(void);
 
 /**
  * @function cf_input_disable_ime
@@ -862,7 +862,7 @@ CF_API void CF_CALL cf_input_enable_ime();
  *           of different language inputs. This is usually a feature of the underlying operating system.
  * @related  cf_input_enable_ime cf_input_disable_ime cf_input_is_ime_enabled cf_input_has_ime_keyboard_support cf_input_is_ime_keyboard_shown cf_input_set_ime_rect
  */
-CF_API void CF_CALL cf_input_disable_ime();
+CF_API void CF_CALL cf_input_disable_ime(void);
 
 /**
  * @function cf_input_is_ime_enabled
@@ -872,7 +872,7 @@ CF_API void CF_CALL cf_input_disable_ime();
  *           of different language inputs. This is usually a feature of the underlying operating system.
  * @related  cf_input_enable_ime cf_input_disable_ime cf_input_is_ime_enabled cf_input_has_ime_keyboard_support cf_input_is_ime_keyboard_shown cf_input_set_ime_rect
  */
-CF_API bool CF_CALL cf_input_is_ime_enabled();
+CF_API bool CF_CALL cf_input_is_ime_enabled(void);
 
 /**
  * @function cf_input_has_ime_keyboard_support
@@ -882,7 +882,7 @@ CF_API bool CF_CALL cf_input_is_ime_enabled();
  *           of different language inputs. This is usually a feature of the underlying operating system.
  * @related  cf_input_enable_ime cf_input_disable_ime cf_input_is_ime_enabled cf_input_has_ime_keyboard_support cf_input_is_ime_keyboard_shown cf_input_set_ime_rect
  */
-CF_API bool CF_CALL cf_input_has_ime_keyboard_support();
+CF_API bool CF_CALL cf_input_has_ime_keyboard_support(void);
 
 /**
  * @function cf_input_is_ime_keyboard_shown
@@ -892,7 +892,7 @@ CF_API bool CF_CALL cf_input_has_ime_keyboard_support();
  *           of different language inputs. This is usually a feature of the underlying operating system.
  * @related  cf_input_enable_ime cf_input_disable_ime cf_input_is_ime_enabled cf_input_has_ime_keyboard_support cf_input_is_ime_keyboard_shown cf_input_set_ime_rect
  */
-CF_API bool CF_CALL cf_input_is_ime_keyboard_shown();
+CF_API bool CF_CALL cf_input_is_ime_keyboard_shown(void);
 
 /**
  * @function cf_input_set_ime_rect

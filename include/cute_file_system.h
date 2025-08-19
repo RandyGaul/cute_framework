@@ -332,7 +332,7 @@ typedef struct CF_Stat
  *           but probably is. You should probably mount the base directory with `cf_fs_mount`. See [Virtual File System](https://randygaul.github.io/cute_framework/topics/virtual_file_system) for an overview.
  * @related  cf_fs_get_base_directory cf_fs_set_write_directory cf_fs_get_user_directory cf_fs_mount cf_fs_dismount cf_fs_get_working_directory
  */
-CF_API const char* CF_CALL cf_fs_get_base_directory();
+CF_API const char* CF_CALL cf_fs_get_base_directory(void);
 
 /**
  * @function cf_fs_get_working_directory
@@ -341,7 +341,7 @@ CF_API const char* CF_CALL cf_fs_get_base_directory();
  * @remarks  Not all platforms have the concept of a working directory, but this function will sill try to return something sane in these cases.
  * @related  cf_fs_get_base_directory cf_fs_set_write_directory cf_fs_get_user_directory cf_fs_mount cf_fs_dismount cf_fs_get_working_directory
  */
-CF_API const char* CF_CALL cf_fs_get_working_directory();
+CF_API const char* CF_CALL cf_fs_get_working_directory(void);
 
 /**
  * @function cf_fs_set_write_directory
@@ -665,7 +665,7 @@ CF_API CF_Result CF_CALL cf_fs_write_string_range_to_file(const char* virtual_pa
  * @remarks  Feel free to call this whenever an error occurs in any of the file system functions to try and get a detailed description
  *           on what might have happened. Often times this string is already returned to you inside a `CF_Result`.
  */
-CF_API const char* CF_CALL cf_fs_get_backend_specific_error_message();
+CF_API const char* CF_CALL cf_fs_get_backend_specific_error_message(void);
 
 /**
  * @function cf_fs_get_actual_path
@@ -702,7 +702,7 @@ CF_API CF_Result CF_CALL cf_fs_init(const char* argv0);
  *           as `cf_app_destroy` already does this for you.
  * @related  cf_fs_init cf_fs_destroy
  */
-CF_API void CF_CALL cf_fs_destroy();
+CF_API void CF_CALL cf_fs_destroy(void);
 
 #ifdef __cplusplus
 }

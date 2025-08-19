@@ -266,7 +266,7 @@ CF_API CF_Result CF_CALL cf_joypad_add_mapping(const char* mapping);
  *           be seen by Cute Framework.
  * @related  CF_Joypad cf_joypad_count cf_joypad_open cf_joypad_close
  */
-CF_API int CF_CALL cf_joypad_count();
+CF_API int CF_CALL cf_joypad_count(void);
 
 /**
  * @function cf_joypad_is_connected

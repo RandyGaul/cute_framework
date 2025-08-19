@@ -163,7 +163,7 @@ CF_INLINE const char* cf_backend_type_to_string(CF_BackendType type) {
  * @brief    Returns which `CF_BackendType` is currently active.
  * @related  CF_BackendType cf_backend_type_to_string cf_query_backend
  */
-CF_API CF_BackendType CF_CALL cf_query_backend();
+CF_API CF_BackendType CF_CALL cf_query_backend(void);
 
 /**
  * @enum     CF_PixelFormat
@@ -1592,7 +1592,7 @@ typedef struct CF_RenderState
  * @brief    Returns a good set of default parameters for a `CF_RenderState`.
  * @related  CF_RenderState cf_render_state_defaults cf_material_set_render_state
  */
-CF_API CF_RenderState CF_CALL cf_render_state_defaults();
+CF_API CF_RenderState CF_CALL cf_render_state_defaults(void);
 
 //--------------------------------------------------------------------------------------------------
 // Material.
@@ -1655,7 +1655,7 @@ CF_INLINE const char* cf_uniform_type_string(CF_UniformType type) {
  *           uniforms (see `CF_UniformType`). For an overview see `CF_Material`.
  * @related  CF_UniformType CF_Material cf_make_material cf_destroy_material cf_material_set_render_state cf_material_set_texture_vs cf_material_set_texture_fs cf_material_set_uniform_vs cf_material_set_uniform_fs
  */
-CF_API CF_Material CF_CALL cf_make_material();
+CF_API CF_Material CF_CALL cf_make_material(void);
 
 /**
  * @function cf_destroy_material
@@ -1863,7 +1863,7 @@ CF_API void CF_CALL cf_apply_shader(CF_Shader shader, CF_Material material);
  * @brief    Draws all elements within the last applied mesh.
  * @related  CF_Mesh cf_create_mesh cf_apply_shader cf_apply_canvas
  */
-CF_API void CF_CALL cf_draw_elements();
+CF_API void CF_CALL cf_draw_elements(void);
 
 /**
  * @function cf_commit
@@ -1872,7 +1872,7 @@ CF_API void CF_CALL cf_draw_elements();
  * @remarks  You must call this after calling `cf_apply_shader` to "complete" the rendering pass.
  * @related  CF_Canvas cf_apply_canvas cf_apply_mesh cf_apply_shader
  */
-CF_API void CF_CALL cf_commit();
+CF_API void CF_CALL cf_commit(void);
 
 #ifdef __cplusplus
 }

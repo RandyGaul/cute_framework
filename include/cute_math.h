@@ -1108,7 +1108,7 @@ CF_INLINE CF_V2 cf_sign_v2(CF_V2 a) { return cf_v2(cf_sign(a.x), cf_sign(a.y)); 
  * @related  CF_SinCos cf_sincos_f cf_x_axis cf_y_axis cf_mul_sc_v2 cf_mulT_sc_v2 cf_mul_sc cf_mulT_sc
  */
 CF_INLINE CF_SinCos cf_sincos_f(float radians) { CF_SinCos r; r.s = CF_SINF(radians); r.c = CF_COSF(radians); return r; }
-CF_INLINE CF_SinCos cf_sincos() { CF_SinCos r; r.c = 1.0f; r.s = 0; return r; }
+CF_INLINE CF_SinCos cf_sincos(void) { CF_SinCos r; r.c = 1.0f; r.s = 0; return r; }
 
 /**
  * @function cf_x_axis
@@ -1274,7 +1274,7 @@ CF_INLINE CF_M3x2 cf_mul_m32(CF_M3x2 a, CF_M3x2 b) { CF_M3x2 c; c.m = cf_mul_m2(
  * @brief    Returns an identity `CF_M3x2`.
  * @related  CF_M3x2 cf_mul_m32_v2 cf_mul_m32 cf_make_identity cf_make_translation cf_make_scale cf_make_scale_translation cf_make_rotation cf_make_transform_TSR cf_invert
  */
-CF_INLINE CF_M3x2 cf_make_identity() { CF_M3x2 m; m.m.x = cf_v2(1, 0); m.m.y = cf_v2(0, 1); m.p = cf_v2(0, 0); return m; }
+CF_INLINE CF_M3x2 cf_make_identity(void) { CF_M3x2 m; m.m.x = cf_v2(1, 0); m.m.y = cf_v2(0, 1); m.p = cf_v2(0, 0); return m; }
 
 /**
  * @function cf_make_translation_f
@@ -1394,7 +1394,7 @@ CF_INLINE CF_M3x2 cf_ortho_2d(float x, float y, float scale_x, float scale_y)
  * @brief    Returns an identity `CF_Transform`.
  * @related  CF_Transform cf_make_transform cf_make_transform_TR cf_mul_tf_v2 cf_mulT_tf_v2 cf_mul_tf cf_mulT_tf
  */
-CF_INLINE CF_Transform cf_make_transform() { CF_Transform x; x.p = cf_v2(0, 0); x.r = cf_sincos(); return x; }
+CF_INLINE CF_Transform cf_make_transform(void) { CF_Transform x; x.p = cf_v2(0, 0); x.r = cf_sincos(); return x; }
 
 /**
  * @function cf_make_transform_TR

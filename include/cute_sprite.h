@@ -199,7 +199,7 @@ typedef struct CF_Sprite
  *           you may be looking for `cf_make_sprite` or `cf_make_easy_sprite`.
  * @related  CF_Sprite cf_sprite_defaults cf_make_easy_sprite cf_make_sprite
  */
-CF_INLINE CF_Sprite cf_sprite_defaults()
+CF_INLINE CF_Sprite cf_sprite_defaults(void)
 {
 	CF_Sprite sprite = { 0 };
 	sprite.scale = cf_v2(1, 1);
@@ -284,7 +284,7 @@ CF_API CF_Sprite CF_CALL cf_make_sprite_from_memory(const char* unique_name, con
  * @return   The sprite contains a few animations called "up", "side", "hold_down", "hold_side", "hold_up", "idle" you may try out.
  * @related  CF_Sprite cf_make_easy_sprite_from_png cf_make_easy_sprite_from_pixels cf_easy_sprite_update_pixels
  */
-CF_API CF_Sprite CF_CALL cf_make_demo_sprite();
+CF_API CF_Sprite CF_CALL cf_make_demo_sprite(void);
 
 /**
  * @function cf_sprite_unload

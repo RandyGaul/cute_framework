@@ -225,7 +225,7 @@ CF_API void CF_CALL cf_music_set_pitch(float pitch);
  * @brief    Pauses the music.
  * @related  cf_music_play cf_music_stop cf_music_set_volume cf_music_set_loop cf_music_pause cf_music_resume cf_music_switch_to cf_music_crossfade cf_music_get_sample_index cf_music_set_sample_index cf_music_set_pitch
  */
-CF_API void CF_CALL cf_music_pause();
+CF_API void CF_CALL cf_music_pause(void);
 
 /**
  * @function cf_music_resume
@@ -233,7 +233,7 @@ CF_API void CF_CALL cf_music_pause();
  * @brief    Resumes the music if the music was paused.
  * @related  cf_music_play cf_music_stop cf_music_set_volume cf_music_set_loop cf_music_pause cf_music_resume cf_music_switch_to cf_music_crossfade cf_music_get_sample_index cf_music_set_sample_index cf_music_set_pitch
  */
-CF_API void CF_CALL cf_music_resume();
+CF_API void CF_CALL cf_music_resume(void);
 
 /**
  * @function cf_music_switch_to
@@ -262,7 +262,7 @@ CF_API void CF_CALL cf_music_crossfade(CF_Audio audio_source, float cross_fade_t
  * @remarks  This can be useful to sync a dynamic audio system that can turn on/off different instruments or sounds.
  * @related  cf_music_play cf_music_stop cf_music_set_volume cf_music_set_loop cf_music_pause cf_music_resume cf_music_switch_to cf_music_crossfade cf_music_get_sample_index cf_music_set_sample_index cf_music_set_pitch
  */
-CF_API int CF_CALL cf_music_get_sample_index();
+CF_API int CF_CALL cf_music_get_sample_index(void);
 
 /**
  * @function cf_music_set_sample_index
@@ -323,7 +323,7 @@ typedef struct CF_SoundParams
  * @brief    Returns a `CF_SoundParams` filled with default state, to use with `cf_play_sound`.
  * @related  CF_SoundParams CF_Sound cf_sound_params_defaults cf_play_sound cf_sound_is_active cf_sound_get_is_paused cf_sound_get_is_looped cf_sound_get_volume cf_sound_get_sample_index cf_sound_set_sample_index cf_sound_set_is_paused cf_sound_set_is_looped cf_sound_set_volume cf_sound_stop cf_sound_set_pitch cf_sound_get_pitch
  */
-CF_INLINE CF_SoundParams CF_CALL cf_sound_params_defaults()
+CF_INLINE CF_SoundParams CF_CALL cf_sound_params_defaults(void)
 {
 	CF_SoundParams params;
 	params.paused = false;

@@ -69,7 +69,7 @@ typedef struct CF_Png
  * @return   Returns an empty `CF_Png` struct.
  * @related  CF_Png cf_png_defaults cf_png_cache_load cf_make_png_cache_animation cf_make_png_cache_sprite
  */
-CF_INLINE CF_Png cf_png_defaults()
+CF_INLINE CF_Png cf_png_defaults(void)
 {
 	CF_Png result = { 0 };
 	result.id = ~0;

@@ -230,7 +230,7 @@ CF_API bool CF_CALL cf_on_timestamp(double timestamp);
  * @remarks  Pause means from `cf_pause_for` or `cf_pause_for_ticks`.
  * @related  CF_PAUSE_TIME_LEFT cf_is_paused cf_pause_for cf_pause_for_ticks
  */
-CF_API bool CF_CALL cf_is_paused();
+CF_API bool CF_CALL cf_is_paused(void);
 
 /**
  * @function cf_get_ticks
@@ -240,7 +240,7 @@ CF_API bool CF_CALL cf_is_paused();
  *           queries the application for the number of ticks _right now_. Mostly useful for performance measuring.
  * @related  cf_get_ticks cf_get_tick_frequency
  */
-CF_API uint64_t CF_CALL cf_get_ticks();
+CF_API uint64_t CF_CALL cf_get_ticks(void);
 
 /**
  * @function cf_get_tick_frequency
@@ -248,7 +248,7 @@ CF_API uint64_t CF_CALL cf_get_ticks();
  * @brief    Returns the machine-dependent number of ticks that occur in one second.
  * @related  cf_get_ticks cf_get_tick_frequency
  */
-CF_API uint64_t CF_CALL cf_get_tick_frequency();
+CF_API uint64_t CF_CALL cf_get_tick_frequency(void);
 
 /**
  * @function cf_sleep
@@ -285,7 +285,7 @@ typedef struct CF_Stopwatch
  *           `cf_stopwatch_milliseconds`, or `cf_microseconds`.
  * @related  CF_Stopwatch cf_make_stopwatch cf_stopwatch_seconds cf_stopwatch_milliseconds cf_stopwatch_microseconds
  */
-CF_API CF_Stopwatch CF_CALL cf_make_stopwatch();
+CF_API CF_Stopwatch CF_CALL cf_make_stopwatch(void);
 
 /**
  * @function cf_stopwatch_seconds
