@@ -818,7 +818,7 @@ void cf_app_set_icon(const char* virtual_path_to_png)
 		fprintf(stderr, "Unable to open icon png file %s.", virtual_path_to_png);
 		return;
 	}
-	SDL_Surface* icon = SDL_CreateRGBSurfaceFrom(img.pix, img.w, img.h, 32, img.w * 4, 0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000);
+	SDL_Surface* icon = SDL_CreateRGBSurfaceFrom(img.pix, img.w, img.h, 32, img.w * 4, 0x000000FF, 0x0000FF00, 0x00FF0000, 0xFF000000);
 	SDL_SetWindowIcon(app->window, icon);
 	SDL_DestroySurface(icon);
 	cf_image_free(&img);
