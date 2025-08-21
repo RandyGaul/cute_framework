@@ -8,6 +8,7 @@ int main(int argc, char* argv[])
 	float w = 320, h = 240;
 	float sx = 2, sy = 2;
 	make_app("Development Scratch", 0, 0, 0, (int)(w * sx), (int)(h * sy), CF_APP_OPTIONS_WINDOW_POS_CENTERED_BIT, argv[0]);
+	app_set_icon("/app_icon.png");
 	CF_Canvas plain = make_canvas(canvas_defaults((int)w, (int)h));
 	cf_clear_color(0,0,0,0);
 
