@@ -370,6 +370,11 @@ if (CF_RUNTIME_SHADER_COMPILATION OR CF_CUTE_SHADERC)
 	set(CUTE_SHADER_SRCS src/cute_shader/cute_shader.cpp)
 	add_library(cute-shader STATIC ${CUTE_SHADER_SRCS})
 	target_link_libraries(cute-shader PRIVATE glslang glslang-default-resource-limits SPIRV)
+	install(TARGETS cute-shader
+	BUNDLE DESTINATION .
+	RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+	LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+	ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
 	if (NOT MSVC AND NOT CF_FRAMEWORK_STATIC)
 		set_target_properties(cute-shader PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
 	endif()
