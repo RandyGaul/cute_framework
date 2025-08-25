@@ -26,12 +26,7 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 
 # Platform detection.
-if(CMAKE_SYSTEM_NAME MATCHES "Emscripten")
-	set(EMSCRIPTEN TRUE)
-	# Also disable samples/tests. These should be supported/added back in at some point.
-	set(CF_FRAMEWORK_BUILD_SAMPLES OFF)
-	set(CF_FRAMEWORK_BUILD_TESTS OFF)
-elseif(WIN32)
+if(WIN32)
 	set(WINDOWS TRUE)
 elseif(UNIX AND NOT APPLE)
 	if(CMAKE_SYSTEM_NAME MATCHES ".*Linux")
@@ -341,25 +336,21 @@ endif()
 set(SDL_REQUIRED_VERSION 3.2.16)
 # Just don't build the shared library at all, it's not needed.
 set(SDL_SHARED_ENABLED_BY_DEFAULT OFF)
-if(EMSCRIPTEN)
-	# Emscripten provides its own SDL.
-else()
-	set(SDL_STATIC ${CF_FRAMEWORK_STATIC} CACHE BOOL "Build SDL as a static library")
-	set(SDL_SHARED $<NOT:${CF_FRAMEWORK_STATIC}> CACHE BOOL "Do not build SDL as a shared library")
-	set(SDL_TEST_LIBRARY OFF CACHE BOOL "Do not build SDL tests")
-	set(SDL_EXAMPLES OFF CACHE BOOL "Do not build SDL examples")
-	FetchContent_Declare(
-		SDL3
-		URL https://github.com/libsdl-org/SDL/releases/download/release-${SDL_REQUIRED_VERSION}/SDL3-${SDL_REQUIRED_VERSION}.zip
-		DOWNLOAD_EXTRACT_TIMESTAMP ON
-		CMAKE_ARGS -DSDL_SHARED=$<NOT:${CF_FRAMEWORK_STATIC}> -DSDL_STATIC=${CF_FRAMEWORK_STATIC} -DSDL_TEST_LIBRARY=OFF -DSDL_TESTS=OFF -DSDL_EXAMPLES=OFF
-	)
-	FetchContent_MakeAvailable(SDL3)
-	if(CF_FRAMEWORK_STATIC)
-		set(CF_LINK_LIBS ${CF_LINK_LIBS} SDL3::SDL3-static)
-	else ()
-		set(CF_LINK_LIBS ${CF_LINK_LIBS} SDL3::SDL3)
-	endif()
+set(SDL_STATIC ${CF_FRAMEWORK_STATIC} CACHE BOOL "Build SDL as a static library")
+set(SDL_SHARED $<NOT:${CF_FRAMEWORK_STATIC}> CACHE BOOL "Do not build SDL as a shared library")
+set(SDL_TEST_LIBRARY OFF CACHE BOOL "Do not build SDL tests")
+set(SDL_EXAMPLES OFF CACHE BOOL "Do not build SDL examples")
+FetchContent_Declare(
+	SDL3
+	URL https://github.com/libsdl-org/SDL/releases/download/release-${SDL_REQUIRED_VERSION}/SDL3-${SDL_REQUIRED_VERSION}.zip
+	DOWNLOAD_EXTRACT_TIMESTAMP ON
+	CMAKE_ARGS -DSDL_SHARED=$<NOT:${CF_FRAMEWORK_STATIC}> -DSDL_STATIC=${CF_FRAMEWORK_STATIC} -DSDL_TEST_LIBRARY=OFF -DSDL_TESTS=OFF -DSDL_EXAMPLES=OFF
+)
+FetchContent_MakeAvailable(SDL3)
+if(CF_FRAMEWORK_STATIC)
+	set(CF_LINK_LIBS ${CF_LINK_LIBS} SDL3::SDL3-static)
+else ()
+	set(CF_LINK_LIBS ${CF_LINK_LIBS} SDL3::SDL3)
 endif()
 target_include_directories(cute PUBLIC ${SDL3_INCLUDE_DIRS})
 
@@ -446,11 +437,7 @@ FetchContent_MakeAvailable(SPIRV_CROSS)
 set(CF_LINK_LIBS ${CF_LINK_LIBS} spirv-cross-c)
 
 # Some platform specific settings.
-if(EMSCRIPTEN)
-	target_compile_options(cute PUBLIC -O1 -fno-rtti -fno-exceptions)
-	set_target_properties(cute PROPERTIES COMPILE_FLAGS "-s USE_SDL=3")
-	target_link_libraries(cute PRIVATE "-s USE_WEBGL2=1 -s ASSERTIONS=1 -s MAX_WEBGL_VERSION=2 -s USE_SDL=3 -s ALLOW_MEMORY_GROWTH=1 -O1 -s ASYNCIFY=1")
-elseif(MINGW)
+if(MINGW)
 	set(CF_LINK_LIBS ${CF_LINK_LIBS} d3d11 crypt32)
 elseif(WINDOWS)
 	set(CF_LINK_LIBS ${CF_LINK_LIBS} crypt32)
@@ -512,12 +499,6 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 
 		add_executable(tests ${CF_TEST_SRCS} ${CF_TEST_HDRS})
 		target_link_libraries(tests PRIVATE cute)
-
-		if(EMSCRIPTEN)
-			set(CMAKE_EXECUTABLE_SUFFIX ".html")
-			target_compile_options(tests PUBLIC -O1 -fno-rtti -fno-exceptions)
-			target_link_options(tests PRIVATE -o tests.html --emrun -O1)
-		endif()
 
 		# For convenience make tests the startup project in Visual Studio.
 		# Also set working directory to the target output folder.
