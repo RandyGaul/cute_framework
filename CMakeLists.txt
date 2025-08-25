@@ -9,6 +9,7 @@ project(cute_framework
 # Must have at least C++20.
 set(CMAKE_CXX_STANDARD 20)
 
+include(GNUInstallDirs)
 # These are needed for how we use FetchContent.
 include(FetchContent)
 Set(FETCHCONTENT_QUIET FALSE)
@@ -267,6 +268,11 @@ endif()
 
 add_library(physfs STATIC ${PHYSFS_SRCS})
 set(CF_LINK_LIBS ${CF_LINK_LIBS} physfs)
+install(TARGETS physfs
+	BUNDLE DESTINATION .
+	RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+	LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+	ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
 
 # Add s2n for Linux builds.
 if(LINUX)
@@ -380,6 +386,11 @@ if (CF_RUNTIME_SHADER_COMPILATION OR CF_CUTE_SHADERC)
 	set(CUTE_SHADER_SRCS src/cute_shader/cute_shader.cpp)
 	add_library(cute-shader STATIC ${CUTE_SHADER_SRCS})
 	target_link_libraries(cute-shader PRIVATE glslang glslang-default-resource-limits SPIRV)
+	install(TARGETS cute-shader
+	BUNDLE DESTINATION .
+	RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+	LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+	ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
 	if (NOT MSVC AND NOT CF_FRAMEWORK_STATIC)
 		set_target_properties(cute-shader PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
 	endif()
@@ -396,6 +407,11 @@ if (CF_RUNTIME_SHADER_COMPILATION OR CF_CUTE_SHADERC)
 		set(CUTE_SHADERC_SRCS src/cute_shader/cute_shaderc.cpp)
 		add_executable(cute-shaderc ${CUTE_SHADERC_SRCS})
 		target_link_libraries(cute-shaderc cute-shader)
+		install(TARGETS cute-shaderc
+		BUNDLE DESTINATION .
+		RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+		LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+		ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
 	endif()
 endif()
 
@@ -648,3 +664,10 @@ target_include_directories(cute PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_
 target_include_directories(cute PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/libraries>)
 target_include_directories(cute PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/libraries/cimgui>)
 target_include_directories(cute PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/libraries/cimgui/imgui>)
+
+# Install target
+install(TARGETS cute
+	BUNDLE DESTINATION .
+	RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+	LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+	ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
