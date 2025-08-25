@@ -252,6 +252,11 @@ endif()
 
 add_library(physfs STATIC ${PHYSFS_SRCS})
 set(CF_LINK_LIBS ${CF_LINK_LIBS} physfs)
+install(TARGETS physfs
+	BUNDLE DESTINATION .
+	RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+	LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+	ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
 
 # Add s2n for Linux builds.
 if(LINUX)
@@ -381,6 +386,11 @@ if (CF_RUNTIME_SHADER_COMPILATION OR CF_CUTE_SHADERC)
 		set(CUTE_SHADERC_SRCS src/cute_shader/cute_shaderc.cpp)
 		add_executable(cute-shaderc ${CUTE_SHADERC_SRCS})
 		target_link_libraries(cute-shaderc cute-shader)
+		install(TARGETS cute-shaderc
+		BUNDLE DESTINATION .
+		RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+		LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+		ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
 	endif()
 endif()
 
