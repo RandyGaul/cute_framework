@@ -210,42 +210,20 @@ else()
 endif()
 target_compile_definitions(cute PRIVATE CF_EXPORT)
 
-# PhysicsFS, always statically linked.
-set(PHYSFS_SRCS
-	libraries/physfs/physfs_archiver_7z.c
-	libraries/physfs/physfs_archiver_dir.c
-	libraries/physfs/physfs_archiver_grp.c
-	libraries/physfs/physfs_archiver_hog.c
-	libraries/physfs/physfs_archiver_iso9660.c
-	libraries/physfs/physfs_archiver_mvl.c
-	libraries/physfs/physfs_archiver_qpak.c
-	libraries/physfs/physfs_archiver_slb.c
-	libraries/physfs/physfs_archiver_unpacked.c
-	libraries/physfs/physfs_archiver_vdf.c
-	libraries/physfs/physfs_archiver_wad.c
-	libraries/physfs/physfs_archiver_zip.c
-	libraries/physfs/physfs_byteorder.c
-	libraries/physfs/physfs_casefolding.h
-	libraries/physfs/physfs_internal.h
-	libraries/physfs/physfs_lzmasdk.h
-	libraries/physfs/physfs_miniz.h
-	libraries/physfs/physfs_platform_haiku.cpp
-	libraries/physfs/physfs_platform_os2.c
-	libraries/physfs/physfs_platform_posix.c
-	libraries/physfs/physfs_platform_qnx.c
-	libraries/physfs/physfs_platform_unix.c
-	libraries/physfs/physfs_platform_windows.c
-	libraries/physfs/physfs_platform_winrt.cpp
-	libraries/physfs/physfs_platforms.h
-	libraries/physfs/physfs_unicode.c
-	libraries/physfs/physfs.c
-	libraries/physfs/physfs.h
+# PhysicsFS for virtual file system and archive support.
+set(PHYSFS_BUILD_SHARED $<NOT:${CF_FRAMEWORK_STATIC}> CACHE BOOL "Build PhysFS as shared library")
+set(PHYSFS_BUILD_STATIC ${CF_FRAMEWORK_STATIC} CACHE BOOL "Build PhysFS as static library")
+set(PHYSFS_BUILD_TEST OFF CACHE BOOL "Do not build PhysFS tests.")
+set(PHYSFS_BUILD_DOCS OFF CACHE BOOL "Do not build PhysFS docs.")
+FetchContent_Declare(
+	physfs
+	GIT_REPOSITORY https://github.com/icculus/physfs.git
+	GIT_TAG        9d18d36b5a5207b72f473f05e1b2834e347d8144
+	GIT_SHALLOW TRUE
 )
+FetchContent_MakeAvailable(physfs)
 
 if(APPLE)
-	set(PHYSFS_SRCS ${PHYSFS_SRCS}
-		libraries/physfs/physfs_platform_apple.m
-	)
 	find_library(IOKIT IOKit)
 	find_library(FOUNDATION Foundation)
 	find_library(SECURITY Security)
@@ -261,13 +239,11 @@ if(LINUX)
 	set(CF_LINK_LIBS ${CF_LINK_LIBS} ${IOKIT} ${FOUNDATION} ${SECURITY} ${OPENGL_LIBRARIES})
 endif()
 
-add_library(physfs STATIC ${PHYSFS_SRCS})
-set(CF_LINK_LIBS ${CF_LINK_LIBS} physfs)
-install(TARGETS physfs
-	BUNDLE DESTINATION .
-	RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-	LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-	ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
+if(CF_FRAMEWORK_STATIC)
+	set(CF_LINK_LIBS ${CF_LINK_LIBS} PhysFS::PhysFS-static)
+else ()
+	set(CF_LINK_LIBS ${CF_LINK_LIBS} PhysFS::PhysFS)
+endif()
 
 # Add s2n for Linux builds.
 if(LINUX)
