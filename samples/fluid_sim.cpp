@@ -10,7 +10,7 @@ float h = 300*2;
 // Would be nice to replace it with some more cool.
 #define STR(X) #X
 const char* s_shd = STR(
-	layout(set = 2, binding = 0) uniform sampler2D tex;
+	layout(set = 2, binding = 1) uniform sampler2D tex;
 
 	layout(set = 3, binding = 1) uniform shd_uniforms {
 		float dt;
