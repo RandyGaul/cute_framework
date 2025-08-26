@@ -18,6 +18,9 @@ set(CF_TEST_HDRS test_harness.h)
 
 add_executable(tests ${CF_TEST_SRCS} ${CF_TEST_HDRS})
 target_link_libraries(tests PRIVATE cute)
+set_target_properties(tests PROPERTIES
+	RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
+)
 
 # For convenience make tests the startup project in Visual Studio.
 # Also set working directory to the target output folder.
