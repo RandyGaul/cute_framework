@@ -12,7 +12,7 @@
 #include <internal/cute_alloc_internal.h>
 #include <internal/cute_app_internal.h>
 
-#include <physfs/physfs.h>
+#include <physfs.h>
 
 #define CF_FILE_SYSTEM_BUFFERED_IO_SIZE (2 * CF_MB)
 
