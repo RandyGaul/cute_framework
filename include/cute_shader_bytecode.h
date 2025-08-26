@@ -152,6 +152,8 @@ typedef struct CF_ShaderInfo
 	int num_images;
 	/* @member Name of each images. */
 	const char** image_names;
+	/* @member Binding slot index of each image. */
+	int* image_binding_slots;
 
 	/* @member Number of uniform blocks. */
 	int num_uniforms;
