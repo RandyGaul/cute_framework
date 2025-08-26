@@ -95,34 +95,23 @@ For bug fixes please create a GitHub pull request. Try to be careful to match CF
 
 The CF [samples](https://github.com/RandyGaul/cute_framework/tree/master/samples) are quite easy to extend. Simply copy + paste one of the other samples to get started, such as one of the simpler ones, perhaps [basic_sprite](https://github.com/RandyGaul/cute_framework/blob/master/samples/basic_sprite.cppb). or [basic_input.c](https://github.com/RandyGaul/cute_framework/blob/master/samples/basic_input.c).
 
-Open up CF's [CmakeLists.txt file](https://github.com/RandyGaul/cute_framework/blob/master/CMakeLists.txt) to hook up the sample to the build system. Search for `CF_FRAMEWORK_BUILD_SAMPLES` to find a list of executable targets for all the samples via `add_executable`. Add your new sample here like so for the example "new_sample":
+Open up CF's `samples` [CmakeLists.txt file](https://github.com/RandyGaul/cute_framework/blob/master/samples/CMakeLists.txt) to hook up the sample to the build system. Add your new sample here like so for the example "new_sample":
 
 ```cmake
 ...
-add_executable(waves samples/waves.cpp)
-add_executable(shallow_water samples/shallow_water.cpp)
-add_executable(noise samples/noise.c)
-add_executable(new_sample samples/new_sample.c)
+add_sample(waves waves.cpp)
+add_sample(shallow_water shallow_water.cpp)
+add_sample(noise noise.c)
+add_sample(new_sample new_sample.c)
 ```
 
-Just below also add in a line via `set(SAMPLE_EXECUTABLES` like so:
+If your sample needs access to files on disk, such as assets like images or audio, create a folder in CF's samples folder. Name it "new_sample_data", where "new_sample" is the name of your new sample. Then add in a line to CF's [CmakeLists.txt file](https://github.com/RandyGaul/cute_framework/blob/master/samples/CMakeLists.txt) to copy over the assets to the build folder when building.
 
 ```cmake
-		hello_triangle
-		waves
-		shallow_water
-		noise
-		new_sample
-	)
-```
-
-If your sample needs access to files on disk, such as assets like images or audio, create a folder in CF's samples folder. Name it "new_sample_data", where "new_sample" is the name of your new sample. Then add in a line to CF's [CmakeLists.txt file](https://github.com/RandyGaul/cute_framework/blob/master/CMakeLists.txt) to copy over the assets to the build folder when building.
-
-```cmake
-	add_custom_command(TARGET spaceshooter PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/samples/spaceshooter_data $<TARGET_FILE_DIR:spaceshooter>/spaceshooter_data)
-	add_custom_command(TARGET waves PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/samples/waves_data $<TARGET_FILE_DIR:waves>/waves_data)
-	add_custom_command(TARGET shallow_water PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/samples/shallow_water_data $<TARGET_FILE_DIR:shallow_water>/shallow_water_data)
-	add_custom_command(TARGET shallow_water PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/samples/new_sample $<TARGET_FILE_DIR:shallow_water>/new_sample)
+	add_custom_command(TARGET spaceshooter PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/spaceshooter_data $<TARGET_FILE_DIR:spaceshooter>/spaceshooter_data)
+	add_custom_command(TARGET waves PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/waves_data $<TARGET_FILE_DIR:waves>/waves_data)
+	add_custom_command(TARGET shallow_water PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/shallow_water_data $<TARGET_FILE_DIR:shallow_water>/shallow_water_data)
+	add_custom_command(TARGET shallow_water PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/new_sample $<TARGET_FILE_DIR:shallow_water>/new_sample)
 ```
 
 And that's it! Regenerate your project and you will be able to build your new sample. Once confirmed working as intended, open a pull request to add in your new sample!
@@ -136,3 +125,4 @@ Please note that the reference pages for functions/structs are automatically gen
 CF uses [MkDocs](https://www.mkdocs.org/) with the [Material theme](https://squidfunk.github.io/mkdocs-material/) to generate the website, so you can run `mkdocs serve` to preview the docs locally. Be sure to install MkDocs first, which you can do with `pip install mkdocs mkdocs-material "mkdocs-material[imaging]"`. This requires Python 3.x.
 
 <p align="center"><img src=https://github.com/RandyGaul/cute_framework/blob/master/assets/CF_Logo_Pixel_2x.png></p>
+
