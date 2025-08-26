@@ -456,7 +456,7 @@ void cf_app_update(CF_OnUpdateFn* on_update)
 		}
 
 		if (app->using_imgui) {
-  		ImGui_ImplSDLGPU3_NewFrame();
+			ImGui_ImplSDLGPU3_NewFrame();
 			ImGui_ImplSDL3_NewFrame();
 			ImGui::NewFrame();
 		}
