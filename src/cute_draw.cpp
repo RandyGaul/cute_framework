@@ -2688,6 +2688,13 @@ void static s_blit(CF_Command* cmd, CF_Canvas src, CF_Canvas dst, bool clear_dst
 		draw->blit_mesh = blit_mesh;
 	}
 
+	// End any active render pass before updating mesh data to avoid Metal command encoder conflicts
+	CF_CanvasInternal* dst_canvas = (CF_CanvasInternal*)dst.id;
+	if (dst_canvas && dst_canvas->pass) {
+		cf_commit();
+		dst_canvas->pass = NULL;
+	}
+
 	// Try and fetch a custom shader supplied by the user, otherwise fallback to the default blit shader.
 	CF_Shader* blit = (CF_Shader*)draw->draw_shd_to_blit_shd.try_get(cmd->shader.id);
 	if (!blit) {
@@ -2695,8 +2702,7 @@ void static s_blit(CF_Command* cmd, CF_Canvas src, CF_Canvas dst, bool clear_dst
 		blit = (CF_Shader*)&app->blit_shader;
 	}
 
-	cf_apply_canvas(dst, clear_dst);
-
+	// Prepare vertex data BEFORE applying canvas to avoid Metal command encoder conflicts
 	// Matches index convention from `bb_verts` function.
 	v2 verts_world[6] = {
 		cmd->canvas_verts[0],
@@ -2726,7 +2732,11 @@ void static s_blit(CF_Command* cmd, CF_Canvas src, CF_Canvas dst, bool clear_dst
 	verts[4].uv = V2(1,0);
 	verts[5].uv = V2(0,0);
 
+	// Update mesh data before starting render pass
 	cf_mesh_update_vertex_data(draw->blit_mesh, verts, 6);
+
+	// Now apply canvas which starts the render pass
+	cf_apply_canvas(dst, clear_dst);
 	cf_apply_mesh(draw->blit_mesh);
 
 	// Read pixels from src.
@@ -2861,6 +2871,14 @@ void cf_render_layers_to(CF_Canvas canvas, int layer_lo, int layer_hi, bool clea
 		}
 		spritebatch_flush(&draw->sb);
 	}
+	
+	// End any active render pass to avoid Metal command encoder conflicts
+	CF_CanvasInternal* canvas_internal = (CF_CanvasInternal*)canvas.id;
+	if (canvas_internal && canvas_internal->pass) {
+		cf_commit();
+		canvas_internal->pass = NULL;
+	}
+	
 	draw->has_drawn_something = false;
 	cf_arena_reset(&draw->uniform_arena);
 	draw->verts.clear();
