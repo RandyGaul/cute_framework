@@ -456,32 +456,7 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 	option(CF_FRAMEWORK_BUILD_SAMPLES "Build the cute framework sample programs." ON)
 	# Cute unit tests executable (optional, defaulted to also build).
 	if (CF_FRAMEWORK_BUILD_TESTS)
-		set(CF_TEST_SRCS test/main.cpp
-			test/test_array.cpp
-			test/test_aseprite.cpp
-			test/test_audio.cpp
-			test/test_base64.cpp
-			test/test_coroutine.cpp
-			test/test_doubly_list.cpp
-			test/test_hashtable.cpp
-			test/test_path.cpp
-			test/test_png_cache.cpp
-			test/test_sprite.cpp
-			test/test_string.cpp
-			test/test_json.cpp
-			test/test_markups.cpp
-			)
-		set(CF_TEST_HDRS test/test_harness.h)
-
-		add_executable(tests ${CF_TEST_SRCS} ${CF_TEST_HDRS})
-		target_link_libraries(tests PRIVATE cute)
-
-		# For convenience make tests the startup project in Visual Studio.
-		# Also set working directory to the target output folder.
-		if (MSVC)
-			set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT tests)
-			set_property(TARGET tests PROPERTY VS_DEBUGGER_WORKING_DIRECTORY $<TARGET_FILE_DIR:tests>)
-		endif()
+		add_subdirectory(test)
 	endif()
 
 	# Cute sample prgrams (optional, defaulted to also build).
