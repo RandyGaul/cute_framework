@@ -288,6 +288,7 @@ void cf_texture_update_mip(CF_Texture texture_handle, void* data, int size, int 
 	SDL_GPUCopyPass* pass = SDL_BeginGPUCopyPass(cmd);
 	SDL_GPUTextureTransferInfo src;
 	src.transfer_buffer = buf;
+	src.offset = 0;
 	src.pixels_per_row = w;
 	src.rows_per_layer = h;
 	SDL_GPUTextureRegion dst = SDL_GPUTextureRegionDefaults(tex, w, h);
