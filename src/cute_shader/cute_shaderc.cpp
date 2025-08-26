@@ -106,8 +106,14 @@ static bool write_bytecode_struct(
 			fprintf(file, " \"%s\",", shader_info->image_names[i]);
 		}
 		fprintf(file, "\n};\n");
+		fprintf(file, "static int %s%s_image_binding_slots[%d] = {\n   ", var_name, suffix, shader_info->num_images);
+		for (int i = 0; i < shader_info->num_images; ++i) {
+			fprintf(file, " %d,", shader_info->image_binding_slots[i]);
+		}
+		fprintf(file, "\n};\n");
 	} else {
 		fprintf(file, "static const char** const %s%s_image_names = NULL;\n", var_name, suffix);
+		fprintf(file, "static int* const %s%s_image_binding_slots = NULL;\n", var_name, suffix);
 	}
 
 	if (shader_info->num_uniforms > 0) {
@@ -164,6 +170,7 @@ static bool write_bytecode_struct(
 	fprintf(file, "        .num_storage_buffers = %d,\n", shader_info->num_storage_buffers);
 	fprintf(file, "        .num_images = %d,\n", shader_info->num_images);
 	fprintf(file, "        .image_names = %s%s_image_names,\n", var_name, suffix);
+	fprintf(file, "        .image_binding_slots = %s%s_image_binding_slots,\n", var_name, suffix);
 	fprintf(file, "        .num_uniforms = %d,\n", shader_info->num_uniforms);
 	fprintf(file, "        .uniforms = %s%s_uniforms,\n", var_name, suffix);
 	fprintf(file, "        .num_uniform_members = %d,\n", shader_info->num_uniform_members);

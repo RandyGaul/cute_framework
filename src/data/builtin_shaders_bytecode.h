@@ -265,6 +265,7 @@ static const uint8_t s_draw_vs_bytecode_content[3176] = {
     0xFD, 0x00, 0x01, 0x00, 0x38, 0x00, 0x01, 0x00,
 };
 static const char** const s_draw_vs_bytecode_image_names = NULL;
+static int* const s_draw_vs_bytecode_image_binding_slots = NULL;
 static CF_ShaderUniformInfo* const s_draw_vs_bytecode_uniforms = NULL;
 static CF_ShaderUniformMemberInfo* const s_draw_vs_bytecode_uniform_members = NULL;
 static CF_ShaderInputInfo s_draw_vs_bytecode_inputs[14] = {
@@ -348,6 +349,7 @@ static const CF_ShaderBytecode s_draw_vs_bytecode = {
         .num_storage_buffers = 0,
         .num_images = 0,
         .image_names = s_draw_vs_bytecode_image_names,
+        .image_binding_slots = s_draw_vs_bytecode_image_binding_slots,
         .num_uniforms = 0,
         .uniforms = s_draw_vs_bytecode_uniforms,
         .num_uniform_members = 0,
@@ -1972,6 +1974,9 @@ static const uint8_t s_draw_fs_bytecode_content[20720] = {
 static const char* s_draw_fs_bytecode_image_names[1] = {
     "u_image",
 };
+static int s_draw_fs_bytecode_image_binding_slots[1] = {
+    0,
+};
 static CF_ShaderUniformInfo s_draw_fs_bytecode_uniforms[1] = {
     {
         .block_name = "uniform_block",
@@ -2004,6 +2009,7 @@ static const CF_ShaderBytecode s_draw_fs_bytecode = {
         .num_storage_buffers = 0,
         .num_images = 1,
         .image_names = s_draw_fs_bytecode_image_names,
+        .image_binding_slots = s_draw_fs_bytecode_image_binding_slots,
         .num_uniforms = 1,
         .uniforms = s_draw_fs_bytecode_uniforms,
         .num_uniform_members = 2,
@@ -2084,6 +2090,7 @@ static const uint8_t s_basic_vs_bytecode_content[896] = {
     0x1A, 0x00, 0x00, 0x00, 0x18, 0x00, 0x00, 0x00, 0xFD, 0x00, 0x01, 0x00, 0x38, 0x00, 0x01, 0x00,
 };
 static const char** const s_basic_vs_bytecode_image_names = NULL;
+static int* const s_basic_vs_bytecode_image_binding_slots = NULL;
 static CF_ShaderUniformInfo* const s_basic_vs_bytecode_uniforms = NULL;
 static CF_ShaderUniformMemberInfo* const s_basic_vs_bytecode_uniform_members = NULL;
 static CF_ShaderInputInfo s_basic_vs_bytecode_inputs[1] = {
@@ -2102,6 +2109,7 @@ static const CF_ShaderBytecode s_basic_vs_bytecode = {
         .num_storage_buffers = 0,
         .num_images = 0,
         .image_names = s_basic_vs_bytecode_image_names,
+        .image_binding_slots = s_basic_vs_bytecode_image_binding_slots,
         .num_uniforms = 0,
         .uniforms = s_basic_vs_bytecode_uniforms,
         .num_uniform_members = 0,
@@ -2152,6 +2160,7 @@ static const uint8_t s_basic_fs_bytecode_content[408] = {
     0xFD, 0x00, 0x01, 0x00, 0x38, 0x00, 0x01, 0x00,
 };
 static const char** const s_basic_fs_bytecode_image_names = NULL;
+static int* const s_basic_fs_bytecode_image_binding_slots = NULL;
 static CF_ShaderUniformInfo* const s_basic_fs_bytecode_uniforms = NULL;
 static CF_ShaderUniformMemberInfo* const s_basic_fs_bytecode_uniform_members = NULL;
 static CF_ShaderInputInfo* const s_basic_fs_bytecode_inputs = NULL;
@@ -2164,6 +2173,7 @@ static const CF_ShaderBytecode s_basic_fs_bytecode = {
         .num_storage_buffers = 0,
         .num_images = 0,
         .image_names = s_basic_fs_bytecode_image_names,
+        .image_binding_slots = s_basic_fs_bytecode_image_binding_slots,
         .num_uniforms = 0,
         .uniforms = s_basic_fs_bytecode_uniforms,
         .num_uniform_members = 0,
@@ -2244,6 +2254,7 @@ static const uint8_t s_backbuffer_vs_bytecode_content[896] = {
     0x1A, 0x00, 0x00, 0x00, 0x18, 0x00, 0x00, 0x00, 0xFD, 0x00, 0x01, 0x00, 0x38, 0x00, 0x01, 0x00,
 };
 static const char** const s_backbuffer_vs_bytecode_image_names = NULL;
+static int* const s_backbuffer_vs_bytecode_image_binding_slots = NULL;
 static CF_ShaderUniformInfo* const s_backbuffer_vs_bytecode_uniforms = NULL;
 static CF_ShaderUniformMemberInfo* const s_backbuffer_vs_bytecode_uniform_members = NULL;
 static CF_ShaderInputInfo s_backbuffer_vs_bytecode_inputs[1] = {
@@ -2262,6 +2273,7 @@ static const CF_ShaderBytecode s_backbuffer_vs_bytecode = {
         .num_storage_buffers = 0,
         .num_images = 0,
         .image_names = s_backbuffer_vs_bytecode_image_names,
+        .image_binding_slots = s_backbuffer_vs_bytecode_image_binding_slots,
         .num_uniforms = 0,
         .uniforms = s_backbuffer_vs_bytecode_uniforms,
         .num_uniform_members = 0,
@@ -2312,6 +2324,7 @@ static const uint8_t s_backbuffer_fs_bytecode_content[408] = {
     0xFD, 0x00, 0x01, 0x00, 0x38, 0x00, 0x01, 0x00,
 };
 static const char** const s_backbuffer_fs_bytecode_image_names = NULL;
+static int* const s_backbuffer_fs_bytecode_image_binding_slots = NULL;
 static CF_ShaderUniformInfo* const s_backbuffer_fs_bytecode_uniforms = NULL;
 static CF_ShaderUniformMemberInfo* const s_backbuffer_fs_bytecode_uniform_members = NULL;
 static CF_ShaderInputInfo* const s_backbuffer_fs_bytecode_inputs = NULL;
@@ -2324,6 +2337,7 @@ static const CF_ShaderBytecode s_backbuffer_fs_bytecode = {
         .num_storage_buffers = 0,
         .num_images = 0,
         .image_names = s_backbuffer_fs_bytecode_image_names,
+        .image_binding_slots = s_backbuffer_fs_bytecode_image_binding_slots,
         .num_uniforms = 0,
         .uniforms = s_backbuffer_fs_bytecode_uniforms,
         .num_uniform_members = 0,
@@ -2448,6 +2462,7 @@ static const uint8_t s_blit_vs_bytecode_content[1412] = {
     0x38, 0x00, 0x01, 0x00,
 };
 static const char** const s_blit_vs_bytecode_image_names = NULL;
+static int* const s_blit_vs_bytecode_image_binding_slots = NULL;
 static CF_ShaderUniformInfo* const s_blit_vs_bytecode_uniforms = NULL;
 static CF_ShaderUniformMemberInfo* const s_blit_vs_bytecode_uniform_members = NULL;
 static CF_ShaderInputInfo s_blit_vs_bytecode_inputs[4] = {
@@ -2481,6 +2496,7 @@ static const CF_ShaderBytecode s_blit_vs_bytecode = {
         .num_storage_buffers = 0,
         .num_images = 0,
         .image_names = s_blit_vs_bytecode_image_names,
+        .image_binding_slots = s_blit_vs_bytecode_image_binding_slots,
         .num_uniforms = 0,
         .uniforms = s_blit_vs_bytecode_uniforms,
         .num_uniform_members = 0,
@@ -2731,6 +2747,9 @@ static const uint8_t s_blit_fs_bytecode_content[3052] = {
 static const char* s_blit_fs_bytecode_image_names[1] = {
     "u_image",
 };
+static int s_blit_fs_bytecode_image_binding_slots[1] = {
+    0,
+};
 static CF_ShaderUniformInfo s_blit_fs_bytecode_uniforms[1] = {
     {
         .block_name = "uniform_block",
@@ -2763,6 +2782,7 @@ static const CF_ShaderBytecode s_blit_fs_bytecode = {
         .num_storage_buffers = 0,
         .num_images = 1,
         .image_names = s_blit_fs_bytecode_image_names,
+        .image_binding_slots = s_blit_fs_bytecode_image_binding_slots,
         .num_uniforms = 1,
         .uniforms = s_blit_fs_bytecode_uniforms,
         .num_uniform_members = 2,
