@@ -490,6 +490,7 @@ static SDL_GPUShader* s_compile(CF_ShaderInternal* shader_internal, CF_ShaderByt
 
 	for (int i = 0; i < shader_info->num_images; ++i) {
 		shader_internal->image_names.add(sintern(shader_info->image_names[i]));
+		shader_internal->image_binding_slots.add(shader_info->image_binding_slots[i]);
 	}
 
 	if (stage == CF_SHADER_STAGE_VERTEX) {
@@ -1468,20 +1469,29 @@ void cf_apply_shader(CF_Shader shader_handle, CF_Material material_handle)
 
 	// Bind images to all their respective slots.
 	int sampler_count = shader->image_names.count();
-	SDL_GPUTextureSamplerBinding* sampler_bindings = SDL_stack_alloc(SDL_GPUTextureSamplerBinding, sampler_count);
+	int max_binding_slot = 0;
+	// Find the maximum binding slot to allocate the correct size array
+	for (int i = 0; i < shader->image_binding_slots.size(); ++i) {
+		if (shader->image_binding_slots[i] > max_binding_slot) {
+			max_binding_slot = shader->image_binding_slots[i];
+		}
+	}
+	SDL_GPUTextureSamplerBinding* sampler_bindings = SDL_stack_alloc(SDL_GPUTextureSamplerBinding, max_binding_slot + 1);
+	CF_MEMSET(sampler_bindings, 0, sizeof(SDL_GPUTextureSamplerBinding) * (max_binding_slot + 1));
 	int found_image_count = 0;
 	for (int i = 0; found_image_count < sampler_count && i < material->fs.textures.count(); ++i) {
 		const char* image_name = material->fs.textures[i].name;
 		for (int j = 0; j < shader->image_names.size(); ++j) {
 			if (shader->image_names[j] == image_name) {
-				sampler_bindings[j].sampler = ((CF_TextureInternal*)material->fs.textures[i].handle.id)->sampler;
-				sampler_bindings[j].texture = ((CF_TextureInternal*)material->fs.textures[i].handle.id)->tex;
+				int binding_slot = shader->image_binding_slots[j];
+				sampler_bindings[binding_slot].sampler = ((CF_TextureInternal*)material->fs.textures[i].handle.id)->sampler;
+				sampler_bindings[binding_slot].texture = ((CF_TextureInternal*)material->fs.textures[i].handle.id)->tex;
 				found_image_count++;
 			}
 		}
 	}
 	CF_ASSERT(found_image_count == sampler_count);
-	SDL_BindGPUFragmentSamplers(pass, 0, sampler_bindings, (Uint32)found_image_count);
+	SDL_BindGPUFragmentSamplers(pass, 0, sampler_bindings, (Uint32)(max_binding_slot + 1));
 
 	// Copy over uniform data.
 	s_copy_uniforms(cmd, &material->block_arena, shader, &material->vs, true);
