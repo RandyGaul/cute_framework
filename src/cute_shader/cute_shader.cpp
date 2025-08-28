@@ -526,7 +526,7 @@ void cute_shader_free_result(CF_ShaderCompilerResult result)
 		free((char*)shader_info->image_names[i]);
 	}
 	free(shader_info->image_names);
-	free(shader_info->image_binding_slots);
+	free((int*)shader_info->image_binding_slots);
 
 	free((void*)result.bytecode.content);
 	free((char*)result.preprocessed_source);
