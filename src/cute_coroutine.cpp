@@ -12,6 +12,7 @@
 #include <internal/cute_app_internal.h>
 
 #define MINICORO_IMPL
+#define MCO_USE_VMEM_ALLOCATOR
 #include <edubart/minicoro.h>
 
 struct CF_CoroutineInternal
