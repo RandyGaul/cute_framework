@@ -5,6 +5,8 @@ on: [push, pull_request, workflow_dispatch]
 
 env:
   CMAKE_BUILD_PARALLEL_LEVEL: 6
+  CMAKE_C_COMPILER_LAUNCHER: ccache
+  CMAKE_CXX_COMPILER_LAUNCHER: ccache
 
 jobs:
   build:
@@ -17,24 +19,44 @@ jobs:
     defaults:
       run:
         shell: bash
-    
+
     strategy:
       # Don't cancel other in-progress jobs if one fails.
       fail-fast: false
       matrix:
         runtime_shader_compilation:
-          - { value: 'ON', cmake_arg: '-DCF_RUNTIME_SHADER_COMPILATION=ON' }
-          - { value: 'OFF', cmake_arg: '-DCF_RUNTIME_SHADER_COMPILATION=OFF' }
+          - { value: "ON", cmake_arg: "-DCF_RUNTIME_SHADER_COMPILATION=ON" }
+          - { value: "OFF", cmake_arg: "-DCF_RUNTIME_SHADER_COMPILATION=OFF" }
         platform:
           # Diabled MinGW as it was having trouble with DX12 headers being out of date.
           # - { name: "Windows (MinGW-w64)",     os: windows-latest, artifact: 'mingw-w64', generate: '-G "MinGW Makefiles"' }
-          - { name: "Windows (MSCV 17 2022)",  os: windows-2025,   artifact: 'mscv17',    generate: '-G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release' }
-          - { name: "MacOS",                   os: macos-latest,   artifact: 'macos',     generate: '-G "Unix Makefiles"' }
-          - { name: "Linux",                   os: ubuntu-latest,  artifact: 'linux',     generate: '-G "Unix Makefiles"' }
+          - {
+              name: "Windows (MSCV 17 2022)",
+              os: windows-2025,
+              artifact: "mscv17",
+              generate: '-G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release',
+            }
+          - {
+              name: "MacOS",
+              os: macos-latest,
+              artifact: "macos",
+              generate: '-G "Unix Makefiles"',
+            }
+          - {
+              name: "Linux",
+              os: ubuntu-latest,
+              artifact: "linux",
+              generate: '-G "Unix Makefiles"',
+            }
           # TODO - Add iOS and Android platforms. Waiting on better support from GitHub.
 
     steps:
       - uses: actions/checkout@master
+
+      - name: ccache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: ${{ github.job }}-${{ matrix.platform.os }}-${{ matrix.runtime_shader_compilation.value }}
 
       # Linux needs to install various dependencies.
       # This could potentially be removed by using SOKOL_EXTERNAL_GL_LOADER.
@@ -48,7 +70,7 @@ jobs:
 
       - name: Create build folder with CMake
         run: |
-            cmake ${{ matrix.platform.generate }} ${{ matrix.runtime_shader_compilation.cmake_arg }} -B build_folder
+          cmake ${{ matrix.platform.generate }} ${{ matrix.runtime_shader_compilation.cmake_arg }} -B build_folder
 
       - name: Build project binary (non-MSVC)
         run: |
@@ -61,7 +83,7 @@ jobs:
         run: |
           cmake --build build_folder --config Release
         if: matrix.platform.name == 'Windows (MSCV 17 2022)'
-      
+
       # Run tests for MSVC 17
       - name: Run Tests for MSVC 17
         shell: cmd
@@ -70,7 +92,7 @@ jobs:
           tests.exe
           cd ..\..
         if: matrix.platform.name == 'Windows (MSCV 17 2022)'
-      
+
       # Run tests for MinGW (no Release folder)
       - name: Run Tests for MinGW
         shell: cmd
@@ -80,7 +102,7 @@ jobs:
           docsparser.exe
           cd ..
         if: matrix.platform.name == 'Windows (MinGW)'
-      
+
       - name: Run Tests for Apple
         run: |
           cd build_folder
@@ -88,7 +110,7 @@ jobs:
           ./docsparser
           cd ..
         if: runner.os == 'macOS'
-      
+
       - name: Run Tests for Linux
         run: |
           cd build_folder
@@ -104,7 +126,7 @@ jobs:
         shell: cmd
         run: |
           robocopy include dist *.h
-          robocopy build_folder\Release\lib dist cute*.lib 
+          robocopy build_folder\Release\lib dist cute*.lib
           robocopy build_folder\lib dist libcute*.a
           7z a ${{ matrix.platform.artifact }}.zip .\dist\*
         if: runner.os == 'Windows'
@@ -124,7 +146,7 @@ jobs:
           cp -v ./build_folder/lib/libcute*.a ./dist
           tar -czvf ${{ matrix.platform.artifact }}.tar.gz -C dist .
         if: runner.os == 'Linux'
-          
+
       # Uploads the zip archives onto the workflow. They can be downloaded for 90 days (by default).
       # Find them here: https://github.com/RandyGaul/cute_framework/actions
       - uses: actions/upload-artifact@v4
