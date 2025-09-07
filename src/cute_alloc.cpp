@@ -57,7 +57,7 @@ void cf_allocator_override(CF_Allocator allocator)
 	s_allocator = allocator;
 }
 
-void cf_allocator_restore_default()
+void cf_allocator_restore_default(void)
 {
 	s_allocator = s_default_allocator;
 }

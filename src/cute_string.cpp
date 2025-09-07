@@ -523,7 +523,7 @@ const char* cf_sintern_range(const char* start, const char* end)
 	return intern->string;
 }
 
-void cf_sinuke_intern_table()
+void cf_sinuke_intern_table(void)
 {
 	intern_table_t* table = s_inst();
 	table->write_lock();
