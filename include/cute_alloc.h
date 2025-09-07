@@ -60,7 +60,7 @@ CF_API void CF_CALL cf_allocator_override(CF_Allocator allocator);
  *           to do this on certain platforms for performance optimizations, but is not a necessary thing to do for many games.
  * @related  CF_Allocator cf_allocator_override cf_allocator_restore_default cf_alloc cf_free cf_calloc cf_realloc
  */
-CF_API void CF_CALL cf_allocator_restore_default();
+CF_API void CF_CALL cf_allocator_restore_default(void);
 
 /**
  * @function cf_alloc

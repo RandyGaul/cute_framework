@@ -963,7 +963,7 @@ CF_API char* CF_CALL cf_string_append_UTF8_impl(char *s, int codepoint);
 
 CF_API const char* CF_CALL cf_sintern(const char* s);
 CF_API const char* CF_CALL cf_sintern_range(const char* start, const char* end);
-CF_API void CF_CALL cf_sinuke_intern_table();
+CF_API void CF_CALL cf_sinuke_intern_table(void);
 
 #ifdef __cplusplus
 }
