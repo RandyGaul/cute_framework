@@ -56,7 +56,7 @@ jobs:
       - name: ccache
         uses: hendrikmuhs/ccache-action@v1.2
         with:
-          key: ${{ matrix.platform.os }}-${{ matrix.runtime_shader_compilation.value }}
+          key: ${{ github.job }}-${{ matrix.platform.os }}-${{ matrix.runtime_shader_compilation.value }}
 
       # Linux needs to install various dependencies.
       # This could potentially be removed by using SOKOL_EXTERNAL_GL_LOADER.
