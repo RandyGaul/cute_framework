@@ -18,6 +18,7 @@ jobs:
 
       - name: Install dependencies
         run: |
+          sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends libcairo2-dev libfreetype6-dev libffi-dev libjpeg-dev libpng-dev libz-dev
           sudo apt-get install -y --no-install-recommends pngquant gcc-multilib libasound2-dev libpulse-dev \
             libglfw3 libglfw3-dev libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libxext-dev libxfixes-dev
@@ -34,7 +35,7 @@ jobs:
       - name: Docs parser
         run: |
           cmake -B build/debug -DCF_RUNTIME_SHADER_COMPILATION=OFF -DCF_CUTE_SHADERC=OFF
-          cmake --build build/debug --parallel 8 --target docsparser
+          cmake --build build/debug --parallel --target docsparser
           cd build/debug
           ./docsparser
 

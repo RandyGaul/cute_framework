@@ -4,7 +4,6 @@ name: Build CF
 on: [push, pull_request, workflow_dispatch]
 
 env:
-  CMAKE_BUILD_PARALLEL_LEVEL: 6
   CMAKE_C_COMPILER_LAUNCHER: ccache
   CMAKE_CXX_COMPILER_LAUNCHER: ccache
 
@@ -74,14 +73,14 @@ jobs:
 
       - name: Build project binary (non-MSVC)
         run: |
-          cmake --build build_folder
+          cmake --build build_folder --parallel
         if: matrix.platform.name != 'Windows (MSCV 17 2022)'
 
       # Default for MSVC is to build with Debug, so a special case is needed to produce
       # Release binaries.
       - name: Build project binary (MSVC)
         run: |
-          cmake --build build_folder --config Release
+          cmake --build build_folder --config Release --parallel
         if: matrix.platform.name == 'Windows (MSCV 17 2022)'
 
       # Run tests for MSVC 17
