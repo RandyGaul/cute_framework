@@ -340,8 +340,6 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 
 #ifdef CF_WINDOWS
 	app->platform_handle = SDL_GetPointerProperty(SDL_GetWindowProperties(window), SDL_PROP_WINDOW_WIN32_HWND_POINTER, NULL);;
-#else
-	void* hwnd = NULL;
 #endif
 
 	app->gfx_enabled = use_gfx;
