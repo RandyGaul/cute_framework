@@ -4,6 +4,7 @@ name: Build CF
 on: [push, pull_request, workflow_dispatch]
 
 env:
+  CMAKE_BUILD_PARALLEL_LEVEL: 4
   CMAKE_C_COMPILER_LAUNCHER: ccache
   CMAKE_CXX_COMPILER_LAUNCHER: ccache
 
