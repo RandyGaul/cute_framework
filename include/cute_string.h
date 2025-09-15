@@ -981,7 +981,6 @@ CF_INLINE uint64_t constexpr fnv1a(const void* data, int size)
 {
 	const char* s = (const char*)data;
 	uint64_t h = 14695981039346656037ULL;
-	char c = 0;
 	while (size--) {
 		h = h ^ (uint64_t)(*s++);
 		h = h * 1099511628211ULL;
