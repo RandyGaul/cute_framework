@@ -4,8 +4,7 @@ name: Build CF
 on: [push, pull_request, workflow_dispatch]
 
 env:
-  CMAKE_C_COMPILER_LAUNCHER: ccache
-  CMAKE_CXX_COMPILER_LAUNCHER: ccache
+  CMAKE_BUILD_PARALLEL_LEVEL: 2
 
 jobs:
   build:
@@ -52,11 +51,6 @@ jobs:
     steps:
       - uses: actions/checkout@master
 
-      - name: ccache
-        uses: hendrikmuhs/ccache-action@v1.2
-        with:
-          key: ${{ github.job }}-${{ matrix.platform.os }}-${{ matrix.runtime_shader_compilation.value }}
-
       # Linux needs to install various dependencies.
       # This could potentially be removed by using SOKOL_EXTERNAL_GL_LOADER.
       - name: Install OpenGL + Audio
@@ -73,14 +67,14 @@ jobs:
 
       - name: Build project binary (non-MSVC)
         run: |
-          cmake --build build_folder --parallel
+          cmake --build build_folder
         if: matrix.platform.name != 'Windows (MSCV 17 2022)'
 
       # Default for MSVC is to build with Debug, so a special case is needed to produce
       # Release binaries.
       - name: Build project binary (MSVC)
         run: |
-          cmake --build build_folder --config Release --parallel
+          cmake --build build_folder --config Release
         if: matrix.platform.name == 'Windows (MSCV 17 2022)'
 
       # Run tests for MSVC 17
