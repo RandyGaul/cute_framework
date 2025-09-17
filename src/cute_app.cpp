@@ -296,6 +296,8 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 	app->w = w;
 	app->h = h;
 	SDL_GetWindowPosition(app->window, &app->x, &app->y);
+	app->dpi_scale = SDL_GetWindowDisplayScale(app->window);
+	app->dpi_scale_prev = app->dpi_scale;
 	::app = app;
 	cf_make_aseprite_cache();
 	cf_make_png_cache();
