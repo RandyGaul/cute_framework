@@ -461,6 +461,7 @@ struct CF_ShaderInternal
 	Cute::Array<CF_UniformBlockMember> fs_uniform_block_members[CF_MAX_UNIFORM_BLOCK_COUNT];
 	Cute::Array<CF_UniformBlockMember> vs_uniform_block_members[CF_MAX_UNIFORM_BLOCK_COUNT];
 	Cute::Array<const char*> image_names;
+	Cute::Array<int> image_binding_slots;
 	Cute::Array<CF_Pipeline> pip_cache;
 
 	CF_INLINE int get_input_index(const char* name)
