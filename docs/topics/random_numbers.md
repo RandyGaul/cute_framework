@@ -7,10 +7,10 @@ You may already know about the [`rand`](https://en.cppreference.com/w/c/numeric/
 To initialize a fresh random number generator, [`CF_Rnd`](../random/cf_rnd.md), call [`cf_rnd_seed`](../random/cf_rnd_seed.md).
 
 ```cpp
-CF_RndState rnd = cf_rnd_seed(0);
+CF_Rnd rnd = cf_rnd_seed(0);
 ```
 
-The seed acts as the initial parameter for the random number genertor, and dictates what number sequence will be generated. Each seed produces a deterministic set of numbers. That means if ever need to recreate something generated from random numbers, you can use the same initial seed.
+The seed acts as the initial parameter for the random number generator, and dictates what number sequence will be generated. Each seed produces a deterministic set of numbers. That means if ever need to recreate something generated from random numbers, you can use the same initial seed.
 
 If we want to generate _seemingly_ random but different numbers each time the application is started up, a great way is to query the system's time. In C there's a function called [`time`](https://en.cppreference.com/w/c/chrono/time) that returns an integer representing the number of seconds elapsed since [_the epoch_](https://en.wikipedia.org/wiki/Epoch_(computing)). You may typecast the return value to an integer and pass it into [`cf_rnd_seed`](../random/cf_rnd_seed.md).
 
@@ -19,7 +19,7 @@ If we want to generate _seemingly_ random but different numbers each time the ap
 
 //
 
-CF_RndState rnd = cf_rnd_seed((int)(time(NULL));
+CF_Rnd rnd = cf_rnd_seed((int)(time(NULL));
 ```
 
 [`CF_Rnd`](../random/cf_rnd.md) only takes up 128 bytes of stack space, so feel free to create as many of them as you need!
