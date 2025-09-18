@@ -172,6 +172,7 @@ struct CF_Draw
 	Cute::Array<int> blurs = { 0 };
 	Cute::Array<float> text_wrap_widths = { FLT_MAX };
 	Cute::Array<bool> vertical = { false };
+	Cute::Array<uint64_t> text_ids = { 0 };
 	Cute::Array<CF_Strike> strikes;
 	Cute::Array<bool> text_effects = { true };
 	Cute::Map<uint64_t, CF_AtlasSubImage> premade_sub_image_id_to_sub_image;

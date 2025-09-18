@@ -5,6 +5,7 @@ using namespace Cute;
 #include "sample_text.h"
 
 static bool draw_text_bound = false;
+static bool change_text = false;
 
 static void draw_text_boxed(const char* text, v2 pos, int len = -1)
 {
@@ -34,6 +35,10 @@ int main(int argc, char* argv[])
 
 		if (key_just_pressed(CF_KEY_SPACE)) {
 			draw_text_bound = !draw_text_bound;
+		}
+
+		if (key_down(CF_KEY_TAB)) {
+			change_text = !change_text;
 		}
 
 		push_font("ProggyClean");
@@ -94,6 +99,16 @@ int main(int argc, char* argv[])
 		// For moving text it helps to round positions.
 		push_font_size(30);
 		draw_text_boxed("Some <shake freq=35 x=2 y=2>shaking</shake> text.", round(V2(sinf((float)CF_SECONDS*0.25f)*100,cosf((float)CF_SECONDS*0.25f)*100)));
+
+		cf_push_text_id(1);
+		{
+			const char* modifiable_text = change_text
+				? "<wave height=30>Hold Tab to change this text</wave>"
+				: "<wave height=30>This is a new text, hold Tab to change</wave>";
+			v2 size = text_size(modifiable_text);
+			draw_text_boxed(modifiable_text, V2(-size.x * 0.5f, 40.f));
+		}
+		cf_pop_text_id();
 
 		// Instructions
 		const char* instructions = "Press Space to toggle bounding boxes";
