@@ -103,9 +103,14 @@ struct TextEffect : public CF_TextEffect
 
 struct CF_TextEffectState
 {
+	float elapsed = 0;
+	bool alive = false;
+};
+
+struct CF_ParsedTextState
+{
 	Cute::String sanitized;
 	uint64_t hash = 0;
-	float elapsed = 0;
 	bool alive = false;
 	Cute::Array<TextEffect> effects;
 	Cute::Array<CF_TextCode> codes;

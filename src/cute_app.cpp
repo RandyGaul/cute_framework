@@ -487,16 +487,30 @@ int cf_app_draw_onto_screen(bool clear)
 		SDL_SyncWindow(app->window);
 	}
 
-	// Update lifteime of all text effects.
-	const char** keys = app->text_effect_states.keys();
+	// Update lifetime of all text effects.
+	uint64_t* effect_keys = app->text_effect_states.keys();
 	CF_TextEffectState* effect_states = app->text_effect_states.items();
 	int count = app->text_effect_states.count();
 	for (int i = 0; i < count;) {
 		if (!effect_states[i].alive) {
-			app->text_effect_states.remove(keys[i]);
+			app->text_effect_states.remove(effect_keys[i]);
 			--count;
 		} else {
 			effect_states[i].alive = false;
+			++i;
+		}
+	}
+
+	// Do the same for text states.
+	uint64_t* text_keys = app->parsed_text_states.keys();
+	CF_ParsedTextState* text_states = app->parsed_text_states.items();
+	count = app->parsed_text_states.count();
+	for (int i = 0; i < count;) {
+		if (!text_states[i].alive) {
+			app->parsed_text_states.remove(text_keys[i]);
+			--count;
+		} else {
+			text_states[i].alive = false;
 			++i;
 		}
 	}
@@ -581,6 +595,7 @@ int cf_app_draw_onto_screen(bool clear)
 	draw->blurs.set_count(1);
 	draw->text_wrap_widths.set_count(1);
 	draw->vertical.set_count(1);
+	draw->text_ids.set_count(1);
 	draw->user_params.set_count(1);
 	draw->shaders.set_count(1);
 	draw->verts.clear();

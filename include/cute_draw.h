@@ -813,6 +813,40 @@ CF_API CF_V2 CF_CALL cf_text_size(const char* text, int num_chars_to_draw);
 CF_API void CF_CALL cf_draw_text(const char* text, CF_V2 position, int num_chars_to_draw /*= -1*/);
 
 /**
+ * @function cf_push_text_id
+ * @category text
+ * @brief    Push a text id for text drawing.
+ * @param    id               The text id.
+ * @remarks  The default behaviour for text effect is such that: every time a new string is passed to `cf_draw_text`,
+ *           the text effects will be reinitialized.
+ *           This can be jarring in some cases.
+ *           To override this behaviour, you can use this function, passing it a stable identifier.
+ *           All subsequent calls to `cf_draw_text` with the same `id` will have the same `CF_TextEffect.elapsed` value,
+ *           creating the illusion of continuous text effect.
+ *
+ *           Pushing an `id` of 0 will also reset to the default behaviour.
+ *
+ * @related  cf_draw_text cf_text_effect_register CF_TextEffect
+ */
+CF_API void CF_CALL cf_push_text_id(uint64_t id);
+
+/**
+ * @function cf_push_text_id
+ * @category text
+ * @brief    Pops and returns the last text id.
+ * @related  cf_push_text_id cf_draw_text cf_text_effect_register CF_TextEffect
+ */
+CF_API uint64_t CF_CALL cf_pop_text_id(void);
+
+/**
+ * @function cf_peek_text_id
+ * @category text
+ * @brief    Returns the last text_id.
+ * @related  cf_push_text_id cf_draw_text cf_text_effect_register CF_TextEffect
+ */
+CF_API uint64_t CF_CALL cf_peek_text_id(void);
+
+/**
  * @struct   CF_TextEffect
  * @category text
  * @brief    A user-defined text effect that can be triggered with text codes.
@@ -1723,6 +1757,10 @@ CF_INLINE v2 text_size(const char* text, int num_chars_to_render = -1) { return 
 CF_INLINE void draw_text(const char* text, v2 position, int num_chars_to_render = -1) { cf_draw_text(text, position, num_chars_to_render); }
 
 CF_INLINE void text_effect_register(const char* name, CF_TextEffectFn* fn) { cf_text_effect_register(name, fn); }
+
+CF_INLINE void push_text_id(uint64_t id) { cf_push_text_id(id); }
+CF_INLINE uint64_t pop_text_id() { return cf_pop_text_id(); }
+CF_INLINE uint64_t peek_text_id() { return cf_peek_text_id(); }
 
 CF_INLINE void text_get_markup_info(cf_text_markup_info_fn* fn, const char* text, v2 position, int num_chars_to_draw = -1) { cf_text_get_markup_info(fn, text, position, num_chars_to_draw); }
 CF_INLINE void push_text_effect_active(bool effects_on) { cf_push_text_effect_active(effects_on); }

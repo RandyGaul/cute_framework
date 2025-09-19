@@ -1616,6 +1616,25 @@ bool cf_peek_text_vertical_layout()
 	return draw->vertical.last();
 }
 
+void cf_push_text_id(uint64_t id)
+{
+	draw->text_ids.add(id);
+}
+
+uint64_t cf_pop_text_id()
+{
+	if (draw->text_ids.count() > 1) {
+		return draw->text_ids.pop();
+	} else {
+		return draw->text_ids.last();
+	}
+}
+
+uint64_t cf_peek_text_id()
+{
+	return draw->text_ids.last();
+}
+
 void cf_push_text_effect_active(bool text_effects_on)
 {
 	draw->text_effects.add(text_effects_on);
@@ -1721,7 +1740,7 @@ static const char* s_find_end_of_line(CF_Font* font, const char* text, float wra
 
 struct CF_CodeParseState
 {
-	CF_TextEffectState* effect;
+	CF_ParsedTextState* text_state;
 	const char* in;
 	const char* end;
 	int glyph_count;
@@ -1903,10 +1922,10 @@ static void s_parse_code(CF_CodeParseState* s)
 	}
 	code.index_in_string = s->glyph_count;
 	if (finish) {
-		bool success = s->effect->parse_finish(code.effect_name, code.index_in_string);
+		bool success = s->text_state->parse_finish(code.effect_name, code.index_in_string);
 		CF_UNUSED(success);
 	} else {
-		s->effect->parse_add(code);
+		s->text_state->parse_add(code);
 	}
 }
 
@@ -1969,7 +1988,7 @@ static bool s_text_fx_strike(CF_TextEffect* fx_ptr)
 	return true;
 }
 
-static void s_parse_codes(CF_TextEffectState* effect, const char* text)
+static void s_parse_codes(CF_ParsedTextState* text_state, const char* text)
 {
 	// Register built-in text effects.
 	static bool init = false;
@@ -1984,7 +2003,7 @@ static void s_parse_codes(CF_TextEffectState* effect, const char* text)
 
 	CF_CodeParseState state = { };
 	CF_CodeParseState* s = &state;
-	s->effect = effect;
+	s->text_state = text_state;
 	s->in = text;
 	s->end = text + CF_STRLEN(text);
 	while (!s->done()) {
@@ -1997,12 +2016,12 @@ static void s_parse_codes(CF_TextEffectState* effect, const char* text)
 			s->append(cp);
 		}
 	}
-	std::sort(effect->codes.begin(), effect->codes.end(),
+	std::sort(text_state->codes.begin(), text_state->codes.end(),
 		[](const CF_TextCode& a, const CF_TextCode&b) {
 			return a.index_in_string < b.index_in_string;
 		}
 	);
-	effect->sanitized = s->sanitized;
+	text_state->sanitized = s->sanitized;
 }
 
 static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool render, cf_text_markup_info_fn* markups)
@@ -2011,31 +2030,34 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 	CF_ASSERT(font);
 	if (!font) return V2(0,0);
 
-	// Cache effect state key'd by input text code.
-	CF_TextEffectState* effect_state = app->text_effect_states.try_find(text);
+	// Text id can be custom or based on text's content
+	uint64_t text_id = draw->text_ids.last();
+	uint64_t text_hash = fnv1a(text, (int)CF_STRLEN(text) + 1);
+	if (text_id == 0) { text_id = text_hash; }
+
+	// Effect state is key'd by text id
+	CF_TextEffectState* effect_state = app->text_effect_states.try_find(text_id);
 	if (!effect_state) {
-		effect_state = app->text_effect_states.insert(text);
-		effect_state->hash = fnv1a(text, (int)CF_STRLEN(text) + 1);
-		s_parse_codes(effect_state, text);
-	} else {
-		uint64_t h = fnv1a(text, (int)CF_STRLEN(text) + 1);
-		if (effect_state->hash != h) {
-			// Contents have changed, re-parse the whole thing.
-			app->text_effect_states.remove(text);
-			effect_state = app->text_effect_states.insert(text);
-			effect_state->hash = h;
-			s_parse_codes(effect_state, text);
-		}
+		effect_state = app->text_effect_states.insert(text_id);
 	}
+
+	// Text state is key'd by text's content
+	CF_ParsedTextState* text_state = app->parsed_text_states.try_find(text_hash);
+	if (!text_state) {
+		text_state = app->parsed_text_states.insert(text_hash);
+		s_parse_codes(text_state, text);
+	}
+
 	if (render || markups) {
 		effect_state->alive = true;
 		effect_state->elapsed += CF_DELTA_TIME;
+		text_state->alive = true;
 	}
 
 	// Use the sanitized string for rendering. This excludes all text codes.
 	bool do_effects = draw->text_effects.last();
 	if (do_effects) {
-		text = effect_state->sanitized.c_str();
+		text = text_state->sanitized.c_str();
 	}
 
 	// Gather up all state required for rendering.
@@ -2068,8 +2090,8 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 
 	// Called whenever text-effects need to be spawned, before going to the next glyph.
 	auto effect_spawn = [&]() {
-		if (code_index < effect_state->codes.count()) {
-			CF_TextCode* code = effect_state->codes + code_index;
+		if (code_index < text_state->codes.count()) {
+			CF_TextCode* code = text_state->codes + code_index;
 			if (index == code->index_in_string) {
 				++code_index;
 				TextEffect effect = { };
@@ -2080,15 +2102,15 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 				effect.elapsed = effect_state->elapsed;
 				effect.params = &code->params;
 				effect.fn = code->fn;
-				effect_state->effects.add(effect);
+				text_state->effects.add(effect);
 			}
 		}
 	};
 
 	// Called whenever text-effects need to be cleaned up, when going to the next glyph.
 	auto effect_cleanup = [&]() {
-		for (int i = 0; i < effect_state->effects.count();) {
-			TextEffect* effect = effect_state->effects + i;
+		for (int i = 0; i < text_state->effects.count();) {
+			TextEffect* effect = text_state->effects + i;
 			if (effect->index_into_string + effect->glyph_count == index) {
 				effect->index_into_effect = index - effect->index_into_string - 1;
 				effect->on_end = true;
@@ -2103,7 +2125,7 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 					info.bounds = effect->bounds.data();
 					markups(text, info, (CF_TextEffect*)effect);
 				}
-				effect_state->effects.unordered_remove(i);
+				text_state->effects.unordered_remove(i);
 			} else {
 				 ++i;
 			}
@@ -2219,8 +2241,8 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 			v2 q1 = glyph->q1 + V2(x,y) + kern + pad;
 
 			// Apply any active custom text effects.
-			for (int i = 0; i < effect_state->effects.count();) {
-				TextEffect* effect = effect_state->effects + i;
+			for (int i = 0; i < text_state->effects.count();) {
+				TextEffect* effect = text_state->effects + i;
 				CF_TextEffectFn* fn = effect->fn;
 				bool keep_going = true;
 				if (fn) {
@@ -2261,7 +2283,7 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 					}
 
 					if (!keep_going) {
-						effect_state->effects.unordered_remove(i);
+						text_state->effects.unordered_remove(i);
 					}
 				}
 				if (keep_going) {
