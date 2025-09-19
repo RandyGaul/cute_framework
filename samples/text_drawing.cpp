@@ -110,14 +110,12 @@ int main(int argc, char* argv[])
 				"<wave height=30>You have pressed tab %d times</wave>",
 				tab_press_count
 			);
-			v2 size = text_size(text_buf);
-			draw_text_boxed(text_buf, V2(-size.x * 0.5f, 60.f));
+			draw_text_boxed(text_buf, V2(-230.f, 60.f));
 
 			const char* switchable_text = change_text
 				? "<wave height=30>Press Tab to change this text</wave>"
 				: "<wave height=30>This is a new text, press Tab to change</wave>";
-			size = text_size(switchable_text);
-			draw_text_boxed(switchable_text, V2(-size.x * 0.5f, 30.f));
+			draw_text_boxed(switchable_text, V2(-230.f, 30.f));
 		}
 		cf_pop_text_id();
 
