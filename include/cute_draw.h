@@ -831,7 +831,7 @@ CF_API void CF_CALL cf_draw_text(const char* text, CF_V2 position, int num_chars
 CF_API void CF_CALL cf_push_text_id(uint64_t id);
 
 /**
- * @function cf_push_text_id
+ * @function cf_pop_text_id
  * @category text
  * @brief    Pops and returns the last text id.
  * @related  cf_push_text_id cf_draw_text cf_text_effect_register CF_TextEffect
