@@ -39,8 +39,7 @@
  * @function alen
  * @category array
  * @brief    Returns the number of elements in the array.
- * @param    x             The x position of the window.
- * @param    y             The y position of the window.
+ * @param    a             The array.
  * @example > Creating an array, adding an element, then decrementing the count to zero before freeing the array.
  *     dyna int* a = NULL;
  *     apush(a, 5);
