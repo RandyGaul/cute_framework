@@ -817,8 +817,8 @@ CF_API void CF_CALL cf_draw_text(const char* text, CF_V2 position, int num_chars
  * @category text
  * @brief    Push a text id for text drawing.
  * @param    id               The text id.
- * @remarks  The default behaviour for text effect is such that: every time a new string pointer is passed to `cf_draw_text`
- *           or the content of a string is updated, the text effect will be reinitialized.
+ * @remarks  The default behaviour for text effect is such that: every time a new string is passed to `cf_draw_text`,
+ *           the text effects will be reinitialized.
  *           This can be jarring in some cases.
  *           To override this behaviour, you can use this function, passing it a stable identifier.
  *           All subsequent calls to `cf_draw_text` with the same `id` will have the same `CF_TextEffect.elapsed` value,

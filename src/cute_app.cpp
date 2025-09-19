@@ -502,7 +502,7 @@ int cf_app_draw_onto_screen(bool clear)
 	}
 
 	// Do the same for text states.
-	const char** text_keys = app->parsed_text_states.keys();
+	uint64_t* text_keys = app->parsed_text_states.keys();
 	CF_ParsedTextState* text_states = app->parsed_text_states.items();
 	count = app->parsed_text_states.count();
 	for (int i = 0; i < count;) {

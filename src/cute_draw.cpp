@@ -2040,22 +2040,14 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 		effect_state = app->text_effect_states.insert(text_id);
 	}
 
-	// Text state is key'd by text content and pointer
-	CF_ParsedTextState* text_state = app->parsed_text_states.try_find(text);
+	// Text state is key'd by text's content
+	uint64_t text_hash = fnv1a(text, (int)CF_STRLEN(text) + 1);
+	CF_ParsedTextState* text_state = app->parsed_text_states.try_find(text_hash);
 	if (!text_state) {
-		text_state = app->parsed_text_states.insert(text);
-		text_state->hash = fnv1a(text, (int)CF_STRLEN(text) + 1);
+		text_state = app->parsed_text_states.insert(text_hash);
 		s_parse_codes(text_state, text);
-	} else {
-		uint64_t h = fnv1a(text, (int)CF_STRLEN(text) + 1);
-		if (text_state->hash != h) {
-			// Contents have changed, re-parse the whole thing.
-			app->parsed_text_states.remove(text);
-			text_state = app->parsed_text_states.insert(text);
-			text_state->hash = h;
-			s_parse_codes(text_state, text);
-		}
 	}
+
 	if (render || markups) {
 		effect_state->alive = true;
 		effect_state->elapsed += CF_DELTA_TIME;

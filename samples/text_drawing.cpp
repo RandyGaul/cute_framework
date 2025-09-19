@@ -6,6 +6,7 @@ using namespace Cute;
 
 static bool draw_text_bound = false;
 static bool change_text = false;
+static int tab_press_count = 0;
 
 static void draw_text_boxed(const char* text, v2 pos, int len = -1)
 {
@@ -37,7 +38,8 @@ int main(int argc, char* argv[])
 			draw_text_bound = !draw_text_bound;
 		}
 
-		if (key_down(CF_KEY_TAB)) {
+		if (key_just_pressed(CF_KEY_TAB)) {
+			++tab_press_count;
 			change_text = !change_text;
 		}
 
@@ -102,11 +104,20 @@ int main(int argc, char* argv[])
 
 		cf_push_text_id(1);
 		{
-			const char* modifiable_text = change_text
-				? "<wave height=30>Hold Tab to change this text</wave>"
-				: "<wave height=30>This is a new text, hold Tab to change</wave>";
-			v2 size = text_size(modifiable_text);
-			draw_text_boxed(modifiable_text, V2(-size.x * 0.5f, 40.f));
+			char text_buf[512];
+			snprintf(
+				text_buf, sizeof(text_buf),
+				"<wave height=30>You have pressed tab %d times</wave>",
+				tab_press_count
+			);
+			v2 size = text_size(text_buf);
+			draw_text_boxed(text_buf, V2(-size.x * 0.5f, 60.f));
+
+			const char* switchable_text = change_text
+				? "<wave height=30>Press Tab to change this text</wave>"
+				: "<wave height=30>This is a new text, press Tab to change</wave>";
+			size = text_size(switchable_text);
+			draw_text_boxed(switchable_text, V2(-size.x * 0.5f, 30.f));
 		}
 		cf_pop_text_id();
 

@@ -139,7 +139,7 @@ struct CF_App
 	Cute::Map<const char*, CF_Font*> fonts;
 	Cute::Map<uint64_t, CF_Pixel*> font_pixels;
 	Cute::Map<uint64_t, CF_TextEffectState> text_effect_states;
-	Cute::Map<const char*, CF_ParsedTextState> parsed_text_states;
+	Cute::Map<uint64_t, CF_ParsedTextState> parsed_text_states;
 	Cute::Map<const char*, CF_TextEffectFn*> text_effect_fns;
 
 	// Easy sprite stuff.
