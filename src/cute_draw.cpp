@@ -2030,9 +2030,10 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 	CF_ASSERT(font);
 	if (!font) return V2(0,0);
 
-	// Text id can be custom or based on string pointer
+	// Text id can be custom or based on text's content
 	uint64_t text_id = draw->text_ids.last();
-	if (text_id == 0) { text_id = (uint64_t)text; }
+	uint64_t text_hash = fnv1a(text, (int)CF_STRLEN(text) + 1);
+	if (text_id == 0) { text_id = text_hash; }
 
 	// Effect state is key'd by text id
 	CF_TextEffectState* effect_state = app->text_effect_states.try_find(text_id);
@@ -2041,7 +2042,6 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 	}
 
 	// Text state is key'd by text's content
-	uint64_t text_hash = fnv1a(text, (int)CF_STRLEN(text) + 1);
 	CF_ParsedTextState* text_state = app->parsed_text_states.try_find(text_hash);
 	if (!text_state) {
 		text_state = app->parsed_text_states.insert(text_hash);
