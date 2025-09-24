@@ -2308,6 +2308,10 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 		hit_newline = false;
 	}
 
+	// If text_length is less than the sanitized length, there may be some left
+	// over effect that is not cleaned up
+	text_state->effects.clear();
+
 	if (render) {
 		// Draw strike-lines just after the text.
 		for (int i = 0; i < draw->strikes.size(); ++i) {

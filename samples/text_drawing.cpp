@@ -97,10 +97,15 @@ int main(int argc, char* argv[])
 		push_font_size(13);
 		draw_text_boxed(draws.c_str(), V2(-640/2.0f + 10,-480/2.0f + 20));
 
+		push_font_size(26);
+		draw_text_boxed("Half-rendered effect <wave>groovy</wave>", V2(-230.f, 180.f), 25);
+		pop_font_size();
+
 		// Text shake effect.
 		// For moving text it helps to round positions.
 		push_font_size(30);
 		draw_text_boxed("Some <shake freq=35 x=2 y=2>shaking</shake> text.", round(V2(sinf((float)CF_SECONDS*0.25f)*100,cosf((float)CF_SECONDS*0.25f)*100)));
+
 
 		cf_push_text_id(1);
 		{
