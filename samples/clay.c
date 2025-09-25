@@ -89,12 +89,6 @@ static void cf_text_element(
 	...
 );
 
-static void hover_indicator(CF_Sprite* icon)
-{
-	bool hovered = Clay_Hovered();
-
-}
-
 static bool menu_entry(const char* text, TextStyle text_style, CF_Sprite* hover_icon)
 {
 	// A reusable component is just a function
@@ -466,9 +460,8 @@ int main(int argc, char* argv[])
 			igInputInt("Life", &life, 1, 10, ImGuiInputTextFlags_None);
 			igInputInt("Score", &score, 1, 10, ImGuiInputTextFlags_None);
 			igInputInt("Highscore", &high_score, 1, 10, ImGuiInputTextFlags_None);
-
-			igEnd();
 		}
+		igEnd();
 
 		cf_app_draw_onto_screen(true);
 
@@ -510,10 +503,9 @@ static Clay_Dimensions measure_text(Clay_StringSlice text, Clay_TextElementConfi
 	// through a custom element.
 	begin_text(config);
 	CF_V2 size;
-
 	if (text.length == 1 && (text.chars[0] == ' ' || text.chars[1] == '\t')) {
 		// Clay will sometimes ask us to measure the size of a standalone space
-		// ' ' to get the space of the entire string.
+		// (' ') to get the size of the entire string.
 		// CF will (correctly) render a lone or trailing space differently from
 		// an intervening space (e.g: 'a b').
 		// But that will often result in unexpected sizing.
