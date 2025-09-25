@@ -29,6 +29,7 @@ typedef struct {
 	const char* font;
 	float font_size;
 	CF_Color color;
+	bool wrap;
 } TextStyle;
 
 typedef struct {
@@ -145,6 +146,7 @@ int main(int argc, char* argv[])
 		// UI Layout
 
 		static int font_size = 30;
+		static int jumbo_font_size = 100;
 		static int padding_top = 10;
 		static int padding_bottom = 10;
 		static int padding_left = 10;
@@ -164,7 +166,8 @@ int main(int argc, char* argv[])
 				.layout = {
 					.sizing = { CLAY_SIZING_GROW(0), CLAY_SIZING_GROW(0) },
 					.layoutDirection = CLAY_TOP_TO_BOTTOM,
-				}
+					.childGap = 10,
+				},
 			}) {
 				CLAY(CLAY_ID("TopBar"),{
 					.layout = {
@@ -254,7 +257,44 @@ int main(int argc, char* argv[])
 					}
 				}
 
-				CLAY(CLAY_ID("Spacer"), {
+				CLAY(CLAY_ID("TitleBlock"), {
+					.layout = {
+						.sizing = {
+							CLAY_SIZING_GROW(0),
+							CLAY_SIZING_PERCENT(0.3)
+						},
+						.padding = {
+							.top = padding_top,
+							.bottom = padding_bottom,
+						},
+						.childAlignment.x = CLAY_ALIGN_X_CENTER,
+					},
+				}) {
+					CLAY(CLAY_ID_LOCAL("Title"), {
+						.layout = {
+							.sizing = { CLAY_SIZING_PERCENT(0.6), CLAY_SIZING_GROW(0) },
+							.childAlignment = {
+								.x = CLAY_ALIGN_X_CENTER,
+								.y = CLAY_ALIGN_Y_CENTER,
+							},
+						},
+						.cornerRadius = CLAY_CORNER_RADIUS(6.f),
+						.border = {
+							.color = clay_color_from_cf(cf_color_white()),
+							.width = CLAY_BORDER_ALL(1.f),
+						},
+					}) {
+						TextStyle title_style = {
+							.color = cf_color_white(),
+							.font = ui_fonts[FONT_DEFAULT],
+							.wrap = true,
+							.font_size = jumbo_font_size,
+						};
+						cf_text_element(CLAY_ID_LOCAL("Text"), title_style, "Super Cute Clay");
+					}
+				}
+
+				CLAY(CLAY_ID_LOCAL("Spacer"), {
 					.layout = {
 						.sizing = { CLAY_SIZING_GROW(0), CLAY_SIZING_GROW(0) },
 					},
@@ -269,6 +309,8 @@ int main(int argc, char* argv[])
 							.bottom = padding_bottom,
 						},
 					},
+					.cornerRadius = CLAY_CORNER_RADIUS(4.f),
+					.border = CLAY_BORDER_OUTSIDE(1),
 				}) {
 					cf_text_element(
 						CLAY_ID_LOCAL("Highscore"),
@@ -298,11 +340,18 @@ int main(int argc, char* argv[])
 						cf_push_font_size(element->style.font_size);
 						cf_draw_push_color(element->style.color);
 						cf_push_text_id(command->id);
+						if (element->style.wrap) {
+							Clay_ElementData* parent_size = command->userData;
+							cf_push_text_wrap_width(parent_size->boundingBox.width);
+						}
 						cf_draw_text(
 							element->text,
 							cf_v2(command->boundingBox.x, -command->boundingBox.y),
 							element->length
 						);
+						if (element->style.wrap) {
+							cf_pop_text_wrap_width();
+						}
 						cf_pop_text_id();
 						cf_draw_pop_color();
 						cf_pop_font();
@@ -329,6 +378,7 @@ int main(int argc, char* argv[])
 			igSeparatorText("Style");
 
 			igInputInt("Font size", &font_size, 1, 2, ImGuiInputTextFlags_None);
+			igInputInt("Title font size", &jumbo_font_size, 1, 2, ImGuiInputTextFlags_None);
 			if (font_size < 1) { font_size = 1; }
 
 			igSeparatorText("Padding");
@@ -444,26 +494,39 @@ static void cf_text_element(
 	CLAY(id, {
 		.layout = {
 			.sizing = {
-				.width = CLAY_SIZING_FIT(0),
+				.width = style.wrap ? CLAY_SIZING_GROW(0) : CLAY_SIZING_FIT(0),
 				.height = CLAY_SIZING_GROW(0),
 			},
 		},
 	}) {
-		cf_push_font(style.font);
-		cf_push_font_size(style.font_size);
-		CF_V2 size = cf_text_size(element->text, element->length);
-		cf_pop_font();
-		cf_pop_font_size();
+		Clay_ElementData parent_size = Clay_GetElementData(id);
 
-		CLAY(CLAY_ID_LOCAL("Content"), {
-			.layout = {
-				.sizing = {
-					.width = CLAY_SIZING_FIXED(size.x),
-					.height = CLAY_SIZING_FIXED(size.y),
+		if (parent_size.found) {
+			if (style.wrap) {
+				cf_push_text_wrap_width(parent_size.boundingBox.width);
+			}
+			cf_push_font(style.font);
+			cf_push_font_size(style.font_size);
+
+			CF_V2 size = cf_text_size(element->text, element->length);
+
+			cf_pop_font();
+			cf_pop_font_size();
+			if (style.wrap) {
+				cf_pop_text_wrap_width();
+			}
+
+			CLAY(CLAY_ID_LOCAL("Content"), {
+				.layout = {
+					.sizing = {
+						.width = CLAY_SIZING_FIXED(size.x),
+						.height = CLAY_SIZING_FIXED(size.y),
+					},
 				},
-			},
-			.custom = element,
-		}) {}
+				.custom = element,
+				.userData = make_tmp_copy(&parent_size, sizeof(parent_size)),
+			}) {}
+		}
 	}
 
 	// Ensure the type is set
