@@ -1,5 +1,6 @@
 #include <cute.h>
 #include <cimgui.h>
+#include <stdarg.h>
 #include "clay.h"
 #include "proggy.h"
 
@@ -25,14 +26,18 @@ typedef enum {
 } CustomElementType;
 
 typedef struct {
+	const char* font;
+	float font_size;
+	CF_Color color;
+} TextStyle;
+
+typedef struct {
 	CustomElementType type;
 
 	const char* text;
 	int length;
 
-	const char* font;
-	float font_size;
-	CF_Color color;
+	TextStyle style;
 } TextElement;
 
 static void handle_clay_error(Clay_ErrorData errorText);
@@ -76,7 +81,12 @@ static inline CF_Aabb cf_aabb_from_clay(Clay_BoundingBox aabb)
 	};
 }
 
-static void cf_text_element(Clay_ElementId id, TextElement* element);
+static void cf_text_element(
+	Clay_ElementId id,
+	TextStyle style,
+	const char* fmt,
+	...
+);
 
 int main(int argc, char* argv[])
 {
@@ -139,8 +149,14 @@ int main(int argc, char* argv[])
 		static int padding_bottom = 10;
 		static int padding_left = 10;
 		static int padding_right = 10;
-		static int high_score = 10;
+		static int score = 10;
+		static int high_score = 9999;
+		static int current_score = 0;
 		static int life = 3;
+		static TextStyle text_style;
+		text_style.color = cf_color_white();
+		text_style.font = ui_fonts[FONT_MENU];
+		text_style.font_size = font_size;
 
 		Clay_BeginLayout();
 		{
@@ -162,6 +178,7 @@ int main(int argc, char* argv[])
 				}) {
 					CLAY(CLAY_ID_LOCAL("Left"), {
 						.layout.sizing = { CLAY_SIZING_FIT(0), CLAY_SIZING_FIT(0) },
+						.layout.layoutDirection = CLAY_TOP_TO_BOTTOM,
 					}) {
 						CLAY_TEXT(CLAY_STRING("Score"), CLAY_TEXT_CONFIG({
 							.fontId = FONT_MENU,
@@ -169,6 +186,8 @@ int main(int argc, char* argv[])
 							.textColor = clay_color_from_cf(cf_color_white()),
 							.wrapMode = CLAY_TEXT_WRAP_NONE,
 						}));
+
+						cf_text_element(CLAY_ID_LOCAL("Score"), text_style, "%06d", score);
 					}
 
 					CLAY(CLAY_ID_LOCAL("Spacer1"), {
@@ -180,33 +199,40 @@ int main(int argc, char* argv[])
 
 					CLAY(CLAY_ID_LOCAL("Center"), {
 						.layout = {
-							.sizing = { CLAY_SIZING_FIT(0), CLAY_SIZING_FIT(0) },
-							.childGap = 5,
-							.childAlignment = {
-								.x = CLAY_ALIGN_X_CENTER,
-								.y = CLAY_ALIGN_Y_BOTTOM,
-							}
+							.sizing = { CLAY_SIZING_FIT(0), CLAY_SIZING_GROW(0) },
+							.childAlignment.x = CLAY_ALIGN_X_CENTER,
+							.layoutDirection = CLAY_TOP_TO_BOTTOM,
 						}
 					}) {
-						CLAY(CLAY_ID_LOCAL("LifeIcon"), {
-							.layout.sizing = {
-								.width = CLAY_SIZING_FIT(life_icon.w),
-								.height = CLAY_SIZING_PERCENT(1.f),
-							},
-							.aspectRatio = (float)life_icon.w / (float)life_icon.h,
-							.image = { .imageData = &life_icon },
-						}) {
-						}
+						CLAY_TEXT(CLAY_STRING("Life"), CLAY_TEXT_CONFIG({
+							.fontId = FONT_MENU,
+							.fontSize = font_size,
+							.textColor = clay_color_from_cf(cf_color_white()),
+							.wrapMode = CLAY_TEXT_WRAP_NONE,
+						}));
 
-						static char format_buf[64];
-						snprintf(format_buf, sizeof(format_buf), "x %02d", life);
-						cf_text_element(CLAY_ID_LOCAL("LifeCounter"), &(TextElement){
-							.color = cf_color_white(),
-							.font_size = font_size,
-							.length = -1,
-							.text = format_buf,
-							.font = ui_fonts[FONT_MENU],
-						});
+						CLAY(CLAY_ID_LOCAL("Wrapper"), {
+							.layout = {
+								.sizing = { CLAY_SIZING_FIT(0), CLAY_SIZING_FIT(0) },
+								.childGap = 5,
+							},
+						}) {
+							CLAY(CLAY_ID_LOCAL("LifeIcon"), {
+								.layout.sizing = {
+									.width = CLAY_SIZING_FIT(life_icon.w),
+									.height = CLAY_SIZING_PERCENT(1.f),
+								},
+								.aspectRatio = (float)life_icon.w / (float)life_icon.h,
+								.image = { .imageData = &life_icon },
+							}) {
+							}
+
+							cf_text_element(
+								CLAY_ID_LOCAL("LifeCounter"),
+								text_style,
+								"x %02d", life
+							);
+						}
 					}
 
 					CLAY(CLAY_ID_LOCAL("Spacer2"), {
@@ -244,15 +270,11 @@ int main(int argc, char* argv[])
 						},
 					},
 				}) {
-					static char format_buf[64];
-					snprintf(format_buf, sizeof(format_buf), "Highscore - %06d", high_score);
-					cf_text_element(CLAY_ID_LOCAL("Highscore"), &(TextElement){
-						.color = cf_color_white(),
-						.font_size = font_size,
-						.length = -1,
-						.text = format_buf,
-						.font = ui_fonts[FONT_MENU],
-					});
+					cf_text_element(
+						CLAY_ID_LOCAL("Highscore"),
+						text_style,
+						"Highscore - %06d", high_score
+					);
 				}
 			}
 		}
@@ -272,9 +294,9 @@ int main(int argc, char* argv[])
 				switch (element_type) {
 					case CUSTOM_ELEMENT_TEXT: {
 						const TextElement* element = (const TextElement*)command->renderData.custom.customData;
-						cf_push_font(element->font);
-						cf_push_font_size(element->font_size);
-						cf_draw_push_color(element->color);
+						cf_push_font(element->style.font);
+						cf_push_font_size(element->style.font_size);
+						cf_draw_push_color(element->style.color);
 						cf_push_text_id(command->id);
 						cf_draw_text(
 							element->text,
@@ -317,6 +339,7 @@ int main(int argc, char* argv[])
 
 			igSeparatorText("Data");
 			igInputInt("Life", &life, 1, 10, ImGuiInputTextFlags_None);
+			igInputInt("Score", &score, 1, 10, ImGuiInputTextFlags_None);
 			igInputInt("Highscore", &high_score, 1, 10, ImGuiInputTextFlags_None);
 
 			igEnd();
@@ -392,11 +415,29 @@ static void* make_tmp_copy(void* item, size_t size)
 	return copy;
 }
 
-static void cf_text_element(Clay_ElementId id, TextElement* element)
-{
-	// This is usually stack allocated so a heap copy is needed in case it goes
-	// out of scope
-	element = make_tmp_copy(element, sizeof(*element));
+static void cf_text_element(
+	Clay_ElementId id,
+	TextStyle style,
+	const char* fmt,
+	...
+) {
+	va_list args, args_copy;
+	va_start(args, fmt);
+	va_copy(args_copy, args);
+
+	int len = vsnprintf(NULL, 0, fmt, args_copy);
+	char* text_buf = cf_arena_alloc(&tmp_arena, len + 1);
+	vsnprintf(text_buf, len + 1, fmt, args);
+
+	va_end(args);
+	va_end(args_copy);
+
+	TextElement* element = cf_arena_alloc(&tmp_arena, sizeof(TextElement));
+	*element = (TextElement){
+		.style = style,
+		.text = text_buf,
+		.length = len,
+	};
 
 	// This custom element has a more accurate size measurement and can support
 	// text effect.
@@ -408,8 +449,8 @@ static void cf_text_element(Clay_ElementId id, TextElement* element)
 			},
 		},
 	}) {
-		cf_push_font(element->font);
-		cf_push_font_size(element->font_size);
+		cf_push_font(style.font);
+		cf_push_font_size(style.font_size);
 		CF_V2 size = cf_text_size(element->text, element->length);
 		cf_pop_font();
 		cf_pop_font_size();
