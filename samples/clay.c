@@ -18,6 +18,23 @@ static const char* ui_fonts[FONT_COUNT] = {
 	[FONT_MENU] = "ProggyClean",
 };
 
+static CF_Arena tmp_arena = { 0 };
+
+typedef enum {
+	CUSTOM_ELEMENT_TEXT,
+} CustomElementType;
+
+typedef struct {
+	CustomElementType type;
+
+	const char* text;
+	int length;
+
+	const char* font;
+	float font_size;
+	CF_Color color;
+} TextElement;
+
 static void handle_clay_error(Clay_ErrorData errorText);
 
 static void handle_clay_core_commands(const Clay_RenderCommand* command);
@@ -59,6 +76,8 @@ static inline CF_Aabb cf_aabb_from_clay(Clay_BoundingBox aabb)
 	};
 }
 
+static void cf_text_element(Clay_ElementId id, TextElement* element);
+
 int main(int argc, char* argv[])
 {
 	CF_Result result = cf_make_app(
@@ -71,6 +90,7 @@ int main(int argc, char* argv[])
 	cf_app_init_imgui();
 
 	cf_make_font_from_memory(proggy_data, proggy_sz, cf_sintern("ProggyClean"));
+	tmp_arena = cf_make_arena(_Alignof(void*), 4096);
 
 	// Clay only uses a static block of memory
 	size_t clay_mem_size = Clay_MinMemorySize();
@@ -119,6 +139,8 @@ int main(int argc, char* argv[])
 		static int padding_bottom = 10;
 		static int padding_left = 10;
 		static int padding_right = 10;
+		static int high_score = 10;
+		static int life = 3;
 
 		Clay_BeginLayout();
 		{
@@ -176,12 +198,15 @@ int main(int argc, char* argv[])
 						}) {
 						}
 
-						CLAY_TEXT(CLAY_STRING("x 00"), CLAY_TEXT_CONFIG({
-							.fontId = FONT_MENU,
-							.fontSize = font_size,
-							.textColor = clay_color_from_cf(cf_color_white()),
-							.wrapMode = CLAY_TEXT_WRAP_NONE,
-						}));
+						static char format_buf[64];
+						snprintf(format_buf, sizeof(format_buf), "x %02d", life);
+						cf_text_element(CLAY_ID_LOCAL("LifeCounter"), &(TextElement){
+							.color = cf_color_white(),
+							.font_size = font_size,
+							.length = -1,
+							.text = format_buf,
+							.font = ui_fonts[FONT_MENU],
+						});
 					}
 
 					CLAY(CLAY_ID_LOCAL("Spacer2"), {
@@ -219,12 +244,15 @@ int main(int argc, char* argv[])
 						},
 					},
 				}) {
-					CLAY_TEXT(CLAY_STRING("High score - 3"), CLAY_TEXT_CONFIG({
-						.fontId = FONT_MENU,
-						.fontSize = font_size,
-						.textColor = clay_color_from_cf(cf_color_white()),
-						.wrapMode = CLAY_TEXT_WRAP_NEWLINES,
-					}));
+					static char format_buf[64];
+					snprintf(format_buf, sizeof(format_buf), "Highscore - %06d", high_score);
+					cf_text_element(CLAY_ID_LOCAL("Highscore"), &(TextElement){
+						.color = cf_color_white(),
+						.font_size = font_size,
+						.length = -1,
+						.text = format_buf,
+						.font = ui_fonts[FONT_MENU],
+					});
 				}
 			}
 		}
@@ -240,6 +268,25 @@ int main(int argc, char* argv[])
 		for (int i = 0; i < render_cmds.length; i++) {
 			const Clay_RenderCommand* command = &render_cmds.internalArray[i];
 			if (command->commandType == CLAY_RENDER_COMMAND_TYPE_CUSTOM) {
+				CustomElementType element_type = *(CustomElementType*)command->renderData.custom.customData;
+				switch (element_type) {
+					case CUSTOM_ELEMENT_TEXT: {
+						const TextElement* element = (const TextElement*)command->renderData.custom.customData;
+						cf_push_font(element->font);
+						cf_push_font_size(element->font_size);
+						cf_draw_push_color(element->color);
+						cf_push_text_id(command->id);
+						cf_draw_text(
+							element->text,
+							cf_v2(command->boundingBox.x, -command->boundingBox.y),
+							element->length
+						);
+						cf_pop_text_id();
+						cf_draw_pop_color();
+						cf_pop_font();
+						cf_pop_font_size();
+					} break;
+				}
 			} else {
 				handle_clay_core_commands(command);
 			}
@@ -249,11 +296,15 @@ int main(int argc, char* argv[])
 		// Tweaking
 
 		if (igBegin("UI tweaks", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
+			igSeparatorText("Clay");
+
 			static bool show_inspector = false;
 			show_inspector = Clay_IsDebugModeEnabled();
 			if (igCheckbox("Show Clay inspector", &show_inspector)) {
 				Clay_SetDebugModeEnabled(show_inspector);
 			}
+
+			igSeparatorText("Style");
 
 			igInputInt("Font size", &font_size, 1, 2, ImGuiInputTextFlags_None);
 			if (font_size < 1) { font_size = 1; }
@@ -264,13 +315,20 @@ int main(int argc, char* argv[])
 			igInputInt("Left", &padding_left, 1, 10, ImGuiInputTextFlags_None);
 			igInputInt("Right", &padding_right, 1, 10, ImGuiInputTextFlags_None);
 
+			igSeparatorText("Data");
+			igInputInt("Life", &life, 1, 10, ImGuiInputTextFlags_None);
+			igInputInt("Highscore", &high_score, 1, 10, ImGuiInputTextFlags_None);
+
 			igEnd();
 		}
 
 		cf_app_draw_onto_screen(true);
+
+		cf_arena_reset(&tmp_arena);
 	}
 
 	cf_free(clay_mem);
+	cf_destroy_arena(&tmp_arena);
 
 	return 0;
 }
@@ -325,6 +383,50 @@ static Clay_Dimensions measure_text(Clay_StringSlice text, Clay_TextElementConfi
 	end_text();
 
 	return (Clay_Dimensions){ .width = size.x, .height = size.y };
+}
+
+static void* make_tmp_copy(void* item, size_t size)
+{
+	void* copy = cf_arena_alloc(&tmp_arena, size);
+	memcpy(copy, item, size);
+	return copy;
+}
+
+static void cf_text_element(Clay_ElementId id, TextElement* element)
+{
+	// This is usually stack allocated so a heap copy is needed in case it goes
+	// out of scope
+	element = make_tmp_copy(element, sizeof(*element));
+
+	// This custom element has a more accurate size measurement and can support
+	// text effect.
+	CLAY(id, {
+		.layout = {
+			.sizing = {
+				.width = CLAY_SIZING_FIT(0),
+				.height = CLAY_SIZING_GROW(0),
+			},
+		},
+	}) {
+		cf_push_font(element->font);
+		cf_push_font_size(element->font_size);
+		CF_V2 size = cf_text_size(element->text, element->length);
+		cf_pop_font();
+		cf_pop_font_size();
+
+		CLAY(CLAY_ID_LOCAL("Content"), {
+			.layout = {
+				.sizing = {
+					.width = CLAY_SIZING_FIXED(size.x),
+					.height = CLAY_SIZING_FIXED(size.y),
+				},
+			},
+			.custom = element,
+		}) {}
+	}
+
+	// Ensure the type is set
+	element->type = CUSTOM_ELEMENT_TEXT;
 }
 
 static void handle_clay_core_commands(const Clay_RenderCommand* command)
