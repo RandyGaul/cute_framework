@@ -57,6 +57,7 @@ static char* libc_read_file_content(const char* path, size_t* len, void* context
 	}
 
 	if (len != 0) { *len = (size_t)size; }
+	fclose(file);
 	return content;
 }
 
