@@ -89,6 +89,56 @@ static void cf_text_element(
 	...
 );
 
+static void hover_indicator(CF_Sprite* icon)
+{
+	bool hovered = Clay_Hovered();
+
+}
+
+static bool menu_entry(const char* text, TextStyle text_style, CF_Sprite* hover_icon)
+{
+	// A reusable component is just a function
+	bool clicked = false;
+
+	CLAY(
+		// Local id so it doesn't clash
+		CLAY_SID_LOCAL(((Clay_String){ .chars = text, .length = strlen(text) })),
+		{ .layout.sizing = { CLAY_SIZING_FIT(0), CLAY_SIZING_FIT(0) } }
+	) {
+		bool hovered = Clay_Hovered();
+		cf_text_element(
+			CLAY_ID_LOCAL("Text"),
+			text_style,
+			hovered ? "<wave>%s</wave>" : "%s",
+			text
+		);
+		if (hovered) {
+			CLAY(CLAY_ID_LOCAL("HoverIndicator"), {
+				.layout.sizing = {
+					.width = CLAY_SIZING_FIT(hover_icon->w),
+					.height = CLAY_SIZING_PERCENT(1.f),
+				},
+				.aspectRatio = (float)hover_icon->w / (float)hover_icon->h,
+				.image = { .imageData = hover_icon },
+				// Floating will not affect the size of the parent
+				.floating = {
+					.attachTo = CLAY_ATTACH_TO_PARENT,
+					.attachPoints = {
+						.element = CLAY_ATTACH_POINT_RIGHT_CENTER,
+						.parent = CLAY_ATTACH_POINT_LEFT_CENTER,
+					},
+					.offset = { .x = -10.f },
+				},
+			}) {
+			}
+		}
+
+		clicked = hovered && cf_mouse_just_pressed(CF_MOUSE_BUTTON_LEFT);
+	}
+
+	return clicked;
+}
+
 int main(int argc, char* argv[])
 {
 	CF_Result result = cf_make_app(
@@ -122,10 +172,18 @@ int main(int argc, char* argv[])
 	life_icon = cf_make_demo_sprite();
 	cf_sprite_play(&life_icon, "spin");
 
+	CF_Sprite hover_icon = life_icon;
+	cf_sprite_play(&hover_icon, "hold_down");
+
+	CF_Sprite exit_icon = life_icon;
+	cf_sprite_play(&exit_icon, "hold_up");
+
 	while (cf_app_is_running()) {
 		cf_app_update(NULL);
 
 		cf_sprite_update(&life_icon);
+		cf_sprite_update(&hover_icon);
+		cf_sprite_update(&exit_icon);
 
 		// Update dimension in case of window resize
 		int width, height;
@@ -294,11 +352,28 @@ int main(int argc, char* argv[])
 					}
 				}
 
-				CLAY(CLAY_ID_LOCAL("Spacer"), {
+				CLAY(CLAY_ID_LOCAL("Choice"), {
 					.layout = {
 						.sizing = { CLAY_SIZING_GROW(0), CLAY_SIZING_GROW(0) },
+						.childAlignment = {
+							.x = CLAY_ALIGN_X_CENTER,
+							.y = CLAY_ALIGN_Y_CENTER,
+						},
+						.layoutDirection = CLAY_TOP_TO_BOTTOM,
+						.childGap = 20,
 					},
 				}) {
+					if (menu_entry("NEW GAME", text_style, &hover_icon)) {
+						printf("Start a new game\n");
+					}
+
+					if (menu_entry("CONTINUE", text_style, &hover_icon)) {
+						printf("Continue\n");
+					}
+
+					if (menu_entry("EXIT", text_style, &exit_icon)) {
+						printf("Exit\n");
+					}
 				}
 
 				CLAY(CLAY_ID("BottomBar"),{
@@ -315,7 +390,7 @@ int main(int argc, char* argv[])
 					cf_text_element(
 						CLAY_ID_LOCAL("Highscore"),
 						text_style,
-						"Highscore - %06d", high_score
+						"Highscore - <wave>%06d</wave>", high_score
 					);
 				}
 			}
@@ -491,14 +566,17 @@ static void cf_text_element(
 
 	// This custom element has a more accurate size measurement and can support
 	// text effect.
-	CLAY(id, {
-		.layout = {
-			.sizing = {
-				.width = style.wrap ? CLAY_SIZING_GROW(0) : CLAY_SIZING_FIT(0),
-				.height = CLAY_SIZING_GROW(0),
+	CLAY(
+		(id.baseId != 0 ? CLAY_SID_LOCAL(id.stringId) : id),
+		{
+			.layout = {
+				.sizing = {
+					.width = style.wrap ? CLAY_SIZING_GROW(0) : CLAY_SIZING_FIT(0),
+					.height = CLAY_SIZING_GROW(0),
+				},
 			},
-		},
-	}) {
+		})
+	{
 		Clay_ElementData parent_size = Clay_GetElementData(id);
 
 		if (parent_size.found) {
