@@ -558,17 +558,14 @@ static void cf_text_element(
 
 	// This custom element has a more accurate size measurement and can support
 	// text effect.
-	CLAY(
-		(id.baseId != 0 ? CLAY_SID_LOCAL(id.stringId) : id),
-		{
-			.layout = {
-				.sizing = {
-					.width = style.wrap ? CLAY_SIZING_GROW(0) : CLAY_SIZING_FIT(0),
-					.height = CLAY_SIZING_GROW(0),
-				},
+	CLAY(id, {
+		.layout = {
+			.sizing = {
+				.width = style.wrap ? CLAY_SIZING_GROW(0) : CLAY_SIZING_FIT(0),
+				.height = CLAY_SIZING_GROW(0),
 			},
-		})
-	{
+		},
+	}) {
 		Clay_ElementData parent_size = Clay_GetElementData(id);
 
 		if (parent_size.found) {
