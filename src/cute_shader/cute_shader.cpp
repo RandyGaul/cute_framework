@@ -370,9 +370,11 @@ CF_ShaderCompilerResult cute_shader_compile(const char* source, CF_ShaderCompile
 	int num_uniform_members;
 	CF_ShaderUniformMemberInfo* uniform_members = NULL;
 	uint32_t num_inputs = 0;
+	int* image_binding_slots = NULL;
 	CF_ShaderInputInfo* inputs = NULL;
 	{
 		std::vector<const char*> image_names_vec;
+		std::vector<int> image_binding_slots_vec;
 		std::vector<CF_ShaderUniformInfo> uniforms_vec;
 		std::vector<CF_ShaderUniformMemberInfo> uniform_members_vec;
 
@@ -390,6 +392,7 @@ CF_ShaderCompilerResult cute_shader_compile(const char* source, CF_ShaderCompile
 			case SPV_REFLECT_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
 			{
 				image_names_vec.push_back(strdup(binding->name));
+				image_binding_slots_vec.push_back(binding->binding);
 			}    // Fall-thru.
 			case SPV_REFLECT_DESCRIPTOR_TYPE_SAMPLER: ++num_samplers; break;
 			case SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_IMAGE: ++num_storage_textures; break;
@@ -433,6 +436,8 @@ CF_ShaderCompilerResult cute_shader_compile(const char* source, CF_ShaderCompile
 		if (num_images > 0) {
 			image_names = (const char**)malloc(sizeof(char*) * num_images);
 			memcpy(image_names, image_names_vec.data(), sizeof(char*) * num_images);
+			image_binding_slots = (int*)malloc(sizeof(int) * num_images);
+			memcpy(image_binding_slots, image_binding_slots_vec.data(), sizeof(int) * num_images);
 		}
 
 		num_uniforms = (int)uniforms_vec.size();
@@ -481,6 +486,7 @@ CF_ShaderCompilerResult cute_shader_compile(const char* source, CF_ShaderCompile
 
 				.num_images = num_images,
 				.image_names = image_names,
+				.image_binding_slots = image_binding_slots,
 
 				.num_uniforms = num_uniforms,
 				.uniforms = uniforms,
@@ -521,6 +527,7 @@ void cute_shader_free_result(CF_ShaderCompilerResult result)
 		free((char*)shader_info->image_names[i]);
 	}
 	free(shader_info->image_names);
+	free((int*)shader_info->image_binding_slots);
 
 	free((void*)result.bytecode.content);
 	free((char*)result.preprocessed_source);
