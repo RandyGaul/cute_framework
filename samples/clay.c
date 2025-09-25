@@ -1,4 +1,5 @@
 #include <cute.h>
+#include <cimgui.h>
 #include "clay.h"
 #include "proggy.h"
 
@@ -67,6 +68,7 @@ int main(int argc, char* argv[])
 		argv[0]
 	);
 	if (cf_is_error(result)) { return -1; }
+	cf_app_init_imgui();
 
 	cf_make_font_from_memory(proggy_data, proggy_sz, cf_sintern("ProggyClean"));
 
@@ -85,8 +87,14 @@ int main(int argc, char* argv[])
 
 	cf_clear_color(0.5, 0.5, 0.5, 0);
 
+	CF_Sprite life_icon = { 0 };
+	life_icon = cf_make_demo_sprite();
+	cf_sprite_play(&life_icon, "spin");
+
 	while (cf_app_is_running()) {
 		cf_app_update(NULL);
+
+		cf_sprite_update(&life_icon);
 
 		// Update dimension in case of window resize
 		int width, height;
@@ -104,15 +112,121 @@ int main(int argc, char* argv[])
 			CF_DELTA_TIME
 		);
 
-		// Debug toggle
-		if (cf_key_just_pressed(CF_KEY_F12)) {
-			Clay_SetDebugModeEnabled(!Clay_IsDebugModeEnabled());
-		}
-
 		// UI Layout
+
+		static int font_size = 30;
+		static int padding_top = 10;
+		static int padding_bottom = 10;
+		static int padding_left = 10;
+		static int padding_right = 10;
 
 		Clay_BeginLayout();
 		{
+			CLAY(CLAY_ID("Root"), {
+				.layout = {
+					.sizing = { CLAY_SIZING_GROW(0), CLAY_SIZING_GROW(0) },
+					.layoutDirection = CLAY_TOP_TO_BOTTOM,
+				}
+			}) {
+				CLAY(CLAY_ID("TopBar"),{
+					.layout = {
+						.sizing = { CLAY_SIZING_GROW(0), CLAY_SIZING_FIT(0) },
+						.padding = {
+							.left = padding_left,
+							.right = padding_right,
+							.top = padding_top,
+						},
+					},
+				}) {
+					CLAY(CLAY_ID_LOCAL("Left"), {
+						.layout.sizing = { CLAY_SIZING_FIT(0), CLAY_SIZING_FIT(0) },
+					}) {
+						CLAY_TEXT(CLAY_STRING("Score"), CLAY_TEXT_CONFIG({
+							.fontId = FONT_MENU,
+							.fontSize = font_size,
+							.textColor = clay_color_from_cf(cf_color_white()),
+							.wrapMode = CLAY_TEXT_WRAP_NONE,
+						}));
+					}
+
+					CLAY(CLAY_ID_LOCAL("Spacer1"), {
+						.layout = {
+							.sizing = { CLAY_SIZING_GROW(0), CLAY_SIZING_GROW(0) },
+						},
+					}) {
+					}
+
+					CLAY(CLAY_ID_LOCAL("Center"), {
+						.layout = {
+							.sizing = { CLAY_SIZING_FIT(0), CLAY_SIZING_FIT(0) },
+							.childGap = 5,
+							.childAlignment = {
+								.x = CLAY_ALIGN_X_CENTER,
+								.y = CLAY_ALIGN_Y_BOTTOM,
+							}
+						}
+					}) {
+						CLAY(CLAY_ID_LOCAL("LifeIcon"), {
+							.layout.sizing = {
+								.width = CLAY_SIZING_FIT(life_icon.w),
+								.height = CLAY_SIZING_PERCENT(1.f),
+							},
+							.aspectRatio = (float)life_icon.w / (float)life_icon.h,
+							.image = { .imageData = &life_icon },
+						}) {
+						}
+
+						CLAY_TEXT(CLAY_STRING("x 00"), CLAY_TEXT_CONFIG({
+							.fontId = FONT_MENU,
+							.fontSize = font_size,
+							.textColor = clay_color_from_cf(cf_color_white()),
+							.wrapMode = CLAY_TEXT_WRAP_NONE,
+						}));
+					}
+
+					CLAY(CLAY_ID_LOCAL("Spacer2"), {
+						.layout = {
+							.sizing = { CLAY_SIZING_GROW(0), CLAY_SIZING_GROW(0) },
+						},
+					}) {
+					}
+
+					CLAY(CLAY_ID_LOCAL("Right"), {
+						.layout.sizing = { CLAY_SIZING_FIT(0), CLAY_SIZING_FIT(0) },
+					}) {
+						CLAY_TEXT(CLAY_STRING("Time"), CLAY_TEXT_CONFIG({
+							.fontId = FONT_MENU,
+							.fontSize = font_size,
+							.textColor = clay_color_from_cf(cf_color_white()),
+							.wrapMode = CLAY_TEXT_WRAP_NONE,
+						}));
+					}
+				}
+
+				CLAY(CLAY_ID("Spacer"), {
+					.layout = {
+						.sizing = { CLAY_SIZING_GROW(0), CLAY_SIZING_GROW(0) },
+					},
+				}) {
+				}
+
+				CLAY(CLAY_ID("BottomBar"),{
+					.layout = {
+						.sizing = { CLAY_SIZING_GROW(0), CLAY_SIZING_FIT(0) },
+						.childAlignment = { .x = CLAY_ALIGN_X_CENTER },
+						.padding = {
+							.bottom = padding_bottom,
+						},
+					},
+				}) {
+					CLAY_TEXT(CLAY_STRING("High score - 3"), CLAY_TEXT_CONFIG({
+						.fontId = FONT_MENU,
+						.fontSize = font_size,
+						.textColor = clay_color_from_cf(cf_color_white()),
+						.wrapMode = CLAY_TEXT_WRAP_NEWLINES,
+					}));
+				}
+			}
 		}
 		Clay_RenderCommandArray render_cmds = Clay_EndLayout();
 
@@ -131,6 +245,27 @@ int main(int argc, char* argv[])
 			}
 		}
 		cf_draw_pop();
+
+		// Tweaking
+
+		if (igBegin("UI tweaks", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
+			static bool show_inspector = false;
+			show_inspector = Clay_IsDebugModeEnabled();
+			if (igCheckbox("Show Clay inspector", &show_inspector)) {
+				Clay_SetDebugModeEnabled(show_inspector);
+			}
+
+			igInputInt("Font size", &font_size, 1, 2, ImGuiInputTextFlags_None);
+			if (font_size < 1) { font_size = 1; }
+
+			igSeparatorText("Padding");
+			igInputInt("Top", &padding_top, 1, 10, ImGuiInputTextFlags_None);
+			igInputInt("Bottom", &padding_bottom, 1, 10, ImGuiInputTextFlags_None);
+			igInputInt("Left", &padding_left, 1, 10, ImGuiInputTextFlags_None);
+			igInputInt("Right", &padding_right, 1, 10, ImGuiInputTextFlags_None);
+
+			igEnd();
+		}
 
 		cf_app_draw_onto_screen(true);
 	}
@@ -164,8 +299,29 @@ static void end_text(void)
 
 static Clay_Dimensions measure_text(Clay_StringSlice text, Clay_TextElementConfig* config, void* userdata)
 {
+	// This is only provided so that the inspector can be rendered.
+	// CF already has its own text wrapping and text rendering should be done
+	// through a custom element.
 	begin_text(config);
-	CF_V2 size = cf_text_size(text.chars, text.length);
+	CF_V2 size;
+
+	if (text.length == 1 && (text.chars[0] == ' ' || text.chars[1] == '\t')) {
+		// Clay will sometimes ask us to measure the size of a standalone space
+		// ' ' to get the space of the entire string.
+		// CF will (correctly) render a lone or trailing space differently from
+		// an intervening space (e.g: 'a b').
+		// But that will often result in unexpected sizing.
+		// So we will have to estimate.
+		// Kerning is complex and Clay's method is not strictly accurate.
+		char measure_buf[4] = "Z Z";
+		measure_buf[1] = text.chars[0];
+		CF_V2 total_size = cf_text_size(measure_buf, 3);
+		CF_V2 char_size = cf_text_size("Z", 1);
+		size.x = total_size.x - char_size.x * 2.f;
+		size.y = total_size.y;
+	} else {
+		size = cf_text_size(text.chars, text.length);
+	}
 	end_text();
 
 	return (Clay_Dimensions){ .width = size.x, .height = size.y };
@@ -197,7 +353,7 @@ static void handle_clay_core_commands(const Clay_RenderCommand* command)
 			// The most common case is when all borders are set so we can just draw
 			// a box.
 			// But the inspector uses partial border a lot and it looks ugly if
-			// we don't handle it
+			// we don't handle it.
 			if (
 				border.width.top == border.width.left
 				&&
@@ -276,14 +432,10 @@ static void handle_clay_core_commands(const Clay_RenderCommand* command)
 			cf_draw_pop_color();
 		} break;
 		case CLAY_RENDER_COMMAND_TYPE_TEXT: {
-			// While Clay's text wrapping is redundant for CF and it does not
-			// play well with effect markup, we still implement it for the
-			// inspector.
 			begin_text(&(Clay_TextElementConfig){
 				.fontId = command->renderData.text.fontId,
 				.fontSize = command->renderData.text.fontSize,
 				.textColor = command->renderData.text.textColor,
-				.userData = command->userData,
 			});
 			cf_draw_text(
 				command->renderData.text.stringContents.chars,
@@ -293,6 +445,15 @@ static void handle_clay_core_commands(const Clay_RenderCommand* command)
 			end_text();
 		} break;
 		case CLAY_RENDER_COMMAND_TYPE_IMAGE: {
+			CF_Sprite sprite = *(CF_Sprite*)command->renderData.image.imageData;
+
+			CF_V2 pivot = sprite.pivots[sprite.frame_index];
+			sprite.scale.x = command->boundingBox.width / (float)sprite.w;
+			sprite.scale.y = command->boundingBox.height / (float)sprite.h;
+			sprite.transform.p.x = command->boundingBox.x + pivot.x + (float)sprite.w * sprite.scale.x * 0.5f;
+			sprite.transform.p.y = -command->boundingBox.y + pivot.y - (float)sprite.h * sprite.scale.y * 0.5f;
+
+			cf_draw_sprite(&sprite);
 		} break;
 		case CLAY_RENDER_COMMAND_TYPE_SCISSOR_START: {
 			cf_draw_push_scissor((CF_Rect){
