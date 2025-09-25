@@ -57,6 +57,7 @@ add_sample(sprite_slice sprite_slice.cpp)
 add_sample(sprite_shatter sprite_shatter.cpp)
 add_sample(screen_shatter screen_shatter.cpp)
 add_sample(font_debug font_debug.cpp)
+add_sample(clay clay.c)
 
 # Pre-compile shaders for certain samples.
 if (CF_CUTE_SHADERC)
