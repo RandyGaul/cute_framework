@@ -8,7 +8,7 @@
 #endif
 #endif
 
-//#define CIMGUI_DEFINE_ENUMS_AND_STRUCTS
+#define CIMGUI_DEFINE_ENUMS_AND_STRUCTS
 #define IMGUI_STB_NAMESPACE ImStb
 
 #undef NDEBUG

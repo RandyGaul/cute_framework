@@ -13,6 +13,7 @@
 #include "cute_result.h"
 #include "cute_graphics.h"
 #include "cute_time.h"
+#include <cimconfig.h>
 
 //--------------------------------------------------------------------------------------------------
 // C API

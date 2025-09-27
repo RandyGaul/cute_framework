@@ -66,7 +66,6 @@ if(CF_FRAMEWORK_WITH_HTTPS MATCHES OFF)
 	add_definitions(-DCF_NO_HTTPS)
 endif()
 
-add_definitions("-DIMGUI_USER_CONFIG=\"cimgui/cimconfig.h\"")
 configure_file(
 	"${CMAKE_CURRENT_SOURCE_DIR}/include/cute_version.h.in"
 	"${CMAKE_CURRENT_SOURCE_DIR}/include/cute_version.h"
