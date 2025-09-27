@@ -23,10 +23,6 @@
 #include <internal/cute_aseprite_cache_internal.h>
 #include <internal/cute_imgui_internal.h>
 
-#include <imgui/backends/imgui_impl_sdl3.h>
-#include <imgui/backends/imgui_impl_sdlgpu3.h>
-#include <SDL3_shadercross/SDL_shadercross.h>
-
 #include <data/fonts/calibri.h>
 
 #include <SDL3/SDL.h>
@@ -41,7 +37,9 @@ static void s_init_video()
 	static bool init = false;
 	if (init) return;
 	init = SDL_Init(SDL_INIT_VIDEO);
+#ifndef CF_EMSCRIPTEN
 	SDL_ShaderCross_Init();
+#endif
 }
 
 CF_DisplayID cf_default_display()
@@ -243,6 +241,7 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 		w = w <= 0 ? 1 : w;
 		h = h <= 0 ? 1 : h;
 
+#ifndef CF_EMSCRIPTEN
 		// Create the GPU device.
 		const char* device_name = NULL;
 		if (use_dx11) {
@@ -261,11 +260,26 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 		if (!device) {
 			return cf_result_error("Failed to create GPU Device.");
 		}
+#else
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
+
+		SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+		SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
+		SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
+
+		if (options & CF_APP_OPTIONS_GFX_DEBUG_BIT) {
+			SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_DEBUG_FLAG);
+		}
+#endif
 	}
 
 	Uint32 flags = 0;
-	// Turn on high DPI support for all platforms.
-	flags |= SDL_WINDOW_HIGH_PIXEL_DENSITY;
+	flags |= SDL_WINDOW_HIGH_PIXEL_DENSITY; // Turn on high DPI support for all platforms.
+#ifdef CF_EMSCRIPTEN
+	flags |= SDL_WINDOW_OPENGL;
+#endif
 	if (use_metal) flags |= SDL_WINDOW_METAL;
 	if (options & CF_APP_OPTIONS_FULLSCREEN_BIT) flags |= SDL_WINDOW_FULLSCREEN;
 	if (options & CF_APP_OPTIONS_RESIZABLE_BIT) flags |= SDL_WINDOW_RESIZABLE;
@@ -289,6 +303,7 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 	}
 	window = SDL_CreateWindowWithProperties(props);
 	SDL_DestroyProperties(props);
+
 	CF_App* app = (CF_App*)CF_ALLOC(sizeof(CF_App));
 	CF_PLACEMENT_NEW(app) CF_App;
 	app->options = options;
@@ -304,9 +319,16 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 
 	if (use_gfx) {
 		app->device = device;
+
+#ifndef CF_EMSCRIPTEN
 		SDL_ClaimWindowForGPUDevice(app->device, app->window);
 		cf_app_set_vsync_mailbox(app->vsync);
 		app->cmd = SDL_AcquireGPUCommandBuffer(app->device);
+#else
+		app->gl_ctx = SDL_GL_CreateContext(app->window);
+		SDL_GL_MakeCurrent(window, app->gl_ctx);
+#endif
+
 		cf_load_internal_shaders();
 		cf_make_draw();
 
@@ -336,27 +358,29 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 
 		// Create the default font.
 		make_font_from_memory(calibri_data, calibri_sz, "Calibri");
+#ifndef CF_EMSCRIPTEN
 		SDL_SubmitGPUCommandBuffer(app->cmd);
 		app->cmd = NULL;
+#endif
 	}
 
 #ifdef CF_WINDOWS
-	app->platform_handle = SDL_GetPointerProperty(SDL_GetWindowProperties(window), SDL_PROP_WINDOW_WIN32_HWND_POINTER, NULL);;
+	app->platform_handle = SDL_GetPointerProperty(SDL_GetWindowProperties(window), SDL_PROP_WINDOW_WIN32_HWND_POINTER, NULL);
 #endif
 
 	app->gfx_enabled = use_gfx;
 
 	if (!(options & CF_APP_OPTIONS_NO_AUDIO_BIT)) {
 		int more_on_emscripten = 1;
-	#ifdef CF_EMSCRIPTEN
+#ifdef CF_EMSCRIPTEN
 		more_on_emscripten = 4;
-	#endif
+#endif
 		cs_error_t err = cs_init(NULL, 44100, 1024 * more_on_emscripten, NULL);
 		if (err == CUTE_SOUND_ERROR_NONE) {
-	#ifndef CF_EMSCRIPTEN
+#ifndef CF_EMSCRIPTEN
 			cs_spawn_mix_thread();
 			app->spawned_mix_thread = true;
-	#endif // CF_EMSCRIPTEN
+#endif // CF_EMSCRIPTEN
 			app->audio_needs_updates = true;
 			//cs_cull_duplicates(true); -- https://github.com/RandyGaul/cute_framework/issues/172
 		} else {
@@ -399,6 +423,7 @@ void cf_destroy_app()
 	if (app->device) SDL_ReleaseWindowFromGPUDevice(app->device, app->window);
 	SDL_DestroyWindow(app->window);
 	if (app->device) SDL_DestroyGPUDevice(app->device);
+	if (app->gl_ctx) SDL_GL_DestroyContext(app->gl_ctx);
 	SDL_Quit();
 	cs_shutdown();
 	CF_Image* easy_sprites = app->easy_sprites.items();
@@ -456,12 +481,18 @@ void cf_app_update(CF_OnUpdateFn* on_update)
 		}
 
 		if (app->using_imgui) {
+#ifndef CF_EMSCRIPTEN
 			ImGui_ImplSDLGPU3_NewFrame();
+#else
+			ImGui_ImplOpenGL3_NewFrame();
+#endif
 			ImGui_ImplSDL3_NewFrame();
 			ImGui::NewFrame();
 		}
 
+#ifndef CF_EMSCRIPTEN
 		app->cmd = SDL_AcquireGPUCommandBuffer(app->device);
+#endif
 		cf_shader_watch();
 	}
 	app->user_on_update = on_update;
@@ -473,10 +504,15 @@ static void s_imgui_present(SDL_GPUTexture* swapchain_texture)
 {
 	if (app->using_imgui) {
 		ImGui::EndFrame();
+#ifndef CF_EMSCRIPTEN
 		if (swapchain_texture) {
 			ImGui::Render();
 			cf_imgui_draw(swapchain_texture);
 		}
+#else
+		ImGui::Render();
+		cf_imgui_draw(NULL);
+#endif
 	}
 }
 
@@ -526,6 +562,7 @@ int cf_app_draw_onto_screen(bool clear)
 	// Render any remaining geometry in the draw API.
 	cf_render_to(app->offscreen_canvas, clear);
 
+#ifndef CF_EMSCRIPTEN
 	bool canceled_command_buffer = false;
 	// Stretch the app canvas onto the backbuffer canvas.
 	Uint32 w, h;
@@ -563,6 +600,15 @@ int cf_app_draw_onto_screen(bool clear)
 	if (app->using_imgui) {
 		s_imgui_present(swapchain_tex);
 	}
+#else
+	// TODO - Get canvas onto backbuffer somehow.
+
+	// Dear ImGui draw.
+	if (app->using_imgui) {
+		s_imgui_present(NULL);
+	}
+	SDL_GL_SwapWindow(app->window);
+#endif
 
 	// Do defrag down here after rendering ImGui to avoid thrashing any texture IDs. Generally we want to defrag
 	// before doing final rendering to reduce draw call count, but in the case where ImGui is rendered it's acceptable
@@ -573,12 +619,14 @@ int cf_app_draw_onto_screen(bool clear)
 		draw->delay_defrag = false;
 	}
 
+#ifndef CF_EMSCRIPTEN
 	// When using Vulkan, don't submit canceled command buffers. This will cause a crash due to DescriptorSetCache being
 	// NULL. Cases where this can happen is when you minimize the window.
 	if (!canceled_command_buffer) {
 		SDL_SubmitGPUCommandBuffer(app->cmd);
 	}
 	app->cmd = NULL;
+#endif
 
 	// Clear all pushed draw parameters.
 	draw->alpha_discards.set_count(1);
@@ -602,8 +650,6 @@ int cf_app_draw_onto_screen(bool clear)
 	draw->draw_item_order = 0;
 	draw->cmds.clear();
 	draw->add_cmd();
-
-	SDL_WaitForGPUIdle(app->device);
 
 	// Report the number of draw calls.
 	int draw_call_count = app->draw_call_count;
@@ -750,6 +796,7 @@ bool cf_app_mouse_inside()
 
 bool cf_app_set_msaa(int sample_count)
 {
+#ifndef CF_EMSCRIPTEN
 	SDL_GPUTextureFormat fmt = SDL_GetGPUSwapchainTextureFormat(app->device, app->window);
 	SDL_GPUSampleCount msaa =  (SDL_GPUSampleCount)cf_clamp_int((app->sample_count >> 1), 0, 3);
 	if (SDL_GPUTextureSupportsSampleCount(app->device, fmt, msaa)) {
@@ -761,6 +808,10 @@ bool cf_app_set_msaa(int sample_count)
 	} else {
 		return false;
 	}
+#else
+	CF_ASSERT(!"This isn't implemented yet on web builds.");
+	return false;
+#endif
 }
 
 CF_Canvas cf_app_get_canvas()
@@ -786,13 +837,22 @@ int cf_app_get_canvas_height()
 void cf_app_set_vsync(bool true_turn_on_vsync)
 {
 	app->vsync = true_turn_on_vsync;
+#ifndef CF_EMSCRIPTEN
 	SDL_SetGPUSwapchainParameters(app->device, app->window, SDL_GPU_SWAPCHAINCOMPOSITION_SDR, app->vsync ? SDL_GPU_PRESENTMODE_VSYNC : SDL_GPU_PRESENTMODE_IMMEDIATE);
+#else
+	SDL_GL_SetSwapInterval(true_turn_on_vsync ? 1 : 0);
+#endif
 }
 
 void cf_app_set_vsync_mailbox(bool true_turn_on_mailbox)
 {
 	app->vsync = true_turn_on_mailbox;
+#ifndef CF_EMSCRIPTEN
 	SDL_SetGPUSwapchainParameters(app->device, app->window, SDL_GPU_SWAPCHAINCOMPOSITION_SDR, app->vsync ? SDL_GPU_PRESENTMODE_MAILBOX : SDL_GPU_PRESENTMODE_IMMEDIATE);
+#else
+	SDL_GL_SetSwapInterval(true_turn_on_mailbox ? 1 : 0);
+	CF_ASSERT(!"This isn't supported on web builds.");
+#endif
 }
 
 bool cf_app_get_vsync()

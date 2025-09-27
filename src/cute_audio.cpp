@@ -305,5 +305,15 @@ int cf_audio_channel_count(CF_Audio audio)
 	return src->channel_count;
 }
 
+#ifdef CF_EMSCRIPTEN
+	#pragma clang diagnostic push
+	#pragma clang diagnostic ignored "-Wtautological-compare"
+#endif
+
+#define STB_VORBIS_NO_PUSHDATA_API
 #undef STB_VORBIS_HEADER_ONLY
-#include <stb/stb_vorbis.c>
+#include "stb/stb_vorbis.c"
+
+#ifdef CF_EMSCRIPTEN
+	#pragma clang diagnostic pop
+#endif

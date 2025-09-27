@@ -33,6 +33,8 @@ using namespace Cute;
 
 CF_INLINE CF_UniformType s_uniform_type(CF_ShaderInfoDataType type)
 {
+	SDL_GL_CreateContext(app->window);
+
 	switch (type) {
 	case CF_SHADER_INFO_TYPE_UNKNOWN: return CF_UNIFORM_TYPE_UNKNOWN;
 	case CF_SHADER_INFO_TYPE_FLOAT:   return CF_UNIFORM_TYPE_FLOAT;

@@ -25,7 +25,7 @@ extern "C" {
  * @brief    Represents a single json document.
  * @related  CF_JDoc CF_JVal cf_make_json
  */
-typedef struct CF_JDoc { uint64_t id; } CF_JDoc;
+typedef struct CF_JDoc { uintptr_t id; } CF_JDoc;
 /* @end */
 
 /**
@@ -34,7 +34,7 @@ typedef struct CF_JDoc { uint64_t id; } CF_JDoc;
  * @brief    Represents a single json value, such an integer or array.
  * @related  CF_JDoc CF_JVal cf_make_json CF_JType
  */
-typedef struct CF_JVal { uint64_t id; } CF_JVal;
+typedef struct CF_JVal { uintptr_t id; } CF_JVal;
 /* @end */
 
 /**

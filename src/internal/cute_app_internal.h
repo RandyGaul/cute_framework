@@ -72,6 +72,7 @@ struct CF_App
 	CF_OnUpdateFn* user_on_update = NULL;
 	SDL_Window* window = NULL;
 	SDL_GPUDevice* device = NULL;
+	SDL_GLContext gl_ctx = NULL;
 	cs_context_t* cute_sound = NULL;
 	bool spawned_mix_thread = false;
 	void (*on_shader_changed_fn)(const char* path, void* udata) = NULL;

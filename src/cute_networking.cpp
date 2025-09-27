@@ -7,6 +7,9 @@
 
 #include <cute_networking.h>
 
+// This entire file makes no sense for web builds, since web doesn't allow UDP.
+#ifndef CF_EMSCRIPTEN
+
 #define CUTE_NET_IMPLEMENTATION
 #include <cute/cute_net.h>
 
@@ -205,3 +208,5 @@ void cf_server_enable_network_simulator(CF_Server* server, double latency, doubl
 {
 	cn_server_enable_network_simulator(server, latency, jitter, drop_chance, duplicate_chance);
 }
+
+#endif // CF_EMSCRIPTEN

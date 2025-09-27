@@ -18,6 +18,9 @@
 #	define _CRT_NONSTDC_NO_DEPRECATE
 #endif
 
+// TODO - REMOVE (DON'T COMMIT THIS)
+//#define CF_EMSCRIPTEN
+
 #if defined(_WIN32)
 #	define CF_WINDOWS 1
 #elif defined(__linux__) || defined(__unix__) && !defined(SDL_PLATFORM_APPLE) && !defined(__EMSCRIPTEN__)
@@ -45,6 +48,7 @@
 #	define CF_ANDROID 1
 #elif defined(__EMSCRIPTEN__)
 #	define CF_EMSCRIPTEN 1
+#	include <emscripten.h>
 #elif defined(__CYGWIN__)
 #	define CF_CYGWIN 1
 #endif
@@ -143,29 +147,17 @@
 #ifdef CF_CPP
 // -------------------------------------------------------------------------------------------------
 // Avoid including <utility> header to reduce compile times.
-
+template <typename T> struct cf_remove_reference      { using type = T; };
+template <typename T> struct cf_remove_reference<T&>  { using type = T; };
+template <typename T> struct cf_remove_reference<T&&> { using type = T; };
 template <typename T>
-struct cf_remove_reference
-{
-	using type = T;
-};
+using cf_remove_reference_t = typename cf_remove_reference<T>::type;
 
+// cf_move: Same semantics as std::move (preserves constness).
 template <typename T>
-struct cf_remove_reference<T&>
+constexpr cf_remove_reference_t<T>&& cf_move(T&& t) noexcept
 {
-	using type = T;
-};
-
-template <typename T>
-struct cf_remove_reference<T&&>
-{
-	using type = T;
-};
-
-template <typename T>
-constexpr typename cf_remove_reference<T>::type&& cf_move(T&& arg) noexcept
-{
-	return (typename cf_remove_reference<T>::type&&)arg;
+	return static_cast<cf_remove_reference_t<T>&&>(t);
 }
 
 #include <initializer_list>

@@ -14,8 +14,6 @@
 #include <internal/cute_graphics_internal.h>
 
 #include <imgui/imgui.h>
-#include <imgui/backends/imgui_impl_sdl3.h>
-#include <imgui/backends/imgui_impl_sdlgpu3.h>
 
 using namespace Cute;
 
@@ -24,28 +22,40 @@ void cf_imgui_init()
 	auto& io = ImGui::GetIO();
 	io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 
+#ifndef CF_EMSCRIPTEN
 	ImGui_ImplSDL3_InitForSDLGPU(app->window);
 	ImGui_ImplSDLGPU3_InitInfo init_info = {};
 	init_info.Device = app->device;
 	init_info.ColorTargetFormat = SDL_GetGPUSwapchainTextureFormat(app->device, app->window);
 	init_info.MSAASamples = SDL_GPU_SAMPLECOUNT_1;
 	ImGui_ImplSDLGPU3_Init(&init_info);
+#else
+	ImGui_ImplOpenGL3_Init("#version 300 es");
+	ImGui_ImplSDL3_InitForOpenGL(app->window, app->gl_ctx);
+#endif
 }
 
 void cf_imgui_shutdown()
 {
-	ImGui_ImplSDL3_Shutdown();
+#ifndef CF_EMSCRIPTEN
 	ImGui_ImplSDLGPU3_Shutdown();
+#else
+	ImGui_ImplOpenGL3_Shutdown();
+#endif
+	ImGui_ImplSDL3_Shutdown();
+	ImGui::DestroyContext();
 }
 
-void cf_imgui_draw(SDL_GPUTexture* swapchain_texture) {
+void cf_imgui_draw(SDL_GPUTexture* swapchain_texture)
+{
+#ifndef CF_EMSCRIPTEN
 	ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 	ImDrawData* draw_data = ImGui::GetDrawData();
 	const bool is_minimized = (draw_data->DisplaySize.x <= 0.0f || draw_data->DisplaySize.y <= 0.0f);
 
 	if (swapchain_texture != nullptr && !is_minimized) {
-		// This is mandatory: call Imgui_ImplSDLGPU3_PrepareDrawData() to upload the vertex/index buffer!
-		Imgui_ImplSDLGPU3_PrepareDrawData(draw_data, app->cmd); // TODO: Update function name to ImGui_ImplSDLGPU3_PrepareDrawData
+		// This is mandatory: call ImGui_ImplSDLGPU3_PrepareDrawData() to upload the vertex/index buffer!
+		ImGui_ImplSDLGPU3_PrepareDrawData(draw_data, app->cmd);
 
 		// Setup and start a render pass
 		SDL_GPUColorTargetInfo target_info = {};
@@ -59,4 +69,7 @@ void cf_imgui_draw(SDL_GPUTexture* swapchain_texture) {
 
 		SDL_EndGPURenderPass(render_pass);
 	}
+#else
+	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+#endif
 }
