@@ -1,5 +1,5 @@
 #include <cute.h>
-#include <cimgui.h>
+#include <dcimgui.h>
 #include <stdarg.h>
 #include "clay.h"
 #include "proggy.h"
@@ -435,33 +435,33 @@ int main(int argc, char* argv[])
 
 		// Tweaking
 
-		if (igBegin("UI tweaks", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
-			igSeparatorText("Clay");
+		if (ImGui_Begin("UI tweaks", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
+			ImGui_SeparatorText("Clay");
 
 			static bool show_inspector = false;
 			show_inspector = Clay_IsDebugModeEnabled();
-			if (igCheckbox("Show Clay inspector", &show_inspector)) {
+			if (ImGui_Checkbox("Show Clay inspector", &show_inspector)) {
 				Clay_SetDebugModeEnabled(show_inspector);
 			}
 
-			igSeparatorText("Style");
+			ImGui_SeparatorText("Style");
 
-			igInputInt("Font size", &font_size, 1, 2, ImGuiInputTextFlags_None);
-			igInputInt("Title font size", &jumbo_font_size, 1, 2, ImGuiInputTextFlags_None);
+			ImGui_InputInt("Font size", &font_size, 1, 2, ImGuiInputTextFlags_None);
+			ImGui_InputInt("Title font size", &jumbo_font_size, 1, 2, ImGuiInputTextFlags_None);
 			if (font_size < 1) { font_size = 1; }
 
-			igSeparatorText("Padding");
-			igInputInt("Top", &padding_top, 1, 10, ImGuiInputTextFlags_None);
-			igInputInt("Bottom", &padding_bottom, 1, 10, ImGuiInputTextFlags_None);
-			igInputInt("Left", &padding_left, 1, 10, ImGuiInputTextFlags_None);
-			igInputInt("Right", &padding_right, 1, 10, ImGuiInputTextFlags_None);
+			ImGui_SeparatorText("Padding");
+			ImGui_InputInt("Top", &padding_top, 1, 10, ImGuiInputTextFlags_None);
+			ImGui_InputInt("Bottom", &padding_bottom, 1, 10, ImGuiInputTextFlags_None);
+			ImGui_InputInt("Left", &padding_left, 1, 10, ImGuiInputTextFlags_None);
+			ImGui_InputInt("Right", &padding_right, 1, 10, ImGuiInputTextFlags_None);
 
-			igSeparatorText("Data");
-			igInputInt("Life", &life, 1, 10, ImGuiInputTextFlags_None);
-			igInputInt("Score", &score, 1, 10, ImGuiInputTextFlags_None);
-			igInputInt("Highscore", &high_score, 1, 10, ImGuiInputTextFlags_None);
+			ImGui_SeparatorText("Data");
+			ImGui_InputInt("Life", &life, 1, 10, ImGuiInputTextFlags_None);
+			ImGui_InputInt("Score", &score, 1, 10, ImGuiInputTextFlags_None);
+			ImGui_InputInt("Highscore", &high_score, 1, 10, ImGuiInputTextFlags_None);
 		}
-		igEnd();
+		ImGui_End();
 
 		cf_app_draw_onto_screen(true);
 

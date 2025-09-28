@@ -915,7 +915,7 @@ float cf_app_get_smoothed_framerate()
 	return fps;
 }
 
-ImGuiContext* cf_app_init_imgui()
+void* cf_app_init_imgui()
 {
 	if (!app->gfx_enabled) return NULL;
 
@@ -925,7 +925,7 @@ ImGuiContext* cf_app_init_imgui()
 
 	cf_imgui_init();
 
-	return ::ImGui::GetCurrentContext();
+	return (void*)::ImGui::GetCurrentContext();
 }
 
 CF_PowerInfo cf_app_power_info()

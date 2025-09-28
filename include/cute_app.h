@@ -13,7 +13,6 @@
 #include "cute_result.h"
 #include "cute_graphics.h"
 #include "cute_time.h"
-#include <cimconfig.h>
 
 //--------------------------------------------------------------------------------------------------
 // C API
@@ -21,10 +20,6 @@
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
-
-typedef struct ImGuiContext ImGuiContext;
-typedef struct sg_imgui_t sg_imgui_t;
-typedef struct sg_image sg_image;
 
 /**
  * @enum     Display Orientation
@@ -599,10 +594,10 @@ CF_API bool CF_CALL cf_app_mouse_inside(void);
  * @category app
  * @brief    Initializes Dear ImGui.
  * @remarks  [Dear ImGui](https://github.com/ocornut/imgui) is an excellent UI library for debugging, great for making tools and editors.
- *           After calling this init function you can call into Dear ImGui's functions.
+ *           After calling this init function you can call into Dear ImGui's functions. Typecast the result to `ImGuiContext*` (after including dcimgui.h).
  * @related  cf_app_get_sokol_imgui
  */
-CF_API ImGuiContext* CF_CALL cf_app_init_imgui(void);
+CF_API void* CF_CALL cf_app_init_imgui(void);
 
 /**
  * @enum     CF_MSAA
@@ -922,7 +917,7 @@ CF_INLINE void app_set_icon(const char* virtual_path_to_png) { cf_app_set_icon(v
 CF_INLINE float app_get_framerate() { return cf_app_get_framerate(); }
 CF_INLINE float app_get_smoothed_framerate() { return cf_app_get_smoothed_framerate(); }
 
-CF_INLINE ImGuiContext* app_init_imgui() { return cf_app_init_imgui(); }
+CF_INLINE void* app_init_imgui() { return cf_app_init_imgui(); }
 CF_INLINE void app_set_msaa(int msaa) { cf_app_set_msaa(msaa); }
 CF_INLINE CF_Canvas app_get_canvas() { return cf_app_get_canvas(); }
 CF_INLINE void app_set_canvas_size(int w, int h) { cf_app_set_canvas_size(w, h); }

@@ -115,24 +115,24 @@ set(CF_SRCS
 
 	src/internal/yyjson.c
 
-	libraries/cimgui/imgui/imgui.cpp
-	libraries/cimgui/imgui/imgui_demo.cpp
-	libraries/cimgui/imgui/imgui_draw.cpp
-	libraries/cimgui/imgui/imgui_tables.cpp
-	libraries/cimgui/imgui/imgui_widgets.cpp
-	libraries/cimgui/imgui/backends/imgui_impl_sdl3.cpp
-
-	libraries/cimgui/cimgui.cpp
+	libraries/imgui/imgui.cpp
+	libraries/imgui/imgui_demo.cpp
+	libraries/imgui/imgui_draw.cpp
+	libraries/imgui/imgui_tables.cpp
+	libraries/imgui/imgui_widgets.cpp
+	libraries/imgui/backends/imgui_impl_sdl3.cpp
+	libraries/imgui/dcimgui.cpp
+	libraries/imgui/dcimgui_internal.cpp
 )
 
 if (NOT EMSCRIPTEN)
 	set(CF_SRCS ${CF_SRCS}
 		libraries/SDL3_shadercross/SDL_shadercross.c
-		libraries/cimgui/imgui/backends/imgui_impl_sdlgpu3.cpp
+		libraries/imgui/backends/imgui_impl_sdlgpu3.cpp
 	)
 elseif()
 	set(CF_SRCS ${CF_SRCS}
-		libraries/cimgui/imgui/backends/imgui_impl_opengl3.cpp
+		libraries/imgui/backends/imgui_impl_opengl3.cpp
 	)
 endif()
 
@@ -185,22 +185,19 @@ set(CF_PUBLIC_HDRS
 )
 
 set(IMGUI_HDRS
-	libraries/cimgui/imgui/imgui.h
-	libraries/cimgui/imgui/imconfig.h
-	libraries/cimgui/imgui/imgui_internal.h
-	libraries/cimgui/imgui/imstb_rectpack.h
-	libraries/cimgui/imgui/imstb_textedit.h
-	libraries/cimgui/imgui/imstb_truetype.h
-)
-
-set(CIMGUI_HDRS
-	libraries/cimgui/cimgui.h
+	libraries/imgui/imgui.h
+	libraries/imgui/imconfig.h
+	libraries/imgui/imgui_internal.h
+	libraries/imgui/imstb_rectpack.h
+	libraries/imgui/imstb_textedit.h
+	libraries/imgui/imstb_truetype.h
+	libraries/imgui/dcimgui.h
+	libraries/imgui/dcimgui_internal.h
 )
 
 set(CF_HDRS
 	${CF_PUBLIC_HDRS}
 	${IMGUI_HDRS}
-	${CIMGUI_HDRS}
 
 	src/internal/cute_imgui_internal.h
 	src/internal/cute_app_internal.h
@@ -231,8 +228,6 @@ if(EMSCRIPTEN)
 	set(CF_RUNTIME_SHADER_COMPILATION OFF CACHE BOOL "" FORCE)
 	set(CF_CUTE_SHADERC OFF CACHE BOOL "" FORCE)
 	set(CF_FRAMEWORK_APPLE_FRAMEWORK OFF CACHE BOOL "" FORCE)
-	set(CF_FRAMEWORK_BUILD_SAMPLES OFF CACHE BOOL "" FORCE)
-	set(CF_FRAMEWORK_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 	set(PHYSFS_BUILD_SHARED OFF CACHE BOOL "" FORCE)
 	set(PHYSFS_BUILD_STATIC ON  CACHE BOOL "" FORCE)
 
@@ -513,8 +508,7 @@ endif()
 # Propogate public headers to other cmake scripts including this subdirectory.
 target_include_directories(cute PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
 target_include_directories(cute PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/libraries>)
-target_include_directories(cute PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/libraries/cimgui>)
-target_include_directories(cute PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/libraries/cimgui/imgui>)
+target_include_directories(cute PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/libraries/imgui>)
 
 # Install target
 install(TARGETS cute
