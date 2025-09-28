@@ -124,13 +124,10 @@ set(CF_SRCS
 	libraries/imgui/dcimgui.cpp
 	libraries/imgui/dcimgui_internal.cpp
 	libraries/imgui/backends/imgui_impl_sdlgpu3.cpp
+		libraries/imgui/backends/imgui_impl_opengl3.cpp
 )
 
-if (EMSCRIPTEN)
-	set(CF_SRCS ${CF_SRCS}
-		libraries/imgui/backends/imgui_impl_opengl3.cpp
-	)
-elseif()
+if (NOT EMSCRIPTEN)
 	set(CF_SRCS ${CF_SRCS}
 		libraries/SDL3_shadercross/SDL_shadercross.c
 	)
