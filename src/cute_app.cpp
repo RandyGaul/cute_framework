@@ -27,6 +27,8 @@
 
 #include <SDL3/SDL.h>
 
+#include <glad/glad.h>
+
 #define CUTE_SOUND_FORCE_SDL
 #include <cute/cute_sound.h>
 
@@ -328,12 +330,13 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 	if (use_gfx) {
 		if (use_opengl) {
 			app->use_opengl = true;
+			gladLoadGLES2Loader((GLADloadproc)SDL_LoadObject);
 		} else {
 			app->use_sdlgpu = true;
 			app->device = device;
 		}
 
-		if (!app->use_sdlgpu) {
+		if (app->use_sdlgpu) {
 			SDL_ClaimWindowForGPUDevice(app->device, app->window);
 			cf_app_set_vsync_mailbox(app->vsync);
 			app->cmd = SDL_AcquireGPUCommandBuffer(app->device);

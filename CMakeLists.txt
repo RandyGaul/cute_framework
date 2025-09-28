@@ -124,7 +124,9 @@ set(CF_SRCS
 	libraries/imgui/dcimgui.cpp
 	libraries/imgui/dcimgui_internal.cpp
 	libraries/imgui/backends/imgui_impl_sdlgpu3.cpp
-		libraries/imgui/backends/imgui_impl_opengl3.cpp
+	libraries/imgui/backends/imgui_impl_opengl3.cpp
+
+	libraries/glad/glad.c
 )
 
 if (NOT EMSCRIPTEN)
