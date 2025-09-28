@@ -195,6 +195,7 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 	bool use_dx12 = options & CF_APP_OPTIONS_GFX_D3D12_BIT;
 	bool use_metal = options & CF_APP_OPTIONS_GFX_METAL_BIT;
 	bool use_vulkan = options & CF_APP_OPTIONS_GFX_VULKAN_BIT;
+	bool use_opengl = options & CF_APP_OPTIONS_GFX_OPENGL_BIT;
 	bool use_gfx = !(options & CF_APP_OPTIONS_NO_GFX_BIT);
 
 	// Ensure the user selected only one backend, if they selected one at all.
@@ -202,31 +203,37 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 		CF_ASSERT(!use_dx12);
 		CF_ASSERT(!use_metal);
 		CF_ASSERT(!use_vulkan);
+		CF_ASSERT(!use_opengl);
 	}
 	if (use_dx12) {
 		CF_ASSERT(!use_dx11);
 		CF_ASSERT(!use_metal);
 		CF_ASSERT(!use_vulkan);
+		CF_ASSERT(!use_opengl);
 	}
 	if (use_metal) {
 		CF_ASSERT(!use_dx11);
 		CF_ASSERT(!use_dx12);
 		CF_ASSERT(!use_vulkan);
+		CF_ASSERT(!use_opengl);
 	}
 	if (use_vulkan) {
 		CF_ASSERT(!use_dx11);
 		CF_ASSERT(!use_dx12);
 		CF_ASSERT(!use_metal);
+		CF_ASSERT(!use_opengl);
+	}
+	if (use_opengl) {
+		CF_ASSERT(!use_dx11);
+		CF_ASSERT(!use_dx12);
+		CF_ASSERT(!use_metal);
+		CF_ASSERT(!use_vulkan);
 	}
 
-#ifdef CF_EMSCRIPTEN
-	Uint32 sdl_options = SDL_INIT_EVENTS | SDL_INIT_VIDEO | SDL_INIT_GAMEPAD;
-#else
 	Uint32 sdl_options = SDL_INIT_EVENTS | SDL_INIT_VIDEO | SDL_INIT_GAMEPAD | SDL_INIT_HAPTIC;
 	if (options & CF_APP_OPTIONS_NO_GFX_BIT) {
 		sdl_options &= ~SDL_INIT_VIDEO;
 	}
-#endif
 	if (!(options & CF_APP_OPTIONS_NO_AUDIO_BIT)) {
 		SDL_Init(SDL_INIT_AUDIO);
 	}
@@ -241,45 +248,46 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 		w = w <= 0 ? 1 : w;
 		h = h <= 0 ? 1 : h;
 
+		// Create the SDL GPU device.
+		if (!use_opengl) {
+			const char* device_name = NULL;
+			if (use_dx11) {
+				device_name = "direct3d11";
+			} else if (use_dx12) {
+				device_name = "direct3d12";
+			} else if (use_metal) {
+				device_name = "metal";
+			} else if (use_vulkan) {
+				device_name = "vulkan";
+			}
 #ifndef CF_EMSCRIPTEN
-		// Create the GPU device.
-		const char* device_name = NULL;
-		if (use_dx11) {
-			device_name = "direct3d11";
-		} else if (use_dx12) {
-			device_name = "direct3d12";
-		} else if (use_metal) {
-			device_name = "metal";
-		} else if (use_vulkan) {
-			device_name = "vulkan";
-		}
-		if(!SDL_ShaderCross_Init()) {
-			return cf_result_error("Failed to initialize SDL_ShaderCross.");
-		}
-		device = SDL_CreateGPUDevice(SDL_ShaderCross_GetSPIRVShaderFormats(), options & CF_APP_OPTIONS_GFX_DEBUG_BIT, device_name);
-		if (!device) {
-			return cf_result_error("Failed to create GPU Device.");
-		}
-#else
-		SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
-		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
-
-		SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
-		SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
-		SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
-
-		if (options & CF_APP_OPTIONS_GFX_DEBUG_BIT) {
-			SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_DEBUG_FLAG);
-		}
+			if(!SDL_ShaderCross_Init()) {
+				return cf_result_error("Failed to initialize SDL_ShaderCross.");
+			}
+			device = SDL_CreateGPUDevice(SDL_ShaderCross_GetSPIRVShaderFormats(), options & CF_APP_OPTIONS_GFX_DEBUG_BIT, device_name);
+			if (!device) {
+				return cf_result_error("Failed to create GPU Device.");
+			}
 #endif
+		}
+		if (use_opengl) {
+			SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
+			SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+			SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
+
+			SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+			SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
+			SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
+
+			if (options & CF_APP_OPTIONS_GFX_DEBUG_BIT) {
+				SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_DEBUG_FLAG);
+			}
+		}
 	}
 
 	Uint32 flags = 0;
 	flags |= SDL_WINDOW_HIGH_PIXEL_DENSITY; // Turn on high DPI support for all platforms.
-#ifdef CF_EMSCRIPTEN
 	flags |= SDL_WINDOW_OPENGL;
-#endif
 	if (use_metal) flags |= SDL_WINDOW_METAL;
 	if (options & CF_APP_OPTIONS_FULLSCREEN_BIT) flags |= SDL_WINDOW_FULLSCREEN;
 	if (options & CF_APP_OPTIONS_RESIZABLE_BIT) flags |= SDL_WINDOW_RESIZABLE;
@@ -318,16 +326,22 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 	cf_make_png_cache();
 
 	if (use_gfx) {
-		app->device = device;
+		if (use_opengl) {
+			app->use_opengl = true;
+		} else {
+			app->use_sdlgpu = true;
+			app->device = device;
+		}
 
-#ifndef CF_EMSCRIPTEN
-		SDL_ClaimWindowForGPUDevice(app->device, app->window);
-		cf_app_set_vsync_mailbox(app->vsync);
-		app->cmd = SDL_AcquireGPUCommandBuffer(app->device);
-#else
-		app->gl_ctx = SDL_GL_CreateContext(app->window);
-		SDL_GL_MakeCurrent(window, app->gl_ctx);
-#endif
+		if (!app->use_sdlgpu) {
+			SDL_ClaimWindowForGPUDevice(app->device, app->window);
+			cf_app_set_vsync_mailbox(app->vsync);
+			app->cmd = SDL_AcquireGPUCommandBuffer(app->device);
+		}
+		if (app->use_opengl) {
+			app->gl_ctx = SDL_GL_CreateContext(app->window);
+			SDL_GL_MakeCurrent(window, app->gl_ctx);
+		}
 
 		cf_load_internal_shaders();
 		cf_make_draw();
@@ -358,10 +372,11 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 
 		// Create the default font.
 		make_font_from_memory(calibri_data, calibri_sz, "Calibri");
-#ifndef CF_EMSCRIPTEN
-		SDL_SubmitGPUCommandBuffer(app->cmd);
-		app->cmd = NULL;
-#endif
+
+		if (app->use_sdlgpu) {
+			SDL_SubmitGPUCommandBuffer(app->cmd);
+			app->cmd = NULL;
+		}
 	}
 
 #ifdef CF_WINDOWS
@@ -380,7 +395,7 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 #ifndef CF_EMSCRIPTEN
 			cs_spawn_mix_thread();
 			app->spawned_mix_thread = true;
-#endif // CF_EMSCRIPTEN
+#endif
 			app->audio_needs_updates = true;
 			//cs_cull_duplicates(true); -- https://github.com/RandyGaul/cute_framework/issues/172
 		} else {
@@ -481,18 +496,13 @@ void cf_app_update(CF_OnUpdateFn* on_update)
 		}
 
 		if (app->using_imgui) {
-#ifndef CF_EMSCRIPTEN
-			ImGui_ImplSDLGPU3_NewFrame();
-#else
-			ImGui_ImplOpenGL3_NewFrame();
-#endif
+			if (app->use_sdlgpu) ImGui_ImplSDLGPU3_NewFrame();
+			if (app->use_opengl) ImGui_ImplOpenGL3_NewFrame();
 			ImGui_ImplSDL3_NewFrame();
 			ImGui::NewFrame();
 		}
 
-#ifndef CF_EMSCRIPTEN
-		app->cmd = SDL_AcquireGPUCommandBuffer(app->device);
-#endif
+		if (app->use_sdlgpu) app->cmd = SDL_AcquireGPUCommandBuffer(app->device);
 		cf_shader_watch();
 	}
 	app->user_on_update = on_update;
@@ -504,15 +514,16 @@ static void s_imgui_present(SDL_GPUTexture* swapchain_texture)
 {
 	if (app->using_imgui) {
 		ImGui::EndFrame();
-#ifndef CF_EMSCRIPTEN
-		if (swapchain_texture) {
-			ImGui::Render();
-			cf_imgui_draw(swapchain_texture);
+		if (app->use_sdlgpu) {
+			if (swapchain_texture) {
+				ImGui::Render();
+				cf_imgui_draw(swapchain_texture);
+			}
 		}
-#else
-		ImGui::Render();
-		cf_imgui_draw(NULL);
-#endif
+		if (app->use_opengl) {
+			ImGui::Render();
+			cf_imgui_draw(NULL);
+		}
 	}
 }
 
@@ -562,53 +573,55 @@ int cf_app_draw_onto_screen(bool clear)
 	// Render any remaining geometry in the draw API.
 	cf_render_to(app->offscreen_canvas, clear);
 
-#ifndef CF_EMSCRIPTEN
 	bool canceled_command_buffer = false;
-	// Stretch the app canvas onto the backbuffer canvas.
-	Uint32 w, h;
-	SDL_GPUTexture* swapchain_tex = NULL;
-	if (SDL_AcquireGPUSwapchainTexture(app->cmd, app->window, &swapchain_tex, &w, &h) && swapchain_tex) {
-		// Blit onto the screen.
-		CF_CanvasInternal* canvas = (CF_CanvasInternal*)app->offscreen_canvas.id;
-		SDL_GPUBlitRegion src = {
-			.texture = canvas->resolve_texture ? canvas->resolve_texture : canvas->texture,
-			.w = (Uint32)app->canvas_w,
-			.h = (Uint32)app->canvas_h,
-		};
-		SDL_GPUBlitRegion dst = {
-			.texture = swapchain_tex,
-			.w = w,
-			.h = h,
-		};
-		SDL_GPUBlitInfo blit_info = {
-			.source = src,
-			.destination = dst,
-			.load_op = SDL_GPU_LOADOP_CLEAR,
-			.flip_mode = SDL_FLIP_NONE,
-			.filter = SDL_GPU_FILTER_NEAREST,
-			.cycle = true,
-		};
-		SDL_BlitGPUTexture(app->cmd, &blit_info);
-	} else {
-		// Avoid large resource cycle chains gobbling up RAM when GPU-bound.
-		// https://discourse.libsdl.org/t/sdl-gpu-cycle-difficulties/55188
-		SDL_CancelGPUCommandBuffer(app->cmd);
-		canceled_command_buffer = true;
+	if (app->use_sdlgpu) {
+		// Stretch the app canvas onto the backbuffer canvas.
+		Uint32 w, h;
+		SDL_GPUTexture* swapchain_tex = NULL;
+		if (SDL_AcquireGPUSwapchainTexture(app->cmd, app->window, &swapchain_tex, &w, &h) && swapchain_tex) {
+			// Blit onto the screen.
+			CF_CanvasInternal* canvas = (CF_CanvasInternal*)app->offscreen_canvas.id;
+			SDL_GPUBlitRegion src = {
+				.texture = canvas->resolve_texture ? canvas->resolve_texture : canvas->texture,
+				.w = (Uint32)app->canvas_w,
+				.h = (Uint32)app->canvas_h,
+			};
+			SDL_GPUBlitRegion dst = {
+				.texture = swapchain_tex,
+				.w = w,
+				.h = h,
+			};
+			SDL_GPUBlitInfo blit_info = {
+				.source = src,
+				.destination = dst,
+				.load_op = SDL_GPU_LOADOP_CLEAR,
+				.flip_mode = SDL_FLIP_NONE,
+				.filter = SDL_GPU_FILTER_NEAREST,
+				.cycle = true,
+			};
+			SDL_BlitGPUTexture(app->cmd, &blit_info);
+		} else {
+			// Avoid large resource cycle chains gobbling up RAM when GPU-bound.
+			// https://discourse.libsdl.org/t/sdl-gpu-cycle-difficulties/55188
+			SDL_CancelGPUCommandBuffer(app->cmd);
+			canceled_command_buffer = true;
+		}
+
+		// Dear ImGui draw.
+		if (app->using_imgui) {
+			s_imgui_present(swapchain_tex);
+		}
 	}
 
-	// Dear ImGui draw.
-	if (app->using_imgui) {
-		s_imgui_present(swapchain_tex);
-	}
-#else
-	// TODO - Get canvas onto backbuffer somehow.
+	if (app->use_opengl) {
+		// TODO - Get canvas onto backbuffer somehow.
 
-	// Dear ImGui draw.
-	if (app->using_imgui) {
-		s_imgui_present(NULL);
+		// Dear ImGui draw.
+		if (app->using_imgui) {
+			s_imgui_present(NULL);
+		}
+		SDL_GL_SwapWindow(app->window);
 	}
-	SDL_GL_SwapWindow(app->window);
-#endif
 
 	// Do defrag down here after rendering ImGui to avoid thrashing any texture IDs. Generally we want to defrag
 	// before doing final rendering to reduce draw call count, but in the case where ImGui is rendered it's acceptable
@@ -619,14 +632,14 @@ int cf_app_draw_onto_screen(bool clear)
 		draw->delay_defrag = false;
 	}
 
-#ifndef CF_EMSCRIPTEN
-	// When using Vulkan, don't submit canceled command buffers. This will cause a crash due to DescriptorSetCache being
-	// NULL. Cases where this can happen is when you minimize the window.
-	if (!canceled_command_buffer) {
-		SDL_SubmitGPUCommandBuffer(app->cmd);
+	if (app->use_sdlgpu) {
+		// When using Vulkan, don't submit canceled command buffers. This will cause a crash due to DescriptorSetCache being
+		// NULL. Cases where this can happen is when you minimize the window.
+		if (!canceled_command_buffer) {
+			SDL_SubmitGPUCommandBuffer(app->cmd);
+		}
+		app->cmd = NULL;
 	}
-	app->cmd = NULL;
-#endif
 
 	// Clear all pushed draw parameters.
 	draw->alpha_discards.set_count(1);
@@ -796,22 +809,21 @@ bool cf_app_mouse_inside()
 
 bool cf_app_set_msaa(int sample_count)
 {
-#ifndef CF_EMSCRIPTEN
-	SDL_GPUTextureFormat fmt = SDL_GetGPUSwapchainTextureFormat(app->device, app->window);
-	SDL_GPUSampleCount msaa =  (SDL_GPUSampleCount)cf_clamp_int((app->sample_count >> 1), 0, 3);
-	if (SDL_GPUTextureSupportsSampleCount(app->device, fmt, msaa)) {
-		if (app->sample_count != sample_count) {
-			app->sample_count = sample_count;
-			s_canvas(app->w, app->h);
+	if (app->use_sdlgpu) {
+		SDL_GPUTextureFormat fmt = SDL_GetGPUSwapchainTextureFormat(app->device, app->window);
+		SDL_GPUSampleCount msaa =  (SDL_GPUSampleCount)cf_clamp_int((app->sample_count >> 1), 0, 3);
+		if (SDL_GPUTextureSupportsSampleCount(app->device, fmt, msaa)) {
+			if (app->sample_count != sample_count) {
+				app->sample_count = sample_count;
+				s_canvas(app->w, app->h);
+			}
+			return true;
+		} else {
+			return false;
 		}
-		return true;
-	} else {
-		return false;
 	}
-#else
-	CF_ASSERT(!"This isn't implemented yet on web builds.");
+	CF_ASSERT(!"This is only implemented on SDL_Gpu backends (Metal/DX11/DX12/Vulkan).");
 	return false;
-#endif
 }
 
 CF_Canvas cf_app_get_canvas()
@@ -837,22 +849,19 @@ int cf_app_get_canvas_height()
 void cf_app_set_vsync(bool true_turn_on_vsync)
 {
 	app->vsync = true_turn_on_vsync;
-#ifndef CF_EMSCRIPTEN
-	SDL_SetGPUSwapchainParameters(app->device, app->window, SDL_GPU_SWAPCHAINCOMPOSITION_SDR, app->vsync ? SDL_GPU_PRESENTMODE_VSYNC : SDL_GPU_PRESENTMODE_IMMEDIATE);
-#else
-	SDL_GL_SetSwapInterval(true_turn_on_vsync ? 1 : 0);
-#endif
+	if (app->use_sdlgpu) SDL_SetGPUSwapchainParameters(app->device, app->window, SDL_GPU_SWAPCHAINCOMPOSITION_SDR, app->vsync ? SDL_GPU_PRESENTMODE_VSYNC : SDL_GPU_PRESENTMODE_IMMEDIATE);
+	if (app->use_opengl) SDL_GL_SetSwapInterval(true_turn_on_vsync ? 1 : 0);
 }
 
 void cf_app_set_vsync_mailbox(bool true_turn_on_mailbox)
 {
 	app->vsync = true_turn_on_mailbox;
-#ifndef CF_EMSCRIPTEN
-	SDL_SetGPUSwapchainParameters(app->device, app->window, SDL_GPU_SWAPCHAINCOMPOSITION_SDR, app->vsync ? SDL_GPU_PRESENTMODE_MAILBOX : SDL_GPU_PRESENTMODE_IMMEDIATE);
-#else
-	SDL_GL_SetSwapInterval(true_turn_on_mailbox ? 1 : 0);
-	CF_ASSERT(!"This isn't supported on web builds.");
-#endif
+	if (app->use_sdlgpu) {
+		SDL_SetGPUSwapchainParameters(app->device, app->window, SDL_GPU_SWAPCHAINCOMPOSITION_SDR, app->vsync ? SDL_GPU_PRESENTMODE_MAILBOX : SDL_GPU_PRESENTMODE_IMMEDIATE);
+	} else {
+		if (app->use_opengl) SDL_GL_SetSwapInterval(true_turn_on_mailbox ? 1 : 0);
+		CF_ASSERT(!"This is only implemented on SDL_Gpu backends (Metal/DX11/DX12/Vulkan).");
+	}
 }
 
 bool cf_app_get_vsync()

@@ -22,54 +22,53 @@ void cf_imgui_init()
 	auto& io = ImGui::GetIO();
 	io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 
-#ifndef CF_EMSCRIPTEN
-	ImGui_ImplSDL3_InitForSDLGPU(app->window);
-	ImGui_ImplSDLGPU3_InitInfo init_info = {};
-	init_info.Device = app->device;
-	init_info.ColorTargetFormat = SDL_GetGPUSwapchainTextureFormat(app->device, app->window);
-	init_info.MSAASamples = SDL_GPU_SAMPLECOUNT_1;
-	ImGui_ImplSDLGPU3_Init(&init_info);
-#else
-	ImGui_ImplOpenGL3_Init("#version 300 es");
-	ImGui_ImplSDL3_InitForOpenGL(app->window, app->gl_ctx);
-#endif
+	if (app->use_sdlgpu) {
+		ImGui_ImplSDL3_InitForSDLGPU(app->window);
+		ImGui_ImplSDLGPU3_InitInfo init_info = {};
+		init_info.Device = app->device;
+		init_info.ColorTargetFormat = SDL_GetGPUSwapchainTextureFormat(app->device, app->window);
+		init_info.MSAASamples = SDL_GPU_SAMPLECOUNT_1;
+		ImGui_ImplSDLGPU3_Init(&init_info);
+	}
+	if (app->use_opengl) {
+		ImGui_ImplOpenGL3_Init("#version 300 es");
+		ImGui_ImplSDL3_InitForOpenGL(app->window, app->gl_ctx);
+	}
 }
 
 void cf_imgui_shutdown()
 {
-#ifndef CF_EMSCRIPTEN
-	ImGui_ImplSDLGPU3_Shutdown();
-#else
-	ImGui_ImplOpenGL3_Shutdown();
-#endif
+	if (app->use_sdlgpu) ImGui_ImplSDLGPU3_Shutdown();
+	if (app->use_opengl) ImGui_ImplOpenGL3_Shutdown();
 	ImGui_ImplSDL3_Shutdown();
 	ImGui::DestroyContext();
 }
 
 void cf_imgui_draw(SDL_GPUTexture* swapchain_texture)
 {
-#ifndef CF_EMSCRIPTEN
-	ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
-	ImDrawData* draw_data = ImGui::GetDrawData();
-	const bool is_minimized = (draw_data->DisplaySize.x <= 0.0f || draw_data->DisplaySize.y <= 0.0f);
+	if (app->use_sdlgpu) {
+		ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
+		ImDrawData* draw_data = ImGui::GetDrawData();
+		const bool is_minimized = (draw_data->DisplaySize.x <= 0.0f || draw_data->DisplaySize.y <= 0.0f);
 
-	if (swapchain_texture != nullptr && !is_minimized) {
-		// This is mandatory: call ImGui_ImplSDLGPU3_PrepareDrawData() to upload the vertex/index buffer!
-		ImGui_ImplSDLGPU3_PrepareDrawData(draw_data, app->cmd);
+		if (swapchain_texture != nullptr && !is_minimized) {
+			// This is mandatory: call ImGui_ImplSDLGPU3_PrepareDrawData() to upload the vertex/index buffer!
+			ImGui_ImplSDLGPU3_PrepareDrawData(draw_data, app->cmd);
 
-		// Setup and start a render pass
-		SDL_GPUColorTargetInfo target_info = {};
-		target_info.texture = swapchain_texture;
-		target_info.load_op = SDL_GPU_LOADOP_LOAD;
-		target_info.store_op = SDL_GPU_STOREOP_STORE;
-		SDL_GPURenderPass* render_pass = SDL_BeginGPURenderPass(app->cmd, &target_info, 1, nullptr);
+			// Setup and start a render pass
+			SDL_GPUColorTargetInfo target_info = {};
+			target_info.texture = swapchain_texture;
+			target_info.load_op = SDL_GPU_LOADOP_LOAD;
+			target_info.store_op = SDL_GPU_STOREOP_STORE;
+			SDL_GPURenderPass* render_pass = SDL_BeginGPURenderPass(app->cmd, &target_info, 1, nullptr);
 
-		// Render ImGui
-		ImGui_ImplSDLGPU3_RenderDrawData(draw_data, app->cmd, render_pass);
+			// Render ImGui
+			ImGui_ImplSDLGPU3_RenderDrawData(draw_data, app->cmd, render_pass);
 
-		SDL_EndGPURenderPass(render_pass);
+			SDL_EndGPURenderPass(render_pass);
+		}
 	}
-#else
-	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-#endif
+	if (app->use_opengl) {
+		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+	}
 }

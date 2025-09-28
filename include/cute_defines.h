@@ -18,9 +18,6 @@
 #	define _CRT_NONSTDC_NO_DEPRECATE
 #endif
 
-// TODO - REMOVE (DON'T COMMIT THIS)
-//#define CF_EMSCRIPTEN
-
 #if defined(_WIN32)
 #	define CF_WINDOWS 1
 #elif defined(__linux__) || defined(__unix__) && !defined(SDL_PLATFORM_APPLE) && !defined(__EMSCRIPTEN__)

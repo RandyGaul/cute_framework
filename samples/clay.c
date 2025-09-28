@@ -446,20 +446,20 @@ int main(int argc, char* argv[])
 
 			ImGui_SeparatorText("Style");
 
-			ImGui_InputInt("Font size", &font_size, 1, 2, ImGuiInputTextFlags_None);
-			ImGui_InputInt("Title font size", &jumbo_font_size, 1, 2, ImGuiInputTextFlags_None);
+			ImGui_InputIntEx("Font size", &font_size, 1, 2, ImGuiInputTextFlags_None);
+			ImGui_InputIntEx("Title font size", &jumbo_font_size, 1, 2, ImGuiInputTextFlags_None);
 			if (font_size < 1) { font_size = 1; }
 
 			ImGui_SeparatorText("Padding");
-			ImGui_InputInt("Top", &padding_top, 1, 10, ImGuiInputTextFlags_None);
-			ImGui_InputInt("Bottom", &padding_bottom, 1, 10, ImGuiInputTextFlags_None);
-			ImGui_InputInt("Left", &padding_left, 1, 10, ImGuiInputTextFlags_None);
-			ImGui_InputInt("Right", &padding_right, 1, 10, ImGuiInputTextFlags_None);
+			ImGui_InputIntEx("Top", &padding_top, 1, 10, ImGuiInputTextFlags_None);
+			ImGui_InputIntEx("Bottom", &padding_bottom, 1, 10, ImGuiInputTextFlags_None);
+			ImGui_InputIntEx("Left", &padding_left, 1, 10, ImGuiInputTextFlags_None);
+			ImGui_InputIntEx("Right", &padding_right, 1, 10, ImGuiInputTextFlags_None);
 
 			ImGui_SeparatorText("Data");
-			ImGui_InputInt("Life", &life, 1, 10, ImGuiInputTextFlags_None);
-			ImGui_InputInt("Score", &score, 1, 10, ImGuiInputTextFlags_None);
-			ImGui_InputInt("Highscore", &high_score, 1, 10, ImGuiInputTextFlags_None);
+			ImGui_InputIntEx("Life", &life, 1, 10, ImGuiInputTextFlags_None);
+			ImGui_InputIntEx("Score", &score, 1, 10, ImGuiInputTextFlags_None);
+			ImGui_InputIntEx("Highscore", &high_score, 1, 10, ImGuiInputTextFlags_None);
 		}
 		ImGui_End();
 

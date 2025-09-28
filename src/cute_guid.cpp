@@ -29,7 +29,7 @@ void cf_crypto_random_bytes(void* dst, size_t len)
 	if (!dst || !len) return;
 	cf_js_fill_random(dst, (int)len);
 }
-#endif
+#endif // CF_EMSCRIPTEN
 
 CF_Guid cf_make_guid()
 {

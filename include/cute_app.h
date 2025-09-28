@@ -196,8 +196,10 @@ CF_API CF_DisplayOrientation CF_CALL cf_display_orientation(CF_DisplayID display
 	CF_ENUM(APP_OPTIONS_GFX_METAL_BIT,                          1 << 9)  \
 	/* @entry Starts the application with a Vulkan backend. */           \
 	CF_ENUM(APP_OPTIONS_GFX_VULKAN_BIT,                         1 << 10) \
+	/* @entry TODO */ \
+	CF_ENUM(APP_OPTIONS_GFX_OPENGL_BIT,                       1 << 11) \
 	/* @entry Starts the application with a debug mode graphics context. */ \
-	CF_ENUM(APP_OPTIONS_GFX_DEBUG_BIT,                          1 << 11) \
+	CF_ENUM(APP_OPTIONS_GFX_DEBUG_BIT,                          1 << 12) \
 	/* @end */
 
 typedef int CF_AppOptionFlags;

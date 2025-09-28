@@ -71,6 +71,8 @@ struct CF_App
 	void* platform_handle = NULL;
 	CF_OnUpdateFn* user_on_update = NULL;
 	SDL_Window* window = NULL;
+	bool use_sdlgpu = false;
+	bool use_opengl = false;
 	SDL_GPUDevice* device = NULL;
 	SDL_GLContext gl_ctx = NULL;
 	cs_context_t* cute_sound = NULL;

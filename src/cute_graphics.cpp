@@ -106,11 +106,11 @@ CF_BackendType cf_query_backend()
 bool cf_texture_supports_format(CF_PixelFormat format, CF_TextureUsageBits usage)
 {
 	return SDL_GPUTextureSupportsFormat(
-			app->device,
-			s_wrap(format),
-			SDL_GPU_TEXTURETYPE_2D,
-			usage
-			);
+		app->device,
+		s_wrap(format),
+		SDL_GPU_TEXTURETYPE_2D,
+		usage
+	);
 }
 
 CF_TextureParams cf_texture_defaults(int w, int h)
@@ -559,11 +559,12 @@ static SDL_GPUShader* s_compile(CF_ShaderInternal* shader_internal, CF_ShaderByt
 	if (SDL_GetGPUShaderFormats(app->device) == SDL_GPU_SHADERFORMAT_SPIRV) {
 		sdl_shader = (SDL_GPUShader*)SDL_CreateGPUShader(app->device, &shaderCreateInfo);
 	} else {
-  	SDL_ShaderCross_GraphicsShaderMetadata metadata = {};
-  	metadata.num_samplers = shader_info->num_samplers;
-  	metadata.num_storage_textures = shader_info->num_storage_textures;
-  	metadata.num_storage_buffers = shader_info->num_storage_buffers;
-  	metadata.num_uniform_buffers = shader_info->num_uniforms;
+#ifndef CF_EMSCRIPTEN
+		SDL_ShaderCross_GraphicsShaderMetadata metadata = {};
+		metadata.num_samplers = shader_info->num_samplers;
+		metadata.num_storage_textures = shader_info->num_storage_textures;
+		metadata.num_storage_buffers = shader_info->num_storage_buffers;
+		metadata.num_uniform_buffers = shader_info->num_uniforms;
 
 	  SDL_ShaderCross_SPIRV_Info spirvInfo;
 		spirvInfo.bytecode = bytecode.content;
@@ -574,6 +575,7 @@ static SDL_GPUShader* s_compile(CF_ShaderInternal* shader_internal, CF_ShaderByt
 		spirvInfo.name = "shader.shd";
 		spirvInfo.props = SDL_CreateProperties();
 		sdl_shader = (SDL_GPUShader*)SDL_ShaderCross_CompileGraphicsShaderFromSPIRV(app->device, &spirvInfo, &metadata);
+#endif
 	}
 	CF_ASSERT(sdl_shader);
 	return sdl_shader;

@@ -10,12 +10,9 @@
 
 #include <SDL3/SDL.h>
 
-#ifndef CF_EMSCRIPTEN
 #include <imgui/backends/imgui_impl_sdlgpu3.h>
 #include <SDL3_shadercross/SDL_shadercross.h>
-#else
 #include <imgui/backends/imgui_impl_opengl3.h>
-#endif
 
 #include <imgui/backends/imgui_impl_sdl3.h>
 
