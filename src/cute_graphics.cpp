@@ -9,6 +9,7 @@
 #include <cute_c_runtime.h>
 #include <cute_graphics.h>
 #include <cute_file_system.h>
+#include <stdio.h>
 
 #include <internal/cute_alloc_internal.h>
 #include <internal/cute_app_internal.h>
@@ -18,6 +19,9 @@
 #include "cute_shader/builtin_shaders.h"
 #include "data/builtin_shaders_bytecode.h"
 #include <SDL3_shadercross/SDL_shadercross.h>
+#if !defined(CF_EMSCRIPTEN)
+#include <spirv_cross_c.h>
+#endif
 
 struct CF_CanvasInternal;
 static CF_CanvasInternal* s_canvas = NULL;
@@ -86,7 +90,7 @@ struct CF_MeshInternal
 	CF_VertexAttribute attributes[CF_MESH_MAX_VERTEX_ATTRIBUTES];
 };
 
-CF_BackendType cf_query_backend()
+CF_BackendType sdlgpu_query_backend()
 {
 	SDL_GPUShaderFormat format = SDL_GetGPUShaderFormats(app->device);
 	switch (format) {
@@ -102,7 +106,7 @@ CF_BackendType cf_query_backend()
 	}
 }
 
-bool cf_texture_supports_format(CF_PixelFormat format, CF_TextureUsageBits usage)
+bool sdlgpu_texture_supports_format(CF_PixelFormat format, CF_TextureUsageBits usage)
 {
 	return SDL_GPUTextureSupportsFormat(
 		app->device,
@@ -112,7 +116,7 @@ bool cf_texture_supports_format(CF_PixelFormat format, CF_TextureUsageBits usage
 	);
 }
 
-CF_TextureParams cf_texture_defaults(int w, int h)
+CF_TextureParams sdlgpu_texture_defaults(int w, int h)
 {
 	CF_TextureParams params;
 	params.pixel_format = CF_PIXEL_FORMAT_R8G8B8A8_UNORM;
@@ -203,12 +207,12 @@ static CF_Texture s_make_texture(CF_TextureParams params, CF_SampleCount sample_
 	return result;
 }
 
-CF_Texture cf_make_texture(CF_TextureParams params)
+CF_Texture sdlgpu_make_texture(CF_TextureParams params)
 {
 	return s_make_texture(params, CF_SAMPLE_COUNT_1);
 }
 
-void cf_destroy_texture(CF_Texture texture_handle)
+void sdlgpu_destroy_texture(CF_Texture texture_handle)
 {
 	CF_TextureInternal* tex = (CF_TextureInternal*)texture_handle.id;
 	SDL_ReleaseGPUTexture(app->device, tex->tex);
@@ -227,7 +231,7 @@ static SDL_GPUTextureLocation SDL_GPUTextureLocationDefaults(CF_TextureInternal*
 	return location;
 }
 
-void cf_texture_update(CF_Texture texture_handle, void* data, int size)
+void sdlgpu_texture_update(CF_Texture texture_handle, void* data, int size)
 {
 	CF_TextureInternal* tex = (CF_TextureInternal*)texture_handle.id;
 
@@ -260,7 +264,7 @@ void cf_texture_update(CF_Texture texture_handle, void* data, int size)
 	if (!app->cmd) SDL_SubmitGPUCommandBuffer(cmd);
 }
 
-void cf_texture_update_mip(CF_Texture texture_handle, void* data, int size, int mip_level)
+void sdlgpu_texture_update_mip(CF_Texture texture_handle, void* data, int size, int mip_level)
 {
 	CF_TextureInternal* tex = (CF_TextureInternal*)texture_handle.id;
 
@@ -300,7 +304,7 @@ void cf_texture_update_mip(CF_Texture texture_handle, void* data, int size, int 
 	if (!app->cmd) SDL_SubmitGPUCommandBuffer(cmd);
 }
 
-void cf_generate_mipmaps(CF_Texture texture_handle)
+void sdlgpu_generate_mipmaps(CF_Texture texture_handle)
 {
 	CF_TextureInternal* tex = (CF_TextureInternal*)texture_handle.id;
 	SDL_GPUCommandBuffer* cmd = app->cmd ? app->cmd : SDL_AcquireGPUCommandBuffer(app->device);
@@ -308,12 +312,12 @@ void cf_generate_mipmaps(CF_Texture texture_handle)
 	if (!app->cmd) SDL_SubmitGPUCommandBuffer(cmd);
 }
 
-uint64_t cf_texture_handle(CF_Texture texture)
+uint64_t sdlgpu_texture_handle(CF_Texture texture)
 {
 	return (uint64_t)((CF_TextureInternal*)texture.id)->tex;
 }
 
-uint64_t cf_texture_binding_handle(CF_Texture texture)
+uint64_t sdlgpu_texture_binding_handle(CF_Texture texture)
 {
 	return (uint64_t)&((CF_TextureInternal*)texture.id)->binding;
 }
@@ -580,7 +584,7 @@ static SDL_GPUShader* s_compile(CF_ShaderInternal* shader_internal, CF_ShaderByt
 	return sdl_shader;
 }
 
-CF_Shader cf_make_shader_from_bytecode(CF_ShaderBytecode vertex_bytecode, CF_ShaderBytecode fragment_bytecode)
+CF_Shader sdlgpu_make_shader_from_bytecode(CF_ShaderBytecode vertex_bytecode, CF_ShaderBytecode fragment_bytecode)
 {
 	CF_ShaderInternal* shader_internal = CF_NEW(CF_ShaderInternal);
 	CF_MEMSET(shader_internal, 0, sizeof(*shader_internal));
@@ -694,7 +698,7 @@ CF_Shader cf_make_draw_blit_shader_from_bytecode_internal(CF_ShaderBytecode byte
 	return cf_make_shader_from_bytecode(s_blit_vs_bytecode, bytecode);
 }
 
-CF_Shader cf_make_shader(const char* vertex_path, const char* fragment_path)
+CF_Shader sdlgpu_make_shader(const char* vertex_path, const char* fragment_path)
 {
 	// Make sure each file can be found.
 	const char* vs = fs_read_entire_file_to_memory_and_nul_terminate(vertex_path);
@@ -704,12 +708,12 @@ CF_Shader cf_make_shader(const char* vertex_path, const char* fragment_path)
 	return s_compile(vs, fs);
 }
 
-CF_Shader cf_make_shader_from_source(const char* vertex_src, const char* fragment_src)
+CF_Shader sdlgpu_make_shader_from_source(const char* vertex_src, const char* fragment_src)
 {
 	return s_compile(vertex_src, fragment_src);
 }
 
-void cf_destroy_shader(CF_Shader shader_handle)
+void sdlgpu_destroy_shader(CF_Shader shader_handle)
 {
 	// Draw shaders automatically have blit shaders generated, so clean that up as well,
 	// if it exists. See `cf_make_draw_shader`.
@@ -729,7 +733,7 @@ void cf_destroy_shader(CF_Shader shader_handle)
 	CF_FREE(shd);
 }
 
-void cf_clear_canvas(CF_Canvas canvas_handle)
+void sdlgpu_clear_canvas(CF_Canvas canvas_handle)
 {
 	CF_CanvasInternal* canvas = (CF_CanvasInternal*)canvas_handle.id;
 	SDL_GPUCommandBuffer* cmd = app->cmd ? app->cmd : SDL_AcquireGPUCommandBuffer(app->device);
@@ -758,7 +762,7 @@ void cf_clear_canvas(CF_Canvas canvas_handle)
 	if (!app->cmd) SDL_SubmitGPUCommandBuffer(cmd);
 }
 
-CF_CanvasParams cf_canvas_defaults(int w, int h)
+CF_CanvasParams sdlgpu_canvas_defaults(int w, int h)
 {
 	CF_CanvasParams params = { 0 };
 	if (w == 0 || h == 0) {
@@ -767,12 +771,12 @@ CF_CanvasParams cf_canvas_defaults(int w, int h)
 		params.depth_stencil_target = { };
 	} else {
 		params.name = NULL;
-		params.target = cf_texture_defaults(w, h);
+                params.target = sdlgpu_texture_defaults(w, h);
 		params.target.usage |= CF_TEXTURE_USAGE_COLOR_TARGET_BIT;
 		params.depth_stencil_enable = false;
-		params.depth_stencil_target = cf_texture_defaults(w, h);
+                params.depth_stencil_target = sdlgpu_texture_defaults(w, h);
 		params.depth_stencil_target.pixel_format = CF_PIXEL_FORMAT_D16_UNORM;
-		if (cf_texture_supports_format(CF_PIXEL_FORMAT_D24_UNORM_S8_UINT, CF_TEXTURE_USAGE_DEPTH_STENCIL_TARGET_BIT)) {
+                if (sdlgpu_texture_supports_format(CF_PIXEL_FORMAT_D24_UNORM_S8_UINT, CF_TEXTURE_USAGE_DEPTH_STENCIL_TARGET_BIT)) {
 			params.depth_stencil_target.pixel_format = CF_PIXEL_FORMAT_D24_UNORM_S8_UINT;
 		}
 		params.depth_stencil_target.usage = CF_TEXTURE_USAGE_DEPTH_STENCIL_TARGET_BIT;
@@ -780,7 +784,7 @@ CF_CanvasParams cf_canvas_defaults(int w, int h)
 	return params;
 }
 
-CF_Canvas cf_make_canvas(CF_CanvasParams params)
+CF_Canvas sdlgpu_make_canvas(CF_CanvasParams params)
 {
 	CF_CanvasInternal* canvas = (CF_CanvasInternal*)CF_CALLOC(sizeof(CF_CanvasInternal));
 	if (params.target.width > 0 && params.target.height > 0) {
@@ -802,7 +806,7 @@ CF_Canvas cf_make_canvas(CF_CanvasParams params)
 		}
 		if (canvas->sample_count != CF_SAMPLE_COUNT_1) {
 			params.target.usage = CF_TEXTURE_USAGE_COLOR_TARGET_BIT | CF_TEXTURE_USAGE_SAMPLER_BIT;
-			canvas->cf_resolve_texture = cf_make_texture(params.target);
+                        canvas->cf_resolve_texture = sdlgpu_make_texture(params.target);
 			if (canvas->cf_resolve_texture.id) {
 				canvas->resolve_texture = ((CF_TextureInternal*)canvas->cf_resolve_texture.id)->tex;
 			}
@@ -815,28 +819,28 @@ CF_Canvas cf_make_canvas(CF_CanvasParams params)
 	return result;
 }
 
-void cf_destroy_canvas(CF_Canvas canvas_handle)
+void sdlgpu_destroy_canvas(CF_Canvas canvas_handle)
 {
 	CF_CanvasInternal* canvas = (CF_CanvasInternal*)canvas_handle.id;
-	cf_destroy_texture(canvas->cf_texture);
-	if (canvas->resolve_texture) cf_destroy_texture(canvas->cf_resolve_texture);
-	if (canvas->depth_stencil) cf_destroy_texture(canvas->cf_depth_stencil);
+        sdlgpu_destroy_texture(canvas->cf_texture);
+        if (canvas->resolve_texture) sdlgpu_destroy_texture(canvas->cf_resolve_texture);
+        if (canvas->depth_stencil) sdlgpu_destroy_texture(canvas->cf_depth_stencil);
 	CF_FREE(canvas);
 }
 
-CF_Texture cf_canvas_get_target(CF_Canvas canvas_handle)
+CF_Texture sdlgpu_canvas_get_target(CF_Canvas canvas_handle)
 {
 	CF_CanvasInternal* canvas = (CF_CanvasInternal*)canvas_handle.id;
 	return canvas->resolve_texture ? canvas->cf_resolve_texture : canvas->cf_texture;
 }
 
-CF_Texture cf_canvas_get_depth_stencil_target(CF_Canvas canvas_handle)
+CF_Texture sdlgpu_canvas_get_depth_stencil_target(CF_Canvas canvas_handle)
 {
 	CF_CanvasInternal* canvas = (CF_CanvasInternal*)canvas_handle.id;
 	return canvas->cf_depth_stencil;
 }
 
-CF_Mesh cf_make_mesh(int vertex_buffer_size, const CF_VertexAttribute* attributes, int attribute_count, int vertex_stride)
+CF_Mesh sdlgpu_make_mesh(int vertex_buffer_size, const CF_VertexAttribute* attributes, int attribute_count, int vertex_stride)
 {
 	CF_MeshInternal* mesh = (CF_MeshInternal*)CF_CALLOC(sizeof(CF_MeshInternal));
 	mesh->vertices.size = vertex_buffer_size;
@@ -865,7 +869,7 @@ CF_Mesh cf_make_mesh(int vertex_buffer_size, const CF_VertexAttribute* attribute
 	return result;
 }
 
-void cf_mesh_set_index_buffer(CF_Mesh mesh_handle, int index_buffer_size_in_bytes, int index_bit_count)
+void sdlgpu_mesh_set_index_buffer(CF_Mesh mesh_handle, int index_buffer_size_in_bytes, int index_bit_count)
 {
 	CF_ASSERT(index_bit_count == 16 || index_bit_count == 32);
 	CF_MeshInternal* mesh = (CF_MeshInternal*)mesh_handle.id;
@@ -885,7 +889,7 @@ void cf_mesh_set_index_buffer(CF_Mesh mesh_handle, int index_buffer_size_in_byte
 	mesh->indices.transfer_buffer = SDL_CreateGPUTransferBuffer(app->device, &tbuf_info);
 }
 
-void cf_mesh_set_instance_buffer(CF_Mesh mesh_handle, int instance_buffer_size_in_bytes, int instance_stride)
+void sdlgpu_mesh_set_instance_buffer(CF_Mesh mesh_handle, int instance_buffer_size_in_bytes, int instance_stride)
 {
 	CF_MeshInternal* mesh = (CF_MeshInternal*)mesh_handle.id;
 	mesh->instances.size = instance_buffer_size_in_bytes;
@@ -904,7 +908,7 @@ void cf_mesh_set_instance_buffer(CF_Mesh mesh_handle, int instance_buffer_size_i
 	mesh->instances.transfer_buffer = SDL_CreateGPUTransferBuffer(app->device, &tbuf_info);
 }
 
-void cf_destroy_mesh(CF_Mesh mesh_handle)
+void sdlgpu_destroy_mesh(CF_Mesh mesh_handle)
 {
 	CF_MeshInternal* mesh = (CF_MeshInternal*)mesh_handle.id;
 	if (mesh->vertices.buffer) {
@@ -967,26 +971,26 @@ static void s_update_buffer(CF_Buffer* buffer, int element_count, void* data, in
 	if (!app->cmd) SDL_SubmitGPUCommandBuffer(cmd);
 }
 
-void cf_mesh_update_vertex_data(CF_Mesh mesh_handle, void* data, int count)
+void sdlgpu_mesh_update_vertex_data(CF_Mesh mesh_handle, void* data, int count)
 {
 	CF_MeshInternal* mesh = (CF_MeshInternal*)mesh_handle.id;
 	CF_ASSERT(mesh->attribute_count);
 	s_update_buffer(&mesh->vertices, count, data, count * mesh->vertices.stride, SDL_GPU_BUFFERUSAGE_VERTEX);
 }
 
-void cf_mesh_update_index_data(CF_Mesh mesh_handle, void* data, int count)
+void sdlgpu_mesh_update_index_data(CF_Mesh mesh_handle, void* data, int count)
 {
 	CF_MeshInternal* mesh = (CF_MeshInternal*)mesh_handle.id;
 	s_update_buffer(&mesh->indices, count, data, count * mesh->indices.stride, SDL_GPU_BUFFERUSAGE_INDEX);
 }
 
-void cf_mesh_update_instance_data(CF_Mesh mesh_handle, void* data, int count)
+void sdlgpu_mesh_update_instance_data(CF_Mesh mesh_handle, void* data, int count)
 {
 	CF_MeshInternal* mesh = (CF_MeshInternal*)mesh_handle.id;
 	s_update_buffer(&mesh->instances, count, data, count * mesh->instances.stride, SDL_GPU_BUFFERUSAGE_VERTEX);
 }
 
-CF_RenderState cf_render_state_defaults()
+CF_RenderState sdlgpu_render_state_defaults()
 {
 	CF_RenderState state;
 	state.primitive_type = CF_PRIMITIVE_TYPE_TRIANGLELIST;
@@ -1025,7 +1029,7 @@ CF_RenderState cf_render_state_defaults()
 	return state;
 }
 
-CF_Material cf_make_material()
+CF_Material sdlgpu_make_material()
 {
 	CF_MaterialInternal* material = CF_NEW(CF_MaterialInternal);
 	material->uniform_arena = cf_make_arena(4, CF_KB * 16);
@@ -1035,7 +1039,7 @@ CF_Material cf_make_material()
 	return result;
 }
 
-void cf_destroy_material(CF_Material material_handle)
+void sdlgpu_destroy_material(CF_Material material_handle)
 {
 	CF_MaterialInternal* material = (CF_MaterialInternal*)material_handle.id;
 	cf_arena_reset(&material->uniform_arena);
@@ -1044,7 +1048,7 @@ void cf_destroy_material(CF_Material material_handle)
 	CF_FREE(material);
 }
 
-void cf_material_set_render_state(CF_Material material_handle, CF_RenderState render_state)
+void sdlgpu_material_set_render_state(CF_Material material_handle, CF_RenderState render_state)
 {
 	CF_MaterialInternal* material = (CF_MaterialInternal*)material_handle.id;
 	if (CF_MEMCMP(&material->state, &render_state, sizeof(material->state))) {
@@ -1072,21 +1076,21 @@ static void s_material_set_texture(CF_MaterialInternal* material, CF_MaterialSta
 	}
 }
 
-void cf_material_set_texture_vs(CF_Material material_handle, const char* name, CF_Texture texture)
+void sdlgpu_material_set_texture_vs(CF_Material material_handle, const char* name, CF_Texture texture)
 {
 	CF_MaterialInternal* material = (CF_MaterialInternal*)material_handle.id;
 	name = sintern(name);
 	s_material_set_texture(material, &material->vs, name, texture);
 }
 
-void cf_material_set_texture_fs(CF_Material material_handle, const char* name, CF_Texture texture)
+void sdlgpu_material_set_texture_fs(CF_Material material_handle, const char* name, CF_Texture texture)
 {
 	CF_MaterialInternal* material = (CF_MaterialInternal*)material_handle.id;
 	name = sintern(name);
 	s_material_set_texture(material, &material->fs, name, texture);
 }
 
-void cf_material_clear_textures(CF_Material material_handle)
+void sdlgpu_material_clear_textures(CF_Material material_handle)
 {
 	CF_MaterialInternal* material = (CF_MaterialInternal*)material_handle.id;
 	material->vs.textures.clear();
@@ -1120,35 +1124,35 @@ static void s_material_set_uniform(CF_Arena* arena, CF_MaterialState* state, con
 	CF_MEMCPY(uniform->data, data, size);
 }
 
-void cf_material_set_uniform_vs(CF_Material material_handle, const char* name, void* data, CF_UniformType type, int array_length)
+void sdlgpu_material_set_uniform_vs(CF_Material material_handle, const char* name, void* data, CF_UniformType type, int array_length)
 {
 	CF_MaterialInternal* material = (CF_MaterialInternal*)material_handle.id;
 	name = sintern(name);
 	s_material_set_uniform(&material->uniform_arena, &material->vs, sintern("uniform_block"), name, data, type, array_length);
 }
 
-void cf_material_set_uniform_vs_internal(CF_Material material_handle, const char* block_name, const char* name, void* data, CF_UniformType type, int array_length)
+void sdlgpu_material_set_uniform_vs_internal(CF_Material material_handle, const char* block_name, const char* name, void* data, CF_UniformType type, int array_length)
 {
 	CF_MaterialInternal* material = (CF_MaterialInternal*)material_handle.id;
 	name = sintern(name);
 	s_material_set_uniform(&material->uniform_arena, &material->vs, sintern(block_name), name, data, type, array_length);
 }
 
-void cf_material_set_uniform_fs(CF_Material material_handle, const char* name, void* data, CF_UniformType type, int array_length)
+void sdlgpu_material_set_uniform_fs(CF_Material material_handle, const char* name, void* data, CF_UniformType type, int array_length)
 {
 	CF_MaterialInternal* material = (CF_MaterialInternal*)material_handle.id;
 	name = sintern(name);
 	s_material_set_uniform(&material->uniform_arena, &material->fs, sintern("uniform_block"), name, data, type, array_length);
 }
 
-void cf_material_set_uniform_fs_internal(CF_Material material_handle, const char* block_name, const char* name, void* data, CF_UniformType type, int array_length)
+void sdlgpu_material_set_uniform_fs_internal(CF_Material material_handle, const char* block_name, const char* name, void* data, CF_UniformType type, int array_length)
 {
 	CF_MaterialInternal* material = (CF_MaterialInternal*)material_handle.id;
 	name = sintern(name);
 	s_material_set_uniform(&material->uniform_arena, &material->fs, sintern(block_name), name, data, type, array_length);
 }
 
-void cf_material_clear_uniforms(CF_Material material_handle)
+void sdlgpu_material_clear_uniforms(CF_Material material_handle)
 {
 	CF_MaterialInternal* material = (CF_MaterialInternal*)material_handle.id;
 	arena_reset(&material->uniform_arena);
@@ -1156,18 +1160,18 @@ void cf_material_clear_uniforms(CF_Material material_handle)
 	material->fs.uniforms.clear();
 }
 
-void cf_clear_color(float red, float green, float blue, float alpha)
+void sdlgpu_clear_color(float red, float green, float blue, float alpha)
 {
 	app->clear_color = make_color(red, green, blue, alpha);
 }
 
-void cf_clear_depth_stencil(float depth, uint32_t stencil)
+void sdlgpu_clear_depth_stencil(float depth, uint32_t stencil)
 {
 	app->clear_depth = depth;
 	app->clear_stencil = stencil;
 }
 
-void cf_apply_canvas(CF_Canvas canvas_handle, bool clear)
+void sdlgpu_apply_canvas(CF_Canvas canvas_handle, bool clear)
 {
 	CF_CanvasInternal* canvas = (CF_CanvasInternal*)canvas_handle.id;
 	CF_ASSERT(canvas);
@@ -1175,7 +1179,7 @@ void cf_apply_canvas(CF_Canvas canvas_handle, bool clear)
 	s_canvas->clear = clear;
 }
 
-void cf_apply_viewport(int x, int y, int w, int h)
+void sdlgpu_apply_viewport(int x, int y, int w, int h)
 {
 	CF_ASSERT(s_canvas);
 	CF_ASSERT(s_canvas->pass);
@@ -1189,7 +1193,7 @@ void cf_apply_viewport(int x, int y, int w, int h)
 	SDL_SetGPUViewport(s_canvas->pass, &viewport);
 }
 
-void cf_apply_scissor(int x, int y, int w, int h)
+void sdlgpu_apply_scissor(int x, int y, int w, int h)
 {
 	CF_ASSERT(s_canvas);
 	CF_ASSERT(s_canvas->pass);
@@ -1201,14 +1205,14 @@ void cf_apply_scissor(int x, int y, int w, int h)
 	SDL_SetGPUScissor(s_canvas->pass, &scissor);
 }
 
-void cf_apply_stencil_reference(int reference)
+void sdlgpu_apply_stencil_reference(int reference)
 {
   CF_ASSERT(s_canvas);
   CF_ASSERT(s_canvas->pass);
   SDL_SetGPUStencilReference(s_canvas->pass, reference);
 }
 
-void cf_apply_blend_constants(float r, float g, float b, float a)
+void sdlgpu_apply_blend_constants(float r, float g, float b, float a)
 {
   CF_ASSERT(s_canvas);
   CF_ASSERT(s_canvas->pass);
@@ -1220,7 +1224,7 @@ void cf_apply_blend_constants(float r, float g, float b, float a)
   SDL_SetGPUBlendConstants(s_canvas->pass, color);
 }
 
-void cf_apply_mesh(CF_Mesh mesh_handle)
+void sdlgpu_apply_mesh(CF_Mesh mesh_handle)
 {
 	CF_ASSERT(s_canvas);
 	CF_MeshInternal* mesh = (CF_MeshInternal*)mesh_handle.id;
@@ -1381,7 +1385,7 @@ static SDL_GPUGraphicsPipeline* s_build_pipeline(CF_ShaderInternal* shader, CF_R
 	return pip;
 }
 
-void cf_apply_shader(CF_Shader shader_handle, CF_Material material_handle)
+void sdlgpu_apply_shader(CF_Shader shader_handle, CF_Material material_handle)
 {
 	CF_ASSERT(s_canvas);
 	CF_ASSERT(s_canvas->mesh);
@@ -1496,7 +1500,7 @@ void cf_apply_shader(CF_Shader shader_handle, CF_Material material_handle)
 	s_canvas->clear = false;
 }
 
-void cf_draw_elements()
+void sdlgpu_draw_elements()
 {
 	CF_MeshInternal* mesh = s_canvas->mesh;
 	if (mesh->instances.buffer) {
@@ -1515,7 +1519,7 @@ void cf_draw_elements()
 	app->draw_call_count++;
 }
 
-void cf_commit()
+void sdlgpu_commit()
 {
 	SDL_EndGPURenderPass(s_canvas->pass);
 }
@@ -1523,15 +1527,72 @@ void cf_commit()
 //--------------------------------------------------------------------------------------------------
 // OpenGL ES 3.0 implementation of cute_graphics.h.
 
-#if 0
-
 #ifdef CF_EMSCRIPTEN
 #	include <GLES3/gl3.h>
 #else
 #	include <glad/glad.h>
 #endif
 
-CF_INLINE GLenum gl_wrap_filter(CF_Filter f)
+CF_BackendType opengl_query_backend()
+{
+        return CF_BACKEND_TYPE_PRIVATE;
+}
+
+#if !defined(CF_EMSCRIPTEN)
+static char* opengl_transpile_spirv_to_glsl(const CF_ShaderBytecode& bytecode)
+{
+        if (!bytecode.content || !bytecode.size) return NULL;
+
+        spvc_context context = NULL;
+        if (spvc_context_create(&context) != SPVC_SUCCESS) return NULL;
+
+        spvc_parsed_ir ir = NULL;
+        spvc_result result = spvc_context_parse_spirv(
+                context,
+                (const spvc_uint32*)bytecode.content,
+                (size_t)(bytecode.size / sizeof(spvc_uint32)),
+                &ir
+        );
+        if (result != SPVC_SUCCESS) {
+                spvc_context_destroy(context);
+                return NULL;
+        }
+
+        spvc_compiler compiler = NULL;
+        result = spvc_context_create_compiler(context, SPVC_BACKEND_GLSL, ir, SPVC_CAPTURE_MODE_TAKE_OWNERSHIP, &compiler);
+        if (result != SPVC_SUCCESS) {
+                spvc_context_destroy(context);
+                return NULL;
+        }
+
+        spvc_compiler_options options = NULL;
+        if (spvc_compiler_create_compiler_options(compiler, &options) == SPVC_SUCCESS) {
+#ifdef CF_EMSCRIPTEN
+                spvc_compiler_options_set_uint(options, SPVC_COMPILER_OPTION_GLSL_VERSION, 300);
+                spvc_compiler_options_set_bool(options, SPVC_COMPILER_OPTION_GLSL_ES, SPVC_TRUE);
+#else
+                spvc_compiler_options_set_uint(options, SPVC_COMPILER_OPTION_GLSL_VERSION, 330);
+                spvc_compiler_options_set_bool(options, SPVC_COMPILER_OPTION_GLSL_ES, SPVC_FALSE);
+#endif
+                spvc_compiler_options_set_bool(options, SPVC_COMPILER_OPTION_GLSL_SEPARATE_SHADER_OBJECTS, SPVC_TRUE);
+                spvc_compiler_install_compiler_options(compiler, options);
+        }
+
+        const char* source = NULL;
+        result = spvc_compiler_compile(compiler, &source);
+        char* output = NULL;
+        if (result == SPVC_SUCCESS && source) {
+                size_t len = CF_STRLEN(source);
+                output = (char*)CF_ALLOC(len + 1);
+                CF_MEMCPY(output, source, len + 1);
+        }
+
+        spvc_context_destroy(context);
+        return output;
+}
+#endif
+
+CF_INLINE GLenum opengl_wrap_filter(CF_Filter f)
 {
 	switch (f) { default:
 	case CF_FILTER_NEAREST: return GL_NEAREST;
@@ -1539,7 +1600,7 @@ CF_INLINE GLenum gl_wrap_filter(CF_Filter f)
 	}
 }
 
-CF_INLINE GLenum gl_wrap_mip(CF_MipFilter m, bool has_mips)
+CF_INLINE GLenum opengl_wrap_mip(CF_MipFilter m, bool has_mips)
 {
 	if (!has_mips) return GL_NEAREST; // min filter without mips
 	switch (m) { default:
@@ -1548,7 +1609,7 @@ CF_INLINE GLenum gl_wrap_mip(CF_MipFilter m, bool has_mips)
 	}
 }
 
-CF_INLINE GLenum gl_wrap_wrap(CF_WrapMode w)
+CF_INLINE GLenum opengl_wrap_wrap(CF_WrapMode w)
 {
 	switch (w) { default:
 	case CF_WRAP_MODE_CLAMP_TO_EDGE:   return GL_CLAMP_TO_EDGE;
@@ -1557,7 +1618,7 @@ CF_INLINE GLenum gl_wrap_wrap(CF_WrapMode w)
 	}
 }
 
-CF_INLINE GLenum gl_internal_fmt(CF_PixelFormat f)
+CF_INLINE GLenum opengl_internal_format(CF_PixelFormat f)
 {
 	switch (f) { default:
 	case CF_PIXEL_FORMAT_R8G8B8A8_UNORM:    return GL_RGBA8;
@@ -1566,21 +1627,21 @@ CF_INLINE GLenum gl_internal_fmt(CF_PixelFormat f)
 	}
 }
 
-CF_INLINE GLenum gl_upload_fmt(CF_PixelFormat f)
+CF_INLINE GLenum opengl_upload_format(CF_PixelFormat f)
 {
 	switch (f) { default:
 	case CF_PIXEL_FORMAT_R8G8B8A8_UNORM: return GL_RGBA;
 	}
 }
 
-CF_INLINE GLenum gl_upload_type(CF_PixelFormat f)
+CF_INLINE GLenum opengl_upload_type(CF_PixelFormat f)
 {
 	switch (f) { default:
 	case CF_PIXEL_FORMAT_R8G8B8A8_UNORM: return GL_UNSIGNED_BYTE;
 	}
 }
 
-CF_INLINE GLenum gl_prim(CF_PrimitiveType p)
+CF_INLINE GLenum opengl_primitive(CF_PrimitiveType p)
 {
 	switch (p) { default:
 	case CF_PRIMITIVE_TYPE_TRIANGLELIST:  return GL_TRIANGLES;
@@ -1590,7 +1651,7 @@ CF_INLINE GLenum gl_prim(CF_PrimitiveType p)
 	}
 }
 
-CF_INLINE GLenum gl_cmp(CF_CompareFunction c)
+CF_INLINE GLenum opengl_compare(CF_CompareFunction c)
 {
 	switch (c) { default:
 	case CF_COMPARE_FUNCTION_ALWAYS:                return GL_ALWAYS;
@@ -1604,7 +1665,7 @@ CF_INLINE GLenum gl_cmp(CF_CompareFunction c)
 	}
 }
 
-CF_INLINE GLenum gl_cull(CF_CullMode m)
+CF_INLINE GLenum opengl_cull_mode(CF_CullMode m)
 {
 	switch (m) { default:
 	case CF_CULL_MODE_NONE:  return 0;
@@ -1613,7 +1674,7 @@ CF_INLINE GLenum gl_cull(CF_CullMode m)
 	}
 }
 
-CF_INLINE GLenum gl_blend_op(CF_BlendOp op)
+CF_INLINE GLenum opengl_blend_op(CF_BlendOp op)
 {
 	switch (op) { default:
 	case CF_BLEND_OP_ADD:              return GL_FUNC_ADD;
@@ -1624,7 +1685,7 @@ CF_INLINE GLenum gl_blend_op(CF_BlendOp op)
 	}
 }
 
-CF_INLINE GLenum gl_blend_factor(CF_BlendFactor f)
+CF_INLINE GLenum opengl_blend_factor(CF_BlendFactor f)
 {
 	switch (f) { default:
 	case CF_BLENDFACTOR_ZERO:                     return GL_ZERO;
@@ -1658,20 +1719,22 @@ struct CF_GL_TextureInternal
 
 struct CF_GL_Buffer
 {
-	GLuint id = 0;
-	int size = 0;
-	int stride = 0;
+        GLuint id = 0;
+        int size = 0;
+        int stride = 0;
+        int count = 0;
 };
 
 struct CF_GL_MeshInternal
 {
-	GLuint vao = 0;
-	CF_GL_Buffer vbo;
-	CF_GL_Buffer ibo;
-	int index_count = 0;
+        GLuint vao = 0;
+        CF_GL_Buffer vbo;
+        CF_GL_Buffer ibo;
+        CF_GL_Buffer instance;
+        int index_count = 0;
 
-	int attribute_count = 0;
-	CF_VertexAttribute attributes[CF_MESH_MAX_VERTEX_ATTRIBUTES];
+        int attribute_count = 0;
+        CF_VertexAttribute attributes[CF_MESH_MAX_VERTEX_ATTRIBUTES];
 };
 
 struct CF_GL_ShaderInternal
@@ -1696,23 +1759,23 @@ struct CF_GL_MaterialInternal
 
 struct CF_GL_CanvasInternal
 {
-	int w = 0, h = 0;
-	GLuint fbo = 0;
-	GLuint color = 0; // texture
-	GLuint depth = 0; // renderbuffer if present
+int w = 0, h = 0;
+GLuint fbo = 0;
+GLuint color = 0; // texture
+GLuint depth = 0; // renderbuffer if present
 
-	CF_Texture cf_color{}; // handle back to CF
+CF_Texture cf_color{}; // handle back to CF
 };
 
-CF_GL_CanvasInternal* s_gl_canvas = nullptr;
+static CF_GL_CanvasInternal* s_opengl_canvas = nullptr;
 
-void gl_apply_sampler_params(CF_GL_TextureInternal* t, const CF_TextureParams& p)
+static void opengl_apply_sampler_params(CF_GL_TextureInternal* t, const CF_TextureParams& p)
 {
 	t->has_mips = p.generate_mipmaps || p.mip_count > 1;
-	t->min_filter = gl_wrap_mip(p.mip_filter, t->has_mips);
-	t->mag_filter = gl_wrap_filter(p.filter);
-	t->wrap_u = gl_wrap_wrap(p.wrap_u);
-	t->wrap_v = gl_wrap_wrap(p.wrap_v);
+	t->min_filter = opengl_wrap_mip(p.mip_filter, t->has_mips);
+	t->mag_filter = opengl_wrap_filter(p.filter);
+	t->wrap_u = opengl_wrap_wrap(p.wrap_u);
+	t->wrap_v = opengl_wrap_wrap(p.wrap_v);
 
 	glBindTexture(GL_TEXTURE_2D, t->id);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, t->min_filter);
@@ -1724,28 +1787,41 @@ void gl_apply_sampler_params(CF_GL_TextureInternal* t, const CF_TextureParams& p
 
 CF_TextureParams opengl_texture_defaults(int w, int h)
 {
-	CF_TextureParams p{};
-	p.pixel_format = CF_PIXEL_FORMAT_R8G8B8A8_UNORM;
-	p.usage = CF_TEXTURE_USAGE_SAMPLER_BIT;
-	p.filter = CF_FILTER_LINEAR;
-	p.wrap_u = CF_WRAP_MODE_REPEAT; p.wrap_v = CF_WRAP_MODE_REPEAT;
-	p.mip_filter = CF_MIP_FILTER_LINEAR;
-	p.width = w; p.height = h;
-	return p;
+        CF_TextureParams p{};
+        p.pixel_format = CF_PIXEL_FORMAT_R8G8B8A8_UNORM;
+        p.usage = CF_TEXTURE_USAGE_SAMPLER_BIT;
+        p.filter = CF_FILTER_LINEAR;
+        p.wrap_u = CF_WRAP_MODE_REPEAT; p.wrap_v = CF_WRAP_MODE_REPEAT;
+        p.mip_filter = CF_MIP_FILTER_LINEAR;
+        p.width = w; p.height = h;
+        return p;
+}
+
+bool opengl_texture_supports_format(CF_PixelFormat format, CF_TextureUsageBits usage)
+{
+        CF_UNUSED(usage);
+        switch (format) {
+        case CF_PIXEL_FORMAT_R8G8B8A8_UNORM:
+        case CF_PIXEL_FORMAT_D16_UNORM:
+        case CF_PIXEL_FORMAT_D24_UNORM_S8_UINT:
+                return true;
+        default:
+                return false;
+        }
 }
 
 CF_Texture opengl_make_texture(CF_TextureParams params)
 {
 	auto* t = CF_NEW(CF_GL_TextureInternal);
 	t->w = params.width; t->h = params.height;
-	t->internal_fmt = gl_internal_fmt(params.pixel_format);
-	t->upload_fmt   = gl_upload_fmt(params.pixel_format);
-	t->upload_type  = gl_upload_type(params.pixel_format);
+	t->internal_fmt = opengl_internal_format(params.pixel_format);
+	t->upload_fmt   = opengl_upload_format(params.pixel_format);
+	t->upload_type  = opengl_upload_type(params.pixel_format);
 
 	glGenTextures(1, &t->id);
 	glBindTexture(GL_TEXTURE_2D, t->id);
 	glTexImage2D(GL_TEXTURE_2D, 0, t->internal_fmt, t->w, t->h, 0, t->upload_fmt, t->upload_type, nullptr);
-	gl_apply_sampler_params(t, params);
+	opengl_apply_sampler_params(t, params);
 	if (params.generate_mipmaps) glGenerateMipmap(GL_TEXTURE_2D);
 	glBindTexture(GL_TEXTURE_2D, 0);
 
@@ -1804,7 +1880,7 @@ CF_CanvasParams opengl_canvas_defaults(int w, int h)
 	return p;
 }
 
-static GLuint gl_make_depth_rb(const CF_TextureParams& p)
+static GLuint opengl_make_depth_renderbuffer(const CF_TextureParams& p)
 {
 	GLuint rbo = 0;
 	glGenRenderbuffers(1, &rbo);
@@ -1829,7 +1905,7 @@ CF_Canvas opengl_make_canvas(CF_CanvasParams params)
 
 	// depth/stencil (renderbuffer)
 	if (params.depth_stencil_enable) {
-		c->depth = gl_make_depth_rb(params.depth_stencil_target);
+		c->depth = opengl_make_depth_renderbuffer(params.depth_stencil_target);
 	}
 
 	glGenFramebuffers(1, &c->fbo);
@@ -1881,7 +1957,7 @@ void opengl_clear_canvas(CF_Canvas ch)
 void opengl_apply_canvas(CF_Canvas ch, bool clear)
 {
 	auto* c = (CF_GL_CanvasInternal*)(uintptr_t)ch.id;
-	s_gl_canvas = c;
+	s_opengl_canvas = c;
 	glBindFramebuffer(GL_FRAMEBUFFER, c->fbo);
 	if (clear) opengl_clear_canvas(ch);
 }
@@ -1913,61 +1989,106 @@ CF_Mesh opengl_make_mesh(int vertex_buffer_size, const CF_VertexAttribute* attri
 	return CF_Mesh{ (uint64_t)(uintptr_t)m };
 }
 
-void opengl_mesh_set_index_buffer(CF_Mesh mh, int index_buffer_size_in_bytes, CF_IndexElementSize /*element_size*/)
+void opengl_mesh_set_index_buffer(CF_Mesh mh, int index_buffer_size_in_bytes, int index_bit_count)
 {
-	auto* m = (CF_GL_MeshInternal*)(uintptr_t)mh.id;
-	if (!m->ibo.id) glGenBuffers(1, &m->ibo.id);
-	m->ibo.size = index_buffer_size_in_bytes;
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m->ibo.id);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, index_buffer_size_in_bytes, nullptr, GL_DYNAMIC_DRAW);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+        auto* m = (CF_GL_MeshInternal*)(uintptr_t)mh.id;
+        if (!m->ibo.id) glGenBuffers(1, &m->ibo.id);
+        CF_ASSERT(index_bit_count == 16 || index_bit_count == 32);
+        m->ibo.size = index_buffer_size_in_bytes;
+        m->ibo.stride = index_bit_count / 8;
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m->ibo.id);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, index_buffer_size_in_bytes, nullptr, GL_DYNAMIC_DRAW);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 }
 
-void opengl_mesh_update_vertex_data(CF_Mesh mh, const void* verts, int vertex_count)
+void opengl_mesh_set_instance_buffer(CF_Mesh mh, int instance_buffer_size_in_bytes, int instance_stride)
 {
-	auto* m = (CF_GL_MeshInternal*)(uintptr_t)mh.id;
-	glBindBuffer(GL_ARRAY_BUFFER, m->vbo.id);
-	glBufferSubData(GL_ARRAY_BUFFER, 0, vertex_count * m->vbo.stride, verts);
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
+        auto* m = (CF_GL_MeshInternal*)(uintptr_t)mh.id;
+        if (!m->instance.id) glGenBuffers(1, &m->instance.id);
+        m->instance.size = instance_buffer_size_in_bytes;
+        m->instance.stride = instance_stride;
+        glBindBuffer(GL_ARRAY_BUFFER, m->instance.id);
+        glBufferData(GL_ARRAY_BUFFER, instance_buffer_size_in_bytes, nullptr, GL_DYNAMIC_DRAW);
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
-void opengl_mesh_update_index_data(CF_Mesh mh, const void* indices, int index_count, CF_IndexElementSize element_size)
+void opengl_mesh_update_vertex_data(CF_Mesh mh, void* verts, int vertex_count)
 {
-	auto* m = (CF_GL_MeshInternal*)(uintptr_t)mh.id;
-	m->index_count = index_count;
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m->ibo.id);
-	const int elem = (element_size == CF_INDEX_ELEMENT_SIZE_16) ? sizeof(uint16_t) : sizeof(uint32_t);
-	glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0, index_count * elem, indices);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+        auto* m = (CF_GL_MeshInternal*)(uintptr_t)mh.id;
+        GLsizeiptr bytes = vertex_count * m->vbo.stride;
+        glBindBuffer(GL_ARRAY_BUFFER, m->vbo.id);
+        if (bytes > m->vbo.size) {
+                glBufferData(GL_ARRAY_BUFFER, bytes, verts, GL_DYNAMIC_DRAW);
+                m->vbo.size = (int)bytes;
+        } else {
+                glBufferSubData(GL_ARRAY_BUFFER, 0, bytes, verts);
+        }
+        m->vbo.count = vertex_count;
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+}
+
+void opengl_mesh_update_index_data(CF_Mesh mh, void* indices, int index_count)
+{
+        auto* m = (CF_GL_MeshInternal*)(uintptr_t)mh.id;
+        m->index_count = index_count;
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m->ibo.id);
+        int stride = m->ibo.stride ? m->ibo.stride : sizeof(uint16_t);
+        GLsizeiptr bytes = index_count * stride;
+        if (bytes > m->ibo.size) {
+                glBufferData(GL_ELEMENT_ARRAY_BUFFER, bytes, indices, GL_DYNAMIC_DRAW);
+                m->ibo.size = (int)bytes;
+        } else {
+                glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0, bytes, indices);
+        }
+        m->ibo.count = index_count;
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+}
+
+void opengl_mesh_update_instance_data(CF_Mesh mh, void* instances, int instance_count)
+{
+        auto* m = (CF_GL_MeshInternal*)(uintptr_t)mh.id;
+        if (!m->instance.id) return;
+        glBindBuffer(GL_ARRAY_BUFFER, m->instance.id);
+        GLsizeiptr bytes = instance_count * m->instance.stride;
+        if (bytes > m->instance.size) {
+                glBufferData(GL_ARRAY_BUFFER, bytes, instances, GL_DYNAMIC_DRAW);
+                m->instance.size = (int)bytes;
+        } else {
+                glBufferSubData(GL_ARRAY_BUFFER, 0, bytes, instances);
+        }
+        m->instance.count = instance_count;
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
 void opengl_destroy_mesh(CF_Mesh mh)
 {
-	if (!mh.id) return;
-	auto* m = (CF_GL_MeshInternal*)(uintptr_t)mh.id;
-	if (m->ibo.id) glDeleteBuffers(1, &m->ibo.id);
-	if (m->vbo.id) glDeleteBuffers(1, &m->vbo.id);
-	if (m->vao)    glDeleteVertexArrays(1, &m->vao);
-	CF_FREE(m);
+        if (!mh.id) return;
+        auto* m = (CF_GL_MeshInternal*)(uintptr_t)mh.id;
+        if (m->ibo.id) glDeleteBuffers(1, &m->ibo.id);
+        if (m->vbo.id) glDeleteBuffers(1, &m->vbo.id);
+        if (m->instance.id) glDeleteBuffers(1, &m->instance.id);
+        if (m->vao)    glDeleteVertexArrays(1, &m->vao);
+        CF_FREE(m);
 }
 
 void opengl_apply_mesh(CF_Mesh mh)
 {
-	auto* m = (CF_GL_MeshInternal*)(uintptr_t)mh.id;
-	glBindVertexArray(m->vao);
-	glBindBuffer(GL_ARRAY_BUFFER, m->vbo.id);
-	if (m->ibo.id) glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m->ibo.id);
+        auto* m = (CF_GL_MeshInternal*)(uintptr_t)mh.id;
+        s_opengl_bindings.me = m;
+        glBindVertexArray(m->vao);
+        glBindBuffer(GL_ARRAY_BUFFER, m->vbo.id);
+        if (m->ibo.id) glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m->ibo.id);
 }
 
 struct CF_GL_ShaderAndMaterial
 {
-	CF_GL_ShaderInternal* sh = nullptr;
-	CF_GL_MaterialInternal* ma = nullptr;
-	CF_GL_MeshInternal* me = nullptr;
+CF_GL_ShaderInternal* sh = nullptr;
+CF_GL_MaterialInternal* ma = nullptr;
+CF_GL_MeshInternal* me = nullptr;
 };
-CF_GL_ShaderAndMaterial s_gl_bindings;
+static CF_GL_ShaderAndMaterial s_opengl_bindings;
 
-GLuint gl_compile(GLenum stage, const char* src)
+static GLuint opengl_compile_shader(GLenum stage, const char* src)
 {
 	GLuint s = glCreateShader(stage);
 	glShaderSource(s, 1, &src, nullptr);
@@ -1982,7 +2103,7 @@ GLuint gl_compile(GLenum stage, const char* src)
 	return s;
 }
 
-GLuint gl_link(GLuint vs, GLuint fs)
+static GLuint opengl_link_program(GLuint vs, GLuint fs)
 {
 	GLuint p = glCreateProgram();
 	glAttachShader(p, vs);
@@ -2000,12 +2121,12 @@ GLuint gl_link(GLuint vs, GLuint fs)
 	return p;
 }
 
-CF_Shader s_make_shader_es(const char* vs_src, const char* fs_src)
+static CF_Shader opengl_make_shader_es(const char* vs_src, const char* fs_src)
 {
 	auto* sh = CF_NEW(CF_GL_ShaderInternal);
-	GLuint vs = gl_compile(GL_VERTEX_SHADER,   vs_src);
-	GLuint fs = gl_compile(GL_FRAGMENT_SHADER, fs_src);
-	sh->prog = gl_link(vs, fs);
+	GLuint vs = opengl_compile_shader(GL_VERTEX_SHADER,   vs_src);
+	GLuint fs = opengl_compile_shader(GL_FRAGMENT_SHADER, fs_src);
+	sh->prog = opengl_link_program(vs, fs);
 
 	// Optional UBO named "uniform_block"
 	sh->ubo_index = glGetUniformBlockIndex(sh->prog, "uniform_block");
@@ -2023,22 +2144,44 @@ CF_Shader s_make_shader_es(const char* vs_src, const char* fs_src)
 
 CF_Shader opengl_make_shader_from_source(const char* vertex_src, const char* fragment_src)
 {
-	return s_make_shader_es(vertex_src, fragment_src);
+	return opengl_make_shader_es(vertex_src, fragment_src);
 }
 
 CF_Shader opengl_make_shader(const char* vs_path, const char* fs_path)
 {
-	const char* vs = fs_read_entire_file_to_memory_and_nul_terminate(vs_path);
-	const char* fs = fs_read_entire_file_to_memory_and_nul_terminate(fs_path);
-	CF_ASSERT(vs && fs);
-	return s_make_shader_es(vs, fs);
+        const char* vs = fs_read_entire_file_to_memory_and_nul_terminate(vs_path);
+        const char* fs = fs_read_entire_file_to_memory_and_nul_terminate(fs_path);
+        CF_ASSERT(vs && fs);
+        return opengl_make_shader_es(vs, fs);
+}
+
+CF_Shader opengl_make_shader_from_bytecode(CF_ShaderBytecode vertex_bytecode, CF_ShaderBytecode fragment_bytecode)
+{
+#if !defined(CF_EMSCRIPTEN)
+        char* vs_src = opengl_transpile_spirv_to_glsl(vertex_bytecode);
+        char* fs_src = opengl_transpile_spirv_to_glsl(fragment_bytecode);
+        if (!vs_src || !fs_src) {
+                if (vs_src) CF_FREE(vs_src);
+                if (fs_src) CF_FREE(fs_src);
+                return CF_Shader{};
+        }
+
+        CF_Shader shader = opengl_make_shader_from_source(vs_src, fs_src);
+        CF_FREE(vs_src);
+        CF_FREE(fs_src);
+        return shader;
+#else
+        CF_UNUSED(vertex_bytecode);
+        CF_UNUSED(fragment_bytecode);
+        return CF_Shader{};
+#endif
 }
 
 void opengl_destroy_shader(CF_Shader sh)
 {
-	if (!sh.id) return;
-	auto* s = (CF_GL_ShaderInternal*)(uintptr_t)sh.id;
-	if (s->ubo) glDeleteBuffers(1, &s->ubo);
+        if (!sh.id) return;
+        auto* s = (CF_GL_ShaderInternal*)(uintptr_t)sh.id;
+        if (s->ubo) glDeleteBuffers(1, &s->ubo);
 	if (s->prog) glDeleteProgram(s->prog);
 	CF_FREE(s);
 }
@@ -2135,9 +2278,16 @@ void opengl_material_set_texture_fs(CF_Material m, const char* name, CF_Texture 
 
 void opengl_material_set_texture_vs(CF_Material m, const char* name, CF_Texture t)
 {
-	auto* mi = (CF_GL_MaterialInternal*)(uintptr_t)m.id;
-	CF_MaterialTex mt{ sintern(name), t };
-	mi->vs.textures.add(mt);
+        auto* mi = (CF_GL_MaterialInternal*)(uintptr_t)m.id;
+        CF_MaterialTex mt{ sintern(name), t };
+        mi->vs.textures.add(mt);
+}
+
+void opengl_material_clear_textures(CF_Material m)
+{
+        auto* mi = (CF_GL_MaterialInternal*)(uintptr_t)m.id;
+        mi->vs.textures.clear();
+        mi->fs.textures.clear();
 }
 
 void opengl_material_set_render_state(CF_Material m, CF_RenderState s)
@@ -2146,7 +2296,7 @@ void opengl_material_set_render_state(CF_Material m, CF_RenderState s)
 	mi->state = s;
 }
 
-static void gl_upload_uniform_block(CF_GL_ShaderInternal* sh, CF_GL_MaterialInternal* mi)
+static void opengl_upload_uniform_block(CF_GL_ShaderInternal* sh, CF_GL_MaterialInternal* mi)
 {
 	if (sh->ubo_index == GL_INVALID_INDEX) return;
 
@@ -2175,20 +2325,20 @@ static void gl_upload_uniform_block(CF_GL_ShaderInternal* sh, CF_GL_MaterialInte
 
 void opengl_apply_shader(CF_Shader sh, CF_Material m)
 {
-	s_gl_bindings.sh = (CF_GL_ShaderInternal*)(uintptr_t)sh.id;
-	s_gl_bindings.ma = (CF_GL_MaterialInternal*)(uintptr_t)m.id;
+	s_opengl_bindings.sh = (CF_GL_ShaderInternal*)(uintptr_t)sh.id;
+	s_opengl_bindings.ma = (CF_GL_MaterialInternal*)(uintptr_t)m.id;
 
-	glUseProgram(s_gl_bindings.sh->prog);
+	glUseProgram(s_opengl_bindings.sh->prog);
 
 	// render state
-	auto& rs = s_gl_bindings.ma->state;
+	auto& rs = s_opengl_bindings.ma->state;
 	// cull
 	if (rs.cull_mode == CF_CULL_MODE_NONE) glDisable(GL_CULL_FACE);
-	else { glEnable(GL_CULL_FACE); glCullFace(gl_cull(rs.cull_mode)); }
+	else { glEnable(GL_CULL_FACE); glCullFace(opengl_cull_mode(rs.cull_mode)); }
 	// depth
 	if (rs.depth_write_enabled || rs.depth_compare != CF_COMPARE_FUNCTION_ALWAYS) {
 		glEnable(GL_DEPTH_TEST);
-		glDepthFunc(gl_cmp(rs.depth_compare));
+		glDepthFunc(opengl_compare(rs.depth_compare));
 		glDepthMask(rs.depth_write_enabled ? GL_TRUE : GL_FALSE);
 	} else {
 		glDisable(GL_DEPTH_TEST);
@@ -2197,26 +2347,26 @@ void opengl_apply_shader(CF_Shader sh, CF_Material m)
 	if (rs.blend.enabled) {
 		glEnable(GL_BLEND);
 		glColorMask(rs.blend.write_R_enabled, rs.blend.write_G_enabled, rs.blend.write_B_enabled, rs.blend.write_A_enabled);
-		glBlendEquationSeparate(gl_blend_op(rs.blend.rgb_op), gl_blend_op(rs.blend.alpha_op));
-		glBlendFuncSeparate(gl_blend_factor(rs.blend.rgb_src_blend_factor),
-		                    gl_blend_factor(rs.blend.rgb_dst_blend_factor),
-		                    gl_blend_factor(rs.blend.alpha_src_blend_factor),
-		                    gl_blend_factor(rs.blend.alpha_dst_blend_factor));
+		glBlendEquationSeparate(opengl_blend_op(rs.blend.rgb_op), opengl_blend_op(rs.blend.alpha_op));
+		glBlendFuncSeparate(opengl_blend_factor(rs.blend.rgb_src_blend_factor),
+		                    opengl_blend_factor(rs.blend.rgb_dst_blend_factor),
+		                    opengl_blend_factor(rs.blend.alpha_src_blend_factor),
+		                    opengl_blend_factor(rs.blend.alpha_dst_blend_factor));
 	} else {
 		glDisable(GL_BLEND);
 		glColorMask(GL_TRUE,GL_TRUE,GL_TRUE,GL_TRUE);
 	}
 
 	// uniforms
-	gl_upload_uniform_block(s_gl_bindings.sh, s_gl_bindings.ma);
+	opengl_upload_uniform_block(s_opengl_bindings.sh, s_opengl_bindings.ma);
 
 	// textures (FS)
 	GLint unit = 0;
-	for (int i = 0; i < s_gl_bindings.ma->fs.textures.count(); ++i) {
-		const char* name = s_gl_bindings.ma->fs.textures[i].name;
-		auto* tex = (CF_GL_TextureInternal*)(uintptr_t)s_gl_bindings.ma->fs.textures[i].handle.id;
+	for (int i = 0; i < s_opengl_bindings.ma->fs.textures.count(); ++i) {
+		const char* name = s_opengl_bindings.ma->fs.textures[i].name;
+		auto* tex = (CF_GL_TextureInternal*)(uintptr_t)s_opengl_bindings.ma->fs.textures[i].handle.id;
 		if (!tex) continue;
-		GLint loc = glGetUniformLocation(s_gl_bindings.sh->prog, name);
+		GLint loc = glGetUniformLocation(s_opengl_bindings.sh->prog, name);
 		if (loc >= 0) {
 			glActiveTexture(GL_TEXTURE0 + unit);
 			glBindTexture(GL_TEXTURE_2D, tex->id);
@@ -2226,53 +2376,82 @@ void opengl_apply_shader(CF_Shader sh, CF_Material m)
 	}
 
 	// vertex attribs (match by name)
-	CF_GL_MeshInternal* me = s_gl_bindings.me;
-	if (me) {
-		for (int i = 0; i < me->attribute_count; ++i) {
-			const auto& a = me->attributes[i];
-			GLint loc = glGetAttribLocation(s_gl_bindings.sh->prog, a.name);
-			if (loc < 0) continue;
+        CF_GL_MeshInternal* me = s_opengl_bindings.me;
+        if (me) {
+                glBindVertexArray(me->vao);
+                if (me->ibo.id) glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, me->ibo.id);
+                for (int i = 0; i < me->attribute_count; ++i) {
+                        const auto& a = me->attributes[i];
+                        GLint loc = glGetAttribLocation(s_opengl_bindings.sh->prog, a.name);
+                        if (loc < 0) continue;
 
-			GLenum type = GL_FLOAT; GLint comps = 4; GLboolean norm = GL_FALSE;
-			switch (a.format) {
-				case CF_VERTEX_FORMAT_FLOAT:  type=GL_FLOAT; comps=1; break;
-				case CF_VERTEX_FORMAT_FLOAT2: type=GL_FLOAT; comps=2; break;
-				case CF_VERTEX_FORMAT_FLOAT3: type=GL_FLOAT; comps=3; break;
-				case CF_VERTEX_FORMAT_FLOAT4: type=GL_FLOAT; comps=4; break;
-				case CF_VERTEX_FORMAT_BYTE4_NORM: type=GL_BYTE; comps=4; norm=GL_TRUE; break;
-				case CF_VERTEX_FORMAT_UBYTE4_NORM: type=GL_UNSIGNED_BYTE; comps=4; norm=GL_TRUE; break;
-				case CF_VERTEX_FORMAT_SHORT2: type=GL_SHORT; comps=2; break;
-				case CF_VERTEX_FORMAT_SHORT2_NORM: type=GL_SHORT; comps=2; norm=GL_TRUE; break;
-				case CF_VERTEX_FORMAT_SHORT4: type=GL_SHORT; comps=4; break;
-				case CF_VERTEX_FORMAT_SHORT4_NORM: type=GL_SHORT; comps=4; norm=GL_TRUE; break;
-				case CF_VERTEX_FORMAT_USHORT2: type=GL_UNSIGNED_SHORT; comps=2; break;
-				case CF_VERTEX_FORMAT_USHORT2_NORM: type=GL_UNSIGNED_SHORT; comps=2; norm=GL_TRUE; break;
-				case CF_VERTEX_FORMAT_USHORT4: type=GL_UNSIGNED_SHORT; comps=4; break;
-				case CF_VERTEX_FORMAT_USHORT4_NORM: type=GL_UNSIGNED_SHORT; comps=4; norm=GL_TRUE; break;
-				default: break;
-			}
-			glEnableVertexAttribArray((GLuint)loc);
-			glVertexAttribPointer((GLuint)loc, comps, type, norm, me->vbo.stride, (const void*)(intptr_t)a.offset);
-		}
-	}
+                        const bool per_instance = a.per_instance;
+                        CF_GL_Buffer& buf = per_instance ? me->instance : me->vbo;
+                        if (!buf.id) continue;
+
+                        GLenum type = GL_FLOAT; GLint comps = 4; GLboolean norm = GL_FALSE;
+                        switch (a.format) {
+                                case CF_VERTEX_FORMAT_FLOAT:  type=GL_FLOAT; comps=1; break;
+                                case CF_VERTEX_FORMAT_FLOAT2: type=GL_FLOAT; comps=2; break;
+                                case CF_VERTEX_FORMAT_FLOAT3: type=GL_FLOAT; comps=3; break;
+                                case CF_VERTEX_FORMAT_FLOAT4: type=GL_FLOAT; comps=4; break;
+                                case CF_VERTEX_FORMAT_BYTE4_NORM: type=GL_BYTE; comps=4; norm=GL_TRUE; break;
+                                case CF_VERTEX_FORMAT_UBYTE4_NORM: type=GL_UNSIGNED_BYTE; comps=4; norm=GL_TRUE; break;
+                                case CF_VERTEX_FORMAT_SHORT2: type=GL_SHORT; comps=2; break;
+                                case CF_VERTEX_FORMAT_SHORT2_NORM: type=GL_SHORT; comps=2; norm=GL_TRUE; break;
+                                case CF_VERTEX_FORMAT_SHORT4: type=GL_SHORT; comps=4; break;
+                                case CF_VERTEX_FORMAT_SHORT4_NORM: type=GL_SHORT; comps=4; norm=GL_TRUE; break;
+                                case CF_VERTEX_FORMAT_USHORT2: type=GL_UNSIGNED_SHORT; comps=2; break;
+                                case CF_VERTEX_FORMAT_USHORT2_NORM: type=GL_UNSIGNED_SHORT; comps=2; norm=GL_TRUE; break;
+                                case CF_VERTEX_FORMAT_USHORT4: type=GL_UNSIGNED_SHORT; comps=4; break;
+                                case CF_VERTEX_FORMAT_USHORT4_NORM: type=GL_UNSIGNED_SHORT; comps=4; norm=GL_TRUE; break;
+                                default: break;
+                        }
+                        glBindBuffer(GL_ARRAY_BUFFER, buf.id);
+                        glEnableVertexAttribArray((GLuint)loc);
+                        glVertexAttribPointer((GLuint)loc, comps, type, norm, buf.stride, (const void*)(intptr_t)a.offset);
+                        glVertexAttribDivisor((GLuint)loc, per_instance ? 1 : 0);
+                }
+                glBindBuffer(GL_ARRAY_BUFFER, 0);
+        }
 }
 
 void opengl_bind_mesh_for_shader(CF_Mesh mh)
 {
-	s_gl_bindings.me = (CF_GL_MeshInternal*)(uintptr_t)mh.id;
+	s_opengl_bindings.me = (CF_GL_MeshInternal*)(uintptr_t)mh.id;
 	opengl_apply_mesh(mh);
 }
 
 void opengl_draw_arrays(CF_PrimitiveType prim, int first, int count)
 {
-	glDrawArrays(gl_prim(prim), first, count);
+	glDrawArrays(opengl_primitive(prim), first, count);
 }
 
-void opengl_draw_elements(CF_PrimitiveType prim, CF_IndexElementSize elem, int index_count, int first_index)
+void opengl_draw_elements()
 {
-	GLenum gl_elem = (elem == CF_INDEX_ELEMENT_SIZE_16) ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT;
-	const GLvoid* offset = (const GLvoid*)(intptr_t)(first_index * (elem == CF_INDEX_ELEMENT_SIZE_16 ? 2 : 4));
-	glDrawElements(gl_prim(prim), index_count, gl_elem, offset);
+        auto* me = s_opengl_bindings.me;
+        auto* ma = s_opengl_bindings.ma;
+        if (!me || !ma) return;
+
+        GLenum prim = opengl_primitive(ma->state.primitive_type);
+        int instance_count = (me->instance.id && me->instance.count > 0) ? me->instance.count : 0;
+
+        if (me->ibo.id && me->index_count > 0) {
+                GLenum elem = (me->ibo.stride == 2) ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT;
+                if (instance_count > 0) {
+                        glDrawElementsInstanced(prim, me->index_count, elem, nullptr, instance_count);
+                } else {
+                        glDrawElements(prim, me->index_count, elem, nullptr);
+                }
+        } else if (me->vbo.count > 0) {
+                if (instance_count > 0) {
+                        glDrawArraysInstanced(prim, 0, me->vbo.count, instance_count);
+                } else {
+                        glDrawArrays(prim, 0, me->vbo.count);
+                }
+        }
+
+        ++app->draw_call_count;
 }
 
 void opengl_commit()
@@ -2280,8 +2459,8 @@ void opengl_commit()
 	// Unbind to keep state clean for the next backend
 	glBindVertexArray(0);
 	glUseProgram(0);
-	if (s_gl_canvas) glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	s_gl_canvas = nullptr;
+	if (s_opengl_canvas) glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	s_opengl_canvas = nullptr;
 }
 
 void opengl_clear_color(float r, float g, float b, float a) { app->clear_color = make_color(r,g,b,a); }
@@ -2289,22 +2468,355 @@ void opengl_clear_depth_stencil(float depth, uint32_t stencil) { app->clear_dept
 
 CF_RenderState opengl_render_state_defaults()
 {
-	CF_RenderState rs{};
-	rs.primitive_type = CF_PRIMITIVE_TYPE_TRIANGLELIST;
-	rs.cull_mode = CF_CULL_MODE_BACK;
-	rs.depth_compare = CF_COMPARE_FUNCTION_ALWAYS;
-	rs.depth_write_enabled = false;
+        CF_RenderState rs{};
+        rs.primitive_type = CF_PRIMITIVE_TYPE_TRIANGLELIST;
+        rs.cull_mode = CF_CULL_MODE_BACK;
+        rs.depth_compare = CF_COMPARE_FUNCTION_ALWAYS;
+        rs.depth_write_enabled = false;
 
-	rs.blend.enabled = true;
-	rs.blend.pixel_format = CF_PIXEL_FORMAT_R8G8B8A8_UNORM;
-	rs.blend.write_R_enabled = rs.blend.write_G_enabled = rs.blend.write_B_enabled = rs.blend.write_A_enabled = true;
-	rs.blend.rgb_op = CF_BLEND_OP_ADD;
-	rs.blend.rgb_src_blend_factor = CF_BLENDFACTOR_ONE;
-	rs.blend.rgb_dst_blend_factor = CF_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
-	rs.blend.alpha_op = CF_BLEND_OP_ADD;
-	rs.blend.alpha_src_blend_factor = CF_BLENDFACTOR_ONE;
-	rs.blend.alpha_dst_blend_factor = CF_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
-	return rs;
+        rs.blend.enabled = true;
+        rs.blend.pixel_format = CF_PIXEL_FORMAT_R8G8B8A8_UNORM;
+        rs.blend.write_R_enabled = rs.blend.write_G_enabled = rs.blend.write_B_enabled = rs.blend.write_A_enabled = true;
+        rs.blend.rgb_op = CF_BLEND_OP_ADD;
+        rs.blend.rgb_src_blend_factor = CF_BLENDFACTOR_ONE;
+        rs.blend.rgb_dst_blend_factor = CF_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
+        rs.blend.alpha_op = CF_BLEND_OP_ADD;
+        rs.blend.alpha_src_blend_factor = CF_BLENDFACTOR_ONE;
+        rs.blend.alpha_dst_blend_factor = CF_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
+        return rs;
 }
 
-#endif
+//--------------------------------------------------------------------------------------------------
+// Backend dispatch shims.
+
+CF_BackendType cf_query_backend()
+{
+        CF_BackendType type = CF_BACKEND_TYPE_INVALID;
+        if (app->use_sdlgpu) type = sdlgpu_query_backend();
+        if (app->use_opengl) type = opengl_query_backend();
+        return type;
+}
+
+bool cf_texture_supports_format(CF_PixelFormat format, CF_TextureUsageBits usage)
+{
+        bool supported = false;
+        if (app->use_sdlgpu) supported |= sdlgpu_texture_supports_format(format, usage);
+        if (app->use_opengl) supported |= opengl_texture_supports_format(format, usage);
+        return supported;
+}
+
+CF_TextureParams cf_texture_defaults(int w, int h)
+{
+        CF_TextureParams params{};
+        if (app->use_sdlgpu) params = sdlgpu_texture_defaults(w, h);
+        if (app->use_opengl) params = opengl_texture_defaults(w, h);
+        return params;
+}
+
+CF_Texture cf_make_texture(CF_TextureParams params)
+{
+        CF_Texture texture{};
+        if (app->use_sdlgpu) texture = sdlgpu_make_texture(params);
+        if (app->use_opengl) texture = opengl_make_texture(params);
+        return texture;
+}
+
+void cf_destroy_texture(CF_Texture texture_handle)
+{
+        if (app->use_sdlgpu) sdlgpu_destroy_texture(texture_handle);
+        if (app->use_opengl) opengl_destroy_texture(texture_handle);
+}
+
+void cf_texture_update(CF_Texture texture_handle, void* data, int size)
+{
+        if (app->use_sdlgpu) sdlgpu_texture_update(texture_handle, data, size);
+        if (app->use_opengl) opengl_texture_update(texture_handle, data, size);
+}
+
+void cf_texture_update_mip(CF_Texture texture_handle, void* data, int size, int mip_level)
+{
+        if (app->use_sdlgpu) sdlgpu_texture_update_mip(texture_handle, data, size, mip_level);
+        if (app->use_opengl) opengl_texture_update_mip(texture_handle, data, size, mip_level);
+}
+
+void cf_generate_mipmaps(CF_Texture texture_handle)
+{
+        if (app->use_sdlgpu) sdlgpu_generate_mipmaps(texture_handle);
+        if (app->use_opengl) opengl_generate_mipmaps(texture_handle);
+}
+
+uint64_t cf_texture_handle(CF_Texture texture)
+{
+        uint64_t handle = 0;
+        if (app->use_sdlgpu) handle = sdlgpu_texture_handle(texture);
+        if (app->use_opengl) handle = opengl_texture_handle(texture);
+        return handle;
+}
+
+uint64_t cf_texture_binding_handle(CF_Texture texture)
+{
+        uint64_t handle = 0;
+        if (app->use_sdlgpu) handle = sdlgpu_texture_binding_handle(texture);
+        if (app->use_opengl) handle = opengl_texture_binding_handle(texture);
+        return handle;
+}
+
+CF_CanvasParams cf_canvas_defaults(int w, int h)
+{
+        CF_CanvasParams params{};
+        if (app->use_sdlgpu) params = sdlgpu_canvas_defaults(w, h);
+        if (app->use_opengl) params = opengl_canvas_defaults(w, h);
+        return params;
+}
+
+CF_Canvas cf_make_canvas(CF_CanvasParams params)
+{
+        CF_Canvas canvas{};
+        if (app->use_sdlgpu) canvas = sdlgpu_make_canvas(params);
+        if (app->use_opengl) canvas = opengl_make_canvas(params);
+        return canvas;
+}
+
+void cf_destroy_canvas(CF_Canvas canvas_handle)
+{
+        if (app->use_sdlgpu) sdlgpu_destroy_canvas(canvas_handle);
+        if (app->use_opengl) opengl_destroy_canvas(canvas_handle);
+}
+
+CF_Texture cf_canvas_get_target(CF_Canvas canvas_handle)
+{
+        CF_Texture target{};
+        if (app->use_sdlgpu) target = sdlgpu_canvas_get_target(canvas_handle);
+        if (app->use_opengl) target = opengl_canvas_get_target(canvas_handle);
+        return target;
+}
+
+CF_Texture cf_canvas_get_depth_stencil_target(CF_Canvas canvas_handle)
+{
+        CF_Texture target{};
+        if (app->use_sdlgpu) target = sdlgpu_canvas_get_depth_stencil_target(canvas_handle);
+        if (app->use_opengl) target = opengl_canvas_get_depth_stencil_target(canvas_handle);
+        return target;
+}
+
+void cf_clear_canvas(CF_Canvas canvas_handle)
+{
+        if (app->use_sdlgpu) sdlgpu_clear_canvas(canvas_handle);
+        if (app->use_opengl) opengl_clear_canvas(canvas_handle);
+}
+
+void cf_apply_canvas(CF_Canvas canvas_handle, bool clear)
+{
+        if (app->use_sdlgpu) sdlgpu_apply_canvas(canvas_handle, clear);
+        if (app->use_opengl) opengl_apply_canvas(canvas_handle, clear);
+}
+
+void cf_apply_viewport(int x, int y, int w, int h)
+{
+        if (app->use_sdlgpu) sdlgpu_apply_viewport(x, y, w, h);
+        if (app->use_opengl) opengl_apply_viewport(x, y, w, h);
+}
+
+void cf_apply_scissor(int x, int y, int w, int h)
+{
+        if (app->use_sdlgpu) sdlgpu_apply_scissor(x, y, w, h);
+        if (app->use_opengl) opengl_apply_scissor(x, y, w, h);
+}
+
+void cf_apply_stencil_reference(int reference)
+{
+        if (app->use_sdlgpu) sdlgpu_apply_stencil_reference(reference);
+        if (app->use_opengl) opengl_apply_stencil_reference(reference);
+}
+
+void cf_apply_blend_constants(float r, float g, float b, float a)
+{
+        if (app->use_sdlgpu) sdlgpu_apply_blend_constants(r, g, b, a);
+        if (app->use_opengl) opengl_apply_blend_constants(r, g, b, a);
+}
+
+CF_Mesh cf_make_mesh(int vertex_buffer_size, const CF_VertexAttribute* attributes, int attribute_count, int vertex_stride)
+{
+        CF_Mesh mesh{};
+        if (app->use_sdlgpu) mesh = sdlgpu_make_mesh(vertex_buffer_size, attributes, attribute_count, vertex_stride);
+        if (app->use_opengl) mesh = opengl_make_mesh(vertex_buffer_size, attributes, attribute_count, vertex_stride);
+        return mesh;
+}
+
+void cf_mesh_set_index_buffer(CF_Mesh mesh_handle, int index_buffer_size_in_bytes, int index_bit_count)
+{
+        if (app->use_sdlgpu) sdlgpu_mesh_set_index_buffer(mesh_handle, index_buffer_size_in_bytes, index_bit_count);
+        if (app->use_opengl) opengl_mesh_set_index_buffer(mesh_handle, index_buffer_size_in_bytes, index_bit_count);
+}
+
+void cf_mesh_set_instance_buffer(CF_Mesh mesh_handle, int instance_buffer_size_in_bytes, int instance_stride)
+{
+        if (app->use_sdlgpu) sdlgpu_mesh_set_instance_buffer(mesh_handle, instance_buffer_size_in_bytes, instance_stride);
+        if (app->use_opengl) opengl_mesh_set_instance_buffer(mesh_handle, instance_buffer_size_in_bytes, instance_stride);
+}
+
+void cf_destroy_mesh(CF_Mesh mesh_handle)
+{
+        if (app->use_sdlgpu) sdlgpu_destroy_mesh(mesh_handle);
+        if (app->use_opengl) opengl_destroy_mesh(mesh_handle);
+}
+
+void cf_mesh_update_vertex_data(CF_Mesh mesh_handle, void* data, int count)
+{
+        if (app->use_sdlgpu) sdlgpu_mesh_update_vertex_data(mesh_handle, data, count);
+        if (app->use_opengl) opengl_mesh_update_vertex_data(mesh_handle, data, count);
+}
+
+void cf_mesh_update_index_data(CF_Mesh mesh_handle, void* data, int count)
+{
+        if (app->use_sdlgpu) sdlgpu_mesh_update_index_data(mesh_handle, data, count);
+        if (app->use_opengl) opengl_mesh_update_index_data(mesh_handle, data, count);
+}
+
+void cf_mesh_update_instance_data(CF_Mesh mesh_handle, void* data, int count)
+{
+        if (app->use_sdlgpu) sdlgpu_mesh_update_instance_data(mesh_handle, data, count);
+        if (app->use_opengl) opengl_mesh_update_instance_data(mesh_handle, data, count);
+}
+
+CF_RenderState cf_render_state_defaults()
+{
+        CF_RenderState state{};
+        if (app->use_sdlgpu) state = sdlgpu_render_state_defaults();
+        if (app->use_opengl) state = opengl_render_state_defaults();
+        return state;
+}
+
+CF_Material cf_make_material()
+{
+        CF_Material material{};
+        if (app->use_sdlgpu) material = sdlgpu_make_material();
+        if (app->use_opengl) material = opengl_make_material();
+        return material;
+}
+
+void cf_destroy_material(CF_Material material_handle)
+{
+        if (app->use_sdlgpu) sdlgpu_destroy_material(material_handle);
+        if (app->use_opengl) opengl_destroy_material(material_handle);
+}
+
+void cf_material_set_render_state(CF_Material material_handle, CF_RenderState render_state)
+{
+        if (app->use_sdlgpu) sdlgpu_material_set_render_state(material_handle, render_state);
+        if (app->use_opengl) opengl_material_set_render_state(material_handle, render_state);
+}
+
+void cf_material_set_texture_vs(CF_Material material_handle, const char* name, CF_Texture texture)
+{
+        if (app->use_sdlgpu) sdlgpu_material_set_texture_vs(material_handle, name, texture);
+        if (app->use_opengl) opengl_material_set_texture_vs(material_handle, name, texture);
+}
+
+void cf_material_set_texture_fs(CF_Material material_handle, const char* name, CF_Texture texture)
+{
+        if (app->use_sdlgpu) sdlgpu_material_set_texture_fs(material_handle, name, texture);
+        if (app->use_opengl) opengl_material_set_texture_fs(material_handle, name, texture);
+}
+
+void cf_material_clear_textures(CF_Material material_handle)
+{
+        if (app->use_sdlgpu) sdlgpu_material_clear_textures(material_handle);
+        if (app->use_opengl) opengl_material_clear_textures(material_handle);
+}
+
+void cf_material_set_uniform_vs(CF_Material material_handle, const char* name, void* data, CF_UniformType type, int array_length)
+{
+        if (app->use_sdlgpu) sdlgpu_material_set_uniform_vs(material_handle, name, data, type, array_length);
+        if (app->use_opengl) opengl_material_set_uniform_vs(material_handle, name, data, type, array_length);
+}
+
+void cf_material_set_uniform_vs_internal(CF_Material material_handle, const char* block_name, const char* name, void* data, CF_UniformType type, int array_length)
+{
+        if (app->use_sdlgpu) sdlgpu_material_set_uniform_vs_internal(material_handle, block_name, name, data, type, array_length);
+        if (app->use_opengl) opengl_material_set_uniform_vs_internal(material_handle, block_name, name, data, type, array_length);
+}
+
+void cf_material_set_uniform_fs(CF_Material material_handle, const char* name, void* data, CF_UniformType type, int array_length)
+{
+        if (app->use_sdlgpu) sdlgpu_material_set_uniform_fs(material_handle, name, data, type, array_length);
+        if (app->use_opengl) opengl_material_set_uniform_fs(material_handle, name, data, type, array_length);
+}
+
+void cf_material_set_uniform_fs_internal(CF_Material material_handle, const char* block_name, const char* name, void* data, CF_UniformType type, int array_length)
+{
+        if (app->use_sdlgpu) sdlgpu_material_set_uniform_fs_internal(material_handle, block_name, name, data, type, array_length);
+        if (app->use_opengl) opengl_material_set_uniform_fs_internal(material_handle, block_name, name, data, type, array_length);
+}
+
+void cf_material_clear_uniforms(CF_Material material_handle)
+{
+        if (app->use_sdlgpu) sdlgpu_material_clear_uniforms(material_handle);
+        if (app->use_opengl) opengl_material_clear_uniforms(material_handle);
+}
+
+void cf_clear_color(float red, float green, float blue, float alpha)
+{
+        if (app->use_sdlgpu) sdlgpu_clear_color(red, green, blue, alpha);
+        if (app->use_opengl) opengl_clear_color(red, green, blue, alpha);
+}
+
+void cf_clear_depth_stencil(float depth, uint32_t stencil)
+{
+        if (app->use_sdlgpu) sdlgpu_clear_depth_stencil(depth, stencil);
+        if (app->use_opengl) opengl_clear_depth_stencil(depth, stencil);
+}
+
+void cf_apply_shader(CF_Shader shader_handle, CF_Material material_handle)
+{
+        if (app->use_sdlgpu) sdlgpu_apply_shader(shader_handle, material_handle);
+        if (app->use_opengl) opengl_apply_shader(shader_handle, material_handle);
+}
+
+CF_Shader cf_make_shader(const char* vertex_path, const char* fragment_path)
+{
+        CF_Shader shader{};
+        if (app->use_sdlgpu) shader = sdlgpu_make_shader(vertex_path, fragment_path);
+        if (app->use_opengl) shader = opengl_make_shader(vertex_path, fragment_path);
+        return shader;
+}
+
+CF_Shader cf_make_shader_from_source(const char* vertex_src, const char* fragment_src)
+{
+        CF_Shader shader{};
+        if (app->use_sdlgpu) shader = sdlgpu_make_shader_from_source(vertex_src, fragment_src);
+        if (app->use_opengl) shader = opengl_make_shader_from_source(vertex_src, fragment_src);
+        return shader;
+}
+
+CF_Shader cf_make_shader_from_bytecode(CF_ShaderBytecode vertex_bytecode, CF_ShaderBytecode fragment_bytecode)
+{
+        CF_Shader shader{};
+        if (app->use_sdlgpu) shader = sdlgpu_make_shader_from_bytecode(vertex_bytecode, fragment_bytecode);
+        if (app->use_opengl) shader = opengl_make_shader_from_bytecode(vertex_bytecode, fragment_bytecode);
+        return shader;
+}
+
+void cf_destroy_shader(CF_Shader shader_handle)
+{
+        if (app->use_sdlgpu) sdlgpu_destroy_shader(shader_handle);
+        if (app->use_opengl) opengl_destroy_shader(shader_handle);
+}
+
+void cf_apply_mesh(CF_Mesh mesh_handle)
+{
+        if (app->use_sdlgpu) sdlgpu_apply_mesh(mesh_handle);
+        if (app->use_opengl) opengl_apply_mesh(mesh_handle);
+}
+
+void cf_draw_elements()
+{
+        if (app->use_sdlgpu) sdlgpu_draw_elements();
+        if (app->use_opengl) opengl_draw_elements();
+}
+
+void cf_commit()
+{
+        if (app->use_sdlgpu) sdlgpu_commit();
+        if (app->use_opengl) opengl_commit();
+}
