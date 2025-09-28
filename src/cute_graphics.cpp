@@ -9,7 +9,6 @@
 #include <cute_c_runtime.h>
 #include <cute_graphics.h>
 #include <cute_file_system.h>
-#include <stdio.h>
 
 #include <internal/cute_alloc_internal.h>
 #include <internal/cute_app_internal.h>
@@ -19,8 +18,9 @@
 #include "cute_shader/builtin_shaders.h"
 #include "data/builtin_shaders_bytecode.h"
 #include <SDL3_shadercross/SDL_shadercross.h>
+
 #if !defined(CF_EMSCRIPTEN)
-#include <spirv_cross_c.h>
+#	include <spirv_cross_c.h>
 #endif
 
 struct CF_CanvasInternal;
@@ -1611,7 +1611,7 @@ CF_INLINE GLenum opengl_wrap_wrap(CF_WrapMode w)
 {
 	switch (w) { default:
 	case CF_WRAP_MODE_CLAMP_TO_EDGE:   return GL_CLAMP_TO_EDGE;
-	case CF_WRAP_MODE_REPEAT:		  return GL_REPEAT;
+	case CF_WRAP_MODE_REPEAT:          return GL_REPEAT;
 	case CF_WRAP_MODE_MIRRORED_REPEAT: return GL_MIRRORED_REPEAT;
 	}
 }
@@ -1619,8 +1619,8 @@ CF_INLINE GLenum opengl_wrap_wrap(CF_WrapMode w)
 CF_INLINE GLenum opengl_internal_format(CF_PixelFormat f)
 {
 	switch (f) { default:
-	case CF_PIXEL_FORMAT_R8G8B8A8_UNORM:	return GL_RGBA8;
-	case CF_PIXEL_FORMAT_D16_UNORM:		 return GL_DEPTH_COMPONENT16;
+	case CF_PIXEL_FORMAT_R8G8B8A8_UNORM:    return GL_RGBA8;
+	case CF_PIXEL_FORMAT_D16_UNORM:         return GL_DEPTH_COMPONENT16;
 	case CF_PIXEL_FORMAT_D24_UNORM_S8_UINT: return GL_DEPTH24_STENCIL8;
 	}
 }
@@ -1644,21 +1644,21 @@ CF_INLINE GLenum opengl_primitive(CF_PrimitiveType p)
 	switch (p) { default:
 	case CF_PRIMITIVE_TYPE_TRIANGLELIST:  return GL_TRIANGLES;
 	case CF_PRIMITIVE_TYPE_TRIANGLESTRIP: return GL_TRIANGLE_STRIP;
-	case CF_PRIMITIVE_TYPE_LINELIST:	  return GL_LINES;
-	case CF_PRIMITIVE_TYPE_LINESTRIP:	 return GL_LINE_STRIP;
+	case CF_PRIMITIVE_TYPE_LINELIST:      return GL_LINES;
+	case CF_PRIMITIVE_TYPE_LINESTRIP:     return GL_LINE_STRIP;
 	}
 }
 
 CF_INLINE GLenum opengl_compare(CF_CompareFunction c)
 {
 	switch (c) { default:
-	case CF_COMPARE_FUNCTION_ALWAYS:				return GL_ALWAYS;
-	case CF_COMPARE_FUNCTION_NEVER:				 return GL_NEVER;
-	case CF_COMPARE_FUNCTION_LESS_THAN:			 return GL_LESS;
-	case CF_COMPARE_FUNCTION_EQUAL:				 return GL_EQUAL;
-	case CF_COMPARE_FUNCTION_NOT_EQUAL:			 return GL_NOTEQUAL;
-	case CF_COMPARE_FUNCTION_LESS_THAN_OR_EQUAL:	return GL_LEQUAL;
-	case CF_COMPARE_FUNCTION_GREATER_THAN:		  return GL_GREATER;
+	case CF_COMPARE_FUNCTION_ALWAYS:                return GL_ALWAYS;
+	case CF_COMPARE_FUNCTION_NEVER:                 return GL_NEVER;
+	case CF_COMPARE_FUNCTION_LESS_THAN:             return GL_LESS;
+	case CF_COMPARE_FUNCTION_EQUAL:                 return GL_EQUAL;
+	case CF_COMPARE_FUNCTION_NOT_EQUAL:             return GL_NOTEQUAL;
+	case CF_COMPARE_FUNCTION_LESS_THAN_OR_EQUAL:    return GL_LEQUAL;
+	case CF_COMPARE_FUNCTION_GREATER_THAN:          return GL_GREATER;
 	case CF_COMPARE_FUNCTION_GREATER_THAN_OR_EQUAL: return GL_GEQUAL;
 	}
 }
@@ -1675,30 +1675,30 @@ CF_INLINE GLenum opengl_cull_mode(CF_CullMode m)
 CF_INLINE GLenum opengl_blend_op(CF_BlendOp op)
 {
 	switch (op) { default:
-	case CF_BLEND_OP_ADD:			  return GL_FUNC_ADD;
-	case CF_BLEND_OP_SUBTRACT:		 return GL_FUNC_SUBTRACT;
+	case CF_BLEND_OP_ADD:              return GL_FUNC_ADD;
+	case CF_BLEND_OP_SUBTRACT:         return GL_FUNC_SUBTRACT;
 	case CF_BLEND_OP_REVERSE_SUBTRACT: return GL_FUNC_REVERSE_SUBTRACT;
-	case CF_BLEND_OP_MIN:			  return GL_MIN;
-	case CF_BLEND_OP_MAX:			  return GL_MAX;
+	case CF_BLEND_OP_MIN:              return GL_MIN;
+	case CF_BLEND_OP_MAX:              return GL_MAX;
 	}
 }
 
 CF_INLINE GLenum opengl_blend_factor(CF_BlendFactor f)
 {
 	switch (f) { default:
-	case CF_BLENDFACTOR_ZERO:					 return GL_ZERO;
-	case CF_BLENDFACTOR_ONE:					  return GL_ONE;
-	case CF_BLENDFACTOR_SRC_COLOR:				return GL_SRC_COLOR;
-	case CF_BLENDFACTOR_ONE_MINUS_SRC_COLOR:	  return GL_ONE_MINUS_SRC_COLOR;
-	case CF_BLENDFACTOR_DST_COLOR:				return GL_DST_COLOR;
-	case CF_BLENDFACTOR_ONE_MINUS_DST_COLOR:	  return GL_ONE_MINUS_DST_COLOR;
-	case CF_BLENDFACTOR_SRC_ALPHA:				return GL_SRC_ALPHA;
-	case CF_BLENDFACTOR_ONE_MINUS_SRC_ALPHA:	  return GL_ONE_MINUS_SRC_ALPHA;
-	case CF_BLENDFACTOR_DST_ALPHA:				return GL_DST_ALPHA;
-	case CF_BLENDFACTOR_ONE_MINUS_DST_ALPHA:	  return GL_ONE_MINUS_DST_ALPHA;
-	case CF_BLENDFACTOR_CONSTANT_COLOR:		   return GL_CONSTANT_COLOR;
+	case CF_BLENDFACTOR_ZERO:                     return GL_ZERO;
+	case CF_BLENDFACTOR_ONE:                      return GL_ONE;
+	case CF_BLENDFACTOR_SRC_COLOR:                return GL_SRC_COLOR;
+	case CF_BLENDFACTOR_ONE_MINUS_SRC_COLOR:      return GL_ONE_MINUS_SRC_COLOR;
+	case CF_BLENDFACTOR_DST_COLOR:                return GL_DST_COLOR;
+	case CF_BLENDFACTOR_ONE_MINUS_DST_COLOR:      return GL_ONE_MINUS_DST_COLOR;
+	case CF_BLENDFACTOR_SRC_ALPHA:                return GL_SRC_ALPHA;
+	case CF_BLENDFACTOR_ONE_MINUS_SRC_ALPHA:      return GL_ONE_MINUS_SRC_ALPHA;
+	case CF_BLENDFACTOR_DST_ALPHA:                return GL_DST_ALPHA;
+	case CF_BLENDFACTOR_ONE_MINUS_DST_ALPHA:      return GL_ONE_MINUS_DST_ALPHA;
+	case CF_BLENDFACTOR_CONSTANT_COLOR:           return GL_CONSTANT_COLOR;
 	case CF_BLENDFACTOR_ONE_MINUS_CONSTANT_COLOR: return GL_ONE_MINUS_CONSTANT_COLOR;
-	case CF_BLENDFACTOR_SRC_ALPHA_SATURATE:	   return GL_SRC_ALPHA_SATURATE;
+	case CF_BLENDFACTOR_SRC_ALPHA_SATURATE:       return GL_SRC_ALPHA_SATURATE;
 	}
 }
 
@@ -1757,15 +1757,14 @@ struct CF_GL_MaterialInternal
 
 struct CF_GL_CanvasInternal
 {
-int w = 0, h = 0;
-GLuint fbo = 0;
-GLuint color = 0; // texture
-GLuint depth = 0; // renderbuffer if present
-
-CF_Texture cf_color{}; // handle back to CF
+	int w = 0, h = 0;
+	GLuint fbo = 0;
+	GLuint color = 0; // texture
+	GLuint depth = 0; // renderbuffer if present
+	CF_Texture cf_color{}; // handle back to CF
 };
 
-static CF_GL_CanvasInternal* s_opengl_canvas = nullptr;
+static CF_GL_CanvasInternal* s_opengl_canvas = NULL;
 
 static void opengl_apply_sampler_params(CF_GL_TextureInternal* t, const CF_TextureParams& p)
 {
@@ -1818,7 +1817,7 @@ CF_Texture opengl_make_texture(CF_TextureParams params)
 
 	glGenTextures(1, &t->id);
 	glBindTexture(GL_TEXTURE_2D, t->id);
-	glTexImage2D(GL_TEXTURE_2D, 0, t->internal_fmt, t->w, t->h, 0, t->upload_fmt, t->upload_type, nullptr);
+	glTexImage2D(GL_TEXTURE_2D, 0, t->internal_fmt, t->w, t->h, 0, t->upload_fmt, t->upload_type, NULL);
 	opengl_apply_sampler_params(t, params);
 	if (params.generate_mipmaps) glGenerateMipmap(GL_TEXTURE_2D);
 	glBindTexture(GL_TEXTURE_2D, 0);
@@ -1981,7 +1980,7 @@ CF_Mesh opengl_make_mesh(int vertex_buffer_size, const CF_VertexAttribute* attri
 
 	glBindVertexArray(m->vao);
 	glBindBuffer(GL_ARRAY_BUFFER, m->vbo.id);
-	glBufferData(GL_ARRAY_BUFFER, vertex_buffer_size, nullptr, GL_DYNAMIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, vertex_buffer_size, NULL, GL_DYNAMIC_DRAW);
 	glBindVertexArray(0);
 
 	return CF_Mesh{ (uint64_t)(uintptr_t)m };
@@ -1995,7 +1994,7 @@ void opengl_mesh_set_index_buffer(CF_Mesh mh, int index_buffer_size_in_bytes, in
 	m->ibo.size = index_buffer_size_in_bytes;
 	m->ibo.stride = index_bit_count / 8;
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m->ibo.id);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, index_buffer_size_in_bytes, nullptr, GL_DYNAMIC_DRAW);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, index_buffer_size_in_bytes, NULL, GL_DYNAMIC_DRAW);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 }
 
@@ -2006,7 +2005,7 @@ void opengl_mesh_set_instance_buffer(CF_Mesh mh, int instance_buffer_size_in_byt
 	m->instance.size = instance_buffer_size_in_bytes;
 	m->instance.stride = instance_stride;
 	glBindBuffer(GL_ARRAY_BUFFER, m->instance.id);
-	glBufferData(GL_ARRAY_BUFFER, instance_buffer_size_in_bytes, nullptr, GL_DYNAMIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, instance_buffer_size_in_bytes, NULL, GL_DYNAMIC_DRAW);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
@@ -2069,6 +2068,15 @@ void opengl_destroy_mesh(CF_Mesh mh)
 	CF_FREE(m);
 }
 
+struct CF_GL_ShaderAndMaterial
+{
+	CF_GL_ShaderInternal* sh = NULL;
+	CF_GL_MaterialInternal* ma = NULL;
+	CF_GL_MeshInternal* me = NULL;
+};
+
+CF_GL_ShaderAndMaterial s_opengl_bindings;
+
 void opengl_apply_mesh(CF_Mesh mh)
 {
 	auto* m = (CF_GL_MeshInternal*)(uintptr_t)mh.id;
@@ -2078,18 +2086,10 @@ void opengl_apply_mesh(CF_Mesh mh)
 	if (m->ibo.id) glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m->ibo.id);
 }
 
-struct CF_GL_ShaderAndMaterial
-{
-CF_GL_ShaderInternal* sh = nullptr;
-CF_GL_MaterialInternal* ma = nullptr;
-CF_GL_MeshInternal* me = nullptr;
-};
-static CF_GL_ShaderAndMaterial s_opengl_bindings;
-
 static GLuint opengl_compile_shader(GLenum stage, const char* src)
 {
 	GLuint s = glCreateShader(stage);
-	glShaderSource(s, 1, &src, nullptr);
+	glShaderSource(s, 1, &src, NULL);
 	glCompileShader(s);
 	GLint ok = GL_FALSE;
 	glGetShaderiv(s, GL_COMPILE_STATUS, &ok);
@@ -2131,7 +2131,7 @@ static CF_Shader opengl_make_shader_es(const char* vs_src, const char* fs_src)
 	if (sh->ubo_index != GL_INVALID_INDEX) {
 		glGenBuffers(1, &sh->ubo);
 		glBindBuffer(GL_UNIFORM_BUFFER, sh->ubo);
-		glBufferData(GL_UNIFORM_BUFFER, 4 * 1024, nullptr, GL_DYNAMIC_DRAW);
+		glBufferData(GL_UNIFORM_BUFFER, 4 * 1024, NULL, GL_DYNAMIC_DRAW);
 		glBindBuffer(GL_UNIFORM_BUFFER, 0);
 		sh->ubo_binding = 0;
 		glUniformBlockBinding(sh->prog, sh->ubo_index, sh->ubo_binding);
@@ -2218,7 +2218,7 @@ int s_uniform_type_size(CF_UniformType t)
 void s_mat_set_uniform(CF_GL_MaterialInternal* mi, CF_MaterialState* st, const char* block, const char* name, void* data, CF_UniformType type, int array_len)
 {
 	int size = s_uniform_type_size(type) * array_len;
-	CF_Uniform* u = nullptr;
+	CF_Uniform* u = NULL;
 	for (int i = 0; i < st->uniforms.count(); ++i) {
 		if (st->uniforms[i].block_name == block && st->uniforms[i].name == name) { u = &st->uniforms[i]; break; }
 	}
@@ -2327,7 +2327,7 @@ static void opengl_upload_uniform_block(CF_GL_ShaderInternal* sh, CF_GL_Material
 	GLint cur = 0;
 	glGetBufferParameteriv(GL_UNIFORM_BUFFER, GL_BUFFER_SIZE, &cur);
 	if ((GLint)total > cur) {
-		glBufferData(GL_UNIFORM_BUFFER, (GLsizeiptr)total, nullptr, GL_DYNAMIC_DRAW);
+		glBufferData(GL_UNIFORM_BUFFER, (GLsizeiptr)total, NULL, GL_DYNAMIC_DRAW);
 	}
 	glBufferSubData(GL_UNIFORM_BUFFER, 0, (GLsizeiptr)total, blob);
 	glBindBufferBase(GL_UNIFORM_BUFFER, sh->ubo_binding, sh->ubo);
@@ -2452,9 +2452,9 @@ void opengl_draw_elements()
 	if (me->ibo.id && me->index_count > 0) {
 		GLenum elem = (me->ibo.stride == 2) ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT;
 		if (instance_count > 0) {
-			glDrawElementsInstanced(prim, me->index_count, elem, nullptr, instance_count);
+			glDrawElementsInstanced(prim, me->index_count, elem, NULL, instance_count);
 		} else {
-			glDrawElements(prim, me->index_count, elem, nullptr);
+			glDrawElements(prim, me->index_count, elem, NULL);
 		}
 	} else if (me->vbo.count > 0) {
 		if (instance_count > 0) {
@@ -2473,7 +2473,7 @@ void opengl_commit()
 	glBindVertexArray(0);
 	glUseProgram(0);
 	if (s_opengl_canvas) glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	s_opengl_canvas = nullptr;
+	s_opengl_canvas = NULL;
 }
 
 void opengl_clear_color(float r, float g, float b, float a) { app->clear_color = make_color(r,g,b,a); }
