@@ -65,8 +65,6 @@ void cute_shader_init(void);
 
 void cute_shader_cleanup(void);
 
-extern spvc_context g_spvc_context;
-
 CF_ShaderCompilerResult cute_shader_compile(const char* source, CF_ShaderCompilerStage stage, CF_ShaderCompilerConfig config);
 
 void cute_shader_free_result(CF_ShaderCompilerResult result);

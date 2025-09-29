@@ -18,10 +18,9 @@
 #include "cute_shader/builtin_shaders.h"
 #include "data/builtin_shaders_bytecode.h"
 #include <SDL3_shadercross/SDL_shadercross.h>
+#include <spirv_cross_c.h>
 
-#if !defined(CF_EMSCRIPTEN)
-#	include <spirv_cross_c.h>
-#endif
+spvc_context g_spvc_context = NULL;
 
 struct CF_CanvasInternal;
 static CF_CanvasInternal* s_canvas = NULL;
@@ -30,6 +29,57 @@ static CF_CanvasInternal* s_default_canvas = NULL;
 #include <float.h>
 
 using namespace Cute;
+
+//--------------------------------------------------------------------------------------------------
+// Helpers used by both SDL_Gpu and GL backends.
+
+CF_INLINE bool cf_pixel_format_is_depth(CF_PixelFormat format)
+{
+	switch (format) {
+	case CF_PIXEL_FORMAT_D16_UNORM:
+	case CF_PIXEL_FORMAT_D24_UNORM:
+	case CF_PIXEL_FORMAT_D32_FLOAT:
+	case CF_PIXEL_FORMAT_D24_UNORM_S8_UINT:
+	case CF_PIXEL_FORMAT_D32_FLOAT_S8_UINT:
+		return true;
+	default:
+		return false;
+	}
+}
+
+CF_INLINE bool cf_pixel_format_has_alpha(CF_PixelFormat format)
+{
+	switch (format) {
+	case CF_PIXEL_FORMAT_A8_UNORM:
+	case CF_PIXEL_FORMAT_R8G8B8A8_UNORM:
+	case CF_PIXEL_FORMAT_R16G16B16A16_UNORM:
+	case CF_PIXEL_FORMAT_R10G10B10A2_UNORM:
+	case CF_PIXEL_FORMAT_B5G5R5A1_UNORM:
+	case CF_PIXEL_FORMAT_B4G4R4A4_UNORM:
+	case CF_PIXEL_FORMAT_B8G8R8A8_UNORM:
+	case CF_PIXEL_FORMAT_R8G8B8A8_SNORM:
+	case CF_PIXEL_FORMAT_R16G16B16A16_SNORM:
+	case CF_PIXEL_FORMAT_R16G16B16A16_FLOAT:
+	case CF_PIXEL_FORMAT_R32G32B32A32_FLOAT:
+	case CF_PIXEL_FORMAT_R8G8B8A8_UINT:
+	case CF_PIXEL_FORMAT_R16G16B16A16_UINT:
+	case CF_PIXEL_FORMAT_R8G8B8A8_INT:
+	case CF_PIXEL_FORMAT_R16G16B16A16_INT:
+	case CF_PIXEL_FORMAT_R8G8B8A8_UNORM_SRGB:
+	case CF_PIXEL_FORMAT_B8G8R8A8_UNORM_SRGB:
+	case CF_PIXEL_FORMAT_BC1_RGBA_UNORM:
+	case CF_PIXEL_FORMAT_BC2_RGBA_UNORM:
+	case CF_PIXEL_FORMAT_BC3_RGBA_UNORM:
+	case CF_PIXEL_FORMAT_BC7_RGBA_UNORM:
+	case CF_PIXEL_FORMAT_BC1_RGBA_UNORM_SRGB:
+	case CF_PIXEL_FORMAT_BC2_RGBA_UNORM_SRGB:
+	case CF_PIXEL_FORMAT_BC3_RGBA_UNORM_SRGB:
+	case CF_PIXEL_FORMAT_BC7_RGBA_UNORM_SRGB:
+		return true;
+	default:
+		return false;
+	}
+}
 
 //--------------------------------------------------------------------------------------------------
 // SDL_Gpu implementation of cute_graphics.h.
@@ -648,6 +698,10 @@ void cf_load_internal_shaders()
 #ifdef CF_RUNTIME_SHADER_COMPILATION
 	cute_shader_init();
 
+	if (spvc_context_create(&g_spvc_context) != SPVC_SUCCESS) {
+		g_spvc_context = NULL;
+	}
+
 	// Compile built-in shaders.
 	app->draw_shader = s_compile(s_draw_vs, s_draw_fs, true, NULL);
 	app->basic_shader = s_compile(s_basic_vs, s_basic_fs, true, NULL);
@@ -669,6 +723,11 @@ void cf_unload_internal_shaders()
 #ifdef CF_RUNTIME_SHADER_COMPILATION
 	cute_shader_cleanup();
 #endif
+
+	if (g_spvc_context) {
+		spvc_context_destroy(g_spvc_context);
+		g_spvc_context = NULL;
+	}
 }
 
 // Create a user shader by injecting their `shader` function into CF's draw shader.
@@ -1648,76 +1707,15 @@ static CF_GL_PixelFormatInfo g_gl_pixel_formats[] =
 #endif
 };
 
-
-static bool cf_pixel_format_is_depth(CF_PixelFormat format)
-{
-	switch (format) {
-	case CF_PIXEL_FORMAT_D16_UNORM:
-	case CF_PIXEL_FORMAT_D24_UNORM:
-	case CF_PIXEL_FORMAT_D32_FLOAT:
-	case CF_PIXEL_FORMAT_D24_UNORM_S8_UINT:
-	case CF_PIXEL_FORMAT_D32_FLOAT_S8_UINT:
-		return true;
-	default:
-		return false;
-	}
-}
-
-static bool cf_pixel_format_has_alpha(CF_PixelFormat format)
-{
-	switch (format) {
-	case CF_PIXEL_FORMAT_A8_UNORM:
-	case CF_PIXEL_FORMAT_R8G8B8A8_UNORM:
-	case CF_PIXEL_FORMAT_R16G16B16A16_UNORM:
-	case CF_PIXEL_FORMAT_R10G10B10A2_UNORM:
-	case CF_PIXEL_FORMAT_B5G5R5A1_UNORM:
-	case CF_PIXEL_FORMAT_B4G4R4A4_UNORM:
-	case CF_PIXEL_FORMAT_B8G8R8A8_UNORM:
-	case CF_PIXEL_FORMAT_R8G8B8A8_SNORM:
-	case CF_PIXEL_FORMAT_R16G16B16A16_SNORM:
-	case CF_PIXEL_FORMAT_R16G16B16A16_FLOAT:
-	case CF_PIXEL_FORMAT_R32G32B32A32_FLOAT:
-	case CF_PIXEL_FORMAT_R8G8B8A8_UINT:
-	case CF_PIXEL_FORMAT_R16G16B16A16_UINT:
-	case CF_PIXEL_FORMAT_R8G8B8A8_INT:
-	case CF_PIXEL_FORMAT_R16G16B16A16_INT:
-	case CF_PIXEL_FORMAT_R8G8B8A8_UNORM_SRGB:
-	case CF_PIXEL_FORMAT_B8G8R8A8_UNORM_SRGB:
-	case CF_PIXEL_FORMAT_BC1_RGBA_UNORM:
-	case CF_PIXEL_FORMAT_BC2_RGBA_UNORM:
-	case CF_PIXEL_FORMAT_BC3_RGBA_UNORM:
-	case CF_PIXEL_FORMAT_BC7_RGBA_UNORM:
-	case CF_PIXEL_FORMAT_BC1_RGBA_UNORM_SRGB:
-	case CF_PIXEL_FORMAT_BC2_RGBA_UNORM_SRGB:
-	case CF_PIXEL_FORMAT_BC3_RGBA_UNORM_SRGB:
-	case CF_PIXEL_FORMAT_BC7_RGBA_UNORM_SRGB:
-		return true;
-	default:
-		return false;
-	}
-}
-
-
 static bool opengl_has_extension(const char* name)
 {
 	if (!name) return true;
 	GLint count = 0;
-#if defined(GL_NUM_EXTENSIONS)
 	glGetIntegerv(GL_NUM_EXTENSIONS, &count);
 	for (GLint i = 0; i < count; ++i) {
 		const char* ext = (const char*)glGetStringi(GL_EXTENSIONS, (GLuint)i);
 		if (ext && CF_STRCMP(ext, name) == 0) return true;
 	}
-#else
-	const char* ext = (const char*)glGetString(GL_EXTENSIONS);
-	if (!ext) return false;
-	const char* start = ext;
-	size_t len = CF_STRLEN(name);
-	while ((start = CF_STRSTR(start, name))) {
-		if ((start == ext || start[-1] == ' ') && (start[len] == ' ' || start[len] == ' ')) return true;
-		start += len;
-	}
-#endif
 	return false;
 }
 
@@ -1729,7 +1727,7 @@ static CF_GL_PixelFormatInfo* opengl_find_pixel_format_info(CF_PixelFormat forma
 	return NULL;
 }
 
-static void opengl_refresh_format_caps()
+void opengl_load_format_caps()
 {
 	static bool s_caps_initialized = false;
 	if (s_caps_initialized) return;
@@ -1738,38 +1736,25 @@ static void opengl_refresh_format_caps()
 	for (size_t i = 0; i < CF_ARRAY_SIZE(g_gl_pixel_formats); ++i) {
 		CF_GL_PixelFormatInfo& info = g_gl_pixel_formats[i];
 		info.caps = 0;
+
 		if (info.internal_fmt == GL_NONE) continue;
 		if (!opengl_has_extension(info.required_extension)) continue;
 
-		GLint supported = GL_FALSE;
-		glGetInternalformativ(GL_TEXTURE_2D, info.internal_fmt, GL_INTERNALFORMAT_SUPPORTED, 1, &supported);
-		if (!supported) continue;
+		// GL 3.3 core does not support querying these properties.
+		// Mark as unsupported by default.
+		// You can hardcode a conservative set of assumptions here if desired.
 
-		info.caps |= CF_GL_FMT_CAP_SAMPLE;
-		GLint filterable = GL_FALSE;
-		glGetInternalformativ(GL_TEXTURE_2D, info.internal_fmt, GL_FILTER, 1, &filterable);
-		if (filterable == GL_TRUE) info.caps |= CF_GL_FMT_CAP_LINEAR;
+		// Example conservative assumptions:
+		if (!info.is_integer) info.caps |= CF_GL_FMT_CAP_SAMPLE; // can sample
+		if (!info.is_integer) info.caps |= CF_GL_FMT_CAP_LINEAR; // linear filter on normalized formats
 
-		GLint color_renderable = GL_FALSE;
-		glGetInternalformativ(GL_TEXTURE_2D, info.internal_fmt, GL_COLOR_RENDERABLE, 1, &color_renderable);
-		if (color_renderable == GL_TRUE) info.caps |= CF_GL_FMT_CAP_COLOR;
-
-		GLint depth_renderable = GL_FALSE;
-		glGetInternalformativ(GL_TEXTURE_2D, info.internal_fmt, GL_DEPTH_RENDERABLE, 1, &depth_renderable);
-		if (depth_renderable == GL_TRUE) info.caps |= CF_GL_FMT_CAP_DEPTH;
-
-		GLint stencil_renderable = GL_FALSE;
-		glGetInternalformativ(GL_TEXTURE_2D, info.internal_fmt, GL_STENCIL_RENDERABLE, 1, &stencil_renderable);
-		if (stencil_renderable == GL_TRUE) info.caps |= CF_GL_FMT_CAP_STENCIL;
-
-		GLint sample_count = 0;
-		glGetInternalformativ(GL_TEXTURE_2D, info.internal_fmt, GL_SAMPLES, 1, &sample_count);
-		if (sample_count > 1) info.caps |= CF_GL_FMT_CAP_MSAA;
-
-		if (info.has_alpha) info.caps |= CF_GL_FMT_CAP_ALPHA;
-		if (info.is_depth) info.caps |= CF_GL_FMT_CAP_DEPTH;
+		if (info.has_alpha)   info.caps |= CF_GL_FMT_CAP_ALPHA;
+		if (info.is_depth)    info.caps |= CF_GL_FMT_CAP_DEPTH;
 		if (info.has_stencil) info.caps |= CF_GL_FMT_CAP_STENCIL;
-		if (info.is_integer && (info.caps & CF_GL_FMT_CAP_LINEAR)) info.caps &= ~CF_GL_FMT_CAP_LINEAR;
+
+		// Don’t set MSAA capability (GL_SAMPLES query not available in 3.3 core).
+		// If you want MSAA support, you’ll need to test by actually creating
+		// a multisampled renderbuffer and checking for errors.
 	}
 }
 
@@ -1939,15 +1924,15 @@ CF_INLINE GLenum opengl_blend_factor(CF_BlendFactor f)
 
 struct CF_GL_TextureInternal
 {
-int w = 0, h = 0;
-GLuint id = 0;
-GLenum internal_fmt = GL_NONE;
-GLenum upload_fmt   = GL_NONE;
-GLenum upload_type  = GL_NONE;
-bool has_mips = false;
-GLint min_filter = GL_LINEAR;
-GLint mag_filter = GL_LINEAR;
-GLint wrap_u = GL_REPEAT, wrap_v = GL_REPEAT;
+	int w = 0, h = 0;
+	GLuint id = 0;
+	GLenum internal_fmt = GL_NONE;
+	GLenum upload_fmt   = GL_NONE;
+	GLenum upload_type  = GL_NONE;
+	bool has_mips = false;
+	GLint min_filter = GL_LINEAR;
+	GLint mag_filter = GL_LINEAR;
+	GLint wrap_u = GL_REPEAT, wrap_v = GL_REPEAT;
 };
 
 struct CF_GL_Buffer
@@ -2003,23 +1988,23 @@ static CF_GL_CanvasInternal* s_opengl_canvas = NULL;
 
 static void opengl_apply_sampler_params(CF_GL_TextureInternal* t, const CF_TextureParams& p)
 {
-opengl_refresh_format_caps();
-CF_GL_PixelFormatInfo* info = opengl_find_pixel_format_info(p.pixel_format);
-uint32_t caps = info ? info->caps : 0;
-t->has_mips = p.generate_mipmaps || p.mip_count > 1;
-GLenum min_filter = opengl_wrap_mip(p.mip_filter, t->has_mips);
-GLenum mag_filter = opengl_wrap_filter(p.filter);
-if (!(caps & CF_GL_FMT_CAP_LINEAR)) {
-min_filter = t->has_mips ? GL_NEAREST_MIPMAP_NEAREST : GL_NEAREST;
-mag_filter = GL_NEAREST;
-}
-t->min_filter = min_filter;
-t->mag_filter = mag_filter;
-t->wrap_u = opengl_wrap_wrap(p.wrap_u);
-t->wrap_v = opengl_wrap_wrap(p.wrap_v);
-
-glBindTexture(GL_TEXTURE_2D, t->id);
-glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, t->min_filter);
+	opengl_load_format_caps();
+	CF_GL_PixelFormatInfo* info = opengl_find_pixel_format_info(p.pixel_format);
+	uint32_t caps = info ? info->caps : 0;
+	t->has_mips = p.generate_mipmaps || p.mip_count > 1;
+	GLenum min_filter = opengl_wrap_mip(p.mip_filter, t->has_mips);
+	GLenum mag_filter = opengl_wrap_filter(p.filter);
+	if (!(caps & CF_GL_FMT_CAP_LINEAR)) {
+		min_filter = t->has_mips ? GL_NEAREST_MIPMAP_NEAREST : GL_NEAREST;
+		mag_filter = GL_NEAREST;
+	}
+	t->min_filter = min_filter;
+	t->mag_filter = mag_filter;
+	t->wrap_u = opengl_wrap_wrap(p.wrap_u);
+	t->wrap_v = opengl_wrap_wrap(p.wrap_v);
+	
+	glBindTexture(GL_TEXTURE_2D, t->id);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, t->min_filter);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, t->mag_filter);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, t->wrap_u);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, t->wrap_v);
@@ -2028,9 +2013,9 @@ glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, t->min_filter);
 
 CF_TextureParams opengl_texture_defaults(int w, int h)
 {
-CF_TextureParams p{};
-p.pixel_format = CF_PIXEL_FORMAT_R8G8B8A8_UNORM;
-p.usage = CF_TEXTURE_USAGE_SAMPLER_BIT;
+	CF_TextureParams p{};
+	p.pixel_format = CF_PIXEL_FORMAT_R8G8B8A8_UNORM;
+	p.usage = CF_TEXTURE_USAGE_SAMPLER_BIT;
 	p.filter = CF_FILTER_LINEAR;
 	p.wrap_u = CF_WRAP_MODE_REPEAT; p.wrap_v = CF_WRAP_MODE_REPEAT;
 	p.mip_filter = CF_MIP_FILTER_LINEAR;
@@ -2040,77 +2025,87 @@ p.usage = CF_TEXTURE_USAGE_SAMPLER_BIT;
 
 bool opengl_texture_supports_format(CF_PixelFormat format, CF_TextureUsageBits usage)
 {
-opengl_refresh_format_caps();
-CF_GL_PixelFormatInfo* info = opengl_find_pixel_format_info(format);
-if (!info || info->internal_fmt == GL_NONE) return false;
-uint32_t caps = info->caps;
-if (!caps) return false;
-if (usage & (CF_TEXTURE_USAGE_GRAPHICS_STORAGE_READ_BIT | CF_TEXTURE_USAGE_COMPUTE_STORAGE_READ_BIT | CF_TEXTURE_USAGE_COMPUTE_STORAGE_WRITE_BIT)) return false;
-if ((usage & CF_TEXTURE_USAGE_SAMPLER_BIT) && !(caps & CF_GL_FMT_CAP_SAMPLE)) return false;
-if ((usage & CF_TEXTURE_USAGE_COLOR_TARGET_BIT) && !(caps & CF_GL_FMT_CAP_COLOR)) return false;
-if (usage & CF_TEXTURE_USAGE_DEPTH_STENCIL_TARGET_BIT) {
-if (!info->is_depth) return false;
-if (!(caps & CF_GL_FMT_CAP_DEPTH)) return false;
-if (info->has_stencil && !(caps & CF_GL_FMT_CAP_STENCIL)) return false;
-}
-return true;
+	opengl_load_format_caps();
+	CF_GL_PixelFormatInfo* info = opengl_find_pixel_format_info(format);
+	if (!info || info->internal_fmt == GL_NONE) return false;
+		uint32_t caps = info->caps;
+		if (!caps) return false;
+		if (usage & (CF_TEXTURE_USAGE_GRAPHICS_STORAGE_READ_BIT | CF_TEXTURE_USAGE_COMPUTE_STORAGE_READ_BIT | CF_TEXTURE_USAGE_COMPUTE_STORAGE_WRITE_BIT)) return false;
+		if ((usage & CF_TEXTURE_USAGE_SAMPLER_BIT) && !(caps & CF_GL_FMT_CAP_SAMPLE)) return false;
+		if ((usage & CF_TEXTURE_USAGE_COLOR_TARGET_BIT) && !(caps & CF_GL_FMT_CAP_COLOR)) return false;
+		if (usage & CF_TEXTURE_USAGE_DEPTH_STENCIL_TARGET_BIT) {
+		if (!info->is_depth) return false;
+		if (!(caps & CF_GL_FMT_CAP_DEPTH)) return false;
+		if (info->has_stencil && !(caps & CF_GL_FMT_CAP_STENCIL)) return false;
+	}
+	return true;
 }
 
 bool opengl_query_pixel_format(CF_PixelFormat format, CF_PixelFormatOp op)
 {
-opengl_refresh_format_caps();
-CF_GL_PixelFormatInfo* info = opengl_find_pixel_format_info(format);
-if (!info || info->internal_fmt == GL_NONE) return false;
-uint32_t caps = info->caps;
-if (!caps) return false;
-switch (op) {
-case CF_PIXELFORMAT_OP_NEAREST_FILTER:
-return (caps & CF_GL_FMT_CAP_SAMPLE) != 0;
-case CF_PIXELFORMAT_OP_BILINEAR_FILTER:
-return (caps & CF_GL_FMT_CAP_SAMPLE) && (caps & CF_GL_FMT_CAP_LINEAR);
-case CF_PIXELFORMAT_OP_RENDER_TARGET:
-return (caps & CF_GL_FMT_CAP_COLOR) != 0;
-case CF_PIXELFORMAT_OP_ALPHA_BLENDING:
-if (!(caps & CF_GL_FMT_CAP_COLOR)) return false;
-if (!(caps & CF_GL_FMT_CAP_ALPHA)) return false;
-return !info->is_integer;
-case CF_PIXELFORMAT_OP_MSAA:
-if (info->is_depth) return (caps & CF_GL_FMT_CAP_MSAA) && (caps & CF_GL_FMT_CAP_DEPTH);
-return (caps & CF_GL_FMT_CAP_MSAA) && (caps & CF_GL_FMT_CAP_COLOR);
-case CF_PIXELFORMAT_OP_DEPTH:
-return (caps & CF_GL_FMT_CAP_DEPTH) != 0;
-default:
-return false;
-}
+	opengl_load_format_caps();
+	CF_GL_PixelFormatInfo* info = opengl_find_pixel_format_info(format);
+	if (!info || info->internal_fmt == GL_NONE) return false;
+	uint32_t caps = info->caps;
+	if (!caps) return false;
+
+	switch (op) {
+	case CF_PIXELFORMAT_OP_NEAREST_FILTER:
+		return (caps & CF_GL_FMT_CAP_SAMPLE) != 0;
+
+	case CF_PIXELFORMAT_OP_BILINEAR_FILTER:
+		return (caps & CF_GL_FMT_CAP_SAMPLE) && (caps & CF_GL_FMT_CAP_LINEAR);
+
+	case CF_PIXELFORMAT_OP_RENDER_TARGET:
+		return (caps & CF_GL_FMT_CAP_COLOR) != 0;
+
+	case CF_PIXELFORMAT_OP_ALPHA_BLENDING:
+		if (!(caps & CF_GL_FMT_CAP_COLOR)) return false;
+		if (!(caps & CF_GL_FMT_CAP_ALPHA)) return false;
+		return !info->is_integer;
+
+	case CF_PIXELFORMAT_OP_MSAA:
+		if (info->is_depth) return (caps & CF_GL_FMT_CAP_MSAA) && (caps & CF_GL_FMT_CAP_DEPTH);
+		return (caps & CF_GL_FMT_CAP_MSAA) && (caps & CF_GL_FMT_CAP_COLOR);
+
+	case CF_PIXELFORMAT_OP_DEPTH:
+		return (caps & CF_GL_FMT_CAP_DEPTH) != 0;
+
+	default:
+		return false;
+	}
 }
 
 CF_Texture opengl_make_texture(CF_TextureParams params)
 {
-if (!opengl_texture_supports_format(params.pixel_format, (CF_TextureUsageBits)params.usage)) {
-CF_ASSERT(!"Unsupported pixel format for OpenGL backend.");
-return CF_Texture{};
-}
-CF_GL_PixelFormatInfo* info = opengl_find_pixel_format_info(params.pixel_format);
-if (!info || info->internal_fmt == GL_NONE) return CF_Texture{};
+	if (!opengl_texture_supports_format(params.pixel_format, (CF_TextureUsageBits)params.usage)) {
+		CF_ASSERT(!"Unsupported pixel format for OpenGL backend.");
+		return CF_Texture{};
+	}
 
-auto* t = CF_NEW(CF_GL_TextureInternal);
-t->w = params.width; t->h = params.height;
-t->internal_fmt = info->internal_fmt;
-t->upload_fmt   = info->upload_fmt;
-t->upload_type  = info->upload_type;
-if (!info->is_depth && (t->upload_fmt == GL_NONE || t->upload_type == GL_NONE)) {
-CF_FREE(t);
-return CF_Texture{};
-}
+	CF_GL_PixelFormatInfo* info = opengl_find_pixel_format_info(params.pixel_format);
+	if (!info || info->internal_fmt == GL_NONE) return CF_Texture{};
 
-glGenTextures(1, &t->id);
-if (!t->id) {
-CF_FREE(t);
-return CF_Texture{};
-}
-glBindTexture(GL_TEXTURE_2D, t->id);
-glTexImage2D(GL_TEXTURE_2D, 0, t->internal_fmt, t->w, t->h, 0, t->upload_fmt, t->upload_type, NULL);
-opengl_apply_sampler_params(t, params);
+	auto* t = CF_NEW(CF_GL_TextureInternal);
+	t->w = params.width;
+	t->h = params.height;
+	t->internal_fmt = info->internal_fmt;
+	t->upload_fmt   = info->upload_fmt;
+	t->upload_type  = info->upload_type;
+	if (!info->is_depth && (t->upload_fmt == GL_NONE || t->upload_type == GL_NONE)) {
+		CF_FREE(t);
+		return CF_Texture{};
+	}
+
+	glGenTextures(1, &t->id);
+	if (!t->id) {
+		CF_FREE(t);
+		return CF_Texture{};
+	}
+
+	glBindTexture(GL_TEXTURE_2D, t->id);
+	glTexImage2D(GL_TEXTURE_2D, 0, t->internal_fmt, t->w, t->h, 0, t->upload_fmt, t->upload_type, NULL);
+	opengl_apply_sampler_params(t, params);
 	if (params.generate_mipmaps) glGenerateMipmap(GL_TEXTURE_2D);
 	glBindTexture(GL_TEXTURE_2D, 0);
 
@@ -2160,66 +2155,67 @@ CF_CanvasParams opengl_canvas_defaults(int w, int h)
 	CF_CanvasParams p;
 	CF_MEMSET(&p, 0, sizeof(p));
 	if (w == 0 || h == 0) return p;
-p.target = opengl_texture_defaults(w, h);
-p.target.usage |= CF_TEXTURE_USAGE_COLOR_TARGET_BIT;
-p.depth_stencil_enable = false;
-p.depth_stencil_target = opengl_texture_defaults(w, h);
-p.depth_stencil_target.pixel_format = CF_PIXEL_FORMAT_D16_UNORM;
-p.depth_stencil_target.usage = CF_TEXTURE_USAGE_DEPTH_STENCIL_TARGET_BIT;
-p.sample_count = CF_SAMPLE_COUNT_1;
-return p;
+	p.target = opengl_texture_defaults(w, h);
+	p.target.usage |= CF_TEXTURE_USAGE_COLOR_TARGET_BIT;
+	p.depth_stencil_enable = false;
+	p.depth_stencil_target = opengl_texture_defaults(w, h);
+	p.depth_stencil_target.pixel_format = CF_PIXEL_FORMAT_D16_UNORM;
+	p.depth_stencil_target.usage = CF_TEXTURE_USAGE_DEPTH_STENCIL_TARGET_BIT;
+	p.sample_count = CF_SAMPLE_COUNT_1;
+	return p;
 }
 
 static GLuint opengl_make_depth_renderbuffer(const CF_TextureParams& p)
 {
-opengl_refresh_format_caps();
-CF_GL_PixelFormatInfo* info = opengl_find_pixel_format_info(p.pixel_format);
-if (!info || info->internal_fmt == GL_NONE || !info->is_depth) return 0;
-if (!(info->caps & CF_GL_FMT_CAP_DEPTH)) return 0;
-if (info->has_stencil && !(info->caps & CF_GL_FMT_CAP_STENCIL)) return 0;
-
-GLuint rbo = 0;
-glGenRenderbuffers(1, &rbo);
-glBindRenderbuffer(GL_RENDERBUFFER, rbo);
-glRenderbufferStorage(GL_RENDERBUFFER, info->internal_fmt, p.width, p.height);
-glBindRenderbuffer(GL_RENDERBUFFER, 0);
-return rbo;
+	opengl_load_format_caps();
+	CF_GL_PixelFormatInfo* info = opengl_find_pixel_format_info(p.pixel_format);
+	if (!info || info->internal_fmt == GL_NONE || !info->is_depth) return 0;
+	if (!(info->caps & CF_GL_FMT_CAP_DEPTH)) return 0;
+	if (info->has_stencil && !(info->caps & CF_GL_FMT_CAP_STENCIL)) return 0;
+	
+	GLuint rbo = 0;
+	glGenRenderbuffers(1, &rbo);
+	glBindRenderbuffer(GL_RENDERBUFFER, rbo);
+	glRenderbufferStorage(GL_RENDERBUFFER, info->internal_fmt, p.width, p.height);
+	glBindRenderbuffer(GL_RENDERBUFFER, 0);
+	return rbo;
 }
 
 CF_Canvas opengl_make_canvas(CF_CanvasParams params)
 {
-if (!opengl_texture_supports_format(params.target.pixel_format, (CF_TextureUsageBits)params.target.usage)) {
-CF_ASSERT(!"Unsupported color target format for OpenGL backend.");
-return CF_Canvas{};
-}
-if (params.depth_stencil_enable) {
-if (!opengl_texture_supports_format(params.depth_stencil_target.pixel_format, (CF_TextureUsageBits)params.depth_stencil_target.usage)) {
-CF_ASSERT(!"Unsupported depth/stencil format for OpenGL backend.");
-return CF_Canvas{};
-}
-}
+	if (!opengl_texture_supports_format(params.target.pixel_format, (CF_TextureUsageBits)params.target.usage)) {
+		CF_ASSERT(!"Unsupported color target format for OpenGL backend.");
+		return CF_Canvas{};
+	}
+	if (params.depth_stencil_enable) {
+		if (!opengl_texture_supports_format(params.depth_stencil_target.pixel_format, (CF_TextureUsageBits)params.depth_stencil_target.usage)) {
+			CF_ASSERT(!"Unsupported depth/stencil format for OpenGL backend.");
+			return CF_Canvas{};
+		}
+	}
 
-auto* c = CF_NEW(CF_GL_CanvasInternal);
-c->w = params.target.width; c->h = params.target.height;
+	auto* c = CF_NEW(CF_GL_CanvasInternal);
+	c->w = params.target.width;
+	c->h = params.target.height;
 
-// color
-CF_Texture color = opengl_make_texture(params.target);
-c->cf_color = color;
-if (!color.id) {
-CF_FREE(c);
-return CF_Canvas{};
-}
-c->color = ((CF_GL_TextureInternal*)(uintptr_t)color.id)->id;
+	// color
+	CF_Texture color = opengl_make_texture(params.target);
+	c->cf_color = color;
+	if (!color.id) {
+		CF_FREE(c);
+		return CF_Canvas{};
+	}
+	c->color = ((CF_GL_TextureInternal*)(uintptr_t)color.id)->id;
 
-// depth/stencil (renderbuffer)
-if (params.depth_stencil_enable) {
-c->depth = opengl_make_depth_renderbuffer(params.depth_stencil_target);
-if (!c->depth) {
-opengl_destroy_texture(color);
-CF_FREE(c);
-return CF_Canvas{};
-}
-}
+	// depth/stencil (renderbuffer)
+	if (params.depth_stencil_enable) {
+		c->depth = opengl_make_depth_renderbuffer(params.depth_stencil_target);
+		if (!c->depth) {
+			opengl_destroy_texture(color);
+			CF_FREE(c);
+			return CF_Canvas{};
+		}
+	}
 
 	glGenFramebuffers(1, &c->fbo);
 	glBindFramebuffer(GL_FRAMEBUFFER, c->fbo);

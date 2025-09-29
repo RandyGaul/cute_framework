@@ -17,8 +17,6 @@
 #include <SDL3_shadercross/spirv.h>
 #include <SPIRV-Reflect/spirv_reflect.h>
 
-spvc_context g_spvc_context = NULL;
-
 #define CUTE_SHADER_GLSL_VERSION 450
 
 namespace cute_shader {
@@ -253,17 +251,10 @@ static CF_ShaderCompilerResult cute_shader_failure(const char* message, const ch
 void cute_shader_init(void)
 {
 	glslang::InitializeProcess();
-	if (spvc_context_create(&g_spvc_context) != SPVC_SUCCESS) {
-		g_spvc_context = NULL;
-	}
 }
 
 void cute_shader_cleanup(void)
 {
-	if (g_spvc_context) {
-		spvc_context_destroy(g_spvc_context);
-		g_spvc_context = NULL;
-	}
 	glslang::FinalizeProcess();
 }
 
