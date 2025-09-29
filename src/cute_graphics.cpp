@@ -106,6 +106,7 @@ CF_BackendType sdlgpu_query_backend()
 	}
 }
 
+
 bool sdlgpu_texture_supports_format(CF_PixelFormat format, CF_TextureUsageBits usage)
 {
 	return SDL_GPUTextureSupportsFormat(
@@ -116,9 +117,29 @@ bool sdlgpu_texture_supports_format(CF_PixelFormat format, CF_TextureUsageBits u
 	);
 }
 
+bool sdlgpu_query_pixel_format(CF_PixelFormat format, CF_PixelFormatOp op)
+{
+	switch (op) {
+	case CF_PIXELFORMAT_OP_NEAREST_FILTER:
+	case CF_PIXELFORMAT_OP_BILINEAR_FILTER:
+		return sdlgpu_texture_supports_format(format, CF_TEXTURE_USAGE_SAMPLER_BIT);
+	case CF_PIXELFORMAT_OP_RENDER_TARGET:
+		return sdlgpu_texture_supports_format(format, CF_TEXTURE_USAGE_COLOR_TARGET_BIT);
+	case CF_PIXELFORMAT_OP_ALPHA_BLENDING:
+		return sdlgpu_texture_supports_format(format, CF_TEXTURE_USAGE_COLOR_TARGET_BIT) && cf_pixel_format_has_alpha(format);
+	case CF_PIXELFORMAT_OP_MSAA:
+		if (cf_pixel_format_is_depth(format)) return sdlgpu_texture_supports_format(format, CF_TEXTURE_USAGE_DEPTH_STENCIL_TARGET_BIT);
+		return sdlgpu_texture_supports_format(format, CF_TEXTURE_USAGE_COLOR_TARGET_BIT);
+	case CF_PIXELFORMAT_OP_DEPTH:
+		return sdlgpu_texture_supports_format(format, CF_TEXTURE_USAGE_DEPTH_STENCIL_TARGET_BIT);
+	default:
+		return false;
+	}
+}
+
 CF_TextureParams sdlgpu_texture_defaults(int w, int h)
 {
-	CF_TextureParams params;
+CF_TextureParams params;
 	params.pixel_format = CF_PIXEL_FORMAT_R8G8B8A8_UNORM;
 	params.usage = CF_TEXTURE_USAGE_SAMPLER_BIT;
 	params.filter = CF_FILTER_LINEAR;
@@ -1533,6 +1554,225 @@ void sdlgpu_commit()
 #	include <glad/glad.h>
 #endif
 
+
+struct CF_GL_PixelFormatInfo
+{
+	CF_PixelFormat format;
+	GLenum internal_fmt;
+	GLenum upload_fmt;
+	GLenum upload_type;
+	uint32_t caps;
+	bool has_alpha;
+	bool is_depth;
+	bool has_stencil;
+	bool is_integer;
+	const char* required_extension;
+};
+
+enum
+{
+	CF_GL_FMT_CAP_SAMPLE = 0x1,
+	CF_GL_FMT_CAP_LINEAR = 0x2,
+	CF_GL_FMT_CAP_COLOR = 0x4,
+	CF_GL_FMT_CAP_ALPHA = 0x8,
+	CF_GL_FMT_CAP_MSAA = 0x10,
+	CF_GL_FMT_CAP_DEPTH = 0x20,
+	CF_GL_FMT_CAP_STENCIL = 0x40,
+};
+
+#ifndef GL_BGRA8_EXT
+#define GL_BGRA8_EXT 0
+#endif
+
+static CF_GL_PixelFormatInfo g_gl_pixel_formats[] =
+{
+{ CF_PIXEL_FORMAT_A8_UNORM, GL_NONE, GL_NONE, GL_NONE, 0, true, false, false, false, NULL },
+	{ CF_PIXEL_FORMAT_R8_UNORM, GL_R8, GL_RED, GL_UNSIGNED_BYTE, 0, false, false, false, false, NULL },
+	{ CF_PIXEL_FORMAT_R8G8_UNORM, GL_RG8, GL_RG, GL_UNSIGNED_BYTE, 0, false, false, false, false, NULL },
+	{ CF_PIXEL_FORMAT_R8G8B8A8_UNORM, GL_RGBA8, GL_RGBA, GL_UNSIGNED_BYTE, 0, true, false, false, false, NULL },
+	{ CF_PIXEL_FORMAT_R16_UNORM, GL_NONE, GL_NONE, GL_NONE, 0, false, false, false, false, NULL },
+	{ CF_PIXEL_FORMAT_R16G16_UNORM, GL_NONE, GL_NONE, GL_NONE, 0, false, false, false, false, NULL },
+	{ CF_PIXEL_FORMAT_R16G16B16A16_UNORM, GL_NONE, GL_NONE, GL_NONE, 0, true, false, false, false, NULL },
+	{ CF_PIXEL_FORMAT_R10G10B10A2_UNORM, GL_RGB10_A2, GL_RGBA, GL_UNSIGNED_INT_2_10_10_10_REV, 0, true, false, false, false, NULL },
+	{ CF_PIXEL_FORMAT_B5G6R5_UNORM, GL_NONE, GL_NONE, GL_NONE, 0, false, false, false, false, NULL },
+	{ CF_PIXEL_FORMAT_B5G5R5A1_UNORM, GL_NONE, GL_NONE, GL_NONE, 0, true, false, false, false, NULL },
+	{ CF_PIXEL_FORMAT_B4G4R4A4_UNORM, GL_NONE, GL_NONE, GL_NONE, 0, true, false, false, false, NULL },
+	{ CF_PIXEL_FORMAT_B8G8R8A8_UNORM, GL_BGRA8_EXT, GL_BGRA, GL_UNSIGNED_BYTE, 0, true, false, false, false, "GL_EXT_texture_format_BGRA8888" },
+	{ CF_PIXEL_FORMAT_BC1_RGBA_UNORM, GL_NONE, GL_NONE, GL_NONE, 0, true, false, false, false, NULL },
+	{ CF_PIXEL_FORMAT_BC2_RGBA_UNORM, GL_NONE, GL_NONE, GL_NONE, 0, true, false, false, false, NULL },
+	{ CF_PIXEL_FORMAT_BC3_RGBA_UNORM, GL_NONE, GL_NONE, GL_NONE, 0, true, false, false, false, NULL },
+	{ CF_PIXEL_FORMAT_BC4_R_UNORM, GL_NONE, GL_NONE, GL_NONE, 0, false, false, false, false, NULL },
+	{ CF_PIXEL_FORMAT_BC5_RG_UNORM, GL_NONE, GL_NONE, GL_NONE, 0, false, false, false, false, NULL },
+	{ CF_PIXEL_FORMAT_BC7_RGBA_UNORM, GL_NONE, GL_NONE, GL_NONE, 0, true, false, false, false, NULL },
+	{ CF_PIXEL_FORMAT_BC6H_RGB_FLOAT, GL_NONE, GL_NONE, GL_NONE, 0, false, false, false, false, NULL },
+	{ CF_PIXEL_FORMAT_BC6H_RGB_UFLOAT, GL_NONE, GL_NONE, GL_NONE, 0, false, false, false, false, NULL },
+	{ CF_PIXEL_FORMAT_R8_SNORM, GL_R8_SNORM, GL_RED, GL_BYTE, 0, false, false, false, false, NULL },
+	{ CF_PIXEL_FORMAT_R8G8_SNORM, GL_RG8_SNORM, GL_RG, GL_BYTE, 0, false, false, false, false, NULL },
+	{ CF_PIXEL_FORMAT_R8G8B8A8_SNORM, GL_RGBA8_SNORM, GL_RGBA, GL_BYTE, 0, true, false, false, false, NULL },
+	{ CF_PIXEL_FORMAT_R16_SNORM, GL_R16_SNORM, GL_RED, GL_SHORT, 0, false, false, false, false, NULL },
+	{ CF_PIXEL_FORMAT_R16G16_SNORM, GL_RG16_SNORM, GL_RG, GL_SHORT, 0, false, false, false, false, NULL },
+	{ CF_PIXEL_FORMAT_R16G16B16A16_SNORM, GL_RGBA16_SNORM, GL_RGBA, GL_SHORT, 0, true, false, false, false, NULL },
+	{ CF_PIXEL_FORMAT_R16_FLOAT, GL_R16F, GL_RED, GL_HALF_FLOAT, 0, false, false, false, false, NULL },
+	{ CF_PIXEL_FORMAT_R16G16_FLOAT, GL_RG16F, GL_RG, GL_HALF_FLOAT, 0, false, false, false, false, NULL },
+	{ CF_PIXEL_FORMAT_R16G16B16A16_FLOAT, GL_RGBA16F, GL_RGBA, GL_HALF_FLOAT, 0, true, false, false, false, NULL },
+	{ CF_PIXEL_FORMAT_R32_FLOAT, GL_R32F, GL_RED, GL_FLOAT, 0, false, false, false, false, NULL },
+	{ CF_PIXEL_FORMAT_R32G32_FLOAT, GL_RG32F, GL_RG, GL_FLOAT, 0, false, false, false, false, NULL },
+	{ CF_PIXEL_FORMAT_R32G32B32A32_FLOAT, GL_RGBA32F, GL_RGBA, GL_FLOAT, 0, true, false, false, false, NULL },
+	{ CF_PIXEL_FORMAT_R11G11B10_UFLOAT, GL_R11F_G11F_B10F, GL_RGB, GL_UNSIGNED_INT_10F_11F_11F_REV, 0, false, false, false, false, NULL },
+	{ CF_PIXEL_FORMAT_R8_UINT, GL_R8UI, GL_RED_INTEGER, GL_UNSIGNED_BYTE, 0, false, false, false, true, NULL },
+	{ CF_PIXEL_FORMAT_R8G8_UINT, GL_RG8UI, GL_RG_INTEGER, GL_UNSIGNED_BYTE, 0, false, false, false, true, NULL },
+	{ CF_PIXEL_FORMAT_R8G8B8A8_UINT, GL_RGBA8UI, GL_RGBA_INTEGER, GL_UNSIGNED_BYTE, 0, true, false, false, true, NULL },
+	{ CF_PIXEL_FORMAT_R16_UINT, GL_R16UI, GL_RED_INTEGER, GL_UNSIGNED_SHORT, 0, false, false, false, true, NULL },
+	{ CF_PIXEL_FORMAT_R16G16_UINT, GL_RG16UI, GL_RG_INTEGER, GL_UNSIGNED_SHORT, 0, false, false, false, true, NULL },
+	{ CF_PIXEL_FORMAT_R16G16B16A16_UINT, GL_RGBA16UI, GL_RGBA_INTEGER, GL_UNSIGNED_SHORT, 0, true, false, false, true, NULL },
+	{ CF_PIXEL_FORMAT_R8_INT, GL_R8I, GL_RED_INTEGER, GL_BYTE, 0, false, false, false, true, NULL },
+	{ CF_PIXEL_FORMAT_R8G8_INT, GL_RG8I, GL_RG_INTEGER, GL_BYTE, 0, false, false, false, true, NULL },
+	{ CF_PIXEL_FORMAT_R8G8B8A8_INT, GL_RGBA8I, GL_RGBA_INTEGER, GL_BYTE, 0, true, false, false, true, NULL },
+	{ CF_PIXEL_FORMAT_R16_INT, GL_R16I, GL_RED_INTEGER, GL_SHORT, 0, false, false, false, true, NULL },
+	{ CF_PIXEL_FORMAT_R16G16_INT, GL_RG16I, GL_RG_INTEGER, GL_SHORT, 0, false, false, false, true, NULL },
+	{ CF_PIXEL_FORMAT_R16G16B16A16_INT, GL_RGBA16I, GL_RGBA_INTEGER, GL_SHORT, 0, true, false, false, true, NULL },
+	{ CF_PIXEL_FORMAT_R8G8B8A8_UNORM_SRGB, GL_SRGB8_ALPHA8, GL_RGBA, GL_UNSIGNED_BYTE, 0, true, false, false, false, NULL },
+	{ CF_PIXEL_FORMAT_B8G8R8A8_UNORM_SRGB, GL_NONE, GL_NONE, GL_NONE, 0, true, false, false, false, NULL },
+	{ CF_PIXEL_FORMAT_BC1_RGBA_UNORM_SRGB, GL_NONE, GL_NONE, GL_NONE, 0, true, false, false, false, NULL },
+	{ CF_PIXEL_FORMAT_BC2_RGBA_UNORM_SRGB, GL_NONE, GL_NONE, GL_NONE, 0, true, false, false, false, NULL },
+	{ CF_PIXEL_FORMAT_BC3_RGBA_UNORM_SRGB, GL_NONE, GL_NONE, GL_NONE, 0, true, false, false, false, NULL },
+	{ CF_PIXEL_FORMAT_BC7_RGBA_UNORM_SRGB, GL_NONE, GL_NONE, GL_NONE, 0, true, false, false, false, NULL },
+	{ CF_PIXEL_FORMAT_D16_UNORM, GL_DEPTH_COMPONENT16, GL_DEPTH_COMPONENT, GL_UNSIGNED_SHORT, 0, false, true, false, false, NULL },
+	{ CF_PIXEL_FORMAT_D24_UNORM, GL_DEPTH_COMPONENT24, GL_DEPTH_COMPONENT, GL_UNSIGNED_INT, 0, false, true, false, false, NULL },
+	{ CF_PIXEL_FORMAT_D32_FLOAT, GL_DEPTH_COMPONENT32F, GL_DEPTH_COMPONENT, GL_FLOAT, 0, false, true, false, false, NULL },
+	{ CF_PIXEL_FORMAT_D24_UNORM_S8_UINT, GL_DEPTH24_STENCIL8, GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8, 0, false, true, true, false, NULL },
+#if defined(GL_DEPTH32F_STENCIL8)
+	{ CF_PIXEL_FORMAT_D32_FLOAT_S8_UINT, GL_DEPTH32F_STENCIL8, GL_DEPTH_STENCIL, GL_FLOAT_32_UNSIGNED_INT_24_8_REV, 0, false, true, true, false, NULL },
+#else
+	{ CF_PIXEL_FORMAT_D32_FLOAT_S8_UINT, GL_NONE, GL_NONE, GL_NONE, 0, false, true, true, false, NULL },
+#endif
+};
+
+
+static bool cf_pixel_format_is_depth(CF_PixelFormat format)
+{
+	switch (format) {
+	case CF_PIXEL_FORMAT_D16_UNORM:
+	case CF_PIXEL_FORMAT_D24_UNORM:
+	case CF_PIXEL_FORMAT_D32_FLOAT:
+	case CF_PIXEL_FORMAT_D24_UNORM_S8_UINT:
+	case CF_PIXEL_FORMAT_D32_FLOAT_S8_UINT:
+		return true;
+	default:
+		return false;
+	}
+}
+
+static bool cf_pixel_format_has_alpha(CF_PixelFormat format)
+{
+	switch (format) {
+	case CF_PIXEL_FORMAT_A8_UNORM:
+	case CF_PIXEL_FORMAT_R8G8B8A8_UNORM:
+	case CF_PIXEL_FORMAT_R16G16B16A16_UNORM:
+	case CF_PIXEL_FORMAT_R10G10B10A2_UNORM:
+	case CF_PIXEL_FORMAT_B5G5R5A1_UNORM:
+	case CF_PIXEL_FORMAT_B4G4R4A4_UNORM:
+	case CF_PIXEL_FORMAT_B8G8R8A8_UNORM:
+	case CF_PIXEL_FORMAT_R8G8B8A8_SNORM:
+	case CF_PIXEL_FORMAT_R16G16B16A16_SNORM:
+	case CF_PIXEL_FORMAT_R16G16B16A16_FLOAT:
+	case CF_PIXEL_FORMAT_R32G32B32A32_FLOAT:
+	case CF_PIXEL_FORMAT_R8G8B8A8_UINT:
+	case CF_PIXEL_FORMAT_R16G16B16A16_UINT:
+	case CF_PIXEL_FORMAT_R8G8B8A8_INT:
+	case CF_PIXEL_FORMAT_R16G16B16A16_INT:
+	case CF_PIXEL_FORMAT_R8G8B8A8_UNORM_SRGB:
+	case CF_PIXEL_FORMAT_B8G8R8A8_UNORM_SRGB:
+	case CF_PIXEL_FORMAT_BC1_RGBA_UNORM:
+	case CF_PIXEL_FORMAT_BC2_RGBA_UNORM:
+	case CF_PIXEL_FORMAT_BC3_RGBA_UNORM:
+	case CF_PIXEL_FORMAT_BC7_RGBA_UNORM:
+	case CF_PIXEL_FORMAT_BC1_RGBA_UNORM_SRGB:
+	case CF_PIXEL_FORMAT_BC2_RGBA_UNORM_SRGB:
+	case CF_PIXEL_FORMAT_BC3_RGBA_UNORM_SRGB:
+	case CF_PIXEL_FORMAT_BC7_RGBA_UNORM_SRGB:
+		return true;
+	default:
+		return false;
+	}
+}
+
+
+static bool opengl_has_extension(const char* name)
+{
+	if (!name) return true;
+	GLint count = 0;
+#if defined(GL_NUM_EXTENSIONS)
+	glGetIntegerv(GL_NUM_EXTENSIONS, &count);
+	for (GLint i = 0; i < count; ++i) {
+		const char* ext = (const char*)glGetStringi(GL_EXTENSIONS, (GLuint)i);
+		if (ext && CF_STRCMP(ext, name) == 0) return true;
+	}
+#else
+	const char* ext = (const char*)glGetString(GL_EXTENSIONS);
+	if (!ext) return false;
+	const char* start = ext;
+	size_t len = CF_STRLEN(name);
+	while ((start = CF_STRSTR(start, name))) {
+		if ((start == ext || start[-1] == ' ') && (start[len] == ' ' || start[len] == ' ')) return true;
+		start += len;
+	}
+#endif
+	return false;
+}
+
+static CF_GL_PixelFormatInfo* opengl_find_pixel_format_info(CF_PixelFormat format)
+{
+	for (size_t i = 0; i < CF_ARRAY_SIZE(g_gl_pixel_formats); ++i) {
+		if (g_gl_pixel_formats[i].format == format) return &g_gl_pixel_formats[i];
+	}
+	return NULL;
+}
+
+static void opengl_refresh_format_caps()
+{
+	static bool s_caps_initialized = false;
+	if (s_caps_initialized) return;
+	s_caps_initialized = true;
+
+	for (size_t i = 0; i < CF_ARRAY_SIZE(g_gl_pixel_formats); ++i) {
+		CF_GL_PixelFormatInfo& info = g_gl_pixel_formats[i];
+		info.caps = 0;
+		if (info.internal_fmt == GL_NONE) continue;
+		if (!opengl_has_extension(info.required_extension)) continue;
+
+		GLint supported = GL_FALSE;
+		glGetInternalformativ(GL_TEXTURE_2D, info.internal_fmt, GL_INTERNALFORMAT_SUPPORTED, 1, &supported);
+		if (!supported) continue;
+
+		info.caps |= CF_GL_FMT_CAP_SAMPLE;
+		GLint filterable = GL_FALSE;
+		glGetInternalformativ(GL_TEXTURE_2D, info.internal_fmt, GL_FILTER, 1, &filterable);
+		if (filterable == GL_TRUE) info.caps |= CF_GL_FMT_CAP_LINEAR;
+
+		GLint color_renderable = GL_FALSE;
+		glGetInternalformativ(GL_TEXTURE_2D, info.internal_fmt, GL_COLOR_RENDERABLE, 1, &color_renderable);
+		if (color_renderable == GL_TRUE) info.caps |= CF_GL_FMT_CAP_COLOR;
+
+		GLint depth_renderable = GL_FALSE;
+		glGetInternalformativ(GL_TEXTURE_2D, info.internal_fmt, GL_DEPTH_RENDERABLE, 1, &depth_renderable);
+		if (depth_renderable == GL_TRUE) info.caps |= CF_GL_FMT_CAP_DEPTH;
+
+		GLint stencil_renderable = GL_FALSE;
+		glGetInternalformativ(GL_TEXTURE_2D, info.internal_fmt, GL_STENCIL_RENDERABLE, 1, &stencil_renderable);
+		if (stencil_renderable == GL_TRUE) info.caps |= CF_GL_FMT_CAP_STENCIL;
+
+		GLint sample_count = 0;
+		glGetInternalformativ(GL_TEXTURE_2D, info.internal_fmt, GL_SAMPLES, 1, &sample_count);
+		if (sample_count > 1) info.caps |= CF_GL_FMT_CAP_MSAA;
+
+		if (info.has_alpha) info.caps |= CF_GL_FMT_CAP_ALPHA;
+		if (info.is_depth) info.caps |= CF_GL_FMT_CAP_DEPTH;
+		if (info.has_stencil) info.caps |= CF_GL_FMT_CAP_STENCIL;
+		if (info.is_integer && (info.caps & CF_GL_FMT_CAP_LINEAR)) info.caps &= ~CF_GL_FMT_CAP_LINEAR;
+	}
+}
+
 CF_BackendType opengl_query_backend()
 {
 	return CF_BACKEND_TYPE_PRIVATE;
@@ -1541,9 +1781,9 @@ CF_BackendType opengl_query_backend()
 char* opengl_transpile_spirv_to_glsl(const CF_ShaderBytecode& bytecode)
 {
 	if (!bytecode.content || !bytecode.size) return NULL;
+	if (!g_spvc_context) return NULL;
 
-	spvc_context context = NULL;
-	if (spvc_context_create(&context) != SPVC_SUCCESS) return NULL;
+	spvc_context context = g_spvc_context;
 
 	spvc_parsed_ir ir = NULL;
 	spvc_result result = spvc_context_parse_spirv(
@@ -1553,14 +1793,14 @@ char* opengl_transpile_spirv_to_glsl(const CF_ShaderBytecode& bytecode)
 		&ir
 	);
 	if (result != SPVC_SUCCESS) {
-		spvc_context_destroy(context);
+		spvc_context_release_allocations(context);
 		return NULL;
 	}
 
 	spvc_compiler compiler = NULL;
 	result = spvc_context_create_compiler(context, SPVC_BACKEND_GLSL, ir, SPVC_CAPTURE_MODE_TAKE_OWNERSHIP, &compiler);
 	if (result != SPVC_SUCCESS) {
-		spvc_context_destroy(context);
+		spvc_context_release_allocations(context);
 		return NULL;
 	}
 
@@ -1586,7 +1826,7 @@ char* opengl_transpile_spirv_to_glsl(const CF_ShaderBytecode& bytecode)
 		CF_MEMCPY(output, source, len + 1);
 	}
 
-	spvc_context_destroy(context);
+	spvc_context_release_allocations(context);
 	return output;
 }
 
@@ -1618,25 +1858,20 @@ CF_INLINE GLenum opengl_wrap_wrap(CF_WrapMode w)
 
 CF_INLINE GLenum opengl_internal_format(CF_PixelFormat f)
 {
-	switch (f) { default:
-	case CF_PIXEL_FORMAT_R8G8B8A8_UNORM:    return GL_RGBA8;
-	case CF_PIXEL_FORMAT_D16_UNORM:         return GL_DEPTH_COMPONENT16;
-	case CF_PIXEL_FORMAT_D24_UNORM_S8_UINT: return GL_DEPTH24_STENCIL8;
-	}
+	CF_GL_PixelFormatInfo* info = opengl_find_pixel_format_info(f);
+	return info ? info->internal_fmt : GL_NONE;
 }
 
 CF_INLINE GLenum opengl_upload_format(CF_PixelFormat f)
 {
-	switch (f) { default:
-	case CF_PIXEL_FORMAT_R8G8B8A8_UNORM: return GL_RGBA;
-	}
+	CF_GL_PixelFormatInfo* info = opengl_find_pixel_format_info(f);
+	return info ? info->upload_fmt : GL_NONE;
 }
 
 CF_INLINE GLenum opengl_upload_type(CF_PixelFormat f)
 {
-	switch (f) { default:
-	case CF_PIXEL_FORMAT_R8G8B8A8_UNORM: return GL_UNSIGNED_BYTE;
-	}
+	CF_GL_PixelFormatInfo* info = opengl_find_pixel_format_info(f);
+	return info ? info->upload_type : GL_NONE;
 }
 
 CF_INLINE GLenum opengl_primitive(CF_PrimitiveType p)
@@ -1704,15 +1939,15 @@ CF_INLINE GLenum opengl_blend_factor(CF_BlendFactor f)
 
 struct CF_GL_TextureInternal
 {
-	int w = 0, h = 0;
-	GLuint id = 0;
-	GLenum internal_fmt = GL_RGBA8;
-	GLenum upload_fmt   = GL_RGBA;
-	GLenum upload_type  = GL_UNSIGNED_BYTE;
-	bool has_mips = false;
-	GLint min_filter = GL_LINEAR;
-	GLint mag_filter = GL_LINEAR;
-	GLint wrap_u = GL_REPEAT, wrap_v = GL_REPEAT;
+int w = 0, h = 0;
+GLuint id = 0;
+GLenum internal_fmt = GL_NONE;
+GLenum upload_fmt   = GL_NONE;
+GLenum upload_type  = GL_NONE;
+bool has_mips = false;
+GLint min_filter = GL_LINEAR;
+GLint mag_filter = GL_LINEAR;
+GLint wrap_u = GL_REPEAT, wrap_v = GL_REPEAT;
 };
 
 struct CF_GL_Buffer
@@ -1768,14 +2003,23 @@ static CF_GL_CanvasInternal* s_opengl_canvas = NULL;
 
 static void opengl_apply_sampler_params(CF_GL_TextureInternal* t, const CF_TextureParams& p)
 {
-	t->has_mips = p.generate_mipmaps || p.mip_count > 1;
-	t->min_filter = opengl_wrap_mip(p.mip_filter, t->has_mips);
-	t->mag_filter = opengl_wrap_filter(p.filter);
-	t->wrap_u = opengl_wrap_wrap(p.wrap_u);
-	t->wrap_v = opengl_wrap_wrap(p.wrap_v);
+opengl_refresh_format_caps();
+CF_GL_PixelFormatInfo* info = opengl_find_pixel_format_info(p.pixel_format);
+uint32_t caps = info ? info->caps : 0;
+t->has_mips = p.generate_mipmaps || p.mip_count > 1;
+GLenum min_filter = opengl_wrap_mip(p.mip_filter, t->has_mips);
+GLenum mag_filter = opengl_wrap_filter(p.filter);
+if (!(caps & CF_GL_FMT_CAP_LINEAR)) {
+min_filter = t->has_mips ? GL_NEAREST_MIPMAP_NEAREST : GL_NEAREST;
+mag_filter = GL_NEAREST;
+}
+t->min_filter = min_filter;
+t->mag_filter = mag_filter;
+t->wrap_u = opengl_wrap_wrap(p.wrap_u);
+t->wrap_v = opengl_wrap_wrap(p.wrap_v);
 
-	glBindTexture(GL_TEXTURE_2D, t->id);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, t->min_filter);
+glBindTexture(GL_TEXTURE_2D, t->id);
+glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, t->min_filter);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, t->mag_filter);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, t->wrap_u);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, t->wrap_v);
@@ -1784,9 +2028,9 @@ static void opengl_apply_sampler_params(CF_GL_TextureInternal* t, const CF_Textu
 
 CF_TextureParams opengl_texture_defaults(int w, int h)
 {
-	CF_TextureParams p{};
-	p.pixel_format = CF_PIXEL_FORMAT_R8G8B8A8_UNORM;
-	p.usage = CF_TEXTURE_USAGE_SAMPLER_BIT;
+CF_TextureParams p{};
+p.pixel_format = CF_PIXEL_FORMAT_R8G8B8A8_UNORM;
+p.usage = CF_TEXTURE_USAGE_SAMPLER_BIT;
 	p.filter = CF_FILTER_LINEAR;
 	p.wrap_u = CF_WRAP_MODE_REPEAT; p.wrap_v = CF_WRAP_MODE_REPEAT;
 	p.mip_filter = CF_MIP_FILTER_LINEAR;
@@ -1796,29 +2040,77 @@ CF_TextureParams opengl_texture_defaults(int w, int h)
 
 bool opengl_texture_supports_format(CF_PixelFormat format, CF_TextureUsageBits usage)
 {
-	CF_UNUSED(usage);
-	switch (format) {
-	case CF_PIXEL_FORMAT_R8G8B8A8_UNORM:
-	case CF_PIXEL_FORMAT_D16_UNORM:
-	case CF_PIXEL_FORMAT_D24_UNORM_S8_UINT:
-		return true;
-	default:
-		return false;
-	}
+opengl_refresh_format_caps();
+CF_GL_PixelFormatInfo* info = opengl_find_pixel_format_info(format);
+if (!info || info->internal_fmt == GL_NONE) return false;
+uint32_t caps = info->caps;
+if (!caps) return false;
+if (usage & (CF_TEXTURE_USAGE_GRAPHICS_STORAGE_READ_BIT | CF_TEXTURE_USAGE_COMPUTE_STORAGE_READ_BIT | CF_TEXTURE_USAGE_COMPUTE_STORAGE_WRITE_BIT)) return false;
+if ((usage & CF_TEXTURE_USAGE_SAMPLER_BIT) && !(caps & CF_GL_FMT_CAP_SAMPLE)) return false;
+if ((usage & CF_TEXTURE_USAGE_COLOR_TARGET_BIT) && !(caps & CF_GL_FMT_CAP_COLOR)) return false;
+if (usage & CF_TEXTURE_USAGE_DEPTH_STENCIL_TARGET_BIT) {
+if (!info->is_depth) return false;
+if (!(caps & CF_GL_FMT_CAP_DEPTH)) return false;
+if (info->has_stencil && !(caps & CF_GL_FMT_CAP_STENCIL)) return false;
+}
+return true;
+}
+
+bool opengl_query_pixel_format(CF_PixelFormat format, CF_PixelFormatOp op)
+{
+opengl_refresh_format_caps();
+CF_GL_PixelFormatInfo* info = opengl_find_pixel_format_info(format);
+if (!info || info->internal_fmt == GL_NONE) return false;
+uint32_t caps = info->caps;
+if (!caps) return false;
+switch (op) {
+case CF_PIXELFORMAT_OP_NEAREST_FILTER:
+return (caps & CF_GL_FMT_CAP_SAMPLE) != 0;
+case CF_PIXELFORMAT_OP_BILINEAR_FILTER:
+return (caps & CF_GL_FMT_CAP_SAMPLE) && (caps & CF_GL_FMT_CAP_LINEAR);
+case CF_PIXELFORMAT_OP_RENDER_TARGET:
+return (caps & CF_GL_FMT_CAP_COLOR) != 0;
+case CF_PIXELFORMAT_OP_ALPHA_BLENDING:
+if (!(caps & CF_GL_FMT_CAP_COLOR)) return false;
+if (!(caps & CF_GL_FMT_CAP_ALPHA)) return false;
+return !info->is_integer;
+case CF_PIXELFORMAT_OP_MSAA:
+if (info->is_depth) return (caps & CF_GL_FMT_CAP_MSAA) && (caps & CF_GL_FMT_CAP_DEPTH);
+return (caps & CF_GL_FMT_CAP_MSAA) && (caps & CF_GL_FMT_CAP_COLOR);
+case CF_PIXELFORMAT_OP_DEPTH:
+return (caps & CF_GL_FMT_CAP_DEPTH) != 0;
+default:
+return false;
+}
 }
 
 CF_Texture opengl_make_texture(CF_TextureParams params)
 {
-	auto* t = CF_NEW(CF_GL_TextureInternal);
-	t->w = params.width; t->h = params.height;
-	t->internal_fmt = opengl_internal_format(params.pixel_format);
-	t->upload_fmt   = opengl_upload_format(params.pixel_format);
-	t->upload_type  = opengl_upload_type(params.pixel_format);
+if (!opengl_texture_supports_format(params.pixel_format, (CF_TextureUsageBits)params.usage)) {
+CF_ASSERT(!"Unsupported pixel format for OpenGL backend.");
+return CF_Texture{};
+}
+CF_GL_PixelFormatInfo* info = opengl_find_pixel_format_info(params.pixel_format);
+if (!info || info->internal_fmt == GL_NONE) return CF_Texture{};
 
-	glGenTextures(1, &t->id);
-	glBindTexture(GL_TEXTURE_2D, t->id);
-	glTexImage2D(GL_TEXTURE_2D, 0, t->internal_fmt, t->w, t->h, 0, t->upload_fmt, t->upload_type, NULL);
-	opengl_apply_sampler_params(t, params);
+auto* t = CF_NEW(CF_GL_TextureInternal);
+t->w = params.width; t->h = params.height;
+t->internal_fmt = info->internal_fmt;
+t->upload_fmt   = info->upload_fmt;
+t->upload_type  = info->upload_type;
+if (!info->is_depth && (t->upload_fmt == GL_NONE || t->upload_type == GL_NONE)) {
+CF_FREE(t);
+return CF_Texture{};
+}
+
+glGenTextures(1, &t->id);
+if (!t->id) {
+CF_FREE(t);
+return CF_Texture{};
+}
+glBindTexture(GL_TEXTURE_2D, t->id);
+glTexImage2D(GL_TEXTURE_2D, 0, t->internal_fmt, t->w, t->h, 0, t->upload_fmt, t->upload_type, NULL);
+opengl_apply_sampler_params(t, params);
 	if (params.generate_mipmaps) glGenerateMipmap(GL_TEXTURE_2D);
 	glBindTexture(GL_TEXTURE_2D, 0);
 
@@ -1868,42 +2160,66 @@ CF_CanvasParams opengl_canvas_defaults(int w, int h)
 	CF_CanvasParams p;
 	CF_MEMSET(&p, 0, sizeof(p));
 	if (w == 0 || h == 0) return p;
-	p.target = opengl_texture_defaults(w, h);
-	p.target.usage |= CF_TEXTURE_USAGE_COLOR_TARGET_BIT;
-	p.depth_stencil_enable = false;
-	p.depth_stencil_target = opengl_texture_defaults(w, h);
-	p.depth_stencil_target.pixel_format = CF_PIXEL_FORMAT_D16_UNORM;
-	p.sample_count = CF_SAMPLE_COUNT_1;
-	return p;
+p.target = opengl_texture_defaults(w, h);
+p.target.usage |= CF_TEXTURE_USAGE_COLOR_TARGET_BIT;
+p.depth_stencil_enable = false;
+p.depth_stencil_target = opengl_texture_defaults(w, h);
+p.depth_stencil_target.pixel_format = CF_PIXEL_FORMAT_D16_UNORM;
+p.depth_stencil_target.usage = CF_TEXTURE_USAGE_DEPTH_STENCIL_TARGET_BIT;
+p.sample_count = CF_SAMPLE_COUNT_1;
+return p;
 }
 
 static GLuint opengl_make_depth_renderbuffer(const CF_TextureParams& p)
 {
-	GLuint rbo = 0;
-	glGenRenderbuffers(1, &rbo);
-	glBindRenderbuffer(GL_RENDERBUFFER, rbo);
-	if (p.pixel_format == CF_PIXEL_FORMAT_D24_UNORM_S8_UINT)
-		glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, p.width, p.height);
-	else
-		glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT16, p.width, p.height);
-	glBindRenderbuffer(GL_RENDERBUFFER, 0);
-	return rbo;
+opengl_refresh_format_caps();
+CF_GL_PixelFormatInfo* info = opengl_find_pixel_format_info(p.pixel_format);
+if (!info || info->internal_fmt == GL_NONE || !info->is_depth) return 0;
+if (!(info->caps & CF_GL_FMT_CAP_DEPTH)) return 0;
+if (info->has_stencil && !(info->caps & CF_GL_FMT_CAP_STENCIL)) return 0;
+
+GLuint rbo = 0;
+glGenRenderbuffers(1, &rbo);
+glBindRenderbuffer(GL_RENDERBUFFER, rbo);
+glRenderbufferStorage(GL_RENDERBUFFER, info->internal_fmt, p.width, p.height);
+glBindRenderbuffer(GL_RENDERBUFFER, 0);
+return rbo;
 }
 
 CF_Canvas opengl_make_canvas(CF_CanvasParams params)
 {
-	auto* c = CF_NEW(CF_GL_CanvasInternal);
-	c->w = params.target.width; c->h = params.target.height;
+if (!opengl_texture_supports_format(params.target.pixel_format, (CF_TextureUsageBits)params.target.usage)) {
+CF_ASSERT(!"Unsupported color target format for OpenGL backend.");
+return CF_Canvas{};
+}
+if (params.depth_stencil_enable) {
+if (!opengl_texture_supports_format(params.depth_stencil_target.pixel_format, (CF_TextureUsageBits)params.depth_stencil_target.usage)) {
+CF_ASSERT(!"Unsupported depth/stencil format for OpenGL backend.");
+return CF_Canvas{};
+}
+}
 
-	// color
-	CF_Texture color = opengl_make_texture(params.target);
-	c->cf_color = color;
-	c->color = ((CF_GL_TextureInternal*)(uintptr_t)color.id)->id;
+auto* c = CF_NEW(CF_GL_CanvasInternal);
+c->w = params.target.width; c->h = params.target.height;
 
-	// depth/stencil (renderbuffer)
-	if (params.depth_stencil_enable) {
-		c->depth = opengl_make_depth_renderbuffer(params.depth_stencil_target);
-	}
+// color
+CF_Texture color = opengl_make_texture(params.target);
+c->cf_color = color;
+if (!color.id) {
+CF_FREE(c);
+return CF_Canvas{};
+}
+c->color = ((CF_GL_TextureInternal*)(uintptr_t)color.id)->id;
+
+// depth/stencil (renderbuffer)
+if (params.depth_stencil_enable) {
+c->depth = opengl_make_depth_renderbuffer(params.depth_stencil_target);
+if (!c->depth) {
+opengl_destroy_texture(color);
+CF_FREE(c);
+return CF_Canvas{};
+}
+}
 
 	glGenFramebuffers(1, &c->fbo);
 	glBindFramebuffer(GL_FRAMEBUFFER, c->fbo);
@@ -2510,6 +2826,7 @@ CF_BackendType cf_query_backend()
 	return type;
 }
 
+
 bool cf_texture_supports_format(CF_PixelFormat format, CF_TextureUsageBits usage)
 {
 	bool supported = false;
@@ -2518,10 +2835,18 @@ bool cf_texture_supports_format(CF_PixelFormat format, CF_TextureUsageBits usage
 	return supported;
 }
 
+bool cf_query_pixel_format(CF_PixelFormat format, CF_PixelFormatOp op)
+{
+	bool supported = false;
+	if (app->use_sdlgpu) supported |= sdlgpu_query_pixel_format(format, op);
+	if (app->use_opengl) supported |= opengl_query_pixel_format(format, op);
+	return supported;
+}
+
 CF_TextureParams cf_texture_defaults(int w, int h)
 {
-	CF_TextureParams params{};
-	if (app->use_sdlgpu) params = sdlgpu_texture_defaults(w, h);
+CF_TextureParams params{};
+if (app->use_sdlgpu) params = sdlgpu_texture_defaults(w, h);
 	if (app->use_opengl) params = opengl_texture_defaults(w, h);
 	return params;
 }

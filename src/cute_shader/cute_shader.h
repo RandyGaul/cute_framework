@@ -2,6 +2,7 @@
 #define CUTE_SHADER_H
 
 #include <cute_shader_bytecode.h>
+#include <SDL3_shadercross/spirv.h>
 
 typedef struct CF_ShaderCompilerDefine
 {
@@ -63,6 +64,8 @@ extern "C" {
 void cute_shader_init(void);
 
 void cute_shader_cleanup(void);
+
+extern spvc_context g_spvc_context;
 
 CF_ShaderCompilerResult cute_shader_compile(const char* source, CF_ShaderCompilerStage stage, CF_ShaderCompilerConfig config);
 
