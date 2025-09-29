@@ -1616,6 +1616,7 @@ void sdlgpu_commit()
 
 #ifdef CF_EMSCRIPTEN
 #	include <GLES3/gl3.h>
+#	include <GLES3/gl2ext.h>
 #else
 #	include <glad/glad.h>
 #endif
@@ -1645,13 +1646,9 @@ enum
 	CF_GL_FMT_CAP_STENCIL = 0x40,
 };
 
-#ifndef GL_BGRA8_EXT
-#define GL_BGRA8_EXT 0
-#endif
-
 #ifdef CF_EMSCRIPTEN
+#define GL_BGRA GL_BGRA_EXT
 // These are not available in WebGL
-#define GL_BGRA GL_NONE
 #define GL_R16_SNORM GL_NONE
 #define GL_RG16_SNORM GL_NONE
 #define GL_RGBA16_SNORM GL_NONE
@@ -1670,7 +1667,7 @@ static CF_GL_PixelFormatInfo g_gl_pixel_formats[] =
 	{ CF_PIXEL_FORMAT_B5G6R5_UNORM, GL_NONE, GL_NONE, GL_NONE, 0, false, false, false, false, NULL },
 	{ CF_PIXEL_FORMAT_B5G5R5A1_UNORM, GL_NONE, GL_NONE, GL_NONE, 0, true, false, false, false, NULL },
 	{ CF_PIXEL_FORMAT_B4G4R4A4_UNORM, GL_NONE, GL_NONE, GL_NONE, 0, true, false, false, false, NULL },
-	{ CF_PIXEL_FORMAT_B8G8R8A8_UNORM, GL_BGRA8_EXT, GL_BGRA, GL_UNSIGNED_BYTE, 0, true, false, false, false, "GL_EXT_texture_format_BGRA8888" },
+	{ CF_PIXEL_FORMAT_B8G8R8A8_UNORM, GL_BGRA, GL_BGRA, GL_UNSIGNED_BYTE, 0, true, false, false, false, "GL_EXT_texture_format_BGRA8888" },
 	{ CF_PIXEL_FORMAT_BC1_RGBA_UNORM, GL_NONE, GL_NONE, GL_NONE, 0, true, false, false, false, NULL },
 	{ CF_PIXEL_FORMAT_BC2_RGBA_UNORM, GL_NONE, GL_NONE, GL_NONE, 0, true, false, false, false, NULL },
 	{ CF_PIXEL_FORMAT_BC3_RGBA_UNORM, GL_NONE, GL_NONE, GL_NONE, 0, true, false, false, false, NULL },
