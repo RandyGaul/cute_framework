@@ -14,6 +14,108 @@ Cute Framework is a **2D game development framework** written in C/C++ designed 
 - 40+ sample programs demonstrating framework capabilities
 - Extensive documentation at https://randygaul.github.io/cute_framework/
 
+## Code Style and Conventions
+
+When contributing to Cute Framework, follow these established coding conventions:
+
+### Naming Conventions
+
+**Functions**:
+- Public API: `cf_` prefix with snake_case (e.g., `cf_make_app`, `cf_draw_sprite`)
+- Internal functions: `s_` prefix for static functions (e.g., `s_init_video`)
+- C++ namespace functions: snake_case without prefix (e.g., `sprite_draw`, `app_update`)
+
+**Types and Structures**:
+- Structs: `CF_` prefix with PascalCase (e.g., `CF_Sprite`, `CF_Canvas`, `CF_Material`)
+- Enums: `CF_` prefix with UPPER_SNAKE_CASE (e.g., `CF_DISPLAY_ORIENTATION_LANDSCAPE`)
+- Typedefs: Same as the underlying type convention
+
+**Macros and Constants**:
+- Macros: `CF_` prefix with UPPER_SNAKE_CASE (e.g., `CF_INLINE`, `CF_GLOBAL`, `CF_STATIC_ASSERT`)
+- Constants: UPPER_SNAKE_CASE or follow enum convention
+
+**Variables**:
+- Local variables: snake_case (e.g., `display_id`, `rect`)
+- Member variables: snake_case
+- Global variables: Typically avoided, but when necessary use descriptive names
+
+### File Organization
+
+**Header Files** (.h):
+- Include guards: `CF_[FILENAME]_H` (e.g., `CF_GRAPHICS_H`)
+- Copyright notice at the top
+- C API wrapped in `extern "C"` for C++ compatibility
+- Comprehensive Doxygen-style documentation for public APIs
+- Related functions grouped together with `@related` tags
+
+**Implementation Files** (.cpp/.c):
+- Copyright notice at the top
+- System/external includes first, then internal headers
+- Static functions and variables at file scope with `s_` prefix
+- Logical grouping of related functions
+
+### Documentation Style
+
+**API Documentation**:
+```c
+/**
+ * @function function_name
+ * @category category_name
+ * @brief    Brief one-line description.
+ * @param    param_name    Description of parameter.
+ * @return   Description of return value.
+ * @remarks  Additional details and usage notes.
+ * @related  Related functions for cross-reference.
+ */
+```
+
+### Code Formatting
+
+**Indentation and Spacing**:
+- Use tabs for indentation
+- Opening braces on the same line for functions and control structures
+- Space after control keywords: `if (`, `while (`, `for (`
+- No space after function names: `function_name(`
+
+**Line Length**:
+- Generally keep lines under 120 characters
+- Break long function signatures across multiple lines if needed
+
+### C++ Specific Conventions
+
+**Namespace**:
+- Primary namespace: `Cute` (using `namespace Cute;` in implementation files)
+- C++ wrapper functions use snake_case without cf_ prefix
+
+**Modern C++ Features**:
+- Target C++20 standard
+- Use `CF_INLINE` macro for inline functions (cross-platform compatibility)
+- Prefer stack allocation and value semantics where appropriate
+
+### Platform-Specific Code
+
+**Conditional Compilation**:
+- Use `#ifdef CF_WINDOWS`, `#ifdef CF_APPLE`, `#ifdef CF_LINUX`, `#ifdef CF_EMSCRIPTEN`
+- Platform detection handled in CMakeLists.txt:30-55
+
+**Portability Macros**:
+- `CF_INLINE` - Platform-appropriate inline keyword
+- `CF_GLOBAL` - Global variable declaration
+- `CF_STATIC_ASSERT` - Compile-time assertions
+
+### Memory Management
+
+- Prefer stack allocation when possible
+- Use `cf_alloc`/`cf_free` for dynamic allocation (not malloc/free)
+- RAII patterns in C++ code
+- Clear ownership semantics for allocated resources
+
+### Error Handling
+
+- Return `CF_Result` for operations that can fail
+- Use `is_error(result)` to check for errors
+- Provide meaningful error messages via result system
+
 ## Build Commands
 
 ### Building the Project
