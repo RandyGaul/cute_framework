@@ -2802,6 +2802,14 @@ void opengl_apply_shader(CF_Shader sh, CF_Material m)
 				case CF_VERTEX_FORMAT_FLOAT2: type=GL_FLOAT; comps=2; break;
 				case CF_VERTEX_FORMAT_FLOAT3: type=GL_FLOAT; comps=3; break;
 				case CF_VERTEX_FORMAT_FLOAT4: type=GL_FLOAT; comps=4; break;
+				case CF_VERTEX_FORMAT_INT:  type=GL_INT; comps=1; break;
+				case CF_VERTEX_FORMAT_INT2: type=GL_INT; comps=2; break;
+				case CF_VERTEX_FORMAT_INT3: type=GL_INT; comps=3; break;
+				case CF_VERTEX_FORMAT_INT4: type=GL_INT; comps=4; break;
+				case CF_VERTEX_FORMAT_UINT:  type=GL_UNSIGNED_INT; comps=1; break;
+				case CF_VERTEX_FORMAT_UINT2: type=GL_UNSIGNED_INT; comps=2; break;
+				case CF_VERTEX_FORMAT_UINT3: type=GL_UNSIGNED_INT; comps=3; break;
+				case CF_VERTEX_FORMAT_UINT4: type=GL_UNSIGNED_INT; comps=4; break;
 				case CF_VERTEX_FORMAT_BYTE4_NORM: type=GL_BYTE; comps=4; norm=GL_TRUE; break;
 				case CF_VERTEX_FORMAT_UBYTE4_NORM: type=GL_UNSIGNED_BYTE; comps=4; norm=GL_TRUE; break;
 				case CF_VERTEX_FORMAT_SHORT2: type=GL_SHORT; comps=2; break;
@@ -2812,11 +2820,17 @@ void opengl_apply_shader(CF_Shader sh, CF_Material m)
 				case CF_VERTEX_FORMAT_USHORT2_NORM: type=GL_UNSIGNED_SHORT; comps=2; norm=GL_TRUE; break;
 				case CF_VERTEX_FORMAT_USHORT4: type=GL_UNSIGNED_SHORT; comps=4; break;
 				case CF_VERTEX_FORMAT_USHORT4_NORM: type=GL_UNSIGNED_SHORT; comps=4; norm=GL_TRUE; break;
+				case CF_VERTEX_FORMAT_HALF2: type=GL_HALF_FLOAT; comps=2; break;
+				case CF_VERTEX_FORMAT_HALF4: type=GL_HALF_FLOAT; comps=4; break;
 				default: break;
 			}
 			glBindBuffer(GL_ARRAY_BUFFER, buf.id);
 			glEnableVertexAttribArray((GLuint)loc);
-			glVertexAttribPointer((GLuint)loc, comps, type, norm, buf.stride, (const void*)(intptr_t)a.offset);
+			if (type == GL_INT) {
+				glVertexAttribIPointer((GLuint)loc, comps, type, buf.stride, (const void*)(intptr_t)a.offset);
+			} else {
+				glVertexAttribPointer((GLuint)loc, comps, type, norm, buf.stride, (const void*)(intptr_t)a.offset);
+			}
 			glVertexAttribDivisor((GLuint)loc, per_instance ? 1 : 0);
 		}
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
