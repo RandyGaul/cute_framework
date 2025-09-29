@@ -2661,15 +2661,41 @@ void opengl_material_clear_uniforms(CF_Material m)
 void opengl_material_set_texture_fs(CF_Material m, const char* name, CF_Texture t)
 {
 	auto* mi = (CF_GL_MaterialInternal*)(uintptr_t)m.id;
+	name = sintern(name);
 	CF_MaterialTex mt{ sintern(name), t };
-	mi->fs.textures.add(mt);
+	CF_MaterialState* state = &mi->fs;
+
+	bool found = false;
+	for (int i = 0; i < state->textures.count(); ++i) {
+		if (state->textures[i].name == name) {
+			state->textures[i].handle = mt.handle;
+			found = true;
+			break;
+		}
+	}
+	if (!found) {
+		state->textures.add(mt);
+	}
 }
 
 void opengl_material_set_texture_vs(CF_Material m, const char* name, CF_Texture t)
 {
 	auto* mi = (CF_GL_MaterialInternal*)(uintptr_t)m.id;
+	name = sintern(name);
 	CF_MaterialTex mt{ sintern(name), t };
-	mi->vs.textures.add(mt);
+	CF_MaterialState* state = &mi->vs;
+
+	bool found = false;
+	for (int i = 0; i < state->textures.count(); ++i) {
+		if (state->textures[i].name == name) {
+			state->textures[i].handle = mt.handle;
+			found = true;
+			break;
+		}
+	}
+	if (!found) {
+		state->textures.add(mt);
+	}
 }
 
 void opengl_material_clear_textures(CF_Material m)
