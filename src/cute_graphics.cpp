@@ -2157,6 +2157,7 @@ CF_Texture opengl_make_texture(CF_TextureParams params)
 	opengl_apply_sampler_params(t, params);
 	if (params.generate_mipmaps) glGenerateMipmap(GL_TEXTURE_2D);
 	glBindTexture(GL_TEXTURE_2D, 0);
+	CF_POLL_OPENGL_ERROR();
 
 	return CF_Texture{ (uint64_t)(uintptr_t)t };
 }
@@ -2166,6 +2167,7 @@ void opengl_destroy_texture(CF_Texture tex)
 	if (!tex.id) return;
 	auto* t = (CF_GL_TextureInternal*)(uintptr_t)tex.id;
 	if (t->id) glDeleteTextures(1, &t->id);
+	CF_POLL_OPENGL_ERROR();
 	CF_FREE(t);
 }
 
@@ -2176,6 +2178,7 @@ void opengl_texture_update(CF_Texture tex, void* data, int /*size*/)
 	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, t->w, t->h, t->upload_fmt, t->upload_type, data);
 	if (t->has_mips) glGenerateMipmap(GL_TEXTURE_2D);
 	glBindTexture(GL_TEXTURE_2D, 0);
+	CF_POLL_OPENGL_ERROR();
 }
 
 void opengl_texture_update_mip(CF_Texture tex, void* data, int /*size*/, int mip)
@@ -2186,6 +2189,7 @@ void opengl_texture_update_mip(CF_Texture tex, void* data, int /*size*/, int mip
 	glBindTexture(GL_TEXTURE_2D, t->id);
 	glTexSubImage2D(GL_TEXTURE_2D, mip, 0, 0, w, h, t->upload_fmt, t->upload_type, data);
 	glBindTexture(GL_TEXTURE_2D, 0);
+	CF_POLL_OPENGL_ERROR();
 }
 
 void opengl_generate_mipmaps(CF_Texture tex)
@@ -2194,6 +2198,7 @@ void opengl_generate_mipmaps(CF_Texture tex)
 	glBindTexture(GL_TEXTURE_2D, t->id);
 	glGenerateMipmap(GL_TEXTURE_2D);
 	glBindTexture(GL_TEXTURE_2D, 0);
+	CF_POLL_OPENGL_ERROR();
 }
 
 uint64_t opengl_texture_handle(CF_Texture t) { return t.id; }
@@ -2227,6 +2232,7 @@ static GLuint opengl_make_depth_renderbuffer(const CF_TextureParams& p)
 	glBindRenderbuffer(GL_RENDERBUFFER, rbo);
 	glRenderbufferStorage(GL_RENDERBUFFER, info->internal_fmt, p.width, p.height);
 	glBindRenderbuffer(GL_RENDERBUFFER, 0);
+	CF_POLL_OPENGL_ERROR();
 	return rbo;
 }
 
@@ -2277,6 +2283,7 @@ CF_Canvas opengl_make_canvas(CF_CanvasParams params)
 	}
 	CF_ASSERT(glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	CF_POLL_OPENGL_ERROR();
 
 	return CF_Canvas{ (uint64_t)(uintptr_t)c };
 }
@@ -2288,6 +2295,7 @@ void opengl_destroy_canvas(CF_Canvas ch)
 	if (c->depth) glDeleteRenderbuffers(1, &c->depth);
 	if (c->fbo) glDeleteFramebuffers(1, &c->fbo);
 	opengl_destroy_texture(c->cf_color);
+	CF_POLL_OPENGL_ERROR();
 	CF_FREE(c);
 }
 
@@ -2308,6 +2316,7 @@ void opengl_clear_canvas(CF_Canvas ch)
 	glClearDepthf(app->clear_depth);
 	glClearStencil((GLint)app->clear_stencil);
 	glClear(bits);
+	CF_POLL_OPENGL_ERROR();
 	// leave bound for subsequent draws
 }
 
@@ -2318,6 +2327,7 @@ void opengl_apply_canvas(CF_Canvas ch, bool clear)
 	s_opengl_canvas = c;
 	glBindFramebuffer(GL_FRAMEBUFFER, c->fbo);
 	if (clear) opengl_clear_canvas(ch);
+	CF_POLL_OPENGL_ERROR();
 }
 
 void opengl_apply_viewport(int x, int y, int w, int h) { glViewport(x, y, w, h); }
@@ -2343,6 +2353,7 @@ CF_Mesh opengl_make_mesh(int vertex_buffer_size, const CF_VertexAttribute* attri
 	glBindBuffer(GL_ARRAY_BUFFER, m->vbo.id);
 	glBufferData(GL_ARRAY_BUFFER, vertex_buffer_size, NULL, GL_DYNAMIC_DRAW);
 	glBindVertexArray(0);
+	CF_POLL_OPENGL_ERROR();
 
 	return CF_Mesh{ (uint64_t)(uintptr_t)m };
 }
@@ -2357,6 +2368,7 @@ void opengl_mesh_set_index_buffer(CF_Mesh mh, int index_buffer_size_in_bytes, in
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m->ibo.id);
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, index_buffer_size_in_bytes, NULL, GL_DYNAMIC_DRAW);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+	CF_POLL_OPENGL_ERROR();
 }
 
 void opengl_mesh_set_instance_buffer(CF_Mesh mh, int instance_buffer_size_in_bytes, int instance_stride)
@@ -2368,6 +2380,7 @@ void opengl_mesh_set_instance_buffer(CF_Mesh mh, int instance_buffer_size_in_byt
 	glBindBuffer(GL_ARRAY_BUFFER, m->instance.id);
 	glBufferData(GL_ARRAY_BUFFER, instance_buffer_size_in_bytes, NULL, GL_DYNAMIC_DRAW);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	CF_POLL_OPENGL_ERROR();
 }
 
 void opengl_mesh_update_vertex_data(CF_Mesh mh, void* verts, int vertex_count)
@@ -2383,6 +2396,7 @@ void opengl_mesh_update_vertex_data(CF_Mesh mh, void* verts, int vertex_count)
 	}
 	m->vbo.count = vertex_count;
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	CF_POLL_OPENGL_ERROR();
 }
 
 void opengl_mesh_update_index_data(CF_Mesh mh, void* indices, int index_count)
@@ -2400,6 +2414,7 @@ void opengl_mesh_update_index_data(CF_Mesh mh, void* indices, int index_count)
 	}
 	m->ibo.count = index_count;
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+	CF_POLL_OPENGL_ERROR();
 }
 
 void opengl_mesh_update_instance_data(CF_Mesh mh, void* instances, int instance_count)
@@ -2416,6 +2431,7 @@ void opengl_mesh_update_instance_data(CF_Mesh mh, void* instances, int instance_
 	}
 	m->instance.count = instance_count;
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	CF_POLL_OPENGL_ERROR();
 }
 
 void opengl_destroy_mesh(CF_Mesh mh)
@@ -2426,6 +2442,7 @@ void opengl_destroy_mesh(CF_Mesh mh)
 	if (m->vbo.id) glDeleteBuffers(1, &m->vbo.id);
 	if (m->instance.id) glDeleteBuffers(1, &m->instance.id);
 	if (m->vao)	glDeleteVertexArrays(1, &m->vao);
+	CF_POLL_OPENGL_ERROR();
 	CF_FREE(m);
 }
 
@@ -2445,6 +2462,7 @@ void opengl_apply_mesh(CF_Mesh mh)
 	glBindVertexArray(m->vao);
 	glBindBuffer(GL_ARRAY_BUFFER, m->vbo.id);
 	if (m->ibo.id) glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m->ibo.id);
+	CF_POLL_OPENGL_ERROR();
 }
 
 static GLuint opengl_compile_shader(GLenum stage, const char* src)
@@ -2477,6 +2495,7 @@ static GLuint opengl_link_program(GLuint vs, GLuint fs)
 	}
 	glDetachShader(p, vs); glDetachShader(p, fs);
 	glDeleteShader(vs); glDeleteShader(fs);
+	CF_POLL_OPENGL_ERROR();
 	return p;
 }
 
@@ -2498,6 +2517,7 @@ static CF_Shader opengl_make_shader_es(const char* vs_src, const char* fs_src)
 		glUniformBlockBinding(sh->prog, sh->ubo_index, sh->ubo_binding);
 	}
 
+	CF_POLL_OPENGL_ERROR();
 	return CF_Shader{ (uint64_t)(uintptr_t)sh };
 }
 
@@ -2546,6 +2566,7 @@ void opengl_destroy_shader(CF_Shader sh)
 	auto* s = (CF_GL_ShaderInternal*)(uintptr_t)sh.id;
 	if (s->ubo) glDeleteBuffers(1, &s->ubo);
 	if (s->prog) glDeleteProgram(s->prog);
+	CF_POLL_OPENGL_ERROR();
 	CF_FREE(s);
 }
 
@@ -2698,6 +2719,7 @@ static void opengl_upload_uniform_block(CF_GL_ShaderInternal* sh, CF_GL_Material
 	glBindBufferBase(GL_UNIFORM_BUFFER, sh->ubo_binding, sh->ubo);
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
+	CF_POLL_OPENGL_ERROR();
 	CF_FREE(blob);
 }
 
@@ -2734,6 +2756,7 @@ void opengl_apply_shader(CF_Shader sh, CF_Material m)
 		glDisable(GL_BLEND);
 		glColorMask(GL_TRUE,GL_TRUE,GL_TRUE,GL_TRUE);
 	}
+	CF_POLL_OPENGL_ERROR();
 
 	// uniforms
 	opengl_upload_uniform_block(s_opengl_bindings.sh, s_opengl_bindings.ma);
@@ -2752,6 +2775,7 @@ void opengl_apply_shader(CF_Shader sh, CF_Material m)
 			++unit;
 		}
 	}
+	CF_POLL_OPENGL_ERROR();
 
 	// vertex attribs (match by name)
 	CF_GL_MeshInternal* me = s_opengl_bindings.me;
@@ -2792,6 +2816,7 @@ void opengl_apply_shader(CF_Shader sh, CF_Material m)
 		}
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
 	}
+	CF_POLL_OPENGL_ERROR();
 }
 
 void opengl_bind_mesh_for_shader(CF_Mesh mh)
@@ -2803,6 +2828,7 @@ void opengl_bind_mesh_for_shader(CF_Mesh mh)
 void opengl_draw_arrays(CF_PrimitiveType prim, int first, int count)
 {
 	glDrawArrays(opengl_primitive(prim), first, count);
+	CF_POLL_OPENGL_ERROR();
 }
 
 void opengl_draw_elements()
@@ -2829,6 +2855,7 @@ void opengl_draw_elements()
 		}
 	}
 
+	CF_POLL_OPENGL_ERROR();
 	++app->draw_call_count;
 }
 
@@ -2839,6 +2866,7 @@ void opengl_commit()
 	glUseProgram(0);
 	if (s_opengl_canvas) glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	s_opengl_canvas = NULL;
+	CF_POLL_OPENGL_ERROR();
 }
 
 void opengl_clear_color(float r, float g, float b, float a) { app->clear_color = make_color(r,g,b,a); }
@@ -2864,11 +2892,11 @@ CF_RenderState opengl_render_state_defaults()
 	return rs;
 }
 
-void opengl_poll_debug_output()
+void opengl_poll_debug_output(const char* file, int line)
 {
 	GLenum err;
 	while ((err = glGetError()) != GL_NO_ERROR) {
-		fprintf(stderr, "GL error: 0x%x\n", err);
+		fprintf(stderr, "%s:%d: GL error: 0x%x\n", file, line, err);
 	}
 }
 
