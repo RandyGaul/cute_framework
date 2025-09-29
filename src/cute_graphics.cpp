@@ -694,12 +694,12 @@ CF_Shader opengl_make_shader_from_source(const char* vertex_src, const char* fra
 
 void cf_load_internal_shaders()
 {
-#ifdef CF_RUNTIME_SHADER_COMPILATION
-	cute_shader_init();
-
 	if (spvc_context_create(&g_spvc_context) != SPVC_SUCCESS) {
 		g_spvc_context = NULL;
 	}
+
+#ifdef CF_RUNTIME_SHADER_COMPILATION
+	cute_shader_init();
 
 	// Compile built-in shaders.
 	if (app->use_opengl) {
@@ -1647,6 +1647,14 @@ enum
 
 #ifndef GL_BGRA8_EXT
 #define GL_BGRA8_EXT 0
+#endif
+
+#ifdef CF_EMSCRIPTEN
+// These are not available in WebGL
+#define GL_BGRA GL_NONE
+#define GL_R16_SNORM GL_NONE
+#define GL_RG16_SNORM GL_NONE
+#define GL_RGBA16_SNORM GL_NONE
 #endif
 
 static CF_GL_PixelFormatInfo g_gl_pixel_formats[] =
