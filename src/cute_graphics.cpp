@@ -2864,6 +2864,14 @@ CF_RenderState opengl_render_state_defaults()
 	return rs;
 }
 
+void opengl_poll_debug_output()
+{
+	GLenum err;
+	while ((err = glGetError()) != GL_NO_ERROR) {
+		fprintf(stderr, "GL error: 0x%x\n", err);
+	}
+}
+
 //--------------------------------------------------------------------------------------------------
 // Backend dispatch shims.
 

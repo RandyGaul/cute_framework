@@ -73,6 +73,7 @@ struct CF_App
 	SDL_Window* window = NULL;
 	bool use_sdlgpu = false;
 	bool use_opengl = false;
+	bool debug_opengl = false;
 	SDL_GPUDevice* device = NULL;
 	SDL_GLContext gl_ctx = NULL;
 	cs_context_t* cute_sound = NULL;

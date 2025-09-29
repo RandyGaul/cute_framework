@@ -498,5 +498,6 @@ void cf_load_internal_shaders();
 void cf_unload_internal_shaders();
 void cf_shader_watch();
 void cf_clear_canvas(CF_Canvas canvas);
+void opengl_poll_debug_output();
 
 #endif // CF_GRAPHICS_INTERNAL_H

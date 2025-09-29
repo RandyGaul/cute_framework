@@ -277,9 +277,13 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 			SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
 			SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
 
-			SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
-			SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
+			SDL_GL_SetAttribute(SDL_GL_RED_SIZE,     8);
+			SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE,   8);
+			SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE,    8);
+			SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE,   8);
+			SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE,   24);
 			SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
+			SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 
 			if (options & CF_APP_OPTIONS_GFX_DEBUG_BIT) {
 				SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_DEBUG_FLAG);
@@ -330,6 +334,9 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 	if (use_gfx) {
 		if (use_opengl) {
 			app->use_opengl = true;
+			if (options & CF_APP_OPTIONS_GFX_DEBUG_BIT) {
+				app->debug_opengl = true;
+			}
 		} else {
 			app->use_sdlgpu = true;
 			app->device = device;
@@ -416,6 +423,10 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 	} else if (!(options & CF_APP_OPTIONS_FILE_SYSTEM_DONT_DEFAULT_MOUNT_BIT)) {
 		// Put the base directory (the path to the exe) onto the file system search path.
 		cf_fs_mount(cf_fs_get_base_directory(), "", true);
+	}
+
+	if (app->debug_opengl) {
+		opengl_poll_debug_output();
 	}
 
 	return cf_result_success();
@@ -512,6 +523,10 @@ void cf_app_update(CF_OnUpdateFn* on_update)
 	app->user_on_update = on_update;
 	cf_begin_frame_input();
 	cf_update_time(s_on_update);
+
+	if (app->debug_opengl) {
+		opengl_poll_debug_output();
+	}
 }
 
 static void s_imgui_present(SDL_GPUTexture* swapchain_texture)
@@ -618,12 +633,21 @@ int cf_app_draw_onto_screen(bool clear)
 	}
 
 	if (app->use_opengl) {
-		// TODO - Get canvas onto backbuffer somehow.
+		// Blit onto the default framebuffer.
+		apply_mesh(app->backbuffer_quad);
+		v2 u_texture_size = V2((float)app->w, (float)app->h);
+		material_set_texture_fs(app->backbuffer_material, "u_image", canvas_get_target(app->offscreen_canvas));
+		material_set_uniform_fs(app->backbuffer_material, "u_texture_size", &u_texture_size, CF_UNIFORM_TYPE_FLOAT2, 1);
+		apply_shader(app->backbuffer_shader, app->backbuffer_material);
+		draw_elements();
+
+		cf_commit();
 
 		// Dear ImGui draw.
 		if (app->using_imgui) {
 			s_imgui_present(NULL);
 		}
+
 		SDL_GL_SwapWindow(app->window);
 	}
 
@@ -643,6 +667,10 @@ int cf_app_draw_onto_screen(bool clear)
 			SDL_SubmitGPUCommandBuffer(app->cmd);
 		}
 		app->cmd = NULL;
+	}
+
+	if (app->debug_opengl) {
+		opengl_poll_debug_output();
 	}
 
 	// Clear all pushed draw parameters.
