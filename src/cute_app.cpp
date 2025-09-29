@@ -425,9 +425,7 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 		cf_fs_mount(cf_fs_get_base_directory(), "", true);
 	}
 
-	if (app->debug_opengl) {
-		opengl_poll_debug_output();
-	}
+	CF_POLL_OPENGL_ERROR();
 
 	return cf_result_success();
 }
@@ -524,9 +522,7 @@ void cf_app_update(CF_OnUpdateFn* on_update)
 	cf_begin_frame_input();
 	cf_update_time(s_on_update);
 
-	if (app->debug_opengl) {
-		opengl_poll_debug_output();
-	}
+	CF_POLL_OPENGL_ERROR();
 }
 
 static void s_imgui_present(SDL_GPUTexture* swapchain_texture)
@@ -669,9 +665,7 @@ int cf_app_draw_onto_screen(bool clear)
 		app->cmd = NULL;
 	}
 
-	if (app->debug_opengl) {
-		opengl_poll_debug_output();
-	}
+	CF_POLL_OPENGL_ERROR();
 
 	// Clear all pushed draw parameters.
 	draw->alpha_discards.set_count(1);

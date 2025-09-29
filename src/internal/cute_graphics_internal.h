@@ -498,6 +498,11 @@ void cf_load_internal_shaders();
 void cf_unload_internal_shaders();
 void cf_shader_watch();
 void cf_clear_canvas(CF_Canvas canvas);
-void opengl_poll_debug_output();
+void opengl_poll_debug_output(const char* file, int line);
+
+#define CF_POLL_OPENGL_ERROR() \
+	do { \
+		if (app->debug_opengl) { opengl_poll_debug_output(__FILE__, __LINE__); } \
+	} while (0)
 
 #endif // CF_GRAPHICS_INTERNAL_H
