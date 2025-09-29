@@ -694,12 +694,12 @@ CF_Shader opengl_make_shader_from_source(const char* vertex_src, const char* fra
 
 void cf_load_internal_shaders()
 {
-#ifdef CF_RUNTIME_SHADER_COMPILATION
-	cute_shader_init();
-
 	if (spvc_context_create(&g_spvc_context) != SPVC_SUCCESS) {
 		g_spvc_context = NULL;
 	}
+
+#ifdef CF_RUNTIME_SHADER_COMPILATION
+	cute_shader_init();
 
 	// Compile built-in shaders.
 	if (app->use_opengl) {
@@ -1616,6 +1616,7 @@ void sdlgpu_commit()
 
 #ifdef CF_EMSCRIPTEN
 #	include <GLES3/gl3.h>
+#	include <GLES3/gl2ext.h>
 #else
 #	include <glad/glad.h>
 #endif
@@ -1645,8 +1646,12 @@ enum
 	CF_GL_FMT_CAP_STENCIL = 0x40,
 };
 
-#ifndef GL_BGRA8_EXT
-#define GL_BGRA8_EXT 0
+#ifdef CF_EMSCRIPTEN
+#define GL_BGRA GL_BGRA_EXT
+// These are not available in WebGL
+#define GL_R16_SNORM GL_NONE
+#define GL_RG16_SNORM GL_NONE
+#define GL_RGBA16_SNORM GL_NONE
 #endif
 
 static CF_GL_PixelFormatInfo g_gl_pixel_formats[] =
@@ -1662,7 +1667,7 @@ static CF_GL_PixelFormatInfo g_gl_pixel_formats[] =
 	{ CF_PIXEL_FORMAT_B5G6R5_UNORM, GL_NONE, GL_NONE, GL_NONE, 0, false, false, false, false, NULL },
 	{ CF_PIXEL_FORMAT_B5G5R5A1_UNORM, GL_NONE, GL_NONE, GL_NONE, 0, true, false, false, false, NULL },
 	{ CF_PIXEL_FORMAT_B4G4R4A4_UNORM, GL_NONE, GL_NONE, GL_NONE, 0, true, false, false, false, NULL },
-	{ CF_PIXEL_FORMAT_B8G8R8A8_UNORM, GL_BGRA8_EXT, GL_BGRA, GL_UNSIGNED_BYTE, 0, true, false, false, false, "GL_EXT_texture_format_BGRA8888" },
+	{ CF_PIXEL_FORMAT_B8G8R8A8_UNORM, GL_BGRA, GL_BGRA, GL_UNSIGNED_BYTE, 0, true, false, false, false, "GL_EXT_texture_format_BGRA8888" },
 	{ CF_PIXEL_FORMAT_BC1_RGBA_UNORM, GL_NONE, GL_NONE, GL_NONE, 0, true, false, false, false, NULL },
 	{ CF_PIXEL_FORMAT_BC2_RGBA_UNORM, GL_NONE, GL_NONE, GL_NONE, 0, true, false, false, false, NULL },
 	{ CF_PIXEL_FORMAT_BC3_RGBA_UNORM, GL_NONE, GL_NONE, GL_NONE, 0, true, false, false, false, NULL },
@@ -2656,15 +2661,41 @@ void opengl_material_clear_uniforms(CF_Material m)
 void opengl_material_set_texture_fs(CF_Material m, const char* name, CF_Texture t)
 {
 	auto* mi = (CF_GL_MaterialInternal*)(uintptr_t)m.id;
+	name = sintern(name);
 	CF_MaterialTex mt{ sintern(name), t };
-	mi->fs.textures.add(mt);
+	CF_MaterialState* state = &mi->fs;
+
+	bool found = false;
+	for (int i = 0; i < state->textures.count(); ++i) {
+		if (state->textures[i].name == name) {
+			state->textures[i].handle = mt.handle;
+			found = true;
+			break;
+		}
+	}
+	if (!found) {
+		state->textures.add(mt);
+	}
 }
 
 void opengl_material_set_texture_vs(CF_Material m, const char* name, CF_Texture t)
 {
 	auto* mi = (CF_GL_MaterialInternal*)(uintptr_t)m.id;
+	name = sintern(name);
 	CF_MaterialTex mt{ sintern(name), t };
-	mi->vs.textures.add(mt);
+	CF_MaterialState* state = &mi->vs;
+
+	bool found = false;
+	for (int i = 0; i < state->textures.count(); ++i) {
+		if (state->textures[i].name == name) {
+			state->textures[i].handle = mt.handle;
+			found = true;
+			break;
+		}
+	}
+	if (!found) {
+		state->textures.add(mt);
+	}
 }
 
 void opengl_material_clear_textures(CF_Material m)
@@ -2797,6 +2828,14 @@ void opengl_apply_shader(CF_Shader sh, CF_Material m)
 				case CF_VERTEX_FORMAT_FLOAT2: type=GL_FLOAT; comps=2; break;
 				case CF_VERTEX_FORMAT_FLOAT3: type=GL_FLOAT; comps=3; break;
 				case CF_VERTEX_FORMAT_FLOAT4: type=GL_FLOAT; comps=4; break;
+				case CF_VERTEX_FORMAT_INT:  type=GL_INT; comps=1; break;
+				case CF_VERTEX_FORMAT_INT2: type=GL_INT; comps=2; break;
+				case CF_VERTEX_FORMAT_INT3: type=GL_INT; comps=3; break;
+				case CF_VERTEX_FORMAT_INT4: type=GL_INT; comps=4; break;
+				case CF_VERTEX_FORMAT_UINT:  type=GL_UNSIGNED_INT; comps=1; break;
+				case CF_VERTEX_FORMAT_UINT2: type=GL_UNSIGNED_INT; comps=2; break;
+				case CF_VERTEX_FORMAT_UINT3: type=GL_UNSIGNED_INT; comps=3; break;
+				case CF_VERTEX_FORMAT_UINT4: type=GL_UNSIGNED_INT; comps=4; break;
 				case CF_VERTEX_FORMAT_BYTE4_NORM: type=GL_BYTE; comps=4; norm=GL_TRUE; break;
 				case CF_VERTEX_FORMAT_UBYTE4_NORM: type=GL_UNSIGNED_BYTE; comps=4; norm=GL_TRUE; break;
 				case CF_VERTEX_FORMAT_SHORT2: type=GL_SHORT; comps=2; break;
@@ -2807,11 +2846,17 @@ void opengl_apply_shader(CF_Shader sh, CF_Material m)
 				case CF_VERTEX_FORMAT_USHORT2_NORM: type=GL_UNSIGNED_SHORT; comps=2; norm=GL_TRUE; break;
 				case CF_VERTEX_FORMAT_USHORT4: type=GL_UNSIGNED_SHORT; comps=4; break;
 				case CF_VERTEX_FORMAT_USHORT4_NORM: type=GL_UNSIGNED_SHORT; comps=4; norm=GL_TRUE; break;
+				case CF_VERTEX_FORMAT_HALF2: type=GL_HALF_FLOAT; comps=2; break;
+				case CF_VERTEX_FORMAT_HALF4: type=GL_HALF_FLOAT; comps=4; break;
 				default: break;
 			}
 			glBindBuffer(GL_ARRAY_BUFFER, buf.id);
 			glEnableVertexAttribArray((GLuint)loc);
-			glVertexAttribPointer((GLuint)loc, comps, type, norm, buf.stride, (const void*)(intptr_t)a.offset);
+			if (type == GL_INT) {
+				glVertexAttribIPointer((GLuint)loc, comps, type, buf.stride, (const void*)(intptr_t)a.offset);
+			} else {
+				glVertexAttribPointer((GLuint)loc, comps, type, norm, buf.stride, (const void*)(intptr_t)a.offset);
+			}
 			glVertexAttribDivisor((GLuint)loc, per_instance ? 1 : 0);
 		}
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
