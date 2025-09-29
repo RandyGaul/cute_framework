@@ -289,7 +289,7 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 
 	Uint32 flags = 0;
 	flags |= SDL_WINDOW_HIGH_PIXEL_DENSITY; // Turn on high DPI support for all platforms.
-	flags |= SDL_WINDOW_OPENGL;
+	if (use_opengl) flags |= SDL_WINDOW_OPENGL;
 	if (use_metal) flags |= SDL_WINDOW_METAL;
 	if (options & CF_APP_OPTIONS_FULLSCREEN_BIT) flags |= SDL_WINDOW_FULLSCREEN;
 	if (options & CF_APP_OPTIONS_RESIZABLE_BIT) flags |= SDL_WINDOW_RESIZABLE;
@@ -330,7 +330,6 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 	if (use_gfx) {
 		if (use_opengl) {
 			app->use_opengl = true;
-			gladLoadGLES2Loader((GLADloadproc)SDL_LoadObject);
 		} else {
 			app->use_sdlgpu = true;
 			app->device = device;
@@ -344,6 +343,8 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 		if (app->use_opengl) {
 			app->gl_ctx = SDL_GL_CreateContext(app->window);
 			SDL_GL_MakeCurrent(window, app->gl_ctx);
+			gladLoadGLES2Loader((GLADloadproc)SDL_GL_GetProcAddress);
+			printf("Loaded GLES %d.%d\n", GLVersion.major, GLVersion.minor);
 		}
 
 		cf_load_internal_shaders();

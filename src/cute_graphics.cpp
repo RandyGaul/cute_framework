@@ -1783,27 +1783,70 @@ char* opengl_transpile_spirv_to_glsl(const CF_ShaderBytecode& bytecode)
 	}
 
 	spvc_compiler compiler = NULL;
-	result = spvc_context_create_compiler(context, SPVC_BACKEND_GLSL, ir, SPVC_CAPTURE_MODE_TAKE_OWNERSHIP, &compiler);
-	if (result != SPVC_SUCCESS) {
+	if (spvc_context_create_compiler(context, SPVC_BACKEND_GLSL, ir,
+	                                 SPVC_CAPTURE_MODE_TAKE_OWNERSHIP, &compiler) != SPVC_SUCCESS) {
 		spvc_context_release_allocations(context);
 		return NULL;
 	}
 
+	// --- Ensure integer varyings are flat (required by GLSL ES) -----------------
+	{
+		// Determine execution model (Vertex vs Fragment) of this module's entry point.
+		const spvc_entry_point* eps = NULL;
+		size_t ep_count = 0;
+		SpvExecutionModel_ exec_model = SpvExecutionModelVertex; // default safe guess
+		if (spvc_compiler_get_entry_points(compiler, &eps, &ep_count) == SPVC_SUCCESS && ep_count > 0) {
+			exec_model = eps[0].execution_model;
+		}
+
+		spvc_resources res = NULL;
+		if (spvc_compiler_create_shader_resources(compiler, &res) == SPVC_SUCCESS) {
+			// Helper: mark variables flat if base type is (u)int (covers ivec*/uvec* as well).
+			auto decorate_list_flat_if_integer = [&](const spvc_reflected_resource* list, size_t count) {
+				for (size_t i = 0; i < count; ++i) {
+					spvc_type type = spvc_compiler_get_type_handle(compiler, list[i].type_id);
+					spvc_basetype bt = spvc_type_get_basetype(type);
+					if (bt == SPVC_BASETYPE_INT32 || bt == SPVC_BASETYPE_UINT32) {
+						// Avoid re-marking if already flat (optional).
+						if (!spvc_compiler_has_decoration(compiler, list[i].id, SpvDecorationFlat)) {
+							spvc_compiler_set_decoration(compiler, list[i].id, SpvDecorationFlat, 1);
+						}
+					}
+				}
+			};
+
+			// 1) Stage outputs (VS varyings): always ok to set flat here for integer types.
+			const spvc_reflected_resource* outs = NULL; size_t out_count = 0;
+			if (spvc_resources_get_resource_list_for_type(res, SPVC_RESOURCE_TYPE_STAGE_OUTPUT, &outs, &out_count) == SPVC_SUCCESS) {
+				decorate_list_flat_if_integer(outs, out_count);
+			}
+
+			// 2) Stage inputs:
+			//    - Fragment shader inputs are varyings -> must be 'flat' for integer types.
+			//    - Vertex shader inputs are *attributes* -> DO NOT decorate.
+			if (exec_model == SpvExecutionModelFragment) {
+				const spvc_reflected_resource* ins = NULL; size_t in_count = 0;
+				if (spvc_resources_get_resource_list_for_type(res, SPVC_RESOURCE_TYPE_STAGE_INPUT, &ins, &in_count) == SPVC_SUCCESS) {
+					decorate_list_flat_if_integer(ins, in_count);
+				}
+			}
+		}
+	}
+	// ---------------------------------------------------------------------------
+
+	// Options for GLES 3.00
 	spvc_compiler_options options = NULL;
 	if (spvc_compiler_create_compiler_options(compiler, &options) == SPVC_SUCCESS) {
-#ifdef CF_EMSCRIPTEN
 		spvc_compiler_options_set_uint(options, SPVC_COMPILER_OPTION_GLSL_VERSION, 300);
 		spvc_compiler_options_set_bool(options, SPVC_COMPILER_OPTION_GLSL_ES, SPVC_TRUE);
-#else
-		spvc_compiler_options_set_uint(options, SPVC_COMPILER_OPTION_GLSL_VERSION, 330);
-		spvc_compiler_options_set_bool(options, SPVC_COMPILER_OPTION_GLSL_ES, SPVC_FALSE);
-#endif
+		spvc_compiler_options_set_bool(options, SPVC_COMPILER_OPTION_GLSL_ENABLE_420PACK_EXTENSION, SPVC_FALSE);
 		spvc_compiler_options_set_bool(options, SPVC_COMPILER_OPTION_GLSL_SEPARATE_SHADER_OBJECTS, SPVC_TRUE);
 		spvc_compiler_install_compiler_options(compiler, options);
 	}
 
 	const char* source = NULL;
 	result = spvc_compiler_compile(compiler, &source);
+
 	char* output = NULL;
 	if (result == SPVC_SUCCESS && source) {
 		size_t len = CF_STRLEN(source);
@@ -2467,7 +2510,6 @@ CF_Shader opengl_make_shader(const char* vs_path, const char* fs_path)
 
 CF_Shader opengl_make_shader_from_bytecode(CF_ShaderBytecode vertex_bytecode, CF_ShaderBytecode fragment_bytecode)
 {
-#if !defined(CF_EMSCRIPTEN)
 	char* vs_src = opengl_transpile_spirv_to_glsl(vertex_bytecode);
 	char* fs_src = opengl_transpile_spirv_to_glsl(fragment_bytecode);
 	if (!vs_src || !fs_src) {
@@ -2480,11 +2522,6 @@ CF_Shader opengl_make_shader_from_bytecode(CF_ShaderBytecode vertex_bytecode, CF
 	CF_FREE(vs_src);
 	CF_FREE(fs_src);
 	return shader;
-#else
-	CF_UNUSED(vertex_bytecode);
-	CF_UNUSED(fragment_bytecode);
-	return CF_Shader{};
-#endif
 }
 
 void opengl_destroy_shader(CF_Shader sh)
