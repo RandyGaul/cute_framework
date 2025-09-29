@@ -557,7 +557,7 @@ void cf_free_shader_bytecode(CF_ShaderBytecode bytecode)
 #endif
 }
 
-static SDL_GPUShader* s_compile(CF_ShaderInternal* shader_internal, CF_ShaderBytecode bytecode, CF_ShaderStage stage)
+static SDL_GPUShader* sdlgpu_compile_glsl450(CF_ShaderInternal* shader_internal, CF_ShaderBytecode bytecode, CF_ShaderStage stage)
 {
 	bool vs = stage == CF_SHADER_STAGE_VERTEX ? true : false;
 
@@ -640,7 +640,7 @@ static SDL_GPUShader* s_compile(CF_ShaderInternal* shader_internal, CF_ShaderByt
 		metadata.num_storage_buffers = shader_info->num_storage_buffers;
 		metadata.num_uniform_buffers = shader_info->num_uniforms;
 
-	  SDL_ShaderCross_SPIRV_Info spirvInfo;
+		SDL_ShaderCross_SPIRV_Info spirvInfo;
 		spirvInfo.bytecode = bytecode.content;
 		spirvInfo.bytecode_size = bytecode.size;
 		spirvInfo.entrypoint = "main";
@@ -660,8 +660,8 @@ CF_Shader sdlgpu_make_shader_from_bytecode(CF_ShaderBytecode vertex_bytecode, CF
 	CF_ShaderInternal* shader_internal = CF_NEW(CF_ShaderInternal);
 	CF_MEMSET(shader_internal, 0, sizeof(*shader_internal));
 
-	shader_internal->vs = s_compile(shader_internal, vertex_bytecode, CF_SHADER_STAGE_VERTEX);
-	shader_internal->fs = s_compile(shader_internal, fragment_bytecode, CF_SHADER_STAGE_FRAGMENT);
+	shader_internal->vs = sdlgpu_compile_glsl450(shader_internal, vertex_bytecode, CF_SHADER_STAGE_VERTEX);
+	shader_internal->fs = sdlgpu_compile_glsl450(shader_internal, fragment_bytecode, CF_SHADER_STAGE_FRAGMENT);
 	CF_ASSERT(shader_internal->vs);
 	CF_ASSERT(shader_internal->fs);
 
@@ -670,10 +670,8 @@ CF_Shader sdlgpu_make_shader_from_bytecode(CF_ShaderBytecode vertex_bytecode, CF
 	return result;
 }
 
-static CF_Shader s_compile(const char* vs_src, const char* fs_src, bool builtin = false, const char* user_shd = NULL)
+static CF_Shader sdlgpu_compile_glsl450(const char* vs_src, const char* fs_src, const char* user_shd = NULL)
 {
-	// TODO: builtin flag is redundant
-	// Compile to bytecode.
 	CF_ShaderBytecode vs_bytecode = cf_compile_shader_to_bytecode_internal(vs_src, CF_SHADER_STAGE_VERTEX, NULL);
 	if (vs_bytecode.content == NULL) {
 		CF_Shader result = { 0 };
@@ -685,13 +683,14 @@ static CF_Shader s_compile(const char* vs_src, const char* fs_src, bool builtin 
 		CF_Shader result = { 0 };
 		return result;
 	}
-
 	// Create the actual shader object.
 	CF_Shader shader = cf_make_shader_from_bytecode(vs_bytecode, fs_bytecode);
 	cf_free_shader_bytecode(vs_bytecode);
 	cf_free_shader_bytecode(fs_bytecode);
 	return shader;
 }
+
+CF_Shader opengl_make_shader_from_source(const char* vertex_src, const char* fragment_src, const char* user_shd = NULL);
 
 void cf_load_internal_shaders()
 {
@@ -703,10 +702,18 @@ void cf_load_internal_shaders()
 	}
 
 	// Compile built-in shaders.
-	app->draw_shader = s_compile(s_draw_vs, s_draw_fs, true, NULL);
-	app->basic_shader = s_compile(s_basic_vs, s_basic_fs, true, NULL);
-	app->backbuffer_shader = s_compile(s_backbuffer_vs, s_backbuffer_fs, true, NULL);
-	app->blit_shader = s_compile(s_blit_vs, s_blit_fs, true, NULL);
+	if (app->use_opengl) {
+		app->draw_shader = opengl_make_shader_from_source(s_draw_vs, s_draw_fs, NULL);
+		app->basic_shader = opengl_make_shader_from_source(s_basic_vs, s_basic_fs, NULL);
+		app->backbuffer_shader = opengl_make_shader_from_source(s_backbuffer_vs, s_backbuffer_fs, NULL);
+		app->blit_shader = opengl_make_shader_from_source(s_blit_vs, s_blit_fs, NULL);
+	}
+	if (app->use_sdlgpu) {
+		app->draw_shader = sdlgpu_compile_glsl450(s_draw_vs, s_draw_fs, NULL);
+		app->basic_shader = sdlgpu_compile_glsl450(s_basic_vs, s_basic_fs, NULL);
+		app->backbuffer_shader = sdlgpu_compile_glsl450(s_backbuffer_vs, s_backbuffer_fs, NULL);
+		app->blit_shader = sdlgpu_compile_glsl450(s_blit_vs, s_blit_fs, NULL);
+	}
 #else
 	app->draw_shader = cf_make_shader_from_bytecode(s_draw_vs_bytecode, s_draw_fs_bytecode);
 	app->basic_shader = cf_make_shader_from_bytecode(s_basic_vs_bytecode, s_basic_fs_bytecode);
@@ -760,7 +767,7 @@ CF_Shader cf_make_draw_blit_shader_internal(const char* path)
 
 CF_Shader cf_make_draw_shader_from_source_internal(const char* src)
 {
-	return s_compile(s_draw_vs, s_draw_fs, true, src);
+	return sdlgpu_compile_glsl450(s_draw_vs, s_draw_fs, src);
 }
 
 CF_Shader cf_make_draw_shader_from_bytecode_internal(CF_ShaderBytecode bytecode)
@@ -770,7 +777,7 @@ CF_Shader cf_make_draw_shader_from_bytecode_internal(CF_ShaderBytecode bytecode)
 
 CF_Shader cf_make_draw_blit_shader_from_source_internal(const char* src)
 {
-	return s_compile(s_blit_vs, s_blit_fs, true, src);
+	return sdlgpu_compile_glsl450(s_blit_vs, s_blit_fs, src);
 }
 
 CF_Shader cf_make_draw_blit_shader_from_bytecode_internal(CF_ShaderBytecode bytecode)
@@ -785,12 +792,12 @@ CF_Shader sdlgpu_make_shader(const char* vertex_path, const char* fragment_path)
 	const char* fs = fs_read_entire_file_to_memory_and_nul_terminate(fragment_path);
 	CF_ASSERT(vs);
 	CF_ASSERT(fs);
-	return s_compile(vs, fs);
+	return sdlgpu_compile_glsl450(vs, fs);
 }
 
 CF_Shader sdlgpu_make_shader_from_source(const char* vertex_src, const char* fragment_src)
 {
-	return s_compile(vertex_src, fragment_src);
+	return sdlgpu_compile_glsl450(vertex_src, fragment_src);
 }
 
 void sdlgpu_destroy_shader(CF_Shader shader_handle)
@@ -1287,21 +1294,21 @@ void sdlgpu_apply_scissor(int x, int y, int w, int h)
 
 void sdlgpu_apply_stencil_reference(int reference)
 {
-  CF_ASSERT(s_canvas);
-  CF_ASSERT(s_canvas->pass);
-  SDL_SetGPUStencilReference(s_canvas->pass, reference);
+	CF_ASSERT(s_canvas);
+	CF_ASSERT(s_canvas->pass);
+	SDL_SetGPUStencilReference(s_canvas->pass, reference);
 }
 
 void sdlgpu_apply_blend_constants(float r, float g, float b, float a)
 {
-  CF_ASSERT(s_canvas);
-  CF_ASSERT(s_canvas->pass);
-  SDL_FColor color;
-  color.r = r;
-  color.g = g;
-  color.b = b;
-  color.a = a;
-  SDL_SetGPUBlendConstants(s_canvas->pass, color);
+	CF_ASSERT(s_canvas);
+	CF_ASSERT(s_canvas->pass);
+	SDL_FColor color;
+	color.r = r;
+	color.g = g;
+	color.b = b;
+	color.a = a;
+	SDL_SetGPUBlendConstants(s_canvas->pass, color);
 }
 
 void sdlgpu_apply_mesh(CF_Mesh mesh_handle)
@@ -1613,7 +1620,6 @@ void sdlgpu_commit()
 #	include <glad/glad.h>
 #endif
 
-
 struct CF_GL_PixelFormatInfo
 {
 	CF_PixelFormat format;
@@ -1747,6 +1753,7 @@ void opengl_load_format_caps()
 		// Example conservative assumptions:
 		if (!info.is_integer) info.caps |= CF_GL_FMT_CAP_SAMPLE; // can sample
 		if (!info.is_integer) info.caps |= CF_GL_FMT_CAP_LINEAR; // linear filter on normalized formats
+		if (!info.is_depth) info.caps |= CF_GL_FMT_CAP_COLOR; // color attachment support on non-depth formats
 
 		if (info.has_alpha)   info.caps |= CF_GL_FMT_CAP_ALPHA;
 		if (info.is_depth)    info.caps |= CF_GL_FMT_CAP_DEPTH;
@@ -1763,7 +1770,7 @@ CF_BackendType opengl_query_backend()
 	return CF_BACKEND_TYPE_PRIVATE;
 }
 
-char* opengl_transpile_spirv_to_glsl(const CF_ShaderBytecode& bytecode)
+char* opengl_transpile_spirv_to_glsles300(const CF_ShaderBytecode& bytecode)
 {
 	if (!bytecode.content || !bytecode.size) return NULL;
 	if (!g_spvc_context) return NULL;
@@ -1783,8 +1790,7 @@ char* opengl_transpile_spirv_to_glsl(const CF_ShaderBytecode& bytecode)
 	}
 
 	spvc_compiler compiler = NULL;
-	if (spvc_context_create_compiler(context, SPVC_BACKEND_GLSL, ir,
-	                                 SPVC_CAPTURE_MODE_TAKE_OWNERSHIP, &compiler) != SPVC_SUCCESS) {
+	if (spvc_context_create_compiler(context, SPVC_BACKEND_GLSL, ir, SPVC_CAPTURE_MODE_TAKE_OWNERSHIP, &compiler) != SPVC_SUCCESS) {
 		spvc_context_release_allocations(context);
 		return NULL;
 	}
@@ -2495,11 +2501,6 @@ static CF_Shader opengl_make_shader_es(const char* vs_src, const char* fs_src)
 	return CF_Shader{ (uint64_t)(uintptr_t)sh };
 }
 
-CF_Shader opengl_make_shader_from_source(const char* vertex_src, const char* fragment_src)
-{
-	return opengl_make_shader_es(vertex_src, fragment_src);
-}
-
 CF_Shader opengl_make_shader(const char* vs_path, const char* fs_path)
 {
 	const char* vs = fs_read_entire_file_to_memory_and_nul_terminate(vs_path);
@@ -2510,18 +2511,33 @@ CF_Shader opengl_make_shader(const char* vs_path, const char* fs_path)
 
 CF_Shader opengl_make_shader_from_bytecode(CF_ShaderBytecode vertex_bytecode, CF_ShaderBytecode fragment_bytecode)
 {
-	char* vs_src = opengl_transpile_spirv_to_glsl(vertex_bytecode);
-	char* fs_src = opengl_transpile_spirv_to_glsl(fragment_bytecode);
+	char* vs_src = opengl_transpile_spirv_to_glsles300(vertex_bytecode);
+	char* fs_src = opengl_transpile_spirv_to_glsles300(fragment_bytecode);
 	if (!vs_src || !fs_src) {
 		if (vs_src) CF_FREE(vs_src);
 		if (fs_src) CF_FREE(fs_src);
 		return CF_Shader{};
 	}
-
-	CF_Shader shader = opengl_make_shader_from_source(vs_src, fs_src);
+	CF_Shader shader = opengl_make_shader_es(vs_src, fs_src);
 	CF_FREE(vs_src);
 	CF_FREE(fs_src);
 	return shader;
+}
+
+CF_Shader opengl_make_shader_from_source(const char* vertex_src, const char* fragment_src, const char* user_shd)
+{
+	CF_ShaderBytecode vs_bytecode = cf_compile_shader_to_bytecode_internal(vertex_src, CF_SHADER_STAGE_VERTEX, NULL);
+	if (vs_bytecode.content == NULL) {
+		CF_Shader result = { 0 };
+		return result;
+	}
+	CF_ShaderBytecode fs_bytecode = cf_compile_shader_to_bytecode_internal(fragment_src, CF_SHADER_STAGE_FRAGMENT, user_shd);
+	if (fs_bytecode.content == NULL) {
+		cf_free_shader_bytecode(vs_bytecode);
+		CF_Shader result = { 0 };
+		return result;
+	}
+	return opengl_make_shader_from_bytecode(vs_bytecode, fs_bytecode);
 }
 
 void opengl_destroy_shader(CF_Shader sh)
