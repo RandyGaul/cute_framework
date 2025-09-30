@@ -760,8 +760,8 @@ void cf_sdlgpu_end_frame()
 	// NULL. Cases where this can happen is when you minimize the window.
 	if (!g_ctx.canceled_command_buffer) {
 		SDL_SubmitGPUCommandBuffer(g_ctx.cmd);
-		SDL_WaitForGPUIdle(g_ctx.device);
 	}
+	SDL_WaitForGPUIdle(g_ctx.device);
 	g_ctx.cmd = NULL;
 	g_ctx.canvas = NULL;
 	g_ctx.swapchain_tex = NULL;
