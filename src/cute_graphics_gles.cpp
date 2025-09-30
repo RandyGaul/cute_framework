@@ -520,7 +520,7 @@ static GLuint s_link_program(GLuint vs, GLuint fs)
 
 static CF_Shader s_make_shader(const char* vs_src, const char* fs_src)
 {
-	CF_GL_ShaderInternal* sh = CF_NEW(CF_GL_ShaderInternal);
+	CF_GL_ShaderInternal* sh = (CF_GL_ShaderInternal*)CF_CALLOC(sizeof(CF_GL_ShaderInternal));
 	GLuint vs = s_compile_shader(GL_VERTEX_SHADER,   vs_src);
 	GLuint fs = s_compile_shader(GL_FRAGMENT_SHADER, fs_src);
 	sh->prog = s_link_program(vs, fs);
@@ -848,7 +848,7 @@ CF_Texture cf_gles_make_texture(CF_TextureParams params)
 	CF_GL_PixelFormatInfo* info = cf_gles_find_pixel_format_info(params.pixel_format);
 	if (!info || info->internal_fmt == GL_NONE) return CF_Texture{};
 
-	CF_GL_TextureInternal* t = CF_NEW(CF_GL_TextureInternal);
+	CF_GL_TextureInternal* t = (CF_GL_TextureInternal*)CF_CALLOC(sizeof(CF_GL_TextureInternal));
 	t->w = params.width;
 	t->h = params.height;
 	t->internal_fmt = info->internal_fmt;
@@ -937,7 +937,7 @@ CF_Canvas cf_gles_make_canvas(CF_CanvasParams params)
 		}
 	}
 
-	CF_GL_CanvasInternal* c = CF_NEW(CF_GL_CanvasInternal);
+	CF_GL_CanvasInternal* c = (CF_GL_CanvasInternal*)CF_CALLOC(sizeof(CF_GL_CanvasInternal));
 	c->w = params.target.width;
 	c->h = params.target.height;
 
@@ -1031,11 +1031,13 @@ void cf_gles_apply_canvas(CF_Canvas canvas_handle, bool clear)
 	if (clear) { s_clear_canvas(); }
 
 	g_ctx.target_state = s_default_state();
+	g_ctx.target_state.viewport.w = canvas->w;
+	g_ctx.target_state.viewport.h = canvas->h;
 }
 
 CF_Mesh cf_gles_make_mesh(int vertex_buffer_size, const CF_VertexAttribute* attributes, int attribute_count, int vertex_stride)
 {
-	auto* m = CF_NEW(CF_GL_MeshInternal);
+	auto* m = (CF_GL_MeshInternal*)CF_CALLOC(sizeof(CF_GL_MeshInternal));
 	glGenVertexArrays(1, &m->vao);
 	glGenBuffers(1, &m->vbo.id);
 
