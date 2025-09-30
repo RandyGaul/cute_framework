@@ -232,6 +232,7 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 
 		// Create the SDL GPU device.
 		if (!use_opengl) {
+#ifndef CF_EMSCRIPTEN
 			const char* device_name = NULL;
 			if (use_dx11) {
 				device_name = "direct3d11";
@@ -244,6 +245,7 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 			}
 
 			init_gfx_result = cf_sdlgpu_init(device_name, debug, &gfx_backend_type);
+#endif
 		} else {
 			init_gfx_result = cf_gles_init(debug);
 			gfx_backend_type = CF_BACKEND_TYPE_GLES3;
@@ -300,7 +302,9 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 		if (app->gfx_backend_type == CF_BACKEND_TYPE_GLES3) {
 			cf_gles_attach(app->window);
 		} else {
+#ifndef CF_EMSCRIPTEN
 			cf_sdlgpu_attach(app->window);
+#endif
 		}
 
 		cf_load_internal_shaders();
@@ -322,7 +326,9 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 		if (app->gfx_backend_type == CF_BACKEND_TYPE_GLES3) {
 			cf_gles_flush();
 		} else {
+#ifndef CF_EMSCRIPTEN
 			cf_sdlgpu_flush();
+#endif
 		}
 	}
 
@@ -378,7 +384,9 @@ void cf_destroy_app()
 		if (app->gfx_backend_type == CF_BACKEND_TYPE_GLES3) {
 			cf_gles_cleanup();
 		} else {
+#ifndef CF_EMSCRIPTEN
 			cf_sdlgpu_cleanup();
+#endif
 		}
 	}
 	cf_destroy_aseprite_cache();
@@ -455,20 +463,15 @@ void cf_app_update(CF_OnUpdateFn* on_update)
 		if (app->gfx_backend_type == CF_BACKEND_TYPE_GLES3) {
 			cf_gles_begin_frame();
 		} else {
+#ifndef CF_EMSCRIPTEN
 			cf_sdlgpu_begin_frame();
+#endif
 		}
 		cf_shader_watch();
 	}
 	app->user_on_update = on_update;
 	cf_begin_frame_input();
 	cf_update_time(s_on_update);
-}
-
-static void s_imgui_present(SDL_GPUTexture* swapchain_texture)
-{
-	if (app->using_imgui) {
-		cf_imgui_draw();
-	}
 }
 
 int cf_app_draw_onto_screen(bool clear)
@@ -522,7 +525,9 @@ int cf_app_draw_onto_screen(bool clear)
 	if (app->gfx_backend_type == CF_BACKEND_TYPE_GLES3) {
 		cf_gles_blit_canvas(app->offscreen_canvas);
 	} else {
+#ifndef CF_EMSCRIPTEN
 		cf_sdlgpu_blit_canvas(app->offscreen_canvas);
+#endif
 	}
 
 	// Dear ImGui draw.
@@ -544,7 +549,9 @@ int cf_app_draw_onto_screen(bool clear)
 	if (app->gfx_backend_type == CF_BACKEND_TYPE_GLES3) {
 		cf_gles_end_frame();
 	} else {
+#ifndef CF_EMSCRIPTEN
 		cf_sdlgpu_end_frame();
+#endif
 	}
 
 	// Clear all pushed draw parameters.
@@ -719,7 +726,9 @@ bool cf_app_set_msaa(int sample_count)
 	if (app->gfx_backend_type == CF_BACKEND_TYPE_GLES3) {
 		supported = cf_gles_supports_msaa(sample_count);
 	} else {
+#ifndef CF_EMSCRIPTEN
 		supported = cf_sdlgpu_supports_msaa(sample_count);
+#endif
 	}
 
 	if (supported && app->sample_count != sample_count) {
@@ -756,7 +765,9 @@ void cf_app_set_vsync(bool true_turn_on_vsync)
 	if (app->gfx_backend_type == CF_BACKEND_TYPE_GLES3) {
 		cf_gles_set_vsync(true_turn_on_vsync);
 	} else {
+#ifndef CF_EMSCRIPTEN
 		cf_sdlgpu_set_vsync(true_turn_on_vsync);
+#endif
 	}
 }
 
@@ -766,7 +777,9 @@ void cf_app_set_vsync_mailbox(bool true_turn_on_mailbox)
 	if (app->gfx_backend_type == CF_BACKEND_TYPE_GLES3) {
 		CF_ASSERT(!"This is only implemented on SDL_Gpu backends (Metal/DX11/DX12/Vulkan).");
 	} else {
+#ifndef CF_EMSCRIPTEN
 		cf_sdlgpu_set_vsync_mailbox(true_turn_on_mailbox);
+#endif
 	}
 }
 

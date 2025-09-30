@@ -26,6 +26,7 @@ void cf_imgui_init()
 		ImGui_ImplOpenGL3_Init("#version 300 es");
 		ImGui_ImplSDL3_InitForOpenGL(app->window, cf_gles_get_gl_context());
 	} else {
+#ifndef CF_EMSCRIPTEN
 		SDL_GPUDevice* device = cf_sdlgpu_get_device();
 		ImGui_ImplSDL3_InitForSDLGPU(app->window);
 		ImGui_ImplSDLGPU3_InitInfo init_info = {};
@@ -33,6 +34,7 @@ void cf_imgui_init()
 		init_info.ColorTargetFormat = SDL_GetGPUSwapchainTextureFormat(device, app->window);
 		init_info.MSAASamples = SDL_GPU_SAMPLECOUNT_1;
 		ImGui_ImplSDLGPU3_Init(&init_info);
+#endif
 	}
 }
 
@@ -52,6 +54,7 @@ void cf_imgui_draw()
 	if (app->gfx_backend_type == CF_BACKEND_TYPE_GLES3) {
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 	} else {
+#ifndef CF_EMSCRIPTEN
 		ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 		ImDrawData* draw_data = ImGui::GetDrawData();
 		const bool is_minimized = (draw_data->DisplaySize.x <= 0.0f || draw_data->DisplaySize.y <= 0.0f);
@@ -74,5 +77,6 @@ void cf_imgui_draw()
 
 			SDL_EndGPURenderPass(render_pass);
 		}
+#endif
 	}
 }

@@ -101,6 +101,7 @@ set(CF_SRCS
 	src/cute_graphics.cpp
 	src/cute_graphics_sdlgpu.cpp
 	src/cute_graphics_gles.cpp
+	src/cute_graphics_glad.cpp
 	src/cute_aseprite_cache.cpp
 	src/cute_png_cache.cpp
 	src/cute_https.cpp

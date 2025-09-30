@@ -16,10 +16,7 @@
 
 #include "cute_shader/cute_shader.h"
 #include "cute_shader/builtin_shaders.h"
-
-#ifdef CF_RUNTIME_SHADER_COMPILATION
-#	include "data/builtin_shaders_bytecode.h"
-#endif
+#include "data/builtin_shaders_bytecode.h"
 
 #include <float.h>
 
@@ -557,6 +554,23 @@ CF_Shader cf_make_shader_from_source(const char* vertex_src, const char* fragmen
 // Backend dispatch shims.
 
 // Macro to generate shim
+
+#ifdef CF_EMSCRIPTEN
+
+#define CF_DISPATCH_SHIM(RETURN_TYPE, OP, ARGUMENTS, ...) \
+	RETURN_TYPE cf_gles_##OP ARGUMENTS; \
+	RETURN_TYPE cf_##OP ARGUMENTS { \
+		return cf_gles_##OP(__VA_ARGS__); \
+	}
+
+#define CF_DISPATCH_SHIM_VOID(OP, ARGUMENTS, ...) \
+	void cf_gles_##OP ARGUMENTS; \
+	void cf_##OP ARGUMENTS { \
+		cf_gles_##OP(__VA_ARGS__); \
+	}
+
+#else
+
 #define CF_DISPATCH_SHIM(RETURN_TYPE, OP, ARGUMENTS, ...) \
 	RETURN_TYPE cf_sdlgpu_##OP ARGUMENTS; \
 	RETURN_TYPE cf_gles_##OP ARGUMENTS; \
@@ -566,7 +580,7 @@ CF_Shader cf_make_shader_from_source(const char* vertex_src, const char* fragmen
 		} else { \
 			return cf_sdlgpu_##OP(__VA_ARGS__); \
 		} \
-   	} \
+	}
 
 #define CF_DISPATCH_SHIM_VOID(OP, ARGUMENTS, ...) \
 	void cf_sdlgpu_##OP ARGUMENTS; \
@@ -577,7 +591,9 @@ CF_Shader cf_make_shader_from_source(const char* vertex_src, const char* fragmen
 		} else { \
 			cf_sdlgpu_##OP(__VA_ARGS__); \
 		} \
-   	} \
+	}
+
+#endif
 
 CF_DISPATCH_SHIM(bool, texture_supports_format, (CF_PixelFormat format, CF_TextureUsageBits usage), format, usage)
 CF_DISPATCH_SHIM(bool, query_pixel_format, (CF_PixelFormat format, CF_PixelFormatOp op), format, op)
@@ -623,7 +639,9 @@ void cf_draw_elements()
 	if (app->gfx_backend_type == CF_BACKEND_TYPE_GLES3) {
 		cf_gles_draw_elements();
 	} else {
+#ifndef CF_EMSCRIPTEN
 		cf_sdlgpu_draw_elements();
+#endif
 	}
 }
 
@@ -634,6 +652,8 @@ void cf_commit()
 	if (app->gfx_backend_type == CF_BACKEND_TYPE_GLES3) {
 		cf_gles_commit();
 	} else {
+#ifndef CF_EMSCRIPTEN
 		cf_sdlgpu_commit();
+#endif
 	}
 }

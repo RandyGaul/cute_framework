@@ -666,12 +666,13 @@ SDL_GLContext cf_gles_get_gl_context()
 	return g_ctx.gl_ctx;
 }
 
+void cf_load_gles();
+
 void cf_gles_attach(SDL_Window* window)
 {
 	g_ctx.gl_ctx = SDL_GL_CreateContext(window);
 	SDL_GL_MakeCurrent(window, g_ctx.gl_ctx);
-	gladLoadGLES2Loader((GLADloadproc)SDL_GL_GetProcAddress);
-	printf("Loaded GLES %d.%d\n", GLVersion.major, GLVersion.minor);
+	cf_load_gles();
 
 	g_ctx.window = window;
 

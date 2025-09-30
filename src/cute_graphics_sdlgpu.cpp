@@ -1,3 +1,5 @@
+#include <cute_defines.h>
+
 #ifndef CF_EMSCRIPTEN
 
 #include "internal/cute_graphics_internal.h"
@@ -651,10 +653,9 @@ CF_Result cf_sdlgpu_init(const char* device_name, bool debug, CF_BackendType* ba
 
 void cf_sdlgpu_cleanup()
 {
-	SDL_ShaderCross_Quit();
-
 	SDL_ReleaseWindowFromGPUDevice(g_ctx.device, g_ctx.window);
 	SDL_DestroyGPUDevice(g_ctx.device);
+	SDL_ShaderCross_Quit();
 }
 
 SDL_GPUDevice* cf_sdlgpu_get_device()
