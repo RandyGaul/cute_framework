@@ -27,8 +27,6 @@
 
 #include <SDL3/SDL.h>
 
-#include <glad/glad.h>
-
 #define CUTE_SOUND_FORCE_SDL
 #include <cute/cute_sound.h>
 
@@ -39,9 +37,6 @@ static void s_init_video()
 	static bool init = false;
 	if (init) return;
 	init = SDL_Init(SDL_INIT_VIDEO);
-#ifndef CF_EMSCRIPTEN
-	SDL_ShaderCross_Init();
-#endif
 }
 
 CF_DisplayID cf_default_display()
@@ -143,28 +138,6 @@ CF_GLOBAL CF_App* app;
 
 using namespace Cute;
 
-struct Vertex
-{
-	float x, y;
-	float u, v;
-};
-
-static void s_quad(float x, float y, float sx, float sy, Vertex quad[6])
-{
-	quad[0].x = -0.5f; quad[0].y =  0.5f; quad[0].u = 0; quad[0].v = 0;
-	quad[1].x =  0.5f; quad[1].y = -0.5f; quad[1].u = 1; quad[1].v = 1;
-	quad[2].x =  0.5f; quad[2].y =  0.5f; quad[2].u = 1; quad[2].v = 0;
-
-	quad[3].x = -0.5f; quad[3].y =  0.5f; quad[3].u = 0; quad[3].v = 0;
-	quad[4].x = -0.5f; quad[4].y = -0.5f; quad[4].u = 0; quad[4].v = 1;
-	quad[5].x =  0.5f; quad[5].y = -0.5f; quad[5].u = 1; quad[5].v = 1;
-
-	for (int i = 0; i < 6; ++i) {
-		quad[i].x = quad[i].x * sx + x;
-		quad[i].y = quad[i].y * sy + y;
-	}
-}
-
 // Embedded white_pixel
 int default_png_sz = 81;
 unsigned char default_png_data[81] = {
@@ -188,7 +161,6 @@ static void s_canvas(int w, int h)
 	app->offscreen_canvas = cf_make_canvas(params);
 	app->canvas_w = w;
 	app->canvas_h = h;
-	cf_material_set_texture_fs(app->backbuffer_material, "u_image", cf_canvas_get_target(app->offscreen_canvas));
 }
 
 CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, int y, int w, int h, CF_AppOptionFlags options, const char* argv0)
@@ -199,6 +171,11 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 	bool use_vulkan = options & CF_APP_OPTIONS_GFX_VULKAN_BIT;
 	bool use_opengl = options & CF_APP_OPTIONS_GFX_OPENGL_BIT;
 	bool use_gfx = !(options & CF_APP_OPTIONS_NO_GFX_BIT);
+
+#ifdef CF_EMSCRIPTEN
+	// This is the only supported backend as of now
+	use_opengl = true;
+#endif
 
 	// Ensure the user selected only one backend, if they selected one at all.
 	if (use_dx11) {
@@ -244,11 +221,14 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 		return cf_result_error("SDL_Init failed");
 	}
 
-	SDL_GPUDevice* device = NULL;
+	CF_BackendType gfx_backend_type = CF_BACKEND_TYPE_INVALID;
 	if (use_gfx) {
 		// Some backends don't support window size of zero.
 		w = w <= 0 ? 1 : w;
 		h = h <= 0 ? 1 : h;
+
+		CF_Result init_gfx_result = {  };
+		bool debug = options & CF_APP_OPTIONS_GFX_DEBUG_BIT;
 
 		// Create the SDL GPU device.
 		if (!use_opengl) {
@@ -262,32 +242,16 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 			} else if (use_vulkan) {
 				device_name = "vulkan";
 			}
-#ifndef CF_EMSCRIPTEN
-			if(!SDL_ShaderCross_Init()) {
-				return cf_result_error("Failed to initialize SDL_ShaderCross.");
-			}
-			device = SDL_CreateGPUDevice(SDL_ShaderCross_GetSPIRVShaderFormats(), options & CF_APP_OPTIONS_GFX_DEBUG_BIT, device_name);
-			if (!device) {
-				return cf_result_error("Failed to create GPU Device.");
-			}
-#endif
+
+			init_gfx_result = cf_sdlgpu_init(device_name, debug, &gfx_backend_type);
+		} else {
+			init_gfx_result = cf_gles_init(debug);
+			gfx_backend_type = CF_BACKEND_TYPE_GLES3;
 		}
-		if (use_opengl) {
-			SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
-			SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-			SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
 
-			SDL_GL_SetAttribute(SDL_GL_RED_SIZE,     8);
-			SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE,   8);
-			SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE,    8);
-			SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE,   8);
-			SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE,   24);
-			SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
-			SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
-
-			if (options & CF_APP_OPTIONS_GFX_DEBUG_BIT) {
-				SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_DEBUG_FLAG);
-			}
+		if (cf_is_error(init_gfx_result)) {
+			gfx_backend_type = CF_BACKEND_TYPE_INVALID;
+			return init_gfx_result;
 		}
 	}
 
@@ -321,6 +285,7 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 	CF_App* app = (CF_App*)CF_ALLOC(sizeof(CF_App));
 	CF_PLACEMENT_NEW(app) CF_App;
 	app->options = options;
+	app->gfx_backend_type = gfx_backend_type;
 	app->window = window;
 	app->w = w;
 	app->h = h;
@@ -332,46 +297,15 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 	cf_make_png_cache();
 
 	if (use_gfx) {
-		if (use_opengl) {
-			app->use_opengl = true;
-			if (options & CF_APP_OPTIONS_GFX_DEBUG_BIT) {
-				app->debug_opengl = true;
-			}
+		if (app->gfx_backend_type == CF_BACKEND_TYPE_GLES3) {
+			cf_gles_attach(app->window);
 		} else {
-			app->use_sdlgpu = true;
-			app->device = device;
-		}
-
-		if (app->use_sdlgpu) {
-			SDL_ClaimWindowForGPUDevice(app->device, app->window);
-			cf_app_set_vsync_mailbox(app->vsync);
-			app->cmd = SDL_AcquireGPUCommandBuffer(app->device);
-		}
-		if (app->use_opengl) {
-			app->gl_ctx = SDL_GL_CreateContext(app->window);
-			SDL_GL_MakeCurrent(window, app->gl_ctx);
-			gladLoadGLES2Loader((GLADloadproc)SDL_GL_GetProcAddress);
-			printf("Loaded GLES %d.%d\n", GLVersion.major, GLVersion.minor);
+			cf_sdlgpu_attach(app->window);
 		}
 
 		cf_load_internal_shaders();
 		cf_make_draw();
 
-		// Setup the backbuffer fullscreen mesh and canvas.
-		{
-			CF_VertexAttribute attrs[2] = { };
-			attrs[0].name = "in_posH";
-			attrs[0].format = CF_VERTEX_FORMAT_FLOAT2;
-			attrs[0].offset = CF_OFFSET_OF(Vertex, x);
-			attrs[1].name = "in_uv";
-			attrs[1].format = CF_VERTEX_FORMAT_FLOAT2;
-			attrs[1].offset = CF_OFFSET_OF(Vertex, u);
-			app->backbuffer_quad = cf_make_mesh(sizeof(Vertex) * 6, attrs, CF_ARRAY_SIZE(attrs), sizeof(Vertex));
-			Vertex quad[6];
-			s_quad(0, 0, 2, 2, quad);
-			cf_mesh_update_vertex_data(app->backbuffer_quad, quad, 6);
-		}
-		app->backbuffer_material = cf_make_material();
 		s_canvas(app->w, app->h);
 
 		// Load up a default image of 1x1 white pixel.
@@ -384,9 +318,11 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 		// Create the default font.
 		make_font_from_memory(calibri_data, calibri_sz, "Calibri");
 
-		if (app->use_sdlgpu) {
-			SDL_SubmitGPUCommandBuffer(app->cmd);
-			app->cmd = NULL;
+		// Ensure initial resources are uploaded
+		if (app->gfx_backend_type == CF_BACKEND_TYPE_GLES3) {
+			cf_gles_flush();
+		} else {
+			cf_sdlgpu_flush();
 		}
 	}
 
@@ -425,8 +361,6 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 		cf_fs_mount(cf_fs_get_base_directory(), "", true);
 	}
 
-	CF_POLL_OPENGL_ERROR();
-
 	return cf_result_success();
 }
 
@@ -437,21 +371,21 @@ void cf_destroy_app()
 		app->using_imgui = false;
 	}
 	if (app->gfx_enabled) {
-		cf_unload_internal_shaders();
 		cf_destroy_canvas(app->offscreen_canvas);
-		cf_destroy_mesh(app->backbuffer_quad);
-		cf_destroy_material(app->backbuffer_material);
-		cf_destroy_shader(app->blit_shader);
 		cf_destroy_draw();
+		cf_unload_internal_shaders();
+
+		if (app->gfx_backend_type == CF_BACKEND_TYPE_GLES3) {
+			cf_gles_cleanup();
+		} else {
+			cf_sdlgpu_cleanup();
+		}
 	}
 	cf_destroy_aseprite_cache();
 	cf_destroy_png_cache();
 	cs_shutdown();
 	destroy_mutex(&app->on_sound_finish_mutex);
-	if (app->device) SDL_ReleaseWindowFromGPUDevice(app->device, app->window);
 	SDL_DestroyWindow(app->window);
-	if (app->device) SDL_DestroyGPUDevice(app->device);
-	if (app->gl_ctx) SDL_GL_DestroyContext(app->gl_ctx);
 	SDL_Quit();
 	cs_shutdown();
 	CF_Image* easy_sprites = app->easy_sprites.items();
@@ -509,36 +443,31 @@ void cf_app_update(CF_OnUpdateFn* on_update)
 		}
 
 		if (app->using_imgui) {
-			if (app->use_sdlgpu) ImGui_ImplSDLGPU3_NewFrame();
-			if (app->use_opengl) ImGui_ImplOpenGL3_NewFrame();
+			if (app->gfx_backend_type == CF_BACKEND_TYPE_GLES3) {
+				ImGui_ImplOpenGL3_NewFrame();
+			} else {
+				ImGui_ImplSDLGPU3_NewFrame();
+			}
 			ImGui_ImplSDL3_NewFrame();
 			ImGui::NewFrame();
 		}
 
-		if (app->use_sdlgpu) app->cmd = SDL_AcquireGPUCommandBuffer(app->device);
+		if (app->gfx_backend_type == CF_BACKEND_TYPE_GLES3) {
+			cf_gles_begin_frame();
+		} else {
+			cf_sdlgpu_begin_frame();
+		}
 		cf_shader_watch();
 	}
 	app->user_on_update = on_update;
 	cf_begin_frame_input();
 	cf_update_time(s_on_update);
-
-	CF_POLL_OPENGL_ERROR();
 }
 
 static void s_imgui_present(SDL_GPUTexture* swapchain_texture)
 {
 	if (app->using_imgui) {
-		ImGui::EndFrame();
-		if (app->use_sdlgpu) {
-			if (swapchain_texture) {
-				ImGui::Render();
-				cf_imgui_draw(swapchain_texture);
-			}
-		}
-		if (app->use_opengl) {
-			ImGui::Render();
-			cf_imgui_draw(NULL);
-		}
+		cf_imgui_draw();
 	}
 }
 
@@ -588,63 +517,19 @@ int cf_app_draw_onto_screen(bool clear)
 	// Render any remaining geometry in the draw API.
 	cf_render_to(app->offscreen_canvas, clear);
 
-	bool canceled_command_buffer = false;
-	if (app->use_sdlgpu) {
-		// Stretch the app canvas onto the backbuffer canvas.
-		Uint32 w, h;
-		SDL_GPUTexture* swapchain_tex = NULL;
-		if (SDL_AcquireGPUSwapchainTexture(app->cmd, app->window, &swapchain_tex, &w, &h) && swapchain_tex) {
-			// Blit onto the screen.
-			CF_CanvasInternal* canvas = (CF_CanvasInternal*)app->offscreen_canvas.id;
-			SDL_GPUBlitRegion src = {
-				.texture = canvas->resolve_texture ? canvas->resolve_texture : canvas->texture,
-				.w = (Uint32)app->canvas_w,
-				.h = (Uint32)app->canvas_h,
-			};
-			SDL_GPUBlitRegion dst = {
-				.texture = swapchain_tex,
-				.w = w,
-				.h = h,
-			};
-			SDL_GPUBlitInfo blit_info = {
-				.source = src,
-				.destination = dst,
-				.load_op = SDL_GPU_LOADOP_CLEAR,
-				.flip_mode = SDL_FLIP_NONE,
-				.filter = SDL_GPU_FILTER_NEAREST,
-				.cycle = true,
-			};
-			SDL_BlitGPUTexture(app->cmd, &blit_info);
-		} else {
-			// Avoid large resource cycle chains gobbling up RAM when GPU-bound.
-			// https://discourse.libsdl.org/t/sdl-gpu-cycle-difficulties/55188
-			SDL_CancelGPUCommandBuffer(app->cmd);
-			canceled_command_buffer = true;
-		}
-
-		// Dear ImGui draw.
-		if (app->using_imgui) {
-			s_imgui_present(swapchain_tex);
-		}
+	// Draw the app canvas
+	SDL_GPUTexture* swapchain_tex = NULL;
+	if (app->gfx_backend_type == CF_BACKEND_TYPE_GLES3) {
+		cf_gles_blit_canvas(app->offscreen_canvas);
+	} else {
+		cf_sdlgpu_blit_canvas(app->offscreen_canvas);
 	}
 
-	if (app->use_opengl) {
-		// Blit onto the default framebuffer.
-		apply_mesh(app->backbuffer_quad);
-		v2 u_texture_size = V2((float)app->w, (float)app->h);
-		material_set_texture_fs(app->backbuffer_material, "u_image", canvas_get_target(app->offscreen_canvas));
-		material_set_uniform_fs(app->backbuffer_material, "u_texture_size", &u_texture_size, CF_UNIFORM_TYPE_FLOAT2, 1);
-		apply_shader(app->backbuffer_shader, app->backbuffer_material);
-		draw_elements();
-
-		cf_commit();
-
-		// Dear ImGui draw.
-		if (app->using_imgui) {
-			s_imgui_present(NULL);
-		}
-
-		SDL_GL_SwapWindow(app->window);
+	// Dear ImGui draw.
+	if (app->using_imgui) {
+		ImGui::EndFrame();
+		ImGui::Render();
+		cf_imgui_draw();
 	}
 
 	// Do defrag down here after rendering ImGui to avoid thrashing any texture IDs. Generally we want to defrag
@@ -656,16 +541,11 @@ int cf_app_draw_onto_screen(bool clear)
 		draw->delay_defrag = false;
 	}
 
-	if (app->use_sdlgpu) {
-		// When using Vulkan, don't submit canceled command buffers. This will cause a crash due to DescriptorSetCache being
-		// NULL. Cases where this can happen is when you minimize the window.
-		if (!canceled_command_buffer) {
-			SDL_SubmitGPUCommandBuffer(app->cmd);
-		}
-		app->cmd = NULL;
+	if (app->gfx_backend_type == CF_BACKEND_TYPE_GLES3) {
+		cf_gles_end_frame();
+	} else {
+		cf_sdlgpu_end_frame();
 	}
-
-	CF_POLL_OPENGL_ERROR();
 
 	// Clear all pushed draw parameters.
 	draw->alpha_discards.set_count(1);
@@ -835,21 +715,19 @@ bool cf_app_mouse_inside()
 
 bool cf_app_set_msaa(int sample_count)
 {
-	if (app->use_sdlgpu) {
-		SDL_GPUTextureFormat fmt = SDL_GetGPUSwapchainTextureFormat(app->device, app->window);
-		SDL_GPUSampleCount msaa =  (SDL_GPUSampleCount)cf_clamp_int((app->sample_count >> 1), 0, 3);
-		if (SDL_GPUTextureSupportsSampleCount(app->device, fmt, msaa)) {
-			if (app->sample_count != sample_count) {
-				app->sample_count = sample_count;
-				s_canvas(app->w, app->h);
-			}
-			return true;
-		} else {
-			return false;
-		}
+	bool supported = false;
+	if (app->gfx_backend_type == CF_BACKEND_TYPE_GLES3) {
+		supported = cf_gles_supports_msaa(sample_count);
+	} else {
+		supported = cf_sdlgpu_supports_msaa(sample_count);
 	}
-	CF_ASSERT(!"This is only implemented on SDL_Gpu backends (Metal/DX11/DX12/Vulkan).");
-	return false;
+
+	if (supported && app->sample_count != sample_count) {
+		app->sample_count = sample_count;
+		s_canvas(app->w, app->h);
+	}
+
+	return supported;
 }
 
 CF_Canvas cf_app_get_canvas()
@@ -875,18 +753,20 @@ int cf_app_get_canvas_height()
 void cf_app_set_vsync(bool true_turn_on_vsync)
 {
 	app->vsync = true_turn_on_vsync;
-	if (app->use_sdlgpu) SDL_SetGPUSwapchainParameters(app->device, app->window, SDL_GPU_SWAPCHAINCOMPOSITION_SDR, app->vsync ? SDL_GPU_PRESENTMODE_VSYNC : SDL_GPU_PRESENTMODE_IMMEDIATE);
-	if (app->use_opengl) SDL_GL_SetSwapInterval(true_turn_on_vsync ? 1 : 0);
+	if (app->gfx_backend_type == CF_BACKEND_TYPE_GLES3) {
+		cf_gles_set_vsync(true_turn_on_vsync);
+	} else {
+		cf_sdlgpu_set_vsync(true_turn_on_vsync);
+	}
 }
 
 void cf_app_set_vsync_mailbox(bool true_turn_on_mailbox)
 {
 	app->vsync = true_turn_on_mailbox;
-	if (app->use_sdlgpu) {
-		SDL_SetGPUSwapchainParameters(app->device, app->window, SDL_GPU_SWAPCHAINCOMPOSITION_SDR, app->vsync ? SDL_GPU_PRESENTMODE_MAILBOX : SDL_GPU_PRESENTMODE_IMMEDIATE);
-	} else {
-		if (app->use_opengl) SDL_GL_SetSwapInterval(true_turn_on_mailbox ? 1 : 0);
+	if (app->gfx_backend_type == CF_BACKEND_TYPE_GLES3) {
 		CF_ASSERT(!"This is only implemented on SDL_Gpu backends (Metal/DX11/DX12/Vulkan).");
+	} else {
+		cf_sdlgpu_set_vsync_mailbox(true_turn_on_mailbox);
 	}
 }
 
