@@ -655,8 +655,14 @@ CF_Result cf_gles_init(bool debug)
 	return cf_result_success();
 }
 
+
+void cf_gles_destroy_shader_internal(CF_Shader sh);
+
 void cf_gles_cleanup()
 {
+	cf_destroy_material(g_ctx.backbuffer_material);
+	cf_gles_destroy_shader_internal(g_ctx.backbuffer_shader);
+	cf_destroy_mesh(g_ctx.backbuffer_quad);
 	spvc_context_destroy(g_ctx.spvc);
 	SDL_GL_DestroyContext(g_ctx.gl_ctx);
 }

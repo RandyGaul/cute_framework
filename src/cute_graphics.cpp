@@ -311,32 +311,6 @@ static void s_material_set_texture(CF_MaterialInternal* material, CF_MaterialSta
 	}
 }
 
-static void s_material_set_uniform(CF_Arena* arena, CF_MaterialState* state, const char* block_name, const char* name, void* data, CF_UniformType type, int array_length)
-{
-	if (array_length <= 0) array_length = 1;
-	CF_Uniform* uniform = NULL;
-	for (int i = 0; i < state->uniforms.count(); ++i) {
-		CF_Uniform* u = state->uniforms + i;
-		if (u->block_name == block_name && u->name == name) {
-			uniform = u;
-			break;
-		}
-	}
-	int size = s_uniform_size(type) * array_length;
-	if (!uniform) {
-		uniform = &state->uniforms.add();
-		uniform->name = name;
-		uniform->block_name = block_name;
-		uniform->data = cf_arena_alloc(arena, size);
-		uniform->size = size;
-		uniform->type = type;
-		uniform->array_length = array_length;
-	}
-	CF_ASSERT(uniform->type == type);
-	CF_ASSERT(uniform->array_length == array_length);
-	CF_MEMCPY(uniform->data, data, size);
-}
-
 int s_uniform_type_size(CF_UniformType t)
 {
 	switch (t) {
@@ -492,11 +466,44 @@ void cf_material_clear_textures(CF_Material material_handle)
 	material->dirty = true;
 }
 
+static void s_material_set_uniform(CF_Arena* arena, CF_MaterialState* state, const char* block_name, const char* name, void* data, CF_UniformType type, int array_length)
+{
+	if (array_length <= 0) array_length = 1;
+	CF_Uniform* uniform = NULL;
+	for (int i = 0; i < state->uniforms.count(); ++i) {
+		CF_Uniform* u = state->uniforms + i;
+		if (u->block_name == block_name && u->name == name) {
+			uniform = u;
+			break;
+		}
+	}
+	int size = s_uniform_size(type) * array_length;
+	if (!uniform) {
+		uniform = &state->uniforms.add();
+		uniform->name = name;
+		uniform->block_name = block_name;
+		uniform->data = cf_arena_alloc(arena, size);
+		uniform->size = size;
+		uniform->type = type;
+		uniform->array_length = array_length;
+	}
+	CF_ASSERT(uniform->type == type);
+	CF_ASSERT(uniform->array_length == array_length);
+	CF_MEMCPY(uniform->data, data, size);
+}
+
 void cf_material_set_uniform_vs(CF_Material material_handle, const char* name, void* data, CF_UniformType type, int array_length)
 {
 	CF_MaterialInternal* material = (CF_MaterialInternal*)material_handle.id;
 	name = sintern(name);
 	s_material_set_uniform(&material->uniform_arena, &material->vs, sintern("uniform_block"), name, data, type, array_length);
+}
+
+void cf_material_set_uniform_vs_internal(CF_Material material_handle, const char* block_name, const char* name, void* data, CF_UniformType type, int array_length)
+{
+	CF_MaterialInternal* material = (CF_MaterialInternal*)material_handle.id;
+	name = sintern(name);
+	s_material_set_uniform(&material->uniform_arena, &material->vs, sintern(block_name), name, data, type, array_length);
 }
 
 void cf_material_set_uniform_fs(CF_Material material_handle, const char* name, void* data, CF_UniformType type, int array_length)

@@ -677,6 +677,7 @@ void cf_sdlgpu_attach(SDL_Window* window)
 {
 	SDL_ClaimWindowForGPUDevice(g_ctx.device, window);
 	g_ctx.window = window;
+	cf_sdlgpu_set_vsync_mailbox(false);
 	g_ctx.cmd = SDL_AcquireGPUCommandBuffer(g_ctx.device);
 }
 
@@ -759,6 +760,7 @@ void cf_sdlgpu_end_frame()
 	// NULL. Cases where this can happen is when you minimize the window.
 	if (!g_ctx.canceled_command_buffer) {
 		SDL_SubmitGPUCommandBuffer(g_ctx.cmd);
+		SDL_WaitForGPUIdle(g_ctx.device);
 	}
 	g_ctx.cmd = NULL;
 	g_ctx.canvas = NULL;
@@ -1039,7 +1041,7 @@ CF_Mesh cf_sdlgpu_make_mesh(int vertex_buffer_size, const CF_VertexAttribute* at
 		};
 		mesh->vertices.transfer_buffer = SDL_CreateGPUTransferBuffer(g_ctx.device, &tbuf_info);
 	}
-	attribute_count = min(attribute_count, CF_MESH_MAX_VERTEX_ATTRIBUTES);
+	attribute_count = cf_min(attribute_count, CF_MESH_MAX_VERTEX_ATTRIBUTES);
 	mesh->attribute_count = attribute_count;
 	mesh->vertices.stride = vertex_stride;
 	for (int i = 0; i < attribute_count; ++i) {

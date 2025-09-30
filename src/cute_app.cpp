@@ -521,7 +521,6 @@ int cf_app_draw_onto_screen(bool clear)
 	cf_render_to(app->offscreen_canvas, clear);
 
 	// Draw the app canvas
-	SDL_GPUTexture* swapchain_tex = NULL;
 	if (app->gfx_backend_type == CF_BACKEND_TYPE_GLES3) {
 		cf_gles_blit_canvas(app->offscreen_canvas);
 	} else {
