@@ -433,11 +433,7 @@ void CF_Draw::set_aaf()
 void cf_make_draw()
 {
 	draw = CF_NEW(CF_Draw);
-	if (app->gfx_backend_type == CF_BACKEND_TYPE_GLES3) {
-		draw->projection = ortho_2d(0, 0, (float)app->w, -(float)app->h);
-	} else {
-		draw->projection = ortho_2d(0, 0, (float)app->w, (float)app->h);
-	}
+	draw->projection = ortho_2d(0, 0, (float)app->w, (float)app->h);
 	draw->reset_cam();
 	draw->uniform_arena = cf_make_arena(32, CF_MB);
 
