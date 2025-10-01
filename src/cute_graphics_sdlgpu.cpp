@@ -121,7 +121,7 @@ static struct
 	SDL_Window* window;
 	SDL_GPUTexture* swapchain_tex;
 	uint32_t swapchain_tex_w, swapchain_tex_h;
-	bool canceled_command_buffer;
+	bool skip_drawing;
 	int msaa_sample_count;
 	CF_CanvasInternal* canvas;
 } g_ctx = { };
@@ -710,21 +710,18 @@ void cf_sdlgpu_set_vsync_mailbox(bool vsync)
 void cf_sdlgpu_begin_frame()
 {
 	g_ctx.cmd = SDL_AcquireGPUCommandBuffer(g_ctx.device);
-	g_ctx.canceled_command_buffer = false;
+	g_ctx.skip_drawing = false;
 }
 
 void cf_sdlgpu_blit_canvas(CF_Canvas canvas)
 {
 	// Try to acquire a swapchain texture
-	if (g_ctx.swapchain_tex == NULL && !g_ctx.canceled_command_buffer) {
+	if (g_ctx.swapchain_tex == NULL && !g_ctx.skip_drawing) {
 		if (
-			!SDL_AcquireGPUSwapchainTexture(g_ctx.cmd, g_ctx.window, &g_ctx.swapchain_tex, &g_ctx.swapchain_tex_w, &g_ctx.swapchain_tex_h)
+			!SDL_WaitAndAcquireGPUSwapchainTexture(g_ctx.cmd, g_ctx.window, &g_ctx.swapchain_tex, &g_ctx.swapchain_tex_w, &g_ctx.swapchain_tex_h)
 			|| g_ctx.swapchain_tex == NULL
 		) {
-			// Avoid large resource cycle chains gobbling up RAM when GPU-bound.
-			// https://discourse.libsdl.org/t/sdl-gpu-cycle-difficulties/55188
-			SDL_CancelGPUCommandBuffer(g_ctx.cmd);
-			g_ctx.canceled_command_buffer = true;
+			g_ctx.skip_drawing = true;
 		}
 	}
 
@@ -756,12 +753,7 @@ void cf_sdlgpu_blit_canvas(CF_Canvas canvas)
 
 void cf_sdlgpu_end_frame()
 {
-	// When using Vulkan, don't submit canceled command buffers. This will cause a crash due to DescriptorSetCache being
-	// NULL. Cases where this can happen is when you minimize the window.
-	if (!g_ctx.canceled_command_buffer) {
-		SDL_SubmitGPUCommandBuffer(g_ctx.cmd);
-	}
-	SDL_WaitForGPUIdle(g_ctx.device);
+	SDL_SubmitGPUCommandBuffer(g_ctx.cmd);
 	g_ctx.cmd = NULL;
 	g_ctx.canvas = NULL;
 	g_ctx.swapchain_tex = NULL;
