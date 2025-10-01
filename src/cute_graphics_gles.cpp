@@ -196,6 +196,9 @@ static CF_GL_PixelFormatInfo g_gl_pixel_formats[] =
 #endif
 };
 
+static CF_GL_CanvasInternal g_backbuffer_canvas = { .fbo = 0 };
+static CF_Canvas g_backbuffer_canvas_handle = { .id = (uintptr_t)&g_backbuffer_canvas };
+
 static struct
 {
 	bool debug;
@@ -211,6 +214,7 @@ static struct
 	GLuint fbo;
 	CF_MaterialInternal* material;
 	CF_GL_MeshInternal* mesh;
+	CF_GL_CanvasInternal* canvas;
 } g_ctx = { };
 
 static void cf_gles_poll_error(const char* file, int line)
@@ -275,9 +279,12 @@ static void s_apply_state()
 			target->scissor.h != current->scissor.h
 		)
 	) {
+		// Flip the scissor rect vertically since OpenGL's puts (0, 0) at the
+		// bottom left
+		CF_GL_CanvasInternal* canvas = g_ctx.canvas;
 		glScissor(
 			target->scissor.x,
-			target->scissor.y,
+			canvas->h - target->scissor.y - target->scissor.h,
 			target->scissor.w,
 			target->scissor.h
 		);
@@ -729,14 +736,19 @@ void cf_gles_end_frame()
 	SDL_GL_SwapWindow(g_ctx.window);
 }
 
-void cf_gles_blit_canvas(CF_Canvas canvas)
+void cf_gles_apply_canvas(CF_Canvas canvas_handle, bool clear);
+
+void cf_gles_blit_canvas(CF_Canvas canvas_handle)
 {
 	// Blit onto the default framebuffer.
-	s_bind_framebuffer(0);
+	g_backbuffer_canvas.w = app->w;
+	g_backbuffer_canvas.h = app->h;
+	cf_gles_apply_canvas(g_backbuffer_canvas_handle, false);
 	cf_apply_mesh(g_ctx.backbuffer_quad);
-	CF_V2 u_texture_size = V2((float)app->w, (float)app->h);
 
-	cf_material_set_texture_fs(g_ctx.backbuffer_material, "u_image", cf_canvas_get_target(canvas));
+	CF_GL_CanvasInternal* canvas = (CF_GL_CanvasInternal*)(uintptr_t)canvas_handle.id;
+	CF_V2 u_texture_size = V2((float)canvas->w, (float)canvas->h);
+	cf_material_set_texture_fs(g_ctx.backbuffer_material, "u_image", cf_canvas_get_target(canvas_handle));
 	cf_material_set_uniform_fs(g_ctx.backbuffer_material, "u_texture_size", &u_texture_size, CF_UNIFORM_TYPE_FLOAT2, 1);
 	cf_apply_shader(g_ctx.backbuffer_shader, g_ctx.backbuffer_material);
 	cf_draw_elements();
@@ -1030,6 +1042,7 @@ void cf_gles_apply_canvas(CF_Canvas canvas_handle, bool clear)
 	s_bind_framebuffer(canvas->fbo);
 	if (clear) { s_clear_canvas(); }
 
+	g_ctx.canvas = canvas;
 	g_ctx.target_state = s_default_state();
 	g_ctx.target_state.viewport.w = canvas->w;
 	g_ctx.target_state.viewport.h = canvas->h;
@@ -1388,9 +1401,9 @@ void cf_gles_draw_elements()
 void cf_gles_commit()
 {
 	// Reset all but viewport state which is part of cf_apply_canvas
-	CF_GL_Rect viewport = g_ctx.target_state.viewport;
 	g_ctx.target_state = s_default_state();
-	g_ctx.target_state.viewport = viewport;
+	g_ctx.target_state.viewport.w = g_ctx.canvas->w;
+	g_ctx.target_state.viewport.h = g_ctx.canvas->h;
 }
 
 void cf_gles_apply_viewport(int x, int y, int w, int h)
