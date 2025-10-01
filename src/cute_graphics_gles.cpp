@@ -1387,7 +1387,10 @@ void cf_gles_draw_elements()
 
 void cf_gles_commit()
 {
+	// Reset all but viewport state which is part of cf_apply_canvas
+	CF_GL_Rect viewport = g_ctx.target_state.viewport;
 	g_ctx.target_state = s_default_state();
+	g_ctx.target_state.viewport = viewport;
 }
 
 void cf_gles_apply_viewport(int x, int y, int w, int h)
