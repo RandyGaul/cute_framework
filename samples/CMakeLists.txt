@@ -90,6 +90,11 @@ if (CF_CUTE_SHADERC)
 	)
 endif()
 
+# Ensure that sample data is included in web build
+if (EMSCRIPTEN)
+	target_link_options(waves PRIVATE --preload-file "${CMAKE_CURRENT_SOURCE_DIR}/waves_data@/waves_data")
+endif ()
+
 # Copy over some folders for certain samples.
 add_custom_command(TARGET spaceshooter PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/spaceshooter_data $<TARGET_FILE_DIR:spaceshooter>/spaceshooter_data)
 add_custom_command(TARGET waves PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/waves_data $<TARGET_FILE_DIR:waves>/waves_data)

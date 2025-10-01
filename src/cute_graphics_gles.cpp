@@ -81,16 +81,34 @@ struct CF_GL_MeshInternal
 	CF_VertexAttribute attributes[CF_MESH_MAX_VERTEX_ATTRIBUTES];
 };
 
+struct CF_GL_ShaderUniformBlock
+{
+	CF_ShaderUniformInfo info;
+	CF_ShaderUniformMemberInfo* members;
+};
+
+struct CF_GL_ShaderInfo
+{
+	int num_uniform_blocks;
+	GLuint ubo[CF_MAX_UNIFORM_BLOCK_COUNT];
+	CF_GL_ShaderUniformBlock uniform_blocks[CF_MAX_UNIFORM_BLOCK_COUNT];
+	CF_ShaderUniformMemberInfo* uniform_members;
+};
+
+struct CF_GL_TextureBinding
+{
+	const char* name;
+	int location;
+};
+
 struct CF_GL_ShaderInternal
 {
-	GLuint prog = 0;
-	GLuint ubo = 0;
-	GLuint ubo_index = GL_INVALID_INDEX;
-	GLuint ubo_binding = 0; // binding point
+	GLuint program;
 
-	// lazy texture bindings by name
-	struct TexBinding { const char* name; GLint loc; GLint unit; };
-	Cute::Array<TexBinding> fs_textures;
+	int num_texture_bindings;
+	CF_GL_TextureBinding* texture_bindings;
+	CF_GL_ShaderInfo vs;
+	CF_GL_ShaderInfo fs;
 };
 
 struct Vertex
@@ -503,45 +521,27 @@ static GLuint s_compile_shader(GLenum stage, const char* src)
 	return s;
 }
 
-static GLuint s_link_program(GLuint vs, GLuint fs)
+static GLuint s_make_program(const char* vs_src, const char* fs_src)
 {
-	GLuint p = glCreateProgram();
-	glAttachShader(p, vs);
-	glAttachShader(p, fs);
-	glLinkProgram(p);
-	GLint ok = GL_FALSE;
-	glGetProgramiv(p, GL_LINK_STATUS, &ok);
-	if (!ok) {
-		char log[4096]; GLsizei len=0;
-		glGetProgramInfoLog(p, sizeof(log), &len, log);
-		fprintf(stderr, "GLSL link error:\n%.*s\n", (int)len, log);
-	}
-	glDetachShader(p, vs); glDetachShader(p, fs);
-	glDeleteShader(vs); glDeleteShader(fs);
-	CF_POLL_OPENGL_ERROR();
-	return p;
-}
-
-static CF_Shader s_make_shader(const char* vs_src, const char* fs_src)
-{
-	CF_GL_ShaderInternal* sh = (CF_GL_ShaderInternal*)CF_CALLOC(sizeof(CF_GL_ShaderInternal));
 	GLuint vs = s_compile_shader(GL_VERTEX_SHADER,   vs_src);
 	GLuint fs = s_compile_shader(GL_FRAGMENT_SHADER, fs_src);
-	sh->prog = s_link_program(vs, fs);
 
-	// Optional UBO named "uniform_block"
-	sh->ubo_index = glGetUniformBlockIndex(sh->prog, "uniform_block");
-	if (sh->ubo_index != GL_INVALID_INDEX) {
-		glGenBuffers(1, &sh->ubo);
-		glBindBuffer(GL_UNIFORM_BUFFER, sh->ubo);
-		glBufferData(GL_UNIFORM_BUFFER, 4 * 1024, NULL, GL_DYNAMIC_DRAW);
-		glBindBuffer(GL_UNIFORM_BUFFER, 0);
-		sh->ubo_binding = 0;
-		glUniformBlockBinding(sh->prog, sh->ubo_index, sh->ubo_binding);
+	GLuint program = glCreateProgram();
+	glAttachShader(program, vs);
+	glAttachShader(program, fs);
+	glLinkProgram(program);
+
+	GLint ok = GL_FALSE;
+	glGetProgramiv(program, GL_LINK_STATUS, &ok);
+	if (!ok) {
+		char log[4096]; GLsizei len=0;
+		glGetProgramInfoLog(program, sizeof(log), &len, log);
+		fprintf(stderr, "GLSL link error:\n%.*s\n", (int)len, log);
 	}
+	glDetachShader(program, vs); glDetachShader(program, fs);
+	glDeleteShader(vs); glDeleteShader(fs);
 
-	CF_POLL_OPENGL_ERROR();
-	return CF_Shader{ (uint64_t)(uintptr_t)sh };
+	return program;
 }
 
 CF_INLINE GLenum s_wrap(CF_Filter f)
@@ -1144,8 +1144,49 @@ void cf_gles_apply_mesh(CF_Mesh mesh_handle)
 	g_ctx.mesh = mesh;
 }
 
+static void s_build_uniforms(GLuint program, CF_GL_ShaderInfo* shader_info, const CF_ShaderInfo* uniform_info, GLuint* binding_point)
+{
+	shader_info->uniform_members = (CF_ShaderUniformMemberInfo*)CF_ALLOC(sizeof(CF_ShaderUniformMemberInfo) * uniform_info->num_uniform_members);
+	for (int member_index = 0; member_index < uniform_info->num_uniform_members; ++member_index) {
+		shader_info->uniform_members[member_index] = uniform_info->uniform_members[member_index];
+		shader_info->uniform_members[member_index].name = cf_sintern(shader_info->uniform_members[member_index].name);
+	}
+
+	CF_ShaderUniformMemberInfo* members = shader_info->uniform_members;
+	shader_info->num_uniform_blocks = uniform_info->num_uniforms;
+	for (int block_index = 0; block_index < uniform_info->num_uniforms; ++block_index) {
+		CF_GL_ShaderUniformBlock* block = &shader_info->uniform_blocks[block_index];
+		block->info = uniform_info->uniforms[block_index];
+		block->info.block_name = cf_sintern(block->info.block_name);
+		block->members = members;
+		// Members of consecutive blocks are tightly packed into a single array
+		members += block->info.num_members;
+	}
+
+	glGenBuffers(shader_info->num_uniform_blocks, shader_info->ubo);
+	for (int block_index = 0; block_index < uniform_info->num_uniforms; ++block_index) {
+		CF_GL_ShaderUniformBlock* block = &shader_info->uniform_blocks[block_index];
+		glBindBuffer(GL_UNIFORM_BUFFER, shader_info->ubo[block_index]);
+		glBufferData(GL_UNIFORM_BUFFER, shader_info->uniform_blocks[block_index].info.block_size, NULL, GL_DYNAMIC_DRAW);
+		// GLES 3.00 and WebGL do not support explicit binding (i.e: layout(binding = x))
+		// Thus, we have to query this after linking.
+		GLuint index = glGetUniformBlockIndex(program, block->info.block_name);
+		if (index == GL_INVALID_INDEX) {
+			// The block could be optimized out
+			block->info.block_index = -1;
+			continue;
+		}
+		glUniformBlockBinding(program, index, *binding_point);
+		block->info.block_index = *binding_point;
+		++*binding_point;
+	}
+	glBindBuffer(GL_UNIFORM_BUFFER, 0);
+	CF_POLL_OPENGL_ERROR();
+}
+
 CF_Shader cf_gles_make_shader_from_bytecode(CF_ShaderBytecode vertex_bytecode, CF_ShaderBytecode fragment_bytecode)
 {
+	// Transpile and link
 	char* vs_src = s_transpile(&vertex_bytecode);
 	char* fs_src = s_transpile(&fragment_bytecode);
 	if (!vs_src || !fs_src) {
@@ -1153,63 +1194,115 @@ CF_Shader cf_gles_make_shader_from_bytecode(CF_ShaderBytecode vertex_bytecode, C
 		CF_FREE(fs_src);
 		return CF_Shader{};
 	}
-	CF_Shader shader = s_make_shader(vs_src, fs_src);
+	GLuint program = s_make_program(vs_src, fs_src);
 	CF_FREE(vs_src);
 	CF_FREE(fs_src);
-	return shader;
+
+	// Copy refelection data
+	CF_GL_ShaderInternal* shader = (CF_GL_ShaderInternal*)CF_CALLOC(sizeof(CF_GL_ShaderInternal));
+	shader->program = program;
+
+	shader->texture_bindings = (CF_GL_TextureBinding*)CF_ALLOC(sizeof(CF_GL_TextureBinding) * fragment_bytecode.shader_info.num_images);
+	for (int image_index = 0; image_index < fragment_bytecode.shader_info.num_images; ++image_index) {
+		// GLES 3.00 and WebGL do not support explicit binding (i.e: layout(binding = x))
+		// Thus, we have to query this after linking.
+		const char* image_name = fragment_bytecode.shader_info.image_names[image_index];
+		GLint location = glGetUniformLocation(program, image_name);
+		if (location < 0) { continue; }  // The image might be optimized out
+
+		shader->texture_bindings[shader->num_texture_bindings].location = location;
+		shader->texture_bindings[shader->num_texture_bindings].name = cf_sintern(image_name);
+		++shader->num_texture_bindings;
+	}
+
+	GLuint binding_point = 0;
+	s_build_uniforms(program, &shader->vs, &vertex_bytecode.shader_info, &binding_point);
+	s_build_uniforms(program, &shader->fs, &fragment_bytecode.shader_info, &binding_point);
+
+	return { .id = (uintptr_t)shader };
 }
 
-void cf_gles_destroy_shader_internal(CF_Shader sh)
+void cf_gles_destroy_shader_internal(CF_Shader shader_handle)
 {
-	if (!sh.id) return;
-	auto* s = (CF_GL_ShaderInternal*)(uintptr_t)sh.id;
-	if (s->ubo) glDeleteBuffers(1, &s->ubo);
-	if (s->prog) glDeleteProgram(s->prog);
+	if (!shader_handle.id) return;
+
+	CF_GL_ShaderInternal* shader = (CF_GL_ShaderInternal*)(uintptr_t)shader_handle.id;
+
+	glDeleteBuffers(shader->vs.num_uniform_blocks, shader->vs.ubo);
+	glDeleteBuffers(shader->fs.num_uniform_blocks, shader->fs.ubo);
 	CF_POLL_OPENGL_ERROR();
-	CF_FREE(s);
+
+	CF_FREE(shader->vs.uniform_members);
+	CF_FREE(shader->fs.uniform_members);
+	CF_FREE(shader->texture_bindings);
+	glDeleteProgram(shader->program);
+	CF_FREE(shader);
 }
 
-static void s_upload_uniforms(CF_GL_ShaderInternal* sh, CF_MaterialInternal* mi)
+static const CF_GL_ShaderUniformBlock* s_find_block_info(const CF_GL_ShaderInfo* shader_info, const char* name)
 {
-	if (sh->ubo_index == GL_INVALID_INDEX) return;
-
-	// Compute total size (naive pack: VS then FS, in the order they were added).
-	size_t total = 0;
-	for (int pass = 0; pass < 2; ++pass) {
-		const auto& list = (pass == 0) ? mi->vs.uniforms : mi->fs.uniforms;
-		for (int i = 0; i < list.count(); ++i) total += (size_t)list[i].size;
-	}
-	if (total == 0) {
-		// Nothing to upload; still ensure UBO is bound to the binding point.
-		glBindBufferBase(GL_UNIFORM_BUFFER, sh->ubo_binding, sh->ubo);
-		return;
-	}
-
-	// Single temporary blob; manual writes.
-	uint8_t* blob = (uint8_t*)CF_ALLOC(total);
-	uint8_t* write = blob;
-	for (int pass = 0; pass < 2; ++pass) {
-		const auto& list = (pass == 0) ? mi->vs.uniforms : mi->fs.uniforms;
-		for (int i = 0; i < list.count(); ++i) {
-			const CF_Uniform& u = list[i];
-			CF_MEMCPY(write, u.data, u.size);
-			write += u.size;
+	for (int i = 0; i < shader_info->num_uniform_blocks; ++i) {
+		const CF_GL_ShaderUniformBlock* block = &shader_info->uniform_blocks[i];
+		if (block->info.block_name == name) {
+			return block;
 		}
 	}
 
-	// Upload to UBO.
-	glBindBuffer(GL_UNIFORM_BUFFER, sh->ubo);
-	GLint cur = 0;
-	glGetBufferParameteriv(GL_UNIFORM_BUFFER, GL_BUFFER_SIZE, &cur);
-	if ((GLint)total > cur) {
-		glBufferData(GL_UNIFORM_BUFFER, (GLsizeiptr)total, NULL, GL_DYNAMIC_DRAW);
-	}
-	glBufferSubData(GL_UNIFORM_BUFFER, 0, (GLsizeiptr)total, blob);
-	glBindBufferBase(GL_UNIFORM_BUFFER, sh->ubo_binding, sh->ubo);
-	glBindBuffer(GL_UNIFORM_BUFFER, 0);
+	return NULL;
+}
 
+static const CF_ShaderUniformMemberInfo* s_find_member_info(const CF_GL_ShaderUniformBlock* block, const char* name)
+{
+	for (int i = 0; i < block->info.num_members; ++i) {
+		const CF_ShaderUniformMemberInfo* member = &block->members[i];
+		if (member->name == name) {
+			return member;
+		}
+	}
+
+	return NULL;
+}
+
+static void s_upload_uniforms(CF_GL_ShaderInfo* shader_info, const CF_MaterialState* material, CF_Arena* arena)
+{
+	void* uniform_data_ptrs[CF_MAX_UNIFORM_BLOCK_COUNT];
+	CF_MEMSET(uniform_data_ptrs, 0, sizeof(uniform_data_ptrs));
+
+	// Copy data into uniform blocks
+	for (int uniform_index = 0; uniform_index < material->uniforms.count(); ++uniform_index) {
+		const CF_Uniform* uniform = &material->uniforms[uniform_index];
+		const CF_GL_ShaderUniformBlock* block = s_find_block_info(shader_info, uniform->block_name);
+		if (block == NULL) { continue; }
+		if (block->info.block_index < 0) { continue; }
+
+		const CF_ShaderUniformMemberInfo* member = s_find_member_info(block, uniform->name);
+		if (member == NULL) { continue; }
+
+		// TODO: assert type consistency
+		int block_index = block - shader_info->uniform_blocks;
+		void* uniform_data = uniform_data_ptrs[block_index];
+		if (uniform_data == NULL) {
+			uniform_data = cf_arena_alloc(arena, block->info.block_size);
+			CF_MEMSET(uniform_data, 0, block->info.block_size);
+			uniform_data_ptrs[block_index] = uniform_data;
+		}
+
+		CF_MEMCPY((void*)((uintptr_t)uniform_data + member->offset), uniform->data, uniform->size);
+	}
+
+	// Upload to GPU
+	for (int block_index = 0; block_index < shader_info->num_uniform_blocks; ++block_index) {
+		void* block_data = uniform_data_ptrs[block_index];
+		if (block_data == NULL) { continue; }
+
+		const CF_GL_ShaderUniformBlock* block = &shader_info->uniform_blocks[block_index];
+		glBindBuffer(GL_UNIFORM_BUFFER, shader_info->ubo[block_index]);
+		glBufferSubData(GL_UNIFORM_BUFFER, 0, block->info.block_size, block_data);
+		glBindBufferBase(GL_UNIFORM_BUFFER, block->info.block_index, shader_info->ubo[block_index]);
+	}
 	CF_POLL_OPENGL_ERROR();
-	CF_FREE(blob);
+
+	cf_arena_reset(arena);
 }
 
 void cf_gles_apply_shader(CF_Shader shader_handle, CF_Material material_handle)
@@ -1217,8 +1310,6 @@ void cf_gles_apply_shader(CF_Shader shader_handle, CF_Material material_handle)
 	CF_GL_ShaderInternal* shader = (CF_GL_ShaderInternal*)(uintptr_t)shader_handle.id;
 	CF_MaterialInternal* material = (CF_MaterialInternal*)(uintptr_t)material_handle.id;
 	g_ctx.material = material;
-
-	glUseProgram(shader->prog);
 
 	// render state
 	CF_RenderState render_state = material->state;
@@ -1265,23 +1356,27 @@ void cf_gles_apply_shader(CF_Shader shader_handle, CF_Material material_handle)
 	}
 	CF_POLL_OPENGL_ERROR();
 
+	glUseProgram(shader->program);
+
 	// uniforms
-	s_upload_uniforms(shader, material);
+	s_upload_uniforms(&shader->vs, &material->vs, &material->block_arena);
+	s_upload_uniforms(&shader->fs, &material->fs, &material->block_arena);
 
 	// textures (FS)
-	GLint unit = 0;
-	for (int i = 0; i < material->fs.textures.count(); ++i) {
-		const char* name = material->fs.textures[i].name;
-		auto* tex = (CF_GL_TextureInternal*)(uintptr_t)material->fs.textures[i].handle.id;
-		if (!tex) continue;
-
-		// TODO: cache the location
-		GLint loc = glGetUniformLocation(shader->prog, name);
-		if (loc >= 0) {
-			glActiveTexture(GL_TEXTURE0 + unit);
-			glBindTexture(GL_TEXTURE_2D, tex->id);
-			glUniform1i(loc, unit);
-			++unit;
+	GLuint texture_unit = 0;
+	for (int texture_index = 0; texture_index < material->fs.textures.count(); ++texture_index) {
+		const char* name = material->fs.textures[texture_index].name;
+		CF_MaterialTex material_tex = material->fs.textures[texture_index];
+		CF_GL_TextureInternal* texture = (CF_GL_TextureInternal*)(uintptr_t)material_tex.handle.id;
+		for (int image_index = 0; image_index < shader->num_texture_bindings; ++image_index) {
+			const CF_GL_TextureBinding* binding = &shader->texture_bindings[image_index];
+			if (binding->name == material_tex.name) {
+				glActiveTexture(GL_TEXTURE0 + texture_unit);
+				glBindTexture(GL_TEXTURE_2D, texture->id);
+				glUniform1i(binding->location, texture_unit);
+				++texture_unit;
+				break;
+			}
 		}
 	}
 	CF_POLL_OPENGL_ERROR();
@@ -1299,7 +1394,7 @@ void cf_gles_apply_shader(CF_Shader shader_handle, CF_Material material_handle)
 	for (int i = 0; i < mesh->attribute_count; ++i) {
 		const CF_VertexAttribute* attrib = &mesh->attributes[i];
 		// TODO: cache the locations
-		GLint loc = glGetAttribLocation(shader->prog, attrib->name);
+		GLint loc = glGetAttribLocation(shader->program, attrib->name);
 		if (loc < 0) continue;
 
 		const bool per_instance = attrib->per_instance;
