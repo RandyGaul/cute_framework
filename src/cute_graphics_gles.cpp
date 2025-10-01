@@ -1278,7 +1278,10 @@ static void s_upload_uniforms(CF_GL_ShaderInfo* shader_info, const CF_MaterialSt
 		const CF_ShaderUniformMemberInfo* member = s_find_member_info(block, uniform->name);
 		if (member == NULL) { continue; }
 
-		// TODO: assert type consistency
+		CF_UniformType uniform_type = s_uniform_type(member->type);
+		CF_ASSERT(uniform_type == uniform->type);
+		CF_ASSERT(s_uniform_size(uniform_type) * member->array_length == uniform->size);
+
 		int block_index = block - shader_info->uniform_blocks;
 		void* uniform_data = uniform_data_ptrs[block_index];
 		if (uniform_data == NULL) {

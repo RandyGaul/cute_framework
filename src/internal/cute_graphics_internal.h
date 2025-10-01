@@ -75,6 +75,22 @@ CF_INLINE bool s_is_compatible(CF_ShaderInputFormat input_format, CF_VertexForma
 	}
 }
 
+CF_INLINE CF_UniformType s_uniform_type(CF_ShaderInfoDataType type)
+{
+	switch (type) {
+	case CF_SHADER_INFO_TYPE_UNKNOWN: return CF_UNIFORM_TYPE_UNKNOWN;
+	case CF_SHADER_INFO_TYPE_FLOAT:   return CF_UNIFORM_TYPE_FLOAT;
+	case CF_SHADER_INFO_TYPE_FLOAT2:  return CF_UNIFORM_TYPE_FLOAT2;
+	case CF_SHADER_INFO_TYPE_FLOAT3:  return CF_UNIFORM_TYPE_FLOAT3;
+	case CF_SHADER_INFO_TYPE_FLOAT4:  return CF_UNIFORM_TYPE_FLOAT4;
+	case CF_SHADER_INFO_TYPE_SINT:	return CF_UNIFORM_TYPE_INT;
+	case CF_SHADER_INFO_TYPE_SINT2:   return CF_UNIFORM_TYPE_INT2;
+	case CF_SHADER_INFO_TYPE_SINT4:   return CF_UNIFORM_TYPE_INT4;
+	case CF_SHADER_INFO_TYPE_MAT4:	return CF_UNIFORM_TYPE_MAT4;
+	default: return CF_UNIFORM_TYPE_UNKNOWN;
+	}
+}
+
 CF_INLINE int s_uniform_size(CF_UniformType type)
 {
 	switch (type) {
