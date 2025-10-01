@@ -228,7 +228,6 @@ void cf_gles_flush();
 void cf_gles_set_vsync(bool true_turn_on_vsync);
 void cf_gles_begin_frame();
 void cf_gles_blit_canvas(CF_Canvas canvas);
-void cf_gles_present();
 void cf_gles_end_frame();
 void cf_gles_cleanup();
 
