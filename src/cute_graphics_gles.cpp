@@ -709,6 +709,8 @@ void cf_gles_end_frame()
 
 void cf_gles_blit_canvas(CF_Canvas canvas_handle)
 {
+	int window_width, window_height;
+	SDL_GetWindowSizeInPixels(g_ctx.window, &window_width, &window_height);
 	g_ctx.current_state.scissor_enabled = false;
 	glDisable(GL_SCISSOR_TEST);
 
@@ -717,9 +719,9 @@ void cf_gles_blit_canvas(CF_Canvas canvas_handle)
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 	glBlitFramebuffer(
 		0, 0, canvas->w, canvas->h,
-		0, 0, app->w, app->h,
-		GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT,
-		GL_NEAREST
+		0, 0, window_width, window_height,
+		GL_COLOR_BUFFER_BIT,
+		GL_LINEAR
 	);
 	CF_POLL_OPENGL_ERROR();
 	g_ctx.fbo = 0;
