@@ -196,18 +196,12 @@ static CF_GL_PixelFormatInfo g_gl_pixel_formats[] =
 #endif
 };
 
-static CF_GL_CanvasInternal g_backbuffer_canvas = { .fbo = 0 };
-static CF_Canvas g_backbuffer_canvas_handle = { .id = (uintptr_t)&g_backbuffer_canvas };
-
 static struct
 {
 	bool debug;
 	SDL_GLContext gl_ctx;
 	SDL_Window* window;
 	spvc_context spvc;
-	CF_Mesh backbuffer_quad;
-	CF_Shader backbuffer_shader;
-	CF_Material backbuffer_material;
 
 	CF_GL_RenderState target_state;
 	CF_GL_RenderState current_state;
@@ -225,12 +219,12 @@ static void cf_gles_poll_error(const char* file, int line)
 	}
 }
 
-static CF_GL_RenderState s_default_state()
+static CF_GL_RenderState s_default_state(CF_GL_CanvasInternal* canvas)
 {
 	CF_GL_RenderState state = { };
-	state.viewport = { 0, 0, app->w, app->h };
+	state.viewport = { 0, 0, canvas->w, canvas->h };
 	state.scissor_enabled = false;
-	state.scissor = { 0, 0, app->w, app->h };
+	state.scissor = { 0, 0, canvas->w, canvas->h };
 	state.stencil_reference = 0;
 	state.blend_constants = { 0.0, 0.0, 0.0, 0.0 };
 	return state;
@@ -269,7 +263,8 @@ static void s_apply_state()
 
 	if (
 		target->scissor_enabled
-		&& (
+		&&
+		(
 			target->scissor.x != current->scissor.x
 			||
 			target->scissor.y != current->scissor.y
@@ -667,9 +662,6 @@ void cf_gles_destroy_shader_internal(CF_Shader sh);
 
 void cf_gles_cleanup()
 {
-	cf_destroy_material(g_ctx.backbuffer_material);
-	cf_gles_destroy_shader_internal(g_ctx.backbuffer_shader);
-	cf_destroy_mesh(g_ctx.backbuffer_quad);
 	spvc_context_destroy(g_ctx.spvc);
 	SDL_GL_DestroyContext(g_ctx.gl_ctx);
 }
@@ -688,27 +680,6 @@ void cf_gles_attach(SDL_Window* window)
 	cf_load_gles();
 
 	g_ctx.window = window;
-
-	// Setup the backbuffer fullscreen mesh and canvas.
-	CF_VertexAttribute attrs[2] = { };
-	attrs[0].name = "in_posH";
-	attrs[0].format = CF_VERTEX_FORMAT_FLOAT2;
-	attrs[0].offset = CF_OFFSET_OF(Vertex, x);
-	attrs[1].name = "in_uv";
-	attrs[1].format = CF_VERTEX_FORMAT_FLOAT2;
-	attrs[1].offset = CF_OFFSET_OF(Vertex, u);
-	g_ctx.backbuffer_quad = cf_make_mesh(sizeof(Vertex) * 6, attrs, CF_ARRAY_SIZE(attrs), sizeof(Vertex));
-	Vertex quad[6];
-	s_quad(0, 0, 2, 2, quad);
-	cf_mesh_update_vertex_data(g_ctx.backbuffer_quad, quad, 6);
-
-#ifdef CF_RUNTIME_SHADER_COMPILATION
-	g_ctx.backbuffer_shader = cf_make_shader_from_source_internal(s_backbuffer_vs, s_backbuffer_fs, NULL);
-#else
-	g_ctx.backbuffer_shader = cf_make_shader_from_bytecode(s_backbuffer_vs_bytecode, s_backbuffer_fs_bytecode);
-#endif
-
-	g_ctx.backbuffer_material = cf_make_material();
 }
 
 bool cf_gles_supports_msaa(int sample_count)
@@ -736,23 +707,23 @@ void cf_gles_end_frame()
 	SDL_GL_SwapWindow(g_ctx.window);
 }
 
-void cf_gles_apply_canvas(CF_Canvas canvas_handle, bool clear);
-
 void cf_gles_blit_canvas(CF_Canvas canvas_handle)
 {
-	// Blit onto the default framebuffer.
-	g_backbuffer_canvas.w = app->w;
-	g_backbuffer_canvas.h = app->h;
-	cf_gles_apply_canvas(g_backbuffer_canvas_handle, false);
-	cf_apply_mesh(g_ctx.backbuffer_quad);
+	g_ctx.current_state.scissor_enabled = false;
+	glDisable(GL_SCISSOR_TEST);
 
 	CF_GL_CanvasInternal* canvas = (CF_GL_CanvasInternal*)(uintptr_t)canvas_handle.id;
-	CF_V2 u_texture_size = V2((float)canvas->w, (float)canvas->h);
-	cf_material_set_texture_fs(g_ctx.backbuffer_material, "u_image", cf_canvas_get_target(canvas_handle));
-	cf_material_set_uniform_fs(g_ctx.backbuffer_material, "u_texture_size", &u_texture_size, CF_UNIFORM_TYPE_FLOAT2, 1);
-	cf_apply_shader(g_ctx.backbuffer_shader, g_ctx.backbuffer_material);
-	cf_draw_elements();
-	cf_commit();
+	glBindFramebuffer(GL_READ_FRAMEBUFFER, canvas->fbo);
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+	glBlitFramebuffer(
+		0, 0, canvas->w, canvas->h,
+		0, 0, app->w, app->h,
+		GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT,
+		GL_NEAREST
+	);
+	CF_POLL_OPENGL_ERROR();
+	g_ctx.fbo = 0;
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
 bool cf_gles_texture_supports_format(CF_PixelFormat format, CF_TextureUsageBits usage)
@@ -1025,14 +996,20 @@ static void s_clear_canvas()
 	glClearColor(app->clear_color.r, app->clear_color.g, app->clear_color.b, app->clear_color.a);
 	glClearDepthf(app->clear_depth);
 	glClearStencil((GLint)app->clear_stencil);
+	g_ctx.current_state.scissor_enabled = false;
+	glDisable(GL_SCISSOR_TEST);
 	glClear(bits);
 }
 
 void cf_gles_clear_canvas(CF_Canvas canvas_handle)
 {
 	CF_GL_CanvasInternal* canvas = (CF_GL_CanvasInternal*)(uintptr_t)canvas_handle.id;
+
+	GLuint fbo = g_ctx.fbo;
 	s_bind_framebuffer(canvas->fbo);
 	s_clear_canvas();
+	s_bind_framebuffer(fbo);
+
 	CF_POLL_OPENGL_ERROR();
 }
 
@@ -1043,9 +1020,7 @@ void cf_gles_apply_canvas(CF_Canvas canvas_handle, bool clear)
 	if (clear) { s_clear_canvas(); }
 
 	g_ctx.canvas = canvas;
-	g_ctx.target_state = s_default_state();
-	g_ctx.target_state.viewport.w = canvas->w;
-	g_ctx.target_state.viewport.h = canvas->h;
+	g_ctx.target_state = s_default_state(canvas);
 }
 
 CF_Mesh cf_gles_make_mesh(int vertex_buffer_size, const CF_VertexAttribute* attributes, int attribute_count, int vertex_stride)
@@ -1400,10 +1375,7 @@ void cf_gles_draw_elements()
 
 void cf_gles_commit()
 {
-	// Reset all but viewport state which is part of cf_apply_canvas
-	g_ctx.target_state = s_default_state();
-	g_ctx.target_state.viewport.w = g_ctx.canvas->w;
-	g_ctx.target_state.viewport.h = g_ctx.canvas->h;
+	g_ctx.target_state = s_default_state(g_ctx.canvas);
 }
 
 void cf_gles_apply_viewport(int x, int y, int w, int h)
