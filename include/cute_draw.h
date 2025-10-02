@@ -30,6 +30,17 @@ extern "C" {
  */
 CF_API void CF_CALL cf_draw_sprite(const CF_Sprite* sprite);
 
+
+/**
+* @function cf_draw_sprite
+* @category draw
+* @brief    Draws a sprite using 9 slice, if no center patch uvs are defined then this defaults back to cf_draw_sprite.
+* @param    sprite     The sprite.
+* @related  cf_draw_sprite cf_draw_quad draw_look_at cf_draw_to cf_app_draw_onto_screen
+*/
+CF_API void CF_CALL cf_draw_sprite_9_slice(const CF_Sprite* sprite);
+
+
 /**
  * @function cf_draw_prefetch
  * @category draw
@@ -1689,6 +1700,10 @@ CF_INLINE void draw_sprite(const CF_Sprite* sprite) { cf_draw_sprite(sprite); }
 CF_INLINE void draw_sprite(const CF_Sprite& sprite) { cf_draw_sprite(&sprite); }
 CF_INLINE void sprite_draw(const CF_Sprite* sprite) { cf_draw_sprite(sprite); }
 CF_INLINE void sprite_draw(const CF_Sprite& sprite) { cf_draw_sprite(&sprite); }
+CF_INLINE void draw_9_slice_sprite(const CF_Sprite* sprite) { cf_draw_sprite_9_slice(sprite); }
+CF_INLINE void draw_9_slice_sprite(const CF_Sprite& sprite) { cf_draw_sprite_9_slice(&sprite); }
+CF_INLINE void sprite_9_slice_draw(const CF_Sprite* sprite) { cf_draw_sprite_9_slice(sprite); }
+CF_INLINE void sprite_9_slice_draw(const CF_Sprite& sprite) { cf_draw_sprite_9_slice(&sprite); }
 CF_INLINE void draw_quad(CF_Aabb bb, float thickness = 1.0f, float chubbiness = 0) { cf_draw_quad(bb, thickness, chubbiness); }
 CF_INLINE void draw_quad(v2 p0, v2 p1, v2 p2, v2 p3, float thickness = 1.0f, float chubbiness = 0) { cf_draw_quad2(p0, p1, p2, p3, thickness, chubbiness); }
 CF_INLINE void draw_quad_fill(CF_Aabb bb, float chubbiness = 0) { cf_draw_quad_fill(bb, chubbiness); }

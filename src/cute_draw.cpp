@@ -584,6 +584,11 @@ void cf_draw_sprite(const CF_Sprite* sprite)
 	s.h = sprite->h;
 	s.geom.type = BATCH_GEOMETRY_TYPE_SPRITE;
 
+	s.minx = 0;
+	s.miny = 0;
+	s.maxx = 1;
+	s.maxy = 1;
+
 	v2 offset = sprite->offset + (sprite->pivots ? sprite->pivots[sprite->frame_index] : V2(0,0));
 	v2 p = cf_add_v2(sprite->transform.p, cf_mul_v2(offset, sprite->scale));
 
@@ -631,6 +636,250 @@ void cf_draw_sprite(const CF_Sprite* sprite)
 	s.geom.alpha = sprite->opacity;
 	s.geom.user_params = draw->user_params.last();
 	DRAW_PUSH_ITEM(s);
+}
+
+void cf_draw_sprite_9_slice(const CF_Sprite* sprite)
+{
+	CF_ASSERT(sprite);
+	bool apply_border_scale = true;
+	int frame_index = 0;
+	SPRITEBATCH_U64 image_id = 0;
+
+	if (sprite->animation) {
+		frame_index = sprite->frame_index;
+		image_id = sprite->animation->frames[sprite->frame_index].id;
+	}
+	else if (sprite->easy_sprite_id >= CF_PREMADE_ID_RANGE_LO && sprite->easy_sprite_id <= CF_PREMADE_ID_RANGE_HI) {
+		// not handled for now
+		cf_draw_sprite(sprite);
+		return;
+	}
+	else {
+		image_id = sprite->easy_sprite_id;
+	}
+
+	// revert back to default cf_draw
+	if (cf_area_aabb(sprite->center_patches[sprite->frame_index]) == 0.0f) {
+		cf_draw_sprite(sprite);
+		return;
+	}
+
+	// disable this so sides do not overlap
+	apply_border_scale = false;
+	// prefetch incase image hasn't been blitted yet to the atlas
+	spritebatch_prefetch(&draw->sb, image_id, sprite->w, sprite->h);
+
+	CF_V2 center_uv0 = sprite->center_patches[frame_index].min;
+	CF_V2 center_uv1 = sprite->center_patches[frame_index].max;
+	CF_V2 center_uv_size = center_uv1 - center_uv0;
+	
+#if 0
+	// testing any clipping..
+	CF_V2 uvs0[] = {
+		// top row
+		cf_v2(0           , 0.5f),
+		cf_v2(0           , 0),
+		cf_v2(0           , 0),
+		cf_v2(0           , 0),
+		cf_v2(0           , 0),
+		cf_v2(0           , 0),
+		cf_v2(0           , 0),
+		cf_v2(0           , 0),
+		cf_v2(0           , 0),
+	};
+
+	CF_V2 uvs1[] = {
+		// top row
+		cf_v2(1           , 1),
+		cf_v2(1           , 1),
+		cf_v2(1           , 1),
+		cf_v2(1           , 1),
+		cf_v2(1           , 1),
+		cf_v2(1           , 1),
+		cf_v2(1           , 1),
+		cf_v2(1           , 1),
+		cf_v2(1           , 1),
+	};
+#elif 1
+	CF_V2 uvs0[] = {
+		// top row
+		cf_v2(0           , 1.0f),
+		cf_v2(center_uv0.x, 1.0f),
+		cf_v2(center_uv1.x, 1.0f),
+		// middle row
+		cf_v2(0           , center_uv1.y),
+		cf_v2(center_uv0.x, center_uv1.y),
+		cf_v2(center_uv1.x, center_uv1.y),
+		// bottom row
+		cf_v2(0           , center_uv0.y),
+		cf_v2(center_uv0.x, center_uv0.y),
+		cf_v2(center_uv1.x, center_uv0.y),
+	};
+
+	CF_V2 uvs1[] = {
+		// top row
+		cf_v2(center_uv0.x, center_uv1.y),
+		cf_v2(center_uv1.x, center_uv1.y),
+		cf_v2(1.0f        , center_uv1.y),
+
+		// middle row
+		cf_v2(center_uv0.x, center_uv0.y),
+		cf_v2(center_uv1.x, center_uv0.y),
+		cf_v2(1.0f        , center_uv0.y),
+
+		// bottom row
+		cf_v2(center_uv0.x, 0.0f),
+		cf_v2(center_uv1.x, 0.0f),
+		cf_v2(1.0f        , 0.0f),
+	};
+#else
+	CF_V2 uvs0[] = {
+		// top row
+		cf_v2(0           , 0),
+		cf_v2(center_uv0.x, 0),
+		cf_v2(center_uv1.x, 0),
+		// middle row
+		cf_v2(0           , center_uv0.y),
+		cf_v2(center_uv0.x, center_uv0.y),
+		cf_v2(center_uv1.x, center_uv0.y),
+		// bottom row
+		cf_v2(0           , center_uv1.y),
+		cf_v2(center_uv0.x, center_uv1.y),
+		cf_v2(center_uv1.x, center_uv1.y),
+	};
+
+	CF_V2 uvs1[] = {
+		// top row
+		cf_v2(center_uv0.x, center_uv0.y),
+		cf_v2(center_uv1.x, center_uv0.y),
+		cf_v2(1.0f        , center_uv0.y),
+
+		// middle row
+		cf_v2(center_uv0.x, center_uv1.y),
+		cf_v2(center_uv1.x, center_uv1.y),
+		cf_v2(1.0f        , center_uv1.y),
+
+		// bottom row
+		cf_v2(center_uv0.x, 1.0f),
+		cf_v2(center_uv1.x, 1.0f),
+		cf_v2(1.0f        , 1.0f),
+	};
+#endif
+
+	CF_V2 offsets[] = {
+		// top
+		cf_v2(-center_uv_size.x - center_uv0.x,  center_uv_size.x + center_uv0.y),
+		cf_v2( 0                              ,  center_uv_size.x + center_uv0.y),
+		cf_v2( center_uv1.x                   ,  center_uv_size.x + center_uv0.y),
+		// middle
+		cf_v2(-center_uv_size.x - center_uv0.x,  0),
+		cf_v2( 0                              ,  0),
+		cf_v2( center_uv1.x                   ,  0),
+		// bottom
+		cf_v2(-center_uv_size.x - center_uv0.x, -center_uv1.y),
+		cf_v2( 0                              , -center_uv1.y),
+		cf_v2( center_uv1.x                   , -center_uv1.y),
+	};
+
+	//  @todo:  need a scale for each one
+	//          corners fixed
+	//          top and bottom wide
+	//          left and right tall
+	//          center fat
+	
+	// calculate w/h of the center patch
+	float w = sprite->w * sprite->scale.x - sprite->w * (center_uv0.x + 1.0f - center_uv1.x);
+	float h = sprite->h * sprite->scale.y - sprite->h * (center_uv0.y + 1.0f - center_uv1.y);
+	float center_w = sprite->w * center_uv_size.x;
+	float center_h = sprite->h * center_uv_size.y;
+	float scale_x = w;
+	float scale_y = h;
+
+	v2 scales[] = {
+		cf_v2(sprite->w * (uvs1[0].x - uvs0[0].x), sprite->h * (uvs1[0].y - uvs0[0].y)),
+		cf_v2(scale_x                            , sprite->h * (uvs1[1].y - uvs0[1].y)),
+		cf_v2(sprite->w * (uvs1[2].x - uvs0[2].x), sprite->h * (uvs1[2].y - uvs0[2].y)),
+
+		cf_v2(sprite->w * (uvs1[3].x - uvs0[3].x), scale_y),
+		cf_v2(scale_x                            , scale_y),
+		cf_v2(sprite->w * (uvs1[5].x - uvs0[5].x), scale_y),
+
+		cf_v2(sprite->w * (uvs1[6].x - uvs0[6].x), sprite->h * (uvs1[6].y - uvs0[6].y)),
+		cf_v2(scale_x                            , sprite->h * (uvs1[7].y - uvs0[7].y)),
+		cf_v2(sprite->w * (uvs1[8].x - uvs0[8].x), sprite->h * (uvs1[8].y - uvs0[8].y)),
+	};
+
+	v2 inv_dims = V2(1.0f / draw->atlas_dims.x, 1.0f / draw->atlas_dims.y);
+	for (int y = 0; y < 3; ++y) {
+		for (int x = 0; x < 3; ++x) {
+			spritebatch_sprite_t s = { };
+			//if (! ((y & 1) && (x & 1)) ) continue;
+			//if (x & 1) continue;
+			int uv_index = x + y * 3;
+			s.minx = uvs0[uv_index].x;
+			s.miny = uvs0[uv_index].y;
+			s.maxx = uvs1[uv_index].x;
+			s.maxy = uvs1[uv_index].y;
+
+			s.w = (int)(sprite->w * (s.maxx - s.minx));
+			s.h = (int)(sprite->h * (s.maxy - s.miny));
+
+			s.geom.type = BATCH_GEOMETRY_TYPE_SPRITE;
+
+			v2 offset = sprite->offset + (sprite->pivots ? sprite->pivots[sprite->frame_index] : V2(0, 0));
+			offset.x += offsets[uv_index].x * sprite->w * 0.5f;
+			offset.y += offsets[uv_index].y * sprite->h * 0.5f;
+			v2 p = cf_add_v2(sprite->transform.p, cf_mul_v2(offset, sprite->scale));
+			//v2 scale = V2(sprite->scale.x * s.w, sprite->scale.y * s.h);
+			v2 scale = V2(	scales[uv_index].x, 
+							scales[uv_index].y);
+
+			if (apply_border_scale) {
+				// Expand sprite's scale to account for border pixels in the atlas.
+				scale.x = scale.x + (scale.x / (float)sprite->w) * 2.0f;
+				scale.y = scale.y + (scale.y / (float)sprite->h) * 2.0f;
+			}
+
+			CF_V2 quad[] = {
+				{ -0.5f,  0.5f },
+				{  0.5f,  0.5f },
+				{  0.5f, -0.5f },
+				{ -0.5f, -0.5f },
+			};
+
+			// Construct quad in local space.
+			for (int j = 0; j < 4; ++j) {
+				float x = quad[j].x;
+				float y = quad[j].y;
+
+				x *= scale.x;
+				y *= scale.y;
+
+				float x0 = sprite->transform.r.c * x - sprite->transform.r.s * y;
+				float y0 = sprite->transform.r.s * x + sprite->transform.r.c * y;
+				x = x0;
+				y = y0;
+
+				x += p.x;
+				y += p.y;
+
+				quad[j].x = x;
+				quad[j].y = y;
+			}
+
+			CF_M3x2 m = draw->mvp;
+			s.geom.shape[0] = mul(m, quad[0]);
+			s.geom.shape[1] = mul(m, quad[1]);
+			s.geom.shape[2] = mul(m, quad[2]);
+			s.geom.shape[3] = mul(m, quad[3]);
+			s.geom.is_sprite = true;
+			s.geom.color = premultiply(pixel_white());
+			s.geom.alpha = sprite->opacity;
+			s.geom.user_params = draw->user_params.last();
+			s.image_id = image_id;
+			DRAW_PUSH_ITEM(s);
+		}
+	}
 }
 
 void cf_draw_prefetch(const CF_Sprite* sprite)

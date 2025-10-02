@@ -25,6 +25,7 @@ struct CF_AsepriteCacheEntry
 	htbl CF_Animation** animations = NULL;
 	dyna CF_SpriteSlice* slices = NULL;
 	dyna v2* pivots = NULL;
+	dyna CF_Aabb* center_patches = NULL;
 };
 
 struct CF_AsepriteCache
@@ -91,6 +92,7 @@ static void s_sprite(CF_AsepriteCacheEntry entry, CF_Sprite* sprite)
 	sprite->w = entry.ase->w;
 	sprite->h = entry.ase->h;
 	sprite->pivots = entry.pivots;
+	sprite->center_patches = entry.center_patches;
 	sprite->slices = entry.slices;
 	if (entry.ase->tag_count == 0) {
 		cf_sprite_play(sprite, "default");
@@ -101,14 +103,16 @@ static void s_sprite(CF_AsepriteCacheEntry entry, CF_Sprite* sprite)
 
 static CF_Result s_aseprite_cache_load_from_memory(const char* unique_name, const void* data, int sz, CF_Sprite* sprite_out)
 {
-	ase_t* ase = cute_aseprite_load_from_memory(data, (int)sz, NULL);
+ 	ase_t* ase = cute_aseprite_load_from_memory(data, (int)sz, NULL);
 	if (!ase) return cf_result_error("Unable to open ase file at `aseprite_path`.");
 
 	// Allocate internal cache data structure entries.
 	CF_Animation** animations = NULL;
 	Array<uint64_t> ids;
 	v2* pivots = NULL;
+	CF_Aabb* center_patches = NULL;
 	afit(pivots, ase->frame_count);
+	afit(center_patches, ase->frame_count);
 	ids.ensure_capacity(ase->frame_count);
 
 	for (int i = 0; i < ase->frame_count; ++i) {
@@ -183,6 +187,7 @@ static CF_Result s_aseprite_cache_load_from_memory(const char* unique_name, cons
 	// The slice named "origin"'s center is used to define the local offset.
 	CF_AsepriteCacheEntry entry;
 	entry.pivots = pivots;
+	entry.center_patches = center_patches;
 	afit(entry.slices, ase->slice_count);
 	float sw = (float)ase->w;
 	float sh = (float)ase->h;
@@ -208,7 +213,16 @@ static CF_Result s_aseprite_cache_load_from_memory(const char* unique_name, cons
 		});
 
 		if (slice->has_center_as_9_slice) {
-			// Ignored, as this is mostly intended for UI.
+			v2 center_uv0 = v2((float)slice->center_x, (float)slice->center_y);
+			v2 center_uv1 = center_uv0;
+			center_uv1.x += slice->center_w;
+			center_uv1.y += slice->center_h;
+			center_uv0.x /= w;
+			center_uv0.y /= h;
+			center_uv1.x /= w;
+			center_uv1.y /= h;
+			CF_Aabb center_patch = cf_make_aabb(center_uv0, center_uv1);
+			entry.center_patches[slice->frame_number] = center_patch;
 		}
 		if (slice->has_pivot && slice_name == origin_slice_name) {
 			v2 pivot = V2((float)slice->pivot_x, (float)slice->pivot_y);

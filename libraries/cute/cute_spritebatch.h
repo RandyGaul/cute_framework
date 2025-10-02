@@ -1463,10 +1463,19 @@ int spritebatch_internal_push_sprite(spritebatch_t* sb, spritebatch_internal_spr
 			tex->timestamp = 0;
 			sprite.w = tex->w;
 			sprite.h = tex->h;
+#if 0
 			sprite.minx = tex->minx;
 			sprite.miny = tex->miny;
 			sprite.maxx = tex->maxx;
 			sprite.maxy = tex->maxy;
+#else
+			float dx = tex->maxx - tex->minx;
+			float dy = tex->maxy - tex->miny;
+			sprite.minx = dx * sprite.minx + tex->minx;
+			sprite.miny = dy * sprite.miny + tex->miny;
+			sprite.maxx = dx * sprite.maxx + tex->minx;
+			sprite.maxy = dy * sprite.maxy + tex->miny;
+#endif
 		}
 		else skipped_tex = spritebatch_internal_lonely_sprite(sb, s->image_id, s->w, s->h, &sprite, skip_missing_textures);
 	}
