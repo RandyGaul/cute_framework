@@ -133,6 +133,8 @@ typedef struct CF_Shader { uint64_t id; } CF_Shader;
 	CF_ENUM(BACKEND_TYPE_METAL,  3)                                                \
 	/* @entry A "secret" backend for platforms under non-disclosure agreement. */  \
 	CF_ENUM(BACKEND_TYPE_PRIVATE,  4)                                              \
+	/* @entry OpenGL ES 3 backen.. */                                              \
+	CF_ENUM(BACKEND_TYPE_GLES3,  5)                                                \
 	/* @end */
 
 typedef enum CF_BackendType

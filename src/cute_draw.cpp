@@ -2759,11 +2759,12 @@ void static s_blit(CF_Command* cmd, CF_Canvas src, CF_Canvas dst, bool clear_dst
 	cf_material_set_texture_fs(draw->material, "u_image", cf_canvas_get_target(src));
 
 	// Apply uniforms.
-	CF_CanvasInternal* canvas_internal = (CF_CanvasInternal*)cmd->canvas.id;
-	v2 canvas_dims = V2((float)canvas_internal->w, (float)canvas_internal->h);
+	int w, h;
+	cf_canvas_get_size(cmd->canvas, &w, &h);
+	v2 canvas_dims = V2((float)w, (float)h);
 	cf_material_set_uniform_fs(draw->material, "u_texture_size", &canvas_dims, CF_UNIFORM_TYPE_FLOAT2, 1);
 	cf_material_set_uniform_fs(draw->material, "u_alpha_discard", &cmd->alpha_discard, CF_UNIFORM_TYPE_FLOAT, 1);
-	
+
 	// Apply render state.
 	cf_material_set_render_state(draw->material, cmd->render_state);
 
