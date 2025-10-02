@@ -279,7 +279,7 @@ static void s_apply_state()
 		CF_GL_CanvasInternal* canvas = g_ctx.canvas;
 		glScissor(
 			target->scissor.x,
-			canvas->h - target->scissor.y - target->scissor.h,
+			target->scissor.y,
 			target->scissor.w,
 			target->scissor.h
 		);
@@ -469,6 +469,8 @@ static char* s_transpile(const CF_ShaderBytecode* bytecode)
 		spvc_compiler_options_set_bool(options, SPVC_COMPILER_OPTION_GLSL_ES, SPVC_TRUE);
 		spvc_compiler_options_set_bool(options, SPVC_COMPILER_OPTION_GLSL_ENABLE_420PACK_EXTENSION, SPVC_FALSE);
 		spvc_compiler_options_set_bool(options, SPVC_COMPILER_OPTION_GLSL_SEPARATE_SHADER_OBJECTS, SPVC_TRUE);
+		spvc_compiler_options_set_bool(options, SPVC_COMPILER_OPTION_FLIP_VERTEX_Y, SPVC_TRUE);
+		spvc_compiler_options_set_bool(options, SPVC_COMPILER_OPTION_FIXUP_DEPTH_CONVENTION, SPVC_TRUE);
 		spvc_compiler_install_compiler_options(compiler, options);
 	}
 
@@ -718,7 +720,7 @@ void cf_gles_blit_canvas(CF_Canvas canvas_handle)
 	glBindFramebuffer(GL_READ_FRAMEBUFFER, canvas->fbo);
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 	glBlitFramebuffer(
-		0, 0, canvas->w, canvas->h,
+		0, canvas->h, canvas->w, 0,
 		0, 0, window_width, window_height,
 		GL_COLOR_BUFFER_BIT,
 		GL_LINEAR
