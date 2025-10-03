@@ -1,10 +1,10 @@
 # Dear ImGui
 
-[Dear ImGui](https://github.com/ocornut/imgui) is a free to use C/C++ library for creating tools or debug user-interfaces (UI). It's an absolutely splendid tool for game development, and comes baked right into CF's source code, ready to use right out of the box.
+[Dear ImGui](https://github.com/ocornut/imgui) is a free C/C++ library for building tools and debug UIs. CF includes it by default, ready to use.
 
 ## Setup Dear ImGui
 
-Before using Dear ImGui you must call [`cf_app_init_imgui`](../app/cf_app_init_imgui.md). You can call this before your main loop just once. Once done you may draw Dear ImGui debug windows like this one:
+Call [`cf_app_init_imgui`](../app/cf_app_init_imgui.md) once before your main loop. Then you can draw Dear ImGui windows:
 
 ```cpp
 static bool hello = true;
@@ -26,7 +26,7 @@ if (hello) {
 }
 ```
 
-Which produces this window:
+Result:
 
 <p align="center">
 <img src=https://github.com/RandyGaul/cute_framework/blob/master/assets/imgui.png?raw=true>
@@ -96,13 +96,12 @@ int main(int argc, char* argv[])
 
 ## Learning Dear ImGui
 
-The [Dear ImGui](https://github.com/ocornut/imgui) page has tons of information about learning and getting started. The source code for the "Big Demo" window in the previous section can be found [here](https://github.com/ocornut/imgui/blob/master/imgui_demo.cpp). This is a great way to see examples of how to use Dear ImGui.
+The [Dear ImGui](https://github.com/ocornut/imgui) GitHub has extensive learning resources. Check out the [Big Demo(https://github.com/ocornut/imgui/blob/master/imgui_demo.cpp) source code] to see practical examples of every feature.
 
 ## C vs C++
 
-The above examples are shown with the [dear_bindings](https://github.com/dearimgui/dear_bindings) API, which is a C wrapper around the C++ Dear ImGui library. If instead you want to use C++, include `<imgui.h>` instead of `<dcimgui.h>`, and use `ImGui::` instead of the `ImGui` prefix.
-
-The C++ API is rather preferred since it adds in a lot of default parameters. But, if you're just using plain C then `<dcimgui.h>` is here for you.
+These examples use the C API (`dcimgui.h` with ImGui prefix). For C++, use `imgui.h` with ImGui:: prefix instead.
+C++ is recommended - it provides default parameters that make the API easier to use. Use the C API only if you're working in plain C.
 
 ## Making Tools
 
