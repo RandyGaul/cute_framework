@@ -10,19 +10,19 @@ Before using Dear ImGui you must call [`cf_app_init_imgui`](../app/cf_app_init_i
 static bool hello = true;
 static bool mutate = false;
 if (hello) {
-	igBegin("Hello", &hello, 0);
-	igText("Formatting some text! Press X to %s\n", mutate ? "mutate." : "MUTATE!!!");
-	if (igButton("Press me!", (ImVec2){0,0})) {
+	ImGui_Begin("Hello", &hello, 0);
+	ImGui_Text("Formatting some text! Press X to %s\n", mutate ? "mutate." : "MUTATE!!!");
+	if (ImGui_Button("Press me!")) {
 		printf("Clicked!\n");
 	}
 	static char buffer[256] = "...";
-	igInputText("string", buffer, sizeof(buffer), 0, NULL, NULL);
+	ImGui_InputText("string", buffer, sizeof(buffer), 0);
 	static float f;
-	igSliderFloat("float", &f, 0, 10, "%3f", 0);
-	if (igButton("Big Demo", (ImVec2){0,0})) {
+	ImGui_SliderFloat("float", &f, 0, 10);
+	if (ImGui_Button("Big Demo")) {
 		big_demo = true;
 	}
-	igEnd();
+	ImGui_End();
 }
 ```
 
@@ -40,7 +40,7 @@ You can find [this sample program](https://github.com/RandyGaul/cute_framework/b
 #include <cute.h>
 #include <stdio.h>
 
-#include <cimgui.h>
+#include <dcimgui.h>
 
 int main(int argc, char* argv[])
 {
@@ -58,22 +58,22 @@ int main(int argc, char* argv[])
 		static bool mutate = false;
 		static bool big_demo = false;
 		if (hello) {
-			igBegin("Hello", &hello, 0);
-			igText("Formatting some text! Press X to %s\n", mutate ? "mutate." : "MUTATE!!!");
-			if (igButton("Press me!", (ImVec2){0,0})) {
+			ImGui_Begin("Hello", &hello, 0);
+			ImGui_Text("Formatting some text! Press X to %s\n", mutate ? "mutate." : "MUTATE!!!");
+			if (ImGui_Button("Press me!")) {
 				printf("Clicked!\n");
 			}
 			static char buffer[256] = "...";
-			igInputText("string", buffer, sizeof(buffer), 0, NULL, NULL);
+			ImGui_InputText("string", buffer, sizeof(buffer), 0);
 			static float f;
-			igSliderFloat("float", &f, 0, 10, "%3f", 0);
-			if (igButton("Big Demo", (ImVec2){0,0})) {
+			ImGui_SliderFloat("float", &f, 0, 10);
+			if (ImGui_Button("Big Demo")) {
 				big_demo = true;
 			}
-			igEnd();
+			ImGui_End();
 
 			if (big_demo) {
-				igShowDemoWindow(&big_demo);
+				ImGui_ShowDemoWindow(&big_demo);
 			}
 		}
 
@@ -100,7 +100,7 @@ The [Dear ImGui](https://github.com/ocornut/imgui) page has tons of information 
 
 ## C vs C++
 
-The above examples are shown with the [cimgui](https://github.com/cimgui/cimgui) API, which is a C wrapper around the C++ Dear ImGui library. If instead you want to use C++, include `<imgui.h>` instead of `<cimgui.h>`, and use `ImGui::` instead of the `ig` prefix.
+The above examples are shown with the [dear_bindings](https://github.com/dearimgui/dear_bindings) API, which is a C wrapper around the C++ Dear ImGui library. If instead you want to use C++, include `<imgui.h>` instead of `<dcimgui.h>`, and use `ImGui::` instead of the `ImGui` prefix.
 
 The C++ API is rather preferred since it adds in a lot of default parameters. But, if you're just using plain C then cimgui is here for you.
 
