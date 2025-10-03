@@ -90,6 +90,10 @@ window.Module = {
 	},
 	setStatus(text) {
 		console.log(text);
+		const m = text.match(/([^(]+)\((\d+(\.\d+)?)\/(\d+)\)/);
+		if (m) {
+			progressElement.value = (parseInt(m[2]) / parseInt(m[4])) * 100;
+		}
 		statusElement.innerText = text;
 		if (!text) {
 			hideOverlay();
