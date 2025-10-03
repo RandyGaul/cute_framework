@@ -102,7 +102,7 @@ The [Dear ImGui](https://github.com/ocornut/imgui) page has tons of information 
 
 The above examples are shown with the [dear_bindings](https://github.com/dearimgui/dear_bindings) API, which is a C wrapper around the C++ Dear ImGui library. If instead you want to use C++, include `<imgui.h>` instead of `<dcimgui.h>`, and use `ImGui::` instead of the `ImGui` prefix.
 
-The C++ API is rather preferred since it adds in a lot of default parameters. But, if you're just using plain C then cimgui is here for you.
+The C++ API is rather preferred since it adds in a lot of default parameters. But, if you're just using plain C then `<dcimgui.h>` is here for you.
 
 ## Making Tools
 
