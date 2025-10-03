@@ -234,6 +234,7 @@ if(EMSCRIPTEN)
 	set(PHYSFS_BUILD_STATIC ON  CACHE BOOL "" FORCE)
 
 	target_compile_options(cute PUBLIC -sUSE_SDL=3)
+	target_compile_options(cute PRIVATE -gsplit-dwarf)
 
 	target_link_options(cute INTERFACE
 		-sUSE_SDL=3
