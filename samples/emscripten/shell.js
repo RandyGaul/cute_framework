@@ -1,4 +1,4 @@
-const overlayElement = document.getElementById('overlay');
+const overlayElement = document.getElementById('overlay-wrapper');
 const canvasElement = document.getElementById('canvas');
 const statusElement = document.getElementById('status');
 const progressElement = document.getElementById('progress-bar');
@@ -30,6 +30,48 @@ function quantizeDevicePixelRatio() {
 		var quantizedDpr = Math.round(dpr * 2) / 2;
 		return quantizedDpr;
 	};
+}
+
+/**
+ * Fetch a WASM file with progress tracking and instantiate it.
+ * @param {string} wasmUrl - URL of the WASM file.
+ * @param {(percent: number) => void} onProgress - Called with 0..100 progress.
+ * @param {WebAssembly.Imports} imports - Imports for the WASM module.
+ * @returns {Promise<WebAssembly.Instance>} - The instantiated WASM module instance.
+ */
+async function fetchAndInstantiateWasm(wasmUrl, onProgress = () => {}, imports = {}) {
+	const response = await fetch(wasmUrl);
+	if (!response.ok) throw new Error(`Failed to fetch ${wasmUrl}`);
+
+	const contentLength = +response.headers.get('Content-Length') || 0;
+	const reader = response.body.getReader();
+	let loaded = 0;
+
+	// Wrap a ReadableStream to track progress
+	const stream = new ReadableStream({
+		async start(controller) {
+			while (true) {
+				const { done, value } = await reader.read();
+				if (done) break;
+				loaded += value.length;
+				if (contentLength) {
+					const percent = (loaded / contentLength) * 100;
+					onProgress(percent);
+				}
+				controller.enqueue(value);
+			}
+			controller.close();
+		}
+	});
+
+	// Construct a new Response from the tracked stream
+	const trackedResponse = new Response(stream, {
+		headers: response.headers
+	});
+
+	// Instantiate WASM using streaming API
+	const result = await WebAssembly.instantiateStreaming(trackedResponse, imports);
+	return result.instance;
 }
 
 window.Module = {
@@ -65,7 +107,16 @@ window.Module = {
 			progressElement.value = (this.totalDependencies - left) / this.totalDependencies * 100;
 		}
 	},
-	onRuntimeInitialized() {
+	instantiateWasm(imports, callback) {
+		const onProgress = (percent) => {
+			Module.setStatus("Downloading " + Math.floor(percent) + "%");
+			progressElement.value = percent;
+		};
+		fetchAndInstantiateWasm(findWasmBinary(), onProgress, imports).then(callback).catch((err) => {
+			Module.setStatus("Error while downloading");
+			console.error(err);
+		});
+		return {};
 	},
 };
 Module.setStatus('Loading...');
