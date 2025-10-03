@@ -1,32 +1,32 @@
 # Dear ImGui
 
-[Dear ImGui](https://github.com/ocornut/imgui) is a free to use C/C++ library for creating tools or debug user-interfaces (UI). It's an absolutely splendid tool for game development, and comes baked right into CF's source code, ready to use right out of the box.
+[Dear ImGui](https://github.com/ocornut/imgui) is a free C/C++ library for building tools and debug UIs. CF includes it by default, ready to use.
 
 ## Setup Dear ImGui
 
-Before using Dear ImGui you must call [`cf_app_init_imgui`](../app/cf_app_init_imgui.md). You can call this before your main loop just once. Once done you may draw Dear ImGui debug windows like this one:
+Call [`cf_app_init_imgui`](../app/cf_app_init_imgui.md) once before your main loop. Then you can draw Dear ImGui windows:
 
 ```cpp
 static bool hello = true;
 static bool mutate = false;
 if (hello) {
-	igBegin("Hello", &hello, 0);
-	igText("Formatting some text! Press X to %s\n", mutate ? "mutate." : "MUTATE!!!");
-	if (igButton("Press me!", (ImVec2){0,0})) {
+	ImGui_Begin("Hello", &hello, 0);
+	ImGui_Text("Formatting some text! Press X to %s\n", mutate ? "mutate." : "MUTATE!!!");
+	if (ImGui_Button("Press me!")) {
 		printf("Clicked!\n");
 	}
 	static char buffer[256] = "...";
-	igInputText("string", buffer, sizeof(buffer), 0, NULL, NULL);
+	ImGui_InputText("string", buffer, sizeof(buffer), 0);
 	static float f;
-	igSliderFloat("float", &f, 0, 10, "%3f", 0);
-	if (igButton("Big Demo", (ImVec2){0,0})) {
+	ImGui_SliderFloat("float", &f, 0, 10);
+	if (ImGui_Button("Big Demo")) {
 		big_demo = true;
 	}
-	igEnd();
+	ImGui_End();
 }
 ```
 
-Which produces this window:
+Result:
 
 <p align="center">
 <img src=https://github.com/RandyGaul/cute_framework/blob/master/assets/imgui.png?raw=true>
@@ -40,7 +40,7 @@ You can find [this sample program](https://github.com/RandyGaul/cute_framework/b
 #include <cute.h>
 #include <stdio.h>
 
-#include <cimgui.h>
+#include <dcimgui.h>
 
 int main(int argc, char* argv[])
 {
@@ -58,22 +58,22 @@ int main(int argc, char* argv[])
 		static bool mutate = false;
 		static bool big_demo = false;
 		if (hello) {
-			igBegin("Hello", &hello, 0);
-			igText("Formatting some text! Press X to %s\n", mutate ? "mutate." : "MUTATE!!!");
-			if (igButton("Press me!", (ImVec2){0,0})) {
+			ImGui_Begin("Hello", &hello, 0);
+			ImGui_Text("Formatting some text! Press X to %s\n", mutate ? "mutate." : "MUTATE!!!");
+			if (ImGui_Button("Press me!")) {
 				printf("Clicked!\n");
 			}
 			static char buffer[256] = "...";
-			igInputText("string", buffer, sizeof(buffer), 0, NULL, NULL);
+			ImGui_InputText("string", buffer, sizeof(buffer), 0);
 			static float f;
-			igSliderFloat("float", &f, 0, 10, "%3f", 0);
-			if (igButton("Big Demo", (ImVec2){0,0})) {
+			ImGui_SliderFloat("float", &f, 0, 10);
+			if (ImGui_Button("Big Demo")) {
 				big_demo = true;
 			}
-			igEnd();
+			ImGui_End();
 
 			if (big_demo) {
-				igShowDemoWindow(&big_demo);
+				ImGui_ShowDemoWindow(&big_demo);
 			}
 		}
 
@@ -96,16 +96,15 @@ int main(int argc, char* argv[])
 
 ## Learning Dear ImGui
 
-The [Dear ImGui](https://github.com/ocornut/imgui) page has tons of information about learning and getting started. The source code for the "Big Demo" window in the previous section can be found [here](https://github.com/ocornut/imgui/blob/master/imgui_demo.cpp). This is a great way to see examples of how to use Dear ImGui.
+The [Dear ImGui](https://github.com/ocornut/imgui) GitHub has extensive learning resources. Check out the [Big Demo(https://github.com/ocornut/imgui/blob/master/imgui_demo.cpp) source code] to see practical examples of every feature.
 
 ## C vs C++
 
-The above examples are shown with the [cimgui](https://github.com/cimgui/cimgui) API, which is a C wrapper around the C++ Dear ImGui library. If instead you want to use C++, include `<imgui.h>` instead of `<cimgui.h>`, and use `ImGui::` instead of the `ig` prefix.
-
-The C++ API is rather preferred since it adds in a lot of default parameters. But, if you're just using plain C then cimgui is here for you.
+These examples use the C API (`dcimgui.h` with ImGui prefix). For C++, use `imgui.h` with ImGui:: prefix instead.
+C++ is recommended - it provides default parameters that make the API easier to use. Use the C API only if you're working in plain C.
 
 ## Making Tools
 
-Dear ImGui is great for making all kinds of development tools, such as level editors, tile editors, debug inspection UIs, tools for saving or editing entities/values, etc. It's a general purpose tool to visualize and tweak/edit data in your game. We have included Dear ImGui in CF out of the box since it's such an incredibly useful feature.
+Dear ImGui lets you build development tools directly in your game: level editors, tile editors, debug inspectors, entity editors, and value tweakers. Use it to visualize and modify your game data while it's running. CF includes Dear ImGui by default.
 
-However, Dear ImGui is not very customizable in terms of its looks. For this reason, it's not recommended to use Dear ImGui for your actual in-game UI (such as your start menu, or other clickable UI elements). It's not really designed that way, to actually ship with your final game product. Of course, there's nothing stopping you from doing so... You've been warned.
+Dear ImGui has limited visual customization. Don't use it for your actual game UI (menus, HUD, player-facing interfaces) - it's a development tool, not meant to ship in your final product. That said, nothing technically prevents you from using it anyway.
