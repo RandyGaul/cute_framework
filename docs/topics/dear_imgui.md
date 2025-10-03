@@ -106,6 +106,6 @@ The C++ API is rather preferred since it adds in a lot of default parameters. Bu
 
 ## Making Tools
 
-Dear ImGui is great for making all kinds of development tools, such as level editors, tile editors, debug inspection UIs, tools for saving or editing entities/values, etc. It's a general purpose tool to visualize and tweak/edit data in your game. We have included Dear ImGui in CF out of the box since it's such an incredibly useful feature.
+Dear ImGui lets you build development tools directly in your game: level editors, tile editors, debug inspectors, entity editors, and value tweakers. Use it to visualize and modify your game data while it's running. CF includes Dear ImGui by default.
 
-However, Dear ImGui is not very customizable in terms of its looks. For this reason, it's not recommended to use Dear ImGui for your actual in-game UI (such as your start menu, or other clickable UI elements). It's not really designed that way, to actually ship with your final game product. Of course, there's nothing stopping you from doing so... You've been warned.
+Dear ImGui has limited visual customization. Don't use it for your actual game UI (menus, HUD, player-facing interfaces) - it's a development tool, not meant to ship in your final product. That said, nothing technically prevents you from using it anyway.
