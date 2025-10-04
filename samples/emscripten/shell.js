@@ -113,8 +113,13 @@ window.Module = {
 	},
 	instantiateWasm(imports, callback) {
 		const onProgress = (percent) => {
-			Module.setStatus("Downloading " + Math.floor(percent) + "%");
-			progressElement.value = percent;
+			if (percent <= 100) {  // When compression is used, the real size is larger than Content-Length
+				Module.setStatus("Downloading " + Math.floor(percent) + "%");
+				progressElement.value = percent;
+			} else {
+				Module.setStatus("Downloading");
+				progressElement.removeAttribute("value");
+			}
 		};
 		fetchAndInstantiateWasm(findWasmBinary(), onProgress, imports).then(callback).catch((err) => {
 			Module.setStatus("Error while downloading");
