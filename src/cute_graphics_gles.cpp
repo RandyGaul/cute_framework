@@ -71,11 +71,9 @@ struct CF_GL_Buffer
 
 struct CF_GL_MeshInternal
 {
-	GLuint vao = 0;
 	CF_GL_Buffer vbo;
 	CF_GL_Buffer ibo;
 	CF_GL_Buffer instance;
-	int index_count = 0;
 
 	int attribute_count = 0;
 	CF_VertexAttribute attributes[CF_MESH_MAX_VERTEX_ATTRIBUTES];
@@ -101,6 +99,12 @@ struct CF_GL_TextureBinding
 	int location;
 };
 
+struct CF_GL_Vao
+{
+	CF_GL_MeshInternal* mesh;
+	GLuint id;
+};
+
 struct CF_GL_ShaderInternal
 {
 	GLuint program;
@@ -109,6 +113,8 @@ struct CF_GL_ShaderInternal
 	CF_GL_TextureBinding* texture_bindings;
 	CF_GL_ShaderInfo vs;
 	CF_GL_ShaderInfo fs;
+
+	Cute::Array<CF_GL_Vao> vao_cache;
 };
 
 struct Vertex
@@ -1030,7 +1036,6 @@ void cf_gles_apply_canvas(CF_Canvas canvas_handle, bool clear)
 CF_Mesh cf_gles_make_mesh(int vertex_buffer_size, const CF_VertexAttribute* attributes, int attribute_count, int vertex_stride)
 {
 	auto* m = (CF_GL_MeshInternal*)CF_CALLOC(sizeof(CF_GL_MeshInternal));
-	glGenVertexArrays(1, &m->vao);
 	glGenBuffers(1, &m->vbo.id);
 
 	m->vbo.size = vertex_buffer_size;
@@ -1041,7 +1046,6 @@ CF_Mesh cf_gles_make_mesh(int vertex_buffer_size, const CF_VertexAttribute* attr
 		m->attributes[i].name = sintern(attributes[i].name);
 	}
 
-	glBindVertexArray(m->vao);
 	glBindBuffer(GL_ARRAY_BUFFER, m->vbo.id);
 	glBufferData(GL_ARRAY_BUFFER, vertex_buffer_size, NULL, GL_DYNAMIC_DRAW);
 	glBindVertexArray(0);
@@ -1094,7 +1098,6 @@ void cf_gles_mesh_update_vertex_data(CF_Mesh mh, void* verts, int vertex_count)
 void cf_gles_mesh_update_index_data(CF_Mesh mh, void* indices, int index_count)
 {
 	auto* m = (CF_GL_MeshInternal*)(uintptr_t)mh.id;
-	m->index_count = index_count;
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m->ibo.id);
 	int stride = m->ibo.stride ? m->ibo.stride : sizeof(uint16_t);
 	GLsizeiptr bytes = index_count * stride;
@@ -1133,7 +1136,6 @@ void cf_gles_destroy_mesh(CF_Mesh mh)
 	if (m->ibo.id) glDeleteBuffers(1, &m->ibo.id);
 	if (m->vbo.id) glDeleteBuffers(1, &m->vbo.id);
 	if (m->instance.id) glDeleteBuffers(1, &m->instance.id);
-	if (m->vao)	glDeleteVertexArrays(1, &m->vao);
 	CF_POLL_OPENGL_ERROR();
 	CF_FREE(m);
 }
@@ -1230,12 +1232,18 @@ void cf_gles_destroy_shader_internal(CF_Shader shader_handle)
 
 	glDeleteBuffers(shader->vs.num_uniform_blocks, shader->vs.ubo);
 	glDeleteBuffers(shader->fs.num_uniform_blocks, shader->fs.ubo);
+
+	for (int i = 0; i < shader->vao_cache.count(); ++i) {
+		glDeleteVertexArrays(1, &shader->vao_cache[i].id);
+	}
+
 	CF_POLL_OPENGL_ERROR();
 
 	CF_FREE(shader->vs.uniform_members);
 	CF_FREE(shader->fs.uniform_members);
 	CF_FREE(shader->texture_bindings);
 	glDeleteProgram(shader->program);
+	shader->~CF_GL_ShaderInternal();
 	CF_FREE(shader);
 }
 
@@ -1306,6 +1314,66 @@ static void s_upload_uniforms(CF_GL_ShaderInfo* shader_info, const CF_MaterialSt
 	CF_POLL_OPENGL_ERROR();
 
 	cf_arena_reset(arena);
+}
+
+static GLuint s_build_vao(CF_GL_ShaderInternal* shader, CF_GL_MeshInternal* mesh)
+{
+	GLuint vao;
+	glGenVertexArrays(1, &vao);
+	glBindVertexArray(vao);
+	glBindBuffer(GL_ARRAY_BUFFER, mesh->vbo.id);
+	if (mesh->ibo.id) glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh->ibo.id);
+	CF_POLL_OPENGL_ERROR();
+
+	for (int i = 0; i < mesh->attribute_count; ++i) {
+		const CF_VertexAttribute* attrib = &mesh->attributes[i];
+		GLint loc = glGetAttribLocation(shader->program, attrib->name);
+		if (loc < 0) continue;
+
+		const bool per_instance = attrib->per_instance;
+		CF_GL_Buffer& buf = per_instance ? mesh->instance : mesh->vbo;
+		if (!buf.id) continue;
+
+		GLenum type = GL_FLOAT; GLint comps = 4; GLboolean norm = GL_FALSE;
+		switch (attrib->format) {
+			case CF_VERTEX_FORMAT_FLOAT:  type=GL_FLOAT; comps=1; break;
+			case CF_VERTEX_FORMAT_FLOAT2: type=GL_FLOAT; comps=2; break;
+			case CF_VERTEX_FORMAT_FLOAT3: type=GL_FLOAT; comps=3; break;
+			case CF_VERTEX_FORMAT_FLOAT4: type=GL_FLOAT; comps=4; break;
+			case CF_VERTEX_FORMAT_INT:  type=GL_INT; comps=1; break;
+			case CF_VERTEX_FORMAT_INT2: type=GL_INT; comps=2; break;
+			case CF_VERTEX_FORMAT_INT3: type=GL_INT; comps=3; break;
+			case CF_VERTEX_FORMAT_INT4: type=GL_INT; comps=4; break;
+			case CF_VERTEX_FORMAT_UINT:  type=GL_UNSIGNED_INT; comps=1; break;
+			case CF_VERTEX_FORMAT_UINT2: type=GL_UNSIGNED_INT; comps=2; break;
+			case CF_VERTEX_FORMAT_UINT3: type=GL_UNSIGNED_INT; comps=3; break;
+			case CF_VERTEX_FORMAT_UINT4: type=GL_UNSIGNED_INT; comps=4; break;
+			case CF_VERTEX_FORMAT_BYTE4_NORM: type=GL_BYTE; comps=4; norm=GL_TRUE; break;
+			case CF_VERTEX_FORMAT_UBYTE4_NORM: type=GL_UNSIGNED_BYTE; comps=4; norm=GL_TRUE; break;
+			case CF_VERTEX_FORMAT_SHORT2: type=GL_SHORT; comps=2; break;
+			case CF_VERTEX_FORMAT_SHORT2_NORM: type=GL_SHORT; comps=2; norm=GL_TRUE; break;
+			case CF_VERTEX_FORMAT_SHORT4: type=GL_SHORT; comps=4; break;
+			case CF_VERTEX_FORMAT_SHORT4_NORM: type=GL_SHORT; comps=4; norm=GL_TRUE; break;
+			case CF_VERTEX_FORMAT_USHORT2: type=GL_UNSIGNED_SHORT; comps=2; break;
+			case CF_VERTEX_FORMAT_USHORT2_NORM: type=GL_UNSIGNED_SHORT; comps=2; norm=GL_TRUE; break;
+			case CF_VERTEX_FORMAT_USHORT4: type=GL_UNSIGNED_SHORT; comps=4; break;
+			case CF_VERTEX_FORMAT_USHORT4_NORM: type=GL_UNSIGNED_SHORT; comps=4; norm=GL_TRUE; break;
+			case CF_VERTEX_FORMAT_HALF2: type=GL_HALF_FLOAT; comps=2; break;
+			case CF_VERTEX_FORMAT_HALF4: type=GL_HALF_FLOAT; comps=4; break;
+			default: break;
+		}
+		glBindBuffer(GL_ARRAY_BUFFER, buf.id);
+		glEnableVertexAttribArray((GLuint)loc);
+		if (type == GL_INT) {
+			glVertexAttribIPointer((GLuint)loc, comps, type, buf.stride, (const void*)(intptr_t)attrib->offset);
+		} else {
+			glVertexAttribPointer((GLuint)loc, comps, type, norm, buf.stride, (const void*)(intptr_t)attrib->offset);
+		}
+		glVertexAttribDivisor((GLuint)loc, per_instance ? 1 : 0);
+	}
+	CF_POLL_OPENGL_ERROR();
+
+	return vao;
 }
 
 void cf_gles_apply_shader(CF_Shader shader_handle, CF_Material material_handle)
@@ -1384,64 +1452,23 @@ void cf_gles_apply_shader(CF_Shader shader_handle, CF_Material material_handle)
 	}
 	CF_POLL_OPENGL_ERROR();
 
-	// vertex attribs (match by name)
 	CF_GL_MeshInternal* mesh = g_ctx.mesh;
 	CF_ASSERT(mesh != NULL);
 
-	// TODO: Check what is saved by the VAO
-	glBindVertexArray(mesh->vao);
-	glBindBuffer(GL_ARRAY_BUFFER, mesh->vbo.id);
-	if (mesh->ibo.id) glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh->ibo.id);
-	CF_POLL_OPENGL_ERROR();
-
-	for (int i = 0; i < mesh->attribute_count; ++i) {
-		const CF_VertexAttribute* attrib = &mesh->attributes[i];
-		// TODO: cache the locations
-		GLint loc = glGetAttribLocation(shader->program, attrib->name);
-		if (loc < 0) continue;
-
-		const bool per_instance = attrib->per_instance;
-		CF_GL_Buffer& buf = per_instance ? mesh->instance : mesh->vbo;
-		if (!buf.id) continue;
-
-		GLenum type = GL_FLOAT; GLint comps = 4; GLboolean norm = GL_FALSE;
-		switch (attrib->format) {
-			case CF_VERTEX_FORMAT_FLOAT:  type=GL_FLOAT; comps=1; break;
-			case CF_VERTEX_FORMAT_FLOAT2: type=GL_FLOAT; comps=2; break;
-			case CF_VERTEX_FORMAT_FLOAT3: type=GL_FLOAT; comps=3; break;
-			case CF_VERTEX_FORMAT_FLOAT4: type=GL_FLOAT; comps=4; break;
-			case CF_VERTEX_FORMAT_INT:  type=GL_INT; comps=1; break;
-			case CF_VERTEX_FORMAT_INT2: type=GL_INT; comps=2; break;
-			case CF_VERTEX_FORMAT_INT3: type=GL_INT; comps=3; break;
-			case CF_VERTEX_FORMAT_INT4: type=GL_INT; comps=4; break;
-			case CF_VERTEX_FORMAT_UINT:  type=GL_UNSIGNED_INT; comps=1; break;
-			case CF_VERTEX_FORMAT_UINT2: type=GL_UNSIGNED_INT; comps=2; break;
-			case CF_VERTEX_FORMAT_UINT3: type=GL_UNSIGNED_INT; comps=3; break;
-			case CF_VERTEX_FORMAT_UINT4: type=GL_UNSIGNED_INT; comps=4; break;
-			case CF_VERTEX_FORMAT_BYTE4_NORM: type=GL_BYTE; comps=4; norm=GL_TRUE; break;
-			case CF_VERTEX_FORMAT_UBYTE4_NORM: type=GL_UNSIGNED_BYTE; comps=4; norm=GL_TRUE; break;
-			case CF_VERTEX_FORMAT_SHORT2: type=GL_SHORT; comps=2; break;
-			case CF_VERTEX_FORMAT_SHORT2_NORM: type=GL_SHORT; comps=2; norm=GL_TRUE; break;
-			case CF_VERTEX_FORMAT_SHORT4: type=GL_SHORT; comps=4; break;
-			case CF_VERTEX_FORMAT_SHORT4_NORM: type=GL_SHORT; comps=4; norm=GL_TRUE; break;
-			case CF_VERTEX_FORMAT_USHORT2: type=GL_UNSIGNED_SHORT; comps=2; break;
-			case CF_VERTEX_FORMAT_USHORT2_NORM: type=GL_UNSIGNED_SHORT; comps=2; norm=GL_TRUE; break;
-			case CF_VERTEX_FORMAT_USHORT4: type=GL_UNSIGNED_SHORT; comps=4; break;
-			case CF_VERTEX_FORMAT_USHORT4_NORM: type=GL_UNSIGNED_SHORT; comps=4; norm=GL_TRUE; break;
-			case CF_VERTEX_FORMAT_HALF2: type=GL_HALF_FLOAT; comps=2; break;
-			case CF_VERTEX_FORMAT_HALF4: type=GL_HALF_FLOAT; comps=4; break;
-			default: break;
+	// Use a VAO cache to avoid declaring the attributes all the time
+	GLuint vao = GL_INVALID_INDEX;
+	for (int i = 0; i < shader->vao_cache.count(); ++i) {
+		if (shader->vao_cache[i].mesh == mesh) {
+			vao = shader->vao_cache[i].id;
 		}
-		glBindBuffer(GL_ARRAY_BUFFER, buf.id);
-		glEnableVertexAttribArray((GLuint)loc);
-		if (type == GL_INT) {
-			glVertexAttribIPointer((GLuint)loc, comps, type, buf.stride, (const void*)(intptr_t)attrib->offset);
-		} else {
-			glVertexAttribPointer((GLuint)loc, comps, type, norm, buf.stride, (const void*)(intptr_t)attrib->offset);
-		}
-		glVertexAttribDivisor((GLuint)loc, per_instance ? 1 : 0);
 	}
-	CF_POLL_OPENGL_ERROR();
+
+	if (vao == GL_INVALID_INDEX) {
+		vao = s_build_vao(shader, mesh);
+		shader->vao_cache.add({ .mesh = mesh, .id = vao });
+	}
+
+	glBindVertexArray(vao);
 }
 
 void cf_gles_draw_elements()
@@ -1456,12 +1483,12 @@ void cf_gles_draw_elements()
 	GLenum prim = s_wrap(material->state.primitive_type);
 	int instance_count = (mesh->instance.id && mesh->instance.count > 0) ? mesh->instance.count : 0;
 
-	if (mesh->ibo.id && mesh->index_count > 0) {
+	if (mesh->ibo.id && mesh->ibo.count > 0) {
 		GLenum elem = (mesh->ibo.stride == 2) ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT;
 		if (instance_count > 0) {
-			glDrawElementsInstanced(prim, mesh->index_count, elem, NULL, instance_count);
+			glDrawElementsInstanced(prim, mesh->ibo.count, elem, NULL, instance_count);
 		} else {
-			glDrawElements(prim, mesh->index_count, elem, NULL);
+			glDrawElements(prim, mesh->ibo.count, elem, NULL);
 		}
 	} else if (mesh->vbo.count > 0) {
 		if (instance_count > 0) {
