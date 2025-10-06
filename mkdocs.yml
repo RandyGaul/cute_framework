@@ -106,6 +106,7 @@ nav:
       - Virtual File System: topics/virtual_file_system.md
       - Web: topics/web.md
   - Samples: samples.md
+  - Made with CF: made_with_cf.md
   - Community / Ask for Help: community_ask_for_help.md
   - API Reference: api_reference.md
 
