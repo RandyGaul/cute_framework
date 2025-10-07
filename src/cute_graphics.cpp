@@ -9,6 +9,7 @@
 #include <cute_c_runtime.h>
 #include <cute_graphics.h>
 #include <cute_file_system.h>
+#include <cute_array.h>
 
 #include <internal/cute_alloc_internal.h>
 #include <internal/cute_app_internal.h>
@@ -1531,6 +1532,168 @@ void cf_commit()
 #	include <glad/glad.h>
 #endif
 
+static const int CF_GL_TEXTURE_RING_CAP = 3;
+static const int CF_GL_BUFFER_RING_CAP = 3;
+
+struct Slot
+{
+GLuint handle = 0;
+GLsync fence = 0;
+uint32_t lastUseFrame = 0;
+};
+
+struct Ring
+{
+dyna Slot* slots = NULL;
+int head = 0;
+int cap = 0;
+};
+
+typedef void (*SlotCreateFn)(Slot*, void*);
+
+static GLenum poll_fence(GLsync f)
+{
+if (!f) return GL_ALREADY_SIGNALED;
+return glClientWaitSync(f, 0, 0);
+}
+
+struct AcquireResult
+{
+Slot* slot = NULL;
+bool created = false;
+};
+
+static AcquireResult ring_acquire(Ring* r, uint32_t frame, SlotCreateFn create, void* ctx)
+{
+AcquireResult result{};
+int count = acount(r->slots);
+for (int tries = 0; tries < count; ++tries) {
+int i = (r->head + tries) % count;
+Slot* s = &r->slots[i];
+GLenum st = poll_fence(s->fence);
+if (st == GL_ALREADY_SIGNALED || st == GL_CONDITION_SATISFIED) {
+if (s->fence) {
+glDeleteSync(s->fence);
+s->fence = 0;
+}
+r->head = count ? (i + 1) % count : 0;
+s->lastUseFrame = frame;
+result.slot = s;
+return result;
+}
+}
+if (count < r->cap) {
+Slot slot{};
+apush(r->slots, slot);
+Slot* ns = &r->slots[count];
+if (create) create(ns, ctx);
+r->head = (count + 1) % (count + 1);
+ns->lastUseFrame = frame;
+result.slot = ns;
+result.created = true;
+return result;
+}
+return result;
+}
+
+static AcquireResult ring_acquire_or_wait(Ring* r, uint32_t frame, SlotCreateFn create, void* ctx)
+{
+AcquireResult result = ring_acquire(r, frame, create, ctx);
+if (result.slot) return result;
+int count = acount(r->slots);
+if (!count) return result;
+int i = r->head;
+Slot* s = &r->slots[i];
+if (s->fence) {
+glClientWaitSync(s->fence, GL_SYNC_FLUSH_COMMANDS_BIT, GL_TIMEOUT_IGNORED);
+glDeleteSync(s->fence);
+s->fence = 0;
+}
+r->head = (i + 1) % count;
+s->lastUseFrame = frame;
+result.slot = s;
+return result;
+}
+
+static Slot* ring_get_slot(Ring* r, int index)
+{
+int count = acount(r->slots);
+if (index < 0 || index >= count) return NULL;
+return &r->slots[index];
+}
+
+static int ring_slot_index(Ring* r, Slot* slot)
+{
+if (!slot) return -1;
+return (int)(slot - r->slots);
+}
+
+static void ring_destroy(Ring* r, bool is_mesh, bool is_texture)
+{
+	int count = acount(r->slots);
+	for (int i = 0; i < count; ++i) {
+		if (r->slots[i].fence) {
+			glDeleteSync(r->slots[i].fence);
+			r->slots[i].fence = 0;
+		}
+		if (r->slots[i].handle) {
+			if (is_mesh) {
+				glDeleteBuffers(1, &r->slots[i].handle);
+			} else if (is_texture) {
+				glDeleteTextures(1, &r->slots[i].handle);
+			}
+			r->slots[i].handle = 0;
+		}
+	}
+	afree(r->slots);
+	r->slots = NULL;
+	r->head = 0;
+}
+
+static void submit_and_fence(Slot* s)
+{
+if (!s) return;
+if (s->fence) {
+glDeleteSync(s->fence);
+s->fence = 0;
+}
+s->fence = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
+s->lastUseFrame = s_gl_frame_index;
+}
+
+static void gl_texture_create_handle(Slot* slot, void* ctx)
+{
+CF_UNUSED(ctx);
+glGenTextures(1, &slot->handle);
+}
+
+static void gl_texture_configure_slot(CF_GL_TextureInternal* t, Slot* slot)
+{
+t->id = slot->handle;
+glBindTexture(GL_TEXTURE_2D, t->id);
+glTexImage2D(GL_TEXTURE_2D, 0, t->internal_fmt, t->w, t->h, 0, t->upload_fmt, t->upload_type, nullptr);
+glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, t->min_filter);
+glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, t->mag_filter);
+glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, t->wrap_u);
+glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, t->wrap_v);
+glBindTexture(GL_TEXTURE_2D, 0);
+}
+
+static void gl_buffer_create_handle(Slot* slot, void* ctx)
+{
+CF_UNUSED(ctx);
+glGenBuffers(1, &slot->handle);
+}
+
+static void gl_buffer_configure_slot(CF_GL_Buffer* buffer, Slot* slot)
+{
+glBindBuffer(buffer->target, slot->handle);
+glBufferData(buffer->target, buffer->size, nullptr, buffer->usage);
+glBindBuffer(buffer->target, 0);
+}
+
+static uint32_t s_gl_frame_index = 0;
+
 CF_INLINE GLenum gl_wrap_filter(CF_Filter f)
 {
 	switch (f) { default:
@@ -1646,21 +1809,27 @@ CF_INLINE GLenum gl_blend_factor(CF_BlendFactor f)
 struct CF_GL_TextureInternal
 {
 	int w = 0, h = 0;
-	GLuint id = 0;
 	GLenum internal_fmt = GL_RGBA8;
-	GLenum upload_fmt   = GL_RGBA;
-	GLenum upload_type  = GL_UNSIGNED_BYTE;
+	GLenum upload_fmt = GL_RGBA;
+	GLenum upload_type = GL_UNSIGNED_BYTE;
 	bool has_mips = false;
 	GLint min_filter = GL_LINEAR;
 	GLint mag_filter = GL_LINEAR;
 	GLint wrap_u = GL_REPEAT, wrap_v = GL_REPEAT;
+	Ring ring{};
+	int active_slot = -1;
+	GLuint id = 0;
 };
 
 struct CF_GL_Buffer
 {
-	GLuint id = 0;
+	GLenum target = GL_ARRAY_BUFFER;
+	GLenum usage = GL_DYNAMIC_DRAW;
 	int size = 0;
 	int stride = 0;
+	Ring ring{};
+	int active_slot = -1;
+	GLuint id = 0;
 };
 
 struct CF_GL_MeshInternal
@@ -1739,15 +1908,19 @@ CF_Texture opengl_make_texture(CF_TextureParams params)
 	auto* t = CF_NEW(CF_GL_TextureInternal);
 	t->w = params.width; t->h = params.height;
 	t->internal_fmt = gl_internal_fmt(params.pixel_format);
-	t->upload_fmt   = gl_upload_fmt(params.pixel_format);
-	t->upload_type  = gl_upload_type(params.pixel_format);
-
-	glGenTextures(1, &t->id);
-	glBindTexture(GL_TEXTURE_2D, t->id);
-	glTexImage2D(GL_TEXTURE_2D, 0, t->internal_fmt, t->w, t->h, 0, t->upload_fmt, t->upload_type, nullptr);
+	t->upload_fmt = gl_upload_fmt(params.pixel_format);
+	t->upload_type = gl_upload_type(params.pixel_format);
+	t->ring.cap = CF_GL_TEXTURE_RING_CAP;
+	AcquireResult acquire = ring_acquire_or_wait(&t->ring, s_gl_frame_index, gl_texture_create_handle, t);
+	CF_ASSERT(acquire.slot);
+	t->active_slot = ring_slot_index(&t->ring, acquire.slot);
+	gl_texture_configure_slot(t, acquire.slot);
 	gl_apply_sampler_params(t, params);
-	if (params.generate_mipmaps) glGenerateMipmap(GL_TEXTURE_2D);
-	glBindTexture(GL_TEXTURE_2D, 0);
+	if (params.generate_mipmaps) {
+		glBindTexture(GL_TEXTURE_2D, t->id);
+		glGenerateMipmap(GL_TEXTURE_2D);
+		glBindTexture(GL_TEXTURE_2D, 0);
+	}
 
 	return CF_Texture{ (uint64_t)(uintptr_t)t };
 }
@@ -1756,13 +1929,22 @@ void opengl_destroy_texture(CF_Texture tex)
 {
 	if (!tex.id) return;
 	auto* t = (CF_GL_TextureInternal*)(uintptr_t)tex.id;
-	if (t->id) glDeleteTextures(1, &t->id);
+	ring_destroy(&t->ring, false, true);
+	t->id = 0;
 	CF_FREE(t);
 }
 
 void opengl_texture_update(CF_Texture tex, void* data, int /*size*/)
 {
 	auto* t = (CF_GL_TextureInternal*)(uintptr_t)tex.id;
+	AcquireResult acquire = ring_acquire_or_wait(&t->ring, s_gl_frame_index, gl_texture_create_handle, t);
+	CF_ASSERT(acquire.slot);
+	if (acquire.created) {
+		gl_texture_configure_slot(t, acquire.slot);
+	} else {
+		t->id = acquire.slot->handle;
+	}
+	t->active_slot = ring_slot_index(&t->ring, acquire.slot);
 	glBindTexture(GL_TEXTURE_2D, t->id);
 	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, t->w, t->h, t->upload_fmt, t->upload_type, data);
 	if (t->has_mips) glGenerateMipmap(GL_TEXTURE_2D);
@@ -1772,6 +1954,16 @@ void opengl_texture_update(CF_Texture tex, void* data, int /*size*/)
 void opengl_texture_update_mip(CF_Texture tex, void* data, int /*size*/, int mip)
 {
 	auto* t = (CF_GL_TextureInternal*)(uintptr_t)tex.id;
+	if (mip == 0) {
+		AcquireResult acquire = ring_acquire_or_wait(&t->ring, s_gl_frame_index, gl_texture_create_handle, t);
+		CF_ASSERT(acquire.slot);
+		if (acquire.created) {
+			gl_texture_configure_slot(t, acquire.slot);
+		} else {
+			t->id = acquire.slot->handle;
+		}
+		t->active_slot = ring_slot_index(&t->ring, acquire.slot);
+	}
 	int w = cf_max(t->w >> mip, 1);
 	int h = cf_max(t->h >> mip, 1);
 	glBindTexture(GL_TEXTURE_2D, t->id);
@@ -1895,20 +2087,26 @@ CF_Mesh opengl_make_mesh(int vertex_buffer_size, const CF_VertexAttribute* attri
 {
 	auto* m = CF_NEW(CF_GL_MeshInternal);
 	glGenVertexArrays(1, &m->vao);
-	glGenBuffers(1, &m->vbo.id);
-
+	m->vbo.target = GL_ARRAY_BUFFER;
+	m->vbo.usage = GL_DYNAMIC_DRAW;
 	m->vbo.size = vertex_buffer_size;
 	m->vbo.stride = vertex_stride;
+	m->vbo.ring.cap = CF_GL_BUFFER_RING_CAP;
+	AcquireResult vbo_slot = ring_acquire_or_wait(&m->vbo.ring, s_gl_frame_index, gl_buffer_create_handle, &m->vbo);
+	CF_ASSERT(vbo_slot.slot);
+	gl_buffer_configure_slot(&m->vbo, vbo_slot.slot);
+	m->vbo.active_slot = ring_slot_index(&m->vbo.ring, vbo_slot.slot);
+	m->vbo.id = vbo_slot.slot->handle;
 	m->attribute_count = cf_min(attribute_count, CF_MESH_MAX_VERTEX_ATTRIBUTES);
 	for (int i = 0; i < m->attribute_count; ++i) {
-		m->attributes[i] = attributes[i];
-		m->attributes[i].name = sintern(attributes[i].name);
+	m->attributes[i] = attributes[i];
+	m->attributes[i].name = sintern(attributes[i].name);
 	}
 
 	glBindVertexArray(m->vao);
 	glBindBuffer(GL_ARRAY_BUFFER, m->vbo.id);
-	glBufferData(GL_ARRAY_BUFFER, vertex_buffer_size, nullptr, GL_DYNAMIC_DRAW);
 	glBindVertexArray(0);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
 
 	return CF_Mesh{ (uint64_t)(uintptr_t)m };
 }
@@ -1916,16 +2114,38 @@ CF_Mesh opengl_make_mesh(int vertex_buffer_size, const CF_VertexAttribute* attri
 void opengl_mesh_set_index_buffer(CF_Mesh mh, int index_buffer_size_in_bytes, CF_IndexElementSize /*element_size*/)
 {
 	auto* m = (CF_GL_MeshInternal*)(uintptr_t)mh.id;
-	if (!m->ibo.id) glGenBuffers(1, &m->ibo.id);
+	m->ibo.target = GL_ELEMENT_ARRAY_BUFFER;
+	m->ibo.usage = GL_DYNAMIC_DRAW;
 	m->ibo.size = index_buffer_size_in_bytes;
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m->ibo.id);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, index_buffer_size_in_bytes, nullptr, GL_DYNAMIC_DRAW);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+	if (!m->ibo.ring.cap) m->ibo.ring.cap = CF_GL_BUFFER_RING_CAP;
+	if (!acount(m->ibo.ring.slots)) {
+	AcquireResult ibo_slot = ring_acquire_or_wait(&m->ibo.ring, s_gl_frame_index, gl_buffer_create_handle, &m->ibo);
+	CF_ASSERT(ibo_slot.slot);
+	gl_buffer_configure_slot(&m->ibo, ibo_slot.slot);
+	m->ibo.active_slot = ring_slot_index(&m->ibo.ring, ibo_slot.slot);
+	m->ibo.id = ibo_slot.slot->handle;
+	} else {
+	int count = acount(m->ibo.ring.slots);
+	for (int i = 0; i < count; ++i) {
+	gl_buffer_configure_slot(&m->ibo, &m->ibo.ring.slots[i]);
+	}
+	if (m->ibo.active_slot < 0) {
+	m->ibo.active_slot = 0;
+	m->ibo.id = m->ibo.ring.slots[0].handle;
+	}
+	}
 }
 
 void opengl_mesh_update_vertex_data(CF_Mesh mh, const void* verts, int vertex_count)
 {
 	auto* m = (CF_GL_MeshInternal*)(uintptr_t)mh.id;
+	AcquireResult vbo_slot = ring_acquire_or_wait(&m->vbo.ring, s_gl_frame_index, gl_buffer_create_handle, &m->vbo);
+	CF_ASSERT(vbo_slot.slot);
+	if (vbo_slot.created) {
+	gl_buffer_configure_slot(&m->vbo, vbo_slot.slot);
+	}
+	m->vbo.active_slot = ring_slot_index(&m->vbo.ring, vbo_slot.slot);
+	m->vbo.id = vbo_slot.slot->handle;
 	glBindBuffer(GL_ARRAY_BUFFER, m->vbo.id);
 	glBufferSubData(GL_ARRAY_BUFFER, 0, vertex_count * m->vbo.stride, verts);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -1935,6 +2155,13 @@ void opengl_mesh_update_index_data(CF_Mesh mh, const void* indices, int index_co
 {
 	auto* m = (CF_GL_MeshInternal*)(uintptr_t)mh.id;
 	m->index_count = index_count;
+	AcquireResult ibo_slot = ring_acquire_or_wait(&m->ibo.ring, s_gl_frame_index, gl_buffer_create_handle, &m->ibo);
+	CF_ASSERT(ibo_slot.slot);
+	if (ibo_slot.created) {
+	gl_buffer_configure_slot(&m->ibo, ibo_slot.slot);
+	}
+	m->ibo.active_slot = ring_slot_index(&m->ibo.ring, ibo_slot.slot);
+	m->ibo.id = ibo_slot.slot->handle;
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m->ibo.id);
 	const int elem = (element_size == CF_INDEX_ELEMENT_SIZE_16) ? sizeof(uint16_t) : sizeof(uint32_t);
 	glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0, index_count * elem, indices);
@@ -1945,8 +2172,10 @@ void opengl_destroy_mesh(CF_Mesh mh)
 {
 	if (!mh.id) return;
 	auto* m = (CF_GL_MeshInternal*)(uintptr_t)mh.id;
-	if (m->ibo.id) glDeleteBuffers(1, &m->ibo.id);
-	if (m->vbo.id) glDeleteBuffers(1, &m->vbo.id);
+	ring_destroy(&m->ibo.ring, true, false);
+	ring_destroy(&m->vbo.ring, true, false);
+	m->ibo.id = 0;
+	m->vbo.id = 0;
 	if (m->vao)    glDeleteVertexArrays(1, &m->vao);
 	CF_FREE(m);
 }
@@ -1955,17 +2184,40 @@ void opengl_apply_mesh(CF_Mesh mh)
 {
 	auto* m = (CF_GL_MeshInternal*)(uintptr_t)mh.id;
 	glBindVertexArray(m->vao);
+	Slot* vslot = ring_get_slot(&m->vbo.ring, m->vbo.active_slot >= 0 ? m->vbo.active_slot : 0);
+	if (!m->vbo.id && vslot) m->vbo.id = vslot->handle;
 	glBindBuffer(GL_ARRAY_BUFFER, m->vbo.id);
+	Slot* islot = ring_get_slot(&m->ibo.ring, m->ibo.active_slot >= 0 ? m->ibo.active_slot : 0);
+	if (!m->ibo.id && islot) m->ibo.id = islot->handle;
 	if (m->ibo.id) glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m->ibo.id);
 }
 
 struct CF_GL_ShaderAndMaterial
 {
-	CF_GL_ShaderInternal* sh = nullptr;
-	CF_GL_MaterialInternal* ma = nullptr;
-	CF_GL_MeshInternal* me = nullptr;
+CF_GL_ShaderInternal* sh = nullptr;
+CF_GL_MaterialInternal* ma = nullptr;
+CF_GL_MeshInternal* me = nullptr;
 };
 CF_GL_ShaderAndMaterial s_gl_bindings;
+
+static void gl_track_submission()
+{
+	if (s_gl_bindings.me) {
+	Slot* vslot = ring_get_slot(&s_gl_bindings.me->vbo.ring, s_gl_bindings.me->vbo.active_slot);
+	submit_and_fence(vslot);
+	Slot* islot = ring_get_slot(&s_gl_bindings.me->ibo.ring, s_gl_bindings.me->ibo.active_slot);
+	submit_and_fence(islot);
+	}
+	if (s_gl_bindings.ma) {
+	for (int i = 0; i < s_gl_bindings.ma->fs.textures.count(); ++i) {
+	auto* tex = (CF_GL_TextureInternal*)(uintptr_t)s_gl_bindings.ma->fs.textures[i].handle.id;
+	if (!tex) continue;
+	int slot_index = tex->active_slot >= 0 ? tex->active_slot : 0;
+	Slot* tslot = ring_get_slot(&tex->ring, slot_index);
+	submit_and_fence(tslot);
+	}
+	}
+}
 
 GLuint gl_compile(GLenum stage, const char* src)
 {
@@ -2266,6 +2518,7 @@ void opengl_bind_mesh_for_shader(CF_Mesh mh)
 void opengl_draw_arrays(CF_PrimitiveType prim, int first, int count)
 {
 	glDrawArrays(gl_prim(prim), first, count);
+	gl_track_submission();
 }
 
 void opengl_draw_elements(CF_PrimitiveType prim, CF_IndexElementSize elem, int index_count, int first_index)
@@ -2273,6 +2526,7 @@ void opengl_draw_elements(CF_PrimitiveType prim, CF_IndexElementSize elem, int i
 	GLenum gl_elem = (elem == CF_INDEX_ELEMENT_SIZE_16) ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT;
 	const GLvoid* offset = (const GLvoid*)(intptr_t)(first_index * (elem == CF_INDEX_ELEMENT_SIZE_16 ? 2 : 4));
 	glDrawElements(gl_prim(prim), index_count, gl_elem, offset);
+	gl_track_submission();
 }
 
 void opengl_commit()
@@ -2282,6 +2536,7 @@ void opengl_commit()
 	glUseProgram(0);
 	if (s_gl_canvas) glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	s_gl_canvas = nullptr;
+	++s_gl_frame_index;
 }
 
 void opengl_clear_color(float r, float g, float b, float a) { app->clear_color = make_color(r,g,b,a); }
