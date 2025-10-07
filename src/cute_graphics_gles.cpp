@@ -37,7 +37,7 @@ struct CF_GL_PixelFormatInfo
 	const char* required_extension;
 };
 
-struct CF_GL_TextureInternal
+struct CF_GL_Texture
 {
 	int w = 0, h = 0;
 	GLuint id = 0;
@@ -51,7 +51,7 @@ struct CF_GL_TextureInternal
 	GLint wrap_v = GL_REPEAT;
 };
 
-struct CF_GL_CanvasInternal
+struct CF_GL_Canvas
 {
 	int w, h;
 	GLuint fbo;
@@ -69,7 +69,7 @@ struct CF_GL_Buffer
 	int count = 0;
 };
 
-struct CF_GL_MeshInternal
+struct CF_GL_Mesh
 {
 	CF_GL_Buffer vbo;
 	CF_GL_Buffer ibo;
@@ -101,11 +101,11 @@ struct CF_GL_TextureBinding
 
 struct CF_GL_Vao
 {
-	CF_GL_MeshInternal* mesh;
+	CF_GL_Mesh* mesh;
 	GLuint id;
 };
 
-struct CF_GL_ShaderInternal
+struct CF_GL_Shader
 {
 	GLuint program;
 
@@ -225,8 +225,8 @@ static struct
 	CF_GL_RenderState current_state;
 	GLuint fbo;
 	CF_MaterialInternal* material;
-	CF_GL_MeshInternal* mesh;
-	CF_GL_CanvasInternal* canvas;
+	CF_GL_Mesh* mesh;
+	CF_GL_Canvas* canvas;
 } g_ctx = { };
 
 static void s_poll_error(const char* file, int line)
@@ -237,7 +237,7 @@ static void s_poll_error(const char* file, int line)
 	}
 }
 
-static CF_GL_RenderState s_default_state(CF_GL_CanvasInternal* canvas)
+static CF_GL_RenderState s_default_state(CF_GL_Canvas* canvas)
 {
 	CF_GL_RenderState state = { };
 	state.viewport = { 0, 0, canvas->w, canvas->h };
@@ -276,7 +276,7 @@ static void s_apply_state()
 		target->scissor.h != current->scissor.h)
 	) {
 		// Flip the scissor rect vertically since OpenGL's puts (0, 0) at the bottom left.
-		CF_GL_CanvasInternal* canvas = g_ctx.canvas;
+		CF_GL_Canvas* canvas = g_ctx.canvas;
 		glScissor(target->scissor.x, target->scissor.y, target->scissor.w, target->scissor.h);
 	}
 
@@ -668,7 +668,7 @@ void cf_gles_blit_canvas(CF_Canvas canvas_handle)
 	g_ctx.current_state.scissor_enabled = false;
 	glDisable(GL_SCISSOR_TEST);
 
-	CF_GL_CanvasInternal* canvas = (CF_GL_CanvasInternal*)(uintptr_t)canvas_handle.id;
+	CF_GL_Canvas* canvas = (CF_GL_Canvas*)(uintptr_t)canvas_handle.id;
 	glBindFramebuffer(GL_READ_FRAMEBUFFER, canvas->fbo);
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 	glBlitFramebuffer(
@@ -735,7 +735,7 @@ bool cf_gles_query_pixel_format(CF_PixelFormat format, CF_PixelFormatOp op)
 	}
 }
 
-static void s_apply_sampler_params(CF_GL_TextureInternal* t, const CF_TextureParams& p)
+static void s_apply_sampler_params(CF_GL_Texture* t, const CF_TextureParams& p)
 {
 	s_load_format_caps();
 	CF_GL_PixelFormatInfo* info = s_find_pixel_format_info(p.pixel_format);
@@ -787,7 +787,7 @@ CF_Texture cf_gles_make_texture(CF_TextureParams params)
 	CF_GL_PixelFormatInfo* info = s_find_pixel_format_info(params.pixel_format);
 	if (!info || info->internal_fmt == GL_NONE) return CF_Texture{};
 
-	CF_GL_TextureInternal* t = (CF_GL_TextureInternal*)CF_CALLOC(sizeof(CF_GL_TextureInternal));
+	CF_GL_Texture* t = (CF_GL_Texture*)CF_CALLOC(sizeof(CF_GL_Texture));
 	t->w = params.width;
 	t->h = params.height;
 	t->internal_fmt = info->internal_fmt;
@@ -817,7 +817,7 @@ CF_Texture cf_gles_make_texture(CF_TextureParams params)
 void cf_gles_destroy_texture(CF_Texture tex)
 {
 	if (!tex.id) return;
-	CF_GL_TextureInternal* t = (CF_GL_TextureInternal*)(uintptr_t)tex.id;
+	CF_GL_Texture* t = (CF_GL_Texture*)(uintptr_t)tex.id;
 	if (t->id) glDeleteTextures(1, &t->id);
 	CF_POLL_OPENGL_ERROR();
 	CF_FREE(t);
@@ -825,7 +825,7 @@ void cf_gles_destroy_texture(CF_Texture tex)
 
 void cf_gles_texture_update(CF_Texture tex, void* data, int /*size*/)
 {
-	CF_GL_TextureInternal* t = (CF_GL_TextureInternal*)(uintptr_t)tex.id;
+	CF_GL_Texture* t = (CF_GL_Texture*)(uintptr_t)tex.id;
 	glBindTexture(GL_TEXTURE_2D, t->id);
 	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, t->w, t->h, t->upload_fmt, t->upload_type, data);
 	if (t->has_mips) glGenerateMipmap(GL_TEXTURE_2D);
@@ -835,7 +835,7 @@ void cf_gles_texture_update(CF_Texture tex, void* data, int /*size*/)
 
 void cf_gles_texture_update_mip(CF_Texture tex, void* data, int /*size*/, int mip)
 {
-	CF_GL_TextureInternal* t = (CF_GL_TextureInternal*)(uintptr_t)tex.id;
+	CF_GL_Texture* t = (CF_GL_Texture*)(uintptr_t)tex.id;
 	int w = cf_max(t->w >> mip, 1);
 	int h = cf_max(t->h >> mip, 1);
 	glBindTexture(GL_TEXTURE_2D, t->id);
@@ -846,7 +846,7 @@ void cf_gles_texture_update_mip(CF_Texture tex, void* data, int /*size*/, int mi
 
 void cf_gles_generate_mipmaps(CF_Texture tex)
 {
-	CF_GL_TextureInternal* t = (CF_GL_TextureInternal*)(uintptr_t)tex.id;
+	CF_GL_Texture* t = (CF_GL_Texture*)(uintptr_t)tex.id;
 	glBindTexture(GL_TEXTURE_2D, t->id);
 	glGenerateMipmap(GL_TEXTURE_2D);
 	glBindTexture(GL_TEXTURE_2D, 0);
@@ -855,12 +855,12 @@ void cf_gles_generate_mipmaps(CF_Texture tex)
 
 uint64_t cf_gles_texture_handle(CF_Texture t)
 {
-	return ((CF_GL_TextureInternal*)t.id)->id;
+	return ((CF_GL_Texture*)t.id)->id;
 }
 
 uint64_t cf_gles_texture_binding_handle(CF_Texture t)
 {
-	return ((CF_GL_TextureInternal*)t.id)->id;
+	return ((CF_GL_Texture*)t.id)->id;
 }
 
 CF_Canvas cf_gles_make_canvas(CF_CanvasParams params)
@@ -876,7 +876,7 @@ CF_Canvas cf_gles_make_canvas(CF_CanvasParams params)
 		}
 	}
 
-	CF_GL_CanvasInternal* c = (CF_GL_CanvasInternal*)CF_CALLOC(sizeof(CF_GL_CanvasInternal));
+	CF_GL_Canvas* c = (CF_GL_Canvas*)CF_CALLOC(sizeof(CF_GL_Canvas));
 	c->w = params.target.width;
 	c->h = params.target.height;
 
@@ -887,7 +887,7 @@ CF_Canvas cf_gles_make_canvas(CF_CanvasParams params)
 		CF_FREE(c);
 		return CF_Canvas{};
 	}
-	c->color = ((CF_GL_TextureInternal*)(uintptr_t)color.id)->id;
+	c->color = ((CF_GL_Texture*)(uintptr_t)color.id)->id;
 
 	// Septh/stencil (renderbuffer).
 	if (params.depth_stencil_enable) {
@@ -917,7 +917,7 @@ CF_Canvas cf_gles_make_canvas(CF_CanvasParams params)
 void cf_gles_destroy_canvas(CF_Canvas ch)
 {
 	if (!ch.id) return;
-	CF_GL_CanvasInternal* c = (CF_GL_CanvasInternal*)(uintptr_t)ch.id;
+	CF_GL_Canvas* c = (CF_GL_Canvas*)(uintptr_t)ch.id;
 	if (c->depth) glDeleteRenderbuffers(1, &c->depth);
 	if (c->fbo) glDeleteFramebuffers(1, &c->fbo);
 	cf_gles_destroy_texture(c->cf_color);
@@ -927,7 +927,7 @@ void cf_gles_destroy_canvas(CF_Canvas ch)
 
 void cf_gles_canvas_get_size(CF_Canvas canvas_handle, int* w, int* h)
 {
-	CF_GL_CanvasInternal* canvas = (CF_GL_CanvasInternal*)(uintptr_t)canvas_handle.id;
+	CF_GL_Canvas* canvas = (CF_GL_Canvas*)(uintptr_t)canvas_handle.id;
 	if (canvas) {
 		if (w) { *w = canvas->w; }
 		if (h) { *h = canvas->h; }
@@ -936,7 +936,7 @@ void cf_gles_canvas_get_size(CF_Canvas canvas_handle, int* w, int* h)
 
 CF_Texture cf_gles_canvas_get_target(CF_Canvas ch)
 {
-	CF_GL_CanvasInternal* c = (CF_GL_CanvasInternal*)(uintptr_t)ch.id;
+	CF_GL_Canvas* c = (CF_GL_Canvas*)(uintptr_t)ch.id;
 	return c->cf_color;
 }
 
@@ -959,7 +959,7 @@ static void s_clear_canvas()
 
 void cf_gles_clear_canvas(CF_Canvas canvas_handle)
 {
-	CF_GL_CanvasInternal* canvas = (CF_GL_CanvasInternal*)(uintptr_t)canvas_handle.id;
+	CF_GL_Canvas* canvas = (CF_GL_Canvas*)(uintptr_t)canvas_handle.id;
 
 	GLuint fbo = g_ctx.fbo;
 	s_bind_framebuffer(canvas->fbo);
@@ -971,7 +971,7 @@ void cf_gles_clear_canvas(CF_Canvas canvas_handle)
 
 void cf_gles_apply_canvas(CF_Canvas canvas_handle, bool clear)
 {
-	CF_GL_CanvasInternal* canvas = (CF_GL_CanvasInternal*)(uintptr_t)canvas_handle.id;
+	CF_GL_Canvas* canvas = (CF_GL_Canvas*)(uintptr_t)canvas_handle.id;
 	s_bind_framebuffer(canvas->fbo);
 	if (clear) { s_clear_canvas(); }
 
@@ -981,7 +981,7 @@ void cf_gles_apply_canvas(CF_Canvas canvas_handle, bool clear)
 
 CF_Mesh cf_gles_make_mesh(int vertex_buffer_size, const CF_VertexAttribute* attributes, int attribute_count, int vertex_stride)
 {
-	auto* m = (CF_GL_MeshInternal*)CF_CALLOC(sizeof(CF_GL_MeshInternal));
+	auto* m = (CF_GL_Mesh*)CF_CALLOC(sizeof(CF_GL_Mesh));
 	glGenBuffers(1, &m->vbo.id);
 
 	m->vbo.size = vertex_buffer_size;
@@ -1002,7 +1002,7 @@ CF_Mesh cf_gles_make_mesh(int vertex_buffer_size, const CF_VertexAttribute* attr
 
 void cf_gles_mesh_set_index_buffer(CF_Mesh mh, int index_buffer_size_in_bytes, int index_bit_count)
 {
-	auto* m = (CF_GL_MeshInternal*)(uintptr_t)mh.id;
+	auto* m = (CF_GL_Mesh*)(uintptr_t)mh.id;
 	if (!m->ibo.id) glGenBuffers(1, &m->ibo.id);
 	CF_ASSERT(index_bit_count == 16 || index_bit_count == 32);
 	m->ibo.size = index_buffer_size_in_bytes;
@@ -1015,7 +1015,7 @@ void cf_gles_mesh_set_index_buffer(CF_Mesh mh, int index_buffer_size_in_bytes, i
 
 void cf_gles_mesh_set_instance_buffer(CF_Mesh mh, int instance_buffer_size_in_bytes, int instance_stride)
 {
-	auto* m = (CF_GL_MeshInternal*)(uintptr_t)mh.id;
+	auto* m = (CF_GL_Mesh*)(uintptr_t)mh.id;
 	if (!m->instance.id) glGenBuffers(1, &m->instance.id);
 	m->instance.size = instance_buffer_size_in_bytes;
 	m->instance.stride = instance_stride;
@@ -1027,7 +1027,7 @@ void cf_gles_mesh_set_instance_buffer(CF_Mesh mh, int instance_buffer_size_in_by
 
 void cf_gles_mesh_update_vertex_data(CF_Mesh mh, void* verts, int vertex_count)
 {
-	auto* m = (CF_GL_MeshInternal*)(uintptr_t)mh.id;
+	auto* m = (CF_GL_Mesh*)(uintptr_t)mh.id;
 	GLsizeiptr bytes = vertex_count * m->vbo.stride;
 	glBindBuffer(GL_ARRAY_BUFFER, m->vbo.id);
 	if (bytes > m->vbo.size) {
@@ -1043,7 +1043,7 @@ void cf_gles_mesh_update_vertex_data(CF_Mesh mh, void* verts, int vertex_count)
 
 void cf_gles_mesh_update_index_data(CF_Mesh mh, void* indices, int index_count)
 {
-	auto* m = (CF_GL_MeshInternal*)(uintptr_t)mh.id;
+	auto* m = (CF_GL_Mesh*)(uintptr_t)mh.id;
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m->ibo.id);
 	int stride = m->ibo.stride ? m->ibo.stride : sizeof(uint16_t);
 	GLsizeiptr bytes = index_count * stride;
@@ -1060,7 +1060,7 @@ void cf_gles_mesh_update_index_data(CF_Mesh mh, void* indices, int index_count)
 
 void cf_gles_mesh_update_instance_data(CF_Mesh mh, void* instances, int instance_count)
 {
-	auto* m = (CF_GL_MeshInternal*)(uintptr_t)mh.id;
+	auto* m = (CF_GL_Mesh*)(uintptr_t)mh.id;
 	if (!m->instance.id) return;
 	glBindBuffer(GL_ARRAY_BUFFER, m->instance.id);
 	GLsizeiptr bytes = instance_count * m->instance.stride;
@@ -1078,7 +1078,7 @@ void cf_gles_mesh_update_instance_data(CF_Mesh mh, void* instances, int instance
 void cf_gles_destroy_mesh(CF_Mesh mh)
 {
 	if (!mh.id) return;
-	auto* m = (CF_GL_MeshInternal*)(uintptr_t)mh.id;
+	auto* m = (CF_GL_Mesh*)(uintptr_t)mh.id;
 	if (m->ibo.id) glDeleteBuffers(1, &m->ibo.id);
 	if (m->vbo.id) glDeleteBuffers(1, &m->vbo.id);
 	if (m->instance.id) glDeleteBuffers(1, &m->instance.id);
@@ -1088,7 +1088,7 @@ void cf_gles_destroy_mesh(CF_Mesh mh)
 
 void cf_gles_apply_mesh(CF_Mesh mesh_handle)
 {
-	CF_GL_MeshInternal* mesh = (CF_GL_MeshInternal*)(uintptr_t)mesh_handle.id;
+	CF_GL_Mesh* mesh = (CF_GL_Mesh*)(uintptr_t)mesh_handle.id;
 	g_ctx.mesh = mesh;
 }
 
@@ -1147,7 +1147,7 @@ CF_Shader cf_gles_make_shader_from_bytecode(CF_ShaderBytecode vertex_bytecode, C
 	CF_FREE(fs_src);
 
 	// Copy refelection data
-	CF_GL_ShaderInternal* shader = (CF_GL_ShaderInternal*)CF_CALLOC(sizeof(CF_GL_ShaderInternal));
+	CF_GL_Shader* shader = (CF_GL_Shader*)CF_CALLOC(sizeof(CF_GL_Shader));
 	shader->program = program;
 
 	shader->texture_bindings = (CF_GL_TextureBinding*)CF_ALLOC(sizeof(CF_GL_TextureBinding) * fragment_bytecode.shader_info.num_images);
@@ -1174,7 +1174,7 @@ void cf_gles_destroy_shader_internal(CF_Shader shader_handle)
 {
 	if (!shader_handle.id) return;
 
-	CF_GL_ShaderInternal* shader = (CF_GL_ShaderInternal*)(uintptr_t)shader_handle.id;
+	CF_GL_Shader* shader = (CF_GL_Shader*)(uintptr_t)shader_handle.id;
 
 	glDeleteBuffers(shader->vs.num_uniform_blocks, shader->vs.ubo);
 	glDeleteBuffers(shader->fs.num_uniform_blocks, shader->fs.ubo);
@@ -1189,7 +1189,7 @@ void cf_gles_destroy_shader_internal(CF_Shader shader_handle)
 	CF_FREE(shader->fs.uniform_members);
 	CF_FREE(shader->texture_bindings);
 	glDeleteProgram(shader->program);
-	shader->~CF_GL_ShaderInternal();
+	shader->~CF_GL_Shader();
 	CF_FREE(shader);
 }
 
@@ -1262,7 +1262,7 @@ static void s_upload_uniforms(CF_GL_ShaderInfo* shader_info, const CF_MaterialSt
 	cf_arena_reset(arena);
 }
 
-static GLuint s_build_vao(CF_GL_ShaderInternal* shader, CF_GL_MeshInternal* mesh)
+static GLuint s_build_vao(CF_GL_Shader* shader, CF_GL_Mesh* mesh)
 {
 	GLuint vao;
 	glGenVertexArrays(1, &vao);
@@ -1324,7 +1324,7 @@ static GLuint s_build_vao(CF_GL_ShaderInternal* shader, CF_GL_MeshInternal* mesh
 
 void cf_gles_apply_shader(CF_Shader shader_handle, CF_Material material_handle)
 {
-	CF_GL_ShaderInternal* shader = (CF_GL_ShaderInternal*)(uintptr_t)shader_handle.id;
+	CF_GL_Shader* shader = (CF_GL_Shader*)(uintptr_t)shader_handle.id;
 	CF_MaterialInternal* material = (CF_MaterialInternal*)(uintptr_t)material_handle.id;
 	g_ctx.material = material;
 
@@ -1384,7 +1384,7 @@ void cf_gles_apply_shader(CF_Shader shader_handle, CF_Material material_handle)
 	for (int texture_index = 0; texture_index < material->fs.textures.count(); ++texture_index) {
 		const char* name = material->fs.textures[texture_index].name;
 		CF_MaterialTex material_tex = material->fs.textures[texture_index];
-		CF_GL_TextureInternal* texture = (CF_GL_TextureInternal*)(uintptr_t)material_tex.handle.id;
+		CF_GL_Texture* texture = (CF_GL_Texture*)(uintptr_t)material_tex.handle.id;
 		for (int image_index = 0; image_index < shader->num_texture_bindings; ++image_index) {
 			const CF_GL_TextureBinding* binding = &shader->texture_bindings[image_index];
 			if (binding->name == material_tex.name) {
@@ -1398,7 +1398,7 @@ void cf_gles_apply_shader(CF_Shader shader_handle, CF_Material material_handle)
 	}
 	CF_POLL_OPENGL_ERROR();
 
-	CF_GL_MeshInternal* mesh = g_ctx.mesh;
+	CF_GL_Mesh* mesh = g_ctx.mesh;
 	CF_ASSERT(mesh != NULL);
 
 	// Use a VAO cache to avoid declaring the attributes all the time.
@@ -1419,7 +1419,7 @@ void cf_gles_apply_shader(CF_Shader shader_handle, CF_Material material_handle)
 
 void cf_gles_draw_elements()
 {
-	CF_GL_MeshInternal* mesh = g_ctx.mesh;
+	CF_GL_Mesh* mesh = g_ctx.mesh;
 	CF_MaterialInternal* material = g_ctx.material;
 	CF_ASSERT(mesh != NULL);
 	CF_ASSERT(material != NULL);
