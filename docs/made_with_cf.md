@@ -30,6 +30,16 @@ Shader-toy like tool for Cute Framework by [@bullno1](https://github.com/bullno1
 
 ---
 
+### raptor-cute-c
+
+A tiny shoot 'em up built in C and Cute Framework by [@pusewicz](https://github.com/pusewicz).
+
+![Raptor](https://media.githubusercontent.com/media/pusewicz/raptor-cute-c/main/assets/screenshot.gif)
+
+[See Raptor on GitHub](https://github.com/pusewicz/raptor-cute-c).
+
+---
+
 ### toy_iso_paintball
 
 Isometric demo game using Cute Framework by [@ogam](https://github.com/ogam).
@@ -41,4 +51,3 @@ Isometric demo game using Cute Framework by [@ogam](https://github.com/ogam).
 ---
 
 <!-- Add your projects below this line -->
-
