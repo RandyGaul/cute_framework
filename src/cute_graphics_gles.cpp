@@ -124,15 +124,6 @@ struct CF_GL_TextureBinding
 	int location;
 };
 
-struct CF_GL_Vao
-{
-	CF_GL_Mesh* mesh;
-	GLuint id;
-	uint32_t vbo_version;
-	uint32_t ibo_version;
-	uint32_t instance_version;
-};
-
 struct CF_GL_Shader
 {
 	GLuint program;
@@ -141,8 +132,6 @@ struct CF_GL_Shader
 	CF_GL_TextureBinding* texture_bindings;
 	CF_GL_ShaderInfo vs;
 	CF_GL_ShaderInfo fs;
-
-	Cute::Array<CF_GL_Vao> vao_cache;
 };
 
 struct CF_GL_Rect
@@ -256,6 +245,7 @@ static struct
 	CF_MaterialInternal* material;
 	CF_GL_Mesh* mesh;
 	CF_GL_Canvas* canvas;
+	uint64_t enabled_vertex_attrib_mask;
 } g_ctx = { };
 
 static void s_poll_error(const char* file, int line)
@@ -1400,10 +1390,6 @@ void cf_gles_destroy_shader_internal(CF_Shader shader_handle)
 	glDeleteBuffers(shader->vs.num_uniform_blocks, shader->vs.ubo);
 	glDeleteBuffers(shader->fs.num_uniform_blocks, shader->fs.ubo);
 
-	for (int i = 0; i < shader->vao_cache.count(); ++i) {
-		glDeleteVertexArrays(1, &shader->vao_cache[i].id);
-	}
-
 	CF_POLL_OPENGL_ERROR();
 
 	CF_FREE(shader->vs.uniform_members);
@@ -1483,56 +1469,60 @@ static void s_upload_uniforms(CF_GL_ShaderInfo* shader_info, const CF_MaterialSt
 	cf_arena_reset(arena);
 }
 
-static CF_GL_Vao s_build_vao(CF_GL_Shader* shader, CF_GL_Mesh* mesh)
+static void s_apply_vertex_attributes(CF_GL_Shader* shader, CF_GL_Mesh* mesh)
 {
-	CF_GL_Vao vao = { };
-	vao.mesh = mesh;
-	glGenVertexArrays(1, &vao.id);
-	glBindVertexArray(vao.id);
-	glBindBuffer(GL_ARRAY_BUFFER, mesh->vbo.id);
-	if (mesh->ibo.id) glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh->ibo.id);
-	CF_POLL_OPENGL_ERROR();
+	if (mesh->ibo.id) {
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh->ibo.id);
+	} else {
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+	}
+
+	uint64_t attribute_mask = 0;
 
 	for (int i = 0; i < mesh->attribute_count; ++i) {
 		const CF_VertexAttribute* attrib = &mesh->attributes[i];
 		GLint loc = glGetAttribLocation(shader->program, attrib->name);
-		if (loc < 0) continue;
+		if (loc < 0 || loc >= 64) continue;
 
 		const bool per_instance = attrib->per_instance;
 		CF_GL_Buffer& buf = per_instance ? mesh->instance : mesh->vbo;
 		if (!buf.id) continue;
 		GLintptr base_offset = per_instance ? mesh->instance.active_offset : mesh->vbo.active_offset;
 
-		GLenum type = GL_FLOAT; GLint comps = 4; GLboolean norm = GL_FALSE;
+		GLenum type = GL_FLOAT;
+		GLint comps = 4;
+		GLboolean norm = GL_FALSE;
 		switch (attrib->format) {
-			case CF_VERTEX_FORMAT_FLOAT:  type = GL_FLOAT; comps = 1; break;
-			case CF_VERTEX_FORMAT_FLOAT2: type = GL_FLOAT; comps = 2; break;
-			case CF_VERTEX_FORMAT_FLOAT3: type = GL_FLOAT; comps = 3; break;
-			case CF_VERTEX_FORMAT_FLOAT4: type = GL_FLOAT; comps = 4; break;
-			case CF_VERTEX_FORMAT_INT:  type = GL_INT; comps = 1; break;
-			case CF_VERTEX_FORMAT_INT2: type = GL_INT; comps = 2; break;
-			case CF_VERTEX_FORMAT_INT3: type = GL_INT; comps = 3; break;
-			case CF_VERTEX_FORMAT_INT4: type = GL_INT; comps = 4; break;
-			case CF_VERTEX_FORMAT_UINT:  type = GL_UNSIGNED_INT; comps = 1; break;
-			case CF_VERTEX_FORMAT_UINT2: type = GL_UNSIGNED_INT; comps = 2; break;
-			case CF_VERTEX_FORMAT_UINT3: type = GL_UNSIGNED_INT; comps = 3; break;
-			case CF_VERTEX_FORMAT_UINT4: type = GL_UNSIGNED_INT; comps = 4; break;
-			case CF_VERTEX_FORMAT_BYTE4_NORM: type = GL_BYTE; comps = 4; norm = GL_TRUE; break;
-			case CF_VERTEX_FORMAT_UBYTE4_NORM: type = GL_UNSIGNED_BYTE; comps = 4; norm = GL_TRUE; break;
-			case CF_VERTEX_FORMAT_SHORT2: type = GL_SHORT; comps = 2; break;
-			case CF_VERTEX_FORMAT_SHORT2_NORM: type = GL_SHORT; comps = 2; norm = GL_TRUE; break;
-			case CF_VERTEX_FORMAT_SHORT4: type = GL_SHORT; comps = 4; break;
-			case CF_VERTEX_FORMAT_SHORT4_NORM: type = GL_SHORT; comps = 4; norm = GL_TRUE; break;
-			case CF_VERTEX_FORMAT_USHORT2: type = GL_UNSIGNED_SHORT; comps = 2; break;
-			case CF_VERTEX_FORMAT_USHORT2_NORM: type = GL_UNSIGNED_SHORT; comps = 2; norm = GL_TRUE; break;
-			case CF_VERTEX_FORMAT_USHORT4: type = GL_UNSIGNED_SHORT; comps = 4; break;
-			case CF_VERTEX_FORMAT_USHORT4_NORM: type = GL_UNSIGNED_SHORT; comps = 4; norm = GL_TRUE; break;
-			case CF_VERTEX_FORMAT_HALF2: type = GL_HALF_FLOAT; comps = 2; break;
-			case CF_VERTEX_FORMAT_HALF4: type = GL_HALF_FLOAT; comps = 4; break;
+			case CF_VERTEX_FORMAT_FLOAT:	type = GL_FLOAT; comps = 1; break;
+			case CF_VERTEX_FORMAT_FLOAT2:	type = GL_FLOAT; comps = 2; break;
+			case CF_VERTEX_FORMAT_FLOAT3:	type = GL_FLOAT; comps = 3; break;
+			case CF_VERTEX_FORMAT_FLOAT4:	type = GL_FLOAT; comps = 4; break;
+			case CF_VERTEX_FORMAT_INT:	type = GL_INT; comps = 1; break;
+			case CF_VERTEX_FORMAT_INT2:	type = GL_INT; comps = 2; break;
+			case CF_VERTEX_FORMAT_INT3:	type = GL_INT; comps = 3; break;
+			case CF_VERTEX_FORMAT_INT4:	type = GL_INT; comps = 4; break;
+			case CF_VERTEX_FORMAT_UINT:	type = GL_UNSIGNED_INT; comps = 1; break;
+			case CF_VERTEX_FORMAT_UINT2:	type = GL_UNSIGNED_INT; comps = 2; break;
+			case CF_VERTEX_FORMAT_UINT3:	type = GL_UNSIGNED_INT; comps = 3; break;
+			case CF_VERTEX_FORMAT_UINT4:	type = GL_UNSIGNED_INT; comps = 4; break;
+			case CF_VERTEX_FORMAT_BYTE4_NORM:	type = GL_BYTE; comps = 4; norm = GL_TRUE; break;
+			case CF_VERTEX_FORMAT_UBYTE4_NORM:	type = GL_UNSIGNED_BYTE; comps = 4; norm = GL_TRUE; break;
+			case CF_VERTEX_FORMAT_SHORT2:	type = GL_SHORT; comps = 2; break;
+			case CF_VERTEX_FORMAT_SHORT2_NORM:	type = GL_SHORT; comps = 2; norm = GL_TRUE; break;
+			case CF_VERTEX_FORMAT_SHORT4:	type = GL_SHORT; comps = 4; break;
+			case CF_VERTEX_FORMAT_SHORT4_NORM:	type = GL_SHORT; comps = 4; norm = GL_TRUE; break;
+			case CF_VERTEX_FORMAT_USHORT2:	type = GL_UNSIGNED_SHORT; comps = 2; break;
+			case CF_VERTEX_FORMAT_USHORT2_NORM:	type = GL_UNSIGNED_SHORT; comps = 2; norm = GL_TRUE; break;
+			case CF_VERTEX_FORMAT_USHORT4:	type = GL_UNSIGNED_SHORT; comps = 4; break;
+			case CF_VERTEX_FORMAT_USHORT4_NORM:	type = GL_UNSIGNED_SHORT; comps = 4; norm = GL_TRUE; break;
+			case CF_VERTEX_FORMAT_HALF2:	type = GL_HALF_FLOAT; comps = 2; break;
+			case CF_VERTEX_FORMAT_HALF4:	type = GL_HALF_FLOAT; comps = 4; break;
 			default: break;
 		}
 		glBindBuffer(GL_ARRAY_BUFFER, buf.id);
-		glEnableVertexAttribArray((GLuint)loc);
+		if (!(g_ctx.enabled_vertex_attrib_mask & (1ULL << loc))) {
+			glEnableVertexAttribArray((GLuint)loc);
+		}
 		const void* pointer = (const void*)(intptr_t)(attrib->offset + base_offset);
 		if (type == GL_INT) {
 			glVertexAttribIPointer((GLuint)loc, comps, type, buf.stride, pointer);
@@ -1540,14 +1530,23 @@ static CF_GL_Vao s_build_vao(CF_GL_Shader* shader, CF_GL_Mesh* mesh)
 			glVertexAttribPointer((GLuint)loc, comps, type, norm, buf.stride, pointer);
 		}
 		glVertexAttribDivisor((GLuint)loc, per_instance ? 1 : 0);
+
+		attribute_mask |= 1ULL << loc;
 	}
+
+	uint64_t disable_mask = g_ctx.enabled_vertex_attrib_mask & ~attribute_mask;
+	if (disable_mask) {
+		uint64_t mask = disable_mask;
+		for (GLuint loc = 0; mask; ++loc) {
+			if (mask & 1ULL) {
+				glDisableVertexAttribArray(loc);
+			}
+			mask >>= 1;
+		}
+	}
+
+	g_ctx.enabled_vertex_attrib_mask = attribute_mask;
 	CF_POLL_OPENGL_ERROR();
-
-	vao.vbo_version = mesh->vbo.version;
-	vao.ibo_version = mesh->ibo.version;
-	vao.instance_version = mesh->instance.version;
-
-	return vao;
 }
 
 void cf_gles_apply_shader(CF_Shader shader_handle, CF_Material material_handle)
@@ -1629,24 +1628,7 @@ void cf_gles_apply_shader(CF_Shader shader_handle, CF_Material material_handle)
 	CF_GL_Mesh* mesh = g_ctx.mesh;
 	CF_ASSERT(mesh != NULL);
 
-	// Use a VAO cache to avoid declaring the attributes all the time.
-	CF_GL_Vao* vao_entry = NULL;
-	for (int i = 0; i < shader->vao_cache.count(); ++i) {
-		CF_GL_Vao& entry = shader->vao_cache[i];
-		if (entry.mesh == mesh) {
-			if (entry.vbo_version != mesh->vbo.version || entry.ibo_version != mesh->ibo.version || entry.instance_version != mesh->instance.version) {
-				glDeleteVertexArrays(1, &entry.id);
-				entry = s_build_vao(shader, mesh);
-			}
-			vao_entry = &entry;
-			break;
-		}
-	}
-	if (!vao_entry) {
-		shader->vao_cache.add(s_build_vao(shader, mesh));
-		vao_entry = &shader->vao_cache[shader->vao_cache.count() - 1];
-	}
-	glBindVertexArray(vao_entry->id);
+	s_apply_vertex_attributes(shader, mesh);
 }
 
 void cf_gles_draw_elements()
