@@ -25,10 +25,6 @@
 
 #define RING_BUFFER_CAPACITY 3
 
-static const int CF_GL_TEXTURE_RING_CAP = 3;
-static const int CF_GL_BUFFER_RING_CAP = 3;
-static const GLsizeiptr CF_GL_BUFFER_STREAM_ALIGN = 256;
-
 struct CF_GL_PixelFormatInfo
 {
 	CF_PixelFormat format;
@@ -57,7 +53,6 @@ struct CF_GL_Ring
 	CF_GL_Slot slots[RING_BUFFER_CAPACITY];
 	int count = 0;
 	int head = 0;
-	int cap = 0;
 };
 
 struct CF_GL_Texture
@@ -280,7 +275,7 @@ static GLsizeiptr s_align_up(GLsizeiptr value, GLsizeiptr alignment)
 static GLenum s_poll_fence(GLsync fence)
 {
 	if (!fence) return GL_ALREADY_SIGNALED;
-	return glClientWaitSync(fence, 0, 0);
+    return glClientWaitSync(fence, GL_SYNC_FLUSH_COMMANDS_BIT, 0);
 }
 
 static CF_GL_Slot* s_acquire_slot(CF_GL_Ring* ring, uint32_t frame, int* out_index)
@@ -301,7 +296,7 @@ static CF_GL_Slot* s_acquire_slot(CF_GL_Ring* ring, uint32_t frame, int* out_ind
 			return &slot;
 		}
 	}
-	if (count < ring->cap && count < RING_BUFFER_CAPACITY) {
+	if (count < RING_BUFFER_CAPACITY) {
 		int index = count;
 		CF_GL_Slot& new_slot = ring->slots[index];
 		new_slot = CF_GL_Slot();
@@ -320,7 +315,9 @@ static CF_GL_Slot* s_force_slot(CF_GL_Ring* ring, uint32_t frame, int* out_index
 	int index = ring->head;
 	CF_GL_Slot& slot = ring->slots[index];
 	if (slot.fence) {
-		glWaitSync(slot.fence, 0, GL_TIMEOUT_IGNORED);
+		// Block the CPU until the GPU is done with this slot.
+		// If you're seeing this on the hot-path of a profile or flame-graph it means you're GPU bound.
+		glClientWaitSync(slot.fence, GL_SYNC_FLUSH_COMMANDS_BIT, GL_TIMEOUT_IGNORED);
 		glDeleteSync(slot.fence);
 		slot.fence = 0;
 	}
@@ -406,8 +403,6 @@ static void s_apply_state()
 	}
 
 	*current = *target;
-
-
 	CF_POLL_OPENGL_ERROR();
 }
 
@@ -441,7 +436,7 @@ static CF_GL_PixelFormatInfo* s_find_pixel_format_info(CF_PixelFormat format)
 
 static void s_load_format_caps()
 {
-static bool s_caps_initialized = false;
+	static bool s_caps_initialized = false;
 	if (s_caps_initialized) return;
 	s_caps_initialized = true;
 
@@ -719,7 +714,6 @@ CF_Result cf_gles_init(bool debug)
 	return cf_result_success();
 }
 
-
 void cf_gles_destroy_shader_internal(CF_Shader sh);
 
 void cf_gles_cleanup()
@@ -740,7 +734,6 @@ void cf_gles_attach(SDL_Window* window)
 	g_ctx.gl_ctx = SDL_GL_CreateContext(window);
 	SDL_GL_MakeCurrent(window, g_ctx.gl_ctx);
 	cf_load_gles();
-
 	g_ctx.window = window;
 }
 
@@ -944,10 +937,10 @@ static GLuint s_make_depth_renderbuffer(const CF_TextureParams& p)
 }
 
 CF_Texture cf_gles_make_texture(CF_TextureParams params)
-	{
+{
 	if (!cf_gles_texture_supports_format(params.pixel_format, (CF_TextureUsageBits)params.usage)) {
-	CF_ASSERT(!"Unsupported pixel format for GLES backend.");
-	return CF_Texture{};
+		CF_ASSERT(!"Unsupported pixel format for GLES backend.");
+		return CF_Texture { 0ULL };
 	}
 
 	CF_GL_PixelFormatInfo* info = s_find_pixel_format_info(params.pixel_format);
@@ -959,29 +952,28 @@ CF_Texture cf_gles_make_texture(CF_TextureParams params)
 	t->internal_fmt = info->internal_fmt;
 	t->upload_fmt   = info->upload_fmt;
 	t->upload_type  = info->upload_type;
-	t->ring.cap = cf_min(CF_GL_TEXTURE_RING_CAP, RING_BUFFER_CAPACITY);
 	if (!info->is_depth && (t->upload_fmt == GL_NONE || t->upload_type == GL_NONE)) {
-	CF_FREE(t);
-	return CF_Texture{};
+		CF_FREE(t);
+		return CF_Texture { 0ULL };
 	}
 
 	int slot_index = -1;
 	CF_GL_Slot* slot = s_acquire_or_wait(&t->ring, g_ctx.frame_index, &slot_index);
 	if (!slot) {
-	CF_FREE(t);
-	return CF_Texture{};
+		CF_FREE(t);
+		return CF_Texture { 0ULL };
 	}
 	if (!s_texture_allocate_storage(t, slot)) {
-	CF_FREE(t);
-	return CF_Texture{};
+		CF_FREE(t);
+		return CF_Texture { 0ULL };
 	}
 	t->id = slot->handle;
 	t->active_slot = slot_index;
 	s_apply_sampler_params(t, params);
 	if (params.generate_mipmaps) {
-	glBindTexture(GL_TEXTURE_2D, t->id);
-	glGenerateMipmap(GL_TEXTURE_2D);
-	glBindTexture(GL_TEXTURE_2D, 0);
+		glBindTexture(GL_TEXTURE_2D, t->id);
+		glGenerateMipmap(GL_TEXTURE_2D);
+		glBindTexture(GL_TEXTURE_2D, 0);
 	}
 	CF_POLL_OPENGL_ERROR();
 
@@ -1051,17 +1043,17 @@ void cf_gles_generate_mipmaps(CF_Texture tex)
 	CF_POLL_OPENGL_ERROR();
 }
 
-	uint64_t cf_gles_texture_handle(CF_Texture t)
+uint64_t cf_gles_texture_handle(CF_Texture t)
 {
 	return ((CF_GL_Texture*)t.id)->id;
 }
 
-	uint64_t cf_gles_texture_binding_handle(CF_Texture t)
+uint64_t cf_gles_texture_binding_handle(CF_Texture t)
 {
 	return ((CF_GL_Texture*)t.id)->id;
 }
 
-	CF_Canvas cf_gles_make_canvas(CF_CanvasParams params)
+CF_Canvas cf_gles_make_canvas(CF_CanvasParams params)
 {
 	if (!cf_gles_texture_supports_format(params.target.pixel_format, (CF_TextureUsageBits)params.target.usage)) {
 		CF_ASSERT(!"Unsupported color target format for GLES backend.");
@@ -1132,13 +1124,13 @@ void cf_gles_canvas_get_size(CF_Canvas canvas_handle, int* w, int* h)
 	}
 }
 
-	CF_Texture cf_gles_canvas_get_target(CF_Canvas ch)
+CF_Texture cf_gles_canvas_get_target(CF_Canvas ch)
 {
 	CF_GL_Canvas* c = (CF_GL_Canvas*)(uintptr_t)ch.id;
 	return c->cf_color;
 }
 
-	CF_Texture cf_gles_canvas_get_depth_stencil_target(CF_Canvas)
+CF_Texture cf_gles_canvas_get_depth_stencil_target(CF_Canvas)
 {
 	// TODO: Implement
 	return CF_Texture{};
@@ -1183,7 +1175,6 @@ CF_Mesh cf_gles_make_mesh(int vertex_buffer_size, const CF_VertexAttribute* attr
 	m->vbo.target = GL_ARRAY_BUFFER;
 	m->vbo.capacity = vertex_buffer_size;
 	m->vbo.stride = vertex_stride;
-	m->vbo.ring.cap = cf_min(CF_GL_BUFFER_RING_CAP, RING_BUFFER_CAPACITY);
 	int slot_index = -1;
 	CF_GL_Slot* slot = s_prepare_buffer_slot(&m->vbo, vertex_buffer_size, &slot_index);
 	if (slot) {
@@ -1207,7 +1198,6 @@ void cf_gles_mesh_set_index_buffer(CF_Mesh mh, int index_buffer_size_in_bytes, i
 	m->ibo.target = GL_ELEMENT_ARRAY_BUFFER;
 	m->ibo.capacity = index_buffer_size_in_bytes;
 	m->ibo.stride = index_bit_count / 8;
-	m->ibo.ring.cap = cf_min(CF_GL_BUFFER_RING_CAP, RING_BUFFER_CAPACITY);
 	int slot_index = -1;
 	CF_GL_Slot* slot = s_prepare_buffer_slot(&m->ibo, index_buffer_size_in_bytes, &slot_index);
 	if (slot) {
@@ -1224,7 +1214,6 @@ void cf_gles_mesh_set_instance_buffer(CF_Mesh mh, int instance_buffer_size_in_by
 	m->instance.target = GL_ARRAY_BUFFER;
 	m->instance.capacity = instance_buffer_size_in_bytes;
 	m->instance.stride = instance_stride;
-	m->instance.ring.cap = cf_min(CF_GL_BUFFER_RING_CAP, RING_BUFFER_CAPACITY);
 	int slot_index = -1;
 	CF_GL_Slot* slot = s_prepare_buffer_slot(&m->instance, instance_buffer_size_in_bytes, &slot_index);
 	if (slot) {
@@ -1246,7 +1235,7 @@ void cf_gles_mesh_update_vertex_data(CF_Mesh mh, void* verts, int vertex_count)
 	GLintptr upload_offset = slot->offset;
 	if (bytes > 0) {
 		glBufferSubData(GL_ARRAY_BUFFER, upload_offset, bytes, verts);
-		slot->offset = s_align_up(upload_offset + bytes, CF_GL_BUFFER_STREAM_ALIGN);
+		slot->offset = s_align_up(upload_offset + bytes, 256);
 	} else {
 		slot->offset = 0;
 	}
@@ -1270,7 +1259,7 @@ void cf_gles_mesh_update_index_data(CF_Mesh mh, void* indices, int index_count)
 	GLintptr upload_offset = slot->offset;
 	if (bytes > 0) {
 		glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, upload_offset, bytes, indices);
-		slot->offset = s_align_up(upload_offset + bytes, CF_GL_BUFFER_STREAM_ALIGN);
+		slot->offset = s_align_up(upload_offset + bytes, 256);
 	} else {
 		slot->offset = 0;
 	}
@@ -1294,7 +1283,7 @@ void cf_gles_mesh_update_instance_data(CF_Mesh mh, void* instances, int instance
 	GLintptr upload_offset = slot->offset;
 	if (bytes > 0) {
 		glBufferSubData(GL_ARRAY_BUFFER, upload_offset, bytes, instances);
-		slot->offset = s_align_up(upload_offset + bytes, CF_GL_BUFFER_STREAM_ALIGN);
+		slot->offset = s_align_up(upload_offset + bytes, 256);
 	} else {
 		slot->offset = 0;
 	}
@@ -1323,6 +1312,7 @@ void cf_gles_apply_mesh(CF_Mesh mesh_handle)
 	CF_GL_Mesh* mesh = (CF_GL_Mesh*)(uintptr_t)mesh_handle.id;
 	g_ctx.mesh = mesh;
 }
+
 static void s_build_uniforms(GLuint program, CF_GL_ShaderInfo* shader_info, const CF_ShaderInfo* uniform_info, GLuint* binding_point)
 {
 	shader_info->uniform_members = (CF_ShaderUniformMemberInfo*)CF_ALLOC(sizeof(CF_ShaderUniformMemberInfo) * uniform_info->num_uniform_members);
@@ -1363,7 +1353,7 @@ static void s_build_uniforms(GLuint program, CF_GL_ShaderInfo* shader_info, cons
 	CF_POLL_OPENGL_ERROR();
 }
 
-	CF_Shader cf_gles_make_shader_from_bytecode(CF_ShaderBytecode vertex_bytecode, CF_ShaderBytecode fragment_bytecode)
+CF_Shader cf_gles_make_shader_from_bytecode(CF_ShaderBytecode vertex_bytecode, CF_ShaderBytecode fragment_bytecode)
 {
 	// Transpile and link
 	char* vs_src = s_transpile(&vertex_bytecode);
@@ -1371,7 +1361,7 @@ static void s_build_uniforms(GLuint program, CF_GL_ShaderInfo* shader_info, cons
 	if (!vs_src || !fs_src) {
 		CF_FREE(vs_src);
 		CF_FREE(fs_src);
-		return CF_Shader{};
+		return CF_Shader { 0ULL };
 	}
 	GLuint program = s_make_program(vs_src, fs_src);
 	CF_FREE(vs_src);
@@ -1398,7 +1388,7 @@ static void s_build_uniforms(GLuint program, CF_GL_ShaderInfo* shader_info, cons
 	s_build_uniforms(program, &shader->vs, &vertex_bytecode.shader_info, &binding_point);
 	s_build_uniforms(program, &shader->fs, &fragment_bytecode.shader_info, &binding_point);
 
-	return { .id = (uintptr_t)shader };
+	return { (uintptr_t)(uintptr_t)shader };
 }
 
 void cf_gles_destroy_shader_internal(CF_Shader shader_handle)
