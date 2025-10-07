@@ -9,7 +9,6 @@
 #endif
 
 #include <cute_graphics.h>
-
 #include <spirv_cross_c.h>
 
 #ifdef CF_EMSCRIPTEN
@@ -21,7 +20,7 @@
 
 #define CF_POLL_OPENGL_ERROR() \
 	do { \
-		if (g_ctx.debug) { cf_gles_poll_error(__FILE__, __LINE__); } \
+		if (g_ctx.debug) { s_poll_error(__FILE__, __LINE__); } \
 	} while (0)
 
 struct CF_GL_PixelFormatInfo
@@ -48,7 +47,8 @@ struct CF_GL_TextureInternal
 	bool has_mips = false;
 	GLint min_filter = GL_LINEAR;
 	GLint mag_filter = GL_LINEAR;
-	GLint wrap_u = GL_REPEAT, wrap_v = GL_REPEAT;
+	GLint wrap_u = GL_REPEAT;
+	GLint wrap_v = GL_REPEAT;
 };
 
 struct CF_GL_CanvasInternal
@@ -117,12 +117,6 @@ struct CF_GL_ShaderInternal
 	Cute::Array<CF_GL_Vao> vao_cache;
 };
 
-struct Vertex
-{
-	float x, y;
-	float u, v;
-};
-
 struct CF_GL_Rect
 {
 	int x, y, w, h;
@@ -149,11 +143,11 @@ enum
 };
 
 #ifdef CF_EMSCRIPTEN
-#define GL_BGRA GL_BGRA_EXT
-// These are not available in WebGL
-#define GL_R16_SNORM GL_NONE
-#define GL_RG16_SNORM GL_NONE
-#define GL_RGBA16_SNORM GL_NONE
+#	define GL_BGRA GL_BGRA_EXT
+	// These are not available in WebGL
+#	define GL_R16_SNORM GL_NONE
+#	define GL_RG16_SNORM GL_NONE
+#	define GL_RGBA16_SNORM GL_NONE
 #endif
 
 static CF_GL_PixelFormatInfo g_gl_pixel_formats[] =
@@ -235,7 +229,7 @@ static struct
 	CF_GL_CanvasInternal* canvas;
 } g_ctx = { };
 
-static void cf_gles_poll_error(const char* file, int line)
+static void s_poll_error(const char* file, int line)
 {
 	GLenum err;
 	while ((err = glGetError()) != GL_NO_ERROR) {
@@ -259,25 +253,15 @@ static void s_apply_state()
 	CF_GL_RenderState* target = &g_ctx.target_state;
 	CF_GL_RenderState* current = &g_ctx.current_state;
 
-	if (
-		target->viewport.x != current->viewport.x
-		||
-		target->viewport.y != current->viewport.y
-		||
-		target->viewport.w != current->viewport.w
-		||
+	if (target->viewport.x != current->viewport.x ||
+		target->viewport.y != current->viewport.y ||
+		target->viewport.w != current->viewport.w ||
 		target->viewport.h != current->viewport.h
 	) {
-		glViewport(
-			target->viewport.x,
-			target->viewport.y,
-			target->viewport.w,
-			target->viewport.h
-		);
+		glViewport(target->viewport.x, target->viewport.y, target->viewport.w, target->viewport.h);
 	}
 
-	if (target->scissor_enabled != current->scissor_enabled)
-	{
+	if (target->scissor_enabled != current->scissor_enabled) {
 		if (target->scissor_enabled) {
 			glEnable(GL_SCISSOR_TEST);
 		} else {
@@ -285,46 +269,24 @@ static void s_apply_state()
 		}
 	}
 
-	if (
-		target->scissor_enabled
-		&&
-		(
-			target->scissor.x != current->scissor.x
-			||
-			target->scissor.y != current->scissor.y
-			||
-			target->scissor.w != current->scissor.w
-			||
-			target->scissor.h != current->scissor.h
-		)
+	if (target->scissor_enabled &&
+	   (target->scissor.x != current->scissor.x ||
+		target->scissor.y != current->scissor.y ||
+		target->scissor.w != current->scissor.w ||
+		target->scissor.h != current->scissor.h)
 	) {
-		// Flip the scissor rect vertically since OpenGL's puts (0, 0) at the
-		// bottom left
+		// Flip the scissor rect vertically since OpenGL's puts (0, 0) at the bottom left.
 		CF_GL_CanvasInternal* canvas = g_ctx.canvas;
-		glScissor(
-			target->scissor.x,
-			target->scissor.y,
-			target->scissor.w,
-			target->scissor.h
-		);
+		glScissor(target->scissor.x, target->scissor.y, target->scissor.w, target->scissor.h);
 	}
 
 	if (target->stencil_reference != current->stencil_reference) {
-		glStencilFuncSeparate(
-			GL_FRONT_AND_BACK,
-			GL_ALWAYS,
-			target->stencil_reference,
-			0xFF
-		);
+		glStencilFuncSeparate(GL_FRONT_AND_BACK, GL_ALWAYS, target->stencil_reference, 0xFF );
 	}
 
-	if (
-		target->blend_constants.r != current->blend_constants.r
-		||
-		target->blend_constants.g != current->blend_constants.g
-		||
-		target->blend_constants.b != current->blend_constants.b
-		||
+	if (target->blend_constants.r != current->blend_constants.r ||
+		target->blend_constants.g != current->blend_constants.g ||
+		target->blend_constants.b != current->blend_constants.b ||
 		target->blend_constants.a != current->blend_constants.a
 	) {
 		glBlendColor(
@@ -342,30 +304,13 @@ static void s_apply_state()
 
 static void s_bind_framebuffer(GLuint fbo)
 {
-	if (g_ctx.fbo != fbo)
-	{
+	if (g_ctx.fbo != fbo) {
 		glBindFramebuffer(GL_FRAMEBUFFER, fbo);
 		g_ctx.fbo = fbo;
 	}
 }
 
-static void s_quad(float x, float y, float sx, float sy, Vertex quad[6])
-{
-	quad[0].x = -0.5f; quad[0].y =  0.5f; quad[0].u = 0; quad[0].v = 1;
-	quad[1].x =  0.5f; quad[1].y = -0.5f; quad[1].u = 1; quad[1].v = 0;
-	quad[2].x =  0.5f; quad[2].y =  0.5f; quad[2].u = 1; quad[2].v = 1;
-
-	quad[3].x = -0.5f; quad[3].y =  0.5f; quad[3].u = 0; quad[3].v = 1;
-	quad[4].x = -0.5f; quad[4].y = -0.5f; quad[4].u = 0; quad[4].v = 0;
-	quad[5].x =  0.5f; quad[5].y = -0.5f; quad[5].u = 1; quad[5].v = 0;
-
-	for (int i = 0; i < 6; ++i) {
-		quad[i].x = quad[i].x * sx + x;
-		quad[i].y = quad[i].y * sy + y;
-	}
-}
-
-static bool cf_gles_has_extension(const char* name)
+static bool s_has_extension(const char* name)
 {
 	if (!name) return true;
 	GLint count = 0;
@@ -377,7 +322,7 @@ static bool cf_gles_has_extension(const char* name)
 	return false;
 }
 
-static CF_GL_PixelFormatInfo* cf_gles_find_pixel_format_info(CF_PixelFormat format)
+static CF_GL_PixelFormatInfo* s_find_pixel_format_info(CF_PixelFormat format)
 {
 	for (size_t i = 0; i < CF_ARRAY_SIZE(g_gl_pixel_formats); ++i) {
 		if (g_gl_pixel_formats[i].format == format) return &g_gl_pixel_formats[i];
@@ -385,7 +330,7 @@ static CF_GL_PixelFormatInfo* cf_gles_find_pixel_format_info(CF_PixelFormat form
 	return NULL;
 }
 
-static void cf_gles_load_format_caps()
+static void s_load_format_caps()
 {
 	static bool s_caps_initialized = false;
 	if (s_caps_initialized) return;
@@ -396,7 +341,7 @@ static void cf_gles_load_format_caps()
 		info.caps = 0;
 
 		if (info.internal_fmt == GL_NONE) continue;
-		if (!cf_gles_has_extension(info.required_extension)) continue;
+		if (!s_has_extension(info.required_extension)) continue;
 
 		// GL 3.3 core does not support querying these properties.
 		// Mark as unsupported by default.
@@ -708,6 +653,7 @@ void cf_gles_set_vsync(bool true_turn_on_vsync)
 
 void cf_gles_begin_frame()
 {
+	// No-op.
 }
 
 void cf_gles_end_frame()
@@ -738,8 +684,8 @@ void cf_gles_blit_canvas(CF_Canvas canvas_handle)
 
 bool cf_gles_texture_supports_format(CF_PixelFormat format, CF_TextureUsageBits usage)
 {
-	cf_gles_load_format_caps();
-	CF_GL_PixelFormatInfo* info = cf_gles_find_pixel_format_info(format);
+	s_load_format_caps();
+	CF_GL_PixelFormatInfo* info = s_find_pixel_format_info(format);
 	if (!info || info->internal_fmt == GL_NONE) return false;
 		uint32_t caps = info->caps;
 		if (!caps) return false;
@@ -756,8 +702,8 @@ bool cf_gles_texture_supports_format(CF_PixelFormat format, CF_TextureUsageBits 
 
 bool cf_gles_query_pixel_format(CF_PixelFormat format, CF_PixelFormatOp op)
 {
-	cf_gles_load_format_caps();
-	CF_GL_PixelFormatInfo* info = cf_gles_find_pixel_format_info(format);
+	s_load_format_caps();
+	CF_GL_PixelFormatInfo* info = s_find_pixel_format_info(format);
 	if (!info || info->internal_fmt == GL_NONE) return false;
 	uint32_t caps = info->caps;
 	if (!caps) return false;
@@ -789,10 +735,10 @@ bool cf_gles_query_pixel_format(CF_PixelFormat format, CF_PixelFormatOp op)
 	}
 }
 
-static void cf_gles_apply_sampler_params(CF_GL_TextureInternal* t, const CF_TextureParams& p)
+static void s_apply_sampler_params(CF_GL_TextureInternal* t, const CF_TextureParams& p)
 {
-	cf_gles_load_format_caps();
-	CF_GL_PixelFormatInfo* info = cf_gles_find_pixel_format_info(p.pixel_format);
+	s_load_format_caps();
+	CF_GL_PixelFormatInfo* info = s_find_pixel_format_info(p.pixel_format);
 	uint32_t caps = info ? info->caps : 0;
 	t->has_mips = p.generate_mipmaps || p.mip_count > 1;
 	GLenum min_filter = s_wrap(p.mip_filter, t->has_mips);
@@ -814,10 +760,10 @@ static void cf_gles_apply_sampler_params(CF_GL_TextureInternal* t, const CF_Text
 	glBindTexture(GL_TEXTURE_2D, 0);
 }
 
-static GLuint cf_gles_make_depth_renderbuffer(const CF_TextureParams& p)
+static GLuint s_make_depth_renderbuffer(const CF_TextureParams& p)
 {
-	cf_gles_load_format_caps();
-	CF_GL_PixelFormatInfo* info = cf_gles_find_pixel_format_info(p.pixel_format);
+	s_load_format_caps();
+	CF_GL_PixelFormatInfo* info = s_find_pixel_format_info(p.pixel_format);
 	if (!info || info->internal_fmt == GL_NONE || !info->is_depth) return 0;
 	if (!(info->caps & CF_GL_FMT_CAP_DEPTH)) return 0;
 	if (info->has_stencil && !(info->caps & CF_GL_FMT_CAP_STENCIL)) return 0;
@@ -838,7 +784,7 @@ CF_Texture cf_gles_make_texture(CF_TextureParams params)
 		return CF_Texture{};
 	}
 
-	CF_GL_PixelFormatInfo* info = cf_gles_find_pixel_format_info(params.pixel_format);
+	CF_GL_PixelFormatInfo* info = s_find_pixel_format_info(params.pixel_format);
 	if (!info || info->internal_fmt == GL_NONE) return CF_Texture{};
 
 	CF_GL_TextureInternal* t = (CF_GL_TextureInternal*)CF_CALLOC(sizeof(CF_GL_TextureInternal));
@@ -860,7 +806,7 @@ CF_Texture cf_gles_make_texture(CF_TextureParams params)
 
 	glBindTexture(GL_TEXTURE_2D, t->id);
 	glTexImage2D(GL_TEXTURE_2D, 0, t->internal_fmt, t->w, t->h, 0, t->upload_fmt, t->upload_type, NULL);
-	cf_gles_apply_sampler_params(t, params);
+	s_apply_sampler_params(t, params);
 	if (params.generate_mipmaps) glGenerateMipmap(GL_TEXTURE_2D);
 	glBindTexture(GL_TEXTURE_2D, 0);
 	CF_POLL_OPENGL_ERROR();
@@ -934,7 +880,7 @@ CF_Canvas cf_gles_make_canvas(CF_CanvasParams params)
 	c->w = params.target.width;
 	c->h = params.target.height;
 
-	// color
+	// Color.
 	CF_Texture color = cf_gles_make_texture(params.target);
 	c->cf_color = color;
 	if (!color.id) {
@@ -943,9 +889,9 @@ CF_Canvas cf_gles_make_canvas(CF_CanvasParams params)
 	}
 	c->color = ((CF_GL_TextureInternal*)(uintptr_t)color.id)->id;
 
-	// depth/stencil (renderbuffer)
+	// Septh/stencil (renderbuffer).
 	if (params.depth_stencil_enable) {
-		c->depth = cf_gles_make_depth_renderbuffer(params.depth_stencil_target);
+		c->depth = s_make_depth_renderbuffer(params.depth_stencil_target);
 		if (!c->depth) {
 			cf_gles_destroy_texture(color);
 			CF_FREE(c);
@@ -1276,7 +1222,7 @@ static void s_upload_uniforms(CF_GL_ShaderInfo* shader_info, const CF_MaterialSt
 	void* uniform_data_ptrs[CF_MAX_UNIFORM_BLOCK_COUNT];
 	CF_MEMSET(uniform_data_ptrs, 0, sizeof(uniform_data_ptrs));
 
-	// Copy data into uniform blocks
+	// Copy data into uniform blocks.
 	for (int uniform_index = 0; uniform_index < material->uniforms.count(); ++uniform_index) {
 		const CF_Uniform* uniform = &material->uniforms[uniform_index];
 		const CF_GL_ShaderUniformBlock* block = s_find_block_info(shader_info, uniform->block_name);
@@ -1290,7 +1236,7 @@ static void s_upload_uniforms(CF_GL_ShaderInfo* shader_info, const CF_MaterialSt
 		CF_ASSERT(uniform_type == uniform->type);
 		CF_ASSERT(s_uniform_size(uniform_type) * member->array_length == uniform->size);
 
-		int block_index = block - shader_info->uniform_blocks;
+		int block_index = (int)(block - shader_info->uniform_blocks);
 		void* uniform_data = uniform_data_ptrs[block_index];
 		if (uniform_data == NULL) {
 			uniform_data = cf_arena_alloc(arena, block->info.block_size);
@@ -1301,7 +1247,7 @@ static void s_upload_uniforms(CF_GL_ShaderInfo* shader_info, const CF_MaterialSt
 		CF_MEMCPY((void*)((uintptr_t)uniform_data + member->offset), uniform->data, uniform->size);
 	}
 
-	// Upload to GPU
+	// Upload to GPU.
 	for (int block_index = 0; block_index < shader_info->num_uniform_blocks; ++block_index) {
 		void* block_data = uniform_data_ptrs[block_index];
 		if (block_data == NULL) { continue; }
@@ -1382,10 +1328,10 @@ void cf_gles_apply_shader(CF_Shader shader_handle, CF_Material material_handle)
 	CF_MaterialInternal* material = (CF_MaterialInternal*)(uintptr_t)material_handle.id;
 	g_ctx.material = material;
 
-	// render state
+	// Render state.
 	CF_RenderState render_state = material->state;
 
-	// cull
+	// Cull.
 	if (render_state.cull_mode == CF_CULL_MODE_NONE) {
 		glDisable(GL_CULL_FACE);
 	} else {
@@ -1393,7 +1339,7 @@ void cf_gles_apply_shader(CF_Shader shader_handle, CF_Material material_handle)
 		glCullFace(s_wrap(render_state.cull_mode));
 	}
 
-	// depth
+	// Depth.
 	if (render_state.depth_write_enabled || render_state.depth_compare != CF_COMPARE_FUNCTION_ALWAYS) {
 		glEnable(GL_DEPTH_TEST);
 		glDepthFunc(s_wrap(render_state.depth_compare));
@@ -1402,7 +1348,7 @@ void cf_gles_apply_shader(CF_Shader shader_handle, CF_Material material_handle)
 		glDisable(GL_DEPTH_TEST);
 	}
 
-	// blend
+	// Blend.
 	if (render_state.blend.enabled) {
 		glEnable(GL_BLEND);
 		glColorMask(
@@ -1429,11 +1375,11 @@ void cf_gles_apply_shader(CF_Shader shader_handle, CF_Material material_handle)
 
 	glUseProgram(shader->program);
 
-	// uniforms
+	// Uniforms.
 	s_upload_uniforms(&shader->vs, &material->vs, &material->block_arena);
 	s_upload_uniforms(&shader->fs, &material->fs, &material->block_arena);
 
-	// textures (FS)
+	// Textures (FS).
 	GLuint texture_unit = 0;
 	for (int texture_index = 0; texture_index < material->fs.textures.count(); ++texture_index) {
 		const char* name = material->fs.textures[texture_index].name;
@@ -1455,7 +1401,7 @@ void cf_gles_apply_shader(CF_Shader shader_handle, CF_Material material_handle)
 	CF_GL_MeshInternal* mesh = g_ctx.mesh;
 	CF_ASSERT(mesh != NULL);
 
-	// Use a VAO cache to avoid declaring the attributes all the time
+	// Use a VAO cache to avoid declaring the attributes all the time.
 	GLuint vao = GL_INVALID_INDEX;
 	for (int i = 0; i < shader->vao_cache.count(); ++i) {
 		if (shader->vao_cache[i].mesh == mesh) {
