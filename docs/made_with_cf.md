@@ -30,5 +30,15 @@ Shader-toy like tool for Cute Framework by [@bullno1](https://github.com/bullno1
 
 ---
 
+### toy_iso_paintball
+
+Isometric demo game using Cute Framework by [@ogam](https://github.com/ogam).
+
+![toy_iso_paintball](https://raw.githubusercontent.com/ogam/toy_iso_paintball/refs/heads/main/resources/demo.gif)
+
+[See toy_iso_paintball on GitHub](https://github.com/ogam/toy_iso_paintball).
+
+---
+
 <!-- Add your projects below this line -->
 
