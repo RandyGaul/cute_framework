@@ -1282,8 +1282,14 @@ static SDL_GPUGraphicsPipeline* s_build_pipeline(CF_ShaderInternal* shader, CF_R
 	pip_info.target_info.color_target_descriptions = &color_info;
 	pip_info.vertex_shader = shader->vs;
 	pip_info.fragment_shader = shader->fs;
-	if (g_ctx.canvas->cf_depth_stencil.id && state->depth_write_enabled) {
-		pip_info.target_info.depth_stencil_format = ((CF_TextureInternal*)g_ctx.canvas->cf_depth_stencil.id)->format;
+	const bool has_depth_stencil_texture = g_ctx.canvas->depth_stencil != NULL;
+	const bool depth_test_requested = state->depth_write_enabled || state->depth_compare != CF_COMPARE_FUNCTION_ALWAYS;
+	CF_TextureInternal* depth_texture = has_depth_stencil_texture ? (CF_TextureInternal*)g_ctx.canvas->cf_depth_stencil.id : NULL;
+	const bool depth_test_enabled = (depth_texture != NULL) && depth_test_requested;
+	const bool stencil_capable = depth_texture && cf_pixel_format_has_stencil(depth_texture->format);
+	const bool stencil_test_enabled = stencil_capable && state->stencil.enabled;
+	if (depth_texture && (depth_test_enabled || stencil_test_enabled)) {
+		pip_info.target_info.depth_stencil_format = depth_texture->format;
 		pip_info.target_info.has_depth_stencil_target = true;
 	}
 
@@ -1343,10 +1349,10 @@ static SDL_GPUGraphicsPipeline* s_build_pipeline(CF_ShaderInternal* shader, CF_R
 	pip_info.multisample_state.sample_count = (SDL_GPUSampleCount)g_ctx.canvas->sample_count;
 	pip_info.multisample_state.sample_mask = 0;
 
-	pip_info.depth_stencil_state.enable_depth_test = state->depth_write_enabled;
-	pip_info.depth_stencil_state.enable_depth_write = state->depth_write_enabled;
+	pip_info.depth_stencil_state.enable_depth_test = depth_test_enabled;
+	pip_info.depth_stencil_state.enable_depth_write = (depth_texture != NULL) && state->depth_write_enabled;
 	pip_info.depth_stencil_state.compare_op = s_wrap(state->depth_compare);
-	pip_info.depth_stencil_state.enable_stencil_test = state->stencil.enabled;
+	pip_info.depth_stencil_state.enable_stencil_test = stencil_test_enabled;
 	pip_info.depth_stencil_state.back_stencil_state.fail_op = s_wrap(state->stencil.back.fail_op);
 	pip_info.depth_stencil_state.back_stencil_state.pass_op = s_wrap(state->stencil.back.pass_op);
 	pip_info.depth_stencil_state.back_stencil_state.depth_fail_op = s_wrap(state->stencil.back.depth_fail_op);
@@ -1416,20 +1422,28 @@ void cf_sdlgpu_apply_shader(CF_Shader shader_handle, CF_Material material_handle
 		pass_color_info.store_op = SDL_GPU_STOREOP_RESOLVE_AND_STORE;
 		pass_color_info.resolve_texture = g_ctx.canvas->resolve_texture;
 	}
-
+	
+	const bool has_depth_stencil_texture = g_ctx.canvas->depth_stencil != NULL;
+	CF_TextureInternal* depth_texture = has_depth_stencil_texture ? (CF_TextureInternal*)g_ctx.canvas->cf_depth_stencil.id : NULL;
+	const bool depth_test_requested = state->depth_write_enabled || state->depth_compare != CF_COMPARE_FUNCTION_ALWAYS;
+	const bool depth_test_enabled = (depth_texture != NULL) && depth_test_requested;
+	const bool stencil_capable = depth_texture && cf_pixel_format_has_stencil(depth_texture->format);
+	const bool stencil_test_enabled = stencil_capable && state->stencil.enabled;
+	const bool use_depth_stencil_target = depth_texture && (depth_test_enabled || stencil_test_enabled);
+	
 	SDL_GPUDepthStencilTargetInfo pass_depth_stencil_info;
 	CF_MEMSET(&pass_depth_stencil_info, 0, sizeof(pass_depth_stencil_info));
-	pass_depth_stencil_info.texture = g_ctx.canvas->depth_stencil;
-	if (g_ctx.canvas->depth_stencil) {
+	pass_depth_stencil_info.texture = use_depth_stencil_target ? g_ctx.canvas->depth_stencil : NULL;
+	if (use_depth_stencil_target) {
 		pass_depth_stencil_info.clear_depth = app->clear_depth;
 		pass_depth_stencil_info.clear_stencil = app->clear_stencil;
 		pass_depth_stencil_info.load_op = g_ctx.canvas->clear ? SDL_GPU_LOADOP_CLEAR : SDL_GPU_LOADOP_LOAD;
 		pass_depth_stencil_info.store_op = SDL_GPU_STOREOP_STORE;
 		pass_depth_stencil_info.stencil_load_op = g_ctx.canvas->clear ? SDL_GPU_LOADOP_CLEAR : SDL_GPU_LOADOP_LOAD;
-		pass_depth_stencil_info.stencil_store_op = SDL_GPU_STOREOP_DONT_CARE;
+		pass_depth_stencil_info.stencil_store_op = SDL_GPU_STOREOP_STORE;
 		pass_depth_stencil_info.cycle = pass_color_info.cycle;
 	}
-	SDL_GPUDepthStencilTargetInfo* depth_stencil_ptr = state->depth_write_enabled && g_ctx.canvas->depth_stencil ? &pass_depth_stencil_info : NULL;
+	SDL_GPUDepthStencilTargetInfo* depth_stencil_ptr = use_depth_stencil_target ? &pass_depth_stencil_info : NULL;
 	SDL_GPURenderPass* pass = SDL_BeginGPURenderPass(cmd, &pass_color_info, 1, depth_stencil_ptr);
 	CF_ASSERT(pass);
 	g_ctx.canvas->pass = pass;
