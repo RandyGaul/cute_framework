@@ -32,7 +32,7 @@ extern "C" {
  *           - `cf_haptic_rumble_stop`
  *           
  *           TODO - Open haptic on the device itself (e.g. for phones).
- * @related  CF_Haptic CF_HapticType cf_haptic_open cf_haptic_close CF_HapticEffect
+ * @related  cf_haptic_open cf_haptic_close CF_HapticType
  */
 typedef struct CF_Haptic { uint64_t id; } CF_Haptic;
 // @end
@@ -65,7 +65,7 @@ typedef struct CF_Haptic { uint64_t id; } CF_Haptic;
  *           From (1) to (2) is the `attack_milliseconds`.
  *           From (1) to (4) is the effect duration (search for `duration_milliseconds` in this file).
  *           From (3) to (4) is the `fade_milliseconds`.
- * @related  CF_Haptic CF_HapticEnvelope CF_HapticEffect CF_HapticData cf_haptic_create_effect
+ * @related  cf_haptic_create_effect CF_HapticEffect CF_Haptic
  */
 typedef struct CF_HapticEnvelope
 {
@@ -87,7 +87,7 @@ typedef struct CF_HapticEnvelope
  * @enum     CF_HapticType
  * @category haptic
  * @brief    Various types of supported haptic effects.
- * @related  cf_haptic_type_to_string CF_HapticData CF_HapticLeftRight CF_HapticPeriodic CF_HapticRamp
+ * @related  cf_haptic_type_to_string CF_HapticData CF_HapticLeftRight
  */
 #define CF_HAPTIC_TYPE_DEFS \
 	/* @entry An invalid haptic type. */           \
@@ -112,7 +112,7 @@ typedef enum CF_HapticType
  * @category haptic
  * @brief    Converts a `CF_HapticType` to a C string.
  * @param    type       The type to convert.
- * @related  CF_HapticType cf_haptic_type_to_string
+ * @related  CF_HapticType
  */
 CF_INLINE const char* cf_haptic_type_to_string(CF_HapticType type)
 {
@@ -128,7 +128,7 @@ CF_INLINE const char* cf_haptic_type_to_string(CF_HapticType type)
  * @struct   CF_HapticLeftRight
  * @category haptic
  * @brief    The leftright haptic allows direct control of one larger and one smaller freqeuncy motors, as commonly found in game controllers.
- * @related  CF_Haptic CF_HapticType cf_haptic_open cf_haptic_close CF_HapticEffect cf_haptic_create_effect
+ * @related  cf_haptic_open cf_haptic_close cf_haptic_create_effect
  */
 typedef struct CF_HapticLeftRight
 {
@@ -147,7 +147,7 @@ typedef struct CF_HapticLeftRight
  * @enum     CF_HapticWaveType
  * @category haptic
  * @brief    Various types of supported haptic waves.
- * @related  CF_HapticWaveType cf_haptic_wave_type_to_string CF_HapticPeriodic CF_HapticEffect cf_haptic_create_effect
+ * @related  cf_haptic_wave_type_to_string cf_haptic_create_effect
  */
 #define CF_HAPTIC_WAVE_TYPE_DEFS \
 	/* @entry Sin wave haptic type. */         \
@@ -170,7 +170,7 @@ typedef enum CF_HapticWaveType
  * @category haptic
  * @brief    Converts a `CF_HapticWaveType` to a C string.
  * @param    type       The string to convert.
- * @related  CF_HapticWaveType cf_haptic_wave_type_to_string
+ * @related  CF_HapticWaveType
  */
 CF_INLINE const char* cf_haptic_wave_type_to_string(CF_HapticWaveType type)
 {
@@ -186,7 +186,7 @@ CF_INLINE const char* cf_haptic_wave_type_to_string(CF_HapticWaveType type)
  * @struct   CF_HapticPeriodic
  * @category haptic
  * @brief    A basic haptic for sine-based waveforms (https://en.wikipedia.org/wiki/Sine_wave).
- * @related  CF_Haptic CF_HapticType cf_haptic_open cf_haptic_close CF_HapticEffect cf_haptic_create_effect
+ * @related  cf_haptic_open cf_haptic_close cf_haptic_create_effect
  */
 typedef struct CF_HapticPeriodic
 {
@@ -211,7 +211,7 @@ typedef struct CF_HapticPeriodic
  * @struct   CF_HapticRamp
  * @category haptic
  * @brief    Adjusts the strength from `start` to `end` over `duration_milliseconds`.
- * @related  CF_Haptic CF_HapticType cf_haptic_open cf_haptic_close CF_HapticEffect cf_haptic_create_effect
+ * @related  cf_haptic_open cf_haptic_close cf_haptic_create_effect
  */
 typedef struct CF_HapticRamp
 {
@@ -233,7 +233,7 @@ typedef struct CF_HapticRamp
  * @struct   CF_HapticData
  * @category haptic
  * @brief    Container struct for all possible supported haptic types.
- * @related  CF_Haptic CF_HapticType cf_haptic_open cf_haptic_close CF_HapticEffect cf_haptic_create_effect CF_HapticRamp CF_HapticPeriodic CF_HapticLeftRight
+ * @related  cf_haptic_open cf_haptic_close cf_haptic_create_effect
  */
 typedef struct CF_HapticData
 {
@@ -262,7 +262,7 @@ typedef struct CF_HapticData
  * @param    player_index     An index represeting the joypad for a particular player, starting at 0.
  * @return   Returns a new `CF_Haptic`.
  * @remarks  Returns `NULL` upon any errors, including missing support from the underlying device.
- * @related  CF_Haptic CF_Joypad cf_haptic_open cf_haptic_close cf_haptic_create_effect cf_haptic_run_effect cf_haptic_rumble_play
+ * @related  cf_haptic_close cf_haptic_create_effect cf_haptic_run_effect
  */
 CF_API CF_Haptic CF_CALL cf_haptic_open(int player_index);
 
@@ -271,7 +271,7 @@ CF_API CF_Haptic CF_CALL cf_haptic_open(int player_index);
  * @category haptic
  * @brief    Frees up a `CF_Haptic` previously created by `cf_haptic_open`.
  * @param    haptic         The haptic.
- * @related  CF_Haptic cf_haptic_open cf_haptic_close cf_haptic_create_effect cf_haptic_run_effect cf_haptic_rumble_play
+ * @related  cf_haptic_create_effect cf_haptic_open cf_haptic_run_effect
  */
 CF_API void CF_CALL cf_haptic_close(CF_Haptic haptic);
 
@@ -282,7 +282,7 @@ CF_API void CF_CALL cf_haptic_close(CF_Haptic haptic);
  * @param    haptic         The haptic.
  * @param    type           The `CF_HapticType` to check support for.
  * @return   Returns true if supported, false otherwise.
- * @related  CF_Haptic cf_haptic_open cf_haptic_close cf_haptic_create_effect cf_haptic_run_effect
+ * @related  cf_haptic_open cf_haptic_close cf_haptic_create_effect
  */
 CF_API bool CF_CALL cf_haptic_supports(CF_Haptic haptic, CF_HapticType type);
 
@@ -292,7 +292,7 @@ CF_API bool CF_CALL cf_haptic_supports(CF_Haptic haptic, CF_HapticType type);
  * @brief    Sets the global gain for all haptics on this device.
  * @param    haptic         The haptic.
  * @param    gain           Must be from 0 to 1. This is like a global "volume" for the strength of all haptics that run on this device.
- * @related  CF_Haptic cf_haptic_open cf_haptic_close cf_haptic_create_effect cf_haptic_run_effect
+ * @related  cf_haptic_open cf_haptic_close cf_haptic_create_effect
  */
 CF_API void CF_CALL cf_haptic_set_gain(CF_Haptic haptic, float gain);
 
@@ -300,7 +300,7 @@ CF_API void CF_CALL cf_haptic_set_gain(CF_Haptic haptic, float gain);
  * @struct   CF_HapticEffect
  * @category haptic
  * @brief    An opaque handle representing a single instance of a `CF_HapticData` on a device.
- * @related  CF_Haptic CF_HapticType cf_haptic_open cf_haptic_close CF_HapticEffect cf_haptic_create_effect CF_HapticRamp CF_HapticPeriodic CF_HapticLeftRight
+ * @related  cf_haptic_open cf_haptic_close cf_haptic_create_effect
  */
 typedef struct CF_HapticEffect { int id; } CF_HapticEffect;
 // @end
@@ -312,7 +312,7 @@ typedef struct CF_HapticEffect { int id; } CF_HapticEffect;
  * @param    haptic         The haptic.
  * @param    data           The haptic specification.
  * @remarks  Run the haptic with `haptic_run_effect`.
- * @related  CF_Haptic cf_haptic_open CF_HapticEffect cf_haptic_create_effect cf_haptic_run_effect
+ * @related  cf_haptic_open cf_haptic_run_effect CF_Haptic
  */
 CF_API CF_HapticEffect CF_CALL cf_haptic_create_effect(CF_Haptic haptic, CF_HapticData data);
 
@@ -323,7 +323,7 @@ CF_API CF_HapticEffect CF_CALL cf_haptic_create_effect(CF_Haptic haptic, CF_Hapt
  * @param    haptic         The haptic.
  * @param    effect         The haptic effect created by `cf_haptic_create_effect`.
  * @param    iterations     A number of times to play the effect.
- * @related  CF_Haptic cf_haptic_open CF_HapticEffect cf_haptic_create_effect cf_haptic_run_effect cf_haptic_stop_effect
+ * @related  cf_haptic_open cf_haptic_create_effect cf_haptic_stop_effect
  */
 CF_API void CF_CALL cf_haptic_run_effect(CF_Haptic haptic, CF_HapticEffect effect, int iterations);
 
@@ -334,7 +334,7 @@ CF_API void CF_CALL cf_haptic_run_effect(CF_Haptic haptic, CF_HapticEffect effec
  * @param    haptic         The haptic.
  * @param    effect         The haptic effect created by `cf_haptic_create_effect`.
  * @param    data           The updated haptic specification.
- * @related  CF_Haptic cf_haptic_open CF_HapticData CF_HapticEffect cf_haptic_create_effect cf_haptic_run_effect cf_haptic_stop_effect
+ * @related  cf_haptic_open cf_haptic_create_effect cf_haptic_run_effect
  */
 CF_API void CF_CALL cf_haptic_update_effect(CF_Haptic haptic, CF_HapticEffect effect, CF_HapticData data);
 
@@ -345,7 +345,7 @@ CF_API void CF_CALL cf_haptic_update_effect(CF_Haptic haptic, CF_HapticEffect ef
  * @param    haptic         The haptic.
  * @param    effect         The haptic effect created by `cf_haptic_create_effect`.
  * @remarks  The effect is not destroyed.
- * @related  CF_Haptic cf_haptic_open CF_HapticEffect cf_haptic_create_effect cf_haptic_stop_effect cf_haptic_destroy_effect cf_haptic_pause cf_haptic_unpause cf_haptic_stop_all
+ * @related  cf_haptic_stop_all cf_haptic_open cf_haptic_create_effect
  */
 CF_API void CF_CALL cf_haptic_stop_effect(CF_Haptic haptic, CF_HapticEffect effect);
 
@@ -355,7 +355,7 @@ CF_API void CF_CALL cf_haptic_stop_effect(CF_Haptic haptic, CF_HapticEffect effe
  * @brief    Destroys an instance of an effect on the device.
  * @param    haptic         The haptic.
  * @param    effect         The haptic effect created by `cf_haptic_create_effect`.
- * @related  CF_Haptic cf_haptic_open CF_HapticEffect cf_haptic_create_effect cf_haptic_stop_effect cf_haptic_destroy_effect cf_haptic_pause cf_haptic_unpause cf_haptic_stop_all
+ * @related  cf_haptic_open cf_haptic_create_effect cf_haptic_stop_effect
  */
 CF_API void CF_CALL cf_haptic_destroy_effect(CF_Haptic haptic, CF_HapticEffect effect);
 
@@ -364,7 +364,7 @@ CF_API void CF_CALL cf_haptic_destroy_effect(CF_Haptic haptic, CF_HapticEffect e
  * @category haptic
  * @brief    Pause all haptics on the device.
  * @param    haptic         The haptic.
- * @related  CF_Haptic cf_haptic_open CF_HapticEffect cf_haptic_create_effect cf_haptic_stop_effect cf_haptic_destroy_effect cf_haptic_pause cf_haptic_unpause cf_haptic_stop_all
+ * @related  cf_haptic_open cf_haptic_create_effect cf_haptic_stop_effect
  */
 CF_API void CF_CALL cf_haptic_pause(CF_Haptic haptic);
 
@@ -373,7 +373,7 @@ CF_API void CF_CALL cf_haptic_pause(CF_Haptic haptic);
  * @category haptic
  * @brief    Unpause all haptics on the device.
  * @param    haptic         The haptic.
- * @related  CF_Haptic cf_haptic_open CF_HapticEffect cf_haptic_create_effect cf_haptic_stop_effect cf_haptic_destroy_effect cf_haptic_pause cf_haptic_unpause cf_haptic_stop_all
+ * @related  cf_haptic_open cf_haptic_create_effect cf_haptic_stop_effect
  */
 CF_API void CF_CALL cf_haptic_unpause(CF_Haptic haptic);
 
@@ -383,7 +383,7 @@ CF_API void CF_CALL cf_haptic_unpause(CF_Haptic haptic);
  * @brief    Stops all haptics on the device.
  * @param    haptic         The haptic.
  * @remarks  The effects are not destroyed.
- * @related  CF_Haptic cf_haptic_open CF_HapticEffect cf_haptic_create_effect cf_haptic_stop_effect cf_haptic_destroy_effect cf_haptic_pause cf_haptic_unpause cf_haptic_stop_all
+ * @related  cf_haptic_stop_effect cf_haptic_open cf_haptic_create_effect
  */
 CF_API void CF_CALL cf_haptic_stop_all(CF_Haptic haptic);
 
@@ -395,7 +395,7 @@ CF_API void CF_CALL cf_haptic_stop_all(CF_Haptic haptic);
  * @brief    Checks to see if a simple sine/leftright haptic can be supported on the device.
  * @param    haptic         The haptic.
  * @remarks  Creates a set of decent parameters to play a rumbling effect in an easy to use way.
- * @related  CF_Haptic cf_haptic_open cf_haptic_rumble_supported cf_haptic_rumble_play cf_haptic_rumble_stop
+ * @related  cf_haptic_rumble_stop cf_haptic_rumble_play cf_haptic_open
  */
 CF_API bool CF_CALL cf_haptic_rumble_supported(CF_Haptic haptic);
 
@@ -407,7 +407,7 @@ CF_API bool CF_CALL cf_haptic_rumble_supported(CF_Haptic haptic);
  * @param    strength               Must be from 0.0f to 1.0f. How strong the rumble is.
  * @param    duration_milliseconds  The duration of the rumble in milliseconds.
  * @remarks  Successive calls on this function will update the underlying rumble effect, instead of creating and playing multiple different effect instances.
- * @related  CF_Haptic cf_haptic_open cf_haptic_rumble_supported cf_haptic_rumble_play cf_haptic_rumble_stop
+ * @related  cf_haptic_rumble_supported cf_haptic_rumble_stop cf_haptic_open
  */
 CF_API void CF_CALL cf_haptic_rumble_play(CF_Haptic haptic, float strength, int duration_milliseconds);
 
@@ -417,7 +417,7 @@ CF_API void CF_CALL cf_haptic_rumble_play(CF_Haptic haptic, float strength, int 
  * @brief    Stops playing the simple rumble effect.
  * @param    haptic         The haptic.
  * @remarks  See `cf_haptic_rumble_play` for more details.
- * @related  CF_Haptic cf_haptic_open cf_haptic_rumble_supported cf_haptic_rumble_play cf_haptic_rumble_stop
+ * @related  cf_haptic_rumble_supported cf_haptic_rumble_play cf_haptic_open
  */
 CF_API void CF_CALL cf_haptic_rumble_stop(CF_Haptic haptic);
 

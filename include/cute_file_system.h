@@ -34,7 +34,7 @@ extern "C" {
  *     printf("%s\n", filename);
  *     // Prints: big_gem.txt
  * @remarks  Call `sfree` on the return value when done. `sp` stands for "sting path".
- * @related  spfname spfname_no_ext spext spext_equ sppop sppopn spcompact spdir_of sptop_of spnorm
+ * @related  spfname_no_ext spext spext_equ
  */
 #define spfname(s) cf_path_get_filename(s)
 
@@ -48,7 +48,7 @@ extern "C" {
  *     printf("%s\n", filename);
  *     // Prints: big_gem
  * @remarks  Call `sfree` on the return value when done. `sp` stands for "sting path".
- * @related  spfname spfname_no_ext spext spext_equ sppop sppopn spcompact spdir_of sptop_of spnorm
+ * @related  spfname spext spext_equ
  */
 #define spfname_no_ext(s) cf_path_get_filename_no_ext(s)
 
@@ -62,7 +62,7 @@ extern "C" {
  *     printf("%s\n", ext);
  *     // Prints: .txt
  * @remarks  Call `sfree` on the return value when done. `sp` stands for "sting path".
- * @related  spfname spfname_no_ext spext spext_equ sppop sppopn spcompact spdir_of sptop_of spnorm
+ * @related  spext_equ spfname spfname_no_ext
  */
 #define spext(s) cf_path_get_ext(s)
 
@@ -73,7 +73,7 @@ extern "C" {
  * @param    s          The path string.
  * @param    ext        The file extension.
  * @remarks  `sp` stands for "sting path".
- * @related  spfname spfname_no_ext spext spext_equ sppop sppopn spcompact spdir_of sptop_of spnorm
+ * @related  spext spfname spfname_no_ext
  */
 #define spext_equ(s, ext) cf_path_ext_equ(s, ext)
 
@@ -85,7 +85,7 @@ extern "C" {
  * @return   If the string is not a dynamic string from CF's string API, a new string is returned. Otherwise the
  *           string is modified in-place. You must call `sfree` if a new dynamic string is returned, when done.
  * @remarks  `sp` stands for "sting path".
- * @related  spfname spfname_no_ext spext spext_equ sppop sppopn spcompact spdir_of sptop_of spnorm
+ * @related  sppopn spfname spfname_no_ext
  */
 #define sppop(s) cf_path_pop(s)
 
@@ -98,7 +98,7 @@ extern "C" {
  * @return   If the string is not a dynamic string from CF's string API, a new string is returned. Otherwise the
  *           string is modified in-place. You must call `sfree` if a new dynamic string is returned, when done.
  * @remarks  `sp` stands for "sting path".
- * @related  spfname spfname_no_ext spext spext_equ sppop sppopn spcompact spdir_of sptop_of spnorm
+ * @related  sppop spfname spfname_no_ext
  */
 #define sppopn(s, n) cf_path_pop_n(s, n)
 
@@ -112,7 +112,7 @@ extern "C" {
  *           string is modified in-place. You must call `sfree` if a new dynamic string is returned, when done.
  * @remarks  This will insert ellipses "..." into the path as necessary. This function is useful for displaying paths
  *           and visualizing them in small boxes or windows. n includes the nul-byte. Returns a new string.
- * @related  spfname spfname_no_ext spext spext_equ sppop sppopn spcompact spdir_of sptop_of spnorm
+ * @related  spfname spfname_no_ext spext
  */
 #define spcompact(s, n) cf_path_compact(s, n)
 
@@ -126,7 +126,7 @@ extern "C" {
  *     printf("%s\n", filename);
  *     // Prints: /rare
  * @remarks  `sp` stands for "sting path". Call `sfree` on the return value when done.
- * @related  spfname spfname_no_ext spext spext_equ sppop sppopn spcompact spdir_of sptop_of spnorm
+ * @related  spfname spfname_no_ext spext
  */
 #define spdir_of(s) cf_path_directory_of(s)
 
@@ -140,7 +140,7 @@ extern "C" {
  *     printf("%s\n", filename);
  *     // Prints: /data
  * @remarks  `sp` stands for "sting path". Call `sfree` on the return value when done.
- * @related  spfname spfname_no_ext spext spext_equ sppop sppopn spcompact spdir_of sptop_of spnorm
+ * @related  spfname spfname_no_ext spext
  */
 #define sptop_of(s) cf_path_top_directory(s)
 
@@ -158,7 +158,7 @@ extern "C" {
  *           ```
  *           spnorm("C:\\Users\\Randy\\Documents") -> "C:/Users/Randy/Documents"
  *           ```
- * @related  spfname spfname_no_ext spext spext_equ sppop sppopn spcompact spdir_of sptop_of spnorm
+ * @related  spfname spfname_no_ext spext
  */
 #define spnorm(s) cf_path_normalize(s)
 
@@ -251,7 +251,7 @@ CF_API char* CF_CALL cf_path_normalize(const char* path);
  * @category file
  * @brief    An opaque pointer for representing a file.
  * @remarks  [Virtual File System](https://randygaul.github.io/cute_framework/topics/virtual_file_system)
- * @related  CF_File CF_Stat cf_fs_create_file cf_fs_open_file_for_write cf_fs_open_file_for_read cf_fs_close
+ * @related  cf_fs_create_file cf_fs_open_file_for_write cf_fs_open_file_for_read
  */
 typedef struct CF_File CF_File;
 // @end
@@ -260,7 +260,7 @@ typedef struct CF_File CF_File;
  * @enum     File Types
  * @category file
  * @brief    The various kinds of files that can be opened.
- * @related  CF_File CF_Stat cf_file_type_to_string
+ * @related  cf_file_type_to_string CF_File CF_Stat
  */
 #define CF_FILE_TYPE_DEFS \
 	/* @entry A reguler file, such as a .txt or .pdf file. */ \
@@ -284,7 +284,7 @@ typedef enum CF_FileType
  * @function cf_file_type_to_string
  * @category file
  * @brief    Returns a `CF_FileType` converted to a c-string.
- * @related  CF_File CF_Stat cf_file_type_to_string
+ * @related  CF_File CF_Stat
  */
 CF_INLINE const char* cf_file_type_to_string(CF_FileType type)
 {
@@ -300,7 +300,7 @@ CF_INLINE const char* cf_file_type_to_string(CF_FileType type)
  * @struct   CF_Stat
  * @category file
  * @brief    A structure containing information about a file.
- * @related  CF_File CF_Stat cf_fs_create_file cf_fs_open_file_for_write cf_fs_open_file_for_read cf_fs_close
+ * @related  cf_fs_create_file cf_fs_open_file_for_write cf_fs_open_file_for_read
  */
 typedef struct CF_Stat
 {
@@ -330,7 +330,7 @@ typedef struct CF_Stat
  * @brief    Returns the path of the base directory.
  * @remarks  This is not a virtual path, but the actual OS-path where the executable was run from. This might not be the working directory,
  *           but probably is. You should probably mount the base directory with `cf_fs_mount`. See [Virtual File System](https://randygaul.github.io/cute_framework/topics/virtual_file_system) for an overview.
- * @related  cf_fs_get_base_directory cf_fs_set_write_directory cf_fs_get_user_directory cf_fs_mount cf_fs_dismount cf_fs_get_working_directory
+ * @related  cf_fs_get_user_directory cf_fs_get_working_directory cf_fs_set_write_directory
  */
 CF_API const char* CF_CALL cf_fs_get_base_directory(void);
 
@@ -339,7 +339,7 @@ CF_API const char* CF_CALL cf_fs_get_base_directory(void);
  * @category file
  * @brief    Returns the current working directory in platform-dependent notation.
  * @remarks  Not all platforms have the concept of a working directory, but this function will sill try to return something sane in these cases.
- * @related  cf_fs_get_base_directory cf_fs_set_write_directory cf_fs_get_user_directory cf_fs_mount cf_fs_dismount cf_fs_get_working_directory
+ * @related  cf_fs_get_base_directory cf_fs_get_user_directory cf_fs_set_write_directory
  */
 CF_API const char* CF_CALL cf_fs_get_working_directory(void);
 
@@ -353,7 +353,7 @@ CF_API const char* CF_CALL cf_fs_get_working_directory(void);
  * @remarks  The path is in platform-dependent notation. It's highly recommend to use `cf_fs_get_user_directory` and pass it into this function
  *           when shipping your game. This function will fail if any files are from the write directory are currently open.
  *           See [Virtual File System](https://randygaul.github.io/cute_framework/topics/virtual_file_system) for an overview.
- * @related  cf_fs_get_base_directory cf_fs_set_write_directory cf_fs_get_user_directory cf_fs_mount cf_fs_dismount
+ * @related  cf_fs_get_base_directory cf_fs_get_user_directory cf_fs_mount
  */
 CF_API CF_Result CF_CALL cf_fs_set_write_directory(const char* platform_dependent_directory);
 
@@ -377,7 +377,7 @@ CF_API CF_Result CF_CALL cf_fs_set_write_directory(const char* platform_dependen
  *           "/Users/OS_user_name/Library/Application Support/my_game"
  *           ```
  *           You should assume this directory is the only safe place to write files. [Virtual File System](https://randygaul.github.io/cute_framework/topics/virtual_file_system).
- * @related  cf_fs_get_base_directory cf_fs_set_write_directory cf_fs_get_user_directory cf_fs_mount cf_fs_dismount
+ * @related  cf_fs_get_base_directory cf_fs_set_write_directory cf_fs_mount
  */
 CF_API const char* CF_CALL cf_fs_get_user_directory(const char* company_name, const char* game_name);
 
@@ -401,7 +401,7 @@ CF_API const char* CF_CALL cf_fs_get_user_directory(const char* company_name, co
  *           
  *           By default CF mounts the base directory when you call `cf_make_app`. This can be disabled by
  *           passing the `CF_APP_OPTIONS_FILE_SYSTEM_DONT_DEFAULT_MOUNT` flag to `cf_make_app`. [Virtual File System](https://randygaul.github.io/cute_framework/topics/virtual_file_system).
- * @related  cf_fs_get_base_directory cf_fs_set_write_directory cf_fs_get_user_directory cf_fs_mount cf_fs_dismount
+ * @related  cf_fs_get_base_directory cf_fs_set_write_directory cf_fs_get_user_directory
  */
 CF_API CF_Result CF_CALL cf_fs_mount(const char* archive, const char* mount_point, bool append_to_path);
 
@@ -411,7 +411,7 @@ CF_API CF_Result CF_CALL cf_fs_mount(const char* archive, const char* mount_poin
  * @brief    Removes an archive from the path specified in platform-dependent notation.
  * @return   Returns any errors as a `CF_Result`.
  * @remarks  This function does not remove a `mount_point` from the virtual file system, but only the actual archive that was previously mounted. [Virtual File System](https://randygaul.github.io/cute_framework/topics/virtual_file_system).
- * @related  cf_fs_get_base_directory cf_fs_set_write_directory cf_fs_get_user_directory cf_fs_mount cf_fs_dismount
+ * @related  cf_fs_get_base_directory cf_fs_set_write_directory cf_fs_get_user_directory
  */
 CF_API CF_Result CF_CALL cf_fs_dismount(const char* archive);
 
@@ -421,7 +421,7 @@ CF_API CF_Result CF_CALL cf_fs_dismount(const char* archive);
  * @brief    Returns file information at the given virtual path, such as file size or creation time.
  * @return   Returns any errors as a `CF_Result`.
  * @remarks  This doesn't open the file itself, and is a fairly light-weight operation in comparison. [Virtual File System](https://randygaul.github.io/cute_framework/topics/virtual_file_system).
- * @related  CF_File CF_Stat cf_fs_create_file cf_fs_open_file_for_write cf_fs_open_file_for_read cf_fs_close
+ * @related  cf_fs_create_file cf_fs_open_file_for_write cf_fs_open_file_for_read
  */
 CF_API CF_Result CF_CALL cf_fs_stat(const char* virtual_path, CF_Stat* stat);
 
@@ -431,7 +431,7 @@ CF_API CF_Result CF_CALL cf_fs_stat(const char* virtual_path, CF_Stat* stat);
  * @brief    Opens a file for writing relative to the write directory.
  * @return   Returns a `CF_File` pointer representing the file.
  * @remarks  The write directory is specified by you when calling `cf_fs_set_write_directory`. [Virtual File System](https://randygaul.github.io/cute_framework/topics/virtual_file_system).
- * @related  CF_File CF_Stat cf_fs_create_file cf_fs_open_file_for_write cf_fs_open_file_for_read cf_fs_close
+ * @related  cf_fs_close cf_fs_open_file_for_write cf_fs_open_file_for_read
  */
 CF_API CF_File* CF_CALL cf_fs_create_file(const char* virtual_path);
 
@@ -441,7 +441,7 @@ CF_API CF_File* CF_CALL cf_fs_create_file(const char* virtual_path);
  * @brief    Opens a file for writing relative to the write directory.
  * @return   Returns a `CF_File` pointer representing the file.
  * @remarks  The write directory is specified by you when calling `cf_fs_set_write_directory`. [Virtual File System](https://randygaul.github.io/cute_framework/topics/virtual_file_system).
- * @related  CF_File CF_Stat cf_fs_create_file cf_fs_open_file_for_write cf_fs_open_file_for_read cf_fs_close
+ * @related  cf_fs_open_file_for_read cf_fs_create_file cf_fs_close
  */
 CF_API CF_File* CF_CALL cf_fs_open_file_for_write(const char* virtual_path);
 
@@ -451,7 +451,7 @@ CF_API CF_File* CF_CALL cf_fs_open_file_for_write(const char* virtual_path);
  * @brief    Opens a file for appending relative to the write directory.
  * @return   Returns a `CF_File` pointer representing the file.
  * @remarks  The write directory is specified by you when calling `cf_fs_set_write_directory`. [Virtual File System](https://randygaul.github.io/cute_framework/topics/virtual_file_system).
- * @related  CF_File CF_Stat cf_fs_create_file cf_fs_open_file_for_write cf_fs_open_file_for_read cf_fs_close
+ * @related  cf_fs_open_file_for_write cf_fs_open_file_for_read cf_fs_create_file
  */
 CF_API CF_File* CF_CALL cf_fs_open_file_for_append(const char* virtual_path);
 
@@ -462,7 +462,7 @@ CF_API CF_File* CF_CALL cf_fs_open_file_for_append(const char* virtual_path);
  * @param    virtual_path  The virtual path to the file.
  * @return   Returns a `CF_File` pointer representing the file.
  * @remarks  If you just want some basic information about the file (such as it's size or when it was created), you can use `cf_fs_stat` instead. [Virtual File System](https://randygaul.github.io/cute_framework/topics/virtual_file_system).
- * @related  CF_File CF_Stat cf_fs_create_file cf_fs_open_file_for_write cf_fs_open_file_for_read cf_fs_close
+ * @related  cf_fs_open_file_for_write cf_fs_create_file cf_fs_close
  */
 CF_API CF_File* CF_CALL cf_fs_open_file_for_read(const char* virtual_path);
 
@@ -472,7 +472,7 @@ CF_API CF_File* CF_CALL cf_fs_open_file_for_read(const char* virtual_path);
  * @brief    Closes a file.
  * @param    file        The file.
  * @return   Returns any errors as a `CF_Result`.
- * @related  CF_File CF_Stat cf_fs_create_file cf_fs_open_file_for_write cf_fs_open_file_for_read cf_fs_close
+ * @related  cf_fs_create_file cf_fs_open_file_for_write cf_fs_open_file_for_read
  */
 CF_API CF_Result CF_CALL cf_fs_close(CF_File* file);
 
@@ -483,7 +483,7 @@ CF_API CF_Result CF_CALL cf_fs_close(CF_File* file);
  * @param    virtual_path  The virtual path to the file or directory.
  * @return   Returns any errors as a `CF_Result`.
  * @remarks  [Virtual File System](https://randygaul.github.io/cute_framework/topics/virtual_file_system).
- * @related  cf_fs_remove_directory cf_fs_create_directory cf_fs_enumerate_directory cf_fs_free_enumerated_directory
+ * @related  cf_fs_remove_directory cf_fs_create_directory cf_fs_enumerate_directory
  */
 CF_API CF_Result CF_CALL cf_fs_remove(const char* virtual_path);
 
@@ -494,7 +494,7 @@ CF_API CF_Result CF_CALL cf_fs_remove(const char* virtual_path);
  * @param    virtual_path  The virtual path to the directory.
  * @return   Returns any errors as a `CF_Result`.
  * @remarks  All missing directories are also created. [Virtual File System](https://randygaul.github.io/cute_framework/topics/virtual_file_system).
- * @related  cf_fs_remove_directory cf_fs_create_directory cf_fs_enumerate_directory cf_fs_free_enumerated_directory
+ * @related  cf_fs_remove_directory cf_fs_enumerate_directory cf_fs_free_enumerated_directory
  */
 CF_API CF_Result CF_CALL cf_fs_create_directory(const char* virtual_path);
 
@@ -513,7 +513,7 @@ CF_API CF_Result CF_CALL cf_fs_create_directory(const char* virtual_path);
  * @remarks  Results are collected by visiting the search path for all real directories mounted on `virtual_path`. No duplicate file
  *           names will be reported. The list itself is sorted alphabetically, though you can further sort it however you like. Free
  *           the list up with `cf_fs_free_enumerated_directory` when done. The final element of the list is NULL. [Virtual File System](https://randygaul.github.io/cute_framework/topics/virtual_file_system).
- * @related  cf_fs_remove_directory cf_fs_create_directory cf_fs_enumerate_directory cf_fs_free_enumerated_directory
+ * @related  cf_fs_remove_directory cf_fs_create_directory cf_fs_free_enumerated_directory
  */
 CF_API const char** CF_CALL cf_fs_enumerate_directory(const char* virtual_path);
 
@@ -522,7 +522,7 @@ CF_API const char** CF_CALL cf_fs_enumerate_directory(const char* virtual_path);
  * @category file
  * @brief    Frees a file list from `cf_fs_create_directory`.
  * @param    directory_list  The directory list returned from `cf_fs_create_directory`.
- * @related  cf_fs_remove_directory cf_fs_create_directory cf_fs_enumerate_directory cf_fs_free_enumerated_directory
+ * @related  cf_fs_remove_directory cf_fs_create_directory cf_fs_enumerate_directory
  */
 CF_API void CF_CALL cf_fs_free_enumerated_directory(const char** directory_list);
 
@@ -532,7 +532,7 @@ CF_API void CF_CALL cf_fs_free_enumerated_directory(const char** directory_list)
  * @brief    Returns true if a file exists, false otherwise.
  * @param    virtual_path  A path to the file.
  * @remarks  [Virtual File System](https://randygaul.github.io/cute_framework/topics/virtual_file_system).
- * @related  CF_File cf_fs_file_exists cf_fs_read cf_fs_write cf_fs_eof cf_fs_tell cf_fs_seek cf_fs_size
+ * @related  cf_fs_read cf_fs_write cf_fs_eof
  */
 CF_API bool CF_CALL cf_fs_file_exists(const char* virtual_path);
 
@@ -545,7 +545,7 @@ CF_API bool CF_CALL cf_fs_file_exists(const char* virtual_path);
  * @param    size       The size in bytes of `buffer`.
  * @remarks  The file must be opened in read mode with `cf_fs_open_file_for_read`. Returns the number of bytes read. Returns -1 on
  *           failure. [Virtual File System](https://randygaul.github.io/cute_framework/topics/virtual_file_system).
- * @related  CF_File cf_fs_file_exists cf_fs_read cf_fs_write cf_fs_eof cf_fs_tell cf_fs_seek cf_fs_size
+ * @related  cf_fs_file_exists cf_fs_write cf_fs_eof
  */
 CF_API size_t CF_CALL cf_fs_read(CF_File* file, void* buffer, size_t size);
 
@@ -558,7 +558,7 @@ CF_API size_t CF_CALL cf_fs_read(CF_File* file, void* buffer, size_t size);
  * @param    size       The size in bytes of `buffer`.
  * @remarks  The file must be opened in write mode with `cf_fs_open_file_for_write`. Returns the number of bytes written. Returns -1 on
  *           failure. [Virtual File System](https://randygaul.github.io/cute_framework/topics/virtual_file_system).
- * @related  CF_File cf_fs_file_exists cf_fs_read cf_fs_write cf_fs_eof cf_fs_tell cf_fs_seek cf_fs_size
+ * @related  cf_fs_file_exists cf_fs_read cf_fs_eof
  */
 CF_API size_t CF_CALL cf_fs_write(CF_File* file, const void* buffer, size_t size);
 
@@ -568,7 +568,7 @@ CF_API size_t CF_CALL cf_fs_write(CF_File* file, const void* buffer, size_t size
  * @brief    Check to see if the eof has been found after reading a file opened in read mode.
  * @param    CF_File    The file.
  * @remarks  [Virtual File System](https://randygaul.github.io/cute_framework/topics/virtual_file_system).
- * @related  CF_File cf_fs_file_exists cf_fs_read cf_fs_write cf_fs_eof cf_fs_tell cf_fs_seek cf_fs_size
+ * @related  cf_fs_file_exists cf_fs_read cf_fs_write
  */
 CF_API CF_Result CF_CALL cf_fs_eof(CF_File* file);
 
@@ -578,7 +578,7 @@ CF_API CF_Result CF_CALL cf_fs_eof(CF_File* file);
  * @brief    Returns the current position within the file.
  * @param    CF_File    The file.
  * @remarks  This is an offset from the beginning of the file. Returns -1 on failure. [Virtual File System](https://randygaul.github.io/cute_framework/topics/virtual_file_system).
- * @related  CF_File cf_fs_file_exists cf_fs_read cf_fs_write cf_fs_eof cf_fs_tell cf_fs_seek cf_fs_size
+ * @related  cf_fs_file_exists cf_fs_read cf_fs_write
  */
 CF_API size_t CF_CALL cf_fs_tell(CF_File* file);
 
@@ -590,7 +590,7 @@ CF_API size_t CF_CALL cf_fs_tell(CF_File* file);
  * @param    position   The read/write position.
  * @return   Returns any errors as a `CF_Result`.
  * @remarks  This is an offset from the beginning of the file. The next read or write will happen at this position. [Virtual File System](https://randygaul.github.io/cute_framework/topics/virtual_file_system).
- * @related  CF_File cf_fs_file_exists cf_fs_read cf_fs_write cf_fs_eof cf_fs_tell cf_fs_seek cf_fs_size
+ * @related  cf_fs_size cf_fs_file_exists cf_fs_read
  */
 CF_API CF_Result CF_CALL cf_fs_seek(CF_File* file, size_t position);
 
@@ -600,7 +600,7 @@ CF_API CF_Result CF_CALL cf_fs_seek(CF_File* file, size_t position);
  * @brief    Returns the size of a file in bytes.
  * @param    CF_File    The file.
  * @remarks  You might want to use `cf_fs_stat` instead to avoid needing to fully open the file first. [Virtual File System](https://randygaul.github.io/cute_framework/topics/virtual_file_system).
- * @related  CF_File cf_fs_file_exists cf_fs_read cf_fs_write cf_fs_eof cf_fs_tell cf_fs_seek cf_fs_size
+ * @related  cf_fs_seek cf_fs_file_exists cf_fs_read
  */
 CF_API size_t CF_CALL cf_fs_size(CF_File* file);
 
@@ -611,7 +611,7 @@ CF_API size_t CF_CALL cf_fs_size(CF_File* file);
  * @param    virtual_path  A path to the file.
  * @param    size          If the file exists the size of the file is stored here.
  * @remarks  Call `cf_free` on it when done. [Virtual File System](https://randygaul.github.io/cute_framework/topics/virtual_file_system).
- * @related  cf_fs_read_entire_file_to_memory cf_fs_read_entire_file_to_memory_and_nul_terminate cf_fs_write_entire_buffer_to_file cf_fs_write_string_file
+ * @related  cf_fs_read_entire_file_to_memory_and_nul_terminate cf_fs_write_entire_buffer_to_file cf_fs_write_string_file
  */
 CF_API void* CF_CALL cf_fs_read_entire_file_to_memory(const char* virtual_path, size_t* size);
 
@@ -622,7 +622,7 @@ CF_API void* CF_CALL cf_fs_read_entire_file_to_memory(const char* virtual_path, 
  * @param    virtual_path  A path to the file.
  * @param    size          If the file exists the size of the file is stored here.
  * @remarks  Call `cf_free` on it when done. [Virtual File System](https://randygaul.github.io/cute_framework/topics/virtual_file_system).
- * @related  cf_fs_read_entire_file_to_memory cf_fs_read_entire_file_to_memory_and_nul_terminate cf_fs_write_entire_buffer_to_file cf_fs_write_string_file
+ * @related  cf_fs_read_entire_file_to_memory cf_fs_write_entire_buffer_to_file cf_fs_write_string_file
  */
 CF_API char* CF_CALL cf_fs_read_entire_file_to_memory_and_nul_terminate(const char* virtual_path, size_t* size);
 
@@ -633,7 +633,7 @@ CF_API char* CF_CALL cf_fs_read_entire_file_to_memory_and_nul_terminate(const ch
  * @param    virtual_path  A path to the file.
  * @param    data          A pointer to the data to write to the file.
  * @param    size          The size in bytes of `data`.
- * @related  cf_fs_read_entire_file_to_memory cf_fs_read_entire_file_to_memory_and_nul_terminate cf_fs_write_entire_buffer_to_file cf_fs_write_string_file cf_fs_write_string_range_to_file
+ * @related  cf_fs_write_string_file cf_fs_write_string_range_to_file cf_fs_read_entire_file_to_memory
  */
 CF_API CF_Result CF_CALL cf_fs_write_entire_buffer_to_file(const char* virtual_path, const void* data, size_t size);
 
@@ -643,7 +643,7 @@ CF_API CF_Result CF_CALL cf_fs_write_entire_buffer_to_file(const char* virtual_p
  * @brief    Writes a string to a file.
  * @param    virtual_path  A path to the file.
  * @param    string        A string to write.
- * @related  cf_fs_read_entire_file_to_memory cf_fs_read_entire_file_to_memory_and_nul_terminate cf_fs_write_entire_buffer_to_file cf_fs_write_string_file cf_fs_write_string_range_to_file
+ * @related  cf_fs_write_string_file cf_fs_write_string_range_to_file cf_fs_write_entire_buffer_to_file
  */
 CF_API CF_Result CF_CALL cf_fs_write_string_to_file(const char* virtual_path, const char* string);
 
@@ -654,7 +654,7 @@ CF_API CF_Result CF_CALL cf_fs_write_string_to_file(const char* virtual_path, co
  * @param    virtual_path  A path to the file.
  * @param    begin         Beginning of the string.
  * @param    end           Pointer to one passed the end of the string's contents.
- * @related  cf_fs_read_entire_file_to_memory cf_fs_read_entire_file_to_memory_and_nul_terminate cf_fs_write_entire_buffer_to_file cf_fs_write_string_file cf_fs_write_string_range_to_file
+ * @related  cf_fs_write_string_file cf_fs_write_entire_buffer_to_file cf_fs_read_entire_file_to_memory
  */
 CF_API CF_Result CF_CALL cf_fs_write_string_range_to_file(const char* virtual_path, const char* begin, const char* end);
 
@@ -689,7 +689,7 @@ CF_API const char* CF_CALL cf_fs_get_actual_path(const char* virtual_path);
  *           need to call this function. However, sometimes it's convenient to make tools that crawl
  *           over files without the need for a full application window. In this case simply call this
  *           function to enable all the `cf_fs_***` functions.
- * @related  cf_fs_init cf_fs_destroy
+ * @related  cf_fs_destroy
  */
 CF_API CF_Result CF_CALL cf_fs_init(const char* argv0);
 
@@ -700,7 +700,7 @@ CF_API CF_Result CF_CALL cf_fs_init(const char* argv0);
  * @param    argv0       The first command-line argument passed into your `main` function.
  * @remarks  Cleans up all static memory used by `cf_fs_init`. You probably don't need to call this function,
  *           as `cf_app_destroy` already does this for you.
- * @related  cf_fs_init cf_fs_destroy
+ * @related  cf_fs_init
  */
 CF_API void CF_CALL cf_fs_destroy(void);
 

@@ -29,7 +29,7 @@ extern "C" {
  * @remarks  Use this for the `dst_size` in `cf_base64_encode`.
  *           Base64 encoding is useful for storing data as text in a copy-paste-safe manner. For more information about
  *           base64 encoding see this link: [RFC-4648](https://tools.ietf.org/html/rfc4648) or [Wikipedia Base64](https://en.wikipedia.org/wiki/Base64).
- * @related  CF_BASE64_ENCODED_SIZE CF_BASE64_DECODED_SIZE cf_base64_encode cf_base64_decode
+ * @related  cf_base64_encode cf_base64_decode CF_BASE64_DECODED_SIZE
  */
 #define CF_BASE64_ENCODED_SIZE(size) ((((size) + 2) / 3) * 4)
 
@@ -42,7 +42,7 @@ extern "C" {
  * @remarks  Use this for the `dst_size` in `cf_base64_decode`.
  *           Base64 encoding is useful for storing data as text in a copy-paste-safe manner. For more information about
  *           base64 encoding see this link: [RFC-4648](https://tools.ietf.org/html/rfc4648) or [Wikipedia Base64](https://en.wikipedia.org/wiki/Base64).
- * @related  CF_BASE64_ENCODED_SIZE CF_BASE64_DECODED_SIZE cf_base64_encode cf_base64_decode
+ * @related  cf_base64_decode cf_base64_encode CF_BASE64_ENCODED_SIZE
  */
 #define CF_BASE64_DECODED_SIZE(size) ((((size) + 3) / 4) * 3)
 
@@ -57,7 +57,7 @@ extern "C" {
  * @return   Returns a `CF_Result` containing information about any errors.
  * @remarks  Base64 encoding is useful for storing data as text in a copy-paste-safe manner. For more information about
  *           base64 encoding see this link: [RFC-4648](https://tools.ietf.org/html/rfc4648) or [Wikipedia Base64](https://en.wikipedia.org/wiki/Base64).
- * @related  CF_BASE64_ENCODED_SIZE CF_BASE64_DECODED_SIZE cf_base64_encode cf_base64_decode
+ * @related  cf_base64_decode CF_BASE64_ENCODED_SIZE CF_BASE64_DECODED_SIZE
  */
 CF_API CF_Result CF_CALL cf_base64_encode(void* dst, size_t dst_size, const void* src, size_t src_size);
 
@@ -72,7 +72,7 @@ CF_API CF_Result CF_CALL cf_base64_encode(void* dst, size_t dst_size, const void
  * @return   Returns a `CF_Result` containing information about any errors.
  * @remarks  Base64 encoding is useful for storing data as text in a copy-paste-safe manner. For more information about
  *           base64 encoding see this link: [RFC-4648](https://tools.ietf.org/html/rfc4648) or [Wikipedia Base64](https://en.wikipedia.org/wiki/Base64).
- * @related  CF_BASE64_ENCODED_SIZE CF_BASE64_DECODED_SIZE cf_base64_encode cf_base64_decode
+ * @related  cf_base64_encode CF_BASE64_DECODED_SIZE CF_BASE64_ENCODED_SIZE
  */
 CF_API CF_Result CF_CALL cf_base64_decode(void* dst, size_t dst_size, const void* src, size_t src_size);
 

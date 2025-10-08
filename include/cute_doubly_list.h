@@ -22,7 +22,7 @@ extern "C" {
  * @category list
  * @brief    A node in a circular doubly-linked list.
  * @remarks  This node is _intrusive_ and to be placed within your struct/object definitions as a member.
- * @related  CF_ListNode CF_List CF_LIST_NODE CF_LIST_HOST cf_list_init_node cf_list_init cf_list_push_front cf_list_push_back cf_list_remove cf_list_pop_front cf_list_pop_back cf_list_empty cf_list_begin cf_list_end cf_list_front cf_list_back
+ * @related  cf_list_init_node cf_list_init cf_list_push_front
  */
 typedef struct CF_ListNode
 {
@@ -38,7 +38,7 @@ typedef struct CF_ListNode
  * @struct   CF_List
  * @category list
  * @brief    A circular doubly-linked list.
- * @related  CF_ListNode CF_List CF_LIST_NODE CF_LIST_HOST cf_list_init_node cf_list_init cf_list_push_front cf_list_push_back cf_list_remove cf_list_pop_front cf_list_pop_back cf_list_empty cf_list_begin cf_list_end cf_list_front cf_list_back
+ * @related  cf_list_init_node cf_list_init cf_list_push_front
  */
 typedef struct CF_List
 {
@@ -69,7 +69,7 @@ typedef struct CF_List
  *     
  *     // Do whatever is needed with the node.
  *     do_stuff(node);
- * @related  CF_ListNode CF_List CF_LIST_NODE CF_LIST_HOST cf_list_init_node cf_list_init cf_list_push_front cf_list_push_back cf_list_remove cf_list_pop_front cf_list_pop_back cf_list_empty cf_list_begin cf_list_end cf_list_front cf_list_back
+ * @related  cf_list_init_node cf_list_init cf_list_push_front
  */
 #define CF_LIST_NODE(T, member, ptr) ((CF_ListNode*)((uintptr_t)ptr + CF_OFFSET_OF(T, member)))
 
@@ -95,7 +95,7 @@ typedef struct CF_List
  *     
  *     // Do whatever is needed with the host:
  *     do_stuff(my);
- * @related  CF_ListNode CF_List CF_LIST_NODE CF_LIST_HOST cf_list_init_node cf_list_init cf_list_push_front cf_list_push_back cf_list_remove cf_list_pop_front cf_list_pop_back cf_list_empty cf_list_begin cf_list_end cf_list_front cf_list_back
+ * @related  cf_list_init_node cf_list_init cf_list_push_front
  */
 #define CF_LIST_HOST(T, member, ptr) ((T*)((uintptr_t)ptr - CF_OFFSET_OF(T, member)))
 
@@ -105,7 +105,7 @@ typedef struct CF_List
  * @brief    Intializes a node.
  * @param    node       The node.
  * @remarks  As this list is circular, each node is initialized to point to itself.
- * @related  CF_ListNode CF_List CF_LIST_NODE CF_LIST_HOST cf_list_init_node cf_list_init cf_list_push_front cf_list_push_back cf_list_remove cf_list_pop_front cf_list_pop_back cf_list_empty cf_list_begin cf_list_end cf_list_front cf_list_back
+ * @related  cf_list_init cf_list_push_front cf_list_push_back
  */
 CF_INLINE void cf_list_init_node(CF_ListNode* node)
 {
@@ -120,7 +120,7 @@ CF_INLINE void cf_list_init_node(CF_ListNode* node)
  * @param    list       The list.
  * @remarks  As an optimization the list contains a dummy node inside of it. To traverse this list, use `cf_list_begin` and
  *           `cf_list_end` in a for loop. See `cf_list_begin` for an example.
- * @related  CF_ListNode CF_List CF_LIST_NODE CF_LIST_HOST cf_list_init_node cf_list_init cf_list_push_front cf_list_push_back cf_list_remove cf_list_pop_front cf_list_pop_back cf_list_empty cf_list_begin cf_list_end cf_list_front cf_list_back
+ * @related  cf_list_init_node cf_list_push_front cf_list_push_back
  */
 CF_INLINE void cf_list_init(CF_List* list)
 {
@@ -133,7 +133,7 @@ CF_INLINE void cf_list_init(CF_List* list)
  * @brief    Pushes a node onto the front of the list.
  * @param    list       The list.
  * @param    node       The node.
- * @related  CF_ListNode CF_List CF_LIST_NODE CF_LIST_HOST cf_list_init_node cf_list_init cf_list_push_front cf_list_push_back cf_list_remove cf_list_pop_front cf_list_pop_back cf_list_empty cf_list_begin cf_list_end cf_list_front cf_list_back
+ * @related  cf_list_push_back cf_list_pop_front cf_list_pop_back
  */
 CF_INLINE void cf_list_push_front(CF_List* list, CF_ListNode* node)
 {
@@ -149,7 +149,7 @@ CF_INLINE void cf_list_push_front(CF_List* list, CF_ListNode* node)
  * @brief    Pushes a node onto the back of the list.
  * @param    list       The list.
  * @param    node       The node.
- * @related  CF_ListNode CF_List CF_LIST_NODE CF_LIST_HOST cf_list_init_node cf_list_init cf_list_push_front cf_list_push_back cf_list_remove cf_list_pop_front cf_list_pop_back cf_list_empty cf_list_begin cf_list_end cf_list_front cf_list_back
+ * @related  cf_list_push_front cf_list_pop_front cf_list_pop_back
  */
 CF_INLINE void cf_list_push_back(CF_List* list, CF_ListNode* node)
 {
@@ -164,7 +164,7 @@ CF_INLINE void cf_list_push_back(CF_List* list, CF_ListNode* node)
  * @category list
  * @brief    Removes a node from the list.
  * @param    List       The list.
- * @related  CF_ListNode CF_List CF_LIST_NODE CF_LIST_HOST cf_list_init_node cf_list_init cf_list_push_front cf_list_push_back cf_list_remove cf_list_pop_front cf_list_pop_back cf_list_empty cf_list_begin cf_list_end cf_list_front cf_list_back
+ * @related  cf_list_init_node cf_list_init cf_list_push_front
  */
 CF_INLINE void cf_list_remove(CF_ListNode* node)
 {
@@ -178,7 +178,7 @@ CF_INLINE void cf_list_remove(CF_ListNode* node)
  * @category list
  * @brief    Pops a node off the front of a list.
  * @param    List       The list.
- * @related  CF_ListNode CF_List CF_LIST_NODE CF_LIST_HOST cf_list_init_node cf_list_init cf_list_push_front cf_list_push_back cf_list_remove cf_list_pop_front cf_list_pop_back cf_list_empty cf_list_begin cf_list_end cf_list_front cf_list_back
+ * @related  cf_list_pop_back cf_list_push_front cf_list_push_back
  */
 CF_INLINE CF_ListNode* cf_list_pop_front(CF_List* list)
 {
@@ -192,7 +192,7 @@ CF_INLINE CF_ListNode* cf_list_pop_front(CF_List* list)
  * @category list
  * @brief    Pops a node off the back of a list.
  * @param    List       The list.
- * @related  CF_ListNode CF_List CF_LIST_NODE CF_LIST_HOST cf_list_init_node cf_list_init cf_list_push_front cf_list_push_back cf_list_remove cf_list_pop_front cf_list_pop_back cf_list_empty cf_list_begin cf_list_end cf_list_front cf_list_back
+ * @related  cf_list_pop_front cf_list_push_front cf_list_push_back
  */
 CF_INLINE CF_ListNode* cf_list_pop_back(CF_List* list)
 {
@@ -206,7 +206,7 @@ CF_INLINE CF_ListNode* cf_list_pop_back(CF_List* list)
  * @category list
  * @brief    Returns true if a list is empty.
  * @param    List       The list.
- * @related  CF_ListNode CF_List CF_LIST_NODE CF_LIST_HOST cf_list_init_node cf_list_init cf_list_push_front cf_list_push_back cf_list_remove cf_list_pop_front cf_list_pop_back cf_list_empty cf_list_begin cf_list_end cf_list_front cf_list_back
+ * @related  cf_list_end cf_list_init_node cf_list_init
  */
 CF_INLINE bool cf_list_empty(CF_List* list)
 {
@@ -224,7 +224,7 @@ CF_INLINE bool cf_list_empty(CF_List* list)
  *     }
  * @remarks  Since the list is circular with a single dummy node it can be confusing to loop over. To help make this simpler, use
  *           `cf_list_begin` and `cf_list_end` to perform a loop over the list.
- * @related  CF_ListNode CF_List CF_LIST_NODE CF_LIST_HOST cf_list_init_node cf_list_init cf_list_push_front cf_list_push_back cf_list_remove cf_list_pop_front cf_list_pop_back cf_list_empty cf_list_begin cf_list_end cf_list_front cf_list_back
+ * @related  cf_list_back cf_list_init_node cf_list_init
  */
 CF_INLINE CF_ListNode* cf_list_begin(CF_List* list)
 {
@@ -242,7 +242,7 @@ CF_INLINE CF_ListNode* cf_list_begin(CF_List* list)
  *     }
  * @remarks  Since the list is circular with a single dummy node it can be confusing to loop over. To help make this simpler, use
  *           `cf_list_begin` and `cf_list_end` to perform a loop over the list.
- * @related  CF_ListNode CF_List CF_LIST_NODE CF_LIST_HOST cf_list_init_node cf_list_init cf_list_push_front cf_list_push_back cf_list_remove cf_list_pop_front cf_list_pop_back cf_list_empty cf_list_begin cf_list_end cf_list_front cf_list_back
+ * @related  cf_list_empty cf_list_init_node cf_list_init
  */
 CF_INLINE CF_ListNode* cf_list_end(CF_List* list)
 {
@@ -255,7 +255,7 @@ CF_INLINE CF_ListNode* cf_list_end(CF_List* list)
  * @brief    Returns a pointer to the first element in the list.
  * @param    List       The list.
  * @remarks  Check to see if this is a valid node in the list with `node != cf_list_end(list)`.
- * @related  CF_ListNode CF_List CF_LIST_NODE CF_LIST_HOST cf_list_init_node cf_list_init cf_list_push_front cf_list_push_back cf_list_remove cf_list_pop_front cf_list_pop_back cf_list_empty cf_list_begin cf_list_end cf_list_front cf_list_back
+ * @related  cf_list_init_node cf_list_init cf_list_push_front
  */
 CF_INLINE CF_ListNode* cf_list_front(CF_List* list)
 {
@@ -268,7 +268,7 @@ CF_INLINE CF_ListNode* cf_list_front(CF_List* list)
  * @brief    Returns a pointer to the last element in the list.
  * @param    List       The list.
  * @remarks  Check to see if this is a valid node in the list with `node != cf_list_end(list)`.
- * @related  CF_ListNode CF_List CF_LIST_NODE CF_LIST_HOST cf_list_init_node cf_list_init cf_list_push_front cf_list_push_back cf_list_remove cf_list_pop_front cf_list_pop_back cf_list_empty cf_list_begin cf_list_end cf_list_front cf_list_back
+ * @related  cf_list_begin cf_list_init_node cf_list_init
  */
 CF_INLINE CF_ListNode* cf_list_back(CF_List* list)
 {

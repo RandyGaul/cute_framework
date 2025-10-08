@@ -62,7 +62,7 @@ CF_API CF_DisplayID CF_CALL cf_default_display(void);
  * @category app
  * @brief    Returns the number of displays on the system.
  * @remarks  Inidices >= 0 and < the return value are valid display indices.
- * @related  cf_make_app cf_display_count cf_display_x cf_display_y cf_display_width cf_display_height cf_display_refresh_rate cf_display_bounds cf_display_name cf_display_orientation
+ * @related  cf_display_x cf_display_y cf_display_width
  */
 CF_API int CF_CALL cf_display_count(void);
 
@@ -88,7 +88,7 @@ CF_API void CF_CALL cf_free_display_list(CF_DisplayID* display_list);
  * @brief    Returns the x position, in pixels, of the display.
  * @param    display_id    The id of the display. See `cf_get_display_list`.
  * @remarks  Display positions are in a global space, so different displays have different but unique coordinates.
- * @related  cf_make_app cf_display_count cf_display_x cf_display_y cf_display_width cf_display_height cf_display_refresh_rate cf_display_bounds cf_display_name cf_display_orientation
+ * @related  cf_display_count cf_display_y cf_display_width
  */
 CF_API int CF_CALL cf_display_x(CF_DisplayID display_id);
 
@@ -98,7 +98,7 @@ CF_API int CF_CALL cf_display_x(CF_DisplayID display_id);
  * @brief    Returns the y position, in pixels, of the display.
  * @param    display_id    The id of the display. See `cf_get_display_list`.
  * @remarks  Display positions are in a global space, so different displays have different but unique coordinates.
- * @related  cf_make_app cf_display_count cf_display_x cf_display_y cf_display_width cf_display_height cf_display_refresh_rate cf_display_bounds cf_display_name cf_display_orientation
+ * @related  cf_display_count cf_display_x cf_display_width
  */
 CF_API int CF_CALL cf_display_y(CF_DisplayID display_id);
 
@@ -107,7 +107,7 @@ CF_API int CF_CALL cf_display_y(CF_DisplayID display_id);
  * @category app
  * @brief    Returns the width, in pixels, of the display.
  * @param    display_id    The id of the display. See `cf_get_display_list`.
- * @related  cf_make_app cf_display_count cf_display_x cf_display_y cf_display_width cf_display_height cf_display_refresh_rate cf_display_bounds cf_display_name cf_display_orientation
+ * @related  cf_display_count cf_display_x cf_display_y
  */
 CF_API int CF_CALL cf_display_width(CF_DisplayID display_id);
 
@@ -116,7 +116,7 @@ CF_API int CF_CALL cf_display_width(CF_DisplayID display_id);
  * @category app
  * @brief    Returns the height, in pixels, of the display.
  * @param    display_id    The id of the display. See `cf_get_display_list`.
- * @related  cf_make_app cf_display_count cf_display_x cf_display_y cf_display_width cf_display_height cf_display_refresh_rate cf_display_bounds cf_display_name cf_display_orientation
+ * @related  cf_display_count cf_display_x cf_display_y
  */
 CF_API int CF_CALL cf_display_height(CF_DisplayID display_id);
 
@@ -125,7 +125,7 @@ CF_API int CF_CALL cf_display_height(CF_DisplayID display_id);
  * @category app
  * @brief    Returns the refresh rate, in hz, of the display.
  * @param    display_id    The id of the display. See `cf_get_display_list`.
- * @related  cf_make_app cf_display_count cf_display_x cf_display_y cf_display_width cf_display_height cf_display_refresh_rate cf_display_bounds cf_display_name cf_display_orientation
+ * @related  cf_display_count cf_display_x cf_display_y
  */
 CF_API float CF_CALL cf_display_refresh_rate(CF_DisplayID display_id);
 
@@ -134,7 +134,7 @@ CF_API float CF_CALL cf_display_refresh_rate(CF_DisplayID display_id);
  * @category app
  * @brief    Returns the bounds, in pixels, of the display.
  * @param    display_id    The id of the display. See `cf_get_display_list`.
- * @related  cf_make_app cf_display_count cf_display_x cf_display_y cf_display_width cf_display_height cf_display_refresh_rate cf_display_bounds cf_display_name cf_display_orientation
+ * @related  cf_display_count cf_display_x cf_display_y
  */
 CF_API CF_Rect CF_CALL cf_display_bounds(CF_DisplayID display_id);
 
@@ -143,7 +143,7 @@ CF_API CF_Rect CF_CALL cf_display_bounds(CF_DisplayID display_id);
  * @category app
  * @brief    Returns the name of the display.
  * @param    display_id    The id of the display. See `cf_get_display_list`.
- * @related  cf_make_app cf_display_count cf_display_x cf_display_y cf_display_width cf_display_height cf_display_refresh_rate cf_display_bounds cf_display_name cf_display_orientation
+ * @related  cf_display_count cf_display_x cf_display_y
  */
 CF_API const char* CF_CALL cf_display_name(CF_DisplayID display_id);
 
@@ -152,7 +152,7 @@ CF_API const char* CF_CALL cf_display_name(CF_DisplayID display_id);
  * @category app
  * @brief    Returns the orientation.
  * @param    display_id    The id of the display. See `cf_get_display_list`.
- * @related  cf_make_app cf_display_count cf_display_x cf_display_y cf_display_width cf_display_height cf_display_refresh_rate cf_display_bounds cf_display_name cf_display_orientation
+ * @related  cf_display_count cf_display_x cf_display_y
  */
 CF_API CF_DisplayOrientation CF_CALL cf_display_orientation(CF_DisplayID display_id);
 
@@ -171,7 +171,7 @@ CF_API CF_DisplayOrientation CF_CALL cf_display_orientation(CF_DisplayID display
  *         return 0;
  *     }
  * @remarks  The `app_options` parameter of `cf_make_app` is a bitmask flag. Simply take the `APP_OPTIONS_*` flags listed above and OR them together.
- * @related  CF_AppOptionFlagBits cf_make_app cf_destroy_app
+ * @related  cf_destroy_app cf_make_app
  */
 #define CF_APP_OPTION_DEFS \
 	/* @entry Does not initialize any graphics backend at all (for servers or headless mode). */ \
@@ -246,7 +246,7 @@ typedef enum CF_AppOptionFlagBits
  *     }
  * @remarks  The options parameter is an enum from `app_options`. Different options can be OR'd together.
  *           Parameters `w` and `h` are ignored if the window is initialized to fullscreen mode with `APP_OPTIONS_FULLSCREEN`.
- * @related  CF_AppOptionFlagBits cf_app_is_running cf_app_signal_shutdown cf_destroy_app
+ * @related  cf_app_is_running cf_app_signal_shutdown cf_destroy_app
  */
 CF_API CF_Result CF_CALL cf_make_app(const char* window_title, CF_DisplayID display_id, int x, int y, int w, int h, CF_AppOptionFlags options, const char* argv0);
 
@@ -286,7 +286,7 @@ CF_API void CF_CALL cf_destroy_app(void);
  * @remarks  Some OS events, like clicking the red X on the app, will signal the app should shutdown.
  *           This will cause this function to return false. You may manually call `cf_app_signal_shutdown`
  *           to signal a shutdown.
- * @related  cf_make_app cf_destroy_app cf_app_signal_shutdown
+ * @related  cf_app_signal_shutdown cf_make_app cf_destroy_app
  */
 CF_API bool CF_CALL cf_app_is_running(void);
 
@@ -318,7 +318,7 @@ CF_API bool CF_CALL cf_app_is_running(void);
  *         
  *         return 0;
  *     }
- * @related  cf_make_app cf_destroy_app cf_app_is_running
+ * @related  cf_app_is_running cf_make_app cf_destroy_app
  */
 CF_API void CF_CALL cf_app_signal_shutdown(void);
 
@@ -327,7 +327,7 @@ CF_API void CF_CALL cf_app_signal_shutdown(void);
  * @category app
  * @brief    Updates the application. Must be called once per frame, at the beginning of the frame.
  * @param    on_update  Called for each update tick.
- * @related  cf_make_app cf_app_is_running cf_app_signal_shutdown cf_destroy_app
+ * @related  cf_app_is_running cf_app_signal_shutdown cf_make_app
  */
 CF_API void CF_CALL cf_app_update(CF_OnUpdateFn* on_update);
 
@@ -357,7 +357,7 @@ CF_API void CF_CALL cf_app_update(CF_OnUpdateFn* on_update);
  *         return 0;
  *     }
  * @remarks  Call this at the *end* of your main loop. You may only call this function once per game tick.
- * @related  cf_make_app cf_app_is_running cf_app_signal_shutdown cf_destroy_app
+ * @related  cf_app_is_running cf_app_signal_shutdown cf_make_app
  */
 CF_API int CF_CALL cf_app_draw_onto_screen(bool clear);
 
@@ -367,7 +367,7 @@ CF_API int CF_CALL cf_app_draw_onto_screen(bool clear);
  * @brief    Gets the size of the window in pixels.
  * @param    w          The width of the window in pixels.
  * @param    h          The height of the window in pixels.
- * @related  cf_app_set_size cf_app_get_position cf_app_set_position cf_app_get_width cf_app_get_height cf_app_get_dpi_scale
+ * @related  cf_app_get_position cf_app_get_width cf_app_get_height
  */
 CF_API void CF_CALL cf_app_get_size(int* w, int* h);
 
@@ -375,7 +375,7 @@ CF_API void CF_CALL cf_app_get_size(int* w, int* h);
  * @function cf_app_get_width
  * @category app
  * @brief    Returns the size of the window width in pixels.
- * @related  cf_app_set_size cf_app_get_position cf_app_set_position cf_app_get_width cf_app_get_height cf_app_get_dpi_scale
+ * @related  cf_app_get_position cf_app_get_height cf_app_get_dpi_scale
  */
 CF_API int CF_CALL cf_app_get_width(void);
 
@@ -383,7 +383,7 @@ CF_API int CF_CALL cf_app_get_width(void);
  * @function cf_app_get_height
  * @category app
  * @brief    Returns the size of the window height in pixels.
- * @related  cf_app_set_size cf_app_get_position cf_app_set_position cf_app_get_width cf_app_get_height cf_app_get_dpi_scale
+ * @related  cf_app_get_position cf_app_get_width cf_app_get_dpi_scale
  */
 CF_API int CF_CALL cf_app_get_height(void);
 
@@ -391,7 +391,7 @@ CF_API int CF_CALL cf_app_get_height(void);
  * @function cf_app_show_window
  * @category app
  * @brief    Brings the app out of a minimized/hidden state.
- * @related  cf_app_set_size cf_app_get_position cf_app_set_position cf_app_get_width cf_app_get_height cf_app_get_dpi_scale
+ * @related  cf_app_set_size cf_app_set_position cf_app_get_position
  */
 CF_API void CF_CALL cf_app_show_window(void);
 
@@ -404,7 +404,7 @@ CF_API void CF_CALL cf_app_show_window(void);
  *           to aid in readability. These devices have very small pixels. Most of the time you should ignore dpi and let the OS
  *           handle this. CF enables DPI settings by default, but, you can see if this function returns 2.0f to let you know if
  *           pixels are clustered for you under the hood.
- * @related  cf_app_set_size cf_app_get_position cf_app_set_position cf_app_get_width cf_app_get_height cf_app_get_dpi_scale cf_app_dpi_scale_was_changed
+ * @related  cf_app_get_position cf_app_get_width cf_app_get_height
  */
 CF_API float CF_CALL cf_app_get_dpi_scale(void);
 
@@ -412,7 +412,7 @@ CF_API float CF_CALL cf_app_get_dpi_scale(void);
  * @function cf_app_dpi_scale_was_changed
  * @category app
  * @brief    Returns true if the DPI scaling changed, such as moving from one screen to another.
- * @related  cf_app_get_dpi_scale cf_app_dpi_scale_was_changed
+ * @related  cf_app_get_dpi_scale
  */
 CF_API bool CF_CALL cf_app_dpi_scale_was_changed(void);
 
@@ -422,7 +422,7 @@ CF_API bool CF_CALL cf_app_dpi_scale_was_changed(void);
  * @brief    Sets the size of the window in pixels.
  * @param    w          The width of the window in pixels.
  * @param    h          The height of the window in pixels.
- * @related  cf_app_get_size cf_app_get_position cf_app_set_position
+ * @related  cf_app_set_position cf_app_get_size cf_app_get_position
  */
 CF_API void CF_CALL cf_app_set_size(int w, int h);
 
@@ -432,7 +432,7 @@ CF_API void CF_CALL cf_app_set_size(int w, int h);
  * @brief    Gets the position of the window in pixels.
  * @param    x          The x position of the window in pixels.
  * @param    y          The y position of the window in pixels.
- * @related  cf_app_get_size cf_app_set_size cf_app_set_position cf_app_center_window
+ * @related  cf_app_get_size cf_app_set_size cf_app_set_position
  */
 CF_API void CF_CALL cf_app_get_position(int* x, int* y);
 
@@ -442,7 +442,7 @@ CF_API void CF_CALL cf_app_get_position(int* x, int* y);
  * @brief    Sets the position of the window in pixels.
  * @param    x          The x position of the window in pixels.
  * @param    y          The y position of the window in pixels.
- * @related  cf_app_get_size cf_app_set_size cf_app_get_position cf_app_center_window
+ * @related  cf_app_set_size cf_app_get_size cf_app_get_position
  */
 CF_API void CF_CALL cf_app_set_position(int x, int y);
 
@@ -450,7 +450,7 @@ CF_API void CF_CALL cf_app_set_position(int x, int y);
  * @function cf_app_center_window
  * @category app
  * @brief    Sets the window position centered on the screen.
- * @related  cf_app_get_size cf_app_set_size cf_app_get_position cf_app_center_window
+ * @related  cf_app_get_size cf_app_set_size cf_app_get_position
  */
 CF_API void CF_CALL cf_app_center_window(void);
 
@@ -502,7 +502,7 @@ CF_API bool CF_CALL cf_app_has_focus(void);
  * @category app
  * @brief    Requests attention for the window for a brief period.
  * @remarks  On Windows this flashes the tab icon, and bounces the dock icon on OSX.
- * @related  cf_app_request_attention cf_app_request_attention_continuously cf_app_request_attention_cancel
+ * @related  cf_app_request_attention_continuously cf_app_request_attention_cancel
  */
 CF_API void CF_CALL cf_app_request_attention(void);
 
@@ -511,7 +511,7 @@ CF_API void CF_CALL cf_app_request_attention(void);
  * @category app
  * @brief    Requests attention for the window for continuously.
  * @remarks  On Windows this flashes the tab icon, and bounces the dock icon on OSX.
- * @related  cf_app_request_attention cf_app_request_attention_continuously cf_app_request_attention_cancel
+ * @related  cf_app_request_attention_cancel cf_app_request_attention
  */
 CF_API void CF_CALL cf_app_request_attention_continuously(void);
 
@@ -519,7 +519,7 @@ CF_API void CF_CALL cf_app_request_attention_continuously(void);
  * @function cf_app_request_attention_cancel
  * @category app
  * @brief    Cancels any previous requests for attention.
- * @related  cf_app_request_attention cf_app_request_attention_continuously cf_app_request_attention_cancel
+ * @related  cf_app_request_attention_continuously cf_app_request_attention
  */
 CF_API void CF_CALL cf_app_request_attention_cancel(void);
 
@@ -527,7 +527,7 @@ CF_API void CF_CALL cf_app_request_attention_cancel(void);
  * @function cf_app_was_minimized
  * @category app
  * @brief    Returns true if the app was minimized last frame.
- * @related  cf_app_was_maximized cf_app_minimized cf_app_maximized cf_app_was_restored
+ * @related  cf_app_was_maximized cf_app_was_restored cf_app_minimized
  */
 CF_API bool CF_CALL cf_app_was_minimized(void);
 
@@ -535,7 +535,7 @@ CF_API bool CF_CALL cf_app_was_minimized(void);
  * @function cf_app_was_maximized
  * @category app
  * @brief    Returns true if the app was maximized last frame.
- * @related  cf_app_was_minimized cf_app_minimized cf_app_maximized cf_app_was_restored
+ * @related  cf_app_was_minimized cf_app_was_restored cf_app_minimized
  */
 CF_API bool CF_CALL cf_app_was_maximized(void);
 
@@ -543,7 +543,7 @@ CF_API bool CF_CALL cf_app_was_maximized(void);
  * @function cf_app_minimized
  * @category app
  * @brief    Returns true while the app is currently minimized.
- * @related  cf_app_was_minimized cf_app_was_maximized cf_app_maximized cf_app_was_restored
+ * @related  cf_app_maximized cf_app_was_minimized cf_app_was_maximized
  */
 CF_API bool CF_CALL cf_app_minimized(void);
 
@@ -551,7 +551,7 @@ CF_API bool CF_CALL cf_app_minimized(void);
  * @function cf_app_maximized
  * @category app
  * @brief    Returns true while the app is currently maximized.
- * @related  cf_app_was_minimized cf_app_was_maximized cf_app_minimized cf_app_was_restored
+ * @related  cf_app_minimized cf_app_was_minimized cf_app_was_maximized
  */
 CF_API bool CF_CALL cf_app_maximized(void);
 
@@ -560,7 +560,7 @@ CF_API bool CF_CALL cf_app_maximized(void);
  * @category app
  * @brief    Returns true if the app was restored last frame.
  * @remarks  Restored means a window's size/position was restored from a minimized/maximized state.
- * @related  cf_app_was_minimized cf_app_was_maximized cf_app_minimized cf_app_maximized cf_app_was_restored
+ * @related  cf_app_was_minimized cf_app_was_maximized cf_app_minimized
  */
 CF_API bool CF_CALL cf_app_was_restored(void);
 
@@ -606,7 +606,7 @@ CF_API void* CF_CALL cf_app_init_imgui(void);
  * @category app
  * @brief    Multisample count used for MSAA for the app's offscreen canvas.
  * @remarks  This function turns on .
- * @related  cf_app_set_msaa cf_msaa_string
+ * @related  cf_msaa_string cf_app_set_msaa
  */
 #define CF_MSAA_DEFS \
 	/* @entry No multisampling. */                          \
@@ -652,7 +652,7 @@ CF_INLINE const char* cf_msaa_string(CF_MSAA msaa) {
  *           The value should match a supported sample count for the current GPU.
  *           Note: If this is enabled you can not sample from the app's canvas, i.e. `cf_app_get_canvas` is then
  *           effectively write-only.
- * @related  CF_MSAA cf_app_get_msaa CF_Canvas
+ * @related  cf_app_get_msaa CF_MSAA CF_Canvas
  */
 CF_API bool CF_CALL cf_app_set_msaa(int sample_count);
 
@@ -665,7 +665,7 @@ CF_API bool CF_CALL cf_app_set_msaa(int sample_count);
  *           calling `cf_app_set_canvas_size`, as it will invalidate any references to the app's canvas.
  *           
  *           If you fetch this canvas and have MSAA on (see `cf_app_set_msaa`) you may *not* sample from the canvas.
- * @related  cf_app_set_canvas_size cf_app_get_canvas_width cf_app_get_canvas_height cf_app_set_vsync cf_app_get_vsync
+ * @related  cf_app_get_canvas_width cf_app_get_canvas_height cf_app_get_vsync
  */
 CF_API CF_Canvas CF_CALL cf_app_get_canvas(void);
 
@@ -676,7 +676,7 @@ CF_API CF_Canvas CF_CALL cf_app_get_canvas(void);
  * @param    w          The width in pixels to resize the canvas to.
  * @param    h          The height in pixels to resize the canvas to.
  * @remarks  Be careful about calling this function, as it will invalidate any old references from `cf_app_get_canvas`.
- * @related  cf_app_get_canvas cf_app_get_canvas_width cf_app_get_canvas_height cf_app_set_vsync cf_app_get_vsync
+ * @related  cf_app_set_vsync cf_app_get_canvas cf_app_get_canvas_width
  */
 CF_API void CF_CALL cf_app_set_canvas_size(int w, int h);
 
@@ -684,7 +684,7 @@ CF_API void CF_CALL cf_app_set_canvas_size(int w, int h);
  * @function cf_app_get_canvas_width
  * @category app
  * @brief    Gets the app's canvas width in pixels.
- * @related  cf_app_get_canvas cf_app_set_canvas_size cf_app_get_canvas_height cf_app_set_vsync cf_app_get_vsync
+ * @related  cf_app_get_canvas_height cf_app_get_canvas cf_app_get_vsync
  */
 CF_API int CF_CALL cf_app_get_canvas_width(void);
 
@@ -692,7 +692,7 @@ CF_API int CF_CALL cf_app_get_canvas_width(void);
  * @function cf_app_get_canvas_height
  * @category app
  * @brief    Gets the app's canvas height in pixels.
- * @related  cf_app_get_canvas cf_app_set_canvas_size cf_app_get_canvas_width cf_app_set_vsync cf_app_get_vsync
+ * @related  cf_app_get_canvas_width cf_app_get_canvas cf_app_get_vsync
  */
 CF_API int CF_CALL cf_app_get_canvas_height(void);
 
@@ -700,7 +700,7 @@ CF_API int CF_CALL cf_app_get_canvas_height(void);
  * @function cf_app_set_vsync
  * @category app
  * @brief    Turns on vsync via the graphical backend (if supported).
- * @related  cf_app_get_canvas cf_app_set_canvas_size cf_app_get_canvas_width cf_app_set_vsync cf_app_get_vsync cf_app_set_vsync_mailbox
+ * @related  cf_app_set_vsync_mailbox cf_app_set_canvas_size cf_app_get_canvas
  */
 CF_API void CF_CALL cf_app_set_vsync(bool true_turn_on_vsync);
 
@@ -710,7 +710,7 @@ CF_API void CF_CALL cf_app_set_vsync(bool true_turn_on_vsync);
  * @brief    Turns on vsync via the graphical backend (if supported) in mailbox mode.
  * @remarks  Similar to vsync but with reduced latency. When rendering too quickly the frame may be updated
  *           more than once before it is sent off the GPU.
- * @related  cf_app_get_canvas cf_app_set_canvas_size cf_app_get_canvas_width cf_app_set_vsync cf_app_get_vsync cf_app_set_vsync_mailbox
+ * @related  cf_app_set_vsync cf_app_set_canvas_size cf_app_get_canvas
  */
 CF_API void CF_CALL cf_app_set_vsync_mailbox(bool true_turn_on_mailbox);
 
@@ -718,7 +718,7 @@ CF_API void CF_CALL cf_app_set_vsync_mailbox(bool true_turn_on_mailbox);
  * @function cf_app_get_vsync
  * @category app
  * @brief    Returns the vsync state (true for on).
- * @related  cf_app_get_canvas cf_app_set_canvas_size cf_app_get_canvas_width cf_app_set_vsync cf_app_get_vsync cf_app_set_vsync_mailbox
+ * @related  cf_app_get_canvas cf_app_get_canvas_width cf_app_set_canvas_size
  */
 CF_API bool CF_CALL cf_app_get_vsync(void);
 
@@ -726,7 +726,7 @@ CF_API bool CF_CALL cf_app_get_vsync(void);
  * @function cf_app_set_windowed_mode
  * @category app
  * @brief    Sets the application to windowed mode.
- * @related  cf_app_set_windowed_mode cf_app_set_borderless_fullscreen_mode cf_app_set_fullscreen_mode cf_app_set_title
+ * @related  cf_app_set_borderless_fullscreen_mode cf_app_set_fullscreen_mode cf_app_set_title
  */
 CF_API void CF_CALL cf_app_set_windowed_mode(void);
 
@@ -734,7 +734,7 @@ CF_API void CF_CALL cf_app_set_windowed_mode(void);
  * @function cf_app_set_borderless_fullscreen_mode
  * @category app
  * @brief    Sets the application mode to "fake fullscreen" without a border.
- * @related  cf_app_set_windowed_mode cf_app_set_borderless_fullscreen_mode cf_app_set_fullscreen_mode cf_app_set_title
+ * @related  cf_app_set_windowed_mode cf_app_set_fullscreen_mode cf_app_set_title
  */
 CF_API void CF_CALL cf_app_set_borderless_fullscreen_mode(void);
 
@@ -742,7 +742,7 @@ CF_API void CF_CALL cf_app_set_borderless_fullscreen_mode(void);
  * @function cf_app_set_fullscreen_mode
  * @category app
  * @brief    Sets the application true fullscreen mode.
- * @related  cf_app_set_windowed_mode cf_app_set_borderless_fullscreen_mode cf_app_set_fullscreen_mode cf_app_set_title
+ * @related  cf_app_set_windowed_mode cf_app_set_borderless_fullscreen_mode cf_app_set_title
  */
 CF_API void CF_CALL cf_app_set_fullscreen_mode(void);
 
@@ -750,7 +750,7 @@ CF_API void CF_CALL cf_app_set_fullscreen_mode(void);
  * @function cf_app_set_title
  * @category app
  * @brief    Sets the application' true fullscreen mode's title.
- * @related  cf_app_set_windowed_mode cf_app_set_borderless_fullscreen_mode cf_app_set_fullscreen_mode cf_app_set_title cf_app_set_icon
+ * @related  cf_app_set_windowed_mode cf_app_set_borderless_fullscreen_mode cf_app_set_fullscreen_mode
  */
 CF_API void CF_CALL cf_app_set_title(const char* title);
 
@@ -760,7 +760,7 @@ CF_API void CF_CALL cf_app_set_title(const char* title);
  * @brief    Sets the icon for the application.
  * @param    virtual_path_to_png  A path to a png file. See [Virtual File System](https://randygaul.github.io/cute_framework/topics/virtual_file_system).
  * @remarks  The icon file must be a png image. Suggested image dimensions are 32x32, 48x48, or 64x64.
- * @related  cf_app_set_title cf_app_set_icon
+ * @related  cf_app_set_title
  */
 CF_API void CF_CALL cf_app_set_icon(const char* virtual_path_to_png);
 
@@ -768,7 +768,7 @@ CF_API void CF_CALL cf_app_set_icon(const char* virtual_path_to_png);
  * @function cf_app_get_framerate
  * @category app
  * @brief    Returns the current framerate of the application.
- * @related  cf_app_get_framerate cf_app_get_smoothed_framerate
+ * @related  cf_app_get_smoothed_framerate
  */
 CF_API float CF_CALL cf_app_get_framerate(void);
 
@@ -776,7 +776,7 @@ CF_API float CF_CALL cf_app_get_framerate(void);
  * @function cf_app_get_smoothed_framerate
  * @category app
  * @brief    Returns the smoothed framerate of the application. Last 60 frames are averaged. This values is controlled by `CF_FRAMERATE_SMOOTHING`.
- * @related  cf_app_get_framerate cf_app_get_smoothed_framerate
+ * @related  cf_app_get_framerate
  */
 CF_API float CF_CALL cf_app_get_smoothed_framerate(void);
 
@@ -784,7 +784,7 @@ CF_API float CF_CALL cf_app_get_smoothed_framerate(void);
  * @enum     CF_PowerState
  * @category app
  * @brief    The states of power for the application.
- * @related  CF_PowerInfo cf_app_power_info
+ * @related  cf_app_power_info CF_PowerInfo
  */
 #define CF_POWER_STATE_DEFS \
 	/* @entry error determining power status. */        \
@@ -828,7 +828,7 @@ CF_INLINE const char* cf_power_state_to_string(CF_PowerState state) {
  * @struct   CF_PowerInfo
  * @category app
  * @brief    Detailed information about the power level/status of the application.
- * @related  cf_app_power_info cf_power_state_to_string CF_PowerState
+ * @related  cf_app_power_info CF_PowerState
  */
 typedef struct CF_PowerInfo
 {
@@ -848,7 +848,7 @@ typedef struct CF_PowerInfo
  * @category app
  * @brief    Fetches detailed power info about the application.
  * @return   Returns a `CF_PowerInfo` struct.
- * @related  CF_PowerInfo cf_power_state_to_string CF_PowerState
+ * @related  cf_power_state_to_string CF_PowerInfo CF_PowerState
  */
 CF_API CF_PowerInfo CF_CALL cf_app_power_info(void);
 

@@ -42,7 +42,7 @@ extern "C" {
  * @brief    An empty macro used in the C API to markup dynamic strings.
  * @remarks  This is an optional and _completely_ empty macro. It's only purpose is to provide a bit of visual indication a type is a
  *           dynamic string.
- * @related  sdyna sfmt sfmt_append svfmt svfmt_append sset sdup smake
+ * @related  sset sfree smake
  */
 #define sdyna
 
@@ -51,7 +51,7 @@ extern "C" {
  * @category string
  * @brief    Returns the number of characters in the string, not counting the nul-terminator.
  * @param    s            The string. Can be `NULL`.
- * @related  sdyna slen scount scap sempty
+ * @related  scount sempty sset
  */
 #define slen(s) cf_string_len(s)
 
@@ -61,7 +61,7 @@ extern "C" {
  * @brief    Returns whether or not the string is empty.
  * @param    s            The string. Can be `NULL`.
  * @remarks  Both "" and NULL count as empty.
- * @related  sdyna slen scount scap sempty
+ * @related  slen scount sset
  */
 #define sempty(s) cf_string_empty(s)
 
@@ -72,7 +72,7 @@ extern "C" {
  * @param    s            The string. Can be `NULL`.
  * @param    ch           A character to push onto the end of the string.
  * @remarks  Does not overwite the nul-byte. If the string is empty a nul-byte is pushed afterwards. Can be NULL, will create a new string and assign `s` if so.
- * @related  sdyna spush spop sfit sfree sset
+ * @related  spop sset sfit
  */
 #define spush(s, ch) cf_string_push(s, ch)
 
@@ -81,7 +81,7 @@ extern "C" {
  * @category string
  * @brief    Frees up all resources used by the string and sets it to `NULL`.
  * @param    s            The string. Can be `NULL`.
- * @related  sdyna spush spop sfit sfree sset
+ * @related  sset smake sdyna
  */
 #define sfree(s) cf_string_free(s)
 
@@ -90,7 +90,7 @@ extern "C" {
  * @category string
  * @brief    Returns the number of characters in the string, including the nul-terminator.
  * @param    s            The string.
- * @related  sdyna slen scount scap sempty
+ * @related  slen scap sempty
  */
 #define scount(s) cf_string_count(s)
 
@@ -101,7 +101,7 @@ extern "C" {
  * @param    s            The string. Can be `NULL`.
  * @remarks  This is not the number of characters, but the size of the internal buffer. The capacity automatically grows as necessary, but
  *           you can use `sfit` to ensure a minimum capacity manually, as an optimization.
- * @related  sdyna slen scount scap sempty
+ * @related  sfit slen sset
  */
 #define scap(s) cf_string_cap(s)
 
@@ -111,7 +111,7 @@ extern "C" {
  * @brief    Returns the first character in the string.
  * @param    s            The string. Can be `NULL`.
  * @return   Returns '\0' if `s` is `NULL`.
- * @related  sdyna spush spop sfirst slast sclear
+ * @related  slast spush spop
  */
 #define sfirst(s) cf_string_first(s)
 
@@ -121,7 +121,7 @@ extern "C" {
  * @brief    Returns the last character in the string. Not the nul-byte.
  * @param    s            The string. Can be `NULL`.
  * @return   Returns '\0' if `s` is `NULL`.
- * @related  sdyna spush spop sfirst slast sclear
+ * @related  sfirst spush spop
  */
 #define slast(s) cf_string_last(s)
 
@@ -131,7 +131,7 @@ extern "C" {
  * @brief    Sets the string size to zero.
  * @param    s            The string. Can be `NULL`.
  * @remarks  Does not free up any resources.
- * @related  sdyna spush spop sfirst slast sclear
+ * @related  sset sfree spush
  */
 #define sclear(s) cf_string_clear(s)
 
@@ -142,7 +142,7 @@ extern "C" {
  * @param    s            The string. Can be `NULL`.
  * @param    n            The number of elements for the new internal capacity.
  * @remarks  Does not change the size/count of the string, or the len. This function is just here for optimization purposes.
- * @related  sdyna sfit scap sclear
+ * @related  scap spush slen
  */
 #define sfit(s, n) cf_string_fit(s, n)
 
@@ -154,7 +154,7 @@ extern "C" {
  * @param    fmt          The format string.
  * @param    ...          The parameters for the format string.
  * @remarks  The string will be overwritten from the beginning. Will automatically adjust capacity as needed.
- * @related  sdyna sfmt sfmt_append svfmt svfmt_append sset
+ * @related  sfmt_append svfmt sset
  */
 #define sfmt(s, fmt, ...) cf_string_fmt(s, fmt, __VA_ARGS__)
 
@@ -166,7 +166,7 @@ extern "C" {
  * @param    fmt          The format string.
  * @param    ...          The parameters for the format string.
  * @remarks  All printed data is appended to the end of the string. Will automatically adjust it's capacity as needed.
- * @related  sdyna sfmt sfmt_append svfmt svfmt_append sset
+ * @related  sfmt svfmt_append sappend
  */
 #define sfmt_append(s, fmt, ...) cf_string_fmt_append(s, fmt, __VA_ARGS__)
 
@@ -179,7 +179,7 @@ extern "C" {
  * @param    ...          The parameters for the format string.
  * @remarks  You probably are looking for `sfmt` instead. The string will be overwritten from the beginning. Will automatically adjust it's
  *           capacity as needed. args must be a `va_list`.
- * @related  sdyna sfmt sfmt_append svfmt svfmt_append sset
+ * @related  sfmt svfmt_append sset
  */
 #define svfmt(s, fmt, args) cf_string_vfmt(s, fmt, args)
 
@@ -192,7 +192,7 @@ extern "C" {
  * @param    ...          The parameters for the format string.
  * @remarks  You probably are looking for `sfmt_append` instead. The string will be overwritten from the beginning. Will automatically adjust it's
  *           capacity as needed. args must be a `va_list`.
- * @related  sdyna sfmt sfmt_append svfmt svfmt_append sset
+ * @related  sfmt_append sfmt svfmt
  */
 #define svfmt_append(s, fmt, args) cf_string_vfmt_append(s, fmt, args)
 
@@ -202,7 +202,7 @@ extern "C" {
  * @brief    Copies the string `b` into string `a`.
  * @param    a            Destination for copying. Can be `NULL`.
  * @param    b            Source for copying.
- * @related  sdyna sfmt sfmt_append svfmt svfmt_append sset sdup smake
+ * @related  sdup smake sfree
  */
 #define sset(a, b) cf_string_set(a, b)
 
@@ -212,7 +212,7 @@ extern "C" {
  * @brief    Returns a completely new string copy.
  * @param    s            The string to duplicate.
  * @remarks  You must free the copy with `sfree` when done. Does the same thing as `smake`.
- * @related  sdyna sset sdup smake
+ * @related  sset smake sfree
  */
 #define sdup(s) cf_string_dup(s)
 
@@ -223,7 +223,7 @@ extern "C" {
  * @param    s            The string to duplicate.
  * @param    b            Source for copying.
  * @remarks  You must free the copy with `sfree` when done. Does the same thing as `sdup`.
- * @related  sdyna sset sdup smake
+ * @related  sdup sset sfree
  */
 #define smake(s) cf_string_make(s)
 
@@ -234,7 +234,7 @@ extern "C" {
  * @param    a            The first string.
  * @param    b            The second string.
  * @remarks  Returns 0 if the two strings are equivalent. Otherwise returns 1 if a[i] > b[i], or -1 if a[i] < b[i].
- * @related  sdyna scmp sicmp sequ siequ
+ * @related  sequ sicmp siequ
  */
 #define scmp(a, b) cf_string_cmp(a, b)
 
@@ -245,7 +245,7 @@ extern "C" {
  * @param    a            The first string.
  * @param    b            The second string.
  * @remarks  Returns 0 if the two strings are equivalent. Otherwise returns 1 if a[i] > b[i], or -1 if a[i] < b[i].
- * @related  sdyna scmp sicmp sequ siequ
+ * @related  siequ scmp sequ
  */
 #define sicmp(a, b) cf_string_icmp(a, b)
 
@@ -255,7 +255,7 @@ extern "C" {
  * @brief    Returns true if the two strings are equivalent, false otherwise.
  * @param    a            The first string.
  * @param    b            The second string.
- * @related  sdyna scmp sicmp sequ siequ
+ * @related  scmp siequ sicmp
  */
 #define sequ(a, b) cf_string_equ(a, b)
 
@@ -265,7 +265,7 @@ extern "C" {
  * @brief    Returns true if the two strings are equivalent, ignoring case, false otherwise.
  * @param    a            The first string.
  * @param    b            The second string.
- * @related  sdyna scmp sicmp sequ siequ
+ * @related  sicmp sequ scmp
  */
 #define siequ(a, b) cf_string_iequ(a, b)
 
@@ -276,7 +276,7 @@ extern "C" {
  * @param    s            The string. Can be `NULL`.
  * @param    prefix       A string to compare against the beginning of `s`.
  * @return   Returns true if `prefix` is the prefix of `s`, false otherwise.
- * @related  sdyna sprefix ssuffix scontains sfirst_index_of slast_index_of sfind
+ * @related  ssuffix scontains sfind
  */
 #define sprefix(s, prefix) cf_string_prefix(s, prefix)
 
@@ -287,7 +287,7 @@ extern "C" {
  * @param    s            The string. Can be `NULL`.
  * @param    prefix       A string to compare against the end of `s`.
  * @return   Returns true if `suffix` is the suffix of `s`, false otherwise.
- * @related  sdyna sprefix ssuffix scontains sfirst_index_of slast_index_of sfind
+ * @related  sprefix scontains sfind
  */
 #define ssuffix(s, suffix) cf_string_suffix(s, suffix)
 
@@ -297,7 +297,7 @@ extern "C" {
  * @brief    Returns true if s contains a certain substring.
  * @param    s            The string. Can be `NULL`.
  * @param    contains_me  A substring to search for.
- * @related  sdyna sprefix ssuffix scontains sfirst_index_of slast_index_of sfind
+ * @related  sfind sprefix ssuffix
  */
 #define scontains(s, contains_me) cf_string_contains(s, contains_me)
 
@@ -306,7 +306,7 @@ extern "C" {
  * @category string
  * @brief    Sets all characters in the string to upper case.
  * @param    s            The string. Can be `NULL`.
- * @related  sdyna stoupper stolower siequ sicmp
+ * @related  stolower sicmp siequ
  */
 #define stoupper(s) cf_string_toupper(s)
 
@@ -315,7 +315,7 @@ extern "C" {
  * @category string
  * @brief    Sets all characters in the string to lower case.
  * @param    s            The string. Can be `NULL`.
- * @related  sdyna stoupper stolower siequ sicmp
+ * @related  stoupper sicmp siequ
  */
 #define stolower(s) cf_string_tolower(s)
 
@@ -334,7 +334,7 @@ extern "C" {
  * @param    a            The string to modify. Can be `NULL`.
  * @param    b            Used to append onto `a`.
  * @remarks  You can technically do this with `sfmt`, but this function is optimized much faster. Does the same thing as `scat`.
- * @related  sdyna sappend scat sappend_range scat_range sfmt sfmt_append
+ * @related  scat sappend_range sfmt_append
  */
 #define sappend(a, b) cf_string_append(a, b)
 
@@ -345,7 +345,7 @@ extern "C" {
  * @param    a            The string to modify. Can be `NULL`.
  * @param    b            Used to append onto `a`.
  * @remarks  You can technically do this with `sfmt`, but this function is optimized much faster. Does the same thing as `sappend`.
- * @related  sdyna sappend scat sappend_range scat_range sfmt sfmt_append
+ * @related  sappend scat_range sfmt_append
  */
 #define scat(a, b) cf_string_append(a, b)
 
@@ -356,7 +356,7 @@ extern "C" {
  * @param    a            The string to modify. Can be `NULL`.
  * @param    b            Used to append onto `a`.
  * @remarks  You can technically do this with `sfmt`, but this function is optimized much faster. Does the same thing as `scat_range`.
- * @related  sdyna sappend scat sappend_range scat_range sfmt sfmt_append
+ * @related  sappend scat_range sfmt_append
  */
 #define sappend_range(a, b, b_end) cf_string_append_range(a, b, b_end)
 
@@ -367,7 +367,7 @@ extern "C" {
  * @param    a            The string to modify. Can be `NULL`.
  * @param    b            Used to append onto `a`.
  * @remarks  You can technically do this with `sfmt`, but this function is optimized much faster. Does the same thing as `sappend_range`.
- * @related  sdyna sappend scat sappend_range scat_range sfmt sfmt_append
+ * @related  scat sappend_range sfmt_append
  */
 #define scat_range(a, b, b_end) cf_string_append_range(a, b, b_end)
 
@@ -376,7 +376,7 @@ extern "C" {
  * @category string
  * @brief    Removes all whitespace from the beginning and end of the string.
  * @param    s            The string.
- * @related  sdyna strim sltrim srtrim slpad srpad sdedup sreplace serase
+ * @related  sdyna sltrim srtrim
  */
 #define strim(s) cf_string_trim(s)
 
@@ -385,7 +385,7 @@ extern "C" {
  * @category string
  * @brief    Removes all whitespace from the beginning of the string.
  * @param    s            The string.
- * @related  sdyna strim sltrim srtrim slpad srpad sdedup sreplace serase
+ * @related  slpad sdyna strim
  */
 #define sltrim(s) cf_string_ltrim(s)
 
@@ -394,7 +394,7 @@ extern "C" {
  * @category string
  * @brief    Removes all whitespace from the end of the string.
  * @param    s            The string.
- * @related  sdyna strim sltrim srtrim slpad srpad sdedup sreplace serase
+ * @related  srpad sreplace sdyna
  */
 #define srtrim(s) cf_string_rtrim(s)
 
@@ -405,7 +405,7 @@ extern "C" {
  * @param    s            The string. Can be `NULL`.
  * @param    ch           A character to insert.
  * @param    n            Number of times to insert `ch`.
- * @related  sdyna strim sltrim srtrim slpad srpad sdedup sreplace serase
+ * @related  sltrim sdyna strim
  */
 #define slpad(s, ch, n) cf_string_lpad(s, ch, n)
 
@@ -416,7 +416,7 @@ extern "C" {
  * @param    s            The string. Can be `NULL`.
  * @param    ch           A character to insert.
  * @param    n            Number of times to insert `ch`.
- * @related  sdyna strim sltrim srtrim slpad srpad sdedup sreplace serase
+ * @related  srtrim sreplace sdyna
  */
 #define srpad(s, ch, n) cf_string_rpad(s, ch, n)
 
@@ -435,7 +435,7 @@ extern "C" {
  *           This function is intended to be used in a loop, successively chopping off pieces of `s`.
  *           A much easier, but slightly slower, version of this function is `ssplit`, which returns
  *           an array of strings.
- * @related  sdyna ssplit_once ssplit
+ * @related  ssplit sfind scontains
  */
 #define ssplit_once(s, ch) cf_string_split_once(s, ch)
 
@@ -464,7 +464,7 @@ extern "C" {
  *     }
  *     afree(array_of_splits);
  * @remarks  `s` is not modified. You must call `sfree` on the returned strings and `afree` on the returned array.
- * @related  sdyna ssplit_once ssplit
+ * @related  ssplit_once sfind scontains
  */
 #define ssplit(s, ch) cf_string_split(s, ch)
 
@@ -475,7 +475,7 @@ extern "C" {
  * @param    s            The string. Can be `NULL`.
  * @param    ch           A character to search for.
  * @return   Returns -1 if none are found.
- * @related  sdyna sfirst_index_of slast_index_of sfind
+ * @related  sfind slast_index_of scontains
  */
 #define sfirst_index_of(s, ch) cf_string_first_index_of(s, ch)
 
@@ -486,7 +486,7 @@ extern "C" {
  * @param    s            The string. Can be `NULL`.
  * @param    ch           A character to search for.
  * @return   Returns -1 if none are found.
- * @related  sdyna sfirst_index_of slast_index_of sfind
+ * @related  sfind sfirst_index_of scontains
  */
 #define slast_index_of(s, ch) cf_string_last_index_of(s, ch)
 
@@ -497,7 +497,7 @@ extern "C" {
  * @param    s            The string.
  * @param    find         A substring to search for.
  * @return   Returns `NULL` if not found.
- * @related  sdyna sfirst_index_of slast_index_of sfind
+ * @related  scontains sfirst_index_of slast_index_of
  */
 #define sfind(s, find) cf_string_find(s, find)
 
@@ -507,7 +507,7 @@ extern "C" {
  * @brief    Converts an int64_t to a string and assigns `s` to it.
  * @param    s            The string.
  * @param    i            The value to convert.
- * @related  sdyna sint suint sfloat sdouble shex sbool stint stouint stofloat stodouble stohex stobool
+ * @related  sdyna suint sfloat
  */
 #define sint(s, i) cf_string_int(s, i)
 
@@ -517,7 +517,7 @@ extern "C" {
  * @brief    Converts a uint64_t to a string and assigns `s` to it.
  * @param    s            The string.
  * @param    uint         The value to convert.
- * @related  sdyna sint suint sfloat sdouble shex sbool stint stouint stofloat stodouble stohex stobool
+ * @related  sdyna sint sfloat
  */
 #define suint(s, uint) cf_string_uint(s, uint)
 
@@ -527,7 +527,7 @@ extern "C" {
  * @brief    Converts a float to a string and assigns `s` to it.
  * @param    s            The string.
  * @param    f            The value to convert.
- * @related  sdyna sint suint sfloat sdouble shex sbool stint stouint stofloat stodouble stohex stobool
+ * @related  sdyna sint suint
  */
 #define sfloat(s, f) cf_string_float(s, f)
 
@@ -537,7 +537,7 @@ extern "C" {
  * @brief    Converts a double to a string and assigns `s` to it.
  * @param    s            The string.
  * @param    f            The value to convert.
- * @related  sdyna sint suint sfloat sdouble shex sbool stint stouint stofloat stodouble stohex stobool
+ * @related  sdyna sint suint
  */
 #define sdouble(s, f) cf_string_double(s, f)
 
@@ -547,7 +547,7 @@ extern "C" {
  * @brief    Converts a uint64_t to a hex-string and assigns `s` to it.
  * @param    s            The string.
  * @param    uint         The value to convert.
- * @related  sdyna sint suint sfloat sdouble shex sbool stint stouint stofloat stodouble stohex stobool
+ * @related  sdyna sint suint
  */
 #define shex(s, uint) cf_string_hex(s, uint)
 
@@ -557,7 +557,7 @@ extern "C" {
  * @brief    Converts a bool to a string and assigns `s` to it.
  * @param    s            The string.
  * @param    uint         The value to convert.
- * @related  sdyna sint suint sfloat sdouble shex sbool stint stouint stofloat stodouble stohex stobool
+ * @related  sdyna sint suint
  */
 #define sbool(s, b) cf_string_bool(s, b)
 
@@ -566,7 +566,7 @@ extern "C" {
  * @category string
  * @brief    Converts a string to an int64_t and returns it.
  * @param    s            The string.
- * @related  sdyna sint suint sfloat sdouble shex sbool stint stouint stofloat stodouble stohex stobool
+ * @related  stouint stofloat stodouble
  */
 #define stoint(s) cf_string_toint(s)
 
@@ -575,7 +575,7 @@ extern "C" {
  * @category string
  * @brief    Converts a string to an uint64_t and returns it.
  * @param    s            The string.
- * @related  sdyna sint suint sfloat sdouble shex sbool stint stouint stofloat stodouble stohex stobool
+ * @related  stofloat stodouble stohex
  */
 #define stouint(s) cf_string_touint(s)
 
@@ -584,7 +584,7 @@ extern "C" {
  * @category string
  * @brief    Converts a string to a float and returns it.
  * @param    s            The string.
- * @related  sdyna sint suint sfloat sdouble shex sbool stint stouint stofloat stodouble stohex stobool
+ * @related  stouint stodouble stohex
  */
 #define stofloat(s) cf_string_tofloat(s)
 
@@ -593,7 +593,7 @@ extern "C" {
  * @category string
  * @brief    Converts a string to a double and returns it.
  * @param    s            The string.
- * @related  sdyna sint suint sfloat sdouble shex sbool stint stouint stofloat stodouble stohex stobool
+ * @related  stouint stofloat stohex
  */
 #define stodouble(s) cf_string_todouble(s)
 
@@ -603,7 +603,7 @@ extern "C" {
  * @brief    Converts a hex-string to a uint64_t and returns it.
  * @param    s            The string.
  * @remarks  Supports srings that start with "0x", "#", or no prefix.
- * @related  sdyna sint suint sfloat sdouble shex sbool stint stouint stofloat stodouble stohex stobool
+ * @related  stouint stofloat stodouble
  */
 #define stohex(s) cf_string_tohex(s)
 
@@ -613,7 +613,7 @@ extern "C" {
  * @brief    Converts a string to a bool and returns it.
  * @param    s            The string.
  * @remarks  Supports srings that start with "0x", "#", or no prefix.
- * @related  sdyna sint suint sfloat sdouble shex sbool stint stouint stofloat stodouble stohex stobool
+ * @related  stouint stofloat stodouble
  */
 #define stobool(s) cf_string_tobool(s)
 
@@ -625,7 +625,7 @@ extern "C" {
  * @param    replace_me   Substring to replace.
  * @param    with_me      The replacement string.
  * @remarks  Supports srings that start with "0x", "#", or no prefix.
- * @related  sdyna strim sltrim srtrim slpad srpad sdedup sreplace serase
+ * @related  serase sfind sinsert
  */
 #define sreplace(s, replace_me, with_me) cf_string_replace(s, replace_me, with_me)
 
@@ -635,7 +635,7 @@ extern "C" {
  * @brief    Removes all consecutive occurances of `ch` from the string.
  * @param    s            The string. Can be `NULL`.
  * @param    ch           A character.
- * @related  sdyna strim sltrim srtrim slpad srpad sdedup sreplace serase
+ * @related  sdyna strim sltrim
  */
 #define sdedup(s, ch) cf_string_dedup(s, ch)
 
@@ -646,7 +646,7 @@ extern "C" {
  * @param    s            The string. Can be `NULL`.
  * @param    index        Index in the string to start deleting from.
  * @param    count        Number of character to delete.
- * @related  sdyna strim sltrim srtrim slpad srpad sdedup sreplace serase
+ * @related  sreplace spop spopn
  */
 #define serase(s, index, count) cf_string_erase(s, index, count)
 
@@ -655,7 +655,7 @@ extern "C" {
  * @category string
  * @brief    Removes a character from the end of the string.
  * @param    s            The string. Can be `NULL`.
- * @related  sdyna spop spopn serase slast
+ * @related  spopn sdyna serase
  */
 #define spop(s) (s = cf_string_pop(s))
 
@@ -665,7 +665,7 @@ extern "C" {
  * @brief    Removes n characters from the back of a string.
  * @param    s            The string. Can be `NULL`.
  * @param    n            Number of characters to pop.
- * @related  sdyna spop spopn serase slast
+ * @related  spop sdyna serase
  */
 #define spopn(s, n) (s = cf_string_pop_n(s, n))
 
@@ -677,7 +677,7 @@ extern "C" {
  * @param    buffer       Pointer to a static memory buffer.
  * @param    buffer_size  The size of `buffer` in bytes.
  * @remarks  Will grow onto the heap if the size becomes too large. Call `sfree` when done.
- * @related  sdyna sstatic sisdyna spush sset
+ * @related  sset sdyna sisdyna
  */
 #define sstatic(s, buffer, buffer_size) cf_string_static(s, buffer, buffer_size)
 
@@ -688,7 +688,7 @@ extern "C" {
  * @param    s            The string. Can be `NULL`.
  * @return   Returns true if `s` is a dynamically alloced string from this C string API.
  * @remarks  This can be evaluated at compile time for string literals.
- * @related  sdyna sstatic sisdyna spush sset
+ * @related  sdyna sstatic spush
  */
 #define sisdyna(s) cf_string_is_dynamic(s)
 
@@ -714,7 +714,7 @@ extern "C" {
  *           
  *           If an invalid codepoint is found the "replacement character" 0xFFFD will be appended instead, which
  *           looks like question mark inside of a dark diamond.
- * @related  sappend_UTF8 cf_decode_UTF8 cf_decode_UTF16
+ * @related  cf_decode_UTF8 cf_decode_UTF16 sdecode_UTF8
  */
 #define sappend_UTF8(s, codepoint) cf_string_append_UTF8(s, codepoint)
 
@@ -735,7 +735,7 @@ extern "C" {
  * @remarks  You can use this function in a loop to decode one codepoint at a time, where each codepoint
  *           represents a single UTF8 character. If the decoded codepoint is invalid then the "replacement character"
  *           0xFFFD will be recorded instead.
- * @related  sappend_UTF8 cf_decode_UTF8 cf_decode_UTF16
+ * @related  cf_decode_UTF16 sappend_UTF8
  */
 CF_API const char* CF_CALL cf_decode_UTF8(const char* s, int* codepoint);
 
@@ -774,7 +774,7 @@ CF_API const char* CF_CALL cf_decode_UTF8(const char* s, int* codepoint);
  *           return s;
  *           }
  *           ```
- * @related  sappend_UTF8 cf_decode_UTF8 cf_decode_UTF16
+ * @related  cf_decode_UTF8 sappend_UTF8
  */
 CF_API const uint16_t* CF_CALL cf_decode_UTF16(const uint16_t* s, int* codepoint);
 
@@ -796,7 +796,7 @@ CF_API const uint16_t* CF_CALL cf_decode_UTF16(const uint16_t* s, int* codepoint
  *           - You can simply compare pointers for equality, as opposed to comparing the string contents, as long as both strings came from this function.
  *           - You may optionally call `sinuke` to free all resources used by the global string table.
  *           - This function is very fast if the string was already stored previously.
- * @related  sintern sintern_range sivalid silen sinuke
+ * @related  sintern_range sinuke sivalid
  */
 #define sintern(s) cf_sintern(s)
 
@@ -815,7 +815,7 @@ CF_API const uint16_t* CF_CALL cf_decode_UTF16(const uint16_t* s, int* codepoint
  *           - You can simply compare pointers for equality, as opposed to comparing the string contents, as long as both strings came from this function.
  *           - You may optionally call `sinuke` to free all resources used by the global string table.
  *           - This function is very fast if the string was already stored previously.
- * @related  sintern sintern_range sivalid silen sinuke
+ * @related  sintern sinuke sivalid
  */
 #define sintern_range(start, end) cf_sintern_range(start, end)
 
@@ -825,7 +825,7 @@ CF_API const uint16_t* CF_CALL cf_decode_UTF16(const uint16_t* s, int* codepoint
  * @brief    Returns true if the string is a static, stable, unique pointer from `sintern`.
  * @param    s            The string.
  * @remarks  This is *not* a secure method -- do not use it on any potentially dangerous strings. It's designed to be very simple and fast, nothing more.
- * @related  sintern sintern_range sivalid silen sinuke
+ * @related  sintern sintern_range silen
  */
 #define sivalid(s) (((cf_intern_t*)s - 1)->cookie == CF_INTERN_COOKIE)
 
@@ -836,7 +836,7 @@ CF_API const uint16_t* CF_CALL cf_decode_UTF16(const uint16_t* s, int* codepoint
  * @param    s            The string.
  * @remarks  This is *not* a secure method -- do not use it on any potentially dangerous strings. It's designed to be very simple and fast, nothing more.
  *           The return value is calculated in constant time, as opposed to calling `CF_STRLEN` (`strlen`).
- * @related  sintern sintern_range sivalid silen sinuke
+ * @related  sintern sintern_range sivalid
  */
 #define silen(s) (((cf_intern_t*)s - 1)->len)
 
@@ -845,7 +845,7 @@ CF_API const uint16_t* CF_CALL cf_decode_UTF16(const uint16_t* s, int* codepoint
  * @category string
  * @brief    Frees up all resources used by the global string table built by `sintern`.
  * @remarks  All strings previously returned by `sintern` are now invalid.
- * @related  sintern sintern_range sivalid silen sinuke
+ * @related  sintern sintern_range sivalid
  */
 #define sinuke() cf_sinuke()
 

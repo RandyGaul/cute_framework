@@ -21,7 +21,7 @@ extern "C" {
  * @enum     CF_MouseButton
  * @category input
  * @brief    The mouse buttons.
- * @related  CF_MouseButton cf_mouse_button_to_string cf_mouse_down
+ * @related  cf_mouse_button_to_string cf_mouse_down
  */
 #define CF_MOUSE_BUTTON_DEFS \
 	/* @entry */ \
@@ -50,7 +50,7 @@ typedef enum CF_MouseButton
  * @category input
  * @brief    Convert an enum `CF_MouseButton` to a c-style string.
  * @param    state        The state to convert to a string.
- * @related  CF_MouseButton cf_mouse_button_to_string cf_mouse_down
+ * @related  cf_mouse_down CF_MouseButton
  */
 CF_INLINE const char* cf_mouse_button_to_string(CF_MouseButton button)
 {
@@ -66,7 +66,7 @@ CF_INLINE const char* cf_mouse_button_to_string(CF_MouseButton button)
  * @enum     CF_KeyButton
  * @category input
  * @brief    The keys.
- * @related  CF_KeyButton cf_key_button_to_string cf_key_down
+ * @related  cf_key_button_to_string cf_key_down
  */
 #define CF_KEY_BUTTON_DEFS \
 	/* @entry */ \
@@ -557,7 +557,7 @@ typedef enum CF_KeyButton
  * @category input
  * @brief    Convert an enum `CF_KeyButton` to a c-style string.
  * @param    state        The state to convert to a string.
- * @related  CF_KeyButton cf_key_button_to_string cf_key_down
+ * @related  cf_key_down CF_KeyButton
  */
 CF_INLINE const char* cf_key_button_to_string(CF_KeyButton button)
 {
@@ -573,7 +573,7 @@ CF_INLINE const char* cf_key_button_to_string(CF_KeyButton button)
  * @function cf_key_down
  * @category input
  * @brief    Returns true if a key is currently down.
- * @related  CF_KeyButton cf_key_down cf_key_up cf_key_just_pressed cf_key_just_released cf_key_ctrl cf_key_shift cf_key_alt cf_key_gui cf_clear_key_states cf_key_repeating
+ * @related  cf_key_up cf_key_just_pressed cf_key_just_released
  */
 CF_API bool CF_CALL cf_key_down(CF_KeyButton key);
 
@@ -581,7 +581,7 @@ CF_API bool CF_CALL cf_key_down(CF_KeyButton key);
  * @function cf_key_up
  * @category input
  * @brief    Returns true if a key is currently up.
- * @related  CF_KeyButton cf_key_down cf_key_up cf_key_just_pressed cf_key_just_released cf_key_ctrl cf_key_shift cf_key_alt cf_key_gui cf_clear_key_states cf_key_repeating
+ * @related  cf_key_down cf_key_just_pressed cf_key_just_released
  */
 CF_API bool CF_CALL cf_key_up(CF_KeyButton key);
 
@@ -589,7 +589,7 @@ CF_API bool CF_CALL cf_key_up(CF_KeyButton key);
  * @function cf_key_just_pressed
  * @category input
  * @brief    Returns true if a key was just pressed.
- * @related  CF_KeyButton cf_key_down cf_key_up cf_key_just_pressed cf_key_just_released cf_key_ctrl cf_key_shift cf_key_alt cf_key_gui cf_clear_key_states cf_key_repeating
+ * @related  cf_key_just_released cf_key_down cf_key_up
  */
 CF_API bool CF_CALL cf_key_just_pressed(CF_KeyButton key);
 
@@ -597,7 +597,7 @@ CF_API bool CF_CALL cf_key_just_pressed(CF_KeyButton key);
  * @function cf_key_just_released
  * @category input
  * @brief    Returns true if a key was just released.
- * @related  CF_KeyButton cf_key_down cf_key_up cf_key_just_pressed cf_key_just_released cf_key_ctrl cf_key_shift cf_key_alt cf_key_gui cf_clear_key_states cf_key_repeating
+ * @related  cf_key_just_pressed cf_key_down cf_key_up
  */
 CF_API bool CF_CALL cf_key_just_released(CF_KeyButton key);
 
@@ -605,7 +605,7 @@ CF_API bool CF_CALL cf_key_just_released(CF_KeyButton key);
  * @function cf_key_repeating
  * @category input
  * @brief    Returns true if a key was held long enough to repeat.
- * @related  CF_KeyButton cf_key_down cf_key_up cf_key_just_pressed cf_key_just_released cf_key_ctrl cf_key_shift cf_key_alt cf_key_gui cf_clear_key_states cf_key_repeating
+ * @related  cf_key_down cf_key_up cf_key_just_pressed
  */
 CF_API bool CF_CALL cf_key_repeating(CF_KeyButton key);
 
@@ -613,7 +613,7 @@ CF_API bool CF_CALL cf_key_repeating(CF_KeyButton key);
  * @function cf_key_ctrl
  * @category input
  * @brief    Returns true if the left or right control key is currently down.
- * @related  CF_KeyButton cf_key_down cf_key_up cf_key_just_pressed cf_key_just_released cf_key_ctrl cf_key_shift cf_key_alt cf_key_gui cf_clear_key_states cf_key_repeating
+ * @related  cf_key_down cf_key_up cf_key_just_pressed
  */
 CF_API bool CF_CALL cf_key_ctrl(void);
 
@@ -621,7 +621,7 @@ CF_API bool CF_CALL cf_key_ctrl(void);
  * @function cf_key_shift
  * @category input
  * @brief    Returns true if the left or right shift key is currently down.
- * @related  CF_KeyButton cf_key_down cf_key_up cf_key_just_pressed cf_key_just_released cf_key_ctrl cf_key_shift cf_key_alt cf_key_gui cf_clear_key_states
+ * @related  cf_key_down cf_key_up cf_key_just_pressed
  */
 CF_API bool CF_CALL cf_key_shift(void);
 
@@ -629,7 +629,7 @@ CF_API bool CF_CALL cf_key_shift(void);
  * @function cf_key_alt
  * @category input
  * @brief    Returns true if the left or right alt key is currently down.
- * @related  CF_KeyButton cf_key_down cf_key_up cf_key_just_pressed cf_key_just_released cf_key_ctrl cf_key_shift cf_key_alt cf_key_gui cf_clear_key_states
+ * @related  cf_key_down cf_key_up cf_key_just_pressed
  */
 CF_API bool CF_CALL cf_key_alt(void);
 
@@ -638,7 +638,7 @@ CF_API bool CF_CALL cf_key_alt(void);
  * @category input
  * @brief    Returns true if the left or right gui key is currently down.
  * @remarks  Windows key in Windows, Command key in OSX.
- * @related  CF_KeyButton cf_key_down cf_key_up cf_key_just_pressed cf_key_just_released cf_key_ctrl cf_key_shift cf_key_alt cf_key_gui cf_clear_key_states
+ * @related  cf_key_down cf_key_up cf_key_just_pressed
  */
 CF_API bool CF_CALL cf_key_gui(void);
 
@@ -646,7 +646,7 @@ CF_API bool CF_CALL cf_key_gui(void);
  * @function cf_clear_key_states
  * @category input
  * @brief    Zeroes out all internal keyboard state.
- * @related  CF_KeyButton cf_key_down cf_key_up cf_key_just_pressed cf_key_just_released cf_key_ctrl cf_key_shift cf_key_alt cf_key_gui cf_clear_key_states
+ * @related  cf_key_down cf_key_up cf_key_just_pressed
  */
 CF_API void CF_CALL cf_clear_key_states(void);
 
@@ -654,7 +654,7 @@ CF_API void CF_CALL cf_clear_key_states(void);
  * @function cf_register_key_callback
  * @category input
  * @brief    Registers a callback invoked whenever a key is pressed.
- * @related  CF_KeyButton cf_key_down cf_key_up cf_key_just_pressed cf_key_just_released cf_key_ctrl cf_key_shift cf_key_alt cf_key_gui cf_clear_key_states
+ * @related  cf_key_down cf_key_up cf_key_just_pressed
  */
 CF_API void CF_CALL cf_register_key_callback(void (*key_callback)(CF_KeyButton key, bool true_down_false_up));
 
@@ -663,7 +663,7 @@ CF_API void CF_CALL cf_register_key_callback(void (*key_callback)(CF_KeyButton k
  * @category input
  * @brief    Returns the current mouse x-coordinate in pixels.
  * @remarks  (0, 0) is the top-left of the screen, y-downards.
- * @related  CF_MouseButton cf_mouse_down cf_mouse_x cf_mouse_y cf_mouse_motion_x cf_mouse_motion_y
+ * @related  cf_mouse_down cf_mouse_y cf_mouse_motion_x
  */
 CF_API float CF_CALL cf_mouse_x(void);
 
@@ -672,7 +672,7 @@ CF_API float CF_CALL cf_mouse_x(void);
  * @category input
  * @brief    Returns the current mouse y-coordinate in pixels.
  * @remarks  (0, 0) is the top-left of the screen, y-downwards.
- * @related  CF_MouseButton cf_mouse_down cf_mouse_x cf_mouse_y cf_mouse_motion_x cf_mouse_motion_y
+ * @related  cf_mouse_down cf_mouse_x cf_mouse_motion_x
  */
 CF_API float CF_CALL cf_mouse_y(void);
 
@@ -681,7 +681,7 @@ CF_API float CF_CALL cf_mouse_y(void);
  * @category input
  * @brief    Returns the current mouse motion x-coordinates in pixels.
  * @remarks  (0, 0) means there is no mouse movement, y-downwards.
- * @related  CF_MouseButton cf_mouse_down cf_mouse_x cf_mouse_y cf_mouse_motion_x cf_mouse_motion_y
+ * @related  cf_mouse_motion_y cf_mouse_down cf_mouse_x
  */
 CF_API float CF_CALL cf_mouse_motion_x(void);
 
@@ -690,7 +690,7 @@ CF_API float CF_CALL cf_mouse_motion_x(void);
  * @category input
  * @brief    Returns the current mouse motion y-coordinates in pixels.
  * @remarks  (0, 0) means there is no mouse movement, y-downwards.
- * @related  CF_MouseButton cf_mouse_down cf_mouse_x cf_mouse_y cf_mouse_motion_x cf_mouse_motion_y
+ * @related  cf_mouse_motion_x cf_mouse_down cf_mouse_x
  */
 CF_API float CF_CALL cf_mouse_motion_y(void);
 
@@ -698,7 +698,7 @@ CF_API float CF_CALL cf_mouse_motion_y(void);
  * @function cf_mouse_down
  * @category input
  * @brief    Returns true if the mouse button is currently down.
- * @related  CF_MouseButton cf_mouse_down cf_mouse_x cf_mouse_y cf_mouse_just_pressed cf_mouse_just_released cf_mouse_wheel_motion cf_mouse_double_click_held cf_mouse_double_clicked
+ * @related  cf_mouse_double_click_held cf_mouse_double_clicked cf_mouse_x
  */
 CF_API bool CF_CALL cf_mouse_down(CF_MouseButton button);
 
@@ -706,7 +706,7 @@ CF_API bool CF_CALL cf_mouse_down(CF_MouseButton button);
  * @function cf_mouse_just_pressed
  * @category input
  * @brief    Returns true if the mouse button was just pressed.
- * @related  CF_MouseButton cf_mouse_down cf_mouse_x cf_mouse_y cf_mouse_just_pressed cf_mouse_just_released cf_mouse_wheel_motion cf_mouse_double_click_held cf_mouse_double_clicked
+ * @related  cf_mouse_just_released cf_mouse_down cf_mouse_x
  */
 CF_API bool CF_CALL cf_mouse_just_pressed(CF_MouseButton button);
 
@@ -714,7 +714,7 @@ CF_API bool CF_CALL cf_mouse_just_pressed(CF_MouseButton button);
  * @function cf_mouse_just_released
  * @category input
  * @brief    Returns true if the mouse button was just released.
- * @related  CF_MouseButton cf_mouse_down cf_mouse_x cf_mouse_y cf_mouse_just_pressed cf_mouse_just_released cf_mouse_wheel_motion cf_mouse_double_click_held cf_mouse_double_clicked
+ * @related  cf_mouse_just_pressed cf_mouse_down cf_mouse_x
  */
 CF_API bool CF_CALL cf_mouse_just_released(CF_MouseButton button);
 
@@ -722,7 +722,7 @@ CF_API bool CF_CALL cf_mouse_just_released(CF_MouseButton button);
  * @function cf_mouse_wheel_motion
  * @category input
  * @brief    Returns a signed integer representing by how much the mouse wheel was rotated.
- * @related  CF_MouseButton cf_mouse_down cf_mouse_x cf_mouse_y cf_mouse_just_pressed cf_mouse_just_released cf_mouse_wheel_motion cf_mouse_double_click_held cf_mouse_double_clicked
+ * @related  cf_mouse_down cf_mouse_x cf_mouse_y
  */
 CF_API float CF_CALL cf_mouse_wheel_motion(void);
 
@@ -730,7 +730,7 @@ CF_API float CF_CALL cf_mouse_wheel_motion(void);
  * @function cf_mouse_double_click_held
  * @category input
  * @brief    Returns true while a double click was detected and currently held down.
- * @related  CF_MouseButton cf_mouse_down cf_mouse_x cf_mouse_y cf_mouse_just_pressed cf_mouse_just_released cf_mouse_wheel_motion cf_mouse_double_click_held cf_mouse_double_clicked
+ * @related  cf_mouse_double_clicked cf_mouse_down cf_mouse_x
  */
 CF_API bool CF_CALL cf_mouse_double_click_held(CF_MouseButton button);
 
@@ -738,7 +738,7 @@ CF_API bool CF_CALL cf_mouse_double_click_held(CF_MouseButton button);
  * @function cf_mouse_double_clicked
  * @category input
  * @brief    Returns true if a double click was just detected.
- * @related  CF_MouseButton cf_mouse_down cf_mouse_x cf_mouse_y cf_mouse_just_pressed cf_mouse_just_released cf_mouse_wheel_motion cf_mouse_double_click_held cf_mouse_double_clicked
+ * @related  cf_mouse_double_click_held cf_mouse_down cf_mouse_x
  */
 CF_API bool CF_CALL cf_mouse_double_clicked(CF_MouseButton button);
 
@@ -746,7 +746,7 @@ CF_API bool CF_CALL cf_mouse_double_clicked(CF_MouseButton button);
  * @function cf_mouse_hide
  * @category input
  * @brief    Hides or shows the mouse.
- * @related  cf_mouse_hide cf_mouse_hidden cf_mouse_lock_inside_window
+ * @related  cf_mouse_hidden cf_mouse_lock_inside_window
  */
 CF_API void CF_CALL cf_mouse_hide(bool true_to_hide);
 
@@ -755,7 +755,7 @@ CF_API void CF_CALL cf_mouse_hide(bool true_to_hide);
  * @category input
  * @brief    Returns whether the mouse is hidden.
  * @return   True means hidden, false means not hidden.
- * @related  cf_mouse_hide cf_mouse_hidden cf_mouse_lock_inside_window
+ * @related  cf_mouse_hide cf_mouse_lock_inside_window
  */
 CF_API bool CF_CALL cf_mouse_hidden(void);
 
@@ -764,7 +764,7 @@ CF_API bool CF_CALL cf_mouse_hidden(void);
  * @category input
  * @brief    Locks the mouse within the window's borders.
  * @remarks  This is off by default, meaning the mouse is free to leave the border of the window.
- * @related  cf_mouse_hide cf_mouse_hidden cf_mouse_lock_inside_window cf_mouse_set_relative_mode
+ * @related  cf_mouse_hide cf_mouse_hidden cf_mouse_set_relative_mode
  */
 CF_API void CF_CALL cf_mouse_lock_inside_window(bool true_to_lock);
 
@@ -773,7 +773,7 @@ CF_API void CF_CALL cf_mouse_lock_inside_window(bool true_to_lock);
  * @category input
  * @brief    Locks the mouse within the window's borders and hides the mouse.
  * @remarks  This is off by default, meaning the mouse is free to leave the border of the window.
- * @related  cf_mouse_hide cf_mouse_hidden cf_mouse_lock_inside_window cf_mouse_set_relative_mode
+ * @related  cf_mouse_hide cf_mouse_hidden cf_mouse_lock_inside_window
  */
 CF_API void CF_CALL cf_mouse_set_relative_mode(bool true_to_set_relative);
 
@@ -781,7 +781,7 @@ CF_API void CF_CALL cf_mouse_set_relative_mode(bool true_to_set_relative);
  * @struct   CF_InputTextBuffer
  * @category input
  * @brief    Represents the application's input text buffer.
- * @related  cf_input_enable_ime cf_input_disable_ime cf_input_text_get_buffer cf_input_text_clear
+ * @related  cf_input_enable_ime cf_input_disable_ime cf_input_text_get_buffer
  */
 typedef struct CF_InputTextBuffer
 {
@@ -799,7 +799,7 @@ typedef struct CF_InputTextBuffer
  * @brief    Adds a utf8 codepoint to the input buffer of the application.
  * @remarks  The input text functions are for dealing with text input. Not all text inputs come from a single key-stroke, as some are comprised of
  *           multiple keystrokes, especially when dealing with non-Latin based inputs.
- * @related  cf_input_text_add_utf8 cf_input_text_pop_utf32 cf_input_text_has_data cf_input_text_clear
+ * @related  cf_input_text_pop_utf32 cf_input_text_has_data cf_input_text_clear
  */
 CF_API void CF_CALL cf_input_text_add_utf8(const char* text);
 
@@ -809,7 +809,7 @@ CF_API void CF_CALL cf_input_text_add_utf8(const char* text);
  * @brief    Pops a utf8 codepoint off of the input buffer of the application.
  * @remarks  The input text functions are for dealing with text input. Not all text inputs come from a single key-stroke, as some are comprised of
  *           multiple keystrokes, especially when dealing with non-Latin based inputs.
- * @related  cf_input_text_add_utf8 cf_input_text_pop_utf32 cf_input_text_has_data cf_input_text_clear
+ * @related  cf_input_text_add_utf8 cf_input_text_has_data cf_input_text_clear
  */
 CF_API int CF_CALL cf_input_text_pop_utf32(void);
 
@@ -819,7 +819,7 @@ CF_API int CF_CALL cf_input_text_pop_utf32(void);
  * @brief    Returns true if the input buffer of the application has any text within.
  * @remarks  The input text functions are for dealing with text input. Not all text inputs come from a single key-stroke, as some are comprised of
  *           multiple keystrokes, especially when dealing with non-Latin based inputs.
- * @related  cf_input_text_add_utf8 cf_input_text_pop_utf32 cf_input_text_has_data cf_input_text_clear
+ * @related  cf_input_text_add_utf8 cf_input_text_pop_utf32 cf_input_text_clear
  */
 CF_API bool CF_CALL cf_input_text_has_data(void);
 
@@ -830,7 +830,7 @@ CF_API bool CF_CALL cf_input_text_has_data(void);
  * @return   Returns true if the input buffer of the application has any text within.
  * @remarks  The input text functions are for dealing with text input. Not all text inputs come from a single key-stroke, as some are comprised of
  *           multiple keystrokes, especially when dealing with non-Latin based inputs.
- * @related  cf_input_enable_ime cf_input_disable_ime cf_input_text_clear
+ * @related  cf_input_text_clear cf_input_enable_ime cf_input_disable_ime
  */
 CF_API bool CF_CALL cf_input_text_get_buffer(CF_InputTextBuffer* buffer);
 
@@ -840,7 +840,7 @@ CF_API bool CF_CALL cf_input_text_get_buffer(CF_InputTextBuffer* buffer);
  * @brief    Clears the application's input text buffer.
  * @remarks  The input text functions are for dealing with text input. Not all text inputs come from a single key-stroke, as some are comprised of
  *           multiple keystrokes, especially when dealing with non-Latin based inputs.
- * @related  cf_input_text_add_utf8 cf_input_text_pop_utf32 cf_input_text_has_data cf_input_text_clear
+ * @related  cf_input_text_add_utf8 cf_input_text_pop_utf32 cf_input_text_has_data
  */
 CF_API void CF_CALL cf_input_text_clear(void);
 
@@ -850,7 +850,7 @@ CF_API void CF_CALL cf_input_text_clear(void);
  * @brief    Enables the IME (Input Method Editor) for the operating system.
  * @remarks  This is an advanced function. It's useful for gathering input from a variety of languages, where keystrokes are translated into a variety
  *           of different language inputs. This is usually a feature of the underlying operating system.
- * @related  cf_input_enable_ime cf_input_disable_ime cf_input_is_ime_enabled cf_input_has_ime_keyboard_support cf_input_is_ime_keyboard_shown cf_input_set_ime_rect
+ * @related  cf_input_disable_ime cf_input_is_ime_enabled cf_input_has_ime_keyboard_support
  */
 CF_API void CF_CALL cf_input_enable_ime(void);
 
@@ -860,7 +860,7 @@ CF_API void CF_CALL cf_input_enable_ime(void);
  * @brief    Disables the IME (Input Method Editor) for the operating system.
  * @remarks  This is an advanced function. It's useful for gathering input from a variety of languages, where keystrokes are translated into a variety
  *           of different language inputs. This is usually a feature of the underlying operating system.
- * @related  cf_input_enable_ime cf_input_disable_ime cf_input_is_ime_enabled cf_input_has_ime_keyboard_support cf_input_is_ime_keyboard_shown cf_input_set_ime_rect
+ * @related  cf_input_enable_ime cf_input_is_ime_enabled cf_input_has_ime_keyboard_support
  */
 CF_API void CF_CALL cf_input_disable_ime(void);
 
@@ -870,7 +870,7 @@ CF_API void CF_CALL cf_input_disable_ime(void);
  * @brief    Returns true if the IME (Input Method Editor) for the operating system is enabled.
  * @remarks  This is an advanced function. It's useful for gathering input from a variety of languages, where keystrokes are translated into a variety
  *           of different language inputs. This is usually a feature of the underlying operating system.
- * @related  cf_input_enable_ime cf_input_disable_ime cf_input_is_ime_enabled cf_input_has_ime_keyboard_support cf_input_is_ime_keyboard_shown cf_input_set_ime_rect
+ * @related  cf_input_is_ime_keyboard_shown cf_input_enable_ime cf_input_disable_ime
  */
 CF_API bool CF_CALL cf_input_is_ime_enabled(void);
 
@@ -880,7 +880,7 @@ CF_API bool CF_CALL cf_input_is_ime_enabled(void);
  * @brief    Returns true if the IME (Input Method Editor) for the operating system has keyboard support.
  * @remarks  This is an advanced function. It's useful for gathering input from a variety of languages, where keystrokes are translated into a variety
  *           of different language inputs. This is usually a feature of the underlying operating system.
- * @related  cf_input_enable_ime cf_input_disable_ime cf_input_is_ime_enabled cf_input_has_ime_keyboard_support cf_input_is_ime_keyboard_shown cf_input_set_ime_rect
+ * @related  cf_input_enable_ime cf_input_disable_ime cf_input_is_ime_enabled
  */
 CF_API bool CF_CALL cf_input_has_ime_keyboard_support(void);
 
@@ -890,7 +890,7 @@ CF_API bool CF_CALL cf_input_has_ime_keyboard_support(void);
  * @brief    Returns true if the IME (Input Method Editor) for the operating system is currently showing the keyboard.
  * @remarks  This is an advanced function. It's useful for gathering input from a variety of languages, where keystrokes are translated into a variety
  *           of different language inputs. This is usually a feature of the underlying operating system.
- * @related  cf_input_enable_ime cf_input_disable_ime cf_input_is_ime_enabled cf_input_has_ime_keyboard_support cf_input_is_ime_keyboard_shown cf_input_set_ime_rect
+ * @related  cf_input_is_ime_enabled cf_input_enable_ime cf_input_disable_ime
  */
 CF_API bool CF_CALL cf_input_is_ime_keyboard_shown(void);
 
@@ -900,7 +900,7 @@ CF_API bool CF_CALL cf_input_is_ime_keyboard_shown(void);
  * @brief    Tells the operating system where the current IME (Input Method Editor) rect should be.
  * @remarks  This is an advanced function. It's useful for gathering input from a variety of languages, where keystrokes are translated into a variety
  *           of different language inputs. This is usually a feature of the underlying operating system.
- * @related  cf_input_enable_ime cf_input_disable_ime cf_input_is_ime_enabled cf_input_has_ime_keyboard_support cf_input_is_ime_keyboard_shown cf_input_set_ime_rect
+ * @related  cf_input_enable_ime cf_input_disable_ime cf_input_is_ime_enabled
  */
 CF_API void CF_CALL cf_input_set_ime_rect(int x, int y, int w, int h);
 
@@ -908,7 +908,7 @@ CF_API void CF_CALL cf_input_set_ime_rect(int x, int y, int w, int h);
  * @struct   CF_ImeComposition
  * @category input
  * @brief    Represents the IME (Input Method Editor) composition from the operating system, for gathering complex text inputs.
- * @related  cf_input_enable_ime CF_ImeComposition cf_input_get_ime_composition
+ * @related  cf_input_enable_ime cf_input_get_ime_composition
  */
 typedef struct CF_ImeComposition
 {
@@ -931,7 +931,7 @@ typedef struct CF_ImeComposition
  * @return   Returns true if the IME (Input Method Editor) is currently composing text.
  * @remarks  This is an advanced function. It's useful for gathering input from a variety of languages, where keystrokes are translated into a variety
  *           of different language inputs. This is usually a feature of the underlying operating system.
- * @related  cf_input_enable_ime CF_ImeComposition cf_input_get_ime_composition
+ * @related  cf_input_enable_ime CF_ImeComposition
  */
 CF_API bool CF_CALL cf_input_get_ime_composition(CF_ImeComposition* composition);
 
@@ -939,7 +939,7 @@ CF_API bool CF_CALL cf_input_get_ime_composition(CF_ImeComposition* composition)
  * @struct   CF_Touch
  * @category input
  * @brief    Represents a single touch event on the device.
- * @related  CF_Touch cf_touch_get_all cf_touch_get
+ * @related  cf_touch_get_all cf_touch_get
  */
 typedef struct CF_Touch
 {
@@ -969,7 +969,7 @@ typedef struct CF_Touch
  *     for (int i = 0; i < touch_count; ++i) {
  *         do_something(touches[i]);
  *     }
- * @related  CF_Touch cf_touch_get_all cf_touch_get
+ * @related  cf_touch_get CF_Touch
  */
 CF_API int CF_CALL cf_touch_get_all(CF_Touch** touch_all);
 
@@ -983,7 +983,7 @@ CF_API int CF_CALL cf_touch_get_all(CF_Touch** touch_all);
  * @remarks  You should use `cf_touch_get_all` to peek at all current touch events. Make note of any touch events that are
  *           new. Then, you can loop over all touch events you've noted with this function, and remove them when they
  *           become unavailable.
- * @related  CF_Touch cf_touch_get_all cf_touch_get
+ * @related  cf_touch_get_all CF_Touch
  */
 CF_API bool CF_CALL cf_touch_get(uint64_t id, CF_Touch* touch);
 

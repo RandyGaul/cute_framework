@@ -28,7 +28,7 @@ extern "C" {
  *           can pause itself with `cf_coroutine_yield`. Then, later, someone else can call `cf_coroutine_resume`. The coroutine
  *           will then continue running just after the last call to `cf_coroutine_yield`. This makes a coroutine great for
  *           preserving state between yield/resume calls, for example to perform some complex action over multiple frames.
- * @related  CF_Coroutine CF_CoroutineFn CF_CoroutineState cf_make_coroutine cf_destroy_coroutine cf_coroutine_state_to_string cf_coroutine_resume cf_coroutine_yield cf_coroutine_state cf_coroutine_get_udata cf_coroutine_push cf_coroutine_pop cf_coroutine_bytes_pushed cf_coroutine_space_remaining cf_coroutine_currently_running
+ * @related  cf_coroutine_state_to_string cf_coroutine_resume cf_coroutine_yield
  */
 typedef struct CF_Coroutine { uint64_t id; } CF_Coroutine;
 // @end
@@ -38,7 +38,7 @@ typedef struct CF_Coroutine { uint64_t id; } CF_Coroutine;
  * @category coroutine
  * @brief    Entry point for a coroutine to start.
  * @param    co            The coroutine.
- * @related  CF_Coroutine CF_CoroutineFn CF_CoroutineState cf_make_coroutine cf_destroy_coroutine cf_coroutine_state_to_string cf_coroutine_resume cf_coroutine_yield cf_coroutine_state cf_coroutine_get_udata cf_coroutine_push cf_coroutine_pop cf_coroutine_bytes_pushed cf_coroutine_space_remaining cf_coroutine_currently_running
+ * @related  cf_coroutine_state_to_string cf_coroutine_resume cf_coroutine_yield
  */
 typedef void (CF_CoroutineFn)(CF_Coroutine co);
 
@@ -53,7 +53,7 @@ typedef void (CF_CoroutineFn)(CF_Coroutine co);
  *           coroutine with `cf_destroy_coroutine` when done. See `CF_Coroutine` for some more details. **IMPORTANT NOTE**: You should beef
  *           up the stack_size to 1 or 2 MB (you may use e.g. `CF_MB * 2`) if you wish to call into APIs such as DirectX. A variety of APIs
  *           and libraries out there have very deep or complex call stacks -- so the default size may cause stack overflows in such cases.
- * @related  CF_Coroutine CF_CoroutineFn CF_CoroutineState cf_make_coroutine cf_destroy_coroutine cf_coroutine_state_to_string cf_coroutine_resume cf_coroutine_yield cf_coroutine_state cf_coroutine_get_udata cf_coroutine_push cf_coroutine_pop cf_coroutine_bytes_pushed cf_coroutine_space_remaining cf_coroutine_currently_running
+ * @related  cf_destroy_coroutine cf_coroutine_state_to_string cf_coroutine_resume
  */
 CF_API CF_Coroutine CF_CALL cf_make_coroutine(CF_CoroutineFn* fn, int stack_size, void* udata);
 
@@ -63,7 +63,7 @@ CF_API CF_Coroutine CF_CALL cf_make_coroutine(CF_CoroutineFn* fn, int stack_size
  * @brief    Destroys a coroutine created by `cf_make_coroutine`.
  * @param    co            The coroutine.
  * @remarks  All objects on the coroutine's stack will get automically cleaned up.
- * @related  CF_Coroutine CF_CoroutineFn CF_CoroutineState cf_make_coroutine cf_destroy_coroutine cf_coroutine_state_to_string cf_coroutine_resume cf_coroutine_yield cf_coroutine_state cf_coroutine_get_udata cf_coroutine_push cf_coroutine_pop cf_coroutine_bytes_pushed cf_coroutine_space_remaining cf_coroutine_currently_running
+ * @related  cf_make_coroutine cf_coroutine_state_to_string cf_coroutine_resume
  */
 CF_API void CF_CALL cf_destroy_coroutine(CF_Coroutine co);
 
@@ -71,8 +71,8 @@ CF_API void CF_CALL cf_destroy_coroutine(CF_Coroutine co);
  * @enum     CF_CoroutineState
  * @category coroutine
  * @brief    The states of a coroutine.
- * @related  CF_Coroutine CF_CoroutineFn CF_CoroutineState cf_make_coroutine cf_destroy_coroutine cf_coroutine_state_to_string cf_coroutine_resume cf_coroutine_yield cf_coroutine_state cf_coroutine_get_udata cf_coroutine_push cf_coroutine_pop cf_coroutine_bytes_pushed cf_coroutine_space_remaining cf_coroutine_currently_running
- * @related  cf_make_app cf_destroy_app
+ * @related  cf_coroutine_state_to_string cf_coroutine_resume cf_make_coroutine
+ * @related  cf_destroy_app cf_make_app
  */
 #define CF_COROUTINE_STATE_DEFS \
 	/* @entry The coroutine has stopped running entirely. */                                           \
@@ -97,7 +97,7 @@ typedef enum CF_CoroutineState
  * @category coroutine
  * @brief    Converts a `CF_CoroutineState` to c-string.
  * @param    type          The state.
- * @related  CF_Coroutine CF_CoroutineFn CF_CoroutineState cf_make_coroutine cf_destroy_coroutine cf_coroutine_state_to_string cf_coroutine_resume cf_coroutine_yield cf_coroutine_state cf_coroutine_get_udata cf_coroutine_push cf_coroutine_pop cf_coroutine_bytes_pushed cf_coroutine_space_remaining cf_coroutine_currently_running
+ * @related  cf_coroutine_state cf_coroutine_space_remaining cf_coroutine_resume
  */
 CF_INLINE const char* cf_coroutine_state_to_string(CF_CoroutineState type)
 {
@@ -117,7 +117,7 @@ CF_INLINE const char* cf_coroutine_state_to_string(CF_CoroutineState type)
  * return    Returns info on any errors as `CF_Result`.
  * @remarks  Coroutines are functions that can be paused with `cf_coroutine_yield` and resumed with `cf_coroutine_resume`. See `CF_Coroutine`
  *           for more details.
- * @related  CF_Coroutine CF_CoroutineFn CF_CoroutineState cf_make_coroutine cf_destroy_coroutine cf_coroutine_state_to_string cf_coroutine_resume cf_coroutine_yield cf_coroutine_state cf_coroutine_get_udata cf_coroutine_push cf_coroutine_pop cf_coroutine_bytes_pushed cf_coroutine_space_remaining cf_coroutine_currently_running
+ * @related  cf_coroutine_state_to_string cf_coroutine_yield cf_coroutine_state
  */
 CF_API CF_Result CF_CALL cf_coroutine_resume(CF_Coroutine co);
 
@@ -129,7 +129,7 @@ CF_API CF_Result CF_CALL cf_coroutine_resume(CF_Coroutine co);
  * return    Returns info on any errors as `CF_Result`.
  * @remarks  Coroutines are functions that can be paused with `cf_coroutine_yield` and resumed with `cf_coroutine_resume`. See `CF_Coroutine`
  *           for more details.
- * @related  CF_Coroutine CF_CoroutineFn CF_CoroutineState cf_make_coroutine cf_destroy_coroutine cf_coroutine_state_to_string cf_coroutine_resume cf_coroutine_yield cf_coroutine_state cf_coroutine_get_udata cf_coroutine_push cf_coroutine_pop cf_coroutine_bytes_pushed cf_coroutine_space_remaining cf_coroutine_currently_running
+ * @related  cf_coroutine_state_to_string cf_coroutine_resume cf_coroutine_state
  */
 CF_API CF_Result CF_CALL cf_coroutine_yield(CF_Coroutine co);
 
@@ -138,7 +138,7 @@ CF_API CF_Result CF_CALL cf_coroutine_yield(CF_Coroutine co);
  * @category coroutine
  * @brief    Returns the current state of the coroutine.
  * @param    co            The coroutine.
- * @related  CF_Coroutine CF_CoroutineFn CF_CoroutineState cf_make_coroutine cf_destroy_coroutine cf_coroutine_state_to_string cf_coroutine_resume cf_coroutine_yield cf_coroutine_state cf_coroutine_get_udata cf_coroutine_push cf_coroutine_pop cf_coroutine_bytes_pushed cf_coroutine_space_remaining cf_coroutine_currently_running
+ * @related  cf_coroutine_state_to_string cf_coroutine_space_remaining cf_coroutine_resume
  */
 CF_API CF_CoroutineState CF_CALL cf_coroutine_state(CF_Coroutine co);
 
@@ -147,7 +147,7 @@ CF_API CF_CoroutineState CF_CALL cf_coroutine_state(CF_Coroutine co);
  * @category coroutine
  * @brief    Returns the `void* udata` from `cf_coroutine_create`.
  * @param    co            The coroutine.
- * @related  CF_Coroutine CF_CoroutineFn CF_CoroutineState cf_make_coroutine cf_destroy_coroutine cf_coroutine_state_to_string cf_coroutine_resume cf_coroutine_yield cf_coroutine_state cf_coroutine_get_udata cf_coroutine_push cf_coroutine_pop cf_coroutine_bytes_pushed cf_coroutine_space_remaining cf_coroutine_currently_running
+ * @related  cf_coroutine_state_to_string cf_coroutine_resume cf_coroutine_yield
  */
 CF_API void* CF_CALL cf_coroutine_get_udata(CF_Coroutine co);
 
@@ -161,7 +161,7 @@ CF_API void* CF_CALL cf_coroutine_get_udata(CF_Coroutine co);
  * return    Returns info on any errors as `CF_Result`.
  * @remarks  Each coroutine has an internal storage of 1k (1024) bytes. The purpose is to allow a formal communication/parameter passing
  *           in/out of coroutines via FIFO ordering. These storage are totally optional, and here merely for convenience.
- * @related  CF_Coroutine CF_CoroutineFn CF_CoroutineState cf_make_coroutine cf_destroy_coroutine cf_coroutine_state_to_string cf_coroutine_resume cf_coroutine_yield cf_coroutine_state cf_coroutine_get_udata cf_coroutine_push cf_coroutine_pop cf_coroutine_bytes_pushed cf_coroutine_space_remaining cf_coroutine_currently_running
+ * @related  cf_coroutine_pop cf_coroutine_state_to_string cf_coroutine_resume
  */
 CF_API CF_Result CF_CALL cf_coroutine_push(CF_Coroutine co, const void* data, size_t size);
 
@@ -175,7 +175,7 @@ CF_API CF_Result CF_CALL cf_coroutine_push(CF_Coroutine co, const void* data, si
  * return    Returns info on any errors as `CF_Result`.
  * @remarks  Each coroutine has an internal storage of 1k (1024) bytes. The purpose is to allow a formal communication/parameter passing
  *           in/out of coroutines via FIFO ordering. These storage are totally optional, and here merely for convenience.
- * @related  CF_Coroutine CF_CoroutineFn CF_CoroutineState cf_make_coroutine cf_destroy_coroutine cf_coroutine_state_to_string cf_coroutine_resume cf_coroutine_yield cf_coroutine_state cf_coroutine_get_udata cf_coroutine_push cf_coroutine_pop cf_coroutine_bytes_pushed cf_coroutine_space_remaining cf_coroutine_currently_running
+ * @related  cf_coroutine_push cf_coroutine_state_to_string cf_coroutine_resume
  */
 CF_API CF_Result CF_CALL cf_coroutine_pop(CF_Coroutine co, void* data, size_t size);
 
@@ -186,7 +186,7 @@ CF_API CF_Result CF_CALL cf_coroutine_pop(CF_Coroutine co, void* data, size_t si
  * @param    co            The coroutine.
  * @remarks  Each coroutine has an internal storage of 1k (1024) bytes. The purpose is to allow a formal communication/parameter passing
  *           in/out of coroutines via FIFO ordering. These storage are totally optional, and here merely for convenience.
- * @related  CF_Coroutine CF_CoroutineFn CF_CoroutineState cf_make_coroutine cf_destroy_coroutine cf_coroutine_state_to_string cf_coroutine_resume cf_coroutine_yield cf_coroutine_state cf_coroutine_get_udata cf_coroutine_push cf_coroutine_pop cf_coroutine_bytes_pushed cf_coroutine_space_remaining cf_coroutine_currently_running
+ * @related  cf_coroutine_state_to_string cf_coroutine_resume cf_coroutine_yield
  */
 CF_API size_t CF_CALL cf_coroutine_bytes_pushed(CF_Coroutine co);
 
@@ -197,7 +197,7 @@ CF_API size_t CF_CALL cf_coroutine_bytes_pushed(CF_Coroutine co);
  * @param    co            The coroutine.
  * @remarks  Each coroutine has an internal storage of 1k (1024) bytes. The purpose is to allow a formal communication/parameter passing
  *           in/out of coroutines via FIFO ordering. These storage are totally optional, and here merely for convenience.
- * @related  CF_Coroutine CF_CoroutineFn CF_CoroutineState cf_make_coroutine cf_destroy_coroutine cf_coroutine_state_to_string cf_coroutine_resume cf_coroutine_yield cf_coroutine_state cf_coroutine_get_udata cf_coroutine_push cf_coroutine_pop cf_coroutine_bytes_pushed cf_coroutine_space_remaining cf_coroutine_currently_running
+ * @related  cf_coroutine_state_to_string cf_coroutine_state cf_coroutine_resume
  */
 CF_API size_t CF_CALL cf_coroutine_space_remaining(CF_Coroutine co);
 
@@ -210,7 +210,7 @@ CF_API size_t CF_CALL cf_coroutine_space_remaining(CF_Coroutine co);
  *           For example, your coroutines may call into other functions -- instead of passing around a `co` pointer everywhere,
  *           your helper functions can simply fetch the `CF_Coroutine` pointer themselves on an as-needed basis by calling
  *           this function.
- * @related  CF_Coroutine CF_CoroutineFn CF_CoroutineState cf_make_coroutine cf_destroy_coroutine cf_coroutine_state_to_string cf_coroutine_resume cf_coroutine_yield cf_coroutine_state cf_coroutine_get_udata cf_coroutine_push cf_coroutine_pop cf_coroutine_bytes_pushed cf_coroutine_space_remaining cf_coroutine_currently_running
+ * @related  cf_coroutine_state_to_string cf_coroutine_resume cf_coroutine_yield
  */
 CF_API CF_Coroutine CF_CALL cf_coroutine_currently_running(void);
 

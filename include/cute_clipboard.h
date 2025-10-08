@@ -22,7 +22,7 @@ extern "C" {
  * @function cf_clipboard_get
  * @category input
  * @brief    Returns a UTF-8 string of the clipboard contents.
- * @related  cf_clipboard_get cf_clipboard_set
+ * @related  cf_clipboard_set
  */
 CF_API char* CF_CALL cf_clipboard_get(void);
 
@@ -30,7 +30,7 @@ CF_API char* CF_CALL cf_clipboard_get(void);
  * @function cf_clipboard_set
  * @category input
  * @brief    Sets a UTF-8 string of the clipboard contents.
- * @related  cf_clipboard_get cf_clipboard_set
+ * @related  cf_clipboard_get
  */
 CF_API CF_Result CF_CALL cf_clipboard_set(const char* string);
 

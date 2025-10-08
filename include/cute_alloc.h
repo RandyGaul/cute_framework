@@ -19,7 +19,7 @@ extern "C" {
  * @category allocator
  * @brief    A simple way to allocate memory without calling `malloc` too often.
  * @remarks  Individual allocations cannot be free'd, instead the entire allocator can reset.
- * @related  CF_Allocator cf_allocator_override cf_allocator_restore_default cf_alloc cf_free cf_calloc cf_realloc
+ * @related  cf_allocator_override cf_allocator_restore_default cf_alloc
  */
 typedef struct CF_Allocator
 {
@@ -47,7 +47,7 @@ typedef struct CF_Allocator
  * @remarks  The default allocator simply calls malloc/free and friends. You may override this behavior by passing
  *           a `CF_Allocator` to this function. This lets you hook up your own custom allocator. Usually you only want
  *           to do this on certain platforms for performance optimizations, but is not a necessary thing to do for many games.
- * @related  CF_Allocator cf_allocator_override cf_allocator_restore_default cf_alloc cf_free cf_calloc cf_realloc
+ * @related  cf_allocator_restore_default cf_alloc cf_free
  */
 CF_API void CF_CALL cf_allocator_override(CF_Allocator allocator);
 
@@ -58,7 +58,7 @@ CF_API void CF_CALL cf_allocator_override(CF_Allocator allocator);
  * @remarks  The default allocator simply calls malloc/free and friends. You may override this behavior by passing
  *           a `CF_Allocator` to this function. This lets you hook up your own custom allocator. Usually you only want
  *           to do this on certain platforms for performance optimizations, but is not a necessary thing to do for many games.
- * @related  CF_Allocator cf_allocator_override cf_allocator_restore_default cf_alloc cf_free cf_calloc cf_realloc
+ * @related  cf_allocator_override cf_alloc cf_free
  */
 CF_API void CF_CALL cf_allocator_restore_default(void);
 
@@ -66,7 +66,7 @@ CF_API void CF_CALL cf_allocator_restore_default(void);
  * @function cf_alloc
  * @category allocator
  * @brief    Allocates a block of memory of `size` bytes and returns it.
- * @related  CF_Allocator cf_allocator_override cf_allocator_restore_default cf_alloc cf_free cf_calloc cf_realloc
+ * @related  cf_allocator_override cf_allocator_restore_default cf_free
  */
 CF_API void* CF_CALL cf_alloc(size_t size);
 
@@ -74,7 +74,7 @@ CF_API void* CF_CALL cf_alloc(size_t size);
  * @function cf_free
  * @category allocator
  * @brief    Frees a block of memory previously allocated by `cf_alloc`.
- * @related  CF_Allocator cf_allocator_override cf_allocator_restore_default cf_alloc cf_free cf_calloc cf_realloc
+ * @related  cf_allocator_override cf_allocator_restore_default cf_alloc
  */
 CF_API void CF_CALL cf_free(void* ptr);
 
@@ -84,7 +84,7 @@ CF_API void CF_CALL cf_free(void* ptr);
  * @brief    Allocates a block of memory `size * count` bytes in size.
  * @remarks  The memory returned is completely zero'd out. Generally this is more efficient than calling `cf_malloc` and
  *           then clearing the memory to zero yourself. Though, it's not a concern for most games.
- * @related  CF_Allocator cf_allocator_override cf_allocator_restore_default cf_alloc cf_free cf_calloc cf_realloc
+ * @related  cf_allocator_override cf_allocator_restore_default cf_alloc
  */
 CF_API void* CF_CALL cf_calloc(size_t size, size_t count);
 
@@ -94,7 +94,7 @@ CF_API void* CF_CALL cf_calloc(size_t size, size_t count);
  * @brief    Reallocates a block of memory to a new size.
  * @remarks  You must reassign your old pointer! Generally this is more efficient than calling `cf_malloc`, `cf_free`, and
  *           `CF_MEMCPY` yourself. Though, this is not a concern for most games.
- * @related  CF_Allocator cf_allocator_override cf_allocator_restore_default cf_alloc cf_free cf_calloc cf_realloc
+ * @related  cf_allocator_override cf_allocator_restore_default cf_alloc
  */
 CF_API void* CF_CALL cf_realloc(void* ptr, size_t size);
 
@@ -167,7 +167,7 @@ typedef struct CF_Arena
  * @param    arena         The arena to initialize.
  * @param    alignment     An alignment boundary, must be a power of two.
  * @param    block_size    The default size of each internal call to `malloc` to form pages to further allocate from.
- * @related  cf_arena_init cf_arena_alloc cf_arena_reset cf_arena_free
+ * @related  cf_arena_alloc cf_arena_reset cf_arena_free
  */
 CF_API CF_Arena CF_CALL cf_make_arena(int alignment, int block_size);
 
@@ -178,7 +178,7 @@ CF_API CF_Arena CF_CALL cf_make_arena(int alignment, int block_size);
  * @param    arena         The arena to allocate from.
  * @param    size          The size of the allocation, it cannot be larger than `block_size` from `cf_arena_init`.
  * @return   Returns an aligned pointer of `size` bytes.
- * @related  cf_arena_init cf_arena_alloc cf_arena_reset cf_arena_free
+ * @related  cf_arena_init cf_arena_reset cf_arena_free
  */
 CF_API void* CF_CALL cf_arena_alloc(CF_Arena* arena, int size);
 
@@ -192,7 +192,7 @@ CF_API void* CF_CALL cf_arena_alloc(CF_Arena* arena, int size);
  *           only the most recent allocation(s) can be freed. It does not support freeing allocations in 
  *           arbitrary order. Minimal error checking is performed, so only call this function if you
  *           know what you're doing, otherwise you'll get memory corruption issues.
- * @related  cf_arena_init cf_arena_alloc cf_arena_reset cf_arena_free
+ * @related  cf_arena_init cf_arena_alloc cf_arena_reset
  */
 CF_API void CF_CALL cf_arena_free(CF_Arena* arena, int ptr);
 
@@ -203,7 +203,7 @@ CF_API void CF_CALL cf_arena_free(CF_Arena* arena, int ptr);
  * @param    arena         The arena to reset.
  * @remarks  This does not free up internal resources, and will reuse all previously allocated
  *           resources to fulfill subsequent `cf_arena_alloc` calls.
- * @related  cf_arena_init cf_arena_alloc cf_arena_reset cf_arena_free
+ * @related  cf_arena_init cf_arena_alloc cf_arena_free
  */
 CF_API void CF_CALL cf_arena_reset(CF_Arena* arena);
 
@@ -212,7 +212,7 @@ CF_API void CF_CALL cf_arena_reset(CF_Arena* arena);
  * @category allocator
  * @brief    Free's up all resources used by the allocator.
  * @param    arena         The arena to free.
- * @related  cf_arena_init cf_arena_alloc cf_arena_reset cf_arena_free
+ * @related  cf_arena_init cf_arena_alloc cf_arena_reset
  */
 CF_API void CF_CALL cf_destroy_arena(CF_Arena* arena);
 
@@ -230,7 +230,7 @@ typedef struct CF_MemoryPool CF_MemoryPool;
 
  * @param    alignment      An alignment boundary, must be a power of two.
  * @return   Returns a memory pool pointer.
- * @related  cf_destroy_memory_pool cf_memory_pool_alloc cf_memory_pool_free
+ * @related  cf_memory_pool_alloc cf_memory_pool_free cf_destroy_memory_pool
  */
 CF_API CF_MemoryPool* CF_CALL cf_make_memory_pool(int element_size, int element_count, int alignment);
 
@@ -249,7 +249,7 @@ CF_API void CF_CALL cf_destroy_memory_pool(CF_MemoryPool* pool);
  * @brief    Allocates a chunk of memory from the pool. The allocation size was determined by `element_size` in `cf_make_memory_pool`.
  * @param    pool           The pool.
  * @return   Returns an aligned pointer of `size` bytes.
- * @related  cf_make_memory_pool cf_destroy_memory_pool cf_memory_pool_free
+ * @related  cf_memory_pool_free cf_make_memory_pool cf_destroy_memory_pool
  */
 CF_API void* CF_CALL cf_memory_pool_alloc(CF_MemoryPool* pool);
 
@@ -259,7 +259,7 @@ CF_API void* CF_CALL cf_memory_pool_alloc(CF_MemoryPool* pool);
  * @brief    Frees an allocation made by `cf_memory_pool_alloc`.
  * @param    pool           The pool.
  * @param    element        The pointer to deallocate.
- * @related  cf_make_memory_pool cf_destroy_memory_pool cf_memory_pool_alloc
+ * @related  cf_memory_pool_alloc cf_make_memory_pool cf_destroy_memory_pool
  */
 CF_API void CF_CALL cf_memory_pool_free(CF_MemoryPool* pool, void* element);
 

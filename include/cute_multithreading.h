@@ -24,7 +24,7 @@ extern "C" {
  * @struct   CF_Mutex
  * @category multithreading
  * @brief    An opaque handle representing a mutex.
- * @related  CF_Mutex cf_make_mutex cf_destroy_mutex cf_mutex_lock cf_mutex_unlock cf_mutex_try_lock
+ * @related  cf_mutex_lock cf_mutex_unlock cf_mutex_try_lock
  */
 typedef cute_mutex_t CF_Mutex;
 // @end
@@ -33,7 +33,7 @@ typedef cute_mutex_t CF_Mutex;
  * @struct   CF_ConditionVariable
  * @category multithreading
  * @brief    An opaque handle representing a condition variable.
- * @related  CF_ConditionVariable cf_make_cv cf_destroy_cv cf_cv_wake_all cf_cv_wake_one cf_cv_wait
+ * @related  cf_cv_wake_all cf_cv_wake_one cf_cv_wait
  */
 typedef cute_cv_t CF_ConditionVariable;
 // @end
@@ -43,7 +43,7 @@ typedef cute_cv_t CF_ConditionVariable;
  * @category atomic
  * @brief    An opaque handle representing an atomic integer.
  * @remarks  Atomics are an advanced topic. You've been warned! Beej has a [good article on atomics](https://beej.us/guide/bgc/html/split/chapter-atomics.html).
- * @related  CF_AtomicInt cf_atomic_zero cf_atomic_add cf_atomic_set cf_atomic_get cf_atomic_cas cf_atomic_ptr_set cf_atomic_ptr_get cf_atomic_ptr_cas
+ * @related  cf_atomic_zero cf_atomic_add cf_atomic_set
  */
 typedef cute_atomic_int_t CF_AtomicInt;
 // @end
@@ -52,7 +52,7 @@ typedef cute_atomic_int_t CF_AtomicInt;
  * @struct   CF_Semaphore
  * @category multithreading
  * @brief    An opaque handle representing a semaphore.
- * @related  CF_Semaphore cf_make_sem cf_destroy_sem cf_sem_post cf_sem_try cf_sem_wait cf_sem_value
+ * @related  cf_sem_post cf_sem_try cf_sem_wait
  */
 typedef cute_semaphore_t CF_Semaphore;
 // @end
@@ -61,7 +61,7 @@ typedef cute_semaphore_t CF_Semaphore;
  * @struct   CF_Thread
  * @category multithreading
  * @brief    An opaque handle representing a thread.
- * @related  CF_Thread cf_thread_create cf_thread_detach cf_thread_get_id cf_thread_id cf_thread_wait
+ * @related  cf_thread_create cf_thread_detach cf_thread_get_id
  */
 typedef cute_thread_t CF_Thread;
 // @end
@@ -70,7 +70,7 @@ typedef cute_thread_t CF_Thread;
  * @struct   CF_ThreadId
  * @category multithreading
  * @brief    An identifier of a thread.
- * @related  CF_Thread cf_thread_create cf_thread_detach cf_thread_get_id cf_thread_id cf_thread_wait
+ * @related  cf_thread_create cf_thread_detach cf_thread_get_id
  */
 typedef cute_thread_id_t CF_ThreadId;
 // @end
@@ -85,7 +85,7 @@ typedef cute_thread_id_t CF_ThreadId;
  *         // Do work here...
  *         return 0;
  *     }
- * @related  CF_Thread cf_thread_create cf_thread_detach cf_thread_get_id cf_thread_id cf_thread_wait
+ * @related  cf_thread_create cf_thread_detach cf_thread_get_id
  */
 typedef cute_thread_fn CF_ThreadFn;
 // @end
@@ -97,7 +97,7 @@ typedef cute_thread_fn CF_ThreadFn;
  * @remarks  A read/write lock can have a large number of simultaneous readers, but only one writer at a time. This can be
  *           used as an opimization where a resources can be safely read from many threads. Then, when the resource must be
  *           modified a writer can wait for all readers to leave, and then exclusively lock to perform a write update.
- * @related  CF_ReadWriteLock cf_make_rw_lock cf_destroy_rw_lock cf_read_lock cf_read_unlock cf_write_lock cf_write_unlock
+ * @related  cf_read_lock cf_read_unlock cf_make_rw_lock
  */
 typedef cute_rw_lock_t CF_ReadWriteLock;
 // @end
@@ -106,7 +106,7 @@ typedef cute_rw_lock_t CF_ReadWriteLock;
  * @struct   CF_Threadpool
  * @category multithreading
  * @brief    An opaque handle representing a threadpool.
- * @related  CF_Threadpool CF_TaskFn cf_make_threadpool cf_destroy_threadpool cf_threadpool_add_task cf_threadpool_kick_and_wait cf_threadpool_kick
+ * @related  cf_threadpool_add_task cf_threadpool_kick_and_wait cf_threadpool_kick
  */
 typedef cute_threadpool_t CF_Threadpool;
 // @end
@@ -116,7 +116,7 @@ typedef cute_threadpool_t CF_Threadpool;
  * @category multithreading
  * @brief    Returns an unlocked `CF_Mutex`.
  * @remarks  Destroy the mutex with `cf_destroy_mutex` when done.
- * @related  CF_Mutex cf_make_mutex cf_destroy_mutex cf_mutex_lock cf_mutex_unlock cf_mutex_try_lock
+ * @related  cf_mutex_lock cf_mutex_unlock cf_mutex_try_lock
  */
 CF_API CF_Mutex CF_CALL cf_make_mutex();
 
@@ -125,7 +125,7 @@ CF_API CF_Mutex CF_CALL cf_make_mutex();
  * @category multithreading
  * @brief    Destroys a `CF_Mutex` created with `cf_make_mutex`.
  * @param    mutex      The mutex.
- * @related  CF_Mutex cf_make_mutex cf_destroy_mutex cf_mutex_lock cf_mutex_unlock cf_mutex_try_lock
+ * @related  cf_make_mutex cf_mutex_lock cf_mutex_unlock
  */
 CF_API void CF_CALL cf_destroy_mutex(CF_Mutex* mutex);
 
@@ -135,7 +135,7 @@ CF_API void CF_CALL cf_destroy_mutex(CF_Mutex* mutex);
  * @brief    Locks a `CF_Mutex`.
  * @param    mutex      The mutex.
  * @remarks  Will cause the thread to wait until the lock is available if it's currently locked.
- * @related  CF_Mutex cf_make_mutex cf_destroy_mutex cf_mutex_lock cf_mutex_unlock cf_mutex_try_lock
+ * @related  cf_mutex_unlock cf_mutex_try_lock cf_make_mutex
  */
 CF_API void CF_CALL cf_mutex_lock(CF_Mutex* mutex);
 
@@ -144,7 +144,7 @@ CF_API void CF_CALL cf_mutex_lock(CF_Mutex* mutex);
  * @category multithreading
  * @brief    Unlocks a `CF_Mutex`.
  * @param    mutex      The mutex.
- * @related  CF_Mutex cf_make_mutex cf_destroy_mutex cf_mutex_lock cf_mutex_unlock cf_mutex_try_lock
+ * @related  cf_mutex_lock cf_mutex_try_lock cf_make_mutex
  */
 CF_API void CF_CALL cf_mutex_unlock(CF_Mutex* mutex);
 
@@ -154,7 +154,7 @@ CF_API void CF_CALL cf_mutex_unlock(CF_Mutex* mutex);
  * @brief    Attempts to lock a `CF_Mutex` without waiting.
  * @param    mutex      The mutex.
  * @return   Returns true if the lock was acquired, and false if the lock was already locked.
- * @related  CF_Mutex cf_make_mutex cf_destroy_mutex cf_mutex_lock cf_mutex_unlock cf_mutex_try_lock
+ * @related  cf_mutex_lock cf_mutex_unlock cf_make_mutex
  */
 CF_API bool CF_CALL cf_mutex_try_lock(CF_Mutex* mutex);
 
@@ -163,7 +163,7 @@ CF_API bool CF_CALL cf_mutex_try_lock(CF_Mutex* mutex);
  * @category multithreading
  * @brief    Returns an initialized `CF_ConditionVariable`, used to sleep or wake threads.
  * @remarks  Destroy the mutex with `cf_destroy_cv` when done.
- * @related  CF_ConditionVariable cf_make_cv cf_destroy_cv cf_cv_wake_all cf_cv_wake_one cf_cv_wait
+ * @related  cf_destroy_cv cf_cv_wake_all cf_cv_wake_one
  */
 CF_API CF_ConditionVariable CF_CALL cf_make_cv();
 
@@ -172,7 +172,7 @@ CF_API CF_ConditionVariable CF_CALL cf_make_cv();
  * @category multithreading
  * @brief    Destroys a `CF_ConditionVariable` created with `cf_make_cv`.
  * @param    cv         The condition variable.
- * @related  CF_ConditionVariable cf_make_cv cf_destroy_cv cf_cv_wake_all cf_cv_wake_one cf_cv_wait
+ * @related  cf_make_cv cf_cv_wake_all cf_cv_wake_one
  */
 CF_API void CF_CALL cf_destroy_cv(CF_ConditionVariable* cv);
 
@@ -182,7 +182,7 @@ CF_API void CF_CALL cf_destroy_cv(CF_ConditionVariable* cv);
  * @brief    Wakes all threads sleeping on the condition variable.
  * @param    cv         The condition variable.
  * @return   Returns any errors as a `CF_Result`.
- * @related  CF_ConditionVariable cf_make_cv cf_destroy_cv cf_cv_wake_all cf_cv_wake_one cf_cv_wait
+ * @related  cf_cv_wake_one cf_cv_wait cf_make_cv
  */
 CF_API CF_Result CF_CALL cf_cv_wake_all(CF_ConditionVariable* cv);
 
@@ -192,7 +192,7 @@ CF_API CF_Result CF_CALL cf_cv_wake_all(CF_ConditionVariable* cv);
  * @brief    Wakes a single (implementation-dependent) thread sleeping on the condition variable.
  * @param    cv         The condition variable.
  * @return   Returns any errors as a `CF_Result`.
- * @related  CF_ConditionVariable cf_make_cv cf_destroy_cv cf_cv_wake_all cf_cv_wake_one cf_cv_wait
+ * @related  cf_cv_wake_all cf_cv_wait cf_make_cv
  */
 CF_API CF_Result CF_CALL cf_cv_wake_one(CF_ConditionVariable* cv);
 
@@ -204,7 +204,7 @@ CF_API CF_Result CF_CALL cf_cv_wake_one(CF_ConditionVariable* cv);
  * @param    mutex      The mutex used to access the condition variable.
  * @return   Returns any errors as a `CF_Result`.
  * @remarks  The thread will not wake until `cf_cv_wake_all` or `cf_cv_wake_one` is called.
- * @related  CF_ConditionVariable cf_make_cv cf_destroy_cv cf_cv_wake_all cf_cv_wake_one cf_cv_wait
+ * @related  cf_cv_wake_all cf_cv_wake_one cf_make_cv
  */
 CF_API CF_Result CF_CALL cf_cv_wait(CF_ConditionVariable* cv, CF_Mutex* mutex);
 
@@ -217,7 +217,7 @@ CF_API CF_Result CF_CALL cf_cv_wait(CF_ConditionVariable* cv, CF_Mutex* mutex);
  *           common resources. Usually you'll have N resources, and initialize the semaphore to N. This is
  *           a rather advanced and low-level topic, beware. To learn more about semaphores I suggest reading
  *           the online book "The Little Book of Semaphores".
- * @related  CF_Semaphore cf_make_sem cf_destroy_sem cf_sem_post cf_sem_try cf_sem_wait cf_sem_value
+ * @related  cf_destroy_sem cf_sem_post cf_sem_try
  */
 CF_API CF_Semaphore CF_CALL cf_make_sem(int initial_count);
 
@@ -226,7 +226,7 @@ CF_API CF_Semaphore CF_CALL cf_make_sem(int initial_count);
  * @category multithreading
  * @brief    Destroys a `CF_Semaphore` made by `cf_make_sem`.
  * @param    semaphore  The semaphore.
- * @related  CF_Semaphore cf_make_sem cf_destroy_sem cf_sem_post cf_sem_try cf_sem_wait cf_sem_value
+ * @related  cf_make_sem cf_sem_post cf_sem_try
  */
 CF_API void CF_CALL cf_destroy_sem(CF_Semaphore* semaphore);
 
@@ -238,7 +238,7 @@ CF_API void CF_CALL cf_destroy_sem(CF_Semaphore* semaphore);
  * @remarks  As other threads call `cf_sem_try` or `cf_sem_wait` they decrement the semaphore's counter. Eventually
  *           the counter will become zero, causing additional threads to wait (sleep). When the resources become
  *           available again, this function is used to wake one up.
- * @related  CF_Semaphore cf_make_sem cf_destroy_sem cf_sem_post cf_sem_try cf_sem_wait cf_sem_value
+ * @related  cf_sem_try cf_sem_wait cf_sem_value
  */
 CF_API CF_Result CF_CALL cf_sem_post(CF_Semaphore* semaphore);
 
@@ -251,7 +251,7 @@ CF_API CF_Result CF_CALL cf_sem_post(CF_Semaphore* semaphore);
  *           be returned. Success is returned if the semaphore was successfully acquired and the counter was decremented.
  * @remarks  Since this function does not block/sleep, it allows the thread to continue running, even if the return
  *           value was an error. This lets a thread poll the semaphore instead of blocking/sleeping.
- * @related  CF_Semaphore cf_make_sem cf_destroy_sem cf_sem_post cf_sem_try cf_sem_wait cf_sem_value
+ * @related  cf_sem_post cf_sem_wait cf_sem_value
  */
 CF_API CF_Result CF_CALL cf_sem_try(CF_Semaphore* semaphore);
 
@@ -263,7 +263,7 @@ CF_API CF_Result CF_CALL cf_sem_try(CF_Semaphore* semaphore);
  * @return   Returns any errors upon failure.
  * @remarks  The calling thread will sleep until the semaphore's counter is positive. When positive, the counter will be
  *           decremented once.
- * @related  CF_Semaphore cf_make_sem cf_destroy_sem cf_sem_post cf_sem_try cf_sem_wait cf_sem_value
+ * @related  cf_sem_post cf_sem_try cf_sem_value
  */
 CF_API CF_Result CF_CALL cf_sem_wait(CF_Semaphore* semaphore);
 
@@ -273,7 +273,7 @@ CF_API CF_Result CF_CALL cf_sem_wait(CF_Semaphore* semaphore);
  * @brief    Atomically fetches the semaphore's counter.
  * @param    semaphore  The semaphore.
  * @return   Returns any errors upon failure.
- * @related  CF_Semaphore cf_make_sem cf_destroy_sem cf_sem_post cf_sem_try cf_sem_wait cf_sem_value
+ * @related  cf_sem_post cf_sem_try cf_sem_wait
  */
 CF_API CF_Result CF_CALL cf_sem_value(CF_Semaphore* semaphore);
 
@@ -293,7 +293,7 @@ CF_API CF_Result CF_CALL cf_sem_value(CF_Semaphore* semaphore);
  *     }
  * @remarks  Unless you call `cf_thread_detach` you should call `cf_thread_wait` from another thread to
  *           clean up resources and get the thread's return value back. It is considered a leak otherwise.
- * @related  CF_Thread CF_ThreadFn cf_thread_create cf_thread_detach cf_thread_get_id cf_thread_id cf_thread_wait
+ * @related  cf_thread_detach cf_thread_get_id cf_thread_id
  */
 CF_API CF_Thread* CF_CALL cf_thread_create(CF_ThreadFn func, const char* name, void* udata);
 
@@ -304,7 +304,7 @@ CF_API CF_Thread* CF_CALL cf_thread_create(CF_ThreadFn func, const char* name, v
  *           for long-lived threads.
  * @param    thread  The thread.
  * @remarks  When a thread has `cf_thread_detach` called on it, it is no longer necessary to call `cf_thread_wait` on it.
- * @related  CF_Thread CF_ThreadFn cf_thread_create cf_thread_detach cf_thread_get_id cf_thread_id cf_thread_wait
+ * @related  cf_thread_create cf_thread_get_id cf_thread_id
  */
 CF_API void CF_CALL cf_thread_detach(CF_Thread* thread);
 
@@ -313,7 +313,7 @@ CF_API void CF_CALL cf_thread_detach(CF_Thread* thread);
  * @category multithreading
  * @brief    Returns the unique id of a thread.
  * @param    thread  The thread.
- * @related  CF_Thread CF_ThreadFn cf_thread_create cf_thread_detach cf_thread_get_id cf_thread_id cf_thread_wait
+ * @related  cf_thread_create cf_thread_detach cf_thread_id
  */
 CF_API CF_ThreadId CF_CALL cf_thread_get_id(CF_Thread* thread);
 
@@ -322,7 +322,7 @@ CF_API CF_ThreadId CF_CALL cf_thread_get_id(CF_Thread* thread);
  * @category multithreading
  * @brief    Returns the unique id of the calling thread.
  * @param    thread  The thread.
- * @related  CF_Thread CF_ThreadFn cf_thread_create cf_thread_detach cf_thread_get_id cf_thread_id cf_thread_wait
+ * @related  cf_thread_create cf_thread_detach cf_thread_get_id
  */
 CF_API CF_ThreadId CF_CALL cf_thread_id();
 
@@ -333,7 +333,7 @@ CF_API CF_ThreadId CF_CALL cf_thread_id();
  * @param    thread  The thread.
  * @remarks  It is invalid to call this function on a detached thread (see `cf_thread_detach`). It is invalid to
  *           call this function on a thread more than once.
- * @related  CF_Thread CF_ThreadFn cf_thread_create cf_thread_detach cf_thread_get_id cf_thread_id cf_thread_wait
+ * @related  cf_thread_create cf_thread_detach cf_thread_get_id
  */
 CF_API CF_Result CF_CALL cf_thread_wait(CF_Thread* thread);
 
@@ -341,7 +341,7 @@ CF_API CF_Result CF_CALL cf_thread_wait(CF_Thread* thread);
  * @function cf_core_count
  * @category CPU
  * @brief    Returns the number of cores on the CPU. Can be affected my machine dependent technology, such as Intel's hyperthreading.
- * @related  cf_core_count
+ * @related  cf_cacheline_size
  */
 CF_API int CF_CALL cf_core_count();
 
@@ -358,7 +358,7 @@ CF_API int CF_CALL cf_cacheline_size();
  * @category atomic
  * @brief    Returns an atomic integer of value zero.
  * @remarks  Atomics are an advanced topic. You've been warned!
- * @related  cf_atomic_zero cf_atomic_add cf_atomic_set cf_atomic_get cf_atomic_cas cf_atomic_ptr_set cf_atomic_ptr_get cf_atomic_ptr_cas
+ * @related  cf_atomic_add cf_atomic_set cf_atomic_get
  */
 CF_API CF_AtomicInt CF_CALL cf_atomic_zero();
 
@@ -369,7 +369,7 @@ CF_API CF_AtomicInt CF_CALL cf_atomic_zero();
  * @param    atomic     The integer to atomically manipulate.
  * @param    addend     A value to atomically add to `atomic`.
  * @remarks  Atomics are an advanced topic. You've been warned! Beej has a [good article on atomics](https://beej.us/guide/bgc/html/split/chapter-atomics.html).
- * @related  cf_atomic_zero cf_atomic_add cf_atomic_set cf_atomic_get cf_atomic_cas cf_atomic_ptr_set cf_atomic_ptr_get cf_atomic_ptr_cas
+ * @related  cf_atomic_zero cf_atomic_set cf_atomic_get
  */
 CF_API int CF_CALL cf_atomic_add(CF_AtomicInt* atomic, int addend);
 
@@ -380,7 +380,7 @@ CF_API int CF_CALL cf_atomic_add(CF_AtomicInt* atomic, int addend);
  * @param    atomic     The integer to atomically manipulate.
  * @param    value      A value to atomically set to `atomic`.
  * @remarks  Atomics are an advanced topic. You've been warned! Beej has a [good article on atomics](https://beej.us/guide/bgc/html/split/chapter-atomics.html).
- * @related  cf_atomic_zero cf_atomic_add cf_atomic_set cf_atomic_get cf_atomic_cas cf_atomic_ptr_set cf_atomic_ptr_get cf_atomic_ptr_cas
+ * @related  cf_atomic_zero cf_atomic_add cf_atomic_get
  */
 CF_API int CF_CALL cf_atomic_set(CF_AtomicInt* atomic, int value);
 
@@ -390,7 +390,7 @@ CF_API int CF_CALL cf_atomic_set(CF_AtomicInt* atomic, int value);
  * @brief    Atomically fetches the value at `atomic`.
  * @param    atomic     The integer to fetch from.
  * @remarks  Atomics are an advanced topic. You've been warned! Beej has a [good article on atomics](https://beej.us/guide/bgc/html/split/chapter-atomics.html).
- * @related  cf_atomic_zero cf_atomic_add cf_atomic_set cf_atomic_get cf_atomic_cas cf_atomic_ptr_set cf_atomic_ptr_get cf_atomic_ptr_cas
+ * @related  cf_atomic_zero cf_atomic_add cf_atomic_set
  */
 CF_API int CF_CALL cf_atomic_get(CF_AtomicInt* atomic);
 
@@ -403,7 +403,7 @@ CF_API int CF_CALL cf_atomic_get(CF_AtomicInt* atomic);
  * @param    value      A value to atomically set to `atomic`.
  * @return   Returns success if the value was set, error otherwise.
  * @remarks  Atomics are an advanced topic. You've been warned! Beej has a [good article on atomics](https://beej.us/guide/bgc/html/split/chapter-atomics.html).
- * @related  cf_atomic_zero cf_atomic_add cf_atomic_set cf_atomic_get cf_atomic_cas cf_atomic_ptr_set cf_atomic_ptr_get cf_atomic_ptr_cas
+ * @related  cf_atomic_zero cf_atomic_add cf_atomic_set
  */
 CF_API CF_Result CF_CALL cf_atomic_cas(CF_AtomicInt* atomic, int expected, int value);
 
@@ -414,7 +414,7 @@ CF_API CF_Result CF_CALL cf_atomic_cas(CF_AtomicInt* atomic, int expected, int v
  * @param    atomic     The pointer to atomically manipulate.
  * @param    value      A value to atomically set to `atomic`.
  * @remarks  Atomics are an advanced topic. You've been warned! Beej has a [good article on atomics](https://beej.us/guide/bgc/html/split/chapter-atomics.html).
- * @related  cf_atomic_zero cf_atomic_add cf_atomic_set cf_atomic_get cf_atomic_cas cf_atomic_ptr_set cf_atomic_ptr_get cf_atomic_ptr_cas
+ * @related  cf_atomic_ptr_get cf_atomic_ptr_cas cf_atomic_zero
  */
 CF_API void* CF_CALL cf_atomic_ptr_set(void** atomic, void* value);
 
@@ -424,7 +424,7 @@ CF_API void* CF_CALL cf_atomic_ptr_set(void** atomic, void* value);
  * @brief    Atomically fetches the value at `atomic`.
  * @param    atomic    The pointer to fetch from.
  * @remarks  Atomics are an advanced topic. You've been warned! Beej has a [good article on atomics](https://beej.us/guide/bgc/html/split/chapter-atomics.html).
- * @related  cf_atomic_zero cf_atomic_add cf_atomic_set cf_atomic_get cf_atomic_cas cf_atomic_ptr_set cf_atomic_ptr_get cf_atomic_ptr_cas
+ * @related  cf_atomic_ptr_set cf_atomic_ptr_cas cf_atomic_zero
  */
 CF_API void* CF_CALL cf_atomic_ptr_get(void** atomic);
 
@@ -437,7 +437,7 @@ CF_API void* CF_CALL cf_atomic_ptr_get(void** atomic);
  * @param    value      A value to atomically set to `atomic`.
  * @return   Returns success if the value was set, error otherwise.
  * @remarks  Atomics are an advanced topic. You've been warned! Beej has a [good article on atomics](https://beej.us/guide/bgc/html/split/chapter-atomics.html).
- * @related  cf_atomic_zero cf_atomic_add cf_atomic_set cf_atomic_get cf_atomic_cas cf_atomic_ptr_set cf_atomic_ptr_get cf_atomic_ptr_cas
+ * @related  cf_atomic_ptr_set cf_atomic_ptr_get cf_atomic_zero
  */
 CF_API CF_Result CF_CALL cf_atomic_ptr_cas(void** atomic, void* expected, void* value);
 
@@ -446,7 +446,7 @@ CF_API CF_Result CF_CALL cf_atomic_ptr_cas(void** atomic, void* expected, void* 
  * @category multithreading
  * @brief    Returns an unlocked `CF_ReadWriteLock` lock.
  * @remarks  Call `cf_destroy_rw_lock` when done.
- * @related  CF_ReadWriteLock cf_make_rw_lock cf_destroy_rw_lock cf_read_lock cf_read_unlock cf_write_lock cf_write_unlock
+ * @related  cf_destroy_rw_lock cf_read_lock cf_read_unlock
  */
 CF_API CF_ReadWriteLock CF_CALL cf_make_rw_lock();
 
@@ -455,7 +455,7 @@ CF_API CF_ReadWriteLock CF_CALL cf_make_rw_lock();
  * @category multithreading
  * @brief    Destroys a `CF_ReadWriteLock` made from `cf_make_rw_lock`.
  * @param    rw         The read/write lock.
- * @related  CF_ReadWriteLock cf_make_rw_lock cf_destroy_rw_lock cf_read_lock cf_read_unlock cf_write_lock cf_write_unlock
+ * @related  cf_make_rw_lock cf_read_lock cf_read_unlock
  */
 CF_API void CF_CALL cf_destroy_rw_lock(CF_ReadWriteLock* rw);
 
@@ -464,7 +464,7 @@ CF_API void CF_CALL cf_destroy_rw_lock(CF_ReadWriteLock* rw);
  * @category multithreading
  * @brief    Locks for reading. Many simultaneous readers are allowed.
  * @param    rw         The read/write lock.
- * @related  CF_ReadWriteLock cf_make_rw_lock cf_destroy_rw_lock cf_read_lock cf_read_unlock cf_write_lock cf_write_unlock
+ * @related  cf_read_unlock cf_make_rw_lock cf_destroy_rw_lock
  */
 CF_API void CF_CALL cf_read_lock(CF_ReadWriteLock* rw);
 
@@ -473,7 +473,7 @@ CF_API void CF_CALL cf_read_lock(CF_ReadWriteLock* rw);
  * @category multithreading
  * @brief    Undoes one call to `cf_read_lock`.
  * @param    rw         The read/write lock.
- * @related  CF_ReadWriteLock cf_make_rw_lock cf_destroy_rw_lock cf_read_lock cf_read_unlock cf_write_lock cf_write_unlock
+ * @related  cf_read_lock cf_make_rw_lock cf_destroy_rw_lock
  */
 CF_API void CF_CALL cf_read_unlock(CF_ReadWriteLock* rw);
 
@@ -484,7 +484,7 @@ CF_API void CF_CALL cf_read_unlock(CF_ReadWriteLock* rw);
  * @param    rw         The read/write lock.
  * @remarks  When locked for writing, only one writer can be present with no readers. The writer will sleep/wait for all other
  *           readers and writers to unlock before acquiring exclusive access to the lock.
- * @related  CF_ReadWriteLock cf_make_rw_lock cf_destroy_rw_lock cf_read_lock cf_read_unlock cf_write_lock cf_write_unlock
+ * @related  cf_write_unlock cf_make_rw_lock cf_destroy_rw_lock
  */
 CF_API void CF_CALL cf_write_lock(CF_ReadWriteLock* rw);
 
@@ -495,7 +495,7 @@ CF_API void CF_CALL cf_write_lock(CF_ReadWriteLock* rw);
  * @param    rw         The read/write lock.
  * @remarks  When locked for writing, only one writer can be present with no readers. The writer will sleep/wait for all other
  *           readers and writers to unlock before acquiring exclusive access to the lock.
- * @related  CF_ReadWriteLock cf_make_rw_lock cf_destroy_rw_lock cf_read_lock cf_read_unlock cf_write_lock cf_write_unlock
+ * @related  cf_write_lock cf_make_rw_lock cf_destroy_rw_lock
  */
 CF_API void CF_CALL cf_write_unlock(CF_ReadWriteLock* rw);
 
@@ -507,7 +507,7 @@ CF_API void CF_CALL cf_write_unlock(CF_ReadWriteLock* rw);
  * @remarks  Threadpools are an advanced topic. You've been warned! John has a [good article on threadpools](https://nachtimwald.com/2019/04/12/thread-pool-in-c/).
  *           A task is a single function that a thread in the threadpool will run. Usually they perform one chunk of work, and then
  *           return. Often a task is defined as a bunch of processing that doesn't share any data external to the task.
- * @related  CF_TaskFn cf_make_threadpool cf_destroy_threadpool cf_threadpool_add_task cf_threadpool_kick_and_wait cf_threadpool_kick
+ * @related  cf_threadpool_add_task cf_threadpool_kick_and_wait cf_threadpool_kick
  */
 typedef void (CF_CALL CF_TaskFn)(void* param);
 
@@ -520,7 +520,7 @@ typedef void (CF_CALL CF_TaskFn)(void* param);
  *           into the threadpool (see: `CF_TaskFn`). Once the task is completed, the thread attempts to fetch another task. If no more
  *           tasks are available, the thread goes back to sleep. A common tactic is to take the number of cores in a given CPU and
  *           subtract one, then use this number for `thread_count`. We subtract one to account for the main thread.
- * @related  CF_TaskFn cf_make_threadpool cf_destroy_threadpool cf_threadpool_add_task cf_threadpool_kick_and_wait cf_threadpool_kick
+ * @related  cf_destroy_threadpool cf_threadpool_add_task cf_threadpool_kick_and_wait
  */
 CF_API CF_Threadpool* CF_CALL cf_make_threadpool(int thread_count);
 
@@ -529,7 +529,7 @@ CF_API CF_Threadpool* CF_CALL cf_make_threadpool(int thread_count);
  * @category multithreading
  * @brief    Destroys a `CF_Threadpool` created by `cf_make_threadpool`.
  * @param    pool       The pool.
- * @related  CF_TaskFn cf_make_threadpool cf_destroy_threadpool cf_threadpool_add_task cf_threadpool_kick_and_wait cf_threadpool_kick
+ * @related  cf_make_threadpool cf_threadpool_add_task cf_threadpool_kick_and_wait
  */
 CF_API void CF_CALL cf_destroy_threadpool(CF_Threadpool* pool);
 
@@ -542,7 +542,7 @@ CF_API void CF_CALL cf_destroy_threadpool(CF_Threadpool* pool);
  * @param    param      Can be `NULL`. This gets handed to the `CF_TaskFn` when it gets called.
  * @remarks  Once a task is added to the pool `cf_threadpool_kick_and_wait` or `cf_threadpool_kick` must be called wake threads. Once
  *           awake, threads will process the tasks. The order of start/finish for the tasks is not deterministic.
- * @related  CF_TaskFn cf_make_threadpool cf_destroy_threadpool cf_threadpool_add_task cf_threadpool_kick_and_wait cf_threadpool_kick
+ * @related  cf_threadpool_kick_and_wait cf_threadpool_kick cf_make_threadpool
  */
 CF_API void CF_CALL cf_threadpool_add_task(CF_Threadpool* pool, CF_TaskFn* task, void* param);
 
@@ -552,7 +552,7 @@ CF_API void CF_CALL cf_threadpool_add_task(CF_Threadpool* pool, CF_TaskFn* task,
  * @brief    Tells the internal threads to wake and start processing tasks, and blocks until all tasks are done.
  * @param    pool       The pool.
  * @remarks  This function will block until all tasks are completed.
- * @related  CF_TaskFn cf_make_threadpool cf_destroy_threadpool cf_threadpool_add_task cf_threadpool_kick_and_wait cf_threadpool_kick
+ * @related  cf_threadpool_kick cf_threadpool_add_task cf_make_threadpool
  */
 CF_API void CF_CALL cf_threadpool_kick_and_wait(CF_Threadpool* pool);
 
@@ -562,7 +562,7 @@ CF_API void CF_CALL cf_threadpool_kick_and_wait(CF_Threadpool* pool);
  * @brief    Tells the internal threads to wake and start processing tasks without blocking.
  * @param    pool       The pool.
  * @remarks  This function will _not_ block. It immediately returns after signaling the threads in the pool to wake.
- * @related  CF_TaskFn cf_make_threadpool cf_destroy_threadpool cf_threadpool_add_task cf_threadpool_kick_and_wait cf_threadpool_kick
+ * @related  cf_threadpool_kick_and_wait cf_threadpool_add_task cf_make_threadpool
  */
 CF_API void CF_CALL cf_threadpool_kick(CF_Threadpool* pool);
 

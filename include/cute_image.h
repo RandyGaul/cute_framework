@@ -26,7 +26,7 @@ extern "C" {
  * @remarks  You probably do not need this. In Cute Framework loading images manually is not often
  *           necessary, as most games can use CF's [Draw API](https://randygaul.github.io/cute_framework/topics/drawing) to get sprites onto the screen.
  *           However, a good use case is, for example, if you want to implement some custom shader and feed it a texture.
- * @related  CF_Image CF_ImageIndexed cf_image_load_png cf_image_premultiply
+ * @related  cf_image_load_png cf_image_premultiply CF_ImageIndexed
  */
 typedef struct CF_Image
 {
@@ -48,7 +48,7 @@ typedef struct CF_Image
  * @remarks  You probably do not need this. In Cute Framework loading images manually is not often
  *           necessary, as most games can use CF's [Draw API](https://randygaul.github.io/cute_framework/topics/drawing) to get sprites onto the screen.
  *           However, a good use case is, for example, if you want to implement some custom shader and feed it a texture.
- * @related  CF_Image CF_ImageIndexed cf_image_load_png
+ * @related  cf_image_load_png CF_Image
  */
 typedef struct CF_ImageIndexed
 {
@@ -79,7 +79,7 @@ typedef struct CF_ImageIndexed
  * @param    virtual_path  A virtual path to the image file. See [Virtual File System](https://randygaul.github.io/cute_framework/topics/virtual_file_system).
  * @param    img           Out parameter for the image.
  * @return   Check the `CF_Result` for errors.
- * @related  CF_Image cf_image_load_png cf_image_free cf_image_load_png_from_memory cf_image_load_png_wh cf_image_load_png_indexed cf_image_premultiply
+ * @related  cf_image_load_png_from_memory cf_image_load_png_wh cf_image_load_png_indexed
  */
 CF_API CF_Result CF_CALL cf_image_load_png(const char* virtual_path, CF_Image* img);
 
@@ -91,7 +91,7 @@ CF_API CF_Result CF_CALL cf_image_load_png(const char* virtual_path, CF_Image* i
  * @param    size          The number of bytes in the `data` pointer.
  * @param    img           Out parameter for the image.
  * @return   Check the `CF_Result` for errors.
- * @related  CF_Image cf_image_load_png cf_image_load_png_from_memory cf_image_load_png_wh cf_image_load_png_indexed cf_image_premultiply
+ * @related  cf_image_load_png_wh cf_image_load_png_indexed cf_image_load_png
  */
 CF_API CF_Result CF_CALL cf_image_load_png_from_memory(const void* data, int size, CF_Image* img);
 
@@ -104,7 +104,7 @@ CF_API CF_Result CF_CALL cf_image_load_png_from_memory(const void* data, int siz
  * @param    w             Out parameter for the width of the image.
  * @param    h             Out parameter for the height of the image.
  * @return   Check the `CF_Result` for errors.
- * @related  CF_Image cf_image_load_png cf_image_load_png_from_memory cf_image_load_png_wh cf_image_load_png_indexed cf_image_premultiply
+ * @related  cf_image_load_png_from_memory cf_image_load_png_indexed cf_image_load_png
  */
 CF_API CF_Result CF_CALL cf_image_load_png_wh(const void* data, int size, int* w, int* h);
 
@@ -114,7 +114,7 @@ CF_API CF_Result CF_CALL cf_image_load_png_wh(const void* data, int size, int* w
  * @brief    Frees a png image.
  * @param    img           The image to free.
  * @return   Check the `CF_Result` for errors.
- * @related  CF_Image cf_image_load_png cf_image_free cf_image_load_png_from_memory cf_image_load_png_wh cf_image_load_png_indexed cf_image_premultiply
+ * @related  cf_image_load_png cf_image_load_png_from_memory cf_image_load_png_wh
  */
 CF_API void CF_CALL cf_image_free(CF_Image* img);
 
@@ -125,7 +125,7 @@ CF_API void CF_CALL cf_image_free(CF_Image* img);
  * @param    virtual_path  A virtual path to the image file. See [Virtual File System](https://randygaul.github.io/cute_framework/topics/virtual_file_system).
  * @param    img           Out parameter for the image.
  * @return   Check the `CF_Result` for errors.
- * @related  CF_ImageIndexed cf_image_load_png_indexed cf_image_load_png_from_memory_indexed cf_image_free_indexed cf_image_depallete
+ * @related  cf_image_load_png_from_memory_indexed cf_image_free_indexed cf_image_depallete
  */
 CF_API CF_Result CF_CALL cf_image_load_png_indexed(const char* virtual_path, CF_ImageIndexed* img);
 
@@ -137,7 +137,7 @@ CF_API CF_Result CF_CALL cf_image_load_png_indexed(const char* virtual_path, CF_
  * @param    size          The number of bytes in the `data` pointer.
  * @param    img           Out parameter for the image.
  * @return   Check the `CF_Result` for errors.
- * @related  CF_ImageIndexed cf_image_load_png_indexed cf_image_load_png_from_memory_indexed cf_image_free_indexed cf_image_depallete
+ * @related  cf_image_load_png_indexed cf_image_free_indexed cf_image_depallete
  */
 CF_API CF_Result CF_CALL cf_image_load_png_from_memory_indexed(const void* data, int size, CF_ImageIndexed* img);
 
@@ -147,7 +147,7 @@ CF_API CF_Result CF_CALL cf_image_load_png_from_memory_indexed(const void* data,
  * @brief    Frees an indexed png image.
  * @param    img           The image to free.
  * @return   Check the `CF_Result` for errors.
- * @related  CF_ImageIndexed cf_image_load_png_indexed cf_image_load_png_from_memory_indexed cf_image_free_indexed cf_image_depallete
+ * @related  cf_image_load_png_indexed cf_image_load_png_from_memory_indexed cf_image_depallete
  */
 CF_API void CF_CALL cf_image_free_indexed(CF_ImageIndexed* img);
 
@@ -160,7 +160,7 @@ CF_API void CF_CALL cf_image_free_indexed(CF_ImageIndexed* img);
  * @brief    Converts a paletted image to a typical image with an array of pixels.
  * @param    img           The image to depalette.
  * @return   Returns an image without a palette.
- * @related  CF_Image CF_ImageIndexed cf_image_load_png_indexed
+ * @related  cf_image_load_png_indexed CF_Image CF_ImageIndexed
  */
 CF_API CF_Image CF_CALL cf_image_depallete(CF_ImageIndexed* img);
 
@@ -189,7 +189,7 @@ CF_API void CF_CALL cf_image_flip_horizontal(CF_Image* img);
  * @brief    Saves out greyscale image to a png file on disk.
  * @remarks  Does *not* use the virtual file system. Instead it uses plain old platform-dependent path notation. This
  *           function is not really optimized whatsoever and outputs poorly compressed file sizes.
- * @related  CF_Image cf_debug_dump_greyscale_pixels cf_debug_dump_pixels
+ * @related  cf_debug_dump_pixels CF_Image
  */
 CF_API void CF_CALL cf_debug_dump_greyscale_pixels(const char* path, uint8_t* pixels, int w, int h);
 
@@ -199,7 +199,7 @@ CF_API void CF_CALL cf_debug_dump_greyscale_pixels(const char* path, uint8_t* pi
  * @brief    Saves out an image to a png file on disk.
  * @remarks  Does *not* use the virtual file system. Instead it uses plain old platform-dependent path notation. This
  *           function is not really optimized whatsoever and outputs poorly compressed file sizes.
- * @related  CF_Image cf_debug_dump_greyscale_pixels cf_debug_dump_pixels
+ * @related  cf_debug_dump_greyscale_pixels CF_Image
  */
 CF_API void CF_CALL cf_debug_dump_pixels(const char* path, CF_Pixel* pixels, int w, int h);
 

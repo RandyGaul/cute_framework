@@ -28,7 +28,7 @@ extern "C" {
  *           
  *           This implementation comes from Mattias Gustavsson's single-file header collection.
  *           https://github.com/mattiasgustavsson/libs/blob/main/rnd.h
- * @related  CF_Rnd cf_rnd_seed cf_rnd
+ * @related  cf_rnd_seed cf_rnd
  */
 typedef struct CF_Rnd
 {
@@ -44,7 +44,7 @@ typedef struct CF_Rnd
  * @param    seed         The initial seed value for the random number generator.
  * @remarks  The `seed` is used to control which set of random numbers get generated. The numbers are generated in a completely
  *           deterministic way, so it's often important for many games to control or note which seed is used.
- * @related  CF_Rnd cf_rnd_seed cf_rnd
+ * @related  cf_rnd CF_Rnd
  */
 CF_INLINE CF_Rnd CF_CALL cf_rnd_seed(uint64_t seed);
 
@@ -53,7 +53,7 @@ CF_INLINE CF_Rnd CF_CALL cf_rnd_seed(uint64_t seed);
  * @category random
  * @brief    Returns a random `uint64_t`.
  * @param    rnd          The random number generator state.
- * @related  CF_Rnd cf_rnd_seed cf_rnd cf_rnd_float cf_rnd_double cf_rnd_range_int cf_rnd_range_uint64 cf_rnd_range_float cf_rnd_range_double
+ * @related  cf_rnd_seed cf_rnd_float cf_rnd_double
  */
 CF_INLINE uint64_t CF_CALL cf_rnd_uint64(CF_Rnd* rnd);
 
@@ -62,7 +62,7 @@ CF_INLINE uint64_t CF_CALL cf_rnd_uint64(CF_Rnd* rnd);
  * @category random
  * @brief    Returns a random `float`.
  * @param    rnd          The random number generator state.
- * @related  CF_Rnd cf_rnd_seed cf_rnd cf_rnd_float cf_rnd_double cf_rnd_range_int cf_rnd_range_uint64 cf_rnd_range_float cf_rnd_range_double
+ * @related  cf_rnd_seed cf_rnd_double cf_rnd_range_int
  */
 CF_INLINE float    CF_CALL cf_rnd_float(CF_Rnd* rnd);
 
@@ -71,7 +71,7 @@ CF_INLINE float    CF_CALL cf_rnd_float(CF_Rnd* rnd);
  * @category random
  * @brief    Returns a random `double`.
  * @param    rnd          The random number generator state.
- * @related  CF_Rnd cf_rnd_seed cf_rnd cf_rnd_float cf_rnd_double cf_rnd_range_int cf_rnd_range_uint64 cf_rnd_range_float cf_rnd_range_double
+ * @related  cf_rnd_seed cf_rnd_float cf_rnd_range_int
  */
 CF_INLINE double   CF_CALL cf_rnd_double(CF_Rnd* rnd);
 
@@ -80,7 +80,7 @@ CF_INLINE double   CF_CALL cf_rnd_double(CF_Rnd* rnd);
  * @category random
  * @brief    Returns a random `int` from the range `min` to `max` (inclusive).
  * @param    rnd          The random number generator state.
- * @related  CF_Rnd cf_rnd_seed cf_rnd cf_rnd_float cf_rnd_double cf_rnd_range_int cf_rnd_range_uint64 cf_rnd_range_float cf_rnd_range_double
+ * @related  cf_rnd_range_uint64 cf_rnd_range_float cf_rnd_range_double
  */
 CF_INLINE int      CF_CALL cf_rnd_range_int(CF_Rnd* rnd, int min, int max);
 
@@ -89,7 +89,7 @@ CF_INLINE int      CF_CALL cf_rnd_range_int(CF_Rnd* rnd, int min, int max);
  * @category random
  * @brief    Returns a random `uint64_t` from the range `min` to `max` (inclusive).
  * @param    rnd          The random number generator state.
- * @related  CF_Rnd cf_rnd_seed cf_rnd cf_rnd_float cf_rnd_double cf_rnd_range_int cf_rnd_range_uint64 cf_rnd_range_float cf_rnd_range_double
+ * @related  cf_rnd_range_int cf_rnd_range_float cf_rnd_range_double
  */
 CF_INLINE uint64_t CF_CALL cf_rnd_range_uint64(CF_Rnd* rnd, uint64_t min, uint64_t max);
 
@@ -98,7 +98,7 @@ CF_INLINE uint64_t CF_CALL cf_rnd_range_uint64(CF_Rnd* rnd, uint64_t min, uint64
  * @category random
  * @brief    Returns a random `float` from the range `min` to `max` (inclusive).
  * @param    rnd          The random number generator state.
- * @related  CF_Rnd cf_rnd_seed cf_rnd cf_rnd_float cf_rnd_double cf_rnd_range_int cf_rnd_range_uint64 cf_rnd_range_float cf_rnd_range_double
+ * @related  cf_rnd_range_int cf_rnd_range_uint64 cf_rnd_range_double
  */
 CF_INLINE float    CF_CALL cf_rnd_range_float(CF_Rnd* rnd, float min, float max);
 
@@ -107,7 +107,7 @@ CF_INLINE float    CF_CALL cf_rnd_range_float(CF_Rnd* rnd, float min, float max)
  * @category random
  * @brief    Returns a random `double` from the range `min` to `max` (inclusive).
  * @param    rnd          The random number generator state.
- * @related  CF_Rnd cf_rnd_seed cf_rnd cf_rnd_float cf_rnd_double cf_rnd_range_int cf_rnd_range_uint64 cf_rnd_range_float cf_rnd_range_double
+ * @related  cf_rnd_range_int cf_rnd_range_uint64 cf_rnd_range_float
  */
 CF_INLINE double   CF_CALL cf_rnd_range_double(CF_Rnd* rnd, double min, double max);
 

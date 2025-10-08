@@ -24,7 +24,7 @@ typedef void CF_SharedLibrary;
  * @return   Returns `NULL` in the case of errors, and can be unloaded by calling `unload_shared_library`.
  * @remarks  Does not use the virtual file system. Once loaded, individual functions can be loaded from the shared
  *           library be called `cf_load_function`. See [Virtual File System](https://randygaul.github.io/cute_framework/topics/virtual_file_system).
- * @related  cf_load_shared_library cf_unload_shared_library cf_load_function
+ * @related  cf_load_function cf_unload_shared_library
  */
 CF_API CF_SharedLibrary* CF_CALL cf_load_shared_library(const char* path);
 
@@ -33,7 +33,7 @@ CF_API CF_SharedLibrary* CF_CALL cf_load_shared_library(const char* path);
  * @category utility
  * @brief    Unloads a shared library previously loaded with `load_shared_library`.
  * @param    library      A library of functions from `load_shared_library`.
- * @related  cf_load_shared_library cf_unload_shared_library cf_load_function
+ * @related  cf_load_shared_library cf_load_function
  */
 CF_API void cf_unload_shared_library(CF_SharedLibrary* library);
 
@@ -45,7 +45,7 @@ CF_API void cf_unload_shared_library(CF_SharedLibrary* library);
  * @param    function_name  The name of the function.
  * @remarks  The function pointer is not valid after calling `unload_shared_library`. After obtaining the function pointer with `load_function`
  *           you must typecast it yourself. Returns `NULL` in the case of errors.
- * @related  cf_load_shared_library cf_unload_shared_library cf_load_function
+ * @related  cf_load_shared_library cf_unload_shared_library
  */
 CF_API void* cf_load_function(CF_SharedLibrary* library, const char* function_name);
 

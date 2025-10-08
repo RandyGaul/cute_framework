@@ -21,7 +21,7 @@ extern "C" {
  * @struct   CF_DELTA_TIME
  * @category time
  * @brief    The `dt` or elapsed time from the previous two frames. Use this as an estimate to advance your current frame.
- * @related  CF_DELTA_TIME cf_update_time CF_OnUpdateFn
+ * @related  cf_update_time CF_OnUpdateFn
  */
 CF_API extern float CF_DELTA_TIME;
 // @end
@@ -33,7 +33,7 @@ CF_API extern float CF_DELTA_TIME;
  * @remarks  To turn on fixed-timestep use `cf_set_fixed_timestep`. Fixed timestep is useful when games need determinism. Determinism
  *           means given the same inputs, the exact same outputs are produced. This is especially important for networked games, or
  *           games that require extreme precision and fine-tuning (such as certain fighting games or platformers).
- * @related  CF_DELTA_TIME cf_update_time CF_OnUpdateFn CF_DELTA_TIME_INTERPOLANT cf_set_fixed_timestep cf_set_fixed_timestep_max_updates
+ * @related  cf_update_time cf_set_fixed_timestep cf_set_fixed_timestep_max_updates
  */
 CF_API extern float CF_DELTA_TIME_FIXED;
 // @end
@@ -46,7 +46,7 @@ CF_API extern float CF_DELTA_TIME_FIXED;
  *           than the fixed updates. To produce smooth visuals, the current time is mod'd producing an interpolant value from [0,1].
  *           Typically games will store two transforms, the previous and current transform, each representing a position at a fixed timestep
  *           interval. This interpolant value is to interpolate between these two states to produce a smooth rendering transition.
- * @related  CF_DELTA_TIME cf_update_time CF_OnUpdateFn CF_DELTA_TIME_INTERPOLANT cf_set_fixed_timestep cf_set_fixed_timestep_max_updates
+ * @related  cf_update_time cf_set_fixed_timestep cf_set_fixed_timestep_max_updates
  */
 CF_API extern float CF_DELTA_TIME_INTERPOLANT;
 // @end
@@ -57,7 +57,7 @@ CF_API extern float CF_DELTA_TIME_INTERPOLANT;
  * @brief    The number of machine ticks since program start.
  * @remarks  The frequency of these ticks is platform dependent. If you want to convert these ticks to relative to one second of actual time
  *           call `cf_get_tick_frequency` and use it as a divisor.
- * @related  CF_TICKS CF_PREV_TICKS cf_get_ticks cf_get_tick_frequency cf_make_stopwatch CF_SECONDS
+ * @related  cf_get_ticks cf_get_tick_frequency cf_make_stopwatch
  */
 CF_API extern uint64_t CF_TICKS;
 // @end
@@ -68,7 +68,7 @@ CF_API extern uint64_t CF_TICKS;
  * @brief    The number of machine ticks since program start for the last frame.
  * @remarks  The frequency of these ticks is platform dependent. If you want to convert these ticks to relative to one second of actual time
  *           call `cf_get_tick_frequency` and use it as a divisor.
- * @related  CF_TICKS CF_PREV_TICKS cf_get_ticks cf_get_tick_frequency cf_make_stopwatch CF_SECONDS
+ * @related  cf_get_ticks cf_get_tick_frequency cf_make_stopwatch
  */
 CF_API extern uint64_t CF_PREV_TICKS;
 // @end
@@ -77,7 +77,7 @@ CF_API extern uint64_t CF_PREV_TICKS;
  * @struct   CF_SECONDS
  * @category time
  * @brief    The number of seconds elapsed since program start.
- * @related  CF_TICKS CF_PREV_TICKS cf_get_ticks cf_get_tick_frequency cf_make_stopwatch CF_SECONDS CF_PREV_SECONDS
+ * @related  cf_get_ticks cf_get_tick_frequency cf_make_stopwatch
  */
 CF_API extern double CF_SECONDS;
 // @end
@@ -86,7 +86,7 @@ CF_API extern double CF_SECONDS;
  * @struct   CF_PREV_SECONDS
  * @category time
  * @brief    The number of seconds elapsed since program start for the last frame.
- * @related  CF_TICKS CF_PREV_TICKS cf_get_ticks cf_get_tick_frequency cf_make_stopwatch CF_SECONDS CF_PREV_SECONDS
+ * @related  cf_get_ticks cf_get_tick_frequency cf_make_stopwatch
  */
 CF_API extern double CF_PREV_SECONDS;
 // @end
@@ -97,7 +97,7 @@ CF_API extern double CF_PREV_SECONDS;
  * @brief    The number of seconds left for the global pause control.
  * @remarks  The entire application can be paused with `cf_pause_for` or `cf_pause_for_ticks`, which pause updates that will
  *           happen when `cf_update_time` is called.
- * @related  CF_PAUSE_TIME_LEFT cf_update_time cf_pause_for cf_pause_for_ticks cf_is_paused
+ * @related  cf_pause_for cf_pause_for_ticks cf_update_time
  */
 CF_API extern float CF_PAUSE_TIME_LEFT;
 // @end
@@ -109,7 +109,7 @@ CF_API extern float CF_PAUSE_TIME_LEFT;
  * @remarks  This callback can be used to implement your main-loop, and is generally used to update your gameplay/logic/physics.
  *           Usually rendering will occur outside of this callback one time per frame. This callback is only really useful when
  *           using a fixed timestep (see `cf_set_fixed_timestep`), as multiple calls can occur given a single frame's update.
- * @related  cf_set_fixed_timestep cf_set_fixed_timestep_max_updates cf_update_time CF_DELTA_TIME_FIXED CF_DELTA_TIME_INTERPOLANT cf_set_target_framerate
+ * @related  cf_set_fixed_timestep cf_set_fixed_timestep_max_updates cf_update_time
  */
 typedef void (CF_OnUpdateFn)(void* udata);
 
@@ -121,7 +121,7 @@ typedef void (CF_OnUpdateFn)(void* udata);
  * @remarks  Often times a fixed-timestep can occur multiple times in one frame. In this case, `CF_OnUpdateFn` will be called once
  *           per update to simulate a fixed-timestep (see `CF_OnUpdateFn` and `cf_update_time`). The max number of updates possible 
  *           is clamped below `cf_set_fixed_timestep_max_updates`.
- * @related  cf_set_fixed_timestep cf_set_fixed_timestep_max_updates cf_update_time CF_DELTA_TIME_FIXED CF_DELTA_TIME_INTERPOLANT cf_set_target_framerate
+ * @related  cf_set_fixed_timestep_max_updates cf_set_target_framerate cf_update_time
  */
 CF_API void CF_CALL cf_set_fixed_timestep(int frames_per_second);
 
@@ -133,7 +133,7 @@ CF_API void CF_CALL cf_set_fixed_timestep(int frames_per_second);
  * @remarks  Often times a fixed-timestep can occur multiple times in one frame. In this case, `CF_OnUpdateFn` will be called once
  *           per update to simulate a fixed-timestep (see `CF_OnUpdateFn` and `cf_update_time`). The max number of updates possible 
  *           is clamped below `max_updates`.
- * @related  cf_set_fixed_timestep cf_set_fixed_timestep_max_updates cf_update_time CF_DELTA_TIME_FIXED CF_DELTA_TIME_INTERPOLANT cf_set_target_framerate
+ * @related  cf_set_fixed_timestep cf_set_target_framerate cf_update_time
  */
 CF_API void CF_CALL cf_set_fixed_timestep_max_updates(int max_updates);
 
@@ -144,7 +144,7 @@ CF_API void CF_CALL cf_set_fixed_timestep_max_updates(int max_updates);
  * @param    frames_per_second  Target frequency to run the app.
  * @remarks  This effect will try to render the game at a target framerate, similar to vsync. Set to -1 to disable this effect (disabled by default).
  *           This only affects rendering (not gameplay/update), see `cf_set_fixed_timestep` to control your gameplay/update framerate.
- * @related  cf_set_fixed_timestep cf_set_fixed_timestep_max_updates cf_update_time CF_DELTA_TIME_FIXED CF_DELTA_TIME_INTERPOLANT cf_set_target_framerate
+ * @related  cf_set_fixed_timestep cf_set_fixed_timestep_max_updates cf_update_time
  */
 CF_API void CF_CALL cf_set_target_framerate(int frames_per_second);
 
@@ -152,7 +152,7 @@ CF_API void CF_CALL cf_set_target_framerate(int frames_per_second);
  * @function cf_set_update_udata
  * @category time
  * @brief    Sets the `udata` passed into `CF_OnUpdateFn`.
- * @related  cf_set_fixed_timestep cf_set_fixed_timestep_max_updates cf_update_time cf_set_update_udata CF_DELTA_TIME_FIXED CF_DELTA_TIME_INTERPOLANT
+ * @related  cf_set_fixed_timestep cf_set_fixed_timestep_max_updates cf_update_time
  */
 CF_API void CF_CALL cf_set_update_udata(void* udata);
 
@@ -163,7 +163,7 @@ CF_API void CF_CALL cf_set_update_udata(void* udata);
  * @param    on_update  Can be `NULL`. Called once per update. Mostly just useful for the fixed-timestep case (see `cf_set_fixed_timestep`).
  * @remarks  Typically you will want to call this function just after `cf_app_update`, or, alternatively pass
              in `on_update` to `cf_app_update` instead of calling this function at all.
- * @related  cf_set_fixed_timestep cf_set_fixed_timestep_max_updates cf_update_time cf_set_update_udata CF_DELTA_TIME_FIXED CF_DELTA_TIME_INTERPOLANT
+ * @related  cf_set_fixed_timestep cf_set_fixed_timestep_max_updates cf_set_update_udata
  */
 CF_API void CF_CALL cf_update_time(CF_OnUpdateFn* on_update);
 
@@ -174,7 +174,7 @@ CF_API void CF_CALL cf_update_time(CF_OnUpdateFn* on_update);
  * @param    seconds    A number of seconds to pause the application for.
  * @remarks  The entire application can be paused with `cf_pause_for` or `cf_pause_for_ticks`, which pause updates that will
  *           happen when `cf_update_time` is called.
- * @related  CF_PAUSE_TIME_LEFT cf_update_time cf_pause_for cf_pause_for_ticks cf_is_paused
+ * @related  cf_pause_for_ticks cf_update_time cf_is_paused
  */
 CF_API void CF_CALL cf_pause_for(float seconds);
 
@@ -185,7 +185,7 @@ CF_API void CF_CALL cf_pause_for(float seconds);
  * @param    ticks      A number of ticks to pause the application for. See `cf_get_tick_frequency`.
  * @remarks  The entire application can be paused with `cf_pause_for` or `cf_pause_for_ticks`, which pause updates that will
  *           happen when `cf_update_time` is called.
- * @related  CF_PAUSE_TIME_LEFT cf_update_time cf_pause_for cf_pause_for_ticks cf_is_paused
+ * @related  cf_pause_for cf_update_time cf_is_paused
  */
 CF_API void CF_CALL cf_pause_for_ticks(uint64_t pause_ticks);
 
@@ -196,7 +196,7 @@ CF_API void CF_CALL cf_pause_for_ticks(uint64_t pause_ticks);
  * @param    interval   Number of seconds between each interval.
  * @param    offset     A starting offset in seconds for the interval. This gets mathematically modulo'd. Used to sync times for rythms or repeats.
  *           Simply place this within an if-statement!
- * @related  cf_on_interval cf_between_interval cf_on_timestamp
+ * @related  cf_on_timestamp cf_between_interval
  */
 CF_API bool CF_CALL cf_on_interval(float interval, float offset);
 
@@ -208,7 +208,7 @@ CF_API bool CF_CALL cf_on_interval(float interval, float offset);
  * @param    offset     A starting offset in seconds for the interval. This gets mathematically modulo'd. Used to sync times for rythms or repeats.
  * @remarks  This function is super useful for general purpose gameplay implementation where you want an event to fire for N seconds,
  *           and then _not_ fire for N seconds, flipping back and forth periodically. Simply place this within an if-statement.
- * @related  cf_on_interval cf_between_interval cf_on_timestamp
+ * @related  cf_on_interval cf_on_timestamp
  */
 CF_API bool CF_CALL cf_between_interval(float interval, float offset);
 
@@ -219,7 +219,7 @@ CF_API bool CF_CALL cf_between_interval(float interval, float offset);
  * @param    timestamp  The timestamp.
  * @remarks  This function is super useful for general purpose gameplay implementation where you want an event to fire at N seconds
  *           (since program start). Simply place this within an if-statement!
- * @related  cf_on_interval cf_between_interval cf_on_timestamp
+ * @related  cf_on_interval cf_between_interval
  */
 CF_API bool CF_CALL cf_on_timestamp(double timestamp);
 
@@ -228,7 +228,7 @@ CF_API bool CF_CALL cf_on_timestamp(double timestamp);
  * @category time
  * @brief    Returns true if the application is currently paused.
  * @remarks  Pause means from `cf_pause_for` or `cf_pause_for_ticks`.
- * @related  CF_PAUSE_TIME_LEFT cf_is_paused cf_pause_for cf_pause_for_ticks
+ * @related  cf_pause_for cf_pause_for_ticks CF_PAUSE_TIME_LEFT
  */
 CF_API bool CF_CALL cf_is_paused(void);
 
@@ -238,7 +238,7 @@ CF_API bool CF_CALL cf_is_paused(void);
  * @brief    Returns the number of ticks elapsed _right now_ since program start.
  * @remarks  `CF_TICK` and `CF_SECONDS` are only recorded once at the beginning of an update (see `cf_update_time`). This function instead
  *           queries the application for the number of ticks _right now_. Mostly useful for performance measuring.
- * @related  cf_get_ticks cf_get_tick_frequency
+ * @related  cf_get_tick_frequency
  */
 CF_API uint64_t CF_CALL cf_get_ticks(void);
 
@@ -246,7 +246,7 @@ CF_API uint64_t CF_CALL cf_get_ticks(void);
  * @function cf_get_tick_frequency
  * @category time
  * @brief    Returns the machine-dependent number of ticks that occur in one second.
- * @related  cf_get_ticks cf_get_tick_frequency
+ * @related  cf_get_ticks
  */
 CF_API uint64_t CF_CALL cf_get_tick_frequency(void);
 
@@ -266,7 +266,7 @@ CF_API void CF_CALL cf_sleep(int milliseconds);
  * @brief    A stopwatch for general purpose precise timings.
  * @remarks  Once created with `cf_make_stopwatch` the time elapsed can be fetched. To reset the stopwatch, simply call
  *           `cf_make_stopwatch` again and overwrite your old stopwatch.
- * @related  CF_Stopwatch cf_make_stopwatch cf_seconds cf_milliseconds cf_microseconds
+ * @related  cf_seconds cf_make_stopwatch cf_milliseconds
  */
 typedef struct CF_Stopwatch
 {
@@ -283,7 +283,7 @@ typedef struct CF_Stopwatch
  * @remarks  Once created with `cf_make_stopwatch` the time elapsed can be fetched. To reset the stopwatch, simply call
  *           `cf_make_stopwatch` again and overwrite your old stopwatch. To fetch the time elapsed, call `cf_stopwatch_seconds`,
  *           `cf_stopwatch_milliseconds`, or `cf_microseconds`.
- * @related  CF_Stopwatch cf_make_stopwatch cf_stopwatch_seconds cf_stopwatch_milliseconds cf_stopwatch_microseconds
+ * @related  cf_stopwatch_seconds cf_stopwatch_milliseconds cf_stopwatch_microseconds
  */
 CF_API CF_Stopwatch CF_CALL cf_make_stopwatch(void);
 
@@ -291,7 +291,7 @@ CF_API CF_Stopwatch CF_CALL cf_make_stopwatch(void);
  * @function cf_stopwatch_seconds
  * @category time
  * @brief    Returns the number of seconds elapsed since the last call to `cf_make_stopwatch` was made.
- * @related  CF_Stopwatch cf_make_stopwatch cf_stopwatch_seconds cf_stopwatch_milliseconds cf_stopwatch_microseconds
+ * @related  cf_stopwatch_milliseconds cf_stopwatch_microseconds cf_make_stopwatch
  */
 CF_API double CF_CALL cf_stopwatch_seconds(CF_Stopwatch stopwatch);
 
@@ -299,7 +299,7 @@ CF_API double CF_CALL cf_stopwatch_seconds(CF_Stopwatch stopwatch);
  * @function cf_stopwatch_milliseconds
  * @category time
  * @brief    Returns the number of milliseconds elapsed since the last call to `cf_make_stopwatch` was made.
- * @related  CF_Stopwatch cf_make_stopwatch cf_stopwatch_seconds cf_stopwatch_milliseconds cf_stopwatch_microseconds
+ * @related  cf_stopwatch_microseconds cf_stopwatch_seconds cf_make_stopwatch
  */
 CF_API double CF_CALL cf_stopwatch_milliseconds(CF_Stopwatch stopwatch);
 
@@ -307,7 +307,7 @@ CF_API double CF_CALL cf_stopwatch_milliseconds(CF_Stopwatch stopwatch);
  * @function cf_stopwatch_microseconds
  * @category time
  * @brief    Returns the number of microseconds elapsed since the last call to `cf_make_stopwatch` was made.
- * @related  CF_Stopwatch cf_make_stopwatch cf_seconds cf_stopwatch_milliseconds cf_stopwatch_microseconds
+ * @related  cf_stopwatch_milliseconds cf_seconds cf_make_stopwatch
  */
 CF_API double CF_CALL cf_stopwatch_microseconds(CF_Stopwatch stopwatch);
 

@@ -24,7 +24,7 @@ extern "C" {
  * @brief    Used to generate noise at specified points.
  * @remarks  You're probably looking for image generation functions such as `cf_noise_pixels` or `cf_noise_fbm_pixels`. This
  *           struct is fairly low-level and intended for those who know what they're doing.
- * @related  CF_Noise cf_make_noise cf_destroy_noise cf_noise2 cf_noise3 cf_noise4
+ * @related  cf_noise2 cf_noise3 cf_noise4
  */
 typedef struct CF_Noise { uint64_t id; } CF_Noise;
 // @end
@@ -36,7 +36,7 @@ typedef struct CF_Noise { uint64_t id; } CF_Noise;
  * @param    seed        Used to seed the sequence of numbers generated. Default 0.
  * @remarks  You're probably looking for image generation functions such as `cf_noise_pixels` or `cf_noise_fbm_pixels`. This
  *           function is fairly low-level and intended for those who know what they're doing.
- * @related  CF_Noise cf_make_noise cf_make_noise_fbm cf_destroy_noise cf_noise2 cf_noise3 cf_noise4
+ * @related  cf_make_noise_fbm cf_destroy_noise cf_noise2
  */
 CF_API CF_Noise CF_CALL cf_make_noise(uint64_t seed);
 
@@ -51,7 +51,7 @@ CF_API CF_Noise CF_CALL cf_make_noise(uint64_t seed);
  * @param    falloff     How much contribution higher octaves have compared to lower ones. Default 0.5f.
  * @remarks  You're probably looking for image generation functions such as `cf_noise_pixels` or `cf_noise_fbm_pixels`. This
  *           function is fairly low-level and intended for those who know what they're doing.
- * @related  CF_Noise cf_make_noise cf_destroy_noise cf_noise2 cf_noise3 cf_noise4
+ * @related  cf_make_noise cf_destroy_noise cf_noise2
  */
 CF_API CF_Noise CF_CALL cf_make_noise_fbm(uint64_t seed, float scale, float lacunarity, int octaves, float falloff);
 
@@ -60,7 +60,7 @@ CF_API CF_Noise CF_CALL cf_make_noise_fbm(uint64_t seed, float scale, float lacu
  * @category noise
  * @brief    Destroys a `CF_Noise` created by `cf_make_noise` or `cf_make_noise_fbm`.
  * @param    CF_Noise    The `CF_Noise` to destroy.
- * @related  CF_Noise cf_make_noise cf_make_noise_fbm cf_destroy_noise cf_noise2 cf_noise3 cf_noise4
+ * @related  cf_make_noise cf_make_noise_fbm cf_noise2
  */
 CF_API void CF_CALL cf_destroy_noise(CF_Noise noise);
 
@@ -74,7 +74,7 @@ CF_API void CF_CALL cf_destroy_noise(CF_Noise noise);
  * @return   Returns a random value at the specified point.
  * @remarks  You're probably looking for image generation functions such as `cf_noise_pixels` or `cf_noise_fbm_pixels`. This
  *           function is fairly low-level and intended for those who know what they're doing.
- * @related  CF_Noise cf_make_noise cf_destroy_noise cf_noise2 cf_noise3 cf_noise4
+ * @related  cf_noise3 cf_noise4 cf_make_noise
  */
 CF_API float CF_CALL cf_noise2(CF_Noise noise, float x, float y);
 
@@ -89,7 +89,7 @@ CF_API float CF_CALL cf_noise2(CF_Noise noise, float x, float y);
  * @return   Returns a random value at the specified point.
  * @remarks  You're probably looking for image generation functions such as `cf_noise_pixels` or `cf_noise_fbm_pixels`. This
  *           function is fairly low-level and intended for those who know what they're doing.
- * @related  CF_Noise cf_make_noise cf_destroy_noise cf_noise2 cf_noise3 cf_noise4
+ * @related  cf_noise2 cf_noise4 cf_make_noise
  */
 CF_API float CF_CALL cf_noise3(CF_Noise noise, float x, float y, float z);
 
@@ -105,7 +105,7 @@ CF_API float CF_CALL cf_noise3(CF_Noise noise, float x, float y, float z);
  * @return   Returns a random value at the specified point.
  * @remarks  You're probably looking for image generation functions such as `cf_noise_pixels` or `cf_noise_fbm_pixels`. This
  *           function is fairly low-level and intended for those who know what they're doing.
- * @related  CF_Noise cf_make_noise cf_destroy_noise cf_noise2 cf_noise3 cf_noise4
+ * @related  cf_noise2 cf_noise3 cf_make_noise
  */
 CF_API float CF_CALL cf_noise4(CF_Noise noise, float x, float y, float z, float w);
 
@@ -119,7 +119,7 @@ CF_API float CF_CALL cf_noise4(CF_Noise noise, float x, float y, float z, float 
  * @param    scale      Scales up or down the noise in the image, like zooming in or out. Default 1.0f.
  * @return   Returns a generated image filled with noise.
  * @remarks  The generated noise is quite simple -- you're probably looking for the more advanced `cf_noise_fbm_pixels`, or `cf_noise_fbm_pixels_wrapped`.
- * @related  cf_noise_pixels cf_noise_pixels_wrapped cf_noise_fbm_pixels cf_noise_fbm_pixels_wrapped
+ * @related  cf_noise_pixels_wrapped cf_noise_fbm_pixels cf_noise_fbm_pixels_wrapped
  */
 CF_API CF_Pixel* CF_CALL cf_noise_pixels(int w, int h, uint64_t seed, float scale);
 
@@ -140,7 +140,7 @@ CF_API CF_Pixel* CF_CALL cf_noise_pixels(int w, int h, uint64_t seed, float scal
  *           
  *           If you want the animation to move faster without adjusting the loop time, then adjust `time_amplitude`. This scales how
  *           much the animation will evolve over time. Higher values will have faster and more volatile looking motions.
- * @related  cf_noise_pixels cf_noise_pixels_wrapped cf_noise_fbm_pixels cf_noise_fbm_pixels_wrapped
+ * @related  cf_noise_pixels cf_noise_fbm_pixels cf_noise_fbm_pixels_wrapped
  */
 CF_API CF_Pixel* CF_CALL cf_noise_pixels_wrapped(int w, int h, uint64_t seed, float scale, float time, float time_amplitude);
 
@@ -157,7 +157,7 @@ CF_API CF_Pixel* CF_CALL cf_noise_pixels_wrapped(int w, int h, uint64_t seed, fl
  * @param    falloff     How much contribution higher octaves have compared to lower ones. Default 0.5f.
  * @return   Returns a generated image filled with noise.
  * @remarks  If you want the image to animate over a loop, or tile seamlessly, then check out `cf_noise_fbm_pixels_wrapped`.
- * @related  cf_noise_pixels cf_noise_pixels_wrapped cf_noise_fbm_pixels cf_noise_fbm_pixels_wrapped
+ * @related  cf_noise_fbm_pixels_wrapped cf_noise_pixels cf_noise_pixels_wrapped
  */
 CF_API CF_Pixel* CF_CALL cf_noise_fbm_pixels(int w, int h, uint64_t seed, float scale, float lacunarity, int octaves, float falloff);
 
@@ -179,7 +179,7 @@ CF_API CF_Pixel* CF_CALL cf_noise_fbm_pixels(int w, int h, uint64_t seed, float 
  *           
  *           If you want the animation to move faster without adjusting the loop time, then adjust `time_amplitude`. This scales how
  *           much the animation will evolve over time. Higher values will have faster and more volatile looking motions.
- * @related  cf_noise_pixels cf_noise_pixels_wrapped cf_noise_fbm_pixels cf_noise_fbm_pixels_wrapped
+ * @related  cf_noise_fbm_pixels cf_noise_pixels cf_noise_pixels_wrapped
  */
 CF_API CF_Pixel* CF_CALL cf_noise_fbm_pixels_wrapped(int w, int h, uint64_t seed, float scale, float lacunarity, int octaves, float falloff, float time, float time_amplitude);
 

@@ -22,7 +22,7 @@ extern "C" {
  * @struct   CF_Guid
  * @category utility
  * @brief    A general purpose unique identifier.
- * @related  CF_Guid cf_make_guid cf_guid_equal
+ * @related  cf_guid_equal cf_make_guid
  */
 typedef struct CF_Guid
 {
@@ -36,7 +36,7 @@ typedef struct CF_Guid
  * @category utility
  * @brief    Returns a new `CF_Guid`.
  * @remarks  The bytes are generated in a cryptographically secure way.
- * @related  CF_Guid cf_make_guid cf_guid_equal
+ * @related  cf_guid_equal CF_Guid
  */
 CF_API CF_Guid CF_CALL cf_make_guid();
 
@@ -46,7 +46,7 @@ CF_API CF_Guid CF_CALL cf_make_guid();
  * @brief    Returns true if two `CF_Guid`'s are equal, false otherwise.
  * @param    a         A guid to compare.
  * @param    b         A guid to compare.
- * @related  CF_Guid cf_make_guid cf_guid_equal
+ * @related  cf_make_guid CF_Guid
  */
 CF_INLINE bool cf_guid_equal(CF_Guid a, CF_Guid b) { return !CF_MEMCMP(&a, &b, sizeof(a)); }
 

@@ -44,7 +44,7 @@
  *           on typed pointers, there's no actual hashtable struct type. It can get really annoying to sometimes forget if a pointer is an
  *           array, a hashtable, or just a pointer. This macro can be used to markup the type to make it much more clear for function
  *           parameters or struct member definitions. It's saying "Hey, I'm a hashtable!" to mitigate this downside.
- * @related  htbl hset hadd hget hfind hget_ptr hfind_ptr hhas hdel hclear hkeys hitems hswap hsize hcount hfree
+ * @related  hset hadd hget
  */
 #define htbl
 
@@ -66,7 +66,7 @@
  * @remarks  If the item does not exist in the table it is added. The pointer returned is not stable. Internally the table can be resized,
  *           invalidating _all_ pointers to any elements within the table. Therefor, no items may store pointers to themselves or other items.
  *           Indices however, are totally fine.
- * @related  htbl hset hadd hget hfind hget_ptr hfind_ptr hhas hdel hclear hkeys hitems hswap hsize hcount hfree
+ * @related  hswap hsize htbl
  */
 #define hset(h, k, ...) cf_hashtable_set(h, k, (__VA_ARGS__))
 
@@ -88,7 +88,7 @@
  * @remarks  This function works the same as `hset`. If the item already exists in the table, it's simply updated to a new value.
  *           The pointer returned is not stable. Internally the table can be resized, invalidating _all_ pointers to any elements
  *           within the table. Therefor, no items may store pointers to themselves or other items. Indices however, are totally fine.
- * @related  htbl hset hadd hget hfind hget_ptr hfind_ptr hhas hdel hclear hkeys hitems hswap hsize hcount hfree
+ * @related  htbl hset hget
  */
 #define hadd(h, k, ...) cf_hashtable_add(h, k, (__VA_ARGS__))
 
@@ -109,7 +109,7 @@
  * @remarks  Items are returned by value, not pointer. If the item doesn't exist a zero'd out item is instead returned. If you want to get a pointer
  *           (so you can see if it's `NULL` in case the item didn't exist, then use `hget_ptr`). You can also call `hhas` for a bool. This function does
  *           the same as `hfind`.
- * @related  htbl hset hadd hget hfind hget_ptr hfind_ptr hhas hdel hclear hkeys hitems hswap hsize hcount hfree
+ * @related  hget_ptr htbl hset
  */
 #define hget(h, k) cf_hashtable_get(h, k)
 
@@ -130,7 +130,7 @@
  * @remarks  Items are returned by value, not pointer. If the item doesn't exist a zero'd out item is instead returned. If you want to get a pointer
  *           (so you can see if it's `NULL` in case the item didn't exist, then use `hfind_ptr`). You can also call `hhas` for a bool. This function does
  *           the same as `hget`.
- * @related  htbl hset hadd hget hfind hget_ptr hfind_ptr hhas hdel hclear hkeys hitems hswap hsize hcount hfree
+ * @related  hfind_ptr hfree htbl
  */
 #define hfind(h, k) cf_hashtable_find(h, k)
 
@@ -150,7 +150,7 @@
  *     hfree(table);
  * @return   Returns a pointer to an item. Returns `NULL` if not found.
  * @remarks  If you want to fetch an item by value, you can use `hget` or `hfind`. Does the same thing as `hfind_ptr`.
- * @related  htbl hset hadd hget hfind hget_ptr hfind_ptr hhas hdel hclear hkeys hitems hswap hsize hcount hfree
+ * @related  hget htbl hset
  */
 #define hget_ptr(h, k) cf_hashtable_get_ptr(h, k)
 
@@ -170,7 +170,7 @@
  *     hfree(table);
  * @return   Returns a pointer to an item. Returns `NULL` if not found.
  * @remarks  If you want to fetch an item by value, you can use `hget` or `hfind`. Does the same thing as `hget_ptr`.
- * @related  htbl hset hadd hget hfind hget_ptr hfind_ptr hhas hdel hclear hkeys hitems hswap hsize hcount hfree
+ * @related  hfind hfree htbl
  */
 #define hfind_ptr(h, k) cf_hashtable_find_ptr(h, k)
 
@@ -186,7 +186,7 @@
  *     CF_ASSERT(hhas(table, 10));
  *     hfree(table);
  * @return   Returns true if the item was found, false otherwise.
- * @related  htbl hset hadd hget hfind hget_ptr hfind_ptr hhas hdel hclear hkeys hitems hswap hsize hcount hfree
+ * @related  htbl hset hadd
  */
 #define hhas(h, k) cf_hashtable_has(h, k)
 
@@ -202,7 +202,7 @@
  *     hdel(table, 10);
  *     hfree(table);
  * @remarks  Asserts if the item does not exist.
- * @related  htbl hset hadd hget hfind hget_ptr hfind_ptr hhas hdel hclear hkeys hitems hswap hsize hcount hfree
+ * @related  htbl hset hadd
  */
 #define hdel(h, k) cf_hashtable_del(h, k)
 
@@ -212,7 +212,7 @@
  * @brief    Clears the hashtable.
  * @param    h        The hashtable. Can be `NULL`. Needs to be a pointer to the type of items in the table.
  * @remarks  The count of items will now be zero. Does not free any memory. Call `hfree` when you are done.
- * @related  htbl hset hadd hget hfind hget_ptr hfind_ptr hhas hdel hclear hkeys hitems hswap hsize hcount hfree
+ * @related  hcount htbl hset
  */
 #define hclear(h) cf_hashtable_clear(h)
 
@@ -230,7 +230,7 @@
  *         // ...
  *     }
  * @remarks  The keys are type `uint64_t`.
- * @related  htbl hset hadd hget hfind hget_ptr hfind_ptr hhas hdel hclear hkeys hitems hswap hsize hcount hfree
+ * @related  htbl hset hadd
  */
 #define hkeys(h) cf_hashtable_keys(h)
 
@@ -248,7 +248,7 @@
  *         // ...
  *     }
  * @remarks  This macro doesn't do much as `h` is already a valid pointer to the items.
- * @related  htbl hset hadd hget hfind hget_ptr hfind_ptr hhas hdel hclear hkeys hitems hswap hsize hcount hfree
+ * @related  htbl hset hadd
  */
 #define hitems(h) cf_hashtable_items(h)
 
@@ -270,7 +270,7 @@
  *         }
  *     }
  * @remarks  Use this for e.g. implementing a priority queue on top of the hash table.
- * @related  htbl hset hadd hget hfind hget_ptr hfind_ptr hhas hdel hclear hkeys hitems hswap hsize hcount hfree hsort hssort hsisort
+ * @related  hset hsize hsort
  */
 #define hswap(h, index_a, index_b) cf_hashtable_swap(h, index_a, index_b)
 
@@ -281,7 +281,7 @@
  * @param    h        The hashtable. Can be `NULL`. Needs to be a pointer to the type of items in the table.
  * @remarks  The keys and items returned by `hkeys` and `hitems` will be sorted. Recall that all keys in the hashtable are treated
  *           as `uint64_t`, so the sorting simply sorts the keys from least to greatest as `uint64_t`. This is _not_ a stable sort.
- * @related  htbl hswap hsort hssort hsisort
+ * @related  hswap hssort hsisort
  */
 #define hsort(h) cf_hashtable_sort(h)
 
@@ -293,7 +293,7 @@
  * @remarks  The keys and items returned by `hkeys` and `hitems` will be sorted. Normally it's not valid to store strings as keys,
  *           since all keys are simply typecasted to `uint64_t`. However, if you use `sintern` each unique string has a unique and
  *           stable pointer, making them valid keys for hashtables. This is _not_ a stable sort.
- * @related  htbl hswap hsort hssort hsisort sintern
+ * @related  hswap hsort hsisort
  */
 #define hssort(h) cf_hashtable_ssort(h)
 
@@ -306,7 +306,7 @@
  * @remarks  The keys and items returned by `hkeys` and `hitems` will be sorted. Normally it's not valid to store strings as keys,
  *           since all keys are simply typecasted to `uint64_t`. However, if you use `sintern` each unique string has a unique and
  *           stable pointer, making them valid keys for hashtables. This is _not_ a stable sort.
- * @related  htbl hswap hsort hssort hsisort sintern
+ * @related  hswap hsort hssort
  */
 #define hsisort(h) cf_hashtable_sisort(h)
 
@@ -316,7 +316,7 @@
  * @brief    The number of {key, item} pairs in the table.
  * @param    h        The hashtable. Can be `NULL`. Needs to be a pointer to the type of items in the table.
  * @remarks  `h` can be `NULL`.
- * @related  htbl hset hadd hget hfind hget_ptr hfind_ptr hhas hdel hclear hkeys hitems hswap hsize hcount hfree
+ * @related  hset hswap htbl
  */
 #define hsize(h) cf_hashtable_size(h)
 
@@ -326,7 +326,7 @@
  * @brief    The number of {key, item} pairs in the table.
  * @param    h        The hashtable. Can be `NULL`. Needs to be a pointer to the type of items in the table.
  * @remarks  `h` can be `NULL`.
- * @related  htbl hset hadd hget hfind hget_ptr hfind_ptr hhas hdel hclear hkeys hitems hswap hsize hcount hfree
+ * @related  hclear htbl hset
  */
 #define hcount(h) cf_hashtable_count(h)
 
@@ -336,7 +336,7 @@
  * @brief    Frees up all resources used and sets `h` to `NULL`.
  * @param    h        The hashtable. Can be `NULL`. Needs to be a pointer to the type of items in the table.
  * @remarks  `h` can be `NULL`.
- * @related  htbl hset hadd hget hfind hget_ptr hfind_ptr hhas hdel hclear hkeys hitems hswap hsize hcount hfree
+ * @related  hfind hfind_ptr htbl
  */
 #define hfree(h) cf_hashtable_free(h)
 

@@ -197,7 +197,7 @@ extern "C" {
  * @param    message  An error message.
  * @param    file     Name of the file the assert came from.
  * @param    line     The line number the assert came from.
- * @related  cf_set_assert_handler cf_assert_fn
+ * @related  cf_set_assert_handler
  */
 typedef void (cf_assert_fn)(bool expr, const char* message, const char* file, int line);
 CF_API extern cf_assert_fn* g_assert_fn;
@@ -206,7 +206,7 @@ CF_API extern cf_assert_fn* g_assert_fn;
  * @function cf_set_assert_handler
  * @category app
  * @brief    Sets the application's default assert handler.
- * @related  cf_set_assert_handler cf_assert_fn
+ * @related  cf_assert_fn
  */
 CF_API void CF_CALL cf_set_assert_handler(cf_assert_fn* assert_fn);
 

@@ -60,7 +60,7 @@ extern "C" {
  *     }
  * @remarks  You may create a request by calling either `cf_https_get` or `cf_https_post`. It is intended to continually
  *           call `cf_https_process` in a loop until the request generates a response, or fails.
- * @related  CF_HttpsRequest CF_HttpsResponse cf_https_get cf_https_post
+ * @related  cf_https_get cf_https_post CF_HttpsResponse
  */
 typedef struct CF_HttpsRequest { uint64_t id; } CF_HttpsRequest;
 // @end
@@ -70,7 +70,7 @@ typedef struct CF_HttpsRequest { uint64_t id; } CF_HttpsRequest;
  * @category web
  * @brief    Represents an [HTTPS response](https://www.ibm.com/docs/en/cics-ts/5.2?topic=protocol-http-responses).
  * @remarks  The response may be fetched from a `CF_HttpsRequest` by calling `cf_https_response`.
- * @related  CF_HttpsRequest CF_HttpsResponse cf_https_response cf_https_response_find_header cf_https_response_content
+ * @related  cf_https_response cf_https_response_find_header cf_https_response_content
  */
 typedef struct CF_HttpsResponse { uint64_t id; } CF_HttpsResponse;
 // @end
@@ -80,7 +80,7 @@ typedef struct CF_HttpsResponse { uint64_t id; } CF_HttpsResponse;
  * @category web
  * @brief    Represents an [HTTPS header](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers).
  * @remarks  Headers may be fetched from a `CF_HttpsResponse` by calling `cf_https_response_find_header`, or `cf_https_response_headers`.
- * @related  CF_HttpsRequest CF_HttpsResponse CF_HttpsHeader cf_https_response_find_header cf_https_response_headers
+ * @related  cf_https_response_find_header cf_https_response_headers CF_HttpsRequest
  */
 typedef struct CF_HttpsHeader
 {
@@ -102,7 +102,7 @@ typedef struct CF_HttpsHeader
  * @param    verify_cert  Recommended as true. Set to true to verify the server certificate (you want this on).
  * @return   Returns a `CF_HttpsRequest` for processing the get request and receiving a response.
  * @remarks  You should continually call `cf_https_process` on the `CF_HttpsRequest`. See `CF_HttpsRequest` for details.
- * @related  CF_HttpsRequest cf_https_get cf_https_post cf_https_destroy cf_https_process cf_https_response
+ * @related  cf_https_post cf_https_destroy cf_https_process
  */
 CF_API CF_HttpsRequest CF_CALL cf_https_get(const char* host, int port, const char* uri, bool verify_cert);
 
@@ -119,7 +119,7 @@ CF_API CF_HttpsRequest CF_CALL cf_https_get(const char* host, int port, const ch
  * @param    verify_cert  Recommended as true. Set to true to verify the server certificate (you want this on).
  * @return   Returns a `CF_HttpsRequest` for processing the get request and receiving a response.
  * @remarks  You should continually call `cf_https_process` on the `CF_HttpsRequest`. See `CF_HttpsRequest` for details.
- * @related  CF_HttpsRequest cf_https_get cf_https_post cf_https_destroy cf_https_process cf_https_response
+ * @related  cf_https_process cf_https_get cf_https_destroy
  */
 CF_API CF_HttpsRequest CF_CALL cf_https_post(const char* host, int port, const char* uri, const void* content, int content_length, bool verify_cert);
 
@@ -131,7 +131,7 @@ CF_API CF_HttpsRequest CF_CALL cf_https_post(const char* host, int port, const c
  * @param    name       The key value of the header.
  * @param    value      String representation of the header's value.
  * @remarks  You should call this before calling `cf_https_process`. Calling this after `cf_https_process` will break things.
- * @related  CF_HttpsRequest cf_https_get cf_https_post cf_https_destroy cf_https_process cf_https_response
+ * @related  cf_https_get cf_https_post cf_https_destroy
  */
 CF_API void CF_CALL cf_https_add_header(CF_HttpsRequest request, const char* name, const char* value);
 
@@ -139,7 +139,7 @@ CF_API void CF_CALL cf_https_add_header(CF_HttpsRequest request, const char* nam
  * @function cf_https_destroy
  * @category web
  * @brief    Destroys a `CF_HttpsRequest`.
- * @related  CF_HttpsRequest cf_https_get cf_https_post cf_https_destroy cf_https_process cf_https_response
+ * @related  cf_https_get cf_https_post cf_https_process
  */
 CF_API void CF_CALL cf_https_destroy(CF_HttpsRequest request);
 
@@ -148,7 +148,7 @@ CF_API void CF_CALL cf_https_destroy(CF_HttpsRequest request);
  * @category web
  * @brief    Status of a `CF_HttpsRequest`.
  * @remarks  Intended to be used in a loop, along with `cf_https_process`. See `CF_HttpsRequest`.
- * @related  CF_HttpsRequest cf_https_process cf_https_result_to_string
+ * @related  cf_https_process cf_https_result_to_string CF_HttpsRequest
  */
 #define CF_HTTPS_RESULT_DEFS \
 	/* @entry The server has an invalid certificate. */          \
@@ -183,7 +183,7 @@ typedef enum CF_HttpsResult
  * @category web
  * @brief    Convert an enum `CF_HttpsState` to a c-style string.
  * @param    state        The state to convert to a string.
- * @related  CF_HttpsRequest cf_https_process cf_https_result_to_string
+ * @related  cf_https_process CF_HttpsRequest
  */
 CF_INLINE const char* cf_https_result_to_string(CF_HttpsResult state)
 {
@@ -201,7 +201,7 @@ CF_INLINE const char* cf_https_result_to_string(CF_HttpsResult state)
  * @brief    Processes a request and generates a response.
  * @return   Returns the status of the request `CF_HttpsResult`.
  * @remarks  You should call this function in a loop. See `CF_HttpsResult`.
- * @related  CF_HttpsResult cf_https_process cf_https_get cf_https_post cf_https_response
+ * @related  cf_https_post cf_https_get cf_https_response
  */
 CF_API CF_HttpsResult CF_CALL cf_https_process(CF_HttpsRequest request);
 
@@ -212,7 +212,7 @@ CF_API CF_HttpsResult CF_CALL cf_https_process(CF_HttpsRequest request);
  * @remarks  A response can be retrieved from the `https` object after `cf_https_state` returns `CF_HTTPS_STATE_COMPLETED`.
  *           Calling this function otherwise will get you a NULL pointer returned. This will get cleaned up automatically
  *           when `cf_https_destroy` is called.
- * @related  CF_Https cf_https_get cf_https_post cf_https_destroy cf_https_process cf_https_response cf_https_state
+ * @related  cf_https_get cf_https_post cf_https_destroy
  */
 CF_API CF_HttpsResponse CF_CALL cf_https_response(CF_HttpsRequest request);
 
@@ -220,7 +220,7 @@ CF_API CF_HttpsResponse CF_CALL cf_https_response(CF_HttpsRequest request);
  * @function cf_https_response_code
  * @category web
  * @brief    Returns the HTTP code for the response.
- * @related  CF_HttpsResponse cf_https_response cf_https_response_code
+ * @related  cf_https_response CF_HttpsResponse
  */
 CF_API int CF_CALL cf_https_response_code(CF_HttpsResponse response);
 
@@ -228,7 +228,7 @@ CF_API int CF_CALL cf_https_response_code(CF_HttpsResponse response);
  * @function cf_https_response_content_length
  * @category web
  * @brief    Returns the length of the response content.
- * @related  CF_HttpsResponse cf_https_response cf_https_response_content
+ * @related  cf_https_response_content cf_https_response CF_HttpsResponse
  */
 CF_API int CF_CALL cf_https_response_content_length(CF_HttpsResponse response);
 
@@ -236,7 +236,7 @@ CF_API int CF_CALL cf_https_response_content_length(CF_HttpsResponse response);
  * @function cf_https_response_content
  * @category web
  * @brief    Returns the content of the response as a string.
- * @related  CF_HttpsResponse cf_https_response_content cf_https_response_content_length
+ * @related  cf_https_response_content_length CF_HttpsResponse
  */
 CF_API char* CF_CALL cf_https_response_content(CF_HttpsResponse response);
 
@@ -246,7 +246,7 @@ CF_API char* CF_CALL cf_https_response_content(CF_HttpsResponse response);
  * @brief    Searches for and returns a header by name.
  * @param    response     The HTTP response.
  * @param    header_name  The name of the header to search for.
- * @related  CF_HttpsHeader CF_HttpsResponse cf_https_response_find_header cf_https_response_headers
+ * @related  cf_https_response_headers CF_HttpsHeader CF_HttpsResponse
  */
 CF_API CF_HttpsHeader CF_CALL cf_https_response_find_header(CF_HttpsResponse response, const char* header_name);
 
@@ -255,7 +255,7 @@ CF_API CF_HttpsHeader CF_CALL cf_https_response_find_header(CF_HttpsResponse res
  * @category web
  * @brief    Returns the number of headers in the response.
  * @remarks  Intended to be used with `cf_https_response_headers`.
- * @related  CF_HttpsHeader CF_HttpsResponse cf_https_response_find_header cf_https_response_headers
+ * @related  cf_https_response_headers cf_https_response_find_header CF_HttpsHeader
  */
 CF_API int CF_CALL cf_https_response_headers_count(CF_HttpsResponse response);
 
@@ -266,7 +266,7 @@ CF_API int CF_CALL cf_https_response_headers_count(CF_HttpsResponse response);
  * @remarks  Intended to be used with `cf_https_response_headers_count`. Do not free this array, it will
  *           get cleaned up when the originating `CF_HttpsRequest` is destroyed via `cf_https_destroy`.
  *           If you're familiar with `htbl` you may treat this pointer as a hashtable key'd by strings.
- * @related  CF_HttpsHeader CF_HttpsResponse cf_https_response_find_header cf_https_response_headers
+ * @related  cf_https_response_find_header CF_HttpsHeader CF_HttpsResponse
  */
 CF_API htbl const CF_HttpsHeader* CF_CALL cf_https_response_headers(CF_HttpsResponse response);
 

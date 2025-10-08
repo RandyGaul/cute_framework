@@ -23,7 +23,7 @@ extern "C" {
  * @struct   CF_JDoc
  * @category json
  * @brief    Represents a single json document.
- * @related  CF_JDoc CF_JVal cf_make_json
+ * @related  cf_make_json CF_JVal
  */
 typedef struct CF_JDoc { uintptr_t id; } CF_JDoc;
 /* @end */
@@ -32,7 +32,7 @@ typedef struct CF_JDoc { uintptr_t id; } CF_JDoc;
  * @struct   CF_JVal
  * @category json
  * @brief    Represents a single json value, such an integer or array.
- * @related  CF_JDoc CF_JVal cf_make_json CF_JType
+ * @related  cf_make_json CF_JDoc CF_JType
  */
 typedef struct CF_JVal { uintptr_t id; } CF_JVal;
 /* @end */
@@ -41,7 +41,7 @@ typedef struct CF_JVal { uintptr_t id; } CF_JVal;
  * @enum     CF_JType
  * @category json
  * @brief    Describes the type of a `CF_JVal`.
- * @related  CF_JDoc CF_JVal cf_make_json
+ * @related  cf_make_json CF_JDoc CF_JVal
  */
 #define CF_JTYPE_DEFS \
 	/* @entry Empty value, representing an uninitialized state. This is not the same as `CF_JTYPE_NULL`. */ \
@@ -94,7 +94,7 @@ CF_INLINE const char* cf_json_type_to_string(CF_JType type)
  * @param    size       The number of bytes in the `data` pointer.
  * @return   Returns a `CF_JDoc`.
  * @remarks  You should call `cf_json_get_root` on this document to begin fetching values out of it.
- * @related  CF_JDoc cf_make_json cf_make_json_from_file cf_json_get_root cf_destroy_json cf_json_get_root cf_json_to_string cf_json_to_file
+ * @related  cf_make_json_from_file cf_json_get_root cf_destroy_json
  */
 CF_API CF_JDoc CF_CALL cf_make_json(const void* data, size_t size);
 
@@ -105,7 +105,7 @@ CF_API CF_JDoc CF_CALL cf_make_json(const void* data, size_t size);
  * @param    virtual_path  A virtual path to the json file. See [Virtual File System](https://randygaul.github.io/cute_framework/topics/virtual_file_system).
  * @return   Returns a `CF_JDoc`.
  * @remarks  You should call `cf_json_get_root` on this document to begin fetching values out of it.
- * @related  CF_JDoc cf_make_json cf_make_json_from_file cf_json_get_root cf_destroy_json cf_json_get_root cf_json_to_string cf_json_to_file
+ * @related  cf_make_json cf_json_get_root cf_destroy_json
  */
 CF_API CF_JDoc CF_CALL cf_make_json_from_file(const char* virtual_path);
 
@@ -113,7 +113,7 @@ CF_API CF_JDoc CF_CALL cf_make_json_from_file(const char* virtual_path);
  * @function cf_destroy_json
  * @category json
  * @brief    Destroys a json blob `CF_JDoc`.
- * @related  CF_JDoc cf_make_json cf_make_json_from_file cf_json_get_root cf_destroy_json cf_json_get_root cf_json_to_string cf_json_to_file
+ * @related  cf_make_json cf_make_json_from_file cf_json_get_root
  */
 CF_API void CF_CALL cf_destroy_json(CF_JDoc doc);
 
@@ -122,7 +122,7 @@ CF_API void CF_CALL cf_destroy_json(CF_JDoc doc);
  * @category json
  * @brief    Fetches the root of the document.
  * @return   Returns a `CF_JVal`, the root of the document.
- * @related  CF_JDoc cf_make_json cf_make_json_from_file cf_json_get_root cf_destroy_json cf_json_get_root cf_json_set_root
+ * @related  cf_json_set_root cf_make_json cf_make_json_from_file
  */
 CF_API CF_JVal CF_CALL cf_json_get_root(CF_JDoc doc);
 
@@ -130,7 +130,7 @@ CF_API CF_JVal CF_CALL cf_json_get_root(CF_JDoc doc);
  * @function cf_json_set_root
  * @category json
  * @brief    Sets the root of the document.
- * @related  CF_JDoc cf_make_json cf_make_json_from_file cf_json_get_root cf_destroy_json cf_json_get_root cf_json_set_root
+ * @related  cf_json_get_root cf_make_json cf_make_json_from_file
  */
 CF_API void CF_CALL cf_json_set_root(CF_JDoc doc, CF_JVal val);
 
@@ -141,7 +141,7 @@ CF_API void CF_CALL cf_json_set_root(CF_JDoc doc, CF_JVal val);
  * @function cf_json_type
  * @category json
  * @brief    Returns the type of the `CF_JVal` via enum `CF_JType`.
- * @related  CF_JType CF_JVal cf_json_type cf_json_is_null cf_json_is_int cf_json_is_float cf_json_is_bool cf_json_is_string cf_json_is_array cf_json_is_object
+ * @related  cf_json_is_null cf_json_is_int cf_json_is_float
  */
 CF_API CF_JType CF_CALL cf_json_type(CF_JVal val);
 
@@ -149,7 +149,7 @@ CF_API CF_JType CF_CALL cf_json_type(CF_JVal val);
  * @function cf_json_is_null
  * @category json
  * @brief    Returns true if the `CF_JType` is `CF_JTYPE_NULL`.
- * @related  CF_JVal cf_json_type cf_json_is_null cf_json_is_int cf_json_is_float cf_json_is_bool cf_json_is_string cf_json_is_array cf_json_is_object
+ * @related  cf_json_is_int cf_json_is_float cf_json_is_bool
  */
 CF_API bool CF_CALL cf_json_is_null(CF_JVal val);
 
@@ -157,7 +157,7 @@ CF_API bool CF_CALL cf_json_is_null(CF_JVal val);
  * @function cf_json_is_int
  * @category json
  * @brief    Returns true if the `CF_JType` is `CF_JTYPE_INT`.
- * @related  CF_JVal cf_json_type cf_json_is_null cf_json_is_int cf_json_is_float cf_json_is_bool cf_json_is_string cf_json_is_array cf_json_is_object
+ * @related  cf_json_is_null cf_json_is_float cf_json_is_bool
  */
 CF_API bool CF_CALL cf_json_is_int(CF_JVal val);
 
@@ -165,7 +165,7 @@ CF_API bool CF_CALL cf_json_is_int(CF_JVal val);
  * @function cf_json_is_float
  * @category json
  * @brief    Returns true if the `CF_JType` is `CF_JTYPE_FLOAT`.
- * @related  CF_JVal cf_json_type cf_json_is_null cf_json_is_int cf_json_is_float cf_json_is_bool cf_json_is_string cf_json_is_array cf_json_is_object
+ * @related  cf_json_is_null cf_json_is_int cf_json_is_bool
  */
 CF_API bool CF_CALL cf_json_is_float(CF_JVal val);
 
@@ -173,7 +173,7 @@ CF_API bool CF_CALL cf_json_is_float(CF_JVal val);
  * @function cf_json_is_bool
  * @category json
  * @brief    Returns true if the `CF_JType` is `CF_JTYPE_BOOL`.
- * @related  CF_JVal cf_json_type cf_json_is_null cf_json_is_int cf_json_is_float cf_json_is_bool cf_json_is_string cf_json_is_array cf_json_is_object
+ * @related  cf_json_is_null cf_json_is_int cf_json_is_float
  */
 CF_API bool CF_CALL cf_json_is_bool(CF_JVal val);
 
@@ -181,7 +181,7 @@ CF_API bool CF_CALL cf_json_is_bool(CF_JVal val);
  * @function cf_json_is_string
  * @category json
  * @brief    Returns true if the `CF_JType` is `CF_JTYPE_STRING`.
- * @related  CF_JVal cf_json_type cf_json_is_null cf_json_is_int cf_json_is_float cf_json_is_bool cf_json_is_string cf_json_is_array cf_json_is_object
+ * @related  cf_json_is_null cf_json_is_int cf_json_is_float
  */
 CF_API bool CF_CALL cf_json_is_string(CF_JVal val);
 
@@ -189,7 +189,7 @@ CF_API bool CF_CALL cf_json_is_string(CF_JVal val);
  * @function cf_json_is_array
  * @category json
  * @brief    Returns true if the `CF_JType` is `CF_JTYPE_ARRAY`.
- * @related  CF_JVal cf_json_type cf_json_is_null cf_json_is_int cf_json_is_float cf_json_is_bool cf_json_is_string cf_json_is_array cf_json_is_object
+ * @related  cf_json_is_null cf_json_is_int cf_json_is_float
  */
 CF_API bool CF_CALL cf_json_is_array(CF_JVal val);
 
@@ -197,7 +197,7 @@ CF_API bool CF_CALL cf_json_is_array(CF_JVal val);
  * @function cf_json_is_object
  * @category json
  * @brief    Returns true if the `CF_JType` is `CF_JTYPE_OBJECT`.
- * @related  CF_JVal cf_json_type cf_json_is_null cf_json_is_int cf_json_is_float cf_json_is_bool cf_json_is_string cf_json_is_array cf_json_is_object
+ * @related  cf_json_is_null cf_json_is_int cf_json_is_float
  */
 CF_API bool CF_CALL cf_json_is_object(CF_JVal val);
 
@@ -205,7 +205,7 @@ CF_API bool CF_CALL cf_json_is_object(CF_JVal val);
  * @function cf_json_get_int
  * @category json
  * @brief    Interprets the `CF_JVal` as an integer.
- * @related  CF_JVal cf_json_get_int cf_json_get_i64 cf_json_get_u64 cf_json_get_float cf_json_get_double cf_json_get_bool cf_json_get_string cf_json_get_len
+ * @related  cf_json_get_i64 cf_json_get_u64 cf_json_get_float
  */
 CF_API int CF_CALL cf_json_get_int(CF_JVal val);
 
@@ -213,7 +213,7 @@ CF_API int CF_CALL cf_json_get_int(CF_JVal val);
  * @function cf_json_get_i64
  * @category json
  * @brief    Interprets the `CF_JVal` as a 64-bit signed integer.
- * @related  CF_JVal cf_json_get_int cf_json_get_i64 cf_json_get_u64 cf_json_get_float cf_json_get_double cf_json_get_bool cf_json_get_string cf_json_get_len
+ * @related  cf_json_get_int cf_json_get_u64 cf_json_get_float
  */
 CF_API int64_t CF_CALL cf_json_get_i64(CF_JVal val);
 
@@ -221,7 +221,7 @@ CF_API int64_t CF_CALL cf_json_get_i64(CF_JVal val);
  * @function cf_json_get_u64
  * @category json
  * @brief    Interprets the `CF_JVal` as a 64-bit unsigned integer.
- * @related  CF_JVal cf_json_get_int cf_json_get_i64 cf_json_get_u64 cf_json_get_float cf_json_get_double cf_json_get_bool cf_json_get_string cf_json_get_len
+ * @related  cf_json_get_int cf_json_get_i64 cf_json_get_float
  */
 CF_API uint64_t CF_CALL cf_json_get_u64(CF_JVal val);
 
@@ -229,7 +229,7 @@ CF_API uint64_t CF_CALL cf_json_get_u64(CF_JVal val);
  * @function cf_json_get_float
  * @category json
  * @brief    Interprets the `CF_JVal` as a 32-bit float.
- * @related  CF_JVal cf_json_get_int cf_json_get_i64 cf_json_get_u64 cf_json_get_float cf_json_get_double cf_json_get_bool cf_json_get_string cf_json_get_len
+ * @related  cf_json_get_int cf_json_get_i64 cf_json_get_u64
  */
 CF_API float CF_CALL cf_json_get_float(CF_JVal val);
 
@@ -237,7 +237,7 @@ CF_API float CF_CALL cf_json_get_float(CF_JVal val);
  * @function cf_json_get_double
  * @category json
  * @brief    Interprets the `CF_JVal` as a 64-bit float.
- * @related  CF_JVal cf_json_get_int cf_json_get_i64 cf_json_get_u64 cf_json_get_float cf_json_get_double cf_json_get_bool cf_json_get_string cf_json_get_len
+ * @related  cf_json_get_int cf_json_get_i64 cf_json_get_u64
  */
 CF_API double CF_CALL cf_json_get_double(CF_JVal val);
 
@@ -245,7 +245,7 @@ CF_API double CF_CALL cf_json_get_double(CF_JVal val);
  * @function cf_json_get_bool
  * @category json
  * @brief    Interprets the `CF_JVal` as a boolean.
- * @related  CF_JVal cf_json_get_int cf_json_get_i64 cf_json_get_u64 cf_json_get_float cf_json_get_double cf_json_get_bool cf_json_get_string cf_json_get_len
+ * @related  cf_json_get_int cf_json_get_i64 cf_json_get_u64
  */
 CF_API bool CF_CALL cf_json_get_bool(CF_JVal val);
 
@@ -253,7 +253,7 @@ CF_API bool CF_CALL cf_json_get_bool(CF_JVal val);
  * @function cf_json_get_string
  * @category json
  * @brief    Interprets the `CF_JVal` as a plain C-string.
- * @related  CF_JVal cf_json_get_int cf_json_get_i64 cf_json_get_u64 cf_json_get_float cf_json_get_double cf_json_get_bool cf_json_get_string cf_json_get_len
+ * @related  cf_json_get_int cf_json_get_i64 cf_json_get_u64
  */
 CF_API const char* CF_CALL cf_json_get_string(CF_JVal val);
 
@@ -261,7 +261,7 @@ CF_API const char* CF_CALL cf_json_get_string(CF_JVal val);
  * @function cf_json_get_len
  * @category json
  * @brief    Returns the length of the `CF_JVal`'s string, if it is a valid string.
- * @related  CF_JVal cf_json_get_int cf_json_get_i64 cf_json_get_u64 cf_json_get_float cf_json_get_double cf_json_get_bool cf_json_get_string cf_json_get_len
+ * @related  cf_json_get_int cf_json_get_i64 cf_json_get_u64
  */
 CF_API int CF_CALL cf_json_get_len(CF_JVal val);
 
@@ -275,7 +275,7 @@ CF_API int CF_CALL cf_json_get_len(CF_JVal val);
  * @param    val       The JSON value to search for `key` within.
  * @param    key       The search key.
  * @return   Returns the `CF_JVal` associated with `key` on the object `val`.
- * @related  CF_JVal cf_json_get cf_json_array_at cf_json_array_get cf_json_iter
+ * @related  cf_json_array_at cf_json_array_get cf_json_iter
  */
 CF_API CF_JVal CF_CALL cf_json_get(CF_JVal val, const char* key);
 
@@ -287,7 +287,7 @@ CF_API CF_JVal CF_CALL cf_json_get(CF_JVal val, const char* key);
  * @param    index     The index of the value to return.
  * @return   Returns the `CF_JVal` associated with `index` on the object `val`.
  * @remarks  This function does the same thing as `cf_json_array_get`.
- * @related  CF_JVal cf_json_get cf_json_array_at cf_json_array_get cf_json_iter
+ * @related  cf_json_array_get cf_json_get cf_json_iter
  */
 CF_API CF_JVal CF_CALL cf_json_array_at(CF_JVal val, int index);
 
@@ -299,7 +299,7 @@ CF_API CF_JVal CF_CALL cf_json_array_at(CF_JVal val, int index);
  * @param    index     The index of the value to return.
  * @return   Returns the `CF_JVal` associated with `index` on the object `val`.
  * @remarks  This function does the same thing as `cf_json_array_at`.
- * @related  CF_JVal cf_json_get cf_json_array_at cf_json_array_get cf_json_iter
+ * @related  cf_json_array_at cf_json_get cf_json_iter
  */
 CF_API CF_JVal CF_CALL cf_json_array_get(CF_JVal val, int index);
 
@@ -307,7 +307,7 @@ CF_API CF_JVal CF_CALL cf_json_array_get(CF_JVal val, int index);
  * @struct   CF_JIter
  * @category json
  * @brief    An iterator for looping over arrays or key-value pairs.
- * @related  CF_JIter cf_json_iter cf_json_iter_next cf_json_iter_next_by_name cf_json_iter_remove cf_json_iter_key cf_json_iter_val
+ * @related  cf_json_iter cf_json_iter_next cf_json_iter_next_by_name
  */
 typedef struct CF_JIter
 {
@@ -344,7 +344,7 @@ typedef struct CF_JIter
  *           }
  * @remarks  The `CF_JIter` can be used in foor loops, and can traverse both JSON arrays and objects. When
  *           traversing arrays do not call `cf_json_iter_key`.
- * @related  CF_JVal cf_json_get cf_json_array_at cf_json_array_get cf_json_iter cf_json_iter_remove
+ * @related  cf_json_iter_remove cf_json_get cf_json_array_at
  */
 CF_API CF_JIter CF_CALL cf_json_iter(CF_JVal val);
 
@@ -353,7 +353,7 @@ CF_API CF_JIter CF_CALL cf_json_iter(CF_JVal val);
  * @category json
  * @brief    Returns true if the `CF_JIter` has finished iterating over all elements.
  * @remarks  See `cf_json_iter`.
- * @related  CF_JVal cf_json_get cf_json_array_at cf_json_array_get cf_json_iter cf_json_iter_remove
+ * @related  cf_json_iter_remove cf_json_iter cf_json_get
  */
 #define cf_json_iter_done(iter) ((iter).index >= (iter).count)
 
@@ -362,7 +362,7 @@ CF_API CF_JIter CF_CALL cf_json_iter(CF_JVal val);
  * @category json
  * @brief    Proceeds to the next element.
  * @remarks  See `cf_json_iter`.
- * @related  CF_JVal cf_json_get cf_json_array_at cf_json_array_get cf_json_iter cf_json_iter_remove
+ * @related  cf_json_iter_remove cf_json_iter cf_json_get
  */
 CF_API CF_JIter CF_CALL cf_json_iter_next(CF_JIter iter);
 
@@ -371,7 +371,7 @@ CF_API CF_JIter CF_CALL cf_json_iter_next(CF_JIter iter);
  * @category json
  * @brief    Proceeds to the next element with a matching name.
  * @remarks  You should know the ordering of your key/val pairs before calling this function, as it only searches forwards. See `cf_json_iter`.
- * @related  CF_JVal cf_json_get cf_json_array_at cf_json_array_get cf_json_iter cf_json_iter_remove
+ * @related  cf_json_iter_remove cf_json_iter cf_json_get
  */
 CF_API CF_JVal CF_CALL cf_json_iter_next_by_name(CF_JIter* iter, const char* key);
 
@@ -380,7 +380,7 @@ CF_API CF_JVal CF_CALL cf_json_iter_next_by_name(CF_JIter* iter, const char* key
  * @category json
  * @brief    Removes the element currently referenced by the iterator.
  * @remarks  See `cf_json_iter`.
- * @related  CF_JVal cf_json_get cf_json_array_at cf_json_array_get cf_json_iter cf_json_iter_remove
+ * @related  cf_json_iter cf_json_get cf_json_array_at
  */
 CF_API CF_JVal CF_CALL cf_json_iter_remove(CF_JIter* iter);
 
@@ -389,7 +389,7 @@ CF_API CF_JVal CF_CALL cf_json_iter_remove(CF_JIter* iter);
  * @category json
  * @brief    Returns the key currently referenced by the iterator.
  * @remarks  You should not call this function when iterating over an array. See `cf_json_iter`.
- * @related  CF_JVal cf_json_get cf_json_array_at cf_json_array_get cf_json_iter cf_json_iter_remove
+ * @related  cf_json_iter_remove cf_json_iter cf_json_get
  */
 CF_API const char* CF_CALL cf_json_iter_key(CF_JIter iter);
 
@@ -398,7 +398,7 @@ CF_API const char* CF_CALL cf_json_iter_key(CF_JIter iter);
  * @category json
  * @brief    Returns the value currently referenced by the iterator.
  * @remarks  See `cf_json_iter`.
- * @related  CF_JVal cf_json_get cf_json_array_at cf_json_array_get cf_json_iter cf_json_iter_remove
+ * @related  cf_json_iter_remove cf_json_iter cf_json_get
  */
 CF_API CF_JVal CF_CALL cf_json_iter_val(CF_JIter iter);
 
@@ -410,7 +410,7 @@ CF_API CF_JVal CF_CALL cf_json_iter_val(CF_JIter iter);
  * @category json
  * @brief    Creates and returns a new NULL json value.
  * @remarks  The value can be attached to the document by `cf_json_array_add` or `cf_json_object_add`.
- * @related  CF_JVal cf_json_from_null cf_json_from_int cf_json_from_float cf_json_from_bool cf_json_from_string cf_json_array_add cf_json_object_add
+ * @related  cf_json_from_int cf_json_from_float cf_json_from_bool
  */
 CF_API CF_JVal CF_CALL cf_json_from_null(CF_JDoc doc);
 
@@ -419,7 +419,7 @@ CF_API CF_JVal CF_CALL cf_json_from_null(CF_JDoc doc);
  * @category json
  * @brief    Creates and returns a new 32-bit int json value.
  * @remarks  The value can be attached to the document by `cf_json_array_add` or `cf_json_object_add`.
- * @related  CF_JVal cf_json_from_null cf_json_from_int cf_json_from_i64 cf_json_from_u64 cf_json_from_float cf_json_from_bool cf_json_from_string cf_json_array_add cf_json_object_add
+ * @related  cf_json_from_i64 cf_json_from_null cf_json_from_u64
  */
 CF_API CF_JVal CF_CALL cf_json_from_int(CF_JDoc doc, int val);
 
@@ -428,7 +428,7 @@ CF_API CF_JVal CF_CALL cf_json_from_int(CF_JDoc doc, int val);
  * @category json
  * @brief    Creates and returns a new 64-bit signed int json value.
  * @remarks  The value can be attached to the document by `cf_json_array_add` or `cf_json_object_add`.
- * @related  CF_JVal cf_json_from_null cf_json_from_int cf_json_from_i64 cf_json_from_u64 cf_json_from_float cf_json_from_bool cf_json_from_string cf_json_array_add cf_json_object_add
+ * @related  cf_json_from_int cf_json_from_null cf_json_from_u64
  */
 CF_API CF_JVal CF_CALL cf_json_from_i64(CF_JDoc doc, int64_t val);
 
@@ -437,7 +437,7 @@ CF_API CF_JVal CF_CALL cf_json_from_i64(CF_JDoc doc, int64_t val);
  * @category json
  * @brief    Creates and returns a new 64-bit unsigned int json value.
  * @remarks  The value can be attached to the document by `cf_json_array_add` or `cf_json_object_add`.
- * @related  CF_JVal cf_json_from_null cf_json_from_int cf_json_from_i64 cf_json_from_u64 cf_json_from_float cf_json_from_bool cf_json_from_string cf_json_array_add cf_json_object_add
+ * @related  cf_json_from_null cf_json_from_int cf_json_from_i64
  */
 CF_API CF_JVal CF_CALL cf_json_from_u64(CF_JDoc doc, uint64_t val);
 
@@ -446,7 +446,7 @@ CF_API CF_JVal CF_CALL cf_json_from_u64(CF_JDoc doc, uint64_t val);
  * @category json
  * @brief    Creates and returns a new 32-bit float json value.
  * @remarks  The value can be attached to the document by `cf_json_array_add` or `cf_json_object_add`.
- * @related  CF_JVal cf_json_from_null cf_json_from_int cf_json_from_float cf_json_from_double cf_json_from_bool cf_json_from_string cf_json_array_add cf_json_object_add
+ * @related  cf_json_from_null cf_json_from_int cf_json_from_double
  */
 CF_API CF_JVal CF_CALL cf_json_from_float(CF_JDoc doc, float val);
 
@@ -455,7 +455,7 @@ CF_API CF_JVal CF_CALL cf_json_from_float(CF_JDoc doc, float val);
  * @category json
  * @brief    Creates and returns a new 64-bit float json value.
  * @remarks  The value can be attached to the document by `cf_json_array_add` or `cf_json_object_add`.
- * @related  CF_JVal cf_json_from_null cf_json_from_int cf_json_from_float cf_json_from_double cf_json_from_bool cf_json_from_string cf_json_array_add cf_json_object_add
+ * @related  cf_json_from_null cf_json_from_int cf_json_from_float
  */
 CF_API CF_JVal CF_CALL cf_json_from_double(CF_JDoc doc, double val);
 
@@ -464,7 +464,7 @@ CF_API CF_JVal CF_CALL cf_json_from_double(CF_JDoc doc, double val);
  * @category json
  * @brief    Creates and returns a new boolean json value.
  * @remarks  The value can be attached to the document by `cf_json_array_add` or `cf_json_object_add`.
- * @related  CF_JVal cf_json_from_null cf_json_from_int cf_json_from_float cf_json_from_bool cf_json_from_string cf_json_array_add cf_json_object_add
+ * @related  cf_json_from_null cf_json_from_int cf_json_from_float
  */
 CF_API CF_JVal CF_CALL cf_json_from_bool(CF_JDoc doc, bool val);
 
@@ -473,7 +473,7 @@ CF_API CF_JVal CF_CALL cf_json_from_bool(CF_JDoc doc, bool val);
  * @category json
  * @brief    Creates and returns a new string json value.
  * @remarks  The value can be attached to the document by `cf_json_array_add` or `cf_json_object_add`.
- * @related  CF_JVal cf_json_from_null cf_json_from_int cf_json_from_float cf_json_from_bool cf_json_from_string cf_json_from_string_range cf_json_array_add cf_json_object_add
+ * @related  cf_json_from_string_range cf_json_from_null cf_json_from_int
  */
 CF_API CF_JVal CF_CALL cf_json_from_string(CF_JDoc doc, const char* val);
 
@@ -482,7 +482,7 @@ CF_API CF_JVal CF_CALL cf_json_from_string(CF_JDoc doc, const char* val);
  * @category json
  * @brief    Creates and returns a new string json value.
  * @remarks  The value can be attached to the document by `cf_json_array_add` or `cf_json_object_add`.
- * @related  CF_JVal cf_json_from_null cf_json_from_int cf_json_from_float cf_json_from_bool cf_json_from_string cf_json_from_string_range cf_json_array_add cf_json_object_add
+ * @related  cf_json_from_string cf_json_from_null cf_json_from_int
  */
 CF_API CF_JVal CF_CALL cf_json_from_string_range(CF_JDoc doc, const char* begin, const char* end);
 
@@ -493,7 +493,7 @@ CF_API CF_JVal CF_CALL cf_json_from_string_range(CF_JDoc doc, const char* begin,
  * @function cf_json_set_null
  * @category json
  * @brief    Sets the `CF_JVal` to null.
- * @related  CF_JVal cf_json_set_null cf_json_set_int cf_json_set_i64 cf_json_set_u64 cf_json_set_float cf_json_set_double cf_json_set_bool cf_json_set_string cf_json_set_string_range
+ * @related  cf_json_set_int cf_json_set_i64 cf_json_set_u64
  */
 CF_API void CF_CALL cf_json_set_null(CF_JVal jval);
 
@@ -501,7 +501,7 @@ CF_API void CF_CALL cf_json_set_null(CF_JVal jval);
  * @function cf_json_set_int
  * @category json
  * @brief    Sets the `CF_JVal` to a 32-bit signed int.
- * @related  CF_JVal cf_json_set_null cf_json_set_int cf_json_set_i64 cf_json_set_u64 cf_json_set_float cf_json_set_double cf_json_set_bool cf_json_set_string cf_json_set_string_range
+ * @related  cf_json_set_i64 cf_json_set_null cf_json_set_u64
  */
 CF_API void CF_CALL cf_json_set_int(CF_JVal jval, int val);
 
@@ -509,7 +509,7 @@ CF_API void CF_CALL cf_json_set_int(CF_JVal jval, int val);
  * @function cf_json_set_i64
  * @category json
  * @brief    Sets the `CF_JVal` to a 64-bit signed int.
- * @related  CF_JVal cf_json_set_null cf_json_set_int cf_json_set_i64 cf_json_set_u64 cf_json_set_float cf_json_set_double cf_json_set_bool cf_json_set_string cf_json_set_string_range
+ * @related  cf_json_set_int cf_json_set_null cf_json_set_u64
  */
 CF_API void CF_CALL cf_json_set_i64(CF_JVal jval, int64_t val);
 
@@ -517,7 +517,7 @@ CF_API void CF_CALL cf_json_set_i64(CF_JVal jval, int64_t val);
  * @function cf_json_set_u64
  * @category json
  * @brief    Sets the `CF_JVal` to an unsigned 64-bit int.
- * @related  CF_JVal cf_json_set_null cf_json_set_int cf_json_set_i64 cf_json_set_u64 cf_json_set_float cf_json_set_double cf_json_set_bool cf_json_set_string cf_json_set_string_range
+ * @related  cf_json_set_null cf_json_set_int cf_json_set_i64
  */
 CF_API void CF_CALL cf_json_set_u64(CF_JVal jval, uint64_t val);
 
@@ -525,7 +525,7 @@ CF_API void CF_CALL cf_json_set_u64(CF_JVal jval, uint64_t val);
  * @function cf_json_set_float
  * @category json
  * @brief    Sets the `CF_JVal` to a 32-bit float.
- * @related  CF_JVal cf_json_set_null cf_json_set_int cf_json_set_i64 cf_json_set_u64 cf_json_set_float cf_json_set_double cf_json_set_bool cf_json_set_string cf_json_set_string_range
+ * @related  cf_json_set_null cf_json_set_int cf_json_set_i64
  */
 CF_API void CF_CALL cf_json_set_float(CF_JVal jval, float val);
 
@@ -533,7 +533,7 @@ CF_API void CF_CALL cf_json_set_float(CF_JVal jval, float val);
  * @function cf_json_set_double
  * @category json
  * @brief    Sets the `CF_JVal` to a 64-bit float.
- * @related  CF_JVal cf_json_set_null cf_json_set_int cf_json_set_i64 cf_json_set_u64 cf_json_set_float cf_json_set_double cf_json_set_bool cf_json_set_string cf_json_set_string_range
+ * @related  cf_json_set_null cf_json_set_int cf_json_set_i64
  */
 CF_API void CF_CALL cf_json_set_double(CF_JVal jval, double val);
 
@@ -541,7 +541,7 @@ CF_API void CF_CALL cf_json_set_double(CF_JVal jval, double val);
  * @function cf_json_set_bool
  * @category json
  * @brief    Sets the `CF_JVal` to a boolean.
- * @related  CF_JVal cf_json_set_null cf_json_set_int cf_json_set_i64 cf_json_set_u64 cf_json_set_float cf_json_set_double cf_json_set_bool cf_json_set_string cf_json_set_string_range
+ * @related  cf_json_set_null cf_json_set_int cf_json_set_i64
  */
 CF_API void CF_CALL cf_json_set_bool(CF_JVal jval, bool val);
 
@@ -550,7 +550,7 @@ CF_API void CF_CALL cf_json_set_bool(CF_JVal jval, bool val);
  * @category json
  * @brief    Sets the `CF_JVal` to a string.
  * @remarks  The string must be retained in memory while the `CF_JDoc` persists.
- * @related  CF_JVal cf_json_set_null cf_json_set_int cf_json_set_i64 cf_json_set_u64 cf_json_set_float cf_json_set_double cf_json_set_bool cf_json_set_string cf_json_set_string_range
+ * @related  cf_json_set_string_range cf_json_set_null cf_json_set_int
  */
 CF_API void CF_CALL cf_json_set_string(CF_JVal jval, const char* val);
 
@@ -559,7 +559,7 @@ CF_API void CF_CALL cf_json_set_string(CF_JVal jval, const char* val);
  * @category json
  * @brief    Sets the `CF_JVal` to a string.
  * @remarks  The string must be retained in memory while the `CF_JDoc` persists.
- * @related  CF_JVal cf_json_set_null cf_json_set_int cf_json_set_i64 cf_json_set_u64 cf_json_set_float cf_json_set_double cf_json_set_bool cf_json_set_string cf_json_set_string_range
+ * @related  cf_json_set_string cf_json_set_null cf_json_set_int
  */
 CF_API void CF_CALL cf_json_set_string_range(CF_JVal jval, const char* begin, const char* end);
 
@@ -571,7 +571,7 @@ CF_API void CF_CALL cf_json_set_string_range(CF_JVal jval, const char* begin, co
  * @category json
  * @brief    Creates a new json array.
  * @remarks  The value can be attached to the document by `cf_json_array_add` or `cf_json_object_add`.
- * @related  CF_JVal cf_json_array cf_json_array_from_int cf_json_array_from_i64 cf_json_array_from_u64 cf_json_array_from_float cf_json_array_from_double cf_json_array_from_bool cf_json_array_from_string cf_json_array_add cf_json_object_add
+ * @related  cf_json_array_from_int cf_json_array_from_i64 cf_json_array_from_u64
  */
 CF_API CF_JVal CF_CALL cf_json_array(CF_JDoc doc);
 
@@ -580,7 +580,7 @@ CF_API CF_JVal CF_CALL cf_json_array(CF_JDoc doc);
  * @category json
  * @brief    Creates a new json array from an array of integers.
  * @remarks  The returned `CF_JVal` can be attached to the document by `cf_json_array_add` or `cf_json_object_add`.
- * @related  CF_JVal cf_json_array cf_json_array_from_int cf_json_array_from_i64 cf_json_array_from_u64 cf_json_array_from_float cf_json_array_from_double cf_json_array_from_bool cf_json_array_from_string cf_json_array_add cf_json_object_add
+ * @related  cf_json_array_from_i64 cf_json_array_from_u64 cf_json_array_from_float
  */
 CF_API CF_JVal CF_CALL cf_json_array_from_int(CF_JDoc doc, int* vals, int count);
 
@@ -589,7 +589,7 @@ CF_API CF_JVal CF_CALL cf_json_array_from_int(CF_JDoc doc, int* vals, int count)
  * @category json
  * @brief    Creates a new json array from an array of integers.
  * @remarks  The returned `CF_JVal` can be attached to the document by `cf_json_array_add` or `cf_json_object_add`.
- * @related  CF_JVal cf_json_array cf_json_array_from_int cf_json_array_from_i64 cf_json_array_from_u64 cf_json_array_from_float cf_json_array_from_double cf_json_array_from_bool cf_json_array_from_string cf_json_array_add cf_json_object_add
+ * @related  cf_json_array_from_int cf_json_array_from_u64 cf_json_array_from_float
  */
 CF_API CF_JVal CF_CALL cf_json_array_from_i64(CF_JDoc doc, int64_t* vals, int count);
 
@@ -598,7 +598,7 @@ CF_API CF_JVal CF_CALL cf_json_array_from_i64(CF_JDoc doc, int64_t* vals, int co
  * @category json
  * @brief    Creates a new json array from an array of integers.
  * @remarks  The returned `CF_JVal` can be attached to the document by `cf_json_array_add` or `cf_json_object_add`.
- * @related  CF_JVal cf_json_array cf_json_array_from_int cf_json_array_from_i64 cf_json_array_from_u64 cf_json_array_from_float cf_json_array_from_double cf_json_array_from_bool cf_json_array_from_string cf_json_array_add cf_json_object_add
+ * @related  cf_json_array_from_int cf_json_array_from_i64 cf_json_array_from_float
  */
 CF_API CF_JVal CF_CALL cf_json_array_from_u64(CF_JDoc doc, uint64_t* vals, int count);
 
@@ -607,7 +607,7 @@ CF_API CF_JVal CF_CALL cf_json_array_from_u64(CF_JDoc doc, uint64_t* vals, int c
  * @category json
  * @brief    Creates a new json array from an array of floats.
  * @remarks  The returned `CF_JVal` can be attached to the document by `cf_json_array_add` or `cf_json_object_add`.
- * @related  CF_JVal cf_json_array cf_json_array_from_int cf_json_array_from_i64 cf_json_array_from_u64 cf_json_array_from_float cf_json_array_from_double cf_json_array_from_bool cf_json_array_from_string cf_json_array_add cf_json_object_add
+ * @related  cf_json_array_from_int cf_json_array_from_i64 cf_json_array_from_u64
  */
 CF_API CF_JVal CF_CALL cf_json_array_from_float(CF_JDoc doc, float* vals, int count);
 
@@ -616,7 +616,7 @@ CF_API CF_JVal CF_CALL cf_json_array_from_float(CF_JDoc doc, float* vals, int co
  * @category json
  * @brief    Creates a new json array from an array of 64-bit floats.
  * @remarks  The returned `CF_JVal` can be attached to the document by `cf_json_array_add` or `cf_json_object_add`.
- * @related  CF_JVal cf_json_array cf_json_array_from_int cf_json_array_from_i64 cf_json_array_from_u64 cf_json_array_from_float cf_json_array_from_double cf_json_array_from_bool cf_json_array_from_string cf_json_array_add cf_json_object_add
+ * @related  cf_json_array_from_int cf_json_array_from_i64 cf_json_array_from_u64
  */
 CF_API CF_JVal CF_CALL cf_json_array_from_double(CF_JDoc doc, double* vals, int count);
 
@@ -625,7 +625,7 @@ CF_API CF_JVal CF_CALL cf_json_array_from_double(CF_JDoc doc, double* vals, int 
  * @category json
  * @brief    Creates a new json array from an array of bools.
  * @remarks  The returned `CF_JVal` can be attached to the document by `cf_json_array_add` or `cf_json_object_add`.
- * @related  CF_JVal cf_json_array cf_json_array_from_int cf_json_array_from_i64 cf_json_array_from_u64 cf_json_array_from_float cf_json_array_from_double cf_json_array_from_bool cf_json_array_from_string cf_json_array_add cf_json_object_add
+ * @related  cf_json_array_from_int cf_json_array_from_i64 cf_json_array_from_u64
  */
 CF_API CF_JVal CF_CALL cf_json_array_from_bool(CF_JDoc doc, bool* vals, int count);
 
@@ -634,7 +634,7 @@ CF_API CF_JVal CF_CALL cf_json_array_from_bool(CF_JDoc doc, bool* vals, int coun
  * @category json
  * @brief    Creates a new json array from an array of strings.
  * @remarks  The returned `CF_JVal` can be attached to the document by `cf_json_array_add` or `cf_json_object_add`.
- * @related  CF_JVal cf_json_array cf_json_array_from_int cf_json_array_from_i64 cf_json_array_from_u64 cf_json_array_from_float cf_json_array_from_double cf_json_array_from_bool cf_json_array_from_string cf_json_array_add cf_json_object_add
+ * @related  cf_json_array_from_int cf_json_array_from_i64 cf_json_array_from_u64
  */
 CF_API CF_JVal CF_CALL cf_json_array_from_string(CF_JDoc doc, const char** vals, int count);
 
@@ -645,7 +645,7 @@ CF_API CF_JVal CF_CALL cf_json_array_from_string(CF_JDoc doc, const char** vals,
  * @function cf_json_array_add
  * @category json
  * @brief    Adds a json value to the end of a json array.
- * @related  CF_JVal cf_json_array_add cf_json_object_add
+ * @related  cf_json_object_add CF_JVal
  */
 CF_API void CF_CALL cf_json_array_add(CF_JVal arr, CF_JVal val);
 
@@ -653,7 +653,7 @@ CF_API void CF_CALL cf_json_array_add(CF_JVal arr, CF_JVal val);
  * @function cf_json_array_add_null
  * @category json
  * @brief    Adds a null value to the end of a json array.
- * @related  CF_JVal cf_json_array_add cf_json_object_add
+ * @related  cf_json_array_add cf_json_object_add CF_JVal
  */
 CF_API void CF_CALL cf_json_array_add_null(CF_JDoc doc, CF_JVal arr);
 
@@ -661,7 +661,7 @@ CF_API void CF_CALL cf_json_array_add_null(CF_JDoc doc, CF_JVal arr);
  * @function cf_json_array_add_int
  * @category json
  * @brief    Adds a 32-bit signed int to the end of a json array.
- * @related  CF_JVal cf_json_array_add cf_json_object_add
+ * @related  cf_json_array_add cf_json_object_add CF_JVal
  */
 CF_API void CF_CALL cf_json_array_add_int(CF_JDoc doc, CF_JVal arr, int val);
 
@@ -669,7 +669,7 @@ CF_API void CF_CALL cf_json_array_add_int(CF_JDoc doc, CF_JVal arr, int val);
  * @function cf_json_array_add_i64
  * @category json
  * @brief    Adds a 64-bit signed int to the end of a json array.
- * @related  CF_JVal cf_json_array_add cf_json_object_add
+ * @related  cf_json_array_add cf_json_object_add CF_JVal
  */
 CF_API void CF_CALL cf_json_array_add_i64(CF_JDoc doc, CF_JVal arr, int64_t val);
 
@@ -677,7 +677,7 @@ CF_API void CF_CALL cf_json_array_add_i64(CF_JDoc doc, CF_JVal arr, int64_t val)
  * @function cf_json_array_add_u64
  * @category json
  * @brief    Adds a 64-bit unsigned int to the end of a json array.
- * @related  CF_JVal cf_json_array_add cf_json_object_add
+ * @related  cf_json_array_add cf_json_object_add CF_JVal
  */
 CF_API void CF_CALL cf_json_array_add_u64(CF_JDoc doc, CF_JVal arr, uint64_t val);
 
@@ -685,7 +685,7 @@ CF_API void CF_CALL cf_json_array_add_u64(CF_JDoc doc, CF_JVal arr, uint64_t val
  * @function cf_json_array_add_float
  * @category json
  * @brief    Adds a 32-bit float to the end of a json array.
- * @related  CF_JVal cf_json_array_add cf_json_object_add
+ * @related  cf_json_array_add cf_json_object_add CF_JVal
  */
 CF_API void CF_CALL cf_json_array_add_float(CF_JDoc doc, CF_JVal arr, float val);
 
@@ -693,7 +693,7 @@ CF_API void CF_CALL cf_json_array_add_float(CF_JDoc doc, CF_JVal arr, float val)
  * @function cf_json_array_add_double
  * @category json
  * @brief    Adds a 64-bit float to the end of a json array.
- * @related  CF_JVal cf_json_array_add cf_json_object_add
+ * @related  cf_json_array_add cf_json_object_add CF_JVal
  */
 CF_API void CF_CALL cf_json_array_add_double(CF_JDoc doc, CF_JVal arr, double val);
 
@@ -701,7 +701,7 @@ CF_API void CF_CALL cf_json_array_add_double(CF_JDoc doc, CF_JVal arr, double va
  * @function cf_json_array_add_bool
  * @category json
  * @brief    Adds a bool to the end of a json array.
- * @related  CF_JVal cf_json_array_add cf_json_object_add
+ * @related  cf_json_array_add cf_json_object_add CF_JVal
  */
 CF_API void CF_CALL cf_json_array_add_bool(CF_JDoc doc, CF_JVal arr, bool val);
 
@@ -709,7 +709,7 @@ CF_API void CF_CALL cf_json_array_add_bool(CF_JDoc doc, CF_JVal arr, bool val);
  * @function cf_json_array_add_string
  * @category json
  * @brief    Adds a string to the end of a json array.
- * @related  CF_JVal cf_json_array_add cf_json_object_add
+ * @related  cf_json_array_add cf_json_object_add CF_JVal
  */
 CF_API void CF_CALL cf_json_array_add_string(CF_JDoc doc, CF_JVal arr, const char* val);
 
@@ -717,7 +717,7 @@ CF_API void CF_CALL cf_json_array_add_string(CF_JDoc doc, CF_JVal arr, const cha
  * @function cf_json_array_add_string_range
  * @category json
  * @brief    Adds a string to the end of a json array.
- * @related  CF_JVal cf_json_array_add cf_json_object_add
+ * @related  cf_json_array_add cf_json_object_add CF_JVal
  */
 CF_API void CF_CALL cf_json_array_add_string_range(CF_JDoc doc, CF_JVal arr, const char* begin, const char* end);
 
@@ -726,7 +726,7 @@ CF_API void CF_CALL cf_json_array_add_string_range(CF_JDoc doc, CF_JVal arr, con
  * @category json
  * @brief    Creates a new array and adds it to the end of a json array.
  * @return   Returns the newly added array.
- * @related  CF_JVal cf_json_array_add cf_json_object_add
+ * @related  cf_json_array_add cf_json_object_add CF_JVal
  */
 CF_API CF_JVal CF_CALL cf_json_array_add_array(CF_JDoc doc, CF_JVal arr);
 
@@ -735,7 +735,7 @@ CF_API CF_JVal CF_CALL cf_json_array_add_array(CF_JDoc doc, CF_JVal arr);
  * @category json
  * @brief    Adds an empty object to the end of a json array.
  * @return   Returns the newly added empty object.
- * @related  CF_JVal cf_json_array_add cf_json_object_add
+ * @related  cf_json_array_add cf_json_object_add CF_JVal
  */
 CF_API CF_JVal CF_CALL cf_json_array_add_object(CF_JDoc doc, CF_JVal arr);
 
@@ -743,7 +743,7 @@ CF_API CF_JVal CF_CALL cf_json_array_add_object(CF_JDoc doc, CF_JVal arr);
  * @function cf_json_array_pop
  * @category json
  * @brief    Removes the last element of the array and returns it.
- * @related  CF_JVal cf_json_array_add cf_json_object_add
+ * @related  cf_json_array_add cf_json_object_add CF_JVal
  */
 CF_API CF_JVal CF_CALL cf_json_array_pop(CF_JVal arr);
 
@@ -754,7 +754,7 @@ CF_API CF_JVal CF_CALL cf_json_array_pop(CF_JVal arr);
  * @function cf_json_object
  * @category json
  * @brief    Creates a new empty json object.
- * @related  CF_JVal cf_json_object cf_json_object_from_strings cf_json_object_from_string_pairs
+ * @related  cf_json_object_from_strings cf_json_object_from_string_pairs CF_JVal
  */
 CF_API CF_JVal CF_CALL cf_json_object(CF_JDoc doc);
 
@@ -762,7 +762,7 @@ CF_API CF_JVal CF_CALL cf_json_object(CF_JDoc doc);
  * @function cf_json_object_from_strings
  * @category json
  * @brief    Creates a new json object from an array of key/val pairs as strings.
- * @related  CF_JVal cf_json_object cf_json_object_from_strings cf_json_object_from_string_pairs
+ * @related  cf_json_object_from_string_pairs cf_json_object CF_JVal
  */
 CF_API CF_JVal CF_CALL cf_json_object_from_strings(CF_JDoc doc, const char** keys, const char** vals, int count);
 
@@ -770,7 +770,7 @@ CF_API CF_JVal CF_CALL cf_json_object_from_strings(CF_JDoc doc, const char** key
  * @function cf_json_object_from_string_pairs
  * @category json
  * @brief    Creates a new json object from an array of key/val pairs as strings.
- * @related  CF_JVal cf_json_object cf_json_object_from_strings cf_json_object_from_string_pairs
+ * @related  cf_json_object_from_strings cf_json_object CF_JVal
  */
 CF_API CF_JVal CF_CALL cf_json_object_from_string_pairs(CF_JDoc doc, const char** kv_pairs, int pair_count);
 
@@ -781,7 +781,7 @@ CF_API CF_JVal CF_CALL cf_json_object_from_string_pairs(CF_JDoc doc, const char*
  * @function cf_json_object_add
  * @category json
  * @brief    Adds a property (key/val pair) to a json object.
- * @related  CF_JVal cf_json_object_add cf_json_object_add_null cf_json_object_add_int cf_json_object_add_float cf_json_object_add_bool cf_json_object_add_string
+ * @related  cf_json_object_add_null cf_json_object_add_int cf_json_object_add_float
  */
 CF_API void CF_CALL cf_json_object_add(CF_JDoc doc, CF_JVal obj, const char* key, CF_JVal val);
 
@@ -789,7 +789,7 @@ CF_API void CF_CALL cf_json_object_add(CF_JDoc doc, CF_JVal obj, const char* key
  * @function cf_json_object_add_null
  * @category json
  * @brief    Adds a null to a json object.
- * @related  CF_JVal cf_json_object_add cf_json_object_add_null cf_json_object_add_int cf_json_object_add_float cf_json_object_add_bool cf_json_object_add_string
+ * @related  cf_json_object_add_int cf_json_object_add_float cf_json_object_add_bool
  */
 CF_API void CF_CALL cf_json_object_add_null(CF_JDoc doc, CF_JVal obj, const char* key);
 
@@ -797,7 +797,7 @@ CF_API void CF_CALL cf_json_object_add_null(CF_JDoc doc, CF_JVal obj, const char
  * @function cf_json_object_add_int
  * @category json
  * @brief    Adds a 32-bit signed int to a json object.
- * @related  CF_JVal cf_json_object_add cf_json_object_add_null cf_json_object_add_int cf_json_object_add_float cf_json_object_add_bool cf_json_object_add_string
+ * @related  cf_json_object_add_null cf_json_object_add_float cf_json_object_add_bool
  */
 CF_API void CF_CALL cf_json_object_add_int(CF_JDoc doc, CF_JVal obj, const char* key, int val);
 
@@ -805,7 +805,7 @@ CF_API void CF_CALL cf_json_object_add_int(CF_JDoc doc, CF_JVal obj, const char*
  * @function cf_json_object_add_i64
  * @category json
  * @brief    Adds a 64-bit signed int to a json object.
- * @related  CF_JVal cf_json_object_add cf_json_object_add_null cf_json_object_add_int cf_json_object_add_float cf_json_object_add_bool cf_json_object_add_string
+ * @related  cf_json_object_add_int cf_json_object_add_null cf_json_object_add_float
  */
 CF_API void CF_CALL cf_json_object_add_i64(CF_JDoc doc, CF_JVal obj, const char* key, int64_t val);
 
@@ -813,7 +813,7 @@ CF_API void CF_CALL cf_json_object_add_i64(CF_JDoc doc, CF_JVal obj, const char*
  * @function cf_json_object_add_u64
  * @category json
  * @brief    Adds a 64-bit unsigned int to a json object.
- * @related  CF_JVal cf_json_object_add cf_json_object_add_null cf_json_object_add_int cf_json_object_add_float cf_json_object_add_bool cf_json_object_add_string
+ * @related  cf_json_object_add_null cf_json_object_add_int cf_json_object_add_float
  */
 CF_API void CF_CALL cf_json_object_add_u64(CF_JDoc doc, CF_JVal obj, const char* key, uint64_t val);
 
@@ -821,7 +821,7 @@ CF_API void CF_CALL cf_json_object_add_u64(CF_JDoc doc, CF_JVal obj, const char*
  * @function cf_json_object_add_float
  * @category json
  * @brief    Adds a 32-bit float to a json object.
- * @related  CF_JVal cf_json_object_add cf_json_object_add_null cf_json_object_add_int cf_json_object_add_float cf_json_object_add_bool cf_json_object_add_string
+ * @related  cf_json_object_add_null cf_json_object_add_int cf_json_object_add_bool
  */
 CF_API void CF_CALL cf_json_object_add_float(CF_JDoc doc, CF_JVal obj, const char* key, float val);
 
@@ -829,7 +829,7 @@ CF_API void CF_CALL cf_json_object_add_float(CF_JDoc doc, CF_JVal obj, const cha
  * @function cf_json_object_add_double
  * @category json
  * @brief    Adds a 64-bit float to a json object.
- * @related  CF_JVal cf_json_object_add cf_json_object_add_null cf_json_object_add_int cf_json_object_add_float cf_json_object_add_bool cf_json_object_add_string
+ * @related  cf_json_object_add_null cf_json_object_add_int cf_json_object_add_float
  */
 CF_API void CF_CALL cf_json_object_add_double(CF_JDoc doc, CF_JVal obj, const char* key, double val);
 
@@ -837,7 +837,7 @@ CF_API void CF_CALL cf_json_object_add_double(CF_JDoc doc, CF_JVal obj, const ch
  * @function cf_json_object_add_bool
  * @category json
  * @brief    Adds a bool to a json object.
- * @related  CF_JVal cf_json_object_add cf_json_object_add_null cf_json_object_add_int cf_json_object_add_float cf_json_object_add_bool cf_json_object_add_string
+ * @related  cf_json_object_add_null cf_json_object_add_int cf_json_object_add_float
  */
 CF_API void CF_CALL cf_json_object_add_bool(CF_JDoc doc, CF_JVal obj, const char* key, bool val);
 
@@ -845,7 +845,7 @@ CF_API void CF_CALL cf_json_object_add_bool(CF_JDoc doc, CF_JVal obj, const char
  * @function cf_json_object_add_string
  * @category json
  * @brief    Adds a string to a json object.
- * @related  CF_JVal cf_json_object_add cf_json_object_add_null cf_json_object_add_int cf_json_object_add_float cf_json_object_add_bool cf_json_object_add_string cf_json_object_add_string_range
+ * @related  cf_json_object_add_string_range cf_json_object_add_null cf_json_object_add_int
  */
 CF_API void CF_CALL cf_json_object_add_string(CF_JDoc doc, CF_JVal obj, const char* key, const char* val);
 
@@ -853,7 +853,7 @@ CF_API void CF_CALL cf_json_object_add_string(CF_JDoc doc, CF_JVal obj, const ch
  * @function cf_json_object_add_string_range
  * @category json
  * @brief    Adds a string to a json object.
- * @related  CF_JVal cf_json_object_add cf_json_object_add_null cf_json_object_add_int cf_json_object_add_float cf_json_object_add_bool cf_json_object_add_string cf_json_object_add_string_range
+ * @related  cf_json_object_add_string cf_json_object_add_null cf_json_object_add_int
  */
 CF_API void CF_CALL cf_json_object_add_string_range(CF_JDoc doc, CF_JVal obj, const char* key, const char* begin, const char* end);
 
@@ -864,7 +864,7 @@ CF_API void CF_CALL cf_json_object_add_string_range(CF_JDoc doc, CF_JVal obj, co
  * @function cf_json_object_remove_key
  * @category json
  * @brief    Removes a key/val pair from a json object.
- * @related  CF_JVal cf_json_object_remove_key cf_json_object_remove_key_range cf_json_object_rename_key cf_json_object_rename_key_range
+ * @related  cf_json_object_remove_key_range cf_json_object_rename_key cf_json_object_rename_key_range
  */
 CF_API void CF_CALL cf_json_object_remove_key(CF_JVal obj, const char* key);
 
@@ -872,7 +872,7 @@ CF_API void CF_CALL cf_json_object_remove_key(CF_JVal obj, const char* key);
  * @function cf_json_object_remove_key_range
  * @category json
  * @brief    Removes a key/val pair from a json object.
- * @related  CF_JVal cf_json_object_remove_key cf_json_object_remove_key_range cf_json_object_rename_key cf_json_object_rename_key_range
+ * @related  cf_json_object_remove_key cf_json_object_rename_key cf_json_object_rename_key_range
  */
 CF_API void CF_CALL cf_json_object_remove_key_range(CF_JVal obj, const char* key_begin, const char* key_end);
 
@@ -880,7 +880,7 @@ CF_API void CF_CALL cf_json_object_remove_key_range(CF_JVal obj, const char* key
  * @function cf_json_object_rename_key
  * @category json
  * @brief    Renames a key/val pair from a json object.
- * @related  CF_JVal cf_json_object_remove_key cf_json_object_remove_key_range cf_json_object_rename_key cf_json_object_rename_key_range
+ * @related  cf_json_object_rename_key_range cf_json_object_remove_key cf_json_object_remove_key_range
  */
 CF_API void CF_CALL cf_json_object_rename_key(CF_JDoc doc, CF_JVal obj, const char* key, const char* rename);
 
@@ -888,7 +888,7 @@ CF_API void CF_CALL cf_json_object_rename_key(CF_JDoc doc, CF_JVal obj, const ch
  * @function cf_json_object_rename_key_range
  * @category json
  * @brief    Renames a key/val pair from a json object.
- * @related  CF_JVal cf_json_object_remove_key cf_json_object_remove_key_range cf_json_object_rename_key cf_json_object_rename_key_range
+ * @related  cf_json_object_rename_key cf_json_object_remove_key cf_json_object_remove_key_range
  */
 CF_API void CF_CALL cf_json_object_rename_key_range(CF_JDoc doc, CF_JVal obj, const char* key_begin, const char* key_end, const char* rename_begin, const char* rename_end);
 
@@ -901,7 +901,7 @@ CF_API void CF_CALL cf_json_object_rename_key_range(CF_JDoc doc, CF_JVal obj, co
  * @brief    Saves the json document as a string.
  * @return   Returns a dynamic string, free it with `sfree` when done.
  * @remarks  If you want to remove all unnecessary formatting/whitespace then use `cf_json_to_string_minimal`.
- * @related  CF_JDoc cf_make_json cf_make_json_from_file cf_json_get_root cf_destroy_json cf_json_get_root cf_json_to_string cf_json_to_file cf_json_to_string_minimal cf_json_to_file_minimal
+ * @related  cf_json_to_string_minimal cf_json_to_file cf_json_to_file_minimal
  */
 CF_API dyna char* CF_CALL cf_json_to_string(CF_JDoc doc);
 
@@ -910,7 +910,7 @@ CF_API dyna char* CF_CALL cf_json_to_string(CF_JDoc doc);
  * @category json
  * @brief    Saves the json document as a string.
  * @return   Returns a dynamic string, free it with `sfree` when done.
- * @related  CF_JDoc cf_make_json cf_make_json_from_file cf_json_get_root cf_destroy_json cf_json_get_root cf_json_to_string cf_json_to_file
+ * @related  cf_json_to_string cf_json_to_file cf_json_get_root
  */
 CF_API dyna char* CF_CALL cf_json_to_string_minimal(CF_JDoc doc);
 
@@ -921,7 +921,7 @@ CF_API dyna char* CF_CALL cf_json_to_string_minimal(CF_JDoc doc);
  * @param    virtual_path  A virtual path to the json file. Make sure to setup your write directory with `cf_fs_set_write_directory`. See [Virtual File System](https://randygaul.github.io/cute_framework/topics/virtual_file_system).
  * @brief    Saves the json document to a file.
  * @remarks  If you want to remove all unnecessary formatting/whitespace then use `cf_json_to_file_minimal`.
- * @related  CF_JDoc cf_make_json cf_make_json_from_file cf_json_get_root cf_destroy_json cf_json_get_root cf_json_to_string cf_json_to_file cf_json_to_string_minimal cf_json_to_file_minimal
+ * @related  cf_json_to_file_minimal cf_json_to_string cf_json_to_string_minimal
  */
 CF_API CF_Result CF_CALL cf_json_to_file(CF_JDoc doc, const char* virtual_path);
 
@@ -931,7 +931,7 @@ CF_API CF_Result CF_CALL cf_json_to_file(CF_JDoc doc, const char* virtual_path);
  * @param    doc           The json document to save.
  * @param    virtual_path  A virtual path to the json file. Make sure to setup your write directory with `cf_fs_set_write_directory`. See [Virtual File System](https://randygaul.github.io/cute_framework/topics/virtual_file_system).
  * @brief    Saves the json document to a file.
- * @related  CF_JDoc cf_make_json cf_make_json_from_file cf_json_get_root cf_destroy_json cf_json_get_root cf_json_to_string cf_json_to_file cf_json_to_string_minimal cf_json_to_file_minimal
+ * @related  cf_json_to_file cf_json_to_string cf_json_to_string_minimal
  */
 CF_API CF_Result CF_CALL cf_json_to_file_minimal(CF_JDoc doc, const char* virtual_path);
 

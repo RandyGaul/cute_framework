@@ -65,7 +65,7 @@ typedef enum CF_ShaderInfoDataType
  * @struct   CF_ShaderUniformMemberInfo
  * @category graphics
  * @brief    Information about a uniform block member.
- * @related  CF_ShaderBytecode CF_ShaderUniformInfo
+ * @related  CF_ShaderUniformInfo CF_ShaderBytecode
  */
 typedef struct CF_ShaderUniformMemberInfo
 {
@@ -101,7 +101,7 @@ typedef struct CF_ShaderUniformMemberInfo
  *               members += uniform_info->num_members;
  *           }
  *           ```
- * @related  CF_ShaderBytecode CF_ShaderUniformMemberInfo
+ * @related  CF_ShaderUniformMemberInfo CF_ShaderBytecode
  */
 typedef struct CF_ShaderUniformInfo
 {
@@ -175,7 +175,7 @@ typedef struct CF_ShaderInfo
  * @category graphics
  * @brief    A SPIR-V shader bytecode blob.
  * @remarks  This can be created either through `cf_compile_shader_to_bytecode` or the `cute-shaderc` compiler.
- * @related  CF_Shader cf_make_shader_from_bytecode cf_compile_shader_to_bytecode
+ * @related  cf_make_shader_from_bytecode cf_compile_shader_to_bytecode CF_Shader
  */
 typedef struct CF_ShaderBytecode
 {

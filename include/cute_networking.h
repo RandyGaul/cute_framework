@@ -27,7 +27,7 @@ extern "C" {
  * @struct   CF_Client
  * @category net
  * @brief    An opaque pointer representing a single networked client.
- * @related  CF_Client CF_Server cf_make_client
+ * @related  cf_make_client CF_Server
  */
 typedef struct cn_client_t CF_Client;
 // @end
@@ -36,7 +36,7 @@ typedef struct cn_client_t CF_Client;
  * @struct   CF_Server
  * @category net
  * @brief    An opaque pointer representing a single networked server.
- * @related  CF_Client CF_Server cf_make_client
+ * @related  cf_make_client CF_Client
  */
 typedef struct cn_server_t CF_Server;
 // @end
@@ -45,7 +45,7 @@ typedef struct cn_server_t CF_Server;
  * @struct   CF_CryptoKey
  * @category net
  * @brief    A chunk of bytes representing a cryptographically secure key.
- * @related  CF_CryptoKey cf_crypto_generate_key cf_generate_connect_token
+ * @related  cf_crypto_generate_key cf_generate_connect_token
  */
 typedef struct cn_crypto_key_t CF_CryptoKey;
 // @end
@@ -54,7 +54,7 @@ typedef struct cn_crypto_key_t CF_CryptoKey;
  * @struct   CF_CryptoSignPublic
  * @category net
  * @brief    One-half of a cryptographically secure keypair. This key can be freely shared to the public.
- * @related  CF_CryptoKey CF_CryptoSignPublic CF_CryptoSignSecret cf_crypto_sign_keygen CF_ServerConfig
+ * @related  cf_crypto_sign_keygen CF_CryptoSignSecret CF_CryptoKey
  */
 typedef struct cn_crypto_sign_public_t CF_CryptoSignPublic;
 // @end
@@ -63,7 +63,7 @@ typedef struct cn_crypto_sign_public_t CF_CryptoSignPublic;
  * @struct   CF_CryptoSignSecret
  * @category net
  * @brief    One-half of a cryptographically secure keypair. This key must be kept secret and hidden with your servers.
- * @related  CF_CryptoKey CF_CryptoSignPublic CF_CryptoSignSecret cf_crypto_sign_keygen CF_ServerConfig
+ * @related  cf_crypto_sign_keygen CF_CryptoSignPublic CF_CryptoKey
  */
 typedef struct cn_crypto_sign_secret_t CF_CryptoSignSecret;
 // @end
@@ -75,7 +75,7 @@ typedef struct cn_crypto_sign_secret_t CF_CryptoSignSecret;
  * @struct   CF_Address
  * @category net
  * @brief    A network address.
- * @related  CF_Address CF_AddressType cf_address_init
+ * @related  cf_address_init CF_AddressType
  */
 typedef struct cn_endpoint_t CF_Address;
 // @end
@@ -109,7 +109,7 @@ enum
  * @category net
  * @brief    Initialze a `CF_Address` from a C string.
  * @return   Returns 0 on success, -1 on failure.
- * @related  CF_Address cf_address_init cf_address_to_string cf_address_equals
+ * @related  cf_address_to_string cf_address_equals CF_Address
  */
 CF_API int CF_CALL cf_address_init(CF_Address* endpoint, const char* address_and_port_string);
 
@@ -117,7 +117,7 @@ CF_API int CF_CALL cf_address_init(CF_Address* endpoint, const char* address_and
  * @function cf_address_to_string
  * @category net
  * @brief    Converts a `CF_Address` to a C string.
- * @related  CF_Address cf_address_init cf_address_to_string cf_address_equals
+ * @related  cf_address_init cf_address_equals CF_Address
  */
 CF_API void CF_CALL cf_address_to_string(CF_Address endpoint, char* buffer, int buffer_size);
 
@@ -125,7 +125,7 @@ CF_API void CF_CALL cf_address_to_string(CF_Address endpoint, char* buffer, int 
  * @function cf_address_equals
  * @category net
  * @brief    Tests two endpoints for equality.
- * @related  CF_Address cf_address_init cf_address_to_string cf_address_equals
+ * @related  cf_address_init cf_address_to_string CF_Address
  */
 CF_API int CF_CALL cf_address_equals(CF_Address a, CF_Address b);
 
@@ -136,7 +136,7 @@ CF_API int CF_CALL cf_address_equals(CF_Address a, CF_Address b);
  * @function CF_CONNECT_TOKEN_SIZE
  * @category net
  * @brief    The size of a single connect token.
- * @related  CF_CONNECT_TOKEN_SIZE CF_CONNECT_TOKEN_USER_DATA_SIZE cf_generate_connect_token cf_client_connect
+ * @related  cf_client_connect cf_generate_connect_token CF_CONNECT_TOKEN_USER_DATA_SIZE
  */
 #define CF_CONNECT_TOKEN_SIZE 1114
 
@@ -144,7 +144,7 @@ CF_API int CF_CALL cf_address_equals(CF_Address a, CF_Address b);
  * @function CF_CONNECT_TOKEN_USER_DATA_SIZE
  * @category net
  * @brief    The size of the user data section of a connect token.
- * @related  CF_CONNECT_TOKEN_SIZE CF_CONNECT_TOKEN_USER_DATA_SIZE cf_generate_connect_token cf_client_connect
+ * @related  cf_client_connect cf_generate_connect_token CF_CONNECT_TOKEN_SIZE
  */
 #define CF_CONNECT_TOKEN_USER_DATA_SIZE 256
 
@@ -152,7 +152,7 @@ CF_API int CF_CALL cf_address_equals(CF_Address a, CF_Address b);
  * @function cf_crypto_generate_key
  * @category net
  * @brief    Returns a cryptography key in a cryptographically secure way.
- * @related  CF_CryptoKey cf_crypto_generate_key cf_generate_connect_token
+ * @related  cf_generate_connect_token CF_CryptoKey
  */
 CF_API CF_CryptoKey CF_CALL cf_crypto_generate_key(void);
 
@@ -169,7 +169,7 @@ CF_API void CF_CALL cf_crypto_random_bytes(void* data, int byte_count);
  * @brief    Generates a cryptographically secure keypair, used for facilitating connect tokens.
  * @param    public_key     The public key of the keypair. Freely share this publicy.
  * @param    secret_key     The secret key of the keypair. Keep this safe and hidden within your servers.
- * @related  CF_CryptoKey cf_crypto_generate_key cf_generate_connect_token
+ * @related  cf_crypto_generate_key cf_generate_connect_token CF_CryptoKey
  */
 CF_API void CF_CALL cf_crypto_sign_keygen(CF_CryptoSignPublic* public_key, CF_CryptoSignSecret* secret_key);
 
@@ -207,7 +207,7 @@ CF_API void CF_CALL cf_crypto_sign_keygen(CF_CryptoSignPublic* public_key, CF_Cr
  *           which means the token cannot be modified or forged as long as the `cf_shared_secret_key` is
  *           not leaked. In the event your secret key is accidentally leaked, you can always roll a
  *           new one and distribute it to your webservice and game servers.
- * @related  CF_CryptoKey cf_crypto_generate_key cf_generate_connect_token cf_client_connect
+ * @related  cf_crypto_generate_key cf_client_connect CF_CryptoKey
  */
 CF_API CF_Result CF_CALL cf_generate_connect_token(uint64_t application_id, uint64_t creation_timestamp, const CF_CryptoKey* client_to_server_key, const CF_CryptoKey* server_to_client_key, uint64_t expiration_timestamp, uint32_t handshake_timeout, int address_count, const char** address_list, uint64_t client_id, const uint8_t* user_data, const CF_CryptoSignSecret* shared_secret_key, uint8_t* token_ptr_out);
 
@@ -221,7 +221,7 @@ CF_API CF_Result CF_CALL cf_generate_connect_token(uint64_t application_id, uint
  * @param    port            Port for opening a UDP socket.
  * @param    application_id  A unique number to identify your game, can be whatever value you like. This must be the same number as in `cf_server_create`.
  * @param    use_ipv6        Whether or not the socket should turn on ipv6. Some users will not have ipv6 enabled, so consider setting to `false`.
- * @related  CF_Client cf_make_client cf_destroy_client cf_client_connect cf_generate_connect_token
+ * @related  cf_destroy_client cf_client_connect cf_generate_connect_token
  */
 CF_API CF_Client* CF_CALL cf_make_client(uint16_t port, uint64_t application_id, bool use_ipv6);
 
@@ -230,7 +230,7 @@ CF_API CF_Client* CF_CALL cf_make_client(uint16_t port, uint64_t application_id,
  * @category net
  * @brief    Destroys a client created by `cf_make_client`.
  * @remarks  Does not send out any disconnect packets. Call `cf_client_disconnect` first.
- * @related  CF_Client cf_make_client cf_destroy_client cf_client_connect cf_client_disconnect
+ * @related  cf_make_client cf_client_connect cf_client_disconnect
  */
 CF_API void CF_CALL cf_destroy_client(CF_Client* client);
 
@@ -244,7 +244,7 @@ CF_API void CF_CALL cf_destroy_client(CF_Client* client);
  *           `cf_client_state_get` to get the client's state. Once `cf_client_connect` is called then successive calls to
  *           `cf_client_update` is expected, where `cf_client_update` will perform the connection handshake and make
  *           connection attempts to your servers.
- * @related  CF_Client cf_make_client cf_destroy_client cf_client_connect cf_client_disconnect cf_client_update
+ * @related  cf_client_disconnect cf_client_update cf_make_client
  */
 CF_API CF_Result CF_CALL cf_client_connect(CF_Client* client, const uint8_t* connect_token);
 
@@ -252,7 +252,7 @@ CF_API CF_Result CF_CALL cf_client_connect(CF_Client* client, const uint8_t* con
  * @function cf_client_disconnect
  * @category net
  * @brief    Attempts to gracefully disconnect a `CF_Client` from a `CF_Server`.
- * @related  CF_Client cf_make_client cf_destroy_client cf_client_connect cf_client_disconnect cf_client_update
+ * @related  cf_client_connect cf_client_update cf_make_client
  */
 CF_API void CF_CALL cf_client_disconnect(CF_Client* client);
 
@@ -261,7 +261,7 @@ CF_API void CF_CALL cf_client_disconnect(CF_Client* client);
  * @category net
  * @brief    Updates the client.
  * @remarks  You should call this one per game loop after calling `cf_client_connect`.
- * @related  CF_Client cf_make_client cf_destroy_client cf_client_connect cf_client_disconnect cf_client_update
+ * @related  cf_client_connect cf_client_disconnect cf_make_client
  */
 CF_API void CF_CALL cf_client_update(CF_Client* client, double dt, uint64_t current_time);
 
@@ -275,7 +275,7 @@ CF_API void CF_CALL cf_client_update(CF_Client* client, double dt, uint64_t curr
  * @param    was_sent_reliably  `true` if the packet was a reliable packet.
  * @return   Returns `true` if a packet was popped.
  * @remarks  You must free this packet when you're done by calling `cf_client_free_packet`.
- * @related  CF_Client cf_client_pop_packet cf_client_free_packet cf_client_send
+ * @related  cf_client_free_packet cf_client_send CF_Client
  */
 CF_API bool CF_CALL cf_client_pop_packet(CF_Client* client, void** packet, int* size, bool* was_sent_reliably);
 
@@ -283,7 +283,7 @@ CF_API bool CF_CALL cf_client_pop_packet(CF_Client* client, void** packet, int* 
  * @function cf_client_free_packet
  * @category net
  * @brief    Free's a packet created by `cf_client_pop_packet`.
- * @related  CF_Client cf_client_pop_packet cf_client_free_packet cf_client_send
+ * @related  cf_client_pop_packet cf_client_send CF_Client
  */
 CF_API void CF_CALL cf_client_free_packet(CF_Client* client, void* packet);
 
@@ -308,7 +308,7 @@ CF_API void CF_CALL cf_client_free_packet(CF_Client* client, void* packet);
  *           that can be lost due to packet loss as an unreliable packet. Of course, some packets are required
  *           to be sent, and so reliable is appropriate. As an optimization some kinds of data, such as frequent
  *           transform updates, can be sent unreliably.
- * @related  CF_Client cf_client_pop_packet cf_client_free_packet cf_client_send
+ * @related  cf_client_pop_packet cf_client_free_packet CF_Client
  */
 CF_API CF_Result CF_CALL cf_client_send(CF_Client* client, const void* packet, int size, bool send_reliably);
 
@@ -317,7 +317,7 @@ CF_API CF_Result CF_CALL cf_client_send(CF_Client* client, const void* packet, i
  * @category net
  * @brief    The various states of a `CF_Client`.
  * @remarks  Anything less than or equal to 0 is an error.
- * @related  CF_ClientState cf_client_state_to_string cf_client_state_get
+ * @related  cf_client_state_to_string cf_client_state_get
  */
 #define CF_CLIENT_STATE_DEFS \
 	/* @entry */ \
@@ -354,7 +354,7 @@ typedef enum CF_ClientState
  * @category net
  * @brief    Convert an enum `CF_ClientState` to a c-style string.
  * @param    state        The state to convert to a string.
- * @related  CF_ClientState cf_client_state_to_string cf_client_state_get
+ * @related  cf_client_state_get CF_ClientState
  */
 CF_INLINE const char* cf_client_state_to_string(CF_ClientState state)
 {
@@ -370,7 +370,7 @@ CF_INLINE const char* cf_client_state_to_string(CF_ClientState state)
  * @function cf_client_state_get
  * @category net
  * @brief    Returns the `CF_ClientState` of a `CF_Client`.
- * @related  CF_ClientState cf_client_state_to_string cf_client_state_get
+ * @related  cf_client_state_to_string CF_ClientState
  */
 CF_API CF_ClientState CF_CALL cf_client_state_get(const CF_Client* client);
 
@@ -398,7 +398,7 @@ CF_API void CF_CALL cf_client_enable_network_simulator(CF_Client* client, double
  * @category net
  * @brief    Parameters for calling `cf_make_server`.
  * @remarks  Call `cf_server_config_defaults` to get a good set of default parameters.
- * @related  CF_ServerConfig cf_server_config_defaults cf_make_server
+ * @related  cf_server_config_defaults cf_make_server
  */
 typedef struct CF_ServerConfig
 {
@@ -429,7 +429,7 @@ typedef struct CF_ServerConfig
  * @function cf_server_config_defaults
  * @category net
  * @brief    Returns a good set of default parameters for `cf_make_server`.
- * @related  CF_ServerConfig cf_server_config_defaults cf_make_server
+ * @related  cf_make_server CF_ServerConfig
  */
 CF_INLINE CF_ServerConfig CF_CALL cf_server_config_defaults(void)
 {
@@ -447,7 +447,7 @@ CF_INLINE CF_ServerConfig CF_CALL cf_server_config_defaults(void)
  * @category net
  * @brief    Returns a new `CF_Server`.
  * @param    config      The server settings `CF_ServerConfig`.
- * @related  CF_ServerConfig cf_server_config_defaults cf_make_server cf_destroy_server cf_server_start cf_server_update
+ * @related  cf_server_config_defaults cf_destroy_server cf_server_start
  */
 CF_API CF_Server* CF_CALL cf_make_server(CF_ServerConfig config);
 
@@ -455,7 +455,7 @@ CF_API CF_Server* CF_CALL cf_make_server(CF_ServerConfig config);
  * @function cf_destroy_server
  * @category net
  * @brief    Destroys a `CF_Server` created by `cf_make_server`.
- * @related  CF_ServerConfig cf_server_config_defaults cf_make_server cf_destroy_server cf_server_start cf_server_update
+ * @related  cf_server_config_defaults cf_make_server cf_server_start
  */
 CF_API void CF_CALL cf_destroy_server(CF_Server* server);
 
@@ -465,7 +465,7 @@ CF_API void CF_CALL cf_destroy_server(CF_Server* server);
  * @brief    Starts up the server connection, ready to receive new client connections.
  * @param    address_and_port  The address and port combo to start the server upon.
  * @remarks  Please note that not all users will be able to access an ipv6 server address, so it might be good to also provide a way to connect through ipv4.
- * @related  CF_ServerConfig cf_server_config_defaults cf_make_server cf_destroy_server cf_server_start cf_server_update
+ * @related  cf_server_config_defaults cf_server_update cf_make_server
  */
 CF_API CF_Result cf_server_start(CF_Server* server, const char* address_and_port);
 
@@ -473,7 +473,7 @@ CF_API CF_Result cf_server_start(CF_Server* server, const char* address_and_port
  * @function cf_server_stop
  * @category net
  * @brief    Stops the server.
- * @related  CF_ServerConfig cf_server_config_defaults cf_make_server cf_destroy_server cf_server_start cf_server_update
+ * @related  cf_server_start cf_server_config_defaults cf_server_update
  */
 CF_API void cf_server_stop(CF_Server* server);
 
@@ -481,7 +481,7 @@ CF_API void cf_server_stop(CF_Server* server);
  * @enum     CF_ServerEventType
  * @category net
  * @brief    The various possible `CF_ServerEvent` types.
- * @related  CF_ServerEventType cf_server_event_type_to_string CF_ServerEvent cf_server_pop_event
+ * @related  cf_server_event_type_to_string cf_server_pop_event
  */
 #define CF_SERVER_EVENT_TYPE_DEFS \
 	/* @entry A new incoming connection. */         \
@@ -504,7 +504,7 @@ typedef enum CF_ServerEventType
  * @category net
  * @brief    Convert an enum `CF_ServerEventType` to a c-style string.
  * @param    state        The state to convert to a string.
- * @related  CF_ServerEventType cf_server_event_type_to_string CF_ServerEvent cf_server_pop_event
+ * @related  cf_server_pop_event CF_ServerEventType CF_ServerEvent
  */
 CF_INLINE const char* cf_server_event_type_to_string(CF_ServerEventType type)
 {
@@ -520,7 +520,7 @@ CF_INLINE const char* cf_server_event_type_to_string(CF_ServerEventType type)
  * @struct   CF_ServerEvent
  * @category net
  * @brief    An event from the server, likely a client payload packet.
- * @related  CF_ServerEvent CF_ServerEvent cf_server_update cf_server_pop_event cf_server_free_packet
+ * @related  cf_server_update cf_server_pop_event cf_server_free_packet
  */
 typedef struct CF_ServerEvent
 {
@@ -568,7 +568,7 @@ typedef struct CF_ServerEvent
  * @return   Returns true if an event was popped.
  * @remarks  Server events notify of when a client connects/disconnects, or has sent a payload packet.
  *           You must free the payload packets with `cf_server_free_packet` when done.
- * @related  CF_ServerEventType cf_server_event_type_to_string CF_ServerEvent cf_server_pop_event cf_server_update cf_server_send
+ * @related  cf_server_event_type_to_string cf_server_update cf_server_send
  */
 CF_API bool CF_CALL cf_server_pop_event(CF_Server* server, CF_ServerEvent* event);
 
@@ -576,7 +576,7 @@ CF_API bool CF_CALL cf_server_pop_event(CF_Server* server, CF_ServerEvent* event
  * @function cf_server_free_packet
  * @category net
  * @brief    Frees a payload packet from a `CF_ServerEvent`.
- * @related  CF_ServerEventType cf_server_event_type_to_string CF_ServerEvent cf_server_pop_event
+ * @related  cf_server_event_type_to_string cf_server_pop_event CF_ServerEventType
  */
 CF_API void CF_CALL cf_server_free_packet(CF_Server* server, int client_index, void* data);
 
@@ -585,7 +585,7 @@ CF_API void CF_CALL cf_server_free_packet(CF_Server* server, int client_index, v
  * @category net
  * @brief    Updates the server.
  * @remarks  Call this once per game tick.
- * @related  cf_server_update CF_ServerEvent cf_server_pop_event
+ * @related  cf_server_pop_event CF_ServerEvent
  */
 CF_API void CF_CALL cf_server_update(CF_Server* server, double dt, uint64_t current_time);
 
@@ -593,7 +593,7 @@ CF_API void CF_CALL cf_server_update(CF_Server* server, double dt, uint64_t curr
  * @function cf_server_disconnect_client
  * @category net
  * @brief    Disconnects a client from the server.
- * @related  cf_server_update CF_ServerEvent cf_server_pop_event cf_server_send
+ * @related  cf_server_update cf_server_pop_event cf_server_send
  */
 CF_API void CF_CALL cf_server_disconnect_client(CF_Server* server, int client_index, bool notify_client /* = true */);
 
@@ -607,7 +607,7 @@ CF_API void CF_CALL cf_server_disconnect_client(CF_Server* server, int client_in
  * @param    client_index   An index representing a particular client, from `CF_ServerEvent`.
  * @param    send_reliably  If `true` the packet will be sent reliably and in order. If false the packet will be sent just once, and may
  *                          arrive out of order or not at all.
- * @related  cf_server_update CF_ServerEvent cf_server_pop_event cf_server_send
+ * @related  cf_server_update cf_server_pop_event CF_ServerEvent
  */
 CF_API void CF_CALL cf_server_send(CF_Server* server, const void* packet, int size, int client_index, bool send_reliably);
 
@@ -615,7 +615,7 @@ CF_API void CF_CALL cf_server_send(CF_Server* server, const void* packet, int si
  * @function cf_server_is_client_connected
  * @category net
  * @brief    Returns true if a client is still connected.
- * @related  cf_server_update CF_ServerEvent cf_server_pop_event cf_server_send
+ * @related  cf_server_update cf_server_pop_event cf_server_send
  */
 CF_API bool CF_CALL cf_server_is_client_connected(CF_Server* server, int client_index);
 
