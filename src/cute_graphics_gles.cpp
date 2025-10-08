@@ -77,6 +77,8 @@ struct CF_GL_Canvas
 	GLuint fbo;
 	GLuint color;
 	GLuint depth;
+	bool has_depth;
+	bool has_stencil;
 
 	CF_Texture cf_color;
 };
@@ -357,6 +359,16 @@ static CF_GL_RenderState s_default_state(CF_GL_Canvas* canvas)
 	return state;
 }
 
+static bool s_canvas_has_depth(const CF_GL_Canvas* canvas)
+{
+	return canvas && canvas->has_depth;
+}
+
+static bool s_canvas_has_stencil(const CF_GL_Canvas* canvas)
+{
+	return canvas && canvas->has_stencil;
+}
+
 static void s_apply_state()
 {
 	CF_GL_RenderState* target = &g_ctx.target_state;
@@ -390,12 +402,21 @@ static void s_apply_state()
 	}
 
 	if (target->stencil_reference != current->stencil_reference) {
-		glStencilFuncSeparate(GL_FRONT_AND_BACK, GL_ALWAYS, target->stencil_reference, 0xFF );
+	GLenum front_compare = GL_ALWAYS;
+	GLenum back_compare = GL_ALWAYS;
+	GLuint mask = 0xFF;
+	if (g_ctx.material && g_ctx.material->state.stencil.enabled && s_canvas_has_stencil(g_ctx.canvas)) {
+	front_compare = s_wrap(g_ctx.material->state.stencil.front.compare);
+	back_compare = s_wrap(g_ctx.material->state.stencil.back.compare);
+	mask = g_ctx.material->state.stencil.read_mask;
+	}
+	glStencilFuncSeparate(GL_FRONT, front_compare, target->stencil_reference, mask);
+	glStencilFuncSeparate(GL_BACK, back_compare, target->stencil_reference, mask);
 	}
 
 	if (target->blend_constants.r != current->blend_constants.r ||
-		target->blend_constants.g != current->blend_constants.g ||
-		target->blend_constants.b != current->blend_constants.b ||
+	target->blend_constants.g != current->blend_constants.g ||
+	target->blend_constants.b != current->blend_constants.b ||
 		target->blend_constants.a != current->blend_constants.a
 	) {
 		glBlendColor(
@@ -689,6 +710,20 @@ CF_INLINE GLenum s_wrap(CF_BlendFactor f)
 	case CF_BLENDFACTOR_CONSTANT_COLOR:           return GL_CONSTANT_COLOR;
 	case CF_BLENDFACTOR_ONE_MINUS_CONSTANT_COLOR: return GL_ONE_MINUS_CONSTANT_COLOR;
 	case CF_BLENDFACTOR_SRC_ALPHA_SATURATE:       return GL_SRC_ALPHA_SATURATE;
+	}
+}
+
+CF_INLINE GLenum s_wrap(CF_StencilOp op)
+{
+	switch (op) { default:
+	case CF_STENCIL_OP_KEEP:            return GL_KEEP;
+	case CF_STENCIL_OP_ZERO:            return GL_ZERO;
+	case CF_STENCIL_OP_REPLACE:         return GL_REPLACE;
+	case CF_STENCIL_OP_INCREMENT_CLAMP: return GL_INCR;
+	case CF_STENCIL_OP_DECREMENT_CLAMP: return GL_DECR;
+	case CF_STENCIL_OP_INVERT:          return GL_INVERT;
+	case CF_STENCIL_OP_INCREMENT_WRAP:  return GL_INCR_WRAP;
+	case CF_STENCIL_OP_DECREMENT_WRAP:  return GL_DECR_WRAP;
 	}
 }
 
@@ -1060,47 +1095,52 @@ uint64_t cf_gles_texture_binding_handle(CF_Texture t)
 CF_Canvas cf_gles_make_canvas(CF_CanvasParams params)
 {
 	if (!cf_gles_texture_supports_format(params.target.pixel_format, (CF_TextureUsageBits)params.target.usage)) {
-		CF_ASSERT(!"Unsupported color target format for GLES backend.");
-		return CF_Canvas{};
+	CF_ASSERT(!"Unsupported color target format for GLES backend.");
+	return CF_Canvas{};
 	}
 	if (params.depth_stencil_enable) {
-		if (!cf_gles_texture_supports_format(params.depth_stencil_target.pixel_format, (CF_TextureUsageBits)params.depth_stencil_target.usage)) {
-			CF_ASSERT(!"Unsupported depth/stencil format for GLES backend.");
-			return CF_Canvas{};
-		}
+	if (!cf_gles_texture_supports_format(params.depth_stencil_target.pixel_format, (CF_TextureUsageBits)params.depth_stencil_target.usage)) {
+	CF_ASSERT(!"Unsupported depth/stencil format for GLES backend.");
+	return CF_Canvas{};
+	}
 	}
 
 	CF_GL_Canvas* c = (CF_GL_Canvas*)CF_CALLOC(sizeof(CF_GL_Canvas));
 	c->w = params.target.width;
 	c->h = params.target.height;
+	c->has_depth = false;
+	c->has_stencil = false;
 
 	// Color.
 	CF_Texture color = cf_gles_make_texture(params.target);
 	c->cf_color = color;
 	if (!color.id) {
-		CF_FREE(c);
-		return CF_Canvas{};
+	CF_FREE(c);
+	return CF_Canvas{};
 	}
 	c->color = ((CF_GL_Texture*)(uintptr_t)color.id)->id;
 
 	// Septh/stencil (renderbuffer).
 	if (params.depth_stencil_enable) {
-		c->depth = s_make_depth_renderbuffer(params.depth_stencil_target);
-		if (!c->depth) {
-			cf_gles_destroy_texture(color);
-			CF_FREE(c);
-			return CF_Canvas{};
-		}
+	CF_GL_PixelFormatInfo* depth_info = s_find_pixel_format_info(params.depth_stencil_target.pixel_format);
+	c->has_depth = depth_info && (depth_info->caps & CF_GL_FMT_CAP_DEPTH);
+	c->has_stencil = depth_info && depth_info->has_stencil && (depth_info->caps & CF_GL_FMT_CAP_STENCIL);
+	c->depth = s_make_depth_renderbuffer(params.depth_stencil_target);
+	if (!c->depth) {
+	cf_gles_destroy_texture(color);
+	CF_FREE(c);
+	return CF_Canvas{};
+	}
 	}
 
 	glGenFramebuffers(1, &c->fbo);
 	s_bind_framebuffer(c->fbo);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, c->color, 0);
 	if (c->depth) {
-		if (params.depth_stencil_target.pixel_format == CF_PIXEL_FORMAT_D24_UNORM_S8_UINT)
-			glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, c->depth);
-		else
-			glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, c->depth);
+	if (params.depth_stencil_target.pixel_format == CF_PIXEL_FORMAT_D24_UNORM_S8_UINT)
+	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, c->depth);
+	else
+	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, c->depth);
 	}
 	CF_ASSERT(glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE);
 	CF_POLL_OPENGL_ERROR();
@@ -1140,12 +1180,18 @@ CF_Texture cf_gles_canvas_get_depth_stencil_target(CF_Canvas)
 	return CF_Texture{};
 }
 
-static void s_clear_canvas()
+static void s_clear_canvas(const CF_GL_Canvas* canvas)
 {
-	GLbitfield bits = GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT;
+	GLbitfield bits = GL_COLOR_BUFFER_BIT;
 	glClearColor(app->clear_color.r, app->clear_color.g, app->clear_color.b, app->clear_color.a);
+	if (s_canvas_has_depth(canvas)) {
 	glClearDepthf(app->clear_depth);
+	bits |= GL_DEPTH_BUFFER_BIT;
+	}
+	if (s_canvas_has_stencil(canvas)) {
 	glClearStencil((GLint)app->clear_stencil);
+	bits |= GL_STENCIL_BUFFER_BIT;
+	}
 	g_ctx.current_state.scissor_enabled = false;
 	glDisable(GL_SCISSOR_TEST);
 	glClear(bits);
@@ -1157,7 +1203,7 @@ void cf_gles_clear_canvas(CF_Canvas canvas_handle)
 
 	GLuint fbo = g_ctx.fbo;
 	s_bind_framebuffer(canvas->fbo);
-	s_clear_canvas();
+	s_clear_canvas(canvas);
 	s_bind_framebuffer(fbo);
 
 	CF_POLL_OPENGL_ERROR();
@@ -1167,9 +1213,9 @@ void cf_gles_apply_canvas(CF_Canvas canvas_handle, bool clear)
 {
 	CF_GL_Canvas* canvas = (CF_GL_Canvas*)(uintptr_t)canvas_handle.id;
 	s_bind_framebuffer(canvas->fbo);
-	if (clear) { s_clear_canvas(); }
-
 	g_ctx.canvas = canvas;
+	if (clear) { s_clear_canvas(canvas); }
+
 	g_ctx.target_state = s_default_state(canvas);
 }
 
@@ -1581,17 +1627,36 @@ void cf_gles_apply_shader(CF_Shader shader_handle, CF_Material material_handle)
 	}
 
 	// Depth.
-	if (render_state.depth_write_enabled || render_state.depth_compare != CF_COMPARE_FUNCTION_ALWAYS) {
-		glEnable(GL_DEPTH_TEST);
-		glDepthFunc(s_wrap(render_state.depth_compare));
-		glDepthMask(render_state.depth_write_enabled ? GL_TRUE : GL_FALSE);
+	const bool canvas_has_depth = s_canvas_has_depth(g_ctx.canvas);
+	const bool depth_test_requested = render_state.depth_write_enabled || render_state.depth_compare != CF_COMPARE_FUNCTION_ALWAYS;
+	if (canvas_has_depth && depth_test_requested) {
+	glEnable(GL_DEPTH_TEST);
+	glDepthFunc(s_wrap(render_state.depth_compare));
+	glDepthMask(render_state.depth_write_enabled ? GL_TRUE : GL_FALSE);
 	} else {
-		glDisable(GL_DEPTH_TEST);
+	glDisable(GL_DEPTH_TEST);
+	glDepthMask(GL_FALSE);
+	}
+
+	// Stencil.
+	const bool canvas_has_stencil = s_canvas_has_stencil(g_ctx.canvas);
+	g_ctx.target_state.stencil_reference = (GLint)render_state.stencil.reference;
+	g_ctx.current_state.stencil_reference = (GLint)render_state.stencil.reference;
+	if (canvas_has_stencil && render_state.stencil.enabled) {
+	glEnable(GL_STENCIL_TEST);
+	glStencilMask(render_state.stencil.write_mask);
+	glStencilFuncSeparate(GL_FRONT, s_wrap(render_state.stencil.front.compare), render_state.stencil.reference, render_state.stencil.read_mask);
+	glStencilFuncSeparate(GL_BACK, s_wrap(render_state.stencil.back.compare), render_state.stencil.reference, render_state.stencil.read_mask);
+	glStencilOpSeparate(GL_FRONT, s_wrap(render_state.stencil.front.fail_op), s_wrap(render_state.stencil.front.depth_fail_op), s_wrap(render_state.stencil.front.pass_op));
+	glStencilOpSeparate(GL_BACK, s_wrap(render_state.stencil.back.fail_op), s_wrap(render_state.stencil.back.depth_fail_op), s_wrap(render_state.stencil.back.pass_op));
+	} else {
+	glDisable(GL_STENCIL_TEST);
+	glStencilMask(0xFF);
 	}
 
 	// Blend.
 	if (render_state.blend.enabled) {
-		glEnable(GL_BLEND);
+	glEnable(GL_BLEND);
 		glColorMask(
 			render_state.blend.write_R_enabled,
 			render_state.blend.write_G_enabled,
