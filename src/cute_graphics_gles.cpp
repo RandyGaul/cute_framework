@@ -23,6 +23,109 @@
 		if (g_ctx.debug) { s_poll_error(__FILE__, __LINE__); } \
 	} while (0)
 
+CF_INLINE GLenum s_wrap(CF_Filter f)
+{
+	switch (f) { default:
+	case CF_FILTER_NEAREST: return GL_NEAREST;
+	case CF_FILTER_LINEAR:  return GL_LINEAR;
+	}
+}
+
+CF_INLINE GLenum s_wrap(CF_MipFilter m, bool has_mips)
+{
+	if (!has_mips) return GL_NEAREST; // min filter without mips
+	switch (m) { default:
+	case CF_MIP_FILTER_NEAREST: return GL_NEAREST_MIPMAP_NEAREST;
+	case CF_MIP_FILTER_LINEAR:  return GL_LINEAR_MIPMAP_LINEAR;
+	}
+}
+
+CF_INLINE GLenum s_wrap(CF_WrapMode w)
+{
+	switch (w) { default:
+	case CF_WRAP_MODE_CLAMP_TO_EDGE:   return GL_CLAMP_TO_EDGE;
+	case CF_WRAP_MODE_REPEAT:          return GL_REPEAT;
+	case CF_WRAP_MODE_MIRRORED_REPEAT: return GL_MIRRORED_REPEAT;
+	}
+}
+
+CF_INLINE GLenum s_wrap(CF_PrimitiveType p)
+{
+	switch (p) { default:
+	case CF_PRIMITIVE_TYPE_TRIANGLELIST:  return GL_TRIANGLES;
+	case CF_PRIMITIVE_TYPE_TRIANGLESTRIP: return GL_TRIANGLE_STRIP;
+	case CF_PRIMITIVE_TYPE_LINELIST:      return GL_LINES;
+	case CF_PRIMITIVE_TYPE_LINESTRIP:     return GL_LINE_STRIP;
+	}
+}
+
+CF_INLINE GLenum s_wrap(CF_CompareFunction c)
+{
+	switch (c) { default:
+	case CF_COMPARE_FUNCTION_ALWAYS:                return GL_ALWAYS;
+	case CF_COMPARE_FUNCTION_NEVER:                 return GL_NEVER;
+	case CF_COMPARE_FUNCTION_LESS_THAN:             return GL_LESS;
+	case CF_COMPARE_FUNCTION_EQUAL:                 return GL_EQUAL;
+	case CF_COMPARE_FUNCTION_NOT_EQUAL:             return GL_NOTEQUAL;
+	case CF_COMPARE_FUNCTION_LESS_THAN_OR_EQUAL:    return GL_LEQUAL;
+	case CF_COMPARE_FUNCTION_GREATER_THAN:          return GL_GREATER;
+	case CF_COMPARE_FUNCTION_GREATER_THAN_OR_EQUAL: return GL_GEQUAL;
+	}
+}
+
+CF_INLINE GLenum s_wrap(CF_CullMode m)
+{
+	switch (m) { default:
+	case CF_CULL_MODE_NONE:  return 0;
+	case CF_CULL_MODE_FRONT: return GL_FRONT;
+	case CF_CULL_MODE_BACK:  return GL_BACK;
+	}
+}
+
+CF_INLINE GLenum s_wrap(CF_BlendOp op)
+{
+	switch (op) { default:
+	case CF_BLEND_OP_ADD:              return GL_FUNC_ADD;
+	case CF_BLEND_OP_SUBTRACT:         return GL_FUNC_SUBTRACT;
+	case CF_BLEND_OP_REVERSE_SUBTRACT: return GL_FUNC_REVERSE_SUBTRACT;
+	case CF_BLEND_OP_MIN:              return GL_MIN;
+	case CF_BLEND_OP_MAX:              return GL_MAX;
+	}
+}
+
+CF_INLINE GLenum s_wrap(CF_BlendFactor f)
+{
+	switch (f) { default:
+	case CF_BLENDFACTOR_ZERO:                     return GL_ZERO;
+	case CF_BLENDFACTOR_ONE:                      return GL_ONE;
+	case CF_BLENDFACTOR_SRC_COLOR:                return GL_SRC_COLOR;
+	case CF_BLENDFACTOR_ONE_MINUS_SRC_COLOR:      return GL_ONE_MINUS_SRC_COLOR;
+	case CF_BLENDFACTOR_DST_COLOR:                return GL_DST_COLOR;
+	case CF_BLENDFACTOR_ONE_MINUS_DST_COLOR:      return GL_ONE_MINUS_DST_COLOR;
+	case CF_BLENDFACTOR_SRC_ALPHA:                return GL_SRC_ALPHA;
+	case CF_BLENDFACTOR_ONE_MINUS_SRC_ALPHA:      return GL_ONE_MINUS_SRC_ALPHA;
+	case CF_BLENDFACTOR_DST_ALPHA:                return GL_DST_ALPHA;
+	case CF_BLENDFACTOR_ONE_MINUS_DST_ALPHA:      return GL_ONE_MINUS_DST_ALPHA;
+	case CF_BLENDFACTOR_CONSTANT_COLOR:           return GL_CONSTANT_COLOR;
+	case CF_BLENDFACTOR_ONE_MINUS_CONSTANT_COLOR: return GL_ONE_MINUS_CONSTANT_COLOR;
+	case CF_BLENDFACTOR_SRC_ALPHA_SATURATE:       return GL_SRC_ALPHA_SATURATE;
+	}
+}
+
+CF_INLINE GLenum s_wrap(CF_StencilOp op)
+{
+	switch (op) { default:
+	case CF_STENCIL_OP_KEEP:            return GL_KEEP;
+	case CF_STENCIL_OP_ZERO:            return GL_ZERO;
+	case CF_STENCIL_OP_REPLACE:         return GL_REPLACE;
+	case CF_STENCIL_OP_INCREMENT_CLAMP: return GL_INCR;
+	case CF_STENCIL_OP_DECREMENT_CLAMP: return GL_DECR;
+	case CF_STENCIL_OP_INVERT:          return GL_INVERT;
+	case CF_STENCIL_OP_INCREMENT_WRAP:  return GL_INCR_WRAP;
+	case CF_STENCIL_OP_DECREMENT_WRAP:  return GL_DECR_WRAP;
+	}
+}
+
 #define RING_BUFFER_CAPACITY 3
 
 struct CF_GL_PixelFormatInfo
@@ -402,16 +505,16 @@ static void s_apply_state()
 	}
 
 	if (target->stencil_reference != current->stencil_reference) {
-	GLenum front_compare = GL_ALWAYS;
-	GLenum back_compare = GL_ALWAYS;
-	GLuint mask = 0xFF;
-	if (g_ctx.material && g_ctx.material->state.stencil.enabled && s_canvas_has_stencil(g_ctx.canvas)) {
-	front_compare = s_wrap(g_ctx.material->state.stencil.front.compare);
-	back_compare = s_wrap(g_ctx.material->state.stencil.back.compare);
-	mask = g_ctx.material->state.stencil.read_mask;
-	}
-	glStencilFuncSeparate(GL_FRONT, front_compare, target->stencil_reference, mask);
-	glStencilFuncSeparate(GL_BACK, back_compare, target->stencil_reference, mask);
+		GLenum front_compare = GL_ALWAYS;
+		GLenum back_compare = GL_ALWAYS;
+		GLuint mask = 0xFF;
+		if (g_ctx.material && g_ctx.material->state.stencil.enabled && s_canvas_has_stencil(g_ctx.canvas)) {
+			front_compare = s_wrap(g_ctx.material->state.stencil.front.compare);
+			back_compare = s_wrap(g_ctx.material->state.stencil.back.compare);
+			mask = g_ctx.material->state.stencil.read_mask;
+		}
+		glStencilFuncSeparate(GL_FRONT, front_compare, target->stencil_reference, mask);
+		glStencilFuncSeparate(GL_BACK, back_compare, target->stencil_reference, mask);
 	}
 
 	if (target->blend_constants.r != current->blend_constants.r ||
@@ -622,109 +725,6 @@ static GLuint s_make_program(const char* vs_src, const char* fs_src)
 	glDeleteShader(vs); glDeleteShader(fs);
 
 	return program;
-}
-
-CF_INLINE GLenum s_wrap(CF_Filter f)
-{
-	switch (f) { default:
-	case CF_FILTER_NEAREST: return GL_NEAREST;
-	case CF_FILTER_LINEAR:  return GL_LINEAR;
-	}
-}
-
-CF_INLINE GLenum s_wrap(CF_MipFilter m, bool has_mips)
-{
-	if (!has_mips) return GL_NEAREST; // min filter without mips
-	switch (m) { default:
-	case CF_MIP_FILTER_NEAREST: return GL_NEAREST_MIPMAP_NEAREST;
-	case CF_MIP_FILTER_LINEAR:  return GL_LINEAR_MIPMAP_LINEAR;
-	}
-}
-
-CF_INLINE GLenum s_wrap(CF_WrapMode w)
-{
-	switch (w) { default:
-	case CF_WRAP_MODE_CLAMP_TO_EDGE:   return GL_CLAMP_TO_EDGE;
-	case CF_WRAP_MODE_REPEAT:          return GL_REPEAT;
-	case CF_WRAP_MODE_MIRRORED_REPEAT: return GL_MIRRORED_REPEAT;
-	}
-}
-
-CF_INLINE GLenum s_wrap(CF_PrimitiveType p)
-{
-	switch (p) { default:
-	case CF_PRIMITIVE_TYPE_TRIANGLELIST:  return GL_TRIANGLES;
-	case CF_PRIMITIVE_TYPE_TRIANGLESTRIP: return GL_TRIANGLE_STRIP;
-	case CF_PRIMITIVE_TYPE_LINELIST:      return GL_LINES;
-	case CF_PRIMITIVE_TYPE_LINESTRIP:     return GL_LINE_STRIP;
-	}
-}
-
-CF_INLINE GLenum s_wrap(CF_CompareFunction c)
-{
-	switch (c) { default:
-	case CF_COMPARE_FUNCTION_ALWAYS:                return GL_ALWAYS;
-	case CF_COMPARE_FUNCTION_NEVER:                 return GL_NEVER;
-	case CF_COMPARE_FUNCTION_LESS_THAN:             return GL_LESS;
-	case CF_COMPARE_FUNCTION_EQUAL:                 return GL_EQUAL;
-	case CF_COMPARE_FUNCTION_NOT_EQUAL:             return GL_NOTEQUAL;
-	case CF_COMPARE_FUNCTION_LESS_THAN_OR_EQUAL:    return GL_LEQUAL;
-	case CF_COMPARE_FUNCTION_GREATER_THAN:          return GL_GREATER;
-	case CF_COMPARE_FUNCTION_GREATER_THAN_OR_EQUAL: return GL_GEQUAL;
-	}
-}
-
-CF_INLINE GLenum s_wrap(CF_CullMode m)
-{
-	switch (m) { default:
-	case CF_CULL_MODE_NONE:  return 0;
-	case CF_CULL_MODE_FRONT: return GL_FRONT;
-	case CF_CULL_MODE_BACK:  return GL_BACK;
-	}
-}
-
-CF_INLINE GLenum s_wrap(CF_BlendOp op)
-{
-	switch (op) { default:
-	case CF_BLEND_OP_ADD:              return GL_FUNC_ADD;
-	case CF_BLEND_OP_SUBTRACT:         return GL_FUNC_SUBTRACT;
-	case CF_BLEND_OP_REVERSE_SUBTRACT: return GL_FUNC_REVERSE_SUBTRACT;
-	case CF_BLEND_OP_MIN:              return GL_MIN;
-	case CF_BLEND_OP_MAX:              return GL_MAX;
-	}
-}
-
-CF_INLINE GLenum s_wrap(CF_BlendFactor f)
-{
-	switch (f) { default:
-	case CF_BLENDFACTOR_ZERO:                     return GL_ZERO;
-	case CF_BLENDFACTOR_ONE:                      return GL_ONE;
-	case CF_BLENDFACTOR_SRC_COLOR:                return GL_SRC_COLOR;
-	case CF_BLENDFACTOR_ONE_MINUS_SRC_COLOR:      return GL_ONE_MINUS_SRC_COLOR;
-	case CF_BLENDFACTOR_DST_COLOR:                return GL_DST_COLOR;
-	case CF_BLENDFACTOR_ONE_MINUS_DST_COLOR:      return GL_ONE_MINUS_DST_COLOR;
-	case CF_BLENDFACTOR_SRC_ALPHA:                return GL_SRC_ALPHA;
-	case CF_BLENDFACTOR_ONE_MINUS_SRC_ALPHA:      return GL_ONE_MINUS_SRC_ALPHA;
-	case CF_BLENDFACTOR_DST_ALPHA:                return GL_DST_ALPHA;
-	case CF_BLENDFACTOR_ONE_MINUS_DST_ALPHA:      return GL_ONE_MINUS_DST_ALPHA;
-	case CF_BLENDFACTOR_CONSTANT_COLOR:           return GL_CONSTANT_COLOR;
-	case CF_BLENDFACTOR_ONE_MINUS_CONSTANT_COLOR: return GL_ONE_MINUS_CONSTANT_COLOR;
-	case CF_BLENDFACTOR_SRC_ALPHA_SATURATE:       return GL_SRC_ALPHA_SATURATE;
-	}
-}
-
-CF_INLINE GLenum s_wrap(CF_StencilOp op)
-{
-	switch (op) { default:
-	case CF_STENCIL_OP_KEEP:            return GL_KEEP;
-	case CF_STENCIL_OP_ZERO:            return GL_ZERO;
-	case CF_STENCIL_OP_REPLACE:         return GL_REPLACE;
-	case CF_STENCIL_OP_INCREMENT_CLAMP: return GL_INCR;
-	case CF_STENCIL_OP_DECREMENT_CLAMP: return GL_DECR;
-	case CF_STENCIL_OP_INVERT:          return GL_INVERT;
-	case CF_STENCIL_OP_INCREMENT_WRAP:  return GL_INCR_WRAP;
-	case CF_STENCIL_OP_DECREMENT_WRAP:  return GL_DECR_WRAP;
-	}
 }
 
 CF_Result cf_gles_init(bool debug)
@@ -1095,14 +1095,14 @@ uint64_t cf_gles_texture_binding_handle(CF_Texture t)
 CF_Canvas cf_gles_make_canvas(CF_CanvasParams params)
 {
 	if (!cf_gles_texture_supports_format(params.target.pixel_format, (CF_TextureUsageBits)params.target.usage)) {
-	CF_ASSERT(!"Unsupported color target format for GLES backend.");
-	return CF_Canvas{};
+		CF_ASSERT(!"Unsupported color target format for GLES backend.");
+		return CF_Canvas{};
 	}
 	if (params.depth_stencil_enable) {
-	if (!cf_gles_texture_supports_format(params.depth_stencil_target.pixel_format, (CF_TextureUsageBits)params.depth_stencil_target.usage)) {
-	CF_ASSERT(!"Unsupported depth/stencil format for GLES backend.");
-	return CF_Canvas{};
-	}
+		if (!cf_gles_texture_supports_format(params.depth_stencil_target.pixel_format, (CF_TextureUsageBits)params.depth_stencil_target.usage)) {
+			CF_ASSERT(!"Unsupported depth/stencil format for GLES backend.");
+			return CF_Canvas{};
+		}
 	}
 
 	CF_GL_Canvas* c = (CF_GL_Canvas*)CF_CALLOC(sizeof(CF_GL_Canvas));
@@ -1137,10 +1137,11 @@ CF_Canvas cf_gles_make_canvas(CF_CanvasParams params)
 	s_bind_framebuffer(c->fbo);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, c->color, 0);
 	if (c->depth) {
-	if (params.depth_stencil_target.pixel_format == CF_PIXEL_FORMAT_D24_UNORM_S8_UINT)
-	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, c->depth);
-	else
-	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, c->depth);
+		if (params.depth_stencil_target.pixel_format == CF_PIXEL_FORMAT_D24_UNORM_S8_UINT) {
+			glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, c->depth);
+		} else {
+			glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, c->depth);
+		}
 	}
 	CF_ASSERT(glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE);
 	CF_POLL_OPENGL_ERROR();
@@ -1185,12 +1186,12 @@ static void s_clear_canvas(const CF_GL_Canvas* canvas)
 	GLbitfield bits = GL_COLOR_BUFFER_BIT;
 	glClearColor(app->clear_color.r, app->clear_color.g, app->clear_color.b, app->clear_color.a);
 	if (s_canvas_has_depth(canvas)) {
-	glClearDepthf(app->clear_depth);
-	bits |= GL_DEPTH_BUFFER_BIT;
+		glClearDepthf(app->clear_depth);
+		bits |= GL_DEPTH_BUFFER_BIT;
 	}
 	if (s_canvas_has_stencil(canvas)) {
-	glClearStencil((GLint)app->clear_stencil);
-	bits |= GL_STENCIL_BUFFER_BIT;
+		glClearStencil((GLint)app->clear_stencil);
+		bits |= GL_STENCIL_BUFFER_BIT;
 	}
 	g_ctx.current_state.scissor_enabled = false;
 	glDisable(GL_SCISSOR_TEST);
@@ -1630,12 +1631,12 @@ void cf_gles_apply_shader(CF_Shader shader_handle, CF_Material material_handle)
 	const bool canvas_has_depth = s_canvas_has_depth(g_ctx.canvas);
 	const bool depth_test_requested = render_state.depth_write_enabled || render_state.depth_compare != CF_COMPARE_FUNCTION_ALWAYS;
 	if (canvas_has_depth && depth_test_requested) {
-	glEnable(GL_DEPTH_TEST);
-	glDepthFunc(s_wrap(render_state.depth_compare));
-	glDepthMask(render_state.depth_write_enabled ? GL_TRUE : GL_FALSE);
+		glEnable(GL_DEPTH_TEST);
+		glDepthFunc(s_wrap(render_state.depth_compare));
+		glDepthMask(render_state.depth_write_enabled ? GL_TRUE : GL_FALSE);
 	} else {
-	glDisable(GL_DEPTH_TEST);
-	glDepthMask(GL_FALSE);
+		glDisable(GL_DEPTH_TEST);
+		glDepthMask(GL_FALSE);
 	}
 
 	// Stencil.
@@ -1643,15 +1644,15 @@ void cf_gles_apply_shader(CF_Shader shader_handle, CF_Material material_handle)
 	g_ctx.target_state.stencil_reference = (GLint)render_state.stencil.reference;
 	g_ctx.current_state.stencil_reference = (GLint)render_state.stencil.reference;
 	if (canvas_has_stencil && render_state.stencil.enabled) {
-	glEnable(GL_STENCIL_TEST);
-	glStencilMask(render_state.stencil.write_mask);
-	glStencilFuncSeparate(GL_FRONT, s_wrap(render_state.stencil.front.compare), render_state.stencil.reference, render_state.stencil.read_mask);
-	glStencilFuncSeparate(GL_BACK, s_wrap(render_state.stencil.back.compare), render_state.stencil.reference, render_state.stencil.read_mask);
-	glStencilOpSeparate(GL_FRONT, s_wrap(render_state.stencil.front.fail_op), s_wrap(render_state.stencil.front.depth_fail_op), s_wrap(render_state.stencil.front.pass_op));
-	glStencilOpSeparate(GL_BACK, s_wrap(render_state.stencil.back.fail_op), s_wrap(render_state.stencil.back.depth_fail_op), s_wrap(render_state.stencil.back.pass_op));
+		glEnable(GL_STENCIL_TEST);
+		glStencilMask(render_state.stencil.write_mask);
+		glStencilFuncSeparate(GL_FRONT, s_wrap(render_state.stencil.front.compare), render_state.stencil.reference, render_state.stencil.read_mask);
+		glStencilFuncSeparate(GL_BACK, s_wrap(render_state.stencil.back.compare), render_state.stencil.reference, render_state.stencil.read_mask);
+		glStencilOpSeparate(GL_FRONT, s_wrap(render_state.stencil.front.fail_op), s_wrap(render_state.stencil.front.depth_fail_op), s_wrap(render_state.stencil.front.pass_op));
+		glStencilOpSeparate(GL_BACK, s_wrap(render_state.stencil.back.fail_op), s_wrap(render_state.stencil.back.depth_fail_op), s_wrap(render_state.stencil.back.pass_op));
 	} else {
-	glDisable(GL_STENCIL_TEST);
-	glStencilMask(0xFF);
+		glDisable(GL_STENCIL_TEST);
+		glStencilMask(0xFF);
 	}
 
 	// Blend.
