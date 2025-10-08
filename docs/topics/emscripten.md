@@ -1,12 +1,6 @@
 # Web Builds with Emscripten
 
-!!! warning
-
-    CF can not currently build for the web, as CF switched to SDL's SDL_GPU API. SDL_GPU has deprecated all OpenGL support, which unfortunately means no access to OpenGLES, which was used to cross-compile for the web via a compiler called [Emscripten](https://emscripten.org/). The rest of this page details old steps to get emscripten builds going. In the future CF will seek out a replacement technology to enable web builds.
-
----
-
-Getting started with Emscripten is a bit challenging, so hopefully this page can help get you started. Once you get your game building for the web it's usually quite a breeze after the initial setup.
+Cute Framework supports web builds with a GLES3 backend renderer. Getting started with Emscripten is a bit challenging, so hopefully this page can help get you started. Once you get your game building for the web it's usually quite a breeze after the initial setup.
 
 !!! Note
 
@@ -46,7 +40,21 @@ if(${CMAKE_SYSTEM_NAME} MATCHES "Emscripten")
 endif()
 ```
 
-Also don't forget to call `emscripten_set_main_loop` from your `main` function!
+Also don't forget to call `emscripten_set_main_loop` from your `main` function! The easiest way is to use the macro `CF_EMSCRIPTEN` to setup your main loop like so:
+
+```c
+#ifdef CF_EMSCRIPTEN
+	// Receives a function to call and some user data to provide it.
+	emscripten_set_main_loop(update, 60, true);
+#else
+	while (app_is_running()) {
+		update();
+	}
+	destroy_app();
+#endif
+```
+
+Where `upduate` will be run once per game tick, and replace your usually main loop body.
 
 ## Example Game Project
 
