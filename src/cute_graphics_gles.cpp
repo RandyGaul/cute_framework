@@ -321,6 +321,8 @@ static CF_GL_Slot* s_force_slot(CF_GL_Ring* ring, uint32_t frame, int* out_index
 				slot.fence = 0;
 				break;
 			}
+			// We can't call glClientWaitSync on WebGL, so we'll try and block to simulate sort what it
+			// would otherwise achieve.
 			cf_sleep(0);
 		}
 #else
