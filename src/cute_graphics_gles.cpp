@@ -2,15 +2,12 @@
 #include "internal/cute_app_internal.h"
 #include "internal/cute_alloc_internal.h"
 
-#include "cute_shader/builtin_shaders.h"
-
 #ifndef CF_RUNTIME_SHADER_COMPILATION
 #	include "data/builtin_shaders_bytecode.h"
 #endif
 
 #include <cute_graphics.h>
 #include <cute_time.h>
-#include <spirv_cross_c.h>
 
 #ifdef CF_EMSCRIPTEN
 #	include <GLES3/gl3.h>
@@ -342,7 +339,6 @@ static struct
 	bool debug;
 	SDL_GLContext gl_ctx;
 	SDL_Window* window;
-	spvc_context spvc;
 	uint32_t frame_index;
 
 	CF_GL_RenderState target_state;
@@ -603,101 +599,6 @@ static void s_load_format_caps()
 	}
 }
 
-static char* s_transpile(const CF_ShaderBytecode* bytecode)
-{
-	if (!bytecode->content || !bytecode->size) return NULL;
-
-	spvc_context context = g_ctx.spvc;
-
-	spvc_parsed_ir ir = NULL;
-	spvc_result result = spvc_context_parse_spirv(
-		context,
-		(const uint32_t*)bytecode->content,
-		(size_t)(bytecode->size / sizeof(uint32_t)),
-		&ir
-	);
-	if (result != SPVC_SUCCESS) {
-		spvc_context_release_allocations(context);
-		return NULL;
-	}
-
-	spvc_compiler compiler = NULL;
-	if (spvc_context_create_compiler(context, SPVC_BACKEND_GLSL, ir, SPVC_CAPTURE_MODE_TAKE_OWNERSHIP, &compiler) != SPVC_SUCCESS) {
-		spvc_context_release_allocations(context);
-		return NULL;
-	}
-
-	// --- Ensure integer varyings are flat (required by GLSL ES) -----------------
-	{
-		// Determine execution model (Vertex vs Fragment) of this module's entry point.
-		const spvc_entry_point* eps = NULL;
-		size_t ep_count = 0;
-		SpvExecutionModel_ exec_model = SpvExecutionModelVertex; // default safe guess
-		if (spvc_compiler_get_entry_points(compiler, &eps, &ep_count) == SPVC_SUCCESS && ep_count > 0) {
-			exec_model = eps[0].execution_model;
-		}
-
-		spvc_resources res = NULL;
-		if (spvc_compiler_create_shader_resources(compiler, &res) == SPVC_SUCCESS) {
-			// Helper: mark variables flat if base type is (u)int (covers ivec*/uvec* as well).
-			auto decorate_list_flat_if_integer = [&](const spvc_reflected_resource* list, size_t count) {
-				for (size_t i = 0; i < count; ++i) {
-					spvc_type type = spvc_compiler_get_type_handle(compiler, list[i].type_id);
-					spvc_basetype bt = spvc_type_get_basetype(type);
-					if (bt == SPVC_BASETYPE_INT32 || bt == SPVC_BASETYPE_UINT32) {
-						// Avoid re-marking if already flat (optional).
-						if (!spvc_compiler_has_decoration(compiler, list[i].id, SpvDecorationFlat)) {
-							spvc_compiler_set_decoration(compiler, list[i].id, SpvDecorationFlat, 1);
-						}
-					}
-				}
-			};
-
-			// 1) Stage outputs (VS varyings): always ok to set flat here for integer types.
-			const spvc_reflected_resource* outs = NULL; size_t out_count = 0;
-			if (spvc_resources_get_resource_list_for_type(res, SPVC_RESOURCE_TYPE_STAGE_OUTPUT, &outs, &out_count) == SPVC_SUCCESS) {
-				decorate_list_flat_if_integer(outs, out_count);
-			}
-
-			// 2) Stage inputs:
-			//    - Fragment shader inputs are varyings -> must be 'flat' for integer types.
-			//    - Vertex shader inputs are *attributes* -> DO NOT decorate.
-			if (exec_model == SpvExecutionModelFragment) {
-				const spvc_reflected_resource* ins = NULL; size_t in_count = 0;
-				if (spvc_resources_get_resource_list_for_type(res, SPVC_RESOURCE_TYPE_STAGE_INPUT, &ins, &in_count) == SPVC_SUCCESS) {
-					decorate_list_flat_if_integer(ins, in_count);
-				}
-			}
-		}
-	}
-	// ---------------------------------------------------------------------------
-
-	// Options for GLES 3.00
-	spvc_compiler_options options = NULL;
-	if (spvc_compiler_create_compiler_options(compiler, &options) == SPVC_SUCCESS) {
-		spvc_compiler_options_set_uint(options, SPVC_COMPILER_OPTION_GLSL_VERSION, 300);
-		spvc_compiler_options_set_bool(options, SPVC_COMPILER_OPTION_GLSL_ES, SPVC_TRUE);
-		spvc_compiler_options_set_bool(options, SPVC_COMPILER_OPTION_GLSL_ENABLE_420PACK_EXTENSION, SPVC_FALSE);
-		spvc_compiler_options_set_bool(options, SPVC_COMPILER_OPTION_GLSL_SEPARATE_SHADER_OBJECTS, SPVC_TRUE);
-		spvc_compiler_options_set_bool(options, SPVC_COMPILER_OPTION_FLIP_VERTEX_Y, SPVC_TRUE);
-		spvc_compiler_options_set_bool(options, SPVC_COMPILER_OPTION_FIXUP_DEPTH_CONVENTION, SPVC_TRUE);
-		spvc_compiler_install_compiler_options(compiler, options);
-	}
-
-	const char* source = NULL;
-	result = spvc_compiler_compile(compiler, &source);
-
-	char* output = NULL;
-	if (result == SPVC_SUCCESS && source) {
-		size_t len = CF_STRLEN(source);
-		output = (char*)CF_ALLOC(len + 1);
-		CF_MEMCPY(output, source, len + 1);
-	}
-
-	spvc_context_release_allocations(context);
-	return output;
-}
-
 static GLuint s_compile_shader(GLenum stage, const char* src)
 {
 	GLuint s = glCreateShader(stage);
@@ -755,10 +656,6 @@ CF_Result cf_gles_init(bool debug)
 	}
 	g_ctx.debug = debug;
 
-	if (spvc_context_create(&g_ctx.spvc) != SPVC_SUCCESS) {
-		return cf_result_error("Could not create Spirv-Cross context");
-	}
-
 	return cf_result_success();
 }
 
@@ -766,7 +663,6 @@ void cf_gles_destroy_shader_internal(CF_Shader sh);
 
 void cf_gles_cleanup()
 {
-	spvc_context_destroy(g_ctx.spvc);
 	SDL_GL_DestroyContext(g_ctx.gl_ctx);
 }
 
@@ -1411,17 +1307,7 @@ static void s_build_uniforms(GLuint program, CF_GL_ShaderInfo* shader_info, cons
 
 CF_Shader cf_gles_make_shader_from_bytecode(CF_ShaderBytecode vertex_bytecode, CF_ShaderBytecode fragment_bytecode)
 {
-	// Transpile and link
-	char* vs_src = s_transpile(&vertex_bytecode);
-	char* fs_src = s_transpile(&fragment_bytecode);
-	if (!vs_src || !fs_src) {
-		CF_FREE(vs_src);
-		CF_FREE(fs_src);
-		return CF_Shader { 0ULL };
-	}
-	GLuint program = s_make_program(vs_src, fs_src);
-	CF_FREE(vs_src);
-	CF_FREE(fs_src);
+	GLuint program = s_make_program(vertex_bytecode.glsl300_src, fragment_bytecode.glsl300_src);
 
 	// Copy refelection data
 	CF_GL_Shader* shader = (CF_GL_Shader*)CF_CALLOC(sizeof(CF_GL_Shader));

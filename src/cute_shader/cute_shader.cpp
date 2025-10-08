@@ -16,6 +16,7 @@
 #include <SPIRV/GlslangToSpv.h>
 #include <SDL3_shadercross/spirv.h>
 #include <SPIRV-Reflect/spirv_reflect.h>
+#include <spirv_cross_c.h>
 
 #define CUTE_SHADER_GLSL_VERSION 450
 
@@ -359,6 +360,99 @@ CF_ShaderCompilerResult cute_shader_compile(const char* source, CF_ShaderCompile
 	void* bytecode = malloc(bytecode_size);
 	memcpy(bytecode, spirv.data(), bytecode_size);
 
+	// GLSL 300 transpilation
+	spvc_context spvc = NULL;
+	spvc_context_create(&spvc);
+	char* glsl300_src = NULL;
+	size_t glsl300_src_size = 0;
+	{
+		spvc_parsed_ir ir = NULL;
+		spvc_context_parse_spirv(
+			spvc,
+			(const uint32_t*)bytecode,
+			(size_t)(bytecode_size / sizeof(uint32_t)),
+			&ir
+		);
+
+		spvc_compiler compiler = NULL;
+		spvc_context_create_compiler(spvc, SPVC_BACKEND_GLSL, ir, SPVC_CAPTURE_MODE_TAKE_OWNERSHIP, &compiler);
+
+		// --- Ensure integer varyings are flat (required by GLSL ES) -----------------
+		{
+			// Determine execution model (Vertex vs Fragment) of this module's entry point.
+			const spvc_entry_point* eps = NULL;
+			size_t ep_count = 0;
+			SpvExecutionModel_ exec_model = SpvExecutionModelVertex; // default safe guess
+			if (spvc_compiler_get_entry_points(compiler, &eps, &ep_count) == SPVC_SUCCESS && ep_count > 0) {
+				exec_model = eps[0].execution_model;
+			}
+
+			spvc_resources res = NULL;
+			if (spvc_compiler_create_shader_resources(compiler, &res) == SPVC_SUCCESS) {
+				// Helper: mark variables flat if base type is (u)int (covers ivec*/uvec* as well).
+				auto decorate_list_flat_if_integer = [&](const spvc_reflected_resource* list, size_t count) {
+					for (size_t i = 0; i < count; ++i) {
+						spvc_type type = spvc_compiler_get_type_handle(compiler, list[i].type_id);
+						spvc_basetype bt = spvc_type_get_basetype(type);
+						if (bt == SPVC_BASETYPE_INT32 || bt == SPVC_BASETYPE_UINT32) {
+							// Avoid re-marking if already flat (optional).
+							if (!spvc_compiler_has_decoration(compiler, list[i].id, SpvDecorationFlat)) {
+								spvc_compiler_set_decoration(compiler, list[i].id, SpvDecorationFlat, 1);
+							}
+						}
+					}
+				};
+
+				// 1) Stage outputs (VS varyings): always ok to set flat here for integer types.
+				const spvc_reflected_resource* outs = NULL; size_t out_count = 0;
+				if (spvc_resources_get_resource_list_for_type(res, SPVC_RESOURCE_TYPE_STAGE_OUTPUT, &outs, &out_count) == SPVC_SUCCESS) {
+					decorate_list_flat_if_integer(outs, out_count);
+				}
+
+				// 2) Stage inputs:
+				//    - Fragment shader inputs are varyings -> must be 'flat' for integer types.
+				//    - Vertex shader inputs are *attributes* -> DO NOT decorate.
+				if (exec_model == SpvExecutionModelFragment) {
+					const spvc_reflected_resource* ins = NULL; size_t in_count = 0;
+					if (spvc_resources_get_resource_list_for_type(res, SPVC_RESOURCE_TYPE_STAGE_INPUT, &ins, &in_count) == SPVC_SUCCESS) {
+						decorate_list_flat_if_integer(ins, in_count);
+					}
+				}
+			}
+		}
+		// ---------------------------------------------------------------------------
+
+		// Options for GLES 3.00
+		spvc_compiler_options options = NULL;
+		if (spvc_compiler_create_compiler_options(compiler, &options) == SPVC_SUCCESS) {
+			spvc_compiler_options_set_uint(options, SPVC_COMPILER_OPTION_GLSL_VERSION, 300);
+			spvc_compiler_options_set_bool(options, SPVC_COMPILER_OPTION_GLSL_ES, SPVC_TRUE);
+			spvc_compiler_options_set_bool(options, SPVC_COMPILER_OPTION_GLSL_ENABLE_420PACK_EXTENSION, SPVC_FALSE);
+			spvc_compiler_options_set_bool(options, SPVC_COMPILER_OPTION_GLSL_SEPARATE_SHADER_OBJECTS, SPVC_TRUE);
+			spvc_compiler_options_set_bool(options, SPVC_COMPILER_OPTION_FLIP_VERTEX_Y, SPVC_TRUE);
+			spvc_compiler_options_set_bool(options, SPVC_COMPILER_OPTION_FIXUP_DEPTH_CONVENTION, SPVC_TRUE);
+			spvc_compiler_install_compiler_options(compiler, options);
+		}
+
+		const char* source = NULL;
+		if (spvc_compiler_compile(compiler, &source) != SPVC_SUCCESS) {
+			CF_ShaderCompilerResult error = cute_shader_failure(
+				"Transpilation to GLSL 300 failed",
+				spvc_context_get_last_error_string(spvc),
+				""
+			);
+			spvc_context_release_allocations(spvc);
+			spvc_context_destroy(spvc);
+			return error;
+		}
+
+		glsl300_src_size = strlen(source);
+		glsl300_src = (char*)malloc(glsl300_src_size);
+		memcpy(glsl300_src, source, glsl300_src_size);
+		spvc_context_release_allocations(spvc);
+	}
+	spvc_context_destroy(spvc);
+
 	// Reflection
 	int num_samplers = 0;
 	int num_storage_textures = 0;
@@ -474,6 +568,9 @@ CF_ShaderCompilerResult cute_shader_compile(const char* source, CF_ShaderCompile
 			.content = (uint8_t*)bytecode,
 			.size = bytecode_size,
 
+			.glsl300_src = glsl300_src,
+			.glsl300_src_size = glsl300_src_size,
+
 			.shader_info = {
 				.num_samplers = num_samplers,
 				.num_storage_textures = num_storage_textures,
@@ -522,6 +619,7 @@ void cute_shader_free_result(CF_ShaderCompilerResult result)
 	}
 	free(shader_info->image_names);
 
+	free((void*)result.bytecode.glsl300_src);
 	free((void*)result.bytecode.content);
 	free((char*)result.preprocessed_source);
 	free((char*)result.error_message);
