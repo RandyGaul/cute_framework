@@ -866,7 +866,6 @@ static bool s_texture_allocate_storage(CF_GL_Texture* t, CF_GL_Slot* slot)
 	glBindTexture(GL_TEXTURE_2D, slot->handle);
 	glTexImage2D(GL_TEXTURE_2D, 0, t->internal_fmt, t->w, t->h, 0, t->upload_fmt, t->upload_type, NULL);
 	glBindTexture(GL_TEXTURE_2D, 0);
-	slot->size = ((GLsizeiptr)t->w << 32) | (GLsizeiptr)t->h;
 	CF_POLL_OPENGL_ERROR();
 	return true;
 }

@@ -7,28 +7,29 @@ float scale = 1;
 
 #define STR(X) #X
 const char* s_shd = STR(
-layout(set = 2, binding = 1) uniform sampler2D tex;
+	layout(set = 2, binding = 1) uniform sampler2D tex;
 
-vec4 shader(vec4 color, vec2 pos, vec2 screen_uv, vec4 params)
-{
-	float d = texture(tex, screen_uv).x;
-	d = d > 0.5 ? 1.0 : 0.0;
-	return vec4(vec3(d), 1);
-}
+	vec4 shader(vec4 color, vec2 pos, vec2 screen_uv, vec4 params)
+	{
+		float d = texture(tex, screen_uv).x;
+		d = d > 0.5 ? 1.0 : 0.0;
+		return vec4(vec3(d), 1);
+	}
 );
 
-int main(int argc, char* argv[])
+#ifndef CF_RUNTIME_SHADER_COMPILATION
+#include "metaballs_shd.h"
+#endif
+
+CF_Canvas soft_circles;
+CF_Shader shd;
+float frame_times[10];
+float frame_time;
+int frame_index;
+float fps;
+
+void update()
 {
-	make_app("Metaballs", 0, 0, 0, (int)(w*scale), (int)(h*scale), CF_APP_OPTIONS_RESIZABLE_BIT | CF_APP_OPTIONS_WINDOW_POS_CENTERED_BIT, argv[0]);
-	CF_Canvas soft_circles = make_canvas(canvas_defaults(w, h));
-	CF_Shader shd = cf_make_draw_shader_from_source(s_shd);
-
-	float frame_times[10] = { 0 };
-	int frame_index = 0;
-	float fps = 0;
-
-	set_target_framerate(200);
-
 	while (app_is_running()) {
 		app_update();
 
@@ -78,6 +79,33 @@ int main(int argc, char* argv[])
 
 		app_draw_onto_screen(toggle ? true : false);
 	}
+}
+
+int main(int argc, char* argv[])
+{
+	make_app("Metaballs", 0, 0, 0, (int)(w*scale), (int)(h*scale), CF_APP_OPTIONS_RESIZABLE_BIT | CF_APP_OPTIONS_WINDOW_POS_CENTERED_BIT, argv[0]);
+	soft_circles = make_canvas(canvas_defaults(w, h));
+
+	
+#ifdef CF_RUNTIME_SHADER_COMPILATION
+	shd = cf_make_draw_shader_from_source(s_shd);
+#else
+	shd = cf_make_draw_shader_from_bytecode(metaballs);
+#endif
+
+	frame_index = 0;
+	fps = 0;
+
+	set_target_framerate(200);
+
+#ifdef CF_EMSCRIPTEN
+	emscripten_set_main_loop(update, 60, true);
+#else
+	while (app_is_running()) {
+		update();
+	}
+	destroy_app();
+#endif
 
 	destroy_canvas(soft_circles);
 	destroy_app();

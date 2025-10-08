@@ -60,8 +60,8 @@ int main(int argc, char* argv[])
 
 	sprite_play(girl, "spin");
 	girl.scale = V2(4,4);
+
 #ifdef CF_EMSCRIPTEN
-	// Receives a function to call and some user data to provide it.
 	emscripten_set_main_loop(update, 60, true);
 #else
 	while (app_is_running()) {
@@ -69,7 +69,6 @@ int main(int argc, char* argv[])
 	}
 	destroy_app();
 #endif
-
 
 	return 0;
 }

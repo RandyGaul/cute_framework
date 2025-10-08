@@ -560,8 +560,6 @@ CF_Shader cf_make_shader_from_source(const char* vertex_src, const char* fragmen
 //--------------------------------------------------------------------------------------------------
 // Backend dispatch shims.
 
-// Macro to generate shim
-
 #ifdef CF_EMSCRIPTEN
 
 #define CF_DISPATCH_SHIM(RETURN_TYPE, OP, ARGUMENTS, ...) \

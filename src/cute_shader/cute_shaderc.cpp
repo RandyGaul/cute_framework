@@ -69,6 +69,7 @@ static char* read_file(const char* path)
 		fclose(file);
 		return NULL;
 	}
+	content[size] = 0;
 	fclose(file);
 	return content;
 }
@@ -364,7 +365,8 @@ int main(int argc, const char* argv[])
 		}
 	} else {
 		if (input_path == NULL) {
-			fprintf(stderr, "Please specify an input\n");
+			fprintf(stderr, "Please specify an input, use --help for more info\n");
+			fprintf(stderr, "You can also visit https://randygaul.github.io/cute_framework/topics/shader_compilation\n");
 			return 1;
 		}
 
