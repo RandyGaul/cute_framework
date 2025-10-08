@@ -8,276 +8,12 @@
 #ifndef CF_GRAPHICS_INTERNAL_H
 #define CF_GRAPHICS_INTERNAL_H
 
-#include <SDL3/SDL.h>
 #include <cute_array.h>
+#include <cute_result.h>
+#include <cute_graphics.h>
+#include <SDL3/SDL_gpu.h>
 
-CF_INLINE SDL_GPUTextureCreateInfo SDL_GPUTextureCreateInfoDefaults(int w, int h)
-{
-	SDL_GPUTextureCreateInfo createInfo;
-	CF_MEMSET(&createInfo, 0, sizeof(createInfo));
-	createInfo.width = (int)w;
-	createInfo.height = (int)h;
-	createInfo.type = SDL_GPU_TEXTURETYPE_2D;
-	createInfo.layer_count_or_depth = 1;
-	createInfo.num_levels = 1;
-	createInfo.sample_count = SDL_GPU_SAMPLECOUNT_1;
-	createInfo.format = SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM;
-	createInfo.usage = SDL_GPU_TEXTUREUSAGE_SAMPLER | SDL_GPU_TEXTUREUSAGE_COLOR_TARGET;
-	return createInfo;
-}
-
-struct CF_CanvasInternal
-{
-	int w, h;
-	CF_Texture cf_texture;
-	CF_Texture cf_resolve_texture;
-	CF_Texture cf_depth_stencil;
-	CF_SampleCount sample_count;
-	SDL_GPUTexture* texture;
-	SDL_GPUTexture* resolve_texture;
-	SDL_GPUSampler* sampler;
-	SDL_GPUTexture* depth_stencil;
-
-	bool clear;
-
-	// These get set by cf_apply_* functions.
-	struct CF_MeshInternal* mesh;
-	SDL_GPUGraphicsPipeline* pip;
-	SDL_GPURenderPass* pass;
-};
-
-struct CF_TextureInternal
-{
-	int w, h;
-	SDL_GPUFilter filter;
-	SDL_GPUTexture* tex;
-	SDL_GPUTransferBuffer* buf;
-	SDL_GPUSampler* sampler;
-	SDL_GPUTextureFormat format;
-	SDL_GPUTextureSamplerBinding binding;
-};
-
-CF_INLINE SDL_GPUSamplerCreateInfo SDL_GPUSamplerCreateInfoDefaults()
-{
-	SDL_GPUSamplerCreateInfo samplerInfo;
-	CF_MEMSET(&samplerInfo, 0, sizeof(samplerInfo));
-	samplerInfo.min_filter = SDL_GPU_FILTER_NEAREST;
-	samplerInfo.mag_filter = SDL_GPU_FILTER_NEAREST;
-	samplerInfo.mipmap_mode = SDL_GPU_SAMPLERMIPMAPMODE_LINEAR;
-	samplerInfo.address_mode_u = SDL_GPU_SAMPLERADDRESSMODE_REPEAT;
-	samplerInfo.address_mode_v = SDL_GPU_SAMPLERADDRESSMODE_REPEAT;
-	samplerInfo.address_mode_w = SDL_GPU_SAMPLERADDRESSMODE_REPEAT;
-	samplerInfo.mip_lod_bias = 0.0f;
-	samplerInfo.enable_anisotropy = false;
-	samplerInfo.max_anisotropy = 1.0f;
-	samplerInfo.enable_compare = false;
-	samplerInfo.compare_op = SDL_GPU_COMPAREOP_ALWAYS;
-	samplerInfo.min_lod = 0.0f;
-	samplerInfo.max_lod = FLT_MAX;
-	return samplerInfo;
-}
-
-CF_INLINE SDL_GPUTextureRegion SDL_GPUTextureRegionDefaults(CF_TextureInternal* tex, int w, int h)
-{
-	SDL_GPUTextureRegion region;
-	CF_MEMSET(&region, 0, sizeof(region));
-	region.texture = tex->tex;
-	region.w = (Uint32)w;
-	region.h = (Uint32)h;
-	region.d = 1;
-	return region;
-}
-
-CF_INLINE SDL_GPUCompareOp s_wrap(CF_CompareFunction compare_function)
-{
-	switch (compare_function)
-	{
-	case CF_COMPARE_FUNCTION_ALWAYS:                return SDL_GPU_COMPAREOP_ALWAYS;
-	case CF_COMPARE_FUNCTION_NEVER:                 return SDL_GPU_COMPAREOP_NEVER;
-	case CF_COMPARE_FUNCTION_LESS_THAN:             return SDL_GPU_COMPAREOP_LESS;
-	case CF_COMPARE_FUNCTION_EQUAL:                 return SDL_GPU_COMPAREOP_EQUAL;
-	case CF_COMPARE_FUNCTION_NOT_EQUAL:             return SDL_GPU_COMPAREOP_NOT_EQUAL;
-	case CF_COMPARE_FUNCTION_LESS_THAN_OR_EQUAL:    return SDL_GPU_COMPAREOP_LESS_OR_EQUAL;
-	case CF_COMPARE_FUNCTION_GREATER_THAN:          return SDL_GPU_COMPAREOP_GREATER;
-	case CF_COMPARE_FUNCTION_GREATER_THAN_OR_EQUAL: return SDL_GPU_COMPAREOP_GREATER_OR_EQUAL;
-	default:                                        return SDL_GPU_COMPAREOP_ALWAYS;
-	}
-}
-
-CF_INLINE SDL_GPUCullMode s_wrap(CF_CullMode mode)
-{
-    switch (mode)
-    {
-    case CF_CULL_MODE_NONE:  return SDL_GPU_CULLMODE_NONE;
-    case CF_CULL_MODE_FRONT: return SDL_GPU_CULLMODE_FRONT;
-    case CF_CULL_MODE_BACK:  return SDL_GPU_CULLMODE_BACK;
-    default:              return SDL_GPU_CULLMODE_NONE;
-    }
-}
-
-CF_INLINE SDL_GPUStencilOp s_wrap(CF_StencilOp stencil_op)
-{
-	switch (stencil_op)
-	{
-	case CF_STENCIL_OP_KEEP:            return SDL_GPU_STENCILOP_KEEP;
-	case CF_STENCIL_OP_ZERO:            return SDL_GPU_STENCILOP_ZERO;
-	case CF_STENCIL_OP_REPLACE:         return SDL_GPU_STENCILOP_REPLACE;
-	case CF_STENCIL_OP_INCREMENT_CLAMP: return SDL_GPU_STENCILOP_INCREMENT_AND_CLAMP;
-	case CF_STENCIL_OP_DECREMENT_CLAMP: return SDL_GPU_STENCILOP_DECREMENT_AND_CLAMP;
-	case CF_STENCIL_OP_INVERT:          return SDL_GPU_STENCILOP_INVERT;
-	case CF_STENCIL_OP_INCREMENT_WRAP:  return SDL_GPU_STENCILOP_INCREMENT_AND_WRAP;
-	case CF_STENCIL_OP_DECREMENT_WRAP:  return SDL_GPU_STENCILOP_DECREMENT_AND_WRAP;
-	default:                            return SDL_GPU_STENCILOP_KEEP;
-	}
-}
-
-CF_INLINE SDL_GPUBlendOp s_wrap(CF_BlendOp blend_op)
-{
-	switch (blend_op)
-	{
-	case CF_BLEND_OP_ADD:              return SDL_GPU_BLENDOP_ADD;
-	case CF_BLEND_OP_SUBTRACT:         return SDL_GPU_BLENDOP_SUBTRACT;
-	case CF_BLEND_OP_REVERSE_SUBTRACT: return SDL_GPU_BLENDOP_REVERSE_SUBTRACT;
-	case CF_BLEND_OP_MIN:              return SDL_GPU_BLENDOP_MIN;
-	case CF_BLEND_OP_MAX:              return SDL_GPU_BLENDOP_MAX;
-	default:                           return SDL_GPU_BLENDOP_ADD;
-	}
-}
-
-CF_INLINE SDL_GPUBlendFactor s_wrap(CF_BlendFactor factor)
-{
-	switch (factor) {
-	case CF_BLENDFACTOR_ZERO:                    return SDL_GPU_BLENDFACTOR_ZERO;
-	case CF_BLENDFACTOR_ONE:                     return SDL_GPU_BLENDFACTOR_ONE;
-	case CF_BLENDFACTOR_SRC_COLOR:               return SDL_GPU_BLENDFACTOR_SRC_COLOR;
-	case CF_BLENDFACTOR_ONE_MINUS_SRC_COLOR:     return SDL_GPU_BLENDFACTOR_ONE_MINUS_SRC_COLOR;
-	case CF_BLENDFACTOR_DST_COLOR:               return SDL_GPU_BLENDFACTOR_DST_COLOR;
-	case CF_BLENDFACTOR_ONE_MINUS_DST_COLOR:     return SDL_GPU_BLENDFACTOR_ONE_MINUS_DST_COLOR;
-	case CF_BLENDFACTOR_SRC_ALPHA:               return SDL_GPU_BLENDFACTOR_SRC_ALPHA;
-	case CF_BLENDFACTOR_ONE_MINUS_SRC_ALPHA:     return SDL_GPU_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
-	case CF_BLENDFACTOR_DST_ALPHA:               return SDL_GPU_BLENDFACTOR_DST_ALPHA;
-	case CF_BLENDFACTOR_ONE_MINUS_DST_ALPHA:     return SDL_GPU_BLENDFACTOR_ONE_MINUS_DST_ALPHA;
-	case CF_BLENDFACTOR_CONSTANT_COLOR:          return SDL_GPU_BLENDFACTOR_CONSTANT_COLOR;
-	case CF_BLENDFACTOR_ONE_MINUS_CONSTANT_COLOR:return SDL_GPU_BLENDFACTOR_ONE_MINUS_CONSTANT_COLOR;
-	case CF_BLENDFACTOR_SRC_ALPHA_SATURATE:      return SDL_GPU_BLENDFACTOR_SRC_ALPHA_SATURATE;
-	default:                                     return SDL_GPU_BLENDFACTOR_ZERO;
-	}
-}
-
-CF_INLINE SDL_GPUPrimitiveType s_wrap(CF_PrimitiveType type)
-{
-	switch (type)
-	{
-	case CF_PRIMITIVE_TYPE_TRIANGLELIST:   return SDL_GPU_PRIMITIVETYPE_TRIANGLELIST;
-	case CF_PRIMITIVE_TYPE_TRIANGLESTRIP:  return SDL_GPU_PRIMITIVETYPE_TRIANGLESTRIP;
-	case CF_PRIMITIVE_TYPE_LINELIST:       return SDL_GPU_PRIMITIVETYPE_LINELIST;
-	case CF_PRIMITIVE_TYPE_LINESTRIP:      return SDL_GPU_PRIMITIVETYPE_LINESTRIP;
-	default:                               return SDL_GPU_PRIMITIVETYPE_TRIANGLELIST;
-	}
-}
-
-CF_INLINE SDL_GPUShaderStage s_wrap(CF_ShaderStage stage)
-{
-	switch (stage) {
-	case CF_SHADER_STAGE_VERTEX: return SDL_GPU_SHADERSTAGE_VERTEX;
-	case CF_SHADER_STAGE_FRAGMENT: return SDL_GPU_SHADERSTAGE_FRAGMENT;
-	default: return SDL_GPU_SHADERSTAGE_VERTEX;
-	}
-}
-
-CF_INLINE SDL_GPUTextureFormat s_wrap(CF_PixelFormat format)
-{
-	switch (format)
-	{
-	case CF_PIXEL_FORMAT_INVALID:                 return SDL_GPU_TEXTUREFORMAT_INVALID;
-	case CF_PIXEL_FORMAT_A8_UNORM:                return SDL_GPU_TEXTUREFORMAT_A8_UNORM;
-	case CF_PIXEL_FORMAT_R8_UNORM:                return SDL_GPU_TEXTUREFORMAT_R8_UNORM;
-	case CF_PIXEL_FORMAT_R8G8_UNORM:              return SDL_GPU_TEXTUREFORMAT_R8G8_UNORM;
-	case CF_PIXEL_FORMAT_R8G8B8A8_UNORM:          return SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM;
-	case CF_PIXEL_FORMAT_R16_UNORM:               return SDL_GPU_TEXTUREFORMAT_R16_UNORM;
-	case CF_PIXEL_FORMAT_R16G16_UNORM:            return SDL_GPU_TEXTUREFORMAT_R16G16_UNORM;
-	case CF_PIXEL_FORMAT_R16G16B16A16_UNORM:      return SDL_GPU_TEXTUREFORMAT_R16G16B16A16_UNORM;
-	case CF_PIXEL_FORMAT_R10G10B10A2_UNORM:       return SDL_GPU_TEXTUREFORMAT_R10G10B10A2_UNORM;
-	case CF_PIXEL_FORMAT_B5G6R5_UNORM:            return SDL_GPU_TEXTUREFORMAT_B5G6R5_UNORM;
-	case CF_PIXEL_FORMAT_B5G5R5A1_UNORM:          return SDL_GPU_TEXTUREFORMAT_B5G5R5A1_UNORM;
-	case CF_PIXEL_FORMAT_B4G4R4A4_UNORM:          return SDL_GPU_TEXTUREFORMAT_B4G4R4A4_UNORM;
-	case CF_PIXEL_FORMAT_B8G8R8A8_UNORM:          return SDL_GPU_TEXTUREFORMAT_B8G8R8A8_UNORM;
-	case CF_PIXEL_FORMAT_BC1_RGBA_UNORM:          return SDL_GPU_TEXTUREFORMAT_BC1_RGBA_UNORM;
-	case CF_PIXEL_FORMAT_BC2_RGBA_UNORM:          return SDL_GPU_TEXTUREFORMAT_BC2_RGBA_UNORM;
-	case CF_PIXEL_FORMAT_BC3_RGBA_UNORM:          return SDL_GPU_TEXTUREFORMAT_BC3_RGBA_UNORM;
-	case CF_PIXEL_FORMAT_BC4_R_UNORM:             return SDL_GPU_TEXTUREFORMAT_BC4_R_UNORM;
-	case CF_PIXEL_FORMAT_BC5_RG_UNORM:            return SDL_GPU_TEXTUREFORMAT_BC5_RG_UNORM;
-	case CF_PIXEL_FORMAT_BC7_RGBA_UNORM:          return SDL_GPU_TEXTUREFORMAT_BC7_RGBA_UNORM;
-	case CF_PIXEL_FORMAT_BC6H_RGB_FLOAT:          return SDL_GPU_TEXTUREFORMAT_BC6H_RGB_FLOAT;
-	case CF_PIXEL_FORMAT_BC6H_RGB_UFLOAT:         return SDL_GPU_TEXTUREFORMAT_BC6H_RGB_UFLOAT;
-	case CF_PIXEL_FORMAT_R8_SNORM:                return SDL_GPU_TEXTUREFORMAT_R8_SNORM;
-	case CF_PIXEL_FORMAT_R8G8_SNORM:              return SDL_GPU_TEXTUREFORMAT_R8G8_SNORM;
-	case CF_PIXEL_FORMAT_R8G8B8A8_SNORM:          return SDL_GPU_TEXTUREFORMAT_R8G8B8A8_SNORM;
-	case CF_PIXEL_FORMAT_R16_SNORM:               return SDL_GPU_TEXTUREFORMAT_R16_SNORM;
-	case CF_PIXEL_FORMAT_R16G16_SNORM:            return SDL_GPU_TEXTUREFORMAT_R16G16_SNORM;
-	case CF_PIXEL_FORMAT_R16G16B16A16_SNORM:      return SDL_GPU_TEXTUREFORMAT_R16G16B16A16_SNORM;
-	case CF_PIXEL_FORMAT_R16_FLOAT:               return SDL_GPU_TEXTUREFORMAT_R16_FLOAT;
-	case CF_PIXEL_FORMAT_R16G16_FLOAT:            return SDL_GPU_TEXTUREFORMAT_R16G16_FLOAT;
-	case CF_PIXEL_FORMAT_R16G16B16A16_FLOAT:      return SDL_GPU_TEXTUREFORMAT_R16G16B16A16_FLOAT;
-	case CF_PIXEL_FORMAT_R32_FLOAT:               return SDL_GPU_TEXTUREFORMAT_R32_FLOAT;
-	case CF_PIXEL_FORMAT_R32G32_FLOAT:            return SDL_GPU_TEXTUREFORMAT_R32G32_FLOAT;
-	case CF_PIXEL_FORMAT_R32G32B32A32_FLOAT:      return SDL_GPU_TEXTUREFORMAT_R32G32B32A32_FLOAT;
-	case CF_PIXEL_FORMAT_R11G11B10_UFLOAT:        return SDL_GPU_TEXTUREFORMAT_R11G11B10_UFLOAT;
-	case CF_PIXEL_FORMAT_R8_UINT:                 return SDL_GPU_TEXTUREFORMAT_R8_UINT;
-	case CF_PIXEL_FORMAT_R8G8_UINT:               return SDL_GPU_TEXTUREFORMAT_R8G8_UINT;
-	case CF_PIXEL_FORMAT_R8G8B8A8_UINT:           return SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UINT;
-	case CF_PIXEL_FORMAT_R16_UINT:                return SDL_GPU_TEXTUREFORMAT_R16_UINT;
-	case CF_PIXEL_FORMAT_R16G16_UINT:             return SDL_GPU_TEXTUREFORMAT_R16G16_UINT;
-	case CF_PIXEL_FORMAT_R16G16B16A16_UINT:       return SDL_GPU_TEXTUREFORMAT_R16G16B16A16_UINT;
-	case CF_PIXEL_FORMAT_R8_INT:                  return SDL_GPU_TEXTUREFORMAT_R8_INT;
-	case CF_PIXEL_FORMAT_R8G8_INT:                return SDL_GPU_TEXTUREFORMAT_R8G8_INT;
-	case CF_PIXEL_FORMAT_R8G8B8A8_INT:            return SDL_GPU_TEXTUREFORMAT_R8G8B8A8_INT;
-	case CF_PIXEL_FORMAT_R16_INT:                 return SDL_GPU_TEXTUREFORMAT_R16_INT;
-	case CF_PIXEL_FORMAT_R16G16_INT:              return SDL_GPU_TEXTUREFORMAT_R16G16_INT;
-	case CF_PIXEL_FORMAT_R16G16B16A16_INT:        return SDL_GPU_TEXTUREFORMAT_R16G16B16A16_INT;
-	case CF_PIXEL_FORMAT_R8G8B8A8_UNORM_SRGB:     return SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM_SRGB;
-	case CF_PIXEL_FORMAT_B8G8R8A8_UNORM_SRGB:     return SDL_GPU_TEXTUREFORMAT_B8G8R8A8_UNORM_SRGB;
-	case CF_PIXEL_FORMAT_BC1_RGBA_UNORM_SRGB:     return SDL_GPU_TEXTUREFORMAT_BC1_RGBA_UNORM_SRGB;
-	case CF_PIXEL_FORMAT_BC2_RGBA_UNORM_SRGB:     return SDL_GPU_TEXTUREFORMAT_BC2_RGBA_UNORM_SRGB;
-	case CF_PIXEL_FORMAT_BC3_RGBA_UNORM_SRGB:     return SDL_GPU_TEXTUREFORMAT_BC3_RGBA_UNORM_SRGB;
-	case CF_PIXEL_FORMAT_BC7_RGBA_UNORM_SRGB:     return SDL_GPU_TEXTUREFORMAT_BC7_RGBA_UNORM_SRGB;
-	case CF_PIXEL_FORMAT_D16_UNORM:               return SDL_GPU_TEXTUREFORMAT_D16_UNORM;
-	case CF_PIXEL_FORMAT_D24_UNORM:               return SDL_GPU_TEXTUREFORMAT_D24_UNORM;
-	case CF_PIXEL_FORMAT_D32_FLOAT:               return SDL_GPU_TEXTUREFORMAT_D32_FLOAT;
-	case CF_PIXEL_FORMAT_D24_UNORM_S8_UINT:       return SDL_GPU_TEXTUREFORMAT_D24_UNORM_S8_UINT;
-	case CF_PIXEL_FORMAT_D32_FLOAT_S8_UINT:       return SDL_GPU_TEXTUREFORMAT_D32_FLOAT_S8_UINT;
-	default:                                      return SDL_GPU_TEXTUREFORMAT_INVALID;
-	}
-}
-
-CF_INLINE SDL_GPUFilter s_wrap(CF_Filter filter)
-{
-	switch (filter) {
-	default: return SDL_GPU_FILTER_LINEAR;
-	case CF_FILTER_NEAREST: return SDL_GPU_FILTER_NEAREST;
-	case CF_FILTER_LINEAR: return SDL_GPU_FILTER_LINEAR;
-	}
-}
-
-CF_INLINE SDL_GPUSamplerMipmapMode s_wrap(CF_MipFilter filter)
-{
-	switch (filter) {
-	default: return SDL_GPU_SAMPLERMIPMAPMODE_LINEAR;
-	case CF_MIP_FILTER_NEAREST: return SDL_GPU_SAMPLERMIPMAPMODE_NEAREST;
-	case CF_MIP_FILTER_LINEAR: return SDL_GPU_SAMPLERMIPMAPMODE_LINEAR;
-	}
-}
-
-CF_INLINE SDL_GPUSamplerAddressMode s_wrap(CF_WrapMode mode)
-{
-	switch (mode)
-	{
-	case CF_WRAP_MODE_REPEAT:           return SDL_GPU_SAMPLERADDRESSMODE_REPEAT;
-	case CF_WRAP_MODE_CLAMP_TO_EDGE:    return SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE;
-	case CF_WRAP_MODE_MIRRORED_REPEAT:  return SDL_GPU_SAMPLERADDRESSMODE_MIRRORED_REPEAT;
-	default:                            return SDL_GPU_SAMPLERADDRESSMODE_REPEAT;
-	}
-}
+#define CF_MAX_UNIFORM_BLOCK_COUNT (4)
 
 typedef enum CF_ShaderInputFormat
 {
@@ -339,41 +75,19 @@ CF_INLINE bool s_is_compatible(CF_ShaderInputFormat input_format, CF_VertexForma
 	}
 }
 
-CF_INLINE SDL_GPUVertexElementFormat s_wrap(CF_VertexFormat format)
+CF_INLINE CF_UniformType s_uniform_type(CF_ShaderInfoDataType type)
 {
-	switch (format)
-	{
-	case CF_VERTEX_FORMAT_INT:           return SDL_GPU_VERTEXELEMENTFORMAT_INT;
-	case CF_VERTEX_FORMAT_INT2:          return SDL_GPU_VERTEXELEMENTFORMAT_INT2;
-	case CF_VERTEX_FORMAT_INT3:          return SDL_GPU_VERTEXELEMENTFORMAT_INT3;
-	case CF_VERTEX_FORMAT_INT4:          return SDL_GPU_VERTEXELEMENTFORMAT_INT4;
-	case CF_VERTEX_FORMAT_UINT:          return SDL_GPU_VERTEXELEMENTFORMAT_UINT;
-	case CF_VERTEX_FORMAT_UINT2:         return SDL_GPU_VERTEXELEMENTFORMAT_UINT2;
-	case CF_VERTEX_FORMAT_UINT3:         return SDL_GPU_VERTEXELEMENTFORMAT_UINT3;
-	case CF_VERTEX_FORMAT_UINT4:         return SDL_GPU_VERTEXELEMENTFORMAT_UINT4;
-	case CF_VERTEX_FORMAT_FLOAT:         return SDL_GPU_VERTEXELEMENTFORMAT_FLOAT;
-	case CF_VERTEX_FORMAT_FLOAT2:        return SDL_GPU_VERTEXELEMENTFORMAT_FLOAT2;
-	case CF_VERTEX_FORMAT_FLOAT3:        return SDL_GPU_VERTEXELEMENTFORMAT_FLOAT3;
-	case CF_VERTEX_FORMAT_FLOAT4:        return SDL_GPU_VERTEXELEMENTFORMAT_FLOAT4;
-	case CF_VERTEX_FORMAT_BYTE2:         return SDL_GPU_VERTEXELEMENTFORMAT_BYTE2;
-	case CF_VERTEX_FORMAT_BYTE4:         return SDL_GPU_VERTEXELEMENTFORMAT_BYTE4;
-	case CF_VERTEX_FORMAT_UBYTE2:        return SDL_GPU_VERTEXELEMENTFORMAT_UBYTE2;
-	case CF_VERTEX_FORMAT_UBYTE4:        return SDL_GPU_VERTEXELEMENTFORMAT_UBYTE4;
-	case CF_VERTEX_FORMAT_BYTE2_NORM:    return SDL_GPU_VERTEXELEMENTFORMAT_BYTE2_NORM;
-	case CF_VERTEX_FORMAT_BYTE4_NORM:    return SDL_GPU_VERTEXELEMENTFORMAT_BYTE4_NORM;
-	case CF_VERTEX_FORMAT_UBYTE2_NORM:   return SDL_GPU_VERTEXELEMENTFORMAT_UBYTE2_NORM;
-	case CF_VERTEX_FORMAT_UBYTE4_NORM:   return SDL_GPU_VERTEXELEMENTFORMAT_UBYTE4_NORM;
-	case CF_VERTEX_FORMAT_SHORT2:        return SDL_GPU_VERTEXELEMENTFORMAT_SHORT2;
-	case CF_VERTEX_FORMAT_SHORT4:        return SDL_GPU_VERTEXELEMENTFORMAT_SHORT4;
-	case CF_VERTEX_FORMAT_USHORT2:       return SDL_GPU_VERTEXELEMENTFORMAT_USHORT2;
-	case CF_VERTEX_FORMAT_USHORT4:       return SDL_GPU_VERTEXELEMENTFORMAT_USHORT4;
-	case CF_VERTEX_FORMAT_SHORT2_NORM:   return SDL_GPU_VERTEXELEMENTFORMAT_SHORT2_NORM;
-	case CF_VERTEX_FORMAT_SHORT4_NORM:   return SDL_GPU_VERTEXELEMENTFORMAT_SHORT4_NORM;
-	case CF_VERTEX_FORMAT_USHORT2_NORM:  return SDL_GPU_VERTEXELEMENTFORMAT_USHORT2_NORM;
-	case CF_VERTEX_FORMAT_USHORT4_NORM:  return SDL_GPU_VERTEXELEMENTFORMAT_USHORT4_NORM;
-	case CF_VERTEX_FORMAT_HALF2:         return SDL_GPU_VERTEXELEMENTFORMAT_HALF2;
-	case CF_VERTEX_FORMAT_HALF4:         return SDL_GPU_VERTEXELEMENTFORMAT_HALF4;
-	default:                             return SDL_GPU_VERTEXELEMENTFORMAT_FLOAT;
+	switch (type) {
+	case CF_SHADER_INFO_TYPE_UNKNOWN: return CF_UNIFORM_TYPE_UNKNOWN;
+	case CF_SHADER_INFO_TYPE_FLOAT:   return CF_UNIFORM_TYPE_FLOAT;
+	case CF_SHADER_INFO_TYPE_FLOAT2:  return CF_UNIFORM_TYPE_FLOAT2;
+	case CF_SHADER_INFO_TYPE_FLOAT3:  return CF_UNIFORM_TYPE_FLOAT3;
+	case CF_SHADER_INFO_TYPE_FLOAT4:  return CF_UNIFORM_TYPE_FLOAT4;
+	case CF_SHADER_INFO_TYPE_SINT:	return CF_UNIFORM_TYPE_INT;
+	case CF_SHADER_INFO_TYPE_SINT2:   return CF_UNIFORM_TYPE_INT2;
+	case CF_SHADER_INFO_TYPE_SINT4:   return CF_UNIFORM_TYPE_INT4;
+	case CF_SHADER_INFO_TYPE_MAT4:	return CF_UNIFORM_TYPE_MAT4;
+	default: return CF_UNIFORM_TYPE_UNKNOWN;
 	}
 }
 
@@ -436,67 +150,101 @@ struct CF_MaterialInternal
 	CF_Arena block_arena;
 };
 
-struct CF_Pipeline
+//--------------------------------------------------------------------------------------------------
+// Helpers used by both SDL_Gpu and GL backends.
+
+CF_INLINE bool cf_pixel_format_is_depth(CF_PixelFormat format)
 {
-	int sample_count = 0;
-	CF_MaterialInternal* material = NULL;
-	SDL_GPUGraphicsPipeline* pip = NULL;
-	CF_MeshInternal* mesh = NULL;
-};
+	switch (format) {
+	case CF_PIXEL_FORMAT_D16_UNORM:
+	case CF_PIXEL_FORMAT_D24_UNORM:
+	case CF_PIXEL_FORMAT_D32_FLOAT:
+	case CF_PIXEL_FORMAT_D24_UNORM_S8_UINT:
+	case CF_PIXEL_FORMAT_D32_FLOAT_S8_UINT:
+		return true;
+	default:
+		return false;
+	}
+}
 
-#define CF_MAX_UNIFORM_BLOCK_COUNT (4)
-
-struct CF_ShaderInternal
+CF_INLINE bool cf_pixel_format_has_alpha(CF_PixelFormat format)
 {
-	SDL_GPUShader* vs = NULL;
-	SDL_GPUShader* fs = NULL;
-	int input_count = 0;
-	const char* input_names[CF_MAX_SHADER_INPUTS];
-	int input_locations[CF_MAX_SHADER_INPUTS];
-	CF_ShaderInputFormat input_formats[CF_MAX_SHADER_INPUTS];
-	int vs_uniform_block_count = 0;
-	int fs_uniform_block_count = 0;
-	int vs_block_sizes[CF_MAX_UNIFORM_BLOCK_COUNT];
-	int fs_block_sizes[CF_MAX_UNIFORM_BLOCK_COUNT];
-	Cute::Array<CF_UniformBlockMember> fs_uniform_block_members[CF_MAX_UNIFORM_BLOCK_COUNT];
-	Cute::Array<CF_UniformBlockMember> vs_uniform_block_members[CF_MAX_UNIFORM_BLOCK_COUNT];
-	Cute::Array<const char*> image_names;
-	Cute::Array<CF_Pipeline> pip_cache;
-
-	CF_INLINE int get_input_index(const char* name)
-	{
-		for (int i = 0; i < input_count; ++i) {
-			if (input_names[i] == name) return i;
-		}
-		return -1;
+	switch (format) {
+	case CF_PIXEL_FORMAT_A8_UNORM:
+	case CF_PIXEL_FORMAT_R8G8B8A8_UNORM:
+	case CF_PIXEL_FORMAT_R16G16B16A16_UNORM:
+	case CF_PIXEL_FORMAT_R10G10B10A2_UNORM:
+	case CF_PIXEL_FORMAT_B5G5R5A1_UNORM:
+	case CF_PIXEL_FORMAT_B4G4R4A4_UNORM:
+	case CF_PIXEL_FORMAT_B8G8R8A8_UNORM:
+	case CF_PIXEL_FORMAT_R8G8B8A8_SNORM:
+	case CF_PIXEL_FORMAT_R16G16B16A16_SNORM:
+	case CF_PIXEL_FORMAT_R16G16B16A16_FLOAT:
+	case CF_PIXEL_FORMAT_R32G32B32A32_FLOAT:
+	case CF_PIXEL_FORMAT_R8G8B8A8_UINT:
+	case CF_PIXEL_FORMAT_R16G16B16A16_UINT:
+	case CF_PIXEL_FORMAT_R8G8B8A8_INT:
+	case CF_PIXEL_FORMAT_R16G16B16A16_INT:
+	case CF_PIXEL_FORMAT_R8G8B8A8_UNORM_SRGB:
+	case CF_PIXEL_FORMAT_B8G8R8A8_UNORM_SRGB:
+	case CF_PIXEL_FORMAT_BC1_RGBA_UNORM:
+	case CF_PIXEL_FORMAT_BC2_RGBA_UNORM:
+	case CF_PIXEL_FORMAT_BC3_RGBA_UNORM:
+	case CF_PIXEL_FORMAT_BC7_RGBA_UNORM:
+	case CF_PIXEL_FORMAT_BC1_RGBA_UNORM_SRGB:
+	case CF_PIXEL_FORMAT_BC2_RGBA_UNORM_SRGB:
+	case CF_PIXEL_FORMAT_BC3_RGBA_UNORM_SRGB:
+	case CF_PIXEL_FORMAT_BC7_RGBA_UNORM_SRGB:
+		return true;
+	default:
+		return false;
 	}
+}
 
-	CF_INLINE int fs_index(const char* name, int block_index)
-	{
-		for (int i = 0; i < fs_uniform_block_members[block_index].size(); ++i) {
-			if (fs_uniform_block_members[block_index][i].name == name) return i;
-		}
-		return -1;
-	}
+CF_INLINE bool s_is_depth(CF_PixelFormat format)
+{
+	return format >= CF_PIXEL_FORMAT_D16_UNORM;
+}
 
-	CF_INLINE int vs_index(const char* name, int block_index)
-	{
-		for (int i = 0; i < vs_uniform_block_members[block_index].size(); ++i) {
-			if (vs_uniform_block_members[block_index][i].name == name) return i;
-		}
-		return -1;
-	}
-};
-
+void cf_load_internal_shaders();
+void cf_unload_internal_shaders();
 CF_Shader cf_make_draw_shader_internal(const char* path);
 CF_Shader cf_make_draw_shader_from_source_internal(const char* src);
 CF_Shader cf_make_draw_shader_from_bytecode_internal(CF_ShaderBytecode bytecode);
 CF_Shader cf_make_draw_blit_shader_internal(const char* path);
 CF_Shader cf_make_draw_blit_shader_from_source_internal(const char* src);
 CF_Shader cf_make_draw_blit_shader_from_bytecode_internal(CF_ShaderBytecode bytecode);
-void cf_load_internal_shaders();
-void cf_unload_internal_shaders();
+CF_Shader cf_make_shader_from_source_internal(const char* vs_src, const char* fs_src, const char* user_shd = NULL);
+void cf_canvas_get_size(CF_Canvas canvas, int* w, int* h);
 void cf_shader_watch();
-void cf_clear_canvas(CF_Canvas canvas);
+
+#ifndef CF_EMSCRIPTEN
+
+CF_Result cf_sdlgpu_init(const char* device_name, bool debug, CF_BackendType* backend_type);
+SDL_GPUDevice* cf_sdlgpu_get_device();
+SDL_GPUTexture* cf_sdlgpu_get_swapchain_texture();
+SDL_GPUCommandBuffer* cf_sdlgpu_get_command_buffer();
+void cf_sdlgpu_attach(SDL_Window* window);
+bool cf_sdlgpu_supports_msaa(int sample_count);
+void cf_sdlgpu_flush();
+void cf_sdlgpu_set_vsync(bool true_turn_on_vsync);
+void cf_sdlgpu_set_vsync_mailbox(bool true_turn_on_vsync);
+void cf_sdlgpu_begin_frame();
+void cf_sdlgpu_blit_canvas(CF_Canvas canvas);
+void cf_sdlgpu_end_frame();
+void cf_sdlgpu_cleanup();
+
+#endif
+
+CF_Result cf_gles_init(bool debug);
+SDL_GLContext cf_gles_get_gl_context();
+void cf_gles_attach(SDL_Window* window);
+bool cf_gles_supports_msaa(int sample_count);
+void cf_gles_flush();
+void cf_gles_set_vsync(bool true_turn_on_vsync);
+void cf_gles_begin_frame();
+void cf_gles_blit_canvas(CF_Canvas canvas);
+void cf_gles_end_frame();
+void cf_gles_cleanup();
 
 #endif // CF_GRAPHICS_INTERNAL_H

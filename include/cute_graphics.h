@@ -133,6 +133,8 @@ typedef struct CF_Shader { uint64_t id; } CF_Shader;
 	CF_ENUM(BACKEND_TYPE_METAL,  3)                                                \
 	/* @entry A "secret" backend for platforms under non-disclosure agreement. */  \
 	CF_ENUM(BACKEND_TYPE_PRIVATE,  4)                                              \
+	/* @entry OpenGL ES 3 backen.. */                                              \
+	CF_ENUM(BACKEND_TYPE_GLES3,  5)                                                \
 	/* @end */
 
 typedef enum CF_BackendType
@@ -349,13 +351,24 @@ typedef enum CF_PixelFormatOp
  * @related  CF_PixelFormat cf_pixel_format_op_to_string CF_PixelFormatOp
  */
 CF_INLINE const char* cf_pixel_format_op_to_string(CF_PixelFormatOp op) {
-	switch (op) {
-	#define CF_ENUM(K, V) case CF_##K: return CF_STRINGIZE(CF_##K);
-	CF_PIXELFORMAT_OP_DEFS
-	#undef CF_ENUM
-	default: return NULL;
-	}
+switch (op) {
+#define CF_ENUM(K, V) case CF_##K: return CF_STRINGIZE(CF_##K);
+CF_PIXELFORMAT_OP_DEFS
+#undef CF_ENUM
+default: return NULL;
 }
+}
+
+/**
+ * @function cf_query_pixel_format
+ * @category graphics
+ * @brief    Queries whether a pixel format supports a specific operation on the current backend.
+ * @param    format  The `CF_PixelFormat` to query.
+ * @param    op      The operation to test, see `CF_PixelFormatOp`.
+ * @return   True if the operation is supported for the format, otherwise false.
+ * @related  CF_PixelFormat CF_PixelFormatOp cf_texture_supports_format
+ */
+CF_API bool CF_CALL cf_query_pixel_format(CF_PixelFormat format, CF_PixelFormatOp op);
 
 //--------------------------------------------------------------------------------------------------
 // Texture.

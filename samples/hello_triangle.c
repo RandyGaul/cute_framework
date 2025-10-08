@@ -38,7 +38,7 @@ const char* s_tri_fs = STR(
 
 int main(int argc, char* argv[])
 {
-	CF_Result result = cf_make_app("Hello Triangle", 0, 0, 0, 640, 480, CF_APP_OPTIONS_WINDOW_POS_CENTERED_BIT | CF_APP_OPTIONS_RESIZABLE_BIT, argv[0]);
+	CF_Result result = cf_make_app("Hello Triangle", 0, 0, 0, 640, 480, CF_APP_OPTIONS_WINDOW_POS_CENTERED_BIT, argv[0]);
 	if (cf_is_error(result)) return -1;
 
 	// Example program to get going with custom rendering. Most of the time you want to draw sprites or shapes,
