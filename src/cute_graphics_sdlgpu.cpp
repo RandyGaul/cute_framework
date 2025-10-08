@@ -458,6 +458,22 @@ CF_INLINE bool s_texture_supports_format(CF_PixelFormat format, CF_TextureUsageB
 	);
 }
 
+static bool s_texture_supports_stencil(const CF_TextureInternal* texture)
+{
+	if (!texture) return false;
+
+	if (cf_pixel_format_has_stencil(texture->pixel_format)) return true;
+
+	switch (texture->format)
+	{
+	case SDL_GPU_TEXTUREFORMAT_D24_UNORM_S8_UINT:
+	case SDL_GPU_TEXTUREFORMAT_D32_FLOAT_S8_UINT:
+		return true;
+	default:
+		return false;
+	}
+}
+
 static CF_Texture s_make_texture(CF_TextureParams params, CF_SampleCount sample_count)
 {
 	SDL_GPUTextureCreateInfo tex_info = SDL_GPUTextureCreateInfoDefaults(params.width, params.height);
@@ -1288,7 +1304,7 @@ static SDL_GPUGraphicsPipeline* s_build_pipeline(CF_ShaderInternal* shader, CF_R
 	const bool depth_test_requested = state->depth_write_enabled || state->depth_compare != CF_COMPARE_FUNCTION_ALWAYS;
 	CF_TextureInternal* depth_texture = has_depth_stencil_texture ? (CF_TextureInternal*)g_ctx.canvas->cf_depth_stencil.id : NULL;
 	const bool depth_test_enabled = (depth_texture != NULL) && depth_test_requested;
-	const bool stencil_capable = depth_texture && cf_pixel_format_has_stencil(depth_texture->pixel_format);
+	const bool stencil_capable = s_texture_supports_stencil(depth_texture);
 	const bool stencil_test_enabled = stencil_capable && state->stencil.enabled;
 	if (depth_texture && (depth_test_enabled || stencil_test_enabled)) {
 		pip_info.target_info.depth_stencil_format = depth_texture->format;
@@ -1429,7 +1445,7 @@ void cf_sdlgpu_apply_shader(CF_Shader shader_handle, CF_Material material_handle
 	CF_TextureInternal* depth_texture = has_depth_stencil_texture ? (CF_TextureInternal*)g_ctx.canvas->cf_depth_stencil.id : NULL;
 	const bool depth_test_requested = state->depth_write_enabled || state->depth_compare != CF_COMPARE_FUNCTION_ALWAYS;
 	const bool depth_test_enabled = (depth_texture != NULL) && depth_test_requested;
-	const bool stencil_capable = depth_texture && cf_pixel_format_has_stencil(depth_texture->pixel_format);
+	const bool stencil_capable = s_texture_supports_stencil(depth_texture);
 	const bool stencil_test_enabled = stencil_capable && state->stencil.enabled;
 	const bool use_depth_stencil_target = depth_texture && (depth_test_enabled || stencil_test_enabled);
 	
