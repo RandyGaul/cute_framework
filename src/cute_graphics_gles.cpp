@@ -265,7 +265,7 @@ static GLsizeiptr s_align_up(GLsizeiptr value, GLsizeiptr alignment)
 static GLenum s_poll_fence(GLsync fence)
 {
 	if (!fence) return GL_ALREADY_SIGNALED;
-    return glClientWaitSync(fence, GL_SYNC_FLUSH_COMMANDS_BIT, 0);
+	return glClientWaitSync(fence, GL_SYNC_FLUSH_COMMANDS_BIT, 0);
 }
 
 static CF_GL_Slot* s_acquire_slot(CF_GL_Ring* ring, uint32_t frame, int* out_index)
@@ -307,9 +307,20 @@ static CF_GL_Slot* s_force_slot(CF_GL_Ring* ring, uint32_t frame, int* out_index
 	if (slot.fence) {
 		// Block the CPU until the GPU is done with this slot.
 		// If you're seeing this on the hot-path of a profile or flame-graph it means you're GPU bound.
+#ifdef CF_EMSCRIPTEN
+		GLenum status = s_poll_fence(slot.fence);
+		if (status == GL_ALREADY_SIGNALED || status == GL_CONDITION_SATISFIED) {
+			glDeleteSync(slot.fence);
+			slot.fence = 0;
+		} else {
+			if (out_index) *out_index = -1;
+			return NULL;
+		}
+#else
 		glClientWaitSync(slot.fence, GL_SYNC_FLUSH_COMMANDS_BIT, GL_TIMEOUT_IGNORED);
 		glDeleteSync(slot.fence);
 		slot.fence = 0;
+#endif
 	}
 	slot.last_use_frame = frame;
 	ring->head = (index + 1) % ring->count;
@@ -330,6 +341,9 @@ static void s_set_slot_fence(CF_GL_Slot& slot)
 		glDeleteSync(slot.fence);
 	}
 	slot.fence = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
+#ifdef CF_EMSCRIPTEN
+	glFlush();
+#endif
 }
 
 static CF_GL_RenderState s_default_state(CF_GL_Canvas* canvas)
