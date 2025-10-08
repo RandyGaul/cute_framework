@@ -414,17 +414,19 @@ CF_INLINE SDL_GPUVertexElementFormat s_wrap(CF_VertexFormat format)
 
 CF_INLINE CF_BackendType s_query_backend()
 {
-	SDL_GPUShaderFormat format = SDL_GetGPUShaderFormats(g_ctx.device);
-	switch (format) {
-	case SDL_GPU_SHADERFORMAT_INVALID:  return CF_BACKEND_TYPE_INVALID;
-	case SDL_GPU_SHADERFORMAT_PRIVATE:  return CF_BACKEND_TYPE_PRIVATE;
-	case SDL_GPU_SHADERFORMAT_SPIRV:	return CF_BACKEND_TYPE_VULKAN;
-	case SDL_GPU_SHADERFORMAT_DXBC:	 return CF_BACKEND_TYPE_D3D11;
-	case SDL_GPU_SHADERFORMAT_DXIL:	 return CF_BACKEND_TYPE_D3D12;
-	case SDL_GPU_SHADERFORMAT_MSL:	  // Fall through.
-	case SDL_GPU_SHADERFORMAT_METALLIB: // Fall through.
-	case SDL_GPU_SHADERFORMAT_MSL | SDL_GPU_SHADERFORMAT_METALLIB: return CF_BACKEND_TYPE_METAL;
-	default: return CF_BACKEND_TYPE_INVALID;
+	const char* driver = SDL_GetGPUDeviceDriver(g_ctx.device);
+	if (sequ(driver, "vulkan")) {
+		return CF_BACKEND_TYPE_VULKAN;
+	} else if (sequ(driver, "metal")) {
+		return CF_BACKEND_TYPE_METAL;
+	} else if (sequ(driver, "direct3d11")) {
+		return CF_BACKEND_TYPE_D3D11;
+	} else if (sequ(driver, "direct3d12")) {
+		return CF_BACKEND_TYPE_D3D12;
+	} else if (sequ(driver, "private")) { // Is this the right string??
+		return CF_BACKEND_TYPE_PRIVATE;
+	} else {
+		return CF_BACKEND_TYPE_INVALID;
 	}
 }
 
