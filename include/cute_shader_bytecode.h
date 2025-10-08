@@ -183,6 +183,10 @@ typedef struct CF_ShaderBytecode
 	const uint8_t* content;
 	/* @member Size of the bytecode blob. */
 	size_t size;
+	/* @member The transpiled GLSL 300 source for GLES 3 and WebGL 2. */
+	const char* glsl300_src;
+	/* @member Size of the GLSL 300 source. */
+	size_t glsl300_src_size;
 	/* @member Shader reflection info. */
 	CF_ShaderInfo shader_info;
 } CF_ShaderBytecode;

@@ -89,6 +89,7 @@ static bool write_bytecode_struct(
 	fprintf(file, "*/\n");
 
 	// Write the bytecode.
+	fprintf(file, "#ifndef __EMSCRIPTEN__\n");
 	fprintf(file, "static const uint8_t %s%s_content[%zu] = {", var_name, suffix, compile_result.bytecode.size);
 	for (size_t i = 0; i < compile_result.bytecode.size; ++i) {
 		if ((i % HEADER_LINE_SIZE) == 0) {
@@ -97,6 +98,19 @@ static bool write_bytecode_struct(
 		fprintf(file, " 0x%02X,", content[i]);
 	}
 	fprintf(file, "\n};\n");
+	fprintf(file, "#endif\n");
+
+	// Write GLSL 300
+	fprintf(file, "static const char %s%s_glsl300_src[%zu] =\n\"", var_name, suffix, compile_result.bytecode.glsl300_src_size + 1);
+	for (size_t i = 0; i < compile_result.bytecode.glsl300_src_size; ++i) {
+		char ch = compile_result.bytecode.glsl300_src[i];
+		if (ch == '\n') {  // Escape new line as \n and start an actual new line
+			fprintf(file, "\\n\"\n\"");
+		} else {
+			fprintf(file, "%c", ch);
+		}
+	}
+	fprintf(file, "\";\n");
 
 	// Write reflection info.
 	const CF_ShaderInfo* shader_info = &compile_result.bytecode.shader_info;
@@ -157,8 +171,12 @@ static bool write_bytecode_struct(
 
 	// Write the struct.
 	fprintf(file, "static const CF_ShaderBytecode %s%s = {\n", var_name, suffix);
+	fprintf(file, "#ifndef __EMSCRIPTEN__\n");
 	fprintf(file, "    .content = %s%s_content,\n", var_name, suffix);
 	fprintf(file, "    .size = %zu,\n", compile_result.bytecode.size);
+	fprintf(file, "#endif\n");
+	fprintf(file, "    .glsl300_src = %s%s_glsl300_src,\n", var_name, suffix);
+	fprintf(file, "    .glsl300_src_size = %zu,\n", compile_result.bytecode.glsl300_src_size);
 	fprintf(file, "    .shader_info = {\n");
 	fprintf(file, "        .num_samplers = %d,\n", shader_info->num_samplers);
 	fprintf(file, "        .num_storage_textures = %d,\n", shader_info->num_storage_textures);
