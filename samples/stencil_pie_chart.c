@@ -79,10 +79,10 @@ int main(int argc, char* argv[])
 	// Receives a function to call and some user data to provide it.
 	emscripten_set_main_loop(update, 60, true);
 #else
-	while (app_is_running()) {
+	while (cf_app_is_running()) {
 		update();
 	}
-	destroy_app();
+	cf_destroy_app();
 #endif
 
 	cf_destroy_app();
