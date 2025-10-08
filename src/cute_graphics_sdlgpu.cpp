@@ -42,6 +42,7 @@ struct CF_TextureInternal
 	SDL_GPUTexture* tex;
 	SDL_GPUTransferBuffer* buf;
 	SDL_GPUSampler* sampler;
+	CF_PixelFormat pixel_format;
 	SDL_GPUTextureFormat format;
 	SDL_GPUTextureSamplerBinding binding;
 };
@@ -516,6 +517,7 @@ static CF_Texture s_make_texture(CF_TextureParams params, CF_SampleCount sample_
 	tex_internal->tex = tex;
 	tex_internal->buf = buf;
 	tex_internal->sampler = sampler;
+	tex_internal->pixel_format = params.pixel_format;
 	tex_internal->format = tex_info.format;
 	tex_internal->binding.texture = tex;
 	tex_internal->binding.sampler = sampler;
@@ -1286,7 +1288,7 @@ static SDL_GPUGraphicsPipeline* s_build_pipeline(CF_ShaderInternal* shader, CF_R
 	const bool depth_test_requested = state->depth_write_enabled || state->depth_compare != CF_COMPARE_FUNCTION_ALWAYS;
 	CF_TextureInternal* depth_texture = has_depth_stencil_texture ? (CF_TextureInternal*)g_ctx.canvas->cf_depth_stencil.id : NULL;
 	const bool depth_test_enabled = (depth_texture != NULL) && depth_test_requested;
-	const bool stencil_capable = depth_texture && cf_pixel_format_has_stencil(depth_texture->format);
+	const bool stencil_capable = depth_texture && cf_pixel_format_has_stencil(depth_texture->pixel_format);
 	const bool stencil_test_enabled = stencil_capable && state->stencil.enabled;
 	if (depth_texture && (depth_test_enabled || stencil_test_enabled)) {
 		pip_info.target_info.depth_stencil_format = depth_texture->format;
@@ -1427,7 +1429,7 @@ void cf_sdlgpu_apply_shader(CF_Shader shader_handle, CF_Material material_handle
 	CF_TextureInternal* depth_texture = has_depth_stencil_texture ? (CF_TextureInternal*)g_ctx.canvas->cf_depth_stencil.id : NULL;
 	const bool depth_test_requested = state->depth_write_enabled || state->depth_compare != CF_COMPARE_FUNCTION_ALWAYS;
 	const bool depth_test_enabled = (depth_texture != NULL) && depth_test_requested;
-	const bool stencil_capable = depth_texture && cf_pixel_format_has_stencil(depth_texture->format);
+	const bool stencil_capable = depth_texture && cf_pixel_format_has_stencil(depth_texture->pixel_format);
 	const bool stencil_test_enabled = stencil_capable && state->stencil.enabled;
 	const bool use_depth_stencil_target = depth_texture && (depth_test_enabled || stencil_test_enabled);
 	
