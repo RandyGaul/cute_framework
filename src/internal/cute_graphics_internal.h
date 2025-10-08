@@ -167,6 +167,17 @@ CF_INLINE bool cf_pixel_format_is_depth(CF_PixelFormat format)
 	}
 }
 
+CF_INLINE bool cf_pixel_format_has_stencil(CF_PixelFormat format)
+{
+	switch (format) {
+	case CF_PIXEL_FORMAT_D24_UNORM_S8_UINT:
+	case CF_PIXEL_FORMAT_D32_FLOAT_S8_UINT:
+		return true;
+	default:
+		return false;
+	}
+}
+
 CF_INLINE bool cf_pixel_format_has_alpha(CF_PixelFormat format)
 {
 	switch (format) {

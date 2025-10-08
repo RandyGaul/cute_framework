@@ -82,7 +82,6 @@ int main(int argc, char* argv[])
 	while (cf_app_is_running()) {
 		update();
 	}
-	cf_destroy_app();
 #endif
 
 	cf_destroy_app();
