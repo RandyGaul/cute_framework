@@ -9,6 +9,7 @@
 #endif
 
 #include <cute_graphics.h>
+#include <cute_time.h>
 #include <spirv_cross_c.h>
 
 #ifdef CF_EMSCRIPTEN
@@ -308,13 +309,19 @@ static CF_GL_Slot* s_force_slot(CF_GL_Ring* ring, uint32_t frame, int* out_index
 		// Block the CPU until the GPU is done with this slot.
 		// If you're seeing this on the hot-path of a profile or flame-graph it means you're GPU bound.
 #ifdef CF_EMSCRIPTEN
-		GLenum status = s_poll_fence(slot.fence);
-		if (status == GL_ALREADY_SIGNALED || status == GL_CONDITION_SATISFIED) {
-			glDeleteSync(slot.fence);
-			slot.fence = 0;
-		} else {
-			if (out_index) *out_index = -1;
-			return NULL;
+		while (slot.fence) {
+			GLenum status = s_poll_fence(slot.fence);
+			if (status == GL_ALREADY_SIGNALED || status == GL_CONDITION_SATISFIED) {
+				glDeleteSync(slot.fence);
+				slot.fence = 0;
+				break;
+			}
+			if (status == GL_WAIT_FAILED) {
+				glDeleteSync(slot.fence);
+				slot.fence = 0;
+				break;
+			}
+			cf_sleep(0);
 		}
 #else
 		glClientWaitSync(slot.fence, GL_SYNC_FLUSH_COMMANDS_BIT, GL_TIMEOUT_IGNORED);
