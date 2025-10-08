@@ -1145,11 +1145,8 @@ CF_Canvas cf_gles_make_canvas(CF_CanvasParams params)
 	s_bind_framebuffer(c->fbo);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, c->color, 0);
 	if (c->depth) {
-		if (params.depth_stencil_target.pixel_format == CF_PIXEL_FORMAT_D24_UNORM_S8_UINT) {
-			glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, c->depth);
-		} else {
-			glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, c->depth);
-		}
+		GLenum attachment = c->has_stencil ? GL_DEPTH_STENCIL_ATTACHMENT : GL_DEPTH_ATTACHMENT;
+		glFramebufferRenderbuffer(GL_FRAMEBUFFER, attachment, GL_RENDERBUFFER, c->depth);
 	}
 	CF_ASSERT(glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE);
 	CF_POLL_OPENGL_ERROR();
