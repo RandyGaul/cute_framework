@@ -1774,7 +1774,7 @@ void cf_gles_commit()
 
 void cf_gles_apply_viewport(int x, int y, int w, int h)
 {
-	g_ctx.target_state = { x, y, w, h };
+	g_ctx.target_state.viewport = { x, y, w, h };
 }
 
 void cf_gles_apply_scissor(int x, int y, int w, int h)
