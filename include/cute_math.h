@@ -368,17 +368,33 @@ typedef struct CF_Manifold
  * @function cf_min
  * @category math
  * @brief    Returns the minimum of two values.
+ * @remarks  In C builds this name resolves via `_Generic` to support vector overloads.
  * @related  cf_min cf_max
  */
+#ifdef __cplusplus
 #define cf_min(a, b) ((a) < (b) ? (a) : (b))
+#else
+#define cf_min(a, b) \
+	_Generic((a), \
+		CF_V2: cf_min_v2(a, b), \
+		default: ((a) < (b) ? (a) : (b)))
+#endif
 
 /**
  * @function cf_max
  * @category math
  * @brief    Returns the maximum of two values.
+ * @remarks  In C builds this name resolves via `_Generic` to support vector overloads.
  * @related  cf_min cf_max
  */
+#ifdef __cplusplus
 #define cf_max(a, b) ((b) < (a) ? (a) : (b))
+#else
+#define cf_max(a, b) \
+	_Generic((a), \
+		CF_V2: cf_max_v2(a, b), \
+		default: ((b) < (a) ? (a) : (b)))
+#endif
 
 /**
  * @function cf_abs
@@ -954,7 +970,8 @@ CF_INLINE CF_V2 cf_norm(CF_V2 a) { return cf_div_v2_f(a, cf_len(a)); }
  *           the case of a zero vector.
  * @related  CF_V2 cf_len cf_distance cf_norm cf_safe_norm
  */
-CF_INLINE CF_V2 cf_safe_norm(CF_V2 a) { float sq = cf_dot(a, a); return sq ? cf_div_v2_f(a, CF_SQRTF(sq)) : cf_v2(0, 0); }
+CF_INLINE CF_V2 cf_safe_norm_v2(CF_V2 a) { float sq = cf_dot(a, a); return sq ? cf_div_v2_f(a, CF_SQRTF(sq)) : cf_v2(0, 0); }
+CF_INLINE CF_V2 cf_safe_norm(CF_V2 a) { return cf_safe_norm_v2(a); }
 
 /**
  * @function cf_safe_norm_f
@@ -1062,7 +1079,8 @@ CF_INLINE int cf_greater_equal_v2(CF_V2 a, CF_V2 b) { return a.x >= b.x && a.y >
  * @remarks  Floor means the decimal-point part is zero'd out.
  * @related  CF_V2 cf_round cf_lesser_v2 cf_greater_v2 cf_lesser_equal_v2 cf_greater_equal_v2 cf_parallel cf_floor cf_ceil
  */
-CF_INLINE CF_V2 cf_floor(CF_V2 a) { return cf_v2(CF_FLOORF(a.x), CF_FLOORF(a.y)); }
+CF_INLINE CF_V2 cf_floor_v2(CF_V2 a) { return cf_v2(CF_FLOORF(a.x), CF_FLOORF(a.y)); }
+CF_INLINE CF_V2 cf_floor(CF_V2 a) { return cf_floor_v2(a); }
 
 /**
  * @function cf_ceil
@@ -1071,7 +1089,8 @@ CF_INLINE CF_V2 cf_floor(CF_V2 a) { return cf_v2(CF_FLOORF(a.x), CF_FLOORF(a.y))
  * @remarks  Ceil means the number is clamped up to the next whole-number.
  * @related  CF_V2 cf_round cf_lesser_v2 cf_greater_v2 cf_lesser_equal_v2 cf_greater_equal_v2 cf_parallel cf_floor cf_ceil
  */
-CF_INLINE CF_V2 cf_ceil(CF_V2 a) { return cf_v2(CF_CEILF(a.x), CF_CEILF(a.y)); }
+CF_INLINE CF_V2 cf_ceil_v2(CF_V2 a) { return cf_v2(CF_CEILF(a.x), CF_CEILF(a.y)); }
+CF_INLINE CF_V2 cf_ceil(CF_V2 a) { return cf_ceil_v2(a); }
 
 /**
  * @function cf_round
@@ -1080,7 +1099,8 @@ CF_INLINE CF_V2 cf_ceil(CF_V2 a) { return cf_v2(CF_CEILF(a.x), CF_CEILF(a.y)); }
  * @remarks  Rounding means clamping the float to the nearest whole integer value.
  * @related  CF_V2 cf_lesser_v2 cf_greater_v2 cf_lesser_equal_v2 cf_greater_equal_v2 cf_parallel
  */
-CF_INLINE CF_V2 cf_round(CF_V2 a) { return cf_v2(CF_ROUNDF(a.x), CF_ROUNDF(a.y)); }
+CF_INLINE CF_V2 cf_round_v2(CF_V2 a) { return cf_v2(CF_ROUNDF(a.x), CF_ROUNDF(a.y)); }
+CF_INLINE CF_V2 cf_round(CF_V2 a) { return cf_round_v2(a); }
 
 /**
  * @function cf_safe_invert_v2
@@ -2598,6 +2618,234 @@ CF_API void CF_CALL cf_collide(const void* A, const CF_Transform* ax, CF_ShapeTy
  * @related  CF_Ray CF_Raycast CF_Transform CF_ShapeType cf_cast_ray
  */
 CF_API bool CF_CALL cf_cast_ray(CF_Ray A, const void* B, const CF_Transform* bx, CF_ShapeType typeB, CF_Raycast* out);
+
+#ifndef __cplusplus
+
+//--------------------------------------------------------------------------------------------------
+// C overload helpers.
+
+/**
+ * @function cf_abs
+ * @category math
+ * @brief    Computes the absolute value for supported math types.
+ * @remarks  C-only `_Generic` macro that dispatches to the appropriate overload.
+ * @related  cf_abs cf_abs_int cf_abs_v2 cf_sign
+ */
+#define cf_abs(a) \
+	_Generic((a), \
+	int: cf_abs_int(a), \
+	CF_V2: cf_abs_v2(a), \
+	default: CF_FABSF(a))
+
+/**
+ * @function cf_sign
+ * @category math
+ * @brief    Computes the sign for supported math types.
+ * @remarks  C-only `_Generic` macro that dispatches to the appropriate overload.
+ * @related  cf_sign cf_sign_int cf_sign_v2 cf_abs
+ */
+#define cf_sign(a) \
+	_Generic((a), \
+	int: cf_sign_int(a), \
+	CF_V2: cf_sign_v2(a), \
+	default: ((a) < 0 ? -1.0f : 1.0f))
+
+/**
+ * @function cf_clamp
+ * @category math
+ * @brief    Clamps supported math types between `lo` and `hi`.
+ * @remarks  C-only `_Generic` macro that dispatches to the appropriate overload.
+ * @related  cf_clamp cf_clamp_int cf_clamp_v2 cf_min cf_max
+ */
+#define cf_clamp(a, lo, hi) \
+	_Generic((a), \
+	int: cf_clamp_int(a, lo, hi), \
+	CF_V2: cf_clamp_v2(a, lo, hi), \
+	default: cf_max(lo, cf_min(a, hi)))
+
+/**
+ * @function cf_clamp01
+ * @category math
+ * @brief    Clamps supported math types between 0 and 1.
+ * @remarks  C-only `_Generic` macro that dispatches to the appropriate overload.
+ * @related  cf_clamp01 cf_clamp01_int cf_clamp01_v2 cf_clamp
+ */
+#define cf_clamp01(a) \
+	_Generic((a), \
+	int: cf_clamp01_int(a), \
+	CF_V2: cf_clamp01_v2(a), \
+	default: cf_max(0.0f, cf_min(a, 1.0f)))
+
+/**
+ * @function cf_add
+ * @category math
+ * @brief    Adds two math objects with overload support.
+ * @remarks  C-only `_Generic` macro that dispatches to the appropriate overload.
+ * @related  cf_add_v2 cf_sub cf_mul cf_div
+ */
+#define cf_add(a, b) \
+	_Generic((a), \
+	CF_V2: cf_add_v2(a, b), \
+	default: ((a) + (b)))
+
+/**
+ * @function cf_sub
+ * @category math
+ * @brief    Subtracts two math objects with overload support.
+ * @remarks  C-only `_Generic` macro that dispatches to the appropriate overload.
+ * @related  cf_sub_v2 cf_add cf_mul cf_div
+ */
+#define cf_sub(a, b) \
+	_Generic((a), \
+	CF_V2: cf_sub_v2(a, b), \
+	default: ((a) - (b)))
+
+/**
+ * @function cf_mul
+ * @category math
+ * @brief    Multiplies two math objects with overload support.
+ * @remarks  C-only `_Generic` macro that dispatches to the appropriate overload.
+ * @related  cf_mul_v2 cf_mul_v2_f cf_mul_m2 cf_mul_m2_v2 cf_mul_m2_f cf_mul_m32 cf_mul_m32_v2 cf_mul_sc cf_mul_sc_v2 cf_mul_tf cf_mul_tf_v2 cf_mul_tf_hs
+ */
+#define cf_mul(a, b) \
+	_Generic((a), \
+	CF_V2: _Generic((b), \
+	float: cf_mul_v2_f(a, b), \
+	CF_V2: cf_mul_v2(a, b)), \
+	CF_SinCos: _Generic((b), \
+	CF_V2: cf_mul_sc_v2(a, b), \
+	CF_SinCos: cf_mul_sc(a, b)), \
+	CF_M2x2: _Generic((b), \
+	float: cf_mul_m2_f(a, b), \
+	CF_V2: cf_mul_m2_v2(a, b), \
+	CF_M2x2: cf_mul_m2(a, b)), \
+	CF_M3x2: _Generic((b), \
+	CF_V2: cf_mul_m32_v2(a, b), \
+	CF_M3x2: cf_mul_m32(a, b)), \
+	CF_Transform: _Generic((b), \
+	CF_V2: cf_mul_tf_v2(a, b), \
+	CF_Transform: cf_mul_tf(a, b), \
+	CF_Halfspace: cf_mul_tf_hs(a, b)), \
+	default: ((a) * (b)))
+
+/**
+ * @function cf_mulT
+ * @category math
+ * @brief    Multiplies a math object by a transpose transform with overload support.
+ * @remarks  C-only `_Generic` macro that dispatches to the appropriate overload.
+ * @related  cf_mulT_sc cf_mulT_sc_v2 cf_mulT_tf cf_mulT_tf_v2 cf_mulT_tf_hs
+ */
+#define cf_mulT(a, b) \
+	_Generic((a), \
+	CF_SinCos: _Generic((b), \
+	CF_V2: cf_mulT_sc_v2(a, b), \
+	CF_SinCos: cf_mulT_sc(a, b)), \
+	CF_Transform: _Generic((b), \
+	CF_V2: cf_mulT_tf_v2(a, b), \
+	CF_Transform: cf_mulT_tf(a, b), \
+	CF_Halfspace: cf_mulT_tf_hs(a, b)))
+
+/**
+ * @function cf_div
+ * @category math
+ * @brief    Divides two math objects with overload support.
+ * @remarks  C-only `_Generic` macro that dispatches to the appropriate overload.
+ * @related  cf_div_v2_f cf_mul cf_add cf_sub
+ */
+#define cf_div(a, b) \
+	_Generic((a), \
+	CF_V2: cf_div_v2_f(a, b), \
+	default: ((a) / (b)))
+
+/**
+ * @function cf_cross
+ * @category math
+ * @brief    Computes the 2D cross product across supported overloads.
+ * @remarks  C-only `_Generic` macro that dispatches to the appropriate overload.
+ * @related  cf_det2 cf_cross_v2_f cf_cross_f_v2 cf_cross
+ */
+#define cf_cross(a, b) \
+	_Generic((a), \
+	CF_V2: _Generic((b), \
+	CF_V2: cf_det2(a, b), \
+	float: cf_cross_v2_f(a, b)), \
+	float: _Generic((b), \
+	CF_V2: cf_cross_f_v2(a, b)))
+
+/**
+ * @function cf_safe_norm
+ * @category math
+ * @brief    Normalizes math objects while handling zero length inputs.
+ * @remarks  C-only `_Generic` macro that dispatches to the appropriate overload.
+ * @related  cf_safe_norm cf_safe_norm_f cf_safe_norm_int cf_safe_norm_v2 cf_norm
+ */
+#define cf_safe_norm(a) \
+	_Generic((a), \
+	int: cf_safe_norm_int(a), \
+	CF_V2: cf_safe_norm_v2(a), \
+	default: cf_safe_norm_f(a))
+
+/**
+ * @function cf_safe_invert
+ * @category math
+ * @brief    Inverts math objects while handling zero values.
+ * @remarks  C-only `_Generic` macro that dispatches to the appropriate overload.
+ * @related  cf_safe_invert cf_safe_invert_v2 cf_sign
+ */
+#define cf_safe_invert(a) \
+	_Generic((a), \
+	CF_V2: cf_safe_invert_v2(a), \
+	default: ((a) != 0 ? 1.0f / (a) : 0))
+
+/**
+ * @function cf_lerp
+ * @category math
+ * @brief    Linearly interpolates between math objects with overload support.
+ * @remarks  C-only `_Generic` macro that dispatches to the appropriate overload.
+ * @related  cf_lerp cf_lerp_v2 cf_add cf_sub cf_mul
+ */
+#define cf_lerp(a, b, t) \
+	_Generic((a), \
+	CF_V2: cf_lerp_v2(a, b, t), \
+	default: ((a) + ((b) - (a)) * (t)))
+
+/**
+ * @function cf_floor
+ * @category math
+ * @brief    Floors math objects with overload support.
+ * @remarks  C-only `_Generic` macro that dispatches to the appropriate overload.
+ * @related  cf_floor cf_floor_v2 CF_FLOORF
+ */
+#define cf_floor(a) \
+	_Generic((a), \
+	CF_V2: cf_floor_v2(a), \
+	default: CF_FLOORF(a))
+
+/**
+ * @function cf_ceil
+ * @category math
+ * @brief    Ceils math objects with overload support.
+ * @remarks  C-only `_Generic` macro that dispatches to the appropriate overload.
+ * @related  cf_ceil cf_ceil_v2 CF_CEILF
+ */
+#define cf_ceil(a) \
+	_Generic((a), \
+	CF_V2: cf_ceil_v2(a), \
+	default: CF_CEILF(a))
+
+/**
+ * @function cf_round
+ * @category math
+ * @brief    Rounds math objects with overload support.
+ * @remarks  C-only `_Generic` macro that dispatches to the appropriate overload.
+ * @related  cf_round cf_round_v2 CF_ROUNDF
+ */
+#define cf_round(a) \
+	_Generic((a), \
+	CF_V2: cf_round_v2(a), \
+	default: CF_ROUNDF(a))
+
+#endif // __cplusplus
 
 #ifdef __cplusplus
 }
