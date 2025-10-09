@@ -565,7 +565,6 @@ CF_V2 resolve_overlaps(dyna Block *blocks, CF_V2 p, CF_V2 dp, CF_Aabb mover_aabb
                         {
                             // if the mover is moving left or right and hits an edge that's barely
                             // below step height then ignore that normal
-                            float d = block_shape.aabb.max.y - m.contact_points[0].y;
                             float dy = block_shape.aabb.max.y - aabb.min.y;
                             if (dy > 0 && dy < STEP_HEIGHT && dp.x != 0.0f && CF_FABSF(n.x) > 0)
                             {
@@ -1483,6 +1482,7 @@ int main(int argc, char **argv)
     Game game = {};
     
 	CF_Result result = cf_make_app("cute gimmick", display_index, window_x, window_y, window_width, window_height, options, argv[0]);
+    
     cf_set_fixed_timestep(60);
 
     cf_app_init_imgui();
