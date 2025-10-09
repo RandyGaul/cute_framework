@@ -795,17 +795,27 @@ void cf_draw_sprite_9_slice(const CF_Sprite* sprite)
 	float scale_x = w;
 	float scale_y = h;
 
+	float top_corner_height = (uvs0[0].y - uvs1[0].y) * sprite->h;
+	float bottom_corner_height = (uvs0[6].y - uvs1[6].y) * sprite->h;
+	float side_height = sprite->h * sprite->scale.y - top_corner_height - bottom_corner_height;
+	float dy = (1.0f - center_uv_size.y) * side_height;
+
+	float left_corner_width = (uvs1[0].x - uvs0[0].x) * sprite->w;
+	float right_corner_width = (uvs1[2].x - uvs0[2].x) * sprite->w;
+	float side_width = sprite->w * sprite->scale.x - left_corner_width - right_corner_width;
+	float dx = (1.0f - center_uv_size.x) * side_width;
+
 	v2 scales[] = {
 		cf_v2(sprite->w * (uvs1[0].x - uvs0[0].x), sprite->h * (uvs1[0].y - uvs0[0].y)),
-		cf_v2(scale_x                            , sprite->h * (uvs1[1].y - uvs0[1].y)),
+		cf_v2(dx                                 , sprite->h * (uvs1[1].y - uvs0[1].y)),
 		cf_v2(sprite->w * (uvs1[2].x - uvs0[2].x), sprite->h * (uvs1[2].y - uvs0[2].y)),
 
-		cf_v2(sprite->w * (uvs1[3].x - uvs0[3].x), scale_y),
-		cf_v2(scale_x                            , scale_y),
-		cf_v2(sprite->w * (uvs1[5].x - uvs0[5].x), scale_y),
+		cf_v2(sprite->w * (uvs1[3].x - uvs0[3].x), dy),
+		cf_v2(dx                                 , dy),
+		cf_v2(sprite->w * (uvs1[5].x - uvs0[5].x), dy),
 
 		cf_v2(sprite->w * (uvs1[6].x - uvs0[6].x), sprite->h * (uvs1[6].y - uvs0[6].y)),
-		cf_v2(scale_x                            , sprite->h * (uvs1[7].y - uvs0[7].y)),
+		cf_v2(dx                                 , sprite->h * (uvs1[7].y - uvs0[7].y)),
 		cf_v2(sprite->w * (uvs1[8].x - uvs0[8].x), sprite->h * (uvs1[8].y - uvs0[8].y)),
 	};
 
@@ -2543,6 +2553,10 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 			// Actually render the sprite.
 			if (visible && render) {
 				CF_M3x2 m = draw->mvp;
+				s.minx = 0.0f;
+				s.miny = 0.0f;
+				s.maxx = 1.0f;
+				s.maxy = 1.0f;
 				s.geom.shape[0] = mul(m, V2(q0.x, q1.y));
 				s.geom.shape[1] = mul(m, V2(q1.x, q1.y));
 				s.geom.shape[2] = mul(m, V2(q1.x, q0.y));
