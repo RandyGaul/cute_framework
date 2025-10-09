@@ -24,6 +24,7 @@
 #define STAR_IMPULSE 200.0f
 
 #define COYOTE_JUMP_FRAME_COUNT 5
+#define STEP_HEIGHT 1.5f
 
 #define GRAVITY_X 0
 #define GRAVITY_Y -1000.0f
@@ -50,9 +51,7 @@ struct BlockShape
 struct Block
 {
     CF_Transform transform;
-    
     BlockShape shape;
-    
     CF_Color color;
 };
 
@@ -78,6 +77,7 @@ struct Player
     CF_V2 velocity;
     
     float ground_acceleration;
+    float star_ground_acceleration;
     float air_acceleration;
     
     float jump_acceleration;
@@ -100,7 +100,7 @@ struct Player
     int thrown_star_index;
     bool is_overlapping_with_thrown_star;
     
-    int jump_queued;
+    bool jump_queued;
     
     PlayerState state;
 };
@@ -227,6 +227,7 @@ static inline Player make_player(CF_V2 position)
     
     // high enough to start reaching max speed within a few frames
     player.ground_acceleration = 300.0f;
+    player.star_ground_acceleration = 50.0f;
     player.air_acceleration = 170.0f;
     player.jump_acceleration = 200.0f;
     player.jump_impulse = 100.0f;
@@ -346,9 +347,6 @@ static inline void draw_star(CF_V2 position, CF_V2 size, float chubbiness)
     };
     
     CF_V2 half_size = cf_mul_v2_f(size, 0.5f);
-    CF_V2 p0;
-    CF_V2 p1;
-    CF_V2 p2;
     
     for (int index = 0; index < CF_ARRAY_SIZE(vertices); ++index)
     {
@@ -356,64 +354,8 @@ static inline void draw_star(CF_V2 position, CF_V2 size, float chubbiness)
         vertices[index] = cf_add_v2(vertices[index], position);
         vertices[index] = cf_sub_v2(vertices[index], half_size);
     }
-    
-    // T triangle
-    {
-        p0 = vertices[0];
-        p1 = vertices[1];
-        p2 = vertices[9];
-        cf_draw_tri_fill(p0, p1, p2, chubbiness);
-    }
-    // L triangle
-    {
-        p0 = vertices[1];
-        p1 = vertices[2];
-        p2 = vertices[3];
-        cf_draw_tri_fill(p0, p1, p2, chubbiness);
-    }
-    // R triangle
-    {
-        p0 = vertices[9];
-        p1 = vertices[7];
-        p2 = vertices[8];
-        cf_draw_tri_fill(p0, p1, p2, chubbiness);
-    }
-    // BL triangle
-    {
-        p0 = vertices[3];
-        p1 = vertices[4];
-        p2 = vertices[5];
-        cf_draw_tri_fill(p0, p1, p2, chubbiness);
-    }
-    // BR triangle
-    {
-        p0 = vertices[5];
-        p1 = vertices[6];
-        p2 = vertices[7];
-        cf_draw_tri_fill(p0, p1, p2, chubbiness);
-    }
-    // split center into 3 parts
-    // C0 triangle
-    {
-        p0 = vertices[1];
-        p1 = vertices[3];
-        p2 = vertices[9];
-        cf_draw_tri_fill(p0, p1, p2, chubbiness);
-    }
-    // C1 triangle
-    {
-        p0 = vertices[3];
-        p1 = vertices[5];
-        p2 = vertices[9];
-        cf_draw_tri_fill(p0, p1, p2, chubbiness);
-    }
-    // C2 triangle
-    {
-        p0 = vertices[9];
-        p1 = vertices[5];
-        p2 = vertices[7];
-        cf_draw_tri_fill(p0, p1, p2, chubbiness);
-    }
+
+    cf_draw_polygon_fill_simple(vertices, CF_ARRAY_SIZE(vertices));
 }
 
 // didn't want to embed a sprite sheet or asprite file so we get this
@@ -572,7 +514,7 @@ static inline void get_star_positions(CF_V2 positions[5], CF_V2 position, float 
 
 // this was moved out to test if we can skip step_move() and do resolve_overlaps() when only riding
 // but it made things a bit jittery
-CF_V2 resolve_overlaps(dyna Block *blocks, CF_V2 p, CF_V2 dp, CF_Aabb mover_aabb, CF_V2 normals[3], int *out_normal_count)
+CF_V2 resolve_overlaps(dyna Block *blocks, CF_V2 p, CF_V2 dp, CF_Aabb mover_aabb, CF_V2* normals, int normal_capacity, int* out_normal_count, bool can_step)
 {
     CF_V2 new_position = p;
     
@@ -585,8 +527,9 @@ CF_V2 resolve_overlaps(dyna Block *blocks, CF_V2 p, CF_V2 dp, CF_Aabb mover_aabb
     CF_V2 sample_p = cf_add_v2(p, dp);
     
     int normal_count = 0;
-    
-    for (int index = 0; index < 10; ++index)
+    int nudge_limit = 10;
+
+    for (int index = 0; index < nudge_limit; ++index)
     {
         for (int block_index = 0; block_index < cf_array_count(blocks); ++block_index)
         {
@@ -604,7 +547,7 @@ CF_V2 resolve_overlaps(dyna Block *blocks, CF_V2 p, CF_V2 dp, CF_Aabb mover_aabb
                     
                     CF_V2 n = cf_neg_v2(m.n);
                     
-                    int has_normal = false;
+                    bool has_normal = false;
                     for (int normal_index = 0; normal_index < normal_count; ++normal_index)
                     {
                         CF_V2 dn = cf_sub_v2(normals[index], n);
@@ -615,9 +558,24 @@ CF_V2 resolve_overlaps(dyna Block *blocks, CF_V2 p, CF_V2 dp, CF_Aabb mover_aabb
                         }
                     }
                     
-                    if (!has_normal && normal_count < CF_ARRAY_SIZE(normals))
+                    if (!has_normal && normal_count < normal_capacity)
                     {
-                        normals[normal_count++] = n;
+                        bool can_add_normal = true;
+                        if (block_shape.type == CF_SHAPE_TYPE_AABB && can_step)
+                        {
+                            // if the mover is moving left or right and hits an edge that's barely
+                            // below step height then ignore that normal
+                            float d = block_shape.aabb.max.y - m.contact_points[0].y;
+                            float dy = block_shape.aabb.max.y - aabb.min.y;
+                            if (dy > 0 && dy < STEP_HEIGHT && dp.x != 0.0f && CF_FABSF(n.x) > 0)
+                            {
+                                can_add_normal = false;
+                            }
+                        }
+                        if (can_add_normal)
+                        {
+                            normals[normal_count++] = n;
+                        }
                     }
                     ++nudge_count;
                 }
@@ -625,7 +583,7 @@ CF_V2 resolve_overlaps(dyna Block *blocks, CF_V2 p, CF_V2 dp, CF_Aabb mover_aabb
         }
     }
     
-    if (nudge_count)
+    if (nudge_count && nudge_count <= nudge_limit)
     {
         new_position = sample_p;
     }
@@ -659,7 +617,9 @@ int step_move(dyna Block *blocks, CF_Transform *transform, CF_V2 *velocity, CF_A
     
     CF_V2 normals[3] = {};
     int normal_count = 0;
-    
+
+    bool can_step = true;
+
     while (remaining_move_time > 0.0001f)
     {
         CF_V2 dp = cf_mul_v2_f(v, remaining_move_time);
@@ -687,7 +647,7 @@ int step_move(dyna Block *blocks, CF_Transform *transform, CF_V2 *velocity, CF_A
                     CF_ToiResult result = cf_toi(&aabb, CF_SHAPE_TYPE_AABB, nullptr, dp, 
                                                  &block_shape._data, block_shape.type, nullptr, cf_v2(0.0f, 0.0f),
                                                  false);
-                    int collided = cf_collided(&aabb, nullptr, CF_SHAPE_TYPE_AABB, &block_shape._data, nullptr, block_shape.type);
+                    bool collided = cf_collided(&aabb, nullptr, CF_SHAPE_TYPE_AABB, &block_shape._data, nullptr, block_shape.type);
                     
                     if (result.hit && !collided)
                     {
@@ -707,8 +667,13 @@ int step_move(dyna Block *blocks, CF_Transform *transform, CF_V2 *velocity, CF_A
         }
         
         dp = cf_mul_v2_f(v, remaining_move_time * toi);
-        p = resolve_overlaps(blocks, p, dp, mover_aabb, normals, &normal_count);
-        
+        p = resolve_overlaps(blocks, p, dp, mover_aabb, normals, CF_ARRAY_SIZE(normals), & normal_count, can_step);
+
+        if (normal_count == 0)
+        {
+            can_step = false;
+        }
+
         for (int normal_index = 0; normal_index < normal_count; ++normal_index)
         {
             CF_V2 normal = normals[normal_index];
@@ -721,6 +686,7 @@ int step_move(dyna Block *blocks, CF_Transform *transform, CF_V2 *velocity, CF_A
         p = cf_add_v2(p, dp);
         
         remaining_move_time = remaining_move_time - remaining_move_time * toi;
+        
         if (toi == 0.0f)
         {
             remaining_move_time = 0.0f;
@@ -743,7 +709,7 @@ int step_move(dyna Block *blocks, CF_Transform *transform, CF_V2 *velocity, CF_A
             }
         }
     }
-    
+
     transform->p = p;
     *velocity = v;
     
@@ -764,8 +730,9 @@ void imgui_render(Game *game)
         Player *player = game->players;
         ImGui::Text("Z - Recall/Charge/Fire Star | X - Jump | C - Recall Star");
         ImGui::Text("R - Restart");
-        ImGui::Text("%-10s | Is Riding: %d", states[player->state], player->is_riding);
+        ImGui::Text("%-10s | Is Riding: %d | Ride offset: %0.3f, %0.3f", states[player->state], player->is_riding, player->ride_offset.x, player->ride_offset.y);
         ImGui::Text("Velocity: %0.3f, %0.3f", player->velocity.x, player->velocity.y);
+        ImGui::Text("FPS: %0.5f", cf_app_get_framerate());
     }
     ImGui::End();
 }
@@ -934,6 +901,7 @@ void update_players(Game *game)
         int hit_head = false;
         
         float acceleration = player->ground_acceleration;
+        float star_ground_acceleration = player->star_ground_acceleration;
         float friction = ground_friction;
         
         if (player->state != PlayerState_Grounded)
@@ -1058,6 +1026,9 @@ void update_players(Game *game)
                 }
                 else
                 {
+                    // allow moving left and right while star riding
+                    player->ride_offset.x += input_direction.x * star_ground_acceleration * CF_DELTA_TIME_FIXED;
+
                     // try to maintain roughly same offset
                     player->transform.p = cf_add_v2(star_position, player->ride_offset);
                 }
@@ -1131,6 +1102,16 @@ void update_players(Game *game)
                 {
                     // always try to get the most possible initial jump height
                     v.y = cf_max(v.y + player->jump_impulse, player->jump_impulse);
+                    // jumping off while riding a star
+                    if (player->is_riding && input_direction.x != 0.0f)
+                    {
+                        // moving opposite direction, zero out x so you have more noticeable jump off x direction
+                        if (v.x * input_direction.x < 0)
+                        {
+                            v.x = 0;
+                        }
+                        v.x += input_direction.x * star_ground_acceleration * CF_DELTA_TIME_FIXED;
+                    }
                     player->jump_remaining_time = JUMP_VARIABLE_MAX_TIME;
                     player->state = PlayerState_Jumping;
                     
@@ -1377,7 +1358,7 @@ void load_level(Game *game)
         "####################"
         "####################"
         ;
-    
+
     CF_V2 tile_extents = cf_v2(BLOCK_HALF_WIDTH * 2, BLOCK_HALF_HEIGHT * 2);
     CF_V2 min = cf_v2(FLT_MAX, FLT_MAX);
     CF_V2 max = cf_v2(FLT_MIN, FLT_MIN);
@@ -1499,19 +1480,16 @@ int main(int argc, char **argv)
     int window_y = 0;
     int window_width = 640;
     int window_height = 480;
-    float display_refresh_rate = cf_display_refresh_rate(display_index);
     Game game = {};
     
 	CF_Result result = cf_make_app("cute gimmick", display_index, window_x, window_y, window_width, window_height, options, argv[0]);
-    
     cf_set_fixed_timestep(60);
-    cf_set_target_framerate((int)display_refresh_rate);
-    
+
     cf_app_init_imgui();
     cf_set_update_udata(&game);
     
     init(&game);
-    
+
     while (cf_app_is_running())
     {
         cf_app_update(update);
