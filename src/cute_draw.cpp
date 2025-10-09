@@ -21,6 +21,7 @@
 #include <internal/cute_graphics_internal.h>
 
 struct CF_Draw* draw;
+static const char* s_text_without_markups = NULL;
 
 //#define SPRITEBATCH_LOG printf
 #define SPRITEBATCH_IMPLEMENTATION
@@ -2246,6 +2247,7 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 				CF_TextEffectFn* fn = effect->fn;
 				bool keep_going = true;
 				if (fn) {
+					effect->text_without_markups = text_state->sanitized.c_str();
 					effect->character = cp;
 					effect->index_into_effect = index - effect->index_into_string - 1;
 					effect->center = V2(x + xadvance*0.5f, y + h*0.25f);
@@ -2326,6 +2328,11 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 	return V2(max_x - position.x, position.y - min_y);
 }
 
+static void s_get_text_without_markups(const char* text, CF_MarkupInfo info, const CF_TextEffect* fx)
+{
+	s_text_without_markups = fx->text_without_markups;
+}
+
 void cf_draw_text(const char* text, CF_V2 position, int text_length)
 {
 	s_draw_text(text, position, text_length);
@@ -2354,6 +2361,14 @@ const char* cf_text_effect_get_string(const CF_TextEffect* fx, const char* key, 
 void cf_text_get_markup_info(cf_text_markup_info_fn* fn, const char* text, CF_V2 position, int num_chars_to_draw)
 {
 	s_draw_text(text, position, num_chars_to_draw, false, fn);
+}
+
+const char* cf_text_without_markups(const char* text)
+{
+	s_text_without_markups = NULL;
+	s_draw_text(text, V2(0,0), -1, false, s_get_text_without_markups);
+	// The callback may not be invoked if there is no markup
+	return s_text_without_markups != NULL ? s_text_without_markups : text;
 }
 
 void cf_draw_push_layer(int layer)
