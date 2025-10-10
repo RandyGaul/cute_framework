@@ -213,15 +213,9 @@ static CF_Result s_aseprite_cache_load_from_memory(const char* unique_name, cons
 		});
 
 		if (slice->has_center_as_9_slice) {
-			v2 center_uv0 = v2((float)slice->center_x, (float)slice->center_y);
-			v2 center_uv1 = center_uv0;
-			center_uv1.x += slice->center_w;
-			center_uv1.y += slice->center_h;
-			center_uv0.x /= w;
-			center_uv0.y /= h;
-			center_uv1.x /= w;
-			center_uv1.y /= h;
-			CF_Aabb center_patch = cf_make_aabb(center_uv0, center_uv1);
+			CF_V2 min = cf_v2(slice->center_x, slice->center_y);
+			CF_V2 max = cf_v2(slice->center_x + slice->center_w, slice->center_y + slice->center_h);
+			CF_Aabb center_patch = cf_make_aabb(min, max);
 			entry.center_patches[slice->frame_number] = center_patch;
 		}
 		if (slice->has_pivot && slice_name == origin_slice_name) {

@@ -317,6 +317,7 @@ CF_API CF_Sprite CF_CALL cf_sprite_reload(const CF_Sprite* sprite);
 
 CF_API void CF_CALL cf_draw_sprite(const CF_Sprite* sprite);
 CF_API void CF_CALL cf_draw_sprite_9_slice(const CF_Sprite* sprite);
+CF_API void CF_CALL cf_draw_sprite_9_slice_tiled(const CF_Sprite* sprite);
 
 CF_INLINE void cf_sprite_draw(CF_Sprite* sprite)
 {

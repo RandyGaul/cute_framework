@@ -641,7 +641,6 @@ void cf_draw_sprite(const CF_Sprite* sprite)
 void cf_draw_sprite_9_slice(const CF_Sprite* sprite)
 {
 	CF_ASSERT(sprite);
-	bool apply_border_scale = true;
 	int frame_index = 0;
 	SPRITEBATCH_U64 image_id = 0;
 
@@ -655,207 +654,149 @@ void cf_draw_sprite_9_slice(const CF_Sprite* sprite)
 		return;
 	}
 	else {
+		// needs testing
 		image_id = sprite->easy_sprite_id;
 	}
 
-	// revert back to default cf_draw
-	if (cf_area_aabb(sprite->center_patches[sprite->frame_index]) == 0.0f) {
+	// revert back to default cf_draw since center patch is 0
+	CF_Aabb center_patch = sprite->center_patches[sprite->frame_index];
+	if (center_patch.min.x == 0.0f && center_patch.min.y == 0.0f &&
+		center_patch.max.x == 0.0f && center_patch.max.y == 0.0f) {
 		cf_draw_sprite(sprite);
 		return;
 	}
 
-	// disable this so sides do not overlap
-	apply_border_scale = false;
-	// prefetch incase image hasn't been blitted yet to the atlas
-	spritebatch_prefetch(&draw->sb, image_id, sprite->w, sprite->h);
+	float left = center_patch.min.x;
+	float right = center_patch.max.x;
+	float bottom = center_patch.min.y;
+	float top = center_patch.max.y;
 
-	CF_V2 center_uv0 = sprite->center_patches[frame_index].min;
-	CF_V2 center_uv1 = sprite->center_patches[frame_index].max;
+	CF_V2 center_uv0 = cf_v2(left / sprite->w, bottom / sprite->h);
+	CF_V2 center_uv1 = cf_v2(right / sprite->w, top / sprite->h);
 	CF_V2 center_uv_size = center_uv1 - center_uv0;
 	
-#if 0
-	// testing any clipping..
-	CF_V2 uvs0[] = {
-		// top row
-		cf_v2(0           , 0.5f),
-		cf_v2(0           , 0),
-		cf_v2(0           , 0),
-		cf_v2(0           , 0),
-		cf_v2(0           , 0),
-		cf_v2(0           , 0),
-		cf_v2(0           , 0),
-		cf_v2(0           , 0),
-		cf_v2(0           , 0),
-	};
+	right = sprite->w - right;
+	top = sprite->h - top;
 
-	CF_V2 uvs1[] = {
-		// top row
-		cf_v2(1           , 1),
-		cf_v2(1           , 1),
-		cf_v2(1           , 1),
-		cf_v2(1           , 1),
-		cf_v2(1           , 1),
-		cf_v2(1           , 1),
-		cf_v2(1           , 1),
-		cf_v2(1           , 1),
-		cf_v2(1           , 1),
-	};
-#elif 1
 	CF_V2 uvs0[] = {
 		// top row
-		cf_v2(0           , 1.0f),
-		cf_v2(center_uv0.x, 1.0f),
-		cf_v2(center_uv1.x, 1.0f),
-		// middle row
 		cf_v2(0           , center_uv1.y),
 		cf_v2(center_uv0.x, center_uv1.y),
 		cf_v2(center_uv1.x, center_uv1.y),
-		// bottom row
+		// middle row
 		cf_v2(0           , center_uv0.y),
 		cf_v2(center_uv0.x, center_uv0.y),
 		cf_v2(center_uv1.x, center_uv0.y),
-	};
-
-	CF_V2 uvs1[] = {
-		// top row
-		cf_v2(center_uv0.x, center_uv1.y),
-		cf_v2(center_uv1.x, center_uv1.y),
-		cf_v2(1.0f        , center_uv1.y),
-
-		// middle row
-		cf_v2(center_uv0.x, center_uv0.y),
-		cf_v2(center_uv1.x, center_uv0.y),
-		cf_v2(1.0f        , center_uv0.y),
-
 		// bottom row
+		cf_v2(0           , 0.0f),
 		cf_v2(center_uv0.x, 0.0f),
 		cf_v2(center_uv1.x, 0.0f),
-		cf_v2(1.0f        , 0.0f),
-	};
-#else
-	CF_V2 uvs0[] = {
-		// top row
-		cf_v2(0           , 0),
-		cf_v2(center_uv0.x, 0),
-		cf_v2(center_uv1.x, 0),
-		// middle row
-		cf_v2(0           , center_uv0.y),
-		cf_v2(center_uv0.x, center_uv0.y),
-		cf_v2(center_uv1.x, center_uv0.y),
-		// bottom row
-		cf_v2(0           , center_uv1.y),
-		cf_v2(center_uv0.x, center_uv1.y),
-		cf_v2(center_uv1.x, center_uv1.y),
 	};
 
 	CF_V2 uvs1[] = {
 		// top row
-		cf_v2(center_uv0.x, center_uv0.y),
-		cf_v2(center_uv1.x, center_uv0.y),
-		cf_v2(1.0f        , center_uv0.y),
-
-		// middle row
-		cf_v2(center_uv0.x, center_uv1.y),
-		cf_v2(center_uv1.x, center_uv1.y),
-		cf_v2(1.0f        , center_uv1.y),
-
-		// bottom row
 		cf_v2(center_uv0.x, 1.0f),
 		cf_v2(center_uv1.x, 1.0f),
 		cf_v2(1.0f        , 1.0f),
-	};
-#endif
 
-	CF_V2 offsets[] = {
-		// top
-		cf_v2(-center_uv_size.x - center_uv0.x,  center_uv_size.x + center_uv0.y),
-		cf_v2( 0                              ,  center_uv_size.x + center_uv0.y),
-		cf_v2( center_uv1.x                   ,  center_uv_size.x + center_uv0.y),
-		// middle
-		cf_v2(-center_uv_size.x - center_uv0.x,  0),
-		cf_v2( 0                              ,  0),
-		cf_v2( center_uv1.x                   ,  0),
-		// bottom
-		cf_v2(-center_uv_size.x - center_uv0.x, -center_uv1.y),
-		cf_v2( 0                              , -center_uv1.y),
-		cf_v2( center_uv1.x                   , -center_uv1.y),
+		// middle row
+		cf_v2(center_uv0.x, center_uv1.y),
+		cf_v2(center_uv1.x, center_uv1.y),
+		cf_v2(1.0f        , center_uv1.y),
+
+		// bottom row
+		cf_v2(center_uv0.x, center_uv0.y),
+		cf_v2(center_uv1.x, center_uv0.y),
+		cf_v2(1.0f        , center_uv0.y),
 	};
 
-	//  @todo:  need a scale for each one
-	//          corners fixed
-	//          top and bottom wide
-	//          left and right tall
-	//          center fat
-	
-	// calculate w/h of the center patch
-	float w = sprite->w * sprite->scale.x - sprite->w * (center_uv0.x + 1.0f - center_uv1.x);
-	float h = sprite->h * sprite->scale.y - sprite->h * (center_uv0.y + 1.0f - center_uv1.y);
-	float center_w = sprite->w * center_uv_size.x;
-	float center_h = sprite->h * center_uv_size.y;
-	float scale_x = w;
-	float scale_y = h;
+	// inner pieces needs to be scaled down by the sprite scale since we're operating in local quad space
+	// otherwise we end up with just a normal scaled up sprite instead of a 9 slice one
+	float full_width   = CF_FABSF(sprite->w * sprite->scale.x);
+	float full_height  = CF_FABSF(sprite->h * sprite->scale.y);
+	float inner_left   = left / full_width * 0.5f;
+	float inner_right  = right / full_width * 0.5f;
+	float inner_top    = top / full_height * 0.5f;
+	float inner_bottom = bottom / full_height * 0.5f;
 
-	float top_corner_height = (uvs0[0].y - uvs1[0].y) * sprite->h;
-	float bottom_corner_height = (uvs0[6].y - uvs1[6].y) * sprite->h;
-	float side_height = sprite->h * sprite->scale.y - top_corner_height - bottom_corner_height;
-	float dy = (1.0f - center_uv_size.y) * side_height;
-
-	float left_corner_width = (uvs1[0].x - uvs0[0].x) * sprite->w;
-	float right_corner_width = (uvs1[2].x - uvs0[2].x) * sprite->w;
-	float side_width = sprite->w * sprite->scale.x - left_corner_width - right_corner_width;
-	float dx = (1.0f - center_uv_size.x) * side_width;
-
-	v2 scales[] = {
-		cf_v2(sprite->w * (uvs1[0].x - uvs0[0].x), sprite->h * (uvs1[0].y - uvs0[0].y)),
-		cf_v2(dx                                 , sprite->h * (uvs1[1].y - uvs0[1].y)),
-		cf_v2(sprite->w * (uvs1[2].x - uvs0[2].x), sprite->h * (uvs1[2].y - uvs0[2].y)),
-
-		cf_v2(sprite->w * (uvs1[3].x - uvs0[3].x), dy),
-		cf_v2(dx                                 , dy),
-		cf_v2(sprite->w * (uvs1[5].x - uvs0[5].x), dy),
-
-		cf_v2(sprite->w * (uvs1[6].x - uvs0[6].x), sprite->h * (uvs1[6].y - uvs0[6].y)),
-		cf_v2(dx                                 , sprite->h * (uvs1[7].y - uvs0[7].y)),
-		cf_v2(sprite->w * (uvs1[8].x - uvs0[8].x), sprite->h * (uvs1[8].y - uvs0[8].y)),
+	CF_V2 quads[9][4] = {
+		// top row
+		{
+			{ -0.5f             ,  0.5f                },
+			{ -0.5f + inner_left,  0.5f                },
+			{ -0.5f + inner_left,  0.5f - inner_top    },
+			{ -0.5f             ,  0.5f - inner_top    },
+		},
+		{
+			{ -0.5f + inner_left ,  0.5f               },
+			{  0.5f - inner_right,  0.5f               },
+			{  0.5f - inner_right,  0.5f - inner_top   },
+			{ -0.5f + inner_left ,  0.5f - inner_top   },
+		},
+		{
+			{  0.5f - inner_right,  0.5f               },
+			{  0.5f              ,  0.5f               },
+			{  0.5f              ,  0.5f - inner_top   },
+			{  0.5f - inner_right,  0.5f - inner_top   },
+		},
+		// middle row
+		{
+			{ -0.5f              ,  0.5f - inner_top    },
+			{ -0.5f + inner_left ,  0.5f - inner_top    },
+			{ -0.5f + inner_left , -0.5f + inner_bottom },
+			{ -0.5f              , -0.5f + inner_bottom },
+		},
+		{
+			{ -0.5f + inner_left ,  0.5f - inner_top    },
+			{  0.5f - inner_right,  0.5f - inner_top    },
+			{  0.5f - inner_right, -0.5f + inner_bottom },
+			{ -0.5f + inner_left , -0.5f + inner_bottom },
+		},
+		{
+			{  0.5f - inner_right,  0.5f - inner_top    },
+			{  0.5f              ,  0.5f - inner_top    },
+			{  0.5f              , -0.5f + inner_bottom },
+			{  0.5f - inner_right, -0.5f + inner_bottom },
+		},
+		// bottom row
+		{
+			{ -0.5f              , -0.5f + inner_bottom },
+			{ -0.5f + inner_left , -0.5f + inner_bottom },
+			{ -0.5f + inner_left , -0.5f                },
+			{ -0.5f              , -0.5f                },
+		},
+		{
+			{ -0.5f + inner_left , -0.5f + inner_bottom },
+			{  0.5f - inner_right, -0.5f + inner_bottom },
+			{  0.5f - inner_right, -0.5f                },
+			{ -0.5f + inner_left , -0.5f                },
+		},
+		{
+			{  0.5f - inner_right, -0.5f + inner_bottom },
+			{  0.5f              , -0.5f + inner_bottom },
+			{  0.5f              , -0.5f                },
+			{  0.5f - inner_right, -0.5f                },
+		},
 	};
 
-	v2 inv_dims = V2(1.0f / draw->atlas_dims.x, 1.0f / draw->atlas_dims.y);
+	v2 offset = sprite->offset + (sprite->pivots ? sprite->pivots[sprite->frame_index] : V2(0, 0));
+	v2 p = cf_add_v2(sprite->transform.p, cf_mul_v2(offset, sprite->scale));
+	v2 scale = V2(sprite->scale.x * sprite->w, sprite->scale.y * sprite->h);
+
 	for (int y = 0; y < 3; ++y) {
 		for (int x = 0; x < 3; ++x) {
-			spritebatch_sprite_t s = { };
-			//if (! ((y & 1) && (x & 1)) ) continue;
-			//if (x & 1) continue;
-			int uv_index = x + y * 3;
-			s.minx = uvs0[uv_index].x;
-			s.miny = uvs0[uv_index].y;
-			s.maxx = uvs1[uv_index].x;
-			s.maxy = uvs1[uv_index].y;
+			spritebatch_sprite_t s = { 0 };
+			int index = x + y * 3;
+			s.minx = uvs0[index].x;
+			s.miny = uvs0[index].y;
+			s.maxx = uvs1[index].x;
+			s.maxy = uvs1[index].y;
 
-			s.w = (int)(sprite->w * (s.maxx - s.minx));
-			s.h = (int)(sprite->h * (s.maxy - s.miny));
+			s.w = sprite->w ;
+			s.h = sprite->h ;
 
 			s.geom.type = BATCH_GEOMETRY_TYPE_SPRITE;
-
-			v2 offset = sprite->offset + (sprite->pivots ? sprite->pivots[sprite->frame_index] : V2(0, 0));
-			offset.x += offsets[uv_index].x * sprite->w * 0.5f;
-			offset.y += offsets[uv_index].y * sprite->h * 0.5f;
-			v2 p = cf_add_v2(sprite->transform.p, cf_mul_v2(offset, sprite->scale));
-			//v2 scale = V2(sprite->scale.x * s.w, sprite->scale.y * s.h);
-			v2 scale = V2(	scales[uv_index].x, 
-							scales[uv_index].y);
-
-			if (apply_border_scale) {
-				// Expand sprite's scale to account for border pixels in the atlas.
-				scale.x = scale.x + (scale.x / (float)sprite->w) * 2.0f;
-				scale.y = scale.y + (scale.y / (float)sprite->h) * 2.0f;
-			}
-
-			CF_V2 quad[] = {
-				{ -0.5f,  0.5f },
-				{  0.5f,  0.5f },
-				{  0.5f, -0.5f },
-				{ -0.5f, -0.5f },
-			};
+			CF_V2* quad = quads[index];
 
 			// Construct quad in local space.
 			for (int j = 0; j < 4; ++j) {
@@ -890,6 +831,291 @@ void cf_draw_sprite_9_slice(const CF_Sprite* sprite)
 			DRAW_PUSH_ITEM(s);
 		}
 	}
+}
+
+void cf_draw_sprite_9_slice_tiled(const CF_Sprite* sprite)
+{
+	CF_ASSERT(sprite);
+	int frame_index = 0;
+	SPRITEBATCH_U64 image_id = 0;
+
+	if (sprite->animation) {
+		frame_index = sprite->frame_index;
+		image_id = sprite->animation->frames[sprite->frame_index].id;
+	}
+	else if (sprite->easy_sprite_id >= CF_PREMADE_ID_RANGE_LO && sprite->easy_sprite_id <= CF_PREMADE_ID_RANGE_HI) {
+		// not handled for now
+		cf_draw_sprite(sprite);
+		return;
+	}
+	else {
+		// needs testing
+		image_id = sprite->easy_sprite_id;
+	}
+
+	// revert back to default cf_draw since center patch is 0
+	CF_Aabb center_patch = sprite->center_patches[sprite->frame_index];
+	if (center_patch.min.x == 0.0f && center_patch.min.y == 0.0f &&
+		center_patch.max.x == 0.0f && center_patch.max.y == 0.0f) {
+		cf_draw_sprite(sprite);
+		return;
+	}
+
+	float left = center_patch.min.x;
+	float right = center_patch.max.x;
+	float bottom = center_patch.min.y;
+	float top = center_patch.max.y;
+
+	CF_V2 center_uv0 = cf_v2(left / sprite->w, bottom / sprite->h);
+	CF_V2 center_uv1 = cf_v2(right / sprite->w, top / sprite->h);
+	CF_V2 center_uv_size = center_uv1 - center_uv0;
+
+	right = sprite->w - right;
+	top = sprite->h - top;
+
+	CF_V2 uvs0[] = {
+		// top row
+		cf_v2(0           , center_uv1.y),
+		cf_v2(center_uv0.x, center_uv1.y),
+		cf_v2(center_uv1.x, center_uv1.y),
+		// middle row
+		cf_v2(0           , center_uv0.y),
+		cf_v2(center_uv0.x, center_uv0.y),
+		cf_v2(center_uv1.x, center_uv0.y),
+		// bottom row
+		cf_v2(0           , 0.0f),
+		cf_v2(center_uv0.x, 0.0f),
+		cf_v2(center_uv1.x, 0.0f),
+	};
+
+	CF_V2 uvs1[] = {
+		// top row
+		cf_v2(center_uv0.x, 1.0f),
+		cf_v2(center_uv1.x, 1.0f),
+		cf_v2(1.0f        , 1.0f),
+		// middle row
+		cf_v2(center_uv0.x, center_uv1.y),
+		cf_v2(center_uv1.x, center_uv1.y),
+		cf_v2(1.0f        , center_uv1.y),
+		// bottom row
+		cf_v2(center_uv0.x, center_uv0.y),
+		cf_v2(center_uv1.x, center_uv0.y),
+		cf_v2(1.0f        , center_uv0.y),
+	};
+
+	// inner pieces needs to be scaled down by the sprite scale since we're operating in local quad space
+	// otherwise we end up with just a normal scaled up sprite instead of a 9 slice one
+	float full_width   = CF_FABSF(sprite->w * sprite->scale.x);
+	float full_height  = CF_FABSF(sprite->h * sprite->scale.y);
+	float inner_left   = left / full_width * 0.5f;
+	float inner_right  = right / full_width * 0.5f;
+	float inner_top    = top / full_height * 0.5f;
+	float inner_bottom = bottom / full_height * 0.5f;
+	
+	// tiled sizes in local space
+	CF_V2 side_tiled_size = V2(	(center_patch.max.x - center_patch.min.x) / full_width * 0.5f, 
+								(center_patch.max.y - center_patch.min.y) / full_height * 0.5f);
+
+	CF_V2 quads[9][4] = {
+		// top row
+		{
+			{ -0.5f             ,  0.5f               },
+			{ -0.5f + inner_left,  0.5f               },
+			{ -0.5f + inner_left,  0.5f - inner_top   },
+			{ -0.5f             ,  0.5f - inner_top   },
+		},
+		{
+			{ -0.5f + inner_left ,  0.5f              },
+			{  0.5f - inner_right,  0.5f              },
+			{  0.5f - inner_right,  0.5f - inner_top  },
+			{ -0.5f + inner_left ,  0.5f - inner_top  },
+		},
+		{
+			{  0.5f - inner_right,  0.5f              },
+			{  0.5f              ,  0.5f              },
+			{  0.5f              ,  0.5f - inner_top  },
+			{  0.5f - inner_right,  0.5f - inner_top  },
+		},
+		// middle row
+		{
+			{ -0.5f              ,  0.5f - inner_top   },
+			{ -0.5f + inner_left ,  0.5f - inner_top   },
+			{ -0.5f + inner_left , -0.5f + inner_bottom},
+			{ -0.5f              , -0.5f + inner_bottom},
+		},
+		{
+			{ -0.5f + inner_left ,  0.5f - inner_top   },
+			{  0.5f - inner_right,  0.5f - inner_top   },
+			{  0.5f - inner_right, -0.5f + inner_bottom},
+			{ -0.5f + inner_left , -0.5f + inner_bottom},
+		},
+		{
+			{  0.5f - inner_right,  0.5f - inner_top   },
+			{  0.5f              ,  0.5f - inner_top   },
+			{  0.5f              , -0.5f + inner_bottom},
+			{  0.5f - inner_right, -0.5f + inner_bottom},
+		},
+		// bottom row
+		{
+			{ -0.5f              , -0.5f + inner_bottom},
+			{ -0.5f + inner_left , -0.5f + inner_bottom},
+			{ -0.5f + inner_left , -0.5f               },
+			{ -0.5f              , -0.5f               },
+		},
+		{
+			{ -0.5f + inner_left , -0.5f + inner_bottom},
+			{  0.5f - inner_right, -0.5f + inner_bottom},
+			{  0.5f - inner_right, -0.5f               },
+			{ -0.5f + inner_left , -0.5f               },
+		},
+		{
+			{  0.5f - inner_right, -0.5f + inner_bottom},
+			{  0.5f              , -0.5f + inner_bottom},
+			{  0.5f              , -0.5f               },
+			{  0.5f - inner_right, -0.5f               },
+		},
+	};
+
+	v2 offset = sprite->offset + (sprite->pivots ? sprite->pivots[sprite->frame_index] : V2(0, 0));
+	v2 p = cf_add_v2(sprite->transform.p, cf_mul_v2(offset, sprite->scale));
+	v2 scale = V2(sprite->scale.x * sprite->w, sprite->scale.y * sprite->h);
+
+	auto push_quad = [&sprite, &image_id, &offset, &p, &scale](CF_V2* quad, CF_V2 uv0, CF_V2 uv1) {
+		spritebatch_sprite_t s = { };
+		s.minx = uv0.x;
+		s.miny = uv0.y;
+		s.maxx = uv1.x;
+		s.maxy = uv1.y;
+
+		s.w = sprite->w;
+		s.h = sprite->h;
+
+		s.geom.type = BATCH_GEOMETRY_TYPE_SPRITE;
+
+		// Construct quad in local space.
+		for (int j = 0; j < 4; ++j) {
+			float x = quad[j].x;
+			float y = quad[j].y;
+
+			x *= scale.x;
+			y *= scale.y;
+
+			float x0 = sprite->transform.r.c * x - sprite->transform.r.s * y;
+			float y0 = sprite->transform.r.s * x + sprite->transform.r.c * y;
+			x = x0;
+			y = y0;
+
+			x += p.x;
+			y += p.y;
+
+			quad[j].x = x;
+			quad[j].y = y;
+		}
+
+		CF_M3x2 m = draw->mvp;
+		s.geom.shape[0] = mul(m, quad[0]);
+		s.geom.shape[1] = mul(m, quad[1]);
+		s.geom.shape[2] = mul(m, quad[2]);
+		s.geom.shape[3] = mul(m, quad[3]);
+		s.geom.is_sprite = true;
+		s.geom.color = premultiply(pixel_white());
+		s.geom.alpha = sprite->opacity;
+		s.geom.user_params = draw->user_params.last();
+		s.image_id = image_id;
+		DRAW_PUSH_ITEM(s);
+	};
+
+	auto push_tiled_quad_x = [&push_quad, &side_tiled_size](CF_V2* quad, CF_V2 uv0, CF_V2 uv1) {
+		CF_V2 q0 = quad[0];
+		CF_V2 q1 = quad[3];
+		float current = quad[0].x;
+		float end = quad[1].x;
+		CF_V2 quad_increment = V2(side_tiled_size.x, 0);
+		float increment = quad_increment.x;
+
+		while (current + increment < end)
+		{
+			CF_V2 tiled_quad[] = {
+				q0,
+				cf_add_v2(q0, quad_increment),
+				cf_add_v2(q1, quad_increment),
+				q1,
+			};
+
+			push_quad(tiled_quad, uv0, uv1);
+			q0 = cf_add_v2(q0, quad_increment);
+			q1 = cf_add_v2(q1, quad_increment);
+			current += increment;
+		}
+
+		// draw remainder
+		if (current < end)
+		{
+			float scale = (end - current) / increment;
+			uv1.x = uv0.x + (uv1.x - uv0.x) * scale;
+
+			CF_V2 tiled_quad[] = {
+				q0,
+				cf_add_v2(q0, cf_mul_v2_f(quad_increment, scale)),
+				cf_add_v2(q1, cf_mul_v2_f(quad_increment, scale)),
+				q1,
+			};
+
+			push_quad(tiled_quad, uv0, uv1);
+		}
+	};
+
+	auto push_tiled_quad_y = [&push_quad, &side_tiled_size](CF_V2* quad, CF_V2 uv0, CF_V2 uv1) {
+		CF_V2 q0 = quad[3];
+		CF_V2 q1 = quad[2];
+		float current = quad[3].y;
+		float end = quad[0].y;
+		CF_V2 quad_increment = V2(0, side_tiled_size.y);
+		float increment = side_tiled_size.y;
+
+		while (current + increment < end)
+		{
+			CF_V2 tiled_quad[] = {
+				cf_add_v2(q0, quad_increment),
+				cf_add_v2(q1, quad_increment),
+				q1,
+				q0,
+			};
+
+			push_quad(tiled_quad, uv0, uv1);
+			q0 = cf_add_v2(q0, quad_increment);
+			q1 = cf_add_v2(q1, quad_increment);
+			current += increment;
+		}
+
+		// draw remainder
+		if (current < end)
+		{
+			float scale = (end - current) / increment;
+			uv1.y = uv0.y + (uv1.y - uv0.y) * scale;
+
+			CF_V2 tiled_quad[] = {
+				cf_add_v2(q0, cf_mul_v2_f(quad_increment, scale)),
+				cf_add_v2(q1, cf_mul_v2_f(quad_increment, scale)),
+				q1,
+				q0,
+			};
+
+			push_quad(tiled_quad, uv0, uv1);
+		}
+	};
+
+	// push corners and center
+	push_quad(quads[0], uvs0[0], uvs1[0]);
+	push_quad(quads[2], uvs0[2], uvs1[2]);
+	push_quad(quads[4], uvs0[4], uvs1[4]);
+	push_quad(quads[6], uvs0[6], uvs1[6]);
+	push_quad(quads[8], uvs0[8], uvs1[8]);
+	// push sides
+	push_tiled_quad_x(quads[1], uvs0[1], uvs1[1]);
+	push_tiled_quad_y(quads[3], uvs0[3], uvs1[3]);
+	push_tiled_quad_y(quads[5], uvs0[5], uvs1[5]);
+	push_tiled_quad_x(quads[7], uvs0[7], uvs1[7]);
 }
 
 void cf_draw_prefetch(const CF_Sprite* sprite)
