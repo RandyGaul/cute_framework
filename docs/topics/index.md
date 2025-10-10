@@ -25,6 +25,7 @@ After completing the above fundamental reading it's recommended to then select t
 * [Multithreading](./multithreading.md)
 * [Networking](./networking.md)
 * [Random Numbers](./random_numbers.md)
+* [A Tour of CF's Renderer](./renderer.md)
 * [Shader Compilation](./shader_compilation.md)
 * [Strings](./strings.md)
 * [Virtual File System](./virtual_file_system.md)
