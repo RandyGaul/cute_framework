@@ -371,13 +371,24 @@ typedef struct CF_Manifold
  * @related  cf_min cf_max
  */
 #define cf_min(a, b) ((a) < (b) ? (a) : (b))
-#ifndef __cplusplus
+#ifdef __cplusplus
+#undef cf_min
+CF_INLINE float cf_min(float a, float b) { return a < b ? a : b; }
+CF_INLINE int cf_min(int a, int b) { return a < b ? a : b; }
+CF_INLINE uint64_t cf_min(uint64_t a, uint64_t b) { return a < b ? a : b; }
+#else
 CF_V2 cf_min_v2(CF_V2 a, CF_V2 b);
+CF_INLINE float cf_min_f(float a, float b) { return a < b ? a : b; }
+CF_INLINE int cf_min_int(int a, int b) { return a < b ? a : b; }
+CF_INLINE uint64_t cf_min_u64(uint64_t a, uint64_t b) { return a < b ? a : b; }
 #undef cf_min
 #define cf_min(a, b) \
-	_Generic((a), \
-		CF_V2: cf_min_v2(a, b), \
-		default: ((a) < (b) ? (a) : (b)))
+	_Generic((0 ? (a) : (b)), \
+		CF_V2: cf_min_v2, \
+		int: cf_min_int, \
+		uint64_t: cf_min_u64, \
+		default: cf_min_f \
+	)((a), (b))
 #endif
 
 /**
@@ -387,13 +398,24 @@ CF_V2 cf_min_v2(CF_V2 a, CF_V2 b);
  * @related  cf_min cf_max
  */
 #define cf_max(a, b) ((b) < (a) ? (a) : (b))
-#ifndef __cplusplus
+#ifdef __cplusplus
+#undef cf_max
+CF_INLINE float cf_max(float a, float b) { return b < a ? a : b; }
+CF_INLINE int cf_max(int a, int b) { return b < a ? a : b; }
+CF_INLINE uint64_t cf_max(uint64_t a, uint64_t b) { return b < a ? a : b; }
+#else
 CF_V2 cf_max_v2(CF_V2 a, CF_V2 b);
+CF_INLINE float cf_max_f(float a, float b) { return b < a ? a : b; }
+CF_INLINE int cf_max_int(int a, int b) { return b < a ? a : b; }
+CF_INLINE uint64_t cf_max_u64(uint64_t a, uint64_t b) { return b < a ? a : b; }
 #undef cf_max
 #define cf_max(a, b) \
-	_Generic((a), \
-		CF_V2: cf_max_v2(a, b), \
-		default: ((b) < (a) ? (a) : (b)))
+	_Generic((0 ? (a) : (b)), \
+		CF_V2: cf_max_v2, \
+		int: cf_max_int, \
+		uint64_t: cf_max_u64, \
+		default: cf_max_f \
+	)((a), (b))
 #endif
 
 /**
