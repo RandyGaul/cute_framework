@@ -66,6 +66,61 @@
 	#define CF_LOG2F log2f
 #endif
 
+#ifndef CF_SQRT
+	#include <math.h>
+	#define CF_SQRT sqrt
+#endif
+
+#ifndef CF_FABS
+	#include <math.h>
+	#define CF_FABS fabs
+#endif
+
+#ifndef CF_SIN
+	#include <math.h>
+	#define CF_SIN sin
+#endif
+
+#ifndef CF_COS
+	#include <math.h>
+	#define CF_COS cos
+#endif
+
+#ifndef CF_ACOS
+	#include <math.h>
+	#define CF_ACOS acos
+#endif
+
+#ifndef CF_ATAN2
+	#include <math.h>
+	#define CF_ATAN2 atan2
+#endif
+
+#ifndef CF_FLOOR
+	#include <math.h>
+	#define CF_FLOOR floor
+#endif
+
+#ifndef CF_CEIL
+	#include <math.h>
+	#define CF_CEIL ceil
+#endif
+
+#ifndef CF_ROUND
+	#include <math.h>
+	#define CF_ROUND round
+#endif
+
+#ifndef CF_FMOD
+	#include <math.h>
+	#define CF_FMOD fmod
+#endif
+
+#ifndef CF_LOG2
+	#include <math.h>
+	#define CF_LOG2 log2
+#endif
+
 //--------------------------------------------------------------------------------------------------
 // C API
 
@@ -96,11 +151,27 @@ typedef struct CF_V2
 } CF_V2;
 // @end
 
-CF_INLINE CF_V2 cf_v2(float x, float y)
+/**
+ * @function cf_v2
+ * @category math
+ * @brief    Creates a 2D vector from 1 or 2 numeric values. If one argument is given, fills both x and y.
+ * @example  cf_v2(4.0f) -> {4.0f, 4.0f};  cf_v2(1.0f, 2.0f) -> {1.0f, 2.0f}
+ */
+#define cf_v2(...) CF_EXPAND(_CF_V2_SELECT(__VA_ARGS__, _CF_V2_2, _CF_V2_1)(__VA_ARGS__))
+#define _CF_V2_SELECT(_1, _2, NAME, ...) NAME
+#define CF_EXPAND(x) x
+CF_INLINE CF_V2 _CF_V2_1(float x)
 {
 	CF_V2 result;
-	result.x = x;
-	result.y = y;
+	result.x = (float)x;
+	result.y = (float)x;
+	return result;
+}
+CF_INLINE CF_V2 _CF_V2_2(float x, float y)
+{
+	CF_V2 result;
+	result.x = (float)x;
+	result.y = (float)y;
 	return result;
 }
 
@@ -362,7 +433,6 @@ typedef struct CF_Manifold
 #define CF_TAU (2.0f*3.14159265f)
 
 //--------------------------------------------------------------------------------------------------
-// Scalar float ops.
 
 /**
  * @function cf_min
@@ -371,6 +441,35 @@ typedef struct CF_Manifold
  * @related  cf_min cf_max
  */
 #define cf_min(a, b) ((a) < (b) ? (a) : (b))
+#ifndef __cplusplus
+#undef cf_min
+CF_INLINE float    cf_min_f  (float    a, float    b) { return a < b ? a : b; }
+CF_INLINE double   cf_min_d  (double   a, double   b) { return a < b ? a : b; }
+CF_INLINE int8_t   cf_min_i8 (int8_t   a, int8_t   b) { return a < b ? a : b; }
+CF_INLINE uint8_t  cf_min_u8 (uint8_t  a, uint8_t  b) { return a < b ? a : b; }
+CF_INLINE int16_t  cf_min_i16(int16_t  a, int16_t  b) { return a < b ? a : b; }
+CF_INLINE uint16_t cf_min_u16(uint16_t a, uint16_t b) { return a < b ? a : b; }
+CF_INLINE int32_t  cf_min_i32(int32_t  a, int32_t  b) { return a < b ? a : b; }
+CF_INLINE uint32_t cf_min_u32(uint32_t a, uint32_t b) { return a < b ? a : b; }
+CF_INLINE int64_t  cf_min_i64(int64_t  a, int64_t  b) { return a < b ? a : b; }
+CF_INLINE uint64_t cf_min_u64(uint64_t a, uint64_t b) { return a < b ? a : b; }
+CF_V2 cf_min_v2(CF_V2 a, CF_V2 b);
+#define cf_min(a, b)          \
+	_Generic((a),             \
+		float:    cf_min_f,   \
+		double:   cf_min_d,   \
+		int8_t:   cf_min_i8,  \
+		uint8_t:  cf_min_u8,  \
+		int16_t:  cf_min_i16, \
+		uint16_t: cf_min_u16, \
+		int32_t:  cf_min_i32, \
+		uint32_t: cf_min_u32, \
+		int64_t:  cf_min_i64, \
+		uint64_t: cf_min_u64, \
+		CF_V2:    cf_min_v2,  \
+		default:  cf_min_i32  \
+	)((a), (b))
+#endif
 
 /**
  * @function cf_max
@@ -378,7 +477,36 @@ typedef struct CF_Manifold
  * @brief    Returns the maximum of two values.
  * @related  cf_min cf_max
  */
-#define cf_max(a, b) ((b) < (a) ? (a) : (b))
+#define cf_max(a, b) ((a) < (b) ? (a) : (b))
+#ifndef __cplusplus
+#undef cf_max
+CF_INLINE float    cf_max_f  (float    a, float    b) { return a > b ? a : b; }
+CF_INLINE double   cf_max_d  (double   a, double   b) { return a > b ? a : b; }
+CF_INLINE int8_t   cf_max_i8 (int8_t   a, int8_t   b) { return a > b ? a : b; }
+CF_INLINE uint8_t  cf_max_u8 (uint8_t  a, uint8_t  b) { return a > b ? a : b; }
+CF_INLINE int16_t  cf_max_i16(int16_t  a, int16_t  b) { return a > b ? a : b; }
+CF_INLINE uint16_t cf_max_u16(uint16_t a, uint16_t b) { return a > b ? a : b; }
+CF_INLINE int32_t  cf_max_i32(int32_t  a, int32_t  b) { return a > b ? a : b; }
+CF_INLINE uint32_t cf_max_u32(uint32_t a, uint32_t b) { return a > b ? a : b; }
+CF_INLINE int64_t  cf_max_i64(int64_t  a, int64_t  b) { return a > b ? a : b; }
+CF_INLINE uint64_t cf_max_u64(uint64_t a, uint64_t b) { return a > b ? a : b; }
+CF_INLINE CF_V2    cf_max_v2 (CF_V2    a, CF_V2    b) { cf_v2(cf_max_f(a.x, b.x), cf_max_f(a.y, b.y)); }
+#define cf_max(a, b)          \
+	_Generic((a),             \
+		float:    cf_max_f,   \
+		double:   cf_max_d,   \
+		int8_t:   cf_max_i8,  \
+		uint8_t:  cf_max_u8,  \
+		int16_t:  cf_max_i16, \
+		uint16_t: cf_max_u16, \
+		int32_t:  cf_max_i32, \
+		uint32_t: cf_max_u32, \
+		int64_t:  cf_max_i64, \
+		uint64_t: cf_max_u64, \
+		CF_V2:    cf_max_v2,  \
+		default:  cf_max_i32  \
+	)((a), (b))
+#endif
 
 /**
  * @function cf_abs
@@ -386,7 +514,47 @@ typedef struct CF_Manifold
  * @brief    Returns absolute value of a float.
  * @related  cf_min cf_max cf_clamp cf_clamp01 cf_sign cf_intersect cf_safe_invert cf_lerp cf_remap cf_mod cf_fract
  */
-CF_INLINE float cf_abs(float a) { return CF_FABSF(a); }
+#define cf_abs(a)
+#undef cf_abs
+#ifdef __cplusplus
+CF_INLINE float    cf_abs(float    x) { return x < 0 ? -x : x; }
+CF_INLINE double   cf_abs(double   x) { return x < 0 ? -x : x; }
+CF_INLINE int8_t   cf_abs(int8_t   x) { return x < 0 ? (int8_t)-x : x; }
+CF_INLINE int16_t  cf_abs(int16_t  x) { return x < 0 ? (int16_t)-x : x; }
+CF_INLINE int32_t  cf_abs(int32_t  x) { return x < 0 ? -x : x; }
+CF_INLINE int64_t  cf_abs(int64_t  x) { return x < 0 ? -x : x; }
+CF_INLINE uint8_t  cf_abs(uint8_t  x) { return x; }
+CF_INLINE uint16_t cf_abs(uint16_t x) { return x; }
+CF_INLINE uint32_t cf_abs(uint32_t x) { return x; }
+CF_INLINE uint64_t cf_abs(uint64_t x) { return x; }
+#else
+CF_INLINE float    cf_abs_f  (float    x) { return x < 0 ? -x : x; }
+CF_INLINE double   cf_abs_d  (double   x) { return x < 0 ? -x : x; }
+CF_INLINE int8_t   cf_abs_i8 (int8_t   x) { return x < 0 ? (int8_t)-x : x; }
+CF_INLINE int16_t  cf_abs_i16(int16_t  x) { return x < 0 ? (int16_t)-x : x; }
+CF_INLINE int32_t  cf_abs_i32(int32_t  x) { return x < 0 ? -x : x; }
+CF_INLINE int64_t  cf_abs_i64(int64_t  x) { return x < 0 ? -x : x; }
+CF_INLINE uint8_t  cf_abs_u8 (uint8_t  x) { return x; }
+CF_INLINE uint16_t cf_abs_u16(uint16_t x) { return x; }
+CF_INLINE uint32_t cf_abs_u32(uint32_t x) { return x; }
+CF_INLINE uint64_t cf_abs_u64(uint64_t x) { return x; }
+CF_INLINE CF_V2    cf_max_v2 (CF_V2    a, CF_V2 b) { cf_v2(cf_max_f(a.x, b.x), cf_max_f(a.y, b.y)); }
+#define cf_abs(x) \
+	_Generic((x), \
+		float:    cf_abs_f,   \
+		double:   cf_abs_d,   \
+		int8_t:   cf_abs_i8,  \
+		uint8_t:  cf_abs_u8,  \
+		int16_t:  cf_abs_i16, \
+		uint16_t: cf_abs_u16, \
+		int32_t:  cf_abs_i32, \
+		uint32_t: cf_abs_u32, \
+		int64_t:  cf_abs_i64, \
+		uint64_t: cf_abs_u64, \
+		CF_V2:    cf_abs_v2,  \
+		default:  cf_abs_i32  \
+	)(x)
+#endif
 
 /**
  * @function cf_clamp
@@ -394,23 +562,122 @@ CF_INLINE float cf_abs(float a) { return CF_FABSF(a); }
  * @brief    Returns `a` float clamped between `lo` and `hi`.
  * @related  cf_min cf_max cf_clamp cf_clamp01 cf_sign cf_intersect cf_safe_invert cf_lerp cf_remap cf_mod cf_fract
  */
-CF_INLINE float cf_clamp(float a, float lo, float hi) { return cf_max(lo, cf_min(a, hi)); }
+#define cf_clamp(x, hi, lo) cf_max(lo, cf_min(x, hi))
+#ifndef __cplusplus
+#undef cf_clamp
+CF_INLINE float    cf_clamp_f  (float    x, float    hi, float    lo) { return cf_max(lo, cf_min(x, hi)); }
+CF_INLINE double   cf_clamp_d  (double   x, double   hi, double   lo) { return cf_max(lo, cf_min(x, hi)); }
+CF_INLINE int8_t   cf_clamp_i8 (int8_t   x, int8_t   hi, int8_t   lo) { return cf_max(lo, cf_min(x, hi)); }
+CF_INLINE uint8_t  cf_clamp_u8 (uint8_t  x, uint8_t  hi, uint8_t  lo) { return cf_max(lo, cf_min(x, hi)); }
+CF_INLINE int16_t  cf_clamp_i16(int16_t  x, int16_t  hi, int16_t  lo) { return cf_max(lo, cf_min(x, hi)); }
+CF_INLINE uint16_t cf_clamp_u16(uint16_t x, uint16_t hi, uint16_t lo) { return cf_max(lo, cf_min(x, hi)); }
+CF_INLINE int32_t  cf_clamp_i32(int32_t  x, int32_t  hi, int32_t  lo) { return cf_max(lo, cf_min(x, hi)); }
+CF_INLINE uint32_t cf_clamp_u32(uint32_t x, uint32_t hi, uint32_t lo) { return cf_max(lo, cf_min(x, hi)); }
+CF_INLINE int64_t  cf_clamp_i64(int64_t  x, int64_t  hi, int64_t  lo) { return cf_max(lo, cf_min(x, hi)); }
+CF_INLINE uint64_t cf_clamp_u64(uint64_t x, uint64_t hi, uint64_t lo) { return cf_max(lo, cf_min(x, hi)); }
+CF_INLINE CF_V2    cf_clamp_v2 (CF_V2    x, CF_V2    hi, CF_V2    lo) { return cf_max_v2(lo, cf_min_v2(x, hi)); }
+#define cf_clamp(x, hi, lo)     \
+	_Generic((x),               \
+		float:    cf_clamp_f,   \
+		double:   cf_clamp_d,   \
+		int8_t:   cf_clamp_i8,  \
+		uint8_t:  cf_clamp_u8,  \
+		int16_t:  cf_clamp_i16, \
+		uint16_t: cf_clamp_u16, \
+		int32_t:  cf_clamp_i32, \
+		uint32_t: cf_clamp_u32, \
+		int64_t:  cf_clamp_i64, \
+		uint64_t: cf_clamp_u64, \
+		CF_V2:    cf_clamp_v2,  \
+		default:  cf_clamp_i32  \
+	)((a), (hi), (lo))
+#endif
 
 /**
  * @function cf_clamp01
  * @category math
- * @brief    Returns `a` float clamped between 0.0f and 1.0f.
- * @related  cf_min cf_max cf_clamp cf_clamp01 cf_sign cf_intersect cf_safe_invert cf_lerp cf_remap cf_mod cf_fract
+ * @brief    Returns `x` clamped between 0 and 1.
+ * @related  cf_min cf_max cf_abs cf_clamp cf_clamp01 cf_sign cf_intersect cf_safe_invert cf_lerp cf_remap cf_mod cf_fract
  */
-CF_INLINE float cf_clamp01(float a) { return cf_max(0.0f, cf_min(a, 1.0f)); }
+#define cf_clamp01(x) cf_max(0, cf_min(x, 1))
+#ifndef __cplusplus
+#undef cf_clamp01
+CF_INLINE float    cf_clamp01_f  (float    x) { return cf_max(0.0f, cf_min(x, 1.0f)); }
+CF_INLINE double   cf_clamp01_d  (double   x) { return cf_max(0.0,  cf_min(x, 1.0)); }
+CF_INLINE int8_t   cf_clamp01_i8 (int8_t   x) { return cf_max((int8_t)0, (int8_t)cf_min(x, (int8_t)1)); }
+CF_INLINE uint8_t  cf_clamp01_u8 (uint8_t  x) { return cf_max((uint8_t)0, (uint8_t)cf_min(x, (uint8_t)1)); }
+CF_INLINE int16_t  cf_clamp01_i16(int16_t  x) { return cf_max((int16_t)0, (int16_t)cf_min(x, (int16_t)1)); }
+CF_INLINE uint16_t cf_clamp01_u16(uint16_t x) { return cf_max((uint16_t)0, (uint16_t)cf_min(x, (uint16_t)1)); }
+CF_INLINE int32_t  cf_clamp01_i32(int32_t  x) { return cf_max((int32_t)0, (int32_t)cf_min(x, (int32_t)1)); }
+CF_INLINE uint32_t cf_clamp01_u32(uint32_t x) { return cf_max((uint32_t)0, (uint32_t)cf_min(x, (uint32_t)1)); }
+CF_INLINE int64_t  cf_clamp01_i64(int64_t  x) { return cf_max((int64_t)0, (int64_t)cf_min(x, (int64_t)1)); }
+CF_INLINE uint64_t cf_clamp01_u64(uint64_t x) { return cf_max((uint64_t)0, (uint64_t)cf_min(x, (uint64_t)1)); }
+CF_INLINE CF_V2    cf_clamp01_v2 (CF_V2    x) { return cf_max_v2(cf_v2(0), cf_min_v2(x, cf_v2(1))); }
+#define cf_clamp01(x)             \
+	_Generic((x),                 \
+		float:    cf_clamp01_f,   \
+		double:   cf_clamp01_d,   \
+		int8_t:   cf_clamp01_i8,  \
+		uint8_t:  cf_clamp01_u8,  \
+		int16_t:  cf_clamp01_i16, \
+		uint16_t: cf_clamp01_u16, \
+		int32_t:  cf_clamp01_i32, \
+		uint32_t: cf_clamp01_u32, \
+		int64_t:  cf_clamp01_i64, \
+		uint64_t: cf_clamp01_u64, \
+		CF_V2:    cf_clamp01_v2,  \
+		default:  cf_clamp01_i32  \
+	)(x)
+#endif
 
 /**
  * @function cf_sign
  * @category math
- * @brief    Returns the sign (either 1.0f or -1.0f) of `a` float.
+ * @brief    Returns the sign (either 1 or -1) of `x`.
  * @related  cf_min cf_max cf_clamp cf_clamp01 cf_sign cf_intersect cf_safe_invert cf_lerp cf_remap cf_mod cf_fract
  */
-CF_INLINE float cf_sign(float a) { return a < 0 ? -1.0f : 1.0f; }
+#define cf_sign(a)
+#undef cf_sign
+#ifdef __cplusplus
+CF_INLINE float    cf_sign(float    x) { return x < 0.0f ? -1.0f : 1.0f; }
+CF_INLINE double   cf_sign(double   x) { return x < 0.0  ? -1.0  : 1.0; }
+CF_INLINE int8_t   cf_sign(int8_t   x) { return x < 0 ? (int8_t)-1 : (int8_t)1; }
+CF_INLINE int16_t  cf_sign(int16_t  x) { return x < 0 ? (int16_t)-1 : (int16_t)1; }
+CF_INLINE int32_t  cf_sign(int32_t  x) { return x < 0 ? -1 : 1; }
+CF_INLINE int64_t  cf_sign(int64_t  x) { return x < 0 ? -1 : 1; }
+CF_INLINE uint8_t  cf_sign(uint8_t  x) { return (uint8_t)1; }
+CF_INLINE uint16_t cf_sign(uint16_t x) { return (uint16_t)1; }
+CF_INLINE uint32_t cf_sign(uint32_t x) { return 1u; }
+CF_INLINE uint64_t cf_sign(uint64_t x) { return 1ull; }
+CF_INLINE CF_V2    cf_sign(CF_V2    x) { return { cf_sign(x.x), cf_sign(x.y) }; }
+#else
+CF_INLINE float    cf_sign_f  (float    x) { return x < 0.0f ? -1.0f : 1.0f; }
+CF_INLINE double   cf_sign_d  (double   x) { return x < 0.0  ? -1.0  : 1.0; }
+CF_INLINE int8_t   cf_sign_i8 (int8_t   x) { return x < 0 ? (int8_t)-1 : (int8_t)1; }
+CF_INLINE int16_t  cf_sign_i16(int16_t  x) { return x < 0 ? (int16_t)-1 : (int16_t)1; }
+CF_INLINE int32_t  cf_sign_i32(int32_t  x) { return x < 0 ? -1 : 1; }
+CF_INLINE int64_t  cf_sign_i64(int64_t  x) { return x < 0 ? -1 : 1; }
+CF_INLINE uint8_t  cf_sign_u8 (uint8_t  x) { return (uint8_t)1; }
+CF_INLINE uint16_t cf_sign_u16(uint16_t x) { return (uint16_t)1; }
+CF_INLINE uint32_t cf_sign_u32(uint32_t x) { return 1u; }
+CF_INLINE uint64_t cf_sign_u64(uint64_t x) { return 1ull; }
+CF_INLINE CF_V2    cf_sign_v2 (CF_V2    x) { return (CF_V2){ cf_sign_f(x.x), cf_sign_f(x.y) }; }
+#define cf_sign(x) \
+	_Generic((x), \
+		float:    cf_sign_f,   \
+		double:   cf_sign_d,   \
+		int8_t:   cf_sign_i8,  \
+		uint8_t:  cf_sign_u8,  \
+		int16_t:  cf_sign_i16, \
+		uint16_t: cf_sign_u16, \
+		int32_t:  cf_sign_i32, \
+		uint32_t: cf_sign_u32, \
+		int64_t:  cf_sign_i64, \
+		uint64_t: cf_sign_u64, \
+		CF_V2:    cf_sign_v2,  \
+		default:  cf_sign_i32  \
+	)(x)
+#endif
 
 /**
  * @function cf_intersect
@@ -432,74 +699,189 @@ CF_INLINE float cf_safe_invert(float a) { return a != 0 ? 1.0f / a : 0; }
 /**
  * @function cf_lerp
  * @category math
- * @brief    Returns the linear interpolation from `a` to `b` along `t`, where `t` is _usually_ a value from 0.0f to 1.0f.
- * @related  cf_min cf_max cf_clamp cf_clamp01 cf_sign cf_intersect cf_safe_invert cf_lerp cf_remap cf_mod cf_fract
+ * @brief    Returns the linear interpolation from `a` to `b` along `t`, where `t` is _usually_ between 0.0 and 1.0.
+ * @related  cf_min cf_max cf_clamp cf_clamp01 cf_sign cf_lerp cf_remap cf_mod cf_fract
  */
-CF_INLINE float cf_lerp(float a, float b, float t) { return a + (b - a) * t; }
+#define cf_lerp(a, b, t)
+#undef cf_lerp
+#ifdef __cplusplus
+CF_INLINE float  cf_lerp(float  a, float  b, float  t) { return a + (b - a) * t; }
+CF_INLINE double cf_lerp(double a, double b, double t) { return a + (b - a) * t; }
+CF_INLINE CF_V2  cf_lerp(CF_V2  a, CF_V2  b, float  t) { return cf_add_v2(a, cf_mul_v2_f(cf_sub_v2(b, a), t)); }
+#else
+CF_INLINE float  cf_lerp_f (float  a, float  b, float  t) { return a + (b - a) * t; }
+CF_INLINE double cf_lerp_d (double a, double b, double t) { return a + (b - a) * t; }
+CF_INLINE CF_V2  cf_lerp_v2(CF_V2  a, CF_V2  b, float  t) { return cf_add_v2(a, cf_mul_v2_f(cf_sub_v2(b, a), t)); }
+#define cf_lerp(a, b, t)     \
+	_Generic((a),            \
+		float:   cf_lerp_f,  \
+		double:  cf_lerp_d,  \
+		CF_V2:   cf_lerp_v2, \
+		default: cf_lerp_f   \
+	)((a), (b), (t))
+#endif
 
 /**
  * @function cf_remap01
  * @category math
- * @brief    Returns the value `t` remaped from [0, 1] to [lo, hi].
- * @related  cf_min cf_max cf_clamp cf_clamp01 cf_sign cf_intersect cf_safe_invert cf_lerp cf_remap cf_mod cf_fract
+ * @brief    Remaps `t` from [0, 1] to [lo, hi].
+ * @related  cf_min cf_max cf_clamp cf_clamp01 cf_sign cf_lerp cf_remap cf_remap01 cf_mod cf_fract
  */
-CF_INLINE float cf_remap01(float t, float lo, float hi) { return lo + t * (hi - lo); }
+#define cf_remap01(t, lo, hi)
+#undef cf_remap01
+#ifdef __cplusplus
+CF_INLINE float  cf_remap01(float  t, float  lo, float  hi) { return lo + t * (hi - lo); }
+CF_INLINE double cf_remap01(double t, double lo, double hi) { return lo + t * (hi - lo); }
+CF_INLINE CF_V2  cf_remap01(CF_V2  t, CF_V2  lo, CF_V2  hi) { return cf_add_v2(lo, cf_mul_v2(cf_sub_v2(hi, lo), t)); }
+#else
+CF_INLINE float  cf_remap01_f(float  t, float  lo, float  hi) { return lo + t * (hi - lo); }
+CF_INLINE double cf_remap01_d(double t, double lo, double hi) { return lo + t * (hi - lo); }
+CF_INLINE CF_V2  cf_remap01_v2(CF_V2 t, CF_V2  lo, CF_V2  hi) { return cf_add_v2(lo, cf_mul_v2(cf_sub_v2(hi, lo), t)); }
+#define cf_remap01(t, lo, hi)   \
+	_Generic((t),               \
+		float:   cf_remap01_f,  \
+		double:  cf_remap01_d,  \
+		CF_V2:   cf_remap01_v2, \
+		default: cf_remap01_f   \
+	)((t), (lo), (hi))
+#endif
 
 /**
  * @function cf_remap
  * @category math
- * @brief    Returns the value `t` remaped from [old_lo, old_hi] to [lo, hi].
- * @related  cf_min cf_max cf_clamp cf_clamp01 cf_sign cf_intersect cf_safe_invert cf_lerp cf_remap cf_mod cf_fract
+ * @brief    Remaps `t` from [old_lo, old_hi] to [lo, hi].
+ * @related  cf_min cf_max cf_clamp cf_clamp01 cf_sign cf_lerp cf_remap cf_remap01 cf_mod cf_fract
  */
-CF_INLINE float cf_remap(float t, float old_lo, float old_hi, float lo, float hi) { return lo + ((old_hi - old_lo) != 0 ? (t - old_lo) / (old_hi - old_lo) : 0) * (hi - lo); }
+#define cf_remap(t, old_lo, old_hi, lo, hi)
+#undef cf_remap
+#ifdef __cplusplus
+CF_INLINE float  cf_remap(float  t, float  old_lo, float  old_hi, float  lo, float  hi) { return lo + ((old_hi - old_lo) != 0 ? (t - old_lo) / (old_hi - old_lo) : 0.0f) * (hi - lo); }
+CF_INLINE double cf_remap(double t, double old_lo, double old_hi, double lo, double hi) { return lo + ((old_hi - old_lo) != 0 ? (t - old_lo) / (old_hi - old_lo) : 0.0)  * (hi - lo); }
+CF_INLINE CF_V2  cf_remap(CF_V2  t, CF_V2  old_lo, CF_V2  old_hi, CF_V2  lo, CF_V2  hi)
+{
+	CF_V2 denom = cf_sub_v2(old_hi, old_lo);
+	CF_V2 num   = cf_sub_v2(t, old_lo);
+	CF_V2 safe  = cf_div_v2(num, cf_add_v2(denom, cf_cmp_eq_v2(denom, cf_v2(0.0f))));
+	return cf_add_v2(lo, cf_mul_v2(cf_sub_v2(hi, lo), safe));
+}
+#else
+CF_INLINE float  cf_remap_f(float  t, float  old_lo, float  old_hi, float  lo, float  hi) { return lo + ((old_hi - old_lo) != 0 ? (t - old_lo) / (old_hi - old_lo) : 0.0f) * (hi - lo); }
+CF_INLINE double cf_remap_d(double t, double old_lo, double old_hi, double lo, double hi) { return lo + ((old_hi - old_lo) != 0 ? (t - old_lo) / (old_hi - old_lo) : 0.0)  * (hi - lo); }
+CF_INLINE CF_V2  cf_remap_v2(CF_V2 t, CF_V2  old_lo, CF_V2  old_hi, CF_V2  lo, CF_V2  hi)
+{
+	CF_V2 denom = cf_sub_v2(old_hi, old_lo);
+	CF_V2 num   = cf_sub_v2(t, old_lo);
+	CF_V2 safe  = cf_div_v2(num, cf_add_v2(denom, cf_cmp_eq_v2(denom, cf_v2(0))));
+	return cf_add_v2(lo, cf_mul_v2(cf_sub_v2(hi, lo), safe));
+}
+#define cf_remap(t, old_lo, old_hi, lo, hi) \
+	_Generic((t),             \
+		float:   cf_remap_f,  \
+		double:  cf_remap_d,  \
+		CF_V2:   cf_remap_v2, \
+		default: cf_remap_f   \
+	)((t), (old_lo), (old_hi), (lo), (hi))
+#endif
 
 /**
  * @function cf_mod
  * @category math
- * @brief    Returns floating point `x % m`. Can return negative numbers.
- * @related  cf_min cf_max cf_clamp cf_clamp01 cf_sign cf_intersect cf_safe_invert cf_lerp cf_remap cf_mod cf_fract
+ * @brief    Returns `x` modulo `m`.
+ * @related  cf_min cf_max cf_clamp cf_clamp01 cf_sign cf_lerp cf_remap cf_mod cf_fract
  */
-CF_INLINE float cf_mod(float x, float m) { return x - (int)(x / m) * m; }
+#define cf_mod(x, m)
+#undef cf_mod
+#ifdef __cplusplus
+CF_INLINE float  cf_mod(float  x, float  m) { return x - (int)(x / m) * m; }
+CF_INLINE double cf_mod(double x, double m) { return x - (int64_t)(x / m) * m; }
+CF_INLINE CF_V2  cf_mod(CF_V2  x, CF_V2  m) { return cf_sub_v2(x, cf_mul_v2(cf_floor_v2(cf_div_v2(x, m)), m)); }
+#else
+CF_INLINE float  cf_mod_f(float  x, float  m) { return x - (int)(x / m) * m; }
+CF_INLINE double cf_mod_d(double x, double m) { return x - (int64_t)(x / m) * m; }
+CF_INLINE CF_V2  cf_mod_v2(CF_V2 x, CF_V2  m) { return cf_sub_v2(x, cf_mul_v2(cf_floor_v2(cf_div_v2(x, m)), m)); }
+#define cf_mod(x, m) \
+	_Generic((x), \
+		float:   cf_mod_f,  \
+		double:  cf_mod_d,  \
+		CF_V2:   cf_mod_v2, \
+		default: cf_mod_f   \
+	)((x), (m))
+#endif
 
 /**
  * @function cf_fract
  * @category math
- * @brief    Returns the fractional portion of a float.
- * @related  cf_min cf_max cf_clamp cf_clamp01 cf_sign cf_intersect cf_safe_invert cf_lerp cf_remap cf_mod cf_fract
+ * @brief    Returns the fractional part of `x`.
+ * @related  cf_min cf_max cf_clamp cf_clamp01 cf_sign cf_lerp cf_remap cf_mod cf_fract
  */
-CF_INLINE float cf_fract(float x) { return x - CF_FLOORF(x); }
+#define cf_fract(x)
+#undef cf_fract
+#ifdef __cplusplus
+CF_INLINE float  cf_fract(float  x) { return x - CF_FLOORF(x); }
+CF_INLINE double cf_fract(double x) { return x - CF_FLOOR(x); }
+CF_INLINE CF_V2  cf_fract(CF_V2  x) { return cf_sub_v2(x, cf_floor_v2(x)); }
+#else
+CF_INLINE float  cf_fract_f(float  x) { return x - CF_FLOORF(x); }
+CF_INLINE double cf_fract_d(double x) { return x - CF_FLOOR(x); }
+CF_INLINE CF_V2  cf_fract_v2(CF_V2 x) { return cf_sub_v2(x, cf_floor_v2(x)); }
+#define cf_fract(x) \
+	_Generic((x), \
+		float:    cf_fract_f,  \
+		double:   cf_fract_d,  \
+		CF_V2:    cf_fract_v2, \
+		default:  cf_fract_f   \
+	)(x)
+#endif
 
 /**
- * @function cf_sign_int
+ * @function cf_floor
  * @category math
- * @brief    Returns the sign (either 1 or -1) of an int.
- * @related  cf_sign_int cf_abs_int cf_clamp_int cf_clamp01_int cf_is_even cf_is_odd
+ * @brief    Returns the largest integer less than or equal to `x`.
+ * @related  cf_ceil cf_round cf_fract cf_mod
  */
-CF_INLINE int cf_sign_int(int a) { return a < 0 ? -1 : 1; }
+#define cf_floor(x)
+#undef cf_floor
+#ifdef __cplusplus
+CF_INLINE float  cf_floor(float  x) { return CF_FLOORF(x); }
+CF_INLINE double cf_floor(double x) { return CF_FLOOR(x); }
+CF_INLINE CF_V2  cf_floor(CF_V2  x) { return cf_floor_v2(x); }
+#else
+CF_INLINE float  cf_floor_f(float  x) { return CF_FLOORF(x); }
+CF_INLINE double cf_floor_d(double x) { return CF_FLOOR(x); }
+CF_INLINE CF_V2  cf_floor_v2(CF_V2 x) { return cf_floor_v2(x); }
+#define cf_floor(x)            \
+	_Generic((x),              \
+		float:    cf_floor_f,  \
+		double:   cf_floor_d,  \
+		CF_V2:    cf_floor_v2, \
+		default:  cf_floor_f   \
+	)(x)
+#endif
 
 /**
- * @function cf_abs_int
+ * @function cf_ceil
  * @category math
- * @brief    Returns the absolute value of an int.
- * @related  cf_sign_int cf_abs_int cf_clamp_int cf_clamp01_int cf_is_even cf_is_odd
+ * @brief    Returns the smallest integer greater than or equal to `x`.
+ * @related  cf_floor cf_round cf_fract cf_mod
  */
-CF_INLINE int cf_abs_int(int a) { int mask = a >> ((sizeof(int) * 8) - 1); return (a + mask) ^ mask; }
-
-/**
- * @function cf_clamp_int
- * @category math
- * @brief    Returns an int clamped between `lo` and `hi`.
- * @related  cf_sign_int cf_abs_int cf_clamp_int cf_clamp01_int cf_is_even cf_is_odd
- */
-CF_INLINE int cf_clamp_int(int a, int lo, int hi) { return cf_max(lo, cf_min(a, hi)); }
-
-/**
- * @function cf_clamp01_int
- * @category math
- * @brief    Returns an int clamped between 0 and 1.
- * @related  cf_sign_int cf_abs_int cf_clamp_int cf_clamp01_int cf_is_even cf_is_odd
- */
-CF_INLINE int cf_clamp01_int(int a) { return cf_max(0, cf_min(a, 1)); }
+#define cf_ceil(x)
+#undef cf_ceil
+#ifdef __cplusplus
+CF_INLINE float  cf_ceil(float  x) { return CF_CEILF(x); }
+CF_INLINE double cf_ceil(double x) { return CF_CEIL(x); }
+CF_INLINE CF_V2  cf_ceil(CF_V2  x) { return cf_ceil_v2(x); }
+#else
+CF_INLINE float  cf_ceil_f(float  x) { return CF_CEILF(x); }
+CF_INLINE double cf_ceil_d(double x) { return CF_CEIL(x); }
+CF_INLINE CF_V2  cf_ceil_v2(CF_V2 x) { return cf_ceil_v2(x); }
+#define cf_ceil(x)           \
+	_Generic((x),            \
+		float:   cf_ceil_f,  \
+		double:  cf_ceil_d,  \
+		CF_V2:   cf_ceil_v2, \
+		default: cf_ceil_f   \
+	)(x)
+#endif
 
 /**
  * @function cf_is_even
@@ -518,31 +900,157 @@ CF_INLINE bool cf_is_even(int x) { return (x % 2) == 0; }
 CF_INLINE bool cf_is_odd(int x) { return !cf_is_even(x); }
 
 //--------------------------------------------------------------------------------------------------
-// Bit manipulation.
+// Trig functions.
 
 /**
- * @function cf_is_power_of_two
+ * @function cf_sin
  * @category math
- * @brief    Returns true if an int is a power of two.
- * @related  cf_is_power_of_two cf_is_power_of_two_uint cf_fit_power_of_two
+ * @brief    Returns the sine of `x` (angle in radians).
+ * @related  cf_cos cf_tan cf_asin cf_acos cf_atan2
  */
-CF_INLINE bool cf_is_power_of_two(int a) { return a != 0 && (a & (a - 1)) == 0; }
+#define cf_sin(x)
+#undef cf_sin
+#ifdef __cplusplus
+CF_INLINE float  cf_sin(float  x) { return CF_SINF(x); }
+CF_INLINE double cf_sin(double x) { return CF_SIN(x); }
+CF_INLINE CF_V2  cf_sin(CF_V2  x) { return { cf_sin(x.x), cf_sin(x.y) }; }
+#else
+CF_INLINE float  cf_sin_f(float  x) { return CF_SINF(x); }
+CF_INLINE double cf_sin_d(double x) { return CF_SIN(x); }
+CF_INLINE CF_V2  cf_sin_v2(CF_V2 x) { return cf_sin_v2(x); }
+#define cf_sin(x)           \
+	_Generic((x),           \
+		float:   cf_sin_f,  \
+		double:  cf_sin_d,  \
+		CF_V2:   cf_sin_v2, \
+		default: cf_sin_f   \
+	)(x)
+#endif
 
 /**
- * @function cf_is_power_of_two_uint
+ * @function cf_cos
  * @category math
- * @brief    Returns true if an unsigned int is a power of two.
- * @related  cf_is_power_of_two cf_is_power_of_two_uint cf_fit_power_of_two
+ * @brief    Returns the cosine of `x` (angle in radians).
+ * @related  cf_sin cf_tan cf_asin cf_acos cf_atan2
  */
-CF_INLINE bool cf_is_power_of_two_uint(uint64_t a) { return a != 0 && (a & (a - 1)) == 0; }
+#define cf_cos(x)
+#undef cf_cos
+#ifdef __cplusplus
+CF_INLINE float  cf_cos(float  x) { return CF_COSF(x); }
+CF_INLINE double cf_cos(double x) { return CF_COS(x); }
+CF_INLINE CF_V2  cf_cos(CF_V2  x) { return cf_cos_v2(x); }
+#else
+CF_INLINE float  cf_cos_f(float  x) { return CF_COSF(x); }
+CF_INLINE double cf_cos_d(double x) { return CF_COS(x); }
+CF_INLINE CF_V2  cf_cos_v2(CF_V2 x) { return cf_cos_v2(x); }
+#define cf_cos(x)           \
+	_Generic((x),           \
+		float:   cf_cos_f,  \
+		double:  cf_cos_d,  \
+		CF_V2:   cf_cos_v2, \
+		default: cf_cos_f   \
+	)(x)
+#endif
 
 /**
- * @function cf_fit_power_of_two
+ * @function cf_asin
  * @category math
- * @brief    Returns an integer clamped upwards to the nearest power of two.
- * @related  cf_is_power_of_two cf_is_power_of_two_uint cf_fit_power_of_two
+ * @brief    Returns the arc-sine of `x` in radians.
+ * @related  cf_acos cf_atan2 cf_sin cf_cos
  */
-CF_INLINE int cf_fit_power_of_two(int a) { a--; a |= a >> 1; a |= a >> 2; a |= a >> 4; a |= a >> 8; a |= a >> 16; a++; return a; }
+#define cf_asin(x)
+#undef cf_asin
+#ifdef __cplusplus
+CF_INLINE float  cf_asin(float  x) { return asinf(x); }
+CF_INLINE double cf_asin(double x) { return asin(x); }
+CF_INLINE CF_V2  cf_asin(CF_V2  x) { return cf_asin_v2(x); }
+#else
+CF_INLINE float  cf_asin_f(float  x) { return asinf(x); }
+CF_INLINE double cf_asin_d(double x) { return asin(x); }
+CF_INLINE CF_V2  cf_asin_v2(CF_V2 x) { return cf_asin_v2(x); }
+#define cf_asin(x)           \
+	_Generic((x),            \
+		float:   cf_asin_f,  \
+		double:  cf_asin_d,  \
+		CF_V2:   cf_asin_v2, \
+		default: cf_asin_f   \
+	)(x)
+#endif
+
+/**
+ * @function cf_acos
+ * @category math
+ * @brief    Returns the arc-cosine of `x` in radians.
+ * @related  cf_asin cf_atan2 cf_sin cf_cos
+ */
+#define cf_acos(x)
+#undef cf_acos
+#ifdef __cplusplus
+CF_INLINE float  cf_acos(float  x) { return CF_ACOSF(x); }
+CF_INLINE double cf_acos(double x) { return CF_ACOS(x); }
+CF_INLINE CF_V2  cf_acos(CF_V2  x) { return cf_acos_v2(x); }
+#else
+CF_INLINE float  cf_acos_f(float  x) { return CF_ACOSF(x); }
+CF_INLINE double cf_acos_d(double x) { return CF_ACOS(x); }
+CF_INLINE CF_V2  cf_acos_v2(CF_V2 x) { return cf_acos_v2(x); }
+#define cf_acos(x)           \
+	_Generic((x),            \
+		float:   cf_acos_f,  \
+		double:  cf_acos_d,  \
+		CF_V2:   cf_acos_v2, \
+		default: cf_acos_f   \
+	)(x)
+#endif
+
+/**
+ * @function cf_atan2
+ * @category math
+ * @brief    Returns the arc-tangent of `y / x` in radians.
+ * @related  cf_asin cf_acos cf_sin cf_cos
+ */
+#define cf_atan2(y, x)
+#undef cf_atan2
+#ifdef __cplusplus
+CF_INLINE float  cf_atan2(float  y, float  x) { return CF_ATAN2F(y, x); }
+CF_INLINE double cf_atan2(double y, double x) { return CF_ATAN2(y, x); }
+CF_INLINE CF_V2  cf_atan2(CF_V2  y, CF_V2  x) { return cf_atan2_v2(y, x); }
+#else
+CF_INLINE float  cf_atan2_f(float  y, float  x) { return CF_ATAN2F(y, x); }
+CF_INLINE double cf_atan2_d(double y, double x) { return CF_ATAN2(y, x); }
+CF_INLINE CF_V2  cf_atan2_v2(CF_V2 y, CF_V2  x) { return cf_atan2_v2(y, x); }
+#define cf_atan2(y, x)        \
+	_Generic((y),             \
+		float:   cf_atan2_f,  \
+		double:  cf_atan2_d,  \
+		CF_V2:   cf_atan2_v2, \
+		default: cf_atan2_f   \
+	)((y), (x))
+#endif
+
+/**
+ * @function cf_sqrt
+ * @category math
+ * @brief    Returns the square root of `x`.
+ * @related  cf_abs cf_pow cf_square cf_length cf_normalize
+ */
+#define cf_sqrt(x)
+#undef cf_sqrt
+#ifdef __cplusplus
+CF_INLINE float  cf_sqrt(float  x) { return CF_SQRTF(x); }
+CF_INLINE double cf_sqrt(double x) { return CF_SQRT(x); }
+CF_INLINE CF_V2  cf_sqrt(CF_V2  x) { return cf_sqrt_v2(x); }
+#else
+CF_INLINE float  cf_sqrt_f(float  x) { return CF_SQRTF(x); }
+CF_INLINE double cf_sqrt_d(double x) { return CF_SQRT(x); }
+CF_INLINE CF_V2  cf_sqrt_v2(CF_V2 x) { return cf_sqrt_v2(x); }
+#define cf_sqrt(x)           \
+	_Generic((x),            \
+		float:   cf_sqrt_f,  \
+		double:  cf_sqrt_d,  \
+		CF_V2:   cf_sqrt_v2, \
+		default: cf_sqrt_f   \
+	)(x)
+#endif
 
 //--------------------------------------------------------------------------------------------------
 // Easing functions.
@@ -551,199 +1059,706 @@ CF_INLINE int cf_fit_power_of_two(int a) { a--; a |= a >> 1; a |= a >> 2; a |= a
 /**
  * @function cf_smoothstep
  * @category math
- * @brief    Returns the smoothstep of a float from 0.0f to 1.0f.
+ * @brief    Returns the smoothstep of `x` from 0.0 to 1.0.
  * @remarks  Here is a great link to [visualize each easing function](https://easings.net/).
  */
-CF_INLINE float cf_smoothstep(float x) { return x * x * (3.0f - 2.0f * x); }
+#define cf_smoothstep(x)
+#undef cf_smoothstep
+#ifdef __cplusplus
+CF_INLINE float  cf_smoothstep(float  x) { return x * x * (3.0f - 2.0f * x); }
+CF_INLINE double cf_smoothstep(double x) { return x * x * (3.0  - 2.0  * x); }
+CF_INLINE CF_V2  cf_smoothstep(CF_V2  x) { return cf_mul_v2(x, cf_mul_v2(x, cf_sub_v2(cf_v2(3.0f), cf_mul_v2_f(x, 2.0f)))); }
+#else
+CF_INLINE float  cf_smoothstep_f(float  x) { return x * x * (3.0f - 2.0f * x); }
+CF_INLINE double cf_smoothstep_d(double x) { return x * x * (3.0  - 2.0  * x); }
+CF_INLINE CF_V2  cf_smoothstep_v2(CF_V2 x) { return cf_mul_v2(x, cf_mul_v2(x, cf_sub_v2(cf_v2(3.0f), cf_mul_v2_f(x, 2.0f)))); }
+#define cf_smoothstep(x)            \
+	_Generic((x),                   \
+		float:    cf_smoothstep_f,  \
+		double:   cf_smoothstep_d,  \
+		CF_V2:    cf_smoothstep_v2, \
+		default:  cf_smoothstep_f   \
+	)(x)
+#endif
 
 /**
  * @function cf_quad_in
  * @category math
- * @brief    Returns the quadratic-in ease of a float from 0.0f to 1.0f.
- * @remarks  Here is a great link to [visualize each easing function](https://easings.net/).
- * @related  cf_quad_in cf_quad_out cf_quad_in_out
+ * @brief    Returns the quadratic-in ease of `x`.
+ * @remarks  See [easings.net](https://easings.net/).
  */
-CF_INLINE float cf_quad_in(float x) { return x * x; }
+#define cf_quad_in(x)
+#undef cf_quad_in
+#ifdef __cplusplus
+CF_INLINE float  cf_quad_in(float  x) { return x * x; }
+CF_INLINE double cf_quad_in(double x) { return x * x; }
+CF_INLINE CF_V2  cf_quad_in(CF_V2  x) { return cf_mul_v2(x, x); }
+#else
+CF_INLINE float  cf_quad_in_f(float  x) { return x * x; }
+CF_INLINE double cf_quad_in_d(double x) { return x * x; }
+CF_INLINE CF_V2  cf_quad_in_v2(CF_V2 x) { return cf_mul_v2(x, x); }
+#define cf_quad_in(x)            \
+	_Generic((x),                \
+		float:    cf_quad_in_f,  \
+		double:   cf_quad_in_d,  \
+		CF_V2:    cf_quad_in_v2, \
+		default:  cf_quad_in_f   \
+	)(x)
+#endif
 
 /**
  * @function cf_quad_out
  * @category math
- * @brief    Returns the quadratic-out ease of a float from 0.0f to 1.0f.
- * @remarks  Here is a great link to [visualize each easing function](https://easings.net/).
- * @related  cf_quad_in cf_quad_out cf_quad_in_out
+ * @brief    Returns the quadratic-out ease of `x`.
  */
-CF_INLINE float cf_quad_out(float x) { return -(x * (x - 2.0f)); }
+#define cf_quad_out(x)
+#undef cf_quad_out
+#ifdef __cplusplus
+CF_INLINE float  cf_quad_out(float  x) { return -(x * (x - 2.0f)); }
+CF_INLINE double cf_quad_out(double x) { return -(x * (x - 2.0)); }
+CF_INLINE CF_V2  cf_quad_out(CF_V2  x) { return cf_neg_v2(cf_mul_v2(x, cf_sub_v2(x, cf_v2(2.0f)))); }
+#else
+CF_INLINE float  cf_quad_out_f(float  x) { return -(x * (x - 2.0f)); }
+CF_INLINE double cf_quad_out_d(double x) { return -(x * (x - 2.0)); }
+CF_INLINE CF_V2  cf_quad_out_v2(CF_V2 x) { return cf_neg_v2(cf_mul_v2(x, cf_sub_v2(x, cf_v2(2.0f)))); }
+#define cf_quad_out(x)           \
+	_Generic((x),                \
+		float:   cf_quad_out_f,  \
+		double:  cf_quad_out_d,  \
+		CF_V2:   cf_quad_out_v2, \
+		default: cf_quad_out_f   \
+	)(x)
+#endif
 
 /**
  * @function cf_quad_in_out
  * @category math
- * @brief    Returns the quadratic ease of a float from 0.0f to 1.0f.
- * @remarks  Here is a great link to [visualize each easing function](https://easings.net/).
- * @related  cf_quad_in cf_quad_out cf_quad_in_out
+ * @brief    Returns the quadratic ease of `x`.
  */
-CF_INLINE float cf_quad_in_out(float x) { if (x < 0.5f) return 2.0f * x * x; else return (-2.0f * x * x) + (4.0f * x) - 1.0f; }
+#define cf_quad_in_out(x)
+#undef cf_quad_in_out
+#ifdef __cplusplus
+CF_INLINE float  cf_quad_in_out(float  x) { return x < 0.5f ? 2.0f * x * x : (-2.0f * x * x) + (4.0f * x) - 1.0f; }
+CF_INLINE double cf_quad_in_out(double x) { return x < 0.5  ? 2.0  * x * x : (-2.0  * x * x) + (4.0  * x) - 1.0; }
+CF_INLINE CF_V2  cf_quad_in_out(CF_V2  x) {
+	CF_V2 half = cf_v2(0.5f);
+	float mask = cf_lesser_v2(x, half);
+	CF_V2 in = cf_mul_v2_f(cf_mul_v2(x, x), 2.0f);
+	CF_V2 out = cf_add_v2(cf_add_v2(cf_mul_v2_f(cf_mul_v2(x, x), -2.0f), cf_mul_v2_f(x, 4.0f)), cf_v2(-1.0f));
+	return cf_lerp_v2(out, in, (float)mask);
+}
+#else
+CF_INLINE float  cf_quad_in_out_f(float  x) { return x < 0.5f ? 2.0f * x * x : (-2.0f * x * x) + (4.0f * x) - 1.0f; }
+CF_INLINE double cf_quad_in_out_d(double x) { return x < 0.5  ? 2.0  * x * x : (-2.0  * x * x) + (4.0  * x) - 1.0; }
+CF_INLINE CF_V2  cf_quad_in_out_v2(CF_V2 x)
+{
+	CF_V2 half = cf_v2(0.5f);
+	float mask = cf_lesser_v2(x, half);
+	CF_V2 in = cf_mul_v2_f(cf_mul_v2(x, x), 2.0f);
+	CF_V2 out = cf_add_v2(cf_add_v2(cf_mul_v2_f(cf_mul_v2(x, x), -2.0f), cf_mul_v2_f(x, 4.0f)), cf_v2(-1.0f));
+	return cf_lerp_v2(out, in, (float)mask);
+}
+#define cf_quad_in_out(x)           \
+	_Generic((x),                   \
+		float:   cf_quad_in_out_f,  \
+		double:  cf_quad_in_out_d,  \
+		CF_V2:   cf_quad_in_out_v2, \
+		default: cf_quad_in_out_f   \
+	)(x)
+#endif
 
 /**
  * @function cf_cube_in
  * @category math
- * @brief    Returns the cubic-in ease of a float from 0.0f to 1.0f.
+ * @brief    Returns the cubic-in ease of `x` from 0.0 to 1.0.
  * @remarks  Here is a great link to [visualize each easing function](https://easings.net/).
  * @related  cf_cube_in cf_cube_out cf_cube_in_out
  */
-CF_INLINE float cf_cube_in(float x) { return x * x * x; }
+#define cf_cube_in(x)
+#undef cf_cube_in
+#ifdef __cplusplus
+CF_INLINE float  cf_cube_in(float  x) { return x * x * x; }
+CF_INLINE double cf_cube_in(double x) { return x * x * x; }
+CF_INLINE CF_V2  cf_cube_in(CF_V2  x) { return cf_mul_v2(cf_mul_v2(x, x), x); }
+#else
+CF_INLINE float  cf_cube_in_f(float  x) { return x * x * x; }
+CF_INLINE double cf_cube_in_d(double x) { return x * x * x; }
+CF_INLINE CF_V2  cf_cube_in_v2(CF_V2 x) { return cf_mul_v2(cf_mul_v2(x, x), x); }
+#define cf_cube_in(x)           \
+	_Generic((x),               \
+		float:   cf_cube_in_f,  \
+		double:  cf_cube_in_d,  \
+		CF_V2:   cf_cube_in_v2, \
+		default: cf_cube_in_f   \
+	)(x)
+#endif
 
 /**
  * @function cf_cube_out
  * @category math
- * @brief    Returns the cubic-out ease of a float from 0.0f to 1.0f.
+ * @brief    Returns the cubic-out ease of `x` from 0.0 to 1.0.
  * @remarks  Here is a great link to [visualize each easing function](https://easings.net/).
  * @related  cf_cube_in cf_cube_out cf_cube_in_out
  */
-CF_INLINE float cf_cube_out(float x) { float f = (x - 1); return f * f * f + 1.0f; }
+#define cf_cube_out(x)
+#undef cf_cube_out
+#ifdef __cplusplus
+CF_INLINE float  cf_cube_out(float  x) { float f = (x - 1.0f); return f * f * f + 1.0f; }
+CF_INLINE double cf_cube_out(double x) { double f = (x - 1.0);  return f * f * f + 1.0; }
+CF_INLINE CF_V2  cf_cube_out(CF_V2  x) {
+	CF_V2 f = cf_sub_v2(x, cf_v2(1.0f));
+	return cf_add_v2(cf_mul_v2(cf_mul_v2(f, f), f), cf_v2(1.0f));
+}
+#else
+CF_INLINE float  cf_cube_out_f(float  x) { float f = (x - 1.0f); return f * f * f + 1.0f; }
+CF_INLINE double cf_cube_out_d(double x) { double f = (x - 1.0);  return f * f * f + 1.0; }
+CF_INLINE CF_V2  cf_cube_out_v2(CF_V2 x) {
+	CF_V2 f = cf_sub_v2(x, cf_v2(1.0f));
+	return cf_add_v2(cf_mul_v2(cf_mul_v2(f, f), f), cf_v2(1.0f));
+}
+#define cf_cube_out(x)           \
+	_Generic((x),                \
+		float:   cf_cube_out_f,  \
+		double:  cf_cube_out_d,  \
+		CF_V2:   cf_cube_out_v2, \
+		default: cf_cube_out_f   \
+	)(x)
+#endif
 
 /**
  * @function cf_cube_in_out
  * @category math
- * @brief    Returns the cubic ease of a float from 0.0f to 1.0f.
+ * @brief    Returns the cubic ease of `x` from 0.0 to 1.0.
  * @remarks  Here is a great link to [visualize each easing function](https://easings.net/).
  * @related  cf_cube_in cf_cube_out cf_cube_in_out
  */
-CF_INLINE float cf_cube_in_out(float x) { if (x < 0.5f) return 4.0f * x * x * x; else { return 0.5f * x * x * x + 1.0f; } }
+#define cf_cube_in_out(x)
+#undef cf_cube_in_out
+#ifdef __cplusplus
+CF_INLINE float  cf_cube_in_out(float  x) { return x < 0.5f ? 4.0f * x * x * x : 0.5f * x * x * x + 1.0f; }
+CF_INLINE double cf_cube_in_out(double x) { return x < 0.5  ? 4.0  * x * x * x : 0.5  * x * x * x + 1.0; }
+CF_INLINE CF_V2  cf_cube_in_out(CF_V2  x)
+{
+	CF_V2 half = cf_v2(0.5f);
+	float mask = cf_lesser_v2(x, half);
+	CF_V2 in   = cf_mul_v2_f(cf_mul_v2(cf_mul_v2(x, x), x), 4.0f);
+	CF_V2 out  = cf_add_v2(cf_mul_v2_f(cf_mul_v2(cf_mul_v2(x, x), x), 0.5f), cf_v2(1.0f));
+	return cf_lerp_v2(out, in, (float)mask);
+}
+#else
+CF_INLINE float  cf_cube_in_out_f(float  x) { return x < 0.5f ? 4.0f * x * x * x : 0.5f * x * x * x + 1.0f; }
+CF_INLINE double cf_cube_in_out_d(double x) { return x < 0.5  ? 4.0  * x * x * x : 0.5  * x * x * x + 1.0; }
+CF_INLINE CF_V2  cf_cube_in_out_v2(CF_V2 x)
+{
+	CF_V2 half = cf_v2(0.5f);
+	float mask = cf_lesser_v2(x, half);
+	CF_V2 in   = cf_mul_v2_f(cf_mul_v2(cf_mul_v2(x, x), x), 4.0f);
+	CF_V2 out  = cf_add_v2(cf_mul_v2_f(cf_mul_v2(cf_mul_v2(x, x), x), 0.5f), cf_v2(1.0f));
+	return cf_lerp_v2(out, in, (float)mask);
+}
+#define cf_cube_in_out(x)           \
+	_Generic((x),                   \
+		float:   cf_cube_in_out_f,  \
+		double:  cf_cube_in_out_d,  \
+		CF_V2:   cf_cube_in_out_v2, \
+		default: cf_cube_in_out_f   \
+	)(x)
+#endif
 
 /**
  * @function cf_quart_in
  * @category math
- * @brief    Returns the quartic-in ease of a float from 0.0f to 1.0f.
+ * @brief    Returns the quartic-in ease of `x` from 0.0 to 1.0.
  * @remarks  Here is a great link to [visualize each easing function](https://easings.net/).
  * @related  cf_quart_in cf_quart_out cf_quart_in_out
  */
-CF_INLINE float cf_quart_in(float x) { return x * x * x * x; }
+#define cf_quart_in(x)
+#undef cf_quart_in
+#ifdef __cplusplus
+CF_INLINE float  cf_quart_in(float  x) { return x * x * x * x; }
+CF_INLINE double cf_quart_in(double x) { return x * x * x * x; }
+CF_INLINE CF_V2  cf_quart_in(CF_V2  x) { return cf_mul_v2(cf_mul_v2(cf_mul_v2(x, x), x), x); }
+#else
+CF_INLINE float  cf_quart_in_f(float  x) { return x * x * x * x; }
+CF_INLINE double cf_quart_in_d(double x) { return x * x * x * x; }
+CF_INLINE CF_V2  cf_quart_in_v2(CF_V2 x) { return cf_mul_v2(cf_mul_v2(cf_mul_v2(x, x), x), x); }
+#define cf_quart_in(x)           \
+	_Generic((x),                \
+		float:   cf_quart_in_f,  \
+		double:  cf_quart_in_d,  \
+		CF_V2:   cf_quart_in_v2, \
+		default: cf_quart_in_f   \
+	)(x)
+#endif
 
 /**
  * @function cf_quart_out
  * @category math
- * @brief    Returns the quartic-out ease of a float from 0.0f to 1.0f.
+ * @brief    Returns the quartic-out ease of `x` from 0.0 to 1.0.
  * @remarks  Here is a great link to [visualize each easing function](https://easings.net/).
  * @related  cf_quart_in cf_quart_out cf_quart_in_out
  */
-CF_INLINE float cf_quart_out(float x) { float f = (x - 1.0f); return f * f * f * (1.0f - x) + 1.0f; }
+#define cf_quart_out(x)
+#undef cf_quart_out
+#ifdef __cplusplus
+CF_INLINE float  cf_quart_out(float  x) { float f = (x - 1.0f); return f * f * f * (1.0f - x) + 1.0f; }
+CF_INLINE double cf_quart_out(double x) { double f = (x - 1.0); return f * f * f * (1.0  - x) + 1.0; }
+CF_INLINE CF_V2  cf_quart_out(CF_V2  x)
+{
+	CF_V2 one = cf_v2(1.0f);
+	CF_V2 f   = cf_sub_v2(x, one);
+	return cf_add_v2(cf_mul_v2(cf_mul_v2(cf_mul_v2(f, f), f), cf_sub_v2(one, x)), one);
+}
+#else
+CF_INLINE float  cf_quart_out_f(float  x) { float f = (x - 1.0f); return f * f * f * (1.0f - x) + 1.0f; }
+CF_INLINE double cf_quart_out_d(double x) { double f = (x - 1.0); return f * f * f * (1.0  - x) + 1.0; }
+CF_INLINE CF_V2  cf_quart_out_v2(CF_V2 x)
+{
+	CF_V2 one = cf_v2(1.0f);
+	CF_V2 f   = cf_sub_v2(x, one);
+	return cf_add_v2(cf_mul_v2(cf_mul_v2(cf_mul_v2(f, f), f), cf_sub_v2(one, x)), one);
+}
+#define cf_quart_out(x)           \
+	_Generic((x),                 \
+		float:   cf_quart_out_f,  \
+		double:  cf_quart_out_d,  \
+		CF_V2:   cf_quart_out_v2, \
+		default: cf_quart_out_f   \
+	)(x)
+#endif
 
 /**
  * @function cf_quart_in_out
  * @category math
- * @brief    Returns the quartic ease of a float from 0.0f to 1.0f.
+ * @brief    Returns the quartic ease of `x` from 0.0 to 1.0.
  * @remarks  Here is a great link to [visualize each easing function](https://easings.net/).
  * @related  cf_quart_in cf_quart_out cf_quart_in_out
  */
-CF_INLINE float cf_quart_in_out(float x) { if (x < 0.5f) return 8.0f * x * x * x * x; else { float f = (x - 1); return -8.0f * f * f * f * f + 1.0f; } }
+#define cf_quart_in_out(x)
+#undef cf_quart_in_out
+#ifdef __cplusplus
+CF_INLINE float  cf_quart_in_out(float  x) { if (x < 0.5f) return 8.0f * x * x * x * x; else { float f = (x - 1.0f); return -8.0f * f * f * f * f + 1.0f; } }
+CF_INLINE double cf_quart_in_out(double x) { if (x < 0.5)  return 8.0  * x * x * x * x; else { double f = (x - 1.0);  return -8.0  * f * f * f * f + 1.0; } }
+CF_INLINE CF_V2  cf_quart_in_out(CF_V2  x)
+{
+	CF_V2 half = cf_v2(0.5f);
+	float mask = cf_lesser_v2(x, half);
+	CF_V2 in   = cf_mul_v2_f(cf_mul_v2(cf_mul_v2(cf_mul_v2(x, x), x), x), 8.0f);
+	CF_V2 f    = cf_sub_v2(x, cf_v2(1.0f));
+	CF_V2 out  = cf_add_v2(cf_mul_v2_f(cf_mul_v2(cf_mul_v2(cf_mul_v2(f, f), f), f), -8.0f), cf_v2(1.0f));
+	return cf_lerp_v2(out, in, (float)mask);
+}
+#else
+CF_INLINE float  cf_quart_in_out_f(float  x) { if (x < 0.5f) return 8.0f * x * x * x * x; else { float f = (x - 1.0f); return -8.0f * f * f * f * f + 1.0f; } }
+CF_INLINE double cf_quart_in_out_d(double x) { if (x < 0.5)  return 8.0  * x * x * x * x; else { double f = (x - 1.0);  return -8.0  * f * f * f * f + 1.0; } }
+CF_INLINE CF_V2  cf_quart_in_out_v2(CF_V2 x)
+{
+	CF_V2 half = cf_v2(0.5f);
+	float mask = cf_lesser_v2(x, half);
+	CF_V2 in   = cf_mul_v2_f(cf_mul_v2(cf_mul_v2(cf_mul_v2(x, x), x), x), 8.0f);
+	CF_V2 f    = cf_sub_v2(x, cf_v2(1.0f));
+	CF_V2 out  = cf_add_v2(cf_mul_v2_f(cf_mul_v2(cf_mul_v2(cf_mul_v2(f, f), f), f), -8.0f), cf_v2(1.0f));
+	return cf_lerp_v2(out, in, (float)mask);
+}
+#define cf_quart_in_out(x)           \
+	_Generic((x),                    \
+		float:   cf_quart_in_out_f,  \
+		double:  cf_quart_in_out_d,  \
+		CF_V2:   cf_quart_in_out_v2, \
+		default: cf_quart_in_out_f   \
+	)(x)
+#endif
 
 /**
  * @function cf_quint_in
  * @category math
- * @brief    Returns the quintic-in ease of a float from 0.0f to 1.0f.
+ * @brief    Returns the quintic-in ease of `x` from 0.0 to 1.0.
  * @remarks  Here is a great link to [visualize each easing function](https://easings.net/).
  * @related  cf_quint_in cf_quint_out cf_quint_in_out
  */
-CF_INLINE float cf_quint_in(float x) { return x * x * x * x * x; }
+#define cf_quint_in(x)
+#undef cf_quint_in
+#ifdef __cplusplus
+CF_INLINE float  cf_quint_in(float  x) { return x * x * x * x * x; }
+CF_INLINE double cf_quint_in(double x) { return x * x * x * x * x; }
+CF_INLINE CF_V2  cf_quint_in(CF_V2  x) { return cf_mul_v2(cf_mul_v2(cf_mul_v2(cf_mul_v2(x, x), x), x), x); }
+#else
+CF_INLINE float  cf_quint_in_f(float  x) { return x * x * x * x * x; }
+CF_INLINE double cf_quint_in_d(double x) { return x * x * x * x * x; }
+CF_INLINE CF_V2  cf_quint_in_v2(CF_V2 x) { return cf_mul_v2(cf_mul_v2(cf_mul_v2(cf_mul_v2(x, x), x), x), x); }
+#define cf_quint_in(x)           \
+	_Generic((x),                \
+		float:   cf_quint_in_f,  \
+		double:  cf_quint_in_d,  \
+		CF_V2:   cf_quint_in_v2, \
+		default: cf_quint_in_f   \
+	)(x)
+#endif
 
 /**
  * @function cf_quint_out
  * @category math
- * @brief    Returns the quintic-out ease of a float from 0.0f to 1.0f.
+ * @brief    Returns the quintic-out ease of `x` from 0.0 to 1.0.
  * @remarks  Here is a great link to [visualize each easing function](https://easings.net/).
  * @related  cf_quint_in cf_quint_out cf_quint_in_out
  */
-CF_INLINE float cf_quint_out(float x) { float f = (x - 1); return f * f * f * f * f + 1.0f; }
+#define cf_quint_out(x)
+#undef cf_quint_out
+#ifdef __cplusplus
+CF_INLINE float  cf_quint_out(float  x) { float f = (x - 1.0f); return f * f * f * f * f + 1.0f; }
+CF_INLINE double cf_quint_out(double x) { double f = (x - 1.0);  return f * f * f * f * f + 1.0; }
+CF_INLINE CF_V2  cf_quint_out(CF_V2  x) {
+	CF_V2 f = cf_sub_v2(x, cf_v2(1.0f));
+	return cf_add_v2(cf_mul_v2(cf_mul_v2(cf_mul_v2(cf_mul_v2(f, f), f), f), f), cf_v2(1.0f));
+}
+#else
+CF_INLINE float  cf_quint_out_f(float  x) { float f = (x - 1.0f); return f * f * f * f * f + 1.0f; }
+CF_INLINE double cf_quint_out_d(double x) { double f = (x - 1.0);  return f * f * f * f * f + 1.0; }
+CF_INLINE CF_V2  cf_quint_out_v2(CF_V2 x) {
+	CF_V2 f = cf_sub_v2(x, cf_v2(1.0f));
+	return cf_add_v2(cf_mul_v2(cf_mul_v2(cf_mul_v2(cf_mul_v2(f, f), f), f), f), cf_v2(1.0f));
+}
+#define cf_quint_out(x)           \
+	_Generic((x),                 \
+		float:   cf_quint_out_f,  \
+		double:  cf_quint_out_d,  \
+		CF_V2:   cf_quint_out_v2, \
+		default: cf_quint_out_f   \
+	)(x)
+#endif
+
 
 /**
  * @function cf_quint_in_out
  * @category math
- * @brief    Returns the quintic ease of a float from 0.0f to 1.0f.
+ * @brief    Returns the quintic ease of `x` from 0.0 to 1.0.
  * @remarks  Here is a great link to [visualize each easing function](https://easings.net/).
  * @related  cf_quint_in cf_quint_out cf_quint_in_out
  */
-CF_INLINE float cf_quint_in_out(float x) { if (x < 0.5f) return 16.0f * x * x * x * x * x; else { float f = ((2.0f * x) - 2.0f); return  0.5f * f * f * f * f * f + 1.0f; } }
+#define cf_quint_in_out(x)
+#undef cf_quint_in_out
+#ifdef __cplusplus
+CF_INLINE float  cf_quint_in_out(float  x) { if (x < 0.5f) return 16.0f * x * x * x * x * x; else { float f = ((2.0f * x) - 2.0f); return 0.5f * f * f * f * f * f + 1.0f; } }
+CF_INLINE double cf_quint_in_out(double x) { if (x < 0.5)  return 16.0  * x * x * x * x * x; else { double f = ((2.0  * x) - 2.0);  return 0.5  * f * f * f * f * f + 1.0; } }
+CF_INLINE CF_V2  cf_quint_in_out(CF_V2  x)
+{
+	CF_V2 half = cf_v2(0.5f);
+	float mask = cf_lesser_v2(x, half);
+	CF_V2 in   = cf_mul_v2_f(cf_mul_v2(cf_mul_v2(cf_mul_v2(cf_mul_v2(x, x), x), x), x), 16.0f);
+	CF_V2 f    = cf_sub_v2(cf_mul_v2_f(x, 2.0f), cf_v2(2.0f));
+	CF_V2 out  = cf_add_v2(cf_mul_v2_f(cf_mul_v2(cf_mul_v2(cf_mul_v2(cf_mul_v2(f, f), f), f), f), 0.5f), cf_v2(1.0f));
+	return cf_lerp_v2(out, in, (float)mask);
+}
+#else
+CF_INLINE float  cf_quint_in_out_f(float  x) { if (x < 0.5f) return 16.0f * x * x * x * x * x; else { float f = ((2.0f * x) - 2.0f); return 0.5f * f * f * f * f * f + 1.0f; } }
+CF_INLINE double cf_quint_in_out_d(double x) { if (x < 0.5)  return 16.0  * x * x * x * x * x; else { double f = ((2.0  * x) - 2.0);  return 0.5  * f * f * f * f * f + 1.0; } }
+CF_INLINE CF_V2  cf_quint_in_out_v2(CF_V2 x)
+{
+	CF_V2 half = cf_v2(0.5f);
+	float mask = cf_lesser_v2(x, half);
+	CF_V2 in   = cf_mul_v2_f(cf_mul_v2(cf_mul_v2(cf_mul_v2(cf_mul_v2(x, x), x), x), x), 16.0f);
+	CF_V2 f    = cf_sub_v2(cf_mul_v2_f(x, 2.0f), cf_v2(2.0f));
+	CF_V2 out  = cf_add_v2(cf_mul_v2_f(cf_mul_v2(cf_mul_v2(cf_mul_v2(cf_mul_v2(f, f), f), f), f), 0.5f), cf_v2(1.0f));
+	return cf_lerp_v2(out, in, (float)mask);
+}
+#define cf_quint_in_out(x)           \
+	_Generic((x),                    \
+		float:   cf_quint_in_out_f,  \
+		double:  cf_quint_in_out_d,  \
+		CF_V2:   cf_quint_in_out_v2, \
+		default: cf_quint_in_out_f   \
+	)(x)
+#endif
 
 /**
  * @function cf_sin_in
  * @category math
- * @brief    Returns the sin-in ease of a float from 0.0f to 1.0f.
- * @remarks  Here is a great link to [visualize each easing function](https://easings.net/).
- * @related  cf_sin_in cf_sin_out cf_sin_in_out
+ * @brief    Returns the sin-in ease of `x` from 0.0 to 1.0.
  */
-CF_INLINE float cf_sin_in(float x) { return CF_SINF((x - 1.0f) * CF_PI * 0.5f) + 1.0f; }
+#define cf_sin_in(x)
+#undef cf_sin_in
+#ifdef __cplusplus
+CF_INLINE float  cf_sin_in(float  x) { return CF_SINF((x - 1.0f) * CF_PI * 0.5f) + 1.0f; }
+CF_INLINE double cf_sin_in(double x) { return CF_SIN((x - 1.0) * CF_PI * 0.5) + 1.0; }
+CF_INLINE CF_V2  cf_sin_in(CF_V2  x) { return cf_add_v2(cf_sin(cf_mul_v2_f(cf_sub_v2(x, cf_v2(1.0f)), CF_PI * 0.5f)), cf_v2(1.0f)); }
+#else
+CF_INLINE float  cf_sin_in_f(float  x) { return CF_SINF((x - 1.0f) * CF_PI * 0.5f) + 1.0f; }
+CF_INLINE double cf_sin_in_d(double x) { return CF_SIN((x - 1.0) * CF_PI * 0.5) + 1.0; }
+CF_INLINE CF_V2  cf_sin_in_v2(CF_V2 x) { return cf_add_v2(cf_sin(cf_mul_v2_f(cf_sub_v2(x, cf_v2(1.0f)), CF_PI * 0.5f)), cf_v2(1.0f)); }
+#define cf_sin_in(x)           \
+	_Generic((x),              \
+		float:   cf_sin_in_f,  \
+		double:  cf_sin_in_d,  \
+		CF_V2:   cf_sin_in_v2, \
+		default: cf_sin_in_f   \
+	)(x)
+#endif
 
 /**
  * @function cf_sin_out
  * @category math
- * @brief    Returns the sin-out ease of a float from 0.0f to 1.0f.
- * @remarks  Here is a great link to [visualize each easing function](https://easings.net/).
- * @related  cf_sin_in cf_sin_out cf_sin_in_out
+ * @brief    Returns the sin-out ease of `x` from 0.0 to 1.0.
  */
-CF_INLINE float cf_sin_out(float x) { return CF_SINF(x * (CF_PI * 0.5f)); }
+#define cf_sin_out(x)
+#undef cf_sin_out
+#ifdef __cplusplus
+CF_INLINE float  cf_sin_out(float  x) { return CF_SINF(x * (CF_PI * 0.5f)); }
+CF_INLINE double cf_sin_out(double x) { return CF_SIN(x * (CF_PI * 0.5)); }
+CF_INLINE CF_V2  cf_sin_out(CF_V2  x) { return cf_sin(cf_mul_v2_f(x, CF_PI * 0.5f)); }
+#else
+CF_INLINE float  cf_sin_out_f(float  x) { return CF_SINF(x * (CF_PI * 0.5f)); }
+CF_INLINE double cf_sin_out_d(double x) { return CF_SIN(x * (CF_PI * 0.5)); }
+CF_INLINE CF_V2  cf_sin_out_v2(CF_V2 x) { return cf_sin(cf_mul_v2_f(x, CF_PI * 0.5f)); }
+#define cf_sin_out(x)           \
+	_Generic((x),               \
+		float:   cf_sin_out_f,  \
+		double:  cf_sin_out_d,  \
+		CF_V2:   cf_sin_out_v2, \
+		default: cf_sin_out_f   \
+	)(x)
+#endif
 
 /**
  * @function cf_sin_in_out
  * @category math
- * @brief    Returns the sin ease of a float from 0.0f to 1.0f.
- * @remarks  Here is a great link to [visualize each easing function](https://easings.net/).
- * @related  cf_sin_in cf_sin_out cf_sin_in_out
+ * @brief    Returns the sin ease of `x` from 0.0 to 1.0.
  */
-CF_INLINE float cf_sin_in_out(float x) { return 0.5f * (1.0f - CF_COSF(x * CF_PI)); }
+#define cf_sin_in_out(x)
+#undef cf_sin_in_out
+#ifdef __cplusplus
+CF_INLINE float  cf_sin_in_out(float  x) { return 0.5f * (1.0f - CF_COSF(x * CF_PI)); }
+CF_INLINE double cf_sin_in_out(double x) { return 0.5  * (1.0  - CF_COS(x * CF_PI)); }
+CF_INLINE CF_V2  cf_sin_in_out(CF_V2  x) { return cf_mul_v2_f(cf_sub_v2(cf_v2(1.0f), cf_cos(cf_mul_v2_f(x, CF_PI))), 0.5f); }
+#else
+CF_INLINE float  cf_sin_in_out_f(float  x) { return 0.5f * (1.0f - CF_COSF(x * CF_PI)); }
+CF_INLINE double cf_sin_in_out_d(double x) { return 0.5  * (1.0  - CF_COS(x * CF_PI)); }
+CF_INLINE CF_V2  cf_sin_in_out_v2(CF_V2 x) { return cf_mul_v2_f(cf_sub_v2(cf_v2(1.0f), cf_cos(cf_mul_v2_f(x, CF_PI))), 0.5f); }
+#define cf_sin_in_out(x)           \
+	_Generic((x),                  \
+		float:   cf_sin_in_out_f,  \
+		double:  cf_sin_in_out_d,  \
+		CF_V2:   cf_sin_in_out_v2, \
+		default: cf_sin_in_out_f   \
+	)(x)
+#endif
 
 /**
  * @function cf_circle_in
  * @category math
- * @brief    Returns the circle-in ease of a float from 0.0f to 1.0f.
+ * @brief    Returns the circle-in ease of `x` from 0.0 to 1.0.
  * @remarks  Here is a great link to [visualize each easing function](https://easings.net/).
  * @related  cf_circle_in cf_circle_out cf_circle_in_out
  */
-CF_INLINE float cf_circle_in(float x) { return 1.0f - CF_SQRTF(1.0f - (x * x)); }
+#define cf_circle_in(x)
+#undef cf_circle_in
+#ifdef __cplusplus
+CF_INLINE float  cf_circle_in(float  x) { return 1.0f - CF_SQRTF(1.0f - (x * x)); }
+CF_INLINE double cf_circle_in(double x) { return 1.0  - CF_SQRT(1.0  - (x * x)); }
+CF_INLINE CF_V2  cf_circle_in(CF_V2  x) {
+	return cf_sub_v2(cf_v2(1.0f), cf_sqrt_v2(cf_sub_v2(cf_v2(1.0f), cf_mul_v2(x, x))));
+}
+#else
+CF_INLINE float  cf_circle_in_f(float  x) { return 1.0f - CF_SQRTF(1.0f - (x * x)); }
+CF_INLINE double cf_circle_in_d(double x) { return 1.0  - CF_SQRT(1.0  - (x * x)); }
+CF_INLINE CF_V2  cf_circle_in_v2(CF_V2 x) {
+	return cf_sub_v2(cf_v2(1.0f), cf_sqrt_v2(cf_sub_v2(cf_v2(1.0f), cf_mul_v2(x, x))));
+}
+#define cf_circle_in(x)           \
+	_Generic((x),                 \
+		float:   cf_circle_in_f,  \
+		double:  cf_circle_in_d,  \
+		CF_V2:   cf_circle_in_v2, \
+		default: cf_circle_in_f   \
+	)(x)
+#endif
 
 /**
  * @function cf_circle_out
  * @category math
- * @brief    Returns the circle-out ease of a float from 0.0f to 1.0f.
+ * @brief    Returns the circle-out ease of `x` from 0.0 to 1.0.
  * @remarks  Here is a great link to [visualize each easing function](https://easings.net/).
  * @related  cf_circle_in cf_circle_out cf_circle_in_out
  */
-CF_INLINE float cf_circle_out(float x) { return CF_SQRTF((2.0f - x) * x); }
+#define cf_circle_out(x)
+#undef cf_circle_out
+#ifdef __cplusplus
+CF_INLINE float  cf_circle_out(float  x) { return CF_SQRTF((2.0f - x) * x); }
+CF_INLINE double cf_circle_out(double x) { return CF_SQRT((2.0  - x) * x); }
+CF_INLINE CF_V2  cf_circle_out(CF_V2  x) {
+	return cf_sqrt_v2(cf_mul_v2(cf_sub_v2(cf_v2(2.0f), x), x));
+}
+#else
+CF_INLINE float  cf_circle_out_f(float  x) { return CF_SQRTF((2.0f - x) * x); }
+CF_INLINE double cf_circle_out_d(double x) { return CF_SQRT((2.0  - x) * x); }
+CF_INLINE CF_V2  cf_circle_out_v2(CF_V2 x) {
+	return cf_sqrt_v2(cf_mul_v2(cf_sub_v2(cf_v2(2.0f), x), x));
+}
+#define cf_circle_out(x)           \
+	_Generic((x),                  \
+		float:   cf_circle_out_f,  \
+		double:  cf_circle_out_d,  \
+		CF_V2:   cf_circle_out_v2, \
+		default: cf_circle_out_f   \
+	)(x)
+#endif
 
 /**
  * @function cf_circle_in_out
  * @category math
- * @brief    Returns the circle ease of a float from 0.0f to 1.0f.
+ * @brief    Returns the circle ease of `x` from 0.0 to 1.0.
  * @remarks  Here is a great link to [visualize each easing function](https://easings.net/).
  * @related  cf_circle_in cf_circle_out cf_circle_in_out
  */
-CF_INLINE float cf_circle_in_out(float x) { if (x < 0.5f) return 0.5f * (1.0f - CF_SQRTF(1.0f - 4.0f * (x * x))); else return 0.5f * (CF_SQRTF(-((2.0f * x) - 3.0f) * ((2.0f * x) - 1.0f)) + 1.0f); }
+#define cf_circle_in_out(x)
+#undef cf_circle_in_out
+#ifdef __cplusplus
+CF_INLINE float  cf_circle_in_out(float  x) { if (x < 0.5f) return 0.5f * (1.0f - CF_SQRTF(1.0f - 4.0f * (x * x))); else return 0.5f * (CF_SQRTF(-((2.0f * x) - 3.0f) * ((2.0f * x) - 1.0f)) + 1.0f); }
+CF_INLINE double cf_circle_in_out(double x) { if (x < 0.5) return 0.5  * (1.0  - CF_SQRT(1.0  - 4.0  * (x * x))); else return 0.5  * (CF_SQRT(-((2.0  * x) - 3.0 ) * ((2.0  * x) - 1.0 )) + 1.0 ); }
+CF_INLINE CF_V2  cf_circle_in_out(CF_V2  x)
+{
+	CF_V2 half = cf_v2(0.5f);
+	float mask = cf_lesser_v2(x, half);
+	CF_V2 one = cf_v2(1.0f);
+	CF_V2 two = cf_v2(2.0f);
+	CF_V2 in = cf_mul_v2_f(cf_sub_v2(one, cf_sqrt_v2(cf_sub_v2(one, cf_mul_v2_f(cf_mul_v2(x, x), 4.0f)))), 0.5f);
+	CF_V2 term = cf_mul_v2(cf_sub_v2(cf_mul_v2_f(x, 2.0f), cf_v2(3.0f)), cf_sub_v2(cf_mul_v2_f(x, 2.0f), cf_v2(1.0f)));
+	CF_V2 out = cf_mul_v2_f(cf_add_v2(cf_sqrt_v2(cf_neg_v2(term)), cf_v2(1.0f)), 0.5f);
+	return cf_lerp_v2(out, in, (float)mask);
+}
+#else
+CF_INLINE float  cf_circle_in_out_f(float  x) { if (x < 0.5f) return 0.5f * (1.0f - CF_SQRTF(1.0f - 4.0f * (x * x))); else return 0.5f * (CF_SQRTF(-((2.0f * x) - 3.0f) * ((2.0f * x) - 1.0f)) + 1.0f); }
+CF_INLINE double cf_circle_in_out_d(double x) { if (x < 0.5) return 0.5  * (1.0  - CF_SQRT(1.0  - 4.0  * (x * x))); else return 0.5  * (CF_SQRT(-((2.0  * x) - 3.0 ) * ((2.0  * x) - 1.0 )) + 1.0 ); }
+CF_INLINE CF_V2  cf_circle_in_out_v2(CF_V2 x)
+{
+	CF_V2 half = cf_v2(0.5f);
+	float mask = cf_lesser_v2(x, half);
+	CF_V2 one = cf_v2(1.0f);
+	CF_V2 two = cf_v2(2.0f);
+	CF_V2 in = cf_mul_v2_f(cf_sub_v2(one, cf_sqrt_v2(cf_sub_v2(one, cf_mul_v2_f(cf_mul_v2(x, x), 4.0f)))), 0.5f);
+	CF_V2 term = cf_mul_v2(cf_sub_v2(cf_mul_v2_f(x, 2.0f), cf_v2(3.0f)), cf_sub_v2(cf_mul_v2_f(x, 2.0f), cf_v2(1.0f)));
+	CF_V2 out = cf_mul_v2_f(cf_add_v2(cf_sqrt_v2(cf_neg_v2(term)), cf_v2(1.0f)), 0.5f);
+	return cf_lerp_v2(out, in, (float)mask);
+}
+#define cf_circle_in_out(x)           \
+	_Generic((x),                     \
+		float:   cf_circle_in_out_f,  \
+		double:  cf_circle_in_out_d,  \
+		CF_V2:   cf_circle_in_out_v2, \
+		default: cf_circle_in_out_f   \
+	)(x)
+#endif
 
 /**
  * @function cf_back_in
  * @category math
- * @brief    Returns the back-in ease of a float from 0.0f to 1.0f.
+ * @brief    Returns the back-in ease of `x` from 0.0 to 1.0.
  * @remarks  Here is a great link to [visualize each easing function](https://easings.net/).
  * @related  cf_back_in cf_back_out cf_back_in_out
  */
-CF_INLINE float cf_back_in(float x) { return x * x * x - x * CF_SINF(x * CF_PI); }
+#define cf_back_in(x)
+#undef cf_back_in
+#ifdef __cplusplus
+CF_INLINE float  cf_back_in(float  x) { return x * x * x - x * CF_SINF(x * CF_PI); }
+CF_INLINE double cf_back_in(double x) { return x * x * x - x * CF_SIN(x * CF_PI); }
+CF_INLINE CF_V2  cf_back_in(CF_V2  x) {
+	return cf_sub_v2(cf_mul_v2(cf_mul_v2(x, x), x), cf_mul_v2(x, cf_sin(cf_mul_v2_f(x, CF_PI))));
+}
+#else
+CF_INLINE float  cf_back_in_f(float  x) { return x * x * x - x * CF_SINF(x * CF_PI); }
+CF_INLINE double cf_back_in_d(double x) { return x * x * x - x * CF_SIN(x * CF_PI); }
+CF_INLINE CF_V2  cf_back_in_v2(CF_V2 x) {
+	return cf_sub_v2(cf_mul_v2(cf_mul_v2(x, x), x), cf_mul_v2(x, cf_sin(cf_mul_v2_f(x, CF_PI))));
+}
+#define cf_back_in(x)           \
+	_Generic((x),               \
+		float:   cf_back_in_f,  \
+		double:  cf_back_in_d,  \
+		CF_V2:   cf_back_in_v2, \
+		default: cf_back_in_f   \
+	)(x)
+#endif
 
 /**
  * @function cf_back_out
  * @category math
- * @brief    Returns the back-out ease of a float from 0.0f to 1.0f.
+ * @brief    Returns the back-out ease of `x` from 0.0 to 1.0.
  * @remarks  Here is a great link to [visualize each easing function](https://easings.net/).
  * @related  cf_back_in cf_back_out cf_back_in_out
  */
-CF_INLINE float cf_back_out(float x) { float f = (1.0f - x); return 1.0f - (x * x * x - x * CF_SINF(f * CF_PI)); }
+#define cf_back_out(x)
+#undef cf_back_out
+#ifdef __cplusplus
+CF_INLINE float  cf_back_out(float  x) { float f = (1.0f - x); return 1.0f - (x * x * x - x * CF_SINF(f * CF_PI)); }
+CF_INLINE double cf_back_out(double x) { double f = (1.0  - x); return 1.0  - (x * x * x - x * CF_SIN(f * CF_PI)); }
+CF_INLINE CF_V2  cf_back_out(CF_V2  x) {
+	CF_V2 one = cf_v2(1.0f);
+	CF_V2 f   = cf_sub_v2(one, x);
+	return cf_sub_v2(one, cf_sub_v2(cf_mul_v2(cf_mul_v2(x, x), x), cf_mul_v2(x, cf_sin(cf_mul_v2_f(f, CF_PI)))));
+}
+#else
+CF_INLINE float  cf_back_out_f(float  x) { float f = (1.0f - x); return 1.0f - (x * x * x - x * CF_SINF(f * CF_PI)); }
+CF_INLINE double cf_back_out_d(double x) { double f = (1.0  - x); return 1.0  - (x * x * x - x * CF_SIN(f * CF_PI)); }
+CF_INLINE CF_V2  cf_back_out_v2(CF_V2 x) {
+	CF_V2 one = cf_v2(1.0f);
+	CF_V2 f   = cf_sub_v2(one, x);
+	return cf_sub_v2(one, cf_sub_v2(cf_mul_v2(cf_mul_v2(x, x), x), cf_mul_v2(x, cf_sin(cf_mul_v2_f(f, CF_PI)))));
+}
+#define cf_back_out(x)           \
+	_Generic((x),                \
+		float:   cf_back_out_f,  \
+		double:  cf_back_out_d,  \
+		CF_V2:   cf_back_out_v2, \
+		default: cf_back_out_f   \
+	)(x)
+#endif
 
 /**
  * @function cf_back_in_out
  * @category math
- * @brief    Returns the back ease of a float from 0.0f to 1.0f.
+ * @brief    Returns the back ease of `x` from 0.0 to 1.0.
  * @remarks  Here is a great link to [visualize each easing function](https://easings.net/).
  * @related  cf_back_in cf_back_out cf_back_in_out
  */
-CF_INLINE float cf_back_in_out(float x) { if (x < 0.5f) { float f = 2.0f * x; return 0.5f * (f * f * f - f * CF_SINF(f * CF_PI)); } else { float f = (1.0f - (2.0f * x - 1.0f)); return 0.5f * (1.0f - (f * f * f - f * CF_SINF(f * CF_PI))) + 0.5f; } }
+#define cf_back_in_out(x)
+#undef cf_back_in_out
+#ifdef __cplusplus
+CF_INLINE float  cf_back_in_out(float  x) { if (x < 0.5f) { float f = 2.0f * x; return 0.5f * (f * f * f - f * CF_SINF(f * CF_PI)); } else { float f = (1.0f - (2.0f * x - 1.0f)); return 0.5f * (1.0f - (f * f * f - f * CF_SINF(f * CF_PI))) + 0.5f; } }
+CF_INLINE double cf_back_in_out(double x) { if (x < 0.5) { double f = 2.0 * x; return 0.5 * (f * f * f - f * CF_SIN(f * CF_PI)); } else { double f = (1.0 - (2.0 * x - 1.0)); return 0.5 * (1.0 - (f * f * f - f * CF_SIN(f * CF_PI))) + 0.5; } }
+CF_INLINE CF_V2  cf_back_in_out(CF_V2  x)
+{
+	CF_V2 half = cf_v2(0.5f);
+	float mask = cf_lesser_v2(x, half);
+	CF_V2 one = cf_v2(1.0f);
+	CF_V2 two = cf_v2(2.0f);
+	CF_V2 f_in = cf_mul_v2_f(x, 2.0f);
+	CF_V2 in = cf_mul_v2_f(cf_sub_v2(cf_mul_v2(cf_mul_v2(f_in, f_in), f_in), cf_mul_v2(f_in, cf_sin(cf_mul_v2_f(f_in, CF_PI)))), 0.5f);
+	CF_V2 f_out = cf_sub_v2(one, cf_sub_v2(cf_mul_v2_f(x, 2.0f), cf_v2(1.0f)));
+	CF_V2 out = cf_add_v2(cf_mul_v2_f(cf_sub_v2(one, cf_sub_v2(cf_mul_v2(cf_mul_v2(f_out, f_out), f_out), cf_mul_v2(f_out, cf_sin(cf_mul_v2_f(f_out, CF_PI))))), 0.5f), cf_v2(0.5f));
+	return cf_lerp_v2(out, in, (float)mask);
+}
+#else
+CF_INLINE float  cf_back_in_out_f(float  x) { if (x < 0.5f) { float f = 2.0f * x; return 0.5f * (f * f * f - f * CF_SINF(f * CF_PI)); } else { float f = (1.0f - (2.0f * x - 1.0f)); return 0.5f * (1.0f - (f * f * f - f * CF_SINF(f * CF_PI))) + 0.5f; } }
+CF_INLINE double cf_back_in_out_d(double x) { if (x < 0.5) { double f = 2.0 * x; return 0.5 * (f * f * f - f * CF_SIN(f * CF_PI)); } else { double f = (1.0 - (2.0 * x - 1.0)); return 0.5 * (1.0 - (f * f * f - f * CF_SIN(f * CF_PI))) + 0.5; } }
+CF_INLINE CF_V2  cf_back_in_out_v2(CF_V2 x)
+{
+	CF_V2 half = cf_v2(0.5f);
+	float mask = cf_lesser_v2(x, half);
+	CF_V2 one = cf_v2(1.0f);
+	CF_V2 two = cf_v2(2.0f);
+	CF_V2 f_in = cf_mul_v2_f(x, 2.0f);
+	CF_V2 in = cf_mul_v2_f(cf_sub_v2(cf_mul_v2(cf_mul_v2(f_in, f_in), f_in), cf_mul_v2(f_in, cf_sin(cf_mul_v2_f(f_in, CF_PI)))), 0.5f);
+	CF_V2 f_out = cf_sub_v2(one, cf_sub_v2(cf_mul_v2_f(x, 2.0f), cf_v2(1.0f)));
+	CF_V2 out = cf_add_v2(cf_mul_v2_f(cf_sub_v2(one, cf_sub_v2(cf_mul_v2(cf_mul_v2(f_out, f_out), f_out), cf_mul_v2(f_out, cf_sin(cf_mul_v2_f(f_out, CF_PI))))), 0.5f), cf_v2(0.5f));
+	return cf_lerp_v2(out, in, (float)mask);
+}
+#define cf_back_in_out(x)           \
+	_Generic((x),                   \
+		float:   cf_back_in_out_f,  \
+		double:  cf_back_in_out_d,  \
+		CF_V2:   cf_back_in_out_v2, \
+		default: cf_back_in_out_f   \
+	)(x)
+#endif
 
 //--------------------------------------------------------------------------------------------------
 // 2D vector ops.
@@ -796,6 +1811,14 @@ CF_INLINE CF_V2 cf_mul_v2(CF_V2 a, CF_V2 b) { return cf_v2(a.x * b.x, a.y * b.y)
  * @related  CF_V2 cf_mul_v2_f cf_mul_v2 cf_div_v2_f
  */
 CF_INLINE CF_V2 cf_div_v2_f(CF_V2 a, float b) { return cf_v2(a.x / b, a.y / b); }
+
+/**
+ * @function cf_div_v2
+ * @category math
+ * @brief    Divides two vectors together component-wise.
+ * @related  TODO
+ */
+CF_INLINE CF_V2 cf_div_v2(CF_V2 a, CF_V2 b) { return (CF_V2){ a.x / b.x, a.y / b.y }; }
 
 /**
  * @function cf_skew
@@ -854,48 +1877,6 @@ CF_INLINE CF_V2 cf_cross_v2_f(CF_V2 a, float b) { return cf_v2(b * a.y, -b * a.x
  * @related  CF_V2 cf_skew cf_cw90 cf_det2 cf_cross cf_cross_v2_f cf_cross_f_v2
  */
 CF_INLINE CF_V2 cf_cross_f_v2(float a, CF_V2 b) { return cf_v2(-a * b.y, a * b.x); }
-
-/**
- * @function cf_min_v2
- * @category math
- * @brief    Returns the component-wise minimum of two vectors.
- * @remarks  The vector returned has the value `{ cf_min(a.x, b.x), cf_min(a.y, b.y) }`. See `cf_min`.
- * @related  CF_V2 cf_min_v2 cf_max_v2 cf_clamp_v2 cf_clamp01_v2 cf_abs_v2 cf_hmin cf_hmax
- */
-CF_INLINE CF_V2 cf_min_v2(CF_V2 a, CF_V2 b) { return cf_v2(cf_min(a.x, b.x), cf_min(a.y, b.y)); }
-
-/**
- * @function cf_max_v2
- * @category math
- * @brief    Returns the component-wise maximum of two vectors.
- * @remarks  The vector returned has the value `{ cf_max(a.x, b.x), cf_max(a.y, b.y) }`. See `cf_max`.
- * @related  CF_V2 cf_min_v2 cf_max_v2 cf_clamp_v2 cf_clamp01_v2 cf_abs_v2 cf_hmin cf_hmax
- */
-CF_INLINE CF_V2 cf_max_v2(CF_V2 a, CF_V2 b) { return cf_v2(cf_max(a.x, b.x), cf_max(a.y, b.y)); }
-
-/**
- * @function cf_clamp_v2
- * @category math
- * @brief    Returns the component-wise clamp of two vectors from `lo` to `hi`.
- * @related  CF_V2 cf_min_v2 cf_max_v2 cf_clamp_v2 cf_clamp01_v2 cf_abs_v2 cf_hmin cf_hmax
- */
-CF_INLINE CF_V2 cf_clamp_v2(CF_V2 a, CF_V2 lo, CF_V2 hi) { return cf_max_v2(lo, cf_min_v2(a, hi)); }
-
-/**
- * @function cf_clamp01_v2
- * @category math
- * @brief    Returns the component-wise clamp of two vectors from 0.0f to 1.0f.
- * @related  CF_V2 cf_min_v2 cf_max_v2 cf_clamp_v2 cf_clamp01_v2 cf_abs_v2 cf_hmin cf_hmax
- */
-CF_INLINE CF_V2 cf_clamp01_v2(CF_V2 a) { return cf_max_v2(cf_v2(0, 0), cf_min_v2(a, cf_v2(1, 1))); }
-
-/**
- * @function cf_abs_v2
- * @category math
- * @brief    Returns the component-wise absolute value of two vectors.
- * @related  CF_V2 cf_min_v2 cf_max_v2 cf_clamp_v2 cf_clamp01_v2 cf_abs_v2 cf_hmin cf_hmax
- */
-CF_INLINE CF_V2 cf_abs_v2(CF_V2 a) { return cf_v2(CF_FABSF(a.x), CF_FABSF(a.y)); }
 
 /**
  * @function cf_hmin
@@ -1062,7 +2043,7 @@ CF_INLINE int cf_greater_equal_v2(CF_V2 a, CF_V2 b) { return a.x >= b.x && a.y >
  * @remarks  Floor means the decimal-point part is zero'd out.
  * @related  CF_V2 cf_round cf_lesser_v2 cf_greater_v2 cf_lesser_equal_v2 cf_greater_equal_v2 cf_parallel cf_floor cf_ceil
  */
-CF_INLINE CF_V2 cf_floor(CF_V2 a) { return cf_v2(CF_FLOORF(a.x), CF_FLOORF(a.y)); }
+CF_INLINE CF_V2 cf_floor_v2(CF_V2 a) { return cf_v2(CF_FLOORF(a.x), CF_FLOORF(a.y)); }
 
 /**
  * @function cf_ceil
@@ -1071,7 +2052,7 @@ CF_INLINE CF_V2 cf_floor(CF_V2 a) { return cf_v2(CF_FLOORF(a.x), CF_FLOORF(a.y))
  * @remarks  Ceil means the number is clamped up to the next whole-number.
  * @related  CF_V2 cf_round cf_lesser_v2 cf_greater_v2 cf_lesser_equal_v2 cf_greater_equal_v2 cf_parallel cf_floor cf_ceil
  */
-CF_INLINE CF_V2 cf_ceil(CF_V2 a) { return cf_v2(CF_CEILF(a.x), CF_CEILF(a.y)); }
+CF_INLINE CF_V2 cf_ceil_v2(CF_V2 a) { return cf_v2(CF_CEILF(a.x), CF_CEILF(a.y)); }
 
 /**
  * @function cf_round
@@ -1080,7 +2061,7 @@ CF_INLINE CF_V2 cf_ceil(CF_V2 a) { return cf_v2(CF_CEILF(a.x), CF_CEILF(a.y)); }
  * @remarks  Rounding means clamping the float to the nearest whole integer value.
  * @related  CF_V2 cf_lesser_v2 cf_greater_v2 cf_lesser_equal_v2 cf_greater_equal_v2 cf_parallel
  */
-CF_INLINE CF_V2 cf_round(CF_V2 a) { return cf_v2(CF_ROUNDF(a.x), CF_ROUNDF(a.y)); }
+CF_INLINE CF_V2 cf_round_v2(CF_V2 a) { return cf_v2(CF_ROUNDF(a.x), CF_ROUNDF(a.y)); }
 
 /**
  * @function cf_safe_invert_v2
