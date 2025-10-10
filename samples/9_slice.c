@@ -1,5 +1,5 @@
 #include <cute.h>
-#include "dcimgui.h"
+#include <dcimgui.h>
 
 void mount_content_directory_as(const char* dir)
 {
@@ -23,7 +23,8 @@ int main(int argc, char* argv[])
 	float rotation = 0.0f;
 	bool is_tiled = false;
 
-	cf_htbl const char* animations = cf_hashtable_keys(sprite.animations);
+	cf_htbl const char** animations = (const char**)cf_hashtable_keys(sprite.animations);
+	int animation_index = 0;
 
 	while (cf_app_is_running()) {
 		cf_app_update(NULL);
@@ -39,14 +40,16 @@ int main(int argc, char* argv[])
 			cf_draw_sprite_9_slice(&sprite);
 		}
 
-		ImGui_Begin("9 Slice");
-		{
-			ImGui_Checkbox("Tiled?", &is_tiled);
-			ImGui_SliderFloat2("Position", (float*)&sprite.transform.p, -20, 20);
-			ImGui_SliderFloat2("Scale", (float*)&sprite.scale, -2, 2);
-			ImGui_SliderFloat("Rotation", &rotation, 0, 360);
-			sprite.transform.r = cf_sincos_f(rotation * CF_PI / 180.0f);
+		ImGui_Begin("9 Slice", NULL, ImGuiWindowFlags_None);
+		if (ImGui_ComboChar("Animation", &animation_index, animations, cf_hashtable_count(sprite.animations))) {
+			cf_sprite_play(&sprite, animations[animation_index]);
 		}
+
+		ImGui_Checkbox("Tiled?", &is_tiled);
+		ImGui_SliderFloat2("Position", (float*)&sprite.transform.p, -20, 20);
+		ImGui_SliderFloat2("Scale", (float*)&sprite.scale, -2, 2);
+		ImGui_SliderFloat("Rotation", &rotation, 0, 360);
+		sprite.transform.r = cf_sincos_f(rotation * CF_PI / 180.0f);
 		ImGui_End();
 
 		cf_sprite_draw(&demo);
