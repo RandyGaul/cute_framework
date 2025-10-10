@@ -14,14 +14,14 @@
 #include "cute_array.h"
 #include "cute_hashtable.h"
 
+#ifndef CF_EMSCRIPTEN
+
 //--------------------------------------------------------------------------------------------------
 // C API
 
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
-
-#ifndef CF_EMSCRIPTEN
 
 /**
  * @struct   CF_HttpsRequest

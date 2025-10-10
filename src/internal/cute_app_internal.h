@@ -71,7 +71,8 @@ struct CF_App
 	void* platform_handle = NULL;
 	CF_OnUpdateFn* user_on_update = NULL;
 	SDL_Window* window = NULL;
-	SDL_GPUDevice* device = NULL;
+	CF_BackendType gfx_backend_type = CF_BACKEND_TYPE_INVALID;
+	bool debug_opengl = false;
 	cs_context_t* cute_sound = NULL;
 	bool spawned_mix_thread = false;
 	void (*on_shader_changed_fn)(const char* path, void* udata) = NULL;
@@ -95,14 +96,8 @@ struct CF_App
 	float clear_depth = 1.0f;
 	uint32_t clear_stencil = 0;
 	CF_Canvas offscreen_canvas = { };
-	CF_Mesh backbuffer_quad = { };
-	CF_Shader draw_shader = { };
-	CF_Shader basic_shader = { };
-	CF_Shader backbuffer_shader = { };
-	CF_Material backbuffer_material = { };
 	CF_WindowState window_state;
 	CF_WindowState window_state_prev;
-	SDL_GPUCommandBuffer* cmd = NULL;
 	int sample_count = 0;
 	bool use_depth_stencil = false;
 	uint64_t default_image_id = CF_PNG_ID_RANGE_LO;
@@ -117,6 +112,7 @@ struct CF_App
 	void* on_sound_finish_udata = NULL;
 	void* on_music_finish_udata = NULL;
 	CF_Mutex on_sound_finish_mutex = cf_make_mutex();
+	CF_Shader draw_shader = { 0 };
 	CF_Shader blit_shader = { 0 };
 
 	// Input stuff.

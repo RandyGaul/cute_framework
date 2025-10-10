@@ -8,6 +8,11 @@
 #ifndef CF_NETWORKING_H
 #define CF_NETWORKING_H
 
+#include <cute_defines.h>
+
+// This entire file makes no sense for web builds, since web doesn't allow UDP.
+#ifndef CF_EMSCRIPTEN
+
 #include <cute_result.h>
 #include <cute/cute_net.h>
 
@@ -763,5 +768,7 @@ CF_INLINE void server_enable_network_simulator(Server* server, double latency, d
 }
 
 #endif // CF_CPP
+
+#endif // CF_EMSCRIPTEN
 
 #endif // CF_NETWORKING_H

@@ -346,8 +346,6 @@ struct Array
 
 	Array<T>& operator=(const Array<T>& rhs);
 	Array<T>& operator=(Array<T>&& rhs);
-	Array<T>& steal_from(Array<T>* steal_from_me);
-	Array<T>& steal_from(Array<T>& steal_from_me);
 
 	T& last();
 	const T& last() const;
@@ -365,22 +363,21 @@ private:
 
 // Manually force-inline a few functions via macros to help with debug performance.
 
-#define CF_ARRAY_ENSURE_CAPACITY(capacity)                     \
-	int num_elements = capacity;                               \
-	if (num_elements > m_capacity) {                           \
-		if (m_capacity == 0) {                                 \
-			m_capacity = 8;                                    \
-		}                                                      \
-		while (m_capacity < num_elements) {                    \
-			m_capacity *= 2;                                   \
-		}                                                      \
-		T* new_ptr = (T*)cf_alloc(sizeof(T) * m_capacity);     \
-		for (int i = 0; i < m_count; ++i) {                    \
-			CF_PLACEMENT_NEW(new_ptr + i) T(cf_move(m_ptr[i]));\
-		}                                                      \
-		cf_free(m_ptr);                                        \
-		m_ptr = new_ptr;                                       \
-	}                                                          \
+#define CF_ARRAY_ENSURE_CAPACITY(capacity)                      \
+    int num_elements = (capacity);                              \
+    if (num_elements > m_capacity) {                            \
+        if (m_capacity == 0) m_capacity = 8;                    \
+        while (m_capacity < num_elements) m_capacity *= 2;      \
+        T* new_ptr = (T*)cf_alloc(sizeof(T) * m_capacity);      \
+        for (int i = 0; i < m_count; ++i) {                     \
+            CF_PLACEMENT_NEW(new_ptr + i) T(cf_move(m_ptr[i])); \
+        }                                                       \
+        for (int i = 0; i < m_count; ++i) {                     \
+            m_ptr[i].~T();                                      \
+        }                                                       \
+        cf_free(m_ptr);                                         \
+        m_ptr = new_ptr;                                        \
+    }
 
 #define CF_ARRAY_CLEAR()                \
 	for (int i = 0; i < m_count; i++) { \
@@ -413,12 +410,14 @@ Array<T>::Array(const Array<T>& other)
 }
 
 template <typename T>
+inline void swap(T& a, T& b) { T tmp = cf_move(a); a = cf_move(b); b = cf_move(tmp); }
+
+template <typename T>
 Array<T>::Array(Array<T>&& other)
 {
-	m_capacity = other.m_capacity;
-	m_count = other.m_count;
-	m_ptr = other.m_ptr;
-	CF_MEMSET(&other, 0, sizeof(other));
+	swap(m_capacity, other.m_capacity);
+	swap(m_count, other.m_count);
+	swap(m_ptr, other.m_ptr);
 }
 
 template <typename T>
@@ -434,26 +433,6 @@ Array<T>::~Array()
 		m_ptr[i].~T();
 	}
 	cf_free(m_ptr);
-}
-
-template <typename T>
-Array<T>& Array<T>::steal_from(Array<T>* steal_from_me)
-{
-	m_capacity = steal_from_me->m_capacity;
-	m_count = steal_from_me->m_count;
-	m_ptr = steal_from_me->m_ptr;
-	CF_MEMSET(steal_from_me, 0, sizeof(*steal_from_me));
-	return *this;
-}
-
-template <typename T>
-Array<T>& Array<T>::steal_from(Array<T>& steal_from_me)
-{
-	m_capacity = steal_from_me.m_capacity;
-	m_count = steal_from_me.m_count;
-	m_ptr = steal_from_me.m_ptr;
-	CF_MEMSET(&steal_from_me, 0, sizeof(steal_from_me));
-	return *this;
 }
 
 template <typename T>
@@ -490,10 +469,13 @@ T Array<T>::pop()
 template <typename T>
 void Array<T>::unordered_remove(int index)
 {
-	m_ptr[index].~T();
-	if (index != --m_count) {
-		m_ptr[index] = cf_move(m_ptr[m_count]);
+	CF_ASSERT(index >= 0 && index < m_count);
+	const int last = m_count - 1;
+	if (index != last) {
+		m_ptr[index] = cf_move(m_ptr[last]);
 	}
+	m_ptr[last].~T();
+	--m_count;
 }
 
 template <typename T>
@@ -539,15 +521,14 @@ void Array<T>::ensure_count(int count)
 template <typename T>
 void Array<T>::reverse()
 {
+	if (m_count <= 1) return;
 	T* a = m_ptr;
 	T* b = m_ptr + (m_count - 1);
-
 	while (a < b) {
 		T t = cf_move(*a);
 		*a = cf_move(*b);
 		*b = cf_move(t);
-		++a;
-		--b;
+		++a; --b;
 	}
 }
 
@@ -642,6 +623,7 @@ const T* Array<T>::operator+(int index) const
 template <typename T>
 Array<T>& Array<T>::operator=(const Array<T>& rhs)
 {
+	if (this == &rhs) return *this;
 	CF_ARRAY_CLEAR();
 	CF_ARRAY_ENSURE_CAPACITY(rhs.m_count);
 	for (int i = 0; i < rhs.m_count; i++) {
@@ -654,11 +636,9 @@ Array<T>& Array<T>::operator=(const Array<T>& rhs)
 template <typename T>
 Array<T>& Array<T>::operator=(Array<T>&& rhs)
 {
-	CF_ARRAY_CLEAR();
-	m_capacity = rhs.m_capacity;
-	m_count = rhs.m_count;
-	m_ptr = rhs.m_ptr;
-	CF_MEMSET(&rhs, 0, sizeof(rhs));
+	swap(m_capacity, rhs.m_capacity);
+	swap(m_count, rhs.m_count);
+	swap(m_ptr, rhs.m_ptr);
 	return *this;
 }
 

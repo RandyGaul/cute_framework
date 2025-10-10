@@ -26,14 +26,13 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 
 # Platform detection.
-if(WIN32)
+# Put Emscripten first so it doesn't fall into the generic UNIX/Linux path.
+if(CMAKE_SYSTEM_NAME STREQUAL "Emscripten" OR DEFINED EMSCRIPTEN)
+	set(EMSCRIPTEN TRUE)
+
+elseif(WIN32)
 	set(WINDOWS TRUE)
-elseif(UNIX AND NOT APPLE)
-	if(CMAKE_SYSTEM_NAME MATCHES ".*Linux")
-		set(LINUX TRUE)
-	else()
-		message(FATAL_ERROR, "No supported platform detected.")
-	endif()
+
 elseif(APPLE)
 	enable_language(OBJC)
 	if(CMAKE_SYSTEM_NAME MATCHES ".*MacOS.*" OR CMAKE_SYSTEM_NAME MATCHES ".*Darwin.*")
@@ -41,10 +40,18 @@ elseif(APPLE)
 	elseif(CMAKE_SYSTEM_NAME MATCHES ".*iOS.*")
 		set(IOS TRUE)
 	else()
-		message(FATAL_ERROR, "No supported platform detected.")
+		message(FATAL_ERROR "No supported Apple platform detected.")
 	endif()
+
+elseif(UNIX AND NOT APPLE)
+	if(CMAKE_SYSTEM_NAME MATCHES ".*Linux")
+		set(LINUX TRUE)
+	else()
+		message(FATAL_ERROR "No supported UNIX platform detected.")
+	endif()
+
 else()
-	message(FATAL_ERROR, "No supported platform detected.")
+	message(FATAL_ERROR "No supported platform detected.")
 endif()
 
 # Disable annoying MSVC warnings.
@@ -59,7 +66,6 @@ if(CF_FRAMEWORK_WITH_HTTPS MATCHES OFF)
 	add_definitions(-DCF_NO_HTTPS)
 endif()
 
-add_definitions("-DIMGUI_USER_CONFIG=\"cimgui/cimconfig.h\"")
 configure_file(
 	"${CMAKE_CURRENT_SOURCE_DIR}/include/cute_version.h.in"
 	"${CMAKE_CURRENT_SOURCE_DIR}/include/cute_version.h"
@@ -70,7 +76,6 @@ configure_file(
 	"${CMAKE_CURRENT_SOURCE_DIR}/src/cute_version.cpp"
 	@ONLY
 )
-
 
 # Common directories for compiler/linker path.
 include_directories(src libraries test)
@@ -94,6 +99,9 @@ set(CF_SRCS
 	src/cute_draw.cpp
 	src/cute_image.cpp
 	src/cute_graphics.cpp
+	src/cute_graphics_sdlgpu.cpp
+	src/cute_graphics_gles.cpp
+	src/cute_graphics_glad.cpp
 	src/cute_aseprite_cache.cpp
 	src/cute_png_cache.cpp
 	src/cute_https.cpp
@@ -110,18 +118,26 @@ set(CF_SRCS
 
 	src/internal/yyjson.c
 
-	libraries/cimgui/imgui/imgui.cpp
-	libraries/cimgui/imgui/imgui_demo.cpp
-	libraries/cimgui/imgui/imgui_draw.cpp
-	libraries/cimgui/imgui/imgui_tables.cpp
-	libraries/cimgui/imgui/imgui_widgets.cpp
-	libraries/cimgui/imgui/backends/imgui_impl_sdl3.cpp
-	libraries/cimgui/imgui/backends/imgui_impl_sdlgpu3.cpp
+	libraries/imgui/imgui.cpp
+	libraries/imgui/imgui_demo.cpp
+	libraries/imgui/imgui_draw.cpp
+	libraries/imgui/imgui_tables.cpp
+	libraries/imgui/imgui_widgets.cpp
+	libraries/imgui/backends/imgui_impl_sdl3.cpp
+	libraries/imgui/dcimgui.cpp
+	libraries/imgui/dcimgui_internal.cpp
+	libraries/imgui/backends/imgui_impl_sdlgpu3.cpp
+	libraries/imgui/backends/imgui_impl_opengl3.cpp
 
-	libraries/cimgui/cimgui.cpp
-
-	libraries/SDL3_shadercross/SDL_shadercross.c
+	libraries/glad/glad.c
 )
+
+if (NOT EMSCRIPTEN)
+	set(CF_SRCS ${CF_SRCS}
+		libraries/SDL3_shadercross/SDL_shadercross.c
+	)
+endif()
+
 if(APPLE)
 	set(CF_SRCS ${CF_SRCS}
 		src/internal/cute_tls.m
@@ -171,22 +187,19 @@ set(CF_PUBLIC_HDRS
 )
 
 set(IMGUI_HDRS
-	libraries/cimgui/imgui/imgui.h
-	libraries/cimgui/imgui/imconfig.h
-	libraries/cimgui/imgui/imgui_internal.h
-	libraries/cimgui/imgui/imstb_rectpack.h
-	libraries/cimgui/imgui/imstb_textedit.h
-	libraries/cimgui/imgui/imstb_truetype.h
-)
-
-set(CIMGUI_HDRS
-	libraries/cimgui/cimgui.h
+	libraries/imgui/imgui.h
+	libraries/imgui/imconfig.h
+	libraries/imgui/imgui_internal.h
+	libraries/imgui/imstb_rectpack.h
+	libraries/imgui/imstb_textedit.h
+	libraries/imgui/imstb_truetype.h
+	libraries/imgui/dcimgui.h
+	libraries/imgui/dcimgui_internal.h
 )
 
 set(CF_HDRS
 	${CF_PUBLIC_HDRS}
 	${IMGUI_HDRS}
-	${CIMGUI_HDRS}
 
 	src/internal/cute_imgui_internal.h
 	src/internal/cute_app_internal.h
@@ -209,6 +222,32 @@ else()
 	add_library(cute SHARED ${CF_SRCS} ${CF_HDRS})
 endif()
 target_compile_definitions(cute PRIVATE CF_EXPORT)
+
+if(EMSCRIPTEN)
+	message(STATUS "Configuring CF for Web (Emscripten)")
+
+	# Emscripten forces off a couple options that don't make sense for web builds.
+	set(CF_RUNTIME_SHADER_COMPILATION OFF CACHE BOOL "" FORCE)
+	set(CF_CUTE_SHADERC OFF CACHE BOOL "" FORCE)
+	set(CF_FRAMEWORK_APPLE_FRAMEWORK OFF CACHE BOOL "" FORCE)
+	set(PHYSFS_BUILD_SHARED OFF CACHE BOOL "" FORCE)
+	set(PHYSFS_BUILD_STATIC ON  CACHE BOOL "" FORCE)
+
+	target_compile_options(cute PUBLIC -sUSE_SDL=3)
+	target_compile_options(cute PRIVATE -gsplit-dwarf)
+
+	target_link_options(cute INTERFACE
+		-sUSE_SDL=3
+		-sUSE_WEBGL2=1 -sMIN_WEBGL_VERSION=2 -sMAX_WEBGL_VERSION=2
+		-sFULL_ES3=1
+		-sALLOW_MEMORY_GROWTH=1
+		-sFILESYSTEM=1
+		-sASYNCIFY=1
+		-sASYNCIFY_STACK_SIZE=2040000
+	)
+
+	target_compile_options(cute PRIVATE -O1 -fno-rtti -fno-exceptions)
+endif()
 
 # PhysicsFS for virtual file system and archive support.
 set(PHYSFS_BUILD_SHARED $<NOT:${CF_FRAMEWORK_STATIC}> CACHE BOOL "Build PhysFS as shared library")
@@ -307,27 +346,29 @@ if (WINDOWS)
 	endif()
 endif()
 
-# SDL for platform support.
-set(SDL_REQUIRED_VERSION 3.2.16)
-# Just don't build the shared library at all, it's not needed.
-set(SDL_SHARED_ENABLED_BY_DEFAULT OFF)
-set(SDL_STATIC ${CF_FRAMEWORK_STATIC} CACHE BOOL "Build SDL as a static library")
-set(SDL_SHARED $<NOT:${CF_FRAMEWORK_STATIC}> CACHE BOOL "Do not build SDL as a shared library")
-set(SDL_TEST_LIBRARY OFF CACHE BOOL "Do not build SDL tests")
-set(SDL_EXAMPLES OFF CACHE BOOL "Do not build SDL examples")
-FetchContent_Declare(
-	SDL3
-	URL https://github.com/libsdl-org/SDL/releases/download/release-${SDL_REQUIRED_VERSION}/SDL3-${SDL_REQUIRED_VERSION}.zip
-	DOWNLOAD_EXTRACT_TIMESTAMP ON
-	CMAKE_ARGS -DSDL_SHARED=$<NOT:${CF_FRAMEWORK_STATIC}> -DSDL_STATIC=${CF_FRAMEWORK_STATIC} -DSDL_TEST_LIBRARY=OFF -DSDL_TESTS=OFF -DSDL_EXAMPLES=OFF
-)
-FetchContent_MakeAvailable(SDL3)
-if(CF_FRAMEWORK_STATIC)
-	set(CF_LINK_LIBS ${CF_LINK_LIBS} SDL3::SDL3-static)
-else ()
-	set(CF_LINK_LIBS ${CF_LINK_LIBS} SDL3::SDL3)
+if(NOT EMSCRIPTEN) # Emscripten provides it's own SDL3.
+	# SDL for platform support.
+	set(SDL_REQUIRED_VERSION 3.2.16)
+	# Just don't build the shared library at all, it's not needed.
+	set(SDL_SHARED_ENABLED_BY_DEFAULT OFF)
+	set(SDL_STATIC ${CF_FRAMEWORK_STATIC} CACHE BOOL "Build SDL as a static library")
+	set(SDL_SHARED $<NOT:${CF_FRAMEWORK_STATIC}> CACHE BOOL "Do not build SDL as a shared library")
+	set(SDL_TEST_LIBRARY OFF CACHE BOOL "Do not build SDL tests")
+	set(SDL_EXAMPLES OFF CACHE BOOL "Do not build SDL examples")
+	FetchContent_Declare(
+		SDL3
+		URL https://github.com/libsdl-org/SDL/releases/download/release-${SDL_REQUIRED_VERSION}/SDL3-${SDL_REQUIRED_VERSION}.zip
+		DOWNLOAD_EXTRACT_TIMESTAMP ON
+		CMAKE_ARGS -DSDL_SHARED=$<NOT:${CF_FRAMEWORK_STATIC}> -DSDL_STATIC=${CF_FRAMEWORK_STATIC} -DSDL_TEST_LIBRARY=OFF -DSDL_TESTS=OFF -DSDL_EXAMPLES=OFF
+	)
+	FetchContent_MakeAvailable(SDL3)
+	if(CF_FRAMEWORK_STATIC)
+		set(CF_LINK_LIBS ${CF_LINK_LIBS} SDL3::SDL3-static)
+	else ()
+		set(CF_LINK_LIBS ${CF_LINK_LIBS} SDL3::SDL3)
+	endif()
+	target_include_directories(cute PUBLIC ${SDL3_INCLUDE_DIRS})
 endif()
-target_include_directories(cute PUBLIC ${SDL3_INCLUDE_DIRS})
 
 if (CF_RUNTIME_SHADER_COMPILATION OR CF_CUTE_SHADERC)
 	# glslang for shader compilation.
@@ -351,7 +392,7 @@ if (CF_RUNTIME_SHADER_COMPILATION OR CF_CUTE_SHADERC)
 	# cute-shader, a glslang wrapper
 	set(CUTE_SHADER_SRCS src/cute_shader/cute_shader.cpp)
 	add_library(cute-shader STATIC ${CUTE_SHADER_SRCS})
-	target_link_libraries(cute-shader PRIVATE glslang glslang-default-resource-limits SPIRV)
+	target_link_libraries(cute-shader PRIVATE glslang glslang-default-resource-limits SPIRV spirv-cross-c)
 	install(TARGETS cute-shader
 	BUNDLE DESTINATION .
 	RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
@@ -382,34 +423,36 @@ if (CF_RUNTIME_SHADER_COMPILATION OR CF_CUTE_SHADERC)
 endif()
 
 # SPIRV-Cross for SDL_shadercross
-set(SPIRV_CROSS_CLI OFF CACHE BOOL "Turn off building SPIRV-Cross CLI.")
-FetchContent_Declare(
-	SPIRV_CROSS
-	GIT_REPOSITORY https://github.com/KhronosGroup/SPIRV-Cross.git
-	GIT_TAG 0a88b2d5c08708d45692b7096a0a84e7bfae366c
-	CMAKE_ARGS -DSPIRV_CROSS_EXCEPTIONS_TO_ASSERTIONS=ON -DSPIRV_CROSS_CLI=OFF -DSPIRV_CROSS_SHARED=OFF -DSPIRV_CROSS_STATIC=ON
-	UPDATE_DISCONNECTED TRUE
-	GIT_PROGRESS TRUE
-)
-set(SPIRV_CROSS_ENABLE_TESTS OFF CACHE BOOL "Disable SPIRV-Cross tests")
-set(SPIRV_CROSS_ENABLE_GLSLANG_INSTALL OFF CACHE BOOL "Disable GLSLANG install")
-set(SPIRV_CROSS_SHARED OFF CACHE BOOL "Build SPIRV-Cross as shared library")
-set(SPIRV_CROSS_STATIC ON CACHE BOOL "Do not build SPIRV-Cross as static library")
-set(SPIRV_CROSS_C_API ON CACHE BOOL "Enable the C API")
-set(SPIRV_CROSS_EXCEPTIONS_TO_ASSERTIONS ON CACHE BOOL "Turn off exceptions in SPIRV-Cross.")
-set(SPIRV_CROSS_ENABLE_REFLECT OFF CACHE BOOL "Turn off reflection in SPIRV-Cross.")
-set(SPIRV_CROSS_SKIP_INSTALL OFF CACHE BOOL "Turn off install targets in SPIRV-Cross.")
-set(SPIRV_CROSS_ENABLE_UTIL OFF CACHE BOOL "Turn off utils in SPIRV-Cross.")
-set(SPIRV_CROSS_ENABLE_CPP OFF CACHE BOOL "Turn off CPP target support in SPIRV-Cross.")
-set(SPIRV_CROSS_FORCE_PIC $<NOT:${CF_FRAMEWORK_STATIC}> CACHE BOOL "Force position-independent code for all targets.")
-if (WINDOWS)
-	set(SPIRV_CROSS_ENABLE_MSL OFF CACHE BOOL "Turn off MSL support when on windows.")
+if(NOT EMSCRIPTEN)  # SPIRV-Cross is not needed for web.
+	set(SPIRV_CROSS_CLI OFF CACHE BOOL "Turn off building SPIRV-Cross CLI.")
+	FetchContent_Declare(
+		SPIRV_CROSS
+		GIT_REPOSITORY https://github.com/KhronosGroup/SPIRV-Cross.git
+		GIT_TAG 0a88b2d5c08708d45692b7096a0a84e7bfae366c
+		CMAKE_ARGS -DSPIRV_CROSS_EXCEPTIONS_TO_ASSERTIONS=ON -DSPIRV_CROSS_CLI=OFF -DSPIRV_CROSS_SHARED=OFF -DSPIRV_CROSS_STATIC=ON
+		UPDATE_DISCONNECTED TRUE
+		GIT_PROGRESS TRUE
+	)
+	set(SPIRV_CROSS_ENABLE_TESTS OFF CACHE BOOL "Disable SPIRV-Cross tests")
+	set(SPIRV_CROSS_ENABLE_GLSLANG_INSTALL OFF CACHE BOOL "Disable GLSLANG install")
+	set(SPIRV_CROSS_SHARED OFF CACHE BOOL "Build SPIRV-Cross as shared library")
+	set(SPIRV_CROSS_STATIC ON CACHE BOOL "Do not build SPIRV-Cross as static library")
+	set(SPIRV_CROSS_C_API ON CACHE BOOL "Enable the C API")
+	set(SPIRV_CROSS_EXCEPTIONS_TO_ASSERTIONS ON CACHE BOOL "Turn off exceptions in SPIRV-Cross.")
+	set(SPIRV_CROSS_ENABLE_REFLECT OFF CACHE BOOL "Turn off reflection in SPIRV-Cross.")
+	set(SPIRV_CROSS_SKIP_INSTALL OFF CACHE BOOL "Turn off install targets in SPIRV-Cross.")
+	set(SPIRV_CROSS_ENABLE_UTIL OFF CACHE BOOL "Turn off utils in SPIRV-Cross.")
+	set(SPIRV_CROSS_ENABLE_CPP OFF CACHE BOOL "Turn off CPP target support in SPIRV-Cross.")
+	set(SPIRV_CROSS_FORCE_PIC $<NOT:${CF_FRAMEWORK_STATIC}> CACHE BOOL "Force position-independent code for all targets.")
+	if (WINDOWS)
+		set(SPIRV_CROSS_ENABLE_MSL OFF CACHE BOOL "Turn off MSL support when on windows.")
+	endif()
+	if (APPLE)
+		set(SPIRV_CROSS_ENABLE_HLSL OFF CACHE BOOL "Turn off HLSL support when on windows.")
+	endif()
+	FetchContent_MakeAvailable(SPIRV_CROSS)
+	set(CF_LINK_LIBS ${CF_LINK_LIBS} spirv-cross-c)
 endif()
-if (APPLE)
-	set(SPIRV_CROSS_ENABLE_HLSL OFF CACHE BOOL "Turn off HLSL support when on windows.")
-endif()
-FetchContent_MakeAvailable(SPIRV_CROSS)
-set(CF_LINK_LIBS ${CF_LINK_LIBS} spirv-cross-c)
 
 # Some platform specific settings.
 if(MINGW)
@@ -453,12 +496,13 @@ target_link_libraries(cute PUBLIC ${CF_LINK_LIBS})
 if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 	option(CF_FRAMEWORK_BUILD_TESTS "Build the cute framework unit tests." ON)
 	option(CF_FRAMEWORK_BUILD_SAMPLES "Build the cute framework sample programs." ON)
+
 	# Cute unit tests executable (optional, defaulted to also build).
 	if (CF_FRAMEWORK_BUILD_TESTS)
 		add_subdirectory(test)
 	endif()
 
-	# Cute sample prgrams (optional, defaulted to also build).
+	# Cute sample programs (optional, defaulted to also build).
 	if (CF_FRAMEWORK_BUILD_SAMPLES)
 		add_subdirectory(samples)
 	endif()
@@ -467,8 +511,7 @@ endif()
 # Propogate public headers to other cmake scripts including this subdirectory.
 target_include_directories(cute PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
 target_include_directories(cute PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/libraries>)
-target_include_directories(cute PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/libraries/cimgui>)
-target_include_directories(cute PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/libraries/cimgui/imgui>)
+target_include_directories(cute PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/libraries/imgui>)
 
 # Install target
 install(TARGETS cute
@@ -476,4 +519,5 @@ install(TARGETS cute
 	RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 	LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
 	ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-	FRAMEWORK DESTINATION ${CMAKE_INSTALL_LIBDIR})
+	FRAMEWORK DESTINATION ${CMAKE_INSTALL_LIBDIR}
+)

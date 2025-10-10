@@ -22,7 +22,7 @@ CF_JDoc cf_make_json(const void* data, size_t size)
 	} else {
 		doc = yyjson_mut_doc_new(NULL);
 	}
-	CF_JDoc result = { (uint64_t)doc };
+	CF_JDoc result = { (uintptr_t)doc };
 	return result;
 }
 
@@ -44,7 +44,7 @@ void cf_destroy_json(CF_JDoc doc_handle)
 
 CF_JVal cf_json_get_root(CF_JDoc doc_handle)
 {
-	CF_JVal result = { (uint64_t)yyjson_mut_doc_get_root((yyjson_mut_doc*)doc_handle.id) };
+	CF_JVal result = { (uintptr_t)yyjson_mut_doc_get_root((yyjson_mut_doc*)doc_handle.id) };
 	return result;
 }
 
@@ -213,19 +213,19 @@ int cf_json_get_len(CF_JVal val_handle)
 
 CF_JVal cf_json_get(CF_JVal val_handle, const char* key)
 {
-	CF_JVal result = { (uint64_t)yyjson_mut_obj_get((yyjson_mut_val*)val_handle.id, key) };
+	CF_JVal result = { (uintptr_t)yyjson_mut_obj_get((yyjson_mut_val*)val_handle.id, key) };
 	return result;
 }
 
 CF_JVal cf_json_array_at(CF_JVal val_handle, int index)
 {
-	CF_JVal result = { (uint64_t)yyjson_mut_arr_get((yyjson_mut_val*)val_handle.id, index) };
+	CF_JVal result = { (uintptr_t)yyjson_mut_arr_get((yyjson_mut_val*)val_handle.id, index) };
 	return result;
 }
 
 CF_JVal cf_json_array_get(CF_JVal val_handle, int index)
 {
-	CF_JVal result = { (uint64_t)yyjson_mut_arr_get((yyjson_mut_val*)val_handle.id, index) };
+	CF_JVal result = { (uintptr_t)yyjson_mut_arr_get((yyjson_mut_val*)val_handle.id, index) };
 	return result;
 }
 
@@ -288,9 +288,9 @@ CF_JVal cf_json_iter_remove(CF_JIter* iter)
 {
 	CF_JVal result = { 0 };
 	if (yyjson_mut_is_arr((yyjson_mut_val*)iter->parent.id)) {
-		result = { (uint64_t)yyjson_mut_arr_iter_remove((yyjson_mut_arr_iter*)iter) };
+		result = { (uintptr_t)yyjson_mut_arr_iter_remove((yyjson_mut_arr_iter*)iter) };
 	} else if (yyjson_mut_is_obj((yyjson_mut_val*)iter->parent.id)) {
-		result = { (uint64_t)yyjson_mut_obj_iter_remove((yyjson_mut_obj_iter*)iter) };
+		result = { (uintptr_t)yyjson_mut_obj_iter_remove((yyjson_mut_obj_iter*)iter) };
 	}
 	return result;
 }
@@ -300,10 +300,10 @@ CF_JVal cf_json_iter_val(CF_JIter iter)
 	yyjson_mut_val* parent = (yyjson_mut_val*)iter.parent.id;
 	CF_JVal val = { 0 };
 	if (yyjson_mut_is_arr(parent)) {
-		val.id = (uint64_t)((yyjson_mut_arr_iter*)&iter)->cur;
+		val.id = (uintptr_t)((yyjson_mut_arr_iter*)&iter)->cur;
 	} else if (yyjson_mut_is_obj(parent)) {
 		// Objects are stored as k,v pairs in a list; the key is cur, the val is cur->next.
-		val.id = (uint64_t)((yyjson_mut_obj_iter*)&iter)->cur->next;
+		val.id = (uintptr_t)((yyjson_mut_obj_iter*)&iter)->cur->next;
 	}
 	return val;
 }
@@ -319,56 +319,56 @@ const char* cf_json_iter_key(CF_JIter iter)
 
 CF_JVal cf_json_from_null(CF_JDoc doc_handle)
 {
-	CF_JVal result = { (uint64_t)yyjson_mut_null((yyjson_mut_doc*)doc_handle.id) };
+	CF_JVal result = { (uintptr_t)yyjson_mut_null((yyjson_mut_doc*)doc_handle.id) };
 	return result;
 }
 
 CF_JVal cf_json_from_int(CF_JDoc doc_handle, int val)
 {
-	CF_JVal result = { (uint64_t)yyjson_mut_int((yyjson_mut_doc*)doc_handle.id, (int64_t)val) };
+	CF_JVal result = { (uintptr_t)yyjson_mut_int((yyjson_mut_doc*)doc_handle.id, (int64_t)val) };
 	return result;
 }
 
 CF_JVal cf_json_from_i64(CF_JDoc doc_handle, int64_t val)
 {
-	CF_JVal result = { (uint64_t)yyjson_mut_sint((yyjson_mut_doc*)doc_handle.id, val) };
+	CF_JVal result = { (uintptr_t)yyjson_mut_sint((yyjson_mut_doc*)doc_handle.id, val) };
 	return result;
 }
 
 CF_JVal cf_json_from_u64(CF_JDoc doc_handle, uint64_t val)
 {
-	CF_JVal result = { (uint64_t)yyjson_mut_uint((yyjson_mut_doc*)doc_handle.id, val) };
+	CF_JVal result = { (uintptr_t)yyjson_mut_uint((yyjson_mut_doc*)doc_handle.id, val) };
 	return result;
 }
 
 CF_JVal cf_json_from_float(CF_JDoc doc_handle, float val)
 {
-	CF_JVal result = { (uint64_t)yyjson_mut_real((yyjson_mut_doc*)doc_handle.id, (double)val) };
+	CF_JVal result = { (uintptr_t)yyjson_mut_real((yyjson_mut_doc*)doc_handle.id, (double)val) };
 	return result;
 }
 
 CF_JVal cf_json_from_double(CF_JDoc doc_handle, double val)
 {
-	CF_JVal result = { (uint64_t)yyjson_mut_real((yyjson_mut_doc*)doc_handle.id, val) };
+	CF_JVal result = { (uintptr_t)yyjson_mut_real((yyjson_mut_doc*)doc_handle.id, val) };
 	return result;
 }
 
 CF_JVal cf_json_from_bool(CF_JDoc doc_handle, bool val)
 {
 	yyjson_mut_doc* doc = (yyjson_mut_doc*)doc_handle.id;
-	CF_JVal result = { (uint64_t)(val ? yyjson_mut_true(doc) : yyjson_mut_false(doc)) };
+	CF_JVal result = { (uintptr_t)(val ? yyjson_mut_true(doc) : yyjson_mut_false(doc)) };
 	return result;
 }
 
 CF_JVal cf_json_from_string(CF_JDoc doc_handle, const char* val)
 {
-	CF_JVal result = { (uint64_t)yyjson_mut_str((yyjson_mut_doc*)doc_handle.id, val) };
+	CF_JVal result = { (uintptr_t)yyjson_mut_str((yyjson_mut_doc*)doc_handle.id, val) };
 	return result;
 }
 
 CF_JVal cf_json_from_string_range(CF_JDoc doc_handle, const char* begin, const char* end)
 {
-	CF_JVal result = { (uint64_t)yyjson_mut_strn((yyjson_mut_doc*)doc_handle.id, begin, end - begin) };
+	CF_JVal result = { (uintptr_t)yyjson_mut_strn((yyjson_mut_doc*)doc_handle.id, begin, end - begin) };
 	return result;
 }
 
@@ -419,49 +419,49 @@ void cf_json_set_string_range(CF_JVal jval, const char* begin, const char* end)
 
 CF_JVal cf_json_array(CF_JDoc doc_handle)
 {
-	CF_JVal result = { (uint64_t)yyjson_mut_arr((yyjson_mut_doc*)doc_handle.id) };
+	CF_JVal result = { (uintptr_t)yyjson_mut_arr((yyjson_mut_doc*)doc_handle.id) };
 	return result;
 }
 
 CF_JVal cf_json_array_from_int(CF_JDoc doc_handle, int* vals, int count)
 {
-	CF_JVal result = { (uint64_t)yyjson_mut_arr_with_sint32((yyjson_mut_doc*)doc_handle.id, vals, count) };
+	CF_JVal result = { (uintptr_t)yyjson_mut_arr_with_sint32((yyjson_mut_doc*)doc_handle.id, vals, count) };
 	return result;
 }
 
 CF_JVal cf_json_array_from_i64(CF_JDoc doc_handle, int64_t* vals, int count)
 {
-	CF_JVal result = { (uint64_t)yyjson_mut_arr_with_sint((yyjson_mut_doc*)doc_handle.id, vals, count) };
+	CF_JVal result = { (uintptr_t)yyjson_mut_arr_with_sint((yyjson_mut_doc*)doc_handle.id, vals, count) };
 	return result;
 }
 
 CF_JVal cf_json_array_from_u64(CF_JDoc doc_handle, uint64_t* vals, int count)
 {
-	CF_JVal result = { (uint64_t)yyjson_mut_arr_with_uint((yyjson_mut_doc*)doc_handle.id, vals, count) };
+	CF_JVal result = { (uintptr_t)yyjson_mut_arr_with_uint((yyjson_mut_doc*)doc_handle.id, vals, count) };
 	return result;
 }
 
 CF_JVal cf_json_array_from_float(CF_JDoc doc_handle, float* vals, int count)
 {
-	CF_JVal result = { (uint64_t)yyjson_mut_arr_with_float((yyjson_mut_doc*)doc_handle.id, vals, count) };
+	CF_JVal result = { (uintptr_t)yyjson_mut_arr_with_float((yyjson_mut_doc*)doc_handle.id, vals, count) };
 	return result;
 }
 
 CF_JVal cf_json_array_from_double(CF_JDoc doc_handle, double* vals, int count)
 {
-	CF_JVal result = { (uint64_t)yyjson_mut_arr_with_double((yyjson_mut_doc*)doc_handle.id, vals, count) };
+	CF_JVal result = { (uintptr_t)yyjson_mut_arr_with_double((yyjson_mut_doc*)doc_handle.id, vals, count) };
 	return result;
 }
 
 CF_JVal cf_json_array_from_bool(CF_JDoc doc_handle, bool* vals, int count)
 {
-	CF_JVal result = { (uint64_t)yyjson_mut_arr_with_bool((yyjson_mut_doc*)doc_handle.id, vals, count) };
+	CF_JVal result = { (uintptr_t)yyjson_mut_arr_with_bool((yyjson_mut_doc*)doc_handle.id, vals, count) };
 	return result;
 }
 
 CF_JVal cf_json_array_from_string(CF_JDoc doc_handle, const char** vals, int count)
 {
-	CF_JVal result = { (uint64_t)yyjson_mut_arr_with_str((yyjson_mut_doc*)doc_handle.id, vals, count) };
+	CF_JVal result = { (uintptr_t)yyjson_mut_arr_with_str((yyjson_mut_doc*)doc_handle.id, vals, count) };
 	return result;
 }
 
@@ -521,37 +521,37 @@ void cf_json_array_add_string_range(CF_JDoc doc_handle, CF_JVal arr_handle, cons
 
 CF_JVal cf_json_array_add_array(CF_JDoc doc_handle, CF_JVal arr_handle)
 {
-	CF_JVal result = { (uint64_t)yyjson_mut_arr_add_arr((yyjson_mut_doc*)doc_handle.id, (yyjson_mut_val*)arr_handle.id) };
+	CF_JVal result = { (uintptr_t)yyjson_mut_arr_add_arr((yyjson_mut_doc*)doc_handle.id, (yyjson_mut_val*)arr_handle.id) };
 	return result;
 }
 
 CF_JVal cf_json_array_add_object(CF_JDoc doc_handle, CF_JVal arr_handle)
 {
-	CF_JVal result = { (uint64_t)yyjson_mut_arr_add_obj((yyjson_mut_doc*)doc_handle.id, (yyjson_mut_val*)arr_handle.id) };
+	CF_JVal result = { (uintptr_t)yyjson_mut_arr_add_obj((yyjson_mut_doc*)doc_handle.id, (yyjson_mut_val*)arr_handle.id) };
 	return result;
 }
 
 CF_JVal cf_json_array_pop(CF_JVal arr)
 {
-	CF_JVal result = { (uint64_t)yyjson_mut_arr_remove_last((yyjson_mut_val*)arr.id) };
+	CF_JVal result = { (uintptr_t)yyjson_mut_arr_remove_last((yyjson_mut_val*)arr.id) };
 	return result;
 }
 
 CF_JVal cf_json_object(CF_JDoc doc_handle)
 {
-	CF_JVal result = { (uint64_t)yyjson_mut_obj((yyjson_mut_doc*)doc_handle.id) };
+	CF_JVal result = { (uintptr_t)yyjson_mut_obj((yyjson_mut_doc*)doc_handle.id) };
 	return result;
 }
 
 CF_JVal cf_json_object_from_strings(CF_JDoc doc_handle, const char** keys, const char** vals, int count)
 {
-	CF_JVal result = { (uint64_t)yyjson_mut_obj_with_str((yyjson_mut_doc*)doc_handle.id, keys, vals, count) };
+	CF_JVal result = { (uintptr_t)yyjson_mut_obj_with_str((yyjson_mut_doc*)doc_handle.id, keys, vals, count) };
 	return result;
 }
 
 CF_JVal cf_json_object_from_string_pairs(CF_JDoc doc_handle, const char** kv_pairs, int pair_count)
 {
-	CF_JVal result = { (uint64_t)yyjson_mut_obj_with_kv((yyjson_mut_doc*)doc_handle.id, kv_pairs, pair_count) };
+	CF_JVal result = { (uintptr_t)yyjson_mut_obj_with_kv((yyjson_mut_doc*)doc_handle.id, kv_pairs, pair_count) };
 	return result;
 }
 

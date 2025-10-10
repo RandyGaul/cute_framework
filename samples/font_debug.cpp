@@ -1,5 +1,5 @@
 #include <cute.h>
-#include "cimgui.h"
+#include "dcimgui.h"
 #include "internal/cute_font_internal.h"
 #include "proggy.h"
 
@@ -225,36 +225,36 @@ int main(int argc, char* argv[])
         cf_pop_font_size();
         cf_pop_font();
 
-        igBegin("Font", 0, ImGuiWindowFlags_None);
+        ImGui_Begin("Font", 0, ImGuiWindowFlags_None);
         {
-            igBeginChild_Str("##font_input", { 250.0f, 0.0f }, ImGuiChildFlags_None, ImGuiWindowFlags_None);
+            ImGui_BeginChild("##font_input", { 250.0f, 0.0f }, ImGuiChildFlags_None, ImGuiWindowFlags_None);
             {
-                igInputTextMultiline("Text", text, sizeof(text), {250.0f, 100.0f}, ImGuiInputTextFlags_None, NULL, NULL);
-                igListBox_Str_arr("Font", &font_index, font_names, cf_array_count(font_names), 2);
+                ImGui_InputTextMultilineEx("Text", text, sizeof(text), {250.0f, 100.0f}, ImGuiInputTextFlags_None, NULL, NULL);
+                ImGui_ListBox("Font", &font_index, font_names, cf_array_count(font_names), 2);
 
-                igCheckboxFlags_IntPtr("Text Aabb", &font_state, font_state_text_aabb);
-                igCheckboxFlags_IntPtr("Glyph", &font_state, font_state_glyph);
+                ImGui_CheckboxFlagsIntPtr("Text Aabb", &font_state, font_state_text_aabb);
+                ImGui_CheckboxFlagsIntPtr("Glyph", &font_state, font_state_glyph);
 
                 text_glyph_length = string_glyph_length(text);
 
-                igSliderInt("Glyph Index", &glyph_index, 0, text_glyph_length - 1, "%d", ImGuiSliderFlags_ClampOnInput);
-                igSliderFloat("Font Size", &font_size, font_size_min, font_size_max, "%.0f", ImGuiSliderFlags_ClampOnInput);
+                ImGui_SliderIntEx("Glyph Index", &glyph_index, 0, text_glyph_length - 1, "%d", ImGuiSliderFlags_ClampOnInput);
+                ImGui_SliderFloatEx("Font Size", &font_size, font_size_min, font_size_max, "%.0f", ImGuiSliderFlags_ClampOnInput);
             }
-            igEndChild();
+            ImGui_EndChild();
 
-            igSameLine(0, 5);
+            ImGui_SameLineEx(0, 5);
 
-            igBeginChild_Str("##font_info", { 0 }, ImGuiChildFlags_None, ImGuiWindowFlags_None);
+            ImGui_BeginChild("##font_info", { 0 }, ImGuiChildFlags_None, ImGuiWindowFlags_None);
             {
-                igText("Ascent: %.2f", ascent);
-                igText("Descent: %.2f", descent);
-                igText("Line Height: %.2f", line_height);
-                igText("Line Gap: %.2f", line_gap);
-                igText("Kerning: %.2f", kerning);
+                ImGui_Text("Ascent: %.2f", ascent);
+                ImGui_Text("Descent: %.2f", descent);
+                ImGui_Text("Line Height: %.2f", line_height);
+                ImGui_Text("Line Gap: %.2f", line_gap);
+                ImGui_Text("Kerning: %.2f", kerning);
             }
-            igEndChild();
+            ImGui_EndChild();
         }
-        igEnd();
+        ImGui_End();
 
         cf_app_draw_onto_screen(true);
     }

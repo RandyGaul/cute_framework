@@ -16,6 +16,8 @@
 
 #include <cute_math.h>
 
+#define IMGUI_STB_NAMESPACE ImStb
+
 //---- Define assertion handler. Defaults to calling assert().
 // If your macro uses multiple statements, make sure is enclosed in a 'do { .. } while (0)' block so it can be used as a single statement.
 //#define IM_ASSERT(_EXPR)  MyAssert(_EXPR)
@@ -111,7 +113,6 @@
 #define IM_VEC4_CLASS_EXTRA                                                     \
         constexpr ImVec4(const MyVec4& f) : x(f.x), y(f.y), z(f.z), w(f.w) {}   \
         operator MyVec4() const { return MyVec4(x,y,z,w); }
-
 */
 
 #define IM_VEC2_CLASS_EXTRA                                                     \
@@ -137,6 +138,10 @@
 // (use 'Metrics->Tools->Item Picker' to pick widgets with the mouse and break into them for easy debugging.)
 //#define IM_DEBUG_BREAK  IM_ASSERT(0)
 //#define IM_DEBUG_BREAK  __debugbreak()
+
+//---- Debug Tools: Enable highlight ID conflicts _before_ hovering items. When io.ConfigDebugHighlightIdConflicts is set.
+// (THIS WILL SLOW DOWN DEAR IMGUI. Only use occasionally and disable after use)
+//#define IMGUI_DEBUG_HIGHLIGHT_ALL_ID_CONFLICTS
 
 //---- Debug Tools: Enable slower asserts
 //#define IMGUI_DEBUG_PARANOID

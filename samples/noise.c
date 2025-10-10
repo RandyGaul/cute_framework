@@ -1,5 +1,5 @@
 #include <cute.h>
-#include <cimgui/cimgui.h>
+#include <dcimgui.h>
 
 int main(int argc, char* argv[])
 {
@@ -26,14 +26,14 @@ int main(int argc, char* argv[])
 	while (cf_app_is_running()) {
 		cf_app_update(NULL);
 
-		igBegin("Noise Sample", NULL, 0);
-		igSliderFloat("scale", &scale, 0.001f, 10.0f, "%.3f", 0);
-		igSliderFloat("lacunarity", &lacunarity, 0.001f, 10.0f, "%.3f", 0);
-		igSliderInt("octaves", &octaves, 1, 6, "%d", 0);
-		igSliderFloat("falloff", &falloff, 0.001f, 1.0f, "%.3f", 0);
-		igSliderFloat("frequency", &frequency, 0.1f, 10.0f, "%.3f", 0);
-		igSliderFloat("time_amplitude", &time_amplitude, 0.01f, 2.0f, "%.3f", 0);
-		igEnd();
+		ImGui_Begin("Noise Sample", NULL, 0);
+		ImGui_SliderFloat("scale", &scale, 0.001f, 10.0f);
+		ImGui_SliderFloat("lacunarity", &lacunarity, 0.001f, 10.0f);
+		ImGui_SliderInt("octaves", &octaves, 1, 6);
+		ImGui_SliderFloat("falloff", &falloff, 0.001f, 1.0f);
+		ImGui_SliderFloat("frequency", &frequency, 0.1f, 10.0f);
+		ImGui_SliderFloat("time_amplitude", &time_amplitude, 0.01f, 2.0f);
+		ImGui_End();
 
 		srand(0);
 		for (int i = 0; i < 3; ++i) {

@@ -389,7 +389,7 @@ CF_API void CF_CALL cf_draw_arrow(CF_V2 a, CF_V2 b, float thickness, float arrow
  * @category draw
  * @brief    Pushes a draw layer.
  * @param    layer      The layer.
- * @remarks  Draw layers are sorted before rendering. Lower numbers are rendered fast, while larger numbers are rendered last.
+ * @remarks  Draw layers are sorted before rendering. Lower numbers are rendered first, while larger numbers are rendered last.
  *           This can be used to pick which sprites/shapes should draw on top of each other.
  * @related  cf_draw_push_layer cf_draw_pop_layer cf_draw_peek_layer
  */
@@ -399,7 +399,7 @@ CF_API void CF_CALL cf_draw_push_layer(int layer);
  * @function cf_draw_pop_layer
  * @category draw
  * @brief    Pops and returns the last draw layer.
- * @remarks  Draw layers are sorted before rendering. Lower numbers are rendered fast, while larger numbers are rendered last.
+ * @remarks  Draw layers are sorted before rendering. Lower numbers are rendered first, while larger numbers are rendered last.
  *           This can be used to pick which sprites/shapes should draw on top of each other.
  * @related  cf_draw_push_layer cf_draw_pop_layer cf_draw_peek_layer
  */
@@ -409,7 +409,7 @@ CF_API int CF_CALL cf_draw_pop_layer(void);
  * @function cf_draw_peek_layer
  * @category draw
  * @brief    Returns the last draw layer.
- * @remarks  Draw layers are sorted before rendering. Lower numbers are rendered fast, while larger numbers are rendered last.
+ * @remarks  Draw layers are sorted before rendering. Lower numbers are rendered first, while larger numbers are rendered last.
  *           This can be used to pick which sprites/shapes should draw on top of each other.
  * @related  cf_draw_push_layer cf_draw_pop_layer cf_draw_peek_layer
  */

@@ -506,7 +506,7 @@ static CF_ShaderCompilerFile s_builtin_includes[] = {
 static CF_BuiltinShaderSource s_builtin_shader_sources[] = {
 	{ "s_draw", s_draw_vs, s_draw_fs },
 	{ "s_basic", s_basic_vs, s_basic_fs },
-	{ "s_backbuffer", s_basic_vs, s_basic_fs },
+	{ "s_backbuffer", s_backbuffer_vs, s_backbuffer_fs },
 	{ "s_blit", s_blit_vs, s_blit_fs },
 };
 

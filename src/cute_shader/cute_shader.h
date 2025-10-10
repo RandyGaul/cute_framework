@@ -2,6 +2,7 @@
 #define CUTE_SHADER_H
 
 #include <cute_shader_bytecode.h>
+#include <SDL3_shadercross/spirv.h>
 
 typedef struct CF_ShaderCompilerDefine
 {

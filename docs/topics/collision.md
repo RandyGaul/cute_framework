@@ -129,11 +129,3 @@ This function is generic and requires the use of `void*` + [`cf_shapetype`](../c
 The purpose of swept collision is to prevent tunneling. Tunneling is when a shape moves so fast the collision check from one frame to another completely misses, and shapes can fly through each other as a result. One solution to tunneling is to use swept collision checks. All the other collision functions mentioned in this article (besides gjk) are called _discrete collision_.
 
 You may calculate the time of impact between two _linearly moving_ shapes (as in, no rotation allowed) with [`cf_toi`](../collision/cf_toi.md). This is a pretty advanced function, so be careful about reading the documentation page on it ([same as last link](../collision/cf_toi.md))! By calculating the time of impact you can implement a swept collision algorithm, perhaps like the one described in the previous links.
-
-## Broadphase
-
-All of the previous functions mentioned operate on pairs of shapes. Often times the pairwise collision functions are called the _narrow phase_ of a collision engine. When we have N shapes in the game, testing all shapes against all other shapes results in quadratic time complexity, or N^2 collision checks. Beyond about 200 to 300 shapes this time complexity usually starts to become much too slow. Instead, a different algorithm, sometimes called _the broadphase_ can cut down the time complexity.
-
-CF implements a dymamic Aabb tree, [`CF_AabbTree`](../collision/cf_aabbtree.md), ideal for many games as a broadphase. To use the tree wrap all your shapes up in an Axis Aligned Bounding Box (Aabb, it means a rectangle that doesn't rotate). Insert the Aabb's into the tree. The tree will then organize the 2D space all the Aabb's occupy, and use an accelerated algorithm that runs in `Log(N) * N` time complexity -- much faster and scales well to many thousands of shapes.
-
-After all the shapes are placed into the tree, the tree can be queried to find all inserted Aabb's that overlap the query. By doing so, a list of potential pairs is generated. Each potential pair can then be tested with _the narrowphase_ (a function from earlier in this article, such as [`cf_collide`](../collision/cf_collide.md)).

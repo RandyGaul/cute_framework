@@ -1,7 +1,7 @@
 #include <cute.h>
 #include <stdio.h>
 
-#include <cimgui.h>
+#include <dcimgui.h>
 
 int main(int argc, char* argv[])
 {
@@ -19,22 +19,22 @@ int main(int argc, char* argv[])
 		static bool mutate = false;
 		static bool big_demo = false;
 		if (hello) {
-			igBegin("Hello", &hello, 0);
-			igText("Formatting some text! Press X to %s\n", mutate ? "mutate." : "MUTATE!!!");
-			if (igButton("Press me!", (ImVec2){0,0})) {
+			ImGui_Begin("Hello", &hello, 0);
+			ImGui_Text("Formatting some text! Press X to %s\n", mutate ? "mutate." : "MUTATE!!!");
+			if (ImGui_ButtonEx("Press me!", (ImVec2){0,0})) {
 				printf("Clicked!\n");
 			}
 			static char buffer[256] = "...";
-			igInputText("string", buffer, sizeof(buffer), 0, NULL, NULL);
+			ImGui_InputText("string", buffer, sizeof(buffer), 0);
 			static float f;
-			igSliderFloat("float", &f, 0, 10, "%3f", 0);
-			if (igButton("Big Demo", (ImVec2){0,0})) {
+			ImGui_SliderFloat("float", &f, 0, 10);
+			if (ImGui_Button("Big Demo")) {
 				big_demo = true;
 			}
-			igEnd();
+			ImGui_End();
 
 			if (big_demo) {
-				igShowDemoWindow(&big_demo);
+				ImGui_ShowDemoWindow(&big_demo);
 			}
 		}
 

@@ -21,10 +21,6 @@
 extern "C" {
 #endif // __cplusplus
 
-typedef struct ImGuiContext ImGuiContext;
-typedef struct sg_imgui_t sg_imgui_t;
-typedef struct sg_image sg_image;
-
 /**
  * @enum     Display Orientation
  * @category app
@@ -200,8 +196,10 @@ CF_API CF_DisplayOrientation CF_CALL cf_display_orientation(CF_DisplayID display
 	CF_ENUM(APP_OPTIONS_GFX_METAL_BIT,                          1 << 9)  \
 	/* @entry Starts the application with a Vulkan backend. */           \
 	CF_ENUM(APP_OPTIONS_GFX_VULKAN_BIT,                         1 << 10) \
+	/* @entry TODO */ \
+	CF_ENUM(APP_OPTIONS_GFX_OPENGL_BIT,                       1 << 11) \
 	/* @entry Starts the application with a debug mode graphics context. */ \
-	CF_ENUM(APP_OPTIONS_GFX_DEBUG_BIT,                          1 << 11) \
+	CF_ENUM(APP_OPTIONS_GFX_DEBUG_BIT,                          1 << 12) \
 	/* @end */
 
 typedef int CF_AppOptionFlags;
@@ -598,10 +596,10 @@ CF_API bool CF_CALL cf_app_mouse_inside(void);
  * @category app
  * @brief    Initializes Dear ImGui.
  * @remarks  [Dear ImGui](https://github.com/ocornut/imgui) is an excellent UI library for debugging, great for making tools and editors.
- *           After calling this init function you can call into Dear ImGui's functions.
+ *           After calling this init function you can call into Dear ImGui's functions. Typecast the result to `ImGuiContext*` (after including dcimgui.h).
  * @related  cf_app_get_sokol_imgui
  */
-CF_API ImGuiContext* CF_CALL cf_app_init_imgui(void);
+CF_API void* CF_CALL cf_app_init_imgui(void);
 
 /**
  * @enum     CF_MSAA
@@ -921,7 +919,7 @@ CF_INLINE void app_set_icon(const char* virtual_path_to_png) { cf_app_set_icon(v
 CF_INLINE float app_get_framerate() { return cf_app_get_framerate(); }
 CF_INLINE float app_get_smoothed_framerate() { return cf_app_get_smoothed_framerate(); }
 
-CF_INLINE ImGuiContext* app_init_imgui() { return cf_app_init_imgui(); }
+CF_INLINE void* app_init_imgui() { return cf_app_init_imgui(); }
 CF_INLINE void app_set_msaa(int msaa) { cf_app_set_msaa(msaa); }
 CF_INLINE CF_Canvas app_get_canvas() { return cf_app_get_canvas(); }
 CF_INLINE void app_set_canvas_size(int w, int h) { cf_app_set_canvas_size(w, h); }

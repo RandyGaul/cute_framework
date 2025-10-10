@@ -12,6 +12,8 @@
 #include <cute_string.h>
 #include <cute_coroutine.h>
 
+#ifndef CF_EMSCRIPTEN
+
 #include <internal/cute_alloc_internal.h>
 
 #include <SDL3/SDL.h>
@@ -29,8 +31,6 @@ extern "C" {
 // Credit to Mattias Gustavsson for the original API design of cute_https.h
 
 using namespace Cute;
-
-#ifndef CF_EMSCRIPTEN
 
 #define CF_RESPONSE_CHUNKED             1
 #define CF_RESPONSE_GZIP                2

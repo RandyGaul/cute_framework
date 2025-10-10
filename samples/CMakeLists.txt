@@ -1,3 +1,12 @@
+if (EMSCRIPTEN)
+	add_custom_target(copy-emscripten-shell
+		COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different ${CMAKE_CURRENT_SOURCE_DIR}/emscripten ${CMAKE_BINARY_DIR}/emscripten
+	)
+	add_library(cute-emscripten-shell INTERFACE)
+	add_dependencies(cute-emscripten-shell copy-emscripten-shell)
+	target_link_options(cute-emscripten-shell INTERFACE --shell-file "${CMAKE_CURRENT_SOURCE_DIR}/emscripten/shell.html")
+endif ()
+
 function(add_sample TARGET_NAME SOURCE_FILE)
 	add_executable(${TARGET_NAME} ${SOURCE_FILE})
 	target_link_libraries(${TARGET_NAME} PRIVATE cute)
@@ -15,6 +24,12 @@ function(add_sample TARGET_NAME SOURCE_FILE)
 	if (WINDOWS)
 		target_dxc_copy(${TARGET_NAME})
 	endif()
+	if (EMSCRIPTEN)
+		set_target_properties(${TARGET_NAME} PROPERTIES OUTPUT_NAME "${TARGET_NAME}" SUFFIX ".html")
+		target_compile_options(${TARGET_NAME} PRIVATE -O1 -fno-rtti -fno-exceptions -gsplit-dwarf)
+		target_link_options(${TARGET_NAME} PRIVATE -o ${TARGET_NAME}.html -sASYNCIFY=1 -O1 -gseparate-dwarf)
+		target_link_libraries(${TARGET_NAME} PRIVATE cute-emscripten-shell)
+	endif()
 endfunction()
 
 add_sample(easysprite easy_sprite.c)
@@ -29,7 +44,9 @@ add_sample(windowevents window_events.c)
 add_sample(window window.cpp)
 add_sample(docsparser docs_parser.cpp)
 add_sample(scratch scratch.cpp)
-add_sample(https https.c)
+if (NOT EMSCRIPTEN)
+	add_sample(https https.c)
+endif()
 add_sample(spaceshooter spaceshooter.cpp)
 add_sample(draw_to_texture draw_to_texture.c)
 add_sample(hello_triangle hello_triangle.c)
@@ -83,6 +100,12 @@ if (CF_CUTE_SHADERC)
 		DEPENDS cute-shaderc
 	)
 endif()
+
+# Ensure that sample data is included in web build
+if (EMSCRIPTEN)
+	target_link_options(waves PRIVATE --preload-file "${CMAKE_CURRENT_SOURCE_DIR}/waves_data@/waves_data")
+	target_link_options(spaceshooter PRIVATE --preload-file "${CMAKE_CURRENT_SOURCE_DIR}/spaceshooter_data@/spaceshooter_data")
+endif ()
 
 # Copy over some folders for certain samples.
 add_custom_command(TARGET spaceshooter PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/spaceshooter_data $<TARGET_FILE_DIR:spaceshooter>/spaceshooter_data)

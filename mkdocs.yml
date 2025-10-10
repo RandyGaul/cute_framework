@@ -90,13 +90,14 @@ nav:
       - Allocators: topics/allocator.md
       - Atomics: topics/atomics.md
       - Audio: topics/audio.md
+      - Camera: topics/camera.md
       - Collision: topics/collision.md
       - Coroutines: topics/coroutines.md
       - Data Structures: topics/data_structures.md
       - Web Builds with Emscripten: topics/emscripten.md
       - Input: topics/input.md
-      - Low Level Graphics: topics/low_level_graphics.md
       - macOS + iOS Builds: topics/ios.md
+      - Low Level Graphics: topics/low_level_graphics.md
       - Multithreading: topics/multithreading.md
       - Networking: topics/networking.md
       - Cute Protocol Standard: topics/protocol.md
@@ -104,8 +105,9 @@ nav:
       - Shader Compilation: topics/shader_compilation.md
       - Strings: topics/strings.md
       - Virtual File System: topics/virtual_file_system.md
-      - Web: topics/web.md
+      - HTTPS: topics/web.md
   - Samples: samples.md
+  - Made with CF: made_with_cf.md
   - Community / Ask for Help: community_ask_for_help.md
   - API Reference: api_reference.md
 
