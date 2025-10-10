@@ -150,6 +150,9 @@ typedef struct CF_Sprite
 	/* @member A local pivot (offset) per-frame. This value comes from an aseprite slice on a particular frame if the `pivot` box is checked. Make sure to only have one pivot per frame when authoring your .ase file or they will overwrite each other upon loading. */
 	dyna CF_V2* pivots;
 
+	/* @member Center patch of a 9 slice, mainly to be used for UI*/
+	dyna const CF_Aabb* center_patches;
+
 	/* @member All the `CF_SpriteSlice`'s in the sprite. These get loaded from the .ase file.  */
 	dyna const CF_SpriteSlice* slices;
 
@@ -313,6 +316,8 @@ CF_API CF_Sprite CF_CALL cf_sprite_reload(const CF_Sprite* sprite);
 // In-line implementation of `CF_Sprite` functions.
 
 CF_API void CF_CALL cf_draw_sprite(const CF_Sprite* sprite);
+CF_API void CF_CALL cf_draw_sprite_9_slice(const CF_Sprite* sprite);
+CF_API void CF_CALL cf_draw_sprite_9_slice_tiled(const CF_Sprite* sprite);
 
 CF_INLINE void cf_sprite_draw(CF_Sprite* sprite)
 {
