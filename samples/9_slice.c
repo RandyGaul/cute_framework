@@ -7,6 +7,7 @@ void mount_content_directory_as(const char* dir)
 	path = cf_path_normalize(path);
 	path = cf_string_append(path, "/9_slice_data");
 	cf_fs_mount(path, dir, false);
+	cf_string_free(path);
 }
 
 int main(int argc, char* argv[])

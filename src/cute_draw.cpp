@@ -641,11 +641,11 @@ void cf_draw_sprite(const CF_Sprite* sprite)
 void cf_draw_sprite_9_slice(const CF_Sprite* sprite)
 {
 	CF_ASSERT(sprite);
-	int frame_index = 0;
+	int frame_index = sprite->frame_index;
 	SPRITEBATCH_U64 image_id = 0;
 
 	if (sprite->animation) {
-		frame_index = sprite->frame_index;
+		frame_index = sprite->frame_index + sprite->animation->frame_offset;
 		image_id = sprite->animation->frames[sprite->frame_index].id;
 	}
 	else if (sprite->easy_sprite_id >= CF_PREMADE_ID_RANGE_LO && sprite->easy_sprite_id <= CF_PREMADE_ID_RANGE_HI) {
@@ -659,7 +659,7 @@ void cf_draw_sprite_9_slice(const CF_Sprite* sprite)
 	}
 
 	// revert back to default cf_draw since center patch is 0
-	CF_Aabb center_patch = sprite->center_patches[sprite->frame_index];
+	CF_Aabb center_patch = sprite->center_patches[frame_index];
 	if (center_patch.min.x == 0.0f && center_patch.min.y == 0.0f &&
 		center_patch.max.x == 0.0f && center_patch.max.y == 0.0f) {
 		cf_draw_sprite(sprite);
@@ -836,11 +836,11 @@ void cf_draw_sprite_9_slice(const CF_Sprite* sprite)
 void cf_draw_sprite_9_slice_tiled(const CF_Sprite* sprite)
 {
 	CF_ASSERT(sprite);
-	int frame_index = 0;
+	int frame_index = sprite->frame_index;
 	SPRITEBATCH_U64 image_id = 0;
 
 	if (sprite->animation) {
-		frame_index = sprite->frame_index;
+		frame_index = sprite->frame_index + sprite->animation->frame_offset;
 		image_id = sprite->animation->frames[sprite->frame_index].id;
 	}
 	else if (sprite->easy_sprite_id >= CF_PREMADE_ID_RANGE_LO && sprite->easy_sprite_id <= CF_PREMADE_ID_RANGE_HI) {
@@ -854,7 +854,7 @@ void cf_draw_sprite_9_slice_tiled(const CF_Sprite* sprite)
 	}
 
 	// revert back to default cf_draw since center patch is 0
-	CF_Aabb center_patch = sprite->center_patches[sprite->frame_index];
+	CF_Aabb center_patch = sprite->center_patches[frame_index];
 	if (center_patch.min.x == 0.0f && center_patch.min.y == 0.0f &&
 		center_patch.max.x == 0.0f && center_patch.max.y == 0.0f) {
 		cf_draw_sprite(sprite);
