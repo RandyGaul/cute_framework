@@ -368,12 +368,12 @@ typedef struct CF_Manifold
  * @function cf_min
  * @category math
  * @brief    Returns the minimum of two values.
- * @remarks  In C builds this name resolves via `_Generic` to support vector overloads.
  * @related  cf_min cf_max
  */
-#ifdef __cplusplus
 #define cf_min(a, b) ((a) < (b) ? (a) : (b))
-#else
+#ifndef __cplusplus
+CF_V2 cf_min_v2(CF_V2 a, CF_V2 b);
+#undef cf_min
 #define cf_min(a, b) \
 	_Generic((a), \
 		CF_V2: cf_min_v2(a, b), \
@@ -384,12 +384,12 @@ typedef struct CF_Manifold
  * @function cf_max
  * @category math
  * @brief    Returns the maximum of two values.
- * @remarks  In C builds this name resolves via `_Generic` to support vector overloads.
  * @related  cf_min cf_max
  */
-#ifdef __cplusplus
 #define cf_max(a, b) ((b) < (a) ? (a) : (b))
-#else
+#ifndef __cplusplus
+CF_V2 cf_max_v2(CF_V2 a, CF_V2 b);
+#undef cf_max
 #define cf_max(a, b) \
 	_Generic((a), \
 		CF_V2: cf_max_v2(a, b), \
