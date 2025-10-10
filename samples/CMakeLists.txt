@@ -75,6 +75,7 @@ add_sample(sprite_shatter sprite_shatter.cpp)
 add_sample(screen_shatter screen_shatter.cpp)
 add_sample(font_debug font_debug.cpp)
 add_sample(clay clay.c)
+add_sample(9_slice 9_slice.c)
 
 # Pre-compile shaders for certain samples.
 if (CF_CUTE_SHADERC)
@@ -113,3 +114,4 @@ add_custom_command(TARGET shallow_water PRE_BUILD COMMAND ${CMAKE_COMMAND} -E co
 add_custom_command(TARGET import_spritesheet PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/import_spritesheet_data $<TARGET_FILE_DIR:import_spritesheet>/import_spritesheet_data)
 add_custom_command(TARGET pivot PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/pivot_data $<TARGET_FILE_DIR:pivot>/pivot_data)
 add_custom_command(TARGET scratch PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/../assets/CF_Logo_Pixel.png $<TARGET_FILE_DIR:scratch>/app_icon.png)
+add_custom_command(TARGET 9_slice PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/9_slice_data $<TARGET_FILE_DIR:9_slice>/9_slice_data)

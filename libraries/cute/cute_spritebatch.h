@@ -1463,10 +1463,19 @@ int spritebatch_internal_push_sprite(spritebatch_t* sb, spritebatch_internal_spr
 			tex->timestamp = 0;
 			sprite.w = tex->w;
 			sprite.h = tex->h;
-			sprite.minx = tex->minx;
-			sprite.miny = tex->miny;
-			sprite.maxx = tex->maxx;
-			sprite.maxy = tex->maxy;
+
+			// Previously the uvs were overwritten here directly with the sprite batch texture UVs
+			// now it expects the user code to send in local texture UVs. 
+			// Default sprites should pass in minx and miny as 0 and maxx and maxy as 1 to draw the full
+			// texture, values above will creep into other textures of the atlas, between 0-1 will draw a portion
+			// and below 0 will again creep into other parts of the atlas.
+			// Example use case is to draw 9 slice sprites to be able to draw each slice with specific UVs.
+			float dx = tex->maxx - tex->minx;
+			float dy = tex->maxy - tex->miny;
+			sprite.minx = dx * sprite.minx + tex->minx;
+			sprite.miny = dy * sprite.miny + tex->miny;
+			sprite.maxx = dx * sprite.maxx + tex->minx;
+			sprite.maxy = dy * sprite.maxy + tex->miny;
 		}
 		else skipped_tex = spritebatch_internal_lonely_sprite(sb, s->image_id, s->w, s->h, &sprite, skip_missing_textures);
 	}
