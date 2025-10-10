@@ -584,6 +584,9 @@ void cf_draw_sprite(const CF_Sprite* sprite)
 	s.h = sprite->h;
 	s.geom.type = BATCH_GEOMETRY_TYPE_SPRITE;
 
+	// changes to spritebatch_internal_push_sprite() to support 9 slice sprites now requires all sprites to include
+	// local sprite UVs, having minx/miny being 0 and maxx/maxy being 1 will draw the entire full sprite texture
+	// to support what this did previously.
 	s.minx = 0;
 	s.miny = 0;
 	s.maxx = 1;
@@ -649,13 +652,10 @@ void cf_draw_sprite_9_slice(const CF_Sprite* sprite)
 		image_id = sprite->animation->frames[sprite->frame_index].id;
 	}
 	else if (sprite->easy_sprite_id >= CF_PREMADE_ID_RANGE_LO && sprite->easy_sprite_id <= CF_PREMADE_ID_RANGE_HI) {
-		// not handled for now
-		cf_draw_sprite(sprite);
-		return;
+		CF_ASSERT(!"Not implemented yet.");
 	}
 	else {
-		// needs testing
-		image_id = sprite->easy_sprite_id;
+		CF_ASSERT(!"Not implemented yet.");
 	}
 
 	// revert back to default cf_draw since center patch is 0
@@ -844,13 +844,10 @@ void cf_draw_sprite_9_slice_tiled(const CF_Sprite* sprite)
 		image_id = sprite->animation->frames[sprite->frame_index].id;
 	}
 	else if (sprite->easy_sprite_id >= CF_PREMADE_ID_RANGE_LO && sprite->easy_sprite_id <= CF_PREMADE_ID_RANGE_HI) {
-		// not handled for now
-		cf_draw_sprite(sprite);
-		return;
+		CF_ASSERT(!"Not implemented yet.");
 	}
 	else {
-		// needs testing
-		image_id = sprite->easy_sprite_id;
+		CF_ASSERT(!"Not implemented yet.");
 	}
 
 	// revert back to default cf_draw since center patch is 0
@@ -2779,6 +2776,10 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 			// Actually render the sprite.
 			if (visible && render) {
 				CF_M3x2 m = draw->mvp;
+				// same as cf_draw_sprite()
+				// changes to spritebatch_internal_push_sprite() to support 9 slice sprites now requires all sprites to include
+				// local UVs.
+				// minx/miny being 0 and maxx/maxy being 1 will draw the full glyph texture
 				s.minx = 0.0f;
 				s.miny = 0.0f;
 				s.maxx = 1.0f;

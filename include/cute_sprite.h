@@ -151,7 +151,7 @@ typedef struct CF_Sprite
 	dyna CF_V2* pivots;
 
 	/* @member Center patch of a 9 slice, mainly to be used for UI*/
-	dyna CF_Aabb* center_patches;
+	dyna const CF_Aabb* center_patches;
 
 	/* @member All the `CF_SpriteSlice`'s in the sprite. These get loaded from the .ase file.  */
 	dyna const CF_SpriteSlice* slices;
