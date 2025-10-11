@@ -22,7 +22,7 @@ The purpose of the atlases and batchers is to reduce *draw calls*, an expensive 
 
 However, the paradigm that has stuck is to statically construct atlases as an offline or preprocessing step. This was done in the past as an optimization when computers were much less efficient than they are by today's standards, and had much less memory. Today, especially for 2D games, many games can easily get away with storing their textures in RAM and simply construct atlases on-the-fly based on what is actually being rendered at the time. There is no practical reason why atlases must be packed on disk or defined up-front and fed through our drawing API.
 
-Instead, a novel idea of utilizing higher RAM capabilities of today lets us hide texture atlases entirely from the user. We can simply let the user push sprites into a buffer, and upon drawing scan the buffer for new sprites, inject them into atlases, and viola - draw call counts can be reduced to single digits no matter what.
+Instead, a novel idea of utilizing higher RAM capabilities of today lets us hide texture atlases entirely from the user. We can simply let the user push sprites into a buffer, and upon drawing scan the buffer for new sprites, inject them into atlases, and voila - draw call counts can be reduced to single digits no matter what.
 
 So what would a full program for drawing sprites look like? Just make the sprite, and draw it. Done.
 
@@ -78,7 +78,7 @@ Pretty cool, eh? Let us go over some pro/con analysis of the online sprite compi
 
 1. Nobody needs to really think much about atlases. Artists can export their images however they like. When drawing sprites you can just... Draw the sprite. No need to consider a batch, or atlas, UV, or any other associated plumbing. Just draw the sprite.
 2. The online atlas API can compile sprites together based on what you're actually rendering at the time. This is really cool over the development of a game as you don't need to spend any energy thinking about what sprites will be drawn and when, trying to manually pack them into the same atlas to save a few draw calls.
-3. The atlas compiler can decay sprites out of atalses automatically when they cease to be drawn for long enough.
+3. The atlas compiler can decay sprites out of atlases automatically when they cease to be drawn for long enough.
 4. Some fascinating benefits with text rendering, to be covered later.
 
 And here are some cons of the design:
