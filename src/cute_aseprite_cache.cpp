@@ -213,8 +213,8 @@ static CF_Result s_aseprite_cache_load_from_memory(const char* unique_name, cons
 		});
 
 		if (slice->has_center_as_9_slice) {
-			CF_V2 min = cf_v2(slice->center_x, slice->center_y);
-			CF_V2 max = cf_v2(slice->center_x + slice->center_w, slice->center_y + slice->center_h);
+			CF_V2 min = cf_v2((float)slice->center_x, (float)slice->center_y);
+			CF_V2 max = cf_v2((float)slice->center_x + slice->center_w, (float)slice->center_y + slice->center_h);
 			CF_Aabb center_patch = cf_make_aabb(min, max);
 			for (int frame_number = slice->frame_number; frame_number < ase->frame_count; ++frame_number) {
 				entry.center_patches[frame_number] = center_patch;
