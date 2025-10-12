@@ -156,12 +156,6 @@ typedef struct CF_V2
 } CF_V2;
 // @end
 
-/**
- * @function cf_v2
- * @category math
- * @brief    Creates a 2D vector from 1 or 2 numeric values. If one argument is given, fills both x and y.
- * @example  cf_v2(4.0f) -> {4.0f, 4.0f};  cf_v2(1.0f, 2.0f) -> {1.0f, 2.0f}
- */
 #define cf_v2(...)
 #undef cf_v2
 // We implement cf_v2 in this odd way to 100% for sure force-inline a static initializer. This ensures
@@ -184,7 +178,7 @@ typedef struct CF_V2
  * @struct   CF_SinCos
  * @category math
  * @brief    Rotation about an axis composed of cos/sin pair.
- * @remarks  You can construct an identity with the `CF_SinCos cf_sin_cos()` function.
+ * @remarks  You can construct a `CF_SinCos` with the function `cf_sin_cos()/cf_sin_cos(1.0f)` function.
  * @related  CF_SinCos cf_sincos cf_sincos_f cf_x_axis cf_y_axis cf_mul_sc_v2 cf_mul_T_sc_v2
  */
 typedef struct CF_SinCos
@@ -1398,12 +1392,6 @@ CF_INLINE CF_V2 cf_cw90(CF_V2 a) { return cf_v2(a.y, -a.x); }
  */
 CF_INLINE float cf_det2(CF_V2 a, CF_V2 b) { return a.x * b.y - a.y * b.x; }
 
-/**
- * @function cf_sincos
- * @category math
- * @brief    Constructs a `CF_SinCos` rotation from an angle in radians, or the identity rotation.
- * @related  cf_mul cf_mul_T cf_atan2_360 cf_make_rotation
- */
 #define cf_sincos(a)
 #undef cf_sincos
 #ifdef __cplusplus
@@ -1918,13 +1906,6 @@ CF_INLINE CF_V2 cf_safe_norm(CF_V2 a) { float sq = cf_dot(a, a); return sq ? cf_
 CF_INLINE CF_V2 cf_reflect(CF_V2 a, CF_V2 n) { return cf_sub(a, cf_mul_v2_f(n, (2.f * cf_dot(a, n)))); }
 
 /**
- * @function cf_lerp
- * @category math
- * @brief    Returns a vector linearly interpolated from `a` to `b` along `t`, a value _usually_ from 0.0f to 1.0f.
- * @related  CF_V2 cf_lerp cf_bezier
- */
-
-/**
  * @function cf_bezier
  * @category math
  * @brief    Returns a point along a quadratic bezier curve according to time `t`.
@@ -2017,13 +1998,6 @@ CF_INLINE CF_V2 cf_from_angle(float radians) { return cf_v2(CF_COSF(radians), CF
  * @related  CF_M3x2 cf_mul_m32_v2 cf_mul_m32 cf_make_identity cf_make_translation cf_make_scale cf_make_scale_translation cf_make_rotation cf_make_transform_TSR cf_invert
  */
 CF_INLINE CF_M3x2 cf_make_identity(void) { CF_M3x2 m; m.m.x = cf_v2(1, 0); m.m.y = cf_v2(0, 1); m.p = cf_v2(0, 0); return m; }
-
-/**
- * @function cf_make_scale_translation
- * @category math
- * @brief    Returns a `CF_M3x2` that represents a scale + translation.
- * @related  CF_M3x2 cf_mul_m32_v2 cf_mul_m32 cf_make_identity cf_make_translation cf_make_scale cf_make_scale_translation cf_make_rotation cf_make_transform_TSR cf_invert
- */
 
 /**
  * @function cf_make_rotation

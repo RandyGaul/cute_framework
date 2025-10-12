@@ -180,8 +180,8 @@ char* cf_strim(char* s)
 	if (slen(s) == 0) return s;
 	char* start = s;
 	char* end = s + slen(s) - 1;
-	while (isspace(*start)) start++;
-	while (isspace(*end)) end--;
+	while (isspace(*start) && start < end) start++;
+	while (isspace(*end) && end > start) end--;
 	size_t len = end - start + 1;
 	CF_MEMMOVE(s, start, len);
 	s[len] = 0;
@@ -193,7 +193,8 @@ char* cf_sltrim(char* s)
 {
 	CF_ACANARY(s);
 	char* start = s;
-	while (isspace(*start)) start++;
+	char* end = s + slen(s) - 1;
+	while (isspace(*start) && end > start) start++;
 	size_t len = slen(s) - (start - s);
 	CF_MEMMOVE(s, start, len);
 	s[len] = 0;
@@ -204,7 +205,12 @@ char* cf_sltrim(char* s)
 char* cf_srtrim(char* s)
 {
 	CF_ACANARY(s);
-	while (isspace(*(s + slen(s) - 1))) alen(s)--;
+	char* start = s;
+	char* end = s + slen(s) - 1;
+	while (isspace(*(s + slen(s) - 1)) && end < start) {
+		alen(s)--;
+		--end;
+	}
 	s[slen(s)] = 0;
 	return s;
 }
