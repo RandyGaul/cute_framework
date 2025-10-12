@@ -2559,8 +2559,8 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 	// text rendering feel a lot more robust, especially for nearest-neighbor rendering.
 	float inv_cam_scale_y = 1.0f / len(draw->cam_stack.last().m.y);
 	float inv_cam_scale_x = 1.0f / len(draw->cam_stack.last().m.x);
-	float x = roundf(position.x * inv_cam_scale_x);
-	float initial_y = roundf((position.y - font->ascent * scale) * inv_cam_scale_y);
+	float x = CF_ROUNDF(position.x * inv_cam_scale_x);
+	float initial_y = CF_ROUNDF((position.y - font->ascent * scale) * inv_cam_scale_y);
 	float y = initial_y;
 	float max_x = x;
 	// Extend the height by descent to include spaces below the baseline.

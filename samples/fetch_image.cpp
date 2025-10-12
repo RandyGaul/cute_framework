@@ -37,7 +37,7 @@ int main(int argc, char *argv[])
 		{
 			CF_TemporaryImage image = cf_fetch_image(&sprite);
 
-			ImTextureID id = (ImTextureID)cf_texture_binding_handle(image.tex);
+			ImTextureID id = (ImTextureID)cf_texture_handle(image.tex);
 			ImVec2 size = { (float)image.w * 5.0f, (float)image.h * 5.0f };
 			// y is flipped
 			ImVec2 uv0 = { image.u.x, image.v.y };

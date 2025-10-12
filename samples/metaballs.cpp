@@ -104,7 +104,6 @@ int main(int argc, char* argv[])
 	while (app_is_running()) {
 		update();
 	}
-	destroy_app();
 #endif
 
 	destroy_canvas(soft_circles);

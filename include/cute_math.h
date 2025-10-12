@@ -26,6 +26,11 @@
 	#define CF_SINF sinf
 #endif
 
+#ifndef CF_ASINF
+	#include <math.h>
+	#define CF_ASINF asinf
+#endif
+
 #ifndef CF_COSF
 	#include <math.h>
 	#define CF_COSF cosf
@@ -593,35 +598,35 @@ CF_INLINE CF_V2    cf_abs_v2 (CF_V2    x) { return cf_v2(cf_abs_f(x.x), cf_abs_f
  * @brief    Returns `a` float clamped between `lo` and `hi`.
  * @related  cf_min cf_max cf_clamp cf_clamp01 cf_sign cf_intersect cf_safe_invert cf_lerp cf_remap cf_mod cf_fract
  */
-#define cf_clamp(x, hi, lo) cf_max(lo, cf_min(x, hi))
+#define cf_clamp(x, lo, hi) cf_max(lo, cf_min(x, hi))
 #undef cf_clamp
 #ifdef __cplusplus
 } // extern "C"
-CF_INLINE float    cf_clamp(float    x, float    hi, float    lo) { return cf_max(lo, cf_min(x, hi)); }
-CF_INLINE double   cf_clamp(double   x, double   hi, double   lo) { return cf_max(lo, cf_min(x, hi)); }
-CF_INLINE int8_t   cf_clamp(int8_t   x, int8_t   hi, int8_t   lo) { return cf_max(lo, cf_min(x, hi)); }
-CF_INLINE uint8_t  cf_clamp(uint8_t  x, uint8_t  hi, uint8_t  lo) { return cf_max(lo, cf_min(x, hi)); }
-CF_INLINE int16_t  cf_clamp(int16_t  x, int16_t  hi, int16_t  lo) { return cf_max(lo, cf_min(x, hi)); }
-CF_INLINE uint16_t cf_clamp(uint16_t x, uint16_t hi, uint16_t lo) { return cf_max(lo, cf_min(x, hi)); }
-CF_INLINE int32_t  cf_clamp(int32_t  x, int32_t  hi, int32_t  lo) { return cf_max(lo, cf_min(x, hi)); }
-CF_INLINE uint32_t cf_clamp(uint32_t x, uint32_t hi, uint32_t lo) { return cf_max(lo, cf_min(x, hi)); }
-CF_INLINE int64_t  cf_clamp(int64_t  x, int64_t  hi, int64_t  lo) { return cf_max(lo, cf_min(x, hi)); }
-CF_INLINE uint64_t cf_clamp(uint64_t x, uint64_t hi, uint64_t lo) { return cf_max(lo, cf_min(x, hi)); }
-CF_INLINE CF_V2    cf_clamp(CF_V2    x, CF_V2    hi, CF_V2    lo) { return cf_max(lo, cf_min(x, hi)); }
+CF_INLINE float    cf_clamp(float    x, float    lo, float    hi) { return cf_max(lo, cf_min(x, hi)); }
+CF_INLINE double   cf_clamp(double   x, double   lo, double   hi) { return cf_max(lo, cf_min(x, hi)); }
+CF_INLINE int8_t   cf_clamp(int8_t   x, int8_t   lo, int8_t   hi) { return cf_max(lo, cf_min(x, hi)); }
+CF_INLINE uint8_t  cf_clamp(uint8_t  x, uint8_t  lo, uint8_t  hi) { return cf_max(lo, cf_min(x, hi)); }
+CF_INLINE int16_t  cf_clamp(int16_t  x, int16_t  lo, int16_t  hi) { return cf_max(lo, cf_min(x, hi)); }
+CF_INLINE uint16_t cf_clamp(uint16_t x, uint16_t lo, uint16_t hi) { return cf_max(lo, cf_min(x, hi)); }
+CF_INLINE int32_t  cf_clamp(int32_t  x, int32_t  lo, int32_t  hi) { return cf_max(lo, cf_min(x, hi)); }
+CF_INLINE uint32_t cf_clamp(uint32_t x, uint32_t lo, uint32_t hi) { return cf_max(lo, cf_min(x, hi)); }
+CF_INLINE int64_t  cf_clamp(int64_t  x, int64_t  lo, int64_t  hi) { return cf_max(lo, cf_min(x, hi)); }
+CF_INLINE uint64_t cf_clamp(uint64_t x, uint64_t lo, uint64_t hi) { return cf_max(lo, cf_min(x, hi)); }
+CF_INLINE CF_V2    cf_clamp(CF_V2    x, CF_V2    lo, CF_V2    hi) { return cf_max(lo, cf_min(x, hi)); }
 extern "C" {
 #else
-CF_INLINE float    cf_clamp_f  (float    x, float    hi, float    lo) { return cf_max(lo, cf_min(x, hi)); }
-CF_INLINE double   cf_clamp_d  (double   x, double   hi, double   lo) { return cf_max(lo, cf_min(x, hi)); }
-CF_INLINE int8_t   cf_clamp_i8 (int8_t   x, int8_t   hi, int8_t   lo) { return cf_max(lo, cf_min(x, hi)); }
-CF_INLINE uint8_t  cf_clamp_u8 (uint8_t  x, uint8_t  hi, uint8_t  lo) { return cf_max(lo, cf_min(x, hi)); }
-CF_INLINE int16_t  cf_clamp_i16(int16_t  x, int16_t  hi, int16_t  lo) { return cf_max(lo, cf_min(x, hi)); }
-CF_INLINE uint16_t cf_clamp_u16(uint16_t x, uint16_t hi, uint16_t lo) { return cf_max(lo, cf_min(x, hi)); }
-CF_INLINE int32_t  cf_clamp_i32(int32_t  x, int32_t  hi, int32_t  lo) { return cf_max(lo, cf_min(x, hi)); }
-CF_INLINE uint32_t cf_clamp_u32(uint32_t x, uint32_t hi, uint32_t lo) { return cf_max(lo, cf_min(x, hi)); }
-CF_INLINE int64_t  cf_clamp_i64(int64_t  x, int64_t  hi, int64_t  lo) { return cf_max(lo, cf_min(x, hi)); }
-CF_INLINE uint64_t cf_clamp_u64(uint64_t x, uint64_t hi, uint64_t lo) { return cf_max(lo, cf_min(x, hi)); }
-CF_INLINE CF_V2    cf_clamp_v2 (CF_V2    x, CF_V2    hi, CF_V2    lo) { return cf_max(lo, cf_min(x, hi)); }
-#define cf_clamp(x, hi, lo)     \
+CF_INLINE float    cf_clamp_f  (float    x, float    lo, float    hi) { return cf_max(lo, cf_min(x, hi)); }
+CF_INLINE double   cf_clamp_d  (double   x, double   lo, double   hi) { return cf_max(lo, cf_min(x, hi)); }
+CF_INLINE int8_t   cf_clamp_i8 (int8_t   x, int8_t   lo, int8_t   hi) { return cf_max(lo, cf_min(x, hi)); }
+CF_INLINE uint8_t  cf_clamp_u8 (uint8_t  x, uint8_t  lo, uint8_t  hi) { return cf_max(lo, cf_min(x, hi)); }
+CF_INLINE int16_t  cf_clamp_i16(int16_t  x, int16_t  lo, int16_t  hi) { return cf_max(lo, cf_min(x, hi)); }
+CF_INLINE uint16_t cf_clamp_u16(uint16_t x, uint16_t lo, uint16_t hi) { return cf_max(lo, cf_min(x, hi)); }
+CF_INLINE int32_t  cf_clamp_i32(int32_t  x, int32_t  lo, int32_t  hi) { return cf_max(lo, cf_min(x, hi)); }
+CF_INLINE uint32_t cf_clamp_u32(uint32_t x, uint32_t lo, uint32_t hi) { return cf_max(lo, cf_min(x, hi)); }
+CF_INLINE int64_t  cf_clamp_i64(int64_t  x, int64_t  lo, int64_t  hi) { return cf_max(lo, cf_min(x, hi)); }
+CF_INLINE uint64_t cf_clamp_u64(uint64_t x, uint64_t lo, uint64_t hi) { return cf_max(lo, cf_min(x, hi)); }
+CF_INLINE CF_V2    cf_clamp_v2 (CF_V2    x, CF_V2    lo, CF_V2    hi) { return cf_max(lo, cf_min(x, hi)); }
+#define cf_clamp(x, lo, hi)     \
 	_Generic((x),               \
 		float:    cf_clamp_f,   \
 		double:   cf_clamp_d,   \
@@ -1006,7 +1011,7 @@ extern "C" {
 #else
 CF_INLINE float  cf_sin_f(float  x) { return CF_SINF(x); }
 CF_INLINE double cf_sin_d(double x) { return CF_SIN(x); }
-CF_INLINE CF_V2  cf_sin_v2(CF_V2 x) { return cf_sin_v2(x); }
+CF_INLINE CF_V2  cf_sin_v2(CF_V2 x) { return cf_v2(CF_SINF(x.x), CF_SINF(x.y)); }
 #define cf_sin(x)           \
 	_Generic((x),           \
 		float:   cf_sin_f,  \
@@ -1055,12 +1060,12 @@ CF_INLINE CF_V2  cf_cos_v2(CF_V2 x) { return cf_v2(CF_COSF(x.x), CF_COSF(x.y)); 
 } // extern "C"
 CF_INLINE float  cf_asin(float  x) { return asinf(x); }
 CF_INLINE double cf_asin(double x) { return asin(x); }
-CF_INLINE CF_V2  cf_asin(CF_V2  x) { return cf_v2(CF_SINF(x.x), CF_SINF(x.y)); }
+CF_INLINE CF_V2  cf_asin(CF_V2  x) { return cf_v2(CF_ASINF(x.x), CF_ASINF(x.y)); }
 extern "C" {
 #else
 CF_INLINE float  cf_asin_f(float  x) { return asinf(x); }
 CF_INLINE double cf_asin_d(double x) { return asin(x); }
-CF_INLINE CF_V2  cf_asin_v2(CF_V2 x) { return cf_v2(CF_SINF(x.x), CF_SINF(x.y)); }
+CF_INLINE CF_V2  cf_asin_v2(CF_V2 x) { return cf_v2(CF_ASINF(x.x), CF_ASINF(x.y)); }
 #define cf_asin(x)           \
 	_Generic((x),            \
 		float:   cf_asin_f,  \
@@ -1212,7 +1217,7 @@ CF_INLINE float cf_cube_out(float x) { float f = (x - 1); return f * f * f + 1.0
  * @remarks  Here is a great link to [visualize each easing function](https://easings.net/).
  * @related  cf_cube_in cf_cube_out cf_cube_in_out
  */
-CF_INLINE float cf_cube_in_out(float x) { if (x < 0.5f) return 4.0f * x * x * x; else { return 0.5f * x * x * x + 1.0f; } }
+CF_INLINE float cf_cube_in_out(float x) { if (x < 0.5f) return 4.0f * x * x * x; else { return 4.0f * x * x * x - 3.0f * x * x + 1.0f; } }
 
 /**
  * @function cf_quart_in
