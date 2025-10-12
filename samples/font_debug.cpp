@@ -145,8 +145,8 @@ int main(int argc, char* argv[])
                 CF_V2 glyph_min = glyph_position;
                 CF_V2 glyph_max = glyph_position;
 
-                glyph_min = cf_add_v2(glyph_min, glyph->q0);
-                glyph_max = cf_add_v2(glyph_max, glyph->q1);
+                glyph_min = cf_add(glyph_min, glyph->q0);
+                glyph_max = cf_add(glyph_max, glyph->q1);
 
                 CF_Aabb glyph_aabb = cf_make_aabb(glyph_min, glyph_max);
 

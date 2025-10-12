@@ -157,7 +157,7 @@ static void s_canvas(int w, int h)
 		cf_destroy_canvas(app->offscreen_canvas);
 	}
 	params.depth_stencil_enable = true;
-	params.sample_count = (CF_SampleCount)cf_clamp_int((app->sample_count >> 1), 0, 3);
+	params.sample_count = (CF_SampleCount)cf_clamp((app->sample_count >> 1), 0, 3);
 	app->offscreen_canvas = cf_make_canvas(params);
 	app->canvas_w = w;
 	app->canvas_h = h;

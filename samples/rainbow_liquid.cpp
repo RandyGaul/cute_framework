@@ -137,7 +137,7 @@ void physics_solve_collisions_entity(physics_t* physics, grid_cell_id_t id, int 
 		v2* a_pos = &a->curr_pos;
 		v2* b_pos = &b->curr_pos;
 
-		v2 d = cf_sub_v2(*b_pos, *a_pos);
+		v2 d = cf_sub(*b_pos, *a_pos);
 
 		float d2 = cf_dot(d, d);
 		float r  = a->r + b->r;
@@ -148,8 +148,8 @@ void physics_solve_collisions_entity(physics_t* physics, grid_cell_id_t id, int 
 			float depth = r - l;
 			v2 response = cf_mul_v2_f(n, depth * 0.5f);
 
-			*a_pos = cf_sub_v2(*a_pos, response);
-			*b_pos = cf_add_v2(*b_pos, response);
+			*a_pos = cf_sub(*a_pos, response);
+			*b_pos = cf_add(*b_pos, response);
 		}
 	}
 }
@@ -247,7 +247,7 @@ void physics_update_entities_task(void* udata)
 		p->prev_pos = p->curr_pos;
 		p->curr_pos  = new_position;
 
-		p->curr_pos = cf_clamp_v2(p->curr_pos, {margin, margin}, {physics->width - margin, physics->height - margin});
+		p->curr_pos = cf_clamp(p->curr_pos, {margin, margin}, {physics->width - margin, physics->height - margin});
 	}
 }
 
