@@ -715,10 +715,10 @@ void cf_draw_sprite_9_slice(const CF_Sprite* sprite)
 	// otherwise we end up with just a normal scaled up sprite instead of a 9 slice one
 	float full_width   = CF_FABSF(sprite->w * sprite->scale.x);
 	float full_height  = CF_FABSF(sprite->h * sprite->scale.y);
-	float inner_left   = left / full_width * 0.5f;
-	float inner_right  = right / full_width * 0.5f;
-	float inner_top    = top / full_height * 0.5f;
-	float inner_bottom = bottom / full_height * 0.5f;
+	float inner_left   = left / full_width;
+	float inner_right  = right / full_width;
+	float inner_top    = top / full_height;
+	float inner_bottom = bottom / full_height;
 
 	CF_V2 quads[9][4] = {
 		// top row
@@ -905,14 +905,14 @@ void cf_draw_sprite_9_slice_tiled(const CF_Sprite* sprite)
 	// otherwise we end up with just a normal scaled up sprite instead of a 9 slice one
 	float full_width   = CF_FABSF(sprite->w * sprite->scale.x);
 	float full_height  = CF_FABSF(sprite->h * sprite->scale.y);
-	float inner_left   = left / full_width * 0.5f;
-	float inner_right  = right / full_width * 0.5f;
-	float inner_top    = top / full_height * 0.5f;
-	float inner_bottom = bottom / full_height * 0.5f;
+	float inner_left   = left / full_width;
+	float inner_right  = right / full_width;
+	float inner_top    = top / full_height;
+	float inner_bottom = bottom / full_height;
 	
 	// tiled sizes in local space
-	CF_V2 side_tiled_size = V2(	(center_patch.max.x - center_patch.min.x) / full_width * 0.5f, 
-								(center_patch.max.y - center_patch.min.y) / full_height * 0.5f);
+	CF_V2 side_tiled_size = V2(	(center_patch.max.x - center_patch.min.x) / full_width, 
+								(center_patch.max.y - center_patch.min.y) / full_height);
 
 	CF_V2 quads[9][4] = {
 		// top row
