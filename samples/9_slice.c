@@ -50,7 +50,7 @@ int main(int argc, char* argv[])
 		ImGui_SliderFloat2("Position", (float*)&sprite.transform.p, -20, 20);
 		ImGui_SliderFloat2("Scale", (float*)&sprite.scale, -2, 2);
 		ImGui_SliderFloat("Rotation", &rotation, 0, 360);
-		sprite.transform.r = cf_sincos_f(rotation * CF_PI / 180.0f);
+		sprite.transform.r = cf_sincos(rotation * CF_PI / 180.0f);
 		ImGui_End();
 
 		cf_sprite_draw(&demo);
