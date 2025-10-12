@@ -105,12 +105,11 @@ And here are some cons of the design:
 
 You can find the guts of the atlas compiler here, in a [single-file C header called cute_spritebatch.h](https://github.com/RandyGaul/cute_framework/blob/master/libraries/cute/cute_spritebatch.h). It's managing the rolling atlas cache itself, and firing a variety of callbacks back to the user to fetch pixels, make textures, or report batches.
 
-# Escaping the Whale
-
 As promised, we can be more like Pinocchio, and escape the whale one sprite at a time.
 
 <p align="center">
 <img src=https://github.com/RandyGaul/cute_framework/blob/master/assets/whale_escape.png?raw=true>
+<em><a href="https://www.mouseplanet.com/gallery/v/PersonalContributions/cbarry/Pinocchio+Behind+Scenes.jpg.html">image source</a></em>
 </p>
 
 Conclusion? If you're still packing sprites into atlases offline then you're getting swallowed by the whale. Just kidding! It's a totally valid solution to prebake atlases and render sprites this way; it's just there are other interesting things to try out as well if one were so inclined :)
@@ -126,12 +125,6 @@ Of course, other formats can be supported, as CF provides some lower level APIs 
 Drawing shapes is not easy. Just try thinking about how to antialias (aa) the edges of a circle and enjoy tearing your hair out. Your aa needs to also work regardless of camera zoom, window dimensions, and not subject itself to weird alias acne artifacts.
 
 Peeking into other open source projects reveals a plethora of hand-rolled triangulations. The typical strategy is to perform a bunch of math to figure out how to make many tiny feather triangles around the rim of shapes and draw them at half-opacity to produce antialiased pixels. However, this is super error-prone, tedious, produces a lot of code, and most important produces a lot of geometry to submit to the GPU.
-
-Whale alert! Swallowing imminent.
-
-<p align="center">
-<img src=https://github.com/RandyGaul/cute_framework/blob/master/assets/whale_alert.png?raw=true>
-</p>
 
 Instead, a novel and effective approach is to steal all of [Inigo Quilez's work](https://iquilezles.org/articles/distfunctions2d) and draw shapes using SDF's (signed distance function, NOT signed distance field). These SDF's are cool because you can get fragment shaders to just power through them without a hitch. These SDF's work by defining a function to, given a pixel, compute the distance to that pixel as a signed distance value. This tells you how far from the shapes surface you're in, perfect for rendering shapes with perfect antialiased edges.
 
