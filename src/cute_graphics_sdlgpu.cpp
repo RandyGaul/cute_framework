@@ -688,7 +688,7 @@ void cf_sdlgpu_attach(SDL_Window* window)
 bool cf_sdlgpu_supports_msaa(int sample_count)
 {
 	SDL_GPUTextureFormat fmt = SDL_GetGPUSwapchainTextureFormat(g_ctx.device, g_ctx.window);
-	SDL_GPUSampleCount msaa = (SDL_GPUSampleCount)cf_clamp_int((g_ctx.msaa_sample_count >> 1), 0, 3);
+	SDL_GPUSampleCount msaa = (SDL_GPUSampleCount)cf_clamp((g_ctx.msaa_sample_count >> 1), 0, 3);
 	return SDL_GPUTextureSupportsSampleCount(g_ctx.device, fmt, msaa);
 }
 

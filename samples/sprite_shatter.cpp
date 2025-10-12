@@ -95,18 +95,18 @@ void shatter_sprite(CF_Sprite* sprite, int steps, SpriteChunk* chunks)
     sprite_max.y += h / 2;
     
     CF_Aabb aabb = cf_make_aabb(sprite_min, sprite_max);
-    CF_V2 step = cf_sub_v2(sprite_max, sprite_min);
-    step = cf_div_v2_f(step, split_step);
+    CF_V2 step = cf_sub(sprite_max, sprite_min);
+    step = cf_div(step, split_step);
     
     CF_M3x2 mvp = cf_draw_peek();
     mvp = cf_mul_m32(draw.projection, mvp);
     
     CF_Vertex verts[6] = {};
     CF_TemporaryImage temporary_image = cf_fetch_image(sprite);
-    CF_V2 u = cf_min_v2(temporary_image.v, temporary_image.u);
-    CF_V2 v = cf_max_v2(temporary_image.v, temporary_image.u);
-    CF_V2 duv = cf_sub_v2(v, u);
-    CF_V2 uv_step = cf_div_v2_f(duv, split_step);
+    CF_V2 u = cf_min(temporary_image.v, temporary_image.u);
+    CF_V2 v = cf_max(temporary_image.v, temporary_image.u);
+    CF_V2 duv = cf_sub(v, u);
+    CF_V2 uv_step = cf_div(duv, split_step);
     
     CF_V2 center = cf_center(aabb);
     float push_strength = 10.0f;
@@ -127,7 +127,7 @@ void shatter_sprite(CF_Sprite* sprite, int steps, SpriteChunk* chunks)
             chunk_center.y -= step.y * 0.5f;
             
             // uniform force push to each chunk from the center
-            CF_V2 velocity = cf_sub_v2(chunk_center, center);
+            CF_V2 velocity = cf_sub(chunk_center, center);
             velocity = cf_norm(velocity);
             velocity = cf_mul_v2_f(velocity, push_strength);
             
@@ -177,10 +177,10 @@ void update_sprite_chunks(SpriteChunk* chunks)
         
         CF_V2 dp = cf_mul_v2_f(chunk->velocity, CF_DELTA_TIME);
         
-        chunk->verts[0] = cf_add_v2(chunk->verts[0], dp);
-        chunk->verts[1] = cf_add_v2(chunk->verts[1], dp);
-        chunk->verts[2] = cf_add_v2(chunk->verts[2], dp);
-        chunk->verts[3] = cf_add_v2(chunk->verts[3], dp);
+        chunk->verts[0] = cf_add(chunk->verts[0], dp);
+        chunk->verts[1] = cf_add(chunk->verts[1], dp);
+        chunk->verts[2] = cf_add(chunk->verts[2], dp);
+        chunk->verts[3] = cf_add(chunk->verts[3], dp);
     }
 }
 

@@ -586,7 +586,7 @@ void cf_draw_sprite(const CF_Sprite* sprite)
 	s.geom.type = BATCH_GEOMETRY_TYPE_SPRITE;
 
 	v2 offset = sprite->offset + (sprite->pivots ? sprite->pivots[sprite->frame_index] : V2(0,0));
-	v2 p = cf_add_v2(sprite->transform.p, cf_mul_v2(offset, sprite->scale));
+	v2 p = cf_add(sprite->transform.p, cf_mul(offset, sprite->scale));
 
 	v2 scale = V2(sprite->scale.x * s.w, sprite->scale.y * s.h);
 	if (apply_border_scale) {

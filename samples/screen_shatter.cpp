@@ -88,8 +88,8 @@ void screen_chunk(CF_V2 screen_dims, ScreenChunk* chunks)
     CF_V2 center = cf_v2(0, 0);
     float push_strength = 10.0f;
     
-    CF_V2 screen_min = cf_neg_v2(cf_mul_v2_f(screen_dims, 0.5f));
-    CF_V2 screen_max = cf_mul_v2_f(screen_dims, 0.5f);
+    CF_V2 screen_min = cf_neg(cf_mul(screen_dims, 0.5f));
+    CF_V2 screen_max = cf_mul(screen_dims, 0.5f);
     CF_Aabb screen_aabb = cf_make_aabb(screen_min, screen_max);
     CF_V2 screen_top_left = cf_top_left(screen_aabb);
     
@@ -108,7 +108,7 @@ void screen_chunk(CF_V2 screen_dims, ScreenChunk* chunks)
         cf_array_pop(aabbs);
         
         CF_V2 extents = cf_extents(aabb);
-        CF_V2 ds = cf_sub_v2(extents, min_size);
+        CF_V2 ds = cf_sub(extents, min_size);
         bool discard = ds.x <= min_size.x && ds.y <= min_size.y;
         
         if (discard)
@@ -118,10 +118,10 @@ void screen_chunk(CF_V2 screen_dims, ScreenChunk* chunks)
             CF_V2 p2 = cf_top_right(aabb);
             CF_V2 p3 = cf_bottom_right(aabb);
             
-            CF_V2 uv0 = cf_sub_v2(screen_top_left, p0);
-            CF_V2 uv1 = cf_sub_v2(screen_top_left, p1);
-            CF_V2 uv2 = cf_sub_v2(screen_top_left, p2);
-            CF_V2 uv3 = cf_sub_v2(screen_top_left, p3);
+            CF_V2 uv0 = cf_sub(screen_top_left, p0);
+            CF_V2 uv1 = cf_sub(screen_top_left, p1);
+            CF_V2 uv2 = cf_sub(screen_top_left, p2);
+            CF_V2 uv3 = cf_sub(screen_top_left, p3);
             
             uv0.x = cf_abs(uv0.x / screen_dims.x);
             uv0.y = cf_abs(uv0.y / screen_dims.y);
@@ -146,9 +146,9 @@ void screen_chunk(CF_V2 screen_dims, ScreenChunk* chunks)
                 chunk.uvs[2] = uv2;
                 
                 centroid = cf_centroid(chunk.verts, CF_ARRAY_SIZE(chunk.verts));
-                chunk.velocity = cf_sub_v2(centroid, center);
+                chunk.velocity = cf_sub(centroid, center);
                 chunk.velocity = cf_norm(chunk.velocity);
-                chunk.velocity = cf_mul_v2_f(chunk.velocity, push_strength);
+                chunk.velocity = cf_mul(chunk.velocity, push_strength);
                 
                 cf_array_push(chunks, chunk);
             }
@@ -165,9 +165,9 @@ void screen_chunk(CF_V2 screen_dims, ScreenChunk* chunks)
                 chunk.uvs[2] = uv3;
                 
                 centroid = cf_centroid(chunk.verts, CF_ARRAY_SIZE(chunk.verts));
-                chunk.velocity = cf_sub_v2(centroid, center);
+                chunk.velocity = cf_sub(centroid, center);
                 chunk.velocity = cf_norm(chunk.velocity);
-                chunk.velocity = cf_mul_v2_f(chunk.velocity, push_strength);
+                chunk.velocity = cf_mul(chunk.velocity, push_strength);
                 
                 cf_array_push(chunks, chunk);
             }
@@ -222,9 +222,9 @@ void update_screen_chunk(ScreenChunk* chunks)
     {
         ScreenChunk* chunk = chunks + index;
         CF_V2 dp = cf_mul_v2_f(chunk->velocity, CF_DELTA_TIME);
-        chunk->verts[0] = cf_add_v2(chunk->verts[0], dp);
-        chunk->verts[1] = cf_add_v2(chunk->verts[1], dp);
-        chunk->verts[2] = cf_add_v2(chunk->verts[2], dp);
+        chunk->verts[0] = cf_add(chunk->verts[0], dp);
+        chunk->verts[1] = cf_add(chunk->verts[1], dp);
+        chunk->verts[2] = cf_add(chunk->verts[2], dp);
     }
 }
 
@@ -335,7 +335,7 @@ int main(int argc, char *argv[])
         else
         {
             cf_draw_push_color(cf_color_grey());
-            CF_Aabb background_aabb = cf_make_aabb(cf_neg_v2(canvas_dims), canvas_dims);
+            CF_Aabb background_aabb = cf_make_aabb(cf_neg(canvas_dims), canvas_dims);
             cf_draw_box_fill(background_aabb, 0.0f);
             cf_draw_pop_color();
             
