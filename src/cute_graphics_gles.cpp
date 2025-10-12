@@ -833,7 +833,7 @@ static CF_GL_Slot* s_prepare_buffer_slot(CF_GL_Buffer* buffer, GLsizeiptr requir
 		slot->size = 0;
 		slot->offset = 0;
 	}
-	GLsizeiptr capacity = cf_max(buffer->capacity, required_bytes);
+	GLsizeiptr capacity = cf_max((int64_t)buffer->capacity, (int64_t)required_bytes);
 	glBindBuffer(buffer->target, slot->handle);
 	if (slot->size < capacity) {
 		glBufferData(buffer->target, capacity, NULL, GL_DYNAMIC_DRAW);
