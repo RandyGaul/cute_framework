@@ -23,7 +23,7 @@ Don't reinvent the wheel! Seriously, what are you thinking wasting time drawing 
 Is it though? Truly a solved problem? [DRY principle](https://en.wikipedia.org/wiki/Don%27t_repeat_yourself) is another fun one. It turns out some psychology can be fun, and go a long way. If we take a look at the movie Pinocchio we find Gepetto, Pinocchio's father, sitting in a whale attempting to fish for food.
 
 <p align="center">
-<img src=TODO>
+<img src=https://github.com/RandyGaul/cute_framework/blob/master/assets/gepetto.png?raw=true>
 </p>
 
 This scene lays out a metaphor for the psychological story of how an up-and-coming son must save his father to actualize himself through life. The father represents order, structure, and the past. He knows how to make puppets, and fish (apparently), and uses the skills and knowledge of the past to navigate present tense. However, over time this crystalized structure of knowledge can become outdated, no longer sufficient to deal with the landscape evolving underneath it. And so, Geppetto doesn't even acknowledge the whale or his situation, simply living on in delusion without addressing the problem at-hand.
@@ -110,7 +110,7 @@ You can find the guts of the atlas compiler here, in a [single-file C header cal
 As promised, we can be more like Pinocchio, and escape the whale one sprite at a time.
 
 <p align="center">
-<img src=TODO>
+<img src=https://github.com/RandyGaul/cute_framework/blob/master/assets/whale_escape.png?raw=true>
 </p>
 
 Conclusion? If you're still packing sprites into atlases offline then you're getting swallowed by the whale. Just kidding! It's a totally valid solution to prebake atlases and render sprites this way; it's just there are other interesting things to try out as well if one were so inclined :)
@@ -130,7 +130,7 @@ Peeking into other open source projects reveals a plethora of hand-rolled triang
 Whale alert! Swallowing imminent.
 
 <p align="center">
-<img src=TODO>
+<img src=https://github.com/RandyGaul/cute_framework/blob/master/assets/whale_alert.png?raw=true>
 </p>
 
 Instead, a novel and effective approach is to steal all of [Inigo Quilez's work](https://iquilezles.org/articles/distfunctions2d) and draw shapes using SDF's (signed distance function, NOT signed distance field). These SDF's are cool because you can get fragment shaders to just power through them without a hitch. These SDF's work by defining a function to, given a pixel, compute the distance to that pixel as a signed distance value. This tells you how far from the shapes surface you're in, perfect for rendering shapes with perfect antialiased edges.
