@@ -1,6 +1,6 @@
 # A Tour of Cute Framework's Renderer
 
-The renderer in CF (Cute Framework) has grown to be something quite unique since its inception. Let us go through a tour from the ground up and cover the design and implementation of a novel, full-featured, high-performance, cross-platform 2D renderer. Yes, many buzzwords. Let's go.
+The renderer in CF (Cute Framework) has grown into something quite unique since its inception. Let us go through a tour from the ground up and cover the design and implementation of a novel, full-featured, high-performance, cross-platform 2D renderer. Yes, many buzzwords. Let's go.
 
 # Sprites
 
@@ -10,19 +10,35 @@ The [original idea](https://github.com/RandyGaul/tinycavestory) of CF's renderer
 <img src=https://github.com/RandyGaul/tinycavestory/raw/master/screenshots/tinycavestory_slide.gif?raw=true>
 </p>
 
-I really wanted to push this concept farther, and really embrace *truly* representing sprites as POD (Plain Old Data) structs, even to the point where the on-disk representation simply doesn't matter in terms of run-time performance of the renderer. I wanted to throw any sprite at the API and have it "just work", enabling whatever kind of wacky feature you could possibly come up with.
+I really wanted to push this concept farther, and really embrace *truly* representing sprites as POD (Plain Old Data) structs, even to the point where the on-disk representation simply doesn't matter, at least in terms of run-time performance of the renderer. I wanted to throw any sprite at the API and have it "just work", enabling whatever kind of wacky feature you could possibly come up with.
 
 <p align="center">
 <img src=https://github.com/RandyGaul/tinycavestory/raw/master/screenshots/tinycavestory_live_edit.gif?raw=true>
 </p>
 
+# Don't Reinvent the Wheel
+
+Don't reinvent the wheel! Seriously, what are you thinking wasting time drawing sprites? That's a solved problem.
+
+Is it though? Truly a solved problem? [DRY principle](https://en.wikipedia.org/wiki/Don%27t_repeat_yourself) is another fun one. It turns out some psychology can be fun, and go a long way. If we take a look at the movie Pinocchio we find Gepetto, Pinocchio's father, sitting in a whale attempting to fish for food.
+
+<p align="center">
+<img src=TODO>
+</p>
+
+This scene lays out a metaphor for the psychological story of how an up-and-coming son must save his father to actualize himself through life. The father represents order, structure, and the past. He knows how to make puppets, and fish (apparently), and uses the skills and knowledge of the past to navigate present tense. However, over time this crystalized structure of knowledge can become outdated, no longer sufficient to deal with the landscape evolving underneath it. And so, Geppetto doesn't even acknowledge the whale or his situation, simply living on in delusion without addressing the problem at-hand.
+
+We can be like Pinocchio. We can recast the old traditions into a present day context, learn something in the process, and perhaps a new solution will unfold. Pinnocchio does eventually make his way into the whale to save his father. More on that later.
+
+# Rethinking Sprites
+
 If we consider the traditional method of efficiently drawing sprites you will find endless examples of sprite texture packing, also called texture atlases. Here's a pretty nice [blog post](https://www.ohsat.com/tutorial/flixel/using-texture-atlas/index.php) going over the idea in the context of [Flixel](https://haxeflixel.com). Love2D (a highly recommended game framework, by the way!) has their own [spritebatch API](https://love2d.org/wiki/SpriteBatch) centered around rendering glyphs from a single atlas. Noel Berry from Celeste also likes using a very similar `Batcher` API seen [here on GitHub](https://github.com/FosterFramework/Foster/blob/main/Framework/Graphics/Batcher.cs) in his Foster C# framework.
 
-The purpose of the atlases and batchers is to reduce *draw calls*, an expensive operation where sprites are drawn on the GPU. When submitting a [draw call](https://toncijukic.medium.com/draw-calls-in-a-nutshell-597330a85381) quite a lot of work goes into operation, making it a fairly high-latency and expensive thing to do. However, as a developer we can pack many sprites into a single draw call, minimizing the high constant cost of each draw call. The number of sprites a draw call is limited to drawing is primarily restricted by the number of textures a draw call can reference (typically implemented by referencing just one texture at a time for simplicity).
+The purpose of the atlases and batchers is to reduce *draw calls*, an expensive operation where sprites are drawn on the GPU. When submitting a [draw call](https://toncijukic.medium.com/draw-calls-in-a-nutshell-597330a85381) quite a lot of work goes into the operation, making it a fairly high-latency and expensive thing to do. However, as a developer we can pack many sprites into a single draw call, minimizing the high constant cost of each draw call. The number of sprites a draw call is limited to drawing is primarily restricted by the number of textures a draw call can reference (typically implemented by referencing just one texture at a time for simplicity).
 
-However, the paradigm that has stuck is to statically construct atlases as an offline or preprocessing step. This was done in the past as an optimization when computers were much less efficient than they are by today's standards, and had much less memory. Today, especially for 2D games, many games can easily get away with storing their textures in RAM and simply construct atlases on-the-fly based on what is actually being rendered at the time. There is no practical reason why atlases must be packed on disk or defined up-front and fed through our drawing API.
+However, constructing atlases as an offline or preprocessing step has proven a popular paradigm, even today. This was done in the past as an optimization when computers were much less efficient than they are by today's standards, and had much less memory. Today, especially for 2D games, many games can easily get away with storing their textures in RAM and simply construct atlases on-the-fly based on what is actually being rendered at the time. There is no practical reason why atlases must be packed on disk or defined up-front and fed through our drawing API.
 
-Instead, a novel idea of utilizing higher RAM capabilities of today lets us hide texture atlases entirely from the user. We can simply let the user push sprites into a buffer, and upon drawing scan the buffer for new sprites, inject them into atlases, and viola - draw call counts can be reduced to single digits no matter what.
+Instead, a novel idea of utilizing higher RAM capabilities of today lets us hide texture atlases entirely from the user. We can simply let the user push sprites into a buffer, and upon drawing scan the buffer for new sprites, inject them into atlases, and voila - draw call counts can be reduced to single digits no matter what.
 
 So what would a full program for drawing sprites look like? Just make the sprite, and draw it. Done.
 
@@ -78,7 +94,7 @@ Pretty cool, eh? Let us go over some pro/con analysis of the online sprite compi
 
 1. Nobody needs to really think much about atlases. Artists can export their images however they like. When drawing sprites you can just... Draw the sprite. No need to consider a batch, or atlas, UV, or any other associated plumbing. Just draw the sprite.
 2. The online atlas API can compile sprites together based on what you're actually rendering at the time. This is really cool over the development of a game as you don't need to spend any energy thinking about what sprites will be drawn and when, trying to manually pack them into the same atlas to save a few draw calls.
-3. The atlas compiler can decay sprites out of atalses automatically when they cease to be drawn for long enough.
+3. The atlas compiler can decay sprites out of atlases automatically when they cease to be drawn for long enough.
 4. Some fascinating benefits with text rendering, to be covered later.
 
 And here are some cons of the design:
@@ -88,6 +104,16 @@ And here are some cons of the design:
 3. Opening many individual files on some OS's (looking at you, Windows) can be really slow due to slowly implemented security checks. This is totally out of our direct control, but, can be easily avoidable by using a tool to open invidual files out of an archive, like a .zip file.
 
 You can find the guts of the atlas compiler here, in a [single-file C header called cute_spritebatch.h](https://github.com/RandyGaul/cute_framework/blob/master/libraries/cute/cute_spritebatch.h). It's managing the rolling atlas cache itself, and firing a variety of callbacks back to the user to fetch pixels, make textures, or report batches.
+
+# Escaping the Whale
+
+As promised, we can be more like Pinocchio, and escape the whale one sprite at a time.
+
+<p align="center">
+<img src=TODO>
+</p>
+
+Conclusion? If you're still packing sprites into atlases offline then you're getting swallowed by the whale. Just kidding! It's a totally valid solution to prebake atlases and render sprites this way; it's just there are other interesting things to try out as well if one were so inclined :)
 
 # Animating Sprites
 
@@ -101,11 +127,17 @@ Drawing shapes is not easy. Just try thinking about how to antialias (aa) the ed
 
 Peeking into other open source projects reveals a plethora of hand-rolled triangulations. The typical strategy is to perform a bunch of math to figure out how to make many tiny feather triangles around the rim of shapes and draw them at half-opacity to produce antialiased pixels. However, this is super error-prone, tedious, produces a lot of code, and most important produces a lot of geometry to submit to the GPU.
 
+Whale alert! Swallowing imminent.
+
+<p align="center">
+<img src=TODO>
+</p>
+
 Instead, a novel and effective approach is to steal all of [Inigo Quilez's work](https://iquilezles.org/articles/distfunctions2d) and draw shapes using SDF's (signed distance function, NOT signed distance field). These SDF's are cool because you can get fragment shaders to just power through them without a hitch. These SDF's work by defining a function to, given a pixel, compute the distance to that pixel as a signed distance value. This tells you how far from the shapes surface you're in, perfect for rendering shapes with perfect antialiased edges.
 
 If you crawl through [CF's internal shaders](https://github.com/RandyGaul/cute_framework/blob/master/src/cute_shader/builtin_shaders.h) you will find a whole bunch of similar SDF functions and many ternary operators. It turns out compilers these days just simply evaluate both sides of simple ternary operators and branchlessly select the correct result, with these cmov or select style instructions. Or in other words, it go fast, like Sonic fast.
 
-In practice this kind of SDF rendering will be limited by [pixel overdraw](https://forum.playcanvas.com/t/pixel-overdraw/29442) as the first bottleneck, assuming your draw call counts are low and you aren't flooding the upload limit to the GPU. So, when dealing with SDF rendering the big thing is to try and only submit quads to the GPU that tightly wrap around the shape to draw. Here's a [little program](https://gist.github.com/RandyGaul/c8abb1793d9d93e767b812ec9e636ea9) I made to prototype wrapping an oriented triangle in a tightly fitting AABB, while also giving some optional padding pixels.
+In practice this kind of SDF rendering will be limited by [pixel overdraw](https://forum.playcanvas.com/t/pixel-overdraw/29442) as the first bottleneck, assuming your draw call counts are low and you aren't flooding the upload limit to the GPU. So, when dealing with SDF rendering the big thing is to try and only submit quads to the GPU that tightly wrap around the shape to draw. Here's a [little program](https://gist.github.com/RandyGaul/c8abb1793d9d93e767b812ec9e636ea9) I made to prototype wrapping an oriented triangle in a tightly fitting box, while also giving some optional padding pixels.
 
 ```c
 void bounding_box_of_triangle(v2 a, v2 b, v2 c, float radius, v2* out)
@@ -216,15 +248,11 @@ void main()
 }
 ```
 
-WAIT A MINUTE -- Won't this blow up the GPU? If StAteMeNtS aRe SlOw, BrO00000!!!
+WAIT A MINUTE -- Won't this blow up the GPU? If-statements are slow!!!
 
-<p align="center">
-<img src=https://archives.bulbagarden.net/media/upload/thumb/a/a3/0080Slowbro.png/250px-0080Slowbro.png>
-</p>
+Are if-statements truly slow? When was the last time you wrote and if-statement in a fragment shader and then actually observed the performance? When writing CF I realized my own personal answer was "never". And so, in cowboy fashion, a fragment shader was whipped up from the dust, along with some bonafide hip-firing, and SDFs were dispatched naively from a big if-else chain.
 
-Well hold your horses, we can get the slowbros out of the renderer. As it turns out, a certain level of chill goes a long way. And by chill I mean GPUs these days can be understood as stamping out blocks of pixels in typical 32 or 64 size. As long as block of pixels associated with one of these hardware stamps is all executing the same branch-path you will get giga-good performance. It turns out, in practice, game tend to draw a lot of the same kind of shape in the same area, such as particles or sprites. This turns out to be a total non-issue in terms of perf cost.
-
-If you freaked out at the if-else statement just above here, then it's time to reevaluate your understanding of GPU branches. Otherwise, continue chillin' my gamedev br0, you're doing A+.
+GPUs these days can be understood as stamping out blocks of pixels in typical 32 or 64 size. As long as block of pixels associated with one of these hardware stamps is all executing the same branch-path you will get good performance. It turns out, in practice, games tend to draw a lot of the same shape in the same area, such as particles or sprites. Conclusion: worrying about warp/wavefront convergence is a total non-issue in terms of perf cost (in this context).
 
 # Shape AA
 
@@ -290,9 +318,9 @@ The text rendering works in CF by piggy-backing off of the sprite implentation. 
 
 Typically games will lay out what glyphs they can render up-front in order to build atlases as a precompilation step. This is horrible, especially when considering localization! Each time you write new text into your game you have to have a complex system to regenerate and verify you have all those glyphs available beforehand. This makes it extra difficult for anyone to rapidly prototype, and also lends itself to wasting space if you end up cutting certain glyphs later.
 
-It's also really challening to support user chat systems where they could type in all kinds of arbitrary utf8 characters. Instead, the atlas compiler simply treats glyphs as any other sprite, and batches them together based only on what you're currently using and rendering (or have prefetched).
+It's also really challenging to support user chat systems where they could type in all kinds of arbitrary characters. Instead, the atlas compiler simply treats glyphs as any other sprite, and batches them together based only on what you're currently using and rendering (or have prefetched).
 
-If we look at one of the more advanced open source solutions for text, [fontstash](https://github.com/memononen/fontstash), you can see the beginnings of a good solution -- simply grow a *single* atlas downwards, on-demand, whenever glyphs are used. However, it doesn't decay glyphs out of the atlas ever, meaning for larger utf8 sets you can simply overflow hardware limits on resolution. For 2D text games this is actually pretty easy to do once you start bolding, italicizing, or blurring glyphs with individual rasters. CF doesn't have this problem, as the online compiler handles all of those cases by design.
+If we look at one of the more advanced open source solutions for text, [fontstash](https://github.com/memononen/fontstash), you can see the beginnings of a good solution -- simply grow a *single* atlas downwards, on-demand, whenever glyphs are used. However, it doesn't decay glyphs out of the atlas ever, meaning for larger codepoint sets you can simply overflow hardware limits on resolution. For 2D text games this is actually pretty easy to do once you start bolding, italicizing, or blurring glyphs with individual rasters. CF doesn't have this problem, as the online compiler handles all of those cases by design.
 
 Just try drawing all of this with one draw call and a dozen lines of code in another engine/framework:
 
@@ -338,10 +366,10 @@ CF renders through `SDL_Gpu`(https://wiki.libsdl.org/SDL3/CategoryGPU), a well-w
  *                 for each shader {
  *                     cf_apply_shader(shader, material);
  *                     cf_draw_elements(...);
+ *                     cf_commit();
  *                 }
  *             }
  *         }
- *         cf_commit();
  *     }
  */
 ```
@@ -352,7 +380,7 @@ The canvas holds a texture CF can render to. The material holds global variable 
 
 Canvas can be drawn to, blitted to one another, have shaders applied (or not) to them, etc. The API is largely canvas-centric.
 
-One nice thing about SDL_Gpu is how Meshes and Textures are dealt with in terms of buffers. These buffers use *staging buffers*, which are blocks of memory we can allocate on the CPU that get sent in-flight to the GPU when needed, and later cycled back. However, on devices with a shared memory model, these can simply be a single spot in memory. The cycling itself is also quite interested in SDL_Gpu, as any writeable resource (namely textures and mesh buffers) will automagically allocate a ring-buffer of resources under the hood as-needed to reduce inter-frame dependencies. This means we get some parallelism for "free" without having to implement our own double/triple buffering systems.
+One nice thing about SDL_Gpu is how Meshes and Textures are dealt with in terms of buffers. These buffers use *staging buffers*, which are blocks of memory we can allocate on the CPU that get sent in-flight to the GPU when needed, and later cycled back. However, on devices with a shared memory model, these can simply be a single spot in memory. The cycling itself is also quite interesting in SDL_Gpu, as any writeable resource (namely textures and mesh buffers) will automagically allocate a ring-buffer of resources under the hood as-needed to reduce inter-frame dependencies. This means we get some parallelism for "free" without having to implement our own double/triple buffering systems.
 
 # Web Builds
 
