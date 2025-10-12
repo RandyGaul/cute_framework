@@ -318,7 +318,7 @@ CF_INLINE CF_Color cf_clamp_color(CF_Color a, CF_Color lo, CF_Color hi) { return
  * @param    a          The color.
  * @related  CF_Color cf_mul_color cf_mul_color2 cf_div_color cf_add_color cf_sub_color cf_abs_color cf_fract_color cf_splat_color cf_mod_color cf_clamp_color cf_clamp_color01 cf_color_lerp cf_color_premultiply
  */
-CF_INLINE CF_Color cf_clamp_color01(CF_Color a) { return cf_make_color_rgba_f(cf_clamp(a.r, 0, 1.0f), cf_clamp(a.g, 0, 1.0f), cf_clamp(a.b, 0, 1.0f), cf_clamp(a.a, 0, 1.0f)); }
+CF_INLINE CF_Color cf_clamp_color01(CF_Color a) { return cf_make_color_rgba_f(cf_clamp(a.r, 0.0f, 1.0f), cf_clamp(a.g, 0.0f, 1.0f), cf_clamp(a.b, 0.0f, 1.0f), cf_clamp(a.a, 0.0f, 1.0f)); }
 
 /**
  * @function cf_color_lerp

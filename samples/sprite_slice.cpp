@@ -87,26 +87,26 @@ void set_sprite_chunk(SpriteChunk* chunk, CF_Poly* poly, CF_Sprite* sprite, floa
     sprite_top_left.y += h * 0.5f;
     
     CF_TemporaryImage temporary_image = cf_fetch_image(sprite);
-    CF_V2 u = cf_min_v2(temporary_image.v, temporary_image.u);
-    CF_V2 v = cf_max_v2(temporary_image.v, temporary_image.u);
-    CF_V2 duv = cf_sub_v2(v, u);
+    CF_V2 u = cf_min(temporary_image.v, temporary_image.u);
+    CF_V2 v = cf_max(temporary_image.v, temporary_image.u);
+    CF_V2 duv = cf_sub(v, u);
     
     chunk->poly = *poly;
     for (int index = 0; index < chunk->poly.count; ++index)
     {
-        CF_V2 uv = cf_sub_v2(sprite_top_left, chunk->poly.verts[index]);
+        CF_V2 uv = cf_sub(sprite_top_left, chunk->poly.verts[index]);
         uv.x = cf_abs(uv.x / w);
         uv.y = cf_abs(uv.y / h);
-        uv = cf_mul_v2(uv, duv);
-        uv = cf_add_v2(u, uv);
+        uv = cf_mul(uv, duv);
+        uv = cf_add(u, uv);
         
         chunk->uvs[index] = uv;
     }
     
     chunk->velocity = cf_center_of_mass(chunk->poly);
-    chunk->velocity = cf_sub_v2(chunk->velocity, sprite->transform.p);
+    chunk->velocity = cf_sub(chunk->velocity, sprite->transform.p);
     chunk->velocity = cf_norm(chunk->velocity);
-    chunk->velocity = cf_mul_v2_f(chunk->velocity, push_strength);
+    chunk->velocity = cf_mul(chunk->velocity, push_strength);
 }
 
 void slice_sprite(CF_Sprite* sprite, CF_V2 start, CF_V2 end, SpriteChunk* chunks)
@@ -129,7 +129,7 @@ void slice_sprite(CF_Sprite* sprite, CF_V2 start, CF_V2 end, SpriteChunk* chunks
     
     CF_Ray ray;
     ray.p = start;
-    ray.d = cf_sub_v2(end, start);
+    ray.d = cf_sub(end, start);
     ray.d = cf_safe_norm(ray.d);
     ray.t = cf_distance(end, start);
     
@@ -140,8 +140,8 @@ void slice_sprite(CF_Sprite* sprite, CF_V2 start, CF_V2 end, SpriteChunk* chunks
         {
             cf_array_clear(chunks);
         
-            CF_V2 hit_point = cf_mul_v2_f(ray.d, hit_result.t);
-            hit_point = cf_add_v2(start, hit_point);
+            CF_V2 hit_point = cf_mul(ray.d, hit_result.t);
+            hit_point = cf_add(start, hit_point);
         
             CF_Poly sprite_poly;
             sprite_poly.verts[0] = sprite_min;
@@ -154,7 +154,7 @@ void slice_sprite(CF_Sprite* sprite, CF_V2 start, CF_V2 end, SpriteChunk* chunks
             const float epsilon = (float)1e-4;
             CF_V2 n = cf_perp(ray.d);
         
-            CF_Halfspace slice_plane = cf_plane2(n, hit_point);
+            CF_Halfspace slice_plane = cf_plane(n, hit_point);
             CF_SliceOutput output = cf_slice(slice_plane, sprite_poly, epsilon);
         
             SpriteChunk chunk = {};
@@ -179,7 +179,7 @@ void update_sprite_chunks(SpriteChunk* chunks)
         
         for (int vertex = 0; vertex < chunk->poly.count; ++vertex)
         {
-            chunk->poly.verts[vertex] = cf_add_v2(chunk->poly.verts[vertex], dp);
+            chunk->poly.verts[vertex] = cf_add(chunk->poly.verts[vertex], dp);
         }
     }
 }

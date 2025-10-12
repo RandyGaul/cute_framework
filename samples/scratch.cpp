@@ -16,7 +16,7 @@ int main(int argc, char* argv[])
 		app_update();
 		draw_push_antialias(false);
 		draw_scale(sx, sy);
-		draw_rotate(CF_PI * CF_SECONDS / 16.0f);
+		draw_rotate((float)(CF_PI * CF_SECONDS / 16.0f));
 
 		draw_push_color(color_red());
 		draw_arrow(V2(0, 0), V2(20, 0), 1, 5);

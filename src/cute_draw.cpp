@@ -594,7 +594,7 @@ void cf_draw_sprite(const CF_Sprite* sprite)
 	s.maxy = 1;
 
 	v2 offset = sprite->offset + (sprite->pivots ? sprite->pivots[sprite->frame_index] : V2(0,0));
-	v2 p = cf_add_v2(sprite->transform.p, cf_mul_v2(offset, sprite->scale));
+	v2 p = cf_add(sprite->transform.p, cf_mul(offset, sprite->scale));
 
 	v2 scale = V2(sprite->scale.x * s.w, sprite->scale.y * s.h);
 	if (apply_border_scale) {
@@ -781,7 +781,7 @@ void cf_draw_sprite_9_slice(const CF_Sprite* sprite)
 	};
 
 	v2 offset = sprite->offset + (sprite->pivots ? sprite->pivots[sprite->frame_index] : V2(0, 0));
-	v2 p = cf_add_v2(sprite->transform.p, cf_mul_v2(offset, sprite->scale));
+	v2 p = cf_add(sprite->transform.p, cf_mul_v2(offset, sprite->scale));
 	v2 scale = V2(sprite->scale.x * sprite->w, sprite->scale.y * sprite->h);
 
 	for (int y = 0; y < 3; ++y) {
@@ -975,7 +975,7 @@ void cf_draw_sprite_9_slice_tiled(const CF_Sprite* sprite)
 	};
 
 	v2 offset = sprite->offset + (sprite->pivots ? sprite->pivots[sprite->frame_index] : V2(0, 0));
-	v2 p = cf_add_v2(sprite->transform.p, cf_mul_v2(offset, sprite->scale));
+	v2 p = cf_add(sprite->transform.p, cf_mul_v2(offset, sprite->scale));
 	v2 scale = V2(sprite->scale.x * sprite->w, sprite->scale.y * sprite->h);
 
 	auto push_quad = [&sprite, &image_id, &offset, &p, &scale](CF_V2* quad, CF_V2 uv0, CF_V2 uv1) {
@@ -1035,14 +1035,14 @@ void cf_draw_sprite_9_slice_tiled(const CF_Sprite* sprite)
 		{
 			CF_V2 tiled_quad[] = {
 				q0,
-				cf_add_v2(q0, quad_increment),
-				cf_add_v2(q1, quad_increment),
+				cf_add(q0, quad_increment),
+				cf_add(q1, quad_increment),
 				q1,
 			};
 
 			push_quad(tiled_quad, uv0, uv1);
-			q0 = cf_add_v2(q0, quad_increment);
-			q1 = cf_add_v2(q1, quad_increment);
+			q0 = cf_add(q0, quad_increment);
+			q1 = cf_add(q1, quad_increment);
 			current += increment;
 		}
 
@@ -1054,8 +1054,8 @@ void cf_draw_sprite_9_slice_tiled(const CF_Sprite* sprite)
 
 			CF_V2 tiled_quad[] = {
 				q0,
-				cf_add_v2(q0, cf_mul_v2_f(quad_increment, scale)),
-				cf_add_v2(q1, cf_mul_v2_f(quad_increment, scale)),
+				cf_add(q0, cf_mul_v2_f(quad_increment, scale)),
+				cf_add(q1, cf_mul_v2_f(quad_increment, scale)),
 				q1,
 			};
 
@@ -1074,15 +1074,15 @@ void cf_draw_sprite_9_slice_tiled(const CF_Sprite* sprite)
 		while (current + increment < end)
 		{
 			CF_V2 tiled_quad[] = {
-				cf_add_v2(q0, quad_increment),
-				cf_add_v2(q1, quad_increment),
+				cf_add(q0, quad_increment),
+				cf_add(q1, quad_increment),
 				q1,
 				q0,
 			};
 
 			push_quad(tiled_quad, uv0, uv1);
-			q0 = cf_add_v2(q0, quad_increment);
-			q1 = cf_add_v2(q1, quad_increment);
+			q0 = cf_add(q0, quad_increment);
+			q1 = cf_add(q1, quad_increment);
 			current += increment;
 		}
 
@@ -1093,8 +1093,8 @@ void cf_draw_sprite_9_slice_tiled(const CF_Sprite* sprite)
 			uv1.y = uv0.y + (uv1.y - uv0.y) * scale;
 
 			CF_V2 tiled_quad[] = {
-				cf_add_v2(q0, cf_mul_v2_f(quad_increment, scale)),
-				cf_add_v2(q1, cf_mul_v2_f(quad_increment, scale)),
+				cf_add(q0, cf_mul_v2_f(quad_increment, scale)),
+				cf_add(q1, cf_mul_v2_f(quad_increment, scale)),
 				q1,
 				q0,
 			};
@@ -2559,8 +2559,8 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 	// text rendering feel a lot more robust, especially for nearest-neighbor rendering.
 	float inv_cam_scale_y = 1.0f / len(draw->cam_stack.last().m.y);
 	float inv_cam_scale_x = 1.0f / len(draw->cam_stack.last().m.x);
-	float x = roundf(position.x * inv_cam_scale_x);
-	float initial_y = roundf((position.y - font->ascent * scale) * inv_cam_scale_y);
+	float x = CF_ROUNDF(position.x * inv_cam_scale_x);
+	float initial_y = CF_ROUNDF((position.y - font->ascent * scale) * inv_cam_scale_y);
 	float y = initial_y;
 	float max_x = x;
 	// Extend the height by descent to include spaces below the baseline.

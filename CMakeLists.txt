@@ -6,8 +6,9 @@ project(cute_framework
 	VERSION 1.1.0
 )
 
-# Must have at least C++20.
+# Must have at least C++20 and C17.
 set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_C_STANDARD 17)
 
 include(GNUInstallDirs)
 # These are needed for how we use FetchContent.

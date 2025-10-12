@@ -183,7 +183,7 @@ static inline BlockShape shape_set_center(BlockShape shape, CF_V2 center)
         for (int index = 0; index < new_shape.poly.count; ++index)
         {
             CF_V2 p = new_shape.poly.verts[index];
-            p = cf_sub_v2(center, p);
+            p = cf_sub(center, p);
             new_shape.poly.verts[index] = p;
             cf_make_poly(&new_shape.poly);
         }
@@ -221,7 +221,7 @@ static inline Player make_player(CF_V2 position)
     CF_V2 player_half_extents = cf_v2(CREATURE_BLOCK_HALF_WIDTH, CREATURE_BLOCK_HALF_HEIGHT);
     player.collision_aabb = cf_make_aabb_center_half_extents(cf_v2(0.0f, 0.0f), player_half_extents);
     player.hit_box_aabb = cf_expand_aabb(player.collision_aabb, cf_v2(-1.0f, -1.0f));
-    player.transform.r = cf_sincos_f(0);
+    player.transform.r = cf_sincos(0);
     player.transform.p = position;
     player.prev_transform = player.transform;
     
@@ -248,7 +248,7 @@ static inline Star make_star(CF_V2 position)
     star.hurt_aabb = star.collision_aabb;
     star.player_walkable_aabb = star.collision_aabb;
     
-    star.transform.r = cf_sincos_f(0);
+    star.transform.r = cf_sincos(0);
     star.transform.p = position;
     star.prev_transform = star.transform;
     
@@ -268,7 +268,7 @@ static inline StarParticle make_star_particle(CF_V2 position, CF_V2 half_extents
     particle.transform.p = position;
     particle.prev_transform.p = position;
     
-    particle.size = cf_mul_v2_f(half_extents, 2.0f);
+    particle.size = cf_mul(half_extents, 2.0f);
     particle.prev_size = particle.size;
     
     particle.color = cf_color_yellow();
@@ -346,13 +346,13 @@ static inline void draw_star(CF_V2 position, CF_V2 size, float chubbiness)
         cf_v2(0.65f, 0.65f),
     };
     
-    CF_V2 half_size = cf_mul_v2_f(size, 0.5f);
+    CF_V2 half_size = cf_mul(size, 0.5f);
     
     for (int index = 0; index < CF_ARRAY_SIZE(vertices); ++index)
     {
-        vertices[index] = cf_mul_v2(vertices[index], size);
-        vertices[index] = cf_add_v2(vertices[index], position);
-        vertices[index] = cf_sub_v2(vertices[index], half_size);
+        vertices[index] = cf_mul(vertices[index], size);
+        vertices[index] = cf_add(vertices[index], position);
+        vertices[index] = cf_sub(vertices[index], half_size);
     }
 
     cf_draw_polygon_fill_simple(vertices, CF_ARRAY_SIZE(vertices));
@@ -396,54 +396,54 @@ static inline void draw_gimmick(CF_V2 position, float radius, CF_V2 facing_direc
     float horn_distance = radius * 0.1f;
     
     CF_V2 upper_body = cf_v2(0.0f, upper_body_height);
-    upper_body = cf_add_v2(position, upper_body);
+    upper_body = cf_add(position, upper_body);
     
-    CF_V2 lower_body = cf_mul_v2_f(facing_direction, lower_body_distance);
+    CF_V2 lower_body = cf_mul(facing_direction, lower_body_distance);
     lower_body.y -= lower_body_height;
-    lower_body = cf_add_v2(position, lower_body);
-    CF_V2 lower_body_0 = cf_add_v2(lower_body, cf_mul_v2_f(facing_direction, lower_body_0_distance));
-    CF_V2 lower_body_1 = cf_add_v2(lower_body, cf_mul_v2_f(facing_direction, lower_body_1_distance));
+    lower_body = cf_add(position, lower_body);
+    CF_V2 lower_body_0 = cf_add(lower_body, cf_mul(facing_direction, lower_body_0_distance));
+    CF_V2 lower_body_1 = cf_add(lower_body, cf_mul(facing_direction, lower_body_1_distance));
     
-    CF_V2 eye_0 = cf_mul_v2_f(facing_direction, eye_0_distance);
-    eye_0 = cf_add_v2(eye_0, cf_v2(0.0f, eye_height));
-    eye_0 = cf_add_v2(eye_0, upper_body);
+    CF_V2 eye_0 = cf_mul(facing_direction, eye_0_distance);
+    eye_0 = cf_add(eye_0, cf_v2(0.0f, eye_height));
+    eye_0 = cf_add(eye_0, upper_body);
     
-    CF_V2 eye_1 = cf_mul_v2_f(facing_direction, eye_1_distance);
-    eye_1 = cf_add_v2(eye_1, cf_v2(0.0f, eye_height));
-    eye_1 = cf_add_v2(eye_1, upper_body);
+    CF_V2 eye_1 = cf_mul(facing_direction, eye_1_distance);
+    eye_1 = cf_add(eye_1, cf_v2(0.0f, eye_height));
+    eye_1 = cf_add(eye_1, upper_body);
     
-    CF_V2 pupil_0 = cf_add_v2(eye_0, cf_mul_v2_f(facing_direction, pupil_distance));
-    CF_V2 pupil_1 = cf_add_v2(eye_1, cf_mul_v2_f(facing_direction, pupil_distance));
+    CF_V2 pupil_0 = cf_add(eye_0, cf_mul(facing_direction, pupil_distance));
+    CF_V2 pupil_1 = cf_add(eye_1, cf_mul(facing_direction, pupil_distance));
     
-    CF_V2 iris_0 = cf_add_v2(pupil_0, cf_mul_v2_f(facing_direction, iris_distance));
-    CF_V2 iris_1 = cf_add_v2(pupil_1, cf_mul_v2_f(facing_direction, iris_distance));
+    CF_V2 iris_0 = cf_add(pupil_0, cf_mul(facing_direction, iris_distance));
+    CF_V2 iris_1 = cf_add(pupil_1, cf_mul(facing_direction, iris_distance));
     
     CF_V2 mouth_0 = pupil_0;
     CF_V2 mouth_1 = iris_1;
     mouth_0.y = lower_body_0.y;
     mouth_1.y = lower_body_0.y;
     
-    CF_V2 foot_0_0 = cf_mul_v2_f(facing_direction, foot_0_0_distance);
-    foot_0_0 = cf_add_v2(foot_0_0, cf_v2(0.0f, foot_height));
-    foot_0_0 = cf_add_v2(foot_0_0, lower_body);
-    CF_V2 foot_0_1 = cf_mul_v2_f(facing_direction, foot_0_1_distance);
-    foot_0_1 = cf_add_v2(foot_0_1, cf_v2(0.0f, foot_height));
-    foot_0_1 = cf_add_v2(foot_0_1, lower_body);
+    CF_V2 foot_0_0 = cf_mul(facing_direction, foot_0_0_distance);
+    foot_0_0 = cf_add(foot_0_0, cf_v2(0.0f, foot_height));
+    foot_0_0 = cf_add(foot_0_0, lower_body);
+    CF_V2 foot_0_1 = cf_mul(facing_direction, foot_0_1_distance);
+    foot_0_1 = cf_add(foot_0_1, cf_v2(0.0f, foot_height));
+    foot_0_1 = cf_add(foot_0_1, lower_body);
     
-    CF_V2 foot_1_0 = cf_mul_v2_f(facing_direction, foot_1_0_distance);
-    foot_1_0 = cf_add_v2(foot_1_0, cf_v2(0.0f, foot_height));
-    foot_1_0 = cf_add_v2(foot_1_0, lower_body);
-    CF_V2 foot_1_1 = cf_mul_v2_f(facing_direction, foot_1_1_distance);
-    foot_1_1 = cf_add_v2(foot_1_1, cf_v2(0.0f, foot_height));
-    foot_1_1 = cf_add_v2(foot_1_1, lower_body);
+    CF_V2 foot_1_0 = cf_mul(facing_direction, foot_1_0_distance);
+    foot_1_0 = cf_add(foot_1_0, cf_v2(0.0f, foot_height));
+    foot_1_0 = cf_add(foot_1_0, lower_body);
+    CF_V2 foot_1_1 = cf_mul(facing_direction, foot_1_1_distance);
+    foot_1_1 = cf_add(foot_1_1, cf_v2(0.0f, foot_height));
+    foot_1_1 = cf_add(foot_1_1, lower_body);
     
-    CF_V2 horn_p0 = cf_add_v2(cf_v2(0.0f, horn_height + radius * 0.05f), cf_mul_v2_f(facing_direction, horn_distance - radius * 0.35f));
-    CF_V2 horn_p1 = cf_add_v2(cf_v2(0.0f, horn_height + radius * 0.05f), cf_mul_v2_f(facing_direction, horn_distance - radius * 0.05f));
-    CF_V2 horn_p2 = cf_add_v2(cf_v2(0.0f, horn_height + radius * 0.35f), cf_mul_v2_f(facing_direction, horn_distance - radius * 0.4f));
+    CF_V2 horn_p0 = cf_add(cf_v2(0.0f, horn_height + radius * 0.05f), cf_mul(facing_direction, horn_distance - radius * 0.35f));
+    CF_V2 horn_p1 = cf_add(cf_v2(0.0f, horn_height + radius * 0.05f), cf_mul(facing_direction, horn_distance - radius * 0.05f));
+    CF_V2 horn_p2 = cf_add(cf_v2(0.0f, horn_height + radius * 0.35f), cf_mul(facing_direction, horn_distance - radius * 0.4f));
     
-    horn_p0 = cf_add_v2(horn_p0, upper_body);
-    horn_p1 = cf_add_v2(horn_p1, upper_body);
-    horn_p2 = cf_add_v2(horn_p2, upper_body);
+    horn_p0 = cf_add(horn_p0, upper_body);
+    horn_p1 = cf_add(horn_p1, upper_body);
+    horn_p2 = cf_add(horn_p2, upper_body);
     
     cf_draw_push_color(cf_color_orange());
     // horn
@@ -505,9 +505,9 @@ static inline void get_star_positions(CF_V2 positions[5], CF_V2 position, float 
     for (int index = 0; index < 5; ++index)
     {
         CF_V2 p = positions[index];
-        p = cf_mul_v2_f(p, distance);
-        p = cf_add_v2(p, position);
-        p = cf_sub_v2(p, offset);
+        p = cf_mul(p, distance);
+        p = cf_add(p, position);
+        p = cf_sub(p, offset);
         positions[index] = p;
     }
 }
@@ -524,7 +524,7 @@ CF_V2 resolve_overlaps(dyna Block *blocks, CF_V2 p, CF_V2 dp, CF_Aabb mover_aabb
     CF_Aabb padded_aabb = mover_aabb;
     cf_inflate(&padded_aabb, CF_SHAPE_TYPE_AABB, SKIN_FACTOR);
     int nudge_count = 0;
-    CF_V2 sample_p = cf_add_v2(p, dp);
+    CF_V2 sample_p = cf_add(p, dp);
     
     int normal_count = 0;
     int nudge_limit = 10;
@@ -542,15 +542,15 @@ CF_V2 resolve_overlaps(dyna Block *blocks, CF_V2 p, CF_V2 dp, CF_Aabb mover_aabb
                 CF_Manifold m = aabb_to_shape_manifold(aabb, block_shape);
                 if (m.count && cf_abs(m.depths[0]) > 0)
                 {
-                    CF_V2 offset = cf_mul_v2_f(m.n, m.depths[0]);
-                    sample_p = cf_sub_v2(sample_p, offset);
+                    CF_V2 offset = cf_mul(m.n, m.depths[0]);
+                    sample_p = cf_sub(sample_p, offset);
                     
-                    CF_V2 n = cf_neg_v2(m.n);
+                    CF_V2 n = cf_neg(m.n);
                     
                     bool has_normal = false;
                     for (int normal_index = 0; normal_index < normal_count; ++normal_index)
                     {
-                        CF_V2 dn = cf_sub_v2(normals[index], n);
+                        CF_V2 dn = cf_sub(normals[index], n);
                         if (cf_len_sq(dn) < 0.0001f)
                         {
                             has_normal = true;
@@ -621,7 +621,7 @@ int step_move(dyna Block *blocks, CF_Transform *transform, CF_V2 *velocity, CF_A
 
     while (remaining_move_time > 0.0001f)
     {
-        CF_V2 dp = cf_mul_v2_f(v, remaining_move_time);
+        CF_V2 dp = cf_mul(v, remaining_move_time);
         
         float toi = 1.0f;
         CF_ToiResult shortest_result = {};
@@ -665,7 +665,7 @@ int step_move(dyna Block *blocks, CF_Transform *transform, CF_V2 *velocity, CF_A
             toi = shortest_result.toi;
         }
         
-        dp = cf_mul_v2_f(v, remaining_move_time * toi);
+        dp = cf_mul(v, remaining_move_time * toi);
         p = resolve_overlaps(blocks, p, dp, mover_aabb, normals, CF_ARRAY_SIZE(normals), & normal_count, can_step);
 
         if (normal_count == 0)
@@ -677,12 +677,12 @@ int step_move(dyna Block *blocks, CF_Transform *transform, CF_V2 *velocity, CF_A
         {
             CF_V2 normal = normals[normal_index];
             float clip_amount = cf_dot(v, normal);
-            CF_V2 clip = cf_mul_v2_f(normal, clip_amount * (1.0f + bounciness));
-            v = cf_sub_v2(v, clip);
+            CF_V2 clip = cf_mul(normal, clip_amount * (1.0f + bounciness));
+            v = cf_sub(v, clip);
         }
         
-        dp = cf_mul_v2_f(v, remaining_move_time * toi);
-        p = cf_add_v2(p, dp);
+        dp = cf_mul(v, remaining_move_time * toi);
+        p = cf_add(p, dp);
         
         remaining_move_time = remaining_move_time - remaining_move_time * toi;
         
@@ -786,7 +786,7 @@ void update_stars(Game *game)
     dyna Block *blocks = game->blocks;
     
     CF_V2 gravity = cf_v2(GRAVITY_X, GRAVITY_Y);
-    CF_V2 g = cf_mul_v2_f(gravity, CF_DELTA_TIME_FIXED);
+    CF_V2 g = cf_mul(gravity, CF_DELTA_TIME_FIXED);
     
     for (int index = 0; index < cf_array_count(stars); ++index)
     {
@@ -795,7 +795,7 @@ void update_stars(Game *game)
         star->prev_transform = star->transform;
         
         CF_V2 v = star->velocity;
-        v = cf_add_v2(v, g);
+        v = cf_add(v, g);
         
         int move_result = step_move(blocks, &star->transform, &v, star->collision_aabb, star->bounciness); 
         
@@ -839,7 +839,7 @@ void render_stars(Game *game)
     for (int index = 0; index < cf_array_count(game->stars); ++index)
     {
         Star *star = game->stars + index;
-        CF_V2 position = cf_lerp_v2(star->prev_transform.p, star->transform.p, CF_DELTA_TIME_INTERPOLANT);
+        CF_V2 position = cf_lerp(star->prev_transform.p, star->transform.p, CF_DELTA_TIME_INTERPOLANT);
         CF_Aabb star_walkable_aabb = aabb_set_center(star->player_walkable_aabb, position);
         
         draw_star(position, cf_v2(CREATURE_BLOCK_HALF_WIDTH * 2, CREATURE_BLOCK_HALF_HEIGHT * 2), 0.0f);
@@ -860,7 +860,7 @@ void update_players(Game *game)
     dyna Block *blocks = game->blocks;
     
     CF_V2 gravity = cf_v2(GRAVITY_X, GRAVITY_Y);
-    CF_V2 g = cf_mul_v2_f(gravity, CF_DELTA_TIME_FIXED);
+    CF_V2 g = cf_mul(gravity, CF_DELTA_TIME_FIXED);
     
     float ground_friction = 3.75f;
     
@@ -912,17 +912,17 @@ void update_players(Game *game)
         // apply gravity only when falling
         if (player->state != PlayerState_Jumping)
         {
-            v = cf_add_v2(v, g);
+            v = cf_add(v, g);
         }
         
         // update facing direction
         if (input_direction.x > 0)
         {
-            player->transform.r = cf_sincos_f(0);
+            player->transform.r = cf_sincos(0);
         }
         else if (input_direction.x < 0)
         {
-            player->transform.r = cf_sincos_f(CF_PI);
+            player->transform.r = cf_sincos(CF_PI);
         }
         
         v.x += input_direction.x * acceleration * CF_DELTA_TIME_FIXED;
@@ -1000,12 +1000,12 @@ void update_players(Game *game)
                     if (is_star_under_player)
                     {
                         inherit_velocity = star->velocity;
-                        CF_V2 offset = cf_mul_v2_f(m.n, m.depths[0]);
-                        new_p = cf_sub_v2(player->transform.p, offset);
+                        CF_V2 offset = cf_mul(m.n, m.depths[0]);
+                        new_p = cf_sub(player->transform.p, offset);
                         is_star_riding = true;
                         
                         star_riding_index = star_index;
-                        star_offset = cf_sub_v2(new_p, star->transform.p);
+                        star_offset = cf_sub(new_p, star->transform.p);
                         star_position = star->transform.p;
                     }
                 }
@@ -1029,7 +1029,7 @@ void update_players(Game *game)
                     player->ride_offset.x += input_direction.x * star_ground_acceleration * CF_DELTA_TIME_FIXED;
 
                     // try to maintain roughly same offset
-                    player->transform.p = cf_add_v2(star_position, player->ride_offset);
+                    player->transform.p = cf_add(star_position, player->ride_offset);
                 }
             }
             else
@@ -1128,7 +1128,7 @@ void update_players(Game *game)
                     }
                     else if (input_jump_down)
                     {
-                        v = cf_add_v2(v, cf_v2(0.0f, player->jump_acceleration * CF_DELTA_TIME_FIXED));
+                        v = cf_add(v, cf_v2(0.0f, player->jump_acceleration * CF_DELTA_TIME_FIXED));
                         player->jump_remaining_time -= CF_DELTA_TIME_FIXED;
                     }
                     else
@@ -1174,7 +1174,7 @@ void update_players(Game *game)
                     CF_V2 particle_half_extents = cf_v2(CREATURE_BLOCK_HALF_WIDTH * 0.5f, CREATURE_BLOCK_HALF_HEIGHT * 0.5f);
                     CF_V2 particle_focal_point = cf_v2(0.0f, CREATURE_BLOCK_HALF_HEIGHT);
                     
-                    particle_focal_point = cf_add_v2(player->transform.p, particle_focal_point);
+                    particle_focal_point = cf_add(player->transform.p, particle_focal_point);
                     
                     get_star_positions(particle_positions, particle_focal_point, particle_distance);
                     
@@ -1205,14 +1205,14 @@ void update_players(Game *game)
                 {
                     CF_V2 star_position = player->transform.p;
                     CF_V2 star_offset = cf_v2(0.0f, CREATURE_BLOCK_HALF_HEIGHT);
-                    star_position = cf_add_v2(star_position, star_offset);
+                    star_position = cf_add(star_position, star_offset);
                     
                     Star star = make_star(star_position);
                     star.transform.r = player->transform.r;
                     
                     CF_V2 star_velocity = cf_x_axis(star.transform.r);
                     star_velocity.y = -1.0f;
-                    star_velocity = cf_mul_v2_f(star_velocity, STAR_IMPULSE);
+                    star_velocity = cf_mul(star_velocity, STAR_IMPULSE);
                     star.velocity = star_velocity;
                     
                     cf_array_push(stars, star);
@@ -1258,7 +1258,7 @@ void render_players(Game *game)
     for (int index = 0; index < cf_array_count(game->players); ++index)
     {
         Player *player = game->players + index;
-        CF_V2 position = cf_lerp_v2(player->prev_transform.p, player->transform.p, CF_DELTA_TIME_INTERPOLANT);
+        CF_V2 position = cf_lerp(player->prev_transform.p, player->transform.p, CF_DELTA_TIME_INTERPOLANT);
         CF_V2 half_extents = cf_half_extents(player->collision_aabb);
         CF_V2 facing_direction = cf_x_axis(player->transform.r);
         float radius = cf_max(half_extents.x, half_extents.y);
@@ -1269,7 +1269,7 @@ void render_players(Game *game)
         {
             CF_V2 star_size = cf_v2(CREATURE_BLOCK_HALF_WIDTH * 2, CREATURE_BLOCK_HALF_HEIGHT * 2);
             CF_V2 star_position = cf_v2(0.0f, CREATURE_BLOCK_HALF_HEIGHT);
-            star_position = cf_add_v2(position, star_position);
+            star_position = cf_add(position, star_position);
             cf_draw_push_color(cf_color_yellow());
             draw_star(star_position, star_size, 0.0f);
             cf_draw_pop_color();
@@ -1317,8 +1317,8 @@ void render_star_particles(Game *game)
     for (int index = 0; index < cf_array_count(particles); ++index)
     {
         StarParticle *particle = particles + index;
-        CF_V2 position = cf_lerp_v2(particle->prev_transform.p, particle->transform.p, CF_DELTA_TIME_INTERPOLANT);
-        CF_V2 size = cf_lerp_v2(particle->prev_size, particle->size, CF_DELTA_TIME_INTERPOLANT);
+        CF_V2 position = cf_lerp(particle->prev_transform.p, particle->transform.p, CF_DELTA_TIME_INTERPOLANT);
+        CF_V2 size = cf_lerp(particle->prev_size, particle->size, CF_DELTA_TIME_INTERPOLANT);
         
         cf_draw_push_color(particle->color);
         draw_star(position, size, 0.0f);
@@ -1406,8 +1406,8 @@ void load_level(Game *game)
                 aabb = shape_get_aabb(shape);
             }
             
-            min = cf_min_v2(min, aabb.min);
-            max = cf_max_v2(max, aabb.max);
+            min = cf_min(min, aabb.min);
+            max = cf_max(max, aabb.max);
         }
     }
     
@@ -1450,7 +1450,7 @@ void render(void* udata)
     CF_V2 camera_offset = cf_center(level_bounds);
     // move this up a bit
     camera_offset.y -= BLOCK_HALF_HEIGHT * 2 * 4;
-    camera_offset = cf_neg_v2(camera_offset);
+    camera_offset = cf_neg(camera_offset);
     
     cf_draw_push();
     cf_draw_scale(1.5f, 1.5f);
