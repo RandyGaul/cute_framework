@@ -177,41 +177,51 @@ char* cf_sappend_range(char* a, const char* b, const char* b_end)
 char* cf_strim(char* s)
 {
 	CF_ACANARY(s);
-	if (slen(s) == 0) return s;
+	int len = slen(s);
+	if (len <= 0) return s;
 	char* start = s;
-	char* end = s + slen(s) - 1;
-	while (isspace(*start) && start < end) start++;
-	while (isspace(*end) && end > start) end--;
-	size_t len = end - start + 1;
-	CF_MEMMOVE(s, start, len);
-	s[len] = 0;
-	alen(s) = (int)(len + 1);
+	char* end = s + len - 1;
+	while (start <= end && isspace((unsigned char)*start)) start++;
+	while (end >= start && isspace((unsigned char)*end)) end--;
+	int new_len = (int)(end >= start ? (end - start + 1) : 0);
+	if (new_len > 0) {
+		CF_MEMMOVE(s, start, (size_t)new_len);
+	}
+	s[new_len] = 0;
+	alen(s) = new_len + 1;
 	return s;
 }
 
 char* cf_sltrim(char* s)
 {
 	CF_ACANARY(s);
+	int len = slen(s);
+	if (len <= 0) return s;
 	char* start = s;
-	char* end = s + slen(s) - 1;
-	while (isspace(*start) && end > start) start++;
-	size_t len = slen(s) - (start - s);
-	CF_MEMMOVE(s, start, len);
-	s[len] = 0;
-	alen(s) = (int)(len + 1);
+	char* end = s + len - 1;
+	while (start <= end && isspace((unsigned char)*start)) start++;
+	int new_len = (int)(end >= start ? (end - start + 1) : 0);
+	if (new_len > 0) {
+		CF_MEMMOVE(s, start, (size_t)new_len);
+	}
+	s[new_len] = 0;
+	alen(s) = new_len + 1;
 	return s;
 }
 
 char* cf_srtrim(char* s)
 {
 	CF_ACANARY(s);
-	char* start = s;
-	char* end = s + slen(s) - 1;
-	while (isspace(*(s + slen(s) - 1)) && end < start) {
-		alen(s)--;
+	int len = slen(s);
+	if (len <= 0) return s;
+	char* end = s + len - 1;
+	while (end >= s && isspace((unsigned char)*end)) {
 		--end;
 	}
-	s[slen(s)] = 0;
+	int new_len = (int)(end - s + 1);
+	if (new_len < 0) new_len = 0;
+	s[new_len] = 0;
+	alen(s) = new_len + 1;
 	return s;
 }
 
