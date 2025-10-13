@@ -225,7 +225,7 @@ void cf_update_time(CF_OnUpdateFn* on_update)
 
 void cf_pause_for(float seconds)
 {
-	pause_ticks = max(pause_ticks, (uint64_t)(seconds * freq));
+	pause_ticks = cf_max(pause_ticks, (int64_t)(seconds * freq));
 }
 
 void cf_pause_for_ticks(uint64_t pause_ticks)
