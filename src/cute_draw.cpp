@@ -566,6 +566,15 @@ void cf_draw_sprite(const CF_Sprite* sprite)
 {
 	CF_ASSERT(sprite);
 	spritebatch_sprite_t s = { };
+
+	// Changes to spritebatch_internal_push_sprite() to support 9 slice sprites now requires all sprites to include
+	// local sprite UVs, having minx/miny being 0 and maxx/maxy being 1 will draw the entire full sprite texture
+	// to support what this did previously.
+	s.minx = 0;
+	s.miny = 0;
+	s.maxx = 1;
+	s.maxy = 1;
+
 	bool apply_border_scale = true;
 	if (sprite->animation) {
 		s.image_id = sprite->animation->frames[sprite->frame_index].id;
@@ -584,14 +593,6 @@ void cf_draw_sprite(const CF_Sprite* sprite)
 	s.w = sprite->w;
 	s.h = sprite->h;
 	s.geom.type = BATCH_GEOMETRY_TYPE_SPRITE;
-
-	// changes to spritebatch_internal_push_sprite() to support 9 slice sprites now requires all sprites to include
-	// local sprite UVs, having minx/miny being 0 and maxx/maxy being 1 will draw the entire full sprite texture
-	// to support what this did previously.
-	s.minx = 0;
-	s.miny = 0;
-	s.maxx = 1;
-	s.maxy = 1;
 
 	v2 offset = sprite->offset + (sprite->pivots ? sprite->pivots[sprite->frame_index] : V2(0,0));
 	v2 p = cf_add(sprite->transform.p, cf_mul(offset, sprite->scale));
@@ -2701,6 +2702,10 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 		}
 
 		spritebatch_sprite_t s = { };
+		s.minx = 0; // 9-slice implementation expects these to be defaulted to 0..1.
+		s.miny = 0;
+		s.maxx = 1;
+		s.maxy = 1;
 		CF_Glyph* glyph = cf_font_get_glyph(font, cp, font_size, blur);
 		if (!glyph) {
 			continue;
@@ -2778,14 +2783,6 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 			// Actually render the sprite.
 			if (visible && render) {
 				CF_M3x2 m = draw->mvp;
-				// same as cf_draw_sprite()
-				// changes to spritebatch_internal_push_sprite() to support 9 slice sprites now requires all sprites to include
-				// local UVs.
-				// minx/miny being 0 and maxx/maxy being 1 will draw the full glyph texture
-				s.minx = 0.0f;
-				s.miny = 0.0f;
-				s.maxx = 1.0f;
-				s.maxy = 1.0f;
 				s.geom.shape[0] = mul(m, V2(q0.x, q1.y));
 				s.geom.shape[1] = mul(m, V2(q1.x, q1.y));
 				s.geom.shape[2] = mul(m, V2(q1.x, q0.y));
