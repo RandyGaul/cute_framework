@@ -74,7 +74,7 @@ static char* read_file(const char* path)
 	return content;
 }
 
-static bool write_bytecode(
+static bool write_bytecode_struct(
 	FILE* file,
 	CF_ShaderCompilerResult compile_result,
 	const char* var_name,
@@ -93,9 +93,9 @@ static bool write_bytecode(
 	fprintf(file, "static const uint8_t %s%s_content[%zu] = {", var_name, suffix, compile_result.bytecode.size);
 	for (size_t i = 0; i < compile_result.bytecode.size; ++i) {
 		if ((i % HEADER_LINE_SIZE) == 0) {
-			fprintf(file, "\n\t");
+			fprintf(file, "\n   ");
 		}
-		fprintf(file, "0x%02X,", content[i]);
+		fprintf(file, " 0x%02X,", content[i]);
 	}
 	fprintf(file, "\n};\n");
 	fprintf(file, "#endif\n");
@@ -122,125 +122,74 @@ static bool write_bytecode(
 		}
 		fprintf(file, "\n};\n");
 	} else {
-		fprintf(file, "#define %s%s_image_names NULL\n", var_name, suffix);
+		fprintf(file, "static const char** const %s%s_image_names = NULL;\n", var_name, suffix);
 	}
 
 	if (shader_info->num_uniforms > 0) {
 		fprintf(file, "static CF_ShaderUniformInfo %s%s_uniforms[%d] = {\n", var_name, suffix, shader_info->num_uniforms);
 		for (int i = 0; i < shader_info->num_uniforms; ++i) {
-			fprintf(file, "\t{\n");
-			fprintf(file, "\t\t.block_name = \"%s\",\n", shader_info->uniforms[i].block_name);
-			fprintf(file, "\t\t.block_index = %d,\n", shader_info->uniforms[i].block_index);
-			fprintf(file, "\t\t.block_size = %d,\n", shader_info->uniforms[i].block_size);
-			fprintf(file, "\t\t.num_members = %d,\n", shader_info->uniforms[i].num_members);
-			fprintf(file, "\t},\n");
+			fprintf(file, "    {\n");
+			fprintf(file, "        .block_name = \"%s\",\n", shader_info->uniforms[i].block_name);
+			fprintf(file, "        .block_index = %d,\n", shader_info->uniforms[i].block_index);
+			fprintf(file, "        .block_size = %d,\n", shader_info->uniforms[i].block_size);
+			fprintf(file, "        .num_members = %d,\n", shader_info->uniforms[i].num_members);
+			fprintf(file, "    },\n");
 		}
 		fprintf(file, "};\n");
 	} else {
-		fprintf(file, "#define %s%s_uniforms NULL\n", var_name, suffix);
+		fprintf(file, "static CF_ShaderUniformInfo* const %s%s_uniforms = NULL;\n", var_name, suffix);
 	}
 
 	if (shader_info->num_uniform_members > 0) {
 		fprintf(file, "static CF_ShaderUniformMemberInfo %s%s_uniform_members[%d] = {\n", var_name, suffix, shader_info->num_uniform_members);
 		for (int i = 0; i < shader_info->num_uniform_members; ++i) {
-			fprintf(file, "\t{\n");
-			fprintf(file, "\t\t.name = \"%s\",\n", shader_info->uniform_members[i].name);
-			fprintf(file, "\t\t.type = %s,\n", cf_shader_info_data_type_to_string(shader_info->uniform_members[i].type));
-			fprintf(file, "\t\t.offset = %d,\n", shader_info->uniform_members[i].offset);
-			fprintf(file, "\t\t.array_length = %d,\n", shader_info->uniform_members[i].array_length);
-			fprintf(file, "\t},\n");
+			fprintf(file, "    {\n");
+			fprintf(file, "        .name = \"%s\",\n", shader_info->uniform_members[i].name);
+			fprintf(file, "        .type = %s,\n", cf_shader_info_data_type_to_string(shader_info->uniform_members[i].type));
+			fprintf(file, "        .offset = %d,\n", shader_info->uniform_members[i].offset);
+			fprintf(file, "        .array_length = %d,\n", shader_info->uniform_members[i].array_length);
+			fprintf(file, "    },\n");
 		}
 		fprintf(file, "};\n");
 	} else {
-		fprintf(file, "#define %s%s_uniform_members NULL\n", var_name, suffix);
+		fprintf(file, "static CF_ShaderUniformMemberInfo* const %s%s_uniform_members = NULL;\n", var_name, suffix);
 	}
 
 	if (shader_info->num_inputs > 0) {
 		fprintf(file, "static CF_ShaderInputInfo %s%s_inputs[%d] = {\n", var_name, suffix, shader_info->num_inputs);
 		for (int i = 0; i < shader_info->num_inputs; ++i) {
-			fprintf(file, "\t{\n");
-			fprintf(file, "\t\t.name = \"%s\",\n", shader_info->inputs[i].name);
-			fprintf(file, "\t\t.location = %d,\n", shader_info->inputs[i].location);
-			fprintf(file, "\t\t.format = %s,\n", cf_shader_info_data_type_to_string(shader_info->inputs[i].format));
-			fprintf(file, "\t},\n");
+			fprintf(file, "    {\n");
+			fprintf(file, "        .name = \"%s\",\n", shader_info->inputs[i].name);
+			fprintf(file, "        .location = %d,\n", shader_info->inputs[i].location);
+			fprintf(file, "        .format = %s,\n", cf_shader_info_data_type_to_string(shader_info->inputs[i].format));
+			fprintf(file, "    },\n");
 		}
 		fprintf(file, "};\n");
 	} else {
-		fprintf(file, "#define %s%s_inputs NULL\n", var_name, suffix);
+		fprintf(file, "static CF_ShaderInputInfo* const %s%s_inputs = NULL;\n", var_name, suffix);
 	}
-
-	return ferror(file) == 0;
-}
-
-static bool write_bytecode_struct_contents(
-	FILE* file,
-	CF_ShaderCompilerResult compile_result,
-	const char* var_name,
-	const char* suffix
-)
-{
-	const CF_ShaderInfo* shader_info = &compile_result.bytecode.shader_info;
 
 	// Write the struct.
-	fprintf(file, "#ifndef __EMSCRIPTEN__\n");
-	fprintf(file, "\t.content = %s%s_content,\n", var_name, suffix);
-	fprintf(file, "\t.size = %zu,\n", compile_result.bytecode.size);
-	fprintf(file, "#endif\n");
-	fprintf(file, "\t.glsl300_src = %s%s_glsl300_src,\n", var_name, suffix);
-	fprintf(file, "\t.glsl300_src_size = %zu,\n", compile_result.bytecode.glsl300_src_size);
-	fprintf(file, "\t.shader_info = {\n");
-	fprintf(file, "\t\t.num_samplers = %d,\n", shader_info->num_samplers);
-	fprintf(file, "\t\t.num_storage_textures = %d,\n", shader_info->num_storage_textures);
-	fprintf(file, "\t\t.num_storage_buffers = %d,\n", shader_info->num_storage_buffers);
-	fprintf(file, "\t\t.num_images = %d,\n", shader_info->num_images);
-	fprintf(file, "\t\t.image_names = %s%s_image_names,\n", var_name, suffix);
-	fprintf(file, "\t\t.num_uniforms = %d,\n", shader_info->num_uniforms);
-	fprintf(file, "\t\t.uniforms = %s%s_uniforms,\n", var_name, suffix);
-	fprintf(file, "\t\t.num_uniform_members = %d,\n", shader_info->num_uniform_members);
-	fprintf(file, "\t\t.uniform_members = %s%s_uniform_members,\n", var_name, suffix);
-	fprintf(file, "\t\t.num_inputs = %d,\n", shader_info->num_inputs);
-	fprintf(file, "\t\t.inputs = %s%s_inputs,\n", var_name, suffix);
-	fprintf(file, "\t},\n");
-
-	return ferror(file) == 0;
-}
-
-
-static bool write_bytecode_struct(
-	FILE* file,
-	CF_ShaderCompilerResult compile_result,
-	const char* var_name,
-	const char* suffix
-)
-{
-	write_bytecode(file, compile_result, var_name, suffix);
 	fprintf(file, "static const CF_ShaderBytecode %s%s = {\n", var_name, suffix);
-	write_bytecode_struct_contents(file, compile_result, var_name, suffix);
-	fprintf(file, "};\n");
-
-	return ferror(file) == 0;
-}
-
-static bool write_draw_bytecode_struct(
-	FILE* file,
-	CF_ShaderCompilerResult draw_result,
-	CF_ShaderCompilerResult blit_result,
-	const char* var_name
-)
-{
-	fprintf(file, "static const CF_DrawShaderBytecode %s = {\n", var_name);
-	fprintf(file, "\t.draw_shader = {\n");
-	if (!write_bytecode_struct_contents(file, draw_result, var_name, "_draw")) {
-		fclose(file);
-		return false;
-	}
-	fprintf(file, "\t},\n");
-	fprintf(file, "\t.blit_shader = {\n");
-	if (!write_bytecode_struct_contents(file, blit_result, var_name, "_blit")) {
-		fclose(file);
-		return false;
-	}
-	fprintf(file, "\t},\n");
+	fprintf(file, "#ifndef __EMSCRIPTEN__\n");
+	fprintf(file, "    .content = %s%s_content,\n", var_name, suffix);
+	fprintf(file, "    .size = %zu,\n", compile_result.bytecode.size);
+	fprintf(file, "#endif\n");
+	fprintf(file, "    .glsl300_src = %s%s_glsl300_src,\n", var_name, suffix);
+	fprintf(file, "    .glsl300_src_size = %zu,\n", compile_result.bytecode.glsl300_src_size);
+	fprintf(file, "    .shader_info = {\n");
+	fprintf(file, "        .num_samplers = %d,\n", shader_info->num_samplers);
+	fprintf(file, "        .num_storage_textures = %d,\n", shader_info->num_storage_textures);
+	fprintf(file, "        .num_storage_buffers = %d,\n", shader_info->num_storage_buffers);
+	fprintf(file, "        .num_images = %d,\n", shader_info->num_images);
+	fprintf(file, "        .image_names = %s%s_image_names,\n", var_name, suffix);
+	fprintf(file, "        .num_uniforms = %d,\n", shader_info->num_uniforms);
+	fprintf(file, "        .uniforms = %s%s_uniforms,\n", var_name, suffix);
+	fprintf(file, "        .num_uniform_members = %d,\n", shader_info->num_uniform_members);
+	fprintf(file, "        .uniform_members = %s%s_uniform_members,\n", var_name, suffix);
+	fprintf(file, "        .num_inputs = %d,\n", shader_info->num_inputs);
+	fprintf(file, "        .inputs = %s%s_inputs,\n", var_name, suffix);
+	fprintf(file, "    },\n");
 	fprintf(file, "};\n");
 
 	return ferror(file) == 0;
@@ -262,10 +211,19 @@ static bool write_draw_header_file(
 	fprintf(file, "#pragma once\n\n");
 
 	// Write the constant.
-	write_bytecode(file, draw_result, var_name, "_draw");
-	write_bytecode(file, draw_result, var_name, "_blit");
-	write_draw_bytecode_struct(file, draw_result, blit_result, var_name);
+	if (!write_bytecode_struct(file, draw_result, var_name, "_draw")) {
+		fclose(file);
+		return false;
+	}
+	if (!write_bytecode_struct(file, blit_result, var_name, "_blit")) {
+		fclose(file);
+		return false;
+	}
 
+	fprintf(file, "static const CF_DrawShaderBytecode %s = {\n", var_name);
+	fprintf(file, "    .draw_shader = %s_draw,\n", var_name);
+	fprintf(file, "    .blit_shader = %s_blit,\n", var_name);
+	fprintf(file, "};\n");
 	if (ferror(file) != 0) {
 		fclose(file);
 		return false;
