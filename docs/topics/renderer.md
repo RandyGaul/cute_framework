@@ -357,7 +357,7 @@ CF renders through `SDL_Gpu`(https://wiki.libsdl.org/SDL3/CategoryGPU), a well-w
  *                 cf_material_set_uniform_vs(material, ...);
  *                 cf_material_set_uniform_fs(material, ...);
  *                 for each shader {
- *                     cf_apply_shader(shader, material);
+ *                     cf_apply_shader(shader, material, mesh);
  *                     cf_draw_elements(...);
  *                 }
  *             }

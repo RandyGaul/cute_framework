@@ -83,9 +83,8 @@ int main(int argc, char* argv[])
 	while (cf_app_is_running()) {
 		cf_app_update(NULL);
 		cf_apply_canvas(cf_app_get_canvas(), true);
-		cf_apply_mesh(mesh);
-		cf_apply_shader(shader, material);
-		cf_draw_elements();
+		cf_apply_shader(shader, material, mesh);
+		cf_draw_elements(mesh);
 		cf_app_draw_onto_screen(false);
 	}
 

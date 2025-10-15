@@ -43,13 +43,12 @@ extern "C" {
  *         cf_apply_canvas(canvas);
  *         for each mesh {
  *             cf_mesh_update_vertex_data(mesh, ...);
- *             cf_apply_mesh(mesh);
  *             for each material {
  *                 cf_material_set_uniform_vs(material, ...);
  *                 cf_material_set_uniform_fs(material, ...);
  *                 for each shader {
- *                     cf_apply_shader(shader, material);
- *                     cf_draw_elements(...);
+ *                     cf_apply_shader(shader, material, mesh);
+ *                     cf_draw_elements(mesh);
  *                 }
  *             }
  *         }
@@ -1850,16 +1849,6 @@ CF_API void CF_CALL cf_apply_stencil_reference(int reference);
 CF_API void CF_CALL cf_apply_blend_constants(float r, float g, float b, float a);
 
 /**
- * @function cf_apply_mesh
- * @category graphics
- * @brief    Uses a specific mesh for rendering.
- * @remarks  The mesh contains vertex data, defining the geometry to be rendered. The mesh vertices are sent to the GPU as inputs to
- *           the vertex shader. See `CF_Mesh` for an overview.
- * @related  CF_Mesh cf_create_mesh cf_apply_shader cf_draw_elements
- */
-CF_API void CF_CALL cf_apply_mesh(CF_Mesh mesh);
-
-/**
  * @function cf_apply_shader
  * @category graphics
  * @brief    Uses a specific shader + material combo for rendering.
@@ -1867,15 +1856,17 @@ CF_API void CF_CALL cf_apply_mesh(CF_Mesh mesh);
  *           vertex shader. A `CF_Material` defines uniform and texture inputs to the shader.
  * @related  CF_Mesh cf_create_mesh cf_apply_shader cf_draw_elements
  */
-CF_API void CF_CALL cf_apply_shader(CF_Shader shader, CF_Material material);
+CF_API void CF_CALL cf_apply_shader(CF_Shader shader, CF_Material material, CF_Mesh mesh);
 
 /**
  * @function cf_draw_elements
  * @category graphics
  * @brief    Draws all elements within the last applied mesh.
+ * @remarks  The mesh contains vertex data, defining the geometry to be rendered. The mesh vertices are sent to the GPU as inputs to
+ *           the vertex shader. See `CF_Mesh` for an overview.
  * @related  CF_Mesh cf_create_mesh cf_apply_shader cf_apply_canvas
  */
-CF_API void CF_CALL cf_draw_elements(void);
+CF_API void CF_CALL cf_draw_elements(CF_Mesh mesh);
 
 #ifdef __cplusplus
 }
@@ -1928,9 +1919,7 @@ CF_INLINE void material_clear_uniforms(CF_Material material) { cf_material_clear
 CF_INLINE void apply_canvas(CF_Canvas canvas, bool clear = false) { cf_apply_canvas(canvas, clear); }
 CF_INLINE void apply_viewport(int x, int y, int w, int h) { cf_apply_viewport(x, y, w, h); }
 CF_INLINE void apply_scissor(int x, int y, int w, int h) { cf_apply_scissor(x, y, w, h); }
-CF_INLINE void apply_mesh(CF_Mesh mesh) { cf_apply_mesh(mesh); }
-CF_INLINE void apply_shader(CF_Shader shader, CF_Material material) { cf_apply_shader(shader, material); }
-CF_INLINE void draw_elements() { cf_draw_elements(); }
+CF_INLINE void apply_shader(CF_Shader shader, CF_Material material, CF_Mesh mesh) { cf_apply_shader(shader, material, mesh); }
 
 }
 void cf_clear_canvas(CF_Canvas canvas_handle);

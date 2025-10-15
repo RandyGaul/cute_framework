@@ -631,21 +631,20 @@ CF_DISPATCH_SHIM_VOID(destroy_mesh, (CF_Mesh mesh_handle), mesh_handle)
 CF_DISPATCH_SHIM_VOID(mesh_update_vertex_data, (CF_Mesh mesh_handle, void* data, int count), mesh_handle, data, count)
 CF_DISPATCH_SHIM_VOID(mesh_update_index_data, (CF_Mesh mesh_handle, void* data, int count), mesh_handle, data, count)
 CF_DISPATCH_SHIM_VOID(mesh_update_instance_data, (CF_Mesh mesh_handle, void* data, int count), mesh_handle, data, count)
-CF_DISPATCH_SHIM_VOID(apply_mesh, (CF_Mesh mesh_handle), mesh_handle)
 
 CF_DISPATCH_SHIM(CF_Shader, make_shader_from_bytecode, (CF_ShaderBytecode vertex_bytecode, CF_ShaderBytecode fragment_bytecode), vertex_bytecode, fragment_bytecode)
 CF_DISPATCH_SHIM_VOID(destroy_shader_internal, (CF_Shader shader_handle), shader_handle)
-CF_DISPATCH_SHIM_VOID(apply_shader, (CF_Shader shader_handle, CF_Material material_handle), shader_handle, material_handle)
+CF_DISPATCH_SHIM_VOID(apply_shader, (CF_Shader shader_handle, CF_Material material_handle, CF_Mesh mesh_handle), shader_handle, material_handle, mesh_handle)
 
-void cf_sdlgpu_draw_elements();
-void cf_gles_draw_elements();
-void cf_draw_elements()
+void cf_sdlgpu_draw_elements(CF_Mesh mesh_handle);
+void cf_gles_draw_elements(CF_Mesh mesh_handle);
+void cf_draw_elements(CF_Mesh mesh_handle)
 {
 	if (app->gfx_backend_type == CF_BACKEND_TYPE_GLES3) {
-		cf_gles_draw_elements();
+		cf_gles_draw_elements(mesh_handle);
 	} else {
 #ifndef CF_EMSCRIPTEN
-		cf_sdlgpu_draw_elements();
+		cf_sdlgpu_draw_elements(mesh_handle);
 #endif
 	}
 }

@@ -349,7 +349,6 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 
 	// Map the vertex buffer with sprite vertex data.
 	cf_mesh_update_vertex_data(draw->mesh, verts, vert_count);
-	cf_apply_mesh(draw->mesh);
 
 	// Apply the atlas texture.
 	CF_Texture atlas = { sprites->texture_id };
@@ -366,7 +365,7 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 	cf_material_set_render_state(draw->material, cmd.render_state);
 
 	// Kick off a draw call.
-	cf_apply_shader(cmd.shader, draw->material);
+	cf_apply_shader(cmd.shader, draw->material, draw->mesh);
 
 	// Apply viewport.
 	CF_Rect viewport = cmd.viewport;
@@ -380,7 +379,7 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 		cf_apply_scissor(scissor.x, scissor.y, scissor.w, scissor.h);
 	}
 
-	cf_draw_elements();
+	cf_draw_elements(draw->mesh);
 
 	draw->has_drawn_something = true;
 }
@@ -3254,7 +3253,6 @@ void static s_blit(CF_Command* cmd, CF_Canvas src, CF_Canvas dst, bool clear_dst
 	verts[5].uv = V2(0,0);
 
 	cf_mesh_update_vertex_data(draw->blit_mesh, verts, 6);
-	cf_apply_mesh(draw->blit_mesh);
 
 	// Read pixels from src.
 	cf_material_set_texture_fs(draw->material, "u_image", cf_canvas_get_target(src));
@@ -3270,7 +3268,7 @@ void static s_blit(CF_Command* cmd, CF_Canvas src, CF_Canvas dst, bool clear_dst
 	cf_material_set_render_state(draw->material, cmd->render_state);
 
 	// Apply shader.
-	cf_apply_shader(*blit, draw->material);
+	cf_apply_shader(*blit, draw->material, draw->blit_mesh);
 
 	// Apply viewport.
 	CF_Rect viewport = cmd->viewport;
@@ -3285,7 +3283,7 @@ void static s_blit(CF_Command* cmd, CF_Canvas src, CF_Canvas dst, bool clear_dst
 	}
 
 	// Blit onto dst.
-	cf_draw_elements();
+	cf_draw_elements(draw->blit_mesh);
 }
 
 static void s_process_command(CF_Canvas canvas, CF_Command* cmd, CF_Command* next, bool& clear)

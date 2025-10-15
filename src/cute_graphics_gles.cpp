@@ -1259,12 +1259,6 @@ void cf_gles_destroy_mesh(CF_Mesh mh)
 	CF_FREE(m);
 }
 
-void cf_gles_apply_mesh(CF_Mesh mesh_handle)
-{
-	CF_GL_Mesh* mesh = (CF_GL_Mesh*)(uintptr_t)mesh_handle.id;
-	g_ctx.mesh = mesh;
-}
-
 static void s_build_uniforms(GLuint program, CF_GL_ShaderInfo* shader_info, const CF_ShaderInfo* uniform_info, GLuint* binding_point)
 {
 	shader_info->uniform_members = (CF_ShaderUniformMemberInfo*)CF_ALLOC(sizeof(CF_ShaderUniformMemberInfo) * uniform_info->num_uniform_members);
@@ -1501,10 +1495,11 @@ static void s_apply_vertex_attributes(CF_GL_Shader* shader, CF_GL_Mesh* mesh)
 	CF_POLL_OPENGL_ERROR();
 }
 
-void cf_gles_apply_shader(CF_Shader shader_handle, CF_Material material_handle)
+void cf_gles_apply_shader(CF_Shader shader_handle, CF_Material material_handle, CF_Mesh mesh_handle)
 {
 	CF_GL_Shader* shader = (CF_GL_Shader*)(uintptr_t)shader_handle.id;
 	CF_MaterialInternal* material = (CF_MaterialInternal*)(uintptr_t)material_handle.id;
+	CF_GL_Mesh* mesh = (CF_GL_Mesh*)(uintptr_t)mesh_handle.id;
 	g_ctx.material = material;
 
 	// Render state.
@@ -1596,15 +1591,14 @@ void cf_gles_apply_shader(CF_Shader shader_handle, CF_Material material_handle)
 	}
 	CF_POLL_OPENGL_ERROR();
 
-	CF_GL_Mesh* mesh = g_ctx.mesh;
 	CF_ASSERT(mesh != NULL);
 
 	s_apply_vertex_attributes(shader, mesh);
 }
 
-void cf_gles_draw_elements()
+void cf_gles_draw_elements(CF_Mesh mesh_handle)
 {
-	CF_GL_Mesh* mesh = g_ctx.mesh;
+	CF_GL_Mesh* mesh = (CF_GL_Mesh*)(uintptr_t)mesh_handle.id;
 	CF_MaterialInternal* material = g_ctx.material;
 	CF_ASSERT(mesh != NULL);
 	CF_ASSERT(material != NULL);
