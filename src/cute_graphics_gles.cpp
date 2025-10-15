@@ -1648,10 +1648,6 @@ void cf_gles_draw_elements()
 
 	CF_POLL_OPENGL_ERROR();
 	++app->draw_call_count;
-}
-
-void cf_gles_commit()
-{
 	g_ctx.target_state = s_default_state(g_ctx.canvas);
 }
 

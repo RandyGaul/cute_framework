@@ -53,7 +53,6 @@ extern "C" {
  *                 }
  *             }
  *         }
- *         cf_commit();
  *     }
  */
 
@@ -1878,15 +1877,6 @@ CF_API void CF_CALL cf_apply_shader(CF_Shader shader, CF_Material material);
  */
 CF_API void CF_CALL cf_draw_elements(void);
 
-/**
- * @function cf_commit
- * @category graphics
- * @brief    Submits all previous draw commands to the GPU.
- * @remarks  You must call this after calling `cf_apply_shader` to "complete" the rendering pass.
- * @related  CF_Canvas cf_apply_canvas cf_apply_mesh cf_apply_shader
- */
-CF_API void CF_CALL cf_commit(void);
-
 #ifdef __cplusplus
 }
 #endif // __cplusplus
@@ -1941,7 +1931,6 @@ CF_INLINE void apply_scissor(int x, int y, int w, int h) { cf_apply_scissor(x, y
 CF_INLINE void apply_mesh(CF_Mesh mesh) { cf_apply_mesh(mesh); }
 CF_INLINE void apply_shader(CF_Shader shader, CF_Material material) { cf_apply_shader(shader, material); }
 CF_INLINE void draw_elements() { cf_draw_elements(); }
-CF_INLINE void commit() { cf_commit(); }
 
 }
 void cf_clear_canvas(CF_Canvas canvas_handle);

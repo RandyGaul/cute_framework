@@ -1528,10 +1528,7 @@ void cf_sdlgpu_draw_elements()
 		}
 	}
 	app->draw_call_count++;
-}
 
-void cf_sdlgpu_commit()
-{
 	SDL_EndGPURenderPass(g_ctx.canvas->pass);
 }
 

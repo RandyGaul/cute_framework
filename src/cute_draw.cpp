@@ -381,7 +381,6 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 	}
 
 	cf_draw_elements();
-	cf_commit();
 
 	draw->has_drawn_something = true;
 }
