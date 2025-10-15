@@ -634,7 +634,7 @@ CF_INLINE CF_V2    cf_clamp_v2 (CF_V2    x, CF_V2    lo, CF_V2    hi) { return c
 		uint64_t: cf_clamp_u64, \
 		CF_V2:    cf_clamp_v2,  \
 		default:  cf_clamp_i32  \
-	)((x), (hi), (lo))
+	)((x), (lo), (hi))
 #endif
 
 /**
