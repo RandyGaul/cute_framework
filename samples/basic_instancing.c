@@ -86,7 +86,6 @@ int main(int argc, char* argv[])
 		cf_apply_mesh(mesh);
 		cf_apply_shader(shader, material);
 		cf_draw_elements();
-		cf_commit();
 		cf_app_draw_onto_screen(false);
 	}
 

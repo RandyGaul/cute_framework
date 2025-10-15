@@ -649,16 +649,3 @@ void cf_draw_elements()
 #endif
 	}
 }
-
-void cf_sdlgpu_commit();
-void cf_gles_commit();
-void cf_commit()
-{
-	if (app->gfx_backend_type == CF_BACKEND_TYPE_GLES3) {
-		cf_gles_commit();
-	} else {
-#ifndef CF_EMSCRIPTEN
-		cf_sdlgpu_commit();
-#endif
-	}
-}

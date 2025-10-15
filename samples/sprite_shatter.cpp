@@ -325,7 +325,6 @@ int main(int argc, char *argv[])
                 
                 cf_apply_shader(draw.shader, draw.material);
                 cf_draw_elements();
-                cf_commit();
                 
                 cf_draw_pop_shader();
             }

@@ -381,7 +381,6 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 	}
 
 	cf_draw_elements();
-	cf_commit();
 
 	draw->has_drawn_something = true;
 }
@@ -3287,7 +3286,6 @@ void static s_blit(CF_Command* cmd, CF_Canvas src, CF_Canvas dst, bool clear_dst
 
 	// Blit onto dst.
 	cf_draw_elements();
-	cf_commit();
 }
 
 static void s_process_command(CF_Canvas canvas, CF_Command* cmd, CF_Command* next, bool& clear)
