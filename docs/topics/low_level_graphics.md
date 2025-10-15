@@ -38,7 +38,6 @@ for each canvas {
             }
         }
     }
-    cf_commit();
 }
 ```
 
@@ -48,7 +47,6 @@ The important functions are are the apply functions. Each apply function is used
 - [`cf_apply_mesh`](../graphics/cf_apply_mesh.md)
 - [`cf_apply_shader`](../graphics/cf_apply_shader.md)
 - [`cf_draw_elements`](../graphics/cf_draw_elements.md)
-- [`cf_commit`](../graphics/cf_commit.md)
 
 ## Meshes
 

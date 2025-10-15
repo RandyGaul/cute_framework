@@ -359,7 +359,6 @@ CF renders through `SDL_Gpu`(https://wiki.libsdl.org/SDL3/CategoryGPU), a well-w
  *                 for each shader {
  *                     cf_apply_shader(shader, material);
  *                     cf_draw_elements(...);
- *                     cf_commit();
  *                 }
  *             }
  *         }
