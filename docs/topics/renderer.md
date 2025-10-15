@@ -307,7 +307,7 @@ And that's for *all shape types*:
 
 # Text Rendering
 
-The text rendering works in CF by piggy-backing off of the sprite implentation. By using [stb_truetype.h](stb_truetype.h) individual text glyphs can be rasterized on-demand. This works perfectly for loading up sprite as-needed and feeding them into the atlas compiler. Perfect! This is actually a highly novel way to render text and leads to the most powerful style of text rendering I've ever seen for raster-glyphs in games.
+The text rendering works in CF by piggy-backing off of the sprite implentation. By using [stb_truetype.h](https://github.com/nothings/stb/blob/master/stb_truetype.h) individual text glyphs can be rasterized on-demand. This works perfectly for loading up sprite as-needed and feeding them into the atlas compiler. Perfect! This is actually a highly novel way to render text and leads to the most powerful style of text rendering I've ever seen for raster-glyphs in games.
 
 Typically games will lay out what glyphs they can render up-front in order to build atlases as a precompilation step. This is horrible, especially when considering localization! Each time you write new text into your game you have to have a complex system to regenerate and verify you have all those glyphs available beforehand. This makes it extra difficult for anyone to rapidly prototype, and also lends itself to wasting space if you end up cutting certain glyphs later.
 

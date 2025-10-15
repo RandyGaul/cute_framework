@@ -1920,6 +1920,8 @@ CF_INLINE void apply_canvas(CF_Canvas canvas, bool clear = false) { cf_apply_can
 CF_INLINE void apply_viewport(int x, int y, int w, int h) { cf_apply_viewport(x, y, w, h); }
 CF_INLINE void apply_scissor(int x, int y, int w, int h) { cf_apply_scissor(x, y, w, h); }
 CF_INLINE void apply_shader(CF_Shader shader, CF_Material material, CF_Mesh mesh) { cf_apply_shader(shader, material, mesh); }
+CF_INLINE void apply_shader(CF_Shader shader, CF_Material material) { cf_apply_shader(shader, material); }
+CF_INLINE void draw_elements(CF_Mesh mesh) { cf_draw_elements(mesh); }
 
 }
 void cf_clear_canvas(CF_Canvas canvas_handle);
