@@ -447,8 +447,9 @@ CF_ShaderCompilerResult cute_shader_compile(const char* source, CF_ShaderCompile
 		}
 
 		glsl300_src_size = strlen(source);
-		glsl300_src = (char*)malloc(glsl300_src_size);
+		glsl300_src = (char*)malloc(glsl300_src_size + 1);
 		memcpy(glsl300_src, source, glsl300_src_size);
+		glsl300_src[glsl300_src_size] = '\0';
 		spvc_context_release_allocations(spvc);
 	}
 	spvc_context_destroy(spvc);
