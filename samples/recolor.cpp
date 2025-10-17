@@ -3,9 +3,9 @@ using namespace Cute;
 
 #include <imgui.h>
 
-#define STR(X) #X
-#define BLEND_SHD "#include \"blend.shd\"\n"
-const char* s_recolor = BLEND_SHD STR(
+const char* s_recolor = R"(
+	#include "blend.shd"
+
 	vec4 shader(vec4 color, vec2 pos, vec2 screen_uv, vec4 params)
 	{
 		vec3 a = rgb_to_hsv(color.rgb);
@@ -13,7 +13,7 @@ const char* s_recolor = BLEND_SHD STR(
 		vec3 c = hsv_to_rgb(mix(a, b, params.a));
 		return vec4(c, color.a);
 	}
-);
+)";
 
 int main(int argc, char* argv[])
 {

@@ -5,8 +5,7 @@ int w = 480*2;
 int h = 270*2;
 float scale = 1;
 
-#define STR(X) #X
-const char* s_shd = STR(
+const char* s_shd = R"(
 	layout(set = 2, binding = 1) uniform sampler2D tex;
 
 	vec4 shader(vec4 color, vec2 pos, vec2 screen_uv, vec4 params)
@@ -15,7 +14,7 @@ const char* s_shd = STR(
 		d = d > 0.5 ? 1.0 : 0.0;
 		return vec4(vec3(d), 1);
 	}
-);
+)";
 
 #ifndef CF_RUNTIME_SHADER_COMPILATION
 #include "metaballs_shd.h"

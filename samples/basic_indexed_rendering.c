@@ -6,28 +6,26 @@ typedef struct Vertex
 	CF_Pixel color;
 } Vertex;
 
-#define STR(X) #X
-const char* s_tri_vs = STR(
-	layout (location = 0) in vec2 in_pos;
-	layout (location = 1) in vec4 in_col;
+const char* s_tri_vs =
+"layout (location = 0) in vec2 in_pos;\n"
+"layout (location = 1) in vec4 in_col;\n"
+"\n"
+"layout (location = 0) out vec4 v_col;\n"
+"\n"
+"void main()\n"
+"{\n"
+"    v_col = in_col;\n"
+"    gl_Position = vec4(in_pos, 0, 1);\n"
+"}\n";
 
-	layout (location = 0) out vec4 v_col;
-
-	void main()
-	{
-		v_col = in_col;
-		gl_Position = vec4(in_pos, 0, 1);
-	}
-);
-const char* s_tri_fs = STR(
-	layout(location = 0) in vec4 v_col;
-	layout(location = 0) out vec4 result;
-
-	void main()
-	{
-		result = v_col;
-	}
-);
+const char* s_tri_fs =
+"layout(location = 0) in vec4 v_col;\n"
+"layout(location = 0) out vec4 result;\n"
+"\n"
+"void main()\n"
+"{\n"
+"    result = v_col;\n"
+"}\n";
 
 int main(int argc, char* argv[])
 {
