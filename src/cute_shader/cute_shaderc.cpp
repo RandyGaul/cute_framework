@@ -176,31 +176,36 @@ static bool write_bytecode_struct_contents(
 	FILE* file,
 	CF_ShaderCompilerResult compile_result,
 	const char* var_name,
-	const char* suffix
+	const char* suffix,
+	int tabs
 )
 {
 	const CF_ShaderInfo* shader_info = &compile_result.bytecode.shader_info;
 
+#define TABS() fprintf(file, "%s", tabs == 0 ? "" : (tabs == 1 ? "\t" : (tabs == 2 ? "\t\t" : (tabs == 3 ? "\t\t\t" : "\t\t\t\t"))))
+
 	// Write the struct.
 	fprintf(file, "#ifndef __EMSCRIPTEN__\n");
-	fprintf(file, "\t.content = %s%s_content,\n", var_name, suffix);
-	fprintf(file, "\t.size = %zu,\n", compile_result.bytecode.size);
+	TABS(); fprintf(file, ".content = %s%s_content,\n", var_name, suffix);
+	TABS(); fprintf(file, ".size = %zu,\n", compile_result.bytecode.size);
 	fprintf(file, "#endif\n");
-	fprintf(file, "\t.glsl300_src = %s%s_glsl300_src,\n", var_name, suffix);
-	fprintf(file, "\t.glsl300_src_size = %zu,\n", compile_result.bytecode.glsl300_src_size);
-	fprintf(file, "\t.shader_info = {\n");
-	fprintf(file, "\t\t.num_samplers = %d,\n", shader_info->num_samplers);
-	fprintf(file, "\t\t.num_storage_textures = %d,\n", shader_info->num_storage_textures);
-	fprintf(file, "\t\t.num_storage_buffers = %d,\n", shader_info->num_storage_buffers);
-	fprintf(file, "\t\t.num_images = %d,\n", shader_info->num_images);
-	fprintf(file, "\t\t.image_names = %s%s_image_names,\n", var_name, suffix);
-	fprintf(file, "\t\t.num_uniforms = %d,\n", shader_info->num_uniforms);
-	fprintf(file, "\t\t.uniforms = %s%s_uniforms,\n", var_name, suffix);
-	fprintf(file, "\t\t.num_uniform_members = %d,\n", shader_info->num_uniform_members);
-	fprintf(file, "\t\t.uniform_members = %s%s_uniform_members,\n", var_name, suffix);
-	fprintf(file, "\t\t.num_inputs = %d,\n", shader_info->num_inputs);
-	fprintf(file, "\t\t.inputs = %s%s_inputs,\n", var_name, suffix);
-	fprintf(file, "\t},\n");
+	TABS(); fprintf(file, ".glsl300_src = %s%s_glsl300_src,\n", var_name, suffix);
+	TABS(); fprintf(file, ".glsl300_src_size = %zu,\n", compile_result.bytecode.glsl300_src_size);
+	TABS(); fprintf(file, ".shader_info = {\n");
+	TABS(); fprintf(file, "\t.num_samplers = %d,\n", shader_info->num_samplers);
+	TABS(); fprintf(file, "\t.num_storage_textures = %d,\n", shader_info->num_storage_textures);
+	TABS(); fprintf(file, "\t.num_storage_buffers = %d,\n", shader_info->num_storage_buffers);
+	TABS(); fprintf(file, "\t.num_images = %d,\n", shader_info->num_images);
+	TABS(); fprintf(file, "\t.image_names = %s%s_image_names,\n", var_name, suffix);
+	TABS(); fprintf(file, "\t.num_uniforms = %d,\n", shader_info->num_uniforms);
+	TABS(); fprintf(file, "\t.uniforms = %s%s_uniforms,\n", var_name, suffix);
+	TABS(); fprintf(file, "\t.num_uniform_members = %d,\n", shader_info->num_uniform_members);
+	TABS(); fprintf(file, "\t.uniform_members = %s%s_uniform_members,\n", var_name, suffix);
+	TABS(); fprintf(file, "\t.num_inputs = %d,\n", shader_info->num_inputs);
+	TABS(); fprintf(file, "\t.inputs = %s%s_inputs,\n", var_name, suffix);
+	TABS(); fprintf(file, "},\n");
+
+#undef TABS
 
 	return ferror(file) == 0;
 }
@@ -215,7 +220,7 @@ static bool write_bytecode_struct(
 {
 	write_bytecode(file, compile_result, var_name, suffix);
 	fprintf(file, "static const CF_ShaderBytecode %s%s = {\n", var_name, suffix);
-	write_bytecode_struct_contents(file, compile_result, var_name, suffix);
+	write_bytecode_struct_contents(file, compile_result, var_name, suffix, 1);
 	fprintf(file, "};\n");
 
 	return ferror(file) == 0;
@@ -230,13 +235,13 @@ static bool write_draw_bytecode_struct(
 {
 	fprintf(file, "static const CF_DrawShaderBytecode %s = {\n", var_name);
 	fprintf(file, "\t.draw_shader = {\n");
-	if (!write_bytecode_struct_contents(file, draw_result, var_name, "_draw")) {
+	if (!write_bytecode_struct_contents(file, draw_result, var_name, "_draw", 2)) {
 		fclose(file);
 		return false;
 	}
 	fprintf(file, "\t},\n");
 	fprintf(file, "\t.blit_shader = {\n");
-	if (!write_bytecode_struct_contents(file, blit_result, var_name, "_blit")) {
+	if (!write_bytecode_struct_contents(file, blit_result, var_name, "_blit", 2)) {
 		fclose(file);
 		return false;
 	}
