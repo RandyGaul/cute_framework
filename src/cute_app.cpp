@@ -876,6 +876,8 @@ void cf_default_assert(bool expr, const char* message, const char* file, int lin
 		fprintf(stderr, "CF_ASSERT(%s) : %s, line %d\n", message, file, line);
 #ifdef _MSC_VER
 		__debugbreak();
+#else
+		__builtin_trap();
 #endif
 	}
 }
