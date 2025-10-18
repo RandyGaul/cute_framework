@@ -66,7 +66,7 @@ void animation_start(uint64_t id, double initial, double time, EaseKind ease_kin
 			.initial = initial,
 			.prev = initial,
 			.time = time,
-			ease_kind = ease_kind,
+			.ease_kind = ease_kind,
 		};
 	}
 }
@@ -232,11 +232,9 @@ static bool menu_entry(const char* text, TextStyle text_style, CF_Sprite* hover_
 
 int main(int argc, char* argv[])
 {
-	int w = 1280;
-	int h = 720;
 	CF_Result result = cf_make_app(
 		"Clay UI Animations",
-		0, 0, 0, w, h,
+		0, 0, 0, 1280, 720,
 		CF_APP_OPTIONS_WINDOW_POS_CENTERED_BIT,
 		argv[0]
 	);
@@ -331,7 +329,7 @@ int main(int argc, char* argv[])
 			}) {
 				CLAY(CLAY_ID_LOCAL("Choice"), {
 					.layout = {
-						.sizing = { CLAY_SIZING_FIXED(w * 0.2f), CLAY_SIZING_GROW(0) },
+						.sizing = { CLAY_SIZING_FIXED(width * 0.2f), CLAY_SIZING_GROW(0) },
 						.childAlignment = {
 							.x = CLAY_ALIGN_X_CENTER,
 							.y = CLAY_ALIGN_Y_CENTER,
