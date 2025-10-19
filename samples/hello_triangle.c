@@ -80,9 +80,8 @@ int main(int argc, char* argv[])
 		cf_apply_canvas(app_canvas, true);
 
 		// Draw the triangle.
-		cf_apply_mesh(mesh);
-		cf_apply_shader(shader, material);
-		cf_draw_elements();
+		cf_apply_shader(shader, material, mesh);
+		cf_draw_elements(mesh);
 
 		cf_app_draw_onto_screen(false);
 	}

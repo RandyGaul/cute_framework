@@ -306,10 +306,9 @@ int main(int argc, char *argv[])
             cf_material_set_uniform_fs(draw.material, "u_texture_size", &atlas_dims, CF_UNIFORM_TYPE_FLOAT2, 1);
             
             cf_mesh_update_vertex_data(draw.mesh, draw.verts, cf_array_count(draw.verts));
-            cf_apply_mesh(draw.mesh);
             
-            cf_apply_shader(draw.shader, draw.material);
-            cf_draw_elements();
+            cf_apply_shader(draw.shader, draw.material, draw.mesh);
+            cf_draw_elements(draw.mesh);
             
             cf_draw_pop_shader();
         }

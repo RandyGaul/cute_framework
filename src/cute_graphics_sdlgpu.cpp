@@ -1222,13 +1222,6 @@ void cf_sdlgpu_apply_blend_constants(float r, float g, float b, float a)
 	SDL_SetGPUBlendConstants(g_ctx.canvas->pass, color);
 }
 
-void cf_sdlgpu_apply_mesh(CF_Mesh mesh_handle)
-{
-	CF_ASSERT(g_ctx.canvas);
-	CF_MeshInternal* mesh = (CF_MeshInternal*)mesh_handle.id;
-	g_ctx.canvas->mesh = mesh;
-}
-
 static void s_copy_uniforms(SDL_GPUCommandBuffer* cmd, CF_Arena* arena, CF_ShaderInternal* shd, CF_MaterialState* mstate, bool vs)
 {
 	// Create any required uniform blocks for all uniforms matching between which uniforms
@@ -1389,13 +1382,12 @@ static SDL_GPUGraphicsPipeline* s_build_pipeline(CF_ShaderInternal* shader, CF_R
 	return pip;
 }
 
-void cf_sdlgpu_apply_shader(CF_Shader shader_handle, CF_Material material_handle)
+void cf_sdlgpu_apply_shader(CF_Shader shader_handle, CF_Material material_handle, CF_Mesh mesh_handle)
 {
 	CF_ASSERT(g_ctx.canvas);
-	CF_ASSERT(g_ctx.canvas->mesh);
-	CF_MeshInternal* mesh = g_ctx.canvas->mesh;
-	CF_MaterialInternal* material = (CF_MaterialInternal*)material_handle.id;
 	CF_ShaderInternal* shader = (CF_ShaderInternal*)shader_handle.id;
+	CF_MaterialInternal* material = (CF_MaterialInternal*)material_handle.id;
+	CF_MeshInternal* mesh = (CF_MeshInternal*)mesh_handle.id;
 	CF_RenderState* state = &material->state;
 
 	// Cache the pipeline to avoid create/release each frame.
@@ -1511,9 +1503,12 @@ void cf_sdlgpu_apply_shader(CF_Shader shader_handle, CF_Material material_handle
 	g_ctx.canvas->clear = false;
 }
 
-void cf_sdlgpu_draw_elements()
+void cf_sdlgpu_draw_elements(CF_Mesh mesh_handle)
 {
-	CF_MeshInternal* mesh = g_ctx.canvas->mesh;
+	CF_MeshInternal* mesh = (CF_MeshInternal*)mesh_handle.id;
+	CF_ASSERT(mesh != NULL);
+	CF_ASSERT(g_ctx.canvas);
+
 	if (mesh->instances.buffer) {
 		if (mesh->indices.buffer) {
 			SDL_DrawGPUIndexedPrimitives(g_ctx.canvas->pass, mesh->indices.element_count, mesh->instances.element_count, 0, 0, 0);
