@@ -286,7 +286,7 @@ void cf_aseprite_cache_unload(const char* aseprite_path)
 		for (int j = 0; j < alen(animation->frames); ++j) {
 			uint64_t id = animation->frames[j].id;
 			cache->id_to_pixels.remove(id);
-			spritebatch_invalidate(&draw->sb, id);
+			spritebatch_invalidate(&s_draw->sb, id);
 		}
 
 		afree(animation->frames);

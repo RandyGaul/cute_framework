@@ -268,7 +268,7 @@ static bool write_draw_header_file(
 
 	// Write the constant.
 	write_bytecode(file, draw_result, var_name, "_draw");
-	write_bytecode(file, draw_result, var_name, "_blit");
+	write_bytecode(file, blit_result, var_name, "_blit");
 	write_draw_bytecode_struct(file, draw_result, blit_result, var_name);
 
 	if (ferror(file) != 0) {

@@ -15,7 +15,7 @@
 
 #include <float.h>
 
-extern struct CF_Draw* draw;
+extern struct CF_Draw* s_draw;
 
 enum BatchGeometryType : int
 {
@@ -90,41 +90,41 @@ struct CF_Command
 };
 
 #define DRAW_PUSH_ITEM(s) \
-	draw->cmds.last().items.add(s)
+	s_draw->cmds.last().items.add(s)
 
 #define PUSH_DRAW_VAR(var) \
-	draw->var##s.add(var)
+	s_draw->var##s.add(var)
 
 #define POP_DRAW_VAR(var) \
-	if (draw->var##s.count() > 1) { \
-		auto var = draw->var##s.pop(); \
+	if (s_draw->var##s.count() > 1) { \
+		auto var = s_draw->var##s.pop(); \
 		return var; \
 	} else { \
-		return draw->var##s.last(); \
+		return s_draw->var##s.last(); \
 	}
 
 #define PUSH_DRAW_VAR_AND_ADD_CMD_IF_NEEDED(var) \
-	if (draw->var##s.last() != var) { \
-		CF_Command& cmd = draw->add_cmd(); \
+	if (s_draw->var##s.last() != var) { \
+		CF_Command& cmd = s_draw->add_cmd(); \
 		cmd.var = var; \
 	} \
 	PUSH_DRAW_VAR(var)
 
 #define POP_DRAW_VAR_AND_ADD_CMD_IF_NEEDED(var) \
-	if (draw->var##s.count() > 1) { \
-		auto result = draw->var##s.pop(); \
-		if (draw->var##s.last() != result) { \
-			CF_Command& cmd = draw->add_cmd(); \
-			cmd.var = draw->var##s.last(); \
+	if (s_draw->var##s.count() > 1) { \
+		auto result = s_draw->var##s.pop(); \
+		if (s_draw->var##s.last() != result) { \
+			CF_Command& cmd = s_draw->add_cmd(); \
+			cmd.var = s_draw->var##s.last(); \
 		} \
 		return result; \
 	} else { \
-		return draw->var##s.last(); \
+		return s_draw->var##s.last(); \
 	}
 
 #define ADD_UNIFORM(u) \
-	draw->add_cmd(); \
-	draw->cmds.last().u = u
+	s_draw->add_cmd(); \
+	s_draw->cmds.last().u = u
 
 struct CF_Draw
 {

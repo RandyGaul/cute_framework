@@ -235,10 +235,10 @@ void cf_destroy_shader(CF_Shader shader_handle)
 {
 	// Draw shaders automatically have blit shaders generated, so clean that up as well,
 	// if it exists. See `cf_make_draw_shader`.
-	CF_Shader* blit = (CF_Shader*)draw->draw_shd_to_blit_shd.try_get(shader_handle.id);
+	CF_Shader* blit = (CF_Shader*)s_draw->draw_shd_to_blit_shd.try_get(shader_handle.id);
 	if (blit) {
 		cf_destroy_shader(*blit);
-		draw->draw_shd_to_blit_shd.remove(shader_handle.id);
+		s_draw->draw_shd_to_blit_shd.remove(shader_handle.id);
 	}
 
 	cf_destroy_shader_internal(shader_handle);
