@@ -175,6 +175,10 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 #ifdef CF_EMSCRIPTEN
 	// This is the only supported backend as of now
 	use_opengl = true;
+#else
+	if (use_opengl) {
+		fprintf(stderr, "WARNING -- OpenGL ES is not intended for non-web builds! Use at your own risk (i.e. for developement or debugging).\n");
+	}
 #endif
 
 	// Ensure the user selected only one backend, if they selected one at all.

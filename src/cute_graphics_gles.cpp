@@ -712,11 +712,16 @@ void cf_gles_blit_canvas(CF_Canvas canvas_handle)
 	int window_width, window_height;
 	SDL_GetWindowSizeInPixels(g_ctx.window, &window_width, &window_height);
 	g_ctx.current_state.scissor_enabled = false;
+	CF_POLL_OPENGL_ERROR();
 	glDisable(GL_SCISSOR_TEST);
+	CF_POLL_OPENGL_ERROR();
 
 	CF_GL_Canvas* canvas = (CF_GL_Canvas*)(uintptr_t)canvas_handle.id;
+	CF_POLL_OPENGL_ERROR();
 	glBindFramebuffer(GL_READ_FRAMEBUFFER, canvas->fbo);
+	CF_POLL_OPENGL_ERROR();
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+	CF_POLL_OPENGL_ERROR();
 	glBlitFramebuffer(
 		0, canvas->h, canvas->w, 0,
 		0, 0, window_width, window_height,
