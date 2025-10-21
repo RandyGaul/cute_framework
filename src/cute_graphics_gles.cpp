@@ -599,10 +599,10 @@ static void s_load_format_caps()
 	}
 }
 
-static GLuint s_compile_shader(GLenum stage, const char* src)
+static GLuint s_compile_shader(GLenum stage, const char* src, int src_len)
 {
 	GLuint s = glCreateShader(stage);
-	glShaderSource(s, 1, &src, NULL);
+	glShaderSource(s, 1, &src, &src_len);
 	glCompileShader(s);
 	GLint ok = GL_FALSE;
 	glGetShaderiv(s, GL_COMPILE_STATUS, &ok);
@@ -614,10 +614,10 @@ static GLuint s_compile_shader(GLenum stage, const char* src)
 	return s;
 }
 
-static GLuint s_make_program(const char* vs_src, const char* fs_src)
+static GLuint s_make_program(CF_ShaderBytecode vs_bytecode, CF_ShaderBytecode fs_bytecode)
 {
-	GLuint vs = s_compile_shader(GL_VERTEX_SHADER,   vs_src);
-	GLuint fs = s_compile_shader(GL_FRAGMENT_SHADER, fs_src);
+	GLuint vs = s_compile_shader(GL_VERTEX_SHADER,   vs_bytecode.glsl300_src, vs_bytecode.glsl300_src_size);
+	GLuint fs = s_compile_shader(GL_FRAGMENT_SHADER, fs_bytecode.glsl300_src, fs_bytecode.glsl300_src_size);
 
 	GLuint program = glCreateProgram();
 	glAttachShader(program, vs);
@@ -1312,7 +1312,7 @@ static void s_build_uniforms(GLuint program, CF_GL_ShaderInfo* shader_info, cons
 
 CF_Shader cf_gles_make_shader_from_bytecode(CF_ShaderBytecode vertex_bytecode, CF_ShaderBytecode fragment_bytecode)
 {
-	GLuint program = s_make_program(vertex_bytecode.glsl300_src, fragment_bytecode.glsl300_src);
+	GLuint program = s_make_program(vertex_bytecode, fragment_bytecode);
 
 	// Copy refelection data
 	CF_GL_Shader* shader = (CF_GL_Shader*)CF_CALLOC(sizeof(CF_GL_Shader));
