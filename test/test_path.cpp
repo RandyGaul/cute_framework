@@ -185,6 +185,26 @@ TEST_CASE(test_path_c)
 	REQUIRE(sequ(s, "/"));
 	sfree(s);
 
+	s = sptop_of("../example");
+	REQUIRE(sequ(s, "/"));
+	sfree(s);
+
+	s = sptop_of("../example/file.txt");
+	REQUIRE(sequ(s, "/example"));
+	sfree(s);
+
+	s = sptop_of("../example/a/b/file.txt");
+	REQUIRE(sequ(s, "/example"));
+	sfree(s);
+
+	s = sptop_of(".");
+	REQUIRE(sequ(s, NULL));
+	sfree(s);
+
+	s = sptop_of("..");
+	REQUIRE(sequ(s, NULL));
+	sfree(s);
+
 	s = spnorm("/first.last/.hidden");
 	REQUIRE(sequ(s, "/first.last/.hidden"));
 	sfree(s);
