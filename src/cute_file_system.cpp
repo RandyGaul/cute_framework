@@ -152,7 +152,7 @@ char* cf_path_top_directory(const char* path)
 	if (at == -1) return NULL;
 	int next = sfirst_index_of(path + at + 1, '/');
 	if (next == -1) return smake("/");
-	char* s = sdup(path);
+	char* s = sdup(path + at);
 	return serase(s, next + 1, slen(s) - (next + 1));
 }
 
