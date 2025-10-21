@@ -717,10 +717,10 @@ CF_INLINE int8_t   cf_sign_i8 (int8_t   x) { return x < 0 ? (int8_t)-1 : (int8_t
 CF_INLINE int16_t  cf_sign_i16(int16_t  x) { return x < 0 ? (int16_t)-1 : (int16_t)1; }
 CF_INLINE int32_t  cf_sign_i32(int32_t  x) { return x < 0 ? -1 : 1; }
 CF_INLINE int64_t  cf_sign_i64(int64_t  x) { return x < 0 ? -1 : 1; }
-CF_INLINE uint8_t  cf_sign_u8 (uint8_t  x) { return (uint8_t)1; }
-CF_INLINE uint16_t cf_sign_u16(uint16_t x) { return (uint16_t)1; }
-CF_INLINE uint32_t cf_sign_u32(uint32_t x) { return 1u; }
-CF_INLINE uint64_t cf_sign_u64(uint64_t x) { return 1ull; }
+CF_INLINE uint8_t  cf_sign_u8 (uint8_t  x) { CF_UNUSED(x); return (uint8_t)1; }
+CF_INLINE uint16_t cf_sign_u16(uint16_t x) { CF_UNUSED(x); return (uint16_t)1; }
+CF_INLINE uint32_t cf_sign_u32(uint32_t x) { CF_UNUSED(x); return 1u; }
+CF_INLINE uint64_t cf_sign_u64(uint64_t x) { CF_UNUSED(x); return 1ull; }
 CF_INLINE CF_V2    cf_sign_v2 (CF_V2    x) { return (CF_V2){ cf_sign_f(x.x), cf_sign_f(x.y) }; }
 #define cf_sign(x) \
 	_Generic((x), \
