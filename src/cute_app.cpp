@@ -23,6 +23,8 @@
 #include <internal/cute_aseprite_cache_internal.h>
 #include <internal/cute_imgui_internal.h>
 
+#include <scottt/debugbreak.h>
+
 #include <data/fonts/calibri.h>
 
 #include <SDL3/SDL.h>
@@ -878,9 +880,7 @@ void cf_default_assert(bool expr, const char* message, const char* file, int lin
 {
 	if (!expr) {
 		fprintf(stderr, "CF_ASSERT(%s) : %s, line %d\n", message, file, line);
-#ifdef _MSC_VER
-		__debugbreak();
-#endif
+		debug_break();
 	}
 }
 
