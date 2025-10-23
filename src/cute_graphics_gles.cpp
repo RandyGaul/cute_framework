@@ -21,7 +21,7 @@
 		if (g_ctx.debug) { s_poll_error(__FILE__, __LINE__); } \
 	} while (0)
 
-CF_INLINE GLenum s_wrap(CF_Filter f)
+static inline GLenum s_wrap(CF_Filter f)
 {
 	switch (f) { default:
 	case CF_FILTER_NEAREST: return GL_NEAREST;
@@ -29,7 +29,7 @@ CF_INLINE GLenum s_wrap(CF_Filter f)
 	}
 }
 
-CF_INLINE GLenum s_wrap(CF_MipFilter m, bool has_mips)
+static inline GLenum s_wrap(CF_MipFilter m, bool has_mips)
 {
 	if (!has_mips) return GL_NEAREST; // min filter without mips
 	switch (m) { default:
@@ -38,7 +38,7 @@ CF_INLINE GLenum s_wrap(CF_MipFilter m, bool has_mips)
 	}
 }
 
-CF_INLINE GLenum s_wrap(CF_WrapMode w)
+static inline GLenum s_wrap(CF_WrapMode w)
 {
 	switch (w) { default:
 	case CF_WRAP_MODE_CLAMP_TO_EDGE:   return GL_CLAMP_TO_EDGE;
@@ -47,7 +47,7 @@ CF_INLINE GLenum s_wrap(CF_WrapMode w)
 	}
 }
 
-CF_INLINE GLenum s_wrap(CF_PrimitiveType p)
+static inline GLenum s_wrap(CF_PrimitiveType p)
 {
 	switch (p) { default:
 	case CF_PRIMITIVE_TYPE_TRIANGLELIST:  return GL_TRIANGLES;
@@ -57,7 +57,7 @@ CF_INLINE GLenum s_wrap(CF_PrimitiveType p)
 	}
 }
 
-CF_INLINE GLenum s_wrap(CF_CompareFunction c)
+static inline GLenum s_wrap(CF_CompareFunction c)
 {
 	switch (c) { default:
 	case CF_COMPARE_FUNCTION_ALWAYS:                return GL_ALWAYS;
@@ -71,7 +71,7 @@ CF_INLINE GLenum s_wrap(CF_CompareFunction c)
 	}
 }
 
-CF_INLINE GLenum s_wrap(CF_CullMode m)
+static inline GLenum s_wrap(CF_CullMode m)
 {
 	switch (m) { default:
 	case CF_CULL_MODE_NONE:  return 0;
@@ -80,7 +80,7 @@ CF_INLINE GLenum s_wrap(CF_CullMode m)
 	}
 }
 
-CF_INLINE GLenum s_wrap(CF_BlendOp op)
+static inline GLenum s_wrap(CF_BlendOp op)
 {
 	switch (op) { default:
 	case CF_BLEND_OP_ADD:              return GL_FUNC_ADD;
@@ -91,7 +91,7 @@ CF_INLINE GLenum s_wrap(CF_BlendOp op)
 	}
 }
 
-CF_INLINE GLenum s_wrap(CF_BlendFactor f)
+static inline GLenum s_wrap(CF_BlendFactor f)
 {
 	switch (f) { default:
 	case CF_BLENDFACTOR_ZERO:                     return GL_ZERO;
@@ -110,7 +110,7 @@ CF_INLINE GLenum s_wrap(CF_BlendFactor f)
 	}
 }
 
-CF_INLINE GLenum s_wrap(CF_StencilOp op)
+static inline GLenum s_wrap(CF_StencilOp op)
 {
 	switch (op) { default:
 	case CF_STENCIL_OP_KEEP:            return GL_KEEP;
@@ -350,7 +350,7 @@ static struct
 	uint64_t enabled_vertex_attrib_mask;
 } g_ctx = { };
 
-static void s_poll_error(const char* file, int line)
+static inline void s_poll_error(const char* file, int line)
 {
 	GLenum err;
 	while ((err = glGetError()) != GL_NO_ERROR) {
@@ -358,19 +358,19 @@ static void s_poll_error(const char* file, int line)
 	}
 }
 
-static GLsizeiptr s_align_up(GLsizeiptr value, GLsizeiptr alignment)
+static inline GLsizeiptr s_align_up(GLsizeiptr value, GLsizeiptr alignment)
 {
 	GLsizeiptr mask = alignment - 1;
 	return (value + mask) & ~mask;
 }
 
-static GLenum s_poll_fence(GLsync fence)
+static inline GLenum s_poll_fence(GLsync fence)
 {
 	if (!fence) return GL_ALREADY_SIGNALED;
 	return glClientWaitSync(fence, GL_SYNC_FLUSH_COMMANDS_BIT, 0);
 }
 
-static CF_GL_Slot* s_acquire_slot(CF_GL_Ring* ring, uint32_t frame, int* out_index)
+static inline CF_GL_Slot* s_acquire_slot(CF_GL_Ring* ring, uint32_t frame, int* out_index)
 {
 	int count = ring->count;
 	for (int tries = 0; tries < count; ++tries) {
@@ -401,7 +401,7 @@ static CF_GL_Slot* s_acquire_slot(CF_GL_Ring* ring, uint32_t frame, int* out_ind
 	return NULL;
 }
 
-static CF_GL_Slot* s_force_slot(CF_GL_Ring* ring, uint32_t frame, int* out_index)
+static inline CF_GL_Slot* s_force_slot(CF_GL_Ring* ring, uint32_t frame, int* out_index)
 {
 	if (!ring->count) return NULL;
 	int index = ring->head;
@@ -438,14 +438,14 @@ static CF_GL_Slot* s_force_slot(CF_GL_Ring* ring, uint32_t frame, int* out_index
 	return &slot;
 }
 
-static CF_GL_Slot* s_acquire_or_wait(CF_GL_Ring* ring, uint32_t frame, int* out_index)
+static inline CF_GL_Slot* s_acquire_or_wait(CF_GL_Ring* ring, uint32_t frame, int* out_index)
 {
 	CF_GL_Slot* slot = s_acquire_slot(ring, frame, out_index);
 	if (slot) return slot;
 	return s_force_slot(ring, frame, out_index);
 }
 
-static void s_set_slot_fence(CF_GL_Slot& slot)
+static inline void s_set_slot_fence(CF_GL_Slot& slot)
 {
 	if (slot.fence) {
 		glDeleteSync(slot.fence);
@@ -456,7 +456,7 @@ static void s_set_slot_fence(CF_GL_Slot& slot)
 #endif
 }
 
-static CF_GL_RenderState s_default_state(CF_GL_Canvas* canvas)
+static inline CF_GL_RenderState s_default_state(CF_GL_Canvas* canvas)
 {
 	CF_GL_RenderState state = { };
 	state.viewport = { 0, 0, canvas->w, canvas->h };
@@ -467,17 +467,17 @@ static CF_GL_RenderState s_default_state(CF_GL_Canvas* canvas)
 	return state;
 }
 
-static bool s_canvas_has_depth(const CF_GL_Canvas* canvas)
+static inline bool s_canvas_has_depth(const CF_GL_Canvas* canvas)
 {
 	return canvas && canvas->has_depth;
 }
 
-static bool s_canvas_has_stencil(const CF_GL_Canvas* canvas)
+static inline bool s_canvas_has_stencil(const CF_GL_Canvas* canvas)
 {
 	return canvas && canvas->has_stencil;
 }
 
-static void s_apply_state()
+static inline void s_apply_state()
 {
 	CF_GL_RenderState* target = &g_ctx.target_state;
 	CF_GL_RenderState* current = &g_ctx.current_state;
@@ -539,7 +539,7 @@ static void s_apply_state()
 	CF_POLL_OPENGL_ERROR();
 }
 
-static void s_bind_framebuffer(GLuint fbo)
+static inline void s_bind_framebuffer(GLuint fbo)
 {
 	if (g_ctx.fbo != fbo) {
 		glBindFramebuffer(GL_FRAMEBUFFER, fbo);
@@ -547,7 +547,7 @@ static void s_bind_framebuffer(GLuint fbo)
 	}
 }
 
-static bool s_has_extension(const char* name)
+static inline bool s_has_extension(const char* name)
 {
 	if (!name) return true;
 	GLint count = 0;
@@ -559,7 +559,7 @@ static bool s_has_extension(const char* name)
 	return false;
 }
 
-static CF_GL_PixelFormatInfo* s_find_pixel_format_info(CF_PixelFormat format)
+static inline CF_GL_PixelFormatInfo* s_find_pixel_format_info(CF_PixelFormat format)
 {
 	for (size_t i = 0; i < CF_ARRAY_SIZE(g_gl_pixel_formats); ++i) {
 		if (g_gl_pixel_formats[i].format == format) return &g_gl_pixel_formats[i];
@@ -567,7 +567,7 @@ static CF_GL_PixelFormatInfo* s_find_pixel_format_info(CF_PixelFormat format)
 	return NULL;
 }
 
-static void s_load_format_caps()
+static inline void s_load_format_caps()
 {
 	static bool s_caps_initialized = false;
 	if (s_caps_initialized) return;
@@ -599,7 +599,7 @@ static void s_load_format_caps()
 	}
 }
 
-static GLuint s_compile_shader(GLenum stage, const char* src, int src_len)
+static inline GLuint s_compile_shader(GLenum stage, const char* src, int src_len)
 {
 	GLuint s = glCreateShader(stage);
 	glShaderSource(s, 1, &src, &src_len);
@@ -614,7 +614,7 @@ static GLuint s_compile_shader(GLenum stage, const char* src, int src_len)
 	return s;
 }
 
-static GLuint s_make_program(CF_ShaderBytecode vs_bytecode, CF_ShaderBytecode fs_bytecode)
+static inline GLuint s_make_program(CF_ShaderBytecode vs_bytecode, CF_ShaderBytecode fs_bytecode)
 {
 	GLuint vs = s_compile_shader(GL_VERTEX_SHADER,   vs_bytecode.glsl300_src, vs_bytecode.glsl300_src_size);
 	GLuint fs = s_compile_shader(GL_FRAGMENT_SHADER, fs_bytecode.glsl300_src, fs_bytecode.glsl300_src_size);
@@ -786,7 +786,7 @@ bool cf_gles_query_pixel_format(CF_PixelFormat format, CF_PixelFormatOp op)
 	}
 }
 
-static void s_apply_sampler_state_to_handle(const CF_GL_Texture* t, GLuint handle)
+static inline void s_apply_sampler_state_to_handle(const CF_GL_Texture* t, GLuint handle)
 {
 	glBindTexture(GL_TEXTURE_2D, handle);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, t->min_filter);
@@ -796,7 +796,7 @@ static void s_apply_sampler_state_to_handle(const CF_GL_Texture* t, GLuint handl
 	glBindTexture(GL_TEXTURE_2D, 0);
 }
 
-static void s_apply_sampler_params(CF_GL_Texture* t, const CF_TextureParams& p)
+static inline void s_apply_sampler_params(CF_GL_Texture* t, const CF_TextureParams& p)
 {
 	s_load_format_caps();
 	CF_GL_PixelFormatInfo* info = s_find_pixel_format_info(p.pixel_format);
@@ -816,7 +816,7 @@ static void s_apply_sampler_params(CF_GL_Texture* t, const CF_TextureParams& p)
 	s_apply_sampler_state_to_handle(t, t->id);
 }
 
-static bool s_texture_allocate_storage(CF_GL_Texture* t, CF_GL_Slot* slot)
+static inline bool s_texture_allocate_storage(CF_GL_Texture* t, CF_GL_Slot* slot)
 {
 	if (!slot->handle) {
 		glGenTextures(1, &slot->handle);
@@ -829,7 +829,7 @@ static bool s_texture_allocate_storage(CF_GL_Texture* t, CF_GL_Slot* slot)
 	return true;
 }
 
-static CF_GL_Slot* s_prepare_buffer_slot(CF_GL_Buffer* buffer, GLsizeiptr required_bytes, int* out_index)
+static inline CF_GL_Slot* s_prepare_buffer_slot(CF_GL_Buffer* buffer, GLsizeiptr required_bytes, int* out_index)
 {
 	CF_GL_Slot* slot = s_acquire_or_wait(&buffer->ring, g_ctx.frame_index, out_index);
 	if (!slot) return NULL;
@@ -852,7 +852,7 @@ static CF_GL_Slot* s_prepare_buffer_slot(CF_GL_Buffer* buffer, GLsizeiptr requir
 	return slot;
 }
 
-static void s_destroy_buffer(CF_GL_Buffer* buffer)
+static inline void s_destroy_buffer(CF_GL_Buffer* buffer)
 {
 	for (int i = 0; i < buffer->ring.count; ++i) {
 		CF_GL_Slot& slot = buffer->ring.slots[i];
@@ -867,7 +867,7 @@ static void s_destroy_buffer(CF_GL_Buffer* buffer)
 	}
 }
 
-static GLuint s_make_depth_renderbuffer(const CF_TextureParams& p)
+static inline GLuint s_make_depth_renderbuffer(const CF_TextureParams& p)
 {
 	s_load_format_caps();
 	CF_GL_PixelFormatInfo* info = s_find_pixel_format_info(p.pixel_format);
@@ -1087,7 +1087,7 @@ CF_Texture cf_gles_canvas_get_depth_stencil_target(CF_Canvas)
 	return CF_Texture{};
 }
 
-static void s_clear_canvas(const CF_GL_Canvas* canvas)
+static inline void s_clear_canvas(const CF_GL_Canvas* canvas)
 {
 	GLbitfield bits = GL_COLOR_BUFFER_BIT;
 	glClearColor(app->clear_color.r, app->clear_color.g, app->clear_color.b, app->clear_color.a);
@@ -1357,7 +1357,7 @@ void cf_gles_destroy_shader_internal(CF_Shader shader_handle)
 	CF_FREE(shader);
 }
 
-static const CF_GL_ShaderUniformBlock* s_find_block_info(const CF_GL_ShaderInfo* shader_info, const char* name)
+static inline const CF_GL_ShaderUniformBlock* s_find_block_info(const CF_GL_ShaderInfo* shader_info, const char* name)
 {
 	for (int i = 0; i < shader_info->num_uniform_blocks; ++i) {
 		const CF_GL_ShaderUniformBlock* block = &shader_info->uniform_blocks[i];
@@ -1369,7 +1369,7 @@ static const CF_GL_ShaderUniformBlock* s_find_block_info(const CF_GL_ShaderInfo*
 	return NULL;
 }
 
-static const CF_ShaderUniformMemberInfo* s_find_member_info(const CF_GL_ShaderUniformBlock* block, const char* name)
+static inline const CF_ShaderUniformMemberInfo* s_find_member_info(const CF_GL_ShaderUniformBlock* block, const char* name)
 {
 	for (int i = 0; i < block->info.num_members; ++i) {
 		const CF_ShaderUniformMemberInfo* member = &block->members[i];
@@ -1381,7 +1381,7 @@ static const CF_ShaderUniformMemberInfo* s_find_member_info(const CF_GL_ShaderUn
 	return NULL;
 }
 
-static void s_upload_uniforms(CF_GL_ShaderInfo* shader_info, const CF_MaterialState* material, CF_Arena* arena)
+static inline void s_upload_uniforms(CF_GL_ShaderInfo* shader_info, const CF_MaterialState* material, CF_Arena* arena)
 {
 	void* uniform_data_ptrs[CF_MAX_UNIFORM_BLOCK_COUNT];
 	CF_MEMSET(uniform_data_ptrs, 0, sizeof(uniform_data_ptrs));
@@ -1426,7 +1426,7 @@ static void s_upload_uniforms(CF_GL_ShaderInfo* shader_info, const CF_MaterialSt
 	cf_arena_reset(arena);
 }
 
-static void s_apply_vertex_attributes(CF_GL_Shader* shader, CF_GL_Mesh* mesh)
+static inline void s_apply_vertex_attributes(CF_GL_Shader* shader, CF_GL_Mesh* mesh)
 {
 	if (mesh->ibo.id) {
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh->ibo.id);

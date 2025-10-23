@@ -183,7 +183,7 @@ static SDL_GPUTextureLocation SDL_GPUTextureLocationDefaults(CF_TextureInternal*
 	return location;
 }
 
-CF_INLINE SDL_GPUCompareOp s_wrap(CF_CompareFunction compare_function)
+static inline SDL_GPUCompareOp s_wrap(CF_CompareFunction compare_function)
 {
 	switch (compare_function)
 	{
@@ -199,7 +199,7 @@ CF_INLINE SDL_GPUCompareOp s_wrap(CF_CompareFunction compare_function)
 	}
 }
 
-CF_INLINE SDL_GPUCullMode s_wrap(CF_CullMode mode)
+static inline SDL_GPUCullMode s_wrap(CF_CullMode mode)
 {
     switch (mode)
     {
@@ -210,7 +210,7 @@ CF_INLINE SDL_GPUCullMode s_wrap(CF_CullMode mode)
     }
 }
 
-CF_INLINE SDL_GPUStencilOp s_wrap(CF_StencilOp stencil_op)
+static inline SDL_GPUStencilOp s_wrap(CF_StencilOp stencil_op)
 {
 	switch (stencil_op)
 	{
@@ -226,7 +226,7 @@ CF_INLINE SDL_GPUStencilOp s_wrap(CF_StencilOp stencil_op)
 	}
 }
 
-CF_INLINE SDL_GPUBlendOp s_wrap(CF_BlendOp blend_op)
+static inline SDL_GPUBlendOp s_wrap(CF_BlendOp blend_op)
 {
 	switch (blend_op)
 	{
@@ -239,7 +239,7 @@ CF_INLINE SDL_GPUBlendOp s_wrap(CF_BlendOp blend_op)
 	}
 }
 
-CF_INLINE SDL_GPUBlendFactor s_wrap(CF_BlendFactor factor)
+static inline SDL_GPUBlendFactor s_wrap(CF_BlendFactor factor)
 {
 	switch (factor) {
 	case CF_BLENDFACTOR_ZERO:                    return SDL_GPU_BLENDFACTOR_ZERO;
@@ -259,7 +259,7 @@ CF_INLINE SDL_GPUBlendFactor s_wrap(CF_BlendFactor factor)
 	}
 }
 
-CF_INLINE SDL_GPUPrimitiveType s_wrap(CF_PrimitiveType type)
+static inline SDL_GPUPrimitiveType s_wrap(CF_PrimitiveType type)
 {
 	switch (type)
 	{
@@ -271,7 +271,7 @@ CF_INLINE SDL_GPUPrimitiveType s_wrap(CF_PrimitiveType type)
 	}
 }
 
-CF_INLINE SDL_GPUShaderStage s_wrap(CF_ShaderStage stage)
+static inline SDL_GPUShaderStage s_wrap(CF_ShaderStage stage)
 {
 	switch (stage) {
 	case CF_SHADER_STAGE_VERTEX: return SDL_GPU_SHADERSTAGE_VERTEX;
@@ -280,7 +280,7 @@ CF_INLINE SDL_GPUShaderStage s_wrap(CF_ShaderStage stage)
 	}
 }
 
-CF_INLINE SDL_GPUTextureFormat s_wrap(CF_PixelFormat format)
+static inline SDL_GPUTextureFormat s_wrap(CF_PixelFormat format)
 {
 	switch (format)
 	{
@@ -345,7 +345,7 @@ CF_INLINE SDL_GPUTextureFormat s_wrap(CF_PixelFormat format)
 	}
 }
 
-CF_INLINE SDL_GPUFilter s_wrap(CF_Filter filter)
+static inline SDL_GPUFilter s_wrap(CF_Filter filter)
 {
 	switch (filter) {
 	default: return SDL_GPU_FILTER_LINEAR;
@@ -354,7 +354,7 @@ CF_INLINE SDL_GPUFilter s_wrap(CF_Filter filter)
 	}
 }
 
-CF_INLINE SDL_GPUSamplerMipmapMode s_wrap(CF_MipFilter filter)
+static inline SDL_GPUSamplerMipmapMode s_wrap(CF_MipFilter filter)
 {
 	switch (filter) {
 	default: return SDL_GPU_SAMPLERMIPMAPMODE_LINEAR;
@@ -363,7 +363,7 @@ CF_INLINE SDL_GPUSamplerMipmapMode s_wrap(CF_MipFilter filter)
 	}
 }
 
-CF_INLINE SDL_GPUSamplerAddressMode s_wrap(CF_WrapMode mode)
+static inline SDL_GPUSamplerAddressMode s_wrap(CF_WrapMode mode)
 {
 	switch (mode)
 	{
@@ -374,7 +374,7 @@ CF_INLINE SDL_GPUSamplerAddressMode s_wrap(CF_WrapMode mode)
 	}
 }
 
-CF_INLINE SDL_GPUVertexElementFormat s_wrap(CF_VertexFormat format)
+static inline SDL_GPUVertexElementFormat s_wrap(CF_VertexFormat format)
 {
 	switch (format)
 	{
@@ -412,7 +412,7 @@ CF_INLINE SDL_GPUVertexElementFormat s_wrap(CF_VertexFormat format)
 	}
 }
 
-CF_INLINE CF_BackendType s_query_backend()
+static inline CF_BackendType s_query_backend()
 {
 	const char* driver = SDL_GetGPUDeviceDriver(g_ctx.device);
 	if (sequ(driver, "vulkan")) {
@@ -430,7 +430,7 @@ CF_INLINE CF_BackendType s_query_backend()
 	}
 }
 
-CF_INLINE CF_ShaderInputFormat s_wrap(CF_ShaderInfoDataType type)
+static inline CF_ShaderInputFormat s_wrap(CF_ShaderInfoDataType type)
 {
 	switch (type) {
 	case CF_SHADER_INFO_TYPE_UNKNOWN: return CF_SHADER_INPUT_FORMAT_UNKNOWN;
@@ -450,7 +450,7 @@ CF_INLINE CF_ShaderInputFormat s_wrap(CF_ShaderInfoDataType type)
 	}
 }
 
-CF_INLINE bool s_texture_supports_format(CF_PixelFormat format, CF_TextureUsageBits usage)
+static inline bool s_texture_supports_format(CF_PixelFormat format, CF_TextureUsageBits usage)
 {
 	return SDL_GPUTextureSupportsFormat(
 		g_ctx.device,
@@ -460,7 +460,7 @@ CF_INLINE bool s_texture_supports_format(CF_PixelFormat format, CF_TextureUsageB
 	);
 }
 
-static bool s_texture_supports_stencil(const CF_TextureInternal* texture)
+static inline bool s_texture_supports_stencil(const CF_TextureInternal* texture)
 {
 	if (!texture) return false;
 
@@ -476,7 +476,7 @@ static bool s_texture_supports_stencil(const CF_TextureInternal* texture)
 	}
 }
 
-static CF_Texture s_make_texture(CF_TextureParams params, CF_SampleCount sample_count)
+static inline CF_Texture s_make_texture(CF_TextureParams params, CF_SampleCount sample_count)
 {
 	SDL_GPUTextureCreateInfo tex_info = SDL_GPUTextureCreateInfoDefaults(params.width, params.height);
 	tex_info.width = (Uint32)params.width;
@@ -544,7 +544,7 @@ static CF_Texture s_make_texture(CF_TextureParams params, CF_SampleCount sample_
 	return result;
 }
 
-static SDL_GPUShader* s_load_shader_bytecode(CF_ShaderInternal* shader_internal, CF_ShaderBytecode bytecode, CF_ShaderStage stage)
+static inline SDL_GPUShader* s_load_shader_bytecode(CF_ShaderInternal* shader_internal, CF_ShaderBytecode bytecode, CF_ShaderStage stage)
 {
 	bool vs = stage == CF_SHADER_STAGE_VERTEX ? true : false;
 
@@ -1105,7 +1105,7 @@ void cf_sdlgpu_destroy_mesh(CF_Mesh mesh_handle)
 	CF_FREE(mesh);
 }
 
-static void s_update_buffer(CF_Buffer* buffer, int element_count, void* data, int size, SDL_GPUBufferUsageFlags flags)
+static inline void s_update_buffer(CF_Buffer* buffer, int element_count, void* data, int size, SDL_GPUBufferUsageFlags flags)
 {
 	// Resize buffer if necessary.
 	if (size > buffer->size) {
@@ -1229,7 +1229,7 @@ void cf_sdlgpu_apply_mesh(CF_Mesh mesh_handle)
 	g_ctx.canvas->mesh = mesh;
 }
 
-static void s_copy_uniforms(SDL_GPUCommandBuffer* cmd, CF_Arena* arena, CF_ShaderInternal* shd, CF_MaterialState* mstate, bool vs)
+static inline void s_copy_uniforms(SDL_GPUCommandBuffer* cmd, CF_Arena* arena, CF_ShaderInternal* shd, CF_MaterialState* mstate, bool vs)
 {
 	// Create any required uniform blocks for all uniforms matching between which uniforms
 	// the material has and the shader needs.
@@ -1275,7 +1275,7 @@ static void s_copy_uniforms(SDL_GPUCommandBuffer* cmd, CF_Arena* arena, CF_Shade
 	cf_arena_reset(arena);
 }
 
-static SDL_GPUGraphicsPipeline* s_build_pipeline(CF_ShaderInternal* shader, CF_RenderState* state, CF_MeshInternal* mesh)
+static inline SDL_GPUGraphicsPipeline* s_build_pipeline(CF_ShaderInternal* shader, CF_RenderState* state, CF_MeshInternal* mesh)
 {
 	CF_TextureInternal* tex = (CF_TextureInternal*)g_ctx.canvas->cf_texture.id;
 	SDL_GPUColorTargetDescription color_info;
