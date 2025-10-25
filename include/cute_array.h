@@ -252,7 +252,7 @@
 #define cf_array_clear(a) (CF_ACANARY(a), (a) ? cf_array_len(a) = 0 : 0)
 #define cf_array_set(a, b) (*(void**)&(a) = cf_aset((void*)(a), (void*)(b), sizeof(*a)))
 #define cf_array_reverse(a) (a ? cf_arev(a, sizeof(*a)) : NULL)
-#define cf_array_hash(a) cf_fnv1a(a, cf_array_size(a))
+#define cf_array_hash(a) cf_fnv1a(a, sizeof(*a) * cf_array_size(a))
 #define cf_array_del(a, i) (a[i] = a[--alen(a)])
 #define cf_array_static(a, buffer, buffer_size) (*(void**)&(a) = cf_astatic(buffer, buffer_size, sizeof(*a)))
 #define cf_array_free(a) do { CF_ACANARY(a); if (a && !CF_AHDR(a)->is_static) cf_free(CF_AHDR(a)); a = NULL; } while (0)
