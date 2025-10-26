@@ -121,7 +121,7 @@ int main(int argc, char* argv[])
 		// apply camera
 		cf_draw_translate_v2(camera.offset);
 		cf_draw_scale(camera.scale, camera.scale);
-		cf_draw_rotate(camera.rotation);
+		cf_draw_rotate(-camera.rotation);
 		cf_draw_translate_v2(cf_neg(camera.target));
 
 		// draw tilemap
