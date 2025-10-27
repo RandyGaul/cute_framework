@@ -143,7 +143,10 @@ CF_INLINE CF_Color cf_make_color_hex2(int hex, int alpha) { return cf_make_color
  * @param    hex        A hex-value string, such as "#42f563" or "0x42f563FF".
  * @related  CF_Color cf_make_color_rgb_f cf_make_color_rgba_f cf_make_color_rgb cf_make_color_rgba cf_make_color_hex cf_make_color_hex_string
  */
-CF_INLINE CF_Color cf_make_color_hex_string(const char* hex) { return cf_make_color_hex((int)stohex(hex)); }
+CF_INLINE CF_Color cf_make_color_hex_string(const char* hex) { 
+	uint32_t rgba = (uint32_t)stohex(hex);
+	return cf_make_color_rgba((uint8_t)((rgba >> 24) & 0xFF), (uint8_t)((rgba >> 16) & 0xFF), (uint8_t)((rgba >> 8) & 0xFF), (uint8_t)(rgba & 0xFF)); 
+}
 
 /**
  * @function cf_make_pixel_rgb_f
