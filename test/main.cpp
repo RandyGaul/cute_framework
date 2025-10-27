@@ -29,6 +29,7 @@ TEST_SUITE(test_array);
 TEST_SUITE(test_aseprite);
 TEST_SUITE(test_audio);
 TEST_SUITE(test_base64);
+TEST_SUITE(test_color);
 TEST_SUITE(test_coroutine);
 TEST_SUITE(test_doubly_list);
 TEST_SUITE(test_hashtable);
@@ -65,6 +66,7 @@ int main(int argc, char* argv[])
 	RUN_TEST_SUITE(test_aseprite);
 	RUN_TEST_SUITE(test_audio);
 	RUN_TEST_SUITE(test_base64);
+	RUN_TEST_SUITE(test_color);
 	RUN_TEST_SUITE(test_coroutine);
 	RUN_TEST_SUITE(test_doubly_list);
 	RUN_TEST_SUITE(test_hashtable);
