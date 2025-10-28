@@ -74,8 +74,8 @@ struct CF_Touch
 };
 ```
 
-!!! note
-    Coordinates for touch events are normalized from [0,1], where [0,0] is the top-left corner.
+> [!NOTE]
+> Coordinates for touch events are normalized from [0,1], where [0,0] is the top-left corner.
 
 To get list of all live touch events call [`cf_touch_get_all`](../input/cf_touch_get_all.md). This function fills in a pointer you can use to loop over all the touch events.
 

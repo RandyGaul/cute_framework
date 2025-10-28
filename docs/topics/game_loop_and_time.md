@@ -6,13 +6,13 @@ The [`Time API`](../api_reference.md#time) is all about updating the game and co
 
 For many games variable timestep is a good choice. This means the game-tick runs as fast as possible and updates once per visually rendered frame. Each game-tick runs for a slightly variable time duration, since the hardware state changes each frame, and the game itself changes each frame. A time-slice is used to update everything in the game, usually called `dt` or  _delta time_.
 
-!!! note
-    It's not necessary to actually pass the `dt` variable around to all your functions. Instead you can make use of the global variable [`CF_DELTA_TIME`](../time/cf_delta_time.md).
+> [!NOTE]
+> It's not necessary to actually pass the `dt` variable around to all your functions. Instead you can make use of the global variable [`CF_DELTA_TIME`](../time/cf_delta_time.md).
 
 The time-slice is usually a small value, such as (1/60) or 0.0167. We can use this delta time to update positions, velocities, animations, or anything else in the game.
 
-!!! note
-    The delta time for a given frame can't actually be computed, since before we simulate the frame we won't know exactly how long it takes. As a workaround employed by basically all games in existence, we can use the previous frame's delta time for the current frame, assuming it will last roughly as long.
+> [!NOTE]
+> The delta time for a given frame can't actually be computed, since before we simulate the frame we won't know exactly how long it takes. As a workaround employed by basically all games in existence, we can use the previous frame's delta time for the current frame, assuming it will last roughly as long.
 
 Usually you want to choose a variable timestep if you don't need any [_determinism_](../topics/game_loop_and_time.md#determinism) in your game, or if you aren't running any kind of _physics simulation_. In CF variable timestep is used by default when you call [`cf_app_update`](../app/cf_app_update.md) and pass `NULL` in as the parameter.
 
