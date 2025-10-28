@@ -69,6 +69,7 @@ The [documentation website](https://randygaul.github.io/cute_framework/) is the 
 
 - [Topics and Tutorials](https://randygaul.github.io/cute_framework/topics/)
 - [Samples](https://github.com/RandyGaul/cute_framework/tree/master/samples)
+- [Made with Cute Famework](https://github.com/RandyGaul/cute_framework/blob/master/docs/made_with_cf.md)
 - [API Reference](https://randygaul.github.io/cute_framework/api_reference)
 
 If you're stuck and need help then check out the [Discord chat](https://discord.gg/2DFHRmX). Feel free to pop in and ask questions, make suggestions, or have a discussion. General gamedev chatting unrelated to CF is also welcome!
