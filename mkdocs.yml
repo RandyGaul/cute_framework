@@ -124,6 +124,7 @@ markdown_extensions:
   - attr_list
   - def_list
   - footnotes
+  - github-callouts
   - md_in_html
   - toc:
       permalink: true
