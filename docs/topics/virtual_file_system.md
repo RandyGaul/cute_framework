@@ -17,8 +17,8 @@ cf_fs_mount("C:/Users/Randy/Documents/data", "/data", append_to_path);
 
 The above snippet will give the folder `"C:/Users/Randy/Documents/data"`, which is specified in platform-dependent notation, a new alias `"/data"`.
 
-!!! note
-    **Platform-dependent notation** means a full folder path, and not a relative path, according to the platform your game is currently running on. On Windows machines folders start with the drive like, such as `C:/`, while on Linux machines a path will start simply with a slash `/`.
+> [!NOTE]
+> **Platform-dependent notation** means a full folder path, and not a relative path, according to the platform your game is currently running on. On Windows machines folders start with the drive like, such as `C:/`, while on Linux machines a path will start simply with a slash `/`.
 
  The alias folder `/data` is called a virtual path, and is specified in platform-independent notation. This means:
 
@@ -27,8 +27,8 @@ The above snippet will give the folder `"C:/Users/Randy/Documents/data"`, which 
 - No Windows style slashes `\\`
 - No colons `:`
 
-!!! note
-    **Normalizing** a path is the process of removing relative directories, removing redundant or Windows style slashes, and attempting to convert the string to a more platform-independant form. You can still normalize platform-dependent paths too though. Call [`spnorm`](../path/spnorm.md) to normalize a string path.
+> [!NOTE]
+> **Normalizing** a path is the process of removing relative directories, removing redundant or Windows style slashes, and attempting to convert the string to a more platform-independant form. You can still normalize platform-dependent paths too though. Call [`spnorm`](../path/spnorm.md) to normalize a string path.
 
 By mounting we achieve great portability by using platform-independent paths within our game. The paths are also more secure by removing relative paths (which reduce the chances of anyone accessing unanticipated directories), and most important of all grants versatility.
 

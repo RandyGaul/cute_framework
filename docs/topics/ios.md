@@ -2,8 +2,8 @@
 
 Building a game for iOS requires you to setup a developer account, and slightly complicates a few CMake commands. However, once setup it's very easy to build and install your game onto iOS devices through Xcode. Building your game for MacOS is even simpler than on iOS!
 
-!!! note
-    Just a friendly reminder that CF only supports 64-bit builds. There is no support for 32-bit builds.
+> [!NOTE]
+> Just a friendly reminder that CF only supports 64-bit builds. There is no support for 32-bit builds.
 
 ## Setup your MacOS Device
 
@@ -28,8 +28,8 @@ If you are a beginner to CMake it's best to use [CF's project template](https://
         └─ main.cpp
 ```
 
-!!! note
-    The `.gitignore` file is there just to ignore any `.DS_Store` files, and anything in any folder starting with the name `build*`. This helps prevent git from capturing any unwanted files, especially our build files we will be generating shortly. You can add any other folder or files here you wish to ignore in source control. Usually you will want to ignore generated files.
+> [!NOTE]
+> The `.gitignore` file is there just to ignore any `.DS_Store` files, and anything in any folder starting with the name `build*`. This helps prevent git from capturing any unwanted files, especially our build files we will be generating shortly. You can add any other folder or files here you wish to ignore in source control. Usually you will want to ignore generated files.
 
 Once downloaded all your source code can live in the `src` folder. To start with you should already have a basic `main.cpp` to open a window with CF.
 

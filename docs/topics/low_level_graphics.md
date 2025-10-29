@@ -10,7 +10,7 @@ CF wraps [low level 3D rendering APIs](../api_reference.md#graphics). The backen
 - DirectX 11
 - DirectX 12
 - Metal
-- ~~WebGPU~~ - This is disabled due to SDL_GPU not supporting OpenGL ES3, CF is currently seeking alternative solutions
+- OpenGL ES
 
 The major primitives that make up the graphics layer of CF are:
 
@@ -201,8 +201,8 @@ Once the vertex shader processes a vertex it outputs a color. The color is then 
 
 The fragment shader finally outputs the color for a single pixel within the triangle, once for each pixel. This produces the final image on the screen.
 
-!!! note
-    When we say "interpolated" it means the `varying` glsl keyword. We can see these interpolated values as outputs from the vertex shader in the [above sprite shader example](low_level_graphics.md#shaders). The vertex shaders specifies it's interpolated outputs with `out`, and the fragment shader collects those inputs with the same `in` keyword.
+> [!NOTE]
+> When we say "interpolated" it means the `varying` glsl keyword. We can see these interpolated values as outputs from the vertex shader in the [above sprite shader example](low_level_graphics.md#shaders). The vertex shaders specifies it's interpolated outputs with `out`, and the fragment shader collects those inputs with the same `in` keyword.
 
 We can visualize a set of steps a vertex will travel along to go from a sprite sitting on the CPU, to a pixel on the screen, for CF:
 

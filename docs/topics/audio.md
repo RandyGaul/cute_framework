@@ -66,8 +66,8 @@ See the page [`CF_SoundParams`](../audio/cf_soundparams.md) to view all the diff
 
 You can play many sound FX all simultaneously, up to many thousands without hitting any kind of performance difference on many platforms.
 
-!!! note 
-    For the web unfortunately the entire application is single threaded, making audio significantly more expensive than other platforms.
+> [!NOTE]
+> For the web unfortunately the entire application is single threaded, making audio significantly more expensive than other platforms.
 
 You may globally control sound FX volume with [`cf_audio_set_sound_volume`](../audio/cf_audio_set_sound_volume.md).
 

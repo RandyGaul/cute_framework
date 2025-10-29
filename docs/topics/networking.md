@@ -1,7 +1,7 @@
 # Networking
 
-!!! note
-    CF's networking is implemented by [cute_net.h](https://github.com/RandyGaul/cute_headers/blob/master/cute_net.h), a low level networking header. This code has not yet reached stable maturity -- use at your own risk! CF would like to release networking features officially in a future release.
+> [!NOTE]
+> CF's networking is implemented by [cute_net.h](https://github.com/RandyGaul/cute_headers/blob/master/cute_net.h), a low level networking header. This code has not yet reached stable maturity -- use at your own risk! CF would like to release networking features officially in a future release.
 
 CF's networking model uses a [client server networking architecture](https://en.wikipedia.org/wiki/Client%E2%80%93server_model). The underlying protocol works over UDP packets. There is no TCP support or peer-to-peer connections. However, CF does provide an [https API](../api_reference.md#web) for sending requests to an HTTP server. Here are the features of the client server API.
 

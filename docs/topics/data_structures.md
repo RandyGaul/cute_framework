@@ -21,8 +21,8 @@ CF_ASSERT(alen(a) == 0);
 afree(a);
 ```
 
-!!! note
-    The [`dyna`](../array/dyna.md) keyword is an _optional_, but encouraged, macro that doesn't actuall do anything. It's used to markup the type and make it clear this is a dynamic array, and not just an `int*`.
+> [!NOTE]
+> The [`dyna`](../array/dyna.md) keyword is an _optional_, but encouraged, macro that doesn't actuall do anything. It's used to markup the type and make it clear this is a dynamic array, and not just an `int*`.
 
 The array will automatically grow as elements are pushed. Whenever you want to fetch a particular element just use `a[i]` like any other pointer. When done, free up the array with [`afree`](../array/afree.md).
 
@@ -50,8 +50,8 @@ A hash table is used to map a unique key to a specific value. The value can be f
 
 In C we use the [Hash API](../api_reference.md#hash), while in C++ there's a `Map<T>` class that wraps the C functionality. It contains a very similar API including get/find, insert, remove, etc. We will cover both the C and C++ APIs in this page.
 
-!!! note "Important Note"
-    Since the table itself grows dynamically, values _may not_ store pointers to themselves or other values. All values are stored as [plain old data (POD)](https://stackoverflow.com/questions/146452/what-are-pod-types-in-c), as their location in memory will get shuffled around internally as the map grows.
+> [!IMPORTANT]
+> Since the table itself grows dynamically, values _may not_ store pointers to themselves or other values. All values are stored as [plain old data (POD)](https://stackoverflow.com/questions/146452/what-are-pod-types-in-c), as their location in memory will get shuffled around internally as the map grows.
 
 ## htbl in C
 
@@ -133,11 +133,11 @@ v2* a_ptr = vecs.try_get(0);
 v2* b_ptr = vecs.try_get(1);
 ```
 
-!!! note "Important Note"
-    The `get` function will return by value. If a particular key does not exist the returned value is simply a zero'd out element. If instead you want to know if a particular element was found or not, use `try_get` to return a pointer to an element. `NULL` is returned if a particular key is not found.
+> [!IMPORTANT]
+> The `get` function will return by value. If a particular key does not exist the returned value is simply a zero'd out element. If instead you want to know if a particular element was found or not, use `try_get` to return a pointer to an element. `NULL` is returned if a particular key is not found.
 
-!!! note "Important Note"
-    Since the table itself grows dynamically, values _may not_ store pointers to themselves or other values. All values are stored as [plain old data (POD)](https://stackoverflow.com/questions/146452/what-are-pod-types-in-c), as their location in memory will get shuffled around internally as the map grows.
+> [!IMPORTANT]
+> Since the table itself grows dynamically, values _may not_ store pointers to themselves or other values. All values are stored as [plain old data (POD)](https://stackoverflow.com/questions/146452/what-are-pod-types-in-c), as their location in memory will get shuffled around internally as the map grows.
 
 ## Linked List
 

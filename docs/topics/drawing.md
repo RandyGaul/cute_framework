@@ -153,8 +153,8 @@ Text has it's own [Text API Reference](../api_reference.md#text). Call [`cf_make
 - [`cf_push_font_size`](../text/cf_push_font_size.md)
 - [`cf_push_font_blur`](../text/cf_push_font_blur.md)
 
-!!! note
-    Recall that each push function has associated peek and pop APIs! See the [Text API Reference](../api_reference.md#text) for a full list of text related pages.
+> [!NOTE]
+> Recall that each push function has associated peek and pop APIs! See the [Text API Reference](../api_reference.md#text) for a full list of text related pages.
 
 Here's a [sample](https://github.com/RandyGaul/cute_framework/blob/master/samples/text_drawing.cpp) for drawing some text onto the screen.
 
@@ -164,8 +164,8 @@ Here's a [sample](https://github.com/RandyGaul/cute_framework/blob/master/sample
 
 You can see the [Text Effect](../text/cf_text_effect_register.md) system in work. Text codes that look sort of like xml are supported for a variety of built-in effects. Click the previous link to see some documentation about built-in text effects, and how to contruct + register your own custom text effect codes.
 
-!!! note
-    The position of rendering text is the top-left corner of the text.
+> [!NOTE]
+> The position of rendering text is the top-left corner of the text.
 
 ## Shaders
 
@@ -247,9 +247,8 @@ vec4 shader(vec4 color, vec2 pos, vec2 screen_uv, vec4 params)
 }
 ```
 
-!!! note
-
-    Custom shaders require a specific ordering for resource sets (the `set = N` part). Texture samplers `uniform sampler2D` must have `set = 2` and bindings start at index 1 (`binding = 1`), while the uniform block *must be named* `shd_uniforms` an have `set = 3, binding = 1`. Generally speaking you can just copy + paste this example and easily get away with incrementing the `binding = N` for textures. To add in more uniforms simply add more members to the `shd_uniforms` block.
+> [!NOTE]
+> Custom shaders require a specific ordering for resource sets (the `set = N` part). Texture samplers `uniform sampler2D` must have `set = 2` and bindings start at index 1 (`binding = 1`), while the uniform block *must be named* `shd_uniforms` an have `set = 3, binding = 1`. Generally speaking you can just copy + paste this example and easily get away with incrementing the `binding = N` for textures. To add in more uniforms simply add more members to the `shd_uniforms` block.
 
 The custom textures are `wavelets_tex`, `noise_tex` and `scene_tex`. The custom uniforms are `show_normals` and `show_noise`. In C++ it's quite easy to hook up your custom shader, textures, and uniforms (snippet from the [wavelets sample](https://github.com/RandyGaul/cute_framework/blob/master/samples/shallow_water.cpp)): If you want to learn about the fundamentals of writing shader code in CF take a look at the low-level graphics page here for an overview: [Low Level Graphics](../topics/low_level_graphics.md). This page assumes you know the basics of writing GLSL code to hook up to CF's draw API.
 
