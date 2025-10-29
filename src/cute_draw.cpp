@@ -3370,7 +3370,18 @@ void cf_render_layers_to(CF_Canvas canvas, int layer_lo, int layer_hi, bool clea
 	for (int i = 0; i < count; ++i) {
 		s_draw->cmd_index = i;
 		CF_Command* cmd = &s_draw->cmds[i];
-		CF_Command* next = i + 1 == count ? NULL : s_draw->cmds + (i + 1);
+
+		// Find next non-empty command for batch merging.
+		// Skip over empty commands that were created by state changes (like shader pop)
+		// to allow proper batching of sprites with identical state.
+		CF_Command* next = NULL;
+		for (int j = i + 1; j < count; ++j) {
+			if (s_draw->cmds[j].items.count() > 0) {
+				next = &s_draw->cmds[j];
+				break;
+			}
+		}
+
 		if (cmd->layer >= layer_lo && cmd->layer <= layer_hi) {
 			s_process_command(canvas, cmd, next, clear);
 		} else if (cmd->layer > layer_hi) {
