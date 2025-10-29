@@ -26,7 +26,7 @@ extern "C" {
  * @category draw
  * @brief    Draws a sprite.
  * @param    sprite     The sprite.
- * @related  cf_draw_sprite cf_draw_quad draw_look_at cf_draw_to cf_app_draw_onto_screen
+ * @related  cf_draw_sprite cf_draw_quad cf_draw_to cf_app_draw_onto_screen
  */
 CF_API void CF_CALL cf_draw_sprite(const CF_Sprite* sprite);
 
@@ -37,7 +37,7 @@ CF_API void CF_CALL cf_draw_sprite(const CF_Sprite* sprite);
 * @brief    Draws a sprite using 9 slice, the top, left, right and bottom sides will be stretched.
 *           if no center patch uvs are defined then this defaults back to cf_draw_sprite
 * @param    sprite     The sprite.
-* @related  cf_draw_sprite cf_draw_sprite_9_slice cf_draw_sprite_9_slice_tiled cf_draw_quad draw_look_at cf_draw_to cf_app_draw_onto_screen
+* @related  cf_draw_sprite cf_draw_sprite_9_slice cf_draw_sprite_9_slice_tiled cf_draw_quad cf_draw_to cf_app_draw_onto_screen
 */
 CF_API void CF_CALL cf_draw_sprite_9_slice(const CF_Sprite* sprite);
 
@@ -47,7 +47,7 @@ CF_API void CF_CALL cf_draw_sprite_9_slice(const CF_Sprite* sprite);
 * @brief    Draws a sprite using 9 slice, the top, left, right and bottom will be tiled.
 *           if no center patch uvs are defined then this defaults back to cf_draw_sprite
 * @param    sprite     The sprite.
-* @related  cf_draw_sprite cf_draw_sprite_9_slice cf_draw_sprite_9_slice_tiled cf_draw_quad draw_look_at cf_draw_to cf_app_draw_onto_screen
+* @related  cf_draw_sprite cf_draw_sprite_9_slice cf_draw_sprite_9_slice_tiled cf_draw_quad cf_draw_to cf_app_draw_onto_screen
 */
 CF_API void CF_CALL cf_draw_sprite_9_slice_tiled(const CF_Sprite* sprite);
 
@@ -58,7 +58,7 @@ CF_API void CF_CALL cf_draw_sprite_9_slice_tiled(const CF_Sprite* sprite);
  * @param    sprite     The sprite.
  * @remarks  This function ensures the sprite is fully loaded into memory without actually rendering anything.
  *           This is a good way to avoid disk io at inconvenient times.
- * @related  cf_draw_sprite cf_draw_quad draw_look_at cf_draw_to cf_app_draw_onto_screen
+ * @related  cf_draw_sprite cf_draw_quad cf_draw_to cf_app_draw_onto_screen
  */
 CF_API void CF_CALL cf_draw_prefetch(const CF_Sprite* sprite);
 
