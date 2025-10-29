@@ -350,7 +350,7 @@ uint64_t cf_stohex(const char* s)
 	char* end;
 	uint64_t result = CF_STRTOLL(s, &end, 16);
 	CF_ASSERT(end == s + len);
-	return len == 6 ? ((result << 16) | 0xFF) : result;
+	return len == 6 ? ((result << 8) | 0xFF) : result;
 }
 
 char* cf_sreplace(char* s, const char* replace_me, const char* with_me)

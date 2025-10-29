@@ -1,9 +1,10 @@
-set(CF_TEST_SRCS 
+set(CF_TEST_SRCS
 	main.cpp
 	test_array.cpp
 	test_aseprite.cpp
 	test_audio.cpp
 	test_base64.cpp
+	test_color.cpp
 	test_coroutine.cpp
 	test_doubly_list.cpp
 	test_hashtable.cpp

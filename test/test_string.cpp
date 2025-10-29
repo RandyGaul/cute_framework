@@ -188,6 +188,7 @@ TEST_CASE(test_string_macros_advanced)
 	REQUIRE(sfirst_index_of(a, '3') == 3);
 	REQUIRE(slast_index_of(a, '3') == 4);
 	REQUIRE(slast_index_of(a, '0') == 5);
+	REQUIRE(stohex("0xbaadf0") == 0xbaadf0FF);
 	sset(a, "0xbaadf00d");
 	REQUIRE(stohex(a) == 0xbaadf00d);
 	shex(b, 0xbaadf00d);
