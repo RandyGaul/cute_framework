@@ -106,10 +106,10 @@ void cf_get_pixels(SPRITEBATCH_U64 image_id, void* buffer, int bytes_to_fill, vo
 		// These are handled externally by the user, so spritebatch should never ask for pixels.
 		// It's assumed premade atlases are generated properly externally.
 		CF_ASSERT(!"This should never be hit -- Invalid image_id sent to spritebatch.");
-		CF_MEMSET(buffer, 0, sizeof(bytes_to_fill));
+		CF_MEMSET(buffer, 0, bytes_to_fill);
 	} else {
 		CF_ASSERT(!"Invalid image_id when attempting to fetch pixels.");
-		CF_MEMSET(buffer, 0, sizeof(bytes_to_fill));
+		CF_MEMSET(buffer, 0, bytes_to_fill);
 	}
 }
 
