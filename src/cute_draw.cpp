@@ -3404,9 +3404,9 @@ void cf_render_layers_to(CF_Canvas canvas, int layer_lo, int layer_hi, bool clea
 	cf_arena_reset(&s_draw->uniform_arena);
 	s_draw->verts.clear();
 
-	// Remove commands that were processed.
+	// Remove commands that were processed or are empty.
 	for (int i = 0; i < s_draw->cmds.size();) {
-		if (s_draw->cmds[i].processed) {
+		if (s_draw->cmds[i].processed || s_draw->cmds[i].items.count() <= 0) {
 			s_draw->cmds.unordered_remove(i);
 		} else {
 			++i;
