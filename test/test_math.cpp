@@ -51,8 +51,41 @@ TEST_CASE(test_make_translation_negative) {
 	return true;
 }
 
+TEST_CASE(test_atan2_360_floats) {
+	float angle = cf_atan2_360(0.0f, 1.0f);
+	REQUIRE(angle >= 0.0f && angle <= CF_PI * 2.0f);
+
+	float angle2 = cf_atan2_360(1.0f, 0.0f);
+	REQUIRE(angle2 >= 0.0f && angle2 <= CF_PI * 2.0f);
+
+	return true;
+}
+
+TEST_CASE(test_atan2_360_v2) {
+	CF_V2 v = cf_v2(1.0f, 0.0f);
+	float angle = cf_atan2_360(v);
+	REQUIRE(angle >= 0.0f && angle <= CF_PI * 2.0f);
+
+	CF_V2 v2 = cf_v2(0.0f, 1.0f);
+	float angle2 = cf_atan2_360(v2);
+	REQUIRE(angle2 >= 0.0f && angle2 <= CF_PI * 2.0f);
+
+	return true;
+}
+
+TEST_CASE(test_atan2_360_sincos) {
+	CF_SinCos sc = cf_sincos(CF_PI / 4.0f);
+	float angle = cf_atan2_360(sc);
+	REQUIRE(angle >= 0.0f && angle <= CF_PI * 2.0f);
+
+	return true;
+}
+
 TEST_SUITE(test_math) {
 	RUN_TEST_CASE(test_make_translation_v2);
 	RUN_TEST_CASE(test_make_translation_floats);
 	RUN_TEST_CASE(test_make_translation_negative);
+	RUN_TEST_CASE(test_atan2_360_floats);
+	RUN_TEST_CASE(test_atan2_360_v2);
+	RUN_TEST_CASE(test_atan2_360_sincos);
 }

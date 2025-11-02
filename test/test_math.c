@@ -70,9 +70,63 @@ TEST_CASE(test_make_translation_mixed_c) {
 	return true;
 }
 
+TEST_CASE(test_atan2_360_floats_c) {
+	float angle = cf_atan2_360(0.0f, 1.0f);
+	REQUIRE(angle >= 0.0f && angle <= CF_PI * 2.0f);
+
+	float angle2 = cf_atan2_360(1.0f, 0.0f);
+	REQUIRE(angle2 >= 0.0f && angle2 <= CF_PI * 2.0f);
+
+	return true;
+}
+
+TEST_CASE(test_atan2_360_v2_c) {
+	CF_V2 v = cf_v2(1.0f, 0.0f);
+	float angle = cf_atan2_360(v);
+	REQUIRE(angle >= 0.0f && angle <= CF_PI * 2.0f);
+
+	CF_V2 v2 = cf_v2(0.0f, 1.0f);
+	float angle2 = cf_atan2_360(v2);
+	REQUIRE(angle2 >= 0.0f && angle2 <= CF_PI * 2.0f);
+
+	return true;
+}
+
+TEST_CASE(test_atan2_360_sincos_c) {
+	CF_SinCos sc = cf_sincos(CF_PI / 4.0f);
+	float angle = cf_atan2_360(sc);
+	REQUIRE(angle >= 0.0f && angle <= CF_PI * 2.0f);
+
+	return true;
+}
+
+TEST_CASE(test_atan2_360_mixed_c) {
+	/* Test with float variables */
+	float y = 1.0f;
+	float x = 1.0f;
+	float angle1 = cf_atan2_360(y, x);
+	REQUIRE(angle1 >= 0.0f && angle1 <= CF_PI * 2.0f);
+
+	/* Test with CF_V2 variable */
+	CF_V2 vec = cf_v2(1.0f, 1.0f);
+	float angle2 = cf_atan2_360(vec);
+	REQUIRE(angle2 >= 0.0f && angle2 <= CF_PI * 2.0f);
+
+	/* Test with CF_SinCos variable */
+	CF_SinCos rotation = cf_sincos(CF_PI / 2.0f);
+	float angle3 = cf_atan2_360(rotation);
+	REQUIRE(angle3 >= 0.0f && angle3 <= CF_PI * 2.0f);
+
+	return true;
+}
+
 TEST_SUITE(test_math_c) {
 	RUN_TEST_CASE(test_make_translation_v2_c);
 	RUN_TEST_CASE(test_make_translation_floats_c);
 	RUN_TEST_CASE(test_make_translation_negative_c);
 	RUN_TEST_CASE(test_make_translation_mixed_c);
+	RUN_TEST_CASE(test_atan2_360_floats_c);
+	RUN_TEST_CASE(test_atan2_360_v2_c);
+	RUN_TEST_CASE(test_atan2_360_sincos_c);
+	RUN_TEST_CASE(test_atan2_360_mixed_c);
 }
