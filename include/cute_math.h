@@ -1511,12 +1511,9 @@ extern "C" {
 CF_INLINE CF_M3x2 cf_make_translation_f_f(float x, float y) { CF_M3x2 m; m.m.x = cf_v2(1,0); m.m.y = cf_v2(0,1); m.p = cf_v2(x,y); return m; }
 CF_INLINE CF_M3x2 cf_make_translation_v2(CF_V2 p) { return cf_make_translation_f_f(p.x,p.y); }
 
-#define cf_make_translation(a, b)        \
-	_Generic((a),                        \
-		CF_V2:   cf_make_translation_v2, \
-		float:   cf_make_translation_f_f,\
-		default: cf_make_translation_f_f \
-	)((a), (b))
+#define _CF_MAKE_TRANSLATION_SELECT(_1, _2, NAME, ...) NAME
+#define cf_make_translation(...)         \
+	CF_EXPAND(_CF_MAKE_TRANSLATION_SELECT(__VA_ARGS__, cf_make_translation_f_f, cf_make_translation_v2)(__VA_ARGS__))
 #endif
 
 /**
