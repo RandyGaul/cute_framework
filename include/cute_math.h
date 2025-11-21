@@ -1893,7 +1893,7 @@ CF_INLINE CF_V2 cf_norm(CF_V2 a) { return cf_div(a, cf_len(a)); }
  *           the case of a zero vector.
  * @related  CF_V2 cf_len cf_distance cf_norm cf_safe_norm
  */
-CF_INLINE CF_V2 cf_safe_norm(CF_V2 a) { float sq = cf_dot(a, a); return sq ? cf_div(a, CF_SQRTF(sq)) : cf_v2(0, 0); }
+CF_INLINE CF_V2 cf_safe_norm(CF_V2 a) { float sq = cf_dot(a, a); return sq != 0.0f ? cf_div(a, CF_SQRTF(sq)) : cf_v2(0, 0); }
 
 /**
  * @function cf_reflect
