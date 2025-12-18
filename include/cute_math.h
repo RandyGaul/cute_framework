@@ -76,6 +76,11 @@
 	#define CF_POWF powf
 #endif
 
+#ifndef CF_EXPF
+	#include <math.h>
+	#define CF_EXPF expf
+#endif
+
 #ifndef CF_SQRT
 	#include <math.h>
 	#define CF_SQRT sqrt
@@ -134,6 +139,11 @@
 #ifndef CF_POW
 	#include <math.h>
 	#define CF_POW pow
+#endif
+
+#ifndef CF_EXP
+	#include <math.h>
+	#define CF_EXP exp
 #endif
 
 //--------------------------------------------------------------------------------------------------
@@ -1179,6 +1189,30 @@ CF_INLINE double cf_pow_d(double base, double exp) { return CF_POW(base, exp); }
 		double:  cf_pow_d,   \
 		default: cf_pow_f    \
 	)((base), (exp))
+#endif
+
+/**
+ * @function cf_exp
+ * @category math
+ * @brief    Returns e raised to the power of `x`.
+ * @related  cf_abs cf_sqrt cf_pow cf_log2
+ */
+#define cf_exp(x)
+#undef cf_exp
+#ifdef __cplusplus
+} // extern "C"
+CF_INLINE float  cf_exp(float  x) { return CF_EXPF(x); }
+CF_INLINE double cf_exp(double x) { return CF_EXP(x); }
+extern "C" {
+#else
+CF_INLINE float  cf_exp_f(float  x) { return CF_EXPF(x); }
+CF_INLINE double cf_exp_d(double x) { return CF_EXP(x); }
+#define cf_exp(x)            \
+	_Generic((x),            \
+		float:   cf_exp_f,   \
+		double:  cf_exp_d,   \
+		default: cf_exp_f    \
+	)(x)
 #endif
 
 //--------------------------------------------------------------------------------------------------
