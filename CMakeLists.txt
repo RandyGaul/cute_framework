@@ -291,7 +291,7 @@ if(LINUX)
 
 	FetchContent_Declare(
 		s2n
-		URL https://github.com/aws/s2n-tls/archive/refs/tags/v1.3.46.zip
+		URL https://github.com/aws/s2n-tls/archive/refs/tags/v1.6.3.zip
 		DOWNLOAD_EXTRACT_TIMESTAMP ON
 		GIT_PROGRESS TRUE
 	)

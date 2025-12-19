@@ -309,13 +309,6 @@ static void s_decode(CF_Coroutine co)
 	if (response->trailers) {
 		// Read in any trailing headers.
 		s_headers(co, response);
-	} else {
-		s_get_line(co, response);
-		if (response->parse.len() != 0) {
-			// End of response doesn't have expected final empty-line CRLF.
-			response->ok = false;
-			return;
-		}
 	}
 }
 
@@ -395,6 +388,8 @@ static void s_https_process(CF_Coroutine co)
 				request->result = CF_HTTPS_RESULT_FAILED;
 				destroy_coroutine(decoder);
 				return;
+			} else if (coroutine_state(decoder) == CF_COROUTINE_STATE_DEAD) {
+				break;
 			}
 		}
 		coroutine_yield(co);
