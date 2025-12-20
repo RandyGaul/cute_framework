@@ -332,27 +332,26 @@ static void s_https_process(CF_Coroutine co)
 
 	// Send of the HTTP request.
 	String s;
+	s = String::fmt(
+		"%s %s HTTP/1.1\r\n"
+		"Host: %s\r\n"
+		"Connection: close\r\n"
+		"TE: trailers, deflate, gzip\r\n",
+		request->content ? "POST" : "GET", request->uri, request->host
+	);
+	for (int i = 0; i < request->headers.count(); ++i) {
+		s.fmt_append("%s: %s\r\n", request->headers[i].name, request->headers[i].value);
+	}
+
 	if (request->content) {
-		s = String::fmt(
-			"POST %s HTTP/1.1\r\n"
-			"Host: %s\r\n"
-			"Connection: close\r\n"
-			"TE: trailers, deflate, gzip\r\n"
-			"Content-Length: %d\r\n"
-			"\r\n",
-			request->uri, request->host, request->content_length
-		);
+		s.fmt_append("Content-Length: %d\r\n", request->content_length);
+	}
+
+	s.append("\r\n");
+
+	if (request->content) {
 		const char* content = (const char*)request->content;
-		s.append(content, content + request->content_length); 
-	} else {
-		s = String::fmt(
-			"GET %s HTTP/1.1\r\n"
-			"Host: %s\r\n"
-			"Connection: close\r\n"
-			"TE: trailers, deflate, gzip\r\n"
-			"\r\n",
-			request->uri, request->host
-		);
+		s.append(content, content + request->content_length);
 	}
 
 	if (tls_send(request->connection, s.c_str(), s.len()) < 0) {
