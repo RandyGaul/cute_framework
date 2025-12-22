@@ -509,15 +509,14 @@ static void tls_recv(TLS_Context* ctx)
 	#endif // TLS_APPLE
 
 	#ifdef TLS_S2N
-		s2n_blocked_status blocked = S2N_NOT_BLOCKED;
-		int bytes_read = 0;
-		while (bytes_read < sizeof(ctx->incoming)) {
-			int r = s2n_recv(ctx->connection, ctx->incoming + bytes_read, sizeof(ctx->incoming) - bytes_read, &blocked);
+		while (ctx->received < sizeof(ctx->incoming)) {
+			s2n_blocked_status blocked = S2N_NOT_BLOCKED;
+			int r = s2n_recv(ctx->connection, ctx->incoming + ctx->received, sizeof(ctx->incoming) - ctx->received, &blocked);
 			s2n_error_type etype = (s2n_error_type)s2n_error_get_type(s2n_errno);
-			if (r == 0) {
+			if (r == 0 || blocked != S2N_NOT_BLOCKED) {
 				break;
 			} else if (r > 0) {
-				bytes_read += r;
+				ctx->received += r;
 			} else if (etype == S2N_ERR_T_CLOSED) {
 				ctx->state = TLS_STATE_DISCONNECTED;
 				break;
@@ -529,7 +528,6 @@ static void tls_recv(TLS_Context* ctx)
 				break;
 			}
 		}
-		ctx->received = bytes_read;
 	#endif // TLS_S2N
 }
 
