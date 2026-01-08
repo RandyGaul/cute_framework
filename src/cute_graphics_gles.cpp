@@ -31,10 +31,9 @@ static inline GLenum s_wrap(CF_Filter f)
 
 static inline GLenum s_wrap(CF_MipFilter m, bool has_mips)
 {
-	if (!has_mips) return GL_NEAREST; // min filter without mips
 	switch (m) { default:
-	case CF_MIP_FILTER_NEAREST: return GL_NEAREST_MIPMAP_NEAREST;
-	case CF_MIP_FILTER_LINEAR:  return GL_LINEAR_MIPMAP_LINEAR;
+	case CF_MIP_FILTER_NEAREST: return has_mips ? GL_NEAREST_MIPMAP_NEAREST : GL_NEAREST;
+	case CF_MIP_FILTER_LINEAR:  return has_mips ? GL_LINEAR_MIPMAP_LINEAR   : GL_LINEAR;
 	}
 }
 
