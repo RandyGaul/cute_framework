@@ -360,7 +360,9 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 	cf_material_set_uniform_fs(s_draw->material, "u_texture_size", &u_texture_size, CF_UNIFORM_TYPE_FLOAT2, 1);
 	v2 u_texel_size = cf_v2(1.0f / (float)texture_w, 1.0f / (float)texture_h);
 	cf_material_set_uniform_fs(s_draw->material, "u_texel_size", &u_texel_size, CF_UNIFORM_TYPE_FLOAT2, 1);
-	cf_material_set_uniform_fs(s_draw->material, "u_alpha_discard", &cmd.alpha_discard, CF_UNIFORM_TYPE_INT, 1);
+	int alpha_discard = cmd.alpha_discard == 0.0f ? 0 : 1;
+	cf_material_set_uniform_fs(s_draw->material, "u_alpha_discard", &alpha_discard, CF_UNIFORM_TYPE_INT, 1);
+	cf_material_set_uniform_fs(s_draw->material, "u_use_smooth_uv", &cmd.use_smooth_uv, CF_UNIFORM_TYPE_INT, 1);
 
 	// Apply render state.
 	cf_material_set_render_state(s_draw->material, cmd.render_state);
@@ -3083,6 +3085,28 @@ bool cf_draw_peek_alpha_discard()
 	return s_draw->alpha_discards.last() == 0 ? false : true;
 }
 
+void cf_draw_push_use_smooth_uv(bool true_enable_smooth_uv)
+{
+	int use_smooth_uv = true_enable_smooth_uv ? 1 : 0;
+	PUSH_DRAW_VAR_AND_ADD_CMD_IF_NEEDED(use_smooth_uv);
+}
+
+static int s_pop_use_smooth_uv()
+{
+	POP_DRAW_VAR_AND_ADD_CMD_IF_NEEDED(use_smooth_uv);
+}
+
+bool cf_draw_pop_use_smooth_uv()
+{
+	int use_smooth_uv = s_pop_use_smooth_uv();
+	return use_smooth_uv == 0 ? false : true;
+}
+
+bool cf_draw_peek_smooth_uv()
+{
+	return s_draw->use_smooth_uvs.last() == 0 ? false : true;
+}
+
 void cf_draw_set_texture(const char* name, CF_Texture texture)
 {
 	CF_DrawUniform u;
@@ -3264,7 +3288,9 @@ void static s_blit(CF_Command* cmd, CF_Canvas src, CF_Canvas dst, bool clear_dst
 	cf_canvas_get_size(cmd->canvas, &w, &h);
 	v2 canvas_dims = V2((float)w, (float)h);
 	cf_material_set_uniform_fs(s_draw->material, "u_texture_size", &canvas_dims, CF_UNIFORM_TYPE_FLOAT2, 1);
-	cf_material_set_uniform_fs(s_draw->material, "u_alpha_discard", &cmd->alpha_discard, CF_UNIFORM_TYPE_INT, 1);
+	int alpha_discard = cmd->alpha_discard == 0.0f ? 0 : 1;
+	cf_material_set_uniform_fs(s_draw->material, "u_alpha_discard", &alpha_discard, CF_UNIFORM_TYPE_INT, 1);
+	cf_material_set_uniform_fs(s_draw->material, "u_use_smooth_uv", &cmd->use_smooth_uv, CF_UNIFORM_TYPE_INT, 1);
 
 	// Apply render state.
 	cf_material_set_render_state(s_draw->material, cmd->render_state);
@@ -3332,6 +3358,7 @@ static void s_process_command(CF_Canvas canvas, CF_Command* cmd, CF_Command* nex
 			same = false;
 		} else if (!(
 			next->alpha_discard == cmd->alpha_discard &&
+			next->use_smooth_uv == cmd->use_smooth_uv &&
 			next->render_state == cmd->render_state &&
 			next->scissor == cmd->scissor &&
 			next->shader == cmd->shader &&

@@ -382,6 +382,7 @@ layout (set = 2, binding = 0) uniform sampler2D u_image;
 layout (set = 3, binding = 0) uniform uniform_block {
 	vec2 u_texture_size;
 	int u_alpha_discard;
+	int u_use_smooth_uv;
 };
 
 #include "blend.shd"
@@ -405,7 +406,8 @@ void main()
 
 	// Traditional sprite/text/tri cases.
 	vec4 c = vec4(0);
-	c = !(is_sprite && is_text) ? de_gamma(texture(u_image, smooth_uv(v_uv, u_texture_size))) : c;
+	vec2 uv = u_use_smooth_uv == 0 ? smooth_uv(v_uv, u_texture_size) : v_uv;
+	c = !(is_sprite && is_text) ? de_gamma(texture(u_image, uv)) : c;
 	c = is_sprite ? gamma(c) : c;
 	c = is_text ? v_col * c.a : c;
 	c = is_tri ? v_col : c;
