@@ -362,10 +362,16 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 	cf_material_set_uniform_fs(s_draw->material, "u_texel_size", &u_texel_size, CF_UNIFORM_TYPE_FLOAT2, 1);
 	int alpha_discard = cmd.alpha_discard == 0.0f ? 0 : 1;
 	cf_material_set_uniform_fs(s_draw->material, "u_alpha_discard", &alpha_discard, CF_UNIFORM_TYPE_INT, 1);
-	cf_material_set_uniform_fs(s_draw->material, "u_use_smooth_uv", &cmd.use_smooth_uv, CF_UNIFORM_TYPE_INT, 1);
+	// u_use_smooth_uv: 0 = apply shader smooth_uv function, 1 = use plain v_uv (hardware filtering only)
+	int use_smooth_uv = cmd.filter_mode == CF_DRAW_FILTER_SMOOTH ? 0 : 1;
+	cf_material_set_uniform_fs(s_draw->material, "u_use_smooth_uv", &use_smooth_uv, CF_UNIFORM_TYPE_INT, 1);
 
 	// Apply render state.
 	cf_material_set_render_state(s_draw->material, cmd.render_state);
+
+	// Set sampler filter based on filter mode.
+	void* sampler_override = (cmd.filter_mode == CF_DRAW_FILTER_NEAREST) ? s_draw->sampler_nearest : s_draw->sampler_linear;
+	cf_set_sampler_override(sampler_override);
 
 	// Kick off a draw call.
 	cf_apply_shader(cmd.shader, s_draw->material);
@@ -545,6 +551,10 @@ void cf_make_draw()
 	// Spritebatcher.
 	s_init_sb(2048, 2048);
 
+	// Create samplers for filter mode switching.
+	s_draw->sampler_nearest = cf_create_draw_sampler(CF_FILTER_NEAREST);
+	s_draw->sampler_linear = cf_create_draw_sampler(CF_FILTER_LINEAR);
+
 	// Create an initial draw command.
 	s_draw->add_cmd();
 }
@@ -554,6 +564,8 @@ void cf_destroy_draw()
 	if (s_draw->blit_init) {
 		cf_destroy_mesh(s_draw->blit_mesh);
 	}
+	cf_destroy_draw_sampler(s_draw->sampler_nearest);
+	cf_destroy_draw_sampler(s_draw->sampler_linear);
 	spritebatch_term(&s_draw->sb);
 	cf_destroy_mesh(s_draw->mesh);
 	cf_destroy_material(s_draw->material);
@@ -3085,26 +3097,24 @@ bool cf_draw_peek_alpha_discard()
 	return s_draw->alpha_discards.last() == 0 ? false : true;
 }
 
-void cf_draw_push_smooth_uv(bool true_enable_smooth_uv)
+void cf_draw_push_filter(CF_DrawFilterMode filter_mode)
 {
-	int use_smooth_uv = true_enable_smooth_uv ? 1 : 0;
-	PUSH_DRAW_VAR_AND_ADD_CMD_IF_NEEDED(use_smooth_uv);
+	PUSH_DRAW_VAR_AND_ADD_CMD_IF_NEEDED(filter_mode);
 }
 
-static int s_pop_smooth_uv()
+static CF_DrawFilterMode s_pop_filter_mode()
 {
-	POP_DRAW_VAR_AND_ADD_CMD_IF_NEEDED(use_smooth_uv);
+	POP_DRAW_VAR_AND_ADD_CMD_IF_NEEDED(filter_mode);
 }
 
-bool cf_draw_pop_smooth_uv()
+CF_DrawFilterMode cf_draw_pop_filter()
 {
-	int use_smooth_uv = s_pop_smooth_uv();
-	return use_smooth_uv == 0 ? false : true;
+	return s_pop_filter_mode();
 }
 
-bool cf_draw_peek_smooth_uv()
+CF_DrawFilterMode cf_draw_peek_filter()
 {
-	return s_draw->use_smooth_uvs.last() == 0 ? false : true;
+	return s_draw->filter_modes.last();
 }
 
 void cf_draw_set_texture(const char* name, CF_Texture texture)
@@ -3290,10 +3300,16 @@ void static s_blit(CF_Command* cmd, CF_Canvas src, CF_Canvas dst, bool clear_dst
 	cf_material_set_uniform_fs(s_draw->material, "u_texture_size", &canvas_dims, CF_UNIFORM_TYPE_FLOAT2, 1);
 	int alpha_discard = cmd->alpha_discard == 0.0f ? 0 : 1;
 	cf_material_set_uniform_fs(s_draw->material, "u_alpha_discard", &alpha_discard, CF_UNIFORM_TYPE_INT, 1);
-	cf_material_set_uniform_fs(s_draw->material, "u_use_smooth_uv", &cmd->use_smooth_uv, CF_UNIFORM_TYPE_INT, 1);
+	// u_use_smooth_uv: 0 = apply shader smooth_uv function, 1 = use plain v_uv (hardware filtering only)
+	int use_smooth_uv = cmd->filter_mode == CF_DRAW_FILTER_SMOOTH ? 0 : 1;
+	cf_material_set_uniform_fs(s_draw->material, "u_use_smooth_uv", &use_smooth_uv, CF_UNIFORM_TYPE_INT, 1);
 
 	// Apply render state.
 	cf_material_set_render_state(s_draw->material, cmd->render_state);
+
+	// Set sampler filter based on filter mode.
+	void* sampler_override = (cmd->filter_mode == CF_DRAW_FILTER_NEAREST) ? s_draw->sampler_nearest : s_draw->sampler_linear;
+	cf_set_sampler_override(sampler_override);
 
 	// Apply shader.
 	cf_apply_shader(*blit, s_draw->material);
@@ -3358,7 +3374,7 @@ static void s_process_command(CF_Canvas canvas, CF_Command* cmd, CF_Command* nex
 			same = false;
 		} else if (!(
 			next->alpha_discard == cmd->alpha_discard &&
-			next->use_smooth_uv == cmd->use_smooth_uv &&
+			next->filter_mode == cmd->filter_mode &&
 			next->render_state == cmd->render_state &&
 			next->scissor == cmd->scissor &&
 			next->shader == cmd->shader &&

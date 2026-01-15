@@ -258,4 +258,11 @@ void cf_gles_blit_canvas(CF_Canvas canvas);
 void cf_gles_end_frame();
 void cf_gles_cleanup();
 
+// Draw system sampler override API.
+// Used by the draw system to dynamically switch between nearest/linear filtering.
+// Dispatch shims are defined in cute_graphics.cpp via CF_DISPATCH_SHIM macros.
+void* cf_create_draw_sampler(CF_Filter filter);
+void cf_destroy_draw_sampler(void* sampler);
+void cf_set_sampler_override(void* sampler);
+
 #endif // CF_GRAPHICS_INTERNAL_H

@@ -78,7 +78,7 @@ struct CF_Command
 	CF_Rect scissor = { 0, 0, -1, -1 };
 	CF_Rect viewport = { 0, 0, -1, -1 };
 	float alpha_discard = 1.0f;
-	int use_smooth_uv = 1;
+	CF_DrawFilterMode filter_mode = CF_DRAW_FILTER_SMOOTH;
 	CF_RenderState render_state;
 	CF_Shader shader;
 	Cute::Array<spritebatch_sprite_t> items;
@@ -136,6 +136,7 @@ struct CF_Draw
 		cmd.scissor = scissors.last();
 		cmd.viewport = viewports.last();
 		cmd.alpha_discard = alpha_discards.last();
+		cmd.filter_mode = filter_modes.last();
 		cmd.render_state = render_states.last();
 		cmd.shader = shaders.last();
 		return cmd;
@@ -152,7 +153,7 @@ struct CF_Draw
 	CF_Material material;
 	CF_Arena uniform_arena;
 	Cute::Array<float> alpha_discards = { 1.0f };
-	Cute::Array<int> use_smooth_uvs = { 1 };
+	Cute::Array<CF_DrawFilterMode> filter_modes = { CF_DRAW_FILTER_SMOOTH };
 	Cute::Array<CF_Color> colors = { cf_color_white() };
 	Cute::Array<bool> antialias = { true };
 	Cute::Array<float> antialias_scale = { 1.5f };
@@ -184,6 +185,10 @@ struct CF_Draw
 	CF_VertexFn* vertex_fn = NULL;
 	bool need_flush = false;
 	bool has_drawn_something = false;
+
+	// Samplers for filter mode (backend-specific, stored as void* for cross-platform compatibility)
+	void* sampler_nearest = NULL;
+	void* sampler_linear = NULL;
 };
 
 void cf_make_draw();
