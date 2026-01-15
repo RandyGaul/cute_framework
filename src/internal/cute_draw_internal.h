@@ -78,6 +78,7 @@ struct CF_Command
 	CF_Rect scissor = { 0, 0, -1, -1 };
 	CF_Rect viewport = { 0, 0, -1, -1 };
 	float alpha_discard = 1.0f;
+	int use_smooth_uv = 1;
 	CF_RenderState render_state;
 	CF_Shader shader;
 	Cute::Array<spritebatch_sprite_t> items;
@@ -150,7 +151,8 @@ struct CF_Draw
 	CF_Mesh mesh;
 	CF_Material material;
 	CF_Arena uniform_arena;
-	Cute::Array<float> alpha_discards = { true };
+	Cute::Array<float> alpha_discards = { 1.0f };
+	Cute::Array<int> use_smooth_uvs = { 1 };
 	Cute::Array<CF_Color> colors = { cf_color_white() };
 	Cute::Array<bool> antialias = { true };
 	Cute::Array<float> antialias_scale = { 1.5f };
