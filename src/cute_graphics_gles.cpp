@@ -615,8 +615,8 @@ static inline GLuint s_compile_shader(GLenum stage, const char* src, int src_len
 
 static inline GLuint s_make_program(CF_ShaderBytecode vs_bytecode, CF_ShaderBytecode fs_bytecode)
 {
-	GLuint vs = s_compile_shader(GL_VERTEX_SHADER,   vs_bytecode.glsl300_src, vs_bytecode.glsl300_src_size);
-	GLuint fs = s_compile_shader(GL_FRAGMENT_SHADER, fs_bytecode.glsl300_src, fs_bytecode.glsl300_src_size);
+	GLuint vs = s_compile_shader(GL_VERTEX_SHADER,   vs_bytecode.glsl300_src, (int)vs_bytecode.glsl300_src_size);
+	GLuint fs = s_compile_shader(GL_FRAGMENT_SHADER, fs_bytecode.glsl300_src, (int)fs_bytecode.glsl300_src_size);
 
 	GLuint program = glCreateProgram();
 	glAttachShader(program, vs);
