@@ -1350,31 +1350,70 @@ CF_API bool CF_CALL cf_draw_pop_alpha_discard(void);
 CF_API bool CF_CALL cf_draw_peek_alpha_discard(void);
 
 /**
-* @function cf_draw_push_smooth_uv
+* @enum     CF_DrawFilterMode
 * @category draw
-* @brief    TODO
-* @remarks  TODO
-* @related  TODO
+* @brief    Filter modes for the draw system's texture sampling.
+* @related  CF_DrawFilterMode cf_draw_filter_mode_to_string cf_draw_push_filter cf_draw_pop_filter cf_draw_peek_filter
 */
-CF_API void CF_CALL cf_draw_push_smooth_uv(bool true_enable_smooth_uv);
+#define CF_DRAW_FILTER_MODE_DEFS \
+	/* @entry Nearest-neighbor filtering. Good for pixel art. Uses hardware nearest. */                             \
+	CF_ENUM(DRAW_FILTER_NEAREST, 0)                                                                                 \
+	/* @entry Linear (bilinear) filtering. Uses hardware linear. */                                                 \
+	CF_ENUM(DRAW_FILTER_LINEAR,  1)                                                                                 \
+	/* @entry Smooth filtering. Uses hardware linear combined with a shader-based smooth UV interpolation. */       \
+	CF_ENUM(DRAW_FILTER_SMOOTH,  2)                                                                                 \
+	/* @end */
+
+typedef enum CF_DrawFilterMode
+{
+#define CF_ENUM(K, V) CF_##K = V,
+	CF_DRAW_FILTER_MODE_DEFS
+#undef CF_ENUM
+} CF_DrawFilterMode;
 
 /**
-* @function cf_draw_pop_smooth_uv
+* @function cf_draw_filter_mode_to_string
 * @category draw
-* @brief    TODO
-* @remarks  TODO
-* @related  TODO
+* @brief    Returns a `CF_DrawFilterMode` converted to a C string.
+* @related  CF_DrawFilterMode cf_draw_filter_mode_to_string cf_draw_push_filter cf_draw_pop_filter cf_draw_peek_filter
 */
-CF_API bool CF_CALL cf_draw_pop_smooth_uv(void);
+CF_INLINE const char* cf_draw_filter_mode_to_string(CF_DrawFilterMode mode) {
+	switch (mode) {
+#define CF_ENUM(K, V) case CF_##K: return CF_STRINGIZE(CF_##K);
+		CF_DRAW_FILTER_MODE_DEFS
+#undef CF_ENUM
+	default: return NULL;
+	}
+}
 
 /**
-* @function cf_draw_peek_smooth_uv
-* @category draw
-* @brief    TODO
-* @remarks  TODO
-* @related  TODO
-*/
-CF_API bool CF_CALL cf_draw_peek_smooth_uv(void);
+ * @function cf_draw_push_filter
+ * @category draw
+ * @brief    Sets the texture filtering mode for the draw system.
+ * @param    mode       The filter mode to use. See `CF_DrawFilterMode`.
+ * @remarks  NEAREST uses hardware nearest-neighbor filtering, good for pixel art. LINEAR uses hardware bilinear filtering.
+ *           SMOOTH uses hardware linear combined with shader-based smooth UV interpolation for high quality upscaling.
+ * @related  CF_DrawFilterMode cf_draw_push_filter cf_draw_pop_filter cf_draw_peek_filter
+ */
+CF_API void CF_CALL cf_draw_push_filter(CF_DrawFilterMode mode);
+
+/**
+ * @function cf_draw_pop_filter
+ * @category draw
+ * @brief    Pops the texture filtering mode stack.
+ * @return   Returns the popped filter mode.
+ * @related  CF_DrawFilterMode cf_draw_push_filter cf_draw_pop_filter cf_draw_peek_filter
+ */
+CF_API CF_DrawFilterMode CF_CALL cf_draw_pop_filter(void);
+
+/**
+ * @function cf_draw_peek_filter
+ * @category draw
+ * @brief    Returns the current texture filtering mode without popping the stack.
+ * @return   Returns the current filter mode.
+ * @related  CF_DrawFilterMode cf_draw_push_filter cf_draw_pop_filter cf_draw_peek_filter
+ */
+CF_API CF_DrawFilterMode CF_CALL cf_draw_peek_filter(void);
 
 /**
  * @function cf_draw_set_texture
@@ -1860,6 +1899,9 @@ CF_INLINE CF_Shader draw_peek_shader() { return cf_draw_peek_shader(); }
 CF_INLINE void draw_push_alpha_discard(bool true_to_enable_alpha_discard) { return cf_draw_push_alpha_discard(true_to_enable_alpha_discard); }
 CF_INLINE bool draw_pop_alpha_discard() { return cf_draw_pop_alpha_discard(); }
 CF_INLINE bool draw_peek_alpha_discard() { return cf_draw_peek_alpha_discard(); }
+CF_INLINE void draw_push_filter(CF_DrawFilterMode mode) { cf_draw_push_filter(mode); }
+CF_INLINE CF_DrawFilterMode draw_pop_filter() { return cf_draw_pop_filter(); }
+CF_INLINE CF_DrawFilterMode draw_peek_filter() { return cf_draw_peek_filter(); }
 CF_INLINE void draw_set_texture(const char* name, CF_Texture texture) { cf_draw_set_texture(name, texture); }
 CF_INLINE void draw_set_uniform(const char* name, void* data, CF_UniformType type, int array_length) { cf_draw_set_uniform(name, data, type, array_length); }
 CF_INLINE void draw_set_uniform(const char* name, int val) { cf_draw_set_uniform_int(name, val); }

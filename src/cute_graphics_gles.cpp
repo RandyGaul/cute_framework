@@ -347,6 +347,8 @@ static struct
 	CF_GL_Mesh* mesh;
 	CF_GL_Canvas* canvas;
 	uint64_t enabled_vertex_attrib_mask;
+	CF_Filter filter_override;
+	bool has_filter_override;
 } g_ctx = { };
 
 static inline void s_poll_error(const char* file, int line)
@@ -1592,12 +1594,20 @@ void cf_gles_apply_shader(CF_Shader shader_handle, CF_Material material_handle)
 			if (binding->name == material_tex.name) {
 				glActiveTexture(GL_TEXTURE0 + texture_unit);
 				glBindTexture(GL_TEXTURE_2D, texture->id);
+				// Apply filter override if set.
+				if (g_ctx.has_filter_override) {
+					GLenum gl_filter = (g_ctx.filter_override == CF_FILTER_NEAREST) ? GL_NEAREST : GL_LINEAR;
+					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, gl_filter);
+					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, gl_filter);
+				}
 				glUniform1i(binding->location, texture_unit);
 				++texture_unit;
 				break;
 			}
 		}
 	}
+	// Clear filter override after use.
+	g_ctx.has_filter_override = false;
 	CF_POLL_OPENGL_ERROR();
 
 	CF_GL_Mesh* mesh = g_ctx.mesh;
@@ -1674,4 +1684,27 @@ void cf_gles_apply_stencil_reference(int reference)
 void cf_gles_apply_blend_constants(float r, float g, float b, float a)
 {
 	g_ctx.target_state.blend_constants = { r, g, b, a };
+}
+
+// For GLES, samplers are just stored filter values since GLES sets filter mode directly on textures.
+void* cf_gles_create_draw_sampler(CF_Filter filter)
+{
+	// Store the filter value as a pointer (we only need NEAREST=0 or LINEAR=1).
+	return (void*)(uintptr_t)filter;
+}
+
+void cf_gles_destroy_draw_sampler(void* sampler)
+{
+	// Nothing to do for GLES - filter values don't need cleanup.
+	CF_UNUSED(sampler);
+}
+
+void cf_gles_set_sampler_override(void* sampler)
+{
+	if (sampler) {
+		g_ctx.filter_override = (CF_Filter)(uintptr_t)sampler;
+		g_ctx.has_filter_override = true;
+	} else {
+		g_ctx.has_filter_override = false;
+	}
 }

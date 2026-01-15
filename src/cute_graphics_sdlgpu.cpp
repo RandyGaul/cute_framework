@@ -125,6 +125,7 @@ static struct
 	bool skip_drawing;
 	int msaa_sample_count;
 	CF_CanvasInternal* canvas;
+	SDL_GPUSampler* sampler_override;
 } g_ctx = { };
 
 CF_INLINE SDL_GPUTextureCreateInfo SDL_GPUTextureCreateInfoDefaults(int w, int h)
@@ -1492,7 +1493,12 @@ void cf_sdlgpu_apply_shader(CF_Shader shader_handle, CF_Material material_handle
 		const char* image_name = material->fs.textures[i].name;
 		for (int j = 0; j < shader->image_names.size(); ++j) {
 			if (shader->image_names[j] == image_name) {
-				sampler_bindings[j].sampler = ((CF_TextureInternal*)material->fs.textures[i].handle.id)->sampler;
+				// Use sampler override if set, otherwise use the texture's sampler.
+				if (g_ctx.sampler_override) {
+					sampler_bindings[j].sampler = g_ctx.sampler_override;
+				} else {
+					sampler_bindings[j].sampler = ((CF_TextureInternal*)material->fs.textures[i].handle.id)->sampler;
+				}
 				sampler_bindings[j].texture = ((CF_TextureInternal*)material->fs.textures[i].handle.id)->tex;
 				found_image_count++;
 			}
@@ -1500,6 +1506,9 @@ void cf_sdlgpu_apply_shader(CF_Shader shader_handle, CF_Material material_handle
 	}
 	CF_ASSERT(found_image_count == sampler_count);
 	SDL_BindGPUFragmentSamplers(pass, 0, sampler_bindings, (Uint32)found_image_count);
+
+	// Clear sampler override after use.
+	g_ctx.sampler_override = NULL;
 
 	// Copy over uniform data.
 	s_copy_uniforms(cmd, &material->block_arena, shader, &material->vs, true);
@@ -1530,6 +1539,27 @@ void cf_sdlgpu_draw_elements()
 	app->draw_call_count++;
 
 	SDL_EndGPURenderPass(g_ctx.canvas->pass);
+}
+
+void* cf_sdlgpu_create_draw_sampler(CF_Filter filter)
+{
+	SDL_GPUSamplerCreateInfo sampler_info = SDL_GPUSamplerCreateInfoDefaults();
+	sampler_info.min_filter = s_wrap(filter);
+	sampler_info.mag_filter = s_wrap(filter);
+	SDL_GPUSampler* sampler = SDL_CreateGPUSampler(g_ctx.device, &sampler_info);
+	return (void*)sampler;
+}
+
+void cf_sdlgpu_destroy_draw_sampler(void* sampler)
+{
+	if (sampler) {
+		SDL_ReleaseGPUSampler(g_ctx.device, (SDL_GPUSampler*)sampler);
+	}
+}
+
+void cf_sdlgpu_set_sampler_override(void* sampler)
+{
+	g_ctx.sampler_override = (SDL_GPUSampler*)sampler;
 }
 
 #endif
