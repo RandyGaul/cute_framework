@@ -1323,31 +1323,58 @@ CF_API CF_Shader CF_CALL cf_draw_pop_shader(void);
 CF_API CF_Shader CF_CALL cf_draw_peek_shader(void);
 
 /**
- * @function cf_draw_push_alpha_discard
- * @category draw
- * @brief    Sets whether or not alpha discarding is enabled (on by default).
- * @remarks  Alpha discarding is useful to throw away pixels with zero alpha, for cutouts or as an optimization, or for certain blending techniques.
- * @related  cf_draw_set_texture cf_draw_set_uniform cf_draw_set_uniform_int cf_draw_set_uniform_float cf_draw_set_uniform_v2 cf_draw_set_uniform_color
- */
+* @function cf_draw_push_alpha_discard
+* @category draw
+* @brief    Sets whether or not alpha discarding is enabled (on by default).
+* @remarks  Alpha discarding is useful to throw away pixels with zero alpha, for cutouts or as an optimization, or for certain blending techniques.
+* @related  cf_draw_set_texture cf_draw_set_uniform cf_draw_set_uniform_int cf_draw_set_uniform_float cf_draw_set_uniform_v2 cf_draw_set_uniform_color
+*/
 CF_API void CF_CALL cf_draw_push_alpha_discard(bool true_enable_alpha_discard);
 
 /**
- * @function cf_draw_pop_alpha_discard
- * @category draw
- * @brief    TODO
- * @remarks  Alpha discarding is useful to throw away pixels with zero alpha, for cutouts or as an optimization, or for certain blending techniques.
- * @related  TODO
- */
+* @function cf_draw_pop_alpha_discard
+* @category draw
+* @brief    TODO
+* @remarks  Alpha discarding is useful to throw away pixels with zero alpha, for cutouts or as an optimization, or for certain blending techniques.
+* @related  TODO
+*/
 CF_API bool CF_CALL cf_draw_pop_alpha_discard(void);
 
 /**
- * @function cf_draw_peek_alpha_discard
- * @category draw
- * @brief    TODO
- * @remarks  Alpha discarding is useful to throw away pixels with zero alpha, for cutouts or as an optimization, or for certain blending techniques.
- * @related  TODO
- */
+* @function cf_draw_peek_alpha_discard
+* @category draw
+* @brief    TODO
+* @remarks  Alpha discarding is useful to throw away pixels with zero alpha, for cutouts or as an optimization, or for certain blending techniques.
+* @related  TODO
+*/
 CF_API bool CF_CALL cf_draw_peek_alpha_discard(void);
+
+/**
+* @function cf_draw_push_smooth_uv
+* @category draw
+* @brief    TODO
+* @remarks  TODO
+* @related  TODO
+*/
+CF_API void CF_CALL cf_draw_push_smooth_uv(bool true_enable_smooth_uv);
+
+/**
+* @function cf_draw_pop_smooth_uv
+* @category draw
+* @brief    TODO
+* @remarks  TODO
+* @related  TODO
+*/
+CF_API bool CF_CALL cf_draw_pop_smooth_uv(void);
+
+/**
+* @function cf_draw_peek_smooth_uv
+* @category draw
+* @brief    TODO
+* @remarks  TODO
+* @related  TODO
+*/
+CF_API bool CF_CALL cf_draw_peek_smooth_uv(void);
 
 /**
  * @function cf_draw_set_texture

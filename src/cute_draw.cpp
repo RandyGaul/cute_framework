@@ -3085,20 +3085,20 @@ bool cf_draw_peek_alpha_discard()
 	return s_draw->alpha_discards.last() == 0 ? false : true;
 }
 
-void cf_draw_push_use_smooth_uv(bool true_enable_smooth_uv)
+void cf_draw_push_smooth_uv(bool true_enable_smooth_uv)
 {
 	int use_smooth_uv = true_enable_smooth_uv ? 1 : 0;
 	PUSH_DRAW_VAR_AND_ADD_CMD_IF_NEEDED(use_smooth_uv);
 }
 
-static int s_pop_use_smooth_uv()
+static int s_pop_smooth_uv()
 {
 	POP_DRAW_VAR_AND_ADD_CMD_IF_NEEDED(use_smooth_uv);
 }
 
-bool cf_draw_pop_use_smooth_uv()
+bool cf_draw_pop_smooth_uv()
 {
-	int use_smooth_uv = s_pop_use_smooth_uv();
+	int use_smooth_uv = s_pop_smooth_uv();
 	return use_smooth_uv == 0 ? false : true;
 }
 
