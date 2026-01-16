@@ -114,7 +114,8 @@ nav:
 
 # Plugins
 plugins:
-  - search
+  - search:
+      separator: '[\s\-\_]+'
   - social
 
 # Extensions
