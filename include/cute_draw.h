@@ -377,7 +377,7 @@ CF_API void CF_CALL cf_draw_bezier_line2(CF_V2 a, CF_V2 c0, CF_V2 c1, CF_V2 b, i
  * @param    b            The end point.
  * @param    thickness    The thickness of the line to draw.
  * @param    arrow_width  The width of the arrow to draw.
- * @remarks  This function is intended only for debug purposes. It's implemented in naive way so the
+ * @remarks  This function is intended only for debug purposes. It's implemented in a naive way so the
  *           arrow shaft will overdraw atop the arrow head. This will become visible if the arrow is
  *           drawn with any transparency.
  * @related  cf_draw_line cf_draw_polyline cf_draw_bezier_line cf_draw_bezier_line2 cf_draw_arrow
@@ -609,8 +609,8 @@ typedef struct CF_Vertex
  *
  *           Call `cf_set_vertex_callback` to setup your callback.
  *
- *           There is no adjecancy info provided. If you need to know which triangles connect to others you
- *           should probably redesign your feature to not require adjecancy information, or use your own custom
+ *           There is no adjacency info provided. If you need to know which triangles connect to others you
+ *           should probably redesign your feature to not require adjacency information, or use your own custom
  *           rendering solution. With a custom solution you may use low-level graphics in cute_graphics.h, where
  *           any adjacency info can be controlled 100% by you a-priori.
  * @related  CF_Vertex CF_VertexFn cf_set_vertex_callback
@@ -1024,7 +1024,7 @@ typedef bool (CF_TextEffectFn)(CF_TextEffect* fx);
  *           When registering a custom text effect, any parameters in the string will be stored for you
  *           automatically. You only need to fetch them with the appropriate cf_text_effect_get*** function.
  *           Note: You can also setup parameters for markup as strings, not just numbers/colors. Example: `<color=#2c5ee8 metadata=\"Just some string.\">blue text</color>`,
- *           where the `color` markup contains a parameter called `metadata` and a strinf value of `"Just some string."`.
+ *           where the `color` markup contains a parameter called `metadata` and a string value of `"Just some string."`.
  * @related  CF_TextEffect CF_TextEffectFn cf_text_effect_register cf_text_effect_get_number cf_text_effect_get_color cf_text_effect_get_string
  */
 CF_API void CF_CALL cf_text_effect_register(const char* name, CF_TextEffectFn* fn);
@@ -1088,7 +1088,7 @@ typedef struct CF_MarkupInfo
 	/* @member The number of `CF_Aabb`'s in `bounds`. */
 	int bounds_count;
 
-	/* @member An arry of `CF_Aabb`'s, one per line the `text` string provided in the `cf_text_markup_info_fn` callback. */
+	/* @member An array of `CF_Aabb`'s, one per line the `text` string provided in the `cf_text_markup_info_fn` callback. */
 	CF_Aabb* bounds;
 } CF_MarkupInfo;
 // @end
@@ -1240,7 +1240,7 @@ CF_API CF_RenderState CF_CALL cf_draw_peek_render_state(void);
  *           can likely get away with 4096 on most devices. Larger internal atlases can be useful to decrease the number of
  *           draw calls used, and also enables support for high-res image rendering.
  *
- *           Please not you should put in power of 2 atlases sizes to make the hardware happy. Here are the recommended range
+ *           Please note you should put in power of 2 atlases sizes to make the hardware happy. Here are the recommended range
  *           of sizes available:
  *
  *           - 256
