@@ -312,7 +312,7 @@ typedef struct CF_SoundParams
 	/* @member Default: 1.0f. Lower numbers lower the pitch and increase playback speed. Higher numbers increase the pitch and reduce playback speed. */
 	float pitch;
 
-	/* @member Default: 0. Specify the sample to start playing at. In term of seconds this would be the `cf_audio_sample_rate` * seconds. */
+	/* @member Default: 0. Specify the sample to start playing at. In terms of seconds this would be the `cf_audio_sample_rate` * seconds. */
 	int sample_index;
 } CF_SoundParams;
 // @end
@@ -362,7 +362,7 @@ CF_API void CF_CALL cf_sound_set_on_finish_callback(void (*on_finished)(CF_Sound
  * @category audio
  * @brief    Returns whether or not a sound is active.
  * @param    sound          The sound.
- * @return   Rreturns true if the sound is active, or false if it finished playing (and was not looped).
+ * @return   Returns true if the sound is active, or false if it finished playing (and was not looped).
  * @related  CF_SoundParams CF_Sound cf_sound_params_defaults cf_play_sound cf_sound_is_active cf_sound_get_is_paused cf_sound_get_is_looped cf_sound_get_volume cf_sound_get_sample_index cf_sound_set_sample_index cf_sound_set_is_paused cf_sound_set_is_looped cf_sound_set_volume cf_sound_stop cf_sound_set_pitch cf_sound_get_pitch
  */
 CF_API bool CF_CALL cf_sound_is_active(CF_Sound sound);

@@ -107,7 +107,7 @@ enum
 /**
  * @function cf_address_init
  * @category net
- * @brief    Initialze a `CF_Address` from a C string.
+ * @brief    Initialize a `CF_Address` from a C string.
  * @return   Returns 0 on success, -1 on failure.
  * @related  CF_Address cf_address_init cf_address_to_string cf_address_equals
  */
@@ -167,7 +167,7 @@ CF_API void CF_CALL cf_crypto_random_bytes(void* data, int byte_count);
  * @function cf_crypto_sign_keygen
  * @category net
  * @brief    Generates a cryptographically secure keypair, used for facilitating connect tokens.
- * @param    public_key     The public key of the keypair. Freely share this publicy.
+ * @param    public_key     The public key of the keypair. Freely share this publicly.
  * @param    secret_key     The secret key of the keypair. Keep this safe and hidden within your servers.
  * @related  CF_CryptoKey cf_crypto_generate_key cf_generate_connect_token
  */
@@ -282,7 +282,7 @@ CF_API bool CF_CALL cf_client_pop_packet(CF_Client* client, void** packet, int* 
 /**
  * @function cf_client_free_packet
  * @category net
- * @brief    Free's a packet created by `cf_client_pop_packet`.
+ * @brief    Frees a packet created by `cf_client_pop_packet`.
  * @related  CF_Client cf_client_pop_packet cf_client_free_packet cf_client_send
  */
 CF_API void CF_CALL cf_client_free_packet(CF_Client* client, void* packet);
@@ -420,7 +420,7 @@ typedef struct CF_ServerConfig
 	/* @member The public part of your public key cryptography used for connect tokens. This can be safely shared with your players publicly. See `CF_CryptoSignPublic`. */
 	CF_CryptoSignPublic public_key;
 
-	/* @member The secret part of your public key cryptography used for connect tokens. This must never be shared publicly and remain a complete secret only know to your servers. See `CF_CryptoSignSecret`. */
+	/* @member The secret part of your public key cryptography used for connect tokens. This must never be shared publicly and remain a complete secret only known to your servers. See `CF_CryptoSignSecret`. */
 	CF_CryptoSignSecret secret_key;
 } CF_ServerConfig;
 // @end

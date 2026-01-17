@@ -791,7 +791,7 @@ CF_INLINE CF_Pixel cf_pixel_black(void) { return cf_make_pixel_rgb(0, 0, 0); }
 /**
  * @function cf_pixel_white
  * @category graphics
- * @brief    Helper function to return a invisible `white`.
+ * @brief    Helper function to return a white `CF_Pixel`.
  * @related  cf_pixel_invisible cf_pixel_black cf_pixel_white cf_pixel_red cf_pixel_green cf_pixel_blue cf_pixel_yellow cf_pixel_orange cf_pixel_purple cf_pixel_grey cf_pixel_cyan cf_pixel_magenta
  */
 CF_INLINE CF_Pixel cf_pixel_white(void) { return cf_make_pixel_rgb(255, 255, 255); }

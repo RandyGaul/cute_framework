@@ -662,7 +662,7 @@ CF_API void CF_CALL cf_register_key_callback(void (*key_callback)(CF_KeyButton k
  * @function cf_mouse_x
  * @category input
  * @brief    Returns the current mouse x-coordinate in pixels.
- * @remarks  (0, 0) is the top-left of the screen, y-downards.
+ * @remarks  (0, 0) is the top-left of the screen, y-downwards.
  * @related  CF_MouseButton cf_mouse_down cf_mouse_x cf_mouse_y cf_mouse_motion_x cf_mouse_motion_y
  */
 CF_API float CF_CALL cf_mouse_x(void);
@@ -806,7 +806,7 @@ CF_API void CF_CALL cf_input_text_add_utf8(const char* text);
 /**
  * @function cf_input_text_pop_utf32
  * @category input
- * @brief    Pops a utf8 codepoint off of the input buffer of the application.
+ * @brief    Pops a utf32 codepoint off of the input buffer of the application.
  * @remarks  The input text functions are for dealing with text input. Not all text inputs come from a single key-stroke, as some are comprised of
  *           multiple keystrokes, especially when dealing with non-Latin based inputs.
  * @related  cf_input_text_add_utf8 cf_input_text_pop_utf32 cf_input_text_has_data cf_input_text_clear
