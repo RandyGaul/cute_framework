@@ -61,7 +61,7 @@ CF_API CF_DisplayID CF_CALL cf_default_display(void);
  * @function cf_display_count
  * @category app
  * @brief    Returns the number of displays on the system.
- * @remarks  Inidices >= 0 and < the return value are valid display indices.
+ * @remarks  Indices >= 0 and < the return value are valid display indices.
  * @related  cf_make_app cf_display_count cf_display_x cf_display_y cf_display_width cf_display_height cf_display_refresh_rate cf_display_bounds cf_display_name cf_display_orientation
  */
 CF_API int CF_CALL cf_display_count(void);
@@ -605,7 +605,7 @@ CF_API void* CF_CALL cf_app_init_imgui(void);
  * @enum     CF_MSAA
  * @category app
  * @brief    Multisample count used for MSAA for the app's offscreen canvas.
- * @remarks  This function turns on .
+ * @remarks  This function turns on MSAA.
  * @related  cf_app_set_msaa cf_msaa_string
  */
 #define CF_MSAA_DEFS \
@@ -749,7 +749,7 @@ CF_API void CF_CALL cf_app_set_fullscreen_mode(void);
 /**
  * @function cf_app_set_title
  * @category app
- * @brief    Sets the application' true fullscreen mode's title.
+ * @brief    Sets the application's true fullscreen mode's title.
  * @related  cf_app_set_windowed_mode cf_app_set_borderless_fullscreen_mode cf_app_set_fullscreen_mode cf_app_set_title cf_app_set_icon
  */
 CF_API void CF_CALL cf_app_set_title(const char* title);
@@ -775,7 +775,7 @@ CF_API float CF_CALL cf_app_get_framerate(void);
 /**
  * @function cf_app_get_smoothed_framerate
  * @category app
- * @brief    Returns the smoothed framerate of the application. Last 60 frames are averaged. This values is controlled by `CF_FRAMERATE_SMOOTHING`.
+ * @brief    Returns the smoothed framerate of the application. Last 60 frames are averaged. This value is controlled by `CF_FRAMERATE_SMOOTHING`.
  * @related  cf_app_get_framerate cf_app_get_smoothed_framerate
  */
 CF_API float CF_CALL cf_app_get_smoothed_framerate(void);

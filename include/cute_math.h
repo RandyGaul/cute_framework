@@ -336,7 +336,7 @@ typedef struct CF_Circle
  * @struct   CF_Aabb
  * @category math
  * @brief    Axis-aligned bounding box. A box that cannot rotate.
- * @remarks  There are many ways to describ an AABB, such as a point + half-extents, or a point and width/height pair. However, of all
+ * @remarks  There are many ways to describe an AABB, such as a point + half-extents, or a point and width/height pair. However, of all
  *           these options the min/max choice is the simplest when it comes to the majority of collision detection routine implementations.
  * @related  CF_Aabb cf_make_aabb cf_width cf_height cf_center cf_top_left cf_top_right cf_bottom_left cf_bottom_right cf_contains_point cf_overlaps cf_make_aabb_verts cf_aabb_verts cf_circle_to_aabb cf_aabb_to_aabb cf_aabb_to_capsule cf_aabb_to_poly cf_ray_to_aabb cf_circle_to_aabb_manifold cf_aabb_to_aabb_manifold cf_aabb_to_capsule_manifold cf_aabb_to_poly_manifold
  */
@@ -762,7 +762,7 @@ CF_INLINE CF_V2    cf_sign_v2 (CF_V2    x) { return (CF_V2){ cf_sign_f(x.x), cf_
 /**
  * @function cf_intersect
  * @category math
- * @brief    Given the distances of two points `a` and `b` to a plane (`da` and `db` respectively), compute the insterection
+ * @brief    Given the distances of two points `a` and `b` to a plane (`da` and `db` respectively), compute the intersection
  *           value used to lerp from `a` to `b` to find the intersection point.
  * @related  cf_min cf_max cf_clamp cf_clamp01 cf_sign cf_intersect cf_safe_invert cf_lerp cf_remap cf_mod cf_fract
  */
@@ -811,7 +811,7 @@ CF_INLINE CF_V2 cf_div_v2_f(CF_V2 a, float b) { return cf_v2(a.x / b, a.y / b); 
 /**
  * @function cf_lesser
  * @category math
- * @brief    Returns true if `a.x < b.y` and `a.y < b.y`.
+ * @brief    Returns true if `a.x < b.x` and `a.y < b.y`.
  * @related  CF_V2 cf_round cf_lesser cf_greater cf_lesser_equal cf_greater_equal cf_parallel
  */
 CF_INLINE int cf_lesser(CF_V2 a, CF_V2 b) { return a.x < b.x && a.y < b.y; }
@@ -819,7 +819,7 @@ CF_INLINE int cf_lesser(CF_V2 a, CF_V2 b) { return a.x < b.x && a.y < b.y; }
 /**
  * @function cf_greater
  * @category math
- * @brief    Returns true if `a.x > b.y` and `a.y > b.y`.
+ * @brief    Returns true if `a.x > b.x` and `a.y > b.y`.
  * @related  CF_V2 cf_round cf_lesser cf_greater cf_lesser_equal cf_greater_equal cf_parallel
  */
 CF_INLINE int cf_greater(CF_V2 a, CF_V2 b) { return a.x > b.x && a.y > b.y; }
@@ -827,7 +827,7 @@ CF_INLINE int cf_greater(CF_V2 a, CF_V2 b) { return a.x > b.x && a.y > b.y; }
 /**
  * @function cf_lesser_equal
  * @category math
- * @brief    Returns true if `a.x <= b.y` and `a.y <= b.y`.
+ * @brief    Returns true if `a.x <= b.x` and `a.y <= b.y`.
  * @related  CF_V2 cf_round cf_lesser cf_greater cf_lesser_equal cf_greater_equal cf_parallel
  */
 CF_INLINE int cf_lesser_equal(CF_V2 a, CF_V2 b) { return a.x <= b.x && a.y <= b.y; }
@@ -835,7 +835,7 @@ CF_INLINE int cf_lesser_equal(CF_V2 a, CF_V2 b) { return a.x <= b.x && a.y <= b.
 /**
  * @function cf_greater_equal
  * @category math
- * @brief    Returns true if `a.x >= b.y` and `a.y >= b.y`.
+ * @brief    Returns true if `a.x >= b.x` and `a.y >= b.y`.
  * @related  CF_V2 cf_round cf_lesser cf_greater cf_lesser_equal cf_greater_equal cf_parallel
  */
 CF_INLINE int cf_greater_equal(CF_V2 a, CF_V2 b) { return a.x >= b.x && a.y >= b.y; }
@@ -1553,13 +1553,11 @@ extern "C" {
 CF_INLINE float cf_atan2_360_f_f(float y, float x) { return CF_ATAN2F(-y, -x) + CF_PI; }
 CF_INLINE float cf_atan2_360_sc(CF_SinCos r)       { return cf_atan2_360_f_f(r.s, r.c); }
 CF_INLINE float cf_atan2_360_v2(CF_V2 v)           { return CF_ATAN2F(-v.y, -v.x) + CF_PI; }
-#define cf_atan2_360(a, b)          \
-	_Generic((a),                   \
-		CF_V2:     cf_atan2_360_v2, \
-		CF_SinCos: cf_atan2_360_sc, \
-		float:     cf_atan2_360,    \
-		default:   cf_atan2_360     \
-	)((a), (b))
+
+#define _CF_ATAN2_360_1ARG(a) _Generic((a), CF_V2: cf_atan2_360_v2, CF_SinCos: cf_atan2_360_sc)(a)
+#define _CF_ATAN2_360_SELECT(_1, _2, NAME, ...) NAME
+#define cf_atan2_360(...) \
+	CF_EXPAND(_CF_ATAN2_360_SELECT(__VA_ARGS__, cf_atan2_360_f_f, _CF_ATAN2_360_1ARG)(__VA_ARGS__))
 #endif
 
 /**
@@ -1579,12 +1577,9 @@ extern "C" {
 CF_INLINE CF_M3x2 cf_make_translation_f_f(float x, float y) { CF_M3x2 m; m.m.x = cf_v2(1,0); m.m.y = cf_v2(0,1); m.p = cf_v2(x,y); return m; }
 CF_INLINE CF_M3x2 cf_make_translation_v2(CF_V2 p) { return cf_make_translation_f_f(p.x,p.y); }
 
-#define cf_make_translation(a, b)        \
-	_Generic((a),                        \
-		CF_V2:   cf_make_translation_v2, \
-		float:   cf_make_translation_f_f,\
-		default: cf_make_translation_f_f \
-	)((a), (b))
+#define _CF_MAKE_TRANSLATION_SELECT(_1, _2, NAME, ...) NAME
+#define cf_make_translation(...)         \
+	CF_EXPAND(_CF_MAKE_TRANSLATION_SELECT(__VA_ARGS__, cf_make_translation_f_f, cf_make_translation_v2)(__VA_ARGS__))
 #endif
 
 /**
@@ -1669,7 +1664,7 @@ CF_INLINE CF_V2 cf_project(CF_Halfspace h, CF_V2 p) { float d = cf_distance_hs(h
  * @brief    Returns the intersection point of two points to a plane.
  * @remarks  The distance to the plane are provided as `da` and `db`. You can compute these with e.g. `cf_distance_hs`, or instead
  *           call the similar function `cf_intersect_halfspace2`.
- * @related  CF_Halfspace cf_plane cf_origin cf_distance_hs cf_project cf_mul_tf_hs cf_mul_T_tf_hs cf_intersect_halfspace cf_intersect_haflspace2 cf_intersect_haflspace3
+ * @related  CF_Halfspace cf_plane cf_origin cf_distance_hs cf_project cf_mul_tf_hs cf_mul_T_tf_hs cf_intersect_halfspace cf_intersect_halfspace2 cf_intersect_halfspace3
  */
 CF_INLINE CF_V2 cf_intersect_halfspace(CF_V2 a, CF_V2 b, float da, float db) { float d = (da / (da - db)); CF_V2 ab = cf_sub(b, a); return cf_add(a, cf_v2(ab.x * d, ab.y * d)); }
 
@@ -1677,7 +1672,7 @@ CF_INLINE CF_V2 cf_intersect_halfspace(CF_V2 a, CF_V2 b, float da, float db) { f
  * @function cf_intersect_halfspace2
  * @category math
  * @brief    Returns the intersection point of two points to a plane.
- * @related  CF_Halfspace cf_plane cf_origin cf_distance_hs cf_project cf_mul_tf_hs cf_mul_T_tf_hs cf_intersect_halfspace cf_intersect_haflspace2 cf_intersect_haflspace3
+ * @related  CF_Halfspace cf_plane cf_origin cf_distance_hs cf_project cf_mul_tf_hs cf_mul_T_tf_hs cf_intersect_halfspace cf_intersect_halfspace2 cf_intersect_halfspace3
  */
 CF_INLINE CF_V2 cf_intersect_halfspace2(CF_Halfspace h, CF_V2 a, CF_V2 b) { return cf_intersect_halfspace(a, b, cf_distance_hs(h, a), cf_distance_hs(h, b)); }
 
@@ -1685,7 +1680,7 @@ CF_INLINE CF_V2 cf_intersect_halfspace2(CF_Halfspace h, CF_V2 a, CF_V2 b) { retu
  * @function cf_intersect_halfspace3
  * @category math
  * @brief    Returns the intersection point of two planes.
- * @related  CF_Halfspace cf_plane cf_origin cf_distance_hs cf_project cf_mul_tf_hs cf_mul_T_tf_hs cf_intersect_halfspace cf_intersect_haflspace2 cf_intersect_haflspace3
+ * @related  CF_Halfspace cf_plane cf_origin cf_distance_hs cf_project cf_mul_tf_hs cf_mul_T_tf_hs cf_intersect_halfspace cf_intersect_halfspace2 cf_intersect_halfspace3
  */
 CF_INLINE CF_V2 cf_intersect_halfspace3(CF_Halfspace ha, CF_Halfspace hb) { CF_V2 a = {ha.n.x, hb.n.x}, b = {ha.n.y, hb.n.y}, c = {ha.d, hb.d}; float x = cf_det2(c, b) / cf_det2(a, b); float y = cf_det2(a, c) / cf_det2(a, b); return cf_v2(x, y); }
 
@@ -3039,8 +3034,8 @@ CF_API CF_Manifold CF_CALL cf_poly_to_poly_manifold(const CF_Poly* A, const CF_T
  * @struct   CF_GjkCache
  * @category collision
  * @brief    This struct is only for advanced usage of the `cf_gjk` function. See comments inside of the `cf_gjk` function for more details.
- * @remarks  Contains cached geometric information to speed up successive calls to `cf_gjk` where the shapes don't move much relatie to
- *           one other from one call to the next.
+ * @remarks  Contains cached geometric information to speed up successive calls to `cf_gjk` where the shapes don't move much relative to
+ *           one another from one call to the next.
  * @related  CF_GjkCache cf_gjk
  */
 typedef struct CF_GjkCache
@@ -3057,7 +3052,7 @@ typedef struct CF_GjkCache
 	/* An index into shape B. */
 	int iB[3];
 
-	/* The divisor (used in baryecentric coordinates internally) for the vertex B - A. */
+	/* The divisor (used in barycentric coordinates internally) for the vertex B - A. */
 	float div;
 } CF_GjkCache;
 // @end

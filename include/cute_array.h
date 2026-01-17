@@ -47,7 +47,7 @@
  *     alen(a)--;
  *     CF_ASSERT(alen(a) == 0);
  *     afree(a);
- * @remarks  `a` must not by `NULL`. This function returns a proper l-value, so you can assign to it, i.e. increment/decrement can be quite useful.
+ * @remarks  `a` must not be `NULL`. This function returns a proper l-value, so you can assign to it, i.e. increment/decrement can be quite useful.
  * @related  dyna asize acount acap afit apush apop aend alast aclear aset arev ahash adel astatic afree
  */
 #define alen(a) cf_array_len(a)

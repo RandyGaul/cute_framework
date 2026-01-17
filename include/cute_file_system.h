@@ -33,7 +33,7 @@ extern "C" {
  *     const char* filename = spfname("/data/collections/rare/big_gem.txt");
  *     printf("%s\n", filename);
  *     // Prints: big_gem.txt
- * @remarks  Call `sfree` on the return value when done. `sp` stands for "sting path".
+ * @remarks  Call `sfree` on the return value when done. `sp` stands for "string path".
  * @related  spfname spfname_no_ext spext spext_equ sppop sppopn spcompact spdir_of sptop_of spnorm
  */
 #define spfname(s) cf_path_get_filename(s)
@@ -47,7 +47,7 @@ extern "C" {
  *     const char* filename = spfname("/data/collections/rare/big_gem.txt");
  *     printf("%s\n", filename);
  *     // Prints: big_gem
- * @remarks  Call `sfree` on the return value when done. `sp` stands for "sting path".
+ * @remarks  Call `sfree` on the return value when done. `sp` stands for "string path".
  * @related  spfname spfname_no_ext spext spext_equ sppop sppopn spcompact spdir_of sptop_of spnorm
  */
 #define spfname_no_ext(s) cf_path_get_filename_no_ext(s)
@@ -61,7 +61,7 @@ extern "C" {
  *     const char* ext = spfname("/data/collections/rare/big_gem.txt");
  *     printf("%s\n", ext);
  *     // Prints: .txt
- * @remarks  Call `sfree` on the return value when done. `sp` stands for "sting path".
+ * @remarks  Call `sfree` on the return value when done. `sp` stands for "string path".
  * @related  spfname spfname_no_ext spext spext_equ sppop sppopn spcompact spdir_of sptop_of spnorm
  */
 #define spext(s) cf_path_get_ext(s)
@@ -72,7 +72,7 @@ extern "C" {
  * @brief    Returns true if the file's extension matches, false otherwise.
  * @param    s          The path string.
  * @param    ext        The file extension.
- * @remarks  `sp` stands for "sting path".
+ * @remarks  `sp` stands for "string path".
  * @related  spfname spfname_no_ext spext spext_equ sppop sppopn spcompact spdir_of sptop_of spnorm
  */
 #define spext_equ(s, ext) cf_path_ext_equ(s, ext)
@@ -84,7 +84,7 @@ extern "C" {
  * @param    s          The path string.
  * @return   If the string is not a dynamic string from CF's string API, a new string is returned. Otherwise the
  *           string is modified in-place. You must call `sfree` if a new dynamic string is returned, when done.
- * @remarks  `sp` stands for "sting path".
+ * @remarks  `sp` stands for "string path".
  * @related  spfname spfname_no_ext spext spext_equ sppop sppopn spcompact spdir_of sptop_of spnorm
  */
 #define sppop(s) cf_path_pop(s)
@@ -97,7 +97,7 @@ extern "C" {
  * @param    n          The number of files to pop from the directory path.
  * @return   If the string is not a dynamic string from CF's string API, a new string is returned. Otherwise the
  *           string is modified in-place. You must call `sfree` if a new dynamic string is returned, when done.
- * @remarks  `sp` stands for "sting path".
+ * @remarks  `sp` stands for "string path".
  * @related  spfname spfname_no_ext spext spext_equ sppop sppopn spcompact spdir_of sptop_of spnorm
  */
 #define sppopn(s, n) cf_path_pop_n(s, n)
@@ -125,7 +125,7 @@ extern "C" {
  *     const char* filename = spfname("/data/collections/rare/big_gem.txt");
  *     printf("%s\n", filename);
  *     // Prints: /rare
- * @remarks  `sp` stands for "sting path". Call `sfree` on the return value when done.
+ * @remarks  `sp` stands for "string path". Call `sfree` on the return value when done.
  * @related  spfname spfname_no_ext spext spext_equ sppop sppopn spcompact spdir_of sptop_of spnorm
  */
 #define spdir_of(s) cf_path_directory_of(s)
@@ -139,7 +139,7 @@ extern "C" {
  *     const char* filename = spfname("/data/collections/rare/big_gem.txt");
  *     printf("%s\n", filename);
  *     // Prints: /data
- * @remarks  `sp` stands for "sting path". Call `sfree` on the return value when done.
+ * @remarks  `sp` stands for "string path". Call `sfree` on the return value when done.
  * @related  spfname spfname_no_ext spext spext_equ sppop sppopn spcompact spdir_of sptop_of spnorm
  */
 #define sptop_of(s) cf_path_top_directory(s)
@@ -263,7 +263,7 @@ typedef struct CF_File CF_File;
  * @related  CF_File CF_Stat cf_file_type_to_string
  */
 #define CF_FILE_TYPE_DEFS \
-	/* @entry A reguler file, such as a .txt or .pdf file. */ \
+	/* @entry A regular file, such as a .txt or .pdf file. */ \
 	CF_ENUM(FILE_TYPE_REGULAR, 0)                             \
 	/* @entry A directory/folder. */                          \
 	CF_ENUM(FILE_TYPE_DIRECTORY, 1)                           \
@@ -338,7 +338,7 @@ CF_API const char* CF_CALL cf_fs_get_base_directory(void);
  * @function cf_fs_get_working_directory
  * @category file
  * @brief    Returns the current working directory in platform-dependent notation.
- * @remarks  Not all platforms have the concept of a working directory, but this function will sill try to return something sane in these cases.
+ * @remarks  Not all platforms have the concept of a working directory, but this function will still try to return something sane in these cases.
  * @related  cf_fs_get_base_directory cf_fs_set_write_directory cf_fs_get_user_directory cf_fs_mount cf_fs_dismount cf_fs_get_working_directory
  */
 CF_API const char* CF_CALL cf_fs_get_working_directory(void);
@@ -395,7 +395,7 @@ CF_API const char* CF_CALL cf_fs_get_user_directory(const char* company_name, co
  *           modding or download patches, as duplicate entries will be searched for on the path as normal,
  *           without the need to overwrite each other on the actual disk.
  *           
- *           You can mount an actual directory or an archive file. If it's an archive the vitrual file
+ *           You can mount an actual directory or an archive file. If it's an archive the virtual file
  *           system will treat it like a normal directory for you. There are a variety of archive file
  *           formats supported (see top of file).
  *           
