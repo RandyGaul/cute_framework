@@ -543,6 +543,73 @@ CF_API CF_Color CF_CALL cf_draw_pop_vertex_attributes(void);
 CF_API CF_Color CF_CALL cf_draw_peek_vertex_attributes(void);
 
 /**
+ * @function cf_draw_push_tri_colors
+ * @category draw
+ * @brief    Pushes per-vertex colors for triangle drawing.
+ * @param    c0          Color for the first vertex (p0).
+ * @param    c1          Color for the second vertex (p1).
+ * @param    c2          Color for the third vertex (p2).
+ * @remarks  When active, triangles drawn with `cf_draw_tri_fill` will interpolate colors
+ *           across the triangle surface between c0, c1, and c2 at vertices p0, p1, and p2.
+ *           This only works when chubbiness is 0 and antialiasing is disabled.
+ * @related  cf_draw_push_tri_colors cf_draw_pop_tri_colors cf_draw_peek_tri_colors cf_draw_tri_fill
+ */
+CF_API void CF_CALL cf_draw_push_tri_colors(CF_Color c0, CF_Color c1, CF_Color c2);
+
+/**
+ * @function cf_draw_pop_tri_colors
+ * @category draw
+ * @brief    Pops the per-vertex triangle color state.
+ * @related  cf_draw_push_tri_colors cf_draw_pop_tri_colors cf_draw_peek_tri_colors cf_draw_tri_fill
+ */
+CF_API void CF_CALL cf_draw_pop_tri_colors(void);
+
+/**
+ * @function cf_draw_peek_tri_colors
+ * @category draw
+ * @brief    Returns the current per-vertex triangle color state.
+ * @param    c0          Output pointer for color of first vertex (can be NULL).
+ * @param    c1          Output pointer for color of second vertex (can be NULL).
+ * @param    c2          Output pointer for color of third vertex (can be NULL).
+ * @related  cf_draw_push_tri_colors cf_draw_pop_tri_colors cf_draw_peek_tri_colors cf_draw_tri_fill
+ */
+CF_API void CF_CALL cf_draw_peek_tri_colors(CF_Color* c0, CF_Color* c1, CF_Color* c2);
+
+/**
+ * @function cf_draw_push_tri_attributes
+ * @category draw
+ * @brief    Pushes per-vertex attributes for triangle drawing.
+ * @param    a0          Attributes for the first vertex (p0).
+ * @param    a1          Attributes for the second vertex (p1).
+ * @param    a2          Attributes for the third vertex (p2).
+ * @remarks  When active, triangles drawn with `cf_draw_tri_fill` will interpolate attributes
+ *           across the triangle surface between a0, a1, and a2 at vertices p0, p1, and p2.
+ *           This is useful for custom shaders that need per-vertex data (UVs, blend weights, etc.).
+ *           This only works when chubbiness is 0 and antialiasing is disabled.
+ * @related  cf_draw_push_tri_attributes cf_draw_pop_tri_attributes cf_draw_peek_tri_attributes cf_draw_tri_fill
+ */
+CF_API void CF_CALL cf_draw_push_tri_attributes(CF_Color a0, CF_Color a1, CF_Color a2);
+
+/**
+ * @function cf_draw_pop_tri_attributes
+ * @category draw
+ * @brief    Pops the per-vertex triangle attribute state.
+ * @related  cf_draw_push_tri_attributes cf_draw_pop_tri_attributes cf_draw_peek_tri_attributes cf_draw_tri_fill
+ */
+CF_API void CF_CALL cf_draw_pop_tri_attributes(void);
+
+/**
+ * @function cf_draw_peek_tri_attributes
+ * @category draw
+ * @brief    Returns the current per-vertex triangle attribute state.
+ * @param    a0          Output pointer for attributes of first vertex (can be NULL).
+ * @param    a1          Output pointer for attributes of second vertex (can be NULL).
+ * @param    a2          Output pointer for attributes of third vertex (can be NULL).
+ * @related  cf_draw_push_tri_attributes cf_draw_pop_tri_attributes cf_draw_peek_tri_attributes cf_draw_tri_fill
+ */
+CF_API void CF_CALL cf_draw_peek_tri_attributes(CF_Color* a0, CF_Color* a1, CF_Color* a2);
+
+/**
  * @struct   CF_Vertex
  * @category draw
  * @brief    The full vertex layout CF uses just before sending verts to the GPU.
