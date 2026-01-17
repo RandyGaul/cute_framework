@@ -29,7 +29,7 @@ extern "C" {
  * If you want to draw sprites, lines/shapes, or text, see: cute_draw.h
  *
  * Quick list of unsupported features. CF's focus is on the 2D use case, so most of these features are
- * omit since they aren't super useful for 2D.
+ * omitted since they aren't super useful for 2D.
  *
  *     - Blend color constant
  *     - Multiple render targets (aka color/texture attachments)
@@ -120,7 +120,7 @@ typedef struct CF_Shader { uint64_t id; } CF_Shader;
  * @related  CF_BackendType cf_backend_type_to_string cf_query_backend
  */
 #define CF_BACKEND_TYPE_DEFS \
-	/* @entry Invalid backend type (unitialized or failed to create). */           \
+	/* @entry Invalid backend type (uninitialized or failed to create). */           \
 	CF_ENUM(BACKEND_TYPE_INVALID, -1)                                              \
 	/* @entry Vulkan backend. */                                                   \
 	CF_ENUM(BACKEND_TYPE_VULKAN, 0)                                                \
@@ -132,7 +132,7 @@ typedef struct CF_Shader { uint64_t id; } CF_Shader;
 	CF_ENUM(BACKEND_TYPE_METAL,  3)                                                \
 	/* @entry A "secret" backend for platforms under non-disclosure agreement. */  \
 	CF_ENUM(BACKEND_TYPE_PRIVATE,  4)                                              \
-	/* @entry OpenGL ES 3 backen.. */                                              \
+	/* @entry OpenGL ES 3 backend. */                                              \
 	CF_ENUM(BACKEND_TYPE_GLES3,  5)                                                \
 	/* @end */
 
@@ -762,7 +762,7 @@ CF_API CF_Shader CF_CALL cf_make_shader_from_source(const char* vertex_src, cons
  * @category graphics
  * @brief    Compiles a shader to SPIR-V bytecode.
  * @param    shader_src   Raw glsl, version 450, for the shader as a string.
- * @param    stage        The shaderstrage to differentiate between vertex or fragment shaders.
+ * @param    stage        The shader stage to differentiate between vertex or fragment shaders.
  * @remarks  This function is good for precompiling shaders to bytecode, which can help speed up app
  *           startup times. SPIR-V blobs can be saved straight to disk and shipped with your game. Load
  *           the bytecode blob pair (vertex + fragment shader blobs) into a `CF_Shader` via `cf_make_shader_from_bytecode`.
@@ -1123,7 +1123,7 @@ CF_API void CF_CALL cf_mesh_update_index_data(CF_Mesh mesh, void* data, int coun
  * @brief    Overwrites the instance data of a mesh.
  * @param    mesh       The mesh.
  * @param    data       A pointer to instance data.
- * @param    count      Number of isntances in `data`.
+ * @param    count      Number of instances in `data`.
  * @related  CF_Mesh cf_make_mesh cf_destroy_mesh cf_mesh_set_instance_buffer
  */
 CF_API void CF_CALL cf_mesh_update_instance_data(CF_Mesh mesh, void* data, int count);
@@ -1474,7 +1474,7 @@ typedef struct CF_StencilParams
  *           P = S + D
  *
  *           Recap: P is the pixel to write, S is the source factor, while D is the destination factor. Usually the D (destination factor) is
- *           the old pixel value, while S (source factor) is a new image getting draw over old pixel contents. Therefor, P is the final color
+ *           the old pixel value, while S (source factor) is a new image getting draw over old pixel contents. Therefore, P is the final color
  *           after compositing a new image on top of an old image.
  *
  *           Blend factors (see `CF_BlendFactor`) are components of a color, including the alpha component. The most common setup for your

@@ -210,7 +210,7 @@ CF_API void CF_CALL cf_arena_reset(CF_Arena* arena);
 /**
  * @function cf_destroy_arena
  * @category allocator
- * @brief    Free's up all resources used by the allocator.
+ * @brief    Frees up all resources used by the allocator.
  * @param    arena         The arena to free.
  * @related  cf_arena_init cf_arena_alloc cf_arena_reset cf_arena_free
  */

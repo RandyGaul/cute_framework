@@ -575,7 +575,7 @@ CF_INLINE void cf_sprite_reset(CF_Sprite* sprite)
 /**
  * @function cf_sprite_play
  * @category sprite
- * @brief    Switches to a new aninmation and starts playing it from the beginning.
+ * @brief    Switches to a new animation and starts playing it from the beginning.
  * @param    sprite     The sprite.
  * @param    animation  Name of the animation to switch to and start playing.
  * @related  CF_Sprite cf_sprite_update cf_sprite_play cf_sprite_is_playing
@@ -646,7 +646,7 @@ CF_INLINE void cf_sprite_toggle_pause(CF_Sprite* sprite)
 /**
  * @function cf_sprite_flip_x
  * @category sprite
- * @brief    Flip's the sprite on the x-axis.
+ * @brief    Flips the sprite on the x-axis.
  * @param    sprite     The sprite.
  * @remarks  Works by flipping the sign of the sprite's scale on the x-axis.
  * @related  CF_Sprite cf_sprite_flip_x cf_sprite_flip_y
@@ -660,7 +660,7 @@ CF_INLINE void cf_sprite_flip_x(CF_Sprite* sprite)
 /**
  * @function cf_sprite_flip_y
  * @category sprite
- * @brief    Flip's the sprite on the y-axis.
+ * @brief    Flips the sprite on the y-axis.
  * @param    sprite     The sprite.
  * @remarks  Works by flipping the sign of the sprite's scale on the y-axis.
  * @related  CF_Sprite cf_sprite_flip_x cf_sprite_flip_y
