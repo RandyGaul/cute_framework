@@ -602,7 +602,7 @@ extern "C" {
  * @category string
  * @brief    Converts a hex-string to a uint64_t and returns it.
  * @param    s            The string.
- * @remarks  Supports srings that start with "0x", "#", or no prefix.
+ * @remarks  Supports strings that start with "0x", "#", or no prefix.
  * @related  sdyna sint suint sfloat sdouble shex sbool stint stouint stofloat stodouble stohex stobool
  */
 #define stohex(s) cf_string_tohex(s)
@@ -612,7 +612,7 @@ extern "C" {
  * @category string
  * @brief    Converts a string to a bool and returns it.
  * @param    s            The string.
- * @remarks  Supports srings that start with "0x", "#", or no prefix.
+ * @remarks  Supports strings that start with "true" or "false".
  * @related  sdyna sint suint sfloat sdouble shex sbool stint stouint stofloat stodouble stohex stobool
  */
 #define stobool(s) cf_string_tobool(s)
@@ -624,7 +624,6 @@ extern "C" {
  * @param    s            The string. Can be `NULL`.
  * @param    replace_me   Substring to replace.
  * @param    with_me      The replacement string.
- * @remarks  Supports srings that start with "0x", "#", or no prefix.
  * @related  sdyna strim sltrim srtrim slpad srpad sdedup sreplace serase
  */
 #define sreplace(s, replace_me, with_me) cf_string_replace(s, replace_me, with_me)
@@ -710,7 +709,7 @@ extern "C" {
  * @remarks  The UTF8 bytes are appended onto the string.
  *           
  *           Each UTF32 codepoint represents a single character. Each character can be encoded from 1 to 4
- *           bytes. Therefor, this function will push 1 to 4 bytes onto the string.
+ *           bytes. Therefore, this function will push 1 to 4 bytes onto the string.
  *           
  *           If an invalid codepoint is found the "replacement character" 0xFFFD will be appended instead, which
  *           looks like question mark inside of a dark diamond.

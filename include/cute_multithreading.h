@@ -95,7 +95,7 @@ typedef cute_thread_fn CF_ThreadFn;
  * @category multithreading
  * @brief    An opaque handle representing a read-write lock.
  * @remarks  A read/write lock can have a large number of simultaneous readers, but only one writer at a time. This can be
- *           used as an opimization where a resources can be safely read from many threads. Then, when the resource must be
+ *           used as an optimization where a resources can be safely read from many threads. Then, when the resource must be
  *           modified a writer can wait for all readers to leave, and then exclusively lock to perform a write update.
  * @related  CF_ReadWriteLock cf_make_rw_lock cf_destroy_rw_lock cf_read_lock cf_read_unlock cf_write_lock cf_write_unlock
  */
@@ -280,7 +280,7 @@ CF_API CF_Result CF_CALL cf_sem_value(CF_Semaphore* semaphore);
 /**
  * @function cf_thread_create
  * @category multithreading
- * @brief    Creates a new thread and runs it's thread function (`CF_ThreadFn`).
+ * @brief    Creates a new thread and runs its thread function (`CF_ThreadFn`).
  * @param    func    The function to run for the thread.
  * @param    name    The name of this thread. Must be unique.
  * @param    udata   Can be `NULL`. This gets handed back to you in your `func`.
@@ -321,7 +321,6 @@ CF_API CF_ThreadId CF_CALL cf_thread_get_id(CF_Thread* thread);
  * @function cf_thread_id
  * @category multithreading
  * @brief    Returns the unique id of the calling thread.
- * @param    thread  The thread.
  * @related  CF_Thread CF_ThreadFn cf_thread_create cf_thread_detach cf_thread_get_id cf_thread_id cf_thread_wait
  */
 CF_API CF_ThreadId CF_CALL cf_thread_id();
@@ -340,7 +339,7 @@ CF_API CF_Result CF_CALL cf_thread_wait(CF_Thread* thread);
 /**
  * @function cf_core_count
  * @category CPU
- * @brief    Returns the number of cores on the CPU. Can be affected my machine dependent technology, such as Intel's hyperthreading.
+ * @brief    Returns the number of cores on the CPU. Can be affected by machine dependent technology, such as Intel's hyperthreading.
  * @related  cf_core_count
  */
 CF_API int CF_CALL cf_core_count();
@@ -540,7 +539,7 @@ CF_API void CF_CALL cf_destroy_threadpool(CF_Threadpool* pool);
  * @param    pool       The pool.
  * @param    task       The task for a thread in the pool to perform.
  * @param    param      Can be `NULL`. This gets handed to the `CF_TaskFn` when it gets called.
- * @remarks  Once a task is added to the pool `cf_threadpool_kick_and_wait` or `cf_threadpool_kick` must be called wake threads. Once
+ * @remarks  Once a task is added to the pool `cf_threadpool_kick_and_wait` or `cf_threadpool_kick` must be called to wake threads. Once
  *           awake, threads will process the tasks. The order of start/finish for the tasks is not deterministic.
  * @related  CF_TaskFn cf_make_threadpool cf_destroy_threadpool cf_threadpool_add_task cf_threadpool_kick_and_wait cf_threadpool_kick
  */
@@ -582,7 +581,7 @@ CF_INLINE CF_Mutex make_mutex() { return cf_make_mutex(); }
 CF_INLINE void destroy_mutex(CF_Mutex* mutex) { cf_destroy_mutex(mutex); }
 CF_INLINE void mutex_lock(CF_Mutex* mutex) { cf_mutex_lock(mutex); }
 CF_INLINE void mutex_unlock(CF_Mutex* mutex) { cf_mutex_unlock(mutex); }
-CF_INLINE bool Mutexrylock(CF_Mutex* mutex) { return cf_mutex_try_lock(mutex); }
+CF_INLINE bool mutex_try_lock(CF_Mutex* mutex) { return cf_mutex_try_lock(mutex); }
 
 CF_INLINE CF_ConditionVariable make_cv() { return cf_make_cv(); }
 CF_INLINE void destroy_cv(CF_ConditionVariable* cv) { cf_destroy_cv(cv); }

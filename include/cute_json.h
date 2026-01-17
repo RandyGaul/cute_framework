@@ -342,7 +342,7 @@ typedef struct CF_JIter
  *               const char* val = cf_json_get_string(cf_json_iter_val(i));
  *               printf("%s\n", val);
  *           }
- * @remarks  The `CF_JIter` can be used in foor loops, and can traverse both JSON arrays and objects. When
+ * @remarks  The `CF_JIter` can be used in for loops, and can traverse both JSON arrays and objects. When
  *           traversing arrays do not call `cf_json_iter_key`.
  * @related  CF_JVal cf_json_get cf_json_array_at cf_json_array_get cf_json_iter cf_json_iter_remove
  */

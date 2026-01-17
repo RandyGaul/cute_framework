@@ -38,7 +38,7 @@ extern "C" {
  * @category base64
  * @brief    Calculates the size of data after base64 decoding it.
  * @param    size         The size of base64 encoded data.
- * @return   Returns the number of bytes the raw dencoded data will take up. This will deflate the size ~33%.
+ * @return   Returns the number of bytes the raw decoded data will take up. This will deflate the size ~33%.
  * @remarks  Use this for the `dst_size` in `cf_base64_decode`.
  *           Base64 encoding is useful for storing data as text in a copy-paste-safe manner. For more information about
  *           base64 encoding see this link: [RFC-4648](https://tools.ietf.org/html/rfc4648) or [Wikipedia Base64](https://en.wikipedia.org/wiki/Base64).
