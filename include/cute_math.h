@@ -1553,13 +1553,11 @@ extern "C" {
 CF_INLINE float cf_atan2_360_f_f(float y, float x) { return CF_ATAN2F(-y, -x) + CF_PI; }
 CF_INLINE float cf_atan2_360_sc(CF_SinCos r)       { return cf_atan2_360_f_f(r.s, r.c); }
 CF_INLINE float cf_atan2_360_v2(CF_V2 v)           { return CF_ATAN2F(-v.y, -v.x) + CF_PI; }
-#define cf_atan2_360(a, b)          \
-	_Generic((a),                   \
-		CF_V2:     cf_atan2_360_v2, \
-		CF_SinCos: cf_atan2_360_sc, \
-		float:     cf_atan2_360,    \
-		default:   cf_atan2_360     \
-	)((a), (b))
+
+#define _CF_ATAN2_360_1ARG(a) _Generic((a), CF_V2: cf_atan2_360_v2, CF_SinCos: cf_atan2_360_sc)(a)
+#define _CF_ATAN2_360_SELECT(_1, _2, NAME, ...) NAME
+#define cf_atan2_360(...) \
+	CF_EXPAND(_CF_ATAN2_360_SELECT(__VA_ARGS__, cf_atan2_360_f_f, _CF_ATAN2_360_1ARG)(__VA_ARGS__))
 #endif
 
 /**
@@ -1579,12 +1577,9 @@ extern "C" {
 CF_INLINE CF_M3x2 cf_make_translation_f_f(float x, float y) { CF_M3x2 m; m.m.x = cf_v2(1,0); m.m.y = cf_v2(0,1); m.p = cf_v2(x,y); return m; }
 CF_INLINE CF_M3x2 cf_make_translation_v2(CF_V2 p) { return cf_make_translation_f_f(p.x,p.y); }
 
-#define cf_make_translation(a, b)        \
-	_Generic((a),                        \
-		CF_V2:   cf_make_translation_v2, \
-		float:   cf_make_translation_f_f,\
-		default: cf_make_translation_f_f \
-	)((a), (b))
+#define _CF_MAKE_TRANSLATION_SELECT(_1, _2, NAME, ...) NAME
+#define cf_make_translation(...)         \
+	CF_EXPAND(_CF_MAKE_TRANSLATION_SELECT(__VA_ARGS__, cf_make_translation_f_f, cf_make_translation_v2)(__VA_ARGS__))
 #endif
 
 /**
