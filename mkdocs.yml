@@ -23,6 +23,8 @@ theme:
     - navigation.path
     - navigation.indexes
     - content.code.copy
+    - search.suggest
+    - search.highlight
   palette:
     - media: "(prefers-color-scheme)"
       scheme: cute
