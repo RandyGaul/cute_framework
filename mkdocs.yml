@@ -17,6 +17,9 @@ theme:
   name: material
   logo: assets/logo.png
   features:
+    - navigation.instant
+    - navigation.instant.prefetch
+    - navigation.instant.progress
     - navigation.path
     - navigation.indexes
     - content.code.copy
