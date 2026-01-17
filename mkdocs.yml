@@ -19,6 +19,7 @@ theme:
   features:
     - navigation.path
     - navigation.indexes
+    - navigation.footer
     - content.code.copy
   palette:
     - media: "(prefers-color-scheme)"
