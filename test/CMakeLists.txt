@@ -14,7 +14,9 @@ set(CF_TEST_SRCS
 	test_string.cpp
 	test_json.cpp
 	test_markups.cpp
-	)
+	test_math.cpp
+	test_math.c
+)
 set(CF_TEST_HDRS test_harness.h)
 
 add_executable(tests ${CF_TEST_SRCS} ${CF_TEST_HDRS})
