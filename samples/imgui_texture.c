@@ -1,7 +1,7 @@
 #include <cute.h>
 #include <dcimgui.h>
 
-inline ImTextureRef imgui_texture_ref_from_id(ImTextureID tex_id) {
+static inline ImTextureRef imgui_texture_ref_from_id(ImTextureID tex_id) {
 	ImTextureRef tex_ref = { ._TexData = NULL, ._TexID = tex_id };
 	return tex_ref;
 }
