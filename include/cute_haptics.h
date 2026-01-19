@@ -127,7 +127,7 @@ CF_INLINE const char* cf_haptic_type_to_string(CF_HapticType type)
 /**
  * @struct   CF_HapticLeftRight
  * @category haptic
- * @brief    The leftright haptic allows direct control of one larger and one smaller freqeuncy motors, as commonly found in game controllers.
+ * @brief    The leftright haptic allows direct control of one larger and one smaller frequency motors, as commonly found in game controllers.
  * @related  CF_Haptic CF_HapticType cf_haptic_open cf_haptic_close CF_HapticEffect cf_haptic_create_effect
  */
 typedef struct CF_HapticLeftRight
@@ -259,7 +259,7 @@ typedef struct CF_HapticData
  * @function cf_haptic_open
  * @category haptic
  * @brief    Attempts to open a joypad for haptics use.
- * @param    player_index     An index represeting the joypad for a particular player, starting at 0.
+ * @param    player_index     An index representing the joypad for a particular player, starting at 0.
  * @return   Returns a new `CF_Haptic`.
  * @remarks  Returns `NULL` upon any errors, including missing support from the underlying device.
  * @related  CF_Haptic CF_Joypad cf_haptic_open cf_haptic_close cf_haptic_create_effect cf_haptic_run_effect cf_haptic_rumble_play
