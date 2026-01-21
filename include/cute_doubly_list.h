@@ -102,7 +102,7 @@ typedef struct CF_List
 /**
  * @function cf_list_init_node
  * @category list
- * @brief    Intializes a node.
+ * @brief    Initializes a node.
  * @param    node       The node.
  * @remarks  As this list is circular, each node is initialized to point to itself.
  * @related  CF_ListNode CF_List CF_LIST_NODE CF_LIST_HOST cf_list_init_node cf_list_init cf_list_push_front cf_list_push_back cf_list_remove cf_list_pop_front cf_list_pop_back cf_list_empty cf_list_begin cf_list_end cf_list_front cf_list_back
@@ -116,7 +116,7 @@ CF_INLINE void cf_list_init_node(CF_ListNode* node)
 /**
  * @function cf_list_init
  * @category list
- * @brief    Intializes a list.
+ * @brief    Initializes a list.
  * @param    list       The list.
  * @remarks  As an optimization the list contains a dummy node inside of it. To traverse this list, use `cf_list_begin` and
  *           `cf_list_end` in a for loop. See `cf_list_begin` for an example.
