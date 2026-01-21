@@ -256,6 +256,16 @@ bool cf_is_paused()
 	return pause_ticks > 0;
 }
 
+void cf_pause()
+{
+	pause_ticks = INT64_MAX;
+}
+
+void cf_unpause()
+{
+	pause_ticks = 0;
+}
+
 uint64_t cf_get_ticks()
 {
 	s_init();

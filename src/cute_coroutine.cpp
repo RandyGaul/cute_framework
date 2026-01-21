@@ -49,6 +49,7 @@ CF_Coroutine cf_make_coroutine(CF_CoroutineFn* fn, int stack_size, void* udata)
 void cf_destroy_coroutine(CF_Coroutine co_handle)
 {
 	CF_CoroutineInternal* co = (CF_CoroutineInternal*)co_handle.id;
+	if (!co) return;
 	mco_state state = mco_status(co->mco);
 	CF_ASSERT(state == MCO_DEAD || state == MCO_SUSPENDED);
 	mco_result res = mco_destroy(co->mco);

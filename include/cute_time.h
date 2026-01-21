@@ -227,10 +227,28 @@ CF_API bool CF_CALL cf_on_timestamp(double timestamp);
  * @function cf_is_paused
  * @category time
  * @brief    Returns true if the application is currently paused.
- * @remarks  Pause means from `cf_pause_for` or `cf_pause_for_ticks`.
- * @related  CF_PAUSE_TIME_LEFT cf_is_paused cf_pause_for cf_pause_for_ticks
+ * @remarks  Pause means from `cf_pause_for`, `cf_pause_for_ticks`, or `cf_pause`.
+ * @related  CF_PAUSE_TIME_LEFT cf_is_paused cf_pause_for cf_pause_for_ticks cf_pause cf_unpause
  */
 CF_API bool CF_CALL cf_is_paused(void);
+
+/**
+ * @function cf_pause
+ * @category time
+ * @brief    Pauses the application indefinitely until `cf_unpause` is called.
+ * @remarks  Use this when you need to pause without knowing how long in advance.
+ * @related  CF_PAUSE_TIME_LEFT cf_is_paused cf_pause_for cf_pause_for_ticks cf_pause cf_unpause
+ */
+CF_API void CF_CALL cf_pause(void);
+
+/**
+ * @function cf_unpause
+ * @category time
+ * @brief    Unpauses the application if it was paused.
+ * @remarks  Clears any pause state from `cf_pause`, `cf_pause_for`, or `cf_pause_for_ticks`.
+ * @related  CF_PAUSE_TIME_LEFT cf_is_paused cf_pause_for cf_pause_for_ticks cf_pause cf_unpause
+ */
+CF_API void CF_CALL cf_unpause(void);
 
 /**
  * @function cf_get_ticks
@@ -329,6 +347,8 @@ CF_INLINE void set_target_framerate(int frames_per_second = -1) { cf_set_target_
 CF_INLINE void update_time(CF_OnUpdateFn* on_update = NULL) { cf_update_time(on_update); }
 CF_INLINE void pause_for(float seconds) { cf_pause_for(seconds); }
 CF_INLINE void pause_for_ticks(uint64_t pause_ticks) { cf_pause_for_ticks(pause_ticks); }
+CF_INLINE void pause() { cf_pause(); }
+CF_INLINE void unpause() { cf_unpause(); }
 
 CF_INLINE bool on_interval(float interval, float offset = 0) { return cf_on_interval(interval, offset); }
 CF_INLINE bool between_interval(float interval, float offset = 0) { return cf_between_interval(interval, offset); }
