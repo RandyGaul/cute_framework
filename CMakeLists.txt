@@ -349,7 +349,7 @@ endif()
 
 if(NOT EMSCRIPTEN) # Emscripten provides it's own SDL3.
 	# SDL for platform support.
-	set(SDL_REQUIRED_VERSION 3.2.16)
+	set(SDL_REQUIRED_VERSION 3.4.0)
 	# Just don't build the shared library at all, it's not needed.
 	set(SDL_SHARED_ENABLED_BY_DEFAULT OFF)
 	set(SDL_STATIC ${CF_FRAMEWORK_STATIC} CACHE BOOL "Build SDL as a static library")
