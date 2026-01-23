@@ -39,6 +39,7 @@
 #include "cute_doubly_list.h"
 #include "cute_draw.h"
 #include "cute_file_system.h"
+#include "cute_guid.h"
 #include "cute_graphics.h"
 #include "cute_hashtable.h"
 #include "cute_https.h"
