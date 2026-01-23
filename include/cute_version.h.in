@@ -19,7 +19,7 @@
 extern "C" {
 #endif // __cplusplus
 
-CF_API const char* CF_CALL cf_version_string_linked();
+CF_API const char* CF_CALL cf_version_string_linked(void);
 
 #ifdef __cplusplus
 }
