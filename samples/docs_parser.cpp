@@ -229,7 +229,7 @@ void Doc::emit_params(FILE* fp)
 	if (param_names.count()) {
 		fprintf(fp, "Parameters | Description\n--- | ---\n");
 		for (int i = 0; i < param_names.count(); ++i) {
-			fprintf(fp, "%s | %s\n", param_names[i].c_str(), param_briefs[i].c_str());
+			fprintf(fp, "`%s` | %s\n", param_names[i].c_str(), param_briefs[i].c_str());
 		}
 		fprintf(fp, "\n");
 	}
@@ -240,7 +240,7 @@ void Doc::emit_enum_entries(FILE* fp)
 	fprintf(fp, "## Values\n\n");
 	fprintf(fp, "Enum | Description\n--- | ---\n");
 	for (int i = 0; i < enum_entries.count(); ++i) {
-		fprintf(fp, "%s | %s\n", enum_entries[i].c_str(), enum_entry_briefs[i].c_str());
+		fprintf(fp, "`%s` | %s\n", enum_entries[i].c_str(), enum_entry_briefs[i].c_str());
 	}
 	fprintf(fp, "\n");
 }
@@ -411,7 +411,7 @@ void parse_enum()
 		} else if (s->token.begins_with("CF_ENUM(")) {
 			s->token.replace("CF_ENUM(", "");
 			s->token.pop(); // Remove ','
-			s->doc.enum_entries.add(s->token);
+			s->doc.enum_entries.add(String("CF_") + s->token);
 		}
 	}
 	if (s->doc.enum_entries.count() != s->doc.enum_entry_briefs.count()) {
