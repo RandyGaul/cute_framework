@@ -411,7 +411,7 @@ void parse_enum()
 		} else if (s->token.begins_with("CF_ENUM(")) {
 			s->token.replace("CF_ENUM(", "");
 			s->token.pop(); // Remove ','
-			s->doc.enum_entries.add(s->token);
+			s->doc.enum_entries.add(String("CF_") + s->token);
 		}
 	}
 	if (s->doc.enum_entries.count() != s->doc.enum_entry_briefs.count()) {

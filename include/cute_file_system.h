@@ -243,7 +243,7 @@ CF_API char* CF_CALL cf_path_normalize(const char* path);
  * a single file without overwriting each other on the actual disk.
  * 
  * By default CF mounts the base directory when you call `make_app`. This can be disabled by
- * passing the `APP_OPTIONS_FILE_SYSTEM_DONT_DEFAULT_MOUNT` flag to `make_app`.
+ * passing the `CF_APP_OPTIONS_FILE_SYSTEM_DONT_DEFAULT_MOUNT_BIT` flag to `cf_make_app`.
  */
 
 /**
@@ -400,7 +400,7 @@ CF_API const char* CF_CALL cf_fs_get_user_directory(const char* company_name, co
  *           formats supported (see top of file).
  *           
  *           By default CF mounts the base directory when you call `cf_make_app`. This can be disabled by
- *           passing the `CF_APP_OPTIONS_FILE_SYSTEM_DONT_DEFAULT_MOUNT` flag to `cf_make_app`. [Virtual File System](https://randygaul.github.io/cute_framework/topics/virtual_file_system).
+ *           passing the `CF_APP_OPTIONS_FILE_SYSTEM_DONT_DEFAULT_MOUNT_BIT` flag to `cf_make_app`. [Virtual File System](https://randygaul.github.io/cute_framework/topics/virtual_file_system).
  * @related  cf_fs_get_base_directory cf_fs_set_write_directory cf_fs_get_user_directory cf_fs_mount cf_fs_dismount
  */
 CF_API CF_Result CF_CALL cf_fs_mount(const char* archive, const char* mount_point, bool append_to_path);
