@@ -2,9 +2,63 @@
 
 Everything in the [Drawing API](../topics/drawing.md) is drawn relative to the current coordinate system. We can transform this coordinate system to adjust the position, scale, and rotation of anything drawn.
 
-## Default System
+## Coordinate Systems
 
-In games typically the center of the screen is defined as position `(0, 0)`, with the positive y-axis going up the screen. This is the default setup in CF.
+CF uses two different coordinate systems: **world space** and **screen space**.
+
+### World Space (Drawing)
+
+This is the coordinate system used by all drawing functions.
+
+- **Origin**: Center of the screen `(0, 0)`
+- **X-axis**: Positive values go **right**
+- **Y-axis**: Positive values go **up**
+
+```
+                 +Y
+                  ^
+                  |
+                  |
+       -X <-------+-------> +X
+                  |
+                  |
+                  v
+                 -Y
+```
+
+### Screen Space (Input)
+
+This is the coordinate system used by mouse and touch input functions like [`cf_mouse_x`](../input/cf_mouse_x.md) and [`cf_mouse_y`](../input/cf_mouse_y.md).
+
+- **Origin**: Top-left corner of the screen `(0, 0)`
+- **X-axis**: Positive values go **right**
+- **Y-axis**: Positive values go **down**
+
+```
+       (0,0)+--------------> +X
+            |
+            |
+            |
+            |
+            v
+           +Y
+```
+
+### Converting Between Coordinate Systems
+
+To convert mouse coordinates to world space for game logic, use [`cf_screen_to_world`](../draw/cf_screen_to_world.md):
+
+```cpp
+CF_V2 mouse_world = cf_screen_to_world(cf_v2((float)cf_mouse_x(), (float)cf_mouse_y()));
+```
+
+To convert world coordinates to screen space, use [`cf_world_to_screen`](../draw/cf_world_to_screen.md):
+
+```cpp
+CF_V2 screen_pos = cf_world_to_screen(world_position);
+```
+
+You can also get the visible screen bounds in world space with [`cf_screen_bounds_to_world`](../draw/cf_screen_bounds_to_world.md).
 
 ## Translating
 
