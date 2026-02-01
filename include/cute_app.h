@@ -170,7 +170,7 @@ CF_API CF_DisplayOrientation CF_CALL cf_display_orientation(CF_DisplayID display
  *         app_destroy();
  *         return 0;
  *     }
- * @remarks  The `app_options` parameter of `cf_make_app` is a bitmask flag. Simply take the `APP_OPTIONS_*` flags listed above and OR them together.
+ * @remarks  The `app_options` parameter of `cf_make_app` is a bitmask flag. Simply take the `CF_APP_OPTIONS_*` flags listed above and OR them together.
  * @related  CF_AppOptionFlagBits cf_make_app cf_destroy_app
  */
 #define CF_APP_OPTION_DEFS \
@@ -245,7 +245,7 @@ typedef enum CF_AppOptionFlagBits
  *         return 0;
  *     }
  * @remarks  The options parameter is an enum from `app_options`. Different options can be OR'd together.
- *           Parameters `w` and `h` are ignored if the window is initialized to fullscreen mode with `APP_OPTIONS_FULLSCREEN`.
+ *           Parameters `w` and `h` are ignored if the window is initialized to fullscreen mode with `CF_APP_OPTIONS_FULLSCREEN_BIT`.
  * @related  CF_AppOptionFlagBits cf_app_is_running cf_app_signal_shutdown cf_destroy_app
  */
 CF_API CF_Result CF_CALL cf_make_app(const char* window_title, CF_DisplayID display_id, int x, int y, int w, int h, CF_AppOptionFlags options, const char* argv0);
@@ -270,7 +270,7 @@ CF_API void CF_CALL cf_destroy_app(void);
  *     int main(int argc, const char** argv)
  *     {
  *         // Create a window with a resolution of 640 x 480, along with a DirectX 11 context.
- *         app_make("Fancy Window Title", 0, 50, 50, 640, 480, CF_APP_OPTIONS_D3D11_CONTEXT, argv[0]);
+ *         app_make("Fancy Window Title", 0, 50, 50, 640, 480, CF_APP_OPTIONS_GFX_D3D11_BIT, argv[0]);
  *         
  *         while (app_is_running())
  *         {
@@ -301,7 +301,7 @@ CF_API bool CF_CALL cf_app_is_running(void);
  *     int main(int argc, const char** argv)
  *     {
  *         // Create a window with a resolution of 640 x 480, along with a DirectX 11 context.
- *         app_make("Fancy Window Title", 0, 50, 50, 640, 480, CF_APP_OPTIONS_D3D11_CONTEXT, argv[0]);
+ *         app_make("Fancy Window Title", 0, 50, 50, 640, 480, CF_APP_OPTIONS_GFX_D3D11_BIT, argv[0]);
  *         
  *         while (app_is_running())
  *         {
@@ -343,7 +343,7 @@ CF_API void CF_CALL cf_app_update(CF_OnUpdateFn* on_update);
  *     int main(int argc, const char** argv)
  *     {
  *         // Create a window with a resolution of 640 x 480, along with a DirectX 11 context.
- *         app_make("Fancy Window Title", 0, 50, 50, 640, 480, CF_APP_OPTIONS_D3D11_CONTEXT, argv[0]);
+ *         app_make("Fancy Window Title", 0, 50, 50, 640, 480, CF_APP_OPTIONS_GFX_D3D11_BIT, argv[0]);
  *         
  *         while (app_is_running())
  *         {

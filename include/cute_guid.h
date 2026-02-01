@@ -38,7 +38,7 @@ typedef struct CF_Guid
  * @remarks  The bytes are generated in a cryptographically secure way.
  * @related  CF_Guid cf_make_guid cf_guid_equal
  */
-CF_API CF_Guid CF_CALL cf_make_guid();
+CF_API CF_Guid CF_CALL cf_make_guid(void);
 
 /**
  * @function cf_guid_equal
