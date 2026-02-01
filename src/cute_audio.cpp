@@ -144,14 +144,14 @@ void cf_music_crossfade(CF_Audio audio_source, float cross_fade_time)
 	return cs_music_crossfade((cs_audio_source_t*)audio_source.id, cross_fade_time);
 }
 
-int cf_music_get_sample_index()
+double cf_music_get_time()
 {
-	return cs_music_get_sample_index();
+	return cs_music_get_time();
 }
 
-CF_Result cf_music_set_sample_index(int sample_index)
+CF_Result cf_music_set_time(double time_in_seconds)
 {
-	return s_result(cs_music_set_sample_index(sample_index));
+	return s_result(cs_music_set_time(time_in_seconds));
 }
 
 void cf_music_set_pitch(float pitch)
@@ -169,7 +169,7 @@ CF_Sound cf_play_sound(CF_Audio audio_source, CF_SoundParams params)
 	csparams.volume = params.volume;
 	csparams.pan = params.pan;
 	csparams.pitch = params.pitch;
-	csparams.sample_index = params.sample_index;
+	csparams.start_time = params.start_time;
 	CF_Sound result;
 	cs_playing_sound_t csresult = cs_play_sound((cs_audio_source_t*)audio_source.id, csparams);
 	result.id = csresult.id;
@@ -240,10 +240,10 @@ float cf_sound_get_pitch(CF_Sound sound)
 	return cs_sound_get_pitch(cssound);
 }
 
-int cf_sound_get_sample_index(CF_Sound sound)
+double cf_sound_get_time(CF_Sound sound)
 {
 	cs_playing_sound_t cssound = { sound.id };
-	return cs_sound_get_sample_index(cssound);
+	return cs_sound_get_time(cssound);
 }
 
 void cf_sound_set_is_paused(CF_Sound sound, bool true_for_paused)
@@ -264,10 +264,10 @@ void cf_sound_set_volume(CF_Sound sound, float volume)
 	cs_sound_set_volume(cssound, volume);
 }
 
-void cf_sound_set_sample_index(CF_Sound sound, int sample_index)
+CF_Result cf_sound_set_time(CF_Sound sound, double time_in_seconds)
 {
 	cs_playing_sound_t cssound = { sound.id };
-	cs_sound_set_sample_index(cssound, sample_index);
+	return s_result(cs_sound_set_time(cssound, time_in_seconds));
 }
 
 void cf_sound_stop(CF_Sound sound)
@@ -280,11 +280,6 @@ void cf_sound_set_pitch(CF_Sound sound, float pitch)
 {
 	cs_playing_sound_t cssound = { sound.id };
 	cs_sound_set_pitch(cssound, pitch);
-}
-
-void cf_audio_cull_duplicates(bool true_to_cull_duplicates)
-{
-	cs_cull_duplicates(true_to_cull_duplicates);
 }
 
 int cf_audio_sample_rate(CF_Audio audio)
