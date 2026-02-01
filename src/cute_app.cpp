@@ -351,10 +351,6 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 #endif
 		cs_error_t err = cs_init(44100, 1024 * more_on_emscripten, NULL);
 		if (err == CUTE_SOUND_ERROR_NONE) {
-#ifndef CF_EMSCRIPTEN
-			cs_spawn_mix_thread();
-			app->spawned_mix_thread = true;
-#endif
 			app->audio_needs_updates = true;
 			//cs_cull_duplicates(true); -- https://github.com/RandyGaul/cute_framework/issues/172
 		} else {
