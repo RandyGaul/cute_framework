@@ -118,7 +118,7 @@ typedef cute_threadpool_t CF_Threadpool;
  * @remarks  Destroy the mutex with `cf_destroy_mutex` when done.
  * @related  CF_Mutex cf_make_mutex cf_destroy_mutex cf_mutex_lock cf_mutex_unlock cf_mutex_try_lock
  */
-CF_API CF_Mutex CF_CALL cf_make_mutex();
+CF_API CF_Mutex CF_CALL cf_make_mutex(void);
 
 /**
  * @function cf_destroy_mutex
@@ -165,7 +165,7 @@ CF_API bool CF_CALL cf_mutex_try_lock(CF_Mutex* mutex);
  * @remarks  Destroy the mutex with `cf_destroy_cv` when done.
  * @related  CF_ConditionVariable cf_make_cv cf_destroy_cv cf_cv_wake_all cf_cv_wake_one cf_cv_wait
  */
-CF_API CF_ConditionVariable CF_CALL cf_make_cv();
+CF_API CF_ConditionVariable CF_CALL cf_make_cv(void);
 
 /**
  * @function cf_destroy_cv
@@ -323,7 +323,7 @@ CF_API CF_ThreadId CF_CALL cf_thread_get_id(CF_Thread* thread);
  * @brief    Returns the unique id of the calling thread.
  * @related  CF_Thread CF_ThreadFn cf_thread_create cf_thread_detach cf_thread_get_id cf_thread_id cf_thread_wait
  */
-CF_API CF_ThreadId CF_CALL cf_thread_id();
+CF_API CF_ThreadId CF_CALL cf_thread_id(void);
 
 /**
  * @function cf_thread_wait
@@ -342,7 +342,7 @@ CF_API CF_Result CF_CALL cf_thread_wait(CF_Thread* thread);
  * @brief    Returns the number of cores on the CPU. Can be affected by machine dependent technology, such as Intel's hyperthreading.
  * @related  cf_core_count
  */
-CF_API int CF_CALL cf_core_count();
+CF_API int CF_CALL cf_core_count(void);
 
 /**
  * @function cf_cacheline_size
@@ -350,7 +350,7 @@ CF_API int CF_CALL cf_core_count();
  * @brief    Returns the number of bytes in a single cache line of the CPU L1 memory cache.
  * @related  cf_core_count
  */
-CF_API int CF_CALL cf_cacheline_size();
+CF_API int CF_CALL cf_cacheline_size(void);
 
 /**
  * @function cf_atomic_zero
@@ -359,7 +359,7 @@ CF_API int CF_CALL cf_cacheline_size();
  * @remarks  Atomics are an advanced topic. You've been warned!
  * @related  cf_atomic_zero cf_atomic_add cf_atomic_set cf_atomic_get cf_atomic_cas cf_atomic_ptr_set cf_atomic_ptr_get cf_atomic_ptr_cas
  */
-CF_API CF_AtomicInt CF_CALL cf_atomic_zero();
+CF_API CF_AtomicInt CF_CALL cf_atomic_zero(void);
 
 /**
  * @function cf_atomic_add
@@ -447,7 +447,7 @@ CF_API CF_Result CF_CALL cf_atomic_ptr_cas(void** atomic, void* expected, void* 
  * @remarks  Call `cf_destroy_rw_lock` when done.
  * @related  CF_ReadWriteLock cf_make_rw_lock cf_destroy_rw_lock cf_read_lock cf_read_unlock cf_write_lock cf_write_unlock
  */
-CF_API CF_ReadWriteLock CF_CALL cf_make_rw_lock();
+CF_API CF_ReadWriteLock CF_CALL cf_make_rw_lock(void);
 
 /**
  * @function cf_destroy_rw_lock
