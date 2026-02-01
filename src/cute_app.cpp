@@ -349,7 +349,7 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 #ifdef CF_EMSCRIPTEN
 		more_on_emscripten = 4;
 #endif
-		cs_error_t err = cs_init(NULL, 44100, 1024 * more_on_emscripten, NULL);
+		cs_error_t err = cs_init(44100, 1024 * more_on_emscripten, NULL);
 		if (err == CUTE_SOUND_ERROR_NONE) {
 #ifndef CF_EMSCRIPTEN
 			cs_spawn_mix_thread();
