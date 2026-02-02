@@ -3,7 +3,7 @@
 		Licensing information can be found at the end of the file.
 	------------------------------------------------------------------------------
 
-	cute_sync.h - v1.01
+	cute_sync.h - v1.02
 
 	To create implementation (the function definitions)
 		#define CUTE_SYNC_IMPLEMENTATION
@@ -12,7 +12,7 @@
 
 	SUMMARY
 
-		Collection of practical syncronization primitives for Windows/Posix/SDL2.
+		Collection of practical syncronization primitives for Windows/Posix/SDL3.
 
 		Here is a list of all supported primitives.
 
@@ -26,7 +26,7 @@
 
 		Here are some slides I wrote for those interested in learning prequisite
 		knowledge for utilizing this header:
-		http://www.randygaul.net/2014/09/24/multi-threading-best-practices-for-gamedev/
+		https://randygaul.github.io/2014/09/24/multi-threading-best-practices-for-gamedev/
 
 		A good chunk of this code came from Mattias Gustavsson's thread.h header.
 		It really is quite a good header, and worth considering!
@@ -35,18 +35,33 @@
 
 	PLATFORMS
 
-		The current supported platforms are Windows/Posix/SDL. Here are the macros for
+		The current supported platforms are Windows/Posix/SDL3. Here are the macros for
 		picking each implementation.
 
 			* CUTE_SYNC_WINDOWS
 			* CUTE_SYNC_POSIX
 			* CUTE_SYNC_SDL
 
+		Note: CUTE_SYNC_SDL requires SDL3 (not SDL2). SDL3 must be included before
+		cute_sync.h when using CUTE_SYNC_IMPLEMENTATION.
+
 
 	REVISION HISTORY
 
 		1.0  (05/31/2018) initial release
 		1.01 (08/25/2019) Windows and pthreads port
+		1.02 (02/01/2026) Bug fixes:
+		     - Fixed POSIX cute_atomic_set/cute_atomic_ptr_set zeroing out value
+		     - Fixed Windows cute_atomic_cas/cute_atomic_ptr_cas wrong comparison
+		     - Fixed Windows cute_trylock returning inverted result
+		     - Fixed SDL cute_cv_wait passing wrong pointer
+		     - Fixed Apple semaphore waiting_count not being incremented
+		     - Fixed cute_thread_wait not returning thread exit code (Windows/POSIX)
+		     - Fixed POSIX thread function signature mismatch (int vs void*)
+		     - Fixed threadpool worker blocking after each task instead of draining queue
+		     - Fixed race conditions in cute_threadpool_kick and cute_threadpool_kick_and_wait
+		     - Fixed resource leaks in cute_threadpool_destroy (mutex/semaphore not freed)
+		     - Removed unused sem_mutex field from threadpool
 */
 
 #if !defined(CUTE_SYNC_H)
@@ -64,8 +79,15 @@ typedef int (cute_thread_fn)(void *udata);
  */
 cute_mutex_t cute_mutex_create();
 
-void cute_lock(cute_mutex_t* mutex);
-void cute_unlock(cute_mutex_t* mutex);
+/**
+ * Returns 1 on success, zero otherwise.
+ */
+int cute_lock(cute_mutex_t* mutex);
+
+/**
+ * Returns 1 on success, zero otherwise.
+ */
+int cute_unlock(cute_mutex_t* mutex);
 
 /**
  * Attempts to lock the mutex without blocking. Returns one if lock was acquired,
@@ -132,7 +154,7 @@ cute_thread_t* cute_thread_create(cute_thread_fn func, const char* name, void* u
  * Useful for certain long-lived threads.
  * It is invalid to call `cute_thread_wait` on a detached thread.
  * It is invalid to call `cute_thread_wait` on a thread more than once.
- * Please see this link for a longer description: https://wiki.libsdl.org/SDL_DetachThread
+ * Please see this link for a longer description: https://wiki.libsdl.org/SDL3/SDL_DetachThread
  */
 void cute_thread_detach(cute_thread_t* thread);
 cute_thread_id_t cute_thread_get_id(cute_thread_t* thread);
@@ -310,10 +332,6 @@ struct cute_rw_lock_t
 #define CUTE_SYNC_IMPLEMENTATION_ONCE
 
 #if defined(CUTE_SYNC_SDL)
-#include <SDL3/SDL_atomic.h>
-#include <SDL3/SDL_cpuinfo.h>
-#include <SDL3/SDL_mutex.h>
-#include <SDL3/SDL_thread.h>
 #elif defined(CUTE_SYNC_WINDOWS)
 	#define WIN32_LEAN_AND_MEAN
 	// To use GetThreadId and other methods we must require Windows Vista minimum.
@@ -432,7 +450,9 @@ int cute_atomic_get(cute_atomic_int_t* atomic)
 
 int cute_atomic_cas(cute_atomic_int_t* atomic, int expected, int value)
 {
-	return (int)_InterlockedCompareExchange(&atomic->i, value, expected) == value;
+	// _InterlockedCompareExchange returns the original value. CAS succeeds when
+	// the original value equals expected (meaning the swap occurred).
+	return (int)_InterlockedCompareExchange(&atomic->i, value, expected) == expected;
 }
 
 void* cute_atomic_ptr_set(void** atomic, void* value)
@@ -447,7 +467,9 @@ void* cute_atomic_ptr_get(void** atomic)
 
 int cute_atomic_ptr_cas(void** atomic, void* expected, void* value)
 {
-	return _InterlockedCompareExchangePointer(atomic, value, expected) == value;
+	// _InterlockedCompareExchangePointer returns the original value. CAS succeeds when
+	// the original value equals expected (meaning the swap occurred).
+	return _InterlockedCompareExchangePointer(atomic, value, expected) == expected;
 }
 
 #elif defined(CUTE_SYNC_POSIX)
@@ -464,9 +486,14 @@ int cute_atomic_add(cute_atomic_int_t* atomic, int addend)
 
 int cute_atomic_set(cute_atomic_int_t* atomic, int value)
 {
-	int result = (int)__sync_lock_test_and_set(&atomic->i, value);
-	__sync_lock_release(&atomic->i);
-	return result;
+	// Use a CAS loop to atomically exchange the value.
+	// __sync_lock_test_and_set has acquire semantics only and __sync_lock_release
+	// would zero out the value, so we use CAS instead for a proper atomic set.
+	long old_val;
+	do {
+		old_val = atomic->i;
+	} while (!__sync_bool_compare_and_swap(&atomic->i, old_val, value));
+	return (int)old_val;
 }
 
 int cute_atomic_get(cute_atomic_int_t* atomic)
@@ -481,9 +508,14 @@ int cute_atomic_cas(cute_atomic_int_t* atomic, int expected, int value)
 
 void* cute_atomic_ptr_set(void** atomic, void* value)
 {
-	void* result = __sync_lock_test_and_set(atomic, value);
-	__sync_lock_release(atomic);
-	return result;
+	// Use a CAS loop to atomically exchange the value.
+	// __sync_lock_test_and_set has acquire semantics only and __sync_lock_release
+	// would zero out the pointer, so we use CAS instead for a proper atomic set.
+	void* old_val;
+	do {
+		old_val = *atomic;
+	} while (!__sync_bool_compare_and_swap(atomic, old_val, value));
+	return old_val;
 }
 
 void* cute_atomic_ptr_get(void** atomic)
@@ -507,19 +539,24 @@ cute_mutex_t cute_mutex_create()
 	return mutex;
 }
 
-void cute_lock(cute_mutex_t* mutex)
+int cute_lock(cute_mutex_t* mutex)
 {
-	return SDL_LockMutex((SDL_Mutex*)mutex->align);
+	// SDL3: SDL_LockMutex returns void (always succeeds or aborts).
+	SDL_LockMutex((SDL_Mutex*)mutex->align);
+	return 1;
 }
 
-void cute_unlock(cute_mutex_t* mutex)
+int cute_unlock(cute_mutex_t* mutex)
 {
-	return SDL_UnlockMutex((SDL_Mutex*)mutex->align);
+	// SDL3: SDL_UnlockMutex returns void (always succeeds or aborts).
+	SDL_UnlockMutex((SDL_Mutex*)mutex->align);
+	return 1;
 }
 
 int cute_trylock(cute_mutex_t* mutex)
 {
-	return !SDL_TryLockMutex((SDL_Mutex*)mutex->align);
+	// SDL3: SDL_TryLockMutex returns bool (true on success).
+	return SDL_TryLockMutex((SDL_Mutex*)mutex->align) ? 1 : 0;
 }
 
 void cute_mutex_destroy(cute_mutex_t* mutex)
@@ -536,19 +573,22 @@ cute_cv_t cute_cv_create()
 
 int cute_cv_wake_all(cute_cv_t* cv)
 {
+	// SDL3: SDL_BroadcastCondition returns void.
 	SDL_BroadcastCondition((SDL_Condition*)cv->align);
 	return 1;
 }
 
 int cute_cv_wake_one(cute_cv_t* cv)
 {
+	// SDL3: SDL_SignalCondition returns void.
 	SDL_SignalCondition((SDL_Condition*)cv->align);
 	return 1;
 }
 
 int cute_cv_wait(cute_cv_t* cv, cute_mutex_t* mutex)
 {
-	SDL_WaitCondition((SDL_Condition*)cv, (SDL_Mutex*)mutex->align);
+	// SDL3: SDL_WaitCondition returns void (always succeeds or aborts).
+	SDL_WaitCondition((SDL_Condition*)cv->align, (SDL_Mutex*)mutex->align);
 	return 1;
 }
 
@@ -567,24 +607,27 @@ cute_semaphore_t cute_semaphore_create(int initial_count)
 
 int cute_semaphore_post(cute_semaphore_t* semaphore)
 {
+	// SDL3: SDL_SignalSemaphore returns void.
 	SDL_SignalSemaphore((SDL_Semaphore*)semaphore->id);
 	return 1;
 }
 
 int cute_semaphore_try(cute_semaphore_t* semaphore)
 {
-	return !SDL_TryWaitSemaphore((SDL_Semaphore*)semaphore->id);
+	// SDL3: SDL_TryWaitSemaphore returns bool (true on success).
+	return SDL_TryWaitSemaphore((SDL_Semaphore*)semaphore->id) ? 1 : 0;
 }
 
 int cute_semaphore_wait(cute_semaphore_t* semaphore)
 {
+	// SDL3: SDL_WaitSemaphore returns void.
 	SDL_WaitSemaphore((SDL_Semaphore*)semaphore->id);
 	return 1;
 }
 
 int cute_semaphore_value(cute_semaphore_t* semaphore)
 {
-	return SDL_GetSemaphoreValue((SDL_Semaphore*)semaphore->id);
+	return (int)SDL_GetSemaphoreValue((SDL_Semaphore*)semaphore->id);
 }
 
 void cute_semaphore_destroy(cute_semaphore_t* semaphore)
@@ -644,19 +687,22 @@ cute_mutex_t cute_mutex_create()
 	return mutex;
 }
 
-void cute_lock(cute_mutex_t* mutex)
+int cute_lock(cute_mutex_t* mutex)
 {
 	EnterCriticalSection((CRITICAL_SECTION*)mutex);
+	return 1;
 }
 
-void cute_unlock(cute_mutex_t* mutex)
+int cute_unlock(cute_mutex_t* mutex)
 {
 	LeaveCriticalSection((CRITICAL_SECTION*)mutex);
+	return 1;
 }
 
 int cute_trylock(cute_mutex_t* mutex)
 {
-	return !TryEnterCriticalSection((CRITICAL_SECTION*)mutex);
+	// TryEnterCriticalSection returns non-zero on success, which matches our API.
+	return TryEnterCriticalSection((CRITICAL_SECTION*)mutex) != 0;
 }
 
 void cute_mutex_destroy(cute_mutex_t* mutex)
@@ -769,8 +815,10 @@ cute_thread_id_t cute_thread_id()
 int cute_thread_wait(cute_thread_t* thread)
 {
 	WaitForSingleObject((HANDLE)thread, INFINITE);
+	DWORD exit_code = 0;
+	GetExitCodeThread((HANDLE)thread, &exit_code);
 	CloseHandle((HANDLE)thread);
-	return 1;
+	return (int)exit_code;
 }
 
 int cute_core_count()
@@ -823,14 +871,16 @@ cute_mutex_t cute_mutex_create()
 	return mutex;
 }
 
-void cute_lock(cute_mutex_t* mutex)
+int cute_lock(cute_mutex_t* mutex)
 {
 	pthread_mutex_lock((pthread_mutex_t*)mutex);
+	return 1;
 }
 
-void cute_unlock(cute_mutex_t* mutex)
+int cute_unlock(cute_mutex_t* mutex)
 {
 	pthread_mutex_unlock((pthread_mutex_t*)mutex);
+	return 1;
 }
 
 int cute_trylock(cute_mutex_t* mutex)
@@ -878,7 +928,7 @@ void cute_cv_destroy(cute_cv_t* cv)
 cute_semaphore_t cute_semaphore_create(int initial_count)
 {
 	cute_semaphore_t semaphore;
-	semaphore.id = CUTE_ALLOC(sizeof(sem_t), NULL);
+	semaphore.id = CUTE_SYNC_ALLOC(sizeof(sem_t), NULL);
 	sem_init((sem_t*)semaphore.id, 0, (unsigned)initial_count);
 	semaphore.count.i = initial_count;
 	return semaphore;
@@ -909,7 +959,7 @@ int cute_semaphore_value(cute_semaphore_t* semaphore)
 void cute_semaphore_destroy(cute_semaphore_t* semaphore)
 {
 	sem_destroy((sem_t*)semaphore->id);
-	CUTE_FREE(semaphore->id);
+	CUTE_SYNC_FREE(semaphore->id, NULL);
 }
 
 #elif defined(__APPLE__)
@@ -967,6 +1017,8 @@ int cute_semaphore_wait(cute_semaphore_t* semaphore)
 	cute_apple_sem_t* apple_sem = (cute_apple_sem_t*)semaphore->id;
 	int result = 1;
 	cute_lock(&apple_sem->lock);
+	// Increment waiting_count before potentially waiting on the CV.
+	apple_sem->waiting_count += 1;
 	while (apple_sem->count == 0 && result) {
 		result = cute_cv_wait(&apple_sem->cv, &apple_sem->lock);
 	}
@@ -1004,10 +1056,32 @@ void cute_semaphore_destroy(cute_semaphore_t* semaphore)
 
 #endif
 
+// Wrapper to adapt cute_thread_fn (returns int) to pthread's void* return type.
+typedef struct cute_pthread_wrapper_t
+{
+	cute_thread_fn* fn;
+	void* udata;
+} cute_pthread_wrapper_t;
+
+static void* cute_pthread_wrapper_internal(void* wrapper_ptr)
+{
+	cute_pthread_wrapper_t wrapper = *(cute_pthread_wrapper_t*)wrapper_ptr;
+	CUTE_SYNC_FREE(wrapper_ptr, NULL);
+	int result = wrapper.fn(wrapper.udata);
+	return (void*)(intptr_t)result;
+}
+
 cute_thread_t* cute_thread_create(cute_thread_fn fn, const char* name, void* udata)
 {
+	cute_pthread_wrapper_t* wrapper = (cute_pthread_wrapper_t*)CUTE_SYNC_ALLOC(sizeof(cute_pthread_wrapper_t), NULL);
+	if (!wrapper) return NULL;
+	wrapper->fn = fn;
+	wrapper->udata = udata;
 	pthread_t thread;
-	pthread_create(&thread, NULL, (void* (*)(void*))fn, udata);
+	if (pthread_create(&thread, NULL, cute_pthread_wrapper_internal, wrapper) != 0) {
+		CUTE_SYNC_FREE(wrapper, NULL);
+		return NULL;
+	}
 #if !defined(__APPLE__)
 	if (name) pthread_setname_np(thread, name);
 #else
@@ -1033,8 +1107,10 @@ cute_thread_id_t cute_thread_id()
 
 int cute_thread_wait(cute_thread_t* thread)
 {
-	pthread_join((pthread_t)thread, NULL);
-	return 1;
+	void* retval = NULL;
+	pthread_join((pthread_t)thread, &retval);
+	// Thread functions return int, which was cast to void* by pthread.
+	return (int)(intptr_t)retval;
 }
 
 int cute_core_count()
@@ -1166,13 +1242,11 @@ typedef struct cute_threadpool_t
 	int task_count;
 	cute_task_t* tasks;
 	cute_mutex_t task_mutex;
-	cute_atomic_int_t tasks_running;
 
 	int thread_count;
 	cute_thread_t** threads;
 
 	cute_atomic_int_t running;
-	cute_mutex_t sem_mutex;
 	cute_semaphore_t semaphore;
 	void* mem_ctx;
 } cute_threadpool_t;
@@ -1195,13 +1269,15 @@ int cute_worker_thread_internal(void* udata)
 {
 	cute_threadpool_t* pool = (cute_threadpool_t*)udata;
 	while (cute_atomic_get(&pool->running)) {
-		cute_task_t task;
-		if (cute_try_pop_task_internal(pool, &task)) {
-			task.do_work(task.param);
-			cute_atomic_add(&pool->tasks_running, -1);
-		}
-
+		// Wait for a signal that there's work to do (or shutdown).
 		cute_semaphore_wait(&pool->semaphore);
+
+		// Process tasks until the queue is empty. This ensures all tasks get
+		// processed even if more tasks exist than semaphore posts were made.
+		cute_task_t task;
+		while (cute_try_pop_task_internal(pool, &task)) {
+			task.do_work(task.param);
+		}
 	}
 	return 0;
 }
@@ -1214,12 +1290,10 @@ cute_threadpool_t* cute_threadpool_create(int thread_count, void* mem_ctx)
 	pool->task_capacity = 64;
 	pool->task_count = 0;
 	pool->tasks = (cute_task_t*)cute_malloc_aligned(sizeof(cute_task_t) * pool->task_capacity, CUTE_SYNC_CACHELINE_SIZE, mem_ctx);
-	cute_atomic_set(&pool->tasks_running, 0);
 	pool->task_mutex = cute_mutex_create();
 	pool->thread_count = thread_count;
 	pool->threads = (cute_thread_t**)cute_malloc_aligned(sizeof(cute_thread_t*) * thread_count, CUTE_SYNC_CACHELINE_SIZE, mem_ctx);
 	cute_atomic_set(&pool->running, 1);
-	pool->sem_mutex = cute_mutex_create();
 	pool->semaphore = cute_semaphore_create(0);
 	pool->mem_ctx = mem_ctx;
 
@@ -1247,7 +1321,6 @@ void cute_threadpool_add_task(cute_threadpool_t* pool, void (*func)(void*), void
 	task.do_work = func;
 	task.param = param;
 	pool->tasks[pool->task_count++] = task;
-	cute_atomic_add(&pool->tasks_running, 1);
 
 	cute_unlock(&pool->task_mutex);
 }
@@ -1256,25 +1329,31 @@ void cute_threadpool_kick_and_wait(cute_threadpool_t* pool)
 {
 	cute_threadpool_kick(pool);
 
-	while (pool->task_count) {
-		cute_task_t task;
-		if (cute_try_pop_task_internal(pool, &task)) {
-			cute_semaphore_try(&pool->semaphore);
-			task.do_work(task.param);
-			cute_atomic_add(&pool->tasks_running, -1);
-		}
-		CUTE_SYNC_YIELD();
+	// Help process tasks on the calling thread while waiting.
+	cute_task_t task;
+	while (cute_try_pop_task_internal(pool, &task)) {
+		task.do_work(task.param);
 	}
 
-	while (cute_atomic_get(&pool->tasks_running)) {
-		CUTE_SYNC_YIELD();
-	}
+	// Spin until all tasks are complete (workers may still be processing).
+	int pending;
+	do {
+		cute_lock(&pool->task_mutex);
+		pending = pool->task_count;
+		cute_unlock(&pool->task_mutex);
+		if (pending) CUTE_SYNC_YIELD();
+	} while (pending);
 }
 
 void cute_threadpool_kick(cute_threadpool_t* pool)
 {
-	if (pool->task_count) {
-		int count = pool->task_count < pool->thread_count ? pool->task_count : pool->thread_count;
+	cute_lock(&pool->task_mutex);
+	int task_count = pool->task_count;
+	cute_unlock(&pool->task_mutex);
+
+	if (task_count) {
+		// Wake enough threads to handle all tasks (up to thread_count).
+		int count = task_count < pool->thread_count ? task_count : pool->thread_count;
 		for (int i = 0; i < count; ++i) {
 			cute_semaphore_post(&pool->semaphore);
 		}
@@ -1285,6 +1364,7 @@ void cute_threadpool_destroy(cute_threadpool_t* pool)
 {
 	cute_atomic_set(&pool->running, 0);
 
+	// Wake all worker threads so they can see running==0 and exit.
 	for (int i = 0; i < pool->thread_count; ++i) {
 		cute_semaphore_post(&pool->semaphore);
 	}
@@ -1293,9 +1373,10 @@ void cute_threadpool_destroy(cute_threadpool_t* pool)
 		cute_thread_wait(pool->threads[i]);
 	}
 
-	cute_semaphore_destroy(&pool->semaphore);
-	cute_mutex_destroy(&pool->sem_mutex);
+	// Clean up synchronization primitives.
 	cute_mutex_destroy(&pool->task_mutex);
+	cute_semaphore_destroy(&pool->semaphore);
+
 	cute_free_aligned(pool->tasks, pool->mem_ctx);
 	cute_free_aligned(pool->threads, pool->mem_ctx);
 	void* mem_ctx = pool->mem_ctx;
@@ -1311,7 +1392,7 @@ void cute_threadpool_destroy(cute_threadpool_t* pool)
 	This software is available under 2 licenses - you may choose the one you like.
 	------------------------------------------------------------------------------
 	ALTERNATIVE A - zlib license
-	Copyright (c) 2019 Randy Gaul http://www.randygaul.net
+	Copyright (c) 2026 Randy Gaul https://randygaul.github.io
 	This software is provided 'as-is', without any express or implied warranty.
 	In no event will the authors be held liable for any damages arising from
 	the use of this software.
