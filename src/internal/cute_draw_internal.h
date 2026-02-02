@@ -44,8 +44,11 @@ struct BatchGeometry
 	bool is_text;
 	bool is_sprite;
 	bool fill;
-	bool unused;
+	bool use_tri_colors;      // Per-vertex colors for triangles.
+	bool use_tri_attributes;  // Per-vertex attributes for triangles.
 	CF_Color user_params;
+	CF_Pixel tri_colors[3];      // Per-vertex colors (only for BATCH_GEOMETRY_TYPE_TRI).
+	CF_Color tri_attributes[3];  // Per-vertex attributes (only for BATCH_GEOMETRY_TYPE_TRI).
 };
 
 #define SPRITEBATCH_SPRITE_GEOMETRY BatchGeometry
@@ -168,6 +171,12 @@ struct CF_Draw
 	void reset_cam();
 	void set_aaf();
 	Cute::Array<CF_Color> user_params = { cf_make_color_hex(0) };
+	Cute::Array<CF_Color> tri_colors0 = { cf_color_white() };
+	Cute::Array<CF_Color> tri_colors1 = { cf_color_white() };
+	Cute::Array<CF_Color> tri_colors2 = { cf_color_white() };
+	Cute::Array<CF_Color> tri_attributes0 = { cf_make_color_hex(0) };
+	Cute::Array<CF_Color> tri_attributes1 = { cf_make_color_hex(0) };
+	Cute::Array<CF_Color> tri_attributes2 = { cf_make_color_hex(0) };
 	Cute::Array<CF_Shader> shaders;
 	Cute::Array<CF_V2> temp;
 	Cute::Array<float> font_sizes = { 18 };

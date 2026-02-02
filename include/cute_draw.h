@@ -377,7 +377,7 @@ CF_API void CF_CALL cf_draw_bezier_line2(CF_V2 a, CF_V2 c0, CF_V2 c1, CF_V2 b, i
  * @param    b            The end point.
  * @param    thickness    The thickness of the line to draw.
  * @param    arrow_width  The width of the arrow to draw.
- * @remarks  This function is intended only for debug purposes. It's implemented in naive way so the
+ * @remarks  This function is intended only for debug purposes. It's implemented in a naive way so the
  *           arrow shaft will overdraw atop the arrow head. This will become visible if the arrow is
  *           drawn with any transparency.
  * @related  cf_draw_line cf_draw_polyline cf_draw_bezier_line cf_draw_bezier_line2 cf_draw_arrow
@@ -543,6 +543,73 @@ CF_API CF_Color CF_CALL cf_draw_pop_vertex_attributes(void);
 CF_API CF_Color CF_CALL cf_draw_peek_vertex_attributes(void);
 
 /**
+ * @function cf_draw_push_tri_colors
+ * @category draw
+ * @brief    Pushes per-vertex colors for triangle drawing.
+ * @param    c0          Color for the first vertex (p0).
+ * @param    c1          Color for the second vertex (p1).
+ * @param    c2          Color for the third vertex (p2).
+ * @remarks  When active, triangles drawn with `cf_draw_tri_fill` will interpolate colors
+ *           across the triangle surface between c0, c1, and c2 at vertices p0, p1, and p2.
+ *           This only works when chubbiness is 0 and antialiasing is disabled.
+ * @related  cf_draw_push_tri_colors cf_draw_pop_tri_colors cf_draw_peek_tri_colors cf_draw_tri_fill
+ */
+CF_API void CF_CALL cf_draw_push_tri_colors(CF_Color c0, CF_Color c1, CF_Color c2);
+
+/**
+ * @function cf_draw_pop_tri_colors
+ * @category draw
+ * @brief    Pops the per-vertex triangle color state.
+ * @related  cf_draw_push_tri_colors cf_draw_pop_tri_colors cf_draw_peek_tri_colors cf_draw_tri_fill
+ */
+CF_API void CF_CALL cf_draw_pop_tri_colors(void);
+
+/**
+ * @function cf_draw_peek_tri_colors
+ * @category draw
+ * @brief    Returns the current per-vertex triangle color state.
+ * @param    c0          Output pointer for color of first vertex (can be NULL).
+ * @param    c1          Output pointer for color of second vertex (can be NULL).
+ * @param    c2          Output pointer for color of third vertex (can be NULL).
+ * @related  cf_draw_push_tri_colors cf_draw_pop_tri_colors cf_draw_peek_tri_colors cf_draw_tri_fill
+ */
+CF_API void CF_CALL cf_draw_peek_tri_colors(CF_Color* c0, CF_Color* c1, CF_Color* c2);
+
+/**
+ * @function cf_draw_push_tri_attributes
+ * @category draw
+ * @brief    Pushes per-vertex attributes for triangle drawing.
+ * @param    a0          Attributes for the first vertex (p0).
+ * @param    a1          Attributes for the second vertex (p1).
+ * @param    a2          Attributes for the third vertex (p2).
+ * @remarks  When active, triangles drawn with `cf_draw_tri_fill` will interpolate attributes
+ *           across the triangle surface between a0, a1, and a2 at vertices p0, p1, and p2.
+ *           This is useful for custom shaders that need per-vertex data (UVs, blend weights, etc.).
+ *           This only works when chubbiness is 0 and antialiasing is disabled.
+ * @related  cf_draw_push_tri_attributes cf_draw_pop_tri_attributes cf_draw_peek_tri_attributes cf_draw_tri_fill
+ */
+CF_API void CF_CALL cf_draw_push_tri_attributes(CF_Color a0, CF_Color a1, CF_Color a2);
+
+/**
+ * @function cf_draw_pop_tri_attributes
+ * @category draw
+ * @brief    Pops the per-vertex triangle attribute state.
+ * @related  cf_draw_push_tri_attributes cf_draw_pop_tri_attributes cf_draw_peek_tri_attributes cf_draw_tri_fill
+ */
+CF_API void CF_CALL cf_draw_pop_tri_attributes(void);
+
+/**
+ * @function cf_draw_peek_tri_attributes
+ * @category draw
+ * @brief    Returns the current per-vertex triangle attribute state.
+ * @param    a0          Output pointer for attributes of first vertex (can be NULL).
+ * @param    a1          Output pointer for attributes of second vertex (can be NULL).
+ * @param    a2          Output pointer for attributes of third vertex (can be NULL).
+ * @related  cf_draw_push_tri_attributes cf_draw_pop_tri_attributes cf_draw_peek_tri_attributes cf_draw_tri_fill
+ */
+CF_API void CF_CALL cf_draw_peek_tri_attributes(CF_Color* a0, CF_Color* a1, CF_Color* a2);
+
+/**
  * @struct   CF_Vertex
  * @category draw
  * @brief    The full vertex layout CF uses just before sending verts to the GPU.
@@ -609,8 +676,8 @@ typedef struct CF_Vertex
  *
  *           Call `cf_set_vertex_callback` to setup your callback.
  *
- *           There is no adjecancy info provided. If you need to know which triangles connect to others you
- *           should probably redesign your feature to not require adjecancy information, or use your own custom
+ *           There is no adjacency info provided. If you need to know which triangles connect to others you
+ *           should probably redesign your feature to not require adjacency information, or use your own custom
  *           rendering solution. With a custom solution you may use low-level graphics in cute_graphics.h, where
  *           any adjacency info can be controlled 100% by you a-priori.
  * @related  CF_Vertex CF_VertexFn cf_set_vertex_callback
@@ -1024,7 +1091,7 @@ typedef bool (CF_TextEffectFn)(CF_TextEffect* fx);
  *           When registering a custom text effect, any parameters in the string will be stored for you
  *           automatically. You only need to fetch them with the appropriate cf_text_effect_get*** function.
  *           Note: You can also setup parameters for markup as strings, not just numbers/colors. Example: `<color=#2c5ee8 metadata=\"Just some string.\">blue text</color>`,
- *           where the `color` markup contains a parameter called `metadata` and a strinf value of `"Just some string."`.
+ *           where the `color` markup contains a parameter called `metadata` and a string value of `"Just some string."`.
  * @related  CF_TextEffect CF_TextEffectFn cf_text_effect_register cf_text_effect_get_number cf_text_effect_get_color cf_text_effect_get_string
  */
 CF_API void CF_CALL cf_text_effect_register(const char* name, CF_TextEffectFn* fn);
@@ -1088,7 +1155,7 @@ typedef struct CF_MarkupInfo
 	/* @member The number of `CF_Aabb`'s in `bounds`. */
 	int bounds_count;
 
-	/* @member An arry of `CF_Aabb`'s, one per line the `text` string provided in the `cf_text_markup_info_fn` callback. */
+	/* @member An array of `CF_Aabb`'s, one per line the `text` string provided in the `cf_text_markup_info_fn` callback. */
 	CF_Aabb* bounds;
 } CF_MarkupInfo;
 // @end
@@ -1240,7 +1307,7 @@ CF_API CF_RenderState CF_CALL cf_draw_peek_render_state(void);
  *           can likely get away with 4096 on most devices. Larger internal atlases can be useful to decrease the number of
  *           draw calls used, and also enables support for high-res image rendering.
  *
- *           Please not you should put in power of 2 atlases sizes to make the hardware happy. Here are the recommended range
+ *           Please note you should put in power of 2 atlases sizes to make the hardware happy. Here are the recommended range
  *           of sizes available:
  *
  *           - 256

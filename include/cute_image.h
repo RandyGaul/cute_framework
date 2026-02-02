@@ -98,7 +98,7 @@ CF_API CF_Result CF_CALL cf_image_load_png_from_memory(const void* data, int siz
 /**
  * @function cf_image_load_png_wh
  * @category image
- * @brief    Loads a just the width/height out of a png image, without processing the pixels.
+ * @brief    Loads just the width/height out of a png image, without processing the pixels.
  * @param    data          Pointer to the png file in memory.
  * @param    size          The number of bytes in the `data` pointer.
  * @param    w             Out parameter for the width of the image.
@@ -125,7 +125,7 @@ CF_API void CF_CALL cf_image_free(CF_Image* img);
  * @param    virtual_path  A virtual path to the image file. See [Virtual File System](https://randygaul.github.io/cute_framework/topics/virtual_file_system).
  * @param    img           Out parameter for the image.
  * @return   Check the `CF_Result` for errors.
- * @related  CF_ImageIndexed cf_image_load_png_indexed cf_image_load_png_from_memory_indexed cf_image_free_indexed cf_image_depallete
+ * @related  CF_ImageIndexed cf_image_load_png_indexed cf_image_load_png_from_memory_indexed cf_image_free_indexed cf_image_depalette
  */
 CF_API CF_Result CF_CALL cf_image_load_png_indexed(const char* virtual_path, CF_ImageIndexed* img);
 
@@ -137,7 +137,7 @@ CF_API CF_Result CF_CALL cf_image_load_png_indexed(const char* virtual_path, CF_
  * @param    size          The number of bytes in the `data` pointer.
  * @param    img           Out parameter for the image.
  * @return   Check the `CF_Result` for errors.
- * @related  CF_ImageIndexed cf_image_load_png_indexed cf_image_load_png_from_memory_indexed cf_image_free_indexed cf_image_depallete
+ * @related  CF_ImageIndexed cf_image_load_png_indexed cf_image_load_png_from_memory_indexed cf_image_free_indexed cf_image_depalette
  */
 CF_API CF_Result CF_CALL cf_image_load_png_from_memory_indexed(const void* data, int size, CF_ImageIndexed* img);
 
@@ -147,7 +147,7 @@ CF_API CF_Result CF_CALL cf_image_load_png_from_memory_indexed(const void* data,
  * @brief    Frees an indexed png image.
  * @param    img           The image to free.
  * @return   Check the `CF_Result` for errors.
- * @related  CF_ImageIndexed cf_image_load_png_indexed cf_image_load_png_from_memory_indexed cf_image_free_indexed cf_image_depallete
+ * @related  CF_ImageIndexed cf_image_load_png_indexed cf_image_load_png_from_memory_indexed cf_image_free_indexed cf_image_depalette
  */
 CF_API void CF_CALL cf_image_free_indexed(CF_ImageIndexed* img);
 
@@ -155,14 +155,14 @@ CF_API void CF_CALL cf_image_free_indexed(CF_ImageIndexed* img);
 // Image operations.
 
 /**
- * @function cf_image_depallete
+ * @function cf_image_depalette
  * @category image
  * @brief    Converts a paletted image to a typical image with an array of pixels.
  * @param    img           The image to depalette.
  * @return   Returns an image without a palette.
  * @related  CF_Image CF_ImageIndexed cf_image_load_png_indexed
  */
-CF_API CF_Image CF_CALL cf_image_depallete(CF_ImageIndexed* img);
+CF_API CF_Image CF_CALL cf_image_depalette(CF_ImageIndexed* img);
 
 /**
  * @function cf_image_premultiply
@@ -230,7 +230,7 @@ CF_INLINE void image_free(CF_ImageIndexed* img) { cf_image_free_indexed(img); }
 // -------------------------------------------------------------------------------------------------
 // Image operations.
 
-CF_INLINE CF_Image image_depallete(CF_ImageIndexed* img) { return cf_image_depallete(img); }
+CF_INLINE CF_Image image_depalette(CF_ImageIndexed* img) { return cf_image_depalette(img); }
 CF_INLINE void image_premultiply(CF_Image* img) { cf_image_premultiply(img); }
 CF_INLINE void image_flip_horizontal(CF_Image* img) { cf_image_flip_horizontal(img); }
 CF_INLINE void debug_dump_greyscale_pixels(const char* path, uint8_t* pixels, int w, int h) { cf_debug_dump_greyscale_pixels(path, pixels, w, h); }

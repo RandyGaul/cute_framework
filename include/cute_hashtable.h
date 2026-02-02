@@ -18,10 +18,10 @@
 /**
  * @function htbl
  * @category hash
- * @brief    An empty macro used in the C API to markup hastables.
+ * @brief    An empty macro used in the C API to markup hashtables.
  * @example > Showcase of base htbl features.
  *     htbl CF_V2* pts = NULL;
- *     hset(pts, 0, cf_v2(3, 5)); // Contructs a new table on-the-spot. The table is *hidden* behind `pts`.
+ *     hset(pts, 0, cf_v2(3, 5)); // Constructs a new table on-the-spot. The table is *hidden* behind `pts`.
  *     hset(pts, 10, cf_v2(-1, -1);
  *     hset(pts, -2, cf_v2(0, 0));
  *
@@ -39,7 +39,7 @@
  *     }
  *
  *     hfree(pts);
- * @remarks  This is an optional and _completely_ empty macro. It's only purpose is to provide a bit of visual indication a type is a
+ * @remarks  This is an optional and _completely_ empty macro. Its only purpose is to provide a bit of visual indication a type is a
  *           hashtable. One downside of the C-macro API is the opaque nature of the pointer type. Since the macros use polymorphism
  *           on typed pointers, there's no actual hashtable struct type. It can get really annoying to sometimes forget if a pointer is an
  *           array, a hashtable, or just a pointer. This macro can be used to markup the type to make it much more clear for function
@@ -51,7 +51,7 @@
 /**
  * @function hset
  * @category hash
- * @brief    Add's a {key, item} pair.
+ * @brief    Adds a {key, item} pair.
  * @param    h        The hashtable. Can be `NULL`. Needs to be a pointer to the type of items in the table.
  * @param    k        The key for lookups. Each {key, item} pair must be unique. Keys are always typecasted to `uint64_t` e.g. you can use pointers as keys.
  * @param    ...      An item to place in the table.
@@ -64,7 +64,7 @@
  *     hfree(table);
  * @return   Returns a pointer to the item set into the table.
  * @remarks  If the item does not exist in the table it is added. The pointer returned is not stable. Internally the table can be resized,
- *           invalidating _all_ pointers to any elements within the table. Therefor, no items may store pointers to themselves or other items.
+ *           invalidating _all_ pointers to any elements within the table. Therefore, no items may store pointers to themselves or other items.
  *           Indices however, are totally fine.
  * @related  htbl hset hadd hget hfind hget_ptr hfind_ptr hhas hdel hclear hkeys hitems hswap hsize hcount hfree
  */
@@ -73,7 +73,7 @@
 /**
  * @function hadd
  * @category hash
- * @brief    Add's a {key, item} pair.
+ * @brief    Adds a {key, item} pair.
  * @param    h        The hashtable. Can be `NULL`. Needs to be a pointer to the type of items in the table.
  * @param    k        The key for lookups. Each {key, item} pair must be unique. Keys are always typecasted to `uint64_t` e.g. you can use pointers as keys.
  * @param    ...      An item to place in the table.
@@ -87,7 +87,7 @@
  * @return   Returns a pointer to the item set into the table.
  * @remarks  This function works the same as `hset`. If the item already exists in the table, it's simply updated to a new value.
  *           The pointer returned is not stable. Internally the table can be resized, invalidating _all_ pointers to any elements
- *           within the table. Therefor, no items may store pointers to themselves or other items. Indices however, are totally fine.
+ *           within the table. Therefore, no items may store pointers to themselves or other items. Indices however, are totally fine.
  * @related  htbl hset hadd hget hfind hget_ptr hfind_ptr hhas hdel hclear hkeys hitems hswap hsize hcount hfree
  */
 #define hadd(h, k, ...) cf_hashtable_add(h, k, (__VA_ARGS__))
@@ -432,7 +432,7 @@ namespace Cute
 
 // General purpose {key, item} pair mapping via internal hash table.
 // Keys are treated as mere byte buffers (Plain Old Data).
-// Items have contructors/destructors called, but are *not* allowed to store references/pointers to themselves.
+// Items have constructors/destructors called, but are *not* allowed to store references/pointers to themselves.
 template <typename K, typename T>
 struct Map
 {

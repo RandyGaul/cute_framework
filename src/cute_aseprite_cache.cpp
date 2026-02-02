@@ -191,7 +191,6 @@ static CF_Result s_aseprite_cache_load_from_memory(const char* unique_name, cons
 	afit(entry.slices, ase->slice_count);
 	float sw = (float)ase->w;
 	float sh = (float)ase->h;
-	const char* origin_slice_name = sintern("origin");
 	for (int i = 0; i < ase->slice_count; ++i) {
 		ase_slice_t* slice = ase->slices + i;
 		float x = (float)slice->origin_x - sw*0.5f;
@@ -220,7 +219,7 @@ static CF_Result s_aseprite_cache_load_from_memory(const char* unique_name, cons
 				entry.center_patches[frame_number] = center_patch;
 			}
 		}
-		if (slice->has_pivot && slice_name == origin_slice_name) {
+		if (slice->has_pivot) {
 			v2 pivot = V2((float)slice->pivot_x, (float)slice->pivot_y);
 			// Transform from CF's (0, 0) at center to ase's (0, 0) at top-left.
 			pivot.x = pivot.x - sw * 0.5f + 0.5f;
