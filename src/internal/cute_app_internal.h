@@ -74,7 +74,6 @@ struct CF_App
 	CF_BackendType gfx_backend_type = CF_BACKEND_TYPE_INVALID;
 	bool debug_opengl = false;
 	cs_context_t* cute_sound = NULL;
-	bool spawned_mix_thread = false;
 	void (*on_shader_changed_fn)(const char* path, void* udata) = NULL;
 	void* on_shader_changed_udata = NULL;
 	bool shader_directory_set = false;

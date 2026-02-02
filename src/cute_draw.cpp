@@ -155,20 +155,20 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 		case BATCH_GEOMETRY_TYPE_TRI:
 		{
 			for (int i = 0; i < 3; ++i) {
-				out[i].color = s->geom.color;
+				out[i].color = s->geom.use_tri_colors ? s->geom.tri_colors[i] : s->geom.color;
 				out[i].radius = 0;
 				out[i].stroke = 0;
 				out[i].type = VA_TYPE_TRIANGLE;
 				out[i].alpha = (uint8_t)(s->geom.alpha * 255.0f);
 				out[i].fill = 255;
 				out[i].aa = 0;
-				out[i].attributes = geom.user_params;
+				out[i].attributes = s->geom.use_tri_attributes ? s->geom.tri_attributes[i] : geom.user_params;
 			}
 
 			out[0].posH = geom.shape[0];
 			out[1].posH = geom.shape[1];
 			out[2].posH = geom.shape[2];
-		
+
 			vert_count += 3;
 		}	break;
 
@@ -1411,6 +1411,23 @@ static void s_draw_tri(v2 a, v2 b, v2 c, float stroke, float radius, bool fill)
 	s.geom.fill = fill;
 	s.geom.aa = s_draw->aaf;
 	s.geom.user_params = s_draw->user_params.last();
+
+	// Per-vertex triangle colors.
+	s.geom.use_tri_colors = s_draw->tri_colors0.count() > 1;
+	if (s.geom.use_tri_colors) {
+		s.geom.tri_colors[0] = premultiply(to_pixel(s_draw->tri_colors0.last()));
+		s.geom.tri_colors[1] = premultiply(to_pixel(s_draw->tri_colors1.last()));
+		s.geom.tri_colors[2] = premultiply(to_pixel(s_draw->tri_colors2.last()));
+	}
+
+	// Per-vertex triangle attributes.
+	s.geom.use_tri_attributes = s_draw->tri_attributes0.count() > 1;
+	if (s.geom.use_tri_attributes) {
+		s.geom.tri_attributes[0] = s_draw->tri_attributes0.last();
+		s.geom.tri_attributes[1] = s_draw->tri_attributes1.last();
+		s.geom.tri_attributes[2] = s_draw->tri_attributes2.last();
+	}
+
 	DRAW_PUSH_ITEM(s);
 }
 
@@ -2967,6 +2984,52 @@ CF_Color cf_draw_pop_vertex_attributes()
 CF_Color cf_draw_peek_vertex_attributes()
 {
 	return s_draw->user_params.last();
+}
+
+void cf_draw_push_tri_colors(CF_Color c0, CF_Color c1, CF_Color c2)
+{
+	s_draw->tri_colors0.add(c0);
+	s_draw->tri_colors1.add(c1);
+	s_draw->tri_colors2.add(c2);
+}
+
+void cf_draw_pop_tri_colors()
+{
+	if (s_draw->tri_colors0.count() > 1) {
+		s_draw->tri_colors0.pop();
+		s_draw->tri_colors1.pop();
+		s_draw->tri_colors2.pop();
+	}
+}
+
+void cf_draw_peek_tri_colors(CF_Color* c0, CF_Color* c1, CF_Color* c2)
+{
+	if (c0) *c0 = s_draw->tri_colors0.last();
+	if (c1) *c1 = s_draw->tri_colors1.last();
+	if (c2) *c2 = s_draw->tri_colors2.last();
+}
+
+void cf_draw_push_tri_attributes(CF_Color a0, CF_Color a1, CF_Color a2)
+{
+	s_draw->tri_attributes0.add(a0);
+	s_draw->tri_attributes1.add(a1);
+	s_draw->tri_attributes2.add(a2);
+}
+
+void cf_draw_pop_tri_attributes()
+{
+	if (s_draw->tri_attributes0.count() > 1) {
+		s_draw->tri_attributes0.pop();
+		s_draw->tri_attributes1.pop();
+		s_draw->tri_attributes2.pop();
+	}
+}
+
+void cf_draw_peek_tri_attributes(CF_Color* a0, CF_Color* a1, CF_Color* a2)
+{
+	if (a0) *a0 = s_draw->tri_attributes0.last();
+	if (a1) *a1 = s_draw->tri_attributes1.last();
+	if (a2) *a2 = s_draw->tri_attributes2.last();
 }
 
 void cf_set_vertex_callback(CF_VertexFn* vertex_fn)

@@ -203,7 +203,7 @@ CF_INLINE CF_Pixel cf_make_pixel_rgba(uint8_t r, uint8_t g, uint8_t b, uint8_t a
  * @param    hex        An integer value, e.g. 0xFFAACC11.
  * @related  CF_Pixel cf_make_pixel_rgb_f cf_make_pixel_rgba_f cf_make_pixel_rgb cf_make_pixel_rgba cf_make_pixel_hex cf_make_pixel_hex_string
  */
-CF_INLINE CF_Pixel cf_make_pixel_hex(int hex) { return cf_make_pixel_rgba((uint8_t)((hex & 0xFF000000) >> 24), (uint8_t)((hex & 0x00FF0000) >> 16), (uint8_t)((hex & 0x0000FF00) >> 8), (uint8_t)(hex & 0x000000FF)); }
+CF_INLINE CF_Pixel cf_make_pixel_hex(int hex) { unsigned int h = (unsigned int)hex; return cf_make_pixel_rgba((uint8_t)((h & 0xFF000000) >> 24), (uint8_t)((h & 0x00FF0000) >> 16), (uint8_t)((h & 0x0000FF00) >> 8), (uint8_t)(h & 0x000000FF)); }
 
 /**
  * @function cf_make_pixel_hex_string
@@ -618,7 +618,7 @@ CF_INLINE char* cf_pixel_to_string(CF_Pixel p) { char* s = NULL; return shex(s, 
  * @param    c          The color.
  * @related  cf_color_to_pixel cf_color_to_int_rgb cf_color_to_int_rgba cf_color_to_string
  */
-CF_INLINE CF_Pixel cf_color_to_pixel(CF_Color c) { CF_Pixel p; p.colors.r = (int)((uint8_t)(c.r * 255.0f)); p.colors.g = (int)((uint8_t)(c.g * 255.0f)); p.colors.b = (int)((uint8_t)(c.b * 255.0f)); p.colors.a = (int)((uint8_t)(c.a * 255.0f)); return p; }
+CF_INLINE CF_Pixel cf_color_to_pixel(CF_Color c) { CF_Pixel p; p.colors.r = (uint8_t)(c.r * 255.0f); p.colors.g = (uint8_t)(c.g * 255.0f); p.colors.b = (uint8_t)(c.b * 255.0f); p.colors.a = (uint8_t)(c.a * 255.0f); return p; }
 
 /**
  * @function cf_color_to_int_rgb
@@ -791,7 +791,7 @@ CF_INLINE CF_Pixel cf_pixel_black(void) { return cf_make_pixel_rgb(0, 0, 0); }
 /**
  * @function cf_pixel_white
  * @category graphics
- * @brief    Helper function to return a invisible `white`.
+ * @brief    Helper function to return a white `CF_Pixel`.
  * @related  cf_pixel_invisible cf_pixel_black cf_pixel_white cf_pixel_red cf_pixel_green cf_pixel_blue cf_pixel_yellow cf_pixel_orange cf_pixel_purple cf_pixel_grey cf_pixel_cyan cf_pixel_magenta
  */
 CF_INLINE CF_Pixel cf_pixel_white(void) { return cf_make_pixel_rgb(255, 255, 255); }
@@ -925,8 +925,8 @@ CF_INLINE float softlight(float base, float blend) { return cf_softlight(base, b
 CF_INLINE CF_Color overlay(CF_Color base, CF_Color blend) { return cf_overlay_color(base, blend); }
 CF_INLINE CF_Color softlight(CF_Color base, CF_Color blend) { return cf_softlight_color(base, blend); }
 
-CF_INLINE CF_Pixel operator*(CF_Pixel a, int s) { return cf_mul_pixel(a, s); }
-CF_INLINE CF_Pixel operator/(CF_Pixel a, int s) { return cf_div_pixel(a, s); }
+CF_INLINE CF_Pixel operator*(CF_Pixel a, int s) { return cf_mul_pixel(a, (uint8_t)s); }
+CF_INLINE CF_Pixel operator/(CF_Pixel a, int s) { return cf_div_pixel(a, (uint8_t)s); }
 CF_INLINE CF_Pixel operator+(CF_Pixel a, CF_Pixel b) { return cf_add_pixel(a, b); }
 CF_INLINE CF_Pixel operator-(CF_Pixel a, CF_Pixel b) { return cf_sub_pixel(a, b); }
 CF_INLINE bool operator==(CF_Pixel a, CF_Pixel b) { return a.val == b.val; }

@@ -17,9 +17,15 @@ theme:
   name: material
   logo: assets/logo.png
   features:
+    - navigation.instant
+    - navigation.instant.prefetch
+    - navigation.instant.progress
     - navigation.path
     - navigation.indexes
+    - navigation.footer
     - content.code.copy
+    - search.suggest
+    - search.highlight
   palette:
     - media: "(prefers-color-scheme)"
       scheme: cute
@@ -85,7 +91,6 @@ nav:
       - Game Loop and Time: topics/game_loop_and_time.md
       - File I/O: topics/file_io.md
       - Drawing: topics/drawing.md
-      - Transforms: topics/camera.md
       - Debug/Tools UI: topics/dear_imgui.md
       - Allocators: topics/allocator.md
       - Atomics: topics/atomics.md
@@ -114,7 +119,8 @@ nav:
 
 # Plugins
 plugins:
-  - search
+  - search:
+      separator: '[\s\-\_]+'
   - social
 
 # Extensions

@@ -49,7 +49,7 @@ typedef void (CF_CoroutineFn)(CF_Coroutine co);
  * @param    fn            The entry point (function) the coroutine runs.
  * @param    stack_size    The size of the coroutine's stack to call functions and make local variables, the default is about 57344 bytes.
  * @param    udata         Can be `NULL`. Gets handed back to you when `cf_coroutine_get_udata` is called.
- * @remarks  The coroutine starts in a `COROUTINE_STATE_SUSPENDED`, and won't run until `cf_coroutine_resume` is first called. Free up the
+ * @remarks  The coroutine starts in a `CF_COROUTINE_STATE_SUSPENDED`, and won't run until `cf_coroutine_resume` is first called. Free up the
  *           coroutine with `cf_destroy_coroutine` when done. See `CF_Coroutine` for some more details. **IMPORTANT NOTE**: You should beef
  *           up the stack_size to 1 or 2 MB (you may use e.g. `CF_MB * 2`) if you wish to call into APIs such as DirectX. A variety of APIs
  *           and libraries out there have very deep or complex call stacks -- so the default size may cause stack overflows in such cases.
@@ -62,7 +62,7 @@ CF_API CF_Coroutine CF_CALL cf_make_coroutine(CF_CoroutineFn* fn, int stack_size
  * @category coroutine
  * @brief    Destroys a coroutine created by `cf_make_coroutine`.
  * @param    co            The coroutine.
- * @remarks  All objects on the coroutine's stack will get automically cleaned up.
+ * @remarks  All objects on the coroutine's stack will get automatically cleaned up.
  * @related  CF_Coroutine CF_CoroutineFn CF_CoroutineState cf_make_coroutine cf_destroy_coroutine cf_coroutine_state_to_string cf_coroutine_resume cf_coroutine_yield cf_coroutine_state cf_coroutine_get_udata cf_coroutine_push cf_coroutine_pop cf_coroutine_bytes_pushed cf_coroutine_space_remaining cf_coroutine_currently_running
  */
 CF_API void CF_CALL cf_destroy_coroutine(CF_Coroutine co);
@@ -205,7 +205,7 @@ CF_API size_t CF_CALL cf_coroutine_space_remaining(CF_Coroutine co);
  * @function cf_coroutine_currently_running
  * @category coroutine
  * @brief    Returns the opaque pointer to the coroutine currently running.
- * @remarks  Each coroutine has ther `co` pointer handed to them as the only parameter in `CF_CoroutineFn`, so you likely
+ * @remarks  Each coroutine has their `co` pointer handed to them as the only parameter in `CF_CoroutineFn`, so you likely
  *           already have access to the coroutine pointer. However, this function is made available here for convenience.
  *           For example, your coroutines may call into other functions -- instead of passing around a `co` pointer everywhere,
  *           your helper functions can simply fetch the `CF_Coroutine` pointer themselves on an as-needed basis by calling

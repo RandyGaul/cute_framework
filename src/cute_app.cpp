@@ -345,24 +345,11 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 	app->gfx_enabled = use_gfx;
 
 	if (!(options & CF_APP_OPTIONS_NO_AUDIO_BIT)) {
-		int more_on_emscripten = 1;
-#ifdef CF_EMSCRIPTEN
-		more_on_emscripten = 4;
-#endif
-		cs_error_t err = cs_init(NULL, 44100, 1024 * more_on_emscripten, NULL);
+		cs_error_t err = cs_init(44100, NULL);
 		if (err == CUTE_SOUND_ERROR_NONE) {
-#ifndef CF_EMSCRIPTEN
-			cs_spawn_mix_thread();
-			app->spawned_mix_thread = true;
-#endif
 			app->audio_needs_updates = true;
-			//cs_cull_duplicates(true); -- https://github.com/RandyGaul/cute_framework/issues/172
-		} else {
-			CF_Result result;
-			result.code = -1;
-			result.details = cs_error_as_string(err);
-			return result;
 		}
+		// If audio init fails, continue silently without audio.
 	}
 
 	CF_Result err = cf_fs_init(argv0);

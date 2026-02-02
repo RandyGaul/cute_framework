@@ -61,7 +61,7 @@ CF_API CF_DisplayID CF_CALL cf_default_display(void);
  * @function cf_display_count
  * @category app
  * @brief    Returns the number of displays on the system.
- * @remarks  Inidices >= 0 and < the return value are valid display indices.
+ * @remarks  Indices >= 0 and < the return value are valid display indices.
  * @related  cf_make_app cf_display_count cf_display_x cf_display_y cf_display_width cf_display_height cf_display_refresh_rate cf_display_bounds cf_display_name cf_display_orientation
  */
 CF_API int CF_CALL cf_display_count(void);
@@ -170,7 +170,7 @@ CF_API CF_DisplayOrientation CF_CALL cf_display_orientation(CF_DisplayID display
  *         app_destroy();
  *         return 0;
  *     }
- * @remarks  The `app_options` parameter of `cf_make_app` is a bitmask flag. Simply take the `APP_OPTIONS_*` flags listed above and OR them together.
+ * @remarks  The `app_options` parameter of `cf_make_app` is a bitmask flag. Simply take the `CF_APP_OPTIONS_*` flags listed above and OR them together.
  * @related  CF_AppOptionFlagBits cf_make_app cf_destroy_app
  */
 #define CF_APP_OPTION_DEFS \
@@ -245,7 +245,7 @@ typedef enum CF_AppOptionFlagBits
  *         return 0;
  *     }
  * @remarks  The options parameter is an enum from `app_options`. Different options can be OR'd together.
- *           Parameters `w` and `h` are ignored if the window is initialized to fullscreen mode with `APP_OPTIONS_FULLSCREEN`.
+ *           Parameters `w` and `h` are ignored if the window is initialized to fullscreen mode with `CF_APP_OPTIONS_FULLSCREEN_BIT`.
  * @related  CF_AppOptionFlagBits cf_app_is_running cf_app_signal_shutdown cf_destroy_app
  */
 CF_API CF_Result CF_CALL cf_make_app(const char* window_title, CF_DisplayID display_id, int x, int y, int w, int h, CF_AppOptionFlags options, const char* argv0);
@@ -270,7 +270,7 @@ CF_API void CF_CALL cf_destroy_app(void);
  *     int main(int argc, const char** argv)
  *     {
  *         // Create a window with a resolution of 640 x 480, along with a DirectX 11 context.
- *         app_make("Fancy Window Title", 0, 50, 50, 640, 480, CF_APP_OPTIONS_D3D11_CONTEXT, argv[0]);
+ *         app_make("Fancy Window Title", 0, 50, 50, 640, 480, CF_APP_OPTIONS_GFX_D3D11_BIT, argv[0]);
  *         
  *         while (app_is_running())
  *         {
@@ -301,7 +301,7 @@ CF_API bool CF_CALL cf_app_is_running(void);
  *     int main(int argc, const char** argv)
  *     {
  *         // Create a window with a resolution of 640 x 480, along with a DirectX 11 context.
- *         app_make("Fancy Window Title", 0, 50, 50, 640, 480, CF_APP_OPTIONS_D3D11_CONTEXT, argv[0]);
+ *         app_make("Fancy Window Title", 0, 50, 50, 640, 480, CF_APP_OPTIONS_GFX_D3D11_BIT, argv[0]);
  *         
  *         while (app_is_running())
  *         {
@@ -343,7 +343,7 @@ CF_API void CF_CALL cf_app_update(CF_OnUpdateFn* on_update);
  *     int main(int argc, const char** argv)
  *     {
  *         // Create a window with a resolution of 640 x 480, along with a DirectX 11 context.
- *         app_make("Fancy Window Title", 0, 50, 50, 640, 480, CF_APP_OPTIONS_D3D11_CONTEXT, argv[0]);
+ *         app_make("Fancy Window Title", 0, 50, 50, 640, 480, CF_APP_OPTIONS_GFX_D3D11_BIT, argv[0]);
  *         
  *         while (app_is_running())
  *         {
@@ -605,7 +605,7 @@ CF_API void* CF_CALL cf_app_init_imgui(void);
  * @enum     CF_MSAA
  * @category app
  * @brief    Multisample count used for MSAA for the app's offscreen canvas.
- * @remarks  This function turns on .
+ * @remarks  This function turns on MSAA.
  * @related  cf_app_set_msaa cf_msaa_string
  */
 #define CF_MSAA_DEFS \
@@ -749,7 +749,7 @@ CF_API void CF_CALL cf_app_set_fullscreen_mode(void);
 /**
  * @function cf_app_set_title
  * @category app
- * @brief    Sets the application' true fullscreen mode's title.
+ * @brief    Sets the application's true fullscreen mode's title.
  * @related  cf_app_set_windowed_mode cf_app_set_borderless_fullscreen_mode cf_app_set_fullscreen_mode cf_app_set_title cf_app_set_icon
  */
 CF_API void CF_CALL cf_app_set_title(const char* title);
@@ -775,7 +775,7 @@ CF_API float CF_CALL cf_app_get_framerate(void);
 /**
  * @function cf_app_get_smoothed_framerate
  * @category app
- * @brief    Returns the smoothed framerate of the application. Last 60 frames are averaged. This values is controlled by `CF_FRAMERATE_SMOOTHING`.
+ * @brief    Returns the smoothed framerate of the application. Last 60 frames are averaged. This value is controlled by `CF_FRAMERATE_SMOOTHING`.
  * @related  cf_app_get_framerate cf_app_get_smoothed_framerate
  */
 CF_API float CF_CALL cf_app_get_smoothed_framerate(void);

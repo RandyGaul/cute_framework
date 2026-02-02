@@ -194,7 +194,7 @@ CF_API void CF_CALL cf_pause_for_ticks(uint64_t pause_ticks);
  * @category time
  * @brief    Returns true for one frame update each time an interval of seconds elapses.
  * @param    interval   Number of seconds between each interval.
- * @param    offset     A starting offset in seconds for the interval. This gets mathematically modulo'd. Used to sync times for rythms or repeats.
+ * @param    offset     A starting offset in seconds for the interval. This gets mathematically modulo'd. Used to sync times for rhythms or repeats.
  *           Simply place this within an if-statement!
  * @related  cf_on_interval cf_between_interval cf_on_timestamp
  */
@@ -205,7 +205,7 @@ CF_API bool CF_CALL cf_on_interval(float interval, float offset);
  * @category time
  * @brief    Returns true for one interval of seconds, every other interval.
  * @param    interval   Number of seconds between each interval.
- * @param    offset     A starting offset in seconds for the interval. This gets mathematically modulo'd. Used to sync times for rythms or repeats.
+ * @param    offset     A starting offset in seconds for the interval. This gets mathematically modulo'd. Used to sync times for rhythms or repeats.
  * @remarks  This function is super useful for general purpose gameplay implementation where you want an event to fire for N seconds,
  *           and then _not_ fire for N seconds, flipping back and forth periodically. Simply place this within an if-statement.
  * @related  cf_on_interval cf_between_interval cf_on_timestamp
@@ -227,10 +227,28 @@ CF_API bool CF_CALL cf_on_timestamp(double timestamp);
  * @function cf_is_paused
  * @category time
  * @brief    Returns true if the application is currently paused.
- * @remarks  Pause means from `cf_pause_for` or `cf_pause_for_ticks`.
- * @related  CF_PAUSE_TIME_LEFT cf_is_paused cf_pause_for cf_pause_for_ticks
+ * @remarks  Pause means from `cf_pause_for`, `cf_pause_for_ticks`, or `cf_pause`.
+ * @related  CF_PAUSE_TIME_LEFT cf_is_paused cf_pause_for cf_pause_for_ticks cf_pause cf_unpause
  */
 CF_API bool CF_CALL cf_is_paused(void);
+
+/**
+ * @function cf_pause
+ * @category time
+ * @brief    Pauses the application indefinitely until `cf_unpause` is called.
+ * @remarks  Use this when you need to pause without knowing how long in advance.
+ * @related  CF_PAUSE_TIME_LEFT cf_is_paused cf_pause_for cf_pause_for_ticks cf_pause cf_unpause
+ */
+CF_API void CF_CALL cf_pause(void);
+
+/**
+ * @function cf_unpause
+ * @category time
+ * @brief    Unpauses the application if it was paused.
+ * @remarks  Clears any pause state from `cf_pause`, `cf_pause_for`, or `cf_pause_for_ticks`.
+ * @related  CF_PAUSE_TIME_LEFT cf_is_paused cf_pause_for cf_pause_for_ticks cf_pause cf_unpause
+ */
+CF_API void CF_CALL cf_unpause(void);
 
 /**
  * @function cf_get_ticks
@@ -255,7 +273,7 @@ CF_API uint64_t CF_CALL cf_get_tick_frequency(void);
  * @category time
  * @brief    Waits an estimated number of milliseconds before returning.
  * @remarks  This function actually sleeps the application. If you want to instead pause updates without locking the entire
- *           applcation (so you can e.g. continue rendering and capturing user inputs) use `cf_pause_for` instead.
+ *           application (so you can e.g. continue rendering and capturing user inputs) use `cf_pause_for` instead.
  * @related  cf_get_ticks cf_get_tick_frequency cf_pause_for
  */
 CF_API void CF_CALL cf_sleep(int milliseconds);
@@ -266,7 +284,7 @@ CF_API void CF_CALL cf_sleep(int milliseconds);
  * @brief    A stopwatch for general purpose precise timings.
  * @remarks  Once created with `cf_make_stopwatch` the time elapsed can be fetched. To reset the stopwatch, simply call
  *           `cf_make_stopwatch` again and overwrite your old stopwatch.
- * @related  CF_Stopwatch cf_make_stopwatch cf_seconds cf_milliseconds cf_microseconds
+ * @related  CF_Stopwatch cf_make_stopwatch cf_stopwatch_seconds cf_stopwatch_milliseconds cf_stopwatch_microseconds
  */
 typedef struct CF_Stopwatch
 {
@@ -307,7 +325,7 @@ CF_API double CF_CALL cf_stopwatch_milliseconds(CF_Stopwatch stopwatch);
  * @function cf_stopwatch_microseconds
  * @category time
  * @brief    Returns the number of microseconds elapsed since the last call to `cf_make_stopwatch` was made.
- * @related  CF_Stopwatch cf_make_stopwatch cf_seconds cf_stopwatch_milliseconds cf_stopwatch_microseconds
+ * @related  CF_Stopwatch cf_make_stopwatch cf_stopwatch_seconds cf_stopwatch_milliseconds cf_stopwatch_microseconds
  */
 CF_API double CF_CALL cf_stopwatch_microseconds(CF_Stopwatch stopwatch);
 
@@ -329,6 +347,8 @@ CF_INLINE void set_target_framerate(int frames_per_second = -1) { cf_set_target_
 CF_INLINE void update_time(CF_OnUpdateFn* on_update = NULL) { cf_update_time(on_update); }
 CF_INLINE void pause_for(float seconds) { cf_pause_for(seconds); }
 CF_INLINE void pause_for_ticks(uint64_t pause_ticks) { cf_pause_for_ticks(pause_ticks); }
+CF_INLINE void pause() { cf_pause(); }
+CF_INLINE void unpause() { cf_unpause(); }
 
 CF_INLINE bool on_interval(float interval, float offset = 0) { return cf_on_interval(interval, offset); }
 CF_INLINE bool between_interval(float interval, float offset = 0) { return cf_between_interval(interval, offset); }
