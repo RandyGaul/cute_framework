@@ -348,12 +348,8 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 		cs_error_t err = cs_init(44100, NULL);
 		if (err == CUTE_SOUND_ERROR_NONE) {
 			app->audio_needs_updates = true;
-		} else {
-			CF_Result result;
-			result.code = -1;
-			result.details = cs_error_as_string(err);
-			return result;
 		}
+		// If audio init fails, continue silently without audio.
 	}
 
 	CF_Result err = cf_fs_init(argv0);
