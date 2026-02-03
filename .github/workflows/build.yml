@@ -61,6 +61,25 @@ jobs:
           liburing-dev
         if: matrix.platform.name == 'Linux'
 
+      # Parse SDL version from CMakeLists.txt
+      - name: Get SDL version from CMakeLists.txt
+        id: sdl-version
+        run: |
+          SDL_VERSION=$(sed -n 's/.*set(SDL_REQUIRED_VERSION \([0-9]*\.[0-9]*\.[0-9]*\)).*/\1/p' CMakeLists.txt)
+          if [ -z "$SDL_VERSION" ]; then
+            echo "::error::Failed to parse SDL_REQUIRED_VERSION from CMakeLists.txt"
+            exit 1
+          fi
+          echo "version=$SDL_VERSION" >> "$GITHUB_OUTPUT"
+          echo "Parsed SDL version: $SDL_VERSION"
+
+      - name: Install SDL3
+        id: sdl
+        uses: libsdl-org/setup-sdl@main
+        with:
+          version: ${{ steps.sdl-version.outputs.version }}
+          build-type: Release
+
       - name: Install ccache (macOS)
         run: brew install ccache
         if: runner.os == 'macOS'
