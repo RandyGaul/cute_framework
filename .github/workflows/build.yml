@@ -33,16 +33,16 @@ jobs:
               generate: '-G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release',
             }
           - {
-              name: "MacOS",
+              name: "macOS",
               os: macos-latest,
               artifact: "macos",
-              generate: '-G "Unix Makefiles"',
+              generate: '-G "Ninja"',
             }
           - {
               name: "Linux",
               os: ubuntu-latest,
               artifact: "linux",
-              generate: '-G "Unix Makefiles" -DSDL_JACK=OFF -DSDL_PIPEWIRE=OFF -DSDL_PULSEAUDIO=OFF -DSDL_SNDIO=OFF -DSDL_ALSA=OFF -DSDL_WAYLAND=OFF -DSDL_X11=OFF -DSDL_KMSDRM=OFF -DSDL_RENDER=OFF -DSDL_OPENGL=OFF -DSDL_OPENGLES=OFF -DSDL_UNIX_CONSOLE_BUILD=ON',
+              generate: '-G "Ninja" -DSDL_JACK=OFF -DSDL_PIPEWIRE=OFF -DSDL_PULSEAUDIO=OFF -DSDL_SNDIO=OFF -DSDL_ALSA=OFF -DSDL_WAYLAND=OFF -DSDL_X11=OFF -DSDL_KMSDRM=OFF -DSDL_RENDER=OFF -DSDL_OPENGL=OFF -DSDL_OPENGLES=OFF -DSDL_UNIX_CONSOLE_BUILD=ON',
             }
           # TODO - Add iOS and Android platforms. Waiting on better support from GitHub.
 
