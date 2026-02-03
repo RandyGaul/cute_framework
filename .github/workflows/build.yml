@@ -50,7 +50,7 @@ jobs:
       - uses: actions/checkout@master
 
       # Linux needs to install various dependencies.
-      - name: Install OpenGL + Audio
+      - name: Install Linux Dependencies
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends build-essential git make \
