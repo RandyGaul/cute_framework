@@ -58,7 +58,8 @@ jobs:
           libaudio-dev libfribidi-dev \
           libxkbcommon-dev libgl1-mesa-dev libgles2-mesa-dev \
           libegl1-mesa-dev libdbus-1-dev libibus-1.0-dev libudev-dev libthai-dev \
-          liburing-dev
+          liburing-dev \
+          libcairo2-dev libfreetype6-dev libffi-dev libjpeg-dev libpng-dev libz-dev pngquant
         if: matrix.platform.name == 'Linux'
 
       # Parse SDL version from CMakeLists.txt
@@ -139,7 +140,6 @@ jobs:
         run: |
           cd build_folder\Release
           tests.exe
-          cd ..\..
         if: matrix.platform.name == 'Windows (MSCV 17 2022)'
 
       # Run tests for MinGW (no Release folder)
@@ -148,24 +148,18 @@ jobs:
         run: |
           cd build_folder
           tests.exe
-          docsparser.exe
-          cd ..
         if: matrix.platform.name == 'Windows (MinGW)'
 
       - name: Run Tests for Apple
         run: |
           cd build_folder
           ./tests
-          ./docsparser
-          cd ..
         if: runner.os == 'macOS'
 
       - name: Run Tests for Linux
         run: |
           cd build_folder
           ./tests
-          ./docsparser
-          cd ..
         if: runner.os == 'Linux'
 
       - name: Print ccache stats
@@ -209,67 +203,44 @@ jobs:
           path: ./dist/
         if: matrix.runtime_shader_compilation.value == 'ON'
 
-      # Upload docsparser binary and shared library for documentation job (Linux only, one matrix combination)
-      - name: Upload docsparser artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: docsparser
-          path: |
-            ./build_folder/docsparser
-            ./build_folder/lib/libcute.so
-          if-no-files-found: error
-        if: runner.os == 'Linux' && matrix.runtime_shader_compilation.value == 'ON'
-
-  docs:
-    name: Build documentation
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Download docsparser artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: docsparser
-          path: ./build/debug
-
-      - name: Make docsparser executable and run
-        run: |
-          chmod +x ./build/debug/docsparser
-          cd build/debug
-          LD_LIBRARY_PATH=./lib:$LD_LIBRARY_PATH ./docsparser
-
+      # Build documentation (Linux only, one matrix combination)
       - name: Set up Python runtime
         uses: actions/setup-python@v5
         with:
           python-version: 3.x
+        if: runner.os == 'Linux' && matrix.runtime_shader_compilation.value == 'ON'
 
-      - name: Install dependencies
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends libcairo2-dev libfreetype6-dev libffi-dev libjpeg-dev libpng-dev libz-dev pngquant
-          pip install mkdocs mkdocs-material "mkdocs-material[imaging]" markdown-callouts
+      - name: Install mkdocs dependencies
+        run: pip install mkdocs mkdocs-material "mkdocs-material[imaging]" markdown-callouts
+        if: runner.os == 'Linux' && matrix.runtime_shader_compilation.value == 'ON'
 
       - name: Build documentation
         run: |
+          mkdir -p build/docs
+          cp ./build/docsparser build/docs
+          cd build/docs
+          ./docsparser
+          cd ../..
           mkdocs build --clean
           mkdocs --version
+        if: runner.os == 'Linux' && matrix.runtime_shader_compilation.value == 'ON'
 
-      - name: Adjust permissions
+      - name: Adjust documentation permissions
         run: |
           chmod -c -R +rX site/ | while read line; do
             echo "::warning title=Invalid file permissions automatically fixed::$line"
           done
+        if: runner.os == 'Linux' && matrix.runtime_shader_compilation.value == 'ON'
 
       - name: Upload to GitHub Pages
         uses: actions/upload-pages-artifact@v3
         with:
           path: site
+        if: runner.os == 'Linux' && matrix.runtime_shader_compilation.value == 'ON' && github.ref == 'refs/heads/master' && github.event_name != 'pull_request'
 
   deploy-docs:
     name: Deploy documentation
-    needs: docs
+    needs: build
     if: github.ref == 'refs/heads/master' && github.event_name != 'pull_request'
 
     permissions:
