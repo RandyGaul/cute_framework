@@ -177,6 +177,11 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 #ifdef CF_EMSCRIPTEN
 	// This is the only supported backend as of now
 	use_opengl = true;
+#elif defined(CF_ANDROID)
+	// On Android, default to Vulkan via SDL_GPU. GLES3 fallback is handled below.
+	if (!use_vulkan && !use_opengl) {
+		use_vulkan = true;
+	}
 #else
 	if (use_opengl) {
 		fprintf(stderr, "WARNING -- OpenGL ES is not intended for non-web builds! Use at your own risk (i.e. for developement or debugging).\n");
@@ -251,6 +256,16 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 			}
 
 			init_gfx_result = cf_sdlgpu_init(device_name, debug, &gfx_backend_type);
+#	ifdef CF_ANDROID
+			// On Android, fall back to GLES3 if Vulkan/SDL_GPU fails.
+			if (cf_is_error(init_gfx_result)) {
+				init_gfx_result = cf_gles_init(debug);
+				if (!cf_is_error(init_gfx_result)) {
+					gfx_backend_type = CF_BACKEND_TYPE_GLES3;
+					use_opengl = true;
+				}
+			}
+#	endif
 #endif
 		} else {
 			init_gfx_result = cf_gles_init(debug);

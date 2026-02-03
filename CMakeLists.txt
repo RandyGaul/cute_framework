@@ -31,6 +31,9 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 if(CMAKE_SYSTEM_NAME STREQUAL "Emscripten" OR DEFINED EMSCRIPTEN)
 	set(EMSCRIPTEN TRUE)
 
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Android" OR DEFINED ANDROID)
+	set(ANDROID TRUE)
+
 elseif(WIN32)
 	set(WINDOWS TRUE)
 
@@ -248,6 +251,20 @@ if(EMSCRIPTEN)
 	)
 
 	target_compile_options(cute PRIVATE -O1 -fno-rtti -fno-exceptions)
+endif()
+
+if(ANDROID)
+	message(STATUS "Configuring CF for Android")
+
+	# Android-specific options.
+	set(CF_CUTE_SHADERC OFF CACHE BOOL "" FORCE)
+	set(CF_FRAMEWORK_APPLE_FRAMEWORK OFF CACHE BOOL "" FORCE)
+	set(PHYSFS_BUILD_SHARED OFF CACHE BOOL "" FORCE)
+	set(PHYSFS_BUILD_STATIC ON CACHE BOOL "" FORCE)
+
+	# Link Android-specific libraries.
+	# GLESv3 needed for imgui OpenGL3 backend (VAO functions).
+	set(CF_LINK_LIBS ${CF_LINK_LIBS} android log GLESv3 EGL)
 endif()
 
 # PhysicsFS for virtual file system and archive support.
