@@ -56,13 +56,13 @@ Usually condition variables are not used on their own, and higher level primitiv
 
 ## Mutex
 
-The mutex, aka lock ([`CF_Mutex`](http://localhost:3000/#/multithreading/cf_mutex), stands for "mutual exclusion". It's used as a basic _synchronization primitive_ for two threads to communicate with one another. The idea is the mutex can be acquired by only a single thread at any given time. If any other thread attempts to aquire the mutex (lock it), the thread will sleep and wait until the lock can be acquired.
+The mutex, aka lock ([`CF_Mutex`](../multithreading/cf_mutex.md)), stands for "mutual exclusion". It's used as a basic _synchronization primitive_ for two threads to communicate with one another. The idea is the mutex can be acquired by only a single thread at any given time. If any other thread attempts to aquire the mutex (lock it), the thread will sleep and wait until the lock can be acquired.
 
 Sometimes locks are used on their own, but generally locks are considered difficult to use, tedious, and a bit error-prone. It's recommended to instead use a thread pool if possible. But, if you really know what you're doing sometimes a simple mutex is preferable. For further reading Beej has an excellent article on [Threads and Mutexes](https://beej.us/guide/bgc/html/split/multithreading.html).
 
 ## Read/Write Lock
 
-Similar to mutex, a read write lock is a bit higher level ([`CF_ReadWriteLock`](http://localhost:3000/#/multithreading/cf_readwritelock)). It supports many simultaneous readers, but only a single writer at a time (the write excludes other readers as well). Usually the read write lock is used to implement other tools or data structures.
+Similar to mutex, a read write lock is a bit higher level ([`CF_ReadWriteLock`](../multithreading/cf_readwritelock.md)). It supports many simultaneous readers, but only a single writer at a time (the write excludes other readers as well). Usually the read write lock is used to implement other tools or data structures.
 
 For example, a multi-threaded hash table can be constructed with a read write lock. Most of the time the hash table can operate in read-only mode. We can use a read write lock for the entire table. Many simultaneous readers can fetch or lookup keys freely from the table. If the table needs to insert an element we can then write lock the table and perform the insertion. This will wait for all readers to exitb before doing any writing. To take this a step further, if the hash table uses chained collision resolution another read write lock can be used for each collision chain. As chains are updated, only an individual chain needs to be write-locked at a given time. If the table becomes saturated it can expand it's memory size with a single global write-lock, of which would write-lock all of the chains before expansion. This would completely wait for all readers to exit before expansion.
 
