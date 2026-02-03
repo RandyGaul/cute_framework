@@ -44,7 +44,7 @@ jobs:
               name: "Linux",
               os: ubuntu-latest,
               artifact: "linux",
-              generate: '-G "Unix Makefiles" -DSDL_JACK=OFF -DSDL_PIPEWIRE=OFF -DSDL_PULSEAUDIO=OFF -DSDL_SNDIO=OFF -DSDL_ALSA=OFF -DSDL_WAYLAND=OFF',
+              generate: '-G "Unix Makefiles" -DSDL_JACK=OFF -DSDL_PIPEWIRE=OFF -DSDL_PULSEAUDIO=OFF -DSDL_SNDIO=OFF -DSDL_ALSA=OFF -DSDL_WAYLAND=OFF -DSDL_X11=OFF',
             }
           # TODO - Add iOS and Android platforms. Waiting on better support from GitHub.
 
@@ -57,8 +57,7 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends build-essential git make \
           pkg-config cmake ninja-build gnome-desktop-testing \
-          libaudio-dev libfribidi-dev libx11-dev libxext-dev \
-          libxrandr-dev libxcursor-dev libxfixes-dev libxi-dev libxss-dev libxtst-dev \
+          libaudio-dev libfribidi-dev \
           libxkbcommon-dev libdrm-dev libgbm-dev libgl1-mesa-dev libgles2-mesa-dev \
           libegl1-mesa-dev libdbus-1-dev libibus-1.0-dev libudev-dev libthai-dev \
           liburing-dev
