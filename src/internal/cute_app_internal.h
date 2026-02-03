@@ -81,7 +81,6 @@ struct CF_App
 	Cute::Map<const char*, CF_ShaderFileInfo> shader_file_infos;
 	bool gfx_enabled = false;
 	float dpi_scale = 1.0f;
-	float dpi_scale_prev = 1.0f;
 	bool dpi_scale_was_changed = false;
 	bool sync_window = false;
 	int draw_call_count = 0;
