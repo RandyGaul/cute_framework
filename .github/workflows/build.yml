@@ -42,7 +42,7 @@ jobs:
               name: "Linux",
               os: ubuntu-latest,
               artifact: "linux",
-              generate: '-G "Unix Makefiles" -DSDL_JACK=OFF -DSDL_PIPEWIRE=OFF -DSDL_PULSEAUDIO=OFF -DSDL_SNDIO=OFF -DSDL_ALSA=OFF -DSDL_WAYLAND=OFF -DSDL_X11=OFF -DSDL_KMSDRM=OFF -DSDL_UNIX_CONSOLE_BUILD=ON',
+              generate: '-G "Unix Makefiles" -DSDL_JACK=OFF -DSDL_PIPEWIRE=OFF -DSDL_PULSEAUDIO=OFF -DSDL_SNDIO=OFF -DSDL_ALSA=OFF -DSDL_WAYLAND=OFF -DSDL_X11=OFF -DSDL_KMSDRM=OFF -DSDL_RENDER=OFF -DSDL_UNIX_CONSOLE_BUILD=ON',
             }
           # TODO - Add iOS and Android platforms. Waiting on better support from GitHub.
 
