@@ -79,6 +79,7 @@ jobs:
         with:
           version: ${{ steps.sdl-version.outputs.version }}
           build-type: Release
+          discriminator: ${{ matrix.platform.os }}
 
       - name: Install ccache (macOS)
         run: brew install ccache
