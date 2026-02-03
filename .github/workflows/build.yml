@@ -1,4 +1,4 @@
-name: Build CF
+name: Build
 
 # This workflow will work for pushes, pull requests, or a manual trigger (workflow_dispatch).
 on: [push, pull_request, workflow_dispatch]
@@ -8,9 +8,7 @@ env:
 
 jobs:
   build:
-    # Matrix feature for cross-platform coverage. Names the build "Build X"
-    # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
-    name: "Build ${{ matrix.platform.name }} (CF_RUNTIME_SHADER_COMPILATION=${{ matrix.runtime_shader_compilation.value }})"
+    name: "${{ matrix.platform.name }} (CF_RUNTIME_SHADER_COMPILATION=${{ matrix.runtime_shader_compilation.value }})"
     runs-on: ${{ matrix.platform.os }}
     timeout-minutes: 20
 
