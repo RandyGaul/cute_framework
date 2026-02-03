@@ -117,6 +117,7 @@ jobs:
         run: |
           cmake ${{ matrix.platform.generate }} ${{ matrix.runtime_shader_compilation.cmake_arg }} \
             ${{ runner.os != 'Windows' && '-DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache' || '' }} \
+            -DCF_FRAMEWORK_STATIC=OFF \
             -B build_folder
 
       - name: Build project binary (non-MSVC)
