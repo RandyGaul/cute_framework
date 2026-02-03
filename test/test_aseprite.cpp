@@ -11,7 +11,7 @@
 using namespace Cute;
 
 #ifndef CF_STATIC
-#	define CF_ASEPRITE_IMPLEMENTATION
+#	define CUTE_ASEPRITE_IMPLEMENTATION
 #	include <cute/cute_aseprite.h>
 #endif
 
