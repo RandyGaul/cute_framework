@@ -12,6 +12,7 @@ To learn about a specific area in Cute Framework visit one of these topic articl
 After completing the above fundamental reading it's recommended to then select topics of interest from the list below. The list is sorted alphabetically.
 
 * [Allocators](./allocator.md)
+* [Android Builds](./android.md)
 * [Atomics](./atomics.md)
 * [Audio](./audio.md)
 * [Camera](./camera.md)
