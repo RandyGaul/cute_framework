@@ -209,12 +209,14 @@ jobs:
           path: ./dist/
         if: matrix.runtime_shader_compilation.value == 'ON'
 
-      # Upload docsparser binary for documentation job (Linux only, one matrix combination)
+      # Upload docsparser binary and shared library for documentation job (Linux only, one matrix combination)
       - name: Upload docsparser artifact
         uses: actions/upload-artifact@v4
         with:
           name: docsparser
-          path: ./build_folder/docsparser
+          path: |
+            ./build_folder/docsparser
+            ./build_folder/lib/libcute.so
           if-no-files-found: error
         if: runner.os == 'Linux' && matrix.runtime_shader_compilation.value == 'ON'
 
@@ -236,7 +238,7 @@ jobs:
         run: |
           chmod +x ./build/debug/docsparser
           cd build/debug
-          ./docsparser
+          LD_LIBRARY_PATH=./lib:$LD_LIBRARY_PATH ./docsparser
 
       - name: Set up Python runtime
         uses: actions/setup-python@v5
