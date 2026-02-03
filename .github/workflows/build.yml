@@ -54,16 +54,51 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends build-essential git make \
-          pkg-config cmake ninja-build gnome-desktop-testing \
+          pkg-config cmake ninja-build gnome-desktop-testing ccache \
           libaudio-dev libfribidi-dev \
           libxkbcommon-dev libgl1-mesa-dev libgles2-mesa-dev \
           libegl1-mesa-dev libdbus-1-dev libibus-1.0-dev libudev-dev libthai-dev \
           liburing-dev
         if: matrix.platform.name == 'Linux'
 
+      - name: Install ccache (macOS)
+        run: brew install ccache
+        if: runner.os == 'macOS'
+
+      - name: Configure ccache
+        run: |
+          ccache --set-config=max_size=500M
+          ccache --set-config=compression=true
+          ccache --zero-stats
+        if: runner.os != 'Windows'
+
+      - name: Restore ccache (Linux)
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ccache
+          key: ccache-${{ matrix.platform.artifact }}-${{ matrix.runtime_shader_compilation.value }}-${{ github.ref_name }}-${{ github.sha }}
+          restore-keys: |
+            ccache-${{ matrix.platform.artifact }}-${{ matrix.runtime_shader_compilation.value }}-${{ github.ref_name }}-
+            ccache-${{ matrix.platform.artifact }}-${{ matrix.runtime_shader_compilation.value }}-master-
+            ccache-${{ matrix.platform.artifact }}-${{ matrix.runtime_shader_compilation.value }}-
+        if: runner.os == 'Linux'
+
+      - name: Restore ccache (macOS)
+        uses: actions/cache@v4
+        with:
+          path: ~/Library/Caches/ccache
+          key: ccache-${{ matrix.platform.artifact }}-${{ matrix.runtime_shader_compilation.value }}-${{ github.ref_name }}-${{ github.sha }}
+          restore-keys: |
+            ccache-${{ matrix.platform.artifact }}-${{ matrix.runtime_shader_compilation.value }}-${{ github.ref_name }}-
+            ccache-${{ matrix.platform.artifact }}-${{ matrix.runtime_shader_compilation.value }}-master-
+            ccache-${{ matrix.platform.artifact }}-${{ matrix.runtime_shader_compilation.value }}-
+        if: runner.os == 'macOS'
+
       - name: Create build folder with CMake
         run: |
-          cmake ${{ matrix.platform.generate }} ${{ matrix.runtime_shader_compilation.cmake_arg }} -B build_folder
+          cmake ${{ matrix.platform.generate }} ${{ matrix.runtime_shader_compilation.cmake_arg }} \
+            ${{ runner.os != 'Windows' && '-DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache' || '' }} \
+            -B build_folder
 
       - name: Build project binary (non-MSVC)
         run: |
@@ -111,6 +146,10 @@ jobs:
           ./docsparser
           cd ..
         if: runner.os == 'Linux'
+
+      - name: Print ccache stats
+        run: ccache --show-stats
+        if: runner.os != 'Windows'
 
       # Just call robocopy twice, one looking for libcute.a for MinGW, and one
       # looking for cute.lib for MSCV. robocopy doesn't trigger a build failure for
