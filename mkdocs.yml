@@ -93,6 +93,7 @@ nav:
       - Drawing: topics/drawing.md
       - Debug/Tools UI: topics/dear_imgui.md
       - Allocators: topics/allocator.md
+      - Android Builds: topics/android.md
       - Atomics: topics/atomics.md
       - Audio: topics/audio.md
       - Camera: topics/camera.md
