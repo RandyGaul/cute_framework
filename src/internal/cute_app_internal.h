@@ -29,7 +29,7 @@
 struct SDL_Window;
 struct cs_context_t;
 
-extern struct CF_App* app;
+CF_API extern struct CF_App* app;
 
 struct CF_MouseState
 {
