@@ -42,9 +42,10 @@ struct CF_Font
 	int height;
 };
 
-CF_Font* cf_font_get(const char* font_name);
-CF_Glyph* cf_font_get_glyph(CF_Font* font, int codepoint, float font_size, int blur);
-float cf_font_get_kern(CF_Font* font, float font_size, int codepoint0, int codepoint1);
+CF_API CF_Font* CF_CALL cf_font_get(const char* font_name);
+CF_API CF_Glyph* CF_CALL cf_font_get_glyph(CF_Font* font, int codepoint, float font_size, int blur);
+CF_API float CF_CALL cf_font_get_kern(CF_Font* font, float font_size, int codepoint0, int codepoint1);
+CF_API float CF_CALL cf_font_scale_for_pixel_height(CF_Font* font, float pixel_height);
 
 #define CF_KERN_KEY(cp0, cp1) (((uint64_t)cp0) << 32 | ((uint64_t)cp1))
 

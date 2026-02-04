@@ -68,7 +68,7 @@ int main(int argc, char* argv[])
 
         const char* font_name = font_names[font_index];
         CF_Font* font = cf_font_get(font_name);
-        float scale = stbtt_ScaleForPixelHeight(&font->info, font_size);
+        float scale = cf_font_scale_for_pixel_height(font, font_size);
         float ascent = font->ascent * scale;
         float descent = font->descent * scale;
         float line_gap = font->line_gap * scale;
