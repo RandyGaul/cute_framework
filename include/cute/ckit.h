@@ -1735,8 +1735,11 @@ uint64_t ck_hash_fnv1a(const void* ptr, size_t sz)
 #ifndef CK_SKIP_SINTERN
 
 // C11 atomics for C, std::atomic for C++
+// Must close extern "C" before including <atomic> since it contains C++ templates.
 #ifdef __cplusplus
+} // extern "C"
 #include <atomic>
+extern "C" {
 #define CK_ATOMIC(T) std::atomic<T>
 #define ck_atomic_load(p) (p)->load()
 #define ck_atomic_store(p, v) (p)->store(v)
