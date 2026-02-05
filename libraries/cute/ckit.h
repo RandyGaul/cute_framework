@@ -70,6 +70,24 @@
 #	define CK_FREE(p) free(p)
 #endif
 
+// Cookie union for debugger-friendly viewing of 4-char magic values.
+typedef union CK_Cookie
+{
+	uint32_t val;
+	char c[4];
+} CK_Cookie;
+
+// Helper to create cookies (works in both C and C++).
+static inline CK_Cookie ck_cookie(char a, char b, char c, char d)
+{
+	CK_Cookie ck;
+	ck.c[0] = a;
+	ck.c[1] = b;
+	ck.c[2] = c;
+	ck.c[3] = d;
+	return ck;
+}
+
 // Portable case-insensitive string compare.
 #ifdef _WIN32
 #	define ck_stricmp _stricmp
@@ -356,14 +374,14 @@ typedef struct CK_MapSlot
 } CK_MapSlot;
 
 // Safety cookie for map validation.
-#define CK_MAP_COOKIE 0x4D415021  // "MAP!"
+#define CK_MAP_COOKIE ck_cookie('M','A','P','!')
 
 // Map header stored just before the values array.
 // All arrays (items, keys, islot, slots) are in a single allocation following the header.
 // Layout: [Header][items...][keys...][islot...][slots...]
 typedef struct CK_MapHeader
 {
-	uint32_t     cookie;         // Safety cookie for validation
+	CK_Cookie    cookie;         // Safety cookie for validation
 	int          val_size;       // Size of each value in bytes
 	int          size;           // Number of items
 	int          capacity;       // Capacity for items/keys/islot
@@ -396,7 +414,7 @@ typedef struct CK_MapHeader
 #define ck_map_hdr(m) ((m) ? (CK_MapHeader*)((char*)(m) - sizeof(CK_MapHeader)) : NULL)
 
 // Internal: Validate map cookie (catches use-after-free, etc).
-#define ck_map_assert_valid(m) ((void)(!(m) || (assert(ck_map_hdr(m)->cookie == CK_MAP_COOKIE), 1)))
+#define ck_map_assert_valid(m) ((void)(!(m) || (assert(ck_map_hdr(m)->cookie.val == CK_MAP_COOKIE.val), 1)))
 
 // map_size: Number of {key, value} pairs. Returns 0 for NULL.
 #define map_size(m)     (ck_map_assert_valid(m), (m) ? ck_map_hdr(m)->size : 0)
@@ -544,10 +562,10 @@ void sintern_nuke();
 #endif
 
 // Intern structure for validation and length access.
-#define CK_INTERN_COOKIE 0x75AFC82E
+#define CK_INTERN_COOKIE ck_cookie('I','N','T','R')
 typedef struct CK_UniqueString
 {
-	uint32_t cookie;
+	CK_Cookie cookie;
 	int len;
 	struct CK_UniqueString* next;
 	char* str;
@@ -563,12 +581,12 @@ typedef struct CK_ArrayHeader
 	int capacity;
 	int is_static;
 	char* data;
-	uint32_t cookie;
+	CK_Cookie cookie;
 } CK_ArrayHeader;
 
 #define CK_AHDR(a)    ((CK_ArrayHeader*)(a) - 1)
-#define CK_ACOOKIE    0xE6F7E359
-#define CK_ACANARY(a) ((a) ? assert(CK_AHDR(a)->cookie == CK_ACOOKIE) : (void)0)
+#define CK_ACOOKIE    ck_cookie('A','R','R','Y')
+#define CK_ACANARY(a) ((a) ? assert(CK_AHDR(a)->cookie.val == CK_ACOOKIE.val) : (void)0)
 
 #ifdef __cplusplus
 extern "C" {

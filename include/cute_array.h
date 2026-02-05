@@ -244,7 +244,7 @@
 #define CF_Ahdr      CK_ArrayHeader
 #define CF_AHDR      CK_AHDR
 #define CF_ACOOKIE   CK_ACOOKIE
-#define CF_ACANARY(a) ((a) ? CF_ASSERT(CK_AHDR(a)->cookie == CK_ACOOKIE) : (void)0)
+#define CF_ACANARY(a) ((a) ? CF_ASSERT(CK_AHDR(a)->cookie.val == CK_ACOOKIE.val) : (void)0)
 
 #define cf_agrow   ck_agrow
 #define cf_astatic ck_astatic
