@@ -1933,7 +1933,6 @@ CF_INLINE void apply_shader(CF_Shader shader, CF_Material material) { cf_apply_s
 CF_INLINE void draw_elements() { cf_draw_elements(); }
 
 }
-void cf_clear_canvas(CF_Canvas canvas_handle);
 
 CF_INLINE bool operator==(const CF_RenderState& a, const CF_RenderState& b) { return !CF_MEMCMP(&a, &b, sizeof(a)); }
 CF_INLINE bool operator==(CF_Shader a, CF_Shader b) { return a.id == b.id; }
