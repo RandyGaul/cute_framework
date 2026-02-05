@@ -42,6 +42,7 @@ TEST_SUITE(test_markups);
 TEST_SUITE(test_math);
 extern "C" {
 TEST_SUITE(test_math_c);
+TEST_SUITE(test_ckit);
 }
 
 #include <SDL3/SDL.h>
@@ -60,28 +61,31 @@ int main(int argc, char* argv[])
 	_CrtSetReportFile(_CRT_WARN, _CRTDBG_FILE_STDERR);
 	_CrtSetReportFile(_CRT_ERROR, _CRTDBG_FILE_STDERR);
 	_CrtSetReportFile(_CRT_ASSERT, _CRTDBG_FILE_STDERR);
-	#undef RUN_TEST_SUITE
-	#define RUN_TEST_SUITE(suite_fp) pu_run_suite(#suite_fp, suite_fp); sinuke(); SDL_Quit(); _CrtDumpMemoryLeaks();
 #endif
 
 	pu_display_colors(true);
+	setvbuf(stdout, NULL, _IONBF, 0);
+	setvbuf(stderr, NULL, _IONBF, 0);
 
-	RUN_TEST_SUITE(test_array);
-	RUN_TEST_SUITE(test_aseprite);
-	RUN_TEST_SUITE(test_audio);
-	RUN_TEST_SUITE(test_base64);
-	RUN_TEST_SUITE(test_color);
-	RUN_TEST_SUITE(test_coroutine);
-	RUN_TEST_SUITE(test_doubly_list);
-	RUN_TEST_SUITE(test_hashtable);
-	RUN_TEST_SUITE(test_path);
-	RUN_TEST_SUITE(test_png_cache);
-	RUN_TEST_SUITE(test_sprite);
-	RUN_TEST_SUITE(test_string);
-	RUN_TEST_SUITE(test_json);
-	RUN_TEST_SUITE(test_markups);
-	RUN_TEST_SUITE(test_math);
-	RUN_TEST_SUITE(test_math_c);
+#define RUN_TRACED(suite_fp) fprintf(stderr, ">>> " #suite_fp "\n"); RUN_TEST_SUITE(suite_fp); fprintf(stderr, "<<< " #suite_fp "\n");
+	RUN_TRACED(test_array);
+	RUN_TRACED(test_aseprite);
+	RUN_TRACED(test_audio);
+	RUN_TRACED(test_base64);
+	RUN_TRACED(test_color);
+	RUN_TRACED(test_coroutine);
+	RUN_TRACED(test_doubly_list);
+	RUN_TRACED(test_hashtable);
+	RUN_TRACED(test_path);
+	RUN_TRACED(test_png_cache);
+	RUN_TRACED(test_sprite);
+	RUN_TRACED(test_string);
+	RUN_TRACED(test_json);
+	RUN_TRACED(test_markups);
+	RUN_TRACED(test_math);
+	RUN_TRACED(test_math_c);
+	RUN_TRACED(test_ckit);
+#undef RUN_TRACED
 
 	pu_print_stats();
 	return pu_test_failed();

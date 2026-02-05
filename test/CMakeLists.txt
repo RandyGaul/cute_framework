@@ -16,11 +16,13 @@ set(CF_TEST_SRCS
 	test_markups.cpp
 	test_math.cpp
 	test_math.c
+	test_ckit.c
 )
 set(CF_TEST_HDRS test_harness.h)
 
 add_executable(tests ${CF_TEST_SRCS} ${CF_TEST_HDRS})
 target_link_libraries(tests PRIVATE cute)
+target_include_directories(tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../src)
 set_target_properties(tests PROPERTIES
 	RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
 )

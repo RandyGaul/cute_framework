@@ -11,6 +11,7 @@
 #include "cute_defines.h"
 #include "cute_c_runtime.h"
 #include "cute_alloc.h"
+#include "cute/ckit.h"
 
 //--------------------------------------------------------------------------------------------------
 // C API
@@ -20,277 +21,235 @@
  * @category array
  * @brief    An empty macro used in the C API to markup dynamic arrays.
  * @example > Creating a dynamic array, pushing some elements into the array, and freeing it up afterwards.
- *     dyna int* a = NULL;
- *     apush(a, 5);
- *     CF_ASSERT(alen(a) == 1);
- *     alen(a)--;
- *     CF_ASSERT(alen(a) == 0);
- *     afree(a);
+ *           dyna int* a = NULL;
+ *           apush(a, 5);
+ *           CF_ASSERT(asize(a) == 1);
+ *           asetlen(a, 0);
+ *           CF_ASSERT(asize(a) == 0);
+ *           afree(a);
  * @remarks  This is an optional and _completely_ empty macro. It's only purpose is to provide a bit of visual indication a type is a
  *           dynamic array. One downside of the C-macro API is the opaque nature of the pointer type. Since the macros use polymorphism
  *           on typed pointers, there's no actual array struct type. It can get really annoying to sometimes forget if a pointer is an
  *           array, a hashtable, or just a pointer. This macro can be used to markup the type to make it much more clear for function
  *           parameters or struct member definitions. It's saying "Hey, I'm a dynamic array!" to mitigate this downside.
- * @related  dyna asize acount acap afit apush apop aend alast aclear aset arev ahash adel astatic afree
+ * @related  dyna asize acount acap afit apush apop aend alast aclear asetlen aset arev ahash adel astatic afree
  */
-#define dyna
-
-/**
- * @function alen
- * @category array
- * @brief    Returns the number of elements in the array.
- * @param    a             The array.
- * @example > Creating an array, adding an element, then decrementing the count to zero before freeing the array.
- *     dyna int* a = NULL;
- *     apush(a, 5);
- *     CF_ASSERT(alen(a) == 1);
- *     alen(a)--;
- *     CF_ASSERT(alen(a) == 0);
- *     afree(a);
- * @remarks  `a` must not be `NULL`. This function returns a proper l-value, so you can assign to it, i.e. increment/decrement can be quite useful.
- * @related  dyna asize acount acap afit apush apop aend alast aclear aset arev ahash adel astatic afree
- */
-#define alen(a) cf_array_len(a)
-
-/**
- * @function asize
- * @category array
- * @brief    Returns the number of elements in the array.
- * @param    a             The array.
- * @example > Creating an array, getting the size of the array, then freeing it up afterwards.
- *     dyna int* a = NULL;
- *     apush(a, 5);
- *     CF_ASSERT(asize(a) == 1);
- *     afree(a);
- * @remarks  `a` can be `NULL`.
- * @related  dyna asize acount acap afit apush apop aend alast aclear aset arev ahash adel astatic afree
- */
-#define asize(a) cf_array_size(a)
-
-/**
- * @function acount
- * @category array
- * @brief    Returns the number of elements in the array.
- * @param    a             The array.
- * @example > Creating an array, getting the size of the array, then freeing it up afterwards.
- *     dyna int* a = NULL;
- *     apush(a, 5);
- *     CF_ASSERT(acount(a) == 1);
- *     afree(a);
- * @remarks  `a` can be `NULL`.
- * @related  dyna asize acount acap afit apush apop aend alast aclear aset arev ahash adel astatic afree
- */
-#define acount(a) cf_array_count(a)
-
-/**
- * @function acap
- * @category array
- * @brief    Returns the capacity of the array.
- * @param    a             The array.
- * @remarks  `a` can be `NULL`. The capacity automatically grows if the size of the array grows over the capacity.
- *            You can use `afit` to ensure a minimum capacity as an optimization.
- * @related  dyna asize acount acap afit apush apop aend alast aclear aset arev ahash adel astatic afree
- */
-#define acap(a) cf_array_capacity(a)
-
-/**
- * @function afit
- * @category array
- * @brief    Ensures the capacity of the array is at least `n` elements large.
- * @param    a             The array.
- * @param    n             The number of elements to resize the array's capacity to.
- * @return   Returns a pointer to the array.
- * @remarks  This function does not change the number of live elements, the count/size, of the array. Only the capacity.
- *           This function is only useful as an optimization to avoid extra/unnecessary internal allocations. `a` is
- *           automatically re-assigned to a new pointer if the array was internally regrown.
- * @related  dyna asize acount acap afit apush apop aend alast aclear aset arev ahash adel astatic afree
- */
-#define afit(a, n) cf_array_fit(a, n)
-
-/**
- * @function apush
- * @category array
- * @brief    Pushes an element onto the back of the array.
- * @param    a             The array. Can be `NULL`.
- * @param    ...           The element to push.
- * @return   Returns the pushed element.
- * @example > Pushing some elements onto an array and asserting their values.
- *     dyna int* a = NULL;
- *     apush(a, 5);
- *     apush(a, 13);
- *     CF_ASSERT(a[0] == 5);
- *     CF_ASSERT(a[1] == 13);
- *     CF_ASSERT(asize(a) == 2);
- *     afree(a);
- * @remarks  `a` is automatically re-assigned to a new pointer if the array was internally regrown. If `a` is `NULL` a new
- *           dynamic array is allocated on-the-spot for you, and assigned back to `a`.
- * @related  dyna asize acount acap afit apush apop aend alast aclear aset arev ahash adel astatic afree
- */
-#define apush(a, ...) cf_array_push(a, (__VA_ARGS__))
-
-/**
- * @function apop
- * @category array
- * @brief    Pops and returns an element off the back of the array.
- * @param    a             The array. Can not be `NULL`.
- * @return   Returns the popped element.
- * @remarks  The last element of the array is fetched and will be returned. The size of the array is decremented by one.
- * @related  dyna asize acount acap afit apush apop aend alast aclear aset arev ahash adel astatic afree
- */
-#define apop(a) cf_array_pop(a)
-
-/**
- * @function aend
- * @category array
- * @brief    Returns a pointer one element beyond the end of the array.
- * @param    a             The array. Can be `NULL`.
- * @related  dyna asize acount acap afit apush apop aend alast aclear aset arev ahash adel astatic afree
- */
-#define aend(a) cf_array_end(a)
-
-/**
- * @function alast
- * @category array
- * @brief    Returns the last element in the array.
- * @param    a             The array. Can not be `NULL`.
- * @related  dyna asize acount acap afit apush apop aend alast aclear aset arev ahash adel astatic afree
- */
-#define alast(a) cf_array_last(a)
-
-/**
- * @function aclear
- * @category array
- * @brief    Sets the array's count to zero. Does not free any resources.
- * @param    a             The array. Can be `NULL`.
- * @return   Returns zero.
- * @related  dyna asize acount acap afit apush apop aend alast aclear aset arev ahash adel astatic afree
- */
-#define aclear(a) cf_array_clear(a)
-
-/**
- * @function aset
- * @category array
- * @brief    Copies the array b into array a. Will automatically fit a if needed with `afit`.
- * @param    a             The array to copy into (destination).
- * @param    b             The array to copy from (source).
- * @return   Returns a pointer to `a`. `a` will automatically be reassigned to any new pointer.
- * @related  dyna asize acount acap afit apush apop aend alast aclear aset arev ahash adel astatic afree
- */
-#define aset(a, b) cf_array_set(a, b)
-
-/**
- * @function arev
- * @category array
- * @brief    Reverses the elements in an array.
- * @param    a             The array. Can be `NULL`.
- * @related  dyna asize acount acap afit apush apop aend alast aclear aset arev ahash adel astatic afree
- */
-#define arev(a) cf_array_reverse(a)
+#define dyna CK_DYNA
 
 /**
  * @function ahash
  * @category array
  * @brief    Returns the hash of all the bytes in the array.
  * @param    a             The array.
- * @related  dyna asize acount acap afit apush apop aend alast aclear aset arev ahash adel astatic afree
+ * @related  dyna asize acount acap afit apush apop aend alast aclear asetlen aset arev ahash adel astatic afree
  */
-#define ahash(a) cf_array_hash(a)
+// ahash is provided by ckit.h
 
-/**
- * @function adel
- * @category array
- * @brief    Performs an *unordered* removal of the element at index i.
- * @param    a             The array.
- * @param    i             The index of the element to remove.
- * @remarks  The last element of the array is swapped into the index `i`. This is a constant time
- *           operation, but does *not preserve order* of the array.
- * @related  dyna asize acount acap afit apush apop aend alast aclear aset arev ahash adel astatic afree
- */
-#define adel(a, i) cf_array_del(a, i)
-
-/**
- * @function astatic
- * @category array
- * @brief    Creates an array with an initial static storage backing. Will grow onto the heap if the size becomes too large.
- * @param    a             The array. Can be `NULL`.
- * @param    buffer        An initial buffer of memory to store the array within.
- * @param    buffer_size   The size of `buffer` in bytes.
- * @return   Returns a pointer to `a`. `a` will automatically be reassigned to any new pointer.
- * @remarks  This macro is useful as an optimization to avoid any dynamic memory allocation in the common case for implementing
- *           certain data structures (such as strings or stack vectors). As the array grows too large for the `buffer` it will
- *           dynamically grow into the heap.
- * @related  dyna asize acount acap afit apush apop aend alast aclear aset arev ahash adel astatic afree
- */
-#define astatic(a, buffer, buffer_size) cf_array_static(a, buffer, buffer_size)
-
-/**
- * @function afree
- * @category array
- * @brief    Frees up all resources used by the array.
- * @param    a             The array.
- * @remarks  Sets `a` to `NULL`.
- * @related  dyna asize acount acap afit apush apop aend alast aclear aset arev ahash adel astatic afree
- */
-#define afree(a) cf_array_free(a)
+// Shortform macros (asize, acount, acap, afit, apush, apop, aend, alast, aclear,
+// asetlen, aset, arev, ahash, adel, astatic, afree) are provided by ckit.h.
 
 //--------------------------------------------------------------------------------------------------
 // Longform C API.
+// These map cf_array_* names to the shortform ckit macros.
 
-#ifdef __cplusplus
-#define cf_array_len(a) (CF_ACANARY(a), CF_AHDR(a)->size)
-#else
-#define cf_array_len(a) (CF_AHDR(a)->size)
-#endif
-#define cf_array_size(a) (a ? cf_array_len(a) : 0)
-#define cf_array_count(a) cf_array_size(a)
-#define cf_array_capacity(a) ((a) ? CF_AHDR(a)->capacity : 0)
-#define cf_array_fit(a, n) ((n) <= cf_array_capacity(a) ? 0 : (*(void**)&(a) = cf_agrow((a), (n), sizeof(*a))))
-#define cf_array_push(a, ...) (CF_ACANARY(a), cf_array_fit((a), 1 + ((a) ? cf_array_len(a) : 0)), (a)[cf_array_len(a)++] = (__VA_ARGS__))
-#define cf_array_pop(a) (a[--cf_array_len(a)])
-#define cf_array_end(a) (a + cf_array_size(a))
-#define cf_array_last(a) (a[cf_array_len(a) - 1])
-#define cf_array_clear(a) (CF_ACANARY(a), (a) ? cf_array_len(a) = 0 : 0)
-#define cf_array_set(a, b) (*(void**)&(a) = cf_aset((void*)(a), (void*)(b), sizeof(*a)))
-#define cf_array_reverse(a) (a ? cf_arev(a, sizeof(*a)) : NULL)
-#define cf_array_hash(a) cf_fnv1a(a, sizeof(*a) * cf_array_size(a))
-#define cf_array_del(a, i) (a[i] = a[--alen(a)])
-#define cf_array_static(a, buffer, buffer_size) (*(void**)&(a) = cf_astatic(buffer, buffer_size, sizeof(*a)))
-#define cf_array_free(a) do { CF_ACANARY(a); if (a && !CF_AHDR(a)->is_static) cf_free(CF_AHDR(a)); a = NULL; } while (0)
+/**
+ * @function cf_array_len
+ * @category array
+ * @brief    Returns the number of elements in the array, or 0 if NULL.
+ * @param    a             The array.
+ * @return   Returns the number of elements in `a`.
+ * @remarks  Shortform: `asize(a)`.
+ * @related  cf_array_size cf_array_count cf_array_capacity cf_array_fit cf_array_push cf_array_pop cf_array_free
+ */
+#define cf_array_len(a) asize(a)
+
+/**
+ * @function cf_array_size
+ * @category array
+ * @brief    Returns the number of elements in the array, or 0 if NULL. Same as `cf_array_len`.
+ * @param    a             The array.
+ * @return   Returns the number of elements in `a`.
+ * @remarks  Shortform: `asize(a)`.
+ * @related  cf_array_len cf_array_count cf_array_capacity cf_array_fit cf_array_push cf_array_pop cf_array_free
+ */
+#define cf_array_size(a) asize(a)
+
+/**
+ * @function cf_array_count
+ * @category array
+ * @brief    Returns the number of elements in the array, or 0 if NULL. Same as `cf_array_len`.
+ * @param    a             The array.
+ * @return   Returns the number of elements in `a`.
+ * @remarks  Shortform: `acount(a)`.
+ * @related  cf_array_len cf_array_size cf_array_capacity cf_array_fit cf_array_push cf_array_pop cf_array_free
+ */
+#define cf_array_count(a) acount(a)
+
+/**
+ * @function cf_array_capacity
+ * @category array
+ * @brief    Returns the capacity of the array (number of elements allocated), or 0 if NULL.
+ * @param    a             The array.
+ * @return   Returns the number of elements `a` can hold before the next reallocation.
+ * @remarks  Shortform: `acap(a)`.
+ * @related  cf_array_len cf_array_fit cf_array_push cf_array_free
+ */
+#define cf_array_capacity(a) acap(a)
+
+/**
+ * @function cf_array_fit
+ * @category array
+ * @brief    Ensures the array can hold at least `n` elements, growing if necessary.
+ * @param    a             The array. Modified in-place.
+ * @param    n             The minimum number of elements to reserve capacity for.
+ * @remarks  Shortform: `afit(a, n)`.
+ * @related  cf_array_len cf_array_capacity cf_array_push cf_array_free
+ */
+#define cf_array_fit(a, n) afit(a, n)
+
+/**
+ * @function cf_array_push
+ * @category array
+ * @brief    Appends an element to the end of the array, growing if necessary.
+ * @param    a             The array. Modified in-place.
+ * @param    ...           The element to append.
+ * @remarks  Shortform: `apush(a, ...)`.
+ * @related  cf_array_pop cf_array_len cf_array_fit cf_array_free
+ */
+#define cf_array_push(a, ...) apush(a, __VA_ARGS__)
+
+/**
+ * @function cf_array_pop
+ * @category array
+ * @brief    Removes and returns the last element of the array.
+ * @param    a             The array. Must be non-NULL and non-empty.
+ * @return   Returns the removed element.
+ * @remarks  Shortform: `apop(a)`.
+ * @related  cf_array_push cf_array_last cf_array_len
+ */
+#define cf_array_pop(a) apop(a)
+
+/**
+ * @function cf_array_end
+ * @category array
+ * @brief    Returns a pointer one past the last element.
+ * @param    a             The array.
+ * @return   Returns `a + asize(a)`.
+ * @remarks  Shortform: `aend(a)`.
+ * @related  cf_array_last cf_array_len
+ */
+#define cf_array_end(a) aend(a)
+
+/**
+ * @function cf_array_last
+ * @category array
+ * @brief    Returns the last element of the array.
+ * @param    a             The array. Must be non-NULL and non-empty.
+ * @return   Returns `a[asize(a) - 1]`.
+ * @remarks  Shortform: `alast(a)`.
+ * @related  cf_array_pop cf_array_end cf_array_len
+ */
+#define cf_array_last(a) alast(a)
+
+/**
+ * @function cf_array_clear
+ * @category array
+ * @brief    Sets the element count to zero without freeing memory.
+ * @param    a             The array.
+ * @remarks  Shortform: `aclear(a)`.
+ * @related  cf_array_free cf_array_len cf_array_setlen
+ */
+#define cf_array_clear(a) aclear(a)
+
+/**
+ * @function cf_array_setlen
+ * @category array
+ * @brief    Directly sets the element count. The array must be non-NULL and have enough capacity.
+ * @param    a             The array. Must be non-NULL.
+ * @param    n             The new element count.
+ * @remarks  Shortform: `asetlen(a, n)`. Use `cf_array_fit` first to ensure sufficient capacity.
+ * @related  cf_array_clear cf_array_len cf_array_fit
+ */
+#define cf_array_setlen(a, n) asetlen(a, n)
+
+/**
+ * @function cf_array_set
+ * @category array
+ * @brief    Copies the contents of array `b` into array `a`, resizing `a` if needed.
+ * @param    a             The destination array. Modified in-place.
+ * @param    b             The source array.
+ * @remarks  Shortform: `aset(a, b)`.
+ * @related  cf_array_len cf_array_fit cf_array_free
+ */
+#define cf_array_set(a, b) aset(a, b)
+
+/**
+ * @function cf_array_reverse
+ * @category array
+ * @brief    Reverses the order of elements in the array in-place.
+ * @param    a             The array.
+ * @remarks  Shortform: `arev(a)`.
+ * @related  cf_array_len
+ */
+#define cf_array_reverse(a) arev(a)
+
+/**
+ * @function cf_array_hash
+ * @category array
+ * @brief    Returns a hash of all the bytes in the array using FNV1a.
+ * @param    a             The array.
+ * @return   Returns a `uint64_t` hash.
+ * @remarks  Shortform: `ahash(a)`.
+ * @related  cf_array_len
+ */
+#define cf_array_hash(a) ahash(a)
+
+/**
+ * @function cf_array_del
+ * @category array
+ * @brief    Removes an element by swapping it with the last element (unordered).
+ * @param    a             The array.
+ * @param    i             The index of the element to remove.
+ * @remarks  Shortform: `adel(a, i)`. Does not preserve order.
+ * @related  cf_array_pop cf_array_len
+ */
+#define cf_array_del(a, i) adel(a, i)
+
+/**
+ * @function cf_array_static
+ * @category array
+ * @brief    Initializes a dynamic array backed by a static (stack) buffer.
+ * @param    a             The array pointer. Modified in-place.
+ * @param    buffer        A stack buffer to use as initial storage.
+ * @param    buffer_size   Size of `buffer` in bytes.
+ * @remarks  Shortform: `astatic(a, buffer, buffer_size)`. The array will copy out of the static
+ *           buffer and switch to heap allocation if it outgrows the buffer.
+ * @related  cf_array_fit cf_array_free
+ */
+#define cf_array_static(a, buffer, buffer_size) astatic(a, buffer, buffer_size)
+
+/**
+ * @function cf_array_free
+ * @category array
+ * @brief    Frees the array and sets the pointer to NULL.
+ * @param    a             The array. Modified in-place. Safe to call on NULL.
+ * @remarks  Shortform: `afree(a)`.
+ * @related  cf_array_push cf_array_clear cf_array_len
+ */
+#define cf_array_free(a) afree(a)
 
 //--------------------------------------------------------------------------------------------------
-// Hidden API - Not intended for direct use.
+// Hidden API - Aliases to ckit internals for code that uses CF names directly.
 
-#define CF_AHDR(a) ((CF_Ahdr*)a - 1)
-#define CF_ACOOKIE 0xE6F7E359
+#define CF_Ahdr      CK_ArrayHeader
+#define CF_AHDR      CK_AHDR
+#define CF_ACOOKIE   CK_ACOOKIE
+#define CF_ACANARY(a) ((a) ? CF_ASSERT(CK_AHDR(a)->cookie == CK_ACOOKIE) : (void)0)
 
-// If you see this macro asserting it likely means you didn't pass a proper dynamic string or array
-// to one of the array/string macros. You must not pass string literals to these functions for certain input
-// arguments, and instead, build a dynamic array/string using the C apis (e.g. `apush` or `sset`). This macro
-// also helps detect heap/stack corruption such as buffer underruns.
-#define CF_ACANARY(a) ((a) ? CF_ASSERT(CF_AHDR(a)->cookie == CF_ACOOKIE) : (void)0)
-
-// *Hidden* array header.
-typedef struct CF_Ahdr
-{
-	int size;
-	int capacity;
-	bool is_static;
-	char* data;
-	uint32_t cookie;
-} CF_Ahdr;
-
-#ifdef __cplusplus
-extern "C" {
-#endif // __cplusplus
-
-CF_API void* CF_CALL cf_agrow(const void* a, int new_size, size_t element_size);
-CF_API void* CF_CALL cf_astatic(const void* a, int capacity, size_t element_size);
-CF_API void* CF_CALL cf_aset(const void* a, const void* b, size_t element_size);
-CF_API void* CF_CALL cf_arev(const void* a, size_t element_size);
-
-#ifdef __cplusplus
-}
-#endif // __cplusplus
+#define cf_agrow   ck_agrow
+#define cf_astatic ck_astatic
+#define cf_aset    ck_aset
+#define cf_arev    ck_arev
 
 //--------------------------------------------------------------------------------------------------
 // C++ API

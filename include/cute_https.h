@@ -12,7 +12,7 @@
 #include "cute_result.h"
 #include "cute_c_runtime.h"
 #include "cute_array.h"
-#include "cute_hashtable.h"
+#include "cute_map.h"
 
 #ifndef CF_EMSCRIPTEN
 
@@ -265,10 +265,10 @@ CF_API int CF_CALL cf_https_response_headers_count(CF_HttpsResponse response);
  * @brief    Returns an array of response headers.
  * @remarks  Intended to be used with `cf_https_response_headers_count`. Do not free this array, it will
  *           get cleaned up when the originating `CF_HttpsRequest` is destroyed via `cf_https_destroy`.
- *           If you're familiar with `htbl` you may treat this pointer as a hashtable key'd by strings.
+ *           The returned array is indexed by position, use `cf_https_response_find_header` to look up by name.
  * @related  CF_HttpsHeader CF_HttpsResponse cf_https_response_find_header cf_https_response_headers
  */
-CF_API htbl const CF_HttpsHeader* CF_CALL cf_https_response_headers(CF_HttpsResponse response);
+CF_API dyna const CF_HttpsHeader* CF_CALL cf_https_response_headers(CF_HttpsResponse response);
 
 #ifdef __cplusplus
 }
@@ -294,7 +294,7 @@ CF_INLINE int https_response_content_length(CF_HttpsResponse response) { return 
 CF_INLINE char* https_response_content(CF_HttpsResponse response) { return cf_https_response_content(response); }
 CF_INLINE CF_HttpsHeader https_response_find_header(CF_HttpsResponse response, const char* header_name) { return cf_https_response_find_header(response, header_name); }
 CF_INLINE int https_response_headers_count(CF_HttpsResponse response) { return cf_https_response_headers_count(response); }
-CF_INLINE htbl const CF_HttpsHeader* https_response_headers(CF_HttpsResponse response) { return cf_https_response_headers(response); }
+CF_INLINE dyna const CF_HttpsHeader* https_response_headers(CF_HttpsResponse response) { return cf_https_response_headers(response); }
 
 }
 

@@ -9,6 +9,8 @@
 #include <cute_debug_printf.h>
 #include <cute_file_system.h>
 #include <cute_defer.h>
+#include <cute_input.h>
+#include <cute_image.h>
 
 #include <internal/cute_alloc_internal.h>
 #include <internal/cute_app_internal.h>
@@ -22,7 +24,7 @@ struct CF_AsepriteCacheEntry
 {
 	const char* path = NULL;
 	ase_t* ase = NULL;
-	htbl CF_Animation** animations = NULL;
+	CK_MAP(CF_Animation*) animations = NULL;
 	dyna CF_SpriteSlice* slices = NULL;
 	dyna v2* pivots = NULL;
 	dyna CF_Aabb* center_patches = NULL;
@@ -30,8 +32,8 @@ struct CF_AsepriteCacheEntry
 
 struct CF_AsepriteCache
 {
-	Map<const char*, CF_AsepriteCacheEntry> aseprites;
-	Map<uint64_t, void*> id_to_pixels;
+	Map<CF_AsepriteCacheEntry> aseprites;
+	Map<void*> id_to_pixels;
 	uint64_t id_gen = CF_ASEPRITE_ID_RANGE_LO;
 };
 
@@ -60,13 +62,13 @@ void cf_destroy_aseprite_cache()
 	CF_AsepriteCacheEntry* entries = cache->aseprites.items();
 	for (int i = 0; i < count; ++i) {
 		CF_AsepriteCacheEntry* entry = entries + i;
-		int animation_count = hcount(entry->animations);
-		for (int j = 0; j < animation_count; ++j) {
-			afree(entry->animations[j]->frames);
-			CF_FREE(entry->animations[j]);
+		CF_Animation** anim_vals = map_items(entry->animations);
+		for (int j = 0; j < map_size(entry->animations); ++j) {
+			afree(anim_vals[j]->frames);
+			CF_FREE(anim_vals[j]);
 		}
 
-		hfree(entry->animations);
+		map_free(entry->animations);
 		afree(entry->slices);
 		afree(entry->pivots);
 		cute_aseprite_free(entry->ase);
@@ -85,19 +87,20 @@ static CF_PlayDirection s_play_direction(ase_animation_direction_t direction)
 	return CF_PLAY_DIRECTION_FORWARDS;
 }
 
-static void s_sprite(CF_AsepriteCacheEntry entry, CF_Sprite* sprite)
+static void s_sprite(CF_AsepriteCacheEntry* entry, CF_Sprite* sprite)
 {
-	sprite->name = entry.path;
-	sprite->animations = (const CF_Animation**)entry.animations;
-	sprite->w = entry.ase->w;
-	sprite->h = entry.ase->h;
-	sprite->pivots = entry.pivots;
-	sprite->center_patches = entry.center_patches;
-	sprite->slices = entry.slices;
-	if (entry.ase->tag_count == 0) {
+	sprite->name = entry->path;
+	sprite->animations = (decltype(sprite->animations))&entry->animations;
+	sprite->w = entry->ase->w;
+	sprite->h = entry->ase->h;
+	sprite->pivots = entry->pivots;
+	sprite->center_patches = entry->center_patches;
+	sprite->slices = entry->slices;
+	if (entry->ase->tag_count == 0) {
 		cf_sprite_play(sprite, "default");
 	} else {
-		cf_sprite_play(sprite, sprite->animations[0]->name);
+		const CF_Animation** first_anim = (const CF_Animation**)map_items(entry->animations);
+		cf_sprite_play(sprite, (*first_anim)->name);
 	}
 }
 
@@ -107,7 +110,7 @@ static CF_Result s_aseprite_cache_load_from_memory(const char* unique_name, cons
 	if (!ase) return cf_result_error("Unable to open ase file at `aseprite_path`.");
 
 	// Allocate internal cache data structure entries.
-	CF_Animation** animations = NULL;
+	CK_MAP(CF_Animation*) animations = NULL;
 	Array<uint64_t> ids;
 	v2* pivots = NULL;
 	CF_Aabb* center_patches = NULL;
@@ -163,7 +166,7 @@ static CF_Result s_aseprite_cache_load_from_memory(const char* unique_name, cons
 				frame.id = id;
 				cf_animation_add_frame(animation, frame);
 			}
-			hadd(animations, animation->name, animation);
+			map_set(animations, (uint64_t)animation->name, animation);
 		}
 	} else {
 		// Treat the entire frame set as a single animation if there are no tags.
@@ -179,7 +182,7 @@ static CF_Result s_aseprite_cache_load_from_memory(const char* unique_name, cons
 			frame.id = id;
 			cf_animation_add_frame(animation, frame);
 		}
-		hadd(animations, animation->name, animation);
+		map_set(animations, (uint64_t)animation->name, animation);
 	}
 
 	// Fill out slices.
@@ -234,10 +237,11 @@ static CF_Result s_aseprite_cache_load_from_memory(const char* unique_name, cons
 	// Cache the ase and animation.
 	entry.path = unique_name;
 	entry.ase = ase;
-	entry.animations = animations;
+	CF_MEMCPY(&entry.animations, &animations, sizeof(animations));
 	cache->aseprites.insert(unique_name, entry);
 
-	s_sprite(entry, sprite_out);
+	CF_AsepriteCacheEntry* cached_entry = cache->aseprites.try_find(unique_name);
+	s_sprite(cached_entry, sprite_out);
 	return cf_result_success();
 }
 
@@ -247,7 +251,7 @@ CF_Result cf_aseprite_cache_load_from_memory(const char* unique_name, const void
 	unique_name = sintern(unique_name);
 	auto entry_ptr = cache->aseprites.try_find(unique_name);
 	if (entry_ptr) {
-		s_sprite(*entry_ptr, sprite_out);
+		s_sprite(entry_ptr, sprite_out);
 		return cf_result_success();
 	}
 
@@ -260,7 +264,7 @@ CF_Result cf_aseprite_cache_load(const char* aseprite_path, CF_Sprite* sprite)
 	aseprite_path = sintern(aseprite_path);
 	auto entry_ptr = cache->aseprites.try_find(aseprite_path);
 	if (entry_ptr) {
-		s_sprite(*entry_ptr, sprite);
+		s_sprite(entry_ptr, sprite);
 		return cf_result_success();
 	}
 
@@ -280,9 +284,10 @@ void cf_aseprite_cache_unload(const char* aseprite_path)
 	if (!entry_ptr) return;
 
 	CF_AsepriteCacheEntry entry = *entry_ptr;
-	for (int i = 0; i < hcount(entry.animations); ++i) {
-		CF_Animation* animation = entry.animations[i];
-		for (int j = 0; j < alen(animation->frames); ++j) {
+	CF_Animation** anim_vals = map_items(entry.animations);
+	for (int i = 0; i < map_size(entry.animations); ++i) {
+		CF_Animation* animation = anim_vals[i];
+		for (int j = 0; j < asize(animation->frames); ++j) {
 			uint64_t id = animation->frames[j].id;
 			cache->id_to_pixels.remove(id);
 			spritebatch_invalidate(&s_draw->sb, id);
@@ -292,7 +297,7 @@ void cf_aseprite_cache_unload(const char* aseprite_path)
 		CF_FREE(animation);
 	}
 
-	hfree(entry.animations);
+	map_free(entry.animations);
 	cute_aseprite_free(entry.ase);
 	cache->aseprites.remove(aseprite_path);
 }

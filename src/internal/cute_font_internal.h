@@ -9,7 +9,7 @@
 #define CF_FONT_INTERNAL_H
 
 #include <cute_array.h>
-#include <cute_hashtable.h>
+#include <cute_map.h>
 #include <cute_math.h>
 #include <cute_color.h>
 #include <cute_alloc.h>
@@ -31,8 +31,8 @@ struct CF_Font
 {
 	uint8_t* file_data = NULL;
 	stbtt_fontinfo info;
-	Cute::Map<uint64_t, int> kerning;
-	Cute::Map<uint64_t, CF_Glyph> glyphs;
+	Cute::Map<int> kerning;
+	Cute::Map<CF_Glyph> glyphs;
 	Cute::Array<uint64_t> image_ids;
 	int ascent;
 	int descent;
@@ -54,7 +54,7 @@ struct CF_TextCode
 	int index_in_string;
 	int glyph_count;
 	CF_TextEffectFn* fn;
-	Cute::Map<const char*, CF_TextCodeVal> params;
+	Cute::Map<CF_TextCodeVal> params;
 };
 
 struct TextEffect : public CF_TextEffect
@@ -94,7 +94,7 @@ struct TextEffect : public CF_TextEffect
 
 	// "private" state -- don't touch.
 	int initial_index;
-	const Cute::Map<const char*, CF_TextCodeVal>* params;
+	const Cute::Map<CF_TextCodeVal>* params;
 	CF_TextEffectFn* fn;
 	bool line_bound_init = false;
 	CF_Aabb line_bound;

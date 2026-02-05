@@ -78,7 +78,7 @@ struct CF_App
 	void* on_shader_changed_udata = NULL;
 	bool shader_directory_set = false;
 	Cute::CF_Path shader_directory;
-	Cute::Map<const char*, CF_ShaderFileInfo> shader_file_infos;
+	Cute::Map<CF_ShaderFileInfo> shader_file_infos;
 	bool gfx_enabled = false;
 	float dpi_scale = 1.0f;
 	float dpi_scale_prev = 1.0f;
@@ -131,15 +131,15 @@ struct CF_App
 
 	// Font stuff.
 	uint64_t font_image_id_gen = CF_FONT_ID_RANGE_LO;
-	Cute::Map<const char*, CF_Font*> fonts;
-	Cute::Map<uint64_t, CF_Pixel*> font_pixels;
-	Cute::Map<uint64_t, CF_TextEffectState> text_effect_states;
-	Cute::Map<uint64_t, CF_ParsedTextState> parsed_text_states;
-	Cute::Map<const char*, CF_TextEffectFn*> text_effect_fns;
+	Cute::Map<CF_Font*> fonts;
+	Cute::Map<CF_Pixel*> font_pixels;
+	Cute::Map<CF_TextEffectState> text_effect_states;
+	Cute::Map<CF_ParsedTextState> parsed_text_states;
+	Cute::Map<CF_TextEffectFn*> text_effect_fns;
 
 	// Easy sprite stuff.
 	uint64_t easy_sprite_id_gen = CF_EASY_ID_RANGE_LO;
-	Cute::Map<uint64_t, CF_Image> easy_sprites;
+	Cute::Map<CF_Image> easy_sprites;
 };
 
 #endif // CF_APP_INTERNAL_H

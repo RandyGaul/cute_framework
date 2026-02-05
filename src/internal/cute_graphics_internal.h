@@ -11,6 +11,8 @@
 #include <cute_array.h>
 #include <cute_result.h>
 #include <cute_graphics.h>
+#include <cute_input.h>
+#include <cute_image.h>
 #include <SDL3/SDL_gpu.h>
 
 #define CF_MAX_UNIFORM_BLOCK_COUNT (4)

@@ -187,8 +187,8 @@ struct CF_Draw
 	Cute::Array<uint64_t> text_ids = { 0 };
 	Cute::Array<CF_Strike> strikes;
 	Cute::Array<bool> text_effects = { true };
-	Cute::Map<uint64_t, CF_AtlasSubImage> premade_sub_image_id_to_sub_image;
-	Cute::Map<uint64_t, uint64_t> draw_shd_to_blit_shd;
+	Cute::Map<CF_AtlasSubImage> premade_sub_image_id_to_sub_image;
+	Cute::Map<uint64_t> draw_shd_to_blit_shd;
 	bool blit_init = false;
 	CF_Mesh blit_mesh = { 0 };
 	CF_VertexFn* vertex_fn = NULL;

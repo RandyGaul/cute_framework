@@ -48,7 +48,7 @@ typedef struct CF_Response
 	bool deflate = false;
 	int content_length = 0;
 	bool trailers = false;
-	Map<const char*, CF_HttpsHeader> headers;
+	Map<CF_HttpsHeader> headers;
 	String parse;
 	String content;
 } CF_Response;
@@ -494,7 +494,7 @@ int cf_https_response_headers_count(CF_HttpsResponse response_handle)
 	return response->headers.count();
 }
 
-htbl const CF_HttpsHeader* cf_https_response_headers(CF_HttpsResponse response_handle)
+dyna const CF_HttpsHeader* cf_https_response_headers(CF_HttpsResponse response_handle)
 {
 	CF_Response* response = (CF_Response*)response_handle.id;
 	return response->headers.items();
