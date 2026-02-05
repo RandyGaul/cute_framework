@@ -51,14 +51,14 @@ Since the C++ wrapper has a constructor and destructor there's no need to manual
 
 A map is used to map a unique key to a specific value. The value can be fetched later very efficiently (in constant time). This makes the map a very popular data structure for general purpose problem solving. Often times maps are used to store unique identifiers for game objects, assets, and provide an easy way to create associations between different sets of data.
 
-In C we use the [`CF_MAP`](../hash/cf_map.md) type, while in C++ there's a `Map<T>` class that wraps the C functionality. It contains a very similar API including get/find, insert, remove, etc. We will cover both the C and C++ APIs in this page.
+In C we use the [`CF_MAP`](../map/cf_map.md) type, while in C++ there's a `Map<T>` class that wraps the C functionality. It contains a very similar API including get/find, insert, remove, etc. We will cover both the C and C++ APIs in this page.
 
 > [!IMPORTANT]
 > Since the table itself grows dynamically, values _may not_ store pointers to themselves or other values. All values are stored as [plain old data (POD)](https://stackoverflow.com/questions/146452/what-are-pod-types-in-c), as their location in memory will get shuffled around internally as the map grows.
 
 ## CF_MAP in C
 
-[`CF_MAP(T)`](../hash/cf_map.md) is a markup macro for a map type. All keys are `uint64_t`. You can store any POD value type. The map grows automatically as entries are added.
+[`CF_MAP(T)`](../map/cf_map.md) is a markup macro for a map type. All keys are `uint64_t`. You can store any POD value type. The map grows automatically as entries are added.
 
 ```cpp
 CF_MAP(CF_V2) pts = NULL;
