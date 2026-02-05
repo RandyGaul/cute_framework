@@ -108,7 +108,7 @@
 #define afit(a, n)    ((n) <= acap(a) ? 0 : (*(void**)&(a) = ck_agrow((a), (n), sizeof(*(a)))))
 
 // apush: Append element. May reallocate.
-#define apush(a, ...) (CK_ACANARY(a), afit((a), 1 + ((a) ? asize(a) : 0)), (a)[CK_AHDR(a)->size++] = (__VA_ARGS__))
+#define apush(a, ...) (CK_ACANARY(a), afit((a), 1 + asize(a)), (a)[CK_AHDR(a)->size++] = (__VA_ARGS__))
 
 // apop: Remove and return last element. Array must not be empty.
 #define apop(a)       ((a)[--CK_AHDR(a)->size])
