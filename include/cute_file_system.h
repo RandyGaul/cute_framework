@@ -354,11 +354,11 @@ CF_API CF_Result CF_CALL cf_fs_create_directory(const char* virtual_path);
  * @param    virtual_path  The virtual path to the directory.
  * @return   Returns any errors as a `CF_Result`.
  * @example > Loop over a list of all files in a directory.
- *     const char** list = cf_fs_enumerate_directory("/data");
- *     for (const char** i = list; *i; ++i) {
- *         printf("Found %s\n", *i);
- *     }
- *     cf_fs_free_enumerated_directory(list);
+ *           const char** list = cf_fs_enumerate_directory("/data");
+ *           for (const char** i = list; *i; ++i) {
+ *               printf("Found %s\n", *i);
+ *           }
+ *           cf_fs_free_enumerated_directory(list);
  * @remarks  Results are collected by visiting the search path for all real directories mounted on `virtual_path`. No duplicate file
  *           names will be reported. The list itself is sorted alphabetically, though you can further sort it however you like. Free
  *           the list up with `cf_fs_free_enumerated_directory` when done. The final element of the list is NULL. [Virtual File System](https://randygaul.github.io/cute_framework/topics/virtual_file_system).
