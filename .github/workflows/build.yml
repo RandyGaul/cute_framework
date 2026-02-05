@@ -30,7 +30,7 @@ jobs:
               name: "Windows (MSVC 17 2022)",
               os: windows-2025,
               artifact: "msvc17",
-              generate: '-G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release',
+              generate: '-G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release -DCF_FRAMEWORK_BUILD_SAMPLES=OFF',
             }
           - {
               name: "macOS",
