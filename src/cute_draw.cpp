@@ -424,7 +424,6 @@ void CF_Draw::reset_cam()
 	cam_stack.clear();
 	cam_stack.add(cf_make_identity());
 	mvp = projection;
-	s_draw->antialias_scale.set_count(1);
 	s_draw->set_aaf();
 }
 
@@ -432,10 +431,9 @@ void CF_Draw::reset_cam()
 // This factor remains constant-size despite zooming in/out with the camera.
 void CF_Draw::set_aaf()
 {
-	float on_or_off = s_draw->antialias.last() ? 1.0f : 0.0f;
 	float inv_cam_scale = 1.0f / len(s_draw->cam_stack.last().m.y);
-	float scale = s_draw->antialias_scale.last();
-	aaf = scale * inv_cam_scale * on_or_off;
+	float scale = s_draw->antialias.last();
+	aaf = scale * inv_cam_scale;
 }
 
 void cf_make_draw()
@@ -1498,10 +1496,10 @@ void cf_draw_polyline(const CF_V2* pts, int count, float thickness, bool loop)
 	auto submit = [&](v2 a, v2 b, v2 c, bool solo = false) {
 		if (skip) return;
 		if (debug) {
-			draw_push_antialias(false);
+			draw_push_shape_aa(false);
 			draw_tri(a, b, c);
 			draw_tri_fill(a, b, c);
-			draw_pop_antialias();
+			draw_pop_shape_aa();
 		} else {
 			s.geom.shape[0] = p0;
 			s.geom.shape[1] = p1;
@@ -2928,16 +2926,16 @@ CF_Color cf_draw_peek_color()
 	return s_draw->colors.last();
 }
 
-void cf_draw_push_shape_aa(bool aa)
+void cf_draw_push_shape_aa(float aa)
 {
 	s_draw->antialias.add(aa);
 	s_draw->set_aaf();
 }
 
-bool cf_draw_pop_shape_aa()
+float cf_draw_pop_shape_aa()
 {
 	if (s_draw->antialias.count() > 1) {
-		bool result = s_draw->antialias.pop();
+		float result = s_draw->antialias.pop();
 		s_draw->set_aaf();
 		return result;
 	} else {
@@ -2945,31 +2943,9 @@ bool cf_draw_pop_shape_aa()
 	}
 }
 
-bool cf_draw_peek_shape_aa()
+float cf_draw_peek_shape_aa()
 {
 	return s_draw->antialias.last();
-}
-
-void cf_draw_push_shape_aa_scale(float scale)
-{
-	s_draw->antialias_scale.add(scale);
-	s_draw->set_aaf();
-}
-
-float cf_draw_pop_shape_aa_scale()
-{
-	if (s_draw->antialias_scale.count() > 1) {
-		float scale = s_draw->antialias_scale.pop();
-		s_draw->set_aaf();
-		return scale;
-	} else {
-		return s_draw->antialias_scale.last();
-	}
-}
-
-float cf_draw_peek_shape_aa_scale()
-{
-	return s_draw->antialias_scale.last();
 }
 
 void cf_draw_push_vertex_attributes(float r, float g, float b, float a)

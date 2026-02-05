@@ -36,8 +36,7 @@ int main(int argc, char* argv[])
 		ImGui::End();
 
 		draw_push_color(color);
-		draw_push_shape_aa_scale(aa_scale);
-		draw_push_shape_aa(aa);
+		draw_push_shape_aa(aa ? aa_scale : 0);
 		draw_polygon_fill(polygon, CF_ARRAY_SIZE(polygon), chubbiness);
 
 		if (!ImGui::GetIO().WantCaptureMouse) {

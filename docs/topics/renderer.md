@@ -280,10 +280,9 @@ To deal with camera zoom CF chose to pass in an `antialias_factor`, or dubiously
 // This factor remains constant-size despite zooming in/out with the camera.
 void CF_Draw::set_aaf()
 {
-	float on_or_off = draw->antialias.last() ? 1.0f : 0.0f;
 	float inv_cam_scale = 1.0f / len(draw->cam_stack.last().m.y);
-	float scale = draw->antialias_scale.last();
-	aaf = scale * inv_cam_scale * on_or_off;
+	float scale = draw->antialias.last();
+	aaf = scale * inv_cam_scale;
 }
 ```
 

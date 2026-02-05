@@ -23,7 +23,7 @@ int main(int argc, char* argv[])
 {
 	make_app("Text Drawing", 0, 0, 0, 640, 480, CF_APP_OPTIONS_WINDOW_POS_CENTERED_BIT | CF_APP_OPTIONS_RESIZABLE_BIT, argv[0]);
 
-	draw_push_shape_aa(true);
+	draw_push_shape_aa(1.5f);
 	make_font_from_memory(proggy_data, proggy_sz, "ProggyClean");
 	set_fixed_timestep();
 	int draw_calls = 0;

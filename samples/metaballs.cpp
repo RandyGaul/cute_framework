@@ -53,9 +53,9 @@ void update()
 			float r = rnd_range(rnd, 10.0f,60.0f);
 		
 			// Render a perfect soft-circle using anti-alias scaling and zero-radius.
-			draw_push_shape_aa_scale(r);
+			draw_push_shape_aa(r);
 			draw_circle_fill(make_circle(V2(x, y), 0));
-			draw_pop_shape_aa_scale();
+			draw_pop_shape_aa();
 		}
 
 		static int toggle = false;

@@ -85,7 +85,7 @@ int main(int argc, char* argv[])
 		draw_set_uniform("show_noise", show_noise ? 1.0f : 0.0f);
 		draw_set_texture("water_tex", canvas_get_target(offscreen));
 		draw_set_texture("noise_tex", tex);
-		draw_push_shape_aa(false);
+		draw_push_shape_aa(0);
 		draw_box_fill(make_aabb(V2(0,0), 640, 480));
 
 		app_draw_onto_screen(true);
