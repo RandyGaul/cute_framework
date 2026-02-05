@@ -571,6 +571,10 @@ typedef struct CK_UniqueString
 	char* str;
 } CK_UniqueString;
 
+// Intern validation and length macros.
+#define ck_sivalid(s) (((CK_UniqueString*)(s) - 1)->cookie.val == CK_INTERN_COOKIE.val)
+#define ck_silen(s)   (((CK_UniqueString*)(s) - 1)->len)
+
 //--------------------------------------------------------------------------------------------------
 // Private implementation details.
 
@@ -587,6 +591,7 @@ typedef struct CK_ArrayHeader
 #define CK_AHDR(a)    ((CK_ArrayHeader*)(a) - 1)
 #define CK_ACOOKIE    ck_cookie('A','R','R','Y')
 #define CK_ACANARY(a) ((a) ? assert(CK_AHDR(a)->cookie.val == CK_ACOOKIE.val) : (void)0)
+#define ck_avalid(a)  ((a) && CK_AHDR(a)->cookie.val == CK_ACOOKIE.val)
 
 #ifdef __cplusplus
 extern "C" {
