@@ -14,7 +14,7 @@ int main(int argc, char* argv[])
 
 	while (app_is_running()) {
 		app_update();
-		draw_push_antialias(false);
+		draw_push_shape_aa(false);
 		draw_scale(sx, sy);
 		draw_rotate((float)(CF_PI * CF_SECONDS / 16.0f));
 
