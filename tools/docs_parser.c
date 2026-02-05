@@ -408,15 +408,16 @@ static char* parse_paragraph(int is_example)
 		if (cp == '\n') {
 			spush(paragraph, (char)cp);
 			state_skip();
-			if (state_try_next(' ')) {
-				if (state_try_next('*')) {
-					if (state_try_next('/')) {
-						s->in--;
-						s->in--;
-						break;
-					} else {
-						state_try_next(' ');
-					}
+			// Try to consume comment prefix: optional space + asterisk + optional space
+			// This handles both " * " (proper format) and "* " (malformed without leading space)
+			state_try_next(' ');
+			if (state_try_next('*')) {
+				if (state_try_next('/')) {
+					s->in--;
+					s->in--;
+					break;
+				} else {
+					state_try_next(' ');
 				}
 			}
 		} else if (cp == '@') {
@@ -427,6 +428,9 @@ static char* parse_paragraph(int is_example)
 				s->in--;
 				s->in--;
 				break;
+			} else {
+				// Preserve asterisks that are part of content (not comment delimiters)
+				spush(paragraph, '*');
 			}
 		} else {
 			if (cp != '\r') {

@@ -32,23 +32,23 @@ CF_API void CF_CALL cf_draw_sprite(const CF_Sprite* sprite);
 
 
 /**
-* @function cf_draw_sprite_9_slice
-* @category draw
-* @brief    Draws a sprite using 9 slice, the top, left, right and bottom sides will be stretched.
-*           if no center patch uvs are defined then this defaults back to cf_draw_sprite
-* @param    sprite     The sprite.
-* @related  cf_draw_sprite cf_draw_sprite_9_slice cf_draw_sprite_9_slice_tiled cf_draw_quad cf_draw_to cf_app_draw_onto_screen
-*/
+ * @function cf_draw_sprite_9_slice
+ * @category draw
+ * @brief    Draws a sprite using 9 slice, the top, left, right and bottom sides will be stretched.
+ *           if no center patch uvs are defined then this defaults back to cf_draw_sprite
+ * @param    sprite     The sprite.
+ * @related  cf_draw_sprite cf_draw_sprite_9_slice cf_draw_sprite_9_slice_tiled cf_draw_quad cf_draw_to cf_app_draw_onto_screen
+ */
 CF_API void CF_CALL cf_draw_sprite_9_slice(const CF_Sprite* sprite);
 
 /**
-* @function cf_draw_sprite_9_slice_tiled
-* @category draw
-* @brief    Draws a sprite using 9 slice, the top, left, right and bottom will be tiled.
-*           if no center patch uvs are defined then this defaults back to cf_draw_sprite
-* @param    sprite     The sprite.
-* @related  cf_draw_sprite cf_draw_sprite_9_slice cf_draw_sprite_9_slice_tiled cf_draw_quad cf_draw_to cf_app_draw_onto_screen
-*/
+ * @function cf_draw_sprite_9_slice_tiled
+ * @category draw
+ * @brief    Draws a sprite using 9 slice, the top, left, right and bottom will be tiled.
+ *           if no center patch uvs are defined then this defaults back to cf_draw_sprite
+ * @param    sprite     The sprite.
+ * @related  cf_draw_sprite cf_draw_sprite_9_slice cf_draw_sprite_9_slice_tiled cf_draw_quad cf_draw_to cf_app_draw_onto_screen
+ */
 CF_API void CF_CALL cf_draw_sprite_9_slice_tiled(const CF_Sprite* sprite);
 
 /**
@@ -113,76 +113,76 @@ CF_API void CF_CALL cf_draw_quad_fill(CF_Aabb bb, float chubbiness);
 CF_API void CF_CALL cf_draw_quad_fill2(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float chubbiness);
 
 /**
-* @function cf_draw_box
-* @category draw
-* @brief    Draws a quad wireframe.
-* @param    bb         The AABB (Axis-Aligned Bounding Box) to draw a quad over.
-* @param    thickness  The thickness of each line to draw.
-* @param    chubbiness Inflates the shape, similar to corner-rounding. Makes the shape chubbier.
-* @remarks  This is an alias for `cf_draw_quad`
-* @related  cf_draw_quad cf_draw_quad2 cf_draw_quad_fill cf_draw_quad_fill2
-*/
+ * @function cf_draw_box
+ * @category draw
+ * @brief    Draws a quad wireframe.
+ * @param    bb         The AABB (Axis-Aligned Bounding Box) to draw a quad over.
+ * @param    thickness  The thickness of each line to draw.
+ * @param    chubbiness Inflates the shape, similar to corner-rounding. Makes the shape chubbier.
+ * @remarks  This is an alias for `cf_draw_quad`
+ * @related  cf_draw_quad cf_draw_quad2 cf_draw_quad_fill cf_draw_quad_fill2
+ */
 CF_INLINE void cf_draw_box(CF_Aabb bb, float thickness, float chubbiness) { cf_draw_quad(bb, thickness, chubbiness); }
 
 /**
-* @function cf_draw_box_rounded
-* @category draw
-* @brief    Draws a quad wireframe with rounded corners.
-* @param    bb         The AABB (Axis-Aligned Bounding Box) to draw a quad over.
-* @param    thickness  The thickness of each line to draw.
-* @param    radius     The radius to use for rounding.
-* @related  cf_draw_quad cf_draw_quad2 cf_draw_quad_fill cf_draw_quad_fill2
-*/
+ * @function cf_draw_box_rounded
+ * @category draw
+ * @brief    Draws a quad wireframe with rounded corners.
+ * @param    bb         The AABB (Axis-Aligned Bounding Box) to draw a quad over.
+ * @param    thickness  The thickness of each line to draw.
+ * @param    radius     The radius to use for rounding.
+ * @related  cf_draw_quad cf_draw_quad2 cf_draw_quad_fill cf_draw_quad_fill2
+ */
 CF_API void CF_CALL cf_draw_box_rounded(CF_Aabb bb, float thickness, float radius);
 
 /**
-* @function cf_draw_box2
-* @category draw
-* @brief    Draws a quad wireframe.
-* @param    p0         A corner of the quad.
-* @param    p1         A corner of the quad.
-* @param    p2         A corner of the quad.
-* @param    p3         A corner of the quad.
-* @param    thickness  The thickness of each line to draw.
-* @param    chubbiness Inflates the shape, similar to corner-rounding. Makes the shape chubbier.
-* @remarks  All points `p0` through `p3` are encouraged to be in counter-clockwise order. This is an alias for `cf_draw_quad2`
-* @related  cf_draw_quad cf_draw_quad2 cf_draw_quad_fill cf_draw_quad_fill2
-*/
+ * @function cf_draw_box2
+ * @category draw
+ * @brief    Draws a quad wireframe.
+ * @param    p0         A corner of the quad.
+ * @param    p1         A corner of the quad.
+ * @param    p2         A corner of the quad.
+ * @param    p3         A corner of the quad.
+ * @param    thickness  The thickness of each line to draw.
+ * @param    chubbiness Inflates the shape, similar to corner-rounding. Makes the shape chubbier.
+ * @remarks  All points `p0` through `p3` are encouraged to be in counter-clockwise order. This is an alias for `cf_draw_quad2`
+ * @related  cf_draw_quad cf_draw_quad2 cf_draw_quad_fill cf_draw_quad_fill2
+ */
 CF_INLINE void cf_draw_box2(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float thickness, float chubbiness) { cf_draw_quad2(p0, p1, p2, p3, thickness,  chubbiness); }
 
 /**
-* @function cf_draw_box_fill
-* @category draw
-* @brief    Draws a quad.
-* @param    bb         The AABB (Axis-Aligned Bounding Box) to draw a quad over.
-* @param    chubbiness Inflates the shape, similar to corner-rounding. Makes the shape chubbier.
-* @remarks  This is an alias for `cf_draw_quad_fill`
-* @related  cf_draw_quad cf_draw_quad2 cf_draw_quad_fill cf_draw_quad_fill2
-*/
+ * @function cf_draw_box_fill
+ * @category draw
+ * @brief    Draws a quad.
+ * @param    bb         The AABB (Axis-Aligned Bounding Box) to draw a quad over.
+ * @param    chubbiness Inflates the shape, similar to corner-rounding. Makes the shape chubbier.
+ * @remarks  This is an alias for `cf_draw_quad_fill`
+ * @related  cf_draw_quad cf_draw_quad2 cf_draw_quad_fill cf_draw_quad_fill2
+ */
 CF_INLINE void cf_draw_box_fill(CF_Aabb bb, float chubbiness) { cf_draw_quad_fill(bb, chubbiness); }
 
 /**
-* @function cf_draw_box_fill2
-* @category draw
-* @brief    Draws a quad.
-* @param    p0         A corner of the quad.
-* @param    p1         A corner of the quad.
-* @param    p2         A corner of the quad.
-* @param    p3         A corner of the quad.
-* @param    chubbiness Inflates the shape, similar to corner-rounding. Makes the shape chubbier.
-* @remarks  All points `p0` through `p3` are encouraged to be in counter-clockwise order. This is an alias for `cf_draw_quad_fill2`
-* @related  cf_draw_quad cf_draw_quad2 cf_draw_quad_fill cf_draw_quad_fill2
-*/
+ * @function cf_draw_box_fill2
+ * @category draw
+ * @brief    Draws a quad.
+ * @param    p0         A corner of the quad.
+ * @param    p1         A corner of the quad.
+ * @param    p2         A corner of the quad.
+ * @param    p3         A corner of the quad.
+ * @param    chubbiness Inflates the shape, similar to corner-rounding. Makes the shape chubbier.
+ * @remarks  All points `p0` through `p3` are encouraged to be in counter-clockwise order. This is an alias for `cf_draw_quad_fill2`
+ * @related  cf_draw_quad cf_draw_quad2 cf_draw_quad_fill cf_draw_quad_fill2
+ */
 CF_INLINE void cf_draw_box_fill2(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float chubbiness) { cf_draw_quad_fill2(p0, p1, p2, p3, chubbiness); }
 
 /**
-* @function cf_draw_box_rounded_fill
-* @category draw
-* @brief    Draws a quad with rounded corners.
-* @param    bb         The AABB (Axis-Aligned Bounding Box) to draw a quad over.
-* @param    radius     The radius to use for rounding.
-* @related  cf_draw_quad cf_draw_quad2 cf_draw_quad_fill cf_draw_quad_fill2
-*/
+ * @function cf_draw_box_rounded_fill
+ * @category draw
+ * @brief    Draws a quad with rounded corners.
+ * @param    bb         The AABB (Axis-Aligned Bounding Box) to draw a quad over.
+ * @param    radius     The radius to use for rounding.
+ * @related  cf_draw_quad cf_draw_quad2 cf_draw_quad_fill cf_draw_quad_fill2
+ */
 CF_API void CF_CALL cf_draw_box_rounded_fill(CF_Aabb bb, float radius);
 
 /**
@@ -1390,38 +1390,38 @@ CF_API CF_Shader CF_CALL cf_draw_pop_shader(void);
 CF_API CF_Shader CF_CALL cf_draw_peek_shader(void);
 
 /**
-* @function cf_draw_push_alpha_discard
-* @category draw
-* @brief    Sets whether or not alpha discarding is enabled (on by default).
-* @remarks  Alpha discarding is useful to throw away pixels with zero alpha, for cutouts or as an optimization, or for certain blending techniques.
-* @related  cf_draw_set_texture cf_draw_set_uniform cf_draw_set_uniform_int cf_draw_set_uniform_float cf_draw_set_uniform_v2 cf_draw_set_uniform_color
-*/
+ * @function cf_draw_push_alpha_discard
+ * @category draw
+ * @brief    Sets whether or not alpha discarding is enabled (on by default).
+ * @remarks  Alpha discarding is useful to throw away pixels with zero alpha, for cutouts or as an optimization, or for certain blending techniques.
+ * @related  cf_draw_set_texture cf_draw_set_uniform cf_draw_set_uniform_int cf_draw_set_uniform_float cf_draw_set_uniform_v2 cf_draw_set_uniform_color
+ */
 CF_API void CF_CALL cf_draw_push_alpha_discard(bool true_enable_alpha_discard);
 
 /**
-* @function cf_draw_pop_alpha_discard
-* @category draw
-* @brief    TODO
-* @remarks  Alpha discarding is useful to throw away pixels with zero alpha, for cutouts or as an optimization, or for certain blending techniques.
-* @related  TODO
-*/
+ * @function cf_draw_pop_alpha_discard
+ * @category draw
+ * @brief    TODO
+ * @remarks  Alpha discarding is useful to throw away pixels with zero alpha, for cutouts or as an optimization, or for certain blending techniques.
+ * @related  TODO
+ */
 CF_API bool CF_CALL cf_draw_pop_alpha_discard(void);
 
 /**
-* @function cf_draw_peek_alpha_discard
-* @category draw
-* @brief    TODO
-* @remarks  Alpha discarding is useful to throw away pixels with zero alpha, for cutouts or as an optimization, or for certain blending techniques.
-* @related  TODO
-*/
+ * @function cf_draw_peek_alpha_discard
+ * @category draw
+ * @brief    TODO
+ * @remarks  Alpha discarding is useful to throw away pixels with zero alpha, for cutouts or as an optimization, or for certain blending techniques.
+ * @related  TODO
+ */
 CF_API bool CF_CALL cf_draw_peek_alpha_discard(void);
 
 /**
-* @enum     CF_DrawFilterMode
-* @category draw
-* @brief    Filter modes for the draw system's texture sampling.
-* @related  CF_DrawFilterMode cf_draw_filter_mode_to_string cf_draw_push_filter cf_draw_pop_filter cf_draw_peek_filter
-*/
+ * @enum     CF_DrawFilterMode
+ * @category draw
+ * @brief    Filter modes for the draw system's texture sampling.
+ * @related  CF_DrawFilterMode cf_draw_filter_mode_to_string cf_draw_push_filter cf_draw_pop_filter cf_draw_peek_filter
+ */
 #define CF_DRAW_FILTER_MODE_DEFS \
 	/* @entry Nearest-neighbor filtering. Good for pixel art. Uses hardware nearest. */                             \
 	CF_ENUM(DRAW_FILTER_NEAREST, 0)                                                                                 \
@@ -1439,11 +1439,11 @@ typedef enum CF_DrawFilterMode
 } CF_DrawFilterMode;
 
 /**
-* @function cf_draw_filter_mode_to_string
-* @category draw
-* @brief    Returns a `CF_DrawFilterMode` converted to a C string.
-* @related  CF_DrawFilterMode cf_draw_filter_mode_to_string cf_draw_push_filter cf_draw_pop_filter cf_draw_peek_filter
-*/
+ * @function cf_draw_filter_mode_to_string
+ * @category draw
+ * @brief    Returns a `CF_DrawFilterMode` converted to a C string.
+ * @related  CF_DrawFilterMode cf_draw_filter_mode_to_string cf_draw_push_filter cf_draw_pop_filter cf_draw_peek_filter
+ */
 CF_INLINE const char* cf_draw_filter_mode_to_string(CF_DrawFilterMode mode) {
 	switch (mode) {
 #define CF_ENUM(K, V) case CF_##K: return CF_STRINGIZE(CF_##K);
