@@ -403,13 +403,7 @@ static char* parse_single_comment_line()
 static char* parse_paragraph(int is_example)
 {
 	char* paragraph = NULL;
-	int iter = 0;
 	while (!state_done()) {
-		iter++;
-		if (iter % 100000 == 0) {
-			printf("    parse_paragraph iter %d at: %.20s\n", iter, s->in);
-			fflush(stdout);
-		}
 		int cp = state_peek();
 		if (cp == '\n') {
 			spush(paragraph, (char)cp);
@@ -480,20 +474,12 @@ static void parse_command()
 		sfree(s->doc.return_value);
 		s->doc.return_value = parse_paragraph(0);
 	} else if (sequ(s->token, "@category")) {
-		printf("      @category: getting text\n");
-		fflush(stdout);
 		sfree(s->doc.web_category);
 		s->doc.web_category = parse_paragraph(0);
-		printf("      @category: text=%s\n", s->doc.web_category ? s->doc.web_category : "(null)");
-		fflush(stdout);
 		const char* category = sintern(s->doc.web_category);
-		printf("      @category: interned\n");
-		fflush(stdout);
 		if (!map_has(s->categories, (uint64_t)category)) {
 			map_set(s->categories, (uint64_t)category, category);
 		}
-		printf("      @category: done\n");
-		fflush(stdout);
 	} else {
 		char* msg = sfmake("Found unrecognized command %s.", s->token);
 		panic(msg);
@@ -560,27 +546,17 @@ static char* parse_line()
 static void parse_comment_block()
 {
 	sfree(s->doc.title);
-	printf("    parse_comment_block: getting title\n");
-	fflush(stdout);
 	s->doc.title = parse_paragraph(0);
-	printf("    parse_comment_block: title=%s\n", s->doc.title ? s->doc.title : "(null)");
-	fflush(stdout);
 	int iter = 0;
 	while (!state_done()) {
 		iter++;
-		printf("    parse_comment_block: iter %d\n", iter);
-		fflush(stdout);
 		parse_token();
-		printf("    parse_comment_block: token=%s\n", s->token ? s->token : "(null)");
-		fflush(stdout);
 		if (s->token && slen(s->token) && sfirst(s->token) == '@') {
 			parse_command();
 		} else if (sequ(s->token, "*/")) {
 			break;
 		}
 	}
-	printf("    parse_comment_block: done\n");
-	fflush(stdout);
 }
 
 static void parse_function()
@@ -602,24 +578,14 @@ static void parse_function()
 
 static void parse_struct()
 {
-	printf("  parse_struct: entering\n");
-	fflush(stdout);
 	s->doc.type = DOC_STRUCT;
-	printf("  parse_struct: calling parse_comment_block\n");
-	fflush(stdout);
 	parse_comment_block();
-	printf("  parse_struct: comment_block done\n");
-	fflush(stdout);
 	int doc_index = asize(s->docs);
 	flush_doc();
 	Doc* doc = &s->docs[asize(s->docs) - 1];
-	printf("  parse_struct: %s\n", doc->title ? doc->title : "(no title)");
-	fflush(stdout);
 	while (!state_done()) {
 		parse_token();
 		if (s->token && slen(s->token) && sfirst(s->token) == '@') {
-			printf("    found: %s\n", s->token);
-			fflush(stdout);
 			if (sequ(s->token, "@member")) {
 				char* brief = parse_paragraph(0);
 				parse_token(); // Skip "*/"
@@ -661,17 +627,9 @@ static void parse_header(const char* include_dir, const char* header)
 	sfree(s->file);
 	s->file = smake(header);
 
-	int token_count = 0;
 	while (!state_done()) {
 		parse_token();
-		token_count++;
-		if (token_count % 10000 == 0) {
-			printf("  tokens: %d, at: %.20s...\n", token_count, s->in);
-			fflush(stdout);
-		}
 		if (s->token && slen(s->token) && sfirst(s->token) == '@') {
-			printf("  found: %s\n", s->token);
-			fflush(stdout);
 			if (sequ(s->token, "@enum")) {
 				parse_enum();
 			} else if (sequ(s->token, "@function")) {
@@ -857,8 +815,6 @@ int main(int argc, char* argv[])
 	const char* file;
 	while ((file = dir_next(&headers))) {
 		if (spext_equ(file, ".h")) {
-			printf("Parsing: %s\n", file);
-			fflush(stdout);
 			parse_header(include_dir, file);
 		}
 	}
@@ -908,7 +864,6 @@ int main(int argc, char* argv[])
 		FILE* fp = fopen(doc->path, "wb");
 		if (!fp) {
 			fprintf(stderr, "Failed to open: '%s'\n", doc->path);
-			fflush(stderr);
 			exit(1);
 		}
 		const char* category = sintern(doc->web_category);
@@ -1048,7 +1003,6 @@ int main(int argc, char* argv[])
 				afree(enums);
 			}
 		}
-		printf("Wrote %s\n", ref_path);
 		fclose(fp);
 		sfree(ref_path);
 		map_free(related);
