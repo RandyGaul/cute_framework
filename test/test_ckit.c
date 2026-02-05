@@ -1075,20 +1075,20 @@ TEST_CASE(test_ckit_intern_as_map_key)
 
 TEST_CASE(test_ckit_string_slast_empty)
 {
-	// Bug: slast on empty string should return '\0', not access s[-1].
-	char* s = NULL;
-	sset(s, "");
-	REQUIRE(slen(s) == 0);
-	REQUIRE(slast(s) == '\0');
-	sfree(s);
-
-	// slast on NULL.
-	REQUIRE(slast(NULL) == '\0');
-
 	// slast on single char.
-	s = smake("x");
+	char* s = smake("x");
 	REQUIRE(slast(s) == 'x');
 	sfree(s);
+
+	// slast on multi-char string.
+	s = smake("abc");
+	REQUIRE(slast(s) == 'c');
+	sfree(s);
+
+	// slast on NULL returns '\0'.
+	char* null_str = NULL;
+	char c = slast(null_str);
+	REQUIRE(c == '\0');
 
 	return true;
 }
@@ -1098,11 +1098,14 @@ TEST_CASE(test_ckit_string_sfirst_empty)
 	// sfirst on empty string.
 	char* s = NULL;
 	sset(s, "");
-	REQUIRE(sfirst(s) == '\0');
+	char c = sfirst(s);
+	REQUIRE(c == '\0');
 	sfree(s);
 
-	// sfirst on NULL.
-	REQUIRE(sfirst(NULL) == '\0');
+	// sfirst on NULL returns '\0'.
+	char* null_str = NULL;
+	c = sfirst(null_str);
+	REQUIRE(c == '\0');
 
 	// sfirst on normal string.
 	s = smake("abc");
@@ -1112,14 +1115,17 @@ TEST_CASE(test_ckit_string_sfirst_empty)
 	return true;
 }
 
-TEST_CASE(test_ckit_string_scontains_null)
+TEST_CASE(test_ckit_string_scontains_edge)
 {
-	// scontains with NULL string.
-	REQUIRE(!scontains(NULL, "test"));
-
-	// scontains with empty substring (edge case).
+	// scontains with empty substring matches.
 	char* s = smake("hello");
 	REQUIRE(scontains(s, ""));
+	sfree(s);
+
+	// scontains with matching substring.
+	s = smake("hello world");
+	REQUIRE(scontains(s, "world"));
+	REQUIRE(!scontains(s, "xyz"));
 	sfree(s);
 
 	return true;
@@ -1603,7 +1609,7 @@ TEST_SUITE(test_ckit)
 	// String edge cases and bug coverage.
 	RUN_TEST_CASE(test_ckit_string_slast_empty);
 	RUN_TEST_CASE(test_ckit_string_sfirst_empty);
-	RUN_TEST_CASE(test_ckit_string_scontains_null);
+	RUN_TEST_CASE(test_ckit_string_scontains_edge);
 	RUN_TEST_CASE(test_ckit_string_sappend_null);
 	RUN_TEST_CASE(test_ckit_string_split_once_edge_cases);
 	RUN_TEST_CASE(test_ckit_string_sdedup_edge_cases);

@@ -54,6 +54,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
@@ -969,13 +970,13 @@ char* ck_ssplit_once(char* s, char split_c)
 {
 	CK_ACANARY(s);
 	char* start = s;
-	char* end = s + slen(s) - 1;
+	char* end = s + slen(s);
 	while (start < end) {
 		if (*start == split_c) break;
 		++start;
 	}
+	if (start == end) return NULL; // Delimiter not found.
 	int len = (int)(start - s);
-	if (len + 1 == slen(s)) return NULL;
 	char* split = NULL;
 	sfit(split, len + 1);
 	asetlen(split, len + 1);
@@ -1061,6 +1062,7 @@ char* ck_sreplace(char* s, const char* replace_me, const char* with_me)
 	CK_ACANARY(s);
 	if (!s) return NULL;
 	size_t replace_len = strlen(replace_me);
+	if (replace_len == 0) return s; // Empty pattern: nothing to replace.
 	size_t with_len = strlen(with_me);
 	char* find;
 	char* search = s;
@@ -1091,6 +1093,7 @@ char* ck_sdedup(char* s, int ch)
 	CK_ACANARY(s);
 	if (!s) return NULL;
 	int len = (int)strlen(s);
+	if (len <= 1) return s; // Empty or single char: nothing to dedup.
 	int i = 0, j = 1;
 	int dup = 0;
 	while (j < len) {
