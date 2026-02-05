@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.14)
+cmake_minimum_required(VERSION 4.2)
 project(cute_framework
 	DESCRIPTION "The cutest framework out there for creating 2D games in C++!"
 	HOMEPAGE_URL "https://github.com/RandyGaul/cute_framework"
@@ -6,9 +6,9 @@ project(cute_framework
 	VERSION 1.1.0
 )
 
-# Must have at least C++20 and C17.
+# Must have at least C++20 and C23.
 set(CMAKE_CXX_STANDARD 20)
-set(CMAKE_C_STANDARD 17)
+set(CMAKE_C_STANDARD 23)
 
 include(GNUInstallDirs)
 # These are needed for how we use FetchContent.
@@ -87,7 +87,7 @@ include_directories(src libraries test)
 # Cute Framework shared library.
 set(CF_SRCS
 	src/cute_app.cpp
-	src/cute_array.cpp
+	src/cute_ckit.cpp
 	src/cute_audio.cpp
 	src/cute_clipboard.cpp
 	src/cute_multithreading.cpp
@@ -97,7 +97,6 @@ set(CF_SRCS
 	src/cute_version.cpp
 	src/cute_json.cpp
 	src/cute_base64.cpp
-	src/cute_hashtable.cpp
 	src/cute_string.cpp
 	src/cute_math.cpp
 	src/cute_draw.cpp
@@ -166,7 +165,8 @@ set(CF_PUBLIC_HDRS
 	include/cute_json.h
 	include/cute_base64.h
 	include/cute_array.h
-	include/cute_hashtable.h
+	include/cute_map.h
+	include/cute/ckit.h
 	include/cute_string.h
 	include/cute_defer.h
 	include/cute_math.h
@@ -406,39 +406,9 @@ if (CF_RUNTIME_SHADER_COMPILATION OR CF_CUTE_SHADERC)
 		PATCH_COMMAND ${Python3_EXECUTABLE} update_glslang_sources.py
 	)
 	FetchContent_MakeAvailable(glslang)
-
-	# cute-shader, a glslang wrapper
-	set(CUTE_SHADER_SRCS src/cute_shader/cute_shader.cpp)
-	add_library(cute-shader STATIC ${CUTE_SHADER_SRCS})
-	target_link_libraries(cute-shader PRIVATE glslang glslang-default-resource-limits SPIRV spirv-cross-c)
-	install(TARGETS cute-shader
-	BUNDLE DESTINATION .
-	RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-	LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-	ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
-	if (NOT MSVC AND NOT CF_FRAMEWORK_STATIC)
-		set_target_properties(cute-shader PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
-	endif()
-	target_include_directories(cute-shader PUBLIC include)  # For cute_shader_info.h
-
-	# Linking cute-shader for online shader compilation (optional).
-	if (CF_RUNTIME_SHADER_COMPILATION)
-		target_compile_definitions(cute PUBLIC CF_RUNTIME_SHADER_COMPILATION)
-		set(CF_LINK_LIBS ${CF_LINK_LIBS} cute-shader)
-	endif()
-
-	# cute-shaderc, an offline shader compiler
-	if (CF_CUTE_SHADERC)
-		set(CUTE_SHADERC_SRCS src/cute_shader/cute_shaderc.cpp)
-		add_executable(cute-shaderc ${CUTE_SHADERC_SRCS})
-		target_link_libraries(cute-shaderc cute-shader)
-		install(TARGETS cute-shaderc
-		BUNDLE DESTINATION .
-		RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-		LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-		ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
-	endif()
 endif()
+
+add_subdirectory(tools)
 
 # SPIRV-Cross for SDL_shadercross
 if(NOT EMSCRIPTEN)  # SPIRV-Cross is not needed for web.
@@ -503,7 +473,7 @@ if (CF_CUTE_SHADERC)
 		COMMAND cute-shaderc
 			-type=builtin
 			-oheader=${CMAKE_CURRENT_SOURCE_DIR}/src/data/builtin_shaders_bytecode.h
-		DEPENDS src/cute_shader/builtin_shaders.h
+		DEPENDS tools/builtin_shaders.h
 		DEPENDS cute-shaderc
 	)
 endif()
@@ -514,6 +484,7 @@ target_link_libraries(cute PUBLIC ${CF_LINK_LIBS})
 if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 	option(CF_FRAMEWORK_BUILD_TESTS "Build the cute framework unit tests." ON)
 	option(CF_FRAMEWORK_BUILD_SAMPLES "Build the cute framework sample programs." ON)
+	option(CF_BUILD_DOCSPARSER "Build the docsparser documentation generator." ON)
 
 	# Cute unit tests executable (optional, defaulted to also build).
 	if (CF_FRAMEWORK_BUILD_TESTS)
@@ -530,6 +501,7 @@ endif()
 target_include_directories(cute PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
 target_include_directories(cute PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/libraries>)
 target_include_directories(cute PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/libraries/imgui>)
+target_include_directories(cute PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/tools)
 
 # Install target
 install(TARGETS cute

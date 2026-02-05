@@ -13,10 +13,13 @@ int main(int argc, char *argv[])
 	
 	CF_Sprite sprite = cf_make_demo_sprite();
 	sprite.scale = cf_mul_v2_f(sprite.scale, 3.0f);
-	
-	const char **names = (const char**)cf_hashtable_keys(sprite.animations);
-	int count = cf_hashtable_count(sprite.animations);
-	
+
+	int count = map_size(*sprite.animations);
+	const char** names = nullptr;
+	for (int i = 0; i < count; i++) {
+		apush(names, (*sprite.animations)[i]->name);
+	}
+
 	int animation_index = 0;
 	
 	while (cf_app_is_running()) {
@@ -52,7 +55,8 @@ int main(int argc, char *argv[])
 		cf_app_draw_onto_screen(true);
 	}
 	
+	afree(names);
 	cf_destroy_app();
-	
+
 	return 0;
 }

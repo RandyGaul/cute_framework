@@ -2,7 +2,7 @@
 
 Data structures are used as work-horse tools to implement all kinds of features or tools in games. The data structures available include:
 
-- [Hashtable/Map](../api_reference.md#hash)
+- [Map](../api_reference.md#map)
 - [Array](../api_reference.md#array)
 - [Linked List](../api_reference.md#list)
 
@@ -15,14 +15,14 @@ Arrays operate on typed pointers in C, and automatically grow when necessary, ma
 ```cpp
 dyna int* a = NULL;
 apush(a, 5);
-CF_ASSERT(alen(a) == 1);
-alen(a)--;
-CF_ASSERT(alen(a) == 0);
+CF_ASSERT(asize(a) == 1);
+asetlen(a, 0);
+CF_ASSERT(asize(a) == 0);
 afree(a);
 ```
 
 > [!NOTE]
-> The [`dyna`](../array/dyna.md) keyword is an _optional_, but encouraged, macro that doesn't actuall do anything. It's used to markup the type and make it clear this is a dynamic array, and not just an `int*`.
+> The [`dyna`](../array/dyna.md) keyword is an _optional_, but encouraged, macro that doesn't actually do anything. It's used to markup the type and make it clear this is a dynamic array, and not just an `int*`.
 
 The array will automatically grow as elements are pushed. Whenever you want to fetch a particular element just use `a[i]` like any other pointer. When done, free up the array with [`afree`](../array/afree.md).
 
@@ -44,56 +44,54 @@ for (int i = 0; i < a.count(); ++i) {
 
 Since the C++ wrapper has a constructor and destructor there's no need to manually call any free function (unlike the C api) -- the destructor cleans up the array's memory resources whenever it gets called.
 
-## Hash Table/Map
+## Map
 
-A hash table is used to map a unique key to a specific value. The value can be fetched later very efficiently (in constant time). This makes the hash table a very popular data structure for general purpose problem solving. Often times hash tables are used to store unique identifiers for game objects, assets, and provide an easy way to create associations between different sets of data.
+A map is used to map a unique key to a specific value. The value can be fetched later very efficiently (in constant time). This makes the map a very popular data structure for general purpose problem solving. Often times maps are used to store unique identifiers for game objects, assets, and provide an easy way to create associations between different sets of data.
 
-In C we use the [Hash API](../api_reference.md#hash), while in C++ there's a `Map<T>` class that wraps the C functionality. It contains a very similar API including get/find, insert, remove, etc. We will cover both the C and C++ APIs in this page.
+In C we use the [`CK_MAP`](../map/CK_MAP.md) type, while in C++ there's a `Map<T>` class that wraps the C functionality. It contains a very similar API including get/find, insert, remove, etc. We will cover both the C and C++ APIs in this page.
 
 > [!IMPORTANT]
 > Since the table itself grows dynamically, values _may not_ store pointers to themselves or other values. All values are stored as [plain old data (POD)](https://stackoverflow.com/questions/146452/what-are-pod-types-in-c), as their location in memory will get shuffled around internally as the map grows.
 
-## htbl in C
+## CK_MAP in C
 
-The [`htbl`](../hash/htbl.md) (stands for hashtable) works on a typed pointer, and automatically grows to fit new key/value pairs as necessary. Internally it's implemented with a [stretchy buffer](https://github.com/creikey/stretchy-buff), just like the [Array API in C](../topics/data_structures.md?id=array). It can store values with unique 64-bit keys.
+[`CK_MAP(T)`](../map/CK_MAP.md) is a markup macro for a map type. All keys are `uint64_t`. You can store any POD value type. The map grows automatically as entries are added.
 
 ```cpp
-htbl CF_V2* pts = NULL;
-hset(pts, 0, cf_v2(3, 5));
-hset(pts, 10, cf_v2(-1, -1);
-hset(pts, -2, cf_v2(0, 0));
+CK_MAP(CF_V2) pts = NULL;
+map_set(pts, 0, cf_v2(3, 5));
+map_set(pts, 10, cf_v2(-1, -1));
+map_set(pts, -2, cf_v2(0, 0));
 
-// Use `hget` to fetch values.
-CF_V2 a = hget(pts, 0);
-CF_V2 b = hget(pts, 10);
-CF_V2 c = hget(pts, -2);
+// Use `map_get` to fetch values.
+CF_V2 a = map_get(pts, 0);
+CF_V2 b = map_get(pts, 10);
+CF_V2 c = map_get(pts, -2);
 
 // Loop over {key, item} pairs like so:
-const uint64_t* keys = hkeys(pts);
-for (int i = 0; i < hcount(pts); ++i) {
+uint64_t* keys = map_keys(pts);
+for (int i = 0; i < map_size(pts); ++i) {
     uint64_t key = keys[i];
     CF_V2 v = pts[i];
     // ...
 }
 
-hfree(pts);
+map_free(pts);
 ```
 
-All keys for [`htbl`](../hash/htbl.md) are typecasted to a `uint64_t`. You can use pointers, integers, chars, etc. as keys. Arbitrary values can be passed to the table, including return results from function calls or hard-coded literals (like `10` or `"Strings!"`).
+All keys for `CK_MAP` are `uint64_t`. You can use pointers, integers, chars, etc. as keys. Use `map_set` to insert, `map_get` to fetch, `map_del` to remove, and `map_free` to clean up.
 
 ### Strings as Keys
 
-Since the [`htbl`](../hash/htbl.md) typecasts all keys to `uint64_t` internally we cannot use strings as keys, right? Good question! Actually there's a _highly recommended_ technique to deal with strings as keys. The [Strings](../topics/strings.md) page has all the string related details. We can make use of the _string interning_ functions to create stable, unique string references. Here is the list of intern functions:
+Since `CK_MAP` uses `uint64_t` keys internally we cannot use strings as keys directly. However there's a _highly recommended_ technique using _string interning_ to create stable, unique string references. The [Strings](../topics/strings.md) page has all the string related details. Here is the list of intern functions:
 
 * [`sintern`](../string/sintern.md)
 * [`sintern_range`](../string/sintern_range.md)
-* [`silen`](../string/silen.md)
-* [`sivalid`](../string/sivalid.md)
-* [`sinuke`](../string/sinuke.md)
+* `sintern_nuke`
 
-[`sintern`](../string/sintern.md) is the important one. Given a string it will return you a pointer to an identical string, but with a stable and unique pointer. The pointer is unique based on the contents of the string, ensuring only one copy of any string exists. The pointer will be completely immutable, and valid until [`sinuke`](../string/sinuke.md) is called, which cleans up all memory used by the string interning API up to that point.
+[`sintern`](../string/sintern.md) is the important one. Given a string it will return you a pointer to an identical string, but with a stable and unique pointer. The pointer is unique based on the contents of the string, ensuring only one copy of any string exists. The pointer will be completely immutable, and valid until `sintern_nuke` is called, which cleans up all memory used by the string interning API up to that point.
 
-By interning a string the stable + unique pointer can be used as a globally unique identifier for the string contents itself. We can then insert the pointer to the string into hashtables and use it as a valid lookup key. The pattern is to take any dynamic string, pass it to [`sintern`](../string/sintern.md), then pass the stable pointer around from there on (but remember, it's contents are immutable!).
+By interning a string the stable + unique pointer can be used as a globally unique identifier for the string contents itself. We can then cast the pointer to `uint64_t` and use it as a valid map key. The pattern is to take any dynamic string, pass it to [`sintern`](../string/sintern.md), then pass the stable pointer around from there on (but remember, its contents are immutable!).
 
 ```cpp
 const char* special_name = sintern("Something Special");
@@ -101,8 +99,8 @@ const char* special_name = sintern("Something Special");
 const char* name = GetName();
 name = sintern(name);
 if (name == special_name) { // Valid to compare pointers directly!
-	Data* data = hget(table, name); // Valid to use as key lookup! Internally compares pointers directly.
-	DoStuff(data);
+	CF_V2 data = map_get(table, (uint64_t)name, CF_V2); // Cast interned pointer to key.
+	DoStuff(&data);
 }
 ```
 
@@ -115,16 +113,16 @@ There are of course some downsides.
 
 - Intern'd strings are 100% immutable -- you cannot change their contents after creation.
 - It's important not to pollute the intern table with many different little strings inside of a loop. For example, when iterating over numbers or counters.
-- Since an intern'd string looks just like a normal string, it can be difficult to remember which is which. You can still use [`sivalid`](../string/sivalid.md), but this is just a sanity check meant only for debugging.
+- Since an intern'd string looks just like a normal string, it can be difficult to remember which is which.
 
 ## Map in C++
 
-In C++ we have access to `Map<T>`, a wrapper class for the [C htbl API](../topics/data_structures.md?id=hash-tablemap). It contains many similar functions as the C api, including add/insert, get/try_get, keys/vals.
+In C++ we have access to `Map<T>`, a wrapper class for the C map API. It contains many similar functions, including insert, get/try_get, keys/items, remove, and count.
 
 ```cpp
 Map<v2> vecs;
-vecs.add(0, V2(0,0));
-vecs.add(1, V2(10,0));
+vecs.insert(0, V2(0,0));
+vecs.insert(1, V2(10,0));
 
 v2 a = vecs.get(0);
 v2 b = vecs.get(1);

@@ -33,7 +33,7 @@ void text_append_input(TextBoxData* data, CF_InputTextBuffer buffer) {
 }
 
 void text_pop(TextBoxData* data) {
-	if (data->utf32 && alen(data->utf32) > 0) {
+	if (data->utf32 && asize(data->utf32) > 0) {
 		int codepoint = apop(data->utf32);
 		spopn(data->utf8, utf8_bytes_required(codepoint));
 	}

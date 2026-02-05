@@ -24,7 +24,11 @@ int main(int argc, char* argv[])
 	float rotation = 0.0f;
 	bool is_tiled = false;
 
-	cf_htbl const char** animations = (const char**)cf_hashtable_keys(sprite.animations);
+	int animation_count = map_size(*sprite.animations);
+	const char** animation_names = NULL;
+	for (int i = 0; i < animation_count; i++) {
+		apush(animation_names, (*sprite.animations)[i]->name);
+	}
 	int animation_index = 0;
 
 	while (cf_app_is_running()) {
@@ -42,8 +46,8 @@ int main(int argc, char* argv[])
 		}
 
 		ImGui_Begin("9 Slice", NULL, ImGuiWindowFlags_None);
-		if (ImGui_ComboChar("Animation", &animation_index, animations, cf_hashtable_count(sprite.animations))) {
-			cf_sprite_play(&sprite, animations[animation_index]);
+		if (ImGui_ComboChar("Animation", &animation_index, animation_names, animation_count)) {
+			cf_sprite_play(&sprite, animation_names[animation_index]);
 		}
 
 		ImGui_Checkbox("Tiled?", &is_tiled);
@@ -58,6 +62,7 @@ int main(int argc, char* argv[])
 		cf_app_draw_onto_screen(true);
 	}
 
+	afree(animation_names);
 	cf_destroy_app();
 
 	return 0;

@@ -278,32 +278,34 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 		}
 	}
 
-	Uint32 flags = 0;
-	flags |= SDL_WINDOW_HIGH_PIXEL_DENSITY; // Turn on high DPI support for all platforms.
-	if (use_opengl) flags |= SDL_WINDOW_OPENGL;
-	if (use_metal) flags |= SDL_WINDOW_METAL;
-	if (options & CF_APP_OPTIONS_FULLSCREEN_BIT) flags |= SDL_WINDOW_FULLSCREEN;
-	if (options & CF_APP_OPTIONS_RESIZABLE_BIT) flags |= SDL_WINDOW_RESIZABLE;
-	if (options & CF_APP_OPTIONS_HIDDEN_BIT) flags |= (SDL_WINDOW_HIDDEN | SDL_WINDOW_MINIMIZED);
+	SDL_Window* window = NULL;
+	if (use_gfx) {
+		Uint32 flags = 0;
+		flags |= SDL_WINDOW_HIGH_PIXEL_DENSITY; // Turn on high DPI support for all platforms.
+		if (use_opengl) flags |= SDL_WINDOW_OPENGL;
+		if (use_metal) flags |= SDL_WINDOW_METAL;
+		if (options & CF_APP_OPTIONS_FULLSCREEN_BIT) flags |= SDL_WINDOW_FULLSCREEN;
+		if (options & CF_APP_OPTIONS_RESIZABLE_BIT) flags |= SDL_WINDOW_RESIZABLE;
+		if (options & CF_APP_OPTIONS_HIDDEN_BIT) flags |= (SDL_WINDOW_HIDDEN | SDL_WINDOW_MINIMIZED);
 
-	SDL_Window* window;
-	SDL_PropertiesID props = SDL_CreateProperties();
-	SDL_SetStringProperty(props, SDL_PROP_WINDOW_CREATE_TITLE_STRING, window_title);
-	SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER, w);
-	SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER, h);
-	SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_FLAGS_NUMBER, flags);
-	if (options & CF_APP_OPTIONS_WINDOW_POS_CENTERED_BIT) {
-		SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_X_NUMBER, SDL_WINDOWPOS_CENTERED_DISPLAY(display_id));
-		SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_Y_NUMBER, SDL_WINDOWPOS_CENTERED_DISPLAY(display_id));
-	} else {
-		if (display_id == 0) display_id = SDL_GetPrimaryDisplay();
-		int x_offset = display_x(display_id);
-		int y_offset = display_y(display_id);
-		SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_X_NUMBER, x_offset+x);
-		SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_Y_NUMBER, y_offset+y);
+		SDL_PropertiesID props = SDL_CreateProperties();
+		SDL_SetStringProperty(props, SDL_PROP_WINDOW_CREATE_TITLE_STRING, window_title);
+		SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER, w);
+		SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER, h);
+		SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_FLAGS_NUMBER, flags);
+		if (options & CF_APP_OPTIONS_WINDOW_POS_CENTERED_BIT) {
+			SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_X_NUMBER, SDL_WINDOWPOS_CENTERED_DISPLAY(display_id));
+			SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_Y_NUMBER, SDL_WINDOWPOS_CENTERED_DISPLAY(display_id));
+		} else {
+			if (display_id == 0) display_id = SDL_GetPrimaryDisplay();
+			int x_offset = display_x(display_id);
+			int y_offset = display_y(display_id);
+			SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_X_NUMBER, x_offset+x);
+			SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_Y_NUMBER, y_offset+y);
+		}
+		window = SDL_CreateWindowWithProperties(props);
+		SDL_DestroyProperties(props);
 	}
-	window = SDL_CreateWindowWithProperties(props);
-	SDL_DestroyProperties(props);
 
 	CF_App* app = (CF_App*)CF_ALLOC(sizeof(CF_App));
 	CF_PLACEMENT_NEW(app) CF_App;
@@ -312,9 +314,11 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 	app->window = window;
 	app->w = w;
 	app->h = h;
-	SDL_GetWindowPosition(app->window, &app->x, &app->y);
-	app->dpi_scale = SDL_GetWindowDisplayScale(app->window);
-	app->dpi_scale_prev = app->dpi_scale;
+	if (window) {
+		SDL_GetWindowPosition(app->window, &app->x, &app->y);
+		app->dpi_scale = SDL_GetWindowDisplayScale(app->window);
+		app->dpi_scale_prev = app->dpi_scale;
+	}
 	::app = app;
 	cf_make_aseprite_cache();
 	cf_make_png_cache();
@@ -354,7 +358,9 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 	}
 
 #ifdef CF_WINDOWS
-	app->platform_handle = SDL_GetPointerProperty(SDL_GetWindowProperties(window), SDL_PROP_WINDOW_WIN32_HWND_POINTER, NULL);
+	if (window) {
+		app->platform_handle = SDL_GetPointerProperty(SDL_GetWindowProperties(window), SDL_PROP_WINDOW_WIN32_HWND_POINTER, NULL);
+	}
 #endif
 
 	app->gfx_enabled = use_gfx;
@@ -401,7 +407,7 @@ void cf_destroy_app()
 	cf_destroy_png_cache();
 	cs_shutdown();
 	destroy_mutex(&app->on_sound_finish_mutex);
-	SDL_DestroyWindow(app->window);
+	if (app->window) SDL_DestroyWindow(app->window);
 	SDL_Quit();
 	cs_shutdown();
 	CF_Image* easy_sprites = app->easy_sprites.items();

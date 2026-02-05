@@ -14,8 +14,8 @@
 #include <internal/cute_app_internal.h>
 #include <internal/cute_graphics_internal.h>
 
-#include "cute_shader/cute_shader.h"
-#include "cute_shader/builtin_shaders.h"
+#include "cute_shader.h"
+#include "builtin_shaders.h"
 #include "data/builtin_shaders_bytecode.h"
 
 #include <float.h>

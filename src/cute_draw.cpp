@@ -1133,8 +1133,9 @@ void cf_draw_sprite_9_slice_tiled(const CF_Sprite* sprite)
 void cf_draw_prefetch(const CF_Sprite* sprite)
 {
 	if (sprite->animation) {
-		for (int i = 0; i < hsize(sprite->animations); ++i) {
-			const CF_Animation* animation = sprite->animations[i];
+		CF_AnimationTable anims = *sprite->animations;
+		for (int i = 0; i < map_size(anims); ++i) {
+			const CF_Animation* animation = anims[i];
 			for (int j = 0; j < asize(animation->frames); ++j) {
 				CF_Frame* frame = animation->frames + j;
 				spritebatch_prefetch(&s_draw->sb, frame->id, sprite->w, sprite->h);

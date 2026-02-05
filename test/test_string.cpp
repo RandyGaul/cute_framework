@@ -22,10 +22,10 @@ TEST_CASE(test_array_macros_simple)
 	REQUIRE(vec[1] == 2);
 	REQUIRE(vec[2] == 3);
 	REQUIRE(apop(vec) == 3);
-	REQUIRE(alen(vec) == 2);
+	REQUIRE(asize(vec) == 2);
 	CF_UNUSED(apop(vec));
 	REQUIRE(apop(vec) == 1);
-	REQUIRE(alen(vec) == 0);
+	REQUIRE(asize(vec) == 0);
 	for (int i = 0; i < 32; ++i) {
 		apush(vec, i);
 	}
@@ -176,7 +176,7 @@ TEST_CASE(test_string_macros_advanced)
 		"loop",
 	};
 	char** c = ssplit(a, '.');
-	for (int i = 0; i < alen(c); ++i) {
+	for (int i = 0; i < asize(c); ++i) {
 		REQUIRE(sequ(c[i], splits[i]));
 		sfree(c[i]);
 	}
@@ -259,7 +259,7 @@ TEST_CASE(test_string_interning)
 /* Run Map<T> API and sintern API */
 TEST_CASE(test_dictionary_and_interning)
 {
-	Map<const char*, int> h;
+	Map<int> h;
 	const char* a = "test 1";
 	const char* b = "test 2";
 	const char* ia = sintern(a);

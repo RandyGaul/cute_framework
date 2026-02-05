@@ -4,19 +4,10 @@ CF has a [dynamic string API](../api_reference.md#string) where strings are 100%
 
 ## Dynamic Strings
 
-In CF's C API we can create a new string with [`sset`](../string/sset.md).
+In CF's C API we can create a new string with [`smake`](../string/smake.md) or [`sdup`](../string/sdup.md).
 
 ```cpp
-char* s = NULL;
-sset(s, "Hello world!");
-printf("%s", s);
-sfree(s);
-```
-
-Or alternatively:
-
-```cpp
-char* s = sset(NULL, "Hello world!");
+char* s = smake("Hello world!");
 printf("%s", s);
 sfree(s);
 ```
@@ -27,13 +18,21 @@ Which outputs:
 Hello world!
 ```
 
+To overwrite an existing string use [`sset`](../string/sset.md). The first argument must be an l-value (a variable), not a literal like NULL. Use `smake` to create a string from scratch.
+
+```cpp
+char* s = smake("Hello world!");
+sset(s, "Goodbye!");
+printf("%s", s);
+sfree(s);
+```
+
 All dynamic strings must be free'd up with [`sfree`](../string/sfree.md) when done.
 
 To push some more characters onto the end of the string use [`spush`](../string/spush.md).
 
 ```cpp
-char* s = NULL;
-sset(s, "Hello world!");
+char* s = smake("Hello world!");
 
 spush(s, '!');
 spush(s, '!');
@@ -51,8 +50,7 @@ Hello world!!!
 You can append a string onto the end of a dynamic string with [`sappend`](../string/sappend.md).
 
 ```cpp
-char* s = NULL;
-sset(s, "Hello world!");
+char* s = smake("Hello world!");
 
 sappend(s, " What a nice string we have.");
 printf("%s", s);
@@ -63,7 +61,7 @@ sfree(s);
 Which outputs:
 
 ```
-Hello world! What a string string we have.
+Hello world! What a nice string we have.
 ```
 
 ## String Conversions
@@ -85,14 +83,15 @@ There are similar functions available for float, double, boolean, and hex number
 
 ## String Formatting
 
-String formatting is done with a printf-style function called [`sfmt`](../string/sfmt.md).
+String formatting is done with a printf-style function called [`sfmt`](../string/sfmt.md). To create a new formatted string from scratch use [`sfmake`](../string/sfmake.md).
 
 ```cpp
-sfmt(s, "%s said hello to %s.\n", "Bob", "Sally");
-printf("%s, s"); // Prints: "Bob said hello to Sally."
+char* s = sfmake("%s said hello to %s.\n", "Bob", "Sally");
+printf("%s", s); // Prints: "Bob said hello to Sally."
+sfree(s);
 ```
 
-You can append a format (instead of overwriting the previous string contents) with [`sfmt_append`](../string/sfmt_append.md).
+To overwrite an existing string with formatted text use `sfmt`. To append formatted text use [`sfmt_append`](../string/sfmt_append.md).
 
 ## String Manipulation
 
@@ -118,11 +117,11 @@ Well hello there! Today is red day, meaning everything is the color red.
 
 To get a hash of a string call [`shash`](../string/shash.md).
 
-Be sure to check out this section on [String Interning](../topics/data_structures.md#strings-as-keys), which covers the [String Intern API](../string/sintern.md). You may use this to construct immutable strings that work super efficiently for comparisons and hash tables.
+Be sure to check out this section on [String Interning](../topics/data_structures.md#strings-as-keys), which covers the [String Intern API](../string/sintern.md). You may use this to construct immutable strings that work super efficiently for comparisons and maps.
 
 ## UTF8
 
-It's highly recommended to store strings for your game in text files and load them up from disk. This makes it easy for a localizer to make different versions of text in different langauges without editing anything other than simple text files. The format of your strings should be in the [UTF8 format](https://en.wikipedia.org/wiki/UTF-8), which is 100% backwards compatible with typical C-strings you're already used to.
+It's highly recommended to store strings for your game in text files and load them up from disk. This makes it easy for a localizer to make different versions of text in different languages without editing anything other than simple text files. The format of your strings should be in the [UTF8 format](https://en.wikipedia.org/wiki/UTF-8), which is 100% backwards compatible with typical C-strings you're already used to.
 
 The UTF8 format encodes a large number of characters by making certain characters take up more than a single byte. To encode or decode UTF8 characters you may call [`sappend_UTF8`](../string/sappend_utf8.md) or [`cf_decode_UTF8`](../string/cf_decode_utf8.md).
 
