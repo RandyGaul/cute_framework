@@ -1874,6 +1874,11 @@ CF_Font* cf_font_get(const char* font_name)
 	return app->fonts.get(sintern(font_name));
 }
 
+float cf_font_scale_for_pixel_height(CF_Font* font, float pixel_height)
+{
+	return stbtt_ScaleForPixelHeight(&font->info, pixel_height);
+}
+
 CF_INLINE uint64_t cf_glyph_key(int cp, float font_size, int blur)
 {
 	int k0 = cp;

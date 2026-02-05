@@ -223,7 +223,7 @@ Coroutines are admittedly weird. Thinking of how to implement things with a coro
 1. [Unity/C# with coroutines](https://docs.unity3d.com/Manual/Coroutines.html).
 2. [Coroutines from the Lua programming language](https://www.lua.org/pil/9.1.html).
 
-Elias Daler wrote a fantastic blog post on using [coroutines to implement cutscenes](https://eliasdaler.github.io/how-to-implement-action-sequences-and-cutscenes/). Check it out! He has some absolutely beautiful gifs.
+Elias Daler wrote a fantastic blog post on using [coroutines to implement cutscenes](https://edw.is/how-to-implement-action-sequences-and-cutscenes/). Check it out! He has some absolutely beautiful gifs.
 
 Small functions can be reused many times in different coroutines to perform common tasks, such as waiting for a number of seconds, walking along a path, or playing a sequence of animations.
 

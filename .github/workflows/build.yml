@@ -1,16 +1,14 @@
-name: Build CF
+name: Build
 
 # This workflow will work for pushes, pull requests, or a manual trigger (workflow_dispatch).
 on: [push, pull_request, workflow_dispatch]
 
 env:
-  CMAKE_BUILD_PARALLEL_LEVEL: 2
+  CMAKE_BUILD_PARALLEL_LEVEL: 3
 
 jobs:
   build:
-    # Matrix feature for cross-platform coverage. Names the build "Build X"
-    # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
-    name: "Build ${{ matrix.platform.name }} (CF_RUNTIME_SHADER_COMPILATION=${{ matrix.runtime_shader_compilation.value }})"
+    name: "${{ matrix.platform.name }} (CF_RUNTIME_SHADER_COMPILATION=${{ matrix.runtime_shader_compilation.value }})"
     runs-on: ${{ matrix.platform.os }}
     timeout-minutes: 20
 
@@ -35,16 +33,16 @@ jobs:
               generate: '-G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release',
             }
           - {
-              name: "MacOS",
+              name: "macOS",
               os: macos-latest,
               artifact: "macos",
-              generate: '-G "Unix Makefiles"',
+              generate: '-G "Ninja" -DSDL_RENDER=OFF -DSDL_CCACHE=ON',
             }
           - {
               name: "Linux",
               os: ubuntu-latest,
               artifact: "linux",
-              generate: '-G "Unix Makefiles"',
+              generate: '-G "Ninja" -DSDL_JACK=OFF -DSDL_PIPEWIRE=OFF -DSDL_PULSEAUDIO=OFF -DSDL_SNDIO=OFF -DSDL_ALSA=OFF -DSDL_WAYLAND=OFF -DSDL_X11=OFF -DSDL_KMSDRM=OFF -DSDL_RENDER=OFF -DSDL_CCACHE=ON -DSDL_OPENGL=OFF -DSDL_OPENGLES=OFF -DSDL_UNIX_CONSOLE_BUILD=ON',
             }
           # TODO - Add iOS and Android platforms. Waiting on better support from GitHub.
 
@@ -52,18 +50,55 @@ jobs:
       - uses: actions/checkout@master
 
       # Linux needs to install various dependencies.
-      # This could potentially be removed by using SOKOL_EXTERNAL_GL_LOADER.
-      - name: Install OpenGL + Audio
+      - name: Install Linux Dependencies
         run: |
           sudo apt-get update -qq
-          sudo apt-get install gcc-multilib
-          sudo apt-get install libasound2-dev libpulse-dev
-          sudo apt-get install -y --no-install-recommends libglfw3 libglfw3-dev libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libxext-dev libxfixes-dev
+          sudo apt-get install -y --no-install-recommends build-essential git make \
+          pkg-config cmake ninja-build gnome-desktop-testing ccache \
+          libaudio-dev libfribidi-dev \
+          libxkbcommon-dev libgl1-mesa-dev libgles2-mesa-dev \
+          libegl1-mesa-dev libdbus-1-dev libibus-1.0-dev libudev-dev libthai-dev \
+          liburing-dev
         if: matrix.platform.name == 'Linux'
+
+      - name: Install ccache (macOS)
+        run: brew install ccache
+        if: runner.os == 'macOS'
+
+      - name: Configure ccache
+        run: |
+          ccache --set-config=max_size=500M
+          ccache --set-config=compression=true
+          ccache --zero-stats
+        if: runner.os != 'Windows'
+
+      - name: Restore ccache (Linux)
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ccache
+          key: ccache-${{ matrix.platform.artifact }}-${{ matrix.runtime_shader_compilation.value }}-${{ github.ref_name }}-${{ github.sha }}
+          restore-keys: |
+            ccache-${{ matrix.platform.artifact }}-${{ matrix.runtime_shader_compilation.value }}-${{ github.ref_name }}-
+            ccache-${{ matrix.platform.artifact }}-${{ matrix.runtime_shader_compilation.value }}-master-
+            ccache-${{ matrix.platform.artifact }}-${{ matrix.runtime_shader_compilation.value }}-
+        if: runner.os == 'Linux'
+
+      - name: Restore ccache (macOS)
+        uses: actions/cache@v4
+        with:
+          path: ~/Library/Caches/ccache
+          key: ccache-${{ matrix.platform.artifact }}-${{ matrix.runtime_shader_compilation.value }}-${{ github.ref_name }}-${{ github.sha }}
+          restore-keys: |
+            ccache-${{ matrix.platform.artifact }}-${{ matrix.runtime_shader_compilation.value }}-${{ github.ref_name }}-
+            ccache-${{ matrix.platform.artifact }}-${{ matrix.runtime_shader_compilation.value }}-master-
+            ccache-${{ matrix.platform.artifact }}-${{ matrix.runtime_shader_compilation.value }}-
+        if: runner.os == 'macOS'
 
       - name: Create build folder with CMake
         run: |
-          cmake ${{ matrix.platform.generate }} ${{ matrix.runtime_shader_compilation.cmake_arg }} -B build_folder
+          cmake ${{ matrix.platform.generate }} ${{ matrix.runtime_shader_compilation.cmake_arg }} \
+            ${{ runner.os != 'Windows' && '-DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache' || '' }} \
+            -B build_folder
 
       - name: Build project binary (non-MSVC)
         run: |
@@ -112,6 +147,10 @@ jobs:
           cd ..
         if: runner.os == 'Linux'
 
+      - name: Print ccache stats
+        run: ccache --show-stats
+        if: runner.os != 'Windows'
+
       # Just call robocopy twice, one looking for libcute.a for MinGW, and one
       # looking for cute.lib for MSCV. robocopy doesn't trigger a build failure for
       # not finding a file.
@@ -148,3 +187,78 @@ jobs:
           name: ${{ matrix.platform.artifact }}
           path: ./dist/
         if: matrix.runtime_shader_compilation.value == 'ON'
+
+      # Upload docsparser binary for documentation job (Linux only, one matrix combination)
+      - name: Upload docsparser artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: docsparser
+          path: ./build_folder/docsparser
+          if-no-files-found: error
+        if: runner.os == 'Linux' && matrix.runtime_shader_compilation.value == 'ON'
+
+  docs:
+    name: Build documentation
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download docsparser artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: docsparser
+          path: ./build/debug
+
+      - name: Make docsparser executable and run
+        run: |
+          chmod +x ./build/debug/docsparser
+          cd build/debug
+          ./docsparser
+
+      - name: Set up Python runtime
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.x
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends libcairo2-dev libfreetype6-dev libffi-dev libjpeg-dev libpng-dev libz-dev pngquant
+          pip install mkdocs mkdocs-material "mkdocs-material[imaging]" markdown-callouts
+
+      - name: Build documentation
+        run: |
+          mkdocs build --clean
+          mkdocs --version
+
+      - name: Adjust permissions
+        run: |
+          chmod -c -R +rX site/ | while read line; do
+            echo "::warning title=Invalid file permissions automatically fixed::$line"
+          done
+
+      - name: Upload to GitHub Pages
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy-docs:
+    name: Deploy documentation
+    needs: docs
+    if: github.ref == 'refs/heads/master' && github.event_name != 'pull_request'
+
+    permissions:
+      pages: write
+      id-token: write
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
