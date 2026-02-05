@@ -444,65 +444,68 @@ CF_API CF_Color CF_CALL cf_draw_pop_color(void);
 CF_API CF_Color CF_CALL cf_draw_peek_color(void);
 
 /**
- * @function cf_draw_push_antialias
+ * @function cf_draw_push_shape_aa
  * @category draw
- * @brief    Pushes whether or not to apply antialiasing.
- * @param    antialias  True to antialias, false otherwise.
- * @remarks  Various shape drawing functions can be drawn in antialiased mode, or in plain mode. Antialiasing is slightly slower,
- *           but looks much smoother.
- * @related  cf_draw_push_antialias cf_draw_pop_antialias cf_draw_peek_antialias
+ * @brief    Pushes whether or not to apply antialiasing for shapes.
+ * @param    aa         True to antialias shapes, false otherwise.
+ * @remarks  Shape drawing functions can be drawn in antialiased mode, or in plain mode. Antialiasing is slightly slower,
+ *           but looks much smoother. This only affects shapes, not text or sprites.
+ * @related  cf_draw_push_shape_aa cf_draw_pop_shape_aa cf_draw_peek_shape_aa cf_draw_push_shape_aa_scale
  */
-CF_API void CF_CALL cf_draw_push_antialias(bool antialias);
+CF_API void CF_CALL cf_draw_push_shape_aa(bool aa);
 
 /**
- * @function cf_draw_pop_antialias
+ * @function cf_draw_pop_shape_aa
  * @category draw
- * @brief    Pops and returns the last antialias state.
- * @remarks  Various shape drawing functions can be drawn in antialiased mode, or in plain mode. Antialiasing is slightly slower,
- *           but looks much smoother.
- * @related  cf_draw_push_antialias cf_draw_pop_antialias cf_draw_peek_antialias
+ * @brief    Pops and returns the last shape antialias state.
+ * @remarks  Shape drawing functions can be drawn in antialiased mode, or in plain mode. Antialiasing is slightly slower,
+ *           but looks much smoother. This only affects shapes, not text or sprites.
+ * @related  cf_draw_push_shape_aa cf_draw_pop_shape_aa cf_draw_peek_shape_aa cf_draw_push_shape_aa_scale
  */
-CF_API bool CF_CALL cf_draw_pop_antialias(void);
+CF_API bool CF_CALL cf_draw_pop_shape_aa(void);
 
 /**
- * @function cf_draw_peek_antialias
+ * @function cf_draw_peek_shape_aa
  * @category draw
- * @brief    Returns the last antialias state.
- * @remarks  Various shape drawing functions can be drawn in antialiased mode, or in plain mode. Antialiasing is slightly slower,
- *           but looks much smoother.
- * @related  cf_draw_push_antialias cf_draw_pop_antialias cf_draw_peek_antialias
+ * @brief    Returns the last shape antialias state.
+ * @remarks  Shape drawing functions can be drawn in antialiased mode, or in plain mode. Antialiasing is slightly slower,
+ *           but looks much smoother. This only affects shapes, not text or sprites.
+ * @related  cf_draw_push_shape_aa cf_draw_pop_shape_aa cf_draw_peek_shape_aa cf_draw_push_shape_aa_scale
  */
-CF_API bool CF_CALL cf_draw_peek_antialias(void);
+CF_API bool CF_CALL cf_draw_peek_shape_aa(void);
 
 /**
- * @function cf_draw_push_antialias_scale
+ * @function cf_draw_push_shape_aa_scale
  * @category draw
- * @brief    Returns the last antialias scale.
- * @remarks  Antialias scale controls how much antialiasing will be used. A larger number makes the borders of shapes blurry.
+ * @brief    Pushes the shape antialias scale.
+ * @remarks  Shape antialias scale controls how much antialiasing will be used. A larger number makes the borders of shapes blurrier.
  *           The number must be greater than 0, but probably not more than 2 or 3 for most cases. The default is 1.5.
- * @related  cf_draw_push_antialias_scale cf_draw_pop_antialias_scale cf_draw_peek_antialias_scale
+ *           This only affects shapes, not text or sprites.
+ * @related  cf_draw_push_shape_aa_scale cf_draw_pop_shape_aa_scale cf_draw_peek_shape_aa_scale cf_draw_push_shape_aa
  */
-CF_API void CF_CALL cf_draw_push_antialias_scale(float scale);
+CF_API void CF_CALL cf_draw_push_shape_aa_scale(float scale);
 
 /**
- * @function cf_draw_pop_antialias_scale
+ * @function cf_draw_pop_shape_aa_scale
  * @category draw
- * @brief    Pops and returns the last antialias scale.
- * @remarks  Antialias scale controls how much antialiasing will be used. A larger number makes the borders of shapes blurry.
+ * @brief    Pops and returns the last shape antialias scale.
+ * @remarks  Shape antialias scale controls how much antialiasing will be used. A larger number makes the borders of shapes blurrier.
  *           The number must be greater than 0, but probably not more than 2 or 3 for most cases. The default is 1.5.
- * @related  cf_draw_push_antialias_scale cf_draw_pop_antialias_scale cf_draw_peek_antialias_scale
+ *           This only affects shapes, not text or sprites.
+ * @related  cf_draw_push_shape_aa_scale cf_draw_pop_shape_aa_scale cf_draw_peek_shape_aa_scale cf_draw_push_shape_aa
  */
-CF_API float CF_CALL cf_draw_pop_antialias_scale(void);
+CF_API float CF_CALL cf_draw_pop_shape_aa_scale(void);
 
 /**
- * @function cf_draw_peek_antialias_scale
+ * @function cf_draw_peek_shape_aa_scale
  * @category draw
- * @brief    Returns the last antialias scale.
- * @remarks  Antialias scale controls how much antialiasing will be used. A larger number makes the borders of shapes blurry.
+ * @brief    Returns the last shape antialias scale.
+ * @remarks  Shape antialias scale controls how much antialiasing will be used. A larger number makes the borders of shapes blurrier.
  *           The number must be greater than 0, but probably not more than 2 or 3 for most cases. The default is 1.5.
- * @related  cf_draw_push_antialias_scale cf_draw_pop_antialias_scale cf_draw_peek_antialias_scale
+ *           This only affects shapes, not text or sprites.
+ * @related  cf_draw_push_shape_aa_scale cf_draw_pop_shape_aa_scale cf_draw_peek_shape_aa_scale cf_draw_push_shape_aa
  */
-CF_API float CF_CALL cf_draw_peek_antialias_scale(void);
+CF_API float CF_CALL cf_draw_peek_shape_aa_scale(void);
 
 /**
  * @function cf_draw_push_vertex_attributes
@@ -1905,12 +1908,12 @@ CF_INLINE int draw_peek_layer() { return cf_draw_peek_layer(); }
 CF_INLINE void draw_push_color(CF_Color c) { cf_draw_push_color(c); }
 CF_INLINE CF_Color draw_pop_color() { return cf_draw_pop_color(); }
 CF_INLINE CF_Color draw_peek_color() { return cf_draw_peek_color(); }
-CF_INLINE void draw_push_antialias(bool antialias) { cf_draw_push_antialias(antialias); }
-CF_INLINE bool draw_pop_antialias() { return cf_draw_pop_antialias(); }
-CF_INLINE bool draw_peek_antialias() { return cf_draw_peek_antialias(); }
-CF_INLINE void draw_push_antialias_scale(float scale) { return cf_draw_push_antialias_scale(scale); }
-CF_INLINE float draw_pop_antialias_scale() { return cf_draw_pop_antialias_scale(); }
-CF_INLINE float draw_peek_antialias_scale() { return cf_draw_peek_antialias_scale(); }
+CF_INLINE void draw_push_shape_aa(bool aa) { cf_draw_push_shape_aa(aa); }
+CF_INLINE bool draw_pop_shape_aa() { return cf_draw_pop_shape_aa(); }
+CF_INLINE bool draw_peek_shape_aa() { return cf_draw_peek_shape_aa(); }
+CF_INLINE void draw_push_shape_aa_scale(float scale) { return cf_draw_push_shape_aa_scale(scale); }
+CF_INLINE float draw_pop_shape_aa_scale() { return cf_draw_pop_shape_aa_scale(); }
+CF_INLINE float draw_peek_shape_aa_scale() { return cf_draw_peek_shape_aa_scale(); }
 CF_INLINE void draw_push_vertex_attributes(float r, float g, float b, float a) { cf_draw_push_vertex_attributes(r, g, b, a); }
 CF_INLINE void draw_push_vertex_attributes(CF_Color attributes) { cf_draw_push_vertex_attributes2(attributes); }
 CF_INLINE CF_Color draw_pop_vertex_attributes() { return cf_draw_pop_vertex_attributes(); }

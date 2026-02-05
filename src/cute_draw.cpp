@@ -2928,13 +2928,13 @@ CF_Color cf_draw_peek_color()
 	return s_draw->colors.last();
 }
 
-void cf_draw_push_antialias(bool antialias)
+void cf_draw_push_shape_aa(bool aa)
 {
-	s_draw->antialias.add(antialias);
+	s_draw->antialias.add(aa);
 	s_draw->set_aaf();
 }
 
-bool cf_draw_pop_antialias()
+bool cf_draw_pop_shape_aa()
 {
 	if (s_draw->antialias.count() > 1) {
 		bool result = s_draw->antialias.pop();
@@ -2945,18 +2945,18 @@ bool cf_draw_pop_antialias()
 	}
 }
 
-bool cf_draw_peek_antialias()
+bool cf_draw_peek_shape_aa()
 {
 	return s_draw->antialias.last();
 }
 
-void cf_draw_push_antialias_scale(float scale)
+void cf_draw_push_shape_aa_scale(float scale)
 {
 	s_draw->antialias_scale.add(scale);
 	s_draw->set_aaf();
 }
 
-float cf_draw_pop_antialias_scale()
+float cf_draw_pop_shape_aa_scale()
 {
 	if (s_draw->antialias_scale.count() > 1) {
 		float scale = s_draw->antialias_scale.pop();
@@ -2967,7 +2967,7 @@ float cf_draw_pop_antialias_scale()
 	}
 }
 
-float cf_draw_peek_antialias_scale()
+float cf_draw_peek_shape_aa_scale()
 {
 	return s_draw->antialias_scale.last();
 }

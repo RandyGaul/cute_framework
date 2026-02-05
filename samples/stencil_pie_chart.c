@@ -6,7 +6,7 @@ void update()
 	CF_RenderState state = cf_render_state_defaults();
 	state.stencil.enabled = true;
 
-	cf_draw_push_antialias(false);
+	cf_draw_push_shape_aa(false);
 	cf_draw_push_alpha_discard(true);
 
 	// Render a full white circle.
@@ -60,7 +60,7 @@ void update()
 	cf_draw_pop_render_state();
 
 	// Draw yellow border.
-	cf_draw_push_antialias(true);
+	cf_draw_push_shape_aa(true);
 	cf_draw_push_alpha_discard(true);
 	cf_draw_push_color(cf_color_yellow());
 	cf_draw_circle2(cf_v2(0,0), 100, 3);

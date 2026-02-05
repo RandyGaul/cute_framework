@@ -38,7 +38,7 @@ int main(int argc, char* argv[])
 	}
 
 	draw_push_color(make_color(0xeba48bff));
-	draw_push_antialias(true);
+	draw_push_shape_aa(true);
 	float t = 0;
 
 	while (app_is_running()) {
@@ -72,8 +72,8 @@ int main(int argc, char* argv[])
 The draw API has some settings that can be pushed and popped. Pushing and popping settings is a great way to customize how to draw without affecting the settings of the rest of your code. Here are some of the customizeable settings:
 
 - color
-- antialias on/off
-- antialias scale
+- shape antialias on/off
+- shape antialias scale
 - layer
 - chubbiness
 - shader
@@ -259,7 +259,7 @@ draw_set_texture("noise_tex", noise_tex);
 draw_set_texture("scene_tex", canvas_get_target(scene_canvas));
 draw_set_uniform("show_noise", show_noise ? 1.0f : 0.0f);
 draw_set_uniform("show_normals", show_normals ? 1.0f : 0.0f);
-draw_push_antialias(false);
+draw_push_shape_aa(false);
 draw_box(V2(0,0), (float)W, (float)H);
 ```
 
