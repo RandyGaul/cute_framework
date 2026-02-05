@@ -31,7 +31,8 @@ jobs:
               os: windows-2025,
               artifact: "mscv17",
               # /FS forces synchronous PDB writes to avoid race conditions in parallel builds
-              generate: '-G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS="/FS" -DCMAKE_CXX_FLAGS="/FS"',
+              # Double slashes prevent MSYS/Git Bash from converting /FS to a file path
+              generate: '-G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS="//FS" -DCMAKE_CXX_FLAGS="//FS"',
             }
           - {
               name: "macOS",
