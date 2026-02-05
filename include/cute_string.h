@@ -171,7 +171,7 @@ extern "C" {
  * @remarks  This is *not* a secure method -- do not use it on any potentially dangerous strings. It's designed to be very simple and fast, nothing more.
  * @related  sintern sintern_range sivalid silen sinuke
  */
-#define sivalid(s) (((CF_Intern*)s - 1)->cookie.val == CF_INTERN_COOKIE.val)
+#define sivalid ck_sivalid
 
 /**
  * @function silen
@@ -182,7 +182,7 @@ extern "C" {
  *           The return value is calculated in constant time, as opposed to calling `CF_STRLEN` (`strlen`).
  * @related  sintern sintern_range sivalid silen sinuke
  */
-#define silen(s) (((CF_Intern*)s - 1)->len)
+#define silen ck_silen
 
 /**
  * @function sinuke
@@ -981,7 +981,7 @@ CF_API const uint16_t* CF_CALL cf_decode_UTF16(const uint16_t* s, int* codepoint
  * @remarks  Shortform: `sisdyna(s)`.
  * @related  cf_string_static cf_string_free
  */
-#define cf_string_is_dynamic(s) (s && !((#s)[0] == '"') && CK_AHDR(s)->cookie.val == CK_ACOOKIE.val)
+#define cf_string_is_dynamic(s) (!((#s)[0] == '"') && ck_avalid(s))
 
 /**
  * @function cf_string_append_UTF8
