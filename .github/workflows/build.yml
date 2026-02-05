@@ -31,7 +31,7 @@ jobs:
               os: windows-2025,
               artifact: "msvc17",
               # Override release flags without /Zi to avoid PDB race conditions causing ICE
-              generate: '-G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS_RELEASE="//O2 //DNDEBUG" -DCMAKE_CXX_FLAGS_RELEASE="//O2 //DNDEBUG"',
+              generate: '-G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS_RELEASE="/O2 /DNDEBUG" -DCMAKE_CXX_FLAGS_RELEASE="/O2 /DNDEBUG"',
             }
           - {
               name: "macOS",
