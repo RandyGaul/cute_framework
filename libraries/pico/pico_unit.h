@@ -75,7 +75,7 @@ extern "C" {
  *
  * @param name The name of the test. Must be a valid C function name
  */
-#define TEST_CASE(name) static bool name()
+#define TEST_CASE(name) static bool name(void)
 
 /**
  * @brief Asserts that a condition is true
