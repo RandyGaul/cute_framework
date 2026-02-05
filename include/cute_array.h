@@ -32,18 +32,9 @@
  *           on typed pointers, there's no actual array struct type. It can get really annoying to sometimes forget if a pointer is an
  *           array, a hashtable, or just a pointer. This macro can be used to markup the type to make it much more clear for function
  *           parameters or struct member definitions. It's saying "Hey, I'm a dynamic array!" to mitigate this downside.
- * @related  dyna asize acount acap afit apush apop aend alast aclear asetlen aset arev ahash adel astatic afree
+ * @related  dyna cf_array_len cf_array_push cf_array_pop cf_array_free cf_array_hash
  */
 #define dyna CK_DYNA
-
-/**
- * @function ahash
- * @category array
- * @brief    Returns the hash of all the bytes in the array.
- * @param    a             The array.
- * @related  dyna asize acount acap afit apush apop aend alast aclear asetlen aset arev ahash adel astatic afree
- */
-// ahash is provided by ckit.h
 
 // Shortform macros (asize, acount, acap, afit, apush, apop, aend, alast, aclear,
 // asetlen, aset, arev, ahash, adel, astatic, afree) are provided by ckit.h.

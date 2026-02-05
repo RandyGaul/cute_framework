@@ -18,7 +18,7 @@
 
 /**
  * @function CF_MAP
- * @category hash
+ * @category map
  * @brief    Declares a map (hashtable) type for values of type `T`.
  * @param    T            The value type stored in the map.
  * @example > Showcase of basic map features.
@@ -47,13 +47,13 @@
  *           there's no actual map struct type visible. `CF_MAP(T)` helps visually indicate a type is a map, not
  *           just a plain pointer. Keys are always `uint64_t`. Use `sintern` for string keys (casting the pointer
  *           to `uint64_t`).
- * @related  map_set map_get map_get_ptr map_has map_del map_clear map_keys map_items map_swap map_size map_free
+ * @related  cf_map_set cf_map_get cf_map_get_ptr cf_map_has cf_map_del cf_map_clear cf_map_keys cf_map_items cf_map_swap cf_map_size cf_map_free
  */
 #define CF_MAP(T) CK_MAP(T)
 
 /**
- * @function map_set
- * @category hash
+ * @function cf_map_set
+ * @category map
  * @brief    Adds or updates a {key, item} pair in the map.
  * @param    m            The map. Can be `NULL`. Must be declared with `CF_MAP(T)`.
  * @param    k            The key for lookups. Keys are always typecast to `uint64_t`, so you can use pointers as keys.
@@ -68,13 +68,13 @@
  * @remarks  If the key already exists, the value is overwritten. The map may reallocate internally, invalidating
  *           _all_ pointers to elements within the map. Therefore, items may not store pointers to themselves or
  *           other items in the same map. Indices, however, are stable.
- * @related  CF_MAP map_get map_get_ptr map_has map_del map_clear map_keys map_items map_swap map_size map_free
+ * @related  CF_MAP cf_map_get cf_map_get_ptr cf_map_has cf_map_del cf_map_clear cf_map_keys cf_map_items cf_map_swap cf_map_size cf_map_free
  */
 #define cf_map_set(m, k, v) map_set(m, k, v)
 
 /**
- * @function map_get
- * @category hash
+ * @function cf_map_get
+ * @category map
  * @brief    Fetches the item that `k` maps to.
  * @param    m            The map. Can be `NULL`. Must be declared with `CF_MAP(T)`.
  * @param    k            The key for lookups. Keys are always typecast to `uint64_t`.
@@ -88,13 +88,13 @@
  *           map_free(table);
  * @remarks  Items are returned by value, not pointer. If you want a pointer (to check for `NULL` when the item
  *           doesn't exist), use `map_get_ptr`. You can also call `map_has` to check existence.
- * @related  CF_MAP map_set map_get_ptr map_has map_del map_clear map_keys map_items map_swap map_size map_free
+ * @related  CF_MAP cf_map_set cf_map_get_ptr cf_map_has cf_map_del cf_map_clear cf_map_keys cf_map_items cf_map_swap cf_map_size cf_map_free
  */
 #define cf_map_get(m, k) map_get(m, k)
 
 /**
- * @function map_get_ptr
- * @category hash
+ * @function cf_map_get_ptr
+ * @category map
  * @brief    Fetches a pointer to the item that `k` maps to.
  * @param    m            The map. Can be `NULL`. Must be declared with `CF_MAP(T)`.
  * @param    k            The key for lookups. Keys are always typecast to `uint64_t`.
@@ -109,13 +109,13 @@
  *           map_free(table);
  * @remarks  If you want to fetch an item by value, use `map_get`. The returned pointer is not stable across
  *           insertions -- adding new items may cause reallocation and invalidate all pointers.
- * @related  CF_MAP map_set map_get map_has map_del map_clear map_keys map_items map_swap map_size map_free
+ * @related  CF_MAP cf_map_set cf_map_get cf_map_has cf_map_del cf_map_clear cf_map_keys cf_map_items cf_map_swap cf_map_size cf_map_free
  */
 #define cf_map_get_ptr(m, k) map_get_ptr(m, k)
 
 /**
- * @function map_has
- * @category hash
+ * @function cf_map_has
+ * @category map
  * @brief    Check if a key exists in the map.
  * @param    m            The map. Can be `NULL`. Must be declared with `CF_MAP(T)`.
  * @param    k            The key for lookups. Keys are always typecast to `uint64_t`.
@@ -126,13 +126,13 @@
  *           CF_ASSERT(map_has(table, 10));
  *           CF_ASSERT(!map_has(table, 99));
  *           map_free(table);
- * @related  CF_MAP map_set map_get map_get_ptr map_del map_clear map_keys map_items map_swap map_size map_free
+ * @related  CF_MAP cf_map_set cf_map_get cf_map_get_ptr cf_map_del cf_map_clear cf_map_keys cf_map_items cf_map_swap cf_map_size cf_map_free
  */
 #define cf_map_has(m, k) map_has(m, k)
 
 /**
- * @function map_del
- * @category hash
+ * @function cf_map_del
+ * @category map
  * @brief    Removes an item from the map.
  * @param    m            The map. Can be `NULL`. Must be declared with `CF_MAP(T)`.
  * @param    k            The key for lookups. Keys are always typecast to `uint64_t`.
@@ -143,23 +143,23 @@
  *           map_del(table, 10);
  *           CF_ASSERT(!map_has(table, 10));
  *           map_free(table);
- * @related  CF_MAP map_set map_get map_get_ptr map_has map_clear map_keys map_items map_swap map_size map_free
+ * @related  CF_MAP cf_map_set cf_map_get cf_map_get_ptr cf_map_has cf_map_clear cf_map_keys cf_map_items cf_map_swap cf_map_size cf_map_free
  */
 #define cf_map_del(m, k) map_del(m, k)
 
 /**
- * @function map_clear
- * @category hash
+ * @function cf_map_clear
+ * @category map
  * @brief    Removes all items from the map without freeing memory.
  * @param    m            The map. Can be `NULL`. Must be declared with `CF_MAP(T)`.
  * @remarks  After clearing, `map_size` returns 0 but the backing memory is retained. Call `map_free` when done.
- * @related  CF_MAP map_set map_get map_get_ptr map_has map_del map_keys map_items map_swap map_size map_free
+ * @related  CF_MAP cf_map_set cf_map_get cf_map_get_ptr cf_map_has cf_map_del cf_map_keys cf_map_items cf_map_swap cf_map_size cf_map_free
  */
 #define cf_map_clear(m) map_clear(m)
 
 /**
- * @function map_keys
- * @category hash
+ * @function cf_map_keys
+ * @category map
  * @brief    Get a pointer to the array of keys.
  * @param    m            The map. Can be `NULL`. Must be declared with `CF_MAP(T)`.
  * @return   Returns `uint64_t*` pointing to the keys array, or `NULL` if map is empty.
@@ -172,13 +172,13 @@
  *               // ...
  *           }
  * @remarks  The keys array is parallel to the items array. Use with `map_size` for iteration bounds.
- * @related  CF_MAP map_set map_get map_get_ptr map_has map_del map_clear map_items map_swap map_size map_free
+ * @related  CF_MAP cf_map_set cf_map_get cf_map_get_ptr cf_map_has cf_map_del cf_map_clear cf_map_items cf_map_swap cf_map_size cf_map_free
  */
 #define cf_map_keys(m) map_keys(m)
 
 /**
- * @function map_items
- * @category hash
+ * @function cf_map_items
+ * @category map
  * @brief    Get a pointer to the array of items (values).
  * @param    m            The map. Can be `NULL`. Must be declared with `CF_MAP(T)`.
  * @return   Returns the map pointer itself (which points to the items array).
@@ -193,13 +193,13 @@
  *           }
  * @remarks  Since `CF_MAP(T)` is `T*`, the map pointer itself is already the items array. This macro exists
  *           for symmetry with `map_keys` and clarity in iteration code.
- * @related  CF_MAP map_set map_get map_get_ptr map_has map_del map_clear map_keys map_swap map_size map_free
+ * @related  CF_MAP cf_map_set cf_map_get cf_map_get_ptr cf_map_has cf_map_del cf_map_clear cf_map_keys cf_map_swap cf_map_size cf_map_free
  */
 #define cf_map_items(m) map_items(m)
 
 /**
- * @function map_swap
- * @category hash
+ * @function cf_map_swap
+ * @category map
  * @brief    Swaps two {key, item} pairs by index without breaking the hash lookup.
  * @param    m            The map. Can be `NULL`. Must be declared with `CF_MAP(T)`.
  * @param    index_a      Index of the first item to swap.
@@ -214,50 +214,50 @@
  *               }
  *           }
  * @remarks  Use this for implementing priority queues or custom sort orders on top of the map.
- * @related  CF_MAP map_sort map_ssort map_keys map_items map_size
+ * @related  CF_MAP cf_map_sort cf_map_ssort cf_map_keys cf_map_items cf_map_size
  */
 #define cf_map_swap(m, i, j) map_swap(m, i, j)
 
 /**
- * @function map_sort
- * @category hash
+ * @function cf_map_sort
+ * @category map
  * @brief    Sorts the {key, item} pairs by values using a comparator.
  * @param    m            The map. Can be `NULL`. Must be declared with `CF_MAP(T)`.
  * @param    cmp          Comparator function: `int cmp(const void* a, const void* b)`. Receives pointers to items.
  * @remarks  The keys and items returned by `map_keys` and `map_items` will be sorted. This is _not_ a stable sort.
- * @related  CF_MAP map_ssort map_swap map_keys map_items map_size
+ * @related  CF_MAP cf_map_ssort cf_map_swap cf_map_keys cf_map_items cf_map_size
  */
 #define cf_map_sort(m, cmp) map_sort(m, cmp)
 
 /**
- * @function map_ssort
- * @category hash
+ * @function cf_map_ssort
+ * @category map
  * @brief    Sorts the {key, item} pairs by keys, treating keys as interned string pointers.
  * @param    m            The map. Can be `NULL`. Must be declared with `CF_MAP(T)`.
  * @param    ignore_case  If true, sorts case-insensitively.
  * @remarks  Normally you can't store strings as keys since keys are `uint64_t`. However, if you use `sintern`,
  *           each unique string gets a unique stable pointer, making them valid map keys. This is _not_ a stable sort.
- * @related  CF_MAP map_sort map_swap map_keys map_items map_size sintern
+ * @related  CF_MAP cf_map_sort cf_map_swap cf_map_keys cf_map_items cf_map_size sintern
  */
 #define cf_map_ssort(m, ignore_case) map_ssort(m, ignore_case)
 
 /**
- * @function map_size
- * @category hash
+ * @function cf_map_size
+ * @category map
  * @brief    Returns the number of {key, item} pairs in the map.
  * @param    m            The map. Can be `NULL`. Must be declared with `CF_MAP(T)`.
  * @return   Returns the count as `int`. Returns 0 if `m` is `NULL`.
- * @related  CF_MAP map_set map_get map_get_ptr map_has map_del map_clear map_keys map_items map_swap map_free
+ * @related  CF_MAP cf_map_set cf_map_get cf_map_get_ptr cf_map_has cf_map_del cf_map_clear cf_map_keys cf_map_items cf_map_swap cf_map_free
  */
 #define cf_map_size(m) map_size(m)
 
 /**
- * @function map_free
- * @category hash
+ * @function cf_map_free
+ * @category map
  * @brief    Frees all memory used by the map and sets it to `NULL`.
  * @param    m            The map. Can be `NULL`. Must be declared with `CF_MAP(T)`.
  * @remarks  After calling, `m` will be `NULL`.
- * @related  CF_MAP map_set map_get map_get_ptr map_has map_del map_clear map_keys map_items map_swap map_size
+ * @related  CF_MAP cf_map_set cf_map_get cf_map_get_ptr cf_map_has cf_map_del cf_map_clear cf_map_keys cf_map_items cf_map_swap cf_map_size
  */
 #define cf_map_free(m) map_free(m)
 

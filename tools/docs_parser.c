@@ -15,6 +15,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include <limits.h>
 
 #ifdef _WIN32
 #include <io.h>
@@ -46,6 +47,57 @@ static int s_is_space(int cp)
 	case '\r': return 1;
 	default:   return 0;
 	}
+}
+
+// Left-aligns a code snippet by removing the minimum common leading whitespace from all lines.
+static char* left_align(char* text)
+{
+	if (!text || !slen(text)) return text;
+
+	// Find minimum leading spaces across all non-empty lines
+	int min_indent = INT_MAX;
+	const char* p = text;
+	while (*p) {
+		// Count leading spaces on this line
+		int indent = 0;
+		while (*p == ' ' || *p == '\t') {
+			indent += (*p == '\t') ? 4 : 1;
+			p++;
+		}
+		// Only consider non-empty lines
+		if (*p && *p != '\n' && *p != '\r') {
+			if (indent < min_indent) min_indent = indent;
+		}
+		// Skip to next line
+		while (*p && *p != '\n') p++;
+		if (*p == '\n') p++;
+	}
+
+	if (min_indent == 0 || min_indent == INT_MAX) return text;
+
+	// Build new string with indentation removed
+	char* result = NULL;
+	p = text;
+	while (*p) {
+		// Skip min_indent worth of whitespace
+		int skipped = 0;
+		while (skipped < min_indent && (*p == ' ' || *p == '\t')) {
+			skipped += (*p == '\t') ? 4 : 1;
+			p++;
+		}
+		// Copy rest of line
+		while (*p && *p != '\n') {
+			spush(result, *p);
+			p++;
+		}
+		if (*p == '\n') {
+			spush(result, *p);
+			p++;
+		}
+	}
+
+	sfree(text);
+	return result;
 }
 
 static char* read_file(const char* path, size_t* out_size)
@@ -452,7 +504,7 @@ static void parse_command()
 		sfree(s->doc.example_brief);
 		s->doc.example_brief = parse_single_comment_line();
 		char* ex = parse_paragraph(1);
-		sreplace(ex, "\n    ", "\n");
+		ex = left_align(ex);
 		sfree(s->doc.example);
 		s->doc.example = ex;
 	} else if (sequ(s->token, "@remarks")) {
@@ -935,7 +987,7 @@ int main(int argc, char* argv[])
 		ADD_RELATED("file", "- [Virtual File System](topics/virtual_file_system.md)");
 		ADD_RELATED("graphics", "- [Low Level Graphics](topics/low_level_graphics.md)");
 		ADD_RELATED("haptic", "- [Input](topics/input.md)");
-		ADD_RELATED("hash", "- [Data Structures](topics/data_structures.md)");
+		ADD_RELATED("map", "- [Data Structures](topics/data_structures.md)");
 		ADD_RELATED("input", "- [Input](topics/input.md)");
 		ADD_RELATED("list", "- [Data Structures](topics/data_structures.md)");
 		ADD_RELATED("math", "- [Collision](topics/collision.md)");
