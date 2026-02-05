@@ -27,11 +27,11 @@ jobs:
           # Diabled MinGW as it was having trouble with DX12 headers being out of date.
           # - { name: "Windows (MinGW-w64)",     os: windows-latest, artifact: 'mingw-w64', generate: '-G "MinGW Makefiles"' }
           - {
-              name: "Windows (MSVC 18 2026)",
+              name: "Windows (MSVC 17 2022)",
               os: windows-2025,
-              artifact: "msvc18",
+              artifact: "msvc17",
               # Override release flags without /Zi to avoid PDB race conditions causing ICE
-              generate: '-G "Visual Studio 18 2026" -A x64 -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS_RELEASE="//O2 //DNDEBUG" -DCMAKE_CXX_FLAGS_RELEASE="//O2 //DNDEBUG"',
+              generate: '-G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS_RELEASE="//O2 //DNDEBUG" -DCMAKE_CXX_FLAGS_RELEASE="//O2 //DNDEBUG"',
             }
           - {
               name: "macOS",
@@ -112,14 +112,14 @@ jobs:
       - name: Build project binary (non-MSVC)
         run: |
           cmake --build build_folder
-        if: matrix.platform.name != 'Windows (MSVC 18 2026)'
+        if: matrix.platform.name != 'Windows (MSVC 17 2022)'
 
       # Default for MSVC is to build with Debug, so a special case is needed to produce
       # Release binaries. Limit parallel jobs to 2 to avoid ICE (internal compiler errors).
       - name: Build project binary (MSVC)
         run: |
           cmake --build build_folder --config Release --parallel 2
-        if: matrix.platform.name == 'Windows (MSVC 18 2026)'
+        if: matrix.platform.name == 'Windows (MSVC 17 2022)'
 
       # Run tests for MSVC 17
       - name: Run Tests for MSVC 17
@@ -128,7 +128,7 @@ jobs:
           cd build_folder\Release
           tests.exe
           cd ..\..
-        if: matrix.platform.name == 'Windows (MSVC 18 2026)'
+        if: matrix.platform.name == 'Windows (MSVC 17 2022)'
 
       # Run tests for MinGW (no Release folder)
       - name: Run Tests for MinGW
