@@ -49,6 +49,14 @@ jobs:
     steps:
       - uses: actions/checkout@master
 
+      # Move to new version of CMake for later language support for C23.
+      - name: Setup CMake 4.2.x
+        uses: lukka/get-cmake@latest
+        with:
+          cmakeVersion: 4.2.3
+          ninjaVersion: latest
+
+
       # Linux needs to install various dependencies.
       - name: Install Linux Dependencies
         run: |
