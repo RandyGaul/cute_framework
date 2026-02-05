@@ -24,7 +24,7 @@ struct CF_AsepriteCacheEntry
 {
 	const char* path = NULL;
 	ase_t* ase = NULL;
-	CK_MAP(CF_Animation*) animations = NULL;
+	CF_MAP(CF_Animation*) animations = NULL;
 	dyna CF_SpriteSlice* slices = NULL;
 	dyna v2* pivots = NULL;
 	dyna CF_Aabb* center_patches = NULL;
@@ -110,7 +110,7 @@ static CF_Result s_aseprite_cache_load_from_memory(const char* unique_name, cons
 	if (!ase) return cf_result_error("Unable to open ase file at `aseprite_path`.");
 
 	// Allocate internal cache data structure entries.
-	CK_MAP(CF_Animation*) animations = NULL;
+	CF_MAP(CF_Animation*) animations = NULL;
 	Array<uint64_t> ids;
 	v2* pivots = NULL;
 	CF_Aabb* center_patches = NULL;

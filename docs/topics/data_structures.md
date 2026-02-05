@@ -53,12 +53,12 @@ In C we use the [`CK_MAP`](../map/CK_MAP.md) type, while in C++ there's a `Map<T
 > [!IMPORTANT]
 > Since the table itself grows dynamically, values _may not_ store pointers to themselves or other values. All values are stored as [plain old data (POD)](https://stackoverflow.com/questions/146452/what-are-pod-types-in-c), as their location in memory will get shuffled around internally as the map grows.
 
-## CK_MAP in C
+## CF_MAP in C
 
-[`CK_MAP(T)`](../map/CK_MAP.md) is a markup macro for a map type. All keys are `uint64_t`. You can store any POD value type. The map grows automatically as entries are added.
+[`CF_MAP(T)`](../map/CF_MAP.md) is a markup macro for a map type. All keys are `uint64_t`. You can store any POD value type. The map grows automatically as entries are added.
 
 ```cpp
-CK_MAP(CF_V2) pts = NULL;
+CF_MAP(CF_V2) pts = NULL;
 map_set(pts, 0, cf_v2(3, 5));
 map_set(pts, 10, cf_v2(-1, -1));
 map_set(pts, -2, cf_v2(0, 0));
@@ -79,7 +79,7 @@ for (int i = 0; i < map_size(pts); ++i) {
 map_free(pts);
 ```
 
-All keys for `CK_MAP` are `uint64_t`. You can use pointers, integers, chars, etc. as keys. Use `map_set` to insert, `map_get` to fetch, `map_del` to remove, and `map_free` to clean up.
+All keys for `CF_MAP` are `uint64_t`. You can use pointers, integers, chars, etc. as keys. Use `map_set` to insert, `map_get` to fetch, `map_del` to remove, and `map_free` to clean up.
 
 ### Strings as Keys
 

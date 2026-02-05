@@ -166,7 +166,6 @@ set(CF_PUBLIC_HDRS
 	include/cute_base64.h
 	include/cute_array.h
 	include/cute_map.h
-	include/cute/ckit.h
 	include/cute_string.h
 	include/cute_defer.h
 	include/cute_math.h

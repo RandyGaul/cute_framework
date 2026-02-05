@@ -102,7 +102,7 @@ typedef struct CF_Animation
 } CF_Animation;
 // @end
 
-typedef CK_MAP(const CF_Animation*) CF_AnimationTable;
+typedef CF_MAP(const CF_Animation*) CF_AnimationTable;
 
 /**
  * @struct   CF_SpriteSlice
