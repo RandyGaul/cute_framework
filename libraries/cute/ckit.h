@@ -59,7 +59,13 @@
 #include <string.h>
 #include <assert.h>
 
-// Configurable allocator. Define before including ckit.h to override.
+// ----------------------------------------------------------------------------------------------------
+// Overrideable macros (define before including ckit.h to customize behavior):
+//
+//   CK_ALLOC(sz)       - Custom allocator. Default: malloc(sz)
+//   CK_REALLOC(p, sz)  - Custom reallocator. Default: realloc(p, sz)
+//   CK_FREE(p)         - Custom free. Default: free(p)
+
 #ifndef CK_ALLOC
 #	define CK_ALLOC(sz) malloc(sz)
 #endif
@@ -1185,7 +1191,6 @@ char* ck_sappend_UTF8(char* s, int codepoint)
 	return s;
 }
 
-#ifndef CK_SKIP_CF_DECODE_UTF8
 const char* cf_decode_UTF8(const char* s, int* codepoint)
 {
 	unsigned char c = (unsigned char)*s++;
@@ -1204,7 +1209,6 @@ const char* cf_decode_UTF8(const char* s, int* codepoint)
 	if (*codepoint < min) *codepoint = 0xFFFD;
 	return s;
 }
-#endif
 
 //--------------------------------------------------------------------------------------------------
 // String path utilities.
@@ -1755,8 +1759,6 @@ uint64_t ck_hash_fnv1a(const void* ptr, size_t sz)
 	return x;
 }
 
-#ifndef CK_SKIP_SINTERN
-
 // C11 atomics for C, std::atomic for C++
 // Must close extern "C" before including <atomic> since it contains C++ templates.
 #ifdef __cplusplus
@@ -1787,15 +1789,6 @@ static CK_ATOMIC(CK_InternTable*) g_intern_table;
 
 static CK_InternTable* ck_sintern_get_table()
 {
-#ifdef CK_SINTERN_NO_LOCK
-	// Single-threaded version without atomics
-	static CK_InternTable* s_table = NULL;
-	if (!s_table) {
-		s_table = (CK_InternTable*)CK_ALLOC(sizeof(CK_InternTable));
-		memset(s_table, 0, sizeof(CK_InternTable));
-	}
-	return s_table;
-#else
 	CK_InternTable* table = ck_atomic_load(&g_intern_table);
 	if (!table) {
 		CK_InternTable* new_table = (CK_InternTable*)CK_ALLOC(sizeof(CK_InternTable));
@@ -1809,13 +1802,8 @@ static CK_InternTable* ck_sintern_get_table()
 		}
 	}
 	return table;
-#endif
 }
 
-#ifdef CK_SINTERN_NO_LOCK
-static void ck_sintern_lock(CK_InternTable* table) { (void)table; }
-static void ck_sintern_unlock(CK_InternTable* table) { (void)table; }
-#else
 static void ck_sintern_lock(CK_InternTable* table)
 {
 	int expected = 0;
@@ -1828,35 +1816,16 @@ static void ck_sintern_unlock(CK_InternTable* table)
 {
 	ck_atomic_store(&table->lock, 0);
 }
-#endif
 
 const char* ck_sintern_range(const char* start, const char* end)
 {
-#ifdef CK_SINTERN_DEBUG
-	printf("        sintern_range: start\n"); fflush(stdout);
-#endif
 	CK_InternTable* table = ck_sintern_get_table();
-#ifdef CK_SINTERN_DEBUG
-	printf("        sintern_range: got table %p\n", (void*)table); fflush(stdout);
-#endif
 	size_t len = (size_t)(end - start);
 	uint64_t key = ck_hash_fnv1a((void*)start, len);
-#ifdef CK_SINTERN_DEBUG
-	printf("        sintern_range: key=%llu len=%zu\n", (unsigned long long)key, len); fflush(stdout);
-#endif
 
 	ck_sintern_lock(table);
-#ifdef CK_SINTERN_DEBUG
-	printf("        sintern_range: locked\n"); fflush(stdout);
-#endif
 
-#ifdef CK_SINTERN_DEBUG
-	printf("        sintern_range: calling map_get, interns=%p\n", (void*)table->interns); fflush(stdout);
-#endif
 	CK_UniqueString* head = map_get(table->interns, key);
-#ifdef CK_SINTERN_DEBUG
-	printf("        sintern_range: map_get returned %p\n", (void*)head); fflush(stdout);
-#endif
 	for (CK_UniqueString* it = head; it; it = it->next) {
 		if ((size_t)it->len == len && memcmp(it->str, start, len) == 0) {
 			ck_sintern_unlock(table);
@@ -1864,32 +1833,17 @@ const char* ck_sintern_range(const char* start, const char* end)
 		}
 	}
 
-#ifdef CK_SINTERN_DEBUG
-	printf("        sintern_range: allocating node\n"); fflush(stdout);
-#endif
 	size_t bytes = sizeof(CK_UniqueString) + len + 1;
 	CK_UniqueString* node = (CK_UniqueString*)CK_ALLOC(bytes);
-#ifdef CK_SINTERN_DEBUG
-	printf("        sintern_range: node=%p\n", (void*)node); fflush(stdout);
-#endif
 	node->cookie = CK_INTERN_COOKIE;
 	node->len = (int)len;
 	node->next = head;
 	node->str = (char*)(node + 1);
 	memcpy(node->str, start, len);
 	node->str[len] = '\0';
-#ifdef CK_SINTERN_DEBUG
-	printf("        sintern_range: calling map_set\n"); fflush(stdout);
-#endif
 	map_set(table->interns, key, node);
-#ifdef CK_SINTERN_DEBUG
-	printf("        sintern_range: map_set done\n"); fflush(stdout);
-#endif
 
 	ck_sintern_unlock(table);
-#ifdef CK_SINTERN_DEBUG
-	printf("        sintern_range: returning %s\n", node->str); fflush(stdout);
-#endif
 	return node->str;
 }
 
@@ -1913,8 +1867,6 @@ void sintern_nuke()
 	ck_sintern_unlock(table);
 	CK_FREE(table);
 }
-
-#endif // CK_SKIP_SINTERN
 
 #ifdef __cplusplus
 } // extern "C"

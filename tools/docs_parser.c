@@ -8,9 +8,6 @@
 // Parses all the Cute headers and generates documentation pages in .md format.
 // Only dependency is ckit.h (no CF runtime/SDL required).
 
-// Skip the default sintern lock implementation - docsparser is single-threaded
-#define CK_SINTERN_NO_LOCK
-
 #define CKIT_IMPLEMENTATION
 #include "cute/ckit.h"
 
@@ -927,33 +924,31 @@ int main(int argc, char* argv[])
 			map_set(related, (uint64_t)sintern(name), _arr); \
 		} while (0)
 
-		ADD_RELATED("allocator", "- [Allocator](../topics/allocator)");
-		ADD_RELATED("app", "- [Application Window](../topics/application_window.md)", "- [Game Loop and Time](../topics/game_loop_and_time.md)");
-		ADD_RELATED("array", "- [Data Structures](../topics/data_structures.md)");
-		ADD_RELATED("atomics", "- [Atomics](../topics/atomics.md)");
-		ADD_RELATED("base64", "- [Serialization](../topics/serialization.md)");
-		ADD_RELATED("collision", "- [Collision](../topics/collision.md)");
-		ADD_RELATED("coroutine", "- [Coroutines](../topics/coroutines.md)");
-		ADD_RELATED("draw", "- [Drawing](../topics/drawing.md)");
-		ADD_RELATED("ecs", "- [Entity Component System](../topics/entity_component_system.md)");
-		ADD_RELATED("file", "- [Virtual File System](../topics/virtual_file_system.md)");
-		ADD_RELATED("graphics", "- [Low Level Graphics](../topics/low_level_graphics.md)");
-		ADD_RELATED("haptic", "- [Input](../topics/input.md)");
-		ADD_RELATED("hash", "- [Data Structures](../topics/data_structures.md)");
-		ADD_RELATED("input", "- [Input](../topics/input.md)");
-		ADD_RELATED("list", "- [Data Structures](../topics/data_structures.md)");
-		ADD_RELATED("math", "- [Collision](../topics/collision.md)");
-		ADD_RELATED("multithreading", "- [Atomics](../topics/atomics.md)", "- [Multithreading](../topics/multithreading.md)");
-		ADD_RELATED("net", "- [Networking](../topics/networking.md)");
-		ADD_RELATED("path", "- [Virtual File System](../topics/virtual_file_system.md)");
-		ADD_RELATED("pathfinding", "- [Path Finding](../topics/pathfinding.md)");
-		ADD_RELATED("random", "- [Random Numbers](../topics/random_numbers.md)");
-		ADD_RELATED("serialization", "- [Serialization](../topics/serialization.md)");
-		ADD_RELATED("sprite", "- [Drawing](../topics/drawing.md)");
-		ADD_RELATED("string", "- [Strings](../topics/strings.md)");
-		ADD_RELATED("time", "- [Game Loop and Time](../topics/game_loop_and_time.md)");
-		ADD_RELATED("text", "- [Drawing](../topics/drawing.md)", "- [Input](../topics/input.md)");
-		ADD_RELATED("web", "- [Networking](../topics/networking.md)");
+		ADD_RELATED("allocator", "- [Allocator](topics/allocator.md)");
+		ADD_RELATED("app", "- [Application Window](topics/application_window.md)", "- [Game Loop and Time](topics/game_loop_and_time.md)");
+		ADD_RELATED("array", "- [Data Structures](topics/data_structures.md)");
+		ADD_RELATED("atomics", "- [Atomics](topics/atomics.md)");
+		ADD_RELATED("collision", "- [Collision](topics/collision.md)");
+		ADD_RELATED("coroutine", "- [Coroutines](topics/coroutines.md)");
+		ADD_RELATED("draw", "- [Drawing](topics/drawing.md)");
+		ADD_RELATED("ecs", "- [Entity Component System](topics/entity_component_system.md)");
+		ADD_RELATED("file", "- [Virtual File System](topics/virtual_file_system.md)");
+		ADD_RELATED("graphics", "- [Low Level Graphics](topics/low_level_graphics.md)");
+		ADD_RELATED("haptic", "- [Input](topics/input.md)");
+		ADD_RELATED("hash", "- [Data Structures](topics/data_structures.md)");
+		ADD_RELATED("input", "- [Input](topics/input.md)");
+		ADD_RELATED("list", "- [Data Structures](topics/data_structures.md)");
+		ADD_RELATED("math", "- [Collision](topics/collision.md)");
+		ADD_RELATED("multithreading", "- [Atomics](topics/atomics.md)", "- [Multithreading](topics/multithreading.md)");
+		ADD_RELATED("net", "- [Networking](topics/networking.md)");
+		ADD_RELATED("path", "- [Virtual File System](topics/virtual_file_system.md)");
+		ADD_RELATED("pathfinding", "- [Path Finding](topics/pathfinding.md)");
+		ADD_RELATED("random", "- [Random Numbers](topics/random_numbers.md)");
+		ADD_RELATED("sprite", "- [Drawing](topics/drawing.md)");
+		ADD_RELATED("string", "- [Strings](topics/strings.md)");
+		ADD_RELATED("time", "- [Game Loop and Time](topics/game_loop_and_time.md)");
+		ADD_RELATED("text", "- [Drawing](topics/drawing.md)", "- [Input](topics/input.md)");
+		ADD_RELATED("web", "- [Networking](topics/networking.md)");
 		#undef ADD_RELATED
 
 		// Sort categories by name.

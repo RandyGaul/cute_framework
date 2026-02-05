@@ -28,7 +28,7 @@ The above snippet will give the folder `"C:/Users/Randy/Documents/data"`, which 
 - No colons `:`
 
 > [!NOTE]
-> **Normalizing** a path is the process of removing relative directories, removing redundant or Windows style slashes, and attempting to convert the string to a more platform-independant form. You can still normalize platform-dependent paths too though. Call [`spnorm`](../path/spnorm.md) to normalize a string path.
+> **Normalizing** a path is the process of removing relative directories, removing redundant or Windows style slashes, and attempting to convert the string to a more platform-independant form. You can still normalize platform-dependent paths too though. Call [`cf_path_normalize`](../path/cf_path_normalize.md) to normalize a string path.
 
 By mounting we achieve great portability by using platform-independent paths within our game. The paths are also more secure by removing relative paths (which reduce the chances of anyone accessing unanticipated directories), and most important of all grants versatility.
 
