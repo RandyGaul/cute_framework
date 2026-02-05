@@ -199,7 +199,7 @@ static inline int aabb_to_shape(CF_Aabb aabb, BlockShape shape)
     }
     else
     {
-        return cf_aabb_to_poly(aabb, &shape.poly, nullptr);
+        return cf_aabb_to_poly(aabb, &shape.poly);
     }
 }
 
@@ -211,7 +211,7 @@ static inline CF_Manifold aabb_to_shape_manifold(CF_Aabb aabb, BlockShape shape)
     }
     else
     {
-        return cf_aabb_to_poly_manifold(aabb, &shape.poly, nullptr);
+        return cf_aabb_to_poly_manifold(aabb, &shape.poly);
     }
 }
 
@@ -643,10 +643,10 @@ int step_move(dyna Block *blocks, CF_Transform *transform, CF_V2 *velocity, CF_A
                 
                 if (aabb_to_shape(cull_aabb, block_shape))
                 {
-                    CF_ToiResult result = cf_toi(&aabb, CF_SHAPE_TYPE_AABB, nullptr, dp, 
-                                                 &block_shape._data, block_shape.type, nullptr, cf_v2(0.0f, 0.0f),
+                    CF_ToiResult result = cf_toi(&aabb, CF_SHAPE_TYPE_AABB, dp,
+                                                 &block_shape._data, block_shape.type, cf_v2(0.0f, 0.0f),
                                                  false);
-                    bool collided = cf_collided(&aabb, nullptr, CF_SHAPE_TYPE_AABB, &block_shape._data, nullptr, block_shape.type);
+                    bool collided = cf_collided(&aabb, CF_SHAPE_TYPE_AABB, &block_shape._data, block_shape.type);
                     
                     if (result.hit && !collided)
                     {

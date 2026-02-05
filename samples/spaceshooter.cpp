@@ -446,7 +446,7 @@ void BulletBarn::update()
 		} else {
 			for (int j = 0; j < ASTEROIDS_MAX; ++j) {
 				if (!g->asteroids.alive[j]) continue;
-				if (circle_to_poly(make_circle(p[i], BULLETS_RADIUS), g->asteroids.poly + j, NULL)) {
+				if (circle_to_poly(make_circle(p[i], BULLETS_RADIUS), g->asteroids.poly + j)) {
 					hit(i);
 				}
 			}
@@ -579,7 +579,7 @@ void AsteroidBarn::hit(v2 hit, float radius)
 	CF_Circle c = make_circle(hit, radius);
 	for (int i = 0; i < ASTEROIDS_MAX; ++i) {
 		if (!alive[i]) continue;
-		if (circle_to_poly(c, poly + i, NULL)) {
+		if (circle_to_poly(c, poly + i)) {
 			alive[i] = false;
 			explode(i);
 		}
@@ -605,7 +605,7 @@ void player_movement_routine()
 			for (int i = 0; i < ASTEROIDS_MAX; ++i) {
 				if (!g->asteroids.alive[i]) continue;
 				CF_Circle c = make_circle(g->player.sprite.transform.p, 12.5f);
-				if (circle_to_poly(c, g->asteroids.poly + i, NULL)) {
+				if (circle_to_poly(c, g->asteroids.poly + i)) {
 					nav_goto("hurt");
 				}
 			}
@@ -827,7 +827,7 @@ void player_weapons_routine()
 			// Collide with asteroids.
 			for (int i = 0; i < ASTEROIDS_MAX; ++i) {
 				if (!g->asteroids.alive[i]) continue;
-				if (circle_to_poly(make_circle(g->player.sprite.transform.p, 25), g->asteroids.poly + i, NULL)) {
+				if (circle_to_poly(make_circle(g->player.sprite.transform.p, 25), g->asteroids.poly + i)) {
 					g->asteroids.alive[i] = false;
 					g->asteroids.explode(i);
 				}
@@ -1073,7 +1073,7 @@ void ChargeShot::update_and_draw()
 		// Collide with asteroids.
 		for (int i = 0; i < ASTEROIDS_MAX; ++i) {
 			if (!g->asteroids.alive[i]) continue;
-			if (circle_to_poly(make_circle(shot.transform.p, CHARGE_SHOT_RADIUS), g->asteroids.poly + i, NULL)) {
+			if (circle_to_poly(make_circle(shot.transform.p, CHARGE_SHOT_RADIUS), g->asteroids.poly + i)) {
 				g->asteroids.alive[i] = false;
 				g->asteroids.explode(i);
 				hit();
