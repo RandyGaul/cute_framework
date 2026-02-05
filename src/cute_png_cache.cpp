@@ -16,11 +16,11 @@
 
 struct CF_PngCache
 {
-	CK_MAP(void*) id_to_pixels = NULL;
+	CF_MAP(void*) id_to_pixels = NULL;
 	dyna CF_Animation** animations_list = NULL;
-	CK_MAP(CF_AnimationTable) animation_tables = NULL;
-	CK_MAP(CF_Png) pngs = NULL;
-	CK_MAP(CF_Animation*) animations = NULL;
+	CF_MAP(CF_AnimationTable) animation_tables = NULL;
+	CF_MAP(CF_Png) pngs = NULL;
+	CF_MAP(CF_Animation*) animations = NULL;
 	uint64_t id_gen = CF_PNG_ID_RANGE_LO;
 };
 

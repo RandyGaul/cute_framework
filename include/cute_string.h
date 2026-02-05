@@ -124,7 +124,7 @@ extern "C" {
  *     CF_ASSERT(apple != banana);
  *
  *     // Use as hash table keys (cast pointer to uint64_t).
- *     CK_MAP(int) prices = NULL;
+ *     CF_MAP(int) prices = NULL;
  *     map_set(prices, (uint64_t)apple, 100);
  *     map_set(prices, (uint64_t)banana, 50);
  *     int apple_price = map_get(prices, (uint64_t)sintern("apple"));
@@ -1156,9 +1156,6 @@ CF_API const uint16_t* CF_CALL cf_decode_UTF16(const uint16_t* s, int* codepoint
 // Use ckit's intern structure for compatibility.
 #define CF_INTERN_COOKIE CK_INTERN_COOKIE
 typedef CK_UniqueString CF_Intern;
-
-// Forward CK_MAP to CF namespace.
-#define CF_MAP CK_MAP
 
 CF_API const char* CF_CALL cf_sintern(const char* s);
 CF_API const char* CF_CALL cf_sintern_range(const char* start, const char* end);

@@ -10,18 +10,18 @@
 #include <cute.h>
 using namespace Cute;
 
-/* Test the CK_MAP C macros and the C++ Map<T> wrapper. */
+/* Test the CF_MAP C macros and the C++ Map<T> wrapper. */
 TEST_CASE(test_hashtable_macros)
 {
 	{
-		CK_MAP(const char*) h = { 0 };
+		CF_MAP(const char*) h = { 0 };
 		map_set(h, 5, "yo");
 		const char* val = map_get(h, 5);
 		REQUIRE(!CF_STRCMP(val, "yo"));
 		map_free(h);
 	}
 	{
-		CK_MAP(v2) h = { 0 };
+		CF_MAP(v2) h = { 0 };
 		map_set(h, 0, V2(1, 2));
 		map_set(h, 1, V2(4, 10));
 		map_set(h, 2, V2(-12, 13));
@@ -43,7 +43,7 @@ TEST_CASE(test_hashtable_macros)
 		map_free(h);
 	}
 	{
-		CK_MAP(v2) h = { 0 };
+		CF_MAP(v2) h = { 0 };
 		map_set(h, 0, V2(1, 2));
 		map_set(h, 1, V2(4, 10));
 		map_set(h, 2, V2(-12, 13));
@@ -65,7 +65,7 @@ TEST_CASE(test_hashtable_macros)
 		map_free(h);
 	}
 	{
-		CK_MAP(v2) h = { 0 };
+		CF_MAP(v2) h = { 0 };
 		int iters = 100;
 		for (int i = 0; i < iters; ++i) {
 			v2 v = V2((float)i, (float)i);
@@ -81,7 +81,7 @@ TEST_CASE(test_hashtable_macros)
 		map_free(h);
 	}
 	{
-		CK_MAP(int) h = { 0 };
+		CF_MAP(int) h = { 0 };
 		map_set(h, 10, 10);
 		map_set(h, 2, 2);
 		map_set(h, 5, 5);
@@ -100,7 +100,7 @@ TEST_CASE(test_hashtable_macros)
 		map_free(h);
 	}
 	{
-		CK_MAP(int) h = { 0 };
+		CF_MAP(int) h = { 0 };
 		map_set(h, sintern("eee"), 4);
 		map_set(h, sintern("ddd"), 3);
 		map_set(h, sintern("bbb"), 1);
@@ -149,7 +149,7 @@ TEST_CASE(test_hashtable_macros)
 
 TEST_CASE(test_hashtable_has)
 {
-	CK_MAP(v2) h = { 0 };
+	CF_MAP(v2) h = { 0 };
 	map_set(h, 0, V2(1, 2));
 	map_set(h, 1, V2(4, 10));
 	map_set(h, 2, V2(-12, 13));

@@ -137,7 +137,7 @@ CF_API const CF_Animation* CF_CALL cf_png_cache_get_animation(const char* name);
  * @category png_cache
  * @brief    Constructs an animation table given an array of animations, or returns one from the cache if it already exists.
  * @param    sprite_name  A unique name for the animation table.
- * @return   Returns a `CK_MAP(const CF_Animation*)` map of animation names to animations.
+ * @return   Returns a `CF_MAP(const CF_Animation*)` map of animation names to animations.
  * @remarks  The table returned is a map of animation names to individual `CF_Animation`'s. This is represents the guts of a sprite
  *           implementation. You may use this function if you wish to implement your own sprites. However, it's recommended to instead use
  *           `cf_make_png_cache_sprite` and `CF_Sprite`.
