@@ -561,7 +561,6 @@ int cf_app_draw_onto_screen(bool clear)
 	s_draw->alpha_discards.set_count(1);
 	s_draw->colors.set_count(1);
 	s_draw->antialias.set_count(1);
-	s_draw->antialias_scale.set_count(1);
 	s_draw->render_states.set_count(1);
 	s_draw->scissors.set_count(1);
 	s_draw->viewports.set_count(1);

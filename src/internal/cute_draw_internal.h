@@ -158,8 +158,7 @@ struct CF_Draw
 	Cute::Array<float> alpha_discards = { 1.0f };
 	Cute::Array<CF_DrawFilterMode> filter_modes = { CF_DRAW_FILTER_SMOOTH };
 	Cute::Array<CF_Color> colors = { cf_color_white() };
-	Cute::Array<bool> antialias = { true };
-	Cute::Array<float> antialias_scale = { 1.5f };
+	Cute::Array<float> antialias = { 1.5f };
 	Cute::Array<CF_RenderState> render_states;
 	Cute::Array<CF_Rect> scissors = { { 0, 0, -1, -1 } };
 	Cute::Array<CF_Rect> viewports = { { 0, 0, -1, -1 } };

@@ -155,7 +155,7 @@ int main(int argc, char* argv[])
 
 		for (int i = 0; i < wavelets.count(); ++i) {
 			Wavelet& w = wavelets[i];
-			draw_push_shape_aa_scale(w.blur);
+			draw_push_shape_aa(w.blur);
 			draw_push_color(make_color(1.0f, 1.0f, 1.0f, w.opacity));
 			draw_circle(w.p, w.r, 0);
 			w.r += 10.0f * CF_DELTA_TIME;
@@ -177,7 +177,7 @@ int main(int argc, char* argv[])
 		draw_set_texture("scene_tex", canvas_get_target(scene_canvas));
 		draw_set_uniform("show_noise", show_noise ? 1.0f : 0.0f);
 		draw_set_uniform("show_normals", show_normals ? 1.0f : 0.0f);
-		draw_push_shape_aa(false);
+		draw_push_shape_aa(0);
 		draw_box(V2(0,0), (float)W, (float)H);
 		app_draw_onto_screen(false);
 	}

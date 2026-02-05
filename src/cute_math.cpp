@@ -16,8 +16,6 @@
 CF_STATIC_ASSERT(CF_POLY_MAX_VERTS == C2_MAX_POLYGON_VERTS, "Must be equal.");
 
 CF_STATIC_ASSERT(sizeof(CF_V2) == sizeof(c2v), "Must be equal.");
-CF_STATIC_ASSERT(sizeof(CF_SinCos) == sizeof(c2r), "Must be equal.");
-CF_STATIC_ASSERT(sizeof(CF_Transform) == sizeof(c2x), "Must be equal.");
 CF_STATIC_ASSERT(sizeof(CF_M2x2) == sizeof(c2m), "Must be equal.");
 CF_STATIC_ASSERT(sizeof(CF_Halfspace) == sizeof(c2h), "Must be equal.");
 CF_STATIC_ASSERT(sizeof(CF_Ray) == sizeof(c2Ray), "Must be equal.");
@@ -198,24 +196,24 @@ bool cf_capsule_to_capsule(CF_Capsule A, CF_Capsule B)
 	return !!c2CapsuletoCapsule(*(c2Capsule*)&A, *(c2Capsule*)&B);
 }
 
-bool cf_circle_to_poly(CF_Circle A, const CF_Poly* B, const CF_Transform* bx)
+bool cf_circle_to_poly(CF_Circle A, const CF_Poly* B)
 {
-	return !!c2CircletoPoly(*(c2Circle*)&A, (c2Poly*)B, (c2x*)bx);
+	return !!c2CircletoPoly(*(c2Circle*)&A, (c2Poly*)B);
 }
 
-bool cf_aabb_to_poly(CF_Aabb A, const CF_Poly* B, const CF_Transform* bx)
+bool cf_aabb_to_poly(CF_Aabb A, const CF_Poly* B)
 {
-	return !!c2AABBtoPoly(*(c2AABB*)&A, (c2Poly*)B, (c2x*)bx);
+	return !!c2AABBtoPoly(*(c2AABB*)&A, (c2Poly*)B);
 }
 
-bool cf_capsule_to_poly(CF_Capsule A, const CF_Poly* B, const CF_Transform* bx)
+bool cf_capsule_to_poly(CF_Capsule A, const CF_Poly* B)
 {
-	return !!c2CapsuletoPoly(*(c2Capsule*)&A, (c2Poly*)B, (c2x*)bx);
+	return !!c2CapsuletoPoly(*(c2Capsule*)&A, (c2Poly*)B);
 }
 
-bool cf_poly_to_poly(const CF_Poly* A, const CF_Transform* ax, const CF_Poly* B, const CF_Transform* bx)
+bool cf_poly_to_poly(const CF_Poly* A, const CF_Poly* B)
 {
-	return !!c2PolytoPoly((c2Poly*)A, (c2x*)ax, (c2Poly*)B, (c2x*)bx);
+	return !!c2PolytoPoly((c2Poly*)A, (c2Poly*)B);
 }
 
 CF_Raycast cf_ray_to_circle(CF_Ray A, CF_Circle B)
@@ -248,11 +246,11 @@ CF_Raycast cf_ray_to_capsule(CF_Ray A, CF_Capsule B)
 	return result;
 }
 
-CF_Raycast cf_ray_to_poly(CF_Ray A, const CF_Poly* B, const CF_Transform* bx_ptr)
+CF_Raycast cf_ray_to_poly(CF_Ray A, const CF_Poly* B)
 {
 	CF_Raycast result;
 	c2Raycast cast;
-	result.hit = !!c2RaytoPoly(*(c2Ray*)&A, (c2Poly*)B, (c2x*)bx_ptr, (c2Raycast*)&cast);
+	result.hit = !!c2RaytoPoly(*(c2Ray*)&A, (c2Poly*)B, (c2Raycast*)&cast);
 	result.n = *(v2*)&cast.n;
 	result.t = cast.t;
 	return result;
@@ -299,61 +297,61 @@ CF_Manifold cf_capsule_to_capsule_manifold(CF_Capsule A, CF_Capsule B)
 	return *(CF_Manifold*)&m;
 }
 
-CF_Manifold cf_circle_to_poly_manifold(CF_Circle A, const CF_Poly* B, const CF_Transform* bx)
+CF_Manifold cf_circle_to_poly_manifold(CF_Circle A, const CF_Poly* B)
 {
 	c2Manifold m;
-	c2CircletoPolyManifold(*(c2Circle*)&A, (c2Poly*)B, (c2x*)bx, &m);
+	c2CircletoPolyManifold(*(c2Circle*)&A, (c2Poly*)B, &m);
 	return *(CF_Manifold*)&m;
 }
 
-CF_Manifold cf_aabb_to_poly_manifold(CF_Aabb A, const CF_Poly* B, const CF_Transform* bx)
+CF_Manifold cf_aabb_to_poly_manifold(CF_Aabb A, const CF_Poly* B)
 {
 	c2Manifold m;
-	c2AABBtoPolyManifold(*(c2AABB*)&A, (c2Poly*)B, (c2x*)bx, &m);
+	c2AABBtoPolyManifold(*(c2AABB*)&A, (c2Poly*)B, &m);
 	return *(CF_Manifold*)&m;
 }
 
-CF_Manifold cf_capsule_to_poly_manifold(CF_Capsule A, const CF_Poly* B, const CF_Transform* bx)
+CF_Manifold cf_capsule_to_poly_manifold(CF_Capsule A, const CF_Poly* B)
 {
 	c2Manifold m;
-	c2CapsuletoPolyManifold(*(c2Capsule*)&A, (c2Poly*)B, (c2x*)bx, &m);
+	c2CapsuletoPolyManifold(*(c2Capsule*)&A, (c2Poly*)B, &m);
 	return *(CF_Manifold*)&m;
 }
 
-CF_Manifold cf_poly_to_poly_manifold(const CF_Poly* A, const CF_Transform* ax, const CF_Poly* B, const CF_Transform* bx)
+CF_Manifold cf_poly_to_poly_manifold(const CF_Poly* A, const CF_Poly* B)
 {
 	c2Manifold m;
-	c2PolytoPolyManifold((c2Poly*)A, (c2x*)ax, (c2Poly*)B, (c2x*)bx, &m);
+	c2PolytoPolyManifold((c2Poly*)A, (c2Poly*)B, &m);
 	return *(CF_Manifold*)&m;
 }
 
-float cf_gjk(const void* A, CF_ShapeType typeA, const CF_Transform* ax_ptr, const void* B, CF_ShapeType typeB, const CF_Transform* bx_ptr, CF_V2* outA, CF_V2* outB, bool use_radius, int* iterations, CF_GjkCache* cache)
+float cf_gjk(const void* A, CF_ShapeType typeA, const void* B, CF_ShapeType typeB, CF_V2* outA, CF_V2* outB, bool use_radius, int* iterations, CF_GjkCache* cache)
 {
-	return c2GJK(A, (C2_TYPE)typeA, (c2x*)ax_ptr, B, (C2_TYPE)typeB, (c2x*)bx_ptr, (c2v*)outA, (c2v*)outB, (int)use_radius, iterations, (c2GJKCache*)cache);
+	return c2GJK(A, (C2_TYPE)typeA, B, (C2_TYPE)typeB, (c2v*)outA, (c2v*)outB, (int)use_radius, iterations, (c2GJKCache*)cache);
 }
 
-CF_ToiResult cf_toi(const void* A, CF_ShapeType typeA, const CF_Transform* ax_ptr, CF_V2 vA, const void* B, CF_ShapeType typeB, const CF_Transform* bx_ptr, CF_V2 vB, int use_radius)
+CF_ToiResult cf_toi(const void* A, CF_ShapeType typeA, CF_V2 vA, const void* B, CF_ShapeType typeB, CF_V2 vB, int use_radius)
 {
 	CF_ToiResult result;
-	c2TOIResult c2result = c2TOI(A, (C2_TYPE)typeA, (c2x*)ax_ptr, *(c2v*)&vA, B, (C2_TYPE)typeB, (c2x*)bx_ptr, *(c2v*)&vB, use_radius);
+	c2TOIResult c2result = c2TOI(A, (C2_TYPE)typeA, *(c2v*)&vA, B, (C2_TYPE)typeB, *(c2v*)&vB, use_radius);
 	result = *(CF_ToiResult*)&c2result;
 	return result;
 }
 
-int cf_collided(const void* A, const CF_Transform* ax, CF_ShapeType typeA, const void* B, const CF_Transform* bx, CF_ShapeType typeB)
+int cf_collided(const void* A, CF_ShapeType typeA, const void* B, CF_ShapeType typeB)
 {
-	return c2Collided(A, (c2x*)ax, (C2_TYPE)typeA, B, (c2x*)bx, (C2_TYPE)typeB);
+	return c2Collided(A, (C2_TYPE)typeA, B, (C2_TYPE)typeB);
 }
 
-void cf_collide(const void* A, const CF_Transform* ax, CF_ShapeType typeA, const void* B, const CF_Transform* bx, CF_ShapeType typeB, CF_Manifold* m)
+void cf_collide(const void* A, CF_ShapeType typeA, const void* B, CF_ShapeType typeB, CF_Manifold* m)
 {
-	c2Collide(A, (c2x*)ax, (C2_TYPE)typeA, B, (c2x*)bx, (C2_TYPE)typeB, (c2Manifold*)m);
+	c2Collide(A, (C2_TYPE)typeA, B, (C2_TYPE)typeB, (c2Manifold*)m);
 }
 
-bool cf_cast_ray(CF_Ray A, const void* B, const CF_Transform* bx, CF_ShapeType typeB, CF_Raycast* out)
+bool cf_cast_ray(CF_Ray A, const void* B, CF_ShapeType typeB, CF_Raycast* out)
 {
 	c2Raycast cast;
-	out->hit = !!c2CastRay(*(c2Ray*)&A, B, (c2x*)bx, (C2_TYPE)typeB, (c2Raycast*)&cast);
+	out->hit = !!c2CastRay(*(c2Ray*)&A, B, (C2_TYPE)typeB, (c2Raycast*)&cast);
 	out->n = *(v2*)&cast.n;
 	out->t = cast.t;
 	return out->hit;
