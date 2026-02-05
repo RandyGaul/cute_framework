@@ -6,6 +6,9 @@ Data structures are used as work-horse tools to implement all kinds of features 
 - [Array](../api_reference.md#array)
 - [Linked List](../api_reference.md#list)
 
+> [!NOTE]
+> CF provides shortform convenience macros for common operations (e.g. `apush`, `afree`, `map_set`, `map_get`). These are simple wrappers around the longform `cf_array_*` and `map_*` functions. The shortform macros are not individually documented but work identically to their longform counterparts.
+
 ## Array in C
 
 Arrays operate on typed pointers in C, and automatically grow when necessary, making them _dynamic_ arrays. If you're familiar with [stretchy buffers](https://github.com/creikey/stretchy-buff), this is exactly that.
@@ -24,7 +27,7 @@ afree(a);
 > [!NOTE]
 > The [`dyna`](../array/dyna.md) keyword is an _optional_, but encouraged, macro that doesn't actually do anything. It's used to markup the type and make it clear this is a dynamic array, and not just an `int*`.
 
-The array will automatically grow as elements are pushed. Whenever you want to fetch a particular element just use `a[i]` like any other pointer. When done, free up the array with [`afree`](../array/afree.md).
+The array will automatically grow as elements are pushed. Whenever you want to fetch a particular element just use `a[i]` like any other pointer. When done, free up the array with [`cf_array_free`](../array/cf_array_free.md).
 
 You may store any kind of element you wish, including structs. However, since the array will grow as necessary elements cannot store pointers to themselves or any other element. Pointers into the array are _not stable_. A good workaround is to instead store indices into the array, and fetch pointers to elements only temporarily.
 
@@ -48,14 +51,14 @@ Since the C++ wrapper has a constructor and destructor there's no need to manual
 
 A map is used to map a unique key to a specific value. The value can be fetched later very efficiently (in constant time). This makes the map a very popular data structure for general purpose problem solving. Often times maps are used to store unique identifiers for game objects, assets, and provide an easy way to create associations between different sets of data.
 
-In C we use the [`CK_MAP`](../map/CK_MAP.md) type, while in C++ there's a `Map<T>` class that wraps the C functionality. It contains a very similar API including get/find, insert, remove, etc. We will cover both the C and C++ APIs in this page.
+In C we use the [`CF_MAP`](../hash/cf_map.md) type, while in C++ there's a `Map<T>` class that wraps the C functionality. It contains a very similar API including get/find, insert, remove, etc. We will cover both the C and C++ APIs in this page.
 
 > [!IMPORTANT]
 > Since the table itself grows dynamically, values _may not_ store pointers to themselves or other values. All values are stored as [plain old data (POD)](https://stackoverflow.com/questions/146452/what-are-pod-types-in-c), as their location in memory will get shuffled around internally as the map grows.
 
 ## CF_MAP in C
 
-[`CF_MAP(T)`](../map/CF_MAP.md) is a markup macro for a map type. All keys are `uint64_t`. You can store any POD value type. The map grows automatically as entries are added.
+[`CF_MAP(T)`](../hash/cf_map.md) is a markup macro for a map type. All keys are `uint64_t`. You can store any POD value type. The map grows automatically as entries are added.
 
 ```cpp
 CF_MAP(CF_V2) pts = NULL;

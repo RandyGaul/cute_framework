@@ -2,9 +2,12 @@
 
 CF has a [dynamic string API](../api_reference.md#string) where strings are 100% compatible with normal C-strings. Dynamic strings can be modified and grow onto the heap as necessary. They come with a wide variety of manipulation functions such as removing certain characters, trimming whitespace, find + replace, and a whole lot more. In C++ we also have the `String` class which wraps the dynamic C string API.
 
+> [!NOTE]
+> CF provides shortform convenience macros for common string operations (e.g. `smake`, `sfree`, `sappend`, `sfmt`). These are simple wrappers around the longform `cf_string_*` functions. The shortform macros are not individually documented but work identically to their longform counterparts.
+
 ## Dynamic Strings
 
-In CF's C API we can create a new string with [`smake`](../string/smake.md) or [`sdup`](../string/sdup.md).
+In CF's C API we can create a new string with [`cf_string_make`](../string/cf_string_make.md) or [`cf_string_dup`](../string/cf_string_dup.md).
 
 ```cpp
 char* s = smake("Hello world!");
@@ -18,7 +21,7 @@ Which outputs:
 Hello world!
 ```
 
-To overwrite an existing string use [`sset`](../string/sset.md). The first argument must be an l-value (a variable), not a literal like NULL. Use `smake` to create a string from scratch.
+To overwrite an existing string use [`cf_string_set`](../string/cf_string_set.md). The first argument must be an l-value (a variable), not a literal like NULL. Use `cf_string_make` to create a string from scratch.
 
 ```cpp
 char* s = smake("Hello world!");
@@ -27,9 +30,9 @@ printf("%s", s);
 sfree(s);
 ```
 
-All dynamic strings must be free'd up with [`sfree`](../string/sfree.md) when done.
+All dynamic strings must be free'd up with [`cf_string_free`](../string/cf_string_free.md) when done.
 
-To push some more characters onto the end of the string use [`spush`](../string/spush.md).
+To push some more characters onto the end of the string use [`cf_string_push`](../string/cf_string_push.md).
 
 ```cpp
 char* s = smake("Hello world!");
@@ -47,7 +50,7 @@ Which outputs:
 Hello world!!!
 ```
 
-You can append a string onto the end of a dynamic string with [`sappend`](../string/sappend.md).
+You can append a string onto the end of a dynamic string with [`cf_string_append`](../string/cf_string_append.md).
 
 ```cpp
 char* s = smake("Hello world!");
@@ -66,14 +69,14 @@ Hello world! What a nice string we have.
 
 ## String Conversions
 
-To convert an integer to a string call [`sint`](../string/sint.md).
+To convert an integer to a string call [`cf_string_int`](../string/cf_string_int.md).
 
 ```cpp
 char* s = sint(NULL, 10);
 printf("%s", s); // s is now "10".
 ```
 
-To convert from a string to an integer call [stoint](../string/stoint.md).
+To convert from a string to an integer call [`cf_string_toint`](../string/cf_string_toint.md).
 
 ```cpp
 int x = stoint("100");
@@ -83,7 +86,7 @@ There are similar functions available for float, double, boolean, and hex number
 
 ## String Formatting
 
-String formatting is done with a printf-style function called [`sfmt`](../string/sfmt.md). To create a new formatted string from scratch use [`sfmake`](../string/sfmake.md).
+String formatting is done with a printf-style function called [`cf_string_fmt`](../string/cf_string_fmt.md). To create a new formatted string from scratch use [`cf_string_fmt_make`](../string/cf_string_fmt_make.md).
 
 ```cpp
 char* s = sfmake("%s said hello to %s.\n", "Bob", "Sally");
@@ -91,11 +94,11 @@ printf("%s", s); // Prints: "Bob said hello to Sally."
 sfree(s);
 ```
 
-To overwrite an existing string with formatted text use `sfmt`. To append formatted text use [`sfmt_append`](../string/sfmt_append.md).
+To overwrite an existing string with formatted text use `cf_string_fmt`. To append formatted text use [`cf_string_fmt_append`](../string/cf_string_fmt_append.md).
 
 ## String Manipulation
 
-There are a variety of manipulation functions available for strings. Be sure to check out the [String API Reference](../api_reference.md#string) for a full list and for more examples. Some really popular ones include [`sreplace`](../string/sreplace.md), [`ssplit`](../string/ssplit.md), and [`strim`](../string/strim.md).
+There are a variety of manipulation functions available for strings. Be sure to check out the [String API Reference](../api_reference.md#string) for a full list and for more examples. Some really popular ones include [`cf_string_replace`](../string/cf_string_replace.md), [`cf_string_split`](../string/cf_string_split.md), and [`cf_string_trim`](../string/cf_string_trim.md).
 
 ## String in C++
 
@@ -115,7 +118,7 @@ Well hello there! Today is red day, meaning everything is the color red.
 
 ## String Hashing
 
-To get a hash of a string call [`shash`](../string/shash.md).
+To get a hash of a string call [`cf_string_hash`](../string/cf_string_hash.md).
 
 Be sure to check out this section on [String Interning](../topics/data_structures.md#strings-as-keys), which covers the [String Intern API](../string/sintern.md). You may use this to construct immutable strings that work super efficiently for comparisons and maps.
 
