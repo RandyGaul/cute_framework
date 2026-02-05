@@ -454,16 +454,6 @@ static void s_on_update(void* udata)
 void cf_app_update(CF_OnUpdateFn* on_update)
 {
 	if (app->gfx_enabled) {
-		// Deal with DPI scaling.
-		int pw = 0, ph = 0;
-		SDL_GetWindowSizeInPixels(app->window, &pw, &ph);
-		app->dpi_scale = (float)ph / (float)app->h;
-		app->dpi_scale_was_changed = false;
-		if (app->dpi_scale != app->dpi_scale_prev) {
-			app->dpi_scale_was_changed = true;
-			app->dpi_scale_prev = app->dpi_scale;
-		}
-
 		if (app->using_imgui) {
 			if (app->gfx_backend_type == CF_BACKEND_TYPE_GLES3) {
 				ImGui_ImplOpenGL3_NewFrame();

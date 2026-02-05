@@ -48,6 +48,9 @@ theme:
 extra_css:
   - stylesheets/cute.css
 
+extra_javascript:
+  - javascripts/redirect.js
+
 # Navigation
 not_in_nav: |
   /CPU/*.md

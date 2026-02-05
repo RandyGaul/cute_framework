@@ -268,8 +268,13 @@ if(ANDROID)
 endif()
 
 # PhysicsFS for virtual file system and archive support.
-set(PHYSFS_BUILD_SHARED $<NOT:${CF_FRAMEWORK_STATIC}> CACHE BOOL "Build PhysFS as shared library")
-set(PHYSFS_BUILD_STATIC ${CF_FRAMEWORK_STATIC} CACHE BOOL "Build PhysFS as static library")
+if(CF_FRAMEWORK_STATIC)
+	set(PHYSFS_BUILD_SHARED OFF CACHE BOOL "Build PhysFS as shared library")
+	set(PHYSFS_BUILD_STATIC ON CACHE BOOL "Build PhysFS as static library")
+else()
+	set(PHYSFS_BUILD_SHARED ON CACHE BOOL "Build PhysFS as shared library")
+	set(PHYSFS_BUILD_STATIC OFF CACHE BOOL "Build PhysFS as static library")
+endif()
 set(PHYSFS_BUILD_TEST OFF CACHE BOOL "Do not build PhysFS tests.")
 set(PHYSFS_BUILD_DOCS OFF CACHE BOOL "Do not build PhysFS docs.")
 FetchContent_Declare(
@@ -366,18 +371,22 @@ endif()
 
 if(NOT EMSCRIPTEN) # Emscripten provides it's own SDL3.
 	# SDL for platform support.
-	set(SDL_REQUIRED_VERSION 3.2.16)
+	set(SDL_REQUIRED_VERSION 3.4.0)
 	# Just don't build the shared library at all, it's not needed.
 	set(SDL_SHARED_ENABLED_BY_DEFAULT OFF)
-	set(SDL_STATIC ${CF_FRAMEWORK_STATIC} CACHE BOOL "Build SDL as a static library")
-	set(SDL_SHARED $<NOT:${CF_FRAMEWORK_STATIC}> CACHE BOOL "Do not build SDL as a shared library")
+	if(CF_FRAMEWORK_STATIC)
+		set(SDL_STATIC ON CACHE BOOL "Build SDL as a static library")
+		set(SDL_SHARED OFF CACHE BOOL "Do not build SDL as a shared library")
+	else()
+		set(SDL_STATIC OFF CACHE BOOL "Do not build SDL as a static library")
+		set(SDL_SHARED ON CACHE BOOL "Build SDL as a shared library")
+	endif()
 	set(SDL_TEST_LIBRARY OFF CACHE BOOL "Do not build SDL tests")
 	set(SDL_EXAMPLES OFF CACHE BOOL "Do not build SDL examples")
 	FetchContent_Declare(
 		SDL3
 		URL https://github.com/libsdl-org/SDL/releases/download/release-${SDL_REQUIRED_VERSION}/SDL3-${SDL_REQUIRED_VERSION}.zip
 		DOWNLOAD_EXTRACT_TIMESTAMP ON
-		CMAKE_ARGS -DSDL_SHARED=$<NOT:${CF_FRAMEWORK_STATIC}> -DSDL_STATIC=${CF_FRAMEWORK_STATIC} -DSDL_TEST_LIBRARY=OFF -DSDL_TESTS=OFF -DSDL_EXAMPLES=OFF
 	)
 	FetchContent_MakeAvailable(SDL3)
 	if(CF_FRAMEWORK_STATIC)
@@ -412,32 +421,36 @@ add_subdirectory(tools)
 
 # SPIRV-Cross for SDL_shadercross
 if(NOT EMSCRIPTEN)  # SPIRV-Cross is not needed for web.
+	# Set all SPIRV-Cross options BEFORE FetchContent_Declare/MakeAvailable
 	set(SPIRV_CROSS_CLI OFF CACHE BOOL "Turn off building SPIRV-Cross CLI.")
-	FetchContent_Declare(
-		SPIRV_CROSS
-		GIT_REPOSITORY https://github.com/KhronosGroup/SPIRV-Cross.git
-		GIT_TAG 0a88b2d5c08708d45692b7096a0a84e7bfae366c
-		CMAKE_ARGS -DSPIRV_CROSS_EXCEPTIONS_TO_ASSERTIONS=ON -DSPIRV_CROSS_CLI=OFF -DSPIRV_CROSS_SHARED=OFF -DSPIRV_CROSS_STATIC=ON
-		UPDATE_DISCONNECTED TRUE
-		GIT_PROGRESS TRUE
-	)
 	set(SPIRV_CROSS_ENABLE_TESTS OFF CACHE BOOL "Disable SPIRV-Cross tests")
 	set(SPIRV_CROSS_ENABLE_GLSLANG_INSTALL OFF CACHE BOOL "Disable GLSLANG install")
-	set(SPIRV_CROSS_SHARED OFF CACHE BOOL "Build SPIRV-Cross as shared library")
-	set(SPIRV_CROSS_STATIC ON CACHE BOOL "Do not build SPIRV-Cross as static library")
+	set(SPIRV_CROSS_SHARED OFF CACHE BOOL "Do not build SPIRV-Cross as shared library")
+	set(SPIRV_CROSS_STATIC ON CACHE BOOL "Build SPIRV-Cross as static library")
 	set(SPIRV_CROSS_C_API ON CACHE BOOL "Enable the C API")
 	set(SPIRV_CROSS_EXCEPTIONS_TO_ASSERTIONS ON CACHE BOOL "Turn off exceptions in SPIRV-Cross.")
 	set(SPIRV_CROSS_ENABLE_REFLECT OFF CACHE BOOL "Turn off reflection in SPIRV-Cross.")
 	set(SPIRV_CROSS_SKIP_INSTALL OFF CACHE BOOL "Turn off install targets in SPIRV-Cross.")
 	set(SPIRV_CROSS_ENABLE_UTIL OFF CACHE BOOL "Turn off utils in SPIRV-Cross.")
 	set(SPIRV_CROSS_ENABLE_CPP OFF CACHE BOOL "Turn off CPP target support in SPIRV-Cross.")
-	set(SPIRV_CROSS_FORCE_PIC $<NOT:${CF_FRAMEWORK_STATIC}> CACHE BOOL "Force position-independent code for all targets.")
-	if (WINDOWS)
-		set(SPIRV_CROSS_ENABLE_MSL OFF CACHE BOOL "Turn off MSL support when on windows.")
+	if(CF_FRAMEWORK_STATIC)
+		set(SPIRV_CROSS_FORCE_PIC OFF CACHE BOOL "Force position-independent code for all targets.")
+	else()
+		set(SPIRV_CROSS_FORCE_PIC ON CACHE BOOL "Force position-independent code for all targets.")
 	endif()
-	if (APPLE)
-		set(SPIRV_CROSS_ENABLE_HLSL OFF CACHE BOOL "Turn off HLSL support when on windows.")
+	if(WINDOWS)
+		set(SPIRV_CROSS_ENABLE_MSL OFF CACHE BOOL "Turn off MSL support when on Windows.")
 	endif()
+	if(APPLE)
+		set(SPIRV_CROSS_ENABLE_HLSL OFF CACHE BOOL "Turn off HLSL support when on Apple.")
+	endif()
+	FetchContent_Declare(
+		SPIRV_CROSS
+		GIT_REPOSITORY https://github.com/KhronosGroup/SPIRV-Cross.git
+		GIT_TAG 0a88b2d5c08708d45692b7096a0a84e7bfae366c
+		UPDATE_DISCONNECTED TRUE
+		GIT_PROGRESS TRUE
+	)
 	FetchContent_MakeAvailable(SPIRV_CROSS)
 	set(CF_LINK_LIBS ${CF_LINK_LIBS} spirv-cross-c)
 endif()

@@ -1071,6 +1071,430 @@ TEST_CASE(test_ckit_intern_as_map_key)
 }
 
 //--------------------------------------------------------------------------------------------------
+// String edge cases and bug coverage.
+
+TEST_CASE(test_ckit_string_slast_empty)
+{
+	// Bug: slast on empty string should return '\0', not access s[-1].
+	char* s = NULL;
+	sset(s, "");
+	REQUIRE(slen(s) == 0);
+	REQUIRE(slast(s) == '\0');
+	sfree(s);
+
+	// slast on NULL.
+	REQUIRE(slast(NULL) == '\0');
+
+	// slast on single char.
+	s = smake("x");
+	REQUIRE(slast(s) == 'x');
+	sfree(s);
+
+	return true;
+}
+
+TEST_CASE(test_ckit_string_sfirst_empty)
+{
+	// sfirst on empty string.
+	char* s = NULL;
+	sset(s, "");
+	REQUIRE(sfirst(s) == '\0');
+	sfree(s);
+
+	// sfirst on NULL.
+	REQUIRE(sfirst(NULL) == '\0');
+
+	// sfirst on normal string.
+	s = smake("abc");
+	REQUIRE(sfirst(s) == 'a');
+	sfree(s);
+
+	return true;
+}
+
+TEST_CASE(test_ckit_string_scontains_null)
+{
+	// scontains with NULL string.
+	REQUIRE(!scontains(NULL, "test"));
+
+	// scontains with empty substring (edge case).
+	char* s = smake("hello");
+	REQUIRE(scontains(s, ""));
+	sfree(s);
+
+	return true;
+}
+
+TEST_CASE(test_ckit_string_sappend_null)
+{
+	// sappend with empty string b.
+	char* s = smake("hello");
+	sappend(s, "");
+	REQUIRE(sequ(s, "hello"));
+	sfree(s);
+
+	return true;
+}
+
+TEST_CASE(test_ckit_string_split_once_edge_cases)
+{
+	// Split when delimiter is at the end.
+	char* s = NULL;
+	sset(s, "abc,");
+	char* left = ssplit_once(s, ',');
+	// Should return "abc" and s should be "".
+	REQUIRE(sequ(left, "abc"));
+	REQUIRE(sequ(s, ""));
+	sfree(left);
+	sfree(s);
+
+	// Split when delimiter is at the start.
+	s = NULL;
+	sset(s, ",abc");
+	left = ssplit_once(s, ',');
+	REQUIRE(sequ(left, ""));
+	REQUIRE(sequ(s, "abc"));
+	sfree(left);
+	sfree(s);
+
+	// Split when string is just the delimiter.
+	s = NULL;
+	sset(s, ",");
+	left = ssplit_once(s, ',');
+	REQUIRE(sequ(left, ""));
+	REQUIRE(sequ(s, ""));
+	sfree(left);
+	sfree(s);
+
+	// No delimiter found.
+	s = NULL;
+	sset(s, "nodelim");
+	left = ssplit_once(s, ',');
+	REQUIRE(left == NULL);
+	REQUIRE(sequ(s, "nodelim"));
+	sfree(s);
+
+	return true;
+}
+
+TEST_CASE(test_ckit_string_sdedup_edge_cases)
+{
+	// Dedup on empty string.
+	char* s = smake("");
+	sdedup(s, '/');
+	REQUIRE(sequ(s, ""));
+	REQUIRE(slen(s) == 0);
+	sfree(s);
+
+	// Dedup on single character.
+	s = smake("x");
+	sdedup(s, 'x');
+	REQUIRE(sequ(s, "x"));
+	sfree(s);
+
+	// Dedup on all same characters.
+	s = smake("////");
+	sdedup(s, '/');
+	REQUIRE(sequ(s, "/"));
+	sfree(s);
+
+	// Dedup with no duplicates.
+	s = smake("/a/b/c");
+	sdedup(s, '/');
+	REQUIRE(sequ(s, "/a/b/c"));
+	sfree(s);
+
+	return true;
+}
+
+TEST_CASE(test_ckit_string_utf8_truncated)
+{
+	// Truncated 2-byte sequence (starts with 0xC0-0xDF but only 1 byte).
+	// This tests that cf_decode_UTF8 handles malformed input gracefully.
+	char truncated2[] = { (char)0xC2, '\0' };
+	int cp;
+	cf_decode_UTF8(truncated2, &cp);
+	// Should return replacement character for invalid sequence.
+	REQUIRE(cp == 0xFFFD);
+
+	// Truncated 3-byte sequence.
+	char truncated3[] = { (char)0xE2, (char)0x82, '\0' };
+	cf_decode_UTF8(truncated3, &cp);
+	REQUIRE(cp == 0xFFFD);
+
+	// Truncated 4-byte sequence.
+	char truncated4[] = { (char)0xF0, (char)0x9F, (char)0x98, '\0' };
+	cf_decode_UTF8(truncated4, &cp);
+	REQUIRE(cp == 0xFFFD);
+
+	return true;
+}
+
+TEST_CASE(test_ckit_string_stouint_large)
+{
+	// Test large unsigned values.
+	REQUIRE(stouint("0") == 0);
+	REQUIRE(stouint("4294967295") == 4294967295ULL);
+
+	// Test int conversion boundaries.
+	REQUIRE(stoint("2147483647") == 2147483647);
+	REQUIRE(stoint("-2147483648") == -2147483648);
+
+	return true;
+}
+
+TEST_CASE(test_ckit_string_trim_all_whitespace)
+{
+	// Trim string that is all whitespace.
+	char* s = smake("   \t\n  ");
+	strim(s);
+	REQUIRE(sequ(s, ""));
+	REQUIRE(slen(s) == 0);
+	sfree(s);
+
+	// Left trim all whitespace.
+	s = smake("   \t  ");
+	sltrim(s);
+	REQUIRE(sequ(s, ""));
+	sfree(s);
+
+	// Right trim all whitespace.
+	s = smake("   \n  ");
+	srtrim(s);
+	REQUIRE(sequ(s, ""));
+	sfree(s);
+
+	return true;
+}
+
+TEST_CASE(test_ckit_string_erase_edge_cases)
+{
+	// Erase with count=0.
+	char* s = smake("hello");
+	serase(s, 2, 0);
+	REQUIRE(sequ(s, "hello"));
+	sfree(s);
+
+	// Erase entire string.
+	s = smake("hello");
+	serase(s, 0, 100);
+	REQUIRE(sequ(s, ""));
+	sfree(s);
+
+	// Erase with negative index that makes count<=0.
+	s = smake("hello");
+	serase(s, -10, 5);
+	REQUIRE(sequ(s, "hello"));
+	sfree(s);
+
+	return true;
+}
+
+TEST_CASE(test_ckit_string_replace_edge_cases)
+{
+	// Replace with same length.
+	char* s = smake("aabbcc");
+	sreplace(s, "bb", "xx");
+	REQUIRE(sequ(s, "aaxxcc"));
+	sfree(s);
+
+	// Replace empty string (should do nothing).
+	s = smake("hello");
+	sreplace(s, "", "x");
+	// Behavior: empty match at every position would cause issues.
+	// Most implementations skip empty pattern.
+	sfree(s);
+
+	// Replace at very beginning.
+	s = smake("hello");
+	sreplace(s, "he", "XX");
+	REQUIRE(sequ(s, "XXllo"));
+	sfree(s);
+
+	// Replace at very end.
+	s = smake("hello");
+	sreplace(s, "lo", "XX");
+	REQUIRE(sequ(s, "helXX"));
+	sfree(s);
+
+	// Multiple consecutive replacements.
+	s = smake("aaa");
+	sreplace(s, "a", "bb");
+	REQUIRE(sequ(s, "bbbbbb"));
+	sfree(s);
+
+	return true;
+}
+
+TEST_CASE(test_ckit_string_spush_spop_sequence)
+{
+	// Build string character by character.
+	char* s = NULL;
+	spush(s, 'h');
+	spush(s, 'e');
+	spush(s, 'l');
+	spush(s, 'l');
+	spush(s, 'o');
+	REQUIRE(sequ(s, "hello"));
+	REQUIRE(slen(s) == 5);
+
+	// Pop all characters.
+	spop(s);
+	REQUIRE(sequ(s, "hell"));
+	spop(s);
+	REQUIRE(sequ(s, "hel"));
+	spopn(s, 3);
+	REQUIRE(sequ(s, ""));
+	REQUIRE(slen(s) == 0);
+
+	// Pop from empty should not crash.
+	spop(s);
+	REQUIRE(slen(s) == 0);
+
+	sfree(s);
+	return true;
+}
+
+TEST_CASE(test_ckit_string_prefix_suffix_edge_cases)
+{
+	// Empty prefix/suffix always matches.
+	char* s = smake("hello");
+	REQUIRE(sprefix(s, ""));
+	REQUIRE(ssuffix(s, ""));
+	sfree(s);
+
+	// Prefix/suffix longer than string.
+	s = smake("hi");
+	REQUIRE(!sprefix(s, "hello"));
+	REQUIRE(!ssuffix(s, "world"));
+	sfree(s);
+
+	// Exact match.
+	s = smake("exact");
+	REQUIRE(sprefix(s, "exact"));
+	REQUIRE(ssuffix(s, "exact"));
+	sfree(s);
+
+	// NULL string.
+	REQUIRE(!sprefix(NULL, "test"));
+	REQUIRE(!ssuffix(NULL, "test"));
+
+	return true;
+}
+
+TEST_CASE(test_ckit_string_append_range_edge_cases)
+{
+	// Append empty range.
+	char* s = smake("hello");
+	const char* empty = "";
+	sappend_range(s, empty, empty);
+	REQUIRE(sequ(s, "hello"));
+	sfree(s);
+
+	// Append to empty string.
+	s = smake("");
+	const char* world = "world";
+	sappend_range(s, world, world + 5);
+	REQUIRE(sequ(s, "world"));
+	sfree(s);
+
+	return true;
+}
+
+TEST_CASE(test_ckit_string_pad_edge_cases)
+{
+	// Pad with count=0.
+	char* s = smake("test");
+	slpad(s, 'x', 0);
+	REQUIRE(sequ(s, "test"));
+	srpad(s, 'y', 0);
+	REQUIRE(sequ(s, "test"));
+	sfree(s);
+
+	// Pad empty string.
+	s = smake("");
+	slpad(s, 'L', 3);
+	REQUIRE(sequ(s, "LLL"));
+	sfree(s);
+
+	s = smake("");
+	srpad(s, 'R', 3);
+	REQUIRE(sequ(s, "RRR"));
+	sfree(s);
+
+	return true;
+}
+
+TEST_CASE(test_ckit_string_ssplit_edge_cases)
+{
+	// Split empty string.
+	char** parts = ssplit("", '.');
+	REQUIRE(asize(parts) == 1);
+	REQUIRE(sequ(parts[0], ""));
+	for (int i = 0; i < asize(parts); ++i) sfree(parts[i]);
+	afree(parts);
+
+	// Split string with only delimiters.
+	parts = ssplit("...", '.');
+	REQUIRE(asize(parts) == 4);
+	for (int i = 0; i < asize(parts); ++i) {
+		REQUIRE(sequ(parts[i], ""));
+		sfree(parts[i]);
+	}
+	afree(parts);
+
+	// Split with delimiter at start and end.
+	parts = ssplit(".a.b.", '.');
+	REQUIRE(asize(parts) == 4);
+	REQUIRE(sequ(parts[0], ""));
+	REQUIRE(sequ(parts[1], "a"));
+	REQUIRE(sequ(parts[2], "b"));
+	REQUIRE(sequ(parts[3], ""));
+	for (int i = 0; i < asize(parts); ++i) sfree(parts[i]);
+	afree(parts);
+
+	return true;
+}
+
+TEST_CASE(test_ckit_intern_empty_string)
+{
+	// Intern empty string.
+	const char* a = sintern("");
+	const char* b = sintern("");
+	REQUIRE(a == b);
+	REQUIRE(strcmp(a, "") == 0);
+	sintern_nuke();
+	return true;
+}
+
+TEST_CASE(test_ckit_intern_many_strings)
+{
+	// Intern many unique strings to test hash collisions.
+	const char* ptrs[100];
+	char buf[32];
+	for (int i = 0; i < 100; ++i) {
+		sprintf(buf, "string_%d", i);
+		ptrs[i] = sintern(buf);
+	}
+
+	// Verify they're all unique.
+	for (int i = 0; i < 100; ++i) {
+		for (int j = i + 1; j < 100; ++j) {
+			REQUIRE(ptrs[i] != ptrs[j]);
+		}
+	}
+
+	// Verify lookup works.
+	for (int i = 0; i < 100; ++i) {
+		sprintf(buf, "string_%d", i);
+		REQUIRE(sintern(buf) == ptrs[i]);
+	}
+
+	sintern_nuke();
+	return true;
+}
+
+//--------------------------------------------------------------------------------------------------
 // FNV-1a hash.
 
 TEST_CASE(test_ckit_fnv1a)
@@ -1173,6 +1597,26 @@ TEST_SUITE(test_ckit)
 	RUN_TEST_CASE(test_ckit_intern_range);
 	RUN_TEST_CASE(test_ckit_intern_constructed);
 	RUN_TEST_CASE(test_ckit_intern_as_map_key);
+	RUN_TEST_CASE(test_ckit_intern_empty_string);
+	RUN_TEST_CASE(test_ckit_intern_many_strings);
+
+	// String edge cases and bug coverage.
+	RUN_TEST_CASE(test_ckit_string_slast_empty);
+	RUN_TEST_CASE(test_ckit_string_sfirst_empty);
+	RUN_TEST_CASE(test_ckit_string_scontains_null);
+	RUN_TEST_CASE(test_ckit_string_sappend_null);
+	RUN_TEST_CASE(test_ckit_string_split_once_edge_cases);
+	RUN_TEST_CASE(test_ckit_string_sdedup_edge_cases);
+	RUN_TEST_CASE(test_ckit_string_utf8_truncated);
+	RUN_TEST_CASE(test_ckit_string_stouint_large);
+	RUN_TEST_CASE(test_ckit_string_trim_all_whitespace);
+	RUN_TEST_CASE(test_ckit_string_erase_edge_cases);
+	RUN_TEST_CASE(test_ckit_string_replace_edge_cases);
+	RUN_TEST_CASE(test_ckit_string_spush_spop_sequence);
+	RUN_TEST_CASE(test_ckit_string_prefix_suffix_edge_cases);
+	RUN_TEST_CASE(test_ckit_string_append_range_edge_cases);
+	RUN_TEST_CASE(test_ckit_string_pad_edge_cases);
+	RUN_TEST_CASE(test_ckit_string_ssplit_edge_cases);
 
 	// Hash.
 	RUN_TEST_CASE(test_ckit_fnv1a);
