@@ -30,7 +30,7 @@ jobs:
               name: "Windows (MSVC 18 2026)",
               os: windows-2025-vs2026,
               artifact: "msvc18",
-              generate: '-G "Visual Studio 18 2026" -A x64 -DCMAKE_BUILD_TYPE=Release -DCF_FRAMEWORK_BUILD_SAMPLES=OFF',
+              generate: '-G "Ninja" -DSDL_RENDER=OFF -DSDL_CCACHE=ON',
             }
           - {
               name: "macOS",
@@ -80,57 +80,21 @@ jobs:
       - name: Create build folder with CMake
         run: |
           cmake ${{ matrix.platform.generate }} ${{ matrix.runtime_shader_compilation.cmake_arg }} \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+            -DCMAKE_MSVC_DEBUG_INFORMATION_FORMAT=Embedded \
+            -DCMAKE_POLICY_CMP0141=NEW \
             -B build_folder
 
-      - name: Build project binary (non-MSVC)
+      - name: Build project binary
         run: |
           cmake --build build_folder
-        if: matrix.platform.name != 'Windows (MSVC 18 2026)'
-
-      # Default for MSVC is to build with Debug, so a special case is needed to produce
-      # Release binaries.
-      - name: Build project binary (MSVC)
-        run: |
-          cmake --build build_folder --config Release
-        if: matrix.platform.name == 'Windows (MSVC 18 2026)'
 
       # Run tests for MSVC 18
-      - name: Run Tests for MSVC 18
-        shell: cmd
-        run: |
-          cd build_folder\Release
-          tests.exe
-          cd ..\..
-        if: matrix.platform.name == 'Windows (MSVC 18 2026)'
-
-      # Run tests for MinGW (no Release folder)
-      - name: Run Tests for MinGW
-        shell: cmd
-        run: |
-          cd build_folder
-          tests.exe
-          docsparser.exe
-          cd ..
-        if: matrix.platform.name == 'Windows (MinGW)'
-
-      - name: Run Tests for Apple
+      - name: Run Tests
         run: |
           cd build_folder
           ./tests
-          ./docsparser
-          cd ..
-        if: runner.os == 'macOS'
-
-      - name: Run Tests for Linux
-        run: |
-          cd build_folder
-          ./tests
-          ./docsparser
-          cd ..
-        if: runner.os == 'Linux'
-
-      - name: Print ccache stats
-        run: ccache --show-stats
 
       # Just call robocopy twice, one looking for libcute.a for MinGW, and one
       # looking for cute.lib for MSCV. robocopy doesn't trigger a build failure for
@@ -139,7 +103,7 @@ jobs:
         shell: cmd
         run: |
           robocopy include dist *.h
-          robocopy build_folder\Release\lib dist cute*.lib
+          robocopy build_folder\lib dist cute*.lib
           robocopy build_folder\lib dist libcute*.a
           7z a ${{ matrix.platform.artifact }}.zip .\dist\*
         if: runner.os == 'Windows'
