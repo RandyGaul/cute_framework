@@ -21,6 +21,7 @@ After completing the above fundamental reading it's recommended to then select t
 * [Data Structures](./data_structures.md)
 * [Web Builds with Emscripten](./emscripten.md)
 * [Input](./input.md)
+* [Input Bindings](./input_bindings.md)
 * [MacOS + iOS Builds](./ios.md)
 * [Low Level Graphics](./low_level_graphics.md)
 * [Multithreading](./multithreading.md)

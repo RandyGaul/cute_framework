@@ -87,6 +87,7 @@ include_directories(src libraries test)
 # Cute Framework shared library.
 set(CF_SRCS
 	src/cute_app.cpp
+	src/cute_binding.cpp
 	src/cute_ckit.cpp
 	src/cute_audio.cpp
 	src/cute_clipboard.cpp
