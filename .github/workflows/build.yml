@@ -4,7 +4,7 @@ name: Build
 on: [push, pull_request, workflow_dispatch]
 
 env:
-  CMAKE_BUILD_PARALLEL_LEVEL: 3
+  CMAKE_BUILD_PARALLEL_LEVEL: 4
 
 jobs:
   build:
