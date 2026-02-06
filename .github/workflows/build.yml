@@ -8,8 +8,7 @@ env:
 
 jobs:
   build:
-    name: "${{ matrix.platform.name }} (CF_RUNTIME_SHADER_COMPILATION=${{ matrix.runtime_shader_compilation.value }})"
-    runs-on: ${{ matrix.platform.os }}
+    name: "${{ matrix.os }} (CF_RUNTIME_SHADER_COMPILATION=${{ matrix.runtime_shader_compilation }})"
     timeout-minutes: 20
 
     defaults:
@@ -33,6 +32,8 @@ jobs:
           - os: windows-latest
             compiler: gcc
           # TODO - Add iOS and Android platforms. Waiting on better support from GitHub.
+
+    runs-on: ${{ matrix.os }}
 
     steps:
       # Linux needs to install various dependencies.
