@@ -232,6 +232,8 @@ struct CF_GL_Shader
 
 	int num_texture_bindings;
 	CF_GL_TextureBinding* texture_bindings;
+	int num_vs_texture_bindings;
+	CF_GL_TextureBinding* vs_texture_bindings;
 	CF_GL_ShaderInfo vs;
 	CF_GL_ShaderInfo fs;
 };
@@ -488,7 +490,9 @@ static inline void s_apply_state()
 		target->viewport.w != current->viewport.w ||
 		target->viewport.h != current->viewport.h
 	) {
-		glViewport(target->viewport.x, target->viewport.y, target->viewport.w, target->viewport.h);
+		// Flip viewport vertically since OpenGL puts (0, 0) at the bottom left.
+		CF_GL_Canvas* canvas = g_ctx.canvas;
+		glViewport(target->viewport.x, canvas->h - target->viewport.y - target->viewport.h, target->viewport.w, target->viewport.h);
 	}
 
 	if (target->scissor_enabled != current->scissor_enabled) {
@@ -505,9 +509,9 @@ static inline void s_apply_state()
 		target->scissor.w != current->scissor.w ||
 		target->scissor.h != current->scissor.h)
 	) {
-		// Flip the scissor rect vertically since OpenGL's puts (0, 0) at the bottom left.
+		// Flip the scissor rect vertically since OpenGL puts (0, 0) at the bottom left.
 		CF_GL_Canvas* canvas = g_ctx.canvas;
-		glScissor(target->scissor.x, target->scissor.y, target->scissor.w, target->scissor.h);
+		glScissor(target->scissor.x, canvas->h - target->scissor.y - target->scissor.h, target->scissor.w, target->scissor.h);
 	}
 
 	if (target->stencil_reference != current->stencil_reference) {
@@ -529,10 +533,10 @@ static inline void s_apply_state()
 		target->blend_constants.a != current->blend_constants.a
 	) {
 		glBlendColor(
-			current->blend_constants.r,
-			current->blend_constants.g,
-			current->blend_constants.b,
-			current->blend_constants.a
+			target->blend_constants.r,
+			target->blend_constants.g,
+			target->blend_constants.b,
+			target->blend_constants.a
 		);
 	}
 
@@ -684,7 +688,8 @@ void cf_gles_attach(SDL_Window* window)
 
 bool cf_gles_supports_msaa(int sample_count)
 {
-	CF_ASSERT(!"This is only implemented on SDL_Gpu backends (Metal/DX11/DX12/Vulkan).");
+	// GLES backend does not support MSAA.
+	CF_UNUSED(sample_count);
 	return false;
 }
 
@@ -1084,7 +1089,7 @@ CF_Texture cf_gles_canvas_get_target(CF_Canvas ch)
 
 CF_Texture cf_gles_canvas_get_depth_stencil_target(CF_Canvas)
 {
-	// TODO: Implement
+	// GLES uses renderbuffers for depth/stencil, which are not sampleable as textures.
 	return CF_Texture{};
 }
 
@@ -1319,6 +1324,7 @@ CF_Shader cf_gles_make_shader_from_bytecode(CF_ShaderBytecode vertex_bytecode, C
 	CF_GL_Shader* shader = (CF_GL_Shader*)CF_CALLOC(sizeof(CF_GL_Shader));
 	shader->program = program;
 
+	// FS texture bindings.
 	shader->texture_bindings = (CF_GL_TextureBinding*)CF_ALLOC(sizeof(CF_GL_TextureBinding) * fragment_bytecode.shader_info.num_images);
 	for (int image_index = 0; image_index < fragment_bytecode.shader_info.num_images; ++image_index) {
 		// GLES 3.00 and WebGL do not support explicit binding (i.e: layout(binding = x))
@@ -1330,6 +1336,18 @@ CF_Shader cf_gles_make_shader_from_bytecode(CF_ShaderBytecode vertex_bytecode, C
 		shader->texture_bindings[shader->num_texture_bindings].location = location;
 		shader->texture_bindings[shader->num_texture_bindings].name = cf_sintern(image_name);
 		++shader->num_texture_bindings;
+	}
+
+	// VS texture bindings.
+	shader->vs_texture_bindings = (CF_GL_TextureBinding*)CF_ALLOC(sizeof(CF_GL_TextureBinding) * vertex_bytecode.shader_info.num_images);
+	for (int image_index = 0; image_index < vertex_bytecode.shader_info.num_images; ++image_index) {
+		const char* image_name = vertex_bytecode.shader_info.image_names[image_index];
+		GLint location = glGetUniformLocation(program, image_name);
+		if (location < 0) { continue; }
+
+		shader->vs_texture_bindings[shader->num_vs_texture_bindings].location = location;
+		shader->vs_texture_bindings[shader->num_vs_texture_bindings].name = cf_sintern(image_name);
+		++shader->num_vs_texture_bindings;
 	}
 
 	GLuint binding_point = 0;
@@ -1353,6 +1371,7 @@ void cf_gles_destroy_shader_internal(CF_Shader shader_handle)
 	CF_FREE(shader->vs.uniform_members);
 	CF_FREE(shader->fs.uniform_members);
 	CF_FREE(shader->texture_bindings);
+	CF_FREE(shader->vs_texture_bindings);
 	glDeleteProgram(shader->program);
 	shader->~CF_GL_Shader();
 	CF_FREE(shader);
@@ -1586,7 +1605,6 @@ void cf_gles_apply_shader(CF_Shader shader_handle, CF_Material material_handle)
 	// Textures (FS).
 	GLuint texture_unit = 0;
 	for (int texture_index = 0; texture_index < material->fs.textures.count(); ++texture_index) {
-		const char* name = material->fs.textures[texture_index].name;
 		CF_MaterialTex material_tex = material->fs.textures[texture_index];
 		CF_GL_Texture* texture = (CF_GL_Texture*)(uintptr_t)material_tex.handle.id;
 		for (int image_index = 0; image_index < shader->num_texture_bindings; ++image_index) {
@@ -1594,7 +1612,6 @@ void cf_gles_apply_shader(CF_Shader shader_handle, CF_Material material_handle)
 			if (binding->name == material_tex.name) {
 				glActiveTexture(GL_TEXTURE0 + texture_unit);
 				glBindTexture(GL_TEXTURE_2D, texture->id);
-				// Apply filter override if set.
 				if (g_ctx.has_filter_override) {
 					GLenum gl_filter = (g_ctx.filter_override == CF_FILTER_NEAREST) ? GL_NEAREST : GL_LINEAR;
 					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, gl_filter);
@@ -1606,7 +1623,28 @@ void cf_gles_apply_shader(CF_Shader shader_handle, CF_Material material_handle)
 			}
 		}
 	}
-	// Clear filter override after use.
+
+	// Textures (VS).
+	for (int texture_index = 0; texture_index < material->vs.textures.count(); ++texture_index) {
+		CF_MaterialTex material_tex = material->vs.textures[texture_index];
+		CF_GL_Texture* texture = (CF_GL_Texture*)(uintptr_t)material_tex.handle.id;
+		for (int image_index = 0; image_index < shader->num_vs_texture_bindings; ++image_index) {
+			const CF_GL_TextureBinding* binding = &shader->vs_texture_bindings[image_index];
+			if (binding->name == material_tex.name) {
+				glActiveTexture(GL_TEXTURE0 + texture_unit);
+				glBindTexture(GL_TEXTURE_2D, texture->id);
+				if (g_ctx.has_filter_override) {
+					GLenum gl_filter = (g_ctx.filter_override == CF_FILTER_NEAREST) ? GL_NEAREST : GL_LINEAR;
+					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, gl_filter);
+					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, gl_filter);
+				}
+				glUniform1i(binding->location, texture_unit);
+				++texture_unit;
+				break;
+			}
+		}
+	}
+
 	g_ctx.has_filter_override = false;
 	CF_POLL_OPENGL_ERROR();
 
@@ -1654,6 +1692,13 @@ void cf_gles_draw_elements()
 	}
 	for (int texture_index = 0; texture_index < material->fs.textures.count(); ++texture_index) {
 		CF_GL_Texture* texture = (CF_GL_Texture*)(uintptr_t)material->fs.textures[texture_index].handle.id;
+		if (!texture) continue;
+		if (texture->active_slot >= 0 && texture->active_slot < texture->ring.count) {
+			s_set_slot_fence(texture->ring.slots[texture->active_slot]);
+		}
+	}
+	for (int texture_index = 0; texture_index < material->vs.textures.count(); ++texture_index) {
+		CF_GL_Texture* texture = (CF_GL_Texture*)(uintptr_t)material->vs.textures[texture_index].handle.id;
 		if (!texture) continue;
 		if (texture->active_slot >= 0 && texture->active_slot < texture->ring.count) {
 			s_set_slot_fence(texture->ring.slots[texture->active_slot]);
