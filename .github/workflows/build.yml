@@ -176,7 +176,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: docsparser
-          path: ./build/debug
+          path: ./build/docs
 
       - name: Make docsparser executable and run
         run: |
