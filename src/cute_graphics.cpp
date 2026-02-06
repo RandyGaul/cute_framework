@@ -346,7 +346,7 @@ CF_TextureParams cf_texture_defaults(int w, int h)
 	params.width = w;
 	params.height = h;
 	params.mip_count = 0;
-	params.generate_mipmaps = false;
+	params.allocate_mipmaps = false;
 	params.mip_lod_bias = 0.0f;
 	params.max_anisotropy = 1.0f;
 	params.stream = false;

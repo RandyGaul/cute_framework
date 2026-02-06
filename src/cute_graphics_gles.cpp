@@ -802,7 +802,7 @@ static inline void s_apply_sampler_params(CF_GL_Texture* t, const CF_TexturePara
 	s_load_format_caps();
 	CF_GL_PixelFormatInfo* info = s_find_pixel_format_info(p.pixel_format);
 	uint32_t caps = info ? info->caps : 0;
-	t->has_mips = p.generate_mipmaps || p.mip_count > 1;
+	t->has_mips = p.allocate_mipmaps || p.mip_count > 1;
 	GLenum min_filter = s_wrap(p.mip_filter, t->has_mips);
 	GLenum mag_filter = s_wrap(p.filter);
 	if (!(caps & CF_GL_FMT_CAP_LINEAR)) {
@@ -919,7 +919,7 @@ CF_Texture cf_gles_make_texture(CF_TextureParams params)
 	t->id = slot->handle;
 	t->active_slot = slot_index;
 	s_apply_sampler_params(t, params);
-	if (params.generate_mipmaps) {
+	if (params.allocate_mipmaps) {
 		glBindTexture(GL_TEXTURE_2D, t->id);
 		glGenerateMipmap(GL_TEXTURE_2D);
 		glBindTexture(GL_TEXTURE_2D, 0);
