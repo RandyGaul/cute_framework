@@ -57,6 +57,8 @@ jobs:
           liburing-dev
         if: matrix.platform.name == 'Linux'
 
+      - uses: actions/checkout@master
+
       - name: Setup CCache
         uses: hendrikmuhs/ccache-action@v1.2
         with:
