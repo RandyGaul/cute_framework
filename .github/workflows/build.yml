@@ -20,28 +20,18 @@ jobs:
       # Don't cancel other in-progress jobs if one fails.
       fail-fast: false
       matrix:
-        runtime_shader_compilation:
-          - { value: "ON", cmake_arg: "-DCF_RUNTIME_SHADER_COMPILATION=ON" }
-          - { value: "OFF", cmake_arg: "-DCF_RUNTIME_SHADER_COMPILATION=OFF" }
-        platform:
-          - {
-              name: "Windows",
-              os: windows-2025--vs2026,
-              artifact: "mscv17",
-              generate: '-G "Ninja" -DSDL_RENDER=OFF -DSDL_CCACHE=ON',
-            }
-          - {
-              name: "macOS",
-              os: macos-latest,
-              artifact: "macos",
-              generate: '-G "Ninja" -DSDL_RENDER=OFF -DSDL_CCACHE=ON',
-            }
-          - {
-              name: "Linux",
-              os: ubuntu-latest,
-              artifact: "linux",
-              generate: '-G "Ninja" -DSDL_JACK=OFF -DSDL_PIPEWIRE=OFF -DSDL_PULSEAUDIO=OFF -DSDL_SNDIO=OFF -DSDL_ALSA=OFF -DSDL_WAYLAND=OFF -DSDL_X11=OFF -DSDL_KMSDRM=OFF -DSDL_RENDER=OFF -DSDL_CCACHE=ON -DSDL_OPENGL=OFF -DSDL_OPENGLES=OFF -DSDL_UNIX_CONSOLE_BUILD=ON',
-            }
+        os: [ubuntu-latest, macos-latest, windows-2025-vs2026]
+        compiler: [gcc, clang, msvc]
+        runtime_shader_compilation: [ON, OFF]
+        exclude:
+          # msvc is only available on Windows
+          - os: ubuntu-latest
+            compiler: msvc
+          - os: macos-latest
+            compiler: msvc
+          # gcc on Windows would require MinGW — excluded for simplicity
+          - os: windows-latest
+            compiler: gcc
           # TODO - Add iOS and Android platforms. Waiting on better support from GitHub.
 
     steps:
@@ -59,85 +49,101 @@ jobs:
 
       - uses: actions/checkout@master
 
-      - name: Setup CCache
-        uses: hendrikmuhs/ccache-action@v1.2
-        with:
-          key: ${{ matrix.os }}-${{ matrix.runtime_shader_compilation.value }}
-
       # Move to new version of CMake for later language support for C23.
-      - name: Setup CMake 4.2.x
+      - name: Install CMake and Ninja
         uses: lukka/get-cmake@latest
         with:
           cmakeVersion: 4.2.3
           ninjaVersion: latest
+
+      - name: Setup CCache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: ${{ matrix.os }}-${{ matrix.compiler }}-${{ matrix.runtime_shader_compilation }}
+
+      - name: Set up MSVC developer environment
+        if: matrix.compiler == 'msvc'
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Set compiler environment
+        shell: bash
+        run: |
+          case "${{ matrix.compiler }}" in
+            gcc)
+              echo "CC=gcc" >> "$GITHUB_ENV"
+              echo "CXX=g++" >> "$GITHUB_ENV"
+              ;;
+            clang)
+              echo "CC=clang" >> "$GITHUB_ENV"
+              echo "CXX=clang++" >> "$GITHUB_ENV"
+              ;;
+            msvc)
+              echo "CC=cl" >> "$GITHUB_ENV"
+              echo "CXX=cl" >> "$GITHUB_ENV"
+              ;;
+          esac
 
       - name: Create build folder with CMake
         run: |
           cmake ${{ matrix.platform.generate }} ${{ matrix.runtime_shader_compilation.cmake_arg }} \
             -B build_folder
 
-      - name: Build project binary
-        run: |
-          cmake --build build_folder
+      - name: Configure
+        shell: bash
+        run: >
+          cmake -B build -G Ninja
+          -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_C_COMPILER_LAUNCHER=ccache
+          -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+          -DCF_RUNTIME_SHADER_COMPILATION=${{ matrix.shader_compilation }}
+
+      - name: Build
+        run: cmake --build build --parallel
 
       - name: Print ccache stats
         run: ccache --show-stats
 
-      - name: Run Tests (Windows)
-        shell: cmd
+      - name: Test
+        shell: bash
         run: |
-          cd build_folder
-          tests.exe
-          cd ..\..
-        if: runner.os == 'Windows'
-
-      - name: Run Tests (macOS)
-        run: |
-          cd build_folder
-          ./tests
-          cd ..
-        if: runner.os == 'macOS'
-
-      - name: Run Tests (Linux)
-        run: |
-          cd build_folder
-          ./tests
-          cd ..
-        if: runner.os == 'Linux'
+          ./build/tests
 
       - name: Generate artifacts for Windows
+        if: runner.os == 'Windows'
         shell: cmd
         run: |
           robocopy include dist *.h
-          robocopy build_folder\lib dist cute*.lib
-          robocopy build_folder\lib dist libcute*.a
-          7z a ${{ matrix.platform.artifact }}.zip .\dist\*
-        if: runner.os == 'Windows'
+          if %errorlevel% geq 8 exit /b 1
+          robocopy build\lib dist cute*.lib
+          if %errorlevel% geq 8 exit /b 1
+          robocopy build\lib dist libcute*.a
+          if %errorlevel% geq 8 exit /b 1
+          7z a artifact.zip .\dist\*
 
-      - name: Generate artifacts for MacOS
+      - name: Generate artifacts for macOS
+        if: runner.os == 'macOS'
         run: |
           mkdir -p ./dist
           cp -v ./include/*.h ./dist
-          cp -R -v ./build_folder/lib/libcute*.a ./dist
-          tar -czvf ${{ matrix.platform.artifact }}.tar.gz -C dist .
-        if: runner.os == 'macOS'
+          cp -R -v ./build/lib/libcute*.a ./dist
+          tar -czvf artifact.tar.gz -C dist .
 
       - name: Generate artifacts for Linux
+        if: runner.os == 'Linux'
         run: |
           mkdir -p ./dist
           cp -v ./include/*.h ./dist
-          cp -v ./build_folder/lib/libcute*.a ./dist
-          tar -czvf ${{ matrix.platform.artifact }}.tar.gz -C dist .
-        if: runner.os == 'Linux'
+          cp -v ./build/lib/libcute*.a ./dist
+          tar -czvf artifact.tar.gz -C dist .
 
-      # Uploads the zip archives onto the workflow. They can be downloaded for 90 days (by default).
-      # Find them here: https://github.com/RandyGaul/cute_framework/actions
-      - uses: actions/upload-artifact@v4
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
         with:
+          name: ${{ matrix.os }}-${{ matrix.compiler }}-shader-${{ matrix.shader_compilation }}
+          path: |
+            artifact.zip
+            artifact.tar.gz
           if-no-files-found: error
-          name: ${{ matrix.platform.artifact }}
-          path: ./dist/
-        if: matrix.runtime_shader_compilation.value == 'ON'
 
       # Upload docsparser binary for documentation job (Linux only, one matrix combination)
       - name: Upload docsparser artifact
@@ -146,7 +152,7 @@ jobs:
           name: docsparser
           path: ./build_folder/docsparser
           if-no-files-found: error
-        if: runner.os == 'Linux' && matrix.runtime_shader_compilation.value == 'ON'
+        if: runner.os == 'Linux' && matrix.runtime_shader_compilation == 'ON'
 
   docs:
     name: Build documentation
