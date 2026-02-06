@@ -59,6 +59,7 @@ not_in_nav: |
   /array/*.md
   /atomic/*.md
   /audio/*.md
+  /binding/*.md
   /base64/*.md
   /collision/*.md
   /coroutine/*.md
@@ -105,6 +106,7 @@ nav:
       - Data Structures: topics/data_structures.md
       - Web Builds with Emscripten: topics/emscripten.md
       - Input: topics/input.md
+      - Input Bindings: topics/input_bindings.md
       - macOS + iOS Builds: topics/ios.md
       - Low Level Graphics: topics/low_level_graphics.md
       - Multithreading: topics/multithreading.md

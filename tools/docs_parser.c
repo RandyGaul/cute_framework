@@ -980,6 +980,7 @@ int main(int argc, char* argv[])
 		ADD_RELATED("app", "- [Application Window](topics/application_window.md)", "- [Game Loop and Time](topics/game_loop_and_time.md)");
 		ADD_RELATED("array", "- [Data Structures](topics/data_structures.md)");
 		ADD_RELATED("atomics", "- [Atomics](topics/atomics.md)");
+		ADD_RELATED("binding", "- [Input Bindings](topics/input_bindings.md)");
 		ADD_RELATED("collision", "- [Collision](topics/collision.md)");
 		ADD_RELATED("coroutine", "- [Coroutines](topics/coroutines.md)");
 		ADD_RELATED("draw", "- [Drawing](topics/drawing.md)");

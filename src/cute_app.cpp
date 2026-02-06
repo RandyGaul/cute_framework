@@ -22,6 +22,7 @@
 #include <internal/cute_png_cache_internal.h>
 #include <internal/cute_aseprite_cache_internal.h>
 #include <internal/cute_imgui_internal.h>
+#include <internal/cute_binding_internal.h>
 
 #include <scottt/debugbreak.h>
 
@@ -432,6 +433,7 @@ void cf_app_signal_shutdown()
 static void s_on_update(void* udata)
 {
 	cf_pump_input_msgs();
+	cf_binding_update();
 	if (app->audio_needs_updates) {
 		cs_update(CF_DELTA_TIME);
 		if (app->on_sound_finish_single_threaded) {
