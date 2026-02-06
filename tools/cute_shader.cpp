@@ -460,6 +460,7 @@ CF_ShaderCompilerResult cute_shader_compile(const char* source, CF_ShaderCompile
 	int num_storage_buffers = 0;
 	int num_images;
 	const char** image_names = NULL;
+	int* image_binding_slots = NULL;
 	int num_uniforms;
 	CF_ShaderUniformInfo* uniforms = NULL;
 	int num_uniform_members;
@@ -539,7 +540,6 @@ CF_ShaderCompilerResult cute_shader_compile(const char* source, CF_ShaderCompile
 		}
 
 		// Prepare the returned reflection info
-		int* image_binding_slots = NULL;
 		num_images = (int)image_names_vec.size();
 		if (num_images > 0) {
 			image_names = (const char**)malloc(sizeof(char*) * num_images);
