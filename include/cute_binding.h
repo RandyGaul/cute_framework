@@ -207,18 +207,59 @@ CF_API float CF_CALL cf_button_binding_sign(CF_ButtonBinding b);
  * @category binding
  * @brief    Consumes the press event so subsequent queries return false until a new press occurs.
  * @param    b              The button binding handle.
+ * @return   Returns true if there was a press to consume.
  * @related  CF_ButtonBinding cf_button_binding_consume_press cf_button_binding_consume_release
  */
-CF_API void CF_CALL cf_button_binding_consume_press(CF_ButtonBinding b);
+CF_API bool CF_CALL cf_button_binding_consume_press(CF_ButtonBinding b);
 
 /**
  * @function cf_button_binding_consume_release
  * @category binding
  * @brief    Consumes the release event so subsequent queries return false until a new release occurs.
  * @param    b              The button binding handle.
+ * @return   Returns true if there was a release to consume.
  * @related  CF_ButtonBinding cf_button_binding_consume_press cf_button_binding_consume_release
  */
-CF_API void CF_CALL cf_button_binding_consume_release(CF_ButtonBinding b);
+CF_API bool CF_CALL cf_button_binding_consume_release(CF_ButtonBinding b);
+
+/**
+ * @function cf_button_binding_set_deadzone
+ * @category binding
+ * @brief    Sets a per-binding deadzone, overriding the global deadzone for this binding.
+ * @param    b              The button binding handle.
+ * @param    deadzone       The deadzone value. Set to -1 to use the global deadzone.
+ * @related  CF_ButtonBinding cf_binding_set_deadzone cf_axis_binding_set_deadzone
+ */
+CF_API void CF_CALL cf_button_binding_set_deadzone(CF_ButtonBinding b, float deadzone);
+
+/**
+ * @function cf_button_binding_value_raw
+ * @category binding
+ * @brief    Returns the raw analog value (0..1) with no deadzone applied.
+ * @param    b              The button binding handle.
+ * @related  CF_ButtonBinding cf_button_binding_value cf_axis_binding_value_raw cf_stick_binding_value_raw
+ */
+CF_API float CF_CALL cf_button_binding_value_raw(CF_ButtonBinding b);
+
+/**
+ * @function cf_button_binding_set_repeat
+ * @category binding
+ * @brief    Enables key repeat for this button binding.
+ * @param    b              The button binding handle.
+ * @param    delay          Seconds before the first repeat fires. Set to -1 to disable repeat.
+ * @param    interval       Seconds between subsequent repeats.
+ * @related  CF_ButtonBinding cf_button_binding_repeated
+ */
+CF_API void CF_CALL cf_button_binding_set_repeat(CF_ButtonBinding b, float delay, float interval);
+
+/**
+ * @function cf_button_binding_repeated
+ * @category binding
+ * @brief    Returns true on frames where the key repeat fires.
+ * @param    b              The button binding handle.
+ * @related  CF_ButtonBinding cf_button_binding_set_repeat
+ */
+CF_API bool CF_CALL cf_button_binding_repeated(CF_ButtonBinding b);
 
 //--------------------------------------------------------------------------------------------------
 // AxisBinding API.
@@ -378,18 +419,39 @@ CF_API float CF_CALL cf_axis_binding_sign(CF_AxisBinding a);
  * @category binding
  * @brief    Consumes press events on both directions of the axis.
  * @param    a              The axis binding handle.
+ * @return   Returns true if there was a press to consume.
  * @related  CF_AxisBinding cf_axis_binding_consume_press cf_axis_binding_consume_release
  */
-CF_API void CF_CALL cf_axis_binding_consume_press(CF_AxisBinding a);
+CF_API bool CF_CALL cf_axis_binding_consume_press(CF_AxisBinding a);
 
 /**
  * @function cf_axis_binding_consume_release
  * @category binding
  * @brief    Consumes release events on both directions of the axis.
  * @param    a              The axis binding handle.
+ * @return   Returns true if there was a release to consume.
  * @related  CF_AxisBinding cf_axis_binding_consume_press cf_axis_binding_consume_release
  */
-CF_API void CF_CALL cf_axis_binding_consume_release(CF_AxisBinding a);
+CF_API bool CF_CALL cf_axis_binding_consume_release(CF_AxisBinding a);
+
+/**
+ * @function cf_axis_binding_set_deadzone
+ * @category binding
+ * @brief    Sets a per-binding deadzone on both directions of the axis.
+ * @param    a              The axis binding handle.
+ * @param    deadzone       The deadzone value. Set to -1 to use the global deadzone.
+ * @related  CF_AxisBinding cf_button_binding_set_deadzone cf_binding_set_deadzone
+ */
+CF_API void CF_CALL cf_axis_binding_set_deadzone(CF_AxisBinding a, float deadzone);
+
+/**
+ * @function cf_axis_binding_value_raw
+ * @category binding
+ * @brief    Returns the raw axis value (-1..1) with no deadzone applied.
+ * @param    a              The axis binding handle.
+ * @related  CF_AxisBinding cf_axis_binding_value cf_button_binding_value_raw cf_stick_binding_value_raw
+ */
+CF_API float CF_CALL cf_axis_binding_value_raw(CF_AxisBinding a);
 
 //--------------------------------------------------------------------------------------------------
 // StickBinding API.
@@ -514,18 +576,41 @@ CF_API CF_V2 CF_CALL cf_stick_binding_sign(CF_StickBinding s);
  * @category binding
  * @brief    Consumes press events on both axes of the stick.
  * @param    s              The stick binding handle.
+ * @return   Returns true if there was a press to consume.
  * @related  CF_StickBinding cf_stick_binding_consume_press cf_stick_binding_consume_release
  */
-CF_API void CF_CALL cf_stick_binding_consume_press(CF_StickBinding s);
+CF_API bool CF_CALL cf_stick_binding_consume_press(CF_StickBinding s);
 
 /**
  * @function cf_stick_binding_consume_release
  * @category binding
  * @brief    Consumes release events on both axes of the stick.
  * @param    s              The stick binding handle.
+ * @return   Returns true if there was a release to consume.
  * @related  CF_StickBinding cf_stick_binding_consume_press cf_stick_binding_consume_release
  */
-CF_API void CF_CALL cf_stick_binding_consume_release(CF_StickBinding s);
+CF_API bool CF_CALL cf_stick_binding_consume_release(CF_StickBinding s);
+
+/**
+ * @function cf_stick_binding_set_circular_deadzone
+ * @category binding
+ * @brief    Sets a circular deadzone on the stick, applied to the combined x/y magnitude.
+ * @param    s              The stick binding handle.
+ * @param    deadzone       The circular deadzone radius (0..1). Set to -1 to disable.
+ * @remarks  When active, both underlying axis deadzones are set to 0 so analog values pass through for the circular calculation.
+ *           Digital inputs (keys, dpad) override the analog value when active.
+ * @related  CF_StickBinding cf_stick_binding_value cf_binding_set_deadzone
+ */
+CF_API void CF_CALL cf_stick_binding_set_circular_deadzone(CF_StickBinding s, float deadzone);
+
+/**
+ * @function cf_stick_binding_value_raw
+ * @category binding
+ * @brief    Returns the raw 2D stick value with no deadzone applied.
+ * @param    s              The stick binding handle.
+ * @related  CF_StickBinding cf_stick_binding_value cf_button_binding_value_raw cf_axis_binding_value_raw
+ */
+CF_API CF_V2 CF_CALL cf_stick_binding_value_raw(CF_StickBinding s);
 
 //--------------------------------------------------------------------------------------------------
 // Joypad connection tracking.
@@ -548,7 +633,8 @@ CF_API void CF_CALL cf_register_joypad_connect_callback(void (*fn)(int player_in
  * @category binding
  * @brief    Returns the global deadzone threshold for analog stick inputs.
  * @remarks  Defaults to 0.15f. Values below this threshold are zeroed out. Valid range is roughly 0.1 to 0.2.
- * @related  cf_binding_get_deadzone cf_binding_set_deadzone
+ *           Individual bindings can override this with `cf_button_binding_set_deadzone` or `cf_axis_binding_set_deadzone`.
+ * @related  cf_binding_get_deadzone cf_binding_set_deadzone cf_button_binding_set_deadzone cf_axis_binding_set_deadzone
  */
 CF_API float CF_CALL cf_binding_get_deadzone();
 
@@ -558,7 +644,8 @@ CF_API float CF_CALL cf_binding_get_deadzone();
  * @brief    Sets the global deadzone threshold for analog stick inputs.
  * @param    deadzone       The deadzone value (roughly 0.1 to 0.2). Default is 0.15f.
  * @remarks  Inputs from controllers below this threshold are zeroed out. Setting too low causes stick drift, too high reduces sensitivity.
- * @related  cf_binding_get_deadzone cf_binding_set_deadzone
+ *           Individual bindings can override this with `cf_button_binding_set_deadzone` or `cf_axis_binding_set_deadzone`.
+ * @related  cf_binding_get_deadzone cf_binding_set_deadzone cf_button_binding_set_deadzone cf_axis_binding_set_deadzone
  */
 CF_API void CF_CALL cf_binding_set_deadzone(float deadzone);
 
@@ -652,6 +739,34 @@ CF_API void CF_CALL cf_binding_set_deadzone(float deadzone);
 )(x)
 
 /**
+ * @function cf_binding_value_raw
+ * @category binding
+ * @brief    Returns the raw value of the binding (no deadzone), dispatching by handle type.
+ * @param    x              A `CF_ButtonBinding`, `CF_AxisBinding`, or `CF_StickBinding` handle.
+ * @remarks  This is a C11 `_Generic` macro. Returns `float` for button/axis, `CF_V2` for stick.
+ * @related  cf_button_binding_value_raw cf_axis_binding_value_raw cf_stick_binding_value_raw cf_binding_value
+ */
+#define cf_binding_value_raw(x) _Generic((x), \
+	CF_ButtonBinding: cf_button_binding_value_raw, \
+	CF_AxisBinding: cf_axis_binding_value_raw, \
+	CF_StickBinding: cf_stick_binding_value_raw \
+)(x)
+
+/**
+ * @function cf_binding_set_deadzone_per
+ * @category binding
+ * @brief    Sets a per-binding deadzone, dispatching by handle type (button or axis).
+ * @param    x              A `CF_ButtonBinding` or `CF_AxisBinding` handle.
+ * @param    dz             The deadzone value. Set to -1 to use the global deadzone.
+ * @remarks  This is a C11 `_Generic` macro. For stick bindings use `cf_stick_binding_set_circular_deadzone` instead.
+ * @related  cf_button_binding_set_deadzone cf_axis_binding_set_deadzone cf_stick_binding_set_circular_deadzone
+ */
+#define cf_binding_set_deadzone_per(x, dz) _Generic((x), \
+	CF_ButtonBinding: cf_button_binding_set_deadzone, \
+	CF_AxisBinding: cf_axis_binding_set_deadzone \
+)(x, dz)
+
+/**
  * @function cf_destroy_binding
  * @category binding
  * @brief    Destroys a binding and frees its resources, dispatching by handle type.
@@ -690,8 +805,12 @@ CF_INLINE bool button_binding_released(CF_ButtonBinding b) { return cf_button_bi
 CF_INLINE bool button_binding_down(CF_ButtonBinding b) { return cf_button_binding_down(b); }
 CF_INLINE float button_binding_value(CF_ButtonBinding b) { return cf_button_binding_value(b); }
 CF_INLINE float button_binding_sign(CF_ButtonBinding b) { return cf_button_binding_sign(b); }
-CF_INLINE void button_binding_consume_press(CF_ButtonBinding b) { cf_button_binding_consume_press(b); }
-CF_INLINE void button_binding_consume_release(CF_ButtonBinding b) { cf_button_binding_consume_release(b); }
+CF_INLINE bool button_binding_consume_press(CF_ButtonBinding b) { return cf_button_binding_consume_press(b); }
+CF_INLINE bool button_binding_consume_release(CF_ButtonBinding b) { return cf_button_binding_consume_release(b); }
+CF_INLINE void button_binding_set_deadzone(CF_ButtonBinding b, float deadzone) { cf_button_binding_set_deadzone(b, deadzone); }
+CF_INLINE float button_binding_value_raw(CF_ButtonBinding b) { return cf_button_binding_value_raw(b); }
+CF_INLINE void button_binding_set_repeat(CF_ButtonBinding b, float delay, float interval) { cf_button_binding_set_repeat(b, delay, interval); }
+CF_INLINE bool button_binding_repeated(CF_ButtonBinding b) { return cf_button_binding_repeated(b); }
 
 CF_INLINE CF_AxisBinding make_axis_binding(int player_index) { return cf_make_axis_binding(player_index); }
 CF_INLINE void destroy_axis_binding(CF_AxisBinding a) { cf_destroy_axis_binding(a); }
@@ -708,8 +827,10 @@ CF_INLINE bool axis_binding_pressed(CF_AxisBinding a) { return cf_axis_binding_p
 CF_INLINE bool axis_binding_released(CF_AxisBinding a) { return cf_axis_binding_released(a); }
 CF_INLINE float axis_binding_value(CF_AxisBinding a) { return cf_axis_binding_value(a); }
 CF_INLINE float axis_binding_sign(CF_AxisBinding a) { return cf_axis_binding_sign(a); }
-CF_INLINE void axis_binding_consume_press(CF_AxisBinding a) { cf_axis_binding_consume_press(a); }
-CF_INLINE void axis_binding_consume_release(CF_AxisBinding a) { cf_axis_binding_consume_release(a); }
+CF_INLINE bool axis_binding_consume_press(CF_AxisBinding a) { return cf_axis_binding_consume_press(a); }
+CF_INLINE bool axis_binding_consume_release(CF_AxisBinding a) { return cf_axis_binding_consume_release(a); }
+CF_INLINE void axis_binding_set_deadzone(CF_AxisBinding a, float deadzone) { cf_axis_binding_set_deadzone(a, deadzone); }
+CF_INLINE float axis_binding_value_raw(CF_AxisBinding a) { return cf_axis_binding_value_raw(a); }
 
 CF_INLINE CF_StickBinding make_stick_binding(int player_index) { return cf_make_stick_binding(player_index); }
 CF_INLINE void destroy_stick_binding(CF_StickBinding s) { cf_destroy_stick_binding(s); }
@@ -723,8 +844,10 @@ CF_INLINE bool stick_binding_pressed(CF_StickBinding s) { return cf_stick_bindin
 CF_INLINE bool stick_binding_released(CF_StickBinding s) { return cf_stick_binding_released(s); }
 CF_INLINE CF_V2 stick_binding_value(CF_StickBinding s) { return cf_stick_binding_value(s); }
 CF_INLINE CF_V2 stick_binding_sign(CF_StickBinding s) { return cf_stick_binding_sign(s); }
-CF_INLINE void stick_binding_consume_press(CF_StickBinding s) { cf_stick_binding_consume_press(s); }
-CF_INLINE void stick_binding_consume_release(CF_StickBinding s) { cf_stick_binding_consume_release(s); }
+CF_INLINE bool stick_binding_consume_press(CF_StickBinding s) { return cf_stick_binding_consume_press(s); }
+CF_INLINE bool stick_binding_consume_release(CF_StickBinding s) { return cf_stick_binding_consume_release(s); }
+CF_INLINE void stick_binding_set_circular_deadzone(CF_StickBinding s, float deadzone) { cf_stick_binding_set_circular_deadzone(s, deadzone); }
+CF_INLINE CF_V2 stick_binding_value_raw(CF_StickBinding s) { return cf_stick_binding_value_raw(s); }
 
 CF_INLINE void register_joypad_connect_callback(void (*fn)(int player_index, bool connected, void* udata), void* udata) { cf_register_joypad_connect_callback(fn, udata); }
 
@@ -748,13 +871,20 @@ CF_INLINE float binding_sign(CF_ButtonBinding b) { return cf_button_binding_sign
 CF_INLINE float binding_sign(CF_AxisBinding a) { return cf_axis_binding_sign(a); }
 CF_INLINE CF_V2 binding_sign(CF_StickBinding s) { return cf_stick_binding_sign(s); }
 
-CF_INLINE void binding_consume_press(CF_ButtonBinding b) { cf_button_binding_consume_press(b); }
-CF_INLINE void binding_consume_press(CF_AxisBinding a) { cf_axis_binding_consume_press(a); }
-CF_INLINE void binding_consume_press(CF_StickBinding s) { cf_stick_binding_consume_press(s); }
+CF_INLINE bool binding_consume_press(CF_ButtonBinding b) { return cf_button_binding_consume_press(b); }
+CF_INLINE bool binding_consume_press(CF_AxisBinding a) { return cf_axis_binding_consume_press(a); }
+CF_INLINE bool binding_consume_press(CF_StickBinding s) { return cf_stick_binding_consume_press(s); }
 
-CF_INLINE void binding_consume_release(CF_ButtonBinding b) { cf_button_binding_consume_release(b); }
-CF_INLINE void binding_consume_release(CF_AxisBinding a) { cf_axis_binding_consume_release(a); }
-CF_INLINE void binding_consume_release(CF_StickBinding s) { cf_stick_binding_consume_release(s); }
+CF_INLINE bool binding_consume_release(CF_ButtonBinding b) { return cf_button_binding_consume_release(b); }
+CF_INLINE bool binding_consume_release(CF_AxisBinding a) { return cf_axis_binding_consume_release(a); }
+CF_INLINE bool binding_consume_release(CF_StickBinding s) { return cf_stick_binding_consume_release(s); }
+
+CF_INLINE float binding_value_raw(CF_ButtonBinding b) { return cf_button_binding_value_raw(b); }
+CF_INLINE float binding_value_raw(CF_AxisBinding a) { return cf_axis_binding_value_raw(a); }
+CF_INLINE CF_V2 binding_value_raw(CF_StickBinding s) { return cf_stick_binding_value_raw(s); }
+
+CF_INLINE void binding_set_deadzone(CF_ButtonBinding b, float deadzone) { cf_button_binding_set_deadzone(b, deadzone); }
+CF_INLINE void binding_set_deadzone(CF_AxisBinding a, float deadzone) { cf_axis_binding_set_deadzone(a, deadzone); }
 
 CF_INLINE void destroy_binding(CF_ButtonBinding b) { cf_destroy_button_binding(b); }
 CF_INLINE void destroy_binding(CF_AxisBinding a) { cf_destroy_axis_binding(a); }

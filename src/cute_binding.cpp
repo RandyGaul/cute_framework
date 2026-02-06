@@ -50,10 +50,16 @@ struct CF_ButtonBindingInternal
 	float last_release_time = -1;
 	bool is_down = false;
 	float v = 0;
+	float v_raw = 0;
 	bool pressed = false;
 	bool released = false;
 	bool press_consumed = false;
 	bool release_consumed = false;
+	float deadzone = -1;
+	float repeat_delay = -1;
+	float repeat_interval = 0;
+	float next_repeat_time = 0;
+	bool repeated = false;
 };
 
 struct CF_AxisBindingInternal
@@ -68,6 +74,10 @@ struct CF_StickBindingInternal
 {
 	CF_AxisBinding x_axis;
 	CF_AxisBinding y_axis;
+	int player_index = 0;
+	int analog_x_axis = -1;
+	int analog_y_axis = -1;
+	float circular_deadzone = -1;
 };
 
 struct CF_JoypadInfo
@@ -101,17 +111,26 @@ static bool s_binding_initialized;
 //--------------------------------------------------------------------------------------------------
 // Private helpers.
 
-static float s_int16_to_float(int16_t v)
+static float s_int16_to_float_raw(int16_t v)
 {
-	const int16_t max_int16 = 32767;
-	float normalized_v = (float)v / max_int16;
+	return (float)v / 32767.0f;
+}
+
+static float s_int16_to_float_dz(int16_t v, float dz)
+{
+	float normalized_v = (float)v / 32767.0f;
 	float abs_v = fabsf(normalized_v);
-	if (abs_v < s_binding_deadzone) {
+	if (abs_v < dz) {
 		return 0;
 	}
 	float sign = normalized_v > 0 ? 1.0f : -1.0f;
-	float remapped = (abs_v - s_binding_deadzone) / (1.0f - s_binding_deadzone);
+	float remapped = (abs_v - dz) / (1.0f - dz);
 	return sign * remapped;
+}
+
+static float s_int16_to_float(int16_t v)
+{
+	return s_int16_to_float_dz(v, s_binding_deadzone);
 }
 
 static bool s_axis_is_down_raw(CF_InputBinding input, float v)
@@ -124,19 +143,19 @@ static bool s_axis_is_down_raw(CF_InputBinding input, float v)
 	return false;
 }
 
-static bool s_axis_is_down(int index, CF_InputBinding input)
+static bool s_axis_is_down(int index, CF_InputBinding input, float dz)
 {
-	float v = s_int16_to_float(cf_joypad_axis(index, (CF_JoypadAxis)input.axis));
+	float v = s_int16_to_float_dz(cf_joypad_axis(index, (CF_JoypadAxis)input.axis), dz);
 	return s_axis_is_down_raw(input, v);
 }
 
-static bool s_axis_prev_is_down(int index, CF_InputBinding input)
+static bool s_axis_prev_is_down(int index, CF_InputBinding input, float dz)
 {
-	float v = s_int16_to_float(cf_joypad_axis_prev(index, (CF_JoypadAxis)input.axis));
+	float v = s_int16_to_float_dz(cf_joypad_axis_prev(index, (CF_JoypadAxis)input.axis), dz);
 	return s_axis_is_down_raw(input, v);
 }
 
-static bool s_input_is_down(int index, const dyna CF_InputBinding* inputs)
+static bool s_input_is_down(int index, const dyna CF_InputBinding* inputs, float dz)
 {
 	for (int i = 0; i < asize(inputs); ++i) {
 		CF_InputBinding input = inputs[i];
@@ -147,13 +166,13 @@ static bool s_input_is_down(int index, const dyna CF_InputBinding* inputs)
 		} else if (input.type == CF_INPUT_TYPE_BUTTON) {
 			if (cf_joypad_button_down(index, (CF_JoypadButton)input.button)) return true;
 		} else if (input.type == CF_INPUT_TYPE_TRIGGER) {
-			if (s_axis_is_down(index, input)) return true;
+			if (s_axis_is_down(index, input, dz)) return true;
 		}
 	}
 	return false;
 }
 
-static bool s_input_get_pressed(int index, const dyna CF_InputBinding* inputs)
+static bool s_input_get_pressed(int index, const dyna CF_InputBinding* inputs, float dz)
 {
 	for (int i = 0; i < asize(inputs); ++i) {
 		CF_InputBinding input = inputs[i];
@@ -164,13 +183,13 @@ static bool s_input_get_pressed(int index, const dyna CF_InputBinding* inputs)
 		} else if (input.type == CF_INPUT_TYPE_BUTTON) {
 			if (cf_joypad_button_just_pressed(index, (CF_JoypadButton)input.button)) return true;
 		} else if (input.type == CF_INPUT_TYPE_TRIGGER) {
-			if (s_axis_is_down(index, input) && !s_axis_prev_is_down(index, input)) return true;
+			if (s_axis_is_down(index, input, dz) && !s_axis_prev_is_down(index, input, dz)) return true;
 		}
 	}
 	return false;
 }
 
-static bool s_input_get_released(int index, const dyna CF_InputBinding* inputs)
+static bool s_input_get_released(int index, const dyna CF_InputBinding* inputs, float dz)
 {
 	for (int i = 0; i < asize(inputs); ++i) {
 		CF_InputBinding input = inputs[i];
@@ -181,13 +200,13 @@ static bool s_input_get_released(int index, const dyna CF_InputBinding* inputs)
 		} else if (input.type == CF_INPUT_TYPE_BUTTON) {
 			if (cf_joypad_button_just_released(index, (CF_JoypadButton)input.button)) return true;
 		} else if (input.type == CF_INPUT_TYPE_TRIGGER) {
-			if (!s_axis_is_down(index, input) && s_axis_prev_is_down(index, input)) return true;
+			if (!s_axis_is_down(index, input, dz) && s_axis_prev_is_down(index, input, dz)) return true;
 		}
 	}
 	return false;
 }
 
-static float s_input_get_value(int index, const dyna CF_InputBinding* inputs)
+static float s_input_get_value(int index, const dyna CF_InputBinding* inputs, float dz)
 {
 	float highest_value = 0;
 	for (int i = 0; i < asize(inputs); ++i) {
@@ -199,7 +218,7 @@ static float s_input_get_value(int index, const dyna CF_InputBinding* inputs)
 		} else if (input.type == CF_INPUT_TYPE_BUTTON) {
 			if (cf_joypad_button_down(index, (CF_JoypadButton)input.button)) return 1.0f;
 		} else if (input.type == CF_INPUT_TYPE_TRIGGER) {
-			float v = s_int16_to_float(cf_joypad_axis(index, (CF_JoypadAxis)input.axis));
+			float v = s_int16_to_float_dz(cf_joypad_axis(index, (CF_JoypadAxis)input.axis), dz);
 			if (s_axis_is_down_raw(input, v)) {
 				float abs_v = fabsf(v);
 				if (abs_v > highest_value) highest_value = abs_v;
@@ -209,12 +228,38 @@ static float s_input_get_value(int index, const dyna CF_InputBinding* inputs)
 	return highest_value;
 }
 
+static float s_input_get_value_raw(int index, const dyna CF_InputBinding* inputs)
+{
+	float highest_value = 0;
+	for (int i = 0; i < asize(inputs); ++i) {
+		CF_InputBinding input = inputs[i];
+		if (input.type == CF_INPUT_TYPE_KEY) {
+			if (cf_key_down((CF_KeyButton)input.key)) return 1.0f;
+		} else if (input.type == CF_INPUT_TYPE_MOUSE) {
+			if (cf_mouse_down((CF_MouseButton)input.button)) return 1.0f;
+		} else if (input.type == CF_INPUT_TYPE_BUTTON) {
+			if (cf_joypad_button_down(index, (CF_JoypadButton)input.button)) return 1.0f;
+		} else if (input.type == CF_INPUT_TYPE_TRIGGER) {
+			float v = s_int16_to_float_raw(cf_joypad_axis(index, (CF_JoypadAxis)input.axis));
+			float abs_v = fabsf(v);
+			if (abs_v > highest_value) highest_value = abs_v;
+		}
+	}
+	return highest_value;
+}
+
+static float s_effective_deadzone(CF_ButtonBindingInternal* b)
+{
+	return b->deadzone >= 0 ? b->deadzone : s_binding_deadzone;
+}
+
 static void s_button_binding_update(CF_ButtonBindingInternal* b)
 {
+	float dz = s_effective_deadzone(b);
 	b->press_consumed = false;
 	b->release_consumed = false;
 
-	if (s_input_get_pressed(b->index, b->inputs)) {
+	if (s_input_get_pressed(b->index, b->inputs, dz)) {
 		b->last_timestep = (float)CF_SECONDS;
 		b->last_press_time = (float)CF_SECONDS;
 		b->pressed = true;
@@ -222,15 +267,27 @@ static void s_button_binding_update(CF_ButtonBindingInternal* b)
 		b->pressed = false;
 	}
 
-	if (s_input_get_released(b->index, b->inputs)) {
+	if (s_input_get_released(b->index, b->inputs, dz)) {
 		b->last_release_time = (float)CF_SECONDS;
 		b->released = true;
 	} else {
 		b->released = false;
 	}
 
-	b->is_down = s_input_is_down(b->index, b->inputs);
-	b->v = s_input_get_value(b->index, b->inputs);
+	b->is_down = s_input_is_down(b->index, b->inputs, dz);
+	b->v = s_input_get_value(b->index, b->inputs, dz);
+	b->v_raw = s_input_get_value_raw(b->index, b->inputs);
+
+	// Key repeat.
+	b->repeated = false;
+	if (b->is_down && b->repeat_delay >= 0) {
+		if (b->pressed) {
+			b->next_repeat_time = (float)CF_SECONDS + b->repeat_delay;
+		} else if ((float)CF_SECONDS >= b->next_repeat_time) {
+			b->repeated = true;
+			b->next_repeat_time = (float)CF_SECONDS + b->repeat_interval;
+		}
+	}
 }
 
 static CF_JoypadInfo s_get_joypad_info(int index)
@@ -364,18 +421,47 @@ float cf_button_binding_sign(CF_ButtonBinding handle)
 	else return -1.0f;
 }
 
-void cf_button_binding_consume_press(CF_ButtonBinding handle)
+bool cf_button_binding_consume_press(CF_ButtonBinding handle)
 {
 	CF_ButtonBindingInternal* b = (CF_ButtonBindingInternal*)handle.id;
+	bool had = cf_button_binding_pressed(handle);
 	b->press_consumed = true;
 	b->last_press_time = -1;
+	return had;
 }
 
-void cf_button_binding_consume_release(CF_ButtonBinding handle)
+bool cf_button_binding_consume_release(CF_ButtonBinding handle)
 {
 	CF_ButtonBindingInternal* b = (CF_ButtonBindingInternal*)handle.id;
+	bool had = cf_button_binding_released(handle);
 	b->release_consumed = true;
 	b->last_release_time = -1;
+	return had;
+}
+
+void cf_button_binding_set_deadzone(CF_ButtonBinding handle, float deadzone)
+{
+	CF_ButtonBindingInternal* b = (CF_ButtonBindingInternal*)handle.id;
+	b->deadzone = deadzone;
+}
+
+float cf_button_binding_value_raw(CF_ButtonBinding handle)
+{
+	CF_ButtonBindingInternal* b = (CF_ButtonBindingInternal*)handle.id;
+	return b->v_raw;
+}
+
+void cf_button_binding_set_repeat(CF_ButtonBinding handle, float delay, float interval)
+{
+	CF_ButtonBindingInternal* b = (CF_ButtonBindingInternal*)handle.id;
+	b->repeat_delay = delay;
+	b->repeat_interval = interval;
+}
+
+bool cf_button_binding_repeated(CF_ButtonBinding handle)
+{
+	CF_ButtonBindingInternal* b = (CF_ButtonBindingInternal*)handle.id;
+	return b->repeated;
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -512,18 +598,38 @@ float cf_axis_binding_sign(CF_AxisBinding handle)
 	return 0;
 }
 
-void cf_axis_binding_consume_press(CF_AxisBinding handle)
+bool cf_axis_binding_consume_press(CF_AxisBinding handle)
 {
 	CF_AxisBindingInternal* a = (CF_AxisBindingInternal*)handle.id;
-	cf_button_binding_consume_press(a->negative);
-	cf_button_binding_consume_press(a->positive);
+	bool a0 = cf_button_binding_consume_press(a->negative);
+	bool a1 = cf_button_binding_consume_press(a->positive);
+	return a0 | a1;
 }
 
-void cf_axis_binding_consume_release(CF_AxisBinding handle)
+bool cf_axis_binding_consume_release(CF_AxisBinding handle)
 {
 	CF_AxisBindingInternal* a = (CF_AxisBindingInternal*)handle.id;
-	cf_button_binding_consume_release(a->negative);
-	cf_button_binding_consume_release(a->positive);
+	bool a0 = cf_button_binding_consume_release(a->negative);
+	bool a1 = cf_button_binding_consume_release(a->positive);
+	return a0 | a1;
+}
+
+void cf_axis_binding_set_deadzone(CF_AxisBinding handle, float deadzone)
+{
+	CF_AxisBindingInternal* a = (CF_AxisBindingInternal*)handle.id;
+	cf_button_binding_set_deadzone(a->negative, deadzone);
+	cf_button_binding_set_deadzone(a->positive, deadzone);
+}
+
+float cf_axis_binding_value_raw(CF_AxisBinding handle)
+{
+	CF_AxisBindingInternal* a = (CF_AxisBindingInternal*)handle.id;
+	float negative = cf_button_binding_value_raw(a->negative);
+	float positive = cf_button_binding_value_raw(a->positive);
+	if (negative <= 0 && positive <= 0) return 0;
+	if (negative > 0 && positive <= 0) return -negative;
+	if (positive > 0 && negative <= 0) return positive;
+	return 0;
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -534,6 +640,7 @@ CF_StickBinding cf_make_stick_binding(int player_index)
 	CF_StickBindingInternal* s = CF_NEW(CF_StickBindingInternal);
 	s->x_axis = cf_make_axis_binding(player_index);
 	s->y_axis = cf_make_axis_binding(player_index);
+	s->player_index = player_index;
 	CF_StickBinding result;
 	result.id = (uint64_t)s;
 	return result;
@@ -576,6 +683,8 @@ void cf_stick_binding_add_left_stick(CF_StickBinding handle, float threshold)
 	CF_StickBindingInternal* s = (CF_StickBindingInternal*)handle.id;
 	cf_axis_binding_add_left_stick_x(s->x_axis, threshold);
 	cf_axis_binding_add_left_stick_y(s->y_axis, threshold);
+	s->analog_x_axis = CF_JOYPAD_AXIS_LEFTX;
+	s->analog_y_axis = CF_JOYPAD_AXIS_LEFTY;
 }
 
 void cf_stick_binding_add_right_stick(CF_StickBinding handle, float threshold)
@@ -583,6 +692,8 @@ void cf_stick_binding_add_right_stick(CF_StickBinding handle, float threshold)
 	CF_StickBindingInternal* s = (CF_StickBindingInternal*)handle.id;
 	cf_axis_binding_add_right_stick_x(s->x_axis, threshold);
 	cf_axis_binding_add_right_stick_y(s->y_axis, threshold);
+	s->analog_x_axis = CF_JOYPAD_AXIS_RIGHTX;
+	s->analog_y_axis = CF_JOYPAD_AXIS_RIGHTY;
 }
 
 bool cf_stick_binding_pressed(CF_StickBinding handle)
@@ -600,6 +711,54 @@ bool cf_stick_binding_released(CF_StickBinding handle)
 CF_V2 cf_stick_binding_value(CF_StickBinding handle)
 {
 	CF_StickBindingInternal* s = (CF_StickBindingInternal*)handle.id;
+
+	if (s->circular_deadzone >= 0 && s->analog_x_axis >= 0 && s->analog_y_axis >= 0) {
+		// Check if any digital input is active (keys, dpad, buttons) -- if so, use the standard axis path.
+		CF_AxisBindingInternal* ax = (CF_AxisBindingInternal*)s->x_axis.id;
+		CF_AxisBindingInternal* ay = (CF_AxisBindingInternal*)s->y_axis.id;
+		CF_ButtonBindingInternal* xn = (CF_ButtonBindingInternal*)ax->negative.id;
+		CF_ButtonBindingInternal* xp = (CF_ButtonBindingInternal*)ax->positive.id;
+		CF_ButtonBindingInternal* yn = (CF_ButtonBindingInternal*)ay->negative.id;
+		CF_ButtonBindingInternal* yp = (CF_ButtonBindingInternal*)ay->positive.id;
+
+		// Check for digital input on any of the four button bindings.
+		bool has_digital = false;
+		CF_ButtonBindingInternal* btns[4] = { xn, xp, yn, yp };
+		for (int i = 0; i < 4; ++i) {
+			for (int j = 0; j < asize(btns[i]->inputs); ++j) {
+				CF_InputBinding input = btns[i]->inputs[j];
+				if (input.type == CF_INPUT_TYPE_KEY && cf_key_down((CF_KeyButton)input.key)) { has_digital = true; break; }
+				if (input.type == CF_INPUT_TYPE_MOUSE && cf_mouse_down((CF_MouseButton)input.button)) { has_digital = true; break; }
+				if (input.type == CF_INPUT_TYPE_BUTTON && cf_joypad_button_down(btns[i]->index, (CF_JoypadButton)input.button)) { has_digital = true; break; }
+			}
+			if (has_digital) break;
+		}
+
+		if (has_digital) {
+			// Fall back to standard per-axis values (digital override).
+			CF_V2 result;
+			result.x = cf_axis_binding_value(s->x_axis);
+			result.y = cf_axis_binding_value(s->y_axis);
+			return result;
+		}
+
+		// Circular deadzone: get raw normalized values directly from joypad.
+		float rx = s_int16_to_float_raw(cf_joypad_axis(s->player_index, (CF_JoypadAxis)s->analog_x_axis));
+		float ry = s_int16_to_float_raw(cf_joypad_axis(s->player_index, (CF_JoypadAxis)s->analog_y_axis));
+		float mag = sqrtf(rx * rx + ry * ry);
+		float dz = s->circular_deadzone;
+		if (mag < dz) {
+			CF_V2 result = { 0, 0 };
+			return result;
+		}
+		float remapped_mag = (mag - dz) / (1.0f - dz);
+		float scale = remapped_mag / mag;
+		CF_V2 result;
+		result.x = rx * scale;
+		result.y = ry * scale;
+		return result;
+	}
+
 	CF_V2 result;
 	result.x = cf_axis_binding_value(s->x_axis);
 	result.y = cf_axis_binding_value(s->y_axis);
@@ -615,18 +774,38 @@ CF_V2 cf_stick_binding_sign(CF_StickBinding handle)
 	return result;
 }
 
-void cf_stick_binding_consume_press(CF_StickBinding handle)
+bool cf_stick_binding_consume_press(CF_StickBinding handle)
 {
 	CF_StickBindingInternal* s = (CF_StickBindingInternal*)handle.id;
-	cf_axis_binding_consume_press(s->x_axis);
-	cf_axis_binding_consume_press(s->y_axis);
+	bool a0 = cf_axis_binding_consume_press(s->x_axis);
+	bool a1 = cf_axis_binding_consume_press(s->y_axis);
+	return a0 | a1;
 }
 
-void cf_stick_binding_consume_release(CF_StickBinding handle)
+bool cf_stick_binding_consume_release(CF_StickBinding handle)
 {
 	CF_StickBindingInternal* s = (CF_StickBindingInternal*)handle.id;
-	cf_axis_binding_consume_release(s->x_axis);
-	cf_axis_binding_consume_release(s->y_axis);
+	bool a0 = cf_axis_binding_consume_release(s->x_axis);
+	bool a1 = cf_axis_binding_consume_release(s->y_axis);
+	return a0 | a1;
+}
+
+void cf_stick_binding_set_circular_deadzone(CF_StickBinding handle, float deadzone)
+{
+	CF_StickBindingInternal* s = (CF_StickBindingInternal*)handle.id;
+	s->circular_deadzone = deadzone;
+	// Set both underlying axis deadzones to 0 so analog values pass through raw-normalized.
+	cf_axis_binding_set_deadzone(s->x_axis, 0);
+	cf_axis_binding_set_deadzone(s->y_axis, 0);
+}
+
+CF_V2 cf_stick_binding_value_raw(CF_StickBinding handle)
+{
+	CF_StickBindingInternal* s = (CF_StickBindingInternal*)handle.id;
+	CF_V2 result;
+	result.x = cf_axis_binding_value_raw(s->x_axis);
+	result.y = cf_axis_binding_value_raw(s->y_axis);
+	return result;
 }
 
 //--------------------------------------------------------------------------------------------------
