@@ -3393,6 +3393,14 @@ static void s_process_command(CF_Canvas canvas, CF_Command* cmd, CF_Command* nex
 	// Blit canvas.
 	// ...Incurs an entire extra draw call by itself.
 	if (cmd->is_canvas) {
+		// Flush any accumulated geometry before the blit.
+		if (s_draw->need_flush) {
+			s_draw->need_flush = false;
+			if (!s_draw->delay_defrag) {
+				spritebatch_defrag(&s_draw->sb);
+			}
+			spritebatch_flush(&s_draw->sb);
+		}
 		s_blit(cmd, cmd->canvas, canvas, clear);
 		clear = false; // Only clear `canvas` once.
 		s_draw->has_drawn_something = true;
@@ -3400,10 +3408,11 @@ static void s_process_command(CF_Canvas canvas, CF_Command* cmd, CF_Command* nex
 	}
 
 	// Collate all of the drawable items into the spritebatch.
-	if (!cmd->items.count()) return;
-	s_draw->need_flush = true;
-	for (int j = 0; j < cmd->items.count(); ++j) {
-		spritebatch_push(&s_draw->sb, cmd->items[j]);
+	if (cmd->items.count()) {
+		s_draw->need_flush = true;
+		for (int j = 0; j < cmd->items.count(); ++j) {
+			spritebatch_push(&s_draw->sb, cmd->items[j]);
+		}
 	}
 
 	// Merge with the next command if identical.
@@ -3433,7 +3442,7 @@ static void s_process_command(CF_Canvas canvas, CF_Command* cmd, CF_Command* nex
 		same = false;
 	}
 
-	if (!same) {
+	if (!same && s_draw->need_flush) {
 		// Process the collated drawable items. Might get split up into multiple draw calls depending on
 		// the atlas compiler.
 		s_draw->need_flush = false;
