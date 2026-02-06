@@ -4,7 +4,6 @@
 // binding system. Inspired by a real platformer's player controller.
 
 #include <cute.h>
-#include <cute_binding.h>
 
 // Tuning.
 #define PRESS_BUFFER 0.1f   // Seconds to buffer press/release for forgiving input.
