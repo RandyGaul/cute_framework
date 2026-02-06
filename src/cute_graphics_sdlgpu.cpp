@@ -94,7 +94,9 @@ struct CF_ShaderInternal
 	Cute::Array<CF_UniformBlockMember> fs_uniform_block_members[CF_MAX_UNIFORM_BLOCK_COUNT];
 	Cute::Array<CF_UniformBlockMember> vs_uniform_block_members[CF_MAX_UNIFORM_BLOCK_COUNT];
 	Cute::Array<const char*> vs_image_names;
+	Cute::Array<int> vs_image_binding_slots;
 	Cute::Array<const char*> fs_image_names;
+	Cute::Array<int> fs_image_binding_slots;
 	Cute::Array<CF_Pipeline> pip_cache;
 
 	CF_INLINE int get_input_index(const char* name)
@@ -589,10 +591,12 @@ static inline SDL_GPUShader* s_load_shader_bytecode(CF_ShaderInternal* shader_in
 	if (vs) {
 		for (int i = 0; i < shader_info->num_images; ++i) {
 			shader_internal->vs_image_names.add(sintern(shader_info->image_names[i]));
+			shader_internal->vs_image_binding_slots.add(shader_info->image_binding_slots ? shader_info->image_binding_slots[i] : i);
 		}
 	} else {
 		for (int i = 0; i < shader_info->num_images; ++i) {
 			shader_internal->fs_image_names.add(sintern(shader_info->image_names[i]));
+			shader_internal->fs_image_binding_slots.add(shader_info->image_binding_slots ? shader_info->image_binding_slots[i] : i);
 		}
 	}
 
