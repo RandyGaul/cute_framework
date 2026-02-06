@@ -10,6 +10,7 @@ project(cute_framework
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_C_STANDARD 23)
 
+include(cmake/StandardProjectSettings.cmake)
 include(GNUInstallDirs)
 # These are needed for how we use FetchContent.
 include(FetchContent)
