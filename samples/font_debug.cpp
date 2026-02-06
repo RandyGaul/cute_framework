@@ -16,7 +16,7 @@ int string_glyph_length(const char* str)
     while (true)
     {
         int codepoint = 0;
-        s = cf_decode_UTF8(s, &codepoint);
+        s = cf_string_decode_UTF8(s, &codepoint);
         if (codepoint == 0)
         {
             break;
@@ -57,7 +57,7 @@ int main(int argc, char* argv[])
     int text_glyph_length = 0;
 
     int new_line_codepoint = 0;
-    cf_decode_UTF8("\n", &new_line_codepoint);
+    cf_string_decode_UTF8("\n", &new_line_codepoint);
 
     while (cf_app_is_running())
     {
@@ -104,7 +104,7 @@ int main(int argc, char* argv[])
                 while (true)
                 {
                     prev_codepoint = codepoint;
-                    s = cf_decode_UTF8(s, &codepoint);
+                    s = cf_string_decode_UTF8(s, &codepoint);
                     bool is_new_line = new_line_codepoint == codepoint;
 
                     if (current_glyph_index == glyph_index)

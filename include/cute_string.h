@@ -793,6 +793,17 @@ extern "C" {
 #define cf_string_hex(s, uint) sfmt(s, "0x%x", uint)
 
 /**
+ * @function cf_string_ptr
+ * @category string
+ * @brief    Sets the string to the platform pointer representation of a pointer.
+ * @param    s            The string. Modified in-place.
+ * @param    p            The pointer value.
+ * @remarks  Shortform: `sptr(s, p)`.
+ * @related  cf_string_hex cf_string_int cf_string_uint
+ */
+#define cf_string_ptr(s, p) sptr(s, p)
+
+/**
  * @function cf_string_bool
  * @category string
  * @brief    Sets the string to `"true"` or `"false"`.

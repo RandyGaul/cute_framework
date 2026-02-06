@@ -302,6 +302,7 @@
 #define sfloat(s, f)            sfmt(s, "%f", (double)(f))
 #define sdouble(s, f)           sfmt(s, "%f", (double)(f))
 #define shex(s, u)              sfmt(s, "0x%x", (unsigned)(u))
+#define sptr(s, p)              sfmt(s, "%p", (void*)(p))
 #define sbool(s, b)             sfmt(s, "%s", (b) ? "true" : "false")
 
 //--------------------------------------------------------------------------------------------------
