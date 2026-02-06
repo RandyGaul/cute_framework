@@ -88,19 +88,19 @@ All keys for `CF_MAP` are `uint64_t`. You can use pointers, integers, chars, etc
 
 Since `CK_MAP` uses `uint64_t` keys internally we cannot use strings as keys directly. However there's a _highly recommended_ technique using _string interning_ to create stable, unique string references. The [Strings](../topics/strings.md) page has all the string related details. Here is the list of intern functions:
 
-* [`sintern`](../string/sintern.md)
-* [`sintern_range`](../string/sintern_range.md)
-* `sintern_nuke`
+* [`cf_sintern`](../string/cf_sintern.md)
+* [`cf_sintern_range`](../string/cf_sintern_range.md)
+* [`cf_sinuke`](../string/cf_sinuke.md)
 
-[`sintern`](../string/sintern.md) is the important one. Given a string it will return you a pointer to an identical string, but with a stable and unique pointer. The pointer is unique based on the contents of the string, ensuring only one copy of any string exists. The pointer will be completely immutable, and valid until `sintern_nuke` is called, which cleans up all memory used by the string interning API up to that point.
+[`cf_sintern`](../string/cf_sintern.md) is the important one. Given a string it will return you a pointer to an identical string, but with a stable and unique pointer. The pointer is unique based on the contents of the string, ensuring only one copy of any string exists. The pointer will be completely immutable, and valid until [`cf_sinuke`](../string/cf_sinuke.md) is called, which cleans up all memory used by the string interning API up to that point.
 
-By interning a string the stable + unique pointer can be used as a globally unique identifier for the string contents itself. We can then cast the pointer to `uint64_t` and use it as a valid map key. The pattern is to take any dynamic string, pass it to [`sintern`](../string/sintern.md), then pass the stable pointer around from there on (but remember, its contents are immutable!).
+By interning a string the stable + unique pointer can be used as a globally unique identifier for the string contents itself. We can then cast the pointer to `uint64_t` and use it as a valid map key. The pattern is to take any dynamic string, pass it to [`cf_sintern`](../string/cf_sintern.md), then pass the stable pointer around from there on (but remember, its contents are immutable!).
 
 ```cpp
-const char* special_name = sintern("Something Special");
+const char* special_name = cf_sintern("Something Special");
 
 const char* name = GetName();
-name = sintern(name);
+name = cf_sintern(name);
 if (name == special_name) { // Valid to compare pointers directly!
 	CF_V2 data = map_get(table, (uint64_t)name, CF_V2); // Cast interned pointer to key.
 	DoStuff(&data);

@@ -13,6 +13,9 @@
 #include "cute_alloc.h"
 #include "cute/ckit.h"
 
+// Shortform array macros (apush, adel, etc.) are provided by ckit.h.
+// You may use them directly if you wish, or use the cf_ longform prefixes below.
+
 //--------------------------------------------------------------------------------------------------
 // C API
 
@@ -32,7 +35,7 @@
  *           on typed pointers, there's no actual array struct type. It can get really annoying to sometimes forget if a pointer is an
  *           array, a hashtable, or just a pointer. This macro can be used to markup the type to make it much more clear for function
  *           parameters or struct member definitions. It's saying "Hey, I'm a dynamic array!" to mitigate this downside.
- * @related  dyna cf_array_len cf_array_push cf_array_pop cf_array_free cf_array_hash
+ * @related  dyna cf_array_size cf_array_push cf_array_pop cf_array_free cf_array_hash
  */
 #define dyna CK_DYNA
 
@@ -44,7 +47,7 @@
 // These map cf_array_* names to the shortform ckit macros.
 
 /**
- * @function cf_array_len
+ * @function cf_array_size
  * @category array
  * @brief    Returns the number of elements in the array, or 0 if NULL.
  * @param    a             The array.
@@ -52,27 +55,16 @@
  * @remarks  Shortform: `asize(a)`.
  * @related  cf_array_size cf_array_count cf_array_capacity cf_array_fit cf_array_push cf_array_pop cf_array_free
  */
-#define cf_array_len(a) asize(a)
-
-/**
- * @function cf_array_size
- * @category array
- * @brief    Returns the number of elements in the array, or 0 if NULL. Same as `cf_array_len`.
- * @param    a             The array.
- * @return   Returns the number of elements in `a`.
- * @remarks  Shortform: `asize(a)`.
- * @related  cf_array_len cf_array_count cf_array_capacity cf_array_fit cf_array_push cf_array_pop cf_array_free
- */
 #define cf_array_size(a) asize(a)
 
 /**
  * @function cf_array_count
  * @category array
- * @brief    Returns the number of elements in the array, or 0 if NULL. Same as `cf_array_len`.
+ * @brief    Returns the number of elements in the array, or 0 if NULL. Same as `cf_array_size`.
  * @param    a             The array.
  * @return   Returns the number of elements in `a`.
  * @remarks  Shortform: `acount(a)`.
- * @related  cf_array_len cf_array_size cf_array_capacity cf_array_fit cf_array_push cf_array_pop cf_array_free
+ * @related  cf_array_size cf_array_size cf_array_capacity cf_array_fit cf_array_push cf_array_pop cf_array_free
  */
 #define cf_array_count(a) acount(a)
 
@@ -83,7 +75,7 @@
  * @param    a             The array.
  * @return   Returns the number of elements `a` can hold before the next reallocation.
  * @remarks  Shortform: `acap(a)`.
- * @related  cf_array_len cf_array_fit cf_array_push cf_array_free
+ * @related  cf_array_size cf_array_fit cf_array_push cf_array_free
  */
 #define cf_array_capacity(a) acap(a)
 
@@ -94,7 +86,7 @@
  * @param    a             The array. Modified in-place.
  * @param    n             The minimum number of elements to reserve capacity for.
  * @remarks  Shortform: `afit(a, n)`.
- * @related  cf_array_len cf_array_capacity cf_array_push cf_array_free
+ * @related  cf_array_size cf_array_capacity cf_array_push cf_array_free
  */
 #define cf_array_fit(a, n) afit(a, n)
 
@@ -105,7 +97,7 @@
  * @param    a             The array. Modified in-place.
  * @param    ...           The element to append.
  * @remarks  Shortform: `apush(a, ...)`.
- * @related  cf_array_pop cf_array_len cf_array_fit cf_array_free
+ * @related  cf_array_pop cf_array_size cf_array_fit cf_array_free
  */
 #define cf_array_push(a, ...) apush(a, __VA_ARGS__)
 
@@ -116,7 +108,7 @@
  * @param    a             The array. Must be non-NULL and non-empty.
  * @return   Returns the removed element.
  * @remarks  Shortform: `apop(a)`.
- * @related  cf_array_push cf_array_last cf_array_len
+ * @related  cf_array_push cf_array_last cf_array_size
  */
 #define cf_array_pop(a) apop(a)
 
@@ -127,7 +119,7 @@
  * @param    a             The array.
  * @return   Returns `a + asize(a)`.
  * @remarks  Shortform: `aend(a)`.
- * @related  cf_array_last cf_array_len
+ * @related  cf_array_last cf_array_size
  */
 #define cf_array_end(a) aend(a)
 
@@ -138,7 +130,7 @@
  * @param    a             The array. Must be non-NULL and non-empty.
  * @return   Returns `a[asize(a) - 1]`.
  * @remarks  Shortform: `alast(a)`.
- * @related  cf_array_pop cf_array_end cf_array_len
+ * @related  cf_array_pop cf_array_end cf_array_size
  */
 #define cf_array_last(a) alast(a)
 
@@ -148,7 +140,7 @@
  * @brief    Sets the element count to zero without freeing memory.
  * @param    a             The array.
  * @remarks  Shortform: `aclear(a)`.
- * @related  cf_array_free cf_array_len cf_array_setlen
+ * @related  cf_array_free cf_array_size cf_array_setlen
  */
 #define cf_array_clear(a) aclear(a)
 
@@ -159,7 +151,7 @@
  * @param    a             The array. Must be non-NULL.
  * @param    n             The new element count.
  * @remarks  Shortform: `asetlen(a, n)`. Use `cf_array_fit` first to ensure sufficient capacity.
- * @related  cf_array_clear cf_array_len cf_array_fit
+ * @related  cf_array_clear cf_array_size cf_array_fit
  */
 #define cf_array_setlen(a, n) asetlen(a, n)
 
@@ -170,7 +162,7 @@
  * @param    a             The destination array. Modified in-place.
  * @param    b             The source array.
  * @remarks  Shortform: `aset(a, b)`.
- * @related  cf_array_len cf_array_fit cf_array_free
+ * @related  cf_array_size cf_array_fit cf_array_free
  */
 #define cf_array_set(a, b) aset(a, b)
 
@@ -180,7 +172,7 @@
  * @brief    Reverses the order of elements in the array in-place.
  * @param    a             The array.
  * @remarks  Shortform: `arev(a)`.
- * @related  cf_array_len
+ * @related  cf_array_size
  */
 #define cf_array_reverse(a) arev(a)
 
@@ -191,7 +183,7 @@
  * @param    a             The array.
  * @return   Returns a `uint64_t` hash.
  * @remarks  Shortform: `ahash(a)`.
- * @related  cf_array_len
+ * @related  cf_array_size
  */
 #define cf_array_hash(a) ahash(a)
 
@@ -202,7 +194,7 @@
  * @param    a             The array.
  * @param    i             The index of the element to remove.
  * @remarks  Shortform: `adel(a, i)`. Does not preserve order.
- * @related  cf_array_pop cf_array_len
+ * @related  cf_array_pop cf_array_size
  */
 #define cf_array_del(a, i) adel(a, i)
 
@@ -225,22 +217,9 @@
  * @brief    Frees the array and sets the pointer to NULL.
  * @param    a             The array. Modified in-place. Safe to call on NULL.
  * @remarks  Shortform: `afree(a)`.
- * @related  cf_array_push cf_array_clear cf_array_len
+ * @related  cf_array_push cf_array_clear cf_array_size
  */
 #define cf_array_free(a) afree(a)
-
-//--------------------------------------------------------------------------------------------------
-// Hidden API - Aliases to ckit internals for code that uses CF names directly.
-
-#define CF_Ahdr      CK_ArrayHeader
-#define CF_AHDR      CK_AHDR
-#define CF_ACOOKIE   CK_ACOOKIE
-#define CF_ACANARY   CK_ACANARY
-
-#define cf_agrow   ck_agrow
-#define cf_astatic ck_astatic
-#define cf_aset    ck_aset
-#define cf_arev    ck_arev
 
 //--------------------------------------------------------------------------------------------------
 // C++ API

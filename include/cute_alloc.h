@@ -275,13 +275,6 @@ CF_API void CF_CALL cf_memory_pool_free(CF_MemoryPool* pool, void* element);
 namespace Cute
 {
 
-CF_INLINE void allocator_override(CF_Allocator allocator) { cf_allocator_override(allocator); }
-CF_INLINE void allocator_restore_default() { cf_allocator_restore_default(); }
-CF_INLINE void* alloc(size_t size) { return cf_alloc(size); }
-CF_INLINE void free(void* ptr) { cf_free(ptr); }
-CF_INLINE void* calloc(size_t size, size_t count) { return cf_calloc(size, count); }
-CF_INLINE void* realloc(void* ptr, size_t size) { return cf_realloc(ptr, size); }
-
 CF_INLINE void* aligned_alloc(size_t size, int alignment) { return cf_aligned_alloc(size, alignment); }
 CF_INLINE void aligned_free(void* ptr) { return cf_aligned_free(ptr); }
 

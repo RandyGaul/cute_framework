@@ -606,7 +606,7 @@ struct CF_Path
 	CF_INLINE CF_Path(CF_Path&& p) { *this = p; }
 	CF_INLINE ~CF_Path() { sfree(m_path); m_path = NULL; }
 
-	static CF_INLINE CF_Path steal_from(const char* cute_c_api_string) { CF_ACANARY(cute_c_api_string); CF_Path p; p.m_path = (char*)cute_c_api_string; return p; }
+	static CF_INLINE CF_Path steal_from(const char* cute_c_api_string) { CK_ACANARY(cute_c_api_string); CF_Path p; p.m_path = (char*)cute_c_api_string; return p; }
 
 	CF_INLINE String filename() const { return String::steal_from(spfname(m_path)); }
 	CF_INLINE String filename_no_ext() const { return String::steal_from(spfname_no_ext(m_path)); }

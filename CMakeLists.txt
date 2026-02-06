@@ -97,7 +97,6 @@ set(CF_SRCS
 	src/cute_version.cpp
 	src/cute_json.cpp
 	src/cute_base64.cpp
-	src/cute_string.cpp
 	src/cute_math.cpp
 	src/cute_draw.cpp
 	src/cute_image.cpp

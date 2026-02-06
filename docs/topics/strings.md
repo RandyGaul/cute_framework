@@ -120,13 +120,13 @@ Well hello there! Today is red day, meaning everything is the color red.
 
 To get a hash of a string call [`cf_string_hash`](../string/cf_string_hash.md).
 
-Be sure to check out this section on [String Interning](../topics/data_structures.md#strings-as-keys), which covers the [String Intern API](../string/sintern.md). You may use this to construct immutable strings that work super efficiently for comparisons and maps.
+Be sure to check out this section on [String Interning](../topics/data_structures.md#strings-as-keys), which covers the [String Intern API](../string/cf_sintern.md). You may use `cf_sintern` to construct immutable strings that work super efficiently for comparisons and maps.
 
 ## UTF8
 
 It's highly recommended to store strings for your game in text files and load them up from disk. This makes it easy for a localizer to make different versions of text in different languages without editing anything other than simple text files. The format of your strings should be in the [UTF8 format](https://en.wikipedia.org/wiki/UTF-8), which is 100% backwards compatible with typical C-strings you're already used to.
 
-The UTF8 format encodes a large number of characters by making certain characters take up more than a single byte. To encode or decode UTF8 characters you may call [`sappend_UTF8`](../string/sappend_utf8.md) or [`cf_decode_UTF8`](../string/cf_decode_utf8.md).
+The UTF8 format encodes a large number of characters by making certain characters take up more than a single byte. To encode or decode UTF8 characters you may call [`cf_string_append_UTF8`](../string/cf_string_append_utf8.md) or [`cf_string_decode_UTF8`](../string/cf_string_decode_utf8.md).
 
 In C++ we have access to the `UTF8` helper class. Simply load it up with a string and call `.next()` to get each decoded character with `.codepoint`.
 
