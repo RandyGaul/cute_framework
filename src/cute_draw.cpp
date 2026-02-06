@@ -2219,7 +2219,7 @@ static const char* s_find_end_of_line(CF_Font* font, const char* text, float wra
 
 	while (*text) {
 		const char* text_prev = text;
-		text = cf_decode_UTF8(text, &cp);
+		text = cf_string_decode_UTF8(text, &cp);
 		CF_Glyph* glyph = cf_font_get_glyph(font, cp, font_size, blur);
 
 		if (cp == '\n') {
@@ -2267,11 +2267,11 @@ struct CF_CodeParseState
 	bool done() { return in >= end; }
 	void append(int ch) { sanitized.append(ch); ++glyph_count; }
 	void ltrim() { while (!done()) { int cp = *in; if (s_is_space(cp)) ++in; else break; } }
-	int next(bool trim = true) { if (trim) ltrim(); int cp; in = cf_decode_UTF8(in, &cp); return cp; }
-	int peek(bool trim = true) { if (trim) ltrim(); int cp; cf_decode_UTF8(in, &cp); return cp; }
-	void skip(bool trim = true) { if (trim) ltrim(); int cp; in = cf_decode_UTF8(in, &cp); }
+	int next(bool trim = true) { if (trim) ltrim(); int cp; in = cf_string_decode_UTF8(in, &cp); return cp; }
+	int peek(bool trim = true) { if (trim) ltrim(); int cp; cf_string_decode_UTF8(in, &cp); return cp; }
+	void skip(bool trim = true) { if (trim) ltrim(); int cp; in = cf_string_decode_UTF8(in, &cp); }
 	bool expect(int ch) { int cp = next(); if (cp != ch) { return false; } return true; }
-	bool try_next(int ch, bool trim = true) { if (trim) ltrim(); int cp; const char* next = cf_decode_UTF8(in, &cp); if (cp == ch) { in = next; return true; } return false; }
+	bool try_next(int ch, bool trim = true) { if (trim) ltrim(); int cp; const char* next = cf_string_decode_UTF8(in, &cp); if (cp == ch) { in = next; return true; } return false; }
 };
 
 static String s_parse_code_name(CF_CodeParseState* s)
@@ -2652,7 +2652,7 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 
 	// Used by the line-wrapping algorithm to skip characters.
 	auto skip_to_next = [&]() {
-		text = cf_decode_UTF8(text, &cp);
+		text = cf_string_decode_UTF8(text, &cp);
 		effect_cleanup();
 		++index;
 	};
@@ -2701,7 +2701,7 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 		cp_prev = cp;
 		const char* prev_text = text;
 		if ((render || markups) && do_effects) effect_spawn();
-		text = cf_decode_UTF8(text, &cp);
+		text = cf_string_decode_UTF8(text, &cp);
 		++index;
 		CF_DEFER(effect_cleanup());
 

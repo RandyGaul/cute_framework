@@ -76,31 +76,6 @@
 #	define CK_FREE(p) free(p)
 #endif
 
-// Cookie union for debugger-friendly viewing of 4-char magic values.
-typedef union CK_Cookie
-{
-	uint32_t val;
-	char c[4];
-} CK_Cookie;
-
-// Helper to create cookies (works in both C and C++).
-static inline CK_Cookie ck_cookie(char a, char b, char c, char d)
-{
-	CK_Cookie ck;
-	ck.c[0] = a;
-	ck.c[1] = b;
-	ck.c[2] = c;
-	ck.c[3] = d;
-	return ck;
-}
-
-// Portable case-insensitive string compare.
-#ifdef _WIN32
-#	define ck_stricmp _stricmp
-#else
-#	define ck_stricmp strcasecmp
-#endif
-
 //--------------------------------------------------------------------------------------------------
 // Dynamic arrays (stretchy buffers).
 //
@@ -167,6 +142,9 @@ static inline CK_Cookie ck_cookie(char a, char b, char c, char d)
 // afree: Free array memory and set pointer to NULL.
 #define afree(a)      do { CK_ACANARY(a); if (a && !CK_AHDR(a)->is_static) CK_FREE(CK_AHDR(a)); (a) = NULL; } while (0)
 
+// Check if array is a valid dynamic array.
+#define avalid(a)  ((a) && CK_AHDR(a)->cookie.val == CK_ACOOKIE.val)
+
 //--------------------------------------------------------------------------------------------------
 // Dynamic strings (built on dynamic arrays).
 //
@@ -202,6 +180,12 @@ static inline CK_Cookie ck_cookie(char a, char b, char c, char d)
 
 // sclear: Clear string to empty but keep allocated memory.
 #define sclear(s)               (aclear(s), apush(s, 0))
+
+// sstatic: Create a string backed by a static buffer. Grows to heap if needed.
+#define sstatic(s, buf, sz)     (astatic(s, buf, sz), apush(s, 0))
+
+// sisdyna: True if s is a dynamic string from this API (not a literal or static buffer).
+#define sisdyna(s)              (!((#s)[0] == '"') && ck_avalid(s))
 
 // sfree: Free string memory and set pointer to NULL.
 #define sfree(s)                afree(s)
@@ -304,12 +288,20 @@ static inline CK_Cookie ck_cookie(char a, char b, char c, char d)
 // sappend_UTF8: Append a Unicode codepoint encoded as UTF-8.
 #define sappend_UTF8(s, cp)     (s = ck_sappend_UTF8(s, cp))
 
+// decode_UTF8: Decode one UTF-8 codepoint from s, store it in *codepoint.
+// Returns a pointer past the consumed bytes. Invalid sequences yield 0xFFFD.
+#define decode_UTF8(s, cp)      ck_decode_UTF8(s, cp)
+
+// decode_UTF16: Decode one UTF-16 codepoint (with surrogate pair support) from s, store it in *codepoint.
+// Returns a pointer past the consumed uint16_t(s). Invalid surrogates yield 0xFFFD.
+#define decode_UTF16(s, cp)     ck_decode_UTF16(s, cp)
+
 // String formatting from primitives.
 #define sint(s, i)              sfmt(s, "%d", (int)(i))
 #define suint(s, u)             sfmt(s, "%" PRIu64, (uint64_t)(u))
 #define sfloat(s, f)            sfmt(s, "%f", (double)(f))
 #define sdouble(s, f)           sfmt(s, "%f", (double)(f))
-#define shex_str(s, u)          sfmt(s, "0x%x", (unsigned)(u))
+#define shex(s, u)              sfmt(s, "0x%x", (unsigned)(u))
 #define sbool(s, b)             sfmt(s, "%s", (b) ? "true" : "false")
 
 //--------------------------------------------------------------------------------------------------
@@ -372,87 +364,40 @@ static inline CK_Cookie ck_cookie(char a, char b, char c, char d)
 //     }
 //     map_free(scores);
 
-typedef struct CK_MapSlot
-{
-	uint64_t h;
-	int item_index;
-	int base_count;
-} CK_MapSlot;
-
-// Safety cookie for map validation.
-#define CK_MAP_COOKIE ck_cookie('M','A','P','!')
-
-// Map header stored just before the values array.
-// All arrays (items, keys, islot, slots) are in a single allocation following the header.
-// Layout: [Header][items...][keys...][islot...][slots...]
-typedef struct CK_MapHeader
-{
-	CK_Cookie    cookie;         // Safety cookie for validation
-	int          val_size;       // Size of each value in bytes
-	int          size;           // Number of items
-	int          capacity;       // Capacity for items/keys/islot
-	int          slot_count;     // Number of used hash slots
-	int          slot_capacity;  // Capacity for hash slots (power of 2)
-} CK_MapHeader;
-
-// Alignment helper.
-#define CK_ALIGN8(x) (((x) + 7) & ~(size_t)7)
-
-// Compute pointers to arrays within the single allocation.
-// items: right after header (header is 24 bytes, 8-byte aligned)
-#define ck_map_items_ptr(hdr) ((void*)((hdr) + 1))
-
-// keys: after items (aligned to 8)
-#define ck_map_keys_offset(cap, vsz) (sizeof(CK_MapHeader) + CK_ALIGN8((size_t)(cap) * (vsz)))
-#define ck_map_keys_ptr(hdr) ((uint64_t*)((char*)(hdr) + ck_map_keys_offset((hdr)->capacity, (hdr)->val_size)))
-
-// islot: after keys (already 8-byte aligned since keys are uint64_t)
-#define ck_map_islot_ptr(hdr) ((int*)(ck_map_keys_ptr(hdr) + (hdr)->capacity))
-
-// slots: after islot (aligned to 8 for CK_MapSlot)
-#define ck_map_slots_offset(hdr) CK_ALIGN8((size_t)((char*)(ck_map_islot_ptr(hdr) + (hdr)->capacity) - (char*)(hdr)))
-#define ck_map_slots_ptr(hdr) ((CK_MapSlot*)((char*)(hdr) + ck_map_slots_offset(hdr)))
-
 // CK_MAP(T): Declares a map type. Just T* under the hood.
 #define CK_MAP(T) T*
 
-// Internal: Get header pointer from map pointer.
-#define ck_map_hdr(m) ((m) ? (CK_MapHeader*)((char*)(m) - sizeof(CK_MapHeader)) : NULL)
-
-// Internal: Validate map cookie (catches use-after-free, etc).
-#define ck_map_assert_valid(m) ((void)(!(m) || (assert(ck_map_hdr(m)->cookie.val == CK_MAP_COOKIE.val), 1)))
-
 // map_size: Number of {key, value} pairs. Returns 0 for NULL.
-#define map_size(m)     (ck_map_assert_valid(m), (m) ? ck_map_hdr(m)->size : 0)
+#define map_size(m)     (map_validate(m), (m) ? CK_MHDR(m)->size : 0)
 
 // map_capacity: Allocated capacity.
-#define map_capacity(m) (ck_map_assert_valid(m), (m) ? ck_map_hdr(m)->capacity : 0)
+#define map_capacity(m) (map_validate(m), (m) ? CK_MHDR(m)->capacity : 0)
 
 // map_keys: Pointer to keys array (uint64_t*). Parallel to items array.
-#define map_keys(m)  (ck_map_assert_valid(m), (m) ? ck_map_keys_ptr(ck_map_hdr(m)) : NULL)
+#define map_keys(m)  (map_validate(m), (m) ? ck_map_keys_ptr(CK_MHDR(m)) : NULL)
 
 // map_items: Pointer to items array. Same as the map pointer itself.
-#define map_items(m) (ck_map_assert_valid(m), (m))
+#define map_items(m) (map_validate(m), (m))
 
 // map_has: Check if key exists.
 #define map_has(m, k) ( \
-	ck_map_assert_valid(m), \
-	(m) && ck_map_find_impl(ck_map_hdr(m), (uint64_t)(k)) >= 0)
+	map_validate(m), \
+	(m) && ck_map_find_impl(CK_MHDR(m), (uint64_t)(k)) >= 0)
 
 // map_del: Remove entry by key. Returns 1 if deleted, 0 if not found.
 #define map_del(m, k) ( \
-	ck_map_assert_valid(m), \
-	(m) ? ck_map_del_impl(ck_map_hdr(m), (uint64_t)(k)) : 0)
+	map_validate(m), \
+	(m) ? ck_map_del_impl(CK_MHDR(m), (uint64_t)(k)) : 0)
 
 // map_clear: Remove all entries but keep allocated memory.
 #define map_clear(m) do { \
-	ck_map_assert_valid(m); \
-	if (m) ck_map_clear_impl(ck_map_hdr(m)); \
+	map_validate(m); \
+	if (m) ck_map_clear_impl(CK_MHDR(m)); \
 } while(0)
 
 // map_free: Free all memory and set pointer to NULL.
 #define map_free(m) do { \
-	if (m) { ck_map_assert_valid(m); ck_map_free_impl(ck_map_hdr(m)); } \
+	if (m) { map_validate(m); ck_map_free_impl(CK_MHDR(m)); } \
 	(m) = NULL; \
 } while(0)
 
@@ -467,22 +412,22 @@ typedef struct CK_MapHeader
 //     int cmp(const void* a, const void* b) { return *(int*)a - *(int*)b; }
 //     map_sort(m, cmp);
 #define map_sort(m, cmp) do { \
-	ck_map_assert_valid(m); \
-	if (m) ck_map_sort_impl(ck_map_hdr(m), cmp); \
+	map_validate(m); \
+	if (m) ck_map_sort_impl(CK_MHDR(m), cmp); \
 } while(0)
 
 // map_ssort: Sort entries by keys (treating keys as interned string pointers).
 //     map_ssort(m, 0);  // case-sensitive
 //     map_ssort(m, 1);  // case-insensitive
 #define map_ssort(m, ignore_case) do { \
-	ck_map_assert_valid(m); \
-	if (m) ck_map_ssort_impl(ck_map_hdr(m), ignore_case); \
+	map_validate(m); \
+	if (m) ck_map_ssort_impl(CK_MHDR(m), ignore_case); \
 } while(0)
 
 // map_swap: Swap entries at indices i and j.
 #define map_swap(m, i, j) do { \
-	ck_map_assert_valid(m); \
-	if (m) ck_map_swap_impl(ck_map_hdr(m), i, j); \
+	map_validate(m); \
+	if (m) ck_map_swap_impl(CK_MHDR(m), i, j); \
 } while(0)
 
 //--------------------------------------------------------------------------------------------------
@@ -495,40 +440,40 @@ typedef struct CK_MapHeader
 
 #ifdef __cplusplus
 #	include <type_traits>
-#	define map_get(m, k) (ck_map_assert_valid(m), (m) && ck_map_find_impl(ck_map_hdr(m), (uint64_t)(k)) >= 0 ? (m)[ck_map_find_impl(ck_map_hdr(m), (uint64_t)(k))] : std::remove_pointer_t<std::remove_reference_t<decltype(m)>>{})
-#	define map_get_ptr(m, k) (ck_map_assert_valid(m), (m) ? (std::remove_reference_t<decltype(m)>)ck_map_get_ptr_impl(ck_map_hdr(m), (uint64_t)(k)) : nullptr)
-#	define map_set(m, k, v) do { std::remove_pointer_t<decltype(m)> ck_v_ = (v); ck_map_set_stretchy((void**)&(m), (uint64_t)(k), &ck_v_, sizeof(ck_v_)); ck_map_assert_valid(m); } while(0)
-#	define map_add(m, k, v) do { uint64_t ck_v_ = (uint64_t)(v); ck_map_set_stretchy((void**)&(m), (uint64_t)(k), &ck_v_, sizeof(ck_v_)); ck_map_assert_valid(m); } while(0)
+#	define map_get(m, k) (map_validate(m), (m) && ck_map_find_impl(CK_MHDR(m), (uint64_t)(k)) >= 0 ? (m)[ck_map_find_impl(CK_MHDR(m), (uint64_t)(k))] : std::remove_pointer_t<std::remove_reference_t<decltype(m)>>{})
+#	define map_get_ptr(m, k) (map_validate(m), (m) ? (std::remove_reference_t<decltype(m)>)ck_map_get_ptr_impl(CK_MHDR(m), (uint64_t)(k)) : nullptr)
+#	define map_set(m, k, v) do { std::remove_pointer_t<decltype(m)> ck_v_ = (v); ck_map_set_stretchy((void**)&(m), (uint64_t)(k), &ck_v_, sizeof(ck_v_)); map_validate(m); } while(0)
+#	define map_add(m, k, v) do { uint64_t ck_v_ = (uint64_t)(v); ck_map_set_stretchy((void**)&(m), (uint64_t)(k), &ck_v_, sizeof(ck_v_)); map_validate(m); } while(0)
 #else
 
 // map_get: Get value by key. Returns zero-initialized value if not found.
 //     int x = map_get(m, sintern("x"));
 #define map_get(m, k) ( \
-	ck_map_assert_valid(m), \
-	(m) && ck_map_find_impl(ck_map_hdr(m), (uint64_t)(k)) >= 0 \
-		? (m)[ck_map_find_impl(ck_map_hdr(m), (uint64_t)(k))] \
+	map_validate(m), \
+	(m) && ck_map_find_impl(CK_MHDR(m), (uint64_t)(k)) >= 0 \
+		? (m)[ck_map_find_impl(CK_MHDR(m), (uint64_t)(k))] \
 		: (typeof(*(m))){ 0 })
 
 // map_get_ptr: Get pointer to value. Returns NULL if not found.
 //     int* px = map_get_ptr(m, sintern("x"));
 //     if (px) *px = 999;
 #define map_get_ptr(m, k) ( \
-	ck_map_assert_valid(m), \
-	(m) ? (typeof(m))ck_map_get_ptr_impl(ck_map_hdr(m), (uint64_t)(k)) : NULL)
+	map_validate(m), \
+	(m) ? (typeof(m))ck_map_get_ptr_impl(CK_MHDR(m), (uint64_t)(k)) : NULL)
 
 // map_set: Set value for key. Creates entry if not exists. May reallocate.
 //     map_set(m, sintern("x"), 42);
 #define map_set(m, k, v) do { \
 	typeof(*(m)) ck_v_ = (v); \
 	ck_map_set_stretchy((void**)&(m), (uint64_t)(k), &ck_v_, sizeof(ck_v_)); \
-	ck_map_assert_valid(m); \
+	map_validate(m); \
 } while(0)
 
 // map_add: Alias for map_set with uint64_t value (backwards compat).
 #define map_add(m, k, v) do { \
 	uint64_t ck_v_ = (uint64_t)(v); \
 	ck_map_set_stretchy((void**)&(m), (uint64_t)(k), &ck_v_, sizeof(ck_v_)); \
-	ck_map_assert_valid(m); \
+	map_validate(m); \
 } while(0)
 
 #endif
@@ -558,13 +503,41 @@ typedef struct CK_MapHeader
 // sintern_range: Intern a substring [start, end).
 #define sintern_range(start, end) ck_sintern_range(start, end)
 
-// sintern_nuke: Free all interned strings. All previous pointers become invalid.
-#ifdef __cplusplus
-extern "C" {
-#endif
-void sintern_nuke();
-#ifdef __cplusplus
+// sivalid: True if s is an interned string (from sintern).
+#define sivalid(s) (((CK_UniqueString*)(s) - 1)->cookie.val == CK_INTERN_COOKIE.val)
+
+// silen: Length of an interned string (constant-time).
+#define silen(s)   (((CK_UniqueString*)(s) - 1)->len)
+
+// sinuke: Free all interned strings. All previous pointers become invalid.
+#define sinuke()   sintern_nuke()
+
+//--------------------------------------------------------------------------------------------------
+// Private implementation details.
+
+// Cookie union for debugger-friendly viewing of 4-char magic values.
+typedef union CK_Cookie
+{
+	uint32_t val;
+	char c[4];
+} CK_Cookie;
+
+// Helper to create cookies (works in both C and C++).
+static inline CK_Cookie ck_cookie(char a, char b, char c, char d)
+{
+	CK_Cookie ck;
+	ck.c[0] = a;
+	ck.c[1] = b;
+	ck.c[2] = c;
+	ck.c[3] = d;
+	return ck;
 }
+
+// Portable case-insensitive string compare.
+#ifdef _WIN32
+#	define ck_stricmp _stricmp
+#else
+#	define ck_stricmp strcasecmp
 #endif
 
 // Intern structure for validation and length access.
@@ -576,13 +549,6 @@ typedef struct CK_UniqueString
 	struct CK_UniqueString* next;
 	char* str;
 } CK_UniqueString;
-
-// Intern validation and length macros.
-#define ck_sivalid(s) (((CK_UniqueString*)(s) - 1)->cookie.val == CK_INTERN_COOKIE.val)
-#define ck_silen(s)   (((CK_UniqueString*)(s) - 1)->len)
-
-//--------------------------------------------------------------------------------------------------
-// Private implementation details.
 
 // Hidden array header behind the user pointer.
 typedef struct CK_ArrayHeader
@@ -597,16 +563,64 @@ typedef struct CK_ArrayHeader
 #define CK_AHDR(a)    ((CK_ArrayHeader*)(a) - 1)
 #define CK_ACOOKIE    ck_cookie('A','R','R','Y')
 #define CK_ACANARY(a) ((a) ? assert(CK_AHDR(a)->cookie.val == CK_ACOOKIE.val) : (void)0)
-#define ck_avalid(a)  ((a) && CK_AHDR(a)->cookie.val == CK_ACOOKIE.val)
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+void sintern_nuke();
+
 void* ck_agrow(const void* a, int new_size, size_t element_size);
 void* ck_astatic(const void* a, int buffer_size, size_t element_size);
 void* ck_aset(const void* a, const void* b, size_t element_size);
 void* ck_arev(const void* a, size_t element_size);
+
+typedef struct CK_MapSlot
+{
+	uint64_t h;
+	int item_index;
+	int base_count;
+} CK_MapSlot;
+
+// Safety cookie for map validation.
+#define CK_MAP_COOKIE ck_cookie('M','A','P','!')
+
+// Compute pointers to arrays within the single allocation.
+// items: right after header (header is 24 bytes, 8-byte aligned)
+#define ck_map_items_ptr(hdr) ((void*)((hdr) + 1))
+
+// keys: after items (aligned to 8)
+#define ck_map_keys_offset(cap, vsz) (sizeof(CK_MapHeader) + CK_ALIGN8((size_t)(cap) * (vsz)))
+#define ck_map_keys_ptr(hdr) ((uint64_t*)((char*)(hdr) + ck_map_keys_offset((hdr)->capacity, (hdr)->val_size)))
+
+// islot: after keys (already 8-byte aligned since keys are uint64_t)
+#define ck_map_islot_ptr(hdr) ((int*)(ck_map_keys_ptr(hdr) + (hdr)->capacity))
+
+// slots: after islot (aligned to 8 for CK_MapSlot)
+#define ck_map_slots_offset(hdr) CK_ALIGN8((size_t)((char*)(ck_map_islot_ptr(hdr) + (hdr)->capacity) - (char*)(hdr)))
+#define ck_map_slots_ptr(hdr) ((CK_MapSlot*)((char*)(hdr) + ck_map_slots_offset(hdr)))
+
+// Internal: Get header pointer from map pointer.
+#define CK_MHDR(m) ((m) ? (CK_MapHeader*)((char*)(m) - sizeof(CK_MapHeader)) : NULL)
+
+// Internal: Validate map cookie (catches use-after-free, etc).
+#define map_validate(m) ((void)(!(m) || (assert(CK_MHDR(m)->cookie.val == CK_MAP_COOKIE.val), 1)))
+
+// Map header stored just before the values array.
+// All arrays (items, keys, islot, slots) are in a single allocation following the header.
+// Layout: [Header][items...][keys...][islot...][slots...]
+typedef struct CK_MapHeader
+{
+	CK_Cookie    cookie;         // Safety cookie for validation
+	int          val_size;       // Size of each value in bytes
+	int          size;           // Number of items
+	int          capacity;       // Capacity for items/keys/islot
+	int          slot_count;     // Number of used hash slots
+	int          slot_capacity;  // Capacity for hash slots (power of 2)
+} CK_MapHeader;
+
+// Alignment helper.
+#define CK_ALIGN8(x) (((x) + 7) & ~(size_t)7)
 
 // Map implementation functions.
 void  ck_map_set_stretchy(void** m_ptr, uint64_t key, const void* val, int val_size);
@@ -653,7 +667,7 @@ char* ck_serase(char* s, int index, int count);
 char* ck_spop(char* s);
 char* ck_spopn(char* s, int n);
 char* ck_sappend_UTF8(char* s, int codepoint);
-const char* cf_decode_UTF8(const char* s, int* codepoint);
+const char* ck_decode_UTF8(const char* s, int* codepoint);
 
 // Path implementation functions.
 char* ck_spfname(const char* path);
@@ -666,6 +680,10 @@ char* ck_spcompact(const char* path, int n);
 char* ck_spdir_of(const char* path);
 char* ck_sptop_of(const char* path);
 char* ck_spnorm(const char* path);
+
+// UTF16 decode.
+#include <stdint.h>
+const uint16_t* ck_decode_UTF16(const uint16_t* s, int* codepoint);
 
 // Intern implementation.
 const char* ck_sintern_range(const char* start, const char* end);
@@ -1191,7 +1209,7 @@ char* ck_sappend_UTF8(char* s, int codepoint)
 	return s;
 }
 
-const char* cf_decode_UTF8(const char* s, int* codepoint)
+const char* ck_decode_UTF8(const char* s, int* codepoint)
 {
 	unsigned char c = (unsigned char)*s++;
 	int extra = 0, min = 0;
@@ -1866,6 +1884,19 @@ void sintern_nuke()
 	map_free(table->interns);
 	ck_sintern_unlock(table);
 	CK_FREE(table);
+}
+
+const uint16_t* ck_decode_UTF16(const uint16_t* s, int* codepoint)
+{
+	int W1 = *s++;
+	if (W1 < 0xD800 || W1 > 0xDFFF) {
+		*codepoint = W1;
+	} else if (W1 > 0xD800 && W1 < 0xDBFF) {
+		int W2 = *s++;
+		if (W2 > 0xDC00 && W2 < 0xDFFF) *codepoint = 0x10000 + (((W1 & 0x03FF) << 10) | (W2 & 0x03FF));
+		else *codepoint = 0xFFFD;
+	} else *codepoint = 0xFFFD;
+	return s;
 }
 
 #ifdef __cplusplus

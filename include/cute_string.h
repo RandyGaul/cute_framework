@@ -14,11 +14,13 @@
 #include "cute_array.h"
 #include "cute_math.h"
 
+#include <cute/ckit.h>
+
 #include <inttypes.h>
 #include <stdarg.h>
 
-// Shortform string macros (slen, sset, sfmt, sappend, sfree, etc.)
-// are provided by ckit.h (included via cute_array.h).
+// Shortform string macros (slen, sset, sfmt, sappend, sfree, etc.) are provided by ckit.h.
+// You may use them directly if you wish, or use the cf_ longform prefixes below.
 
 //--------------------------------------------------------------------------------------------------
 // C API
@@ -65,59 +67,24 @@ extern "C" {
  *
  *           To create a new string use `smake` or `sfmake`. To overwrite an existing string use `sset` or `sfmt`.
  *           Note: `sset`/`sfmt` require an l-value (a variable), not a literal like `NULL` -- use `smake`/`sfmake` to create from scratch.
- * @related  sdyna smake sfmake sset sfmt sappend sfree slen sequ
+ * @related  sdyna cf_string_make cf_string_fmt_make cf_string_set cf_string_fmt cf_string_append cf_string_free cf_string_len cf_string_equ
  */
 #define sdyna CK_SDYNA
-
-/**
- * @function shex
- * @category string
- * @brief    Converts a uint64_t to a hex-string and assigns `s` to it.
- * @param    s            The string.
- * @param    uint         The value to convert.
- * @related  sdyna sint suint sfloat sdouble shex sbool stint stouint stofloat stodouble stohex stobool
- */
-#define shex(s, uint) cf_string_hex(s, uint)
-
-/**
- * @function sstatic
- * @category string
- * @brief    Creates a string with an initial static storage backing.
- * @param    s            The string. Can be `NULL`.
- * @param    buffer       Pointer to a static memory buffer.
- * @param    buffer_size  The size of `buffer` in bytes.
- * @remarks  Will grow onto the heap if the size becomes too large. Call `sfree` when done.
- * @related  sdyna sstatic sisdyna spush sset
- */
-#define sstatic(s, buffer, buffer_size) cf_string_static(s, buffer, buffer_size)
-
-/**
- * @function sisdyna
- * @category string
- * @brief    Checks to see if a C string is a dynamic string from Cute Framework's string API, or not.
- * @param    s            The string. Can be `NULL`.
- * @return   Returns true if `s` is a dynamically alloced string from this C string API.
- * @remarks  This can be evaluated at compile time for string literals.
- * @related  sdyna sstatic sisdyna spush sset
- */
-#define sisdyna(s) cf_string_is_dynamic(s)
 
 //--------------------------------------------------------------------------------------------------
 // String Interning C API (global string table).
 
-// Override sintern to use CF's thread-safe implementation instead of ckit's.
-#undef sintern
 /**
- * @function sintern
+ * @function cf_sintern
  * @category string
  * @brief    Stores unique, static copy of a string in a global string interning table.
  * @param    s            The string to insert into the global table.
- * @return   Returns a static, unique, stable, read-only copy of the string. The pointer is stable until `sinuke` is called.
- * @example > Using sintern for fast string comparison and as hash table keys.
+ * @return   Returns a static, unique, stable, read-only copy of the string. The pointer is stable until `cf_sinuke` is called.
+ * @example > Using cf_sintern for fast string comparison and as hash table keys.
  *     // Intern some strings.
- *     const char* apple = sintern("apple");
- *     const char* banana = sintern("banana");
- *     const char* apple2 = sintern("apple");  // Returns same pointer as first apple!
+ *     const char* apple = cf_sintern("apple");
+ *     const char* banana = cf_sintern("banana");
+ *     const char* apple2 = cf_sintern("apple");  // Returns same pointer as first apple!
  *
  *     // Fast pointer comparison (no strcmp needed).
  *     CF_ASSERT(apple == apple2);
@@ -127,7 +94,7 @@ extern "C" {
  *     CF_MAP(int) prices = NULL;
  *     map_set(prices, (uint64_t)apple, 100);
  *     map_set(prices, (uint64_t)banana, 50);
- *     int apple_price = map_get(prices, (uint64_t)sintern("apple"));
+ *     int apple_price = map_get(prices, (uint64_t)cf_sintern("apple"));
  *     CF_ASSERT(apple_price == 100);
  *     map_free(prices);
  * @remarks  Only one copy of each unique string is stored. The purpose is primarily a memory optimization to reduce duplicate strings.
@@ -136,68 +103,66 @@ extern "C" {
  *
  *           - You can hash returned pointers directly into hash tables (instead of hashing the entire string).
  *           - You can simply compare pointers for equality, as opposed to comparing the string contents, as long as both strings came from this function.
- *           - You may optionally call `sinuke` to free all resources used by the global string table.
+ *           - You may optionally call `cf_sinuke` to free all resources used by the global string table.
  *           - This function is very fast if the string was already stored previously.
- * @related  sintern sintern_range sivalid silen sinuke
+ * @related  cf_sintern cf_sintern_range cf_sivalid cf_silen cf_sinuke
  */
-#define sintern(s) cf_sintern(s)
+#define cf_sintern(s) sintern(s)
 
-// Override sintern to use CF's thread-safe implementation instead of ckit's.
-#undef sintern_range
 /**
- * @function sintern_range
+ * @function cf_sintern_range
  * @category string
  * @brief    Stores unique, static copy of a string in a global string interning table.
  * @param    start         A pointer to the start of the string to insert into the global table.
  * @param    end           A pointer to the end of the string to insert into the global table. Should point just before the nul-byte (if there is a nul-byte).
- * @return   Returns a static, unique, stable, read-only copy of the string. The pointer is stable until `sinuke` is called.
+ * @return   Returns a static, unique, stable, read-only copy of the string. The pointer is stable until `cf_sinuke` is called.
  * @remarks  Only one copy of each unique string is stored. The purpose is primarily a memory optimization to reduce duplicate strings.
  *           You *can not* modify this string in any way. It is 100% immutable. Some major benefits come from placing strings into this
  *           table.
  *
  *           - You can hash returned pointers directly into hash tables (instead of hashing the entire string).
  *           - You can simply compare pointers for equality, as opposed to comparing the string contents, as long as both strings came from this function.
- *           - You may optionally call `sinuke` to free all resources used by the global string table.
+ *           - You may optionally call `cf_sinuke` to free all resources used by the global string table.
  *           - This function is very fast if the string was already stored previously.
- * @related  sintern sintern_range sivalid silen sinuke
+ * @related  cf_sintern cf_sintern_range cf_sivalid cf_silen cf_sinuke
  */
-#define sintern_range(start, end) cf_sintern_range(start, end)
+#define cf_sintern_range(start, end) sintern_range(start, end)
 
 /**
- * @function sivalid
+ * @function cf_sivalid
  * @category string
- * @brief    Returns true if the string is a static, stable, unique pointer from `sintern`.
+ * @brief    Returns true if the string is a static, stable, unique pointer from `cf_sintern`.
  * @param    s            The string.
  * @remarks  This is *not* a secure method -- do not use it on any potentially dangerous strings. It's designed to be very simple and fast, nothing more.
- * @related  sintern sintern_range sivalid silen sinuke
+ * @related  cf_sintern cf_sintern_range cf_sivalid cf_silen cf_sinuke
  */
-#define sivalid ck_sivalid
+#define cf_sivalid(s) sivalid(s)
 
 /**
- * @function silen
+ * @function cf_silen
  * @category string
  * @brief    Returns the length of an intern'd string.
  * @param    s            The string.
  * @remarks  This is *not* a secure method -- do not use it on any potentially dangerous strings. It's designed to be very simple and fast, nothing more.
  *           The return value is calculated in constant time, as opposed to calling `CF_STRLEN` (`strlen`).
- * @related  sintern sintern_range sivalid silen sinuke
+ * @related  cf_sintern cf_sintern_range cf_sivalid cf_silen cf_sinuke
  */
-#define silen ck_silen
+#define cf_silen(s) silen(s)
 
 /**
- * @function sinuke
+ * @function cf_sinuke
  * @category string
- * @brief    Frees up all resources used by the global string table built by `sintern`.
- * @remarks  All strings previously returned by `sintern` are now invalid.
- * @related  sintern sintern_range sivalid silen sinuke
+ * @brief    Frees up all resources used by the global string table built by `cf_sintern`.
+ * @remarks  All strings previously returned by `cf_sintern` are now invalid.
+ * @related  cf_sintern cf_sintern_range cf_sivalid cf_silen cf_sinuke
  */
-#define sinuke() cf_sinuke_intern_table()
+#define cf_sinuke() sinuke()
 
 //--------------------------------------------------------------------------------------------------
 // UTF8 and UTF16.
 
 /**
- * @function sappend_UTF8
+ * @function cf_string_append_UTF8
  * @category string
  * @brief    Appends a UTF32 codepoint (as `uint32_t`) encoded as UTF8 onto the string.
  * @param    s            The string. Can be `NULL`.
@@ -205,7 +170,7 @@ extern "C" {
  * @example > Appending UTF32 codepoints as UTF8 in a loop.
  *     sdyna char* s = NULL;
  *     while (has_codepoint()) {
- *         sappend_UTF8(s, get_codepoint());
+ *         cf_string_append_UTF8(s, get_codepoint());
  *     }
  *     sfree(s);
  * @remarks  The UTF8 bytes are appended onto the string.
@@ -215,12 +180,12 @@ extern "C" {
  *
  *           If an invalid codepoint is found the "replacement character" 0xFFFD will be appended instead, which
  *           looks like a question mark inside a dark diamond.
- * @related  sappend_UTF8 cf_decode_UTF8 cf_decode_UTF16
+ * @related  cf_string_append_UTF8 cf_string_append_UTF8 cf_string_decode_UTF16
  */
-// #define sappend_UTF8(s, cp)
+#define cf_string_append_UTF8(s, codepoint) sappend_UTF8(s, codepoint)
 
 /**
- * @function cf_decode_UTF8
+ * @function cf_string_decode_UTF8
  * @category string
  * @brief    Decodes a single UTF8 character from the string as a UTF32 codepoint.
  * @param    s            The string.
@@ -230,18 +195,18 @@ extern "C" {
  *     int cp;
  *     const char* tmp = my_string;
  *     while (*tmp) {
- *         tmp = cf_decode_UTF8(tmp, &cp);
+ *         tmp = cf_string_decode_UTF8(tmp, &cp);
  *         DoSomethingWithCodepoint(cp);
  *     }
  * @remarks  You can use this function in a loop to decode one codepoint at a time, where each codepoint
  *           represents a single UTF8 character. If the decoded codepoint is invalid then the "replacement character"
  *           0xFFFD will be recorded instead.
- * @related  sappend_UTF8 cf_decode_UTF8 cf_decode_UTF16
+ * @related  cf_string_append_UTF8 cf_string_decode_UTF8 cf_string_decode_UTF16
  */
-// const char* cf_decode_UTF8(const char* s, int* codepoint);
+#define cf_string_decode_UTF8(s, codepoint) decode_UTF8(s, codepoint)
 
 /**
- * @function cf_decode_UTF16
+ * @function cf_string_decode_UTF16
  * @category string
  * @brief    Decodes a single UTF16 character from the string as a UTF32 codepoint.
  * @param    s            The string.
@@ -251,7 +216,7 @@ extern "C" {
  *     int cp;
  *     const uint16_t* tmp = my_string;
  *     while (*tmp) {
- *         tmp = cf_decode_UTF16(tmp, &cp);
+ *         tmp = cf_string_decode_UTF16(tmp, &cp);
  *         DoSomethingWithCodepoint(cp);
  *     }
  * @example > Converting a UTF16 string to UTF8.
@@ -260,17 +225,17 @@ extern "C" {
  *         int cp;
  *         sdyna char* s = NULL;
  *         while (*text) {
- *             text = cf_decode_UTF16(text, &cp);
- *             sappend_UTF8(s, cp);
+ *             text = cf_string_decode_UTF16(text, &cp);
+ *             cf_string_append_UTF8(s, cp);
  *         }
  *         return s;
  *     }
  * @remarks  You can use this function in a loop to decode one codepoint at a time, where each codepoint
- *           represents a single UTF16 character. You can convert a UTF16 string to UTF8 by calling `sappend_UTF8`
+ *           represents a single UTF16 character. You can convert a UTF16 string to UTF8 by calling `cf_string_append_UTF8`
  *           on another string instance inside a decode loop.
- * @related  sappend_UTF8 cf_decode_UTF8 cf_decode_UTF16
+ * @related  cf_string_append_UTF8 cf_string_append_UTF8 cf_string_decode_UTF16
  */
-CF_API const uint16_t* CF_CALL cf_decode_UTF16(const uint16_t* s, int* codepoint);
+#define cf_string_decode_UTF16(s, codepoint) decode_UTF16(s, codepoint)
 
 //--------------------------------------------------------------------------------------------------
 // Longform C API.
@@ -970,7 +935,7 @@ CF_API const uint16_t* CF_CALL cf_decode_UTF16(const uint16_t* s, int* codepoint
  * @remarks  Shortform: `sstatic(s, buffer, buffer_size)`. Will grow onto the heap if the size becomes too large. Call `sfree` when done.
  * @related  cf_string_is_dynamic cf_string_free cf_string_set
  */
-#define cf_string_static(s, buffer, buffer_size) (astatic(s, buffer, buffer_size), apush(s, 0))
+#define cf_string_static(s, buffer, buffer_size) sstatic(s, buffer, buffer_size)
 
 /**
  * @function cf_string_is_dynamic
@@ -981,18 +946,7 @@ CF_API const uint16_t* CF_CALL cf_decode_UTF16(const uint16_t* s, int* codepoint
  * @remarks  Shortform: `sisdyna(s)`.
  * @related  cf_string_static cf_string_free
  */
-#define cf_string_is_dynamic(s) (!((#s)[0] == '"') && ck_avalid(s))
-
-/**
- * @function cf_string_append_UTF8
- * @category string
- * @brief    Appends a UTF32 codepoint encoded as UTF8 onto the string.
- * @param    s            The string. Can be `NULL`.
- * @param    codepoint    An `int` codepoint in UTF32 form.
- * @remarks  Shortform: `sappend_UTF8(s, codepoint)`.
- * @related  cf_decode_UTF8 cf_decode_UTF16
- */
-#define cf_string_append_UTF8(s, codepoint) sappend_UTF8(s, codepoint)
+#define cf_string_is_dynamic(s) sisdyna(s)
 
 //--------------------------------------------------------------------------------------------------
 // Longform Path C API.
@@ -1116,50 +1070,6 @@ CF_API const uint16_t* CF_CALL cf_decode_UTF16(const uint16_t* s, int* codepoint
  */
 #define cf_path_normalize(path) spnorm(path)
 
-//--------------------------------------------------------------------------------------------------
-// Hidden API - Not intended for direct use.
-
-// Aliases for code that uses the cf_ prefixed function names directly.
-#define cf_sfit             ck_sfit
-#define cf_sset             ck_sset
-#define cf_sfmt             ck_sfmt
-#define cf_sfmt_append      ck_sfmt_append
-#define cf_svfmt            ck_svfmt
-#define cf_svfmt_append     ck_svfmt_append
-#define cf_sprefix          ck_sprefix
-#define cf_ssuffix          ck_ssuffix
-#define cf_stoupper         ck_stoupper
-#define cf_stolower         ck_stolower
-#define cf_sappend          ck_sappend
-#define cf_sappend_range    ck_sappend_range
-#define cf_strim            ck_strim
-#define cf_sltrim           ck_sltrim
-#define cf_srtrim           ck_srtrim
-#define cf_slpad            ck_slpad
-#define cf_srpad            ck_srpad
-#define cf_ssplit_once      ck_ssplit_once
-#define cf_ssplit           ck_ssplit
-#define cf_sfirst_index_of  ck_sfirst_index_of
-#define cf_slast_index_of   ck_slast_index_of
-#define cf_stoint           ck_stoint
-#define cf_stouint          ck_stouint
-#define cf_stofloat         ck_stofloat
-#define cf_stodouble        ck_stodouble
-#define cf_stohex           ck_stohex
-#define cf_sreplace         ck_sreplace
-#define cf_sdedup           ck_sdedup
-#define cf_serase           ck_serase
-#define cf_spop             ck_spop
-#define cf_spopn            ck_spopn
-#define cf_string_append_UTF8_impl ck_sappend_UTF8
-
-// Use ckit's intern structure for compatibility.
-#define CF_INTERN_COOKIE CK_INTERN_COOKIE
-typedef CK_UniqueString CF_Intern;
-
-CF_API const char* CF_CALL cf_sintern(const char* s);
-CF_API const char* CF_CALL cf_sintern_range(const char* start, const char* end);
-CF_API void CF_CALL cf_sinuke_intern_table(void);
 
 #ifdef __cplusplus
 }
@@ -1193,7 +1103,7 @@ struct String
 {
 	CF_INLINE String() { }
 	CF_INLINE String(const char* s) { sset(m_str, s); }
-	CF_INLINE String(const char* start, const char* end) { int length = (int)(end - start); sfit(m_str, length); CF_STRNCPY(m_str, start, length); CF_AHDR(m_str)->size = length + 1; }
+	CF_INLINE String(const char* start, const char* end) { int length = (int)(end - start); sfit(m_str, length); strncpy(m_str, start, length); CK_AHDR(m_str)->size = length + 1; }
 	CF_INLINE String(const String& s) { sset(m_str, s); }
 	CF_INLINE String(String&& s) {  m_str = s.m_str; s.m_str = NULL; }
 	CF_INLINE String(int i) { sint(m_str, i); }
@@ -1205,7 +1115,7 @@ struct String
 	CF_INLINE String(bool b) { sbool(m_str, b); }
 	CF_INLINE ~String() { sfree(m_str); m_str = NULL; }
 
-	CF_INLINE static String steal_from(char* cute_c_api_string) { CF_ACANARY(cute_c_api_string); String r; r.m_str = cute_c_api_string; return r; }
+	CF_INLINE static String steal_from(char* cute_c_api_string) { CK_ACANARY(cute_c_api_string); String r; r.m_str = cute_c_api_string; return r; }
 	CF_INLINE char* steal() { char* result = m_str; m_str = NULL; return result; }
 	CF_INLINE static String from_hex(uint64_t uint) { String r; shex(r.m_str, uint); return r; }
 
@@ -1314,7 +1224,7 @@ struct UTF8
 	CF_INLINE UTF8() { }
 	CF_INLINE UTF8(const char* text) { this->text = text; }
 
-	CF_INLINE bool next() { if (*text) { text = cf_decode_UTF8(text, &codepoint); return true; } else return false; }
+	CF_INLINE bool next() { if (*text) { text = cf_string_decode_UTF8(text, &codepoint); return true; } else return false; }
 
 	int codepoint;
 	const char* text = NULL;
@@ -1336,15 +1246,13 @@ struct UTF16
 	CF_INLINE UTF16() { }
 	CF_INLINE UTF16(const uint16_t* text) { this->text = text; }
 
-	CF_INLINE bool next() { if (*text) { text = cf_decode_UTF16(text, &codepoint); return true; } else return false; }
+	CF_INLINE bool next() { if (*text) { text = cf_string_decode_UTF16(text, &codepoint); return true; } else return false; }
 
 	int codepoint;
 	const uint16_t* text = NULL;
 };
 
-CF_INLINE const char* sintern(const char* s) { return cf_sintern(s); }
-CF_INLINE const char* sintern_range(const char* start, const char* end) { return cf_sintern_range(start, end); }
-CF_INLINE void sinuke_intern_table() { cf_sinuke_intern_table(); }
+// cf_sintern/cf_sintern_range route to sintern/sintern_range (ckit macros).
 
 }
 

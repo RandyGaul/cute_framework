@@ -370,7 +370,7 @@ void cf_input_text_add_utf8(const char* text)
 {
 	while (*text) {
 		int cp;
-		text = cf_decode_UTF8(text, &cp);
+		text = cf_string_decode_UTF8(text, &cp);
 		app->input_text.add((int)cp);
 	}
 }

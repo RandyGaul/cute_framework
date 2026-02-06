@@ -13,6 +13,9 @@
 #include "cute_alloc.h"
 #include "cute/ckit.h"
 
+// Shortform map macros (map_get, map_set, etc.) are provided by ckit.h.
+// You may use them directly if you wish, or use the cf_ longform prefixes below.
+
 //--------------------------------------------------------------------------------------------------
 // C API
 
@@ -263,7 +266,6 @@
 
 //--------------------------------------------------------------------------------------------------
 // Longform C API aliases.
-// The cf_map_* macros map to the shortform map_* macros from ckit.h.
 
 #define cf_map_add(m, k, v) map_add(m, k, v)
 #define cf_map_find(m, k) map_find(m, k)
@@ -373,13 +375,13 @@ Map<T>::~Map()
 	for (int i = 0; i < count(); ++i) {
 		(elements + i)->~T();
 	}
-	if (m_map) ck_map_free_impl(ck_map_hdr(m_map));
+	if (m_map) ck_map_free_impl(CK_MHDR(m_map));
 }
 
 template <typename T>
 T& Map<T>::get(uint64_t key)
 {
-	void* ptr = m_map ? ck_map_get_ptr_impl(ck_map_hdr(m_map), key) : nullptr;
+	void* ptr = m_map ? ck_map_get_ptr_impl(CK_MHDR(m_map), key) : nullptr;
 	CF_ASSERT(ptr);
 	return *(T*)ptr;
 }
@@ -387,7 +389,7 @@ T& Map<T>::get(uint64_t key)
 template <typename T>
 const T& Map<T>::get(uint64_t key) const
 {
-	void* ptr = m_map ? ck_map_get_ptr_impl(ck_map_hdr(m_map), key) : nullptr;
+	void* ptr = m_map ? ck_map_get_ptr_impl(CK_MHDR(m_map), key) : nullptr;
 	CF_ASSERT(ptr);
 	return *(const T*)ptr;
 }
@@ -395,13 +397,13 @@ const T& Map<T>::get(uint64_t key) const
 template <typename T>
 T* Map<T>::try_get(uint64_t key)
 {
-	return m_map ? (T*)ck_map_get_ptr_impl(ck_map_hdr(m_map), key) : nullptr;
+	return m_map ? (T*)ck_map_get_ptr_impl(CK_MHDR(m_map), key) : nullptr;
 }
 
 template <typename T>
 const T* Map<T>::try_get(uint64_t key) const
 {
-	return m_map ? (const T*)ck_map_get_ptr_impl(ck_map_hdr(m_map), key) : nullptr;
+	return m_map ? (const T*)ck_map_get_ptr_impl(CK_MHDR(m_map), key) : nullptr;
 }
 
 template <typename T>
@@ -411,7 +413,7 @@ T* Map<T>::insert(uint64_t key)
 	T dummy;
 	CF_MEMSET(&dummy, 0, sizeof(T));
 	ck_map_set_stretchy((void**)&m_map, key, &dummy, (int)sizeof(T));
-	T* result = (T*)ck_map_get_ptr_impl(ck_map_hdr(m_map), key);
+	T* result = (T*)ck_map_get_ptr_impl(CK_MHDR(m_map), key);
 	CF_ASSERT(result);
 	CF_PLACEMENT_NEW(result) T();
 	return result;
@@ -423,7 +425,7 @@ T* Map<T>::insert(uint64_t key, const T& val)
 	T dummy;
 	CF_MEMSET(&dummy, 0, sizeof(T));
 	ck_map_set_stretchy((void**)&m_map, key, &dummy, (int)sizeof(T));
-	T* result = (T*)ck_map_get_ptr_impl(ck_map_hdr(m_map), key);
+	T* result = (T*)ck_map_get_ptr_impl(CK_MHDR(m_map), key);
 	CF_ASSERT(result);
 	CF_PLACEMENT_NEW(result) T(val);
 	return result;
@@ -435,7 +437,7 @@ T* Map<T>::insert(uint64_t key, T&& val)
 	T dummy;
 	CF_MEMSET(&dummy, 0, sizeof(T));
 	ck_map_set_stretchy((void**)&m_map, key, &dummy, (int)sizeof(T));
-	T* result = (T*)ck_map_get_ptr_impl(ck_map_hdr(m_map), key);
+	T* result = (T*)ck_map_get_ptr_impl(CK_MHDR(m_map), key);
 	CF_ASSERT(result);
 	CF_PLACEMENT_NEW(result) T(cf_move(val));
 	return result;
@@ -447,7 +449,7 @@ void Map<T>::remove(uint64_t key)
 	T* slot = try_get(key);
 	if (slot) {
 		slot->~T();
-		ck_map_del_impl(ck_map_hdr(m_map), key);
+		ck_map_del_impl(CK_MHDR(m_map), key);
 	}
 }
 
@@ -458,7 +460,7 @@ void Map<T>::clear()
 	for (int i = 0; i < count(); ++i) {
 		(elements + i)->~T();
 	}
-	if (m_map) ck_map_clear_impl(ck_map_hdr(m_map));
+	if (m_map) ck_map_clear_impl(CK_MHDR(m_map));
 }
 
 template <typename T>
@@ -494,13 +496,13 @@ const uint64_t* Map<T>::keys() const
 template <typename T>
 void Map<T>::swap(int index_a, int index_b)
 {
-	if (m_map) ck_map_swap_impl(ck_map_hdr(m_map), index_a, index_b);
+	if (m_map) ck_map_swap_impl(CK_MHDR(m_map), index_a, index_b);
 }
 
 template <typename T>
 void Map<T>::sort(int (*cmp)(const void* a, const void* b))
 {
-	if (m_map) ck_map_sort_impl(ck_map_hdr(m_map), cmp);
+	if (m_map) ck_map_sort_impl(CK_MHDR(m_map), cmp);
 }
 
 template <typename T>
@@ -539,7 +541,7 @@ Map<T>& Map<T>::operator=(Map<T>&& rhs)
 	for (int i = 0; i < count(); ++i) {
 		(elements + i)->~T();
 	}
-	if (m_map) ck_map_free_impl(ck_map_hdr(m_map));
+	if (m_map) ck_map_free_impl(CK_MHDR(m_map));
 	m_map = rhs.m_map;
 	rhs.m_map = nullptr;
 	return *this;
