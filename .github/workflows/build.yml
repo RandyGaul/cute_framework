@@ -104,6 +104,7 @@ jobs:
             -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
             -DCMAKE_MSVC_DEBUG_INFORMATION_FORMAT=Embedded \
             -DCMAKE_POLICY_CMP0141=NEW \
+            -DCF_FRAMEWORK_STATIC=OFF \
             -B build_folder
 
       - name: Build project binary
