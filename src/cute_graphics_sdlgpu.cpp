@@ -710,6 +710,10 @@ CF_Result cf_sdlgpu_init(const char* device_name, bool debug, CF_BackendType* ba
 
 void cf_sdlgpu_cleanup()
 {
+	if (g_ctx.cmd) {
+		SDL_SubmitGPUCommandBuffer(g_ctx.cmd);
+		g_ctx.cmd = NULL;
+	}
 	SDL_ReleaseWindowFromGPUDevice(g_ctx.device, g_ctx.window);
 	SDL_DestroyGPUDevice(g_ctx.device);
 	SDL_ShaderCross_Quit();
