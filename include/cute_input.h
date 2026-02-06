@@ -1038,6 +1038,11 @@ CF_INLINE void input_set_ime_rect(int x, int y, int w, int h) { cf_input_set_ime
 
 CF_INLINE bool input_get_ime_composition(CF_ImeComposition* composition) { return cf_input_get_ime_composition(composition); }
 
+CF_INLINE void register_key_callback(void (*key_callback)(CF_KeyButton key, bool true_down_false_up)) { cf_register_key_callback(key_callback); }
+CF_INLINE float mouse_motion_x() { return cf_mouse_motion_x(); }
+CF_INLINE float mouse_motion_y() { return cf_mouse_motion_y(); }
+CF_INLINE void mouse_set_relative_mode(bool true_for_relative) { cf_mouse_set_relative_mode(true_for_relative); }
+CF_INLINE int touch_get_all(CF_Touch** touches) { return cf_touch_get_all(touches); }
 CF_INLINE bool touch_get(uint64_t id, CF_Touch* touch) { return cf_touch_get(id,touch); }
 
 }

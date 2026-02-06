@@ -526,6 +526,9 @@ CF_INLINE void sound_set_pitch(CF_Sound sound, float pitch = 1.0f) { cf_sound_se
 CF_INLINE CF_Result sound_set_time(CF_Sound sound, double time_in_seconds) { return cf_sound_set_time(sound, time_in_seconds); }
 CF_INLINE void sound_stop(CF_Sound sound) { cf_sound_stop(sound); }
 
+CF_INLINE void music_set_on_finish_callback(void (*on_finished)(void* udata), void* udata = NULL, bool single_threaded = true) { cf_music_set_on_finish_callback(on_finished, udata, single_threaded); }
+CF_INLINE void sound_set_on_finish_callback(void (*on_finished)(CF_Sound snd, void* udata), void* udata = NULL, bool single_threaded = true) { cf_sound_set_on_finish_callback(on_finished, udata, single_threaded); }
+
 }
 
 #endif // CF_CPP

@@ -931,6 +931,9 @@ CF_INLINE CF_Sprite make_demo_sprite() { return cf_make_demo_sprite(); }
 CF_INLINE void sprite_unload(const char* aseprite_path) { cf_sprite_unload(aseprite_path); }
 CF_INLINE CF_Sprite sprite_reload(const CF_Sprite* sprite) { return cf_sprite_reload(sprite); }
 CF_INLINE CF_Sprite sprite_reload(CF_Sprite& sprite) { return (sprite = cf_sprite_reload(&sprite)); }
+CF_INLINE void easy_sprite_update_pixels(CF_Sprite* sprite, const CF_Pixel* pixels) { cf_easy_sprite_update_pixels(sprite, pixels); }
+CF_INLINE void easy_sprite_unload(CF_Sprite* sprite) { cf_easy_sprite_unload(sprite); }
+CF_INLINE CF_Sprite make_sprite_from_memory(const char* unique_name, const void* aseprite_data, int size) { return cf_make_sprite_from_memory(unique_name, aseprite_data, size); }
 
 }
 

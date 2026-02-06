@@ -1342,6 +1342,10 @@ struct UTF16
 	const uint16_t* text = NULL;
 };
 
+CF_INLINE const char* sintern(const char* s) { return cf_sintern(s); }
+CF_INLINE const char* sintern_range(const char* start, const char* end) { return cf_sintern_range(start, end); }
+CF_INLINE void sinuke_intern_table() { cf_sinuke_intern_table(); }
+
 }
 
 #endif // CF_CPP
