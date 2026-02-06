@@ -81,6 +81,7 @@ endif()
 add_sample(9_slice 9_slice.c)
 add_sample(basic_camera basic_camera.c)
 add_sample(imgui_texture imgui_texture.c)
+add_sample(input_binding input_binding.c)
 
 # Pre-compile shaders for certain samples.
 if (CF_CUTE_SHADERC)
