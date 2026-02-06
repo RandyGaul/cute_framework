@@ -108,7 +108,7 @@ CF_INLINE CF_Color cf_make_color_rgb(uint8_t r, uint8_t g, uint8_t b) { CF_Color
 /**
  * @function cf_make_color_rgba
  * @category graphics
- * @brief    Returns a `CF_Color` made from RGB char inputs.
+ * @brief    Returns a `CF_Color` made from RGBA char inputs.
  * @param    r          The red component from 0 to 255.
  * @param    g          The green component from 0 to 255.
  * @param    b          The blue component from 0 to 255.
@@ -167,7 +167,7 @@ CF_INLINE CF_Pixel cf_make_pixel_rgb_f(float r, float g, float b) { CF_Pixel p; 
  * @param    r          The red component from 0.0f to 1.0f.
  * @param    g          The green component from 0.0f to 1.0f.
  * @param    b          The blue component from 0.0f to 1.0f.
- * @param    b          The alpha component from 0.0f to 1.0f.
+ * @param    a          The alpha component from 0.0f to 1.0f.
  * @related  CF_Pixel cf_make_pixel_rgb_f cf_make_pixel_rgba_f cf_make_pixel_rgb cf_make_pixel_rgba cf_make_pixel_hex cf_make_pixel_hex_string
  */
 CF_INLINE CF_Pixel cf_make_pixel_rgba_f(float r, float g, float b, float a) { CF_Pixel p; p.colors.r = (uint8_t)(r * 255.0f); p.colors.g = (uint8_t)(g * 255.0f); p.colors.b = (uint8_t)(b * 255.0f); p.colors.a = (uint8_t)(a * 255.0f); return p; }
@@ -187,7 +187,7 @@ CF_INLINE CF_Pixel cf_make_pixel_rgb(uint8_t r, uint8_t g, uint8_t b) { CF_Pixel
 /**
  * @function cf_make_pixel_rgba
  * @category graphics
- * @brief    Returns a `CF_Pixel` made from RGB char inputs.
+ * @brief    Returns a `CF_Pixel` made from RGBA char inputs.
  * @param    r          The red component from 0 to 255.
  * @param    g          The green component from 0 to 255.
  * @param    b          The blue component from 0 to 255.
@@ -200,19 +200,32 @@ CF_INLINE CF_Pixel cf_make_pixel_rgba(uint8_t r, uint8_t g, uint8_t b, uint8_t a
  * @function cf_make_pixel_hex
  * @category graphics
  * @brief    Returns a `CF_Pixel` made from integer hex input.
- * @param    hex        An integer value, e.g. 0xFFAACC11.
- * @related  CF_Pixel cf_make_pixel_rgb_f cf_make_pixel_rgba_f cf_make_pixel_rgb cf_make_pixel_rgba cf_make_pixel_hex cf_make_pixel_hex_string
+ * @param    hex        An integer value, e.g. 0xFFAACC.
+ * @remarks  The opacity of the output pixel is set to 0xFF (fully opaque).
+ * @related  CF_Pixel cf_make_pixel_rgb_f cf_make_pixel_rgba_f cf_make_pixel_rgb cf_make_pixel_rgba cf_make_pixel_hex cf_make_pixel_hex2 cf_make_pixel_hex_string
  */
-CF_INLINE CF_Pixel cf_make_pixel_hex(int hex) { unsigned int h = (unsigned int)hex; return cf_make_pixel_rgba((uint8_t)((h & 0xFF000000) >> 24), (uint8_t)((h & 0x00FF0000) >> 16), (uint8_t)((h & 0x0000FF00) >> 8), (uint8_t)(h & 0x000000FF)); }
+CF_INLINE CF_Pixel cf_make_pixel_hex(int hex) { return cf_make_pixel_rgba((uint8_t)((hex & 0xFF0000) >> 16), (uint8_t)((hex & 0x00FF00) >> 8), (uint8_t)(hex & 0x0000FF), 0xFF); }
+
+/**
+ * @function cf_make_pixel_hex2
+ * @category graphics
+ * @brief    Returns a `CF_Pixel` made from integer hex input.
+ * @param    hex        An integer value, e.g. 0xFFAACC, and alpha e.g. 0xFF.
+ * @related  CF_Pixel cf_make_pixel_rgb_f cf_make_pixel_rgba_f cf_make_pixel_rgb cf_make_pixel_rgba cf_make_pixel_hex cf_make_pixel_hex2 cf_make_pixel_hex_string
+ */
+CF_INLINE CF_Pixel cf_make_pixel_hex2(int hex, int alpha) { return cf_make_pixel_rgba((uint8_t)((hex & 0xFF0000) >> 16), (uint8_t)((hex & 0x00FF00) >> 8), (uint8_t)(hex & 0x0000FF), (uint8_t)(alpha & 0xFF)); }
 
 /**
  * @function cf_make_pixel_hex_string
  * @category graphics
  * @brief    Returns a `CF_Pixel` made from hex-value string, such as "#42f563" or "0x42f563FF".
- * @param    hex        A hex-value string, such as "#42f563" or "0x42f563FF".
- * @related  CF_Pixel cf_make_pixel_rgb_f cf_make_pixel_rgba_f cf_make_pixel_rgb cf_make_pixel_rgba cf_make_pixel_hex cf_make_pixel_hex_string
+ * @param    hex        A hex-value string formatted as "#RRGGBB[AA]" or "0xRRGGBB[AA]", such as "#42f563" or "0x42f563FF". The last opacity segment is optional.
+ * @related  CF_Pixel cf_make_pixel_rgb_f cf_make_pixel_rgba_f cf_make_pixel_rgb cf_make_pixel_rgba cf_make_pixel_hex cf_make_pixel_hex2 cf_make_pixel_hex_string
  */
-CF_INLINE CF_Pixel cf_make_pixel_hex_string(const char* hex) { return cf_make_pixel_hex((int)stohex(hex)); }
+CF_INLINE CF_Pixel cf_make_pixel_hex_string(const char* hex) {
+	uint32_t rgba = (uint32_t)stohex(hex);
+	return cf_make_pixel_rgba((uint8_t)((rgba >> 24) & 0xFF), (uint8_t)((rgba >> 16) & 0xFF), (uint8_t)((rgba >> 8) & 0xFF), (uint8_t)(rgba & 0xFF));
+}
 
 /**
  * @function cf_mul_color
@@ -582,24 +595,22 @@ CF_INLINE CF_Color cf_pixel_to_color(CF_Pixel p) { return cf_make_color_rgba(p.c
 /**
  * @function cf_pixel_to_int_rgb
  * @category graphics
- * @brief    Converts an RGB `CF_Pixel` to an integer.
+ * @brief    Converts a `CF_Pixel` to an integer in `0x00RRGGBB` format.
  * @param    p          The pixel.
- * @return   Returns an unsigned 32-bit integer of the packed pixel components. The first byte is the red component, the second byte is
- *           the green component, the third byte is the blue component, the fourth byte is 0xFF or full-alpha.
+ * @return   Returns an unsigned 32-bit integer in `0x00RRGGBB` format. The alpha component is discarded.
  * @related  cf_pixel_to_color cf_pixel_to_int_rgba cf_pixel_to_int_rgb cf_pixel_to_string
  */
-CF_INLINE uint32_t cf_pixel_to_int_rgb(CF_Pixel p) { return p.val | 0xFF000000; }
+CF_INLINE uint32_t cf_pixel_to_int_rgb(CF_Pixel p) { return ((uint32_t)p.colors.r << 16) | ((uint32_t)p.colors.g << 8) | p.colors.b; }
 
 /**
  * @function cf_pixel_to_int_rgba
  * @category graphics
- * @brief    Converts an RGBA `CF_Pixel` to an integer.
+ * @brief    Converts a `CF_Pixel` to an integer in `0xRRGGBBAA` format.
  * @param    p          The pixel.
- * @return   Returns an unsigned 32-bit integer of the packed pixel components. The first byte is the red component, the second byte is
- *           the green component, the third byte is the blue component, the fourth byte is the alpha component.
+ * @return   Returns an unsigned 32-bit integer in `0xRRGGBBAA` format.
  * @related  cf_pixel_to_color cf_pixel_to_int_rgba cf_pixel_to_int_rgb cf_pixel_to_string
  */
-CF_INLINE uint32_t cf_pixel_to_int_rgba(CF_Pixel p) { return p.val; }
+CF_INLINE uint32_t cf_pixel_to_int_rgba(CF_Pixel p) { return ((uint32_t)p.colors.r << 24) | ((uint32_t)p.colors.g << 16) | ((uint32_t)p.colors.b << 8) | p.colors.a; }
 
 /**
  * @function cf_pixel_to_string
@@ -609,7 +620,7 @@ CF_INLINE uint32_t cf_pixel_to_int_rgba(CF_Pixel p) { return p.val; }
  * @remarks  Since this function dynamically allocates a Cute Framework C-string, it must be free'd up with `sfree` when you're done with it.
  * @related  cf_pixel_to_color cf_pixel_to_int_rgba cf_pixel_to_int_rgb cf_pixel_to_string
  */
-CF_INLINE char* cf_pixel_to_string(CF_Pixel p) { char* s = NULL; return shex(s, p.val); } // Call `sfree` when done.
+CF_INLINE char* cf_pixel_to_string(CF_Pixel p) { char* s = NULL; return shex(s, cf_pixel_to_int_rgba(p)); } // Call `sfree` when done.
 
 /**
  * @function cf_color_to_pixel
@@ -623,34 +634,32 @@ CF_INLINE CF_Pixel cf_color_to_pixel(CF_Color c) { CF_Pixel p; p.colors.r = (uin
 /**
  * @function cf_color_to_int_rgb
  * @category graphics
- * @brief    Converts an RGBA `CF_Color` to an integer.
+ * @brief    Converts a `CF_Color` to an integer in `0x00RRGGBB` format.
  * @param    c          The color.
- * @return   Returns an unsigned 32-bit integer of the packed pixel components. The first byte is the red component, the second byte is
- *           the green component, the third byte is the blue component, the fourth byte is 0xFF or full-alpha.
+ * @return   Returns an unsigned 32-bit integer in `0x00RRGGBB` format. The alpha component is discarded.
  * @related  cf_color_to_pixel cf_color_to_int_rgb cf_color_to_int_rgba cf_color_to_string
  */
-CF_INLINE uint32_t cf_color_to_int_rgb(CF_Color c) { return cf_color_to_pixel(c).val | 0xFF000000; }
+CF_INLINE uint32_t cf_color_to_int_rgb(CF_Color c) { CF_Pixel p = cf_color_to_pixel(c); return ((uint32_t)p.colors.r << 16) | ((uint32_t)p.colors.g << 8) | p.colors.b; }
 
 /**
  * @function cf_color_to_int_rgba
  * @category graphics
- * @brief    Converts an RGB `CF_Color` to an integer.
+ * @brief    Converts a `CF_Color` to an integer in `0xRRGGBBAA` format.
  * @param    c          The color.
- * @return   Returns an unsigned 32-bit integer of the packed pixel components. The first byte is the red component, the second byte is
- *           the green component, the third byte is the blue component, the fourth byte is the alpha component.
+ * @return   Returns an unsigned 32-bit integer in `0xRRGGBBAA` format.
  * @related  cf_color_to_pixel cf_color_to_int_rgb cf_color_to_int_rgba cf_color_to_string
  */
-CF_INLINE uint32_t cf_color_to_int_rgba(CF_Color c) { return cf_color_to_pixel(c).val; }
+CF_INLINE uint32_t cf_color_to_int_rgba(CF_Color c) { CF_Pixel p = cf_color_to_pixel(c); return ((uint32_t)p.colors.r << 24) | ((uint32_t)p.colors.g << 16) | ((uint32_t)p.colors.b << 8) | p.colors.a; }
 
 /**
  * @function cf_color_to_string
  * @category graphics
  * @brief    Converts a `CF_Color` to a dynamic string. Free it with `sfree` when done.
- * @param    p          The pixel.
+ * @param    c          The color.
  * @remarks  Since this function dynamically allocates a Cute Framework C-string, it must be free'd up with `sfree` when you're done with it.
- * @related  cf_pixel_to_color cf_pixel_to_int_rgba cf_pixel_to_int_rgb cf_pixel_to_string
+ * @related  cf_color_to_pixel cf_color_to_int_rgb cf_color_to_int_rgba cf_color_to_string
  */
-CF_INLINE char* cf_color_to_string(CF_Color c) { char* s = NULL; return shex(s, cf_color_to_pixel(c).val); }
+CF_INLINE char* cf_color_to_string(CF_Color c) { char* s = NULL; return shex(s, cf_color_to_int_rgba(c)); }
 
 /**
  * @function cf_color_invisible
@@ -770,7 +779,7 @@ CF_INLINE CF_Color cf_color_brown(void) { return cf_make_color_rgb(150, 105, 25)
  * @brief    Helper function to return a invisible `CF_Pixel`.
  * @related  cf_pixel_invisible cf_pixel_black cf_pixel_white cf_pixel_red cf_pixel_green cf_pixel_blue cf_pixel_yellow cf_pixel_orange cf_pixel_purple cf_pixel_grey cf_pixel_cyan cf_pixel_magenta
  */
-CF_INLINE CF_Pixel cf_pixel_invisible(void) { return cf_make_pixel_hex(0); }
+CF_INLINE CF_Pixel cf_pixel_invisible(void) { return cf_make_pixel_rgba(0, 0, 0, 0); }
 
 /**
  * @function cf_pixel_clear
@@ -778,7 +787,7 @@ CF_INLINE CF_Pixel cf_pixel_invisible(void) { return cf_make_pixel_hex(0); }
  * @brief    Helper function to return a invisible `CF_Pixel`.
  * @related  cf_pixel_invisible cf_pixel_black cf_pixel_white cf_pixel_red cf_pixel_green cf_pixel_blue cf_pixel_yellow cf_pixel_orange cf_pixel_purple cf_pixel_grey cf_pixel_cyan cf_pixel_magenta
  */
-CF_INLINE CF_Pixel cf_pixel_clear(void) { return cf_make_pixel_hex(0); }
+CF_INLINE CF_Pixel cf_pixel_clear(void) { return cf_make_pixel_rgba(0, 0, 0, 0); }
 
 /**
  * @function cf_pixel_black
@@ -894,14 +903,15 @@ CF_INLINE CF_Color make_color(uint8_t r, uint8_t g, uint8_t b) { return cf_make_
 CF_INLINE CF_Color make_color(uint8_t r, uint8_t g, uint8_t b, uint8_t a) { return cf_make_color_rgba(r, g, b, a); }
 CF_INLINE CF_Color make_color(int hex) { return cf_make_color_hex(hex); }
 CF_INLINE CF_Color make_color(int hex, int alpha) { return cf_make_color_hex2(hex, alpha); }
-CF_INLINE CF_Color make_color(const char* s) { return make_color((int)stohex(s)); }
+CF_INLINE CF_Color make_color(const char* s) { return cf_make_color_hex_string(s); }
 
 CF_INLINE CF_Pixel make_pixel(float r, float g, float b) { return cf_make_pixel_rgb_f(r, g, b); }
 CF_INLINE CF_Pixel make_pixel(float r, float g, float b, float a) { return cf_make_pixel_rgba_f(r, g, b, a); }
 CF_INLINE CF_Pixel make_pixel(uint8_t r, uint8_t g, uint8_t b) { return cf_make_pixel_rgb(r, g, b); }
 CF_INLINE CF_Pixel make_pixel(uint8_t r, uint8_t g, uint8_t b, uint8_t a) { return cf_make_pixel_rgba(r, g, b, a); }
 CF_INLINE CF_Pixel make_pixel(int hex) { return cf_make_pixel_hex(hex); }
-CF_INLINE CF_Pixel make_pixel(const char* hex) { return cf_make_pixel_hex((int)stohex(hex)); }
+CF_INLINE CF_Pixel make_pixel(int hex, int alpha) { return cf_make_pixel_hex2(hex, alpha); }
+CF_INLINE CF_Pixel make_pixel(const char* hex) { return cf_make_pixel_hex_string(hex); }
 
 CF_INLINE CF_Color operator*(CF_Color a, float s) { return cf_mul_color(a, s); }
 CF_INLINE CF_Color operator/(CF_Color a, float s) { return cf_div_color(a, s); }
@@ -941,14 +951,14 @@ CF_INLINE CF_Pixel lerp(CF_Pixel a, CF_Pixel b, uint8_t s) { return cf_pixel_ler
 CF_INLINE CF_Pixel premultiply(CF_Pixel p) { return cf_pixel_premultiply(p); }
 
 CF_INLINE CF_Color to_color(CF_Pixel p) { return cf_make_color_rgba(p.colors.r, p.colors.g, p.colors.b, p.colors.a); }
-CF_INLINE uint32_t to_int_rgba(CF_Pixel p) { return p.val; }
-CF_INLINE uint32_t to_int_rgb(CF_Pixel p) { return p.val | 0xFF000000; }
-CF_INLINE String to_string(CF_Pixel p) { char* s = NULL; return shex(s, p.val); }
+CF_INLINE uint32_t to_int_rgba(CF_Pixel p) { return cf_pixel_to_int_rgba(p); }
+CF_INLINE uint32_t to_int_rgb(CF_Pixel p) { return cf_pixel_to_int_rgb(p); }
+CF_INLINE String to_string(CF_Pixel p) { char* s = NULL; return shex(s, cf_pixel_to_int_rgba(p)); }
 
 CF_INLINE CF_Pixel to_pixel(CF_Color c) { return cf_color_to_pixel(c); }
-CF_INLINE uint32_t to_int_rgb(CF_Color c) { return cf_color_to_pixel(c).val | 0xFF000000; }
-CF_INLINE uint32_t to_int_rgba(CF_Color c) { return cf_color_to_pixel(c).val; }
-CF_INLINE String to_string(CF_Color c) { char* s = NULL; return shex(s, cf_color_to_pixel(c).val); }
+CF_INLINE uint32_t to_int_rgb(CF_Color c) { return cf_color_to_int_rgb(c); }
+CF_INLINE uint32_t to_int_rgba(CF_Color c) { return cf_color_to_int_rgba(c); }
+CF_INLINE String to_string(CF_Color c) { char* s = NULL; return shex(s, cf_color_to_int_rgba(c)); }
 
 CF_INLINE CF_Color color_invisible() { return cf_color_invisible(); }
 CF_INLINE CF_Color color_clear() { return cf_color_clear(); }

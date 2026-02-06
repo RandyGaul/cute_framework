@@ -21,7 +21,7 @@ TEST_CASE(test_markups_basic)
 		CF_Color color = cf_text_effect_get_color(fx, "color", cf_color_white());
 		REQUIRE(number == 123.0);
 		REQUIRE(!CF_STRCMP(string, "maybe a string"));
-		REQUIRE(color == make_color(0xff00ff12));
+		REQUIRE(color == cf_make_color_rgba(0xff, 0x00, 0xff, 0x12));
 		return true;
 	};
 	const char* text = "<fake number=123 string=\"maybe a string\" color=#ff00ff12>does this work?</fake>";
