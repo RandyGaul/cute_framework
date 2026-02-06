@@ -393,6 +393,27 @@ if(NOT EMSCRIPTEN) # Emscripten provides it's own SDL3.
 		set(CF_LINK_LIBS ${CF_LINK_LIBS} SDL3::SDL3)
 	endif()
 	target_include_directories(cute PUBLIC ${SDL3_INCLUDE_DIRS})
+
+	# Build-time tool to extract D3D12 struct layout offsets from SDL3 private headers.
+	if(WIN32)
+		set(D3D12_LAYOUT_HEADER "${CMAKE_CURRENT_BINARY_DIR}/generated/d3d12_layout.gen.h")
+		file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/generated")
+		add_executable(gen_d3d12_layout EXCLUDE_FROM_ALL tools/gen_d3d12_layout.c)
+		add_custom_command(
+			OUTPUT ${D3D12_LAYOUT_HEADER}
+			COMMAND gen_d3d12_layout
+				"${sdl3_SOURCE_DIR}/src/gpu/SDL_sysgpu.h"
+				"${sdl3_SOURCE_DIR}/src/gpu/d3d12/SDL_gpu_d3d12.c"
+				"${D3D12_LAYOUT_HEADER}"
+			DEPENDS gen_d3d12_layout
+				"${sdl3_SOURCE_DIR}/src/gpu/SDL_sysgpu.h"
+				"${sdl3_SOURCE_DIR}/src/gpu/d3d12/SDL_gpu_d3d12.c"
+			COMMENT "Generating D3D12 struct layout offsets"
+		)
+		add_custom_target(gen_d3d12_layout_target DEPENDS ${D3D12_LAYOUT_HEADER})
+		add_dependencies(cute gen_d3d12_layout_target)
+		target_include_directories(cute PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
+	endif()
 endif()
 
 if (CF_RUNTIME_SHADER_COMPILATION OR CF_CUTE_SHADERC)
