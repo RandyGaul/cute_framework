@@ -45,8 +45,6 @@ jobs:
           # TODO - Add iOS and Android platforms. Waiting on better support from GitHub.
 
     steps:
-      - uses: actions/checkout@master
-
       # Linux needs to install various dependencies.
       - name: Install Linux Dependencies
         run: |
@@ -61,6 +59,8 @@ jobs:
 
       - name: Setup CCache
         uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: ${{ matrix.os }}-${{ matrix.runtime_shader_compilation.value }}
 
       # Move to new version of CMake for later language support for C23.
       - name: Setup CMake 4.2.x
