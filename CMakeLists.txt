@@ -373,23 +373,37 @@ endif()
 if(NOT EMSCRIPTEN) # Emscripten provides it's own SDL3.
 	# SDL for platform support.
 	set(SDL_REQUIRED_VERSION 3.4.0)
-	# Just don't build the shared library at all, it's not needed.
-	set(SDL_SHARED_ENABLED_BY_DEFAULT OFF)
-	if(CF_FRAMEWORK_STATIC)
-		set(SDL_STATIC ON CACHE BOOL "Build SDL as a static library")
-		set(SDL_SHARED OFF CACHE BOOL "Do not build SDL as a shared library")
-	else()
-		set(SDL_STATIC OFF CACHE BOOL "Do not build SDL as a static library")
-		set(SDL_SHARED ON CACHE BOOL "Build SDL as a shared library")
+
+	# Try to find system SDL3 when building shared library.
+	set(SDL3_FOUND_SYSTEM FALSE)
+	if(NOT CF_FRAMEWORK_STATIC)
+		find_package(SDL3 ${SDL_REQUIRED_VERSION} EXACT CONFIG QUIET)
+		if(SDL3_FOUND)
+			set(SDL3_FOUND_SYSTEM TRUE)
+			message(STATUS "Found system SDL3 ${SDL3_VERSION}")
+		endif()
 	endif()
-	set(SDL_TEST_LIBRARY OFF CACHE BOOL "Do not build SDL tests")
-	set(SDL_EXAMPLES OFF CACHE BOOL "Do not build SDL examples")
-	FetchContent_Declare(
-		SDL3
-		URL https://github.com/libsdl-org/SDL/releases/download/release-${SDL_REQUIRED_VERSION}/SDL3-${SDL_REQUIRED_VERSION}.zip
-		DOWNLOAD_EXTRACT_TIMESTAMP ON
-	)
-	FetchContent_MakeAvailable(SDL3)
+
+	if(NOT SDL3_FOUND_SYSTEM)
+		# Fetch SDL3 from source.
+		set(SDL_SHARED_ENABLED_BY_DEFAULT OFF)
+		if(CF_FRAMEWORK_STATIC)
+			set(SDL_STATIC ON CACHE BOOL "Build SDL as a static library")
+			set(SDL_SHARED OFF CACHE BOOL "Do not build SDL as a shared library")
+		else()
+			set(SDL_STATIC OFF CACHE BOOL "Do not build SDL as a static library")
+			set(SDL_SHARED ON CACHE BOOL "Build SDL as a shared library")
+		endif()
+		set(SDL_TEST_LIBRARY OFF CACHE BOOL "Do not build SDL tests")
+		set(SDL_EXAMPLES OFF CACHE BOOL "Do not build SDL examples")
+		FetchContent_Declare(
+			SDL3
+			URL https://github.com/libsdl-org/SDL/releases/download/release-${SDL_REQUIRED_VERSION}/SDL3-${SDL_REQUIRED_VERSION}.zip
+			DOWNLOAD_EXTRACT_TIMESTAMP ON
+		)
+		FetchContent_MakeAvailable(SDL3)
+	endif()
+
 	if(CF_FRAMEWORK_STATIC)
 		set(CF_LINK_LIBS ${CF_LINK_LIBS} SDL3::SDL3-static)
 	else ()
