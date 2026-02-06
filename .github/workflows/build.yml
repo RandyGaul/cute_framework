@@ -47,13 +47,6 @@ jobs:
     steps:
       - uses: actions/checkout@master
 
-      # Move to new version of CMake for later language support for C23.
-      - name: Setup CMake 4.2.x
-        uses: lukka/get-cmake@latest
-        with:
-          cmakeVersion: 4.2.3
-          ninjaVersion: latest
-
       # Linux needs to install various dependencies.
       - name: Install Linux Dependencies
         run: |
@@ -66,48 +59,15 @@ jobs:
           liburing-dev
         if: matrix.platform.name == 'Linux'
 
-      # - name: Install ccache (macOS)
-      #   run: brew install ccache
-      #   if: runner.os == 'macOS'
-      - name: Configure ccache
-        run: |
-          ccache --set-config=max_size=500M
-          ccache --set-config=compression=true
-          ccache --zero-stats
-        # if: runner.os != 'Windows'
+      - name: Setup CCache
+        uses: hendrikmuhs/ccache-action@v1.2
 
-      - name: Restore ccache (Linux)
-        uses: actions/cache@v4
+      # Move to new version of CMake for later language support for C23.
+      - name: Setup CMake 4.2.x
+        uses: lukka/get-cmake@latest
         with:
-          path: ~/.cache/ccache
-          key: ccache-${{ matrix.platform.artifact }}-${{ matrix.runtime_shader_compilation.value }}-${{ github.ref_name }}-${{ github.sha }}
-          restore-keys: |
-            ccache-${{ matrix.platform.artifact }}-${{ matrix.runtime_shader_compilation.value }}-${{ github.ref_name }}-
-            ccache-${{ matrix.platform.artifact }}-${{ matrix.runtime_shader_compilation.value }}-master-
-            ccache-${{ matrix.platform.artifact }}-${{ matrix.runtime_shader_compilation.value }}-
-        if: runner.os == 'Linux'
-
-      - name: Restore ccache (macOS)
-        uses: actions/cache@v4
-        with:
-          path: ~/Library/Caches/ccache
-          key: ccache-${{ matrix.platform.artifact }}-${{ matrix.runtime_shader_compilation.value }}-${{ github.ref_name }}-${{ github.sha }}
-          restore-keys: |
-            ccache-${{ matrix.platform.artifact }}-${{ matrix.runtime_shader_compilation.value }}-${{ github.ref_name }}-
-            ccache-${{ matrix.platform.artifact }}-${{ matrix.runtime_shader_compilation.value }}-master-
-            ccache-${{ matrix.platform.artifact }}-${{ matrix.runtime_shader_compilation.value }}-
-        if: runner.os == 'macOS'
-
-      - name: Restore ccache (Windows)
-        uses: actions/cache@v4
-        with:
-          path: C:\ccache
-          key: ccache-${{ matrix.platform.artifact }}-${{ matrix.runtime_shader_compilation.value }}-${{ github.ref_name }}-${{ github.sha }}
-          restore-keys: |
-            ccache-${{ matrix.platform.artifact }}-${{ matrix.runtime_shader_compilation.value }}-${{ github.ref_name }}-
-            ccache-${{ matrix.platform.artifact }}-${{ matrix.runtime_shader_compilation.value }}-master-
-            ccache-${{ matrix.platform.artifact }}-${{ matrix.runtime_shader_compilation.value }}-
-        if: runner.os == 'Windows'
+          cmakeVersion: 4.2.3
+          ninjaVersion: latest
 
       - name: Create build folder with CMake
         run: |
