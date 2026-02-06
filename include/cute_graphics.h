@@ -1931,6 +1931,16 @@ CF_INLINE void apply_scissor(int x, int y, int w, int h) { cf_apply_scissor(x, y
 CF_INLINE void apply_mesh(CF_Mesh mesh) { cf_apply_mesh(mesh); }
 CF_INLINE void apply_shader(CF_Shader shader, CF_Material material) { cf_apply_shader(shader, material); }
 CF_INLINE void draw_elements() { cf_draw_elements(); }
+CF_INLINE bool query_pixel_format(CF_PixelFormat format, CF_PixelFormatOp op) { return cf_query_pixel_format(format, op); }
+CF_INLINE void texture_update_mip(CF_Texture texture, void* data, int size, int mip_level) { cf_texture_update_mip(texture, data, size, mip_level); }
+CF_INLINE void generate_mipmaps(CF_Texture texture) { cf_generate_mipmaps(texture); }
+CF_INLINE uint64_t texture_handle(CF_Texture texture) { return cf_texture_handle(texture); }
+CF_INLINE uint64_t texture_binding_handle(CF_Texture texture) { return cf_texture_binding_handle(texture); }
+CF_INLINE void mesh_set_index_buffer(CF_Mesh mesh, int index_buffer_size_in_bytes, int index_bit_count) { cf_mesh_set_index_buffer(mesh, index_buffer_size_in_bytes, index_bit_count); }
+CF_INLINE void mesh_set_instance_buffer(CF_Mesh mesh, int instance_buffer_size_in_bytes, int instance_stride) { cf_mesh_set_instance_buffer(mesh, instance_buffer_size_in_bytes, instance_stride); }
+CF_INLINE void clear_depth_stencil(float depth, uint32_t stencil) { cf_clear_depth_stencil(depth, stencil); }
+CF_INLINE void apply_stencil_reference(int reference) { cf_apply_stencil_reference(reference); }
+CF_INLINE void apply_blend_constants(float r, float g, float b, float a) { cf_apply_blend_constants(r, g, b, a); }
 
 }
 

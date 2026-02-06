@@ -891,13 +891,16 @@ CF_INLINE void app_show_window() { return cf_app_show_window(); }
 CF_INLINE int app_get_width() { return cf_app_get_width(); }
 CF_INLINE int app_get_height() { return cf_app_get_height(); }
 CF_INLINE float app_get_dpi_scale() { return cf_app_get_dpi_scale(); }
-CF_INLINE bool app_dpi_scaled_was_changed() { return cf_app_dpi_scale_was_changed(); }
+CF_INLINE bool app_dpi_scale_was_changed() { return cf_app_dpi_scale_was_changed(); }
 CF_INLINE void app_center_window() { cf_app_center_window(); }
 CF_INLINE bool app_was_resized() { return cf_app_was_resized(); }
 CF_INLINE bool app_was_moved() { return cf_app_was_moved(); }
 CF_INLINE bool app_lost_focus() { return cf_app_lost_focus(); }
 CF_INLINE bool app_gained_focus() { return cf_app_gained_focus(); }
 CF_INLINE bool app_has_focus() { return cf_app_has_focus(); }
+CF_INLINE void app_request_attention() { cf_app_request_attention(); }
+CF_INLINE void app_request_attention_continuously() { cf_app_request_attention_continuously(); }
+CF_INLINE void app_request_attention_cancel() { cf_app_request_attention_cancel(); }
 CF_INLINE bool app_was_minimized() { return cf_app_was_minimized(); }
 CF_INLINE bool app_was_maximized() { return cf_app_was_maximized(); }
 CF_INLINE bool app_minimized() { return cf_app_minimized(); }

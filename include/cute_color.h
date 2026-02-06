@@ -893,6 +893,7 @@ CF_INLINE CF_Color make_color(float r, float g, float b, float a) { return cf_ma
 CF_INLINE CF_Color make_color(uint8_t r, uint8_t g, uint8_t b) { return cf_make_color_rgb(r, g, b); }
 CF_INLINE CF_Color make_color(uint8_t r, uint8_t g, uint8_t b, uint8_t a) { return cf_make_color_rgba(r, g, b, a); }
 CF_INLINE CF_Color make_color(int hex) { return cf_make_color_hex(hex); }
+CF_INLINE CF_Color make_color(int hex, int alpha) { return cf_make_color_hex2(hex, alpha); }
 CF_INLINE CF_Color make_color(const char* s) { return make_color((int)stohex(s)); }
 
 CF_INLINE CF_Pixel make_pixel(float r, float g, float b) { return cf_make_pixel_rgb_f(r, g, b); }
@@ -924,6 +925,11 @@ CF_INLINE float overlay(float base, float blend) { return cf_overlay(base, blend
 CF_INLINE float softlight(float base, float blend) { return cf_softlight(base, blend); }
 CF_INLINE CF_Color overlay(CF_Color base, CF_Color blend) { return cf_overlay_color(base, blend); }
 CF_INLINE CF_Color softlight(CF_Color base, CF_Color blend) { return cf_softlight_color(base, blend); }
+
+CF_INLINE uint8_t mul_un8(int a, int b) { return cf_mul_un8(a, b); }
+CF_INLINE uint8_t div_un8(int a, int b) { return cf_div_un8(a, b); }
+CF_INLINE uint8_t add_un8(int a, int b) { return cf_add_un8(a, b); }
+CF_INLINE uint8_t sub_un8(int a, int b) { return cf_sub_un8(a, b); }
 
 CF_INLINE CF_Pixel operator*(CF_Pixel a, int s) { return cf_mul_pixel(a, (uint8_t)s); }
 CF_INLINE CF_Pixel operator/(CF_Pixel a, int s) { return cf_div_pixel(a, (uint8_t)s); }
@@ -957,6 +963,7 @@ CF_INLINE CF_Color color_purple() { return cf_color_purple(); }
 CF_INLINE CF_Color color_grey() { return cf_color_grey(); }
 CF_INLINE CF_Color color_cyan() { return cf_color_cyan(); }
 CF_INLINE CF_Color color_magenta() { return cf_color_magenta(); }
+CF_INLINE CF_Color color_brown() { return cf_color_brown(); }
 
 CF_INLINE CF_Pixel pixel_invisible() { return cf_pixel_invisible(); }
 CF_INLINE CF_Pixel pixel_clear() { return cf_pixel_clear(); }
@@ -971,6 +978,7 @@ CF_INLINE CF_Pixel pixel_purple() { return cf_pixel_purple(); }
 CF_INLINE CF_Pixel pixel_grey() { return cf_pixel_grey(); }
 CF_INLINE CF_Pixel pixel_cyan() { return cf_pixel_cyan(); }
 CF_INLINE CF_Pixel pixel_magenta() { return cf_pixel_magenta(); }
+CF_INLINE CF_Pixel pixel_brown() { return cf_pixel_brown(); }
 
 }
 

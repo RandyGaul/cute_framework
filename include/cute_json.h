@@ -981,6 +981,7 @@ struct JVal
 	CF_INLINE bool is_null() const { return cf_json_is_null(v); }
 	CF_INLINE bool is_int() const { return cf_json_is_int(v); }
 	CF_INLINE bool is_float() const { return cf_json_is_float(v); }
+	CF_INLINE bool is_bool() const { return cf_json_is_bool(v); }
 	CF_INLINE bool is_string() const { return cf_json_is_string(v); }
 	CF_INLINE bool is_array() const { return cf_json_is_array(v); }
 	CF_INLINE bool is_object() const { return cf_json_is_object(v); }
@@ -1026,6 +1027,8 @@ struct JVal
 	CF_INLINE void add(const char* val) { cf_json_array_add_string(d, v, val); }
 	CF_INLINE void add_range(const char* begin, const char* end) { cf_json_array_add_string_range(d, v, begin, end); }
 	CF_INLINE void add(JVal val) { cf_json_array_add(v, val.v); }
+	CF_INLINE JVal add_array() { return JVal(cf_json_array_add_array(d, v), d); }
+	CF_INLINE JVal add_object() { return JVal(cf_json_array_add_object(d, v), d); }
 	CF_INLINE JVal pop() { return JVal(cf_json_array_pop(v), d); }
 
 	// Adding properties.

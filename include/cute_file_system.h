@@ -592,6 +592,11 @@ CF_INLINE CF_Result fs_write_entire_buffer_to_file(const char* virtual_path, con
 CF_INLINE const char* fs_get_backend_specific_error_message() { return cf_fs_get_backend_specific_error_message(); }
 CF_INLINE const char* fs_get_user_directory(const char* org, const char* app) { return cf_fs_get_user_directory(org, app); }
 CF_INLINE const char* fs_get_actual_path(const char* virtual_path) { return cf_fs_get_actual_path(virtual_path); }
+CF_INLINE const char* fs_get_working_directory() { return cf_fs_get_working_directory(); }
+CF_INLINE CF_Result fs_write_string_to_file(const char* virtual_path, const char* string) { return cf_fs_write_string_to_file(virtual_path, string); }
+CF_INLINE CF_Result fs_write_string_range_to_file(const char* virtual_path, const char* begin, const char* end) { return cf_fs_write_string_range_to_file(virtual_path, begin, end); }
+CF_INLINE CF_Result fs_init(const char* argv0) { return cf_fs_init(argv0); }
+CF_INLINE void fs_destroy() { cf_fs_destroy(); }
 
 struct CF_Path
 {

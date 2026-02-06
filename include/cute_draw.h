@@ -1842,6 +1842,8 @@ CF_INLINE void draw_sprite_9_slice_tiled(const CF_Sprite* sprite) { cf_draw_spri
 CF_INLINE void draw_sprite_9_slice_tiled(const CF_Sprite& sprite) { cf_draw_sprite_9_slice_tiled(&sprite); }
 CF_INLINE void sprite_draw_9_slice_tiled(const CF_Sprite* sprite) { cf_draw_sprite_9_slice_tiled(sprite); }
 CF_INLINE void sprite_draw_9_slice_tiled(const CF_Sprite& sprite) { cf_draw_sprite_9_slice_tiled(&sprite); }
+CF_INLINE void draw_prefetch(const CF_Sprite* sprite) { cf_draw_prefetch(sprite); }
+CF_INLINE void draw_prefetch(const CF_Sprite& sprite) { cf_draw_prefetch(&sprite); }
 CF_INLINE void draw_quad(CF_Aabb bb, float thickness = 1.0f, float chubbiness = 0) { cf_draw_quad(bb, thickness, chubbiness); }
 CF_INLINE void draw_quad(v2 p0, v2 p1, v2 p2, v2 p3, float thickness = 1.0f, float chubbiness = 0) { cf_draw_quad2(p0, p1, p2, p3, thickness, chubbiness); }
 CF_INLINE void draw_quad_fill(CF_Aabb bb, float chubbiness = 0) { cf_draw_quad_fill(bb, chubbiness); }
@@ -1885,6 +1887,13 @@ CF_INLINE void draw_push_vertex_attributes(float r, float g, float b, float a) {
 CF_INLINE void draw_push_vertex_attributes(CF_Color attributes) { cf_draw_push_vertex_attributes2(attributes); }
 CF_INLINE CF_Color draw_pop_vertex_attributes() { return cf_draw_pop_vertex_attributes(); }
 CF_INLINE CF_Color draw_peek_vertex_attributes() { return cf_draw_peek_vertex_attributes(); }
+CF_INLINE void draw_push_tri_colors(CF_Color c0, CF_Color c1, CF_Color c2) { cf_draw_push_tri_colors(c0, c1, c2); }
+CF_INLINE void draw_pop_tri_colors() { cf_draw_pop_tri_colors(); }
+CF_INLINE void draw_peek_tri_colors(CF_Color* c0, CF_Color* c1, CF_Color* c2) { cf_draw_peek_tri_colors(c0, c1, c2); }
+CF_INLINE void draw_push_tri_attributes(CF_Color a0, CF_Color a1, CF_Color a2) { cf_draw_push_tri_attributes(a0, a1, a2); }
+CF_INLINE void draw_pop_tri_attributes() { cf_draw_pop_tri_attributes(); }
+CF_INLINE void draw_peek_tri_attributes(CF_Color* a0, CF_Color* a1, CF_Color* a2) { cf_draw_peek_tri_attributes(a0, a1, a2); }
+CF_INLINE void set_vertex_callback(CF_VertexFn* vertex_fn) { cf_set_vertex_callback(vertex_fn); }
 
 CF_INLINE CF_Result make_font(const char* path, const char* font_name) { return cf_make_font(path, font_name); }
 CF_INLINE CF_Result make_font_from_memory(void* data, int size, const char* font_name) { return cf_make_font_from_memory(data, size, font_name); }
@@ -1907,6 +1916,9 @@ CF_INLINE v2 text_size(const char* text, int num_chars_to_render = -1) { return 
 CF_INLINE void draw_text(const char* text, v2 position, int num_chars_to_render = -1) { cf_draw_text(text, position, num_chars_to_render); }
 
 CF_INLINE void text_effect_register(const char* name, CF_TextEffectFn* fn) { cf_text_effect_register(name, fn); }
+CF_INLINE double text_effect_get_number(const CF_TextEffect* fx, const char* key, double default_val = 0) { return cf_text_effect_get_number(fx, key, default_val); }
+CF_INLINE CF_Color text_effect_get_color(const CF_TextEffect* fx, const char* key, CF_Color default_val = cf_color_white()) { return cf_text_effect_get_color(fx, key, default_val); }
+CF_INLINE const char* text_effect_get_string(const CF_TextEffect* fx, const char* key, const char* default_val = NULL) { return cf_text_effect_get_string(fx, key, default_val); }
 
 CF_INLINE void push_text_id(uint64_t id) { cf_push_text_id(id); }
 CF_INLINE uint64_t pop_text_id() { return cf_pop_text_id(); }
@@ -1917,6 +1929,9 @@ CF_INLINE const char* text_without_markups(const char* text) { return cf_text_wi
 CF_INLINE void push_text_effect_active(bool effects_on) { cf_push_text_effect_active(effects_on); }
 CF_INLINE bool pop_text_effect_active() { return cf_pop_text_effect_active(); }
 CF_INLINE bool peek_text_effect_active() { return cf_peek_text_effect_active(); }
+CF_INLINE void push_text_vertical_layout(bool layout_vertically) { cf_push_text_vertical_layout(layout_vertically); }
+CF_INLINE bool pop_text_vertical_layout() { return cf_pop_text_vertical_layout(); }
+CF_INLINE bool peek_text_vertical_layout() { return cf_peek_text_vertical_layout(); }
 
 CF_INLINE void draw_push_viewport(CF_Rect viewport) { cf_draw_push_viewport(viewport); }
 CF_INLINE CF_Rect draw_pop_viewport() { return cf_draw_pop_viewport(); }
@@ -1930,6 +1945,7 @@ CF_INLINE CF_RenderState draw_peek_render_state() { return cf_draw_peek_render_s
 CF_INLINE void draw_set_atlas_dimensions(int width_in_pixels, int height_in_pixels) { cf_draw_set_atlas_dimensions(width_in_pixels, height_in_pixels); }
 CF_INLINE CF_Shader make_draw_shader(const char* path) { return cf_make_draw_shader(path); }
 CF_INLINE CF_Shader make_draw_shader_from_source(const char* src) { return cf_make_draw_shader_from_source(src); }
+CF_INLINE CF_Shader make_draw_shader_from_bytecode(CF_DrawShaderBytecode bytecode) { return cf_make_draw_shader_from_bytecode(bytecode); }
 CF_INLINE void draw_push_shader(CF_Shader shader) { cf_draw_push_shader(shader); }
 CF_INLINE CF_Shader draw_pop_shader() { return cf_draw_pop_shader(); }
 CF_INLINE CF_Shader draw_peek_shader() { return cf_draw_peek_shader(); }
