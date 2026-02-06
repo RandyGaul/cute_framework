@@ -505,7 +505,7 @@
 #define sintern_range(start, end) ck_sintern_range(start, end)
 
 // sivalid: True if s is an interned string (from sintern).
-#define sivalid(s) (((CK_UniqueString*)(s) - 1)->cookie.val == CK_INTERN_COOKIE.val && ((CK_UniqueString*)(s) - 1)->str == (s))
+#define sivalid(s) ck_sivalid(s)
 
 // silen: Length of an interned string (constant-time).
 #define silen(s)   (((CK_UniqueString*)(s) - 1)->len)
@@ -688,6 +688,7 @@ const uint16_t* ck_decode_UTF16(const uint16_t* s, int* codepoint);
 
 // Intern implementation.
 const char* ck_sintern_range(const char* start, const char* end);
+int ck_sivalid(const char* s);
 uint64_t ck_hash_fnv1a(const void* ptr, size_t sz);
 
 static inline const char* ck_sintern(const char* s)
@@ -1864,6 +1865,24 @@ const char* ck_sintern_range(const char* start, const char* end)
 
 	ck_sintern_unlock(table);
 	return node->str;
+}
+
+int ck_sivalid(const char* s)
+{
+	CK_InternTable* table = (CK_InternTable*)ck_atomic_load(&g_intern_table);
+	if (!table) return 0;
+	size_t len = strlen(s);
+	uint64_t key = ck_hash_fnv1a((void*)s, len);
+	ck_sintern_lock(table);
+	CK_UniqueString* head = map_has(table->interns, key) ? map_get(table->interns, key) : NULL;
+	for (CK_UniqueString* it = head; it; it = it->next) {
+		if (it->str == s) {
+			ck_sintern_unlock(table);
+			return 1;
+		}
+	}
+	ck_sintern_unlock(table);
+	return 0;
 }
 
 void sintern_nuke()
