@@ -140,6 +140,7 @@ struct CF_App
 	// Easy sprite stuff.
 	uint64_t easy_sprite_id_gen = CF_EASY_ID_RANGE_LO;
 	Cute::Map<CF_Image> easy_sprites;
+	Cute::Map<uint64_t> easy_sprite_png_cache;
 };
 
 #endif // CF_APP_INTERNAL_H

@@ -30,6 +30,19 @@ static CF_Sprite s_insert(CF_Image img)
 
 CF_Sprite cf_make_easy_sprite_from_png(const char* png_path, CF_Result* result_out)
 {
+	png_path = sintern(png_path);
+	uint64_t* cached_id = app->easy_sprite_png_cache.try_find(png_path);
+	if (cached_id) {
+		CF_Image* img = app->easy_sprites.try_find(*cached_id);
+		if (img) {
+			CF_Sprite sprite = cf_sprite_defaults();
+			sprite.name = png_path;
+			sprite.w = img->w;
+			sprite.h = img->h;
+			sprite.easy_sprite_id = *cached_id;
+			return sprite;
+		}
+	}
 	CF_Image img;
 	CF_Result result = cf_image_load_png(png_path, &img);
 	if (cf_is_error(result)) {
@@ -37,7 +50,10 @@ CF_Sprite cf_make_easy_sprite_from_png(const char* png_path, CF_Result* result_o
 		return cf_sprite_defaults();
 	}
 	cf_image_premultiply(&img);
-	return s_insert(img);
+	CF_Sprite sprite = s_insert(img);
+	sprite.name = png_path;
+	app->easy_sprite_png_cache.insert(png_path, sprite.easy_sprite_id);
+	return sprite;
 }
 
 CF_Sprite cf_make_easy_sprite_from_pixels(const CF_Pixel* pixels, int w, int h)
@@ -108,4 +124,5 @@ void cf_easy_sprite_unload(CF_Sprite *sprite)
 		cf_image_free(img);
 		app->easy_sprites.remove(sprite->easy_sprite_id);
 	}
+	app->easy_sprite_png_cache.remove(sprite->name);
 }
