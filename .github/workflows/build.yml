@@ -160,7 +160,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: docsparser
-          path: ./build_folder/docsparser
+          path: ./build/docsparser
           if-no-files-found: error
         if: runner.os == 'Linux' && matrix.runtime_shader_compilation == 'ON'
 
@@ -180,8 +180,8 @@ jobs:
 
       - name: Make docsparser executable and run
         run: |
-          chmod +x ./build/debug/docsparser
-          cd build/debug
+          chmod +x ./build/docs/docsparser
+          cd build/docs
           ./docsparser
 
       - name: Set up Python runtime
