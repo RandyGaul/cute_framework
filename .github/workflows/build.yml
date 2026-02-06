@@ -105,18 +105,18 @@ jobs:
           -DSDL_UNIX_CONSOLE_BUILD=ON
           -DSDL_WAYLAND=OFF
           -DSDL_X11=OFF
-          -DCF_RUNTIME_SHADER_COMPILATION=${{ matrix.shader_compilation }}
+          -DCF_RUNTIME_SHADER_COMPILATION=${{ matrix.runtime_shader_compilation }}
 
       - name: Build
         run: cmake --build build
-
-      - name: Print ccache stats
-        run: ccache --show-stats
 
       - name: Test
         shell: bash
         run: |
           ./build/tests
+
+      - name: Print ccache stats
+        run: ccache --show-stats
 
       - name: Generate artifacts for Windows
         if: runner.os == 'Windows'
@@ -149,7 +149,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.os }}-${{ matrix.compiler }}-shader-${{ matrix.shader_compilation }}
+          name: ${{ matrix.os }}-${{ matrix.compiler }}-shader-${{ matrix.runtime_shader_compilation }}
           path: |
             artifact.zip
             artifact.tar.gz
