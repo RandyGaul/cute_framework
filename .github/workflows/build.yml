@@ -90,7 +90,6 @@ jobs:
         run: |
           cmake --build build_folder
 
-      # Run tests for MSVC 18
       - name: Run Tests
         run: |
           cd build_folder
