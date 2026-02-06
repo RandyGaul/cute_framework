@@ -30,7 +30,7 @@ jobs:
               name: "Windows (MSVC 18 2026)",
               os: windows-2025-vs2026,
               artifact: "msvc18",
-              generate: '-G "Ninja" -A x64 -DCMAKE_BUILD_TYPE=Release -DCF_FRAMEWORK_BUILD_SAMPLES=OFF',
+              generate: '-G "Ninja" -DSDL_RENDER=OFF -DSDL_CCACHE=ON',
             }
           - {
               name: "macOS",
