@@ -529,9 +529,9 @@ TEST_CASE(test_ckit_string_utf8)
 
 	// Decode back.
 	int cp;
-	const char* p = cf_decode_UTF8(s, &cp);
+	const char* p = decode_UTF8(s, &cp);
 	REQUIRE(cp == 'A');
-	p = cf_decode_UTF8(p, &cp);
+	p = decode_UTF8(p, &cp);
 	REQUIRE(cp == 0x00E9);
 	(void)p;
 
@@ -541,7 +541,7 @@ TEST_CASE(test_ckit_string_utf8)
 	s = NULL;
 	sappend_UTF8(s, 0x20AC);
 	REQUIRE(slen(s) == 3);
-	cf_decode_UTF8(s, &cp);
+	decode_UTF8(s, &cp);
 	REQUIRE(cp == 0x20AC);
 	sfree(s);
 
@@ -549,14 +549,14 @@ TEST_CASE(test_ckit_string_utf8)
 	s = NULL;
 	sappend_UTF8(s, 0x1F600);
 	REQUIRE(slen(s) == 4);
-	cf_decode_UTF8(s, &cp);
+	decode_UTF8(s, &cp);
 	REQUIRE(cp == 0x1F600);
 	sfree(s);
 
 	// Invalid codepoint -> replacement character.
 	s = NULL;
 	sappend_UTF8(s, 0x200000);
-	cf_decode_UTF8(s, &cp);
+	decode_UTF8(s, &cp);
 	REQUIRE(cp == 0xFFFD);
 	sfree(s);
 
@@ -1217,21 +1217,21 @@ TEST_CASE(test_ckit_string_sdedup_edge_cases)
 TEST_CASE(test_ckit_string_utf8_truncated)
 {
 	// Truncated 2-byte sequence (starts with 0xC0-0xDF but only 1 byte).
-	// This tests that cf_decode_UTF8 handles malformed input gracefully.
+	// This tests that decode_UTF8 handles malformed input gracefully.
 	char truncated2[] = { (char)0xC2, '\0' };
 	int cp;
-	cf_decode_UTF8(truncated2, &cp);
+	decode_UTF8(truncated2, &cp);
 	// Should return replacement character for invalid sequence.
 	REQUIRE(cp == 0xFFFD);
 
 	// Truncated 3-byte sequence.
 	char truncated3[] = { (char)0xE2, (char)0x82, '\0' };
-	cf_decode_UTF8(truncated3, &cp);
+	decode_UTF8(truncated3, &cp);
 	REQUIRE(cp == 0xFFFD);
 
 	// Truncated 4-byte sequence.
 	char truncated4[] = { (char)0xF0, (char)0x9F, (char)0x98, '\0' };
-	cf_decode_UTF8(truncated4, &cp);
+	decode_UTF8(truncated4, &cp);
 	REQUIRE(cp == 0xFFFD);
 
 	return true;

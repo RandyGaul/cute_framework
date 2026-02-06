@@ -273,11 +273,11 @@ static void state_clear() { sfree(s->token); s->token = NULL; s->in = s->end = N
 static int state_done() { return s->in >= s->end; }
 static void state_append(int ch) { spush(s->token, (char)ch); }
 static void state_ltrim() { while (!state_done()) { int cp = *s->in; if (s_is_space(cp)) ++s->in; else break; } }
-static int state_next() { int cp; s->in = cf_decode_UTF8(s->in, &cp); return cp; }
-static int state_peek() { int cp; cf_decode_UTF8(s->in, &cp); return cp; }
-static void state_skip() { int cp; s->in = cf_decode_UTF8(s->in, &cp); (void)cp; }
+static int state_next() { int cp; s->in = decode_UTF8(s->in, &cp); return cp; }
+static int state_peek() { int cp; decode_UTF8(s->in, &cp); return cp; }
+static void state_skip() { int cp; s->in = decode_UTF8(s->in, &cp); (void)cp; }
 static int state_expect(int ch) { int cp = state_next(); return cp == ch; }
-static int state_try_next(int ch) { int cp; const char* next = cf_decode_UTF8(s->in, &cp); if (cp == ch) { s->in = next; return 1; } return 0; }
+static int state_try_next(int ch) { int cp; const char* next = decode_UTF8(s->in, &cp); if (cp == ch) { s->in = next; return 1; } return 0; }
 
 // -------------------------------------------------------------------------------------------------
 // Linkify
