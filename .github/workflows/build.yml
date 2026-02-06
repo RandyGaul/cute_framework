@@ -162,7 +162,7 @@ jobs:
           name: docsparser
           path: ./build/docsparser
           if-no-files-found: error
-        if: runner.os == 'Linux' && matrix.runtime_shader_compilation == 'ON'
+        if: runner.os == 'Linux' && matrix.compiler == 'gcc' && matrix.runtime_shader_compilation == 'ON'
 
   docs:
     name: Build documentation
