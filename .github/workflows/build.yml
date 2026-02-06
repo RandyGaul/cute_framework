@@ -29,7 +29,7 @@ jobs:
           - os: macos-latest
             compiler: msvc
           # gcc on Windows would require MinGW — excluded for simplicity
-          - os: windows-latest
+          - os: windows-2025-vs2026
             compiler: gcc
           # TODO - Add iOS and Android platforms. Waiting on better support from GitHub.
 
