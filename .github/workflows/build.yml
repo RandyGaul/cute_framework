@@ -96,6 +96,19 @@ jobs:
           -DCMAKE_BUILD_TYPE=Release
           -DCMAKE_C_COMPILER_LAUNCHER=ccache
           -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+          -DSDL_ALSA=OFF
+          -DSDL_CCACHE=ON
+          -DSDL_JACK=OFF
+          -DSDL_KMSDRM=OFF
+          -DSDL_OPENGL=OFF
+          -DSDL_OPENGLES=OFF
+          -DSDL_PIPEWIRE=OFF
+          -DSDL_PULSEAUDIO=OFF
+          -DSDL_RENDER=OFF
+          -DSDL_SNDIO=OFF
+          -DSDL_UNIX_CONSOLE_BUILD=ON
+          -DSDL_WAYLAND=OFF
+          -DSDL_X11=OFF
           -DCF_RUNTIME_SHADER_COMPILATION=${{ matrix.shader_compilation }}
 
       - name: Build
