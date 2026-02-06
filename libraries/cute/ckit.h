@@ -1,5 +1,5 @@
 /*
-    ckit -- A tiny, single-header kit of high-performance C essentials.
+    ckit -- A single-header kit of high-performance C essentials.
 
     In exactly one .c/.cpp file:
            #define CKIT_IMPLEMENTATION
