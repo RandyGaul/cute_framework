@@ -92,9 +92,6 @@ jobs:
           cd build_folder
           ./tests
 
-      - name: Print ccache stats
-        run: ccache --show-stats
-
       # Just call robocopy twice, one looking for libcute.a for MinGW, and one
       # looking for cute.lib for MSCV. robocopy doesn't trigger a build failure for
       # not finding a file.
