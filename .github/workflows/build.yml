@@ -84,11 +84,6 @@ jobs:
               ;;
           esac
 
-      - name: Create build folder with CMake
-        run: |
-          cmake ${{ matrix.platform.generate }} ${{ matrix.runtime_shader_compilation.cmake_arg }} \
-            -B build_folder
-
       - name: Configure
         shell: bash
         run: >
