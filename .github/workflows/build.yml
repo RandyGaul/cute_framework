@@ -113,10 +113,10 @@ jobs:
         if: matrix.platform.name != 'Windows (MSVC 18 2026)'
 
       # Default for MSVC is to build with Debug, so a special case is needed to produce
-      # Release binaries. Limit parallel jobs to 1 to avoid ICE (internal compiler errors).
+      # Release binaries.
       - name: Build project binary (MSVC)
         run: |
-          cmake --build build_folder --config Release --parallel 1
+          cmake --build build_folder --config Release
         if: matrix.platform.name == 'Windows (MSVC 18 2026)'
 
       # Run tests for MSVC 18
