@@ -505,7 +505,7 @@
 #define sintern_range(start, end) ck_sintern_range(start, end)
 
 // sivalid: True if s is an interned string (from sintern).
-#define sivalid(s) (((CK_UniqueString*)(s) - 1)->cookie.val == CK_INTERN_COOKIE.val)
+#define sivalid(s) (((CK_UniqueString*)(s) - 1)->cookie.val == CK_INTERN_COOKIE.val && ((CK_UniqueString*)(s) - 1)->str == (s))
 
 // silen: Length of an interned string (constant-time).
 #define silen(s)   (((CK_UniqueString*)(s) - 1)->len)
