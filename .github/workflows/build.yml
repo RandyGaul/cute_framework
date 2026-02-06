@@ -73,6 +73,9 @@ jobs:
           liburing-dev
         if: matrix.platform.name == 'Linux'
 
+      - name: Set up MSVC developer environment
+        uses: ilammy/msvc-dev-cmd@v1
+        if: runner.os == 'Windows'
 
       - name: Create build folder with CMake
         run: |
