@@ -14,6 +14,8 @@
 
 #include <math.h>
 
+// Original implementation and API design by Noel Berry.
+
 //--------------------------------------------------------------------------------------------------
 // Internal types.
 

@@ -1,7 +1,6 @@
 // Input Bindings Example -- Platformer Character
 //
-// Shows how to wire up keyboard + joypad inputs using Cute Framework's
-// binding system. Inspired by a real platformer's player controller.
+// Shows how to wire up keyboard + joypad inputs using Cute Framework's binding system.
 
 #include <cute.h>
 
