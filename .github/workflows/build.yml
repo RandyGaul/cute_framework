@@ -80,6 +80,9 @@ jobs:
         run: |
           cmake --build build_folder
 
+      - name: Print ccache stats
+        run: ccache --show-stats
+
       - name: Run Tests (Windows)
         shell: cmd
         run: |
@@ -101,10 +104,6 @@ jobs:
           ./tests
           cd ..
         if: runner.os == 'Linux'
-
-      - name: Print ccache stats
-        run: ccache --show-stats
-        if: runner.os != 'Windows'
 
       - name: Generate artifacts for Windows
         shell: cmd
