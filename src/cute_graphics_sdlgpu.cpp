@@ -157,7 +157,7 @@ CF_INLINE SDL_GPUSamplerCreateInfo SDL_GPUSamplerCreateInfoDefaults()
        samplerInfo.enable_anisotropy = false;
        samplerInfo.max_anisotropy = 1.0f;
        samplerInfo.enable_compare = false;
-       samplerInfo.compare_op = SDL_GPU_COMPAREOP_ALWAYS;
+       samplerInfo.compare_op = SDL_GPU_COMPAREOP_NEVER;
        samplerInfo.min_lod = 0.0f;
        samplerInfo.max_lod = FLT_MAX;
        return samplerInfo;
@@ -641,6 +641,52 @@ static inline SDL_GPUShader* s_load_shader_bytecode(CF_ShaderInternal* shader_in
 	return sdl_shader;
 }
 
+#ifdef _WIN32
+#include <d3d12.h>
+#include "d3d12_layout.gen.h"
+
+// Suppress D3D12 debug warning #820 (CLEARRENDERTARGETVIEW_MISMATCHINGCLEARVALUE).
+// We want to suppress this because CF is designed where the clear value can be set by the
+// user at pretty much anytime, so our design conflicts with D3D12's expectation, but, you know,
+// fuck you Microsoft, we do what we want.
+// 
+// SDL3 GPU doesn't expose the native ID3D12Device* publicly, so we reach into
+// private struct layouts using offsets computed at build time by gen_d3d12_layout. This is
+// another case of someone tryna cramp our style. So yeah, fuck you SDL, we do what we want.
+
+static void s_silence_d3d12_clear_value_warning(SDL_GPUDevice* gpu_device)
+{
+	if (SDL_strcmp(SDL_GetGPUDeviceDriver(gpu_device), "direct3d12") != 0) return;
+
+	// SDL_GPUDevice (SDL_sysgpu.h): N function pointer slots, then driverData, then backend.
+	void** device_slots = (void**)gpu_device;
+	void* driver_data = device_slots[SDL_GPU_DEVICE_FN_SLOT_COUNT];
+
+	// Sanity: next slot should be the backend string.
+	const char* backend = (const char*)device_slots[SDL_GPU_DEVICE_FN_SLOT_COUNT + 1];
+	if (SDL_strcmp(backend, "direct3d12") != 0) return;
+
+	// Sanity: D3D12Renderer's first field is a back-pointer to SDL_GPUDevice.
+	void** renderer_slots = (void**)driver_data;
+	if (renderer_slots[0] != gpu_device) return;
+
+	// Access ID3D12Device* at build-time-computed byte offset.
+	ID3D12Device* d3d_device = *(ID3D12Device**)((char*)driver_data + D3D12_RENDERER_DEVICE_BYTE_OFFSET);
+
+	ID3D12InfoQueue* info_queue = NULL;
+	if (SUCCEEDED(d3d_device->QueryInterface(IID_PPV_ARGS(&info_queue)))) {
+		D3D12_MESSAGE_ID hide[] = {
+			D3D12_MESSAGE_ID_CLEARRENDERTARGETVIEW_MISMATCHINGCLEARVALUE,
+		};
+		D3D12_INFO_QUEUE_FILTER filter = {};
+		filter.DenyList.NumIDs = _countof(hide);
+		filter.DenyList.pIDList = hide;
+		info_queue->AddStorageFilterEntries(&filter);
+		info_queue->Release();
+	}
+}
+#endif
+
 CF_Result cf_sdlgpu_init(const char* device_name, bool debug, CF_BackendType* backend_type)
 {
 	if(!SDL_ShaderCross_Init()) {
@@ -650,6 +696,12 @@ CF_Result cf_sdlgpu_init(const char* device_name, bool debug, CF_BackendType* ba
 	if (!g_ctx.device) {
 		return cf_result_error("Failed to create GPU Device.");
 	}
+
+#ifdef _WIN32
+	if (debug) {
+		s_silence_d3d12_clear_value_warning(g_ctx.device);
+	}
+#endif
 
 	*backend_type = s_query_backend();
 
