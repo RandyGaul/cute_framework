@@ -885,6 +885,14 @@ void spritebatch_term(spritebatch_t* sb)
 	}
 	SPRITEBATCH_FREE(sb->key_buffer, sb->mem_ctx);
 	SPRITEBATCH_FREE(sb->pixel_buffer, sb->mem_ctx);
+	{
+		int count = spritebatch_map_count(&sb->sprites_to_lonely_textures);
+		spritebatch_internal_lonely_texture_t* lonely = (spritebatch_internal_lonely_texture_t*)spritebatch_map_items(&sb->sprites_to_lonely_textures);
+		for (int i = 0; i < count; ++i) {
+			if (lonely[i].texture_id != ~0)
+				sb->delete_texture_callback(lonely[i].texture_id, sb->udata);
+		}
+	}
 	spritebatch_map_term(&sb->sprites_to_lonely_textures);
 	spritebatch_map_term(&sb->sprites_to_premades);
 	spritebatch_map_term(&sb->sprites_to_atlases);
@@ -896,6 +904,7 @@ void spritebatch_term(spritebatch_t* sb)
 		do
 		{
 			spritebatch_map_term(&atlas->sprites_to_textures);
+			sb->delete_texture_callback(atlas->texture_id, sb->udata);
 			spritebatch_internal_atlas_t* next = atlas->next;
 			SPRITEBATCH_FREE(atlas, sb->mem_ctx);
 			atlas = next;
