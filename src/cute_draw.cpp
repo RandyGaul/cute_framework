@@ -2036,7 +2036,9 @@ CF_Glyph* cf_font_get_glyph(CF_Font* font, int code, float font_size, int blur)
 float cf_font_get_kern(CF_Font* font, float font_size, int code0, int code1)
 {
 	uint64_t key = CF_KERN_KEY(code0, code1);
-	return font->kerning.get(key) * stbtt_ScaleForPixelHeight(&font->info, font_size);
+	int* val = font->kerning.try_get(key);
+	if (!val) return 0;
+	return *val * stbtt_ScaleForPixelHeight(&font->info, font_size);
 }
 
 void cf_push_font(const char* font)
