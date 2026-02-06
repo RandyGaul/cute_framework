@@ -468,6 +468,7 @@ CF_ShaderCompilerResult cute_shader_compile(const char* source, CF_ShaderCompile
 	CF_ShaderInputInfo* inputs = NULL;
 	{
 		std::vector<const char*> image_names_vec;
+		std::vector<int> image_binding_slots_vec;
 		std::vector<CF_ShaderUniformInfo> uniforms_vec;
 		std::vector<CF_ShaderUniformMemberInfo> uniform_members_vec;
 
@@ -485,6 +486,7 @@ CF_ShaderCompilerResult cute_shader_compile(const char* source, CF_ShaderCompile
 			case SPV_REFLECT_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
 			{
 				image_names_vec.push_back(strdup(binding->name));
+				image_binding_slots_vec.push_back(binding->binding);
 			}    // Fall-thru.
 			case SPV_REFLECT_DESCRIPTOR_TYPE_SAMPLER: ++num_samplers; break;
 			case SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_IMAGE: ++num_storage_textures; break;
@@ -523,11 +525,27 @@ CF_ShaderCompilerResult cute_shader_compile(const char* source, CF_ShaderCompile
 		}
 		free(bindings);
 
+		// Sort images by binding slot so array index matches SDL_GPU slot.
+		{
+			int n = (int)image_names_vec.size();
+			for (int i = 0; i < n - 1; ++i) {
+				for (int j = i + 1; j < n; ++j) {
+					if (image_binding_slots_vec[j] < image_binding_slots_vec[i]) {
+						std::swap(image_names_vec[i], image_names_vec[j]);
+						std::swap(image_binding_slots_vec[i], image_binding_slots_vec[j]);
+					}
+				}
+			}
+		}
+
 		// Prepare the returned reflection info
+		int* image_binding_slots = NULL;
 		num_images = (int)image_names_vec.size();
 		if (num_images > 0) {
 			image_names = (const char**)malloc(sizeof(char*) * num_images);
 			memcpy(image_names, image_names_vec.data(), sizeof(char*) * num_images);
+			image_binding_slots = (int*)malloc(sizeof(int) * num_images);
+			memcpy(image_binding_slots, image_binding_slots_vec.data(), sizeof(int) * num_images);
 		}
 
 		num_uniforms = (int)uniforms_vec.size();
@@ -579,6 +597,7 @@ CF_ShaderCompilerResult cute_shader_compile(const char* source, CF_ShaderCompile
 
 				.num_images = num_images,
 				.image_names = image_names,
+				.image_binding_slots = image_binding_slots,
 
 				.num_uniforms = num_uniforms,
 				.uniforms = uniforms,
@@ -619,6 +638,7 @@ void cute_shader_free_result(CF_ShaderCompilerResult result)
 		free((char*)shader_info->image_names[i]);
 	}
 	free(shader_info->image_names);
+	free(shader_info->image_binding_slots);
 
 	free((void*)result.bytecode.glsl300_src);
 	free((void*)result.bytecode.content);
