@@ -31,7 +31,7 @@ int main(int argc, char* argv[])
 		s = String::fmt("dt    %f", CF_DELTA_TIME);
 		draw_text(s.c_str(), V2(-40,-15));
 
-		app_draw_onto_screen();
+		app_draw_onto_screen(true);
 	}
 
 	destroy_app();

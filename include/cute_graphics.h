@@ -31,7 +31,6 @@ extern "C" {
  * Quick list of unsupported features. CF's focus is on the 2D use case, so most of these features are
  * omitted since they aren't super useful for 2D.
  *
- *     - Blend color constant
  *     - Multiple render targets (aka color/texture attachments)
  *     - Cube map
  *     - 3D textures
@@ -390,9 +389,9 @@ CF_API bool CF_CALL cf_query_pixel_format(CF_PixelFormat format, CF_PixelFormatO
 	/* @entry The texture will be used as read-only storage in graphics pipelines. */ \
 	CF_ENUM(TEXTURE_USAGE_GRAPHICS_STORAGE_READ_BIT, 0x00000008)                      \
 	/* @entry The texture will be used as read-only storage in compute pipelines. */  \
-	CF_ENUM(TEXTURE_USAGE_COMPUTE_STORAGE_READ_BIT,  0x00000020)                      \
+	CF_ENUM(TEXTURE_USAGE_COMPUTE_STORAGE_READ_BIT,  0x00000010)                      \
 	/* @entry The texture will be used as writeable storage in compute pipelines. */  \
-	CF_ENUM(TEXTURE_USAGE_COMPUTE_STORAGE_WRITE_BIT, 0x00000040)                      \
+	CF_ENUM(TEXTURE_USAGE_COMPUTE_STORAGE_WRITE_BIT, 0x00000020)                      \
 	/* @end */
 
 typedef uint32_t CF_TextureUsageFlags;
@@ -544,11 +543,11 @@ typedef struct CF_TextureParams
 	/* @member Number of elements (usually pixels) along the height of the texture. */
 	int height;
 
-	/* @member 0 = auto compute from dimensions if `generate_mipmaps` is true, else specify an explicit number. */
+	/* @member 0 = auto compute from dimensions if `allocate_mipmaps` is true, else specify an explicit number. */
 	int mip_count;
 
-	/* @member Defaulted to false, true to enable mipmap generation and will be initialized with full mipmaps. */
-	bool generate_mipmaps;
+	/* @member Defaulted to false, true to allocate a full mipmap chain for the texture. */
+	bool allocate_mipmaps;
 
 	/* @member Mipmap level bias; positive = blurrier, negative = sharper. */
 	float mip_lod_bias;

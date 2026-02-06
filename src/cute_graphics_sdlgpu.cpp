@@ -47,12 +47,36 @@ struct CF_TextureInternal
 	SDL_GPUTextureSamplerBinding binding;
 };
 
+// Content-based pipeline cache key. All fields that affect pipeline creation.
+// Zeroed before filling so memcmp is safe even with padding.
+struct CF_PipelineKey
+{
+	// Canvas state.
+	SDL_GPUTextureFormat color_format;
+	SDL_GPUTextureFormat depth_format;
+	bool has_depth_stencil;
+	int sample_count;
+
+	// Material render state.
+	CF_RenderState render_state;
+
+	// Vertex layout (matched attributes in shader input order).
+	int vertex_stride;
+	int instance_stride;
+	int attribute_count;
+	struct
+	{
+		int location;
+		CF_VertexFormat format;
+		int offset;
+		bool per_instance;
+	} attrs[CF_MAX_SHADER_INPUTS];
+};
+
 struct CF_Pipeline
 {
-	int sample_count = 0;
-	CF_MaterialInternal* material = NULL;
-	SDL_GPUGraphicsPipeline* pip = NULL;
-	CF_MeshInternal* mesh = NULL;
+	CF_PipelineKey key;
+	SDL_GPUGraphicsPipeline* pip;
 };
 
 struct CF_ShaderInternal
@@ -69,7 +93,8 @@ struct CF_ShaderInternal
 	int fs_block_sizes[CF_MAX_UNIFORM_BLOCK_COUNT];
 	Cute::Array<CF_UniformBlockMember> fs_uniform_block_members[CF_MAX_UNIFORM_BLOCK_COUNT];
 	Cute::Array<CF_UniformBlockMember> vs_uniform_block_members[CF_MAX_UNIFORM_BLOCK_COUNT];
-	Cute::Array<const char*> image_names;
+	Cute::Array<const char*> vs_image_names;
+	Cute::Array<const char*> fs_image_names;
 	Cute::Array<CF_Pipeline> pip_cache;
 
 	CF_INLINE int get_input_index(const char* name)
@@ -126,7 +151,16 @@ static struct
 	int msaa_sample_count;
 	CF_CanvasInternal* canvas;
 	SDL_GPUSampler* sampler_override;
+	SDL_GPURenderPass* active_pass;
 } g_ctx = { };
+
+static inline void s_end_active_pass() {
+	if (g_ctx.active_pass) {
+		SDL_EndGPURenderPass(g_ctx.active_pass);
+		g_ctx.active_pass = NULL;
+		if (g_ctx.canvas) g_ctx.canvas->pass = NULL;
+	}
+}
 
 CF_INLINE SDL_GPUTextureCreateInfo SDL_GPUTextureCreateInfoDefaults(int w, int h)
 {
@@ -488,7 +522,7 @@ static inline CF_Texture s_make_texture(CF_TextureParams params, CF_SampleCount 
 	tex_info.usage = sample_count == CF_SAMPLE_COUNT_1 ? params.usage : (params.usage & ~(SDL_GPU_TEXTUREUSAGE_SAMPLER));
 
 	tex_info.sample_count = (SDL_GPUSampleCount)sample_count;
-	if (params.generate_mipmaps) {
+	if (params.allocate_mipmaps) {
 		tex_info.num_levels = params.mip_count > 0
 			? (Uint32)params.mip_count
 			: (Uint32)(1 + (int)CF_FLOORF(CF_LOG2F((float)cf_max(params.width, params.height))));
@@ -552,8 +586,14 @@ static inline SDL_GPUShader* s_load_shader_bytecode(CF_ShaderInternal* shader_in
 	// Load reflection info
 	const CF_ShaderInfo* shader_info = &bytecode.shader_info;
 
-	for (int i = 0; i < shader_info->num_images; ++i) {
-		shader_internal->image_names.add(sintern(shader_info->image_names[i]));
+	if (vs) {
+		for (int i = 0; i < shader_info->num_images; ++i) {
+			shader_internal->vs_image_names.add(sintern(shader_info->image_names[i]));
+		}
+	} else {
+		for (int i = 0; i < shader_info->num_images; ++i) {
+			shader_internal->fs_image_names.add(sintern(shader_info->image_names[i]));
+		}
 	}
 
 	if (stage == CF_SHADER_STAGE_VERTEX) {
@@ -636,6 +676,7 @@ static inline SDL_GPUShader* s_load_shader_bytecode(CF_ShaderInternal* shader_in
 		spirvInfo.name = "shader.shd";
 		spirvInfo.props = SDL_CreateProperties();
 		sdl_shader = (SDL_GPUShader*)SDL_ShaderCross_CompileGraphicsShaderFromSPIRV(g_ctx.device, &spirvInfo, &metadata);
+		SDL_DestroyProperties(spirvInfo.props);
 	}
 	CF_ASSERT(sdl_shader);
 	return sdl_shader;
@@ -714,6 +755,7 @@ void cf_sdlgpu_cleanup()
 		SDL_SubmitGPUCommandBuffer(g_ctx.cmd);
 		g_ctx.cmd = NULL;
 	}
+	SDL_WaitForGPUIdle(g_ctx.device);
 	SDL_ReleaseWindowFromGPUDevice(g_ctx.device, g_ctx.window);
 	SDL_DestroyGPUDevice(g_ctx.device);
 	SDL_ShaderCross_Quit();
@@ -745,8 +787,7 @@ void cf_sdlgpu_attach(SDL_Window* window)
 bool cf_sdlgpu_supports_msaa(int sample_count)
 {
 	SDL_GPUTextureFormat fmt = SDL_GetGPUSwapchainTextureFormat(g_ctx.device, g_ctx.window);
-	SDL_GPUSampleCount msaa = (SDL_GPUSampleCount)cf_clamp((g_ctx.msaa_sample_count >> 1), 0, 3);
-	return SDL_GPUTextureSupportsSampleCount(g_ctx.device, fmt, msaa);
+	return SDL_GPUTextureSupportsSampleCount(g_ctx.device, fmt, (SDL_GPUSampleCount)sample_count);
 }
 
 void cf_sdlgpu_flush()
@@ -776,6 +817,7 @@ void cf_sdlgpu_begin_frame()
 
 void cf_sdlgpu_blit_canvas(CF_Canvas canvas)
 {
+	s_end_active_pass();
 	// Try to acquire a swapchain texture
 	if (g_ctx.swapchain_tex == NULL && !g_ctx.skip_drawing) {
 		if (
@@ -814,6 +856,7 @@ void cf_sdlgpu_blit_canvas(CF_Canvas canvas)
 
 void cf_sdlgpu_end_frame()
 {
+	s_end_active_pass();
 	SDL_SubmitGPUCommandBuffer(g_ctx.cmd);
 	g_ctx.cmd = NULL;
 	g_ctx.canvas = NULL;
@@ -866,6 +909,7 @@ void cf_sdlgpu_destroy_texture(CF_Texture texture_handle)
 
 void cf_sdlgpu_texture_update(CF_Texture texture_handle, void* data, int size)
 {
+	s_end_active_pass();
 	CF_TextureInternal* tex = (CF_TextureInternal*)texture_handle.id;
 
 	// Copy bytes over to the driver.
@@ -888,8 +932,9 @@ void cf_sdlgpu_texture_update(CF_Texture texture_handle, void* data, int size)
 	SDL_GPUTextureTransferInfo src;
 	src.transfer_buffer = buf;
 	src.offset = 0;
-	src.pixels_per_row = tex->w;
-	src.rows_per_layer = tex->h;
+	// SDL_GPU: 0 means tightly packed, inferred from the texture region dimensions.
+	src.pixels_per_row = 0;
+	src.rows_per_layer = 0;
 	SDL_GPUTextureRegion dst = SDL_GPUTextureRegionDefaults(tex, tex->w, tex->h);
 	SDL_UploadToGPUTexture(pass, &src, &dst, true);
 	SDL_EndGPUCopyPass(pass);
@@ -899,6 +944,7 @@ void cf_sdlgpu_texture_update(CF_Texture texture_handle, void* data, int size)
 
 void cf_sdlgpu_texture_update_mip(CF_Texture texture_handle, void* data, int size, int mip_level)
 {
+	s_end_active_pass();
 	CF_TextureInternal* tex = (CF_TextureInternal*)texture_handle.id;
 
 	// Create a temporary transfer buffer if needed.
@@ -927,8 +973,9 @@ void cf_sdlgpu_texture_update_mip(CF_Texture texture_handle, void* data, int siz
 	SDL_GPUTextureTransferInfo src;
 	src.transfer_buffer = buf;
 	src.offset = 0;
-	src.pixels_per_row = w;
-	src.rows_per_layer = h;
+	// SDL_GPU: 0 means tightly packed, inferred from the texture region dimensions.
+	src.pixels_per_row = 0;
+	src.rows_per_layer = 0;
 	SDL_GPUTextureRegion dst = SDL_GPUTextureRegionDefaults(tex, w, h);
 	dst.mip_level = (Uint32)mip_level;
 	SDL_UploadToGPUTexture(pass, &src, &dst, true);
@@ -939,6 +986,7 @@ void cf_sdlgpu_texture_update_mip(CF_Texture texture_handle, void* data, int siz
 
 void cf_sdlgpu_generate_mipmaps(CF_Texture texture_handle)
 {
+	s_end_active_pass();
 	CF_TextureInternal* tex = (CF_TextureInternal*)texture_handle.id;
 	SDL_GPUCommandBuffer* cmd = g_ctx.cmd ? g_ctx.cmd : SDL_AcquireGPUCommandBuffer(g_ctx.device);
 	SDL_GenerateMipmapsForGPUTexture(cmd, tex->tex);
@@ -1028,6 +1076,7 @@ void cf_sdlgpu_canvas_get_size(CF_Canvas canvas_handle, int* w, int* h)
 
 void cf_sdlgpu_clear_canvas(CF_Canvas canvas_handle)
 {
+	s_end_active_pass();
 	CF_CanvasInternal* canvas = (CF_CanvasInternal*)canvas_handle.id;
 	SDL_GPUCommandBuffer* cmd = g_ctx.cmd ? g_ctx.cmd : SDL_AcquireGPUCommandBuffer(g_ctx.device);
 
@@ -1164,6 +1213,8 @@ void cf_sdlgpu_destroy_mesh(CF_Mesh mesh_handle)
 
 static inline void s_update_buffer(CF_Buffer* buffer, int element_count, void* data, int size, SDL_GPUBufferUsageFlags flags)
 {
+	s_end_active_pass();
+
 	// Resize buffer if necessary.
 	if (size > buffer->size) {
 		SDL_ReleaseGPUBuffer(g_ctx.device, buffer->buffer);
@@ -1230,6 +1281,10 @@ void cf_sdlgpu_apply_canvas(CF_Canvas canvas_handle, bool clear)
 {
 	CF_CanvasInternal* canvas = (CF_CanvasInternal*)canvas_handle.id;
 	CF_ASSERT(canvas);
+	// End any active pass if switching canvases or requesting a clear.
+	if (g_ctx.active_pass && (canvas != g_ctx.canvas || clear)) {
+		s_end_active_pass();
+	}
 	g_ctx.canvas = canvas;
 	g_ctx.canvas->clear = clear;
 }
@@ -1359,13 +1414,11 @@ static inline SDL_GPUGraphicsPipeline* s_build_pipeline(CF_ShaderInternal* shade
 	pip_info.target_info.color_target_descriptions = &color_info;
 	pip_info.vertex_shader = shader->vs;
 	pip_info.fragment_shader = shader->fs;
-	const bool has_depth_stencil_texture = g_ctx.canvas->depth_stencil != NULL;
-	const bool depth_test_requested = state->depth_write_enabled || state->depth_compare != CF_COMPARE_FUNCTION_ALWAYS;
-	CF_TextureInternal* depth_texture = has_depth_stencil_texture ? (CF_TextureInternal*)g_ctx.canvas->cf_depth_stencil.id : NULL;
-	const bool depth_test_enabled = (depth_texture != NULL) && depth_test_requested;
-	const bool stencil_capable = s_texture_supports_stencil(depth_texture);
-	const bool stencil_test_enabled = stencil_capable && state->stencil.enabled;
-	if (depth_texture && (depth_test_enabled || stencil_test_enabled)) {
+	// Always declare depth-stencil target if the canvas has one, regardless of whether
+	// the material enables depth/stencil testing. This ensures all pipelines are compatible
+	// with the render pass (which always includes the depth-stencil attachment).
+	CF_TextureInternal* depth_texture = g_ctx.canvas->depth_stencil ? (CF_TextureInternal*)g_ctx.canvas->cf_depth_stencil.id : NULL;
+	if (depth_texture) {
 		pip_info.target_info.depth_stencil_format = depth_texture->format;
 		pip_info.target_info.has_depth_stencil_target = true;
 	}
@@ -1406,7 +1459,8 @@ static inline SDL_GPUGraphicsPipeline* s_build_pipeline(CF_ShaderInternal* shade
 		vertex_buffer_descriptions_count++;
 	}
 	if (has_instance_data) {
-		vertex_buffer_descriptions[vertex_buffer_descriptions_count].slot = 1;
+		int instance_slot = has_vertex_data ? 1 : 0;
+		vertex_buffer_descriptions[vertex_buffer_descriptions_count].slot = instance_slot;
 		vertex_buffer_descriptions[vertex_buffer_descriptions_count].pitch = mesh->instances.stride;
 		vertex_buffer_descriptions[vertex_buffer_descriptions_count].input_rate = SDL_GPU_VERTEXINPUTRATE_INSTANCE;
 		vertex_buffer_descriptions[vertex_buffer_descriptions_count].instance_step_rate = 0;
@@ -1426,6 +1480,10 @@ static inline SDL_GPUGraphicsPipeline* s_build_pipeline(CF_ShaderInternal* shade
 	pip_info.multisample_state.sample_count = (SDL_GPUSampleCount)g_ctx.canvas->sample_count;
 	pip_info.multisample_state.sample_mask = 0;
 
+	bool depth_test_requested = state->depth_write_enabled || state->depth_compare != CF_COMPARE_FUNCTION_ALWAYS;
+	bool depth_test_enabled = (depth_texture != NULL) && depth_test_requested;
+	bool stencil_capable = depth_texture ? s_texture_supports_stencil(depth_texture) : false;
+	bool stencil_test_enabled = stencil_capable && state->stencil.enabled;
 	pip_info.depth_stencil_state.enable_depth_test = depth_test_enabled;
 	pip_info.depth_stencil_state.enable_depth_write = (depth_texture != NULL) && state->depth_write_enabled;
 	pip_info.depth_stencil_state.compare_op = s_wrap(state->depth_compare);
@@ -1446,6 +1504,45 @@ static inline SDL_GPUGraphicsPipeline* s_build_pipeline(CF_ShaderInternal* shade
 	return pip;
 }
 
+static CF_PipelineKey s_make_pipeline_key(CF_RenderState* state, CF_MeshInternal* mesh, CF_ShaderInternal* shader)
+{
+	CF_PipelineKey key;
+	CF_MEMSET(&key, 0, sizeof(key));
+
+	// Canvas state.
+	CF_TextureInternal* tex = (CF_TextureInternal*)g_ctx.canvas->cf_texture.id;
+	key.color_format = tex->format;
+	key.sample_count = (int)g_ctx.canvas->sample_count;
+	CF_TextureInternal* depth_texture = g_ctx.canvas->depth_stencil ? (CF_TextureInternal*)g_ctx.canvas->cf_depth_stencil.id : NULL;
+	if (depth_texture) {
+		key.has_depth_stencil = true;
+		key.depth_format = depth_texture->format;
+	}
+
+	// Material render state (copied field-by-field to avoid padding issues, but
+	// CF_RenderState is fully zeroed by cf_render_state_defaults, so direct copy is safe).
+	key.render_state = *state;
+
+	// Vertex layout.
+	bool has_vertex_data = mesh->vertices.buffer != NULL;
+	key.vertex_stride = has_vertex_data ? mesh->vertices.stride : 0;
+	key.instance_stride = mesh->instances.buffer ? mesh->instances.stride : 0;
+	int attr_count = 0;
+	for (int i = 0; i < mesh->attribute_count && attr_count < CF_MAX_SHADER_INPUTS; ++i) {
+		int idx = shader->get_input_index(mesh->attributes[i].name);
+		if (idx >= 0) {
+			key.attrs[attr_count].location = shader->input_locations[idx];
+			key.attrs[attr_count].format = mesh->attributes[i].format;
+			key.attrs[attr_count].offset = mesh->attributes[i].offset;
+			key.attrs[attr_count].per_instance = mesh->attributes[i].per_instance;
+			attr_count++;
+		}
+	}
+	key.attribute_count = attr_count;
+
+	return key;
+}
+
 void cf_sdlgpu_apply_shader(CF_Shader shader_handle, CF_Material material_handle)
 {
 	CF_ASSERT(g_ctx.canvas);
@@ -1455,82 +1552,81 @@ void cf_sdlgpu_apply_shader(CF_Shader shader_handle, CF_Material material_handle
 	CF_ShaderInternal* shader = (CF_ShaderInternal*)shader_handle.id;
 	CF_RenderState* state = &material->state;
 
-	// Cache the pipeline to avoid create/release each frame.
-	// ...Build a new one if the material marks itself as dirty.
+	// Content-based pipeline cache lookup.
+	CF_PipelineKey key = s_make_pipeline_key(state, mesh, shader);
 	SDL_GPUGraphicsPipeline* pip = NULL;
-	bool found = false;
 	for (int i = 0; i < shader->pip_cache.count(); ++i) {
-		CF_Pipeline pip_cache = shader->pip_cache[i];
-		if (pip_cache.material == material &&
-			pip_cache.mesh == mesh &&
-			g_ctx.canvas->sample_count == (CF_SampleCount)pip_cache.sample_count) {
-			found = true;
-			if (material->dirty) {
-				material->dirty = false;
-				pip = s_build_pipeline(shader, state, mesh);
-				if (pip_cache.pip) {
-					SDL_ReleaseGPUGraphicsPipeline(g_ctx.device, pip_cache.pip);
-				}
-				shader->pip_cache[i].pip = pip;
-			} else {
-				pip = pip_cache.pip;
-			}
+		if (CF_MEMCMP(&key, &shader->pip_cache[i].key, sizeof(key)) == 0) {
+			pip = shader->pip_cache[i].pip;
+			break;
 		}
 	}
-	if (!found) {
+	if (!pip) {
 		pip = s_build_pipeline(shader, state, mesh);
-		shader->pip_cache.add({ (SDL_GPUSampleCount)g_ctx.canvas->sample_count, material, pip, mesh });
-		material->dirty = false;
+		CF_Pipeline entry;
+		entry.key = key;
+		entry.pip = pip;
+		shader->pip_cache.add(entry);
 	}
 	CF_ASSERT(pip);
 
 	SDL_GPUCommandBuffer* cmd = g_ctx.cmd;
 	CF_ASSERT(cmd);
 
-	SDL_GPUColorTargetInfo pass_color_info;
-	CF_MEMSET(&pass_color_info, 0, sizeof(pass_color_info));
-	pass_color_info.texture = g_ctx.canvas->texture;
-	pass_color_info.clear_color = { app->clear_color.r, app->clear_color.g, app->clear_color.b, app->clear_color.a };
-	pass_color_info.load_op = g_ctx.canvas->clear ? SDL_GPU_LOADOP_CLEAR : SDL_GPU_LOADOP_LOAD;
-	pass_color_info.cycle = g_ctx.canvas->clear ? true : false;
-	if (g_ctx.canvas->sample_count == CF_SAMPLE_COUNT_1) {
-		pass_color_info.store_op = SDL_GPU_STOREOP_STORE;
-	} else {
-		pass_color_info.store_op = SDL_GPU_STOREOP_RESOLVE_AND_STORE;
-		pass_color_info.resolve_texture = g_ctx.canvas->resolve_texture;
+	// Begin a new render pass if needed, or reuse the active one.
+	SDL_GPURenderPass* pass = g_ctx.active_pass;
+	if (!pass) {
+		SDL_GPUColorTargetInfo pass_color_info;
+		CF_MEMSET(&pass_color_info, 0, sizeof(pass_color_info));
+		pass_color_info.texture = g_ctx.canvas->texture;
+		pass_color_info.clear_color = { app->clear_color.r, app->clear_color.g, app->clear_color.b, app->clear_color.a };
+		pass_color_info.load_op = g_ctx.canvas->clear ? SDL_GPU_LOADOP_CLEAR : SDL_GPU_LOADOP_LOAD;
+		pass_color_info.cycle = g_ctx.canvas->clear ? true : false;
+		if (g_ctx.canvas->sample_count == CF_SAMPLE_COUNT_1) {
+			pass_color_info.store_op = SDL_GPU_STOREOP_STORE;
+		} else {
+			pass_color_info.store_op = SDL_GPU_STOREOP_RESOLVE_AND_STORE;
+			pass_color_info.resolve_texture = g_ctx.canvas->resolve_texture;
+		}
+
+		// Always include depth-stencil if the canvas has one.
+		SDL_GPUDepthStencilTargetInfo pass_depth_stencil_info;
+		CF_MEMSET(&pass_depth_stencil_info, 0, sizeof(pass_depth_stencil_info));
+		SDL_GPUDepthStencilTargetInfo* depth_stencil_ptr = NULL;
+		if (g_ctx.canvas->depth_stencil) {
+			pass_depth_stencil_info.texture = g_ctx.canvas->depth_stencil;
+			pass_depth_stencil_info.clear_depth = app->clear_depth;
+			pass_depth_stencil_info.clear_stencil = app->clear_stencil;
+			pass_depth_stencil_info.load_op = g_ctx.canvas->clear ? SDL_GPU_LOADOP_CLEAR : SDL_GPU_LOADOP_LOAD;
+			pass_depth_stencil_info.store_op = SDL_GPU_STOREOP_STORE;
+			pass_depth_stencil_info.stencil_load_op = g_ctx.canvas->clear ? SDL_GPU_LOADOP_CLEAR : SDL_GPU_LOADOP_LOAD;
+			pass_depth_stencil_info.stencil_store_op = SDL_GPU_STOREOP_STORE;
+			pass_depth_stencil_info.cycle = pass_color_info.cycle;
+			depth_stencil_ptr = &pass_depth_stencil_info;
+		}
+
+		pass = SDL_BeginGPURenderPass(cmd, &pass_color_info, 1, depth_stencil_ptr);
+		CF_ASSERT(pass);
+		g_ctx.active_pass = pass;
+		g_ctx.canvas->pass = pass;
+		g_ctx.canvas->clear = false;
 	}
-	
-	const bool has_depth_stencil_texture = g_ctx.canvas->depth_stencil != NULL;
-	CF_TextureInternal* depth_texture = has_depth_stencil_texture ? (CF_TextureInternal*)g_ctx.canvas->cf_depth_stencil.id : NULL;
-	const bool depth_test_requested = state->depth_write_enabled || state->depth_compare != CF_COMPARE_FUNCTION_ALWAYS;
-	const bool depth_test_enabled = (depth_texture != NULL) && depth_test_requested;
-	const bool stencil_capable = s_texture_supports_stencil(depth_texture);
-	const bool stencil_test_enabled = stencil_capable && state->stencil.enabled;
-	const bool use_depth_stencil_target = depth_texture && (depth_test_enabled || stencil_test_enabled);
-	
-	SDL_GPUDepthStencilTargetInfo pass_depth_stencil_info;
-	CF_MEMSET(&pass_depth_stencil_info, 0, sizeof(pass_depth_stencil_info));
-	pass_depth_stencil_info.texture = use_depth_stencil_target ? g_ctx.canvas->depth_stencil : NULL;
-	if (use_depth_stencil_target) {
-		pass_depth_stencil_info.clear_depth = app->clear_depth;
-		pass_depth_stencil_info.clear_stencil = app->clear_stencil;
-		pass_depth_stencil_info.load_op = g_ctx.canvas->clear ? SDL_GPU_LOADOP_CLEAR : SDL_GPU_LOADOP_LOAD;
-		pass_depth_stencil_info.store_op = SDL_GPU_STOREOP_STORE;
-		pass_depth_stencil_info.stencil_load_op = g_ctx.canvas->clear ? SDL_GPU_LOADOP_CLEAR : SDL_GPU_LOADOP_LOAD;
-		pass_depth_stencil_info.stencil_store_op = SDL_GPU_STOREOP_STORE;
-		pass_depth_stencil_info.cycle = pass_color_info.cycle;
-	}
-	SDL_GPUDepthStencilTargetInfo* depth_stencil_ptr = use_depth_stencil_target ? &pass_depth_stencil_info : NULL;
-	SDL_GPURenderPass* pass = SDL_BeginGPURenderPass(cmd, &pass_color_info, 1, depth_stencil_ptr);
-	CF_ASSERT(pass);
-	g_ctx.canvas->pass = pass;
+
 	SDL_BindGPUGraphicsPipeline(pass, pip);
 	SDL_GPUBufferBinding bind[2];
-	bind[0].buffer = mesh->vertices.buffer;
-	bind[0].offset = 0;
-	bind[1].buffer = mesh->instances.buffer;
-	bind[1].offset = 0;
-	SDL_BindGPUVertexBuffers(pass, 0, bind, mesh->instances.buffer ? 2 : 1);
+	bool has_vertex_data = mesh->vertices.buffer != NULL;
+	bool has_instance_data = mesh->instances.buffer != NULL;
+	if (has_vertex_data && has_instance_data) {
+		bind[0].buffer = mesh->vertices.buffer; bind[0].offset = 0;
+		bind[1].buffer = mesh->instances.buffer; bind[1].offset = 0;
+		SDL_BindGPUVertexBuffers(pass, 0, bind, 2);
+	} else if (has_instance_data) {
+		bind[0].buffer = mesh->instances.buffer; bind[0].offset = 0;
+		SDL_BindGPUVertexBuffers(pass, 0, bind, 1);
+	} else {
+		bind[0].buffer = mesh->vertices.buffer; bind[0].offset = 0;
+		SDL_BindGPUVertexBuffers(pass, 0, bind, 1);
+	}
 
 	if (mesh->indices.buffer) {
 		SDL_GPUBufferBinding index_bind = {
@@ -1541,27 +1637,51 @@ void cf_sdlgpu_apply_shader(CF_Shader shader_handle, CF_Material material_handle
 	}
 	// @TODO Storage/compute.
 
-	// Bind images to all their respective slots.
-	int sampler_count = shader->image_names.count();
-	SDL_GPUTextureSamplerBinding* sampler_bindings = SDL_stack_alloc(SDL_GPUTextureSamplerBinding, sampler_count);
-	int found_image_count = 0;
-	for (int i = 0; found_image_count < sampler_count && i < material->fs.textures.count(); ++i) {
-		const char* image_name = material->fs.textures[i].name;
-		for (int j = 0; j < shader->image_names.size(); ++j) {
-			if (shader->image_names[j] == image_name) {
-				// Use sampler override if set, otherwise use the texture's sampler.
-				if (g_ctx.sampler_override) {
-					sampler_bindings[j].sampler = g_ctx.sampler_override;
-				} else {
-					sampler_bindings[j].sampler = ((CF_TextureInternal*)material->fs.textures[i].handle.id)->sampler;
+	// Bind VS images to their respective slots.
+	int vs_sampler_count = shader->vs_image_names.count();
+	if (vs_sampler_count > 0) {
+		SDL_GPUTextureSamplerBinding* vs_sampler_bindings = SDL_stack_alloc(SDL_GPUTextureSamplerBinding, vs_sampler_count);
+		int found_vs_image_count = 0;
+		for (int i = 0; found_vs_image_count < vs_sampler_count && i < material->vs.textures.count(); ++i) {
+			const char* image_name = material->vs.textures[i].name;
+			for (int j = 0; j < shader->vs_image_names.size(); ++j) {
+				if (shader->vs_image_names[j] == image_name) {
+					if (g_ctx.sampler_override) {
+						vs_sampler_bindings[j].sampler = g_ctx.sampler_override;
+					} else {
+						vs_sampler_bindings[j].sampler = ((CF_TextureInternal*)material->vs.textures[i].handle.id)->sampler;
+					}
+					vs_sampler_bindings[j].texture = ((CF_TextureInternal*)material->vs.textures[i].handle.id)->tex;
+					found_vs_image_count++;
 				}
-				sampler_bindings[j].texture = ((CF_TextureInternal*)material->fs.textures[i].handle.id)->tex;
-				found_image_count++;
 			}
 		}
+		CF_ASSERT(found_vs_image_count == vs_sampler_count);
+		SDL_BindGPUVertexSamplers(pass, 0, vs_sampler_bindings, (Uint32)found_vs_image_count);
 	}
-	CF_ASSERT(found_image_count == sampler_count);
-	SDL_BindGPUFragmentSamplers(pass, 0, sampler_bindings, (Uint32)found_image_count);
+
+	// Bind FS images to their respective slots.
+	int fs_sampler_count = shader->fs_image_names.count();
+	if (fs_sampler_count > 0) {
+		SDL_GPUTextureSamplerBinding* fs_sampler_bindings = SDL_stack_alloc(SDL_GPUTextureSamplerBinding, fs_sampler_count);
+		int found_fs_image_count = 0;
+		for (int i = 0; found_fs_image_count < fs_sampler_count && i < material->fs.textures.count(); ++i) {
+			const char* image_name = material->fs.textures[i].name;
+			for (int j = 0; j < shader->fs_image_names.size(); ++j) {
+				if (shader->fs_image_names[j] == image_name) {
+					if (g_ctx.sampler_override) {
+						fs_sampler_bindings[j].sampler = g_ctx.sampler_override;
+					} else {
+						fs_sampler_bindings[j].sampler = ((CF_TextureInternal*)material->fs.textures[i].handle.id)->sampler;
+					}
+					fs_sampler_bindings[j].texture = ((CF_TextureInternal*)material->fs.textures[i].handle.id)->tex;
+					found_fs_image_count++;
+				}
+			}
+		}
+		CF_ASSERT(found_fs_image_count == fs_sampler_count);
+		SDL_BindGPUFragmentSamplers(pass, 0, fs_sampler_bindings, (Uint32)found_fs_image_count);
+	}
 
 	// Clear sampler override after use.
 	g_ctx.sampler_override = NULL;
@@ -1571,9 +1691,6 @@ void cf_sdlgpu_apply_shader(CF_Shader shader_handle, CF_Material material_handle
 	s_copy_uniforms(cmd, &material->block_arena, shader, &material->fs, false);
 
 	SDL_SetGPUStencilReference(pass, state->stencil.reference);
-
-	// Prevent the same canvas from clearing itself more than once.
-	g_ctx.canvas->clear = false;
 }
 
 void cf_sdlgpu_draw_elements()
@@ -1593,8 +1710,6 @@ void cf_sdlgpu_draw_elements()
 		}
 	}
 	app->draw_call_count++;
-
-	SDL_EndGPURenderPass(g_ctx.canvas->pass);
 }
 
 void* cf_sdlgpu_create_draw_sampler(CF_Filter filter)
