@@ -80,6 +80,10 @@ jobs:
       - name: Create build folder with CMake
         run: |
           cmake ${{ matrix.platform.generate }} ${{ matrix.runtime_shader_compilation.cmake_arg }} \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+            -DCMAKE_MSVC_DEBUG_INFORMATION_FORMAT=Embedded \
+            -DCMAKE_POLICY_CMP0141=NEW \
             -B build_folder
 
       - name: Build project binary
