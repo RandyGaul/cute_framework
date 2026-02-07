@@ -51,8 +51,12 @@ jobs:
           libaudio-dev libfribidi-dev \
           libxkbcommon-dev libgl1-mesa-dev libgles2-mesa-dev \
           libegl1-mesa-dev libdbus-1-dev libibus-1.0-dev libudev-dev libthai-dev \
-          liburing-dev
+          liburing-dev libphysfs-dev
         if: runner.os == 'Linux'
+
+      - name: Install macOS Dependencies
+        run: brew install physfs
+        if: runner.os == 'macOS'
 
       - uses: actions/checkout@master
 
