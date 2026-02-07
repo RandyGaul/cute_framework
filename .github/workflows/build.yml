@@ -8,7 +8,7 @@ env:
 
 jobs:
   build:
-    name: "${{ matrix.os }} / ${{ matrix.compiler }} / ${{ matrix.runtime_shader_compilation == 'ON' && 'runtime-shaders' || 'precompiled-shaders' }}"
+    name: "${{ matrix.os }} / ${{ matrix.compiler }} / ${{ matrix.runtime_shader_compilation == 'ON' && 'runtime-shaders' || 'precompiled-shaders' }} / ${{ matrix.framework_static == 'ON' && 'static' || 'shared' }}"
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
 
@@ -23,6 +23,7 @@ jobs:
         os: [ubuntu-latest, macos-latest, windows-2025-vs2026]
         compiler: [gcc, clang, msvc]
         runtime_shader_compilation: [ON, OFF]
+        framework_static: [ON, OFF]
         exclude:
           # msvc is only available on Windows
           - os: ubuntu-latest
@@ -32,6 +33,13 @@ jobs:
           # gcc on Windows would require MinGW — excluded for simplicity
           - os: windows-2025-vs2026
             compiler: gcc
+          # framework_static OFF only for specific combos
+          - os: ubuntu-latest
+            compiler: clang
+            framework_static: OFF
+          - os: macos-latest
+            compiler: gcc
+            framework_static: OFF
 
     steps:
       # Linux needs to install various dependencies.
@@ -58,7 +66,7 @@ jobs:
       - name: Setup CCache
         uses: hendrikmuhs/ccache-action@v1.2
         with:
-          key: ${{ runner.os }}-${{matrix.compiler}}-${{ matrix.runtime_shader_compilation }}
+          key: ${{ runner.os }}-${{matrix.compiler}}-${{ matrix.runtime_shader_compilation }}-${{ matrix.framework_static }}
 
       - name: Set up MSVC developer environment
         uses: ilammy/msvc-dev-cmd@v1
@@ -104,6 +112,7 @@ jobs:
           -DSDL_WAYLAND=OFF
           -DSDL_X11=OFF
           -DCF_RUNTIME_SHADER_COMPILATION=${{ matrix.runtime_shader_compilation }}
+          -DCF_FRAMEWORK_STATIC=${{ matrix.framework_static }}
 
       - name: Build
         run: cmake --build build
@@ -140,7 +149,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.os }}-${{ matrix.compiler }}-shader-${{ matrix.runtime_shader_compilation == 'ON' && 'runtime-shaders' || 'precompiled-shaders' }}
+          name: ${{ matrix.os }}-${{ matrix.compiler }}-shader-${{ matrix.runtime_shader_compilation == 'ON' && 'runtime-shaders' || 'precompiled-shaders' }}-${{ matrix.framework_static == 'ON' && 'static' || 'shared' }}
           if-no-files-found: error
           path: |
             artifact.zip
@@ -153,7 +162,7 @@ jobs:
           name: docsparser
           path: ./build/docsparser
           if-no-files-found: error
-        if: runner.os == 'Linux' && matrix.compiler == 'gcc' && matrix.runtime_shader_compilation == 'ON'
+        if: runner.os == 'Linux' && matrix.compiler == 'gcc' && matrix.runtime_shader_compilation == 'ON' && matrix.framework_static == 'ON'
 
   docs:
     name: Build documentation
