@@ -26,6 +26,7 @@ option(CF_FRAMEWORK_APPLE_FRAMEWORK "Build CF libraries as Apple Framework" OFF)
 # Make sure all libraries are placed into the same output folder.
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 
 # Platform detection.
 # Put Emscripten first so it doesn't fall into the generic UNIX/Linux path.
@@ -282,6 +283,8 @@ FetchContent_Declare(
 	physfs
 	GIT_REPOSITORY https://github.com/icculus/physfs.git
 	GIT_TAG        9d18d36b5a5207b72f473f05e1b2834e347d8144
+	UPDATE_DISCONNECTED TRUE
+	EXCLUDE_FROM_ALL
 )
 FetchContent_MakeAvailable(physfs)
 
@@ -316,7 +319,8 @@ if(LINUX)
 		s2n
 		URL https://github.com/aws/s2n-tls/archive/refs/tags/v1.6.3.zip
 		DOWNLOAD_EXTRACT_TIMESTAMP ON
-		GIT_PROGRESS TRUE
+		UPDATE_DISCONNECTED TRUE
+		EXCLUDE_FROM_ALL
 	)
 	FetchContent_MakeAvailable(s2n)
 	set(CF_LINK_LIBS ${CF_LINK_LIBS} s2n)
@@ -388,6 +392,8 @@ if(NOT EMSCRIPTEN) # Emscripten provides it's own SDL3.
 		SDL3
 		URL https://github.com/libsdl-org/SDL/releases/download/release-${SDL_REQUIRED_VERSION}/SDL3-${SDL_REQUIRED_VERSION}.zip
 		DOWNLOAD_EXTRACT_TIMESTAMP ON
+		UPDATE_DISCONNECTED TRUE
+		EXCLUDE_FROM_ALL
 	)
 	FetchContent_MakeAvailable(SDL3)
 	if(CF_FRAMEWORK_STATIC)
@@ -421,7 +427,7 @@ endif()
 
 if (CF_RUNTIME_SHADER_COMPILATION OR CF_CUTE_SHADERC)
 	# glslang for shader compilation.
-	set(GLSLANG_TESTS_DEFAULT OFF CACHE BOOL "Do not build glslang tests.")
+	set(GLSLANG_TESTS OFF CACHE BOOL "Do not build glslang tests.")
 	set(BUILD_SHARED_LIBS OFF CACHE BOOL "Do not build glslang as a shared lib.")
 	set(ENABLE_OPT ON CACHE BOOL "Enable optimization.")
 	set(SKIP_SPIRV_TOOLS_INSTALL OFF CACHE BOOL "Don't install the SPIR-V Tools as they are built.")
@@ -435,6 +441,7 @@ if (CF_RUNTIME_SHADER_COMPILATION OR CF_CUTE_SHADERC)
 		URL https://github.com/KhronosGroup/glslang/archive/refs/tags/16.0.0.zip
 		DOWNLOAD_EXTRACT_TIMESTAMP ON
 		PATCH_COMMAND ${Python3_EXECUTABLE} update_glslang_sources.py
+		EXCLUDE_FROM_ALL
 	)
 	FetchContent_MakeAvailable(glslang)
 endif()
@@ -471,7 +478,7 @@ if(NOT EMSCRIPTEN)  # SPIRV-Cross is not needed for web.
 		GIT_REPOSITORY https://github.com/KhronosGroup/SPIRV-Cross.git
 		GIT_TAG 0a88b2d5c08708d45692b7096a0a84e7bfae366c
 		UPDATE_DISCONNECTED TRUE
-		GIT_PROGRESS TRUE
+		EXCLUDE_FROM_ALL
 	)
 	FetchContent_MakeAvailable(SPIRV_CROSS)
 	set(CF_LINK_LIBS ${CF_LINK_LIBS} spirv-cross-c)

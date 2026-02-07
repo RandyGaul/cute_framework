@@ -565,16 +565,20 @@ typedef struct CK_ArrayHeader
 #define CK_ACOOKIE    ck_cookie('A','R','R','Y')
 #define CK_ACANARY(a) ((a) ? assert(CK_AHDR(a)->cookie.val == CK_ACOOKIE.val) : (void)0)
 
+#ifndef CK_API
+#define CK_API
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-void sintern_nuke();
+CK_API void sintern_nuke();
 
-void* ck_agrow(const void* a, int new_size, size_t element_size);
-void* ck_astatic(const void* a, int buffer_size, size_t element_size);
-void* ck_aset(const void* a, const void* b, size_t element_size);
-void* ck_arev(const void* a, size_t element_size);
+CK_API void* ck_agrow(const void* a, int new_size, size_t element_size);
+CK_API void* ck_astatic(const void* a, int buffer_size, size_t element_size);
+CK_API void* ck_aset(const void* a, const void* b, size_t element_size);
+CK_API void* ck_arev(const void* a, size_t element_size);
 
 typedef struct CK_MapSlot
 {
@@ -624,71 +628,71 @@ typedef struct CK_MapHeader
 #define CK_ALIGN8(x) (((x) + 7) & ~(size_t)7)
 
 // Map implementation functions.
-void  ck_map_set_stretchy(void** m_ptr, uint64_t key, const void* val, int val_size);
-CK_MapHeader* ck_map_ensure_capacity(void** m_ptr, int want_items, int val_size);
-int   ck_map_find_impl(CK_MapHeader* hdr, uint64_t key);
-void* ck_map_get_ptr_impl(CK_MapHeader* hdr, uint64_t key);
-int   ck_map_del_impl(CK_MapHeader* hdr, uint64_t key);
-void  ck_map_clear_impl(CK_MapHeader* hdr);
-void  ck_map_free_impl(CK_MapHeader* hdr);
-void  ck_map_swap_impl(CK_MapHeader* hdr, int i, int j);
-void  ck_map_sort_impl(CK_MapHeader* hdr, int (*cmp)(const void* a, const void* b));
-void  ck_map_ssort_impl(CK_MapHeader* hdr, int ignore_case);
+CK_API void  ck_map_set_stretchy(void** m_ptr, uint64_t key, const void* val, int val_size);
+CK_API CK_MapHeader* ck_map_ensure_capacity(void** m_ptr, int want_items, int val_size);
+CK_API int   ck_map_find_impl(CK_MapHeader* hdr, uint64_t key);
+CK_API void* ck_map_get_ptr_impl(CK_MapHeader* hdr, uint64_t key);
+CK_API int   ck_map_del_impl(CK_MapHeader* hdr, uint64_t key);
+CK_API void  ck_map_clear_impl(CK_MapHeader* hdr);
+CK_API void  ck_map_free_impl(CK_MapHeader* hdr);
+CK_API void  ck_map_swap_impl(CK_MapHeader* hdr, int i, int j);
+CK_API void  ck_map_sort_impl(CK_MapHeader* hdr, int (*cmp)(const void* a, const void* b));
+CK_API void  ck_map_ssort_impl(CK_MapHeader* hdr, int ignore_case);
 
 // String implementation functions.
-char* ck_sfit(char* a, int n);
-char* ck_sset(char* a, const char* b);
-char* ck_sfmt(char* s, const char* fmt, ...);
-char* ck_sfmt_append(char* s, const char* fmt, ...);
-char* ck_svfmt(char* s, const char* fmt, va_list args);
-char* ck_svfmt_append(char* s, const char* fmt, va_list args);
-int   ck_sprefix(const char* s, const char* prefix);
-int   ck_ssuffix(const char* s, const char* suffix);
-void  ck_stoupper(char* s);
-void  ck_stolower(char* s);
-char* ck_sappend(char* a, const char* b);
-char* ck_sappend_range(char* a, const char* b, const char* b_end);
-char* ck_strim(char* s);
-char* ck_sltrim(char* s);
-char* ck_srtrim(char* s);
-char* ck_slpad(char* s, char pad, int count);
-char* ck_srpad(char* s, char pad, int count);
-char* ck_ssplit_once(char* s, char split_c);
-char** ck_ssplit(const char* s, char split_c);
-int   ck_sfirst_index_of(const char* s, char c);
-int   ck_slast_index_of(const char* s, char c);
-int   ck_stoint(const char* s);
-uint64_t ck_stouint(const char* s);
-float ck_stofloat(const char* s);
-double ck_stodouble(const char* s);
-uint64_t ck_stohex(const char* s);
-char* ck_sreplace(char* s, const char* replace_me, const char* with_me);
-char* ck_sdedup(char* s, int ch);
-char* ck_serase(char* s, int index, int count);
-char* ck_spop(char* s);
-char* ck_spopn(char* s, int n);
-char* ck_sappend_UTF8(char* s, int codepoint);
-const char* ck_decode_UTF8(const char* s, int* codepoint);
+CK_API char* ck_sfit(char* a, int n);
+CK_API char* ck_sset(char* a, const char* b);
+CK_API char* ck_sfmt(char* s, const char* fmt, ...);
+CK_API char* ck_sfmt_append(char* s, const char* fmt, ...);
+CK_API char* ck_svfmt(char* s, const char* fmt, va_list args);
+CK_API char* ck_svfmt_append(char* s, const char* fmt, va_list args);
+CK_API int   ck_sprefix(const char* s, const char* prefix);
+CK_API int   ck_ssuffix(const char* s, const char* suffix);
+CK_API void  ck_stoupper(char* s);
+CK_API void  ck_stolower(char* s);
+CK_API char* ck_sappend(char* a, const char* b);
+CK_API char* ck_sappend_range(char* a, const char* b, const char* b_end);
+CK_API char* ck_strim(char* s);
+CK_API char* ck_sltrim(char* s);
+CK_API char* ck_srtrim(char* s);
+CK_API char* ck_slpad(char* s, char pad, int count);
+CK_API char* ck_srpad(char* s, char pad, int count);
+CK_API char* ck_ssplit_once(char* s, char split_c);
+CK_API char** ck_ssplit(const char* s, char split_c);
+CK_API int   ck_sfirst_index_of(const char* s, char c);
+CK_API int   ck_slast_index_of(const char* s, char c);
+CK_API int   ck_stoint(const char* s);
+CK_API uint64_t ck_stouint(const char* s);
+CK_API float ck_stofloat(const char* s);
+CK_API double ck_stodouble(const char* s);
+CK_API uint64_t ck_stohex(const char* s);
+CK_API char* ck_sreplace(char* s, const char* replace_me, const char* with_me);
+CK_API char* ck_sdedup(char* s, int ch);
+CK_API char* ck_serase(char* s, int index, int count);
+CK_API char* ck_spop(char* s);
+CK_API char* ck_spopn(char* s, int n);
+CK_API char* ck_sappend_UTF8(char* s, int codepoint);
+CK_API const char* ck_decode_UTF8(const char* s, int* codepoint);
 
 // Path implementation functions.
-char* ck_spfname(const char* path);
-char* ck_spfname_no_ext(const char* path);
-char* ck_spext(const char* path);
-int   ck_spext_equ(const char* path, const char* ext);
-char* ck_sppop(const char* path);
-char* ck_sppopn(const char* path, int n);
-char* ck_spcompact(const char* path, int n);
-char* ck_spdir_of(const char* path);
-char* ck_sptop_of(const char* path);
-char* ck_spnorm(const char* path);
+CK_API char* ck_spfname(const char* path);
+CK_API char* ck_spfname_no_ext(const char* path);
+CK_API char* ck_spext(const char* path);
+CK_API int   ck_spext_equ(const char* path, const char* ext);
+CK_API char* ck_sppop(const char* path);
+CK_API char* ck_sppopn(const char* path, int n);
+CK_API char* ck_spcompact(const char* path, int n);
+CK_API char* ck_spdir_of(const char* path);
+CK_API char* ck_sptop_of(const char* path);
+CK_API char* ck_spnorm(const char* path);
 
 // UTF16 decode.
 #include <stdint.h>
-const uint16_t* ck_decode_UTF16(const uint16_t* s, int* codepoint);
+CK_API const uint16_t* ck_decode_UTF16(const uint16_t* s, int* codepoint);
 
 // Intern implementation.
-const char* ck_sintern_range(const char* start, const char* end);
-uint64_t ck_hash_fnv1a(const void* ptr, size_t sz);
+CK_API const char* ck_sintern_range(const char* start, const char* end);
+CK_API uint64_t ck_hash_fnv1a(const void* ptr, size_t sz);
 
 static inline const char* ck_sintern(const char* s)
 {

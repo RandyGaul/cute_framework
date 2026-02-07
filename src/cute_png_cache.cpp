@@ -37,12 +37,12 @@ void cf_png_cache_get_pixels(uint64_t image_id, void* buffer, int bytes_to_fill)
 	}
 }
 
-void cf_make_png_cache()
+CF_API void cf_make_png_cache()
 {
 	cache = CF_NEW(CF_PngCache);
 }
 
-void cf_destroy_png_cache()
+CF_API void cf_destroy_png_cache()
 {
 	for (int i = 0; i < asize(cache->animations_list); ++i) {
 		afree(cache->animations_list[i]->frames);

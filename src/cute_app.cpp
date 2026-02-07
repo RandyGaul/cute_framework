@@ -137,7 +137,7 @@ CF_DisplayOrientation cf_display_orientation(CF_DisplayID display_id)
 	}
 }
 
-CF_GLOBAL CF_App* app;
+CF_API CF_App* app;
 
 using namespace Cute;
 
