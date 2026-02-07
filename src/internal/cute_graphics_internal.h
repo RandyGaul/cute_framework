@@ -148,6 +148,7 @@ struct CF_MaterialInternal
 	CF_RenderState state;
 	CF_MaterialState vs;
 	CF_MaterialState fs;
+	CF_MaterialState cs;
 	CF_Arena uniform_arena;
 	CF_Arena block_arena;
 };

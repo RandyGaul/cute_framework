@@ -265,6 +265,7 @@ CF_ShaderCompilerResult cute_shader_compile(const char* source, CF_ShaderCompile
 	switch (stage) {
 		case CUTE_SHADER_STAGE_VERTEX: glslang_stage = EShLangVertex; break;
 		case CUTE_SHADER_STAGE_FRAGMENT: glslang_stage = EShLangFragment; break;
+		case CUTE_SHADER_STAGE_COMPUTE: glslang_stage = EShLangCompute; break;
 	}
 
 	glslang::TShader shader(glslang_stage);
@@ -360,11 +361,12 @@ CF_ShaderCompilerResult cute_shader_compile(const char* source, CF_ShaderCompile
 	void* bytecode = malloc(bytecode_size);
 	memcpy(bytecode, spirv.data(), bytecode_size);
 
-	// GLSL 300 transpilation
+	// GLSL 300 transpilation (skipped for compute -- GLES 3.0 has no compute support).
 	spvc_context spvc = NULL;
-	spvc_context_create(&spvc);
 	char* glsl300_src = NULL;
 	size_t glsl300_src_size = 0;
+	if (stage != CUTE_SHADER_STAGE_COMPUTE) {
+	spvc_context_create(&spvc);
 	{
 		spvc_parsed_ir ir = NULL;
 		spvc_context_parse_spirv(
@@ -453,6 +455,7 @@ CF_ShaderCompilerResult cute_shader_compile(const char* source, CF_ShaderCompile
 		spvc_context_release_allocations(spvc);
 	}
 	spvc_context_destroy(spvc);
+	} // stage != CUTE_SHADER_STAGE_COMPUTE
 
 	// Reflection
 	int num_samplers = 0;

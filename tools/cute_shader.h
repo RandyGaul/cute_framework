@@ -27,6 +27,7 @@ typedef enum CF_ShaderCompilerStage
 {
 	CUTE_SHADER_STAGE_VERTEX,
 	CUTE_SHADER_STAGE_FRAGMENT,
+	CUTE_SHADER_STAGE_COMPUTE,
 } CF_ShaderCompilerStage;
 
 typedef struct CF_ShaderCompilerConfig

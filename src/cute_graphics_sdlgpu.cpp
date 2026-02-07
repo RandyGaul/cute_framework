@@ -1639,7 +1639,6 @@ void cf_sdlgpu_apply_shader(CF_Shader shader_handle, CF_Material material_handle
 		};
 		SDL_BindGPUIndexBuffer(pass, &index_bind, mesh->indices.stride == 2 ? SDL_GPU_INDEXELEMENTSIZE_16BIT : SDL_GPU_INDEXELEMENTSIZE_32BIT);
 	}
-	// @TODO Storage/compute.
 
 	// Bind VS images to their respective slots.
 	int vs_sampler_count = shader->vs_image_names.count();
@@ -1735,6 +1734,350 @@ void cf_sdlgpu_destroy_draw_sampler(void* sampler)
 void cf_sdlgpu_set_sampler_override(void* sampler)
 {
 	g_ctx.sampler_override = (SDL_GPUSampler*)sampler;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Compute shaders.
+
+struct CF_ComputeShaderInternal
+{
+	SDL_GPUComputePipeline* pipeline;
+
+	// Reflection data for name-matching uniforms from material.
+	int cs_uniform_block_count;
+	int cs_block_sizes[CF_MAX_UNIFORM_BLOCK_COUNT];
+	Cute::Array<CF_UniformBlockMember> cs_uniform_block_members[CF_MAX_UNIFORM_BLOCK_COUNT];
+
+	// Sampler names + binding slots for name-matching textures from material.
+	Cute::Array<const char*> cs_sampler_names;
+	Cute::Array<int> cs_sampler_binding_slots;
+
+	// Resource counts (from SPIRV reflection, needed for pipeline creation).
+	int num_samplers;
+	int num_readonly_storage_textures;
+	int num_readonly_storage_buffers;
+	int num_readwrite_storage_textures;
+	int num_readwrite_storage_buffers;
+	int num_uniform_buffers;
+
+	// Hot-reload.
+	const char* path; // NULL if not file-based.
+
+	CF_INLINE int cs_index(const char* name, int block_index)
+	{
+		for (int i = 0; i < cs_uniform_block_members[block_index].size(); ++i) {
+			if (cs_uniform_block_members[block_index][i].name == name) return i;
+		}
+		return -1;
+	}
+};
+
+struct CF_StorageBufferInternal
+{
+	SDL_GPUBuffer* buffer;
+	SDL_GPUTransferBuffer* transfer_buffer;
+	int size;
+};
+
+CF_ComputeShader cf_sdlgpu_make_compute_shader_from_bytecode(CF_ShaderBytecode bytecode)
+{
+	CF_ComputeShaderInternal* cs = CF_NEW(CF_ComputeShaderInternal);
+	CF_MEMSET(cs, 0, sizeof(*cs));
+
+	const CF_ShaderInfo* info = &bytecode.shader_info;
+
+	// Load sampler reflection data.
+	for (int i = 0; i < info->num_images; ++i) {
+		cs->cs_sampler_names.add(sintern(info->image_names[i]));
+		cs->cs_sampler_binding_slots.add(info->image_binding_slots ? info->image_binding_slots[i] : i);
+	}
+
+	// Load uniform block reflection data.
+	cs->cs_uniform_block_count = info->num_uniforms;
+	const CF_ShaderUniformMemberInfo* member_infos = info->uniform_members;
+	for (int i = 0; i < info->num_uniforms; ++i) {
+		const CF_ShaderUniformInfo* block_info = &info->uniforms[i];
+		int block_index = block_info->block_index;
+		cs->cs_block_sizes[block_index] = block_info->block_size;
+
+		const char* block_name = sintern(block_info->block_name);
+		for (int j = 0; j < block_info->num_members; ++j) {
+			const CF_ShaderUniformMemberInfo* member_info = &member_infos[j];
+			CF_UniformBlockMember block_member;
+			block_member.name = sintern(member_info->name);
+			block_member.block_name = block_name;
+			block_member.type = s_uniform_type(member_info->type);
+			CF_ASSERT(block_member.type != CF_UNIFORM_TYPE_UNKNOWN);
+			block_member.array_element_count = member_info->array_length;
+			block_member.size = s_uniform_size(block_member.type) * member_info->array_length;
+			block_member.offset = member_info->offset;
+			cs->cs_uniform_block_members[block_index].add(block_member);
+		}
+		member_infos += block_info->num_members;
+	}
+
+	// Store resource counts.
+	cs->num_samplers = info->num_samplers;
+	cs->num_readonly_storage_textures = info->num_storage_textures;
+	cs->num_readonly_storage_buffers = info->num_storage_buffers;
+	cs->num_readwrite_storage_textures = 0;
+	cs->num_readwrite_storage_buffers = 0;
+	cs->num_uniform_buffers = info->num_uniforms;
+
+	// Create the compute pipeline.
+	if (SDL_GetGPUShaderFormats(g_ctx.device) == SDL_GPU_SHADERFORMAT_SPIRV) {
+		SDL_GPUComputePipelineCreateInfo pip_info = {};
+		pip_info.code = bytecode.content;
+		pip_info.code_size = bytecode.size;
+		pip_info.entrypoint = "main";
+		pip_info.format = SDL_GPU_SHADERFORMAT_SPIRV;
+		pip_info.num_samplers = (Uint32)cs->num_samplers;
+		pip_info.num_readonly_storage_textures = (Uint32)cs->num_readonly_storage_textures;
+		pip_info.num_readonly_storage_buffers = (Uint32)cs->num_readonly_storage_buffers;
+		pip_info.num_readwrite_storage_textures = (Uint32)cs->num_readwrite_storage_textures;
+		pip_info.num_readwrite_storage_buffers = (Uint32)cs->num_readwrite_storage_buffers;
+		pip_info.num_uniform_buffers = (Uint32)cs->num_uniform_buffers;
+		pip_info.threadcount_x = 0;
+		pip_info.threadcount_y = 0;
+		pip_info.threadcount_z = 0;
+		cs->pipeline = SDL_CreateGPUComputePipeline(g_ctx.device, &pip_info);
+	} else {
+		SDL_ShaderCross_ComputePipelineMetadata metadata = {};
+		metadata.num_samplers = (Uint32)cs->num_samplers;
+		metadata.num_readonly_storage_textures = (Uint32)cs->num_readonly_storage_textures;
+		metadata.num_readonly_storage_buffers = (Uint32)cs->num_readonly_storage_buffers;
+		metadata.num_readwrite_storage_textures = (Uint32)cs->num_readwrite_storage_textures;
+		metadata.num_readwrite_storage_buffers = (Uint32)cs->num_readwrite_storage_buffers;
+		metadata.num_uniform_buffers = (Uint32)cs->num_uniform_buffers;
+		metadata.threadcount_x = 0;
+		metadata.threadcount_y = 0;
+		metadata.threadcount_z = 0;
+
+		SDL_ShaderCross_SPIRV_Info spirvInfo;
+		CF_MEMSET(&spirvInfo, 0, sizeof(spirvInfo));
+		spirvInfo.bytecode = bytecode.content;
+		spirvInfo.bytecode_size = bytecode.size;
+		spirvInfo.entrypoint = "main";
+		spirvInfo.shader_stage = SDL_SHADERCROSS_SHADERSTAGE_COMPUTE;
+		spirvInfo.enable_debug = false;
+		spirvInfo.name = "compute.glsl";
+		spirvInfo.props = SDL_CreateProperties();
+		cs->pipeline = SDL_ShaderCross_CompileComputePipelineFromSPIRV(g_ctx.device, &spirvInfo, &metadata);
+		SDL_DestroyProperties(spirvInfo.props);
+	}
+	CF_ASSERT(cs->pipeline);
+
+	CF_ComputeShader result;
+	result.id = (uint64_t)cs;
+	return result;
+}
+
+void cf_sdlgpu_destroy_compute_shader(CF_ComputeShader shader)
+{
+	CF_ComputeShaderInternal* cs = (CF_ComputeShaderInternal*)shader.id;
+	if (!cs) return;
+	SDL_ReleaseGPUComputePipeline(g_ctx.device, cs->pipeline);
+	CF_FREE(cs);
+}
+
+CF_StorageBuffer cf_sdlgpu_make_storage_buffer(CF_StorageBufferParams params)
+{
+	CF_StorageBufferInternal* sb = CF_NEW(CF_StorageBufferInternal);
+	CF_MEMSET(sb, 0, sizeof(*sb));
+	sb->size = params.size;
+
+	SDL_GPUBufferUsageFlags usage = 0;
+	if (params.compute_readable) usage |= SDL_GPU_BUFFERUSAGE_COMPUTE_STORAGE_READ;
+	if (params.compute_writable) usage |= SDL_GPU_BUFFERUSAGE_COMPUTE_STORAGE_WRITE;
+	if (params.graphics_readable) usage |= SDL_GPU_BUFFERUSAGE_GRAPHICS_STORAGE_READ;
+
+	SDL_GPUBufferCreateInfo buf_info = {};
+	buf_info.usage = usage;
+	buf_info.size = (Uint32)params.size;
+	sb->buffer = SDL_CreateGPUBuffer(g_ctx.device, &buf_info);
+
+	SDL_GPUTransferBufferCreateInfo tbuf_info = {};
+	tbuf_info.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD;
+	tbuf_info.size = (Uint32)params.size;
+	sb->transfer_buffer = SDL_CreateGPUTransferBuffer(g_ctx.device, &tbuf_info);
+
+	CF_StorageBuffer result;
+	result.id = (uint64_t)sb;
+	return result;
+}
+
+void cf_sdlgpu_update_storage_buffer(CF_StorageBuffer buffer, const void* data, int size)
+{
+	CF_StorageBufferInternal* sb = (CF_StorageBufferInternal*)buffer.id;
+	s_end_active_pass();
+
+	// Resize if necessary.
+	if (size > sb->size) {
+		SDL_ReleaseGPUBuffer(g_ctx.device, sb->buffer);
+		SDL_ReleaseGPUTransferBuffer(g_ctx.device, sb->transfer_buffer);
+
+		int new_size = size * 2;
+		sb->size = new_size;
+
+		// Infer usage flags from the old buffer -- just re-create with same flags.
+		// For simplicity, use READ since we're uploading.
+		SDL_GPUBufferCreateInfo buf_info = {};
+		buf_info.usage = SDL_GPU_BUFFERUSAGE_COMPUTE_STORAGE_READ;
+		buf_info.size = (Uint32)new_size;
+		sb->buffer = SDL_CreateGPUBuffer(g_ctx.device, &buf_info);
+
+		SDL_GPUTransferBufferCreateInfo tbuf_info = {};
+		tbuf_info.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD;
+		tbuf_info.size = (Uint32)new_size;
+		sb->transfer_buffer = SDL_CreateGPUTransferBuffer(g_ctx.device, &tbuf_info);
+	}
+
+	// Map, copy, unmap.
+	void* p = SDL_MapGPUTransferBuffer(g_ctx.device, sb->transfer_buffer, true);
+	CF_MEMCPY(p, data, size);
+	SDL_UnmapGPUTransferBuffer(g_ctx.device, sb->transfer_buffer);
+
+	// Upload via copy pass.
+	SDL_GPUCommandBuffer* cmd = g_ctx.cmd ? g_ctx.cmd : SDL_AcquireGPUCommandBuffer(g_ctx.device);
+	SDL_GPUCopyPass* pass = SDL_BeginGPUCopyPass(cmd);
+	SDL_GPUTransferBufferLocation location;
+	location.offset = 0;
+	location.transfer_buffer = sb->transfer_buffer;
+	SDL_GPUBufferRegion region;
+	region.buffer = sb->buffer;
+	region.offset = 0;
+	region.size = size;
+	SDL_UploadToGPUBuffer(pass, &location, &region, true);
+	SDL_EndGPUCopyPass(pass);
+	if (!g_ctx.cmd) SDL_SubmitGPUCommandBuffer(cmd);
+}
+
+void cf_sdlgpu_destroy_storage_buffer(CF_StorageBuffer buffer)
+{
+	CF_StorageBufferInternal* sb = (CF_StorageBufferInternal*)buffer.id;
+	if (!sb) return;
+	SDL_ReleaseGPUBuffer(g_ctx.device, sb->buffer);
+	SDL_ReleaseGPUTransferBuffer(g_ctx.device, sb->transfer_buffer);
+	CF_FREE(sb);
+}
+
+void cf_sdlgpu_dispatch_compute(CF_ComputeShader shader, CF_Material material_handle, CF_ComputeDispatch dispatch)
+{
+	CF_ComputeShaderInternal* cs = (CF_ComputeShaderInternal*)shader.id;
+	CF_MaterialInternal* material = (CF_MaterialInternal*)material_handle.id;
+
+	s_end_active_pass();
+
+	SDL_GPUCommandBuffer* cmd = g_ctx.cmd;
+	CF_ASSERT(cmd);
+
+	// Build RW texture bindings for pass creation.
+	SDL_GPUStorageTextureReadWriteBinding* rw_tex_bindings = NULL;
+	if (dispatch.rw_texture_count > 0) {
+		rw_tex_bindings = SDL_stack_alloc(SDL_GPUStorageTextureReadWriteBinding, dispatch.rw_texture_count);
+		for (int i = 0; i < dispatch.rw_texture_count; ++i) {
+			CF_MEMSET(rw_tex_bindings + i, 0, sizeof(SDL_GPUStorageTextureReadWriteBinding));
+			CF_TextureInternal* tex = (CF_TextureInternal*)dispatch.rw_textures[i].id;
+			rw_tex_bindings[i].texture = tex->tex;
+		}
+	}
+
+	// Build RW buffer bindings for pass creation.
+	SDL_GPUStorageBufferReadWriteBinding* rw_buf_bindings = NULL;
+	if (dispatch.rw_buffer_count > 0) {
+		rw_buf_bindings = SDL_stack_alloc(SDL_GPUStorageBufferReadWriteBinding, dispatch.rw_buffer_count);
+		for (int i = 0; i < dispatch.rw_buffer_count; ++i) {
+			CF_MEMSET(rw_buf_bindings + i, 0, sizeof(SDL_GPUStorageBufferReadWriteBinding));
+			CF_StorageBufferInternal* sb = (CF_StorageBufferInternal*)dispatch.rw_buffers[i].id;
+			rw_buf_bindings[i].buffer = sb->buffer;
+		}
+	}
+
+	// Begin compute pass with RW resources.
+	SDL_GPUComputePass* pass = SDL_BeginGPUComputePass(
+		cmd,
+		rw_tex_bindings,
+		(Uint32)dispatch.rw_texture_count,
+		rw_buf_bindings,
+		(Uint32)dispatch.rw_buffer_count
+	);
+	CF_ASSERT(pass);
+
+	// Bind the pipeline.
+	SDL_BindGPUComputePipeline(pass, cs->pipeline);
+
+	// Bind sampled textures from material (name-matched against cs_sampler_names).
+	int sampler_count = cs->cs_sampler_names.count();
+	if (sampler_count > 0) {
+		SDL_GPUTextureSamplerBinding* sampler_bindings = SDL_stack_alloc(SDL_GPUTextureSamplerBinding, sampler_count);
+		int found_count = 0;
+		for (int i = 0; found_count < sampler_count && i < material->cs.textures.count(); ++i) {
+			const char* image_name = material->cs.textures[i].name;
+			for (int j = 0; j < cs->cs_sampler_names.size(); ++j) {
+				if (cs->cs_sampler_names[j] == image_name) {
+					sampler_bindings[j].sampler = ((CF_TextureInternal*)material->cs.textures[i].handle.id)->sampler;
+					sampler_bindings[j].texture = ((CF_TextureInternal*)material->cs.textures[i].handle.id)->tex;
+					found_count++;
+				}
+			}
+		}
+		CF_ASSERT(found_count == sampler_count);
+		SDL_BindGPUComputeSamplers(pass, 0, sampler_bindings, (Uint32)found_count);
+	}
+
+	// Bind readonly storage textures.
+	if (dispatch.ro_texture_count > 0) {
+		SDL_GPUTexture** ro_textures = SDL_stack_alloc(SDL_GPUTexture*, dispatch.ro_texture_count);
+		for (int i = 0; i < dispatch.ro_texture_count; ++i) {
+			CF_TextureInternal* tex = (CF_TextureInternal*)dispatch.ro_textures[i].id;
+			ro_textures[i] = tex->tex;
+		}
+		SDL_BindGPUComputeStorageTextures(pass, 0, ro_textures, (Uint32)dispatch.ro_texture_count);
+	}
+
+	// Bind readonly storage buffers.
+	if (dispatch.ro_buffer_count > 0) {
+		SDL_GPUBuffer** ro_buffers = SDL_stack_alloc(SDL_GPUBuffer*, dispatch.ro_buffer_count);
+		for (int i = 0; i < dispatch.ro_buffer_count; ++i) {
+			CF_StorageBufferInternal* sb = (CF_StorageBufferInternal*)dispatch.ro_buffers[i].id;
+			ro_buffers[i] = sb->buffer;
+		}
+		SDL_BindGPUComputeStorageBuffers(pass, 0, ro_buffers, (Uint32)dispatch.ro_buffer_count);
+	}
+
+	// Push uniforms from material (name-matched against cs_uniform_block_members).
+	{
+		void* ub_ptrs[CF_MAX_UNIFORM_BLOCK_COUNT] = { };
+		int ub_sizes[CF_MAX_UNIFORM_BLOCK_COUNT] = { };
+		for (int block_index = 0; block_index < cs->cs_uniform_block_count; ++block_index) {
+			for (int i = 0; i < material->cs.uniforms.count(); ++i) {
+				CF_Uniform uniform = material->cs.uniforms[i];
+				int idx = cs->cs_index(uniform.name, block_index);
+				if (idx >= 0) {
+					if (!ub_ptrs[block_index]) {
+						int size = cs->cs_block_sizes[block_index];
+						void* block = cf_arena_alloc(&material->block_arena, size);
+						CF_MEMSET(block, 0, size);
+						ub_ptrs[block_index] = block;
+						ub_sizes[block_index] = size;
+					}
+					int offset = cs->cs_uniform_block_members[block_index][idx].offset;
+					void* dst = (void*)(((uintptr_t)ub_ptrs[block_index]) + offset);
+					CF_MEMCPY(dst, uniform.data, uniform.size);
+				}
+			}
+		}
+		for (int i = 0; i < CF_MAX_UNIFORM_BLOCK_COUNT; ++i) {
+			if (ub_ptrs[i]) {
+				SDL_PushGPUComputeUniformData(cmd, i, ub_ptrs[i], (uint32_t)ub_sizes[i]);
+			}
+		}
+		cf_arena_reset(&material->block_arena);
+	}
+
+	// Dispatch.
+	SDL_DispatchGPUCompute(pass, (Uint32)dispatch.group_count_x, (Uint32)dispatch.group_count_y, (Uint32)dispatch.group_count_z);
+	SDL_EndGPUComputePass(pass);
 }
 
 #endif
