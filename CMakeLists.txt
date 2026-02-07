@@ -448,12 +448,22 @@ if (CF_RUNTIME_SHADER_COMPILATION OR CF_CUTE_SHADERC)
 		FetchContent_MakeAvailable(glslang)
 	else()
 		# Download pre-built glslang binaries (no Python dependency).
-		if (APPLE)
-			set(_glslang_archive "glslang-main-osx-Release.zip")
-		elseif (WIN32)
-			set(_glslang_archive "glslang-master-windows-Release.zip")
+		if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+			set(_glslang_build_type "Debug")
 		else()
-			set(_glslang_archive "glslang-main-linux-Release.zip")
+			set(_glslang_build_type "Release")
+		endif()
+		if (APPLE)
+			set(_glslang_archive "glslang-main-osx-${_glslang_build_type}.zip")
+		elseif (WIN32)
+			set(_glslang_archive "glslang-master-windows-${_glslang_build_type}.zip")
+			if (_glslang_build_type STREQUAL "Debug")
+				set(_glslang_lib_suffix "d")
+			else()
+				set(_glslang_lib_suffix "")
+			endif()
+		else()
+			set(_glslang_archive "glslang-main-linux-${_glslang_build_type}.zip")
 		endif()
 		FetchContent_Declare(
 			glslang_prebuilt
@@ -463,14 +473,19 @@ if (CF_RUNTIME_SHADER_COMPILATION OR CF_CUTE_SHADERC)
 		FetchContent_MakeAvailable(glslang_prebuilt)
 
 		set(_glslang_inc "${glslang_prebuilt_SOURCE_DIR}/include")
-		set(_glslang_lib "${glslang_prebuilt_SOURCE_DIR}/lib")
 
 		# Helper macro to create an imported static library target.
 		macro(_cf_import_glslang_lib target_name lib_name)
 			add_library(${target_name} STATIC IMPORTED)
-			set_target_properties(${target_name} PROPERTIES
-				IMPORTED_LOCATION "${_glslang_lib}/${CMAKE_STATIC_LIBRARY_PREFIX}${lib_name}${CMAKE_STATIC_LIBRARY_SUFFIX}"
-			)
+			if (WIN32)
+				set_target_properties(${target_name} PROPERTIES
+					IMPORTED_LOCATION "${glslang_prebuilt_SOURCE_DIR}/lib/${lib_name}${_glslang_lib_suffix}${CMAKE_STATIC_LIBRARY_SUFFIX}"
+				)
+			else()
+				set_target_properties(${target_name} PROPERTIES
+					IMPORTED_LOCATION "${glslang_prebuilt_SOURCE_DIR}/lib/${CMAKE_STATIC_LIBRARY_PREFIX}${lib_name}${CMAKE_STATIC_LIBRARY_SUFFIX}"
+				)
+			endif()
 		endmacro()
 
 		# Primary targets (names match the source build).
