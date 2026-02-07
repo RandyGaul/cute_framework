@@ -495,7 +495,7 @@ if (CF_RUNTIME_SHADER_COMPILATION OR CF_CUTE_SHADERC)
 			INTERFACE_LINK_LIBRARIES "MachineIndependent;GenericCodeGen;OSDependent"
 		)
 		set_target_properties(SPIRV PROPERTIES
-			INTERFACE_LINK_LIBRARIES "SPIRV-Tools;SPIRV-Tools-opt"
+			INTERFACE_LINK_LIBRARIES "SPIRV-Tools-opt;SPIRV-Tools"
 		)
 	endif()
 endif()
