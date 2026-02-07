@@ -146,6 +146,61 @@ When using CMake, prefix the path with `${CMAKE_CURRENT_SOURCE_DIR}` to make it 
 CF also provides several builtin utility modules: `gamma.shd`, `distance.shd`, `smooth_uv.shd`, `blend.shd`.
 These can always be `#include`-d by your shader without setting the include path. You can view these files by looking at CF's source code to see what sort of extra helper functions are available for use in your shaders.
 
+## Resource Set Layout
+
+All shaders compiled by CF (whether at runtime or precompiled) must assign resources to specific descriptor sets. These sets are dictated by SDL_GPU's SPIR-V binding convention and vary by shader stage.
+
+### Graphics Shaders (Vertex + Fragment)
+
+| Resource type | Vertex shader | Fragment shader |
+|---|---|---|
+| Sampled textures, storage textures, storage buffers | `set = 0` | `set = 2` |
+| Uniform buffers | `set = 1` | `set = 3` |
+
+Example vertex shader:
+```glsl
+layout (set = 0, binding = 0) uniform sampler2D u_image;
+layout (set = 1, binding = 0) uniform uniform_block {
+    vec2 u_texture_size;
+};
+```
+
+Example fragment shader:
+```glsl
+layout (set = 2, binding = 0) uniform sampler2D u_image;
+layout (set = 3, binding = 0) uniform uniform_block {
+    vec2 u_texture_size;
+};
+```
+
+### Compute Shaders
+
+| Resource type | Set |
+|---|---|
+| Sampled textures, then readonly storage textures, then readonly storage buffers | `set = 0` |
+| Read-write storage textures, then read-write storage buffers | `set = 1` |
+| Uniform buffers | `set = 2` |
+
+Example compute shader:
+```glsl
+layout (set = 0, binding = 0) uniform sampler2D u_input;
+layout (set = 1, binding = 0, rgba8) uniform writeonly image2D u_output;
+layout (set = 2, binding = 0) uniform uniform_block {
+    float u_time;
+};
+layout (local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+```
+
+When multiple resources share the same set, they are ordered by binding index. For example, if a compute shader has both a sampled texture and a readonly storage texture on set 0:
+```glsl
+layout (set = 0, binding = 0) uniform sampler2D u_sampled;
+layout (set = 0, binding = 1) readonly uniform image2D u_storage;
+```
+
+### Barrier Safety
+
+When using `shared` memory with `barrier()` in compute shaders, all threads in a workgroup must reach each `barrier()` call. Do not use `return` to exit threads before a barrier. Instead, let all threads participate in the loop/barrier and guard side-effects (like `imageStore`) behind a bounds check at the end.
+
 ## Draw Shader Quirks
 
 Due to the way [custom draw shaders](../topics/drawing.md?id=shaders) are compiled, any errors in your shader will be reported as being from `shader_stub.shd`.

@@ -138,33 +138,7 @@ To compile shaders from bytecode (SPIRV) you must first compile them to a byteco
 
 Shader compilation is explained in more details [here](shader_compilation.md).
 
-Be aware that shaders must adhere to strict rules for resource sets. Here's the notes from CF's source:
-
-```cpp
-/**
- * For _VERTEX_ shaders:
- *  0: Sampled textures, followed by storage textures, followed by storage buffers
- *  1: Uniform buffers
- * For _FRAGMENT_ shaders:
- *  2: Sampled textures, followed by storage textures, followed by storage buffers
- *  3: Uniform buffers
- * 
- * Example _VERTEX shader:
- * layout (set = 0, binding = 0) uniform sampler2D u_image;
- * 
- * layout (set = 1, binding = 0) uniform uniform_block {
- *     vec2 u_texture_size;
- * };
- * 
- * Example _FRAGMENT_ shader:
- * 
- * layout (set = 2, binding = 0) uniform sampler2D u_image;
- * 
- * layout (set = 3, binding = 0) uniform uniform_block {
- *     vec2 u_texture_size;
- * };
- */
-```
+Be aware that shaders must adhere to strict rules for resource sets. See [Resource Set Layout](shader_compilation.md#resource-set-layout) for the full reference. In short: vertex shaders use sets 0-1, fragment shaders use sets 2-3, and compute shaders use sets 0-2.
 
 For uniforms you only have one uniform block available, and it *must* be named `uniform_block`. However, if your
 shader is make from the draw api (`cf_make_draw_shader`) uniform blocks must be named `shd_uniforms`.
@@ -248,6 +222,29 @@ In C++ we can set values for these uniforms by name using [`cf_material_set_unif
 [CF_Material](../graphics/cf_material.md) has the cool feature to dynamically line up uniforms it stores with shaders. This means that a material can hold _many_ different uniforms, but only those that have a matching name will be sent to the shader. All other are simply ignored. This is great for making materials that can be applied to many different shaders, or making many different shaders that share a common material. Mix-and-matching is highly encouraged!
 
 You can set textures on a material as well via [`cf_material_set_texture_vs`](../graphics/cf_material_set_texture_vs.md) for the vertex shader, or [`cf_material_set_texture_fs`](../graphics/cf_material_set_texture_fs.md) for the fragment shader. More on textures in the next section.
+
+## Compute Shaders
+
+Compute shaders run on the GPU outside the normal graphics pipeline. They are available on SDL_GPU backends (Vulkan, D3D12, Metal) but not on GLES3. For the GLSL resource set layout rules and barrier safety, see [Resource Set Layout](shader_compilation.md#resource-set-layout).
+
+### Binding Resources from C
+
+Resources are bound through two mechanisms:
+
+- **Material** (name-matched): Sampled textures via [`cf_material_set_texture_cs`](../graphics/cf_material_set_texture_cs.md), uniforms via [`cf_material_set_uniform_cs`](../graphics/cf_material_set_uniform_cs.md).
+- **Dispatch struct** (positional): Read-write storage textures via `CF_ComputeDispatch::rw_textures`, readonly storage textures via `CF_ComputeDispatch::ro_textures`.
+
+```c
+// Bind sampled texture and uniform via material.
+cf_material_set_texture_cs(material, "u_input", my_texture);
+cf_material_set_uniform_cs(material, "u_time", &time, CF_UNIFORM_TYPE_FLOAT, 1);
+
+// Bind RW storage texture via dispatch and run.
+CF_ComputeDispatch dispatch = cf_compute_dispatch_defaults(width / 16, height / 16, 1);
+dispatch.rw_textures = &output_texture;
+dispatch.rw_texture_count = 1;
+cf_dispatch_compute(compute_shader, material, dispatch);
+```
 
 ## Textures
 

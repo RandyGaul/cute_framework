@@ -117,6 +117,7 @@ static CF_ShaderBytecode cf_compile_shader_to_bytecode_internal(const char* shad
 	default: CF_ASSERT(false); break; // No valid stage provided.
 	case CF_SHADER_STAGE_VERTEX: stage = CUTE_SHADER_STAGE_VERTEX; break;
 	case CF_SHADER_STAGE_FRAGMENT: stage = CUTE_SHADER_STAGE_FRAGMENT; break;
+	case CF_SHADER_STAGE_COMPUTE: stage = CUTE_SHADER_STAGE_COMPUTE; break;
 	}
 
 	// Setup builtin includes
@@ -458,11 +459,19 @@ void cf_material_set_texture_fs(CF_Material material_handle, const char* name, C
 	s_material_set_texture(material, &material->fs, name, texture);
 }
 
+void cf_material_set_texture_cs(CF_Material material_handle, const char* name, CF_Texture texture)
+{
+	CF_MaterialInternal* material = (CF_MaterialInternal*)material_handle.id;
+	name = sintern(name);
+	s_material_set_texture(material, &material->cs, name, texture);
+}
+
 void cf_material_clear_textures(CF_Material material_handle)
 {
 	CF_MaterialInternal* material = (CF_MaterialInternal*)material_handle.id;
 	material->vs.textures.clear();
 	material->fs.textures.clear();
+	material->cs.textures.clear();
 	material->dirty = true;
 }
 
@@ -520,12 +529,20 @@ void cf_material_set_uniform_fs_internal(CF_Material material_handle, const char
 	s_material_set_uniform(&material->uniform_arena, &material->fs, sintern(block_name), name, data, type, array_length);
 }
 
+void cf_material_set_uniform_cs(CF_Material material_handle, const char* name, void* data, CF_UniformType type, int array_length)
+{
+	CF_MaterialInternal* material = (CF_MaterialInternal*)material_handle.id;
+	name = sintern(name);
+	s_material_set_uniform(&material->uniform_arena, &material->cs, sintern("uniform_block"), name, data, type, array_length);
+}
+
 void cf_material_clear_uniforms(CF_Material material_handle)
 {
 	CF_MaterialInternal* material = (CF_MaterialInternal*)material_handle.id;
 	arena_reset(&material->uniform_arena);
 	material->vs.uniforms.clear();
 	material->fs.uniforms.clear();
+	material->cs.uniforms.clear();
 }
 
 void cf_clear_color(float red, float green, float blue, float alpha)
@@ -555,6 +572,31 @@ CF_Shader cf_make_shader(const char* vertex_path, const char* fragment_path)
 CF_Shader cf_make_shader_from_source(const char* vertex_src, const char* fragment_src)
 {
 	return cf_make_shader_from_source_internal(vertex_src, fragment_src, NULL);
+}
+
+CF_ComputeShader cf_make_compute_shader(const char* path)
+{
+	CF_Path p = CF_Path("/") + path;
+	const char* path_s = sintern(p);
+	CF_ShaderFileInfo info = app->shader_file_infos.find(path_s);
+	if (!info.path) return { 0 };
+	char* shd = fs_read_entire_file_to_memory_and_nul_terminate(info.path);
+	if (!shd) return { 0 };
+	CF_ComputeShader result = cf_make_compute_shader_from_source(shd);
+	cf_free(shd);
+	return result;
+}
+
+CF_ComputeShader cf_make_compute_shader_from_source(const char* src)
+{
+	CF_ShaderBytecode bytecode = cf_compile_shader_to_bytecode_internal(src, CF_SHADER_STAGE_COMPUTE, NULL);
+	if (bytecode.content == NULL) {
+		CF_ComputeShader result = { 0 };
+		return result;
+	}
+	CF_ComputeShader shader = cf_make_compute_shader_from_bytecode(bytecode);
+	cf_free_shader_bytecode(bytecode);
+	return shader;
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -649,6 +691,13 @@ void cf_draw_elements()
 #endif
 	}
 }
+
+CF_DISPATCH_SHIM(CF_ComputeShader, make_compute_shader_from_bytecode, (CF_ShaderBytecode bytecode), bytecode)
+CF_DISPATCH_SHIM_VOID(destroy_compute_shader, (CF_ComputeShader shader), shader)
+CF_DISPATCH_SHIM(CF_StorageBuffer, make_storage_buffer, (CF_StorageBufferParams params), params)
+CF_DISPATCH_SHIM_VOID(update_storage_buffer, (CF_StorageBuffer buffer, const void* data, int size), buffer, data, size)
+CF_DISPATCH_SHIM_VOID(destroy_storage_buffer, (CF_StorageBuffer buffer), buffer)
+CF_DISPATCH_SHIM_VOID(dispatch_compute, (CF_ComputeShader shader, CF_Material material, CF_ComputeDispatch dispatch), shader, material, dispatch)
 
 CF_DISPATCH_SHIM(void*, create_draw_sampler, (CF_Filter filter), filter)
 CF_DISPATCH_SHIM_VOID(destroy_draw_sampler, (void* sampler), sampler)

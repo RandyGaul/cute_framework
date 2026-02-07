@@ -1753,3 +1753,44 @@ void cf_gles_set_sampler_override(void* sampler)
 		g_ctx.has_filter_override = false;
 	}
 }
+
+//--------------------------------------------------------------------------------------------------
+// Compute stubs (not supported on GLES3).
+
+CF_ComputeShader cf_gles_make_compute_shader_from_bytecode(CF_ShaderBytecode bytecode)
+{
+	CF_UNUSED(bytecode);
+	CF_ComputeShader result = { 0 };
+	return result;
+}
+
+void cf_gles_destroy_compute_shader(CF_ComputeShader shader)
+{
+	CF_UNUSED(shader);
+}
+
+CF_StorageBuffer cf_gles_make_storage_buffer(CF_StorageBufferParams params)
+{
+	CF_UNUSED(params);
+	CF_StorageBuffer result = { 0 };
+	return result;
+}
+
+void cf_gles_update_storage_buffer(CF_StorageBuffer buffer, const void* data, int size)
+{
+	CF_UNUSED(buffer);
+	CF_UNUSED(data);
+	CF_UNUSED(size);
+}
+
+void cf_gles_destroy_storage_buffer(CF_StorageBuffer buffer)
+{
+	CF_UNUSED(buffer);
+}
+
+void cf_gles_dispatch_compute(CF_ComputeShader shader, CF_Material material, CF_ComputeDispatch dispatch)
+{
+	CF_UNUSED(shader);
+	CF_UNUSED(material);
+	CF_UNUSED(dispatch);
+}

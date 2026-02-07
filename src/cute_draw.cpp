@@ -2314,26 +2314,25 @@ static CF_Color s_parse_color(CF_CodeParseState* s)
 {
 	String string;
 	s->expect('#');
-	int digits = 0;
 	while (!s->done()) {
 		int cp = s->peek();
 		if (!s_is_hex_alphanum(cp)) {
 			break;
 		} else {
 			string.append(cp);
-			++digits;
 			s->skip();
 		}
 	}
-	int hex = 0;
+	uint32_t rgba = 0x000000FF;
 	if (!string.empty()) {
-		hex = (int)string.to_hex();
-		if (digits == 6) {
-			// Treat the color as opaque if only 3 bytes were found.
-			hex = hex << 8 | 0xFF;
-		}
+		rgba = (uint32_t)string.to_hex();
 	}
-	CF_Color result = make_color(hex);
+	CF_Color result = cf_make_color_rgba(
+		(uint8_t)((rgba >> 24) & 0xFF),
+		(uint8_t)((rgba >> 16) & 0xFF),
+		(uint8_t)((rgba >> 8) & 0xFF),
+		(uint8_t)(rgba & 0xFF)
+	);
 	return result;
 }
 

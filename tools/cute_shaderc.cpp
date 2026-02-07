@@ -26,6 +26,7 @@ typedef enum
 {
 	SHADER_TYPE_VERTEX,
 	SHADER_TYPE_FRAGMENT,
+	SHADER_TYPE_COMPUTE,
 	SHADER_TYPE_DRAW,
 	SHADER_TYPE_BUILTIN,
 } shader_type_t;
@@ -387,6 +388,8 @@ int main(int argc, const char* argv[])
 				type = SHADER_TYPE_VERTEX;
 			} else if (strcmp(flag_value, "fragment") == 0) {
 				type = SHADER_TYPE_FRAGMENT;
+			} else if (strcmp(flag_value, "compute") == 0) {
+				type = SHADER_TYPE_COMPUTE;
 			} else if (strcmp(flag_value, "draw") == 0) {
 				type = SHADER_TYPE_DRAW;
 			} else if (strcmp(flag_value, "builtin") == 0) {
@@ -448,10 +451,10 @@ int main(int argc, const char* argv[])
 		}
 
 		if (
-			!(type == SHADER_TYPE_VERTEX || type == SHADER_TYPE_FRAGMENT)
+			!(type == SHADER_TYPE_VERTEX || type == SHADER_TYPE_FRAGMENT || type == SHADER_TYPE_COMPUTE)
 			&& output_bytecode_path != NULL
 		) {
-			fprintf(stderr, "%s is only valid for shader of type 'vertex' or 'fragment'\n", FLAG_BYTECODE_OUT);
+			fprintf(stderr, "%s is only valid for shader of type 'vertex', 'fragment', or 'compute'\n", FLAG_BYTECODE_OUT);
 			return 1;
 		}
 	}
@@ -631,11 +634,13 @@ int main(int argc, const char* argv[])
 			.return_preprocessed_source = true,
 		};
 
+		CF_ShaderCompilerStage compile_stage = CUTE_SHADER_STAGE_FRAGMENT;
+		if (type == SHADER_TYPE_VERTEX) compile_stage = CUTE_SHADER_STAGE_VERTEX;
+		else if (type == SHADER_TYPE_COMPUTE) compile_stage = CUTE_SHADER_STAGE_COMPUTE;
+
 		CF_ShaderCompilerResult result = cute_shader_compile(
 			input_content,
-			type == SHADER_TYPE_VERTEX
-				? CUTE_SHADER_STAGE_VERTEX
-				: CUTE_SHADER_STAGE_FRAGMENT,
+			compile_stage,
 			config
 		);
 		if (!result.success) {
