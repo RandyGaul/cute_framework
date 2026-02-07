@@ -65,6 +65,7 @@ if(MSVC)
 	add_definitions(-D_CRT_SECURE_NO_DEPRECATE)
 	add_compile_options("$<$<C_COMPILER_ID:MSVC>:/utf-8>")
 	add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/utf-8>")
+	add_compile_options(/MP)
 endif()
 
 if(CF_FRAMEWORK_WITH_HTTPS MATCHES OFF)
