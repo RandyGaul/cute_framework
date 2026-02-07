@@ -19,9 +19,10 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 # Todo - Fix how turning some of these off breaks the build.
 option(CF_FRAMEWORK_STATIC "Build static library for Cute Framework." ON)
-option(CF_RUNTIME_SHADER_COMPILATION "Build CF with online shader compilation support (requires python 3.x installation)." ON)
-option(CF_CUTE_SHADERC "Build cute-shaderc, an offline shader compiler (requires python 3.x installation)." ON)
+option(CF_RUNTIME_SHADER_COMPILATION "Build CF with online shader compilation support." ON)
+option(CF_CUTE_SHADERC "Build cute-shaderc, an offline shader compiler." ON)
 option(CF_FRAMEWORK_APPLE_FRAMEWORK "Build CF libraries as Apple Framework" OFF)
+option(CF_GLSLANG_BUILD_FROM_SOURCE "Build glslang from source instead of using pre-built binaries." OFF)
 
 # Make sure all libraries are placed into the same output folder.
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
@@ -426,24 +427,77 @@ if(NOT EMSCRIPTEN) # Emscripten provides it's own SDL3.
 endif()
 
 if (CF_RUNTIME_SHADER_COMPILATION OR CF_CUTE_SHADERC)
-	# glslang for shader compilation.
-	set(GLSLANG_TESTS OFF CACHE BOOL "Do not build glslang tests.")
-	set(BUILD_SHARED_LIBS OFF CACHE BOOL "Do not build glslang as a shared lib.")
-	set(ENABLE_OPT ON CACHE BOOL "Enable optimization.")
-	set(SKIP_SPIRV_TOOLS_INSTALL OFF CACHE BOOL "Don't install the SPIR-V Tools as they are built.")
-	set(SPIRV_SKIP_EXECUTABLES ON CACHE BOOL "Don't build any SPIR-V Tools executables/tests.")
-	set(SPIRV_WERROR OFF CACHE BOOL "Turn off SPIR-V warnings as error.")
-	set(ENABLE_GLSLANG_BINARIES OFF CACHE BOOL "Turn off some standalone binary tools for glslang.")
-	set(GLSLANG_ENABLE_INSTALL OFF CACHE BOOL "Disable installation option for glslang.")
-	find_package(Python3 REQUIRED)
-	FetchContent_Declare(
-		glslang
-		URL https://github.com/KhronosGroup/glslang/archive/refs/tags/16.0.0.zip
-		DOWNLOAD_EXTRACT_TIMESTAMP ON
-		PATCH_COMMAND ${Python3_EXECUTABLE} update_glslang_sources.py
-		EXCLUDE_FROM_ALL
-	)
-	FetchContent_MakeAvailable(glslang)
+	if (CF_GLSLANG_BUILD_FROM_SOURCE)
+		# Build glslang from source (requires Python 3).
+		set(GLSLANG_TESTS OFF CACHE BOOL "Do not build glslang tests.")
+		set(BUILD_SHARED_LIBS OFF CACHE BOOL "Do not build glslang as a shared lib.")
+		set(ENABLE_OPT ON CACHE BOOL "Enable optimization.")
+		set(SKIP_SPIRV_TOOLS_INSTALL OFF CACHE BOOL "Don't install the SPIR-V Tools as they are built.")
+		set(SPIRV_SKIP_EXECUTABLES ON CACHE BOOL "Don't build any SPIR-V Tools executables/tests.")
+		set(SPIRV_WERROR OFF CACHE BOOL "Turn off SPIR-V warnings as error.")
+		set(ENABLE_GLSLANG_BINARIES OFF CACHE BOOL "Turn off some standalone binary tools for glslang.")
+		set(GLSLANG_ENABLE_INSTALL OFF CACHE BOOL "Disable installation option for glslang.")
+		find_package(Python3 REQUIRED)
+		FetchContent_Declare(
+			glslang
+			URL https://github.com/KhronosGroup/glslang/archive/refs/tags/16.0.0.zip
+			DOWNLOAD_EXTRACT_TIMESTAMP ON
+			PATCH_COMMAND ${Python3_EXECUTABLE} update_glslang_sources.py
+			EXCLUDE_FROM_ALL
+		)
+		FetchContent_MakeAvailable(glslang)
+	else()
+		# Download pre-built glslang binaries (no Python dependency).
+		if (APPLE)
+			set(_glslang_archive "glslang-main-osx-Release.zip")
+		elseif (WIN32)
+			set(_glslang_archive "glslang-master-windows-Release.zip")
+		else()
+			set(_glslang_archive "glslang-main-linux-Release.zip")
+		endif()
+		FetchContent_Declare(
+			glslang_prebuilt
+			URL "https://github.com/KhronosGroup/glslang/releases/download/main-tot/${_glslang_archive}"
+			DOWNLOAD_EXTRACT_TIMESTAMP ON
+		)
+		FetchContent_MakeAvailable(glslang_prebuilt)
+
+		set(_glslang_inc "${glslang_prebuilt_SOURCE_DIR}/include")
+		set(_glslang_lib "${glslang_prebuilt_SOURCE_DIR}/lib")
+
+		# Helper macro to create an imported static library target.
+		macro(_cf_import_glslang_lib target_name lib_name)
+			add_library(${target_name} STATIC IMPORTED)
+			set_target_properties(${target_name} PROPERTIES
+				IMPORTED_LOCATION "${_glslang_lib}/${CMAKE_STATIC_LIBRARY_PREFIX}${lib_name}${CMAKE_STATIC_LIBRARY_SUFFIX}"
+			)
+		endmacro()
+
+		# Primary targets (names match the source build).
+		_cf_import_glslang_lib(glslang "glslang")
+		_cf_import_glslang_lib(glslang-default-resource-limits "glslang-default-resource-limits")
+		_cf_import_glslang_lib(SPIRV "SPIRV")
+
+		# Transitive dependencies.
+		_cf_import_glslang_lib(MachineIndependent "MachineIndependent")
+		_cf_import_glslang_lib(GenericCodeGen "GenericCodeGen")
+		_cf_import_glslang_lib(OSDependent "OSDependent")
+		_cf_import_glslang_lib(SPIRV-Tools "SPIRV-Tools")
+		_cf_import_glslang_lib(SPIRV-Tools-opt "SPIRV-Tools-opt")
+
+		# Wire up include directories.
+		# Two include paths needed: include/ for <glslang/...> and include/glslang/ for <SPIRV/...>
+		set_target_properties(glslang PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${_glslang_inc};${_glslang_inc}/glslang")
+		set_target_properties(SPIRV PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${_glslang_inc};${_glslang_inc}/glslang")
+
+		# Wire up transitive link dependencies.
+		set_target_properties(glslang PROPERTIES
+			INTERFACE_LINK_LIBRARIES "MachineIndependent;GenericCodeGen;OSDependent"
+		)
+		set_target_properties(SPIRV PROPERTIES
+			INTERFACE_LINK_LIBRARIES "SPIRV-Tools;SPIRV-Tools-opt"
+		)
+	endif()
 endif()
 
 add_subdirectory(tools)
