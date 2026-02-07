@@ -62,9 +62,10 @@ jobs:
 
       - name: Set up MSVC developer environment
         uses: ilammy/msvc-dev-cmd@v1
-        if: runner.os == 'Windows'
+        if: matrix.compiler == 'msvc'
 
       - name: Set compiler environment
+        shell: bash
         run: |
           case "${{ matrix.compiler }}" in
             gcc)
@@ -82,26 +83,27 @@ jobs:
           esac
 
       - name: Configure
+        shell: bash
         run: >
           cmake -B build -G Ninja
-            -DCMAKE_C_COMPILER_LAUNCHER=ccache
-            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
-            -DCMAKE_MSVC_DEBUG_INFORMATION_FORMAT=Embedded
-            -DCMAKE_POLICY_CMP0141=NEW
-            -DSDL_ALSA=OFF
-            -DSDL_CCACHE=ON
-            -DSDL_JACK=OFF
-            -DSDL_KMSDRM=OFF
-            -DSDL_OPENGL=OFF
-            -DSDL_OPENGLES=OFF
-            -DSDL_PIPEWIRE=OFF
-            -DSDL_PULSEAUDIO=OFF
-            -DSDL_RENDER=OFF
-            -DSDL_SNDIO=OFF
-            -DSDL_UNIX_CONSOLE_BUILD=ON
-            -DSDL_WAYLAND=OFF
-            -DSDL_X11=OFF
-            -DCF_RUNTIME_SHADER_COMPILATION=${{ matrix.runtime_shader_compilation }}
+          -DCMAKE_C_COMPILER_LAUNCHER=ccache
+          -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+          -DCMAKE_MSVC_DEBUG_INFORMATION_FORMAT=Embedded
+          -DCMAKE_POLICY_CMP0141=NEW
+          -DSDL_ALSA=OFF
+          -DSDL_CCACHE=ON
+          -DSDL_JACK=OFF
+          -DSDL_KMSDRM=OFF
+          -DSDL_OPENGL=OFF
+          -DSDL_OPENGLES=OFF
+          -DSDL_PIPEWIRE=OFF
+          -DSDL_PULSEAUDIO=OFF
+          -DSDL_RENDER=OFF
+          -DSDL_SNDIO=OFF
+          -DSDL_UNIX_CONSOLE_BUILD=ON
+          -DSDL_WAYLAND=OFF
+          -DSDL_X11=OFF
+          -DCF_RUNTIME_SHADER_COMPILATION=${{ matrix.runtime_shader_compilation }}
 
       - name: Build
         run: cmake --build build
