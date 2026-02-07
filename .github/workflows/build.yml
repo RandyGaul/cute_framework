@@ -43,8 +43,8 @@ jobs:
           libaudio-dev libfribidi-dev \
           libxkbcommon-dev libgl1-mesa-dev libgles2-mesa-dev \
           libegl1-mesa-dev libdbus-1-dev libibus-1.0-dev libudev-dev libthai-dev \
-          liburing-dev libgl-dev libglx-dev libegl-dev
-        if: matrix.platform.name == 'Linux'
+          liburing-dev
+        if: runner.os == 'Linux'
 
       - uses: actions/checkout@master
 
