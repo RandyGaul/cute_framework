@@ -5,6 +5,9 @@
 	This software is dual-licensed with zlib or Unlicense, check LICENSE.txt for more info
 */
 
+#ifndef CF_SYMBOL_H
+#define CF_SYMBOL_H
+
 #include "cute_defines.h"
 
 //--------------------------------------------------------------------------------------------------
@@ -68,3 +71,5 @@ CF_INLINE void* load_function(CF_SharedLibrary* library, const char* function_na
 }
 
 #endif // CF_CPP
+
+#endif // CF_SYMBOL_H
