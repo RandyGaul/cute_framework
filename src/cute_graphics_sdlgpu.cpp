@@ -1820,8 +1820,8 @@ CF_ComputeShader cf_sdlgpu_make_compute_shader_from_bytecode(CF_ShaderBytecode b
 	cs->num_samplers = info->num_samplers;
 	cs->num_readonly_storage_textures = info->num_storage_textures;
 	cs->num_readonly_storage_buffers = info->num_storage_buffers;
-	cs->num_readwrite_storage_textures = 0;
-	cs->num_readwrite_storage_buffers = 0;
+	cs->num_readwrite_storage_textures = info->num_readwrite_storage_textures;
+	cs->num_readwrite_storage_buffers = info->num_readwrite_storage_buffers;
 	cs->num_uniform_buffers = info->num_uniforms;
 
 	// Create the compute pipeline.

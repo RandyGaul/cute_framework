@@ -143,10 +143,14 @@ typedef struct CF_ShaderInfo
 {
 	/* @member Number of samplers. */
 	int num_samplers;
-	/* @member Number of storage textures. */
+	/* @member Number of readonly storage textures. */
 	int num_storage_textures;
-	/* @member Number of storage buffers. */
+	/* @member Number of readonly storage buffers. */
 	int num_storage_buffers;
+	/* @member Number of readwrite storage textures. */
+	int num_readwrite_storage_textures;
+	/* @member Number of readwrite storage buffers. */
+	int num_readwrite_storage_buffers;
 
 	/* @member Number of images. */
 	int num_images;
