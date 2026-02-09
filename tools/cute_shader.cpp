@@ -461,6 +461,8 @@ CF_ShaderCompilerResult cute_shader_compile(const char* source, CF_ShaderCompile
 	int num_samplers = 0;
 	int num_storage_textures = 0;
 	int num_storage_buffers = 0;
+	int num_readwrite_storage_textures = 0;
+	int num_readwrite_storage_buffers = 0;
 	int num_images;
 	const char** image_names = NULL;
 	int* image_binding_slots = NULL;
@@ -493,8 +495,14 @@ CF_ShaderCompilerResult cute_shader_compile(const char* source, CF_ShaderCompile
 				image_binding_slots_vec.push_back(binding->binding);
 			}    // Fall-thru.
 			case SPV_REFLECT_DESCRIPTOR_TYPE_SAMPLER: ++num_samplers; break;
-			case SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_IMAGE: ++num_storage_textures; break;
-			case SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_BUFFER: ++num_storage_buffers; break;
+			case SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_IMAGE:
+				if (binding->decoration_flags & SPV_REFLECT_DECORATION_NON_WRITABLE) ++num_storage_textures;
+				else ++num_readwrite_storage_textures;
+				break;
+			case SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_BUFFER:
+				if (binding->decoration_flags & SPV_REFLECT_DECORATION_NON_WRITABLE) ++num_storage_buffers;
+				else ++num_readwrite_storage_buffers;
+				break;
 			case SPV_REFLECT_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
 			{
 				// Grab information about the uniform block.
@@ -597,6 +605,8 @@ CF_ShaderCompilerResult cute_shader_compile(const char* source, CF_ShaderCompile
 				.num_samplers = num_samplers,
 				.num_storage_textures = num_storage_textures,
 				.num_storage_buffers = num_storage_buffers,
+				.num_readwrite_storage_textures = num_readwrite_storage_textures,
+				.num_readwrite_storage_buffers = num_readwrite_storage_buffers,
 
 				.num_images = num_images,
 				.image_names = image_names,

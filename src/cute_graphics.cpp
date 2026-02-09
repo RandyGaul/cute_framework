@@ -33,7 +33,7 @@ static void s_shader_directory_recursive(CF_Path path)
 			CF_Stat stat;
 			fs_stat(p, &stat);
 			String ext = p.ext();
-			if (ext == ".vs" || ext == ".fs" || ext == ".shd") {
+			if (ext == ".vs" || ext == ".fs" || ext == ".shd" || ext == ".c_shd") {
 				// Exclude app->shader_directory for easier lookups.
 				// e.g. app->shader_directory is "/shaders" and contains
 				// "/shaders/my_shader.shd", the user needs to only reference it by:
@@ -74,7 +74,7 @@ static void s_shader_watch_recursive(CF_Path path)
 			CF_Stat stat;
 			fs_stat(p, &stat);
 			String ext = p.ext();
-			if (ext == ".vs" || ext == ".fs" || ext == ".shd") {
+			if (ext == ".vs" || ext == ".fs" || ext == ".shd" || ext == ".c_shd") {
 				const char* key = sintern(path + dir[i]);
 				CF_ShaderFileInfo& info = app->shader_file_infos.find(key);
 				if (info.stat.last_modified_time < stat.last_modified_time) {
@@ -578,9 +578,9 @@ CF_ComputeShader cf_make_compute_shader(const char* path)
 {
 	CF_Path p = CF_Path("/") + path;
 	const char* path_s = sintern(p);
-	CF_ShaderFileInfo info = app->shader_file_infos.find(path_s);
-	if (!info.path) return { 0 };
-	char* shd = fs_read_entire_file_to_memory_and_nul_terminate(info.path);
+	CF_ShaderFileInfo* info = app->shader_file_infos.try_find(path_s);
+	if (!info) return { 0 };
+	char* shd = fs_read_entire_file_to_memory_and_nul_terminate(info->path);
 	if (!shd) return { 0 };
 	CF_ComputeShader result = cf_make_compute_shader_from_source(shd);
 	cf_free(shd);

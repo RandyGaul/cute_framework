@@ -202,6 +202,8 @@ static bool write_bytecode_struct_contents(
 	TABS(); fprintf(file, "\t.num_samplers = %d,\n", shader_info->num_samplers);
 	TABS(); fprintf(file, "\t.num_storage_textures = %d,\n", shader_info->num_storage_textures);
 	TABS(); fprintf(file, "\t.num_storage_buffers = %d,\n", shader_info->num_storage_buffers);
+	TABS(); fprintf(file, "\t.num_readwrite_storage_textures = %d,\n", shader_info->num_readwrite_storage_textures);
+	TABS(); fprintf(file, "\t.num_readwrite_storage_buffers = %d,\n", shader_info->num_readwrite_storage_buffers);
 	TABS(); fprintf(file, "\t.num_images = %d,\n", shader_info->num_images);
 	TABS(); fprintf(file, "\t.image_names = %s%s_image_names,\n", var_name, suffix);
 	TABS(); fprintf(file, "\t.image_binding_slots = %s%s_image_binding_slots,\n", var_name, suffix);
