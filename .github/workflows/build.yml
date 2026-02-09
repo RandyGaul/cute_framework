@@ -8,8 +8,8 @@ env:
 
 jobs:
   build:
-    name: "${{ matrix.platform.name }} (CF_RUNTIME_SHADER_COMPILATION=${{ matrix.runtime_shader_compilation.value }})"
-    runs-on: ${{ matrix.platform.os }}
+    name: "${{ matrix.os }} / ${{ matrix.compiler }} / ${{ matrix.runtime_shader_compilation == 'ON' && 'runtime-shaders' || 'precompiled-shaders' }} / ${{ matrix.framework_static == 'ON' && 'static' || 'shared' }}"
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 20
 
     defaults:
@@ -20,33 +20,40 @@ jobs:
       # Don't cancel other in-progress jobs if one fails.
       fail-fast: false
       matrix:
-        runtime_shader_compilation:
-          - { value: "ON", cmake_arg: "-DCF_RUNTIME_SHADER_COMPILATION=ON" }
-          - { value: "OFF", cmake_arg: "-DCF_RUNTIME_SHADER_COMPILATION=OFF" }
-        platform:
-          # Diabled MinGW as it was having trouble with DX12 headers being out of date.
-          # - { name: "Windows (MinGW-w64)",     os: windows-latest, artifact: 'mingw-w64', generate: '-G "MinGW Makefiles"' }
-          - {
-              name: "Windows (MSVC 18 2026)",
-              os: windows-2025-vs2026,
-              artifact: "msvc18",
-              generate: '-G "Ninja" -DSDL_RENDER=OFF -DSDL_CCACHE=ON',
-            }
-          - {
-              name: "macOS",
-              os: macos-latest,
-              artifact: "macos",
-              generate: '-G "Ninja" -DSDL_RENDER=OFF -DSDL_CCACHE=ON',
-            }
-          - {
-              name: "Linux",
-              os: ubuntu-latest,
-              artifact: "linux",
-              generate: '-G "Ninja" -DSDL_JACK=OFF -DSDL_PIPEWIRE=OFF -DSDL_PULSEAUDIO=OFF -DSDL_SNDIO=OFF -DSDL_ALSA=OFF -DSDL_WAYLAND=OFF -DSDL_X11=OFF -DSDL_KMSDRM=OFF -DSDL_RENDER=OFF -DSDL_CCACHE=ON -DSDL_OPENGL=OFF -DSDL_OPENGLES=OFF -DSDL_UNIX_CONSOLE_BUILD=ON',
-            }
-          # TODO - Add iOS and Android platforms. Waiting on better support from GitHub.
+        os: [ubuntu-latest, macos-latest, windows-2025-vs2026]
+        compiler: [gcc, clang, msvc]
+        runtime_shader_compilation: [ON, OFF]
+        framework_static: [ON, OFF]
+        exclude:
+          # msvc is only available on Windows
+          - os: ubuntu-latest
+            compiler: msvc
+          - os: macos-latest
+            compiler: msvc
+          # gcc on Windows would require MinGW — excluded for simplicity
+          - os: windows-2025-vs2026
+            compiler: gcc
+          # framework_static OFF only for specific combos
+          - os: ubuntu-latest
+            compiler: clang
+            framework_static: OFF
+          - os: macos-latest
+            compiler: gcc
+            framework_static: OFF
 
     steps:
+      # Linux needs to install various dependencies.
+      - name: Install Linux Dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends build-essential git make \
+          pkg-config gnome-desktop-testing \
+          libaudio-dev libfribidi-dev \
+          libxkbcommon-dev libgl1-mesa-dev libgles2-mesa-dev \
+          libegl1-mesa-dev libdbus-1-dev libibus-1.0-dev libudev-dev libthai-dev \
+          liburing-dev
+        if: runner.os == 'Linux'
+
       - uses: actions/checkout@master
 
       # Move to new version of CMake for later language support for C23.
@@ -59,151 +66,91 @@ jobs:
       - name: Setup CCache
         uses: hendrikmuhs/ccache-action@v1.2
         with:
-          key: ${{ runner.os }}-${{ matrix.runtime_shader_compilation.value }}
-
-      # Linux needs to install various dependencies.
-      - name: Install Linux Dependencies
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends build-essential git make \
-          pkg-config gnome-desktop-testing \
-          libaudio-dev libfribidi-dev \
-          libxkbcommon-dev libgl1-mesa-dev libgles2-mesa-dev \
-          libegl1-mesa-dev libdbus-1-dev libibus-1.0-dev libudev-dev libthai-dev \
-          liburing-dev
-        if: matrix.platform.name == 'Linux'
+          key: ${{ runner.os }}-${{matrix.compiler}}-${{ matrix.runtime_shader_compilation }}-${{ matrix.framework_static }}
 
       - name: Set up MSVC developer environment
         uses: ilammy/msvc-dev-cmd@v1
-        if: runner.os == 'Windows'
+        if: matrix.compiler == 'msvc'
 
-      - name: Create build folder with CMake
+      - name: Set compiler environment
+        shell: bash
         run: |
-          cmake ${{ matrix.platform.generate }} ${{ matrix.runtime_shader_compilation.cmake_arg }} \
-            -DCMAKE_C_COMPILER_LAUNCHER=ccache \
-            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
-            -DCMAKE_MSVC_DEBUG_INFORMATION_FORMAT=Embedded \
-            -DCMAKE_POLICY_CMP0141=NEW \
-            -B build_folder
+          case "${{ matrix.compiler }}" in
+            gcc)
+              echo "CC=gcc" >> "$GITHUB_ENV"
+              echo "CXX=g++" >> "$GITHUB_ENV"
+              ;;
+            clang)
+              echo "CC=clang" >> "$GITHUB_ENV"
+              echo "CXX=clang++" >> "$GITHUB_ENV"
+              ;;
+            msvc)
+              echo "CC=cl" >> "$GITHUB_ENV"
+              echo "CXX=cl" >> "$GITHUB_ENV"
+              ;;
+          esac
 
-      - name: Build project binary
-        run: |
-          cmake --build build_folder
+      - name: Configure
+        shell: bash
+        run: >
+          cmake -B build -G Ninja
+          -DCMAKE_C_COMPILER_LAUNCHER=ccache
+          -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+          -DCMAKE_MSVC_DEBUG_INFORMATION_FORMAT=Embedded
+          -DCMAKE_POLICY_CMP0141=NEW
+          -DSDL_ALSA=OFF
+          -DSDL_CCACHE=ON
+          -DSDL_JACK=OFF
+          -DSDL_KMSDRM=OFF
+          -DSDL_OPENGL=OFF
+          -DSDL_OPENGLES=OFF
+          -DSDL_PIPEWIRE=OFF
+          -DSDL_PULSEAUDIO=OFF
+          -DSDL_RENDER=OFF
+          -DSDL_SNDIO=OFF
+          -DSDL_UNIX_CONSOLE_BUILD=ON
+          -DSDL_WAYLAND=OFF
+          -DSDL_X11=OFF
+          -DCF_RUNTIME_SHADER_COMPILATION=${{ matrix.runtime_shader_compilation }}
+          -DCF_FRAMEWORK_STATIC=${{ matrix.framework_static }}
 
-      # Run tests for MSVC 18
-      - name: Run Tests
-        run: |
-          cd build_folder
-          ./tests
+      - name: Build
+        run: cmake --build build
 
-      # Just call robocopy twice, one looking for libcute.a for MinGW, and one
-      # looking for cute.lib for MSCV. robocopy doesn't trigger a build failure for
-      # not finding a file.
+      - name: Tests
+        run: ./build/tests
+
       - name: Generate artifacts for Windows
         shell: cmd
         run: |
           robocopy include dist *.h
-          robocopy build_folder\lib dist cute*.lib
-          robocopy build_folder\lib dist libcute*.a
-          7z a ${{ matrix.platform.artifact }}.zip .\dist\*
+          if %errorlevel% geq 8 exit /b 1
+          robocopy build\lib dist cute*.lib
+          if %errorlevel% geq 8 exit /b 1
+          7z a artifact.zip .\dist\*
         if: runner.os == 'Windows'
 
       - name: Generate artifacts for MacOS
         run: |
           mkdir -p ./dist
           cp -v ./include/*.h ./dist
-          cp -R -v ./build_folder/lib/libcute*.a ./dist
-          tar -czvf ${{ matrix.platform.artifact }}.tar.gz -C dist .
+          cp -R -v ./build/lib/libcute*.a ./dist
+          tar -czvf artifact.tar.gz -C dist .
         if: runner.os == 'macOS'
 
       - name: Generate artifacts for Linux
         run: |
           mkdir -p ./dist
           cp -v ./include/*.h ./dist
-          cp -v ./build_folder/lib/libcute*.a ./dist
-          tar -czvf ${{ matrix.platform.artifact }}.tar.gz -C dist .
+          cp -v ./build/lib/libcute*.a ./dist
+          tar -czvf artifact.tar.gz -C dist .
         if: runner.os == 'Linux'
 
-      # Uploads the zip archives onto the workflow. They can be downloaded for 90 days (by default).
-      # Find them here: https://github.com/RandyGaul/cute_framework/actions
-      - uses: actions/upload-artifact@v4
-        with:
-          if-no-files-found: error
-          name: ${{ matrix.platform.artifact }}
-          path: ./dist/
-        if: matrix.runtime_shader_compilation.value == 'ON'
-
-      # Upload docsparser binary for documentation job (Linux only, one matrix combination)
-      - name: Upload docsparser artifact
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: docsparser
-          path: ./build_folder/docsparser
+          name: ${{ matrix.os }}-${{ matrix.compiler }}-shader-${{ matrix.runtime_shader_compilation == 'ON' && 'runtime-shaders' || 'precompiled-shaders' }}-${{ matrix.framework_static == 'ON' && 'static' || 'shared' }}
           if-no-files-found: error
-        if: runner.os == 'Linux' && matrix.runtime_shader_compilation.value == 'ON'
-
-  docs:
-    name: Build documentation
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Download docsparser artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: docsparser
-          path: ./build/debug
-
-      - name: Make docsparser executable and run
-        run: |
-          chmod +x ./build/debug/docsparser
-          cd build/debug
-          ./docsparser
-
-      - name: Set up Python runtime
-        uses: actions/setup-python@v5
-        with:
-          python-version: 3.x
-
-      - name: Install dependencies
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends libcairo2-dev libfreetype6-dev libffi-dev libjpeg-dev libpng-dev libz-dev pngquant
-          pip install mkdocs mkdocs-material "mkdocs-material[imaging]" markdown-callouts
-
-      - name: Build documentation
-        run: |
-          mkdocs build --clean
-          mkdocs --version
-
-      - name: Adjust permissions
-        run: |
-          chmod -c -R +rX site/ | while read line; do
-            echo "::warning title=Invalid file permissions automatically fixed::$line"
-          done
-
-      - name: Upload to GitHub Pages
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: site
-
-  deploy-docs:
-    name: Deploy documentation
-    needs: docs
-    if: github.ref == 'refs/heads/master' && github.event_name != 'pull_request'
-
-    permissions:
-      pages: write
-      id-token: write
-
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-
-    runs-on: ubuntu-latest
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+          path: |
+            artifact.zip
+            artifact.tar.gz

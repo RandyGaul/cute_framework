@@ -10,8 +10,8 @@
 
 #include <cute_defines.h>
 
-void cf_make_png_cache();
-void cf_destroy_png_cache();
+CF_API void cf_make_png_cache();
+CF_API void cf_destroy_png_cache();
 void cf_png_cache_get_pixels(uint64_t image_id, void* buffer, int bytes_to_fill);
 
 #endif // CF_PNG_CACHE_INTERNAL_H
