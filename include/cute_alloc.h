@@ -10,6 +10,10 @@
 
 #include "cute_defines.h"
 
+#define CK_ALLOC(sz) cf_alloc(sz)
+#define CK_REALLOC(p, sz) cf_realloc(p, sz)
+#define CK_FREE(p) cf_free(p)
+
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
