@@ -28,7 +28,7 @@ static void s_shader_directory_recursive(CF_Path path)
 	for (int i = 0; i < dir.size(); ++i) {
 		CF_Path p = app->shader_directory + path + dir[i];
 		if (p.is_directory()) {
-			s_shader_directory_recursive(p);
+			s_shader_directory_recursive(path + dir[i]);
 		} else {
 			CF_Stat stat;
 			fs_stat(p, &stat);
@@ -69,7 +69,7 @@ static void s_shader_watch_recursive(CF_Path path)
 	for (int i = 0; i < dir.size(); ++i) {
 		CF_Path p = app->shader_directory + path + dir[i];
 		if (p.is_directory()) {
-			s_shader_directory_recursive(p);
+			s_shader_watch_recursive(path + dir[i]);
 		} else {
 			CF_Stat stat;
 			fs_stat(p, &stat);
