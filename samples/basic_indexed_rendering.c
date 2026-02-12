@@ -27,6 +27,11 @@ const char* s_tri_fs =
 "    result = v_col;\n"
 "}\n";
 
+#ifndef CF_RUNTIME_SHADER_COMPILATION
+#include "basic_indexed_rendering_vs_shd.h"
+#include "basic_indexed_rendering_fs_shd.h"
+#endif
+
 int main(int argc, char* argv[])
 {
 	CF_Result result = cf_make_app("Indexed Mesh", 0, 0, 0, 640, 480, CF_APP_OPTIONS_WINDOW_POS_CENTERED_BIT | CF_APP_OPTIONS_RESIZABLE_BIT, argv[0]);
@@ -58,7 +63,11 @@ int main(int argc, char* argv[])
 	cf_mesh_update_index_data(mesh, indices, 6);
 
 	CF_Material material = cf_make_material();
+#ifdef CF_RUNTIME_SHADER_COMPILATION
 	CF_Shader shader = cf_make_shader_from_source(s_tri_vs, s_tri_fs);
+#else
+	CF_Shader shader = cf_make_shader_from_bytecode(s_basic_indexed_rendering_vs_bytecode, s_basic_indexed_rendering_fs_bytecode);
+#endif
 
 	while (cf_app_is_running()) {
 		cf_app_update(NULL);

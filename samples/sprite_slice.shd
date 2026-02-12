@@ -1,0 +1,4 @@
+vec4 shader(vec4 color, vec2 pos, vec2 screen_uv, vec4 params)
+{
+    return texture(u_image, smooth_uv(v_uv, u_texture_size));
+}

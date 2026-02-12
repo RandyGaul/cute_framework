@@ -70,10 +70,19 @@ const char* s_shd = STR(
 		return vec4(clamp(v01, 0.0, 1.0), dye, 1.0);
 	}
 );
+
+#ifndef CF_RUNTIME_SHADER_COMPILATION
+#include "fluid_sim_shd.h"
+#endif
+
 int main(int argc, char* argv[])
 {
 	make_app("Fluid Sim", 0, 0, 0, (int)w, (int)h, CF_APP_OPTIONS_RESIZABLE_BIT | CF_APP_OPTIONS_WINDOW_POS_CENTERED_BIT, argv[0]);
+#ifdef CF_RUNTIME_SHADER_COMPILATION
 	CF_Shader shd = cf_make_draw_shader_from_source(s_shd);
+#else
+	CF_Shader shd = cf_make_draw_shader_from_bytecode(s_fluid_sim_shd_bytecode);
+#endif
 	CF_CanvasParams canvas_params = canvas_defaults((int)w, (int)h);
 	canvas_params.target.stream = true;
 	CF_Canvas canvas_a = make_canvas(canvas_params);

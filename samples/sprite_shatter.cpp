@@ -10,6 +10,10 @@ vec4 shader(vec4 color, vec2 pos, vec2 screen_uv, vec4 params)
 }
 );
 
+#ifndef CF_RUNTIME_SHADER_COMPILATION
+#include "sprite_shatter_shd.h"
+#endif
+
 struct
 {
     CF_Shader shader;
@@ -46,7 +50,11 @@ void add_vertex_attribute(CF_VertexAttribute* attrs, const char* name, CF_Vertex
 
 void init(int w, int h)
 {
+#ifdef CF_RUNTIME_SHADER_COMPILATION
     draw.shader = cf_make_draw_shader_from_source(shader_str);
+#else
+    draw.shader = cf_make_draw_shader_from_bytecode(s_sprite_shatter_shd_bytecode);
+#endif
     draw.material = cf_make_material();
     
 	CF_VertexAttribute* attrs = NULL;

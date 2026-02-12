@@ -1,0 +1,12 @@
+layout (location = 0) in vec2 in_pos;
+layout (location = 1) in vec4 in_col;
+layout (location = 2) in vec2 in_offset;
+
+layout (location = 0) out vec4 v_col;
+
+void main()
+{
+    vec2 pos = in_pos + in_offset;
+    v_col = in_col;
+    gl_Position = vec4(pos, 0, 1);
+}

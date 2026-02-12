@@ -15,11 +15,19 @@ const char* s_recolor = R"(
 	}
 )";
 
+#ifndef CF_RUNTIME_SHADER_COMPILATION
+#include "recolor_shd.h"
+#endif
+
 int main(int argc, char* argv[])
 {
 	CF_Result result = make_app("Recolor", 0, 0, 0, 720, 480, CF_APP_OPTIONS_WINDOW_POS_CENTERED_BIT, argv[0]);
 	if (is_error(result)) return -1;
+#ifdef CF_RUNTIME_SHADER_COMPILATION
 	CF_Shader recolor = make_draw_shader_from_source(s_recolor);
+#else
+	CF_Shader recolor = make_draw_shader_from_bytecode(s_recolor_shd_bytecode);
+#endif
 	app_init_imgui();
 
 	CF_Sprite girl = cf_make_demo_sprite();

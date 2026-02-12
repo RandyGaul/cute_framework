@@ -11,6 +11,10 @@ void mount_content_directory_as(const char* dir)
 	fs_mount(path.c_str(), dir);
 }
 
+#ifndef CF_RUNTIME_SHADER_COMPILATION
+#include "shallow_water_data/shallow_water_shd.h"
+#endif
+
 CF_Pixel* get_noise(int w, int h, float time)
 {
 	float scale = 2.5f;
@@ -74,7 +78,11 @@ int main(int argc, char* argv[])
 	int W = 160;
 	int H = 120;
 
+#ifdef CF_RUNTIME_SHADER_COMPILATION
 	CF_Shader shader = cf_make_draw_shader_from_source(s_shd);
+#else
+	CF_Shader shader = cf_make_draw_shader_from_bytecode(s_shallow_water_shd_bytecode);
+#endif
 	CF_Canvas offscreen = make_canvas(canvas_defaults(160, 120));
 	CF_Canvas scene_canvas = make_canvas(canvas_defaults(160, 120));
 

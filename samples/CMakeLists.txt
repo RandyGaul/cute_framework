@@ -32,6 +32,32 @@ function(add_sample TARGET_NAME SOURCE_FILE)
 	endif()
 endfunction()
 
+# Helper function to add shader compilation custom commands
+# Usage: add_shader(SHADER_SOURCE TYPE VARNAME [OUTPUT_HEADER])
+#   SHADER_SOURCE: Path to .shd file relative to samples dir (e.g., "metaballs.shd" or "waves_data/waves.shd")
+#   TYPE: Shader type (draw, vertex, fragment, compute)
+#   VARNAME: Variable name for the bytecode struct
+#   OUTPUT_HEADER: Optional output header path; defaults to SHADER_SOURCE with .shd replaced by _shd.h
+function(add_shader SHADER_SOURCE TYPE VARNAME)
+	# Determine output header path
+	if (ARGC GREATER 3)
+		set(OUTPUT_HEADER ${ARGV3})
+	else()
+		string(REGEX REPLACE "\\.shd$" "_shd.h" OUTPUT_HEADER "${SHADER_SOURCE}")
+	endif()
+
+	add_custom_command(
+		OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/${OUTPUT_HEADER}
+		COMMAND cute-shaderc
+		-type=${TYPE}
+		-varname=${VARNAME}
+		-oheader=${CMAKE_CURRENT_SOURCE_DIR}/${OUTPUT_HEADER}
+		${CMAKE_CURRENT_SOURCE_DIR}/${SHADER_SOURCE}
+		DEPENDS ${SHADER_SOURCE}
+		DEPENDS cute-shaderc
+	)
+endfunction()
+
 add_sample(easysprite easy_sprite.c)
 add_sample(basicserialization basic_serialization.c)
 add_sample(imgui imgui.c)
@@ -82,38 +108,43 @@ add_sample(9_slice 9_slice.c)
 add_sample(basic_camera basic_camera.c)
 add_sample(imgui_texture imgui_texture.c)
 add_sample(input_binding input_binding.c)
-add_sample(compute compute.c)
-add_sample(galaxy galaxy.c)
-add_sample(hrc hrc.c)
+if (NOT EMSCRIPTEN)
+	add_sample(compute compute.c)
+	add_sample(galaxy galaxy.c)
+	add_sample(hrc hrc.c)
+endif()
 
 # Pre-compile shaders for certain samples.
 if (CF_CUTE_SHADERC)
-	add_custom_command(
-		OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/spaceshooter_data/flash_shd.h
-		COMMAND cute-shaderc
-		-type=draw
-		-varname=s_flash_shd_bytecode
-		-oheader=${CMAKE_CURRENT_SOURCE_DIR}/spaceshooter_data/flash_shd.h
-		${CMAKE_CURRENT_SOURCE_DIR}/spaceshooter_data/flash.shd
-		DEPENDS spaceshooter_data/flash.shd
-		DEPENDS cute-shaderc
-	)
-	add_custom_command(
-		OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/waves_data/waves_shd.h
-		COMMAND cute-shaderc
-		-type=draw
-		-varname=s_waves_shd_bytecode
-		-oheader=${CMAKE_CURRENT_SOURCE_DIR}/waves_data/waves_shd.h
-		${CMAKE_CURRENT_SOURCE_DIR}/waves_data/waves.shd
-		DEPENDS waves_data/waves.shd
-		DEPENDS cute-shaderc
-	)
+	# Draw shaders
+	add_shader(spaceshooter_data/flash.shd draw s_flash_shd_bytecode)
+	add_shader(waves_data/waves.shd draw s_waves_shd_bytecode)
+	add_shader(metaballs.shd draw metaballs)
+	add_shader(shallow_water_data/shallow_water.shd draw s_shallow_water_shd_bytecode)
+	add_shader(recolor.shd draw s_recolor_shd_bytecode)
+	add_shader(fluid_sim.shd draw s_fluid_sim_shd_bytecode)
+	add_shader(screen_shatter.shd draw s_screen_shatter_shd_bytecode)
+	add_shader(sprite_shatter.shd draw s_sprite_shatter_shd_bytecode)
+	add_shader(sprite_slice.shd draw s_sprite_slice_shd_bytecode)
+
+	# Low-level shaders (vertex/fragment)
+	add_shader(hello_triangle_vs.shd vertex s_hello_triangle_vs_bytecode)
+	add_shader(hello_triangle_fs.shd fragment s_hello_triangle_fs_bytecode)
+	add_shader(basic_instancing_vs.shd vertex s_basic_instancing_vs_bytecode)
+	add_shader(basic_instancing_fs.shd fragment s_basic_instancing_fs_bytecode)
+	add_shader(basic_indexed_rendering_vs.shd vertex s_basic_indexed_rendering_vs_bytecode)
+	add_shader(basic_indexed_rendering_fs.shd fragment s_basic_indexed_rendering_fs_bytecode)
 endif()
 
 # Ensure that sample data is included in web build
 if (EMSCRIPTEN)
 	target_link_options(waves PRIVATE --preload-file "${CMAKE_CURRENT_SOURCE_DIR}/waves_data@/waves_data")
 	target_link_options(spaceshooter PRIVATE --preload-file "${CMAKE_CURRENT_SOURCE_DIR}/spaceshooter_data@/spaceshooter_data")
+	target_link_options(shallow_water PRIVATE --preload-file "${CMAKE_CURRENT_SOURCE_DIR}/shallow_water_data@/shallow_water_data")
+	target_link_options(import_spritesheet PRIVATE --preload-file "${CMAKE_CURRENT_SOURCE_DIR}/import_spritesheet_data@/import_spritesheet_data")
+	target_link_options(pivot PRIVATE --preload-file "${CMAKE_CURRENT_SOURCE_DIR}/pivot_data@/pivot_data")
+	target_link_options(9_slice PRIVATE --preload-file "${CMAKE_CURRENT_SOURCE_DIR}/9_slice_data@/9_slice_data")
+	target_link_options(scratch PRIVATE --preload-file "${CMAKE_CURRENT_SOURCE_DIR}/../assets/CF_Logo_Pixel.png@/app_icon.png")
 endif ()
 
 # Copy over some folders for certain samples.

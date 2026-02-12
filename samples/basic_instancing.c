@@ -34,6 +34,10 @@ const char* s_tri_fs =
 "    result = v_col;\n"
 "}\n";
 
+#ifndef CF_RUNTIME_SHADER_COMPILATION
+#include "basic_instancing_vs_shd.h"
+#include "basic_instancing_fs_shd.h"
+#endif
 
 int main(int argc, char* argv[])
 {
@@ -77,7 +81,11 @@ int main(int argc, char* argv[])
 	cf_mesh_update_instance_data(mesh, instances, 100);
 
 	CF_Material material = cf_make_material();
+#ifdef CF_RUNTIME_SHADER_COMPILATION
 	CF_Shader shader = cf_make_shader_from_source(s_tri_vs, s_tri_fs);
+#else
+	CF_Shader shader = cf_make_shader_from_bytecode(s_basic_instancing_vs_bytecode, s_basic_instancing_fs_bytecode);
+#endif
 
 	while (cf_app_is_running()) {
 		cf_app_update(NULL);

@@ -36,6 +36,11 @@ const char* s_tri_fs = STR(
 );
 // ---
 
+#ifndef CF_RUNTIME_SHADER_COMPILATION
+#include "hello_triangle_vs_shd.h"
+#include "hello_triangle_fs_shd.h"
+#endif
+
 int main(int argc, char* argv[])
 {
 	CF_Result result = cf_make_app("Hello Triangle", 0, 0, 0, 640, 480, CF_APP_OPTIONS_WINDOW_POS_CENTERED_BIT, argv[0]);
@@ -69,7 +74,11 @@ int main(int argc, char* argv[])
 	// example none of these features are used. The shader simply interpolates color based on colors providing as vertex attributes.
 	// Therefor, the material is just empty in this case.
 	CF_Material material = cf_make_material();
+#ifdef CF_RUNTIME_SHADER_COMPILATION
 	CF_Shader shader = cf_make_shader_from_source(s_tri_vs, s_tri_fs);
+#else
+	CF_Shader shader = cf_make_shader_from_bytecode(s_hello_triangle_vs_bytecode, s_hello_triangle_fs_bytecode);
+#endif
 
 	while (cf_app_is_running()) {
 		cf_app_update(NULL);
