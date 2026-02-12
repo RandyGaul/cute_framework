@@ -1,4 +1,4 @@
-// hrc_copy.comp — Copy one SSBO to another.
+// Copy one SSBO to another.
 // Used to copy R_0 (merge-down result) into F[rot] (per-quadrant output).
 
 layout(std430, set = 0, binding = 0) readonly  buffer Src { uvec2 data[]; } u_src;
