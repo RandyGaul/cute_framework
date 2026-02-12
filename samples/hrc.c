@@ -1,13 +1,13 @@
-// Holographic Radiance Cascades -- standalone CF sample.
+// Holographic Radiance Cascades
 //
-// Demonstrates HRC 2D global illumination with an interactive "Luminarium" scene:
-// colored lights, shadow-casting geometry. Based on the
-// Amitabha-style SSBO pipeline with f16 packing and 4-rotation frustum.
+// Demonstrates HRC 2D global illumination based on the Amitabha-style SSBO pipeline with f16 packing and 4-rotation frustum.
 //
 // Controls:
 //   D       Cycle debug modes (0=normal, 1-4=quadrant, 5=no blur, 6=emissivity, 7=absorption)
 //
 // Reference: Freeman, Sannikov, Margel (2025) "Holographic Radiance Cascades"
+// https://arxiv.org/pdf/2505.02041
+// https://github.com/entropylost/amitabha
 
 #include <cute.h>
 
