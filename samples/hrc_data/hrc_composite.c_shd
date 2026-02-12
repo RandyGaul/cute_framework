@@ -1,4 +1,4 @@
-// hrc_composite.comp — Sum 4 quadrants, cross blur, output (Sec 4.2, Eq 21).
+// Sum 4 quadrants, cross blur, output (Sec 4.2, Eq 21).
 //
 // Each quadrant's R_0 was computed in +x-aligned space by the merge-down phase
 // and stored in F_0..F_3. This shader reverses the rotation, applies the +1 pixel
