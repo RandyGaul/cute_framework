@@ -1,0 +1,153 @@
+// hrc_extend.comp — Builds the ray interval hierarchy T_0 .. T_N (Sec 4.1).
+//
+// T_n stores precomputed ray intervals at cascade level n. Each entry holds radiance +
+// transmittance for a ray segment of length 2^n pixels, starting from a probe and
+// pointing in one of (2^n + 1) directions spanning the +x quadrant.
+//
+// T_0 is seeded by hrc_seed.comp (1px rays from scene data). Each subsequent level
+// doubles ray length by chaining two T_{n-1} intervals end-to-end (Eq 18-20).
+//
+// The merge-down phase later uses T as a lookup table -- when it needs "what happens
+// along a ray from A to B", it reads the answer from T instead of raymarching.
+//
+// Note: T_n here refers to the acceleration structure, not transmittance (T_r), which
+// appears as the .trn field of an Interval.
+//
+// Pipeline:  seed -> [extend x N] -> merge -> composite
+//                     ^^^^^^^^^^
+// Inputs:
+//   u_prev_rad, u_prev_trn — T_{n-1} ray intervals (from seed or previous extend)
+//   u_cascade              — cascade level n being built
+//   u_prev_w, u_curr_w     — buffer widths for T_{n-1} and T_n
+//
+// Outputs:
+//   u_curr_rad, u_curr_trn — T_n ray intervals
+//
+// Buffer layout (same as seed):
+//   width  = (world_size / 2^n) * (2^n + 1)
+//   height = world_size
+//   index  = y * width + probe_x * directions + k
+
+layout(std430, set = 0, binding = 0) readonly  buffer PrevRad { uvec2 data[]; } u_prev_rad;
+layout(std430, set = 0, binding = 1) readonly  buffer PrevTrn { uvec2 data[]; } u_prev_trn;
+layout(std430, set = 1, binding = 0) writeonly buffer CurrRad { uvec2 data[]; } u_curr_rad;
+layout(std430, set = 1, binding = 1) writeonly buffer CurrTrn { uvec2 data[]; } u_curr_trn;
+
+layout(set = 2, binding = 0) uniform Params
+{
+	int u_cascade;    // n: the level we're building
+	int u_world_size;
+	int u_prev_w;     // width of T_{n-1} buffer
+	int u_curr_w;     // width of T_n buffer
+};
+
+layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+
+struct Interval
+{
+	vec3 rad;
+	vec3 trn;
+};
+
+Interval merge(Interval a, Interval b)
+{
+	return Interval(
+		a.rad + a.trn * b.rad,
+		a.trn * b.trn
+	);
+}
+
+vec4 f16_load(uvec2 packed)
+{
+	return vec4(unpackHalf2x16(packed.x), unpackHalf2x16(packed.y));
+}
+
+uvec2 f16_store(vec4 val)
+{
+	return uvec2(packHalf2x16(val.xy), packHalf2x16(val.zw));
+}
+
+// Load an interval from T_{n-1}.
+// probe_x: the probe's x index (not pixel position)
+// k:       direction index (integer)
+// y:       probe y position
+Interval T_load_prev(int probe_x, int k, int y)
+{
+	int prev_n = u_cascade - 1;
+	int directions = (1 << prev_n) + 1;
+	int num_probes = u_world_size >> prev_n;
+
+	// Bounds check: return empty interval for out-of-range lookups.
+	if (probe_x < 0 || probe_x >= num_probes || k < 0 || k >= directions || y < 0 || y >= u_world_size) {
+		return Interval(vec3(0.0), vec3(1.0));
+	}
+
+	int idx = y * u_prev_w + probe_x * directions + k;
+	vec4 rad = f16_load(u_prev_rad.data[idx]);
+	vec4 trn = f16_load(u_prev_trn.data[idx]);
+	return Interval(rad.rgb, trn.rgb);
+}
+
+// Compute the y-offset of a ray endpoint in T_{n-1} direction k.
+// From v_{n-1}(k) = (2^{n-1}, 2k - 2^{n-1}), the y component is 2k - 2^{n-1}.
+int far_y_offset(int k)
+{
+	int prev_pow2 = 1 << (u_cascade - 1);
+	return 2 * k - prev_pow2;
+}
+
+// Eq 18-20: extend ray from T_{n-1} to T_n.
+//
+// Builds a T_n ray by chaining two T_{n-1} rays. When the target direction k maps
+// to an integer direction in T_{n-1} (even k), both candidates are identical and the
+// average is a no-op. When k is odd, the two candidates bend in opposite directions
+// and averaging approximates the true straight ray. We always run both paths to avoid
+// warp divergence from even/odd branching.
+//
+// Candidate A: near=k_lo, far=k_hi     Candidate B: near=k_hi, far=k_lo
+//
+//     *---k_lo--->*                         *---k_hi--->*
+//                  \                       /
+//             k_hi  \                     /  k_lo
+//                    *                   *
+//
+Interval extend(int probe_x, int k, int y)
+{
+	int k_lo = k / 2;
+	int k_hi = (k + 1) / 2;
+	int prev_probe_x = probe_x * 2;
+	int mid_probe_x = prev_probe_x + 1;
+
+	// Candidate A: go k_lo then k_hi
+	Interval near_a = T_load_prev(prev_probe_x, k_lo, y);
+	int far_y_a = y + far_y_offset(k_lo);
+	Interval far_a = T_load_prev(mid_probe_x, k_hi, far_y_a);
+	Interval A = merge(near_a, far_a);
+
+	// Candidate B: go k_hi then k_lo
+	Interval near_b = T_load_prev(prev_probe_x, k_hi, y);
+	int far_y_b = y + far_y_offset(k_hi);
+	Interval far_b = T_load_prev(mid_probe_x, k_lo, far_y_b);
+	Interval B = merge(near_b, far_b);
+
+	return Interval(
+		(A.rad + B.rad) * 0.5,
+		(A.trn + B.trn) * 0.5
+	);
+}
+
+void main()
+{
+	ivec2 gid = ivec2(gl_GlobalInvocationID.xy);
+	if (gid.x >= u_curr_w || gid.y >= u_world_size) return;
+
+	int directions = (1 << u_cascade) + 1;
+	int probe_x = gid.x / directions;
+	int k = gid.x - probe_x * directions;
+
+	Interval iv = extend(probe_x, k, gid.y);
+
+	int out_idx = gid.y * u_curr_w + gid.x;
+	u_curr_rad.data[out_idx] = f16_store(vec4(iv.rad, 1.0));
+	u_curr_trn.data[out_idx] = f16_store(vec4(iv.trn, 1.0));
+}
