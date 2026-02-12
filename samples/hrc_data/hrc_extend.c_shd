@@ -1,4 +1,4 @@
-// hrc_extend.comp — Builds the ray interval hierarchy T_0 .. T_N (Sec 4.1).
+// Builds the ray interval hierarchy T_0 .. T_N (Sec 4.1).
 //
 // T_n stores precomputed ray intervals at cascade level n. Each entry holds radiance +
 // transmittance for a ray segment of length 2^n pixels, starting from a probe and
