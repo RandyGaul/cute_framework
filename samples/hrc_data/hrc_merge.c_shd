@@ -1,4 +1,4 @@
-// hrc_merge.comp — Builds angular fluence R_n from R_{n+1} (Sec 4, Eq 14-17).
+// Builds angular fluence R_n from R_{n+1} (Sec 4, Eq 14-17).
 //
 // R_n(p, i) is the angular fluence at probe p for cone i at cascade n. Each cone
 // splits into upper and lower sub-cones that map to R_{n+1}. We trace a ray from
