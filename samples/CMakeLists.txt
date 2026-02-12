@@ -84,6 +84,7 @@ add_sample(imgui_texture imgui_texture.c)
 add_sample(input_binding input_binding.c)
 add_sample(compute compute.c)
 add_sample(galaxy galaxy.c)
+add_sample(hrc hrc.c)
 
 # Pre-compile shaders for certain samples.
 if (CF_CUTE_SHADERC)
@@ -123,3 +124,4 @@ add_custom_command(TARGET import_spritesheet PRE_BUILD COMMAND ${CMAKE_COMMAND} 
 add_custom_command(TARGET pivot PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/pivot_data $<TARGET_FILE_DIR:pivot>/pivot_data)
 add_custom_command(TARGET scratch PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/../assets/CF_Logo_Pixel.png $<TARGET_FILE_DIR:scratch>/app_icon.png)
 add_custom_command(TARGET 9_slice PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/9_slice_data $<TARGET_FILE_DIR:9_slice>/9_slice_data)
+add_custom_command(TARGET hrc PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/hrc_data $<TARGET_FILE_DIR:hrc>/hrc_data)

@@ -91,7 +91,7 @@ struct CF_App
 	int y;
 	int canvas_w;
 	int canvas_h;
-	CF_Color clear_color = cf_color_black();
+	CF_Color clear_color = { 0, 0, 0, 0 };
 	float clear_depth = 1.0f;
 	uint32_t clear_stencil = 0;
 	CF_Canvas offscreen_canvas = { };
