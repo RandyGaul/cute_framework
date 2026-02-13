@@ -33,7 +33,9 @@ static void s_shader_directory_recursive(CF_Path path)
 			CF_Stat stat;
 			fs_stat(p, &stat);
 			String ext = p.ext();
-			if (ext == ".vs" || ext == ".fs" || ext == ".shd" || ext == ".c_shd") {
+			const char* ext_cstr = ext.c_str();
+			if (ext_cstr && (CF_STRCMP(ext_cstr, ".vs") == 0 || CF_STRCMP(ext_cstr, ".fs") == 0 ||
+			                  CF_STRCMP(ext_cstr, ".shd") == 0 || CF_STRCMP(ext_cstr, ".c_shd") == 0)) {
 				// Exclude app->shader_directory for easier lookups.
 				// e.g. app->shader_directory is "/shaders" and contains
 				// "/shaders/my_shader.shd", the user needs to only reference it by:
@@ -74,7 +76,9 @@ static void s_shader_watch_recursive(CF_Path path)
 			CF_Stat stat;
 			fs_stat(p, &stat);
 			String ext = p.ext();
-			if (ext == ".vs" || ext == ".fs" || ext == ".shd" || ext == ".c_shd") {
+			const char* ext_cstr = ext.c_str();
+			if (ext_cstr && (CF_STRCMP(ext_cstr, ".vs") == 0 || CF_STRCMP(ext_cstr, ".fs") == 0 ||
+			                  CF_STRCMP(ext_cstr, ".shd") == 0 || CF_STRCMP(ext_cstr, ".c_shd") == 0)) {
 				const char* key = sintern(path + dir[i]);
 				CF_ShaderFileInfo& info = app->shader_file_infos.find(key);
 				if (info.stat.last_modified_time < stat.last_modified_time) {
