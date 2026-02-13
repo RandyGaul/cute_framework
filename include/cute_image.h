@@ -213,8 +213,7 @@ CF_API void CF_CALL cf_image_flip_horizontal(CF_Image* img);
  * @function cf_debug_dump_greyscale_pixels
  * @category image
  * @brief    Saves out greyscale image to a png file on disk.
- * @remarks  Does *not* use the virtual file system. Instead it uses plain old platform-dependent path notation. This
- *           function is not really optimized whatsoever and outputs poorly compressed file sizes.
+ * @remarks  Does *not* use the virtual file system. Instead it uses plain old platform-dependent path notation.
  * @related  CF_Image cf_debug_dump_greyscale_pixels cf_debug_dump_pixels
  */
 CF_API void CF_CALL cf_debug_dump_greyscale_pixels(const char* path, uint8_t* pixels, int w, int h);
@@ -223,8 +222,7 @@ CF_API void CF_CALL cf_debug_dump_greyscale_pixels(const char* path, uint8_t* pi
  * @function cf_debug_dump_pixels
  * @category image
  * @brief    Saves out an image to a png file on disk.
- * @remarks  Does *not* use the virtual file system. Instead it uses plain old platform-dependent path notation. This
- *           function is not really optimized whatsoever and outputs poorly compressed file sizes.
+ * @remarks  Does *not* use the virtual file system. Instead it uses plain old platform-dependent path notation.
  * @related  CF_Image cf_debug_dump_greyscale_pixels cf_debug_dump_pixels
  */
 CF_API void CF_CALL cf_debug_dump_pixels(const char* path, CF_Pixel* pixels, int w, int h);
