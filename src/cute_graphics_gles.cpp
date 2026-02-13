@@ -1794,3 +1794,34 @@ void cf_gles_dispatch_compute(CF_ComputeShader shader, CF_Material material, CF_
 	CF_UNUSED(material);
 	CF_UNUSED(dispatch);
 }
+
+CF_Readback cf_gles_canvas_readback(CF_Canvas canvas)
+{
+	CF_UNUSED(canvas);
+	return { 0 };
+}
+
+bool cf_gles_readback_ready(CF_Readback readback)
+{
+	CF_UNUSED(readback);
+	return false;
+}
+
+int cf_gles_readback_data(CF_Readback readback, void* data, int size)
+{
+	CF_UNUSED(readback);
+	CF_UNUSED(data);
+	CF_UNUSED(size);
+	return 0;
+}
+
+int cf_gles_readback_size(CF_Readback readback)
+{
+	CF_UNUSED(readback);
+	return 0;
+}
+
+void cf_gles_destroy_readback(CF_Readback readback)
+{
+	CF_UNUSED(readback);
+}

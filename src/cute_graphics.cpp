@@ -659,6 +659,11 @@ CF_DISPATCH_SHIM(CF_Texture, canvas_get_target, (CF_Canvas canvas_handle), canva
 CF_DISPATCH_SHIM(CF_Texture, canvas_get_depth_stencil_target, (CF_Canvas canvas_handle), canvas_handle)
 CF_DISPATCH_SHIM_VOID(canvas_get_size, (CF_Canvas canvas_handle, int* w, int* h), canvas_handle, w, h)
 CF_DISPATCH_SHIM_VOID(clear_canvas, (CF_Canvas canvas_handle), canvas_handle)
+CF_DISPATCH_SHIM(CF_Readback, canvas_readback, (CF_Canvas canvas), canvas)
+CF_DISPATCH_SHIM(bool, readback_ready, (CF_Readback readback), readback)
+CF_DISPATCH_SHIM(int, readback_data, (CF_Readback readback, void* data, int size), readback, data, size)
+CF_DISPATCH_SHIM(int, readback_size, (CF_Readback readback), readback)
+CF_DISPATCH_SHIM_VOID(destroy_readback, (CF_Readback readback), readback)
 CF_DISPATCH_SHIM_VOID(apply_canvas, (CF_Canvas canvas_handle, bool clear), canvas_handle, clear)
 
 CF_DISPATCH_SHIM_VOID(apply_viewport, (int x, int y, int w, int h), x, y, w, h)

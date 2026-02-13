@@ -47,6 +47,15 @@ struct CF_TextureInternal
 	SDL_GPUTextureSamplerBinding binding;
 };
 
+struct CF_ReadbackInternal
+{
+	SDL_GPUTransferBuffer* transfer_buffer;
+	SDL_GPUFence* fence;
+	int w, h;
+	int size; // w * h * texel_size
+	bool ready;
+};
+
 // Content-based pipeline cache key. All fields that affect pipeline creation.
 // Zeroed before filling so memcmp is safe even with padding.
 struct CF_PipelineKey
@@ -1127,6 +1136,118 @@ CF_Texture cf_sdlgpu_canvas_get_depth_stencil_target(CF_Canvas canvas_handle)
 {
 	CF_CanvasInternal* canvas = (CF_CanvasInternal*)canvas_handle.id;
 	return canvas->cf_depth_stencil;
+}
+
+CF_Readback cf_sdlgpu_canvas_readback(CF_Canvas canvas_handle)
+{
+	CF_CanvasInternal* canvas = (CF_CanvasInternal*)canvas_handle.id;
+	if (!canvas) return { 0 };
+
+	s_end_active_pass();
+
+	// Pick source texture: resolve_texture for MSAA canvases, texture for non-MSAA.
+	SDL_GPUTexture* src_texture = canvas->resolve_texture ? canvas->resolve_texture : canvas->texture;
+	CF_TextureInternal* tex_internal = canvas->resolve_texture
+		? (CF_TextureInternal*)canvas->cf_resolve_texture.id
+		: (CF_TextureInternal*)canvas->cf_texture.id;
+
+	int texel_size = (int)SDL_GPUTextureFormatTexelBlockSize(tex_internal->format);
+	int total_size = canvas->w * canvas->h * texel_size;
+
+	// Create a download transfer buffer.
+	SDL_GPUTransferBufferCreateInfo tbuf_info = {
+		.usage = SDL_GPU_TRANSFERBUFFERUSAGE_DOWNLOAD,
+		.size = (Uint32)total_size,
+		.props = 0,
+	};
+	SDL_GPUTransferBuffer* transfer_buffer = SDL_CreateGPUTransferBuffer(g_ctx.device, &tbuf_info);
+	if (!transfer_buffer) return { 0 };
+
+	// Acquire a separate command buffer for the readback (not g_ctx.cmd).
+	SDL_GPUCommandBuffer* cmd = SDL_AcquireGPUCommandBuffer(g_ctx.device);
+	if (!cmd) {
+		SDL_ReleaseGPUTransferBuffer(g_ctx.device, transfer_buffer);
+		return { 0 };
+	}
+
+	// Begin copy pass, download texture, end copy pass.
+	SDL_GPUCopyPass* copy_pass = SDL_BeginGPUCopyPass(cmd);
+	SDL_GPUTextureTransferInfo dst = { };
+	dst.transfer_buffer = transfer_buffer;
+	dst.offset = 0;
+	SDL_GPUTextureRegion src = { };
+	src.texture = src_texture;
+	src.w = (Uint32)canvas->w;
+	src.h = (Uint32)canvas->h;
+	src.d = 1;
+	SDL_DownloadFromGPUTexture(copy_pass, &src, &dst);
+	SDL_EndGPUCopyPass(copy_pass);
+
+	// Submit and acquire fence.
+	SDL_GPUFence* fence = SDL_SubmitGPUCommandBufferAndAcquireFence(cmd);
+	if (!fence) {
+		SDL_ReleaseGPUTransferBuffer(g_ctx.device, transfer_buffer);
+		return { 0 };
+	}
+
+	// Allocate internal struct.
+	CF_ReadbackInternal* rb = (CF_ReadbackInternal*)CF_CALLOC(sizeof(CF_ReadbackInternal));
+	rb->transfer_buffer = transfer_buffer;
+	rb->fence = fence;
+	rb->w = canvas->w;
+	rb->h = canvas->h;
+	rb->size = total_size;
+	rb->ready = false;
+
+	CF_Readback result;
+	result.id = (uint64_t)rb;
+	return result;
+}
+
+bool cf_sdlgpu_readback_ready(CF_Readback readback)
+{
+	CF_ReadbackInternal* rb = (CF_ReadbackInternal*)readback.id;
+	if (!rb) return false;
+	if (rb->ready) return true;
+	rb->ready = SDL_QueryGPUFence(g_ctx.device, rb->fence);
+	return rb->ready;
+}
+
+int cf_sdlgpu_readback_data(CF_Readback readback, void* data, int size)
+{
+	CF_ReadbackInternal* rb = (CF_ReadbackInternal*)readback.id;
+	if (!rb || !data || size <= 0) return 0;
+	if (!rb->ready) return 0;
+
+	void* mapped = SDL_MapGPUTransferBuffer(g_ctx.device, rb->transfer_buffer, false);
+	if (!mapped) return 0;
+
+	int bytes = size < rb->size ? size : rb->size;
+	CF_MEMCPY(data, mapped, bytes);
+	SDL_UnmapGPUTransferBuffer(g_ctx.device, rb->transfer_buffer);
+	return bytes;
+}
+
+int cf_sdlgpu_readback_size(CF_Readback readback)
+{
+	CF_ReadbackInternal* rb = (CF_ReadbackInternal*)readback.id;
+	if (!rb) return 0;
+	return rb->size;
+}
+
+void cf_sdlgpu_destroy_readback(CF_Readback readback)
+{
+	CF_ReadbackInternal* rb = (CF_ReadbackInternal*)readback.id;
+	if (!rb) return;
+
+	// If not ready, block until the GPU finishes.
+	if (!rb->ready) {
+		SDL_WaitForGPUFences(g_ctx.device, true, &rb->fence, 1);
+	}
+
+	SDL_ReleaseGPUFence(g_ctx.device, rb->fence);
+	SDL_ReleaseGPUTransferBuffer(g_ctx.device, rb->transfer_buffer);
+	CF_FREE(rb);
 }
 
 CF_Mesh cf_sdlgpu_make_mesh(int vertex_buffer_size, const CF_VertexAttribute* attributes, int attribute_count, int vertex_stride)
