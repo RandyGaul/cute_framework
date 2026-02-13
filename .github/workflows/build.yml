@@ -154,3 +154,41 @@ jobs:
           path: |
             artifact.zip
             artifact.tar.gz
+
+  emscripten:
+    name: "emscripten / emcc / precompiled-shaders / static"
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@master
+
+      - name: Setup CMake 4.2.x
+        uses: lukka/get-cmake@latest
+        with:
+          cmakeVersion: 4.2.3
+          ninjaVersion: latest
+
+      - name: Setup Emscripten
+        uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: latest
+          actions-cache-folder: "emsdk-cache"
+
+      - name: Setup CCache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: emscripten
+
+      - name: Verify Emscripten
+        run: emcc -v
+
+      - name: Configure
+        run: >
+          emcmake cmake -B build -G Ninja
+          -DCMAKE_C_COMPILER_LAUNCHER=ccache
+          -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+          -DCF_FRAMEWORK_STATIC=ON
+
+      - name: Build
+        run: cmake --build build
