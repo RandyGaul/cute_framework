@@ -1,6 +1,4 @@
 #include <cute.h>
-
-#define CUTE_PNG_IMPLEMENTATION
 #include <cute/cute_png.h>
 
 #define NUM_CIRCLES 12
