@@ -1,0 +1,41 @@
+# EditorConfig for Cute Framework
+# https://editorconfig.org
+
+root = true
+
+# Default settings for all files
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# C/C++ source and header files
+[*.{c,cpp,h,hpp}]
+indent_style = tab
+indent_size = 4
+
+# CMake files
+[{CMakeLists.txt,*.cmake}]
+indent_style = tab
+indent_size = 4
+
+# Markdown files (preserve trailing whitespace for line breaks)
+[*.md]
+indent_style = tab
+trim_trailing_whitespace = false
+
+# YAML files (typically use spaces)
+[*.{yml,yaml}]
+indent_style = space
+indent_size = 2
+
+# JSON files
+[*.json]
+indent_style = space
+indent_size = 2
+
+# Shell scripts
+[*.sh]
+indent_style = tab
+indent_size = 4
