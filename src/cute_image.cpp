@@ -73,6 +73,22 @@ void cf_image_free_indexed(CF_ImageIndexed* img)
 	CF_FREE(img->pix);
 }
 
+CF_Result cf_image_save_png(const char* path, CF_Image* img)
+{
+	int ret = cp_save_png(path, (cp_image_t*)img);
+	if (ret) return cf_result_error("Failed to save PNG to file.");
+	return cf_result_success();
+}
+
+CF_Result cf_image_save_png_to_memory(CF_Image* img, void** out_data, int* out_size)
+{
+	cp_saved_png_t saved = cp_save_png_to_memory((cp_image_t*)img);
+	if (!saved.data) return cf_result_error("Failed to save PNG to memory.");
+	*out_data = saved.data;
+	*out_size = saved.size;
+	return cf_result_success();
+}
+
 CF_Image cf_image_depallete(CF_ImageIndexed* indexed_img)
 {
 	cp_image_t cp_img = cp_depallete_indexed_image((cp_indexed_image_t*)indexed_img);

@@ -85,7 +85,7 @@ add_sample(input_binding input_binding.c)
 add_sample(compute compute.c)
 add_sample(galaxy galaxy.c)
 add_sample(hrc hrc.c)
-add_sample(canvas_readback canvas_readback.cpp)
+add_sample(canvas_readback canvas_readback.c)
 
 # Pre-compile shaders for certain samples.
 if (CF_CUTE_SHADERC)
