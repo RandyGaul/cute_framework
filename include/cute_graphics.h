@@ -99,8 +99,6 @@ typedef struct CF_Canvas { uint64_t id; } CF_Canvas;
  *         cf_free(pixels);
  *         cf_destroy_readback(readback);
  *     }
- * @example > Reading back the screen contents (screenshot).
- *     CF_Readback readback = cf_canvas_readback(cf_app_get_canvas());
  * @remarks  A readback initiates an async GPU-to-CPU copy of pixel data from a canvas.
  *           Poll with `cf_readback_ready` and retrieve data with `cf_readback_data`.
  *           The pixel format matches the canvas target format (typically RGBA8, 4 bytes per pixel).
