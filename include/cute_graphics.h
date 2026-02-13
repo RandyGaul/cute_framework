@@ -87,8 +87,10 @@ typedef struct CF_Canvas { uint64_t id; } CF_Canvas;
  *     cf_render_to(canvas, true);
  *
  *     // Initiate async readback (ends the active render pass automatically).
+ *     // Save this `CF_Readback` for later! This is an *async* object.
  *     CF_Readback readback = cf_canvas_readback(canvas);
  *
+ *     // ...Elsewhere, and some # of frames later...
  *     // Poll each frame until the GPU finishes the download.
  *     if (cf_readback_ready(readback)) {
  *         int size = cf_readback_size(readback);
