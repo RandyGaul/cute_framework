@@ -1,5 +1,4 @@
 #include <cute.h>
-#include <cute/cute_png.h>
 
 #define NUM_CIRCLES 12
 
@@ -106,18 +105,20 @@ int main(int argc, char* argv[])
 			readback_pending = false;
 
 			// Encode to PNG.
-			cp_image_t img;
+			CF_Image img;
 			img.w = w;
 			img.h = h;
-			img.pix = (cp_pixel_t*)pixels;
-			cp_saved_png_t png = cp_save_png_to_memory(&img);
+			img.pix = (CF_Pixel*)pixels;
+			void* png_data = NULL;
+			int png_size = 0;
+			CF_Result save_result = cf_image_save_png_to_memory(&img, &png_data, &png_size);
 			cf_free(pixels);
 
-			if (png.data) {
+			if (!cf_is_error(save_result) && png_data) {
 				// Copy PNG to clipboard.
 				const char* types[] = { "image/png" };
-				cf_clipboard_set_data(png.data, png.size, types, 1);
-				free(png.data);
+				cf_clipboard_set_data(png_data, png_size, types, 1);
+				cf_free(png_data);
 				flash_timer = 2.0f;
 			}
 		}

@@ -26,7 +26,7 @@ extern "C" {
  * @remarks  You probably do not need this. In Cute Framework loading images manually is not often
  *           necessary, as most games can use CF's [Draw API](https://randygaul.github.io/cute_framework/topics/drawing) to get sprites onto the screen.
  *           However, a good use case is, for example, if you want to implement some custom shader and feed it a texture.
- * @related  CF_Image CF_ImageIndexed cf_image_load_png cf_image_premultiply
+ * @related  CF_Image CF_ImageIndexed cf_image_load_png cf_image_save_png cf_image_save_png_to_memory cf_image_premultiply
  */
 typedef struct CF_Image
 {
@@ -79,7 +79,7 @@ typedef struct CF_ImageIndexed
  * @param    virtual_path  A virtual path to the image file. See [Virtual File System](https://randygaul.github.io/cute_framework/topics/virtual_file_system).
  * @param    img           Out parameter for the image.
  * @return   Check the `CF_Result` for errors.
- * @related  CF_Image cf_image_load_png cf_image_free cf_image_load_png_from_memory cf_image_load_png_wh cf_image_load_png_indexed cf_image_premultiply
+ * @related  CF_Image cf_image_load_png cf_image_free cf_image_load_png_from_memory cf_image_load_png_wh cf_image_load_png_indexed cf_image_save_png cf_image_save_png_to_memory cf_image_premultiply
  */
 CF_API CF_Result CF_CALL cf_image_load_png(const char* virtual_path, CF_Image* img);
 
@@ -91,7 +91,7 @@ CF_API CF_Result CF_CALL cf_image_load_png(const char* virtual_path, CF_Image* i
  * @param    size          The number of bytes in the `data` pointer.
  * @param    img           Out parameter for the image.
  * @return   Check the `CF_Result` for errors.
- * @related  CF_Image cf_image_load_png cf_image_load_png_from_memory cf_image_load_png_wh cf_image_load_png_indexed cf_image_premultiply
+ * @related  CF_Image cf_image_load_png cf_image_load_png_from_memory cf_image_load_png_wh cf_image_load_png_indexed cf_image_save_png cf_image_save_png_to_memory cf_image_premultiply
  */
 CF_API CF_Result CF_CALL cf_image_load_png_from_memory(const void* data, int size, CF_Image* img);
 
@@ -104,7 +104,7 @@ CF_API CF_Result CF_CALL cf_image_load_png_from_memory(const void* data, int siz
  * @param    w             Out parameter for the width of the image.
  * @param    h             Out parameter for the height of the image.
  * @return   Check the `CF_Result` for errors.
- * @related  CF_Image cf_image_load_png cf_image_load_png_from_memory cf_image_load_png_wh cf_image_load_png_indexed cf_image_premultiply
+ * @related  CF_Image cf_image_load_png cf_image_load_png_from_memory cf_image_load_png_wh cf_image_load_png_indexed cf_image_save_png cf_image_save_png_to_memory cf_image_premultiply
  */
 CF_API CF_Result CF_CALL cf_image_load_png_wh(const void* data, int size, int* w, int* h);
 
@@ -114,7 +114,7 @@ CF_API CF_Result CF_CALL cf_image_load_png_wh(const void* data, int size, int* w
  * @brief    Frees a png image.
  * @param    img           The image to free.
  * @return   Check the `CF_Result` for errors.
- * @related  CF_Image cf_image_load_png cf_image_free cf_image_load_png_from_memory cf_image_load_png_wh cf_image_load_png_indexed cf_image_premultiply
+ * @related  CF_Image cf_image_load_png cf_image_free cf_image_load_png_from_memory cf_image_load_png_wh cf_image_load_png_indexed cf_image_save_png cf_image_save_png_to_memory cf_image_premultiply
  */
 CF_API void CF_CALL cf_image_free(CF_Image* img);
 
@@ -150,6 +150,32 @@ CF_API CF_Result CF_CALL cf_image_load_png_from_memory_indexed(const void* data,
  * @related  CF_ImageIndexed cf_image_load_png_indexed cf_image_load_png_from_memory_indexed cf_image_free_indexed cf_image_depalette
  */
 CF_API void CF_CALL cf_image_free_indexed(CF_ImageIndexed* img);
+
+// -------------------------------------------------------------------------------------------------
+// PNG saving.
+
+/**
+ * @function cf_image_save_png
+ * @category image
+ * @brief    Saves an image to a PNG file on disk.
+ * @param    path          The file path to write the PNG to. Does *not* use the virtual file system.
+ * @param    img           The image to save.
+ * @return   Check the `CF_Result` for errors.
+ * @related  CF_Image cf_image_load_png cf_image_free cf_image_save_png cf_image_save_png_to_memory
+ */
+CF_API CF_Result CF_CALL cf_image_save_png(const char* path, CF_Image* img);
+
+/**
+ * @function cf_image_save_png_to_memory
+ * @category image
+ * @brief    Saves an image to a PNG in memory.
+ * @param    img           The image to save.
+ * @param    out_data      Out parameter for the PNG data. Caller must free with `cf_free`.
+ * @param    out_size      Out parameter for the size of the PNG data in bytes.
+ * @return   Check the `CF_Result` for errors.
+ * @related  CF_Image cf_image_load_png cf_image_free cf_image_save_png cf_image_save_png_to_memory
+ */
+CF_API CF_Result CF_CALL cf_image_save_png_to_memory(CF_Image* img, void** out_data, int* out_size);
 
 // -------------------------------------------------------------------------------------------------
 // Image operations.
@@ -226,6 +252,12 @@ CF_INLINE void image_free(CF_Image* img) { cf_image_free(img); }
 CF_INLINE CF_Result image_load_png_indexed(const char* virtual_path, CF_ImageIndexed* img) { return cf_image_load_png_indexed(virtual_path, img); }
 CF_INLINE CF_Result image_load_png_mem_indexed(const void* data, int size, CF_ImageIndexed* img) { return cf_image_load_png_from_memory_indexed(data, size, img); }
 CF_INLINE void image_free(CF_ImageIndexed* img) { cf_image_free_indexed(img); }
+
+// -------------------------------------------------------------------------------------------------
+// PNG saving.
+
+CF_INLINE CF_Result image_save_png(const char* path, CF_Image* img) { return cf_image_save_png(path, img); }
+CF_INLINE CF_Result image_save_png_to_memory(CF_Image* img, void** out_data, int* out_size) { return cf_image_save_png_to_memory(img, out_data, out_size); }
 
 // -------------------------------------------------------------------------------------------------
 // Image operations.
