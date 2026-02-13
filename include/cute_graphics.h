@@ -78,8 +78,33 @@ typedef struct CF_Canvas { uint64_t id; } CF_Canvas;
  * @struct   CF_Readback
  * @category graphics
  * @brief    An opaque handle representing an async GPU readback operation.
+ * @example > Rendering to a canvas with cf_render_to, then reading back pixel data.
+ *     // Create a canvas.
+ *     CF_Canvas canvas = cf_make_canvas(cf_canvas_defaults(256, 256));
+ *
+ *     // Queue up draw calls and flush them to the canvas.
+ *     cf_draw_sprite(&my_sprite);
+ *     cf_render_to(canvas, true);
+ *
+ *     // Initiate async readback (ends the active render pass automatically).
+ *     CF_Readback readback = cf_canvas_readback(canvas);
+ *
+ *     // Poll each frame until the GPU finishes the download.
+ *     if (cf_readback_ready(readback)) {
+ *         int size = cf_readback_size(readback);
+ *         void* pixels = cf_alloc(size);
+ *         cf_readback_data(readback, pixels, size);
+ *         // pixels now holds RGBA8 data (256 * 256 * 4 bytes).
+ *         // ... use the pixel data ...
+ *         cf_free(pixels);
+ *         cf_destroy_readback(readback);
+ *     }
+ * @example > Reading back the screen contents (screenshot).
+ *     CF_Readback readback = cf_canvas_readback(cf_app_get_canvas());
  * @remarks  A readback initiates an async GPU-to-CPU copy of pixel data from a canvas.
  *           Poll with `cf_readback_ready` and retrieve data with `cf_readback_data`.
+ *           The pixel format matches the canvas target format (typically RGBA8, 4 bytes per pixel).
+ *           On web/Emscripten builds, readback is unsupported and returns a zero handle.
  * @related  CF_Canvas cf_canvas_readback cf_readback_ready cf_readback_data cf_readback_size cf_destroy_readback
  */
 typedef struct CF_Readback { uint64_t id; } CF_Readback;
