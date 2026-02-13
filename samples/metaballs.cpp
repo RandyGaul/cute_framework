@@ -5,20 +5,17 @@ int w = 480*2;
 int h = 270*2;
 float scale = 1;
 
-const char* s_shd = R"(
-	layout(set = 2, binding = 1) uniform sampler2D tex;
-
-	vec4 shader(vec4 color, vec2 pos, vec2 screen_uv, vec4 params)
-	{
-		float d = texture(tex, screen_uv).x;
-		d = d > 0.5 ? 1.0 : 0.0;
-		return vec4(vec3(d), 1);
-	}
-)";
-
 #ifndef CF_RUNTIME_SHADER_COMPILATION
-#include "metaballs_shd.h"
+#include "metaballs_data/metaballs_shd.h"
 #endif
+
+void mount_content_directory_as(const char* dir)
+{
+	CF_Path path = fs_get_base_directory();
+	path.normalize();
+	path += "/metaballs_data";
+	fs_mount(path.c_str(), dir);
+}
 
 CF_Canvas soft_circles;
 CF_Shader shd;
@@ -83,11 +80,13 @@ void update()
 int main(int argc, char* argv[])
 {
 	make_app("Metaballs", 0, 0, 0, (int)(w*scale), (int)(h*scale), CF_APP_OPTIONS_RESIZABLE_BIT | CF_APP_OPTIONS_WINDOW_POS_CENTERED_BIT, argv[0]);
+	mount_content_directory_as("/");
+	cf_shader_directory("/");
 	soft_circles = make_canvas(canvas_defaults(w, h));
 
 	
 #ifdef CF_RUNTIME_SHADER_COMPILATION
-	shd = cf_make_draw_shader_from_source(s_shd);
+	shd = cf_make_draw_shader("metaballs.shd");
 #else
 	shd = cf_make_draw_shader_from_bytecode(metaballs);
 #endif

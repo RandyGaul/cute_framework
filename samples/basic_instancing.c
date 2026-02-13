@@ -11,34 +11,26 @@ typedef struct InstanceData
 	CF_V2 offset;
 } InstanceData;
 
-const char* s_tri_vs =
-"layout (location = 0) in vec2 in_pos;\n"
-"layout (location = 1) in vec4 in_col;\n"
-"layout (location = 2) in vec2 in_offset;\n"
-"\n"
-"layout (location = 0) out vec4 v_col;\n"
-"\n"
-"void main()\n"
-"{\n"
-"    vec2 pos = in_pos + in_offset;\n"
-"    v_col = in_col;\n"
-"    gl_Position = vec4(pos, 0, 1);\n"
-"}\n";
+#ifndef CF_RUNTIME_SHADER_COMPILATION
+#include "basic_instancing_data/basic_instancing_vs_shd.h"
+#include "basic_instancing_data/basic_instancing_fs_shd.h"
+#endif
 
-const char* s_tri_fs =
-"layout(location = 0) in vec4 v_col;\n"
-"layout(location = 0) out vec4 result;\n"
-"\n"
-"void main()\n"
-"{\n"
-"    result = v_col;\n"
-"}\n";
-
+void mount_content_directory_as(const char* dir)
+{
+	const char* path = cf_fs_get_base_directory();
+	path = cf_path_normalize(path);
+	path = cf_string_append(path, "/basic_instancing_data");
+	cf_fs_mount(path, dir, false);
+	cf_string_free(path);
+}
 
 int main(int argc, char* argv[])
 {
 	CF_Result result = cf_make_app("Instancing", 0, 0, 0, 640, 480, CF_APP_OPTIONS_WINDOW_POS_CENTERED_BIT | CF_APP_OPTIONS_RESIZABLE_BIT, argv[0]);
 	if (cf_is_error(result)) return -1;
+	mount_content_directory_as("/");
+	cf_shader_directory("/");
 
 	// Vertex data for a single triangle.
 	Vertex verts[3];
@@ -77,7 +69,11 @@ int main(int argc, char* argv[])
 	cf_mesh_update_instance_data(mesh, instances, 100);
 
 	CF_Material material = cf_make_material();
-	CF_Shader shader = cf_make_shader_from_source(s_tri_vs, s_tri_fs);
+#ifdef CF_RUNTIME_SHADER_COMPILATION
+	CF_Shader shader = cf_make_shader("basic_instancing_vs.shd", "basic_instancing_fs.shd");
+#else
+	CF_Shader shader = cf_make_shader_from_bytecode(s_basic_instancing_vs_bytecode, s_basic_instancing_fs_bytecode);
+#endif
 
 	while (cf_app_is_running()) {
 		cf_app_update(NULL);

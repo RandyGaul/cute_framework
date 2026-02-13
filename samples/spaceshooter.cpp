@@ -1108,9 +1108,8 @@ int main(int argc, char* argv[])
 {
 	// Create a window with a resolution of 640 x 480.
 	make_app("Space Shooter", 0, 0, 0, 640, 480, CF_APP_OPTIONS_WINDOW_POS_CENTERED_BIT, argv[0]);
-	cf_shader_directory("/spaceshooter_data");
-
 	mount_content_directory_as("/");
+	cf_shader_directory("/");
 	clear_color(color_black());
 
 	g = (Game*)cf_calloc(sizeof(Game), 1);

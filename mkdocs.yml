@@ -72,6 +72,7 @@ not_in_nav: |
   /input/*.md
   /json/*.md
   /list/*.md
+  /map/*.md
   /math/*.md
   /multithreading/*.md
   /net/*.md
@@ -118,7 +119,51 @@ nav:
       - Strings: topics/strings.md
       - Virtual File System: topics/virtual_file_system.md
       - HTTPS: topics/web.md
-  - Samples: samples.md
+  - Samples:
+      - samples/index.md
+      - basic_camera: samples/basic_camera.md
+      - basicindexedrendering: samples/basicindexedrendering.md
+      - basicinput: samples/basicinput.md
+      - basicinstancing: samples/basicinstancing.md
+      - basicshapes: samples/basicshapes.md
+      - basicsprite: samples/basicsprite.md
+      - clay: samples/clay.md
+      - clay_ui_animations: samples/clay_ui_animations.md
+      - draw_to_texture: samples/draw_to_texture.md
+      - easysprite: samples/easysprite.md
+      - fetch_image: samples/fetch_image.md
+      - fluid_sim: samples/fluid_sim.md
+      - font_debug: samples/font_debug.md
+      - hello_triangle: samples/hello_triangle.md
+      - ime: samples/ime.md
+      - imgui: samples/imgui.md
+      - imgui_texture: samples/imgui_texture.md
+      - import_spritesheet: samples/import_spritesheet.md
+      - input_binding: samples/input_binding.md
+      - joypad: samples/joypad.md
+      - metaballs: samples/metaballs.md
+      - nine_slice: samples/nine_slice.md
+      - noise: samples/noise.md
+      - outline_stencil: samples/outline_stencil.md
+      - pivot: samples/pivot.md
+      - platformer: samples/platformer.md
+      - polygon: samples/polygon.md
+      - rainbow_liquid: samples/rainbow_liquid.md
+      - recolor: samples/recolor.md
+      - scissor: samples/scissor.md
+      - scratch: samples/scratch.md
+      - screen_shatter: samples/screen_shatter.md
+      - shallow_water: samples/shallow_water.md
+      - spaceshooter: samples/spaceshooter.md
+      - sprite_shatter: samples/sprite_shatter.md
+      - sprite_slice: samples/sprite_slice.md
+      - stencil_pie_chart: samples/stencil_pie_chart.md
+      - textdrawing: samples/textdrawing.md
+      - timestep: samples/timestep.md
+      - waves: samples/waves.md
+      - window: samples/window.md
+      - windowevents: samples/windowevents.md
+      - windowresizing: samples/windowresizing.md
   - Made with CF: made_with_cf.md
   - Community / Ask for Help: community_ask_for_help.md
   - API Reference: api_reference.md

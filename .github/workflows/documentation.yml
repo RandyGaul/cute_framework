@@ -24,6 +24,23 @@ jobs:
       - name: Generate documentation
         run: ./docsparser
 
+      - name: Setup Emscripten SDK
+        uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: 'latest'
+          actions-cache-folder: 'emsdk-cache'
+
+      - name: Build samples for web
+        run: |
+          emcmake cmake -B build_web -S . -DCMAKE_BUILD_TYPE=Release
+          cmake --build build_web
+        timeout-minutes: 30
+
+      - name: Generate sample pages
+        run: |
+          chmod +x tools/generate_sample_pages.rb
+          ./tools/generate_sample_pages.rb build_web docs https://github.com/RandyGaul/cute_framework
+
       - name: Set up Python runtime
         uses: actions/setup-python@v5
         with:

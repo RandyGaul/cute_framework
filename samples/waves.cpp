@@ -18,8 +18,8 @@ void mount_content_directory_as(const char* dir)
 int main(int argc, char* argv[])
 {
 	make_app("Waves Sample", 0, 0, 0, 640, 480, CF_APP_OPTIONS_WINDOW_POS_CENTERED_BIT | CF_APP_OPTIONS_RESIZABLE_BIT, argv[0]);
-	cf_shader_directory("/waves_data");
 	mount_content_directory_as("/");
+	cf_shader_directory("/");
 	app_init_imgui();
 
 	CF_Png png;
