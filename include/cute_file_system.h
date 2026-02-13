@@ -652,6 +652,7 @@ struct CF_Directory
 	static CF_INLINE Array<CF_Path> enumerate(const char* virtual_path) {
 		Array<CF_Path> files;
 		const char** paths = fs_enumerate_directory(virtual_path);
+		if (!paths) return files;
 		const char** paths_ptr = paths;
 		while (*paths) {
 			const char* file = *paths++;
