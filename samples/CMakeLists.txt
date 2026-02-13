@@ -58,6 +58,19 @@ function(add_shader SHADER_SOURCE TYPE VARNAME)
 	)
 endfunction()
 
+# Helper function to copy .shd files to build output for runtime shader compilation
+function(add_sample_shader TARGET_NAME SHADER_FILE)
+	add_custom_command(TARGET ${TARGET_NAME} PRE_BUILD
+		COMMAND ${CMAKE_COMMAND} -E copy_if_different
+			${CMAKE_CURRENT_SOURCE_DIR}/${SHADER_FILE}
+			$<TARGET_FILE_DIR:${TARGET_NAME}>/${SHADER_FILE}
+	)
+	if (EMSCRIPTEN)
+		target_link_options(${TARGET_NAME} PRIVATE
+			"SHELL:--preload-file ${CMAKE_CURRENT_SOURCE_DIR}/${SHADER_FILE}@/${SHADER_FILE}")
+	endif()
+endfunction()
+
 add_sample(easysprite easy_sprite.c)
 add_sample(basicserialization basic_serialization.c)
 add_sample(imgui imgui.c)
@@ -114,26 +127,28 @@ if (NOT EMSCRIPTEN)
 	add_sample(hrc hrc.c)
 endif()
 
+# Data directories are now copied wholesale for affected samples (see below)
+
 # Pre-compile shaders for certain samples.
 if (CF_CUTE_SHADERC)
 	# Draw shaders
 	add_shader(spaceshooter_data/flash.shd draw s_flash_shd_bytecode)
 	add_shader(waves_data/waves.shd draw s_waves_shd_bytecode)
-	add_shader(metaballs.shd draw metaballs)
+	add_shader(metaballs_data/metaballs.shd draw metaballs metaballs_data/metaballs_shd.h)
 	add_shader(shallow_water_data/shallow_water.shd draw s_shallow_water_shd_bytecode)
-	add_shader(recolor.shd draw s_recolor_shd_bytecode)
-	add_shader(fluid_sim.shd draw s_fluid_sim_shd_bytecode)
-	add_shader(screen_shatter.shd draw s_screen_shatter_shd_bytecode)
-	add_shader(sprite_shatter.shd draw s_sprite_shatter_shd_bytecode)
-	add_shader(sprite_slice.shd draw s_sprite_slice_shd_bytecode)
+	add_shader(recolor_data/recolor.shd draw s_recolor_shd_bytecode recolor_data/recolor_shd.h)
+	add_shader(fluid_sim_data/fluid_sim.shd draw s_fluid_sim_shd_bytecode fluid_sim_data/fluid_sim_shd.h)
+	add_shader(screen_shatter_data/screen_shatter.shd draw s_screen_shatter_shd_bytecode screen_shatter_data/screen_shatter_shd.h)
+	add_shader(sprite_shatter_data/sprite_shatter.shd draw s_sprite_shatter_shd_bytecode sprite_shatter_data/sprite_shatter_shd.h)
+	add_shader(sprite_slice_data/sprite_slice.shd draw s_sprite_slice_shd_bytecode sprite_slice_data/sprite_slice_shd.h)
 
 	# Low-level shaders (vertex/fragment)
-	add_shader(hello_triangle_vs.shd vertex s_hello_triangle_vs_bytecode)
-	add_shader(hello_triangle_fs.shd fragment s_hello_triangle_fs_bytecode)
-	add_shader(basic_instancing_vs.shd vertex s_basic_instancing_vs_bytecode)
-	add_shader(basic_instancing_fs.shd fragment s_basic_instancing_fs_bytecode)
-	add_shader(basic_indexed_rendering_vs.shd vertex s_basic_indexed_rendering_vs_bytecode)
-	add_shader(basic_indexed_rendering_fs.shd fragment s_basic_indexed_rendering_fs_bytecode)
+	add_shader(hello_triangle_data/hello_triangle_vs.shd vertex s_hello_triangle_vs_bytecode hello_triangle_data/hello_triangle_vs_shd.h)
+	add_shader(hello_triangle_data/hello_triangle_fs.shd fragment s_hello_triangle_fs_bytecode hello_triangle_data/hello_triangle_fs_shd.h)
+	add_shader(basic_instancing_data/basic_instancing_vs.shd vertex s_basic_instancing_vs_bytecode basic_instancing_data/basic_instancing_vs_shd.h)
+	add_shader(basic_instancing_data/basic_instancing_fs.shd fragment s_basic_instancing_fs_bytecode basic_instancing_data/basic_instancing_fs_shd.h)
+	add_shader(basic_indexed_rendering_data/basic_indexed_rendering_vs.shd vertex s_basic_indexed_rendering_vs_bytecode basic_indexed_rendering_data/basic_indexed_rendering_vs_shd.h)
+	add_shader(basic_indexed_rendering_data/basic_indexed_rendering_fs.shd fragment s_basic_indexed_rendering_fs_bytecode basic_indexed_rendering_data/basic_indexed_rendering_fs_shd.h)
 endif()
 
 # Ensure that sample data is included in web build
@@ -145,6 +160,15 @@ if (EMSCRIPTEN)
 	target_link_options(pivot PRIVATE --preload-file "${CMAKE_CURRENT_SOURCE_DIR}/pivot_data@/pivot_data")
 	target_link_options(9_slice PRIVATE --preload-file "${CMAKE_CURRENT_SOURCE_DIR}/9_slice_data@/9_slice_data")
 	target_link_options(scratch PRIVATE --preload-file "${CMAKE_CURRENT_SOURCE_DIR}/../assets/CF_Logo_Pixel.png@/app_icon.png")
+	target_link_options(recolor PRIVATE --preload-file "${CMAKE_CURRENT_SOURCE_DIR}/recolor_data@/recolor_data")
+	target_link_options(fluid_sim PRIVATE --preload-file "${CMAKE_CURRENT_SOURCE_DIR}/fluid_sim_data@/fluid_sim_data")
+	target_link_options(metaballs PRIVATE --preload-file "${CMAKE_CURRENT_SOURCE_DIR}/metaballs_data@/metaballs_data")
+	target_link_options(screen_shatter PRIVATE --preload-file "${CMAKE_CURRENT_SOURCE_DIR}/screen_shatter_data@/screen_shatter_data")
+	target_link_options(sprite_shatter PRIVATE --preload-file "${CMAKE_CURRENT_SOURCE_DIR}/sprite_shatter_data@/sprite_shatter_data")
+	target_link_options(sprite_slice PRIVATE --preload-file "${CMAKE_CURRENT_SOURCE_DIR}/sprite_slice_data@/sprite_slice_data")
+	target_link_options(hello_triangle PRIVATE --preload-file "${CMAKE_CURRENT_SOURCE_DIR}/hello_triangle_data@/hello_triangle_data")
+	target_link_options(basicinstancing PRIVATE --preload-file "${CMAKE_CURRENT_SOURCE_DIR}/basic_instancing_data@/basic_instancing_data")
+	target_link_options(basicindexedrendering PRIVATE --preload-file "${CMAKE_CURRENT_SOURCE_DIR}/basic_indexed_rendering_data@/basic_indexed_rendering_data")
 endif ()
 
 # Copy over some folders for certain samples.
@@ -155,4 +179,15 @@ add_custom_command(TARGET import_spritesheet PRE_BUILD COMMAND ${CMAKE_COMMAND} 
 add_custom_command(TARGET pivot PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/pivot_data $<TARGET_FILE_DIR:pivot>/pivot_data)
 add_custom_command(TARGET scratch PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/../assets/CF_Logo_Pixel.png $<TARGET_FILE_DIR:scratch>/app_icon.png)
 add_custom_command(TARGET 9_slice PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/9_slice_data $<TARGET_FILE_DIR:9_slice>/9_slice_data)
+add_custom_command(TARGET recolor PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/recolor_data $<TARGET_FILE_DIR:recolor>/recolor_data)
+add_custom_command(TARGET fluid_sim PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/fluid_sim_data $<TARGET_FILE_DIR:fluid_sim>/fluid_sim_data)
+add_custom_command(TARGET metaballs PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/metaballs_data $<TARGET_FILE_DIR:metaballs>/metaballs_data)
+add_custom_command(TARGET screen_shatter PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/screen_shatter_data $<TARGET_FILE_DIR:screen_shatter>/screen_shatter_data)
+add_custom_command(TARGET sprite_shatter PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/sprite_shatter_data $<TARGET_FILE_DIR:sprite_shatter>/sprite_shatter_data)
+add_custom_command(TARGET sprite_slice PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/sprite_slice_data $<TARGET_FILE_DIR:sprite_slice>/sprite_slice_data)
+add_custom_command(TARGET hello_triangle PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/hello_triangle_data $<TARGET_FILE_DIR:hello_triangle>/hello_triangle_data)
+add_custom_command(TARGET basicinstancing PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/basic_instancing_data $<TARGET_FILE_DIR:basicinstancing>/basic_instancing_data)
+add_custom_command(TARGET basicindexedrendering PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/basic_indexed_rendering_data $<TARGET_FILE_DIR:basicindexedrendering>/basic_indexed_rendering_data)
+if(NOT EMSCRIPTEN)
 add_custom_command(TARGET hrc PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/hrc_data $<TARGET_FILE_DIR:hrc>/hrc_data)
+endif()

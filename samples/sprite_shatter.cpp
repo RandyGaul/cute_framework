@@ -1,18 +1,17 @@
 #include <cute.h>
 #include "proggy.h"
 
-#define STR(X) #X
-
-const char* shader_str = STR(
-vec4 shader(vec4 color, vec2 pos, vec2 screen_uv, vec4 params)
-{
-    return texture(u_image, smooth_uv(v_uv, u_texture_size));
-}
-);
-
 #ifndef CF_RUNTIME_SHADER_COMPILATION
-#include "sprite_shatter_shd.h"
+#include "sprite_shatter_data/sprite_shatter_shd.h"
 #endif
+
+void mount_content_directory_as(const char* dir)
+{
+	Cute::CF_Path path = Cute::fs_get_base_directory();
+	path.normalize();
+	path += "/sprite_shatter_data";
+	Cute::fs_mount(path.c_str(), dir);
+}
 
 struct
 {
@@ -51,7 +50,7 @@ void add_vertex_attribute(CF_VertexAttribute* attrs, const char* name, CF_Vertex
 void init(int w, int h)
 {
 #ifdef CF_RUNTIME_SHADER_COMPILATION
-    draw.shader = cf_make_draw_shader_from_source(shader_str);
+    draw.shader = cf_make_draw_shader("sprite_shatter.shd");
 #else
     draw.shader = cf_make_draw_shader_from_bytecode(s_sprite_shatter_shd_bytecode);
 #endif
@@ -262,7 +261,9 @@ int main(int argc, char *argv[])
 	int options = CF_APP_OPTIONS_WINDOW_POS_CENTERED_BIT | CF_APP_OPTIONS_RESIZABLE_BIT;
 	CF_Result result = cf_make_app("Sprite Shatter", 0, 0, 0, w, h, options, argv[0]);
 	if (cf_is_error(result)) return -1;
-    
+	mount_content_directory_as("/");
+	cf_shader_directory("/");
+
     // need to know the atlas size otherwise without smooth_uv() the sprites will look blurry
     int atlas_w = 2048;
     int atlas_h = 2048;

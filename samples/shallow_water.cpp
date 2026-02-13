@@ -26,60 +26,18 @@ CF_Pixel* get_noise(int w, int h, float time)
 	return cf_noise_fbm_pixels_wrapped(w, h, 0, scale, lacunarity, octaves, falloff, time * frequency, time_amplitude);
 }
 
-const char* s_shd = R"(
-	layout(set = 2, binding = 1) uniform sampler2D wavelets_tex;
-	layout(set = 2, binding = 2) uniform sampler2D noise_tex;
-	layout(set = 2, binding = 3) uniform sampler2D scene_tex;
-
-	layout(set = 3, binding = 1) uniform shd_uniforms {
-		float show_normals;
-		float show_noise;
-	};
-
-	vec2 normal_from_heightmap(sampler2D tex, vec2 uv)
-	{
-		float ha = textureOffset(tex, uv, ivec2(-1, 1)).r;
-		float hb = textureOffset(tex, uv, ivec2(1, 1)).r;
-		float hc = textureOffset(tex, uv, ivec2(0, -1)).r;
-		vec2 n = vec2(ha - hc, hb - hc);
-		return n;
-	}
-
-	vec4 normal_to_color(vec2 n)
-	{
-		return vec4(n * 0.5 + 0.5, 1.0, 1.0);
-	}
-
-	vec4 shader(vec4 color, vec2 pos, vec2 screen_uv, vec4 params)
-	{
-		vec2 uv = screen_uv;
-		vec2 dim = vec2(1.0 / 160.0, 1.0 / 120.0);
-		vec2 n = normal_from_heightmap(noise_tex, uv);
-		vec2 w = normal_from_heightmap(wavelets_tex, uv + n * dim * 10.0);
-		vec4 c = mix(normal_to_color(n), normal_to_color(w), 0.25);
-		c = texture(scene_tex, uv + (n + w) * dim * 10.0);
-		c = mix(c, vec4(1), length(n + w) > 0.2 ? 0.1 : 0.0);
-
-		c = show_normals > 0.0 ? mix(normal_to_color(n), normal_to_color(w), 0.25) : c;
-
-		c = show_noise > 0.0 ? texture(noise_tex, uv) : c;
-
-		return c;
-	}
-)";
-
 int main(int argc, char* argv[])
 {
 	make_app("Shallow Water Sample", 0, 0, 0, 640, 480, CF_APP_OPTIONS_WINDOW_POS_CENTERED_BIT | CF_APP_OPTIONS_RESIZABLE_BIT, argv[0]);
-	cf_shader_directory("/shallow_water_data");
 	mount_content_directory_as("/");
+	cf_shader_directory("/shallow_water_data");
 	app_init_imgui();
 
 	int W = 160;
 	int H = 120;
 
 #ifdef CF_RUNTIME_SHADER_COMPILATION
-	CF_Shader shader = cf_make_draw_shader_from_source(s_shd);
+	CF_Shader shader = cf_make_draw_shader("shallow_water.shd");
 #else
 	CF_Shader shader = cf_make_draw_shader_from_bytecode(s_shallow_water_shd_bytecode);
 #endif

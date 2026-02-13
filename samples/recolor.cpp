@@ -3,28 +3,26 @@ using namespace Cute;
 
 #include <imgui.h>
 
-const char* s_recolor = R"(
-	#include "blend.shd"
-
-	vec4 shader(vec4 color, vec2 pos, vec2 screen_uv, vec4 params)
-	{
-		vec3 a = rgb_to_hsv(color.rgb);
-		vec3 b = rgb_to_hsv(params.rgb);
-		vec3 c = hsv_to_rgb(mix(a, b, params.a));
-		return vec4(c, color.a);
-	}
-)";
-
 #ifndef CF_RUNTIME_SHADER_COMPILATION
-#include "recolor_shd.h"
+#include "recolor_data/recolor_shd.h"
 #endif
+
+void mount_content_directory_as(const char* dir)
+{
+	CF_Path path = fs_get_base_directory();
+	path.normalize();
+	path += "/recolor_data";
+	fs_mount(path.c_str(), dir);
+}
 
 int main(int argc, char* argv[])
 {
 	CF_Result result = make_app("Recolor", 0, 0, 0, 720, 480, CF_APP_OPTIONS_WINDOW_POS_CENTERED_BIT, argv[0]);
 	if (is_error(result)) return -1;
+	mount_content_directory_as("/");
+	cf_shader_directory("/");
 #ifdef CF_RUNTIME_SHADER_COMPILATION
-	CF_Shader recolor = make_draw_shader_from_source(s_recolor);
+	CF_Shader recolor = make_draw_shader("recolor.shd");
 #else
 	CF_Shader recolor = make_draw_shader_from_bytecode(s_recolor_shd_bytecode);
 #endif

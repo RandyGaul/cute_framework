@@ -6,80 +6,25 @@ using namespace Cute;
 float w = 300*2;
 float h = 300*2;
 
-// This shader is just a bunch of ChatGPT code.
-// Would be nice to replace it with some more cool.
-#define STR(X) #X
-const char* s_shd = STR(
-	layout(set = 2, binding = 1) uniform sampler2D tex;
-
-	layout(set = 3, binding = 1) uniform shd_uniforms {
-		float dt;
-	};
-
-	vec4 shader(vec4 color, vec2 pos, vec2 screen_uv, vec4 params)
-	{
-		// --- Read current state ---
-		vec4 C = texture(tex, screen_uv);
-		ivec2 ts = textureSize(tex, 0);
-		vec2 texel = 1.0 / vec2(ts);
-
-		// Neighbor samples for diffusion/gradients.
-		vec2 uvL = clamp(screen_uv + vec2(-texel.x, 0.0), 0.0, 1.0);
-		vec2 uvR = clamp(screen_uv + vec2( texel.x, 0.0), 0.0, 1.0);
-		vec2 uvD = clamp(screen_uv + vec2(0.0, -texel.y), 0.0, 1.0);
-		vec2 uvU = clamp(screen_uv + vec2(0.0,  texel.y), 0.0, 1.0);
-
-		vec4 L = texture(tex, uvL);
-		vec4 R = texture(tex, uvR);
-		vec4 D = texture(tex, uvD);
-		vec4 U = texture(tex, uvU);
-
-		// Unpack velocity from RG in [-1,1].
-		vec2 v = C.rg * 2.0 - 1.0;
-
-		// --- Advection ---
-		// Backtrace in UV space. Scale down for stability.
-		float adv_scale = 0.6;
-		vec2 backUV = clamp(screen_uv - v * dt * adv_scale, 0.0, 1.0);
-		vec4 adv = texture(tex, backUV);
-		vec2 v_adv = adv.rg * 2.0 - 1.0;
-		float dye_adv = adv.b;
-
-		// --- Simple diffusion ---
-		vec2 v_lap = (L.rg + R.rg + U.rg + D.rg - 4.0 * C.rg);
-		float d_lap = (L.b  + R.b  + U.b  + D.b  - 4.0 * C.b);
-		float visc = 0.15;          // velocity diffusion
-		float diff = 0.12;          // dye diffusion
-
-		// --- Add a bit of vorticity from dye gradient for a "cool" look ---
-		vec2 dye_grad = vec2(R.b - L.b, U.b - D.b) * 0.5;
-		vec2 vort = vec2(-dye_grad.y, dye_grad.x);  // perpendicular to gradient
-		float vort_strength = 1.2;
-		v += vort * vort_strength * dt;
-
-		// --- Damping / viscosity ---
-		v += v_lap * visc * dt;
-		v = mix(v, v_adv, 0.65);           // semi-Lagrangian advection of velocity
-		v *= (1.0 - 0.25 * dt);            // simple drag
-
-		float dye = dye_adv + d_lap * diff * dt;
-		dye = clamp(dye, 0.0, 1.0);
-
-		// Pack velocity back to RG in [0,1], dye in B, A=1.
-		vec2 v01 = v * 0.5 + 0.5;
-		return vec4(clamp(v01, 0.0, 1.0), dye, 1.0);
-	}
-);
-
 #ifndef CF_RUNTIME_SHADER_COMPILATION
-#include "fluid_sim_shd.h"
+#include "fluid_sim_data/fluid_sim_shd.h"
 #endif
+
+void mount_content_directory_as(const char* dir)
+{
+	CF_Path path = fs_get_base_directory();
+	path.normalize();
+	path += "/fluid_sim_data";
+	fs_mount(path.c_str(), dir);
+}
 
 int main(int argc, char* argv[])
 {
 	make_app("Fluid Sim", 0, 0, 0, (int)w, (int)h, CF_APP_OPTIONS_RESIZABLE_BIT | CF_APP_OPTIONS_WINDOW_POS_CENTERED_BIT, argv[0]);
+	mount_content_directory_as("/");
+	cf_shader_directory("/");
 #ifdef CF_RUNTIME_SHADER_COMPILATION
-	CF_Shader shd = cf_make_draw_shader_from_source(s_shd);
+	CF_Shader shd = cf_make_draw_shader("fluid_sim.shd");
 #else
 	CF_Shader shd = cf_make_draw_shader_from_bytecode(s_fluid_sim_shd_bytecode);
 #endif

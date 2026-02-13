@@ -11,8 +11,16 @@ vec4 shader(vec4 color, vec2 pos, vec2 screen_uv, vec4 params)
 );
 
 #ifndef CF_RUNTIME_SHADER_COMPILATION
-#include "sprite_slice_shd.h"
+#include "sprite_slice_data/sprite_slice_shd.h"
 #endif
+
+void mount_content_directory_as(const char* dir)
+{
+	Cute::CF_Path path = Cute::fs_get_base_directory();
+	path.normalize();
+	path += "/sprite_slice_data";
+	Cute::fs_mount(path.c_str(), dir);
+}
 
 struct
 {
@@ -236,13 +244,15 @@ int main(int argc, char *argv[])
 	int options = CF_APP_OPTIONS_WINDOW_POS_CENTERED_BIT | CF_APP_OPTIONS_RESIZABLE_BIT;
 	CF_Result result = cf_make_app("Sprite Slice", 0, 0, 0, w, h, options, argv[0]);
 	if (cf_is_error(result)) return -1;
-    
+	mount_content_directory_as("/");
+	cf_shader_directory("/");
+
     // need to know the atlas size otherwise without smooth_uv() the sprites will look blurry
     int atlas_w = 2048;
     int atlas_h = 2048;
     CF_V2 atlas_dims = cf_v2((float)atlas_w, (float)atlas_h);
     cf_draw_set_atlas_dimensions(atlas_w, atlas_h);
-    
+
     cf_make_font_from_memory(proggy_data, proggy_sz, "ProggyClean");
     init(w, h);
     
