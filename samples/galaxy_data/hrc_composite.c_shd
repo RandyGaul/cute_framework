@@ -1,0 +1,160 @@
+// hrc_composite.comp — Sum 4 quadrants, cross blur, output (Sec 4.2, Eq 21).
+//
+// Each quadrant's R_0 was computed in +x-aligned space by the merge-down phase
+// and stored in F_0..F_3. This shader reverses the rotation, applies the +1 pixel
+// offset to prevent diagonal ray overlap (Fig 12), sums all four quadrants, applies
+// the cross blur to remove checkerboard artifacts, and writes the final fluence.
+//
+// Pipeline:  seed -> [extend x N] -> [merge x N] -> composite
+//                                                   ^^^^^^^^^
+// Inputs:
+//   u_f0..u_f3     — R_0 per quadrant (world_size x world_size, uvec2 f16)
+//   u_absorption   — scene absorption (for cross blur opacity test)
+//
+// Outputs:
+//   u_fluence      — final fluence image (rgba8)
+
+layout(set = 0, binding = 0, rgba16f) uniform readonly image2D u_absorption;
+layout(std430, set = 0, binding = 1) readonly buffer F0 { uvec2 data[]; } u_f0;
+layout(std430, set = 0, binding = 2) readonly buffer F1 { uvec2 data[]; } u_f1;
+layout(std430, set = 0, binding = 3) readonly buffer F2 { uvec2 data[]; } u_f2;
+layout(std430, set = 0, binding = 4) readonly buffer F3 { uvec2 data[]; } u_f3;
+layout(set = 1, binding = 0, rgba8) uniform writeonly image2D u_fluence;
+
+layout(set = 2, binding = 0) uniform Params
+{
+	int   u_world_size;
+	float u_abs_threshold; // opacity similarity cutoff for cross blur
+	int   u_debug_mode;
+};
+
+layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+
+vec4 f16_load(uvec2 packed)
+{
+	return vec4(unpackHalf2x16(packed.x), unpackHalf2x16(packed.y));
+}
+
+vec3 srgb_from_linear(vec3 c)
+{
+	return pow(c, vec3(1.0 / 2.2));
+}
+
+// Inverse of seed's rotate_uv, in integer pixel space.
+// Given a world-space pixel, returns the corresponding index in
+// the rotated F buffer for this quadrant.
+//
+// Seed forward (rotated → world):
+//   rot 0: (rx, ry) → (rx, ry)
+//   rot 1: (rx, ry) → (s-ry, rx)
+//   rot 2: (rx, ry) → (s-rx, s-ry)
+//   rot 3: (rx, ry) → (ry, s-rx)
+//
+// Inverse (world → rotated):
+ivec2 world_to_rotated(ivec2 p, int rot, int s)
+{
+	if (rot == 1) return ivec2(p.y, s - p.x);
+	if (rot == 2) return ivec2(s - p.x, s - p.y);
+	if (rot == 3) return ivec2(s - p.y, p.x);
+	return p;
+}
+
+// Load fluence from one quadrant's F buffer at a rotated-space coordinate.
+// No offset applied here — caller is responsible for the +1 shift.
+vec3 F_load(int rot, ivec2 rotated_pos)
+{
+	if (rotated_pos.x < 0 || rotated_pos.x >= u_world_size || rotated_pos.y < 0 || rotated_pos.y >= u_world_size) return vec3(0.0);
+	int idx = rotated_pos.y * u_world_size + rotated_pos.x;
+	vec4 val;
+	if      (rot == 0) val = f16_load(u_f0.data[idx]);
+	else if (rot == 1) val = f16_load(u_f1.data[idx]);
+	else if (rot == 2) val = f16_load(u_f2.data[idx]);
+	else               val = f16_load(u_f3.data[idx]);
+	return val.rgb;
+}
+
+// Sum fluence from all 4 quadrants at a world-space pixel.
+// Each quadrant covers one 90° wedge of the full 2π.
+//
+// The +1 x-offset in rotated space prevents diagonal ray overlap between
+// quadrants, which otherwise causes cross-shaped brightness artifacts
+// around lights (Sec 4.2, Fig 12).
+vec3 sum_quadrants(ivec2 world_pos)
+{
+	int s = u_world_size - 1;
+	ivec2 r0 = world_to_rotated(world_pos, 0, s) + ivec2(1, 0);
+	ivec2 r1 = world_to_rotated(world_pos, 1, s) + ivec2(1, 0);
+	ivec2 r2 = world_to_rotated(world_pos, 2, s) + ivec2(1, 0);
+	ivec2 r3 = world_to_rotated(world_pos, 3, s) + ivec2(1, 0);
+	return F_load(0, r0) + F_load(1, r1) + F_load(2, r2) + F_load(3, r3);
+}
+
+// Read absorption magnitude at a world pixel for the opacity similarity check.
+float absorption_at(ivec2 pos)
+{
+	vec3 a = imageLoad(u_absorption, pos).rgb;
+	return dot(a, vec3(0.333));
+}
+
+// Accumulate a weighted blur tap, skipping out-of-bounds pixels and
+// pixels whose absorption differs significantly from the center.
+void blur_tap(ivec2 np, float w, float center_abs, inout vec3 sum, inout float weight)
+{
+	if (np.x < 0 || np.x >= u_world_size || np.y < 0 || np.y >= u_world_size) return;
+	if (abs(absorption_at(np) - center_abs) > u_abs_threshold) return;
+	sum += sum_quadrants(np) * w;
+	weight += w;
+}
+
+// Eq 21: 3x3 blur to remove checkerboard artifacts.
+//
+//   K = 1/16 * [1 2 1; 2 4 2; 1 2 1]
+//
+// Skips neighbors that differ significantly in absorption from
+// the center pixel, preventing light leaking through walls.
+// When taps are skipped, the total weight is reduced so the
+// remaining taps are renormalized.
+//
+// The checkerboard arises because v_n(k) has even y-offsets for
+// n >= 1, so odd and even y-rows never interact during extend/merge.
+vec3 blur_3x3(ivec2 pos)
+{
+	float center_abs = absorption_at(pos);
+	vec3 sum = sum_quadrants(pos) * 4.0;
+	float weight = 4.0;
+
+	// Cardinal neighbors (weight 2)
+	blur_tap(pos + ivec2(-1,  0), 2.0, center_abs, sum, weight);
+	blur_tap(pos + ivec2( 1,  0), 2.0, center_abs, sum, weight);
+	blur_tap(pos + ivec2( 0, -1), 2.0, center_abs, sum, weight);
+	blur_tap(pos + ivec2( 0,  1), 2.0, center_abs, sum, weight);
+
+	// Diagonal neighbors (weight 1)
+	blur_tap(pos + ivec2(-1, -1), 1.0, center_abs, sum, weight);
+	blur_tap(pos + ivec2( 1, -1), 1.0, center_abs, sum, weight);
+	blur_tap(pos + ivec2(-1,  1), 1.0, center_abs, sum, weight);
+	blur_tap(pos + ivec2( 1,  1), 1.0, center_abs, sum, weight);
+
+	return sum / weight;
+}
+
+void main()
+{
+	ivec2 gid = ivec2(gl_GlobalInvocationID.xy);
+	if (gid.x >= u_world_size || gid.y >= u_world_size) return;
+
+	vec3 fluence;
+	if (u_debug_mode >= 1 && u_debug_mode <= 4) {
+		// Show a single quadrant without blur.
+		int rot = u_debug_mode - 1;
+		int s = u_world_size - 1;
+		fluence = F_load(rot, world_to_rotated(gid, rot, s) + ivec2(1, 0));
+	} else if (u_debug_mode == 5) {
+		// Sum all quadrants without blur.
+		fluence = sum_quadrants(gid);
+	} else {
+		fluence = blur_3x3(gid);
+	}
+
+	imageStore(u_fluence, gid, vec4(srgb_from_linear(fluence), 1.0));
+}

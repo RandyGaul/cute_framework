@@ -178,27 +178,36 @@ You can apply customizable shaders that work with the draw API by using function
 The draw API passes *all* geometry into an optional shader function, within the fragment shader, called `shader`. This function is the final step in the entire fragment shader, granting the opportunity to alter the final output pixel color. Let us look at the custom shader skeleton/stub (does no-op).
 
 ```glsl
-vec4 shader(vec4 color, vec2 pos, vec2 screen_uv, vec4 params)
+vec4 shader(vec4 color, ShaderParams params)
 {
-	return vec4(mix(color.rgb, params.rgb, params.a), color.a);
+	return vec4(mix(color.rgb, params.attributes.rgb, params.attributes.a), color.a);
 }
 ```
 
 The `color` param is the color that would be rendered if you don't make any modifications to it within the `shader` function. If drawing a sprite this would be the color of a particular pixel from the sprite's texture, or, if drawing a shape the color of the shape itself.
 
-`pos` was the rendering position used when calling an associated draw function like `cf_draw_sprite`.
+The `params` argument is a `ShaderParams` struct with the following fields:
+
+- `view_pos` (vec2) - world position from the draw call
+- `uv` (vec2) - texture UV coordinate
+- `uv_min` (vec2) - UV bounds minimum of the sprite/glyph in the atlas (zero for shapes)
+- `uv_max` (vec2) - UV bounds maximum of the sprite/glyph in the atlas (zero for shapes)
+- `screen_uv` (vec2) - screen-space UV where (0,0) is top-left, (1,1) is bottom-right
+- `attributes` (vec4) - four custom floats from [cf_draw_push_vertex_attributes](../draw/cf_draw_push_vertex_attributes.md)
+
+The `params.uv_min` and `params.uv_max` fields provide atlas UV bounds for sprite sub-regions, which can be useful for effects that need to know the boundaries of the current sprite within the texture atlas. CF internally pads every sprite with a 1-pixel transparent border in the atlas, so clamping modified UVs to these bounds works well as a clamp-to-edge strategy without bleeding from neighboring sprites:
+
+```glsl
+uv = clamp(uv, params.uv_min, params.uv_max);
+```
 
 For pixel art games it's important to sample using the function `smooth_uv`, something like so: `smooth_uv(v_uv, u_texture_size)` to generate a uv coordinate that will scale pixel art correctly.
-
-`screen_uv` is a position relative to the screen, where (0,0) is the top-left, and (1,1) is the bottom-right of the screen.
-
-`params` are four optional floats. They come from vertex attributes set by [cf_draw_push_vertex_attributes](../draw/cf_draw_push_vertex_attributes.md). Each different item drawn through CF's draw API will attach the previously pushed attributes onto their vertices. These four floats are general-purpose, and only used to pass into the `shader` function. Use them to pack information to implement your own custom visual FX, such as color tinting, or anything else on a per-object basis.
 
 You may also add in uniforms and textures as-needed. The draw API has some functions for setting uniforms and textures via [cf_draw_set_uniform](../draw/cf_draw_set_uniform.md) and [cf_draw_set_texture](../draw/cf_draw_set_texture.md). These will get auto-magically hooked up and send values to your shader. When you add in your own uniforms just be sure to place them inside of a uniform block like in the below sample (see `shd_uniforms`, and don't change this name either! It must be called `shd_uniforms`).
 
 Shaders have access to some "hidden" environment variables. In particular you have access to:
 
-- `v_uv` if you're drawing a canvas with [cf_draw_canvas](../draw/cf_draw_canvas.md) it's often very helpful to sample from the canvas. You may do this via: `texture(u_image, v_uv)`.
+- `v_uv` a legacy alias for `params.uv`, containing the texture UV coordinate. Prefer using `params.uv` in new code. If you're drawing a canvas with [cf_draw_canvas](../draw/cf_draw_canvas.md) it's often very helpful to sample from the canvas. You may do this via: `texture(u_image, params.uv)`.
 - `u_image` if you're drawing a canvas with [cf_draw_canvas](../draw/cf_draw_canvas.md) can be quite useful if you need to, for any reason, sample the canvas. See the above point on `v_uv`.
 - `u_texture_size` if you're drawing a canvas with [cf_draw_canvas](../draw/cf_draw_canvas.md) is sometimes useful for certain algorithms that need to calcualte texel sizes, or know the size of the texture they are sampling from.
 
@@ -228,9 +237,9 @@ vec4 normal_to_color(vec2 n)
 	return vec4(n * 0.5 + 0.5, 1.0, 1.0);
 }
 
-vec4 shader(vec4 color, vec2 pos, vec2 screen_uv, vec4 params)
+vec4 shader(vec4 color, ShaderParams params)
 {
-	vec2 uv = screen_uv;
+	vec2 uv = params.screen_uv;
 	vec2 dim = vec2(1.0/160.0,1.0/120.0);
 	vec2 n = normal_from_heightmap(noise_tex, uv);
 	vec2 w = normal_from_heightmap(wavelets_tex, uv+n*dim*10.0);

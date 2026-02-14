@@ -4,7 +4,7 @@
 #define STR(X) #X
 
 const char* shader_str = STR(
-vec4 shader(vec4 color, vec2 pos, vec2 screen_uv, vec4 params)
+vec4 shader(vec4 color, ShaderParams params)
 {
     return texture(u_image, smooth_uv(v_uv, u_texture_size));
 }
@@ -53,20 +53,17 @@ void init(int w, int h)
 	CF_VertexAttribute* attrs = NULL;
     cf_array_fit(attrs, 32);
     
-    add_vertex_attribute(attrs, "in_pos", CF_VERTEX_FORMAT_FLOAT2, CF_OFFSET_OF(CF_Vertex, p));
-    add_vertex_attribute(attrs, "in_posH", CF_VERTEX_FORMAT_FLOAT2, CF_OFFSET_OF(CF_Vertex, posH));
-    add_vertex_attribute(attrs, "in_n", CF_VERTEX_FORMAT_INT, CF_OFFSET_OF(CF_Vertex, n));
-    add_vertex_attribute(attrs, "in_ab", CF_VERTEX_FORMAT_FLOAT4, CF_OFFSET_OF(CF_Vertex, shape[0]));
-    add_vertex_attribute(attrs, "in_cd", CF_VERTEX_FORMAT_FLOAT4, CF_OFFSET_OF(CF_Vertex, shape[2]));
-    add_vertex_attribute(attrs, "in_ef", CF_VERTEX_FORMAT_FLOAT4, CF_OFFSET_OF(CF_Vertex, shape[4]));
-    add_vertex_attribute(attrs, "in_gh", CF_VERTEX_FORMAT_FLOAT4, CF_OFFSET_OF(CF_Vertex, shape[6]));
-    add_vertex_attribute(attrs, "in_uv", CF_VERTEX_FORMAT_FLOAT2, CF_OFFSET_OF(CF_Vertex, uv));
-	add_vertex_attribute(attrs, "in_col", CF_VERTEX_FORMAT_UBYTE4_NORM, CF_OFFSET_OF(CF_Vertex, color));
-	add_vertex_attribute(attrs, "in_radius", CF_VERTEX_FORMAT_FLOAT, CF_OFFSET_OF(CF_Vertex, radius));
-	add_vertex_attribute(attrs, "in_stroke", CF_VERTEX_FORMAT_FLOAT, CF_OFFSET_OF(CF_Vertex, stroke));
-	add_vertex_attribute(attrs, "in_aa", CF_VERTEX_FORMAT_FLOAT, CF_OFFSET_OF(CF_Vertex, aa));
-    add_vertex_attribute(attrs, "in_params", CF_VERTEX_FORMAT_UBYTE4_NORM, CF_OFFSET_OF(CF_Vertex, type));
-    add_vertex_attribute(attrs, "in_user_params", CF_VERTEX_FORMAT_FLOAT4, CF_OFFSET_OF(CF_Vertex, attributes));
+    add_vertex_attribute(attrs, "in_pos_uv",     CF_VERTEX_FORMAT_FLOAT4,      CF_OFFSET_OF(CF_Vertex, p));
+    add_vertex_attribute(attrs, "in_n",          CF_VERTEX_FORMAT_INT,          CF_OFFSET_OF(CF_Vertex, n));
+    add_vertex_attribute(attrs, "in_ab",         CF_VERTEX_FORMAT_FLOAT4,      CF_OFFSET_OF(CF_Vertex, shape[0]));
+    add_vertex_attribute(attrs, "in_cd",         CF_VERTEX_FORMAT_FLOAT4,      CF_OFFSET_OF(CF_Vertex, shape[2]));
+    add_vertex_attribute(attrs, "in_ef",         CF_VERTEX_FORMAT_FLOAT4,      CF_OFFSET_OF(CF_Vertex, shape[4]));
+    add_vertex_attribute(attrs, "in_gh",         CF_VERTEX_FORMAT_FLOAT4,      CF_OFFSET_OF(CF_Vertex, shape[6]));
+    add_vertex_attribute(attrs, "in_col",        CF_VERTEX_FORMAT_UBYTE4_NORM, CF_OFFSET_OF(CF_Vertex, color));
+    add_vertex_attribute(attrs, "in_shape",      CF_VERTEX_FORMAT_FLOAT4,      CF_OFFSET_OF(CF_Vertex, radius));
+    add_vertex_attribute(attrs, "in_blend_posH", CF_VERTEX_FORMAT_FLOAT4,      CF_OFFSET_OF(CF_Vertex, alpha));
+    add_vertex_attribute(attrs, "in_user",       CF_VERTEX_FORMAT_FLOAT4,      CF_OFFSET_OF(CF_Vertex, attributes));
+    add_vertex_attribute(attrs, "in_uv_bounds",  CF_VERTEX_FORMAT_FLOAT4,      CF_OFFSET_OF(CF_Vertex, uv_bounds));
     draw.mesh = cf_make_mesh(CF_MB * 5, attrs, cf_array_count(attrs), sizeof(CF_Vertex));
     
     draw.verts = NULL;
@@ -201,7 +198,7 @@ void draw_sprite_chunks(SpriteChunk* chunks)
             vert->posH = cf_mul_m32_v2(mvp, vert->p);
             vert->uv = chunk->uvs[vertex];
             vert->aa = false;
-            vert->alpha = chunk->opacity;
+            vert->alpha = chunk->opacity / 255.0f;
             vert->color = chunk->color;
         }
         

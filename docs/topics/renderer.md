@@ -196,13 +196,13 @@ The fragment shader needs to look at `shape_type` and do an *actual branch* depe
 ```glsl
 void main()
 {
-	bool is_sprite  = v_type >= (0.0/255.0) && v_type < (0.5/255.0);
-	bool is_text    = v_type >  (0.5/255.0) && v_type < (1.5/255.0);
-	bool is_box     = v_type >  (1.5/255.0) && v_type < (2.5/255.0);
-	bool is_seg     = v_type >  (2.5/255.0) && v_type < (3.5/255.0);
-	bool is_tri     = v_type >  (3.5/255.0) && v_type < (4.5/255.0);
-	bool is_tri_sdf = v_type >  (4.5/255.0) && v_type < (5.5/255.0);
-	bool is_poly    = v_type >  (5.5/255.0) && v_type < (6.5/255.0);
+	bool is_sprite  = v_type >= 0.0 && v_type < 0.5;
+	bool is_text    = v_type >  0.5 && v_type < 1.5;
+	bool is_box     = v_type >  1.5 && v_type < 2.5;
+	bool is_seg     = v_type >  2.5 && v_type < 3.5;
+	bool is_tri     = v_type >  3.5 && v_type < 4.5;
+	bool is_tri_sdf = v_type >  4.5 && v_type < 5.5;
+	bool is_poly    = v_type >  5.5 && v_type < 6.5;
 
 	// Traditional sprite/text/tri cases.
 	vec4 c = vec4(0);
@@ -462,9 +462,9 @@ To create a shader you can check out the [Shader Compilation](https://randygaul.
 When using CF's draw API you can upload [Draw Shaders](https://randygaul.github.io/cute_framework/topics/drawing/#shaders) to the GPU. These are little fragment shaders to operate on shapes or canvases. It looks like this to start with as a pass-through shader (does no-op):
 
 ```glsl
-vec4 shader(vec4 color, vec2 pos, vec2 screen_uv, vec4 params)
+vec4 shader(vec4 color, ShaderParams params)
 {
-    return vec4(mix(color.rgb, params.rgb, params.a), color.a);
+    return vec4(mix(color.rgb, params.attributes.rgb, params.attributes.a), color.a);
 }
 ```
 
@@ -494,9 +494,9 @@ vec4 normal_to_color(vec2 n)
     return vec4(n * 0.5 + 0.5, 1.0, 1.0);
 }
 
-vec4 shader(vec4 color, vec2 pos, vec2 screen_uv, vec4 params)
+vec4 shader(vec4 color, ShaderParams params)
 {
-    vec2 uv = screen_uv;
+    vec2 uv = params.screen_uv;
     vec2 dim = vec2(1.0/160.0,1.0/120.0);
     vec2 n = normal_from_heightmap(noise_tex, uv);
     vec2 w = normal_from_heightmap(wavelets_tex, uv+n*dim*10.0);
@@ -536,8 +536,8 @@ vec2 pts[8];
 
 void main()
 {
-	bool is_sprite  = v_type >= (0.0/255.0) && v_type < (0.5/255.0);
-	bool is_text    = v_type >  (0.5/255.0) && v_type < (1.5/255.0);
+	bool is_sprite  = v_type >= 0.0 && v_type < 0.5;
+	bool is_text    = v_type >  0.5 && v_type < 1.5;
 // snip ...
 ```
 

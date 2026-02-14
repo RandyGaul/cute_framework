@@ -1,0 +1,256 @@
+// hrc_merge.comp — Builds angular fluence R_n from R_{n+1} (Sec 4, Eq 14-17).
+//
+// R_n(p, i) is the angular fluence at probe p for cone i at cascade n. Each cone
+// splits into upper and lower sub-cones that map to R_{n+1}. We trace a ray from
+// our probe to the R_{n+1} probe (looked up from T) and merge with the already-
+// resolved fluence there.
+//
+// Odd probe x (Eq 14): no R_{n+1} at our position, trace one T_n step outward
+// to reach R_{n+1} probes and merge.
+//
+// Even probe x (Eq 15-17): R_{n+1} exists here, but direct lookup has different
+// bias than odd probes. We average the direct lookup (F0) with a longer trace
+// through T_{n+1} (F1) to match the bias.
+//
+// R_N is implicitly zero (no light beyond scene bounds). Merge-down proceeds
+// from R_{N-1} to R_0. R_0 is the final per-pixel fluence for one quadrant.
+//
+// Host requirement: at the first merge iteration (n = N-1), u_r_prev_rad must
+// contain all zeros to represent R_N = 0. This shader trusts the host to zero-
+// initialize the R ping buffer before the merge-down loop.
+//
+// Pipeline:  seed -> [extend x N] -> [merge x N] -> composite
+//                                     ^^^^^^^^^
+// Inputs:
+//   u_t_curr_rad, u_t_curr_trn — T_n ray intervals
+//   u_t_next_rad, u_t_next_trn — T_{n+1} ray intervals (for even probe x)
+//   u_r_prev_rad               — R_{n+1} fluence (ping-pong, zero for first iteration)
+//   u_cascade                  — cascade level n being built
+//
+// Outputs:
+//   u_r_curr_rad               — R_n fluence
+//
+// Buffer layout:
+//   T: width = (world_size / 2^n) * (2^n + 1), height = world_size
+//   R: width = (world_size / 2^n) * 2^n,       height = world_size
+//   R has one fewer slot per probe than T (cones between rays, not rays themselves)
+
+layout(std430, set = 0, binding = 0) readonly  buffer TCurrRad { uvec2 data[]; } u_t_curr_rad;
+layout(std430, set = 0, binding = 1) readonly  buffer TCurrTrn { uvec2 data[]; } u_t_curr_trn;
+layout(std430, set = 0, binding = 2) readonly  buffer TNextRad { uvec2 data[]; } u_t_next_rad;
+layout(std430, set = 0, binding = 3) readonly  buffer TNextTrn { uvec2 data[]; } u_t_next_trn;
+layout(std430, set = 0, binding = 4) readonly  buffer RPrevRad { uvec2 data[]; } u_r_prev_rad;
+layout(std430, set = 1, binding = 0) writeonly buffer RCurrRad { uvec2 data[]; } u_r_curr_rad;
+
+layout(set = 2, binding = 0) uniform Params
+{
+	int u_cascade;      // n: the level we're building
+	int u_world_size;
+	int u_t_curr_w;     // width of T_n buffer
+	int u_t_next_w;     // width of T_{n+1} buffer
+	int u_r_prev_w;     // width of R_{n+1} buffer
+	int u_r_curr_w;     // width of R_n buffer
+};
+
+layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+
+int my_mod(int a, int b) { return ((a % b) + b) % b; }
+
+struct Interval
+{
+	vec3 rad;
+	vec3 trn;
+};
+
+vec4 f16_load(uvec2 packed)
+{
+	return vec4(unpackHalf2x16(packed.x), unpackHalf2x16(packed.y));
+}
+
+uvec2 f16_store(vec4 val)
+{
+	return uvec2(packHalf2x16(val.xy), packHalf2x16(val.zw));
+}
+
+// Direction vector for the k-th ray at cascade n (Sec 4).
+vec2 v_n(int n, float k)
+{
+	float pow2n = float(1 << n);
+	return vec2(pow2n, 2.0 * k - pow2n);
+}
+
+// Eq 13: angular size of cone i at cascade n.
+float angular_span(int n, float i)
+{
+	vec2 left  = v_n(n, i - 0.5);
+	vec2 right = v_n(n, i + 0.5);
+	return atan(right.y, right.x) - atan(left.y, left.x);
+}
+
+// Eq 8: merge a traced interval with a final radiance value.
+vec3 merge_r(Interval near, vec3 far_rad)
+{
+	return near.rad + near.trn * far_rad;
+}
+
+// Load a ray interval from T_n.
+Interval T_load(int probe_x, int k, int y)
+{
+	int n = u_cascade;
+	int directions = (1 << n) + 1;
+	int num_probes = u_world_size >> n;
+	if (probe_x < 0 || probe_x >= num_probes || k < 0 || k >= directions || y < 0 || y >= u_world_size) {
+		return Interval(vec3(0.0), vec3(1.0));
+	}
+	int idx = y * u_t_curr_w + probe_x * directions + k;
+	vec4 rad = f16_load(u_t_curr_rad.data[idx]);
+	vec4 trn = f16_load(u_t_curr_trn.data[idx]);
+	return Interval(rad.rgb, trn.rgb);
+}
+
+// Load a ray interval from T_{n+1}.
+Interval T_load_next(int probe_x, int k, int y)
+{
+	int n = u_cascade + 1;
+	int directions = (1 << n) + 1;
+	int num_probes = u_world_size >> n;
+	if (probe_x < 0 || probe_x >= num_probes || k < 0 || k >= directions || y < 0 || y >= u_world_size) {
+		return Interval(vec3(0.0), vec3(1.0));
+	}
+	int idx = y * u_t_next_w + probe_x * directions + k;
+	vec4 rad = f16_load(u_t_next_rad.data[idx]);
+	vec4 trn = f16_load(u_t_next_trn.data[idx]);
+	return Interval(rad.rgb, trn.rgb);
+}
+
+// Load angular fluence from R_{n+1}.
+vec3 R_load(int probe_x, int i, int y)
+{
+	int n = u_cascade + 1;
+	int directions = 1 << n;
+	int num_probes = u_world_size >> n;
+	if (probe_x < 0 || probe_x >= num_probes || i < 0 || i >= directions || y < 0 || y >= u_world_size) {
+		return vec3(0.0);
+	}
+	int idx = y * u_r_prev_w + probe_x * directions + i;
+	vec4 rad = f16_load(u_r_prev_rad.data[idx]);
+	return rad.rgb;
+}
+
+// Sub-cone indices and weights for cone i split into cascade n+1.
+// Cone i has edges at rays k=i (lower) and k=i+1 (upper). Each edge
+// maps to a cone in R_{n+1}: j_minus (lower half) and j_plus (upper half).
+// Weights convert radiance to angular fluence (Eq 13).
+struct SubCone
+{
+	int   j_plus;     // upper sub-cone index in R_{n+1}
+	int   j_minus;    // lower sub-cone index in R_{n+1}
+	float w_plus;     // angular span of upper sub-cone
+	float w_minus;    // angular span of lower sub-cone
+};
+
+SubCone subcone(int i)
+{
+	SubCone sc;
+	sc.j_plus  = 2 * i + 1;
+	sc.j_minus = 2 * i;
+	sc.w_plus  = angular_span(u_cascade + 1, float(sc.j_plus)  + 0.5);
+	sc.w_minus = angular_span(u_cascade + 1, float(sc.j_minus) + 0.5);
+	return sc;
+}
+
+// Eq 14 core: weight a traced interval by angular span and merge with
+// resolved fluence from R_{n+1}. This is the fundamental merge-down
+// operation — a ray interval attenuates and adds to the far fluence.
+vec3 weighted_merge(Interval traced, float weight, vec3 far_fluence)
+{
+	traced.rad *= weight;
+	return merge_r(traced, far_fluence);
+}
+
+// Eq 14: merge-down for odd probe x.
+//
+//            q+  ---*  R_{n+1} probe, direction j+
+//           /       |
+//     T_n  / F+     |
+//         /         |
+//    p --*----------+
+//         \         |
+//     T_n  \ F-     |
+//           \       |
+//            q-  ---*  R_{n+1} probe, direction j-
+//
+vec3 merge_odd(int probe_x, int i, int y)
+{
+	SubCone sc = subcone(i);
+	int next_probe_x = (probe_x + 1) / 2;
+	int pow2n = 1 << u_cascade;
+
+	vec3 F_plus = weighted_merge(
+		T_load(probe_x, i + 1, y),
+		sc.w_plus,
+		R_load(next_probe_x, sc.j_plus, y + 2 * (i + 1) - pow2n)
+	);
+
+	vec3 F_minus = weighted_merge(
+		T_load(probe_x, i, y),
+		sc.w_minus,
+		R_load(next_probe_x, sc.j_minus, y + 2 * i - pow2n)
+	);
+
+	return F_plus + F_minus;
+}
+
+// Eq 15-17: merge-down for even probe x.
+//
+//                  R_{n+1} here         R_{n+1} there
+//                     |                      |
+//    F0: read ------->*                      |
+//                     |                      |
+//    F1: trace ------>*------- T_{n+1} ----->*  merge with R_{n+1}
+//                     |                      |
+//    result: (F0 + F1) / 2
+//
+vec3 merge_even(int probe_x, int i, int y)
+{
+	SubCone sc = subcone(i);
+	int next_probe_x = probe_x / 2;
+
+	// F1: trace 2x through T_{n+1} (Eq 17)
+	// 2*v_n(k) = v_{n+1}(2k), so T_n edges k=i+1,i become T_{n+1} directions 2*(i+1),2*i
+	int far_probe_x = next_probe_x + 1;
+	int pow2n1 = 1 << (u_cascade + 1);
+
+	vec3 F1_plus = weighted_merge(
+		T_load_next(next_probe_x, 2 * (i + 1), y),
+		sc.w_plus,
+		R_load(far_probe_x, sc.j_plus, y + 2 * 2 * (i + 1) - pow2n1)
+	);
+
+	vec3 F1_minus = weighted_merge(
+		T_load_next(next_probe_x, 2 * i, y),
+		sc.w_minus,
+		R_load(far_probe_x, sc.j_minus, y + 2 * 2 * i - pow2n1)
+	);
+
+	// F0: direct lookup (Eq 16)
+	vec3 F0_plus  = R_load(next_probe_x, sc.j_plus,  y);
+	vec3 F0_minus = R_load(next_probe_x, sc.j_minus, y);
+
+	return (F0_plus + F1_plus + F0_minus + F1_minus) * 0.5;
+}
+
+void main()
+{
+	ivec2 gid = ivec2(gl_GlobalInvocationID.xy);
+	if (gid.x >= u_r_curr_w || gid.y >= u_world_size) return;
+
+	int directions = 1 << u_cascade;
+	int probe_x = gid.x / directions;
+	int i = gid.x - probe_x * directions;
+
+	vec3 fluence = (probe_x % 2 == 0) ? merge_even(probe_x, i, gid.y) : merge_odd(probe_x, i, gid.y);
+
+	int out_idx = gid.y * u_r_curr_w + gid.x;
+	u_r_curr_rad.data[out_idx] = f16_store(vec4(fluence, 1.0));
+}

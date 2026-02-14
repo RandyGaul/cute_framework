@@ -49,6 +49,7 @@ struct BatchGeometry
 	CF_Color user_params;
 	CF_Pixel tri_colors[3];      // Per-vertex colors (only for BATCH_GEOMETRY_TYPE_TRI).
 	CF_Color tri_attributes[3];  // Per-vertex attributes (only for BATCH_GEOMETRY_TYPE_TRI).
+	float uv_bounds[4]; // uv_min.xy, uv_max.zw. Zero for shapes.
 };
 
 #define SPRITEBATCH_SPRITE_GEOMETRY BatchGeometry

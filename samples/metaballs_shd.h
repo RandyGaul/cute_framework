@@ -274,13 +274,13 @@ vec2 pts[8];
 
 void main()
 {
- bool is_sprite = v_type >= (0.0 / 255.0) && v_type < (0.5 / 255.0);
- bool is_text = v_type > (0.5 / 255.0) && v_type < (1.5 / 255.0);
- bool is_box = v_type > (1.5 / 255.0) && v_type < (2.5 / 255.0);
- bool is_seg = v_type > (2.5 / 255.0) && v_type < (3.5 / 255.0);
- bool is_tri = v_type > (3.5 / 255.0) && v_type < (4.5 / 255.0);
- bool is_tri_sdf = v_type > (4.5 / 255.0) && v_type < (5.5 / 255.0);
- bool is_poly = v_type > (5.5 / 255.0) && v_type < (6.5 / 255.0);
+ bool is_sprite = v_type >= 0.0 && v_type < 0.5;
+ bool is_text = v_type > 0.5 && v_type < 1.5;
+ bool is_box = v_type > 1.5 && v_type < 2.5;
+ bool is_seg = v_type > 2.5 && v_type < 3.5;
+ bool is_tri = v_type > 3.5 && v_type < 4.5;
+ bool is_tri_sdf = v_type > 4.5 && v_type < 5.5;
+ bool is_poly = v_type > 5.5 && v_type < 6.5;
 
 
  vec4 c = vec4(0);

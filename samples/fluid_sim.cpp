@@ -16,8 +16,10 @@ const char* s_shd = STR(
 		float dt;
 	};
 
-	vec4 shader(vec4 color, vec2 pos, vec2 screen_uv, vec4 params)
+	vec4 shader(vec4 color, ShaderParams params)
 	{
+		vec2 screen_uv = params.screen_uv;
+
 		// --- Read current state ---
 		vec4 C = texture(tex, screen_uv);
 		ivec2 ts = textureSize(tex, 0);
