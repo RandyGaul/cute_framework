@@ -50,13 +50,13 @@ static const char* s_text_without_markups = NULL;
 
 using namespace Cute;
 
-#define VA_TYPE_SPRITE        (0)
-#define VA_TYPE_TEXT          (1)
-#define VA_TYPE_BOX           (2)
-#define VA_TYPE_SEGMENT       (3)
-#define VA_TYPE_TRIANGLE      (4)
-#define VA_TYPE_TRIANGLE_SDF  (5)
-#define VA_TYPE_POLYGON       (6)
+#define VA_TYPE_SPRITE        (0.0f)
+#define VA_TYPE_TEXT          (1.0f)
+#define VA_TYPE_BOX           (2.0f)
+#define VA_TYPE_SEGMENT       (3.0f)
+#define VA_TYPE_TRIANGLE      (4.0f)
+#define VA_TYPE_TRIANGLE_SDF  (5.0f)
+#define VA_TYPE_POLYGON       (6.0f)
 
 SPRITEBATCH_U64 cf_generate_texture_handle(void* pixels, int w, int h, void* udata)
 {
@@ -159,8 +159,8 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 				out[i].radius = 0;
 				out[i].stroke = 0;
 				out[i].type = VA_TYPE_TRIANGLE;
-				out[i].alpha = (uint8_t)(s->geom.alpha * 255.0f);
-				out[i].fill = 255;
+				out[i].alpha = s->geom.alpha;
+				out[i].fill = 1.0f;
 				out[i].aa = 0;
 				out[i].attributes = s->geom.use_tri_attributes ? s->geom.tri_attributes[i] : geom.user_params;
 			}
@@ -185,8 +185,8 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 				out[i].stroke = s->geom.stroke;
 				out[i].aa = s->geom.aa;
 				out[i].type = VA_TYPE_TRIANGLE_SDF;
-				out[i].alpha = (uint8_t)(s->geom.alpha * 255.0f);
-				out[i].fill = s->geom.fill ? 255 : 0;
+				out[i].alpha = s->geom.alpha;
+				out[i].fill = s->geom.fill ? 1.0f : 0.0f;
 				out[i].attributes = geom.user_params;
 			}
 
@@ -204,8 +204,8 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 				out[i].stroke = s->geom.stroke;
 				out[i].aa = s->geom.aa;
 				out[i].type = VA_TYPE_BOX;
-				out[i].alpha = (uint8_t)(s->geom.alpha * 255.0f);
-				out[i].fill = s->geom.fill ? 255 : 0;
+				out[i].alpha = s->geom.alpha;
+				out[i].fill = s->geom.fill ? 1.0f : 0.0f;
 				out[i].attributes = geom.user_params;
 			}
 
@@ -229,7 +229,7 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 		case BATCH_GEOMETRY_TYPE_SPRITE:
 		{
 			for (int i = 0; i < 6; ++i) {
-				out[i].alpha = (uint8_t)(s->geom.alpha * 255.0f);
+				out[i].alpha = s->geom.alpha;
 				if (s->geom.is_sprite) {
 					out[i].type = VA_TYPE_SPRITE;
 				} else if (s->geom.is_text) {
@@ -239,6 +239,10 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 				}
 				out[i].color = s->geom.color;
 				out[i].attributes = geom.user_params;
+				out[i].uv_bounds[0] = s->minx;
+				out[i].uv_bounds[1] = s->maxy; // y-flip.
+				out[i].uv_bounds[2] = s->maxx;
+				out[i].uv_bounds[3] = s->miny; // y-flip.
 			}
 
 			out[0].posH = geom.shape[0];
@@ -282,8 +286,8 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 				out[i].stroke = s->geom.stroke;
 				out[i].aa = s->geom.aa;
 				out[i].type = VA_TYPE_SEGMENT;
-				out[i].alpha = (uint8_t)(s->geom.alpha * 255.0f);
-				out[i].fill = s->geom.fill ? 255 : 0;
+				out[i].alpha = s->geom.alpha;
+				out[i].fill = s->geom.fill ? 1.0f : 0.0f;
 				out[i].attributes = geom.user_params;
 			}
 
@@ -301,8 +305,8 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 				out[i].stroke = s->geom.stroke;
 				out[i].aa = s->geom.aa;
 				out[i].type = VA_TYPE_SEGMENT;
-				out[i].alpha = (uint8_t)(s->geom.alpha * 255.0f);
-				out[i].fill = s->geom.fill ? 255 : 0;
+				out[i].alpha = s->geom.alpha;
+				out[i].fill = s->geom.fill ? 1.0f : 0.0f;
 				out[i].attributes = geom.user_params;
 			}
 			
@@ -330,8 +334,8 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 				out[i].radius = s->geom.radius;
 				out[i].aa = s->geom.aa;
 				out[i].type = VA_TYPE_POLYGON;
-				out[i].alpha = (uint8_t)(s->geom.alpha * 255.0f);
-				out[i].fill = 255;
+				out[i].alpha = s->geom.alpha;
+				out[i].fill = 1.0f;
 				out[i].attributes = geom.user_params;
 			}
 
@@ -445,89 +449,17 @@ void cf_make_draw()
 
 	// Mesh + vertex attributes.
 	Array<CF_VertexAttribute> attrs;
-	attrs.add({
-		.name = "in_pos",
-		.format = CF_VERTEX_FORMAT_FLOAT2,
-		.offset = CF_OFFSET_OF(CF_Vertex, p)
-	});
-
-	attrs.add({
-		.name = "in_posH",
-		.format = CF_VERTEX_FORMAT_FLOAT2,
-		.offset = CF_OFFSET_OF(CF_Vertex, posH),
-	});
-
-	attrs.add({
-		.name = "in_n",
-		.format = CF_VERTEX_FORMAT_INT,
-		.offset = CF_OFFSET_OF(CF_Vertex, n),
-	});
-
-	attrs.add({
-		.name = "in_ab",
-		.format = CF_VERTEX_FORMAT_FLOAT4,
-		.offset = CF_OFFSET_OF(CF_Vertex, shape[0]),
-	});
-
-	attrs.add({
-		.name = "in_cd",
-		.format = CF_VERTEX_FORMAT_FLOAT4,
-		.offset = CF_OFFSET_OF(CF_Vertex, shape[2]),
-	});
-
-	attrs.add({
-		.name = "in_ef",
-		.format = CF_VERTEX_FORMAT_FLOAT4,
-		.offset = CF_OFFSET_OF(CF_Vertex, shape[4]),
-	});
-
-	attrs.add({
-		.name = "in_gh",
-		.format = CF_VERTEX_FORMAT_FLOAT4,
-		.offset = CF_OFFSET_OF(CF_Vertex, shape[6]),
-	});
-
-	attrs.add({
-		.name = "in_uv",
-		.format = CF_VERTEX_FORMAT_FLOAT2,
-		.offset = CF_OFFSET_OF(CF_Vertex, uv),
-	});
-
-	attrs.add({
-		.name = "in_col",
-		.format = CF_VERTEX_FORMAT_UBYTE4_NORM,
-		.offset = CF_OFFSET_OF(CF_Vertex, color),
-	});
-
-	attrs.add({
-		.name = "in_radius",
-		.format = CF_VERTEX_FORMAT_FLOAT,
-		.offset = CF_OFFSET_OF(CF_Vertex, radius),
-	});
-
-	attrs.add({
-		.name = "in_stroke",
-		.format = CF_VERTEX_FORMAT_FLOAT,
-		.offset = CF_OFFSET_OF(CF_Vertex, stroke),
-	});
-
-	attrs.add({
-		.name = "in_aa",
-		.format = CF_VERTEX_FORMAT_FLOAT,
-		.offset = CF_OFFSET_OF(CF_Vertex, aa),
-	});
-
-	attrs.add({
-		.name = "in_params",
-		.format = CF_VERTEX_FORMAT_UBYTE4_NORM,
-		.offset = CF_OFFSET_OF(CF_Vertex, type),
-	});
-
-	attrs.add({
-		.name = "in_user_params",
-		.format = CF_VERTEX_FORMAT_FLOAT4,
-		.offset = CF_OFFSET_OF(CF_Vertex, attributes),
-	});
+	attrs.add({ .name = "in_pos_uv",     .format = CF_VERTEX_FORMAT_FLOAT4,      .offset = CF_OFFSET_OF(CF_Vertex, p) });
+	attrs.add({ .name = "in_n",          .format = CF_VERTEX_FORMAT_INT,          .offset = CF_OFFSET_OF(CF_Vertex, n) });
+	attrs.add({ .name = "in_ab",         .format = CF_VERTEX_FORMAT_FLOAT4,      .offset = CF_OFFSET_OF(CF_Vertex, shape[0]) });
+	attrs.add({ .name = "in_cd",         .format = CF_VERTEX_FORMAT_FLOAT4,      .offset = CF_OFFSET_OF(CF_Vertex, shape[2]) });
+	attrs.add({ .name = "in_ef",         .format = CF_VERTEX_FORMAT_FLOAT4,      .offset = CF_OFFSET_OF(CF_Vertex, shape[4]) });
+	attrs.add({ .name = "in_gh",         .format = CF_VERTEX_FORMAT_FLOAT4,      .offset = CF_OFFSET_OF(CF_Vertex, shape[6]) });
+	attrs.add({ .name = "in_col",        .format = CF_VERTEX_FORMAT_UBYTE4_NORM, .offset = CF_OFFSET_OF(CF_Vertex, color) });
+	attrs.add({ .name = "in_shape",      .format = CF_VERTEX_FORMAT_FLOAT4,      .offset = CF_OFFSET_OF(CF_Vertex, radius) });
+	attrs.add({ .name = "in_blend_posH", .format = CF_VERTEX_FORMAT_FLOAT4,      .offset = CF_OFFSET_OF(CF_Vertex, alpha) });
+	attrs.add({ .name = "in_user",       .format = CF_VERTEX_FORMAT_FLOAT4,      .offset = CF_OFFSET_OF(CF_Vertex, attributes) });
+	attrs.add({ .name = "in_uv_bounds",  .format = CF_VERTEX_FORMAT_FLOAT4,      .offset = CF_OFFSET_OF(CF_Vertex, uv_bounds) });
 	s_draw->mesh = cf_make_mesh(CF_MB * 5, attrs.data(), attrs.count(), sizeof(CF_Vertex));
 
 	// Shaders.

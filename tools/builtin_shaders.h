@@ -289,7 +289,7 @@ vec2 smooth_uv(vec2 uv, vec2 texture_size)
 
 // Stub function. This gets replaced by injected user-shader code via #include.
 static const char* s_shader_stub = R"(
-vec4 shader(vec4 color, vec2 pos, vec2 screen_uv, vec4 params)
+vec4 shader(vec4 color, ShaderParams params)
 {
 	return color;
 }
@@ -299,81 +299,60 @@ vec4 shader(vec4 color, vec2 pos, vec2 screen_uv, vec4 params)
 // Primary cute_draw.h shader.
 
 static const char* s_draw_vs = R"(
-layout (location = 0) in vec2 in_pos;
-layout (location = 1) in vec2 in_posH;
-layout (location = 2) in vec2 in_uv;
+layout (location = 0) in vec4 in_pos_uv;       // pos.xy, uv.zw
+layout (location = 1) in int in_n;
+layout (location = 2) in vec4 in_ab;
+layout (location = 3) in vec4 in_cd;
+layout (location = 4) in vec4 in_ef;
+layout (location = 5) in vec4 in_gh;
+layout (location = 6) in vec4 in_col;
+layout (location = 7) in vec4 in_shape;         // radius, stroke, aa, type
+layout (location = 8) in vec4 in_blend_posH;    // alpha, fill, posH.xy
+layout (location = 9) in vec4 in_user;
+layout (location = 10) in vec4 in_uv_bounds;    // uv_min.xy, uv_max.zw
 
-layout (location = 3) in int in_n;
-layout (location = 4) in vec4 in_ab;
-layout (location = 5) in vec4 in_cd;
-layout (location = 6) in vec4 in_ef;
-layout (location = 7) in vec4 in_gh;
-layout (location = 8) in vec4 in_col;
-layout (location = 9) in float in_radius;
-layout (location = 10) in float in_stroke;
-layout (location = 11) in float in_aa;
-layout (location = 12) in vec4 in_params;
-layout (location = 13) in vec4 in_user_params;
-
-layout (location = 0) out vec2 v_pos;
+layout (location = 0) out vec4 v_pos_uv;
 layout (location = 1) out int v_n;
 layout (location = 2) out vec4 v_ab;
 layout (location = 3) out vec4 v_cd;
 layout (location = 4) out vec4 v_ef;
 layout (location = 5) out vec4 v_gh;
-layout (location = 6) out vec2 v_uv;
-layout (location = 7) out vec4 v_col;
-layout (location = 8) out float v_radius;
-layout (location = 9) out float v_stroke;
-layout (location = 10) out float v_aa;
-layout (location = 11) out float v_type;
-layout (location = 12) out float v_alpha;
-layout (location = 13) out float v_fill;
-layout (location = 14) out vec2 v_posH;
-layout (location = 15) out vec4 v_user;
+layout (location = 6) out vec4 v_col;
+layout (location = 7) out vec4 v_shape;
+layout (location = 8) out vec4 v_blend_posH;
+layout (location = 9) out vec4 v_user;
+layout (location = 10) out vec4 v_uv_bounds;
 
 void main()
 {
-	v_pos = in_pos;
+	v_pos_uv = in_pos_uv;
 	v_n = in_n;
 	v_ab = in_ab;
 	v_cd = in_cd;
 	v_ef = in_ef;
 	v_gh = in_gh;
-	v_uv = in_uv;
 	v_col = in_col;
-	v_radius = in_radius;
-	v_stroke = in_stroke * 0.5;
-	v_aa = in_aa;
-	v_type = in_params.r;
-	v_alpha = in_params.g;
-	v_fill = in_params.b;
-	// unused = in_params.a;
+	v_shape = vec4(in_shape.x, in_shape.y * 0.5, in_shape.zw);
+	v_blend_posH = in_blend_posH;
+	v_user = in_user;
+	v_uv_bounds = in_uv_bounds;
 
-	vec4 posH = vec4(in_posH, 0, 1);
-	gl_Position = posH;
-	v_posH = in_posH;
-	v_user = in_user_params;
+	gl_Position = vec4(in_blend_posH.zw, 0, 1);
 }
 )";
 
 static const char* s_draw_fs = R"(
-layout (location = 0) in vec2 v_pos;
+layout (location = 0) in vec4 v_pos_uv;
 layout (location = 1) in flat int v_n;
 layout (location = 2) in vec4 v_ab;
 layout (location = 3) in vec4 v_cd;
 layout (location = 4) in vec4 v_ef;
 layout (location = 5) in vec4 v_gh;
-layout (location = 6) in vec2 v_uv;
-layout (location = 7) in vec4 v_col;
-layout (location = 8) in float v_radius;
-layout (location = 9) in float v_stroke;
-layout (location = 10) in float v_aa;
-layout (location = 11) in float v_type;
-layout (location = 12) in float v_alpha;
-layout (location = 13) in float v_fill;
-layout (location = 14) in vec2 v_posH;
-layout (location = 15) in vec4 v_user;
+layout (location = 6) in vec4 v_col;
+layout (location = 7) in vec4 v_shape;
+layout (location = 8) in vec4 v_blend_posH;
+layout (location = 9) in vec4 v_user;
+layout (location = 10) in vec4 v_uv_bounds;
 
 layout(location = 0) out vec4 result;
 
@@ -385,24 +364,60 @@ layout (set = 3, binding = 0) uniform uniform_block {
 	int u_use_smooth_uv;
 };
 
+// Used only for polygon SDF.
+vec2 pts[8];
+
+// Backwards-compat globals.
+// Here for convenience for any legacy user draw shaders that reference them.
+vec2 v_pos;
+vec2 v_uv;
+vec2 v_posH;
+float v_radius;
+float v_stroke;
+float v_aa;
+float v_type;
+float v_alpha;
+float v_fill;
+vec2 pos;
+vec2 screen_uv;
+
 #include "blend.shd"
 #include "gamma.shd"
 #include "smooth_uv.shd"
 #include "distance.shd"
-#include "shader_stub.shd"
 
-// Used only for polygon SDF.
-vec2 pts[8];
+struct ShaderParams
+{
+	vec2 view_pos;
+	vec2 uv;
+	vec2 uv_min;
+	vec2 uv_max;
+	vec2 screen_uv;
+	vec4 attributes;
+};
+
+#include "shader_stub.shd"
 
 void main()
 {
-	bool is_sprite  = v_type >= (0.0/255.0) && v_type < (0.5/255.0);
-	bool is_text    = v_type >  (0.5/255.0) && v_type < (1.5/255.0);
-	bool is_box     = v_type >  (1.5/255.0) && v_type < (2.5/255.0);
-	bool is_seg     = v_type >  (2.5/255.0) && v_type < (3.5/255.0);
-	bool is_tri     = v_type >  (3.5/255.0) && v_type < (4.5/255.0);
-	bool is_tri_sdf = v_type >  (4.5/255.0) && v_type < (5.5/255.0);
-	bool is_poly    = v_type >  (5.5/255.0) && v_type < (6.5/255.0);
+	// Unpack into backwards-compat globals.
+	v_pos    = v_pos_uv.xy;
+	v_uv     = v_pos_uv.zw;
+	v_radius = v_shape.x;
+	v_stroke = v_shape.y;
+	v_aa     = v_shape.z;
+	v_type   = v_shape.w;
+	v_alpha  = v_blend_posH.x;
+	v_fill   = v_blend_posH.y;
+	v_posH   = v_blend_posH.zw;
+
+	bool is_sprite  = v_type >= 0.0 && v_type < 0.5;
+	bool is_text    = v_type >  0.5 && v_type < 1.5;
+	bool is_box     = v_type >  1.5 && v_type < 2.5;
+	bool is_seg     = v_type >  2.5 && v_type < 3.5;
+	bool is_tri     = v_type >  3.5 && v_type < 4.5;
+	bool is_tri_sdf = v_type >  4.5 && v_type < 5.5;
+	bool is_poly    = v_type >  5.5 && v_type < 6.5;
 
 	// Traditional sprite/text/tri cases.
 	vec4 c = vec4(0);
@@ -435,8 +450,16 @@ void main()
 	c = (!is_sprite && !is_text && !is_tri) ? sdf(c, v_col, d - v_radius) : c;
 
 	c *= v_alpha;
-	vec2 screen_uv = (v_posH + vec2(1,-1)) * 0.5 * vec2(1,-1);
-	c = shader(c, v_pos, screen_uv, v_user);
+	pos = v_pos;
+	screen_uv = (v_posH + vec2(1,-1)) * 0.5 * vec2(1,-1);
+	ShaderParams sp;
+	sp.view_pos = pos;
+	sp.uv = v_uv;
+	sp.uv_min = v_uv_bounds.xy;
+	sp.uv_max = v_uv_bounds.zw;
+	sp.screen_uv = screen_uv;
+	sp.attributes = v_user;
+	c = shader(c, sp);
 	if (u_alpha_discard != 0 && c.a == 0) discard;
 	result = c;
 }
@@ -481,12 +504,34 @@ layout (set = 3, binding = 0) uniform uniform_block {
 };
 
 #include "smooth_uv.shd"
+
+vec2 pos;
+vec2 screen_uv;
+
+struct ShaderParams
+{
+	vec2 view_pos;
+	vec2 uv;
+	vec2 uv_min;
+	vec2 uv_max;
+	vec2 screen_uv;
+	vec4 attributes;
+};
+
 #include "shader_stub.shd"
 
 void main() {
 	vec4 color = texture(u_image, smooth_uv(v_uv, u_texture_size));
-	vec2 screen_uv = (v_posH + vec2(1,-1)) * 0.5 * vec2(1,-1);
-	vec4 c = shader(color, v_pos, screen_uv, v_params);
+	pos = v_pos;
+	screen_uv = (v_posH + vec2(1,-1)) * 0.5 * vec2(1,-1);
+	ShaderParams sp;
+	sp.view_pos = pos;
+	sp.uv = v_uv;
+	sp.uv_min = vec2(0);
+	sp.uv_max = vec2(0);
+	sp.screen_uv = screen_uv;
+	sp.attributes = v_params;
+	vec4 c = shader(color, sp);
 	if (u_alpha_discard != 0 && c.a == 0) discard;
 	result = c;
 }

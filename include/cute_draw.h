@@ -594,11 +594,11 @@ CF_API void CF_CALL cf_draw_peek_tri_attributes(CF_Color* a0, CF_Color* a1, CF_C
  */
 typedef struct CF_Vertex
 {
-	/* @member World space position. */
+	/* @member World space position (in_pos_uv.xy). */
 	CF_V2 p;
 
-	/* @member "Homogenous" position transformed by the camera. */
-	CF_V2 posH;
+	/* @member For internal use -- For sprite rendering (in_pos_uv.zw). */
+	CF_V2 uv;
 
 	/* @member For internal use -- For signed-distance functions for rendering shapes. */
 	int n;
@@ -606,35 +606,35 @@ typedef struct CF_Vertex
 	/* @member For internal use -- For signed-distance functions for rendering shapes. */
 	CF_V2 shape[8];
 
-	/* @member For internal use -- For sprite rendering. */
-	CF_V2 uv;
-
 	/* @member Color for rendering shapes (ignored for sprites). */
 	CF_Pixel color;
 
-	/* @member For internal use -- For applying "chubbiness" factor for shapes, or radii on circle/capsule. */
+	/* @member For internal use -- For applying "chubbiness" factor for shapes, or radii on circle/capsule (in_shape.x). */
 	float radius;
 
-	/* @member For internal use -- For shape rendering for border style stroke rendering (no fill). */
+	/* @member For internal use -- For shape rendering for border style stroke rendering (in_shape.y). */
 	float stroke;
 
-	/* @member For internal use -- Factor for the size of antialiasing. */
+	/* @member For internal use -- Factor for the size of antialiasing (in_shape.z). */
 	float aa;
 
-	/* @member For internal use -- The type of shape to be rendered, used by the signed-distance functions within CF's internal fragment shader. */
-	uint8_t type;
+	/* @member For internal use -- Shape type for SDF fragment shader (in_shape.w). Stored as float (0-6). */
+	float type;
 
-	/* @member Used for the alpha-component (transparency). */
-	uint8_t alpha;
+	/* @member Used for the alpha-component, transparency (in_blend_posH.x). Stored as float 0.0-1.0. */
+	float alpha;
 
-	/* @member For internal use -- Whether or not to render shapes as filled or stroked. */
-	uint8_t fill;
+	/* @member For internal use -- Whether or not to render shapes as filled or stroked (in_blend_posH.y). 0.0 or 1.0. */
+	float fill;
 
-	/* @member For internal use -- Currently unused but fills needed padding space. */
-	uint8_t unused;
+	/* @member "Homogenous" position transformed by the camera (in_blend_posH.zw). */
+	CF_V2 posH;
 
 	/* @member Four general purpose floats passed into custom user shaders. */
 	CF_Color attributes;
+
+	/* @member UV bounds for sprite/text glyphs. Zero for shapes. Packed as (uv_min.x, uv_min.y, uv_max.x, uv_max.y). */
+	float uv_bounds[4];
 } CF_Vertex;
 // @end
 

@@ -6,11 +6,11 @@ using namespace Cute;
 const char* s_recolor = R"(
 	#include "blend.shd"
 
-	vec4 shader(vec4 color, vec2 pos, vec2 screen_uv, vec4 params)
+	vec4 shader(vec4 color, ShaderParams params)
 	{
 		vec3 a = rgb_to_hsv(color.rgb);
-		vec3 b = rgb_to_hsv(params.rgb);
-		vec3 c = hsv_to_rgb(mix(a, b, params.a));
+		vec3 b = rgb_to_hsv(params.attributes.rgb);
+		vec3 c = hsv_to_rgb(mix(a, b, params.attributes.a));
 		return vec4(c, color.a);
 	}
 )";
