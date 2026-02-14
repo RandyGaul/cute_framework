@@ -89,12 +89,12 @@ typedef enum cn_address_type_t CF_AddressType;
  * @related  CF_Address
  */
 #define CF_ADDRESS_TYPE_DEFS \
-	/* @entry */ \
-	CF_ENUM(ADDRESS_TYPE_NONE, 0) \
-	/* @entry */ \
-	CF_ENUM(ADDRESS_TYPE_IPV4, 1) \
-	/* @entry */ \
-	CF_ENUM(ADDRESS_TYPE_IPV6, 2) \
+	/* @entry No or invalid address type. */ \
+	CF_ENUM(ADDRESS_TYPE_NONE, 0)          \
+	/* @entry IPv4 address type. */        \
+	CF_ENUM(ADDRESS_TYPE_IPV4, 1)          \
+	/* @entry IPv6 address type. */        \
+	CF_ENUM(ADDRESS_TYPE_IPV6, 2)          \
 	/* @end */
 
 enum
@@ -320,25 +320,25 @@ CF_API CF_Result CF_CALL cf_client_send(CF_Client* client, const void* packet, i
  * @related  CF_ClientState cf_client_state_to_string cf_client_state_get
  */
 #define CF_CLIENT_STATE_DEFS \
-	/* @entry */ \
+	/* @entry The connect token has expired. */ \
 	CF_ENUM(CLIENT_STATE_CONNECT_TOKEN_EXPIRED,        -6) \
-	/* @entry */ \
+	/* @entry The connect token is invalid. */ \
 	CF_ENUM(CLIENT_STATE_INVALID_CONNECT_TOKEN,        -5) \
-	/* @entry */ \
+	/* @entry The connection attempt timed out. */ \
 	CF_ENUM(CLIENT_STATE_CONNECTION_TIMED_OUT,         -4) \
-	/* @entry */ \
+	/* @entry The challenge response timed out. */ \
 	CF_ENUM(CLIENT_STATE_CHALLENGE_RESPONSE_TIMED_OUT, -3) \
-	/* @entry */ \
+	/* @entry The connection request timed out. */ \
 	CF_ENUM(CLIENT_STATE_CONNECTION_REQUEST_TIMED_OUT, -2) \
-	/* @entry */ \
+	/* @entry The connection was denied by the server. */ \
 	CF_ENUM(CLIENT_STATE_CONNECTION_DENIED,            -1) \
-	/* @entry */ \
+	/* @entry The client is disconnected. */ \
 	CF_ENUM(CLIENT_STATE_DISCONNECTED,                  0) \
-	/* @entry */ \
+	/* @entry The client is sending a connection request. */ \
 	CF_ENUM(CLIENT_STATE_SENDING_CONNECTION_REQUEST,    1) \
-	/* @entry */ \
+	/* @entry The client is sending a challenge response. */ \
 	CF_ENUM(CLIENT_STATE_SENDING_CHALLENGE_RESPONSE,    2) \
-	/* @entry */ \
+	/* @entry The client is connected. */ \
 	CF_ENUM(CLIENT_STATE_CONNECTED,                     3) \
 	/* @end */
 

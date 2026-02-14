@@ -181,7 +181,7 @@ typedef enum CF_HttpsResult
 /**
  * @function cf_https_result_to_string
  * @category web
- * @brief    Convert an enum `CF_HttpsState` to a c-style string.
+ * @brief    Convert a `CF_HttpsResult` to a C string.
  * @param    state        The state to convert to a string.
  * @related  CF_HttpsRequest cf_https_process cf_https_result_to_string
  */
