@@ -311,7 +311,6 @@ CF_API void CF_CALL cf_draw_line(CF_V2 p0, CF_V2 p1, float thickness);
  * @param    count        The number of points in the polyline.
  * @param    thickness    The thickness of the line to draw.
  * @param    loop         True to connect the first and last point to form a loop. False otherwise.
- * @param    bevel_count  The number of edges used to smooth corners.
  * @related  cf_draw_line cf_draw_polyline cf_draw_bezier_line cf_draw_bezier_line2 cf_draw_arrow cf_draw_polygon_fill
  */
 CF_API void CF_CALL cf_draw_polyline(const CF_V2* points, int count, float thickness, bool loop);
@@ -807,7 +806,7 @@ CF_API float CF_CALL cf_peek_text_wrap_width(void);
 /**
  * @function cf_push_text_vertical_layout
  * @category text
- * @brief    Pushes a whether or not to layout text vertically (as opposed to the default or horizontally).
+ * @brief    Pushes whether or not to layout text vertically (as opposed to the default of horizontally).
  * @param    layout_vertically  True to layout vertically, false otherwise.
  * @related  cf_make_font cf_push_font cf_push_text_vertical_layout cf_pop_text_vertical_layout cf_peek_text_vertical_layout cf_draw_text
  */
@@ -1202,23 +1201,23 @@ CF_API bool CF_CALL cf_peek_text_effect_active(void);
  * @category draw
  * @brief    Pushes a `CF_Rect` for the viewport to render within.
  * @param    viewport     The viewport.
- * @related  TODO
+ * @related  cf_draw_push_viewport cf_draw_pop_viewport cf_draw_peek_viewport
  */
 CF_API void CF_CALL cf_draw_push_viewport(CF_Rect viewport);
 
 /**
  * @function cf_draw_pop_viewport
  * @category draw
- * @brief    TODO
- * @related  TODO
+ * @brief    Pops and returns the last viewport `CF_Rect`.
+ * @related  cf_draw_push_viewport cf_draw_pop_viewport cf_draw_peek_viewport
  */
 CF_API CF_Rect CF_CALL cf_draw_pop_viewport(void);
 
 /**
  * @function cf_draw_peek_viewport
  * @category draw
- * @brief    TODO
- * @related  TODO
+ * @brief    Returns the current viewport `CF_Rect`.
+ * @related  cf_draw_push_viewport cf_draw_pop_viewport cf_draw_peek_viewport
  */
 CF_API CF_Rect CF_CALL cf_draw_peek_viewport(void);
 
@@ -1227,7 +1226,7 @@ CF_API CF_Rect CF_CALL cf_draw_peek_viewport(void);
  * @category draw
  * @brief    Pushes a `CF_Rect` for the scissor to render within.
  * @param    scissor      The scissor box.
- * @related  TODO
+ * @related  cf_draw_push_scissor cf_draw_pop_scissor cf_draw_peek_scissor
  */
 CF_API void CF_CALL cf_draw_push_scissor(CF_Rect scissor);
 
@@ -1235,7 +1234,7 @@ CF_API void CF_CALL cf_draw_push_scissor(CF_Rect scissor);
  * @function cf_draw_pop_scissor
  * @category draw
  * @brief    Pops and returns the last `CF_Rect` for the scissor box.
- * @related  TODO
+ * @related  cf_draw_push_scissor cf_draw_pop_scissor cf_draw_peek_scissor
  */
 CF_API CF_Rect CF_CALL cf_draw_pop_scissor(void);
 
@@ -1243,7 +1242,7 @@ CF_API CF_Rect CF_CALL cf_draw_pop_scissor(void);
  * @function cf_draw_peek_scissor
  * @category draw
  * @brief    Returns the last `CF_Rect` for the scissor box.
- * @related  TODO
+ * @related  cf_draw_push_scissor cf_draw_pop_scissor cf_draw_peek_scissor
  */
 CF_API CF_Rect CF_CALL cf_draw_peek_scissor(void);
 
@@ -1252,21 +1251,23 @@ CF_API CF_Rect CF_CALL cf_draw_peek_scissor(void);
  * @category draw
  * @brief    Pushes a `CF_RenderState` for controlling various rendering settings.
  * @param    render_state  Various types of rendering states.
- * @related  TODO
+ * @related  CF_RenderState cf_draw_push_render_state cf_draw_pop_render_state cf_draw_peek_render_state
  */
 CF_API void CF_CALL cf_draw_push_render_state(CF_RenderState render_state);
 
 /**
  * @function cf_draw_pop_render_state
  * @category draw
- * @brief    Pops and returns the last `CF_RenderState`.* @related  CF_RenderState cf_draw_filter cf_draw_push_viewport cf_draw_push_scissor cf_draw_push_render_state cf_draw_pop_render_state cf_draw_peek_render_state cf_render_to cf_app_draw_onto_screen
+ * @brief    Pops and returns the last `CF_RenderState`.
+ * @related  CF_RenderState cf_draw_push_render_state cf_draw_pop_render_state cf_draw_peek_render_state
  */
 CF_API CF_RenderState CF_CALL cf_draw_pop_render_state(void);
 
 /**
  * @function cf_draw_peek_render_state
  * @category draw
- * @brief    Returns the last `CF_RenderState`.* @related  CF_RenderState cf_draw_filter cf_draw_push_viewport cf_draw_push_scissor cf_draw_push_render_state cf_draw_pop_render_state cf_draw_peek_render_state cf_render_to cf_app_draw_onto_screen
+ * @brief    Returns the last `CF_RenderState`.
+ * @related  CF_RenderState cf_draw_push_render_state cf_draw_pop_render_state cf_draw_peek_render_state
  */
 CF_API CF_RenderState CF_CALL cf_draw_peek_render_state(void);
 
@@ -1288,6 +1289,7 @@ CF_API CF_RenderState CF_CALL cf_draw_peek_render_state(void);
  *           - 1024
  *           - 2048
  *           - 4096
+ * @related  cf_draw_set_atlas_dimensions cf_render_to cf_draw_sprite
  */
 CF_API void CF_CALL cf_draw_set_atlas_dimensions(int width_in_pixels, int height_in_pixels);
 
@@ -1374,18 +1376,18 @@ CF_API void CF_CALL cf_draw_push_alpha_discard(bool true_enable_alpha_discard);
 /**
  * @function cf_draw_pop_alpha_discard
  * @category draw
- * @brief    TODO
+ * @brief    Pops and returns the last alpha discard state.
  * @remarks  Alpha discarding is useful to throw away pixels with zero alpha, for cutouts or as an optimization, or for certain blending techniques.
- * @related  TODO
+ * @related  cf_draw_push_alpha_discard cf_draw_pop_alpha_discard cf_draw_peek_alpha_discard
  */
 CF_API bool CF_CALL cf_draw_pop_alpha_discard(void);
 
 /**
  * @function cf_draw_peek_alpha_discard
  * @category draw
- * @brief    TODO
+ * @brief    Returns the current alpha discard state.
  * @remarks  Alpha discarding is useful to throw away pixels with zero alpha, for cutouts or as an optimization, or for certain blending techniques.
- * @related  TODO
+ * @related  cf_draw_push_alpha_discard cf_draw_pop_alpha_discard cf_draw_peek_alpha_discard
  */
 CF_API bool CF_CALL cf_draw_peek_alpha_discard(void);
 
@@ -1515,7 +1517,7 @@ CF_API void CF_CALL cf_draw_set_uniform_color(const char* name, CF_Color val);
  * @category draw
  * @brief    Applies the current draw transform to a point.
  * @param    p      The point to transform.
- * @related  TODO
+ * @related  cf_draw_mul cf_draw_transform cf_draw_translate cf_draw_scale cf_draw_rotate
  */
 CF_API CF_V2 CF_CALL cf_draw_mul(CF_V2 p);
 
@@ -1762,7 +1764,7 @@ typedef struct CF_AtlasSubImage
 	/* @member Must be a unique number for all sub-images across all atlases. You should start at 0 and increment for each unique id you need. */
 	uint64_t image_id;
 
-	/* @member The width in height, in pixels, of the sub-image. */
+	/* @member The width and height, in pixels, of the sub-image. */
 	int w, h;
 
 	/* @member u coordinate in the premade atlas. */

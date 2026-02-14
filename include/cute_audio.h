@@ -386,7 +386,7 @@ CF_API float CF_CALL cf_sound_get_volume(CF_Sound sound);
  * @category audio
  * @brief    Returns the pitch of the sound.
  * @param    sound          The sound.
- * @remarks  You can set a sound volume with `cf_sound_set_volume`, or upon creation with `cf_play_sound`.
+ * @remarks  You can set a sound pitch with `cf_sound_set_pitch`, or upon creation with `cf_play_sound`.
  * @related  CF_SoundParams CF_Sound cf_sound_params_defaults cf_play_sound cf_sound_is_active cf_sound_get_is_paused cf_sound_get_is_looped cf_sound_get_volume cf_sound_get_time cf_sound_set_time cf_sound_set_is_paused cf_sound_set_is_looped cf_sound_set_volume cf_sound_stop cf_sound_set_pitch cf_sound_get_pitch
  */
 CF_API float CF_CALL cf_sound_get_pitch(CF_Sound sound);

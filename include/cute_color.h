@@ -244,7 +244,7 @@ CF_INLINE CF_Color cf_mul_color(CF_Color a, float s) { return cf_make_color_rgba
  * @brief    Performs component-wise multiplication between two colors.
  * @param    a          The first color.
  * @param    b          The second color.
- * @return   For colors `a` and `a` the color `{ a.r*b.r, a.g*b.g, a.b*b.b, a.a*b.a }` is returned.
+ * @return   For colors `a` and `b` the color `{ a.r*b.r, a.g*b.g, a.b*b.b, a.a*b.a }` is returned.
  * @related  CF_Color cf_mul_color cf_mul_color2 cf_div_color cf_add_color cf_sub_color cf_abs_color cf_fract_color cf_splat_color cf_mod_color cf_clamp_color cf_clamp_color01 cf_color_lerp cf_color_premultiply
  */
 CF_INLINE CF_Color cf_mul_color2(CF_Color a, CF_Color b) { return cf_make_color_rgba_f(a.r*b.r, a.g*b.g, a.b*b.b, a.a*b.a); }
@@ -728,7 +728,7 @@ CF_INLINE CF_Color cf_color_yellow(void) { return cf_make_color_rgb_f(1.0f, 1.0f
 /**
  * @function cf_color_orange
  * @category graphics
- * @brief    Helper function to return a orange `CF_Color`.
+ * @brief    Helper function to return an orange `CF_Color`.
  * @related  cf_color_invisible cf_color_black cf_color_white cf_color_red cf_color_green cf_color_blue cf_color_yellow cf_color_orange cf_color_purple cf_color_grey cf_color_cyan cf_color_magenta
  */
 CF_INLINE CF_Color cf_color_orange(void) { return cf_make_color_rgb_f(1.0f, 0.65f, 0.0f); }
@@ -840,7 +840,7 @@ CF_INLINE CF_Pixel cf_pixel_yellow(void) { return cf_make_pixel_rgb(255, 255, 0)
 /**
  * @function cf_pixel_orange
  * @category graphics
- * @brief    Helper function to return a orange `CF_Pixel`.
+ * @brief    Helper function to return an orange `CF_Pixel`.
  * @related  cf_pixel_invisible cf_pixel_black cf_pixel_white cf_pixel_red cf_pixel_green cf_pixel_blue cf_pixel_yellow cf_pixel_orange cf_pixel_purple cf_pixel_grey cf_pixel_cyan cf_pixel_magenta
  */
 CF_INLINE CF_Pixel cf_pixel_orange(void) { return cf_make_pixel_rgb(255, 165, 0); }

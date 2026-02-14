@@ -180,7 +180,7 @@ extern "C" {
  *
  *           If an invalid codepoint is found the "replacement character" 0xFFFD will be appended instead, which
  *           looks like a question mark inside a dark diamond.
- * @related  cf_string_append_UTF8 cf_string_append_UTF8 cf_string_decode_UTF16
+ * @related  cf_string_append_UTF8 cf_string_decode_UTF8 cf_string_decode_UTF16
  */
 #define cf_string_append_UTF8(s, codepoint) sappend_UTF8(s, codepoint)
 
@@ -233,7 +233,7 @@ extern "C" {
  * @remarks  You can use this function in a loop to decode one codepoint at a time, where each codepoint
  *           represents a single UTF16 character. You can convert a UTF16 string to UTF8 by calling `cf_string_append_UTF8`
  *           on another string instance inside a decode loop.
- * @related  cf_string_append_UTF8 cf_string_append_UTF8 cf_string_decode_UTF16
+ * @related  cf_string_append_UTF8 cf_string_decode_UTF8 cf_string_decode_UTF16
  */
 #define cf_string_decode_UTF16(s, codepoint) decode_UTF16(s, codepoint)
 

@@ -711,11 +711,11 @@ CF_API uint64_t CF_CALL cf_texture_binding_handle(CF_Texture texture);
  * @related  CF_Shader cf_shader_directory cf_make_shader
  */
 #define CF_SHADER_STAGE_DEFS \
-	/* @entry */                      \
+	/* @entry Vertex shader stage. */   \
 	CF_ENUM(SHADER_STAGE_VERTEX,   0) \
-	/* @entry */                      \
+	/* @entry Fragment shader stage. */ \
 	CF_ENUM(SHADER_STAGE_FRAGMENT, 1) \
-	/* @entry */                      \
+	/* @entry Compute shader stage. */ \
 	CF_ENUM(SHADER_STAGE_COMPUTE,  2) \
 	/* @end */
 
@@ -837,6 +837,7 @@ CF_API CF_ShaderBytecode CF_CALL cf_compile_shader_to_bytecode(const char* shade
  * @param    bytecode   The bytecode blob to free.
  * @remarks  This function must only be called on the bytecode blob returned from `cf_compile_shader_to_bytecode`.
  *           It cannot be called on the bytecode blob generated as a header from the `cute-shaderc` compiler.
+ * @related  CF_ShaderBytecode cf_compile_shader_to_bytecode cf_make_shader_from_bytecode cf_free_shader_bytecode
  */
 CF_API void CF_CALL cf_free_shader_bytecode(CF_ShaderBytecode bytecode);
 
@@ -1346,7 +1347,7 @@ typedef enum CF_VertexFormat
 /**
  * @function cf_vertex_format_string
  * @category graphics
- * @brief    Frees up a `CF_Canvas` created by `cf_make_canvas`.
+ * @brief    Returns a `CF_VertexFormat` converted to a C string.
  * @related  CF_VertexFormat cf_vertex_format_string CF_VertexAttribute cf_mesh_set_attributes
  */
 CF_INLINE const char* cf_vertex_format_string(CF_VertexFormat format) {
@@ -1627,7 +1628,7 @@ typedef enum CF_BlendOp
  * @function cf_blend_op_string
  * @category graphics
  * @brief    Returns a `CF_BlendOp` converted to a C string.
- * @related  CF_StencilOp cf_stencil_op_string CF_StencilFunction
+ * @related  CF_BlendOp cf_blend_op_string CF_BlendFactor CF_RenderState
  */
 CF_INLINE const char* cf_blend_op_string(CF_BlendOp op) {
 	switch (op) {
@@ -2194,17 +2195,19 @@ CF_API void CF_CALL cf_apply_scissor(int x, int y, int w, int h);
  * @category graphics
  * @brief    Sets the stencil reference value.
  * @param    reference      The value to set the stencil reference to.
+ * @related  cf_apply_stencil_reference cf_apply_blend_constants cf_apply_canvas cf_apply_viewport cf_apply_scissor
  */
 CF_API void CF_CALL cf_apply_stencil_reference(int reference);
 
 /**
  * @function cf_apply_blend_constants
  * @category graphics
- * @brief    Sets the stencil reference value.
+ * @brief    Sets the blend constant values used for blend modes that reference blend constants.
  * @param    r      The red blend constant.
  * @param    g      The green blend constant.
  * @param    b      The blue blend constant.
  * @param    a      The alpha blend constant.
+ * @related  cf_apply_stencil_reference cf_apply_blend_constants cf_apply_canvas cf_apply_viewport cf_apply_scissor
  */
 CF_API void CF_CALL cf_apply_blend_constants(float r, float g, float b, float a);
 

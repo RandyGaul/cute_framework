@@ -361,7 +361,7 @@ CF_INLINE float cf_sprite_get_scale_y(CF_Sprite* sprite) { CF_ASSERT(sprite); re
 /**
  * @function cf_sprite_set_scale
  * @category sprite
- * @brief    Returns the sprite's scale on the x-axis.
+ * @brief    Sets the sprite's scale.
  * @related  CF_Sprite cf_sprite_get_scale_x cf_sprite_get_scale_y cf_sprite_set_scale_x cf_sprite_set_scale_y cf_sprite_set_scale
  */
 CF_INLINE void cf_sprite_set_scale(CF_Sprite* sprite, CF_V2 scale) { CF_ASSERT(sprite); sprite->scale = scale; }
@@ -369,7 +369,7 @@ CF_INLINE void cf_sprite_set_scale(CF_Sprite* sprite, CF_V2 scale) { CF_ASSERT(s
 /**
  * @function cf_sprite_set_scale_x
  * @category sprite
- * @brief    Returns the sprite's scale on the x-axis.
+ * @brief    Sets the sprite's scale on the x-axis.
  * @related  CF_Sprite cf_sprite_get_scale_x cf_sprite_get_scale_y cf_sprite_set_scale_x cf_sprite_set_scale_y cf_sprite_set_scale
  */
 CF_INLINE void cf_sprite_set_scale_x(CF_Sprite* sprite, float x) { CF_ASSERT(sprite); sprite->scale.x = x; }
@@ -377,7 +377,7 @@ CF_INLINE void cf_sprite_set_scale_x(CF_Sprite* sprite, float x) { CF_ASSERT(spr
 /**
  * @function cf_sprite_set_scale_y
  * @category sprite
- * @brief    Returns the sprite's scale on the y-axis.
+ * @brief    Sets the sprite's scale on the y-axis.
  * @related  CF_Sprite cf_sprite_get_scale_x cf_sprite_get_scale_y cf_sprite_set_scale_x cf_sprite_set_scale_y cf_sprite_set_scale
  */
 CF_INLINE void cf_sprite_set_scale_y(CF_Sprite* sprite, float y) { CF_ASSERT(sprite); sprite->scale.y = y; }
@@ -401,7 +401,7 @@ CF_INLINE float cf_sprite_get_offset_y(CF_Sprite* sprite) { CF_ASSERT(sprite); r
 /**
  * @function cf_sprite_set_offset_x
  * @category sprite
- * @brief    Returns the sprite's local offset on the x-axis.
+ * @brief    Sets the sprite's local offset on the x-axis.
  * @related  CF_Sprite cf_sprite_get_offset_x cf_sprite_get_offset_y cf_sprite_set_offset_x cf_sprite_set_offset_y
  */
 CF_INLINE void cf_sprite_set_offset_x(CF_Sprite* sprite, float offset) { CF_ASSERT(sprite); sprite->offset.x = offset; }
@@ -409,7 +409,7 @@ CF_INLINE void cf_sprite_set_offset_x(CF_Sprite* sprite, float offset) { CF_ASSE
 /**
  * @function cf_sprite_set_offset_y
  * @category sprite
- * @brief    Returns the sprite's local offset on the y-axis.
+ * @brief    Sets the sprite's local offset on the y-axis.
  * @related  CF_Sprite cf_sprite_get_offset_x cf_sprite_get_offset_y cf_sprite_set_offset_x cf_sprite_set_offset_y
  */
 CF_INLINE void cf_sprite_set_offset_y(CF_Sprite* sprite, float offset) { CF_ASSERT(sprite); sprite->offset.y = offset; }
@@ -418,6 +418,7 @@ CF_INLINE void cf_sprite_set_offset_y(CF_Sprite* sprite, float offset) { CF_ASSE
  * @function cf_sprite_get_opacity
  * @category sprite
  * @brief    Returns the sprite's opacity, a value from 0-1.
+ * @related  CF_Sprite cf_sprite_get_opacity cf_sprite_set_opacity
  */
 CF_INLINE float cf_sprite_get_opacity(CF_Sprite* sprite) { CF_ASSERT(sprite); return sprite->opacity; }
 
@@ -425,6 +426,7 @@ CF_INLINE float cf_sprite_get_opacity(CF_Sprite* sprite) { CF_ASSERT(sprite); re
  * @function cf_sprite_set_opacity
  * @category sprite
  * @brief    Sets the sprite's opacity, a value from 0-1.
+ * @related  CF_Sprite cf_sprite_get_opacity cf_sprite_set_opacity
  */
 CF_INLINE void cf_sprite_set_opacity(CF_Sprite* sprite, float opacity) { CF_ASSERT(sprite); sprite->opacity = opacity; }
 
@@ -432,6 +434,7 @@ CF_INLINE void cf_sprite_set_opacity(CF_Sprite* sprite, float opacity) { CF_ASSE
  * @function cf_sprite_set_loop
  * @category sprite
  * @brief    Sets whether or not the sprite can loop. True for looping. If false the animation will pause on the final frame.
+ * @related  CF_Sprite cf_sprite_set_loop cf_sprite_get_loop cf_sprite_get_loop_count
  */
 CF_INLINE void cf_sprite_set_loop(CF_Sprite* sprite, bool loop) { CF_ASSERT(sprite); sprite->loop = loop; }
 
@@ -439,6 +442,7 @@ CF_INLINE void cf_sprite_set_loop(CF_Sprite* sprite, bool loop) { CF_ASSERT(spri
  * @function cf_sprite_get_loop
  * @category sprite
  * @brief    Gets whether or not the sprite can loop. True for looping. If false the animation will pause on the final frame.
+ * @related  CF_Sprite cf_sprite_set_loop cf_sprite_get_loop cf_sprite_get_loop_count
  */
 CF_INLINE bool cf_sprite_get_loop(CF_Sprite* sprite) { CF_ASSERT(sprite); return sprite->loop; }
 
@@ -447,6 +451,7 @@ CF_INLINE bool cf_sprite_get_loop(CF_Sprite* sprite) { CF_ASSERT(sprite); return
  * @category sprite
  * @brief    Searches for and returns a particular slice. A zero'd out `CF_Aabb` is returned if no match was found.
  * @remarks  Only fetches for slices within the current frame of the current animation.
+ * @related  CF_Sprite CF_SpriteSlice cf_sprite_get_slice
  */
 CF_INLINE CF_Aabb cf_sprite_get_slice(CF_Sprite* sprite, const char* name)
 {
@@ -467,6 +472,7 @@ CF_INLINE CF_Aabb cf_sprite_get_slice(CF_Sprite* sprite, const char* name)
  * @function cf_sprite_get_play_speed_multiplier
  * @category sprite
  * @brief    Returns the sprite's playing speed multiplier.
+ * @related  CF_Sprite cf_sprite_get_play_speed_multiplier cf_sprite_set_play_speed_multiplier
  */
 CF_INLINE float cf_sprite_get_play_speed_multiplier(CF_Sprite* sprite) { CF_ASSERT(sprite); return sprite->play_speed_multiplier; }
 
@@ -474,6 +480,7 @@ CF_INLINE float cf_sprite_get_play_speed_multiplier(CF_Sprite* sprite) { CF_ASSE
  * @function cf_sprite_set_play_speed_multiplier
  * @category sprite
  * @brief    Sets the sprite's playing speed multiplier.
+ * @related  CF_Sprite cf_sprite_get_play_speed_multiplier cf_sprite_set_play_speed_multiplier
  */
 CF_INLINE void cf_sprite_set_play_speed_multiplier(CF_Sprite* sprite, float multiplier) { CF_ASSERT(sprite); sprite->play_speed_multiplier = multiplier; }
 
@@ -481,12 +488,14 @@ CF_INLINE void cf_sprite_set_play_speed_multiplier(CF_Sprite* sprite, float mult
  * @function cf_sprite_get_loop_count
  * @category sprite
  * @brief    Returns the sprite's loop count.
+ * @related  CF_Sprite cf_sprite_get_loop_count cf_sprite_set_loop cf_sprite_get_loop
  */
 CF_INLINE int cf_sprite_get_loop_count(CF_Sprite* sprite) { CF_ASSERT(sprite); return sprite->loop_count; }
 /**
  * @function cf_sprite_get_local_offset
  * @category sprite
  * @brief    Returns the sprite's local offset, set by loading the .ase file if a slice named "origin" exists.
+ * @related  CF_Sprite cf_sprite_get_local_offset cf_sprite_get_offset_x cf_sprite_get_offset_y
  */
 CF_INLINE CF_V2 cf_sprite_get_local_offset(CF_Sprite* sprite) { CF_ASSERT(sprite); return sprite->offset; }
 
@@ -594,7 +603,7 @@ CF_INLINE void cf_sprite_play(CF_Sprite* sprite, const char* animation)
 /**
  * @function cf_sprite_is_playing
  * @category sprite
- * @brief    Returns true if `animation` the is currently playing animation.
+ * @brief    Returns true if the named animation is currently playing.
  * @param    sprite     The sprite.
  * @param    animation  Name of the animation.
  * @related  CF_Sprite cf_sprite_update cf_sprite_play cf_sprite_is_playing

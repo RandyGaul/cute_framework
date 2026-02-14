@@ -52,8 +52,8 @@ typedef uint32_t CF_DisplayID;
 /**
  * @function cf_default_display
  * @category app
- * @brief    TODO
- * @related  TODO
+ * @brief    Returns the default display ID for the primary monitor.
+ * @related  cf_default_display cf_display_count cf_get_display_list cf_free_display_list
  */
 CF_API CF_DisplayID CF_CALL cf_default_display(void);
 
@@ -69,16 +69,16 @@ CF_API int CF_CALL cf_display_count(void);
 /**
  * @function cf_get_display_list
  * @category app
- * @brief    TODO
- * @related  TODO
+ * @brief    Returns a dynamic array of all available display IDs. Free with `cf_free_display_list`.
+ * @related  cf_default_display cf_display_count cf_get_display_list cf_free_display_list
  */
 CF_API CF_DisplayID* CF_CALL cf_get_display_list(void);
 
 /**
  * @function cf_free_display_list
  * @category app
- * @brief    TODO
- * @related  TODO
+ * @brief    Frees the display list returned by `cf_get_display_list`.
+ * @related  cf_default_display cf_display_count cf_get_display_list cf_free_display_list
  */
 CF_API void CF_CALL cf_free_display_list(CF_DisplayID* display_list);
 
@@ -196,7 +196,7 @@ CF_API CF_DisplayOrientation CF_CALL cf_display_orientation(CF_DisplayID display
 	CF_ENUM(APP_OPTIONS_GFX_METAL_BIT,                          1 << 9)  \
 	/* @entry Starts the application with a Vulkan backend. */           \
 	CF_ENUM(APP_OPTIONS_GFX_VULKAN_BIT,                         1 << 10) \
-	/* @entry TODO */ \
+	/* @entry Starts the application with an OpenGL backend. */ \
 	CF_ENUM(APP_OPTIONS_GFX_OPENGL_BIT,                       1 << 11) \
 	/* @entry Starts the application with a debug mode graphics context. */ \
 	CF_ENUM(APP_OPTIONS_GFX_DEBUG_BIT,                          1 << 12) \
@@ -509,7 +509,7 @@ CF_API void CF_CALL cf_app_request_attention(void);
 /**
  * @function cf_app_request_attention_continuously
  * @category app
- * @brief    Requests attention for the window for continuously.
+ * @brief    Requests attention for the window continuously.
  * @remarks  On Windows this flashes the tab icon, and bounces the dock icon on OSX.
  * @related  cf_app_request_attention cf_app_request_attention_continuously cf_app_request_attention_cancel
  */
@@ -749,7 +749,7 @@ CF_API void CF_CALL cf_app_set_fullscreen_mode(void);
 /**
  * @function cf_app_set_title
  * @category app
- * @brief    Sets the application's true fullscreen mode's title.
+ * @brief    Sets the window title.
  * @related  cf_app_set_windowed_mode cf_app_set_borderless_fullscreen_mode cf_app_set_fullscreen_mode cf_app_set_title cf_app_set_icon
  */
 CF_API void CF_CALL cf_app_set_title(const char* title);

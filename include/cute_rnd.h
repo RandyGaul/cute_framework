@@ -49,7 +49,7 @@ typedef struct CF_Rnd
 CF_INLINE CF_Rnd CF_CALL cf_rnd_seed(uint64_t seed);
 
 /**
- * @function cf_rnd_uint
+ * @function cf_rnd_uint64
  * @category random
  * @brief    Returns a random `uint64_t`.
  * @param    rnd          The random number generator state.
