@@ -18,6 +18,7 @@
 #include "cute_color.h"
 #include "cute_result.h"
 #include "cute_math.h"
+#include "cute_image.h"
 
 //--------------------------------------------------------------------------------------------------
 // C API
@@ -830,6 +831,18 @@ CF_INLINE bool cf_sprite_on_loop(CF_Sprite* sprite)
 }
 
 /**
+ * @function cf_sprite_get_pixels
+ * @category sprite
+ * @brief    Returns pixel data for a specific frame of a named animation.
+ * @param    sprite     The sprite.
+ * @param    animation  Name of the animation containing the frame.
+ * @param    frame_index  Zero-based index of the frame within the animation.
+ * @return   A `CF_Image` with a copy of the frame's pixel data (premultiplied alpha). Returns a zero'd `CF_Image` if the animation or frame is not found. The caller must free the image with `cf_image_free`.
+ * @related  CF_Sprite CF_Image CF_Frame cf_image_free
+ */
+CF_API CF_Image CF_CALL cf_sprite_get_pixels(CF_Sprite* sprite, const char* animation, int frame_index);
+
+/**
  * @function cf_animation_add_frame
  * @category sprite
  * @brief    Adds a frame to an animation.
@@ -891,6 +904,7 @@ CF_INLINE float sprite_animation_delay(CF_Sprite* sprite) { return cf_sprite_ani
 CF_INLINE float sprite_animation_interpolant(CF_Sprite* sprite) { return cf_sprite_animation_interpolant(sprite); }
 CF_INLINE bool sprite_will_finish(CF_Sprite* sprite) { return cf_sprite_will_finish(sprite); }
 CF_INLINE bool sprite_on_loop(CF_Sprite* sprite) { return cf_sprite_on_loop(sprite); }
+CF_INLINE CF_Image sprite_get_pixels(CF_Sprite* sprite, const char* animation, int frame_index) { return cf_sprite_get_pixels(sprite, animation, frame_index); }
 CF_INLINE void animation_add_frame(CF_Animation* animation, CF_Frame frame) { cf_animation_add_frame(animation, frame); }
 
 CF_INLINE int sprite_width(CF_Sprite& sprite) { return cf_sprite_width(&sprite); }
@@ -931,6 +945,7 @@ CF_INLINE float sprite_animation_delay(CF_Sprite& sprite) { return cf_sprite_ani
 CF_INLINE float sprite_animation_interpolant(CF_Sprite& sprite) { return cf_sprite_animation_interpolant(&sprite); }
 CF_INLINE bool sprite_will_finish(CF_Sprite& sprite) { return cf_sprite_will_finish(&sprite); }
 CF_INLINE bool sprite_on_loop(CF_Sprite& sprite) { return cf_sprite_on_loop(&sprite); }
+CF_INLINE CF_Image sprite_get_pixels(CF_Sprite& sprite, const char* animation, int frame_index) { return cf_sprite_get_pixels(&sprite, animation, frame_index); }
 CF_INLINE void animation_add_frame(CF_Animation& animation, CF_Frame frame) { cf_animation_add_frame(&animation, frame); }
 
 CF_INLINE CF_Sprite easy_make_sprite(const char* png_path, CF_Result* result) { return cf_make_easy_sprite_from_png(png_path, result); }
