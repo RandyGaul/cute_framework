@@ -51,6 +51,22 @@ void cf_aseprite_cache_get_pixels(uint64_t image_id, void* buffer, int bytes_to_
 	}
 }
 
+CF_Image cf_sprite_get_pixels(CF_Sprite* sprite, const char* animation, int frame_index)
+{
+	CF_Image img = { 0 };
+	if (!sprite || !sprite->animations) return img;
+	const CF_Animation* anim = map_get(*sprite->animations, sintern(animation));
+	if (!anim) return img;
+	if (frame_index < 0 || frame_index >= asize(anim->frames)) return img;
+	uint64_t id = anim->frames[frame_index].id;
+	img.w = sprite->w;
+	img.h = sprite->h;
+	int bytes = img.w * img.h * (int)sizeof(CF_Pixel);
+	img.pix = (CF_Pixel*)CF_ALLOC(bytes);
+	cf_aseprite_cache_get_pixels(id, img.pix, bytes);
+	return img;
+}
+
 void cf_make_aseprite_cache()
 {
 	cache = CF_NEW(CF_AsepriteCache);
