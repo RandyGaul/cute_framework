@@ -22,6 +22,8 @@
 
 using namespace Cute;
 
+static Map<const char*> s_compute_shader_paths;
+
 static void s_shader_directory_recursive(CF_Path path)
 {
 	Array<CF_Path> dir = CF_Directory::enumerate(app->shader_directory + path);
@@ -234,6 +236,8 @@ void cf_unload_internal_shaders()
 
 void cf_destroy_shader(CF_Shader shader_handle)
 {
+	s_draw->shader_paths.remove(shader_handle.id);
+
 	// Draw shaders automatically have blit shaders generated, so clean that up as well,
 	// if it exists. See `cf_make_draw_shader`.
 	CF_Shader* blit = (CF_Shader*)s_draw->draw_shd_to_blit_shd.try_get(shader_handle.id);
@@ -584,6 +588,7 @@ CF_ComputeShader cf_make_compute_shader(const char* path)
 	if (!shd) return { 0 };
 	CF_ComputeShader result = cf_make_compute_shader_from_source(shd);
 	cf_free(shd);
+	if (result.id) s_compute_shader_paths.add(result.id, sintern(path));
 	return result;
 }
 
@@ -597,6 +602,20 @@ CF_ComputeShader cf_make_compute_shader_from_source(const char* src)
 	CF_ComputeShader shader = cf_make_compute_shader_from_bytecode(bytecode);
 	cf_free_shader_bytecode(bytecode);
 	return shader;
+}
+
+bool cf_compute_shader_reload(CF_ComputeShader* shader)
+{
+	const char** path_ptr = s_compute_shader_paths.try_find(shader->id);
+	if (!path_ptr) return false;
+	const char* path = *path_ptr;
+
+	CF_ComputeShader new_shd = cf_make_compute_shader(path);
+	if (!new_shd.id) return false;
+
+	cf_destroy_compute_shader(*shader);
+	*shader = new_shd;
+	return true;
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -698,7 +717,22 @@ void cf_draw_elements()
 }
 
 CF_DISPATCH_SHIM(CF_ComputeShader, make_compute_shader_from_bytecode, (CF_ShaderBytecode bytecode), bytecode)
-CF_DISPATCH_SHIM_VOID(destroy_compute_shader, (CF_ComputeShader shader), shader)
+
+void cf_sdlgpu_destroy_compute_shader(CF_ComputeShader shader);
+void cf_gles_destroy_compute_shader(CF_ComputeShader shader);
+void cf_destroy_compute_shader(CF_ComputeShader shader)
+{
+	s_compute_shader_paths.remove(shader.id);
+#ifdef CF_EMSCRIPTEN
+	cf_gles_destroy_compute_shader(shader);
+#else
+	if (app->gfx_backend_type == CF_BACKEND_TYPE_GLES3) {
+		cf_gles_destroy_compute_shader(shader);
+	} else {
+		cf_sdlgpu_destroy_compute_shader(shader);
+	}
+#endif
+}
 CF_DISPATCH_SHIM(CF_StorageBuffer, make_storage_buffer, (CF_StorageBufferParams params), params)
 CF_DISPATCH_SHIM_VOID(update_storage_buffer, (CF_StorageBuffer buffer, const void* data, int size), buffer, data, size)
 CF_DISPATCH_SHIM_VOID(destroy_storage_buffer, (CF_StorageBuffer buffer), buffer)

@@ -3008,6 +3008,7 @@ CF_Shader cf_make_draw_shader(const char* path)
 	CF_Shader blit_shd = cf_make_draw_blit_shader_internal(path);
 	CF_Shader draw_shd = cf_make_draw_shader_internal(path);
 	s_draw->draw_shd_to_blit_shd.add(draw_shd.id, blit_shd.id);
+	if (draw_shd.id) s_draw->shader_paths.add(draw_shd.id, sintern(path));
 	return draw_shd;
 }
 
@@ -3027,6 +3028,20 @@ CF_Shader cf_make_draw_shader_from_bytecode(CF_DrawShaderBytecode bytecode)
 	CF_Shader draw_shd = cf_make_draw_shader_from_bytecode_internal(bytecode.draw_shader);
 	s_draw->draw_shd_to_blit_shd.add(draw_shd.id, blit_shd.id);
 	return draw_shd;
+}
+
+bool cf_shader_reload(CF_Shader* shader)
+{
+	const char** path_ptr = s_draw->shader_paths.try_find(shader->id);
+	if (!path_ptr) return false;
+	const char* path = *path_ptr;
+
+	CF_Shader new_shd = cf_make_draw_shader(path);
+	if (!new_shd.id) return false;
+
+	cf_destroy_shader(*shader);
+	*shader = new_shd;
+	return true;
 }
 
 void cf_draw_push_shader(CF_Shader shader)
