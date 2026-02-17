@@ -192,3 +192,5 @@ jobs:
 
       - name: Build
         run: cmake --build build
+        env:
+          CMAKE_BUILD_PARALLEL_LEVEL: 1
