@@ -13,7 +13,7 @@
 #include <cute_array.h>
 #include <cute_math.h>
 #include <cute_doubly_list.h>
-#include <cute_png_cache.h>
+#include <cute_custom_sprite.h>
 #include <cute_graphics.h>
 #include <cute_input.h>
 #include <cute_string.h>
@@ -99,7 +99,7 @@ struct CF_App
 	CF_WindowState window_state_prev;
 	int sample_count = 0;
 	bool use_depth_stencil = false;
-	uint64_t default_image_id = CF_PNG_ID_RANGE_LO;
+	uint64_t default_image_id = CF_CUSTOM_SPRITE_ID_RANGE_LO;
 	bool vsync = false;
 	bool audio_needs_updates = false;
 	void* update_udata = NULL;
@@ -140,7 +140,7 @@ struct CF_App
 	// Easy sprite stuff.
 	uint64_t easy_sprite_id_gen = CF_EASY_ID_RANGE_LO;
 	Cute::Map<CF_Image> easy_sprites;
-	Cute::Map<uint64_t> easy_sprite_png_cache;
+	Cute::Map<uint64_t> easy_sprite_id_cache;
 };
 
 #endif // CF_APP_INTERNAL_H

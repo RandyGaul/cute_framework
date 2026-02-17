@@ -10,14 +10,11 @@
 #define CF_SPRITE_H
 
 #include "cute_defines.h"
-#include "cute_array.h"
-#include "cute_map.h"
 #include "cute_string.h"
 #include "cute_math.h"
 #include "cute_time.h"
 #include "cute_color.h"
 #include "cute_result.h"
-#include "cute_math.h"
 #include "cute_image.h"
 
 //--------------------------------------------------------------------------------------------------
@@ -26,22 +23,6 @@
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
-
-/**
- * @struct   CF_Frame
- * @category sprite
- * @brief    Represents one frame of animation within a sprite.
- * @related  CF_Frame CF_Animation CF_Sprite
- */
-typedef struct CF_Frame
-{
-	/* @member Unique identifier for this frame's image. */
-	uint64_t id;
-
-	/* @member Number of seconds to display this frame. */
-	float delay;
-} CF_Frame;
-// @end
 
 /**
  * @enum     CF_PlayDirection
@@ -82,30 +63,6 @@ CF_INLINE const char* cf_play_direction_to_string(CF_PlayDirection dir)
 }
 
 /**
- * @struct   CF_Animation
- * @category sprite
- * @brief    A named set of frames in sequence.
- * @related  CF_Frame CF_Animation CF_Sprite
- */
-typedef struct CF_Animation
-{
-	/* The name of the animation. */
-	const char* name;
-
-	/* The direction to play the animation. See `CF_PlayDirection`. */
-	CF_PlayDirection play_direction;
-
-	/* The frames of the animation. See `dyna`. */
-	dyna CF_Frame* frames;
-	
-	/* For internal use. */
-	int frame_offset;
-} CF_Animation;
-// @end
-
-typedef CF_MAP(const CF_Animation*) CF_AnimationTable;
-
-/**
  * @struct   CF_SpriteSlice
  * @category sprite
  * @brief    A box defined within a .ase file.
@@ -135,6 +92,9 @@ typedef struct CF_SpriteSlice
  */
 typedef struct CF_Sprite
 {
+	/* @member Unique sprite id -- for internal use. */
+	uint64_t id;
+
 	/* @member The name of the sprite. */
 	const char* name;
 
@@ -144,20 +104,20 @@ typedef struct CF_Sprite
 	/* @member Height of the sprite in pixels. */
 	int h;
 
+	/* @member Cached image ID of the current frame (set by cf_sprite_update / cf_sprite_play). */
+	uint64_t _image_id;
+
+	/* @member Cached pivot of the current frame (set by cf_sprite_update / cf_sprite_play). */
+	CF_V2 _pivot;
+
+	/* @member Cached center patch of the current frame for 9-slice (set by cf_sprite_update / cf_sprite_play). */
+	CF_Aabb _center_patch;
+
 	/* @member Scale factor for the sprite when drawing. Default of `(1, 1)`. See `cf_draw_sprite`. */
 	CF_V2 scale;
 
 	/* @member A local offset/origin for the sprite when drawing. Defaults to `(0, 0)`. */
 	CF_V2 offset;
-
-	/* @member A local pivot (offset) per-frame. This value comes from an aseprite slice on a particular frame if the `pivot` box is checked. Make sure to only have one pivot per frame when authoring your .ase file or they will overwrite each other upon loading. */
-	dyna CF_V2* pivots;
-
-	/* @member Center patch of a 9 slice, mainly to be used for UI*/
-	dyna const CF_Aabb* center_patches;
-
-	/* @member All the `CF_SpriteSlice`'s in the sprite. These get loaded from the .ase file.  */
-	dyna const CF_SpriteSlice* slices;
 
 	/* @member An opacity value for the entire sprite. Default of 1.0f. See `cf_draw_sprite`. */
 	float opacity;
@@ -177,6 +137,9 @@ typedef struct CF_Sprite
 	/* @member Whether or not to loop animations. */
 	bool loop;
 
+	/* @member Set to true when a non-looping animation reaches its last frame. Only meaningful when `loop` is false. Reset to false by `cf_sprite_play`. */
+	bool finished;
+
 	/* @member The current elapsed time within a frame of animation. */
 	float t;
 
@@ -186,11 +149,8 @@ typedef struct CF_Sprite
 	/* @member Controls the animation play direction. This gets set each time `cf_sprite_play` is called to the animation's play direction. You may override this member yourself after calling `cf_sprite_play`. */
 	CF_PlayDirection play_direction;
 
-	/* @member A pointer to the current animation to display, from within the set `animations`. See `CF_Animation`. */
-	const CF_Animation* animation;
-
-	/* @member The set of named animations for this sprite. See `CF_Animation` and `CK_Map`. */
-	CF_AnimationTable* animations;
+	/* @member Interned name of the current animation. */
+	const char* animation_name;
 
 	/* @member An optional transform for rendering within a particular space. See `CF_Transform`. */
 	CF_Transform transform;
@@ -205,16 +165,7 @@ typedef struct CF_Sprite
  *           you may be looking for `cf_make_sprite` or `cf_make_easy_sprite`.
  * @related  CF_Sprite cf_sprite_defaults cf_make_easy_sprite cf_make_sprite
  */
-CF_INLINE CF_Sprite cf_sprite_defaults(void)
-{
-	CF_Sprite sprite = { 0 };
-	sprite.scale = cf_v2(1, 1);
-	sprite.opacity = 1.0f;
-	sprite.play_speed_multiplier = 1.0f;
-	sprite.transform = cf_make_transform();
-	sprite.loop = true;
-	return sprite;
-}
+CF_API CF_Sprite CF_CALL cf_sprite_defaults();
 
 /**
  * @function cf_make_easy_sprite_from_png
@@ -263,7 +214,7 @@ CF_API void CF_CALL cf_easy_sprite_unload(CF_Sprite *sprite);
  * @return   Returns a `CF_Sprite` that can be drawn with `cf_sprite_draw`.
  * @remarks  This function caches the sprite internally. Subsequent calls to load the same sprite will be very fast; you can use
  *           this function directly to fetch sprites that were already loaded. If you want to load sprites with your own custom
- *           animation data, instead of using the .ase/.aseprite format, you can try out `cf_png_cache_load` for a more low-level option.
+ *           animation data, instead of using the .ase/.aseprite format, you can try out `cf_custom_sprite_load_png` for a more low-level option.
  *           See [Virtual File System](https://randygaul.github.io/cute_framework/topics/virtual_file_system).
  * @related  CF_Sprite cf_make_easy_sprite_from_png cf_make_easy_sprite_from_pixels cf_easy_sprite_update_pixels cf_make_sprite_from_memory
  */
@@ -277,7 +228,7 @@ CF_API CF_Sprite CF_CALL cf_make_sprite(const char* aseprite_path);
  * @return   Returns a `CF_Sprite` that can be drawn with `cf_sprite_draw`.
  * @remarks  This function caches the sprite internally. Subsequent calls to load the same sprite will be very fast; you can use
  *           this function directly to fetch sprites that were already loaded. If you want to load sprites with your own custom
- *           animation data, instead of using the .ase/.aseprite format, you can try out `cf_png_cache_load` for a more low-level option.
+ *           animation data, instead of using the .ase/.aseprite format, you can try out `cf_custom_sprite_load_png` for a more low-level option.
  *           See [Virtual File System](https://randygaul.github.io/cute_framework/topics/virtual_file_system).
  * @related  CF_Sprite cf_make_easy_sprite_from_png cf_make_easy_sprite_from_pixels cf_easy_sprite_update_pixels
  */
@@ -305,15 +256,42 @@ CF_API void CF_CALL cf_sprite_unload(const char* aseprite_path);
 /**
  * @function cf_sprite_reload
  * @category sprite
- * @brief    Reloads the sprite's pixels from disk.
+ * @brief    Reloads the sprite's pixels from disk in-place.
  * @param    sprite        The sprite to reload.
- * @return   The reloaded sprite.
  * @remarks  This function is designed to help support asset or image hotloading/reloading during development.
- *           This function is *not* designed to be called once you ship your game.
- *           All old instances of the sprite are now invalid and should be reset to this return value.
+ *           Frame IDs are reused so other sprites sharing the same asset will pick up changes on their next update.
  * @related  CF_Sprite cf_make_sprite cf_sprite_unload cf_sprite_reload
  */
-CF_API CF_Sprite CF_CALL cf_sprite_reload(const CF_Sprite* sprite);
+CF_API void CF_CALL cf_sprite_reload(CF_Sprite* sprite);
+
+/**
+ * @function cf_sprite_animation_count
+ * @category sprite
+ * @brief    Returns the number of animations in the sprite's asset.
+ * @param    sprite     The sprite.
+ * @related  CF_Sprite cf_sprite_animation_count cf_sprite_animation_name_at
+ */
+CF_API int CF_CALL cf_sprite_animation_count(const CF_Sprite* sprite);
+
+/**
+ * @function cf_sprite_animation_name_at
+ * @category sprite
+ * @brief    Returns the name of the animation at the given index.
+ * @param    sprite     The sprite.
+ * @param    index      Zero-based index of the animation.
+ * @return   An interned string, or NULL if out of range.
+ * @related  CF_Sprite cf_sprite_animation_count cf_sprite_animation_name_at
+ */
+CF_API const char* CF_CALL cf_sprite_animation_name_at(const CF_Sprite* sprite, int index);
+
+/**
+ * @function cf_sprite_pivot
+ * @category sprite
+ * @brief    Returns the cached pivot of the current frame.
+ * @param    sprite     The sprite.
+ * @related  CF_Sprite cf_sprite_pivot
+ */
+CF_API CF_V2 CF_CALL cf_sprite_pivot(const CF_Sprite* sprite);
 
 //--------------------------------------------------------------------------------------------------
 // In-line implementation of `CF_Sprite` functions.
@@ -454,20 +432,7 @@ CF_INLINE bool cf_sprite_get_loop(CF_Sprite* sprite) { CF_ASSERT(sprite); return
  * @remarks  Only fetches for slices within the current frame of the current animation.
  * @related  CF_Sprite CF_SpriteSlice cf_sprite_get_slice
  */
-CF_INLINE CF_Aabb cf_sprite_get_slice(CF_Sprite* sprite, const char* name)
-{
-	CF_ASSERT(sprite);
-	CF_Aabb not_found = { 0 };
-	name = sintern(name);
-	int frame = sprite->frame_index + (sprite->animation ? sprite->animation->frame_offset : 0);
-	for (int i = 0; i < asize(sprite->slices); ++i) {
-		// >= here used according to Aseprite file spec, says they are valid for subsequent frames.
-		if (sprite->slices[i].name == name && sprite->slices[i].frame_index >= frame) {
-			return sprite->slices[i].box;
-		}
-	}
-	return not_found;
-}
+CF_API CF_Aabb CF_CALL cf_sprite_get_slice(CF_Sprite* sprite, const char* name);
 
 /**
  * @function cf_sprite_get_play_speed_multiplier
@@ -508,64 +473,7 @@ CF_INLINE CF_V2 cf_sprite_get_local_offset(CF_Sprite* sprite) { CF_ASSERT(sprite
  * @remarks  Call this once per frame.
  * @related  CF_Sprite cf_make_sprite cf_sprite_update cf_sprite_play cf_sprite_pause
  */
-CF_INLINE void cf_sprite_update(CF_Sprite* sprite)
-{
-	CF_ASSERT(sprite);
-	if (sprite->paused) return;
-	if (!sprite->animation) return;
-
-	sprite->t += CF_DELTA_TIME * sprite->play_speed_multiplier;
-	int frame_count = asize(sprite->animation->frames);
-	CF_PlayDirection direction = sprite->play_direction;
-	if (direction == CF_PLAY_DIRECTION_FORWARDS) {
-		if (sprite->t >= sprite->animation->frames[sprite->frame_index].delay) {
-			sprite->frame_index++;
-			sprite->t = 0;
-			if (sprite->frame_index == frame_count) {
-				if (sprite->loop) {
-					sprite->loop_count++;
-					sprite->frame_index = 0;
-				} else {
-					sprite->frame_index--;
-				}
-			}
-		}
-	} else if (direction == CF_PLAY_DIRECTION_BACKWARDS) {
-		if (sprite->t >= sprite->animation->frames[sprite->frame_index].delay) {
-			sprite->frame_index--;
-			sprite->t = 0;
-			if (sprite->frame_index < 0) {
-				if (sprite->loop) {
-					sprite->loop_count++;
-					sprite->frame_index = frame_count - 1;
-				} else {
-					sprite->frame_index++;
-				}
-			}
-		}
-	} else if (direction == CF_PLAY_DIRECTION_PINGPONG) {
-		if (sprite->t >= sprite->animation->frames[sprite->frame_index].delay) {
-			sprite->t = 0;
-			if (sprite->loop_count % 2) {
-				sprite->frame_index--;
-				if (sprite->frame_index < 0) {
-					if (sprite->loop) {
-						sprite->loop_count++;
-						sprite->frame_index++;
-					} else  {
-						sprite->frame_index = 0;
-					}
-				}
-			} else {
-				sprite->frame_index++;
-				if (sprite->frame_index == frame_count) {
-					sprite->loop_count++;
-					sprite->frame_index--;
-				}
-			}
-		}
-	}
-}
+CF_API void CF_CALL cf_sprite_update(CF_Sprite* sprite);
 
 /**
  * @function cf_sprite_reset
@@ -574,15 +482,7 @@ CF_INLINE void cf_sprite_update(CF_Sprite* sprite)
  * @param    sprite     The sprite.
  * @related  CF_Sprite cf_sprite_update cf_sprite_play
  */
-CF_INLINE void cf_sprite_reset(CF_Sprite* sprite)
-{
-	CF_ASSERT(sprite);
-	sprite->paused = false;
-	sprite->frame_index = 0;
-	sprite->loop_count = 0;
-	sprite->t = 0;
-	if (sprite->animation) sprite->play_direction = sprite->animation->play_direction;
-}
+CF_API void CF_CALL cf_sprite_reset(CF_Sprite* sprite);
 
 /**
  * @function cf_sprite_play
@@ -592,14 +492,7 @@ CF_INLINE void cf_sprite_reset(CF_Sprite* sprite)
  * @param    animation  Name of the animation to switch to and start playing.
  * @related  CF_Sprite cf_sprite_update cf_sprite_play cf_sprite_is_playing
  */
-CF_INLINE void cf_sprite_play(CF_Sprite* sprite, const char* animation)
-{
-	CF_ASSERT(sprite);
-	if (!sprite->animations) return;
-	sprite->animation = map_get(*sprite->animations, sintern(animation));
-	CF_ASSERT(sprite->animation);
-	cf_sprite_reset(sprite);
-}
+CF_API void CF_CALL cf_sprite_play(CF_Sprite* sprite, const char* animation);
 
 /**
  * @function cf_sprite_is_playing
@@ -609,12 +502,7 @@ CF_INLINE void cf_sprite_play(CF_Sprite* sprite, const char* animation)
  * @param    animation  Name of the animation.
  * @related  CF_Sprite cf_sprite_update cf_sprite_play cf_sprite_is_playing
  */
-CF_INLINE bool cf_sprite_is_playing(CF_Sprite* sprite, const char* animation)
-{
-	CF_ASSERT(sprite);
-	if (!sprite->animation) return false;
-	return !CF_STRCMP(animation, sprite->animation->name);
-}
+CF_API bool CF_CALL cf_sprite_is_playing(CF_Sprite* sprite, const char* animation);
 
 /**
  * @function cf_sprite_pause
@@ -690,12 +578,7 @@ CF_INLINE void cf_sprite_flip_y(CF_Sprite* sprite)
  * @param    sprite     The sprite.
  * @related  CF_Sprite cf_sprite_frame_count cf_sprite_current_frame cf_sprite_frame_delay cf_sprite_animation_delay
  */
-CF_INLINE int cf_sprite_frame_count(const CF_Sprite* sprite)
-{
-	CF_ASSERT(sprite);
-	if (!sprite->animation) return 0;
-	return asize(sprite->animation->frames);
-}
+CF_API int CF_CALL cf_sprite_frame_count(const CF_Sprite* sprite);
 
 /**
  * @function cf_sprite_current_frame
@@ -717,11 +600,7 @@ CF_INLINE int cf_sprite_current_frame(const CF_Sprite* sprite)
  * @param    sprite     The sprite.
  * @related  CF_Sprite cf_sprite_frame_count cf_sprite_current_frame cf_sprite_frame_delay cf_sprite_animation_delay
  */
-CF_INLINE int cf_sprite_current_global_frame(const CF_Sprite* sprite)
-{
-	CF_ASSERT(sprite);
-	return sprite->frame_index + (sprite->animation ? sprite->animation->frame_offset : 0);
-}
+CF_API int CF_CALL cf_sprite_current_global_frame(const CF_Sprite* sprite);
 
 /**
  * @function cf_sprite_set_frame
@@ -731,15 +610,7 @@ CF_INLINE int cf_sprite_current_global_frame(const CF_Sprite* sprite)
  * @param    frame      The frame number to set.
  * @related  CF_Sprite cf_sprite_frame_count cf_sprite_current_frame cf_sprite_frame_delay cf_sprite_animation_delay
  */
-CF_INLINE void cf_sprite_set_frame(CF_Sprite* sprite, int frame)
-{
-	CF_ASSERT(sprite);
-	if (!sprite->animation) return;
-	int frame_count = asize(sprite->animation->frames);
-	CF_ASSERT(frame >= 0 && frame < frame_count);
-	sprite->frame_index = frame;
-	sprite->t = 0;
-}
+CF_API void CF_CALL cf_sprite_set_frame(CF_Sprite* sprite, int frame);
 
 /**
  * @function cf_sprite_frame_delay
@@ -748,12 +619,7 @@ CF_INLINE void cf_sprite_set_frame(CF_Sprite* sprite, int frame)
  * @param    sprite     The sprite.
  * @related  CF_Sprite CF_Frame cf_sprite_frame_count cf_sprite_current_frame cf_sprite_frame_delay cf_sprite_animation_delay cf_sprite_animation_interpolant
  */
-CF_INLINE float cf_sprite_frame_delay(CF_Sprite* sprite)
-{
-	CF_ASSERT(sprite);
-	if (!sprite->animation) return 0;
-	return sprite->animation->frames[sprite->frame_index].delay;
-}
+CF_API float CF_CALL cf_sprite_frame_delay(CF_Sprite* sprite);
 
 /**
  * @function cf_sprite_animation_delay
@@ -762,17 +628,7 @@ CF_INLINE float cf_sprite_frame_delay(CF_Sprite* sprite)
  * @param    sprite     The sprite.
  * @related  CF_Sprite CF_Frame CF_Animation cf_sprite_frame_count cf_sprite_current_frame cf_sprite_frame_delay cf_sprite_animation_delay cf_sprite_animation_interpolant
  */
-CF_INLINE float cf_sprite_animation_delay(CF_Sprite* sprite)
-{
-	CF_ASSERT(sprite);
-	if (!sprite->animation) return 0;
-	int count = cf_sprite_frame_count(sprite);
-	float delay = 0;
-	for (int i = 0; i < count; ++i) {
-		delay += sprite->animation->frames[i].delay;
-	}
-	return delay;
-}
+CF_API float CF_CALL cf_sprite_animation_delay(CF_Sprite* sprite);
 
 /**
  * @function cf_sprite_animation_interpolant
@@ -782,15 +638,7 @@ CF_INLINE float cf_sprite_animation_delay(CF_Sprite* sprite)
  * @remarks  0 means just started, while 1 means finished.
  * @related  CF_Sprite CF_Frame CF_Animation cf_sprite_frame_count cf_sprite_current_frame cf_sprite_frame_delay cf_sprite_animation_delay
  */
-CF_INLINE float cf_sprite_animation_interpolant(CF_Sprite* sprite)
-{
-	CF_ASSERT(sprite);
-	// TODO -- Backwards and pingpong.
-	if (!sprite->animation) return 0;
-	float delay = cf_sprite_animation_delay(sprite);
-	float t = sprite->t + sprite->animation->frames[sprite->frame_index].delay * sprite->frame_index;
-	return cf_clamp(t / delay, 0.0f, 1.0f);
-}
+CF_API float CF_CALL cf_sprite_animation_interpolant(CF_Sprite* sprite);
 
 /**
  * @function cf_sprite_will_finish
@@ -800,17 +648,7 @@ CF_INLINE float cf_sprite_animation_interpolant(CF_Sprite* sprite)
  * @remarks  This is useful to see if you're currently on the last frame of animation, and will finish in this particular update.
  * @related  CF_Sprite cf_sprite_frame_count cf_sprite_current_frame cf_sprite_frame_delay cf_sprite_animation_delay cf_sprite_will_finish
  */
-CF_INLINE bool cf_sprite_will_finish(CF_Sprite* sprite)
-{
-	CF_ASSERT(sprite);
-	// TODO -- Backwards and pingpong.
-	if (!sprite->animation) return false;
-	if (sprite->frame_index == cf_sprite_frame_count(sprite) - 1) {
-		return sprite->t + CF_DELTA_TIME * sprite->play_speed_multiplier >= sprite->animation->frames[sprite->frame_index].delay;
-	} else {
-		return false;
-	}
-}
+CF_API bool CF_CALL cf_sprite_will_finish(CF_Sprite* sprite);
 
 /**
  * @function cf_sprite_on_loop
@@ -841,18 +679,6 @@ CF_INLINE bool cf_sprite_on_loop(CF_Sprite* sprite)
  * @related  CF_Sprite CF_Image CF_Frame cf_image_free
  */
 CF_API CF_Image CF_CALL cf_sprite_get_pixels(CF_Sprite* sprite, const char* animation, int frame_index);
-
-/**
- * @function cf_animation_add_frame
- * @category sprite
- * @brief    Adds a frame to an animation.
- * @param    animation   The sprite.
- * @param    frame       The frame.
- * @remarks  You can use this function to build your own animations in a custom manner. It's recommend to just use `cf_make_sprite`, which
- *           loads a full sprite out of a .ase file. But, this function provides another low-level option if desired.
- * @related  CF_Sprite CF_Animation CF_Frame dyna CK_Map
- */
-CF_INLINE void cf_animation_add_frame(CF_Animation* animation, CF_Frame frame) { CF_ASSERT(animation); apush(animation->frames, frame); }
 
 #ifdef __cplusplus
 }
@@ -905,7 +731,6 @@ CF_INLINE float sprite_animation_interpolant(CF_Sprite* sprite) { return cf_spri
 CF_INLINE bool sprite_will_finish(CF_Sprite* sprite) { return cf_sprite_will_finish(sprite); }
 CF_INLINE bool sprite_on_loop(CF_Sprite* sprite) { return cf_sprite_on_loop(sprite); }
 CF_INLINE CF_Image sprite_get_pixels(CF_Sprite* sprite, const char* animation, int frame_index) { return cf_sprite_get_pixels(sprite, animation, frame_index); }
-CF_INLINE void animation_add_frame(CF_Animation* animation, CF_Frame frame) { cf_animation_add_frame(animation, frame); }
 
 CF_INLINE int sprite_width(CF_Sprite& sprite) { return cf_sprite_width(&sprite); }
 CF_INLINE int sprite_height(CF_Sprite& sprite) { return cf_sprite_height(&sprite); }
@@ -946,15 +771,17 @@ CF_INLINE float sprite_animation_interpolant(CF_Sprite& sprite) { return cf_spri
 CF_INLINE bool sprite_will_finish(CF_Sprite& sprite) { return cf_sprite_will_finish(&sprite); }
 CF_INLINE bool sprite_on_loop(CF_Sprite& sprite) { return cf_sprite_on_loop(&sprite); }
 CF_INLINE CF_Image sprite_get_pixels(CF_Sprite& sprite, const char* animation, int frame_index) { return cf_sprite_get_pixels(&sprite, animation, frame_index); }
-CF_INLINE void animation_add_frame(CF_Animation& animation, CF_Frame frame) { cf_animation_add_frame(&animation, frame); }
 
 CF_INLINE CF_Sprite easy_make_sprite(const char* png_path, CF_Result* result) { return cf_make_easy_sprite_from_png(png_path, result); }
 CF_INLINE CF_Sprite easy_make_sprite(const CF_Pixel* pixels, int w, int h) { return cf_make_easy_sprite_from_pixels(pixels, w, h); }
 CF_INLINE CF_Sprite make_sprite(const char* aseprite_path) { return cf_make_sprite(aseprite_path); }
 CF_INLINE CF_Sprite make_demo_sprite() { return cf_make_demo_sprite(); }
 CF_INLINE void sprite_unload(const char* aseprite_path) { cf_sprite_unload(aseprite_path); }
-CF_INLINE CF_Sprite sprite_reload(const CF_Sprite* sprite) { return cf_sprite_reload(sprite); }
-CF_INLINE CF_Sprite sprite_reload(CF_Sprite& sprite) { return (sprite = cf_sprite_reload(&sprite)); }
+CF_INLINE void sprite_reload(CF_Sprite* sprite) { cf_sprite_reload(sprite); }
+CF_INLINE void sprite_reload(CF_Sprite& sprite) { cf_sprite_reload(&sprite); }
+CF_INLINE int sprite_animation_count(const CF_Sprite* sprite) { return cf_sprite_animation_count(sprite); }
+CF_INLINE const char* sprite_animation_name_at(const CF_Sprite* sprite, int index) { return cf_sprite_animation_name_at(sprite, index); }
+CF_INLINE CF_V2 sprite_pivot(const CF_Sprite* sprite) { return cf_sprite_pivot(sprite); }
 CF_INLINE void easy_sprite_update_pixels(CF_Sprite* sprite, const CF_Pixel* pixels) { cf_easy_sprite_update_pixels(sprite, pixels); }
 CF_INLINE void easy_sprite_unload(CF_Sprite* sprite) { cf_easy_sprite_unload(sprite); }
 CF_INLINE CF_Sprite make_sprite_from_memory(const char* unique_name, const void* aseprite_data, int size) { return cf_make_sprite_from_memory(unique_name, aseprite_data, size); }

@@ -86,13 +86,14 @@ The layer controls the order things are drawn. You can set what layer to draw up
 
 ## Drawing Sprites
 
-Sprites can be loaded with either .ase/.aseprite files or .png files. The recommended method is .ase files called [Aseprite](https://www.aseprite.org/) files. An aseprite file contains all the animation and image data necessary for a 2D frame based animations. If instead you want to support your own custom animation format, or any other format, you can load up your animation data and feed it into the [.png API](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_png_cache.h).
+Sprites can be loaded with either .ase/.aseprite files or .png files. The recommended method is .ase files called [Aseprite](https://www.aseprite.org/) files. An aseprite file contains all the animation and image data necessary for a 2D frame based animations. If instead you want to support your own custom animation format, or any other format, you can build sprites from individual .png files using the [Custom Sprites](custom_sprites.md) API.
 
 Some particular pages of interest are:
 
 - [Sprite API Reference](../api_reference.md#sprite)
 - [CF_Sprite](../sprite/cf_sprite.md)
 - [cf_sprite_play](../sprite/cf_sprite_play.md)
+- [Custom Sprites](custom_sprites.md)
 
 CF comes with a convenience function called [`cf_make_demo_sprite`](../sprite/cf_make_demo_sprite.md). This sprite contains a small pixel art girl with a couple built-in animations. Here's a program to load her up and draw her on screen:
 

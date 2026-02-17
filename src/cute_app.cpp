@@ -19,7 +19,7 @@
 #include <internal/cute_input_internal.h>
 #include <internal/cute_graphics_internal.h>
 #include <internal/cute_draw_internal.h>
-#include <internal/cute_png_cache_internal.h>
+#include <internal/cute_custom_sprite_internal.h>
 #include <internal/cute_aseprite_cache_internal.h>
 #include <internal/cute_imgui_internal.h>
 #include <internal/cute_binding_internal.h>
@@ -322,7 +322,7 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 	}
 	::app = app;
 	cf_make_aseprite_cache();
-	cf_make_png_cache();
+	cf_make_custom_sprite_cache();
 
 	if (use_gfx) {
 		if (app->gfx_backend_type == CF_BACKEND_TYPE_GLES3) {
@@ -341,9 +341,9 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 		// Load up a default image of 1x1 white pixel.
 		// Used in various places as a placeholder or default.
 		CF_Png img;
-		cf_png_cache_load_from_memory("cf_default_png", default_png_data, (size_t)default_png_sz, &img);
+		cf_custom_sprite_load_png_from_memory("cf_default_png", default_png_data, (size_t)default_png_sz, &img);
 		app->default_image_id = img.id;
-		CF_ASSERT(app->default_image_id == CF_PNG_ID_RANGE_LO);
+		CF_ASSERT(app->default_image_id == CF_CUSTOM_SPRITE_ID_RANGE_LO);
 
 		// Create the default font.
 		make_font_from_memory(calibri_data, calibri_sz, "Calibri");
@@ -405,7 +405,7 @@ void cf_destroy_app()
 		}
 	}
 	cf_destroy_aseprite_cache();
-	cf_destroy_png_cache();
+	cf_destroy_custom_sprite_cache();
 	cs_shutdown();
 	destroy_mutex(&app->on_sound_finish_mutex);
 	if (app->window) SDL_DestroyWindow(app->window);

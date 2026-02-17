@@ -87,6 +87,7 @@ add_sample(galaxy galaxy.c)
 add_sample(hrc hrc.c)
 add_sample(canvas_readback canvas_readback.c)
 add_sample(glitch glitch.cpp)
+add_sample(customsprite custom_sprite.c)
 
 # Pre-compile shaders for certain samples.
 if (CF_CUTE_SHADERC)
@@ -127,3 +128,4 @@ add_custom_command(TARGET pivot PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_direc
 add_custom_command(TARGET scratch PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/../assets/CF_Logo_Pixel.png $<TARGET_FILE_DIR:scratch>/app_icon.png)
 add_custom_command(TARGET 9_slice PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/9_slice_data $<TARGET_FILE_DIR:9_slice>/9_slice_data)
 add_custom_command(TARGET hrc PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/hrc_data $<TARGET_FILE_DIR:hrc>/hrc_data)
+add_custom_command(TARGET customsprite PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/custom_sprite_data $<TARGET_FILE_DIR:customsprite>/custom_sprite_data)

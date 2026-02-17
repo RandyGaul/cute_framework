@@ -23,7 +23,7 @@ int main(int argc, char* argv[])
 	app_init_imgui();
 
 	CF_Png png;
-	cf_png_cache_load("/noise.png", &png);
+	cf_custom_sprite_load_png("/noise.png", &png);
 	CF_ASSERT(png.w == 128);
 	CF_ASSERT(png.h == 128);
 

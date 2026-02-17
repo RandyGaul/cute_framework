@@ -657,7 +657,7 @@ static void handle_clay_core_commands(const Clay_RenderCommand* command)
 		case CLAY_RENDER_COMMAND_TYPE_IMAGE: {
 			CF_Sprite sprite = *(CF_Sprite*)command->renderData.image.imageData;
 
-			CF_V2 pivot = sprite.pivots[sprite.frame_index];
+			CF_V2 pivot = cf_sprite_pivot(&sprite);
 			sprite.scale.x = command->boundingBox.width / (float)sprite.w;
 			sprite.scale.y = command->boundingBox.height / (float)sprite.h;
 			sprite.transform.p.x = command->boundingBox.x + pivot.x + (float)sprite.w * sprite.scale.x * 0.5f;

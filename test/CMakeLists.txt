@@ -9,7 +9,7 @@ set(CF_TEST_SRCS
 	test_doubly_list.cpp
 	test_hashtable.cpp
 	test_path.cpp
-	test_png_cache.cpp
+	test_custom_sprite.cpp
 	test_sprite.cpp
 	test_string.cpp
 	test_json.cpp

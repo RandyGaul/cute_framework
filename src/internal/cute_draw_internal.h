@@ -165,6 +165,7 @@ struct CF_Draw
 	Cute::Array<CF_Rect> viewports = { { 0, 0, -1, -1 } };
 	Cute::Array<int> layers = { 0 };
 	Cute::Array<CF_M3x2> cam_stack = { cf_make_identity() };
+	Cute::Array<CF_M3x2> projection_stack;
 	float aaf = 0;
 	CF_M3x2 projection;
 	CF_M3x2 mvp;
@@ -208,9 +209,9 @@ void cf_destroy_draw();
 #define CF_IMAGE_ID_RANGE_SIZE   ((1ULL << 60) - 1)
 #define CF_ASEPRITE_ID_RANGE_LO  (0ULL)
 #define CF_ASEPRITE_ID_RANGE_HI  (CF_ASEPRITE_ID_RANGE_LO + CF_IMAGE_ID_RANGE_SIZE)
-#define CF_PNG_ID_RANGE_LO       (CF_ASEPRITE_ID_RANGE_HI + 1)
-#define CF_PNG_ID_RANGE_HI       (CF_PNG_ID_RANGE_LO      + CF_IMAGE_ID_RANGE_SIZE)
-#define CF_FONT_ID_RANGE_LO      (CF_PNG_ID_RANGE_HI      + 1)
+#define CF_CUSTOM_SPRITE_ID_RANGE_LO (CF_ASEPRITE_ID_RANGE_HI + 1)
+#define CF_CUSTOM_SPRITE_ID_RANGE_HI (CF_CUSTOM_SPRITE_ID_RANGE_LO + CF_IMAGE_ID_RANGE_SIZE)
+#define CF_FONT_ID_RANGE_LO      (CF_CUSTOM_SPRITE_ID_RANGE_HI + 1)
 #define CF_FONT_ID_RANGE_HI      (CF_FONT_ID_RANGE_LO     + CF_IMAGE_ID_RANGE_SIZE)
 #define CF_EASY_ID_RANGE_LO      (CF_FONT_ID_RANGE_HI     + 1)
 #define CF_EASY_ID_RANGE_HI      (CF_EASY_ID_RANGE_LO     + CF_IMAGE_ID_RANGE_SIZE)
