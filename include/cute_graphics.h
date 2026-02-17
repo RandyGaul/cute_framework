@@ -940,6 +940,18 @@ CF_API CF_ComputeShader CF_CALL cf_make_compute_shader_from_bytecode(CF_ShaderBy
  */
 CF_API void CF_CALL cf_destroy_compute_shader(CF_ComputeShader shader);
 
+/**
+ * @function cf_compute_shader_reload
+ * @category graphics
+ * @brief    Reloads a compute shader from its original file path.
+ * @param    shader     Pointer to the compute shader handle. Updated in-place on success.
+ * @return   Returns true on success.
+ * @remarks  Only works for compute shaders originally created with `cf_make_compute_shader`. The shader's
+ *           path is recorded internally at creation time.
+ * @related  CF_ComputeShader cf_make_compute_shader cf_destroy_compute_shader
+ */
+CF_API bool CF_CALL cf_compute_shader_reload(CF_ComputeShader* shader);
+
 //--------------------------------------------------------------------------------------------------
 // Storage Buffers.
 

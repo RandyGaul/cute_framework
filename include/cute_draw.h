@@ -1341,6 +1341,18 @@ CF_API CF_Shader CF_CALL cf_make_draw_shader_from_source(const char* src);
 CF_API CF_Shader CF_CALL cf_make_draw_shader_from_bytecode(CF_DrawShaderBytecode bytecode);
 
 /**
+ * @function cf_shader_reload
+ * @category draw
+ * @brief    Reloads a draw shader from its original file path.
+ * @param    shader     Pointer to the shader handle. Updated in-place on success.
+ * @return   Returns true on success.
+ * @remarks  Only works for shaders originally created with `cf_make_draw_shader`. The shader's path is
+ *           recorded internally at creation time.
+ * @related  CF_Shader cf_make_draw_shader cf_destroy_shader
+ */
+CF_API bool CF_CALL cf_shader_reload(CF_Shader* shader);
+
+/**
  * @function cf_draw_push_shader
  * @category draw
  * @brief    Pushes a custom shader.

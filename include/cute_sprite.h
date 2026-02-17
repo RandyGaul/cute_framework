@@ -92,7 +92,7 @@ typedef struct CF_SpriteSlice
  */
 typedef struct CF_Sprite
 {
-	/* @member Unique sprite id -- for internal use. */
+	/* @member For internal use -- Unique sprite id */
 	uint64_t id;
 
 	/* @member The name of the sprite. */
@@ -104,13 +104,13 @@ typedef struct CF_Sprite
 	/* @member Height of the sprite in pixels. */
 	int h;
 
-	/* @member Cached image ID of the current frame (set by cf_sprite_update / cf_sprite_play). */
+	/* @member For internal use -- Cached image ID of the current frame (set by cf_sprite_update / cf_sprite_play). */
 	uint64_t _image_id;
 
-	/* @member Cached pivot of the current frame (set by cf_sprite_update / cf_sprite_play). */
+	/* @member For internal use -- Cached pivot of the current frame (set by cf_sprite_update / cf_sprite_play). */
 	CF_V2 _pivot;
 
-	/* @member Cached center patch of the current frame for 9-slice (set by cf_sprite_update / cf_sprite_play). */
+	/* @member For internal use -- Cached center patch of the current frame for 9-slice (set by cf_sprite_update / cf_sprite_play). */
 	CF_Aabb _center_patch;
 
 	/* @member Scale factor for the sprite when drawing. Default of `(1, 1)`. See `cf_draw_sprite`. */
