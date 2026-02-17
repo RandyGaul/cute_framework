@@ -842,6 +842,15 @@ int main(int argc, char* argv[])
 	char* cf_root = NULL;
 	if (argc > 1) {
 		cf_root = smake(argv[1]);
+		char* test_include = sfmake("%s/include", cf_root);
+		char* test_docs = sfmake("%s/docs", cf_root);
+		if (!dir_exists(test_include) || !dir_exists(test_docs)) {
+			fprintf(stderr, "Error: '%s' does not look like the cute_framework root (missing include/ or docs/ subdirectory).\n", argv[1]);
+			fprintf(stderr, "Usage: docsparser [path-to-cute-framework-root]\n");
+			exit(1);
+		}
+		sfree(test_include);
+		sfree(test_docs);
 	} else {
 		// Try to find it relative to current working directory.
 		// Check ../.. (e.g. build/Debug/docsparser -> cute_framework)

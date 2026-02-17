@@ -34,7 +34,7 @@ TEST_SUITE(test_coroutine);
 TEST_SUITE(test_doubly_list);
 TEST_SUITE(test_hashtable);
 TEST_SUITE(test_path);
-TEST_SUITE(test_png_cache);
+TEST_SUITE(test_custom_sprite);
 TEST_SUITE(test_sprite);
 TEST_SUITE(test_string);
 TEST_SUITE(test_json);
@@ -77,7 +77,7 @@ int main(int argc, char* argv[])
 	RUN_TRACED(test_doubly_list);
 	RUN_TRACED(test_hashtable);
 	RUN_TRACED(test_path);
-	RUN_TRACED(test_png_cache);
+	RUN_TRACED(test_custom_sprite);
 	RUN_TRACED(test_sprite);
 	RUN_TRACED(test_string);
 	RUN_TRACED(test_json);

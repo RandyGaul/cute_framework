@@ -237,7 +237,7 @@ int main(int argc, char *argv[])
     
     CF_Sprite demo_sprite = cf_make_demo_sprite();
     cf_sprite_play(&demo_sprite, "spin");
-    int frame_count = cf_array_count(demo_sprite.animation->frames);
+    int frame_count = cf_sprite_frame_count(&demo_sprite);
     demo_sprite.scale = cf_v2(8, 8);
     
     CF_Canvas app_canvas = cf_app_get_canvas();

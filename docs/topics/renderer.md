@@ -118,7 +118,7 @@ Conclusion? If you're still packing sprites into atlases offline then you're get
 
 Upgrading sprites to deal with flipbook style animations is a broad topic with many solutions. For CF I've chosen to natively support [Aseprite](https://www.aseprite.org). In the indie dev scene (and generally the 2D gamedev scene) Aseprite has more or less become the de facto tool of choice (besides perhaps some Photoshop lovers). Aseprite has its own binary format. CF just [parses these files directly](https://github.com/RandyGaul/cute_framework/blob/master/libraries/cute/cute_aseprite.h) and fills in animation tables that sprites can point to. Credits to Noel Berry from Celeste for the original idea and implementation of the .ase file loader.
 
-Of course, other formats can be supported, as CF provides some lower level APIs to manually construct sprites by setting up [arrays of .png files](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_png_cache.h). This lets users who already have their own custom art pipeline or flow integrate with CF in their own way.
+Of course, other formats can be supported, as CF provides some lower level APIs to manually construct sprites from individual .png files. See the [Custom Sprites](custom_sprites.md) topic for details. This lets users who already have their own custom art pipeline or flow integrate with CF in their own way.
 
 # Shapes
 

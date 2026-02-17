@@ -3,8 +3,7 @@
 
 void mount_content_directory_as(const char* dir)
 {
-	const char* path = cf_fs_get_base_directory();
-	path = cf_path_normalize(path);
+	char* path = cf_path_normalize(cf_fs_get_base_directory());
 	path = cf_string_append(path, "/9_slice_data");
 	cf_fs_mount(path, dir, false);
 	cf_string_free(path);
@@ -24,10 +23,10 @@ int main(int argc, char* argv[])
 	float rotation = 0.0f;
 	bool is_tiled = false;
 
-	int animation_count = map_size(*sprite.animations);
+	int animation_count = cf_sprite_animation_count(&sprite);
 	const char** animation_names = NULL;
 	for (int i = 0; i < animation_count; i++) {
-		apush(animation_names, (*sprite.animations)[i]->name);
+		apush(animation_names, cf_sprite_animation_name_at(&sprite, i));
 	}
 	int animation_index = 0;
 

@@ -5,44 +5,45 @@
 	This software is dual-licensed with zlib or Unlicense, check LICENSE.txt for more info
 */
 
-#include <cute_png_cache.h>
+#include <cute_custom_sprite.h>
 #include <cute_image.h>
 #include <cute_sprite.h>
 #include <cute_map.h>
 
 #include <internal/cute_alloc_internal.h>
-#include <internal/cute_png_cache_internal.h>
+#include <internal/cute_custom_sprite_internal.h>
 #include <internal/cute_app_internal.h>
+#include <internal/cute_aseprite_cache_internal.h>
 
-struct CF_PngCache
+struct CF_CustomSpriteCache
 {
 	CF_MAP(void*) id_to_pixels = NULL;
 	dyna CF_Animation** animations_list = NULL;
 	CF_MAP(CF_AnimationTable) animation_tables = NULL;
 	CF_MAP(CF_Png) pngs = NULL;
 	CF_MAP(CF_Animation*) animations = NULL;
-	uint64_t id_gen = CF_PNG_ID_RANGE_LO;
+	uint64_t id_gen = CF_CUSTOM_SPRITE_ID_RANGE_LO;
 };
 
-CF_GLOBAL static CF_PngCache* cache;
+CF_GLOBAL static CF_CustomSpriteCache* cache;
 
-void cf_png_cache_get_pixels(uint64_t image_id, void* buffer, int bytes_to_fill)
+void cf_custom_sprite_get_pixels(uint64_t image_id, void* buffer, int bytes_to_fill)
 {
 	void** pixels_ptr = map_get_ptr(cache->id_to_pixels, image_id);
 	if (!pixels_ptr) {
-		CF_DEBUG_PRINTF("png cache -- unable to find id %lld.", (long long int)image_id);
+		CF_DEBUG_PRINTF("custom sprite cache -- unable to find id %lld.", (long long int)image_id);
 		CF_MEMSET(buffer, 0, bytes_to_fill);
 	} else {
 		CF_MEMCPY(buffer, *pixels_ptr, bytes_to_fill);
 	}
 }
 
-CF_API void cf_make_png_cache()
+CF_API void cf_make_custom_sprite_cache()
 {
-	cache = CF_NEW(CF_PngCache);
+	cache = CF_NEW(CF_CustomSpriteCache);
 }
 
-CF_API void cf_destroy_png_cache()
+CF_API void cf_destroy_custom_sprite_cache()
 {
 	for (int i = 0; i < asize(cache->animations_list); ++i) {
 		afree(cache->animations_list[i]->frames);
@@ -59,7 +60,7 @@ CF_API void cf_destroy_png_cache()
 	int i = 0;
 	while (map_size(cache->pngs)) {
 		CF_Png png = map_items(cache->pngs)[i];
-		cf_png_cache_unload(png);
+		cf_custom_sprite_unload_png(png);
 	}
 	map_free(cache->pngs);
 	map_free(cache->id_to_pixels);
@@ -69,7 +70,7 @@ CF_API void cf_destroy_png_cache()
 	cache = NULL;
 }
 
-CF_Result cf_png_cache_load(const char* png_path, CF_Png* png)
+CF_Result cf_custom_sprite_load_png(const char* png_path, CF_Png* png)
 {
 	CF_Image img;
 	CF_Result err = cf_image_load_png(png_path, &img);
@@ -87,7 +88,7 @@ CF_Result cf_png_cache_load(const char* png_path, CF_Png* png)
 	return cf_result_success();
 }
 
-CF_Result cf_png_cache_load_from_memory(const char* png_path, const void* memory, size_t size, CF_Png* png)
+CF_Result cf_custom_sprite_load_png_from_memory(const char* png_path, const void* memory, size_t size, CF_Png* png)
 {
 	CF_Image img;
 	CF_Result err = cf_image_load_png_from_memory(memory, (int)size, &img);
@@ -104,7 +105,7 @@ CF_Result cf_png_cache_load_from_memory(const char* png_path, const void* memory
 	return cf_result_success();
 }
 
-void cf_png_cache_unload(CF_Png png)
+void cf_custom_sprite_unload_png(CF_Png png)
 {
 	CF_Image img;
 	img.pix = png.pix;
@@ -115,9 +116,13 @@ void cf_png_cache_unload(CF_Png png)
 	map_del(cache->pngs, png.id);
 }
 
-const CF_Animation* cf_make_png_cache_animation(const char* name, const CF_Png* pngs, int pngs_count, const float* delays, int delays_count)
+const CF_Animation* cf_make_custom_sprite_animation(const char* name, const CF_Png* pngs, int pngs_count, const float* delays, int delays_count)
 {
 	CF_ASSERT(pngs_count == delays_count);
+	CF_ASSERT(pngs_count > 0);
+	for (int i = 1; i < pngs_count; ++i) {
+		CF_ASSERT(pngs[i].w == pngs[0].w && pngs[i].h == pngs[0].h);
+	}
 	name = sintern(name);
 
 	// If already made, just return the old animation.
@@ -143,13 +148,13 @@ const CF_Animation* cf_make_png_cache_animation(const char* name, const CF_Png* 
 	return animation;
 }
 
-const CF_Animation* cf_png_cache_get_animation(const char* name)
+const CF_Animation* cf_custom_sprite_get_animation(const char* name)
 {
 	CF_Animation** ptr = map_get_ptr(cache->animations, (uint64_t)sintern(name));
 	return ptr ? *ptr : NULL;
 }
 
-const CF_AnimationTable* cf_make_png_cache_animation_table(const char* sprite_name, const CF_Animation* const* animations, int animations_count)
+const CF_AnimationTable* cf_make_custom_sprite_animation_table(const char* sprite_name, const CF_Animation* const* animations, int animations_count)
 {
 	sprite_name = sintern(sprite_name);
 
@@ -169,12 +174,12 @@ const CF_AnimationTable* cf_make_png_cache_animation_table(const char* sprite_na
 	return map_get_ptr(cache->animation_tables, (uint64_t)sprite_name);
 }
 
-const CF_AnimationTable* cf_png_cache_get_animation_table(const char* sprite_name)
+const CF_AnimationTable* cf_custom_sprite_get_animation_table(const char* sprite_name)
 {
 	return map_get_ptr(cache->animation_tables, (uint64_t)sintern(sprite_name));
 }
 
-CF_Sprite cf_make_png_cache_sprite(const char* sprite_name, const CF_AnimationTable* table)
+CF_Sprite cf_make_custom_sprite(const char* sprite_name, const CF_AnimationTable* table)
 {
 	sprite_name = sintern(sprite_name);
 	CF_Sprite sprite = cf_sprite_defaults();
@@ -186,11 +191,11 @@ CF_Sprite cf_make_png_cache_sprite(const char* sprite_name, const CF_AnimationTa
 		CF_ASSERT(png_ptr && png_ptr->path);
 		sprite.w = png_ptr->w;
 		sprite.h = png_ptr->h;
-		sprite.animations = (CF_AnimationTable*)table;
+		sprite.id = cf_register_external_sprite_asset(sprite_name, sprite.w, sprite.h, (CF_MAP(CF_Animation*))*table);
 		cf_sprite_play(&sprite, (*first_anim)->name);
 	} else {
 		CF_Png entry;
-		CF_Result result = cf_png_cache_load(sprite_name, &entry);
+		CF_Result result = cf_custom_sprite_load_png(sprite_name, &entry);
 		if (cf_is_error(result)) {
 			return cf_sprite_defaults();
 		} else {
@@ -206,13 +211,13 @@ CF_Sprite cf_make_png_cache_sprite(const char* sprite_name, const CF_AnimationTa
 namespace Cute
 {
 
-const CF_Animation* make_png_cache_animation(const char* name, const Array<CF_Png>& pngs, const Array<float>& delays)
+const CF_Animation* make_custom_sprite_animation(const char* name, const Array<CF_Png>& pngs, const Array<float>& delays)
 {
-	return cf_make_png_cache_animation(name, pngs.data(), pngs.count(), delays.data(), delays.count());
+	return cf_make_custom_sprite_animation(name, pngs.data(), pngs.count(), delays.data(), delays.count());
 }
-const CF_AnimationTable* make_png_cache_animation_table(const char* sprite_name, const Array<const CF_Animation*>& animations)
+const CF_AnimationTable* make_custom_sprite_animation_table(const char* sprite_name, const Array<const CF_Animation*>& animations)
 {
-	return cf_make_png_cache_animation_table(sprite_name, animations.data(), animations.count());
+	return cf_make_custom_sprite_animation_table(sprite_name, animations.data(), animations.count());
 }
 
 }

@@ -18,6 +18,7 @@ After completing the above fundamental reading it's recommended to then select t
 * [Camera](./camera.md)
 * [Collision](./collision.md)
 * [Coroutines](./coroutines.md)
+* [Custom Sprites](./custom_sprites.md)
 * [Data Structures](./data_structures.md)
 * [Web Builds with Emscripten](./emscripten.md)
 * [Input](./input.md)

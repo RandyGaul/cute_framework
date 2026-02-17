@@ -14,10 +14,10 @@ int main(int argc, char *argv[])
 	CF_Sprite sprite = cf_make_demo_sprite();
 	sprite.scale = cf_mul_v2_f(sprite.scale, 3.0f);
 
-	int count = map_size(*sprite.animations);
+	int count = cf_sprite_animation_count(&sprite);
 	const char** names = nullptr;
 	for (int i = 0; i < count; i++) {
-		apush(names, (*sprite.animations)[i]->name);
+		apush(names, cf_sprite_animation_name_at(&sprite, i));
 	}
 
 	int animation_index = 0;

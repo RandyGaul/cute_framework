@@ -111,7 +111,7 @@ set(CF_SRCS
 	src/cute_graphics_gles.cpp
 	src/cute_graphics_glad.cpp
 	src/cute_aseprite_cache.cpp
-	src/cute_png_cache.cpp
+	src/cute_custom_sprite.cpp
 	src/cute_https.cpp
 	src/cute_joypad.cpp
 	src/cute_symbol.cpp
@@ -182,7 +182,7 @@ set(CF_PUBLIC_HDRS
 	include/cute_graphics.h
 	include/cute_rnd.h
 	include/cute_sprite.h
-	include/cute_png_cache.h
+	include/cute_custom_sprite.h
 	include/cute_https.h
 	include/cute_joypad.h
 	include/cute_priority_queue.h
@@ -213,7 +213,7 @@ set(CF_HDRS
 	src/internal/cute_app_internal.h
 	src/internal/cute_input_internal.h
 	src/internal/cute_serialize_internal.h
-	src/internal/cute_png_cache_internal.h
+	src/internal/cute_custom_sprite_internal.h
 	src/internal/cute_draw_internal.h
 	src/internal/cute_font_internal.h
 	src/internal/cute_graphics_internal.h

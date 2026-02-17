@@ -15,7 +15,7 @@
 
 #include <internal/cute_alloc_internal.h>
 #include <internal/cute_app_internal.h>
-#include <internal/cute_png_cache_internal.h>
+#include <internal/cute_custom_sprite_internal.h>
 #include <internal/cute_aseprite_cache_internal.h>
 #include <internal/cute_font_internal.h>
 #include <internal/cute_graphics_internal.h>
@@ -86,8 +86,8 @@ void cf_get_pixels(SPRITEBATCH_U64 image_id, void* buffer, int bytes_to_fill, vo
 	CF_UNUSED(udata);
 	if (image_id >= CF_ASEPRITE_ID_RANGE_LO && image_id <= CF_ASEPRITE_ID_RANGE_HI) {
 		cf_aseprite_cache_get_pixels(image_id, buffer, bytes_to_fill);
-	} else if (image_id >= CF_PNG_ID_RANGE_LO && image_id <= CF_PNG_ID_RANGE_HI) {
-		cf_png_cache_get_pixels(image_id, buffer, bytes_to_fill);
+	} else if (image_id >= CF_CUSTOM_SPRITE_ID_RANGE_LO && image_id <= CF_CUSTOM_SPRITE_ID_RANGE_HI) {
+		cf_custom_sprite_get_pixels(image_id, buffer, bytes_to_fill);
 	} else if (image_id >= CF_FONT_ID_RANGE_LO && image_id <= CF_FONT_ID_RANGE_HI) {
 		CF_Pixel** pixels = app->font_pixels.try_get(image_id);
 		if (pixels) {
@@ -519,8 +519,8 @@ void cf_draw_sprite(const CF_Sprite* sprite)
 	s.maxy = 1;
 
 	bool apply_border_scale = true;
-	if (sprite->animation) {
-		s.image_id = sprite->animation->frames[sprite->frame_index].id;
+	if (sprite->id != CF_SPRITE_ID_INVALID) {
+		s.image_id = sprite->_image_id;
 	} else if (sprite->easy_sprite_id >= CF_PREMADE_ID_RANGE_LO && sprite->easy_sprite_id <= CF_PREMADE_ID_RANGE_HI) {
 		CF_AtlasSubImage sub_image = s_draw->premade_sub_image_id_to_sub_image.find(sprite->easy_sprite_id);
 		s.minx = sub_image.minx;
@@ -537,7 +537,7 @@ void cf_draw_sprite(const CF_Sprite* sprite)
 	s.h = sprite->h;
 	s.geom.type = BATCH_GEOMETRY_TYPE_SPRITE;
 
-	v2 offset = sprite->offset + (sprite->pivots ? sprite->pivots[sprite->frame_index] : V2(0,0));
+	v2 offset = sprite->offset + (sprite->id != CF_SPRITE_ID_INVALID ? sprite->_pivot : V2(0,0));
 	v2 p = cf_add(sprite->transform.p, cf_mul(offset, sprite->scale));
 
 	v2 scale = V2(sprite->scale.x * s.w, sprite->scale.y * s.h);
@@ -592,19 +592,16 @@ void cf_draw_sprite_9_slice(const CF_Sprite* sprite)
 	int frame_index = sprite->frame_index;
 	SPRITEBATCH_U64 image_id = 0;
 
-	if (sprite->animation) {
-		frame_index = sprite->frame_index + sprite->animation->frame_offset;
-		image_id = sprite->animation->frames[sprite->frame_index].id;
-	}
-	else if (sprite->easy_sprite_id >= CF_PREMADE_ID_RANGE_LO && sprite->easy_sprite_id <= CF_PREMADE_ID_RANGE_HI) {
+	if (sprite->id != CF_SPRITE_ID_INVALID) {
+		image_id = sprite->_image_id;
+	} else if (sprite->easy_sprite_id >= CF_PREMADE_ID_RANGE_LO && sprite->easy_sprite_id <= CF_PREMADE_ID_RANGE_HI) {
 		CF_ASSERT(!"Not implemented yet.");
-	}
-	else {
+	} else {
 		CF_ASSERT(!"Not implemented yet.");
 	}
 
 	// revert back to default cf_draw since center patch is 0
-	CF_Aabb center_patch = sprite->center_patches[frame_index];
+	CF_Aabb center_patch = sprite->_center_patch;
 	if (center_patch.min.x == 0.0f && center_patch.min.y == 0.0f &&
 		center_patch.max.x == 0.0f && center_patch.max.y == 0.0f) {
 		cf_draw_sprite(sprite);
@@ -724,7 +721,7 @@ void cf_draw_sprite_9_slice(const CF_Sprite* sprite)
 		},
 	};
 
-	v2 offset = sprite->offset + (sprite->pivots ? sprite->pivots[sprite->frame_index] : V2(0, 0));
+	v2 offset = sprite->offset + sprite->_pivot;
 	v2 p = cf_add(sprite->transform.p, cf_mul_v2(offset, sprite->scale));
 	v2 scale = V2(sprite->scale.x * sprite->w, sprite->scale.y * sprite->h);
 
@@ -784,19 +781,16 @@ void cf_draw_sprite_9_slice_tiled(const CF_Sprite* sprite)
 	int frame_index = sprite->frame_index;
 	SPRITEBATCH_U64 image_id = 0;
 
-	if (sprite->animation) {
-		frame_index = sprite->frame_index + sprite->animation->frame_offset;
-		image_id = sprite->animation->frames[sprite->frame_index].id;
-	}
-	else if (sprite->easy_sprite_id >= CF_PREMADE_ID_RANGE_LO && sprite->easy_sprite_id <= CF_PREMADE_ID_RANGE_HI) {
+	if (sprite->id != CF_SPRITE_ID_INVALID) {
+		image_id = sprite->_image_id;
+	} else if (sprite->easy_sprite_id >= CF_PREMADE_ID_RANGE_LO && sprite->easy_sprite_id <= CF_PREMADE_ID_RANGE_HI) {
 		CF_ASSERT(!"Not implemented yet.");
-	}
-	else {
+	} else {
 		CF_ASSERT(!"Not implemented yet.");
 	}
 
 	// revert back to default cf_draw since center patch is 0
-	CF_Aabb center_patch = sprite->center_patches[frame_index];
+	CF_Aabb center_patch = sprite->_center_patch;
 	if (center_patch.min.x == 0.0f && center_patch.min.y == 0.0f &&
 		center_patch.max.x == 0.0f && center_patch.max.y == 0.0f) {
 		cf_draw_sprite(sprite);
@@ -918,7 +912,7 @@ void cf_draw_sprite_9_slice_tiled(const CF_Sprite* sprite)
 		},
 	};
 
-	v2 offset = sprite->offset + (sprite->pivots ? sprite->pivots[sprite->frame_index] : V2(0, 0));
+	v2 offset = sprite->offset + sprite->_pivot;
 	v2 p = cf_add(sprite->transform.p, cf_mul_v2(offset, sprite->scale));
 	v2 scale = V2(sprite->scale.x * sprite->w, sprite->scale.y * sprite->h);
 
@@ -1062,10 +1056,11 @@ void cf_draw_sprite_9_slice_tiled(const CF_Sprite* sprite)
 
 void cf_draw_prefetch(const CF_Sprite* sprite)
 {
-	if (sprite->animation) {
-		CF_AnimationTable anims = *sprite->animations;
-		for (int i = 0; i < map_size(anims); ++i) {
-			const CF_Animation* animation = anims[i];
+	if (sprite->id != CF_SPRITE_ID_INVALID) {
+		CF_SpriteAsset* asset = cf_sprite_get_asset(sprite->id);
+		CF_Animation** anim_vals = map_items(asset->animations);
+		for (int i = 0; i < map_size(asset->animations); ++i) {
+			CF_Animation* animation = anim_vals[i];
 			for (int j = 0; j < asize(animation->frames); ++j) {
 				CF_Frame* frame = animation->frames + j;
 				spritebatch_prefetch(&s_draw->sb, frame->id, sprite->w, sprite->h);
@@ -3499,12 +3494,17 @@ void cf_draw_push()
 {
 	CF_M3x2 m = s_draw->cam_stack.last();
 	s_draw->cam_stack.add(m);
+	s_draw->projection_stack.add(s_draw->projection);
 }
 
 void cf_draw_pop()
 {
 	if (s_draw->cam_stack.size() > 1) {
 		s_draw->cam_stack.pop();
+	}
+	if (s_draw->projection_stack.size() > 0) {
+		s_draw->projection = s_draw->projection_stack.last();
+		s_draw->projection_stack.pop();
 	}
 	CF_M3x2 m = s_draw->cam_stack.last();
 	s_draw->mvp = mul(s_draw->projection, m);
@@ -3563,12 +3563,12 @@ CF_TemporaryImage cf_fetch_image(const CF_Sprite* sprite)
 		return image;
 	} else {
 		uint64_t image_id;
-		if (sprite->animation) {
-			image_id = sprite->animation->frames[sprite->frame_index].id;
+		if (sprite->id != CF_SPRITE_ID_INVALID) {
+			image_id = sprite->_image_id;
 		} else {
 			image_id = sprite->easy_sprite_id;
 		}
-		
+
 		spritebatch_sprite_t s = spritebatch_fetch(&s_draw->sb, image_id, sprite->w, sprite->h);
 		CF_TemporaryImage image;
 		image.tex = { s.texture_id };

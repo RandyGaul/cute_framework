@@ -77,7 +77,7 @@ not_in_nav: |
   /net/*.md
   /noise/*.md
   /path/*.md
-  /png_cache/*.md
+  /custom_sprite/*.md
   /random/*.md
   /sprite/*.md
   /string/*.md
@@ -103,6 +103,7 @@ nav:
       - Camera: topics/camera.md
       - Collision: topics/collision.md
       - Coroutines: topics/coroutines.md
+      - Custom Sprites: topics/custom_sprites.md
       - Data Structures: topics/data_structures.md
       - Web Builds with Emscripten: topics/emscripten.md
       - Input: topics/input.md
