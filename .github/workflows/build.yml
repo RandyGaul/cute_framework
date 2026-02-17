@@ -3,9 +3,6 @@ name: Build
 # This workflow will work for pushes, pull requests, or a manual trigger (workflow_dispatch).
 on: [push, pull_request, workflow_dispatch]
 
-env:
-  CMAKE_BUILD_PARALLEL_LEVEL: 4
-
 jobs:
   build:
     name: "${{ matrix.os }} / ${{ matrix.compiler }} / ${{ matrix.runtime_shader_compilation == 'ON' && 'runtime-shaders' || 'precompiled-shaders' }} / ${{ matrix.framework_static == 'ON' && 'static' || 'shared' }}"
