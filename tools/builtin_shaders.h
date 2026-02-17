@@ -422,9 +422,9 @@ void main()
 	// Traditional sprite/text/tri cases.
 	vec4 c = vec4(0);
 	vec2 uv = u_use_smooth_uv == 0 ? smooth_uv(v_uv, u_texture_size) : v_uv;
-	c = !(is_sprite && is_text) ? de_gamma(texture(u_image, uv)) : c;
-	c = is_sprite ? gamma(c) : c;
-	c = is_text ? v_col * c.a : c;
+	vec4 tex_c = de_gamma(texture(u_image, uv));
+	c = is_sprite ? gamma(tex_c) : c;
+	c = is_text ? v_col * tex_c.a : c;
 	c = is_tri ? v_col : c;
 
 	// SDF cases.
