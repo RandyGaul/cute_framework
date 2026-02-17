@@ -127,7 +127,7 @@ void cf_sprite_unload(const char* aseprite_path)
 
 void cf_sprite_reload(CF_Sprite* sprite)
 {
-	if (sprite->id == CF_SPRITE_ID_INVALID) return;
+	if (!cf_sprite_is_valid(sprite)) return;
 	CF_SpriteAsset* asset = cf_sprite_get_asset(sprite->id);
 	if (!asset->ase) return; // External assets can't be reloaded from disk.
 
@@ -206,7 +206,7 @@ static const CF_Animation* s_get_animation(const CF_Sprite* sprite)
 // Cache _image_id, _pivot, _center_patch from the current animation state.
 static void s_cache_sprite_frame(CF_Sprite* sprite)
 {
-	if (sprite->id == CF_SPRITE_ID_INVALID) return;
+	if (!cf_sprite_is_valid(sprite)) return;
 	const CF_Animation* anim = s_get_animation(sprite);
 	if (!anim) return;
 	int fi = sprite->frame_index;
@@ -223,7 +223,7 @@ static void s_cache_sprite_frame(CF_Sprite* sprite)
 void cf_sprite_play(CF_Sprite* sprite, const char* animation)
 {
 	CF_ASSERT(sprite);
-	if (sprite->id == CF_SPRITE_ID_INVALID) return;
+	if (!cf_sprite_is_valid(sprite)) return;
 	const char* name = sintern(animation);
 	CF_SpriteAsset* asset = cf_sprite_get_asset(sprite->id);
 	const CF_Animation* anim = map_get(asset->animations, name);
@@ -365,7 +365,7 @@ CF_Aabb cf_sprite_get_slice(CF_Sprite* sprite, const char* name)
 {
 	CF_ASSERT(sprite);
 	CF_Aabb not_found = { 0 };
-	if (sprite->id == CF_SPRITE_ID_INVALID) return not_found;
+	if (!cf_sprite_is_valid(sprite)) return not_found;
 	name = sintern(name);
 
 	CF_SpriteAsset* asset = cf_sprite_get_asset(sprite->id);
@@ -447,7 +447,7 @@ void cf_sprite_update(CF_Sprite* sprite)
 int cf_sprite_animation_count(const CF_Sprite* sprite)
 {
 	CF_ASSERT(sprite);
-	if (sprite->id == CF_SPRITE_ID_INVALID) return 0;
+	if (!cf_sprite_is_valid(sprite)) return 0;
 	CF_SpriteAsset* asset = cf_sprite_get_asset(sprite->id);
 	return map_size(asset->animations);
 }
@@ -455,7 +455,7 @@ int cf_sprite_animation_count(const CF_Sprite* sprite)
 const char* cf_sprite_animation_name_at(const CF_Sprite* sprite, int index)
 {
 	CF_ASSERT(sprite);
-	if (sprite->id == CF_SPRITE_ID_INVALID) return NULL;
+	if (!cf_sprite_is_valid(sprite)) return NULL;
 	CF_SpriteAsset* asset = cf_sprite_get_asset(sprite->id);
 	if (index < 0 || index >= map_size(asset->animations)) return NULL;
 	CF_Animation** anim_vals = map_items(asset->animations);

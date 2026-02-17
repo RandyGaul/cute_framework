@@ -24,6 +24,8 @@
 extern "C" {
 #endif // __cplusplus
 
+#define CF_SPRITE_ID_INVALID (~0ULL)
+
 /**
  * @enum     CF_PlayDirection
  * @category sprite
@@ -166,6 +168,16 @@ typedef struct CF_Sprite
  * @related  CF_Sprite cf_sprite_defaults cf_make_easy_sprite cf_make_sprite
  */
 CF_API CF_Sprite CF_CALL cf_sprite_defaults();
+
+/**
+ * @function cf_sprite_is_valid
+ * @category sprite
+ * @brief    Returns true if the sprite has been loaded (either as aseprite or easy sprite).
+ * @param    sprite   The sprite.
+ * @return   Returns true if the sprite is valid (loaded), false if it's a default/unloaded sprite.
+ * @related  CF_Sprite cf_sprite_defaults cf_make_sprite cf_make_easy_sprite_from_png
+ */
+CF_INLINE bool cf_sprite_is_valid(const CF_Sprite* sprite) { return sprite->id != CF_SPRITE_ID_INVALID || sprite->easy_sprite_id != 0; }
 
 /**
  * @function cf_make_easy_sprite_from_png
@@ -785,6 +797,8 @@ CF_INLINE CF_V2 sprite_pivot(const CF_Sprite* sprite) { return cf_sprite_pivot(s
 CF_INLINE void easy_sprite_update_pixels(CF_Sprite* sprite, const CF_Pixel* pixels) { cf_easy_sprite_update_pixels(sprite, pixels); }
 CF_INLINE void easy_sprite_unload(CF_Sprite* sprite) { cf_easy_sprite_unload(sprite); }
 CF_INLINE CF_Sprite make_sprite_from_memory(const char* unique_name, const void* aseprite_data, int size) { return cf_make_sprite_from_memory(unique_name, aseprite_data, size); }
+CF_INLINE bool sprite_is_valid(const CF_Sprite* sprite) { return cf_sprite_is_valid(sprite); }
+CF_INLINE bool sprite_is_valid(const CF_Sprite& sprite) { return cf_sprite_is_valid(&sprite); }
 
 }
 
