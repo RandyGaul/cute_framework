@@ -182,12 +182,10 @@ jobs:
 
       - name: Configure
         run: >
-          emcmake cmake -B build -G Ninja
+          emcmake cmake -B build
           -DCMAKE_C_COMPILER_LAUNCHER=ccache
           -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
           -DCF_FRAMEWORK_STATIC=ON
 
       - name: Build
         run: cmake --build build
-        env:
-          CMAKE_BUILD_PARALLEL_LEVEL: 1
