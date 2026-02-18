@@ -2,9 +2,6 @@
 //
 // Demonstrates HRC 2D global illumination based on the Amitabha-style SSBO pipeline with f16 packing and 4-rotation frustum.
 //
-// Controls:
-//   D       Cycle debug modes (0=normal, 1-4=quadrant, 5=no blur, 6=emissivity, 7=absorption)
-//
 // Reference: Freeman, Sannikov, Margel (2025) "Holographic Radiance Cascades"
 // https://arxiv.org/pdf/2505.02041
 // https://github.com/entropylost/amitabha
@@ -75,6 +72,9 @@ typedef struct Hrc
 	int n;
 	int trace_levels; // how many cascade levels use direct trace (0..n+1)
 	int cminus1;     // c-1 gathering enabled
+	int blend_boundary; // angle-based weight blending near ±45° edges
+	int clamp_y;        // clamp DDA y-range to entry-cell footprint
+	float blend_width;  // blend falloff width in direction slots
 } Hrc;
 
 Hrc hrc;
@@ -129,6 +129,7 @@ void hrc_init()
 	hrc_set_grid(HRC_WORLD_SIZE / 2);
 	hrc.trace_levels = 3; // trace T_0..T_2, extend T_3..T_N
 	hrc.cminus1 = 1;
+	hrc.blend_width = 4.0f;
 
 	// Precompute max T cascade dimensions for allocation.
 	int max_vrays_w[HRC_MAX_N + 1];
@@ -246,13 +247,16 @@ void hrc_compute()
 
 		// Direct trace T_0..T_{trace_levels-1}.
 		for (int i = 0; i < hrc.trace_levels; i++) {
-			int params[4] = { i, j, dim, hrc.vrays_w[i] };
+			int params[6] = { i, j, dim, hrc.vrays_w[i], hrc.blend_boundary, hrc.clamp_y };
 			cf_material_set_texture_cs(hrc.mat_trace, "u_emissivity", emiss_tex);
 			cf_material_set_texture_cs(hrc.mat_trace, "u_absorption", absrp_tex);
 			cf_material_set_uniform_cs(hrc.mat_trace, "u_cascade", params + 0, CF_UNIFORM_TYPE_INT, 1);
 			cf_material_set_uniform_cs(hrc.mat_trace, "u_rotate", params + 1, CF_UNIFORM_TYPE_INT, 1);
 			cf_material_set_uniform_cs(hrc.mat_trace, "u_world_size", params + 2, CF_UNIFORM_TYPE_INT, 1);
 			cf_material_set_uniform_cs(hrc.mat_trace, "u_curr_w", params + 3, CF_UNIFORM_TYPE_INT, 1);
+			cf_material_set_uniform_cs(hrc.mat_trace, "u_blend_boundary", params + 4, CF_UNIFORM_TYPE_INT, 1);
+			cf_material_set_uniform_cs(hrc.mat_trace, "u_clamp_y", params + 5, CF_UNIFORM_TYPE_INT, 1);
+			cf_material_set_uniform_cs(hrc.mat_trace, "u_blend_width", &hrc.blend_width, CF_UNIFORM_TYPE_FLOAT, 1);
 
 			CF_ComputeDispatch d = cf_compute_dispatch_defaults(
 				hrc_div_ceil(hrc.vrays_w[i], HRC_WG),
@@ -418,6 +422,18 @@ void handle_input()
 	}
 	if (cf_key_just_pressed(CF_KEY_C)) {
 		hrc.cminus1 = !hrc.cminus1;
+	}
+	if (cf_key_just_pressed(CF_KEY_B)) {
+		hrc.blend_boundary = !hrc.blend_boundary;
+	}
+	if (cf_key_just_pressed(CF_KEY_Y)) {
+		hrc.clamp_y = !hrc.clamp_y;
+	}
+	if (cf_key_just_pressed(CF_KEY_LEFTBRACKET)) {
+		hrc.blend_width = cf_max(0.5f, hrc.blend_width - 0.5f);
+	}
+	if (cf_key_just_pressed(CF_KEY_RIGHTBRACKET)) {
+		hrc.blend_width += 0.5f;
 	}
 }
 
@@ -631,16 +647,22 @@ void draw_hud()
 
 	char buf[512];
 	snprintf(buf, sizeof(buf),
+		"[B] Blend boundary: %s\n"
+		"[[] []] Blend width: %.1f\n"
 		"[C] c-1 gathering: %s\n"
 		"[D] Debug: %s\n"
 		"[H] Grid: %d (%s)\n"
 		"[R] Trace: %d / %d\n"
-		"[T] Test scene: %s",
+		"[T] Test scene: %s\n"
+		"[Y] Clamp Y: %s",
+		hrc.blend_boundary ? "on" : "off",
+		hrc.blend_width,
 		hrc.cminus1 ? "on" : "off",
 		mode_names[hrc.debug_mode],
 		hrc.grid, hrc.grid == HRC_WORLD_SIZE ? "full" : "half",
 		hrc.trace_levels, hrc.n + 1,
-		test_scene ? "on" : "off"
+		test_scene ? "on" : "off",
+		hrc.clamp_y ? "on" : "off"
 	);
 
 	float half = (float)HRC_WORLD_SIZE * 0.5f;
