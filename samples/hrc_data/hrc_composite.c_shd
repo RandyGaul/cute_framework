@@ -1,10 +1,10 @@
 // Sum 4 quadrants with c-1 gathering, cross blur, output (Sec 4.2, Eq 21).
 //
 // Each quadrant's R_0 was computed in +x-aligned space by the merge-down phase
-// and stored in F_0..F_3. This shader reverses the rotation, traces a single-pixel
-// c-1 interval per quadrant to bridge the gap between the pixel and the R_0 probe
-// at +1 offset, merges c-1 with R_0, applies the cross blur to remove checkerboard
-// artifacts, and writes the final fluence.
+// and stored in F_0..F_3. This shader reverses the rotation, raymarches a c-1
+// interval per quadrant toward the nearest c0 probe to bridge the gap between the
+// pixel and the R_0 probe at +1 offset, merges c-1 with R_0, applies the cross
+// blur to remove checkerboard artifacts, and writes the final fluence.
 //
 // The cascade grid (u_grid_size) may be smaller than the output (u_world_size).
 // Frustum buffers are grid-sized; the output fluence and scene textures are world-sized.
@@ -34,6 +34,7 @@ layout(set = 2, binding = 0) uniform Params
 	int   u_grid_size;     // cascade grid resolution (e.g. 256)
 	float u_abs_threshold; // opacity similarity cutoff for cross blur
 	int   u_debug_mode;
+	int   u_cminus1;      // 0 = skip c-1 gathering, 1 = raymarch c-1
 };
 
 layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
@@ -91,20 +92,62 @@ vec3 F_load(int rot, ivec2 rotated_pos)
 	return val.rgb;
 }
 
-// Trace a single-pixel c-1 interval through the current pixel. This covers the
-// gap between the pixel and the R_0 probe at +1 offset. The pixel's emission and
-// absorption are the same regardless of quadrant direction, so no rotation is needed —
-// world_pos is already in world space and maps directly to the scene textures.
-Interval trace_cminus1(ivec2 world_pos)
+// World-space march direction for each quadrant's rotated +x axis.
+//   rot 0: +x in rotated -> +x in world
+//   rot 1: +x in rotated -> +y in world
+//   rot 2: +x in rotated -> -x in world
+//   rot 3: +x in rotated -> -y in world
+ivec2 quadrant_dir(int rot)
 {
+	if (rot == 1) return ivec2(0, 1);
+	if (rot == 2) return ivec2(-1, 0);
+	if (rot == 3) return ivec2(0, -1);
+	return ivec2(1, 0);
+}
+
+// Raymarch c-1 interval from the current pixel toward the nearest c0 probe.
+// Covers the gap between the pixel and the R_0 probe at +1 grid offset in
+// the quadrant's +x direction. The result is NOT stored in cascade memory.
+//
+// With upscaling (world_size > grid_size), the probe is S = world_size/grid_size
+// world pixels away from the grid cell origin. The march steps through each
+// intervening world pixel, accumulating emission and transmittance via Beer's law.
+// At 1x (no upscaling) this reduces to a single-pixel tap matching c0 probe spacing.
+Interval trace_cminus1(ivec2 world_pos, int rot)
+{
+	int S = u_world_size / u_grid_size;
+	ivec2 dir = quadrant_dir(rot);
+
+	// Effective coordinate along the march direction (increases toward the probe).
+	int pos_along;
+	if      (rot == 0) pos_along = world_pos.x;
+	else if (rot == 1) pos_along = world_pos.y;
+	else if (rot == 2) pos_along = (u_world_size - 1) - world_pos.x;
+	else               pos_along = (u_world_size - 1) - world_pos.y;
+
+	// Exact number of world pixels from here to the c0 probe at +1 grid offset.
+	int grid_along = pos_along * u_grid_size / u_world_size;
+	int num_steps = (grid_along + 1) * S - pos_along;
+
 	float world = float(u_world_size);
-	vec2 uv = (vec2(world_pos) + 0.5) / world;
+	float step_abs = 4.0 / float(S);
 
-	vec3 emiss = linear_from_srgb(texture(u_emissivity, uv).rgb);
-	vec3 absrp = linear_from_srgb(texture(u_absorption, uv).rgb);
+	vec3 acc_rad = vec3(0.0);
+	vec3 acc_trn = vec3(1.0);
 
-	vec3 trans = exp(-absrp * 4.0);  // step_length = 1.0
-	return Interval(emiss * (vec3(1.0) - trans), trans);
+	for (int i = 0; i < num_steps; i++) {
+		ivec2 p = world_pos + dir * i;
+		vec2 uv = (vec2(p) + 0.5) / world;
+
+		vec3 emiss = linear_from_srgb(texture(u_emissivity, uv).rgb);
+		vec3 absrp = linear_from_srgb(texture(u_absorption, uv).rgb);
+
+		vec3 trans = exp(-absrp * step_abs);
+		acc_rad += acc_trn * emiss * (vec3(1.0) - trans);
+		acc_trn *= trans;
+	}
+
+	return Interval(acc_rad, acc_trn);
 }
 
 // Sum fluence from all 4 quadrants at a world-space pixel, with c-1 gathering.
@@ -116,12 +159,16 @@ vec3 sum_quadrants(ivec2 world_pos)
 {
 	int s = u_grid_size - 1;
 	ivec2 grid_pos = world_pos * u_grid_size / u_world_size;
-	Interval cminus1 = trace_cminus1(world_pos);
 	vec3 total = vec3(0.0);
 	for (int rot = 0; rot < 4; rot++) {
 		ivec2 rp = grid_to_rotated(grid_pos, rot, s);
 		vec3 r0 = F_load(rot, rp + ivec2(1, 0));
-		total += cminus1.rad + cminus1.trn * r0;
+		if (u_cminus1 != 0) {
+			Interval cminus1 = trace_cminus1(world_pos, rot);
+			total += cminus1.rad + cminus1.trn * r0;
+		} else {
+			total += r0;
+		}
 	}
 	return total;
 }
@@ -202,14 +249,18 @@ void main()
 
 	vec3 fluence;
 	if (u_debug_mode >= 1 && u_debug_mode <= 4) {
-		// Show a single quadrant with c-1 gathering, no blur.
+		// Show a single quadrant, no blur.
 		int rot = u_debug_mode - 1;
 		int s = u_grid_size - 1;
 		ivec2 grid_pos = gid * u_grid_size / u_world_size;
 		ivec2 rp = grid_to_rotated(grid_pos, rot, s);
-		Interval cminus1 = trace_cminus1(gid);
 		vec3 r0 = F_load(rot, rp + ivec2(1, 0));
-		fluence = cminus1.rad + cminus1.trn * r0;
+		if (u_cminus1 != 0) {
+			Interval cminus1 = trace_cminus1(gid, rot);
+			fluence = cminus1.rad + cminus1.trn * r0;
+		} else {
+			fluence = r0;
+		}
 	} else if (u_debug_mode == 5) {
 		// Sum all quadrants with c-1 gathering, no blur.
 		fluence = sum_quadrants(gid);

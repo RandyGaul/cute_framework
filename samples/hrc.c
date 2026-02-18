@@ -63,6 +63,7 @@ typedef struct Hrc
 	CF_Material mat_merge;
 	CF_Material mat_composite;
 	CF_Material mat_copy;
+	CF_ComputeShader cs_seed;
 	CF_ComputeShader cs_trace;
 	CF_ComputeShader cs_extend;
 	CF_ComputeShader cs_merge;
@@ -72,6 +73,8 @@ typedef struct Hrc
 	int debug_mode;
 	int grid;
 	int n;
+	int trace_levels; // how many cascade levels use direct trace (0..n+1)
+	int cminus1;     // c-1 gathering enabled
 } Hrc;
 
 Hrc hrc;
@@ -124,6 +127,8 @@ void hrc_init()
 
 	// Start at half resolution.
 	hrc_set_grid(HRC_WORLD_SIZE / 2);
+	hrc.trace_levels = 3; // trace T_0..T_2, extend T_3..T_N
+	hrc.cminus1 = 1;
 
 	// Precompute max T cascade dimensions for allocation.
 	int max_vrays_w[HRC_MAX_N + 1];
@@ -170,6 +175,7 @@ void hrc_init()
 	hrc.mat_copy = cf_make_material();
 
 	// Compute shaders (loaded from hrc_data/ next to the executable).
+	hrc.cs_seed = load_compute_shader("/hrc_data/hrc_seed.c_shd");
 	hrc.cs_trace = load_compute_shader("/hrc_data/hrc_trace.c_shd");
 	hrc.cs_extend = load_compute_shader("/hrc_data/hrc_extend.c_shd");
 	hrc.cs_merge = load_compute_shader("/hrc_data/hrc_merge.c_shd");
@@ -196,6 +202,7 @@ void hrc_shutdown()
 	cf_destroy_material(hrc.mat_merge);
 	cf_destroy_material(hrc.mat_composite);
 	cf_destroy_material(hrc.mat_copy);
+	cf_destroy_compute_shader(hrc.cs_seed);
 	cf_destroy_compute_shader(hrc.cs_trace);
 	cf_destroy_compute_shader(hrc.cs_extend);
 	cf_destroy_compute_shader(hrc.cs_merge);
@@ -216,8 +223,29 @@ void hrc_compute()
 	int N = hrc.n;
 
 	for (int j = 0; j < 4; j++) {
-		// Direct trace T_0, T_1, T_2.
-		for (int i = 0; i <= 2; i++) {
+		// Seed T_0 when no levels are traced (sample at probe, no raymarching).
+		if (hrc.trace_levels == 0) {
+			int params[4] = { 0, j, dim, hrc.vrays_w[0] };
+			cf_material_set_texture_cs(hrc.mat_trace, "u_emissivity", emiss_tex);
+			cf_material_set_texture_cs(hrc.mat_trace, "u_absorption", absrp_tex);
+			cf_material_set_uniform_cs(hrc.mat_trace, "u_cascade", params + 0, CF_UNIFORM_TYPE_INT, 1);
+			cf_material_set_uniform_cs(hrc.mat_trace, "u_rotate", params + 1, CF_UNIFORM_TYPE_INT, 1);
+			cf_material_set_uniform_cs(hrc.mat_trace, "u_world_size", params + 2, CF_UNIFORM_TYPE_INT, 1);
+			cf_material_set_uniform_cs(hrc.mat_trace, "u_curr_w", params + 3, CF_UNIFORM_TYPE_INT, 1);
+
+			CF_ComputeDispatch d = cf_compute_dispatch_defaults(
+				hrc_div_ceil(hrc.vrays_w[0], HRC_WG),
+				hrc_div_ceil(dim, HRC_WG),
+				1
+			);
+			CF_StorageBuffer rw[2] = { hrc.vrays_rad[0], hrc.vrays_trn[0] };
+			d.rw_buffers = rw;
+			d.rw_buffer_count = 2;
+			cf_dispatch_compute(hrc.cs_seed, hrc.mat_trace, d);
+		}
+
+		// Direct trace T_0..T_{trace_levels-1}.
+		for (int i = 0; i < hrc.trace_levels; i++) {
 			int params[4] = { i, j, dim, hrc.vrays_w[i] };
 			cf_material_set_texture_cs(hrc.mat_trace, "u_emissivity", emiss_tex);
 			cf_material_set_texture_cs(hrc.mat_trace, "u_absorption", absrp_tex);
@@ -237,8 +265,9 @@ void hrc_compute()
 			cf_dispatch_compute(hrc.cs_trace, hrc.mat_trace, d);
 		}
 
-		// Extend T_3..T_N.
-		for (int i = 3; i <= N; i++) {
+		// Extend remaining levels.
+		int ext_start = hrc.trace_levels > 0 ? hrc.trace_levels : 1;
+		for (int i = ext_start; i <= N; i++) {
 			int params[4] = { i, dim, hrc.vrays_w[i - 1], hrc.vrays_w[i] };
 			cf_material_set_uniform_cs(hrc.mat_extend, "u_cascade", params + 0, CF_UNIFORM_TYPE_INT, 1);
 			cf_material_set_uniform_cs(hrc.mat_extend, "u_world_size", params + 1, CF_UNIFORM_TYPE_INT, 1);
@@ -321,6 +350,7 @@ void hrc_compute()
 		cf_material_set_uniform_cs(hrc.mat_composite, "u_grid_size", &dim, CF_UNIFORM_TYPE_INT, 1);
 		cf_material_set_uniform_cs(hrc.mat_composite, "u_abs_threshold", &abs_thresh, CF_UNIFORM_TYPE_FLOAT, 1);
 		cf_material_set_uniform_cs(hrc.mat_composite, "u_debug_mode", &debug, CF_UNIFORM_TYPE_INT, 1);
+		cf_material_set_uniform_cs(hrc.mat_composite, "u_cminus1", &hrc.cminus1, CF_UNIFORM_TYPE_INT, 1);
 
 		CF_ComputeDispatch d = cf_compute_dispatch_defaults(
 			hrc_div_ceil(world, HRC_WG),
@@ -380,6 +410,14 @@ void handle_input()
 			hrc_set_grid(HRC_WORLD_SIZE / 2);
 		else
 			hrc_set_grid(HRC_WORLD_SIZE);
+		if (hrc.trace_levels > hrc.n + 1)
+			hrc.trace_levels = hrc.n + 1;
+	}
+	if (cf_key_just_pressed(CF_KEY_R)) {
+		hrc.trace_levels = (hrc.trace_levels + 1) % (hrc.n + 2);
+	}
+	if (cf_key_just_pressed(CF_KEY_C)) {
+		hrc.cminus1 = !hrc.cminus1;
 	}
 }
 
@@ -495,9 +533,8 @@ void draw_emissivity()
 	push_f16_render_state();
 
 	if (test_scene) {
-		// Single 2x2 white emitter in the center.
 		float half = (float)HRC_WORLD_SIZE * 0.5f;
-		float s = (float)HRC_WORLD_SIZE / (float)HRC_MAX_N;
+		float s = (float)HRC_WORLD_SIZE / (float)hrc.grid;
 		cf_draw_push_color(cf_make_color_rgb_f(1.0f, 1.0f, 1.0f));
 		cf_draw_quad_fill(cf_make_aabb(cf_v2(half - s, half - s), cf_v2(half + s, half + s)), 0);
 		cf_draw_pop_color();
@@ -519,9 +556,8 @@ void draw_absorption()
 	push_f16_render_state();
 
 	if (test_scene) {
-		// Only the emitter itself absorbs (required for emission).
 		float half = (float)HRC_WORLD_SIZE * 0.5f;
-		float s = (float)HRC_WORLD_SIZE / (float)HRC_MAX_N;
+		float s = (float)HRC_WORLD_SIZE / (float)hrc.grid;
 		cf_draw_push_color(cf_make_color_rgb_f(1.0f, 1.0f, 1.0f));
 		cf_draw_quad_fill(cf_make_aabb(cf_v2(half - s, half - s), cf_v2(half + s, half + s)), 0);
 		cf_draw_pop_color();
@@ -595,11 +631,15 @@ void draw_hud()
 
 	char buf[512];
 	snprintf(buf, sizeof(buf),
+		"[C] c-1 gathering: %s\n"
 		"[D] Debug: %s\n"
 		"[H] Grid: %d (%s)\n"
+		"[R] Trace: %d / %d\n"
 		"[T] Test scene: %s",
+		hrc.cminus1 ? "on" : "off",
 		mode_names[hrc.debug_mode],
 		hrc.grid, hrc.grid == HRC_WORLD_SIZE ? "full" : "half",
+		hrc.trace_levels, hrc.n + 1,
 		test_scene ? "on" : "off"
 	);
 
@@ -624,7 +664,7 @@ int main(int argc, char* argv[])
 	scene_init();
 	while (cf_app_is_running()) {
 		cf_app_update(NULL);
-		//cf_draw_push_shape_aa(2);
+		cf_draw_push_shape_aa(0);
 		handle_input();
 		update_lights();
 		draw_emissivity();
