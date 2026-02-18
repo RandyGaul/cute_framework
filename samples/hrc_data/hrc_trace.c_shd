@@ -103,7 +103,7 @@ void main()
 	vec3 acc_trn = vec3(1.0);
 
 	for (int s = 0; s < num_steps; s++) {
-		vec2 pos = origin + slope * (float(s) + 1.0);
+		vec2 pos = origin + slope * float(s);
 
 		// Bounds check — out-of-bounds contributes (rad=0, trn=1), no change.
 		if (pos.x < 0.0 || pos.x >= world || pos.y < 0.0 || pos.y >= world) continue;
