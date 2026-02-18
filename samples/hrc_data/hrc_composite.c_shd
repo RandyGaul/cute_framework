@@ -130,7 +130,7 @@ Interval trace_cminus1(ivec2 world_pos, int rot)
 	int num_steps = (grid_along + 1) * S - pos_along;
 
 	float world = float(u_world_size);
-	float step_abs = 4.0 / float(S);
+	float step_abs = 1.0 / float(S);
 
 	vec3 acc_rad = vec3(0.0);
 	vec3 acc_trn = vec3(1.0);

@@ -90,11 +90,11 @@ CF_StorageBuffer hrc_make_buf(int w, int h)
 	return cf_make_storage_buffer(p);
 }
 
-CF_Canvas hrc_make_canvas(int w, int h, CF_PixelFormat fmt)
+CF_Canvas hrc_make_canvas(int w, int h, CF_PixelFormat fmt, CF_Filter filter)
 {
 	CF_CanvasParams p = cf_canvas_defaults(w, h);
 	p.target.pixel_format = fmt;
-	p.target.filter = CF_FILTER_LINEAR;
+	p.target.filter = filter;
 	p.target.usage = CF_TEXTURE_USAGE_SAMPLER_BIT | CF_TEXTURE_USAGE_COLOR_TARGET_BIT | CF_TEXTURE_USAGE_COMPUTE_STORAGE_READ_BIT | CF_TEXTURE_USAGE_COMPUTE_STORAGE_WRITE_BIT;
 	p.target.wrap_u = CF_WRAP_MODE_CLAMP_TO_EDGE;
 	p.target.wrap_v = CF_WRAP_MODE_CLAMP_TO_EDGE;
@@ -139,9 +139,9 @@ void hrc_init()
 		max_vrays_w[i] = probes * rays;
 	}
 
-	// Scene input canvases.
-	hrc.emissivity = hrc_make_canvas(HRC_WORLD_SIZE, HRC_WORLD_SIZE, CF_PIXEL_FORMAT_R16G16B16A16_FLOAT);
-	hrc.absorption = hrc_make_canvas(HRC_WORLD_SIZE, HRC_WORLD_SIZE, CF_PIXEL_FORMAT_R16G16B16A16_FLOAT);
+	// Scene input canvases (nearest-neighbor: discrete pixel grid, no sRGB-space blending).
+	hrc.emissivity = hrc_make_canvas(HRC_WORLD_SIZE, HRC_WORLD_SIZE, CF_PIXEL_FORMAT_R16G16B16A16_FLOAT, CF_FILTER_NEAREST);
+	hrc.absorption = hrc_make_canvas(HRC_WORLD_SIZE, HRC_WORLD_SIZE, CF_PIXEL_FORMAT_R16G16B16A16_FLOAT, CF_FILTER_NEAREST);
 
 	// Per-cascade T SSBOs (uvec2 per texel = 8 bytes, f16-packed). Allocated at max size.
 	for (int i = 0; i <= HRC_MAX_N; i++) {
@@ -164,8 +164,8 @@ void hrc_init()
 	for (int i = 0; i < 4; i++)
 		hrc.frustum[i] = hrc_make_buf(HRC_WORLD_SIZE, HRC_WORLD_SIZE);
 
-	// Final output canvas.
-	hrc.fluence = hrc_make_canvas(HRC_WORLD_SIZE, HRC_WORLD_SIZE, CF_PIXEL_FORMAT_R8G8B8A8_UNORM);
+	// Final output canvas (linear filtering for smooth display).
+	hrc.fluence = hrc_make_canvas(HRC_WORLD_SIZE, HRC_WORLD_SIZE, CF_PIXEL_FORMAT_R8G8B8A8_UNORM, CF_FILTER_LINEAR);
 
 	// Materials.
 	hrc.mat_trace = cf_make_material();
