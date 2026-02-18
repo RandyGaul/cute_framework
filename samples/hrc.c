@@ -443,10 +443,10 @@ void handle_input()
 		test_scene = !test_scene;
 	}
 	if (cf_key_just_pressed(CF_KEY_H)) {
-		if (hrc.grid == HRC_WORLD_SIZE)
-			hrc_set_grid(HRC_WORLD_SIZE / 2);
-		else
-			hrc_set_grid(HRC_WORLD_SIZE);
+		if      (hrc.grid == 128)  hrc_set_grid(256);
+		else if (hrc.grid == 256)  hrc_set_grid(512);
+		else if (hrc.grid == 512)  hrc_set_grid(1024);
+		else                       hrc_set_grid(128);
 		if (hrc.trace_levels > hrc.n + 1)
 			hrc.trace_levels = hrc.n + 1;
 	}
@@ -692,7 +692,7 @@ void draw_hud()
 		hrc.blend_width,
 		hrc.cminus1 ? "on" : "off",
 		mode_names[hrc.debug_mode],
-		hrc.grid, hrc.grid == HRC_WORLD_SIZE ? "full" : "half",
+		hrc.grid, hrc.grid == HRC_WORLD_SIZE ? "1x" : hrc.grid == HRC_WORLD_SIZE/2 ? "2x" : hrc.grid == HRC_WORLD_SIZE/4 ? "4x" : "8x",
 		hrc.minmax_enabled ? "on" : "off",
 		hrc.trace_levels, hrc.n + 1,
 		test_scene ? "on" : "off"
