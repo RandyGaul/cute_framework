@@ -3204,6 +3204,12 @@ void cf_draw_canvas(CF_Canvas canvas, CF_V2 position, CF_V2 scale)
 		cmd.canvas_verts_posH[i] = mul(s_draw->mvp, cmd.canvas_verts[i]);
 	}
 	cmd.canvas_attributes = s_draw->user_params.last();
+
+	// Ensure subsequent draw items don't land on this canvas command.
+	// Without this, any draws after cf_draw_canvas that don't trigger a new
+	// command (e.g. no layer/shader/state change) silently append to the canvas
+	// command's items array, which s_process_command ignores for canvas blits.
+	s_draw->add_cmd();
 }
 
 void static s_blit(CF_Command* cmd, CF_Canvas src, CF_Canvas dst, bool clear_dst)

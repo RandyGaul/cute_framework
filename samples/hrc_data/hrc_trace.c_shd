@@ -2,9 +2,9 @@
 //
 // At low cascades, the extend shader's zigzag averaging of two diagonal candidates
 // creates manhattan distance artifacts because c0 only has two diagonal directions
-// (1,-1) and (1,1). This shader instead traces each ray directly using a line-slope
-// method: exactly N = 2^n pixel steps per ray, with step_length weighting to account
-// for diagonal rays being physically longer than axis-aligned ones.
+// (1,-1) and (1,1). This shader instead traces each ray directly using a column-by-
+// column DDA: step one x-cell per iteration and split at y-cell boundaries so every
+// cell the ray passes through is visited with its correct physical path length.
 //
 // Pipeline:  [trace x 3] -> [extend x (N-2)] -> merge -> composite
 //            ^^^^^^^^^^^^
@@ -74,6 +74,20 @@ vec2 rotate_uv(vec2 uv, int rot, float inv)
 	return uv;
 }
 
+// Accumulate one cell's Beer-Lambert contribution along a ray.
+// cell is the integer pixel coordinate; ds is the physical distance through the cell.
+void trace_cell(vec2 cell, float ds, inout vec3 rad, inout vec3 trn)
+{
+	float world = float(u_world_size);
+	if (cell.x < 0.0 || cell.x >= world || cell.y < 0.0 || cell.y >= world) return;
+	vec2 uv = rotate_uv((cell + 0.5) / world, u_rotate, 1.0);
+	vec3 emiss = linear_from_srgb(texture(u_emissivity, uv).rgb);
+	vec3 absrp = linear_from_srgb(texture(u_absorption, uv).rgb);
+	vec3 T = exp(-absrp * ds);
+	rad += trn * emiss * (vec3(1.0) - T);
+	trn *= T;
+}
+
 void main()
 {
 	int n = u_cascade;
@@ -90,36 +104,44 @@ void main()
 	vec2 delta = v_n(n, float(k));
 	float max_comp = float(pow2n);             // max(|delta.x|, |delta.y|) = 2^n always
 	vec2 slope = delta / max_comp;             // normalize so max component = 1
-	float step_length = length(slope);         // > 1.0 for diagonal rays
-	int num_steps = pow2n;                     // exactly 2^n pixel steps
+	float step_length = length(slope);         // physical distance per x-column step
+	int num_steps = pow2n;                     // exactly 2^n x-columns
 
 	// Probe origin in rotated world space.
 	vec2 origin = vec2(float(probe_x) * float(pow2n), float(gid.y));
 	float world = float(u_world_size);
-	float inv = 1.0;
 
-	// Trace exactly num_steps pixels along the ray.
+	// Column-by-column DDA: one x-column per iteration. When the ray crosses a
+	// y-cell boundary within a column, split the step so both cells get their
+	// correct fractional path length through Beer-Lambert.
 	vec3 acc_rad = vec3(0.0);
 	vec3 acc_trn = vec3(1.0);
 
+	float y_offset = 0.5;  // start at cell center so diagonal rays split symmetrically
+	int cy = 0;            // current y-cell offset from int(origin.y)
+
 	for (int s = 0; s < num_steps; s++) {
-		vec2 pos = origin + slope * float(s);
+		float px = origin.x + float(s);
+		if (px >= world) break;
 
-		// Bounds check — out-of-bounds contributes (rad=0, trn=1), no change.
-		if (pos.x < 0.0 || pos.x >= world || pos.y < 0.0 || pos.y >= world) continue;
+		float next_y = 0.5 + slope.y * float(s + 1);
+		int next_cy = int(floor(next_y));
 
-		vec2 uv = rotate_uv((pos + 0.5) / world, u_rotate, inv);
+		vec2 col = vec2(px, origin.y);
 
-		vec3 emiss = linear_from_srgb(texture(u_emissivity, uv).rgb);
-		vec3 absrp = linear_from_srgb(texture(u_absorption, uv).rgb);
+		if (cy == next_cy) {
+			// No y-boundary crossing -- full step in one cell.
+			trace_cell(col + vec2(0, float(cy)), step_length, acc_rad, acc_trn);
+		} else {
+			// Y-boundary crossed -- split into two sub-steps.
+			float y_bound = slope.y > 0.0 ? float(cy + 1) : float(cy);
+			float frac = (y_bound - y_offset) / slope.y;
+			trace_cell(col + vec2(0, float(cy)), frac * step_length, acc_rad, acc_trn);
+			trace_cell(col + vec2(0, float(next_cy)), (1.0 - frac) * step_length, acc_rad, acc_trn);
+		}
 
-		// step_length accounts for diagonal rays traversing more material per pixel.
-		vec3 optical_depth = absrp * step_length;
-		vec3 transmittance = exp(-optical_depth);
-		vec3 radiance = emiss * (vec3(1.0) - transmittance);
-
-		acc_rad += radiance * acc_trn;
-		acc_trn *= transmittance;
+		y_offset = next_y;
+		cy = next_cy;
 	}
 
 	int out_idx = gid.y * u_curr_w + gid.x;
