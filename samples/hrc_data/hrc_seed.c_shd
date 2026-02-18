@@ -1,0 +1,92 @@
+// Seed T_0: single-pixel interval at each probe position (no raymarching).
+//
+// Samples the scene at the probe origin and creates a direction-weighted interval.
+// Used when trace_levels = 0 to see the visual difference vs direct raymarching.
+// The extend shader's zigzag averaging of these seeds creates manhattan distance
+// artifacts at low cascades -- this is expected and is why direct tracing exists.
+//
+// Pipeline:  [seed] -> [extend x N] -> [merge x N] -> composite
+//            ^^^^^^
+//
+// Uses the same bindings as hrc_trace so the material setup is shared.
+//
+// Output buffer layout (same as trace/extend):
+//   width  = (world_size / 2^n) * (2^n + 1)
+//   height = world_size
+//   index  = y * width + probe_x * directions + k
+
+layout(set = 0, binding = 0) uniform sampler2D u_emissivity;
+layout(set = 0, binding = 1) uniform sampler2D u_absorption;
+
+layout(std430, set = 1, binding = 0) writeonly buffer OutRad { uvec2 data[]; } u_out_rad;
+layout(std430, set = 1, binding = 1) writeonly buffer OutTrn { uvec2 data[]; } u_out_trn;
+
+layout(set = 2, binding = 0) uniform Params
+{
+	int u_cascade;
+	int u_rotate;
+	int u_world_size;
+	int u_curr_w;
+};
+
+layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+
+// Direction vector for the k-th ray at cascade n (Sec 4).
+//   v_n(k) = (2^n, 2k - 2^n)
+vec2 v_n(int n, float k)
+{
+	float pow2n = float(1 << n);
+	return vec2(pow2n, 2.0 * k - pow2n);
+}
+
+uvec2 f16_store(vec4 val)
+{
+	return uvec2(packHalf2x16(val.xy), packHalf2x16(val.zw));
+}
+
+vec3 linear_from_srgb(vec3 c)
+{
+	return pow(c, vec3(2.2));
+}
+
+// Pre-rotate UV so the rest of HRC operates along the +x axis.
+vec2 rotate_uv(vec2 uv, int rot, float inv)
+{
+	if (rot == 1)      return vec2(inv - uv.y, uv.x);
+	else if (rot == 2) return inv - uv;
+	else if (rot == 3) return vec2(uv.y, inv - uv.x);
+	return uv;
+}
+
+void main()
+{
+	int n = u_cascade;
+	int pow2n = 1 << n;
+	int directions = pow2n + 1;
+
+	ivec2 gid = ivec2(gl_GlobalInvocationID.xy);
+	if (gid.x >= u_curr_w || gid.y >= u_world_size) return;
+
+	int probe_x = gid.x / directions;
+	int k = gid.x - probe_x * directions;
+
+	// Sample at probe origin (no stepping).
+	vec2 origin = vec2(float(probe_x) * float(pow2n), float(gid.y));
+	float world = float(u_world_size);
+	vec2 uv = rotate_uv((origin + 0.5) / world, u_rotate, 1.0);
+
+	vec3 emiss = linear_from_srgb(texture(u_emissivity, uv).rgb);
+	vec3 absrp = linear_from_srgb(texture(u_absorption, uv).rgb);
+
+	// Direction-dependent step length for correct optical depth.
+	vec2 delta = v_n(n, float(k));
+	float step_length = length(delta / float(pow2n));
+
+	vec3 optical_depth = absrp * step_length;
+	vec3 transmittance = exp(-optical_depth);
+	vec3 radiance = emiss * (vec3(1.0) - transmittance);
+
+	int out_idx = gid.y * u_curr_w + gid.x;
+	u_out_rad.data[out_idx] = f16_store(vec4(radiance, 1.0));
+	u_out_trn.data[out_idx] = f16_store(vec4(transmittance, 1.0));
+}
