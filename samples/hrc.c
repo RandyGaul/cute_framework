@@ -72,9 +72,12 @@ typedef struct Hrc
 	int n;
 	int trace_levels; // how many cascade levels use direct trace (0..n+1)
 	int cminus1;     // c-1 gathering enabled
+	int minmax_enabled; // bilinear R_0 upscaling with minmax edge detection
 	int blend_boundary; // angle-based weight blending near ±45° edges
-	int clamp_y;        // clamp DDA y-range to entry-cell footprint
 	float blend_width;  // blend falloff width in direction slots
+	CF_Canvas minmax;
+	CF_Material mat_minmax;
+	CF_ComputeShader cs_minmax;
 } Hrc;
 
 Hrc hrc;
@@ -129,6 +132,8 @@ void hrc_init()
 	hrc_set_grid(HRC_WORLD_SIZE / 2);
 	hrc.trace_levels = 3; // trace T_0..T_2, extend T_3..T_N
 	hrc.cminus1 = 1;
+	hrc.minmax_enabled = 1;
+	hrc.blend_boundary = 1;
 	hrc.blend_width = 4.0f;
 
 	// Precompute max T cascade dimensions for allocation.
@@ -168,12 +173,16 @@ void hrc_init()
 	// Final output canvas (linear filtering for smooth display).
 	hrc.fluence = hrc_make_canvas(HRC_WORLD_SIZE, HRC_WORLD_SIZE, CF_PIXEL_FORMAT_R8G8B8A8_UNORM, CF_FILTER_LINEAR);
 
+	// Min/max absorption canvas (grid-res, allocated at world size to handle runtime grid changes).
+	hrc.minmax = hrc_make_canvas(HRC_WORLD_SIZE, HRC_WORLD_SIZE, CF_PIXEL_FORMAT_R16G16_FLOAT, CF_FILTER_NEAREST);
+
 	// Materials.
 	hrc.mat_trace = cf_make_material();
 	hrc.mat_extend = cf_make_material();
 	hrc.mat_merge = cf_make_material();
 	hrc.mat_composite = cf_make_material();
 	hrc.mat_copy = cf_make_material();
+	hrc.mat_minmax = cf_make_material();
 
 	// Compute shaders (loaded from hrc_data/ next to the executable).
 	hrc.cs_seed = load_compute_shader("/hrc_data/hrc_seed.c_shd");
@@ -182,6 +191,7 @@ void hrc_init()
 	hrc.cs_merge = load_compute_shader("/hrc_data/hrc_merge.c_shd");
 	hrc.cs_copy = load_compute_shader("/hrc_data/hrc_copy.c_shd");
 	hrc.cs_composite = load_compute_shader("/hrc_data/hrc_composite.c_shd");
+	hrc.cs_minmax = load_compute_shader("/hrc_data/hrc_minmax.c_shd");
 }
 
 void hrc_shutdown()
@@ -198,17 +208,20 @@ void hrc_shutdown()
 	for (int i = 0; i < 4; i++)
 		cf_destroy_storage_buffer(hrc.frustum[i]);
 	cf_destroy_canvas(hrc.fluence);
+	cf_destroy_canvas(hrc.minmax);
 	cf_destroy_material(hrc.mat_trace);
 	cf_destroy_material(hrc.mat_extend);
 	cf_destroy_material(hrc.mat_merge);
 	cf_destroy_material(hrc.mat_composite);
 	cf_destroy_material(hrc.mat_copy);
+	cf_destroy_material(hrc.mat_minmax);
 	cf_destroy_compute_shader(hrc.cs_seed);
 	cf_destroy_compute_shader(hrc.cs_trace);
 	cf_destroy_compute_shader(hrc.cs_extend);
 	cf_destroy_compute_shader(hrc.cs_merge);
 	cf_destroy_compute_shader(hrc.cs_copy);
 	cf_destroy_compute_shader(hrc.cs_composite);
+	cf_destroy_compute_shader(hrc.cs_minmax);
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -219,6 +232,7 @@ void hrc_compute()
 	CF_Texture emiss_tex = cf_canvas_get_target(hrc.emissivity);
 	CF_Texture absrp_tex = cf_canvas_get_target(hrc.absorption);
 	CF_Texture fluence_tex = cf_canvas_get_target(hrc.fluence);
+	CF_Texture minmax_tex = cf_canvas_get_target(hrc.minmax);
 
 	int dim = hrc.grid;
 	int N = hrc.n;
@@ -247,7 +261,7 @@ void hrc_compute()
 
 		// Direct trace T_0..T_{trace_levels-1}.
 		for (int i = 0; i < hrc.trace_levels; i++) {
-			int params[6] = { i, j, dim, hrc.vrays_w[i], hrc.blend_boundary, hrc.clamp_y };
+			int params[5] = { i, j, dim, hrc.vrays_w[i], hrc.blend_boundary };
 			cf_material_set_texture_cs(hrc.mat_trace, "u_emissivity", emiss_tex);
 			cf_material_set_texture_cs(hrc.mat_trace, "u_absorption", absrp_tex);
 			cf_material_set_uniform_cs(hrc.mat_trace, "u_cascade", params + 0, CF_UNIFORM_TYPE_INT, 1);
@@ -255,7 +269,6 @@ void hrc_compute()
 			cf_material_set_uniform_cs(hrc.mat_trace, "u_world_size", params + 2, CF_UNIFORM_TYPE_INT, 1);
 			cf_material_set_uniform_cs(hrc.mat_trace, "u_curr_w", params + 3, CF_UNIFORM_TYPE_INT, 1);
 			cf_material_set_uniform_cs(hrc.mat_trace, "u_blend_boundary", params + 4, CF_UNIFORM_TYPE_INT, 1);
-			cf_material_set_uniform_cs(hrc.mat_trace, "u_clamp_y", params + 5, CF_UNIFORM_TYPE_INT, 1);
 			cf_material_set_uniform_cs(hrc.mat_trace, "u_blend_width", &hrc.blend_width, CF_UNIFORM_TYPE_FLOAT, 1);
 
 			CF_ComputeDispatch d = cf_compute_dispatch_defaults(
@@ -343,6 +356,24 @@ void hrc_compute()
 		}
 	}
 
+	// Minmax absorption pass: compute per-grid-cell min/max absorption for bilinear R_0 upscaling.
+	if (hrc.minmax_enabled) {
+		int world = HRC_WORLD_SIZE;
+		cf_material_set_texture_cs(hrc.mat_minmax, "u_absorption", absrp_tex);
+		cf_material_set_uniform_cs(hrc.mat_minmax, "u_world_size", &world, CF_UNIFORM_TYPE_INT, 1);
+		cf_material_set_uniform_cs(hrc.mat_minmax, "u_grid_size", &dim, CF_UNIFORM_TYPE_INT, 1);
+
+		CF_ComputeDispatch d = cf_compute_dispatch_defaults(
+			hrc_div_ceil(dim, HRC_WG),
+			hrc_div_ceil(dim, HRC_WG),
+			1
+		);
+		CF_Texture rw_tex[1] = { minmax_tex };
+		d.rw_textures = rw_tex;
+		d.rw_texture_count = 1;
+		cf_dispatch_compute(hrc.cs_minmax, hrc.mat_minmax, d);
+	}
+
 	// Composite: c-1 gathering, sum 4 quadrants, cross blur, output.
 	{
 		int world = HRC_WORLD_SIZE;
@@ -350,11 +381,13 @@ void hrc_compute()
 		int debug = hrc.debug_mode <= 5 ? hrc.debug_mode : 0;
 		cf_material_set_texture_cs(hrc.mat_composite, "u_emissivity", emiss_tex);
 		cf_material_set_texture_cs(hrc.mat_composite, "u_absorption", absrp_tex);
+		cf_material_set_texture_cs(hrc.mat_composite, "u_minmax", minmax_tex);
 		cf_material_set_uniform_cs(hrc.mat_composite, "u_world_size", &world, CF_UNIFORM_TYPE_INT, 1);
 		cf_material_set_uniform_cs(hrc.mat_composite, "u_grid_size", &dim, CF_UNIFORM_TYPE_INT, 1);
 		cf_material_set_uniform_cs(hrc.mat_composite, "u_abs_threshold", &abs_thresh, CF_UNIFORM_TYPE_FLOAT, 1);
 		cf_material_set_uniform_cs(hrc.mat_composite, "u_debug_mode", &debug, CF_UNIFORM_TYPE_INT, 1);
 		cf_material_set_uniform_cs(hrc.mat_composite, "u_cminus1", &hrc.cminus1, CF_UNIFORM_TYPE_INT, 1);
+		cf_material_set_uniform_cs(hrc.mat_composite, "u_minmax_enabled", &hrc.minmax_enabled, CF_UNIFORM_TYPE_INT, 1);
 
 		CF_ComputeDispatch d = cf_compute_dispatch_defaults(
 			hrc_div_ceil(world, HRC_WG),
@@ -423,11 +456,11 @@ void handle_input()
 	if (cf_key_just_pressed(CF_KEY_C)) {
 		hrc.cminus1 = !hrc.cminus1;
 	}
+	if (cf_key_just_pressed(CF_KEY_M)) {
+		hrc.minmax_enabled = !hrc.minmax_enabled;
+	}
 	if (cf_key_just_pressed(CF_KEY_B)) {
 		hrc.blend_boundary = !hrc.blend_boundary;
-	}
-	if (cf_key_just_pressed(CF_KEY_Y)) {
-		hrc.clamp_y = !hrc.clamp_y;
 	}
 	if (cf_key_just_pressed(CF_KEY_LEFTBRACKET)) {
 		hrc.blend_width = cf_max(0.5f, hrc.blend_width - 0.5f);
@@ -652,17 +685,17 @@ void draw_hud()
 		"[C] c-1 gathering: %s\n"
 		"[D] Debug: %s\n"
 		"[H] Grid: %d (%s)\n"
+		"[M] Bilinear R0: %s\n"
 		"[R] Trace: %d / %d\n"
-		"[T] Test scene: %s\n"
-		"[Y] Clamp Y: %s",
+		"[T] Test scene: %s",
 		hrc.blend_boundary ? "on" : "off",
 		hrc.blend_width,
 		hrc.cminus1 ? "on" : "off",
 		mode_names[hrc.debug_mode],
 		hrc.grid, hrc.grid == HRC_WORLD_SIZE ? "full" : "half",
+		hrc.minmax_enabled ? "on" : "off",
 		hrc.trace_levels, hrc.n + 1,
-		test_scene ? "on" : "off",
-		hrc.clamp_y ? "on" : "off"
+		test_scene ? "on" : "off"
 	);
 
 	float half = (float)HRC_WORLD_SIZE * 0.5f;

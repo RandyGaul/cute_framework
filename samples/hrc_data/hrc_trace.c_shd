@@ -30,7 +30,6 @@ layout(set = 2, binding = 0) uniform Params
 	int u_world_size;
 	int u_curr_w;
 	int u_blend_boundary; // [B] angle-based weight blending near ±45° edges
-	int u_clamp_y;        // [Y] clamp DDA y-range to entry-cell footprint
 	float u_blend_width;  // [/]] blend falloff width in direction slots
 };
 
@@ -121,15 +120,6 @@ void main()
 	vec3 acc_rad = vec3(0.0);
 	vec3 acc_trn = vec3(1.0);
 
-	// Y-clamp: limit next_cy to the range of entry cells, preventing the exit
-	// cell on the final step from overshooting into adjacent rotation territory.
-	// The entry cell at the last step is floor(0.5 + slope.y * (num_steps - 1));
-	// clamping next_cy to that range clips any overshoot for all rays, not just
-	// exact boundary rays.
-	int last_entry_cy = int(floor(0.5 + slope.y * float(num_steps - 1)));
-	int cy_lo = min(0, last_entry_cy);
-	int cy_hi = max(0, last_entry_cy);
-
 	float y_offset = 0.5;  // start at cell center so diagonal rays split symmetrically
 	int cy = 0;            // current y-cell offset from int(origin.y)
 
@@ -139,10 +129,6 @@ void main()
 
 		float next_y = 0.5 + slope.y * float(s + 1);
 		int next_cy = int(floor(next_y));
-
-		if (u_clamp_y != 0) {
-			next_cy = clamp(next_cy, cy_lo, cy_hi);
-		}
 
 		vec2 col = vec2(px, origin.y);
 
