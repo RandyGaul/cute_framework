@@ -14,12 +14,26 @@
 //--------------------------------------------------------------------------------------------------
 // Configuration.
 
-#define HRC_DIM           512
-#define HRC_WORLD_SIZE    512
-#define HRC_N             9   // log2(HRC_DIM)
+#define POW2_LOG2(n) ( \
+	(n) >= 4096 ? 12 : \
+	(n) >= 2048 ? 11 : \
+	(n) >= 1024 ? 10 : \
+	(n) >=  512 ?  9 : \
+	(n) >=  256 ?  8 : \
+	(n) >=  128 ?  7 : \
+	(n) >=   64 ?  6 : \
+	(n) >=   32 ?  5 : \
+	(n) >=   16 ?  4 : \
+	(n) >=    8 ?  3 : \
+	(n) >=    4 ?  2 : \
+	(n) >=    2 ?  1 : 0 \
+)
+
+#define HRC_WORLD_SIZE    1024
+#define HRC_MAX_N         POW2_LOG2(HRC_WORLD_SIZE)
 #define HRC_WG            16
 #define HRC_ABS_THRESHOLD 0.1f
-#define HRC_NUM_DEBUG     8   // debug modes 0..7
+#define HRC_NUM_DEBUG 8   // debug modes 0..7
 
 //--------------------------------------------------------------------------------------------------
 // Shader loading.
@@ -38,24 +52,26 @@ typedef struct Hrc
 {
 	CF_Canvas emissivity;
 	CF_Canvas absorption;
-	CF_StorageBuffer vrays_rad[HRC_N + 1];
-	CF_StorageBuffer vrays_trn[HRC_N + 1];
+	CF_StorageBuffer vrays_rad[HRC_MAX_N + 1];
+	CF_StorageBuffer vrays_trn[HRC_MAX_N + 1];
 	CF_StorageBuffer r_rad[2];
 	CF_StorageBuffer r_zero;
 	CF_StorageBuffer frustum[4];
 	CF_Canvas fluence;
-	CF_Material mat_seed;
+	CF_Material mat_trace;
 	CF_Material mat_extend;
 	CF_Material mat_merge;
 	CF_Material mat_composite;
 	CF_Material mat_copy;
-	CF_ComputeShader cs_seed;
+	CF_ComputeShader cs_trace;
 	CF_ComputeShader cs_extend;
 	CF_ComputeShader cs_merge;
 	CF_ComputeShader cs_copy;
 	CF_ComputeShader cs_composite;
-	int vrays_w[HRC_N + 1];
+	int vrays_w[HRC_MAX_N + 1];
 	int debug_mode;
+	int grid;
+	int n;
 } Hrc;
 
 Hrc hrc;
@@ -75,7 +91,7 @@ CF_Canvas hrc_make_canvas(int w, int h, CF_PixelFormat fmt)
 {
 	CF_CanvasParams p = cf_canvas_defaults(w, h);
 	p.target.pixel_format = fmt;
-	p.target.filter = CF_FILTER_NEAREST;
+	p.target.filter = CF_FILTER_LINEAR;
 	p.target.usage = CF_TEXTURE_USAGE_SAMPLER_BIT | CF_TEXTURE_USAGE_COLOR_TARGET_BIT | CF_TEXTURE_USAGE_COMPUTE_STORAGE_READ_BIT | CF_TEXTURE_USAGE_COMPUTE_STORAGE_WRITE_BIT;
 	p.target.wrap_u = CF_WRAP_MODE_CLAMP_TO_EDGE;
 	p.target.wrap_v = CF_WRAP_MODE_CLAMP_TO_EDGE;
@@ -90,34 +106,50 @@ int hrc_div_ceil(int a, int b)
 //--------------------------------------------------------------------------------------------------
 // Init / shutdown.
 
+void hrc_set_grid(int grid)
+{
+	hrc.grid = grid;
+	hrc.n = POW2_LOG2(grid);
+	for (int i = 0; i <= hrc.n; i++) {
+		int interval = 1 << i;
+		int rays = interval + 1;
+		int probes = grid >> i;
+		hrc.vrays_w[i] = probes * rays;
+	}
+}
+
 void hrc_init()
 {
 	CF_MEMSET(&hrc, 0, sizeof(hrc));
 
-	// Precompute T cascade dimensions.
-	for (int i = 0; i <= HRC_N; i++) {
+	// Start at half resolution.
+	hrc_set_grid(HRC_WORLD_SIZE / 2);
+
+	// Precompute max T cascade dimensions for allocation.
+	int max_vrays_w[HRC_MAX_N + 1];
+	for (int i = 0; i <= HRC_MAX_N; i++) {
 		int interval = 1 << i;
 		int rays = interval + 1;
-		int probes = HRC_DIM >> i;
-		hrc.vrays_w[i] = probes * rays;
+		int probes = HRC_WORLD_SIZE >> i;
+		max_vrays_w[i] = probes * rays;
 	}
 
 	// Scene input canvases.
-	hrc.emissivity = hrc_make_canvas(HRC_DIM, HRC_DIM, CF_PIXEL_FORMAT_R16G16B16A16_FLOAT);
-	hrc.absorption = hrc_make_canvas(HRC_DIM, HRC_DIM, CF_PIXEL_FORMAT_R16G16B16A16_FLOAT);
+	hrc.emissivity = hrc_make_canvas(HRC_WORLD_SIZE, HRC_WORLD_SIZE, CF_PIXEL_FORMAT_R16G16B16A16_FLOAT);
+	hrc.absorption = hrc_make_canvas(HRC_WORLD_SIZE, HRC_WORLD_SIZE, CF_PIXEL_FORMAT_R16G16B16A16_FLOAT);
 
-	// Per-cascade T SSBOs (uvec2 per texel = 8 bytes, f16-packed).
-	for (int i = 0; i <= HRC_N; i++) {
-		hrc.vrays_rad[i] = hrc_make_buf(hrc.vrays_w[i], HRC_DIM);
-		hrc.vrays_trn[i] = hrc_make_buf(hrc.vrays_w[i], HRC_DIM);
+	// Per-cascade T SSBOs (uvec2 per texel = 8 bytes, f16-packed). Allocated at max size.
+	for (int i = 0; i <= HRC_MAX_N; i++) {
+		hrc.vrays_rad[i] = hrc_make_buf(max_vrays_w[i], HRC_WORLD_SIZE);
+		hrc.vrays_trn[i] = hrc_make_buf(max_vrays_w[i], HRC_WORLD_SIZE);
 	}
 
 	// R ping-pong SSBOs + zero buffer for R_N = 0.
 	for (int i = 0; i < 2; i++)
-		hrc.r_rad[i] = hrc_make_buf(HRC_DIM, HRC_DIM);
-	hrc.r_zero = hrc_make_buf(HRC_DIM, HRC_DIM);
+		hrc.r_rad[i] = hrc_make_buf(HRC_WORLD_SIZE, HRC_WORLD_SIZE);
+	hrc.r_zero = hrc_make_buf(HRC_WORLD_SIZE, HRC_WORLD_SIZE);
 	{
-		int sz = HRC_DIM * HRC_DIM * 8;
+		int sz = HRC_WORLD_SIZE * HRC_WORLD_SIZE * 8;
 		void* zeros = cf_calloc(sz, 1);
 		cf_update_storage_buffer(hrc.r_zero, zeros, sz);
 		cf_free(zeros);
@@ -125,20 +157,20 @@ void hrc_init()
 
 	// Per-frustum output SSBOs (4 rotations).
 	for (int i = 0; i < 4; i++)
-		hrc.frustum[i] = hrc_make_buf(HRC_DIM, HRC_DIM);
+		hrc.frustum[i] = hrc_make_buf(HRC_WORLD_SIZE, HRC_WORLD_SIZE);
 
 	// Final output canvas.
-	hrc.fluence = hrc_make_canvas(HRC_DIM, HRC_DIM, CF_PIXEL_FORMAT_R8G8B8A8_UNORM);
+	hrc.fluence = hrc_make_canvas(HRC_WORLD_SIZE, HRC_WORLD_SIZE, CF_PIXEL_FORMAT_R8G8B8A8_UNORM);
 
 	// Materials.
-	hrc.mat_seed = cf_make_material();
+	hrc.mat_trace = cf_make_material();
 	hrc.mat_extend = cf_make_material();
 	hrc.mat_merge = cf_make_material();
 	hrc.mat_composite = cf_make_material();
 	hrc.mat_copy = cf_make_material();
 
 	// Compute shaders (loaded from hrc_data/ next to the executable).
-	hrc.cs_seed = load_compute_shader("/hrc_data/hrc_seed.c_shd");
+	hrc.cs_trace = load_compute_shader("/hrc_data/hrc_trace.c_shd");
 	hrc.cs_extend = load_compute_shader("/hrc_data/hrc_extend.c_shd");
 	hrc.cs_merge = load_compute_shader("/hrc_data/hrc_merge.c_shd");
 	hrc.cs_copy = load_compute_shader("/hrc_data/hrc_copy.c_shd");
@@ -149,7 +181,7 @@ void hrc_shutdown()
 {
 	cf_destroy_canvas(hrc.emissivity);
 	cf_destroy_canvas(hrc.absorption);
-	for (int i = 0; i <= HRC_N; i++) {
+	for (int i = 0; i <= HRC_MAX_N; i++) {
 		cf_destroy_storage_buffer(hrc.vrays_rad[i]);
 		cf_destroy_storage_buffer(hrc.vrays_trn[i]);
 	}
@@ -159,12 +191,12 @@ void hrc_shutdown()
 	for (int i = 0; i < 4; i++)
 		cf_destroy_storage_buffer(hrc.frustum[i]);
 	cf_destroy_canvas(hrc.fluence);
-	cf_destroy_material(hrc.mat_seed);
+	cf_destroy_material(hrc.mat_trace);
 	cf_destroy_material(hrc.mat_extend);
 	cf_destroy_material(hrc.mat_merge);
 	cf_destroy_material(hrc.mat_composite);
 	cf_destroy_material(hrc.mat_copy);
-	cf_destroy_compute_shader(hrc.cs_seed);
+	cf_destroy_compute_shader(hrc.cs_trace);
 	cf_destroy_compute_shader(hrc.cs_extend);
 	cf_destroy_compute_shader(hrc.cs_merge);
 	cf_destroy_compute_shader(hrc.cs_copy);
@@ -180,30 +212,33 @@ void hrc_compute()
 	CF_Texture absrp_tex = cf_canvas_get_target(hrc.absorption);
 	CF_Texture fluence_tex = cf_canvas_get_target(hrc.fluence);
 
-	int dim = HRC_DIM;
+	int dim = hrc.grid;
+	int N = hrc.n;
 
 	for (int j = 0; j < 4; j++) {
-		// Seed T_0.
-		{
-			int params[2] = { j, dim };
-			cf_material_set_texture_cs(hrc.mat_seed, "u_emissivity", emiss_tex);
-			cf_material_set_texture_cs(hrc.mat_seed, "u_absorption", absrp_tex);
-			cf_material_set_uniform_cs(hrc.mat_seed, "u_rotate", params + 0, CF_UNIFORM_TYPE_INT, 1);
-			cf_material_set_uniform_cs(hrc.mat_seed, "u_world_size", params + 1, CF_UNIFORM_TYPE_INT, 1);
+		// Direct trace T_0, T_1, T_2.
+		for (int i = 0; i <= 2; i++) {
+			int params[4] = { i, j, dim, hrc.vrays_w[i] };
+			cf_material_set_texture_cs(hrc.mat_trace, "u_emissivity", emiss_tex);
+			cf_material_set_texture_cs(hrc.mat_trace, "u_absorption", absrp_tex);
+			cf_material_set_uniform_cs(hrc.mat_trace, "u_cascade", params + 0, CF_UNIFORM_TYPE_INT, 1);
+			cf_material_set_uniform_cs(hrc.mat_trace, "u_rotate", params + 1, CF_UNIFORM_TYPE_INT, 1);
+			cf_material_set_uniform_cs(hrc.mat_trace, "u_world_size", params + 2, CF_UNIFORM_TYPE_INT, 1);
+			cf_material_set_uniform_cs(hrc.mat_trace, "u_curr_w", params + 3, CF_UNIFORM_TYPE_INT, 1);
 
 			CF_ComputeDispatch d = cf_compute_dispatch_defaults(
-				hrc_div_ceil(hrc.vrays_w[0], HRC_WG),
+				hrc_div_ceil(hrc.vrays_w[i], HRC_WG),
 				hrc_div_ceil(dim, HRC_WG),
 				1
 			);
-			CF_StorageBuffer rw[2] = { hrc.vrays_rad[0], hrc.vrays_trn[0] };
+			CF_StorageBuffer rw[2] = { hrc.vrays_rad[i], hrc.vrays_trn[i] };
 			d.rw_buffers = rw;
 			d.rw_buffer_count = 2;
-			cf_dispatch_compute(hrc.cs_seed, hrc.mat_seed, d);
+			cf_dispatch_compute(hrc.cs_trace, hrc.mat_trace, d);
 		}
 
-		// Extend T_1..T_N.
-		for (int i = 1; i <= HRC_N; i++) {
+		// Extend T_3..T_N.
+		for (int i = 3; i <= N; i++) {
 			int params[4] = { i, dim, hrc.vrays_w[i - 1], hrc.vrays_w[i] };
 			cf_material_set_uniform_cs(hrc.mat_extend, "u_cascade", params + 0, CF_UNIFORM_TYPE_INT, 1);
 			cf_material_set_uniform_cs(hrc.mat_extend, "u_world_size", params + 1, CF_UNIFORM_TYPE_INT, 1);
@@ -226,7 +261,7 @@ void hrc_compute()
 
 		// Merge R_{N-1} down to R_0.
 		int r_ping = 0;
-		for (int i = HRC_N - 1; i >= 0; i--) {
+		for (int i = N - 1; i >= 0; i--) {
 			int params[6] = { i, dim, hrc.vrays_w[i], hrc.vrays_w[i + 1], dim, dim };
 			cf_material_set_uniform_cs(hrc.mat_merge, "u_cascade", params + 0, CF_UNIFORM_TYPE_INT, 1);
 			cf_material_set_uniform_cs(hrc.mat_merge, "u_world_size", params + 1, CF_UNIFORM_TYPE_INT, 1);
@@ -240,7 +275,7 @@ void hrc_compute()
 				hrc_div_ceil(dim, HRC_WG),
 				1
 			);
-			CF_StorageBuffer r_prev = (i == HRC_N - 1) ? hrc.r_zero : hrc.r_rad[1 - r_ping];
+			CF_StorageBuffer r_prev = (i == N - 1) ? hrc.r_zero : hrc.r_rad[1 - r_ping];
 			CF_StorageBuffer ro[5] = {
 				hrc.vrays_rad[i], hrc.vrays_trn[i],
 				hrc.vrays_rad[i + 1], hrc.vrays_trn[i + 1],
@@ -275,17 +310,21 @@ void hrc_compute()
 		}
 	}
 
-	// Composite: sum 4 quadrants, cross blur, output.
+	// Composite: c-1 gathering, sum 4 quadrants, cross blur, output.
 	{
+		int world = HRC_WORLD_SIZE;
 		float abs_thresh = HRC_ABS_THRESHOLD;
 		int debug = hrc.debug_mode <= 5 ? hrc.debug_mode : 0;
-		cf_material_set_uniform_cs(hrc.mat_composite, "u_world_size", &dim, CF_UNIFORM_TYPE_INT, 1);
+		cf_material_set_texture_cs(hrc.mat_composite, "u_emissivity", emiss_tex);
+		cf_material_set_texture_cs(hrc.mat_composite, "u_absorption", absrp_tex);
+		cf_material_set_uniform_cs(hrc.mat_composite, "u_world_size", &world, CF_UNIFORM_TYPE_INT, 1);
+		cf_material_set_uniform_cs(hrc.mat_composite, "u_grid_size", &dim, CF_UNIFORM_TYPE_INT, 1);
 		cf_material_set_uniform_cs(hrc.mat_composite, "u_abs_threshold", &abs_thresh, CF_UNIFORM_TYPE_FLOAT, 1);
 		cf_material_set_uniform_cs(hrc.mat_composite, "u_debug_mode", &debug, CF_UNIFORM_TYPE_INT, 1);
 
 		CF_ComputeDispatch d = cf_compute_dispatch_defaults(
-			hrc_div_ceil(dim, HRC_WG),
-			hrc_div_ceil(dim, HRC_WG),
+			hrc_div_ceil(world, HRC_WG),
+			hrc_div_ceil(world, HRC_WG),
 			1
 		);
 		CF_StorageBuffer ro[4] = {
@@ -294,9 +333,6 @@ void hrc_compute()
 		};
 		d.ro_buffers = ro;
 		d.ro_buffer_count = 4;
-		CF_Texture ro_tex[1] = { absrp_tex };
-		d.ro_textures = ro_tex;
-		d.ro_texture_count = 1;
 		CF_Texture rw_tex[1] = { fluence_tex };
 		d.rw_textures = rw_tex;
 		d.rw_texture_count = 1;
@@ -316,6 +352,7 @@ typedef struct OrbLight
 } OrbLight;
 
 float time_acc = 0.0f;
+int test_scene = 0;
 
 OrbLight orbs[4];
 
@@ -334,6 +371,15 @@ void handle_input()
 {
 	if (cf_key_just_pressed(CF_KEY_D)) {
 		hrc.debug_mode = (hrc.debug_mode + 1) % HRC_NUM_DEBUG;
+	}
+	if (cf_key_just_pressed(CF_KEY_T)) {
+		test_scene = !test_scene;
+	}
+	if (cf_key_just_pressed(CF_KEY_H)) {
+		if (hrc.grid == HRC_WORLD_SIZE)
+			hrc_set_grid(HRC_WORLD_SIZE / 2);
+		else
+			hrc_set_grid(HRC_WORLD_SIZE);
 	}
 }
 
@@ -448,7 +494,16 @@ void draw_emissivity()
 	begin_canvas_draw();
 	push_f16_render_state();
 
-	draw_lights_emissive();
+	if (test_scene) {
+		// Single 2x2 white emitter in the center.
+		float half = (float)HRC_WORLD_SIZE * 0.5f;
+		float s = (float)HRC_WORLD_SIZE / (float)HRC_MAX_N;
+		cf_draw_push_color(cf_make_color_rgb_f(1.0f, 1.0f, 1.0f));
+		cf_draw_quad_fill(cf_make_aabb(cf_v2(half - s, half - s), cf_v2(half + s, half + s)), 0);
+		cf_draw_pop_color();
+	} else {
+		draw_lights_emissive();
+	}
 
 	cf_draw_pop_render_state();
 	cf_render_to(hrc.emissivity, true);
@@ -463,37 +518,46 @@ void draw_absorption()
 	begin_canvas_draw();
 	push_f16_render_state();
 
-	cf_draw_push_color(cf_make_color_rgb_f(1.0f, 1.0f, 1.0f));
+	if (test_scene) {
+		// Only the emitter itself absorbs (required for emission).
+		float half = (float)HRC_WORLD_SIZE * 0.5f;
+		float s = (float)HRC_WORLD_SIZE / (float)HRC_MAX_N;
+		cf_draw_push_color(cf_make_color_rgb_f(1.0f, 1.0f, 1.0f));
+		cf_draw_quad_fill(cf_make_aabb(cf_v2(half - s, half - s), cf_v2(half + s, half + s)), 0);
+		cf_draw_pop_color();
+	} else {
+		cf_draw_push_color(cf_make_color_rgb_f(1.0f, 1.0f, 1.0f));
 
-	float ws = (float)HRC_WORLD_SIZE;
-	float half = ws * 0.5f;
+		float ws = (float)HRC_WORLD_SIZE;
+		float half = ws * 0.5f;
 
-	// 5 circular pillars in quincunx pattern.
-	draw_circle_at(half, half, 25.0f);
-	draw_circle_at(half - 110.0f, half - 110.0f, 20.0f);
-	draw_circle_at(half + 110.0f, half - 110.0f, 20.0f);
-	draw_circle_at(half - 110.0f, half + 110.0f, 20.0f);
-	draw_circle_at(half + 110.0f, half + 110.0f, 20.0f);
+		// 5 circular pillars in quincunx pattern.
+		draw_circle_at(half, half, 25.0f);
+		draw_circle_at(half - 110.0f, half - 110.0f, 20.0f);
+		draw_circle_at(half + 110.0f, half - 110.0f, 20.0f);
+		draw_circle_at(half - 110.0f, half + 110.0f, 20.0f);
+		draw_circle_at(half + 110.0f, half + 110.0f, 20.0f);
 
-	// 2 angled wall segments.
-	cf_draw_quad_fill2(
-		cf_v2(100.0f, 200.0f), cf_v2(110.0f, 200.0f),
-		cf_v2(200.0f, 310.0f), cf_v2(190.0f, 310.0f), 0
-	);
-	cf_draw_quad_fill2(
-		cf_v2(400.0f, 200.0f), cf_v2(390.0f, 200.0f),
-		cf_v2(300.0f, 310.0f), cf_v2(310.0f, 310.0f), 0
-	);
+		// 2 angled wall segments.
+		cf_draw_quad_fill2(
+			cf_v2(100.0f, 200.0f), cf_v2(110.0f, 200.0f),
+			cf_v2(200.0f, 310.0f), cf_v2(190.0f, 310.0f), 0
+		);
+		cf_draw_quad_fill2(
+			cf_v2(400.0f, 200.0f), cf_v2(390.0f, 200.0f),
+			cf_v2(300.0f, 310.0f), cf_v2(310.0f, 310.0f), 0
+		);
 
-	// 3 small scattered square blocks.
-	cf_draw_quad_fill(cf_make_aabb(cf_v2(340.0f, 400.0f), cf_v2(365.0f, 425.0f)), 0);
-	cf_draw_quad_fill(cf_make_aabb(cf_v2(150.0f, 380.0f), cf_v2(175.0f, 405.0f)), 0);
-	cf_draw_quad_fill(cf_make_aabb(cf_v2(370.0f, 120.0f), cf_v2(395.0f, 145.0f)), 0);
+		// 3 small scattered square blocks.
+		cf_draw_quad_fill(cf_make_aabb(cf_v2(340.0f, 400.0f), cf_v2(365.0f, 425.0f)), 0);
+		cf_draw_quad_fill(cf_make_aabb(cf_v2(150.0f, 380.0f), cf_v2(175.0f, 405.0f)), 0);
+		cf_draw_quad_fill(cf_make_aabb(cf_v2(370.0f, 120.0f), cf_v2(395.0f, 145.0f)), 0);
 
-	cf_draw_pop_color();
+		cf_draw_pop_color();
 
-	// Light sources must absorb to emit (radiative transfer: rad = emiss * (1 - T)).
-	draw_lights_absorbing();
+		// Light sources must absorb to emit (radiative transfer: rad = emiss * (1 - T)).
+		draw_lights_absorbing();
+	}
 
 	cf_draw_pop_render_state();
 	cf_render_to(hrc.absorption, true);
@@ -514,23 +578,60 @@ void display_fluence()
 }
 
 //--------------------------------------------------------------------------------------------------
+// HUD overlay.
+
+void draw_hud()
+{
+	const char* mode_names[] = {
+		"0: Normal (blur)",
+		"1: Rot 0 (+x)",
+		"2: Rot 1 (+y)",
+		"3: Rot 2 (-x)",
+		"4: Rot 3 (-y)",
+		"5: All rotations (no blur)",
+		"6: Emissivity",
+		"7: Absorption",
+	};
+
+	char buf[512];
+	snprintf(buf, sizeof(buf),
+		"[D] Debug: %s\n"
+		"[H] Grid: %d (%s)\n"
+		"[T] Test scene: %s",
+		mode_names[hrc.debug_mode],
+		hrc.grid, hrc.grid == HRC_WORLD_SIZE ? "full" : "half",
+		test_scene ? "on" : "off"
+	);
+
+	float half = (float)HRC_WORLD_SIZE * 0.5f;
+	cf_draw_push_layer(1);
+	cf_draw_push_color(cf_color_white());
+	cf_push_font_size(16.0f);
+	cf_draw_text(buf, cf_v2(-half + 10.0f, half - 20.0f), -1);
+	cf_pop_font_size();
+	cf_draw_pop_color();
+	cf_draw_pop_layer();
+}
+
+//--------------------------------------------------------------------------------------------------
 // Entry point.
 
 int main(int argc, char* argv[])
 {
-	cf_make_app("HRC - Holographic Radiance Cascades", 0, 0, 0, HRC_DIM, HRC_DIM, CF_APP_OPTIONS_WINDOW_POS_CENTERED_BIT, argv[0]);
+	cf_make_app("HRC - Holographic Radiance Cascades", 0, 0, 0, HRC_WORLD_SIZE, HRC_WORLD_SIZE, CF_APP_OPTIONS_WINDOW_POS_CENTERED_BIT, argv[0]);
 
 	hrc_init();
 	scene_init();
-
 	while (cf_app_is_running()) {
 		cf_app_update(NULL);
+		//cf_draw_push_shape_aa(2);
 		handle_input();
 		update_lights();
 		draw_emissivity();
 		draw_absorption();
 		hrc_compute();
 		display_fluence();
+		draw_hud();
 		cf_app_draw_onto_screen(true);
 	}
 

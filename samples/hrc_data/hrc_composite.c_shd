@@ -1,34 +1,48 @@
-// Sum 4 quadrants, cross blur, output (Sec 4.2, Eq 21).
+// Sum 4 quadrants with c-1 gathering, cross blur, output (Sec 4.2, Eq 21).
 //
 // Each quadrant's R_0 was computed in +x-aligned space by the merge-down phase
-// and stored in F_0..F_3. This shader reverses the rotation, applies the +1 pixel
-// offset to prevent diagonal ray overlap (Fig 12), sums all four quadrants, applies
-// the cross blur to remove checkerboard artifacts, and writes the final fluence.
+// and stored in F_0..F_3. This shader reverses the rotation, traces a single-pixel
+// c-1 interval per quadrant to bridge the gap between the pixel and the R_0 probe
+// at +1 offset, merges c-1 with R_0, applies the cross blur to remove checkerboard
+// artifacts, and writes the final fluence.
 //
-// Pipeline:  seed -> [extend x N] -> [merge x N] -> composite
-//                                                   ^^^^^^^^^
+// The cascade grid (u_grid_size) may be smaller than the output (u_world_size).
+// Frustum buffers are grid-sized; the output fluence and scene textures are world-sized.
+// c-1 sampling at world resolution provides per-pixel detail even when upscaling.
+//
+// Pipeline:  [trace x 3] -> [extend x (N-2)] -> [merge x N] -> composite
+//                                                               ^^^^^^^^^
 // Inputs:
-//   u_f0..u_f3     — R_0 per quadrant (world_size x world_size, uvec2 f16)
-//   u_absorption   — scene absorption (for cross blur opacity test)
+//   u_emissivity   — scene emissivity (for c-1 trace)
+//   u_absorption   — scene absorption (for c-1 trace + cross blur opacity test)
+//   u_f0..u_f3     — R_0 per quadrant (grid_size x grid_size, uvec2 f16)
 //
 // Outputs:
-//   u_fluence      — final fluence image (rgba8)
+//   u_fluence      — final fluence image (rgba8, world_size x world_size)
 
-layout(set = 0, binding = 0, rgba16f) uniform readonly image2D u_absorption;
-layout(std430, set = 0, binding = 1) readonly buffer F0 { uvec2 data[]; } u_f0;
-layout(std430, set = 0, binding = 2) readonly buffer F1 { uvec2 data[]; } u_f1;
-layout(std430, set = 0, binding = 3) readonly buffer F2 { uvec2 data[]; } u_f2;
-layout(std430, set = 0, binding = 4) readonly buffer F3 { uvec2 data[]; } u_f3;
+layout(set = 0, binding = 0) uniform sampler2D u_emissivity;
+layout(set = 0, binding = 1) uniform sampler2D u_absorption;
+layout(std430, set = 0, binding = 2) readonly buffer F0 { uvec2 data[]; } u_f0;
+layout(std430, set = 0, binding = 3) readonly buffer F1 { uvec2 data[]; } u_f1;
+layout(std430, set = 0, binding = 4) readonly buffer F2 { uvec2 data[]; } u_f2;
+layout(std430, set = 0, binding = 5) readonly buffer F3 { uvec2 data[]; } u_f3;
 layout(set = 1, binding = 0, rgba8) uniform writeonly image2D u_fluence;
 
 layout(set = 2, binding = 0) uniform Params
 {
-	int   u_world_size;
+	int   u_world_size;    // output resolution (e.g. 512)
+	int   u_grid_size;     // cascade grid resolution (e.g. 256)
 	float u_abs_threshold; // opacity similarity cutoff for cross blur
 	int   u_debug_mode;
 };
 
 layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+
+struct Interval
+{
+	vec3 rad;
+	vec3 trn;
+};
 
 vec4 f16_load(uvec2 packed)
 {
@@ -40,18 +54,22 @@ vec3 srgb_from_linear(vec3 c)
 	return pow(c, vec3(1.0 / 2.2));
 }
 
+vec3 linear_from_srgb(vec3 c)
+{
+	return pow(c, vec3(2.2));
+}
+
 // Inverse of seed's rotate_uv, in integer pixel space.
-// Given a world-space pixel, returns the corresponding index in
-// the rotated F buffer for this quadrant.
+// Operates in grid-space coordinates (grid_size x grid_size).
 //
-// Seed forward (rotated → world):
-//   rot 0: (rx, ry) → (rx, ry)
-//   rot 1: (rx, ry) → (s-ry, rx)
-//   rot 2: (rx, ry) → (s-rx, s-ry)
-//   rot 3: (rx, ry) → (ry, s-rx)
+// Seed forward (rotated -> world):
+//   rot 0: (rx, ry) -> (rx, ry)
+//   rot 1: (rx, ry) -> (s-ry, rx)
+//   rot 2: (rx, ry) -> (s-rx, s-ry)
+//   rot 3: (rx, ry) -> (ry, s-rx)
 //
-// Inverse (world → rotated):
-ivec2 world_to_rotated(ivec2 p, int rot, int s)
+// Inverse (world -> rotated):
+ivec2 grid_to_rotated(ivec2 p, int rot, int s)
 {
 	if (rot == 1) return ivec2(p.y, s - p.x);
 	if (rot == 2) return ivec2(s - p.x, s - p.y);
@@ -59,12 +77,12 @@ ivec2 world_to_rotated(ivec2 p, int rot, int s)
 	return p;
 }
 
-// Load fluence from one quadrant's F buffer at a rotated-space coordinate.
-// No offset applied here — caller is responsible for the +1 shift.
+// Load fluence from one quadrant's F buffer at a rotated grid coordinate.
+// No offset applied here -- caller is responsible for the +1 shift.
 vec3 F_load(int rot, ivec2 rotated_pos)
 {
-	if (rotated_pos.x < 0 || rotated_pos.x >= u_world_size || rotated_pos.y < 0 || rotated_pos.y >= u_world_size) return vec3(0.0);
-	int idx = rotated_pos.y * u_world_size + rotated_pos.x;
+	if (rotated_pos.x < 0 || rotated_pos.x >= u_grid_size || rotated_pos.y < 0 || rotated_pos.y >= u_grid_size) return vec3(0.0);
+	int idx = rotated_pos.y * u_grid_size + rotated_pos.x;
 	vec4 val;
 	if      (rot == 0) val = f16_load(u_f0.data[idx]);
 	else if (rot == 1) val = f16_load(u_f1.data[idx]);
@@ -73,26 +91,47 @@ vec3 F_load(int rot, ivec2 rotated_pos)
 	return val.rgb;
 }
 
-// Sum fluence from all 4 quadrants at a world-space pixel.
-// Each quadrant covers one 90° wedge of the full 2π.
+// Trace a single-pixel c-1 interval through the current pixel. This covers the
+// gap between the pixel and the R_0 probe at +1 offset. The pixel's emission and
+// absorption are the same regardless of quadrant direction, so no rotation is needed —
+// world_pos is already in world space and maps directly to the scene textures.
+Interval trace_cminus1(ivec2 world_pos)
+{
+	float world = float(u_world_size);
+	vec2 uv = (vec2(world_pos) + 0.5) / world;
+
+	vec3 emiss = linear_from_srgb(texture(u_emissivity, uv).rgb);
+	vec3 absrp = linear_from_srgb(texture(u_absorption, uv).rgb);
+
+	vec3 trans = exp(-absrp * 4.0);  // step_length = 1.0
+	return Interval(emiss * (vec3(1.0) - trans), trans);
+}
+
+// Sum fluence from all 4 quadrants at a world-space pixel, with c-1 gathering.
+// Each quadrant covers one 90 degree wedge of the full 2pi.
 //
-// The +1 x-offset in rotated space prevents diagonal ray overlap between
-// quadrants, which otherwise causes cross-shaped brightness artifacts
-// around lights (Sec 4.2, Fig 12).
+// Maps world_pos to the grid, rotates into each quadrant's space to read R_0,
+// then merges with a c-1 interval sampled at full world resolution.
 vec3 sum_quadrants(ivec2 world_pos)
 {
-	int s = u_world_size - 1;
-	ivec2 r0 = world_to_rotated(world_pos, 0, s) + ivec2(1, 0);
-	ivec2 r1 = world_to_rotated(world_pos, 1, s) + ivec2(1, 0);
-	ivec2 r2 = world_to_rotated(world_pos, 2, s) + ivec2(1, 0);
-	ivec2 r3 = world_to_rotated(world_pos, 3, s) + ivec2(1, 0);
-	return F_load(0, r0) + F_load(1, r1) + F_load(2, r2) + F_load(3, r3);
+	int s = u_grid_size - 1;
+	ivec2 grid_pos = world_pos * u_grid_size / u_world_size;
+	Interval cminus1 = trace_cminus1(world_pos);
+	vec3 total = vec3(0.0);
+	for (int rot = 0; rot < 4; rot++) {
+		ivec2 rp = grid_to_rotated(grid_pos, rot, s);
+		vec3 r0 = F_load(rot, rp + ivec2(1, 0));
+		total += cminus1.rad + cminus1.trn * r0;
+	}
+	return total;
 }
 
 // Read absorption magnitude at a world pixel for the opacity similarity check.
 float absorption_at(ivec2 pos)
 {
-	vec3 a = imageLoad(u_absorption, pos).rgb;
+	float world = float(u_world_size);
+	vec2 uv = (vec2(pos) + 0.5) / world;
+	vec3 a = texture(u_absorption, uv).rgb;
 	return dot(a, vec3(0.333));
 }
 
@@ -106,9 +145,9 @@ void blur_tap(ivec2 np, float w, float center_abs, inout vec3 sum, inout float w
 	weight += w;
 }
 
-// Eq 21: 3x3 blur to remove checkerboard artifacts.
+// 5x5 Gaussian blur to remove checkerboard artifacts.
 //
-//   K = 1/16 * [1 2 1; 2 4 2; 1 2 1]
+//   K = [1 4 6 4 1; 4 16 24 16 4; 6 24 36 24 6; 4 16 24 16 4; 1 4 6 4 1] / 256
 //
 // Skips neighbors that differ significantly in absorption from
 // the center pixel, preventing light leaking through walls.
@@ -117,23 +156,41 @@ void blur_tap(ivec2 np, float w, float center_abs, inout vec3 sum, inout float w
 //
 // The checkerboard arises because v_n(k) has even y-offsets for
 // n >= 1, so odd and even y-rows never interact during extend/merge.
-vec3 blur_3x3(ivec2 pos)
+// At 2x upscaling, the checkerboard is 2 world pixels wide, requiring
+// a 5x5 kernel to fully smooth it.
+vec3 blur_5x5(ivec2 pos)
 {
 	float center_abs = absorption_at(pos);
-	vec3 sum = sum_quadrants(pos) * 4.0;
-	float weight = 4.0;
+	vec3 sum = sum_quadrants(pos) * 36.0;
+	float weight = 36.0;
 
-	// Cardinal neighbors (weight 2)
-	blur_tap(pos + ivec2(-1,  0), 2.0, center_abs, sum, weight);
-	blur_tap(pos + ivec2( 1,  0), 2.0, center_abs, sum, weight);
-	blur_tap(pos + ivec2( 0, -1), 2.0, center_abs, sum, weight);
-	blur_tap(pos + ivec2( 0,  1), 2.0, center_abs, sum, weight);
+	// Distance 1: cardinal (weight 24), diagonal (weight 16)
+	blur_tap(pos + ivec2(-1,  0), 24.0, center_abs, sum, weight);
+	blur_tap(pos + ivec2( 1,  0), 24.0, center_abs, sum, weight);
+	blur_tap(pos + ivec2( 0, -1), 24.0, center_abs, sum, weight);
+	blur_tap(pos + ivec2( 0,  1), 24.0, center_abs, sum, weight);
+	blur_tap(pos + ivec2(-1, -1), 16.0, center_abs, sum, weight);
+	blur_tap(pos + ivec2( 1, -1), 16.0, center_abs, sum, weight);
+	blur_tap(pos + ivec2(-1,  1), 16.0, center_abs, sum, weight);
+	blur_tap(pos + ivec2( 1,  1), 16.0, center_abs, sum, weight);
 
-	// Diagonal neighbors (weight 1)
-	blur_tap(pos + ivec2(-1, -1), 1.0, center_abs, sum, weight);
-	blur_tap(pos + ivec2( 1, -1), 1.0, center_abs, sum, weight);
-	blur_tap(pos + ivec2(-1,  1), 1.0, center_abs, sum, weight);
-	blur_tap(pos + ivec2( 1,  1), 1.0, center_abs, sum, weight);
+	// Distance 2: cardinal (weight 6), semi-diagonal (weight 4), corner (weight 1)
+	blur_tap(pos + ivec2(-2,  0),  6.0, center_abs, sum, weight);
+	blur_tap(pos + ivec2( 2,  0),  6.0, center_abs, sum, weight);
+	blur_tap(pos + ivec2( 0, -2),  6.0, center_abs, sum, weight);
+	blur_tap(pos + ivec2( 0,  2),  6.0, center_abs, sum, weight);
+	blur_tap(pos + ivec2(-2, -1),  4.0, center_abs, sum, weight);
+	blur_tap(pos + ivec2(-2,  1),  4.0, center_abs, sum, weight);
+	blur_tap(pos + ivec2( 2, -1),  4.0, center_abs, sum, weight);
+	blur_tap(pos + ivec2( 2,  1),  4.0, center_abs, sum, weight);
+	blur_tap(pos + ivec2(-1, -2),  4.0, center_abs, sum, weight);
+	blur_tap(pos + ivec2(-1,  2),  4.0, center_abs, sum, weight);
+	blur_tap(pos + ivec2( 1, -2),  4.0, center_abs, sum, weight);
+	blur_tap(pos + ivec2( 1,  2),  4.0, center_abs, sum, weight);
+	blur_tap(pos + ivec2(-2, -2),  1.0, center_abs, sum, weight);
+	blur_tap(pos + ivec2( 2, -2),  1.0, center_abs, sum, weight);
+	blur_tap(pos + ivec2(-2,  2),  1.0, center_abs, sum, weight);
+	blur_tap(pos + ivec2( 2,  2),  1.0, center_abs, sum, weight);
 
 	return sum / weight;
 }
@@ -145,15 +202,19 @@ void main()
 
 	vec3 fluence;
 	if (u_debug_mode >= 1 && u_debug_mode <= 4) {
-		// Show a single quadrant without blur.
+		// Show a single quadrant with c-1 gathering, no blur.
 		int rot = u_debug_mode - 1;
-		int s = u_world_size - 1;
-		fluence = F_load(rot, world_to_rotated(gid, rot, s) + ivec2(1, 0));
+		int s = u_grid_size - 1;
+		ivec2 grid_pos = gid * u_grid_size / u_world_size;
+		ivec2 rp = grid_to_rotated(grid_pos, rot, s);
+		Interval cminus1 = trace_cminus1(gid);
+		vec3 r0 = F_load(rot, rp + ivec2(1, 0));
+		fluence = cminus1.rad + cminus1.trn * r0;
 	} else if (u_debug_mode == 5) {
-		// Sum all quadrants without blur.
+		// Sum all quadrants with c-1 gathering, no blur.
 		fluence = sum_quadrants(gid);
 	} else {
-		fluence = blur_3x3(gid);
+		fluence = blur_5x5(gid);
 	}
 
 	imageStore(u_fluence, gid, vec4(srgb_from_linear(fluence), 1.0));

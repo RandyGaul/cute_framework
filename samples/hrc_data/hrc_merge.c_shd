@@ -154,8 +154,8 @@ SubCone subcone(int i)
 	SubCone sc;
 	sc.j_plus  = 2 * i + 1;
 	sc.j_minus = 2 * i;
-	sc.w_plus  = angular_span(u_cascade + 1, float(sc.j_plus)  + 0.5);
-	sc.w_minus = angular_span(u_cascade + 1, float(sc.j_minus) + 0.5);
+	sc.w_plus  = angular_span(u_cascade + 1, float(sc.j_plus)  + 0.5) * 0.5;
+	sc.w_minus = angular_span(u_cascade + 1, float(sc.j_minus) + 0.5) * 0.5;
 	return sc;
 }
 
