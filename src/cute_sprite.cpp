@@ -194,11 +194,12 @@ void cf_easy_sprite_unload(CF_Sprite *sprite)
 // Sprite animation functions.
 
 // Helper: get the current CF_Animation* for a sprite via asset.
+// animation_name is already interned (set by cf_sprite_play from anim->name).
 static const CF_Animation* s_get_animation(const CF_Sprite* sprite)
 {
 	if (sprite->id != CF_SPRITE_ID_INVALID && sprite->animation_name) {
 		CF_SpriteAsset* asset = cf_sprite_get_asset(sprite->id);
-		return map_get(asset->animations, sintern(sprite->animation_name));
+		return map_get(asset->animations, sprite->animation_name);
 	}
 	return NULL;
 }

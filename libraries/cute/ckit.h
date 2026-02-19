@@ -690,7 +690,22 @@ CK_API uint64_t ck_hash_fnv1a(const void* ptr, size_t sz);
 
 static inline const char* ck_sintern(const char* s)
 {
-	return ck_sintern_range(s, s + strlen(s));
+	// Direct-mapped pointer cache. String literals have stable addresses,
+	// so the same call site always hits after the first miss. The strcmp
+	// handles reused buffers (e.g. sprintf into the same char[]) correctly.
+	struct ck_sintern_cache_entry { const char* key; const char* val; };
+#ifdef __cplusplus
+	static thread_local struct ck_sintern_cache_entry ck_sintern_cache[64];
+#else
+	static _Thread_local struct ck_sintern_cache_entry ck_sintern_cache[64];
+#endif
+	unsigned ck_idx = (unsigned)((uintptr_t)s >> 3) & 63;
+	if (ck_sintern_cache[ck_idx].key == s && strcmp(ck_sintern_cache[ck_idx].val, s) == 0)
+		return ck_sintern_cache[ck_idx].val;
+	const char* result = ck_sintern_range(s, s + strlen(s));
+	ck_sintern_cache[ck_idx].key = s;
+	ck_sintern_cache[ck_idx].val = result;
+	return result;
 }
 
 #ifdef __cplusplus
