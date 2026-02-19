@@ -72,12 +72,18 @@ typedef struct Hrc
 	int n;
 	int trace_levels; // how many cascade levels use direct trace (0..n+1)
 	int cminus1;     // c-1 gathering enabled
-	int minmax_enabled; // bilinear R_0 upscaling with minmax edge detection
+	int upscale_mode; // 0=nearest, 1=minmax bilinear, 2=joint bilateral
 	int blend_boundary; // angle-based weight blending near ±45° edges
 	float blend_width;  // blend falloff width in direction slots
+	int prefilter_mode; // 0=off, 1=box, 2=mipmap
 	CF_Canvas minmax;
 	CF_Material mat_minmax;
 	CF_ComputeShader cs_minmax;
+	CF_Canvas emissivity_filtered;
+	CF_Canvas absorption_filtered;
+	CF_Material mat_prefilter;
+	CF_ComputeShader cs_prefilter;
+	CF_ComputeShader cs_prefilter_gauss;
 } Hrc;
 
 Hrc hrc;
@@ -93,7 +99,7 @@ CF_StorageBuffer hrc_make_buf(int w, int h)
 	return cf_make_storage_buffer(p);
 }
 
-CF_Canvas hrc_make_canvas(int w, int h, CF_PixelFormat fmt, CF_Filter filter)
+CF_Canvas hrc_make_canvas(int w, int h, CF_PixelFormat fmt, CF_Filter filter, bool allocate_mipmaps)
 {
 	CF_CanvasParams p = cf_canvas_defaults(w, h);
 	p.target.pixel_format = fmt;
@@ -101,6 +107,10 @@ CF_Canvas hrc_make_canvas(int w, int h, CF_PixelFormat fmt, CF_Filter filter)
 	p.target.usage = CF_TEXTURE_USAGE_SAMPLER_BIT | CF_TEXTURE_USAGE_COLOR_TARGET_BIT | CF_TEXTURE_USAGE_COMPUTE_STORAGE_READ_BIT | CF_TEXTURE_USAGE_COMPUTE_STORAGE_WRITE_BIT;
 	p.target.wrap_u = CF_WRAP_MODE_CLAMP_TO_EDGE;
 	p.target.wrap_v = CF_WRAP_MODE_CLAMP_TO_EDGE;
+	if (allocate_mipmaps) {
+		p.target.allocate_mipmaps = true;
+		p.target.mip_count = 0;
+	}
 	return cf_make_canvas(p);
 }
 
@@ -132,8 +142,9 @@ void hrc_init()
 	hrc_set_grid(HRC_WORLD_SIZE / 2);
 	hrc.trace_levels = 3; // trace T_0..T_2, extend T_3..T_N
 	hrc.cminus1 = 1;
-	hrc.minmax_enabled = 1;
+	hrc.upscale_mode = 1;
 	hrc.blend_boundary = 1;
+	hrc.prefilter_mode = 2;
 	hrc.blend_width = 4.0f;
 
 	// Precompute max T cascade dimensions for allocation.
@@ -146,8 +157,9 @@ void hrc_init()
 	}
 
 	// Scene input canvases (nearest-neighbor: discrete pixel grid, no sRGB-space blending).
-	hrc.emissivity = hrc_make_canvas(HRC_WORLD_SIZE, HRC_WORLD_SIZE, CF_PIXEL_FORMAT_R16G16B16A16_FLOAT, CF_FILTER_NEAREST);
-	hrc.absorption = hrc_make_canvas(HRC_WORLD_SIZE, HRC_WORLD_SIZE, CF_PIXEL_FORMAT_R16G16B16A16_FLOAT, CF_FILTER_NEAREST);
+	// Mipmaps allocated for hardware mipmap prefilter mode.
+	hrc.emissivity = hrc_make_canvas(HRC_WORLD_SIZE, HRC_WORLD_SIZE, CF_PIXEL_FORMAT_R16G16B16A16_FLOAT, CF_FILTER_NEAREST, true);
+	hrc.absorption = hrc_make_canvas(HRC_WORLD_SIZE, HRC_WORLD_SIZE, CF_PIXEL_FORMAT_R16G16B16A16_FLOAT, CF_FILTER_NEAREST, true);
 
 	// Per-cascade T SSBOs (uvec2 per texel = 8 bytes, f16-packed). Allocated at max size.
 	for (int i = 0; i <= HRC_MAX_N; i++) {
@@ -171,10 +183,14 @@ void hrc_init()
 		hrc.frustum[i] = hrc_make_buf(HRC_WORLD_SIZE, HRC_WORLD_SIZE);
 
 	// Final output canvas (linear filtering for smooth display).
-	hrc.fluence = hrc_make_canvas(HRC_WORLD_SIZE, HRC_WORLD_SIZE, CF_PIXEL_FORMAT_R8G8B8A8_UNORM, CF_FILTER_LINEAR);
+	hrc.fluence = hrc_make_canvas(HRC_WORLD_SIZE, HRC_WORLD_SIZE, CF_PIXEL_FORMAT_R8G8B8A8_UNORM, CF_FILTER_LINEAR, false);
 
 	// Min/max absorption canvas (grid-res, allocated at world size to handle runtime grid changes).
-	hrc.minmax = hrc_make_canvas(HRC_WORLD_SIZE, HRC_WORLD_SIZE, CF_PIXEL_FORMAT_R16G16_FLOAT, CF_FILTER_NEAREST);
+	hrc.minmax = hrc_make_canvas(HRC_WORLD_SIZE, HRC_WORLD_SIZE, CF_PIXEL_FORMAT_R16G16_FLOAT, CF_FILTER_NEAREST, false);
+
+	// Prefiltered scene inputs (grid-res, allocated at world size).
+	hrc.emissivity_filtered = hrc_make_canvas(HRC_WORLD_SIZE, HRC_WORLD_SIZE, CF_PIXEL_FORMAT_R16G16B16A16_FLOAT, CF_FILTER_NEAREST, false);
+	hrc.absorption_filtered = hrc_make_canvas(HRC_WORLD_SIZE, HRC_WORLD_SIZE, CF_PIXEL_FORMAT_R16G16B16A16_FLOAT, CF_FILTER_NEAREST, false);
 
 	// Materials.
 	hrc.mat_trace = cf_make_material();
@@ -183,6 +199,7 @@ void hrc_init()
 	hrc.mat_composite = cf_make_material();
 	hrc.mat_copy = cf_make_material();
 	hrc.mat_minmax = cf_make_material();
+	hrc.mat_prefilter = cf_make_material();
 
 	// Compute shaders (loaded from hrc_data/ next to the executable).
 	hrc.cs_seed = load_compute_shader("/hrc_data/hrc_seed.c_shd");
@@ -192,6 +209,8 @@ void hrc_init()
 	hrc.cs_copy = load_compute_shader("/hrc_data/hrc_copy.c_shd");
 	hrc.cs_composite = load_compute_shader("/hrc_data/hrc_composite.c_shd");
 	hrc.cs_minmax = load_compute_shader("/hrc_data/hrc_minmax.c_shd");
+	hrc.cs_prefilter = load_compute_shader("/hrc_data/hrc_prefilter.c_shd");
+	hrc.cs_prefilter_gauss = load_compute_shader("/hrc_data/hrc_prefilter_gauss.c_shd");
 }
 
 void hrc_shutdown()
@@ -209,12 +228,15 @@ void hrc_shutdown()
 		cf_destroy_storage_buffer(hrc.frustum[i]);
 	cf_destroy_canvas(hrc.fluence);
 	cf_destroy_canvas(hrc.minmax);
+	cf_destroy_canvas(hrc.emissivity_filtered);
+	cf_destroy_canvas(hrc.absorption_filtered);
 	cf_destroy_material(hrc.mat_trace);
 	cf_destroy_material(hrc.mat_extend);
 	cf_destroy_material(hrc.mat_merge);
 	cf_destroy_material(hrc.mat_composite);
 	cf_destroy_material(hrc.mat_copy);
 	cf_destroy_material(hrc.mat_minmax);
+	cf_destroy_material(hrc.mat_prefilter);
 	cf_destroy_compute_shader(hrc.cs_seed);
 	cf_destroy_compute_shader(hrc.cs_trace);
 	cf_destroy_compute_shader(hrc.cs_extend);
@@ -222,6 +244,8 @@ void hrc_shutdown()
 	cf_destroy_compute_shader(hrc.cs_copy);
 	cf_destroy_compute_shader(hrc.cs_composite);
 	cf_destroy_compute_shader(hrc.cs_minmax);
+	cf_destroy_compute_shader(hrc.cs_prefilter);
+	cf_destroy_compute_shader(hrc.cs_prefilter_gauss);
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -237,12 +261,64 @@ void hrc_compute()
 	int dim = hrc.grid;
 	int N = hrc.n;
 
+	// Textures used by the trace shader (swapped to prefiltered versions when enabled).
+	CF_Texture trace_emiss = emiss_tex;
+	CF_Texture trace_absrp = absrp_tex;
+
+	// Mipmap prefilter: generate mipmaps from base level for textureLod sampling.
+	float mip_level = 0.0f;
+	float absrp_mip_level = 0.0f;
+	if ((hrc.prefilter_mode == 2 || hrc.prefilter_mode == 4) && dim < HRC_WORLD_SIZE) {
+		cf_generate_mipmaps(emiss_tex);
+		mip_level = log2f((float)HRC_WORLD_SIZE / (float)dim);
+		if (hrc.prefilter_mode == 2) {
+			cf_generate_mipmaps(absrp_tex);
+			absrp_mip_level = mip_level;
+		}
+	}
+
+	// Box/Gauss prefilter: downsample emissivity and absorption to grid resolution.
+	// Mip+max (mode 4): run box prefilter for absorption max only (emissivity uses mipmaps).
+	if ((hrc.prefilter_mode == 1 || hrc.prefilter_mode == 3 || hrc.prefilter_mode == 4) && dim < HRC_WORLD_SIZE) {
+		CF_Texture emiss_filt_tex = cf_canvas_get_target(hrc.emissivity_filtered);
+		CF_Texture absrp_filt_tex = cf_canvas_get_target(hrc.absorption_filtered);
+
+		int world = HRC_WORLD_SIZE;
+		cf_material_set_texture_cs(hrc.mat_prefilter, "u_emissivity", emiss_tex);
+		cf_material_set_texture_cs(hrc.mat_prefilter, "u_absorption", absrp_tex);
+		cf_material_set_uniform_cs(hrc.mat_prefilter, "u_world_size", &world, CF_UNIFORM_TYPE_INT, 1);
+		cf_material_set_uniform_cs(hrc.mat_prefilter, "u_grid_size", &dim, CF_UNIFORM_TYPE_INT, 1);
+
+		CF_ComputeDispatch d = cf_compute_dispatch_defaults(
+			hrc_div_ceil(dim, HRC_WG),
+			hrc_div_ceil(dim, HRC_WG),
+			1
+		);
+		CF_Texture rw_tex[2] = { emiss_filt_tex, absrp_filt_tex };
+		d.rw_textures = rw_tex;
+		d.rw_texture_count = 2;
+		CF_ComputeShader cs = hrc.prefilter_mode == 3 ? hrc.cs_prefilter_gauss : hrc.cs_prefilter;
+		cf_dispatch_compute(cs, hrc.mat_prefilter, d);
+
+		if (hrc.prefilter_mode == 4) {
+			// Mip+max: only swap absorption (emissivity uses mipmaps via textureLod).
+			trace_absrp = absrp_filt_tex;
+		} else {
+			trace_emiss = emiss_filt_tex;
+			trace_absrp = absrp_filt_tex;
+		}
+	}
+
+	// Set mip levels for trace/seed shaders.
+	cf_material_set_uniform_cs(hrc.mat_trace, "u_mip_level", &mip_level, CF_UNIFORM_TYPE_FLOAT, 1);
+	cf_material_set_uniform_cs(hrc.mat_trace, "u_absrp_mip_level", &absrp_mip_level, CF_UNIFORM_TYPE_FLOAT, 1);
+
 	for (int j = 0; j < 4; j++) {
 		// Seed T_0 when no levels are traced (sample at probe, no raymarching).
 		if (hrc.trace_levels == 0) {
 			int params[4] = { 0, j, dim, hrc.vrays_w[0] };
-			cf_material_set_texture_cs(hrc.mat_trace, "u_emissivity", emiss_tex);
-			cf_material_set_texture_cs(hrc.mat_trace, "u_absorption", absrp_tex);
+			cf_material_set_texture_cs(hrc.mat_trace, "u_emissivity", trace_emiss);
+			cf_material_set_texture_cs(hrc.mat_trace, "u_absorption", trace_absrp);
 			cf_material_set_uniform_cs(hrc.mat_trace, "u_cascade", params + 0, CF_UNIFORM_TYPE_INT, 1);
 			cf_material_set_uniform_cs(hrc.mat_trace, "u_rotate", params + 1, CF_UNIFORM_TYPE_INT, 1);
 			cf_material_set_uniform_cs(hrc.mat_trace, "u_world_size", params + 2, CF_UNIFORM_TYPE_INT, 1);
@@ -262,8 +338,8 @@ void hrc_compute()
 		// Direct trace T_0..T_{trace_levels-1}.
 		for (int i = 0; i < hrc.trace_levels; i++) {
 			int params[5] = { i, j, dim, hrc.vrays_w[i], hrc.blend_boundary };
-			cf_material_set_texture_cs(hrc.mat_trace, "u_emissivity", emiss_tex);
-			cf_material_set_texture_cs(hrc.mat_trace, "u_absorption", absrp_tex);
+			cf_material_set_texture_cs(hrc.mat_trace, "u_emissivity", trace_emiss);
+			cf_material_set_texture_cs(hrc.mat_trace, "u_absorption", trace_absrp);
 			cf_material_set_uniform_cs(hrc.mat_trace, "u_cascade", params + 0, CF_UNIFORM_TYPE_INT, 1);
 			cf_material_set_uniform_cs(hrc.mat_trace, "u_rotate", params + 1, CF_UNIFORM_TYPE_INT, 1);
 			cf_material_set_uniform_cs(hrc.mat_trace, "u_world_size", params + 2, CF_UNIFORM_TYPE_INT, 1);
@@ -357,15 +433,16 @@ void hrc_compute()
 	}
 
 	// Minmax absorption pass: compute per-grid-cell min/max absorption for bilinear R_0 upscaling.
-	if (hrc.minmax_enabled) {
+	// Dispatched at world resolution so the composite shader can read at world coordinates directly.
+	if (hrc.upscale_mode == 1) {
 		int world = HRC_WORLD_SIZE;
 		cf_material_set_texture_cs(hrc.mat_minmax, "u_absorption", absrp_tex);
 		cf_material_set_uniform_cs(hrc.mat_minmax, "u_world_size", &world, CF_UNIFORM_TYPE_INT, 1);
 		cf_material_set_uniform_cs(hrc.mat_minmax, "u_grid_size", &dim, CF_UNIFORM_TYPE_INT, 1);
 
 		CF_ComputeDispatch d = cf_compute_dispatch_defaults(
-			hrc_div_ceil(dim, HRC_WG),
-			hrc_div_ceil(dim, HRC_WG),
+			hrc_div_ceil(world, HRC_WG),
+			hrc_div_ceil(world, HRC_WG),
 			1
 		);
 		CF_Texture rw_tex[1] = { minmax_tex };
@@ -387,7 +464,7 @@ void hrc_compute()
 		cf_material_set_uniform_cs(hrc.mat_composite, "u_abs_threshold", &abs_thresh, CF_UNIFORM_TYPE_FLOAT, 1);
 		cf_material_set_uniform_cs(hrc.mat_composite, "u_debug_mode", &debug, CF_UNIFORM_TYPE_INT, 1);
 		cf_material_set_uniform_cs(hrc.mat_composite, "u_cminus1", &hrc.cminus1, CF_UNIFORM_TYPE_INT, 1);
-		cf_material_set_uniform_cs(hrc.mat_composite, "u_minmax_enabled", &hrc.minmax_enabled, CF_UNIFORM_TYPE_INT, 1);
+		cf_material_set_uniform_cs(hrc.mat_composite, "u_upscale_mode", &hrc.upscale_mode, CF_UNIFORM_TYPE_INT, 1);
 
 		CF_ComputeDispatch d = cf_compute_dispatch_defaults(
 			hrc_div_ceil(world, HRC_WG),
@@ -457,7 +534,10 @@ void handle_input()
 		hrc.cminus1 = !hrc.cminus1;
 	}
 	if (cf_key_just_pressed(CF_KEY_M)) {
-		hrc.minmax_enabled = !hrc.minmax_enabled;
+		hrc.upscale_mode = (hrc.upscale_mode + 1) % 3;
+	}
+	if (cf_key_just_pressed(CF_KEY_P)) {
+		hrc.prefilter_mode = (hrc.prefilter_mode + 1) % 5;
 	}
 	if (cf_key_just_pressed(CF_KEY_B)) {
 		hrc.blend_boundary = !hrc.blend_boundary;
@@ -685,7 +765,8 @@ void draw_hud()
 		"[C] c-1 gathering: %s\n"
 		"[D] Debug: %s\n"
 		"[H] Grid: %d (%s)\n"
-		"[M] Bilinear R0: %s\n"
+		"[M] Upscale: %s\n"
+		"[P] Prefilter: %s\n"
 		"[R] Trace: %d / %d\n"
 		"[T] Test scene: %s",
 		hrc.blend_boundary ? "on" : "off",
@@ -693,19 +774,18 @@ void draw_hud()
 		hrc.cminus1 ? "on" : "off",
 		mode_names[hrc.debug_mode],
 		hrc.grid, hrc.grid == HRC_WORLD_SIZE ? "1x" : hrc.grid == HRC_WORLD_SIZE/2 ? "2x" : hrc.grid == HRC_WORLD_SIZE/4 ? "4x" : "8x",
-		hrc.minmax_enabled ? "on" : "off",
+		hrc.upscale_mode == 0 ? "nearest" : hrc.upscale_mode == 1 ? "minmax" : "bilateral",
+		hrc.prefilter_mode == 0 ? "off" : hrc.prefilter_mode == 1 ? "box" : hrc.prefilter_mode == 2 ? "mipmap" : hrc.prefilter_mode == 3 ? "gauss" : "mip+max",
 		hrc.trace_levels, hrc.n + 1,
 		test_scene ? "on" : "off"
 	);
 
 	float half = (float)HRC_WORLD_SIZE * 0.5f;
-	cf_draw_push_layer(1);
 	cf_draw_push_color(cf_color_white());
 	cf_push_font_size(16.0f);
 	cf_draw_text(buf, cf_v2(-half + 10.0f, half - 20.0f), -1);
 	cf_pop_font_size();
 	cf_draw_pop_color();
-	cf_draw_pop_layer();
 }
 
 //--------------------------------------------------------------------------------------------------

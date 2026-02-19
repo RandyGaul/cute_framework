@@ -1,12 +1,15 @@
-// Compute per-grid-cell min/max absorption luminance.
+// Mipmap-style box-average absorption luminance per grid cell, at world resolution.
 //
-// For each grid cell, loops over the SxS world pixels it covers
-// (S = world_size / grid_size), computes min/max absorption luminance,
-// and writes to a rg16f storage image. The composite shader uses this
-// to blend between bilinear (smooth areas) and nearest-neighbor (edges)
-// when upscaling R_0 from grid to world resolution.
+// Dispatched at world_size x world_size. Each world pixel determines which
+// grid cell it belongs to, averages the absorption luminance over all SxS
+// world pixels in that cell, and writes the result to its own position.
+// All world pixels in the same grid cell write the same average value.
 //
-// Pipeline:  [trace] -> [extend] -> [merge] -> minmax -> [composite]
+// The composite shader compares averages between neighboring cells to detect
+// absorption edges. This is smoother than min/max range, which spikes at
+// any single wall pixel in a cell.
+//
+// Pipeline:  [trace] -> [extend] -> [merge] -> mipmap -> [composite]
 //                                               ^^^^^^
 
 layout(set = 0, binding = 0) uniform sampler2D u_absorption;
@@ -23,25 +26,23 @@ layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
 void main()
 {
 	ivec2 gid = ivec2(gl_GlobalInvocationID.xy);
-	if (gid.x >= u_grid_size || gid.y >= u_grid_size) return;
+	if (gid.x >= u_world_size || gid.y >= u_world_size) return;
 
 	int S = u_world_size / u_grid_size;
-	ivec2 base = gid * S;
+	ivec2 grid_cell = gid / S;
+	ivec2 base = grid_cell * S;
 	float world = float(u_world_size);
 
-	float mn = 1e10;
-	float mx = 0.0;
-
+	float total = 0.0;
 	for (int dy = 0; dy < S; dy++) {
 		for (int dx = 0; dx < S; dx++) {
 			ivec2 p = base + ivec2(dx, dy);
 			vec2 uv = (vec2(p) + 0.5) / world;
 			vec3 a = texture(u_absorption, uv).rgb;
-			float lum = dot(a, vec3(0.333));
-			mn = min(mn, lum);
-			mx = max(mx, lum);
+			total += dot(a, vec3(0.333));
 		}
 	}
 
-	imageStore(u_minmax, gid, vec4(mn, mx, 0.0, 0.0));
+	float avg = total / float(S * S);
+	imageStore(u_minmax, gid, vec4(avg, 0.0, 0.0, 0.0));
 }
