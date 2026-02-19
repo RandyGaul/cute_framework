@@ -568,6 +568,7 @@ extern "C" {
 #endif
 
 CK_API void sintern_nuke();
+CK_API int ck_sintern_gen();
 
 CK_API void* ck_agrow(const void* a, int new_size, size_t element_size);
 CK_API void* ck_astatic(const void* a, int buffer_size, size_t element_size);
@@ -692,13 +693,21 @@ static inline const char* ck_sintern(const char* s)
 {
 	// Direct-mapped pointer cache. String literals have stable addresses,
 	// so the same call site always hits after the first miss. The strcmp
-	// handles reused buffers (e.g. sprintf into the same char[]) correctly.
+	// handles reused buffers (e.g. sprintf into the same char[]). The
+	// generation counter invalidates the cache after sintern_nuke().
 	struct ck_sintern_cache_entry { const char* key; const char* val; };
 #ifdef __cplusplus
 	static thread_local struct ck_sintern_cache_entry ck_sintern_cache[64];
+	static thread_local int ck_sintern_cache_gen;
 #else
 	static _Thread_local struct ck_sintern_cache_entry ck_sintern_cache[64];
+	static _Thread_local int ck_sintern_cache_gen;
 #endif
+	int gen = ck_sintern_gen();
+	if (ck_sintern_cache_gen != gen) {
+		memset(ck_sintern_cache, 0, sizeof(ck_sintern_cache));
+		ck_sintern_cache_gen = gen;
+	}
 	unsigned ck_idx = (unsigned)((uintptr_t)s >> 3) & 63;
 	if (ck_sintern_cache[ck_idx].key == s && strcmp(ck_sintern_cache[ck_idx].val, s) == 0)
 		return ck_sintern_cache[ck_idx].val;
@@ -1818,6 +1827,9 @@ typedef struct CK_InternTable
 } CK_InternTable;
 
 static CK_ATOMIC(CK_InternTable*) g_intern_table;
+static int g_sintern_gen;
+
+int ck_sintern_gen() { return g_sintern_gen; }
 
 static CK_InternTable* ck_sintern_get_table()
 {
@@ -1881,6 +1893,7 @@ const char* ck_sintern_range(const char* start, const char* end)
 
 void sintern_nuke()
 {
+	g_sintern_gen++;
 	CK_InternTable* table = ck_atomic_load(&g_intern_table);
 	if (!table) return;
 
