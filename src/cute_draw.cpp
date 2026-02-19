@@ -575,10 +575,10 @@ void cf_draw_sprite(const CF_Sprite* sprite)
 	}
 
 	CF_M3x2 m = s_draw->mvp;
-	s.geom.shape[0] = mul(m, quad[0]);
-	s.geom.shape[1] = mul(m, quad[1]);
-	s.geom.shape[2] = mul(m, quad[2]);
-	s.geom.shape[3] = mul(m, quad[3]);
+	CF_MUL_M32_V2(s.geom.shape[0], m, quad[0]);
+	CF_MUL_M32_V2(s.geom.shape[1], m, quad[1]);
+	CF_MUL_M32_V2(s.geom.shape[2], m, quad[2]);
+	CF_MUL_M32_V2(s.geom.shape[3], m, quad[3]);
 	s.geom.is_sprite = true;
 	s.geom.color = premultiply(pixel_white());
 	s.geom.alpha = sprite->opacity;
@@ -761,10 +761,10 @@ void cf_draw_sprite_9_slice(const CF_Sprite* sprite)
 			}
 
 			CF_M3x2 m = s_draw->mvp;
-			s.geom.shape[0] = mul(m, quad[0]);
-			s.geom.shape[1] = mul(m, quad[1]);
-			s.geom.shape[2] = mul(m, quad[2]);
-			s.geom.shape[3] = mul(m, quad[3]);
+			CF_MUL_M32_V2(s.geom.shape[0], m, quad[0]);
+			CF_MUL_M32_V2(s.geom.shape[1], m, quad[1]);
+			CF_MUL_M32_V2(s.geom.shape[2], m, quad[2]);
+			CF_MUL_M32_V2(s.geom.shape[3], m, quad[3]);
 			s.geom.is_sprite = true;
 			s.geom.color = premultiply(pixel_white());
 			s.geom.alpha = sprite->opacity;
@@ -949,10 +949,10 @@ void cf_draw_sprite_9_slice_tiled(const CF_Sprite* sprite)
 		}
 
 		CF_M3x2 m = s_draw->mvp;
-		s.geom.shape[0] = mul(m, quad[0]);
-		s.geom.shape[1] = mul(m, quad[1]);
-		s.geom.shape[2] = mul(m, quad[2]);
-		s.geom.shape[3] = mul(m, quad[3]);
+		CF_MUL_M32_V2(s.geom.shape[0], m, quad[0]);
+		CF_MUL_M32_V2(s.geom.shape[1], m, quad[1]);
+		CF_MUL_M32_V2(s.geom.shape[2], m, quad[2]);
+		CF_MUL_M32_V2(s.geom.shape[3], m, quad[3]);
 		s.geom.is_sprite = true;
 		s.geom.color = premultiply(pixel_white());
 		s.geom.alpha = sprite->opacity;
@@ -1096,10 +1096,10 @@ static void s_draw_quad(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float stroke, fl
 	s.geom.box[1] = p1;
 	s.geom.box[2] = p2;
 	s.geom.box[3] = p3;
-	s.geom.boxH[0] = mul(m, p0);
-	s.geom.boxH[1] = mul(m, p1);
-	s.geom.boxH[2] = mul(m, p2);
-	s.geom.boxH[3] = mul(m, p3);
+	CF_MUL_M32_V2(s.geom.boxH[0], m, p0);
+	CF_MUL_M32_V2(s.geom.boxH[1], m, p1);
+	CF_MUL_M32_V2(s.geom.boxH[2], m, p2);
+	CF_MUL_M32_V2(s.geom.boxH[3], m, p3);
 	s.geom.shape[0] = c;
 	s.geom.shape[1] = he;
 	s.geom.shape[2] = u;
@@ -1176,10 +1176,10 @@ static void s_draw_circle(v2 position, float stroke, float radius, bool fill)
 	s.geom.box[1] = s.geom.box[1];
 	s.geom.box[2] = s.geom.box[2];
 	s.geom.box[3] = s.geom.box[3];
-	s.geom.boxH[0] = mul(m, s.geom.box[0]);
-	s.geom.boxH[1] = mul(m, s.geom.box[1]);
-	s.geom.boxH[2] = mul(m, s.geom.box[2]);
-	s.geom.boxH[3] = mul(m, s.geom.box[3]);
+	CF_MUL_M32_V2(s.geom.boxH[0], m, s.geom.box[0]);
+	CF_MUL_M32_V2(s.geom.boxH[1], m, s.geom.box[1]);
+	CF_MUL_M32_V2(s.geom.boxH[2], m, s.geom.box[2]);
+	CF_MUL_M32_V2(s.geom.boxH[3], m, s.geom.box[3]);
 	s.geom.shape[0] = position;
 	s.geom.shape[1] = position;
 	s.geom.shape[2] = position;
@@ -1233,10 +1233,10 @@ static void s_draw_capsule(v2 a, v2 b, float stroke, float radius, bool fill)
 	s.geom.type = BATCH_GEOMETRY_TYPE_CAPSULE;
 
 	s_bounding_box_of_capsule(a, b, radius, stroke, s.geom.box);
-	s.geom.boxH[0] = mul(m, s.geom.box[0]);
-	s.geom.boxH[1] = mul(m, s.geom.box[1]);
-	s.geom.boxH[2] = mul(m, s.geom.box[2]);
-	s.geom.boxH[3] = mul(m, s.geom.box[3]);
+	CF_MUL_M32_V2(s.geom.boxH[0], m, s.geom.box[0]);
+	CF_MUL_M32_V2(s.geom.boxH[1], m, s.geom.box[1]);
+	CF_MUL_M32_V2(s.geom.boxH[2], m, s.geom.box[2]);
+	CF_MUL_M32_V2(s.geom.boxH[3], m, s.geom.box[3]);
 	s.geom.shape[0] = a;
 	s.geom.shape[1] = b;
 	s.geom.shape[2] = a;
@@ -1316,18 +1316,18 @@ static void s_draw_tri(v2 a, v2 b, v2 c, float stroke, float radius, bool fill)
 		s.geom.box[1] = s.geom.box[1];
 		s.geom.box[2] = s.geom.box[2];
 		s.geom.box[3] = s.geom.box[3];
-		s.geom.boxH[0] = mul(m, s.geom.box[0]);
-		s.geom.boxH[1] = mul(m, s.geom.box[1]);
-		s.geom.boxH[2] = mul(m, s.geom.box[2]);
-		s.geom.boxH[3] = mul(m, s.geom.box[3]);
+		CF_MUL_M32_V2(s.geom.boxH[0], m, s.geom.box[0]);
+		CF_MUL_M32_V2(s.geom.boxH[1], m, s.geom.box[1]);
+		CF_MUL_M32_V2(s.geom.boxH[2], m, s.geom.box[2]);
+		CF_MUL_M32_V2(s.geom.boxH[3], m, s.geom.box[3]);
 		s.geom.shape[0] = a;
 		s.geom.shape[1] = b;
 		s.geom.shape[2] = c;
 	} else {
 		s.geom.type = BATCH_GEOMETRY_TYPE_TRI;
-		s.geom.shape[0] = mul(m, a);
-		s.geom.shape[1] = mul(m, b);
-		s.geom.shape[2] = mul(m, c);
+		CF_MUL_M32_V2(s.geom.shape[0], m, a);
+		CF_MUL_M32_V2(s.geom.shape[1], m, b);
+		CF_MUL_M32_V2(s.geom.shape[2], m, c);
 	}
 
 	s.geom.color = premultiply(to_pixel(s_draw->colors.last()));
@@ -1434,9 +1434,9 @@ void cf_draw_polyline(const CF_V2* pts, int count, float thickness, bool loop)
 			s.geom.box[0] = a;
 			s.geom.box[1] = b;
 			s.geom.box[2] = c;
-			s.geom.boxH[0] = mul(m, a);
-			s.geom.boxH[1] = mul(m, b);
-			s.geom.boxH[2] = mul(m, c);
+			CF_MUL_M32_V2(s.geom.boxH[0], m, a);
+			CF_MUL_M32_V2(s.geom.boxH[1], m, b);
+			CF_MUL_M32_V2(s.geom.boxH[2], m, c);
 			DRAW_PUSH_ITEM(s);
 		}
 	};
@@ -1567,10 +1567,10 @@ void cf_draw_polygon_fill(const CF_V2* points, int count, float chubbiness)
 	s.geom.box[1] = box[1];
 	s.geom.box[2] = box[2];
 	s.geom.box[3] = box[3];
-	s.geom.boxH[0] = mul(m, s.geom.box[0]);
-	s.geom.boxH[1] = mul(m, s.geom.box[1]);
-	s.geom.boxH[2] = mul(m, s.geom.box[2]);
-	s.geom.boxH[3] = mul(m, s.geom.box[3]);
+	CF_MUL_M32_V2(s.geom.boxH[0], m, s.geom.box[0]);
+	CF_MUL_M32_V2(s.geom.boxH[1], m, s.geom.box[1]);
+	CF_MUL_M32_V2(s.geom.boxH[2], m, s.geom.box[2]);
+	CF_MUL_M32_V2(s.geom.boxH[3], m, s.geom.box[3]);
 	s.geom.n = count;
 	for (int i = 0; i < count; ++i) {
 		s.geom.shape[i] = points[i];
@@ -2745,10 +2745,10 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 			// Actually render the sprite.
 			if (visible && render) {
 				CF_M3x2 m = s_draw->mvp;
-				s.geom.shape[0] = mul(m, V2(q0.x, q1.y));
-				s.geom.shape[1] = mul(m, V2(q1.x, q1.y));
-				s.geom.shape[2] = mul(m, V2(q1.x, q0.y));
-				s.geom.shape[3] = mul(m, V2(q0.x, q0.y));
+				CF_MUL_M32_V2(s.geom.shape[0], m, V2(q0.x, q1.y));
+				CF_MUL_M32_V2(s.geom.shape[1], m, V2(q1.x, q1.y));
+				CF_MUL_M32_V2(s.geom.shape[2], m, V2(q1.x, q0.y));
+				CF_MUL_M32_V2(s.geom.shape[3], m, V2(q0.x, q0.y));
 				s.geom.color = premultiply(to_pixel(color));
 				s.geom.is_text = true;
 				DRAW_PUSH_ITEM(s);
@@ -3201,7 +3201,7 @@ void cf_draw_canvas(CF_Canvas canvas, CF_V2 position, CF_V2 scale)
 		swap(cmd.canvas_verts[1], cmd.canvas_verts[2]);
 	}
 	for (int i = 0; i < 4; ++i) {
-		cmd.canvas_verts_posH[i] = mul(s_draw->mvp, cmd.canvas_verts[i]);
+		CF_MUL_M32_V2(cmd.canvas_verts_posH[i], s_draw->mvp, cmd.canvas_verts[i]);
 	}
 	cmd.canvas_attributes = s_draw->user_params.last();
 
@@ -3459,14 +3459,16 @@ void cf_render_to(CF_Canvas canvas, bool clear)
 
 CF_V2 cf_draw_mul(CF_V2 v)
 {
-	return mul(s_draw->cam_stack.last(), v);
+	CF_V2 r;
+	CF_MUL_M32_V2(r, s_draw->cam_stack.last(), v);
+	return r;
 }
 
 void cf_draw_transform(CF_M3x2 m)
 {
-	m = mul(s_draw->cam_stack.last(), m);
+	CF_MUL_M32_M32(m, s_draw->cam_stack.last(), m);
 	s_draw->cam_stack.last() = m;
-	s_draw->mvp = mul(s_draw->projection, m);
+	CF_MUL_M32_M32(s_draw->mvp, s_draw->projection, m);
 	s_draw->set_aaf();
 }
 
@@ -3500,14 +3502,20 @@ void cf_draw_rotate(float radians)
 
 void cf_draw_TSR(CF_V2 position, CF_V2 scale, float radians)
 {
-	cf_draw_transform(make_transform(position, scale, radians));
+	CF_M3x2 m;
+	CF_MAKE_TSR(m, position, scale, radians);
+	CF_MUL_M32_M32(m, s_draw->cam_stack.last(), m);
+	s_draw->cam_stack.last() = m;
+	CF_MUL_M32_M32(s_draw->mvp, s_draw->projection, m);
+	s_draw->set_aaf();
 }
 
 void cf_draw_TSR_absolute(CF_V2 position, CF_V2 scale, float radians)
 {
-	CF_M3x2 m = make_transform(position, scale, radians);
+	CF_M3x2 m;
+	CF_MAKE_TSR(m, position, scale, radians);
 	s_draw->cam_stack.last() = m;
-	s_draw->mvp = mul(s_draw->projection, m);
+	CF_MUL_M32_M32(s_draw->mvp, s_draw->projection, m);
 	s_draw->set_aaf();
 }
 
@@ -3528,7 +3536,7 @@ void cf_draw_pop()
 		s_draw->projection_stack.pop();
 	}
 	CF_M3x2 m = s_draw->cam_stack.last();
-	s_draw->mvp = mul(s_draw->projection, m);
+	CF_MUL_M32_M32(s_draw->mvp, s_draw->projection, m);
 	s_draw->set_aaf();
 }
 
@@ -3540,12 +3548,12 @@ CF_M3x2 cf_draw_peek()
 void cf_draw_projection(CF_M3x2 projection)
 {
 	s_draw->projection = projection;
-	s_draw->mvp = mul(projection, s_draw->cam_stack.last());
+	CF_MUL_M32_M32(s_draw->mvp, projection, s_draw->cam_stack.last());
 }
 
 CF_V2 cf_world_to_screen(CF_V2 CF_V2)
 {
-	CF_V2 = mul(s_draw->mvp, CF_V2);
+	CF_MUL_M32_V2(CF_V2, s_draw->mvp, CF_V2);
 	CF_V2.x = (CF_V2.x + 1.0f) * (float)app->w * 0.5f;
 	CF_V2.y = (1.0f - CF_V2.y) * (float)app->h * 0.5f;
 	return CF_V2;
