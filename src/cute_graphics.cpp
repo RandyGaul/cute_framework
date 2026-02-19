@@ -505,11 +505,17 @@ static void s_material_set_uniform(CF_Arena* arena, CF_MaterialState* state, con
 	CF_MEMCPY(uniform->data, data, size);
 }
 
+static const char* s_uniform_block_name()
+{
+	static const char* s = sintern("uniform_block");
+	return s;
+}
+
 void cf_material_set_uniform_vs(CF_Material material_handle, const char* name, void* data, CF_UniformType type, int array_length)
 {
 	CF_MaterialInternal* material = (CF_MaterialInternal*)material_handle.id;
 	name = sintern(name);
-	s_material_set_uniform(&material->uniform_arena, &material->vs, sintern("uniform_block"), name, data, type, array_length);
+	s_material_set_uniform(&material->uniform_arena, &material->vs, s_uniform_block_name(), name, data, type, array_length);
 }
 
 void cf_material_set_uniform_vs_internal(CF_Material material_handle, const char* block_name, const char* name, void* data, CF_UniformType type, int array_length)
@@ -523,7 +529,7 @@ void cf_material_set_uniform_fs(CF_Material material_handle, const char* name, v
 {
 	CF_MaterialInternal* material = (CF_MaterialInternal*)material_handle.id;
 	name = sintern(name);
-	s_material_set_uniform(&material->uniform_arena, &material->fs, sintern("uniform_block"), name, data, type, array_length);
+	s_material_set_uniform(&material->uniform_arena, &material->fs, s_uniform_block_name(), name, data, type, array_length);
 }
 
 void cf_material_set_uniform_fs_internal(CF_Material material_handle, const char* block_name, const char* name, void* data, CF_UniformType type, int array_length)
@@ -537,7 +543,7 @@ void cf_material_set_uniform_cs(CF_Material material_handle, const char* name, v
 {
 	CF_MaterialInternal* material = (CF_MaterialInternal*)material_handle.id;
 	name = sintern(name);
-	s_material_set_uniform(&material->uniform_arena, &material->cs, sintern("uniform_block"), name, data, type, array_length);
+	s_material_set_uniform(&material->uniform_arena, &material->cs, s_uniform_block_name(), name, data, type, array_length);
 }
 
 void cf_material_clear_uniforms(CF_Material material_handle)
