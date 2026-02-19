@@ -27,6 +27,8 @@ layout(set = 2, binding = 0) uniform Params
 	int u_rotate;
 	int u_world_size;
 	int u_curr_w;
+	float u_mip_level;         // emissivity mipmap LOD (0.0 = base level)
+	float u_absrp_mip_level;   // absorption mipmap LOD (0.0 = base level)
 };
 
 layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
@@ -75,8 +77,8 @@ void main()
 	float world = float(u_world_size);
 	vec2 uv = rotate_uv((origin + 0.5) / world, u_rotate, 1.0);
 
-	vec3 emiss = linear_from_srgb(texture(u_emissivity, uv).rgb);
-	vec3 absrp = linear_from_srgb(texture(u_absorption, uv).rgb);
+	vec3 emiss = linear_from_srgb(textureLod(u_emissivity, uv, u_mip_level).rgb);
+	vec3 absrp = linear_from_srgb(textureLod(u_absorption, uv, u_absrp_mip_level).rgb);
 
 	// Direction-dependent step length for correct optical depth.
 	vec2 delta = v_n(n, float(k));

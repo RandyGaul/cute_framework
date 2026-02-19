@@ -1,0 +1,71 @@
+// Gaussian prefilter scene inputs from world resolution to grid resolution.
+//
+// Emissivity:  Gaussian-weighted average (smoother than box, reduces blocky
+//              artifacts at grid cell boundaries)
+// Absorption:  per-channel max (conservative occlusion — same as box prefilter)
+//
+// Dispatched at grid resolution. Each thread reads the SxS block of world
+// pixels that map to one grid cell (S = world_size / grid_size), applies
+// Gaussian weights to the emissivity sum, then writes the result back to
+// all SxS world pixels in the output images.
+//
+// Pipeline:  prefilter -> [trace] -> [extend] -> [merge] -> composite
+//            ^^^^^^^^^
+
+layout(set = 0, binding = 0) uniform sampler2D u_emissivity;
+layout(set = 0, binding = 1) uniform sampler2D u_absorption;
+layout(set = 1, binding = 0, rgba16f) uniform writeonly image2D u_out_emissivity;
+layout(set = 1, binding = 1, rgba16f) uniform writeonly image2D u_out_absorption;
+
+layout(set = 2, binding = 0) uniform Params
+{
+	int u_world_size;
+	int u_grid_size;
+};
+
+layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+
+void main()
+{
+	ivec2 gid = ivec2(gl_GlobalInvocationID.xy);
+	if (gid.x >= u_grid_size || gid.y >= u_grid_size) return;
+
+	int S = u_world_size / u_grid_size;
+	ivec2 base = gid * S;
+	float world = float(u_world_size);
+
+	// Gaussian sigma: S/3 gives good coverage within the cell.
+	float sigma = float(S) / 3.0;
+	float inv_2sigma2 = 1.0 / (2.0 * sigma * sigma);
+	float center = (float(S) - 1.0) * 0.5; // center of the SxS block
+
+	vec3 emiss_sum = vec3(0.0);
+	float weight_sum = 0.0;
+	vec3 absrp_max = vec3(0.0);
+
+	for (int dy = 0; dy < S; dy++) {
+		for (int dx = 0; dx < S; dx++) {
+			ivec2 p = base + ivec2(dx, dy);
+			vec2 uv = (vec2(p) + 0.5) / world;
+
+			float fx = float(dx) - center;
+			float fy = float(dy) - center;
+			float w = exp(-(fx * fx + fy * fy) * inv_2sigma2);
+
+			emiss_sum += texture(u_emissivity, uv).rgb * w;
+			weight_sum += w;
+			absrp_max = max(absrp_max, texture(u_absorption, uv).rgb);
+		}
+	}
+
+	vec4 emiss_avg = vec4(emiss_sum / weight_sum, 1.0);
+	vec4 absrp_out = vec4(absrp_max, 1.0);
+
+	// Write to all SxS world pixels so trace shader UVs map correctly.
+	for (int dy = 0; dy < S; dy++) {
+		for (int dx = 0; dx < S; dx++) {
+			imageStore(u_out_emissivity, base + ivec2(dx, dy), emiss_avg);
+			imageStore(u_out_absorption, base + ivec2(dx, dy), absrp_out);
+		}
+	}
+}

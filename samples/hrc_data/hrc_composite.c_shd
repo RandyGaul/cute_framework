@@ -35,8 +35,8 @@ layout(set = 2, binding = 0) uniform Params
 	int   u_grid_size;     // cascade grid resolution (e.g. 256)
 	float u_abs_threshold; // opacity similarity cutoff for cross blur
 	int   u_debug_mode;
-	int   u_cminus1;      // 0 = skip c-1 gathering, 1 = raymarch c-1
-	int   u_minmax_enabled; // 0 = nearest-neighbor R_0, 1 = bilinear with minmax edge detection
+	int   u_cminus1;       // 0 = skip c-1 gathering, 1 = raymarch c-1
+	int   u_upscale_mode;  // 0 = nearest, 1 = minmax bilinear, 2 = joint bilateral
 };
 
 layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
@@ -152,11 +152,23 @@ Interval trace_cminus1(ivec2 world_pos, int rot)
 	return Interval(acc_rad, acc_trn);
 }
 
-// Read min/max absorption at a grid cell from the precomputed minmax texture.
+// Read min/max absorption from the world-resolution minmax texture.
+// Takes a grid position, converts to a world coordinate for the fetch.
+// All world pixels in the same grid cell store the same value.
 vec2 minmax_at(ivec2 grid_pos)
 {
 	grid_pos = clamp(grid_pos, ivec2(0), ivec2(u_grid_size - 1));
-	return texelFetch(u_minmax, grid_pos, 0).rg;
+	int S = u_world_size / u_grid_size;
+	return texelFetch(u_minmax, grid_pos * S, 0).rg;
+}
+
+// Read absorption magnitude at a world pixel for the opacity similarity check.
+float absorption_at(ivec2 pos)
+{
+	float world = float(u_world_size);
+	vec2 uv = (vec2(pos) + 0.5) / world;
+	vec3 a = texture(u_absorption, uv).rgb;
+	return dot(a, vec3(0.333));
 }
 
 // Sum fluence from all 4 quadrants at a world-space pixel, with c-1 gathering.
@@ -165,36 +177,56 @@ vec2 minmax_at(ivec2 grid_pos)
 // Maps world_pos to the grid, rotates into each quadrant's space to read R_0,
 // then merges with a c-1 interval sampled at full world resolution.
 //
-// When minmax is enabled and the grid is upscaled, R_0 is bilinearly
-// interpolated between 4 neighboring grid probes in smooth areas (low
-// absorption variation). Near absorption edges, nearest-neighbor is
-// preserved to prevent light leaking through walls.
+// Upscale modes (u_upscale_mode):
+//   0 = nearest-neighbor
+//   1 = minmax bilinear: bilinear in smooth areas, nearest at absorption edges
+//   2 = joint bilateral: bilinear weighted by absorption similarity at each probe
 vec3 sum_quadrants(ivec2 world_pos)
 {
 	int s = u_grid_size - 1;
 	ivec2 grid_pos = world_pos * u_grid_size / u_world_size;
 
-	// Determine bilinear blend factor from minmax texture.
-	float blend = 0.0;
+	// Interpolation state (shared by minmax and bilateral paths).
 	vec2 fgrid;
 	ivec2 g0;
 	vec2 frac_pos;
+	float blend = 0.0;        // minmax: 0=nearest, 1=bilinear
+	float bw00 = 1.0, bw10 = 1.0, bw01 = 1.0, bw11 = 1.0; // bilateral weights
 
-	if (u_minmax_enabled != 0 && u_world_size > u_grid_size) {
+	if (u_upscale_mode != 0 && u_world_size > u_grid_size) {
 		fgrid = vec2(world_pos) * float(u_grid_size) / float(u_world_size) - 0.5;
 		g0 = ivec2(floor(fgrid));
 		frac_pos = fract(fgrid);
 
-		// Check absorption range across all 4 neighboring grid cells.
-		float max_range = 0.0;
-		for (int dy = 0; dy <= 1; dy++) {
-			for (int dx = 0; dx <= 1; dx++) {
-				vec2 mm = minmax_at(g0 + ivec2(dx, dy));
-				max_range = max(max_range, mm.g - mm.r);
+		if (u_upscale_mode == 1) {
+			// Minmax: check absorption range across neighboring grid cells.
+			float max_range = 0.0;
+			for (int dy = 0; dy <= 1; dy++) {
+				for (int dx = 0; dx <= 1; dx++) {
+					vec2 mm = minmax_at(g0 + ivec2(dx, dy));
+					max_range = max(max_range, mm.g - mm.r);
+				}
 			}
+			blend = 1.0 - smoothstep(0.0, u_abs_threshold, max_range);
+		} else if (u_upscale_mode == 2) {
+			// Joint bilateral: weight probes by absorption similarity.
+			blend = 1.0;
+			float center_abs = absorption_at(world_pos);
+			int S = u_world_size / u_grid_size;
+			float sigma = max(u_abs_threshold, 0.01);
+			float inv_2s2 = 1.0 / (2.0 * sigma * sigma);
+
+			// Absorption at each probe's world position (center of grid cell).
+			float d00 = absorption_at(clamp(g0,              ivec2(0), ivec2(s)) * S + S / 2) - center_abs;
+			float d10 = absorption_at(clamp(g0 + ivec2(1,0), ivec2(0), ivec2(s)) * S + S / 2) - center_abs;
+			float d01 = absorption_at(clamp(g0 + ivec2(0,1), ivec2(0), ivec2(s)) * S + S / 2) - center_abs;
+			float d11 = absorption_at(clamp(g0 + ivec2(1,1), ivec2(0), ivec2(s)) * S + S / 2) - center_abs;
+
+			bw00 = exp(-d00 * d00 * inv_2s2);
+			bw10 = exp(-d10 * d10 * inv_2s2);
+			bw01 = exp(-d01 * d01 * inv_2s2);
+			bw11 = exp(-d11 * d11 * inv_2s2);
 		}
-		// blend: 0 = nearest-neighbor (at edges), 1 = bilinear (smooth areas).
-		blend = 1.0 - smoothstep(0.0, u_abs_threshold, max_range);
 	}
 
 	vec3 total = vec3(0.0);
@@ -202,23 +234,39 @@ vec3 sum_quadrants(ivec2 world_pos)
 		vec3 r0;
 
 		if (blend > 0.0) {
-			// Bilinear interpolation of R_0 from 4 neighboring grid probes.
+			// Load R_0 from 4 neighboring grid probes.
 			vec3 r00 = F_load(rot, grid_to_rotated(clamp(g0,              ivec2(0), ivec2(s)), rot, s) + ivec2(1, 0));
 			vec3 r10 = F_load(rot, grid_to_rotated(clamp(g0 + ivec2(1,0), ivec2(0), ivec2(s)), rot, s) + ivec2(1, 0));
 			vec3 r01 = F_load(rot, grid_to_rotated(clamp(g0 + ivec2(0,1), ivec2(0), ivec2(s)), rot, s) + ivec2(1, 0));
 			vec3 r11 = F_load(rot, grid_to_rotated(clamp(g0 + ivec2(1,1), ivec2(0), ivec2(s)), rot, s) + ivec2(1, 0));
-			vec3 r0_bilinear = mix(mix(r00, r10, frac_pos.x), mix(r01, r11, frac_pos.x), frac_pos.y);
 
-			if (blend < 1.0) {
-				// Blend with nearest-neighbor at absorption edges.
-				ivec2 rp = grid_to_rotated(grid_pos, rot, s);
-				vec3 r0_nearest = F_load(rot, rp + ivec2(1, 0));
-				r0 = mix(r0_nearest, r0_bilinear, blend);
+			if (u_upscale_mode == 2) {
+				// Joint bilateral: spatial bilinear * absorption similarity.
+				float w00 = (1.0 - frac_pos.x) * (1.0 - frac_pos.y) * bw00;
+				float w10 = frac_pos.x           * (1.0 - frac_pos.y) * bw10;
+				float w01 = (1.0 - frac_pos.x) * frac_pos.y           * bw01;
+				float w11 = frac_pos.x           * frac_pos.y           * bw11;
+				float wt = w00 + w10 + w01 + w11;
+				if (wt > 0.001) {
+					r0 = (r00 * w00 + r10 * w10 + r01 * w01 + r11 * w11) / wt;
+				} else {
+					// All probes dissimilar — fall back to nearest.
+					ivec2 rp = grid_to_rotated(grid_pos, rot, s);
+					r0 = F_load(rot, rp + ivec2(1, 0));
+				}
 			} else {
-				r0 = r0_bilinear;
+				// Minmax bilinear.
+				vec3 r0_bilinear = mix(mix(r00, r10, frac_pos.x), mix(r01, r11, frac_pos.x), frac_pos.y);
+				if (blend < 1.0) {
+					ivec2 rp = grid_to_rotated(grid_pos, rot, s);
+					vec3 r0_nearest = F_load(rot, rp + ivec2(1, 0));
+					r0 = mix(r0_nearest, r0_bilinear, blend);
+				} else {
+					r0 = r0_bilinear;
+				}
 			}
 		} else {
-			// Pure nearest-neighbor (original path).
+			// Pure nearest-neighbor.
 			ivec2 rp = grid_to_rotated(grid_pos, rot, s);
 			r0 = F_load(rot, rp + ivec2(1, 0));
 		}
@@ -232,15 +280,6 @@ vec3 sum_quadrants(ivec2 world_pos)
 		}
 	}
 	return total;
-}
-
-// Read absorption magnitude at a world pixel for the opacity similarity check.
-float absorption_at(ivec2 pos)
-{
-	float world = float(u_world_size);
-	vec2 uv = (vec2(pos) + 0.5) / world;
-	vec3 a = texture(u_absorption, uv).rgb;
-	return dot(a, vec3(0.333));
 }
 
 // Shared memory tile for precomputed sum_quadrants results.

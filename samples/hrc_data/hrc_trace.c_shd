@@ -31,6 +31,8 @@ layout(set = 2, binding = 0) uniform Params
 	int u_curr_w;
 	int u_blend_boundary; // [B] angle-based weight blending near ±45° edges
 	float u_blend_width;  // [/]] blend falloff width in direction slots
+	float u_mip_level;         // emissivity mipmap LOD (0.0 = base level)
+	float u_absrp_mip_level;   // absorption mipmap LOD (0.0 = base level)
 };
 
 layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
@@ -83,8 +85,8 @@ void trace_cell(vec2 cell, float ds, inout vec3 rad, inout vec3 trn)
 	float world = float(u_world_size);
 	if (cell.x < 0.0 || cell.x >= world || cell.y < 0.0 || cell.y >= world) return;
 	vec2 uv = rotate_uv((cell + 0.5) / world, u_rotate, 1.0);
-	vec3 emiss = linear_from_srgb(texture(u_emissivity, uv).rgb);
-	vec3 absrp = linear_from_srgb(texture(u_absorption, uv).rgb);
+	vec3 emiss = linear_from_srgb(textureLod(u_emissivity, uv, u_mip_level).rgb);
+	vec3 absrp = linear_from_srgb(textureLod(u_absorption, uv, u_absrp_mip_level).rgb);
 	vec3 T = exp(-absrp * ds);
 	rad += trn * emiss * (vec3(1.0) - T);
 	trn *= T;
