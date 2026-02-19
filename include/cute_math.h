@@ -1705,6 +1705,45 @@ CF_INLINE CF_M2x2 cf_mul_T_m2(CF_M2x2 a, CF_M2x2 b) { CF_M2x2 c; c.x = cf_mul_T_
 CF_INLINE CF_V2 cf_mul_m32_v2(CF_M3x2 a, CF_V2 b) { return cf_add(cf_mul_m2_v2(a.m, b), a.p); }
 CF_INLINE CF_M3x2 cf_mul_m32(CF_M3x2 a, CF_M3x2 b) { CF_M3x2 c; c.m = cf_mul_m2(a.m, b.m); c.p = cf_add(cf_mul_m2_v2(a.m, b.p), a.p); return c; }
 
+// Macro alternatives -- flat expansion, guaranteed inline in debug builds.
+// MSVC /Od ignores __forceinline, so the above functions become real calls.
+// These macros avoid the deep call chains (mul_m32 -> mul_m2 -> mul_m2_v2 -> ...).
+// All arguments must be side-effect-free lvalues or temporaries.
+
+// M3x2 * V2 -> writes CF_V2 into dst.
+#define CF_MUL_M32_V2(dst, a, b) do { \
+	float _cf_bx = (b).x, _cf_by = (b).y; \
+	(dst).x = (a).m.x.x * _cf_bx + (a).m.y.x * _cf_by + (a).p.x; \
+	(dst).y = (a).m.x.y * _cf_bx + (a).m.y.y * _cf_by + (a).p.y; \
+} while (0)
+
+// M3x2 * M3x2 -> writes CF_M3x2 into dst. Safe when dst aliases a or b.
+#define CF_MUL_M32_M32(dst, a, b) do { \
+	float _cf_axx = (a).m.x.x, _cf_axy = (a).m.x.y; \
+	float _cf_ayx = (a).m.y.x, _cf_ayy = (a).m.y.y; \
+	float _cf_apx = (a).p.x,   _cf_apy = (a).p.y; \
+	float _cf_bxx = (b).m.x.x, _cf_bxy = (b).m.x.y; \
+	float _cf_byx = (b).m.y.x, _cf_byy = (b).m.y.y; \
+	float _cf_bpx = (b).p.x,   _cf_bpy = (b).p.y; \
+	(dst).m.x.x = _cf_axx * _cf_bxx + _cf_ayx * _cf_bxy; \
+	(dst).m.x.y = _cf_axy * _cf_bxx + _cf_ayy * _cf_bxy; \
+	(dst).m.y.x = _cf_axx * _cf_byx + _cf_ayx * _cf_byy; \
+	(dst).m.y.y = _cf_axy * _cf_byx + _cf_ayy * _cf_byy; \
+	(dst).p.x   = _cf_axx * _cf_bpx + _cf_ayx * _cf_bpy + _cf_apx; \
+	(dst).p.y   = _cf_axy * _cf_bpx + _cf_ayy * _cf_bpy + _cf_apy; \
+} while (0)
+
+// Build M3x2 from position + scale + radians.
+#define CF_MAKE_TSR(dst, pos, scl, rad) do { \
+	float _cf_c = CF_COSF(rad), _cf_s = CF_SINF(rad); \
+	float _cf_sx = (scl).x, _cf_sy = (scl).y; \
+	(dst).m.x.x =  _cf_c * _cf_sx; \
+	(dst).m.x.y = -_cf_s * _cf_sx; \
+	(dst).m.y.x =  _cf_s * _cf_sy; \
+	(dst).m.y.y =  _cf_c * _cf_sy; \
+	(dst).p = (pos); \
+} while (0)
+
 CF_INLINE CF_V2 cf_mul_tf_v2(CF_Transform a, CF_V2 b) { return cf_add(cf_mul_sc_v2(a.r, b), a.p); }
 CF_INLINE CF_V2 cf_mul_T_tf_v2(CF_Transform a, CF_V2 b) { return cf_mul_T_sc_v2(a.r, cf_sub(b, a.p)); }
 CF_INLINE CF_Transform cf_mul_tf(CF_Transform a, CF_Transform b) { CF_Transform c; c.r = cf_mul_sc(a.r, b.r); c.p = cf_add(cf_mul_sc_v2(a.r, b.p), a.p); return c; }
