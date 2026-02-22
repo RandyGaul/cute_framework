@@ -52,15 +52,17 @@ void cf_aseprite_cache_get_pixels(uint64_t image_id, void* buffer, int bytes_to_
 	}
 }
 
-CF_Image cf_sprite_get_pixels(CF_Sprite* sprite, const char* animation, int frame_index)
+CF_Image cf_sprite_get_pixels(CF_Sprite* sprite, int blend_index, const char* animation, int frame_index)
 {
 	CF_Image img = { 0 };
 	if (!sprite || sprite->id == CF_SPRITE_ID_INVALID) return img;
 	CF_SpriteAsset* asset = cf_sprite_get_asset(sprite->id);
+	if (blend_index < 0 || blend_index >= asset->blend_count) return img;
 	const CF_Animation* anim = map_get(asset->animations, sintern(animation));
 	if (!anim) return img;
 	if (frame_index < 0 || frame_index >= asize(anim->frames)) return img;
-	uint64_t id = anim->frames[frame_index].id;
+	int global_frame = frame_index + anim->frame_offset;
+	uint64_t id = asset->blend_frame_ids[blend_index][global_frame];
 	img.w = sprite->w;
 	img.h = sprite->h;
 	int bytes = img.w * img.h * (int)sizeof(CF_Pixel);
@@ -87,6 +89,15 @@ static void s_free_asset(CF_SpriteAsset* asset)
 		cute_aseprite_free(asset->ase);
 	}
 	// External assets (ase == NULL) don't own their animations.
+	// Free blend data (index 0 is asset->frame_ids, skip it).
+	for (int i = 1; i < asize(asset->blend_frame_ids); ++i) {
+		afree(asset->blend_frame_ids[i]);
+	}
+	afree(asset->blend_frame_ids);
+	for (int i = 0; i < asize(asset->owned_pixel_buffers); ++i) {
+		CF_FREE(asset->owned_pixel_buffers[i]);
+	}
+	afree(asset->owned_pixel_buffers);
 	afree(asset->slices);
 	afree(asset->pivots);
 	afree(asset->center_patches);
@@ -270,6 +281,10 @@ static CF_Result s_aseprite_cache_load_from_memory(const char* unique_name, cons
 	for (int i = 0; i < ids.size(); ++i) {
 		apush(asset.frame_ids, ids[i]);
 	}
+	asset.blend_count = 1;
+	asset.blend_frame_ids = NULL;
+	apush(asset.blend_frame_ids, asset.frame_ids);
+	asset.owned_pixel_buffers = NULL;
 	apush(g_ase_cache->assets, asset);
 	g_ase_cache->path_to_asset_id.insert(unique_name, asset_id);
 
@@ -482,6 +497,63 @@ void cf_aseprite_cache_reload_asset(uint64_t asset_id, ase_t* new_ase)
 	asset->ase = new_ase;
 	asset->w = new_ase->w;
 	asset->h = new_ase->h;
+}
+
+uint64_t cf_aseprite_layer_mask(ase_t* ase, const char** layer_names, int count)
+{
+	uint64_t mask = 0;
+	for (int i = 0; i < count; ++i) {
+		for (int li = 0; li < ase->layer_count; ++li) {
+			if (strcmp(ase->layers[li].name, layer_names[i]) == 0) {
+				mask |= (1ULL << li);
+			}
+		}
+	}
+	return mask;
+}
+
+int cf_aseprite_cache_add_blend(const char* path, uint64_t layer_mask)
+{
+	path = sintern(path);
+	uint64_t* asset_id_ptr = g_ase_cache->path_to_asset_id.try_find(path);
+	CF_ASSERT(asset_id_ptr);
+	CF_SpriteAsset* asset = g_ase_cache->assets + *asset_id_ptr;
+	ase_t* ase = asset->ase;
+	CF_ASSERT(ase);
+
+	int frame_count = ase->frame_count;
+	int pixel_bytes = ase->w * ase->h * (int)sizeof(ase_color_t);
+
+	// Allocate pixel buffers and blend layers.
+	ase_color_t** pixel_bufs = (ase_color_t**)CF_ALLOC(sizeof(ase_color_t*) * frame_count);
+	for (int i = 0; i < frame_count; ++i) {
+		pixel_bufs[i] = (ase_color_t*)CF_ALLOC(pixel_bytes);
+		CF_MEMSET(pixel_bufs[i], 0, pixel_bytes);
+	}
+	cute_aseprite_blend_layers(ase, layer_mask, pixel_bufs);
+
+	// Generate IDs, premultiply alpha, register pixels.
+	dyna uint64_t* blend_ids = NULL;
+	for (int i = 0; i < frame_count; ++i) {
+		// Premultiply alpha.
+		ase_color_t* pix = pixel_bufs[i];
+		for (int p = 0; p < ase->w * ase->h; ++p) {
+			float a = pix[p].a / 255.0f;
+			pix[p].r = (uint8_t)(pix[p].r / 255.0f * a * 255.0f);
+			pix[p].g = (uint8_t)(pix[p].g / 255.0f * a * 255.0f);
+			pix[p].b = (uint8_t)(pix[p].b / 255.0f * a * 255.0f);
+		}
+
+		uint64_t id = g_ase_cache->id_gen++;
+		g_ase_cache->id_to_pixels.insert(id, pixel_bufs[i]);
+		apush(blend_ids, id);
+		apush(asset->owned_pixel_buffers, (void*)pixel_bufs[i]);
+	}
+	CF_FREE(pixel_bufs);
+
+	apush(asset->blend_frame_ids, blend_ids);
+	int blend_index = asset->blend_count++;
+	return blend_index;
 }
 
 uint64_t cf_register_external_sprite_asset(const char* name, int w, int h, CF_MAP(CF_Animation*) animations)

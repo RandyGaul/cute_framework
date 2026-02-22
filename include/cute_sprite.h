@@ -149,6 +149,9 @@ typedef struct CF_Sprite
 	/* @member Controls the animation play direction. This gets set each time `cf_sprite_play` is called to the animation's play direction. You may override this member yourself after calling `cf_sprite_play`. */
 	CF_PlayDirection play_direction;
 
+	/* @member Which blend to draw. 0 = default (all visible layers). Use cf_sprite_add_blend to register additional blends. */
+	int blend_index;
+
 	/* @member Interned name of the current animation. */
 	const char* animation_name;
 
@@ -292,6 +295,28 @@ CF_API const char* CF_CALL cf_sprite_animation_name_at(const CF_Sprite* sprite, 
  * @related  CF_Sprite cf_sprite_pivot
  */
 CF_API CF_V2 CF_CALL cf_sprite_pivot(const CF_Sprite* sprite);
+
+/**
+ * @function cf_sprite_add_blend
+ * @category sprite
+ * @brief    Register a layer blend for an aseprite sprite asset.
+ * @param    path          Virtual path used when loading the sprite.
+ * @param    layer_names   Array of layer name strings to include.
+ * @param    layer_count   Number of entries in layer_names.
+ * @return   The blend index (1, 2, ...). Blend 0 = default (all visible layers).
+ * @remarks  Ignores file visibility flags -- includes exactly the named layers.
+ * @related  CF_Sprite cf_sprite_add_blend cf_sprite_blend_count
+ */
+CF_API int CF_CALL cf_sprite_add_blend(const char* path, const char** layer_names, int layer_count);
+
+/**
+ * @function cf_sprite_blend_count
+ * @category sprite
+ * @brief    Returns the number of blends for this sprite's asset (>= 1).
+ * @param    sprite     The sprite.
+ * @related  CF_Sprite cf_sprite_add_blend cf_sprite_blend_count
+ */
+CF_API int CF_CALL cf_sprite_blend_count(const CF_Sprite* sprite);
 
 //--------------------------------------------------------------------------------------------------
 // In-line implementation of `CF_Sprite` functions.
@@ -672,13 +697,14 @@ CF_INLINE bool cf_sprite_on_loop(CF_Sprite* sprite)
  * @function cf_sprite_get_pixels
  * @category sprite
  * @brief    Returns pixel data for a specific frame of a named animation.
- * @param    sprite     The sprite.
- * @param    animation  Name of the animation containing the frame.
- * @param    frame_index  Zero-based index of the frame within the animation.
+ * @param    sprite        The sprite.
+ * @param    blend_index   Which blend to read (0 = default, 1+ from cf_sprite_add_blend).
+ * @param    animation     Name of the animation containing the frame.
+ * @param    frame_index   Zero-based index of the frame within the animation.
  * @return   A `CF_Image` with a copy of the frame's pixel data (premultiplied alpha). Returns a zero'd `CF_Image` if the animation or frame is not found. The caller must free the image with `cf_image_free`.
  * @related  CF_Sprite CF_Image CF_Frame cf_image_free
  */
-CF_API CF_Image CF_CALL cf_sprite_get_pixels(CF_Sprite* sprite, const char* animation, int frame_index);
+CF_API CF_Image CF_CALL cf_sprite_get_pixels(CF_Sprite* sprite, int blend_index, const char* animation, int frame_index);
 
 #ifdef __cplusplus
 }
@@ -730,7 +756,7 @@ CF_INLINE float sprite_animation_delay(CF_Sprite* sprite) { return cf_sprite_ani
 CF_INLINE float sprite_animation_interpolant(CF_Sprite* sprite) { return cf_sprite_animation_interpolant(sprite); }
 CF_INLINE bool sprite_will_finish(CF_Sprite* sprite) { return cf_sprite_will_finish(sprite); }
 CF_INLINE bool sprite_on_loop(CF_Sprite* sprite) { return cf_sprite_on_loop(sprite); }
-CF_INLINE CF_Image sprite_get_pixels(CF_Sprite* sprite, const char* animation, int frame_index) { return cf_sprite_get_pixels(sprite, animation, frame_index); }
+CF_INLINE CF_Image sprite_get_pixels(CF_Sprite* sprite, int blend_index, const char* animation, int frame_index) { return cf_sprite_get_pixels(sprite, blend_index, animation, frame_index); }
 
 CF_INLINE int sprite_width(CF_Sprite& sprite) { return cf_sprite_width(&sprite); }
 CF_INLINE int sprite_height(CF_Sprite& sprite) { return cf_sprite_height(&sprite); }
@@ -770,7 +796,7 @@ CF_INLINE float sprite_animation_delay(CF_Sprite& sprite) { return cf_sprite_ani
 CF_INLINE float sprite_animation_interpolant(CF_Sprite& sprite) { return cf_sprite_animation_interpolant(&sprite); }
 CF_INLINE bool sprite_will_finish(CF_Sprite& sprite) { return cf_sprite_will_finish(&sprite); }
 CF_INLINE bool sprite_on_loop(CF_Sprite& sprite) { return cf_sprite_on_loop(&sprite); }
-CF_INLINE CF_Image sprite_get_pixels(CF_Sprite& sprite, const char* animation, int frame_index) { return cf_sprite_get_pixels(&sprite, animation, frame_index); }
+CF_INLINE CF_Image sprite_get_pixels(CF_Sprite& sprite, int blend_index, const char* animation, int frame_index) { return cf_sprite_get_pixels(&sprite, blend_index, animation, frame_index); }
 
 CF_INLINE CF_Sprite easy_make_sprite(const char* png_path, CF_Result* result) { return cf_make_easy_sprite_from_png(png_path, result); }
 CF_INLINE CF_Sprite easy_make_sprite(const CF_Pixel* pixels, int w, int h) { return cf_make_easy_sprite_from_pixels(pixels, w, h); }
@@ -785,6 +811,8 @@ CF_INLINE CF_V2 sprite_pivot(const CF_Sprite* sprite) { return cf_sprite_pivot(s
 CF_INLINE void easy_sprite_update_pixels(CF_Sprite* sprite, const CF_Pixel* pixels) { cf_easy_sprite_update_pixels(sprite, pixels); }
 CF_INLINE void easy_sprite_unload(CF_Sprite* sprite) { cf_easy_sprite_unload(sprite); }
 CF_INLINE CF_Sprite make_sprite_from_memory(const char* unique_name, const void* aseprite_data, int size) { return cf_make_sprite_from_memory(unique_name, aseprite_data, size); }
+CF_INLINE int sprite_add_blend(const char* path, const char** layer_names, int layer_count) { return cf_sprite_add_blend(path, layer_names, layer_count); }
+CF_INLINE int sprite_blend_count(const CF_Sprite* sprite) { return cf_sprite_blend_count(sprite); }
 
 }
 

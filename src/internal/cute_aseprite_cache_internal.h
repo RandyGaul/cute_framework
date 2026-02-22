@@ -37,9 +37,15 @@ struct CF_SpriteAsset
 	dyna CF_V2* pivots;
 	dyna CF_Aabb* center_patches;
 	dyna uint64_t* frame_ids;
+	int blend_count;                  // Total blends (1 = default only).
+	dyna uint64_t** blend_frame_ids;  // Array of frame_id arrays per blend.
+	dyna void** owned_pixel_buffers;  // Pixel buffers from re-blending (index 1+).
 };
 
 CF_SpriteAsset* cf_sprite_get_asset(uint64_t asset_id);
+
+int cf_aseprite_cache_add_blend(const char* path, uint64_t layer_mask);
+uint64_t cf_aseprite_layer_mask(ase_t* ase, const char** layer_names, int count);
 
 // Register an externally-owned animation table as a sprite asset (used by custom sprite cache).
 // The caller retains ownership of the animations; the asset will not free them.

@@ -19,12 +19,8 @@
 
 	LIMITATIONS
 
-		Only the "normal" blend mode for layers is supported. As a workaround try
-		using the "merge down" function in Aseprite to create a normal layer.
-		Supporting all blend modes would take too much code to be worth it.
-
 		Does not support very old versions of Aseprite (with old palette chunks
-		0x0004 or 0x0011). Also does not support deprecrated mask chunk.
+		0x0011). Also does not support deprecrated mask chunk.
 
 		sRGB and ICC profiles are parsed but completely ignored when blending
 		frames together. If you want these to be used when composing frames you
@@ -80,10 +76,9 @@
 		animation, formed by blending all the cels of an animation together. There is
 		one cel per layer per frame. Each cel contains its own pixel data.
 
-		The frame's pixels are automatically assumed to have been blended by the `normal`
-		blend mode. A warning is emit if any other blend mode is encountered. Feel free
-		to update the pixels of each frame with your own implementation of blending
-		functions. The frame's pixels are merely provided like this for convenience.
+		The frame's pixels are composited using each layer's blend mode, including
+		all 19 Aseprite blend modes. Group layers with valid blend mode/opacity
+		(header flag bit 2) are composited separately then merged into their parent.
 
 
 	BUGS AND CRASHES
@@ -98,18 +93,20 @@
 #ifndef CUTE_ASEPRITE_H
 #define CUTE_ASEPRITE_H
 
+#include <stdint.h>
+
 typedef struct ase_t ase_t;
+typedef struct ase_color_t ase_color_t;
 
 ase_t* cute_aseprite_load_from_file(const char* path, void* mem_ctx);
 ase_t* cute_aseprite_load_from_memory(const void* memory, int size, void* mem_ctx);
 void cute_aseprite_free(ase_t* aseprite);
+void cute_aseprite_blend_layers(ase_t* ase, uint64_t layer_mask, ase_color_t** out_pixels);
 
 #define CUTE_ASEPRITE_MAX_LAYERS (64)
 #define CUTE_ASEPRITE_MAX_SLICES (128)
 #define CUTE_ASEPRITE_MAX_PALETTE_ENTRIES (1024)
 #define CUTE_ASEPRITE_MAX_TAGS (256)
-
-#include <stdint.h>
 
 typedef struct ase_color_t ase_color_t;
 typedef struct ase_frame_t ase_frame_t;
@@ -154,6 +151,29 @@ typedef enum ase_layer_flags_t
 	ASE_LAYER_FLAGS_REFERENCE          = 0x40,
 } ase_layer_flags_t;
 
+typedef enum ase_blend_mode_t
+{
+	ASE_BLEND_MODE_NORMAL,
+	ASE_BLEND_MODE_MULTIPLY,
+	ASE_BLEND_MODE_SCREEN,
+	ASE_BLEND_MODE_OVERLAY,
+	ASE_BLEND_MODE_DARKEN,
+	ASE_BLEND_MODE_LIGHTEN,
+	ASE_BLEND_MODE_COLOR_DODGE,
+	ASE_BLEND_MODE_COLOR_BURN,
+	ASE_BLEND_MODE_HARD_LIGHT,
+	ASE_BLEND_MODE_SOFT_LIGHT,
+	ASE_BLEND_MODE_DIFFERENCE,
+	ASE_BLEND_MODE_EXCLUSION,
+	ASE_BLEND_MODE_HSL_HUE,
+	ASE_BLEND_MODE_HSL_SATURATION,
+	ASE_BLEND_MODE_HSL_COLOR,
+	ASE_BLEND_MODE_HSL_LUMINOSITY,
+	ASE_BLEND_MODE_ADDITION,
+	ASE_BLEND_MODE_SUBTRACT,
+	ASE_BLEND_MODE_DIVIDE,
+} ase_blend_mode_t;
+
 typedef enum ase_layer_type_t
 {
 	ASE_LAYER_TYPE_NORMAL,
@@ -164,6 +184,7 @@ struct ase_layer_t
 {
 	ase_layer_flags_t flags;
 	ase_layer_type_t type;
+	ase_blend_mode_t blend_mode;
 	const char* name;
 	ase_layer_t* parent;
 	float opacity;
@@ -288,6 +309,7 @@ struct ase_t
 	int grid_w;
 	int grid_h;
 	int has_color_profile;
+	int valid_group_blend;
 	ase_color_profile_t color_profile;
 	ase_palette_t palette;
 
@@ -343,6 +365,8 @@ struct ase_t
 	#include <string.h> // memset
 	#define CUTE_ASEPRITE_MEMSET memset
 #endif
+
+#include <math.h> // sqrt (used by soft_light blend mode)
 
 #if !defined(CUTE_ASEPRITE_ASSERT)
 	#include <assert.h>
@@ -866,28 +890,6 @@ ase_t* cute_aseprite_load_from_file(const char* path, void* mem_ctx)
 	return aseprite;
 }
 
-static int s_mul_un8(int a, int b)
-{
-	int t = (a * b) + 0x80;
-	return (((t >> 8) + t) >> 8);
-}
-
-static ase_color_t s_blend(ase_color_t src, ase_color_t dst, uint8_t opacity)
-{
-	src.a = (uint8_t)s_mul_un8(src.a, opacity);
-	int a = src.a + dst.a - s_mul_un8(src.a, dst.a);
-	int r, g, b;
-	if (a == 0) {
-		r = g = b = 0;
-	} else {
-		r = dst.r + (src.r - dst.r) * src.a / a;
-		g = dst.g + (src.g - dst.g) * src.a / a;
-		b = dst.b + (src.b - dst.b) * src.a / a;
-	}
-	ase_color_t ret = { (uint8_t)r, (uint8_t)g, (uint8_t)b, (uint8_t)a };
-	return ret;
-}
-
 static int s_min(int a, int b)
 {
 	return a < b ? a : b;
@@ -896,6 +898,224 @@ static int s_min(int a, int b)
 static int s_max(int a, int b)
 {
 	return a < b ? b : a;
+}
+
+static int s_mul_un8(int a, int b)
+{
+	int t = (a * b) + 0x80;
+	return (((t >> 8) + t) >> 8);
+}
+
+// Per-channel blend helpers. Reference: Aseprite blend_funcs.cpp
+
+static int s_blend_multiply(int b, int s) { return s_mul_un8(b, s); }
+static int s_blend_screen(int b, int s) { return b + s - s_mul_un8(b, s); }
+static int s_blend_overlay(int b, int s) { return b < 128 ? s_mul_un8(b, s << 1) : s_blend_screen(b, (s << 1) - 255); }
+static int s_blend_darken(int b, int s) { return s_min(b, s); }
+static int s_blend_lighten(int b, int s) { return s_max(b, s); }
+
+static int s_blend_color_dodge(int b, int s)
+{
+	if (b == 0) return 0;
+	s = 255 - s;
+	if (b >= s) return 255;
+	return (b * 255) / s;
+}
+
+static int s_blend_color_burn(int b, int s)
+{
+	if (b == 255) return 255;
+	b = 255 - b;
+	if (b >= s) return 0;
+	return 255 - (b * 255) / s;
+}
+
+static int s_blend_hard_light(int b, int s) { return s < 128 ? s_mul_un8(b, s << 1) : s_blend_screen(b, (s << 1) - 255); }
+
+static int s_blend_soft_light(int b, int s)
+{
+	double t = (double)s / 255.0;
+	double r;
+	if (t < 0.5) {
+		r = (double)b / 255.0;
+		r = r - (1.0 - 2.0 * t) * r * (1.0 - r);
+	} else {
+		double d;
+		r = (double)b / 255.0;
+		if (r < 0.25)
+			d = ((16.0 * r - 12.0) * r + 4.0) * r;
+		else
+			d = sqrt(r);
+		r = r + (2.0 * t - 1.0) * (d - r);
+	}
+	return (int)(r * 255.0 + 0.5);
+}
+
+static int s_blend_difference(int b, int s) { return b > s ? b - s : s - b; }
+static int s_blend_exclusion(int b, int s) { return b + s - 2 * s_mul_un8(b, s); }
+static int s_blend_addition(int b, int s) { return s_min(b + s, 255); }
+static int s_blend_subtract(int b, int s) { return s_max(b - s, 0); }
+
+static int s_blend_divide(int b, int s)
+{
+	if (b == 0) return 0;
+	if (b >= s) return 255;
+	return (b * 255) / s;
+}
+
+// HSL helpers (double precision, matching Aseprite).
+
+static double s_lum(double r, double g, double b) { return 0.3 * r + 0.59 * g + 0.11 * b; }
+
+static double s_sat(double r, double g, double b)
+{
+	double mx = r > g ? (r > b ? r : b) : (g > b ? g : b);
+	double mn = r < g ? (r < b ? r : b) : (g < b ? g : b);
+	return mx - mn;
+}
+
+static void s_clip_color(double* r, double* g, double* b)
+{
+	double l = s_lum(*r, *g, *b);
+	double mn = *r < *g ? (*r < *b ? *r : *b) : (*g < *b ? *g : *b);
+	double mx = *r > *g ? (*r > *b ? *r : *b) : (*g > *b ? *g : *b);
+	if (mn < 0.0) {
+		double d = l - mn;
+		if (d > 0.0001) {
+			*r = l + (*r - l) * l / d;
+			*g = l + (*g - l) * l / d;
+			*b = l + (*b - l) * l / d;
+		} else {
+			*r = *g = *b = l;
+		}
+	}
+	if (mx > 1.0) {
+		double d = mx - l;
+		if (d > 0.0001) {
+			*r = l + (*r - l) * (1.0 - l) / d;
+			*g = l + (*g - l) * (1.0 - l) / d;
+			*b = l + (*b - l) * (1.0 - l) / d;
+		} else {
+			*r = *g = *b = l;
+		}
+	}
+}
+
+static void s_set_lum(double* r, double* g, double* b, double l)
+{
+	double d = l - s_lum(*r, *g, *b);
+	*r += d;
+	*g += d;
+	*b += d;
+	s_clip_color(r, g, b);
+}
+
+static void s_set_sat(double* r, double* g, double* b, double s)
+{
+	// Identify min/mid/max pointers.
+	double *mn, *mid, *mx;
+	if (*r <= *g) {
+		if (*g <= *b)      { mn = r; mid = g; mx = b; }
+		else if (*r <= *b) { mn = r; mid = b; mx = g; }
+		else               { mn = b; mid = r; mx = g; }
+	} else {
+		if (*r <= *b)      { mn = g; mid = r; mx = b; }
+		else if (*g <= *b) { mn = g; mid = b; mx = r; }
+		else               { mn = b; mid = g; mx = r; }
+	}
+	if (*mx > *mn) {
+		*mid = ((*mid - *mn) * s) / (*mx - *mn);
+		*mx = s;
+	} else {
+		*mid = *mx = 0.0;
+	}
+	*mn = 0.0;
+}
+
+// Apply per-channel blend mode to src/dst RGB, then composite with Porter-Duff over.
+static ase_color_t s_blend(ase_color_t src, ase_color_t dst, uint8_t opacity, ase_blend_mode_t mode)
+{
+	src.a = (uint8_t)s_mul_un8(src.a, opacity);
+
+	if (mode == ASE_BLEND_MODE_NORMAL || dst.a == 0) {
+		int a = src.a + dst.a - s_mul_un8(src.a, dst.a);
+		int r, g, b;
+		if (a == 0) {
+			r = g = b = 0;
+		} else {
+			r = dst.r + (src.r - dst.r) * src.a / a;
+			g = dst.g + (src.g - dst.g) * src.a / a;
+			b = dst.b + (src.b - dst.b) * src.a / a;
+		}
+		ase_color_t ret = { (uint8_t)r, (uint8_t)g, (uint8_t)b, (uint8_t)a };
+		return ret;
+	}
+
+	// Compute blended RGB.
+	int br, bg, bb;
+
+	switch (mode) {
+	case ASE_BLEND_MODE_MULTIPLY:    br = s_blend_multiply(dst.r, src.r);    bg = s_blend_multiply(dst.g, src.g);    bb = s_blend_multiply(dst.b, src.b);    break;
+	case ASE_BLEND_MODE_SCREEN:      br = s_blend_screen(dst.r, src.r);      bg = s_blend_screen(dst.g, src.g);      bb = s_blend_screen(dst.b, src.b);      break;
+	case ASE_BLEND_MODE_OVERLAY:     br = s_blend_overlay(dst.r, src.r);     bg = s_blend_overlay(dst.g, src.g);     bb = s_blend_overlay(dst.b, src.b);     break;
+	case ASE_BLEND_MODE_DARKEN:      br = s_blend_darken(dst.r, src.r);      bg = s_blend_darken(dst.g, src.g);      bb = s_blend_darken(dst.b, src.b);      break;
+	case ASE_BLEND_MODE_LIGHTEN:     br = s_blend_lighten(dst.r, src.r);     bg = s_blend_lighten(dst.g, src.g);     bb = s_blend_lighten(dst.b, src.b);     break;
+	case ASE_BLEND_MODE_COLOR_DODGE: br = s_blend_color_dodge(dst.r, src.r); bg = s_blend_color_dodge(dst.g, src.g); bb = s_blend_color_dodge(dst.b, src.b); break;
+	case ASE_BLEND_MODE_COLOR_BURN:  br = s_blend_color_burn(dst.r, src.r);  bg = s_blend_color_burn(dst.g, src.g);  bb = s_blend_color_burn(dst.b, src.b);  break;
+	case ASE_BLEND_MODE_HARD_LIGHT:  br = s_blend_hard_light(dst.r, src.r);  bg = s_blend_hard_light(dst.g, src.g);  bb = s_blend_hard_light(dst.b, src.b);  break;
+	case ASE_BLEND_MODE_SOFT_LIGHT:  br = s_blend_soft_light(dst.r, src.r);  bg = s_blend_soft_light(dst.g, src.g);  bb = s_blend_soft_light(dst.b, src.b);  break;
+	case ASE_BLEND_MODE_DIFFERENCE:  br = s_blend_difference(dst.r, src.r);  bg = s_blend_difference(dst.g, src.g);  bb = s_blend_difference(dst.b, src.b);  break;
+	case ASE_BLEND_MODE_EXCLUSION:   br = s_blend_exclusion(dst.r, src.r);   bg = s_blend_exclusion(dst.g, src.g);   bb = s_blend_exclusion(dst.b, src.b);   break;
+	case ASE_BLEND_MODE_ADDITION:    br = s_blend_addition(dst.r, src.r);    bg = s_blend_addition(dst.g, src.g);    bb = s_blend_addition(dst.b, src.b);    break;
+	case ASE_BLEND_MODE_SUBTRACT:    br = s_blend_subtract(dst.r, src.r);    bg = s_blend_subtract(dst.g, src.g);    bb = s_blend_subtract(dst.b, src.b);    break;
+	case ASE_BLEND_MODE_DIVIDE:      br = s_blend_divide(dst.r, src.r);      bg = s_blend_divide(dst.g, src.g);      bb = s_blend_divide(dst.b, src.b);      break;
+	case ASE_BLEND_MODE_HSL_HUE:
+	case ASE_BLEND_MODE_HSL_SATURATION:
+	case ASE_BLEND_MODE_HSL_COLOR:
+	case ASE_BLEND_MODE_HSL_LUMINOSITY: {
+		double sr = src.r / 255.0, sg = src.g / 255.0, sb = src.b / 255.0;
+		double dr = dst.r / 255.0, dg = dst.g / 255.0, db = dst.b / 255.0;
+		double rr, rg, rb;
+		switch (mode) {
+		case ASE_BLEND_MODE_HSL_HUE:
+			rr = sr; rg = sg; rb = sb;
+			s_set_sat(&rr, &rg, &rb, s_sat(dr, dg, db));
+			s_set_lum(&rr, &rg, &rb, s_lum(dr, dg, db));
+			break;
+		case ASE_BLEND_MODE_HSL_SATURATION:
+			rr = dr; rg = dg; rb = db;
+			s_set_sat(&rr, &rg, &rb, s_sat(sr, sg, sb));
+			s_set_lum(&rr, &rg, &rb, s_lum(dr, dg, db));
+			break;
+		case ASE_BLEND_MODE_HSL_COLOR:
+			rr = sr; rg = sg; rb = sb;
+			s_set_lum(&rr, &rg, &rb, s_lum(dr, dg, db));
+			break;
+		case ASE_BLEND_MODE_HSL_LUMINOSITY:
+			rr = dr; rg = dg; rb = db;
+			s_set_lum(&rr, &rg, &rb, s_lum(sr, sg, sb));
+			break;
+		default: rr = sr; rg = sg; rb = sb; break;
+		}
+		br = (int)(rr * 255.0 + 0.5);
+		bg = (int)(rg * 255.0 + 0.5);
+		bb = (int)(rb * 255.0 + 0.5);
+	} break;
+	default: br = src.r; bg = src.g; bb = src.b; break;
+	}
+
+	// Alpha composite with blended RGB.
+	int a = src.a + dst.a - s_mul_un8(src.a, dst.a);
+	int r, g, b;
+	if (a == 0) {
+		r = g = b = 0;
+	} else {
+		r = dst.r + (br - dst.r) * src.a / a;
+		g = dst.g + (bg - dst.g) * src.a / a;
+		b = dst.b + (bb - dst.b) * src.a / a;
+	}
+	ase_color_t ret = { (uint8_t)r, (uint8_t)g, (uint8_t)b, (uint8_t)a };
+	return ret;
 }
 
 static ase_color_t s_color(ase_t* ase, void* src, int index)
@@ -948,7 +1168,9 @@ ase_t* cute_aseprite_load_from_memory(const void* memory, int size, void* mem_ct
 		CUTE_ASEPRITE_ASSERT(bpp == 1);
 		ase->mode = ASE_MODE_INDEXED;
 	}
-	uint32_t valid_layer_opacity = s_read_uint32(s) & 1;
+	uint32_t header_flags = s_read_uint32(s);
+	uint32_t valid_layer_opacity = header_flags & 1;
+	ase->valid_group_blend = (header_flags >> 1) & 1;
 	int speed = s_read_uint16(s);
 	s_skip(s, sizeof(uint32_t) * 2); // Spec says skip these bytes, as they're zero'd.
 	ase->transparent_palette_entry_index = s_read_uint8(s);
@@ -1030,8 +1252,7 @@ ase_t* cute_aseprite_load_from_memory(const void* memory, int size, void* mem_ct
 				}
 				s_skip(s, sizeof(uint16_t)); // Default layer width in pixels (ignored).
 				s_skip(s, sizeof(uint16_t)); // Default layer height in pixels (ignored).
-				int blend_mode = (int)s_read_uint16(s);
-				if (blend_mode) CUTE_ASEPRITE_WARNING("Unknown blend mode encountered.");
+				layer->blend_mode = (ase_blend_mode_t)s_read_uint16(s);
 				layer->opacity = s_read_uint8(s) / 255.0f;
 				if (!valid_layer_opacity) layer->opacity = 1.0f;
 				s_skip(s, 3); // For future use (set to zero).
@@ -1049,7 +1270,11 @@ ase_t* cute_aseprite_load_from_memory(const void* memory, int size, void* mem_ct
 				cel->y = s_read_int16(s);
 				cel->opacity = s_read_uint8(s) / 255.0f;
 				int cel_type = (int)s_read_uint16(s);
-				s_skip(s, 7); // For future (set to zero).
+				// z-index (int16) + 5 reserved bytes. The z-index lets individual cels
+				// override their layer stacking order per-frame, useful for hand-animated
+				// tricks like an arm swapping in front of / behind the body. Not parsed --
+				// we composite in flat layer-index order.
+				s_skip(s, 7);
 				switch (cel_type) {
 				case 0: // Raw cel.
 					cel->w = s_read_uint16(s);
@@ -1224,34 +1449,77 @@ ase_t* cute_aseprite_load_from_memory(const void* memory, int size, void* mem_ct
 		}
 	}
 
+	// Helper: find layer index given layer pointer.
+	#define s_layer_index(ase, layer) ((int)((layer) - (ase)->layers))
+
 	// Blend all cel pixels into each of their respective frames, for convenience.
+	// Supports group compositing when valid_group_blend is set.
+	int pixel_count = ase->w * ase->h;
+	int pixel_bytes = pixel_count * (int)sizeof(ase_color_t);
+
+	// Allocate group buffers if needed.
+	ase_color_t* group_buffers[CUTE_ASEPRITE_MAX_LAYERS];
+	CUTE_ASEPRITE_MEMSET(group_buffers, 0, sizeof(group_buffers));
+	if (ase->valid_group_blend) {
+		for (int li = 0; li < ase->layer_count; ++li) {
+			if (ase->layers[li].type == ASE_LAYER_TYPE_GROUP) {
+				group_buffers[li] = (ase_color_t*)CUTE_ASEPRITE_ALLOC(pixel_bytes, mem_ctx);
+			}
+		}
+	}
+
 	for (int i = 0; i < ase->frame_count; ++i) {
 		ase_frame_t* frame = ase->frames + i;
-		frame->pixels = (ase_color_t*)CUTE_ASEPRITE_ALLOC((int)(sizeof(ase_color_t)) * ase->w * ase->h, mem_ctx);
-		CUTE_ASEPRITE_MEMSET(frame->pixels, 0, sizeof(ase_color_t) * (size_t)ase->w * (size_t)ase->h);
-		ase_color_t* dst = frame->pixels;
+		frame->pixels = (ase_color_t*)CUTE_ASEPRITE_ALLOC(pixel_bytes, mem_ctx);
+		CUTE_ASEPRITE_MEMSET(frame->pixels, 0, (size_t)pixel_bytes);
+
+		// Clear group buffers for this frame.
+		if (ase->valid_group_blend) {
+			for (int li = 0; li < ase->layer_count; ++li) {
+				if (group_buffers[li]) {
+					CUTE_ASEPRITE_MEMSET(group_buffers[li], 0, (size_t)pixel_bytes);
+				}
+			}
+		}
+
 		for (int j = 0; j < frame->cel_count; ++j) {
 			ase_cel_t* cel = frame->cels + j;
-			if (!(cel->layer->flags & ASE_LAYER_FLAGS_VISIBLE)) {
-				continue;
+
+			// Walk full parent chain for visibility.
+			int visible = (cel->layer->flags & ASE_LAYER_FLAGS_VISIBLE) ? 1 : 0;
+			if (visible) {
+				ase_layer_t* p = cel->layer->parent;
+				while (p) {
+					if (!(p->flags & ASE_LAYER_FLAGS_VISIBLE)) { visible = 0; break; }
+					p = p->parent;
+				}
 			}
-			if (cel->layer->parent && !(cel->layer->parent->flags & ASE_LAYER_FLAGS_VISIBLE)) {
-				continue;
-			}
+			if (!visible) continue;
+
 			while (cel->is_linked) {
-				ase_frame_t* frame = ase->frames + cel->linked_frame_index;
+				ase_frame_t* linked_frame = ase->frames + cel->linked_frame_index;
 				int found = 0;
-				for (int k = 0; k < frame->cel_count; ++k) {
-					if (frame->cels[k].layer == cel->layer) {
-						cel = frame->cels + k;
+				for (int k = 0; k < linked_frame->cel_count; ++k) {
+					if (linked_frame->cels[k].layer == cel->layer) {
+						cel = linked_frame->cels + k;
 						found = 1;
 						break;
 					}
 				}
 				CUTE_ASEPRITE_ASSERT(found);
 			}
+
+			// Target buffer: group parent's buffer (if group compositing) or frame.
+			ase_color_t* dst;
+			if (ase->valid_group_blend && cel->layer->parent && cel->layer->parent->type == ASE_LAYER_TYPE_GROUP) {
+				dst = group_buffers[s_layer_index(ase, cel->layer->parent)];
+			} else {
+				dst = frame->pixels;
+			}
+
 			void* src = cel->pixels;
 			uint8_t opacity = (uint8_t)(cel->opacity * cel->layer->opacity * 255.0f);
+			ase_blend_mode_t blend_mode = cel->layer->blend_mode;
 			int cx = cel->x;
 			int cy = cel->y;
 			int cw = cel->w;
@@ -1268,15 +1536,113 @@ ase_t* cute_aseprite_load_from_memory(const void* memory, int size, void* mem_ct
 					int dst_index = aw * dy + dx;
 					ase_color_t src_color = s_color(ase, src, cw * sy + sx);
 					ase_color_t dst_color = dst[dst_index];
-					ase_color_t result = s_blend(src_color, dst_color, opacity);
+					ase_color_t result = s_blend(src_color, dst_color, opacity, blend_mode);
+					dst[dst_index] = result;
+				}
+			}
+		}
+
+		// Flush group buffers bottom-up (highest layer index = innermost groups first).
+		if (ase->valid_group_blend) {
+			for (int li = ase->layer_count - 1; li >= 0; --li) {
+				if (!group_buffers[li]) continue;
+				ase_layer_t* group = ase->layers + li;
+
+				// Target: parent group's buffer, or the frame.
+				ase_color_t* dst;
+				if (group->parent && group->parent->type == ASE_LAYER_TYPE_GROUP) {
+					dst = group_buffers[s_layer_index(ase, group->parent)];
+				} else {
+					dst = frame->pixels;
+				}
+
+				uint8_t group_opacity = (uint8_t)(group->opacity * 255.0f);
+				ase_blend_mode_t group_mode = group->blend_mode;
+				ase_color_t* src_buf = group_buffers[li];
+				for (int p = 0; p < pixel_count; ++p) {
+					if (src_buf[p].a == 0) continue;
+					dst[p] = s_blend(src_buf[p], dst[p], group_opacity, group_mode);
+				}
+
+				// Clear for next frame.
+				CUTE_ASEPRITE_MEMSET(src_buf, 0, (size_t)pixel_bytes);
+			}
+		}
+	}
+
+	// Free group buffers.
+	if (ase->valid_group_blend) {
+		for (int li = 0; li < ase->layer_count; ++li) {
+			if (group_buffers[li]) {
+				CUTE_ASEPRITE_FREE(group_buffers[li], mem_ctx);
+			}
+		}
+	}
+
+	#undef s_layer_index
+
+	ase->mem_ctx = mem_ctx;
+	return ase;
+}
+
+void cute_aseprite_blend_layers(ase_t* ase, uint64_t layer_mask, ase_color_t** out_pixels)
+{
+	for (int i = 0; i < ase->frame_count; ++i) {
+		ase_frame_t* frame = ase->frames + i;
+		ase_color_t* dst = out_pixels[i];
+		for (int j = 0; j < frame->cel_count; ++j) {
+			ase_cel_t* cel = frame->cels + j;
+			int li = (int)(cel->layer - ase->layers);
+			if (!(layer_mask & (1ULL << li))) continue;
+
+			// Walk parent chain: skip if any ancestor is not in the mask.
+			int include = 1;
+			ase_layer_t* p = cel->layer->parent;
+			while (p) {
+				int pi = (int)(p - ase->layers);
+				if (!(layer_mask & (1ULL << pi))) { include = 0; break; }
+				p = p->parent;
+			}
+			if (!include) continue;
+
+			while (cel->is_linked) {
+				ase_frame_t* linked_frame = ase->frames + cel->linked_frame_index;
+				int found = 0;
+				for (int k = 0; k < linked_frame->cel_count; ++k) {
+					if (linked_frame->cels[k].layer == cel->layer) {
+						cel = linked_frame->cels + k;
+						found = 1;
+						break;
+					}
+				}
+				CUTE_ASEPRITE_ASSERT(found);
+			}
+
+			void* src = cel->pixels;
+			uint8_t opacity = (uint8_t)(cel->opacity * cel->layer->opacity * 255.0f);
+			ase_blend_mode_t blend_mode = cel->layer->blend_mode;
+			int cx = cel->x;
+			int cy = cel->y;
+			int cw = cel->w;
+			int ch = cel->h;
+			int cl = -s_min(cx, 0);
+			int ct = -s_min(cy, 0);
+			int dl = s_max(cx, 0);
+			int dt = s_max(cy, 0);
+			int dr = s_min(ase->w, cw + cx);
+			int db = s_min(ase->h, ch + cy);
+			int aw = ase->w;
+			for (int dx = dl, sx = cl; dx < dr; dx++, sx++) {
+				for (int dy = dt, sy = ct; dy < db; dy++, sy++) {
+					int dst_index = aw * dy + dx;
+					ase_color_t src_color = s_color(ase, src, cw * sy + sx);
+					ase_color_t dst_color = dst[dst_index];
+					ase_color_t result = s_blend(src_color, dst_color, opacity, blend_mode);
 					dst[dst_index] = result;
 				}
 			}
 		}
 	}
-
-	ase->mem_ctx = mem_ctx;
-	return ase;
 }
 
 void cute_aseprite_free(ase_t* ase)
