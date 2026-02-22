@@ -157,13 +157,13 @@ CF_API void CF_CALL cf_image_free_indexed(CF_ImageIndexed* img);
 /**
  * @function cf_image_save_png
  * @category image
- * @brief    Saves an image to a PNG file on disk.
- * @param    path          The file path to write the PNG to. Does *not* use the virtual file system.
+ * @brief    Saves an image to a PNG file.
+ * @param    virtual_path  A virtual path to write the PNG to. See [Virtual File System](https://randygaul.github.io/cute_framework/topics/virtual_file_system).
  * @param    img           The image to save.
  * @return   Check the `CF_Result` for errors.
  * @related  CF_Image cf_image_load_png cf_image_free cf_image_save_png cf_image_save_png_to_memory
  */
-CF_API CF_Result CF_CALL cf_image_save_png(const char* path, CF_Image* img);
+CF_API CF_Result CF_CALL cf_image_save_png(const char* virtual_path, CF_Image* img);
 
 /**
  * @function cf_image_save_png_to_memory

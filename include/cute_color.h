@@ -49,20 +49,31 @@ typedef struct CF_Color
  */
 typedef union CF_Pixel
 {
-	struct
-	{
-		/* @member The red component, from 0 to 255. */
-		uint8_t r;
+	union {
+		struct
+		{
+			/* @member The red component, from 0 to 255. */
+			uint8_t r;
 
-		/* @member The green component, from 0 to 255. */
-		uint8_t g;
+			/* @member The green component, from 0 to 255. */
+			uint8_t g;
 
-		/* @member The blue component, from 0 to 255. */
-		uint8_t b;
+			/* @member The blue component, from 0 to 255. */
+			uint8_t b;
 
-		/* @member The alpha component (transparency/opaqueness), from 0 to 255. */
-		uint8_t a;
-	} colors;
+			/* @member The alpha component (transparency/opaqueness), from 0 to 255. */
+			uint8_t a;
+		} colors;
+
+		// For convenience.
+		struct
+		{
+			uint8_t r;
+			uint8_t g;
+			uint8_t b;
+			uint8_t a;
+		};
+	};
 
 	/* @member A 32-bit unsigned integer containing the packed-bytes for all four RGBA components. */
 	uint32_t val;

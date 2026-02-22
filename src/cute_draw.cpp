@@ -520,7 +520,15 @@ void cf_draw_sprite(const CF_Sprite* sprite)
 
 	bool apply_border_scale = true;
 	if (sprite->id != CF_SPRITE_ID_INVALID) {
-		s.image_id = sprite->_image_id;
+		if (sprite->blend_index > 0) {
+			CF_SpriteAsset* asset = cf_sprite_get_asset(sprite->id);
+			const char* anim_name = sprite->animation_name;
+			const CF_Animation* anim = anim_name ? map_get(asset->animations, anim_name) : NULL;
+			int global_frame = sprite->frame_index + (anim ? anim->frame_offset : 0);
+			s.image_id = asset->blend_frame_ids[sprite->blend_index][global_frame];
+		} else {
+			s.image_id = sprite->_image_id;
+		}
 	} else if (sprite->easy_sprite_id >= CF_PREMADE_ID_RANGE_LO && sprite->easy_sprite_id <= CF_PREMADE_ID_RANGE_HI) {
 		CF_AtlasSubImage sub_image = s_draw->premade_sub_image_id_to_sub_image.find(sprite->easy_sprite_id);
 		s.minx = sub_image.minx;
@@ -593,7 +601,15 @@ void cf_draw_sprite_9_slice(const CF_Sprite* sprite)
 	SPRITEBATCH_U64 image_id = 0;
 
 	if (sprite->id != CF_SPRITE_ID_INVALID) {
-		image_id = sprite->_image_id;
+		if (sprite->blend_index > 0) {
+			CF_SpriteAsset* asset = cf_sprite_get_asset(sprite->id);
+			const char* anim_name = sprite->animation_name;
+			const CF_Animation* anim = anim_name ? map_get(asset->animations, anim_name) : NULL;
+			int global_frame = sprite->frame_index + (anim ? anim->frame_offset : 0);
+			image_id = asset->blend_frame_ids[sprite->blend_index][global_frame];
+		} else {
+			image_id = sprite->_image_id;
+		}
 	} else if (sprite->easy_sprite_id >= CF_PREMADE_ID_RANGE_LO && sprite->easy_sprite_id <= CF_PREMADE_ID_RANGE_HI) {
 		CF_ASSERT(!"Not implemented yet.");
 	} else {
@@ -782,7 +798,15 @@ void cf_draw_sprite_9_slice_tiled(const CF_Sprite* sprite)
 	SPRITEBATCH_U64 image_id = 0;
 
 	if (sprite->id != CF_SPRITE_ID_INVALID) {
-		image_id = sprite->_image_id;
+		if (sprite->blend_index > 0) {
+			CF_SpriteAsset* asset = cf_sprite_get_asset(sprite->id);
+			const char* anim_name = sprite->animation_name;
+			const CF_Animation* anim = anim_name ? map_get(asset->animations, anim_name) : NULL;
+			int global_frame = sprite->frame_index + (anim ? anim->frame_offset : 0);
+			image_id = asset->blend_frame_ids[sprite->blend_index][global_frame];
+		} else {
+			image_id = sprite->_image_id;
+		}
 	} else if (sprite->easy_sprite_id >= CF_PREMADE_ID_RANGE_LO && sprite->easy_sprite_id <= CF_PREMADE_ID_RANGE_HI) {
 		CF_ASSERT(!"Not implemented yet.");
 	} else {

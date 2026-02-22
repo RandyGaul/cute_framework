@@ -73,11 +73,15 @@ void cf_image_free_indexed(CF_ImageIndexed* img)
 	CF_FREE(img->pix);
 }
 
-CF_Result cf_image_save_png(const char* path, CF_Image* img)
+CF_Result cf_image_save_png(const char* virtual_path, CF_Image* img)
 {
-	int ret = cp_save_png(path, (cp_image_t*)img);
-	if (ret) return cf_result_error("Failed to save PNG to file.");
-	return cf_result_success();
+	void* data = NULL;
+	int size = 0;
+	CF_Result r = cf_image_save_png_to_memory(img, &data, &size);
+	if (cf_is_error(r)) return r;
+	r = cf_fs_write_entire_buffer_to_file(virtual_path, data, (size_t)size);
+	CF_FREE(data);
+	return r;
 }
 
 CF_Result cf_image_save_png_to_memory(CF_Image* img, void** out_data, int* out_size)

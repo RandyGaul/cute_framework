@@ -924,15 +924,17 @@ char* ck_svfmt_append(char* s, const char* fmt, va_list args)
 int ck_sprefix(const char* s, const char* prefix)
 {
 	if (!s) return 0;
+	int s_len = (int)strlen(s);
 	int prefix_len = (int)strlen(prefix);
-	return slen(s) >= prefix_len && !memcmp(s, prefix, (size_t)prefix_len);
+	return s_len >= prefix_len && !memcmp(s, prefix, (size_t)prefix_len);
 }
 
 int ck_ssuffix(const char* s, const char* suffix)
 {
 	if (!s) return 0;
+	int s_len = (int)strlen(s);
 	int suffix_len = (int)strlen(suffix);
-	return slen(s) >= suffix_len && !memcmp(s + slen(s) - suffix_len, suffix, (size_t)suffix_len);
+	return s_len >= suffix_len && !memcmp(s + s_len - suffix_len, suffix, (size_t)suffix_len);
 }
 
 void ck_stoupper(char* s)

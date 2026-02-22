@@ -468,3 +468,35 @@ CF_V2 cf_sprite_pivot(const CF_Sprite* sprite)
 	CF_ASSERT(sprite);
 	return sprite->_pivot;
 }
+
+int cf_sprite_add_blend(const char* path, const char** layer_names, int layer_count)
+{
+	// Blends require aseprite layer data -- PNG sprites have no layers.
+	if (!ssuffix(path, ".ase") && !ssuffix(path, ".aseprite")) {
+		char buf[1024];
+		snprintf(buf, sizeof buf,
+			"cf_sprite_add_blend: \"%s\" is not an .ase/.aseprite file.\n"
+			"Layer blends only work with aseprite sprites, not PNG sprites.",
+			path);
+		cf_message_box(CF_MESSAGE_BOX_TYPE_ERROR, "ERROR", buf);
+		return -1;
+	}
+
+	// Ensure asset is loaded.
+	CF_Sprite tmp = cf_sprite_defaults();
+	cf_aseprite_cache_load(path, &tmp);
+
+	// Build mask and add blend.
+	ase_t* ase = NULL;
+	cf_aseprite_cache_load_ase(path, &ase);
+	uint64_t mask = cf_aseprite_layer_mask(ase, layer_names, layer_count);
+	return cf_aseprite_cache_add_blend(path, mask);
+}
+
+int cf_sprite_blend_count(const CF_Sprite* sprite)
+{
+	CF_ASSERT(sprite);
+	if (sprite->id == CF_SPRITE_ID_INVALID) return 1;
+	CF_SpriteAsset* asset = cf_sprite_get_asset(sprite->id);
+	return asset->blend_count;
+}
