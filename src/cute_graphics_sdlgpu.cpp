@@ -812,6 +812,17 @@ void cf_sdlgpu_flush()
 	}
 }
 
+void cf_sdlgpu_gpu_sync()
+{
+	s_end_active_pass();
+	if (g_ctx.cmd) {
+		SDL_GPUFence *fence = SDL_SubmitGPUCommandBufferAndAcquireFence(g_ctx.cmd);
+		SDL_WaitForGPUFences(g_ctx.device, true, &fence, 1);
+		SDL_ReleaseGPUFence(g_ctx.device, fence);
+		g_ctx.cmd = SDL_AcquireGPUCommandBuffer(g_ctx.device);
+	}
+}
+
 void cf_sdlgpu_set_vsync(bool vsync)
 {
 	SDL_SetGPUSwapchainParameters(g_ctx.device, g_ctx.window, SDL_GPU_SWAPCHAINCOMPOSITION_SDR, vsync ? SDL_GPU_PRESENTMODE_VSYNC : SDL_GPU_PRESENTMODE_IMMEDIATE);

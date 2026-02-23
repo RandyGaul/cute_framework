@@ -698,6 +698,11 @@ void cf_gles_flush()
 	glFlush();
 }
 
+void cf_gles_gpu_sync()
+{
+	glFinish();
+}
+
 void cf_gles_set_vsync(bool true_turn_on_vsync)
 {
 	SDL_GL_SetSwapInterval(true_turn_on_vsync ? 1 : 0);

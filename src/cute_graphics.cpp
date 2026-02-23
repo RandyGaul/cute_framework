@@ -747,3 +747,4 @@ CF_DISPATCH_SHIM_VOID(dispatch_compute, (CF_ComputeShader shader, CF_Material ma
 CF_DISPATCH_SHIM(void*, create_draw_sampler, (CF_Filter filter), filter)
 CF_DISPATCH_SHIM_VOID(destroy_draw_sampler, (void* sampler), sampler)
 CF_DISPATCH_SHIM_VOID(set_sampler_override, (void* sampler), sampler)
+CF_DISPATCH_SHIM_VOID(gpu_sync, (), )
