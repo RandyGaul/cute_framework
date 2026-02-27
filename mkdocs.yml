@@ -72,11 +72,13 @@ not_in_nav: |
   /input/*.md
   /json/*.md
   /list/*.md
+  /map/*.md
   /math/*.md
   /multithreading/*.md
   /net/*.md
   /noise/*.md
   /path/*.md
+  /png_cache/*.md
   /custom_sprite/*.md
   /random/*.md
   /sprite/*.md
@@ -119,7 +121,10 @@ nav:
       - Strings: topics/strings.md
       - Virtual File System: topics/virtual_file_system.md
       - HTTPS: topics/web.md
-  - Samples: samples.md
+  - Samples:
+      - samples/index.md
+      - waves: samples/waves.md
+      - spaceshooter: samples/spaceshooter.md
   - Made with CF: made_with_cf.md
   - Community / Ask for Help: community_ask_for_help.md
   - API Reference: api_reference.md
