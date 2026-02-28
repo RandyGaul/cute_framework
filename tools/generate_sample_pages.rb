@@ -6,6 +6,7 @@
 # Reads the sample list from the Samples: section of mkdocs.yml nav, which is
 # the source of truth for which samples to generate pages for.
 
+require 'cgi'
 require 'fileutils'
 require 'yaml'
 
@@ -91,6 +92,7 @@ def main
   samples.each do |sample|
     target = sample[:target]
     display_name = sample[:name]
+    html_name = CGI.escapeHTML(display_name)
     actual_target = TARGET_MAP.fetch(target, target)
 
     source_file = find_source_file(target, samples_src_dir)
@@ -116,10 +118,10 @@ def main
         - toc
       ---
 
-      # #{display_name}
+      # #{html_name}
 
       <div class="sample-container">
-        <iframe class="sample-iframe" src="../play/#{actual_target}.html" title="#{display_name} Sample"></iframe>
+        <iframe class="sample-iframe" src="../play/#{actual_target}.html" title="#{html_name} Sample"></iframe>
       </div>
 
       <div class="sample-controls" markdown>
@@ -146,11 +148,11 @@ def main
   cards = sorted_samples.map do |sample|
     <<~CARD
 
-      - **[#{sample[:name]}](#{sample[:target]}.md)**
+      - **[#{CGI.escapeHTML(sample[:name])}](#{sample[:target]}.md)**
 
           ---
 
-          Interactive sample demonstrating #{sample[:name].downcase} features.
+          Interactive sample demonstrating #{CGI.escapeHTML(sample[:name].downcase)} features.
 
           [:octicons-arrow-right-24: Play](#{sample[:target]}.md)
 
