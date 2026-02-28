@@ -207,5 +207,5 @@ When `@remarks` contains a multi-line code snippet, use fenced ` ```c ` blocks:
 - [ ] All public types: `CF_` prefix
 - [ ] `/** ... */` Doxygen comments on all public declarations with `@function`/`@struct`/`@enum`, `@category`, `@brief`, and `@related` tags
 - [ ] `namespace Cute` C++ wrappers section
-- [ ] Added to `include/cute.h` umbrella include (alphabetical order)
+- [ ] Added to `include/cute.h` umbrella include (follow that file's existing include ordering conventions)
 - [ ] Source file `cute_<name>.cpp` added to top-level `CMakeLists.txt` (in the `CF_SRCS` list)
