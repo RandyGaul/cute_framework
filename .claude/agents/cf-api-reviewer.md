@@ -63,6 +63,6 @@ Additional inline annotation rules:
 
 **11. cute.h** — If the header is new, check that it's been added to `include/cute.h` in a manner consistent with that file's existing grouping/ordering (do not assume strict global alphabetical order).
 
-**12. CMakeLists.txt** — If a new source file `cute_<name>.cpp` was created, check that it's in `src/CMakeLists.txt`.
+**12. CMakeLists.txt** — If a new source file `cute_<name>.cpp` was created, check that it's been added to the `CF_SRCS` source list in the repository root `CMakeLists.txt`.
 
 Report each violation with `filename:line` where possible. Be concise — list only violations.
