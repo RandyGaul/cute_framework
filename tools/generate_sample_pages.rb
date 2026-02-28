@@ -72,6 +72,7 @@ def main
   samples_dir = File.join(docs_dir, 'samples')
   play_dir = File.join(samples_dir, 'play')
 
+  FileUtils.rm_rf(play_dir)
   FileUtils.mkdir_p(play_dir)
 
   emscripten_dir = File.join(build_dir, 'emscripten')
