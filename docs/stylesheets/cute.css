@@ -97,8 +97,9 @@
   overflow: hidden;
   background: #000;
   box-shadow: 0 0.2rem 0.5rem rgba(0, 0, 0, 0.2);
-  min-width: 1024px;
-  min-height: 768px;
+  width: 100%;
+  max-width: 1024px;
+  aspect-ratio: 4 / 3;
 }
 
 .sample-iframe {
