@@ -123,8 +123,8 @@ nav:
       - HTTPS: topics/web.md
   - Samples:
       - samples/index.md
-      - waves: samples/waves.md
-      - spaceshooter: samples/spaceshooter.md
+      - Waves: samples/waves.md
+      - Space Shooter: samples/spaceshooter.md
   - Made with CF: made_with_cf.md
   - Community / Ask for Help: community_ask_for_help.md
   - API Reference: api_reference.md
