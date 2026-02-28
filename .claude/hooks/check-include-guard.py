@@ -8,7 +8,9 @@ data = json.load(sys.stdin)
 tool_input = data.get("tool_input", {})
 file_path = tool_input.get("file_path", "")
 
-if "/include/" in file_path and file_path.endswith(".h"):
+norm = os.path.normpath(file_path)
+parts = norm.split(os.sep)
+if "include" in parts and file_path.endswith(".h"):
     name = os.path.basename(file_path)  # e.g. "cute_graphics.h"
     base = name[:-2]  # strip ".h"
 
