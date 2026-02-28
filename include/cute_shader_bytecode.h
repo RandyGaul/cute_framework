@@ -8,7 +8,7 @@
 #ifndef CF_SHADER_BYTECODE_H
 #define CF_SHADER_BYTECODE_H
 
-#include <cute_defines.h>
+#include "cute_defines.h"
 
 #ifdef __cplusplus
 extern "C" {
