@@ -1,7 +1,9 @@
 build*/
 docs/*/*.md
+!docs/samples/*.md
 docs/api_reference.md
 !docs/topics/*.md
+/docs/samples/play/
 site/
 .cache
 .DS_Store
