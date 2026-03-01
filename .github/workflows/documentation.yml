@@ -24,6 +24,77 @@ jobs:
       - name: Generate documentation
         run: ./docsparser
 
+      - name: Setup CCache (native)
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: docs-native
+
+      - name: Configure native build
+        run: |
+          cmake -S . -B build-native -GNinja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+            -DCF_FRAMEWORK_BUILD_SAMPLES=OFF \
+            -DCF_FRAMEWORK_BUILD_TESTS=OFF \
+            -DCF_RUNTIME_SHADER_COMPILATION=OFF \
+            -DCF_CUTE_SHADERC=ON \
+            -DCF_BUILD_DOCSPARSER=OFF
+
+      - name: Build cute-shaderc
+        run: cmake --build build-native --target cute-shaderc
+
+      - name: Generate precompiled shader headers
+        run: |
+          echo "Compiling builtin shaders..."
+          build-native/cute-shaderc \
+            -type=builtin \
+            -oheader=src/data/builtin_shaders_bytecode.h
+          find samples -name "*.shd" | while read shd_file; do
+            dir=$(dirname "$shd_file")
+            base=$(basename "$shd_file" .shd)
+            echo "Compiling shader: $shd_file -> ${dir}/${base}_shd.h"
+            build-native/cute-shaderc \
+              -type=draw \
+              -varname="s_${base}_shd_bytecode" \
+              -oheader="${dir}/${base}_shd.h" \
+              "$shd_file"
+          done
+
+      - name: Set up Emscripten
+        uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: latest
+          actions-cache-folder: "emsdk-cache"
+
+      - name: Setup CCache (emscripten)
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: docs-emscripten
+
+      - name: Pre-build Emscripten ports
+        run: |
+          mkdir -p "$(em-config CACHE)/sysroot/lib/pkgconfig"
+          embuilder build sdl3
+
+      - name: Configure Emscripten build
+        run: |
+          emcmake cmake -S . -B build-emscripten -GNinja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+            -DCMAKE_CXX_SCAN_FOR_MODULES=OFF \
+            -DCF_FRAMEWORK_BUILD_SAMPLES=ON \
+            -DCF_FRAMEWORK_BUILD_TESTS=OFF \
+            -DCF_BUILD_DOCSPARSER=OFF
+
+      - name: Build Emscripten samples
+        run: cmake --build build-emscripten
+
+      - name: Generate sample pages
+        run: |
+          ruby ./tools/generate_sample_pages.rb build-emscripten docs https://github.com/RandyGaul/cute_framework
+
       - name: Set up Python runtime
         uses: actions/setup-python@v5
         with:
