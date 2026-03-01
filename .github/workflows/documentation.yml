@@ -21,6 +21,13 @@ jobs:
 
       - uses: ./.github/actions/setup-cmake
 
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            libgl1-mesa-dev libgles2-mesa-dev libegl1-mesa-dev \
+            libcairo2-dev libfreetype6-dev libffi-dev libjpeg-dev libpng-dev libz-dev pngquant
+
       - name: Compile docsparser
         run: gcc tools/docs_parser.c -Ilibraries -o docsparser
 
@@ -103,11 +110,8 @@ jobs:
         with:
           python-version: 3.x
 
-      - name: Install dependencies
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends libcairo2-dev libfreetype6-dev libffi-dev libjpeg-dev libpng-dev libz-dev pngquant
-          pip install mkdocs mkdocs-material "mkdocs-material[imaging]" markdown-callouts
+      - name: Install Python dependencies
+        run: pip install mkdocs mkdocs-material "mkdocs-material[imaging]" markdown-callouts
 
       - name: Build documentation
         run: |
