@@ -43,6 +43,7 @@
 #include "cute_guid.h"
 #include "cute_graphics.h"
 #include "cute_map.h"
+#include "cute_haptics.h"
 #include "cute_https.h"
 #include "cute_image.h"
 #include "cute_input.h"
