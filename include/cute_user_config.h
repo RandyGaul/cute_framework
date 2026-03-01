@@ -5,8 +5,8 @@
 	This software is dual-licensed with zlib or Unlicense, check LICENSE.txt for more info
 */
 
-#ifndef CUTE_USER_CONFIG_H
-#define CUTE_USER_CONFIG_H
+#ifndef CF_USER_CONFIG_H
+#define CF_USER_CONFIG_H
 
 /**
  * Feel free to override any macros in Cute Framework with your own. These are mainly to change the default
@@ -50,4 +50,4 @@
  * CF_FMODF
  */
 
-#endif // CUTE_USER_CONFIG_H
+#endif // CF_USER_CONFIG_H
