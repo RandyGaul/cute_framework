@@ -1,0 +1,11 @@
+name: Setup CMake
+description: Install CMake 4.2.x and Ninja (latest) via lukka/get-cmake
+
+runs:
+  using: composite
+  steps:
+    - name: Setup CMake 4.2.x
+      uses: lukka/get-cmake@latest
+      with:
+        cmakeVersion: 4.2.3
+        ninjaVersion: latest
