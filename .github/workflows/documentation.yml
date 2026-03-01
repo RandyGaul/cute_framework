@@ -19,11 +19,14 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup CMake 4.2.x
-        uses: lukka/get-cmake@latest
-        with:
-          cmakeVersion: 4.2.3
-          ninjaVersion: latest
+      - uses: ./.github/actions/setup-cmake
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            libgl1-mesa-dev libgles2-mesa-dev libegl1-mesa-dev \
+            libcairo2-dev libfreetype6-dev libffi-dev libjpeg-dev libpng-dev libz-dev pngquant
 
       - name: Compile docsparser
         run: gcc tools/docs_parser.c -Ilibraries -o docsparser
@@ -46,7 +49,28 @@ jobs:
             -DCF_FRAMEWORK_BUILD_TESTS=OFF \
             -DCF_RUNTIME_SHADER_COMPILATION=OFF \
             -DCF_CUTE_SHADERC=ON \
-            -DCF_BUILD_DOCSPARSER=OFF
+            -DCF_BUILD_DOCSPARSER=OFF \
+            -DSDL_AUDIO=OFF \
+            -DSDL_CAMERA=OFF \
+            -DSDL_DBUS=OFF \
+            -DSDL_DIALOG=OFF \
+            -DSDL_DIRECTX=OFF \
+            -DSDL_HAPTIC=OFF \
+            -DSDL_HIDAPI=OFF \
+            -DSDL_JOYSTICK=OFF \
+            -DSDL_KMSDRM=OFF \
+            -DSDL_METAL=OFF \
+            -DSDL_OFFSCREEN=OFF \
+            -DSDL_OPENGL=OFF \
+            -DSDL_OPENGLES=OFF \
+            -DSDL_POWER=OFF \
+            -DSDL_RENDER=OFF \
+            -DSDL_SENSOR=OFF \
+            -DSDL_TESTS=OFF \
+            -DSDL_UNIX_CONSOLE_BUILD=ON \
+            -DSDL_VULKAN=OFF \
+            -DSDL_WAYLAND=OFF \
+            -DSDL_X11=OFF
 
       - name: Build cute-shaderc
         run: cmake --build build-native --target cute-shaderc
@@ -107,11 +131,8 @@ jobs:
         with:
           python-version: 3.x
 
-      - name: Install dependencies
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends libcairo2-dev libfreetype6-dev libffi-dev libjpeg-dev libpng-dev libz-dev pngquant
-          pip install mkdocs mkdocs-material "mkdocs-material[imaging]" markdown-callouts
+      - name: Install Python dependencies
+        run: pip install mkdocs mkdocs-material "mkdocs-material[imaging]" markdown-callouts
 
       - name: Build documentation
         run: |

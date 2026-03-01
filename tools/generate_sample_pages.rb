@@ -8,6 +8,7 @@
 
 require 'cgi'
 require 'fileutils'
+require 'pathname'
 require 'yaml'
 
 # Target name mappings for cases where the nav target differs from the file name
@@ -16,6 +17,28 @@ TARGET_MAP = { 'nine_slice' => '9_slice' }.freeze
 
 # Extract only the nav: block from mkdocs.yml so we avoid Python-specific YAML
 # tags (!!python/name:, !!python/object/apply:) present in other sections.
+def rel(path)
+  Pathname.new(path).relative_path_from(Pathname.pwd).to_s
+rescue ArgumentError
+  path.to_s
+end
+
+def gh_annotation(level, message, file: nil, title: nil)
+  if ENV['GITHUB_ACTIONS']
+    parts = []
+    parts << "file=#{file}" if file
+    parts << "title=#{title}" if title
+    meta = parts.empty? ? '' : " #{parts.join(',')}"
+    warn "::#{level}#{meta}::#{message}"
+  else
+    yield message
+  end
+end
+
+def gh_debug(message)    = gh_annotation('debug',   message)             { |m| puts m }
+def gh_notice(message, **kw) = gh_annotation('notice',  message, **kw)      { |m| puts m }
+def gh_warn(message, **kw)   = gh_annotation('warning', message, **kw)      { |m| warn "Warning: #{m}" }
+
 def extract_nav_section(mkdocs_path)
   in_nav = false
   nav_lines = []
@@ -83,7 +106,7 @@ def main
   samples = parse_samples_from_nav(nav)
 
   if samples.empty?
-    warn "Warning: No samples found in Samples: nav section of #{mkdocs_yml}"
+    gh_warn("No samples found in Samples: nav section of #{rel(mkdocs_yml)}", file: rel(mkdocs_yml), title: 'No samples found')
     exit 0
   end
 
@@ -97,13 +120,13 @@ def main
 
     source_file = find_source_file(target, samples_src_dir)
     if source_file.nil?
-      warn "Warning: No source file found for #{target} in #{samples_src_dir}, skipping"
+      gh_warn("No source file found for #{target} in #{rel(samples_src_dir)}, skipping", title: 'Missing source file')
       next
     end
 
     html_file = File.join(build_dir, "#{actual_target}.html")
     unless File.exist?(html_file)
-      warn "Warning: #{html_file} not found, skipping #{target}"
+      gh_warn("#{rel(html_file)} not found, skipping #{target}", title: 'Missing build artifact')
       next
     end
 
@@ -131,7 +154,7 @@ def main
     MARKDOWN
 
     File.write(File.join(samples_dir, "#{target}.md"), markdown_content)
-    puts "Generated #{target}.md"
+    gh_notice("Generated #{rel(File.join(samples_dir, "#{target}.md"))}")
     generated_samples << { target: target, name: display_name }
   end
 
@@ -170,7 +193,7 @@ def main
   MARKDOWN
 
   File.write(File.join(samples_dir, 'index.md'), index_header + cards + index_footer)
-  puts "Generated index.md with #{sorted_samples.length} samples"
+  gh_notice("Generated #{rel(File.join(samples_dir, 'index.md'))} with #{sorted_samples.length} samples")
 end
 
 main if __FILE__ == $PROGRAM_NAME
