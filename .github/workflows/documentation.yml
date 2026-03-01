@@ -19,11 +19,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup CMake 4.2.x
-        uses: lukka/get-cmake@latest
-        with:
-          cmakeVersion: 4.2.3
-          ninjaVersion: latest
+      - uses: ./.github/actions/setup-cmake
 
       - name: Compile docsparser
         run: gcc tools/docs_parser.c -Ilibraries -o docsparser
