@@ -135,7 +135,7 @@ jobs:
         run: pip install zensical markdown-callouts
 
       - name: Build documentation
-        run: zensical build
+        run: zensical build --clean
 
       - name: Adjust permissions
         run: |
