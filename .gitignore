@@ -5,6 +5,7 @@ docs/api_reference.md
 !docs/topics/*.md
 /docs/samples/play/
 site/
+.venv/
 .cache
 .DS_Store
 cute_framework.zip
