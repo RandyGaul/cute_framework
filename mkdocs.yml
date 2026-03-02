@@ -10,7 +10,7 @@ repo_url: https://github.com/RandyGaul/cute_framework
 repo_name: RandyGaul/cute_framework
 
 # Copyright
-copyright: Copyright &copy; 2019—2025 Randy Gaul
+copyright: Copyright &copy; 2019—2026 Randy Gaul
 
 # Configuration
 theme:
@@ -132,7 +132,7 @@ nav:
 # Plugins
 plugins:
   - search:
-      separator: '[\s\-\_]+'
+      separator: '[\\s\\-\\_]+'
   - social
 
 # Extensions
