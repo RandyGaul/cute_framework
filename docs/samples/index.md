@@ -12,6 +12,24 @@ Interactive samples demonstrating Cute Framework features. Click any card to pla
 
     [:octicons-arrow-right-24: Play](fluid_sim.md)
 
+
+- **[Space Shooter](spaceshooter.md)**
+
+    ---
+
+    Interactive sample demonstrating space shooter features.
+
+    [:octicons-arrow-right-24: Play](spaceshooter.md)
+
+
+- **[Waves](waves.md)**
+
+    ---
+
+    Interactive sample demonstrating waves features.
+
+    [:octicons-arrow-right-24: Play](waves.md)
+
 </div>
 
 !!! note "Source Code"
