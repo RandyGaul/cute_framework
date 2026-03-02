@@ -125,10 +125,13 @@ Please note that the reference pages for functions/structs are automatically gen
 
 CF uses [Zensical](https://zensical.org/) to generate the website, so you can run `zensical serve` to preview the docs locally.
 
-Zensical requirements:
+Zensical setup:
 
 ```
+python -m venv .venv
+source .venv/bin/activate
 pip install -r docs/requirements.txt
+zensical serve
 ```
 
 <p align="center"><img src=https://github.com/RandyGaul/cute_framework/blob/master/assets/CF_Logo_Pixel_2x.png></p>
