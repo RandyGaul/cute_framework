@@ -12,3 +12,4 @@ github_release
 imgui.ini
 src/cute_version.cpp
 include/cute_version.h
+compile_commands.json
