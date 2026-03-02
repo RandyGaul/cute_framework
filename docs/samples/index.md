@@ -4,22 +4,13 @@ Interactive samples demonstrating Cute Framework features. Click any card to pla
 
 <div class="grid cards" markdown>
 
-- **[spaceshooter](spaceshooter.md)**
+- **[Fluid Sim](fluid_sim.md)**
 
     ---
 
-    Interactive sample demonstrating spaceshooter features.
+    Interactive sample demonstrating fluid sim features.
 
-    [:octicons-arrow-right-24: Play](spaceshooter.md)
-
-
-- **[waves](waves.md)**
-
-    ---
-
-    Interactive sample demonstrating waves features.
-
-    [:octicons-arrow-right-24: Play](waves.md)
+    [:octicons-arrow-right-24: Play](fluid_sim.md)
 
 </div>
 
