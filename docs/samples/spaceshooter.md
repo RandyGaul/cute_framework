@@ -3,10 +3,10 @@ hide:
   - toc
 ---
 
-# spaceshooter
+# Space Shooter
 
 <div class="sample-container">
-  <iframe class="sample-iframe" src="../play/spaceshooter.html" title="spaceshooter Sample"></iframe>
+  <iframe class="sample-iframe" src="../play/spaceshooter.html" title="Space Shooter Sample"></iframe>
 </div>
 
 <div class="sample-controls" markdown>

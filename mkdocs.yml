@@ -123,6 +123,8 @@ nav:
       - HTTPS: topics/web.md
   - Samples:
       - samples/index.md
+      # Sample pages are generated with tools/generate_sample_pages.rb by reading this file
+      - Fluid Sim: samples/fluid_sim.md
       - Waves: samples/waves.md
       - Space Shooter: samples/spaceshooter.md
   - Made with CF: made_with_cf.md

@@ -111,17 +111,29 @@ if (CF_CUTE_SHADERC)
 		DEPENDS waves_data/waves.shd
 		DEPENDS cute-shaderc
 	)
+	add_custom_command(
+		OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/fluid_sim_data/fluid_sim_shd.h
+		COMMAND cute-shaderc
+		-type=draw
+		-varname=s_fluid_sim_shd_bytecode
+		-oheader=${CMAKE_CURRENT_SOURCE_DIR}/fluid_sim_data/fluid_sim_shd.h
+		${CMAKE_CURRENT_SOURCE_DIR}/fluid_sim_data/fluid_sim.shd
+		DEPENDS fluid_sim_data/fluid_sim.shd
+		DEPENDS cute-shaderc
+	)
 endif()
 
 # Ensure that sample data is included in web build
 if (EMSCRIPTEN)
 	target_link_options(waves PRIVATE --preload-file "${CMAKE_CURRENT_SOURCE_DIR}/waves_data@/waves_data")
 	target_link_options(spaceshooter PRIVATE --preload-file "${CMAKE_CURRENT_SOURCE_DIR}/spaceshooter_data@/spaceshooter_data")
+	target_link_options(fluid_sim PRIVATE --preload-file "${CMAKE_CURRENT_SOURCE_DIR}/fluid_sim_data@/fluid_sim_data")
 endif ()
 
 # Copy over some folders for certain samples.
 add_custom_command(TARGET spaceshooter PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/spaceshooter_data $<TARGET_FILE_DIR:spaceshooter>/spaceshooter_data)
 add_custom_command(TARGET waves PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/waves_data $<TARGET_FILE_DIR:waves>/waves_data)
+add_custom_command(TARGET fluid_sim PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/fluid_sim_data $<TARGET_FILE_DIR:fluid_sim>/fluid_sim_data)
 add_custom_command(TARGET shallow_water PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/shallow_water_data $<TARGET_FILE_DIR:shallow_water>/shallow_water_data)
 add_custom_command(TARGET import_spritesheet PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/import_spritesheet_data $<TARGET_FILE_DIR:import_spritesheet>/import_spritesheet_data)
 add_custom_command(TARGET pivot PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/pivot_data $<TARGET_FILE_DIR:pivot>/pivot_data)
