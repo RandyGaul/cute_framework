@@ -3,10 +3,10 @@ hide:
   - toc
 ---
 
-# waves
+# Waves
 
 <div class="sample-container">
-  <iframe class="sample-iframe" src="../play/waves.html" title="waves Sample"></iframe>
+  <iframe class="sample-iframe" src="../play/waves.html" title="Waves Sample"></iframe>
 </div>
 
 <div class="sample-controls" markdown>

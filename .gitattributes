@@ -1,0 +1,5 @@
+# Generated shader headers
+samples/**/*_shd.h linguist-generated=true
+
+# Generated sample docs
+docs/samples/*.md linguist-generated=true
