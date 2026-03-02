@@ -128,7 +128,7 @@ CF uses [Zensical](https://zensical.org/) to generate the website, so you can ru
 Zensical requirements:
 
 ```
-pip install zensical markdown-callouts
+pip install -r docs/requirements.txt
 ```
 
 <p align="center"><img src=https://github.com/RandyGaul/cute_framework/blob/master/assets/CF_Logo_Pixel_2x.png></p>

@@ -132,7 +132,7 @@ jobs:
           python-version: 3.x
 
       - name: Install Python dependencies
-        run: pip install zensical markdown-callouts
+        run: pip install -r docs/requirements.txt
 
       - name: Build documentation
         run: zensical build --clean
