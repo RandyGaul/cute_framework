@@ -237,12 +237,26 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 				} else {
 					CF_ASSERT(false);
 				}
-				out[i].color = s->geom.color;
 				out[i].attributes = geom.user_params;
 				out[i].uv_bounds[0] = s->minx;
 				out[i].uv_bounds[1] = s->maxy; // y-flip.
 				out[i].uv_bounds[2] = s->maxx;
 				out[i].uv_bounds[3] = s->miny; // y-flip.
+			}
+
+			// Per-vertex colors: text uses per-corner text_colors, sprites use flat color.
+			// shape[0]=TL, shape[1]=TR, shape[2]=BR, shape[3]=BL
+			// Triangle 1: TL(0), BL(3), TR(1)  Triangle 2: TR(1), BL(3), BR(2)
+			if (s->geom.is_text) {
+				CF_Pixel *tc = s->geom.text_colors;
+				out[0].color = tc[0]; // TL
+				out[1].color = tc[3]; // BL
+				out[2].color = tc[1]; // TR
+				out[3].color = tc[1]; // TR
+				out[4].color = tc[3]; // BL
+				out[5].color = tc[2]; // BR
+			} else {
+				for (int i = 0; i < 6; ++i) out[i].color = s->geom.color;
 			}
 
 			out[0].posH = geom.shape[0];
@@ -2266,12 +2280,12 @@ static CF_Color s_parse_color(CF_CodeParseState* s)
 	String string;
 	s->expect('#');
 	while (!s->done()) {
-		int cp = s->peek();
+		int cp = s->peek(false);
 		if (!s_is_hex_alphanum(cp)) {
 			break;
 		} else {
 			string.append(cp);
-			s->skip();
+			s->skip(false);
 		}
 	}
 	uint32_t rgba = 0x000000FF;
@@ -2458,6 +2472,39 @@ static bool s_text_fx_strike(CF_TextEffect* fx_ptr)
 	return true;
 }
 
+static CF_Color s_gradient_corner(TextEffect* fx, const char* corner, const char* edge_a, const char* edge_b)
+{
+	CF_Color c = fx->color;
+	if (fx->has(corner)) return fx->get_color(corner, c);
+	bool a = fx->has(edge_a);
+	bool b = fx->has(edge_b);
+	if (a && b) return cf_color_lerp(fx->get_color(edge_a, c), fx->get_color(edge_b, c), 0.5f);
+	if (a) return fx->get_color(edge_a, c);
+	if (b) return fx->get_color(edge_b, c);
+	return c;
+}
+
+static bool s_text_fx_gradient(CF_TextEffect* fx_ptr)
+{
+	TextEffect* fx = (TextEffect*)fx_ptr;
+
+	CF_Color tl = s_gradient_corner(fx, "topleft",     "top",    "left");
+	CF_Color tr = s_gradient_corner(fx, "topright",    "top",    "right");
+	CF_Color br = s_gradient_corner(fx, "bottomright", "bottom", "right");
+	CF_Color bl = s_gradient_corner(fx, "bottomleft",  "bottom", "left");
+
+	float t_left = fx->glyph_count > 1 ? (float)fx->index_into_effect / (float)(fx->glyph_count - 1) : 0.5f;
+	float t_right = fx->glyph_count > 1 ? (float)(fx->index_into_effect + 1) / (float)(fx->glyph_count - 1) : 0.5f;
+	if (t_right > 1.0f) t_right = 1.0f;
+
+	fx->use_colors = true;
+	fx->colors[0] = cf_color_lerp(tl, tr, t_left);   // glyph TL
+	fx->colors[1] = cf_color_lerp(tl, tr, t_right);  // glyph TR
+	fx->colors[2] = cf_color_lerp(bl, br, t_right);  // glyph BR
+	fx->colors[3] = cf_color_lerp(bl, br, t_left);   // glyph BL
+	return true;
+}
+
 static void s_parse_codes(CF_ParsedTextState* text_state, const char* text)
 {
 	// Register built-in text effects.
@@ -2469,6 +2516,7 @@ static void s_parse_codes(CF_ParsedTextState* text_state, const char* text)
 		text_effect_register("fade", s_text_fx_fade);
 		text_effect_register("wave", s_text_fx_wave);
 		text_effect_register("strike", s_text_fx_strike);
+		text_effect_register("gradient", s_text_fx_gradient);
 	}
 
 	CF_CodeParseState state = { };
@@ -2715,6 +2763,7 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 			v2 q1 = glyph->q1 + V2(x,y) + kern + pad;
 
 			// Apply any active custom text effects.
+			bool use_corner_colors = false;
 			for (int i = 0; i < text_state->effects.count();) {
 				TextEffect* effect = text_state->effects + i;
 				CF_TextEffectFn* fn = effect->fn;
@@ -2729,6 +2778,7 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 					effect->w = s.w;
 					effect->h = s.h;
 					effect->color = color;
+					effect->use_colors = false;
 					effect->opacity = s.geom.alpha;
 					effect->xadvance = xadvance;
 					effect->visible = visible;
@@ -2738,6 +2788,13 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 					q0 = effect->q0;
 					q1 = effect->q1;
 					color = effect->color;
+					if (effect->use_colors) {
+						use_corner_colors = true;
+						s.geom.text_colors[0] = premultiply(to_pixel(effect->colors[0]));
+						s.geom.text_colors[1] = premultiply(to_pixel(effect->colors[1]));
+						s.geom.text_colors[2] = premultiply(to_pixel(effect->colors[2]));
+						s.geom.text_colors[3] = premultiply(to_pixel(effect->colors[3]));
+					}
 					s.geom.alpha = effect->opacity;
 					xadvance = effect->xadvance;
 					visible = effect->visible;
@@ -2774,6 +2831,10 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 				CF_MUL_M32_V2(s.geom.shape[2], m, V2(q1.x, q0.y));
 				CF_MUL_M32_V2(s.geom.shape[3], m, V2(q0.x, q0.y));
 				s.geom.color = premultiply(to_pixel(color));
+				if (!use_corner_colors) {
+					CF_Pixel flat = s.geom.color;
+					for (int j = 0; j < 4; ++j) s.geom.text_colors[j] = flat;
+				}
 				s.geom.is_text = true;
 				DRAW_PUSH_ITEM(s);
 			}
