@@ -2493,9 +2493,9 @@ static bool s_text_fx_gradient(CF_TextEffect* fx_ptr)
 	CF_Color br = s_gradient_corner(fx, "bottomright", "bottom", "right");
 	CF_Color bl = s_gradient_corner(fx, "bottomleft",  "bottom", "left");
 
-	float t_left = fx->glyph_count > 1 ? (float)fx->index_into_effect / (float)(fx->glyph_count - 1) : 0.5f;
-	float t_right = fx->glyph_count > 1 ? (float)(fx->index_into_effect + 1) / (float)(fx->glyph_count - 1) : 0.5f;
-	if (t_right > 1.0f) t_right = 1.0f;
+	float n = (float)fx->glyph_count;
+	float t_left = (float)fx->index_into_effect / n;
+	float t_right = (float)(fx->index_into_effect + 1) / n;
 
 	fx->use_colors = true;
 	fx->colors[0] = cf_color_lerp(tl, tr, t_left);   // glyph TL

@@ -129,6 +129,11 @@ int main(int argc, char* argv[])
 		push_font_size(30);
 		draw_text_boxed("<gradient left=#ff0000>Fade from one color</gradient>", V2(gx, -240));
 
+		// Short strings: gradient should still work on 1-2 glyphs.
+		push_font_size(40);
+		draw_text_boxed("<gradient left=#ff0000 right=#0000ff>AB</gradient>", V2(gx, -280));
+		draw_text_boxed("<gradient top=#ff0000 bottom=#0000ff>X</gradient>", V2(gx + 80, -280));
+
 		cf_push_text_id(1);
 		{
 			char text_buf[512];
