@@ -686,36 +686,9 @@ CK_API char* ck_spnorm(const char* path);
 CK_API const uint16_t* ck_decode_UTF16(const uint16_t* s, int* codepoint);
 
 // Intern implementation.
+CK_API const char* ck_sintern(const char* s);
 CK_API const char* ck_sintern_range(const char* start, const char* end);
 CK_API uint64_t ck_hash_fnv1a(const void* ptr, size_t sz);
-
-static inline const char* ck_sintern(const char* s)
-{
-	// Direct-mapped pointer cache. String literals have stable addresses,
-	// so the same call site always hits after the first miss. The strcmp
-	// handles reused buffers (e.g. sprintf into the same char[]). The
-	// generation counter invalidates the cache after sintern_nuke().
-	struct ck_sintern_cache_entry { const char* key; const char* val; };
-#ifdef __cplusplus
-	static thread_local struct ck_sintern_cache_entry ck_sintern_cache[64];
-	static thread_local int ck_sintern_cache_gen;
-#else
-	static _Thread_local struct ck_sintern_cache_entry ck_sintern_cache[64];
-	static _Thread_local int ck_sintern_cache_gen;
-#endif
-	int gen = ck_sintern_gen();
-	if (ck_sintern_cache_gen != gen) {
-		memset(ck_sintern_cache, 0, sizeof(ck_sintern_cache));
-		ck_sintern_cache_gen = gen;
-	}
-	unsigned ck_idx = (unsigned)((uintptr_t)s >> 3) & 63;
-	if (ck_sintern_cache[ck_idx].key == s && strcmp(ck_sintern_cache[ck_idx].val, s) == 0)
-		return ck_sintern_cache[ck_idx].val;
-	const char* result = ck_sintern_range(s, s + strlen(s));
-	ck_sintern_cache[ck_idx].key = s;
-	ck_sintern_cache[ck_idx].val = result;
-	return result;
-}
 
 #ifdef __cplusplus
 } // extern "C"
@@ -1861,6 +1834,34 @@ static void ck_sintern_lock(CK_InternTable* table)
 static void ck_sintern_unlock(CK_InternTable* table)
 {
 	ck_atomic_store(&table->lock, 0);
+}
+
+const char* ck_sintern(const char* s)
+{
+	// Direct-mapped pointer cache. String literals have stable addresses,
+	// so the same call site always hits after the first miss. The strcmp
+	// handles reused buffers (e.g. sprintf into the same char[]). The
+	// generation counter invalidates the cache after sintern_nuke().
+	struct ck_sintern_cache_entry { const char* key; const char* val; };
+#ifdef __cplusplus
+	static thread_local struct ck_sintern_cache_entry ck_sintern_cache[64];
+	static thread_local int ck_sintern_cache_gen;
+#else
+	static _Thread_local struct ck_sintern_cache_entry ck_sintern_cache[64];
+	static _Thread_local int ck_sintern_cache_gen;
+#endif
+	int gen = ck_sintern_gen();
+	if (ck_sintern_cache_gen != gen) {
+		memset(ck_sintern_cache, 0, sizeof(ck_sintern_cache));
+		ck_sintern_cache_gen = gen;
+	}
+	unsigned ck_idx = (unsigned)((uintptr_t)s >> 3) & 63;
+	if (ck_sintern_cache[ck_idx].key == s && strcmp(ck_sintern_cache[ck_idx].val, s) == 0)
+		return ck_sintern_cache[ck_idx].val;
+	const char* result = ck_sintern_range(s, s + strlen(s));
+	ck_sintern_cache[ck_idx].key = s;
+	ck_sintern_cache[ck_idx].val = result;
+	return result;
 }
 
 const char* ck_sintern_range(const char* start, const char* end)
