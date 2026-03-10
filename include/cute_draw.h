@@ -963,6 +963,12 @@ typedef struct CF_TextEffect
 	/* @member User-modifiable. The color to render this glyph with. */
 	CF_Color color;
 
+	/* @member User-modifiable. Per-corner colors: [0]=TL, [1]=TR, [2]=BR, [3]=BL. Only used when use_colors is true. */
+	CF_Color colors[4];
+
+	/* @member User-modifiable. If true, use colors[4] per-corner instead of flat color. */
+	bool use_colors;
+
 	/* @member User-modifiable. The opacity to render this glyph with. */
 	float opacity;
 
