@@ -2562,8 +2562,10 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 	}
 
 	if (render || markups) {
+		if (!effect_state->alive) {
+			effect_state->elapsed += CF_DELTA_TIME;
+		}
 		effect_state->alive = true;
-		effect_state->elapsed += CF_DELTA_TIME;
 		text_state->alive = true;
 	}
 
