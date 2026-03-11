@@ -62,6 +62,7 @@ struct CF_Strike
 {
 	CF_V2 p0, p1;
 	float thickness;
+	CF_Color color;
 };
 
 struct CF_DrawUniform
