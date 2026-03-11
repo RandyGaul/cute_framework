@@ -2529,7 +2529,7 @@ static void s_parse_codes(CF_ParsedTextState* text_state, const char* text)
 			s->append(cp);
 		}
 	}
-	std::sort(text_state->codes.begin(), text_state->codes.end(),
+	std::stable_sort(text_state->codes.begin(), text_state->codes.end(),
 		[](const CF_TextCode& a, const CF_TextCode&b) {
 			return a.index_in_string < b.index_in_string;
 		}
