@@ -2829,8 +2829,8 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 				if (effect->strike_thickness > 0) {
 					float y_mid = y + h * 0.25f + (q0.y - pre_fx_q0_y);
 					CF_Strike strike;
-					strike.p0 = V2(q0.x, y_mid);
-					strike.p1 = V2(q0.x + xadvance, y_mid);
+					strike.p0 = V2(x, y_mid);
+					strike.p1 = V2(x + xadvance, y_mid);
 					strike.thickness = effect->strike_thickness;
 					strike.color = use_corner_colors
 						? cf_color_lerp(cf_color_lerp(corner_colors[0], corner_colors[1], 0.5f), cf_color_lerp(corner_colors[3], corner_colors[2], 0.5f), 0.5f)

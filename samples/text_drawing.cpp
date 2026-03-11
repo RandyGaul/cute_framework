@@ -22,7 +22,7 @@ static void draw_text_boxed(const char* text, v2 pos, int len = -1)
 
 int main(int argc, char* argv[])
 {
-	make_app("Text Drawing", 0, 0, 0, 960, 700, CF_APP_OPTIONS_WINDOW_POS_CENTERED_BIT | CF_APP_OPTIONS_RESIZABLE_BIT, argv[0]);
+	make_app("Text Drawing", 0, 0, 0, 1280, 900, CF_APP_OPTIONS_WINDOW_POS_CENTERED_BIT | CF_APP_OPTIONS_RESIZABLE_BIT, argv[0]);
 
 	draw_push_shape_aa(1.5f);
 	make_font_from_memory(proggy_data, proggy_sz, "ProggyClean");
@@ -167,6 +167,13 @@ int main(int argc, char* argv[])
 			draw_text_boxed(switchable_text, V2(-230.f, 30.f));
 		}
 		cf_pop_text_id();
+
+		// Strikethrough on proportional font (tests contiguous segments).
+		push_font("Calibri");
+		push_font_size(30);
+		draw_text_boxed("<strike>Strikethrough on proportional font</strike>", V2(gx, gy - step*9));
+		draw_text_boxed("<wave><strike>wavy strike on proportional font</strike></wave>", V2(gx, gy - step*10));
+		pop_font_size();
 
 		// Instructions
 		const char* instructions = "Press Space to toggle bounding boxes";
