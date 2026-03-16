@@ -132,12 +132,10 @@ jobs:
           python-version: 3.x
 
       - name: Install Python dependencies
-        run: pip install mkdocs mkdocs-material "mkdocs-material[imaging]" markdown-callouts
+        run: pip install -r docs/requirements.txt
 
       - name: Build documentation
-        run: |
-          mkdocs build --clean
-          mkdocs --version
+        run: zensical build --clean
 
       - name: Adjust permissions
         run: |
