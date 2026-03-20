@@ -43,6 +43,7 @@ struct BatchGeometry
 	float aa;
 	bool is_text;
 	bool is_sprite;
+	CF_Pixel text_colors[4]; // Per-corner: TL, TR, BR, BL (for text glyphs)
 	bool fill;
 	bool use_tri_colors;      // Per-vertex colors for triangles.
 	bool use_tri_attributes;  // Per-vertex attributes for triangles.

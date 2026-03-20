@@ -471,7 +471,7 @@ CF_INLINE const char* to_string(HapticWaveType type)
 	}
 }
 
-CF_INLINE Haptic haptic_open(Joypad joypad) { return cf_haptic_open(joypad); }
+CF_INLINE Haptic haptic_open(int player_index) { return cf_haptic_open(player_index); }
 CF_INLINE void haptic_close(Haptic haptic) { cf_haptic_close(haptic); }
 CF_INLINE bool haptic_supports(Haptic haptic, HapticType type) { return cf_haptic_supports(haptic,type); }
 CF_INLINE void haptic_set_gain(Haptic haptic, float gain) { cf_haptic_set_gain(haptic,gain); }

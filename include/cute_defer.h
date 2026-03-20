@@ -5,6 +5,9 @@
 	This software is dual-licensed with zlib or Unlicense, check LICENSE.txt for more info
 */
 
+#ifndef CF_DEFER_H
+#define CF_DEFER_H
+
 #include "cute_defines.h"
 
 #ifdef CF_CPP
@@ -61,3 +64,5 @@ static CF_ScopeExit<T> s_create_scope_helper(T func)
 #define CF_DEFER(L) const auto& CF_TOKEN_PASTE(CF_ScopeExit, __LINE__) = s_create_scope_helper([&]() { L; })
 
 #endif // CF_CPP
+
+#endif // CF_DEFER_H

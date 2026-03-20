@@ -5,8 +5,8 @@
 	This software is dual-licensed with zlib or Unlicense, check LICENSE.txt for more info
 */
 
-#ifndef CUTE_PERLIN_H
-#define CUTE_PERLIN_H
+#ifndef CF_NOISE_H
+#define CF_NOISE_H
 
 #include "cute_defines.h"
 #include "cute_graphics.h"
@@ -211,4 +211,4 @@ CF_INLINE CF_Pixel* noise_fbm_pixels_wrapped(int w, int h, uint64_t seed, float 
 
 #endif // CF_CPP
 
-#endif // CUTE_PERLIN_H
+#endif // CF_NOISE_H

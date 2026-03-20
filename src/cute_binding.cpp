@@ -660,7 +660,7 @@ void cf_stick_binding_add_keys(CF_StickBinding handle, CF_KeyButton up, CF_KeyBu
 {
 	CF_StickBindingInternal* s = (CF_StickBindingInternal*)handle.id;
 	cf_axis_binding_add_keys(s->x_axis, left, right);
-	cf_axis_binding_add_keys(s->y_axis, up, down);
+	cf_axis_binding_add_keys(s->y_axis, down, up);
 }
 
 void cf_stick_binding_add_wasd(CF_StickBinding handle)

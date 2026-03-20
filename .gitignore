@@ -1,7 +1,9 @@
 build*/
 docs/*/*.md
+!docs/samples/*.md
 docs/api_reference.md
 !docs/topics/*.md
+/docs/samples/play/
 site/
 .cache
 .DS_Store
@@ -10,3 +12,4 @@ github_release
 imgui.ini
 src/cute_version.cpp
 include/cute_version.h
+compile_commands.json

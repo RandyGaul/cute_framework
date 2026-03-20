@@ -9,7 +9,6 @@
 #define CF_MATH_H
 
 #include "cute_defines.h"
-#include "cute_array.h"
 
 #ifndef CF_SQRTF
 	#include <math.h>
