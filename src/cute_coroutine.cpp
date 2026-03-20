@@ -57,6 +57,14 @@ void cf_destroy_coroutine(CF_Coroutine co_handle)
 	CF_FREE(co);
 }
 
+void cf_coroutine_reinit(CF_Coroutine co_handle, CF_CoroutineFn* fn)
+{
+	CF_CoroutineInternal* co = (CF_CoroutineInternal*)co_handle.id;
+	co->fn = fn;
+	mco_result res = mco_reinit(co->mco, s_co_fn);
+	CF_ASSERT(res == MCO_SUCCESS);
+}
+
 CF_Result cf_coroutine_resume(CF_Coroutine co_handle)
 {
 	CF_CoroutineInternal* co = (CF_CoroutineInternal*)co_handle.id;

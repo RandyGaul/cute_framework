@@ -3429,6 +3429,21 @@ void cf_render_layers_to(CF_Canvas canvas, int layer_lo, int layer_hi, bool clea
 	// We will render to this canvas.
 	cf_apply_canvas(canvas, clear);
 
+	// Uniform-only commands (no geometry, not canvas blits) inherit the layer of their
+	// next draw command. This keeps set_texture/set_uniform grouped with the draw_sprite
+	// calls that depend on them through the layer sort.
+	{
+		int next_draw_layer = 0;
+		for (int i = s_draw->cmds.count() - 1; i >= 0; i--) {
+			CF_Command& cmd = s_draw->cmds[i];
+			if (cmd.items.count() || cmd.is_canvas) {
+				next_draw_layer = cmd.layer;
+			} else {
+				cmd.layer = next_draw_layer;
+			}
+		}
+	}
+
 	// Sort the commands by layer first, then by age (to maintain relative ordering).
 	std::stable_sort(s_draw->cmds.begin(), s_draw->cmds.end(), [](const CF_Command& a, const CF_Command& b) {
 		if (a.layer == b.layer) return a.id < b.id;
