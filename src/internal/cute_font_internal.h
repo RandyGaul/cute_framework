@@ -98,6 +98,7 @@ struct TextEffect : public CF_TextEffect
 	int initial_index;
 	const Cute::Map<CF_TextCodeVal>* params;
 	CF_TextEffectFn* fn;
+	float strike_thickness = 0;
 	bool line_bound_init = false;
 	CF_Aabb line_bound;
 	Cute::Array<CF_Aabb> bounds;

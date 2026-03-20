@@ -2460,14 +2460,9 @@ static bool s_text_fx_strike(CF_TextEffect* fx_ptr)
 {
 	TextEffect* fx = (TextEffect*)fx_ptr;
 	if (!s_is_space(fx->character) || fx->character == ' ') {
-		v2 hw = V2((float)fx->xadvance, 0) * 0.5f;
 		float h = fx->font_size / 20.0f;
 		h = (float)fx->get_number("strike", (double)h);
-		CF_Strike strike;
-		strike.p0 = fx->center - hw;
-		strike.p1 = fx->center + hw;
-		strike.thickness = h;
-		s_draw->strikes.add(strike);
+		fx->strike_thickness = h;
 	}
 	return true;
 }
@@ -2534,7 +2529,7 @@ static void s_parse_codes(CF_ParsedTextState* text_state, const char* text)
 			s->append(cp);
 		}
 	}
-	std::sort(text_state->codes.begin(), text_state->codes.end(),
+	std::stable_sort(text_state->codes.begin(), text_state->codes.end(),
 		[](const CF_TextCode& a, const CF_TextCode&b) {
 			return a.index_in_string < b.index_in_string;
 		}
@@ -2567,8 +2562,10 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 	}
 
 	if (render || markups) {
+		if (!effect_state->alive) {
+			effect_state->elapsed += CF_DELTA_TIME;
+		}
 		effect_state->alive = true;
-		effect_state->elapsed += CF_DELTA_TIME;
 		text_state->alive = true;
 	}
 
@@ -2608,7 +2605,7 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 
 	// Called whenever text-effects need to be spawned, before going to the next glyph.
 	auto effect_spawn = [&]() {
-		if (code_index < text_state->codes.count()) {
+		while (code_index < text_state->codes.count()) {
 			CF_TextCode* code = text_state->codes + code_index;
 			if (index == code->index_in_string) {
 				++code_index;
@@ -2621,6 +2618,8 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 				effect.params = &code->params;
 				effect.fn = code->fn;
 				text_state->effects.add(effect);
+			} else {
+				break;
 			}
 		}
 	};
@@ -2764,6 +2763,8 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 
 			// Apply any active custom text effects.
 			bool use_corner_colors = false;
+			CF_Color corner_colors[4] = {};
+			float pre_fx_q0_y = q0.y;
 			for (int i = 0; i < text_state->effects.count();) {
 				TextEffect* effect = text_state->effects + i;
 				CF_TextEffectFn* fn = effect->fn;
@@ -2790,6 +2791,7 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 					color = effect->color;
 					if (effect->use_colors) {
 						use_corner_colors = true;
+						for (int j = 0; j < 4; ++j) corner_colors[j] = effect->colors[j];
 						s.geom.text_colors[0] = premultiply(to_pixel(effect->colors[0]));
 						s.geom.text_colors[1] = premultiply(to_pixel(effect->colors[1]));
 						s.geom.text_colors[2] = premultiply(to_pixel(effect->colors[2]));
@@ -2820,6 +2822,24 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 				}
 				if (keep_going) {
 					++i;
+				}
+			}
+
+			// Collect deferred strikes using final position/color.
+			for (int i = 0; i < text_state->effects.count(); ++i) {
+				TextEffect* effect = text_state->effects + i;
+				if (effect->strike_thickness > 0) {
+					float y_mid = y + h * 0.25f + (q0.y - pre_fx_q0_y);
+					CF_Strike strike;
+					strike.p0 = V2(x, y_mid);
+					strike.p1 = V2(x + xadvance, y_mid);
+					strike.thickness = effect->strike_thickness;
+					strike.color = use_corner_colors
+						? cf_color_lerp(cf_color_lerp(corner_colors[0], corner_colors[1], 0.5f), cf_color_lerp(corner_colors[3], corner_colors[2], 0.5f), 0.5f)
+						: color;
+					strike.color.a *= s.geom.alpha;
+					s_draw->strikes.add(strike);
+					effect->strike_thickness = 0;
 				}
 			}
 
@@ -2854,7 +2874,10 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 			v2 p0 = s_draw->strikes[i].p0;
 			v2 p1 = s_draw->strikes[i].p1;
 			float thickness = s_draw->strikes[i].thickness;
+			CF_Color c = s_draw->strikes[i].color;
+			draw_push_color(c);
 			cf_draw_line(p0, p1, thickness);
+			draw_pop_color();
 		}
 	}
 	s_draw->strikes.clear();

@@ -1,3 +1,4 @@
+#include "cute_draw.h"
 #include <cute.h>
 using namespace Cute;
 
@@ -21,7 +22,7 @@ static void draw_text_boxed(const char* text, v2 pos, int len = -1)
 
 int main(int argc, char* argv[])
 {
-	make_app("Text Drawing", 0, 0, 0, 960, 700, CF_APP_OPTIONS_WINDOW_POS_CENTERED_BIT | CF_APP_OPTIONS_RESIZABLE_BIT, argv[0]);
+	make_app("Text Drawing", 0, 0, 0, 1280, 900, CF_APP_OPTIONS_WINDOW_POS_CENTERED_BIT | CF_APP_OPTIONS_RESIZABLE_BIT, argv[0]);
 
 	draw_push_shape_aa(1.5f);
 	make_font_from_memory(proggy_data, proggy_sz, "ProggyClean");
@@ -108,31 +109,47 @@ int main(int argc, char* argv[])
 
 
 		float gx = 130;
+		float gy = -60;
+		float step = 30;
 
 		// Horizontal: left-to-right red to blue.
-		push_font_size(30);
-		draw_text_boxed("<gradient left=#ff0000 right=#0055ff>Left-to-right gradient!</gradient>", V2(gx, -80));
+		push_font_size(26);
+		draw_text_boxed("<gradient left=#ff0000 right=#0055ff>Left-to-right gradient!</gradient>", V2(gx, gy));
 
 		// Vertical: top gold to bottom purple.
-		push_font_size(30);
-		draw_text_boxed("<gradient top=#ffd700 bottom=#8b00ff>Top-to-bottom gradient!</gradient>", V2(gx, -120));
+		draw_text_boxed("<gradient top=#ffd700 bottom=#8b00ff>Top-to-bottom gradient!</gradient>", V2(gx, gy - step));
 
 		// Corners: direct per-corner control.
-		push_font_size(30);
-		draw_text_boxed("<gradient topleft=#ff0000 topright=#00ff00 bottomright=#0000ff bottomleft=#ffff00>Per-corner colors</gradient>", V2(gx, -160));
+		draw_text_boxed("<gradient topleft=#ff0000 topright=#00ff00 bottomright=#0000ff bottomleft=#ffff00>Per-corner colors</gradient>", V2(gx, gy - step*2));
 
 		// Mix: edge + corner override.
-		push_font_size(30);
-		draw_text_boxed("<gradient left=#ff0000 right=#0000ff topleft=#00ff00>Edge + corner override</gradient>", V2(gx, -200));
+		draw_text_boxed("<gradient left=#ff0000 right=#0000ff topleft=#00ff00>Edge + corner override</gradient>", V2(gx, gy - step*3));
 
 		// Single edge: fades from red to the glyph's current color.
-		push_font_size(30);
-		draw_text_boxed("<gradient left=#ff0000>Fade from one color</gradient>", V2(gx, -240));
+		draw_text_boxed("<gradient left=#ff0000>Fade from one color</gradient>", V2(gx, gy - step*4));
 
 		// Short strings: gradient should still work on 1-2 glyphs.
-		push_font_size(40);
-		draw_text_boxed("<gradient left=#ff0000 right=#0000ff>AB</gradient>", V2(gx, -280));
-		draw_text_boxed("<gradient top=#ff0000 bottom=#0000ff>X</gradient>", V2(gx + 80, -280));
+		push_font_size(30);
+		draw_text_boxed("<gradient left=#ff0000 right=#0000ff>AB</gradient>", V2(gx, gy - step*5));
+		draw_text_boxed("<gradient top=#ff0000 bottom=#0000ff>X</gradient>", V2(gx + 80, gy - step*5));
+
+		// Composited text effects.
+		push_font_size(26);
+		draw_text_boxed("<wave><fade>wave + fade</fade></wave>", V2(gx, gy - step*6));
+		draw_text_boxed("<shake freq=35 x=2 y=2><gradient left=#ff0000 right=#0000ff>shake + gradient</gradient></shake>", V2(gx, gy - step*7));
+
+        cf_push_text_id(42);
+		push_font_blur(10);
+		draw_push_color(color_black());
+		draw_text_boxed("<wave><shake freq=30 x=1 y=1><fade><strike>every effect at once!</strike></fade></shake></wave>", V2(gx, gy - step*8));
+		draw_pop_color();
+		pop_font_blur();
+        push_font_blur(5);
+		draw_text_boxed("<wave><shake freq=30 x=1 y=1><fade><strike><gradient left=#ff0000 right=#0000ff>every effect at once!</gradient></strike></fade></shake></wave>", V2(gx, gy - step*8));
+		draw_pop_color();
+		pop_font_blur();
+		draw_text_boxed("<wave><shake freq=30 x=1 y=1><fade><strike><gradient left=#ff0000 right=#0000ff>every effect at once!</gradient></strike></fade></shake></wave>", V2(gx, gy - step*8));
+        cf_pop_text_id();
 
 		cf_push_text_id(1);
 		{
@@ -150,6 +167,13 @@ int main(int argc, char* argv[])
 			draw_text_boxed(switchable_text, V2(-230.f, 30.f));
 		}
 		cf_pop_text_id();
+
+		// Strikethrough on proportional font (tests contiguous segments).
+		push_font("Calibri");
+		push_font_size(30);
+		draw_text_boxed("<strike>Strikethrough on proportional font</strike>", V2(gx, gy - step*9));
+		draw_text_boxed("<wave><strike>wavy strike on proportional font</strike></wave>", V2(gx, gy - step*10));
+		pop_font_size();
 
 		// Instructions
 		const char* instructions = "Press Space to toggle bounding boxes";
