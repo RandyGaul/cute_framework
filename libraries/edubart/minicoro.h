@@ -1810,24 +1810,34 @@ mco_result mco_reinit(mco_coro* co, void (*func)(mco_coro* co)) {
     MCO_LOG("attempt to reinit a coroutine that is not suspended or dead");
     return MCO_NOT_SUSPENDED;
   }
-  /* Reset the register context to call the new function. */
-  _mco_context* context = (_mco_context*)co->context;
-  memset(context, 0, sizeof(_mco_context));
-  mco_result res = _mco_makectx(co, &context->ctx, co->stack_base, co->stack_size);
-  if(res != MCO_SUCCESS)
-    return res;
-  /* Reset coroutine state. */
-  co->func = func;
-  co->state = MCO_SUSPENDED;
-  co->prev_co = NULL;
-  co->bytes_stored = 0;
-  co->magic_number = MCO_MAGIC_NUMBER;
 #ifdef _MCO_USE_TSAN
   if(co->tsan_fiber) {
     __tsan_destroy_fiber(co->tsan_fiber);
+    co->tsan_fiber = NULL;
   }
-  co->tsan_fiber = __tsan_create_fiber(0);
 #endif
+  /* Rebuild a desc from existing coroutine fields and recreate the context. */
+  /* This works across all backends (asm, fibers, emscripten, asyncify). */
+  void* user_data = co->user_data;
+  void (*dealloc_cb)(void*, size_t, void*) = co->dealloc_cb;
+  size_t coro_size = co->coro_size;
+  void* allocator_data = co->allocator_data;
+  mco_desc desc;
+  memset(&desc, 0, sizeof(mco_desc));
+  desc.func = func;
+  desc.stack_size = co->stack_size;
+  desc.storage_size = co->storage_size;
+  desc.coro_size = coro_size;
+  /* mco_init zeroes the struct, then calls _mco_create_context + sets fields. */
+  mco_result res = mco_init(co, &desc);
+  if(res != MCO_SUCCESS)
+    return res;
+  /* Restore fields that mco_init zeroed but we need to keep. */
+  co->func = func;
+  co->user_data = user_data;
+  co->dealloc_cb = dealloc_cb;
+  co->coro_size = coro_size;
+  co->allocator_data = allocator_data;
   return MCO_SUCCESS;
 }
 
