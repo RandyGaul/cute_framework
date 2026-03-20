@@ -326,6 +326,7 @@ MCO_API mco_result mco_init(mco_coro* co, mco_desc* desc);                      
 MCO_API mco_result mco_uninit(mco_coro* co);                                    /* Uninitialize the coroutine, may fail if it's not dead or suspended. */
 MCO_API mco_result mco_create(mco_coro** out_co, mco_desc* desc);               /* Allocates and initializes a new coroutine. */
 MCO_API mco_result mco_destroy(mco_coro* co);                                   /* Uninitialize and deallocate the coroutine, may fail if it's not dead or suspended. */
+MCO_API mco_result mco_reinit(mco_coro* co, void (*func)(mco_coro* co));        /* Reinitialize a suspended or dead coroutine to run a new function without reallocating. */
 MCO_API mco_result mco_resume(mco_coro* co);                                    /* Starts or continues the execution of the coroutine. */
 MCO_API mco_result mco_yield(mco_coro* co);                                     /* Suspends the execution of a coroutine. */
 MCO_API mco_state mco_status(mco_coro* co);                                     /* Returns the status of the coroutine. */
@@ -1793,6 +1794,40 @@ mco_result mco_destroy(mco_coro* co) {
     return MCO_INVALID_POINTER;
   }
   co->dealloc_cb(co, co->coro_size, co->allocator_data);
+  return MCO_SUCCESS;
+}
+
+mco_result mco_reinit(mco_coro* co, void (*func)(mco_coro* co)) {
+  if(!co) {
+    MCO_LOG("attempt to reinit an invalid coroutine");
+    return MCO_INVALID_COROUTINE;
+  }
+  if(!func) {
+    MCO_LOG("attempt to reinit a coroutine with an invalid function");
+    return MCO_INVALID_ARGUMENTS;
+  }
+  if(co->state == MCO_RUNNING || co->state == MCO_NORMAL) {
+    MCO_LOG("attempt to reinit a coroutine that is not suspended or dead");
+    return MCO_NOT_SUSPENDED;
+  }
+  /* Reset the register context to call the new function. */
+  _mco_context* context = (_mco_context*)co->context;
+  memset(context, 0, sizeof(_mco_context));
+  mco_result res = _mco_makectx(co, &context->ctx, co->stack_base, co->stack_size);
+  if(res != MCO_SUCCESS)
+    return res;
+  /* Reset coroutine state. */
+  co->func = func;
+  co->state = MCO_SUSPENDED;
+  co->prev_co = NULL;
+  co->bytes_stored = 0;
+  co->magic_number = MCO_MAGIC_NUMBER;
+#ifdef _MCO_USE_TSAN
+  if(co->tsan_fiber) {
+    __tsan_destroy_fiber(co->tsan_fiber);
+  }
+  co->tsan_fiber = __tsan_create_fiber(0);
+#endif
   return MCO_SUCCESS;
 }
 

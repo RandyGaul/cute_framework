@@ -68,6 +68,16 @@ CF_API CF_Coroutine CF_CALL cf_make_coroutine(CF_CoroutineFn* fn, int stack_size
 CF_API void CF_CALL cf_destroy_coroutine(CF_Coroutine co);
 
 /**
+ * @function cf_coroutine_reinit
+ * @category coroutine
+ * @brief    Reinitializes a coroutine to run a new function without reallocating memory.
+ * @param    co            The coroutine.
+ * @param    fn            The new coroutine function to run.
+ * @remarks  Works on both dead and suspended coroutines. The old execution state is abandoned.
+ */
+CF_API void CF_CALL cf_coroutine_reinit(CF_Coroutine co, CF_CoroutineFn* fn);
+
+/**
  * @enum     CF_CoroutineState
  * @category coroutine
  * @brief    The states of a coroutine.

@@ -38,6 +38,7 @@
  * @related  dyna cf_array_size cf_array_push cf_array_pop cf_array_free cf_array_hash
  */
 #define dyna CK_DYNA
+#define CF_ARRAY(T) T*
 
 // Shortform macros (asize, acount, acap, afit, apush, apop, aend, alast, aclear,
 // asetlen, aset, arev, ahash, adel, astatic, afree) are provided by ckit.h.
