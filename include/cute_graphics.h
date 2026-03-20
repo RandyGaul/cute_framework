@@ -684,6 +684,14 @@ CF_API void CF_CALL cf_texture_update_mip(CF_Texture texture, void* data, int si
 CF_API void CF_CALL cf_generate_mipmaps(CF_Texture texture);
 
 /**
+ * @function cf_gpu_sync
+ * @category graphics
+ * @brief    Submits the command buffer, waits for GPU completion via fence, then reacquires.
+ * @remarks  Forces GPU/CPU serialization.
+ */
+CF_API void CF_CALL cf_gpu_sync(void);
+
+/**
  * @function cf_texture_handle
  * @category graphics
  * @brief    Returns an SDL_GPUTexture* casted to a `uint64_t`.

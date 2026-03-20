@@ -62,6 +62,7 @@ struct TextEffect : public CF_TextEffect
 {
 	CF_INLINE bool on_start() const { return index_into_effect == 0; }
 	CF_INLINE bool on_finish() const { return index_into_effect == glyph_count - 1; }
+	CF_INLINE bool has(const char* key) const { return params->try_find(sintern(key)) != NULL; }
 
 	CF_INLINE double get_number(const char* key, double default_val = 0) const
 	{

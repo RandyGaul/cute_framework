@@ -21,7 +21,7 @@ static void draw_text_boxed(const char* text, v2 pos, int len = -1)
 
 int main(int argc, char* argv[])
 {
-	make_app("Text Drawing", 0, 0, 0, 640, 480, CF_APP_OPTIONS_WINDOW_POS_CENTERED_BIT | CF_APP_OPTIONS_RESIZABLE_BIT, argv[0]);
+	make_app("Text Drawing", 0, 0, 0, 960, 700, CF_APP_OPTIONS_WINDOW_POS_CENTERED_BIT | CF_APP_OPTIONS_RESIZABLE_BIT, argv[0]);
 
 	draw_push_shape_aa(1.5f);
 	make_font_from_memory(proggy_data, proggy_sz, "ProggyClean");
@@ -95,7 +95,7 @@ int main(int argc, char* argv[])
 		// Drawing a formatted string.
 		String draws = String::fmt("Draw calls: %d", draw_calls);
 		push_font_size(13);
-		draw_text_boxed(draws.c_str(), V2(-640/2.0f + 10,-480/2.0f + 20));
+		draw_text_boxed(draws.c_str(), V2(-960/2.0f + 10,-700/2.0f + 20));
 
 		push_font_size(26);
 		draw_text_boxed("Half-rendered effect <wave>groovy</wave>", V2(-230.f, 180.f), 25);
@@ -106,6 +106,33 @@ int main(int argc, char* argv[])
 		push_font_size(30);
 		draw_text_boxed("Some <shake freq=35 x=2 y=2>shaking</shake> text.", round(V2(sinf((float)CF_SECONDS*0.25f)*100,cosf((float)CF_SECONDS*0.25f)*100)));
 
+
+		float gx = 130;
+
+		// Horizontal: left-to-right red to blue.
+		push_font_size(30);
+		draw_text_boxed("<gradient left=#ff0000 right=#0055ff>Left-to-right gradient!</gradient>", V2(gx, -80));
+
+		// Vertical: top gold to bottom purple.
+		push_font_size(30);
+		draw_text_boxed("<gradient top=#ffd700 bottom=#8b00ff>Top-to-bottom gradient!</gradient>", V2(gx, -120));
+
+		// Corners: direct per-corner control.
+		push_font_size(30);
+		draw_text_boxed("<gradient topleft=#ff0000 topright=#00ff00 bottomright=#0000ff bottomleft=#ffff00>Per-corner colors</gradient>", V2(gx, -160));
+
+		// Mix: edge + corner override.
+		push_font_size(30);
+		draw_text_boxed("<gradient left=#ff0000 right=#0000ff topleft=#00ff00>Edge + corner override</gradient>", V2(gx, -200));
+
+		// Single edge: fades from red to the glyph's current color.
+		push_font_size(30);
+		draw_text_boxed("<gradient left=#ff0000>Fade from one color</gradient>", V2(gx, -240));
+
+		// Short strings: gradient should still work on 1-2 glyphs.
+		push_font_size(40);
+		draw_text_boxed("<gradient left=#ff0000 right=#0000ff>AB</gradient>", V2(gx, -280));
+		draw_text_boxed("<gradient top=#ff0000 bottom=#0000ff>X</gradient>", V2(gx + 80, -280));
 
 		cf_push_text_id(1);
 		{

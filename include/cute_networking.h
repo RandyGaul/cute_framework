@@ -8,12 +8,12 @@
 #ifndef CF_NETWORKING_H
 #define CF_NETWORKING_H
 
-#include <cute_defines.h>
+#include "cute_defines.h"
 
 // This entire file makes no sense for web builds, since web doesn't allow UDP.
 #ifndef CF_EMSCRIPTEN
 
-#include <cute_result.h>
+#include "cute_result.h"
 #include <cute/cute_net.h>
 
 //--------------------------------------------------------------------------------------------------
