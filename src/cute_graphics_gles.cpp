@@ -490,9 +490,7 @@ static inline void s_apply_state()
 		target->viewport.w != current->viewport.w ||
 		target->viewport.h != current->viewport.h
 	) {
-		// Flip viewport vertically since OpenGL puts (0, 0) at the bottom left.
-		CF_GL_Canvas* canvas = g_ctx.canvas;
-		glViewport(target->viewport.x, canvas->h - target->viewport.y - target->viewport.h, target->viewport.w, target->viewport.h);
+		glViewport(target->viewport.x, target->viewport.y, target->viewport.w, target->viewport.h);
 	}
 
 	if (target->scissor_enabled != current->scissor_enabled) {
@@ -509,9 +507,7 @@ static inline void s_apply_state()
 		target->scissor.w != current->scissor.w ||
 		target->scissor.h != current->scissor.h)
 	) {
-		// Flip the scissor rect vertically since OpenGL puts (0, 0) at the bottom left.
-		CF_GL_Canvas* canvas = g_ctx.canvas;
-		glScissor(target->scissor.x, canvas->h - target->scissor.y - target->scissor.h, target->scissor.w, target->scissor.h);
+		glScissor(target->scissor.x, target->scissor.y, target->scissor.w, target->scissor.h);
 	}
 
 	if (target->stencil_reference != current->stencil_reference) {
