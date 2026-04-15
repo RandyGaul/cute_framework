@@ -44,7 +44,7 @@ int main(int argc, char* argv[])
 
 ### Building from Source
 
-Building CF should be done with CMake. The reason CMake is chosen, is it's one of the only working cross-platform build generators in existence, that actually works pretty much everywhere. Make sure you have a compiler installed that you're familiar with beforehand. If you're new to C/C++ I highly recommend using Microsoft Visual Studio (Community Edition), for Windows users. If you don't like Visual Studio you can try gcc/g++ (MinGW), [tdm-gcc](https://jmeubank.github.io/tdm-gcc/) is recommended in this case. If you're MacOS, XCode (and the command line tools) are recommended. For Linux you'll probably use g++.
+Building CF should be done with CMake. The reason CMake is chosen, is it's one of the only working cross-platform build generators in existence, that actually works pretty much everywhere. Make sure you have a compiler installed that you're familiar with beforehand. If you're new to C/C++ I highly recommend using Microsoft Visual Studio (Community Edition), for Windows users. If you don't like Visual Studio you can try gcc/g++ (MinGW), [tdm-gcc](https://jmeubank.github.io/tdm-gcc/) is recommended in this case. Alternatively if you're on an older OS such as Windows 8, you can use [w64devkit](https://github.com/skeeto/w64devkit) which should also work. If you're MacOS, XCode (and the command line tools) are recommended. For Linux you'll probably use g++.
 
 It's highly recommended to use CF's [Cmake project template](https://github.com/RandyGaul/cute_framework_project_template#cmake-101-walkthrough) and follow along these steps with it!
 
