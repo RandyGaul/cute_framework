@@ -836,6 +836,11 @@ float cf_app_get_framerate()
 	return 1.0f / CF_DELTA_TIME;
 }
 
+SDL_Window* CF_CALL cf_app_get_window(void)
+{
+	return app->window;
+}
+
 #ifndef CF_FRAMERATE_SMOOTHING
 #define CF_FRAMERATE_SMOOTHING 60.0f
 #endif

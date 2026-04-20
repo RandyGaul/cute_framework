@@ -852,6 +852,16 @@ typedef struct CF_PowerInfo
  */
 CF_API CF_PowerInfo CF_CALL cf_app_power_info(void);
 
+struct SDL_Window;
+
+/**
+ * @function cf_app_get_window
+ * @category app
+ * @brief    Gets the application window.
+ * @return   Returns a `SDL_Window` handle.
+ */
+CF_API struct SDL_Window* CF_CALL cf_app_get_window(void);
+
 #ifdef __cplusplus
 }
 #endif // __cplusplus
@@ -927,6 +937,7 @@ CF_INLINE void app_set_msaa(int msaa) { cf_app_set_msaa(msaa); }
 CF_INLINE CF_Canvas app_get_canvas() { return cf_app_get_canvas(); }
 CF_INLINE void app_set_canvas_size(int w, int h) { cf_app_set_canvas_size(w, h); }
 CF_INLINE CF_PowerInfo app_power_info() { return cf_app_power_info(); }
+CF_INLINE struct SDL_Window* app_get_window() { return cf_app_get_window(); }
 
 }
 
