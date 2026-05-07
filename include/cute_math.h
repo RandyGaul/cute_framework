@@ -3485,17 +3485,16 @@ CF_INLINE Cute::v2 operator*(Cute::v2 a, float b) { return V2(a.x * b, a.y * b);
 CF_INLINE Cute::v2 operator*(float a, Cute::v2 b) { return V2(a * b.x, a * b.y); }
 CF_INLINE Cute::v2 operator*(Cute::v2 a, Cute::v2 b) { return V2(a.x * b.x, a.y * b.y); }
 CF_INLINE Cute::v2& operator*=(Cute::v2& a, float b) { return a = a * b; }
-CF_INLINE Cute::v2& operator*=(float a, Cute::v2& b) { return b = a * b; }
 CF_INLINE Cute::v2& operator*=(Cute::v2& a, Cute::v2 b) { return a = a * b; }
 CF_INLINE Cute::v2 operator/(Cute::v2 a, float b) { return V2(a.x / b, a.y / b); }
 CF_INLINE Cute::v2 operator/(Cute::v2 a, Cute::v2 b) { return V2(a.x / b.x, a.y / b.y); }
 CF_INLINE Cute::v2& operator/=(Cute::v2& a, float b) { return a = a / b; }
 CF_INLINE Cute::v2& operator/=(Cute::v2& a, Cute::v2 b) { return a = a / b; }
 CF_INLINE Cute::v2 operator-(Cute::v2 a) { return V2(-a.x, -a.y); }
-CF_INLINE int operator<(Cute::v2 a, Cute::v2 b) { return a.x < b.x&& a.y < b.y; }
-CF_INLINE int operator>(Cute::v2 a, Cute::v2 b) { return a.x > b.x && a.y > b.y; }
-CF_INLINE int operator<=(Cute::v2 a, Cute::v2 b) { return a.x <= b.x && a.y <= b.y; }
-CF_INLINE int operator>=(Cute::v2 a, Cute::v2 b) { return a.x >= b.x && a.y >= b.y; }
+CF_INLINE bool operator<(Cute::v2 a, Cute::v2 b) { return a.x < b.x && a.y < b.y; }
+CF_INLINE bool operator>(Cute::v2 a, Cute::v2 b) { return a.x > b.x && a.y > b.y; }
+CF_INLINE bool operator<=(Cute::v2 a, Cute::v2 b) { return a.x <= b.x && a.y <= b.y; }
+CF_INLINE bool operator>=(Cute::v2 a, Cute::v2 b) { return a.x >= b.x && a.y >= b.y; }
 CF_INLINE bool operator==(CF_Rect a, CF_Rect b) { return a.x == b.x && a.y == b.y && a.w == b.w && a.h == b.h; }
 
 #endif // CF_CPP
