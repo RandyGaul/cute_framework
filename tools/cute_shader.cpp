@@ -101,7 +101,7 @@ public:
 		std::string include_name = header_name;
 
 		// Since all includes are system include, we can resolve include guard immediately
-		if (automatic_include_guard && included_files.contains(include_name)) {
+		if (automatic_include_guard && included_files.find(include_name) != included_files.end()) {
 			return new IncludeResult(include_name, "", 0, nullptr);
 		}
 
