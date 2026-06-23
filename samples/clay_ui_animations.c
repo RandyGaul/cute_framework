@@ -174,23 +174,21 @@ static bool menu_entry(const char* text, TextStyle text_style, CF_Sprite* hover_
 	// A reusable component is just a function
 	bool clicked = false;
 
-	CLAY(
+	CLAY({
 		// Local id so it doesn't clash
-		CLAY_SID_LOCAL(((Clay_String){ .chars = text, .length = strlen(text) })),
-		{
-			.layout = {
-				.sizing = {
-					CLAY_SIZING_GROW(0),
-					CLAY_SIZING_FIXED(animation_get(*entry_h_id, *entry_h))
-				},
-				.childAlignment = {
-					.x = CLAY_ALIGN_X_CENTER,
-					.y = CLAY_ALIGN_Y_CENTER,
-				},
+		.id = CLAY_SID_LOCAL(((Clay_String){ .chars = text, .length = strlen(text) })),
+		.layout = {
+			.sizing = {
+				CLAY_SIZING_GROW(0),
+				CLAY_SIZING_FIXED(animation_get(*entry_h_id, *entry_h))
 			},
-			.backgroundColor = clay_color_from_cf(cf_color_orange()),
-		}
-	) {
+			.childAlignment = {
+				.x = CLAY_ALIGN_X_CENTER,
+				.y = CLAY_ALIGN_Y_CENTER,
+			},
+		},
+		.backgroundColor = clay_color_from_cf(cf_color_orange()),
+	}) {
 		bool hovered = Clay_Hovered();
 		cf_text_element(
 			CLAY_ID_LOCAL("Text"),
@@ -199,12 +197,13 @@ static bool menu_entry(const char* text, TextStyle text_style, CF_Sprite* hover_
 			text
 		);
 		if (hovered) {
-			CLAY(CLAY_ID_LOCAL("HoverIndicator"), {
+			CLAY({
+				.id = CLAY_ID_LOCAL("HoverIndicator"),
 				.layout.sizing = {
 					.width = CLAY_SIZING_FIT(hover_icon->w),
 					.height = CLAY_SIZING_PERCENT(1.f),
 				},
-				.aspectRatio = (float)hover_icon->w / (float)hover_icon->h,
+				.aspectRatio = { (float)hover_icon->w / (float)hover_icon->h },
 				.image = { .imageData = hover_icon },
 				// Floating will not affect the size of the parent
 				.floating = {
@@ -316,7 +315,8 @@ int main(int argc, char* argv[])
 
 		Clay_BeginLayout();
 		{
-			CLAY(CLAY_ID("Root"), {
+			CLAY({
+				.id = CLAY_ID("Root"),
 				.layout = {
 					.sizing = { CLAY_SIZING_GROW(0), CLAY_SIZING_GROW(0) },
 					.layoutDirection = CLAY_TOP_TO_BOTTOM,
@@ -327,7 +327,8 @@ int main(int argc, char* argv[])
 					.childGap = 10,
 				},
 			}) {
-				CLAY(CLAY_ID_LOCAL("Choice"), {
+				CLAY({
+					.id = CLAY_ID_LOCAL("Choice"),
 					.layout = {
 						.sizing = { CLAY_SIZING_FIXED(width * 0.2f), CLAY_SIZING_GROW(0) },
 						.childAlignment = {
@@ -491,7 +492,8 @@ static void cf_text_element(
 
 	// This custom element has a more accurate size measurement and can support
 	// text effect.
-	CLAY(id, {
+	CLAY({
+		.id = id,
 		.layout = {
 			.sizing = {
 				.width = style.wrap ? CLAY_SIZING_GROW(0) : CLAY_SIZING_FIT(0),
@@ -520,14 +522,15 @@ static void cf_text_element(
 				cf_pop_text_wrap_width();
 			}
 
-			CLAY(CLAY_ID_LOCAL("Content"), {
+			CLAY({
+				.id = CLAY_ID_LOCAL("Content"),
 				.layout = {
 					.sizing = {
 						.width = CLAY_SIZING_FIXED(size.x),
 						.height = CLAY_SIZING_FIXED(size.y),
 					},
 				},
-				.custom = element,
+				.custom = { .customData = element },
 				.userData = make_tmp_copy(&parent_size, sizeof(parent_size)),
 			}) {}
 		}
