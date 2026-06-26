@@ -257,8 +257,8 @@ static CF_Result s_aseprite_cache_load_from_memory(const char* unique_name, cons
 		if (slice->has_pivot) {
 			v2 pivot = V2((float)slice->pivot_x, (float)slice->pivot_y);
 			// Transform from CF's (0, 0) at center to ase's (0, 0) at top-left.
-			pivot.x = pivot.x - sw * 0.5f + 0.5f;
-			pivot.y = pivot.y - sh * 0.5f + 0.5f;
+			pivot.x =  pivot.x - sw * 0.5f + 0.5f;
+			pivot.y = -pivot.y + sh * 0.5f + 0.5f;
 
 			for (int frame_number = slice->frame_number; frame_number < ase->frame_count; ++frame_number) {
 				pivots[frame_number] = pivot;
@@ -481,8 +481,8 @@ void cf_aseprite_cache_reload_asset(uint64_t asset_id, ase_t* new_ase)
 		}
 		if (slice->has_pivot) {
 			v2 pivot = V2((float)slice->pivot_x, (float)slice->pivot_y);
-			pivot.x = pivot.x - sw * 0.5f + 0.5f;
-			pivot.y = pivot.y - sh * 0.5f + 0.5f;
+			pivot.x =  pivot.x - sw * 0.5f + 0.5f;
+			pivot.y = -pivot.y + sh * 0.5f + 0.5f;
 			for (int frame_number = slice->frame_number; frame_number < new_count; ++frame_number) {
 				pivots[frame_number] = pivot;
 			}

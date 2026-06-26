@@ -559,7 +559,7 @@ void cf_draw_sprite(const CF_Sprite* sprite)
 	s.h = sprite->h;
 	s.geom.type = BATCH_GEOMETRY_TYPE_SPRITE;
 
-	v2 offset = sprite->offset + (sprite->id != CF_SPRITE_ID_INVALID ? sprite->_pivot : V2(0,0));
+	v2 offset = sprite->offset - (sprite->id != CF_SPRITE_ID_INVALID ? sprite->_pivot : V2(0,0));
 	v2 p = cf_add(sprite->transform.p, cf_mul(offset, sprite->scale));
 
 	v2 scale = V2(sprite->scale.x * s.w, sprite->scale.y * s.h);
@@ -751,7 +751,7 @@ void cf_draw_sprite_9_slice(const CF_Sprite* sprite)
 		},
 	};
 
-	v2 offset = sprite->offset + sprite->_pivot;
+	v2 offset = sprite->offset - sprite->_pivot;
 	v2 p = cf_add(sprite->transform.p, cf_mul_v2(offset, sprite->scale));
 	v2 scale = V2(sprite->scale.x * sprite->w, sprite->scale.y * sprite->h);
 
@@ -950,7 +950,7 @@ void cf_draw_sprite_9_slice_tiled(const CF_Sprite* sprite)
 		},
 	};
 
-	v2 offset = sprite->offset + sprite->_pivot;
+	v2 offset = sprite->offset - sprite->_pivot;
 	v2 p = cf_add(sprite->transform.p, cf_mul_v2(offset, sprite->scale));
 	v2 scale = V2(sprite->scale.x * sprite->w, sprite->scale.y * sprite->h);
 
