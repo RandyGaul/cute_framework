@@ -172,6 +172,12 @@ TEST_CASE(test_ckit_string_is_dynamic)
 	sfree(s);
 
 	REQUIRE(!sisdyna("literal"));
+
+	char buffer[64];
+	char* st = NULL;
+	sstatic(st, buffer, sizeof(buffer));
+	REQUIRE(!sisdyna(st));
+
 	return true;
 }
 
