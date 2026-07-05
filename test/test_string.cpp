@@ -221,6 +221,19 @@ TEST_CASE(test_string_macros_advanced)
 	return true;
 }
 
+/* Test the public cf_string_is_dynamic API. */
+TEST_CASE(test_string_is_dynamic)
+{
+	char* s = NULL;
+	sset(s, "heap string");
+	REQUIRE(cf_string_is_dynamic(s));
+	sfree(s);
+
+	REQUIRE(!cf_string_is_dynamic("literal"));
+
+	return true;
+}
+
 /* Run the string interning API. */
 TEST_CASE(test_string_interning)
 {
@@ -290,6 +303,7 @@ TEST_SUITE(test_string)
 	RUN_TEST_CASE(test_array_macros_simple);
 	RUN_TEST_CASE(test_string_macros_simple);
  	RUN_TEST_CASE(test_string_macros_advanced);
+	RUN_TEST_CASE(test_string_is_dynamic);
 	RUN_TEST_CASE(test_string_interning);
 	RUN_TEST_CASE(test_dictionary_and_interning);
 	RUN_TEST_CASE(test_split_for_memleaks);
