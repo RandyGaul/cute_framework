@@ -554,10 +554,16 @@ void cf_pump_input_msgs()
 			app->window_state.has_keyboard_focus = false;
 			break;
 
-		case SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED:
+		case SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED: {
 			app->dpi_scale = SDL_GetWindowDisplayScale(app->window);
 			app->dpi_scale_was_changed = true;
-			break;
+			float pixel_scale = SDL_GetWindowPixelDensity(app->window);
+			if (pixel_scale <= 0.0f) pixel_scale = 1.0f;
+			if (pixel_scale != app->pixel_scale) {
+				app->pixel_scale = pixel_scale;
+				cf_app_recreate_default_canvas_if_needed();
+			}
+		} break;
 
 		case SDL_EVENT_KEY_DOWN:
 		{
@@ -671,8 +677,8 @@ void cf_pump_input_msgs()
 			CF_Touch& touch = app->touches.add();
 			touch.id = id;
 			touch.pressure = event.tfinger.pressure;
-			touch.x = event.tfinger.x * app->w; // NOTE: Probably wrong for high-DPI.
-			touch.y = event.tfinger.y * app->h; // NOTE: Probably wrong for high-DPI.
+			touch.x = event.tfinger.x * app->w;
+			touch.y = event.tfinger.y * app->h;
 		}	break;
 
 		case SDL_EVENT_FINGER_MOTION:
@@ -681,14 +687,14 @@ void cf_pump_input_msgs()
 			CF_Touch touch;
 			if (cf_touch_get(id, &touch)) {
 				touch.pressure = event.tfinger.pressure;
-				touch.x = event.tfinger.x * app->w; // NOTE: Probably wrong for high-DPI.
-				touch.y = event.tfinger.y * app->h; // NOTE: Probably wrong for high-DPI.
+				touch.x = event.tfinger.x * app->w;
+				touch.y = event.tfinger.y * app->h;
 			} else {
 				CF_Touch& touch = app->touches.add();
 				touch.id = id;
 				touch.pressure = event.tfinger.pressure;
-				touch.x = event.tfinger.x * app->w; // NOTE: Probably wrong for high-DPI.
-				touch.y = event.tfinger.y * app->h; // NOTE: Probably wrong for high-DPI.
+				touch.x = event.tfinger.x * app->w;
+				touch.y = event.tfinger.y * app->h;
 			}
 		}	break;
 
