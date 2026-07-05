@@ -499,6 +499,23 @@ void cf_begin_frame_input()
 	}
 }
 
+// Re-queries the window's physical pixel density and, if it changed, updates
+// app->pixel_scale and recreates the default canvas to match (unless pinned).
+// Called from both SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED and
+// SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED -- the former is the OS's content-scale
+// signal and the latter is the authoritative physical-pixel-size signal;
+// either can fire without the other depending on platform/monitor setup, so
+// both are handled the same way and this is idempotent when both fire together.
+static void s_refresh_pixel_scale()
+{
+	float pixel_scale = SDL_GetWindowPixelDensity(app->window);
+	if (pixel_scale <= 0.0f) pixel_scale = 1.0f;
+	if (pixel_scale != app->pixel_scale) {
+		app->pixel_scale = pixel_scale;
+		cf_app_recreate_default_canvas_if_needed();
+	}
+}
+
 void cf_pump_input_msgs()
 {
 	// Handle SDL messages.
@@ -554,16 +571,15 @@ void cf_pump_input_msgs()
 			app->window_state.has_keyboard_focus = false;
 			break;
 
-		case SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED: {
+		case SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED:
 			app->dpi_scale = SDL_GetWindowDisplayScale(app->window);
 			app->dpi_scale_was_changed = true;
-			float pixel_scale = SDL_GetWindowPixelDensity(app->window);
-			if (pixel_scale <= 0.0f) pixel_scale = 1.0f;
-			if (pixel_scale != app->pixel_scale) {
-				app->pixel_scale = pixel_scale;
-				cf_app_recreate_default_canvas_if_needed();
-			}
-		} break;
+			s_refresh_pixel_scale();
+			break;
+
+		case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED:
+			s_refresh_pixel_scale();
+			break;
 
 		case SDL_EVENT_KEY_DOWN:
 		{

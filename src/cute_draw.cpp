@@ -1974,8 +1974,12 @@ static void s_render(CF_Font* font, CF_Glyph* glyph, float font_size, int blur)
 	stbtt_MakeGlyphBitmap(&font->info, pixels_1bpp + pad * w + pad, w - pad*2, h - pad*2, w, scale, scale, glyph->index);
 	//s_save("glyph.png", pixels_1bpp, w, h);
 
-	// Apply blur.
-	if (blur) s_blur(pixels_1bpp, w, h, w, blur);
+	// Apply blur. `blur` is a logical-space radius; scale it to device pixels to
+	// match the bitmap's rasterization resolution, so the blur looks the same
+	// logical size regardless of pixel_scale (pad above already reserved room
+	// for this device-space radius).
+	int device_blur = (int)CF_ROUNDF(blur * pixel_scale);
+	if (device_blur) s_blur(pixels_1bpp, w, h, w, device_blur);
 	//s_save("glyph_blur.png", pixels_1bpp, w, h);
 
 	// Convert to premultiplied RGBA8 pixel format.
