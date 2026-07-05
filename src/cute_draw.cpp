@@ -2674,9 +2674,12 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 	bool vertical = s_draw->vertical.last();
 
 	auto advance_to_next_glyph = [&](CF_Glyph* last_glyph) {
-		// Max bound covers the entire glyph without kerning so we use w instead
-		// of xadvance
-		max_x = max(max_x, x + last_glyph->w);
+		// Max bound covers the entire glyph without kerning so we use the glyph's
+		// logical ink width (q1.x - q0.x) instead of xadvance. Note glyph->w is the
+		// *physical* rasterized bitmap width (scaled by pixel_scale, used for the
+		// sprite's source-texture size) -- not the same unit as the logical `x`
+		// cursor here, so it can't be used directly for this bound.
+		max_x = max(max_x, x + (last_glyph->q1.x - last_glyph->q0.x));
 		if (vertical) {
 			min_y = min(min_y, y + font->descent * scale);
 
