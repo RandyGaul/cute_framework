@@ -185,7 +185,7 @@
 #define sstatic(s, buf, sz)     (astatic(s, buf, sz), apush(s, 0))
 
 // sisdyna: True if s is a dynamic string from this API (not a literal or static buffer).
-#define sisdyna(s)              (!((#s)[0] == '"') && ck_avalid(s))
+#define sisdyna(s)              (!((#s)[0] == '"') && avalid(s))
 
 // sfree: Free string memory and set pointer to NULL.
 #define sfree(s)                afree(s)
