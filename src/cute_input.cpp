@@ -501,6 +501,8 @@ void cf_begin_frame_input()
 
 // Re-queries the window's physical pixel density and, if it changed, updates
 // app->pixel_scale and recreates the default canvas to match (unless pinned).
+// No-ops entirely when CF_APP_OPTIONS_NO_HIGH_DPI_BIT is set, since pixel_scale
+// must stay pinned at 1.0f in that mode.
 // Called from both SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED and
 // SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED -- the former is the OS's content-scale
 // signal and the latter is the authoritative physical-pixel-size signal;
@@ -508,6 +510,7 @@ void cf_begin_frame_input()
 // both are handled the same way and this is idempotent when both fire together.
 static void s_refresh_pixel_scale()
 {
+	if (app->options & CF_APP_OPTIONS_NO_HIGH_DPI_BIT) return;
 	float pixel_scale = SDL_GetWindowPixelDensity(app->window);
 	if (pixel_scale <= 0.0f) pixel_scale = 1.0f;
 	if (pixel_scale != app->pixel_scale) {

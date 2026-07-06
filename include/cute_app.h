@@ -369,7 +369,7 @@ CF_API int CF_CALL cf_app_draw_onto_screen(bool clear);
  * @brief    Gets the size of the window in logical points (called "points" on Retina/HiDPI displays; use `cf_app_get_pixel_scale` to convert to physical pixels).
  * @param    w          The width of the window in logical points.
  * @param    h          The height of the window in logical points.
- * @related  cf_app_set_size cf_app_get_position cf_app_set_position cf_app_get_width cf_app_get_height cf_app_get_dpi_scale
+ * @related  cf_app_set_size cf_app_get_position cf_app_set_position cf_app_get_width cf_app_get_height cf_app_get_dpi_scale cf_app_get_pixel_scale
  */
 CF_API void CF_CALL cf_app_get_size(int* w, int* h);
 
@@ -377,7 +377,7 @@ CF_API void CF_CALL cf_app_get_size(int* w, int* h);
  * @function cf_app_get_width
  * @category app
  * @brief    Returns the size of the window width in logical points (use `cf_app_get_pixel_scale` to convert to physical pixels).
- * @related  cf_app_set_size cf_app_get_position cf_app_set_position cf_app_get_width cf_app_get_height cf_app_get_dpi_scale
+ * @related  cf_app_set_size cf_app_get_position cf_app_set_position cf_app_get_width cf_app_get_height cf_app_get_dpi_scale cf_app_get_pixel_scale
  */
 CF_API int CF_CALL cf_app_get_width(void);
 
@@ -385,7 +385,7 @@ CF_API int CF_CALL cf_app_get_width(void);
  * @function cf_app_get_height
  * @category app
  * @brief    Returns the size of the window height in logical points (use `cf_app_get_pixel_scale` to convert to physical pixels).
- * @related  cf_app_set_size cf_app_get_position cf_app_set_position cf_app_get_width cf_app_get_height cf_app_get_dpi_scale
+ * @related  cf_app_set_size cf_app_get_position cf_app_set_position cf_app_get_width cf_app_get_height cf_app_get_dpi_scale cf_app_get_pixel_scale
  */
 CF_API int CF_CALL cf_app_get_height(void);
 

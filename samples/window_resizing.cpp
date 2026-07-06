@@ -116,7 +116,7 @@ int main(int argc, char* argv[])
 		// blit is 1:1 and stays crisp on HiDPI displays. The projection below
 		// stays in logical units, so game content doesn't move.
 		float pixel_scale = app_get_pixel_scale();
-		app_set_canvas_size((int)(window_w * pixel_scale), (int)(window_h * pixel_scale));
+		app_set_canvas_size((int)CF_ROUNDF(window_w * pixel_scale), (int)CF_ROUNDF(window_h * pixel_scale));
 		CF_V2 dest = calculate_dest_size(game_w, game_h, window_w, window_h, scale_mode);
 
 		// Draw the canvas scaled and centered in the window.
