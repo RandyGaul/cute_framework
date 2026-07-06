@@ -508,6 +508,7 @@ void cf_begin_frame_input()
 // both are handled the same way and this is idempotent when both fire together.
 static void s_refresh_pixel_scale()
 {
+	if (app->options & CF_APP_OPTIONS_NO_HIGH_DPI_BIT) return;
 	float pixel_scale = SDL_GetWindowPixelDensity(app->window);
 	if (pixel_scale <= 0.0f) pixel_scale = 1.0f;
 	if (pixel_scale != app->pixel_scale) {
