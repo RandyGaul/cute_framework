@@ -535,6 +535,7 @@ void cf_pump_input_msgs()
 			app->window_state.resized = true;
 			app->w = event.window.data1;
 			app->h = event.window.data2;
+			cf_app_recreate_default_canvas_if_needed();
 			break;
 
 		case SDL_EVENT_WINDOW_MOVED:
