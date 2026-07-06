@@ -166,6 +166,15 @@ static void s_canvas(int w, int h)
 	app->canvas_h = h;
 }
 
+void cf_app_recreate_default_canvas_if_needed()
+{
+	if (!app->canvas_pinned) {
+		int w = (int)CF_ROUNDF(app->w * app->pixel_scale);
+		int h = (int)CF_ROUNDF(app->h * app->pixel_scale);
+		s_canvas(w, h);
+	}
+}
+
 CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, int y, int w, int h, CF_AppOptionFlags options, const char* argv0)
 {
 	bool use_dx11 = options & CF_APP_OPTIONS_GFX_D3D11_BIT;
@@ -282,7 +291,9 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 	SDL_Window* window = NULL;
 	if (use_gfx) {
 		Uint32 flags = 0;
-		flags |= SDL_WINDOW_HIGH_PIXEL_DENSITY; // Turn on high DPI support for all platforms.
+		if (!(options & CF_APP_OPTIONS_NO_HIGH_DPI_BIT)) {
+			flags |= SDL_WINDOW_HIGH_PIXEL_DENSITY; // Turn on high DPI support for all platforms, unless explicitly disabled.
+		}
 		if (use_opengl) flags |= SDL_WINDOW_OPENGL;
 		if (use_metal) flags |= SDL_WINDOW_METAL;
 		if (options & CF_APP_OPTIONS_FULLSCREEN_BIT) flags |= SDL_WINDOW_FULLSCREEN;
@@ -319,6 +330,9 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 		SDL_GetWindowPosition(app->window, &app->x, &app->y);
 		app->dpi_scale = SDL_GetWindowDisplayScale(app->window);
 		app->dpi_scale_prev = app->dpi_scale;
+		app->pixel_scale = window ? SDL_GetWindowPixelDensity(app->window) : 1.0f;
+		if (app->pixel_scale <= 0.0f) app->pixel_scale = 1.0f;
+		if (options & CF_APP_OPTIONS_NO_HIGH_DPI_BIT) app->pixel_scale = 1.0f;
 	}
 	::app = app;
 	cf_make_aseprite_cache();
@@ -336,7 +350,7 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 		cf_load_internal_shaders();
 		cf_make_draw();
 
-		s_canvas(app->w, app->h);
+		cf_app_recreate_default_canvas_if_needed();
 
 		// Load up a default image of 1x1 white pixel.
 		// Used in various places as a placeholder or default.
@@ -618,6 +632,11 @@ bool cf_app_dpi_scale_was_changed()
 	return app->dpi_scale_was_changed;
 }
 
+float cf_app_get_pixel_scale()
+{
+	return app->pixel_scale;
+}
+
 void cf_app_set_size(int w, int h)
 {
 	SDL_SetWindowSize(app->window, w, h);
@@ -737,7 +756,7 @@ bool cf_app_set_msaa(int sample_count)
 
 	if (supported && app->sample_count != sample_count) {
 		app->sample_count = sample_count;
-		s_canvas(app->w, app->h);
+		cf_app_recreate_default_canvas_if_needed();
 	}
 
 	return supported;
@@ -750,6 +769,7 @@ CF_Canvas cf_app_get_canvas()
 
 void cf_app_set_canvas_size(int w, int h)
 {
+	app->canvas_pinned = true;
 	s_canvas(w, h);
 }
 
@@ -761,6 +781,11 @@ int cf_app_get_canvas_width()
 int cf_app_get_canvas_height()
 {
 	return app->canvas_h;
+}
+
+void cf_app_set_canvas_blit_filter(CF_Filter filter)
+{
+	app->canvas_blit_filter = filter;
 }
 
 void cf_app_set_vsync(bool true_turn_on_vsync)

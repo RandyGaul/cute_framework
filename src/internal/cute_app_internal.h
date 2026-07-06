@@ -31,6 +31,10 @@ struct cs_context_t;
 
 CF_API extern struct CF_App* app;
 
+// Recreates the default offscreen canvas at logical_size * pixel_scale, unless the user has pinned
+// an explicit size via cf_app_set_canvas_size(). Called on init and whenever pixel_scale changes.
+void cf_app_recreate_default_canvas_if_needed();
+
 struct CF_MouseState
 {
 	int left_button = 0;
@@ -83,6 +87,9 @@ struct CF_App
 	float dpi_scale = 1.0f;
 	float dpi_scale_prev = 1.0f;
 	bool dpi_scale_was_changed = false;
+	float pixel_scale = 1.0f;   // Physical pixels per logical point (from SDL_GetWindowPixelDensity). Drives default-canvas sizing, AA, and glyph rasterization.
+	bool canvas_pinned = false; // True once cf_app_set_canvas_size() is called explicitly -- opts out of automatic pixel_scale-based canvas resizing.
+	CF_Filter canvas_blit_filter = CF_FILTER_NEAREST; // Filter used when blitting the app canvas onto the screen, if their sizes differ (e.g. a pinned retro canvas). Defaults to nearest for a crisp/blocky pixel-art look.
 	bool sync_window = false;
 	int draw_call_count = 0;
 	int w;

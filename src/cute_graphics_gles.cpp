@@ -733,7 +733,7 @@ void cf_gles_blit_canvas(CF_Canvas canvas_handle)
 		0, canvas->h, canvas->w, 0,
 		0, 0, window_width, window_height,
 		GL_COLOR_BUFFER_BIT,
-		GL_LINEAR
+		s_wrap(app->canvas_blit_filter)
 	);
 	CF_POLL_OPENGL_ERROR();
 	g_ctx.fbo = 0;

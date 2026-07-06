@@ -871,7 +871,7 @@ void cf_sdlgpu_blit_canvas(CF_Canvas canvas)
 			.destination = dst,
 			.load_op = SDL_GPU_LOADOP_CLEAR,
 			.flip_mode = SDL_FLIP_NONE,
-			.filter = SDL_GPU_FILTER_NEAREST,
+			.filter = s_wrap(app->canvas_blit_filter),
 			.cycle = true,
 		};
 		SDL_BlitGPUTexture(g_ctx.cmd, &blit_info);
