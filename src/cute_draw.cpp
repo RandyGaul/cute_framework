@@ -1790,7 +1790,9 @@ CF_Result cf_make_font_from_memory(void* data, int size, const char* font_name)
 	stbtt_GetFontBoundingBox(&font->info, &x0, &y0, &x1, &y1);
 	font->width = x1 - x0;
 
-	// Build kerning table.
+	// Build the legacy kerning table, keyed by glyph index (as stb provides it). Used
+	// as a fallback in cf_font_get_kern for fonts whose GPOS table isn't in a layout
+	// stb's minimal parser understands, even though real kern data still exists here.
 	Array<stbtt_kerningentry> table_array;
 	int table_length = stbtt_GetKerningTableLength(&font->info);
 	table_array.ensure_capacity(table_length);
@@ -1966,7 +1968,12 @@ static void s_render(CF_Font* font, CF_Glyph* glyph, float font_size, int blur)
 	glyph->q0 = V2((float)x0, -(float)(y0 + h)) / pixel_scale; // Swapped y. Logical units.
 	glyph->q1 = V2((float)(x0 + w), -(float)y0) / pixel_scale; // Swapped y. Logical units.
 	glyph->xadvance = xadvance * scale / pixel_scale;
-	glyph->visible |= w > 0 && h > 0;
+	glyph->rendered = true;
+
+	// Glyphs with no ink (spaces, etc.) have nothing to rasterize -- layout metrics
+	// above are still valid and needed, but skip allocating a bitmap/atlas slot for
+	// them entirely, and skip drawing them (see `visible` check in s_draw_text).
+	if (!glyph->visible) return;
 
 	// Render glyph.
 	uint8_t* pixels_1bpp = (uint8_t*)CF_CALLOC(w * h);
@@ -2012,7 +2019,7 @@ CF_Glyph* cf_font_get_glyph(CF_Font* font, int code, float font_size, int blur)
 		glyph->index = glyph_index;
 		glyph->visible = stbtt_IsGlyphEmpty(&font->info, glyph_index) == 0;
 	}
-	if (glyph->image_id) return glyph;
+	if (glyph->rendered) return glyph;
 
 	// Render the glyph if it exists in the font, but is not yet rendered.
 	s_render(font, glyph, font_size, blur);
@@ -2021,10 +2028,22 @@ CF_Glyph* cf_font_get_glyph(CF_Font* font, int code, float font_size, int blur)
 
 float cf_font_get_kern(CF_Font* font, float font_size, int code0, int code1)
 {
-	uint64_t key = CF_KERN_KEY(code0, code1);
-	int* val = font->kerning.try_get(key);
-	if (!val) return 0;
-	return *val * stbtt_ScaleForPixelHeight(&font->info, font_size);
+	// Prefer GPOS -- stb's codepoint API converts to glyph indices internally and
+	// reads GPOS pair-adjustment tables, which is where most modern fonts keep
+	// kerning. But stb's GPOS parser only understands a narrow set of lookup
+	// formats: some fonts (e.g. this project's bundled Calibri) have a GPOS table
+	// stb can't read, yet still carry real data in the legacy `kern` table. Since
+	// stb only consults `kern` when there's no GPOS table at all, fall back to our
+	// own glyph-index lookup into `kerning` (built in cf_make_font_from_data) when
+	// the GPOS path comes up empty.
+	int advance = stbtt_GetCodepointKernAdvance(&font->info, code0, code1);
+	if (!advance) {
+		int g0 = stbtt_FindGlyphIndex(&font->info, code0);
+		int g1 = stbtt_FindGlyphIndex(&font->info, code1);
+		int* val = font->kerning.try_get(CF_KERN_KEY(g0, g1));
+		if (val) advance = *val;
+	}
+	return advance * stbtt_ScaleForPixelHeight(&font->info, font_size);
 }
 
 void cf_push_font(const char* font)
@@ -2204,6 +2223,10 @@ static const char* s_find_end_of_line(CF_Font* font, const char* text, float wra
 	const char* start_of_word = 0;
 	float word_w = 0;
 	int cp;
+	int cp_prev = 0;
+	// Mirrors the main render loop's hit_newline gating, so wrap points land where
+	// the kerned text will actually break.
+	bool at_line_start = true;
 
 	while (*text) {
 		const char* text_prev = text;
@@ -2214,22 +2237,25 @@ static const char* s_find_end_of_line(CF_Font* font, const char* text, float wra
 			x = 0;
 			word_w = 0;
 			start_of_word = 0;
+			at_line_start = true;
 			continue;
 		} else if (cp == '\r') {
 			continue;
 		} else {
+			float kern = at_line_start ? 0 : cf_font_get_kern(font, font_size, cp_prev, cp);
+			float advance = glyph->xadvance + kern;
 			if (s_is_space(cp)) {
-				x += word_w + glyph->xadvance;
+				x += word_w + advance;
 				word_w = 0;
 				start_of_word = 0;
 			} else {
 				if (!start_of_word) {
 					start_of_word = text_prev;
 				}
-				if (x + word_w + glyph->xadvance < wrap_width) {
-					word_w += glyph->xadvance;
+				if (x + word_w + advance < wrap_width) {
+					word_w += advance;
 				} else {
-					if (word_w + glyph->xadvance < wrap_width) {
+					if (word_w + advance < wrap_width) {
 						// Put entire word on the next line.
 						return start_of_word;
 					} else {
@@ -2238,6 +2264,8 @@ static const char* s_find_end_of_line(CF_Font* font, const char* text, float wra
 					}
 				}
 			}
+			cp_prev = cp;
+			at_line_start = false;
 		}
 	}
 
@@ -2766,6 +2794,13 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 			continue;
 		}
 
+		// Advance the cursor by the pair kern so it accumulates across the line and is
+		// reflected in measurement + bounds, not just the visible glyph. Horizontal only;
+		// hit_newline guards against kerning across line breaks.
+		if (!vertical && !hit_newline && cp_prev) {
+			x += cf_font_get_kern(font, font_size, cp_prev, cp);
+		}
+
 		// Prepare a sprite struct for rendering.
 		float xadvance = glyph->xadvance;
 		if (render || markups) {
@@ -2777,11 +2812,13 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 			s.geom.alpha = 1.0f;
 			CF_Color color = s_draw->colors.last();
 
-			uint64_t kern_key = CF_KERN_KEY(cp_prev, cp);
-			v2 kern = V2(cf_font_get_kern(font, font_size, cp_prev, cp), 0);
-			v2 pad = V2(1,1); // Account for 1-pixel padding in spritebatch.
-			v2 q0 = glyph->q0 + V2(x,y) + kern - pad;
-			v2 q1 = glyph->q1 + V2(x,y) + kern + pad;
+			// Account for spritebatch's 1-pixel atlas border. The border is 1 *device*
+			// pixel (glyph bitmaps are rasterized at pixel_scale resolution), but q0/q1
+			// are in logical units, so the pad must shrink by pixel_scale to match --
+			// otherwise on HiDPI the quad is stretched past the glyph's actual coverage.
+			v2 pad = V2(1,1) / app->pixel_scale;
+			v2 q0 = glyph->q0 + V2(x,y) - pad;
+			v2 q1 = glyph->q1 + V2(x,y) + pad;
 
 			// Apply any active custom text effects.
 			bool use_corner_colors = false;
