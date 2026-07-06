@@ -164,6 +164,23 @@ TEST_CASE(test_ckit_string_dup_make)
 	return true;
 }
 
+TEST_CASE(test_ckit_string_is_dynamic)
+{
+	char* s = NULL;
+	sset(s, "heap string");
+	REQUIRE(sisdyna(s));
+	sfree(s);
+
+	REQUIRE(!sisdyna("literal"));
+
+	char buffer[64];
+	char* st = NULL;
+	sstatic(st, buffer, sizeof(buffer));
+	REQUIRE(!sisdyna(st));
+
+	return true;
+}
+
 TEST_CASE(test_ckit_string_clear)
 {
 	char* s = NULL;
@@ -1533,6 +1550,7 @@ TEST_SUITE(test_ckit)
 	RUN_TEST_CASE(test_ckit_string_set_append);
 	RUN_TEST_CASE(test_ckit_string_push_pop);
 	RUN_TEST_CASE(test_ckit_string_dup_make);
+	RUN_TEST_CASE(test_ckit_string_is_dynamic);
 	RUN_TEST_CASE(test_ckit_string_clear);
 	RUN_TEST_CASE(test_ckit_string_fit);
 
