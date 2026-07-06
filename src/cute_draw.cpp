@@ -1968,7 +1968,12 @@ static void s_render(CF_Font* font, CF_Glyph* glyph, float font_size, int blur)
 	glyph->q0 = V2((float)x0, -(float)(y0 + h)) / pixel_scale; // Swapped y. Logical units.
 	glyph->q1 = V2((float)(x0 + w), -(float)y0) / pixel_scale; // Swapped y. Logical units.
 	glyph->xadvance = xadvance * scale / pixel_scale;
-	glyph->visible |= w > 0 && h > 0;
+	glyph->rendered = true;
+
+	// Glyphs with no ink (spaces, etc.) have nothing to rasterize -- layout metrics
+	// above are still valid and needed, but skip allocating a bitmap/atlas slot for
+	// them entirely, and skip drawing them (see `visible` check in s_draw_text).
+	if (!glyph->visible) return;
 
 	// Render glyph.
 	uint8_t* pixels_1bpp = (uint8_t*)CF_CALLOC(w * h);
@@ -2014,7 +2019,7 @@ CF_Glyph* cf_font_get_glyph(CF_Font* font, int code, float font_size, int blur)
 		glyph->index = glyph_index;
 		glyph->visible = stbtt_IsGlyphEmpty(&font->info, glyph_index) == 0;
 	}
-	if (glyph->image_id) return glyph;
+	if (glyph->rendered) return glyph;
 
 	// Render the glyph if it exists in the font, but is not yet rendered.
 	s_render(font, glyph, font_size, blur);
@@ -2807,7 +2812,11 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 			s.geom.alpha = 1.0f;
 			CF_Color color = s_draw->colors.last();
 
-			v2 pad = V2(1,1); // Account for 1-pixel padding in spritebatch.
+			// Account for spritebatch's 1-pixel atlas border. The border is 1 *device*
+			// pixel (glyph bitmaps are rasterized at pixel_scale resolution), but q0/q1
+			// are in logical units, so the pad must shrink by pixel_scale to match --
+			// otherwise on HiDPI the quad is stretched past the glyph's actual coverage.
+			v2 pad = V2(1,1) / app->pixel_scale;
 			v2 q0 = glyph->q0 + V2(x,y) - pad;
 			v2 q1 = glyph->q1 + V2(x,y) + pad;
 
