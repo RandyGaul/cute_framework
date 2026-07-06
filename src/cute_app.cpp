@@ -756,7 +756,7 @@ bool cf_app_set_msaa(int sample_count)
 
 	if (supported && app->sample_count != sample_count) {
 		app->sample_count = sample_count;
-		cf_app_recreate_default_canvas_if_needed();
+		s_canvas(app->canvas_w, app->canvas_h);
 	}
 
 	return supported;
