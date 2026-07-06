@@ -25,6 +25,7 @@ struct CF_Glyph
 	int w, h;
 	float xadvance;
 	bool visible;
+	bool rendered; // Metrics (and, if visible, the atlas image) have been computed.
 };
 
 struct CF_Font
