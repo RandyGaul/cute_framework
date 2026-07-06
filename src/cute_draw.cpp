@@ -426,8 +426,8 @@ static void s_init_sb(int w, int h)
 	config.delete_texture_callback = cf_destroy_texture_handle;
 	config.allocator_context = NULL;
 	config.lonely_buffer_count_till_flush = 0;
-	config.atlas_height_in_pixels = w;
-	config.atlas_width_in_pixels = h;
+	config.atlas_height_in_pixels = h;
+	config.atlas_width_in_pixels = w;
 	s_draw->atlas_dims = V2((float)w, (float)h);
 
 	if (spritebatch_init(&s_draw->sb, &config, NULL)) {
