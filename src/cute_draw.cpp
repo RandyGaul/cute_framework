@@ -2792,7 +2792,7 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 		// Advance the cursor by the pair kern so it accumulates across the line and is
 		// reflected in measurement + bounds, not just the visible glyph. Horizontal only;
 		// hit_newline guards against kerning across line breaks.
-		if (!vertical && !hit_newline) {
+		if (!vertical && !hit_newline && cp_prev) {
 			x += cf_font_get_kern(font, font_size, cp_prev, cp);
 		}
 
