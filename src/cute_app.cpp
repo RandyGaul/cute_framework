@@ -756,7 +756,11 @@ bool cf_app_set_msaa(int sample_count)
 
 	if (supported && app->sample_count != sample_count) {
 		app->sample_count = sample_count;
-		s_canvas(app->canvas_w, app->canvas_h);
+		if (app->canvas_pinned) {
+			s_canvas(app->canvas_w, app->canvas_h);
+		} else {
+			cf_app_recreate_default_canvas_if_needed();
+		}
 	}
 
 	return supported;
