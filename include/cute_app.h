@@ -200,6 +200,8 @@ CF_API CF_DisplayOrientation CF_CALL cf_display_orientation(CF_DisplayID display
 	CF_ENUM(APP_OPTIONS_GFX_OPENGL_BIT,                       1 << 11) \
 	/* @entry Starts the application with a debug mode graphics context. */ \
 	CF_ENUM(APP_OPTIONS_GFX_DEBUG_BIT,                          1 << 12) \
+	/* @entry Disables the OS's high-pixel-density (Retina/HiDPI) backbuffer, forcing 1:1 logical-to-physical rendering. `cf_app_get_pixel_scale` will always return 1.0f. */ \
+	CF_ENUM(APP_OPTIONS_NO_HIGH_DPI_BIT,                        1 << 13) \
 	/* @end */
 
 typedef int CF_AppOptionFlags;
@@ -364,9 +366,9 @@ CF_API int CF_CALL cf_app_draw_onto_screen(bool clear);
 /**
  * @function cf_app_get_size
  * @category app
- * @brief    Gets the size of the window in pixels.
- * @param    w          The width of the window in pixels.
- * @param    h          The height of the window in pixels.
+ * @brief    Gets the size of the window in logical points (called "points" on Retina/HiDPI displays; use `cf_app_get_pixel_scale` to convert to physical pixels).
+ * @param    w          The width of the window in logical points.
+ * @param    h          The height of the window in logical points.
  * @related  cf_app_set_size cf_app_get_position cf_app_set_position cf_app_get_width cf_app_get_height cf_app_get_dpi_scale
  */
 CF_API void CF_CALL cf_app_get_size(int* w, int* h);
@@ -374,7 +376,7 @@ CF_API void CF_CALL cf_app_get_size(int* w, int* h);
 /**
  * @function cf_app_get_width
  * @category app
- * @brief    Returns the size of the window width in pixels.
+ * @brief    Returns the size of the window width in logical points (use `cf_app_get_pixel_scale` to convert to physical pixels).
  * @related  cf_app_set_size cf_app_get_position cf_app_set_position cf_app_get_width cf_app_get_height cf_app_get_dpi_scale
  */
 CF_API int CF_CALL cf_app_get_width(void);
@@ -382,7 +384,7 @@ CF_API int CF_CALL cf_app_get_width(void);
 /**
  * @function cf_app_get_height
  * @category app
- * @brief    Returns the size of the window height in pixels.
+ * @brief    Returns the size of the window height in logical points (use `cf_app_get_pixel_scale` to convert to physical pixels).
  * @related  cf_app_set_size cf_app_get_position cf_app_set_position cf_app_get_width cf_app_get_height cf_app_get_dpi_scale
  */
 CF_API int CF_CALL cf_app_get_height(void);
@@ -415,6 +417,18 @@ CF_API float CF_CALL cf_app_get_dpi_scale(void);
  * @related  cf_app_get_dpi_scale cf_app_dpi_scale_was_changed
  */
 CF_API bool CF_CALL cf_app_dpi_scale_was_changed(void);
+
+/**
+ * @function cf_app_get_pixel_scale
+ * @category app
+ * @brief    Returns the number of physical pixels per logical point for the app's window.
+ * @remarks  This is the ratio CF actually renders at internally -- e.g. 2.0f on a 2x Retina display. Unlike
+ *           `cf_app_get_dpi_scale` (the OS's suggested UI content scale, which is informational only), this value
+ *           directly reflects the backbuffer/canvas pixel density and is what you'd multiply a logical size by to
+ *           get physical pixels. Returns 1.0f if `CF_APP_OPTIONS_NO_HIGH_DPI_BIT` was passed to `cf_make_app`.
+ * @related  cf_app_get_dpi_scale cf_app_get_size cf_app_get_canvas_width cf_app_get_canvas_height
+ */
+CF_API float CF_CALL cf_app_get_pixel_scale(void);
 
 /**
  * @function cf_app_set_size
@@ -676,6 +690,9 @@ CF_API CF_Canvas CF_CALL cf_app_get_canvas(void);
  * @param    w          The width in pixels to resize the canvas to.
  * @param    h          The height in pixels to resize the canvas to.
  * @remarks  Be careful about calling this function, as it will invalidate any old references from `cf_app_get_canvas`.
+ *           Calling this pins the canvas to an exact device-pixel size and opts out of CF's automatic pixel-density-based
+ *           canvas scaling -- the canvas will no longer auto-resize if the window moves to a display with a different
+ *           pixel density.
  * @related  cf_app_get_canvas cf_app_get_canvas_width cf_app_get_canvas_height cf_app_set_vsync cf_app_get_vsync
  */
 CF_API void CF_CALL cf_app_set_canvas_size(int w, int h);
@@ -695,6 +712,18 @@ CF_API int CF_CALL cf_app_get_canvas_width(void);
  * @related  cf_app_get_canvas cf_app_set_canvas_size cf_app_get_canvas_width cf_app_set_vsync cf_app_get_vsync
  */
 CF_API int CF_CALL cf_app_get_canvas_height(void);
+
+/**
+ * @function cf_app_set_canvas_blit_filter
+ * @category app
+ * @brief    Sets the filter used when the app's canvas is blitted onto the screen, if their sizes differ.
+ * @param    filter     The filter to use: `CF_FILTER_NEAREST` (default; crisp/blocky, good for pixel art) or `CF_FILTER_LINEAR` (smooth).
+ * @remarks  This only matters when the app's canvas size (see `cf_app_set_canvas_size`) doesn't match the window's physical
+ *           pixel size -- for example a pinned low-resolution retro canvas. When the canvas already matches the physical size
+ *           (the default), this setting has no visible effect since no stretching occurs.
+ * @related  cf_app_set_canvas_size cf_app_get_canvas_width cf_app_get_canvas_height CF_Filter
+ */
+CF_API void CF_CALL cf_app_set_canvas_blit_filter(CF_Filter filter);
 
 /**
  * @function cf_app_set_vsync
@@ -902,6 +931,7 @@ CF_INLINE int app_get_width() { return cf_app_get_width(); }
 CF_INLINE int app_get_height() { return cf_app_get_height(); }
 CF_INLINE float app_get_dpi_scale() { return cf_app_get_dpi_scale(); }
 CF_INLINE bool app_dpi_scale_was_changed() { return cf_app_dpi_scale_was_changed(); }
+CF_INLINE float app_get_pixel_scale() { return cf_app_get_pixel_scale(); }
 CF_INLINE void app_center_window() { cf_app_center_window(); }
 CF_INLINE bool app_was_resized() { return cf_app_was_resized(); }
 CF_INLINE bool app_was_moved() { return cf_app_was_moved(); }
@@ -936,6 +966,7 @@ CF_INLINE void* app_init_imgui() { return cf_app_init_imgui(); }
 CF_INLINE void app_set_msaa(int msaa) { cf_app_set_msaa(msaa); }
 CF_INLINE CF_Canvas app_get_canvas() { return cf_app_get_canvas(); }
 CF_INLINE void app_set_canvas_size(int w, int h) { cf_app_set_canvas_size(w, h); }
+CF_INLINE void app_set_canvas_blit_filter(CF_Filter filter) { cf_app_set_canvas_blit_filter(filter); }
 CF_INLINE CF_PowerInfo app_power_info() { return cf_app_power_info(); }
 CF_INLINE struct SDL_Window* app_get_window() { return cf_app_get_window(); }
 

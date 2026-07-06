@@ -451,7 +451,10 @@ void CF_Draw::set_aaf()
 {
 	float inv_cam_scale = 1.0f / len(s_draw->cam_stack.last().m.y);
 	float scale = s_draw->antialias.last();
-	aaf = scale * inv_cam_scale;
+	// The canvas is now rasterized at `pixel_scale` device pixels per logical unit,
+	// so divide by it here to keep the AA band one device pixel wide (instead of
+	// one logical unit wide, which would now span multiple device pixels).
+	aaf = scale * inv_cam_scale / app->pixel_scale;
 }
 
 void cf_make_draw()
@@ -1846,8 +1849,17 @@ CF_INLINE uint64_t cf_glyph_key(int cp, float font_size, int blur)
 {
 	int k0 = cp;
 	int k1 = (int)(font_size * 1000.0f);
-	int k2 = blur;
-	uint64_t key = ((uint64_t)k0 & 0xFFFFFFFFULL) << 32 | ((uint64_t)k1 & 0xFFFFULL) << 16 | ((uint64_t)k2 & 0xFFFFULL);
+	// Clamp here to match the clamp applied in s_render -- this keeps the cache key
+	// consistent with the blur actually rendered, and keeps k2 safely within its 8-bit
+	// field below regardless of what a caller passes to cf_push_font_blur().
+	int k2 = clamp(blur, 0, 20);
+	// Quantize pixel_scale (device pixels per logical unit) into 8 bits at 1/64 granularity
+	// (range 0..~4.0x) so glyphs rasterized at different pixel densities -- e.g. a window
+	// dragged between a 1x and 2x monitor -- don't alias onto the same cache entry. Clamp
+	// before casting so an unexpectedly large density saturates instead of wrapping back
+	// into a low, colliding bucket.
+	int k3 = (int)clamp(app->pixel_scale * 64.0f, 0.0f, 255.0f);
+	uint64_t key = ((uint64_t)k0 & 0xFFFFFFFFULL) << 32 | ((uint64_t)k1 & 0xFFFFULL) << 16 | ((uint64_t)k2 & 0xFFULL) << 8 | ((uint64_t)k3 & 0xFFULL);
 	return key;
 }
 
@@ -1935,10 +1947,15 @@ static void s_save(const char* path, uint8_t* pixels, int w, int h)
 
 static void s_render(CF_Font* font, CF_Glyph* glyph, float font_size, int blur)
 {
+	// Rasterize at physical resolution (bitmap dimensions are in device pixels) but keep the
+	// quad geometry and advance in logical units, so text stays pixel-scale-invariant in
+	// position/size and only gets sharper as `pixel_scale` increases.
+	float pixel_scale = app->pixel_scale;
+
 	// Create glyph quad.
 	blur = clamp(blur, 0, 20);
-	int pad = blur + 2;
-	float scale = stbtt_ScaleForPixelHeight(&font->info, font_size);
+	int pad = (int)CF_ROUNDF((blur + 2) * pixel_scale);
+	float scale = stbtt_ScaleForPixelHeight(&font->info, font_size * pixel_scale);
 	int xadvance, lsb, x0, y0, x1, y1;
 	stbtt_GetGlyphHMetrics(&font->info, glyph->index, &xadvance, &lsb);
 	stbtt_GetGlyphBitmapBox(&font->info, glyph->index, scale, scale, &x0, &y0, &x1, &y1);
@@ -1946,9 +1963,9 @@ static void s_render(CF_Font* font, CF_Glyph* glyph, float font_size, int blur)
 	int h = y1 - y0 + pad*2;
 	glyph->w = w;
 	glyph->h = h;
-	glyph->q0 = V2((float)x0, -(float)(y0 + h)); // Swapped y.
-	glyph->q1 = V2((float)(x0 + w), -(float)y0); // Swapped y.
-	glyph->xadvance = xadvance * scale;
+	glyph->q0 = V2((float)x0, -(float)(y0 + h)) / pixel_scale; // Swapped y. Logical units.
+	glyph->q1 = V2((float)(x0 + w), -(float)y0) / pixel_scale; // Swapped y. Logical units.
+	glyph->xadvance = xadvance * scale / pixel_scale;
 	glyph->visible |= w > 0 && h > 0;
 
 	// Render glyph.
@@ -1957,8 +1974,12 @@ static void s_render(CF_Font* font, CF_Glyph* glyph, float font_size, int blur)
 	stbtt_MakeGlyphBitmap(&font->info, pixels_1bpp + pad * w + pad, w - pad*2, h - pad*2, w, scale, scale, glyph->index);
 	//s_save("glyph.png", pixels_1bpp, w, h);
 
-	// Apply blur.
-	if (blur) s_blur(pixels_1bpp, w, h, w, blur);
+	// Apply blur. `blur` is a logical-space radius; scale it to device pixels to
+	// match the bitmap's rasterization resolution, so the blur looks the same
+	// logical size regardless of pixel_scale (pad above already reserved room
+	// for this device-space radius).
+	int device_blur = (int)CF_ROUNDF(blur * pixel_scale);
+	if (device_blur) s_blur(pixels_1bpp, w, h, w, device_blur);
 	//s_save("glyph_blur.png", pixels_1bpp, w, h);
 
 	// Convert to premultiplied RGBA8 pixel format.
@@ -2657,9 +2678,12 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 	bool vertical = s_draw->vertical.last();
 
 	auto advance_to_next_glyph = [&](CF_Glyph* last_glyph) {
-		// Max bound covers the entire glyph without kerning so we use w instead
-		// of xadvance
-		max_x = max(max_x, x + last_glyph->w);
+		// Max bound covers the entire glyph without kerning so we use the glyph's
+		// logical ink width (q1.x - q0.x) instead of xadvance. Note glyph->w is the
+		// *physical* rasterized bitmap width (scaled by pixel_scale, used for the
+		// sprite's source-texture size) -- not the same unit as the logical `x`
+		// cursor here, so it can't be used directly for this bound.
+		max_x = max(max_x, x + (last_glyph->q1.x - last_glyph->q0.x));
 		if (vertical) {
 			min_y = min(min_y, y + font->descent * scale);
 

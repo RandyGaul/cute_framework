@@ -73,6 +73,7 @@ add_sample(sprite_slice sprite_slice.cpp)
 add_sample(sprite_shatter sprite_shatter.cpp)
 add_sample(screen_shatter screen_shatter.cpp)
 add_sample(font_debug font_debug.cpp)
+add_sample(hidpi hidpi.c)
 # Disabled on Windows -- MSVC crashes for internal reasons when compiling these.
 if(NOT WIN32)
 	add_sample(clay clay.c)

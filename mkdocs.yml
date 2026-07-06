@@ -107,6 +107,7 @@ nav:
       - Coroutines: topics/coroutines.md
       - Custom Sprites: topics/custom_sprites.md
       - Data Structures: topics/data_structures.md
+      - High-DPI Rendering: topics/hidpi.md
       - Web Builds with Emscripten: topics/emscripten.md
       - Input: topics/input.md
       - Input Bindings: topics/input_bindings.md
