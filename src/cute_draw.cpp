@@ -2637,9 +2637,12 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 	float w = font->width * scale;
 
 	// @NOTE -- Not 100% sure snapping to pixel is the best thing here, but it really does make
-	// text rendering feel a lot more robust, especially for nearest-neighbor rendering.
-	float x = CF_ROUNDF(position.x);
-	float initial_y = CF_ROUNDF(position.y - font->ascent * scale);
+	// text rendering feel a lot more robust, especially for nearest-neighbor rendering. Snap on
+	// the physical-pixel grid (not the logical-point grid) so HiDPI text doesn't jitter relative
+	// to unsnapped shapes -- at pixel_scale 2 a logical-point snap only lands on even device pixels.
+	float pixel_scale = app->pixel_scale;
+	float x = CF_ROUNDF(position.x * pixel_scale) / pixel_scale;
+	float initial_y = CF_ROUNDF((position.y - font->ascent * scale) * pixel_scale) / pixel_scale;
 	float y = initial_y;
 	float max_x = x;
 	// Extend the height by descent to include spaces below the baseline.
