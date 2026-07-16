@@ -85,6 +85,7 @@
 		                * Removed cs_cull_duplicates (better handled user-side).
 		                * Fixed music fade to incorporate user volume.
 		                * WAV loader now supports 8/16/24/32-bit PCM and 32/64-bit float.
+		3.01 (07/17/2026) Ramp per-sound gain across mix buffers when pan/volume change to avoid zipper clicks.
 
 
 	CONTRIBUTORS
@@ -880,6 +881,10 @@ typedef struct cs_sound_inst_t
 	float volume;
 	float pan0;
 	float pan1;
+	// Last gains applied by the mixer. Used to ramp toward the next target
+	// so abrupt pan/volume changes don't click (zipper noise).
+	float mixed_vA;
+	float mixed_vB;
 	float pitch;
 	double sample_index;
 	cs_audio_source_t* audio;
@@ -1236,8 +1241,31 @@ static inline cs__m128i cs_mm_floor_epi32(cs__m128 v)
 	return cs_mm_sub_epi32(trunc, adjust);
 }
 
+// Build a 4-wide gain vector ramping from g0 to g1 across samples j..j+3 of a
+// samples_to_write-long stretch. Lanes are in low-to-high memory order.
+static inline cs__m128 cs_ramp_gains(float g0, float g1, int j, int samples_to_write)
+{
+	if (g0 == g1 || samples_to_write <= 1) {
+		return cs_mm_set1_ps(g0);
+	}
+	float denom = (float)samples_to_write;
+	float d = g1 - g0;
+	// t = (sample + 0.5) / N so each lane sits at the center of its sample.
+	float t0 = ((float)j + 0.5f) / denom;
+	float t1 = ((float)j + 1.5f) / denom;
+	float t2 = ((float)j + 2.5f) / denom;
+	float t3 = ((float)j + 3.5f) / denom;
+	if (t0 > 1.0f) t0 = 1.0f;
+	if (t1 > 1.0f) t1 = 1.0f;
+	if (t2 > 1.0f) t2 = 1.0f;
+	if (t3 > 1.0f) t3 = 1.0f;
+	// set_ps(e3,e2,e1,e0) -> memory [e0,e1,e2,e3]
+	return cs_mm_set_ps(g0 + d * t3, g0 + d * t2, g0 + d * t1, g0 + d * t0);
+}
+
 // Mix with pitch shifting (resampling with linear interpolation).
-static void cs_mix_pitched(cs_audio_source_t* audio, cs__m128 vA, cs__m128 vB, int write_offset_wide, int write_wide, float pitch, double sample_index, bool looped)
+// vA0/vB0 ramp to vA1/vB1 across samples_to_write output samples.
+static void cs_mix_pitched(cs_audio_source_t* audio, float vA0, float vB0, float vA1, float vB1, int samples_to_write, int write_offset_wide, int write_wide, float pitch, double sample_index, bool looped)
 {
 	cs__m128* floatA = s_ctx->floatA;
 	cs__m128* floatB = s_ctx->floatB;
@@ -1286,6 +1314,8 @@ static void cs_mix_pitched(cs_audio_source_t* audio, cs__m128 vA, cs__m128 vB, i
 			);
 		}
 		cs__m128 A = cs_mm_add_ps(loA, cs_mm_mul_ps(index_frac, cs_mm_sub_ps(hiA, loA)));
+		cs__m128 vA = cs_ramp_gains(vA0, vA1, j, samples_to_write);
+		cs__m128 vB = cs_ramp_gains(vB0, vB1, j, samples_to_write);
 
 		if (audio->channel_count == 2) {
 			cs__m128 loB, hiB;
@@ -1334,22 +1364,47 @@ static void cs_mix_pitched(cs_audio_source_t* audio, cs__m128 vA, cs__m128 vB, i
 #undef CS_WRAP_SAMPLE
 
 // Mix without pitch shifting (direct copy with volume).
-static void cs_mix_simple(cs_audio_source_t* audio, cs__m128 vA, cs__m128 vB, int write_offset_wide, int write_wide, int sample_index_wide)
+// vA0/vB0 ramp to vA1/vB1 across samples_to_write output samples.
+static void cs_mix_simple(cs_audio_source_t* audio, float vA0, float vB0, float vA1, float vB1, int samples_to_write, int write_offset_wide, int write_wide, int sample_index_wide)
 {
 	cs__m128* floatA = s_ctx->floatA;
 	cs__m128* floatB = s_ctx->floatB;
 	cs__m128* cA = (cs__m128*)audio->channels[0];
 	cs__m128* cB = (cs__m128*)audio->channels[1];
+	bool constant = (vA0 == vA1 && vB0 == vB1);
 
-	if (audio->channel_count == 2) {
-		for (int i = 0; i < write_wide; ++i) {
+	if (constant) {
+		cs__m128 vA = cs_mm_set1_ps(vA0);
+		cs__m128 vB = cs_mm_set1_ps(vB0);
+		if (audio->channel_count == 2) {
+			for (int i = 0; i < write_wide; ++i) {
+				cs__m128 A = cs_mm_mul_ps(cA[i + sample_index_wide], vA);
+				cs__m128 B = cs_mm_mul_ps(cB[i + sample_index_wide], vB);
+				floatA[i + write_offset_wide] = cs_mm_add_ps(floatA[i + write_offset_wide], A);
+				floatB[i + write_offset_wide] = cs_mm_add_ps(floatB[i + write_offset_wide], B);
+			}
+		} else {
+			for (int i = 0; i < write_wide; ++i) {
+				cs__m128 A = cA[i + sample_index_wide];
+				cs__m128 B = cs_mm_mul_ps(A, vB);
+				A = cs_mm_mul_ps(A, vA);
+				floatA[i + write_offset_wide] = cs_mm_add_ps(floatA[i + write_offset_wide], A);
+				floatB[i + write_offset_wide] = cs_mm_add_ps(floatB[i + write_offset_wide], B);
+			}
+		}
+	} else if (audio->channel_count == 2) {
+		for (int i = 0, j = 0; i < write_wide; ++i, j += 4) {
+			cs__m128 vA = cs_ramp_gains(vA0, vA1, j, samples_to_write);
+			cs__m128 vB = cs_ramp_gains(vB0, vB1, j, samples_to_write);
 			cs__m128 A = cs_mm_mul_ps(cA[i + sample_index_wide], vA);
 			cs__m128 B = cs_mm_mul_ps(cB[i + sample_index_wide], vB);
 			floatA[i + write_offset_wide] = cs_mm_add_ps(floatA[i + write_offset_wide], A);
 			floatB[i + write_offset_wide] = cs_mm_add_ps(floatB[i + write_offset_wide], B);
 		}
 	} else {
-		for (int i = 0; i < write_wide; ++i) {
+		for (int i = 0, j = 0; i < write_wide; ++i, j += 4) {
+			cs__m128 vA = cs_ramp_gains(vA0, vA1, j, samples_to_write);
+			cs__m128 vB = cs_ramp_gains(vB0, vB1, j, samples_to_write);
 			cs__m128 A = cA[i + sample_index_wide];
 			cs__m128 B = cs_mm_mul_ps(A, vB);
 			A = cs_mm_mul_ps(A, vA);
@@ -1411,16 +1466,18 @@ static void cs_mix(int bytes_to_write)
 
 			CUTE_SOUND_ASSERT(audio->channels[0]);
 
-			// Calculate volume.
-			float vA0, vB0;
-			cs_calc_volume(playing, &vA0, &vB0);
-			cs__m128 vA = cs_mm_set1_ps(vA0);
-			cs__m128 vB = cs_mm_set1_ps(vB0);
+			// Target gains from current pan/volume. Ramp from last applied gains so
+			// abrupt parameter changes (e.g. fast mouse pan) don't click.
+			float vA_end, vB_end;
+			cs_calc_volume(playing, &vA_end, &vB_end);
+			float vA_start = playing->mixed_vA;
+			float vB_start = playing->mixed_vB;
 
 			// Mix samples, handling looping.
 			int samples_remaining = samples_needed;
 			int write_offset = 0;
 			bool pitched = playing->pitch != 1.0f;
+			bool did_mix = false;
 
 			while (samples_remaining > 0) {
 				// Check for end of sound before mixing.
@@ -1469,21 +1526,36 @@ static void cs_mix(int bytes_to_write)
 
 				if (samples_to_write <= 0) break;
 
+				// Gains at the start/end of this write, progressing over the full mix buffer.
+				float t0 = (float)write_offset / (float)samples_needed;
+				float t1 = (float)(write_offset + samples_to_write) / (float)samples_needed;
+				float chunk_vA0 = vA_start + (vA_end - vA_start) * t0;
+				float chunk_vB0 = vB_start + (vB_end - vB_start) * t0;
+				float chunk_vA1 = vA_start + (vA_end - vA_start) * t1;
+				float chunk_vB1 = vB_start + (vB_end - vB_start) * t1;
+
 				int write_wide = CUTE_SOUND_ALIGN(samples_to_write, 4) / 4;
 				int write_offset_wide = (int)CUTE_SOUND_ALIGN(write_offset, 4) / 4;
 				int sample_index_wide = (int)CUTE_SOUND_TRUNC((int)playing->sample_index, 4) / 4;
 
 				// Mix the samples.
 				if (pitched) {
-					cs_mix_pitched(audio, vA, vB, write_offset_wide, write_wide, playing->pitch, playing->sample_index, playing->looped);
+					cs_mix_pitched(audio, chunk_vA0, chunk_vB0, chunk_vA1, chunk_vB1, samples_to_write, write_offset_wide, write_wide, playing->pitch, playing->sample_index, playing->looped);
 				} else {
-					cs_mix_simple(audio, vA, vB, write_offset_wide, write_wide, sample_index_wide);
+					cs_mix_simple(audio, chunk_vA0, chunk_vB0, chunk_vA1, chunk_vB1, samples_to_write, write_offset_wide, write_wide, sample_index_wide);
 				}
+				did_mix = true;
 
 				// Advance by exact fractional amount.
 				playing->sample_index += (double)samples_to_write * (double)playing->pitch;
 				write_offset += samples_to_write;
 				samples_remaining -= samples_to_write;
+			}
+
+			// Commit ramped gains only if this instance is still active and mixed.
+			if (did_mix && playing->active) {
+				playing->mixed_vA = vA_end;
+				playing->mixed_vB = vB_end;
 			}
 
 			playing = next;
@@ -1936,6 +2008,7 @@ static cs_sound_inst_t* s_inst_music(cs_audio_source_t* src, float volume)
 	inst->pitch = 1.0f;
 	inst->audio = src;
 	inst->sample_index = 0;
+	cs_calc_volume(inst, &inst->mixed_vA, &inst->mixed_vB);
 	s_insert(inst);
 	return inst;
 }
@@ -1958,6 +2031,7 @@ static cs_sound_inst_t* s_inst(cs_audio_source_t* src, cs_sound_params_t params)
 	inst->audio = src;
 	inst->sample_index = params.start_time * (double)src->sample_rate;
 	CUTE_SOUND_ASSERT(inst->sample_index < (double)src->sample_count);
+	cs_calc_volume(inst, &inst->mixed_vA, &inst->mixed_vB);
 	s_insert(inst);
 	return inst;
 }
