@@ -89,6 +89,7 @@ add_sample(hrc hrc.c)
 add_sample(canvas_readback canvas_readback.c)
 add_sample(glitch glitch.cpp)
 add_sample(customsprite custom_sprite.c)
+add_sample(sound_pan sound_pan.c)
 
 # Pre-compile shaders for certain samples.
 if (CF_CUTE_SHADERC)

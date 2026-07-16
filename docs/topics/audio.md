@@ -64,6 +64,8 @@ void PlaySound(SoundFX fx, bool loop = false)
 
 See the page [`CF_SoundParams`](../audio/cf_soundparams.md) to view all the different settings available. There's more than just looping, including pan, volume, pause state, pitch, etc.
 
+While a sound is playing you can update its parameters live. Volume, pitch, pause, loop, and pan all have getters/setters on the [`CF_Sound`](../audio/cf_sound.md) handle — for example [`cf_sound_set_pan`](../audio/cf_sound_set_pan.md) moves a playing effect across the stereo field (useful when an object moves from left to right on screen).
+
 You can play many sound FX all simultaneously, up to many thousands without hitting any kind of performance difference on many platforms.
 
 > [!NOTE]
