@@ -173,7 +173,7 @@ struct CF_Draw
 	CF_M3x2 mvp;
 	void reset_cam();
 	void set_aaf();
-	Cute::Array<CF_Color> user_params = { cf_make_color_hex(0) };
+	Cute::Array<CF_Color> user_params = { cf_color_clear() };
 	Cute::Array<CF_Color> tri_colors0 = { cf_color_white() };
 	Cute::Array<CF_Color> tri_colors1 = { cf_color_white() };
 	Cute::Array<CF_Color> tri_colors2 = { cf_color_white() };

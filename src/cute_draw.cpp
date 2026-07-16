@@ -3443,6 +3443,7 @@ void static s_blit(CF_Command* cmd, CF_Canvas src, CF_Canvas dst, bool clear_dst
 	for (int i = 0; i < 6; ++i) {
 		verts[i].pos = verts_world[i];
 		verts[i].posH = verts_posH[i];
+		verts[i].params = cmd->canvas_attributes;
 	}
 	verts[0].uv = V2(0,1);
 	verts[1].uv = V2(1,1);
