@@ -234,6 +234,12 @@ float cf_sound_get_volume(CF_Sound sound)
 	return cs_sound_get_volume(cssound);
 }
 
+float cf_sound_get_pan(CF_Sound sound)
+{
+	cs_playing_sound_t cssound = { sound.id };
+	return cs_sound_get_pan(cssound);
+}
+
 float cf_sound_get_pitch(CF_Sound sound)
 {
 	cs_playing_sound_t cssound = { sound.id };
@@ -262,6 +268,12 @@ void cf_sound_set_volume(CF_Sound sound, float volume)
 {
 	cs_playing_sound_t cssound = { sound.id };
 	cs_sound_set_volume(cssound, volume);
+}
+
+void cf_sound_set_pan(CF_Sound sound, float pan)
+{
+	cs_playing_sound_t cssound = { sound.id };
+	cs_sound_set_pan(cssound, pan);
 }
 
 CF_Result cf_sound_set_time(CF_Sound sound, double time_in_seconds)
