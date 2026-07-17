@@ -375,7 +375,7 @@ CF_INLINE void cf_sprite_set_scale(CF_Sprite* sprite, CF_V2 scale) { CF_ASSERT(s
  * @category sprite
  * @brief    Sets the 9-slice center patch in pixel coordinates.
  * @param    sprite        The sprite.
- * @param    center_patch  AABB of the stretchable/tileable center region in pixels (min = top-left of the center, max = bottom-right), matching Aseprite 9-slice center rects.
+ * @param    center_patch  AABB of the stretchable/tileable center region in sprite pixels. Uses the same layout as Aseprite 9-slice center rects and as returned by `cf_sprite_get_center_patch` for `.ase` sprites: `min` is the top-left of the center, `max` is the bottom-right, with the origin at the top-left of the sprite (Y increases downward).
  * @remarks  Easy sprites have no .ase slice data, so you must call this before `cf_draw_sprite_9_slice` or `cf_draw_sprite_9_slice_tiled`. A zero AABB falls back to `cf_draw_sprite`. For aseprite sprites, `cf_sprite_update` / `cf_sprite_play` overwrite this from the asset's slice data.
  * @related  CF_Sprite cf_sprite_get_center_patch cf_draw_sprite_9_slice cf_draw_sprite_9_slice_tiled
  */
@@ -386,7 +386,7 @@ CF_INLINE void cf_sprite_set_center_patch(CF_Sprite* sprite, CF_Aabb center_patc
  * @category sprite
  * @brief    Returns the sprite's 9-slice center patch in pixel coordinates.
  * @param    sprite  The sprite.
- * @return   The center patch AABB. A zero AABB means 9-slice falls back to `cf_draw_sprite`.
+ * @return   The center patch AABB (`min` = top-left of center, `max` = bottom-right, origin at sprite top-left, Y down). A zero AABB means 9-slice falls back to `cf_draw_sprite`.
  * @related  CF_Sprite cf_sprite_set_center_patch cf_draw_sprite_9_slice cf_draw_sprite_9_slice_tiled
  */
 CF_INLINE CF_Aabb cf_sprite_get_center_patch(const CF_Sprite* sprite) { CF_ASSERT(sprite); return sprite->_center_patch; }
