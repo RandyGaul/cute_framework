@@ -1050,6 +1050,11 @@ spritebatch_sprite_t spritebatch_fetch(spritebatch_t* sb, SPRITEBATCH_U64 image_
 			}
 		}
 		else {
+			// Lonely textures live in 0..1 UV space; fetch returns the full image.
+			s.minx = 0;
+			s.miny = 0;
+			s.maxx = 1.0f;
+			s.maxy = 1.0f;
 			spritebatch_internal_lonely_sprite(sb, image_id, w, h, &s, 0);
 		}
 	}
@@ -1185,8 +1190,9 @@ int spritebatch_internal_lonely_sprite(spritebatch_t* sb, SPRITEBATCH_U64 image_
 
 		if (sprite_out) {
 			sprite_out->texture_id = tex->texture_id;
-			sprite_out->minx = sprite_out->miny = 0;
-			sprite_out->maxx = sprite_out->maxy = 1.0f;
+			// Preserve local UVs already set by the caller (0..1 texture space for lonely
+			// textures). 9-slice and other partial-UV draws depend on this. Callers that
+			// want the full texture (e.g. spritebatch_fetch) should set 0..1 first.
 
 			if (SPRITEBATCH_LONELY_FLIP_Y_AXIS_FOR_UV)
 			{

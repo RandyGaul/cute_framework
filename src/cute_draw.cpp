@@ -611,34 +611,53 @@ void cf_draw_sprite(const CF_Sprite* sprite)
 	DRAW_PUSH_ITEM(s);
 }
 
-void cf_draw_sprite_9_slice(const CF_Sprite* sprite)
+static SPRITEBATCH_U64 s_sprite_image_id(const CF_Sprite* sprite)
 {
-	CF_ASSERT(sprite);
-	int frame_index = sprite->frame_index;
-	SPRITEBATCH_U64 image_id = 0;
-
 	if (sprite->id != CF_SPRITE_ID_INVALID) {
 		if (sprite->blend_index > 0) {
 			CF_SpriteAsset* asset = cf_sprite_get_asset(sprite->id);
 			const char* anim_name = sprite->animation_name;
 			const CF_Animation* anim = anim_name ? map_get(asset->animations, anim_name) : NULL;
 			int global_frame = sprite->frame_index + (anim ? anim->frame_offset : 0);
-			image_id = asset->blend_frame_ids[sprite->blend_index][global_frame];
-		} else {
-			image_id = sprite->_image_id;
+			return asset->blend_frame_ids[sprite->blend_index][global_frame];
 		}
-	} else if (sprite->easy_sprite_id >= CF_PREMADE_ID_RANGE_LO && sprite->easy_sprite_id <= CF_PREMADE_ID_RANGE_HI) {
-		CF_ASSERT(!"Not implemented yet.");
-	} else {
-		CF_ASSERT(!"Not implemented yet.");
+		return sprite->_image_id;
 	}
+	return sprite->easy_sprite_id;
+}
 
-	// revert back to default cf_draw since center patch is 0
+// Remap local 0..1 UVs into a premade atlas sub-image's absolute UVs.
+static void s_remap_premade_uvs(CF_AtlasSubImage sub, CF_V2* uv0, CF_V2* uv1, int count)
+{
+	float dx = sub.maxx - sub.minx;
+	float dy = sub.maxy - sub.miny;
+	for (int i = 0; i < count; ++i) {
+		uv0[i].x = dx * uv0[i].x + sub.minx;
+		uv0[i].y = dy * uv0[i].y + sub.miny;
+		uv1[i].x = dx * uv1[i].x + sub.minx;
+		uv1[i].y = dy * uv1[i].y + sub.miny;
+	}
+}
+
+void cf_draw_sprite_9_slice(const CF_Sprite* sprite)
+{
+	CF_ASSERT(sprite);
+
+	// No center patch — fall back to a normal sprite draw (ase, easy, and premade).
 	CF_Aabb center_patch = sprite->_center_patch;
 	if (center_patch.min.x == 0.0f && center_patch.min.y == 0.0f &&
 		center_patch.max.x == 0.0f && center_patch.max.y == 0.0f) {
 		cf_draw_sprite(sprite);
 		return;
+	}
+
+	SPRITEBATCH_U64 image_id = s_sprite_image_id(sprite);
+	bool is_premade = sprite->id == CF_SPRITE_ID_INVALID
+		&& sprite->easy_sprite_id >= CF_PREMADE_ID_RANGE_LO
+		&& sprite->easy_sprite_id <= CF_PREMADE_ID_RANGE_HI;
+	CF_AtlasSubImage premade_sub = { 0 };
+	if (is_premade) {
+		premade_sub = s_draw->premade_sub_image_id_to_sub_image.find(sprite->easy_sprite_id);
 	}
 
 	float left = center_patch.min.x;
@@ -648,8 +667,7 @@ void cf_draw_sprite_9_slice(const CF_Sprite* sprite)
 
 	CF_V2 center_uv0 = cf_v2(left / sprite->w, bottom / sprite->h);
 	CF_V2 center_uv1 = cf_v2(right / sprite->w, top / sprite->h);
-	CF_V2 center_uv_size = center_uv1 - center_uv0;
-	
+
 	right = sprite->w - right;
 	top = sprite->h - top;
 
@@ -684,6 +702,10 @@ void cf_draw_sprite_9_slice(const CF_Sprite* sprite)
 		cf_v2(center_uv1.x, center_uv0.y),
 		cf_v2(1.0f        , center_uv0.y),
 	};
+
+	if (is_premade) {
+		s_remap_premade_uvs(premade_sub, uvs0, uvs1, 9);
+	}
 
 	// inner pieces needs to be scaled down by the sprite scale since we're operating in local quad space
 	// otherwise we end up with just a normal scaled up sprite instead of a 9 slice one
@@ -811,31 +833,22 @@ void cf_draw_sprite_9_slice(const CF_Sprite* sprite)
 void cf_draw_sprite_9_slice_tiled(const CF_Sprite* sprite)
 {
 	CF_ASSERT(sprite);
-	int frame_index = sprite->frame_index;
-	SPRITEBATCH_U64 image_id = 0;
 
-	if (sprite->id != CF_SPRITE_ID_INVALID) {
-		if (sprite->blend_index > 0) {
-			CF_SpriteAsset* asset = cf_sprite_get_asset(sprite->id);
-			const char* anim_name = sprite->animation_name;
-			const CF_Animation* anim = anim_name ? map_get(asset->animations, anim_name) : NULL;
-			int global_frame = sprite->frame_index + (anim ? anim->frame_offset : 0);
-			image_id = asset->blend_frame_ids[sprite->blend_index][global_frame];
-		} else {
-			image_id = sprite->_image_id;
-		}
-	} else if (sprite->easy_sprite_id >= CF_PREMADE_ID_RANGE_LO && sprite->easy_sprite_id <= CF_PREMADE_ID_RANGE_HI) {
-		CF_ASSERT(!"Not implemented yet.");
-	} else {
-		CF_ASSERT(!"Not implemented yet.");
-	}
-
-	// revert back to default cf_draw since center patch is 0
+	// No center patch — fall back to a normal sprite draw (ase, easy, and premade).
 	CF_Aabb center_patch = sprite->_center_patch;
 	if (center_patch.min.x == 0.0f && center_patch.min.y == 0.0f &&
 		center_patch.max.x == 0.0f && center_patch.max.y == 0.0f) {
 		cf_draw_sprite(sprite);
 		return;
+	}
+
+	SPRITEBATCH_U64 image_id = s_sprite_image_id(sprite);
+	bool is_premade = sprite->id == CF_SPRITE_ID_INVALID
+		&& sprite->easy_sprite_id >= CF_PREMADE_ID_RANGE_LO
+		&& sprite->easy_sprite_id <= CF_PREMADE_ID_RANGE_HI;
+	CF_AtlasSubImage premade_sub = { 0 };
+	if (is_premade) {
+		premade_sub = s_draw->premade_sub_image_id_to_sub_image.find(sprite->easy_sprite_id);
 	}
 
 	float left = center_patch.min.x;
@@ -845,7 +858,6 @@ void cf_draw_sprite_9_slice_tiled(const CF_Sprite* sprite)
 
 	CF_V2 center_uv0 = cf_v2(left / sprite->w, bottom / sprite->h);
 	CF_V2 center_uv1 = cf_v2(right / sprite->w, top / sprite->h);
-	CF_V2 center_uv_size = center_uv1 - center_uv0;
 
 	right = sprite->w - right;
 	top = sprite->h - top;
@@ -880,6 +892,10 @@ void cf_draw_sprite_9_slice_tiled(const CF_Sprite* sprite)
 		cf_v2(1.0f        , center_uv0.y),
 	};
 
+	if (is_premade) {
+		s_remap_premade_uvs(premade_sub, uvs0, uvs1, 9);
+	}
+
 	// inner pieces needs to be scaled down by the sprite scale since we're operating in local quad space
 	// otherwise we end up with just a normal scaled up sprite instead of a 9 slice one
 	float full_width   = CF_FABSF(sprite->w * sprite->scale.x);
@@ -888,9 +904,9 @@ void cf_draw_sprite_9_slice_tiled(const CF_Sprite* sprite)
 	float inner_right  = right / full_width;
 	float inner_top    = top / full_height;
 	float inner_bottom = bottom / full_height;
-	
+
 	// tiled sizes in local space
-	CF_V2 side_tiled_size = V2(	(center_patch.max.x - center_patch.min.x) / full_width, 
+	CF_V2 side_tiled_size = V2(	(center_patch.max.x - center_patch.min.x) / full_width,
 								(center_patch.max.y - center_patch.min.y) / full_height);
 
 	CF_V2 quads[9][4] = {

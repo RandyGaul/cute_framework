@@ -110,7 +110,7 @@ typedef struct CF_Sprite
 	/* @member For internal use -- Cached pivot of the current frame (set by cf_sprite_update / cf_sprite_play). */
 	CF_V2 _pivot;
 
-	/* @member For internal use -- Cached center patch of the current frame for 9-slice (set by cf_sprite_update / cf_sprite_play). */
+	/* @member Cached center patch of the current frame for 9-slice. Set from .ase slice data by `cf_sprite_update` / `cf_sprite_play`, or manually via `cf_sprite_set_center_patch` (required for easy sprites). */
 	CF_Aabb _center_patch;
 
 	/* @member Scale factor for the sprite when drawing. Default of `(1, 1)`. See `cf_draw_sprite`. */
@@ -369,6 +369,27 @@ CF_INLINE float cf_sprite_get_scale_y(CF_Sprite* sprite) { CF_ASSERT(sprite); re
  * @related  CF_Sprite cf_sprite_get_scale_x cf_sprite_get_scale_y cf_sprite_set_scale_x cf_sprite_set_scale_y cf_sprite_set_scale
  */
 CF_INLINE void cf_sprite_set_scale(CF_Sprite* sprite, CF_V2 scale) { CF_ASSERT(sprite); sprite->scale = scale; }
+
+/**
+ * @function cf_sprite_set_center_patch
+ * @category sprite
+ * @brief    Sets the 9-slice center patch in pixel coordinates.
+ * @param    sprite        The sprite.
+ * @param    center_patch  AABB of the stretchable/tileable center region in pixels (min = top-left of the center, max = bottom-right), matching Aseprite 9-slice center rects.
+ * @remarks  Easy sprites have no .ase slice data, so you must call this before `cf_draw_sprite_9_slice` or `cf_draw_sprite_9_slice_tiled`. A zero AABB falls back to `cf_draw_sprite`. For aseprite sprites, `cf_sprite_update` / `cf_sprite_play` overwrite this from the asset's slice data.
+ * @related  CF_Sprite cf_sprite_get_center_patch cf_draw_sprite_9_slice cf_draw_sprite_9_slice_tiled
+ */
+CF_INLINE void cf_sprite_set_center_patch(CF_Sprite* sprite, CF_Aabb center_patch) { CF_ASSERT(sprite); sprite->_center_patch = center_patch; }
+
+/**
+ * @function cf_sprite_get_center_patch
+ * @category sprite
+ * @brief    Returns the sprite's 9-slice center patch in pixel coordinates.
+ * @param    sprite  The sprite.
+ * @return   The center patch AABB. A zero AABB means 9-slice falls back to `cf_draw_sprite`.
+ * @related  CF_Sprite cf_sprite_set_center_patch cf_draw_sprite_9_slice cf_draw_sprite_9_slice_tiled
+ */
+CF_INLINE CF_Aabb cf_sprite_get_center_patch(const CF_Sprite* sprite) { CF_ASSERT(sprite); return sprite->_center_patch; }
 
 /**
  * @function cf_sprite_set_scale_x
@@ -725,6 +746,8 @@ CF_INLINE float sprite_get_scale_y(CF_Sprite* sprite) { return cf_sprite_get_sca
 CF_INLINE void sprite_set_scale(CF_Sprite* sprite, CF_V2 scale) { cf_sprite_set_scale(sprite, scale); }
 CF_INLINE void sprite_set_scale_x(CF_Sprite* sprite, float x) { cf_sprite_set_scale_x(sprite, x); }
 CF_INLINE void sprite_set_scale_y(CF_Sprite* sprite, float y) { cf_sprite_set_scale_y(sprite, y); }
+CF_INLINE void sprite_set_center_patch(CF_Sprite* sprite, CF_Aabb center_patch) { cf_sprite_set_center_patch(sprite, center_patch); }
+CF_INLINE CF_Aabb sprite_get_center_patch(const CF_Sprite* sprite) { return cf_sprite_get_center_patch(sprite); }
 CF_INLINE float sprite_get_offset_x(CF_Sprite* sprite) { return cf_sprite_get_offset_x(sprite); }
 CF_INLINE float sprite_get_offset_y(CF_Sprite* sprite) { return cf_sprite_get_offset_y(sprite); }
 CF_INLINE void sprite_set_offset_x(CF_Sprite* sprite, float offset) { cf_sprite_set_offset_x(sprite, offset); }
@@ -765,6 +788,8 @@ CF_INLINE float sprite_get_scale_y(CF_Sprite& sprite) { return cf_sprite_get_sca
 CF_INLINE void sprite_set_scale(CF_Sprite& sprite, CF_V2 scale) { cf_sprite_set_scale(&sprite, scale); }
 CF_INLINE void sprite_set_scale_x(CF_Sprite& sprite, float x) { cf_sprite_set_scale_x(&sprite, x); }
 CF_INLINE void sprite_set_scale_y(CF_Sprite& sprite, float y) { cf_sprite_set_scale_y(&sprite, y); }
+CF_INLINE void sprite_set_center_patch(CF_Sprite& sprite, CF_Aabb center_patch) { cf_sprite_set_center_patch(&sprite, center_patch); }
+CF_INLINE CF_Aabb sprite_get_center_patch(const CF_Sprite& sprite) { return cf_sprite_get_center_patch(&sprite); }
 CF_INLINE float sprite_get_offset_x(CF_Sprite& sprite) { return cf_sprite_get_offset_x(&sprite); }
 CF_INLINE float sprite_get_offset_y(CF_Sprite& sprite) { return cf_sprite_get_offset_y(&sprite); }
 CF_INLINE void sprite_set_offset_x(CF_Sprite& sprite, float offset) { cf_sprite_set_offset_x(&sprite, offset); }
