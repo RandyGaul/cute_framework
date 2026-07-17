@@ -45,8 +45,38 @@ TEST_CASE(test_easy_sprite_unload)
 	return true;
 }
 
+/* Easy sprites store a user-defined 9-slice center patch. */
+TEST_CASE(test_easy_sprite_center_patch)
+{
+	CHECK(cf_is_error(cf_make_app(NULL, 0, 0, 0, 0, 0, CF_APP_OPTIONS_HIDDEN_BIT | CF_APP_OPTIONS_NO_AUDIO_BIT | CF_APP_OPTIONS_NO_GFX_BIT, NULL)));
+
+	CF_Pixel pixels[16 * 16] = { 0 };
+	CF_Sprite s = cf_make_easy_sprite_from_pixels(pixels, 16, 16);
+	REQUIRE(s.easy_sprite_id);
+
+	// Default is zero — 9-slice falls back to normal draw.
+	CF_Aabb zero = cf_sprite_get_center_patch(&s);
+	REQUIRE(zero.min.x == 0 && zero.min.y == 0 && zero.max.x == 0 && zero.max.y == 0);
+
+	CF_Aabb patch = cf_make_aabb(cf_v2(4, 4), cf_v2(12, 12));
+	cf_sprite_set_center_patch(&s, patch);
+	CF_Aabb got = cf_sprite_get_center_patch(&s);
+	REQUIRE(got.min.x == 4 && got.min.y == 4);
+	REQUIRE(got.max.x == 12 && got.max.y == 12);
+
+	// Easy sprites are single-frame; update must not clear the patch.
+	cf_sprite_update(&s);
+	got = cf_sprite_get_center_patch(&s);
+	REQUIRE(got.min.x == 4 && got.max.x == 12);
+
+	cf_easy_sprite_unload(&s);
+	cf_destroy_app();
+	return true;
+}
+
 TEST_SUITE(test_sprite)
 {
 	RUN_TEST_CASE(test_make_sprite);
 	RUN_TEST_CASE(test_easy_sprite_unload);
+	RUN_TEST_CASE(test_easy_sprite_center_patch);
 }

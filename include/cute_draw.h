@@ -34,20 +34,20 @@ CF_API void CF_CALL cf_draw_sprite(const CF_Sprite* sprite);
 /**
  * @function cf_draw_sprite_9_slice
  * @category draw
- * @brief    Draws a sprite using 9 slice, the top, left, right and bottom sides will be stretched.
- *           if no center patch uvs are defined then this defaults back to cf_draw_sprite
- * @param    sprite     The sprite.
- * @related  cf_draw_sprite cf_draw_sprite_9_slice cf_draw_sprite_9_slice_tiled cf_draw_quad cf_draw_to cf_app_draw_onto_screen
+ * @brief    Draws a sprite using 9-slice; the top, left, right and bottom sides are stretched.
+ * @param    sprite  The sprite. Works with aseprite sprites (center from .ase slices), easy sprites, and premade sprites.
+ * @remarks  If no center patch is defined this falls back to `cf_draw_sprite`. For easy sprites set the center patch with `cf_sprite_set_center_patch`.
+ * @related  cf_draw_sprite cf_draw_sprite_9_slice cf_draw_sprite_9_slice_tiled cf_sprite_set_center_patch cf_draw_quad cf_draw_to cf_app_draw_onto_screen
  */
 CF_API void CF_CALL cf_draw_sprite_9_slice(const CF_Sprite* sprite);
 
 /**
  * @function cf_draw_sprite_9_slice_tiled
  * @category draw
- * @brief    Draws a sprite using 9 slice, the top, left, right and bottom will be tiled.
- *           if no center patch uvs are defined then this defaults back to cf_draw_sprite
- * @param    sprite     The sprite.
- * @related  cf_draw_sprite cf_draw_sprite_9_slice cf_draw_sprite_9_slice_tiled cf_draw_quad cf_draw_to cf_app_draw_onto_screen
+ * @brief    Draws a sprite using 9-slice; the top, left, right and bottom sides are tiled.
+ * @param    sprite  The sprite. Works with aseprite sprites (center from .ase slices), easy sprites, and premade sprites.
+ * @remarks  If no center patch is defined this falls back to `cf_draw_sprite`. For easy sprites set the center patch with `cf_sprite_set_center_patch`.
+ * @related  cf_draw_sprite cf_draw_sprite_9_slice cf_draw_sprite_9_slice_tiled cf_sprite_set_center_patch cf_draw_quad cf_draw_to cf_app_draw_onto_screen
  */
 CF_API void CF_CALL cf_draw_sprite_9_slice_tiled(const CF_Sprite* sprite);
 
