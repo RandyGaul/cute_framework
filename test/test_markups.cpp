@@ -10,22 +10,33 @@
 #include <cute.h>
 using namespace Cute;
 
+static bool s_basic_hit = false;
+static const char* s_basic_effect_name = NULL;
+static double s_basic_number = 0;
+static const char* s_basic_string = NULL;
+static CF_Color s_basic_color;
+
 TEST_CASE(test_markups_basic)
 {
-	REQUIRE(!is_error(make_app(NULL, 0, 0, 0, 0, CF_APP_OPTIONS_HIDDEN_BIT | CF_APP_OPTIONS_NO_AUDIO_BIT, NULL)));
+	REQUIRE(!is_error(make_app(NULL, 0, 0, 0, 0, 0, CF_APP_OPTIONS_HIDDEN_BIT | CF_APP_OPTIONS_NO_AUDIO_BIT, NULL)));
 
-	auto markup_info_fn = [](const char* text, CF_MarkupInfo info, const CF_TextEffect* fx) -> bool {
-		REQUIRE(info.effect_name == sintern("fake"));
-		double number = cf_text_effect_get_number(fx, "number", 0);
-		const char* string = cf_text_effect_get_string(fx, "string", NULL);
-		CF_Color color = cf_text_effect_get_color(fx, "color", cf_color_white());
-		REQUIRE(number == 123.0);
-		REQUIRE(!CF_STRCMP(string, "maybe a string"));
-		REQUIRE(color == cf_make_color_rgba(0xff, 0x00, 0xff, 0x12));
-		return true;
+	s_basic_hit = false;
+	auto markup_info_fn = [](const char* text, CF_MarkupInfo info, const CF_TextEffect* fx) {
+		CF_UNUSED(text);
+		s_basic_hit = true;
+		s_basic_effect_name = info.effect_name;
+		s_basic_number = cf_text_effect_get_number(fx, "number", 0);
+		s_basic_string = cf_text_effect_get_string(fx, "string", NULL);
+		s_basic_color = cf_text_effect_get_color(fx, "color", cf_color_white());
 	};
 	const char* text = "<fake number=123 string=\"maybe a string\" color=#ff00ff12>does this work?</fake>";
-	cf_text_get_markup_info((cf_text_markup_info_fn*)&markup_info_fn, text, V2(0,0), -1);
+	cf_text_get_markup_info(markup_info_fn, text, V2(0,0), -1);
+
+	REQUIRE(s_basic_hit);
+	REQUIRE(s_basic_effect_name == sintern("fake"));
+	REQUIRE(s_basic_number == 123.0);
+	REQUIRE(!CF_STRCMP(s_basic_string, "maybe a string"));
+	REQUIRE(s_basic_color == cf_make_color_rgba(0xff, 0x00, 0xff, 0x12));
 
 	destroy_app();
 
@@ -36,7 +47,7 @@ static bool hit = false;
 
 TEST_CASE(test_markups_bad_inputs)
 {
-	REQUIRE(!is_error(make_app(NULL, 0, 0, 0, 0, CF_APP_OPTIONS_HIDDEN_BIT | CF_APP_OPTIONS_NO_AUDIO_BIT, NULL)));
+	REQUIRE(!is_error(make_app(NULL, 0, 0, 0, 0, 0, CF_APP_OPTIONS_HIDDEN_BIT | CF_APP_OPTIONS_NO_AUDIO_BIT, NULL)));
 
 	hit = false;
 	auto markup_info_fn = [](const char* text, CF_MarkupInfo info, const CF_TextEffect* fx) {
@@ -44,20 +55,19 @@ TEST_CASE(test_markups_bad_inputs)
 		CF_UNUSED(info);
 		CF_UNUSED(fx);
 		hit = true;
-		return true;
 	};
-	text_get_markup_info((cf_text_markup_info_fn*)&markup_info_fn, "<broken>test string/broken>", V2(0,0));
-	text_get_markup_info((cf_text_markup_info_fn*)&markup_info_fn, "<broken>test stringbroken>", V2(0,0));
-	text_get_markup_info((cf_text_markup_info_fn*)&markup_info_fn, "<broken>test stringbroken", V2(0,0));
-	text_get_markup_info((cf_text_markup_info_fn*)&markup_info_fn, "<brokentest stringbroken", V2(0,0));
-	text_get_markup_info((cf_text_markup_info_fn*)&markup_info_fn, "brokentest stringbroken", V2(0,0));
-	text_get_markup_info((cf_text_markup_info_fn*)&markup_info_fn, "<broken>test string<broken>", V2(0,0));
-	text_get_markup_info((cf_text_markup_info_fn*)&markup_info_fn, "<broken>test string<broken", V2(0,0));
-	text_get_markup_info((cf_text_markup_info_fn*)&markup_info_fn, "<brokentest string</broken>", V2(0,0));
-	text_get_markup_info((cf_text_markup_info_fn*)&markup_info_fn, "broken>test string</broken>", V2(0,0));
-	text_get_markup_info((cf_text_markup_info_fn*)&markup_info_fn, "<<>>", V2(0,0));
-	text_get_markup_info((cf_text_markup_info_fn*)&markup_info_fn, "te<broken>st/broken> string", V2(0,0));
-	text_get_markup_info((cf_text_markup_info_fn*)&markup_info_fn, "te<broken>st/broken> st<>>><rin<>g", V2(0,0));
+	text_get_markup_info(markup_info_fn, "<broken>test string/broken>", V2(0,0));
+	text_get_markup_info(markup_info_fn, "<broken>test stringbroken>", V2(0,0));
+	text_get_markup_info(markup_info_fn, "<broken>test stringbroken", V2(0,0));
+	text_get_markup_info(markup_info_fn, "<brokentest stringbroken", V2(0,0));
+	text_get_markup_info(markup_info_fn, "brokentest stringbroken", V2(0,0));
+	text_get_markup_info(markup_info_fn, "<broken>test string<broken>", V2(0,0));
+	text_get_markup_info(markup_info_fn, "<broken>test string<broken", V2(0,0));
+	text_get_markup_info(markup_info_fn, "<brokentest string</broken>", V2(0,0));
+	text_get_markup_info(markup_info_fn, "broken>test string</broken>", V2(0,0));
+	text_get_markup_info(markup_info_fn, "<<>>", V2(0,0));
+	text_get_markup_info(markup_info_fn, "te<broken>st/broken> string", V2(0,0));
+	text_get_markup_info(markup_info_fn, "te<broken>st/broken> st<>>><rin<>g", V2(0,0));
 	REQUIRE(hit == false);
 
 	destroy_app();
@@ -162,12 +172,9 @@ TEST_CASE(test_markups_empty_tag_no_crash)
 
 TEST_SUITE(test_markups)
 {
-	// Don't submit this to GitHub as the build machines can't init a graphics context.
-#if 0
 	RUN_TEST_CASE(test_markups_basic);
 	RUN_TEST_CASE(test_markups_bad_inputs);
 	RUN_TEST_CASE(test_markups_font_style);
 	RUN_TEST_CASE(test_markups_font_size_vertical_metrics);
 	RUN_TEST_CASE(test_markups_empty_tag_no_crash);
-#endif
 }
