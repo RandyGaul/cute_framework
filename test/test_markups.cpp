@@ -139,6 +139,27 @@ TEST_CASE(test_markups_font_size_vertical_metrics)
 	return true;
 }
 
+TEST_CASE(test_markups_empty_tag_no_crash)
+{
+	// A degenerate tag with no name (e.g. "<>") makes the parser produce an empty tag
+	// name; interning its NULL c_str() used to crash. Measuring must be safe instead.
+	REQUIRE(!is_error(make_app(NULL, 0, 0, 0, 0, CF_APP_OPTIONS_HIDDEN_BIT | CF_APP_OPTIONS_NO_AUDIO_BIT, NULL)));
+
+	push_font("Calibri");
+	push_font_size(24);
+
+	// None of these should crash; each returns a finite, non-negative width.
+	REQUIRE(text_width("<>", -1) >= 0);
+	REQUIRE(text_width("a<>b", -1) >= 0);
+	REQUIRE(text_width("<=x>text</>", -1) >= 0);
+	REQUIRE(text_width("< >spaced", -1) >= 0);
+
+	pop_font_size();
+	pop_font();
+	destroy_app();
+	return true;
+}
+
 TEST_SUITE(test_markups)
 {
 	// Don't submit this to GitHub as the build machines can't init a graphics context.
@@ -147,5 +168,6 @@ TEST_SUITE(test_markups)
 	RUN_TEST_CASE(test_markups_bad_inputs);
 	RUN_TEST_CASE(test_markups_font_style);
 	RUN_TEST_CASE(test_markups_font_size_vertical_metrics);
+	RUN_TEST_CASE(test_markups_empty_tag_no_crash);
 #endif
 }

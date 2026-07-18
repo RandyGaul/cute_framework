@@ -2578,7 +2578,10 @@ static void s_parse_code(CF_CodeParseState* s)
 	bool finish = s->try_next('/');
 	bool first = true;
 	while (!s->done()) {
-		const char* name = sintern(s_parse_code_name(s).c_str());
+		// A nameless tag (e.g. "<>") yields an empty String whose c_str() is NULL;
+		// sintern(NULL) would crash, so intern only a real name (matches s_parse_code_val).
+		String name_str = s_parse_code_name(s);
+		const char* name = !name_str.empty() ? sintern(name_str.c_str()) : NULL;
 		if (first) {
 			first = false;
 			code.effect_name = name;
