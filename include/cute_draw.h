@@ -1067,7 +1067,8 @@ typedef bool (CF_TextEffectFn)(CF_TextEffect* fx);
  *                        : default (font_height / 20) - The thickness of the strike line.
  *           + font
  *                example : "<font name=\"MyBold\" size=48>Big bold text</font>"
- *                name    : (required string) - Name of a font previously loaded with `cf_make_font` (or `font` as an alias key).
+ *                example : "<font size=32>Larger text, same face</font>"
+ *                name    : (optional string) - Name of a font previously loaded with `cf_make_font` (or `font` as an alias key). Omit to keep the current face and only change size.
  *                size    : (optional number) - Pixel size to use for this span.
  *           ```
  *           When registering a custom text effect, any parameters in the string will be stored for you
