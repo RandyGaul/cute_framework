@@ -50,11 +50,23 @@ CF_API float CF_CALL cf_font_scale_for_pixel_height(CF_Font* font, float pixel_h
 
 #define CF_KERN_KEY(cp0, cp1) (((uint64_t)cp0) << 32 | ((uint64_t)cp1))
 
+// Registered text-effect definition: optional callback + optional font override.
+// Font overrides are resolved at draw/measure time so `cf_text_effect_set_font`
+// takes effect even for already-parsed strings.
+struct CF_TextEffectDef
+{
+	CF_TextEffectFn* fn = NULL;
+	const char* font_name = NULL; // interned; NULL means no override
+};
+
 struct CF_TextCode
 {
 	const char* effect_name;
 	int index_in_string;
 	int glyph_count;
+	// Monotonic open order so nested codes that share the same start index still
+	// resolve outer→inner (later opens win when applying font overrides).
+	int parse_order;
 	CF_TextEffectFn* fn;
 	Cute::Map<CF_TextCodeVal> params;
 };
@@ -116,11 +128,16 @@ struct CF_ParsedTextState
 	Cute::String sanitized;
 	uint64_t hash = 0;
 	bool alive = false;
+	int next_parse_order = 0;
 	Cute::Array<TextEffect> effects;
 	Cute::Array<CF_TextCode> codes;
 	Cute::Array<CF_TextCode> parse_stack;
 
-	CF_INLINE void parse_add(CF_TextCode code) { parse_stack.add(code); }
+	CF_INLINE void parse_add(CF_TextCode code)
+	{
+		code.parse_order = next_parse_order++;
+		parse_stack.add(code);
+	}
 	CF_INLINE bool parse_finish(const char* effect_name, int final_index)
 	{
 		for (int i = parse_stack.count() - 1; i >= 0; --i) {

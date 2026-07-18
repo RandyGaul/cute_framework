@@ -26,6 +26,9 @@ int main(int argc, char* argv[])
 
 	draw_push_shape_aa(1.5f);
 	make_font_from_memory(proggy_data, proggy_sz, "ProggyClean");
+	// Map <b> to a second face so style tags are visible without a real bold TTF.
+	// In a game you would load "MyFont-Bold.ttf" / "MyFont-Italic.ttf" and map those.
+	text_effect_set_font("b", "ProggyClean");
 	set_fixed_timestep();
 	int draw_calls = 0;
 
@@ -78,25 +81,26 @@ int main(int argc, char* argv[])
 		draw_pop_color();
 
 		// Using font blurring for a glowing effect.
+		// Left column, above the style-tag demos and clear of the right-side gradients.
 		push_font_size(13 * 5);
 		push_font_blur(10);
-		draw_text_boxed("glowing~", V2(-200-10,-90+10));
+		draw_text_boxed("glowing~", V2(-500-10, -50+10));
 		pop_font_blur();
-		draw_text_boxed("<fade>glowing~</fade>", V2(-200,-90));
+		draw_text_boxed("<fade>glowing~</fade>", V2(-500, -50));
 
 		// Using font blurring for a shadow effect.
 		push_font_size(13 * 5);
 		push_font_blur(10);
 		draw_push_color(color_black());
-		draw_text_boxed("shadow", V2(-150-10-2.5f,-150+5));
+		draw_text_boxed("shadow", V2(-470-10-2.5f, -120+5));
 		draw_pop_color();
 		pop_font_blur();
-		draw_text_boxed("shadow", V2(-150,-150));
+		draw_text_boxed("shadow", V2(-470, -120));
 
 		// Drawing a formatted string.
 		String draws = String::fmt("Draw calls: %d", draw_calls);
 		push_font_size(13);
-		draw_text_boxed(draws.c_str(), V2(-960/2.0f + 10,-700/2.0f + 20));
+		draw_text_boxed(draws.c_str(), V2(-620.f, 400.f));
 
 		push_font_size(26);
 		draw_text_boxed("Half-rendered effect <wave>groovy</wave>", V2(-230.f, 180.f), 25);
@@ -173,6 +177,21 @@ int main(int argc, char* argv[])
 		push_font_size(30);
 		draw_text_boxed("<strike>Strikethrough on proportional font</strike>", V2(gx, gy - step*9));
 		draw_text_boxed("<wave><strike>wavy strike on proportional font</strike></wave>", V2(gx, gy - step*10));
+		pop_font_size();
+
+		// Font style tags via cf_text_effect_set_font / built-in <font> markup (#349).
+		// <b> is mapped to ProggyClean above; real bold/italic faces work the same way.
+		// Bottom-left column, below glow/shadow so the two demos never overlap.
+		push_font("Calibri");
+		push_font_size(26);
+		const float style_x = -600.f;
+		const float style_y = -230.f;
+		const float style_step = 32.f;
+		draw_text_boxed("Style tags: normal, <b>bold-mapped</b>, normal again.", V2(style_x, style_y));
+		draw_text_boxed("Inline <font name=\"ProggyClean\">monospace span</font> mid-sentence.", V2(style_x, style_y - style_step));
+		draw_text_boxed("<font name=\"ProggyClean\" size=36>Big mono</font> then <b>mapped bold</b>.", V2(style_x, style_y - style_step * 2.2f));
+		draw_text_boxed("<font name=\"ProggyClean\" size=22>nested <b>mapped</b> inside font</font>", V2(style_x, style_y - style_step * 3.5f));
+		draw_text_boxed("<wave><b>styled + wave</b></wave> and <b><color=#ffcc00>styled + color</color></b>", V2(style_x, style_y - style_step * 4.6f));
 		pop_font_size();
 
 		// Instructions
