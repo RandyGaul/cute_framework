@@ -1069,7 +1069,10 @@ typedef bool (CF_TextEffectFn)(CF_TextEffect* fx);
  *                example : "<font name=\"MyBold\" size=48>Big bold text</font>"
  *                example : "<font size=32>Larger text, same face</font>"
  *                name    : (optional string) - Name of a font previously loaded with `cf_make_font` (or `font` as an alias key). Omit to keep the current face and only change size.
- *                size    : (optional number) - Pixel size to use for this span.
+ *                size    : (optional number) - Pixel size to use for this span. A line's height, baseline, and measured
+ *                          size (see `cf_text_size`) grow to fit the largest size on that line, so large spans stay inside
+ *                          the reported bounds and successive lines don't collide. Animated effects (wave/shake) are not
+ *                          counted in measurement. Note: vertical text (`cf_push_text_vertical_layout`) uses base-face columns.
  *           ```
  *           When registering a custom text effect, any parameters in the string will be stored for you
  *           automatically. You only need to fetch them with the appropriate cf_text_effect_get*** function.
