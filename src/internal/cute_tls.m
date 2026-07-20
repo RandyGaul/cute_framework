@@ -19,5 +19,9 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
+#include <cute_alloc.h>
+
 #define CUTE_TLS_IMPLEMENTATION
+#define TLS_MALLOC cf_alloc
+#define TLS_FREE cf_free
 #include <cute/cute_tls.h>

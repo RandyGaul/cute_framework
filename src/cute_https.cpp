@@ -20,6 +20,8 @@
 
 #ifndef CF_APPLE
 #	define CUTE_TLS_IMPLEMENTATION
+#	define TLS_MALLOC cf_alloc
+#	define TLS_FREE cf_free
 	// .m file is used to compile this on apple.
 #	include <cute/cute_tls.h>
 #else
