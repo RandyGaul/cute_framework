@@ -1065,14 +1065,54 @@ typedef bool (CF_TextEffectFn)(CF_TextEffect* fx);
  *                example : "<strike>Strikethrough</strike>"
  *                example : "<strike=10>Thick Strikethrough</strike>"
  *                        : default (font_height / 20) - The thickness of the strike line.
+ *           + font
+ *                example : "<font name=\"MyBold\" size=48>Big bold text</font>"
+ *                example : "<font size=32>Larger text, same face</font>"
+ *                name    : (optional string) - Name of a font previously loaded with `cf_make_font` (or `font` as an alias key). Omit to keep the current face and only change size.
+ *                size    : (optional number) - Pixel size to use for this span. A line's height, baseline, and measured
+ *                          size (see `cf_text_size`) grow to fit the largest size on that line, so large spans stay inside
+ *                          the reported bounds and successive lines don't collide. Animated effects (wave/shake) are not
+ *                          counted in measurement. Note: vertical text (`cf_push_text_vertical_layout`) uses base-face columns.
  *           ```
  *           When registering a custom text effect, any parameters in the string will be stored for you
  *           automatically. You only need to fetch them with the appropriate cf_text_effect_get*** function.
  *           Note: You can also setup parameters for markup as strings, not just numbers/colors. Example: `<color=#2c5ee8 metadata=\"Just some string.\">blue text</color>`,
  *           where the `color` markup contains a parameter called `metadata` and a string value of `"Just some string."`.
- * @related  CF_TextEffect CF_TextEffectFn cf_text_effect_register cf_text_effect_get_number cf_text_effect_get_color cf_text_effect_get_string
+ *
+ *           For bold/italic style tags, load the corresponding font faces and map them with `cf_text_effect_set_font`
+ *           (bold/italic are separate fonts, not runtime styles). Example:
+ *           ```c
+ *           cf_make_font("fonts/Calibri-Bold.ttf", "Calibri Bold");
+ *           cf_text_effect_set_font("b", "Calibri Bold");
+ *           cf_draw_text("Hello <b>bold</b> world", pos, -1);
+ *           ```
+ * @related  CF_TextEffect CF_TextEffectFn cf_text_effect_register cf_text_effect_set_font cf_text_effect_get_number cf_text_effect_get_color cf_text_effect_get_string
  */
 CF_API void CF_CALL cf_text_effect_register(const char* name, CF_TextEffectFn* fn);
+
+/**
+ * @function cf_text_effect_set_font
+ * @category text
+ * @brief    Maps a text-effect code name to a loaded font for mid-string font swaps (e.g. bold/italic).
+ * @param    effect_name  Text code name, e.g. `"b"` or `"i"`. Used as `<b>...</b>` in `cf_draw_text`.
+ * @param    font_name    Name of a font previously loaded with `cf_make_font` / `cf_make_font_from_memory`.
+ * @remarks  Bold, italic, and other styles are separate font files -- load each face, then map it here.
+ *           If `effect_name` is not yet registered, a no-op effect is registered automatically so the
+ *           markup parses and renders. Glyph metrics (advance, kerning) come from the mapped font for
+ *           that span. Nested overrides use the innermost active font. When both a mapped font and a
+ *           `<font name=...>` markup apply, later (typically inner) overrides win.
+ *
+ *           Example:
+ *           ```c
+ *           cf_make_font("fonts/MyFont-Bold.ttf", "MyFont Bold");
+ *           cf_make_font("fonts/MyFont-Italic.ttf", "MyFont Italic");
+ *           cf_text_effect_set_font("b", "MyFont Bold");
+ *           cf_text_effect_set_font("i", "MyFont Italic");
+ *           cf_draw_text("Normal, <b>bold</b>, <i>italic</i>.", position, -1);
+ *           ```
+ * @related  CF_TextEffect cf_text_effect_register cf_text_effect_set_font cf_make_font cf_draw_text
+ */
+CF_API void CF_CALL cf_text_effect_set_font(const char* effect_name, const char* font_name);
 
 /**
  * @function cf_text_effect_get_number
@@ -1936,6 +1976,7 @@ CF_INLINE v2 text_size(const char* text, int num_chars_to_render = -1) { return 
 CF_INLINE void draw_text(const char* text, v2 position, int num_chars_to_render = -1) { cf_draw_text(text, position, num_chars_to_render); }
 
 CF_INLINE void text_effect_register(const char* name, CF_TextEffectFn* fn) { cf_text_effect_register(name, fn); }
+CF_INLINE void text_effect_set_font(const char* effect_name, const char* font_name) { cf_text_effect_set_font(effect_name, font_name); }
 CF_INLINE double text_effect_get_number(const CF_TextEffect* fx, const char* key, double default_val = 0) { return cf_text_effect_get_number(fx, key, default_val); }
 CF_INLINE CF_Color text_effect_get_color(const CF_TextEffect* fx, const char* key, CF_Color default_val = cf_color_white()) { return cf_text_effect_get_color(fx, key, default_val); }
 CF_INLINE const char* text_effect_get_string(const CF_TextEffect* fx, const char* key, const char* default_val = NULL) { return cf_text_effect_get_string(fx, key, default_val); }

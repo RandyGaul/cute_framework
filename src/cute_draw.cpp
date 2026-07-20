@@ -2243,10 +2243,59 @@ static bool s_is_space(int cp)
 	}
 }
 
-static const char* s_find_end_of_line(CF_Font* font, const char* text, float wrap_width)
+// Resolve the active font name + size for a sanitized-string glyph index by walking
+// markup codes that cover that index. Later (typically nested/inner) overrides win.
+// Base font/size are the currently pushed stack values passed in by the caller.
+static void s_resolve_text_style(CF_ParsedTextState* text_state, int glyph_index, const char** font_name, float* font_size)
 {
-	float font_size = s_draw->font_sizes.last();
+	if (!text_state) return;
+
+	// Interned keys for the built-in <font> effect and its parameters.
+	static const char* s_font_effect = NULL;
+	static const char* s_name_key = NULL;
+	static const char* s_font_key = NULL;
+	static const char* s_size_key = NULL;
+	if (!s_font_effect) {
+		s_font_effect = sintern("font");
+		s_name_key = sintern("name");
+		s_font_key = sintern("font");
+		s_size_key = sintern("size");
+	}
+
+	// Codes are sorted by index_in_string at parse time, so we can stop once starts
+	// pass our glyph. Active codes are applied in start order so the last one wins.
+	for (int i = 0; i < text_state->codes.count(); ++i) {
+		CF_TextCode* code = text_state->codes + i;
+		if (glyph_index < code->index_in_string) break;
+		if (glyph_index >= code->index_in_string + code->glyph_count) continue;
+
+		CF_TextEffectDef* def = app->text_effect_defs.try_find(code->effect_name);
+		if (def && def->font_name && cf_font_get(def->font_name)) {
+			*font_name = def->font_name;
+		}
+
+		if (code->effect_name == s_font_effect) {
+			const CF_TextCodeVal* name_val = code->params.try_find(s_name_key);
+			if (!name_val) name_val = code->params.try_find(s_font_key);
+			if (name_val && name_val->type == CF_TEXT_CODE_VAL_TYPE_STRING && name_val->u.string) {
+				if (cf_font_get(name_val->u.string)) {
+					*font_name = name_val->u.string;
+				}
+			}
+			const CF_TextCodeVal* size_val = code->params.try_find(s_size_key);
+			if (size_val && size_val->type == CF_TEXT_CODE_VAL_TYPE_NUMBER) {
+				*font_size = (float)size_val->u.number;
+			}
+		}
+	}
+}
+
+static const char* s_find_end_of_line(CF_ParsedTextState* text_state, bool do_effects, const char* text, int start_index, float wrap_width)
+{
+	const char* base_font_name = s_draw->fonts.last();
+	float base_font_size = s_draw->font_sizes.last();
 	int blur = s_draw->blurs.last();
+	CF_Font* base_font = cf_font_get(base_font_name);
 	float x = 0;
 	const char* start_of_word = 0;
 	float word_w = 0;
@@ -2255,22 +2304,43 @@ static const char* s_find_end_of_line(CF_Font* font, const char* text, float wra
 	// Mirrors the main render loop's hit_newline gating, so wrap points land where
 	// the kerned text will actually break.
 	bool at_line_start = true;
+	int index = start_index;
+	const char* prev_font_name = NULL;
+	float prev_font_size = 0;
 
 	while (*text) {
 		const char* text_prev = text;
 		text = cf_string_decode_UTF8(text, &cp);
+
+		const char* font_name = base_font_name;
+		float font_size = base_font_size;
+		if (do_effects) {
+			s_resolve_text_style(text_state, index, &font_name, &font_size);
+		}
+		CF_Font* font = cf_font_get(font_name);
+		if (!font) font = base_font;
 		CF_Glyph* glyph = cf_font_get_glyph(font, cp, font_size, blur);
+		if (!glyph) {
+			++index;
+			continue;
+		}
 
 		if (cp == '\n') {
 			x = 0;
 			word_w = 0;
 			start_of_word = 0;
 			at_line_start = true;
+			prev_font_name = NULL;
+			++index;
 			continue;
 		} else if (cp == '\r') {
+			++index;
 			continue;
 		} else {
-			float kern = at_line_start ? 0 : cf_font_get_kern(font, font_size, cp_prev, cp);
+			float kern = 0;
+			if (!at_line_start && cp_prev && prev_font_name == font_name && prev_font_size == font_size) {
+				kern = cf_font_get_kern(font, font_size, cp_prev, cp);
+			}
 			float advance = glyph->xadvance + kern;
 			if (s_is_space(cp)) {
 				x += word_w + advance;
@@ -2293,11 +2363,52 @@ static const char* s_find_end_of_line(CF_Font* font, const char* text, float wra
 				}
 			}
 			cp_prev = cp;
+			prev_font_name = font_name;
+			prev_font_size = font_size;
 			at_line_start = false;
+			++index;
 		}
 	}
 
 	return text + 1;
+}
+
+// Scan a single visual line [text, end_of_line) and report its vertical metrics: the
+// tallest ascent, deepest descent, and largest line-height across the per-glyph active
+// styles (base stack, or a <font size=...> / mapped-font override resolved the same way
+// as drawing). Used so a line's baseline, its line-to-line advance, and the measured
+// text box all follow the tallest style present on the line -- keeping large size spans
+// inside the reported bounds and stopping successive lines from colliding. Results are
+// in logical units (each face's metric is pre-scaled by its own pixel-height scale).
+static void s_measure_line_vmetrics(CF_ParsedTextState* text_state, bool do_effects, const char* base_font_name, CF_Font* base_font, float base_font_size, const char* text, int start_index, const char* end_of_line, float* out_ascent, float* out_descent, float* out_line_height)
+{
+	float base_scale = stbtt_ScaleForPixelHeight(&base_font->info, base_font_size);
+	float max_ascent = base_font->ascent * base_scale;
+	float min_descent = base_font->descent * base_scale; // Descent is negative; smaller == deeper.
+	float max_line_height = base_font->line_height * base_scale;
+
+	int index = start_index;
+	while (*text && text < end_of_line) {
+		int cp;
+		text = cf_string_decode_UTF8(text, &cp);
+		if (cp == '\n') break;
+
+		const char* font_name = base_font_name;
+		float font_size = base_font_size;
+		if (do_effects) s_resolve_text_style(text_state, index, &font_name, &font_size);
+		CF_Font* font = cf_font_get(font_name);
+		if (!font) font = base_font;
+
+		float s = stbtt_ScaleForPixelHeight(&font->info, font_size);
+		max_ascent = max(max_ascent, font->ascent * s);
+		min_descent = min(min_descent, font->descent * s);
+		max_line_height = max(max_line_height, font->line_height * s);
+		++index;
+	}
+
+	*out_ascent = max_ascent;
+	*out_descent = min_descent;
+	*out_line_height = max_line_height;
 }
 
 struct CF_CodeParseState
@@ -2467,11 +2578,16 @@ static void s_parse_code(CF_CodeParseState* s)
 	bool finish = s->try_next('/');
 	bool first = true;
 	while (!s->done()) {
-		const char* name = sintern(s_parse_code_name(s).c_str());
+		// A nameless tag (e.g. "<>") yields an empty String whose c_str() is NULL;
+		// sintern(NULL) would crash, so intern only a real name (matches s_parse_code_val).
+		String name_str = s_parse_code_name(s);
+		const char* name = !name_str.empty() ? sintern(name_str.c_str()) : NULL;
 		if (first) {
 			first = false;
 			code.effect_name = name;
-			code.fn = app->text_effect_fns.find(name);
+			code.fn = NULL;
+			CF_TextEffectDef* def = app->text_effect_defs.try_find(name);
+			if (def) code.fn = def->fn;
 		}
 		if (s->try_next('=')) {
 			CF_TextCodeVal val = s_parse_code_val(s);
@@ -2577,6 +2693,30 @@ static bool s_text_fx_gradient(CF_TextEffect* fx_ptr)
 	return true;
 }
 
+// Font/size for the built-in <font> effect are applied during layout (see
+// s_resolve_text_style); the callback itself is a no-op so the markup is valid.
+static bool s_text_fx_font(CF_TextEffect* fx_ptr)
+{
+	CF_UNUSED(fx_ptr);
+	return true;
+}
+
+static bool s_text_fx_stub(CF_TextEffect* fx_ptr)
+{
+	CF_UNUSED(fx_ptr);
+	return true;
+}
+
+static CF_TextEffectDef* s_get_or_create_text_effect_def(const char* name)
+{
+	name = sintern(name);
+	CF_TextEffectDef* def = app->text_effect_defs.try_find(name);
+	if (!def) {
+		def = app->text_effect_defs.insert(name);
+	}
+	return def;
+}
+
 static void s_parse_codes(CF_ParsedTextState* text_state, const char* text)
 {
 	// Register built-in text effects.
@@ -2589,6 +2729,7 @@ static void s_parse_codes(CF_ParsedTextState* text_state, const char* text)
 		text_effect_register("wave", s_text_fx_wave);
 		text_effect_register("strike", s_text_fx_strike);
 		text_effect_register("gradient", s_text_fx_gradient);
+		text_effect_register("font", s_text_fx_font);
 	}
 
 	CF_CodeParseState state = { };
@@ -2606,9 +2747,14 @@ static void s_parse_codes(CF_ParsedTextState* text_state, const char* text)
 			s->append(cp);
 		}
 	}
+	// Sort by start index, then by open order so nested spans that share a start
+	// index still apply outer→inner (last override wins in s_resolve_text_style).
 	std::stable_sort(text_state->codes.begin(), text_state->codes.end(),
-		[](const CF_TextCode& a, const CF_TextCode&b) {
-			return a.index_in_string < b.index_in_string;
+		[](const CF_TextCode& a, const CF_TextCode& b) {
+			if (a.index_in_string != b.index_in_string) {
+				return a.index_in_string < b.index_in_string;
+			}
+			return a.parse_order < b.parse_order;
 		}
 	);
 	text_state->sanitized = s->sanitized;
@@ -2616,9 +2762,10 @@ static void s_parse_codes(CF_ParsedTextState* text_state, const char* text)
 
 static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool render, cf_text_markup_info_fn* markups)
 {
-	CF_Font* font = cf_font_get(s_draw->fonts.last());
-	CF_ASSERT(font);
-	if (!font) return V2(0,0);
+	const char* base_font_name = s_draw->fonts.last();
+	CF_Font* base_font = cf_font_get(base_font_name);
+	CF_ASSERT(base_font);
+	if (!base_font) return V2(0,0);
 
 	// Text id can be custom or based on text's content
 	uint64_t text_id = s_draw->text_ids.last();
@@ -2653,16 +2800,27 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 	}
 
 	// Gather up all state required for rendering.
-	float font_size = s_draw->font_sizes.last();
+	// Base font/size seed each line's metrics; the active line then adopts the tallest
+	// per-glyph style on it (see s_measure_line_vmetrics) so large <font size=...> spans
+	// lower the baseline, grow the advance, and stay inside the measured box.
+	// Per-glyph font/size may differ via text-effect font overrides (see s_resolve_text_style).
+	float base_font_size = s_draw->font_sizes.last();
 	int blur = s_draw->blurs.last();
 	float wrap_w = s_draw->text_wrap_widths.last();
-	float scale = stbtt_ScaleForPixelHeight(&font->info, font_size);
-	float line_height = font->line_height * scale;
+	float scale = stbtt_ScaleForPixelHeight(&base_font->info, base_font_size);
+	float line_height = base_font->line_height * scale;
+	// Vertical metrics for the line currently being laid out. cur_line_height is the
+	// finishing line's advance; line_extra_ascent lowers the baseline by any ascent past
+	// the base face. Both default to the base face (used for empty lines with no glyphs).
+	float cur_line_height = line_height;
+	float line_extra_ascent = 0;
 	int cp_prev = 0;
 	int cp = 0;
 	const char* end_of_line = NULL;
-	float h = (font->ascent + font->descent) * scale;
-	float w = font->width * scale;
+	float h = (base_font->ascent + base_font->descent) * scale;
+	float w = base_font->width * scale;
+	const char* prev_glyph_font_name = NULL;
+	float prev_glyph_font_size = 0;
 
 	// @NOTE -- Not 100% sure snapping to pixel is the best thing here, but it really does make
 	// text rendering feel a lot more robust, especially for nearest-neighbor rendering. Snap on
@@ -2670,12 +2828,12 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 	// to unsnapped shapes -- at pixel_scale 2 a logical-point snap only lands on even device pixels.
 	float pixel_scale = app->pixel_scale;
 	float x = CF_ROUNDF(position.x * pixel_scale) / pixel_scale;
-	float initial_y = CF_ROUNDF((position.y - font->ascent * scale) * pixel_scale) / pixel_scale;
+	float initial_y = CF_ROUNDF((position.y - base_font->ascent * scale) * pixel_scale) / pixel_scale;
 	float y = initial_y;
 	float max_x = x;
 	// Extend the height by descent to include spaces below the baseline.
 	// e.g: Characters such as "g", "y"...
-	float min_y = y + font->descent * scale;
+	float min_y = y + base_font->descent * scale;
 
 	int index = 0;
 	int code_index = 0;
@@ -2736,7 +2894,7 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 
 	bool vertical = s_draw->vertical.last();
 
-	auto advance_to_next_glyph = [&](CF_Glyph* last_glyph) {
+	auto advance_to_next_glyph = [&](CF_Glyph* last_glyph, float advance) {
 		// Max bound covers the entire glyph without kerning so we use the glyph's
 		// logical ink width (q1.x - q0.x) instead of xadvance. Note glyph->w is the
 		// *physical* rasterized bitmap width (scaled by pixel_scale, used for the
@@ -2744,11 +2902,12 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 		// cursor here, so it can't be used directly for this bound.
 		max_x = max(max_x, x + (last_glyph->q1.x - last_glyph->q0.x));
 		if (vertical) {
-			min_y = min(min_y, y + font->descent * scale);
+			min_y = min(min_y, y + base_font->descent * scale);
 
 			y -= line_height;
 		} else {
-			x += last_glyph->xadvance;
+			// Prefer the (possibly effect-modified) advance so layout matches rendering.
+			x += advance;
 		}
 	};
 
@@ -2761,11 +2920,14 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 			max_x = max(max_x, x);
 		} else {
 			x = position.x;
-			y -= line_height;
+			y -= cur_line_height;
 
-			min_y = min(min_y, y + font->descent * scale);
+			// Base-descent floor for the new line; the line's own scan lowers min_y
+			// further if it turns out taller. Also covers a trailing empty line.
+			min_y = min(min_y, y + base_font->descent * scale);
 		}
 		hit_newline = true;
+		prev_glyph_font_name = NULL;
 		++newline_count;
 	};
 	
@@ -2786,13 +2948,28 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 		CF_DEFER(effect_cleanup());
 
 		if (cp == '\n') {
+			// Force the next line to recompute its boundary + vertical metrics.
+			end_of_line = NULL;
 			apply_newline();
 			continue;
 		}
 
-		// Word wrapping logic.
+		// Word wrapping logic. Uses the same per-glyph font/size resolution as drawing
+		// so bold/italic (or any font override) wraps at the correct visual width.
 		if (!end_of_line) {
-			end_of_line = s_find_end_of_line(font, prev_text, wrap_w);
+			end_of_line = s_find_end_of_line(text_state, do_effects, prev_text, index - 1, wrap_w);
+
+			// Establish this visual line's vertical metrics from the tallest active style
+			// on it, then lower the baseline by any extra ascent so large size spans fit
+			// under the previous line. min_y is extended for the line's deepest descent so
+			// measurement covers it. Horizontal only; vertical text keeps base-face columns.
+			if (!vertical) {
+				float line_ascent, line_descent, line_line_height;
+				s_measure_line_vmetrics(text_state, do_effects, base_font_name, base_font, base_font_size, prev_text, index - 1, end_of_line, &line_ascent, &line_descent, &line_line_height);
+				cur_line_height = line_line_height;
+				line_extra_ascent = line_ascent - base_font->ascent * scale;
+				min_y = min(min_y, (y - line_extra_ascent) + line_descent);
+			}
 		}
 
 		int finished_rendering_line = !(text < end_of_line);
@@ -2815,25 +2992,39 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 			continue;
 		}
 
+		// Active face for this glyph (base stack, or a text-effect font override).
+		const char* active_font_name = base_font_name;
+		float active_font_size = base_font_size;
+		if (do_effects) {
+			s_resolve_text_style(text_state, index - 1, &active_font_name, &active_font_size);
+		}
+		CF_Font* active_font = cf_font_get(active_font_name);
+		if (!active_font) active_font = base_font;
+
 		spritebatch_sprite_t s = { };
 		s.minx = 0; // 9-slice implementation expects these to be defaulted to 0..1.
 		s.miny = 0;
 		s.maxx = 1;
 		s.maxy = 1;
-		CF_Glyph* glyph = cf_font_get_glyph(font, cp, font_size, blur);
+		CF_Glyph* glyph = cf_font_get_glyph(active_font, cp, active_font_size, blur);
 		if (!glyph) {
 			continue;
 		}
 
 		// Advance the cursor by the pair kern so it accumulates across the line and is
 		// reflected in measurement + bounds, not just the visible glyph. Horizontal only;
-		// hit_newline guards against kerning across line breaks.
-		if (!vertical && !hit_newline && cp_prev) {
-			x += cf_font_get_kern(font, font_size, cp_prev, cp);
+		// hit_newline guards against kerning across line breaks. Skip kerning across a
+		// font or size change -- pair kern tables are face-specific.
+		if (!vertical && !hit_newline && cp_prev && prev_glyph_font_name == active_font_name && prev_glyph_font_size == active_font_size) {
+			x += cf_font_get_kern(active_font, active_font_size, cp_prev, cp);
 		}
 
 		// Prepare a sprite struct for rendering.
 		float xadvance = glyph->xadvance;
+		// This line's baseline, lowered by any ascent past the base face so a taller
+		// span sits under the previous line instead of overflowing above it. Equal to y
+		// for base-height lines, so ordinary text is unaffected.
+		float baseline_y = y - line_extra_ascent;
 		if (render || markups) {
 			bool visible = glyph->visible;
 			s.image_id = glyph->image_id;
@@ -2848,8 +3039,8 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 			// are in logical units, so the pad must shrink by pixel_scale to match --
 			// otherwise on HiDPI the quad is stretched past the glyph's actual coverage.
 			v2 pad = V2(1,1) / app->pixel_scale;
-			v2 q0 = glyph->q0 + V2(x,y) - pad;
-			v2 q1 = glyph->q1 + V2(x,y) + pad;
+			v2 q0 = glyph->q0 + V2(x,baseline_y) - pad;
+			v2 q1 = glyph->q1 + V2(x,baseline_y) + pad;
 
 			// Apply any active custom text effects.
 			bool use_corner_colors = false;
@@ -2863,7 +3054,7 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 					effect->text_without_markups = text_state->sanitized.c_str();
 					effect->character = cp;
 					effect->index_into_effect = index - effect->index_into_string - 1;
-					effect->center = V2(x + xadvance*0.5f, y + h*0.25f);
+					effect->center = V2(x + xadvance*0.5f, baseline_y + h*0.25f);
 					effect->q0 = q0;
 					effect->q1 = q1;
 					effect->w = s.w;
@@ -2873,7 +3064,7 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 					effect->opacity = s.geom.alpha;
 					effect->xadvance = xadvance;
 					effect->visible = visible;
-					effect->font_size = font_size;
+					effect->font_size = active_font_size;
 					effect->on_begin = effect->on_start();
 					keep_going = fn(effect);
 					q0 = effect->q0;
@@ -2919,7 +3110,7 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 			for (int i = 0; i < text_state->effects.count(); ++i) {
 				TextEffect* effect = text_state->effects + i;
 				if (effect->strike_thickness > 0) {
-					float y_mid = y + h * 0.25f + (q0.y - pre_fx_q0_y);
+					float y_mid = baseline_y + h * 0.25f + (q0.y - pre_fx_q0_y);
 					CF_Strike strike;
 					strike.p0 = V2(x, y_mid);
 					strike.p1 = V2(x + xadvance, y_mid);
@@ -2950,7 +3141,9 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 			}
 		}
 
-		advance_to_next_glyph(glyph);
+		advance_to_next_glyph(glyph, xadvance);
+		prev_glyph_font_name = active_font_name;
+		prev_glyph_font_size = active_font_size;
 		hit_newline = false;
 	}
 
@@ -2987,7 +3180,18 @@ void cf_draw_text(const char* text, CF_V2 position, int text_length)
 
 void cf_text_effect_register(const char* name, CF_TextEffectFn* fn)
 {
-	app->text_effect_fns.insert(sintern(name), fn);
+	CF_TextEffectDef* def = s_get_or_create_text_effect_def(name);
+	def->fn = fn;
+}
+
+void cf_text_effect_set_font(const char* effect_name, const char* font_name)
+{
+	CF_TextEffectDef* def = s_get_or_create_text_effect_def(effect_name);
+	def->font_name = sintern(font_name);
+	// Auto-register a no-op callback so the markup is valid without a custom effect.
+	if (!def->fn) {
+		def->fn = s_text_fx_stub;
+	}
 }
 
 double cf_text_effect_get_number(const CF_TextEffect* fx, const char* key, double default_val)
