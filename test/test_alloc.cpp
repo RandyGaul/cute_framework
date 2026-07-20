@@ -42,6 +42,14 @@ static void* s_test_realloc(void* ptr, size_t size, void* udata)
 	return realloc(ptr, size);
 }
 
+// A failed REQUIRE below returns out of the test case early, so restoring the
+// default allocator must happen via RAII rather than a final statement --
+// otherwise the override leaks into every test that runs afterward.
+struct AllocatorRestoreGuard
+{
+	~AllocatorRestoreGuard() { cf_allocator_restore_default(); }
+};
+
 TEST_CASE(test_allocator_forwards_udata)
 {
 	int sentinel = 0;
@@ -54,6 +62,7 @@ TEST_CASE(test_allocator_forwards_udata)
 	allocator.calloc_fn = s_test_calloc;
 	allocator.realloc_fn = s_test_realloc;
 	cf_allocator_override(allocator);
+	AllocatorRestoreGuard restore_guard;
 
 	void* a = cf_alloc(16);
 	REQUIRE(s_last_alloc_udata == expected_udata);
@@ -68,8 +77,6 @@ TEST_CASE(test_allocator_forwards_udata)
 	REQUIRE(s_last_free_udata == expected_udata);
 
 	cf_free(r);
-
-	cf_allocator_restore_default();
 
 	return true;
 }
