@@ -142,7 +142,7 @@ struct CF_App
 	Cute::Map<CF_Pixel*> font_pixels;
 	Cute::Map<CF_TextEffectState> text_effect_states;
 	Cute::Map<CF_ParsedTextState> parsed_text_states;
-	Cute::Map<CF_TextEffectFn*> text_effect_fns;
+	Cute::Map<CF_TextEffectDef> text_effect_defs;
 
 	// Easy sprite stuff.
 	uint64_t easy_sprite_id_gen = CF_EASY_ID_RANGE_LO;
