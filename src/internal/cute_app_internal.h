@@ -107,7 +107,7 @@ struct CF_App
 	int sample_count = 0;
 	bool use_depth_stencil = false;
 	uint64_t default_image_id = CF_CUSTOM_SPRITE_ID_RANGE_LO;
-	bool vsync = false;
+	CF_PresentMode present_mode = CF_PRESENT_MODE_IMMEDIATE;
 	bool audio_needs_updates = false;
 	void* update_udata = NULL;
 	bool on_sound_finish_single_threaded = false;

@@ -331,7 +331,7 @@ int main(int argc, char* argv[])
 	make_app("Liquid Rainbow", 0, 0, 0, (int)(w * scale), (int)(h * scale), options | CF_APP_OPTIONS_WINDOW_POS_CENTERED_BIT, argv[0]);
 	cf_set_fixed_timestep(60);
 	cf_set_target_framerate(60);
-	cf_app_set_vsync(false);
+	cf_app_set_present_mode(CF_PRESENT_MODE_IMMEDIATE);
 
 	CF_Threadpool* tp = cf_make_threadpool(cf_core_count());
 	physics_t physics = {};

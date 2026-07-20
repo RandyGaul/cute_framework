@@ -699,9 +699,13 @@ void cf_gles_gpu_sync()
 	glFinish();
 }
 
-void cf_gles_set_vsync(bool true_turn_on_vsync)
+bool cf_gles_set_present_mode(CF_PresentMode mode)
 {
-	SDL_GL_SetSwapInterval(true_turn_on_vsync ? 1 : 0);
+	switch (mode) {
+	case CF_PRESENT_MODE_IMMEDIATE: return SDL_GL_SetSwapInterval(0);
+	case CF_PRESENT_MODE_VSYNC:     return SDL_GL_SetSwapInterval(1);
+	default:                        return false; // Mailbox isn't supported on the GLES3 backend.
+	}
 }
 
 void cf_gles_begin_frame()

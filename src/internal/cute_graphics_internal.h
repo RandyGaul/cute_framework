@@ -8,6 +8,7 @@
 #ifndef CF_GRAPHICS_INTERNAL_H
 #define CF_GRAPHICS_INTERNAL_H
 
+#include <cute_app.h>
 #include <cute_array.h>
 #include <cute_result.h>
 #include <cute_graphics.h>
@@ -242,8 +243,7 @@ void cf_sdlgpu_attach(SDL_Window* window);
 bool cf_sdlgpu_supports_msaa(int sample_count);
 void cf_sdlgpu_flush();
 void cf_sdlgpu_gpu_sync();
-void cf_sdlgpu_set_vsync(bool true_turn_on_vsync);
-void cf_sdlgpu_set_vsync_mailbox(bool true_turn_on_vsync);
+bool cf_sdlgpu_set_present_mode(CF_PresentMode mode);
 void cf_sdlgpu_begin_frame();
 void cf_sdlgpu_blit_canvas(CF_Canvas canvas);
 void cf_sdlgpu_end_frame();
@@ -257,7 +257,7 @@ void cf_gles_attach(SDL_Window* window);
 bool cf_gles_supports_msaa(int sample_count);
 void cf_gles_flush();
 void cf_gles_gpu_sync();
-void cf_gles_set_vsync(bool true_turn_on_vsync);
+bool cf_gles_set_present_mode(CF_PresentMode mode);
 void cf_gles_begin_frame();
 void cf_gles_blit_canvas(CF_Canvas canvas);
 void cf_gles_end_frame();
