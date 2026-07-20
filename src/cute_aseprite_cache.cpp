@@ -16,6 +16,8 @@
 #include <internal/cute_app_internal.h>
 
 #define CUTE_ASEPRITE_IMPLEMENTATION
+#define CUTE_ASEPRITE_ALLOC(size, ctx) cf_alloc(size)
+#define CUTE_ASEPRITE_FREE(mem, ctx) cf_free(mem)
 #include <cute/cute_aseprite.h>
 
 #include <internal/cute_aseprite_cache_internal.h>

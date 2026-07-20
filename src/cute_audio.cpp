@@ -24,6 +24,8 @@
 #define CUTE_SOUND_IMPLEMENTATION
 #define CUTE_SOUND_FORCE_SDL
 #define CUTE_SOUND_ASSERT CF_ASSERT
+#define CUTE_SOUND_ALLOC(size, ctx) cf_alloc(size)
+#define CUTE_SOUND_FREE(mem, ctx) cf_free(mem)
 #include <cute/cute_sound.h>
 
 CF_Audio cf_audio_load_ogg(const char* path)
