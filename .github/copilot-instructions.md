@@ -123,18 +123,9 @@ Never use `///`; always `/** ... */`.
 - `include/cute_shader_bytecode.h` defines shared shader structures — **hand-written**, edit normally.
 - Builtin shaders: `src/cute_shader/builtin_shaders.h`; bytecode cache: `src/data/builtin_shaders_bytecode.h`.
 
-## Pull Requests
+## Code Review
 
-Wrap the PR body in a `<details>` block so it is collapsed by default:
-
-```markdown
-<details>
-<summary>Overview</summary>
-
-Your description here.
-
-</details>
-```
+Comments must be succinct and compact. Audience are expert framework authors — skip obvious explanations, be direct.
 
 ## Common Pitfalls
 
