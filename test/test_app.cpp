@@ -68,10 +68,9 @@ TEST_CASE(test_app_present_mode_mailbox_failure_does_not_corrupt_state)
 
 TEST_SUITE(test_app)
 {
-	// Don't submit this to GitHub as the build machines can't init a graphics context.
-#if 0
+	// Requires headless GPU context support in CI -- see
+	// https://github.com/RandyGaul/cute_framework/pull/517
 	RUN_TEST_CASE(test_app_present_mode_vsync_always_supported);
 	RUN_TEST_CASE(test_app_present_mode_off_round_trip);
 	RUN_TEST_CASE(test_app_present_mode_mailbox_failure_does_not_corrupt_state);
-#endif
 }
