@@ -14,6 +14,7 @@ set(CF_TEST_SRCS
 	test_string.cpp
 	test_json.cpp
 	test_markups.cpp
+	test_draw_recycle.cpp
 	test_math.cpp
 	test_math.c
 	test_ckit.c

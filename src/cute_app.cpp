@@ -592,6 +592,7 @@ int cf_app_draw_onto_screen(bool clear)
 	s_draw->shaders.set_count(1);
 	s_draw->verts.clear();
 	s_draw->draw_item_order = 0;
+	for (int i = 0; i < s_draw->cmds.count(); ++i) s_draw->recycle_items(s_draw->cmds[i]);
 	s_draw->cmds.clear();
 	s_draw->add_cmd();
 

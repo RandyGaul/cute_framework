@@ -137,6 +137,7 @@ struct CF_Draw
 {
 	CF_INLINE CF_Command& add_cmd() {
 		CF_Command& cmd = cmds.add();
+		if (item_pool.count()) cmd.items = item_pool.pop();
 		cmd.id = draw_item_order++;
 		cmd.layer = layers.last();
 		cmd.scissor = scissors.last();
@@ -147,9 +148,22 @@ struct CF_Draw
 		cmd.shader = shaders.last();
 		return cmd;
 	}
+
+	// Donates a destroyed command's sprite-items buffer to the recycle pool instead of letting
+	// it get freed, so `add_cmd` can hand it back out next time instead of re-allocating from
+	// scratch. Commands with an empty (never-grown) items buffer are skipped so the pool doesn't
+	// fill up with useless zero-capacity entries (e.g. uniform-only or canvas-blit commands).
+	CF_INLINE void recycle_items(CF_Command& cmd) {
+		if (cmd.items.capacity() > 0) {
+			cmd.items.clear();
+			item_pool.add(cf_move(cmd.items));
+		}
+	}
+
 	int cmd_index = 0;
 	int draw_item_order = 0;
 	Cute::Array<CF_Command> cmds;
+	Cute::Array<Cute::Array<spritebatch_sprite_t>> item_pool;
 	Cute::Array<CF_Vertex> verts;
 	CF_V2 atlas_dims = cf_v2(2048, 2048);
 	CF_V2 texel_dims = cf_v2(1.0f/2048.0f, 1.0f/2048.0f);

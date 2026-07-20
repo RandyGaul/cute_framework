@@ -3656,6 +3656,7 @@ void cf_render_layers_to(CF_Canvas canvas, int layer_lo, int layer_hi, bool clea
 	// Remove commands that were processed.
 	for (int i = 0; i < s_draw->cmds.size();) {
 		if (s_draw->cmds[i].processed) {
+			s_draw->recycle_items(s_draw->cmds[i]);
 			s_draw->cmds.unordered_remove(i);
 		} else {
 			++i;
