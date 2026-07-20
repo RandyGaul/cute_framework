@@ -24,6 +24,16 @@ struct CF_Draw* s_draw;
 static const char* s_text_without_markups = NULL;
 
 //#define SPRITEBATCH_LOG printf
+// cute_spritebatch.h's default SPRITEBATCH_MALLOC/FREE live inside its outer
+// include guard, so the header-only include pulled in transitively above
+// (via cute_app_internal.h -> cute_draw_internal.h) already defines them to
+// malloc/free before we get here. #undef first so our override doesn't just
+// silently lose to that earlier default (and to avoid a macro-redefined
+// warning).
+#undef SPRITEBATCH_MALLOC
+#undef SPRITEBATCH_FREE
+#define SPRITEBATCH_MALLOC(size, ctx) cf_alloc(size)
+#define SPRITEBATCH_FREE(ptr, ctx) cf_free(ptr)
 #define SPRITEBATCH_IMPLEMENTATION
 #include <cute/cute_spritebatch.h>
 
@@ -37,6 +47,8 @@ static const char* s_text_without_markups = NULL;
 
 #define STB_TRUETYPE_IMPLEMENTATION
 #define STBTT_assert CF_ASSERT
+#define STBTT_malloc(x, u) cf_alloc(x)
+#define STBTT_free(x, u) cf_free(x)
 #include <stb/stb_truetype.h>
 
 #define IM_ASSERT CF_ASSERT

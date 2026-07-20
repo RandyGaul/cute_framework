@@ -12,8 +12,8 @@
 
 #define CUTE_SYNC_IMPLEMENTATION
 #define CUTE_SYNC_SDL
-#define CUTE_THREAD_ALLOC CF_ALLOC
-#define CUTE_THREAD_FREE CF_FREE
+#define CUTE_SYNC_ALLOC(size, ctx) cf_alloc(size)
+#define CUTE_SYNC_FREE(ptr, ctx) cf_free(ptr)
 #include <cute/cute_sync.h>
 
 CF_Mutex cf_make_mutex()

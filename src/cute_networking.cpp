@@ -6,11 +6,14 @@
 */
 
 #include <cute_networking.h>
+#include <cute_alloc.h>
 
 // This entire file makes no sense for web builds, since web doesn't allow UDP.
 #ifndef CF_EMSCRIPTEN
 
 #define CUTE_NET_IMPLEMENTATION
+#define CN_ALLOC(size, ctx) cf_alloc(size)
+#define CN_FREE(mem, ctx) cf_free(mem)
 #include <cute/cute_net.h>
 
 static CF_INLINE CF_Result cf_wrap(cn_result_t cn_result)
