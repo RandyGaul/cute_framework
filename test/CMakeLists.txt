@@ -1,5 +1,6 @@
 set(CF_TEST_SRCS
 	main.cpp
+	test_alloc.cpp
 	test_array.cpp
 	test_aseprite.cpp
 	test_audio.cpp

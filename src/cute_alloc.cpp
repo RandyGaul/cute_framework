@@ -64,22 +64,22 @@ void cf_allocator_restore_default(void)
 
 void* cf_alloc(size_t size)
 {
-	return s_allocator.alloc_fn ? s_allocator.alloc_fn(size, NULL) : s_default_alloc(size, NULL);
+	return s_allocator.alloc_fn ? s_allocator.alloc_fn(size, s_allocator.udata) : s_default_alloc(size, s_allocator.udata);
 }
 
 void cf_free(void* ptr)
 {
-	s_allocator.free_fn ? s_allocator.free_fn(ptr, NULL) : s_default_free(ptr, NULL);
+	s_allocator.free_fn ? s_allocator.free_fn(ptr, s_allocator.udata) : s_default_free(ptr, s_allocator.udata);
 }
 
 void* cf_calloc(size_t size, size_t count)
 {
-	return s_allocator.calloc_fn ? s_allocator.calloc_fn(size, count, NULL) : s_default_calloc(size, count, NULL);
+	return s_allocator.calloc_fn ? s_allocator.calloc_fn(size, count, s_allocator.udata) : s_default_calloc(size, count, s_allocator.udata);
 }
 
 void* cf_realloc(void* ptr, size_t size)
 {
-	return s_allocator.realloc_fn ? s_allocator.realloc_fn(ptr, size, NULL) : s_default_realloc(ptr, size, NULL);
+	return s_allocator.realloc_fn ? s_allocator.realloc_fn(ptr, size, s_allocator.udata) : s_default_realloc(ptr, size, s_allocator.udata);
 }
 
 //--------------------------------------------------------------------------------------------------
