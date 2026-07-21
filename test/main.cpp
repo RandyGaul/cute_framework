@@ -26,6 +26,7 @@
 #include <cute.h>
 
 TEST_SUITE(test_alloc);
+TEST_SUITE(test_app);
 TEST_SUITE(test_array);
 TEST_SUITE(test_aseprite);
 TEST_SUITE(test_audio);
@@ -70,6 +71,7 @@ int main(int argc, char* argv[])
 
 #define RUN_TRACED(suite_fp) fprintf(stderr, ">>> " #suite_fp "\n"); RUN_TEST_SUITE(suite_fp); fprintf(stderr, "<<< " #suite_fp "\n");
 	RUN_TRACED(test_alloc);
+	RUN_TRACED(test_app);
 	RUN_TRACED(test_array);
 	RUN_TRACED(test_aseprite);
 	RUN_TRACED(test_audio);

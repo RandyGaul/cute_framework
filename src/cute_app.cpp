@@ -792,33 +792,27 @@ void cf_app_set_canvas_blit_filter(CF_Filter filter)
 	app->canvas_blit_filter = filter;
 }
 
-void cf_app_set_vsync(bool true_turn_on_vsync)
+bool cf_app_set_present_mode(CF_PresentMode mode)
 {
-	app->vsync = true_turn_on_vsync;
+	bool applied;
 	if (app->gfx_backend_type == CF_BACKEND_TYPE_GLES3) {
-		cf_gles_set_vsync(true_turn_on_vsync);
+		applied = cf_gles_set_present_mode(mode);
 	} else {
 #ifndef CF_EMSCRIPTEN
-		cf_sdlgpu_set_vsync(true_turn_on_vsync);
+		applied = cf_sdlgpu_set_present_mode(mode);
+#else
+		applied = false;
 #endif
 	}
-}
-
-void cf_app_set_vsync_mailbox(bool true_turn_on_mailbox)
-{
-	app->vsync = true_turn_on_mailbox;
-	if (app->gfx_backend_type == CF_BACKEND_TYPE_GLES3) {
-		CF_ASSERT(!"This is only implemented on SDL_Gpu backends (Metal/DX11/DX12/Vulkan).");
-	} else {
-#ifndef CF_EMSCRIPTEN
-		cf_sdlgpu_set_vsync_mailbox(true_turn_on_mailbox);
-#endif
+	if (applied) {
+		app->present_mode = mode;
 	}
+	return applied;
 }
 
-bool cf_app_get_vsync()
+CF_PresentMode cf_app_get_present_mode()
 {
-	return app->vsync;
+	return app->present_mode;
 }
 
 void cf_app_set_windowed_mode()
