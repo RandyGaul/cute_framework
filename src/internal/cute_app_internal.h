@@ -35,6 +35,9 @@ CF_API extern struct CF_App* app;
 // an explicit size via cf_app_set_canvas_size(). Called on init and whenever pixel_scale changes.
 void cf_app_recreate_default_canvas_if_needed();
 
+// Maps an SDL_PowerState to the corresponding CF_PowerState.
+CF_PowerState cf_power_state_from_sdl(SDL_PowerState state);
+
 struct CF_MouseState
 {
 	int left_button = 0;
@@ -92,12 +95,12 @@ struct CF_App
 	CF_Filter canvas_blit_filter = CF_FILTER_NEAREST; // Filter used when blitting the app canvas onto the screen, if their sizes differ (e.g. a pinned retro canvas). Defaults to nearest for a crisp/blocky pixel-art look.
 	bool sync_window = false;
 	int draw_call_count = 0;
-	int w;
-	int h;
-	int x;
-	int y;
-	int canvas_w;
-	int canvas_h;
+	int w = 0;
+	int h = 0;
+	int x = 0;
+	int y = 0;
+	int canvas_w = 0;
+	int canvas_h = 0;
 	CF_Color clear_color = { 0, 0, 0, 0 };
 	float clear_depth = 1.0f;
 	uint32_t clear_stencil = 0;

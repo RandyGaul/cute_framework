@@ -141,7 +141,7 @@ CF_API CF_Rect CF_CALL cf_display_bounds(CF_DisplayID display_id);
 /**
  * @function cf_display_name
  * @category app
- * @brief    Returns the name of the display.
+ * @brief    Returns the name of the display, or `NULL` on failure (e.g. an invalid display id).
  * @param    display_id    The id of the display. See `cf_get_display_list`.
  * @related  cf_make_app cf_display_count cf_display_x cf_display_y cf_display_width cf_display_height cf_display_refresh_rate cf_display_bounds cf_display_name cf_display_orientation
  */
@@ -843,7 +843,7 @@ CF_API float CF_CALL cf_app_get_framerate(void);
 /**
  * @function cf_app_get_smoothed_framerate
  * @category app
- * @brief    Returns the smoothed framerate of the application. Last 60 frames are averaged. This value is controlled by `CF_FRAMERATE_SMOOTHING`.
+ * @brief    Returns the smoothed framerate of the application. Uses an exponential moving average whose smoothing factor is controlled by `CF_FRAMERATE_SMOOTHING` (default 60).
  * @related  cf_app_get_framerate cf_app_get_smoothed_framerate
  */
 CF_API float CF_CALL cf_app_get_smoothed_framerate(void);
