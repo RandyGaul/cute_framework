@@ -48,7 +48,9 @@ jobs:
           libaudio-dev libfribidi-dev \
           libxkbcommon-dev libgl1-mesa-dev libgles2-mesa-dev \
           libegl1-mesa-dev libdbus-1-dev libibus-1.0-dev libudev-dev libthai-dev \
-          liburing-dev
+          liburing-dev \
+          libx11-dev libxext-dev libxrandr-dev libxi-dev libxcursor-dev libxfixes-dev libxinerama-dev libxss-dev libxtst-dev \
+          xvfb mesa-vulkan-drivers libvulkan1 vulkan-tools
         if: runner.os == 'Linux'
 
       - uses: actions/checkout@master
@@ -100,16 +102,23 @@ jobs:
           -DSDL_PULSEAUDIO=OFF
           -DSDL_RENDER=OFF
           -DSDL_SNDIO=OFF
-          -DSDL_UNIX_CONSOLE_BUILD=ON
           -DSDL_WAYLAND=OFF
-          -DSDL_X11=OFF
+          -DSDL_X11=ON
           -DCF_RUNTIME_SHADER_COMPILATION=${{ matrix.runtime_shader_compilation }}
           -DCF_FRAMEWORK_STATIC=${{ matrix.framework_static }}
 
       - name: Build
         run: cmake --build build
 
+      - name: Tests (Linux, headless GPU)
+        if: runner.os == 'Linux'
+        run: xvfb-run -a -s "-screen 0 1280x720x24" ./build/tests
+        env:
+          SDL_AUDIODRIVER: dummy
+          LIBGL_ALWAYS_SOFTWARE: "1"
+
       - name: Tests
+        if: runner.os != 'Linux'
         run: ./build/tests
 
       - name: Generate artifacts for Windows
