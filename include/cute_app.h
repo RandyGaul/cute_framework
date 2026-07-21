@@ -656,6 +656,45 @@ CF_INLINE const char* cf_msaa_string(CF_MSAA msaa) {
 }
 
 /**
+ * @enum     CF_PresentMode
+ * @category app
+ * @brief    Describes a swapchain present mode -- vsync off, plain vsync, or low-latency mailbox vsync.
+ * @related  cf_app_get_present_mode cf_app_set_present_mode cf_present_mode_string
+ */
+#define CF_PRESENT_MODE_DEFS \
+	/* @entry Vsync is off; frames present immediately (tearing may occur). */ \
+	CF_ENUM(PRESENT_MODE_IMMEDIATE, 0) \
+	/* @entry Vsync is on; frames present synchronized to the display refresh. */ \
+	CF_ENUM(PRESENT_MODE_VSYNC,     1) \
+	/* @entry Low-latency vsync; the swapchain may be updated more than once before a frame is presented. */ \
+	CF_ENUM(PRESENT_MODE_MAILBOX,   2) \
+	/* @end */
+
+typedef enum CF_PresentMode
+{
+	#define CF_ENUM(K, V) CF_##K = V,
+	CF_PRESENT_MODE_DEFS
+	#undef CF_ENUM
+} CF_PresentMode;
+
+/**
+ * @function cf_present_mode_string
+ * @category app
+ * @brief    Returns a `CF_PresentMode` value as a string.
+ * @param    mode       The present mode to convert to a string.
+ * @return   Returns a string representing `mode`, e.g. `CF_PRESENT_MODE_VSYNC` returns "CF_PRESENT_MODE_VSYNC".
+ * @related  cf_app_get_present_mode CF_PresentMode
+ */
+CF_INLINE const char* cf_present_mode_string(CF_PresentMode mode) {
+	switch (mode) {
+	#define CF_ENUM(K, V) case CF_##K: return CF_STRINGIZE(CF_##K);
+	CF_PRESENT_MODE_DEFS
+	#undef CF_ENUM
+	default: return NULL;
+	}
+}
+
+/**
  * @function cf_app_set_msaa
  * @category app
  * @brief    Sets the MSAA sample count for the app's offscreen canvas.
@@ -679,7 +718,7 @@ CF_API bool CF_CALL cf_app_set_msaa(int sample_count);
  *           calling `cf_app_set_canvas_size`, as it will invalidate any references to the app's canvas.
  *           
  *           If you fetch this canvas and have MSAA on (see `cf_app_set_msaa`) you may *not* sample from the canvas.
- * @related  cf_app_set_canvas_size cf_app_get_canvas_width cf_app_get_canvas_height cf_app_set_vsync cf_app_get_vsync
+ * @related  cf_app_set_canvas_size cf_app_get_canvas_width cf_app_get_canvas_height cf_app_set_present_mode cf_app_get_present_mode
  */
 CF_API CF_Canvas CF_CALL cf_app_get_canvas(void);
 
@@ -693,7 +732,7 @@ CF_API CF_Canvas CF_CALL cf_app_get_canvas(void);
  *           Calling this pins the canvas to an exact device-pixel size and opts out of CF's automatic pixel-density-based
  *           canvas scaling -- the canvas will no longer auto-resize if the window moves to a display with a different
  *           pixel density.
- * @related  cf_app_get_canvas cf_app_get_canvas_width cf_app_get_canvas_height cf_app_set_vsync cf_app_get_vsync
+ * @related  cf_app_get_canvas cf_app_get_canvas_width cf_app_get_canvas_height cf_app_set_present_mode cf_app_get_present_mode
  */
 CF_API void CF_CALL cf_app_set_canvas_size(int w, int h);
 
@@ -701,7 +740,7 @@ CF_API void CF_CALL cf_app_set_canvas_size(int w, int h);
  * @function cf_app_get_canvas_width
  * @category app
  * @brief    Gets the app's canvas width in pixels.
- * @related  cf_app_get_canvas cf_app_set_canvas_size cf_app_get_canvas_height cf_app_set_vsync cf_app_get_vsync
+ * @related  cf_app_get_canvas cf_app_set_canvas_size cf_app_get_canvas_height cf_app_set_present_mode cf_app_get_present_mode
  */
 CF_API int CF_CALL cf_app_get_canvas_width(void);
 
@@ -709,7 +748,7 @@ CF_API int CF_CALL cf_app_get_canvas_width(void);
  * @function cf_app_get_canvas_height
  * @category app
  * @brief    Gets the app's canvas height in pixels.
- * @related  cf_app_get_canvas cf_app_set_canvas_size cf_app_get_canvas_width cf_app_set_vsync cf_app_get_vsync
+ * @related  cf_app_get_canvas cf_app_set_canvas_size cf_app_get_canvas_width cf_app_set_present_mode cf_app_get_present_mode
  */
 CF_API int CF_CALL cf_app_get_canvas_height(void);
 
@@ -726,30 +765,30 @@ CF_API int CF_CALL cf_app_get_canvas_height(void);
 CF_API void CF_CALL cf_app_set_canvas_blit_filter(CF_Filter filter);
 
 /**
- * @function cf_app_set_vsync
+ * @function cf_app_set_present_mode
  * @category app
- * @brief    Turns on vsync via the graphical backend (if supported).
- * @related  cf_app_get_canvas cf_app_set_canvas_size cf_app_get_canvas_width cf_app_set_vsync cf_app_get_vsync cf_app_set_vsync_mailbox
- */
-CF_API void CF_CALL cf_app_set_vsync(bool true_turn_on_vsync);
-
-/**
- * @function cf_app_set_vsync_mailbox
- * @category app
- * @brief    Turns on vsync via the graphical backend (if supported) in mailbox mode.
- * @remarks  Similar to vsync but with reduced latency. When rendering too quickly the frame may be updated
+ * @brief    Sets the swapchain present mode via the graphical backend (if supported).
+ * @param    mode       The present mode to switch to -- `CF_PRESENT_MODE_IMMEDIATE`, `CF_PRESENT_MODE_VSYNC`, or `CF_PRESENT_MODE_MAILBOX`.
+ * @return   Returns true if `mode` was actually applied by the backend. Returns false if the backend rejected
+ *           the request (e.g. mailbox is unsupported on the Metal backend), in which case the present mode is
+ *           left unchanged -- see `cf_app_get_present_mode`. `CF_PRESENT_MODE_VSYNC` is always supported.
+ * @remarks  Present modes are mutually exclusive -- there is only ever one active mode at a time. Mailbox is
+ *           similar to vsync but with reduced latency: when rendering too quickly the frame may be updated
  *           more than once before it is sent off the GPU.
- * @related  cf_app_get_canvas cf_app_set_canvas_size cf_app_get_canvas_width cf_app_set_vsync cf_app_get_vsync cf_app_set_vsync_mailbox
+ * @related  cf_app_get_canvas cf_app_set_canvas_size cf_app_get_canvas_width cf_app_get_present_mode CF_PresentMode
  */
-CF_API void CF_CALL cf_app_set_vsync_mailbox(bool true_turn_on_mailbox);
+CF_API bool CF_CALL cf_app_set_present_mode(CF_PresentMode mode);
 
 /**
- * @function cf_app_get_vsync
+ * @function cf_app_get_present_mode
  * @category app
- * @brief    Returns the vsync state (true for on).
- * @related  cf_app_get_canvas cf_app_set_canvas_size cf_app_get_canvas_width cf_app_set_vsync cf_app_get_vsync cf_app_set_vsync_mailbox
+ * @brief    Returns the swapchain present mode currently in effect.
+ * @return   Returns the currently active `CF_PresentMode`.
+ * @remarks  Reflects the mode actually applied by the backend, not merely the last one requested -- if a call
+ *           to `cf_app_set_present_mode` fails, the present mode is unchanged.
+ * @related  cf_app_set_present_mode CF_PresentMode
  */
-CF_API bool CF_CALL cf_app_get_vsync(void);
+CF_API CF_PresentMode CF_CALL cf_app_get_present_mode(void);
 
 /**
  * @function cf_app_set_windowed_mode
@@ -951,9 +990,8 @@ CF_INLINE bool app_mouse_exited() { return cf_app_mouse_exited(); }
 CF_INLINE bool app_mouse_inside() { return cf_app_mouse_inside(); }
 CF_INLINE int app_get_canvas_width() { return cf_app_get_canvas_width(); }
 CF_INLINE int app_get_canvas_height() { return cf_app_get_canvas_height(); }
-CF_INLINE void app_set_vsync(bool true_turn_on_vsync) { cf_app_set_vsync(true_turn_on_vsync); }
-CF_INLINE void app_set_vsync_mailbox(bool true_turn_on_vsync) { cf_app_set_vsync_mailbox(true_turn_on_vsync); }
-CF_INLINE bool app_get_vsync() { return cf_app_get_vsync(); }
+CF_INLINE bool app_set_present_mode(CF_PresentMode mode) { return cf_app_set_present_mode(mode); }
+CF_INLINE CF_PresentMode app_get_present_mode() { return cf_app_get_present_mode(); }
 CF_INLINE void app_set_windowed_mode() { cf_app_set_windowed_mode(); }
 CF_INLINE void app_set_borderless_fullscreen_mode() { cf_app_set_borderless_fullscreen_mode(); }
 CF_INLINE void app_set_fullscreen_mode() { cf_app_set_fullscreen_mode(); }

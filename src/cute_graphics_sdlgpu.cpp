@@ -793,7 +793,7 @@ void cf_sdlgpu_attach(SDL_Window* window)
 {
 	SDL_ClaimWindowForGPUDevice(g_ctx.device, window);
 	g_ctx.window = window;
-	cf_sdlgpu_set_vsync_mailbox(false);
+	cf_sdlgpu_set_present_mode(CF_PRESENT_MODE_IMMEDIATE);
 	g_ctx.cmd = SDL_AcquireGPUCommandBuffer(g_ctx.device);
 }
 
@@ -823,14 +823,16 @@ void cf_sdlgpu_gpu_sync()
 	}
 }
 
-void cf_sdlgpu_set_vsync(bool vsync)
+bool cf_sdlgpu_set_present_mode(CF_PresentMode mode)
 {
-	SDL_SetGPUSwapchainParameters(g_ctx.device, g_ctx.window, SDL_GPU_SWAPCHAINCOMPOSITION_SDR, vsync ? SDL_GPU_PRESENTMODE_VSYNC : SDL_GPU_PRESENTMODE_IMMEDIATE);
-}
-
-void cf_sdlgpu_set_vsync_mailbox(bool vsync)
-{
-	SDL_SetGPUSwapchainParameters(g_ctx.device, g_ctx.window, SDL_GPU_SWAPCHAINCOMPOSITION_SDR, vsync ? SDL_GPU_PRESENTMODE_MAILBOX : SDL_GPU_PRESENTMODE_IMMEDIATE);
+	SDL_GPUPresentMode sdl_mode;
+	switch (mode) {
+	case CF_PRESENT_MODE_IMMEDIATE: sdl_mode = SDL_GPU_PRESENTMODE_IMMEDIATE; break;
+	case CF_PRESENT_MODE_VSYNC:     sdl_mode = SDL_GPU_PRESENTMODE_VSYNC;     break;
+	case CF_PRESENT_MODE_MAILBOX:   sdl_mode = SDL_GPU_PRESENTMODE_MAILBOX;   break;
+	default:                        return false;
+	}
+	return SDL_SetGPUSwapchainParameters(g_ctx.device, g_ctx.window, SDL_GPU_SWAPCHAINCOMPOSITION_SDR, sdl_mode);
 }
 
 void cf_sdlgpu_begin_frame()
