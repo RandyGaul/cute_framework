@@ -369,6 +369,169 @@ CF_API void CF_CALL cf_draw_bezier_line(CF_V2 a, CF_V2 c0, CF_V2 b, int iters, f
 CF_API void CF_CALL cf_draw_bezier_line2(CF_V2 a, CF_V2 c0, CF_V2 c1, CF_V2 b, int iters, float thickness);
 
 /**
+ * @struct   CF_DrawPath
+ * @category draw
+ * @brief    A baked vector path of Bezier curves, for filled or stroked rendering.
+ * @remarks  Built once with `cf_draw_path_begin` + `cf_draw_path_end`, then drawn any number of
+ *           times with `cf_draw_path_fill` or `cf_draw_path`. Paths render per-pixel from their
+ *           curves (the same machinery as curve text): resolution-independent under any zoom or
+ *           rotation, exact antialiasing, and true curved strokes. Multiple contours are supported;
+ *           holes follow the nonzero winding rule (wind inner contours opposite the outer).
+ * @related  CF_DrawPath cf_draw_path_begin cf_draw_path_end cf_draw_path_fill cf_draw_path cf_destroy_path
+ */
+typedef struct CF_DrawPath { uint64_t id; } CF_DrawPath;
+// @end
+
+/**
+ * @function cf_draw_path_begin
+ * @category draw
+ * @brief    Begins building a vector path.
+ * @remarks  Follow with `cf_draw_path_move_to`, `cf_draw_path_line_to`, `cf_draw_path_quad_to`,
+ *           `cf_draw_path_cubic_to`, and `cf_draw_path_close`, then bake with `cf_draw_path_end`.
+ *           Contours close automatically at `cf_draw_path_move_to`/`cf_draw_path_end` (fills
+ *           require closed contours).
+ * @related  CF_DrawPath cf_draw_path_begin cf_draw_path_move_to cf_draw_path_line_to cf_draw_path_quad_to cf_draw_path_cubic_to cf_draw_path_close cf_draw_path_end
+ */
+CF_API void CF_CALL cf_draw_path_begin(void);
+
+/**
+ * @function cf_draw_path_move_to
+ * @category draw
+ * @brief    Starts a new contour at `p`, closing any open contour.
+ * @related  CF_DrawPath cf_draw_path_begin cf_draw_path_move_to cf_draw_path_line_to cf_draw_path_quad_to cf_draw_path_cubic_to cf_draw_path_close cf_draw_path_end
+ */
+CF_API void CF_CALL cf_draw_path_move_to(CF_V2 p);
+
+/**
+ * @function cf_draw_path_line_to
+ * @category draw
+ * @brief    Adds a straight line from the pen to `p`.
+ * @related  CF_DrawPath cf_draw_path_begin cf_draw_path_move_to cf_draw_path_line_to cf_draw_path_quad_to cf_draw_path_cubic_to cf_draw_path_close cf_draw_path_end
+ */
+CF_API void CF_CALL cf_draw_path_line_to(CF_V2 p);
+
+/**
+ * @function cf_draw_path_quad_to
+ * @category draw
+ * @brief    Adds a quadratic Bezier from the pen to `p` with control point `c`.
+ * @related  CF_DrawPath cf_draw_path_begin cf_draw_path_move_to cf_draw_path_line_to cf_draw_path_quad_to cf_draw_path_cubic_to cf_draw_path_close cf_draw_path_end
+ */
+CF_API void CF_CALL cf_draw_path_quad_to(CF_V2 c, CF_V2 p);
+
+/**
+ * @function cf_draw_path_cubic_to
+ * @category draw
+ * @brief    Adds a cubic Bezier from the pen to `p` with control points `c0` and `c1`.
+ * @remarks  Cubics are approximated by quadratics internally (visually exact at any sane zoom).
+ * @related  CF_DrawPath cf_draw_path_begin cf_draw_path_move_to cf_draw_path_line_to cf_draw_path_quad_to cf_draw_path_cubic_to cf_draw_path_close cf_draw_path_end
+ */
+CF_API void CF_CALL cf_draw_path_cubic_to(CF_V2 c0, CF_V2 c1, CF_V2 p);
+
+/**
+ * @function cf_draw_path_close
+ * @category draw
+ * @brief    Closes the current contour with a straight line back to its start.
+ * @related  CF_DrawPath cf_draw_path_begin cf_draw_path_move_to cf_draw_path_line_to cf_draw_path_quad_to cf_draw_path_cubic_to cf_draw_path_close cf_draw_path_end
+ */
+CF_API void CF_CALL cf_draw_path_close(void);
+
+/**
+ * @function cf_draw_path_end
+ * @category draw
+ * @brief    Bakes the path built since `cf_draw_path_begin` and returns its handle.
+ * @remarks  Baking encodes the curves into a small texture block cached for the path's lifetime.
+ *           An empty path returns id 0 (drawing it is a no-op). Free with `cf_destroy_path`.
+ * @related  CF_DrawPath cf_draw_path_begin cf_draw_path_end cf_draw_path_fill cf_draw_path cf_destroy_path
+ */
+CF_API CF_DrawPath CF_CALL cf_draw_path_end(void);
+
+/**
+ * @function cf_draw_path_fill
+ * @category draw
+ * @brief    Draws a filled vector path under the current draw transform and color.
+ * @remarks  Fills by the nonzero winding rule; holes come from opposite-wound inner contours.
+ * @related  CF_DrawPath cf_draw_path_fill cf_draw_path cf_destroy_path
+ */
+CF_API void CF_CALL cf_draw_path_fill(CF_DrawPath path);
+
+/**
+ * @function cf_draw_path
+ * @category draw
+ * @brief    Draws a vector path as a stroked outline of the given thickness.
+ * @related  CF_DrawPath cf_draw_path_fill cf_draw_path cf_destroy_path
+ */
+CF_API void CF_CALL cf_draw_path(CF_DrawPath path, float thickness);
+
+/**
+ * @function cf_destroy_path
+ * @category draw
+ * @brief    Frees a baked vector path.
+ * @related  CF_DrawPath cf_draw_path_begin cf_draw_path_end cf_draw_path_fill cf_draw_path
+ */
+CF_API void CF_CALL cf_destroy_path(CF_DrawPath path);
+
+/**
+ * @struct   CF_DrawList
+ * @category draw
+ * @brief    A retained list of recorded draw calls, replayable each frame for ~zero CPU cost.
+ * @remarks  CF is immediate-mode: every frame normally re-records everything. A draw list captures
+ *           a static snapshot once -- shapes, sprites, text, paths, along with their layers,
+ *           colors, and transforms -- and replays it under the current camera with a single call.
+ *           Static content (tilemaps, level geometry, UI chrome, backgrounds) skips all of its
+ *           per-frame record cost: no transform math, no text layout, no per-object draw calls.
+ * @related  CF_DrawList cf_make_draw_list cf_draw_list_begin cf_draw_list_end cf_draw_list cf_destroy_draw_list
+ */
+typedef struct CF_DrawList { uint64_t id; } CF_DrawList;
+// @end
+
+/**
+ * @function cf_make_draw_list
+ * @category draw
+ * @brief    Creates an empty draw list. Fill it with `cf_draw_list_begin`/`cf_draw_list_end`.
+ * @related  CF_DrawList cf_make_draw_list cf_draw_list_begin cf_draw_list_end cf_draw_list cf_destroy_draw_list
+ */
+CF_API CF_DrawList CF_CALL cf_make_draw_list(void);
+
+/**
+ * @function cf_draw_list_begin
+ * @category draw
+ * @brief    Starts recording draw calls into a list, replacing its previous contents.
+ * @remarks  Recording happens in list-local space: the camera resets to identity for the duration,
+ *           and `cf_draw_list` composes the then-current transform onto the recording at replay.
+ *           Text records a static snapshot (animated text effects freeze at record time). Canvas
+ *           blits (`cf_draw_canvas`) cannot be recorded. End with `cf_draw_list_end`.
+ * @related  CF_DrawList cf_make_draw_list cf_draw_list_begin cf_draw_list_end cf_draw_list cf_destroy_draw_list
+ */
+CF_API void CF_CALL cf_draw_list_begin(CF_DrawList list);
+
+/**
+ * @function cf_draw_list_end
+ * @category draw
+ * @brief    Stops recording and bakes the recorded draw calls into the list.
+ * @related  CF_DrawList cf_make_draw_list cf_draw_list_begin cf_draw_list_end cf_draw_list cf_destroy_draw_list
+ */
+CF_API void CF_CALL cf_draw_list_end(void);
+
+/**
+ * @function cf_draw_list
+ * @category draw
+ * @brief    Replays a recorded draw list under the current draw transform.
+ * @remarks  May be called any number of times per frame (each replay is independent), and lists
+ *           may replay inside another list's recording to compose them. Do not destroy a list
+ *           before the frame that replays it finishes rendering.
+ * @related  CF_DrawList cf_make_draw_list cf_draw_list_begin cf_draw_list_end cf_draw_list cf_destroy_draw_list
+ */
+CF_API void CF_CALL cf_draw_list(CF_DrawList list);
+
+/**
+ * @function cf_destroy_draw_list
+ * @category draw
+ * @brief    Frees a draw list.
+ * @related  CF_DrawList cf_make_draw_list cf_draw_list_begin cf_draw_list_end cf_draw_list cf_destroy_draw_list
+ */
+CF_API void CF_CALL cf_destroy_draw_list(CF_DrawList list);
+
+/**
  * @function cf_draw_arrow
  * @category draw
  * @brief    Draws an arrow.
@@ -1645,6 +1808,61 @@ CF_API CF_DrawFilterMode CF_CALL cf_draw_pop_filter(void);
 CF_API CF_DrawFilterMode CF_CALL cf_draw_peek_filter(void);
 
 /**
+ * @enum     CF_DrawBlend
+ * @category draw
+ * @brief    Per-drawable blend modes for the draw system.
+ * @remarks  Unlike `cf_draw_push_render_state` (whole-batch pipeline state), these are recorded per
+ *           drawable and preserve paint order: additive particles can interleave with alpha sprites
+ *           in a single stream of draw calls. All modes composite exactly against prior canvas
+ *           content on every renderer path.
+ * @related  CF_DrawBlend cf_draw_push_blend cf_draw_pop_blend cf_draw_peek_blend
+ */
+#define CF_DRAW_BLEND_DEFS \
+	/* @entry Premultiplied src-over (the default). */                                     \
+	CF_ENUM(DRAW_BLEND_NORMAL,   0)                                                        \
+	/* @entry Additive: brightens what's beneath. Great for glows, fire, and particles. */ \
+	CF_ENUM(DRAW_BLEND_ADD,      1)                                                        \
+	/* @entry Multiply: darkens what's beneath. Great for shadows and vignettes. */        \
+	CF_ENUM(DRAW_BLEND_MULTIPLY, 2)                                                        \
+	/* @entry Screen: inverse multiply. Softer brightening than additive. */               \
+	CF_ENUM(DRAW_BLEND_SCREEN,   3)                                                        \
+	/* @end */
+
+typedef enum CF_DrawBlend
+{
+#define CF_ENUM(K, V) CF_##K = V,
+	CF_DRAW_BLEND_DEFS
+#undef CF_ENUM
+} CF_DrawBlend;
+
+/**
+ * @function cf_draw_push_blend
+ * @category draw
+ * @brief    Sets the blend mode for subsequent draw calls.
+ * @param    blend      The blend mode to use. See `CF_DrawBlend`.
+ * @remarks  Applies to shapes, sprites, text, and paths alike. Paint order is preserved across
+ *           mode changes within a frame.
+ * @related  CF_DrawBlend cf_draw_push_blend cf_draw_pop_blend cf_draw_peek_blend
+ */
+CF_API void CF_CALL cf_draw_push_blend(CF_DrawBlend blend);
+
+/**
+ * @function cf_draw_pop_blend
+ * @category draw
+ * @brief    Pops the blend mode stack. See `cf_draw_push_blend`.
+ * @related  CF_DrawBlend cf_draw_push_blend cf_draw_pop_blend cf_draw_peek_blend
+ */
+CF_API CF_DrawBlend CF_CALL cf_draw_pop_blend(void);
+
+/**
+ * @function cf_draw_peek_blend
+ * @category draw
+ * @brief    Returns the current blend mode without popping the stack.
+ * @related  CF_DrawBlend cf_draw_push_blend cf_draw_pop_blend cf_draw_peek_blend
+ */
+CF_API CF_DrawBlend CF_CALL cf_draw_peek_blend(void);
+
+/**
  * @function cf_draw_set_texture
  * @category draw
  * @brief    Pushes a texture onto a texture slot by name.
@@ -2057,6 +2275,21 @@ CF_INLINE void draw_tri(v2 p0, v2 p1, v2 p2, float thickness = 1.0f, float chubb
 CF_INLINE void draw_tri_fill(v2 p0, v2 p1, v2 p2, float chubbiness = 0) { cf_draw_tri_fill(p0, p1, p2, chubbiness); }
 CF_INLINE void draw_line(v2 p0, v2 p1, float thickness = 1.0f) { cf_draw_line(p0, p1, thickness); }
 CF_INLINE void draw_polyline(const v2* points, int count, float thickness = 1.0f, bool loop = false) { cf_draw_polyline(points, count, thickness, loop); }
+CF_INLINE void draw_path_begin() { cf_draw_path_begin(); }
+CF_INLINE void draw_path_move_to(v2 p) { cf_draw_path_move_to(p); }
+CF_INLINE void draw_path_line_to(v2 p) { cf_draw_path_line_to(p); }
+CF_INLINE void draw_path_quad_to(v2 c, v2 p) { cf_draw_path_quad_to(c, p); }
+CF_INLINE void draw_path_cubic_to(v2 c0, v2 c1, v2 p) { cf_draw_path_cubic_to(c0, c1, p); }
+CF_INLINE void draw_path_close() { cf_draw_path_close(); }
+CF_INLINE CF_DrawPath draw_path_end() { return cf_draw_path_end(); }
+CF_INLINE void draw_path_fill(CF_DrawPath path) { cf_draw_path_fill(path); }
+CF_INLINE void draw_path(CF_DrawPath path, float thickness = 1.0f) { cf_draw_path(path, thickness); }
+CF_INLINE void destroy_path(CF_DrawPath path) { cf_destroy_path(path); }
+CF_INLINE CF_DrawList make_draw_list() { return cf_make_draw_list(); }
+CF_INLINE void draw_list_begin(CF_DrawList list) { cf_draw_list_begin(list); }
+CF_INLINE void draw_list_end() { cf_draw_list_end(); }
+CF_INLINE void draw_list(CF_DrawList list) { cf_draw_list(list); }
+CF_INLINE void destroy_draw_list(CF_DrawList list) { cf_destroy_draw_list(list); }
 CF_INLINE void draw_polygon_fill(const v2* points, int count, float chubbiness) { cf_draw_polygon_fill(points, count, chubbiness); }
 CF_INLINE void draw_polygon_fill_simple(const v2* points, int count) { cf_draw_polygon_fill_simple(points, count); }
 CF_INLINE void draw_bezier_line(v2 a, v2 c0, v2 b, int iters, float thickness) { cf_draw_bezier_line(a, c0, b, iters, thickness); }
@@ -2137,6 +2370,9 @@ CF_INLINE void push_text_stroke(float stroke) { cf_push_text_stroke(stroke); }
 CF_INLINE float pop_text_stroke() { return cf_pop_text_stroke(); }
 CF_INLINE float peek_text_stroke() { return cf_peek_text_stroke(); }
 
+CF_INLINE void draw_push_blend(CF_DrawBlend blend) { cf_draw_push_blend(blend); }
+CF_INLINE CF_DrawBlend draw_pop_blend() { return cf_draw_pop_blend(); }
+CF_INLINE CF_DrawBlend draw_peek_blend() { return cf_draw_peek_blend(); }
 CF_INLINE void draw_push_viewport(CF_Rect viewport) { cf_draw_push_viewport(viewport); }
 CF_INLINE CF_Rect draw_pop_viewport() { return cf_draw_pop_viewport(); }
 CF_INLINE CF_Rect draw_peek_viewport() { return cf_draw_peek_viewport(); }
