@@ -881,20 +881,6 @@ void* cf_app_init_imgui()
 	return (void*)::ImGui::GetCurrentContext();
 }
 
-CF_PowerState CF_CALL cf_power_state_from_sdl(SDL_PowerState state)
-{
-	CF_PowerState result = CF_POWER_STATE_UNKNOWN;
-	switch (state) {
-	case SDL_POWERSTATE_ERROR: result = CF_POWER_STATE_ERROR; break;
-	case SDL_POWERSTATE_UNKNOWN: result = CF_POWER_STATE_UNKNOWN; break;
-	case SDL_POWERSTATE_ON_BATTERY: result = CF_POWER_STATE_ON_BATTERY; break;
-	case SDL_POWERSTATE_NO_BATTERY: result = CF_POWER_STATE_NO_BATTERY; break;
-	case SDL_POWERSTATE_CHARGING: result = CF_POWER_STATE_CHARGING; break;
-	case SDL_POWERSTATE_CHARGED: result = CF_POWER_STATE_CHARGED; break;
-	}
-	return result;
-}
-
 CF_PowerInfo cf_app_power_info()
 {
 	CF_PowerInfo info;

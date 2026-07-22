@@ -35,9 +35,22 @@ CF_API extern struct CF_App* app;
 // an explicit size via cf_app_set_canvas_size(). Called on init and whenever pixel_scale changes.
 void cf_app_recreate_default_canvas_if_needed();
 
-// Maps an SDL_PowerState to the corresponding CF_PowerState. Unit-tested in
-// test/test_app.cpp. CF_API so the tests still link when CF builds as a shared library.
-CF_API CF_PowerState CF_CALL cf_power_state_from_sdl(SDL_PowerState state);
+// Maps an SDL_PowerState to the corresponding CF_PowerState. Header-inline (rather than
+// CF_API) so it stays testable from test/test_app.cpp without crossing the shared-library
+// export boundary.
+CF_INLINE CF_PowerState cf_power_state_from_sdl(SDL_PowerState state)
+{
+	CF_PowerState result = CF_POWER_STATE_UNKNOWN;
+	switch (state) {
+	case SDL_POWERSTATE_ERROR: result = CF_POWER_STATE_ERROR; break;
+	case SDL_POWERSTATE_UNKNOWN: result = CF_POWER_STATE_UNKNOWN; break;
+	case SDL_POWERSTATE_ON_BATTERY: result = CF_POWER_STATE_ON_BATTERY; break;
+	case SDL_POWERSTATE_NO_BATTERY: result = CF_POWER_STATE_NO_BATTERY; break;
+	case SDL_POWERSTATE_CHARGING: result = CF_POWER_STATE_CHARGING; break;
+	case SDL_POWERSTATE_CHARGED: result = CF_POWER_STATE_CHARGED; break;
+	}
+	return result;
+}
 
 struct CF_MouseState
 {
