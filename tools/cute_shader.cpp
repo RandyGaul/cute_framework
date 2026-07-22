@@ -365,7 +365,7 @@ CF_ShaderCompilerResult cute_shader_compile(const char* source, CF_ShaderCompile
 	spvc_context spvc = NULL;
 	char* glsl300_src = NULL;
 	size_t glsl300_src_size = 0;
-	if (stage != CUTE_SHADER_STAGE_COMPUTE) {
+	if (stage != CUTE_SHADER_STAGE_COMPUTE && !config.skip_glsl300) {
 	spvc_context_create(&spvc);
 	{
 		spvc_parsed_ir ir = NULL;
@@ -577,14 +577,20 @@ CF_ShaderCompilerResult cute_shader_compile(const char* source, CF_ShaderCompile
 			SpvReflectInterfaceVariable** reflected_inputs = (SpvReflectInterfaceVariable**)malloc(num_inputs * sizeof(SpvReflectInterfaceVariable*));
 			spvReflectEnumerateInputVariables(&module, &num_inputs, reflected_inputs);
 			inputs = (CF_ShaderInputInfo*)malloc(sizeof(CF_ShaderInputInfo) * num_inputs);
+			uint32_t write_index = 0;
 			for (uint32_t input_index = 0; input_index < num_inputs; ++input_index) {
 				SpvReflectInterfaceVariable* reflected_input = reflected_inputs[input_index];
 
-				CF_ShaderInputInfo* input = &inputs[input_index];
+				// Skip builtins (gl_VertexIndex, gl_InstanceIndex, ...) -- they are not
+				// vertex attributes and must not count against the mesh layout.
+				if (reflected_input->built_in != -1) continue;
+
+				CF_ShaderInputInfo* input = &inputs[write_index++];
 				input->name = strdup(reflected_input->name);
 				input->location = reflected_input->location;
 				input->format = cute_shader::s_wrap(reflected_input->format);
 			}
+			num_inputs = write_index;
 			free(reflected_inputs);
 		}
 

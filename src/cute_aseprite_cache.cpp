@@ -337,11 +337,11 @@ void cf_aseprite_cache_unload(const char* aseprite_path)
 
 	CF_SpriteAsset* asset = g_ase_cache->assets + *asset_id_ptr;
 
-	// Invalidate all frame IDs in the spritebatch.
+	// Invalidate all frame IDs in the atlas_cache.
 	for (int i = 0; i < asize(asset->frame_ids); ++i) {
 		uint64_t id = asset->frame_ids[i];
 		g_ase_cache->id_to_pixels.remove(id);
-		spritebatch_invalidate(&s_draw->sb, id);
+		atlas_cache_invalidate(&s_draw->sb, id);
 	}
 
 	s_free_asset(asset);
@@ -376,7 +376,7 @@ void cf_aseprite_cache_reload_asset(uint64_t asset_id, ase_t* new_ase)
 	for (int i = 0; i < common; ++i) {
 		uint64_t id = asset->frame_ids[i];
 		g_ase_cache->id_to_pixels.insert(id, new_ase->frames[i].pixels);
-		spritebatch_invalidate(&s_draw->sb, id);
+		atlas_cache_invalidate(&s_draw->sb, id);
 	}
 
 	// Allocate new IDs for additional frames.
@@ -390,7 +390,7 @@ void cf_aseprite_cache_reload_asset(uint64_t asset_id, ase_t* new_ase)
 	for (int i = common; i < old_count; ++i) {
 		uint64_t id = asset->frame_ids[i];
 		g_ase_cache->id_to_pixels.remove(id);
-		spritebatch_invalidate(&s_draw->sb, id);
+		atlas_cache_invalidate(&s_draw->sb, id);
 	}
 	if (new_count < old_count) {
 		asetlen(asset->frame_ids, new_count);

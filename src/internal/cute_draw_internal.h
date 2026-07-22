@@ -10,6 +10,7 @@
 
 #include <cute_array.h>
 #include <cute_math.h>
+#include <cute_string.h>
 #include <cute_draw.h>
 #include <cute_graphics.h>
 
@@ -27,14 +28,37 @@ enum BatchGeometryType : int
 	BATCH_GEOMETRY_TYPE_CAPSULE,
 	BATCH_GEOMETRY_TYPE_SEGMENT,
 	BATCH_GEOMETRY_TYPE_POLYGON,
+
+	// Polyline body: one capsule SDF clipped by hard bisector planes at interior
+	// joints. The bisector partition assigns every pixel to exactly one segment
+	// (translucent strokes never double-blend), and round joins/caps fall out of the
+	// capsule SDF clamping to the joint point -- no joint triangulation.
+	// shape[0]=a, shape[1]=b, shape[2]=plane0 n, shape[3]=plane1 n, shape[4]=(d0, d1).
+	// Mask keeps dot(n0,p)-d0 < 0 (strict) and dot(n1,p)-d1 <= 0, so the shared
+	// boundary belongs to exactly one side. Disabled planes: n=(0,0), d=1.
+	BATCH_GEOMETRY_TYPE_SEGMENT_CLIPPED,
+
+	// Directed arrow: capsule shaft unioned with a triangular head in one SDF command
+	// (no double-blend at the shaft/head seam). shape[0]=a, shape[1]=b,
+	// shape[2]=(shaft radius, head length/half-width).
+	BATCH_GEOMETRY_TYPE_ARROW,
+
+	// User-registered SDF (cf_make_custom_shape). shape[0..7] carry the 16 user params
+	// verbatim, n is the registry dispatch index, box holds the caller's pre-padded
+	// world bounds (also uploaded as payload P4 for the instanced VS coverage quad).
+	BATCH_GEOMETRY_TYPE_CUSTOM,
+
+	// CSG shape group head (cf_draw_shape_group_begin/end): one command compositing the
+	// `n` operand geoms that immediately follow it in the geometry stream (each tagged
+	// csg_operand with its own csg_op/csg_k). box holds the pre-padded union bounds.
+	BATCH_GEOMETRY_TYPE_CSG,
 };
 
 struct BatchGeometry
 {
 	BatchGeometryType type;
 	CF_Pixel color;
-	CF_V2 box[4];
-	CF_V2 boxH[4];
+	CF_V2 box[4]; // World-space AABB coverage corners.
 	int n; // Only needed/used for polygon.
 	CF_V2 shape[8];
 	float alpha;
@@ -43,20 +67,38 @@ struct BatchGeometry
 	float aa;
 	bool is_text;
 	bool is_sprite;
-	CF_Pixel text_colors[4]; // Per-corner: TL, TR, BR, BL (for text glyphs)
 	bool fill;
 	bool use_tri_colors;      // Per-vertex colors for triangles.
 	bool use_tri_attributes;  // Per-vertex attributes for triangles.
+	bool csg_operand;         // Operand of a preceding CSG head; skipped by direct walks.
+	int csg_op;               // CF_ShapeOp folding this operand into the running distance.
+	float csg_k;              // Smoothing constant for csg_op (0 = hard min/max).
 	CF_Color user_params;
-	CF_Pixel tri_colors[3];      // Per-vertex colors (only for BATCH_GEOMETRY_TYPE_TRI).
-	CF_Color tri_attributes[3];  // Per-vertex attributes (only for BATCH_GEOMETRY_TYPE_TRI).
-	float uv_bounds[4]; // uv_min.xy, uv_max.zw. Zero for shapes.
+	// Text glyphs and raw triangles are mutually exclusive; overlay their extras.
+	union {
+		struct {
+			CF_Pixel text_colors[4]; // Per-corner: TL, TR, BR, BL (for text glyphs).
+		};
+		struct {
+			CF_Pixel tri_colors[3];      // Per-vertex colors (only for BATCH_GEOMETRY_TYPE_TRI).
+			CF_Color tri_attributes[3];  // Per-vertex attributes (only for BATCH_GEOMETRY_TYPE_TRI).
+		};
+	};
+	CF_M3x2 mvp; // Record-time camera transform. The command paths invert this on the
+	             // GPU to recover world space per-pixel for SDF evaluation.
 };
 
-#define SPRITEBATCH_SPRITE_GEOMETRY BatchGeometry
+// The atlas cache carries only an index back into the
+// unified geometry stream (CF_Command::geoms). Atlas uvs come back via the callback.
+struct CF_AtlasEntrySeq
+{
+	int seq;
+};
 
-#define SPRITEBATCH_ASSERT CF_ASSERT
-#include <cute/cute_spritebatch.h>
+#define ATLAS_CACHE_ENTRY_GEOMETRY CF_AtlasEntrySeq
+
+#define ATLAS_CACHE_ASSERT CF_ASSERT
+#include <cute/cute_atlas_cache.h>
 
 struct CF_Strike
 {
@@ -64,6 +106,63 @@ struct CF_Strike
 	float thickness;
 	CF_Color color;
 };
+
+// Per-flush sprite/text atlas record, parallel to CF_Draw::pending_geoms. Filled by the
+// atlas_cache callbacks; texture_id stays 0 for shapes.
+struct CF_PendingUV
+{
+	uint64_t texture_id;
+	float minx, miny, maxx, maxy;
+	int tex_w, tex_h;
+};
+
+//--------------------------------------------------------------------------------------------------
+// Command renderer (see s_draw_report_tiled in cute_draw.cpp).
+//
+// Every drawable uploads one compact command plus a small payload. Two GPU paths share
+// that upload: the instanced path expands coverage quads in the vertex shader and
+// rasterizes (best at moderate overdraw), while the tiled path bins commands into
+// per-16px-tile lists with compute and composites in-register per pixel (best when its
+// opaque-cover cull engages). Auto routing picks per batch; both preserve paint order.
+
+#define CF_TILE_PX 16 // Tile size in pixels. Must be even (keeps 2x2 fragment quads within one tile).
+
+// Mirrors the `Cmd` struct in the s_tile_fs builtin shader (std430, four vec4s).
+struct CF_TileCmd
+{
+	float aabb[4];    // Pixel-space bounds, top-left origin: min.xy, max.xy.
+	uint32_t type;    // Shape type id, 0-10 (see s_tile_fs / s_inst_vs).
+	uint32_t color;   // rgba8
+	uint32_t payload; // Offset into the payload buffer, in vec4 units.
+	uint32_t inv_mvp; // Offset of the inverse mvp (2 vec4s) in the payload buffer. SDF shapes only.
+	float radius, stroke, aa, alpha;
+	float fill, n, opaque, unused1; // opaque: filled SDF shape at full alpha -- opaque-cover cull candidate.
+	float user[4]; // User params (ShaderParams.attributes for custom draw shaders).
+};
+
+struct CF_TileV4 { float x, y, z, w; };
+
+// Pure helpers, unit-tested in test/test_draw_tiled.cpp. CF_API so the tests still
+// link when CF builds as a shared library.
+
+// Inclusive tile bounds covering a pixel-space AABB. Returns false when fully outside the grid.
+CF_API bool CF_CALL cf_tile_range(float min_x, float min_y, float max_x, float max_y, int tiles_x, int tiles_y, int* x0, int* y0, int* x1, int* y1);
+
+// Runtime toggles for tests, samples, and perf comparison. The setters force a path;
+// cf_draw_set_tiled_auto restores the default per-batch heuristics (tiled only when
+// opaque-cover culling looks profitable; GPU binning for big-footprint batches).
+CF_API void CF_CALL cf_draw_set_tiled_enabled(bool enabled);
+CF_API bool CF_CALL cf_draw_get_tiled_enabled();
+CF_API bool CF_CALL cf_draw_tiled_available();
+CF_API void CF_CALL cf_draw_set_tiled_auto();
+
+// Overrides the tiled batch footprint budget (bin list entries; see CF_Draw). Tests use
+// a tiny budget to exercise the instanced fallback.
+CF_API void CF_CALL cf_draw_set_tiled_list_budget(uint64_t entries);
+
+// Returns and resets per-interval counters: batches drawn via the tile walk, batches
+// drawn via the instanced path, and bytes uploaded. Call once per frame for stats.
+CF_API void CF_CALL cf_draw_tiled_stats(int* tiled_batches, int* instanced_batches, uint64_t* upload_bytes);
 
 struct CF_DrawUniform
 {
@@ -87,17 +186,25 @@ struct CF_Command
 	CF_DrawFilterMode filter_mode = CF_DRAW_FILTER_SMOOTH;
 	CF_RenderState render_state;
 	CF_Shader shader;
-	Cute::Array<spritebatch_sprite_t> items;
+	Cute::Array<atlas_cache_entry_t> items; // Sprite/text atlas entries; geom.seq indexes `geoms`.
 	CF_DrawUniform u;
 	bool is_canvas = false;
 	CF_Canvas canvas = { 0 };
 	CF_V2 canvas_verts[4];
 	CF_V2 canvas_verts_posH[4];
 	CF_Color canvas_attributes = cf_color_clear();
+	// Every drawable's geometry in record (paint) order -- shapes, sprites, text.
+	// Sprites/text additionally have an `items` atlas entry whose seq indexes here.
+	Cute::Array<BatchGeometry> geoms;
 };
 
+// Pushes a sprite/text atlas entry whose geometry was just appended via s_push_geom().
 #define DRAW_PUSH_ITEM(s) \
-	s_draw->cmds.last().items.add(s)
+	do { \
+		CF_Command& cmd__ = s_draw->cmds.last(); \
+		(s).geom.seq = cmd__.geoms.count() - 1; \
+		cmd__.items.add(s); \
+	} while (0)
 
 #define PUSH_DRAW_VAR(var) \
 	s_draw->var##s.add(var)
@@ -150,12 +257,10 @@ struct CF_Draw
 	int cmd_index = 0;
 	int draw_item_order = 0;
 	Cute::Array<CF_Command> cmds;
-	Cute::Array<CF_Vertex> verts;
 	CF_V2 atlas_dims = cf_v2(2048, 2048);
 	CF_V2 texel_dims = cf_v2(1.0f/2048.0f, 1.0f/2048.0f);
 	bool delay_defrag = false;
-	spritebatch_t sb;
-	CF_Mesh mesh;
+	atlas_cache_t sb;
 	CF_Material material;
 	CF_Arena uniform_arena;
 	Cute::Array<float> alpha_discards = { 1.0f };
@@ -191,13 +296,57 @@ struct CF_Draw
 	Cute::Array<CF_Strike> strikes;
 	Cute::Array<bool> text_effects = { true };
 	Cute::Map<CF_AtlasSubImage> premade_sub_image_id_to_sub_image;
+	// User SDF snippets registered via cf_make_custom_shape, in dispatch-index order.
+	// Stitched into custom_shapes.shd and compiled into every SDF command pipeline.
+	Cute::Array<Cute::String> custom_shape_srcs;
+	// CSG shape group recording state (cf_draw_shape_group_begin/op/end). While active,
+	// SDF shape recorders stage into group_geoms instead of emitting commands.
+	bool shape_group_active = false;
+	int shape_group_op = 0;
+	float shape_group_k = 0;
+	Cute::Array<BatchGeometry> group_geoms;
 	Cute::Map<uint64_t> draw_shd_to_blit_shd;
 	Cute::Map<const char*> shader_paths; // shader.id -> interned file path for reload
 	bool blit_init = false;
 	CF_Mesh blit_mesh = { 0 };
-	CF_VertexFn* vertex_fn = NULL;
 	bool need_flush = false;
 	bool has_drawn_something = false;
+
+	// All geometry for the current flush run in paint order, with a parallel per-entry
+	// uv record for sprites/text (filled by the atlas callbacks; texture_id 0 for
+	// shapes). After the flush the stream renders in paint order, splitting into a new
+	// draw wherever the bound atlas texture changes -- paint order holds across atlas
+	// textures.
+	Cute::Array<BatchGeometry> pending_geoms;
+	Cute::Array<CF_PendingUV> pending_uvs;
+	CF_Texture white_texture = { 0 }; // Bound as u_image for shape-only draws.
+
+	// Tiled renderer state. Modes: 0 = auto (per-batch profitability heuristics),
+	// 1 = force off/CPU, 2 = force on/GPU.
+	bool tiled_available = false;
+	int tiled_mode = 0;     // Auto routes a batch tiled only when opaque-cover culling looks profitable.
+	int tiled_threshold = 1; // Minimum batch item count to take the tiled path.
+	// Max sum of per-command tile footprints for a tiled batch (bin list entries, 4B
+	// each; 8M = 32MB). Batches over budget route instanced -- correctness never
+	// depends on the tiled path, so the cap only trades its opaque-cover cull away.
+	uint64_t tiled_list_budget = 8 * 1024 * 1024;
+	CF_RenderState default_render_state;
+	CF_Mesh tile_mesh = { 0 }; // Fullscreen triangle.
+	CF_Mesh corner_mesh = { 0 }; // Six corner indices; instanced command-fed mesh path.
+	bool instanced_available = false;
+	CF_Material tile_material_cs = { 0 }; // Uniforms for the binning compute dispatches.
+	CF_StorageBuffer tile_cmds_buf = { 0 };
+	CF_StorageBuffer tile_payload_buf = { 0 };
+	CF_StorageBuffer tile_headers_buf = { 0 };
+	CF_StorageBuffer tile_list_buf = { 0 };
+	int tile_headers_cap = 0; // Byte capacities for the GPU-written buffers.
+	int tile_list_cap = 0;
+	Cute::Array<CF_TileCmd> tile_cmds;
+	Cute::Array<CF_TileV4> tile_payload;
+	// Per-frame stats for perf inspection (reset in cf_app_draw_onto_screen path).
+	int tiled_batch_count = 0;
+	int instanced_batch_count = 0;
+	uint64_t tiled_upload_bytes = 0;
 
 	// Samplers for filter mode (backend-specific, stored as void* for cross-platform compatibility)
 	void* sampler_nearest = NULL;
@@ -221,8 +370,8 @@ void cf_destroy_draw();
 #define CF_PREMADE_ID_RANGE_LO   (CF_EASY_ID_RANGE_HI     + 1)
 #define CF_PREMADE_ID_RANGE_HI   (CF_PREMADE_ID_RANGE_LO  + CF_IMAGE_ID_RANGE_SIZE)
 
-SPRITEBATCH_U64 cf_generate_texture_handle(void* pixels, int w, int h, void* udata);
-void cf_destroy_texture_handle(SPRITEBATCH_U64 texture_id, void* udata);
-spritebatch_t* cf_get_draw_sb();
+ATLAS_CACHE_U64 cf_generate_texture_handle(void* pixels, int w, int h, void* udata);
+void cf_destroy_texture_handle(ATLAS_CACHE_U64 texture_id, void* udata);
+atlas_cache_t* cf_get_draw_atlas_cache();
 
 #endif // CF_DRAW_INTERNAL_H

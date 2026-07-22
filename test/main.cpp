@@ -41,6 +41,7 @@ TEST_SUITE(test_sprite);
 TEST_SUITE(test_string);
 TEST_SUITE(test_json);
 TEST_SUITE(test_markups);
+TEST_SUITE(test_draw_tiled);
 TEST_SUITE(test_math);
 extern "C" {
 TEST_SUITE(test_math_c);
@@ -86,6 +87,7 @@ int main(int argc, char* argv[])
 	RUN_TRACED(test_string);
 	RUN_TRACED(test_json);
 	RUN_TRACED(test_markups);
+	RUN_TRACED(test_draw_tiled);
 	RUN_TRACED(test_math);
 	RUN_TRACED(test_math_c);
 	RUN_TRACED(test_ckit);

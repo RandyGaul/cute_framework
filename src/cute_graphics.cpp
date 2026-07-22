@@ -111,7 +111,11 @@ static CF_ShaderCompilerVfs s_cute_shader_vfs = {
 };
 #endif
 
-static CF_ShaderBytecode cf_compile_shader_to_bytecode_internal(const char* shader_src, CF_ShaderStage cf_stage, const char* user_shd)
+// Generated source for the custom_shapes.shd builtin include; NULL until the first
+// cf_make_custom_shape() registration. Owned here (heap copy).
+static char* s_custom_shapes_src = NULL;
+
+static CF_ShaderBytecode cf_compile_shader_to_bytecode_internal(const char* shader_src, CF_ShaderStage cf_stage, const char* user_shd, bool skip_glsl300 = false)
 {
 #ifdef CF_RUNTIME_SHADER_COMPILATION
 	CF_ShaderCompilerStage stage = CUTE_SHADER_STAGE_VERTEX;
@@ -128,6 +132,10 @@ static CF_ShaderBytecode cf_compile_shader_to_bytecode_internal(const char* shad
 	// Use user shader as stub if provided
 	for (int i = 0; i < num_builtin_includes; ++i) {
 		builtin_includes[i] =  s_builtin_includes[i];
+		// Registered custom shapes (cf_make_custom_shape) replace the empty stub.
+		if (s_custom_shapes_src && CF_STRCMP(builtin_includes[i].name, "custom_shapes.shd") == 0) {
+			builtin_includes[i].content = s_custom_shapes_src;
+		}
 	}
 	CF_ShaderCompilerFile shader_stub;
 	shader_stub.name = "shader_stub.shd";
@@ -140,9 +148,15 @@ static CF_ShaderBytecode cf_compile_shader_to_bytecode_internal(const char* shad
 		include_dirs[num_include_dirs++] = app->shader_directory.c_str();
 	}
 
+	// See cf_compute_payload_binding: the draw shader's payload storage buffer binds
+	// right after the user stub's last declared sampler.
+	char payload_binding_str[16];
+	snprintf(payload_binding_str, sizeof(payload_binding_str), "%d", user_shd ? cf_compute_payload_binding(user_shd) : 1);
+	CF_ShaderCompilerDefine payload_define = { "CF_PAYLOAD_BINDING", payload_binding_str };
+
 	CF_ShaderCompilerConfig config = {
-		.num_builtin_defines = 0,
-		.builtin_defines = NULL,
+		.num_builtin_defines = 1,
+		.builtin_defines = &payload_define,
 
 		.num_builtin_includes = num_builtin_includes,
 		.builtin_includes = builtin_includes,
@@ -152,6 +166,8 @@ static CF_ShaderBytecode cf_compile_shader_to_bytecode_internal(const char* shad
 
 		.automatic_include_guard = true,
 		.return_preprocessed_source = false,
+
+		.skip_glsl300 = skip_glsl300,
 
 		.vfs = &s_cute_shader_vfs,
 	};
@@ -174,14 +190,14 @@ static CF_ShaderBytecode cf_compile_shader_to_bytecode_internal(const char* shad
 #endif
 }
 
-CF_Shader cf_make_shader_from_source_internal(const char* vs_src, const char* fs_src, const char* user_shd)
+CF_Shader cf_make_shader_from_source_internal(const char* vs_src, const char* fs_src, const char* user_shd, bool no_gles)
 {
-	CF_ShaderBytecode vs_bytecode = cf_compile_shader_to_bytecode_internal(vs_src, CF_SHADER_STAGE_VERTEX, NULL);
+	CF_ShaderBytecode vs_bytecode = cf_compile_shader_to_bytecode_internal(vs_src, CF_SHADER_STAGE_VERTEX, NULL, no_gles);
 	if (vs_bytecode.content == NULL) {
 		CF_Shader result = { 0 };
 		return result;
 	}
-	CF_ShaderBytecode fs_bytecode = cf_compile_shader_to_bytecode_internal(fs_src, CF_SHADER_STAGE_FRAGMENT, user_shd);
+	CF_ShaderBytecode fs_bytecode = cf_compile_shader_to_bytecode_internal(fs_src, CF_SHADER_STAGE_FRAGMENT, user_shd, no_gles);
 	if (fs_bytecode.content == NULL) {
 		cf_free_shader_bytecode(vs_bytecode);
 		CF_Shader result = { 0 };
@@ -214,21 +230,107 @@ void cf_load_internal_shaders()
 #ifdef CF_RUNTIME_SHADER_COMPILATION
 	cute_shader_init();
 
-	// Compile built-in shaders.
-	app->draw_shader = cf_make_shader_from_source_internal(s_draw_vs, s_draw_fs, NULL);
+	// Compile built-in shaders. The draw shader is the instanced command-fed pair. On
+	// GLES3/WebGL2 (no storage buffers, no compute) a texel-fetch flavor of the same
+	// pair runs instanced-only; the tiled path needs the binning compute shaders.
 	app->blit_shader = cf_make_shader_from_source_internal(s_blit_vs, s_blit_fs, NULL);
+	if (app->gfx_backend_type == CF_BACKEND_TYPE_GLES3) {
+		app->draw_shader = cf_make_shader_from_source_internal(s_inst_vs_gles, s_draw_fs_gles, NULL);
+	} else {
+		app->draw_shader = cf_make_shader_from_source_internal(s_inst_vs, s_draw_fs, NULL, /*no_gles*/ true);
+		app->tile_shader = cf_make_shader_from_source_internal(s_tile_vs, s_tile_fs, NULL, /*no_gles*/ true);
+		app->tile_zero_cs = cf_make_compute_shader_from_source(s_tile_zero_cs);
+		app->tile_count_cs = cf_make_compute_shader_from_source(s_tile_count_cs);
+		app->tile_scan_cs = cf_make_compute_shader_from_source(s_tile_scan_cs);
+		app->tile_gather_cs = cf_make_compute_shader_from_source(s_tile_gather_cs);
+	}
 #else
-	app->draw_shader = cf_make_shader_from_bytecode(s_draw_vs_bytecode, s_draw_fs_bytecode);
 	app->blit_shader = cf_make_shader_from_bytecode(s_blit_vs_bytecode, s_blit_fs_bytecode);
+	if (app->gfx_backend_type == CF_BACKEND_TYPE_GLES3) {
+		app->draw_shader = cf_make_shader_from_bytecode(s_draw_gles_vs_bytecode, s_draw_gles_fs_bytecode);
+	} else {
+		app->draw_shader = cf_make_shader_from_bytecode(s_draw_vs_bytecode, s_draw_fs_bytecode);
+		app->tile_shader = cf_make_shader_from_bytecode(s_tile_vs_bytecode, s_tile_fs_bytecode);
+		app->tile_zero_cs = cf_make_compute_shader_from_bytecode(s_tile_zero_cs_bytecode);
+		app->tile_count_cs = cf_make_compute_shader_from_bytecode(s_tile_count_cs_bytecode);
+		app->tile_scan_cs = cf_make_compute_shader_from_bytecode(s_tile_scan_cs_bytecode);
+		app->tile_gather_cs = cf_make_compute_shader_from_bytecode(s_tile_gather_cs_bytecode);
+	}
 #endif
 }
 
 void cf_destroy_shader_internal(CF_Shader shader_handle);
 
+// Rebuilds every pipeline that evaluates SDF commands with new custom_shapes.shd content
+// (see cf_make_custom_shape). Compile-then-swap: on any failure the old pipelines and old
+// include content stay live and this returns false.
+bool cf_recompile_draw_pipelines(const char* custom_shapes_src)
+{
+#ifdef CF_RUNTIME_SHADER_COMPILATION
+	if (!app->draw_shader.id) return false;
+	char* prev = s_custom_shapes_src;
+	char* copy = NULL;
+	if (custom_shapes_src) {
+		size_t len = CF_STRLEN(custom_shapes_src);
+		copy = (char*)cf_alloc(len + 1);
+		CF_MEMCPY(copy, custom_shapes_src, len + 1);
+	}
+	s_custom_shapes_src = copy;
+	if (app->gfx_backend_type == CF_BACKEND_TYPE_GLES3) {
+		// GLES runs instanced-only; just the draw pair to rebuild.
+		CF_Shader draw = cf_make_shader_from_source_internal(s_inst_vs_gles, s_draw_fs_gles, NULL);
+		if (!draw.id) {
+			if (copy) cf_free(copy);
+			s_custom_shapes_src = prev;
+			return false;
+		}
+		if (prev) cf_free(prev);
+		cf_destroy_shader_internal(app->draw_shader);
+		app->draw_shader = draw;
+		return true;
+	}
+	CF_Shader draw = cf_make_shader_from_source_internal(s_inst_vs, s_draw_fs, NULL, /*no_gles*/ true);
+	CF_Shader tile = cf_make_shader_from_source_internal(s_tile_vs, s_tile_fs, NULL, /*no_gles*/ true);
+	CF_ComputeShader count_cs = cf_make_compute_shader_from_source(s_tile_count_cs);
+	CF_ComputeShader gather_cs = cf_make_compute_shader_from_source(s_tile_gather_cs);
+	if (!draw.id || !tile.id || !count_cs.id || !gather_cs.id) {
+		if (draw.id) cf_destroy_shader_internal(draw);
+		if (tile.id) cf_destroy_shader_internal(tile);
+		if (count_cs.id) cf_destroy_compute_shader(count_cs);
+		if (gather_cs.id) cf_destroy_compute_shader(gather_cs);
+		if (copy) cf_free(copy);
+		s_custom_shapes_src = prev;
+		return false;
+	}
+	if (prev) cf_free(prev);
+	cf_destroy_shader_internal(app->draw_shader);
+	cf_destroy_shader_internal(app->tile_shader);
+	cf_destroy_compute_shader(app->tile_count_cs);
+	cf_destroy_compute_shader(app->tile_gather_cs);
+	app->draw_shader = draw;
+	app->tile_shader = tile;
+	app->tile_count_cs = count_cs;
+	app->tile_gather_cs = gather_cs;
+	return true;
+#else
+	CF_UNUSED(custom_shapes_src);
+	return false;
+#endif
+}
+
 void cf_unload_internal_shaders()
 {
-	cf_destroy_shader_internal(app->draw_shader);
+	if (app->draw_shader.id) cf_destroy_shader_internal(app->draw_shader);
 	cf_destroy_shader_internal(app->blit_shader);
+	if (app->tile_shader.id) cf_destroy_shader_internal(app->tile_shader);
+	if (app->tile_zero_cs.id) cf_destroy_compute_shader(app->tile_zero_cs);
+	if (app->tile_count_cs.id) cf_destroy_compute_shader(app->tile_count_cs);
+	if (app->tile_scan_cs.id) cf_destroy_compute_shader(app->tile_scan_cs);
+	if (app->tile_gather_cs.id) cf_destroy_compute_shader(app->tile_gather_cs);
+	if (s_custom_shapes_src) {
+		cf_free(s_custom_shapes_src);
+		s_custom_shapes_src = NULL;
+	}
 #ifdef CF_RUNTIME_SHADER_COMPILATION
 	cute_shader_cleanup();
 #endif
@@ -279,11 +381,17 @@ CF_Shader cf_make_draw_blit_shader_internal(const char* path)
 
 CF_Shader cf_make_draw_shader_from_source_internal(const char* src)
 {
-	return cf_make_shader_from_source_internal(s_draw_vs, s_draw_fs, src);
+	if (app->gfx_backend_type == CF_BACKEND_TYPE_GLES3) {
+		return cf_make_shader_from_source_internal(s_inst_vs_gles, s_draw_fs_gles, src);
+	}
+	return cf_make_shader_from_source_internal(s_inst_vs, s_draw_fs, src, /*no_gles*/ true);
 }
 
 CF_Shader cf_make_draw_shader_from_bytecode_internal(CF_ShaderBytecode bytecode)
 {
+	if (app->gfx_backend_type == CF_BACKEND_TYPE_GLES3) {
+		return cf_make_shader_from_bytecode(s_draw_gles_vs_bytecode, bytecode);
+	}
 	return cf_make_shader_from_bytecode(s_draw_vs_bytecode, bytecode);
 }
 
@@ -376,6 +484,10 @@ CF_CanvasParams cf_canvas_defaults(int w, int h)
 		params.depth_stencil_target.pixel_format = CF_PIXEL_FORMAT_D16_UNORM;
 		if (cf_texture_supports_format(CF_PIXEL_FORMAT_D24_UNORM_S8_UINT, CF_TEXTURE_USAGE_DEPTH_STENCIL_TARGET_BIT)) {
 			params.depth_stencil_target.pixel_format = CF_PIXEL_FORMAT_D24_UNORM_S8_UINT;
+		} else if (cf_texture_supports_format(CF_PIXEL_FORMAT_D32_FLOAT_S8_UINT, CF_TEXTURE_USAGE_DEPTH_STENCIL_TARGET_BIT)) {
+			// Metal has no D24S8; without this fallback canvases silently lose their
+			// stencil entirely (D16), breaking stencil-based rendering on macOS.
+			params.depth_stencil_target.pixel_format = CF_PIXEL_FORMAT_D32_FLOAT_S8_UINT;
 		}
 		params.depth_stencil_target.usage = CF_TEXTURE_USAGE_DEPTH_STENCIL_TARGET_BIT;
 	}
@@ -747,4 +859,11 @@ CF_DISPATCH_SHIM_VOID(dispatch_compute, (CF_ComputeShader shader, CF_Material ma
 CF_DISPATCH_SHIM(void*, create_draw_sampler, (CF_Filter filter), filter)
 CF_DISPATCH_SHIM_VOID(destroy_draw_sampler, (void* sampler), sampler)
 CF_DISPATCH_SHIM_VOID(set_sampler_override, (void* sampler), sampler)
+
+CF_DISPATCH_SHIM_VOID(apply_fs_storage_buffers, (CF_StorageBuffer* buffers, int count), buffers, count)
+CF_DISPATCH_SHIM_VOID(apply_vs_storage_buffers, (CF_StorageBuffer* buffers, int count), buffers, count)
+CF_DISPATCH_SHIM_VOID(current_canvas_size, (int* w, int* h), w, h)
+CF_DISPATCH_SHIM_VOID(push_gpu_label, (const char* name), name)
+CF_DISPATCH_SHIM_VOID(pop_gpu_label, (), )
+CF_DISPATCH_SHIM_VOID(draw_elements_instanced, (int instance_count), instance_count)
 CF_DISPATCH_SHIM_VOID(gpu_sync, (), )

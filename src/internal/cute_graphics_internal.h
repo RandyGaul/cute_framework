@@ -229,7 +229,10 @@ CF_Shader cf_make_draw_shader_from_bytecode_internal(CF_ShaderBytecode bytecode)
 CF_Shader cf_make_draw_blit_shader_internal(const char* path);
 CF_Shader cf_make_draw_blit_shader_from_source_internal(const char* src);
 CF_Shader cf_make_draw_blit_shader_from_bytecode_internal(CF_ShaderBytecode bytecode);
-CF_Shader cf_make_shader_from_source_internal(const char* vs_src, const char* fs_src, const char* user_shd = NULL);
+CF_Shader cf_make_shader_from_source_internal(const char* vs_src, const char* fs_src, const char* user_shd = NULL, bool no_gles = false);
+// Rebuilds the SDF command pipelines (draw/tile/count/gather) with new custom_shapes.shd
+// content; compile-then-swap, returns false (old pipelines intact) on any failure.
+bool cf_recompile_draw_pipelines(const char* custom_shapes_src);
 void cf_canvas_get_size(CF_Canvas canvas, int* w, int* h);
 void cf_shader_watch();
 
@@ -269,5 +272,21 @@ void cf_gles_cleanup();
 void* cf_create_draw_sampler(CF_Filter filter);
 void cf_destroy_draw_sampler(void* sampler);
 void cf_set_sampler_override(void* sampler);
+
+// Tiled draw path support (see cute_draw.cpp).
+// Binds storage buffers to the fragment stage of the current graphics pipeline, slots
+// starting at 0 (SDL_GPU set = 2, bindings after sampled textures). Call after
+// cf_apply_shader and before cf_draw_elements. No-op on GLES3 (no SSBOs) -- the tiled
+// draw path never selects the GLES backend.
+void cf_apply_fs_storage_buffers(CF_StorageBuffer* buffers, int count);
+// Same, for the vertex stage (SDL_GPU set = 0, bindings after sampled textures).
+void cf_apply_vs_storage_buffers(CF_StorageBuffer* buffers, int count);
+void cf_current_canvas_size(int* w, int* h);
+// GPU timeline debug labels (visible in Nsight/PIX/RenderDoc). No-ops on GLES.
+void cf_push_gpu_label(const char* name);
+void cf_pop_gpu_label();
+// Instanced draw of the currently applied mesh with no per-instance vertex buffer;
+// instance data comes from storage buffers indexed by gl_InstanceIndex.
+void cf_draw_elements_instanced(int instance_count);
 
 #endif // CF_GRAPHICS_INTERNAL_H

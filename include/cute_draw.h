@@ -376,12 +376,164 @@ CF_API void CF_CALL cf_draw_bezier_line2(CF_V2 a, CF_V2 c0, CF_V2 c1, CF_V2 b, i
  * @param    b            The end point.
  * @param    thickness    The thickness of the line to draw.
  * @param    arrow_width  The width of the arrow to draw.
- * @remarks  This function is intended only for debug purposes. It's implemented in a naive way so the
- *           arrow shaft will overdraw atop the arrow head. This will become visible if the arrow is
- *           drawn with any transparency.
+ * @remarks  The arrow renders as a single SDF (shaft and head unioned together), so it blends
+ *           correctly even when drawn with transparency.
  * @related  cf_draw_line cf_draw_polyline cf_draw_bezier_line cf_draw_bezier_line2 cf_draw_arrow
  */
 CF_API void CF_CALL cf_draw_arrow(CF_V2 a, CF_V2 b, float thickness, float arrow_width);
+
+/**
+ * @struct   CF_CustomShape
+ * @category draw
+ * @brief    An opaque handle to a user-registered SDF shape. See `cf_make_custom_shape`.
+ * @related  cf_make_custom_shape cf_draw_custom_shape cf_draw_custom_shape_fill
+ */
+typedef struct CF_CustomShape { uint32_t id; } CF_CustomShape;
+// @end
+
+/**
+ * @function cf_make_custom_shape
+ * @category draw
+ * @brief    Registers a custom SDF shape with the renderer.
+ * @param    sdf_src  GLSL snippet defining `float sdf(vec2 p, ShapeParams s)`.
+ * @return   A handle to draw with via `cf_draw_custom_shape` or `cf_draw_custom_shape_fill`.
+ *           A zero id means registration failed (compile error, or unsupported backend).
+ * @remarks  The snippet must define a signed distance function returning the distance in world
+ *           units from point `p` to the shape's surface (negative inside). `ShapeParams` carries
+ *           the 16 floats passed at draw time as eight `vec2`s named `a` through `h`, plus a
+ *           `vec4 attributes` from `cf_draw_push_vertex_attributes`. The builtin distance helpers
+ *           (`distance_box`, `distance_segment`, `distance_triangle`, `distance_polygon`,
+ *           `distance_arrow`) are available, so most shapes are a few `min`/`max` combinators:
+ *
+ *           ```glsl
+ *           // params: a = center, b.x = radius
+ *           float sdf(vec2 p, ShapeParams s)
+ *           {
+ *               return length(p - s.a) - s.b.x;
+ *           }
+ *           ```
+ *
+ *           The function MUST be a true distance bound (Lipschitz constant <= 1). The renderer
+ *           trusts it for tile binning and occlusion culling; an invalid bound (e.g.
+ *           `|x|+|y| - r`) will drop pixels. All registered shapes batch together with builtin
+ *           shapes, sprites, and text -- no extra draw calls or pipeline switches. Antialiasing,
+ *           stroked outlines, colors, and all draw state apply automatically.
+ *
+ *           Register shapes once at init time (each registration recompiles the renderer's
+ *           internal shaders), and before creating any custom draw shaders. Requires runtime
+ *           shader compilation and a compute-capable backend.
+ * @related  CF_CustomShape cf_draw_custom_shape cf_draw_custom_shape_fill cf_draw_push_vertex_attributes
+ */
+CF_API CF_CustomShape CF_CALL cf_make_custom_shape(const char* sdf_src);
+
+/**
+ * @function cf_draw_custom_shape
+ * @category draw
+ * @brief    Draws the outline of a registered custom SDF shape.
+ * @param    shape        The shape from `cf_make_custom_shape`.
+ * @param    bounds       Conservative world-space bounds of the shape (the renderer pads for
+ *                        stroke and antialias).
+ * @param    thickness    The thickness of the outline stroke.
+ * @param    params       Up to 16 floats delivered to the sdf as `ShapeParams` (a.x, a.y, b.x, ...).
+ * @param    param_count  Number of floats in `params`.
+ * @related  CF_CustomShape cf_make_custom_shape cf_draw_custom_shape_fill
+ */
+CF_API void CF_CALL cf_draw_custom_shape(CF_CustomShape shape, CF_Aabb bounds, float thickness, const float* params, int param_count);
+
+/**
+ * @function cf_draw_custom_shape_fill
+ * @category draw
+ * @brief    Draws a filled registered custom SDF shape.
+ * @param    shape        The shape from `cf_make_custom_shape`.
+ * @param    bounds       Conservative world-space bounds of the shape (the renderer pads for antialias).
+ * @param    params       Up to 16 floats delivered to the sdf as `ShapeParams` (a.x, a.y, b.x, ...).
+ * @param    param_count  Number of floats in `params`.
+ * @related  CF_CustomShape cf_make_custom_shape cf_draw_custom_shape
+ */
+CF_API void CF_CALL cf_draw_custom_shape_fill(CF_CustomShape shape, CF_Aabb bounds, const float* params, int param_count);
+
+/**
+ * @enum     CF_ShapeOp
+ * @category draw
+ * @brief    Boolean operators for composing shapes inside a shape group. See `cf_draw_shape_group_begin`.
+ * @related  CF_ShapeOp cf_draw_shape_group_begin cf_draw_shape_group_op cf_draw_shape_group_end
+ */
+#define CF_SHAPE_OP_DEFS \
+	/* @entry Add the shape to the composite (SDF min). */                    \
+	CF_ENUM(SHAPE_OP_UNION,     0)                                            \
+	/* @entry Carve the shape out of the composite (SDF max(a, -b)). */       \
+	CF_ENUM(SHAPE_OP_SUBTRACT,  1)                                            \
+	/* @entry Keep only the overlap with the composite (SDF max). */          \
+	CF_ENUM(SHAPE_OP_INTERSECT, 2)                                            \
+	/* @end */
+
+typedef enum CF_ShapeOp
+{
+#define CF_ENUM(K, V) CF_##K = V,
+	CF_SHAPE_OP_DEFS
+#undef CF_ENUM
+} CF_ShapeOp;
+
+/**
+ * @function cf_draw_shape_group_begin
+ * @category draw
+ * @brief    Begins a shape group: subsequent SDF shape calls compose with boolean ops into ONE shape.
+ * @remarks  Between begin and `cf_draw_shape_group_end` (or `cf_draw_shape_group_end_stroked`), calls like
+ *           `cf_draw_circle_fill`, `cf_draw_quad_fill`, `cf_draw_tri_fill`, `cf_draw_polygon_fill`,
+ *           `cf_draw_capsule_fill`, `cf_draw_line`, `cf_draw_arrow`, and `cf_draw_custom_shape_fill` record
+ *           operands instead of drawing. The first operand is the base; each following operand folds in with
+ *           the op set by `cf_draw_shape_group_op` (union by default). The composite renders as a single
+ *           command with a single distance field, which means: translucent composites blend exactly once (no
+ *           double-blend at overlaps), and the *whole composite* can be outlined via
+ *           `cf_draw_shape_group_end_stroked` -- impossible with stacked separate draws.
+ *
+ *           A crescent moon in three lines:
+ *
+ *           ```cpp
+ *           cf_draw_shape_group_begin();
+ *           cf_draw_circle_fill2(cf_v2(0, 0), 70);
+ *           cf_draw_shape_group_op(CF_SHAPE_OP_SUBTRACT, 0);
+ *           cf_draw_circle_fill2(cf_v2(-32, 18), 62);
+ *           cf_draw_shape_group_end();
+ *           ```
+ *
+ *           Colors and per-operand strokes of the operand calls are ignored -- the composite takes the draw
+ *           state (color, antialias, layer) at end() time. Sprites, text, and polylines do not join groups
+ *           (they have no single distance function) and draw normally. Do not change the camera between
+ *           begin and end. Bounds are computed automatically from the operands.
+ * @related  CF_ShapeOp cf_draw_shape_group_op cf_draw_shape_group_end cf_draw_shape_group_end_stroked
+ */
+CF_API void CF_CALL cf_draw_shape_group_begin(void);
+
+/**
+ * @function cf_draw_shape_group_op
+ * @category draw
+ * @brief    Sets the boolean op (and optional smoothing) applied to subsequent operands in the current shape group.
+ * @param    op         How following shapes fold into the composite. See `CF_ShapeOp`.
+ * @param    smoothing  0 for hard edges, or a distance (world units) for smooth polynomial blending -- surfaces
+ *                      within `smoothing` of each other melt together (great for organic/metaball looks).
+ * @related  CF_ShapeOp cf_draw_shape_group_begin cf_draw_shape_group_end
+ */
+CF_API void CF_CALL cf_draw_shape_group_op(CF_ShapeOp op, float smoothing);
+
+/**
+ * @function cf_draw_shape_group_end
+ * @category draw
+ * @brief    Ends the current shape group and draws the filled composite as one shape.
+ * @related  CF_ShapeOp cf_draw_shape_group_begin cf_draw_shape_group_op cf_draw_shape_group_end_stroked
+ */
+CF_API void CF_CALL cf_draw_shape_group_end(void);
+
+/**
+ * @function cf_draw_shape_group_end_stroked
+ * @category draw
+ * @brief    Ends the current shape group and draws the composite's outline at the given thickness.
+ * @param    thickness  The stroke thickness.
+ * @remarks  The outline traces the boundary of the boolean result itself -- e.g. the outline of a crescent,
+ *           or of two smoothly-blended blobs, as one continuous stroke.
+ * @related  CF_ShapeOp cf_draw_shape_group_begin cf_draw_shape_group_op cf_draw_shape_group_end
+ */
+CF_API void CF_CALL cf_draw_shape_group_end_stroked(float thickness);
 
 /**
  * @function cf_draw_push_layer
@@ -482,8 +634,7 @@ CF_API float CF_CALL cf_draw_peek_shape_aa(void);
  * @brief    Pushes a set of vertex attributes.
  * @remarks  Each attribute gets copied onto *all* the vertices for everything drawn thereafter. This is useful
  *           for custom shaders that want some extra bits of data sent to the fragment shader. If you want to
- *           customize individual vertices then check out `CF_Vertex`.
- * @related  CF_Vertex cf_draw_push_vertex_attributes cf_draw_push_vertex_attributes2 cf_draw_pop_vertex_attributes cf_draw_peek_vertex_attributes
+ * @related  cf_draw_push_vertex_attributes cf_draw_push_vertex_attributes2 cf_draw_pop_vertex_attributes cf_draw_peek_vertex_attributes
  */
 CF_API void CF_CALL cf_draw_push_vertex_attributes(float r, float g, float b, float a);
 
@@ -493,8 +644,7 @@ CF_API void CF_CALL cf_draw_push_vertex_attributes(float r, float g, float b, fl
  * @brief    Pushes a set of vertex attributes.
  * @remarks  Each attribute gets copied onto *all* the vertices for everything drawn thereafter. This is useful
  *           for custom shaders that want some extra bits of data sent to the fragment shader. If you want to
- *           customize individual vertices then check out `CF_Vertex`.
- * @related  CF_Vertex cf_draw_push_vertex_attributes cf_draw_push_vertex_attributes2 cf_draw_pop_vertex_attributes cf_draw_peek_vertex_attributes
+ * @related  cf_draw_push_vertex_attributes cf_draw_push_vertex_attributes2 cf_draw_pop_vertex_attributes cf_draw_peek_vertex_attributes
  */
 CF_API void CF_CALL cf_draw_push_vertex_attributes2(CF_Color attributes);
 
@@ -502,7 +652,7 @@ CF_API void CF_CALL cf_draw_push_vertex_attributes2(CF_Color attributes);
  * @function cf_draw_pop_vertex_attributes
  * @category draw
  * @brief    Pops the current vertex attribute state, restoring the previous state.
- * @related  CF_Vertex cf_draw_push_vertex_attributes cf_draw_push_vertex_attributes2 cf_draw_pop_vertex_attributes cf_draw_peek_vertex_attributes
+ * @related  cf_draw_push_vertex_attributes cf_draw_push_vertex_attributes2 cf_draw_pop_vertex_attributes cf_draw_peek_vertex_attributes
  */
 CF_API CF_Color CF_CALL cf_draw_pop_vertex_attributes(void);
 
@@ -510,7 +660,7 @@ CF_API CF_Color CF_CALL cf_draw_pop_vertex_attributes(void);
  * @function cf_draw_peek_vertex_attributes
  * @category draw
  * @brief    Returns the current vertex attribute state.
- * @related  CF_Vertex cf_draw_push_vertex_attributes cf_draw_push_vertex_attributes2 cf_draw_pop_vertex_attributes cf_draw_peek_vertex_attributes
+ * @related  cf_draw_push_vertex_attributes cf_draw_push_vertex_attributes2 cf_draw_pop_vertex_attributes cf_draw_peek_vertex_attributes
  */
 CF_API CF_Color CF_CALL cf_draw_peek_vertex_attributes(void);
 
@@ -580,90 +730,6 @@ CF_API void CF_CALL cf_draw_pop_tri_attributes(void);
  * @related  cf_draw_push_tri_attributes cf_draw_pop_tri_attributes cf_draw_peek_tri_attributes cf_draw_tri_fill
  */
 CF_API void CF_CALL cf_draw_peek_tri_attributes(CF_Color* a0, CF_Color* a1, CF_Color* a2);
-
-/**
- * @struct   CF_Vertex
- * @category draw
- * @brief    The full vertex layout CF uses just before sending verts to the GPU.
- * @remarks  You may fill in vertices via callback by `cf_set_vertex_callback`. See `CF_VertexFn`.
- *           This is useful when you need to fill in unique `attributes` per-vertex, or modify any other
- *           bits of the vertex before rendering. This could be used to implement features like dynamically
- *           generated UV's for shape slicing, or complex lighting systems.
- * @related  CF_Vertex CF_VertexFn cf_set_vertex_callback
- */
-typedef struct CF_Vertex
-{
-	/* @member World space position (in_pos_uv.xy). */
-	CF_V2 p;
-
-	/* @member For internal use -- For sprite rendering (in_pos_uv.zw). */
-	CF_V2 uv;
-
-	/* @member For internal use -- For signed-distance functions for rendering shapes. */
-	int n;
-
-	/* @member For internal use -- For signed-distance functions for rendering shapes. */
-	CF_V2 shape[8];
-
-	/* @member Color for rendering shapes (ignored for sprites). */
-	CF_Pixel color;
-
-	/* @member For internal use -- For applying "chubbiness" factor for shapes, or radii on circle/capsule (in_shape.x). */
-	float radius;
-
-	/* @member For internal use -- For shape rendering for border style stroke rendering (in_shape.y). */
-	float stroke;
-
-	/* @member For internal use -- Factor for the size of antialiasing (in_shape.z). */
-	float aa;
-
-	/* @member For internal use -- Shape type for SDF fragment shader (in_shape.w). Stored as float (0-6). */
-	float type;
-
-	/* @member Used for the alpha-component, transparency (in_blend_posH.x). Stored as float 0.0-1.0. */
-	float alpha;
-
-	/* @member For internal use -- Whether or not to render shapes as filled or stroked (in_blend_posH.y). 0.0 or 1.0. */
-	float fill;
-
-	/* @member "Homogenous" position transformed by the camera (in_blend_posH.zw). */
-	CF_V2 posH;
-
-	/* @member Four general purpose floats passed into custom user shaders. */
-	CF_Color attributes;
-
-	/* @member UV bounds for sprite/text glyphs. Zero for shapes. Packed as (uv_min.x, uv_min.y, uv_max.x, uv_max.y). */
-	float uv_bounds[4];
-} CF_Vertex;
-// @end
-
-/**
- * @function CF_VertexFn
- * @category draw
- * @brief    An optional callback for modifying vertices before they are sent to the GPU.
- * @remarks  Setup this callback to apply per-vertex modulations for implementing advanced graphical effects.
- *           `Count` is always a multiple of three, as this function always processes large batched arrays of
- *           triangles. Since all shapes are rendered with signed-distance functions, most shapes merely generate
- *           a single quad, so you may find triangle counts lower than originally anticipated.
- *
- *           Call `cf_set_vertex_callback` to setup your callback.
- *
- *           There is no adjacency info provided. If you need to know which triangles connect to others you
- *           should probably redesign your feature to not require adjacency information, or use your own custom
- *           rendering solution. With a custom solution you may use low-level graphics in cute_graphics.h, where
- *           any adjacency info can be controlled 100% by you a-priori.
- * @related  CF_Vertex CF_VertexFn cf_set_vertex_callback
- */
-typedef void (CF_VertexFn)(CF_Vertex* verts, int count);
-
-/**
- * @function cf_set_vertex_callback
- * @category draw
- * @brief    An optional callback for modifying vertices before they are sent to the GPU.
- * @remarks  See `CF_VertexFn`.
- * @related  CF_Vertex CF_VertexFn cf_set_vertex_callback
- */
-CF_API void CF_CALL cf_set_vertex_callback(CF_VertexFn* vertex_fn);
 
 /**
  * @function cf_make_font
@@ -1361,7 +1427,9 @@ typedef struct CF_DrawShaderBytecode
  * @brief    Creates a custom draw shader.
  * @remarks  Your shader must be written in GLSL 450, and must follow some specific rules to be compatible with the draw API. For more in-depth explanations,
  *           see CF's docs on [Draw Shaders](https://randygaul.github.io/cute_framework/topics/drawing#shaders). Make sure to call `cf_shader_directory` first.
- * @related  CF_Shader cf_draw_push_shader cf_draw_pop_shader cf_draw_peek_shader cf_make_draw_shader_from_source
+ *           If you use custom SDF shapes, register them all via `cf_make_custom_shape` *before* creating draw shaders -- a draw shader bakes in the set of
+ *           custom shapes that exist when it compiles, so shapes registered afterwards render invisibly under it.
+ * @related  CF_Shader cf_draw_push_shader cf_draw_pop_shader cf_draw_peek_shader cf_make_draw_shader_from_source cf_make_custom_shape
  */
 CF_API CF_Shader CF_CALL cf_make_draw_shader(const char* path);
 
@@ -1372,7 +1440,9 @@ CF_API CF_Shader CF_CALL cf_make_draw_shader(const char* path);
  * @remarks  Your shader must be written in GLSL 450, and must follow some specific rules to be compatible with the draw API. For more in-depth explanations,
  *           see CF's docs on [Draw Shaders](https://randygaul.github.io/cute_framework/topics/drawing#shaders). If you wish to include other files into
  *           your shader via `#include` make sure to call `cf_shader_directory` first.
- * @related  CF_Shader cf_draw_push_shader cf_draw_pop_shader cf_draw_peek_shader
+ *           If you use custom SDF shapes, register them all via `cf_make_custom_shape` *before* creating draw shaders -- a draw shader bakes in the set of
+ *           custom shapes that exist when it compiles, so shapes registered afterwards render invisibly under it.
+ * @related  CF_Shader cf_draw_push_shader cf_draw_pop_shader cf_draw_peek_shader cf_make_custom_shape
  */
 CF_API CF_Shader CF_CALL cf_make_draw_shader_from_source(const char* src);
 
@@ -1382,7 +1452,9 @@ CF_API CF_Shader CF_CALL cf_make_draw_shader_from_source(const char* src);
  * @brief    Creates a custom draw shader from bytecode.
  * @remarks  Your shader must be written in GLSL 450, and must follow some specific rules to be compatible with the draw API. For more in-depth explanations,
  *           see CF's docs on [Draw Shaders](https://randygaul.github.io/cute_framework/topics/drawing#shaders).
- * @related  CF_Shader CF_DrawShaderBytecode cf_draw_push_shader cf_draw_pop_shader cf_draw_peek_shader
+ *           Note precompiled draw shaders never contain runtime-registered custom SDF shapes (`cf_make_custom_shape`); custom shapes render invisibly
+ *           while a bytecode draw shader is pushed.
+ * @related  CF_Shader CF_DrawShaderBytecode cf_draw_push_shader cf_draw_pop_shader cf_draw_peek_shader cf_make_custom_shape
  */
 CF_API CF_Shader CF_CALL cf_make_draw_shader_from_bytecode(CF_DrawShaderBytecode bytecode);
 
@@ -1934,6 +2006,15 @@ CF_INLINE void draw_bezier_line(v2 a, v2 c0, v2 b, int iters, float thickness) {
 CF_INLINE void draw_bezier_line(v2 a, v2 c0, v2 c1, v2 b, int iters, float thickness) { cf_draw_bezier_line2(a, c0, c1, b, iters, thickness); }
 CF_INLINE void draw_arrow(v2 a, v2 b, float thickness, float arrow_width) { cf_draw_arrow(a, b, thickness, arrow_width); }
 
+CF_INLINE CF_CustomShape make_custom_shape(const char* sdf_src) { return cf_make_custom_shape(sdf_src); }
+CF_INLINE void draw_custom_shape(CF_CustomShape shape, CF_Aabb bounds, float thickness, const float* params, int param_count) { cf_draw_custom_shape(shape, bounds, thickness, params, param_count); }
+CF_INLINE void draw_custom_shape_fill(CF_CustomShape shape, CF_Aabb bounds, const float* params, int param_count) { cf_draw_custom_shape_fill(shape, bounds, params, param_count); }
+
+CF_INLINE void draw_shape_group_begin() { cf_draw_shape_group_begin(); }
+CF_INLINE void draw_shape_group_op(CF_ShapeOp op, float smoothing = 0) { cf_draw_shape_group_op(op, smoothing); }
+CF_INLINE void draw_shape_group_end() { cf_draw_shape_group_end(); }
+CF_INLINE void draw_shape_group_end_stroked(float thickness) { cf_draw_shape_group_end_stroked(thickness); }
+
 CF_INLINE void draw_push_layer(int layer) { cf_draw_push_layer(layer); }
 CF_INLINE int draw_pop_layer() { return cf_draw_pop_layer(); }
 CF_INLINE int draw_peek_layer() { return cf_draw_peek_layer(); }
@@ -1953,7 +2034,6 @@ CF_INLINE void draw_peek_tri_colors(CF_Color* c0, CF_Color* c1, CF_Color* c2) { 
 CF_INLINE void draw_push_tri_attributes(CF_Color a0, CF_Color a1, CF_Color a2) { cf_draw_push_tri_attributes(a0, a1, a2); }
 CF_INLINE void draw_pop_tri_attributes() { cf_draw_pop_tri_attributes(); }
 CF_INLINE void draw_peek_tri_attributes(CF_Color* a0, CF_Color* a1, CF_Color* a2) { cf_draw_peek_tri_attributes(a0, a1, a2); }
-CF_INLINE void set_vertex_callback(CF_VertexFn* vertex_fn) { cf_set_vertex_callback(vertex_fn); }
 
 CF_INLINE CF_Result make_font(const char* path, const char* font_name) { return cf_make_font(path, font_name); }
 CF_INLINE CF_Result make_font_from_memory(void* data, int size, const char* font_name) { return cf_make_font_from_memory(data, size, font_name); }
