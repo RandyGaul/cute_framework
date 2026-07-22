@@ -19,8 +19,7 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 # Todo - Fix how turning some of these off breaks the build.
 option(CF_FRAMEWORK_STATIC "Build static library for Cute Framework." ON)
-option(CF_RUNTIME_SHADER_COMPILATION "Build CF with online shader compilation support (requires python 3.x installation)." ON)
-option(CF_CUTE_SHADERC "Build cute-shaderc, an offline shader compiler (requires python 3.x installation)." ON)
+option(CF_CUTE_SHADERC "Build cute-shaderc, an offline shader compiler." ON)
 option(CF_FRAMEWORK_APPLE_FRAMEWORK "Build CF libraries as Apple Framework" OFF)
 
 # Make sure all libraries are placed into the same output folder.
@@ -220,7 +219,6 @@ set(CF_HDRS
 	src/internal/cute_aseprite_cache_internal.h
 	src/internal/cute_alloc_internal.h
 	src/internal/yyjson.h
-	src/data/builtin_shaders_bytecode.h
 )
 
 if(CF_FRAMEWORK_STATIC)
@@ -235,7 +233,6 @@ if(EMSCRIPTEN)
 	message(STATUS "Configuring CF for Web (Emscripten)")
 
 	# Emscripten forces off a couple options that don't make sense for web builds.
-	set(CF_RUNTIME_SHADER_COMPILATION OFF CACHE BOOL "" FORCE)
 	set(CF_CUTE_SHADERC OFF CACHE BOOL "" FORCE)
 	set(CF_FRAMEWORK_APPLE_FRAMEWORK OFF CACHE BOOL "" FORCE)
 	set(PHYSFS_BUILD_SHARED OFF CACHE BOOL "" FORCE)
@@ -333,6 +330,8 @@ if(WINDOWS AND NOT MSVC)
 	set(CF_LINK_LIBS ${CF_LINK_LIBS} ws2_32 secur32 shlwapi)
 endif()
 
+# Deprecated no-op, kept so existing user CMake scripts don't break. CF no longer
+# ships or uses dxcompiler.dll/dxil.dll -- D3D12 shaders go through the system's
 # This function should be used if you have specified a target-specific runtime output directory,
 # or if you do not wish to specify a default runtime output directory.
 function(target_dxc_copy TARGET)
@@ -432,31 +431,11 @@ if(NOT EMSCRIPTEN) # Emscripten provides it's own SDL3.
 	endif()
 endif()
 
-if (CF_RUNTIME_SHADER_COMPILATION OR CF_CUTE_SHADERC)
-	# glslang for shader compilation.
-	set(GLSLANG_TESTS OFF CACHE BOOL "Do not build glslang tests.")
-	set(BUILD_SHARED_LIBS OFF CACHE BOOL "Do not build glslang as a shared lib.")
-	set(ENABLE_OPT ON CACHE BOOL "Enable optimization.")
-	set(SKIP_SPIRV_TOOLS_INSTALL OFF CACHE BOOL "Don't install the SPIR-V Tools as they are built.")
-	set(SPIRV_SKIP_EXECUTABLES ON CACHE BOOL "Don't build any SPIR-V Tools executables/tests.")
-	set(SPIRV_WERROR OFF CACHE BOOL "Turn off SPIR-V warnings as error.")
-	set(ENABLE_GLSLANG_BINARIES OFF CACHE BOOL "Turn off some standalone binary tools for glslang.")
-	set(GLSLANG_ENABLE_INSTALL OFF CACHE BOOL "Disable installation option for glslang.")
-	find_package(Python3 REQUIRED)
-	FetchContent_Declare(
-		glslang
-		URL https://github.com/KhronosGroup/glslang/archive/refs/tags/16.0.0.zip
-		DOWNLOAD_EXTRACT_TIMESTAMP ON
-		PATCH_COMMAND ${Python3_EXECUTABLE} update_glslang_sources.py
-		EXCLUDE_FROM_ALL
-	)
-	FetchContent_MakeAvailable(glslang)
-endif()
-
 add_subdirectory(tools)
 
 # SPIRV-Cross for SDL_shadercross
-if(NOT EMSCRIPTEN)  # SPIRV-Cross is not needed for web.
+# SPIRV-Cross translates cute_spirv's SPIR-V for the active backend, including the
+# GLSL ES 300 output web builds need for runtime compilation.
 	# Set all SPIRV-Cross options BEFORE FetchContent_Declare/MakeAvailable
 	set(SPIRV_CROSS_CLI OFF CACHE BOOL "Turn off building SPIRV-Cross CLI.")
 	set(SPIRV_CROSS_ENABLE_TESTS OFF CACHE BOOL "Disable SPIRV-Cross tests")
@@ -489,7 +468,6 @@ if(NOT EMSCRIPTEN)  # SPIRV-Cross is not needed for web.
 	)
 	FetchContent_MakeAvailable(SPIRV_CROSS)
 	set(CF_LINK_LIBS ${CF_LINK_LIBS} spirv-cross-c)
-endif()
 
 # Some platform specific settings.
 if(MINGW)
@@ -515,17 +493,6 @@ elseif(APPLE)
 	endif()
 endif()
 
-# Precompile builtin shaders
-if (CF_CUTE_SHADERC)
-	add_custom_command(
-		OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/src/data/builtin_shaders_bytecode.h
-		COMMAND cute-shaderc
-			-type=builtin
-			-oheader=${CMAKE_CURRENT_SOURCE_DIR}/src/data/builtin_shaders_bytecode.h
-		DEPENDS tools/builtin_shaders.h
-		DEPENDS cute-shaderc
-	)
-endif()
 
 # Link up all dependencies to Cute.
 target_link_libraries(cute PUBLIC ${CF_LINK_LIBS})

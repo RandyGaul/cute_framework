@@ -135,7 +135,6 @@ cmake --build build/web
 # Build with specific options
 cmake -B build -S . \
   -DCF_FRAMEWORK_STATIC=ON \
-  -DCF_RUNTIME_SHADER_COMPILATION=ON \
   -DCF_CUTE_SHADERC=ON
 ```
 
@@ -216,7 +215,7 @@ Platform detection happens in CMakeLists.txt:30-55, with specific build configur
 ### Shader System
 
 The framework has a sophisticated shader compilation pipeline:
-- Runtime compilation support (when CF_RUNTIME_SHADER_COMPILATION=ON)
+- Runtime compilation support (always available; CF ships its own compiler, see libraries/cute/cute_spirv.h)
 - Offline compiler tool (cute-shaderc)
 - Cross-platform bytecode generation
 - Builtin shaders in src/cute_shader/builtin_shaders.h

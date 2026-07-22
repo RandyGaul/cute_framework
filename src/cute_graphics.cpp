@@ -16,7 +16,6 @@
 
 #include "cute_shader.h"
 #include "builtin_shaders.h"
-#include "data/builtin_shaders_bytecode.h"
 
 #include <float.h>
 
@@ -94,7 +93,6 @@ void cf_shader_watch()
 	s_shader_watch_recursive("/");
 }
 
-#ifdef CF_RUNTIME_SHADER_COMPILATION
 static char* s_cute_shader_vfs_read(const char* path, size_t* len, void* context) {
 	CF_UNUSED(context);
 	return (char*)fs_read_entire_file_to_memory(path, len);
@@ -109,15 +107,13 @@ static CF_ShaderCompilerVfs s_cute_shader_vfs = {
 	.read_file_content = s_cute_shader_vfs_read,
 	.free_file_content = s_cute_shader_vfs_free,
 };
-#endif
 
 // Generated source for the custom_shapes.shd builtin include; NULL until the first
 // cf_make_custom_shape() registration. Owned here (heap copy).
 static char* s_custom_shapes_src = NULL;
 
-static CF_ShaderBytecode cf_compile_shader_to_bytecode_internal(const char* shader_src, CF_ShaderStage cf_stage, const char* user_shd, bool skip_glsl300 = false)
+static CF_ShaderBytecode cf_compile_shader_to_bytecode_internal(const char* shader_src, CF_ShaderStage cf_stage, const char* user_shd, const char* user_shd_name = NULL)
 {
-#ifdef CF_RUNTIME_SHADER_COMPILATION
 	CF_ShaderCompilerStage stage = CUTE_SHADER_STAGE_VERTEX;
 	switch (cf_stage) {
 	default: CF_ASSERT(false); break; // No valid stage provided.
@@ -167,7 +163,12 @@ static CF_ShaderBytecode cf_compile_shader_to_bytecode_internal(const char* shad
 		.automatic_include_guard = true,
 		.return_preprocessed_source = false,
 
-		.skip_glsl300 = skip_glsl300,
+		// Only the GLES3 backend consumes the GLSL ES 300 output; shaders that GLES
+		// cannot express (the tiled path) are only ever compiled on other backends.
+		.skip_glsl300 = app->gfx_backend_type != CF_BACKEND_TYPE_GLES3,
+
+		// Report user draw-shader errors under the user's shader path.
+		.shader_stub_display_name = user_shd_name,
 
 		.vfs = &s_cute_shader_vfs,
 	};
@@ -182,22 +183,16 @@ static CF_ShaderBytecode cf_compile_shader_to_bytecode_internal(const char* shad
 		CF_ShaderBytecode bytecode = { 0 };
 		return bytecode;
 	}
-#else
-	fprintf(stderr, "CF was built with CF_RUNTIME_SHADER_COMPILATION=OFF\n");
-
-	CF_ShaderBytecode bytecode = { 0 };
-	return bytecode;
-#endif
 }
 
-CF_Shader cf_make_shader_from_source_internal(const char* vs_src, const char* fs_src, const char* user_shd, bool no_gles)
+CF_Shader cf_make_shader_from_source_internal(const char* vs_src, const char* fs_src, const char* user_shd, const char* user_shd_name)
 {
-	CF_ShaderBytecode vs_bytecode = cf_compile_shader_to_bytecode_internal(vs_src, CF_SHADER_STAGE_VERTEX, NULL, no_gles);
+	CF_ShaderBytecode vs_bytecode = cf_compile_shader_to_bytecode_internal(vs_src, CF_SHADER_STAGE_VERTEX, NULL);
 	if (vs_bytecode.content == NULL) {
 		CF_Shader result = { 0 };
 		return result;
 	}
-	CF_ShaderBytecode fs_bytecode = cf_compile_shader_to_bytecode_internal(fs_src, CF_SHADER_STAGE_FRAGMENT, user_shd, no_gles);
+	CF_ShaderBytecode fs_bytecode = cf_compile_shader_to_bytecode_internal(fs_src, CF_SHADER_STAGE_FRAGMENT, user_shd, user_shd_name);
 	if (fs_bytecode.content == NULL) {
 		cf_free_shader_bytecode(vs_bytecode);
 		CF_Shader result = { 0 };
@@ -217,46 +212,37 @@ CF_ShaderBytecode cf_compile_shader_to_bytecode(const char* shader_src, CF_Shade
 
 void cf_free_shader_bytecode(CF_ShaderBytecode bytecode)
 {
-#ifdef CF_RUNTIME_SHADER_COMPILATION
 	CF_ShaderCompilerResult compile_result = {
 		.bytecode = bytecode,
 	};
 	cute_shader_free_result(compile_result);
-#endif
 }
 
 void cf_load_internal_shaders()
 {
-#ifdef CF_RUNTIME_SHADER_COMPILATION
 	cute_shader_init();
 
 	// Compile built-in shaders. The draw shader is the instanced command-fed pair. On
 	// GLES3/WebGL2 (no storage buffers, no compute) a texel-fetch flavor of the same
 	// pair runs instanced-only; the tiled path needs the binning compute shaders.
+	// This all takes just milliseconds with CF's own compiler, so there is no
+	// precompiled fallback anymore.
 	app->blit_shader = cf_make_shader_from_source_internal(s_blit_vs, s_blit_fs, NULL);
 	if (app->gfx_backend_type == CF_BACKEND_TYPE_GLES3) {
 		app->draw_shader = cf_make_shader_from_source_internal(s_inst_vs_gles, s_draw_fs_gles, NULL);
+		app->draw_vs_bytecode = cf_compile_shader_to_bytecode_internal(s_inst_vs_gles, CF_SHADER_STAGE_VERTEX, NULL);
 	} else {
-		app->draw_shader = cf_make_shader_from_source_internal(s_inst_vs, s_draw_fs, NULL, /*no_gles*/ true);
-		app->tile_shader = cf_make_shader_from_source_internal(s_tile_vs, s_tile_fs, NULL, /*no_gles*/ true);
+		app->draw_shader = cf_make_shader_from_source_internal(s_inst_vs, s_draw_fs, NULL);
+		app->tile_shader = cf_make_shader_from_source_internal(s_tile_vs, s_tile_fs, NULL);
 		app->tile_zero_cs = cf_make_compute_shader_from_source(s_tile_zero_cs);
 		app->tile_count_cs = cf_make_compute_shader_from_source(s_tile_count_cs);
 		app->tile_scan_cs = cf_make_compute_shader_from_source(s_tile_scan_cs);
 		app->tile_gather_cs = cf_make_compute_shader_from_source(s_tile_gather_cs);
+		app->draw_vs_bytecode = cf_compile_shader_to_bytecode_internal(s_inst_vs, CF_SHADER_STAGE_VERTEX, NULL);
 	}
-#else
-	app->blit_shader = cf_make_shader_from_bytecode(s_blit_vs_bytecode, s_blit_fs_bytecode);
-	if (app->gfx_backend_type == CF_BACKEND_TYPE_GLES3) {
-		app->draw_shader = cf_make_shader_from_bytecode(s_draw_gles_vs_bytecode, s_draw_gles_fs_bytecode);
-	} else {
-		app->draw_shader = cf_make_shader_from_bytecode(s_draw_vs_bytecode, s_draw_fs_bytecode);
-		app->tile_shader = cf_make_shader_from_bytecode(s_tile_vs_bytecode, s_tile_fs_bytecode);
-		app->tile_zero_cs = cf_make_compute_shader_from_bytecode(s_tile_zero_cs_bytecode);
-		app->tile_count_cs = cf_make_compute_shader_from_bytecode(s_tile_count_cs_bytecode);
-		app->tile_scan_cs = cf_make_compute_shader_from_bytecode(s_tile_scan_cs_bytecode);
-		app->tile_gather_cs = cf_make_compute_shader_from_bytecode(s_tile_gather_cs_bytecode);
-	}
-#endif
+
+	// Cache the builtin vertex bytecode for the *_from_bytecode draw/blit paths.
+	app->blit_vs_bytecode = cf_compile_shader_to_bytecode_internal(s_blit_vs, CF_SHADER_STAGE_VERTEX, NULL);
 }
 
 void cf_destroy_shader_internal(CF_Shader shader_handle);
@@ -266,7 +252,6 @@ void cf_destroy_shader_internal(CF_Shader shader_handle);
 // include content stay live and this returns false.
 bool cf_recompile_draw_pipelines(const char* custom_shapes_src)
 {
-#ifdef CF_RUNTIME_SHADER_COMPILATION
 	if (!app->draw_shader.id) return false;
 	char* prev = s_custom_shapes_src;
 	char* copy = NULL;
@@ -289,8 +274,8 @@ bool cf_recompile_draw_pipelines(const char* custom_shapes_src)
 		app->draw_shader = draw;
 		return true;
 	}
-	CF_Shader draw = cf_make_shader_from_source_internal(s_inst_vs, s_draw_fs, NULL, /*no_gles*/ true);
-	CF_Shader tile = cf_make_shader_from_source_internal(s_tile_vs, s_tile_fs, NULL, /*no_gles*/ true);
+	CF_Shader draw = cf_make_shader_from_source_internal(s_inst_vs, s_draw_fs, NULL);
+	CF_Shader tile = cf_make_shader_from_source_internal(s_tile_vs, s_tile_fs, NULL);
 	CF_ComputeShader count_cs = cf_make_compute_shader_from_source(s_tile_count_cs);
 	CF_ComputeShader gather_cs = cf_make_compute_shader_from_source(s_tile_gather_cs);
 	if (!draw.id || !tile.id || !count_cs.id || !gather_cs.id) {
@@ -312,10 +297,6 @@ bool cf_recompile_draw_pipelines(const char* custom_shapes_src)
 	app->tile_count_cs = count_cs;
 	app->tile_gather_cs = gather_cs;
 	return true;
-#else
-	CF_UNUSED(custom_shapes_src);
-	return false;
-#endif
 }
 
 void cf_unload_internal_shaders()
@@ -331,9 +312,9 @@ void cf_unload_internal_shaders()
 		cf_free(s_custom_shapes_src);
 		s_custom_shapes_src = NULL;
 	}
-#ifdef CF_RUNTIME_SHADER_COMPILATION
+	cf_free_shader_bytecode(app->draw_vs_bytecode);
+	cf_free_shader_bytecode(app->blit_vs_bytecode);
 	cute_shader_cleanup();
-#endif
 }
 
 void cf_destroy_shader(CF_Shader shader_handle)
@@ -360,7 +341,7 @@ CF_Shader cf_make_draw_shader_internal(const char* path)
 	if (!info.path) return { 0 };
 	char* shd = fs_read_entire_file_to_memory_and_nul_terminate(info.path);
 	if (!shd) return { 0 };
-	CF_Shader result = cf_make_draw_shader_from_source_internal(shd);
+	CF_Shader result = cf_make_draw_shader_from_source_internal(shd, path);
 	cf_free(shd);
 	return result;
 }
@@ -374,35 +355,33 @@ CF_Shader cf_make_draw_blit_shader_internal(const char* path)
 	if (!info.path) return { 0 };
 	char* shd = fs_read_entire_file_to_memory_and_nul_terminate(info.path);
 	if (!shd) return { 0 };
-	CF_Shader result = cf_make_draw_blit_shader_from_source_internal(shd);
+	CF_Shader result = cf_make_draw_blit_shader_from_source_internal(shd, path);
 	cf_free(shd);
 	return result;
 }
 
-CF_Shader cf_make_draw_shader_from_source_internal(const char* src)
+CF_Shader cf_make_draw_shader_from_source_internal(const char* src, const char* src_name)
 {
 	if (app->gfx_backend_type == CF_BACKEND_TYPE_GLES3) {
-		return cf_make_shader_from_source_internal(s_inst_vs_gles, s_draw_fs_gles, src);
+		return cf_make_shader_from_source_internal(s_inst_vs_gles, s_draw_fs_gles, src, src_name);
 	}
-	return cf_make_shader_from_source_internal(s_inst_vs, s_draw_fs, src, /*no_gles*/ true);
+	return cf_make_shader_from_source_internal(s_inst_vs, s_draw_fs, src, src_name);
 }
 
 CF_Shader cf_make_draw_shader_from_bytecode_internal(CF_ShaderBytecode bytecode)
 {
-	if (app->gfx_backend_type == CF_BACKEND_TYPE_GLES3) {
-		return cf_make_shader_from_bytecode(s_draw_gles_vs_bytecode, bytecode);
-	}
-	return cf_make_shader_from_bytecode(s_draw_vs_bytecode, bytecode);
+	// app->draw_vs_bytecode is compiled per-backend at startup (GLES flavor on GLES3).
+	return cf_make_shader_from_bytecode(app->draw_vs_bytecode, bytecode);
 }
 
-CF_Shader cf_make_draw_blit_shader_from_source_internal(const char* src)
+CF_Shader cf_make_draw_blit_shader_from_source_internal(const char* src, const char* src_name)
 {
-	return cf_make_shader_from_source_internal(s_blit_vs, s_blit_fs, src);
+	return cf_make_shader_from_source_internal(s_blit_vs, s_blit_fs, src, src_name);
 }
 
 CF_Shader cf_make_draw_blit_shader_from_bytecode_internal(CF_ShaderBytecode bytecode)
 {
-	return cf_make_shader_from_bytecode(s_blit_vs_bytecode, bytecode);
+	return cf_make_shader_from_bytecode(app->blit_vs_bytecode, bytecode);
 }
 
 static void s_material_set_texture(CF_MaterialInternal* material, CF_MaterialState* state, const char* name, CF_Texture texture)

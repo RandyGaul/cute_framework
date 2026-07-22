@@ -2,10 +2,6 @@
 #include "internal/cute_app_internal.h"
 #include "internal/cute_alloc_internal.h"
 
-#ifndef CF_RUNTIME_SHADER_COMPILATION
-#	include "data/builtin_shaders_bytecode.h"
-#endif
-
 #include <cute_graphics.h>
 #include <cute_time.h>
 

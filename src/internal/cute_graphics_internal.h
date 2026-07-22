@@ -224,12 +224,12 @@ CF_INLINE bool s_is_depth(CF_PixelFormat format)
 void cf_load_internal_shaders();
 void cf_unload_internal_shaders();
 CF_Shader cf_make_draw_shader_internal(const char* path);
-CF_Shader cf_make_draw_shader_from_source_internal(const char* src);
+CF_Shader cf_make_draw_shader_from_source_internal(const char* src, const char* src_name = NULL);
 CF_Shader cf_make_draw_shader_from_bytecode_internal(CF_ShaderBytecode bytecode);
 CF_Shader cf_make_draw_blit_shader_internal(const char* path);
-CF_Shader cf_make_draw_blit_shader_from_source_internal(const char* src);
+CF_Shader cf_make_draw_blit_shader_from_source_internal(const char* src, const char* src_name = NULL);
 CF_Shader cf_make_draw_blit_shader_from_bytecode_internal(CF_ShaderBytecode bytecode);
-CF_Shader cf_make_shader_from_source_internal(const char* vs_src, const char* fs_src, const char* user_shd = NULL, bool no_gles = false);
+CF_Shader cf_make_shader_from_source_internal(const char* vs_src, const char* fs_src, const char* user_shd = NULL, const char* user_shd_name = NULL);
 // Rebuilds the SDF command pipelines (draw/tile/count/gather) with new custom_shapes.shd
 // content; compile-then-swap, returns false (old pipelines intact) on any failure.
 bool cf_recompile_draw_pipelines(const char* custom_shapes_src);

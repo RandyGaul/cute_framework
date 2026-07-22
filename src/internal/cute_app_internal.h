@@ -119,6 +119,10 @@ struct CF_App
 	CF_Mutex on_sound_finish_mutex = cf_make_mutex();
 	CF_Shader draw_shader = { 0 };
 	CF_Shader blit_shader = { 0 };
+	// Builtin vertex shader bytecode, compiled once at startup. Paired with
+	// user fragment bytecode by the *_from_bytecode draw/blit paths.
+	CF_ShaderBytecode draw_vs_bytecode = { 0 };
+	CF_ShaderBytecode blit_vs_bytecode = { 0 };
 	CF_Shader tile_shader = { 0 }; // Tiled draw path walk shader; null id when unavailable (GLES backend).
 	// Tiled draw path GPU binning compute shaders; null ids when unavailable (GLES backend).
 	CF_ComputeShader tile_zero_cs = { 0 };
