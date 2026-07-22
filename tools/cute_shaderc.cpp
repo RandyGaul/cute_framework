@@ -18,6 +18,8 @@
 #define FLAG_BYTECODE_OUT "-obytecode="
 #define FLAG_VARNAME "-varname="
 #define FLAG_TYPE "-type="
+#define FLAG_NOGLES "-nogles"
+#define FLAG_VERBOSE "-verbose"
 #define FLAG_INVALID "-"
 #define MAX_INCLUDES 64
 #define HEADER_LINE_SIZE 16
@@ -83,10 +85,12 @@ static bool write_bytecode(
 {
 	const uint8_t* content = compile_result.bytecode.content;
 
-	// Write preprocessed shader as comment.
-	fprintf(file, "/*\n");
-	fprintf(file, "%.*s\n", (int)compile_result.preprocessed_source_size, compile_result.preprocessed_source);
-	fprintf(file, "*/\n");
+	// Write preprocessed shader as comment (-verbose only; it dominates header size).
+	if (compile_result.preprocessed_source) {
+		fprintf(file, "/*\n");
+		fprintf(file, "%.*s\n", (int)compile_result.preprocessed_source_size, compile_result.preprocessed_source);
+		fprintf(file, "*/\n");
+	}
 
 	// Write the bytecode.
 	fprintf(file, "#ifndef __EMSCRIPTEN__\n");
@@ -100,17 +104,22 @@ static bool write_bytecode(
 	fprintf(file, "\n};\n");
 	fprintf(file, "#endif\n");
 
-	// Write GLSL 300
-	fprintf(file, "static const char %s%s_glsl300_src[%zu] =\n\"", var_name, suffix, compile_result.bytecode.glsl300_src_size + 1);
-	for (size_t i = 0; i < compile_result.bytecode.glsl300_src_size; ++i) {
-		char ch = compile_result.bytecode.glsl300_src[i];
-		if (ch == '\n') {  // Escape new line as \n and start an actual new line
-			fprintf(file, "\\n\"\n\"");
-		} else {
-			fprintf(file, "%c", ch);
+	// Write GLSL 300 (absent with -nogles: the bytecode then only works on
+	// non-GLES backends).
+	if (compile_result.bytecode.glsl300_src) {
+		fprintf(file, "static const char %s%s_glsl300_src[%zu] =\n\"", var_name, suffix, compile_result.bytecode.glsl300_src_size + 1);
+		for (size_t i = 0; i < compile_result.bytecode.glsl300_src_size; ++i) {
+			char ch = compile_result.bytecode.glsl300_src[i];
+			if (ch == '\n') {  // Escape new line as \n and start an actual new line
+				fprintf(file, "\\n\"\n\"");
+			} else {
+				fprintf(file, "%c", ch);
+			}
 		}
+		fprintf(file, "\";\n");
+	} else {
+		fprintf(file, "#define %s%s_glsl300_src NULL\n", var_name, suffix);
 	}
-	fprintf(file, "\";\n");
 
 	// Write reflection info.
 	const CF_ShaderInfo* shader_info = &compile_result.bytecode.shader_info;
@@ -349,6 +358,8 @@ int main(int argc, const char* argv[])
 	const char* var_name = NULL;
 	int num_includes = 0;
 	bool type_set = false;
+	bool nogles = false;
+	bool verbose = false;
 	shader_type_t type = SHADER_TYPE_DRAW;
 	const char* include_dirs[MAX_INCLUDES];
 
@@ -379,6 +390,10 @@ int main(int argc, const char* argv[])
 				fprintf(stderr, "Too many includes\n");
 				return 1;
 			}
+		} else if (strcmp(arg, FLAG_NOGLES) == 0) {
+			nogles = true;
+		} else if (strcmp(arg, FLAG_VERBOSE) == 0) {
+			verbose = true;
 		} else if ((flag_value = parse_flag(arg, FLAG_TYPE)) != NULL) {
 			if (type_set) {
 				fprintf(stderr, "%s can only be specified once\n", FLAG_TYPE);
@@ -482,15 +497,12 @@ int main(int argc, const char* argv[])
 			.content = input_content,
 		};
 
-		// The payload storage buffer binds right after the stub's last sampler (see
-		// cf_compute_payload_binding in builtin_shaders.h).
-		char payload_binding_str[16];
-		snprintf(payload_binding_str, sizeof(payload_binding_str), "%d", cf_compute_payload_binding(input_content));
-		CF_ShaderCompilerDefine payload_define = { "CF_PAYLOAD_BINDING", payload_binding_str };
+		int num_defines = 0;
+		CF_ShaderCompilerDefine defines[2];
 
 		CF_ShaderCompilerConfig config = {
-			.num_builtin_defines = 1,
-			.builtin_defines = &payload_define,
+			.num_builtin_defines = 0,
+			.builtin_defines = defines,
 
 			.num_builtin_includes = num_builtin_includes,
 			.builtin_includes = builtin_includes,
@@ -499,12 +511,27 @@ int main(int argc, const char* argv[])
 			.include_dirs = include_dirs,
 
 			.automatic_include_guard = true,
-			.return_preprocessed_source = true,
+			.return_preprocessed_source = verbose,
 
-			// The SSBO draw template cannot transpile to GLSL 300 es; the GLES flavor's
+			// The SSBO draw flavor cannot transpile to GLSL 300 es; the GLES flavor's
 			// transpile is grafted in below.
 			.skip_glsl300 = true,
 		};
+
+		// The payload storage buffer binds right after the stub's last sampler.
+		// Scan the preprocessed stub so comments/macros can't fool the scan.
+		char payload_binding_str[16];
+		int payload_binding = 1;
+		{
+			char* preprocessed = cute_shader_preprocess(input_content, config);
+			if (preprocessed) {
+				payload_binding = cf_compute_payload_binding(preprocessed);
+				free(preprocessed);
+			}
+		}
+		snprintf(payload_binding_str, sizeof(payload_binding_str), "%d", payload_binding);
+		defines[num_defines++] = { "CF_PAYLOAD_BINDING", payload_binding_str };
+		config.num_builtin_defines = num_defines;
 
 		CF_ShaderCompilerResult draw_shader_result = cute_shader_compile(
 			s_draw_fs,
@@ -517,22 +544,33 @@ int main(int argc, const char* argv[])
 			goto end;
 		}
 
-		// GLES3/WebGL2 runs the texel-fetch flavor of the draw shader; compile the same
-		// stub against it and graft its GLSL 300 es output into the primary bytecode.
-		config.skip_glsl300 = false;
-		CF_ShaderCompilerResult draw_gles_result = cute_shader_compile(
-			s_draw_fs_gles,
-			CUTE_SHADER_STAGE_FRAGMENT,
-			config
-		);
-		if (!draw_gles_result.success) {
-			fprintf(stderr, "%s\n", draw_gles_result.error_message);
-			cute_shader_free_result(draw_shader_result);
-			cute_shader_free_result(draw_gles_result);
-			goto end;
+		// GLES3/WebGL2 runs the texel-fetch flavor of the draw shader (CF_GLES
+		// define); compile the same stub against it and graft its GLSL 300 es
+		// output into the primary bytecode. Skipped entirely with -nogles.
+		CF_ShaderCompilerResult draw_gles_result = { 0 };
+		if (!nogles) {
+			config.skip_glsl300 = false;
+			defines[num_defines++] = { "CF_GLES", "1" };
+			config.num_builtin_defines = num_defines;
+			draw_gles_result = cute_shader_compile(
+				s_draw_fs,
+				CUTE_SHADER_STAGE_FRAGMENT,
+				config
+			);
+			if (!draw_gles_result.success) {
+				fprintf(stderr, "%s\n", draw_gles_result.error_message);
+				cute_shader_free_result(draw_shader_result);
+				cute_shader_free_result(draw_gles_result);
+				goto end;
+			}
+			draw_shader_result.bytecode.glsl300_src = draw_gles_result.bytecode.glsl300_src;
+			draw_shader_result.bytecode.glsl300_src_size = draw_gles_result.bytecode.glsl300_src_size;
+			// The blit shader below wants its GLSL 300 too; drop the CF_GLES define
+			// (blit has no flavors) but keep transpilation on.
+			config.num_builtin_defines = --num_defines;
+		} else {
+			config.skip_glsl300 = true;
 		}
-		draw_shader_result.bytecode.glsl300_src = draw_gles_result.bytecode.glsl300_src;
-		draw_shader_result.bytecode.glsl300_src_size = draw_gles_result.bytecode.glsl300_src_size;
 
 		CF_ShaderCompilerResult blit_shader_result = cute_shader_compile(
 			s_blit_fs,
@@ -578,7 +616,8 @@ int main(int argc, const char* argv[])
 			.include_dirs = include_dirs,
 
 			.automatic_include_guard = true,
-			.return_preprocessed_source = true,
+			.return_preprocessed_source = verbose,
+			.skip_glsl300 = nogles,
 		};
 
 		CF_ShaderCompilerStage compile_stage = CUTE_SHADER_STAGE_FRAGMENT;

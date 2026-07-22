@@ -64,6 +64,67 @@ void cf_shader_on_changed(void (*on_changed_fn)(const char* path, void* udata), 
 	app->on_shader_changed_udata = udata;
 }
 
+// Rebuilds every shader created from `path` in place: fresh guts are compiled and
+// swapped into the existing internals, so user-held CF_Shader handles stay valid.
+// On compile failure the old shader keeps working and the error is reported via
+// cf_shader_compile_error / cf_shader_on_error.
+static void s_shader_auto_reload(const char* changed_key)
+{
+	// Stored shader paths may lack the watch key's leading slash.
+	auto matches = [&](const char* stored) {
+		return stored == changed_key || (changed_key[0] == '/' && !CF_STRCMP(stored, changed_key + 1));
+	};
+
+	// Draw shaders (and their attached blit shaders). Collect first: reload
+	// mutates no draw maps, but collecting keeps this robust either way.
+	if (s_draw) {
+		Array<uint64_t> ids;
+		Array<const char*> paths;
+		int n = s_draw->shader_paths.count();
+		for (int i = 0; i < n; ++i) {
+			if (matches(s_draw->shader_paths.items()[i])) {
+				ids.add(s_draw->shader_paths.keys()[i]);
+				paths.add(s_draw->shader_paths.items()[i]);
+			}
+		}
+		for (int i = 0; i < ids.count(); ++i) {
+			const char* path = paths[i];
+			CF_Shader fresh = cf_make_draw_shader_internal(path);
+			if (!fresh.id) continue; // Compile error; keep the old shader.
+			CF_Shader old = { ids[i] };
+			cf_shader_swap_contents(old, fresh);
+			cf_destroy_shader_internal(fresh);
+			CF_Shader* blit = (CF_Shader*)s_draw->draw_shd_to_blit_shd.try_get(ids[i]);
+			if (blit) {
+				CF_Shader fresh_blit = cf_make_draw_blit_shader_internal(path);
+				if (fresh_blit.id) {
+					cf_shader_swap_contents(*blit, fresh_blit);
+					cf_destroy_shader_internal(fresh_blit);
+				}
+			}
+		}
+	}
+
+	// Compute shaders. cf_make_compute_shader mutates s_compute_shader_paths, so
+	// collect matches before reloading.
+	Array<uint64_t> cs_ids;
+	Array<const char*> cs_paths;
+	int n = s_compute_shader_paths.count();
+	for (int i = 0; i < n; ++i) {
+		if (matches(s_compute_shader_paths.items()[i])) {
+			cs_ids.add(s_compute_shader_paths.keys()[i]);
+			cs_paths.add(s_compute_shader_paths.items()[i]);
+		}
+	}
+	for (int i = 0; i < cs_ids.count(); ++i) {
+		CF_ComputeShader fresh = cf_make_compute_shader(cs_paths[i]);
+		if (!fresh.id) continue;
+		CF_ComputeShader old = { cs_ids[i] };
+		cf_compute_shader_swap_contents(old, fresh);
+		cf_destroy_compute_shader(fresh);
+	}
+}
+
 static void s_shader_watch_recursive(CF_Path path)
 {
 	Array<CF_Path> dir = CF_Directory::enumerate(app->shader_directory + path);
@@ -80,7 +141,12 @@ static void s_shader_watch_recursive(CF_Path path)
 				CF_ShaderFileInfo& info = app->shader_file_infos.find(key);
 				if (info.stat.last_modified_time < stat.last_modified_time) {
 					info.stat.last_modified_time = stat.last_modified_time;
-					app->on_shader_changed_fn(key, app->on_shader_changed_udata);
+					if (app->on_shader_changed_fn) {
+						app->on_shader_changed_fn(key, app->on_shader_changed_udata);
+					} else {
+						// No user callback: hot-reload affected shaders in place.
+						s_shader_auto_reload(key);
+					}
 				}
 			}
 		}
@@ -89,7 +155,15 @@ static void s_shader_watch_recursive(CF_Path path)
 
 void cf_shader_watch()
 {
-	if (!app->on_shader_changed_fn) return;
+	// Watching runs whenever a shader directory is set. With a user callback the
+	// user owns reloading; without one, changed shaders hot-reload automatically
+	// (see s_shader_auto_reload). Auto mode is throttled -- it stats the whole
+	// shader directory, which nobody needs at frame rate.
+	if (!app->shader_directory_set) return;
+	if (!app->on_shader_changed_fn) {
+		static int s_throttle = 0;
+		if ((s_throttle++ % 16) != 0) return;
+	}
 	s_shader_watch_recursive("/");
 }
 
@@ -111,6 +185,23 @@ static CF_ShaderCompilerVfs s_cute_shader_vfs = {
 // Generated source for the custom_shapes.shd builtin include; NULL until the first
 // cf_make_custom_shape() registration. Owned here (heap copy).
 static char* s_custom_shapes_src = NULL;
+
+// Most recent shader compile error (empty = last compile succeeded), plus an
+// optional user callback fired as errors happen. See cf_shader_compile_error.
+static String s_shader_compile_error;
+static void (*s_shader_error_fn)(const char* error_message, void* udata) = NULL;
+static void* s_shader_error_udata = NULL;
+
+const char* cf_shader_compile_error()
+{
+	return s_shader_compile_error.empty() ? NULL : s_shader_compile_error.c_str();
+}
+
+void cf_shader_on_error(void (*on_error_fn)(const char* error_message, void* udata), void* udata)
+{
+	s_shader_error_fn = on_error_fn;
+	s_shader_error_udata = udata;
+}
 
 static CF_ShaderBytecode cf_compile_shader_to_bytecode_internal(const char* shader_src, CF_ShaderStage cf_stage, const char* user_shd, const char* user_shd_name = NULL)
 {
@@ -144,15 +235,17 @@ static CF_ShaderBytecode cf_compile_shader_to_bytecode_internal(const char* shad
 		include_dirs[num_include_dirs++] = app->shader_directory.c_str();
 	}
 
-	// See cf_compute_payload_binding: the draw shader's payload storage buffer binds
-	// right after the user stub's last declared sampler.
-	char payload_binding_str[16];
-	snprintf(payload_binding_str, sizeof(payload_binding_str), "%d", user_shd ? cf_compute_payload_binding(user_shd) : 1);
-	CF_ShaderCompilerDefine payload_define = { "CF_PAYLOAD_BINDING", payload_binding_str };
+	// Builtin defines: CF_GLES selects the texel-fetch storage flavor of the draw
+	// shaders on the GLES3 backend (single-source, see builtin_shaders.h).
+	int num_defines = 0;
+	CF_ShaderCompilerDefine defines[2];
+	if (app->gfx_backend_type == CF_BACKEND_TYPE_GLES3) {
+		defines[num_defines++] = { "CF_GLES", "1" };
+	}
 
 	CF_ShaderCompilerConfig config = {
-		.num_builtin_defines = 1,
-		.builtin_defines = &payload_define,
+		.num_builtin_defines = num_defines,
+		.builtin_defines = defines,
 
 		.num_builtin_includes = num_builtin_includes,
 		.builtin_includes = builtin_includes,
@@ -173,11 +266,31 @@ static CF_ShaderBytecode cf_compile_shader_to_bytecode_internal(const char* shad
 		.vfs = &s_cute_shader_vfs,
 	};
 
+	// The draw shader's payload storage buffer binds right after the user stub's
+	// last declared sampler (SDL_GPU wants set-2 bindings contiguous by resource
+	// class). Scan the *preprocessed* stub so comments and macros can't fool the
+	// scan, then inject the result as the CF_PAYLOAD_BINDING define.
+	char payload_binding_str[16];
+	int payload_binding = 1;
+	if (user_shd) {
+		char* preprocessed = cute_shader_preprocess(user_shd, config);
+		if (preprocessed) {
+			payload_binding = cf_compute_payload_binding(preprocessed);
+			free(preprocessed);
+		}
+	}
+	snprintf(payload_binding_str, sizeof(payload_binding_str), "%d", payload_binding);
+	defines[num_defines++] = { "CF_PAYLOAD_BINDING", payload_binding_str };
+	config.num_builtin_defines = num_defines;
+
 	CF_ShaderCompilerResult result = cute_shader_compile(shader_src, stage, config);
 	if (result.success) {
+		s_shader_compile_error.clear();
 		return result.bytecode;
 	} else {
 		fprintf(stderr, "%s\n", result.error_message);
+		s_shader_compile_error = result.error_message;
+		if (s_shader_error_fn) s_shader_error_fn(s_shader_compile_error.c_str(), s_shader_error_udata);
 		cute_shader_free_result(result);
 
 		CF_ShaderBytecode bytecode = { 0 };
@@ -220,25 +333,23 @@ void cf_free_shader_bytecode(CF_ShaderBytecode bytecode)
 
 void cf_load_internal_shaders()
 {
-	cute_shader_init();
-
 	// Compile built-in shaders. The draw shader is the instanced command-fed pair. On
 	// GLES3/WebGL2 (no storage buffers, no compute) a texel-fetch flavor of the same
 	// pair runs instanced-only; the tiled path needs the binning compute shaders.
 	// This all takes just milliseconds with CF's own compiler, so there is no
 	// precompiled fallback anymore.
+	// The draw pair is single-source: the CF_GLES define (injected automatically on
+	// the GLES3 backend) selects the texel-fetch storage flavor.
 	app->blit_shader = cf_make_shader_from_source_internal(s_blit_vs, s_blit_fs, NULL);
-	if (app->gfx_backend_type == CF_BACKEND_TYPE_GLES3) {
-		app->draw_shader = cf_make_shader_from_source_internal(s_inst_vs_gles, s_draw_fs_gles, NULL);
-		app->draw_vs_bytecode = cf_compile_shader_to_bytecode_internal(s_inst_vs_gles, CF_SHADER_STAGE_VERTEX, NULL);
-	} else {
-		app->draw_shader = cf_make_shader_from_source_internal(s_inst_vs, s_draw_fs, NULL);
+	app->draw_shader = cf_make_shader_from_source_internal(s_inst_vs, s_draw_fs, NULL);
+	app->draw_vs_bytecode = cf_compile_shader_to_bytecode_internal(s_inst_vs, CF_SHADER_STAGE_VERTEX, NULL);
+	if (app->gfx_backend_type != CF_BACKEND_TYPE_GLES3) {
+		// The tiled path (SSBOs + compute) only exists off-GLES.
 		app->tile_shader = cf_make_shader_from_source_internal(s_tile_vs, s_tile_fs, NULL);
 		app->tile_zero_cs = cf_make_compute_shader_from_source(s_tile_zero_cs);
 		app->tile_count_cs = cf_make_compute_shader_from_source(s_tile_count_cs);
 		app->tile_scan_cs = cf_make_compute_shader_from_source(s_tile_scan_cs);
 		app->tile_gather_cs = cf_make_compute_shader_from_source(s_tile_gather_cs);
-		app->draw_vs_bytecode = cf_compile_shader_to_bytecode_internal(s_inst_vs, CF_SHADER_STAGE_VERTEX, NULL);
 	}
 
 	// Cache the builtin vertex bytecode for the *_from_bytecode draw/blit paths.
@@ -262,8 +373,9 @@ bool cf_recompile_draw_pipelines(const char* custom_shapes_src)
 	}
 	s_custom_shapes_src = copy;
 	if (app->gfx_backend_type == CF_BACKEND_TYPE_GLES3) {
-		// GLES runs instanced-only; just the draw pair to rebuild.
-		CF_Shader draw = cf_make_shader_from_source_internal(s_inst_vs_gles, s_draw_fs_gles, NULL);
+		// GLES runs instanced-only; just the draw pair to rebuild (the CF_GLES
+		// define selects the texel-fetch flavor automatically).
+		CF_Shader draw = cf_make_shader_from_source_internal(s_inst_vs, s_draw_fs, NULL);
 		if (!draw.id) {
 			if (copy) cf_free(copy);
 			s_custom_shapes_src = prev;
@@ -314,7 +426,6 @@ void cf_unload_internal_shaders()
 	}
 	cf_free_shader_bytecode(app->draw_vs_bytecode);
 	cf_free_shader_bytecode(app->blit_vs_bytecode);
-	cute_shader_cleanup();
 }
 
 void cf_destroy_shader(CF_Shader shader_handle)
@@ -362,9 +473,7 @@ CF_Shader cf_make_draw_blit_shader_internal(const char* path)
 
 CF_Shader cf_make_draw_shader_from_source_internal(const char* src, const char* src_name)
 {
-	if (app->gfx_backend_type == CF_BACKEND_TYPE_GLES3) {
-		return cf_make_shader_from_source_internal(s_inst_vs_gles, s_draw_fs_gles, src, src_name);
-	}
+	// Single-source: the CF_GLES define picks the storage flavor per backend.
 	return cf_make_shader_from_source_internal(s_inst_vs, s_draw_fs, src, src_name);
 }
 
@@ -798,6 +907,8 @@ CF_DISPATCH_SHIM_VOID(apply_mesh, (CF_Mesh mesh_handle), mesh_handle)
 
 CF_DISPATCH_SHIM(CF_Shader, make_shader_from_bytecode, (CF_ShaderBytecode vertex_bytecode, CF_ShaderBytecode fragment_bytecode), vertex_bytecode, fragment_bytecode)
 CF_DISPATCH_SHIM_VOID(destroy_shader_internal, (CF_Shader shader_handle), shader_handle)
+CF_DISPATCH_SHIM_VOID(shader_swap_contents, (CF_Shader a, CF_Shader b), a, b)
+CF_DISPATCH_SHIM_VOID(compute_shader_swap_contents, (CF_ComputeShader a, CF_ComputeShader b), a, b)
 CF_DISPATCH_SHIM_VOID(apply_shader, (CF_Shader shader_handle, CF_Material material_handle), shader_handle, material_handle)
 
 void cf_sdlgpu_draw_elements();

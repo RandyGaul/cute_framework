@@ -1366,6 +1366,24 @@ CF_Shader cf_gles_make_shader_from_bytecode(CF_ShaderBytecode vertex_bytecode, C
 	return { (uintptr_t)(uintptr_t)shader };
 }
 
+void cf_gles_shader_swap_contents(CF_Shader a, CF_Shader b)
+{
+	// See cf_sdlgpu_shader_swap_contents: hot-reload guts swap, handles stay valid.
+	CF_GL_Shader* pa = (CF_GL_Shader*)(uintptr_t)a.id;
+	CF_GL_Shader* pb = (CF_GL_Shader*)(uintptr_t)b.id;
+	uint8_t tmp[sizeof(CF_GL_Shader)];
+	CF_MEMCPY(tmp, pa, sizeof(tmp));
+	CF_MEMCPY(pa, pb, sizeof(tmp));
+	CF_MEMCPY(pb, tmp, sizeof(tmp));
+}
+
+void cf_gles_compute_shader_swap_contents(CF_ComputeShader a, CF_ComputeShader b)
+{
+	// Compute shaders do not exist on the GLES backend.
+	CF_UNUSED(a);
+	CF_UNUSED(b);
+}
+
 void cf_gles_destroy_shader_internal(CF_Shader shader_handle)
 {
 	if (!shader_handle.id) return;

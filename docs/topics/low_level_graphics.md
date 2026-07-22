@@ -130,7 +130,7 @@ Okay! And with the bad news out of the way, let's focus on how to write your sha
 - Compile shaders from bytecode (SPIRV)
 - Compile [draw-API compatible fragment shaders](drawing.md#shaders)
 
-To compile shaders from glsl source code on-disk you must first call [cf_shader_directory](../graphics/cf_shader_directory.md). This tells the application where the shader folder is. You may then optionally setup a callback via [cf_shader_on_changed](../graphics/cf_shader_on_changed.md) to receive notifications when shaders change on-disk, in order to support shader live-reloading during development. Once done you may then call [cf_make_shader](../graphics/cf_make_shader.md)
+To compile shaders from glsl source code on-disk you must first call [cf_shader_directory](../graphics/cf_shader_directory.md). This tells the application where the shader folder is. Shaders in this directory live-reload automatically when they change on-disk; to handle reloads yourself instead, setup a callback via [cf_shader_on_changed](../graphics/cf_shader_on_changed.md), which disables the automatic reload and hands notifications to you. Compile errors can be fetched with [cf_shader_compile_error](../graphics/cf_shader_compile_error.md) or reported through a [cf_shader_on_error](../graphics/cf_shader_on_error.md) callback. Once done you may then call [cf_make_shader](../graphics/cf_make_shader.md)
 
 To compile shaders from glsl source code from string (in-memory) simply call [cf_make_shader_from_source](../graphics/cf_make_shader_from_source.md).
 

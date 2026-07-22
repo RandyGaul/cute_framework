@@ -183,6 +183,11 @@ typedef struct CSPV_Options
 	// When set, CSPV_Result.preprocessed carries the preprocessed source.
 	bool return_preprocessed;
 
+	// When set, stop after preprocessing: CSPV_Result.preprocessed is filled and no
+	// parsing or code generation runs (spirv/reflection stay empty). Useful for
+	// resource scanning over comment-stripped, macro-expanded source.
+	bool preprocess_only;
+
 	// Optional: map an include path to a different name in error messages (e.g.
 	// show the user's shader path instead of an internal stub name). Return NULL
 	// to keep the path as-is.
@@ -4845,11 +4850,14 @@ static void cspv_gen_global_inout(cspv_ctx* ctx, cspv_layout* layout, bool is_in
 	uint32_t ptr_tid = cspv_ptr_type_id(ctx, type, storage);
 	cspv_emit3(&ctx->globals, CSpvOpVariable, ptr_tid, var, (uint32_t)storage);
 	cspv_emit3(&ctx->decos, CSpvOpDecorate, var, CSpvDecorationLocation, (uint32_t)layout->location);
-	if (flat) {
-		cspv_emit2(&ctx->decos, CSpvOpDecorate, var, CSpvDecorationFlat);
-	} else if (is_input && ctx->stage == CSPV_STAGE_FRAGMENT && cspv_elem_type(type)->kind != CSPV_T_FLOAT) {
-		// Vulkan requires integer fragment inputs to be flat; do it implicitly like
-		// the old glslang pipeline did via SPIRV-Cross.
+	// Integer varyings must interpolate flat. Decorate them implicitly on both the
+	// vertex-output and fragment-input sides (vertex *inputs* are attributes and
+	// must not be decorated) so downstream consumers -- Vulkan validation and the
+	// GLSL ES output -- see correct decorations without any runtime fixups.
+	bool integer_varying = cspv_elem_type(type)->kind != CSPV_T_FLOAT &&
+		((is_input && ctx->stage == CSPV_STAGE_FRAGMENT) ||
+		 (!is_input && ctx->stage == CSPV_STAGE_VERTEX));
+	if (flat || integer_varying) {
 		cspv_emit2(&ctx->decos, CSpvOpDecorate, var, CSpvDecorationFlat);
 	}
 	cspv_name_id(ctx, var, name);
@@ -5731,6 +5739,14 @@ CSPV_Result cspv_compile_ex(const char* source, CSPV_Stage stage, const CSPV_Opt
 	ctx->p = ctx->pp_text;
 	ctx->line = 1;
 	ctx->file_index = 0;
+
+	if (opts && opts->preprocess_only) {
+		result.success = true;
+		result.preprocessed = ctx->pp_text;
+		ctx->pp_text = NULL;
+		cspv_cleanup(ctx);
+		return result;
+	}
 
 	ctx->glsl_ext_id = cspv_new_id(ctx);
 	cspv_init_types(ctx);

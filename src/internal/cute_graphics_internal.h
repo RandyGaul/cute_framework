@@ -235,6 +235,10 @@ CF_Shader cf_make_shader_from_source_internal(const char* vs_src, const char* fs
 bool cf_recompile_draw_pipelines(const char* custom_shapes_src);
 void cf_canvas_get_size(CF_Canvas canvas, int* w, int* h);
 void cf_shader_watch();
+// Swaps the internal contents of two shaders (hot-reload: user-held handles keep
+// pointing at the same internals, which get fresh guts).
+void cf_shader_swap_contents(CF_Shader a, CF_Shader b);
+void cf_compute_shader_swap_contents(CF_ComputeShader a, CF_ComputeShader b);
 
 #ifndef CF_EMSCRIPTEN
 

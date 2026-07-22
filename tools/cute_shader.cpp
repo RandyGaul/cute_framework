@@ -137,6 +137,43 @@ void cute_shader_cleanup(void)
 {
 }
 
+char* cute_shader_preprocess(const char* source, CF_ShaderCompilerConfig config)
+{
+	CK_DYNA CSPV_Define* defines = NULL;
+	for (int i = 0; i < config.num_builtin_defines; ++i) {
+		CSPV_Define d;
+		d.name = config.builtin_defines[i].name;
+		d.value = config.builtin_defines[i].value;
+		apush(defines, d);
+	}
+
+	CF_CspvIncludeCtx include_ctx;
+	memset(&include_ctx, 0, sizeof(include_ctx));
+	include_ctx.config = &config;
+	include_ctx.vfs = config.vfs ? config.vfs : &s_libc_vfs;
+
+	CSPV_Options opts;
+	memset(&opts, 0, sizeof(opts));
+	opts.num_defines = (int)asize(defines);
+	opts.defines = defines;
+	opts.include_resolve = s_resolve_include;
+	opts.user = &include_ctx;
+	opts.preprocess_only = true;
+
+	CSPV_Result r = cspv_compile_ex(source, CSPV_STAGE_FRAGMENT, &opts);
+
+	afree(defines);
+	for (int i = 0; i < (int)asize(include_ctx.owned); ++i) sfree(include_ctx.owned[i]);
+	afree(include_ctx.owned);
+
+	char* out = NULL;
+	if (r.success && r.preprocessed) {
+		out = strdup(r.preprocessed);
+	}
+	cspv_free(&r);
+	return out;
+}
+
 CF_ShaderCompilerResult cute_shader_compile(const char* source, CF_ShaderCompilerStage stage, CF_ShaderCompilerConfig config)
 {
 	CSPV_Stage cspv_stage = CSPV_STAGE_VERTEX;
@@ -199,43 +236,8 @@ CF_ShaderCompilerResult cute_shader_compile(const char* source, CF_ShaderCompile
 			spvc_compiler compiler = NULL;
 			spvc_context_create_compiler(spvc, SPVC_BACKEND_GLSL, ir, SPVC_CAPTURE_MODE_TAKE_OWNERSHIP, &compiler);
 
-			// Ensure integer varyings are flat (required by GLSL ES).
-			{
-				const spvc_entry_point* eps = NULL;
-				size_t ep_count = 0;
-				SpvExecutionModel_ exec_model = SpvExecutionModelVertex;
-				if (spvc_compiler_get_entry_points(compiler, &eps, &ep_count) == SPVC_SUCCESS && ep_count > 0) {
-					exec_model = eps[0].execution_model;
-				}
-
-				spvc_resources res = NULL;
-				if (spvc_compiler_create_shader_resources(compiler, &res) == SPVC_SUCCESS) {
-					auto decorate_list_flat_if_integer = [&](const spvc_reflected_resource* list, size_t count) {
-						for (size_t i = 0; i < count; ++i) {
-							spvc_type type = spvc_compiler_get_type_handle(compiler, list[i].type_id);
-							spvc_basetype bt = spvc_type_get_basetype(type);
-							if (bt == SPVC_BASETYPE_INT32 || bt == SPVC_BASETYPE_UINT32) {
-								if (!spvc_compiler_has_decoration(compiler, list[i].id, SpvDecorationFlat)) {
-									spvc_compiler_set_decoration(compiler, list[i].id, SpvDecorationFlat, 1);
-								}
-							}
-						}
-					};
-
-					const spvc_reflected_resource* outs = NULL;
-					size_t out_count = 0;
-					if (spvc_resources_get_resource_list_for_type(res, SPVC_RESOURCE_TYPE_STAGE_OUTPUT, &outs, &out_count) == SPVC_SUCCESS) {
-						decorate_list_flat_if_integer(outs, out_count);
-					}
-					if (exec_model == SpvExecutionModelFragment) {
-						const spvc_reflected_resource* ins = NULL;
-						size_t in_count = 0;
-						if (spvc_resources_get_resource_list_for_type(res, SPVC_RESOURCE_TYPE_STAGE_INPUT, &ins, &in_count) == SPVC_SUCCESS) {
-							decorate_list_flat_if_integer(ins, in_count);
-						}
-					}
-				}
-			}
+			// (Integer varyings arrive already Flat-decorated on both stages --
+			// cute_spirv emits the decorations, so no fixup pass is needed here.)
 
 			// Options for GLES 3.00.
 			spvc_compiler_options options = NULL;
@@ -268,8 +270,9 @@ CF_ShaderCompilerResult cute_shader_compile(const char* source, CF_ShaderCompile
 		spvc_context_destroy(spvc);
 	}
 
-	// Reflection: map CSPV_Reflection to CF_ShaderInfo. All strings/arrays are
-	// malloc'd/strdup'd to satisfy cute_shader_free_result's free() contract.
+	// Reflection: map CSPV_Reflection to CF_ShaderInfo. Arrays are malloc'd (freed by
+	// cute_shader_free_result); names are interned strings from the compiler, which
+	// are immortal -- no copies, and free_result must not free them.
 	CSPV_Reflection* rf = &r.reflection;
 
 	int num_samplers = (int)asize(rf->samplers);
@@ -294,7 +297,7 @@ CF_ShaderCompilerResult cute_shader_compile(const char* source, CF_ShaderCompile
 		image_names = (const char**)malloc(sizeof(char*) * num_images);
 		image_binding_slots = (int*)malloc(sizeof(int) * num_images);
 		for (int i = 0; i < num_images; ++i) {
-			image_names[i] = strdup(rf->samplers[i].name);
+			image_names[i] = rf->samplers[i].name;
 			image_binding_slots[i] = rf->samplers[i].binding;
 		}
 		for (int i = 0; i < num_images - 1; ++i) {
@@ -312,7 +315,7 @@ CF_ShaderCompilerResult cute_shader_compile(const char* source, CF_ShaderCompile
 	if (num_uniforms > 0) {
 		uniforms = (CF_ShaderUniformInfo*)malloc(sizeof(CF_ShaderUniformInfo) * num_uniforms);
 		for (int i = 0; i < num_uniforms; ++i) {
-			uniforms[i].block_name = strdup(rf->uniform_blocks[i].name);
+			uniforms[i].block_name = rf->uniform_blocks[i].name;
 			uniforms[i].block_index = rf->uniform_blocks[i].binding;
 			uniforms[i].block_size = rf->uniform_blocks[i].size;
 			uniforms[i].num_members = rf->uniform_blocks[i].num_members;
@@ -324,7 +327,7 @@ CF_ShaderCompilerResult cute_shader_compile(const char* source, CF_ShaderCompile
 	if (num_uniform_members > 0) {
 		uniform_members = (CF_ShaderUniformMemberInfo*)malloc(sizeof(CF_ShaderUniformMemberInfo) * num_uniform_members);
 		for (int i = 0; i < num_uniform_members; ++i) {
-			uniform_members[i].name = strdup(rf->uniform_members[i].name);
+			uniform_members[i].name = rf->uniform_members[i].name;
 			uniform_members[i].type = (CF_ShaderInfoDataType)rf->uniform_members[i].type;
 			uniform_members[i].offset = rf->uniform_members[i].offset;
 			uniform_members[i].array_length = rf->uniform_members[i].array_length;
@@ -336,7 +339,7 @@ CF_ShaderCompilerResult cute_shader_compile(const char* source, CF_ShaderCompile
 	if (num_inputs > 0) {
 		inputs = (CF_ShaderInputInfo*)malloc(sizeof(CF_ShaderInputInfo) * num_inputs);
 		for (int i = 0; i < num_inputs; ++i) {
-			inputs[i].name = strdup(rf->inputs[i].name);
+			inputs[i].name = rf->inputs[i].name;
 			inputs[i].location = rf->inputs[i].location;
 			inputs[i].format = (CF_ShaderInfoDataType)rf->inputs[i].type;
 		}
@@ -380,25 +383,11 @@ CF_ShaderCompilerResult cute_shader_compile(const char* source, CF_ShaderCompile
 
 void cute_shader_free_result(CF_ShaderCompilerResult result)
 {
+	// Reflection names are interned strings (immortal) -- only the arrays are freed.
 	CF_ShaderInfo* shader_info = &result.bytecode.shader_info;
-	for (int i = 0; i < shader_info->num_inputs; ++i) {
-		free((char*)shader_info->inputs[i].name);
-	}
 	free(shader_info->inputs);
-
-	for (int i = 0; i < shader_info->num_uniform_members; ++i) {
-		free((char*)shader_info->uniform_members[i].name);
-	}
 	free(shader_info->uniform_members);
-
-	for (int i = 0; i < shader_info->num_uniforms; ++i) {
-		free((char*)shader_info->uniforms[i].block_name);
-	}
 	free(shader_info->uniforms);
-
-	for (int i = 0; i < shader_info->num_images; ++i) {
-		free((char*)shader_info->image_names[i]);
-	}
 	free(shader_info->image_names);
 	free(shader_info->image_binding_slots);
 
