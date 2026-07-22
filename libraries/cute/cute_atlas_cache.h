@@ -3,47 +3,55 @@
 		Licensing information can be found at the end of the file.
 	------------------------------------------------------------------------------
 
-	cute_spritebatch.h - v1.08
+	cute_atlas_cache.h - v1.09
 
 	To create implementation (the function definitions)
-		#define SPRITEBATCH_IMPLEMENTATION
+		#define ATLAS_CACHE_IMPLEMENTATION
 	in *one* C/CPP file (translation unit) that includes this file
 
 	SUMMARY:
 
-		This header implements a 2D sprite batcher by tracking different textures within
-		a rolling atlas cache. Over time atlases are decayed and recreated when textures
-		stop being used. This header is useful for batching sprites at run-time. This avoids
-		the need to compile texture atlases as a pre-process step, letting the game load
-		images up individually, dramatically simplifying art pipelines.
+		This header implements a runtime texture atlas cache. Images are referenced by a
+		unique id; the atlas cache packs the images actually in use into large atlas
+		textures on the fly, decays them out when they stop being used, and reports back
+		texture handles + uv coordinates grouped by atlas. This avoids compiling texture
+		atlases as a pre-process step, letting the game load images up individually,
+		dramatically simplifying art pipelines.
+
+		Think of it as an atlas *tool*: you tell it which images you are drawing this
+		frame (`atlas_cache_push`), and it tells you which texture to bind and which uvs
+		to use for each (`atlas_cache_flush` + your callback), while transparently
+		managing atlas residency behind the scenes. What geometry you render with those
+		uvs -- quads, command buffers, whatever -- is entirely your business; the entries
+		carry only a small user-defined payload (see ATLAS_CACHE_ENTRY_GEOMETRY) so you
+		can correlate reported entries back to your own draw data.
 
 	MORE DETAILS:
 
-		`spritebatch_push` is used to push sprite instances into a buffer. Rendering sprites
-		works by calling `spritebatch_flush`. `spritebatch_flush` will use a user-supplied
-		callback to report sprite batches. This callback is of type `submit_batch_fn`. The
-		batches are reported as an array of `spritebatch_sprite_t` sprites, and can be
-		further sorted by the user (for example to sort by depth). Sprites in a batch share
-		the same texture handle (either from the same base image, or from the same internal
-		atlas).
+		`atlas_cache_push` is used to push sprite entries into a buffer. Rendering works
+		by calling `atlas_cache_flush`. `atlas_cache_flush` will use a user-supplied
+		callback to report batches. This callback is of type `submit_batch_fn`. The
+		batches are reported as an array of `atlas_cache_entry_t` entries with valid
+		texture ids and uvs filled in. Entries in a batch share the same texture handle
+		(either from the same base image, or from the same internal atlas).
 
-		cute_spritebatch does not know anything about how to generate texture handles, or
+		cute_atlas_cache does not know anything about how to generate texture handles, or
 		destroy them. As such, the user must supply two callbacks for creating handles and
 		destroying them. These can be simple wrappers around, for example, `glGenTextures`
 		and `glDeleteTextures`.
 
-		Finally, cute_spritebatch will periodically need access to pixels from images. These
+		Finally, cute_atlas_cache will periodically need access to pixels from images. These
 		pixels are used to generate textures, or to build atlases (which in turn generate a
-		texture). cute_spritebatch does not need to know much about your images, other than
+		texture). cute_atlas_cache does not need to know much about your images, other than
 		the pixel stride. The user supplies callback of type `get_pixels_fn`, which lets
-		cute_spritebatch retreive the pixels associated with a particular image. The pixels
-		can be stored in RAM and handed to cute_spritebatch whenever requested, or the pixels
-		can be fetched directly from disk and handed to cute_spritebatch. It doesn't matter
-		to cute_spritebatch. Since `get_pixels_fn` can be called from `spritebatch_flush` it
+		cute_atlas_cache retreive the pixels associated with a particular image. The pixels
+		can be stored in RAM and handed to cute_atlas_cache whenever requested, or the pixels
+		can be fetched directly from disk and handed to cute_atlas_cache. It doesn't matter
+		to cute_atlas_cache. Since `get_pixels_fn` can be called from `atlas_cache_flush` it
 		is recommended to avoid file i/o within the `get_pixels_fn` callback, and instead try
 		to already have pixels ready in RAM.
 
-		The `spritebatch_defrag` function performs atlas creation and texture management. It
+		The `atlas_cache_defrag` function performs atlas creation and texture management. It
 		should be called periodically. It can be called once per game tick (once per render),
 		or optionally called at a different frequency (once every N game ticks).
 
@@ -65,8 +73,8 @@
 		  time.
 
 		CONS
-		- Performance hits in the `spritebatch_defrag` function, and a little as well in
-		  the `spritebatch_flush` function. Extra run-time memory usage for bookkeeping,
+		- Performance hits in the `atlas_cache_defrag` function, and a little as well in
+		  the `atlas_cache_flush` function. Extra run-time memory usage for bookkeeping,
 		  which implies a RAM hit as well as more things to clog the CPU cache.
 		- If each texture comes from a separate image on-disk, opening individual files on
 		  disk can be very slow. For example on Windows just performing permissions and
@@ -75,25 +83,25 @@
 		  a file io abstraction like PHYSFS.
 		- For large numbers of separate images, some file abstraction is necessary to avoid
 		  a large performance hit on opening/closing many individual files. This problem is
-		  *not* solved by cute_spritebatch.h, and instead should be solved by some separate
+		  *not* solved by cute_atlas_cache.h, and instead should be solved by some separate
 		  file abstraction system. PHYSFS is a good example of a solid file io abstraction.
 
 	EXAMPLE USAGE:
 
-		spritebatch_config_t config;
-		spritebatch_set_default_config(&config);
+		atlas_cache_config_t config;
+		atlas_cache_set_default_config(&config);
 		config.batch_callback = my_report_batches_function;
 		config.get_pixels_callback = my_get_pixels_function;
 		config.generate_texture_callback = my_make_texture_handle_function;
 		config.delete_texture_callback = my_destroy_texture_handle_function;
 
-		spritebatch_t batcher;
-		spritebatch_init(&batcher, &config);
+		atlas_cache_t batcher;
+		atlas_cache_init(&batcher, &config);
 
 		while (game_is_running)
 		{
 			for (int i = 0; i < sprite_count; ++i)
-				spritebatch_push(
+				atlas_cache_push(
 					&batcher,
 					sprites[i].image_id,
 					sprites[i].image_width_in_pixels,
@@ -106,48 +114,55 @@
 					sprites[i].sin_rotation_angle
 					);
 
-			spritebatch_tick(&batcher);
-			spritebatch_defrag(&batcher);
-			spritebatch_flush(&batcher);
+			atlas_cache_tick(&batcher);
+			atlas_cache_defrag(&batcher);
+			atlas_cache_flush(&batcher);
 		}
 
 	CUSTOMIZATION:
 
 		The following macros can be defined before including this header with the
-		SPRITEBATCH_IMPLEMENTATION symbol defined, in order to customize the internal
-		behavior of cute_spritebatch.h. Search this header to find how each macro is
+		ATLAS_CACHE_IMPLEMENTATION symbol defined, in order to customize the internal
+		behavior of cute_atlas_cache.h. Search this header to find how each macro is
 		defined and used. Note that MALLOC/FREE functions can optionally take a context
 		parameter for custom allocation.
 
-		SPRITEBATCH_MALLOC
-		SPRITEBATCH_MEMCPY
-		SPRITEBATCH_MEMSET
-		SPRITEBATCH_MEMMOVE
-		SPRITEBATCH_ASSERT
-		SPRITEBATCH_ATLAS_FLIP_Y_AXIS_FOR_UV
-		SPRITEBATCH_ATLAS_EMPTY_COLOR
-		SPRITEBATCH_LOG
+		ATLAS_CACHE_MALLOC
+		ATLAS_CACHE_MEMCPY
+		ATLAS_CACHE_MEMSET
+		ATLAS_CACHE_MEMMOVE
+		ATLAS_CACHE_ASSERT
+		ATLAS_CACHE_ATLAS_FLIP_Y_AXIS_FOR_UV
+		ATLAS_CACHE_ATLAS_EMPTY_COLOR
+		ATLAS_CACHE_LOG
 
 	Revision history:
 		0.01 (11/20/2017) experimental release
 		1.00 (04/14/2018) initial release
 		1.01 (05/07/2018) modification for easier file embedding
-		1.02 (02/03/2019) moved def of spritebatch_t for easier embedding,
+		1.02 (02/03/2019) moved def of atlas_cache_t for easier embedding,
 		                  inverted get pixels callback to let users have an easier time
 		                  with memory management, added support for pixel padding along
 		                  the edges of all textures (useful for certain shader effects)
-		1.03 (08/18/2020) refactored `spritebatch_push` so that sprites can have userdata
+		1.03 (08/18/2020) refactored `atlas_cache_push` so that sprites can have userdata
 		1.04 (08/20/2021) qsort -> mergesort to avoid sort bugs, optional override
 		                  `sprites_sorter_fn` sorting routines provided by Kariem, added
-		                  new function `spritebatch_prefetch`
-		1.05 (12/10/2022) added `SPRITEBATCH_SPRITE_GEOMETRY`, a way to put custom geom-
-		                  etry in sprites. Added `spritebatch_register_premade_atlas`, a
-		                  way to inject premade atlases into spritebatch
-		1.06 (03/24/2023) added `spritebatch_invalidate`, useful for updating pixels NOW
+		                  new function `atlas_cache_prefetch`
+		1.05 (12/10/2022) added `ATLAS_CACHE_ENTRY_GEOMETRY`, a way to put custom geom-
+		                  etry in sprites. Added `atlas_cache_register_premade_atlas`, a
+		                  way to inject premade atlases into atlas_cache
+		1.06 (03/24/2023) added `atlas_cache_invalidate`, useful for updating pixels NOW
 		1.07 (10/01/2024) Removed public `sort_bits` since it's not actually useful, and
 		                  reused it internally to implement stable sorting (bugfix).
-		1.08 (02/01/2026) Replaced external hashtable.h with simpler internal spritebatch_map_t,
-		                  fixed memory context bugs in spritebatch_term and get_pixels.
+		1.08 (02/01/2026) Replaced external hashtable.h with simpler internal atlas_cache_map_t,
+		                  fixed memory context bugs in atlas_cache_term and get_pixels.
+		1.09 (07/21/2026) Reframed as a pure runtime atlas cache. The geometry payload
+		                  (ATLAS_CACHE_ENTRY_GEOMETRY) is now documented as an opaque
+		                  user correlation payload rather than "the sprite's geometry" --
+		                  renderers that keep their own draw streams (e.g. command-buffer
+		                  renderers) should pass a small index/id here and look their own
+		                  data up when batches are reported. The default quad geometry
+		                  remains for standalone users.
 */
 
 /*
@@ -156,66 +171,69 @@
 		Kariem            1.05 - Initial work on premade atlases
 */
 
-#ifndef SPRITEBATCH_H
+#ifndef ATLAS_CACHE_H
 
-#ifndef SPRITEBATCH_U64
-	#define SPRITEBATCH_U64 unsigned long long
-#endif // SPRITEBATCH_U64
+#ifndef ATLAS_CACHE_U64
+	#define ATLAS_CACHE_U64 unsigned long long
+#endif // ATLAS_CACHE_U64
 
-typedef struct spritebatch_t spritebatch_t;
-typedef struct spritebatch_config_t spritebatch_config_t;
-typedef struct spritebatch_sprite_t spritebatch_sprite_t;
+typedef struct atlas_cache_t atlas_cache_t;
+typedef struct atlas_cache_config_t atlas_cache_config_t;
+typedef struct atlas_cache_entry_t atlas_cache_entry_t;
 
-// This define is *completely optional*. It lets you override the default layout of
-// data passed through the sprite batcher. By default it contains the minimal info
-// needed for a quad (position, scale, rotation, etc.). You can override this macro
-// to define your own geometry for batching. For example, you could have a union to
-// support both quads and individual triangles, as opposed to just quads by default.
-// 
-// IMPROTANT NOTE (ignore unless you override this macro):
+// This define is *completely optional*. It is an opaque payload carried through the
+// atlas cache untouched and handed back to you in reported batches. By default it
+// contains the minimal info needed to draw a quad (position, scale, rotation), for
+// standalone use. Renderers that keep their own draw-data streams should override
+// this with something tiny -- e.g. a single int index into your own array -- and
+// look up their data when batches are reported; the atlas cache then carries only
+// a few bytes per entry.
+//
+// IMPORTANT NOTE (ignore unless you override this macro):
 // Just note you'll have to calculate your own uv coordinates after each batch is
 // reported. You should also be careful about the scale of your geometry if you opt
 // to use `atlas_use_border_pixels`, as you'll have to account for border pixels
-// included in the reported uvs. Search `SPRITEBATCH_SPRITE_GEOMETRY_DEFAULT` for
+// included in the reported uvs. Search `ATLAS_CACHE_ENTRY_GEOMETRY_DEFAULT` for
 // more an example on how to do this yourself.
-#ifndef SPRITEBATCH_SPRITE_GEOMETRY
-	typedef struct spritebatch_primitive_t
+#ifndef ATLAS_CACHE_ENTRY_GEOMETRY
+	typedef struct atlas_cache_primitive_t
 	{
 		float x, y;   // x and y position
 		float sx, sy; // scale on x and y axis
 		float c, s;   // cosine and sine (represents cos(angle) and sin(angle))
-	} spritebatch_primitive_t;
-#	define SPRITEBATCH_SPRITE_GEOMETRY spritebatch_primitive_t
+	} atlas_cache_primitive_t;
+#	define ATLAS_CACHE_ENTRY_GEOMETRY atlas_cache_primitive_t
 
 	// Used to automatically scale reported sprites according to border pixels.
-#	define SPRITEBATCH_SPRITE_GEOMETRY_DEFAULT
+#	define ATLAS_CACHE_ENTRY_GEOMETRY_DEFAULT
 #endif
 
-// Sprites will be pushed into the spritebatch with this struct. All the fields
-// should be set before calling `spritebatch_push`, though `texture_id` and
+// Sprites will be pushed into the atlas_cache with this struct. All the fields
+// should be set before calling `atlas_cache_push`, though `texture_id` and
 // `sort_bits` can simply be set to zero.
 //
-// After sprites are pushed onto the spritebatch via `spritebatch_push`, they will
+// After sprites are pushed onto the atlas_cache via `atlas_cache_push`, they will
 // be sorted, `texture_id` is assigned to a generated atlas, and handed back to you
 // via the `submit_batch_fn` callback.
-struct spritebatch_sprite_t
+struct atlas_cache_entry_t
 {
 	// `image_id` must be a unique identifier for the image a sprite references.
 	// You must set this value!
-	SPRITEBATCH_U64 image_id;
+	ATLAS_CACHE_U64 image_id;
 
 	// `texture_id` can be set to zero. This value will be overwritten with a valid
 	// texture id before batches are reported back to you. This id will map to an
 	// atlas created internally. For premade atlases you must set this yourself.
-	SPRITEBATCH_U64 texture_id;
+	ATLAS_CACHE_U64 texture_id;
 
 	// For internal use. Will get overwritten.
 	int sort_bits;
 
-	// Contains all of the sprite's geometry. By default this is just a scale +
-	// translation + rotation. However, you can overload this macro to use your own
-	// geometry definition. See comments at this macro definition above for more info.
-	SPRITEBATCH_SPRITE_GEOMETRY geom;
+	// Opaque user payload, carried through untouched and handed back in reported
+	// batches. Defaults to simple quad geometry for standalone use; override the
+	// macro with a small index/id to correlate entries with your own draw stream.
+	// See comments at the macro definition above for more info.
+	ATLAS_CACHE_ENTRY_GEOMETRY geom;
 
 	int w, h;         // width and height of this sprite's image in pixels
 	float minx, miny; // u coordinate - this will be overwritten, except for premade sprites
@@ -224,133 +242,133 @@ struct spritebatch_sprite_t
 	// This is a *completely optional* feature. You can insert your own user data
 	// struct into each sprite. It is *never* touched internally, and simply handed
 	// back to you later.
-#ifdef SPRITEBATCH_SPRITE_USERDATA
-	SPRITEBATCH_SPRITE_USERDATA udata;
-#endif // SPRITEBATCH_SPRITE_USERDATA
+#ifdef ATLAS_CACHE_SPRITE_USERDATA
+	ATLAS_CACHE_SPRITE_USERDATA udata;
+#endif // ATLAS_CACHE_SPRITE_USERDATA
 };
 
 // Pushes a sprite onto an internal buffer. Does no other logic.
-void spritebatch_push(spritebatch_t* sb, spritebatch_sprite_t sprite);
+void atlas_cache_push(atlas_cache_t* sb, atlas_cache_entry_t sprite);
 
-// Ensures the image associated with your unique `image_id` is loaded up into spritebatch. This
+// Ensures the image associated with your unique `image_id` is loaded up into atlas_cache. This
 // function pretends to draw a sprite referencing `image_id` but doesn't actually do any
 // drawing at all. Use this function as an optimization to pre-load images you know will be
 // drawn very soon, e.g. prefetch all ten images within a single animation just as it starts
 // playing.
-void spritebatch_prefetch(spritebatch_t* sb, SPRITEBATCH_U64 image_id, int w, int h);
+void atlas_cache_prefetch(atlas_cache_t* sb, ATLAS_CACHE_U64 image_id, int w, int h);
 
 // Useful for re-uploading pixels to the GPU.
 // Invalidates the internal cache for a specific sprite. If this sprite resides in a texture atlas
 // the entire atlas is recompiled. If the sprite resides in the lonely buffer only the individual
 // texture gets recreated. You may want to beef up `lonely_buffer_count_till_flush` in the config
-// `spritebatch_config_t` if you want to invalidate sprites often -- this can help prevent constantly
+// `atlas_cache_config_t` if you want to invalidate sprites often -- this can help prevent constantly
 // invalidating internal atlases and recompiling them, and instead get your dynamic textures into the
 // lonely buffer.
-void spritebatch_invalidate(spritebatch_t* sb, SPRITEBATCH_U64 image_id);
+void atlas_cache_invalidate(atlas_cache_t* sb, ATLAS_CACHE_U64 image_id);
 
 // If a match for `image_id` is found, the texture id and uv coordinates are looked up and returned
 // as a sprite instance. This is sometimes useful to render sprites through an external mechanism,
-// such as Dear ImGui. The return result will be valid until the next call to `spritebatch_defrag`.
-spritebatch_sprite_t spritebatch_fetch(spritebatch_t* sb, SPRITEBATCH_U64 image_id, int w, int h);
+// such as Dear ImGui. The return result will be valid until the next call to `atlas_cache_defrag`.
+atlas_cache_entry_t atlas_cache_fetch(atlas_cache_t* sb, ATLAS_CACHE_U64 image_id, int w, int h);
 
-// Increments internal timestamps on all textures, for use in `spritebatch_defrag`.
-void spritebatch_tick(spritebatch_t* sb);
+// Increments internal timestamps on all textures, for use in `atlas_cache_defrag`.
+void atlas_cache_tick(atlas_cache_t* sb);
 
-// Sorts the internal sprites and flushes the buffer built by `spritebatch_push`. Will call
+// Sorts the internal sprites and flushes the buffer built by `atlas_cache_push`. Will call
 // the `submit_batch_fn` function for each batch of sprites and return them as an array. Any `image_id`
-// within the `spritebatch_push` buffer that do not yet have a texture handle will request pixels
+// within the `atlas_cache_push` buffer that do not yet have a texture handle will request pixels
 // from the image via `get_pixels_fn` and request a texture handle via `generate_texture_handle_fn`.
 // Returns the number of batches created and submitted.
-int spritebatch_flush(spritebatch_t* sb);
+int atlas_cache_flush(atlas_cache_t* sb);
 
-// Clears buffers from `spritebatch_flush` in case you need to bail on rendering for any reason, such
+// Clears buffers from `atlas_cache_flush` in case you need to bail on rendering for any reason, such
 // as working with deferred contexts.
-void spritebatch_clear(spritebatch_t* sb);
+void atlas_cache_clear(atlas_cache_t* sb);
 
-// All textures created so far by `spritebatch_flush` will be considered as candidates for creating
+// All textures created so far by `atlas_cache_flush` will be considered as candidates for creating
 // new internal texture atlases. Internal texture atlases compress images together inside of one
 // texture to dramatically reduce draw calls. When an atlas is created, the most recently used `image_id`
 // instances are prioritized, to ensure atlases are filled with images all drawn at the same time.
 // As some textures cease to draw on screen, they "decay" over time. Once enough images in an atlas
 // decay, the atlas is removed, and any "live" images in the atlas are used to create new atlases.
-// Can be called every 1/N times `spritebatch_flush` is called.
-int spritebatch_defrag(spritebatch_t* sb);
+// Can be called every 1/N times `atlas_cache_flush` is called.
+int atlas_cache_defrag(atlas_cache_t* sb);
 
-int spritebatch_init(spritebatch_t* sb, spritebatch_config_t* config, void* udata);
-void spritebatch_term(spritebatch_t* sb);
+int atlas_cache_init(atlas_cache_t* sb, atlas_cache_config_t* config, void* udata);
+void atlas_cache_term(atlas_cache_t* sb);
 
-typedef struct spritebatch_premade_sprite_t
+typedef struct atlas_cache_premade_entry_t
 {
 	// `image_id` must be a unique identifier for the image a sprite references. This id is *not* local
-	// to a particular atlas, and instead is global to the entire spritebatch.
-	SPRITEBATCH_U64 image_id;
+	// to a particular atlas, and instead is global to the entire atlas_cache.
+	ATLAS_CACHE_U64 image_id;
 	int w, h;         // width and height of this sprite's image in pixels
 	float minx, miny; // u coordinate in the premade atlas
 	float maxx, maxy; // v coordinate in the premade atlas
-} spritebatch_premade_sprite_t;
+} atlas_cache_premade_entry_t;
 
 // Registers a premade atlas into the sprite batcher. This function is provided here mostly for
 // convenience. Sometimes you may already have a pre-created atlas and want a simple way to draw all
-// sprites through spritebatch.
+// sprites through atlas_cache.
 // 
 // In terms of performance, premade atlases provide another way to tune the performance of batching.
-// If you know ahead of time it's better to inject a premade atlas into the spritebatch, instead of
-// using `spritebatch_push`, this can be a good option. For example, this makes sense for text
+// If you know ahead of time it's better to inject a premade atlas into the atlas_cache, instead of
+// using `atlas_cache_push`, this can be a good option. For example, this makes sense for text
 // rendering systems that create their own font texture atlas. Understanding the performance impact
-// can become a lot simpler than flooding `spritebatch_push` with a lot of unique glyphs used briefly.
-void spritebatch_register_premade_atlas(spritebatch_t* sb, SPRITEBATCH_U64 texture_id, int w, int h, int sprite_count, spritebatch_premade_sprite_t* sprites);
+// can become a lot simpler than flooding `atlas_cache_push` with a lot of unique glyphs used briefly.
+void atlas_cache_register_premade_atlas(atlas_cache_t* sb, ATLAS_CACHE_U64 texture_id, int w, int h, int sprite_count, atlas_cache_premade_entry_t* sprites);
 
 // Sprite batches are submit via synchronous callback back to the user. This function is called
-// from inside `spritebatch_flush`. Each time `submit_batch_fn` is called an array of sprites
+// from inside `atlas_cache_flush`. Each time `submit_batch_fn` is called an array of sprites
 // is handed to the user. The sprites are intended to be further sorted by the user as desired
 // (for example, additional sorting based on depth). `w` and `h` are the width/height, respectively,
 // of the texture the batch of sprites resides upon. w/h can be useful for knowing texture dim-
 // ensions, which is needed to know texel size or other measurements.
-typedef void (submit_batch_fn)(spritebatch_sprite_t* sprites, int count, int texture_w, int texture_h, void* udata);
+typedef void (submit_batch_fn)(atlas_cache_entry_t* sprites, int count, int texture_w, int texture_h, void* udata);
 
-// cute_spritebatch.h needs to know how to get the pixels of an image, generate textures handles (for
+// cute_atlas_cache.h needs to know how to get the pixels of an image, generate textures handles (for
 // example glGenTextures for OpenGL), and destroy texture handles. These functions are all called
-// from within the `spritebatch_defrag` function, and sometimes from `spritebatch_flush`.
+// from within the `atlas_cache_defrag` function, and sometimes from `atlas_cache_flush`.
 
 // Called when the pixels are needed from the user. `image_id` maps to a unique image, and is *not*
 // related to `texture_id` at all. `buffer` must be filled in with `bytes_to_fill` number of bytes.
 // The user is assumed to know the width/height of the image, and can optionally verify that
 // `bytes_to_fill` matches the user's w * h * stride for this particular image.
-typedef void (get_pixels_fn)(SPRITEBATCH_U64 image_id, void* buffer, int bytes_to_fill, void* udata);
+typedef void (get_pixels_fn)(ATLAS_CACHE_U64 image_id, void* buffer, int bytes_to_fill, void* udata);
 
 // Called with a new texture handle is needed. This will happen whenever a new atlas is created,
-// and whenever new `image_id`s first appear to cute_spritebatch, and have yet to find their way
+// and whenever new `image_id`s first appear to cute_atlas_cache, and have yet to find their way
 // into an appropriate atlas.
-typedef SPRITEBATCH_U64 (generate_texture_handle_fn)(void* pixels, int w, int h, void* udata);
+typedef ATLAS_CACHE_U64 (generate_texture_handle_fn)(void* pixels, int w, int h, void* udata);
 
 // Called whenever a texture handle is ready to be free'd up. This happens whenever a particular image
 // or a particular atlas has not been used for a while, and is ready to be released.
-typedef void (destroy_texture_handle_fn)(SPRITEBATCH_U64 texture_id, void* udata);
+typedef void (destroy_texture_handle_fn)(ATLAS_CACHE_U64 texture_id, void* udata);
 
-// (Optional) If the user provides this callback, cute_spritebatch will call it to sort all of sprites before submit_batch 
-// callback is called. The intention of sorting is to minimize the submit_batch calls. cute_spritebatch
+// (Optional) If the user provides this callback, cute_atlas_cache will call it to sort all of sprites before submit_batch 
+// callback is called. The intention of sorting is to minimize the submit_batch calls. cute_atlas_cache
 // provides its own internal sorting function which will be used if the user does not provide this callback.
 // 
 // Example using std::sort (C++) - Please note the lambda needs to be a non-capturing one.
 // 
-//     config.sprites_sorter_callback = [](spritebatch_sprite_t* sprites, int count)
+//     config.sprites_sorter_callback = [](atlas_cache_entry_t* sprites, int count)
 //     {
 //         std::sort(sprites, sprites + count,
-//         [](const spritebatch_sprite_t& a, const spritebatch_sprite_t& b) {
+//         [](const atlas_cache_entry_t& a, const atlas_cache_entry_t& b) {
 //             return a.texture_id < b.texture_id;
 //         });
 //     };
-typedef void (sprites_sorter_fn)(spritebatch_sprite_t* sprites, int count);
+typedef void (sprites_sorter_fn)(atlas_cache_entry_t* sprites, int count);
 
-// Sets all function pointers originally defined in the `config` struct when calling `spritebatch_init`.
+// Sets all function pointers originally defined in the `config` struct when calling `atlas_cache_init`.
 // Useful if DLL's are reloaded, or swapped, etc.
-void spritebatch_reset_function_ptrs(spritebatch_t* sb, submit_batch_fn* batch_callback, get_pixels_fn* get_pixels_callback, generate_texture_handle_fn* generate_texture_callback, destroy_texture_handle_fn* delete_texture_callback, sprites_sorter_fn* sprites_sorter_callback);
+void atlas_cache_reset_function_ptrs(atlas_cache_t* sb, submit_batch_fn* batch_callback, get_pixels_fn* get_pixels_callback, generate_texture_handle_fn* generate_texture_callback, destroy_texture_handle_fn* delete_texture_callback, sprites_sorter_fn* sprites_sorter_callback);
 
 // Initializes a set of good default paramaters. The users must still set
 // the four callbacks inside of `config`.
-void spritebatch_set_default_config(spritebatch_config_t* config);
+void atlas_cache_set_default_config(atlas_cache_config_t* config);
 
-struct spritebatch_config_t
+struct atlas_cache_config_t
 {
 	int pixel_stride;
 	int atlas_width_in_pixels;
@@ -362,7 +380,7 @@ struct spritebatch_config_t
 	                                    // immediately put into atlases. Setting a higher number, like 64, will buffer up 64 unique textures (which means up to an
 	                                    // additional 64 draw calls) before flushing them into atlases. Too low of a lonely buffer count combined with a low tick
 	                                    // to decay rate will cause performance problems where atlases are constantly created and immedately destroyed -- you have
-	                                    // been warned! Use `SPRITEBATCH_LOG` to gain some insight on what's going on inside the spritebatch when tuning these settings.
+	                                    // been warned! Use `ATLAS_CACHE_LOG` to gain some insight on what's going on inside the atlas_cache when tuning these settings.
 	float ratio_to_decay_atlas;         // from 0 to 1, once ratio is less than `ratio_to_decay_atlas`, flush active textures in atlas to lonely buffer
 	float ratio_to_merge_atlases;       // from 0 to 0.5, attempts to merge atlases with some ratio of empty space
 	submit_batch_fn* batch_callback;
@@ -373,104 +391,104 @@ struct spritebatch_config_t
 	void* allocator_context;
 };
 
-#define SPRITEBATCH_H
+#define ATLAS_CACHE_H
 #endif
 
 #if !defined(SPRITE_BATCH_INTERNAL_H)
 
-// spritebatch_map_t - A simple hash map for SPRITEBATCH_U64 keys to fixed-size values.
+// atlas_cache_map_t - A simple hash map for ATLAS_CACHE_U64 keys to fixed-size values.
 // Uses open addressing with linear probing and maintains a dense item array for fast iteration.
 
-typedef struct spritebatch_map_slot_t
+typedef struct atlas_cache_map_slot_t
 {
 	unsigned key_hash;
 	int item_index;
 	int base_count;
-} spritebatch_map_slot_t;
+} atlas_cache_map_slot_t;
 
-typedef struct spritebatch_map_t
+typedef struct atlas_cache_map_t
 {
 	void* mem_ctx;
 	int count;
 	int item_size;
-	spritebatch_map_slot_t* slots;
+	atlas_cache_map_slot_t* slots;
 	int slot_capacity;
-	SPRITEBATCH_U64* keys;
+	ATLAS_CACHE_U64* keys;
 	int* item_slots;
 	void* items;
 	int item_capacity;
-} spritebatch_map_t;
+} atlas_cache_map_t;
 
-typedef struct spritebatch_internal_sprite_t
+typedef struct atlas_cache_internal_sprite_t
 {
-	SPRITEBATCH_U64 image_id;
+	ATLAS_CACHE_U64 image_id;
 	int sort_bits;
-	SPRITEBATCH_SPRITE_GEOMETRY geom;
+	ATLAS_CACHE_ENTRY_GEOMETRY geom;
 	int w, h;                         // w/h of image in pixels
 	float premade_minx, premade_miny; // u coordinate for premade 
 	float premade_maxx, premade_maxy; // v coordinate for premade
-#ifdef SPRITEBATCH_SPRITE_USERDATA
-	SPRITEBATCH_SPRITE_USERDATA udata;
-#endif // SPRITEBATCH_SPRITE_USERDATA
-} spritebatch_internal_sprite_t;
+#ifdef ATLAS_CACHE_SPRITE_USERDATA
+	ATLAS_CACHE_SPRITE_USERDATA udata;
+#endif // ATLAS_CACHE_SPRITE_USERDATA
+} atlas_cache_internal_sprite_t;
 
-typedef struct spritebatch_internal_texture_t
+typedef struct atlas_cache_internal_texture_t
 {
 	int timestamp;
 	int w, h;
 	float minx, miny;
 	float maxx, maxy;
-	SPRITEBATCH_U64 image_id;
-} spritebatch_internal_texture_t;
+	ATLAS_CACHE_U64 image_id;
+} atlas_cache_internal_texture_t;
 
-typedef struct spritebatch_internal_atlas_t
+typedef struct atlas_cache_internal_atlas_t
 {
-	SPRITEBATCH_U64 texture_id;
+	ATLAS_CACHE_U64 texture_id;
 	float volume_ratio;
-	spritebatch_map_t sprites_to_textures;
-	struct spritebatch_internal_atlas_t* next;
-	struct spritebatch_internal_atlas_t* prev;
-} spritebatch_internal_atlas_t;
+	atlas_cache_map_t sprites_to_textures;
+	struct atlas_cache_internal_atlas_t* next;
+	struct atlas_cache_internal_atlas_t* prev;
+} atlas_cache_internal_atlas_t;
 
-typedef struct spritebatch_internal_lonely_texture_t
+typedef struct atlas_cache_internal_lonely_texture_t
 {
 	int timestamp;
 	int w, h;
-	SPRITEBATCH_U64 image_id;
-	SPRITEBATCH_U64 texture_id;
-} spritebatch_internal_lonely_texture_t;
+	ATLAS_CACHE_U64 image_id;
+	ATLAS_CACHE_U64 texture_id;
+} atlas_cache_internal_lonely_texture_t;
 
-typedef struct spritebatch_internal_premade_sprite_t
+typedef struct atlas_cache_internal_premade_sprite_t
 {
 	int atlas_w, atlas_h;
 	float minx, miny;
 	float maxx, maxy;
-	SPRITEBATCH_U64 texture_id;
-} spritebatch_internal_premade_sprite_t;
+	ATLAS_CACHE_U64 texture_id;
+} atlas_cache_internal_premade_sprite_t;
 
-struct spritebatch_t
+struct atlas_cache_t
 {
 	int input_count;
 	int input_capacity;
-	spritebatch_internal_sprite_t* input_buffer;
+	atlas_cache_internal_sprite_t* input_buffer;
 
 	int sprite_count;
 	int sprite_capacity;
-	spritebatch_sprite_t* sprites;
-	spritebatch_sprite_t* sprites_scratch;
+	atlas_cache_entry_t* sprites;
+	atlas_cache_entry_t* sprites_scratch;
 
 	int key_buffer_count;
 	int key_buffer_capacity;
-	SPRITEBATCH_U64* key_buffer;
+	ATLAS_CACHE_U64* key_buffer;
 
 	int pixel_buffer_size; // number of pixels
 	void* pixel_buffer;
 
-	spritebatch_map_t sprites_to_premades;
-	spritebatch_map_t sprites_to_lonely_textures;
-	spritebatch_map_t sprites_to_atlases;
+	atlas_cache_map_t sprites_to_premades;
+	atlas_cache_map_t sprites_to_lonely_textures;
+	atlas_cache_map_t sprites_to_atlases;
 
-	spritebatch_internal_atlas_t* atlases;
+	atlas_cache_internal_atlas_t* atlases;
 
 	int sort_id;
 	int pixel_stride;
@@ -499,64 +517,64 @@ struct spritebatch_t
 	#define _CRT_NONSTDC_NO_DEPRECATE
 #endif
 
-#ifndef SPRITEBATCH_MALLOC
+#ifndef ATLAS_CACHE_MALLOC
 	#include <stdlib.h>
-	#define SPRITEBATCH_MALLOC(size, ctx) malloc(size)
-	#define SPRITEBATCH_FREE(ptr, ctx) free(ptr)
+	#define ATLAS_CACHE_MALLOC(size, ctx) malloc(size)
+	#define ATLAS_CACHE_FREE(ptr, ctx) free(ptr)
 #endif
 
-#ifndef SPRITEBATCH_MEMCPY
+#ifndef ATLAS_CACHE_MEMCPY
 	#include <string.h>
-	#define SPRITEBATCH_MEMCPY(dst, src, n) memcpy(dst, src, n)
+	#define ATLAS_CACHE_MEMCPY(dst, src, n) memcpy(dst, src, n)
 #endif
 
-#ifndef SPRITEBATCH_MEMSET
+#ifndef ATLAS_CACHE_MEMSET
 	#include <string.h>
-	#define SPRITEBATCH_MEMSET(ptr, val, n) memset(ptr, val, n)
+	#define ATLAS_CACHE_MEMSET(ptr, val, n) memset(ptr, val, n)
 #endif
 
-#ifndef SPRITEBATCH_MEMMOVE
+#ifndef ATLAS_CACHE_MEMMOVE
 	#include <string.h>
-	#define SPRITEBATCH_MEMMOVE(dst, src, n) memmove(dst, src, n)
+	#define ATLAS_CACHE_MEMMOVE(dst, src, n) memmove(dst, src, n)
 #endif
 
-#ifndef SPRITEBATCH_ASSERT
+#ifndef ATLAS_CACHE_ASSERT
 	#include <assert.h>
-	#define SPRITEBATCH_ASSERT(condition) assert(condition)
+	#define ATLAS_CACHE_ASSERT(condition) assert(condition)
 #endif
 
 // flips output uv coordinate's y. Can be useful to "flip image on load"
-#ifndef SPRITEBATCH_ATLAS_FLIP_Y_AXIS_FOR_UV
-	#define SPRITEBATCH_ATLAS_FLIP_Y_AXIS_FOR_UV 1
+#ifndef ATLAS_CACHE_ATLAS_FLIP_Y_AXIS_FOR_UV
+	#define ATLAS_CACHE_ATLAS_FLIP_Y_AXIS_FOR_UV 1
 #endif
 
 // flips output uv coordinate's y. Can be useful to "flip image on load"
-#ifndef SPRITEBATCH_LONELY_FLIP_Y_AXIS_FOR_UV
-	#define SPRITEBATCH_LONELY_FLIP_Y_AXIS_FOR_UV 1
+#ifndef ATLAS_CACHE_LONELY_FLIP_Y_AXIS_FOR_UV
+	#define ATLAS_CACHE_LONELY_FLIP_Y_AXIS_FOR_UV 1
 #endif
 
-#ifndef SPRITEBATCH_ATLAS_EMPTY_COLOR
-	#define SPRITEBATCH_ATLAS_EMPTY_COLOR 0x00000000
+#ifndef ATLAS_CACHE_ATLAS_EMPTY_COLOR
+	#define ATLAS_CACHE_ATLAS_EMPTY_COLOR 0x00000000
 #endif
 
-#ifndef SPRITEBATCH_LOG
+#ifndef ATLAS_CACHE_LOG
 	#if 0
-		#define SPRITEBATCH_LOG printf
+		#define ATLAS_CACHE_LOG printf
 	#else
-		#define SPRITEBATCH_LOG(...)
+		#define ATLAS_CACHE_LOG(...)
 	#endif
 #endif
 
 #define SPRITE_BATCH_INTERNAL_H
 #endif
 
-#ifdef SPRITEBATCH_IMPLEMENTATION
-#ifndef SPRITEBATCH_IMPLEMENTATION_ONCE
-#define SPRITEBATCH_IMPLEMENTATION_ONCE
+#ifdef ATLAS_CACHE_IMPLEMENTATION
+#ifndef ATLAS_CACHE_IMPLEMENTATION_ONCE
+#define ATLAS_CACHE_IMPLEMENTATION_ONCE
 
-// spritebatch_map implementation
+// atlas_cache_map implementation
 
-static unsigned spritebatch_map_pow2ceil(unsigned v)
+static unsigned atlas_cache_map_pow2ceil(unsigned v)
 {
 	--v;
 	v |= v >> 1;
@@ -569,7 +587,7 @@ static unsigned spritebatch_map_pow2ceil(unsigned v)
 	return v;
 }
 
-static unsigned spritebatch_map_hash(SPRITEBATCH_U64 key)
+static unsigned atlas_cache_map_hash(ATLAS_CACHE_U64 key)
 {
 	key = (~key) + (key << 18);
 	key = key ^ (key >> 31);
@@ -577,39 +595,39 @@ static unsigned spritebatch_map_hash(SPRITEBATCH_U64 key)
 	key = key ^ (key >> 11);
 	key = key + (key << 6);
 	key = key ^ (key >> 22);
-	SPRITEBATCH_ASSERT(key);
+	ATLAS_CACHE_ASSERT(key);
 	return (unsigned)key;
 }
 
-static void spritebatch_map_init(spritebatch_map_t* map, int item_size, int initial_capacity, void* mem_ctx)
+static void atlas_cache_map_init(atlas_cache_map_t* map, int item_size, int initial_capacity, void* mem_ctx)
 {
-	initial_capacity = (int)spritebatch_map_pow2ceil(initial_capacity >= 0 ? (unsigned)initial_capacity : 32U);
+	initial_capacity = (int)atlas_cache_map_pow2ceil(initial_capacity >= 0 ? (unsigned)initial_capacity : 32U);
 	map->mem_ctx = mem_ctx;
 	map->count = 0;
 	map->item_size = item_size;
-	map->slot_capacity = (int)spritebatch_map_pow2ceil((unsigned)(initial_capacity + initial_capacity / 2));
+	map->slot_capacity = (int)atlas_cache_map_pow2ceil((unsigned)(initial_capacity + initial_capacity / 2));
 	int slots_size = (int)(map->slot_capacity * sizeof(*map->slots));
-	map->slots = (spritebatch_map_slot_t*)SPRITEBATCH_MALLOC(slots_size, mem_ctx);
-	SPRITEBATCH_ASSERT(map->slots);
-	SPRITEBATCH_MEMSET(map->slots, 0, slots_size);
-	map->item_capacity = (int)spritebatch_map_pow2ceil((unsigned)initial_capacity);
-	map->keys = (SPRITEBATCH_U64*)SPRITEBATCH_MALLOC(map->item_capacity * (sizeof(*map->keys) + sizeof(*map->item_slots) + map->item_size), mem_ctx);
-	SPRITEBATCH_ASSERT(map->keys);
+	map->slots = (atlas_cache_map_slot_t*)ATLAS_CACHE_MALLOC(slots_size, mem_ctx);
+	ATLAS_CACHE_ASSERT(map->slots);
+	ATLAS_CACHE_MEMSET(map->slots, 0, slots_size);
+	map->item_capacity = (int)atlas_cache_map_pow2ceil((unsigned)initial_capacity);
+	map->keys = (ATLAS_CACHE_U64*)ATLAS_CACHE_MALLOC(map->item_capacity * (sizeof(*map->keys) + sizeof(*map->item_slots) + map->item_size), mem_ctx);
+	ATLAS_CACHE_ASSERT(map->keys);
 	map->item_slots = (int*)(map->keys + map->item_capacity);
 	map->items = (void*)(map->item_slots + map->item_capacity);
 }
 
 
-static void spritebatch_map_term(spritebatch_map_t* map)
+static void atlas_cache_map_term(atlas_cache_map_t* map)
 {
-	SPRITEBATCH_FREE(map->keys, map->mem_ctx);
-	SPRITEBATCH_FREE(map->slots, map->mem_ctx);
+	ATLAS_CACHE_FREE(map->keys, map->mem_ctx);
+	ATLAS_CACHE_FREE(map->slots, map->mem_ctx);
 }
 
-static int spritebatch_map_find_slot(spritebatch_map_t const* map, SPRITEBATCH_U64 key)
+static int atlas_cache_map_find_slot(atlas_cache_map_t const* map, ATLAS_CACHE_U64 key)
 {
 	int slot_mask = map->slot_capacity - 1;
-	unsigned hash = spritebatch_map_hash(key);
+	unsigned hash = atlas_cache_map_hash(key);
 	int base_slot = (int)(hash & (unsigned)slot_mask);
 	int base_count = map->slots[base_slot].base_count;
 	int slot = base_slot;
@@ -629,17 +647,17 @@ static int spritebatch_map_find_slot(spritebatch_map_t const* map, SPRITEBATCH_U
 	return -1;
 }
 
-static void spritebatch_map_expand_slots(spritebatch_map_t* map)
+static void atlas_cache_map_expand_slots(atlas_cache_map_t* map)
 {
 	int old_capacity = map->slot_capacity;
-	spritebatch_map_slot_t* old_slots = map->slots;
+	atlas_cache_map_slot_t* old_slots = map->slots;
 
 	map->slot_capacity *= 2;
 	int slot_mask = map->slot_capacity - 1;
 	int size = (int)(map->slot_capacity * sizeof(*map->slots));
-	map->slots = (spritebatch_map_slot_t*)SPRITEBATCH_MALLOC(size, map->mem_ctx);
-	SPRITEBATCH_ASSERT(map->slots);
-	SPRITEBATCH_MEMSET(map->slots, 0, size);
+	map->slots = (atlas_cache_map_slot_t*)ATLAS_CACHE_MALLOC(size, map->mem_ctx);
+	ATLAS_CACHE_ASSERT(map->slots);
+	ATLAS_CACHE_MEMSET(map->slots, 0, size);
 
 	for (int i = 0; i < old_capacity; ++i) {
 		unsigned hash = old_slots[i].key_hash;
@@ -655,38 +673,38 @@ static void spritebatch_map_expand_slots(spritebatch_map_t* map)
 			++map->slots[base_slot].base_count;
 		}
 	}
-	SPRITEBATCH_FREE(old_slots, map->mem_ctx);
+	ATLAS_CACHE_FREE(old_slots, map->mem_ctx);
 }
 
-static void spritebatch_map_expand_items(spritebatch_map_t* map)
+static void atlas_cache_map_expand_items(atlas_cache_map_t* map)
 {
 	map->item_capacity *= 2;
-	SPRITEBATCH_U64* new_keys = (SPRITEBATCH_U64*)SPRITEBATCH_MALLOC(
+	ATLAS_CACHE_U64* new_keys = (ATLAS_CACHE_U64*)ATLAS_CACHE_MALLOC(
 		map->item_capacity * (sizeof(*map->keys) + sizeof(*map->item_slots) + map->item_size), map->mem_ctx);
-	SPRITEBATCH_ASSERT(new_keys);
+	ATLAS_CACHE_ASSERT(new_keys);
 
 	int* new_item_slots = (int*)(new_keys + map->item_capacity);
 	void* new_items = (void*)(new_item_slots + map->item_capacity);
 
-	SPRITEBATCH_MEMCPY(new_keys, map->keys, map->count * sizeof(*map->keys));
-	SPRITEBATCH_MEMCPY(new_item_slots, map->item_slots, map->count * sizeof(*map->item_slots));
-	SPRITEBATCH_MEMCPY(new_items, map->items, (size_t)map->count * map->item_size);
+	ATLAS_CACHE_MEMCPY(new_keys, map->keys, map->count * sizeof(*map->keys));
+	ATLAS_CACHE_MEMCPY(new_item_slots, map->item_slots, map->count * sizeof(*map->item_slots));
+	ATLAS_CACHE_MEMCPY(new_items, map->items, (size_t)map->count * map->item_size);
 
-	SPRITEBATCH_FREE(map->keys, map->mem_ctx);
+	ATLAS_CACHE_FREE(map->keys, map->mem_ctx);
 	map->keys = new_keys;
 	map->item_slots = new_item_slots;
 	map->items = new_items;
 }
 
-static void* spritebatch_map_insert(spritebatch_map_t* map, SPRITEBATCH_U64 key, void const* item)
+static void* atlas_cache_map_insert(atlas_cache_map_t* map, ATLAS_CACHE_U64 key, void const* item)
 {
-	SPRITEBATCH_ASSERT(spritebatch_map_find_slot(map, key) < 0);
+	ATLAS_CACHE_ASSERT(atlas_cache_map_find_slot(map, key) < 0);
 
 	if (map->count >= (map->slot_capacity - map->slot_capacity / 3))
-		spritebatch_map_expand_slots(map);
+		atlas_cache_map_expand_slots(map);
 
 	int slot_mask = map->slot_capacity - 1;
-	unsigned hash = spritebatch_map_hash(key);
+	unsigned hash = atlas_cache_map_hash(key);
 	int base_slot = (int)(hash & (unsigned)slot_mask);
 	int base_count = map->slots[base_slot].base_count;
 	int slot = base_slot;
@@ -705,24 +723,24 @@ static void* spritebatch_map_insert(spritebatch_map_t* map, SPRITEBATCH_U64 key,
 		slot = (slot + 1) & slot_mask;
 
 	if (map->count >= map->item_capacity)
-		spritebatch_map_expand_items(map);
+		atlas_cache_map_expand_items(map);
 
 	map->slots[slot].key_hash = hash;
 	map->slots[slot].item_index = map->count;
 	++map->slots[base_slot].base_count;
 
 	void* dest = (void*)((uintptr_t)map->items + map->count * map->item_size);
-	SPRITEBATCH_MEMCPY(dest, item, map->item_size);
+	ATLAS_CACHE_MEMCPY(dest, item, map->item_size);
 	map->keys[map->count] = key;
 	map->item_slots[map->count] = slot;
 	++map->count;
 	return dest;
 }
 
-static void spritebatch_map_remove(spritebatch_map_t* map, SPRITEBATCH_U64 key)
+static void atlas_cache_map_remove(atlas_cache_map_t* map, ATLAS_CACHE_U64 key)
 {
-	int slot = spritebatch_map_find_slot(map, key);
-	SPRITEBATCH_ASSERT(slot >= 0);
+	int slot = atlas_cache_map_find_slot(map, key);
+	ATLAS_CACHE_ASSERT(slot >= 0);
 
 	int slot_mask = map->slot_capacity - 1;
 	unsigned hash = map->slots[slot].key_hash;
@@ -737,37 +755,37 @@ static void spritebatch_map_remove(spritebatch_map_t* map, SPRITEBATCH_U64 key)
 		map->item_slots[index] = map->item_slots[last_index];
 		void* dst = (void*)((uintptr_t)map->items + index * map->item_size);
 		void* src = (void*)((uintptr_t)map->items + last_index * map->item_size);
-		SPRITEBATCH_MEMCPY(dst, src, map->item_size);
+		ATLAS_CACHE_MEMCPY(dst, src, map->item_size);
 		map->slots[map->item_slots[last_index]].item_index = index;
 	}
 	--map->count;
 }
 
-static void spritebatch_map_clear(spritebatch_map_t* map)
+static void atlas_cache_map_clear(atlas_cache_map_t* map)
 {
 	map->count = 0;
-	SPRITEBATCH_MEMSET(map->slots, 0, map->slot_capacity * sizeof(*map->slots));
+	ATLAS_CACHE_MEMSET(map->slots, 0, map->slot_capacity * sizeof(*map->slots));
 }
 
-static void* spritebatch_map_find(spritebatch_map_t const* map, SPRITEBATCH_U64 key)
+static void* atlas_cache_map_find(atlas_cache_map_t const* map, ATLAS_CACHE_U64 key)
 {
-	int slot = spritebatch_map_find_slot(map, key);
+	int slot = atlas_cache_map_find_slot(map, key);
 	if (slot < 0) return 0;
 	int index = map->slots[slot].item_index;
 	return (void*)((uintptr_t)map->items + index * map->item_size);
 }
 
-static int spritebatch_map_count(spritebatch_map_t const* map)
+static int atlas_cache_map_count(atlas_cache_map_t const* map)
 {
 	return map->count;
 }
 
-static void* spritebatch_map_items(spritebatch_map_t const* map)
+static void* atlas_cache_map_items(atlas_cache_map_t const* map)
 {
 	return map->items;
 }
 
-static void spritebatch_map_swap(spritebatch_map_t* map, int index_a, int index_b)
+static void atlas_cache_map_swap(atlas_cache_map_t* map, int index_a, int index_b)
 {
 	if (index_a < 0 || index_a >= map->count || index_b < 0 || index_b >= map->count) return;
 
@@ -776,7 +794,7 @@ static void spritebatch_map_swap(spritebatch_map_t* map, int index_a, int index_
 	map->item_slots[index_a] = slot_b;
 	map->item_slots[index_b] = slot_a;
 
-	SPRITEBATCH_U64 temp_key = map->keys[index_a];
+	ATLAS_CACHE_U64 temp_key = map->keys[index_a];
 	map->keys[index_a] = map->keys[index_b];
 	map->keys[index_b] = temp_key;
 
@@ -785,10 +803,10 @@ static void spritebatch_map_swap(spritebatch_map_t* map, int index_a, int index_
 
 	// Use stack buffer for swap (item_size is typically small)
 	char swap_temp[256];
-	SPRITEBATCH_ASSERT(map->item_size <= (int)sizeof(swap_temp));
-	SPRITEBATCH_MEMCPY(swap_temp, item_a, map->item_size);
-	SPRITEBATCH_MEMCPY(item_a, item_b, map->item_size);
-	SPRITEBATCH_MEMCPY(item_b, swap_temp, map->item_size);
+	ATLAS_CACHE_ASSERT(map->item_size <= (int)sizeof(swap_temp));
+	ATLAS_CACHE_MEMCPY(swap_temp, item_a, map->item_size);
+	ATLAS_CACHE_MEMCPY(item_a, item_b, map->item_size);
+	ATLAS_CACHE_MEMCPY(item_b, swap_temp, map->item_size);
 
 	map->slots[slot_a].item_index = index_b;
 	map->slots[slot_b].item_index = index_a;
@@ -796,12 +814,12 @@ static void spritebatch_map_swap(spritebatch_map_t* map, int index_a, int index_
 
 #include <stdbool.h>
 
-bool sprite_batch_internal_use_scratch_buffer(spritebatch_t* sb)
+bool sprite_batch_internal_use_scratch_buffer(atlas_cache_t* sb)
 {
 	return sb->sprites_sorter_callback == 0;
 }
 
-int spritebatch_init(spritebatch_t* sb, spritebatch_config_t* config, void* udata)
+int atlas_cache_init(atlas_cache_t* sb, atlas_cache_config_t* config, void* udata)
 {
 	// read config params
 	if (!config | !sb) return 1;
@@ -836,18 +854,18 @@ int spritebatch_init(spritebatch_t* sb, spritebatch_config_t* config, void* udat
 	// initialize input buffer
 	sb->input_count = 0;
 	sb->input_capacity = 1024;
-	sb->input_buffer = (spritebatch_internal_sprite_t*)SPRITEBATCH_MALLOC(sizeof(spritebatch_internal_sprite_t) * sb->input_capacity, sb->mem_ctx);
+	sb->input_buffer = (atlas_cache_internal_sprite_t*)ATLAS_CACHE_MALLOC(sizeof(atlas_cache_internal_sprite_t) * sb->input_capacity, sb->mem_ctx);
 	if (!sb->input_buffer) return 1;
 
 	// initialize sprite buffer
 	sb->sprite_count = 0;
 	sb->sprite_capacity = 1024;
-	sb->sprites = (spritebatch_sprite_t*)SPRITEBATCH_MALLOC(sizeof(spritebatch_sprite_t) * sb->sprite_capacity, sb->mem_ctx);
+	sb->sprites = (atlas_cache_entry_t*)ATLAS_CACHE_MALLOC(sizeof(atlas_cache_entry_t) * sb->sprite_capacity, sb->mem_ctx);
 
 	sb->sprites_scratch = 0;
 	if (sprite_batch_internal_use_scratch_buffer(sb))
 	{
-		sb->sprites_scratch = (spritebatch_sprite_t*)SPRITEBATCH_MALLOC(sizeof(spritebatch_sprite_t) * sb->sprite_capacity, sb->mem_ctx);
+		sb->sprites_scratch = (atlas_cache_entry_t*)ATLAS_CACHE_MALLOC(sizeof(atlas_cache_entry_t) * sb->sprite_capacity, sb->mem_ctx);
 	}
 	if (!sb->sprites) return 1;
 
@@ -859,63 +877,63 @@ int spritebatch_init(spritebatch_t* sb, spritebatch_config_t* config, void* udat
 	// initialize key buffer (for marking hash table entries for deletion)
 	sb->key_buffer_count = 0;
 	sb->key_buffer_capacity = 1024;
-	sb->key_buffer = (SPRITEBATCH_U64*)SPRITEBATCH_MALLOC(sizeof(SPRITEBATCH_U64) * sb->key_buffer_capacity, sb->mem_ctx);
+	sb->key_buffer = (ATLAS_CACHE_U64*)ATLAS_CACHE_MALLOC(sizeof(ATLAS_CACHE_U64) * sb->key_buffer_capacity, sb->mem_ctx);
 
 	// initialize pixel buffer for grabbing pixel data from the user as needed
 	sb->pixel_buffer_size = 1024;
-	sb->pixel_buffer = SPRITEBATCH_MALLOC(sb->pixel_buffer_size * sb->pixel_stride, sb->mem_ctx);
+	sb->pixel_buffer = ATLAS_CACHE_MALLOC(sb->pixel_buffer_size * sb->pixel_stride, sb->mem_ctx);
 
 	// setup tables
-	spritebatch_map_init(&sb->sprites_to_lonely_textures, sizeof(spritebatch_internal_lonely_texture_t), 1024, sb->mem_ctx);
-	spritebatch_map_init(&sb->sprites_to_premades, sizeof(spritebatch_internal_premade_sprite_t), 1024 * 10, sb->mem_ctx);
-	spritebatch_map_init(&sb->sprites_to_atlases, sizeof(spritebatch_internal_atlas_t*), 16, sb->mem_ctx);
+	atlas_cache_map_init(&sb->sprites_to_lonely_textures, sizeof(atlas_cache_internal_lonely_texture_t), 1024, sb->mem_ctx);
+	atlas_cache_map_init(&sb->sprites_to_premades, sizeof(atlas_cache_internal_premade_sprite_t), 1024 * 10, sb->mem_ctx);
+	atlas_cache_map_init(&sb->sprites_to_atlases, sizeof(atlas_cache_internal_atlas_t*), 16, sb->mem_ctx);
 
 	sb->atlases = 0;
 
 	return 0;
 }
 
-void spritebatch_term(spritebatch_t* sb)
+void atlas_cache_term(atlas_cache_t* sb)
 {
-	SPRITEBATCH_FREE(sb->input_buffer, sb->mem_ctx);
-	SPRITEBATCH_FREE(sb->sprites, sb->mem_ctx);
+	ATLAS_CACHE_FREE(sb->input_buffer, sb->mem_ctx);
+	ATLAS_CACHE_FREE(sb->sprites, sb->mem_ctx);
 	if (sb->sprites_scratch)
 	{
-		SPRITEBATCH_FREE(sb->sprites_scratch, sb->mem_ctx);
+		ATLAS_CACHE_FREE(sb->sprites_scratch, sb->mem_ctx);
 	}
-	SPRITEBATCH_FREE(sb->key_buffer, sb->mem_ctx);
-	SPRITEBATCH_FREE(sb->pixel_buffer, sb->mem_ctx);
+	ATLAS_CACHE_FREE(sb->key_buffer, sb->mem_ctx);
+	ATLAS_CACHE_FREE(sb->pixel_buffer, sb->mem_ctx);
 	{
-		int count = spritebatch_map_count(&sb->sprites_to_lonely_textures);
-		spritebatch_internal_lonely_texture_t* lonely = (spritebatch_internal_lonely_texture_t*)spritebatch_map_items(&sb->sprites_to_lonely_textures);
+		int count = atlas_cache_map_count(&sb->sprites_to_lonely_textures);
+		atlas_cache_internal_lonely_texture_t* lonely = (atlas_cache_internal_lonely_texture_t*)atlas_cache_map_items(&sb->sprites_to_lonely_textures);
 		for (int i = 0; i < count; ++i) {
 			if (lonely[i].texture_id != ~0)
 				sb->delete_texture_callback(lonely[i].texture_id, sb->udata);
 		}
 	}
-	spritebatch_map_term(&sb->sprites_to_lonely_textures);
-	spritebatch_map_term(&sb->sprites_to_premades);
-	spritebatch_map_term(&sb->sprites_to_atlases);
+	atlas_cache_map_term(&sb->sprites_to_lonely_textures);
+	atlas_cache_map_term(&sb->sprites_to_premades);
+	atlas_cache_map_term(&sb->sprites_to_atlases);
 
 	if (sb->atlases)
 	{
-		spritebatch_internal_atlas_t* atlas = sb->atlases;
-		spritebatch_internal_atlas_t* sentinel = sb->atlases;
+		atlas_cache_internal_atlas_t* atlas = sb->atlases;
+		atlas_cache_internal_atlas_t* sentinel = sb->atlases;
 		do
 		{
-			spritebatch_map_term(&atlas->sprites_to_textures);
+			atlas_cache_map_term(&atlas->sprites_to_textures);
 			sb->delete_texture_callback(atlas->texture_id, sb->udata);
-			spritebatch_internal_atlas_t* next = atlas->next;
-			SPRITEBATCH_FREE(atlas, sb->mem_ctx);
+			atlas_cache_internal_atlas_t* next = atlas->next;
+			ATLAS_CACHE_FREE(atlas, sb->mem_ctx);
 			atlas = next;
 		}
 		while (atlas != sentinel);
 	}
 
-	SPRITEBATCH_MEMSET(sb, 0, sizeof(spritebatch_t));
+	ATLAS_CACHE_MEMSET(sb, 0, sizeof(atlas_cache_t));
 }
 
-void spritebatch_reset_function_ptrs(spritebatch_t* sb, submit_batch_fn* batch_callback, get_pixels_fn* get_pixels_callback, generate_texture_handle_fn* generate_texture_callback, destroy_texture_handle_fn* delete_texture_callback, sprites_sorter_fn* sprites_sorter_callback)
+void atlas_cache_reset_function_ptrs(atlas_cache_t* sb, submit_batch_fn* batch_callback, get_pixels_fn* get_pixels_callback, generate_texture_handle_fn* generate_texture_callback, destroy_texture_handle_fn* delete_texture_callback, sprites_sorter_fn* sprites_sorter_callback)
 {
 	sb->batch_callback = batch_callback;
 	sb->get_pixels_callback = get_pixels_callback;
@@ -924,7 +942,7 @@ void spritebatch_reset_function_ptrs(spritebatch_t* sb, submit_batch_fn* batch_c
 	sb->sprites_sorter_callback = sprites_sorter_callback;
 }
 
-void spritebatch_set_default_config(spritebatch_config_t* config)
+void atlas_cache_set_default_config(atlas_cache_config_t* config)
 {
 	config->pixel_stride = sizeof(char) * 4;
 	config->atlas_width_in_pixels = 2048;
@@ -941,33 +959,33 @@ void spritebatch_set_default_config(spritebatch_config_t* config)
 	config->allocator_context = 0;
 }
 
-#define SPRITEBATCH_CHECK_BUFFER_GROW(ctx, count, capacity, data, type) \
+#define ATLAS_CACHE_CHECK_BUFFER_GROW(ctx, count, capacity, data, type) \
 	do { \
 		if (ctx->count == ctx->capacity) \
 		{ \
 			int new_capacity = ctx->capacity * 2; \
-			void* new_data = SPRITEBATCH_MALLOC(sizeof(type) * new_capacity, ctx->mem_ctx); \
+			void* new_data = ATLAS_CACHE_MALLOC(sizeof(type) * new_capacity, ctx->mem_ctx); \
 			if (!new_data) return 0; \
-			SPRITEBATCH_MEMCPY(new_data, ctx->data, sizeof(type) * ctx->count); \
-			SPRITEBATCH_FREE(ctx->data, ctx->mem_ctx); \
+			ATLAS_CACHE_MEMCPY(new_data, ctx->data, sizeof(type) * ctx->count); \
+			ATLAS_CACHE_FREE(ctx->data, ctx->mem_ctx); \
 			ctx->data = (type*)new_data; \
 			ctx->capacity = new_capacity; \
 		} \
 	} while (0)
 
 
-int spritebatch_internal_fill_internal_sprite(spritebatch_t* sb, spritebatch_sprite_t sprite, spritebatch_internal_sprite_t* out)
+int atlas_cache_internal_fill_internal_sprite(atlas_cache_t* sb, atlas_cache_entry_t sprite, atlas_cache_internal_sprite_t* out)
 {
-	SPRITEBATCH_ASSERT(sprite.w <= sb->atlas_width_in_pixels);
-	SPRITEBATCH_ASSERT(sprite.h <= sb->atlas_height_in_pixels);
-	SPRITEBATCH_CHECK_BUFFER_GROW(sb, input_count, input_capacity, input_buffer, spritebatch_internal_sprite_t);
+	ATLAS_CACHE_ASSERT(sprite.w <= sb->atlas_width_in_pixels);
+	ATLAS_CACHE_ASSERT(sprite.h <= sb->atlas_height_in_pixels);
+	ATLAS_CACHE_CHECK_BUFFER_GROW(sb, input_count, input_capacity, input_buffer, atlas_cache_internal_sprite_t);
 
 	out->image_id = sprite.image_id;
 	out->sort_bits = sb->sort_id++;
 	out->geom = sprite.geom;
 	out->w = sprite.w;
 	out->h = sprite.h;
-#ifdef SPRITEBATCH_SPRITE_GEOMETRY_DEFAULT
+#ifdef ATLAS_CACHE_ENTRY_GEOMETRY_DEFAULT
 	out->geom.sx = sprite.geom.sx + (sb->atlas_use_border_pixels ? (sprite.geom.sx / (float)sprite.w) * 2.0f : 0);
 	out->geom.sy = sprite.geom.sy + (sb->atlas_use_border_pixels ? (sprite.geom.sy / (float)sprite.h) * 2.0f : 0);
 #endif
@@ -977,29 +995,29 @@ int spritebatch_internal_fill_internal_sprite(spritebatch_t* sb, spritebatch_spr
 	out->premade_maxx = sprite.maxx;
 	out->premade_maxy = sprite.maxy;
 
-#ifdef SPRITEBATCH_SPRITE_USERDATA
+#ifdef ATLAS_CACHE_SPRITE_USERDATA
 	out->udata = sprite.udata;
 #endif
 
 	return 1;
 }
 
-void spritebatch_internal_append_sprite(spritebatch_t* sb, spritebatch_internal_sprite_t sprite)
+void atlas_cache_internal_append_sprite(atlas_cache_t* sb, atlas_cache_internal_sprite_t sprite)
 {
 	sb->input_buffer[sb->input_count++] = sprite;
 }
 
-void spritebatch_push(spritebatch_t* sb, spritebatch_sprite_t sprite)
+void atlas_cache_push(atlas_cache_t* sb, atlas_cache_entry_t sprite)
 {
-	spritebatch_internal_sprite_t sprite_out;
-	spritebatch_internal_fill_internal_sprite(sb, sprite, &sprite_out);
+	atlas_cache_internal_sprite_t sprite_out;
+	atlas_cache_internal_fill_internal_sprite(sb, sprite, &sprite_out);
 	sb->input_buffer[sb->input_count++] = sprite_out;
 }
 
-void spritebatch_register_premade_atlas(spritebatch_t* sb, SPRITEBATCH_U64 texture_id, int w, int h, int sprite_count, spritebatch_premade_sprite_t* sprites)
+void atlas_cache_register_premade_atlas(atlas_cache_t* sb, ATLAS_CACHE_U64 texture_id, int w, int h, int sprite_count, atlas_cache_premade_entry_t* sprites)
 {
 	for (int i = 0; i < sprite_count; ++i) {
-		spritebatch_internal_premade_sprite_t premade;
+		atlas_cache_internal_premade_sprite_t premade;
 		premade.atlas_w = w;
 		premade.atlas_h = h;
 		premade.minx = sprites[i].minx;
@@ -1007,41 +1025,41 @@ void spritebatch_register_premade_atlas(spritebatch_t* sb, SPRITEBATCH_U64 textu
 		premade.maxx = sprites[i].maxx;
 		premade.maxy = sprites[i].maxy;
 		premade.texture_id = texture_id;
-		void* find = spritebatch_map_find(&sb->sprites_to_premades, sprites[i].image_id);
+		void* find = atlas_cache_map_find(&sb->sprites_to_premades, sprites[i].image_id);
 		if (find) {
-			SPRITEBATCH_MEMCPY(find, &premade, sizeof(premade));
+			ATLAS_CACHE_MEMCPY(find, &premade, sizeof(premade));
 		} else {
-			spritebatch_map_insert(&sb->sprites_to_premades, sprites[i].image_id, &premade);
+			atlas_cache_map_insert(&sb->sprites_to_premades, sprites[i].image_id, &premade);
 		}
 	}
 }
 
-int spritebatch_internal_lonely_sprite(spritebatch_t* sb, SPRITEBATCH_U64 image_id, int w, int h, spritebatch_sprite_t* sprite_out, int skip_missing_textures);
-spritebatch_internal_premade_sprite_t* spritebatch_internal_premade_sprite(spritebatch_t* sb, SPRITEBATCH_U64 image_id, spritebatch_sprite_t* sprite_out);
+int atlas_cache_internal_lonely_sprite(atlas_cache_t* sb, ATLAS_CACHE_U64 image_id, int w, int h, atlas_cache_entry_t* sprite_out, int skip_missing_textures);
+atlas_cache_internal_premade_sprite_t* atlas_cache_internal_premade_sprite(atlas_cache_t* sb, ATLAS_CACHE_U64 image_id, atlas_cache_entry_t* sprite_out);
 
-void spritebatch_prefetch(spritebatch_t* sb, SPRITEBATCH_U64 image_id, int w, int h)
+void atlas_cache_prefetch(atlas_cache_t* sb, ATLAS_CACHE_U64 image_id, int w, int h)
 {
-	spritebatch_internal_premade_sprite_t* premade = spritebatch_internal_premade_sprite(sb, image_id, NULL);
+	atlas_cache_internal_premade_sprite_t* premade = atlas_cache_internal_premade_sprite(sb, image_id, NULL);
 	if(!premade) {
-		void* atlas_ptr = spritebatch_map_find(&sb->sprites_to_atlases, image_id);
-		if (!atlas_ptr) spritebatch_internal_lonely_sprite(sb, image_id, w, h, NULL, 0);
+		void* atlas_ptr = atlas_cache_map_find(&sb->sprites_to_atlases, image_id);
+		if (!atlas_ptr) atlas_cache_internal_lonely_sprite(sb, image_id, w, h, NULL, 0);
 	}
 }
 
-spritebatch_sprite_t spritebatch_fetch(spritebatch_t* sb, SPRITEBATCH_U64 image_id, int w, int h)
+atlas_cache_entry_t atlas_cache_fetch(atlas_cache_t* sb, ATLAS_CACHE_U64 image_id, int w, int h)
 {
-	spritebatch_sprite_t s;
-	SPRITEBATCH_MEMSET(&s, 0, sizeof(s));
+	atlas_cache_entry_t s;
+	ATLAS_CACHE_MEMSET(&s, 0, sizeof(s));
 
-	spritebatch_internal_premade_sprite_t* premade = (spritebatch_internal_premade_sprite_t*)spritebatch_map_find(&sb->sprites_to_premades, image_id);
+	atlas_cache_internal_premade_sprite_t* premade = (atlas_cache_internal_premade_sprite_t*)atlas_cache_map_find(&sb->sprites_to_premades, image_id);
 	if(!premade)
 	{
-		void* atlas_ptr = spritebatch_map_find(&sb->sprites_to_atlases, image_id);
+		void* atlas_ptr = atlas_cache_map_find(&sb->sprites_to_atlases, image_id);
 		if (atlas_ptr) {
-			spritebatch_internal_atlas_t* atlas = *(spritebatch_internal_atlas_t**)atlas_ptr;
+			atlas_cache_internal_atlas_t* atlas = *(atlas_cache_internal_atlas_t**)atlas_ptr;
 			s.texture_id = atlas->texture_id;
 
-			spritebatch_internal_texture_t* tex = (spritebatch_internal_texture_t*)spritebatch_map_find(&atlas->sprites_to_textures, image_id);
+			atlas_cache_internal_texture_t* tex = (atlas_cache_internal_texture_t*)atlas_cache_map_find(&atlas->sprites_to_textures, image_id);
 			if (tex) {
 				s.maxx = tex->maxx;
 				s.maxy = tex->maxy;
@@ -1055,27 +1073,27 @@ spritebatch_sprite_t spritebatch_fetch(spritebatch_t* sb, SPRITEBATCH_U64 image_
 			s.miny = 0;
 			s.maxx = 1.0f;
 			s.maxy = 1.0f;
-			spritebatch_internal_lonely_sprite(sb, image_id, w, h, &s, 0);
+			atlas_cache_internal_lonely_sprite(sb, image_id, w, h, &s, 0);
 		}
 	}
 	else
 	{
-		spritebatch_internal_premade_sprite(sb, image_id, &s);
+		atlas_cache_internal_premade_sprite(sb, image_id, &s);
 	}
 	return s;
 }
 
-static int spritebatch_internal_sprite_less_than_or_equal(spritebatch_sprite_t* a, spritebatch_sprite_t* b)
+static int atlas_cache_internal_sprite_less_than_or_equal(atlas_cache_entry_t* a, atlas_cache_entry_t* b)
 {
 	if (a->sort_bits < b->sort_bits) return 1;
 	return a->texture_id <= b->texture_id;
 }
 
-void spritebatch_internal_merge_sort_iteration(spritebatch_sprite_t* a, int lo, int split, int hi, spritebatch_sprite_t* b)
+void atlas_cache_internal_merge_sort_iteration(atlas_cache_entry_t* a, int lo, int split, int hi, atlas_cache_entry_t* b)
 {
 	int i = lo, j = split;
 	for (int k = lo; k < hi; k++) {
-		if (i < split && (j >= hi || spritebatch_internal_sprite_less_than_or_equal(a + i, a + j))) {
+		if (i < split && (j >= hi || atlas_cache_internal_sprite_less_than_or_equal(a + i, a + j))) {
 			b[k] = a[i];
 			i = i + 1;
 		} else {
@@ -1085,39 +1103,39 @@ void spritebatch_internal_merge_sort_iteration(spritebatch_sprite_t* a, int lo, 
 	}
 }
 
-void spritebatch_internal_merge_sort_recurse(spritebatch_sprite_t* b, int lo, int hi, spritebatch_sprite_t* a)
+void atlas_cache_internal_merge_sort_recurse(atlas_cache_entry_t* b, int lo, int hi, atlas_cache_entry_t* a)
 {
 	if (hi - lo <= 1) return;
 	int split = (lo + hi) / 2;
-	spritebatch_internal_merge_sort_recurse(a, lo,  split, b);
-	spritebatch_internal_merge_sort_recurse(a, split, hi, b);
-	spritebatch_internal_merge_sort_iteration(b, lo, split, hi, a);
+	atlas_cache_internal_merge_sort_recurse(a, lo,  split, b);
+	atlas_cache_internal_merge_sort_recurse(a, split, hi, b);
+	atlas_cache_internal_merge_sort_iteration(b, lo, split, hi, a);
 }
 
-void spritebatch_internal_merge_sort(spritebatch_sprite_t* a, spritebatch_sprite_t* b, int n)
+void atlas_cache_internal_merge_sort(atlas_cache_entry_t* a, atlas_cache_entry_t* b, int n)
 {
-	SPRITEBATCH_MEMCPY(b, a, sizeof(spritebatch_sprite_t) * n);
-	spritebatch_internal_merge_sort_recurse(b, 0, n, a);
+	ATLAS_CACHE_MEMCPY(b, a, sizeof(atlas_cache_entry_t) * n);
+	atlas_cache_internal_merge_sort_recurse(b, 0, n, a);
 }
 
-void spritebatch_internal_sort_sprites(spritebatch_t* sb)
+void atlas_cache_internal_sort_sprites(atlas_cache_t* sb)
 {
 	if (sb->sprites_sorter_callback) sb->sprites_sorter_callback(sb->sprites, sb->sprite_count);
-	else spritebatch_internal_merge_sort(sb->sprites, sb->sprites_scratch, sb->sprite_count);
+	else atlas_cache_internal_merge_sort(sb->sprites, sb->sprites_scratch, sb->sprite_count);
 }
 
-static inline void spritebatch_internal_get_pixels(spritebatch_t* sb, SPRITEBATCH_U64 image_id, int w, int h)
+static inline void atlas_cache_internal_get_pixels(atlas_cache_t* sb, ATLAS_CACHE_U64 image_id, int w, int h)
 {
 	int size = sb->atlas_use_border_pixels ? sb->pixel_stride * (w + 2) * (h + 2) : sb->pixel_stride * w * h;
 	if (size > sb->pixel_buffer_size)
 	{
-		SPRITEBATCH_FREE(sb->pixel_buffer, sb->mem_ctx);
+		ATLAS_CACHE_FREE(sb->pixel_buffer, sb->mem_ctx);
 		sb->pixel_buffer_size = size;
-		sb->pixel_buffer = SPRITEBATCH_MALLOC(sb->pixel_buffer_size, sb->mem_ctx);
+		sb->pixel_buffer = ATLAS_CACHE_MALLOC(sb->pixel_buffer_size, sb->mem_ctx);
 		if (!sb->pixel_buffer) return;
 	}
 
-	SPRITEBATCH_MEMSET(sb->pixel_buffer, 0, size);
+	ATLAS_CACHE_MEMSET(sb->pixel_buffer, 0, size);
 	int size_from_user = sb->pixel_stride * w * h;
 	sb->get_pixels_callback(image_id, sb->pixel_buffer, size_from_user, sb->udata);
 
@@ -1135,24 +1153,24 @@ static inline void spritebatch_internal_get_pixels(spritebatch_t* sb, SPRITEBATC
 		{
 			char* src_row = buffer + (h0 - i - 1) * src_row_stride;
 			char* dst_row = buffer + (h - i - 2) * dst_row_stride + src_row_offset;
-			SPRITEBATCH_MEMMOVE(dst_row, src_row, src_row_stride);
+			ATLAS_CACHE_MEMMOVE(dst_row, src_row, src_row_stride);
 		}
 
 		// Clear the border pixels.
 		int pixel_stride = sb->pixel_stride;
-		SPRITEBATCH_MEMSET(buffer, 0, dst_row_stride);
+		ATLAS_CACHE_MEMSET(buffer, 0, dst_row_stride);
 		for (int i = 1; i < h - 1; ++i)
 		{
-			SPRITEBATCH_MEMSET(buffer + i * dst_row_stride, 0, pixel_stride);
-			SPRITEBATCH_MEMSET(buffer + i * dst_row_stride + src_row_stride + src_row_offset, 0, pixel_stride);
+			ATLAS_CACHE_MEMSET(buffer + i * dst_row_stride, 0, pixel_stride);
+			ATLAS_CACHE_MEMSET(buffer + i * dst_row_stride + src_row_stride + src_row_offset, 0, pixel_stride);
 		}
-		SPRITEBATCH_MEMSET(buffer + (h - 1) * dst_row_stride, 0, dst_row_stride);
+		ATLAS_CACHE_MEMSET(buffer + (h - 1) * dst_row_stride, 0, dst_row_stride);
 	}
 }
 
-static inline SPRITEBATCH_U64 spritebatch_internal_generate_texture_handle(spritebatch_t* sb, SPRITEBATCH_U64 image_id, int w, int h)
+static inline ATLAS_CACHE_U64 atlas_cache_internal_generate_texture_handle(atlas_cache_t* sb, ATLAS_CACHE_U64 image_id, int w, int h)
 {
-	spritebatch_internal_get_pixels(sb, image_id, w, h);
+	atlas_cache_internal_get_pixels(sb, image_id, w, h);
 	if (sb->atlas_use_border_pixels)
 	{
 		w += 2;
@@ -1161,40 +1179,40 @@ static inline SPRITEBATCH_U64 spritebatch_internal_generate_texture_handle(sprit
 	return sb->generate_texture_callback(sb->pixel_buffer, w, h, sb->udata);
 }
 
-spritebatch_internal_lonely_texture_t* spritebatch_internal_lonelybuffer_push(spritebatch_t* sb, SPRITEBATCH_U64 image_id, int w, int h, int make_tex)
+atlas_cache_internal_lonely_texture_t* atlas_cache_internal_lonelybuffer_push(atlas_cache_t* sb, ATLAS_CACHE_U64 image_id, int w, int h, int make_tex)
 {
-	spritebatch_internal_lonely_texture_t texture;
+	atlas_cache_internal_lonely_texture_t texture;
 	texture.timestamp = 0;
 	texture.w = w;
 	texture.h = h;
 	texture.image_id = image_id;
-	texture.texture_id = make_tex ? spritebatch_internal_generate_texture_handle(sb, image_id, w, h) : ~0;
-	return (spritebatch_internal_lonely_texture_t*)spritebatch_map_insert(&sb->sprites_to_lonely_textures, image_id, &texture);
+	texture.texture_id = make_tex ? atlas_cache_internal_generate_texture_handle(sb, image_id, w, h) : ~0;
+	return (atlas_cache_internal_lonely_texture_t*)atlas_cache_map_insert(&sb->sprites_to_lonely_textures, image_id, &texture);
 }
 
-int spritebatch_internal_lonely_sprite(spritebatch_t* sb, SPRITEBATCH_U64 image_id, int w, int h, spritebatch_sprite_t* sprite_out, int skip_missing_textures)
+int atlas_cache_internal_lonely_sprite(atlas_cache_t* sb, ATLAS_CACHE_U64 image_id, int w, int h, atlas_cache_entry_t* sprite_out, int skip_missing_textures)
 {
-	spritebatch_internal_lonely_texture_t* tex = (spritebatch_internal_lonely_texture_t*)spritebatch_map_find(&sb->sprites_to_lonely_textures, image_id);
+	atlas_cache_internal_lonely_texture_t* tex = (atlas_cache_internal_lonely_texture_t*)atlas_cache_map_find(&sb->sprites_to_lonely_textures, image_id);
 
 	if (skip_missing_textures)
 	{
-		if (!tex) spritebatch_internal_lonelybuffer_push(sb, image_id, w, h, 0);
+		if (!tex) atlas_cache_internal_lonelybuffer_push(sb, image_id, w, h, 0);
 		return 1;
 	}
 
 	else
 	{
-		if (!tex) tex = spritebatch_internal_lonelybuffer_push(sb, image_id, w, h, 1);
-		else if (tex->texture_id == ~0) tex->texture_id = spritebatch_internal_generate_texture_handle(sb, image_id, w, h);
+		if (!tex) tex = atlas_cache_internal_lonelybuffer_push(sb, image_id, w, h, 1);
+		else if (tex->texture_id == ~0) tex->texture_id = atlas_cache_internal_generate_texture_handle(sb, image_id, w, h);
 		tex->timestamp = 0;
 
 		if (sprite_out) {
 			sprite_out->texture_id = tex->texture_id;
 			// Preserve local UVs already set by the caller (0..1 texture space for lonely
 			// textures). 9-slice and other partial-UV draws depend on this. Callers that
-			// want the full texture (e.g. spritebatch_fetch) should set 0..1 first.
+			// want the full texture (e.g. atlas_cache_fetch) should set 0..1 first.
 
-			if (SPRITEBATCH_LONELY_FLIP_Y_AXIS_FOR_UV)
+			if (ATLAS_CACHE_LONELY_FLIP_Y_AXIS_FOR_UV)
 			{
 				float tmp = sprite_out->miny;
 				sprite_out->miny = sprite_out->maxy;
@@ -1206,21 +1224,21 @@ int spritebatch_internal_lonely_sprite(spritebatch_t* sb, SPRITEBATCH_U64 image_
 	}
 }
 
-spritebatch_internal_premade_sprite_t* spritebatch_internal_premade_sprite(spritebatch_t* sb, SPRITEBATCH_U64 image_id, spritebatch_sprite_t* sprite_out)
+atlas_cache_internal_premade_sprite_t* atlas_cache_internal_premade_sprite(atlas_cache_t* sb, ATLAS_CACHE_U64 image_id, atlas_cache_entry_t* sprite_out)
 {
-	spritebatch_internal_premade_sprite_t* tex = (spritebatch_internal_premade_sprite_t*)spritebatch_map_find(&sb->sprites_to_premades, image_id);
+	atlas_cache_internal_premade_sprite_t* tex = (atlas_cache_internal_premade_sprite_t*)atlas_cache_map_find(&sb->sprites_to_premades, image_id);
 	if (!tex) return NULL;
-	SPRITEBATCH_ASSERT(tex->texture_id != ~0);
+	ATLAS_CACHE_ASSERT(tex->texture_id != ~0);
 	if (sprite_out) {
 		sprite_out->texture_id = tex->texture_id;
 	}
 	return tex;
 }
 
-int spritebatch_internal_push_sprite(spritebatch_t* sb, spritebatch_internal_sprite_t* s, int skip_missing_textures)
+int atlas_cache_internal_push_sprite(atlas_cache_t* sb, atlas_cache_internal_sprite_t* s, int skip_missing_textures)
 {
 	int skipped_tex = 0;
-	spritebatch_sprite_t sprite;
+	atlas_cache_entry_t sprite;
 	sprite.image_id = s->image_id;
 	sprite.sort_bits = s->sort_bits;
 	sprite.geom = s->geom;
@@ -1232,22 +1250,22 @@ int spritebatch_internal_push_sprite(spritebatch_t* sb, spritebatch_internal_spr
 	sprite.maxx = s->premade_maxx;
 	sprite.maxy = s->premade_maxy;
 
-#ifdef SPRITEBATCH_SPRITE_USERDATA
+#ifdef ATLAS_CACHE_SPRITE_USERDATA
 	sprite.udata = s->udata;
 #endif
 
-	spritebatch_internal_premade_sprite_t* premade = spritebatch_internal_premade_sprite(sb, s->image_id, &sprite);
+	atlas_cache_internal_premade_sprite_t* premade = atlas_cache_internal_premade_sprite(sb, s->image_id, &sprite);
 
 	if(!premade)
 	{
-		void* atlas_ptr = spritebatch_map_find(&sb->sprites_to_atlases, s->image_id);
+		void* atlas_ptr = atlas_cache_map_find(&sb->sprites_to_atlases, s->image_id);
 		if (atlas_ptr)
 		{
-			spritebatch_internal_atlas_t* atlas = *(spritebatch_internal_atlas_t**)atlas_ptr;
+			atlas_cache_internal_atlas_t* atlas = *(atlas_cache_internal_atlas_t**)atlas_ptr;
 			sprite.texture_id = atlas->texture_id;
 
-			spritebatch_internal_texture_t* tex = (spritebatch_internal_texture_t*)spritebatch_map_find(&atlas->sprites_to_textures, s->image_id);
-			SPRITEBATCH_ASSERT(tex);
+			atlas_cache_internal_texture_t* tex = (atlas_cache_internal_texture_t*)atlas_cache_map_find(&atlas->sprites_to_textures, s->image_id);
+			ATLAS_CACHE_ASSERT(tex);
 			tex->timestamp = 0;
 			sprite.w = tex->w;
 			sprite.h = tex->h;
@@ -1265,7 +1283,7 @@ int spritebatch_internal_push_sprite(spritebatch_t* sb, spritebatch_internal_spr
 			sprite.maxx = dx * sprite.maxx + tex->minx;
 			sprite.maxy = dy * sprite.maxy + tex->miny;
 		}
-		else skipped_tex = spritebatch_internal_lonely_sprite(sb, s->image_id, s->w, s->h, &sprite, skip_missing_textures);
+		else skipped_tex = atlas_cache_internal_lonely_sprite(sb, s->image_id, s->w, s->h, &sprite, skip_missing_textures);
 	}
 	else
 	{
@@ -1276,21 +1294,21 @@ int spritebatch_internal_push_sprite(spritebatch_t* sb, spritebatch_internal_spr
 	{
 		if (sb->sprite_count >= sb->sprite_capacity) {
 			int new_capacity = sb->sprite_capacity * 2;
-			void* new_data = SPRITEBATCH_MALLOC(sizeof(spritebatch_sprite_t) * new_capacity, sb->mem_ctx);
+			void* new_data = ATLAS_CACHE_MALLOC(sizeof(atlas_cache_entry_t) * new_capacity, sb->mem_ctx);
 			if (!new_data) return 0;
-			SPRITEBATCH_MEMCPY(new_data, sb->sprites, sizeof(spritebatch_sprite_t) * sb->sprite_count);
-			SPRITEBATCH_FREE(sb->sprites, sb->mem_ctx);
-			sb->sprites = (spritebatch_sprite_t*)new_data;
+			ATLAS_CACHE_MEMCPY(new_data, sb->sprites, sizeof(atlas_cache_entry_t) * sb->sprite_count);
+			ATLAS_CACHE_FREE(sb->sprites, sb->mem_ctx);
+			sb->sprites = (atlas_cache_entry_t*)new_data;
 			sb->sprite_capacity = new_capacity;
 
 			if (sb->sprites_scratch)
 			{
-				SPRITEBATCH_FREE(sb->sprites_scratch, sb->mem_ctx);
+				ATLAS_CACHE_FREE(sb->sprites_scratch, sb->mem_ctx);
 			}
 
 			if (sprite_batch_internal_use_scratch_buffer(sb))
 			{
-				sb->sprites_scratch = (spritebatch_sprite_t*)SPRITEBATCH_MALLOC(sizeof(spritebatch_sprite_t) * new_capacity, sb->mem_ctx);
+				sb->sprites_scratch = (atlas_cache_entry_t*)ATLAS_CACHE_MALLOC(sizeof(atlas_cache_entry_t) * new_capacity, sb->mem_ctx);
 			}
 		}
 		sb->sprites[sb->sprite_count++] = sprite;
@@ -1299,55 +1317,55 @@ int spritebatch_internal_push_sprite(spritebatch_t* sb, spritebatch_internal_spr
 	return skipped_tex;
 }
 
-void spritebatch_internal_process_input(spritebatch_t* sb, int skip_missing_textures)
+void atlas_cache_internal_process_input(atlas_cache_t* sb, int skip_missing_textures)
 {
 	int skipped_index = 0;
 	for (int i = 0; i < sb->input_count; ++i)
 	{
-		spritebatch_internal_sprite_t* s = sb->input_buffer + i;
-		int skipped = spritebatch_internal_push_sprite(sb, s, skip_missing_textures);
+		atlas_cache_internal_sprite_t* s = sb->input_buffer + i;
+		int skipped = atlas_cache_internal_push_sprite(sb, s, skip_missing_textures);
 		if (skip_missing_textures && skipped) sb->input_buffer[skipped_index++] = *s;
 	}
 
 	sb->input_count = skipped_index;
 }
 
-void spritebatch_tick(spritebatch_t* sb)
+void atlas_cache_tick(atlas_cache_t* sb)
 {
-	spritebatch_internal_atlas_t* atlas = sb->atlases;
+	atlas_cache_internal_atlas_t* atlas = sb->atlases;
 	if (atlas)
 	{
-		spritebatch_internal_atlas_t* sentinel = atlas;
+		atlas_cache_internal_atlas_t* sentinel = atlas;
 		do
 		{
-			int texture_count = spritebatch_map_count(&atlas->sprites_to_textures);
-			spritebatch_internal_texture_t* textures = (spritebatch_internal_texture_t*)spritebatch_map_items(&atlas->sprites_to_textures);
+			int texture_count = atlas_cache_map_count(&atlas->sprites_to_textures);
+			atlas_cache_internal_texture_t* textures = (atlas_cache_internal_texture_t*)atlas_cache_map_items(&atlas->sprites_to_textures);
 			for (int i = 0; i < texture_count; ++i) textures[i].timestamp += 1;
 			atlas = atlas->next;
 		}
 		while (atlas != sentinel);
 	}
 
-	int texture_count = spritebatch_map_count(&sb->sprites_to_lonely_textures);
-	spritebatch_internal_lonely_texture_t* lonely_textures = (spritebatch_internal_lonely_texture_t*)spritebatch_map_items(&sb->sprites_to_lonely_textures);
+	int texture_count = atlas_cache_map_count(&sb->sprites_to_lonely_textures);
+	atlas_cache_internal_lonely_texture_t* lonely_textures = (atlas_cache_internal_lonely_texture_t*)atlas_cache_map_items(&sb->sprites_to_lonely_textures);
 	for (int i = 0; i < texture_count; ++i) lonely_textures[i].timestamp += 1;
 }
 
-int spritebatch_flush(spritebatch_t* sb)
+int atlas_cache_flush(atlas_cache_t* sb)
 {
 	// process input buffer, make any necessary lonely textures
 	// convert user sprites to internal format
 	// lookup uv coordinates
-	spritebatch_internal_process_input(sb, 0);
+	atlas_cache_internal_process_input(sb, 0);
 
 	// patchup any missing lonely textures that may have come from atlases decaying and whatnot
-	int texture_count = spritebatch_map_count(&sb->sprites_to_lonely_textures);
-	spritebatch_internal_lonely_texture_t* lonely_textures = (spritebatch_internal_lonely_texture_t*)spritebatch_map_items(&sb->sprites_to_lonely_textures);
+	int texture_count = atlas_cache_map_count(&sb->sprites_to_lonely_textures);
+	atlas_cache_internal_lonely_texture_t* lonely_textures = (atlas_cache_internal_lonely_texture_t*)atlas_cache_map_items(&sb->sprites_to_lonely_textures);
 	for (int i = 0; i < texture_count; ++i)
 	{
-		spritebatch_internal_lonely_texture_t* lonely = lonely_textures + i;
+		atlas_cache_internal_lonely_texture_t* lonely = lonely_textures + i;
 		if (lonely->texture_id == ~0) {
-			lonely->texture_id = spritebatch_internal_generate_texture_handle(sb, lonely->image_id, lonely->w, lonely->h);
+			lonely->texture_id = atlas_cache_internal_generate_texture_handle(sb, lonely->image_id, lonely->w, lonely->h);
 		}
 	}
 
@@ -1355,7 +1373,7 @@ int spritebatch_flush(spritebatch_t* sb)
 	sb->sort_id = 0;
 
 	// sort internal sprite buffer and submit batches
-	spritebatch_internal_sort_sprites(sb);
+	atlas_cache_internal_sort_sprites(sb);
 
 	int min = 0;
 	int max = 0;
@@ -1363,8 +1381,8 @@ int spritebatch_flush(spritebatch_t* sb)
 	int count = 0;
 	while (!done)
 	{
-		SPRITEBATCH_U64 id = sb->sprites[min].texture_id;
-		SPRITEBATCH_U64 image_id = sb->sprites[min].image_id;
+		ATLAS_CACHE_U64 id = sb->sprites[min].texture_id;
+		ATLAS_CACHE_U64 image_id = sb->sprites[min].image_id;
 
 		while (1)
 		{
@@ -1384,10 +1402,10 @@ int spritebatch_flush(spritebatch_t* sb)
 		if (batch_count)
 		{
 			int w, h;
-			spritebatch_internal_premade_sprite_t* premade = (spritebatch_internal_premade_sprite_t*)spritebatch_map_find(&sb->sprites_to_premades, image_id);
+			atlas_cache_internal_premade_sprite_t* premade = (atlas_cache_internal_premade_sprite_t*)atlas_cache_map_find(&sb->sprites_to_premades, image_id);
 			if (!premade)
 			{
-				void* atlas_ptr = spritebatch_map_find(&sb->sprites_to_atlases, image_id);
+				void* atlas_ptr = atlas_cache_map_find(&sb->sprites_to_atlases, image_id);
 
 				if (atlas_ptr)
 				{
@@ -1397,8 +1415,8 @@ int spritebatch_flush(spritebatch_t* sb)
 
 				else
 				{
-					spritebatch_internal_lonely_texture_t* tex = (spritebatch_internal_lonely_texture_t*)spritebatch_map_find(&sb->sprites_to_lonely_textures, image_id);
-					SPRITEBATCH_ASSERT(tex);
+					atlas_cache_internal_lonely_texture_t* tex = (atlas_cache_internal_lonely_texture_t*)atlas_cache_map_find(&sb->sprites_to_lonely_textures, image_id);
+					ATLAS_CACHE_ASSERT(tex);
 					w = tex->w;
 					h = tex->h;
 					if (sb->atlas_use_border_pixels)
@@ -1422,13 +1440,13 @@ int spritebatch_flush(spritebatch_t* sb)
 
 	sb->sprite_count = 0;
 	if (count > 1) {
-		SPRITEBATCH_LOG("Flushed %d batches.\n", count);
+		ATLAS_CACHE_LOG("Flushed %d batches.\n", count);
 	}
 
 	return count;
 }
 
-void spritebatch_clear(spritebatch_t* sb)
+void atlas_cache_clear(atlas_cache_t* sb)
 {
 	sb->input_count = 0;
 	sb->sprite_count = 0;
@@ -1438,36 +1456,36 @@ typedef struct
 {
 	int x;
 	int y;
-} spritebatch_v2_t;
+} atlas_cache_v2_t;
 
 typedef struct
 {
 	int img_index;
-	spritebatch_v2_t size;
-	spritebatch_v2_t min;
-	spritebatch_v2_t max;
+	atlas_cache_v2_t size;
+	atlas_cache_v2_t min;
+	atlas_cache_v2_t max;
 	int fit;
-} spritebatch_internal_integer_image_t;
+} atlas_cache_internal_integer_image_t;
 
-static spritebatch_v2_t spritebatch_v2(int x, int y)
+static atlas_cache_v2_t atlas_cache_v2(int x, int y)
 {
-	spritebatch_v2_t v;
+	atlas_cache_v2_t v;
 	v.x = x;
 	v.y = y;
 	return v;
 }
 
-static spritebatch_v2_t spritebatch_sub(spritebatch_v2_t a, spritebatch_v2_t b)
+static atlas_cache_v2_t atlas_cache_sub(atlas_cache_v2_t a, atlas_cache_v2_t b)
 {
-	spritebatch_v2_t v;
+	atlas_cache_v2_t v;
 	v.x = a.x - b.x;
 	v.y = a.y - b.y;
 	return v;
 }
 
-static spritebatch_v2_t spritebatch_add(spritebatch_v2_t a, spritebatch_v2_t b)
+static atlas_cache_v2_t atlas_cache_add(atlas_cache_v2_t a, atlas_cache_v2_t b)
 {
-	spritebatch_v2_t v;
+	atlas_cache_v2_t v;
 	v.x = a.x + b.x;
 	v.y = a.y + b.y;
 	return v;
@@ -1475,20 +1493,20 @@ static spritebatch_v2_t spritebatch_add(spritebatch_v2_t a, spritebatch_v2_t b)
 
 typedef struct
 {
-	spritebatch_v2_t size;
-	spritebatch_v2_t min;
-	spritebatch_v2_t max;
-} spritebatch_internal_atlas_node_t;
+	atlas_cache_v2_t size;
+	atlas_cache_v2_t min;
+	atlas_cache_v2_t max;
+} atlas_cache_internal_atlas_node_t;
 
-static spritebatch_internal_atlas_node_t* spritebatch_best_fit(int sp, int w, int h, spritebatch_internal_atlas_node_t* nodes)
+static atlas_cache_internal_atlas_node_t* atlas_cache_best_fit(int sp, int w, int h, atlas_cache_internal_atlas_node_t* nodes)
 {
 	int best_volume = INT_MAX;
-	spritebatch_internal_atlas_node_t *best_node = 0;
+	atlas_cache_internal_atlas_node_t *best_node = 0;
 	int img_volume = w * h;
 
 	for ( int i = 0; i < sp; ++i )
 	{
-		spritebatch_internal_atlas_node_t *node = nodes + i;
+		atlas_cache_internal_atlas_node_t *node = nodes + i;
 		int can_contain = node->size.x >= w && node->size.y >= h;
 		if ( can_contain )
 		{
@@ -1505,18 +1523,18 @@ static spritebatch_internal_atlas_node_t* spritebatch_best_fit(int sp, int w, in
 	return best_node;
 }
 
-static int spritebatch_internal_image_less_than_or_equal(spritebatch_internal_integer_image_t* a, spritebatch_internal_integer_image_t* b)
+static int atlas_cache_internal_image_less_than_or_equal(atlas_cache_internal_integer_image_t* a, atlas_cache_internal_integer_image_t* b)
 {
 	int perimeterA = 2 * (a->size.x + a->size.y);
 	int perimeterB = 2 * (b->size.x + b->size.y);
 	return perimeterB <= perimeterA;
 }
 
-void spritebatch_internal_image_merge_sort_iteration(spritebatch_internal_integer_image_t* a, int lo, int split, int hi, spritebatch_internal_integer_image_t* b)
+void atlas_cache_internal_image_merge_sort_iteration(atlas_cache_internal_integer_image_t* a, int lo, int split, int hi, atlas_cache_internal_integer_image_t* b)
 {
 	int i = lo, j = split;
 	for (int k = lo; k < hi; k++) {
-		if (i < split && (j >= hi || spritebatch_internal_image_less_than_or_equal(a + i, a + j))) {
+		if (i < split && (j >= hi || atlas_cache_internal_image_less_than_or_equal(a + i, a + j))) {
 			b[k] = a[i];
 			i = i + 1;
 		} else {
@@ -1526,81 +1544,81 @@ void spritebatch_internal_image_merge_sort_iteration(spritebatch_internal_intege
 	}
 }
 
-void spritebatch_internal_image_merge_sort_recurse(spritebatch_internal_integer_image_t* b, int lo, int hi, spritebatch_internal_integer_image_t* a)
+void atlas_cache_internal_image_merge_sort_recurse(atlas_cache_internal_integer_image_t* b, int lo, int hi, atlas_cache_internal_integer_image_t* a)
 {
 	if (hi - lo <= 1) return;
 	int split = (lo + hi) / 2;
-	spritebatch_internal_image_merge_sort_recurse(a, lo,  split, b);
-	spritebatch_internal_image_merge_sort_recurse(a, split, hi, b);
-	spritebatch_internal_image_merge_sort_iteration(b, lo, split, hi, a);
+	atlas_cache_internal_image_merge_sort_recurse(a, lo,  split, b);
+	atlas_cache_internal_image_merge_sort_recurse(a, split, hi, b);
+	atlas_cache_internal_image_merge_sort_iteration(b, lo, split, hi, a);
 }
 
-void spritebatch_internal_image_merge_sort(spritebatch_internal_integer_image_t* a, spritebatch_internal_integer_image_t* b, int n)
+void atlas_cache_internal_image_merge_sort(atlas_cache_internal_integer_image_t* a, atlas_cache_internal_integer_image_t* b, int n)
 {
-	SPRITEBATCH_MEMCPY(b, a, sizeof(spritebatch_internal_integer_image_t) * n);
-	spritebatch_internal_image_merge_sort_recurse(b, 0, n, a);
+	ATLAS_CACHE_MEMCPY(b, a, sizeof(atlas_cache_internal_integer_image_t) * n);
+	atlas_cache_internal_image_merge_sort_recurse(b, 0, n, a);
 }
 
-typedef struct spritebatch_internal_atlas_image_t
+typedef struct atlas_cache_internal_atlas_image_t
 {
 	int img_index;    // index into the `imgs` array
 	int w, h;         // pixel w/h of original image
 	float minx, miny; // u coordinate
 	float maxx, maxy; // v coordinate
 	int fit;          // non-zero if image fit and was placed into the atlas
-} spritebatch_internal_atlas_image_t;
+} atlas_cache_internal_atlas_image_t;
 
-#define SPRITEBATCH_CHECK( X, Y ) do { if ( !(X) ) { SPRITEBATCH_LOG(Y); goto sb_err; } } while ( 0 )
+#define ATLAS_CACHE_CHECK( X, Y ) do { if ( !(X) ) { ATLAS_CACHE_LOG(Y); goto sb_err; } } while ( 0 )
 
-void spritebatch_make_atlas(spritebatch_t* sb, spritebatch_internal_atlas_t* atlas_out, const spritebatch_internal_lonely_texture_t* imgs, int img_count)
+void atlas_cache_make_atlas(atlas_cache_t* sb, atlas_cache_internal_atlas_t* atlas_out, const atlas_cache_internal_lonely_texture_t* imgs, int img_count)
 {
 	float iw, ih;
 	int atlas_image_size, atlas_stride, sp;
 	void* atlas_pixels = 0;
 	int atlas_node_capacity = img_count * 2;
-	spritebatch_internal_integer_image_t* images = 0;
-	spritebatch_internal_integer_image_t* images_scratch = 0;
-	spritebatch_internal_atlas_node_t* nodes = 0;
+	atlas_cache_internal_integer_image_t* images = 0;
+	atlas_cache_internal_integer_image_t* images_scratch = 0;
+	atlas_cache_internal_atlas_node_t* nodes = 0;
 	int pixel_stride = sb->pixel_stride;
 	int atlas_width = sb->atlas_width_in_pixels;
 	int atlas_height = sb->atlas_height_in_pixels;
 	float volume_used = 0;
 
-	images = (spritebatch_internal_integer_image_t*)SPRITEBATCH_MALLOC(sizeof(spritebatch_internal_integer_image_t) * img_count, sb->mem_ctx);
-	images_scratch = (spritebatch_internal_integer_image_t*)SPRITEBATCH_MALLOC(sizeof(spritebatch_internal_integer_image_t) * img_count, sb->mem_ctx);
-	nodes = (spritebatch_internal_atlas_node_t*)SPRITEBATCH_MALLOC(sizeof(spritebatch_internal_atlas_node_t) * atlas_node_capacity, sb->mem_ctx);
-	SPRITEBATCH_CHECK(images, "out of mem");
-	SPRITEBATCH_CHECK(nodes, "out of mem");
+	images = (atlas_cache_internal_integer_image_t*)ATLAS_CACHE_MALLOC(sizeof(atlas_cache_internal_integer_image_t) * img_count, sb->mem_ctx);
+	images_scratch = (atlas_cache_internal_integer_image_t*)ATLAS_CACHE_MALLOC(sizeof(atlas_cache_internal_integer_image_t) * img_count, sb->mem_ctx);
+	nodes = (atlas_cache_internal_atlas_node_t*)ATLAS_CACHE_MALLOC(sizeof(atlas_cache_internal_atlas_node_t) * atlas_node_capacity, sb->mem_ctx);
+	ATLAS_CACHE_CHECK(images, "out of mem");
+	ATLAS_CACHE_CHECK(nodes, "out of mem");
 
 	for (int i = 0; i < img_count; ++i)
 	{
-		const spritebatch_internal_lonely_texture_t* img = imgs + i;
-		spritebatch_internal_integer_image_t* image = images + i;
+		const atlas_cache_internal_lonely_texture_t* img = imgs + i;
+		atlas_cache_internal_integer_image_t* image = images + i;
 		image->fit = 0;
-		image->size = sb->atlas_use_border_pixels ? spritebatch_v2(img->w + 2, img->h + 2) : spritebatch_v2(img->w, img->h);
+		image->size = sb->atlas_use_border_pixels ? atlas_cache_v2(img->w + 2, img->h + 2) : atlas_cache_v2(img->w, img->h);
 		image->img_index = i;
 	}
 
 	// Sort PNGs from largest to smallest
-	spritebatch_internal_image_merge_sort(images, images_scratch, img_count);
+	atlas_cache_internal_image_merge_sort(images, images_scratch, img_count);
 
 	// stack pointer, the stack is the nodes array which we will
 	// allocate nodes from as necessary.
 	sp = 1;
 
-	nodes[0].min = spritebatch_v2(0, 0);
-	nodes[0].max = spritebatch_v2(atlas_width, atlas_height);
-	nodes[0].size = spritebatch_v2(atlas_width, atlas_height);
+	nodes[0].min = atlas_cache_v2(0, 0);
+	nodes[0].max = atlas_cache_v2(atlas_width, atlas_height);
+	nodes[0].size = atlas_cache_v2(atlas_width, atlas_height);
 
 	// Nodes represent empty space in the atlas. Placing a texture into the
 	// atlas involves splitting a node into two smaller pieces (or, if a
 	// perfect fit is found, deleting the node).
 	for (int i = 0; i < img_count; ++i)
 	{
-		spritebatch_internal_integer_image_t* image = images + i;
+		atlas_cache_internal_integer_image_t* image = images + i;
 		int width = image->size.x;
 		int height = image->size.y;
-		spritebatch_internal_atlas_node_t *best_fit = spritebatch_best_fit(sp, width, height, nodes);
+		atlas_cache_internal_atlas_node_t *best_fit = atlas_cache_best_fit(sp, width, height, nodes);
 
 		if (!best_fit) {
 			image->fit = 0;
@@ -1608,11 +1626,11 @@ void spritebatch_make_atlas(spritebatch_t* sb, spritebatch_internal_atlas_t* atl
 		}
 
 		image->min = best_fit->min;
-		image->max = spritebatch_add(image->min, image->size);
+		image->max = atlas_cache_add(image->min, image->size);
 
 		if (best_fit->size.x == width && best_fit->size.y == height)
 		{
-			spritebatch_internal_atlas_node_t* last_node = nodes + --sp;
+			atlas_cache_internal_atlas_node_t* last_node = nodes + --sp;
 			*best_fit = *last_node;
 			image->fit = 1;
 
@@ -1624,20 +1642,20 @@ void spritebatch_make_atlas(spritebatch_t* sb, spritebatch_internal_atlas_t* atl
 		if (sp == atlas_node_capacity)
 		{
 			int new_capacity = atlas_node_capacity * 2;
-			spritebatch_internal_atlas_node_t* new_nodes = (spritebatch_internal_atlas_node_t*)SPRITEBATCH_MALLOC(sizeof(spritebatch_internal_atlas_node_t) * new_capacity, mem_ctx);
-			SPRITEBATCH_CHECK(new_nodes, "out of mem");
-			memcpy(new_nodes, nodes, sizeof(spritebatch_internal_atlas_node_t) * sp);
-			SPRITEBATCH_FREE(nodes, mem_ctx);
+			atlas_cache_internal_atlas_node_t* new_nodes = (atlas_cache_internal_atlas_node_t*)ATLAS_CACHE_MALLOC(sizeof(atlas_cache_internal_atlas_node_t) * new_capacity, mem_ctx);
+			ATLAS_CACHE_CHECK(new_nodes, "out of mem");
+			memcpy(new_nodes, nodes, sizeof(atlas_cache_internal_atlas_node_t) * sp);
+			ATLAS_CACHE_FREE(nodes, mem_ctx);
 			nodes = new_nodes;
 			atlas_node_capacity = new_capacity;
 		}
 
-		spritebatch_internal_atlas_node_t* new_node = nodes + sp++;
+		atlas_cache_internal_atlas_node_t* new_node = nodes + sp++;
 		new_node->min = best_fit->min;
 
 		// Split bestFit along x or y, whichever minimizes
 		// fragmentation of empty space
-		spritebatch_v2_t d = spritebatch_sub(best_fit->size, spritebatch_v2(width, height));
+		atlas_cache_v2_t d = atlas_cache_sub(best_fit->size, atlas_cache_v2(width, height));
 		if (d.x < d.y)
 		{
 			new_node->size.x = d.x;
@@ -1658,40 +1676,40 @@ void spritebatch_make_atlas(spritebatch_t* sb, spritebatch_internal_atlas_t* atl
 			best_fit->min.x += width;
 		}
 
-		new_node->max = spritebatch_add(new_node->min, new_node->size);
+		new_node->max = atlas_cache_add(new_node->min, new_node->size);
 	}
 
-	// Write the final atlas image, use SPRITEBATCH_ATLAS_EMPTY_COLOR as base color
+	// Write the final atlas image, use ATLAS_CACHE_ATLAS_EMPTY_COLOR as base color
 	atlas_stride = atlas_width * pixel_stride;
 	atlas_image_size = atlas_width * atlas_height * pixel_stride;
-	atlas_pixels = SPRITEBATCH_MALLOC(atlas_image_size, mem_ctx);
-	SPRITEBATCH_CHECK(atlas_image_size, "out of mem");
-	SPRITEBATCH_MEMSET(atlas_pixels, SPRITEBATCH_ATLAS_EMPTY_COLOR, atlas_image_size);
+	atlas_pixels = ATLAS_CACHE_MALLOC(atlas_image_size, mem_ctx);
+	ATLAS_CACHE_CHECK(atlas_image_size, "out of mem");
+	ATLAS_CACHE_MEMSET(atlas_pixels, ATLAS_CACHE_ATLAS_EMPTY_COLOR, atlas_image_size);
 
 	for (int i = 0; i < img_count; ++i)
 	{
-		spritebatch_internal_integer_image_t* image = images + i;
+		atlas_cache_internal_integer_image_t* image = images + i;
 
 		if (image->fit)
 		{
-			const spritebatch_internal_lonely_texture_t* img = imgs + image->img_index;
-			spritebatch_internal_get_pixels(sb, img->image_id, img->w, img->h);
+			const atlas_cache_internal_lonely_texture_t* img = imgs + image->img_index;
+			atlas_cache_internal_get_pixels(sb, img->image_id, img->w, img->h);
 			char* pixels = (char*)sb->pixel_buffer;
 
-			spritebatch_v2_t min = image->min;
-			spritebatch_v2_t max = image->max;
+			atlas_cache_v2_t min = image->min;
+			atlas_cache_v2_t max = image->max;
 			int atlas_offset = min.x * pixel_stride;
 			int tex_stride = image->size.x * pixel_stride;
 
 			for (int row = min.y, y = 0; row < max.y; ++row, ++y)
 			{
 				void* row_ptr = (char*)atlas_pixels + (row * atlas_stride + atlas_offset);
-				SPRITEBATCH_MEMCPY(row_ptr, pixels + y * tex_stride, tex_stride);
+				ATLAS_CACHE_MEMCPY(row_ptr, pixels + y * tex_stride, tex_stride);
 			}
 		}
 	}
 
-	spritebatch_map_init(&atlas_out->sprites_to_textures, sizeof(spritebatch_internal_texture_t), img_count, sb->mem_ctx);
+	atlas_cache_map_init(&atlas_out->sprites_to_textures, sizeof(atlas_cache_internal_texture_t), img_count, sb->mem_ctx);
 	atlas_out->texture_id = sb->generate_texture_callback(atlas_pixels, atlas_width, atlas_height, sb->udata);
 
 	iw = 1.0f / (float)(atlas_width);
@@ -1699,12 +1717,12 @@ void spritebatch_make_atlas(spritebatch_t* sb, spritebatch_internal_atlas_t* atl
 
 	for (int i = 0; i < img_count; ++i)
 	{
-		spritebatch_internal_integer_image_t* img = images + i;
+		atlas_cache_internal_integer_image_t* img = images + i;
 
 		if (img->fit)
 		{
-			spritebatch_v2_t min = img->min;
-			spritebatch_v2_t max = img->max;
+			atlas_cache_v2_t min = img->min;
+			atlas_cache_v2_t max = img->max;
 			volume_used += img->size.x * img->size.y;
 
 			float min_x = (float)min.x * iw;
@@ -1713,14 +1731,14 @@ void spritebatch_make_atlas(spritebatch_t* sb, spritebatch_internal_atlas_t* atl
 			float max_y = (float)max.y * ih;
 
 			// flip image on y axis
-			if (SPRITEBATCH_ATLAS_FLIP_Y_AXIS_FOR_UV)
+			if (ATLAS_CACHE_ATLAS_FLIP_Y_AXIS_FOR_UV)
 			{
 				float tmp = min_y;
 				min_y = max_y;
 				max_y = tmp;
 			}
 
-			spritebatch_internal_texture_t texture;
+			atlas_cache_internal_texture_t texture;
 			texture.w = img->size.x;
 			texture.h = img->size.y;
 			texture.timestamp = 0;
@@ -1728,81 +1746,81 @@ void spritebatch_make_atlas(spritebatch_t* sb, spritebatch_internal_atlas_t* atl
 			texture.miny = min_y;
 			texture.maxx = max_x;
 			texture.maxy = max_y;
-			SPRITEBATCH_ASSERT(!(img->size.x < 0));
-			SPRITEBATCH_ASSERT(!(img->size.y < 0));
-			SPRITEBATCH_ASSERT(!(min_x < 0));
-			SPRITEBATCH_ASSERT(!(max_x < 0));
-			SPRITEBATCH_ASSERT(!(min_y < 0));
-			SPRITEBATCH_ASSERT(!(max_y < 0));
+			ATLAS_CACHE_ASSERT(!(img->size.x < 0));
+			ATLAS_CACHE_ASSERT(!(img->size.y < 0));
+			ATLAS_CACHE_ASSERT(!(min_x < 0));
+			ATLAS_CACHE_ASSERT(!(max_x < 0));
+			ATLAS_CACHE_ASSERT(!(min_y < 0));
+			ATLAS_CACHE_ASSERT(!(max_y < 0));
 			texture.image_id = imgs[img->img_index].image_id;
-			spritebatch_map_insert(&atlas_out->sprites_to_textures, texture.image_id, &texture);
+			atlas_cache_map_insert(&atlas_out->sprites_to_textures, texture.image_id, &texture);
 		}
 	}
 
 	// Need to adjust atlas_width and atlas_height in config params, as none of the images for this
 	// atlas actually fit inside of the atlas! Either adjust the config, or stop sending giant images
 	// to the sprite batcher.
-	SPRITEBATCH_ASSERT(volume_used > 0);
+	ATLAS_CACHE_ASSERT(volume_used > 0);
 
 	atlas_out->volume_ratio = volume_used / (atlas_width * atlas_height);
 
 sb_err:
 	// no specific error handling needed here (yet)
 
-	SPRITEBATCH_FREE(atlas_pixels, mem_ctx);
-	SPRITEBATCH_FREE(nodes, mem_ctx);
-	SPRITEBATCH_FREE(images, mem_ctx);
-	SPRITEBATCH_FREE(images_scratch, mem_ctx);
+	ATLAS_CACHE_FREE(atlas_pixels, mem_ctx);
+	ATLAS_CACHE_FREE(nodes, mem_ctx);
+	ATLAS_CACHE_FREE(images, mem_ctx);
+	ATLAS_CACHE_FREE(images_scratch, mem_ctx);
 	return;
 }
 
-static int spritebatch_internal_lonely_pred(spritebatch_internal_lonely_texture_t* a, spritebatch_internal_lonely_texture_t* b)
+static int atlas_cache_internal_lonely_pred(atlas_cache_internal_lonely_texture_t* a, atlas_cache_internal_lonely_texture_t* b)
 {
 	return a->timestamp < b->timestamp;
 }
 
-static void spritebatch_internal_qsort_lonely(spritebatch_map_t* lonely_table, spritebatch_internal_lonely_texture_t* items, int count)
+static void atlas_cache_internal_qsort_lonely(atlas_cache_map_t* lonely_table, atlas_cache_internal_lonely_texture_t* items, int count)
 {
 	if (count <= 1) return;
 
-	spritebatch_internal_lonely_texture_t pivot = items[count - 1];
+	atlas_cache_internal_lonely_texture_t pivot = items[count - 1];
 	int low = 0;
 	for (int i = 0; i < count - 1; ++i)
 	{
-		if (spritebatch_internal_lonely_pred(items + i, &pivot))
+		if (atlas_cache_internal_lonely_pred(items + i, &pivot))
 		{
-			spritebatch_map_swap(lonely_table, i, low);
+			atlas_cache_map_swap(lonely_table, i, low);
 			low++;
 		}
 	}
 
-	spritebatch_map_swap(lonely_table, low, count - 1);
-	spritebatch_internal_qsort_lonely(lonely_table, items, low);
-	spritebatch_internal_qsort_lonely(lonely_table, items + low + 1, count - 1 - low);
+	atlas_cache_map_swap(lonely_table, low, count - 1);
+	atlas_cache_internal_qsort_lonely(lonely_table, items, low);
+	atlas_cache_internal_qsort_lonely(lonely_table, items + low + 1, count - 1 - low);
 }
 
-int spritebatch_internal_buffer_key(spritebatch_t* sb, SPRITEBATCH_U64 key)
+int atlas_cache_internal_buffer_key(atlas_cache_t* sb, ATLAS_CACHE_U64 key)
 {
-	SPRITEBATCH_CHECK_BUFFER_GROW(sb, key_buffer_count, key_buffer_capacity, key_buffer, SPRITEBATCH_U64);
+	ATLAS_CACHE_CHECK_BUFFER_GROW(sb, key_buffer_count, key_buffer_capacity, key_buffer, ATLAS_CACHE_U64);
 	sb->key_buffer[sb->key_buffer_count++] = key;
 	return 0;
 }
 
-void spritebatch_internal_remove_table_entries(spritebatch_t* sb, spritebatch_map_t* table)
+void atlas_cache_internal_remove_table_entries(atlas_cache_t* sb, atlas_cache_map_t* table)
 {
-	for (int i = 0; i < sb->key_buffer_count; ++i) spritebatch_map_remove(table, sb->key_buffer[i]);
+	for (int i = 0; i < sb->key_buffer_count; ++i) atlas_cache_map_remove(table, sb->key_buffer[i]);
 	sb->key_buffer_count = 0;
 }
 
-void spritebatch_internal_flush_atlas(spritebatch_t* sb, spritebatch_internal_atlas_t* atlas, spritebatch_internal_atlas_t** sentinel, spritebatch_internal_atlas_t** next)
+void atlas_cache_internal_flush_atlas(atlas_cache_t* sb, atlas_cache_internal_atlas_t* atlas, atlas_cache_internal_atlas_t** sentinel, atlas_cache_internal_atlas_t** next)
 {
 	int ticks_to_decay_texture = sb->ticks_to_decay_texture;
-	int texture_count = spritebatch_map_count(&atlas->sprites_to_textures);
-	spritebatch_internal_texture_t* textures = (spritebatch_internal_texture_t*)spritebatch_map_items(&atlas->sprites_to_textures);
+	int texture_count = atlas_cache_map_count(&atlas->sprites_to_textures);
+	atlas_cache_internal_texture_t* textures = (atlas_cache_internal_texture_t*)atlas_cache_map_items(&atlas->sprites_to_textures);
 
 	for (int i = 0; i < texture_count; ++i)
 	{
-		spritebatch_internal_texture_t* atlas_texture = textures + i;
+		atlas_cache_internal_texture_t* atlas_texture = textures + i;
 		if (atlas_texture->timestamp < ticks_to_decay_texture)
 		{
 			int w = atlas_texture->w;
@@ -1812,10 +1830,10 @@ void spritebatch_internal_flush_atlas(spritebatch_t* sb, spritebatch_internal_at
 				w -= 2;
 				h -= 2;
 			}
-			spritebatch_internal_lonely_texture_t* lonely_texture = spritebatch_internal_lonelybuffer_push(sb, atlas_texture->image_id, w, h, 0);
+			atlas_cache_internal_lonely_texture_t* lonely_texture = atlas_cache_internal_lonelybuffer_push(sb, atlas_texture->image_id, w, h, 0);
 			lonely_texture->timestamp = atlas_texture->timestamp;
 		}
-		spritebatch_map_remove(&sb->sprites_to_atlases, atlas_texture->image_id);
+		atlas_cache_map_remove(&sb->sprites_to_atlases, atlas_texture->image_id);
 	}
 
 	if (sb->atlases == atlas)
@@ -1829,14 +1847,14 @@ void spritebatch_internal_flush_atlas(spritebatch_t* sb, spritebatch_internal_at
 	{
 		if (*sentinel == atlas)
 		{
-			SPRITEBATCH_LOG("\t\tsentinel was also atlas: %p\n", *sentinel);
+			ATLAS_CACHE_LOG("\t\tsentinel was also atlas: %p\n", *sentinel);
 			if ((*next)->next != *sentinel)
 			{
-				SPRITEBATCH_LOG("\t\t*next = (*next)->next : %p = (*next)->%p\n", *next, (*next)->next);
+				ATLAS_CACHE_LOG("\t\t*next = (*next)->next : %p = (*next)->%p\n", *next, (*next)->next);
 				*next = (*next)->next;
 			}
 
-			SPRITEBATCH_LOG("\t\t*sentinel = *next : %p =  %p\n", *sentinel, *next);
+			ATLAS_CACHE_LOG("\t\t*sentinel = *next : %p =  %p\n", *sentinel, *next);
  			*sentinel = *next;
 
 		}
@@ -1844,55 +1862,55 @@ void spritebatch_internal_flush_atlas(spritebatch_t* sb, spritebatch_internal_at
 
 	atlas->next->prev = atlas->prev;
 	atlas->prev->next = atlas->next;
-	spritebatch_map_term(&atlas->sprites_to_textures);
+	atlas_cache_map_term(&atlas->sprites_to_textures);
 	sb->delete_texture_callback(atlas->texture_id, sb->udata);
-	SPRITEBATCH_FREE(atlas, sb->mem_ctx);
+	ATLAS_CACHE_FREE(atlas, sb->mem_ctx);
 }
 
-void spritebatch_invalidate(spritebatch_t* sb, SPRITEBATCH_U64 image_id)
+void atlas_cache_invalidate(atlas_cache_t* sb, ATLAS_CACHE_U64 image_id)
 {
-	void* atlas_ptr = spritebatch_map_find(&sb->sprites_to_atlases, image_id);
+	void* atlas_ptr = atlas_cache_map_find(&sb->sprites_to_atlases, image_id);
 	if (atlas_ptr) {
-		spritebatch_internal_atlas_t* atlas = *(spritebatch_internal_atlas_t**)atlas_ptr;
-		spritebatch_internal_flush_atlas(sb, atlas, 0, 0);
+		atlas_cache_internal_atlas_t* atlas = *(atlas_cache_internal_atlas_t**)atlas_ptr;
+		atlas_cache_internal_flush_atlas(sb, atlas, 0, 0);
 	}
-	if (spritebatch_map_find(&sb->sprites_to_lonely_textures, image_id)) {
-		spritebatch_map_remove(&sb->sprites_to_lonely_textures, image_id);
+	if (atlas_cache_map_find(&sb->sprites_to_lonely_textures, image_id)) {
+		atlas_cache_map_remove(&sb->sprites_to_lonely_textures, image_id);
 	}
 }
 
-void spritebatch_internal_log_chain(spritebatch_internal_atlas_t* atlas)
+void atlas_cache_internal_log_chain(atlas_cache_internal_atlas_t* atlas)
 {
 	if (atlas)
 	{
-		spritebatch_internal_atlas_t* sentinel = atlas;
-		SPRITEBATCH_LOG("sentinel: %p\n", sentinel);
+		atlas_cache_internal_atlas_t* sentinel = atlas;
+		ATLAS_CACHE_LOG("sentinel: %p\n", sentinel);
 		do
 		{
-			spritebatch_internal_atlas_t* next = atlas->next;
-			SPRITEBATCH_LOG("\tatlas %p\n", atlas);
+			atlas_cache_internal_atlas_t* next = atlas->next;
+			ATLAS_CACHE_LOG("\tatlas %p\n", atlas);
 			atlas = next;
 		}
 		while (atlas != sentinel);
 	}
 }
 
-int spritebatch_defrag(spritebatch_t* sb)
+int atlas_cache_defrag(atlas_cache_t* sb)
 {
 	// remove decayed atlases and flush them to the lonely buffer
 	// only flush textures that are not decayed
 	int ticks_to_decay_texture = sb->ticks_to_decay_texture;
 	float ratio_to_decay_atlas = sb->ratio_to_decay_atlas;
-	spritebatch_internal_atlas_t* atlas = sb->atlases;
+	atlas_cache_internal_atlas_t* atlas = sb->atlases;
 	if (atlas)
 	{
-		spritebatch_internal_log_chain(atlas);
-		spritebatch_internal_atlas_t* sentinel = atlas;
+		atlas_cache_internal_log_chain(atlas);
+		atlas_cache_internal_atlas_t* sentinel = atlas;
 		do
 		{
-			spritebatch_internal_atlas_t* next = atlas->next;
-			int texture_count = spritebatch_map_count(&atlas->sprites_to_textures);
-			spritebatch_internal_texture_t* textures = (spritebatch_internal_texture_t*)spritebatch_map_items(&atlas->sprites_to_textures);
+			atlas_cache_internal_atlas_t* next = atlas->next;
+			int texture_count = atlas_cache_map_count(&atlas->sprites_to_textures);
+			atlas_cache_internal_texture_t* textures = (atlas_cache_internal_texture_t*)atlas_cache_map_items(&atlas->sprites_to_textures);
 			int decayed_texture_count = 0;
 			for (int i = 0; i < texture_count; ++i) if (textures[i].timestamp >= ticks_to_decay_texture) decayed_texture_count++;
 
@@ -1901,8 +1919,8 @@ int spritebatch_defrag(spritebatch_t* sb)
 			else ratio = (float)texture_count / (float)decayed_texture_count;
 			if (ratio > ratio_to_decay_atlas)
 			{
-				SPRITEBATCH_LOG("flushed atlas %p\n", atlas);
-				spritebatch_internal_flush_atlas(sb, atlas, &sentinel, &next);
+				ATLAS_CACHE_LOG("flushed atlas %p\n", atlas);
+				atlas_cache_internal_flush_atlas(sb, atlas, &sentinel, &next);
 			}
 			atlas = next;
 		}
@@ -1915,19 +1933,19 @@ int spritebatch_defrag(spritebatch_t* sb)
 	if (atlas)
 	{
 		int sp = 0;
-		spritebatch_internal_atlas_t* merge_stack[2];
+		atlas_cache_internal_atlas_t* merge_stack[2];
 
-		spritebatch_internal_atlas_t* sentinel = atlas;
+		atlas_cache_internal_atlas_t* sentinel = atlas;
 		do
 		{
-			spritebatch_internal_atlas_t* next = atlas->next;
+			atlas_cache_internal_atlas_t* next = atlas->next;
 
-			SPRITEBATCH_ASSERT(sp >= 0 && sp <= 2);
+			ATLAS_CACHE_ASSERT(sp >= 0 && sp <= 2);
 			if (sp == 2)
 			{
-				SPRITEBATCH_LOG("merged 2 atlases\n");
-				spritebatch_internal_flush_atlas(sb, merge_stack[0], &sentinel, &next);
-				spritebatch_internal_flush_atlas(sb, merge_stack[1], &sentinel, &next);
+				ATLAS_CACHE_LOG("merged 2 atlases\n");
+				atlas_cache_internal_flush_atlas(sb, merge_stack[0], &sentinel, &next);
+				atlas_cache_internal_flush_atlas(sb, merge_stack[1], &sentinel, &next);
 				sp = 0;
 			}
 
@@ -1940,19 +1958,19 @@ int spritebatch_defrag(spritebatch_t* sb)
 
 		if (sp == 2)
 		{
-			SPRITEBATCH_LOG("merged 2 atlases (out of loop)\n");
-			spritebatch_internal_flush_atlas(sb, merge_stack[0], 0, 0);
-			spritebatch_internal_flush_atlas(sb, merge_stack[1], 0, 0);
+			ATLAS_CACHE_LOG("merged 2 atlases (out of loop)\n");
+			atlas_cache_internal_flush_atlas(sb, merge_stack[0], 0, 0);
+			atlas_cache_internal_flush_atlas(sb, merge_stack[1], 0, 0);
 		}
 	}
 
 	// remove decayed textures from the lonely buffer
 	int lonely_buffer_count_till_decay = sb->lonely_buffer_count_till_decay;
-	int lonely_count = spritebatch_map_count(&sb->sprites_to_lonely_textures);
-	spritebatch_internal_lonely_texture_t* lonely_textures = (spritebatch_internal_lonely_texture_t*)spritebatch_map_items(&sb->sprites_to_lonely_textures);
+	int lonely_count = atlas_cache_map_count(&sb->sprites_to_lonely_textures);
+	atlas_cache_internal_lonely_texture_t* lonely_textures = (atlas_cache_internal_lonely_texture_t*)atlas_cache_map_items(&sb->sprites_to_lonely_textures);
 	if (lonely_count >= lonely_buffer_count_till_decay)
 	{
-		spritebatch_internal_qsort_lonely(&sb->sprites_to_lonely_textures, lonely_textures, lonely_count);
+		atlas_cache_internal_qsort_lonely(&sb->sprites_to_lonely_textures, lonely_textures, lonely_count);
 		int index = 0;
 		while (1)
 		{
@@ -1962,19 +1980,19 @@ int spritebatch_defrag(spritebatch_t* sb)
 		}
 		for (int i = index; i < lonely_count; ++i)
 		{
-			SPRITEBATCH_U64 texture_id = lonely_textures[i].texture_id;
+			ATLAS_CACHE_U64 texture_id = lonely_textures[i].texture_id;
 			if (texture_id != ~0) sb->delete_texture_callback(texture_id, sb->udata);
-			spritebatch_internal_buffer_key(sb, lonely_textures[i].image_id);
-			SPRITEBATCH_LOG("lonely texture decayed\n");
+			atlas_cache_internal_buffer_key(sb, lonely_textures[i].image_id);
+			ATLAS_CACHE_LOG("lonely texture decayed\n");
 		}
-		spritebatch_internal_remove_table_entries(sb, &sb->sprites_to_lonely_textures);
+		atlas_cache_internal_remove_table_entries(sb, &sb->sprites_to_lonely_textures);
 		lonely_count -= lonely_count - index;
-		SPRITEBATCH_ASSERT(lonely_count == spritebatch_map_count(&sb->sprites_to_lonely_textures));
+		ATLAS_CACHE_ASSERT(lonely_count == atlas_cache_map_count(&sb->sprites_to_lonely_textures));
 	}
 
 	// process input, but don't make textures just yet
-	spritebatch_internal_process_input(sb, 1);
-	lonely_count = spritebatch_map_count(&sb->sprites_to_lonely_textures);
+	atlas_cache_internal_process_input(sb, 1);
+	lonely_count = atlas_cache_map_count(&sb->sprites_to_lonely_textures);
 
 	// while greater than lonely_buffer_count_till_flush elements in lonely buffer
 	// grab lonely_buffer_count_till_flush of them and make an atlas
@@ -1982,7 +2000,7 @@ int spritebatch_defrag(spritebatch_t* sb)
 	int stuck = 0;
 	while (lonely_count > lonely_buffer_count_till_flush && !stuck)
 	{
-		atlas = (spritebatch_internal_atlas_t*)SPRITEBATCH_MALLOC(sizeof(spritebatch_internal_atlas_t), sb->mem_ctx);
+		atlas = (atlas_cache_internal_atlas_t*)ATLAS_CACHE_MALLOC(sizeof(atlas_cache_internal_atlas_t), sb->mem_ctx);
 		if (sb->atlases)
 		{
 			atlas->prev = sb->atlases;
@@ -1998,41 +2016,41 @@ int spritebatch_defrag(spritebatch_t* sb)
 			sb->atlases = atlas;
 		}
 
-		spritebatch_make_atlas(sb, atlas, lonely_textures, lonely_count);
-		SPRITEBATCH_LOG("making atlas\n");
+		atlas_cache_make_atlas(sb, atlas, lonely_textures, lonely_count);
+		ATLAS_CACHE_LOG("making atlas\n");
 
-		int tex_count_in_atlas = spritebatch_map_count(&atlas->sprites_to_textures);
+		int tex_count_in_atlas = atlas_cache_map_count(&atlas->sprites_to_textures);
 		if (tex_count_in_atlas != lonely_count)
 		{
 			int hit_count = 0;
 			for (int i = 0; i < lonely_count; ++i)
 			{
-				SPRITEBATCH_U64 key = lonely_textures[i].image_id;
-				if (spritebatch_map_find(&atlas->sprites_to_textures, key))
+				ATLAS_CACHE_U64 key = lonely_textures[i].image_id;
+				if (atlas_cache_map_find(&atlas->sprites_to_textures, key))
 				{
-					spritebatch_internal_buffer_key(sb, key);
-					SPRITEBATCH_U64 texture_id = lonely_textures[i].texture_id;
+					atlas_cache_internal_buffer_key(sb, key);
+					ATLAS_CACHE_U64 texture_id = lonely_textures[i].texture_id;
 					if (texture_id != ~0) sb->delete_texture_callback(texture_id, sb->udata);
-					spritebatch_map_insert(&sb->sprites_to_atlases, key, &atlas);
-					SPRITEBATCH_LOG("removing lonely texture for atlas%s\n", texture_id != ~0 ? "" : " (tex was ~0)" );
+					atlas_cache_map_insert(&sb->sprites_to_atlases, key, &atlas);
+					ATLAS_CACHE_LOG("removing lonely texture for atlas%s\n", texture_id != ~0 ? "" : " (tex was ~0)" );
 				}
 				else
 				{
 					hit_count++;
-					SPRITEBATCH_ASSERT(lonely_textures[i].w <= sb->atlas_width_in_pixels);
-					SPRITEBATCH_ASSERT(lonely_textures[i].h <= sb->atlas_height_in_pixels);
+					ATLAS_CACHE_ASSERT(lonely_textures[i].w <= sb->atlas_width_in_pixels);
+					ATLAS_CACHE_ASSERT(lonely_textures[i].h <= sb->atlas_height_in_pixels);
 				}
 			}
-			spritebatch_internal_remove_table_entries(sb, &sb->sprites_to_lonely_textures);
+			atlas_cache_internal_remove_table_entries(sb, &sb->sprites_to_lonely_textures);
 
-			lonely_count = spritebatch_map_count(&sb->sprites_to_lonely_textures);
+			lonely_count = atlas_cache_map_count(&sb->sprites_to_lonely_textures);
 
 			if (!hit_count)
 			{
 				// TODO
 				// handle case where none fit in atlas
 				stuck = 1;
-				SPRITEBATCH_ASSERT(0);
+				ATLAS_CACHE_ASSERT(0);
 			}
 		}
 
@@ -2040,13 +2058,13 @@ int spritebatch_defrag(spritebatch_t* sb)
 		{
 			for (int i = 0; i < lonely_count; ++i)
 			{
-				SPRITEBATCH_U64 key = lonely_textures[i].image_id;
-				SPRITEBATCH_U64 texture_id = lonely_textures[i].texture_id;
+				ATLAS_CACHE_U64 key = lonely_textures[i].image_id;
+				ATLAS_CACHE_U64 texture_id = lonely_textures[i].texture_id;
 				if (texture_id != ~0) sb->delete_texture_callback(texture_id, sb->udata);
-				spritebatch_map_insert(&sb->sprites_to_atlases, key, &atlas);
-				SPRITEBATCH_LOG("(fast path) removing lonely texture for atlas%s\n", texture_id != ~0 ? "" : " (tex was ~0)" );
+				atlas_cache_map_insert(&sb->sprites_to_atlases, key, &atlas);
+				ATLAS_CACHE_LOG("(fast path) removing lonely texture for atlas%s\n", texture_id != ~0 ? "" : " (tex was ~0)" );
 			}
-			spritebatch_map_clear(&sb->sprites_to_lonely_textures);
+			atlas_cache_map_clear(&sb->sprites_to_lonely_textures);
 			lonely_count = 0;
 			break;
 		}
@@ -2055,8 +2073,8 @@ int spritebatch_defrag(spritebatch_t* sb)
 	return 1;
 }
 
-#endif // SPRITEBATCH_IMPLEMENTATION_ONCE
-#endif // SPRITEBATCH_IMPLEMENTATION
+#endif // ATLAS_CACHE_IMPLEMENTATION_ONCE
+#endif // ATLAS_CACHE_IMPLEMENTATION
 
 /*
 	------------------------------------------------------------------------------

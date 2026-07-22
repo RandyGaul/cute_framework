@@ -106,7 +106,6 @@ struct CF_App
 	CF_WindowState window_state_prev;
 	int sample_count = 0;
 	bool use_depth_stencil = false;
-	uint64_t default_image_id = CF_CUSTOM_SPRITE_ID_RANGE_LO;
 	CF_PresentMode present_mode = CF_PRESENT_MODE_IMMEDIATE;
 	bool audio_needs_updates = false;
 	void* update_udata = NULL;
@@ -120,6 +119,12 @@ struct CF_App
 	CF_Mutex on_sound_finish_mutex = cf_make_mutex();
 	CF_Shader draw_shader = { 0 };
 	CF_Shader blit_shader = { 0 };
+	CF_Shader tile_shader = { 0 }; // Tiled draw path walk shader; null id when unavailable (GLES backend).
+	// Tiled draw path GPU binning compute shaders; null ids when unavailable (GLES backend).
+	CF_ComputeShader tile_zero_cs = { 0 };
+	CF_ComputeShader tile_count_cs = { 0 };
+	CF_ComputeShader tile_scan_cs = { 0 };
+	CF_ComputeShader tile_gather_cs = { 0 };
 
 	// Input stuff.
 	Cute::Array<char> ime_composition;

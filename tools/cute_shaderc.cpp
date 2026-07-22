@@ -492,7 +492,16 @@ int main(int argc, const char* argv[])
 			.content = input_content,
 		};
 
+		// The payload storage buffer binds right after the stub's last sampler (see
+		// cf_compute_payload_binding in builtin_shaders.h).
+		char payload_binding_str[16];
+		snprintf(payload_binding_str, sizeof(payload_binding_str), "%d", cf_compute_payload_binding(input_content));
+		CF_ShaderCompilerDefine payload_define = { "CF_PAYLOAD_BINDING", payload_binding_str };
+
 		CF_ShaderCompilerConfig config = {
+			.num_builtin_defines = 1,
+			.builtin_defines = &payload_define,
+
 			.num_builtin_includes = num_builtin_includes,
 			.builtin_includes = builtin_includes,
 
@@ -501,6 +510,10 @@ int main(int argc, const char* argv[])
 
 			.automatic_include_guard = true,
 			.return_preprocessed_source = true,
+
+			// The SSBO draw template cannot transpile to GLSL 300 es; the GLES flavor's
+			// transpile is grafted in below.
+			.skip_glsl300 = true,
 		};
 
 		CF_ShaderCompilerResult draw_shader_result = cute_shader_compile(
@@ -513,6 +526,24 @@ int main(int argc, const char* argv[])
 			cute_shader_free_result(draw_shader_result);
 			goto end;
 		}
+
+		// GLES3/WebGL2 runs the texel-fetch flavor of the draw shader; compile the same
+		// stub against it and graft its GLSL 300 es output into the primary bytecode.
+		config.skip_glsl300 = false;
+		CF_ShaderCompilerResult draw_gles_result = cute_shader_compile(
+			s_draw_fs_gles,
+			CUTE_SHADER_STAGE_FRAGMENT,
+			config
+		);
+		if (!draw_gles_result.success) {
+			fprintf(stderr, "%s\n", draw_gles_result.error_message);
+			cute_shader_free_result(draw_shader_result);
+			cute_shader_free_result(draw_gles_result);
+			goto end;
+		}
+		draw_shader_result.bytecode.glsl300_src = draw_gles_result.bytecode.glsl300_src;
+		draw_shader_result.bytecode.glsl300_src_size = draw_gles_result.bytecode.glsl300_src_size;
+
 		CF_ShaderCompilerResult blit_shader_result = cute_shader_compile(
 			s_blit_fs,
 			CUTE_SHADER_STAGE_FRAGMENT,
@@ -521,25 +552,28 @@ int main(int argc, const char* argv[])
 		if (!blit_shader_result.success) {
 			fprintf(stderr, "%s\n", blit_shader_result.error_message);
 			cute_shader_free_result(draw_shader_result);
+			cute_shader_free_result(draw_gles_result);
 			cute_shader_free_result(blit_shader_result);
 			goto end;
 		}
 
+		bool wrote_ok = true;
 		if (output_header_path != NULL) {
-			if (!write_draw_header_file(
+			wrote_ok = write_draw_header_file(
 				output_header_path,
 				draw_shader_result, blit_shader_result,
 				var_name
-			)) {
-				perror("Error while writing header");
-				cute_shader_free_result(draw_shader_result);
-				cute_shader_free_result(blit_shader_result);
-				goto end;
-			}
+			);
+			if (!wrote_ok) perror("Error while writing header");
 		}
 
+		// The grafted glsl300 pointer belongs to draw_gles_result; detach before freeing.
+		draw_shader_result.bytecode.glsl300_src = NULL;
+		draw_shader_result.bytecode.glsl300_src_size = 0;
 		cute_shader_free_result(draw_shader_result);
+		cute_shader_free_result(draw_gles_result);
 		cute_shader_free_result(blit_shader_result);
+		if (!wrote_ok) goto end;
 	} else if (type == SHADER_TYPE_BUILTIN) {
 		FILE* output_file = fopen(output_header_path, "wb");
 		if (output_file == NULL) {
@@ -568,6 +602,7 @@ int main(int argc, const char* argv[])
 		int num_builtin_shaders = sizeof(s_builtin_shader_sources) / sizeof(s_builtin_shader_sources[0]);
 		for (int i = 0; i < num_builtin_shaders; ++i) {
 			CF_BuiltinShaderSource source = s_builtin_shader_sources[i];
+			config.skip_glsl300 = source.no_gles;
 
 			CF_ShaderCompilerResult vertex_result = cute_shader_compile(
 				source.vertex, CUTE_SHADER_STAGE_VERTEX, config
@@ -610,6 +645,34 @@ int main(int argc, const char* argv[])
 				goto end;
 			}
 			cute_shader_free_result(fragment_result);
+		}
+
+		// Compile and write each builtin compute shader.
+		config.skip_glsl300 = false; // Ignored -- compute skips GLSL 300 transpile by stage.
+		int num_builtin_compute_shaders = sizeof(s_builtin_compute_shader_sources) / sizeof(s_builtin_compute_shader_sources[0]);
+		for (int i = 0; i < num_builtin_compute_shaders; ++i) {
+			CF_BuiltinComputeShaderSource source = s_builtin_compute_shader_sources[i];
+
+			CF_ShaderCompilerResult compute_result = cute_shader_compile(
+				source.source, CUTE_SHADER_STAGE_COMPUTE, config
+			);
+			if (!compute_result.success) {
+				fprintf(stderr, "%s\n", compute_result.error_message);
+				cute_shader_free_result(compute_result);
+				fclose(output_file);
+				goto end;
+			}
+			if (!write_bytecode_struct(
+				output_file,
+				compute_result,
+				source.name, "_cs_bytecode"
+			)) {
+				perror("Error while writing header");
+				cute_shader_free_result(compute_result);
+				fclose(output_file);
+				goto end;
+			}
+			cute_shader_free_result(compute_result);
 		}
 
 		if (fflush(output_file) != 0) {

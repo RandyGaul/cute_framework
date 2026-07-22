@@ -349,6 +349,11 @@ endfunction()
 if (WINDOWS)
 	set(DXC_DLL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/libraries/dxc")
 
+	# Enable the DXC/DXIL path in SDL_shadercross (dxcompiler.dll is loaded dynamically
+	# at runtime). Shaders using storage buffers (the tiled draw path) require SM 6.0,
+	# which the FXC/DXBC path cannot produce.
+	set_source_files_properties(libraries/SDL3_shadercross/SDL_shadercross.c PROPERTIES COMPILE_DEFINITIONS SDL_SHADERCROSS_DXC)
+
 	# Check if this project is being included as a subproject.
 	if (NOT CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
 		# Set default runtime output directory if not defined.

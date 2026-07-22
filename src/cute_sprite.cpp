@@ -86,8 +86,8 @@ void cf_easy_sprite_update_pixels(CF_Sprite* sprite, const CF_Pixel* pixels)
 	CF_Image* img = app->easy_sprites.try_find(sprite->easy_sprite_id);
 	if (img) {
 		CF_MEMCPY(img->pix, pixels, sizeof(CF_Pixel) * img->w * img->h);
-		spritebatch_t* sb = cf_get_draw_sb();
-		spritebatch_invalidate(sb, sprite->easy_sprite_id);
+		atlas_cache_t* sb = cf_get_draw_atlas_cache();
+		atlas_cache_invalidate(sb, sprite->easy_sprite_id);
 	}
 }
 

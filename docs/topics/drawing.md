@@ -14,6 +14,8 @@ CF can render a variety of shape types:
 - Polygon (fill)
 - Capsule
 - Bezier polyline
+- Arrow
+- [Custom SDF shapes](#custom-sdf-shapes) you define in shader code
 
 The shape renderer in CF has a few extra features that nearly all shapes take advantage of:
 
@@ -66,6 +68,49 @@ int main(int argc, char* argv[])
 <p align="center">
 <img src=https://github.com/RandyGaul/cute_framework/blob/master/assets/basic_shapes.gif?raw=true>
 </p>
+
+## Custom SDF Shapes
+
+Every builtin shape is rendered as a signed distance function (SDF) on the GPU, and you can register your own shapes that plug into the exact same machinery with [`cf_make_custom_shape`](../draw/cf_make_custom_shape.md). You supply a small GLSL snippet defining a distance function, and get back a handle to draw with [`cf_draw_custom_shape`](../draw/cf_draw_custom_shape.md) (outline) or [`cf_draw_custom_shape_fill`](../draw/cf_draw_custom_shape_fill.md) (filled):
+
+```cpp
+// At init time.
+CF_CustomShape star = cf_make_custom_shape(R"(
+	// params: a = center, b.x = outer radius, b.y = inner radius
+	float sdf(vec2 p, ShapeParams s)
+	{
+		// ... return the signed distance from p to the star's surface.
+	}
+)");
+
+// At draw time -- batches freely with all other shapes, sprites, and text.
+float params[] = { x, y, 50.0f, 20.0f };
+cf_draw_custom_shape_fill(star, cf_make_aabb(cf_v2(x-50, y-50), cf_v2(x+50, y+50)), params, 4);
+```
+
+The snippet must define `float sdf(vec2 p, ShapeParams s)` returning the distance in world units from point `p` to the shape's surface (negative inside). `ShapeParams` carries the up-to-16 floats you pass at draw time as eight `vec2`s named `a` through `h`, plus a `vec4 attributes` from [`cf_draw_push_vertex_attributes`](../draw/cf_draw_push_vertex_attributes.md). The builtin distance helpers are all callable from your snippet (`distance_box`, `distance_segment`, `distance_triangle`, `distance_polygon`, `distance_arrow`), so most shapes are just a few `min`/`max` combinators over them. Antialiasing, stroked outlines, colors, layers, and every other draw setting apply to custom shapes automatically, and all registered shapes render in the same batch as builtins — no extra draw calls or pipeline switches.
+
+There are a few important caveats:
+
+- **Your function must be a true signed distance function** (Lipschitz constant ≤ 1 — it may never underestimate distance). The renderer trusts it unconditionally for tile binning and occlusion culling, so an invalid "distance-ish" function (for example `abs(p.x) + abs(p.y) - r`, which overestimates by up to √2) will drop pixels. If you build your shape by combining the builtin helpers with `min`/`max`, translations, and rotations, it stays a valid SDF.
+- **Register shapes once at init time.** Each call to `cf_make_custom_shape` recompiles the renderer's internal shaders. That's fine during startup, but causes a hitch if done mid-game.
+- **Register shapes *before* creating any custom draw shaders.** Shaders made with [`cf_make_draw_shader`](../draw/cf_make_draw_shader.md) bake in the set of custom shapes that existed when they were compiled; shapes registered afterwards will render invisibly under an older custom draw shader.
+- **Runtime shader compilation is required.** Custom shapes are unavailable when CF is built with `CF_RUNTIME_SHADER_COMPILATION=OFF` (precompiled-bytecode-only builds), and require a compute-capable backend (currently unavailable on GLES3/WebGL2). `cf_make_custom_shape` returns a zero id in those cases.
+- **The bounds you pass at draw time must conservatively contain the shape** (the renderer pads them for stroke and antialias). Pixels outside the bounds are never evaluated.
+
+## Shape Groups (Boolean Ops)
+
+Regular shape calls can be composed with boolean operators — union, subtract, intersect — into a *single* shape using [`cf_draw_shape_group_begin`](../draw/cf_draw_shape_group_begin.md). A crescent moon in three lines, no shader code required:
+
+```cpp
+cf_draw_shape_group_begin();
+cf_draw_circle_fill2(cf_v2(0, 0), 70);
+cf_draw_shape_group_op(CF_SHAPE_OP_SUBTRACT, 0);
+cf_draw_circle_fill2(cf_v2(-32, 18), 62);
+cf_draw_shape_group_end();
+```
+
+Because the composite renders as one command with one distance field, translucent composites blend exactly once (no double-blend where operands overlap), and [`cf_draw_shape_group_end_stroked`](../draw/cf_draw_shape_group_end_stroked.md) outlines the *result* of the boolean math as one continuous stroke — something stacked separate draws can never do. Passing a nonzero `smoothing` to [`cf_draw_shape_group_op`](../draw/cf_draw_shape_group_op.md) melts surfaces together for organic, metaball-style blends. All SDF shapes can join a group, including registered custom shapes; sprites, text, and polylines draw normally. See the [custom shapes sample](https://github.com/RandyGaul/cute_framework/blob/master/samples/custom_shapes.cpp) for an animated example.
 
 ## Push and Pop Settings
 

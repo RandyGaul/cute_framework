@@ -691,6 +691,9 @@ static inline SDL_GPUShader* s_load_shader_bytecode(CF_ShaderInternal* shader_in
 		sdl_shader = (SDL_GPUShader*)SDL_ShaderCross_CompileGraphicsShaderFromSPIRV(g_ctx.device, &spirvInfo, &metadata);
 		SDL_DestroyProperties(spirvInfo.props);
 	}
+	if (!sdl_shader) {
+		fprintf(stderr, "Failed to create GPU shader: %s\n", SDL_GetError());
+	}
 	CF_ASSERT(sdl_shader);
 	return sdl_shader;
 }
@@ -1638,6 +1641,9 @@ static inline SDL_GPUGraphicsPipeline* s_build_pipeline(CF_ShaderInternal* shade
 	pip_info.depth_stencil_state.write_mask = state->stencil.write_mask;
 
 	SDL_GPUGraphicsPipeline* pip = SDL_CreateGPUGraphicsPipeline(g_ctx.device, &pip_info);
+	if (!pip) {
+		fprintf(stderr, "Failed to create graphics pipeline: %s\n", SDL_GetError());
+	}
 	CF_ASSERT(pip);
 	return pip;
 }
@@ -1830,6 +1836,23 @@ void cf_sdlgpu_apply_shader(CF_Shader shader_handle, CF_Material material_handle
 	SDL_SetGPUStencilReference(pass, state->stencil.reference);
 }
 
+void cf_sdlgpu_push_gpu_label(const char* name)
+{
+	if (g_ctx.cmd) SDL_PushGPUDebugGroup(g_ctx.cmd, name);
+}
+
+void cf_sdlgpu_pop_gpu_label()
+{
+	if (g_ctx.cmd) SDL_PopGPUDebugGroup(g_ctx.cmd);
+}
+
+void cf_sdlgpu_current_canvas_size(int* w, int* h)
+{
+	CF_ASSERT(g_ctx.canvas);
+	*w = g_ctx.canvas->w;
+	*h = g_ctx.canvas->h;
+}
+
 void cf_sdlgpu_draw_elements()
 {
 	CF_MeshInternal* mesh = g_ctx.canvas->mesh;
@@ -1911,6 +1934,7 @@ struct CF_StorageBufferInternal
 	SDL_GPUBuffer* buffer;
 	SDL_GPUTransferBuffer* transfer_buffer;
 	int size;
+	SDL_GPUBufferUsageFlags usage;
 };
 
 CF_ComputeShader cf_sdlgpu_make_compute_shader_from_bytecode(CF_ShaderBytecode bytecode)
@@ -2024,6 +2048,7 @@ CF_StorageBuffer cf_sdlgpu_make_storage_buffer(CF_StorageBufferParams params)
 	if (params.compute_readable) usage |= SDL_GPU_BUFFERUSAGE_COMPUTE_STORAGE_READ;
 	if (params.compute_writable) usage |= SDL_GPU_BUFFERUSAGE_COMPUTE_STORAGE_WRITE;
 	if (params.graphics_readable) usage |= SDL_GPU_BUFFERUSAGE_GRAPHICS_STORAGE_READ;
+	sb->usage = usage;
 
 	SDL_GPUBufferCreateInfo buf_info = {};
 	buf_info.usage = usage;
@@ -2040,6 +2065,38 @@ CF_StorageBuffer cf_sdlgpu_make_storage_buffer(CF_StorageBufferParams params)
 	return result;
 }
 
+void cf_sdlgpu_apply_fs_storage_buffers(CF_StorageBuffer* buffers, int count)
+{
+	// Must be called after cf_apply_shader so the render pass and pipeline exist.
+	CF_ASSERT(g_ctx.active_pass);
+	CF_ASSERT(count <= 8);
+	SDL_GPUBuffer* bufs[8];
+	for (int i = 0; i < count; ++i) {
+		bufs[i] = ((CF_StorageBufferInternal*)buffers[i].id)->buffer;
+	}
+	SDL_BindGPUFragmentStorageBuffers(g_ctx.active_pass, 0, bufs, (Uint32)count);
+}
+
+void cf_sdlgpu_apply_vs_storage_buffers(CF_StorageBuffer* buffers, int count)
+{
+	CF_ASSERT(g_ctx.active_pass);
+	CF_ASSERT(count <= 8);
+	SDL_GPUBuffer* bufs[8];
+	for (int i = 0; i < count; ++i) {
+		bufs[i] = ((CF_StorageBufferInternal*)buffers[i].id)->buffer;
+	}
+	SDL_BindGPUVertexStorageBuffers(g_ctx.active_pass, 0, bufs, (Uint32)count);
+}
+
+void cf_sdlgpu_draw_elements_instanced(int instance_count)
+{
+	// Instanced draw of the currently applied mesh, no per-instance vertex buffer --
+	// instance data comes from storage buffers indexed by gl_InstanceIndex.
+	CF_MeshInternal* mesh = g_ctx.canvas->mesh;
+	SDL_DrawGPUPrimitives(g_ctx.canvas->pass, mesh->vertices.element_count, (Uint32)instance_count, 0, 0);
+	app->draw_call_count++;
+}
+
 void cf_sdlgpu_update_storage_buffer(CF_StorageBuffer buffer, const void* data, int size)
 {
 	CF_StorageBufferInternal* sb = (CF_StorageBufferInternal*)buffer.id;
@@ -2053,10 +2110,8 @@ void cf_sdlgpu_update_storage_buffer(CF_StorageBuffer buffer, const void* data, 
 		int new_size = size * 2;
 		sb->size = new_size;
 
-		// Infer usage flags from the old buffer -- just re-create with same flags.
-		// For simplicity, use READ since we're uploading.
 		SDL_GPUBufferCreateInfo buf_info = {};
-		buf_info.usage = SDL_GPU_BUFFERUSAGE_COMPUTE_STORAGE_READ;
+		buf_info.usage = sb->usage;
 		buf_info.size = (Uint32)new_size;
 		sb->buffer = SDL_CreateGPUBuffer(g_ctx.device, &buf_info);
 
