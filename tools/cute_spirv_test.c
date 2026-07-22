@@ -342,10 +342,24 @@ static void test_corpus_builtin_full(void)
 	opts.num_defines = 1;
 	opts.defines = &payload_define;
 
-	// Every builtin vertex/fragment pair, verbatim, with the default stub.
+	// Options for the GLES texel-fetch flavor (single-source: CF_GLES selects it).
+	CSPV_Define gles_defines[2];
+	gles_defines[0] = payload_define;
+	gles_defines[1].name = "CF_GLES";
+	gles_defines[1].value = "1";
+	CSPV_Options gles_opts = opts;
+	gles_opts.num_defines = 2;
+	gles_opts.defines = gles_defines;
+
+	// Every builtin vertex/fragment pair, verbatim, with the default stub -- and the
+	// CF_GLES flavor for the pairs that have one.
 	for (int i = 0; i < (int)(sizeof(s_builtin_shader_sources) / sizeof(s_builtin_shader_sources[0])); i++) {
 		expect_ok_ex(CSPV_STAGE_VERTEX, s_builtin_shader_sources[i].vertex, &opts);
 		expect_ok_ex(CSPV_STAGE_FRAGMENT, s_builtin_shader_sources[i].fragment, &opts);
+		if (s_builtin_shader_sources[i].has_gles_flavor) {
+			expect_ok_ex(CSPV_STAGE_VERTEX, s_builtin_shader_sources[i].vertex, &gles_opts);
+			expect_ok_ex(CSPV_STAGE_FRAGMENT, s_builtin_shader_sources[i].fragment, &gles_opts);
+		}
 	}
 
 	// Every builtin compute shader (the tiled path's binning pipeline).

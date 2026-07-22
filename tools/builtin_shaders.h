@@ -6,37 +6,49 @@
 #include <stdlib.h>
 #include <string.h>
 
-// Assembles the per-backend shader variants at static-init time (C++ dynamic
-// initialization; leaked intentionally -- these live for the process).
-static inline const char* cf_assemble_shader_src(const char* a, const char* b, const char* c)
-{
-	size_t la = strlen(a), lb = strlen(b), lc = strlen(c);
-	char* s = (char*)malloc(la + lb + lc + 1);
-	memcpy(s, a, la);
-	memcpy(s + la, b, lb);
-	memcpy(s + la + lb, c, lc + 1);
-	return s;
-}
 
 // Computes where the draw fragment shader's payload storage buffer binds for a given
 // user shader() stub. SDL_GPU requires fragment set-2 bindings to be contiguous by
 // resource class (samplers first, then storage buffers), so the buffer lands right
 // after the stub's last declared sampler. The result is injected as the
-// CF_PAYLOAD_BINDING preprocessor define (see s_draw_fs_access_ssbo).
-static inline int cf_compute_payload_binding(const char* user_shd)
+// CF_PAYLOAD_BINDING preprocessor define (see the payload_buffer in s_draw_fs).
+// Expects *preprocessed* source (see cute_shader_preprocess): comments are stripped
+// and macros expanded, so a token scan over declaration statements is reliable.
+static inline int cf_compute_payload_binding(const char* shd)
 {
+	#define CF_IS_IDENT_CHAR(c) (((c) >= 'a' && (c) <= 'z') || ((c) >= 'A' && (c) <= 'Z') || ((c) >= '0' && (c) <= '9') || (c) == '_')
 	int payload_binding = 1;
-	for (const char* s = user_shd; s && (s = strstr(s, "sampler2D")) != NULL; s += 9) {
-		// Walk back to this declaration's "binding" qualifier.
-		const char* b = s;
-		while (b > user_shd && *b != '(') b--;
-		const char* bind = strstr(b, "binding");
-		if (!bind || bind > s) continue;
-		bind += 7;
-		while (*bind == ' ' || *bind == '\t' || *bind == '=') bind++;
-		int binding = atoi(bind);
-		if (binding + 1 > payload_binding) payload_binding = binding + 1;
+	const char* stmt = shd; // Start of the current declaration statement.
+	const char* s = shd;
+	while (s && *s) {
+		char c = *s;
+		if (c == ';' || c == '{' || c == '}') {
+			stmt = ++s;
+			continue;
+		}
+		if (CF_IS_IDENT_CHAR(c) && !(c >= '0' && c <= '9')) {
+			const char* id = s;
+			while (CF_IS_IDENT_CHAR(*s)) s++;
+			size_t n = (size_t)(s - id);
+			bool is_sampler = (n == 9 && strncmp(id, "sampler2D", 9) == 0)
+			               || (n == 10 && strncmp(id, "usampler2D", 10) == 0);
+			if (is_sampler) {
+				// Find this declaration's `binding = N` within the statement so far.
+				for (const char* b = stmt; b + 7 <= id; b++) {
+					if (strncmp(b, "binding", 7) != 0) continue;
+					if (b > stmt && CF_IS_IDENT_CHAR(b[-1])) continue;
+					if (CF_IS_IDENT_CHAR(b[7])) continue;
+					const char* v = b + 7;
+					while (*v == ' ' || *v == '\t' || *v == '=') v++;
+					int binding = atoi(v);
+					if (binding + 1 > payload_binding) payload_binding = binding + 1;
+				}
+			}
+			continue;
+		}
+		s++;
 	}
+	#undef CF_IS_IDENT_CHAR
 	return payload_binding;
 }
 
@@ -439,7 +451,7 @@ vec4 shader(vec4 color, ShaderParams params)
 // Primary cute_draw.h shader.
 
 
-static const char* s_draw_fs_head = R"(
+static const char* s_draw_fs = R"(
 layout (location = 0) in vec4 v_pos_uv;
 layout (location = 1) in flat int v_n;
 layout (location = 2) in vec4 v_ab;
@@ -462,33 +474,24 @@ layout (set = 3, binding = 0) uniform uniform_block {
 	int u_alpha_discard;
 	int u_use_smooth_uv;
 };
-)";
 
-// Payload access, needed for CSG shape groups (variable-length operand lists cannot
-// ride in varyings). SSBO flavor: SDL_GPU requires set-2 bindings to be contiguous by
-// resource class (samplers first, then storage buffers), so the binding lands right
-// after the last sampler -- computed per compile from the user shader's samplers and
-// injected as a define (see cf_compile_shader_to_bytecode_internal).
-static const char* s_draw_fs_access_ssbo = R"(
-#ifndef CF_PAYLOAD_BINDING
-#define CF_PAYLOAD_BINDING 1
-#endif
-layout (std430, set = 2, binding = CF_PAYLOAD_BINDING) readonly buffer payload_buffer { vec4 payload[]; };
-vec4 cf_payload(uint i) { return payload[i]; }
-)";
-
-// GLES flavor: texel fetches from the emulated storage-buffer texture. Binding 14 is
-// out of the way of user shader samplers (the GLES backend binds by name, not slot).
-static const char* s_draw_fs_access_gles = R"(
+// Storage access: real SSBOs by default; on GLES3/WebGL2 (define CF_GLES) storage
+// buffers are emulated as RGBA32UI texel fetches (see cf_gles_make_storage_buffer).
+#ifdef CF_GLES
 layout (set = 2, binding = 14) uniform highp usampler2D u_fs_storage_0; // payload
 vec4 cf_payload(uint i)
 {
 	uvec4 u = texelFetch(u_fs_storage_0, ivec2(int(i) & 1023, int(i) >> 10), 0);
 	return vec4(uintBitsToFloat(u.x), uintBitsToFloat(u.y), uintBitsToFloat(u.z), uintBitsToFloat(u.w));
 }
-)";
+#else
+#ifndef CF_PAYLOAD_BINDING
+#define CF_PAYLOAD_BINDING 1
+#endif
+layout (std430, set = 2, binding = CF_PAYLOAD_BINDING) readonly buffer payload_buffer { vec4 payload[]; };
+vec4 cf_payload(uint i) { return payload[i]; }
+#endif
 
-static const char* s_draw_fs_body = R"(
 
 // Used only for polygon SDF.
 vec2 pts[8];
@@ -626,8 +629,16 @@ void main()
 }
 )";
 
-static const char* s_draw_fs = cf_assemble_shader_src(s_draw_fs_head, s_draw_fs_access_ssbo, s_draw_fs_body);
-static const char* s_draw_fs_gles = cf_assemble_shader_src(s_draw_fs_head, s_draw_fs_access_gles, s_draw_fs_body);
+// Payload access, needed for CSG shape groups (variable-length operand lists cannot
+// ride in varyings). SSBO flavor: SDL_GPU requires set-2 bindings to be contiguous by
+// resource class (samplers first, then storage buffers), so the binding lands right
+// after the last sampler -- computed per compile from the user shader's samplers and
+// injected as a define (see cf_compile_shader_to_bytecode_internal).
+
+// GLES flavor: texel fetches from the emulated storage-buffer texture. Binding 14 is
+// out of the way of user shader samplers (the GLES backend binds by name, not slot).
+
+
 
 //--------------------------------------------------------------------------------------------------
 // Tiled draw path shaders (see cute_draw.cpp, s_draw_report_tiled).
@@ -869,7 +880,7 @@ void main()
 // RGBA32UI texel fetches on GLES3 (no SSBOs there -- cf_gles emulates CF_StorageBuffer
 // as a 1024-wide texture, one texel per vec4, row-major).
 
-static const char* s_inst_vs_head = R"(
+static const char* s_inst_vs = R"(
 layout (location = 0) in float in_corner;
 
 struct Cmd
@@ -880,16 +891,10 @@ struct Cmd
 	vec4 misc;
 	vec4 user;
 };
-)";
 
-static const char* s_inst_vs_access_ssbo = R"(
-layout (std430, set = 0, binding = 0) readonly buffer cmd_buffer { Cmd cmds[]; };
-layout (std430, set = 0, binding = 1) readonly buffer payload_buffer { vec4 payload[]; };
-Cmd cf_cmd(uint i) { return cmds[i]; }
-vec4 cf_payload(uint i) { return payload[i]; }
-)";
-
-static const char* s_inst_vs_access_gles = R"(
+// Storage access: real SSBOs by default; on GLES3/WebGL2 (define CF_GLES) storage
+// buffers are emulated as RGBA32UI texel fetches (see cf_gles_make_storage_buffer).
+#ifdef CF_GLES
 layout (set = 0, binding = 0) uniform highp usampler2D u_vs_storage_0; // cmds: 5 texels each
 layout (set = 0, binding = 1) uniform highp usampler2D u_vs_storage_1; // payload
 uvec4 cf_fetch0(uint i) { return texelFetch(u_vs_storage_0, ivec2(int(i) & 1023, int(i) >> 10), 0); }
@@ -907,9 +912,13 @@ Cmd cf_cmd(uint i)
 	return c;
 }
 vec4 cf_payload(uint i) { return cf_bits4(cf_fetch1(i)); }
-)";
+#else
+layout (std430, set = 0, binding = 0) readonly buffer cmd_buffer { Cmd cmds[]; };
+layout (std430, set = 0, binding = 1) readonly buffer payload_buffer { vec4 payload[]; };
+Cmd cf_cmd(uint i) { return cmds[i]; }
+vec4 cf_payload(uint i) { return payload[i]; }
+#endif
 
-static const char* s_inst_vs_body = R"(
 layout (location = 0) out vec4 v_pos_uv;
 layout (location = 1) out int v_n;
 layout (location = 2) out vec4 v_ab;
@@ -1057,8 +1066,9 @@ void main()
 }
 )";
 
-static const char* s_inst_vs = cf_assemble_shader_src(s_inst_vs_head, s_inst_vs_access_ssbo, s_inst_vs_body);
-static const char* s_inst_vs_gles = cf_assemble_shader_src(s_inst_vs_head, s_inst_vs_access_gles, s_inst_vs_body);
+
+
+
 
 //--------------------------------------------------------------------------------------------------
 // Tiled renderer GPU binning compute shaders (phase 3).
@@ -1361,7 +1371,10 @@ typedef struct CF_BuiltinShaderSource {
 	const char* name;
 	const char* vertex;
 	const char* fragment;
-	bool no_gles; // Uses features GLES3/WebGL2 can't express (e.g. SSBOs) -- skip GLSL 300 transpile.
+	// The default flavor uses features GLES3/WebGL2 can't express (SSBOs); compile
+	// with the CF_GLES define for the texel-fetch flavor, and skip the GLSL 300
+	// transpile for the default flavor.
+	bool has_gles_flavor;
 } CF_BuiltinShaderSource;
 
 static CF_ShaderCompilerFile s_builtin_includes[] = {
@@ -1378,9 +1391,6 @@ static CF_ShaderCompilerFile s_builtin_includes[] = {
 
 static CF_BuiltinShaderSource s_builtin_shader_sources[] = {
 	{ "s_draw", s_inst_vs, s_draw_fs, true },
-	// GLES3 flavor of the command-fed draw pair: storage buffers emulated as RGBA32UI
-	// texel fetches (see cf_gles_make_storage_buffer).
-	{ "s_draw_gles", s_inst_vs_gles, s_draw_fs_gles },
 	{ "s_basic", s_basic_vs, s_basic_fs },
 	{ "s_backbuffer", s_backbuffer_vs, s_backbuffer_fs },
 	{ "s_blit", s_blit_vs, s_blit_fs },

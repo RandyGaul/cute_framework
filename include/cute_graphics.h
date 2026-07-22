@@ -754,10 +754,37 @@ CF_API void CF_CALL cf_shader_directory(const char* path);
  * @param    on_changed_fn   The reporting callback.
  * @param    udata           An optional `void*` passed back to you whenever `on_changed_fn` is called.
  * @remarks  This is an optional function intended to help facilitate runtime shader reloading during development.
- *           Callbacks are issued when `cf_app_update` is called.
- * @related  CF_Shader cf_make_shader cf_destroy_shader cf_apply_shader CF_Material
+ *           Callbacks are issued when `cf_app_update` is called. If no callback is registered, CF hot-reloads
+ *           changed shaders automatically: shaders created via `cf_make_draw_shader` or `cf_make_compute_shader`
+ *           are recompiled and swapped in place, so your existing `CF_Shader` handles keep working. Register a
+ *           callback to take over reloading yourself (see `cf_shader_reload`).
+ * @related  CF_Shader cf_make_shader cf_destroy_shader cf_apply_shader CF_Material cf_shader_reload
  */
 CF_API void CF_CALL cf_shader_on_changed(void (*on_changed_fn)(const char* path, void* udata), void* udata);
+
+/**
+ * @function cf_shader_compile_error
+ * @category graphics
+ * @brief    Returns the error message from the most recent failed shader compilation, or `NULL` if it succeeded.
+ * @remarks  Errors name the exact construct and location, e.g. `my_shader.shd:12: error: unknown function 'foo'`.
+ *           For draw shaders loaded from disk the path is the shader's own path. The string is owned by CF and
+ *           valid until the next shader compilation. See `cf_shader_on_error` to be notified as errors happen.
+ * @related  CF_Shader cf_make_shader cf_make_draw_shader cf_make_shader_from_source cf_shader_on_error
+ */
+CF_API const char* CF_CALL cf_shader_compile_error();
+
+/**
+ * @function cf_shader_on_error
+ * @category graphics
+ * @brief    Reports shader compilation errors as they happen.
+ * @param    on_error_fn   The reporting callback, handed the full error message.
+ * @param    udata         An optional `void*` passed back to you whenever `on_error_fn` is called.
+ * @remarks  This is an optional function intended to help facilitate runtime shader reloading during development,
+ *           e.g. to display compile errors in an in-game overlay instead of just stderr. See also
+ *           `cf_shader_compile_error` to poll the most recent error.
+ * @related  CF_Shader cf_shader_compile_error cf_shader_on_changed cf_make_draw_shader
+ */
+CF_API void CF_CALL cf_shader_on_error(void (*on_error_fn)(const char* error_message, void* udata), void* udata);
 
 /**
  * @function cf_make_shader
@@ -2281,6 +2308,8 @@ CF_INLINE void texture_update(CF_Texture texture, void* data, int size) { cf_tex
 CF_INLINE CF_Shader make_shader(const char* vertex, const char* fragment) { return cf_make_shader(vertex, fragment); }
 CF_INLINE void shader_directory(const char* path) { cf_shader_directory(path); }
 CF_INLINE void shader_on_changed(void (*on_changed_fn)(const char* path, void* udata), void* udata) { cf_shader_on_changed(on_changed_fn, udata); }
+CF_INLINE const char* shader_compile_error() { return cf_shader_compile_error(); }
+CF_INLINE void shader_on_error(void (*on_error_fn)(const char* error_message, void* udata), void* udata) { cf_shader_on_error(on_error_fn, udata); }
 CF_INLINE CF_Shader make_shader_from_source(const char* vertex_src, const char* fragment_src) { return cf_make_shader_from_source(vertex_src, fragment_src); }
 CF_INLINE CF_ShaderBytecode compile_shader_to_bytecode(const char* shader_src, CF_ShaderStage stage) { return cf_compile_shader_to_bytecode(shader_src, stage); }
 CF_INLINE void free_shader_bytecode(CF_ShaderBytecode bytecode) { return cf_free_shader_bytecode(bytecode); }

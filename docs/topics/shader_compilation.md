@@ -29,6 +29,10 @@ Compile GLSL into SPIRV bytecode and/or generate a C header for embedding.
                    Also requires -varname.
 -varname=<file>    The variable name inside the C header.
 -obytecode=<file>  (Optional) Where to write the raw SPIRV blob.
+-nogles            Omit the GLSL ES 300 output from generated headers. Smaller
+                   headers; the bytecode then cannot be used on GLES3/WebGL2.
+-verbose           Embed the preprocessed shader source as a comment in
+                   generated headers (for debugging).
 
 Example (compiles my_shader.glsl to a C header):
 cute-shaderc -I./my_shaders -type=draw -oheader=my_shader.h -varname=my_shader my_shader.shd
@@ -182,6 +186,8 @@ When using `shared` memory with `barrier()` in compute shaders, all threads in a
 ## Error Reporting
 
 Errors in [custom draw shaders](../topics/drawing.md?id=shaders) loaded from disk are reported under the shader's own path with correct line numbers (e.g. `my_shader.shd:12: error: ...`). Shaders compiled from an in-memory string report as `shader_stub.shd` since there is no path to name.
+
+The most recent compile error is always available from [cf_shader_compile_error](../graphics/cf_shader_compile_error.md). You can also register a callback with [cf_shader_on_error](../graphics/cf_shader_on_error.md) to be invoked whenever any shader compile fails -- including failures during automatic live-reload -- which makes it easy to display shader errors on-screen while iterating.
 
 ## Bytecode Stability
 

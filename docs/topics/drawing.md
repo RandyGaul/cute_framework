@@ -335,7 +335,11 @@ The canvas's internal texture can be sent to a shader as a uniform with [canvas_
 
 ## Loading Shaders
 
-First you must call [cf_shader_directory](../graphics/cf_shader_directory.md) to tell the application where your shaders reside on disk. Then you may call [cf_make_draw_shader](../draw/cf_make_draw_shader.md) to create a shader compatible with [cf_draw_push_shader](../draw/cf_draw_push_shader.md). You may then optionally setup a callback via [cf_shader_on_changed](../graphics/cf_shader_on_changed.md) to receive notifications when shaders change on-disk, in order to support shader live-reloading during development.
+First you must call [cf_shader_directory](../graphics/cf_shader_directory.md) to tell the application where your shaders reside on disk. Then you may call [cf_make_draw_shader](../draw/cf_make_draw_shader.md) to create a shader compatible with [cf_draw_push_shader](../draw/cf_draw_push_shader.md).
+
+Shaders live-reload automatically during development: once a shader directory is set, CF watches it and recompiles + hot-swaps any shader whose file changes on disk -- no code required. If you want to handle reloads yourself instead (custom bookkeeping, logging, etc.), register a callback via [cf_shader_on_changed](../graphics/cf_shader_on_changed.md), which disables the automatic reload and hands the notifications to you.
+
+If a shader fails to compile (at load or during a live-reload), the error text is available from [cf_shader_compile_error](../graphics/cf_shader_compile_error.md), or you can register a callback with [cf_shader_on_error](../graphics/cf_shader_on_error.md) to display errors however you like -- handy for showing compile errors on-screen while iterating on shaders.
 
 Once done your custom shader will be able to apply itself to anything drawn through CF's draw API! A good example is the [metaballs sample](https://github.com/RandyGaul/cute_framework/blob/master/samples/metaballs.cpp)).
 
