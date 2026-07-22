@@ -227,6 +227,7 @@ CF_Shader cf_make_draw_shader_internal(const char* path);
 CF_Shader cf_make_draw_shader_from_source_internal(const char* src, const char* src_name = NULL);
 CF_Shader cf_make_draw_shader_from_bytecode_internal(CF_ShaderBytecode bytecode);
 CF_Shader cf_make_draw_blit_shader_internal(const char* path);
+void cf_destroy_shader_internal(CF_Shader shader_handle);
 CF_Shader cf_make_draw_blit_shader_from_source_internal(const char* src, const char* src_name = NULL);
 CF_Shader cf_make_draw_blit_shader_from_bytecode_internal(CF_ShaderBytecode bytecode);
 CF_Shader cf_make_shader_from_source_internal(const char* vs_src, const char* fs_src, const char* user_shd = NULL, const char* user_shd_name = NULL);

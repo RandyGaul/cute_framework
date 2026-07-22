@@ -356,8 +356,6 @@ void cf_load_internal_shaders()
 	app->blit_vs_bytecode = cf_compile_shader_to_bytecode_internal(s_blit_vs, CF_SHADER_STAGE_VERTEX, NULL);
 }
 
-void cf_destroy_shader_internal(CF_Shader shader_handle);
-
 // Rebuilds every pipeline that evaluates SDF commands with new custom_shapes.shd content
 // (see cf_make_custom_shape). Compile-then-swap: on any failure the old pipelines and old
 // include content stay live and this returns false.
