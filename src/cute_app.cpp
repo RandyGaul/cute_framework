@@ -52,7 +52,8 @@ int cf_display_count()
 {
 	s_init_video();
 	int count = 0;
-	SDL_GetDisplays(&count);
+	SDL_DisplayID* ids = SDL_GetDisplays(&count);
+	SDL_free(ids);
 	return count;
 }
 
@@ -72,7 +73,7 @@ void cf_free_display_list(CF_DisplayID* display_list)
 int cf_display_x(CF_DisplayID display_id)
 {
 	s_init_video();
-	SDL_Rect rect;
+	SDL_Rect rect = { 0 };
 	SDL_GetDisplayBounds(display_id, &rect);
 	return rect.x;
 }
@@ -80,7 +81,7 @@ int cf_display_x(CF_DisplayID display_id)
 int cf_display_y(CF_DisplayID display_id)
 {
 	s_init_video();
-	SDL_Rect rect;
+	SDL_Rect rect = { 0 };
 	SDL_GetDisplayBounds(display_id, &rect);
 	return rect.y;
 }
@@ -88,7 +89,7 @@ int cf_display_y(CF_DisplayID display_id)
 int cf_display_width(CF_DisplayID display_id)
 {
 	s_init_video();
-	SDL_Rect rect;
+	SDL_Rect rect = { 0 };
 	SDL_GetDisplayBounds(display_id, &rect);
 	return rect.w;
 }
@@ -96,7 +97,7 @@ int cf_display_width(CF_DisplayID display_id)
 int cf_display_height(CF_DisplayID display_id)
 {
 	s_init_video();
-	SDL_Rect rect;
+	SDL_Rect rect = { 0 };
 	SDL_GetDisplayBounds(display_id, &rect);
 	return rect.h;
 }
@@ -105,13 +106,13 @@ float cf_display_refresh_rate(CF_DisplayID display_id)
 {
 	s_init_video();
 	const SDL_DisplayMode* mode = SDL_GetCurrentDisplayMode(display_id);
-	return mode->refresh_rate;
+	return mode ? mode->refresh_rate : 0;
 }
 
 CF_Rect cf_display_bounds(CF_DisplayID display_id)
 {
 	s_init_video();
-	SDL_Rect rect;
+	SDL_Rect rect = { 0 };
 	SDL_GetDisplayBounds(display_id, &rect);
 	CF_Rect result = { rect.x, rect.y, rect.w, rect.h };
 	return result;
@@ -230,6 +231,7 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 	}
 
 	if (!SDL_Init(sdl_options)) {
+		SDL_Quit(); // Shut down any subsystems that did initialize (e.g. audio).
 		return cf_result_error("SDL_Init failed");
 	}
 
@@ -275,6 +277,7 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 
 		if (cf_is_error(init_gfx_result)) {
 			gfx_backend_type = CF_BACKEND_TYPE_INVALID;
+			SDL_Quit();
 			return init_gfx_result;
 		}
 	}
@@ -308,6 +311,13 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 		}
 		window = SDL_CreateWindowWithProperties(props);
 		SDL_DestroyProperties(props);
+		if (!window) {
+#ifndef CF_EMSCRIPTEN
+			if (!use_opengl) cf_sdlgpu_cleanup();
+#endif
+			SDL_Quit();
+			return cf_result_error("Failed to create the application window.");
+		}
 	}
 
 	CF_App* app = (CF_App*)CF_ALLOC(sizeof(CF_App));
@@ -385,6 +395,7 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 
 void cf_destroy_app()
 {
+	if (!app) return;
 	if (app->using_imgui) {
 		cf_imgui_shutdown();
 		app->using_imgui = false;
@@ -408,13 +419,13 @@ void cf_destroy_app()
 	destroy_mutex(&app->on_sound_finish_mutex);
 	if (app->window) SDL_DestroyWindow(app->window);
 	SDL_Quit();
-	cs_shutdown();
 	CF_Image* easy_sprites = app->easy_sprites.items();
 	for (int i = 0; i < app->easy_sprites.count(); ++i) {
 		cf_image_free(&easy_sprites[i]);
 	}
 	app->~CF_App();
 	CF_FREE(app);
+	app = NULL;
 	cf_fs_destroy();
 }
 
@@ -436,14 +447,14 @@ static void s_on_update(void* udata)
 		cs_update(CF_DELTA_TIME);
 		if (app->on_sound_finish_single_threaded) {
 			mutex_lock(&app->on_sound_finish_mutex);
-			Array<CF_Sound> on_finish = app->on_sound_finish_queue;
-			app->on_sound_finish_queue.clear();
+			Array<CF_Sound> on_finish = cf_move(app->on_sound_finish_queue);
+			bool music_finished = app->on_music_finish_signal;
+			app->on_music_finish_signal = false;
 			mutex_unlock(&app->on_sound_finish_mutex);
 			for (int i = 0; i < on_finish.size(); ++i) {
 				app->on_sound_finish(on_finish[i], app->on_sound_finish_udata);
 			}
-			if (app->on_music_finish && app->on_music_finish_signal) {
-				app->on_music_finish_signal = false;
+			if (app->on_music_finish && music_finished) {
 				app->on_music_finish(app->on_music_finish_udata);
 			}
 		}
@@ -875,14 +886,7 @@ CF_PowerInfo cf_app_power_info()
 {
 	CF_PowerInfo info;
 	SDL_PowerState state = SDL_GetPowerInfo(&info.seconds_left, &info.percentage_left);
-	switch (state) {
-	case SDL_POWERSTATE_ERROR: info.state = CF_POWER_STATE_ERROR;
-	case SDL_POWERSTATE_UNKNOWN: info.state = CF_POWER_STATE_UNKNOWN;
-	case SDL_POWERSTATE_ON_BATTERY: info.state = CF_POWER_STATE_ON_BATTERY;
-	case SDL_POWERSTATE_NO_BATTERY: info.state = CF_POWER_STATE_NO_BATTERY;
-	case SDL_POWERSTATE_CHARGING: info.state = CF_POWER_STATE_CHARGING;
-	case SDL_POWERSTATE_CHARGED: info.state = CF_POWER_STATE_CHARGED;
-	}
+	info.state = cf_power_state_from_sdl(state);
 	return info;
 }
 
