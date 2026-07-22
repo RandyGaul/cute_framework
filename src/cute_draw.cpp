@@ -145,13 +145,6 @@ static CF_INLINE BatchGeometry& s_push_shape_geom()
 	return s_push_geom();
 }
 
-static CF_INLINE float s_intersect(float a, float b, float u0, float u1, float plane_d)
-{
-	float da = a - plane_d;
-	float db = b - plane_d;
-	return u0 + (u1 - u0) * (da / (da - db));
-}
-
 //--------------------------------------------------------------------------------------------------
 // Tiled renderer. See the comment block in cute_draw_internal.h for an overview.
 
@@ -203,6 +196,7 @@ static CF_TiledBatchStats s_tiled_batch_stats(const BatchGeometry* geoms, int st
 		switch (geom.type) {
 		case BATCH_GEOMETRY_TYPE_SPRITE: src = geom.shape; src_world = true; is_sdf = false; break;
 		case BATCH_GEOMETRY_TYPE_TRI:    src = geom.shape; src_world = true; nverts = 3; is_sdf = false; break;
+		case BATCH_GEOMETRY_TYPE_GLYPH:  is_sdf = false; break; // Winding coverage, not a cull-capable SDF.
 		default: break;
 		}
 		float min_x = FLT_MAX, min_y = FLT_MAX, max_x = -FLT_MAX, max_y = -FLT_MAX;
@@ -407,6 +401,33 @@ static void s_draw_report_tiled(const BatchGeometry* geoms, const CF_PendingUV* 
 				CF_Color ta = geom.use_tri_attributes ? geom.tri_attributes[k] : geom.user_params;
 				pay.add({ ta.r, ta.g, ta.b, ta.a });
 			}
+		}	break;
+
+		case BATCH_GEOMETRY_TYPE_GLYPH:
+		{
+			// Curve glyph: outline-box parallelogram (BL origin, +x/+y edges match the
+			// strip's box-fraction encoding) plus the strip's base texel in the atlas.
+			CF_V2 q0 = geom.shape[3];
+			CF_V2 e1 = geom.shape[2] - q0;
+			CF_V2 e2 = geom.shape[0] - q0;
+			if ((e1.x == 0 && e1.y == 0) || (e2.x == 0 && e2.y == 0)) continue;
+			tc.type = 11u;
+			tc.payload = (uint32_t)pay.count();
+			pay.add({ q0.x, q0.y, e1.x, e1.y });
+			pay.add({ e2.x, e2.y, 1.0f / dot(e1, e1), 1.0f / dot(e2, e2) });
+			// The reported uv rect spans the entry's padded rect (atlas_use_border_pixels);
+			// +1 steps past the 1px border onto the strip's first content texel.
+			float bx = CF_ROUNDF(cf_min(s->minx, s->maxx) * (float)texture_w) + 1.0f;
+			float by = CF_ROUNDF(cf_min(s->miny, s->maxy) * (float)texture_h) + 1.0f;
+			pay.add({ bx, by, 0, 0 });
+			// Per-corner colors (TL,TR,BR,BL), bilerped in the shader by box fraction so
+			// text-effect color gradients carry over to the curve path.
+			CF_TileV4 gcol;
+			*(uint32_t*)&gcol.x = geom.text_colors[0].val;
+			*(uint32_t*)&gcol.y = geom.text_colors[1].val;
+			*(uint32_t*)&gcol.z = geom.text_colors[2].val;
+			*(uint32_t*)&gcol.w = geom.text_colors[3].val;
+			pay.add(gcol);
 		}	break;
 
 		case BATCH_GEOMETRY_TYPE_QUAD:
@@ -614,7 +635,7 @@ static void s_draw_report_tiled(const BatchGeometry* geoms, const CF_PendingUV* 
 		}
 		s_draw->tiled_batch_count++;
 		s_draw->tiled_upload_bytes += (uint64_t)(cmds_bytes + pay_bytes);
-		}
+	}
 
 	// Material state, mirroring the mesh path.
 	CF_Texture atlas = texture_id ? CF_Texture{ texture_id } : s_draw->white_texture;
@@ -766,7 +787,6 @@ void cf_make_draw()
 	s_draw->projection = ortho_2d(0, 0, (float)app->w, (float)app->h);
 	s_draw->reset_cam();
 	s_draw->uniform_arena = cf_make_arena(32, CF_MB);
-
 
 	// Shaders.
 	s_draw->shaders.add(app->draw_shader);
@@ -2191,6 +2211,17 @@ CF_Result cf_make_font_from_memory(void* data, int size, const char* font_name)
 	stbtt_GetFontBoundingBox(&font->info, &x0, &y0, &x1, &y1);
 	font->width = x1 - x0;
 
+	// Measured x-height (top of a lowercase 'x'), for strikethrough placement at the
+	// true lowercase center. Fonts without an 'x' fall back to a metrics estimate.
+	font->x_height = 0;
+	int x_index = stbtt_FindGlyphIndex(&font->info, 'x');
+	if (x_index) {
+		int gx0, gy0, gx1, gy1;
+		if (stbtt_GetGlyphBox(&font->info, x_index, &gx0, &gy0, &gx1, &gy1)) {
+			font->x_height = gy1;
+		}
+	}
+
 	// Build the legacy kerning table, keyed by glyph index (as stb provides it). Used
 	// as a fallback in cf_font_get_kern for fonts whose GPOS table isn't in a layout
 	// stb's minimal parser understands, even though real kern data still exists here.
@@ -2427,6 +2458,142 @@ CF_Glyph* cf_font_get_glyph(CF_Font* font, int code, float font_size, int blur)
 	return glyph;
 }
 
+//--------------------------------------------------------------------------------------------------
+// Curve text (cf_push_text_curves): glyph outlines cached as quadratic Beziers in an
+// atlas strip instead of rasterized bitmaps. Scale-free -- one strip per glyph index
+// serves every font size, zoom, and rotation.
+
+// Emit one quadratic; straight lines become degenerate quads {a, b, b} so storage and
+// the GPU winding classifier stay uniform (no per-segment type branching).
+static CF_INLINE void s_curve_quad(Array<CF_V2>& cps, v2 a, v2 b, v2 c)
+{
+	cps.add(a);
+	cps.add(b);
+	cps.add(c);
+}
+
+// One quadratic approximating a cubic via the midpoint construction. Callers split the
+// cubic first so the approximation error stays far below the strip's quantization step.
+static CF_INLINE void s_cubic_as_quad(Array<CF_V2>& cps, v2 p0, v2 c0, v2 c1, v2 p1)
+{
+	v2 b = ((c0 + c1) * 3.0f - (p0 + p1)) * 0.25f;
+	s_curve_quad(cps, p0, b, p1);
+}
+
+// Cubics only appear in CFF-flavored fonts. A fixed 4-way de Casteljau split keeps the
+// per-quarter midpoint approximation visually exact at any zoom we care about.
+static void s_cubic_to_quads(Array<CF_V2>& cps, v2 p0, v2 c0, v2 c1, v2 p1)
+{
+	v2 q0 = (p0 + c0) * 0.5f;
+	v2 q1 = (c0 + c1) * 0.5f;
+	v2 q2 = (c1 + p1) * 0.5f;
+	v2 r0 = (q0 + q1) * 0.5f;
+	v2 r1 = (q1 + q2) * 0.5f;
+	v2 m = (r0 + r1) * 0.5f;
+	v2 h0[4] = { p0, q0, r0, m };
+	v2 h1[4] = { m, r1, q2, p1 };
+	for (int half = 0; half < 2; ++half) {
+		const v2* h = half == 0 ? h0 : h1;
+		v2 a0 = (h[0] + h[1]) * 0.5f;
+		v2 a1 = (h[1] + h[2]) * 0.5f;
+		v2 a2 = (h[2] + h[3]) * 0.5f;
+		v2 b0 = (a0 + a1) * 0.5f;
+		v2 b1 = (a1 + a2) * 0.5f;
+		v2 hm = (b0 + b1) * 0.5f;
+		s_cubic_as_quad(cps, h[0], a0, b0, hm);
+		s_cubic_as_quad(cps, hm, b1, a2, h[3]);
+	}
+}
+
+// The atlas is 2048 wide with a 1px border per entry; one row per strip caps curves per
+// glyph. Latin runs 10-60, dense CJK a few hundred -- over-budget outlines fall back to
+// the rasterized atlas path per glyph.
+#define CF_CURVE_GLYPH_MAX_STRIP_W 2040
+
+static void s_build_glyph_curves(CF_Font* font, CF_CurveGlyph* cg, int glyph_index)
+{
+	stbtt_vertex* verts = NULL;
+	int nverts = stbtt_GetGlyphShape(&font->info, glyph_index, &verts);
+	if (nverts <= 0) return; // No outline (whitespace).
+
+	Array<CF_V2> cps;
+	v2 pen = V2(0,0);
+	v2 start = V2(0,0);
+	for (int i = 0; i < nverts; ++i) {
+		const stbtt_vertex& v = verts[i];
+		v2 p = V2((float)v.x, (float)v.y);
+		switch (v.type) {
+		case STBTT_vmove:
+			// stb closes contours before each move, but guard against unclosed ones.
+			if (i && (pen.x != start.x || pen.y != start.y)) s_curve_quad(cps, pen, start, start);
+			start = p;
+			break;
+		case STBTT_vline:
+			if (pen.x != p.x || pen.y != p.y) s_curve_quad(cps, pen, p, p);
+			break;
+		case STBTT_vcurve:
+			s_curve_quad(cps, pen, V2((float)v.cx, (float)v.cy), p);
+			break;
+		case STBTT_vcubic:
+			s_cubic_to_quads(cps, pen, V2((float)v.cx, (float)v.cy), V2((float)v.cx1, (float)v.cy1), p);
+			break;
+		}
+		pen = p;
+	}
+	if (nverts && (pen.x != start.x || pen.y != start.y)) s_curve_quad(cps, pen, start, start);
+	stbtt_FreeShape(&font->info, verts);
+
+	int curve_count = cps.count() / 3;
+	int strip_w = curve_count * 3;
+	if (curve_count == 0 || strip_w > CF_CURVE_GLYPH_MAX_STRIP_W) return;
+
+	// Quantization box: bounds over every control point (off-curve included, so nothing
+	// clamps). Shared endpoints quantize identically, keeping contours watertight.
+	v2 mn = cps[0];
+	v2 mx = cps[0];
+	for (int i = 1; i < cps.count(); ++i) {
+		mn = V2(cf_min(mn.x, cps[i].x), cf_min(mn.y, cps[i].y));
+		mx = V2(cf_max(mx.x, cps[i].x), cf_max(mx.y, cps[i].y));
+	}
+	v2 size = V2(cf_max(mx.x - mn.x, 1.0f), cf_max(mx.y - mn.y, 1.0f));
+
+	// Encode: one RGBA8 texel per control point, 16-bit fixed-point x/y as fractions of
+	// the box. Precision is box/65536 in font units -- far below a pixel at any sane zoom.
+	CF_Pixel* px = (CF_Pixel*)CF_ALLOC(strip_w * sizeof(CF_Pixel));
+	for (int i = 0; i < cps.count(); ++i) {
+		uint32_t qx = (uint32_t)CF_ROUNDF((cps[i].x - mn.x) * (65535.0f / size.x));
+		uint32_t qy = (uint32_t)CF_ROUNDF((cps[i].y - mn.y) * (65535.0f / size.y));
+		qx = qx > 65535 ? 65535 : qx;
+		qy = qy > 65535 ? 65535 : qy;
+		CF_Pixel p;
+		p.r = (uint8_t)(qx & 255);
+		p.g = (uint8_t)(qx >> 8);
+		p.b = (uint8_t)(qy & 255);
+		p.a = (uint8_t)(qy >> 8);
+		px[i] = p;
+	}
+
+	cg->image_id = app->font_image_id_gen++;
+	app->font_pixels.insert(cg->image_id, px);
+	font->image_ids.add(cg->image_id); // Font destruction frees the strip like any glyph bitmap.
+	cg->curve_count = curve_count;
+	cg->strip_w = strip_w;
+	cg->box_min = mn;
+	cg->box_max = mn + size;
+}
+
+CF_CurveGlyph* cf_font_get_glyph_curves(CF_Font* font, int codepoint)
+{
+	int glyph_index = stbtt_FindGlyphIndex(&font->info, codepoint);
+	if (!glyph_index) glyph_index = 0xFFFD;
+	CF_CurveGlyph* cg = font->curve_glyphs.try_get((uint64_t)glyph_index);
+	if (cg) return cg;
+	cg = font->curve_glyphs.insert((uint64_t)glyph_index);
+	CF_MEMSET(cg, 0, sizeof(*cg));
+	s_build_glyph_curves(font, cg, glyph_index);
+	return cg;
+}
+
 float cf_font_get_kern(CF_Font* font, float font_size, int code0, int code1)
 {
 	// Prefer GPOS -- stb's codepoint API converts to glyph indices internally and
@@ -2580,7 +2747,76 @@ bool cf_peek_text_effect_active()
 	return s_draw->text_effects.last();
 }
 
+void cf_push_text_curves(bool curves_on)
+{
+	s_draw->text_curves.add(curves_on);
+}
+
+bool cf_pop_text_curves()
+{
+	if (s_draw->text_curves.count() > 1) {
+		return s_draw->text_curves.pop();
+	} else {
+		return s_draw->text_curves.last();
+	}
+}
+
+bool cf_peek_text_curves()
+{
+	return s_draw->text_curves.last();
+}
+
+void cf_push_text_stroke(float stroke)
+{
+	s_draw->text_strokes.add(stroke);
+}
+
+float cf_pop_text_stroke()
+{
+	if (s_draw->text_strokes.count() > 1) {
+		return s_draw->text_strokes.pop();
+	} else {
+		return s_draw->text_strokes.last();
+	}
+}
+
+float cf_peek_text_stroke()
+{
+	return s_draw->text_strokes.last();
+}
+
 static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool render = true, cf_text_markup_info_fn* markups = NULL);
+
+// Draws collected per-glyph strike/underline segments. Contiguous segments with the
+// same thickness and color merge into one polyline: the polyline's bisector partition
+// assigns every pixel to exactly one body, so the overlapping round caps at glyph
+// boundaries never double-blend (visible as dots on translucent or AA'd lines). Wavy
+// lines connect through each junction instead of stair-stepping.
+static void s_draw_strike_lines(Cute::Array<CF_Strike>& lines)
+{
+	Array<CF_V2> pts;
+	int i = 0;
+	while (i < lines.count()) {
+		const CF_Strike& run = lines[i];
+		int j = i;
+		while (j + 1 < lines.count()) {
+			const CF_Strike& next = lines[j + 1];
+			if (next.thickness != run.thickness) break;
+			if (CF_MEMCMP(&next.color, &run.color, sizeof(next.color)) != 0) break;
+			// Contiguity in x (kerning nudges endpoints a little either way).
+			if (fabsf(next.p0.x - lines[j].p1.x) > cf_max(2.0f, run.thickness)) break;
+			++j;
+		}
+		pts.clear();
+		pts.add(run.p0);
+		for (int k = i + 1; k <= j; ++k) pts.add(lines[k].p0);
+		pts.add(lines[j].p1);
+		cf_draw_push_color(run.color);
+		cf_draw_polyline(pts.data(), pts.count(), run.thickness, false);
+		cf_draw_pop_color();
+		i = j + 1;
+	}
+}
 
 float cf_text_width(const char* text, int text_length)
 {
@@ -3033,6 +3269,17 @@ static bool s_text_fx_strike(CF_TextEffect* fx_ptr)
 	return true;
 }
 
+static bool s_text_fx_underline(CF_TextEffect* fx_ptr)
+{
+	TextEffect* fx = (TextEffect*)fx_ptr;
+	if (!s_is_space(fx->character) || fx->character == ' ') {
+		float h = fx->font_size / 20.0f;
+		h = (float)fx->get_number("underline", (double)h);
+		fx->underline_thickness = h;
+	}
+	return true;
+}
+
 static CF_Color s_gradient_corner(TextEffect* fx, const char* corner, const char* edge_a, const char* edge_b)
 {
 	CF_Color c = fx->color;
@@ -3101,6 +3348,7 @@ static void s_parse_codes(CF_ParsedTextState* text_state, const char* text)
 		text_effect_register("fade", s_text_fx_fade);
 		text_effect_register("wave", s_text_fx_wave);
 		text_effect_register("strike", s_text_fx_strike);
+		text_effect_register("underline", s_text_fx_underline);
 		text_effect_register("gradient", s_text_fx_gradient);
 		text_effect_register("font", s_text_fx_font);
 	}
@@ -3420,6 +3668,18 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 			v2 q0 = glyph->q0 + V2(x,baseline_y) - pad;
 			v2 q1 = glyph->q1 + V2(x,baseline_y) + pad;
 
+			// Curve text path (the default; a pushed stroke also forces it): fetch the
+			// outline strip up front so layout stays identical (metrics still come from
+			// the rasterized glyph) and only rendering swaps. Blurred text keeps the
+			// raster path -- blur is a bitmap-space effect.
+			CF_CurveGlyph* cg = NULL;
+			if ((s_draw->text_curves.last() || s_draw->text_strokes.last() > 0) && visible && blur == 0) {
+				cg = cf_font_get_glyph_curves(active_font, cp);
+				if (cg->curve_count == 0) cg = NULL; // No outline, or over strip budget: atlas path.
+			}
+			v2 pre_q0 = q0;
+			v2 pre_q1 = q1;
+
 			// Apply any active custom text effects.
 			bool use_corner_colors = false;
 			CF_Color corner_colors[4] = {};
@@ -3484,31 +3744,84 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 				}
 			}
 
-			// Collect deferred strikes using final position/color.
+			// Collect deferred strikes/underlines using final position/color. Both ride
+			// the same CF_Strike line machinery; only the height differs (mid-height vs
+			// just under the baseline).
 			for (int i = 0; i < text_state->effects.count(); ++i) {
 				TextEffect* effect = text_state->effects + i;
+				CF_Color line_color = use_corner_colors
+					? cf_color_lerp(cf_color_lerp(corner_colors[0], corner_colors[1], 0.5f), cf_color_lerp(corner_colors[3], corner_colors[2], 0.5f), 0.5f)
+					: color;
+				// Line heights come from the active face so <font>/<size> spans place
+				// correctly: strikes run through the lowercase center (half x-height),
+				// underlines sit a fraction of the descent below the baseline.
+				float line_scale = stbtt_ScaleForPixelHeight(&active_font->info, active_font_size);
 				if (effect->strike_thickness > 0) {
-					float y_mid = baseline_y + h * 0.25f + (q0.y - pre_fx_q0_y);
+					float strike_up = active_font->x_height > 0 ? active_font->x_height * line_scale * 0.5f : h * 0.25f;
+					float y_mid = baseline_y + strike_up + (q0.y - pre_fx_q0_y);
 					CF_Strike strike;
 					strike.p0 = V2(x, y_mid);
 					strike.p1 = V2(x + xadvance, y_mid);
 					strike.thickness = effect->strike_thickness;
-					strike.color = use_corner_colors
-						? cf_color_lerp(cf_color_lerp(corner_colors[0], corner_colors[1], 0.5f), cf_color_lerp(corner_colors[3], corner_colors[2], 0.5f), 0.5f)
-						: color;
+					strike.color = line_color;
 					strike.color.a *= g.alpha;
 					s_draw->strikes.add(strike);
 					effect->strike_thickness = 0;
+				}
+				if (effect->underline_thickness > 0) {
+					float y_under = baseline_y + active_font->descent * line_scale * 0.35f + (q0.y - pre_fx_q0_y);
+					CF_Strike strike;
+					strike.p0 = V2(x, y_under);
+					strike.p1 = V2(x + xadvance, y_under);
+					strike.thickness = effect->underline_thickness;
+					strike.color = line_color;
+					strike.color.a *= g.alpha;
+					s_draw->underlines.add(strike);
+					effect->underline_thickness = 0;
 				}
 			}
 
 			// Actually render the sprite.
 			if (visible && render) {
 				CF_M3x2 m = s_draw->mvp;
-				g.shape[0] = V2(q0.x, q1.y);
-				g.shape[1] = V2(q1.x, q1.y);
-				g.shape[2] = V2(q1.x, q0.y);
-				g.shape[3] = V2(q0.x, q0.y);
+				if (cg) {
+					// The outline box sits at fixed fractions of the unmodified glyph
+					// quad; mapping those fractions through the effect-modified quad
+					// carries wave/scale text effects over to the curve path.
+					float su = stbtt_ScaleForPixelHeight(&active_font->info, active_font_size);
+					v2 o0 = V2(x, baseline_y) + cg->box_min * su;
+					v2 o1 = V2(x, baseline_y) + cg->box_max * su;
+					v2 inv = V2(1.0f / (pre_q1.x - pre_q0.x), 1.0f / (pre_q1.y - pre_q0.y));
+					v2 f0 = V2((o0.x - pre_q0.x) * inv.x, (o0.y - pre_q0.y) * inv.y);
+					v2 f1 = V2((o1.x - pre_q0.x) * inv.x, (o1.y - pre_q0.y) * inv.y);
+					v2 e = q1 - q0;
+					o0 = V2(q0.x + f0.x * e.x, q0.y + f0.y * e.y);
+					o1 = V2(q0.x + f1.x * e.x, q0.y + f1.y * e.y);
+					float aaf = s_draw->aaf;
+					float text_stroke = s_draw->text_strokes.last();
+					g.type = BATCH_GEOMETRY_TYPE_GLYPH;
+					g.n = cg->curve_count;
+					g.shape[0] = V2(o0.x, o1.y);
+					g.shape[1] = V2(o1.x, o1.y);
+					g.shape[2] = V2(o1.x, o0.y);
+					g.shape[3] = V2(o0.x, o0.y);
+					float cpad = text_stroke + aaf;
+					g.box[0] = V2(o0.x - cpad, o1.y + cpad);
+					g.box[1] = V2(o1.x + cpad, o1.y + cpad);
+					g.box[2] = V2(o1.x + cpad, o0.y - cpad);
+					g.box[3] = V2(o0.x - cpad, o0.y - cpad);
+					g.stroke = text_stroke;
+					g.fill = text_stroke <= 0;
+					g.aa = aaf;
+					s.image_id = cg->image_id;
+					s.w = cg->strip_w;
+					s.h = 1;
+				} else {
+					g.shape[0] = V2(q0.x, q1.y);
+					g.shape[1] = V2(q1.x, q1.y);
+					g.shape[2] = V2(q1.x, q0.y);
+					g.shape[3] = V2(q0.x, q0.y);
+				}
 				g.color = premultiply(to_pixel(color));
 				if (!use_corner_colors) {
 					CF_Pixel flat = g.color;
@@ -3534,18 +3847,12 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 	text_state->effects.clear();
 
 	if (render) {
-		// Draw strike-lines just after the text.
-		for (int i = 0; i < s_draw->strikes.size(); ++i) {
-			v2 p0 = s_draw->strikes[i].p0;
-			v2 p1 = s_draw->strikes[i].p1;
-			float thickness = s_draw->strikes[i].thickness;
-			CF_Color c = s_draw->strikes[i].color;
-			draw_push_color(c);
-			cf_draw_line(p0, p1, thickness);
-			draw_pop_color();
-		}
+		// Draw strike/underline lines just after the text, merged into polyline runs.
+		s_draw_strike_lines(s_draw->strikes);
+		s_draw_strike_lines(s_draw->underlines);
 	}
 	s_draw->strikes.clear();
+	s_draw->underlines.clear();
 
 	return V2(max_x - position.x, position.y - min_y);
 }

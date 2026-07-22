@@ -28,12 +28,26 @@ struct CF_Glyph
 	bool rendered; // Metrics (and, if visible, the atlas image) have been computed.
 };
 
+// Resolution-independent glyph outline for the curve text path (cf_push_text_curves):
+// the glyph's quadratic Beziers encoded into a small atlas strip (3 RGBA8 texels per
+// curve, two 16-bit fixed-point coords each, fractions of box_min..box_max in font
+// units). One per glyph index -- size and zoom never invalidate it.
+struct CF_CurveGlyph
+{
+	uint64_t image_id; // Atlas image id of the encoded strip (font id range), 0 when curve_count is 0.
+	int curve_count;
+	int strip_w;       // Strip width in texels: curve_count * 3.
+	CF_V2 box_min;     // Outline bounds in font units (y-up), the quantization box.
+	CF_V2 box_max;
+};
+
 struct CF_Font
 {
 	uint8_t* file_data = NULL;
 	stbtt_fontinfo info;
 	Cute::Map<int> kerning;
 	Cute::Map<CF_Glyph> glyphs;
+	Cute::Map<CF_CurveGlyph> curve_glyphs; // Keyed by glyph index (not size/blur -- scale-free).
 	Cute::Array<uint64_t> image_ids;
 	int ascent;
 	int descent;
@@ -41,10 +55,12 @@ struct CF_Font
 	int line_height;
 	int width;
 	int height;
+	int x_height; // Measured from the 'x' glyph box; 0 when the font has no 'x'.
 };
 
 CF_API CF_Font* CF_CALL cf_font_get(const char* font_name);
 CF_API CF_Glyph* CF_CALL cf_font_get_glyph(CF_Font* font, int codepoint, float font_size, int blur);
+CF_API CF_CurveGlyph* CF_CALL cf_font_get_glyph_curves(CF_Font* font, int codepoint);
 CF_API float CF_CALL cf_font_get_kern(CF_Font* font, float font_size, int codepoint0, int codepoint1);
 CF_API float CF_CALL cf_font_scale_for_pixel_height(CF_Font* font, float pixel_height);
 
@@ -112,6 +128,7 @@ struct TextEffect : public CF_TextEffect
 	const Cute::Map<CF_TextCodeVal>* params;
 	CF_TextEffectFn* fn;
 	float strike_thickness = 0;
+	float underline_thickness = 0;
 	bool line_bound_init = false;
 	CF_Aabb line_bound;
 	Cute::Array<CF_Aabb> bounds;

@@ -1002,6 +1002,140 @@ TEST_CASE(test_draw_shape_groups)
 	return true;
 }
 
+// -------------------------------------------------------------------------------------------------
+// Curve text (cf_push_text_curves): glyphs rendered per-pixel from Bezier outlines.
+// Topology probes are font-agnostic: a scanline through an 'O' ring's center crosses
+// 2 ink runs filled and 4 stroked (both outline edges), and winding must leave the
+// counter (hole) empty.
+
+static void s_scene_curve_O_fill()
+{
+	cf_push_text_curves(true);
+	cf_push_font_size(220);
+	cf_draw_push_color(cf_color_white());
+	cf_draw_text("O", cf_v2(-80, 110), -1);
+	cf_draw_pop_color();
+	cf_pop_font_size();
+	cf_pop_text_curves();
+}
+
+static void s_scene_curve_O_stroke()
+{
+	cf_push_text_curves(true);
+	cf_push_text_stroke(3.0f);
+	cf_push_font_size(220);
+	cf_draw_push_color(cf_color_white());
+	cf_draw_text("O", cf_v2(-80, 110), -1);
+	cf_draw_pop_color();
+	cf_pop_font_size();
+	cf_pop_text_stroke();
+	cf_pop_text_curves();
+}
+
+static void s_scene_atlas_O_fill()
+{
+	cf_push_text_curves(false); // Force the rasterized atlas path (curves are the default).
+	cf_push_font_size(220);
+	cf_draw_push_color(cf_color_white());
+	cf_draw_text("O", cf_v2(-80, 110), -1);
+	cf_draw_pop_color();
+	cf_pop_font_size();
+	cf_pop_text_curves();
+}
+
+// Mixed scene for the tiled-vs-instanced pixel diff: filled + stroked + small curve text.
+static void s_scene_curve_text_mixed()
+{
+	s_scene_curve_O_fill();
+	cf_push_text_curves(true);
+	cf_push_text_stroke(2.0f);
+	cf_push_font_size(64);
+	cf_draw_push_color(cf_make_color_rgba_f(0.3f, 0.8f, 1.0f, 1.0f));
+	cf_draw_text("S", cf_v2(120, 60), -1);
+	cf_draw_pop_color();
+	cf_pop_font_size();
+	cf_pop_text_stroke();
+	cf_push_font_size(18);
+	cf_draw_push_color(cf_color_white());
+	cf_draw_text("small curve text", cf_v2(60, -80), -1);
+	cf_draw_pop_color();
+	cf_pop_font_size();
+	cf_pop_text_curves();
+}
+
+// Ink bbox (alpha > 128) and the count of ink runs along the bbox's center row.
+static void s_ink_stats(const CF_Pixel* px, int w, int h, int* ink_out, int* runs_out, int* bbox_w_out)
+{
+	int x0 = w, y0 = h, x1 = -1, y1 = -1, ink = 0;
+	for (int y = 0; y < h; ++y) {
+		for (int x = 0; x < w; ++x) {
+			if (px[y * w + x].colors.a > 128) {
+				++ink;
+				x0 = cf_min(x0, x); x1 = cf_max(x1, x);
+				y0 = cf_min(y0, y); y1 = cf_max(y1, y);
+			}
+		}
+	}
+	int runs = 0;
+	if (y1 >= 0) {
+		int yc = (y0 + y1) / 2;
+		bool in = false;
+		for (int x = 0; x < w; ++x) {
+			bool on = px[yc * w + x].colors.a > 128;
+			if (on && !in) ++runs;
+			in = on;
+		}
+	}
+	*ink_out = ink;
+	*runs_out = runs;
+	*bbox_w_out = y1 >= 0 ? x1 - x0 + 1 : 0;
+}
+
+TEST_CASE(test_draw_text_curves)
+{
+	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, 640, 480, s_app_options(), NULL))) return true; // Headless CI: no display/GPU.
+
+	int w = 640, h = 480;
+	CF_Pixel* a = (CF_Pixel*)cf_alloc(w * h * sizeof(CF_Pixel));
+	CF_Pixel* b = (CF_Pixel*)cf_alloc(w * h * sizeof(CF_Pixel));
+	int ink, runs, bbox_w;
+
+	// Filled ring: solid band, empty counter (nonzero winding handles the hole).
+	REQUIRE(s_readback(s_scene_curve_O_fill, 0, w, h, a));
+	s_ink_stats(a, w, h, &ink, &runs, &bbox_w);
+	REQUIRE(ink > 0);
+	REQUIRE(runs == 2);
+
+	// Same glyph through the atlas path: identical layout, so ink coverage and bbox
+	// must land close (paths differ only in AA character).
+	REQUIRE(s_readback(s_scene_atlas_O_fill, 0, w, h, b));
+	int atlas_ink, atlas_runs, atlas_bbox_w;
+	s_ink_stats(b, w, h, &atlas_ink, &atlas_runs, &atlas_bbox_w);
+	auto absi = [](int v) { return v < 0 ? -v : v; };
+	REQUIRE(atlas_runs == 2);
+	REQUIRE(absi(ink - atlas_ink) < atlas_ink / 8);
+	REQUIRE(absi(bbox_w - atlas_bbox_w) <= 4);
+
+	// Stroked ring: both edges of the band stroke, band interior stays empty.
+	REQUIRE(s_readback(s_scene_curve_O_stroke, 0, w, h, a));
+	s_ink_stats(a, w, h, &ink, &runs, &bbox_w);
+	REQUIRE(ink > 0);
+	REQUIRE(runs == 4);
+
+	// Tiled walk must match the instanced path pixel-for-pixel (within blend precision).
+	if (cf_query_backend() != CF_BACKEND_TYPE_GLES3) {
+		REQUIRE(cf_draw_tiled_available());
+		REQUIRE(s_readback(s_scene_curve_text_mixed, 0, w, h, a));
+		REQUIRE(s_readback(s_scene_curve_text_mixed, 1, w, h, b));
+		REQUIRE(s_diff_ok(a, b, w * h, "curve-text tiled-vs-mesh"));
+	}
+
+	cf_free(a);
+	cf_free(b);
+	cf_destroy_app();
+	return true;
+}
+
 TEST_SUITE(test_draw_tiled)
 {
 	// CF_TEST_ONLY=<case name> runs a single case. Used to validate the GLES3 backend
@@ -1022,4 +1156,5 @@ TEST_SUITE(test_draw_tiled)
 	RUN_TEST_CASE_IF(test_draw_custom_shapes_advanced);
 	RUN_TEST_CASE_IF(test_draw_shape_groups);
 	RUN_TEST_CASE_IF(test_draw_tiled_budget_fallback);
+	RUN_TEST_CASE_IF(test_draw_text_curves);
 }
