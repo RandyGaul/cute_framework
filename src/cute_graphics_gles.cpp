@@ -680,6 +680,14 @@ void cf_gles_attach(SDL_Window* window)
 	SDL_GL_MakeCurrent(window, g_ctx.gl_ctx);
 	cf_load_gles();
 	g_ctx.window = window;
+	// A fresh context recycles GL object ids, so cached bindings from a previous
+	// app/context lifetime would wrongly elide binds. Reset all cached GL state.
+	g_ctx.fbo = 0;
+	g_ctx.mesh = NULL;
+	g_ctx.material = NULL;
+	g_ctx.canvas = NULL;
+	g_ctx.enabled_vertex_attrib_mask = 0;
+	g_ctx.has_filter_override = false;
 }
 
 bool cf_gles_supports_msaa(int sample_count)
@@ -1774,23 +1782,75 @@ void cf_gles_destroy_compute_shader(CF_ComputeShader shader)
 	CF_UNUSED(shader);
 }
 
+// GLES3 has no SSBOs, so CF_StorageBuffer is emulated as a 1024-wide RGBA32UI texture:
+// one texel per vec4, row-major (shader side indexes ivec2(i & 1023, i >> 10) -- see
+// s_inst_vs_access_gles in builtin_shaders.h). Slower than real storage buffers, which
+// is fine: GLES runs the instanced path only.
+
+#define CF_GLES_STORAGE_WIDTH 1024
+
+struct CF_GL_StorageBuffer
+{
+	GLuint tex = 0;
+	int height = 0; // Allocated texture height in rows of CF_GLES_STORAGE_WIDTH texels.
+};
+
+static void s_storage_realloc(CF_GL_StorageBuffer* b, int texels)
+{
+	int height = (texels + CF_GLES_STORAGE_WIDTH - 1) / CF_GLES_STORAGE_WIDTH;
+	if (height < 1) height = 1;
+	if (b->tex && height <= b->height) return;
+	if (b->tex) glDeleteTextures(1, &b->tex);
+	glGenTextures(1, &b->tex);
+	glBindTexture(GL_TEXTURE_2D, b->tex);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32UI, CF_GLES_STORAGE_WIDTH, height, 0, GL_RGBA_INTEGER, GL_UNSIGNED_INT, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	b->height = height;
+	CF_POLL_OPENGL_ERROR();
+}
+
 CF_StorageBuffer cf_gles_make_storage_buffer(CF_StorageBufferParams params)
 {
-	CF_UNUSED(params);
-	CF_StorageBuffer result = { 0 };
+	CF_GL_StorageBuffer* b = CF_NEW(CF_GL_StorageBuffer);
+	s_storage_realloc(b, (params.size + 15) / 16);
+	CF_StorageBuffer result = { (uint64_t)(uintptr_t)b };
 	return result;
 }
 
 void cf_gles_update_storage_buffer(CF_StorageBuffer buffer, const void* data, int size)
 {
-	CF_UNUSED(buffer);
-	CF_UNUSED(data);
-	CF_UNUSED(size);
+	CF_GL_StorageBuffer* b = (CF_GL_StorageBuffer*)(uintptr_t)buffer.id;
+	if (!b || size <= 0) return;
+	int texels = (size + 15) / 16; // All CF uploads are vec4-granular.
+	s_storage_realloc(b, texels);
+	glBindTexture(GL_TEXTURE_2D, b->tex);
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+	int full_rows = texels / CF_GLES_STORAGE_WIDTH;
+	int rem = texels % CF_GLES_STORAGE_WIDTH;
+	const uint8_t* src = (const uint8_t*)data;
+	if (full_rows) {
+		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, CF_GLES_STORAGE_WIDTH, full_rows, GL_RGBA_INTEGER, GL_UNSIGNED_INT, src);
+	}
+	if (rem) {
+		// The final partial row; pad the last partial texel if the size isn't 16-aligned.
+		uint32_t staging[CF_GLES_STORAGE_WIDTH * 4];
+		int row_bytes = size - full_rows * CF_GLES_STORAGE_WIDTH * 16;
+		CF_MEMSET(staging, 0, rem * 16);
+		CF_MEMCPY(staging, src + full_rows * CF_GLES_STORAGE_WIDTH * 16, row_bytes);
+		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, full_rows, rem, 1, GL_RGBA_INTEGER, GL_UNSIGNED_INT, staging);
+	}
+	CF_POLL_OPENGL_ERROR();
 }
 
 void cf_gles_destroy_storage_buffer(CF_StorageBuffer buffer)
 {
-	CF_UNUSED(buffer);
+	CF_GL_StorageBuffer* b = (CF_GL_StorageBuffer*)(uintptr_t)buffer.id;
+	if (!b) return;
+	if (b->tex) glDeleteTextures(1, &b->tex);
+	CF_FREE(b);
 }
 
 void cf_gles_dispatch_compute(CF_ComputeShader shader, CF_Material material, CF_ComputeDispatch dispatch)
@@ -1800,33 +1860,152 @@ void cf_gles_dispatch_compute(CF_ComputeShader shader, CF_Material material, CF_
 	CF_UNUSED(dispatch);
 }
 
+// Pending emulated storage bindings, applied by cf_gles_draw_elements_instanced.
+static CF_GL_StorageBuffer* s_vs_storage[4];
+static int s_vs_storage_count = 0;
+static CF_GL_StorageBuffer* s_fs_storage[4];
+static int s_fs_storage_count = 0;
+
+void cf_gles_apply_fs_storage_buffers(CF_StorageBuffer* buffers, int count)
+{
+	s_fs_storage_count = count > 4 ? 4 : count;
+	for (int i = 0; i < s_fs_storage_count; ++i) {
+		s_fs_storage[i] = (CF_GL_StorageBuffer*)(uintptr_t)buffers[i].id;
+	}
+}
+
+void cf_gles_apply_vs_storage_buffers(CF_StorageBuffer* buffers, int count)
+{
+	s_vs_storage_count = count > 4 ? 4 : count;
+	for (int i = 0; i < s_vs_storage_count; ++i) {
+		s_vs_storage[i] = (CF_GL_StorageBuffer*)(uintptr_t)buffers[i].id;
+	}
+}
+
+// Binds the pending emulated storage textures on units above the material's textures
+// (the draw shader binds at most a couple of samplers; units 8+ are safely clear).
+static void s_apply_storage_textures()
+{
+	GLint program_i = 0;
+	glGetIntegerv(GL_CURRENT_PROGRAM, &program_i);
+	GLuint program = (GLuint)program_i;
+	if (!program) return;
+	static const char* vs_names[4] = { "u_vs_storage_0", "u_vs_storage_1", "u_vs_storage_2", "u_vs_storage_3" };
+	static const char* fs_names[4] = { "u_fs_storage_0", "u_fs_storage_1", "u_fs_storage_2", "u_fs_storage_3" };
+	GLuint unit = 8;
+	for (int i = 0; i < s_vs_storage_count; ++i) {
+		GLint loc = glGetUniformLocation(program, vs_names[i]);
+		if (loc < 0 || !s_vs_storage[i]) continue;
+		glActiveTexture(GL_TEXTURE0 + unit);
+		glBindTexture(GL_TEXTURE_2D, s_vs_storage[i]->tex);
+		glUniform1i(loc, unit);
+		++unit;
+	}
+	for (int i = 0; i < s_fs_storage_count; ++i) {
+		GLint loc = glGetUniformLocation(program, fs_names[i]);
+		if (loc < 0 || !s_fs_storage[i]) continue;
+		glActiveTexture(GL_TEXTURE0 + unit);
+		glBindTexture(GL_TEXTURE_2D, s_fs_storage[i]->tex);
+		glUniform1i(loc, unit);
+		++unit;
+	}
+	CF_POLL_OPENGL_ERROR();
+}
+
+void cf_gles_draw_elements_instanced(int instance_count)
+{
+	CF_GL_Mesh* mesh = g_ctx.mesh;
+	CF_MaterialInternal* material = g_ctx.material;
+	CF_ASSERT(mesh != NULL);
+	CF_ASSERT(material != NULL);
+	if (instance_count <= 0) return;
+
+	s_apply_state();
+	s_apply_storage_textures();
+
+	GLenum prim = s_wrap(material->state.primitive_type);
+	if (mesh->ibo.id && mesh->ibo.count > 0) {
+		GLenum elem = (mesh->ibo.stride == 2) ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT;
+		glDrawElementsInstanced(prim, mesh->ibo.count, elem, (const void*)(intptr_t)mesh->ibo.active_offset, instance_count);
+	} else if (mesh->vbo.count > 0) {
+		glDrawArraysInstanced(prim, 0, mesh->vbo.count, instance_count);
+	}
+
+	CF_POLL_OPENGL_ERROR();
+	++app->draw_call_count;
+	g_ctx.target_state = s_default_state(g_ctx.canvas);
+}
+
+void cf_gles_push_gpu_label(const char* name)
+{
+	CF_UNUSED(name);
+}
+
+void cf_gles_pop_gpu_label()
+{
+}
+
+void cf_gles_current_canvas_size(int* w, int* h)
+{
+	if (g_ctx.canvas) {
+		*w = g_ctx.canvas->w;
+		*h = g_ctx.canvas->h;
+	} else {
+		*w = 0;
+		*h = 0;
+	}
+}
+
+// Synchronous readback: glReadPixels straight into a CPU buffer. CF renders canvases
+// with row 0 at the top (the window blit un-flips), so GL's bottom-up read order
+// already yields top-down rows -- no flip here.
+struct CF_GL_Readback
+{
+	void* data;
+	int size;
+};
+
 CF_Readback cf_gles_canvas_readback(CF_Canvas canvas)
 {
-	CF_UNUSED(canvas);
-	return { 0 };
+	CF_GL_Canvas* c = (CF_GL_Canvas*)(uintptr_t)canvas.id;
+	if (!c) return { 0 };
+	int w = c->w, h = c->h;
+	CF_GL_Readback* rb = (CF_GL_Readback*)CF_ALLOC(sizeof(CF_GL_Readback));
+	rb->size = w * h * 4;
+	rb->data = CF_ALLOC(rb->size);
+	GLuint prev_fbo = g_ctx.fbo;
+	s_bind_framebuffer(c->fbo);
+	glPixelStorei(GL_PACK_ALIGNMENT, 4);
+	glReadPixels(0, 0, w, h, GL_RGBA, GL_UNSIGNED_BYTE, rb->data);
+	s_bind_framebuffer(prev_fbo);
+	CF_POLL_OPENGL_ERROR();
+	return { (uint64_t)(uintptr_t)rb };
 }
 
 bool cf_gles_readback_ready(CF_Readback readback)
 {
-	CF_UNUSED(readback);
-	return false;
+	return readback.id != 0;
 }
 
 int cf_gles_readback_data(CF_Readback readback, void* data, int size)
 {
-	CF_UNUSED(readback);
-	CF_UNUSED(data);
-	CF_UNUSED(size);
-	return 0;
+	CF_GL_Readback* rb = (CF_GL_Readback*)(uintptr_t)readback.id;
+	if (!rb) return 0;
+	int n = size < rb->size ? size : rb->size;
+	CF_MEMCPY(data, rb->data, n);
+	return n;
 }
 
 int cf_gles_readback_size(CF_Readback readback)
 {
-	CF_UNUSED(readback);
-	return 0;
+	CF_GL_Readback* rb = (CF_GL_Readback*)(uintptr_t)readback.id;
+	return rb ? rb->size : 0;
 }
 
 void cf_gles_destroy_readback(CF_Readback readback)
 {
-	CF_UNUSED(readback);
+	CF_GL_Readback* rb = (CF_GL_Readback*)(uintptr_t)readback.id;
+	if (!rb) return;
+	CF_FREE(rb->data);
+	CF_FREE(rb);
 }

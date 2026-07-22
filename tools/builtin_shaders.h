@@ -3,6 +3,43 @@
 
 #include "cute_shader.h"
 
+#include <stdlib.h>
+#include <string.h>
+
+// Assembles the per-backend shader variants at static-init time (C++ dynamic
+// initialization; leaked intentionally -- these live for the process).
+static inline const char* cf_assemble_shader_src(const char* a, const char* b, const char* c)
+{
+	size_t la = strlen(a), lb = strlen(b), lc = strlen(c);
+	char* s = (char*)malloc(la + lb + lc + 1);
+	memcpy(s, a, la);
+	memcpy(s + la, b, lb);
+	memcpy(s + la + lb, c, lc + 1);
+	return s;
+}
+
+// Computes where the draw fragment shader's payload storage buffer binds for a given
+// user shader() stub. SDL_GPU requires fragment set-2 bindings to be contiguous by
+// resource class (samplers first, then storage buffers), so the buffer lands right
+// after the stub's last declared sampler. The result is injected as the
+// CF_PAYLOAD_BINDING preprocessor define (see s_draw_fs_access_ssbo).
+static inline int cf_compute_payload_binding(const char* user_shd)
+{
+	int payload_binding = 1;
+	for (const char* s = user_shd; s && (s = strstr(s, "sampler2D")) != NULL; s += 9) {
+		// Walk back to this declaration's "binding" qualifier.
+		const char* b = s;
+		while (b > user_shd && *b != '(') b--;
+		const char* bind = strstr(b, "binding");
+		if (!bind || bind > s) continue;
+		bind += 7;
+		while (*bind == ' ' || *bind == '\t' || *bind == '=') bind++;
+		int binding = atoi(bind);
+		if (binding + 1 > payload_binding) payload_binding = binding + 1;
+	}
+	return payload_binding;
+}
+
 //--------------------------------------------------------------------------------------------------
 // Builtin shaders. These get cross-compiled at runtime.
 
@@ -137,7 +174,15 @@ vec4 softlight(vec4 base, vec4 blend)
 }
 )";
 
-static const char* s_distance = R"(
+// Pure SDF helpers shared between fragment shaders (via distance.shd) and the tiled
+// renderer's binning compute shaders. Must stay free of globals and derivatives.
+static const char* s_sdf_core = R"(
+// unpackUnorm4x8 is missing from GLSL ES 3.00; this manual unpack works everywhere.
+vec4 cf_unpack_color(uint c)
+{
+	return vec4(float(c & 255u), float((c >> 8u) & 255u), float((c >> 16u) & 255u), float((c >> 24u) & 255u)) * (1.0 / 255.0);
+}
+
 float safe_div(float a, float b)
 {
 	return b == 0.0 ? 0.0 : a / b;
@@ -164,11 +209,6 @@ float det2(vec2 a, vec2 b)
 	return a.x * b.y - a.y * b.x;
 }
 
-float sdf_stroke(float d)
-{
-	return abs(d) - v_stroke;
-}
-
 float sdf_intersect(float a, float b)
 {
 	return max(a, b);
@@ -182,29 +222,6 @@ float sdf_union(float a, float b)
 float sdf_subtract(float d0, float d1)
 {
 	return max(d0, -d1);
-}
-
-float dd(float d)
-{
-	return length(vec2(dFdx(d), dFdy(d)));
-}
-
-// Given two colors a and b, and a distance to the isosurface of a shape,
-// apply antialiasing, fill, and surface stroke FX.
-vec4 sdf(vec4 a, vec4 b, float d)
-{
-	float wire_d = sdf_stroke(d);
-	vec4 stroke_aa = mix(b, a, smoothstep(0.0, v_aa, wire_d));
-	vec4 stroke_no_aa = wire_d <= 0.0 ? b : a;
-
-	vec4 fill_aa = mix(b, a, smoothstep(0.0, v_aa, d));
-	vec4 fill_no_aa = clamp(d, -1.0, 1.0) <= 0.0 ? b : a;
-
-	vec4 stroke = mix(stroke_aa, stroke_aa, v_aa > 0.0 ? 1.0 : 0.0);
-	vec4 fill = mix(fill_no_aa, fill_aa, v_aa > 0.0 ? 1.0 : 0.0);
-
-	result = mix(stroke, fill, v_fill);
-	return result;
 }
 
 float distance_aabb(vec2 p, vec2 he)
@@ -275,6 +292,129 @@ float distance_polygon(vec2 p, vec2[8] v, int N)
 
 	return s * sqrt(d);
 }
+
+// Directed arrow as one SDF: union of a round-capped shaft (capsule) and a triangular
+// head. A single command means translucent arrows never double-blend where the shaft
+// meets the head. r = shaft radius, w = head length and half-width.
+float distance_arrow(vec2 p, vec2 a, vec2 b, float r, float w)
+{
+	vec2 d = b - a;
+	float l = safe_len(d);
+	vec2 n = l == 0.0 ? vec2(0) : d / l;
+	vec2 base = b - n * w;
+	vec2 t = vec2(-n.y, n.x) * w;
+	float ds = distance_segment(p, a, base) - r;
+	float dt = distance_triangle(p, b, base + t, base - t);
+	return min(ds, dt);
+}
+)";
+
+// Default custom-shape include: no shapes registered. cf_make_custom_shape() swaps in a
+// generated version stitching every registered `float sdf(vec2 p, ShapeParams s)` snippet
+// plus a per-command dispatcher. User snippets must be true signed distance functions
+// (Lipschitz <= 1): the binning compute shaders trust them for tile culling and
+// opaque-cover occlusion.
+static const char* s_custom_shapes_stub = R"(
+struct ShapeParams
+{
+	vec2 a, b, c, d, e, f, g, h;
+	vec4 attributes;
+};
+
+float custom_sdf(int shape_id, vec2 p, ShapeParams s)
+{
+	return 3.402823e38;
+}
+)";
+
+// CSG shape groups (cf_draw_shape_group_begin/end): one composite command whose payload
+// streams operand primitives folded left-to-right with min/max (smooth variants via k).
+// Consumers must declare the `payload` storage buffer and include custom_shapes.shd
+// before including this file.
+static const char* s_csg = R"(
+float csg_smin(float a, float b, float k)
+{
+	if (k <= 0.0) return min(a, b);
+	float h = clamp(0.5 + 0.5 * (b - a) / k, 0.0, 1.0);
+	return mix(b, a, h) - k * h * (1.0 - h);
+}
+
+float csg_distance(uint po, int n, vec2 p, vec4 attributes)
+{
+	// Payload: po+0 = pre-padded bounds (used by the vertex stage), then six vec4s per
+	// operand: (prim, aux, op, k), (radius, 0, 0, 0), and 8 vec2s of shape params.
+	float d = 3.402823e38;
+	vec2 cpts[8];
+	for (int i = 0; i < n; ++i) {
+		uint o = po + 1u + uint(i) * 6u;
+		vec4 h4 = cf_payload(o);
+		float r = cf_payload(o + 1u).x;
+		vec4 q0 = cf_payload(o + 2u);
+		vec4 q1 = cf_payload(o + 3u);
+		vec4 q2 = cf_payload(o + 4u);
+		vec4 q3 = cf_payload(o + 5u);
+		int prim = int(h4.x);
+		float di;
+		if (prim == 3) {
+			di = min(distance_segment(p, q0.xy, q0.zw), distance_segment(p, q0.zw, q1.xy));
+		} else if (prim == 2) {
+			di = distance_box(p, q0.xy, q0.zw, q1.xy);
+		} else if (prim == 5) {
+			di = distance_triangle(p, q0.xy, q0.zw, q1.xy);
+		} else if (prim == 8) {
+			di = distance_arrow(p, q0.xy, q0.zw, q1.x, q1.y);
+		} else if (prim == 9) {
+			ShapeParams sp;
+			sp.a = q0.xy; sp.b = q0.zw; sp.c = q1.xy; sp.d = q1.zw;
+			sp.e = q2.xy; sp.f = q2.zw; sp.g = q3.xy; sp.h = q3.zw;
+			sp.attributes = attributes;
+			di = custom_sdf(int(h4.y), p, sp);
+		} else {
+			cpts[0] = q0.xy; cpts[1] = q0.zw; cpts[2] = q1.xy; cpts[3] = q1.zw;
+			cpts[4] = q2.xy; cpts[5] = q2.zw; cpts[6] = q3.xy; cpts[7] = q3.zw;
+			di = distance_polygon(p, cpts, int(h4.y));
+		}
+		di -= r;
+		int op = int(h4.z);
+		d = i == 0 ? di
+		  : op == 0 ? csg_smin(d, di, h4.w)
+		  : op == 1 ? -csg_smin(-d, di, h4.w)
+		  : -csg_smin(-d, -di, h4.w);
+	}
+	return d;
+}
+)";
+
+static const char* s_distance = R"(
+#include "sdf_core.shd"
+
+float sdf_stroke(float d)
+{
+	return abs(d) - v_stroke;
+}
+
+float dd(float d)
+{
+	return length(vec2(dFdx(d), dFdy(d)));
+}
+
+// Given two colors a and b, and a distance to the isosurface of a shape,
+// apply antialiasing, fill, and surface stroke FX.
+vec4 sdf(vec4 a, vec4 b, float d)
+{
+	float wire_d = sdf_stroke(d);
+	vec4 stroke_aa = mix(b, a, smoothstep(0.0, v_aa, wire_d));
+	vec4 stroke_no_aa = wire_d <= 0.0 ? b : a;
+
+	vec4 fill_aa = mix(b, a, smoothstep(0.0, v_aa, d));
+	vec4 fill_no_aa = clamp(d, -1.0, 1.0) <= 0.0 ? b : a;
+
+	vec4 stroke = mix(stroke_aa, stroke_aa, v_aa > 0.0 ? 1.0 : 0.0);
+	vec4 fill = mix(fill_no_aa, fill_aa, v_aa > 0.0 ? 1.0 : 0.0);
+
+	result = mix(stroke, fill, v_fill);
+	return result;
+}
 )";
 
 static const char* s_smooth_uv = R"(
@@ -298,50 +438,8 @@ vec4 shader(vec4 color, ShaderParams params)
 //--------------------------------------------------------------------------------------------------
 // Primary cute_draw.h shader.
 
-static const char* s_draw_vs = R"(
-layout (location = 0) in vec4 in_pos_uv;       // pos.xy, uv.zw
-layout (location = 1) in int in_n;
-layout (location = 2) in vec4 in_ab;
-layout (location = 3) in vec4 in_cd;
-layout (location = 4) in vec4 in_ef;
-layout (location = 5) in vec4 in_gh;
-layout (location = 6) in vec4 in_col;
-layout (location = 7) in vec4 in_shape;         // radius, stroke, aa, type
-layout (location = 8) in vec4 in_blend_posH;    // alpha, fill, posH.xy
-layout (location = 9) in vec4 in_user;
-layout (location = 10) in vec4 in_uv_bounds;    // uv_min.xy, uv_max.zw
 
-layout (location = 0) out vec4 v_pos_uv;
-layout (location = 1) out int v_n;
-layout (location = 2) out vec4 v_ab;
-layout (location = 3) out vec4 v_cd;
-layout (location = 4) out vec4 v_ef;
-layout (location = 5) out vec4 v_gh;
-layout (location = 6) out vec4 v_col;
-layout (location = 7) out vec4 v_shape;
-layout (location = 8) out vec4 v_blend_posH;
-layout (location = 9) out vec4 v_user;
-layout (location = 10) out vec4 v_uv_bounds;
-
-void main()
-{
-	v_pos_uv = in_pos_uv;
-	v_n = in_n;
-	v_ab = in_ab;
-	v_cd = in_cd;
-	v_ef = in_ef;
-	v_gh = in_gh;
-	v_col = in_col;
-	v_shape = vec4(in_shape.x, in_shape.y * 0.5, in_shape.zw);
-	v_blend_posH = in_blend_posH;
-	v_user = in_user;
-	v_uv_bounds = in_uv_bounds;
-
-	gl_Position = vec4(in_blend_posH.zw, 0, 1);
-}
-)";
-
-static const char* s_draw_fs = R"(
+static const char* s_draw_fs_head = R"(
 layout (location = 0) in vec4 v_pos_uv;
 layout (location = 1) in flat int v_n;
 layout (location = 2) in vec4 v_ab;
@@ -353,6 +451,7 @@ layout (location = 7) in vec4 v_shape;
 layout (location = 8) in vec4 v_blend_posH;
 layout (location = 9) in vec4 v_user;
 layout (location = 10) in vec4 v_uv_bounds;
+layout (location = 11) in flat int v_po;
 
 layout(location = 0) out vec4 result;
 
@@ -363,6 +462,33 @@ layout (set = 3, binding = 0) uniform uniform_block {
 	int u_alpha_discard;
 	int u_use_smooth_uv;
 };
+)";
+
+// Payload access, needed for CSG shape groups (variable-length operand lists cannot
+// ride in varyings). SSBO flavor: SDL_GPU requires set-2 bindings to be contiguous by
+// resource class (samplers first, then storage buffers), so the binding lands right
+// after the last sampler -- computed per compile from the user shader's samplers and
+// injected as a define (see cf_compile_shader_to_bytecode_internal).
+static const char* s_draw_fs_access_ssbo = R"(
+#ifndef CF_PAYLOAD_BINDING
+#define CF_PAYLOAD_BINDING 1
+#endif
+layout (std430, set = 2, binding = CF_PAYLOAD_BINDING) readonly buffer payload_buffer { vec4 payload[]; };
+vec4 cf_payload(uint i) { return payload[i]; }
+)";
+
+// GLES flavor: texel fetches from the emulated storage-buffer texture. Binding 14 is
+// out of the way of user shader samplers (the GLES backend binds by name, not slot).
+static const char* s_draw_fs_access_gles = R"(
+layout (set = 2, binding = 14) uniform highp usampler2D u_fs_storage_0; // payload
+vec4 cf_payload(uint i)
+{
+	uvec4 u = texelFetch(u_fs_storage_0, ivec2(int(i) & 1023, int(i) >> 10), 0);
+	return vec4(uintBitsToFloat(u.x), uintBitsToFloat(u.y), uintBitsToFloat(u.z), uintBitsToFloat(u.w));
+}
+)";
+
+static const char* s_draw_fs_body = R"(
 
 // Used only for polygon SDF.
 vec2 pts[8];
@@ -385,6 +511,8 @@ vec2 screen_uv;
 #include "gamma.shd"
 #include "smooth_uv.shd"
 #include "distance.shd"
+#include "custom_shapes.shd"
+#include "csg.shd"
 
 struct ShaderParams
 {
@@ -418,6 +546,10 @@ void main()
 	bool is_tri     = v_type >  3.5 && v_type < 4.5;
 	bool is_tri_sdf = v_type >  4.5 && v_type < 5.5;
 	bool is_poly    = v_type >  5.5 && v_type < 6.5;
+	bool is_seg_clip = v_type > 6.5 && v_type < 7.5;
+	bool is_arrow   = v_type >  7.5 && v_type < 8.5;
+	bool is_custom  = v_type >  8.5 && v_type < 9.5;
+	bool is_csg     = v_type >  9.5 && v_type < 10.5;
 
 	// Traditional sprite/text/tri cases.
 	vec4 c = vec4(0);
@@ -446,8 +578,28 @@ void main()
 		pts[6] = v_gh.xy;
 		pts[7] = v_gh.zw;
 		d = distance_polygon(v_pos, pts, v_n);
+	} else if (is_seg_clip) {
+		d = distance_segment(v_pos, v_ab.xy, v_ab.zw);
+	} else if (is_arrow) {
+		d = distance_arrow(v_pos, v_ab.xy, v_ab.zw, v_cd.x, v_cd.y);
+	} else if (is_custom) {
+		ShapeParams sp_custom;
+		sp_custom.a = v_ab.xy; sp_custom.b = v_ab.zw;
+		sp_custom.c = v_cd.xy; sp_custom.d = v_cd.zw;
+		sp_custom.e = v_ef.xy; sp_custom.f = v_ef.zw;
+		sp_custom.g = v_gh.xy; sp_custom.h = v_gh.zw;
+		sp_custom.attributes = v_user;
+		d = custom_sdf(v_n, v_pos, sp_custom);
+	} else if (is_csg) {
+		d = csg_distance(uint(v_po), v_n, v_pos, v_user);
 	}
 	c = (!is_sprite && !is_text && !is_tri) ? sdf(c, v_col, d - v_radius) : c;
+	// Polyline bodies: hard bisector-plane clip. Strict on plane0 and inclusive on
+	// plane1 so the shared boundary between neighboring bodies belongs to exactly one.
+	if (is_seg_clip) {
+		bool keep = dot(v_cd.xy, v_pos) - v_ef.x < 0.0 && dot(v_cd.zw, v_pos) - v_ef.y <= 0.0;
+		c *= keep ? 1.0 : 0.0;
+	}
 
 	c *= v_alpha;
 	pos = v_pos;
@@ -461,7 +613,670 @@ void main()
 	sp.attributes = v_user;
 	c = shader(c, sp);
 	if (u_alpha_discard != 0 && c.a == 0) discard;
+
+	// D3D12 links VS->PS by hardware register per semantic: the PS input signature must
+	// mirror the VS output registers, but the compiler packs PS inputs by *consumed*
+	// varyings, so a user shader() stub referencing a sparse subset would shift register
+	// assignment and fail pipeline creation. Keep every varying live unconditionally
+	// (the uniform can never hold this value, and the compiler cannot prove that).
+	if (u_alpha_discard == -2147483647) {
+		c += v_pos_uv + v_ab + v_cd + v_ef + v_gh + v_col + v_shape + v_blend_posH + v_user + v_uv_bounds + vec4(float(v_n), float(v_po), 0, 0);
+	}
 	result = c;
+}
+)";
+
+static const char* s_draw_fs = cf_assemble_shader_src(s_draw_fs_head, s_draw_fs_access_ssbo, s_draw_fs_body);
+static const char* s_draw_fs_gles = cf_assemble_shader_src(s_draw_fs_head, s_draw_fs_access_gles, s_draw_fs_body);
+
+//--------------------------------------------------------------------------------------------------
+// Tiled draw path shaders (see cute_draw.cpp, s_draw_report_tiled).
+//
+// The screen is cut into fixed-size square tiles. The CPU bins draw commands into per-tile
+// lists and uploads them via storage buffers. A single fullscreen triangle walks each
+// pixel's tile list, evaluating SDFs / sprite samples per command and compositing
+// in-register (premultiplied src-over), writing the framebuffer exactly once.
+//
+// Derivative discipline: the tile size is even, so a 2x2 fragment quad never straddles a
+// tile boundary -- every pixel in a quad walks the identical command list in lockstep.
+// Branches on per-command data are therefore quad-uniform and implicit derivatives
+// (texture, fwidth in smooth_uv) inside them are well-defined. Pixel-dependent conditions
+// (coverage) must only ever mask a command's contribution, never branch around a sample.
+
+static const char* s_tile_vs = R"(
+layout (location = 0) in vec2 in_posH;
+
+void main()
+{
+	gl_Position = vec4(in_posH, 0, 1);
+}
+)";
+
+static const char* s_tile_fs = R"(
+layout (location = 0) out vec4 result;
+
+layout (set = 2, binding = 0) uniform sampler2D u_image;
+
+struct Cmd
+{
+	vec4 aabb;    // Pixel-space bounds, top-left origin: min.xy, max.xy.
+	uvec4 meta;   // x: type, y: rgba8 color, z: payload offset (vec4 units), w: inverse-mvp offset (vec4 units).
+	vec4 shape;   // radius, stroke (pre-halved), aa, alpha.
+	vec4 misc;    // x: fill (0 or 1), y: polygon vert count, z, w: unused.
+	vec4 user;    // User params (ShaderParams.attributes).
+};
+
+layout (std430, set = 2, binding = 1) readonly buffer cmd_buffer { Cmd cmds[]; };
+layout (std430, set = 2, binding = 2) readonly buffer payload_buffer { vec4 payload[]; };
+layout (std430, set = 2, binding = 3) readonly buffer tile_buffer { uvec2 tiles[]; };
+layout (std430, set = 2, binding = 4) readonly buffer list_buffer { uint tile_list[]; };
+
+layout (set = 3, binding = 0) uniform uniform_block {
+	vec2 u_texture_size;
+	vec2 u_canvas_wh;
+	int u_alpha_discard;
+	int u_use_smooth_uv;
+	int u_tiles_x;
+	int u_tile_px;
+};
+
+// Globals consumed by the sdf() helpers in distance.shd, set per command in the walk loop.
+float v_stroke;
+float v_aa;
+float v_fill;
+
+vec4 cf_payload(uint i) { return payload[i]; }
+
+#include "gamma.shd"
+#include "smooth_uv.shd"
+#include "distance.shd"
+#include "custom_shapes.shd"
+#include "csg.shd"
+
+#define CMD_TYPE_SPRITE   0u
+#define CMD_TYPE_TEXT     1u
+#define CMD_TYPE_BOX      2u
+#define CMD_TYPE_SEGMENT  3u
+#define CMD_TYPE_TRI      4u
+#define CMD_TYPE_TRI_SDF  5u
+#define CMD_TYPE_POLYGON  6u
+#define CMD_TYPE_SEG_CLIP 7u
+#define CMD_TYPE_ARROW    8u
+#define CMD_TYPE_CUSTOM   9u
+#define CMD_TYPE_CSG      10u
+
+vec2 pts[8];
+
+void main()
+{
+	vec2 frag = gl_FragCoord.xy; // Pixel centers, top-left origin.
+	ivec2 tile = ivec2(frag) / u_tile_px;
+	uvec2 range = tiles[uint(tile.y * u_tiles_x + tile.x)]; // offset, count
+	vec2 ndc = vec2(frag.x * (2.0 / u_canvas_wh.x) - 1.0, 1.0 - frag.y * (2.0 / u_canvas_wh.y));
+
+	// Walk the list top-down with premultiplied "under" compositing (equivalent to
+	// bottom-up src-over). Once a pixel's accumulated alpha saturates to exactly 1.0,
+	// everything deeper contributes zero -- SDF/tri commands then skip evaluation
+	// entirely (a pixel-divergent skip is legal there: no derivatives). Sprite/text
+	// commands still evaluate to keep texture fetches quad-uniform; their contribution
+	// multiplies to zero.
+	vec4 acc = vec4(0);
+	for (uint i = range.y; i > 0u;) {
+		--i;
+		Cmd cmd = cmds[tile_list[range.x + i]];
+		uint type = cmd.meta.x;
+		vec4 col = unpackUnorm4x8(cmd.meta.y);
+		uint po = cmd.meta.z;
+
+		// Pixel-space AABB coverage. Mask only -- never branch on this around a sample.
+		vec2 cov2 = step(cmd.aabb.xy, frag) * step(frag, cmd.aabb.zw);
+		float coverage = cov2.x * cov2.y;
+
+		// Recover the command's record-time world space (inverse mvp at palette + 2).
+		vec4 im0 = payload[cmd.meta.w + 2u];
+		vec4 im1 = payload[cmd.meta.w + 3u];
+		vec2 p = im0.xy * ndc.x + im0.zw * ndc.y + im1.xy;
+
+		v_stroke = cmd.shape.y;
+		v_aa = cmd.shape.z;
+		v_fill = cmd.misc.x;
+
+		vec4 c = vec4(0);
+		if (type <= CMD_TYPE_TEXT) {
+			// Sprite/text: quad corners are recorded post-mvp, so map NDC into the quad,
+			// then to atlas uv. q0 = quad top-left corner, e1 = top edge, e2 = left edge.
+			vec4 P0 = payload[po];
+			vec4 P1 = payload[po + 1u];
+			vec4 uvb = payload[po + 2u]; // minx, maxy, maxx, miny
+			vec2 q0 = P0.xy;
+			vec2 e1 = P0.zw;
+			vec2 e2 = P1.xy;
+			float s = dot(p - q0, e1) * P1.z;
+			float t = dot(p - q0, e2) * P1.w;
+			vec2 uv = vec2(mix(uvb.x, uvb.z, s), mix(uvb.y, uvb.w, t));
+			// Sample unconditionally (quad-uniform), clamp into the glyph's uv rect to
+			// avoid bleeding neighboring atlas entries, mask outside the quad after.
+			uv = clamp(uv, min(uvb.xy, uvb.zw), max(uvb.xy, uvb.zw));
+			vec2 uv_final = u_use_smooth_uv == 0 ? smooth_uv(uv, u_texture_size) : uv;
+			// The mesh path computes gamma(de_gamma(tex)) for sprites and de_gamma(tex).a
+			// for text; both are identities (de_gamma leaves alpha untouched), so skip
+			// the two pow() round-trips here.
+			vec4 tex_c = texture(u_image, uv_final);
+			float quad_cov = step(0.0, s) * step(s, 1.0) * step(0.0, t) * step(t, 1.0);
+			if (type == CMD_TYPE_SPRITE) {
+				c = tex_c;
+			} else {
+				vec4 tl = unpackUnorm4x8(floatBitsToUint(payload[po + 3u].x));
+				vec4 tr = unpackUnorm4x8(floatBitsToUint(payload[po + 3u].y));
+				vec4 br = unpackUnorm4x8(floatBitsToUint(payload[po + 3u].z));
+				vec4 bl = unpackUnorm4x8(floatBitsToUint(payload[po + 3u].w));
+				vec4 vcol = mix(mix(tl, tr, s), mix(bl, br, s), t);
+				c = vcol * tex_c.a;
+			}
+			c *= quad_cov;
+		} else if (type == CMD_TYPE_TRI) {
+			if (acc.a >= 1.0 || coverage == 0.0) continue; // Contribution would be exactly zero.
+			// Raw triangle, evaluated directly in NDC with barycentric color interpolation.
+			vec4 P0 = payload[po];
+			vec4 P1 = payload[po + 1u];
+			vec4 P2 = payload[po + 2u];
+			vec2 a = P0.xy, b = P0.zw, cc = P1.xy;
+			float denom = det2(b - a, cc - a);
+			float inv_denom = safe_div(1.0, denom);
+			float w0 = det2(b - p, cc - p) * inv_denom;
+			float w1 = det2(cc - p, a - p) * inv_denom;
+			float w2 = 1.0 - w0 - w1;
+			float inside = step(0.0, w0) * step(0.0, w1) * step(0.0, w2);
+			uint flags = floatBitsToUint(P2.w);
+			vec4 c0 = unpackUnorm4x8(floatBitsToUint(P2.x));
+			vec4 c1 = unpackUnorm4x8(floatBitsToUint(P2.y));
+			vec4 c2 = unpackUnorm4x8(floatBitsToUint(P2.z));
+			vec4 vcol = (flags & 1u) != 0u ? c0 * w0 + c1 * w1 + c2 * w2 : col;
+			c = vcol * inside;
+		} else {
+			if (acc.a >= 1.0 || coverage == 0.0) continue; // Contribution would be exactly zero.
+			// SDF shapes. Params live in record-time world space; recover it from NDC
+			// via the command's inverse mvp. Contributions fade out naturally past the
+			// AA fringe, so the AABB mask only trims work the mesh path's quad would
+			// have clipped anyway.
+			float d = 0.0;
+			vec4 P0 = payload[po];
+			vec4 P1 = payload[po + 1u];
+			float clip = 1.0;
+			if (type == CMD_TYPE_BOX) {
+				d = distance_box(p, P0.xy, P0.zw, P1.xy);
+			} else if (type == CMD_TYPE_SEGMENT) {
+				d = distance_segment(p, P0.xy, P0.zw);
+				d = min(d, distance_segment(p, P0.zw, P1.xy));
+			} else if (type == CMD_TYPE_TRI_SDF) {
+				d = distance_triangle(p, P0.xy, P0.zw, P1.xy);
+			} else if (type == CMD_TYPE_SEG_CLIP) {
+				// Polyline body: capsule SDF, hard bisector-plane clip (strict plane0,
+				// inclusive plane1 so shared boundaries belong to exactly one body).
+				d = distance_segment(p, P0.xy, P0.zw);
+				vec4 P2 = payload[po + 2u];
+				bool keep = dot(P1.xy, p) - P2.x < 0.0 && dot(P1.zw, p) - P2.y <= 0.0;
+				clip = keep ? 1.0 : 0.0;
+			} else if (type == CMD_TYPE_ARROW) {
+				d = distance_arrow(p, P0.xy, P0.zw, P1.x, P1.y);
+			} else if (type == CMD_TYPE_CUSTOM) {
+				vec4 P2 = payload[po + 2u];
+				vec4 P3 = payload[po + 3u];
+				ShapeParams sp;
+				sp.a = P0.xy; sp.b = P0.zw; sp.c = P1.xy; sp.d = P1.zw;
+				sp.e = P2.xy; sp.f = P2.zw; sp.g = P3.xy; sp.h = P3.zw;
+				sp.attributes = cmd.user;
+				d = custom_sdf(int(cmd.misc.y), p, sp);
+			} else if (type == CMD_TYPE_CSG) {
+				d = csg_distance(po, int(cmd.misc.y), p, cmd.user);
+			} else {
+				vec4 P2 = payload[po + 2u];
+				vec4 P3 = payload[po + 3u];
+				pts[0] = P0.xy;
+				pts[1] = P0.zw;
+				pts[2] = P1.xy;
+				pts[3] = P1.zw;
+				pts[4] = P2.xy;
+				pts[5] = P2.zw;
+				pts[6] = P3.xy;
+				pts[7] = P3.zw;
+				d = distance_polygon(p, pts, int(cmd.misc.y));
+			}
+			c = sdf(vec4(0), col, d - cmd.shape.x) * clip;
+		}
+
+		c *= cmd.shape.w * coverage; // alpha modulation + AABB mask
+		acc = acc + c * (1.0 - acc.a); // premultiplied "under" (top-down), in-register
+	}
+
+	if (u_alpha_discard != 0 && acc.a == 0.0) discard;
+	result = acc;
+}
+)";
+
+//--------------------------------------------------------------------------------------------------
+// Instanced command-fed vertex shader. Pairs with s_draw_fs.
+//
+// The mesh path's counterpart to the tile walk: instead of the CPU expanding each shape
+// into six fat pre-transformed vertices, one instance per command reads the same
+// cmds/payload storage buffers the tiled path uploads, derives the coverage quad from
+// the shape params right here (this is where the old CPU-side OBB fitting moved), and
+// produces all of s_draw_fs's varyings. Camera transform comes from the matrix palette
+// (forward mvp at the entry, inverse at +2 for the tile walk).
+
+// The instanced VS (and s_draw_fs below) assemble from head + access + body pieces so
+// storage-buffer reads can swap per backend: real SSBOs on compute-capable backends,
+// RGBA32UI texel fetches on GLES3 (no SSBOs there -- cf_gles emulates CF_StorageBuffer
+// as a 1024-wide texture, one texel per vec4, row-major).
+
+static const char* s_inst_vs_head = R"(
+layout (location = 0) in float in_corner;
+
+struct Cmd
+{
+	vec4 aabb;
+	uvec4 meta;
+	vec4 shape;
+	vec4 misc;
+	vec4 user;
+};
+)";
+
+static const char* s_inst_vs_access_ssbo = R"(
+layout (std430, set = 0, binding = 0) readonly buffer cmd_buffer { Cmd cmds[]; };
+layout (std430, set = 0, binding = 1) readonly buffer payload_buffer { vec4 payload[]; };
+Cmd cf_cmd(uint i) { return cmds[i]; }
+vec4 cf_payload(uint i) { return payload[i]; }
+)";
+
+static const char* s_inst_vs_access_gles = R"(
+layout (set = 0, binding = 0) uniform highp usampler2D u_vs_storage_0; // cmds: 5 texels each
+layout (set = 0, binding = 1) uniform highp usampler2D u_vs_storage_1; // payload
+uvec4 cf_fetch0(uint i) { return texelFetch(u_vs_storage_0, ivec2(int(i) & 1023, int(i) >> 10), 0); }
+uvec4 cf_fetch1(uint i) { return texelFetch(u_vs_storage_1, ivec2(int(i) & 1023, int(i) >> 10), 0); }
+vec4 cf_bits4(uvec4 u) { return vec4(uintBitsToFloat(u.x), uintBitsToFloat(u.y), uintBitsToFloat(u.z), uintBitsToFloat(u.w)); }
+Cmd cf_cmd(uint i)
+{
+	uint base = i * 5u;
+	Cmd c;
+	c.aabb = cf_bits4(cf_fetch0(base));
+	c.meta = cf_fetch0(base + 1u);
+	c.shape = cf_bits4(cf_fetch0(base + 2u));
+	c.misc = cf_bits4(cf_fetch0(base + 3u));
+	c.user = cf_bits4(cf_fetch0(base + 4u));
+	return c;
+}
+vec4 cf_payload(uint i) { return cf_bits4(cf_fetch1(i)); }
+)";
+
+static const char* s_inst_vs_body = R"(
+layout (location = 0) out vec4 v_pos_uv;
+layout (location = 1) out int v_n;
+layout (location = 2) out vec4 v_ab;
+layout (location = 3) out vec4 v_cd;
+layout (location = 4) out vec4 v_ef;
+layout (location = 5) out vec4 v_gh;
+layout (location = 6) out vec4 v_col;
+layout (location = 7) out vec4 v_shape;
+layout (location = 8) out vec4 v_blend_posH;
+layout (location = 9) out vec4 v_user;
+layout (location = 10) out vec4 v_uv_bounds;
+layout (location = 11) out flat int v_po;
+
+#include "sdf_core.shd"
+
+void main()
+{
+	Cmd cmd = cf_cmd(uint(gl_InstanceIndex));
+	vec4 user_out = cmd.user;
+	uint type = cmd.meta.x;
+	uint po = cmd.meta.z;
+	int corner = int(in_corner + 0.5);
+	vec4 P0 = cf_payload(po);
+	vec4 P1 = cf_payload(po + 1u);
+
+	// Conservative coverage inflation: radius + full stroke + aa (shape.y is the
+	// pre-halved stroke).
+	float pad = cmd.shape.x + cmd.shape.y * 2.0 + cmd.shape.z;
+
+	vec2 pos = vec2(0);
+	vec2 uv = vec2(0);
+	vec4 col = cf_unpack_color(cmd.meta.y);
+	vec4 ab = P0;
+	vec4 cd = P1;
+	vec4 ef = vec4(0);
+	vec4 gh = vec4(0);
+	vec4 uvb = vec4(0);
+	float cx = (corner == 1 || corner == 2) ? 1.0 : 0.0;
+	float cy = (corner == 2 || corner == 3) ? 1.0 : 0.0;
+
+	if (type <= 1u) {
+		// Sprite/text: parallelogram q0 + e1/e2, uv by corner.
+		vec2 q0 = P0.xy;
+		vec2 e1 = P0.zw;
+		vec2 e2 = P1.xy;
+		pos = q0 + e1 * cx + e2 * cy;
+		uvb = cf_payload(po + 2u);
+		uv = vec2(mix(uvb.x, uvb.z, cx), mix(uvb.y, uvb.w, cy));
+		if (type == 1u) {
+			vec4 tcol = cf_payload(po + 3u);
+			uint cc = corner == 0 ? floatBitsToUint(tcol.x) : (corner == 1 ? floatBitsToUint(tcol.y) : (corner == 2 ? floatBitsToUint(tcol.z) : floatBitsToUint(tcol.w)));
+			col = cf_unpack_color(cc);
+		}
+	} else if (type == 4u) {
+		// Raw triangle: corners 0,1 map to verts, 2 and 3 both map to the third vert
+		// (the quad's second triangle degenerates to zero area).
+		vec2 t0 = P0.xy;
+		vec2 t1 = P0.zw;
+		vec2 t2 = P1.xy;
+		pos = corner == 0 ? t0 : (corner == 1 ? t1 : t2);
+		vec4 tcol = cf_payload(po + 2u);
+		uint cc = corner == 0 ? floatBitsToUint(tcol.x) : (corner == 1 ? floatBitsToUint(tcol.y) : floatBitsToUint(tcol.z));
+		col = cf_unpack_color(cc);
+		user_out = corner == 0 ? cf_payload(po + 3u) : (corner == 1 ? cf_payload(po + 4u) : cf_payload(po + 5u));
+	} else if (type == 2u) {
+		// Box: center + rotated half-extents.
+		vec2 c = P0.xy;
+		vec2 he = P0.zw + vec2(pad);
+		vec2 u = P1.xy;
+		vec2 sx = u * he.x;
+		vec2 sy = skew(u) * he.y;
+		pos = c + sx * (cx * 2.0 - 1.0) + sy * (cy * 2.0 - 1.0);
+	} else if (type == 3u || type == 7u) {
+		// Capsule/segment (and clipped polyline body): exact OBB along the segment.
+		// Degenerate (circle) becomes an axis-aligned square.
+		vec2 a = P0.xy;
+		vec2 b = P0.zw;
+		vec2 d = b - a;
+		float l = safe_len(d);
+		vec2 n0 = l == 0.0 ? vec2(pad, 0.0) : d * (pad / l);
+		vec2 t = skew(n0);
+		pos = corner == 0 ? a - n0 + t : (corner == 1 ? b + n0 + t : (corner == 2 ? b + n0 - t : a - n0 - t));
+		if (type == 7u) ef = cf_payload(po + 2u);
+	} else if (type == 5u) {
+		// SDF triangle: padded AABB of the three verts.
+		vec2 mn = min(P0.xy, min(P0.zw, P1.xy)) - vec2(pad);
+		vec2 mx = max(P0.xy, max(P0.zw, P1.xy)) + vec2(pad);
+		pos = vec2(mix(mn.x, mx.x, cx), mix(mn.y, mx.y, cy));
+	} else if (type == 8u) {
+		// Arrow: padded AABB of the endpoints (head fits within max(r, w) inflation).
+		float apad = max(P1.x, P1.y) + pad;
+		vec2 mn = min(P0.xy, P0.zw) - vec2(apad);
+		vec2 mx = max(P0.xy, P0.zw) + vec2(apad);
+		pos = vec2(mix(mn.x, mx.x, cx), mix(mn.y, mx.y, cy));
+	} else if (type == 9u) {
+		// Custom shape: CPU-supplied pre-padded bounds ride in the payload; the 16
+		// shape params pass through untouched via ab/cd/ef/gh.
+		vec4 P4 = cf_payload(po + 4u);
+		pos = vec2(mix(P4.x, P4.z, cx), mix(P4.y, P4.w, cy));
+		ef = cf_payload(po + 2u);
+		gh = cf_payload(po + 3u);
+	} else if (type == 10u) {
+		// CSG shape group: pre-padded composite bounds are the payload's first vec4;
+		// the fragment stage reads the operand list from the payload directly.
+		pos = vec2(mix(P0.x, P0.z, cx), mix(P0.y, P0.w, cy));
+	} else {
+		// Polygon: padded AABB of n verts.
+		vec4 P2 = cf_payload(po + 2u);
+		vec4 P3 = cf_payload(po + 3u);
+		int n = int(cmd.misc.y);
+		vec2 pts_[8];
+		pts_[0] = P0.xy; pts_[1] = P0.zw; pts_[2] = P1.xy; pts_[3] = P1.zw;
+		pts_[4] = P2.xy; pts_[5] = P2.zw; pts_[6] = P3.xy; pts_[7] = P3.zw;
+		vec2 mn = pts_[0];
+		vec2 mx = pts_[0];
+		for (int i = 1; i < n; ++i) {
+			mn = min(mn, pts_[i]);
+			mx = max(mx, pts_[i]);
+		}
+		mn -= vec2(pad);
+		mx += vec2(pad);
+		pos = vec2(mix(mn.x, mx.x, cx), mix(mn.y, mx.y, cy));
+		ef = P2;
+		gh = P3;
+	}
+
+	// Camera from the matrix palette (forward mvp).
+	vec4 f0 = cf_payload(cmd.meta.w);
+	vec4 f1 = cf_payload(cmd.meta.w + 1u);
+	vec2 posH = f0.xy * pos.x + f0.zw * pos.y + f1.xy;
+
+	v_pos_uv = vec4(pos, uv);
+	v_n = int(cmd.misc.y);
+	v_ab = ab;
+	v_cd = cd;
+	v_ef = ef;
+	v_gh = gh;
+	v_col = col;
+	v_shape = vec4(cmd.shape.x, cmd.shape.y, cmd.shape.z, float(type));
+	v_blend_posH = vec4(cmd.shape.w, cmd.misc.x, posH);
+	v_user = user_out;
+	v_uv_bounds = uvb;
+	v_po = int(po);
+	gl_Position = vec4(posH, 0, 1);
+}
+)";
+
+static const char* s_inst_vs = cf_assemble_shader_src(s_inst_vs_head, s_inst_vs_access_ssbo, s_inst_vs_body);
+static const char* s_inst_vs_gles = cf_assemble_shader_src(s_inst_vs_head, s_inst_vs_access_gles, s_inst_vs_body);
+
+//--------------------------------------------------------------------------------------------------
+// Tiled renderer GPU binning compute shaders (phase 3).
+//
+// Five dispatches per batch: zero -> count -> scan -> scatter -> sort. The CPU only
+// uploads compact commands + payload; the GPU walks each command's pixel AABB at tile
+// granularity, with an SDF distance cull at tile centers for shape types (this is where
+// the old CPU-side tight OBB fitting effectively moved to). The sort pass restores
+// painter's order within each tile (atomic scatter is nondeterministic, but typically
+// nearly-sorted, where insertion sort is ~linear) and then applies opaque-cover culling:
+// the latest opaque command whose interior covers the whole tile becomes the tile's new
+// list start, dropping everything painted beneath it.
+
+// Shared text for the binning shaders: command/readonly-buffer declarations, uniform
+// block, and conservative tile coverage tests.
+#define CF_TILE_BIN_COMMON \
+"struct Cmd\n" \
+"{\n" \
+"	vec4 aabb;\n" \
+"	uvec4 meta;\n" \
+"	vec4 shape;\n" \
+"	vec4 misc;\n" \
+"	vec4 user;\n" \
+"};\n" \
+"layout (std430, set = 0, binding = 0) readonly buffer cmd_buffer { Cmd cmds[]; };\n" \
+"layout (std430, set = 0, binding = 1) readonly buffer payload_buffer { vec4 payload[]; };\n" \
+"layout (set = 2, binding = 0) uniform uniform_block {\n" \
+"	vec2 u_canvas_wh;\n" \
+"	int u_cmd_count;\n" \
+"	int u_tiles_x;\n" \
+"	int u_tiles_y;\n" \
+"	int u_tile_px;\n" \
+"};\n" \
+"vec4 cf_payload(uint i) { return payload[i]; }\n" \
+"#include \"sdf_core.shd\"\n" \
+"#include \"custom_shapes.shd\"\n" \
+"#include \"csg.shd\"\n" \
+"vec2 pts[8];\n" \
+"float cmd_distance_at(Cmd cmd, int tx, int ty, out float r_tile)\n" \
+"{\n" \
+"	vec2 center_px = vec2((float(tx) + 0.5) * float(u_tile_px), (float(ty) + 0.5) * float(u_tile_px));\n" \
+"	vec2 ndc = vec2(center_px.x * (2.0 / u_canvas_wh.x) - 1.0, 1.0 - center_px.y * (2.0 / u_canvas_wh.y));\n" \
+"	vec4 im0 = payload[cmd.meta.w + 2u];\n" \
+"	vec4 im1 = payload[cmd.meta.w + 3u];\n" \
+"	vec2 p = im0.xy * ndc.x + im0.zw * ndc.y + im1.xy;\n" \
+"	vec2 dwx = im0.xy * (2.0 / u_canvas_wh.x);\n" \
+"	vec2 dwy = im0.zw * (2.0 / u_canvas_wh.y);\n" \
+"	r_tile = 0.5 * float(u_tile_px) * (length(dwx) + length(dwy));\n" \
+"	uint po = cmd.meta.z;\n" \
+"	vec4 P0 = payload[po];\n" \
+"	vec4 P1 = payload[po + 1u];\n" \
+"	uint type = cmd.meta.x;\n" \
+"	float d;\n" \
+"	if (type == 2u) {\n" \
+"		d = distance_box(p, P0.xy, P0.zw, P1.xy);\n" \
+"	} else if (type == 3u || type == 7u) {\n" \
+"		d = distance_segment(p, P0.xy, P0.zw);\n" \
+"		d = min(d, distance_segment(p, P0.zw, type == 7u ? P0.xy : P1.xy));\n" \
+"	} else if (type == 5u) {\n" \
+"		d = distance_triangle(p, P0.xy, P0.zw, P1.xy);\n" \
+"	} else if (type == 8u) {\n" \
+"		d = distance_arrow(p, P0.xy, P0.zw, P1.x, P1.y);\n" \
+"	} else if (type == 9u) {\n" \
+"		vec4 P2 = payload[po + 2u];\n" \
+"		vec4 P3 = payload[po + 3u];\n" \
+"		ShapeParams sp;\n" \
+"		sp.a = P0.xy; sp.b = P0.zw; sp.c = P1.xy; sp.d = P1.zw;\n" \
+"		sp.e = P2.xy; sp.f = P2.zw; sp.g = P3.xy; sp.h = P3.zw;\n" \
+"		sp.attributes = cmd.user;\n" \
+"		d = custom_sdf(int(cmd.misc.y), p, sp);\n" \
+"	} else if (type == 10u) {\n" \
+"		d = csg_distance(po, int(cmd.misc.y), p, cmd.user);\n" \
+"	} else {\n" \
+"		vec4 P2 = payload[po + 2u];\n" \
+"		vec4 P3 = payload[po + 3u];\n" \
+"		pts[0] = P0.xy; pts[1] = P0.zw; pts[2] = P1.xy; pts[3] = P1.zw;\n" \
+"		pts[4] = P2.xy; pts[5] = P2.zw; pts[6] = P3.xy; pts[7] = P3.zw;\n" \
+"		d = distance_polygon(p, pts, int(cmd.misc.y));\n" \
+"	}\n" \
+"	return d;\n" \
+"}\n" \
+"bool tile_touched(Cmd cmd, int tx, int ty)\n" \
+"{\n" \
+"	uint type = cmd.meta.x;\n" \
+"	if (type <= 1u || type == 4u) return true; /* Sprites/text/raw tris: AABB only. */\n" \
+"	float r_tile;\n" \
+"	float d = cmd_distance_at(cmd, tx, ty, r_tile);\n" \
+"	return d - cmd.shape.x - cmd.shape.y - cmd.shape.z - r_tile <= 0.0;\n" \
+"}\n"
+
+static const char* s_tile_zero_cs = R"(
+layout (std430, set = 1, binding = 0) buffer headers_buffer { uvec2 tiles[]; };
+layout (set = 2, binding = 0) uniform uniform_block {
+	int u_tile_count;
+};
+layout (local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+
+void main()
+{
+	uint i = gl_GlobalInvocationID.x;
+	if (i < uint(u_tile_count)) {
+		tiles[i] = uvec2(0u);
+	}
+}
+)";
+
+static const char* s_tile_count_cs =
+CF_TILE_BIN_COMMON
+R"(
+layout (std430, set = 1, binding = 0) buffer headers_buffer { uvec2 tiles[]; };
+layout (local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+
+// One thread per (command, tile row): dispatch y covers the batch's tallest command so
+// screen-sized commands don't serialize a single thread over their whole tile rect.
+void main()
+{
+	uint ci = gl_GlobalInvocationID.x;
+	if (ci >= uint(u_cmd_count)) return;
+	Cmd cmd = cmds[ci];
+	if (cmd.aabb.z < 0.0 || cmd.aabb.w < 0.0 || cmd.aabb.x >= float(u_tiles_x * u_tile_px) || cmd.aabb.y >= float(u_tiles_y * u_tile_px)) return;
+	int tx0 = clamp(int(floor(cmd.aabb.x / float(u_tile_px))), 0, u_tiles_x - 1);
+	int ty0 = clamp(int(floor(cmd.aabb.y / float(u_tile_px))), 0, u_tiles_y - 1);
+	int tx1 = clamp(int(floor(cmd.aabb.z / float(u_tile_px))), 0, u_tiles_x - 1);
+	int ty1 = clamp(int(floor(cmd.aabb.w / float(u_tile_px))), 0, u_tiles_y - 1);
+	int ty = ty0 + int(gl_GlobalInvocationID.y);
+	if (ty > ty1) return;
+	// No SDF cull here: count only reserves space, and the list buffer is already
+	// sized for full AABB rects. The gather writes the true per-tile counts, so an
+	// overestimate costs nothing but slack in the list segments.
+	for (int tx = tx0; tx <= tx1; ++tx) {
+		atomicAdd(tiles[ty * u_tiles_x + tx].y, 1u);
+	}
+}
+)";
+
+static const char* s_tile_scan_cs = R"(
+layout (std430, set = 1, binding = 0) buffer headers_buffer { uvec2 tiles[]; };
+layout (set = 2, binding = 0) uniform uniform_block {
+	int u_tile_count;
+};
+layout (local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+
+shared uint sh[256];
+
+// Single-workgroup chunked exclusive scan. A one-lane serial loop here costs thousands
+// of dependent memory round-trips; 256 lanes with a shared-memory Hillis-Steele scan
+// per chunk keep it in the microseconds. All threads run the full loop structure
+// uniformly (barriers require it); only the stores are guarded by bounds checks.
+void main()
+{
+	uint tid = gl_LocalInvocationID.x;
+	uint count = uint(u_tile_count);
+	uint chunks = (count + 255u) / 256u;
+	uint run = 0u;
+	for (uint ch = 0u; ch < chunks; ++ch) {
+		uint idx = ch * 256u + tid;
+		uint v = idx < count ? tiles[idx].y : 0u;
+		sh[tid] = v;
+		barrier();
+		for (uint off = 1u; off < 256u; off <<= 1u) {
+			uint mine = sh[tid];
+			uint add = tid >= off ? sh[tid - off] : 0u;
+			barrier();
+			sh[tid] = mine + add;
+			barrier();
+		}
+		uint inclusive = sh[tid];
+		if (idx < count) tiles[idx].x = run + inclusive - v;
+		run += sh[255];
+		barrier();
+	}
+}
+)";
+
+static const char* s_tile_gather_cs =
+CF_TILE_BIN_COMMON
+R"(
+layout (std430, set = 1, binding = 0) buffer headers_buffer { uvec2 tiles[]; };
+layout (std430, set = 1, binding = 1) buffer list_buffer { uint tile_list[]; };
+layout (local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+
+// One thread per tile walks all commands in submission order and writes its own list
+// segment: painter's order for free -- no atomics, no cursors, no sort (an atomic
+// scatter would need a per-tile sort afterward, which goes quadratic on long lists).
+// The opaque-cover cull folds into the same walk: the latest opaque SDF command whose
+// filled interior covers the whole tile becomes the list's new start.
+void main()
+{
+	uint t = gl_GlobalInvocationID.x;
+	if (t >= uint(u_tiles_x * u_tiles_y)) return;
+	int tx = int(t) % u_tiles_x;
+	int ty = int(t) / u_tiles_x;
+	float x0 = float(tx * u_tile_px);
+	float y0 = float(ty * u_tile_px);
+	float x1 = x0 + float(u_tile_px);
+	float y1 = y0 + float(u_tile_px);
+	uint base = tiles[t].x;
+	uint reserved = tiles[t].y; // From the count pass; never write past our segment.
+	uint n = 0u;
+	// Walk commands top-down, filling the segment back-to-front (list stays in
+	// ascending command order). The first opaque SDF command whose filled interior
+	// covers the whole tile hides everything deeper -- stop immediately instead of
+	// binning commands that would only be culled.
+	for (uint k = 0u; k < uint(u_cmd_count) && n < reserved; ++k) {
+		uint ci = uint(u_cmd_count) - 1u - k;
+		Cmd cmd = cmds[ci];
+		if (cmd.aabb.x >= x1 || cmd.aabb.y >= y1 || cmd.aabb.z < x0 || cmd.aabb.w < y0) continue;
+		if (!tile_touched(cmd, tx, ty)) continue;
+		tile_list[base + reserved - 1u - n] = ci;
+		++n;
+		if (cmd.misc.z != 0.0 && cmd.aabb.x <= x0 && cmd.aabb.y <= y0 && cmd.aabb.z >= x1 && cmd.aabb.w >= y1) {
+			float r_tile;
+			float d = cmd_distance_at(cmd, tx, ty, r_tile);
+			// Fully inside the filled interior across the whole tile.
+			if (d - cmd.shape.x + r_tile <= 0.0) break;
+		}
+	}
+	tiles[t] = uvec2(base + reserved - n, n);
 }
 )";
 
@@ -533,6 +1348,11 @@ void main() {
 	sp.attributes = v_params;
 	vec4 c = shader(color, sp);
 	if (u_alpha_discard != 0 && c.a == 0) discard;
+	// Keep every varying live regardless of the user stub (see s_draw_fs -- D3D12 links
+	// VS->PS by hardware register, so a sparse input signature breaks pipeline creation).
+	if (u_alpha_discard == -2147483647) {
+		c += vec4(v_uv, v_pos) + vec4(v_posH, 0, 0) + v_params;
+	}
 	result = c;
 }
 )";
@@ -541,20 +1361,43 @@ typedef struct CF_BuiltinShaderSource {
 	const char* name;
 	const char* vertex;
 	const char* fragment;
+	bool no_gles; // Uses features GLES3/WebGL2 can't express (e.g. SSBOs) -- skip GLSL 300 transpile.
 } CF_BuiltinShaderSource;
 
 static CF_ShaderCompilerFile s_builtin_includes[] = {
 	{ "gamma.shd", s_gamma },
+	{ "sdf_core.shd", s_sdf_core },
 	{ "distance.shd", s_distance },
 	{ "smooth_uv.shd", s_smooth_uv },
 	{ "blend.shd", s_blend },
+	// Overridden at runtime with generated content once cf_make_custom_shape() has
+	// registered user shapes (see cf_compile_shader_to_bytecode_internal).
+	{ "custom_shapes.shd", s_custom_shapes_stub },
+	{ "csg.shd", s_csg },
 };
 
 static CF_BuiltinShaderSource s_builtin_shader_sources[] = {
-	{ "s_draw", s_draw_vs, s_draw_fs },
+	{ "s_draw", s_inst_vs, s_draw_fs, true },
+	// GLES3 flavor of the command-fed draw pair: storage buffers emulated as RGBA32UI
+	// texel fetches (see cf_gles_make_storage_buffer).
+	{ "s_draw_gles", s_inst_vs_gles, s_draw_fs_gles },
 	{ "s_basic", s_basic_vs, s_basic_fs },
 	{ "s_backbuffer", s_backbuffer_vs, s_backbuffer_fs },
 	{ "s_blit", s_blit_vs, s_blit_fs },
+	{ "s_tile", s_tile_vs, s_tile_fs, true },
+};
+
+typedef struct CF_BuiltinComputeShaderSource {
+	const char* name;
+	const char* source;
+} CF_BuiltinComputeShaderSource;
+
+// Tiled renderer GPU binning shaders. Compute shaders never target GLES.
+static CF_BuiltinComputeShaderSource s_builtin_compute_shader_sources[] = {
+	{ "s_tile_zero", s_tile_zero_cs },
+	{ "s_tile_count", s_tile_count_cs },
+	{ "s_tile_scan", s_tile_scan_cs },
+	{ "s_tile_gather", s_tile_gather_cs },
 };
 
 #endif

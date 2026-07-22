@@ -44,6 +44,11 @@ typedef struct CF_ShaderCompilerConfig
 	bool automatic_include_guard;
 	bool return_preprocessed_source;
 
+	// Skip transpilation to GLSL ES 300. For shaders using features GLES3/WebGL2 cannot
+	// express (e.g. storage buffers in the tiled draw path). Such shaders can never run
+	// on the GLES backend; bytecode.glsl300_src will be NULL.
+	bool skip_glsl300;
+
 	CF_ShaderCompilerVfs* vfs;
 } CF_ShaderCompilerConfig;
 

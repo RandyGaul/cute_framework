@@ -103,7 +103,7 @@ And here are some cons of the design:
 2. Rendering very large images can be a bit annoying, especially if they don't fit within the atlas compilers internal dimensions. It may be best to just render high resolution images in a custom way, as opposed to fitting them into CF's renderer (we're talking like 2000x2000 pixels or higher). If you have a lot of these high res images it may be best to also make your own streaming/caching mechanism to deal with RAM limitations.
 3. Opening many individual files on some OS's (looking at you, Windows) can be really slow due to slowly implemented security checks. This is totally out of our direct control, but, can be easily avoidable by using a tool to open invidual files out of an archive, like a .zip file.
 
-You can find the guts of the atlas compiler here, in a [single-file C header called cute_spritebatch.h](https://github.com/RandyGaul/cute_framework/blob/master/libraries/cute/cute_spritebatch.h). It's managing the rolling atlas cache itself, and firing a variety of callbacks back to the user to fetch pixels, make textures, or report batches.
+You can find the guts of the atlas compiler here, in a [single-file C header called cute_atlas_cache.h](https://github.com/RandyGaul/cute_framework/blob/master/libraries/cute/cute_atlas_cache.h). It's managing the rolling atlas cache itself, and firing a variety of callbacks back to the user to fetch pixels, make textures, or report batches.
 
 As promised, we can be more like Pinocchio, and escape the whale one sprite at a time.
 
@@ -130,122 +130,37 @@ Instead, a novel and effective approach is to steal all of [Inigo Quilez's work]
 
 If you crawl through [CF's internal shaders](https://github.com/RandyGaul/cute_framework/blob/master/src/cute_shader/builtin_shaders.h) you will find a whole bunch of similar SDF functions and many ternary operators. It turns out compilers these days just simply evaluate both sides of simple ternary operators and branchlessly select the correct result, with these cmov or select style instructions. Or in other words, it go fast, like Sonic fast.
 
-In practice this kind of SDF rendering will be limited by [pixel overdraw](https://forum.playcanvas.com/t/pixel-overdraw/29442) as the first bottleneck, assuming your draw call counts are low and you aren't flooding the upload limit to the GPU. So, when dealing with SDF rendering the big thing is to try and only submit quads to the GPU that tightly wrap around the shape to draw. Here's a [little program](https://gist.github.com/RandyGaul/c8abb1793d9d93e767b812ec9e636ea9) I made to prototype wrapping an oriented triangle in a tightly fitting box, while also giving some optional padding pixels.
+In practice this kind of SDF rendering will be limited by [pixel overdraw](https://forum.playcanvas.com/t/pixel-overdraw/29442) as the first bottleneck, assuming your draw call counts are low and you aren't flooding the upload limit to the GPU. So, when dealing with SDF rendering the big thing is to try and only run the fragment shader on pixels that tightly wrap around the shape to draw -- and, when overdraw stacks up anyway, to skip shading pixels that are hidden underneath opaque shapes. Both of those jobs now live on the GPU, which brings us to the command renderer.
 
-```c
-void bounding_box_of_triangle(v2 a, v2 b, v2 c, float radius, v2* out)
-{
-	v2 ab = b - a;
-	v2 bc = c - b;
-	v2 ca = a - c;
-	float d0 = dot(ab, ab);
-	float d1 = dot(bc, bc);
-	float d2 = dot(ca, ca);
-	auto build_box = [](float d, v2 a, v2 b, v2 c, float inflate, v2* out) {
-		float w = sqrtf(d);
-		v2 u = (b - a) / w;
-		v2 v = skew(u);
-		float h = dot(v, c) - dot(v, a);
-		if (h < 0) {
-			h = -h;
-			v = -v;
-		}
-		out[0] = a - u * inflate - v * inflate;
-		out[1] = b + u * inflate - v * inflate;
-		out[2] = b + u * inflate + v * (inflate + h);
-		out[3] = a - u * inflate + v * (inflate + h);
-	};
-	if (d0 >= d1 && d0 >= d2) {
-		build_box(d0, a, b, c, radius, out);
-	} else if (d1 >= d0 && d1 >= d2) {
-		build_box(d1, b, c, a, radius, out);
-	} else {
-		build_box(d2, c, a, b, radius, out);
-	}
-}
-```
+# The Command Renderer
 
-<p align="center">
-<img src=https://user-images.githubusercontent.com/1919825/211174135-3c6932ca-85ad-4a02-96a5-acbbf0c91174.png>
-</p>
+CF used to work the classic way: the CPU expanded every drawable into six fat pre-transformed vertices (position, uv, shape params, colors -- over a hundred bytes each) and streamed the whole vertex soup to the GPU every frame. That machinery is gone. Today the CPU records one compact *command* per drawable -- 80 bytes holding a bounding box, a shape type, packed colors, and a payload offset -- and uploads commands plus a small shared payload buffer (shape params, matrix palette). Everything downstream happens on the GPU, via one of two paths that share the exact same upload:
 
-As long as we can wrap whatever shape we're rendering in a tight oriented box, we can get pretty good performance by optimizing against the likely bottleneck of pixel overdraw.
-
-# Shapes on the GPU
-
-Getting the shapes onto the GPU to actually call into SDF functions involves packing shapes in world space into vertex attributes for our given quad. Recall the quad itself tightly wraps whatever shape we're rendering (like a circle, capsule, triangle, box, etc.), so that means 2 triangles or 6 vertices. The reason we're wrapping the rendered shape in a quad is it's just a simple way to make sure the fragment shader runs for each pixel of the shape in question. The fragment shader evaluates how far each pixel is from the actual shape, and fills in the color depending on if it's inside or outside of the shape, by using the SDF function we mentioned earlier.
-
-Each vertex uploaded to the GPU should look something like this:
-
-```c
-struct Vertex
-{
-	float x, y;
-	int shape_type;
-	float ax, ay;
-	float bx, by;
-	float cx, cy;
-	// ...
-};
-```
-
-The vectors `ax, ay` and `bx, by` etc. are used to pack the rendered shape itself into the vertex attributes, and are duplicated across all 6 quad vertices. For example, a sphere could pack its position in `ax, ay` while the radius could be packed into `bx`, while all the other attributes may simply remain unused for sphere rendering (but used for other more complex shapes like polylines). This lets us use the same vertex layout for all shapes, allowing us to compress shapes into a single draw call. Actually, we render sprites/text with the same vertex layout, compressing everything into a single draw call.
-
-The fragment shader needs to look at `shape_type` and do an *actual branch* depending on what shape is to be drawn. Here's the actual source for CF's fragment shader SDF dispatch:
+**The instanced path.** One instance per command. The vertex shader reads the command out of a storage buffer via `gl_InstanceIndex`, derives a tightly-fitting coverage quad from the shape parameters right there in the shader (this is where the old CPU-side oriented-bounding-box fitting moved), and the fragment shader dispatches on the command's type to evaluate the right SDF:
 
 ```glsl
-void main()
-{
-	bool is_sprite  = v_type >= 0.0 && v_type < 0.5;
-	bool is_text    = v_type >  0.5 && v_type < 1.5;
-	bool is_box     = v_type >  1.5 && v_type < 2.5;
-	bool is_seg     = v_type >  2.5 && v_type < 3.5;
-	bool is_tri     = v_type >  3.5 && v_type < 4.5;
-	bool is_tri_sdf = v_type >  4.5 && v_type < 5.5;
-	bool is_poly    = v_type >  5.5 && v_type < 6.5;
+bool is_box     = v_type >  1.5 && v_type < 2.5;
+bool is_seg     = v_type >  2.5 && v_type < 3.5;
+// ... triangle, polygon, polyline body, arrow, custom shapes, CSG groups ...
 
-	// Traditional sprite/text/tri cases.
-	vec4 c = vec4(0);
-	c = !(is_sprite && is_text) ? de_gamma(texture(u_image, smooth_uv(v_uv, u_texture_size))) : c;
-	c = is_sprite ? gamma(c) : c;
-	c = is_text ? v_col * c.a : c;
-	c = is_tri ? v_col : c;
-
-	// SDF cases.
-	float d = 0;
-	if (is_box) {
-		d = distance_box(v_pos, v_ab.xy, v_ab.zw, v_cd.xy);
-	} else if (is_seg) {
-		d = distance_segment(v_pos, v_ab.xy, v_ab.zw);
-		d = min(d, distance_segment(v_pos, v_ab.zw, v_cd.xy));
-	} else if (is_tri_sdf) {
-		d = distance_triangle(v_pos, v_ab.xy, v_ab.zw, v_cd.xy);
-	} else if (is_poly) {
-		pts[0] = v_ab.xy;
-		pts[1] = v_ab.zw;
-		pts[2] = v_cd.xy;
-		pts[3] = v_cd.zw;
-		pts[4] = v_ef.xy;
-		pts[5] = v_ef.zw;
-		pts[6] = v_gh.xy;
-		pts[7] = v_gh.zw;
-		d = distance_polygon(v_pos, pts, v_n);
-	}
-	c = (!is_sprite && !is_text && !is_tri) ? sdf(c, v_col, d - v_radius) : c;
-
-	c *= v_alpha;
-	vec2 screen_uv = (v_posH + vec2(1,-1)) * 0.5 * vec2(1,-1);
-	c = shader(c, v_pos, screen_uv, v_user);
-	if (u_alpha_discard != 0 && c.a == 0) discard;
-	result = c;
-}
+float d = 0;
+if (is_box) {
+	d = distance_box(v_pos, v_ab.xy, v_ab.zw, v_cd.xy);
+} else if (is_seg) {
+	d = distance_segment(v_pos, v_ab.xy, v_ab.zw);
+} // ...
+c = sdf(c, v_col, d - v_radius);
 ```
 
 WAIT A MINUTE -- Won't this blow up the GPU? If-statements are slow!!!
 
-Are if-statements truly slow? When was the last time you wrote and if-statement in a fragment shader and then actually observed the performance? When writing CF I realized my own personal answer was "never". And so, in cowboy fashion, a fragment shader was whipped up from the dust, along with some bonafide hip-firing, and SDFs were dispatched naively from a big if-else chain.
+Are if-statements truly slow? When was the last time you wrote an if-statement in a fragment shader and then actually observed the performance? GPUs stamp out blocks of pixels in groups of 32 or 64, and as long as a block executes the same branch-path you get full performance. In practice games draw a lot of the same shape in the same area, so worrying about warp/wavefront convergence here is a total non-issue.
 
-GPUs these days can be understood as stamping out blocks of pixels in typical 32 or 64 size. As long as block of pixels associated with one of these hardware stamps is all executing the same branch-path you will get good performance. It turns out, in practice, games tend to draw a lot of the same shape in the same area, such as particles or sprites. Conclusion: worrying about warp/wavefront convergence is a total non-issue in terms of perf cost (in this context).
+**The tiled path.** The instanced path still pays for overdraw: a stack of ten opaque shapes shades every covered pixel ten times. So the renderer has a second consumer of the very same command buffer: the screen is cut into 16x16 pixel tiles, and a short chain of compute dispatches bins commands into per-tile lists -- evaluating each command's SDF at tile centers to reject tiles the shape never touches (long skinny diagonal lines bin beautifully this way). A fullscreen pass then walks each pixel's tile list back-to-front, evaluating SDFs and compositing *in registers*, writing the framebuffer exactly once per pixel. The binning pass also performs opaque-cover culling: the moment a tile is fully covered by an opaque shape, everything painted beneath it is dropped from the list without ever being shaded.
+
+Neither path is strictly better. The rasterizer wins at moderate overdraw (it shades only real coverage), while the tile walk wins decisively when opaque shapes stack up (its cull skips hidden work entirely -- roughly an order of magnitude on heavily-stacked opaque scenes). So the renderer routes automatically, per batch: a cheap pre-scan detects whether a large opaque cover exists, and picks the winning path. Both preserve paint order exactly and produce near-identical pixels (the test suite diffs them against each other).
+
+Because everything is just commands, the whole feature set rides along in both paths: sprites, text glyphs, every shape type, [custom SDF shapes](https://randygaul.github.io/cute_framework/topics/drawing#custom-sdf-shapes) you register as shader snippets, and [boolean shape groups](https://randygaul.github.io/cute_framework/topics/drawing#shape-groups-boolean-ops) that union/subtract/intersect plain draw calls into a single composite shape -- one command, one distance field, outlineable as one continuous stroke.
 
 # Shape AA
 
@@ -280,9 +195,9 @@ To deal with camera zoom CF chose to pass in an `antialias_factor`, or dubiously
 // This factor remains constant-size despite zooming in/out with the camera.
 void CF_Draw::set_aaf()
 {
-	float inv_cam_scale = 1.0f / len(draw->cam_stack.last().m.y);
-	float scale = draw->antialias.last();
-	aaf = scale * inv_cam_scale;
+	float inv_cam_scale = 1.0f / len(s_draw->cam_stack.last().m.y);
+	float scale = s_draw->antialias.last();
+	aaf = scale * inv_cam_scale / app->pixel_scale;
 }
 ```
 
@@ -303,6 +218,9 @@ And that's for *all shape types*:
 - Box, oriented or AABB
 - Polygon
 - Triangle
+- Arrow (a single SDF -- shaft and head unioned, so translucency never double-blends)
+- [Custom SDF shapes](https://randygaul.github.io/cute_framework/topics/drawing#custom-sdf-shapes) you define in shader code
+- [Boolean compositions](https://randygaul.github.io/cute_framework/topics/drawing#shape-groups-boolean-ops) of any of the above
 
 # Text Rendering
 
@@ -376,6 +294,8 @@ One nice thing about SDL_Gpu is how Meshes and Textures are dealt with in terms 
 # Web Builds
 
 SDL_Gpu doesn't have a web compatible backend. So, CF implements its own GLES3 backend to get web support. It simply implements another backend for all of the graphics API we covered in the prior topic. Here's the docs on [getting web builds going](https://randygaul.github.io/cute_framework/topics/emscripten), great for those itch.io uploads or random playtests by hosting on your own site.
+
+The command renderer runs on GLES3/WebGL2 too, with the same architecture. GLES3 has no storage buffers, so the backend emulates them: commands and payload upload into RGBA32UI textures (one texel per vec4), and a texel-fetch flavor of the same draw shader reads them back out with `texelFetch`. Everything works there -- shapes, sprites, text, custom SDF shapes, boolean shape groups -- at roughly a 25% cost over real storage buffers. The one exception is the tiled path, which needs compute shaders GLES3 doesn't have; web builds run the instanced path for every batch, which is the same path the automatic routing picks for most scenes anyway.
 
 GLES3 doesn't have a fancy cycling system like SDL_Gpu, so we implemented our own in CF. Whenever a mesh or texture is updated we simply create a new internal instance of the resource on a ring buffer as-needed, up to 3 resources (hardcoded). This implements on-demand triple buffering for whatever resource is getting updated. Pretty cool. Here's what some of the internal guts looks like for managing these ring buffers:
 
@@ -520,36 +440,39 @@ Internally this works by injecting shader strings into each before feeding them 
 
 ```glsl
 // snip ...
-layout (set = 3, binding = 0) uniform uniform_block {
-	vec2 u_texture_size;
-	int u_alpha_discard;
-};
-
 #include "blend.shd"
 #include "gamma.shd"
 #include "smooth_uv.shd"
 #include "distance.shd"
-#include "shader_stub.shd"
+#include "custom_shapes.shd"
+#include "csg.shd"
 
-// Used only for polygon SDF.
-vec2 pts[8];
-
-void main()
+struct ShaderParams
 {
-	bool is_sprite  = v_type >= 0.0 && v_type < 0.5;
-	bool is_text    = v_type >  0.5 && v_type < 1.5;
+	vec2 view_pos;
+	vec2 uv;
+	vec2 uv_min;
+	vec2 uv_max;
+	vec2 screen_uv;
+	vec4 attributes;
+};
+
+#include "shader_stub.shd"
 // snip ...
 ```
 
-The line `"shader_stub.shd"` is the one in question. By implementing shader include support we can inject a user shader into the `stub` spot. This gets called at the end of CF's fragment shader as a final opportunity for the user to alter the color/rendering of the fragment.
+The line `"shader_stub.shd"` is the one in question. By implementing shader include support we can inject a user shader into the `stub` spot. This gets called at the end of CF's fragment shader as a final opportunity for the user to alter the color/rendering of the fragment. (The `custom_shapes.shd` include works the same way for [custom SDF shapes](https://randygaul.github.io/cute_framework/topics/drawing#custom-sdf-shapes) -- registered distance-function snippets get stitched in there and compiled into every shape pipeline, including the tiled path's binning compute shaders.)
 
 ```glsl
 	// snip ...
-	c = (!is_sprite && !is_text && !is_tri) ? sdf(c, v_col, d - v_radius) : c;
+	c = sdf(c, v_col, d - v_radius);
 
 	c *= v_alpha;
-	vec2 screen_uv = (v_posH + vec2(1,-1)) * 0.5 * vec2(1,-1);
-	c = shader(c, v_pos, screen_uv, v_user);
+	ShaderParams sp;
+	sp.view_pos = v_pos;
+	sp.uv = v_uv;
+	// ... uv bounds, screen_uv, attributes ...
+	c = shader(c, sp);
 	if (u_alpha_discard != 0 && c.a == 0) discard;
 	result = c;
 }

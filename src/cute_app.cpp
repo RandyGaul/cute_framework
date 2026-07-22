@@ -142,15 +142,6 @@ CF_API CF_App* app;
 using namespace Cute;
 
 // Embedded white_pixel
-int default_png_sz = 81;
-unsigned char default_png_data[81] = {
-	0x89,0x50,0x4e,0x47,0x0d,0x0a,0x1a,0x0a,0x00,0x00,0x00,0x0d,0x49,0x48,0x44,0x52,
-	0x00,0x00,0x00,0x01,0x00,0x00,0x00,0x01,0x08,0x06,0x00,0x00,0x00,0x1f,0x15,0xc4,
-	0x89,0x00,0x00,0x00,0x01,0x73,0x52,0x47,0x42,0x00,0xae,0xce,0x1c,0xe9,0x00,0x00,
-	0x00,0x0b,0x49,0x44,0x41,0x54,0x08,0x99,0x63,0xf8,0x0f,0x04,0x00,0x09,0xfb,0x03,
-	0xfd,0xe3,0x55,0xf2,0x9c,0x00,0x00,0x00,0x00,0x49,0x45,0x4e,0x44,0xae,0x42,0x60,
-	0x82
-};
 
 static void s_canvas(int w, int h)
 {
@@ -352,13 +343,6 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 
 		cf_app_recreate_default_canvas_if_needed();
 
-		// Load up a default image of 1x1 white pixel.
-		// Used in various places as a placeholder or default.
-		CF_Png img;
-		cf_custom_sprite_load_png_from_memory("cf_default_png", default_png_data, (size_t)default_png_sz, &img);
-		app->default_image_id = img.id;
-		CF_ASSERT(app->default_image_id == CF_CUSTOM_SPRITE_ID_RANGE_LO);
-
 		// Create the default font.
 		make_font_from_memory(calibri_data, calibri_sz, "Calibri");
 
@@ -529,12 +513,12 @@ int cf_app_draw_onto_screen(bool clear)
 		}
 	}
 
-	// Update the spritebatch itself.
+	// Update the atlas_cache itself.
 	// This does atlas management internally.
 	// All references to backend texture id's are now invalid (fetch_image or cf_texture_handle).
 	if (!s_draw->delay_defrag) {
-		spritebatch_tick(&s_draw->sb);
-		spritebatch_defrag(&s_draw->sb);
+		atlas_cache_tick(&s_draw->sb);
+		atlas_cache_defrag(&s_draw->sb);
 	}
 
 	// Render any remaining geometry in the draw API.
@@ -560,8 +544,8 @@ int cf_app_draw_onto_screen(bool clear)
 	// before doing final rendering to reduce draw call count, but in the case where ImGui is rendered it's acceptable
 	// to have the perf-hit and delay until next frame.
 	if (s_draw->delay_defrag) {
-		spritebatch_tick(&s_draw->sb);
-		spritebatch_defrag(&s_draw->sb);
+		atlas_cache_tick(&s_draw->sb);
+		atlas_cache_defrag(&s_draw->sb);
 		s_draw->delay_defrag = false;
 	}
 
@@ -590,7 +574,6 @@ int cf_app_draw_onto_screen(bool clear)
 	s_draw->text_ids.set_count(1);
 	s_draw->user_params.set_count(1);
 	s_draw->shaders.set_count(1);
-	s_draw->verts.clear();
 	s_draw->draw_item_order = 0;
 	s_draw->cmds.clear();
 	s_draw->add_cmd();
