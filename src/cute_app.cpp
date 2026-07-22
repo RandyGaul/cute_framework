@@ -881,7 +881,7 @@ void* cf_app_init_imgui()
 	return (void*)::ImGui::GetCurrentContext();
 }
 
-CF_PowerState cf_power_state_from_sdl(SDL_PowerState state)
+CF_PowerState CF_CALL cf_power_state_from_sdl(SDL_PowerState state)
 {
 	CF_PowerState result = CF_POWER_STATE_UNKNOWN;
 	switch (state) {
