@@ -181,7 +181,10 @@ CF_Sound cf_play_sound(CF_Audio audio_source, CF_SoundParams params)
 void s_on_finish(CF_Sound snd, void* udata)
 {
 	if (app->on_sound_finish_single_threaded) {
+		// Runs on the audio/mixer thread -- the main thread drains this queue under the same mutex.
+		cf_mutex_lock(&app->on_sound_finish_mutex);
 		app->on_sound_finish_queue.add(snd);
+		cf_mutex_unlock(&app->on_sound_finish_mutex);
 	} else {
 		app->on_sound_finish(snd, udata);
 	}
@@ -190,7 +193,10 @@ void s_on_finish(CF_Sound snd, void* udata)
 void s_on_finish_music(void* udata)
 {
 	if (app->on_sound_finish_single_threaded) {
+		// Runs on the audio/mixer thread -- the main thread drains this under the same mutex.
+		cf_mutex_lock(&app->on_sound_finish_mutex);
 		app->on_music_finish_signal = true;
+		cf_mutex_unlock(&app->on_sound_finish_mutex);
 	} else {
 		app->on_music_finish(udata);
 	}

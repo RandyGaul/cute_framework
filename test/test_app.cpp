@@ -10,6 +10,72 @@
 #include <cute.h>
 using namespace Cute;
 
+#include <internal/cute_app_internal.h>
+
+TEST_CASE(test_app_destroy_safety)
+{
+	// Destroying when no app was ever created must be a safe no-op.
+	cf_destroy_app();
+	// Create and destroy an app, then destroy again -- the second call must be a no-op.
+	CHECK(cf_is_error(cf_make_app(NULL, 0, 0, 0, 0, 0, CF_APP_OPTIONS_HIDDEN_BIT | CF_APP_OPTIONS_NO_GFX_BIT | CF_APP_OPTIONS_NO_AUDIO_BIT, NULL)));
+	cf_destroy_app();
+	cf_destroy_app();
+	return true;
+}
+
+TEST_CASE(test_app_power_state_mapping)
+{
+	REQUIRE(cf_power_state_from_sdl(SDL_POWERSTATE_ERROR) == CF_POWER_STATE_ERROR);
+	REQUIRE(cf_power_state_from_sdl(SDL_POWERSTATE_UNKNOWN) == CF_POWER_STATE_UNKNOWN);
+	REQUIRE(cf_power_state_from_sdl(SDL_POWERSTATE_ON_BATTERY) == CF_POWER_STATE_ON_BATTERY);
+	REQUIRE(cf_power_state_from_sdl(SDL_POWERSTATE_NO_BATTERY) == CF_POWER_STATE_NO_BATTERY);
+	REQUIRE(cf_power_state_from_sdl(SDL_POWERSTATE_CHARGING) == CF_POWER_STATE_CHARGING);
+	REQUIRE(cf_power_state_from_sdl(SDL_POWERSTATE_CHARGED) == CF_POWER_STATE_CHARGED);
+	return true;
+}
+
+TEST_CASE(test_app_no_gfx_state_defaults)
+{
+	CHECK(cf_is_error(cf_make_app(NULL, 0, 0, 0, 0, 0, CF_APP_OPTIONS_HIDDEN_BIT | CF_APP_OPTIONS_NO_GFX_BIT | CF_APP_OPTIONS_NO_AUDIO_BIT, NULL)));
+	int x = -1, y = -1;
+	cf_app_get_position(&x, &y);
+	REQUIRE(x == 0);
+	REQUIRE(y == 0);
+	REQUIRE(cf_app_get_canvas_width() == 0);
+	REQUIRE(cf_app_get_canvas_height() == 0);
+	cf_destroy_app();
+	return true;
+}
+
+TEST_CASE(test_display_count_matches_list)
+{
+	int count = cf_display_count();
+	REQUIRE(count >= 1);
+	CF_DisplayID* list = cf_get_display_list();
+	REQUIRE(list != NULL);
+	int n = 0;
+	while (list[n]) ++n;
+	REQUIRE(n == count);
+	cf_free_display_list(list);
+	return true;
+}
+
+TEST_CASE(test_display_invalid_id_is_safe)
+{
+	CF_DisplayID bogus = (CF_DisplayID)0xFFFFFFFFu;
+	REQUIRE(cf_display_refresh_rate(bogus) == 0);
+	REQUIRE(cf_display_x(bogus) == 0);
+	REQUIRE(cf_display_y(bogus) == 0);
+	REQUIRE(cf_display_width(bogus) == 0);
+	REQUIRE(cf_display_height(bogus) == 0);
+	CF_Rect r = cf_display_bounds(bogus);
+	REQUIRE(r.x == 0);
+	REQUIRE(r.y == 0);
+	REQUIRE(r.w == 0);
+	REQUIRE(r.h == 0);
+	return true;
+}
+
 TEST_CASE(test_app_present_mode_vsync_always_supported)
 {
 	REQUIRE(!is_error(make_app(NULL, 0, 0, 0, 0, CF_APP_OPTIONS_HIDDEN_BIT | CF_APP_OPTIONS_NO_AUDIO_BIT, NULL)));
@@ -68,6 +134,12 @@ TEST_CASE(test_app_present_mode_mailbox_failure_does_not_corrupt_state)
 
 TEST_SUITE(test_app)
 {
+	RUN_TEST_CASE(test_app_destroy_safety);
+	RUN_TEST_CASE(test_app_power_state_mapping);
+	RUN_TEST_CASE(test_app_no_gfx_state_defaults);
+	RUN_TEST_CASE(test_display_count_matches_list);
+	RUN_TEST_CASE(test_display_invalid_id_is_safe);
+
 	// Requires headless GPU context support in CI -- see
 	// https://github.com/RandyGaul/cute_framework/pull/517
 	RUN_TEST_CASE(test_app_present_mode_vsync_always_supported);
