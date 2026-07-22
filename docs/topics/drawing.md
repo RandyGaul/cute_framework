@@ -204,7 +204,7 @@ Text has it's own [Text API Reference](../api_reference.md#text). Call [`cf_make
 Here's a [sample](https://github.com/RandyGaul/cute_framework/blob/master/samples/text_drawing.cpp) for drawing some text onto the screen.
 
 <p align="center">
-<img src=https://github.com/RandyGaul/cute_framework/blob/master/assets/text_drawing.gif?raw=true>
+<video src="../../assets/text_drawing.mp4" autoplay loop muted playsinline controls width="960" style="max-width:100%"></video>
 </p>
 
 You can see the [Text Effect](../text/cf_text_effect_register.md) system in work. Text codes that look sort of like xml are supported for a variety of built-in effects. Click the previous link to see some documentation about built-in text effects, and how to contruct + register your own custom text effect codes.
