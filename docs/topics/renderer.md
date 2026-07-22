@@ -244,7 +244,7 @@ If we look at one of the more advanced open source solutions for text, [fontstas
 Just try drawing all of this with one draw call and a dozen lines of code in another engine/framework:
 
 <p align="center">
-<img src=https://github.com/RandyGaul/cute_framework/blob/master/assets/text_drawing.gif?raw=true>
+<video src="../../assets/text_drawing.mp4" autoplay loop muted playsinline controls width="960" style="max-width:100%"></video>
 </p>
 
 And if you get that in a single draw call, add in sprites and shape rendering, and *then see* if you're still at a single draw call.
@@ -287,7 +287,11 @@ draw_path_fill(heart);       // Filled, nonzero winding rule.
 draw_path(heart, 3.0f);      // Or stroked, with exact curve distance.
 ```
 
-Multiple contours work, and holes fall out of the nonzero winding rule for free -- wind an inner contour opposite the outer one and the winding numbers cancel. Baking encodes the curves into the same atlas-texel format as glyph strips (bigger paths span multiple texel rows), so paths get the whole treatment: resolution-independent fills, camera-perfect AA, true curved strokes, no tessellation step, and no "how many segments should I use?" question to ever answer. The `vector_paths` sample draws a heart from cubics, a star with a pentagonal hole, and a stroked spline.
+Multiple contours work, and holes fall out of the nonzero winding rule for free -- wind an inner contour opposite the outer one and the winding numbers cancel. Baking encodes the curves into the same atlas-texel format as glyph strips (bigger paths span multiple texel rows), so paths get the whole treatment: resolution-independent fills, camera-perfect AA, true curved strokes, no tessellation step, and no "how many segments should I use?" question to ever answer. Here's the `vector_paths` sample drawing a heart from cubics, a star with a pentagonal hole, and a stroked spline:
+
+<p align="center">
+<video src="../../assets/vector_paths.mp4" autoplay loop muted playsinline controls width="960" style="max-width:100%"></video>
+</p>
 
 # Blend Modes
 
