@@ -1091,6 +1091,251 @@ static void s_ink_stats(const CF_Pixel* px, int w, int h, int* ink_out, int* run
 	*bbox_w_out = y1 >= 0 ? x1 - x0 + 1 : 0;
 }
 
+// -------------------------------------------------------------------------------------------------
+// Per-command blend modes (cf_draw_push_blend): exact fixed-function math on both
+// paths, paint order preserved across mode changes.
+
+static void s_scene_blend_modes()
+{
+	// Opaque 50% gray base strip.
+	cf_draw_push_color(cf_make_color_rgba_f(0.5f, 0.5f, 0.5f, 1.0f));
+	cf_draw_quad_fill(cf_make_aabb(cf_v2(-130, -40), cf_v2(80, 40)), 0);
+	cf_draw_pop_color();
+
+	// Additive red over the base: 0.5 + 0.25 = 0.75 red.
+	cf_draw_push_blend(CF_DRAW_BLEND_ADD);
+	cf_draw_push_color(cf_make_color_rgba_f(0.5f, 0, 0, 0.5f));
+	cf_draw_quad_fill(cf_make_aabb(cf_v2(-70, -30), cf_v2(-30, 30)), 0);
+	cf_draw_pop_color();
+	cf_draw_pop_blend();
+
+	// Multiply 50% gray over the base: half brightness.
+	cf_draw_push_blend(CF_DRAW_BLEND_MULTIPLY);
+	cf_draw_push_color(cf_make_color_rgba_f(0.5f, 0.5f, 0.5f, 1.0f));
+	cf_draw_quad_fill(cf_make_aabb(cf_v2(-20, -30), cf_v2(20, 30)), 0);
+	cf_draw_pop_color();
+	cf_draw_pop_blend();
+
+	// Screen 50% gray over the base: 0.5 + 0.5 * (1 - 0.5) = 0.75.
+	cf_draw_push_blend(CF_DRAW_BLEND_SCREEN);
+	cf_draw_push_color(cf_make_color_rgba_f(0.5f, 0.5f, 0.5f, 1.0f));
+	cf_draw_quad_fill(cf_make_aabb(cf_v2(30, -30), cf_v2(70, 30)), 0);
+	cf_draw_pop_color();
+	cf_draw_pop_blend();
+
+	// Additive over the transparent canvas: rgb lands, canvas alpha stays 0.
+	cf_draw_push_blend(CF_DRAW_BLEND_ADD);
+	cf_draw_push_color(cf_make_color_rgba_f(0.5f, 0, 0, 0.5f));
+	cf_draw_quad_fill(cf_make_aabb(cf_v2(90, -30), cf_v2(130, 30)), 0);
+	cf_draw_pop_color();
+	cf_draw_pop_blend();
+
+	// Paint order across mode changes: a normal opaque green box drawn after an
+	// additive shape at the same spot must fully cover it.
+	cf_draw_push_blend(CF_DRAW_BLEND_ADD);
+	cf_draw_push_color(cf_make_color_rgba_f(0.9f, 0.9f, 0, 1.0f));
+	cf_draw_circle_fill2(cf_v2(160, 0), 25);
+	cf_draw_pop_color();
+	cf_draw_pop_blend();
+	cf_draw_push_color(cf_make_color_rgba_f(0, 1.0f, 0, 1.0f));
+	cf_draw_quad_fill(cf_make_aabb(cf_v2(140, -20), cf_v2(180, 20)), 0);
+	cf_draw_pop_color();
+}
+
+// -------------------------------------------------------------------------------------------------
+// Vector paths (cf_draw_path_begin/end): nonzero winding fills with holes, strokes, and
+// multi-row curve blocks, on both renderer paths.
+
+static CF_DrawPath s_donut_path;
+static CF_DrawPath s_blob_path;
+
+static void s_scene_path_fill()
+{
+	cf_draw_push_color(cf_color_white());
+	cf_draw_path_fill(s_donut_path);
+	cf_draw_pop_color();
+}
+
+static void s_scene_path_stroke()
+{
+	cf_draw_push_color(cf_color_white());
+	cf_draw_path(s_donut_path, 4.0f);
+	cf_draw_pop_color();
+}
+
+static void s_scene_path_mixed()
+{
+	cf_draw_push_color(cf_make_color_rgba_f(0.9f, 0.5f, 0.2f, 1.0f));
+	cf_draw_path_fill(s_donut_path);
+	cf_draw_pop_color();
+	cf_draw_push_color(cf_make_color_rgba_f(0.2f, 0.7f, 0.9f, 0.8f));
+	cf_draw_push();
+	cf_draw_translate(150, 0);
+	cf_draw_path_fill(s_blob_path);
+	cf_draw_path(s_blob_path, 2.0f);
+	cf_draw_pop();
+	cf_draw_pop_color();
+}
+
+TEST_CASE(test_draw_paths)
+{
+	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, 640, 480, s_app_options(), NULL))) return true; // Headless CI: no display/GPU.
+
+	// Donut: outer CCW square, inner CW square -- nonzero winding leaves the hole empty.
+	cf_draw_path_begin();
+	cf_draw_path_move_to(cf_v2(-100, -100));
+	cf_draw_path_line_to(cf_v2(100, -100));
+	cf_draw_path_line_to(cf_v2(100, 100));
+	cf_draw_path_line_to(cf_v2(-100, 100));
+	cf_draw_path_close();
+	cf_draw_path_move_to(cf_v2(-40, -40));
+	cf_draw_path_line_to(cf_v2(-40, 40));
+	cf_draw_path_line_to(cf_v2(40, 40));
+	cf_draw_path_line_to(cf_v2(40, -40));
+	cf_draw_path_close();
+	s_donut_path = cf_draw_path_end();
+	REQUIRE(s_donut_path.id);
+
+	// Curvy blob: quads and cubics.
+	cf_draw_path_begin();
+	cf_draw_path_move_to(cf_v2(0, -60));
+	cf_draw_path_quad_to(cf_v2(70, -60), cf_v2(70, 0));
+	cf_draw_path_cubic_to(cf_v2(70, 50), cf_v2(20, 70), cf_v2(0, 60));
+	cf_draw_path_quad_to(cf_v2(-70, 40), cf_v2(-60, -20));
+	cf_draw_path_close();
+	s_blob_path = cf_draw_path_end();
+	REQUIRE(s_blob_path.id);
+
+	int w = 640, h = 480;
+	CF_Pixel* a = (CF_Pixel*)cf_alloc(w * h * sizeof(CF_Pixel));
+	CF_Pixel* b = (CF_Pixel*)cf_alloc(w * h * sizeof(CF_Pixel));
+	int ink, runs, bbox_w;
+
+	// Filled donut: ring solid, hole empty (2 ink runs on the center scanline).
+	REQUIRE(s_readback(s_scene_path_fill, 0, w, h, a));
+	s_ink_stats(a, w, h, &ink, &runs, &bbox_w);
+	REQUIRE(ink > 0);
+	REQUIRE(runs == 2);
+	REQUIRE(bbox_w >= 198 && bbox_w <= 204);
+
+	// Stroked donut: both edges of both squares (4 runs).
+	REQUIRE(s_readback(s_scene_path_stroke, 0, w, h, a));
+	s_ink_stats(a, w, h, &ink, &runs, &bbox_w);
+	REQUIRE(ink > 0);
+	REQUIRE(runs == 4);
+
+	// Tiled walk matches the instanced path.
+	if (cf_query_backend() != CF_BACKEND_TYPE_GLES3) {
+		REQUIRE(s_readback(s_scene_path_mixed, 0, w, h, a));
+		REQUIRE(s_readback(s_scene_path_mixed, 1, w, h, b));
+		REQUIRE(s_diff_ok(a, b, w * h, "paths tiled-vs-mesh"));
+	}
+
+	cf_destroy_path(s_donut_path);
+	cf_destroy_path(s_blob_path);
+	cf_free(a);
+	cf_free(b);
+	cf_destroy_app();
+	return true;
+}
+
+TEST_CASE(test_draw_blend_modes)
+{
+	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, 640, 480, s_app_options(), NULL))) return true; // Headless CI: no display/GPU.
+
+	int w = 640, h = 480;
+	CF_Pixel* a = (CF_Pixel*)cf_alloc(w * h * sizeof(CF_Pixel));
+	CF_Pixel* b = (CF_Pixel*)cf_alloc(w * h * sizeof(CF_Pixel));
+
+	int mode_count = cf_query_backend() == CF_BACKEND_TYPE_GLES3 ? 1 : 2;
+	for (int mode = 0; mode < mode_count; ++mode) {
+		CF_Pixel* px = mode == 0 ? a : b;
+		REQUIRE(s_readback(s_scene_blend_modes, mode, w, h, px));
+		REQUIRE(s_px_near(s_probe(px, w, h, -100), 128, 128, 128, 255, 3)); // Base only.
+		REQUIRE(s_px_near(s_probe(px, w, h, -50), 191, 128, 128, 255, 3));  // Additive red.
+		REQUIRE(s_px_near(s_probe(px, w, h, 0), 64, 64, 64, 255, 3));       // Multiply.
+		REQUIRE(s_px_near(s_probe(px, w, h, 50), 191, 191, 191, 255, 3));   // Screen.
+		REQUIRE(s_px_near(s_probe(px, w, h, 110), 64, 0, 0, 0, 3));         // Additive over transparent.
+		REQUIRE(s_px_near(s_probe(px, w, h, 160), 0, 255, 0, 255, 3));      // Normal covers additive (order).
+	}
+	if (mode_count == 2) {
+		REQUIRE(s_diff_ok(a, b, w * h, "blend-modes tiled-vs-mesh"));
+	}
+
+	cf_free(a);
+	cf_free(b);
+	cf_destroy_app();
+	return true;
+}
+
+// -------------------------------------------------------------------------------------------------
+// Retained draw lists: replay must pixel-match immediate drawing, compose with the
+// current transform, and support multiple replays per frame.
+
+static CF_DrawList s_test_list;
+
+static void s_scene_list_content()
+{
+	cf_draw_push_color(cf_make_color_rgba_f(1, 0, 0, 1));
+	cf_draw_circle_fill2(cf_v2(-60, 0), 30);
+	cf_draw_pop_color();
+	cf_draw_push_color(cf_make_color_rgba_f(0.2f, 0.4f, 0.9f, 0.6f));
+	cf_draw_quad_fill(cf_make_aabb(cf_v2(-20, -25), cf_v2(40, 25)), 4.0f);
+	cf_draw_pop_color();
+	// Text rides the atlas-entry flow: replays must re-resolve uvs against the live atlas.
+	cf_push_font_size(26);
+	cf_draw_push_color(cf_color_white());
+	cf_draw_text("list", cf_v2(60, 13), -1);
+	cf_draw_pop_color();
+	cf_pop_font_size();
+}
+
+static void s_scene_list_immediate() { s_scene_list_content(); }
+static void s_scene_list_replay() { cf_draw_list(s_test_list); }
+static void s_scene_list_replay_multi()
+{
+	cf_draw_list(s_test_list);
+	cf_draw_push();
+	cf_draw_translate(160, 0);
+	cf_draw_list(s_test_list);
+	cf_draw_pop();
+	// Paint order after a replay: this box must cover the first replay's circle.
+	cf_draw_push_color(cf_make_color_rgba_f(0, 1, 0, 1));
+	cf_draw_quad_fill(cf_make_aabb(cf_v2(-75, -10), cf_v2(-45, 10)), 0);
+	cf_draw_pop_color();
+}
+
+TEST_CASE(test_draw_lists)
+{
+	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, 640, 480, s_app_options(), NULL))) return true; // Headless CI: no display/GPU.
+
+	s_test_list = cf_make_draw_list();
+	cf_draw_list_begin(s_test_list);
+	s_scene_list_content();
+	cf_draw_list_end();
+
+	int w = 640, h = 480;
+	CF_Pixel* a = (CF_Pixel*)cf_alloc(w * h * sizeof(CF_Pixel));
+	CF_Pixel* b = (CF_Pixel*)cf_alloc(w * h * sizeof(CF_Pixel));
+
+	// Replay must match drawing the same content immediately.
+	REQUIRE(s_readback(s_scene_list_immediate, 0, w, h, a));
+	REQUIRE(s_readback(s_scene_list_replay, 0, w, h, b));
+	REQUIRE(s_diff_ok(a, b, w * h, "list-vs-immediate"));
+
+	// Two replays (one transformed) plus paint order across a replay boundary.
+	REQUIRE(s_readback(s_scene_list_replay_multi, 0, w, h, b));
+	REQUIRE(s_px_near(s_probe(b, w, h, -60), 0, 255, 0, 255, 3));   // Green box over replayed circle.
+	REQUIRE(s_px_near(s_probe(b, w, h, 100), 255, 0, 0, 255, 3));   // Second replay's circle at -60+160.
+	REQUIRE(s_px_near(s_probe(b, w, h, 10), 31, 61, 138, 153, 6));  // First replay's translucent quad.
+
+	cf_destroy_draw_list(s_test_list);
+	cf_free(a);
+	cf_free(b);
+	cf_destroy_app();
+	return true;
+}
+
 TEST_CASE(test_draw_text_curves)
 {
 	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, 640, 480, s_app_options(), NULL))) return true; // Headless CI: no display/GPU.
@@ -1157,4 +1402,7 @@ TEST_SUITE(test_draw_tiled)
 	RUN_TEST_CASE_IF(test_draw_shape_groups);
 	RUN_TEST_CASE_IF(test_draw_tiled_budget_fallback);
 	RUN_TEST_CASE_IF(test_draw_text_curves);
+	RUN_TEST_CASE_IF(test_draw_blend_modes);
+	RUN_TEST_CASE_IF(test_draw_paths);
+	RUN_TEST_CASE_IF(test_draw_lists);
 }

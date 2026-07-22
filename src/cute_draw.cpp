@@ -112,6 +112,13 @@ void cf_get_pixels(ATLAS_CACHE_U64 image_id, void* buffer, int bytes_to_fill, vo
 		// It's assumed premade atlases are generated properly externally.
 		CF_ASSERT(!"This should never be hit -- Invalid image_id sent to atlas_cache.");
 		CF_MEMSET(buffer, 0, bytes_to_fill);
+	} else if (image_id >= CF_PATH_ID_RANGE_LO && image_id <= CF_PATH_ID_RANGE_HI) {
+		CF_DrawPathData* pd = s_draw->draw_paths.try_get(image_id);
+		if (pd) {
+			CF_MEMCPY(buffer, pd->pixels, bytes_to_fill);
+		} else {
+			CF_MEMSET(buffer, 0, bytes_to_fill);
+		}
 	} else {
 		CF_ASSERT(!"Invalid image_id when attempting to fetch pixels.");
 		CF_MEMSET(buffer, 0, bytes_to_fill);
@@ -126,6 +133,7 @@ static CF_INLINE BatchGeometry& s_push_geom()
 	CF_Command& cmd = s_draw->cmds.last();
 	BatchGeometry& g = cmd.geoms.add();
 	g.mvp = s_draw->mvp;
+	g.blend = s_draw->blends.last();
 	return g;
 }
 
@@ -137,6 +145,7 @@ static CF_INLINE BatchGeometry& s_push_shape_geom()
 		BatchGeometry& g = s_draw->group_geoms.add();
 		CF_MEMSET(&g, 0, sizeof(g));
 		g.mvp = s_draw->mvp;
+		g.blend = s_draw->blends.last();
 		g.csg_operand = true;
 		g.csg_op = s_draw->shape_group_op;
 		g.csg_k = s_draw->shape_group_k;
@@ -264,7 +273,37 @@ static bool s_tiled_batch_eligible(int count)
 	return true;
 }
 
-static void s_draw_report_tiled(const BatchGeometry* geoms, const CF_PendingUV* uvs, int start, int end, uint64_t texture_id, int texture_w, int texture_h, bool instanced)
+// Fixed-function canvas state for a blend-mode run. Colors are premultiplied, which
+// makes every mode exact: ADD is ONE/ONE, SCREEN is ONE/(1-src.rgb), and MULTIPLY's
+// per-primitive form D*(src.rgb + 1 - src.a) comes from DST_COLOR/(1-src.a). The tiled
+// walk pre-composites its whole run in-register and outputs the total gain for
+// MULTIPLY, so its dst factor is ZERO instead. Alpha: NORMAL accumulates coverage; the
+// other modes leave the canvas alpha untouched.
+static CF_RenderState s_blend_run_state(CF_RenderState rs, int blend, bool tiled_walk)
+{
+	switch (blend) {
+	case CF_DRAW_BLEND_ADD:
+		rs.blend.rgb_src_blend_factor = CF_BLENDFACTOR_ONE;
+		rs.blend.rgb_dst_blend_factor = CF_BLENDFACTOR_ONE;
+		break;
+	case CF_DRAW_BLEND_MULTIPLY:
+		rs.blend.rgb_src_blend_factor = CF_BLENDFACTOR_DST_COLOR;
+		rs.blend.rgb_dst_blend_factor = tiled_walk ? CF_BLENDFACTOR_ZERO : CF_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
+		break;
+	case CF_DRAW_BLEND_SCREEN:
+		rs.blend.rgb_src_blend_factor = CF_BLENDFACTOR_ONE;
+		rs.blend.rgb_dst_blend_factor = CF_BLENDFACTOR_ONE_MINUS_SRC_COLOR;
+		break;
+	default:
+		return rs;
+	}
+	rs.blend.enabled = true;
+	rs.blend.alpha_src_blend_factor = CF_BLENDFACTOR_ZERO;
+	rs.blend.alpha_dst_blend_factor = CF_BLENDFACTOR_ONE;
+	return rs;
+}
+
+static void s_draw_report_tiled(const BatchGeometry* geoms, const CF_PendingUV* uvs, int start, int end, uint64_t texture_id, int texture_w, int texture_h, int blend, bool instanced)
 {
 	CF_Command& cmd = s_draw->cmds[s_draw->cmd_index];
 	int canvas_w, canvas_h;
@@ -416,10 +455,13 @@ static void s_draw_report_tiled(const BatchGeometry* geoms, const CF_PendingUV* 
 			pay.add({ q0.x, q0.y, e1.x, e1.y });
 			pay.add({ e2.x, e2.y, 1.0f / dot(e1, e1), 1.0f / dot(e2, e2) });
 			// The reported uv rect spans the entry's padded rect (atlas_use_border_pixels);
-			// +1 steps past the 1px border onto the strip's first content texel.
+			// +1 steps past the 1px border onto the block's first content texel, and the
+			// content width (padded minus borders) drives row wrapping for multi-row
+			// path blocks (glyph strips are single-row and never wrap).
 			float bx = CF_ROUNDF(cf_min(s->minx, s->maxx) * (float)texture_w) + 1.0f;
 			float by = CF_ROUNDF(cf_min(s->miny, s->maxy) * (float)texture_h) + 1.0f;
-			pay.add({ bx, by, 0, 0 });
+			float bw = CF_ROUNDF(fabsf(s->maxx - s->minx) * (float)texture_w) - 2.0f;
+			pay.add({ bx, by, cf_max(bw, 1.0f), 0 });
 			// Per-corner colors (TL,TR,BR,BL), bilerped in the shader by box fraction so
 			// text-effect color gradients carry over to the curve path.
 			CF_TileV4 gcol;
@@ -501,10 +543,11 @@ static void s_draw_report_tiled(const BatchGeometry* geoms, const CF_PendingUV* 
 		}	break;
 		}
 
-		// Opaque-cover cull candidate? Filled SDF shape at full alpha. Clipped segments
-		// are excluded: their planes can cut mid-tile, so "interior covers the tile"
-		// cannot be decided from the SDF alone.
-		if (is_sdf && tc.fill == 1.0f && geom.alpha >= 1.0f && geom.color.colors.a == 255 && geom.type != BATCH_GEOMETRY_TYPE_SEGMENT_CLIPPED) {
+		// Opaque-cover cull candidate? Filled SDF shape at full alpha under normal
+		// blending (additive/multiply/screen shapes never hide what's beneath).
+		// Clipped segments are excluded: their planes can cut mid-tile, so "interior
+		// covers the tile" cannot be decided from the SDF alone.
+		if (is_sdf && tc.fill == 1.0f && geom.alpha >= 1.0f && geom.color.colors.a == 255 && geom.type != BATCH_GEOMETRY_TYPE_SEGMENT_CLIPPED && blend == CF_DRAW_BLEND_NORMAL) {
 			tc.opaque = 1.0f;
 		}
 
@@ -548,7 +591,7 @@ static void s_draw_report_tiled(const BatchGeometry* geoms, const CF_PendingUV* 
 		cf_material_set_uniform_fs(s_draw->material, "u_alpha_discard", &alpha_discard, CF_UNIFORM_TYPE_INT, 1);
 		int use_smooth_uv = cmd.filter_mode == CF_DRAW_FILTER_SMOOTH ? 0 : 1;
 		cf_material_set_uniform_fs(s_draw->material, "u_use_smooth_uv", &use_smooth_uv, CF_UNIFORM_TYPE_INT, 1);
-		cf_material_set_render_state(s_draw->material, cmd.render_state);
+		cf_material_set_render_state(s_draw->material, s_blend_run_state(cmd.render_state, blend, false));
 		void* sampler_override = (cmd.filter_mode == CF_DRAW_FILTER_NEAREST) ? s_draw->sampler_nearest : s_draw->sampler_linear;
 		cf_set_sampler_override(sampler_override);
 		cf_apply_mesh(s_draw->corner_mesh);
@@ -651,7 +694,8 @@ static void s_draw_report_tiled(const BatchGeometry* geoms, const CF_PendingUV* 
 	cf_material_set_uniform_fs(s_draw->material, "u_tiles_x", &tiles_x, CF_UNIFORM_TYPE_INT, 1);
 	int tile_px = CF_TILE_PX;
 	cf_material_set_uniform_fs(s_draw->material, "u_tile_px", &tile_px, CF_UNIFORM_TYPE_INT, 1);
-	cf_material_set_render_state(s_draw->material, cmd.render_state);
+	cf_material_set_uniform_fs(s_draw->material, "u_blend", &blend, CF_UNIFORM_TYPE_INT, 1);
+	cf_material_set_render_state(s_draw->material, s_blend_run_state(cmd.render_state, blend, true));
 
 	void* sampler_override = (cmd.filter_mode == CF_DRAW_FILTER_NEAREST) ? s_draw->sampler_nearest : s_draw->sampler_linear;
 	cf_set_sampler_override(sampler_override);
@@ -709,16 +753,17 @@ static void s_draw_report(atlas_cache_entry_t* sprites, int count, int texture_w
 }
 
 // Routes one paint-ordered run of the stream to the tiled or instanced path.
-static void s_draw_report_range(const BatchGeometry* geoms, const CF_PendingUV* uvs, int start, int end, uint64_t texture_id, int texture_w, int texture_h)
+static void s_draw_report_range(const BatchGeometry* geoms, const CF_PendingUV* uvs, int start, int end, uint64_t texture_id, int texture_w, int texture_h, int blend)
 {
 	int total = end - start;
 	if (total <= 0) return;
 	if (s_tiled_batch_eligible(total)) {
 		// Auto: the instanced path (rasterizer coverage) wins at moderate overdraw;
 		// tiled wins decisively when its opaque-cover cull can engage (up to ~9x on
-		// stacked opaque scenes). Route tiled only when a big opaque cover exists.
+		// stacked opaque scenes). Route tiled only when a big opaque cover exists --
+		// which requires normal blending (other modes never hide what's beneath).
 		CF_TiledBatchStats stats = s_tiled_batch_stats(geoms, start, end);
-		bool take = s_draw->tiled_mode == 0 ? stats.has_big_opaque : true;
+		bool take = s_draw->tiled_mode == 0 ? (stats.has_big_opaque && blend == CF_DRAW_BLEND_NORMAL) : true;
 		// Bin lists are sized as the sum of per-command tile footprints, and the gather
 		// walks every command per touched tile -- a pathological batch (thousands of
 		// screen-covering commands) would demand an unbounded list buffer and an
@@ -726,13 +771,13 @@ static void s_draw_report_range(const BatchGeometry* geoms, const CF_PendingUV* 
 		// batch instead (it is O(cmds) regardless of footprint).
 		if (take && stats.footprint_tiles > s_draw->tiled_list_budget) take = false;
 		if (take) {
-			s_draw_report_tiled(geoms, uvs, start, end, texture_id, texture_w, texture_h, false);
+			s_draw_report_tiled(geoms, uvs, start, end, texture_id, texture_w, texture_h, blend, false);
 			return;
 		}
 	}
 	s_draw->instanced_batch_count++;
 	if (!s_draw->instanced_available) return; // Draw shader failed to compile; nothing can render.
-	s_draw_report_tiled(geoms, uvs, start, end, texture_id, texture_w, texture_h, true);
+	s_draw_report_tiled(geoms, uvs, start, end, texture_id, texture_w, texture_h, blend, true);
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -784,6 +829,7 @@ void CF_Draw::set_aaf()
 void cf_make_draw()
 {
 	s_draw = CF_NEW(CF_Draw);
+	s_draw->path_image_id_gen = CF_PATH_ID_RANGE_LO;
 	s_draw->projection = ortho_2d(0, 0, (float)app->w, (float)app->h);
 	s_draw->reset_cam();
 	s_draw->uniform_arena = cf_make_arena(32, CF_MB);
@@ -2594,6 +2640,307 @@ CF_CurveGlyph* cf_font_get_glyph_curves(CF_Font* font, int codepoint)
 	return cg;
 }
 
+//--------------------------------------------------------------------------------------------------
+// Vector paths (cf_draw_path_begin/end): user Bezier paths baked into atlas blocks and
+// rendered by the same per-pixel winding/stroke machinery as curve-text glyphs. Unlike
+// glyph strips, paths may span multiple texel rows (see cf_glyph_cp's row wrapping).
+
+static Array<CF_V2> s_path_cps;
+static bool s_path_building = false;
+static bool s_path_contour_open = false;
+static v2 s_path_pen;
+static v2 s_path_start;
+
+static void s_path_close_contour()
+{
+	if (s_path_contour_open && (s_path_pen.x != s_path_start.x || s_path_pen.y != s_path_start.y)) {
+		s_curve_quad(s_path_cps, s_path_pen, s_path_start, s_path_start);
+		s_path_pen = s_path_start;
+	}
+	s_path_contour_open = false;
+}
+
+void cf_draw_path_begin()
+{
+	CF_ASSERT(!s_path_building);
+	s_path_building = true;
+	s_path_contour_open = false;
+	s_path_cps.clear();
+	s_path_pen = V2(0,0);
+	s_path_start = V2(0,0);
+}
+
+void cf_draw_path_move_to(CF_V2 p)
+{
+	CF_ASSERT(s_path_building);
+	s_path_close_contour();
+	s_path_pen = p;
+	s_path_start = p;
+	s_path_contour_open = true;
+}
+
+void cf_draw_path_line_to(CF_V2 p)
+{
+	CF_ASSERT(s_path_building);
+	if (s_path_pen.x != p.x || s_path_pen.y != p.y) {
+		s_curve_quad(s_path_cps, s_path_pen, p, p);
+	}
+	s_path_pen = p;
+	s_path_contour_open = true;
+}
+
+void cf_draw_path_quad_to(CF_V2 c, CF_V2 p)
+{
+	CF_ASSERT(s_path_building);
+	s_curve_quad(s_path_cps, s_path_pen, c, p);
+	s_path_pen = p;
+	s_path_contour_open = true;
+}
+
+void cf_draw_path_cubic_to(CF_V2 c0, CF_V2 c1, CF_V2 p)
+{
+	CF_ASSERT(s_path_building);
+	s_cubic_to_quads(s_path_cps, s_path_pen, c0, c1, p);
+	s_path_pen = p;
+	s_path_contour_open = true;
+}
+
+void cf_draw_path_close()
+{
+	CF_ASSERT(s_path_building);
+	s_path_close_contour();
+}
+
+CF_DrawPath cf_draw_path_end()
+{
+	CF_ASSERT(s_path_building);
+	s_path_building = false;
+	s_path_close_contour();
+
+	CF_DrawPath result = { 0 };
+	int curve_count = s_path_cps.count() / 3;
+	if (curve_count == 0) return result;
+
+	// Quantization box over every control point (same scheme as glyph strips).
+	v2 mn = s_path_cps[0];
+	v2 mx = s_path_cps[0];
+	for (int i = 1; i < s_path_cps.count(); ++i) {
+		mn = V2(cf_min(mn.x, s_path_cps[i].x), cf_min(mn.y, s_path_cps[i].y));
+		mx = V2(cf_max(mx.x, s_path_cps[i].x), cf_max(mx.y, s_path_cps[i].y));
+	}
+	v2 size = V2(cf_max(mx.x - mn.x, 1e-4f), cf_max(mx.y - mn.y, 1e-4f));
+
+	// Encode into a texel block: one RGBA8 texel per control point, row-major. Rows wrap
+	// at a fixed width; the shader fetch handles curves that straddle a row boundary.
+	int texels = curve_count * 3;
+	int strip_w = texels < 1020 ? texels : 1020;
+	int strip_h = (texels + strip_w - 1) / strip_w;
+	CF_Pixel* px = (CF_Pixel*)CF_ALLOC(strip_w * strip_h * sizeof(CF_Pixel));
+	CF_MEMSET(px, 0, strip_w * strip_h * sizeof(CF_Pixel));
+	for (int i = 0; i < s_path_cps.count(); ++i) {
+		uint32_t qx = (uint32_t)CF_ROUNDF((s_path_cps[i].x - mn.x) * (65535.0f / size.x));
+		uint32_t qy = (uint32_t)CF_ROUNDF((s_path_cps[i].y - mn.y) * (65535.0f / size.y));
+		qx = qx > 65535 ? 65535 : qx;
+		qy = qy > 65535 ? 65535 : qy;
+		CF_Pixel p;
+		p.r = (uint8_t)(qx & 255);
+		p.g = (uint8_t)(qx >> 8);
+		p.b = (uint8_t)(qy & 255);
+		p.a = (uint8_t)(qy >> 8);
+		px[i] = p;
+	}
+
+	uint64_t id = s_draw->path_image_id_gen++;
+	CF_DrawPathData pd;
+	pd.pixels = px;
+	pd.curve_count = curve_count;
+	pd.strip_w = strip_w;
+	pd.strip_h = strip_h;
+	pd.box_min = mn;
+	pd.box_max = mn + size;
+	s_draw->draw_paths.insert(id, pd);
+	result.id = id;
+	return result;
+}
+
+void cf_destroy_path(CF_DrawPath path)
+{
+	CF_DrawPathData* pd = s_draw->draw_paths.try_get(path.id);
+	if (!pd) return;
+	CF_FREE(pd->pixels);
+	s_draw->draw_paths.remove(path.id);
+}
+
+static void s_draw_path(CF_DrawPath path, float stroke, bool fill)
+{
+	CF_DrawPathData* pd = s_draw->draw_paths.try_get(path.id);
+	if (!pd) return;
+	float aaf = s_draw->aaf;
+
+	atlas_cache_entry_t s = { };
+	s.minx = 0;
+	s.miny = 0;
+	s.maxx = 1;
+	s.maxy = 1;
+	s.image_id = path.id;
+	s.w = pd->strip_w;
+	s.h = pd->strip_h;
+
+	BatchGeometry& g = s_push_geom();
+	g.type = BATCH_GEOMETRY_TYPE_GLYPH;
+	g.n = pd->curve_count;
+	v2 o0 = pd->box_min;
+	v2 o1 = pd->box_max;
+	g.shape[0] = V2(o0.x, o1.y);
+	g.shape[1] = V2(o1.x, o1.y);
+	g.shape[2] = V2(o1.x, o0.y);
+	g.shape[3] = V2(o0.x, o0.y);
+	float pad = stroke + aaf;
+	g.box[0] = V2(o0.x - pad, o1.y + pad);
+	g.box[1] = V2(o1.x + pad, o1.y + pad);
+	g.box[2] = V2(o1.x + pad, o0.y - pad);
+	g.box[3] = V2(o0.x - pad, o0.y - pad);
+	g.color = premultiply(to_pixel(s_draw->colors.last()));
+	for (int i = 0; i < 4; ++i) g.text_colors[i] = g.color;
+	g.alpha = 1.0f;
+	g.stroke = stroke;
+	g.fill = fill;
+	g.aa = aaf;
+	g.is_text = true; // Routes the pending-uv/atlas flow (path blocks are atlas entries).
+	g.user_params = s_draw->user_params.last();
+	DRAW_PUSH_ITEM(s);
+}
+
+void cf_draw_path_fill(CF_DrawPath path)
+{
+	s_draw_path(path, 0, true);
+}
+
+void cf_draw_path(CF_DrawPath path, float thickness)
+{
+	s_draw_path(path, thickness, false);
+}
+
+//--------------------------------------------------------------------------------------------------
+// Retained draw lists (cf_make_draw_list): record a static snapshot of draw calls once,
+// replay it per frame under the current camera. Recording happens in list-local space
+// (identity camera + projection), so replay composes the caller's transform onto every
+// stored command; replay re-pushes the recorded atlas entries so sprite/text uvs always
+// resolve against the live atlas (defrag/decay safe).
+
+CF_DrawList cf_make_draw_list()
+{
+	CF_DrawListData* data = CF_NEW(CF_DrawListData);
+	uint64_t id = s_draw->draw_list_id_gen++;
+	s_draw->draw_lists.insert(id, data);
+	CF_DrawList result = { id };
+	return result;
+}
+
+static void s_draw_list_free_uniforms(CF_DrawListData* data)
+{
+	for (int i = 0; i < data->uniform_blocks.count(); ++i) {
+		CF_FREE(data->uniform_blocks[i]);
+	}
+	data->uniform_blocks.clear();
+}
+
+void cf_destroy_draw_list(CF_DrawList list)
+{
+	CF_DrawListData** data = s_draw->draw_lists.try_get(list.id);
+	if (!data) return;
+	CF_ASSERT(s_draw->recording_list != *data);
+	s_draw_list_free_uniforms(*data);
+	(*data)->~CF_DrawListData();
+	CF_FREE(*data);
+	s_draw->draw_lists.remove(list.id);
+}
+
+void cf_draw_list_begin(CF_DrawList list)
+{
+	CF_DrawListData** data = s_draw->draw_lists.try_get(list.id);
+	CF_ASSERT(data);
+	CF_ASSERT(!s_draw->recording_list);
+	if (!data) return;
+	s_draw->recording_list = *data;
+	s_draw->recording_mark = s_draw->cmds.count();
+	// Record in list-local space so replay can compose any camera on top.
+	cf_draw_push();
+	s_draw->cam_stack.last() = cf_make_identity();
+	s_draw->projection = cf_make_identity();
+	s_draw->mvp = cf_make_identity();
+	s_draw->set_aaf();
+	s_draw->add_cmd();
+}
+
+void cf_draw_list_end()
+{
+	CF_DrawListData* data = s_draw->recording_list;
+	CF_ASSERT(data);
+	if (!data) return;
+	s_draw->recording_list = NULL;
+	s_draw_list_free_uniforms(data);
+	data->cmds.clear();
+	for (int i = s_draw->recording_mark; i < s_draw->cmds.count(); ++i) {
+		CF_Command& c = s_draw->cmds[i];
+		CF_ASSERT(!c.is_canvas); // Canvas blits reference mutable textures; not retainable.
+		if (c.is_canvas) continue;
+		// Skip state-only churn (empty commands from stack pushes during recording).
+		if (c.geoms.count() == 0 && !c.geoms_ref && c.items.count() == 0 && !c.u.data && !c.u.is_texture) continue;
+		CF_Command copy = c;
+		if (c.geoms_ref) {
+			// A nested replay recorded into this list: resolve the borrowed geometry to
+			// an owned copy so lists never reference each other's storage.
+			copy.geoms = *c.geoms_ref;
+			copy.geoms_ref = NULL;
+			for (int j = 0; j < copy.geoms.count(); ++j) {
+				BatchGeometry& g = copy.geoms[j];
+				CF_MUL_M32_M32(g.mvp, c.replay_mvp, g.mvp);
+				g.aa *= c.replay_aa_scale;
+			}
+		}
+		if (copy.u.data) {
+			// Uniform data lives in the per-frame arena; the list owns its own copy.
+			void* block = CF_ALLOC(copy.u.size);
+			CF_MEMCPY(block, copy.u.data, copy.u.size);
+			copy.u.data = block;
+			data->uniform_blocks.add(block);
+		}
+		data->cmds.add(copy);
+	}
+	s_draw->cmds.set_count(s_draw->recording_mark);
+	cf_draw_pop(); // Restores camera, projection, mvp, and aaf.
+}
+
+void cf_draw_list(CF_DrawList list)
+{
+	CF_DrawListData** data_ptr = s_draw->draw_lists.try_get(list.id);
+	if (!data_ptr) return;
+	CF_DrawListData* data = *data_ptr;
+	// Replays borrow the list's geometry (no deep copy): the collate step flattens
+	// geoms_ref into the pending stream, composing the replay transform and rescaling
+	// the AA band (recorded under an identity camera) during its one copy.
+	float inv_cam_scale = 1.0f / len(s_draw->cam_stack.last().m.y);
+	for (int i = 0; i < data->cmds.count(); ++i) {
+		const CF_Command& src = data->cmds[i];
+		CF_Command& c = s_draw->add_cmd();
+		c.layer = src.layer;
+		c.scissor = src.scissor;
+		c.viewport = src.viewport;
+		c.alpha_discard = src.alpha_discard;
+		c.filter_mode = src.filter_mode;
+		c.render_state = src.render_state;
+		c.shader = src.shader;
+		c.u = src.u;
+		c.items = src.items;
+		c.geoms_ref = &src.geoms;
+		c.replay_mvp = s_draw->mvp;
+		c.replay_aa_scale = inv_cam_scale;
+	}
+	// Reopen a command carrying the caller's current state for subsequent draws.
+	s_draw->add_cmd();
+}
+
 float cf_font_get_kern(CF_Font* font, float font_size, int code0, int code1)
 {
 	// Prefer GPOS -- stb's codepoint API converts to glyph indices internally and
@@ -3628,6 +3975,7 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 		// geoms array under a live reference), and visibility is only final after
 		// effects run -- only visible glyphs append to the stream.
 		BatchGeometry g = { };
+		g.blend = s_draw->blends.last();
 		s.minx = 0; // 9-slice implementation expects these to be defaulted to 0..1.
 		s.miny = 0;
 		s.maxx = 1;
@@ -4192,6 +4540,28 @@ CF_DrawFilterMode cf_draw_peek_filter()
 	return s_draw->filter_modes.last();
 }
 
+// Blend modes are recorded per drawable (no command split at record time); the flush
+// splits paint-ordered runs at mode changes and applies each run's exact fixed-function
+// state, so ordering holds across mode changes and canvas compositing stays correct.
+void cf_draw_push_blend(CF_DrawBlend blend)
+{
+	s_draw->blends.add((int)blend);
+}
+
+CF_DrawBlend cf_draw_pop_blend()
+{
+	if (s_draw->blends.count() > 1) {
+		return (CF_DrawBlend)s_draw->blends.pop();
+	} else {
+		return (CF_DrawBlend)s_draw->blends.last();
+	}
+}
+
+CF_DrawBlend cf_draw_peek_blend()
+{
+	return (CF_DrawBlend)s_draw->blends.last();
+}
+
 void cf_draw_set_texture(const char* name, CF_Texture texture)
 {
 	CF_DrawUniform u;
@@ -4426,8 +4796,19 @@ static void s_flush_pending_geoms()
 	int start = 0;
 	uint64_t run_tex = 0;
 	int run_w = 1, run_h = 1;
+	int run_blend = n ? geoms[0].blend : 0;
 	for (int i = 0; i < n; ++i) {
 		const BatchGeometry& g = geoms[i];
+		if (g.csg_operand) continue; // Rides with its CSG head.
+		// Blend mode changes split the stream: each run renders with its mode's exact
+		// fixed-function canvas state, and run sequencing preserves paint order.
+		if (g.blend != run_blend) {
+			s_draw_report_range(geoms, uvs, start, i, run_tex, run_w, run_h, run_blend);
+			start = i;
+			run_tex = 0;
+			run_w = run_h = 1;
+			run_blend = g.blend;
+		}
 		if (!(g.is_sprite || g.is_text)) continue;
 		if (uvs[i].texture_id == 0) continue;
 		if (run_tex == 0) {
@@ -4435,14 +4816,14 @@ static void s_flush_pending_geoms()
 			run_w = uvs[i].tex_w;
 			run_h = uvs[i].tex_h;
 		} else if (uvs[i].texture_id != run_tex) {
-			s_draw_report_range(geoms, uvs, start, i, run_tex, run_w, run_h);
+			s_draw_report_range(geoms, uvs, start, i, run_tex, run_w, run_h, run_blend);
 			start = i;
 			run_tex = uvs[i].texture_id;
 			run_w = uvs[i].tex_w;
 			run_h = uvs[i].tex_h;
 		}
 	}
-	s_draw_report_range(geoms, uvs, start, n, run_tex, run_w, run_h);
+	s_draw_report_range(geoms, uvs, start, n, run_tex, run_w, run_h, run_blend);
 	s_draw->pending_geoms.clear();
 	s_draw->pending_uvs.clear();
 }
@@ -4481,12 +4862,19 @@ static void s_process_command(CF_Canvas canvas, CF_Command* cmd, CF_Command* nex
 	// Collate the drawable items: all geometry appends to the flush-ordered stream;
 	// sprites/text additionally push a small atlas entry to the atlas_cache whose seq
 	// is rebased to index the stream (commands were layer-sorted, so the rebase
-	// happens here, not at record time).
-	if (cmd->geoms.count()) {
+	// happens here, not at record time). Draw list replays borrow their list's geometry
+	// (geoms_ref) and compose the replay transform during this one copy.
+	const Cute::Array<BatchGeometry>* src_geoms = cmd->geoms_ref ? cmd->geoms_ref : &cmd->geoms;
+	if (src_geoms->count()) {
 		s_draw->need_flush = true;
 		int base = s_draw->pending_geoms.count();
-		for (int i = 0; i < cmd->geoms.count(); ++i) {
-			s_draw->pending_geoms.add(cmd->geoms[i]);
+		for (int i = 0; i < src_geoms->count(); ++i) {
+			s_draw->pending_geoms.add((*src_geoms)[i]);
+			if (cmd->geoms_ref) {
+				BatchGeometry& g = s_draw->pending_geoms.last();
+				CF_MUL_M32_M32(g.mvp, cmd->replay_mvp, g.mvp);
+				g.aa *= cmd->replay_aa_scale;
+			}
 			CF_PendingUV uv = { 0 };
 			s_draw->pending_uvs.add(uv);
 		}
@@ -4548,7 +4936,7 @@ void cf_render_layers_to(CF_Canvas canvas, int layer_lo, int layer_hi, bool clea
 		int next_draw_layer = 0;
 		for (int i = s_draw->cmds.count() - 1; i >= 0; i--) {
 			CF_Command& cmd = s_draw->cmds[i];
-			if (cmd.geoms.count() || cmd.is_canvas) {
+			if (cmd.geoms.count() || cmd.geoms_ref || cmd.is_canvas) {
 				next_draw_layer = cmd.layer;
 			} else {
 				cmd.layer = next_draw_layer;

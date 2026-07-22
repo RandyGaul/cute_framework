@@ -444,9 +444,11 @@ vec4 sdf(vec4 a, vec4 b, float d)
 // Consumers must declare the `u_image` sampler and include distance.shd (for safe_div)
 // before including this file.
 static const char* s_glyph = R"(
-vec2 cf_glyph_cp(ivec2 base, int i)
+// w is the block's content width in texels: single-row glyph strips never wrap, while
+// multi-row path blocks wrap texel index i across rows.
+vec2 cf_glyph_cp(ivec2 base, int i, int w)
 {
-	vec4 t = texelFetch(u_image, base + ivec2(i, 0), 0) * 255.0;
+	vec4 t = texelFetch(u_image, base + ivec2(i % w, i / w), 0) * 255.0;
 	return vec2(t.r + t.g * 256.0, t.b + t.a * 256.0) * (1.0 / 65535.0);
 }
 
@@ -525,7 +527,7 @@ float cf_glyph_dist_sq(vec2 A, vec2 B, vec2 C)
 // live in the command's record-time world space; px is that space's per-screen-pixel
 // step along x and y. Sign never matters downstream: fills consume coverage directly
 // and strokes consume abs distance, so the winding sum only needs magnitude.
-float cf_glyph_eval(vec2 p, vec2 q0, vec2 e1, vec2 e2, ivec2 base, int n, vec2 px, bool want_dist, out float dist)
+float cf_glyph_eval(vec2 p, vec2 q0, vec2 e1, vec2 e2, ivec2 base, int strip_w, int n, vec2 px, bool want_dist, out float dist)
 {
 	float cov_x = 0.0;
 	float cov_y = 0.0;
@@ -533,9 +535,9 @@ float cf_glyph_eval(vec2 p, vec2 q0, vec2 e1, vec2 e2, ivec2 base, int n, vec2 p
 	float inv_px_x = 1.0 / max(px.x, 1e-12);
 	float inv_px_y = 1.0 / max(px.y, 1e-12);
 	for (int i = 0; i < n; ++i) {
-		vec2 f0 = cf_glyph_cp(base, i * 3);
-		vec2 f1 = cf_glyph_cp(base, i * 3 + 1);
-		vec2 f2 = cf_glyph_cp(base, i * 3 + 2);
+		vec2 f0 = cf_glyph_cp(base, i * 3, strip_w);
+		vec2 f1 = cf_glyph_cp(base, i * 3 + 1, strip_w);
+		vec2 f2 = cf_glyph_cp(base, i * 3 + 2, strip_w);
 		vec2 a = q0 + f0.x * e1 + f0.y * e2 - p;
 		vec2 b = q0 + f1.x * e1 + f1.y * e2 - p;
 		vec2 c = q0 + f2.x * e1 + f2.y * e2 - p;
@@ -725,7 +727,7 @@ void main()
 		vec4 gp2 = cf_payload(uint(v_po) + 2u);
 		vec2 gpx = vec2(length(vec2(dFdx(v_pos.x), dFdy(v_pos.x))), length(vec2(dFdx(v_pos.y), dFdy(v_pos.y))));
 		float gd;
-		float gcov = cf_glyph_eval(v_pos, gp0.xy, gp0.zw, gp1.xy, ivec2(gp2.xy), v_n, gpx, v_stroke > 0.0, gd);
+		float gcov = cf_glyph_eval(v_pos, gp0.xy, gp0.zw, gp1.xy, ivec2(gp2.xy), int(gp2.z), v_n, gpx, v_stroke > 0.0, gd);
 		// Per-corner colors (TL,TR,BR,BL) bilerped by box fraction, matching the
 		// rasterized text path's text-effect gradients.
 		vec4 gc = cf_payload(uint(v_po) + 3u);
@@ -828,6 +830,7 @@ layout (set = 3, binding = 0) uniform uniform_block {
 	int u_use_smooth_uv;
 	int u_tiles_x;
 	int u_tile_px;
+	int u_blend; // CF_DrawBlend for this run; runs split at mode changes CPU-side.
 };
 
 // Globals consumed by the sdf() helpers in distance.shd, set per command in the walk loop.
@@ -871,8 +874,11 @@ void main()
 	// everything deeper contributes zero -- SDF/tri commands then skip evaluation
 	// entirely (a pixel-divergent skip is legal there: no derivatives). Sprite/text
 	// commands still evaluate to keep texture fetches quad-uniform; their contribution
-	// multiplies to zero.
+	// multiplies to zero. Non-normal blend runs swap the accumulate operator: additive
+	// sums, multiply accumulates per-channel gain in `trans`, screen under-composites
+	// per channel.
 	vec4 acc = vec4(0);
+	vec3 trans = vec3(1.0);
 	for (uint i = range.y; i > 0u;) {
 		--i;
 		Cmd cmd = cmds[tile_list[range.x + i]];
@@ -883,6 +889,14 @@ void main()
 		// Pixel-space AABB coverage. Mask only -- never branch on this around a sample.
 		vec2 cov2 = step(cmd.aabb.xy, frag) * step(frag, cmd.aabb.zw);
 		float coverage = cov2.x * cov2.y;
+
+		// Saturation early-out per blend mode: src-over saturates on alpha, multiply
+		// when all gain is spent, screen when every channel hits white. Additive never
+		// saturates.
+		float done = u_blend == 0 ? acc.a
+		           : u_blend == 2 ? 1.0 - max(trans.x, max(trans.y, trans.z))
+		           : u_blend == 3 ? min(acc.r, min(acc.g, acc.b))
+		           : 0.0;
 
 		// Recover the command's record-time world space (inverse mvp at palette + 2).
 		vec4 im0 = payload[cmd.meta.w + 2u];
@@ -927,7 +941,7 @@ void main()
 			}
 			c *= quad_cov;
 		} else if (type == CMD_TYPE_TRI) {
-			if (acc.a >= 1.0 || coverage == 0.0) continue; // Contribution would be exactly zero.
+			if (done >= 1.0 || coverage == 0.0) continue; // Contribution would be exactly zero.
 			// Raw triangle, evaluated directly in NDC with barycentric color interpolation.
 			vec4 P0 = payload[po];
 			vec4 P1 = payload[po + 1u];
@@ -948,7 +962,7 @@ void main()
 		} else if (type == CMD_TYPE_GLYPH) {
 			// Curve glyph: winding coverage straight from the outline's quadratics
 			// (texelFetch has no implicit derivatives -- a divergent skip is safe here).
-			if (acc.a >= 1.0 || coverage == 0.0) continue;
+			if (done >= 1.0 || coverage == 0.0) continue;
 			vec4 P0 = payload[po];
 			vec4 P1 = payload[po + 1u];
 			vec4 P2 = payload[po + 2u];
@@ -958,7 +972,7 @@ void main()
 			vec2 dwy = im0.zw * (2.0 / u_canvas_wh.y);
 			vec2 gpx = vec2(length(vec2(dwx.x, dwy.x)), length(vec2(dwx.y, dwy.y)));
 			float gd;
-			float gcov = cf_glyph_eval(p, P0.xy, P0.zw, P1.xy, ivec2(P2.xy), int(cmd.misc.y), gpx, v_stroke > 0.0, gd);
+			float gcov = cf_glyph_eval(p, P0.xy, P0.zw, P1.xy, ivec2(P2.xy), int(P2.z), int(cmd.misc.y), gpx, v_stroke > 0.0, gd);
 			// Per-corner colors (TL,TR,BR,BL) bilerped by box fraction, matching the
 			// rasterized text path's text-effect gradients.
 			vec4 gc = payload[po + 3u];
@@ -968,7 +982,7 @@ void main()
 			                 mix(unpackUnorm4x8(floatBitsToUint(gc.x)), unpackUnorm4x8(floatBitsToUint(gc.y)), gs), gt);
 			c = v_stroke > 0.0 ? sdf(vec4(0), gvcol, gd) : gvcol * gcov;
 		} else {
-			if (acc.a >= 1.0 || coverage == 0.0) continue; // Contribution would be exactly zero.
+			if (done >= 1.0 || coverage == 0.0) continue; // Contribution would be exactly zero.
 			// SDF shapes. Params live in record-time world space; recover it from NDC
 			// via the command's inverse mvp. Contributions fade out naturally past the
 			// AA fringe, so the AABB mask only trims work the mesh path's quad would
@@ -1020,10 +1034,22 @@ void main()
 		}
 
 		c *= cmd.shape.w * coverage; // alpha modulation + AABB mask
-		acc = acc + c * (1.0 - acc.a); // premultiplied "under" (top-down), in-register
+		if (u_blend == 0) {
+			acc = acc + c * (1.0 - acc.a); // Premultiplied "under" (top-down), in-register.
+		} else if (u_blend == 1) {
+			acc.rgb += c.rgb; // Additive: order-independent sum.
+		} else if (u_blend == 2) {
+			trans *= (1.0 - c.a) + c.rgb; // Multiply: accumulate per-channel gain.
+		} else {
+			acc.rgb += (1.0 - acc.rgb) * c.rgb; // Screen: per-channel under-composite.
+		}
 	}
 
-	if (u_alpha_discard != 0 && acc.a == 0.0) discard;
+	// Non-normal runs write alpha 0 (canvas alpha preserved by the run's blend state);
+	// multiply outputs its accumulated gain for the DST_COLOR/ZERO composite.
+	if (u_blend == 2) acc = vec4(trans, 0.0);
+	else if (u_blend != 0) acc.a = 0.0;
+	if (u_alpha_discard != 0 && u_blend == 0 && acc.a == 0.0) discard;
 	result = acc;
 }
 )";

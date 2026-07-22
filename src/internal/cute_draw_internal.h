@@ -80,6 +80,7 @@ struct BatchGeometry
 	bool csg_operand;         // Operand of a preceding CSG head; skipped by direct walks.
 	int csg_op;               // CF_ShapeOp folding this operand into the running distance.
 	float csg_k;              // Smoothing constant for csg_op (0 = hard min/max).
+	int blend;                // CF_DrawBlend. Runs split at changes; see s_flush_pending_geoms.
 	CF_Color user_params;
 	// Text glyphs and raw triangles are mutually exclusive; overlay their extras.
 	union {
@@ -114,6 +115,20 @@ struct CF_Strike
 	CF_Color color;
 };
 
+// Baked vector path (cf_draw_path_end): quadratic Beziers encoded into an RGBA8 atlas
+// block exactly like curve-text glyph strips (3 texels per curve, 16-bit fixed-point
+// coords as fractions of box_min..box_max), except paths may span multiple rows.
+// Keyed by image_id (the public CF_DrawPath id) in CF_Draw::draw_paths.
+struct CF_DrawPathData
+{
+	CF_Pixel* pixels;
+	int curve_count;
+	int strip_w; // Texel dimensions of the encoded block.
+	int strip_h;
+	CF_V2 box_min; // Path bounds in local units, the quantization box.
+	CF_V2 box_max;
+};
+
 // Per-flush sprite/text atlas record, parallel to CF_Draw::pending_geoms. Filled by the
 // atlas_cache callbacks; texture_id stays 0 for shapes.
 struct CF_PendingUV
@@ -143,7 +158,7 @@ struct CF_TileCmd
 	uint32_t payload; // Offset into the payload buffer, in vec4 units.
 	uint32_t inv_mvp; // Offset of the inverse mvp (2 vec4s) in the payload buffer. SDF shapes only.
 	float radius, stroke, aa, alpha;
-	float fill, n, opaque, unused1; // opaque: filled SDF shape at full alpha -- opaque-cover cull candidate.
+	float fill, n, opaque, unused1; // opaque: filled SDF shape at full alpha AND normal blend -- opaque-cover cull candidate.
 	float user[4]; // User params (ShaderParams.attributes for custom draw shaders).
 };
 
@@ -203,6 +218,12 @@ struct CF_Command
 	// Every drawable's geometry in record (paint) order -- shapes, sprites, text.
 	// Sprites/text additionally have an `items` atlas entry whose seq indexes here.
 	Cute::Array<BatchGeometry> geoms;
+	// Draw list replay (cf_draw_list): geometry borrowed from the list, flattened into
+	// the pending stream at collate time with replay_mvp composed on and the AA band
+	// rescaled -- replays never deep-copy geometry. NULL for ordinary commands.
+	const Cute::Array<BatchGeometry>* geoms_ref = NULL;
+	CF_M3x2 replay_mvp;
+	float replay_aa_scale = 1.0f;
 };
 
 // Pushes a sprite/text atlas entry whose geometry was just appended via s_push_geom().
@@ -272,6 +293,7 @@ struct CF_Draw
 	CF_Arena uniform_arena;
 	Cute::Array<float> alpha_discards = { 1.0f };
 	Cute::Array<CF_DrawFilterMode> filter_modes = { CF_DRAW_FILTER_SMOOTH };
+	Cute::Array<int> blends = { 0 }; // CF_DrawBlend stack (cf_draw_push_blend).
 	Cute::Array<CF_Color> colors = { cf_color_white() };
 	Cute::Array<float> antialias = { 1.5f };
 	Cute::Array<CF_RenderState> render_states;
@@ -306,6 +328,15 @@ struct CF_Draw
 	Cute::Array<bool> text_curves = { true };
 	Cute::Array<float> text_strokes = { 0 };
 	Cute::Map<CF_AtlasSubImage> premade_sub_image_id_to_sub_image;
+	// Baked vector paths (cf_draw_path_end), keyed by image id in the path id range.
+	Cute::Map<CF_DrawPathData> draw_paths;
+	uint64_t path_image_id_gen = 0; // Seeded to CF_PATH_ID_RANGE_LO in cf_make_draw.
+	// Retained draw lists (cf_make_draw_list). While recording, commands append to
+	// `cmds` past recording_mark and move into the list at cf_draw_list_end.
+	Cute::Map<struct CF_DrawListData*> draw_lists;
+	uint64_t draw_list_id_gen = 1;
+	struct CF_DrawListData* recording_list = NULL;
+	int recording_mark = 0;
 	// User SDF snippets registered via cf_make_custom_shape, in dispatch-index order.
 	// Stitched into custom_shapes.shd and compiled into every SDF command pipeline.
 	Cute::Array<Cute::String> custom_shape_srcs;
@@ -363,6 +394,15 @@ struct CF_Draw
 	void* sampler_linear = NULL;
 };
 
+// Retained draw list contents: deep copies of recorded commands (list-local
+// transforms; replay composes the current camera on top) plus owned copies of any
+// recorded uniform data (the live path arena resets every frame).
+struct CF_DrawListData
+{
+	Cute::Array<CF_Command> cmds;
+	Cute::Array<void*> uniform_blocks;
+};
+
 void cf_make_draw();
 void cf_destroy_draw();
 
@@ -379,6 +419,8 @@ void cf_destroy_draw();
 #define CF_EASY_ID_RANGE_HI      (CF_EASY_ID_RANGE_LO     + CF_IMAGE_ID_RANGE_SIZE)
 #define CF_PREMADE_ID_RANGE_LO   (CF_EASY_ID_RANGE_HI     + 1)
 #define CF_PREMADE_ID_RANGE_HI   (CF_PREMADE_ID_RANGE_LO  + CF_IMAGE_ID_RANGE_SIZE)
+#define CF_PATH_ID_RANGE_LO      (CF_PREMADE_ID_RANGE_HI  + 1)
+#define CF_PATH_ID_RANGE_HI      (CF_PATH_ID_RANGE_LO     + CF_IMAGE_ID_RANGE_SIZE)
 
 ATLAS_CACHE_U64 cf_generate_texture_handle(void* pixels, int w, int h, void* udata);
 void cf_destroy_texture_handle(ATLAS_CACHE_U64 texture_id, void* udata);

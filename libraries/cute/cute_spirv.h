@@ -3980,7 +3980,8 @@ static cspv_value cspv_gen_call(cspv_ctx* ctx, cspv_expr* e)
 		typedef struct { uint32_t temp; int arg; } cspv_copy_out;
 		CK_DYNA cspv_copy_out* copy_outs = NULL;
 
-		uint32_t w[4 + 8];
+		// 3 header words (type, result, callee) + up to 16 call arguments.
+		uint32_t w[3 + 16];
 		int n = 0;
 		uint32_t result = cspv_new_id(ctx);
 		w[n++] = cspv_type_id(ctx, chosen->type);
