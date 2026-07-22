@@ -34,63 +34,8 @@ jobs:
       - name: Generate documentation
         run: ./docsparser
 
-      - name: Setup CCache (native)
-        uses: hendrikmuhs/ccache-action@v1.2
-        with:
-          key: docs-native
-
-      - name: Configure native build
-        run: |
-          cmake -S . -B build-native -GNinja \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_C_COMPILER_LAUNCHER=ccache \
-            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
-            -DCF_FRAMEWORK_BUILD_SAMPLES=OFF \
-            -DCF_FRAMEWORK_BUILD_TESTS=OFF \
-            -DCF_RUNTIME_SHADER_COMPILATION=OFF \
-            -DCF_CUTE_SHADERC=ON \
-            -DCF_BUILD_DOCSPARSER=OFF \
-            -DSDL_AUDIO=OFF \
-            -DSDL_CAMERA=OFF \
-            -DSDL_DBUS=OFF \
-            -DSDL_DIALOG=OFF \
-            -DSDL_DIRECTX=OFF \
-            -DSDL_HAPTIC=OFF \
-            -DSDL_HIDAPI=OFF \
-            -DSDL_JOYSTICK=OFF \
-            -DSDL_KMSDRM=OFF \
-            -DSDL_METAL=OFF \
-            -DSDL_OFFSCREEN=OFF \
-            -DSDL_OPENGL=OFF \
-            -DSDL_OPENGLES=OFF \
-            -DSDL_POWER=OFF \
-            -DSDL_RENDER=OFF \
-            -DSDL_SENSOR=OFF \
-            -DSDL_TESTS=OFF \
-            -DSDL_UNIX_CONSOLE_BUILD=ON \
-            -DSDL_VULKAN=OFF \
-            -DSDL_WAYLAND=OFF \
-            -DSDL_X11=OFF
-
-      - name: Build cute-shaderc
-        run: cmake --build build-native --target cute-shaderc
-
-      - name: Generate precompiled shader headers
-        run: |
-          echo "Compiling builtin shaders..."
-          build-native/cute-shaderc \
-            -type=builtin \
-            -oheader=src/data/builtin_shaders_bytecode.h
-          find samples -name "*.shd" | while read shd_file; do
-            dir=$(dirname "$shd_file")
-            base=$(basename "$shd_file" .shd)
-            echo "Compiling shader: $shd_file -> ${dir}/${base}_shd.h"
-            build-native/cute-shaderc \
-              -type=draw \
-              -varname="s_${base}_shd_bytecode" \
-              -oheader="${dir}/${base}_shd.h" \
-              "$shd_file"
-          done
+      # Shaders compile at runtime on all platforms (including web), so the web
+      # sample builds below need no precompiled shader headers.
 
       - name: Set up Emscripten
         uses: mymindstorm/setup-emsdk@v14

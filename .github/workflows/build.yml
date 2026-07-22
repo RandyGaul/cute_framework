@@ -5,7 +5,7 @@ on: [push, pull_request, workflow_dispatch]
 
 jobs:
   build:
-    name: "${{ matrix.os }} / ${{ matrix.compiler }} / ${{ matrix.runtime_shader_compilation == 'ON' && 'runtime-shaders' || 'precompiled-shaders' }} / ${{ matrix.framework_static == 'ON' && 'static' || 'shared' }}"
+    name: "${{ matrix.os }} / ${{ matrix.compiler }} / ${{ matrix.framework_static == 'ON' && 'static' || 'shared' }}"
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
 
@@ -19,7 +19,6 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-2025-vs2026]
         compiler: [gcc, clang, msvc]
-        runtime_shader_compilation: [ON, OFF]
         framework_static: [ON, OFF]
         exclude:
           # msvc is only available on Windows
@@ -60,7 +59,7 @@ jobs:
       - name: Setup CCache
         uses: hendrikmuhs/ccache-action@v1.2
         with:
-          key: ${{ runner.os }}-${{matrix.compiler}}-${{ matrix.runtime_shader_compilation }}-${{ matrix.framework_static }}
+          key: ${{ runner.os }}-${{matrix.compiler}}-${{ matrix.framework_static }}
 
       - name: Set up MSVC developer environment
         uses: ilammy/msvc-dev-cmd@v1
@@ -104,7 +103,6 @@ jobs:
           -DSDL_SNDIO=OFF
           -DSDL_WAYLAND=OFF
           -DSDL_X11=ON
-          -DCF_RUNTIME_SHADER_COMPILATION=${{ matrix.runtime_shader_compilation }}
           -DCF_FRAMEWORK_STATIC=${{ matrix.framework_static }}
 
       - name: Build
@@ -120,6 +118,9 @@ jobs:
       - name: Tests
         if: runner.os != 'Linux'
         run: ./build/tests
+
+      - name: Shader Compiler Tests
+        run: ./build/cute-spirv-tests
 
       - name: Generate artifacts for Windows
         shell: cmd
@@ -150,14 +151,14 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.os }}-${{ matrix.compiler }}-shader-${{ matrix.runtime_shader_compilation == 'ON' && 'runtime-shaders' || 'precompiled-shaders' }}-${{ matrix.framework_static == 'ON' && 'static' || 'shared' }}
+          name: ${{ matrix.os }}-${{ matrix.compiler }}-${{ matrix.framework_static == 'ON' && 'static' || 'shared' }}
           if-no-files-found: error
           path: |
             artifact.zip
             artifact.tar.gz
 
   emscripten:
-    name: "emscripten / emcc / precompiled-shaders / static"
+    name: "emscripten / emcc / static"
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
