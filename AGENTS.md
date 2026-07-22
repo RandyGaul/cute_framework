@@ -8,10 +8,10 @@ Cute Framework is a **2D game development framework** written in C/C++ designed 
 
 **Key Features**:
 - Cross-platform support with SDL3 as the platform abstraction layer
-- Modern C++20 codebase with CMake build system (requires CMake 3.14+)
+- Modern C++20 codebase with CMake build system (requires CMake 4.2+)
 - Comprehensive graphics pipeline with shader cross-compilation
 - Full audio, input, networking, and file system support
-- 40+ sample programs demonstrating framework capabilities
+- 50+ sample programs demonstrating framework capabilities
 - Extensive documentation at https://randygaul.github.io/cute_framework/
 
 ## Code Style and Conventions
@@ -47,6 +47,7 @@ When contributing to Cute Framework, follow these established coding conventions
 - C API wrapped in `extern "C"` for C++ compatibility
 - Comprehensive Doxygen-style documentation for public APIs
 - Related functions grouped together with `@related` tags
+- Many headers define enums via X-macro lists (`CF_*_DEFS`)
 
 **Implementation Files** (.cpp/.c):
 - Copyright notice at the top
@@ -96,7 +97,7 @@ When contributing to Cute Framework, follow these established coding conventions
 
 **Conditional Compilation**:
 - Use `#ifdef CF_WINDOWS`, `#ifdef CF_APPLE`, `#ifdef CF_LINUX`, `#ifdef CF_EMSCRIPTEN`
-- Platform detection handled in CMakeLists.txt:30-55
+- Platform detection handled in the `# Platform detection.` block near the top of CMakeLists.txt
 
 **Portability Macros**:
 - `CF_INLINE` - Platform-appropriate inline keyword
@@ -115,6 +116,14 @@ When contributing to Cute Framework, follow these established coding conventions
 - Return `CF_Result` for operations that can fail
 - Use `is_error(result)` to check for errors
 - Provide meaningful error messages via result system
+
+### Deprecation Pattern
+
+When renaming public API functions:
+- The old name remains the real implementation/declaration
+- The new name is a `CF_INLINE` forwarding function
+- The old name gets `@deprecated` in its doc comment
+- C++ wrappers in `namespace Cute` are updated in tandem
 
 ## Build Commands
 
@@ -154,13 +163,12 @@ cmake --build build/debug
 # Run a specific sample
 ./build/debug/[sample_name]
 
-# Key sample programs (40+ available):
-# Basic: hello_triangle, basic_sprite, basic_input, basic_networking
-# Graphics: instancing, indexed_rendering, stencil, render_to_texture
-# Effects: metaballs, waves, fluid_sim, water, particles
-# Games: spaceshooter, platformer, tetris
-# ImGui: imgui, imgui_custom_font, imgui_backend
-# Tools: docs_parser (generates API documentation)
+# Key sample programs (50+ available, see samples/):
+# Basic: hello_triangle, basic_sprite, basic_input, basic_shapes, basic_camera
+# Graphics: basic_instancing, basic_indexed_rendering, stencil_pie_chart, draw_to_texture, compute
+# Effects: metaballs, waves, fluid_sim, shallow_water, rainbow_liquid
+# Games: spaceshooter, platformer
+# ImGui: imgui, imgui_texture
 ```
 
 ## Architecture Overview
@@ -168,17 +176,18 @@ cmake --build build/debug
 ### Core Systems
 
 **Graphics Pipeline**:
-- SDL_gpu-based renderer
-- OpenGL ES 3 renderer for web builds using Emscripten
-- Shader system supports runtime compilation via cute_shader/ subsystem
-- Bytecode generation for cross-platform shader support
+- SDL_gpu-based renderer (src/cute_graphics_sdlgpu.cpp)
+- OpenGL ES 3 renderer for web builds using Emscripten (src/cute_graphics_glad.cpp)
+- Runtime shader compilation always available via CF's own GLSL-to-SPIR-V compiler (libraries/cute/cute_spirv.h)
+- SPIRV-Cross translates SPIR-V for whichever backend is active
 
 **Component Structure**:
 - `src/cute_*.cpp` - Core framework components (app, audio, graphics, input, etc.)
 - `src/internal/cute_*_internal.h` - Internal implementation headers
 - `include/cute_*.h` - Public API headers
 - Single header entry point: `include/cute.h`
-- `libraries/` - External vendored dependencies (imgui, minicoro, stb, etc.
+- `libraries/` - Vendored dependencies (imgui/cimgui, glad, stb, pico, minicoro, single-header cute libs)
+- `tools/` - Shader compiler front-end (cute-shader), offline compiler (cute-shaderc), docs_parser
 
 **Rendering Architecture**:
 - Mesh system with vertex attributes (CF_MeshInternal)
@@ -192,21 +201,27 @@ cmake --build build/debug
 ### Platform Support
 
 The framework uses SDL3 as the platform abstraction layer and supports:
-- Windows (D3D11/D3D12/Vulkan)
+- Windows (D3D12/Vulkan)
 - macOS/iOS (Metal)
 - Linux (Vulkan/OpenGL)
 - Web (WebGL2/OpenGL ES3 via Emscripten)
 
-Platform detection happens in CMakeLists.txt:30-55, with specific build configurations for each target.
+Platform detection happens in the `# Platform detection.` block near the top of CMakeLists.txt, with specific build configurations for each target.
 
 ### Dependencies
 
-**External Libraries** (in libraries/):
-- SDL3 (fetched via CMake)
-- SDL3_shadercross (shader cross-compilation)
+**Vendored** (in libraries/):
+- SDL3_shadercross (SPIR-V to backend shader translation)
+- imgui + cimgui (immediate mode GUI)
+- glad (OpenGL loader for web builds)
+- stb, pico (pico_unit), edubart (minicoro), dxc
+- cute/ (single-header cute libs: ckit.h, cute_spirv.h, cute_net.h, cute_sound.h, ...)
+
+**Fetched via CMake FetchContent**:
+- SDL3 (release archive; Emscripten provides its own)
 - PhysicsFS (virtual filesystem)
-- imgui (immediate mode GUI)
-- glad (OpenGL loader)
+- SPIRV-Cross (shader translation)
+- s2n (TLS, Linux only)
 
 **Internal Libraries** (in src/internal/):
 - yyjson (JSON parsing)
@@ -215,11 +230,11 @@ Platform detection happens in CMakeLists.txt:30-55, with specific build configur
 ### Shader System
 
 The framework has a sophisticated shader compilation pipeline:
-- Runtime compilation support (always available; CF ships its own compiler, see libraries/cute/cute_spirv.h)
-- Offline compiler tool (cute-shaderc)
-- Cross-platform bytecode generation
-- Builtin shaders in src/cute_shader/builtin_shaders.h
-- Bytecode cache in src/data/builtin_shaders_bytecode.h
+- Runtime compilation always available; CF ships its own GLSL-to-SPIR-V compiler (libraries/cute/cute_spirv.h, no external dependencies)
+- Front-end library cute-shader (tools/cute_shader.cpp); SPIRV-Cross translates SPIR-V for the active backend
+- Offline compiler tool cute-shaderc (tools/cute_shaderc.cpp, CF_CUTE_SHADERC option)
+- Builtin shaders in tools/builtin_shaders.h
+- Compiler unit tests: cute-spirv-tests (tools/cute_spirv_test.c)
 
 ### File Organization
 
@@ -229,16 +244,17 @@ cute_framework/
 ├── include/              # Public API headers (42 files)
 │   ├── cute.h           # Single header entry point (includes all)
 │   └── cute_*.h         # Individual subsystem headers
-├── src/                 # Implementation files (37 C++ files)
+├── src/                 # Implementation files (33 C++ files)
 │   ├── cute_*.cpp       # Core framework components
-│   ├── internal/        # Internal implementation headers
-│   └── cute_shader/     # Shader compilation system
-├── libraries/           # External dependencies
-│   ├── dear_bindings/   # ImGui with SDL3 backend
-│   ├── physfs/          # Virtual filesystem
-│   └── [various single-header libs]
-├── samples/             # 40+ example programs
-├── test/                # Unit tests (15+ modules using pico_unit)
+│   ├── internal/        # Internal implementation headers (+ yyjson)
+│   └── data/            # Embedded data (joypad mapping db, fonts)
+├── tools/               # cute-shader, cute-shaderc, docs_parser, cute-spirv-tests
+├── libraries/           # Vendored dependencies
+│   ├── cute/            # Single-header cute libs (ckit.h, cute_spirv.h, ...)
+│   ├── imgui/, cimgui/  # Dear ImGui + C bindings
+│   └── [glad, stb, pico, SDL3_shadercross, ...]
+├── samples/             # 50+ example programs
+├── test/                # Unit tests (20+ modules using pico_unit)
 ├── docs/                # MkDocs documentation source
 ├── CMakeLists.txt       # Main build configuration
 ├── README.md            # Project overview
@@ -246,9 +262,8 @@ cute_framework/
 ```
 
 **Key Configuration Files**:
-- `CMakeLists.txt:30-55` - Platform detection and configuration
+- `CMakeLists.txt` - Platform detection (top `# Platform detection.` block) and build options
 - `mkdocs.yml` - Documentation site configuration
-- `msvc2022.cmd` - Windows Visual Studio build helper
 - `web.cmd` - Emscripten web build helper
 
 ### Documentation
