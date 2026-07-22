@@ -5,7 +5,7 @@ The renderer in CF (Cute Framework) has grown into something quite unique since 
 Here's a taste of where this all ends up. This is a night city built from a few *draw lists* -- thousands of buildings, tens of thousands of lit windows, five parallax layers -- recorded once and replayed each frame for about 0.001 milliseconds of CPU time, while a giant moon with a ring of orbiting debris renders live on top using additive, multiply, and screen blend modes. Everything in this frame is drawn by the renderer described on this page.
 
 <p align="center">
-<video src="https://raw.githubusercontent.com/RandyGaul/cute_framework/master/assets/city_night.mp4" autoplay loop muted playsinline width="960" style="max-width:100%"></video>
+<video src="../../assets/city_night.mp4" autoplay loop muted playsinline controls width="960" style="max-width:100%"></video>
 </p>
 
 # Sprites
