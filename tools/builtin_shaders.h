@@ -429,6 +429,125 @@ vec4 sdf(vec4 a, vec4 b, float d)
 }
 )";
 
+// Curve text glyphs: per-pixel coverage evaluated directly from the glyph's quadratic
+// Bezier outline, fetched from an RGBA8 atlas strip (3 texels per curve, two 16-bit
+// fixed-point coords per texel, fractions of the glyph's quantization box).
+//
+// Winding technique after E. Lengyel, "GPU-Centered Font Rendering Directly from Glyph
+// Outlines" (JCGT 2017); the patent has been dedicated to the public domain. Which of a
+// curve's two roots count as ray crossings folds into a 2-bit lookup indexed by the
+// control points' y-sign pattern (the 0x2E74 table). Crossings accumulate fractionally
+// within the pixel footprint instead of as hard +-1 steps -- analytic AA at any scale --
+// and two perpendicular rays average down x/y aliasing. texelFetch carries no implicit
+// derivatives, so everything here is safe inside divergent branches.
+//
+// Consumers must declare the `u_image` sampler and include distance.shd (for safe_div)
+// before including this file.
+static const char* s_glyph = R"(
+vec2 cf_glyph_cp(ivec2 base, int i)
+{
+	vec4 t = texelFetch(u_image, base + ivec2(i, 0), 0) * 255.0;
+	return vec2(t.r + t.g * 256.0, t.b + t.a * 256.0) * (1.0 / 65535.0);
+}
+
+// Fractional crossing count of the +x ray from the origin against one quadratic
+// (control points given relative to the pixel). inv_px converts a crossing's x offset
+// into pixel-footprint coverage.
+float cf_glyph_ray(vec2 a, vec2 b, vec2 c, float inv_px)
+{
+	uint code = 0x2E74u >> (((a.y > 0.0) ? 2u : 0u) + ((b.y > 0.0) ? 4u : 0u) + ((c.y > 0.0) ? 8u : 0u));
+	if ((code & 3u) == 0u) return 0.0;
+	// y(t) = Ay t^2 - 2 By t + a.y. Nearly-straight-in-y curves (lines ride this path
+	// as degenerate quads) fall back to the linear root.
+	float Ay = a.y - 2.0 * b.y + c.y;
+	float By = a.y - b.y;
+	float Ax = a.x - 2.0 * b.x + c.x;
+	float Bx = a.x - b.x;
+	float t1, t2;
+	if (abs(Ay) < 1e-4 * (abs(a.y) + abs(b.y) + abs(c.y))) {
+		t1 = safe_div(0.5 * a.y, By);
+		t2 = t1;
+	} else {
+		float q = sqrt(max(By * By - Ay * a.y, 0.0));
+		t1 = (By - q) / Ay;
+		t2 = (By + q) / Ay;
+	}
+	float cov = 0.0;
+	if ((code & 1u) != 0u) {
+		float x = (Ax * t1 - 2.0 * Bx) * t1 + a.x;
+		cov += clamp(0.5 + x * inv_px, 0.0, 1.0);
+	}
+	if ((code & 2u) != 0u) {
+		float x = (Ax * t2 - 2.0 * Bx) * t2 + a.x;
+		cov -= clamp(0.5 + x * inv_px, 0.0, 1.0);
+	}
+	return cov;
+}
+
+// Exact nearest squared distance from the origin to one quadratic, via the closed-form
+// cubic solve (Cardano), after I. Quilez's construction. The strip's line encoding
+// {p1, p2, p2} keeps the t^2 coefficient nonzero for straight lines; the eps guard
+// covers the measure-zero case of an off-curve point exactly at a chord midpoint.
+float cf_glyph_dist_sq(vec2 A, vec2 B, vec2 C)
+{
+	vec2 a = B - A;
+	vec2 b = A - 2.0 * B + C;
+	vec2 c = a * 2.0;
+	vec2 d = A;
+	float kk = 1.0 / max(dot(b, b), 1e-12);
+	float kx = kk * dot(a, b);
+	float ky = kk * (2.0 * dot(a, a) + dot(d, b)) / 3.0;
+	float kz = kk * dot(d, a);
+	float p = ky - kx * kx;
+	float p3 = p * p * p;
+	float q = kx * (2.0 * kx * kx - 3.0 * ky) + kz;
+	float h = q * q + 4.0 * p3;
+	if (h >= 0.0) {
+		h = sqrt(h);
+		vec2 x = (vec2(h, -h) - q) / 2.0;
+		vec2 uv = sign(x) * pow(abs(x), vec2(1.0 / 3.0));
+		float t = clamp(uv.x + uv.y - kx, 0.0, 1.0);
+		vec2 e = d + (c + b * t) * t;
+		return dot(e, e);
+	} else {
+		float z = sqrt(-p);
+		float v = acos(q / (p * z * 2.0)) / 3.0;
+		float m = cos(v);
+		float n = sin(v) * 1.732050808;
+		vec2 t = clamp(vec2(m + m, -n - m) * z - kx, 0.0, 1.0);
+		vec2 e0 = d + (c + b * t.x) * t.x;
+		vec2 e1 = d + (c + b * t.y) * t.y;
+		return min(dot(e0, e0), dot(e1, e1));
+	}
+}
+
+// Coverage (0..1) plus optional unsigned distance for one glyph command. p, q0, e1, e2
+// live in the command's record-time world space; px is that space's per-screen-pixel
+// step along x and y. Sign never matters downstream: fills consume coverage directly
+// and strokes consume abs distance, so the winding sum only needs magnitude.
+float cf_glyph_eval(vec2 p, vec2 q0, vec2 e1, vec2 e2, ivec2 base, int n, vec2 px, bool want_dist, out float dist)
+{
+	float cov_x = 0.0;
+	float cov_y = 0.0;
+	float d_sq = 3.402823e38;
+	float inv_px_x = 1.0 / max(px.x, 1e-12);
+	float inv_px_y = 1.0 / max(px.y, 1e-12);
+	for (int i = 0; i < n; ++i) {
+		vec2 f0 = cf_glyph_cp(base, i * 3);
+		vec2 f1 = cf_glyph_cp(base, i * 3 + 1);
+		vec2 f2 = cf_glyph_cp(base, i * 3 + 2);
+		vec2 a = q0 + f0.x * e1 + f0.y * e2 - p;
+		vec2 b = q0 + f1.x * e1 + f1.y * e2 - p;
+		vec2 c = q0 + f2.x * e1 + f2.y * e2 - p;
+		cov_x += cf_glyph_ray(a, b, c, inv_px_x);
+		cov_y -= cf_glyph_ray(vec2(a.y, a.x), vec2(b.y, b.x), vec2(c.y, c.x), inv_px_y);
+		if (want_dist) d_sq = min(d_sq, cf_glyph_dist_sq(a, b, c));
+	}
+	dist = sqrt(d_sq);
+	return 0.5 * (clamp(abs(cov_x), 0.0, 1.0) + clamp(abs(cov_y), 0.0, 1.0));
+}
+)";
+
 static const char* s_smooth_uv = R"(
 vec2 smooth_uv(vec2 uv, vec2 texture_size)
 {
@@ -514,6 +633,7 @@ vec2 screen_uv;
 #include "gamma.shd"
 #include "smooth_uv.shd"
 #include "distance.shd"
+#include "glyph.shd"
 #include "custom_shapes.shd"
 #include "csg.shd"
 
@@ -553,6 +673,7 @@ void main()
 	bool is_arrow   = v_type >  7.5 && v_type < 8.5;
 	bool is_custom  = v_type >  8.5 && v_type < 9.5;
 	bool is_csg     = v_type >  9.5 && v_type < 10.5;
+	bool is_glyph   = v_type > 10.5 && v_type < 11.5;
 
 	// Traditional sprite/text/tri cases.
 	vec4 c = vec4(0);
@@ -595,8 +716,26 @@ void main()
 		d = custom_sdf(v_n, v_pos, sp_custom);
 	} else if (is_csg) {
 		d = csg_distance(uint(v_po), v_n, v_pos, v_user);
+	} else if (is_glyph) {
+		// Curve glyph: winding coverage from the outline's quadratics. Derivatives are
+		// taken before any pixel-divergent math and the branch is primitive-uniform
+		// (one instance per command), so they stay well-defined.
+		vec4 gp0 = cf_payload(uint(v_po));
+		vec4 gp1 = cf_payload(uint(v_po) + 1u);
+		vec4 gp2 = cf_payload(uint(v_po) + 2u);
+		vec2 gpx = vec2(length(vec2(dFdx(v_pos.x), dFdy(v_pos.x))), length(vec2(dFdx(v_pos.y), dFdy(v_pos.y))));
+		float gd;
+		float gcov = cf_glyph_eval(v_pos, gp0.xy, gp0.zw, gp1.xy, ivec2(gp2.xy), v_n, gpx, v_stroke > 0.0, gd);
+		// Per-corner colors (TL,TR,BR,BL) bilerped by box fraction, matching the
+		// rasterized text path's text-effect gradients.
+		vec4 gc = cf_payload(uint(v_po) + 3u);
+		float gs = clamp(dot(v_pos - gp0.xy, gp0.zw) * gp1.z, 0.0, 1.0);
+		float gt = clamp(dot(v_pos - gp0.xy, gp1.xy) * gp1.w, 0.0, 1.0);
+		vec4 gvcol = mix(mix(cf_unpack_color(floatBitsToUint(gc.w)), cf_unpack_color(floatBitsToUint(gc.z)), gs),
+		                 mix(cf_unpack_color(floatBitsToUint(gc.x)), cf_unpack_color(floatBitsToUint(gc.y)), gs), gt);
+		c = v_stroke > 0.0 ? sdf(vec4(0), gvcol, gd) : gvcol * gcov;
 	}
-	c = (!is_sprite && !is_text && !is_tri) ? sdf(c, v_col, d - v_radius) : c;
+	c = (!is_sprite && !is_text && !is_tri && !is_glyph) ? sdf(c, v_col, d - v_radius) : c;
 	// Polyline bodies: hard bisector-plane clip. Strict on plane0 and inclusive on
 	// plane1 so the shared boundary between neighboring bodies belongs to exactly one.
 	if (is_seg_clip) {
@@ -701,6 +840,7 @@ vec4 cf_payload(uint i) { return payload[i]; }
 #include "gamma.shd"
 #include "smooth_uv.shd"
 #include "distance.shd"
+#include "glyph.shd"
 #include "custom_shapes.shd"
 #include "csg.shd"
 
@@ -715,6 +855,7 @@ vec4 cf_payload(uint i) { return payload[i]; }
 #define CMD_TYPE_ARROW    8u
 #define CMD_TYPE_CUSTOM   9u
 #define CMD_TYPE_CSG      10u
+#define CMD_TYPE_GLYPH    11u
 
 vec2 pts[8];
 
@@ -804,6 +945,28 @@ void main()
 			vec4 c2 = unpackUnorm4x8(floatBitsToUint(P2.z));
 			vec4 vcol = (flags & 1u) != 0u ? c0 * w0 + c1 * w1 + c2 * w2 : col;
 			c = vcol * inside;
+		} else if (type == CMD_TYPE_GLYPH) {
+			// Curve glyph: winding coverage straight from the outline's quadratics
+			// (texelFetch has no implicit derivatives -- a divergent skip is safe here).
+			if (acc.a >= 1.0 || coverage == 0.0) continue;
+			vec4 P0 = payload[po];
+			vec4 P1 = payload[po + 1u];
+			vec4 P2 = payload[po + 2u];
+			// World-per-screen-pixel from the inverse mvp columns (same construction as
+			// the binning cull's r_tile, split per axis for the two AA rays).
+			vec2 dwx = im0.xy * (2.0 / u_canvas_wh.x);
+			vec2 dwy = im0.zw * (2.0 / u_canvas_wh.y);
+			vec2 gpx = vec2(length(vec2(dwx.x, dwy.x)), length(vec2(dwx.y, dwy.y)));
+			float gd;
+			float gcov = cf_glyph_eval(p, P0.xy, P0.zw, P1.xy, ivec2(P2.xy), int(cmd.misc.y), gpx, v_stroke > 0.0, gd);
+			// Per-corner colors (TL,TR,BR,BL) bilerped by box fraction, matching the
+			// rasterized text path's text-effect gradients.
+			vec4 gc = payload[po + 3u];
+			float gs = clamp(dot(p - P0.xy, P0.zw) * P1.z, 0.0, 1.0);
+			float gt = clamp(dot(p - P0.xy, P1.xy) * P1.w, 0.0, 1.0);
+			vec4 gvcol = mix(mix(unpackUnorm4x8(floatBitsToUint(gc.w)), unpackUnorm4x8(floatBitsToUint(gc.z)), gs),
+			                 mix(unpackUnorm4x8(floatBitsToUint(gc.x)), unpackUnorm4x8(floatBitsToUint(gc.y)), gs), gt);
+			c = v_stroke > 0.0 ? sdf(vec4(0), gvcol, gd) : gvcol * gcov;
 		} else {
 			if (acc.a >= 1.0 || coverage == 0.0) continue; // Contribution would be exactly zero.
 			// SDF shapes. Params live in record-time world space; recover it from NDC
@@ -1024,6 +1187,16 @@ void main()
 		// CSG shape group: pre-padded composite bounds are the payload's first vec4;
 		// the fragment stage reads the operand list from the payload directly.
 		pos = vec2(mix(P0.x, P0.z, cx), mix(P0.y, P0.w, cy));
+	} else if (type == 11u) {
+		// Curve glyph: outline-box parallelogram (BL origin + x/y edges), inflated by
+		// stroke + aa along the edge directions.
+		vec2 q0g = P0.xy;
+		vec2 e1g = P0.zw;
+		vec2 e2g = P1.xy;
+		float gpad = cmd.shape.y * 2.0 + cmd.shape.z;
+		vec2 gn1 = safe_norm(e1g, safe_len(e1g)) * gpad;
+		vec2 gn2 = safe_norm(e2g, safe_len(e2g)) * gpad;
+		pos = q0g + e1g * cx + e2g * cy + gn1 * (cx * 2.0 - 1.0) + gn2 * (cy * 2.0 - 1.0);
 	} else {
 		// Polygon: padded AABB of n verts.
 		vec4 P2 = cf_payload(po + 2u);
@@ -1153,7 +1326,7 @@ void main()
 "bool tile_touched(Cmd cmd, int tx, int ty)\n" \
 "{\n" \
 "	uint type = cmd.meta.x;\n" \
-"	if (type <= 1u || type == 4u) return true; /* Sprites/text/raw tris: AABB only. */\n" \
+"	if (type <= 1u || type == 4u || type == 11u) return true; /* Sprites/text/tris/glyphs: AABB only. */\n" \
 "	float r_tile;\n" \
 "	float d = cmd_distance_at(cmd, tx, ty, r_tile);\n" \
 "	return d - cmd.shape.x - cmd.shape.y - cmd.shape.z - r_tile <= 0.0;\n" \
@@ -1381,6 +1554,7 @@ static CF_ShaderCompilerFile s_builtin_includes[] = {
 	{ "gamma.shd", s_gamma },
 	{ "sdf_core.shd", s_sdf_core },
 	{ "distance.shd", s_distance },
+	{ "glyph.shd", s_glyph },
 	{ "smooth_uv.shd", s_smooth_uv },
 	{ "blend.shd", s_blend },
 	// Overridden at runtime with generated content once cf_make_custom_shape() has

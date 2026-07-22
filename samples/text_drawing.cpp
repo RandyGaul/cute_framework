@@ -20,6 +20,34 @@ static void draw_text_boxed(const char* text, v2 pos, int len = -1)
 	}
 }
 
+// Text on a curved baseline: one glyph at a time, each rotated to the arc's tangent at
+// its position. Glyphs render from Bezier outlines by default, so the per-glyph
+// rotation stays crisp -- no atlas resampling. center_angle points at the middle of the
+// string; the arc reads left-to-right along the circle's top.
+static void draw_text_arc(const char* text, v2 center, float radius, float center_angle)
+{
+	float total = text_width(text);
+	float a = center_angle + (total * 0.5f) / radius;
+	float ascent = text_height("X"); // Baseline sits on the arc; glyph tops lean inward.
+	const char* p = text;
+	while (*p) {
+		int cp;
+		const char* next = cf_string_decode_UTF8(p, &cp);
+		char glyph[8] = { 0 };
+		CF_MEMCPY(glyph, p, (size_t)(next - p));
+		p = next;
+		float w = text_width(glyph);
+		float half = (w * 0.5f) / radius;
+		a -= half;
+		draw_push();
+		draw_translate(center + V2(cosf(a), sinf(a)) * radius);
+		draw_rotate(a - CF_PI * 0.5f);
+		draw_text(glyph, V2(-w * 0.5f, ascent), -1);
+		draw_pop();
+		a -= half;
+	}
+}
+
 int main(int argc, char* argv[])
 {
 	make_app("Text Drawing", 0, 0, 0, 1280, 900, CF_APP_OPTIONS_WINDOW_POS_CENTERED_BIT | CF_APP_OPTIONS_RESIZABLE_BIT, argv[0]);
@@ -177,6 +205,50 @@ int main(int argc, char* argv[])
 		push_font_size(30);
 		draw_text_boxed("<strike>Strikethrough on proportional font</strike>", V2(gx, gy - step*9));
 		draw_text_boxed("<wave><strike>wavy strike on proportional font</strike></wave>", V2(gx, gy - step*10));
+		pop_font_size();
+
+		// Underline markup: default thickness, explicit thickness, and riding a wave.
+		push_font_size(26);
+		draw_text_boxed("<underline>Underlined</underline>, <underline underline=3>thick</underline>, and <wave><underline>wavy</underline></wave>.", V2(gx, gy - step*11));
+		pop_font_size();
+
+		// Outlined text via cf_push_text_stroke (curve glyphs, no pre-baked outline font
+		// needed), plus a filled+outline combo by drawing the same string twice.
+		push_font_size(30);
+		push_text_stroke(0.8f);
+		draw_push_color(make_color(0.45f, 0.85f, 1.0f));
+		draw_text_boxed("Outline only", V2(gx, gy - step*12));
+		draw_pop_color();
+		draw_push_color(color_black());
+		draw_text_boxed("filled + outline", V2(gx + 210, gy - step*12));
+		draw_pop_color();
+		pop_text_stroke();
+		draw_push_color(make_color(1.0f, 0.8f, 0.2f));
+		draw_text_boxed("filled + outline", V2(gx + 210, gy - step*12));
+		draw_pop_color();
+		pop_font_size();
+
+		// Crisp directional drop shadow: the same string twice with an animated offset.
+		// No blur involved, so the shadow copy stays as sharp as the fill at any scale.
+		{
+			push_font_size(36);
+			v2 shadow_pos = V2(350, 150);
+			v2 shadow_dir = V2(cosf((float)CF_SECONDS * 0.7f), sinf((float)CF_SECONDS * 0.7f)) * 7.0f;
+			draw_push_color(make_color(0.0f, 0.0f, 0.0f, 0.85f));
+			draw_text("directional shadow", shadow_pos + shadow_dir, -1);
+			draw_pop_color();
+			draw_push_color(make_color(1.0f, 0.85f, 0.3f));
+			draw_text_boxed("directional shadow", shadow_pos);
+			draw_pop_color();
+			pop_font_size();
+		}
+
+		// Text on a curved baseline, swaying. Per-glyph rotation stays crisp on the
+		// curve path.
+		push_font_size(30);
+		draw_push_color(make_color(0.6f, 1.0f, 0.6f));
+		draw_text_arc("~ curved baseline text ~", V2(460, 210), 130.0f, CF_PI * 0.5f + sinf((float)CF_SECONDS * 0.6f) * 0.25f);
+		draw_pop_color();
 		pop_font_size();
 
 		// Font style tags via cf_text_effect_set_font / built-in <font> markup (#349).

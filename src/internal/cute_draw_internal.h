@@ -52,6 +52,13 @@ enum BatchGeometryType : int
 	// `n` operand geoms that immediately follow it in the geometry stream (each tagged
 	// csg_operand with its own csg_op/csg_k). box holds the pre-padded union bounds.
 	BATCH_GEOMETRY_TYPE_CSG,
+
+	// Curve text glyph (cf_push_text_curves): rendered per-pixel from the glyph's
+	// quadratic Bezier outline instead of a rasterized atlas bitmap. The curves live in
+	// an atlas strip (see CF_CurveGlyph); the atlas item's uv rect locates it. shape[0..3]
+	// hold the outline box's world quad (TL,TR,BR,BL like sprites), n is the curve count,
+	// box the padded coverage quad. stroke > 0 renders an outline instead of a fill.
+	BATCH_GEOMETRY_TYPE_GLYPH,
 };
 
 struct BatchGeometry
@@ -131,7 +138,7 @@ struct CF_PendingUV
 struct CF_TileCmd
 {
 	float aabb[4];    // Pixel-space bounds, top-left origin: min.xy, max.xy.
-	uint32_t type;    // Shape type id, 0-10 (see s_tile_fs / s_inst_vs).
+	uint32_t type;    // Shape type id, 0-11 (see s_tile_fs / s_inst_vs).
 	uint32_t color;   // rgba8
 	uint32_t payload; // Offset into the payload buffer, in vec4 units.
 	uint32_t inv_mvp; // Offset of the inverse mvp (2 vec4s) in the payload buffer. SDF shapes only.
@@ -294,7 +301,10 @@ struct CF_Draw
 	Cute::Array<bool> vertical = { false };
 	Cute::Array<uint64_t> text_ids = { 0 };
 	Cute::Array<CF_Strike> strikes;
+	Cute::Array<CF_Strike> underlines;
 	Cute::Array<bool> text_effects = { true };
+	Cute::Array<bool> text_curves = { true };
+	Cute::Array<float> text_strokes = { 0 };
 	Cute::Map<CF_AtlasSubImage> premade_sub_image_id_to_sub_image;
 	// User SDF snippets registered via cf_make_custom_shape, in dispatch-index order.
 	// Stitched into custom_shapes.shd and compiled into every SDF command pipeline.

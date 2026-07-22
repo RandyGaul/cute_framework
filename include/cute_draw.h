@@ -1309,6 +1309,63 @@ CF_API bool CF_CALL cf_pop_text_effect_active(void);
 CF_API bool CF_CALL cf_peek_text_effect_active(void);
 
 /**
+ * @function cf_push_text_curves
+ * @category text
+ * @brief    Turns on/off curve text rendering.
+ * @remarks  On by default: glyphs render per-pixel from their quadratic Bezier outlines instead of
+ *           rasterized atlas bitmaps -- resolution-independent, so text stays crisp under any camera
+ *           zoom or rotation with no re-rasterization, and `cf_push_text_stroke` renders outlined
+ *           text. Layout, kerning, wrapping, and text effects are identical on both paths. Push
+ *           false to force the rasterized atlas path. Blurred text (`cf_push_font_blur`) always
+ *           uses the rasterized path.
+ * @related  cf_push_text_curves cf_pop_text_curves cf_peek_text_curves cf_push_text_stroke
+ */
+CF_API void CF_CALL cf_push_text_curves(bool curves_on);
+
+/**
+ * @function cf_pop_text_curves
+ * @category text
+ * @brief    Pops the previously pushed curve text state. See `cf_push_text_curves`.
+ * @related  cf_push_text_curves cf_pop_text_curves cf_peek_text_curves cf_push_text_stroke
+ */
+CF_API bool CF_CALL cf_pop_text_curves(void);
+
+/**
+ * @function cf_peek_text_curves
+ * @category text
+ * @brief    Returns the last curve text state.
+ * @related  cf_push_text_curves cf_pop_text_curves cf_peek_text_curves cf_push_text_stroke
+ */
+CF_API bool CF_CALL cf_peek_text_curves(void);
+
+/**
+ * @function cf_push_text_stroke
+ * @category text
+ * @brief    Sets a stroke thickness for text, rendering glyph outlines instead of fills.
+ * @param    stroke       Stroke thickness in world units. 0 (the default) renders filled glyphs.
+ * @remarks  A nonzero stroke implies curve rendering for that text, even if `cf_push_text_curves`
+ *           pushed false. Blurred text (`cf_push_font_blur`) cannot stroke -- blur wins.
+ * @related  cf_push_text_curves cf_push_text_stroke cf_pop_text_stroke cf_peek_text_stroke
+ */
+CF_API void CF_CALL cf_push_text_stroke(float stroke);
+
+/**
+ * @function cf_pop_text_stroke
+ * @category text
+ * @brief    Pops the previously pushed text stroke thickness. See `cf_push_text_stroke`.
+ * @related  cf_push_text_curves cf_push_text_stroke cf_pop_text_stroke cf_peek_text_stroke
+ */
+CF_API float CF_CALL cf_pop_text_stroke(void);
+
+/**
+ * @function cf_peek_text_stroke
+ * @category text
+ * @brief    Returns the last text stroke thickness.
+ * @related  cf_push_text_curves cf_push_text_stroke cf_pop_text_stroke cf_peek_text_stroke
+ */
+CF_API float CF_CALL cf_peek_text_stroke(void);
+
+/**
  * @function cf_draw_push_viewport
  * @category draw
  * @brief    Pushes a `CF_Rect` for the viewport to render within.
@@ -2073,6 +2130,12 @@ CF_INLINE bool peek_text_effect_active() { return cf_peek_text_effect_active(); 
 CF_INLINE void push_text_vertical_layout(bool layout_vertically) { cf_push_text_vertical_layout(layout_vertically); }
 CF_INLINE bool pop_text_vertical_layout() { return cf_pop_text_vertical_layout(); }
 CF_INLINE bool peek_text_vertical_layout() { return cf_peek_text_vertical_layout(); }
+CF_INLINE void push_text_curves(bool curves_on) { cf_push_text_curves(curves_on); }
+CF_INLINE bool pop_text_curves() { return cf_pop_text_curves(); }
+CF_INLINE bool peek_text_curves() { return cf_peek_text_curves(); }
+CF_INLINE void push_text_stroke(float stroke) { cf_push_text_stroke(stroke); }
+CF_INLINE float pop_text_stroke() { return cf_pop_text_stroke(); }
+CF_INLINE float peek_text_stroke() { return cf_peek_text_stroke(); }
 
 CF_INLINE void draw_push_viewport(CF_Rect viewport) { cf_draw_push_viewport(viewport); }
 CF_INLINE CF_Rect draw_pop_viewport() { return cf_draw_pop_viewport(); }

@@ -40,6 +40,7 @@ add_sample(basicsprite basic_sprite.cpp)
 add_sample(basicshapes basic_shapes.cpp)
 add_sample(custom_shapes custom_shapes.cpp)
 add_sample(mandala mandala.cpp)
+add_sample(vector_text vector_text.cpp)
 target_include_directories(mandala PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../src) # internal/cute_draw_internal.h for renderer toggles/stats.
 add_sample(tile_perf tile_perf.cpp)
 target_include_directories(tile_perf PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../src) # internal/cute_draw_internal.h for the tiled toggle.
