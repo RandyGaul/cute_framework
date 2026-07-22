@@ -28,7 +28,6 @@ typedef enum
 	SHADER_TYPE_FRAGMENT,
 	SHADER_TYPE_COMPUTE,
 	SHADER_TYPE_DRAW,
-	SHADER_TYPE_BUILTIN,
 } shader_type_t;
 
 static const char* parse_flag(const char* arg, const char* flag_name)
@@ -394,8 +393,6 @@ int main(int argc, const char* argv[])
 				type = SHADER_TYPE_COMPUTE;
 			} else if (strcmp(flag_value, "draw") == 0) {
 				type = SHADER_TYPE_DRAW;
-			} else if (strcmp(flag_value, "builtin") == 0) {
-				type = SHADER_TYPE_BUILTIN;
 			} else {
 				fprintf(stderr, "Invalid shader type: %s\n", flag_value);
 				return 1;
@@ -435,12 +432,7 @@ int main(int argc, const char* argv[])
 		}
 	}
 
-	if (type == SHADER_TYPE_BUILTIN) {
-		if (output_header_path == NULL) {
-			fprintf(stderr, "Please specify %s\n", FLAG_HEADER_OUT);
-			return 1;
-		}
-	} else {
+	{
 		if (input_path == NULL) {
 			fprintf(stderr, "Please specify an input, use --help for more info\n");
 			fprintf(stderr, "You can also visit https://randygaul.github.io/cute_framework/topics/shader_compilation\n");
@@ -478,12 +470,10 @@ int main(int argc, const char* argv[])
 
 	int return_code = 1;
 	char* input_content = NULL;
-	if (type != SHADER_TYPE_BUILTIN) {
-		input_content = read_file(input_path);
-		if (input_content == NULL) {
-			perror("Error while reading input");
-			goto end;
-		}
+	input_content = read_file(input_path);
+	if (input_content == NULL) {
+		perror("Error while reading input");
+		goto end;
 	}
 
 	if (type == SHADER_TYPE_DRAW) {
@@ -574,114 +564,6 @@ int main(int argc, const char* argv[])
 		cute_shader_free_result(draw_gles_result);
 		cute_shader_free_result(blit_shader_result);
 		if (!wrote_ok) goto end;
-	} else if (type == SHADER_TYPE_BUILTIN) {
-		FILE* output_file = fopen(output_header_path, "wb");
-		if (output_file == NULL) {
-			perror("Error while writing header");
-			goto end;
-		}
-
-		fprintf(output_file, "#pragma once\n\n");
-
-		// Compile and write each builtin shader
-		builtin_includes[num_builtin_includes++] = {
-			.name = "shader_stub.shd",
-			.content = s_shader_stub,
-		};
-		CF_ShaderCompilerConfig config = {
-			.num_builtin_includes = num_builtin_includes,
-			.builtin_includes = builtin_includes,
-
-			.num_include_dirs = num_includes,
-			.include_dirs = include_dirs,
-
-			.automatic_include_guard = true,
-			.return_preprocessed_source = true,
-		};
-
-		int num_builtin_shaders = sizeof(s_builtin_shader_sources) / sizeof(s_builtin_shader_sources[0]);
-		for (int i = 0; i < num_builtin_shaders; ++i) {
-			CF_BuiltinShaderSource source = s_builtin_shader_sources[i];
-			config.skip_glsl300 = source.no_gles;
-
-			CF_ShaderCompilerResult vertex_result = cute_shader_compile(
-				source.vertex, CUTE_SHADER_STAGE_VERTEX, config
-			);
-			if (!vertex_result.success) {
-				fprintf(stderr, "%s\n", vertex_result.error_message);
-				cute_shader_free_result(vertex_result);
-				fclose(output_file);
-				goto end;
-			}
-			if (!write_bytecode_struct(
-				output_file,
-				vertex_result,
-				source.name, "_vs_bytecode"
-			)) {
-				perror("Error while writing header");
-				cute_shader_free_result(vertex_result);
-				fclose(output_file);
-				goto end;
-			}
-			cute_shader_free_result(vertex_result);
-
-			CF_ShaderCompilerResult fragment_result = cute_shader_compile(
-				source.fragment, CUTE_SHADER_STAGE_FRAGMENT, config
-			);
-			if (!fragment_result.success) {
-				fprintf(stderr, "%s\n", fragment_result.error_message);
-				cute_shader_free_result(fragment_result);
-				fclose(output_file);
-				goto end;
-			}
-			if (!write_bytecode_struct(
-				output_file,
-				fragment_result,
-				source.name, "_fs_bytecode"
-			)) {
-				perror("Error while writing header");
-				cute_shader_free_result(fragment_result);
-				fclose(output_file);
-				goto end;
-			}
-			cute_shader_free_result(fragment_result);
-		}
-
-		// Compile and write each builtin compute shader.
-		config.skip_glsl300 = false; // Ignored -- compute skips GLSL 300 transpile by stage.
-		int num_builtin_compute_shaders = sizeof(s_builtin_compute_shader_sources) / sizeof(s_builtin_compute_shader_sources[0]);
-		for (int i = 0; i < num_builtin_compute_shaders; ++i) {
-			CF_BuiltinComputeShaderSource source = s_builtin_compute_shader_sources[i];
-
-			CF_ShaderCompilerResult compute_result = cute_shader_compile(
-				source.source, CUTE_SHADER_STAGE_COMPUTE, config
-			);
-			if (!compute_result.success) {
-				fprintf(stderr, "%s\n", compute_result.error_message);
-				cute_shader_free_result(compute_result);
-				fclose(output_file);
-				goto end;
-			}
-			if (!write_bytecode_struct(
-				output_file,
-				compute_result,
-				source.name, "_cs_bytecode"
-			)) {
-				perror("Error while writing header");
-				cute_shader_free_result(compute_result);
-				fclose(output_file);
-				goto end;
-			}
-			cute_shader_free_result(compute_result);
-		}
-
-		if (fflush(output_file) != 0) {
-			perror("Error while writing header");
-			fclose(output_file);
-			goto end;
-		}
-
-		fclose(output_file);
 	} else {
 		builtin_includes[num_builtin_includes++] = {
 			.name = "shader_stub.shd",

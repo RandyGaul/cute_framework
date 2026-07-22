@@ -119,6 +119,7 @@ nav:
       - Random Numbers: topics/random_numbers.md
       - A Tour of CF Renderer: topics/renderer.md
       - Shader Compilation: topics/shader_compilation.md
+      - GLSL Support: topics/glsl_support.md
       - Strings: topics/strings.md
       - Virtual File System: topics/virtual_file_system.md
       - HTTPS: topics/web.md

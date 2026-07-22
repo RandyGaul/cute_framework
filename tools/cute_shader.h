@@ -2,7 +2,6 @@
 #define CUTE_SHADER_H
 
 #include <cute_shader_bytecode.h>
-#include <SDL3_shadercross/spirv.h>
 
 typedef struct CF_ShaderCompilerDefine
 {
@@ -44,10 +43,15 @@ typedef struct CF_ShaderCompilerConfig
 	bool automatic_include_guard;
 	bool return_preprocessed_source;
 
-	// Skip transpilation to GLSL ES 300. For shaders using features GLES3/WebGL2 cannot
-	// express (e.g. storage buffers in the tiled draw path). Such shaders can never run
-	// on the GLES backend; bytecode.glsl300_src will be NULL.
+	// Skip transpilation to GLSL ES 300. Used for shaders using features GLES3/WebGL2
+	// cannot express (e.g. storage buffers in the tiled draw path), and for runtime
+	// compilation on backends that never consume GLSL (D3D12/Vulkan/Metal). Offline
+	// compilation (cute-shaderc) keeps it so bytecode works on every backend.
 	bool skip_glsl300;
+
+	// Optional: when a user draw shader is injected as shader_stub.shd, report its
+	// errors under this name (usually the user's shader path) instead.
+	const char* shader_stub_display_name;
 
 	CF_ShaderCompilerVfs* vfs;
 } CF_ShaderCompilerConfig;
