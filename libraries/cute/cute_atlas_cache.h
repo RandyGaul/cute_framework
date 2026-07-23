@@ -3,7 +3,7 @@
 		Licensing information can be found at the end of the file.
 	------------------------------------------------------------------------------
 
-	cute_atlas_cache.h - v1.10
+	cute_atlas_cache.h - v1.11
 
 	To create implementation (the function definitions)
 		#define ATLAS_CACHE_IMPLEMENTATION
@@ -172,6 +172,12 @@
 		                  errors in atlas creation for custom ATLAS_CACHE_MALLOC macros
 		                  that use their context parameter, and fixed `atlas_cache_fetch`
 		                  to return uv coordinates for premade images.
+		1.11 (07/23/2026) Fixed a use-after-free in `atlas_cache_defrag`: the lonely
+		                  buffer's items pointer was captured before input processing,
+		                  which can insert new entries and reallocate the map's backing
+		                  storage; atlas creation then read the freed array and packed
+		                  garbage blocks (visible as corrupted entries once enough
+		                  distinct images accumulated to cross the map's capacity).
 */
 
 /*
@@ -1883,6 +1889,10 @@ int atlas_cache_defrag(atlas_cache_t* cache)
 	// process input, but don't make textures just yet
 	atlas_cache_internal_process_input(cache, 1);
 	lonely_count = atlas_cache_map_count(&cache->lonely_buffer);
+	// Processing input can insert new lonely entries, and growing the map past its
+	// item capacity reallocates the backing items array -- re-fetch the pointer, or
+	// the atlas creation below reads freed memory and packs garbage blocks.
+	lonely_textures = (atlas_cache_internal_lonely_texture_t*)atlas_cache_map_items(&cache->lonely_buffer);
 
 	// while greater than lonely_buffer_count_till_flush elements in lonely buffer
 	// grab lonely_buffer_count_till_flush of them and make an atlas

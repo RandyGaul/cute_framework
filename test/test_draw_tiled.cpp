@@ -1225,6 +1225,244 @@ TEST_CASE(test_draw_paths)
 	return true;
 }
 
+// Bake-once-draw-forever: a path baked at init and drawn every frame must render
+// identically on every frame. Regression: the atlas cache recycled the path's encoded
+// curve block after a few frames while the path id still referenced it, corrupting
+// the strip (the per-pixel winding evaluation then reads garbage curves).
+TEST_CASE(test_draw_path_bake_once_stability)
+{
+	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, 640, 480, s_app_options(), NULL))) return true; // Headless CI: no display/GPU.
+
+	// Donut baked exactly once, before any frame renders.
+	cf_draw_path_begin();
+	cf_draw_path_move_to(cf_v2(-100, -100));
+	cf_draw_path_line_to(cf_v2(100, -100));
+	cf_draw_path_line_to(cf_v2(100, 100));
+	cf_draw_path_line_to(cf_v2(-100, 100));
+	cf_draw_path_close();
+	cf_draw_path_move_to(cf_v2(-40, -40));
+	cf_draw_path_line_to(cf_v2(-40, 40));
+	cf_draw_path_line_to(cf_v2(40, 40));
+	cf_draw_path_line_to(cf_v2(40, -40));
+	cf_draw_path_close();
+	CF_DrawPath path = cf_draw_path_end();
+	REQUIRE(path.id);
+
+	// A dense wavy ring: enough curves that the encoded block spans multiple texel
+	// rows (> 340 curves), the case glyph strips never hit.
+	cf_draw_path_begin();
+	cf_draw_path_move_to(cf_v2(190, 0));
+	for (int i = 1; i <= 420; ++i) {
+		float t = (float)i / 420.0f * 6.2831853f;
+		float r = 190.0f + 12.0f * sinf(t * 24.0f);
+		cf_draw_path_line_to(cf_v2(cosf(t) * r, sinf(t) * r));
+	}
+	cf_draw_path_close();
+	CF_DrawPath ring = cf_draw_path_end();
+	REQUIRE(ring.id);
+
+	// The donut also rides a retained draw list, replayed every frame (the "prebake
+	// draw calls once" pattern real scenes use).
+	CF_DrawList list = cf_make_draw_list();
+	cf_draw_list_begin(list);
+	cf_draw_push_color(cf_color_white());
+	cf_draw_path_fill(path);
+	cf_draw_path(ring, 3.0f);
+	cf_draw_pop_color();
+	cf_draw_list_end();
+
+	int w = 640, h = 480;
+	CF_Pixel* a = (CF_Pixel*)cf_alloc(w * h * sizeof(CF_Pixel));
+	CF_Pixel* b = (CF_Pixel*)cf_alloc(w * h * sizeof(CF_Pixel));
+	CF_Canvas canvas = cf_make_canvas(cf_canvas_defaults(w, h));
+
+	// Renders one frame of the baked path; reads back the canvas when `out` is given.
+	// Every frame also draws different text well outside the readback area -- new
+	// glyphs mint new atlas entries, so the atlas cache churns (new atlases, merges)
+	// around the path's block exactly like a real app with a HUD does.
+	int frame_number = 0;
+	CF_Canvas scratch = cf_make_canvas(cf_canvas_defaults(128, 128));
+	bool force_tiled = cf_query_backend() != CF_BACKEND_TYPE_GLES3;
+	// A small atlas compresses minutes of real-app atlas pressure (fills, merges,
+	// evictions) into a handful of frames.
+	cf_draw_set_atlas_dimensions(1024, 1024);
+	auto frame = [&](CF_Pixel* out) -> bool {
+		cf_app_update(NULL);
+		if (force_tiled) cf_draw_set_tiled_enabled(true);
+		// An extra pass first, like a real multi-pass frame (the paths flush once per
+		// pass they appear in).
+		cf_draw_push_color(cf_color_white());
+		cf_draw_path(ring, 3.0f);
+		cf_draw_pop_color();
+		cf_render_to(scratch, true);
+		// Blit the scratch canvas far offscreen mid-pass: forces the extra
+		// blit-flush sequencing a real multi-canvas frame has.
+		cf_draw_canvas(scratch, cf_v2(5000, 0), cf_v2(64, 64));
+		cf_draw_list(list);
+		// Fresh short-lived paths every frame (animated content pattern): baked, drawn
+		// offscreen, destroyed after the frame. Their atlas blocks churn around the
+		// long-lived ones.
+		CF_DrawPath tmp_paths[8];
+		for (int p = 0; p < 8; ++p) {
+			cf_draw_path_begin();
+			cf_draw_path_move_to(cf_v2(4000, 0));
+			for (int k = 1; k <= 60; ++k) {
+				float t = (float)(frame_number * 8 + p + k) * 0.37f;
+				cf_draw_path_line_to(cf_v2(4000 + cosf(t) * 50.0f, sinf(t) * 50.0f));
+			}
+			cf_draw_path_close();
+			tmp_paths[p] = cf_draw_path_end();
+			cf_draw_path_fill(tmp_paths[p]);
+		}
+		char churn[64];
+		snprintf(churn, sizeof(churn), "%c%c", 'A' + (frame_number % 26), 'a' + (frame_number / 2) % 26);
+		frame_number++;
+		cf_push_font_size(13 + (frame_number % 7));
+		cf_draw_text(churn, cf_v2(5000, 5000), -1); // Far offscreen: churns the atlas, never touches pixels.
+		cf_pop_font_size();
+		cf_render_to(canvas, true);
+		cf_app_draw_onto_screen(false);
+		for (int p = 0; p < 8; ++p) cf_destroy_path(tmp_paths[p]);
+		if (out) {
+			CF_Readback rb = cf_canvas_readback(canvas);
+			REQUIRE(rb.id);
+			while (!cf_readback_ready(rb)) {}
+			int size = w * h * (int)sizeof(CF_Pixel);
+			REQUIRE(cf_readback_size(rb) == size);
+			cf_readback_data(rb, out, size);
+			cf_destroy_readback(rb);
+		}
+		return true;
+	};
+
+	// Frame 1 must already be correct: donut band solid, hole empty, wavy ring
+	// stroke present left of the donut.
+	REQUIRE(frame(a));
+	int ink, runs, bbox_w;
+	s_ink_stats(a, w, h, &ink, &runs, &bbox_w);
+	REQUIRE(ink > 0);
+	REQUIRE(s_px_near(s_probe(a, w, h, -70), 255, 255, 255, 255, 3)); // Donut band.
+	REQUIRE(s_px_near(s_probe(a, w, h, 0), 0, 0, 0, 0, 3));           // Donut hole.
+	REQUIRE(s_px_near(s_probe(a, w, h, -190), 255, 255, 255, 255, 60)); // Wavy ring stroke (AA tolerant).
+
+	// 30 more frames of nothing-changed rendering; every frame must stay
+	// pixel-identical to frame 1 (texel-fetched curve strips are exact; no filtering).
+	int bad_frames = 0;
+	for (int f = 0; f < 30; ++f) {
+		REQUIRE(frame(b));
+		int diffs = 0;
+		for (int i = 0; i < w * h; ++i) {
+			if (a[i].val != b[i].val) ++diffs;
+		}
+		if (diffs) {
+			++bad_frames;
+			printf("baked path drifted on frame %d: %d/%d pixels differ\n", f + 2, diffs, w * h);
+		}
+	}
+	REQUIRE(bad_frames == 0);
+
+	cf_destroy_draw_list(list);
+	cf_destroy_path(path);
+	cf_destroy_path(ring);
+	cf_destroy_canvas(scratch);
+	cf_destroy_canvas(canvas);
+	cf_free(a);
+	cf_free(b);
+	cf_destroy_app();
+	return true;
+}
+
+// A flood of freshly baked paths, all first drawn in one frame. Regression: the
+// atlas cache's defrag captured its lonely-buffer items pointer before processing
+// the frame's input; inserting the new blocks grew the map past its item capacity
+// (a realloc), and atlas creation then read the freed array -- corrupting every
+// block (including long-lived ones) packed into the rebuilt atlas.
+TEST_CASE(test_draw_path_lonely_flood)
+{
+	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, 640, 480, s_app_options(), NULL))) return true; // Headless CI: no display/GPU.
+
+	// A visible donut probe...
+	cf_draw_path_begin();
+	cf_draw_path_move_to(cf_v2(-100, -100));
+	cf_draw_path_line_to(cf_v2(100, -100));
+	cf_draw_path_line_to(cf_v2(100, 100));
+	cf_draw_path_line_to(cf_v2(-100, 100));
+	cf_draw_path_close();
+	cf_draw_path_move_to(cf_v2(-40, -40));
+	cf_draw_path_line_to(cf_v2(-40, 40));
+	cf_draw_path_line_to(cf_v2(40, 40));
+	cf_draw_path_line_to(cf_v2(40, -40));
+	cf_draw_path_close();
+	CF_DrawPath donut = cf_draw_path_end();
+	REQUIRE(donut.id);
+
+	// ...plus enough unique paths to cross the lonely buffer's initial item
+	// capacity (1024) within a single defrag's input processing.
+	enum { FLOOD = 1200 };
+	static CF_DrawPath flood[FLOOD];
+	for (int i = 0; i < FLOOD; ++i) {
+		float o = (float)i * 0.13f;
+		cf_draw_path_begin();
+		cf_draw_path_move_to(cf_v2(5000, 0));
+		cf_draw_path_line_to(cf_v2(5010 + sinf(o) * 4.0f, 10));
+		cf_draw_path_line_to(cf_v2(5000 + cosf(o) * 4.0f, 20));
+		cf_draw_path_close();
+		flood[i] = cf_draw_path_end();
+		REQUIRE(flood[i].id);
+	}
+
+	int w = 640, h = 480;
+	CF_Pixel* a = (CF_Pixel*)cf_alloc(w * h * sizeof(CF_Pixel));
+	CF_Pixel* b = (CF_Pixel*)cf_alloc(w * h * sizeof(CF_Pixel));
+	CF_Canvas canvas = cf_make_canvas(cf_canvas_defaults(w, h));
+
+	auto frame = [&](bool with_flood, CF_Pixel* out) -> bool {
+		cf_app_update(NULL);
+		cf_draw_push_color(cf_color_white());
+		cf_draw_path_fill(donut);
+		if (with_flood) {
+			for (int i = 0; i < FLOOD; ++i) cf_draw_path_fill(flood[i]); // Far offscreen.
+		}
+		cf_draw_pop_color();
+		cf_render_to(canvas, true);
+		cf_app_draw_onto_screen(false);
+		if (out) {
+			CF_Readback rb = cf_canvas_readback(canvas);
+			REQUIRE(rb.id);
+			while (!cf_readback_ready(rb)) {}
+			int size = w * h * (int)sizeof(CF_Pixel);
+			REQUIRE(cf_readback_size(rb) == size);
+			cf_readback_data(rb, out, size);
+			cf_destroy_readback(rb);
+		}
+		return true;
+	};
+
+	// The flood frame itself must render the donut correctly...
+	REQUIRE(frame(true, a));
+	REQUIRE(s_px_near(s_probe(a, w, h, -70), 255, 255, 255, 255, 3)); // Band.
+	REQUIRE(s_px_near(s_probe(a, w, h, 0), 0, 0, 0, 0, 3));           // Hole.
+
+	// ...and subsequent frames must stay pixel-identical.
+	for (int f = 0; f < 3; ++f) {
+		REQUIRE(frame(false, b));
+		int diffs = 0;
+		for (int i = 0; i < w * h; ++i) {
+			if (a[i].val != b[i].val) ++diffs;
+		}
+		if (diffs) printf("donut corrupted after path flood (frame %d): %d/%d pixels differ\n", f + 2, diffs, w * h);
+		REQUIRE(diffs == 0);
+	}
+
+	for (int i = 0; i < FLOOD; ++i) cf_destroy_path(flood[i]);
+	cf_destroy_path(donut);
+	cf_destroy_canvas(canvas);
+	cf_free(a);
+	cf_free(b);
+	cf_destroy_app();
+	return true;
+}
+
 TEST_CASE(test_draw_blend_modes)
 {
 	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, 640, 480, s_app_options(), NULL))) return true; // Headless CI: no display/GPU.
@@ -1456,5 +1694,7 @@ TEST_SUITE(test_draw_tiled)
 	RUN_TEST_CASE_IF(test_draw_text_curves);
 	RUN_TEST_CASE_IF(test_draw_blend_modes);
 	RUN_TEST_CASE_IF(test_draw_paths);
+	RUN_TEST_CASE_IF(test_draw_path_bake_once_stability);
+	RUN_TEST_CASE_IF(test_draw_path_lonely_flood);
 	RUN_TEST_CASE_IF(test_draw_lists);
 }

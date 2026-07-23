@@ -2827,6 +2827,10 @@ void cf_destroy_path(CF_DrawPath path)
 {
 	CF_DrawPathData* pd = s_draw->draw_paths.try_get(path.id);
 	if (!pd) return;
+	// Release the encoded block from the atlas cache (same as easy sprite destruction)
+	// so dead blocks don't accumulate -- per-frame rebaked paths would otherwise pile
+	// stale entries into every defrag repack forever.
+	atlas_cache_invalidate(&s_draw->atlas_cache, path.id);
 	CF_FREE(pd->pixels);
 	s_draw->draw_paths.remove(path.id);
 }
