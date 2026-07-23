@@ -8,8 +8,8 @@
 //   - CSG shape groups for the cave rock (smooth unions/subtracts, retained draw lists)
 //   - HDR draw colors: scene canvases hold physical units (linear emission,
 //     absorption coefficient per world pixel) with no 8-bit encode dance
-//   - CPU particle water: position-based fluids (XSPH viscosity, basin SDF
-//     contact, soft sleep) + a 1D spring heightfield surface with drip rings,
+//   - CPU particle water: position-based fluids (XSPH viscosity, unified
+//     ground-SDF contact, soft sleep) + a 1D spring heightfield surface with drip rings,
 //     screen-space reflection, foam, spray, and agitation-driven bioluminescence
 //   - Coroutine drip script with synthesized cave plink audio
 //   - A custom SDF jellyfish (cf_make_custom_shape)
@@ -43,9 +43,13 @@
 #define CAVE_ABS_THRESHOLD 0.1f
 
 #define WATERLINE 275.0f
-#define BASIN_CX  515.0f
-#define BASIN_CY  690.0f
-#define BASIN_R   520.0f
+
+// Moon crack through the ceiling: centerline x = CRACK_X0 + (y - CRACK_Y0) * CRACK_SLOPE,
+// ~15 degrees off vertical (light falls down-and-left).
+#define CRACK_Y0     790.0f
+#define CRACK_X0     380.0f
+#define CRACK_SLOPE  0.268f  // tan(15 deg)
+#define CRACK_HALF_W 13.0f
 
 //--------------------------------------------------------------------------------------------------
 // Shader loading.
@@ -471,6 +475,134 @@ void push_additive_f16_render_state()
 }
 
 //--------------------------------------------------------------------------------------------------
+// Unified ground SDF. ONE primitive table drives everything that must agree:
+//   - the CPU particle collision (project onto the SDF along its gradient)
+//   - the rendered rock silhouette (the SAME primitives drawn as a CSG shape
+//     group, so visuals match physics exactly)
+//   - the HRC absorption/diffuse canvases (drawn from those shape groups)
+//   - a baked 256x256 R32F distance texture that cave_water.shd samples to
+//     suppress the surface line under rock and place meniscus dabs
+//
+// The fold below mirrors CF's shape-group math (csg_smin in the tile shader):
+// smooth-union of irregular circles/capsules forming a rocky floor, two
+// smooth-subtracted scoops carving an ASYMMETRIC pool (deep bowl on the west,
+// shallow shelf "beach" on the east), and a rock knuckle unioned back in after
+// the scoops so it pokes through the waterline mid-pool.
+
+typedef struct GroundPrim
+{
+	int kind;   // 0 = circle, 1 = capsule, 2 = axis-aligned box
+	int op;     // CF_ShapeOp folding this primitive into the running distance
+	float k;    // smoothing constant
+	CF_V2 a, b; // circle: a = center; capsule: a/b = endpoints; box: a = min, b = max
+	float r;    // radius (unused for boxes)
+} GroundPrim;
+
+static const GroundPrim ground_prims[] = {
+	// Rocky bedrock + shore masses.
+	{ 2, CF_SHAPE_OP_UNION, 18.0f, { 0, 0 },       { 1024, 120 }, 0 },      // bedrock slab
+	{ 0, CF_SHAPE_OP_UNION, 18.0f, { 70, 280 },    { 0, 0 },      150.0f }, // left shore mound (steep side)
+	{ 0, CF_SHAPE_OP_UNION, 18.0f, { 20, 120 },    { 0, 0 },      170.0f }, // left base
+	{ 0, CF_SHAPE_OP_UNION, 18.0f, { 250, -20 },   { 0, 0 },      170.0f }, // deep floor west
+	{ 0, CF_SHAPE_OP_UNION, 18.0f, { 420, -10 },   { 0, 0 },      170.0f }, // deep floor east
+	{ 0, CF_SHAPE_OP_UNION, 18.0f, { 540, 45 },    { 0, 0 },      175.0f }, // mid-pool sill under the knuckle
+	{ 0, CF_SHAPE_OP_UNION, 18.0f, { 760, 180 },   { 0, 0 },      180.0f }, // shelf mass (scooped into the beach)
+	{ 0, CF_SHAPE_OP_UNION, 18.0f, { 900, 170 },   { 0, 0 },      150.0f }, // beach rise
+	{ 0, CF_SHAPE_OP_UNION, 18.0f, { 1030, 340 },  { 0, 0 },      200.0f }, // right wall base (rune wall)
+	{ 1, CF_SHAPE_OP_UNION, 18.0f, { 18, 420 },    { 35, 1060 },  60.0f },  // left wall
+	{ 1, CF_SHAPE_OP_UNION, 18.0f, { 1008, 420 },  { 995, 1060 }, 60.0f },  // right wall
+	{ 0, CF_SHAPE_OP_UNION, 18.0f, { 380, 130 },   { 0, 0 },      45.0f },  // deep-floor boulder
+	{ 0, CF_SHAPE_OP_UNION, 18.0f, { 790, 232 },   { 0, 0 },      24.0f },  // shelf pebble (submerged bump)
+	// Stalagmite on the dry left shore.
+	{ 1, CF_SHAPE_OP_UNION, 14.0f, { 128, 400 },   { 134, 470 },  13.0f },
+	{ 0, CF_SHAPE_OP_UNION, 14.0f, { 136, 492 },   { 0, 0 },      6.0f },
+	// The pool: two smooth-subtracted scoops carve the asymmetric depression.
+	{ 0, CF_SHAPE_OP_SUBTRACT, 20.0f, { 330, 330 }, { 0, 0 },     172.0f }, // deep bowl (west)
+	{ 0, CF_SHAPE_OP_SUBTRACT, 20.0f, { 720, 470 }, { 0, 0 },     235.0f }, // shallow shelf (east beach)
+	// Knuckle poking through the waterline mid-pool (unioned AFTER the scoops).
+	{ 0, CF_SHAPE_OP_UNION, 12.0f, { 585, 245 },   { 0, 0 },      62.0f },
+	{ 0, CF_SHAPE_OP_UNION, 12.0f, { 612, 208 },   { 0, 0 },      50.0f },
+};
+#define GROUND_PRIM_COUNT ((int)(sizeof(ground_prims) / sizeof(ground_prims[0])))
+
+// CF's csg_smin (tile shader): polynomial smooth min, hard min at k = 0.
+float ground_smin(float a, float b, float k)
+{
+	if (k <= 0) return cf_min(a, b);
+	float h = cf_clamp(0.5f + 0.5f * (b - a) / k, 0.0f, 1.0f);
+	return (b + (a - b) * h) - k * h * (1.0f - h);
+}
+
+float ground_prim_dist(const GroundPrim* g, CF_V2 p)
+{
+	if (g->kind == 0) {
+		return cf_len(cf_sub(p, g->a)) - g->r;
+	} else if (g->kind == 1) {
+		CF_V2 ab = cf_sub(g->b, g->a);
+		CF_V2 pa = cf_sub(p, g->a);
+		float t = cf_clamp(cf_dot(pa, ab) / cf_dot(ab, ab), 0.0f, 1.0f);
+		return cf_len(cf_sub(pa, cf_mul_v2_f(ab, t))) - g->r;
+	} else {
+		CF_V2 c = cf_mul_v2_f(cf_add(g->a, g->b), 0.5f);
+		CF_V2 he = cf_mul_v2_f(cf_sub(g->b, g->a), 0.5f);
+		CF_V2 d = cf_v2(fabsf(p.x - c.x) - he.x, fabsf(p.y - c.y) - he.y);
+		CF_V2 dc = cf_v2(cf_max(d.x, 0.0f), cf_max(d.y, 0.0f));
+		return cf_len(dc) + cf_min(cf_max(d.x, d.y), 0.0f);
+	}
+}
+
+// Signed distance to the ground rock: positive in air/water, negative inside rock.
+float cave_ground_sdf(CF_V2 p)
+{
+	float d = 0;
+	for (int i = 0; i < GROUND_PRIM_COUNT; i++) {
+		const GroundPrim* g = ground_prims + i;
+		float di = ground_prim_dist(g, p);
+		if (i == 0) d = di;
+		else if (g->op == CF_SHAPE_OP_UNION) d = ground_smin(d, di, g->k);
+		else if (g->op == CF_SHAPE_OP_SUBTRACT) d = -ground_smin(-d, di, g->k);
+		else d = -ground_smin(-d, -di, g->k);
+	}
+	return d;
+}
+
+// Outward SDF gradient (points away from rock) via central differences.
+CF_V2 cave_ground_grad(CF_V2 p)
+{
+	float e = 0.75f;
+	float dx = cave_ground_sdf(cf_v2(p.x + e, p.y)) - cave_ground_sdf(cf_v2(p.x - e, p.y));
+	float dy = cave_ground_sdf(cf_v2(p.x, p.y + e)) - cave_ground_sdf(cf_v2(p.x, p.y - e));
+	float len = sqrtf(dx * dx + dy * dy);
+	if (len < 1e-6f) return cf_v2(0, 1);
+	return cf_v2(dx / len, dy / len);
+}
+
+// Bake the static ground SDF into a small R32F texture for cave_water.shd
+// (256x256 over the 1024 world = 4 px texels, linearly filtered).
+#define GSDF_N 256
+CF_Texture gsdf_tex;
+
+void ground_bake_sdf_tex()
+{
+	float* data = (float*)cf_alloc(GSDF_N * GSDF_N * sizeof(float));
+	for (int row = 0; row < GSDF_N; row++) {
+		float wy = (1.0f - ((float)row + 0.5f) / (float)GSDF_N) * 1024.0f; // row 0 = world top
+		for (int col = 0; col < GSDF_N; col++) {
+			float wx = (((float)col + 0.5f) / (float)GSDF_N) * 1024.0f;
+			data[row * GSDF_N + col] = cave_ground_sdf(cf_v2(wx, wy));
+		}
+	}
+	CF_TextureParams tp = cf_texture_defaults(GSDF_N, GSDF_N);
+	tp.pixel_format = CF_PIXEL_FORMAT_R32_FLOAT;
+	tp.filter = CF_FILTER_LINEAR;
+	tp.wrap_u = CF_WRAP_MODE_CLAMP_TO_EDGE;
+	tp.wrap_v = CF_WRAP_MODE_CLAMP_TO_EDGE;
+	gsdf_tex = cf_make_texture(tp);
+	cf_texture_update(gsdf_tex, data, GSDF_N * GSDF_N * sizeof(float));
+	cf_free(data);
+}
+
+//--------------------------------------------------------------------------------------------------
 // Cave rock geometry. Static CSG shape groups, recorded once into retained draw
 // lists (one per destination canvas, since recorded draws bake their colors).
 
@@ -483,10 +615,12 @@ CF_V2 stalactite_tips[5];
 void draw_cave_rock()
 {
 	// Ceiling mass: slab + blobby underside + stalactites, with the moon crack
-	// smooth-subtracted through the whole composite.
+	// smooth-subtracted through the whole composite. The slab overshoots the
+	// frame top so the rock mass reads as extending past the visible edge; the
+	// crack channel is the ONLY opening through it.
 	cf_draw_shape_group_begin();
 	cf_draw_shape_group_op(CF_SHAPE_OP_UNION, 16.0f);
-	cf_draw_quad_fill(cf_make_aabb(cf_v2(0, 860), cf_v2(1024, 1024)), 0);
+	cf_draw_quad_fill(cf_make_aabb(cf_v2(0, 860), cf_v2(1024, 1040)), 0);
 	cf_draw_circle_fill2(cf_v2(100, 862), 58);
 	cf_draw_circle_fill2(cf_v2(240, 852), 50);
 	cf_draw_circle_fill2(cf_v2(520, 850), 58);
@@ -499,38 +633,43 @@ void draw_cave_rock()
 	cf_draw_capsule_fill2(cf_v2(480, 875), cf_v2(485, 760), 18);
 	cf_draw_circle_fill2(cf_v2(487, 738), 10);
 	cf_draw_circle_fill2(cf_v2(488, 722), 5);
-	cf_draw_capsule_fill2(cf_v2(560, 870), cf_v2(558, 795), 12);
-	cf_draw_circle_fill2(cf_v2(557, 780), 6);
+	cf_draw_capsule_fill2(cf_v2(660, 870), cf_v2(658, 795), 12);
+	cf_draw_circle_fill2(cf_v2(657, 780), 6);
 	cf_draw_capsule_fill2(cf_v2(700, 875), cf_v2(705, 745), 20);
 	cf_draw_circle_fill2(cf_v2(707, 720), 11);
 	cf_draw_circle_fill2(cf_v2(709, 700), 5);
 	cf_draw_capsule_fill2(cf_v2(850, 872), cf_v2(848, 800), 13);
 	cf_draw_circle_fill2(cf_v2(847, 782), 7);
-	// The crack: a slanted channel cut clean through slab, blobs, everything.
+	// The crack: a slanted channel (~15 degrees off vertical) cut clean through
+	// slab, blobs, everything, from past the frame top down into the cave.
 	cf_draw_shape_group_op(CF_SHAPE_OP_SUBTRACT, 8.0f);
-	cf_draw_quad_fill2(
-		cf_v2(402, 1025), cf_v2(428, 1025),
-		cf_v2(378, 790), cf_v2(352, 790), 0
-	);
+	{
+		float xb = CRACK_X0, xt = CRACK_X0 + (1040.0f - CRACK_Y0) * CRACK_SLOPE;
+		cf_draw_quad_fill2(
+			cf_v2(xt - CRACK_HALF_W, 1040), cf_v2(xt + CRACK_HALF_W, 1040),
+			cf_v2(xb + CRACK_HALF_W, CRACK_Y0), cf_v2(xb - CRACK_HALF_W, CRACK_Y0), 0
+		);
+	}
 	cf_draw_shape_group_end();
 
-	// Floor mass + side walls + stalagmites, with the pool basin subtracted.
+	// Ground: the unified SDF's primitive table drawn as ONE shape group, so
+	// the silhouette IS the collision surface (see cave_ground_sdf).
 	cf_draw_shape_group_begin();
-	cf_draw_shape_group_op(CF_SHAPE_OP_UNION, 16.0f);
-	cf_draw_quad_fill(cf_make_aabb(cf_v2(0, 0), cf_v2(1024, 340)), 0);
-	cf_draw_quad_fill(cf_make_aabb(cf_v2(0, 0), cf_v2(70, 1024)), 0);
-	cf_draw_quad_fill(cf_make_aabb(cf_v2(954, 0), cf_v2(1024, 1024)), 0);
-	cf_draw_circle_fill2(cf_v2(150, 330), 40);
-	cf_draw_circle_fill2(cf_v2(880, 335), 45);
-	// Stalagmites.
-	cf_draw_shape_group_op(CF_SHAPE_OP_UNION, 14.0f);
-	cf_draw_capsule_fill2(cf_v2(200, 320), cf_v2(205, 400), 18);
-	cf_draw_circle_fill2(cf_v2(207, 425), 8);
-	cf_draw_capsule_fill2(cf_v2(835, 330), cf_v2(830, 395), 15);
-	cf_draw_circle_fill2(cf_v2(828, 415), 7);
-	// The pool basin, carved out of the floor slab.
-	cf_draw_shape_group_op(CF_SHAPE_OP_SUBTRACT, 16.0f);
-	cf_draw_circle_fill2(cf_v2(BASIN_CX, BASIN_CY), BASIN_R);
+	{
+		float last_k = -1.0f;
+		int last_op = -1;
+		for (int i = 0; i < GROUND_PRIM_COUNT; i++) {
+			const GroundPrim* g = ground_prims + i;
+			if (g->op != last_op || g->k != last_k) {
+				cf_draw_shape_group_op((CF_ShapeOp)g->op, g->k);
+				last_op = g->op;
+				last_k = g->k;
+			}
+			if (g->kind == 0) cf_draw_circle_fill2(g->a, g->r);
+			else if (g->kind == 1) cf_draw_capsule_fill2(g->a, g->b, g->r);
+			else cf_draw_quad_fill(cf_make_aabb(g->a, g->b), 0);
+		}
+	}
 	cf_draw_shape_group_end();
 
 	// A floating rock arch, right of center, above the pool.
@@ -563,7 +702,7 @@ void record_rock_lists()
 {
 	stalactite_tips[0] = cf_v2(250, 760);
 	stalactite_tips[1] = cf_v2(488, 716);
-	stalactite_tips[2] = cf_v2(557, 773);
+	stalactite_tips[2] = cf_v2(657, 773);
 	stalactite_tips[3] = cf_v2(709, 694);
 	stalactite_tips[4] = cf_v2(847, 774);
 
@@ -606,7 +745,8 @@ float root_time = 0;
 void draw_roots(float thickness)
 {
 	for (int i = 0; i < 4; i++) {
-		float bx = 348.0f + (float)i * 11.0f;
+		// Bases sit inside the (slanted) crack channel at y ~830.
+		float bx = 381.0f + (float)i * 6.0f;
 		float ph = (float)i * 1.7f;
 		float s1 = sinf(root_time * 0.7f + ph) * 6.0f;
 		float s2 = sinf(root_time * 0.9f + ph + 1.3f) * 10.0f;
@@ -658,21 +798,17 @@ void particles_init()
 	particle_count = 0;
 	// Lattice spacing slightly ABOVE the rest separation (9), or frame one is a
 	// constraint-resolution storm that sloshes the whole pool up the walls.
-	for (float y = 180.0f; y < WATERLINE + 40.0f && particle_count < 460; y += 9.5f) {
-		// Chord of the basin circle at this height, inset by the particle radius.
-		float dy = BASIN_CY - y;
-		float half_w = sqrtf(cf_max(0.0f, (BASIN_R - 10.0f) * (BASIN_R - 10.0f) - dy * dy)) - 8.0f;
-		if (half_w <= 0) continue;
-		// Fill from the center outward so a partial top row stays symmetric.
-		for (float o = 0; o <= half_w && particle_count < 460; o += 9.5f) {
-			for (int side = 0; side < (o > 0 ? 2 : 1) && particle_count < 460; side++) {
-				Particle* pt = particles + particle_count++;
-				float x = BASIN_CX + (side == 0 ? o : -o);
-				pt->p = cf_v2(x + ((particle_count % 3) - 1) * 0.8f, y);
-				pt->v = cf_v2(0, 0);
-				pt->agitation = 0;
-				pt->airborne = 0;
-			}
+	// Bottom-up row fill over every open lattice site below the waterline, so
+	// the asymmetric depression fills to a level surface at the waterline.
+	for (float y = 130.0f; y < WATERLINE - 1.0f && particle_count < 500; y += 9.5f) {
+		for (float x = 80.0f; x < 944.0f && particle_count < 500; x += 9.5f) {
+			CF_V2 p = cf_v2(x + ((particle_count % 3) - 1) * 0.8f, y);
+			if (cave_ground_sdf(p) < 11.0f) continue; // keep a rest-spacing margin off the rock
+			Particle* pt = particles + particle_count++;
+			pt->p = p;
+			pt->v = cf_v2(0, 0);
+			pt->agitation = 0;
+			pt->airborne = 0;
 		}
 	}
 }
@@ -702,16 +838,26 @@ void hash_build()
 
 float hf_h[HF_N];       // world-px offset from the waterline
 float hf_v[HF_N];
-float hf_x0, hf_x1;     // world x extent (basin chord at the waterline)
+float hf_x0, hf_x1;     // world x extent (pool opening at the waterline)
+unsigned char hf_rock[HF_N]; // columns where rock crosses the waterline (the knuckle): springs pinned
 CF_Texture hf_tex;
 
 void heightfield_init()
 {
-	float r = BASIN_R - 10.0f;
-	float dy = BASIN_CY - WATERLINE;
-	float half_w = sqrtf(r * r - dy * dy);
-	hf_x0 = BASIN_CX - half_w;
-	hf_x1 = BASIN_CX + half_w;
+	// Scan the ground SDF along the waterline for the pool's open extent:
+	// out from the deep bowl for the west contact, out from the shelf for the
+	// east contact. The knuckle interrupts the middle; those columns get
+	// pinned so ripples reflect off it instead of tunneling through rock.
+	float xl = 350.0f, xr = 750.0f;
+	while (xl > 60.0f && cave_ground_sdf(cf_v2(xl - 1.0f, WATERLINE)) > 0) xl -= 1.0f;
+	while (xr < 980.0f && cave_ground_sdf(cf_v2(xr + 1.0f, WATERLINE)) > 0) xr += 1.0f;
+	hf_x0 = xl;
+	hf_x1 = xr;
+	float colw = (hf_x1 - hf_x0) / (float)HF_N;
+	for (int i = 0; i < HF_N; i++) {
+		float xc = hf_x0 + ((float)i + 0.5f) * colw;
+		hf_rock[i] = cave_ground_sdf(cf_v2(xc, WATERLINE)) < 0 ? 1 : 0;
+	}
 	CF_MEMSET(hf_h, 0, sizeof(hf_h));
 	CF_MEMSET(hf_v, 0, sizeof(hf_v));
 
@@ -763,6 +909,7 @@ void heightfield_update(float dt)
 	for (int i = 0; i < HF_N; i++) {
 		hf_v[i] *= damp;
 		hf_h[i] = cf_clamp(hf_h[i], -18.0f, 18.0f);
+		if (hf_rock[i]) { hf_h[i] = 0; hf_v[i] = 0; } // pinned at the knuckle
 	}
 	cf_texture_update(hf_tex, hf_h, sizeof(hf_h));
 }
@@ -880,8 +1027,7 @@ void particles_update(float dt)
 		pt->p = cf_add(pt->p, cf_mul_v2_f(pt->v, dt));
 	}
 
-	// Relax positional constraints: pairwise separation + basin containment.
-	float max_r = BASIN_R - 10.0f - P_RADIUS;
+	// Relax positional constraints: pairwise separation + ground containment.
 	for (int iter = 0; iter < 4; iter++) {
 		hash_build();
 		for (int i = 0; i < particle_count; i++) {
@@ -906,19 +1052,17 @@ void particles_update(float dt)
 					}
 				}
 			}
-			// Analytic basin SDF: project back inside the carved circle, but only
-			// where the floor slab actually exists (above it the circle boundary
-			// is open air -- splashed particles fly free and fall back). Pure
-			// projection: any restitution or tangential nudging here becomes
-			// perpetual sliding once velocity derives from positions. The y gate
-			// sits above the basin mouth (rim lip ~y 380..420 at the edges) so
-			// nothing perches in the dead air pockets between rim and wall;
-			// mid-pool splash arcs stay inside the circle and fly free.
-			CF_V2 d = cf_sub(a->p, cf_v2(BASIN_CX, BASIN_CY));
-			float len = cf_len(d);
-			if (len > max_r && a->p.y < 420.0f) {
-				CF_V2 dir = cf_div_v2_f(d, len);
-				a->p = cf_add(cf_v2(BASIN_CX, BASIN_CY), cf_mul_v2_f(dir, max_r));
+			// Unified ground SDF: project out of the rock along the gradient.
+			// The SDF is the real rock everywhere, so no altitude gate is needed
+			// -- splash arcs over open water fly free (positive distance), and
+			// anything meeting rock (floor, walls, the knuckle, the beach) gets
+			// a pure projection. No restitution or tangential nudging here:
+			// either becomes perpetual sliding once velocity derives from
+			// positions.
+			float d = cave_ground_sdf(a->p);
+			if (d < P_RADIUS) {
+				CF_V2 n = cave_ground_grad(a->p);
+				a->p = cf_add(a->p, cf_mul_v2_f(n, P_RADIUS - d));
 			}
 			// Pseudo-hydrostatic relief: pairwise separation alone behaves like
 			// dry sand -- stirred piles hold their shape instead of leveling.
@@ -953,15 +1097,15 @@ void particles_update(float dt)
 		float speed = cf_len(pt->v);
 		if (speed > P_VMAX) pt->v = cf_mul_v2_f(pt->v, P_VMAX / speed);
 
-		// In contact with the basin: kill the outward normal component (no
-		// restitution) and rub the tangential one down with friction.
-		CF_V2 d = cf_sub(pt->p, cf_v2(BASIN_CX, BASIN_CY));
-		float len = cf_len(d);
-		if (len > max_r - 2.0f && pt->p.y < 420.0f && len > 1e-3f) {
-			CF_V2 n = cf_div_v2_f(d, len);
+		// In contact with the ground: kill the into-rock normal component (no
+		// restitution) and rub the tangential one down with friction. Same
+		// contact model as the old basin circle, driven by the unified SDF.
+		float gd = cave_ground_sdf(pt->p);
+		if (gd < P_RADIUS + 2.0f) {
+			CF_V2 n = cave_ground_grad(pt->p); // points away from rock
 			float vn = cf_dot(pt->v, n);
 			CF_V2 vt = cf_sub(pt->v, cf_mul_v2_f(n, vn));
-			if (vn > 0) vn = 0;
+			if (vn < 0) vn = 0;
 			float friction = powf(0.92f, dt * 60.0f); // ~0.92 per frame at 60fps
 			pt->v = cf_add(cf_mul_v2_f(vt, friction), cf_mul_v2_f(n, vn));
 		}
@@ -1234,7 +1378,7 @@ void jelly_init()
 		"	return max(d, -d3);\n"
 		"}\n");
 
-	jelly.pos = cf_v2(640, 225);
+	jelly.pos = cf_v2(350, 210); // the deep bowl, west of the knuckle
 	jelly.vel = cf_v2(0, 0);
 	jelly.phase = 0;
 	jelly.startle = 0;
@@ -1251,8 +1395,9 @@ void jelly_update(float dt)
 	// Contraction stroke = a little upward thrust.
 	if (pulse > 0) jelly.vel.y += pulse * 30.0f * dt;
 
-	// Slow wander across the pool.
-	float target_x = BASIN_CX + sinf(jelly.t * 0.11f) * 190.0f;
+	// Slow wander across the deep bowl (the shelf east of the knuckle is too
+	// shallow for a jelly).
+	float target_x = 355.0f + sinf(jelly.t * 0.11f) * 110.0f;
 	jelly.vel.x += (target_x - jelly.pos.x) * 0.05f * dt;
 
 	// Stay submerged: gentle spring toward a comfortable depth band.
@@ -1275,11 +1420,15 @@ void jelly_update(float dt)
 	jelly.vel = cf_mul_v2_f(jelly.vel, 0.97f);
 	jelly.pos = cf_add(jelly.pos, cf_mul_v2_f(jelly.vel, dt));
 
-	// Keep inside the basin.
-	CF_V2 b = cf_sub(jelly.pos, cf_v2(BASIN_CX, BASIN_CY));
-	float bl = cf_len(b);
-	float max_r = BASIN_R - 45.0f;
-	if (bl > max_r) jelly.pos = cf_add(cf_v2(BASIN_CX, BASIN_CY), cf_mul_v2_f(cf_div_v2_f(b, bl), max_r));
+	// Keep clear of the rock (bell + tentacles need ~45 px), and softly herd
+	// it back if a startle shove aims it at the shallow shelf.
+	float gd = cave_ground_sdf(jelly.pos);
+	if (gd < 45.0f) {
+		CF_V2 n = cave_ground_grad(jelly.pos);
+		jelly.pos = cf_add(jelly.pos, cf_mul_v2_f(n, 45.0f - gd));
+	}
+	if (jelly.pos.x > 470.0f) jelly.vel.x -= (jelly.pos.x - 470.0f) * 1.5f * dt;
+	if (jelly.pos.x < 240.0f) jelly.vel.x += (240.0f - jelly.pos.x) * 1.5f * dt;
 }
 
 // Draw the jellyfish into a scene pass. channel: 0 = emissivity, 1 = absorption, 2 = diffuse.
@@ -1365,14 +1514,13 @@ void draw_water_field(float mode, CF_Color col_a, CF_Color col_b)
 	float ws = (float)CAVE_WORLD;
 	float threshold = 0.55f;
 	float hf_params[4] = { hf_x0, hf_x1, WATERLINE, root_time };
-	float basin_params[4] = { BASIN_CX, BASIN_CY, BASIN_R - 10.0f, 0 };
 	cf_draw_push_shader(water_shd);
 	cf_draw_set_texture("u_heightfield", hf_tex);
 	cf_draw_set_texture("u_fluence", cf_canvas_get_target(hrc.fluence));
+	cf_draw_set_texture("u_ground_sdf", gsdf_tex);
 	cf_draw_set_uniform("u_col_a", &col_a, CF_UNIFORM_TYPE_FLOAT4, 1);
 	cf_draw_set_uniform("u_col_b", &col_b, CF_UNIFORM_TYPE_FLOAT4, 1);
 	cf_draw_set_uniform("u_hf", hf_params, CF_UNIFORM_TYPE_FLOAT4, 1);
-	cf_draw_set_uniform("u_basin", basin_params, CF_UNIFORM_TYPE_FLOAT4, 1);
 	cf_draw_set_uniform_float("u_mode", mode);
 	cf_draw_set_uniform_float("u_threshold", threshold);
 	cf_draw_push_alpha_discard(false);
@@ -1383,6 +1531,25 @@ void draw_water_field(float mode, CF_Color col_a, CF_Color col_b)
 
 //--------------------------------------------------------------------------------------------------
 // Scene canvas passes.
+
+// The moon-slit emitter, embedded at the top of the crack channel: a slanted
+// quad aligned with the crack, inset from its walls, overrunning the frame top
+// so the visible bright area is exactly the crack aperture.
+void draw_moon_emitter()
+{
+	// Mostly above the frame top (world y > 1024): only a thin aperture at the
+	// crack's mouth is in view, the rest of the bright face is off-screen. The
+	// shaft carries the light down into the cave. (Commit 2 removes this
+	// emitter entirely and injects the light from the sky boundary instead.)
+	float y0 = 1014.0f, y1 = 1060.0f;
+	float hw = CRACK_HALF_W - 4.0f;
+	float xb = CRACK_X0 + (y0 - CRACK_Y0) * CRACK_SLOPE;
+	float xt = CRACK_X0 + (y1 - CRACK_Y0) * CRACK_SLOPE;
+	cf_draw_quad_fill2(
+		cf_v2(xt - hw, y1), cf_v2(xt + hw, y1),
+		cf_v2(xb + hw, y0), cf_v2(xb - hw, y0), 0
+	);
+}
 
 // Shape draws and canvas blits mix freely within one cf_render_to (the old
 // quirk where a mid-pass blit re-applied the pending clear is fixed).
@@ -1398,10 +1565,12 @@ void draw_emissivity()
 		cf_make_color_rgba_f(0.2f * 2.5f, 1.0f * 2.5f, 0.75f * 2.5f, 0.45f),
 		cf_make_color_rgb_f(0.004f, 0.016f, 0.013f));
 
-	// Moon shaft emitter: a small HDR slit at the top of the crack. Cool
+	// Moon shaft emitter: an HDR slab embedded in the crack channel's top,
+	// aligned with the crack's slant and inset from its walls so the bright
+	// region reads as sky through the aperture, never a floating block. Cool
 	// blue-white at ~40 -- authored in plain physical units, no encode.
-	cf_draw_push_color(cf_make_color_rgb_f(28.0f, 34.0f, 40.0f));
-	cf_draw_quad_fill(cf_make_aabb(cf_v2(398, 992), cf_v2(430, 1018)), 0);
+	cf_draw_push_color(cf_make_color_rgb_f(60.0f, 74.0f, 88.0f));
+	draw_moon_emitter();
 	cf_draw_pop_color();
 
 	draw_drip(0);
@@ -1439,7 +1608,7 @@ void draw_absorption()
 
 	// The moon slit must absorb to emit (radiance = emiss * (1 - T)).
 	cf_draw_push_color(cf_make_color_rgb_f(0.5f, 0.5f, 0.5f));
-	cf_draw_quad_fill(cf_make_aabb(cf_v2(398, 992), cf_v2(430, 1018)), 0);
+	draw_moon_emitter();
 	cf_draw_pop_color();
 
 	draw_drip(1);
@@ -1614,9 +1783,9 @@ void handle_input()
 	float dt = cf_max(CF_DELTA_TIME, 1e-4f);
 	CF_V2 prev = mouse_world;
 	if (autostir) {
-		// A hand swishing back and forth along the surface.
+		// A hand swishing back and forth along the deep bowl's surface.
 		autostir_t += dt;
-		mouse_world = cf_v2(BASIN_CX + sinf(autostir_t * 0.9f) * 180.0f, 262.0f);
+		mouse_world = cf_v2(350.0f + sinf(autostir_t * 0.9f) * 150.0f, 262.0f);
 	} else {
 		mouse_world = cf_v2(cf_mouse_x(), (float)CAVE_WORLD - cf_mouse_y());
 	}
@@ -1715,6 +1884,7 @@ int main(int argc, char* argv[])
 	drip_co = cf_make_coroutine(drip_script, 0, NULL);
 
 	density_canvas = hrc_make_canvas(512, 512, CF_PIXEL_FORMAT_R16G16B16A16_FLOAT, CF_FILTER_LINEAR);
+	ground_bake_sdf_tex();
 	heightfield_init();
 	blob_shd = load_draw_shader("/hrc_cave_data/cave_blob.shd");
 	water_shd = load_draw_shader("/hrc_cave_data/cave_water.shd");
@@ -1777,6 +1947,7 @@ int main(int argc, char* argv[])
 	cf_destroy_draw_list(list_rock_diffuse);
 	cf_destroy_canvas(density_canvas);
 	cf_destroy_texture(hf_tex);
+	cf_destroy_texture(gsdf_tex);
 	cf_destroy_shader(blob_shd);
 	cf_destroy_shader(water_shd);
 	hrc_shutdown();
