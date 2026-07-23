@@ -7418,7 +7418,9 @@ static void cspv_msl_call(cspv_tp* g, cspv_expr* e)
 	// Atomics: GLSL atomics operate on plain fields; MSL wants atomic types, so
 	// cast the destination pointer (the spirv-cross approach). The address space
 	// comes from the destination's root: threadgroup for shared variables,
-	// device otherwise. Statement position only (validated).
+	// device otherwise. MSL cannot take the address of a vector component, so a
+	// single-component swizzle destination reinterprets the vector's address and
+	// offsets to the component instead. Statement position only (validated).
 	{
 		const char* aop = NULL;
 		if (!strcmp(name, "atomicAdd")) aop = "atomic_fetch_add_explicit";
@@ -7429,7 +7431,8 @@ static void cspv_msl_call(cspv_tp* g, cspv_expr* e)
 		else if (!strcmp(name, "atomicXor")) aop = "atomic_fetch_xor_explicit";
 		else if (!strcmp(name, "atomicExchange")) aop = "atomic_exchange_explicit";
 		if (aop) {
-			cspv_expr* root = args[0];
+			cspv_expr* dest = args[0];
+			cspv_expr* root = dest;
 			while (root->kind == CSPV_E_MEMBER || root->kind == CSPV_E_LENGTH) root = root->u.member.base;
 			while (root->kind == CSPV_E_INDEX) {
 				root = root->u.index.base;
@@ -7442,12 +7445,26 @@ static void cspv_msl_call(cspv_tp* g, cspv_expr* e)
 					if (d->kind == CSPV_D_SHARED && d->name == root->u.name) { threadgroup_space = true; break; }
 				}
 			}
+			int comp = -1;
+			if (dest->kind == CSPV_E_MEMBER && dest->u.member.member[0] && dest->u.member.member[1] == 0) {
+				cspv_type* bt = cspv_tp_rtype(g, dest->u.member.base);
+				if (bt && bt->kind == CSPV_T_VEC) {
+					switch (dest->u.member.member[0]) {
+					case 'x': case 'r': case 's': comp = 0; break;
+					case 'y': case 'g': case 't': comp = 1; break;
+					case 'z': case 'b': case 'p': comp = 2; break;
+					case 'w': case 'a': case 'q': comp = 3; break;
+					}
+					if (comp >= 0) dest = dest->u.member.base;
+				}
+			}
 			cspv_type* vt = cspv_tp_rtype(g, args[1]);
 			bool is_int = vt && cspv_elem_type(vt)->kind == CSPV_T_INT;
 			sfmt_append(*out, "%s((%s atomic_%s*)&(", aop,
 				threadgroup_space ? "threadgroup" : "device", is_int ? "int" : "uint");
-			cspv_tp_expr(g, args[0], 0);
-			sappend(*out, "), ");
+			cspv_tp_expr(g, dest, 0);
+			if (comp >= 0) sfmt_append(*out, ") + %d, ", comp);
+			else sappend(*out, "), ");
 			cspv_tp_expr(g, args[1], 2);
 			sappend(*out, ", memory_order_relaxed)");
 			return;
