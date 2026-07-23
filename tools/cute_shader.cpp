@@ -335,6 +335,9 @@ CF_ShaderCompilerResult cute_shader_compile(const char* source, CF_ShaderCompile
 		memcpy(preprocessed_copy, r.preprocessed, preprocessed_size + 1);
 	}
 
+	// Captured before cspv_free wipes the result.
+	int local_size[3] = { r.reflection.local_size[0], r.reflection.local_size[1], r.reflection.local_size[2] };
+
 	cspv_free(&r);
 
 	CF_ShaderCompilerResult result;
@@ -348,9 +351,9 @@ CF_ShaderCompilerResult cute_shader_compile(const char* source, CF_ShaderCompile
 	result.bytecode.hlsl_src_size = hlsl_src_size;
 	result.bytecode.msl_src = msl_src;
 	result.bytecode.msl_src_size = msl_src_size;
-	result.bytecode.shader_info.local_size[0] = r.reflection.local_size[0];
-	result.bytecode.shader_info.local_size[1] = r.reflection.local_size[1];
-	result.bytecode.shader_info.local_size[2] = r.reflection.local_size[2];
+	result.bytecode.shader_info.local_size[0] = local_size[0];
+	result.bytecode.shader_info.local_size[1] = local_size[1];
+	result.bytecode.shader_info.local_size[2] = local_size[2];
 	result.bytecode.shader_info.num_samplers = num_samplers;
 	result.bytecode.shader_info.num_storage_textures = num_storage_textures;
 	result.bytecode.shader_info.num_storage_buffers = num_storage_buffers;
