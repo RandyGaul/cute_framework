@@ -53,6 +53,16 @@ for ((i = 0; i < DURATION; i++)); do
 	sleep 1
 done
 
+# The loop's last iteration ends with a sleep, so the process could have died
+# during that final second without us noticing. Check once more before
+# declaring success.
+if ! kill -0 "$PID" 2>/dev/null; then
+	wait "$PID"
+	code=$?
+	echo "smoke test: FAILED -- '$APP' exited early after ~${DURATION}s with code ${code}" >&2
+	exit 1
+fi
+
 # Still running after the full duration -- success. Shut it down.
 echo "smoke test: '$APP' survived ${DURATION}s, terminating."
 kill "$PID" 2>/dev/null
