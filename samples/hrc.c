@@ -14,6 +14,7 @@
 // https://github.com/entropylost/amitabha
 
 #include <cute.h>
+#include <stdio.h>
 
 //--------------------------------------------------------------------------------------------------
 // Configuration.
@@ -511,6 +512,7 @@ typedef struct OrbLight
 } OrbLight;
 
 float time_acc = 0.0f;
+int freeze_time = 0; // HRC_FREEZE=1: hold time_acc fixed (freezes the pinhole gap sweep etc.)
 int test_scene = 0; // 0 = off, 1 = static centered light, 2 = slowly orbiting light
 
 // Test light center for this frame. The light is 8x8 world pixels -- the paper
@@ -733,7 +735,7 @@ void update_lights()
 	float half = (float)HRC_WORLD_SIZE * 0.5f;
 	float ws = (float)HRC_WORLD_SIZE;
 	float dt = CF_DELTA_TIME;
-	time_acc += dt;
+	if (!freeze_time) time_acc += dt;
 	frame_light_count = 0;
 
 	// Orbiting lights.
@@ -930,6 +932,203 @@ void draw_hud()
 }
 
 //--------------------------------------------------------------------------------------------------
+// Benchmark mode (HRC_BENCH=1).
+//
+// Iterates a fixed config sweep over deterministic scenes. For each config the
+// sample renders warmup frames (long enough for cornell's multibounce feedback
+// to settle), then times BENCH_TIMED frames with the wall clock, reads back the
+// fluence canvas, and prints one CSV row with average frame ms plus quality vs
+// the in-run 1x-grid reference for the same scene (RMSE on tonemapped luma +
+// max channel diff, both on the displayed rgba8 output). Exits when the sweep
+// completes. Run a Release build for meaningful timings.
+
+typedef struct BenchConfig
+{
+	int scene;        // HRC_TEST scene id (1 static, 3 cornell, 4 pinhole)
+	int grid;
+	int trace_levels;
+	int upscale_mode;
+	int cminus1;
+	int is_reference; // first row per scene; its readback becomes the quality baseline
+	const char* extras;
+} BenchConfig;
+
+#define BENCH_MAX_CONFIGS 128
+#define BENCH_WARMUP 30           // pipeline compile + steady state
+#define BENCH_WARMUP_FEEDBACK 120 // cornell: multibounce feedback settles ~60 frames; use 2x margin
+#define BENCH_TIMED 60
+
+typedef struct Bench
+{
+	int active;
+	int index;
+	int count;
+	BenchConfig configs[BENCH_MAX_CONFIGS];
+	int state;       // 0 = apply config, 1 = warmup, 2 = timed, 3 = wait on readback
+	int frames_left;
+	uint64_t t0;
+	double frame_ms;
+	CF_Readback readback;
+	uint8_t* ref[5]; // per-scene reference pixels, indexed by scene id
+} Bench;
+
+Bench bench;
+
+void bench_add(int scene, int grid, int upscale, int cm1, int is_ref, const char* extras)
+{
+	CF_ASSERT(bench.count < BENCH_MAX_CONFIGS);
+	BenchConfig* c = &bench.configs[bench.count++];
+	c->scene = scene;
+	c->grid = grid;
+	c->trace_levels = 3;
+	c->upscale_mode = upscale;
+	c->cminus1 = cm1;
+	c->is_reference = is_ref;
+	c->extras = extras;
+}
+
+void bench_init()
+{
+	bench.active = 1;
+	bench.state = 0;
+	freeze_time = 1;
+	time_acc = 1.0f; // fixed pinhole gap position
+	cf_app_set_present_mode(CF_PRESENT_MODE_IMMEDIATE); // uncap present so GPU time is measurable
+
+	int scenes[3] = { 1, 3, 4 };
+	for (int s = 0; s < 3; s++) {
+		int scene = scenes[s];
+		// 1x-grid reference row (quality baseline for this scene).
+		bench_add(scene, HRC_WORLD_SIZE, 1, 1, 1, "reference");
+		int grids[2] = { 512, 256 };
+		for (int g = 0; g < 2; g++) {
+			bench_add(scene, grids[g], 0, 1, 0, "");
+			bench_add(scene, grids[g], 1, 1, 0, "");
+			bench_add(scene, grids[g], 2, 1, 0, "");
+			bench_add(scene, grids[g], 1, 0, 0, "");
+		}
+	}
+
+	printf("scene,grid,prefilter,upscale,cm1,extras,frame_ms,rmse,maxdiff\n");
+	fflush(stdout);
+}
+
+// Clear last frame's fluence so cornell's feedback loop always converges from
+// the same starting state regardless of which config ran before.
+void bench_clear_feedback()
+{
+	begin_canvas_draw();
+	cf_render_to(hrc.fluence_lin, true);
+	end_canvas_draw();
+}
+
+void bench_apply(BenchConfig* c)
+{
+	test_scene = c->scene;
+	hrc_set_grid(c->grid);
+	hrc.trace_levels = c->trace_levels;
+	hrc.upscale_mode = c->upscale_mode;
+	hrc.cminus1 = c->cminus1;
+	bench_clear_feedback();
+}
+
+void bench_metrics(const uint8_t* test, const uint8_t* ref, double* rmse, double* maxdiff)
+{
+	int n = HRC_WORLD_SIZE * HRC_WORLD_SIZE;
+	double sum_sq = 0.0;
+	int md = 0;
+	for (int i = 0; i < n; i++) {
+		const uint8_t* a = test + i * 4;
+		const uint8_t* b = ref + i * 4;
+		// Tonemapped luma on the displayed sRGB bytes.
+		double la = (0.2126 * a[0] + 0.7152 * a[1] + 0.0722 * a[2]) / 255.0;
+		double lb = (0.2126 * b[0] + 0.7152 * b[1] + 0.0722 * b[2]) / 255.0;
+		double d = la - lb;
+		sum_sq += d * d;
+		for (int ch = 0; ch < 3; ch++) {
+			int cd = abs((int)a[ch] - (int)b[ch]);
+			if (cd > md) md = cd;
+		}
+	}
+	*rmse = sqrt(sum_sq / (double)n);
+	*maxdiff = (double)md / 255.0;
+}
+
+const char* bench_scene_name(int scene)
+{
+	return scene == 1 ? "static" : scene == 2 ? "orbiting" : scene == 3 ? "cornell" : "pinhole";
+}
+
+// Called after cf_app_update, before the frame's draws (config must be in
+// place before the scene canvases render).
+void bench_pre_frame()
+{
+	if (bench.state == 0) {
+		bench_apply(&bench.configs[bench.index]);
+		BenchConfig* c = &bench.configs[bench.index];
+		bench.frames_left = (c->scene == 3) ? BENCH_WARMUP_FEEDBACK : BENCH_WARMUP;
+		bench.state = 1;
+	}
+}
+
+// Called after hrc_compute (the frame's GPU work has been submitted).
+void bench_post_frame()
+{
+	BenchConfig* c = &bench.configs[bench.index];
+	switch (bench.state) {
+	case 1: // warmup
+		if (--bench.frames_left <= 0) {
+			bench.frames_left = BENCH_TIMED;
+			bench.t0 = cf_get_ticks();
+			bench.state = 2;
+		}
+		break;
+	case 2: // timed
+		if (--bench.frames_left <= 0) {
+			uint64_t t1 = cf_get_ticks();
+			bench.frame_ms = (double)(t1 - bench.t0) / (double)cf_get_tick_frequency() * 1000.0 / (double)BENCH_TIMED;
+			bench.readback = cf_canvas_readback(hrc.fluence);
+			bench.state = 3;
+		}
+		break;
+	case 3: // wait on async readback (scene keeps rendering; it's static)
+		if (cf_readback_ready(bench.readback)) {
+			int size = cf_readback_size(bench.readback);
+			CF_ASSERT(size == HRC_WORLD_SIZE * HRC_WORLD_SIZE * 4);
+			uint8_t* pixels = (uint8_t*)cf_alloc(size);
+			cf_readback_data(bench.readback, pixels, size);
+			cf_destroy_readback(bench.readback);
+
+			double rmse = 0.0, maxdiff = 0.0;
+			if (c->is_reference) {
+				cf_free(bench.ref[c->scene]);
+				bench.ref[c->scene] = pixels; // take ownership
+			} else {
+				CF_ASSERT(bench.ref[c->scene]);
+				bench_metrics(pixels, bench.ref[c->scene], &rmse, &maxdiff);
+				cf_free(pixels);
+			}
+
+			printf("%s,%d,%d,%d,%d,%s,%.3f,%.5f,%.4f\n",
+				bench_scene_name(c->scene), c->grid, hrc.prefilter_mode, c->upscale_mode, c->cminus1,
+				c->extras, bench.frame_ms, rmse, maxdiff);
+			fflush(stdout);
+
+			bench.index++;
+			bench.state = 0;
+			if (bench.index >= bench.count) {
+				printf("BENCH DONE\n");
+				fflush(stdout);
+				for (int i = 0; i < 5; i++) cf_free(bench.ref[i]);
+				bench.active = 0;
+				cf_app_signal_shutdown();
+			}
+		}
+		break;
+	}
+}
+
+//--------------------------------------------------------------------------------------------------
 // Entry point.
 
 int main(int argc, char* argv[])
@@ -948,11 +1147,15 @@ int main(int argc, char* argv[])
 		if ((env = getenv("HRC_BLEND_WIDTH"))) hrc.blend_width = (float)atof(env);
 		if ((env = getenv("HRC_CM1")))         hrc.cminus1 = atoi(env);
 		if ((env = getenv("HRC_TRACE")))       hrc.trace_levels = atoi(env);
+		if ((env = getenv("HRC_FREEZE")))      freeze_time = atoi(env);
 	}
+
+	if (getenv("HRC_BENCH")) bench_init();
 
 	while (cf_app_is_running()) {
 		cf_app_update(NULL);
 		cf_draw_push_shape_aa(0);
+		if (bench.active) bench_pre_frame();
 		handle_input();
 		update_lights();
 		draw_emissivity();
@@ -961,8 +1164,9 @@ int main(int argc, char* argv[])
 		if (test_scene == 3) hrc_feedback();
 		hrc_compute();
 		display_fluence();
-		draw_hud();
+		if (!bench.active) draw_hud();
 		cf_app_draw_onto_screen(true);
+		if (bench.active) bench_post_frame();
 	}
 
 	hrc_shutdown();
