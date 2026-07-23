@@ -94,40 +94,6 @@ add_sample(glitch glitch.cpp)
 add_sample(customsprite custom_sprite.c)
 add_sample(sound_pan sound_pan.c)
 
-# Pre-compile shaders for certain samples.
-if (CF_CUTE_SHADERC)
-	add_custom_command(
-		OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/spaceshooter_data/flash_shd.h
-		COMMAND cute-shaderc
-		-type=draw
-		-varname=s_flash_shd_bytecode
-		-oheader=${CMAKE_CURRENT_SOURCE_DIR}/spaceshooter_data/flash_shd.h
-		${CMAKE_CURRENT_SOURCE_DIR}/spaceshooter_data/flash.shd
-		DEPENDS spaceshooter_data/flash.shd
-		DEPENDS cute-shaderc
-	)
-	add_custom_command(
-		OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/waves_data/waves_shd.h
-		COMMAND cute-shaderc
-		-type=draw
-		-varname=s_waves_shd_bytecode
-		-oheader=${CMAKE_CURRENT_SOURCE_DIR}/waves_data/waves_shd.h
-		${CMAKE_CURRENT_SOURCE_DIR}/waves_data/waves.shd
-		DEPENDS waves_data/waves.shd
-		DEPENDS cute-shaderc
-	)
-	add_custom_command(
-		OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/fluid_sim_data/fluid_sim_shd.h
-		COMMAND cute-shaderc
-		-type=draw
-		-varname=s_fluid_sim_shd_bytecode
-		-oheader=${CMAKE_CURRENT_SOURCE_DIR}/fluid_sim_data/fluid_sim_shd.h
-		${CMAKE_CURRENT_SOURCE_DIR}/fluid_sim_data/fluid_sim.shd
-		DEPENDS fluid_sim_data/fluid_sim.shd
-		DEPENDS cute-shaderc
-	)
-endif()
-
 # Ensure that sample data is included in web build
 if (EMSCRIPTEN)
 	target_link_options(waves PRIVATE --preload-file "${CMAKE_CURRENT_SOURCE_DIR}/waves_data@/waves_data")
