@@ -93,6 +93,7 @@ typedef struct Hrc
 	CF_ComputeShader cs_minmax_mip;
 	int mip_march;               // minmax-mip cell skipping on the trace DDA + c-1 march
 	int c1_selective;            // skip the c-1 march in uniform-open cells (use R_0 only)
+	int max_levels;              // cap the cascade this many levels (-1 = full N); R at cap is the R_N=0 boundary
 	CF_Canvas emissivity_filtered;
 	CF_Canvas absorption_filtered;
 	CF_Material mat_prefilter;
@@ -243,6 +244,7 @@ void hrc_init()
 	// (measured spoke/neighborhood ratios: blend off 0.98-1.05, blend on 0.90-0.96).
 	hrc.blend_boundary = 0;
 	hrc.mip_march = 1; // minmax-mip cell skipping on by default
+	hrc.max_levels = -1; // full cascade by default
 	// Mip+max: mipmap-averaged emissivity (smooth lights) + max-absorption
 	// (conservative occlusion). Pure mipmap averaging melts thin opaque walls:
 	// a 2px absorption-4 wall box-filtered at 2x becomes absorption 2 and leaks
@@ -349,6 +351,12 @@ void hrc_compute()
 	int dim = hrc.grid;
 	int N = hrc.n;
 
+	// Cascade level cap: stop early and treat R at the cap as the R_N=0 boundary.
+	// Only T_0..T_cap are built and only R_{cap-1}..R_0 are merged. This drops the
+	// longest-range (lowest-frequency) light in exchange for fewer extend/merge passes.
+	int cap = N;
+	if (hrc.max_levels >= 1 && hrc.max_levels < N) cap = hrc.max_levels;
+
 	// Build the coarse minmax mip (absMin, absMax, emisMax per block) from the
 	// final scene textures. The trace DDA and c-1 march sample it to skip
 	// uniform blocks. Built after feedback so it reflects this frame's emission.
@@ -430,9 +438,9 @@ void hrc_compute()
 			cf_dispatch_compute(hrc.cs_trace, hrc.mat_trace, d);
 		}
 
-		// Extend remaining levels.
+		// Extend remaining levels (up to the cap).
 		int ext_start = hrc.trace_levels > 0 ? hrc.trace_levels : 1;
-		for (int i = ext_start; i <= N; i++) {
+		for (int i = ext_start; i <= cap; i++) {
 			int params[4] = { i, dim, hrc.vrays_w[i - 1], hrc.vrays_w[i] };
 			cf_material_set_uniform_cs(hrc.mat_extend, "u_cascade", params + 0, CF_UNIFORM_TYPE_INT, 1);
 			cf_material_set_uniform_cs(hrc.mat_extend, "u_world_size", params + 1, CF_UNIFORM_TYPE_INT, 1);
@@ -453,9 +461,10 @@ void hrc_compute()
 			cf_dispatch_compute(hrc.cs_extend, hrc.mat_extend, d);
 		}
 
-		// Merge R_{N-1} down to R_0. R rows hold 2 * dim entries (dense directions).
+		// Merge R_{cap-1} down to R_0. R rows hold 2 * dim entries (dense directions).
+		// R at the cap is the zero boundary (r_zero), same role R_N=0 plays at full depth.
 		int r_ping = 0;
-		for (int i = N - 1; i >= 0; i--) {
+		for (int i = cap - 1; i >= 0; i--) {
 			int params[6] = { i, dim, hrc.vrays_w[i], hrc.vrays_w[i + 1], dim * 2, dim * 2 };
 			cf_material_set_uniform_cs(hrc.mat_merge, "u_cascade", params + 0, CF_UNIFORM_TYPE_INT, 1);
 			cf_material_set_uniform_cs(hrc.mat_merge, "u_world_size", params + 1, CF_UNIFORM_TYPE_INT, 1);
@@ -469,7 +478,7 @@ void hrc_compute()
 				hrc_div_ceil(dim, HRC_WG),
 				1
 			);
-			CF_StorageBuffer r_prev = (i == N - 1) ? hrc.r_zero : hrc.r_rad[1 - r_ping];
+			CF_StorageBuffer r_prev = (i == cap - 1) ? hrc.r_zero : hrc.r_rad[1 - r_ping];
 			CF_StorageBuffer ro[5] = {
 				hrc.vrays_rad[i], hrc.vrays_trn[i],
 				hrc.vrays_rad[i + 1], hrc.vrays_trn[i + 1],
@@ -1108,6 +1117,12 @@ void bench_init()
 		bench_add(scene, 512, 1, 1, 0, "mip")->mip_march = 1;
 		// c-1 selectivity at grid 512 (item 4): skip the c-1 march in open cells.
 		bench_add(scene, 512, 1, 1, 0, "c1sel")->c1_selective = 1;
+		// Cascade level cap (item 5): stop N-1 / N-2 levels deep at grid 512 (N=9).
+		{
+			int N = POW2_LOG2(512);
+			bench_add(scene, 512, 1, 1, 0, "cap_N-1")->max_levels = N - 1;
+			bench_add(scene, 512, 1, 1, 0, "cap_N-2")->max_levels = N - 2;
+		}
 	}
 
 	printf("scene,grid,prefilter,upscale,cm1,mip,cap,c1sel,extras,frame_ms,rmse,maxdiff\n");
@@ -1132,6 +1147,7 @@ void bench_apply(BenchConfig* c)
 	hrc.cminus1 = c->cminus1;
 	hrc.mip_march = c->mip_march;
 	hrc.c1_selective = c->c1_selective;
+	hrc.max_levels = c->max_levels;
 	bench_clear_feedback();
 }
 
@@ -1264,6 +1280,7 @@ int main(int argc, char* argv[])
 		if ((env = getenv("HRC_FREEZE")))      freeze_time = atoi(env);
 		if ((env = getenv("HRC_MIP")))         hrc.mip_march = atoi(env);
 		if ((env = getenv("HRC_CM1SEL")))      hrc.c1_selective = atoi(env);
+		if ((env = getenv("HRC_MAX_LEVELS")))  hrc.max_levels = atoi(env);
 	}
 
 	if (getenv("HRC_BENCH")) bench_init();
