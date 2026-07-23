@@ -1463,6 +1463,54 @@ TEST_CASE(test_draw_path_lonely_flood)
 	return true;
 }
 
+// Recording order determines draw order within a pass: shapes batched before a
+// cf_draw_canvas blit must survive a clear=true cf_render_to. Regression: the blit
+// re-applied the render target with the pass's pending clear flag after the earlier
+// shape flush had already rendered, wiping everything batched before the blit.
+TEST_CASE(test_draw_canvas_blit_preserves_earlier_shapes)
+{
+	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, 640, 480, s_app_options(), NULL))) return true; // Headless CI: no display/GPU.
+
+	int w = 640, h = 480;
+	CF_Pixel* px = (CF_Pixel*)cf_alloc(w * h * sizeof(CF_Pixel));
+	CF_Canvas target = cf_make_canvas(cf_canvas_defaults(w, h));
+	CF_Canvas small = cf_make_canvas(cf_canvas_defaults(64, 64));
+
+	cf_app_update(NULL);
+
+	// Fill the small canvas solid blue.
+	cf_draw_push_color(cf_make_color_rgba_f(0, 0, 1.0f, 1.0f));
+	cf_draw_quad_fill(cf_make_aabb(cf_v2(-1000, -1000), cf_v2(1000, 1000)), 0);
+	cf_draw_pop_color();
+	cf_render_to(small, true);
+
+	// One clearing pass: a red quad batched BEFORE the blit, the blit x-separated so
+	// both are probeable.
+	cf_draw_push_color(cf_make_color_rgba_f(1.0f, 0, 0, 1.0f));
+	cf_draw_quad_fill(cf_make_aabb(cf_v2(-120, -30), cf_v2(-40, 30)), 0);
+	cf_draw_pop_color();
+	cf_draw_canvas(small, cf_v2(100, 0), cf_v2(100, 100));
+	cf_render_to(target, true);
+	cf_app_draw_onto_screen(false);
+
+	CF_Readback rb = cf_canvas_readback(target);
+	REQUIRE(rb.id);
+	while (!cf_readback_ready(rb)) {}
+	int size = w * h * (int)sizeof(CF_Pixel);
+	REQUIRE(cf_readback_size(rb) == size);
+	cf_readback_data(rb, px, size);
+	cf_destroy_readback(rb);
+
+	REQUIRE(s_px_near(s_probe(px, w, h, -80), 255, 0, 0, 255, 3)); // Earlier quad survived the blit.
+	REQUIRE(s_px_near(s_probe(px, w, h, 100), 0, 0, 255, 255, 3)); // The blit itself landed.
+
+	cf_destroy_canvas(small);
+	cf_destroy_canvas(target);
+	cf_free(px);
+	cf_destroy_app();
+	return true;
+}
+
 TEST_CASE(test_draw_blend_modes)
 {
 	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, 640, 480, s_app_options(), NULL))) return true; // Headless CI: no display/GPU.
@@ -1696,5 +1744,6 @@ TEST_SUITE(test_draw_tiled)
 	RUN_TEST_CASE_IF(test_draw_paths);
 	RUN_TEST_CASE_IF(test_draw_path_bake_once_stability);
 	RUN_TEST_CASE_IF(test_draw_path_lonely_flood);
+	RUN_TEST_CASE_IF(test_draw_canvas_blit_preserves_earlier_shapes);
 	RUN_TEST_CASE_IF(test_draw_lists);
 }

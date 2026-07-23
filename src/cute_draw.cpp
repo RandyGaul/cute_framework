@@ -4944,7 +4944,10 @@ static void s_process_command(CF_Canvas canvas, CF_Command* cmd, CF_Command* nex
 			atlas_cache_flush(&s_draw->atlas_cache);
 			s_flush_pending_geoms();
 		}
-		s_blit(cmd, cmd->canvas, canvas, clear);
+		// The pass's clear applies exactly once, at the first flush that actually
+		// renders -- if an earlier shape flush already drew, re-applying the target
+		// with clear here would wipe everything batched before this blit.
+		s_blit(cmd, cmd->canvas, canvas, clear && !s_draw->has_drawn_something);
 		clear = false; // Only clear `canvas` once.
 		s_draw->has_drawn_something = true;
 		return;
