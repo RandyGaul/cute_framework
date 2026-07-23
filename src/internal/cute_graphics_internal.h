@@ -244,6 +244,9 @@ void cf_compute_shader_swap_contents(CF_ComputeShader a, CF_ComputeShader b);
 #ifndef CF_EMSCRIPTEN
 
 CF_Result cf_sdlgpu_init(const char* device_name, bool debug, CF_BackendType* backend_type);
+// True when the device consumes DXBC but not SPIR-V (i.e. D3D12): runtime
+// shader compilation then emits HLSL for the FXC -> DXBC path.
+bool cf_sdlgpu_wants_hlsl();
 SDL_GPUDevice* cf_sdlgpu_get_device();
 SDL_GPUTexture* cf_sdlgpu_get_swapchain_texture();
 SDL_GPUCommandBuffer* cf_sdlgpu_get_command_buffer();

@@ -10,6 +10,12 @@
 
 #include <SDL3/SDL_gpu.h>
 #include <SDL3_shadercross/SDL_shadercross.h>
+
+#ifdef _WIN32
+// Compiles transpiled HLSL to DXBC via the system FXC (defined after the
+// d3d12 includes below). Returns a CF_ALLOC'd blob, or NULL on failure.
+static void* cf_fxc_compile(const char* hlsl, size_t hlsl_size, const char* target, size_t* out_size);
+#endif
 #include <spirv_cross_c.h>
 
 #include <float.h>
@@ -671,8 +677,24 @@ static inline SDL_GPUShader* s_load_shader_bytecode(CF_ShaderInternal* shader_in
 	shaderCreateInfo.num_storage_buffers = shader_info->num_storage_buffers;
 	shaderCreateInfo.num_uniform_buffers = shader_info->num_uniforms;
 	SDL_GPUShader* sdl_shader = NULL;
-	if (SDL_GetGPUShaderFormats(g_ctx.device) == SDL_GPU_SHADERFORMAT_SPIRV) {
+	SDL_GPUShaderFormat formats = SDL_GetGPUShaderFormats(g_ctx.device);
+	if (formats & SDL_GPU_SHADERFORMAT_SPIRV) {
 		sdl_shader = (SDL_GPUShader*)SDL_CreateGPUShader(g_ctx.device, &shaderCreateInfo);
+#ifdef _WIN32
+	} else if ((formats & SDL_GPU_SHADERFORMAT_DXBC) && bytecode.hlsl_src) {
+		// D3D12: compile cute_spirv's transpiled HLSL to DXBC with the system
+		// FXC (d3dcompiler_47.dll) -- no SPIRV-Cross or DXC involved.
+		size_t dxbc_size = 0;
+		void* dxbc = cf_fxc_compile(bytecode.hlsl_src, bytecode.hlsl_src_size,
+			stage == CF_SHADER_STAGE_VERTEX ? "vs_5_1" : "ps_5_1", &dxbc_size);
+		if (dxbc) {
+			shaderCreateInfo.code = (const Uint8*)dxbc;
+			shaderCreateInfo.code_size = dxbc_size;
+			shaderCreateInfo.format = SDL_GPU_SHADERFORMAT_DXBC;
+			sdl_shader = (SDL_GPUShader*)SDL_CreateGPUShader(g_ctx.device, &shaderCreateInfo);
+			CF_FREE(dxbc);
+		}
+#endif
 	} else {
 		SDL_ShaderCross_GraphicsShaderMetadata metadata = {};
 		metadata.num_samplers = shader_info->num_samplers;
@@ -701,6 +723,46 @@ static inline SDL_GPUShader* s_load_shader_bytecode(CF_ShaderInternal* shader_in
 #ifdef _WIN32
 #include <d3d12.h>
 #include "d3d12_layout.gen.h"
+
+// FXC lives in d3dcompiler_47.dll, a system component on Windows 10+; load it
+// lazily so nothing ships with games and non-D3D12 devices never touch it.
+typedef HRESULT (WINAPI* CF_PFN_D3DCompile)(
+	const void* src, SIZE_T src_size, const char* source_name,
+	const void* defines, void* include, const char* entry_point,
+	const char* target, UINT flags1, UINT flags2, ID3DBlob** code, ID3DBlob** errors);
+
+static void* cf_fxc_compile(const char* hlsl, size_t hlsl_size, const char* target, size_t* out_size)
+{
+	static CF_PFN_D3DCompile compile_fn;
+	if (!compile_fn) {
+		HMODULE dll = LoadLibraryA("d3dcompiler_47.dll");
+		if (!dll) return NULL;
+		compile_fn = (CF_PFN_D3DCompile)GetProcAddress(dll, "D3DCompile");
+		if (!compile_fn) return NULL;
+	}
+	ID3DBlob* code = NULL;
+	ID3DBlob* errors = NULL;
+	HRESULT hr = compile_fn(hlsl, hlsl_size, "shader", NULL, NULL, "main", target, 0, 0, &code, &errors);
+	if (FAILED(hr)) {
+		fprintf(stderr, "FXC failed to compile shader (%s):\n%s\n", target,
+			errors ? (const char*)errors->GetBufferPointer() : "(no error output)");
+		if (getenv("CF_DUMP_HLSL")) { // Debug aid: dump the failing source next to the exe.
+			static int dump_counter = 0;
+			char path[64];
+			snprintf(path, sizeof(path), "fxc_fail_%d.hlsl", dump_counter++);
+			FILE* fp = fopen(path, "wb");
+			if (fp) { fwrite(hlsl, 1, hlsl_size, fp); fclose(fp); }
+		}
+		if (errors) errors->Release();
+		return NULL;
+	}
+	if (errors) errors->Release();
+	*out_size = code->GetBufferSize();
+	void* copy = CF_ALLOC(*out_size);
+	CF_MEMCPY(copy, code->GetBufferPointer(), *out_size);
+	code->Release();
+	return copy;
+}
 
 // Suppress D3D12 debug warning #820 (CLEARRENDERTARGETVIEW_MISMATCHINGCLEARVALUE).
 // We want to suppress this because CF is designed where the clear value can be set by the
@@ -743,6 +805,13 @@ static void s_silence_d3d12_clear_value_warning(SDL_GPUDevice* gpu_device)
 	}
 }
 #endif
+
+bool cf_sdlgpu_wants_hlsl()
+{
+	if (!g_ctx.device) return false;
+	SDL_GPUShaderFormat formats = SDL_GetGPUShaderFormats(g_ctx.device);
+	return !(formats & SDL_GPU_SHADERFORMAT_SPIRV) && (formats & SDL_GPU_SHADERFORMAT_DXBC) != 0;
+}
 
 CF_Result cf_sdlgpu_init(const char* device_name, bool debug, CF_BackendType* backend_type)
 {
@@ -2012,6 +2081,27 @@ CF_ComputeShader cf_sdlgpu_make_compute_shader_from_bytecode(CF_ShaderBytecode b
 		pip_info.threadcount_y = 0;
 		pip_info.threadcount_z = 0;
 		cs->pipeline = SDL_CreateGPUComputePipeline(g_ctx.device, &pip_info);
+#ifdef _WIN32
+	} else if ((SDL_GetGPUShaderFormats(g_ctx.device) & SDL_GPU_SHADERFORMAT_DXBC) && bytecode.hlsl_src) {
+		// D3D12: transpiled HLSL -> DXBC via the system FXC.
+		size_t dxbc_size = 0;
+		void* dxbc = cf_fxc_compile(bytecode.hlsl_src, bytecode.hlsl_src_size, "cs_5_1", &dxbc_size);
+		if (dxbc) {
+			SDL_GPUComputePipelineCreateInfo pip_info = {};
+			pip_info.code = (const Uint8*)dxbc;
+			pip_info.code_size = dxbc_size;
+			pip_info.entrypoint = "main";
+			pip_info.format = SDL_GPU_SHADERFORMAT_DXBC;
+			pip_info.num_samplers = (Uint32)cs->num_samplers;
+			pip_info.num_readonly_storage_textures = (Uint32)cs->num_readonly_storage_textures;
+			pip_info.num_readonly_storage_buffers = (Uint32)cs->num_readonly_storage_buffers;
+			pip_info.num_readwrite_storage_textures = (Uint32)cs->num_readwrite_storage_textures;
+			pip_info.num_readwrite_storage_buffers = (Uint32)cs->num_readwrite_storage_buffers;
+			pip_info.num_uniform_buffers = (Uint32)cs->num_uniform_buffers;
+			cs->pipeline = SDL_CreateGPUComputePipeline(g_ctx.device, &pip_info);
+			CF_FREE(dxbc);
+		}
+#endif
 	} else {
 		SDL_ShaderCross_ComputePipelineMetadata metadata = {};
 		metadata.num_samplers = (Uint32)cs->num_samplers;
