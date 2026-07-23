@@ -193,6 +193,10 @@ typedef struct CF_ShaderBytecode
 	const char* glsl300_src;
 	/* @member Size of the GLSL 300 source. */
 	size_t glsl300_src_size;
+	/* @member The transpiled HLSL SM 5.1 source for D3D12 (compiled to DXBC by the system FXC at runtime). */
+	const char* hlsl_src;
+	/* @member Size of the HLSL source. */
+	size_t hlsl_src_size;
 	/* @member Shader reflection info. */
 	CF_ShaderInfo shader_info;
 } CF_ShaderBytecode;

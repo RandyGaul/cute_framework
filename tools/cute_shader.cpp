@@ -202,6 +202,8 @@ CF_ShaderCompilerResult cute_shader_compile(const char* source, CF_ShaderCompile
 	opts.display_name = s_display_name;
 	// GLSL 300 es transpilation (skipped for compute -- GLES 3.0 has no compute support).
 	opts.emit_glsl300 = stage != CUTE_SHADER_STAGE_COMPUTE && !config.skip_glsl300;
+	// HLSL SM 5.1 transpilation, for D3D12 via the system FXC.
+	opts.emit_hlsl = !config.skip_hlsl;
 
 	CSPV_Result r = cspv_compile_ex(source, cspv_stage, &opts);
 
@@ -228,6 +230,15 @@ CF_ShaderCompilerResult cute_shader_compile(const char* source, CF_ShaderCompile
 		glsl300_src_size = strlen(r.glsl300);
 		glsl300_src = (char*)malloc(glsl300_src_size + 1);
 		memcpy(glsl300_src, r.glsl300, glsl300_src_size + 1);
+	}
+
+	// HLSL source likewise.
+	char* hlsl_src = NULL;
+	size_t hlsl_src_size = 0;
+	if (r.hlsl) {
+		hlsl_src_size = strlen(r.hlsl);
+		hlsl_src = (char*)malloc(hlsl_src_size + 1);
+		memcpy(hlsl_src, r.hlsl, hlsl_src_size + 1);
 	}
 
 	// Reflection: map CSPV_Reflection to CF_ShaderInfo. Arrays are malloc'd (freed by
@@ -322,6 +333,8 @@ CF_ShaderCompilerResult cute_shader_compile(const char* source, CF_ShaderCompile
 	result.bytecode.size = bytecode_size;
 	result.bytecode.glsl300_src = glsl300_src;
 	result.bytecode.glsl300_src_size = glsl300_src_size;
+	result.bytecode.hlsl_src = hlsl_src;
+	result.bytecode.hlsl_src_size = hlsl_src_size;
 	result.bytecode.shader_info.num_samplers = num_samplers;
 	result.bytecode.shader_info.num_storage_textures = num_storage_textures;
 	result.bytecode.shader_info.num_storage_buffers = num_storage_buffers;
@@ -352,6 +365,7 @@ void cute_shader_free_result(CF_ShaderCompilerResult result)
 	free(shader_info->image_binding_slots);
 
 	free((void*)result.bytecode.glsl300_src);
+	free((void*)result.bytecode.hlsl_src);
 	free((void*)result.bytecode.content);
 	free((char*)result.preprocessed_source);
 	free((char*)result.error_message);

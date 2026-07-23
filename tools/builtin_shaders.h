@@ -551,6 +551,17 @@ float cf_glyph_eval(vec2 p, vec2 q0, vec2 e1, vec2 e2, ivec2 base, int strip_w, 
 )";
 
 static const char* s_smooth_uv = R"(
+// Variant taking a precomputed screen-space texel footprint (fwidth(uv * texture_size)),
+// for contexts where implicit derivatives are unavailable (FXC forbids gradient
+// instructions inside dynamic loops -- see the tiled walk shader).
+vec2 smooth_uv_fw(vec2 uv, vec2 texture_size, vec2 fw)
+{
+	vec2 pixel = uv * texture_size;
+	vec2 seam = floor(pixel + 0.5);
+	pixel = seam + clamp((pixel - seam) / fw, -0.5, 0.5);
+	return pixel / texture_size;
+}
+
 vec2 smooth_uv(vec2 uv, vec2 texture_size)
 {
 	vec2 pixel = uv * texture_size;
@@ -923,11 +934,25 @@ void main()
 			// Sample unconditionally (quad-uniform), clamp into the glyph's uv rect to
 			// avoid bleeding neighboring atlas entries, mask outside the quad after.
 			uv = clamp(uv, min(uvb.xy, uvb.zw), max(uvb.xy, uvb.zw));
-			vec2 uv_final = u_use_smooth_uv == 0 ? smooth_uv(uv, u_texture_size) : uv;
 			// The mesh path computes gamma(de_gamma(tex)) for sprites and de_gamma(tex).a
 			// for text; both are identities (de_gamma leaves alpha untouched), so skip
 			// the two pow() round-trips here.
+#ifdef CF_NO_IMPLICIT_GRADIENTS
+			// FXC (DXBC SM 5.1) forbids gradient instructions inside the dynamic tile
+			// loop. The quad's uv mapping is affine per command, so the screen-space
+			// texel footprint smooth_uv needs is computable analytically, and sampling
+			// goes explicit-lod (atlas textures are single-mip, so lod 0 is exact).
+			vec2 gdx = im0.xy * (2.0 / u_canvas_wh.x);
+			vec2 gdy = im0.zw * (2.0 / u_canvas_wh.y);
+			float gds = (abs(dot(gdx, e1)) + abs(dot(gdy, e1))) * P1.z;
+			float gdt = (abs(dot(gdx, e2)) + abs(dot(gdy, e2))) * P1.w;
+			vec2 fw = vec2(gds * abs(uvb.z - uvb.x), gdt * abs(uvb.w - uvb.y)) * u_texture_size;
+			vec2 uv_final = u_use_smooth_uv == 0 ? smooth_uv_fw(uv, u_texture_size, fw) : uv;
+			vec4 tex_c = textureLod(u_image, uv_final, 0.0);
+#else
+			vec2 uv_final = u_use_smooth_uv == 0 ? smooth_uv(uv, u_texture_size) : uv;
 			vec4 tex_c = texture(u_image, uv_final);
+#endif
 			float quad_cov = step(0.0, s) * step(s, 1.0) * step(0.0, t) * step(t, 1.0);
 			if (type == CMD_TYPE_SPRITE) {
 				c = tex_c;

@@ -49,6 +49,10 @@ typedef struct CF_ShaderCompilerConfig
 	// compilation (cute-shaderc) keeps it so bytecode works on every backend.
 	bool skip_glsl300;
 
+	// Skip transpilation to HLSL SM 5.1. Runtime compilation skips it on every
+	// backend except D3D12-without-SPIR-V; offline compilation keeps it.
+	bool skip_hlsl;
+
 	// Optional: when a user draw shader is injected as shader_stub.shd, report its
 	// errors under this name (usually the user's shader path) instead.
 	const char* shader_stub_display_name;

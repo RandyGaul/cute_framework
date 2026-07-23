@@ -235,12 +235,23 @@ static CF_ShaderBytecode cf_compile_shader_to_bytecode_internal(const char* shad
 		include_dirs[num_include_dirs++] = app->shader_directory.c_str();
 	}
 
+	// Only a D3D12 (DXBC-without-SPIR-V) device consumes the HLSL output.
+	bool skip_hlsl = true;
+#ifndef CF_EMSCRIPTEN
+	if (app->gfx_backend_type != CF_BACKEND_TYPE_GLES3) skip_hlsl = !cf_sdlgpu_wants_hlsl();
+#endif
+
 	// Builtin defines: CF_GLES selects the texel-fetch storage flavor of the draw
-	// shaders on the GLES3 backend (single-source, see builtin_shaders.h).
+	// shaders on the GLES3 backend, and CF_NO_IMPLICIT_GRADIENTS selects the
+	// analytic-derivative flavor of the tiled walk shader for FXC (single-source,
+	// see builtin_shaders.h).
 	int num_defines = 0;
-	CF_ShaderCompilerDefine defines[2];
+	CF_ShaderCompilerDefine defines[3];
 	if (app->gfx_backend_type == CF_BACKEND_TYPE_GLES3) {
 		defines[num_defines++] = { "CF_GLES", "1" };
+	}
+	if (!skip_hlsl) {
+		defines[num_defines++] = { "CF_NO_IMPLICIT_GRADIENTS", "1" };
 	}
 
 	CF_ShaderCompilerConfig config = {
@@ -259,6 +270,7 @@ static CF_ShaderBytecode cf_compile_shader_to_bytecode_internal(const char* shad
 		// Only the GLES3 backend consumes the GLSL ES 300 output; shaders that GLES
 		// cannot express (the tiled path) are only ever compiled on other backends.
 		.skip_glsl300 = app->gfx_backend_type != CF_BACKEND_TYPE_GLES3,
+		.skip_hlsl = skip_hlsl,
 
 		// Report user draw-shader errors under the user's shader path.
 		.shader_stub_display_name = user_shd_name,
