@@ -6156,6 +6156,22 @@ static void cspv_tp_expr_node(cspv_tp* g, cspv_expr* e, int prec)
 	}
 
 	case CSPV_E_COND: {
+		if (g->hlsl) {
+			// FXC's ?: only accepts numeric operands; struct selects go
+			// through the cf_select_<name> helper emitted with each struct.
+			cspv_type* t = cspv_tp_rtype(g, e->u.cond.a);
+			if (!t) t = cspv_tp_rtype(g, e->u.cond.b);
+			if (t && t->kind == CSPV_T_STRUCT) {
+				sfmt_append(g->ctx->tp_out, "cf_select_%s(", t->name);
+				cspv_tp_expr(g, e->u.cond.c, 2);
+				sappend(g->ctx->tp_out, ", ");
+				cspv_tp_expr(g, e->u.cond.a, 2);
+				sappend(g->ctx->tp_out, ", ");
+				cspv_tp_expr(g, e->u.cond.b, 2);
+				spush(g->ctx->tp_out, ')');
+				break;
+			}
+		}
 		bool paren = 3 < prec;
 		if (paren) spush(g->ctx->tp_out, '(');
 		cspv_tp_expr(g, e->u.cond.c, 4);
@@ -6906,6 +6922,12 @@ static int cspv_hlsl_natural_size(cspv_type* t)
 static void cspv_tp_struct_factory(cspv_tp* g, cspv_type* t)
 {
 	cspv_ctx* ctx = g->ctx;
+	if (g->hlsl) {
+		// FXC's ?: operator only accepts numeric operands; struct-typed
+		// ternaries print as calls to this select helper instead.
+		sfmt_append(ctx->tp_out, "%s cf_select_%s(bool c_, %s a_, %s b_) { if (c_) return a_; return b_; }\n",
+			t->name, t->name, t->name, t->name);
+	}
 	for (int i = 0; i < (int)asize(t->field_types); i++) {
 		if (t->field_types[i]->kind == CSPV_T_ARRAY) return;
 	}

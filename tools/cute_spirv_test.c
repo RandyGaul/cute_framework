@@ -1245,6 +1245,23 @@ static void test_emitters(void)
 		}
 		cspv_free(&r);
 	}
+	// Struct-typed ternaries lower to cf_select_<name> in HLSL (FXC's ?: only
+	// accepts numeric operands, error X3020); MSL keeps the plain ternary.
+	{
+		CSPV_Result r = s_emit_all(CSPV_STAGE_FRAGMENT,
+			"struct Interval { float lo; float hi; };\n"
+			"layout(location = 0) out vec4 result;\n"
+			"void main() {\n"
+			"	bool c = gl_FragCoord.x > 0.5;\n"
+			"	Interval iv = c ? Interval(0.0, 1.0) : Interval(2.0, 3.0);\n"
+			"	result = vec4(iv.lo, iv.hi, 0, 1);\n"
+			"}\n");
+		if (r.success) {
+			CHECK(strstr(r.hlsl, "cf_select_Interval(") != NULL);
+			CHECK(strstr(r.msl, "cf_select_Interval(") == NULL);
+		}
+		cspv_free(&r);
+	}
 }
 
 //--------------------------------------------------------------------------------------------------

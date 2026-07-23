@@ -2077,6 +2077,12 @@ CF_ComputeShader cf_sdlgpu_make_compute_shader_from_bytecode(CF_ShaderBytecode b
 	pip_info.num_readwrite_storage_textures = (Uint32)cs->num_readwrite_storage_textures;
 	pip_info.num_readwrite_storage_buffers = (Uint32)cs->num_readwrite_storage_buffers;
 	pip_info.num_uniform_buffers = (Uint32)cs->num_uniform_buffers;
+	// SPIR-V and DXBC carry the workgroup size in the bytecode, but SDL's debug
+	// validation requires non-zero threadcounts for every format (and Metal
+	// genuinely needs them -- MSL source has no readable workgroup size).
+	pip_info.threadcount_x = (Uint32)bytecode.shader_info.local_size[0];
+	pip_info.threadcount_y = (Uint32)bytecode.shader_info.local_size[1];
+	pip_info.threadcount_z = (Uint32)bytecode.shader_info.local_size[2];
 	if (formats & SDL_GPU_SHADERFORMAT_SPIRV) {
 		pip_info.code = bytecode.content;
 		pip_info.code_size = bytecode.size;
@@ -2098,15 +2104,11 @@ CF_ComputeShader cf_sdlgpu_make_compute_shader_from_bytecode(CF_ShaderBytecode b
 	}
 #endif
 	if (!cs->pipeline && (formats & SDL_GPU_SHADERFORMAT_MSL) && bytecode.msl_src) {
-		// Metal: transpiled MSL source; the OS compiles it. Metal cannot read
-		// the workgroup size from source, so pass it via reflection.
+		// Metal: transpiled MSL source; the OS compiles it.
 		pip_info.code = (const Uint8*)bytecode.msl_src;
 		pip_info.code_size = bytecode.msl_src_size + 1;
 		pip_info.entrypoint = "main0";
 		pip_info.format = SDL_GPU_SHADERFORMAT_MSL;
-		pip_info.threadcount_x = (Uint32)bytecode.shader_info.local_size[0];
-		pip_info.threadcount_y = (Uint32)bytecode.shader_info.local_size[1];
-		pip_info.threadcount_z = (Uint32)bytecode.shader_info.local_size[2];
 		cs->pipeline = SDL_CreateGPUComputePipeline(g_ctx.device, &pip_info);
 		if (!cs->pipeline) {
 			// Dump the source so Metal rejections come back as actionable reports.
