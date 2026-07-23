@@ -51,6 +51,11 @@ typedef struct CF_Allocator
  * @remarks  The default allocator simply calls malloc/free and friends. You may override this behavior by passing
  *           a `CF_Allocator` to this function. This lets you hook up your own custom allocator. Usually you only want
  *           to do this on certain platforms for performance optimizations, but is not a necessary thing to do for many games.
+ *
+ *           On web (Emscripten) builds, your allocator's functions must never suspend/yield (e.g. never call
+ *           `cf_sleep`, or otherwise perform a coroutine yield or fiber swap). The default allocator's functions
+ *           are excluded from Emscripten's ASYNCIFY instrumentation on the assumption that allocation never
+ *           suspends; a custom allocator that yields would corrupt the ASYNCIFY call stack instead of failing loudly.
  * @related  CF_Allocator cf_allocator_override cf_allocator_restore_default cf_alloc cf_free cf_calloc cf_realloc
  */
 CF_API void CF_CALL cf_allocator_override(CF_Allocator allocator);
