@@ -137,6 +137,24 @@ static bool write_bytecode(
 		fprintf(file, "#define %s%s_hlsl_src NULL\n", var_name, suffix);
 	}
 
+	// Write MSL (for Metal, compiled by the OS at runtime).
+	if (compile_result.bytecode.msl_src) {
+		fprintf(file, "static const char %s%s_msl_src[%zu] =\n\"", var_name, suffix, compile_result.bytecode.msl_src_size + 1);
+		for (size_t i = 0; i < compile_result.bytecode.msl_src_size; ++i) {
+			char ch = compile_result.bytecode.msl_src[i];
+			if (ch == '\n') {  // Escape new line as \n and start an actual new line
+				fprintf(file, "\\n\"\n\"");
+			} else if (ch == '"') {
+				fprintf(file, "\\\"");
+			} else {
+				fprintf(file, "%c", ch);
+			}
+		}
+		fprintf(file, "\";\n");
+	} else {
+		fprintf(file, "#define %s%s_msl_src NULL\n", var_name, suffix);
+	}
+
 	// Write reflection info.
 	const CF_ShaderInfo* shader_info = &compile_result.bytecode.shader_info;
 
@@ -224,6 +242,8 @@ static bool write_bytecode_struct_contents(
 	TABS(); fprintf(file, ".glsl300_src_size = %zu,\n", compile_result.bytecode.glsl300_src_size);
 	TABS(); fprintf(file, ".hlsl_src = %s%s_hlsl_src,\n", var_name, suffix);
 	TABS(); fprintf(file, ".hlsl_src_size = %zu,\n", compile_result.bytecode.hlsl_src_size);
+	TABS(); fprintf(file, ".msl_src = %s%s_msl_src,\n", var_name, suffix);
+	TABS(); fprintf(file, ".msl_src_size = %zu,\n", compile_result.bytecode.msl_src_size);
 	TABS(); fprintf(file, ".shader_info = {\n");
 	TABS(); fprintf(file, "\t.num_samplers = %d,\n", shader_info->num_samplers);
 	TABS(); fprintf(file, "\t.num_storage_textures = %d,\n", shader_info->num_storage_textures);
@@ -239,6 +259,7 @@ static bool write_bytecode_struct_contents(
 	TABS(); fprintf(file, "\t.uniform_members = %s%s_uniform_members,\n", var_name, suffix);
 	TABS(); fprintf(file, "\t.num_inputs = %d,\n", shader_info->num_inputs);
 	TABS(); fprintf(file, "\t.inputs = %s%s_inputs,\n", var_name, suffix);
+	TABS(); fprintf(file, "\t.local_size = { %d, %d, %d },\n", shader_info->local_size[0], shader_info->local_size[1], shader_info->local_size[2]);
 	TABS(); fprintf(file, "},\n");
 
 #undef TABS
@@ -569,6 +590,7 @@ int main(int argc, const char* argv[])
 		if (!nogles) {
 			config.skip_glsl300 = false;
 			config.skip_hlsl = true; // Only the GLSL 300 output is grafted from this flavor.
+			config.skip_msl = true;
 			defines[num_defines++] = { "CF_GLES", "1" };
 			config.num_builtin_defines = num_defines;
 			draw_gles_result = cute_shader_compile(
@@ -588,6 +610,7 @@ int main(int argc, const char* argv[])
 			// (blit has no flavors) but keep transpilation on.
 			config.num_builtin_defines = --num_defines;
 			config.skip_hlsl = false;
+			config.skip_msl = false;
 		} else {
 			config.skip_glsl300 = true;
 		}

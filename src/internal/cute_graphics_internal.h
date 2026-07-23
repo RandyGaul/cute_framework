@@ -247,6 +247,9 @@ CF_Result cf_sdlgpu_init(const char* device_name, bool debug, CF_BackendType* ba
 // True when the device consumes DXBC but not SPIR-V (i.e. D3D12): runtime
 // shader compilation then emits HLSL for the FXC -> DXBC path.
 bool cf_sdlgpu_wants_hlsl();
+// True when the device consumes MSL but not SPIR-V (i.e. Metal): runtime
+// shader compilation then emits MSL source.
+bool cf_sdlgpu_wants_msl();
 SDL_GPUDevice* cf_sdlgpu_get_device();
 SDL_GPUTexture* cf_sdlgpu_get_swapchain_texture();
 SDL_GPUCommandBuffer* cf_sdlgpu_get_command_buffer();

@@ -235,10 +235,15 @@ static CF_ShaderBytecode cf_compile_shader_to_bytecode_internal(const char* shad
 		include_dirs[num_include_dirs++] = app->shader_directory.c_str();
 	}
 
-	// Only a D3D12 (DXBC-without-SPIR-V) device consumes the HLSL output.
+	// Only a D3D12 (DXBC-without-SPIR-V) device consumes the HLSL output, and
+	// only a Metal (MSL-without-SPIR-V) device consumes the MSL output.
 	bool skip_hlsl = true;
+	bool skip_msl = true;
 #ifndef CF_EMSCRIPTEN
-	if (app->gfx_backend_type != CF_BACKEND_TYPE_GLES3) skip_hlsl = !cf_sdlgpu_wants_hlsl();
+	if (app->gfx_backend_type != CF_BACKEND_TYPE_GLES3) {
+		skip_hlsl = !cf_sdlgpu_wants_hlsl();
+		skip_msl = !cf_sdlgpu_wants_msl();
+	}
 #endif
 
 	// Builtin defines: CF_GLES selects the texel-fetch storage flavor of the draw
@@ -271,6 +276,7 @@ static CF_ShaderBytecode cf_compile_shader_to_bytecode_internal(const char* shad
 		// cannot express (the tiled path) are only ever compiled on other backends.
 		.skip_glsl300 = app->gfx_backend_type != CF_BACKEND_TYPE_GLES3,
 		.skip_hlsl = skip_hlsl,
+		.skip_msl = skip_msl,
 
 		// Report user draw-shader errors under the user's shader path.
 		.shader_stub_display_name = user_shd_name,
