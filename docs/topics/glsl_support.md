@@ -71,7 +71,7 @@ If you're coming from a CF version that used glslang, three things to know:
 
 1. **Regenerate precompiled shaders.** Headers produced by the old `cute-shaderc` must be regenerated with the new one. `CF_ShaderBytecode` has always been documented as opaque with no ABI guarantee, so this is the expected workflow when updating CF — same commands, same flags, smaller output.
 2. **Shaders outside the subset now error with a named message.** glslang accepted all of GLSL 450; CF's compiler accepts the subset above. If one of your shaders uses something outside it, you'll get a precise error naming the construct — [open an issue](https://github.com/RandyGaul/cute_framework/issues) and it can usually be added quickly. Everything CF itself and all of its samples use is covered.
-3. **Nothing to install anymore.** Python is no longer needed to build CF and no sources are fetched for the compiler. (On Windows, `dxcompiler.dll`/`dxil.dll` still ship next to executables: the tiled draw path's storage buffers need Shader Model 6, which only DXC can produce.)
+3. **Nothing to install anymore.** Python is no longer needed to build CF and no sources are fetched for the compiler. On Windows nothing ships next to executables either: D3D12 shaders are transpiled to HLSL by cute_spirv and compiled to DXBC by the system's own FXC (`d3dcompiler_47.dll`).
 
 One behavioral note: bytecode produced by *runtime* compilation only targets the backend the app is running on (the GLSL ES 300 payload is skipped elsewhere). Bytecode from the offline `cute-shaderc` always contains everything and works on every backend.
 

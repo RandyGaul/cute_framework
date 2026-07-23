@@ -29,11 +29,6 @@ target_include_directories(tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../src)
 set_target_properties(tests PROPERTIES
 	RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
 )
-if (WINDOWS)
-	# The draw tests compile SSBO shaders at runtime, which needs DXIL on D3D12.
-	target_dxc_copy(tests)
-endif()
-
 # For convenience make tests the startup project in Visual Studio.
 # Also set working directory to the target output folder.
 if (MSVC)

@@ -332,53 +332,9 @@ endif()
 
 # Deprecated no-op, kept so existing user CMake scripts don't break. CF no longer
 # ships or uses dxcompiler.dll/dxil.dll -- D3D12 shaders go through the system's
-# This function should be used if you have specified a target-specific runtime output directory,
-# or if you do not wish to specify a default runtime output directory.
+# FXC (d3dcompiler_47.dll) fed by cute_spirv's HLSL transpiler backend.
 function(target_dxc_copy TARGET)
-	get_target_property(cute_SOURCE_DIR cute SOURCE_DIR)
-	set(DXC_DLL_DIR "${cute_SOURCE_DIR}/libraries/dxc")
-
-	add_custom_command(TARGET ${TARGET} POST_BUILD
-		COMMAND ${CMAKE_COMMAND} -E copy_if_different "${DXC_DLL_DIR}/dxcompiler.dll" "$<TARGET_FILE_DIR:${TARGET}>/dxcompiler.dll"
-		COMMAND ${CMAKE_COMMAND} -E copy_if_different "${DXC_DLL_DIR}/dxil.dll" "$<TARGET_FILE_DIR:${TARGET}>/dxil.dll"
-	)
 endfunction()
-
-# Check for Windows platform and specify dxcompiler.dll and dxil.dll locations.
-if (WINDOWS)
-	set(DXC_DLL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/libraries/dxc")
-
-	# Enable the DXC/DXIL path in SDL_shadercross (dxcompiler.dll is loaded dynamically
-	# at runtime). Shaders using storage buffers (the tiled draw path) require SM 6.0,
-	# which the FXC/DXBC path cannot produce.
-	set_source_files_properties(libraries/SDL3_shadercross/SDL_shadercross.c PROPERTIES COMPILE_DEFINITIONS SDL_SHADERCROSS_DXC)
-
-	# Check if this project is being included as a subproject.
-	if (NOT CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
-		# Set default runtime output directory if not defined.
-		if (NOT DEFINED CMAKE_RUNTIME_OUTPUT_DIRECTORY)
-			set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIG>")
-		endif()
-
-		# Iterate over the configuration types.
-		# ...Try and support custom user output directories.
-		foreach (CONFIG_TYPE ${CMAKE_CONFIGURATION_TYPES})
-			string(TOUPPER ${CONFIG_TYPE} CONFIG_TYPE_UPPER)
-			if (DEFINED CMAKE_RUNTIME_OUTPUT_DIRECTORY_${CONFIG_TYPE_UPPER})
-				set(DEST_DIR "${CMAKE_RUNTIME_OUTPUT_DIRECTORY_${CONFIG_TYPE_UPPER}}")
-			else()
-				set(DEST_DIR "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/$<CONFIG>")
-			endif()
-
-			if (DEST_DIR)
-				add_custom_command(TARGET cute POST_BUILD
-					COMMAND ${CMAKE_COMMAND} -E copy_if_different "${DXC_DLL_DIR}/dxcompiler.dll" "${DEST_DIR}/dxcompiler.dll"
-					COMMAND ${CMAKE_COMMAND} -E copy_if_different "${DXC_DLL_DIR}/dxil.dll" "${DEST_DIR}/dxil.dll"
-				)
-			endif()
-		endforeach()
-	endif()
-endif()
 
 if(NOT EMSCRIPTEN) # Emscripten provides it's own SDL3.
 	# SDL for platform support.

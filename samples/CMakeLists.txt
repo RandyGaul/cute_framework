@@ -21,9 +21,6 @@ function(add_sample TARGET_NAME SOURCE_FILE)
 		FOLDER "samples"
 		RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
 	)
-	if (WINDOWS)
-		target_dxc_copy(${TARGET_NAME})
-	endif()
 	if (EMSCRIPTEN)
 		set_target_properties(${TARGET_NAME} PROPERTIES OUTPUT_NAME "${TARGET_NAME}" SUFFIX ".html")
 		target_compile_options(${TARGET_NAME} PRIVATE -O1 -fno-rtti -fno-exceptions -gsplit-dwarf)
