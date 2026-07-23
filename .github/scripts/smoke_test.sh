@@ -25,8 +25,10 @@ set -u
 APP="${1:?usage: smoke_test.sh <path-to-sample> [duration-seconds]}"
 DURATION="${2:-8}"
 
-# Windows builds produce an .exe; allow callers to omit the suffix.
-if [[ ! -x "$APP" && -x "$APP.exe" ]]; then
+# Windows builds produce an .exe; allow callers to omit the suffix. Test with
+# -e rather than -x: Git Bash on Windows reports the executable bit
+# unreliably, which could otherwise skip this fallback for a file that exists.
+if [[ ! -e "$APP" && -e "$APP.exe" ]]; then
 	APP="$APP.exe"
 fi
 
