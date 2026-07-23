@@ -11,9 +11,25 @@ require 'fileutils'
 require 'pathname'
 require 'yaml'
 
-# Target name mappings for cases where the nav target differs from the file name
+# Target name mappings for cases where the nav target differs from the build target
 # e.g. nine_slice -> 9_slice
 TARGET_MAP = { 'nine_slice' => '9_slice' }.freeze
+
+# Source file basename mappings for cases where the CMake add_sample() build target
+# differs from the source file's basename, e.g. add_sample(basicinstancing basic_instancing.c)
+SOURCE_FILE_MAP = {
+  'basicinstancing' => 'basic_instancing',
+  'basicindexedrendering' => 'basic_indexed_rendering',
+  'easysprite' => 'easy_sprite',
+  'basicserialization' => 'basic_serialization',
+  'textdrawing' => 'text_drawing',
+  'basicsprite' => 'basic_sprite',
+  'basicshapes' => 'basic_shapes',
+  'windowresizing' => 'window_resizing',
+  'basicinput' => 'basic_input',
+  'windowevents' => 'window_events',
+  'customsprite' => 'custom_sprite',
+}.freeze
 
 # Extract only the nav: block from mkdocs.yml so we avoid Python-specific YAML
 # tags (!!python/name:, !!python/object/apply:) present in other sections.
@@ -73,9 +89,9 @@ def parse_samples_from_nav(nav)
 end
 
 def find_source_file(target, samples_src_dir)
-  actual_target = TARGET_MAP.fetch(target, target)
+  source_basename = SOURCE_FILE_MAP.fetch(target, TARGET_MAP.fetch(target, target))
   %w[c cpp].each do |ext|
-    file = "#{actual_target}.#{ext}"
+    file = "#{source_basename}.#{ext}"
     return file if File.exist?(File.join(samples_src_dir, file))
   end
   nil
