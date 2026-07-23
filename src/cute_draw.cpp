@@ -83,7 +83,7 @@ void cf_destroy_texture_handle(ATLAS_CACHE_U64 texture_id, void* udata)
 
 atlas_cache_t* cf_get_draw_atlas_cache()
 {
-	return &s_draw->sb;
+	return &s_draw->atlas_cache;
 }
 
 void cf_get_pixels(ATLAS_CACHE_U64 image_id, void* buffer, int bytes_to_fill, void* udata)
@@ -732,16 +732,16 @@ static void s_draw_report_tiled(const BatchGeometry* geoms, const CF_PendingUV* 
 	s_draw->has_drawn_something = true;
 }
 
-static void s_draw_report(atlas_cache_entry_t* sprites, int count, int texture_w, int texture_h, void* udata)
+static void s_draw_report(atlas_cache_entry_t* entries, int count, int texture_w, int texture_h, void* udata)
 {
 	CF_UNUSED(udata);
-	// Stash each sprite's atlas uvs + texture into the per-flush uv table. Rendering
+	// Stash each entry's atlas uvs + texture into the per-flush uv table. Rendering
 	// happens after the flush (s_flush_pending_geoms): the stream renders in paint
 	// order, splitting into a new draw wherever the bound texture changes, so paint
 	// order holds even when sprites span multiple atlas textures.
 	for (int i = 0; i < count; ++i) {
-		const atlas_cache_entry_t* s = sprites + i;
-		CF_PendingUV& uv = s_draw->pending_uvs[s->geom.seq];
+		const atlas_cache_entry_t* s = entries + i;
+		CF_PendingUV& uv = s_draw->pending_uvs[(int)s->udata];
 		uv.texture_id = s->texture_id;
 		uv.minx = s->minx;
 		uv.miny = s->miny;
@@ -783,7 +783,7 @@ static void s_draw_report_range(const BatchGeometry* geoms, const CF_PendingUV* 
 //--------------------------------------------------------------------------------------------------
 // Hidden API called by CF_App.
 
-static void s_init_sb(int w, int h)
+static void s_init_atlas_cache(int w, int h)
 {
 	atlas_cache_config_t config;
 	atlas_cache_set_default_config(&config);
@@ -799,7 +799,7 @@ static void s_init_sb(int w, int h)
 	config.atlas_width_in_pixels = w;
 	s_draw->atlas_dims = V2((float)w, (float)h);
 
-	if (atlas_cache_init(&s_draw->sb, &config, NULL)) {
+	if (atlas_cache_init(&s_draw->atlas_cache, &config, NULL)) {
 		CF_FREE(s_draw);
 		s_draw = NULL;
 		CF_ASSERT(false);
@@ -851,7 +851,7 @@ void cf_make_draw()
 	cf_material_set_render_state(s_draw->material, state);
 
 	// AtlasCacheer.
-	s_init_sb(2048, 2048);
+	s_init_atlas_cache(2048, 2048);
 
 	// Create samplers for filter mode switching.
 	s_draw->sampler_nearest = cf_create_draw_sampler(CF_FILTER_NEAREST);
@@ -928,7 +928,7 @@ void cf_destroy_draw()
 	cf_destroy_draw_sampler(s_draw->sampler_nearest);
 	cf_destroy_draw_sampler(s_draw->sampler_linear);
 	cf_destroy_texture(s_draw->white_texture);
-	atlas_cache_term(&s_draw->sb);
+	atlas_cache_term(&s_draw->atlas_cache);
 	cf_destroy_material(s_draw->material);
 	s_draw->~CF_Draw();
 	CF_FREE(s_draw);
@@ -1549,13 +1549,13 @@ void cf_draw_prefetch(const CF_Sprite* sprite)
 			CF_Animation* animation = anim_vals[i];
 			for (int j = 0; j < asize(animation->frames); ++j) {
 				CF_Frame* frame = animation->frames + j;
-				atlas_cache_prefetch(&s_draw->sb, frame->id, sprite->w, sprite->h);
+				atlas_cache_prefetch(&s_draw->atlas_cache, frame->id, sprite->w, sprite->h);
 			}
 		}
 	} else if (sprite->easy_sprite_id >= CF_PREMADE_ID_RANGE_LO && sprite->easy_sprite_id <= CF_PREMADE_ID_RANGE_HI) {
-		atlas_cache_prefetch(&s_draw->sb, sprite->easy_sprite_id, sprite->w, sprite->h);
+		atlas_cache_prefetch(&s_draw->atlas_cache, sprite->easy_sprite_id, sprite->w, sprite->h);
 	} else {
-		atlas_cache_prefetch(&s_draw->sb, sprite->easy_sprite_id, sprite->w, sprite->h);
+		atlas_cache_prefetch(&s_draw->atlas_cache, sprite->easy_sprite_id, sprite->w, sprite->h);
 	}
 }
 
@@ -4429,8 +4429,8 @@ CF_RenderState cf_draw_peek_render_state()
 
 void cf_draw_set_atlas_dimensions(int width_in_pixels, int height_in_pixels)
 {
-	atlas_cache_term(&s_draw->sb);
-	s_init_sb(width_in_pixels, height_in_pixels);
+	atlas_cache_term(&s_draw->atlas_cache);
+	s_init_atlas_cache(width_in_pixels, height_in_pixels);
 	s_draw->atlas_dims.x = (float)width_in_pixels;
 	s_draw->atlas_dims.y = (float)height_in_pixels;
 	s_draw->texel_dims.x = 1.0f / s_draw->atlas_dims.x;
@@ -4848,9 +4848,9 @@ static void s_process_command(CF_Canvas canvas, CF_Command* cmd, CF_Command* nex
 		if (s_draw->need_flush) {
 			s_draw->need_flush = false;
 			if (!s_draw->delay_defrag) {
-				atlas_cache_defrag(&s_draw->sb);
+				atlas_cache_defrag(&s_draw->atlas_cache);
 			}
-			atlas_cache_flush(&s_draw->sb);
+			atlas_cache_flush(&s_draw->atlas_cache);
 			s_flush_pending_geoms();
 		}
 		s_blit(cmd, cmd->canvas, canvas, clear);
@@ -4880,8 +4880,8 @@ static void s_process_command(CF_Canvas canvas, CF_Command* cmd, CF_Command* nex
 		}
 		for (int i = 0; i < cmd->items.count(); ++i) {
 			atlas_cache_entry_t sp = cmd->items[i];
-			sp.geom.seq += base;
-			atlas_cache_push(&s_draw->sb, sp);
+			sp.udata += (ATLAS_CACHE_U64)base;
+			atlas_cache_push(&s_draw->atlas_cache, sp);
 		}
 	}
 
@@ -4917,9 +4917,9 @@ static void s_process_command(CF_Canvas canvas, CF_Command* cmd, CF_Command* nex
 		// the atlas compiler.
 		s_draw->need_flush = false;
 		if (!s_draw->delay_defrag) {
-			atlas_cache_defrag(&s_draw->sb);
+			atlas_cache_defrag(&s_draw->atlas_cache);
 		}
-		atlas_cache_flush(&s_draw->sb);
+		atlas_cache_flush(&s_draw->atlas_cache);
 		s_flush_pending_geoms();
 	}
 }
@@ -4970,9 +4970,9 @@ void cf_render_layers_to(CF_Canvas canvas, int layer_lo, int layer_hi, bool clea
 	if (s_draw->need_flush) {
 		s_draw->need_flush = false;
 		if (!s_draw->delay_defrag) {
-			atlas_cache_defrag(&s_draw->sb);
+			atlas_cache_defrag(&s_draw->atlas_cache);
 		}
-		atlas_cache_flush(&s_draw->sb);
+		atlas_cache_flush(&s_draw->atlas_cache);
 		s_flush_pending_geoms();
 	}
 	s_draw->has_drawn_something = false;
@@ -5121,7 +5121,7 @@ CF_TemporaryImage cf_fetch_image(const CF_Sprite* sprite)
 
 	if (sprite->easy_sprite_id >= CF_PREMADE_ID_RANGE_LO && sprite->easy_sprite_id <= CF_PREMADE_ID_RANGE_HI) {
 		CF_AtlasSubImage sub_image = s_draw->premade_sub_image_id_to_sub_image.find(sprite->easy_sprite_id);
-		atlas_cache_entry_t s = atlas_cache_fetch(&s_draw->sb, sprite->easy_sprite_id, sprite->w, sprite->h);
+		atlas_cache_entry_t s = atlas_cache_fetch(&s_draw->atlas_cache, sprite->easy_sprite_id, sprite->w, sprite->h);
 		CF_TemporaryImage image;
 		image.tex = { sub_image.image_id }; // @JANK - Hijacked to store texture_id and avoid an extra hashtable lookup.
 		image.w = sub_image.w;
@@ -5137,7 +5137,7 @@ CF_TemporaryImage cf_fetch_image(const CF_Sprite* sprite)
 			image_id = sprite->easy_sprite_id;
 		}
 
-		atlas_cache_entry_t s = atlas_cache_fetch(&s_draw->sb, image_id, sprite->w, sprite->h);
+		atlas_cache_entry_t s = atlas_cache_fetch(&s_draw->atlas_cache, image_id, sprite->w, sprite->h);
 		CF_TemporaryImage image;
 		image.tex = { s.texture_id };
 		image.w = sprite->w;
@@ -5176,7 +5176,7 @@ CF_Texture cf_register_premade_atlas(const char* png_path, int sub_image_count, 
 		premades.add(s);
 		s_draw->premade_sub_image_id_to_sub_image.add(s.image_id, sub_images[i]);
 	}
-	atlas_cache_register_premade_atlas(&s_draw->sb, texture.id, img.w, img.h, sub_image_count, premades.data());
+	atlas_cache_register_premade_atlas(&s_draw->atlas_cache, texture.id, img.w, img.h, sub_image_count, premades.data());
 	image_free(&img);
 	return texture;
 }
