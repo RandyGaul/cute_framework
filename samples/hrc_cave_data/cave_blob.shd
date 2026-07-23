@@ -1,0 +1,20 @@
+// Soft radial falloff splat for water particles.
+//
+// Each particle draws a filled circle with vertex attributes carrying its
+// center and radius (world units). The shader replaces the hard SDF coverage
+// with a wide gaussian core (smoothly zeroed at the rim) so overlapping
+// particles accumulate into a smooth density field (additive blend into the
+// rgba16f density canvas) that reads like surface tension, not vector blobs.
+//
+// attributes: x, y = particle center (world), z = splat radius.
+// color: r = density weight, g = agitation weight.
+
+vec4 shader(vec4 color, ShaderParams params)
+{
+	vec2 c = params.attributes.xy;
+	float r = max(params.attributes.z, 1e-3);
+	float d = length(params.view_pos - c) / r;
+	float g = exp(-4.5 * d * d);
+	float f = clamp((g - 0.0111) * 1.0112, 0.0, 1.0); // rebased so f(1) = 0
+	return vec4(color.rgb * f, color.a * f);
+}

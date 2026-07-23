@@ -1,0 +1,151 @@
+// Water rendered as an INTERFACE, not a fill: one shader for every consumer.
+//
+// The density canvas (r = density, g = agitation-weighted density) is drawn as
+// a fullscreen canvas quad with this shader pushed. The water's top edge is a
+// 1D spring heightfield (u_heightfield, 256x1 R32F, world-px offsets from the
+// nominal waterline); the particle metaball contour only takes over where
+// lumps genuinely breach the surface (splashes). u_mode selects the output:
+//   0 = screen: interior refracted through the surface + Beer extinction,
+//       slope-glint specular line, mirrored fluence reflection band, foam
+//   1 = absorption canvas: water body absorption coefficients (replaces fog)
+//   2 = emissivity canvas: bioluminescent glow where agitated + faint base glow
+//   3 = diffuse canvas: water albedo for multibounce feedback
+//
+// u_col_a / u_col_b are mode-dependent (see hrc_cave.c call sites). Outputs are
+// premultiplied; modes 1/3 write alpha = coverage so ONE/ONE_MINUS_SRC_ALPHA
+// blending replaces the fog underneath, mode 2 writes alpha 0 for pure add.
+
+layout (set = 2, binding = 1) uniform sampler2D u_heightfield;
+layout (set = 2, binding = 2) uniform sampler2D u_fluence;
+
+layout (set = 3, binding = 1) uniform shd_uniforms {
+	vec4 u_col_a;
+	vec4 u_col_b;
+	vec4 u_hf;     // x = heightfield x0 (world), y = x1, z = waterline y, w = time
+	vec4 u_basin;  // xy = basin center, z = inner radius
+	float u_mode;
+	float u_threshold;
+};
+
+// Canvas uv <-> world y mapping (one flip constant for every consumer).
+float uv_to_wy(float v)
+{
+	return (1.0 - v) * 1024.0;
+}
+
+float wy_to_uv(float y)
+{
+	return 1.0 - y / 1024.0;
+}
+
+float hf_height(float wx)
+{
+	float u = (wx - u_hf.x) / (u_hf.y - u_hf.x);
+	return texture(u_heightfield, vec2(u, 0.5)).r;
+}
+
+vec4 shader(vec4 color, ShaderParams params)
+{
+	vec4 field = texture(u_image, params.uv);
+	float den = field.r;
+	float agit = field.g;
+
+	float wx = params.uv.x * 1024.0;
+	float wy = uv_to_wy(params.uv.y);
+
+	// Surface interface: waterline + heightfield, slope for glints/refraction.
+	float h = hf_height(wx);
+	float hl = hf_height(wx - 4.0);
+	float hr = hf_height(wx + 4.0);
+	float slope = (hr - hl) * 0.125;
+	float surface_y = u_hf.z + h;
+	float d_surf = surface_y - wy; // > 0 below the surface
+
+	// Horizontal pool extent (basin chord at the waterline), feathered at rock.
+	float in_pool = smoothstep(u_hf.x - 2.0, u_hf.x + 5.0, wx) * (1.0 - smoothstep(u_hf.y - 5.0, u_hf.y + 2.0, wx));
+
+	// Feathered metaball coverage: wide smoothstep = soft-cored droplets.
+	float den_cov = smoothstep(u_threshold - 0.20, u_threshold + 0.12, den);
+
+	// Water presence: local density OR density well below the waterline, so
+	// splash craters near the surface can't punch stripes through the body
+	// (the interface just closes over them). Bounded by the basin SDF so the
+	// body ends at the rock instead of bleeding through it.
+	float rim = u_basin.z - length(vec2(wx, wy) - u_basin.xy); // > 0 inside the basin
+	float deep_den = texture(u_image, vec2(params.uv.x, wy_to_uv(u_hf.z - 60.0))).r;
+	float here = max(smoothstep(0.10, 0.32, den), smoothstep(0.10, 0.32, deep_den));
+	float column = here * in_pool * smoothstep(-2.0, 3.0, rim);
+
+	float surf_cov = smoothstep(-1.5, 1.5, d_surf);
+	float body = surf_cov * column;
+
+	// Breach: metaball lumps GENUINELY above the interface (splash crowns).
+	// Gated by agitation -- real ejecta always carry it, while the resting
+	// pool's soft contour (which pokes ~10px past the surface) has none.
+	float breach = smoothstep(u_threshold - 0.05, u_threshold + 0.25, den) * (1.0 - surf_cov) * smoothstep(2.0, 8.0, -d_surf) * smoothstep(0.04, 0.20, agit);
+	float cov = max(body, breach);
+
+	float depth = max(d_surf, 0.0);
+	float surf_line = exp(-d_surf * d_surf * 0.28); // thin gaussian band at the interface
+
+	if (u_mode < 0.5) {
+		// -------- screen: interior + surface line + reflection + foam --------
+		// Refract the composited scene sideways by the local surface slope, so
+		// submerged glow (jelly, biolum) wobbles when the surface moves. The
+		// slope limiter is smooth -- a hard clamp shears bright columns into
+		// vertical bands where the slope saturates.
+		float ws = slope * 22.0;
+		float wob = (ws / (1.0 + abs(ws))) * min(depth * 0.35, 9.0);
+		vec2 ruv = vec2(params.uv.x + wob / 1024.0, params.uv.y);
+		vec3 scene = texture(u_fluence, ruv).rgb;
+
+		// Beer extinction: darker with depth, red channel dies first.
+		vec3 ext = exp(-depth * vec3(0.034, 0.016, 0.011));
+		vec3 interior = scene * ext + u_col_a.rgb * (0.25 + 0.55 * ext.g);
+
+		// Screen-space reflection band: the scene mirrored about the surface,
+		// attenuated over ~60px of depth, x-wobbled by the surface slope.
+		float rl_y = surface_y + depth; // mirror of this pixel about the surface
+		float ms = slope * 30.0;
+		vec2 mruv = vec2(params.uv.x + (ms / (1.0 + abs(ms))) * 1.5 * min(depth * 0.25, 6.0) / 1024.0, wy_to_uv(rl_y));
+		vec3 refl = texture(u_fluence, mruv).rgb;
+		float refl_w = exp(-depth * 0.045) * 0.7;
+		interior += refl * refl_w;
+
+		// Meniscus: slight brightening only within ~4px of rock contact.
+		float men = 1.0 - smoothstep(1.0, 4.5, rim);
+		interior += vec3(0.010, 0.030, 0.028) * men;
+
+		// Specular line: intensity from slope glint + light just above surface.
+		vec3 above = texture(u_fluence, vec2(params.uv.x, wy_to_uv(surface_y + 8.0))).rgb;
+		float sparkle = clamp(abs(slope) * 16.0, 0.0, 1.0);
+		vec3 spec = (0.18 + 1.5 * sparkle) * (above * 1.4 + u_col_b.rgb * 0.05) * surf_line * column;
+
+		// Foam: agitation breaks the line into white dashes.
+		float agit_s = texture(u_image, vec2(params.uv.x, wy_to_uv(surface_y - 10.0))).g;
+		float dash = sin(wx * 0.55 + u_hf.w * 3.1) * sin(wx * 0.21 - u_hf.w * 2.3);
+		float foam = smoothstep(0.15, 0.65, dash) * smoothstep(0.25, 0.9, agit_s) * surf_line * column;
+		spec += vec3(0.9, 1.0, 0.98) * foam * 1.4;
+
+		// Compose: interface-defined body, teal lumps for breaching splashes.
+		float alpha = cov * u_col_a.a;
+		vec3 rgb = interior * body * u_col_a.a;
+		rgb += (u_col_a.rgb * 3.0 + scene * 0.65) * max(breach - body, 0.0);
+		rgb += spec;
+		return vec4(rgb, alpha);
+	} else if (u_mode < 1.5) {
+		// Absorption coefficients (blue-weighted: red dies first underwater).
+		return vec4(u_col_a.rgb * cov, cov);
+	} else if (u_mode < 2.5) {
+		// Bioluminescence: agitation drives HDR cyan, saturating at u_col_a.rgb
+		// (u_col_a.a = agitation-density gain), plus a faint base glow so the
+		// pool reads at all in the dark. A slice of the glow rides the surface
+		// line so ripples rake light across the cave. Additive (alpha 0).
+		float drive = min(agit * u_col_a.a, 1.0);
+		vec3 glow = u_col_a.rgb * (drive * drive);
+		vec3 base = u_col_b.rgb;
+		return vec4((glow + base) * cov + glow * 0.5 * surf_line * column, 0.0);
+	}
+	// Albedo for the bounce feedback.
+	return vec4(u_col_a.rgb * cov, cov);
+}
