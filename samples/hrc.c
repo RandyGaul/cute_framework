@@ -287,9 +287,12 @@ typedef struct InjectUniforms
 	int   type;          // 0 = infinite directional, 1 = finite point
 	float dirx, diry;    // directional travel dir (from light into scene)
 	float posx, posy;    // normalized world position
-	float r, g, b;       // linear HDR color (already faded for mode 3)
-	float cosv;          // cone acceptance cosine
+	float r, g, b;       // color hue (x anti-flicker fade); intensity is separate
 	float falloff;       // point inverse-square coefficient
+	float intensity;     // E: calibrated per-direction irradiance scale
+	float angradius;     // directional soft-cone plateau half-angle (radians)
+	float radius;        // point emitter radius (normalized world units)
+	float softness;      // penumbra shoulder angular width (radians)
 } InjectUniforms;
 
 InjectUniforms g_inject;
@@ -306,6 +309,10 @@ void set_inject_uniforms(CF_Material mat)
 	cf_material_set_uniform_cs(mat, "u_light_g", &g_inject.g, CF_UNIFORM_TYPE_FLOAT, 1);
 	cf_material_set_uniform_cs(mat, "u_light_b", &g_inject.b, CF_UNIFORM_TYPE_FLOAT, 1);
 	cf_material_set_uniform_cs(mat, "u_light_falloff", &g_inject.falloff, CF_UNIFORM_TYPE_FLOAT, 1);
+	cf_material_set_uniform_cs(mat, "u_light_intensity", &g_inject.intensity, CF_UNIFORM_TYPE_FLOAT, 1);
+	cf_material_set_uniform_cs(mat, "u_light_angradius", &g_inject.angradius, CF_UNIFORM_TYPE_FLOAT, 1);
+	cf_material_set_uniform_cs(mat, "u_light_radius", &g_inject.radius, CF_UNIFORM_TYPE_FLOAT, 1);
+	cf_material_set_uniform_cs(mat, "u_light_softness", &g_inject.softness, CF_UNIFORM_TYPE_FLOAT, 1);
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -338,7 +345,6 @@ void hrc_compute()
 	// u_rotate and u_is_top are set per merge dispatch below.
 	set_inject_uniforms(hrc.mat_merge);
 	cf_material_set_uniform_cs(hrc.mat_merge, "u_inject_mode", &g_inject.merge_mode, CF_UNIFORM_TYPE_INT, 1);
-	cf_material_set_uniform_cs(hrc.mat_merge, "u_light_cos", &g_inject.cosv, CF_UNIFORM_TYPE_FLOAT, 1);
 
 	for (int j = 0; j < 4; j++) {
 		// Seed T_0 when no levels are traced (sample at probe, no raymarching).
@@ -572,9 +578,15 @@ int   inject_mode = 0;
 
 #define HRC_MARGIN_FACTOR 1.3f   // mode 3 padded region = screen x this factor
 #define OFF_ORBIT_RADIUS  680.0f // > half world (512), so it leaves/re-enters
-#define OFF_LIGHT_HDR     10.0f  // linear HDR radiance
+#define OFF_LIGHT_HDR     10.0f  // linear HDR radiance (on-screen emitter body)
 #define OFF_LIGHT_RADIUS  20.0f  // emitter disk radius (world px)
-#define OFF_LIGHT_CONE_DEG 15.0f // point-light angular acceptance (half-width)
+// Soft-cone off-screen light defaults (finite angular size, smooth falloff).
+// intensity E is calibrated so the off-screen soft light matches an on-screen
+// disc of the same intended brightness (see A/B), NOT the raw HDR body value
+// that made the injected boundary source flood the scene.
+#define OFF_LIGHT_INTENSITY 8.0f  // calibrated per-direction irradiance scale
+#define OFF_DIR_ANG_DEG    8.0f   // directional soft-cone plateau half-angle (deg)
+#define OFF_SOFT_DEG       12.0f  // penumbra shoulder angular width (deg)
 
 // Warm HDR light color in LINEAR radiance units (matches emiss decode: pow*16).
 CF_V2 off_light_pos;      // world pixels (may lie outside [0, world])
@@ -639,12 +651,25 @@ void update_offscreen_light()
 void update_inject_uniforms()
 {
 	CF_MEMSET(&g_inject, 0, sizeof(g_inject));
+	float ws = (float)HRC_WORLD_SIZE;
 	g_inject.type = 1;
 	g_inject.falloff = 0.5f;
-	g_inject.cosv = cosf(OFF_LIGHT_CONE_DEG * CF_PI / 180.0f);
+	// Soft-cone parameters (env-overridable so the A/B harness can sweep them
+	// without a rebuild): angular_radius, softness, point radius, intensity.
+	float dir_ang = OFF_DIR_ANG_DEG;
+	float soft_deg = OFF_SOFT_DEG;
+	float pt_radius_px = OFF_LIGHT_RADIUS;
+	g_inject.intensity = OFF_LIGHT_INTENSITY;
+	const char* e;
+	if ((e = getenv("HRC_LANG")))  dir_ang = (float)atof(e);        // directional plateau (deg)
+	if ((e = getenv("HRC_LSOFT"))) soft_deg = (float)atof(e);       // penumbra shoulder (deg)
+	if ((e = getenv("HRC_LRAD")))  pt_radius_px = (float)atof(e);   // point emitter radius (px)
+	if ((e = getenv("HRC_LINT")))  g_inject.intensity = (float)atof(e); // intensity E
+	g_inject.angradius = dir_ang * CF_PI / 180.0f;
+	g_inject.softness  = soft_deg * CF_PI / 180.0f;
+	g_inject.radius    = pt_radius_px / ws; // normalized world units
 	if (test_scene != 5) return;
 
-	float ws = (float)HRC_WORLD_SIZE;
 	const char* lt = getenv("HRC_LIGHTTYPE");
 	if (lt) g_inject.type = atoi(lt); // 0 = directional, 1 = point
 
@@ -657,13 +682,12 @@ void update_inject_uniforms()
 	if (tl < 1e-5f) tl = 1.0f;
 	g_inject.dirx = tx / tl;
 	g_inject.diry = ty / tl;
-	// Wider cone for the directional light (a broad off-screen source).
-	if (g_inject.type == 0) g_inject.cosv = cosf(35.0f * CF_PI / 180.0f);
 
+	// Color is now a unit-ish hue; brightness lives in intensity E (x fade).
 	float b = off_light_fade;
-	g_inject.r = OFF_LIGHT_HDR * 1.00f * b;
-	g_inject.g = OFF_LIGHT_HDR * 0.85f * b;
-	g_inject.b = OFF_LIGHT_HDR * 0.60f * b;
+	g_inject.r = 1.00f * b;
+	g_inject.g = 0.85f * b;
+	g_inject.b = 0.60f * b;
 
 	// Mode 2 = MECHANISM 1 (in-cascade boundary injection, correctly occluded).
 	// Mode 3 = MECHANISM 2 relies on the padded in-world emitter + fade, no
@@ -780,12 +804,39 @@ void draw_pinhole(int channel)
 	}
 }
 
+// A/B reference: a STATIC on-screen disc light of matched angular size, placed to
+// shadow the same left wall from a comparable direction as the off-screen light.
+// This is the "good" reference the off-screen soft-cone shadow is measured against
+// (soft penumbra, no staircase) and the brightness calibration target. Enabled by
+// HRC_REFLIGHT; position/size overridable via HRC_REFX/HRC_REFY/HRC_REFRAD.
+void draw_ref_light(int channel)
+{
+	if (!getenv("HRC_REFLIGHT")) return;
+	float rx = 140.0f, ry = 512.0f, rr = 8.0f;
+	const char* e;
+	if ((e = getenv("HRC_REFX")))   rx = (float)atof(e);
+	if ((e = getenv("HRC_REFY")))   ry = (float)atof(e);
+	if ((e = getenv("HRC_REFRAD"))) rr = (float)atof(e);
+	if (channel == 1) {
+		// Opaque so it can radiate (rad = emiss * (1 - T)).
+		draw_circle_ch(rx, ry, rr, cf_make_color_rgb_f(0.632f, 0.632f, 0.632f));
+	} else {
+		// Same warm hue + HDR level as the off-screen light body.
+		float inv = 1.0f / 2.2f;
+		float er = powf(OFF_LIGHT_HDR * 1.00f / 16.0f, inv);
+		float eg = powf(OFF_LIGHT_HDR * 0.85f / 16.0f, inv);
+		float eb = powf(OFF_LIGHT_HDR * 0.60f / 16.0f, inv);
+		draw_circle_ch(rx, ry, rr, cf_make_color_rgb_f(er, eg, eb));
+	}
+}
+
 // Off-screen demo scene. channel: 0 = emissivity, 1 = absorption.
 // On-screen occluder walls + (mode 3 only) an off-screen margin occluder, plus
 // the orbiting light drawn as an emitter while it is on-screen.
 void draw_offscreen(int channel)
 {
 	CF_Color solid = cf_make_color_rgb_f(1.0f, 1.0f, 1.0f); // opaque occluder
+	draw_ref_light(channel);
 
 	if (channel == 1) {
 		cf_draw_push_color(solid);

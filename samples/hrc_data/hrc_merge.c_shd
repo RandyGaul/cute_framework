@@ -64,11 +64,14 @@ layout(set = 2, binding = 0) uniform Params
 	float u_light_diry;
 	float u_light_posx;    // point: normalized world position (may lie outside [0,1])
 	float u_light_posy;
-	float u_light_r;       // HDR radiance color
+	float u_light_r;       // color hue (x anti-flicker fade); intensity is separate
 	float u_light_g;
 	float u_light_b;
-	float u_light_cos;     // cone acceptance: cos(half-width) for direction test
-	float u_light_falloff; // point-light inverse-square falloff coefficient
+	float u_light_falloff;   // point-light inverse-square falloff coefficient
+	float u_light_intensity; // E: calibrated per-direction irradiance scale
+	float u_light_angradius; // directional soft-cone plateau half-angle (radians)
+	float u_light_radius;    // point emitter radius (normalized world units)
+	float u_light_softness;  // penumbra shoulder angular width (radians)
 };
 
 layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
@@ -120,30 +123,60 @@ vec2 rot_dir(int rot, vec2 d)
 	return d;
 }
 
-// Radiance an off-screen light delivers to boundary point p (normalized world)
-// for a ray leaving the screen in world direction d. Occlusion is NOT applied
-// here -- the caller multiplies this by the ray's accumulated on-screen
-// transmittance, so on-screen walls between p and the probe still shadow it.
+// Per-direction radiance an off-screen light delivers to boundary point p
+// (normalized world) for a ray leaving the screen in world direction d.
+//
+// SOFT CONE (finite angular size). The old model was a HARD binary cone test
+// (in/out), which gave off-screen shadows zero penumbra AND quantized the
+// visibility answer to the cascade's discrete ray directions -> pixely staircase.
+// Here the source has a finite angular radius `a` with a smooth shoulder `s`:
+//   profile(ang) = 1 - smoothstep(a - s/2, a + s/2, ang)   (0.5 at geometric edge)
+// This adds a penumbra like an on-screen area light AND, because the shoulder
+// spans several cascade direction steps, ramps the visibility answer smoothly
+// across cones so the angular quantization averages out.
+//
+// This returns radiance PER DIRECTION (angular-fluence density). The caller
+// (R_load) multiplies by the read cone's angular span to convert it to the
+// angular-fluence units R_n stores -- without that span weight the raw radiance
+// is added once per contributing cone and the composite over-counts it by the
+// cone count (the "overpowering flood").
+//
+// BRIGHTNESS NORMALIZATION. The profile is divided by its angular integral
+// Z = 2a + s, so the total injected irradiance summed over all cones equals the
+// intensity E regardless of a or s: a wider/softer cone SPREADS the same energy
+// (softens) instead of adding more (brightens). E carries the inverse-square
+// distance falloff for the finite point light; the infinite directional source
+// legitimately does not fall off, so its E is just the calibrated uniform.
+//
+// Occlusion is NOT applied here -- the caller multiplies by the ray's accumulated
+// on-screen transmittance, so on-screen walls between p and the probe still shadow.
 vec3 boundary_light(vec2 p, vec2 d)
 {
-	vec3 col = vec3(u_light_r, u_light_g, u_light_b);
+	vec3 col = vec3(u_light_r, u_light_g, u_light_b); // hue (x anti-flicker fade)
 	vec2 nd = normalize(d);
+	float ang;         // angle between exit dir and direction toward light center
+	float a;           // source angular radius (plateau half-angle)
+	float atten = 1.0; // distance attenuation (point only)
 	if (u_light_type == 0) {
-		// Infinite directional light: travels along u_light_dir. A boundary ray
-		// sees it when it looks back up the beam (toward -travel_dir) within the
-		// cone. Any edge whose outward normal faces the light qualifies, which is
-		// exactly the set of exit directions passing the dot test below.
+		// Infinite directional: look back up the beam (toward -travel_dir).
 		vec2 toward = normalize(-vec2(u_light_dirx, u_light_diry));
-		return (dot(nd, toward) >= u_light_cos) ? col : vec3(0.0);
+		ang = acos(clamp(dot(nd, toward), -1.0, 1.0));
+		a   = u_light_angradius;
+	} else {
+		// Finite off-screen point: angular radius atan(r/dist) is PHYSICAL, so the
+		// penumbra tightens as the light recedes, just like a real disc source.
+		vec2 to_l = vec2(u_light_posx, u_light_posy) - p;
+		float dist = max(length(to_l), 1e-5);
+		ang   = acos(clamp(dot(nd, to_l / dist), -1.0, 1.0));
+		a     = atan(u_light_radius / dist);
+		atten = 1.0 / (1.0 + u_light_falloff * dist * dist);
 	}
-	// Finite off-screen point light at u_light_pos (entry dir varies per point).
-	vec2 to_l = vec2(u_light_posx, u_light_posy) - p;
-	float dist = length(to_l);
-	if (dist < 1e-5) return col;
-	if (dot(nd, to_l / dist) >= u_light_cos) {
-		return col / (1.0 + u_light_falloff * dist * dist);
-	}
-	return vec3(0.0);
+	float s = u_light_softness;
+	float h = 0.5 * s;
+	float profile = 1.0 - smoothstep(a - h, a + h, ang);
+	float Z = 2.0 * a + s;                    // angular integral of the profile
+	float E = u_light_intensity * atten;      // calibrated irradiance (with falloff)
+	return col * (E * profile / max(Z, 1e-4));
 }
 
 // Reconstruct the world exit point + world direction of the ray behind an
@@ -226,7 +259,16 @@ vec3 R_load(int probe_x, int i, int y)
 	// "R_N = 0" injection site. With mode 2 we substitute off-screen radiance;
 	// otherwise keep the historical zero.
 	if (oob || u_is_top != 0) {
-		if (u_inject_mode == 2) return boundary_inject(probe_x, i, y);
+		if (u_inject_mode == 2) {
+			// boundary_inject returns radiance PER DIRECTION; R_n stores angular
+			// FLUENCE, so weight by this cone's angular span (matches how traced
+			// near intervals are span-weighted). This is the fix that stops the
+			// injected light being counted once per cone (the over-bright flood):
+			// summed over the cones the light spans, the spans total its angular
+			// footprint, so the composite gets the intended irradiance, not Nx.
+			float span = max(angular_span(u_cascade + 1, float(i) + 0.5), 0.0);
+			return boundary_inject(probe_x, i, y) * span;
+		}
 		return vec3(0.0);
 	}
 	int idx = y * u_r_prev_w + probe_x * directions + i;

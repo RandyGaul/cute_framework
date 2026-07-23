@@ -53,6 +53,10 @@ layout(set = 2, binding = 0) uniform Params
 	float u_light_g;
 	float u_light_b;
 	float u_light_falloff;
+	float u_light_intensity; // E: matches the merge-path intensity for a fair control
+	float u_light_angradius; // (unused here; kept so host can push the same set)
+	float u_light_radius;
+	float u_light_softness;
 };
 
 layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
@@ -345,7 +349,7 @@ vec3 sum_quadrants(ivec2 world_pos)
 	// which is exactly the artifact mode 2's in-cascade injection avoids.
 	if (u_inject_mode == 1) {
 		vec2 wp = (vec2(world_pos) + 0.5) / float(u_world_size);
-		vec3 col = vec3(u_light_r, u_light_g, u_light_b);
+		vec3 col = vec3(u_light_r, u_light_g, u_light_b) * u_light_intensity;
 		if (u_light_type == 0) {
 			total += col;
 		} else {
