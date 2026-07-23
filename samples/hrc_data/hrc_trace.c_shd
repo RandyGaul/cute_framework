@@ -19,6 +19,7 @@
 
 layout(set = 0, binding = 0) uniform sampler2D u_emissivity;
 layout(set = 0, binding = 1) uniform sampler2D u_absorption;
+layout(set = 0, binding = 2) uniform sampler2D u_minmax_mip; // (absMin, absMax, emisMax) per block
 
 layout(std430, set = 1, binding = 0) writeonly buffer OutRad { uvec2 data[]; } u_out_rad;
 layout(std430, set = 1, binding = 1) writeonly buffer OutTrn { uvec2 data[]; } u_out_trn;
@@ -34,7 +35,14 @@ layout(set = 2, binding = 0) uniform Params
 	float u_mip_level;         // emissivity mipmap LOD (0.0 = base level)
 	float u_absrp_mip_level;   // absorption mipmap LOD (0.0 = base level)
 	int u_upscale;             // world pixels per grid cell (march substeps)
+	int u_use_mip;             // 1 = minmax-mip cell skipping enabled
+	int u_mip_block;           // block size (world px) of the minmax mip
 };
+
+// Uniform-cell classification thresholds (absorption coefficient / emission).
+#define MIP_EPS_EMPTY   0.01
+#define MIP_EPS_UNIFORM 0.02
+#define MIP_EPS_EMIS    0.001 // any emission (incl. faint multibounce) forces fine steps
 
 layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
 
@@ -137,10 +145,56 @@ void main()
 
 	float fy = y0;
 	int cy = int(floor(fy));
+	int world_i = u_world_size * S;
 
-	for (int s = 0; s < num_steps; s++) {
+	int s = 0;
+	while (s < num_steps) {
 		float px = x0 + float(s);
 		if (px >= world) break;
+
+		// Minmax-mip cell skip: cross a uniform block with one analytic Beer
+		// step instead of fine-stepping every world column. Empty blocks are a
+		// pure no-op (transmittance 1, no emission); uniform-fog blocks apply a
+		// single per-channel Beer term. Emitters are opaque, so any block that
+		// emits also has high absorption and never classifies as uniform-empty,
+		// and the emission check keeps uniform-fog off emissive blocks -- so all
+		// radiance-bearing cells still get exact fine steps.
+		if (u_use_mip != 0 && cy >= 0 && cy < world_i) {
+			vec2 uv_c = rotate_uv((vec2(px, float(cy)) + 0.5) / world, u_rotate, 1.0);
+			vec3 mm = textureLod(u_minmax_mip, uv_c, 0.0).rgb; // (absMin, absMax, emisMax)
+			bool uniform_empty = mm.y < MIP_EPS_EMPTY;
+			// Require amin above the empty floor so blocks straddling empty and
+			// fog (range small only because the fog is faint) are NOT skipped --
+			// a single sample can't represent a mixed empty/fog column run.
+			bool uniform_fog   = mm.x > MIP_EPS_EMPTY && (mm.y - mm.x) < MIP_EPS_UNIFORM && mm.z < MIP_EPS_EMIS;
+			if (uniform_empty || uniform_fog) {
+				int B = u_mip_block;
+				int ipx = int(px);
+				int bx = ipx / B;
+				int cols_x = (bx + 1) * B - ipx; // columns until x leaves block (>=1)
+				int by = cy / B;
+				int cols_y;
+				if (slope.y > 1e-6) {
+					cols_y = int(floor((float((by + 1) * B) - fy) / slope.y));
+				} else if (slope.y < -1e-6) {
+					cols_y = int(floor((fy - float(by * B)) / (-slope.y)));
+				} else {
+					cols_y = num_steps;
+				}
+				int M = min(min(cols_x, max(cols_y, 1)), num_steps - s);
+				if (M < 1) M = 1;
+				if (uniform_fog) {
+					// Uniform block: one real sample gives the per-channel coefficient.
+					vec3 op = textureLod(u_absorption, uv_c, u_absrp_mip_level).rgb;
+					vec3 absrp = -log(max(vec3(1.0) - op, vec3(1e-7)));
+					acc_trn *= exp(-absrp * (float(M) * step_length));
+				}
+				s += M;
+				fy = y0 + slope.y * float(s);
+				cy = int(floor(fy));
+				continue;
+			}
+		}
 
 		float next_fy = y0 + slope.y * float(s + 1);
 		int next_cy = int(floor(next_fy));
@@ -160,6 +214,7 @@ void main()
 
 		fy = next_fy;
 		cy = next_cy;
+		s++;
 	}
 
 	// Blend boundary: near-boundary rays (small k or k near 2*pow2n) get reduced
