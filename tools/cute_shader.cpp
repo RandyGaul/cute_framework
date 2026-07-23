@@ -204,6 +204,8 @@ CF_ShaderCompilerResult cute_shader_compile(const char* source, CF_ShaderCompile
 	opts.emit_glsl300 = stage != CUTE_SHADER_STAGE_COMPUTE && !config.skip_glsl300;
 	// HLSL SM 5.1 transpilation, for D3D12 via the system FXC.
 	opts.emit_hlsl = !config.skip_hlsl;
+	// MSL transpilation, for Metal (the OS compiles the source at runtime).
+	opts.emit_msl = !config.skip_msl;
 
 	CSPV_Result r = cspv_compile_ex(source, cspv_stage, &opts);
 
@@ -239,6 +241,15 @@ CF_ShaderCompilerResult cute_shader_compile(const char* source, CF_ShaderCompile
 		hlsl_src_size = strlen(r.hlsl);
 		hlsl_src = (char*)malloc(hlsl_src_size + 1);
 		memcpy(hlsl_src, r.hlsl, hlsl_src_size + 1);
+	}
+
+	// MSL source likewise.
+	char* msl_src = NULL;
+	size_t msl_src_size = 0;
+	if (r.msl) {
+		msl_src_size = strlen(r.msl);
+		msl_src = (char*)malloc(msl_src_size + 1);
+		memcpy(msl_src, r.msl, msl_src_size + 1);
 	}
 
 	// Reflection: map CSPV_Reflection to CF_ShaderInfo. Arrays are malloc'd (freed by
@@ -335,6 +346,11 @@ CF_ShaderCompilerResult cute_shader_compile(const char* source, CF_ShaderCompile
 	result.bytecode.glsl300_src_size = glsl300_src_size;
 	result.bytecode.hlsl_src = hlsl_src;
 	result.bytecode.hlsl_src_size = hlsl_src_size;
+	result.bytecode.msl_src = msl_src;
+	result.bytecode.msl_src_size = msl_src_size;
+	result.bytecode.shader_info.local_size[0] = r.reflection.local_size[0];
+	result.bytecode.shader_info.local_size[1] = r.reflection.local_size[1];
+	result.bytecode.shader_info.local_size[2] = r.reflection.local_size[2];
 	result.bytecode.shader_info.num_samplers = num_samplers;
 	result.bytecode.shader_info.num_storage_textures = num_storage_textures;
 	result.bytecode.shader_info.num_storage_buffers = num_storage_buffers;
@@ -366,6 +382,7 @@ void cute_shader_free_result(CF_ShaderCompilerResult result)
 
 	free((void*)result.bytecode.glsl300_src);
 	free((void*)result.bytecode.hlsl_src);
+	free((void*)result.bytecode.msl_src);
 	free((void*)result.bytecode.content);
 	free((char*)result.preprocessed_source);
 	free((char*)result.error_message);

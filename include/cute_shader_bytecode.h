@@ -173,6 +173,9 @@ typedef struct CF_ShaderInfo
 	int num_inputs;
 	/* @member Information about each vertex shader input. */
 	CF_ShaderInputInfo* inputs;
+
+	/* @member Compute workgroup size (zero for non-compute shaders). Metal pipelines dispatch with this. */
+	int local_size[3];
 } CF_ShaderInfo;
 // @end
 
@@ -197,6 +200,10 @@ typedef struct CF_ShaderBytecode
 	const char* hlsl_src;
 	/* @member Size of the HLSL source. */
 	size_t hlsl_src_size;
+	/* @member The transpiled MSL source for Metal (compiled by the OS at runtime; entry point "main0"). */
+	const char* msl_src;
+	/* @member Size of the MSL source. */
+	size_t msl_src_size;
 	/* @member Shader reflection info. */
 	CF_ShaderInfo shader_info;
 } CF_ShaderBytecode;

@@ -53,6 +53,10 @@ typedef struct CF_ShaderCompilerConfig
 	// backend except D3D12-without-SPIR-V; offline compilation keeps it.
 	bool skip_hlsl;
 
+	// Skip transpilation to MSL. Runtime compilation skips it on every backend
+	// except Metal-without-SPIR-V; offline compilation keeps it.
+	bool skip_msl;
+
 	// Optional: when a user draw shader is injected as shader_stub.shd, report its
 	// errors under this name (usually the user's shader path) instead.
 	const char* shader_stub_display_name;

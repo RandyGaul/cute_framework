@@ -695,6 +695,13 @@ static inline SDL_GPUShader* s_load_shader_bytecode(CF_ShaderInternal* shader_in
 			CF_FREE(dxbc);
 		}
 #endif
+	} else if ((formats & SDL_GPU_SHADERFORMAT_MSL) && bytecode.msl_src) {
+		// Metal: hand cute_spirv's transpiled MSL source straight to the OS.
+		shaderCreateInfo.code = (const Uint8*)bytecode.msl_src;
+		shaderCreateInfo.code_size = bytecode.msl_src_size + 1; // Include the NUL, matching SDL's convention.
+		shaderCreateInfo.entrypoint = "main0"; // MSL reserves `main`.
+		shaderCreateInfo.format = SDL_GPU_SHADERFORMAT_MSL;
+		sdl_shader = (SDL_GPUShader*)SDL_CreateGPUShader(g_ctx.device, &shaderCreateInfo);
 	} else {
 		SDL_ShaderCross_GraphicsShaderMetadata metadata = {};
 		metadata.num_samplers = shader_info->num_samplers;
@@ -811,6 +818,13 @@ bool cf_sdlgpu_wants_hlsl()
 	if (!g_ctx.device) return false;
 	SDL_GPUShaderFormat formats = SDL_GetGPUShaderFormats(g_ctx.device);
 	return !(formats & SDL_GPU_SHADERFORMAT_SPIRV) && (formats & SDL_GPU_SHADERFORMAT_DXBC) != 0;
+}
+
+bool cf_sdlgpu_wants_msl()
+{
+	if (!g_ctx.device) return false;
+	SDL_GPUShaderFormat formats = SDL_GetGPUShaderFormats(g_ctx.device);
+	return !(formats & SDL_GPU_SHADERFORMAT_SPIRV) && (formats & SDL_GPU_SHADERFORMAT_MSL) != 0;
 }
 
 CF_Result cf_sdlgpu_init(const char* device_name, bool debug, CF_BackendType* backend_type)
@@ -2102,6 +2116,24 @@ CF_ComputeShader cf_sdlgpu_make_compute_shader_from_bytecode(CF_ShaderBytecode b
 			CF_FREE(dxbc);
 		}
 #endif
+	} else if ((SDL_GetGPUShaderFormats(g_ctx.device) & SDL_GPU_SHADERFORMAT_MSL) && bytecode.msl_src) {
+		// Metal: transpiled MSL source; the OS compiles it. Metal cannot read
+		// the workgroup size from source, so pass it via reflection.
+		SDL_GPUComputePipelineCreateInfo pip_info = {};
+		pip_info.code = (const Uint8*)bytecode.msl_src;
+		pip_info.code_size = bytecode.msl_src_size + 1;
+		pip_info.entrypoint = "main0";
+		pip_info.format = SDL_GPU_SHADERFORMAT_MSL;
+		pip_info.num_samplers = (Uint32)cs->num_samplers;
+		pip_info.num_readonly_storage_textures = (Uint32)cs->num_readonly_storage_textures;
+		pip_info.num_readonly_storage_buffers = (Uint32)cs->num_readonly_storage_buffers;
+		pip_info.num_readwrite_storage_textures = (Uint32)cs->num_readwrite_storage_textures;
+		pip_info.num_readwrite_storage_buffers = (Uint32)cs->num_readwrite_storage_buffers;
+		pip_info.num_uniform_buffers = (Uint32)cs->num_uniform_buffers;
+		pip_info.threadcount_x = (Uint32)bytecode.shader_info.local_size[0];
+		pip_info.threadcount_y = (Uint32)bytecode.shader_info.local_size[1];
+		pip_info.threadcount_z = (Uint32)bytecode.shader_info.local_size[2];
+		cs->pipeline = SDL_CreateGPUComputePipeline(g_ctx.device, &pip_info);
 	} else {
 		SDL_ShaderCross_ComputePipelineMetadata metadata = {};
 		metadata.num_samplers = (Uint32)cs->num_samplers;
