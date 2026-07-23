@@ -669,6 +669,7 @@ SDL_GLContext cf_gles_get_gl_context()
 }
 
 void cf_load_gles();
+static void s_reset_storage_bindings();
 
 void cf_gles_attach(SDL_Window* window)
 {
@@ -684,6 +685,14 @@ void cf_gles_attach(SDL_Window* window)
 	g_ctx.canvas = NULL;
 	g_ctx.enabled_vertex_attrib_mask = 0;
 	g_ctx.has_filter_override = false;
+	// The render-state diff cache must reset too, or state applied in a previous
+	// context elides the same state in this one (a stale viewport cache left every
+	// draw rasterizing into a 0x0 viewport -- the "Nth context renders nothing" bug).
+	g_ctx.current_state = { };
+	g_ctx.target_state = { };
+	// Pending emulated storage bindings point at buffers owned by the previous
+	// app lifetime; drop them rather than binding freed memory.
+	s_reset_storage_bindings();
 }
 
 bool cf_gles_supports_msaa(int sample_count)
@@ -1879,6 +1888,12 @@ static CF_GL_StorageBuffer* s_vs_storage[4];
 static int s_vs_storage_count = 0;
 static CF_GL_StorageBuffer* s_fs_storage[4];
 static int s_fs_storage_count = 0;
+
+static void s_reset_storage_bindings()
+{
+	s_vs_storage_count = 0;
+	s_fs_storage_count = 0;
+}
 
 void cf_gles_apply_fs_storage_buffers(CF_StorageBuffer* buffers, int count)
 {
