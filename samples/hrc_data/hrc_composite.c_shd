@@ -41,6 +41,7 @@ layout(set = 2, binding = 0) uniform Params
 	int   u_upscale_mode;  // 0 = nearest, 1 = minmax bilinear, 2 = joint bilateral
 	int   u_use_mip;       // 1 = minmax-mip cell skipping on the c-1 march
 	int   u_mip_block;     // block size (world px) of the minmax mip
+	int   u_c1_selective;  // 1 = skip the c-1 march in uniform-open cells (use R_0 only)
 };
 
 #define MIP_EPS_EMPTY   0.01
@@ -307,6 +308,17 @@ vec3 sum_quadrants(ivec2 world_pos)
 		}
 	}
 
+	// c-1 selectivity: in a fully-uniform OPEN cell the c-1 march degenerates to
+	// (rad 0, transmittance 1), so the merge with R_0 is just R_0. Classify the
+	// pixel's own cell via the minmax mip and skip the march there. Open cells
+	// are never emissive (emitters are opaque), so no emission term is dropped.
+	bool c1_skip = false;
+	if (u_c1_selective != 0 && u_cminus1 != 0) {
+		vec2 uvp = (vec2(world_pos) + 0.5) / float(u_world_size);
+		float amax = textureLod(u_minmax_mip, uvp, 0.0).g;
+		c1_skip = amax < MIP_EPS_EMPTY;
+	}
+
 	vec3 total = vec3(0.0);
 	for (int rot = 0; rot < 4; rot++) {
 		vec3 r0;
@@ -350,7 +362,7 @@ vec3 sum_quadrants(ivec2 world_pos)
 		}
 
 		// c-1 gathering: trace to nearest probe, merge with (possibly interpolated) R_0.
-		if (u_cminus1 != 0) {
+		if (u_cminus1 != 0 && !c1_skip) {
 			Interval cminus1 = trace_cminus1(world_pos, rot);
 			total += cminus1.rad + cminus1.trn * r0;
 		} else {

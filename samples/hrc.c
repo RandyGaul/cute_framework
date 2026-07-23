@@ -92,6 +92,7 @@ typedef struct Hrc
 	CF_Canvas minmax_mip;        // coarse (absMin, absMax, emisMax) blocks for marching
 	CF_ComputeShader cs_minmax_mip;
 	int mip_march;               // minmax-mip cell skipping on the trace DDA + c-1 march
+	int c1_selective;            // skip the c-1 march in uniform-open cells (use R_0 only)
 	CF_Canvas emissivity_filtered;
 	CF_Canvas absorption_filtered;
 	CF_Material mat_prefilter;
@@ -540,6 +541,7 @@ void hrc_compute()
 		cf_material_set_uniform_cs(hrc.mat_composite, "u_upscale_mode", &hrc.upscale_mode, CF_UNIFORM_TYPE_INT, 1);
 		cf_material_set_uniform_cs(hrc.mat_composite, "u_use_mip", &hrc.mip_march, CF_UNIFORM_TYPE_INT, 1);
 		cf_material_set_uniform_cs(hrc.mat_composite, "u_mip_block", &mip_block, CF_UNIFORM_TYPE_INT, 1);
+		cf_material_set_uniform_cs(hrc.mat_composite, "u_c1_selective", &hrc.c1_selective, CF_UNIFORM_TYPE_INT, 1);
 
 		CF_ComputeDispatch d = cf_compute_dispatch_defaults(
 			hrc_div_ceil(world, HRC_WG),
@@ -1104,6 +1106,8 @@ void bench_init()
 		// measured DIRECTLY against that nomip image (neutrality), not the reference.
 		bench_add(scene, 512, 1, 1, 0, "nomip")->mip_march = 0;
 		bench_add(scene, 512, 1, 1, 0, "mip")->mip_march = 1;
+		// c-1 selectivity at grid 512 (item 4): skip the c-1 march in open cells.
+		bench_add(scene, 512, 1, 1, 0, "c1sel")->c1_selective = 1;
 	}
 
 	printf("scene,grid,prefilter,upscale,cm1,mip,cap,c1sel,extras,frame_ms,rmse,maxdiff\n");
@@ -1127,6 +1131,7 @@ void bench_apply(BenchConfig* c)
 	hrc.upscale_mode = c->upscale_mode;
 	hrc.cminus1 = c->cminus1;
 	hrc.mip_march = c->mip_march;
+	hrc.c1_selective = c->c1_selective;
 	bench_clear_feedback();
 }
 
@@ -1258,6 +1263,7 @@ int main(int argc, char* argv[])
 		if ((env = getenv("HRC_TRACE")))       hrc.trace_levels = atoi(env);
 		if ((env = getenv("HRC_FREEZE")))      freeze_time = atoi(env);
 		if ((env = getenv("HRC_MIP")))         hrc.mip_march = atoi(env);
+		if ((env = getenv("HRC_CM1SEL")))      hrc.c1_selective = atoi(env);
 	}
 
 	if (getenv("HRC_BENCH")) bench_init();
