@@ -5,10 +5,9 @@
 	This software is dual-licensed with zlib or Unlicense, check LICENSE.txt for more info
 
 	Implements the cute_shader.h API on top of cute_spirv.h, CF's own GLSL -> SPIR-V
-	compiler (see docs/topics/glsl_support.md for the supported subset).
-
-	SPIRV-Cross is used for the GLSL ES 300 output consumed by the GLES/WebGL2
-	backend; everything else is dependency-free.
+	compiler (see docs/topics/glsl_support.md for the supported subset). The GLSL
+	ES 300 output consumed by the GLES/WebGL2 backend also comes from cute_spirv's
+	transpiler backend -- fully dependency-free.
 
 	ckit's implementation is expected to come from another TU (cute_ckit.cpp inside
 	CF, or a dedicated TU for standalone tools like cute-shaderc).
@@ -23,10 +22,6 @@
 #include "cute/cute_spirv.h"
 
 #include "cute_shader.h"
-
-// SPIRV-Cross builds on every platform, including Emscripten -- web builds need the
-// GLSL ES 300 output for runtime compilation on the GLES backend.
-#include <spirv_cross_c.h>
 
 //--------------------------------------------------------------------------------------------------
 // Default filesystem VFS (mirrors cute_shader.cpp's libc vfs).
@@ -205,6 +200,8 @@ CF_ShaderCompilerResult cute_shader_compile(const char* source, CF_ShaderCompile
 	opts.user = &include_ctx;
 	opts.return_preprocessed = config.return_preprocessed_source;
 	opts.display_name = s_display_name;
+	// GLSL 300 es transpilation (skipped for compute -- GLES 3.0 has no compute support).
+	opts.emit_glsl300 = stage != CUTE_SHADER_STAGE_COMPUTE && !config.skip_glsl300;
 
 	CSPV_Result r = cspv_compile_ex(source, cspv_stage, &opts);
 
@@ -223,51 +220,14 @@ CF_ShaderCompilerResult cute_shader_compile(const char* source, CF_ShaderCompile
 	void* bytecode = malloc(bytecode_size);
 	memcpy(bytecode, r.spirv, bytecode_size);
 
-	// GLSL 300 transpilation (skipped for compute -- GLES 3.0 has no compute support).
+	// GLSL 300 es source, from cute_spirv's transpiler backend (requested via
+	// opts.emit_glsl300 above; NULL when skipped).
 	char* glsl300_src = NULL;
 	size_t glsl300_src_size = 0;
-	if (stage != CUTE_SHADER_STAGE_COMPUTE && !config.skip_glsl300) {
-		spvc_context spvc = NULL;
-		spvc_context_create(&spvc);
-		{
-			spvc_parsed_ir ir = NULL;
-			spvc_context_parse_spirv(spvc, (const uint32_t*)bytecode, r.word_count, &ir);
-
-			spvc_compiler compiler = NULL;
-			spvc_context_create_compiler(spvc, SPVC_BACKEND_GLSL, ir, SPVC_CAPTURE_MODE_TAKE_OWNERSHIP, &compiler);
-
-			// (Integer varyings arrive already Flat-decorated on both stages --
-			// cute_spirv emits the decorations, so no fixup pass is needed here.)
-
-			// Options for GLES 3.00.
-			spvc_compiler_options options = NULL;
-			if (spvc_compiler_create_compiler_options(compiler, &options) == SPVC_SUCCESS) {
-				spvc_compiler_options_set_uint(options, SPVC_COMPILER_OPTION_GLSL_VERSION, 300);
-				spvc_compiler_options_set_bool(options, SPVC_COMPILER_OPTION_GLSL_ES, SPVC_TRUE);
-				spvc_compiler_options_set_bool(options, SPVC_COMPILER_OPTION_GLSL_ENABLE_420PACK_EXTENSION, SPVC_FALSE);
-				spvc_compiler_options_set_bool(options, SPVC_COMPILER_OPTION_GLSL_SEPARATE_SHADER_OBJECTS, SPVC_TRUE);
-				spvc_compiler_options_set_bool(options, SPVC_COMPILER_OPTION_FLIP_VERTEX_Y, SPVC_TRUE);
-				spvc_compiler_options_set_bool(options, SPVC_COMPILER_OPTION_FIXUP_DEPTH_CONVENTION, SPVC_TRUE);
-				spvc_compiler_install_compiler_options(compiler, options);
-			}
-
-			const char* transpiled = NULL;
-			if (spvc_compiler_compile(compiler, &transpiled) != SPVC_SUCCESS) {
-				CF_ShaderCompilerResult error = s_failure("Transpilation to GLSL 300 failed", spvc_context_get_last_error_string(spvc));
-				spvc_context_release_allocations(spvc);
-				spvc_context_destroy(spvc);
-				free(bytecode);
-				cspv_free(&r);
-				return error;
-			}
-
-			glsl300_src_size = strlen(transpiled);
-			glsl300_src = (char*)malloc(glsl300_src_size + 1);
-			memcpy(glsl300_src, transpiled, glsl300_src_size);
-			glsl300_src[glsl300_src_size] = '\0';
-			spvc_context_release_allocations(spvc);
-		}
-		spvc_context_destroy(spvc);
+	if (r.glsl300) {
+		glsl300_src_size = strlen(r.glsl300);
+		glsl300_src = (char*)malloc(glsl300_src_size + 1);
+		memcpy(glsl300_src, r.glsl300, glsl300_src_size + 1);
 	}
 
 	// Reflection: map CSPV_Reflection to CF_ShaderInfo. Arrays are malloc'd (freed by
