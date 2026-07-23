@@ -50,6 +50,28 @@ layout(set = 2, binding = 0) uniform Params
 	int u_t_next_w;     // width of T_{n+1} buffer
 	int u_r_prev_w;     // width of R_{n+1} buffer
 	int u_r_curr_w;     // width of R_n buffer
+
+	// Off-screen boundary radiance injection (MECHANISM 1). When a merge ray
+	// exits the world edge, instead of returning R_N = 0 we return the radiance
+	// an off-screen light delivers from the ray's world direction at the exit
+	// point. Injected at the SAME site the zero lived, so it is still multiplied
+	// by the full on-screen transmittance the ray accumulated (walls occlude it).
+	int   u_rotate;        // current rotation 0..3 (rotated +x -> world quadrant)
+	int   u_is_top;        // 1 when n == N-1: R_{n+1} is R_N = 0, every read is boundary
+	int   u_inject_mode;   // 0 = none (R_N=0), 2 = correct boundary inject
+	int   u_light_type;    // 0 = infinite directional, 1 = finite off-screen point
+	float u_light_dirx;    // directional: travel dir (from light into scene), normalized
+	float u_light_diry;
+	float u_light_posx;    // point: normalized world position (may lie outside [0,1])
+	float u_light_posy;
+	float u_light_r;       // color hue (x anti-flicker fade); intensity is separate
+	float u_light_g;
+	float u_light_b;
+	float u_light_falloff;   // point-light inverse-square falloff coefficient
+	float u_light_intensity; // E: calibrated per-direction irradiance scale
+	float u_light_angradius; // directional soft-cone plateau half-angle (radians)
+	float u_light_radius;    // point emitter radius (normalized world units)
+	float u_light_softness;  // penumbra shoulder angular width (radians)
 };
 
 layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
@@ -79,6 +101,106 @@ vec2 v_n(int n, float k)
 {
 	float pow2n = float(1 << n);
 	return vec2(pow2n, k - pow2n);
+}
+
+// Rotated-space -> world-space maps (normalized coords). The cascade runs in
+// +x-aligned "rotated" space; rotation j maps rotated +x onto the j-th world
+// quadrant direction. Position map matches the composite's grid_to_rotated
+// inverse; direction map is its linear part (pure 90*j rotation).
+vec2 rot_pos(int rot, vec2 p)
+{
+	if (rot == 1) return vec2(1.0 - p.y, p.x);
+	if (rot == 2) return vec2(1.0 - p.x, 1.0 - p.y);
+	if (rot == 3) return vec2(p.y, 1.0 - p.x);
+	return p;
+}
+
+vec2 rot_dir(int rot, vec2 d)
+{
+	if (rot == 1) return vec2(-d.y, d.x);
+	if (rot == 2) return vec2(-d.x, -d.y);
+	if (rot == 3) return vec2(d.y, -d.x);
+	return d;
+}
+
+// Per-direction radiance an off-screen light delivers to boundary point p
+// (normalized world) for a ray leaving the screen in world direction d.
+//
+// SOFT CONE (finite angular size). The old model was a HARD binary cone test
+// (in/out), which gave off-screen shadows zero penumbra AND quantized the
+// visibility answer to the cascade's discrete ray directions -> pixely staircase.
+// Here the source has a finite angular radius `a` with a smooth shoulder `s`:
+//   profile(ang) = 1 - smoothstep(a - s/2, a + s/2, ang)   (0.5 at geometric edge)
+// This adds a penumbra like an on-screen area light AND, because the shoulder
+// spans several cascade direction steps, ramps the visibility answer smoothly
+// across cones so the angular quantization averages out.
+//
+// This returns radiance PER DIRECTION (angular-fluence density). The caller
+// (R_load) multiplies by the read cone's angular span to convert it to the
+// angular-fluence units R_n stores -- without that span weight the raw radiance
+// is added once per contributing cone and the composite over-counts it by the
+// cone count (the "overpowering flood").
+//
+// BRIGHTNESS NORMALIZATION. The profile is divided by its angular integral
+// Z = 2a + s, so the total injected irradiance summed over all cones equals the
+// intensity E regardless of a or s: a wider/softer cone SPREADS the same energy
+// (softens) instead of adding more (brightens). E carries the inverse-square
+// distance falloff for the finite point light; the infinite directional source
+// legitimately does not fall off, so its E is just the calibrated uniform.
+//
+// Occlusion is NOT applied here -- the caller multiplies by the ray's accumulated
+// on-screen transmittance, so on-screen walls between p and the probe still shadow.
+vec3 boundary_light(vec2 p, vec2 d)
+{
+	vec3 col = vec3(u_light_r, u_light_g, u_light_b); // hue (x anti-flicker fade)
+	vec2 nd = normalize(d);
+	float ang;         // angle between exit dir and direction toward light center
+	float a;           // source angular radius (plateau half-angle)
+	float atten = 1.0; // distance attenuation (point only)
+	if (u_light_type == 0) {
+		// Infinite directional: look back up the beam (toward -travel_dir).
+		vec2 toward = normalize(-vec2(u_light_dirx, u_light_diry));
+		ang = acos(clamp(dot(nd, toward), -1.0, 1.0));
+		a   = u_light_angradius;
+	} else {
+		// Finite off-screen point: angular radius atan(r/dist) is PHYSICAL, so the
+		// penumbra tightens as the light recedes, just like a real disc source.
+		vec2 to_l = vec2(u_light_posx, u_light_posy) - p;
+		float dist = max(length(to_l), 1e-5);
+		ang   = acos(clamp(dot(nd, to_l / dist), -1.0, 1.0));
+		a     = atan(u_light_radius / dist);
+		atten = 1.0 / (1.0 + u_light_falloff * dist * dist);
+	}
+	float s = u_light_softness;
+	float h = 0.5 * s;
+	float profile = 1.0 - smoothstep(a - h, a + h, ang);
+	float Z = 2.0 * a + s;                    // angular integral of the profile
+	float E = u_light_intensity * atten;      // calibrated irradiance (with falloff)
+	return col * (E * profile / max(Z, 1e-4));
+}
+
+// Reconstruct the world exit point + world direction of the ray behind an
+// out-of-bounds (or top-level) R_{n+1} read (probe_x, cone i, row y), then
+// evaluate the off-screen light there. This is the replacement for R_N = 0.
+vec3 boundary_inject(int probe_x, int i, int y)
+{
+	int   n1   = u_cascade + 1;
+	float pw   = float(1 << n1);
+	float grid = float(u_world_size);
+	// Rotated-space far-probe position (grid units) and cone-center direction
+	// v_{n+1}(i+0.5) = (2^{n+1}, i+0.5 - 2^{n+1}).
+	vec2 fr    = vec2(float(probe_x) * pw, float(y));
+	vec2 dcone = vec2(pw, (float(i) + 0.5) - pw);
+	// March forward (dcone.x > 0 always) to the rotated box exit = world edge.
+	float tx = (grid - fr.x) / dcone.x;
+	float ty = 1e30;
+	if      (dcone.y > 0.0) ty = (grid - fr.y) / dcone.y;
+	else if (dcone.y < 0.0) ty = (0.0  - fr.y) / dcone.y;
+	float t = max(0.0, min(tx, ty));
+	vec2 exit_r = clamp(fr + t * dcone, vec2(0.0), vec2(grid));
+	vec2 p = rot_pos(u_rotate, exit_r / grid);
+	vec2 d = rot_dir(u_rotate, dcone);
+	return boundary_light(p, d);
 }
 
 // Eq 13: angular size of cone i at cascade n.
@@ -131,7 +253,22 @@ vec3 R_load(int probe_x, int i, int y)
 	int n = u_cascade + 1;
 	int directions = 2 << n;
 	int num_probes = u_world_size >> n;
-	if (probe_x < 0 || probe_x >= num_probes || i < 0 || i >= directions || y < 0 || y >= u_world_size) {
+	bool oob = (probe_x < 0 || probe_x >= num_probes || i < 0 || i >= directions || y < 0 || y >= u_world_size);
+	// Boundary condition: the ray exits the world (oob), or this is the top
+	// iteration where R_{n+1} = R_N is the all-zero base case. Both are the
+	// "R_N = 0" injection site. With mode 2 we substitute off-screen radiance;
+	// otherwise keep the historical zero.
+	if (oob || u_is_top != 0) {
+		if (u_inject_mode == 2) {
+			// boundary_inject returns radiance PER DIRECTION; R_n stores angular
+			// FLUENCE, so weight by this cone's angular span (matches how traced
+			// near intervals are span-weighted). This is the fix that stops the
+			// injected light being counted once per cone (the over-bright flood):
+			// summed over the cones the light spans, the spans total its angular
+			// footprint, so the composite gets the intended irradiance, not Nx.
+			float span = max(angular_span(u_cascade + 1, float(i) + 0.5), 0.0);
+			return boundary_inject(probe_x, i, y) * span;
+		}
 		return vec3(0.0);
 	}
 	int idx = y * u_r_prev_w + probe_x * directions + i;
