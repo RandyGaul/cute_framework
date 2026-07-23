@@ -278,6 +278,37 @@ void hrc_shutdown()
 }
 
 //--------------------------------------------------------------------------------------------------
+// Off-screen light injection uniforms (resolved each frame in update_inject_uniforms).
+
+typedef struct InjectUniforms
+{
+	int   merge_mode;    // merge shader: 0 = none, 2 = correct boundary injection
+	int   composite_mode;// composite shader: 1 = naive unoccluded add, else 0
+	int   type;          // 0 = infinite directional, 1 = finite point
+	float dirx, diry;    // directional travel dir (from light into scene)
+	float posx, posy;    // normalized world position
+	float r, g, b;       // linear HDR color (already faded for mode 3)
+	float cosv;          // cone acceptance cosine
+	float falloff;       // point inverse-square coefficient
+} InjectUniforms;
+
+InjectUniforms g_inject;
+
+// Push the static off-screen-light uniforms onto a material (merge or composite).
+void set_inject_uniforms(CF_Material mat)
+{
+	cf_material_set_uniform_cs(mat, "u_light_type", &g_inject.type, CF_UNIFORM_TYPE_INT, 1);
+	cf_material_set_uniform_cs(mat, "u_light_dirx", &g_inject.dirx, CF_UNIFORM_TYPE_FLOAT, 1);
+	cf_material_set_uniform_cs(mat, "u_light_diry", &g_inject.diry, CF_UNIFORM_TYPE_FLOAT, 1);
+	cf_material_set_uniform_cs(mat, "u_light_posx", &g_inject.posx, CF_UNIFORM_TYPE_FLOAT, 1);
+	cf_material_set_uniform_cs(mat, "u_light_posy", &g_inject.posy, CF_UNIFORM_TYPE_FLOAT, 1);
+	cf_material_set_uniform_cs(mat, "u_light_r", &g_inject.r, CF_UNIFORM_TYPE_FLOAT, 1);
+	cf_material_set_uniform_cs(mat, "u_light_g", &g_inject.g, CF_UNIFORM_TYPE_FLOAT, 1);
+	cf_material_set_uniform_cs(mat, "u_light_b", &g_inject.b, CF_UNIFORM_TYPE_FLOAT, 1);
+	cf_material_set_uniform_cs(mat, "u_light_falloff", &g_inject.falloff, CF_UNIFORM_TYPE_FLOAT, 1);
+}
+
+//--------------------------------------------------------------------------------------------------
 // Cascade compute pipeline.
 
 void hrc_compute()
@@ -302,6 +333,12 @@ void hrc_compute()
 	cf_material_set_uniform_cs(hrc.mat_trace, "u_mip_level", &mip_level, CF_UNIFORM_TYPE_FLOAT, 1);
 	cf_material_set_uniform_cs(hrc.mat_trace, "u_absrp_mip_level", &absrp_mip_level, CF_UNIFORM_TYPE_FLOAT, 1);
 	cf_material_set_uniform_cs(hrc.mat_trace, "u_upscale", &upscale, CF_UNIFORM_TYPE_INT, 1);
+
+	// Off-screen boundary radiance injection (MECHANISM 1). Static per frame;
+	// u_rotate and u_is_top are set per merge dispatch below.
+	set_inject_uniforms(hrc.mat_merge);
+	cf_material_set_uniform_cs(hrc.mat_merge, "u_inject_mode", &g_inject.merge_mode, CF_UNIFORM_TYPE_INT, 1);
+	cf_material_set_uniform_cs(hrc.mat_merge, "u_light_cos", &g_inject.cosv, CF_UNIFORM_TYPE_FLOAT, 1);
 
 	for (int j = 0; j < 4; j++) {
 		// Seed T_0 when no levels are traced (sample at probe, no raymarching).
@@ -375,12 +412,15 @@ void hrc_compute()
 		int r_ping = 0;
 		for (int i = N - 1; i >= 0; i--) {
 			int params[6] = { i, dim, hrc.vrays_w[i], hrc.vrays_w[i + 1], dim * 2, dim * 2 };
+			int is_top = (i == N - 1) ? 1 : 0; // R_{i+1} == R_N base case at top
 			cf_material_set_uniform_cs(hrc.mat_merge, "u_cascade", params + 0, CF_UNIFORM_TYPE_INT, 1);
 			cf_material_set_uniform_cs(hrc.mat_merge, "u_world_size", params + 1, CF_UNIFORM_TYPE_INT, 1);
 			cf_material_set_uniform_cs(hrc.mat_merge, "u_t_curr_w", params + 2, CF_UNIFORM_TYPE_INT, 1);
 			cf_material_set_uniform_cs(hrc.mat_merge, "u_t_next_w", params + 3, CF_UNIFORM_TYPE_INT, 1);
 			cf_material_set_uniform_cs(hrc.mat_merge, "u_r_prev_w", params + 4, CF_UNIFORM_TYPE_INT, 1);
 			cf_material_set_uniform_cs(hrc.mat_merge, "u_r_curr_w", params + 5, CF_UNIFORM_TYPE_INT, 1);
+			cf_material_set_uniform_cs(hrc.mat_merge, "u_rotate", &j, CF_UNIFORM_TYPE_INT, 1);
+			cf_material_set_uniform_cs(hrc.mat_merge, "u_is_top", &is_top, CF_UNIFORM_TYPE_INT, 1);
 
 			CF_ComputeDispatch d = cf_compute_dispatch_defaults(
 				hrc_div_ceil(dim * 2, HRC_WG),
@@ -456,6 +496,10 @@ void hrc_compute()
 		cf_material_set_uniform_cs(hrc.mat_composite, "u_cminus1", &hrc.cminus1, CF_UNIFORM_TYPE_INT, 1);
 		cf_material_set_uniform_cs(hrc.mat_composite, "u_upscale_mode", &hrc.upscale_mode, CF_UNIFORM_TYPE_INT, 1);
 
+		// Naive off-screen light (MODE 1 negative control) params.
+		set_inject_uniforms(hrc.mat_composite);
+		cf_material_set_uniform_cs(hrc.mat_composite, "u_inject_mode", &g_inject.composite_mode, CF_UNIFORM_TYPE_INT, 1);
+
 		CF_ComputeDispatch d = cf_compute_dispatch_defaults(
 			hrc_div_ceil(world, HRC_WG),
 			hrc_div_ceil(world, HRC_WG),
@@ -511,7 +555,122 @@ typedef struct OrbLight
 } OrbLight;
 
 float time_acc = 0.0f;
-int test_scene = 0; // 0 = off, 1 = static centered light, 2 = slowly orbiting light
+int test_scene = 0; // 0 = off, 1 = static centered light, 2 = slowly orbiting light, 3 = cornell, 4 = pinhole, 5 = off-screen demo
+
+//--------------------------------------------------------------------------------------------------
+// Off-screen light demo (test_scene == 5).
+//
+// A bright HDR point light ORBITS on a radius large enough to leave and re-enter
+// the screen (part of each orbit is off-screen on every side). On-screen walls
+// shadow the interior when the light sits off an edge. Modes select how the
+// off-screen light is handled:
+//   0 = no injection      (light simply vanishes off-screen -- the baseline pop)
+//   1 = naive unoccluded  (WRONG: light bleeds through on-screen walls; control)
+//   2 = correct boundary  (MECHANISM 1: injected in-cascade, walls still occlude)
+//   3 = padded + fade     (MECHANISM 2: sim a margin, display center crop, fade)
+int   inject_mode = 0;
+
+#define HRC_MARGIN_FACTOR 1.3f   // mode 3 padded region = screen x this factor
+#define OFF_ORBIT_RADIUS  680.0f // > half world (512), so it leaves/re-enters
+#define OFF_LIGHT_HDR     10.0f  // linear HDR radiance
+#define OFF_LIGHT_RADIUS  20.0f  // emitter disk radius (world px)
+#define OFF_LIGHT_CONE_DEG 15.0f // point-light angular acceptance (half-width)
+
+// Warm HDR light color in LINEAR radiance units (matches emiss decode: pow*16).
+CF_V2 off_light_pos;      // world pixels (may lie outside [0, world])
+float off_light_fade;     // mode-3 anti-flicker fade 0..1 across the margin band
+int   off_light_onscreen; // 1 if within [0, world]^2
+
+static float off_clamp01(float x) { return x < 0.0f ? 0.0f : (x > 1.0f ? 1.0f : x); }
+static float off_smooth(float e0, float e1, float x)
+{
+	float t = off_clamp01((x - e0) / (e1 - e0));
+	return t * t * (3.0f - 2.0f * t);
+}
+static float off_min4(float a, float b, float c, float d)
+{
+	float m = a < b ? a : b;
+	m = m < c ? m : c;
+	return m < d ? m : d;
+}
+
+// Compute the orbiting light's world position + mode-3 fade for this frame.
+// Deterministic when HRC_ORBIT is set (screenshot seeding): angle taken directly.
+void update_offscreen_light()
+{
+	float ws = (float)HRC_WORLD_SIZE;
+	float half = ws * 0.5f;
+
+	// HRC_LX/HRC_LY explicitly place the light (world pixels) for controlled
+	// straight-line anti-flicker sweeps; otherwise orbit (HRC_ORBIT seeds phase).
+	const char* lxs = getenv("HRC_LX");
+	const char* lys = getenv("HRC_LY");
+	if (lxs && lys) {
+		off_light_pos = cf_v2((float)atof(lxs), (float)atof(lys));
+	} else {
+		float ang;
+		const char* orbit_env = getenv("HRC_ORBIT");
+		if (orbit_env) ang = (float)atof(orbit_env);
+		else           ang = time_acc * 0.4f;
+		off_light_pos = cf_v2(half + cosf(ang) * OFF_ORBIT_RADIUS,
+		                      half + sinf(ang) * OFF_ORBIT_RADIUS);
+	}
+
+	float pnx = off_light_pos.x / ws;
+	float pny = off_light_pos.y / ws;
+	off_light_onscreen = (pnx >= 0.0f && pnx < 1.0f && pny >= 0.0f && pny < 1.0f) ? 1 : 0;
+
+	// Anti-flicker fade: 0 at the padded outer edge, ramping to 1 by the time the
+	// light reaches the visible screen crop, so the ramp happens entirely in the
+	// off-screen margin band and visible pixels only ever see full strength.
+	if (inject_mode == 3) {
+		// Ramp 0 (world edge) -> 1 by 60% into the margin band, so the light is at
+		// full strength before it reaches the visible crop AND margin lights that
+		// sit behind an off-screen occluder (Case B) are still bright enough to
+		// cast a shadow. The whole ramp still lives in the off-screen margin.
+		float margin_norm = (1.0f - 1.0f / HRC_MARGIN_FACTOR) * 0.5f;
+		float m = off_min4(pnx, 1.0f - pnx, pny, 1.0f - pny); // dist to nearest world edge
+		off_light_fade = off_smooth(0.0f, margin_norm * 0.6f, m);
+	} else {
+		off_light_fade = 1.0f;
+	}
+}
+
+void update_inject_uniforms()
+{
+	CF_MEMSET(&g_inject, 0, sizeof(g_inject));
+	g_inject.type = 1;
+	g_inject.falloff = 0.5f;
+	g_inject.cosv = cosf(OFF_LIGHT_CONE_DEG * CF_PI / 180.0f);
+	if (test_scene != 5) return;
+
+	float ws = (float)HRC_WORLD_SIZE;
+	const char* lt = getenv("HRC_LIGHTTYPE");
+	if (lt) g_inject.type = atoi(lt); // 0 = directional, 1 = point
+
+	g_inject.posx = off_light_pos.x / ws;
+	g_inject.posy = off_light_pos.y / ws;
+
+	// Directional travel dir: from the light toward the world center.
+	float tx = 0.5f - g_inject.posx, ty = 0.5f - g_inject.posy;
+	float tl = sqrtf(tx * tx + ty * ty);
+	if (tl < 1e-5f) tl = 1.0f;
+	g_inject.dirx = tx / tl;
+	g_inject.diry = ty / tl;
+	// Wider cone for the directional light (a broad off-screen source).
+	if (g_inject.type == 0) g_inject.cosv = cosf(35.0f * CF_PI / 180.0f);
+
+	float b = off_light_fade;
+	g_inject.r = OFF_LIGHT_HDR * 1.00f * b;
+	g_inject.g = OFF_LIGHT_HDR * 0.85f * b;
+	g_inject.b = OFF_LIGHT_HDR * 0.60f * b;
+
+	// Mode 2 = MECHANISM 1 (in-cascade boundary injection, correctly occluded).
+	// Mode 3 = MECHANISM 2 relies on the padded in-world emitter + fade, no
+	// boundary injection. Mode 1 = naive composite add. Mode 0 = nothing.
+	if (inject_mode == 2) g_inject.merge_mode = 2;
+	if (inject_mode == 1) g_inject.composite_mode = 1;
+}
 
 // Test light center for this frame. The light is 8x8 world pixels -- the paper
 // calls out sub-8x8 emitters as a known HRC limitation, so the reference test
@@ -621,9 +780,54 @@ void draw_pinhole(int channel)
 	}
 }
 
+// Off-screen demo scene. channel: 0 = emissivity, 1 = absorption.
+// On-screen occluder walls + (mode 3 only) an off-screen margin occluder, plus
+// the orbiting light drawn as an emitter while it is on-screen.
+void draw_offscreen(int channel)
+{
+	CF_Color solid = cf_make_color_rgb_f(1.0f, 1.0f, 1.0f); // opaque occluder
+
+	if (channel == 1) {
+		cf_draw_push_color(solid);
+		// Three on-screen occluder walls. When the light is off the left/right
+		// edge these cast shadows into the interior (Case A).
+		draw_rect_ch(292.0f, 372.0f, 308.0f, 652.0f, solid); // left vertical wall
+		draw_rect_ch(716.0f, 372.0f, 732.0f, 652.0f, solid); // right vertical wall
+		draw_rect_ch(372.0f, 716.0f, 652.0f, 732.0f, solid); // top horizontal wall
+		cf_draw_pop_color();
+
+		// Case B: an off-screen occluder living inside the mode-3 padded margin.
+		// It exists only when mechanism 2 is active -- the boundary-injection
+		// mechanism (mode 2) has no knowledge of geometry beyond the screen, so
+		// this wall is absent from its world. Mode 3 simulates the margin and so
+		// shadows the visible crop correctly where mode 2 cannot.
+		if (inject_mode == 3 && !getenv("HRC_NOCCL")) {
+			draw_rect_ch(92.0f, 400.0f, 108.0f, 624.0f, solid); // left margin band (off crop)
+		}
+	}
+
+	// The light body (opaque emitter) while it is on-screen; off-screen frames
+	// rely on boundary injection / padded sim instead.
+	if (off_light_onscreen) {
+		float b = off_light_fade;
+		if (channel == 1) {
+			// Opaque so it can radiate (rad = emiss * (1 - T)).
+			draw_circle_ch(off_light_pos.x, off_light_pos.y, OFF_LIGHT_RADIUS, cf_make_color_rgb_f(0.632f, 0.632f, 0.632f));
+		} else {
+			// Emission encode: stored = (Blin/16)^(1/2.2) so decode pow*16 = Blin.
+			float inv = 1.0f / 2.2f;
+			float er = powf(OFF_LIGHT_HDR * 1.00f * b / 16.0f, inv);
+			float eg = powf(OFF_LIGHT_HDR * 0.85f * b / 16.0f, inv);
+			float eb = powf(OFF_LIGHT_HDR * 0.60f * b / 16.0f, inv);
+			draw_circle_ch(off_light_pos.x, off_light_pos.y, OFF_LIGHT_RADIUS, cf_make_color_rgb_f(er, eg, eb));
+		}
+	}
+}
+
 void draw_test_shapes(int channel)
 {
 	if (test_scene == 3) draw_cornell(channel);
+	else if (test_scene == 5) draw_offscreen(channel);
 	else draw_pinhole(channel);
 }
 
@@ -646,7 +850,10 @@ void handle_input()
 		hrc.debug_mode = (hrc.debug_mode + 1) % HRC_NUM_DEBUG;
 	}
 	if (cf_key_just_pressed(CF_KEY_T)) {
-		test_scene = (test_scene + 1) % 5;
+		test_scene = (test_scene + 1) % 6;
+	}
+	if (cf_key_just_pressed(CF_KEY_I)) {
+		inject_mode = (inject_mode + 1) % 4;
 	}
 	if (cf_key_just_pressed(CF_KEY_H)) {
 		if      (hrc.grid == 128)  hrc_set_grid(256);
@@ -880,7 +1087,11 @@ void display_fluence()
 	else if (hrc.debug_mode == 7) display = hrc.absorption;
 
 	float ws = (float)HRC_WORLD_SIZE;
-	cf_draw_canvas(display, cf_v2(0, 0), cf_v2(ws, ws));
+	// MECHANISM 2 (mode 3): the full world is the padded region; display only the
+	// center screen crop by zooming so the crop fills the window. Off-screen
+	// margin geometry (simulated) is cropped out of view but still shadows.
+	float scale = (test_scene == 5 && inject_mode == 3) ? HRC_MARGIN_FACTOR : 1.0f;
+	cf_draw_canvas(display, cf_v2(0, 0), cf_v2(ws * scale, ws * scale));
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -909,6 +1120,7 @@ void draw_hud()
 		"[M] Upscale: %s\n"
 		"[P] Prefilter: %s\n"
 		"[R] Trace: %d / %d\n"
+		"[I] Off-screen: %s\n"
 		"[T] Test scene: %s",
 		hrc.blend_boundary ? "on" : "off",
 		hrc.blend_width,
@@ -918,7 +1130,8 @@ void draw_hud()
 		hrc.upscale_mode == 0 ? "nearest" : hrc.upscale_mode == 1 ? "minmax" : "bilateral",
 		hrc.prefilter_mode == 0 ? "off" : hrc.prefilter_mode == 1 ? "box" : hrc.prefilter_mode == 2 ? "mipmap" : hrc.prefilter_mode == 3 ? "gauss" : "mip+max",
 		hrc.trace_levels, hrc.n + 1,
-		test_scene == 0 ? "off" : test_scene == 1 ? "static 8x8" : test_scene == 2 ? "orbiting 8x8" : test_scene == 3 ? "cornell" : "pinhole"
+		inject_mode == 0 ? "0 none" : inject_mode == 1 ? "1 naive (bleed)" : inject_mode == 2 ? "2 boundary inject" : "3 padded+fade",
+		test_scene == 0 ? "off" : test_scene == 1 ? "static 8x8" : test_scene == 2 ? "orbiting 8x8" : test_scene == 3 ? "cornell" : test_scene == 4 ? "pinhole" : "off-screen demo"
 	);
 
 	float half = (float)HRC_WORLD_SIZE * 0.5f;
@@ -948,6 +1161,7 @@ int main(int argc, char* argv[])
 		if ((env = getenv("HRC_BLEND_WIDTH"))) hrc.blend_width = (float)atof(env);
 		if ((env = getenv("HRC_CM1")))         hrc.cminus1 = atoi(env);
 		if ((env = getenv("HRC_TRACE")))       hrc.trace_levels = atoi(env);
+		if ((env = getenv("HRC_INJECT")))      inject_mode = atoi(env);
 	}
 
 	while (cf_app_is_running()) {
@@ -955,6 +1169,8 @@ int main(int argc, char* argv[])
 		cf_draw_push_shape_aa(0);
 		handle_input();
 		update_lights();
+		update_offscreen_light();
+		update_inject_uniforms();
 		draw_emissivity();
 		draw_absorption();
 		draw_diffuse();
