@@ -116,6 +116,16 @@ jobs:
       - name: Tests
         if: runner.os != 'Linux'
         run: ./build/tests
+        env:
+          CF_TEST_DUMP: "1"
+
+      - name: Upload test readback dumps
+        if: failure() && runner.os == 'macOS'
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-dumps-${{ matrix.os }}-${{ matrix.compiler }}-${{ matrix.framework_static }}
+          path: build/dump_*.png
+          if-no-files-found: ignore
 
       - name: Shader Compiler Tests
         run: ./build/cute-spirv-tests
