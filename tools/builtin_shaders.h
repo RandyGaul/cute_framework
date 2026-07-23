@@ -189,10 +189,17 @@ vec4 softlight(vec4 base, vec4 blend)
 // Pure SDF helpers shared between fragment shaders (via distance.shd) and the tiled
 // renderer's binning compute shaders. Must stay free of globals and derivatives.
 static const char* s_sdf_core = R"(
-// unpackUnorm4x8 is missing from GLSL ES 3.00; this manual unpack works everywhere.
-vec4 cf_unpack_color(uint c)
+// Draw colors travel as packed half4 -- two packHalf2x16 words, rg then ba -- so HDR
+// channels (> 1.0) survive the trip to the GPU. unpackHalf2x16 is core in GLSL ES 3.00.
+vec4 cf_unpack_half4(uint rg, uint ba)
 {
-	return vec4(float(c & 255u), float((c >> 8u) & 255u), float((c >> 16u) & 255u), float((c >> 24u) & 255u)) * (1.0 / 255.0);
+	return vec4(unpackHalf2x16(rg), unpackHalf2x16(ba));
+}
+
+// Same, for a word pair riding in a payload vec4's float lanes.
+vec4 cf_unpack_half4v(vec2 c)
+{
+	return cf_unpack_half4(floatBitsToUint(c.x), floatBitsToUint(c.y));
 }
 
 float safe_div(float a, float b)
@@ -741,11 +748,12 @@ void main()
 		float gcov = cf_glyph_eval(v_pos, gp0.xy, gp0.zw, gp1.xy, ivec2(gp2.xy), int(gp2.z), v_n, gpx, v_stroke > 0.0, gd);
 		// Per-corner colors (TL,TR,BR,BL) bilerped by box fraction, matching the
 		// rasterized text path's text-effect gradients.
-		vec4 gc = cf_payload(uint(v_po) + 3u);
+		vec4 gc = cf_payload(uint(v_po) + 3u);  // TL, TR as half4 pairs.
+		vec4 gc2 = cf_payload(uint(v_po) + 4u); // BR, BL as half4 pairs.
 		float gs = clamp(dot(v_pos - gp0.xy, gp0.zw) * gp1.z, 0.0, 1.0);
 		float gt = clamp(dot(v_pos - gp0.xy, gp1.xy) * gp1.w, 0.0, 1.0);
-		vec4 gvcol = mix(mix(cf_unpack_color(floatBitsToUint(gc.w)), cf_unpack_color(floatBitsToUint(gc.z)), gs),
-		                 mix(cf_unpack_color(floatBitsToUint(gc.x)), cf_unpack_color(floatBitsToUint(gc.y)), gs), gt);
+		vec4 gvcol = mix(mix(cf_unpack_half4v(gc2.zw), cf_unpack_half4v(gc2.xy), gs),
+		                 mix(cf_unpack_half4v(gc.xy), cf_unpack_half4v(gc.zw), gs), gt);
 		c = v_stroke > 0.0 ? sdf(vec4(0), gvcol, gd) : gvcol * gcov;
 	}
 	c = (!is_sprite && !is_text && !is_tri && !is_glyph) ? sdf(c, v_col, d - v_radius) : c;
@@ -823,9 +831,9 @@ layout (set = 2, binding = 0) uniform sampler2D u_image;
 struct Cmd
 {
 	vec4 aabb;    // Pixel-space bounds, top-left origin: min.xy, max.xy.
-	uvec4 meta;   // x: type, y: rgba8 color, z: payload offset (vec4 units), w: inverse-mvp offset (vec4 units).
+	uvec4 meta;   // x: type, y: packHalf2x16(color.rg), z: payload offset (vec4 units), w: inverse-mvp offset (vec4 units).
 	vec4 shape;   // radius, stroke (pre-halved), aa, alpha.
-	vec4 misc;    // x: fill (0 or 1), y: polygon vert count, z, w: unused.
+	vec4 misc;    // x: fill (0 or 1), y: polygon vert count, z: opaque, w: packHalf2x16(color.ba) bits.
 	vec4 user;    // User params (ShaderParams.attributes).
 };
 
@@ -894,7 +902,7 @@ void main()
 		--i;
 		Cmd cmd = cmds[tile_list[range.x + i]];
 		uint type = cmd.meta.x;
-		vec4 col = unpackUnorm4x8(cmd.meta.y);
+		vec4 col = cf_unpack_half4(cmd.meta.y, floatBitsToUint(cmd.misc.w));
 		uint po = cmd.meta.z;
 
 		// Pixel-space AABB coverage. Mask only -- never branch on this around a sample.
@@ -957,10 +965,12 @@ void main()
 			if (type == CMD_TYPE_SPRITE) {
 				c = tex_c;
 			} else {
-				vec4 tl = unpackUnorm4x8(floatBitsToUint(payload[po + 3u].x));
-				vec4 tr = unpackUnorm4x8(floatBitsToUint(payload[po + 3u].y));
-				vec4 br = unpackUnorm4x8(floatBitsToUint(payload[po + 3u].z));
-				vec4 bl = unpackUnorm4x8(floatBitsToUint(payload[po + 3u].w));
+				vec4 T0 = payload[po + 3u]; // TL, TR as half4 pairs.
+				vec4 T1 = payload[po + 4u]; // BR, BL as half4 pairs.
+				vec4 tl = cf_unpack_half4v(T0.xy);
+				vec4 tr = cf_unpack_half4v(T0.zw);
+				vec4 br = cf_unpack_half4v(T1.xy);
+				vec4 bl = cf_unpack_half4v(T1.zw);
 				vec4 vcol = mix(mix(tl, tr, s), mix(bl, br, s), t);
 				c = vcol * tex_c.a;
 			}
@@ -978,11 +988,12 @@ void main()
 			float w1 = det2(cc - p, a - p) * inv_denom;
 			float w2 = 1.0 - w0 - w1;
 			float inside = step(0.0, w0) * step(0.0, w1) * step(0.0, w2);
-			uint flags = floatBitsToUint(P2.w);
-			vec4 c0 = unpackUnorm4x8(floatBitsToUint(P2.x));
-			vec4 c1 = unpackUnorm4x8(floatBitsToUint(P2.y));
-			vec4 c2 = unpackUnorm4x8(floatBitsToUint(P2.z));
-			vec4 vcol = (flags & 1u) != 0u ? c0 * w0 + c1 * w1 + c2 * w2 : col;
+			// Corner colors pre-resolved CPU-side: c0/c1 in P2 as half4 pairs, c2 in
+			// P1's spare lanes.
+			vec4 c0 = cf_unpack_half4v(P2.xy);
+			vec4 c1 = cf_unpack_half4v(P2.zw);
+			vec4 c2 = cf_unpack_half4v(P1.zw);
+			vec4 vcol = c0 * w0 + c1 * w1 + c2 * w2;
 			c = vcol * inside;
 		} else if (type == CMD_TYPE_GLYPH) {
 			// Curve glyph: winding coverage straight from the outline's quadratics
@@ -1000,11 +1011,12 @@ void main()
 			float gcov = cf_glyph_eval(p, P0.xy, P0.zw, P1.xy, ivec2(P2.xy), int(P2.z), int(cmd.misc.y), gpx, v_stroke > 0.0, gd);
 			// Per-corner colors (TL,TR,BR,BL) bilerped by box fraction, matching the
 			// rasterized text path's text-effect gradients.
-			vec4 gc = payload[po + 3u];
+			vec4 gc = payload[po + 3u];  // TL, TR as half4 pairs.
+			vec4 gc2 = payload[po + 4u]; // BR, BL as half4 pairs.
 			float gs = clamp(dot(p - P0.xy, P0.zw) * P1.z, 0.0, 1.0);
 			float gt = clamp(dot(p - P0.xy, P1.xy) * P1.w, 0.0, 1.0);
-			vec4 gvcol = mix(mix(unpackUnorm4x8(floatBitsToUint(gc.w)), unpackUnorm4x8(floatBitsToUint(gc.z)), gs),
-			                 mix(unpackUnorm4x8(floatBitsToUint(gc.x)), unpackUnorm4x8(floatBitsToUint(gc.y)), gs), gt);
+			vec4 gvcol = mix(mix(cf_unpack_half4v(gc2.zw), cf_unpack_half4v(gc2.xy), gs),
+			                 mix(cf_unpack_half4v(gc.xy), cf_unpack_half4v(gc.zw), gs), gt);
 			c = v_stroke > 0.0 ? sdf(vec4(0), gvcol, gd) : gvcol * gcov;
 		} else {
 			if (done >= 1.0 || coverage == 0.0) continue; // Contribution would be exactly zero.
@@ -1164,7 +1176,7 @@ void main()
 
 	vec2 pos = vec2(0);
 	vec2 uv = vec2(0);
-	vec4 col = cf_unpack_color(cmd.meta.y);
+	vec4 col = cf_unpack_half4(cmd.meta.y, floatBitsToUint(cmd.misc.w));
 	vec4 ab = P0;
 	vec4 cd = P1;
 	vec4 ef = vec4(0);
@@ -1182,9 +1194,9 @@ void main()
 		uvb = cf_payload(po + 2u);
 		uv = vec2(mix(uvb.x, uvb.z, cx), mix(uvb.y, uvb.w, cy));
 		if (type == 1u) {
-			vec4 tcol = cf_payload(po + 3u);
-			uint cc = corner == 0 ? floatBitsToUint(tcol.x) : (corner == 1 ? floatBitsToUint(tcol.y) : (corner == 2 ? floatBitsToUint(tcol.z) : floatBitsToUint(tcol.w)));
-			col = cf_unpack_color(cc);
+			vec4 t0 = cf_payload(po + 3u); // Corners 0,1 as half4 pairs.
+			vec4 t1 = cf_payload(po + 4u); // Corners 2,3 as half4 pairs.
+			col = cf_unpack_half4v(corner == 0 ? t0.xy : (corner == 1 ? t0.zw : (corner == 2 ? t1.xy : t1.zw)));
 		}
 	} else if (type == 4u) {
 		// Raw triangle: corners 0,1 map to verts, 2 and 3 both map to the third vert
@@ -1193,9 +1205,10 @@ void main()
 		vec2 t1 = P0.zw;
 		vec2 t2 = P1.xy;
 		pos = corner == 0 ? t0 : (corner == 1 ? t1 : t2);
+		// Corner colors as half4 pairs: verts 0,1 in the color vec4, vert 2 in P1's
+		// spare lanes.
 		vec4 tcol = cf_payload(po + 2u);
-		uint cc = corner == 0 ? floatBitsToUint(tcol.x) : (corner == 1 ? floatBitsToUint(tcol.y) : floatBitsToUint(tcol.z));
-		col = cf_unpack_color(cc);
+		col = cf_unpack_half4v(corner == 0 ? tcol.xy : (corner == 1 ? tcol.zw : P1.zw));
 		user_out = corner == 0 ? cf_payload(po + 3u) : (corner == 1 ? cf_payload(po + 4u) : cf_payload(po + 5u));
 	} else if (type == 2u) {
 		// Box: center + rotated half-extents.

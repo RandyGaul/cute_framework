@@ -62,6 +62,47 @@ static const char* s_text_without_markups = NULL;
 
 using namespace Cute;
 
+// Draw colors travel to the GPU as packed half4 (two packHalf2x16 words: rg then ba)
+// instead of unorm8, so HDR colors (channels > 1.0) survive to the shader intact.
+// Round-to-nearest-even float32 -> float16 bit conversion; handles subnormals, overflow
+// to inf, and NaN passthrough.
+static CF_INLINE uint16_t s_f32_to_f16(float f)
+{
+	uint32_t x;
+	CF_MEMCPY(&x, &f, sizeof(x));
+	uint32_t sign = (x >> 16) & 0x8000u;
+	x &= 0x7FFFFFFFu;
+	if (x >= 0x47800000u) {
+		// Overflow to inf; NaN keeps a nonzero mantissa.
+		return (uint16_t)(sign | 0x7C00u | (x > 0x7F800000u ? 0x0200u : 0u));
+	}
+	if (x < 0x38800000u) {
+		// Subnormal half (or zero): shift in the implicit leading 1, round to nearest even.
+		if (x < 0x33000000u) return (uint16_t)sign; // Rounds to +-0 (below half of the smallest subnormal).
+		uint32_t shift = 126u - (x >> 23); // 14 (largest subnormal) .. 24 (smallest).
+		uint32_t mant = (x & 0x7FFFFFu) | 0x800000u;
+		uint32_t half = mant >> shift;
+		uint32_t rem = mant & ((1u << shift) - 1u);
+		uint32_t halfway = 1u << (shift - 1u);
+		if (rem > halfway || (rem == halfway && (half & 1u))) ++half;
+		return (uint16_t)(sign | half);
+	}
+	// Normal: rebias the exponent, round the mantissa to nearest even (a carry here
+	// correctly bumps the exponent, saturating to inf at the top).
+	uint32_t half = (x - 0x38000000u) >> 13;
+	uint32_t rem = x & 0x1FFFu;
+	if (rem > 0x1000u || (rem == 0x1000u && (half & 1u))) ++half;
+	return (uint16_t)(sign | half);
+}
+
+// Matches GLSL packHalf2x16: first component in the low 16 bits.
+static CF_INLINE uint32_t s_pack_half2(float a, float b)
+{
+	return (uint32_t)s_f32_to_f16(a) | ((uint32_t)s_f32_to_f16(b) << 16);
+}
+
+static CF_INLINE uint32_t s_pack_half_rg(CF_Color c) { return s_pack_half2(c.r, c.g); }
+static CF_INLINE uint32_t s_pack_half_ba(CF_Color c) { return s_pack_half2(c.b, c.a); }
 
 ATLAS_CACHE_U64 cf_generate_texture_handle(void* pixels, int w, int h, void* udata)
 {
@@ -228,7 +269,7 @@ static CF_TiledBatchStats s_tiled_batch_stats(const BatchGeometry* geoms, int st
 		int th = (int)((max_y - min_y) / CF_TILE_PX) + 1;
 		uint64_t tiles = (uint64_t)tw * (uint64_t)th;
 		stats.footprint_tiles += tiles;
-		if (is_sdf && geom.fill && geom.alpha >= 1.0f && geom.color.colors.a == 255 && tiles >= 64) {
+		if (is_sdf && geom.fill && geom.alpha >= 1.0f && geom.color.a >= 1.0f && tiles >= 64) {
 			stats.has_big_opaque = true;
 		}
 	}
@@ -383,7 +424,8 @@ static void s_draw_report_tiled(const BatchGeometry* geoms, const CF_PendingUV* 
 		tc.aabb[1] = aymin;
 		tc.aabb[2] = axmax;
 		tc.aabb[3] = aymax;
-		tc.color = geom.color.val;
+		tc.color = s_pack_half_rg(geom.color);
+		tc.color_ba = s_pack_half_ba(geom.color);
 		tc.radius = geom.radius;
 		tc.stroke = geom.stroke * 0.5f; // Matches the mesh path's in_shape.y * 0.5 in s_draw_vs.
 		tc.aa = geom.aa;
@@ -411,12 +453,18 @@ static void s_draw_report_tiled(const BatchGeometry* geoms, const CF_PendingUV* 
 			pay.add({ e2.x, e2.y, 1.0f / d1, 1.0f / d2 });
 			pay.add({ s->minx, s->maxy, s->maxx, s->miny });
 			if (geom.is_text) {
-				CF_TileV4 tcol;
-				*(uint32_t*)&tcol.x = geom.text_colors[0].val;
-				*(uint32_t*)&tcol.y = geom.text_colors[1].val;
-				*(uint32_t*)&tcol.z = geom.text_colors[2].val;
-				*(uint32_t*)&tcol.w = geom.text_colors[3].val;
-				pay.add(tcol);
+				// Per-corner colors as half4 pairs: two vec4s, one corner per vec2.
+				CF_TileV4 t0, t1;
+				*(uint32_t*)&t0.x = s_pack_half_rg(geom.text_colors[0]);
+				*(uint32_t*)&t0.y = s_pack_half_ba(geom.text_colors[0]);
+				*(uint32_t*)&t0.z = s_pack_half_rg(geom.text_colors[1]);
+				*(uint32_t*)&t0.w = s_pack_half_ba(geom.text_colors[1]);
+				*(uint32_t*)&t1.x = s_pack_half_rg(geom.text_colors[2]);
+				*(uint32_t*)&t1.y = s_pack_half_ba(geom.text_colors[2]);
+				*(uint32_t*)&t1.z = s_pack_half_rg(geom.text_colors[3]);
+				*(uint32_t*)&t1.w = s_pack_half_ba(geom.text_colors[3]);
+				pay.add(t0);
+				pay.add(t1);
 			}
 		}	break;
 
@@ -425,16 +473,23 @@ static void s_draw_report_tiled(const BatchGeometry* geoms, const CF_PendingUV* 
 			tc.type = 4u;
 			tc.fill = 1.0f;
 			tc.payload = (uint32_t)pay.count();
+			CF_Color c0 = geom.use_tri_colors ? geom.tri_colors[0] : geom.color;
+			CF_Color c1 = geom.use_tri_colors ? geom.tri_colors[1] : geom.color;
+			CF_Color c2 = geom.use_tri_colors ? geom.tri_colors[2] : geom.color;
+			// Half4 corner colors: c0/c1 fill P2, c2 rides P1's two spare lanes (keeps
+			// the attribute vec4s at po+3..5, same as before).
 			pay.add({ geom.shape[0].x, geom.shape[0].y, geom.shape[1].x, geom.shape[1].y });
-			pay.add({ geom.shape[2].x, geom.shape[2].y, 0, 0 });
+			CF_TileV4 p1;
+			p1.x = geom.shape[2].x;
+			p1.y = geom.shape[2].y;
+			*(uint32_t*)&p1.z = s_pack_half_rg(c2);
+			*(uint32_t*)&p1.w = s_pack_half_ba(c2);
+			pay.add(p1);
 			CF_TileV4 tcol;
-			CF_Pixel c0 = geom.use_tri_colors ? geom.tri_colors[0] : geom.color;
-			CF_Pixel c1 = geom.use_tri_colors ? geom.tri_colors[1] : geom.color;
-			CF_Pixel c2 = geom.use_tri_colors ? geom.tri_colors[2] : geom.color;
-			*(uint32_t*)&tcol.x = c0.val;
-			*(uint32_t*)&tcol.y = c1.val;
-			*(uint32_t*)&tcol.z = c2.val;
-			*(uint32_t*)&tcol.w = 1u; // Colors pre-resolved above; always interpolate.
+			*(uint32_t*)&tcol.x = s_pack_half_rg(c0);
+			*(uint32_t*)&tcol.y = s_pack_half_ba(c0);
+			*(uint32_t*)&tcol.z = s_pack_half_rg(c1);
+			*(uint32_t*)&tcol.w = s_pack_half_ba(c1);
 			pay.add(tcol);
 			for (int k = 0; k < 3; ++k) {
 				CF_Color ta = geom.use_tri_attributes ? geom.tri_attributes[k] : geom.user_params;
@@ -464,12 +519,17 @@ static void s_draw_report_tiled(const BatchGeometry* geoms, const CF_PendingUV* 
 			pay.add({ bx, by, cf_max(bw, 1.0f), 0 });
 			// Per-corner colors (TL,TR,BR,BL), bilerped in the shader by box fraction so
 			// text-effect color gradients carry over to the curve path.
-			CF_TileV4 gcol;
-			*(uint32_t*)&gcol.x = geom.text_colors[0].val;
-			*(uint32_t*)&gcol.y = geom.text_colors[1].val;
-			*(uint32_t*)&gcol.z = geom.text_colors[2].val;
-			*(uint32_t*)&gcol.w = geom.text_colors[3].val;
-			pay.add(gcol);
+			CF_TileV4 g0, g1;
+			*(uint32_t*)&g0.x = s_pack_half_rg(geom.text_colors[0]);
+			*(uint32_t*)&g0.y = s_pack_half_ba(geom.text_colors[0]);
+			*(uint32_t*)&g0.z = s_pack_half_rg(geom.text_colors[1]);
+			*(uint32_t*)&g0.w = s_pack_half_ba(geom.text_colors[1]);
+			*(uint32_t*)&g1.x = s_pack_half_rg(geom.text_colors[2]);
+			*(uint32_t*)&g1.y = s_pack_half_ba(geom.text_colors[2]);
+			*(uint32_t*)&g1.z = s_pack_half_rg(geom.text_colors[3]);
+			*(uint32_t*)&g1.w = s_pack_half_ba(geom.text_colors[3]);
+			pay.add(g0);
+			pay.add(g1);
 		}	break;
 
 		case BATCH_GEOMETRY_TYPE_QUAD:
@@ -547,7 +607,7 @@ static void s_draw_report_tiled(const BatchGeometry* geoms, const CF_PendingUV* 
 		// blending (additive/multiply/screen shapes never hide what's beneath).
 		// Clipped segments are excluded: their planes can cut mid-tile, so "interior
 		// covers the tile" cannot be decided from the SDF alone.
-		if (is_sdf && tc.fill == 1.0f && geom.alpha >= 1.0f && geom.color.colors.a == 255 && geom.type != BATCH_GEOMETRY_TYPE_SEGMENT_CLIPPED && blend == CF_DRAW_BLEND_NORMAL) {
+		if (is_sdf && tc.fill == 1.0f && geom.alpha >= 1.0f && geom.color.a >= 1.0f && geom.type != BATCH_GEOMETRY_TYPE_SEGMENT_CLIPPED && blend == CF_DRAW_BLEND_NORMAL) {
 			tc.opaque = 1.0f;
 		}
 
@@ -1020,7 +1080,7 @@ void cf_draw_sprite(const CF_Sprite* sprite)
 	g.shape[2] = quad[2];
 	g.shape[3] = quad[3];
 	g.is_sprite = true;
-	g.color = premultiply(pixel_white());
+	g.color = premultiply(color_white());
 	g.alpha = sprite->opacity;
 	g.user_params = s_draw->user_params.last();
 	DRAW_PUSH_ITEM(s);
@@ -1243,7 +1303,7 @@ void cf_draw_sprite_9_slice(const CF_Sprite* sprite)
 			g.shape[2] = quad[2];
 			g.shape[3] = quad[3];
 			g.is_sprite = true;
-			g.color = premultiply(pixel_white());
+			g.color = premultiply(color_white());
 			g.alpha = sprite->opacity;
 			g.user_params = s_draw->user_params.last();
 			s.image_id = image_id;
@@ -1440,7 +1500,7 @@ void cf_draw_sprite_9_slice_tiled(const CF_Sprite* sprite)
 		g.shape[2] = quad[2];
 		g.shape[3] = quad[3];
 		g.is_sprite = true;
-		g.color = premultiply(pixel_white());
+		g.color = premultiply(color_white());
 		g.alpha = sprite->opacity;
 		g.user_params = s_draw->user_params.last();
 		s.image_id = image_id;
@@ -1582,7 +1642,7 @@ static void s_draw_quad(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float stroke, fl
 	g.shape[0] = c;
 	g.shape[1] = he;
 	g.shape[2] = u;
-	g.color = premultiply(to_pixel(s_draw->colors.last()));
+	g.color = premultiply(s_draw->colors.last());
 	g.alpha = 1.0f;
 	g.radius = radius;
 	g.stroke = stroke;
@@ -1650,7 +1710,7 @@ static void s_draw_circle(v2 position, float stroke, float radius, bool fill)
 	g.shape[0] = position;
 	g.shape[1] = position;
 	g.shape[2] = position;
-	g.color = premultiply(to_pixel(s_draw->colors.last()));
+	g.color = premultiply(s_draw->colors.last());
 	g.alpha = 1.0f;
 	g.radius = radius;
 	g.stroke = stroke;
@@ -1695,7 +1755,7 @@ static void s_draw_capsule(v2 a, v2 b, float stroke, float radius, bool fill)
 	g.shape[0] = a;
 	g.shape[1] = b;
 	g.shape[2] = a;
-	g.color = premultiply(to_pixel(s_draw->colors.last()));
+	g.color = premultiply(s_draw->colors.last());
 	g.alpha = 1.0f;
 	g.radius = radius;
 	g.stroke = stroke;
@@ -1749,7 +1809,7 @@ static void s_draw_tri(v2 a, v2 b, v2 c, float stroke, float radius, bool fill)
 		g.shape[2] = c;
 	}
 
-	g.color = premultiply(to_pixel(s_draw->colors.last()));
+	g.color = premultiply(s_draw->colors.last());
 	g.alpha = 1.0f;
 	g.radius = radius;
 	g.stroke = stroke;
@@ -1760,9 +1820,9 @@ static void s_draw_tri(v2 a, v2 b, v2 c, float stroke, float radius, bool fill)
 	// Per-vertex triangle colors.
 	g.use_tri_colors = s_draw->tri_colors0.count() > 1;
 	if (g.use_tri_colors) {
-		g.tri_colors[0] = premultiply(to_pixel(s_draw->tri_colors0.last()));
-		g.tri_colors[1] = premultiply(to_pixel(s_draw->tri_colors1.last()));
-		g.tri_colors[2] = premultiply(to_pixel(s_draw->tri_colors2.last()));
+		g.tri_colors[0] = premultiply(s_draw->tri_colors0.last());
+		g.tri_colors[1] = premultiply(s_draw->tri_colors1.last());
+		g.tri_colors[2] = premultiply(s_draw->tri_colors2.last());
 	}
 
 	// Per-vertex triangle attributes.
@@ -1811,7 +1871,7 @@ void cf_draw_polyline(const CF_V2* pts, int count, float thickness, bool loop)
 	// where neighboring bodies agree on distance. No joint triangulation, no case
 	// analysis -- the coverage quad is a loose capsule OBB and the planes do the exact
 	// work per pixel.
-	CF_Pixel color = premultiply(to_pixel(s_draw->colors.last()));
+	CF_Color color = premultiply(s_draw->colors.last());
 	CF_Color user_params = s_draw->user_params.last();
 	float aaf = s_draw->aaf;
 
@@ -1905,7 +1965,7 @@ void cf_draw_polygon_fill(const CF_V2* points, int count, float chubbiness)
 		g.shape[i] = points[i];
 	}
 
-	g.color = premultiply(to_pixel(s_draw->colors.last()));
+	g.color = premultiply(s_draw->colors.last());
 	g.alpha = 1.0f;
 	g.radius = chubbiness;
 	g.aa = s_draw->aaf;
@@ -2059,7 +2119,7 @@ void cf_draw_arrow(CF_V2 a, CF_V2 b, float thickness, float arrow_width)
 	g.shape[0] = a;
 	g.shape[1] = b;
 	g.shape[2] = V2(thickness * 0.5f, arrow_width);
-	g.color = premultiply(to_pixel(s_draw->colors.last()));
+	g.color = premultiply(s_draw->colors.last());
 	g.alpha = 1.0f;
 	g.radius = 0;
 	g.stroke = 0;
@@ -2133,7 +2193,7 @@ static void s_draw_custom_shape(CF_CustomShape shape, CF_Aabb bounds, float stro
 		CF_MEMCPY(dst, params, sizeof(float) * cf_min(param_count, 16));
 	}
 	g.n = (int)shape.id - 1; // Registry dispatch index.
-	g.color = premultiply(to_pixel(s_draw->colors.last()));
+	g.color = premultiply(s_draw->colors.last());
 	g.alpha = 1.0f;
 	g.radius = 0;
 	g.stroke = stroke;
@@ -2202,7 +2262,7 @@ static void s_draw_shape_group_end(float stroke, bool fill)
 	g.box[2] = mx;
 	g.box[3] = V2(mn.x, mx.y);
 	g.n = count;
-	g.color = premultiply(to_pixel(s_draw->colors.last()));
+	g.color = premultiply(s_draw->colors.last());
 	g.alpha = 1.0f;
 	g.radius = 0;
 	g.stroke = stroke;
@@ -2800,7 +2860,7 @@ static void s_draw_path(CF_DrawPath path, float stroke, bool fill)
 	g.box[1] = V2(o1.x + pad, o1.y + pad);
 	g.box[2] = V2(o1.x + pad, o0.y - pad);
 	g.box[3] = V2(o0.x - pad, o0.y - pad);
-	g.color = premultiply(to_pixel(s_draw->colors.last()));
+	g.color = premultiply(s_draw->colors.last());
 	for (int i = 0; i < 4; ++i) g.text_colors[i] = g.color;
 	g.alpha = 1.0f;
 	g.stroke = stroke;
@@ -4086,10 +4146,10 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 					if (effect->use_colors) {
 						use_corner_colors = true;
 						for (int j = 0; j < 4; ++j) corner_colors[j] = effect->colors[j];
-						g.text_colors[0] = premultiply(to_pixel(effect->colors[0]));
-						g.text_colors[1] = premultiply(to_pixel(effect->colors[1]));
-						g.text_colors[2] = premultiply(to_pixel(effect->colors[2]));
-						g.text_colors[3] = premultiply(to_pixel(effect->colors[3]));
+						g.text_colors[0] = premultiply(effect->colors[0]);
+						g.text_colors[1] = premultiply(effect->colors[1]);
+						g.text_colors[2] = premultiply(effect->colors[2]);
+						g.text_colors[3] = premultiply(effect->colors[3]);
 					}
 					g.alpha = effect->opacity;
 					xadvance = effect->xadvance;
@@ -4197,9 +4257,9 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 					g.shape[2] = V2(q1.x, q0.y);
 					g.shape[3] = V2(q0.x, q0.y);
 				}
-				g.color = premultiply(to_pixel(color));
+				g.color = premultiply(color);
 				if (!use_corner_colors) {
-					CF_Pixel flat = g.color;
+					CF_Color flat = g.color;
 					for (int j = 0; j < 4; ++j) g.text_colors[j] = flat;
 				}
 				g.is_text = true;

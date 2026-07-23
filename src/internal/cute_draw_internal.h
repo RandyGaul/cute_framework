@@ -64,7 +64,7 @@ enum BatchGeometryType : int
 struct BatchGeometry
 {
 	BatchGeometryType type;
-	CF_Pixel color;
+	CF_Color color; // Premultiplied. Stays float end-to-end so HDR channels (> 1.0) survive.
 	CF_V2 box[4]; // World-space AABB coverage corners.
 	int n; // Only needed/used for polygon.
 	CF_V2 shape[8];
@@ -85,10 +85,10 @@ struct BatchGeometry
 	// Text glyphs and raw triangles are mutually exclusive; overlay their extras.
 	union {
 		struct {
-			CF_Pixel text_colors[4]; // Per-corner: TL, TR, BR, BL (for text glyphs).
+			CF_Color text_colors[4]; // Per-corner: TL, TR, BR, BL (for text glyphs). Premultiplied.
 		};
 		struct {
-			CF_Pixel tri_colors[3];      // Per-vertex colors (only for BATCH_GEOMETRY_TYPE_TRI).
+			CF_Color tri_colors[3];      // Per-vertex colors (only for BATCH_GEOMETRY_TYPE_TRI). Premultiplied.
 			CF_Color tri_attributes[3];  // Per-vertex attributes (only for BATCH_GEOMETRY_TYPE_TRI).
 		};
 	};
@@ -142,16 +142,19 @@ struct CF_PendingUV
 
 #define CF_TILE_PX 16 // Tile size in pixels. Must be even (keeps 2x2 fragment quads within one tile).
 
-// Mirrors the `Cmd` struct in the s_tile_fs builtin shader (std430, four vec4s).
+// Mirrors the `Cmd` struct in the s_tile_fs builtin shader (std430, five vec4s).
+// Colors travel as packed half4 (two packHalf2x16 words: rg then ba) instead of unorm8
+// so HDR draw colors reach the shader intact.
 struct CF_TileCmd
 {
 	float aabb[4];    // Pixel-space bounds, top-left origin: min.xy, max.xy.
 	uint32_t type;    // Shape type id, 0-11 (see s_tile_fs / s_inst_vs).
-	uint32_t color;   // rgba8
+	uint32_t color;   // packHalf2x16(premultiplied rg); ba rides in color_ba below.
 	uint32_t payload; // Offset into the payload buffer, in vec4 units.
 	uint32_t inv_mvp; // Offset of the inverse mvp (2 vec4s) in the payload buffer. SDF shapes only.
 	float radius, stroke, aa, alpha;
-	float fill, n, opaque, unused1; // opaque: filled SDF shape at full alpha AND normal blend -- opaque-cover cull candidate.
+	float fill, n, opaque; // opaque: filled SDF shape at full alpha AND normal blend -- opaque-cover cull candidate.
+	uint32_t color_ba; // packHalf2x16(premultiplied ba); shader reads it via floatBitsToUint(misc.w).
 	float user[4]; // User params (ShaderParams.attributes for custom draw shaders).
 };
 
