@@ -786,8 +786,10 @@ TEST_CASE(test_draw_custom_shapes_advanced)
 	s_plain_circle_shape = cf_make_custom_shape(s_circle_sdf_src);
 	REQUIRE(s_plain_circle_shape.id);
 
-	// A bad snippet must fail cleanly (compile errors print to stderr -- expected here)
-	// and leave the working pipelines and registry intact.
+	// A bad snippet must fail cleanly and leave the working pipelines and
+	// registry intact. Announce it so log readers don't mistake the expected
+	// compile error for a real failure.
+	printf("(negative test: the following shader compile error is expected)\n");
 	CF_CustomShape junk = cf_make_custom_shape("this is not glsl");
 	REQUIRE(junk.id == 0);
 

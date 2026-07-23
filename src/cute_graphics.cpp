@@ -403,10 +403,17 @@ bool cf_recompile_draw_pipelines(const char* custom_shapes_src)
 		return true;
 	}
 	CF_Shader draw = cf_make_shader_from_source_internal(s_inst_vs, s_draw_fs, NULL);
+	if (!draw.id) {
+		// A bad custom-shapes snippet fails all four pipelines with the same
+		// error; report it once and skip the redundant compiles.
+		if (copy) cf_free(copy);
+		s_custom_shapes_src = prev;
+		return false;
+	}
 	CF_Shader tile = cf_make_shader_from_source_internal(s_tile_vs, s_tile_fs, NULL);
 	CF_ComputeShader count_cs = cf_make_compute_shader_from_source(s_tile_count_cs);
 	CF_ComputeShader gather_cs = cf_make_compute_shader_from_source(s_tile_gather_cs);
-	if (!draw.id || !tile.id || !count_cs.id || !gather_cs.id) {
+	if (!tile.id || !count_cs.id || !gather_cs.id) {
 		if (draw.id) cf_destroy_shader_internal(draw);
 		if (tile.id) cf_destroy_shader_internal(tile);
 		if (count_cs.id) cf_destroy_compute_shader(count_cs);
