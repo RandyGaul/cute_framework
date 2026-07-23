@@ -243,6 +243,12 @@ if(EMSCRIPTEN)
 		-sFILESYSTEM=1
 		-sASYNCIFY=1
 		-sASYNCIFY_STACK_SIZE=2040000
+		# Skip ASYNCIFY instrumentation for functions proven never to suspend
+		# (never reach cf_sleep / a coroutine yield / a fiber swap). This severs
+		# the allocator hub (cf_alloc & co, an indirect call) and the cspv shader
+		# compiler from the instrumented set, shrinking the wasm-opt link pass and
+		# the output module. See cmake/asyncify_remove.txt for the list + contract.
+		-sASYNCIFY_REMOVE=@${CMAKE_CURRENT_SOURCE_DIR}/cmake/asyncify_remove.txt
 	)
 
 	target_compile_options(cute PRIVATE -O1 -fno-rtti -fno-exceptions)

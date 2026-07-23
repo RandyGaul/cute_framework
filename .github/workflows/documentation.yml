@@ -64,7 +64,7 @@ jobs:
             -DCF_BUILD_DOCSPARSER=OFF
 
       - name: Build Emscripten samples
-        run: cmake --build build-emscripten
+        run: cmake --build build-emscripten -j
 
       - name: Generate sample pages
         run: |
