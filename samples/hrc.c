@@ -2,6 +2,13 @@
 //
 // Demonstrates HRC 2D global illumination based on the Amitabha-style SSBO pipeline with f16 packing and 4-rotation frustum.
 //
+// Uses dense directions: cascade level n carries 2^(n+1)+1 ray directions with
+// all-integer y-offsets (twice the paper's angular resolution). The paper's
+// v_n(k) = (2^n, 2k - 2^n) only produces even offsets, which parity-segregates
+// probe rows and causes the checkerboard artifact Eq 21's blur exists to hide.
+// Dense directions couple every row, so the default output runs blur-free
+// (debug mode 5 keeps the legacy blur for A/B comparison).
+//
 // Reference: Freeman, Sannikov, Margel (2025) "Holographic Radiance Cascades"
 // https://arxiv.org/pdf/2505.02041
 // https://github.com/entropylost/amitabha
@@ -84,6 +91,10 @@ typedef struct Hrc
 	CF_Material mat_prefilter;
 	CF_ComputeShader cs_prefilter;
 	CF_ComputeShader cs_prefilter_gauss;
+	CF_Canvas diffuse;      // per-pixel albedo for multibounce feedback (cornell test)
+	CF_Canvas fluence_lin;  // last frame's linear fluence (feedback input)
+	CF_Material mat_feedback;
+	CF_ComputeShader cs_feedback;
 } Hrc;
 
 Hrc hrc;
@@ -128,7 +139,7 @@ void hrc_set_grid(int grid)
 	hrc.n = POW2_LOG2(grid);
 	for (int i = 0; i <= hrc.n; i++) {
 		int interval = 1 << i;
-		int rays = interval + 1;
+		int rays = 2 * interval + 1; // dense directions: all-integer y-offsets
 		int probes = grid >> i;
 		hrc.vrays_w[i] = probes * rays;
 	}
@@ -143,15 +154,22 @@ void hrc_init()
 	hrc.trace_levels = 3; // trace T_0..T_2, extend T_3..T_N
 	hrc.cminus1 = 1;
 	hrc.upscale_mode = 1;
-	hrc.blend_boundary = 1;
-	hrc.prefilter_mode = 2;
+	// Off by default: with dense directions + bracketed cone gathering the
+	// quadrant seams already balance, and the blend only carves dark diagonals
+	// (measured spoke/neighborhood ratios: blend off 0.98-1.05, blend on 0.90-0.96).
+	hrc.blend_boundary = 0;
+	// Mip+max: mipmap-averaged emissivity (smooth lights) + max-absorption
+	// (conservative occlusion). Pure mipmap averaging melts thin opaque walls:
+	// a 2px absorption-4 wall box-filtered at 2x becomes absorption 2 and leaks
+	// ~13% per crossing (obvious in the pinhole test).
+	hrc.prefilter_mode = 4;
 	hrc.blend_width = 4.0f;
 
 	// Precompute max T cascade dimensions for allocation.
 	int max_vrays_w[HRC_MAX_N + 1];
 	for (int i = 0; i <= HRC_MAX_N; i++) {
 		int interval = 1 << i;
-		int rays = interval + 1;
+		int rays = 2 * interval + 1; // dense directions
 		int probes = HRC_WORLD_SIZE >> i;
 		max_vrays_w[i] = probes * rays;
 	}
@@ -168,19 +186,20 @@ void hrc_init()
 	}
 
 	// R ping-pong SSBOs + zero buffer for R_N = 0.
+	// Dense directions: R_n holds (grid >> n) * 2^(n+1) = 2 * grid entries per row.
 	for (int i = 0; i < 2; i++)
-		hrc.r_rad[i] = hrc_make_buf(HRC_WORLD_SIZE, HRC_WORLD_SIZE);
-	hrc.r_zero = hrc_make_buf(HRC_WORLD_SIZE, HRC_WORLD_SIZE);
+		hrc.r_rad[i] = hrc_make_buf(HRC_WORLD_SIZE * 2, HRC_WORLD_SIZE);
+	hrc.r_zero = hrc_make_buf(HRC_WORLD_SIZE * 2, HRC_WORLD_SIZE);
 	{
-		int sz = HRC_WORLD_SIZE * HRC_WORLD_SIZE * 8;
+		int sz = HRC_WORLD_SIZE * 2 * HRC_WORLD_SIZE * 8;
 		void* zeros = cf_calloc(sz, 1);
 		cf_update_storage_buffer(hrc.r_zero, zeros, sz);
 		cf_free(zeros);
 	}
 
-	// Per-frustum output SSBOs (4 rotations).
+	// Per-frustum output SSBOs (4 rotations, 2 cones per probe).
 	for (int i = 0; i < 4; i++)
-		hrc.frustum[i] = hrc_make_buf(HRC_WORLD_SIZE, HRC_WORLD_SIZE);
+		hrc.frustum[i] = hrc_make_buf(HRC_WORLD_SIZE * 2, HRC_WORLD_SIZE);
 
 	// Final output canvas (linear filtering for smooth display).
 	hrc.fluence = hrc_make_canvas(HRC_WORLD_SIZE, HRC_WORLD_SIZE, CF_PIXEL_FORMAT_R8G8B8A8_UNORM, CF_FILTER_LINEAR, false);
@@ -192,6 +211,10 @@ void hrc_init()
 	hrc.emissivity_filtered = hrc_make_canvas(HRC_WORLD_SIZE, HRC_WORLD_SIZE, CF_PIXEL_FORMAT_R16G16B16A16_FLOAT, CF_FILTER_NEAREST, false);
 	hrc.absorption_filtered = hrc_make_canvas(HRC_WORLD_SIZE, HRC_WORLD_SIZE, CF_PIXEL_FORMAT_R16G16B16A16_FLOAT, CF_FILTER_NEAREST, false);
 
+	// Multibounce feedback: diffuse albedo + last frame's linear fluence.
+	hrc.diffuse = hrc_make_canvas(HRC_WORLD_SIZE, HRC_WORLD_SIZE, CF_PIXEL_FORMAT_R16G16B16A16_FLOAT, CF_FILTER_NEAREST, false);
+	hrc.fluence_lin = hrc_make_canvas(HRC_WORLD_SIZE, HRC_WORLD_SIZE, CF_PIXEL_FORMAT_R16G16B16A16_FLOAT, CF_FILTER_NEAREST, false);
+
 	// Materials.
 	hrc.mat_trace = cf_make_material();
 	hrc.mat_extend = cf_make_material();
@@ -200,6 +223,7 @@ void hrc_init()
 	hrc.mat_copy = cf_make_material();
 	hrc.mat_minmax = cf_make_material();
 	hrc.mat_prefilter = cf_make_material();
+	hrc.mat_feedback = cf_make_material();
 
 	// Compute shaders (loaded from hrc_data/ next to the executable).
 	hrc.cs_seed = load_compute_shader("/hrc_data/hrc_seed.c_shd");
@@ -211,6 +235,7 @@ void hrc_init()
 	hrc.cs_minmax = load_compute_shader("/hrc_data/hrc_minmax.c_shd");
 	hrc.cs_prefilter = load_compute_shader("/hrc_data/hrc_prefilter.c_shd");
 	hrc.cs_prefilter_gauss = load_compute_shader("/hrc_data/hrc_prefilter_gauss.c_shd");
+	hrc.cs_feedback = load_compute_shader("/hrc_data/hrc_feedback.c_shd");
 }
 
 void hrc_shutdown()
@@ -230,6 +255,10 @@ void hrc_shutdown()
 	cf_destroy_canvas(hrc.minmax);
 	cf_destroy_canvas(hrc.emissivity_filtered);
 	cf_destroy_canvas(hrc.absorption_filtered);
+	cf_destroy_canvas(hrc.diffuse);
+	cf_destroy_canvas(hrc.fluence_lin);
+	cf_destroy_material(hrc.mat_feedback);
+	cf_destroy_compute_shader(hrc.cs_feedback);
 	cf_destroy_material(hrc.mat_trace);
 	cf_destroy_material(hrc.mat_extend);
 	cf_destroy_material(hrc.mat_merge);
@@ -261,57 +290,18 @@ void hrc_compute()
 	int dim = hrc.grid;
 	int N = hrc.n;
 
-	// Textures used by the trace shader (swapped to prefiltered versions when enabled).
+	// The trace shader marches raw full-resolution scene textures (prefiltering
+	// quantizes moving emitters into visible flicker and melts thin occluders),
+	// so no prefilter pass feeds the radiance path anymore. Only the probe
+	// lattice is grid-res; each grid column is marched in S world-pixel steps.
 	CF_Texture trace_emiss = emiss_tex;
 	CF_Texture trace_absrp = absrp_tex;
-
-	// Mipmap prefilter: generate mipmaps from base level for textureLod sampling.
 	float mip_level = 0.0f;
 	float absrp_mip_level = 0.0f;
-	if ((hrc.prefilter_mode == 2 || hrc.prefilter_mode == 4) && dim < HRC_WORLD_SIZE) {
-		cf_generate_mipmaps(emiss_tex);
-		mip_level = log2f((float)HRC_WORLD_SIZE / (float)dim);
-		if (hrc.prefilter_mode == 2) {
-			cf_generate_mipmaps(absrp_tex);
-			absrp_mip_level = mip_level;
-		}
-	}
-
-	// Box/Gauss prefilter: downsample emissivity and absorption to grid resolution.
-	// Mip+max (mode 4): run box prefilter for absorption max only (emissivity uses mipmaps).
-	if ((hrc.prefilter_mode == 1 || hrc.prefilter_mode == 3 || hrc.prefilter_mode == 4) && dim < HRC_WORLD_SIZE) {
-		CF_Texture emiss_filt_tex = cf_canvas_get_target(hrc.emissivity_filtered);
-		CF_Texture absrp_filt_tex = cf_canvas_get_target(hrc.absorption_filtered);
-
-		int world = HRC_WORLD_SIZE;
-		cf_material_set_texture_cs(hrc.mat_prefilter, "u_emissivity", emiss_tex);
-		cf_material_set_texture_cs(hrc.mat_prefilter, "u_absorption", absrp_tex);
-		cf_material_set_uniform_cs(hrc.mat_prefilter, "u_world_size", &world, CF_UNIFORM_TYPE_INT, 1);
-		cf_material_set_uniform_cs(hrc.mat_prefilter, "u_grid_size", &dim, CF_UNIFORM_TYPE_INT, 1);
-
-		CF_ComputeDispatch d = cf_compute_dispatch_defaults(
-			hrc_div_ceil(dim, HRC_WG),
-			hrc_div_ceil(dim, HRC_WG),
-			1
-		);
-		CF_Texture rw_tex[2] = { emiss_filt_tex, absrp_filt_tex };
-		d.rw_textures = rw_tex;
-		d.rw_texture_count = 2;
-		CF_ComputeShader cs = hrc.prefilter_mode == 3 ? hrc.cs_prefilter_gauss : hrc.cs_prefilter;
-		cf_dispatch_compute(cs, hrc.mat_prefilter, d);
-
-		if (hrc.prefilter_mode == 4) {
-			// Mip+max: only swap absorption (emissivity uses mipmaps via textureLod).
-			trace_absrp = absrp_filt_tex;
-		} else {
-			trace_emiss = emiss_filt_tex;
-			trace_absrp = absrp_filt_tex;
-		}
-	}
-
-	// Set mip levels for trace/seed shaders.
+	int upscale = HRC_WORLD_SIZE / dim;
 	cf_material_set_uniform_cs(hrc.mat_trace, "u_mip_level", &mip_level, CF_UNIFORM_TYPE_FLOAT, 1);
 	cf_material_set_uniform_cs(hrc.mat_trace, "u_absrp_mip_level", &absrp_mip_level, CF_UNIFORM_TYPE_FLOAT, 1);
+	cf_material_set_uniform_cs(hrc.mat_trace, "u_upscale", &upscale, CF_UNIFORM_TYPE_INT, 1);
 
 	for (int j = 0; j < 4; j++) {
 		// Seed T_0 when no levels are traced (sample at probe, no raymarching).
@@ -381,10 +371,10 @@ void hrc_compute()
 			cf_dispatch_compute(hrc.cs_extend, hrc.mat_extend, d);
 		}
 
-		// Merge R_{N-1} down to R_0.
+		// Merge R_{N-1} down to R_0. R rows hold 2 * dim entries (dense directions).
 		int r_ping = 0;
 		for (int i = N - 1; i >= 0; i--) {
-			int params[6] = { i, dim, hrc.vrays_w[i], hrc.vrays_w[i + 1], dim, dim };
+			int params[6] = { i, dim, hrc.vrays_w[i], hrc.vrays_w[i + 1], dim * 2, dim * 2 };
 			cf_material_set_uniform_cs(hrc.mat_merge, "u_cascade", params + 0, CF_UNIFORM_TYPE_INT, 1);
 			cf_material_set_uniform_cs(hrc.mat_merge, "u_world_size", params + 1, CF_UNIFORM_TYPE_INT, 1);
 			cf_material_set_uniform_cs(hrc.mat_merge, "u_t_curr_w", params + 2, CF_UNIFORM_TYPE_INT, 1);
@@ -393,7 +383,7 @@ void hrc_compute()
 			cf_material_set_uniform_cs(hrc.mat_merge, "u_r_curr_w", params + 5, CF_UNIFORM_TYPE_INT, 1);
 
 			CF_ComputeDispatch d = cf_compute_dispatch_defaults(
-				hrc_div_ceil(dim, HRC_WG),
+				hrc_div_ceil(dim * 2, HRC_WG),
 				hrc_div_ceil(dim, HRC_WG),
 				1
 			);
@@ -412,9 +402,9 @@ void hrc_compute()
 			r_ping = 1 - r_ping;
 		}
 
-		// Copy R_0 -> frustum[j].
+		// Copy R_0 -> frustum[j] (2 cones per probe).
 		{
-			int count = dim * dim;
+			int count = dim * dim * 2;
 			cf_material_set_uniform_cs(hrc.mat_copy, "u_count", &count, CF_UNIFORM_TYPE_INT, 1);
 
 			CF_ComputeDispatch d = cf_compute_dispatch_defaults(
@@ -477,11 +467,36 @@ void hrc_compute()
 		};
 		d.ro_buffers = ro;
 		d.ro_buffer_count = 4;
-		CF_Texture rw_tex[1] = { fluence_tex };
+		CF_Texture rw_tex[2] = { fluence_tex, cf_canvas_get_target(hrc.fluence_lin) };
 		d.rw_textures = rw_tex;
-		d.rw_texture_count = 1;
+		d.rw_texture_count = 2;
 		cf_dispatch_compute(hrc.cs_composite, hrc.mat_composite, d);
 	}
+}
+
+// Multibounce feedback (amitabha multibounce.rs): inject last frame's fluence,
+// tinted by albedo, into the emissivity canvas. Converges across frames.
+void hrc_feedback()
+{
+	int world = HRC_WORLD_SIZE;
+	cf_material_set_uniform_cs(hrc.mat_feedback, "u_world_size", &world, CF_UNIFORM_TYPE_INT, 1);
+
+	CF_ComputeDispatch d = cf_compute_dispatch_defaults(
+		hrc_div_ceil(world, HRC_WG),
+		hrc_div_ceil(world, HRC_WG),
+		1
+	);
+	CF_Texture ro_tex[3] = {
+		cf_canvas_get_target(hrc.fluence_lin),
+		cf_canvas_get_target(hrc.diffuse),
+		cf_canvas_get_target(hrc.absorption)
+	};
+	d.ro_textures = ro_tex;
+	d.ro_texture_count = 3;
+	CF_Texture rw_tex[1] = { cf_canvas_get_target(hrc.emissivity) };
+	d.rw_textures = rw_tex;
+	d.rw_texture_count = 1;
+	cf_dispatch_compute(hrc.cs_feedback, hrc.mat_feedback, d);
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -496,7 +511,121 @@ typedef struct OrbLight
 } OrbLight;
 
 float time_acc = 0.0f;
-int test_scene = 0;
+int test_scene = 0; // 0 = off, 1 = static centered light, 2 = slowly orbiting light
+
+// Test light center for this frame. The light is 8x8 world pixels -- the paper
+// calls out sub-8x8 emitters as a known HRC limitation, so the reference test
+// stays at the supported minimum. Mode 2 orbits slowly to expose swimming.
+CF_V2 test_light_center()
+{
+	float half = (float)HRC_WORLD_SIZE * 0.5f;
+	CF_V2 c = cf_v2(half, half);
+	if (test_scene == 2) {
+		c.x += cosf(time_acc * 0.25f) * 60.0f;
+		c.y += sinf(time_acc * 0.25f) * 60.0f;
+	}
+	return c;
+}
+
+void draw_test_light(CF_Color color)
+{
+	CF_V2 c = test_light_center();
+	cf_draw_push_color(color);
+	cf_draw_quad_fill(cf_make_aabb(cf_v2(c.x - 4.0f, c.y - 4.0f), cf_v2(c.x + 4.0f, c.y + 4.0f)), 0);
+	cf_draw_pop_color();
+}
+
+// Cornell (test 3) and pinhole (test 4) scenes, ported from amitabha's
+// multibounce.rs and scene.rs for reference comparison. One function draws
+// all shapes into a chosen channel: 0 = emissivity, 1 = absorption, 2 = diffuse.
+void draw_rect_ch(float x0, float y0, float x1, float y1, CF_Color c)
+{
+	if (c.r == 0 && c.g == 0 && c.b == 0) return;
+	cf_draw_push_color(c);
+	cf_draw_quad_fill(cf_make_aabb(cf_v2(x0, y0), cf_v2(x1, y1)), 0);
+	cf_draw_pop_color();
+}
+
+void draw_circle_ch(float x, float y, float r, CF_Color c)
+{
+	if (c.r == 0 && c.g == 0 && c.b == 0) return;
+	cf_draw_push_color(c);
+	cf_draw_circle_fill2(cf_v2(x, y), r);
+	cf_draw_pop_color();
+}
+
+#define CH(e, a, d) (channel == 0 ? (e) : channel == 1 ? (a) : (d))
+
+void draw_cornell(int channel)
+{
+	CF_Color black = cf_make_color_rgb_f(0, 0, 0);
+	// cf_draw vertex colors clamp to 8-bit [0,1], so the absorption canvas
+	// stores per-pixel OPACITY (1 - exp(-absorption)) and the emissivity canvas
+	// stores emission/16; the cascade shaders decode on sample. Solid = opaque.
+	// Opacity 0.9 (absorption ~2.3/px): walls stay sealed across their 20px
+	// thickness but surface texels still receive fluence, so the multibounce
+	// feedback can tint them (opacity 1.0 starves the bounce and kills bleed).
+	CF_Color solid = cf_make_color_rgb_f(0.9f, 0.9f, 0.9f);
+	CF_Color grey  = cf_make_color_rgb_f(0.9f, 0.9f, 0.9f);
+	// Canvas y is up: visual top = world y near 1024. Ceiling (top) / floor (bottom).
+	draw_rect_ch(0, 1004, 1024, 1024, CH(black, solid, grey));
+	draw_rect_ch(0, 0, 1024, 20, CH(black, solid, grey));
+	// Red left wall, blue right wall (diffuse tint; absorption stays neutral).
+	draw_rect_ch(0, 0, 20, 1024, CH(black, solid, cf_make_color_rgb_f(0.9f, 0.05f, 0.05f)));
+	draw_rect_ch(1004, 0, 1024, 1024, CH(black, solid, cf_make_color_rgb_f(0.05f, 0.05f, 0.9f)));
+	// Light frame + emitter slot at top center.
+	draw_rect_ch(444, 1004, 580, 1024, CH(black, solid, black));
+	draw_rect_ch(448, 1004, 576, 1024, CH(cf_make_color_rgb_f(0.467f, 0.467f, 0.467f), cf_make_color_rgb_f(0.632f, 0.632f, 0.632f), black));
+	// Occluder circle on the floor (pure absorber, zero albedo).
+	draw_circle_ch(320, 212, 192, CH(black, solid, black));
+	// Translucent smoky box on the floor.
+	draw_rect_ch(672, 20, 864, 404, CH(black, cf_make_color_rgb_f(0.0198f, 0.0149f, 0.0198f), cf_make_color_rgb_f(0.8f, 0.8f, 0.8f)));
+}
+
+void draw_pinhole(int channel)
+{
+	CF_Color black = cf_make_color_rgb_f(0, 0, 0);
+	// cf_draw vertex colors clamp to 8-bit [0,1], so the absorption canvas
+	// stores per-pixel OPACITY (1 - exp(-absorption)) and the emissivity canvas
+	// stores emission/16; the cascade shaders decode on sample. Solid = opaque.
+	CF_Color solid = cf_make_color_rgb_f(1.0f, 1.0f, 1.0f);
+	// Wall with a moving 10px gap (the gap sweeps to expose swimming).
+	// HRC_NOGAP=1 closes the gap entirely: any light on the right side is then
+	// a true wall leak rather than smeared gap light.
+	if (getenv("HRC_NOGAP")) {
+		draw_rect_ch(511, 0, 513, 1024, CH(black, solid, black));
+	} else {
+		float l = sinf(time_acc * 0.5f) * 200.0f;
+		draw_rect_ch(511, 0, 513, 507 + l, CH(black, solid, black));
+		draw_rect_ch(511, 517 + l, 513, 1024, CH(black, solid, black));
+	}
+	// 7 colored emitter strips along the left edge (golden-angle-ish hues).
+	CF_Color strip[7] = {
+		cf_make_color_rgb_f(0.70f, 0.30f, 1.00f),
+		cf_make_color_rgb_f(1.00f, 0.80f, 0.20f),
+		cf_make_color_rgb_f(0.20f, 0.90f, 0.90f),
+		cf_make_color_rgb_f(1.00f, 0.30f, 0.50f),
+		cf_make_color_rgb_f(0.30f, 1.00f, 0.40f),
+		cf_make_color_rgb_f(0.35f, 0.50f, 1.00f),
+		cf_make_color_rgb_f(1.00f, 0.55f, 0.15f),
+	};
+	for (int i = -3; i <= 3; i++) {
+		CF_Color c = strip[i + 3];
+		// Emission encodes at /16; full-scale channel = effective 16x brightness.
+		CF_Color e = c;
+		float cy = 512.0f - (float)i * 40.0f;
+		// Opaque surface emitters like the reference (radiance = emiss * (1 - T)
+		// needs full absorption for full emission; the surface texels radiate,
+		// the interior blocks).
+		draw_rect_ch(19, cy - 20, 29, cy + 20, CH(e, solid, black));
+	}
+}
+
+void draw_test_shapes(int channel)
+{
+	if (test_scene == 3) draw_cornell(channel);
+	else draw_pinhole(channel);
+}
 
 OrbLight orbs[4];
 
@@ -517,7 +646,7 @@ void handle_input()
 		hrc.debug_mode = (hrc.debug_mode + 1) % HRC_NUM_DEBUG;
 	}
 	if (cf_key_just_pressed(CF_KEY_T)) {
-		test_scene = !test_scene;
+		test_scene = (test_scene + 1) % 5;
 	}
 	if (cf_key_just_pressed(CF_KEY_H)) {
 		if      (hrc.grid == 128)  hrc_set_grid(256);
@@ -636,7 +765,10 @@ void update_lights()
 void draw_lights_emissive()
 {
 	for (int i = 0; i < frame_light_count; i++) {
-		cf_draw_push_color(frame_lights[i].color);
+		CF_Color c = frame_lights[i].color;
+		// Emission decode is pow(c, 2.2) * 16, so the sRGB-space encode scale is
+		// 16^(-1/2.2) = 0.2832 (a plain /16 lands ~28x too dark after the curve).
+		cf_draw_push_color(cf_make_color_rgb_f(c.r * 0.2832f, c.g * 0.2832f, c.b * 0.2832f));
 		draw_circle_at(frame_lights[i].x, frame_lights[i].y, frame_lights[i].r);
 		cf_draw_pop_color();
 	}
@@ -646,7 +778,7 @@ void draw_lights_emissive()
 // Light sources are opaque emitters -- they must absorb to emit.
 void draw_lights_absorbing()
 {
-	cf_draw_push_color(cf_make_color_rgb_f(1.0f, 1.0f, 1.0f));
+	cf_draw_push_color(cf_make_color_rgb_f(0.632f, 0.632f, 0.632f)); // absorption 1.0 -> opacity
 	for (int i = 0; i < frame_light_count; i++) {
 		draw_circle_at(frame_lights[i].x, frame_lights[i].y, frame_lights[i].r);
 	}
@@ -661,12 +793,10 @@ void draw_emissivity()
 	begin_canvas_draw();
 	push_f16_render_state();
 
-	if (test_scene) {
-		float half = (float)HRC_WORLD_SIZE * 0.5f;
-		float s = (float)HRC_WORLD_SIZE / (float)hrc.grid;
-		cf_draw_push_color(cf_make_color_rgb_f(1.0f, 1.0f, 1.0f));
-		cf_draw_quad_fill(cf_make_aabb(cf_v2(half - s, half - s), cf_v2(half + s, half + s)), 0);
-		cf_draw_pop_color();
+	if (test_scene == 1 || test_scene == 2) {
+		draw_test_light(cf_make_color_rgb_f(0.2832f, 0.2832f, 0.2832f)); // emission 1.0, sRGB-space encode
+	} else if (test_scene >= 3) {
+		draw_test_shapes(0);
 	} else {
 		draw_lights_emissive();
 	}
@@ -684,12 +814,10 @@ void draw_absorption()
 	begin_canvas_draw();
 	push_f16_render_state();
 
-	if (test_scene) {
-		float half = (float)HRC_WORLD_SIZE * 0.5f;
-		float s = (float)HRC_WORLD_SIZE / (float)hrc.grid;
-		cf_draw_push_color(cf_make_color_rgb_f(1.0f, 1.0f, 1.0f));
-		cf_draw_quad_fill(cf_make_aabb(cf_v2(half - s, half - s), cf_v2(half + s, half + s)), 0);
-		cf_draw_pop_color();
+	if (test_scene == 1 || test_scene == 2) {
+		draw_test_light(cf_make_color_rgb_f(0.632f, 0.632f, 0.632f)); // absorption 1.0 -> opacity
+	} else if (test_scene >= 3) {
+		draw_test_shapes(1);
 	} else {
 		cf_draw_push_color(cf_make_color_rgb_f(1.0f, 1.0f, 1.0f));
 
@@ -730,6 +858,19 @@ void draw_absorption()
 }
 
 //--------------------------------------------------------------------------------------------------
+// Draw diffuse albedo (multibounce feedback input; only the cornell test uses it).
+
+void draw_diffuse()
+{
+	begin_canvas_draw();
+	push_f16_render_state();
+	if (test_scene == 3) draw_test_shapes(2);
+	cf_draw_pop_render_state();
+	cf_render_to(hrc.diffuse, true);
+	end_canvas_draw();
+}
+
+//--------------------------------------------------------------------------------------------------
 // Display fluence onto screen.
 
 void display_fluence()
@@ -748,12 +889,12 @@ void display_fluence()
 void draw_hud()
 {
 	const char* mode_names[] = {
-		"0: Normal (blur)",
+		"0: Normal (no blur)",
 		"1: Rot 0 (+x)",
 		"2: Rot 1 (+y)",
 		"3: Rot 2 (-x)",
 		"4: Rot 3 (-y)",
-		"5: All rotations (no blur)",
+		"5: Cross blur (legacy)",
 		"6: Emissivity",
 		"7: Absorption",
 	};
@@ -777,7 +918,7 @@ void draw_hud()
 		hrc.upscale_mode == 0 ? "nearest" : hrc.upscale_mode == 1 ? "minmax" : "bilateral",
 		hrc.prefilter_mode == 0 ? "off" : hrc.prefilter_mode == 1 ? "box" : hrc.prefilter_mode == 2 ? "mipmap" : hrc.prefilter_mode == 3 ? "gauss" : "mip+max",
 		hrc.trace_levels, hrc.n + 1,
-		test_scene ? "on" : "off"
+		test_scene == 0 ? "off" : test_scene == 1 ? "static 8x8" : test_scene == 2 ? "orbiting 8x8" : test_scene == 3 ? "cornell" : "pinhole"
 	);
 
 	float half = (float)HRC_WORLD_SIZE * 0.5f;
@@ -797,6 +938,18 @@ int main(int argc, char* argv[])
 
 	hrc_init();
 	scene_init();
+
+	// Dev overrides for headless/scripted runs (same toggles as the HUD keys).
+	{
+		const char* env;
+		if ((env = getenv("HRC_TEST")))        test_scene = atoi(env);
+		if ((env = getenv("HRC_DEBUG")))       hrc.debug_mode = atoi(env);
+		if ((env = getenv("HRC_BLEND")))       hrc.blend_boundary = atoi(env);
+		if ((env = getenv("HRC_BLEND_WIDTH"))) hrc.blend_width = (float)atof(env);
+		if ((env = getenv("HRC_CM1")))         hrc.cminus1 = atoi(env);
+		if ((env = getenv("HRC_TRACE")))       hrc.trace_levels = atoi(env);
+	}
+
 	while (cf_app_is_running()) {
 		cf_app_update(NULL);
 		cf_draw_push_shape_aa(0);
@@ -804,6 +957,8 @@ int main(int argc, char* argv[])
 		update_lights();
 		draw_emissivity();
 		draw_absorption();
+		draw_diffuse();
+		if (test_scene == 3) hrc_feedback();
 		hrc_compute();
 		display_fluence();
 		draw_hud();

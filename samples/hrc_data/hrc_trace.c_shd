@@ -12,8 +12,8 @@
 // Dispatched once per cascade level (0, 1, 2) per rotation. Uses the same buffer
 // layout as seed/extend so the merge phase is unaffected.
 //
-// Output buffer layout (same as seed/extend):
-//   width  = (world_size / 2^n) * (2^n + 1)
+// Output buffer layout (same as seed/extend, dense directions):
+//   width  = (world_size / 2^n) * (2^(n+1) + 1)
 //   height = world_size
 //   index  = y * width + probe_x * directions + k
 
@@ -33,6 +33,7 @@ layout(set = 2, binding = 0) uniform Params
 	float u_blend_width;  // [/]] blend falloff width in direction slots
 	float u_mip_level;         // emissivity mipmap LOD (0.0 = base level)
 	float u_absrp_mip_level;   // absorption mipmap LOD (0.0 = base level)
+	int u_upscale;             // world pixels per grid cell (march substeps)
 };
 
 layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
@@ -51,12 +52,14 @@ Interval merge(Interval a, Interval b)
 	);
 }
 
-// Direction vector for the k-th ray at cascade n (Sec 4).
-//   v_n(k) = (2^n, 2k - 2^n)
+// Direction vector for the k-th ray at cascade n, dense-direction variant:
+//   v_n(k) = (2^n, k - 2^n),  k in [0, 2^(n+1)]
+// Twice the paper's angular resolution; all-integer y-offsets couple every
+// probe row, removing the checkerboard at its source (see hrc_seed.c_shd).
 vec2 v_n(int n, float k)
 {
 	float pow2n = float(1 << n);
-	return vec2(pow2n, 2.0 * k - pow2n);
+	return vec2(pow2n, k - pow2n);
 }
 
 uvec2 f16_store(vec4 val)
@@ -79,14 +82,18 @@ vec2 rotate_uv(vec2 uv, int rot, float inv)
 }
 
 // Accumulate one cell's Beer-Lambert contribution along a ray.
-// cell is the integer pixel coordinate; ds is the physical distance through the cell.
+// cell is the integer WORLD pixel coordinate; ds is the physical distance
+// through the cell in world pixels (absorption is a per-world-pixel coefficient).
 void trace_cell(vec2 cell, float ds, inout vec3 rad, inout vec3 trn)
 {
-	float world = float(u_world_size);
+	float world = float(u_world_size * u_upscale);
 	if (cell.x < 0.0 || cell.x >= world || cell.y < 0.0 || cell.y >= world) return;
 	vec2 uv = rotate_uv((cell + 0.5) / world, u_rotate, 1.0);
-	vec3 emiss = linear_from_srgb(textureLod(u_emissivity, uv, u_mip_level).rgb);
-	vec3 absrp = linear_from_srgb(textureLod(u_absorption, uv, u_absrp_mip_level).rgb);
+	// Scene encoding: cf_draw vertex colors clamp to 8-bit [0,1], so the canvases
+	// store emission/16 and per-pixel opacity (1 - exp(-absorption)); decode here.
+	vec3 emiss = linear_from_srgb(textureLod(u_emissivity, uv, u_mip_level).rgb) * 16.0;
+	vec3 op = textureLod(u_absorption, uv, u_absrp_mip_level).rgb;
+	vec3 absrp = -log(max(vec3(1.0) - op, vec3(1e-7)));
 	vec3 T = exp(-absrp * ds);
 	rad += trn * emiss * (vec3(1.0) - T);
 	trn *= T;
@@ -96,7 +103,7 @@ void main()
 {
 	int n = u_cascade;
 	int pow2n = 1 << n;
-	int directions = pow2n + 1;
+	int directions = 2 * pow2n + 1;
 
 	ivec2 gid = ivec2(gl_GlobalInvocationID.xy);
 	if (gid.x >= u_curr_w || gid.y >= u_world_size) return;
@@ -104,59 +111,63 @@ void main()
 	int probe_x = gid.x / directions;
 	int k = gid.x - probe_x * directions;
 
-	// Ray direction and tracing parameters.
+	// Ray direction and tracing parameters. The march runs at full WORLD
+	// resolution regardless of the cascade grid: prefiltered grid-res scene
+	// samples quantize a moving emitter's footprint (visible flicker) and melt
+	// thin occluders. Marching raw world texels keeps both exact; only the
+	// probe lattice is grid-res (amitabha traces full-res voxels the same way).
 	vec2 delta = v_n(n, float(k));
 	float max_comp = float(pow2n);             // max(|delta.x|, |delta.y|) = 2^n always
-	vec2 slope = delta / max_comp;             // normalize so max component = 1
-	float step_length = length(slope);         // physical distance per x-column step
-	int num_steps = pow2n;                     // exactly 2^n x-columns
-	bool is_boundary = (k == 0 || k == pow2n);
+	vec2 slope = delta / max_comp;             // normalize so max component = 1 grid col
+	float step_length = length(slope);         // world-px distance per world x-column
+	int S = u_upscale;
+	int num_steps = pow2n * S;                 // 2^n grid cols = 2^n * S world columns
+	bool is_boundary = (k == 0 || k == 2 * pow2n);
 
-	// Probe origin in rotated world space.
-	vec2 origin = vec2(float(probe_x) * float(pow2n), float(gid.y));
-	float world = float(u_world_size);
+	// Probe origin in rotated world space (center of the probe's grid cell).
+	float x0 = float(probe_x * pow2n * S);
+	float y0 = (float(gid.y) + 0.5) * float(S);
+	float world = float(u_world_size * S);
 
-	// Column-by-column DDA: one x-column per iteration. When the ray crosses a
-	// y-cell boundary within a column, split the step so both cells get their
-	// correct fractional path length through Beer-Lambert.
+	// Column-by-column DDA: one world x-column per iteration. When the ray
+	// crosses a y-cell boundary within a column, split the step so both cells
+	// get their correct fractional path length through Beer-Lambert.
 	vec3 acc_rad = vec3(0.0);
 	vec3 acc_trn = vec3(1.0);
 
-	float y_offset = 0.5;  // start at cell center so diagonal rays split symmetrically
-	int cy = 0;            // current y-cell offset from int(origin.y)
+	float fy = y0;
+	int cy = int(floor(fy));
 
 	for (int s = 0; s < num_steps; s++) {
-		float px = origin.x + float(s);
+		float px = x0 + float(s);
 		if (px >= world) break;
 
-		float next_y = 0.5 + slope.y * float(s + 1);
-		int next_cy = int(floor(next_y));
-
-		vec2 col = vec2(px, origin.y);
+		float next_fy = y0 + slope.y * float(s + 1);
+		int next_cy = int(floor(next_fy));
 
 		if (cy == next_cy || is_boundary) {
 			// No y-boundary splitting: either no crossing, or boundary ray
-			// (k=0, k=pow2n) where we trace only the entry cell to match
+			// (k=0, k=2*2^n) where we trace only the entry cell to match
 			// extend's one-cell-per-column footprint at the ±45° edges.
-			trace_cell(col + vec2(0, float(cy)), step_length, acc_rad, acc_trn);
+			trace_cell(vec2(px, float(cy)), step_length, acc_rad, acc_trn);
 		} else {
 			// Y-boundary crossed -- split into two sub-steps.
-			float y_bound = slope.y > 0.0 ? float(cy + 1) : float(cy);
-			float frac = (y_bound - y_offset) / slope.y;
-			trace_cell(col + vec2(0, float(cy)), frac * step_length, acc_rad, acc_trn);
-			trace_cell(col + vec2(0, float(next_cy)), (1.0 - frac) * step_length, acc_rad, acc_trn);
+			float y_bound = slope.y > 0.0 ? float(next_cy) : float(cy);
+			float frac = (y_bound - fy) / slope.y;
+			trace_cell(vec2(px, float(cy)), frac * step_length, acc_rad, acc_trn);
+			trace_cell(vec2(px, float(next_cy)), (1.0 - frac) * step_length, acc_rad, acc_trn);
 		}
 
-		y_offset = next_y;
+		fy = next_fy;
 		cy = next_cy;
 	}
 
-	// Blend boundary: near-boundary rays (small k or k near pow2n) get reduced
+	// Blend boundary: near-boundary rays (small k or k near 2*pow2n) get reduced
 	// weight so that the overlapping contributions from adjacent rotations sum
-	// to ~1.0 instead of >1.0. Boundary rays (k=0, k=pow2n) get weight 0.5
+	// to ~1.0 instead of >1.0. Boundary rays (k=0, k=2*pow2n) get weight 0.5
 	// (shared equally between rotations), fading to 1.0 two directions in.
 	if (u_blend_boundary != 0) {
-		float edge_dist = float(min(k, pow2n - k));
+		float edge_dist = float(min(k, 2 * pow2n - k));
 		float weight = mix(0.5, 1.0, smoothstep(0.0, u_blend_width, edge_dist));
 		acc_rad *= weight;
 		acc_trn = mix(vec3(1.0), acc_trn, weight);

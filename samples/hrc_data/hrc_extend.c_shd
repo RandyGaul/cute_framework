@@ -23,8 +23,8 @@
 // Outputs:
 //   u_curr_rad, u_curr_trn — T_n ray intervals
 //
-// Buffer layout (same as seed):
-//   width  = (world_size / 2^n) * (2^n + 1)
+// Buffer layout (same as seed, dense directions):
+//   width  = (world_size / 2^n) * (2^(n+1) + 1)
 //   height = world_size
 //   index  = y * width + probe_x * directions + k
 
@@ -74,7 +74,7 @@ uvec2 f16_store(vec4 val)
 Interval T_load_prev(int probe_x, int k, int y)
 {
 	int prev_n = u_cascade - 1;
-	int directions = (1 << prev_n) + 1;
+	int directions = (2 << prev_n) + 1;
 	int num_probes = u_world_size >> prev_n;
 
 	// Bounds check: return empty interval for out-of-range lookups.
@@ -89,11 +89,11 @@ Interval T_load_prev(int probe_x, int k, int y)
 }
 
 // Compute the y-offset of a ray endpoint in T_{n-1} direction k.
-// From v_{n-1}(k) = (2^{n-1}, 2k - 2^{n-1}), the y component is 2k - 2^{n-1}.
+// From the dense v_{n-1}(k) = (2^{n-1}, k - 2^{n-1}), the y component is k - 2^{n-1}.
 int far_y_offset(int k)
 {
 	int prev_pow2 = 1 << (u_cascade - 1);
-	return 2 * k - prev_pow2;
+	return k - prev_pow2;
 }
 
 // Eq 18-20: extend ray from T_{n-1} to T_n.
@@ -141,7 +141,7 @@ void main()
 	ivec2 gid = ivec2(gl_GlobalInvocationID.xy);
 	if (gid.x >= u_curr_w || gid.y >= u_world_size) return;
 
-	int directions = (1 << u_cascade) + 1;
+	int directions = (2 << u_cascade) + 1;
 	int probe_x = gid.x / directions;
 	int k = gid.x - probe_x * directions;
 

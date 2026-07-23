@@ -10,8 +10,8 @@
 //
 // Uses the same bindings as hrc_trace so the material setup is shared.
 //
-// Output buffer layout (same as trace/extend):
-//   width  = (world_size / 2^n) * (2^n + 1)
+// Output buffer layout (same as trace/extend, dense directions):
+//   width  = (world_size / 2^n) * (2^(n+1) + 1)
 //   height = world_size
 //   index  = y * width + probe_x * directions + k
 
@@ -33,12 +33,17 @@ layout(set = 2, binding = 0) uniform Params
 
 layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
 
-// Direction vector for the k-th ray at cascade n (Sec 4).
-//   v_n(k) = (2^n, 2k - 2^n)
+// Direction vector for the k-th ray at cascade n, dense-direction variant:
+//   v_n(k) = (2^n, k - 2^n),  k in [0, 2^(n+1)]
+// Twice the paper's angular resolution. The paper's v_n(k) = (2^n, 2k - 2^n)
+// only produces even y-offsets, which parity-segregates probe rows and causes
+// the checkerboard artifact (hidden by Eq 21's blur). All-integer offsets
+// couple every row, removing the checkerboard at its source (amitabha's grids
+// work this way).
 vec2 v_n(int n, float k)
 {
 	float pow2n = float(1 << n);
-	return vec2(pow2n, 2.0 * k - pow2n);
+	return vec2(pow2n, k - pow2n);
 }
 
 uvec2 f16_store(vec4 val)
@@ -64,7 +69,7 @@ void main()
 {
 	int n = u_cascade;
 	int pow2n = 1 << n;
-	int directions = pow2n + 1;
+	int directions = 2 * pow2n + 1;
 
 	ivec2 gid = ivec2(gl_GlobalInvocationID.xy);
 	if (gid.x >= u_curr_w || gid.y >= u_world_size) return;
@@ -77,8 +82,10 @@ void main()
 	float world = float(u_world_size);
 	vec2 uv = rotate_uv((origin + 0.5) / world, u_rotate, 1.0);
 
-	vec3 emiss = linear_from_srgb(textureLod(u_emissivity, uv, u_mip_level).rgb);
-	vec3 absrp = linear_from_srgb(textureLod(u_absorption, uv, u_absrp_mip_level).rgb);
+	// Decode emission/16 + opacity encoding (see hrc_trace.c_shd).
+	vec3 emiss = linear_from_srgb(textureLod(u_emissivity, uv, u_mip_level).rgb) * 16.0;
+	vec3 op = textureLod(u_absorption, uv, u_absrp_mip_level).rgb;
+	vec3 absrp = -log(max(vec3(1.0) - op, vec3(1e-7)));
 
 	// Direction-dependent step length for correct optical depth.
 	vec2 delta = v_n(n, float(k));

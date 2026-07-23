@@ -30,9 +30,9 @@
 // Outputs:
 //   u_r_curr_rad               — R_n fluence
 //
-// Buffer layout:
-//   T: width = (world_size / 2^n) * (2^n + 1), height = world_size
-//   R: width = (world_size / 2^n) * 2^n,       height = world_size
+// Buffer layout (dense directions):
+//   T: width = (world_size / 2^n) * (2^(n+1) + 1), height = world_size
+//   R: width = (world_size / 2^n) * 2^(n+1),       height = world_size
 //   R has one fewer slot per probe than T (cones between rays, not rays themselves)
 
 layout(std430, set = 0, binding = 0) readonly  buffer TCurrRad { uvec2 data[]; } u_t_curr_rad;
@@ -72,11 +72,13 @@ uvec2 f16_store(vec4 val)
 	return uvec2(packHalf2x16(val.xy), packHalf2x16(val.zw));
 }
 
-// Direction vector for the k-th ray at cascade n (Sec 4).
+// Direction vector for the k-th ray at cascade n, dense-direction variant:
+//   v_n(k) = (2^n, k - 2^n),  k in [0, 2^(n+1)]
+// All-integer y-offsets couple every probe row (see hrc_seed.c_shd).
 vec2 v_n(int n, float k)
 {
 	float pow2n = float(1 << n);
-	return vec2(pow2n, 2.0 * k - pow2n);
+	return vec2(pow2n, k - pow2n);
 }
 
 // Eq 13: angular size of cone i at cascade n.
@@ -97,7 +99,7 @@ vec3 merge_r(Interval near, vec3 far_rad)
 Interval T_load(int probe_x, int k, int y)
 {
 	int n = u_cascade;
-	int directions = (1 << n) + 1;
+	int directions = (2 << n) + 1;
 	int num_probes = u_world_size >> n;
 	if (probe_x < 0 || probe_x >= num_probes || k < 0 || k >= directions || y < 0 || y >= u_world_size) {
 		return Interval(vec3(0.0), vec3(1.0));
@@ -112,7 +114,7 @@ Interval T_load(int probe_x, int k, int y)
 Interval T_load_next(int probe_x, int k, int y)
 {
 	int n = u_cascade + 1;
-	int directions = (1 << n) + 1;
+	int directions = (2 << n) + 1;
 	int num_probes = u_world_size >> n;
 	if (probe_x < 0 || probe_x >= num_probes || k < 0 || k >= directions || y < 0 || y >= u_world_size) {
 		return Interval(vec3(0.0), vec3(1.0));
@@ -127,7 +129,7 @@ Interval T_load_next(int probe_x, int k, int y)
 vec3 R_load(int probe_x, int i, int y)
 {
 	int n = u_cascade + 1;
-	int directions = 1 << n;
+	int directions = 2 << n;
 	int num_probes = u_world_size >> n;
 	if (probe_x < 0 || probe_x >= num_probes || i < 0 || i >= directions || y < 0 || y >= u_world_size) {
 		return vec3(0.0);
@@ -186,16 +188,17 @@ vec3 merge_odd(int probe_x, int i, int y)
 	int next_probe_x = (probe_x + 1) / 2;
 	int pow2n = 1 << u_cascade;
 
+	// Far-probe y offsets follow the dense v_n: ray k lands at y + k - 2^n.
 	vec3 F_plus = weighted_merge(
 		T_load(probe_x, i + 1, y),
 		sc.w_plus,
-		R_load(next_probe_x, sc.j_plus, y + 2 * (i + 1) - pow2n)
+		R_load(next_probe_x, sc.j_plus, y + (i + 1) - pow2n)
 	);
 
 	vec3 F_minus = weighted_merge(
 		T_load(probe_x, i, y),
 		sc.w_minus,
-		R_load(next_probe_x, sc.j_minus, y + 2 * i - pow2n)
+		R_load(next_probe_x, sc.j_minus, y + i - pow2n)
 	);
 
 	return F_plus + F_minus;
@@ -224,13 +227,13 @@ vec3 merge_even(int probe_x, int i, int y)
 	vec3 F1_plus = weighted_merge(
 		T_load_next(next_probe_x, 2 * (i + 1), y),
 		sc.w_plus,
-		R_load(far_probe_x, sc.j_plus, y + 2 * 2 * (i + 1) - pow2n1)
+		R_load(far_probe_x, sc.j_plus, y + 2 * (i + 1) - pow2n1)
 	);
 
 	vec3 F1_minus = weighted_merge(
 		T_load_next(next_probe_x, 2 * i, y),
 		sc.w_minus,
-		R_load(far_probe_x, sc.j_minus, y + 2 * 2 * i - pow2n1)
+		R_load(far_probe_x, sc.j_minus, y + 2 * i - pow2n1)
 	);
 
 	// F0: direct lookup (Eq 16)
@@ -245,7 +248,7 @@ void main()
 	ivec2 gid = ivec2(gl_GlobalInvocationID.xy);
 	if (gid.x >= u_r_curr_w || gid.y >= u_world_size) return;
 
-	int directions = 1 << u_cascade;
+	int directions = 2 << u_cascade;
 	int probe_x = gid.x / directions;
 	int i = gid.x - probe_x * directions;
 

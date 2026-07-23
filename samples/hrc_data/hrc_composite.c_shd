@@ -28,6 +28,7 @@ layout(std430, set = 0, binding = 4) readonly buffer F1 { uvec2 data[]; } u_f1;
 layout(std430, set = 0, binding = 5) readonly buffer F2 { uvec2 data[]; } u_f2;
 layout(std430, set = 0, binding = 6) readonly buffer F3 { uvec2 data[]; } u_f3;
 layout(set = 1, binding = 0, rgba8) uniform writeonly image2D u_fluence;
+layout(set = 1, binding = 1, rgba16f) uniform image2D u_fluence_lin; // linear copy (feeds multibounce feedback)
 
 layout(set = 2, binding = 0) uniform Params
 {
@@ -80,18 +81,17 @@ ivec2 grid_to_rotated(ivec2 p, int rot, int s)
 	return p;
 }
 
-// Load fluence from one quadrant's F buffer at a rotated grid coordinate.
-// No offset applied here -- caller is responsible for the +1 shift.
-vec3 F_load(int rot, ivec2 rotated_pos)
+// Load one half-quadrant cone from one quadrant's F buffer.
+// cone 0 spans -45..0 degrees (gathers from rows <= y in rotated space),
+// cone 1 spans 0..+45 degrees (gathers from rows >= y).
+vec3 F_cone(int rot, ivec2 rotated_pos, int cone)
 {
 	if (rotated_pos.x < 0 || rotated_pos.x >= u_grid_size || rotated_pos.y < 0 || rotated_pos.y >= u_grid_size) return vec3(0.0);
-	int idx = rotated_pos.y * u_grid_size + rotated_pos.x;
-	vec4 val;
-	if      (rot == 0) val = f16_load(u_f0.data[idx]);
-	else if (rot == 1) val = f16_load(u_f1.data[idx]);
-	else if (rot == 2) val = f16_load(u_f2.data[idx]);
-	else               val = f16_load(u_f3.data[idx]);
-	return val.rgb;
+	int idx = (rotated_pos.y * u_grid_size + rotated_pos.x) * 2 + cone;
+	if      (rot == 0) return f16_load(u_f0.data[idx]).rgb;
+	else if (rot == 1) return f16_load(u_f1.data[idx]).rgb;
+	else if (rot == 2) return f16_load(u_f2.data[idx]).rgb;
+	else               return f16_load(u_f3.data[idx]).rgb;
 }
 
 // World-space march direction for each quadrant's rotated +x axis.
@@ -141,8 +141,10 @@ Interval trace_cminus1(ivec2 world_pos, int rot)
 		ivec2 p = world_pos + dir * i;
 		vec2 uv = (vec2(p) + 0.5) / world;
 
-		vec3 emiss = linear_from_srgb(texture(u_emissivity, uv).rgb);
-		vec3 absrp = linear_from_srgb(texture(u_absorption, uv).rgb);
+		// Decode emission/16 + opacity encoding (see hrc_trace.c_shd).
+		vec3 emiss = linear_from_srgb(texture(u_emissivity, uv).rgb) * 16.0;
+		vec3 op = texture(u_absorption, uv).rgb;
+		vec3 absrp = -log(max(vec3(1.0) - op, vec3(1e-7)));
 
 		vec3 trans = exp(-absrp * step_abs);
 		acc_rad += acc_trn * emiss * (vec3(1.0) - trans);
@@ -169,6 +171,49 @@ float absorption_at(ivec2 pos)
 	vec2 uv = (vec2(pos) + 0.5) / world;
 	vec3 a = texture(u_absorption, uv).rgb;
 	return dot(a, vec3(0.333));
+}
+
+// Inverse of grid_to_rotated: map a rotated-space coordinate back to grid space.
+ivec2 rotated_to_grid(ivec2 rp, int rot, int s)
+{
+	if (rot == 1) return ivec2(s - rp.y, rp.x);
+	if (rot == 2) return ivec2(s - rp.x, s - rp.y);
+	if (rot == 3) return ivec2(rp.y, s - rp.x);
+	return rp;
+}
+
+// Absorption at the world-space center of a grid cell.
+float grid_absorption(ivec2 gp)
+{
+	int S = u_world_size / u_grid_size;
+	gp = clamp(gp, ivec2(0), ivec2(u_grid_size - 1));
+	return absorption_at(gp * S + S / 2);
+}
+
+// Load fluence from one quadrant at a rotated grid coordinate.
+// Dense directions leave R_0 with two half-quadrant cones per probe. Each
+// half-cone is averaged over the two probes bracketing it along its own
+// gather direction (amitabha's final merge does the same). This spreads the
+// exact-edge ray chains (cardinals and diagonals stay even-k at every level
+// and never get bent-averaged) which otherwise show up as 1px needle beams
+// through emitters.
+// Bracket taps are gated on absorption similarity: the rotated cross axis maps
+// to a world axis, so an ungated +-1 tap averages cones from the far side of a
+// one-cell wall and teleports light straight through it.
+// No offset applied here -- caller is responsible for the +1 shift.
+vec3 F_load(int rot, ivec2 rotated_pos)
+{
+	int s = u_grid_size - 1;
+	float a_c = grid_absorption(rotated_to_grid(rotated_pos, rot, s));
+	vec3 lo_c = F_cone(rot, rotated_pos, 0);
+	vec3 hi_c = F_cone(rot, rotated_pos, 1);
+	ivec2 rp_lo = rotated_pos + ivec2(0, -1);
+	ivec2 rp_hi = rotated_pos + ivec2(0, 1);
+	bool ok_lo = abs(grid_absorption(rotated_to_grid(rp_lo, rot, s)) - a_c) <= u_abs_threshold;
+	bool ok_hi = abs(grid_absorption(rotated_to_grid(rp_hi, rot, s)) - a_c) <= u_abs_threshold;
+	vec3 lo = 0.5 * (lo_c + (ok_lo ? F_cone(rot, rp_lo, 0) : lo_c));
+	vec3 hi = 0.5 * (hi_c + (ok_hi ? F_cone(rot, rp_hi, 1) : hi_c));
+	return lo + hi;
 }
 
 // Sum fluence from all 4 quadrants at a world-space pixel, with c-1 gathering.
@@ -362,12 +407,26 @@ void main()
 			fluence = r0;
 		}
 	} else if (u_debug_mode == 5) {
-		// Sum all quadrants with c-1 gathering, no blur.
+		// Legacy cross blur (Eq 21). Dense directions removed the checkerboard
+		// the blur existed to hide, so the default output skips it; this mode
+		// remains for A/B comparison.
+		fluence = blur_tile(gid, lid + BLUR_R);
+	} else {
+		// Normal output: sum all quadrants with c-1 gathering, no blur.
 		ivec2 tc = lid + BLUR_R;
 		fluence = s_tile[tc.y * TILE_W + tc.x];
-	} else {
-		fluence = blur_tile(gid, lid + BLUR_R);
 	}
 
-	imageStore(u_fluence, gid, vec4(srgb_from_linear(fluence), 1.0));
+	imageStore(u_fluence_lin, gid, vec4(fluence, 1.0));
+
+	// Luminance-based Reinhard before display encode: HDR emitters (e.g. the
+	// pinhole strips at 50x) otherwise hard-clip at the sRGB conversion.
+	// Tonemapping luminance instead of channels preserves hue at high intensity
+	// (per-channel Reinhard turns any bright color white).
+	// Exposure 2 keeps mid-tones near the pre-tonemap look (plain Reinhard
+	// compresses L=0.5 to 0.33, which reads as a globally darker scene).
+	float luma = dot(fluence, vec3(0.2126, 0.7152, 0.0722)) * 2.0;
+	float tm = luma / (1.0 + luma);
+	vec3 display = luma > 1e-6 ? min(fluence * (tm / luma), vec3(1.0)) : vec3(0.0);
+	imageStore(u_fluence, gid, vec4(srgb_from_linear(display), 1.0));
 }
