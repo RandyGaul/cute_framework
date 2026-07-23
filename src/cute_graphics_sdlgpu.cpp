@@ -9,14 +9,11 @@
 #include <cute_math.h>
 
 #include <SDL3/SDL_gpu.h>
-#include <SDL3_shadercross/SDL_shadercross.h>
-
 #ifdef _WIN32
 // Compiles transpiled HLSL to DXBC via the system FXC (defined after the
 // d3d12 includes below). Returns a CF_ALLOC'd blob, or NULL on failure.
 static void* cf_fxc_compile(const char* hlsl, size_t hlsl_size, const char* target, size_t* out_size);
 #endif
-#include <spirv_cross_c.h>
 
 #include <float.h>
 
@@ -680,8 +677,9 @@ static inline SDL_GPUShader* s_load_shader_bytecode(CF_ShaderInternal* shader_in
 	SDL_GPUShaderFormat formats = SDL_GetGPUShaderFormats(g_ctx.device);
 	if (formats & SDL_GPU_SHADERFORMAT_SPIRV) {
 		sdl_shader = (SDL_GPUShader*)SDL_CreateGPUShader(g_ctx.device, &shaderCreateInfo);
+	}
 #ifdef _WIN32
-	} else if ((formats & SDL_GPU_SHADERFORMAT_DXBC) && bytecode.hlsl_src) {
+	if (!sdl_shader && (formats & SDL_GPU_SHADERFORMAT_DXBC) && bytecode.hlsl_src) {
 		// D3D12: compile cute_spirv's transpiled HLSL to DXBC with the system
 		// FXC (d3dcompiler_47.dll) -- no SPIRV-Cross or DXC involved.
 		size_t dxbc_size = 0;
@@ -694,31 +692,20 @@ static inline SDL_GPUShader* s_load_shader_bytecode(CF_ShaderInternal* shader_in
 			sdl_shader = (SDL_GPUShader*)SDL_CreateGPUShader(g_ctx.device, &shaderCreateInfo);
 			CF_FREE(dxbc);
 		}
+	}
 #endif
-	} else if ((formats & SDL_GPU_SHADERFORMAT_MSL) && bytecode.msl_src) {
+	if (!sdl_shader && (formats & SDL_GPU_SHADERFORMAT_MSL) && bytecode.msl_src) {
 		// Metal: hand cute_spirv's transpiled MSL source straight to the OS.
 		shaderCreateInfo.code = (const Uint8*)bytecode.msl_src;
 		shaderCreateInfo.code_size = bytecode.msl_src_size + 1; // Include the NUL, matching SDL's convention.
 		shaderCreateInfo.entrypoint = "main0"; // MSL reserves `main`.
 		shaderCreateInfo.format = SDL_GPU_SHADERFORMAT_MSL;
 		sdl_shader = (SDL_GPUShader*)SDL_CreateGPUShader(g_ctx.device, &shaderCreateInfo);
-	} else {
-		SDL_ShaderCross_GraphicsShaderMetadata metadata = {};
-		metadata.num_samplers = shader_info->num_samplers;
-		metadata.num_storage_textures = shader_info->num_storage_textures;
-		metadata.num_storage_buffers = shader_info->num_storage_buffers;
-		metadata.num_uniform_buffers = shader_info->num_uniforms;
-
-		SDL_ShaderCross_SPIRV_Info spirvInfo;
-		spirvInfo.bytecode = bytecode.content;
-		spirvInfo.bytecode_size = bytecode.size;
-		spirvInfo.entrypoint = "main";
-		spirvInfo.shader_stage = stage == CF_SHADER_STAGE_VERTEX ? SDL_SHADERCROSS_SHADERSTAGE_VERTEX : SDL_SHADERCROSS_SHADERSTAGE_FRAGMENT;
-		spirvInfo.enable_debug = false;
-		spirvInfo.name = "shader.shd";
-		spirvInfo.props = SDL_CreateProperties();
-		sdl_shader = (SDL_GPUShader*)SDL_ShaderCross_CompileGraphicsShaderFromSPIRV(g_ctx.device, &spirvInfo, &metadata);
-		SDL_DestroyProperties(spirvInfo.props);
+		if (!sdl_shader) {
+			// Dump the source so Metal rejections come back as actionable reports.
+			fprintf(stderr, "cute_spirv MSL shader was rejected (%s). Please report this shader:\n%s\n",
+				SDL_GetError(), bytecode.msl_src);
+		}
 	}
 	if (!sdl_shader) {
 		fprintf(stderr, "Failed to create GPU shader: %s\n", SDL_GetError());
@@ -829,10 +816,13 @@ bool cf_sdlgpu_wants_msl()
 
 CF_Result cf_sdlgpu_init(const char* device_name, bool debug, CF_BackendType* backend_type)
 {
-	if(!SDL_ShaderCross_Init()) {
-		return cf_result_error("Failed to initialize SDL_ShaderCross.");
-	}
-	g_ctx.device = SDL_CreateGPUDevice(SDL_ShaderCross_GetSPIRVShaderFormats(), debug, device_name);
+	// The formats CF can supply itself: SPIR-V from cute_spirv directly, DXBC
+	// via the system FXC fed cute_spirv's HLSL, and MSL source from cute_spirv.
+	SDL_GPUShaderFormat formats = SDL_GPU_SHADERFORMAT_SPIRV | SDL_GPU_SHADERFORMAT_MSL;
+#ifdef _WIN32
+	formats |= SDL_GPU_SHADERFORMAT_DXBC;
+#endif
+	g_ctx.device = SDL_CreateGPUDevice(formats, debug, device_name);
 	if (!g_ctx.device) {
 		return cf_result_error("Failed to create GPU Device.");
 	}
@@ -857,7 +847,6 @@ void cf_sdlgpu_cleanup()
 	SDL_WaitForGPUIdle(g_ctx.device);
 	SDL_ReleaseWindowFromGPUDevice(g_ctx.device, g_ctx.window);
 	SDL_DestroyGPUDevice(g_ctx.device);
-	SDL_ShaderCross_Quit();
 }
 
 SDL_GPUDevice* cf_sdlgpu_get_device()
@@ -2079,84 +2068,51 @@ CF_ComputeShader cf_sdlgpu_make_compute_shader_from_bytecode(CF_ShaderBytecode b
 	cs->num_uniform_buffers = info->num_uniforms;
 
 	// Create the compute pipeline.
-	if (SDL_GetGPUShaderFormats(g_ctx.device) == SDL_GPU_SHADERFORMAT_SPIRV) {
-		SDL_GPUComputePipelineCreateInfo pip_info = {};
+	SDL_GPUShaderFormat formats = SDL_GetGPUShaderFormats(g_ctx.device);
+	SDL_GPUComputePipelineCreateInfo pip_info = {};
+	pip_info.entrypoint = "main";
+	pip_info.num_samplers = (Uint32)cs->num_samplers;
+	pip_info.num_readonly_storage_textures = (Uint32)cs->num_readonly_storage_textures;
+	pip_info.num_readonly_storage_buffers = (Uint32)cs->num_readonly_storage_buffers;
+	pip_info.num_readwrite_storage_textures = (Uint32)cs->num_readwrite_storage_textures;
+	pip_info.num_readwrite_storage_buffers = (Uint32)cs->num_readwrite_storage_buffers;
+	pip_info.num_uniform_buffers = (Uint32)cs->num_uniform_buffers;
+	if (formats & SDL_GPU_SHADERFORMAT_SPIRV) {
 		pip_info.code = bytecode.content;
 		pip_info.code_size = bytecode.size;
-		pip_info.entrypoint = "main";
 		pip_info.format = SDL_GPU_SHADERFORMAT_SPIRV;
-		pip_info.num_samplers = (Uint32)cs->num_samplers;
-		pip_info.num_readonly_storage_textures = (Uint32)cs->num_readonly_storage_textures;
-		pip_info.num_readonly_storage_buffers = (Uint32)cs->num_readonly_storage_buffers;
-		pip_info.num_readwrite_storage_textures = (Uint32)cs->num_readwrite_storage_textures;
-		pip_info.num_readwrite_storage_buffers = (Uint32)cs->num_readwrite_storage_buffers;
-		pip_info.num_uniform_buffers = (Uint32)cs->num_uniform_buffers;
-		pip_info.threadcount_x = 0;
-		pip_info.threadcount_y = 0;
-		pip_info.threadcount_z = 0;
 		cs->pipeline = SDL_CreateGPUComputePipeline(g_ctx.device, &pip_info);
+	}
 #ifdef _WIN32
-	} else if ((SDL_GetGPUShaderFormats(g_ctx.device) & SDL_GPU_SHADERFORMAT_DXBC) && bytecode.hlsl_src) {
+	if (!cs->pipeline && (formats & SDL_GPU_SHADERFORMAT_DXBC) && bytecode.hlsl_src) {
 		// D3D12: transpiled HLSL -> DXBC via the system FXC.
 		size_t dxbc_size = 0;
 		void* dxbc = cf_fxc_compile(bytecode.hlsl_src, bytecode.hlsl_src_size, "cs_5_1", &dxbc_size);
 		if (dxbc) {
-			SDL_GPUComputePipelineCreateInfo pip_info = {};
 			pip_info.code = (const Uint8*)dxbc;
 			pip_info.code_size = dxbc_size;
-			pip_info.entrypoint = "main";
 			pip_info.format = SDL_GPU_SHADERFORMAT_DXBC;
-			pip_info.num_samplers = (Uint32)cs->num_samplers;
-			pip_info.num_readonly_storage_textures = (Uint32)cs->num_readonly_storage_textures;
-			pip_info.num_readonly_storage_buffers = (Uint32)cs->num_readonly_storage_buffers;
-			pip_info.num_readwrite_storage_textures = (Uint32)cs->num_readwrite_storage_textures;
-			pip_info.num_readwrite_storage_buffers = (Uint32)cs->num_readwrite_storage_buffers;
-			pip_info.num_uniform_buffers = (Uint32)cs->num_uniform_buffers;
 			cs->pipeline = SDL_CreateGPUComputePipeline(g_ctx.device, &pip_info);
 			CF_FREE(dxbc);
 		}
+	}
 #endif
-	} else if ((SDL_GetGPUShaderFormats(g_ctx.device) & SDL_GPU_SHADERFORMAT_MSL) && bytecode.msl_src) {
+	if (!cs->pipeline && (formats & SDL_GPU_SHADERFORMAT_MSL) && bytecode.msl_src) {
 		// Metal: transpiled MSL source; the OS compiles it. Metal cannot read
 		// the workgroup size from source, so pass it via reflection.
-		SDL_GPUComputePipelineCreateInfo pip_info = {};
 		pip_info.code = (const Uint8*)bytecode.msl_src;
 		pip_info.code_size = bytecode.msl_src_size + 1;
 		pip_info.entrypoint = "main0";
 		pip_info.format = SDL_GPU_SHADERFORMAT_MSL;
-		pip_info.num_samplers = (Uint32)cs->num_samplers;
-		pip_info.num_readonly_storage_textures = (Uint32)cs->num_readonly_storage_textures;
-		pip_info.num_readonly_storage_buffers = (Uint32)cs->num_readonly_storage_buffers;
-		pip_info.num_readwrite_storage_textures = (Uint32)cs->num_readwrite_storage_textures;
-		pip_info.num_readwrite_storage_buffers = (Uint32)cs->num_readwrite_storage_buffers;
-		pip_info.num_uniform_buffers = (Uint32)cs->num_uniform_buffers;
 		pip_info.threadcount_x = (Uint32)bytecode.shader_info.local_size[0];
 		pip_info.threadcount_y = (Uint32)bytecode.shader_info.local_size[1];
 		pip_info.threadcount_z = (Uint32)bytecode.shader_info.local_size[2];
 		cs->pipeline = SDL_CreateGPUComputePipeline(g_ctx.device, &pip_info);
-	} else {
-		SDL_ShaderCross_ComputePipelineMetadata metadata = {};
-		metadata.num_samplers = (Uint32)cs->num_samplers;
-		metadata.num_readonly_storage_textures = (Uint32)cs->num_readonly_storage_textures;
-		metadata.num_readonly_storage_buffers = (Uint32)cs->num_readonly_storage_buffers;
-		metadata.num_readwrite_storage_textures = (Uint32)cs->num_readwrite_storage_textures;
-		metadata.num_readwrite_storage_buffers = (Uint32)cs->num_readwrite_storage_buffers;
-		metadata.num_uniform_buffers = (Uint32)cs->num_uniform_buffers;
-		metadata.threadcount_x = 0;
-		metadata.threadcount_y = 0;
-		metadata.threadcount_z = 0;
-
-		SDL_ShaderCross_SPIRV_Info spirvInfo;
-		CF_MEMSET(&spirvInfo, 0, sizeof(spirvInfo));
-		spirvInfo.bytecode = bytecode.content;
-		spirvInfo.bytecode_size = bytecode.size;
-		spirvInfo.entrypoint = "main";
-		spirvInfo.shader_stage = SDL_SHADERCROSS_SHADERSTAGE_COMPUTE;
-		spirvInfo.enable_debug = false;
-		spirvInfo.name = "compute.glsl";
-		spirvInfo.props = SDL_CreateProperties();
-		cs->pipeline = SDL_ShaderCross_CompileComputePipelineFromSPIRV(g_ctx.device, &spirvInfo, &metadata);
-		SDL_DestroyProperties(spirvInfo.props);
+		if (!cs->pipeline) {
+			// Dump the source so Metal rejections come back as actionable reports.
+			fprintf(stderr, "cute_spirv MSL compute shader was rejected (%s). Please report this shader:\n%s\n",
+				SDL_GetError(), bytecode.msl_src);
+		}
 	}
 	CF_ASSERT(cs->pipeline);
 

@@ -139,12 +139,6 @@ set(CF_SRCS
 	libraries/glad/glad.c
 )
 
-if (NOT EMSCRIPTEN)
-	set(CF_SRCS ${CF_SRCS}
-		libraries/SDL3_shadercross/SDL_shadercross.c
-	)
-endif()
-
 if(APPLE)
 	set(CF_SRCS ${CF_SRCS}
 		src/internal/cute_tls.m
@@ -388,42 +382,6 @@ if(NOT EMSCRIPTEN) # Emscripten provides it's own SDL3.
 endif()
 
 add_subdirectory(tools)
-
-# SPIRV-Cross for SDL_shadercross
-# SPIRV-Cross translates cute_spirv's SPIR-V for the active backend, including the
-# GLSL ES 300 output web builds need for runtime compilation.
-	# Set all SPIRV-Cross options BEFORE FetchContent_Declare/MakeAvailable
-	set(SPIRV_CROSS_CLI OFF CACHE BOOL "Turn off building SPIRV-Cross CLI.")
-	set(SPIRV_CROSS_ENABLE_TESTS OFF CACHE BOOL "Disable SPIRV-Cross tests")
-	set(SPIRV_CROSS_ENABLE_GLSLANG_INSTALL OFF CACHE BOOL "Disable GLSLANG install")
-	set(SPIRV_CROSS_SHARED OFF CACHE BOOL "Do not build SPIRV-Cross as shared library")
-	set(SPIRV_CROSS_STATIC ON CACHE BOOL "Build SPIRV-Cross as static library")
-	set(SPIRV_CROSS_C_API ON CACHE BOOL "Enable the C API")
-	set(SPIRV_CROSS_EXCEPTIONS_TO_ASSERTIONS ON CACHE BOOL "Turn off exceptions in SPIRV-Cross.")
-	set(SPIRV_CROSS_ENABLE_REFLECT OFF CACHE BOOL "Turn off reflection in SPIRV-Cross.")
-	set(SPIRV_CROSS_SKIP_INSTALL OFF CACHE BOOL "Turn off install targets in SPIRV-Cross.")
-	set(SPIRV_CROSS_ENABLE_UTIL OFF CACHE BOOL "Turn off utils in SPIRV-Cross.")
-	set(SPIRV_CROSS_ENABLE_CPP OFF CACHE BOOL "Turn off CPP target support in SPIRV-Cross.")
-	if(CF_FRAMEWORK_STATIC)
-		set(SPIRV_CROSS_FORCE_PIC OFF CACHE BOOL "Force position-independent code for all targets.")
-	else()
-		set(SPIRV_CROSS_FORCE_PIC ON CACHE BOOL "Force position-independent code for all targets.")
-	endif()
-	if(WINDOWS)
-		set(SPIRV_CROSS_ENABLE_MSL OFF CACHE BOOL "Turn off MSL support when on Windows.")
-	endif()
-	if(APPLE)
-		set(SPIRV_CROSS_ENABLE_HLSL OFF CACHE BOOL "Turn off HLSL support when on Apple.")
-	endif()
-	FetchContent_Declare(
-		SPIRV_CROSS
-		GIT_REPOSITORY https://github.com/KhronosGroup/SPIRV-Cross.git
-		GIT_TAG 0a88b2d5c08708d45692b7096a0a84e7bfae366c
-		UPDATE_DISCONNECTED TRUE
-		EXCLUDE_FROM_ALL
-	)
-	FetchContent_MakeAvailable(SPIRV_CROSS)
-	set(CF_LINK_LIBS ${CF_LINK_LIBS} spirv-cross-c)
 
 # Some platform specific settings.
 if(MINGW)

@@ -178,8 +178,10 @@ cmake --build build/debug
 **Graphics Pipeline**:
 - SDL_gpu-based renderer (src/cute_graphics_sdlgpu.cpp)
 - OpenGL ES 3 renderer for web builds using Emscripten (src/cute_graphics_glad.cpp)
-- Runtime shader compilation always available via CF's own GLSL-to-SPIR-V compiler (libraries/cute/cute_spirv.h)
-- SPIRV-Cross translates SPIR-V for whichever backend is active
+- Runtime shader compilation always available via CF's own shader compiler (libraries/cute/cute_spirv.h)
+- cute_spirv emits whatever the active backend consumes: SPIR-V (Vulkan), HLSL compiled by the
+  system FXC to DXBC (D3D12), MSL source (Metal), GLSL ES 300 (GLES backend) -- no external
+  cross-compilers
 
 **Component Structure**:
 - `src/cute_*.cpp` - Core framework components (app, audio, graphics, input, etc.)
@@ -211,16 +213,14 @@ Platform detection happens in the `# Platform detection.` block near the top of 
 ### Dependencies
 
 **Vendored** (in libraries/):
-- SDL3_shadercross (SPIR-V to backend shader translation)
 - imgui + cimgui (immediate mode GUI)
 - glad (OpenGL loader for web builds)
-- stb, pico (pico_unit), edubart (minicoro), dxc
+- stb, pico (pico_unit), edubart (minicoro)
 - cute/ (single-header cute libs: ckit.h, cute_spirv.h, cute_net.h, cute_sound.h, ...)
 
 **Fetched via CMake FetchContent**:
 - SDL3 (release archive; Emscripten provides its own)
 - PhysicsFS (virtual filesystem)
-- SPIRV-Cross (shader translation)
 - s2n (TLS, Linux only)
 
 **Internal Libraries** (in src/internal/):
@@ -230,8 +230,8 @@ Platform detection happens in the `# Platform detection.` block near the top of 
 ### Shader System
 
 The framework has a sophisticated shader compilation pipeline:
-- Runtime compilation always available; CF ships its own GLSL-to-SPIR-V compiler (libraries/cute/cute_spirv.h, no external dependencies)
-- Front-end library cute-shader (tools/cute_shader.cpp); SPIRV-Cross translates SPIR-V for the active backend
+- Runtime compilation always available; CF ships its own shader compiler (libraries/cute/cute_spirv.h, no external dependencies)
+- Front-end library cute-shader (tools/cute_shader.cpp); cute_spirv's transpiler backends emit SPIR-V, HLSL, MSL, and GLSL ES 300
 - Offline compiler tool cute-shaderc (tools/cute_shaderc.cpp, CF_CUTE_SHADERC option)
 - Builtin shaders in tools/builtin_shaders.h
 - Compiler unit tests: cute-spirv-tests (tools/cute_spirv_test.c)
@@ -252,7 +252,7 @@ cute_framework/
 ├── libraries/           # Vendored dependencies
 │   ├── cute/            # Single-header cute libs (ckit.h, cute_spirv.h, ...)
 │   ├── imgui/, cimgui/  # Dear ImGui + C bindings
-│   └── [glad, stb, pico, SDL3_shadercross, ...]
+│   └── [glad, stb, pico, ...]
 ├── samples/             # 50+ example programs
 ├── test/                # Unit tests (20+ modules using pico_unit)
 ├── docs/                # MkDocs documentation source
