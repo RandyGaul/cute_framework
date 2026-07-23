@@ -306,6 +306,20 @@ int bounce_on = 1;
 int paused = 0;
 float smoothed_fps = 60.0f;
 
+// HRC_CAVE_TESTLIGHT: isolated-light debug mode that exercises the rectangular
+// cascade in isolation (no water/rock/jelly/drip/runes/roots, no design-space
+// letterbox). The scene is authored DIRECTLY in world space filling the window.
+//   1 = a single centered 8x8 emissive square (the paper's minimum supported
+//       emitter, matching samples/hrc.c's known-good static test light). Pure
+//       radial-symmetry test: a centered point light must read the same at any
+//       world aspect (circle, no directional bias, no spokes).
+//   2 = the 8x8 light plus two box occluders offset from center (shadow-shape
+//       check: shadows must be straight and correctly oriented).
+int testlight = 0;
+float testlight_e = 2.0f; // HRC_CAVE_TESTLIGHT_E: emitter linear emission (per channel)
+float testlight_ox = 0.0f, testlight_oy = 0.0f; // HRC_CAVE_TESTLIGHT_OX/OY: light offset from
+                                                // world center, as a fraction of world_w/world_h
+
 //--------------------------------------------------------------------------------------------------
 // Cascade compute pipeline (fixed config).
 
@@ -1773,6 +1787,71 @@ void draw_diffuse()
 }
 
 //--------------------------------------------------------------------------------------------------
+// Isolated-light debug mode (HRC_CAVE_TESTLIGHT).
+//
+// Draws the HRC scene inputs DIRECTLY in world space (no design->world scale,
+// no letterbox, no scene_scissor): the world canvas fills the window at its true
+// aspect and the cascade runs genuinely rectangular over it. This lets the
+// rectangular cascade math be validated in isolation from the busy cave scene.
+
+// World-space canvas projection: world (0,0) at bottom-left, (world_w,world_h)
+// at top-right, no design transform. Mirrors begin_canvas_draw minus scene_s.
+void begin_world_draw()
+{
+	cf_draw_push();
+	cf_draw_TSR_absolute(cf_v2(0, 0), cf_v2(1, 1), 0);
+	cf_draw_projection(cf_ortho_2d(0, 0, (float)world_w, (float)world_h));
+	cf_draw_translate(-world_w * 0.5f, -world_h * 0.5f);
+}
+
+// Centered 8x8 emissive square. 8x8 is the paper's minimum supported emitter
+// (sub-8x8 lights are a known HRC limitation), matching samples/hrc.c's static
+// test light. Bright, neutral-white HDR emission -- authored in linear physical
+// units (no encode), exactly like the cave's moon emitter.
+void draw_testlight_emissivity()
+{
+	begin_world_draw();
+	push_f16_render_state();
+	float cx = world_w * (0.5f + testlight_ox), cy = world_h * (0.5f + testlight_oy);
+	cf_draw_push_color(cf_make_color_rgb_f(testlight_e, testlight_e, testlight_e));
+	cf_draw_quad_fill(cf_make_aabb(cf_v2(cx - 4.0f, cy - 4.0f), cf_v2(cx + 4.0f, cy + 4.0f)), 0);
+	cf_draw_pop_color();
+	cf_draw_pop_render_state();
+	cf_render_to(hrc.emissivity, true);
+	cf_draw_pop();
+}
+
+// Absorption: the emitter cell must absorb to emit (radiance = emiss*(1-T)), at
+// the same coefficient as the cave moon (0.5/px). TESTLIGHT=2 adds two dense box
+// occluders offset diagonally from center so their shadows can be checked for
+// straightness/orientation independent of the light's radial symmetry.
+void draw_testlight_absorption()
+{
+	begin_world_draw();
+	push_f16_render_state();
+	float cx = world_w * (0.5f + testlight_ox), cy = world_h * (0.5f + testlight_oy);
+
+	cf_draw_push_color(cf_make_color_rgb_f(0.5f, 0.5f, 0.5f));
+	cf_draw_quad_fill(cf_make_aabb(cf_v2(cx - 4.0f, cy - 4.0f), cf_v2(cx + 4.0f, cy + 4.0f)), 0);
+	cf_draw_pop_color();
+
+	if (testlight >= 2) {
+		// Offsets in world pixels (kept modest so both boxes stay on-screen at any
+		// aspect). One box to the upper-right, one to the lower-left of center.
+		float off = 0.16f * (float)(world_w < world_h ? world_w : world_h);
+		float hw = 18.0f;
+		cf_draw_push_color(cf_make_color_rgb_f(30.0f, 30.0f, 30.0f));
+		cf_draw_quad_fill(cf_make_aabb(cf_v2(cx + off - hw, cy + off - hw), cf_v2(cx + off + hw, cy + off + hw)), 0);
+		cf_draw_quad_fill(cf_make_aabb(cf_v2(cx - off - hw, cy - off - hw), cf_v2(cx - off + hw, cy - off + hw)), 0);
+		cf_draw_pop_color();
+	}
+
+	cf_draw_pop_render_state();
+	cf_render_to(hrc.absorption, true);
+	cf_draw_pop();
+}
+
+//--------------------------------------------------------------------------------------------------
 // Screen composition.
 
 const char* debug_view = NULL; // HRC_CAVE_VIEW=emissivity|absorption|diffuse|density
@@ -2016,6 +2095,10 @@ int main(int argc, char* argv[])
 	int perf = getenv("HRC_CAVE_PERF") != NULL;
 	autostir = getenv("HRC_CAVE_AUTOSTIR") != NULL;
 	debug_view = getenv("HRC_CAVE_VIEW");
+	{ const char* tl = getenv("HRC_CAVE_TESTLIGHT"); if (tl) testlight = atoi(tl); }
+	{ const char* te = getenv("HRC_CAVE_TESTLIGHT_E"); if (te) testlight_e = (float)atof(te); }
+	{ const char* to = getenv("HRC_CAVE_TESTLIGHT_OX"); if (to) testlight_ox = (float)atof(to); }
+	{ const char* to = getenv("HRC_CAVE_TESTLIGHT_OY"); if (to) testlight_oy = (float)atof(to); }
 
 	// Scripted-run overrides for the F1 toggles.
 	{
@@ -2035,6 +2118,11 @@ int main(int argc, char* argv[])
 	jelly_init();
 
 	hrc_init();
+	if (testlight) {
+		printf("TESTLIGHT=%d world=%dx%d grid=%dx%d n_horiz=%d n_vert=%d upscale=%d\n",
+			testlight, world_w, world_h, grid_w, grid_h, n_horiz, n_vert, CAVE_UPSCALE);
+		fflush(stdout);
+	}
 	record_rock_lists();
 	particles_init();
 
@@ -2064,6 +2152,36 @@ int main(int argc, char* argv[])
 			// update; it submits the frame itself, so skip the rest of it.
 			want_hdr_test = 0;
 			hdr_smoke_test();
+			continue;
+		}
+
+		// Isolated-light mode: skip the whole cave (sim + scene draws + letterbox)
+		// and run ONLY the rectangular HRC cascade over a world-space test scene.
+		if (testlight) {
+			cf_draw_push_shape_aa(0);
+			draw_testlight_emissivity();
+			draw_testlight_absorption();
+			cf_draw_pop_shape_aa();
+
+			hrc_compute();
+
+			if (debug_view) {
+				CF_Canvas c = hrc.fluence;
+				if (!CF_STRCMP(debug_view, "emissivity")) c = hrc.emissivity;
+				else if (!CF_STRCMP(debug_view, "absorption")) c = hrc.absorption;
+				cf_draw_canvas(c, cf_v2(0, 0), cf_v2((float)world_w, (float)world_h));
+			} else {
+				cf_draw_canvas(hrc.fluence, cf_v2(0, 0), cf_v2((float)world_w, (float)world_h));
+			}
+			cf_app_draw_onto_screen(true);
+
+			frame_ms_acc += (double)(cf_get_ticks() - t0) / (double)cf_get_tick_frequency() * 1000.0;
+			if (++frame % 60 == 0 && perf) {
+				printf("testlight frame avg %.2f ms, grid %dx%d n_h=%d n_v=%d\n",
+					frame_ms_acc / 60.0, grid_w, grid_h, n_horiz, n_vert);
+				fflush(stdout);
+				frame_ms_acc = 0;
+			}
 			continue;
 		}
 
