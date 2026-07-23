@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <errno.h>
+#include <cute_alloc.h>
 #include "cute_shader.h"
 #include "builtin_shaders.h"
 
@@ -64,10 +65,10 @@ static char* read_file(const char* path)
 		fclose(file);
 		return NULL;
 	}
-	char* content = (char*)malloc(size + 1);
+	char* content = (char*)cf_alloc(size + 1);
 	fread(content, size, 1, file);
 	if (ferror(file)) {
-		free(content);
+		cf_free(content);
 		fclose(file);
 		return NULL;
 	}
@@ -563,7 +564,7 @@ int main(int argc, const char* argv[])
 			char* preprocessed = cute_shader_preprocess(input_content, config);
 			if (preprocessed) {
 				payload_binding = cf_compute_payload_binding(preprocessed);
-				free(preprocessed);
+				cf_free(preprocessed);
 			}
 		}
 		snprintf(payload_binding_str, sizeof(payload_binding_str), "%d", payload_binding);
@@ -701,7 +702,7 @@ int main(int argc, const char* argv[])
 
 	return_code = 0;
 end:
-	if (input_content != NULL) { free(input_content); }
+	if (input_content != NULL) { cf_free(input_content); }
 
 	return return_code;
 }

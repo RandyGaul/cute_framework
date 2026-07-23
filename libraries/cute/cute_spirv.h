@@ -513,7 +513,7 @@ static void* cspv_arena_alloc(cspv_arena* arena, size_t size)
 	if (!b || b->used + size > b->capacity) {
 		size_t cap = 64 * 1024;
 		if (cap < size) cap = size;
-		b = (cspv_arena_block*)malloc(sizeof(cspv_arena_block) + cap);
+		b = (cspv_arena_block*)CK_ALLOC(sizeof(cspv_arena_block) + cap);
 		b->next = arena->head;
 		b->used = 0;
 		b->capacity = cap;
@@ -529,7 +529,7 @@ static void cspv_arena_free(cspv_arena* arena)
 	cspv_arena_block* b = arena->head;
 	while (b) {
 		cspv_arena_block* next = b->next;
-		free(b);
+		CK_FREE(b);
 		b = next;
 	}
 	arena->head = NULL;

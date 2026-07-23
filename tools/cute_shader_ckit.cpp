@@ -9,5 +9,7 @@
 	only be linked into executables that do not link the cute library.
 */
 
+#include <cute_alloc.h>
+
 #define CKIT_IMPLEMENTATION
 #include "cute/ckit.h"

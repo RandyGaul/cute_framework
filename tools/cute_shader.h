@@ -82,7 +82,7 @@ extern "C" {
 CF_ShaderCompilerResult cute_shader_compile(const char* source, CF_ShaderCompilerStage stage, CF_ShaderCompilerConfig config);
 
 // Runs only the preprocessor (comments stripped, macros expanded, includes
-// resolved). Returns a malloc'd string (free with free()), or NULL on error.
+// resolved). Returns a cf_alloc'd string (free with cf_free()), or NULL on error.
 // Useful for scanning declared resources without a hand-rolled parser.
 char* cute_shader_preprocess(const char* source, CF_ShaderCompilerConfig config);
 
