@@ -123,15 +123,6 @@ static CF_ShaderCompilerResult s_failure(const char* header, const char* detail)
 
 //--------------------------------------------------------------------------------------------------
 
-void cute_shader_init(void)
-{
-	// Nothing to initialize (the glslang path needs process-wide setup; cspv does not).
-}
-
-void cute_shader_cleanup(void)
-{
-}
-
 char* cute_shader_preprocess(const char* source, CF_ShaderCompilerConfig config)
 {
 	CK_DYNA CSPV_Define* defines = NULL;

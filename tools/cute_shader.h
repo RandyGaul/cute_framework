@@ -79,12 +79,6 @@ typedef struct CF_ShaderCompilerResult
 extern "C" {
 #endif
 
-// Deprecated no-ops kept for compatibility: the compiler needs no process-wide
-// setup or teardown (the glslang-era implementation did).
-void cute_shader_init(void);
-
-void cute_shader_cleanup(void);
-
 CF_ShaderCompilerResult cute_shader_compile(const char* source, CF_ShaderCompilerStage stage, CF_ShaderCompilerConfig config);
 
 // Runs only the preprocessor (comments stripped, macros expanded, includes

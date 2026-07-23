@@ -507,8 +507,6 @@ int main(int argc, const char* argv[])
 		}
 	}
 
-	cute_shader_init();
-
 	CF_ShaderCompilerFile builtin_includes[sizeof(s_builtin_includes) / sizeof(s_builtin_includes[0]) + 1];
 	int num_builtin_includes = sizeof(s_builtin_includes) / sizeof(s_builtin_includes[0]);
 	for (int i = 0; i < num_builtin_includes; ++i) {
@@ -705,6 +703,5 @@ int main(int argc, const char* argv[])
 end:
 	if (input_content != NULL) { free(input_content); }
 
-	cute_shader_cleanup();
 	return return_code;
 }
