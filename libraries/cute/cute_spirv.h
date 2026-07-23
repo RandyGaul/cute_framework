@@ -7669,7 +7669,11 @@ static void cspv_msl_func(cspv_tp* g, cspv_decl* d)
 		}
 		apush(g->shadows, pn);
 	}
-	sappend(ctx->tp_out, ")\n");
+	// Member functions default to address-space-generic in MSL, which breaks
+	// binding member arrays/variables (GLSL globals) to `thread` pointer and
+	// reference parameters. The cf_shader instance always lives in a main0
+	// local, so `thread` is the right space for every function.
+	sappend(ctx->tp_out, ") thread\n");
 	g->indent = 1;
 	cspv_tp_block(g, d->body);
 	g->indent = 0;
