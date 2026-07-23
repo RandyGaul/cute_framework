@@ -22,20 +22,35 @@ layout (set = 2, binding = 3) uniform sampler2D u_ground_sdf; // 256x256 R32F, w
 layout (set = 3, binding = 1) uniform shd_uniforms {
 	vec4 u_col_a;
 	vec4 u_col_b;
-	vec4 u_hf;     // x = heightfield x0 (world), y = x1, z = waterline y, w = time
+	vec4 u_hf;     // x = heightfield x0 (design), y = x1, z = waterline y, w = time
+	vec4 u_world;  // xy = world (fluence canvas) dims
+	vec4 u_scene;  // x = scene scale, y/z = design->world offset, w = design ref (1024)
 	float u_mode;
 	float u_threshold;
 };
 
-// Canvas uv <-> world y mapping (one flip constant for every consumer).
+// The water body is authored in a fixed REF-square DESIGN space (wx,wy below), the
+// density canvas, heightfield and ground SDF all live there. Only the world-space
+// fluence must be sampled through the design->world transform.
+#define REF (u_scene.w)
+
+// Canvas uv <-> DESIGN y mapping (density canvas covers the design box).
 float uv_to_wy(float v)
 {
-	return (1.0 - v) * 1024.0;
+	return (1.0 - v) * REF;
 }
 
 float wy_to_uv(float y)
 {
-	return 1.0 - y / 1024.0;
+	return 1.0 - y / REF;
+}
+
+// Map a DESIGN-space position to a uv into the world-space fluence canvas.
+vec2 fluence_uv(vec2 d)
+{
+	float wx = d.x * u_scene.x + u_scene.y;
+	float wy = d.y * u_scene.x + u_scene.z;
+	return vec2(wx / u_world.x, 1.0 - wy / u_world.y);
 }
 
 float hf_height(float wx)
@@ -47,7 +62,7 @@ float hf_height(float wx)
 // Baked ground SDF (the same cave_ground_sdf the CPU sim collides against).
 float ground_sdf(vec2 w)
 {
-	return texture(u_ground_sdf, vec2(w.x / 1024.0, 1.0 - w.y / 1024.0)).r;
+	return texture(u_ground_sdf, vec2(w.x / REF, 1.0 - w.y / REF)).r;
 }
 
 vec4 shader(vec4 color, ShaderParams params)
@@ -56,7 +71,7 @@ vec4 shader(vec4 color, ShaderParams params)
 	float den = field.r;
 	float agit = field.g;
 
-	float wx = params.uv.x * 1024.0;
+	float wx = params.uv.x * REF;
 	float wy = uv_to_wy(params.uv.y);
 
 	// Surface interface: waterline + heightfield, slope for glints/refraction.
@@ -107,8 +122,7 @@ vec4 shader(vec4 color, ShaderParams params)
 		// vertical bands where the slope saturates.
 		float ws = slope * 22.0;
 		float wob = (ws / (1.0 + abs(ws))) * min(depth * 0.35, 9.0);
-		vec2 ruv = vec2(params.uv.x + wob / 1024.0, params.uv.y);
-		vec3 scene = texture(u_fluence, ruv).rgb;
+		vec3 scene = texture(u_fluence, fluence_uv(vec2(wx + wob, wy))).rgb;
 
 		// Beer extinction: darker with depth, red channel dies first.
 		vec3 ext = exp(-depth * vec3(0.034, 0.016, 0.011));
@@ -118,8 +132,8 @@ vec4 shader(vec4 color, ShaderParams params)
 		// attenuated over ~60px of depth, x-wobbled by the surface slope.
 		float rl_y = surface_y + depth; // mirror of this pixel about the surface
 		float ms = slope * 30.0;
-		vec2 mruv = vec2(params.uv.x + (ms / (1.0 + abs(ms))) * 1.5 * min(depth * 0.25, 6.0) / 1024.0, wy_to_uv(rl_y));
-		vec3 refl = texture(u_fluence, mruv).rgb;
+		float mwob = (ms / (1.0 + abs(ms))) * 1.5 * min(depth * 0.25, 6.0);
+		vec3 refl = texture(u_fluence, fluence_uv(vec2(wx + mwob, rl_y))).rgb;
 		float refl_w = exp(-depth * 0.045) * 0.7;
 		interior += refl * refl_w;
 
@@ -135,7 +149,7 @@ vec4 shader(vec4 color, ShaderParams params)
 		// Specular line: only where the interface meets air (air_above). Under
 		// overhangs and across the knuckle the line is suppressed. Intensity
 		// from slope glint + light just above surface.
-		vec3 above = texture(u_fluence, vec2(params.uv.x, wy_to_uv(surface_y + 8.0))).rgb;
+		vec3 above = texture(u_fluence, fluence_uv(vec2(wx, surface_y + 8.0))).rgb;
 		float sparkle = clamp(abs(slope) * 16.0, 0.0, 1.0);
 		vec3 spec = (0.18 + 1.5 * sparkle) * (above * 1.4 + u_col_b.rgb * 0.05) * surf_line * column * air_above;
 

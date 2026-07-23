@@ -27,9 +27,12 @@ layout(set = 2, binding = 0) uniform Params
 {
 	int u_cascade;
 	int u_rotate;
-	int u_world_size;
+	int u_cascade_dim; // grid cascade-axis dimension (probes span this axis)
+	int u_cross_dim;   // grid cross-axis dimension (probe rows)
 	int u_curr_w;
-	int u_upscale; // world pixels per grid cell (march substeps)
+	int u_upscale;     // world pixels per grid cell (march substeps)
+	int u_world_w;     // scene canvas width
+	int u_world_h;     // scene canvas height
 };
 
 layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
@@ -53,26 +56,27 @@ uvec2 f16_store(vec4 val)
 	return uvec2(packHalf2x16(val.xy), packHalf2x16(val.zw));
 }
 
-// Pre-rotate UV so the rest of HRC operates along the +x axis.
-vec2 rotate_uv(vec2 uv, int rot, float inv)
+// Map a rotated-space WORLD pixel (cascade-along, cross) back to the unrotated
+// scene-canvas pixel, so the rest of HRC operates purely along +x. W,H are the
+// full scene canvas dims (rectangular-aware, matches the composite's inverse).
+ivec2 rotate_texel(vec2 rp, int rot, int W, int H)
 {
-	if (rot == 1)      return vec2(inv - uv.y, uv.x);
-	else if (rot == 2) return inv - uv;
-	else if (rot == 3) return vec2(uv.y, inv - uv.x);
-	return uv;
+	if (rot == 1) return ivec2(W - 1 - int(rp.y), int(rp.x));
+	if (rot == 2) return ivec2(W - 1 - int(rp.x), H - 1 - int(rp.y));
+	if (rot == 3) return ivec2(int(rp.y), H - 1 - int(rp.x));
+	return ivec2(rp);
 }
 
-// Accumulate one cell's Beer-Lambert contribution along a ray.
-// cell is the integer WORLD pixel coordinate; ds is the physical distance
-// through the cell in world pixels (absorption is a per-world-pixel coefficient).
-void trace_cell(vec2 cell, float ds, inout vec3 rad, inout vec3 trn)
+// Accumulate one cell's Beer-Lambert contribution along a ray. `cell` is the
+// integer rotated-space WORLD pixel (x = cascade axis, y = cross axis); ds is
+// the physical distance through the cell in world pixels.
+void trace_cell(vec2 cell, float ds, float world_c, float world_x, inout vec3 rad, inout vec3 trn)
 {
-	float world = float(u_world_size * u_upscale);
-	if (cell.x < 0.0 || cell.x >= world || cell.y < 0.0 || cell.y >= world) return;
-	vec2 uv = rotate_uv((cell + 0.5) / world, u_rotate, 1.0);
+	if (cell.x < 0.0 || cell.x >= world_c || cell.y < 0.0 || cell.y >= world_x) return;
+	ivec2 texel = rotate_texel(cell, u_rotate, u_world_w, u_world_h);
 	// HDR scene units: linear emission and absorption coefficient, no decode.
-	vec3 emiss = textureLod(u_emissivity, uv, 0.0).rgb;
-	vec3 absrp = textureLod(u_absorption, uv, 0.0).rgb;
+	vec3 emiss = texelFetch(u_emissivity, texel, 0).rgb;
+	vec3 absrp = texelFetch(u_absorption, texel, 0).rgb;
 	vec3 T = exp(-absrp * ds);
 	rad += trn * emiss * (vec3(1.0) - T);
 	trn *= T;
@@ -85,7 +89,7 @@ void main()
 	int directions = 2 * pow2n + 1;
 
 	ivec2 gid = ivec2(gl_GlobalInvocationID.xy);
-	if (gid.x >= u_curr_w || gid.y >= u_world_size) return;
+	if (gid.x >= u_curr_w || gid.y >= u_cross_dim) return;
 
 	int probe_x = gid.x / directions;
 	int k = gid.x - probe_x * directions;
@@ -103,7 +107,8 @@ void main()
 	// Probe origin in rotated world space (center of the probe's grid cell).
 	float x0 = float(probe_x * pow2n * S);
 	float y0 = (float(gid.y) + 0.5) * float(S);
-	float world = float(u_world_size * S);
+	float world = float(u_cascade_dim * S);    // cascade-axis world length
+	float world_x = float(u_cross_dim * S);    // cross-axis world length
 
 	// Column-by-column DDA: one world x-column per iteration. When the ray
 	// crosses a y-cell boundary within a column, split the step so both cells
@@ -125,13 +130,13 @@ void main()
 			// No y-boundary splitting: either no crossing, or boundary ray
 			// (k=0, k=2*2^n) where we trace only the entry cell to match
 			// extend's one-cell-per-column footprint at the +-45 degree edges.
-			trace_cell(vec2(px, float(cy)), step_length, acc_rad, acc_trn);
+			trace_cell(vec2(px, float(cy)), step_length, world, world_x, acc_rad, acc_trn);
 		} else {
 			// Y-boundary crossed -- split into two sub-steps.
 			float y_bound = slope.y > 0.0 ? float(next_cy) : float(cy);
 			float frac = (y_bound - fy) / slope.y;
-			trace_cell(vec2(px, float(cy)), frac * step_length, acc_rad, acc_trn);
-			trace_cell(vec2(px, float(next_cy)), (1.0 - frac) * step_length, acc_rad, acc_trn);
+			trace_cell(vec2(px, float(cy)), frac * step_length, world, world_x, acc_rad, acc_trn);
+			trace_cell(vec2(px, float(next_cy)), (1.0 - frac) * step_length, world, world_x, acc_rad, acc_trn);
 		}
 
 		fy = next_fy;

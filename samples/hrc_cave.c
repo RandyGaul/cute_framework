@@ -34,13 +34,32 @@
 
 //--------------------------------------------------------------------------------------------------
 // Configuration.
+//
+// The cave is authored in a fixed 1024x1024 DESIGN space (CAVE_REF). The runtime
+// WORLD (scene canvases + GI grid + window) can be any non-square resolution: the
+// design scene is uniformly scaled by scene_s and centered into the world, so
+// shapes never distort and a square world reduces exactly to the old 1x layout.
+// The HRC cascade runs genuinely rectangular over the full world grid.
 
-#define CAVE_WORLD 1024   // scene canvas resolution
-#define CAVE_GRID  512    // cascade probe lattice resolution
-#define CAVE_N     9      // log2(CAVE_GRID)
+#define CAVE_REF      1024      // design-space resolution the scene is authored in
+#define CAVE_UPSCALE  2         // world pixels per cascade grid cell (per axis)
+#define CAVE_N_MAX    11        // array sizing: log2_ceil of the largest grid axis
 #define CAVE_TRACE_LEVELS 3
 #define CAVE_WG    16
 #define CAVE_ABS_THRESHOLD 0.1f
+
+// Runtime world / grid dimensions (set in main() from the window size).
+int world_w = CAVE_REF, world_h = CAVE_REF;   // scene canvas + display resolution
+int grid_w = CAVE_REF / CAVE_UPSCALE;         // cascade probe lattice (world / upscale)
+int grid_h = CAVE_REF / CAVE_UPSCALE;
+int n_horiz = 9, n_vert = 9, n_max = 9;       // per-axis cascade depth (log2_ceil grid)
+
+// Design-space -> world transform: uniform scale + centering offset.
+float scene_s = 1.0f;
+float scene_ox = 0.0f, scene_oy = 0.0f;
+
+CF_V2 design_to_world(CF_V2 p) { return cf_v2(p.x * scene_s + scene_ox, p.y * scene_s + scene_oy); }
+CF_V2 world_to_design(CF_V2 p) { return cf_v2((p.x - scene_ox) / scene_s, (p.y - scene_oy) / scene_s); }
 
 #define WATERLINE 275.0f
 
@@ -90,8 +109,8 @@ typedef struct Hrc
 	CF_Canvas fluence;      // tonemapped display (rgba8)
 	CF_Canvas fluence_lin;  // linear fluence (feedback input)
 	CF_Canvas minmax;
-	CF_StorageBuffer vrays_rad[CAVE_N + 1];
-	CF_StorageBuffer vrays_trn[CAVE_N + 1];
+	CF_StorageBuffer vrays_rad[CAVE_N_MAX + 1];
+	CF_StorageBuffer vrays_trn[CAVE_N_MAX + 1];
 	CF_StorageBuffer r_rad[2];
 	CF_StorageBuffer r_zero;
 	CF_StorageBuffer frustum[4];
@@ -109,7 +128,8 @@ typedef struct Hrc
 	CF_ComputeShader cs_composite;
 	CF_ComputeShader cs_minmax;
 	CF_ComputeShader cs_feedback;
-	int vrays_w[CAVE_N + 1];
+	int vrays_w_horiz[CAVE_N_MAX + 1]; // dense T widths for horizontal rotations (cascade axis = width)
+	int vrays_w_vert[CAVE_N_MAX + 1];  // dense T widths for vertical rotations (cascade axis = height)
 } Hrc;
 
 Hrc hrc;
@@ -138,41 +158,84 @@ int hrc_div_ceil(int a, int b)
 	return (a + b - 1) / b;
 }
 
+int hrc_log2_ceil(int x)
+{
+	int n = 0;
+	while ((1 << n) < x) n++;
+	return n;
+}
+
+// Dense-direction T width at cascade i for a cascade axis of `dim` grid cells:
+//   num_probes(i) = ceil(dim / 2^i),  directions(i) = 2^(i+1) + 1.
+// ceil_div (not >>) so a non-power-of-two axis still collapses to one probe at n.
+int hrc_vrays_w(int dim, int i)
+{
+	int probes = hrc_div_ceil(dim, 1 << i);
+	int rays = 2 * (1 << i) + 1;
+	return probes * rays;
+}
+
+// Dense R (angular fluence) width at cascade i: num_probes(i) * 2^(i+1).
+int hrc_r_w(int dim, int i)
+{
+	return hrc_div_ceil(dim, 1 << i) * (2 * (1 << i));
+}
+
 void hrc_init()
 {
 	CF_MEMSET(&hrc, 0, sizeof(hrc));
 
-	for (int i = 0; i <= CAVE_N; i++) {
-		int interval = 1 << i;
-		int rays = 2 * interval + 1; // dense directions: all-integer y-offsets
-		int probes = CAVE_GRID >> i;
-		hrc.vrays_w[i] = probes * rays;
+	// Per-axis cascade depth. Horizontal rotations (0,2) cascade along the width
+	// (grid_w); vertical rotations (1,3) along the height (grid_h).
+	n_horiz = hrc_log2_ceil(grid_w);
+	n_vert = hrc_log2_ceil(grid_h);
+	n_max = n_horiz > n_vert ? n_horiz : n_vert;
+
+	for (int i = 0; i <= n_horiz; i++) hrc.vrays_w_horiz[i] = hrc_vrays_w(grid_w, i);
+	for (int i = 0; i <= n_vert; i++)  hrc.vrays_w_vert[i]  = hrc_vrays_w(grid_h, i);
+
+	hrc.emissivity = hrc_make_canvas(world_w, world_h, CF_PIXEL_FORMAT_R16G16B16A16_FLOAT, CF_FILTER_NEAREST);
+	hrc.absorption = hrc_make_canvas(world_w, world_h, CF_PIXEL_FORMAT_R16G16B16A16_FLOAT, CF_FILTER_NEAREST);
+	hrc.diffuse = hrc_make_canvas(world_w, world_h, CF_PIXEL_FORMAT_R16G16B16A16_FLOAT, CF_FILTER_NEAREST);
+	hrc.fluence = hrc_make_canvas(world_w, world_h, CF_PIXEL_FORMAT_R8G8B8A8_UNORM, CF_FILTER_LINEAR);
+	hrc.fluence_lin = hrc_make_canvas(world_w, world_h, CF_PIXEL_FORMAT_R16G16B16A16_FLOAT, CF_FILTER_NEAREST);
+	hrc.minmax = hrc_make_canvas(world_w, world_h, CF_PIXEL_FORMAT_R16G16_FLOAT, CF_FILTER_NEAREST);
+
+	// T buffers: sized to the larger of the two rotation groups per cascade,
+	// horiz(vrays_w_horiz[i] * grid_h) vs vert(vrays_w_vert[i] * grid_w).
+	for (int i = 0; i <= n_max; i++) {
+		int hw = (i <= n_horiz) ? hrc.vrays_w_horiz[i] * grid_h : 0;
+		int vw = (i <= n_vert)  ? hrc.vrays_w_vert[i]  * grid_w : 0;
+		int elems = hw > vw ? hw : vw;
+		hrc.vrays_rad[i] = hrc_make_buf(elems, 1);
+		hrc.vrays_trn[i] = hrc_make_buf(elems, 1);
 	}
 
-	hrc.emissivity = hrc_make_canvas(CAVE_WORLD, CAVE_WORLD, CF_PIXEL_FORMAT_R16G16B16A16_FLOAT, CF_FILTER_NEAREST);
-	hrc.absorption = hrc_make_canvas(CAVE_WORLD, CAVE_WORLD, CF_PIXEL_FORMAT_R16G16B16A16_FLOAT, CF_FILTER_NEAREST);
-	hrc.diffuse = hrc_make_canvas(CAVE_WORLD, CAVE_WORLD, CF_PIXEL_FORMAT_R16G16B16A16_FLOAT, CF_FILTER_NEAREST);
-	hrc.fluence = hrc_make_canvas(CAVE_WORLD, CAVE_WORLD, CF_PIXEL_FORMAT_R8G8B8A8_UNORM, CF_FILTER_LINEAR);
-	hrc.fluence_lin = hrc_make_canvas(CAVE_WORLD, CAVE_WORLD, CF_PIXEL_FORMAT_R16G16B16A16_FLOAT, CF_FILTER_NEAREST);
-	hrc.minmax = hrc_make_canvas(CAVE_WORLD, CAVE_WORLD, CF_PIXEL_FORMAT_R16G16_FLOAT, CF_FILTER_NEAREST);
-
-	for (int i = 0; i <= CAVE_N; i++) {
-		hrc.vrays_rad[i] = hrc_make_buf(hrc.vrays_w[i], CAVE_GRID);
-		hrc.vrays_trn[i] = hrc_make_buf(hrc.vrays_w[i], CAVE_GRID);
+	// R ping-pong + zero buffer: max over cascades and rotation groups of
+	// (r_w(cascade_dim, i) * cross_dim).
+	int max_r_elems = 0;
+	for (int i = 0; i < n_horiz; i++) {
+		int e = hrc_r_w(grid_w, i) * grid_h;
+		if (e > max_r_elems) max_r_elems = e;
 	}
-
+	for (int i = 0; i < n_vert; i++) {
+		int e = hrc_r_w(grid_h, i) * grid_w;
+		if (e > max_r_elems) max_r_elems = e;
+	}
 	for (int i = 0; i < 2; i++)
-		hrc.r_rad[i] = hrc_make_buf(CAVE_GRID * 2, CAVE_GRID);
-	hrc.r_zero = hrc_make_buf(CAVE_GRID * 2, CAVE_GRID);
+		hrc.r_rad[i] = hrc_make_buf(max_r_elems, 1);
+	hrc.r_zero = hrc_make_buf(max_r_elems, 1);
 	{
-		int sz = CAVE_GRID * 2 * CAVE_GRID * 8;
+		int sz = max_r_elems * 8;
 		void* zeros = cf_calloc(sz, 1);
 		cf_update_storage_buffer(hrc.r_zero, zeros, sz);
 		cf_free(zeros);
 	}
 
+	// Per-frustum R_0 output: cascade_dim*2 * cross_dim = 2 * grid_w * grid_h
+	// either rotation group.
 	for (int i = 0; i < 4; i++)
-		hrc.frustum[i] = hrc_make_buf(CAVE_GRID * 2, CAVE_GRID);
+		hrc.frustum[i] = hrc_make_buf(2 * grid_w * grid_h, 1);
 
 	hrc.mat_trace = cf_make_material();
 	hrc.mat_extend = cf_make_material();
@@ -199,7 +262,7 @@ void hrc_shutdown()
 	cf_destroy_canvas(hrc.fluence);
 	cf_destroy_canvas(hrc.fluence_lin);
 	cf_destroy_canvas(hrc.minmax);
-	for (int i = 0; i <= CAVE_N; i++) {
+	for (int i = 0; i <= n_max; i++) {
 		cf_destroy_storage_buffer(hrc.vrays_rad[i]);
 		cf_destroy_storage_buffer(hrc.vrays_trn[i]);
 	}
@@ -253,26 +316,36 @@ void hrc_compute()
 	CF_Texture fluence_tex = cf_canvas_get_target(hrc.fluence);
 	CF_Texture minmax_tex = cf_canvas_get_target(hrc.minmax);
 
-	int dim = CAVE_GRID;
-	int N = CAVE_N;
-	int upscale = CAVE_WORLD / CAVE_GRID;
+	int upscale = CAVE_UPSCALE;
 
 	cf_material_set_uniform_cs(hrc.mat_trace, "u_upscale", &upscale, CF_UNIFORM_TYPE_INT, 1);
 
 	for (int j = 0; j < 4; j++) {
+		// Per-rotation dims: horizontal rotations (0,2) cascade along the width,
+		// vertical rotations (1,3) along the height. cdim = cascade axis grid
+		// dimension, xdim = cross axis grid dimension.
+		int horiz = (j == 0 || j == 2);
+		int cdim = horiz ? grid_w : grid_h;
+		int xdim = horiz ? grid_h : grid_w;
+		int N = horiz ? n_horiz : n_vert;
+		int* vw = horiz ? hrc.vrays_w_horiz : hrc.vrays_w_vert;
+
 		// Direct trace T_0..T_2.
-		for (int i = 0; i < CAVE_TRACE_LEVELS; i++) {
-			int params[4] = { i, j, dim, hrc.vrays_w[i] };
+		for (int i = 0; i < CAVE_TRACE_LEVELS && i <= N; i++) {
+			int params[6] = { i, j, cdim, xdim, vw[i], 0 };
 			cf_material_set_texture_cs(hrc.mat_trace, "u_emissivity", emiss_tex);
 			cf_material_set_texture_cs(hrc.mat_trace, "u_absorption", absrp_tex);
 			cf_material_set_uniform_cs(hrc.mat_trace, "u_cascade", params + 0, CF_UNIFORM_TYPE_INT, 1);
 			cf_material_set_uniform_cs(hrc.mat_trace, "u_rotate", params + 1, CF_UNIFORM_TYPE_INT, 1);
-			cf_material_set_uniform_cs(hrc.mat_trace, "u_world_size", params + 2, CF_UNIFORM_TYPE_INT, 1);
-			cf_material_set_uniform_cs(hrc.mat_trace, "u_curr_w", params + 3, CF_UNIFORM_TYPE_INT, 1);
+			cf_material_set_uniform_cs(hrc.mat_trace, "u_cascade_dim", params + 2, CF_UNIFORM_TYPE_INT, 1);
+			cf_material_set_uniform_cs(hrc.mat_trace, "u_cross_dim", params + 3, CF_UNIFORM_TYPE_INT, 1);
+			cf_material_set_uniform_cs(hrc.mat_trace, "u_curr_w", params + 4, CF_UNIFORM_TYPE_INT, 1);
+			cf_material_set_uniform_cs(hrc.mat_trace, "u_world_w", &world_w, CF_UNIFORM_TYPE_INT, 1);
+			cf_material_set_uniform_cs(hrc.mat_trace, "u_world_h", &world_h, CF_UNIFORM_TYPE_INT, 1);
 
 			CF_ComputeDispatch d = cf_compute_dispatch_defaults(
-				hrc_div_ceil(hrc.vrays_w[i], CAVE_WG),
-				hrc_div_ceil(dim, CAVE_WG),
+				hrc_div_ceil(vw[i], CAVE_WG),
+				hrc_div_ceil(xdim, CAVE_WG),
 				1
 			);
 			CF_StorageBuffer rw[2] = { hrc.vrays_rad[i], hrc.vrays_trn[i] };
@@ -283,15 +356,16 @@ void hrc_compute()
 
 		// Extend remaining levels.
 		for (int i = CAVE_TRACE_LEVELS; i <= N; i++) {
-			int params[4] = { i, dim, hrc.vrays_w[i - 1], hrc.vrays_w[i] };
+			int params[5] = { i, cdim, xdim, vw[i - 1], vw[i] };
 			cf_material_set_uniform_cs(hrc.mat_extend, "u_cascade", params + 0, CF_UNIFORM_TYPE_INT, 1);
-			cf_material_set_uniform_cs(hrc.mat_extend, "u_world_size", params + 1, CF_UNIFORM_TYPE_INT, 1);
-			cf_material_set_uniform_cs(hrc.mat_extend, "u_prev_w", params + 2, CF_UNIFORM_TYPE_INT, 1);
-			cf_material_set_uniform_cs(hrc.mat_extend, "u_curr_w", params + 3, CF_UNIFORM_TYPE_INT, 1);
+			cf_material_set_uniform_cs(hrc.mat_extend, "u_cascade_dim", params + 1, CF_UNIFORM_TYPE_INT, 1);
+			cf_material_set_uniform_cs(hrc.mat_extend, "u_cross_dim", params + 2, CF_UNIFORM_TYPE_INT, 1);
+			cf_material_set_uniform_cs(hrc.mat_extend, "u_prev_w", params + 3, CF_UNIFORM_TYPE_INT, 1);
+			cf_material_set_uniform_cs(hrc.mat_extend, "u_curr_w", params + 4, CF_UNIFORM_TYPE_INT, 1);
 
 			CF_ComputeDispatch d = cf_compute_dispatch_defaults(
-				hrc_div_ceil(hrc.vrays_w[i], CAVE_WG),
-				hrc_div_ceil(dim, CAVE_WG),
+				hrc_div_ceil(vw[i], CAVE_WG),
+				hrc_div_ceil(xdim, CAVE_WG),
 				1
 			);
 			CF_StorageBuffer ro[2] = { hrc.vrays_rad[i - 1], hrc.vrays_trn[i - 1] };
@@ -306,17 +380,20 @@ void hrc_compute()
 		// Merge R_{N-1} down to R_0.
 		int r_ping = 0;
 		for (int i = N - 1; i >= 0; i--) {
-			int params[6] = { i, dim, hrc.vrays_w[i], hrc.vrays_w[i + 1], dim * 2, dim * 2 };
+			int r_prev_w = hrc_r_w(cdim, i + 1);
+			int r_curr_w = hrc_r_w(cdim, i);
+			int params[7] = { i, cdim, xdim, vw[i], vw[i + 1], r_prev_w, r_curr_w };
 			cf_material_set_uniform_cs(hrc.mat_merge, "u_cascade", params + 0, CF_UNIFORM_TYPE_INT, 1);
-			cf_material_set_uniform_cs(hrc.mat_merge, "u_world_size", params + 1, CF_UNIFORM_TYPE_INT, 1);
-			cf_material_set_uniform_cs(hrc.mat_merge, "u_t_curr_w", params + 2, CF_UNIFORM_TYPE_INT, 1);
-			cf_material_set_uniform_cs(hrc.mat_merge, "u_t_next_w", params + 3, CF_UNIFORM_TYPE_INT, 1);
-			cf_material_set_uniform_cs(hrc.mat_merge, "u_r_prev_w", params + 4, CF_UNIFORM_TYPE_INT, 1);
-			cf_material_set_uniform_cs(hrc.mat_merge, "u_r_curr_w", params + 5, CF_UNIFORM_TYPE_INT, 1);
+			cf_material_set_uniform_cs(hrc.mat_merge, "u_cascade_dim", params + 1, CF_UNIFORM_TYPE_INT, 1);
+			cf_material_set_uniform_cs(hrc.mat_merge, "u_cross_dim", params + 2, CF_UNIFORM_TYPE_INT, 1);
+			cf_material_set_uniform_cs(hrc.mat_merge, "u_t_curr_w", params + 3, CF_UNIFORM_TYPE_INT, 1);
+			cf_material_set_uniform_cs(hrc.mat_merge, "u_t_next_w", params + 4, CF_UNIFORM_TYPE_INT, 1);
+			cf_material_set_uniform_cs(hrc.mat_merge, "u_r_prev_w", params + 5, CF_UNIFORM_TYPE_INT, 1);
+			cf_material_set_uniform_cs(hrc.mat_merge, "u_r_curr_w", params + 6, CF_UNIFORM_TYPE_INT, 1);
 
 			CF_ComputeDispatch d = cf_compute_dispatch_defaults(
-				hrc_div_ceil(dim * 2, CAVE_WG),
-				hrc_div_ceil(dim, CAVE_WG),
+				hrc_div_ceil(r_curr_w, CAVE_WG),
+				hrc_div_ceil(xdim, CAVE_WG),
 				1
 			);
 			CF_StorageBuffer r_prev = (i == N - 1) ? hrc.r_zero : hrc.r_rad[1 - r_ping];
@@ -334,9 +411,9 @@ void hrc_compute()
 			r_ping = 1 - r_ping;
 		}
 
-		// Copy R_0 -> frustum[j].
+		// Copy R_0 -> frustum[j]. R_0 element count = cascade_dim*2 * cross_dim.
 		{
-			int count = dim * dim * 2;
+			int count = hrc_r_w(cdim, 0) * xdim;
 			cf_material_set_uniform_cs(hrc.mat_copy, "u_count", &count, CF_UNIFORM_TYPE_INT, 1);
 
 			CF_ComputeDispatch d = cf_compute_dispatch_defaults(hrc_div_ceil(count, 256), 1, 1);
@@ -352,14 +429,15 @@ void hrc_compute()
 
 	// Minmax absorption pass (for gated bilinear upscale in composite).
 	{
-		int world = CAVE_WORLD;
 		cf_material_set_texture_cs(hrc.mat_minmax, "u_absorption", absrp_tex);
-		cf_material_set_uniform_cs(hrc.mat_minmax, "u_world_size", &world, CF_UNIFORM_TYPE_INT, 1);
-		cf_material_set_uniform_cs(hrc.mat_minmax, "u_grid_size", &dim, CF_UNIFORM_TYPE_INT, 1);
+		cf_material_set_uniform_cs(hrc.mat_minmax, "u_world_w", &world_w, CF_UNIFORM_TYPE_INT, 1);
+		cf_material_set_uniform_cs(hrc.mat_minmax, "u_world_h", &world_h, CF_UNIFORM_TYPE_INT, 1);
+		cf_material_set_uniform_cs(hrc.mat_minmax, "u_grid_w", &grid_w, CF_UNIFORM_TYPE_INT, 1);
+		cf_material_set_uniform_cs(hrc.mat_minmax, "u_grid_h", &grid_h, CF_UNIFORM_TYPE_INT, 1);
 
 		CF_ComputeDispatch d = cf_compute_dispatch_defaults(
-			hrc_div_ceil(world, CAVE_WG),
-			hrc_div_ceil(world, CAVE_WG),
+			hrc_div_ceil(world_w, CAVE_WG),
+			hrc_div_ceil(world_h, CAVE_WG),
 			1
 		);
 		CF_Texture rw_tex[1] = { minmax_tex };
@@ -370,7 +448,6 @@ void hrc_compute()
 
 	// Composite: c-1 gathering, sum 4 quadrants, rim light, tonemap, output.
 	{
-		int world = CAVE_WORLD;
 		float abs_thresh = CAVE_ABS_THRESHOLD;
 		float exposure = 2.0f;
 		float rim_strength = 0.3f;
@@ -378,8 +455,10 @@ void hrc_compute()
 		cf_material_set_texture_cs(hrc.mat_composite, "u_emissivity", emiss_tex);
 		cf_material_set_texture_cs(hrc.mat_composite, "u_absorption", absrp_tex);
 		cf_material_set_texture_cs(hrc.mat_composite, "u_minmax", minmax_tex);
-		cf_material_set_uniform_cs(hrc.mat_composite, "u_world_size", &world, CF_UNIFORM_TYPE_INT, 1);
-		cf_material_set_uniform_cs(hrc.mat_composite, "u_grid_size", &dim, CF_UNIFORM_TYPE_INT, 1);
+		cf_material_set_uniform_cs(hrc.mat_composite, "u_world_w", &world_w, CF_UNIFORM_TYPE_INT, 1);
+		cf_material_set_uniform_cs(hrc.mat_composite, "u_world_h", &world_h, CF_UNIFORM_TYPE_INT, 1);
+		cf_material_set_uniform_cs(hrc.mat_composite, "u_grid_w", &grid_w, CF_UNIFORM_TYPE_INT, 1);
+		cf_material_set_uniform_cs(hrc.mat_composite, "u_grid_h", &grid_h, CF_UNIFORM_TYPE_INT, 1);
 		cf_material_set_uniform_cs(hrc.mat_composite, "u_abs_threshold", &abs_thresh, CF_UNIFORM_TYPE_FLOAT, 1);
 		cf_material_set_uniform_cs(hrc.mat_composite, "u_exposure", &exposure, CF_UNIFORM_TYPE_FLOAT, 1);
 		cf_material_set_uniform_cs(hrc.mat_composite, "u_rim", &rim_on, CF_UNIFORM_TYPE_INT, 1);
@@ -387,8 +466,8 @@ void hrc_compute()
 		cf_material_set_uniform_cs(hrc.mat_composite, "u_rock_thresh", &rock_thresh, CF_UNIFORM_TYPE_FLOAT, 1);
 
 		CF_ComputeDispatch d = cf_compute_dispatch_defaults(
-			hrc_div_ceil(world, CAVE_WG),
-			hrc_div_ceil(world, CAVE_WG),
+			hrc_div_ceil(world_w, CAVE_WG),
+			hrc_div_ceil(world_h, CAVE_WG),
 			1
 		);
 		CF_StorageBuffer ro[4] = {
@@ -407,12 +486,12 @@ void hrc_compute()
 // Multibounce feedback: inject last frame's fluence, tinted by albedo, into emissivity.
 void hrc_feedback()
 {
-	int world = CAVE_WORLD;
-	cf_material_set_uniform_cs(hrc.mat_feedback, "u_world_size", &world, CF_UNIFORM_TYPE_INT, 1);
+	cf_material_set_uniform_cs(hrc.mat_feedback, "u_world_w", &world_w, CF_UNIFORM_TYPE_INT, 1);
+	cf_material_set_uniform_cs(hrc.mat_feedback, "u_world_h", &world_h, CF_UNIFORM_TYPE_INT, 1);
 
 	CF_ComputeDispatch d = cf_compute_dispatch_defaults(
-		hrc_div_ceil(world, CAVE_WG),
-		hrc_div_ceil(world, CAVE_WG),
+		hrc_div_ceil(world_w, CAVE_WG),
+		hrc_div_ceil(world_h, CAVE_WG),
 		1
 	);
 	CF_Texture ro_tex[3] = {
@@ -431,19 +510,55 @@ void hrc_feedback()
 //--------------------------------------------------------------------------------------------------
 // Drawing helpers.
 
+// Project the world canvas (world_w x world_h) and fold in the design->world
+// scene transform, so all design-authored draws (rock, water, jelly, ...) land
+// uniformly scaled + centered into the world. At a square world this is the
+// identity 1x layout.
+// The design box mapped into the world, as a framebuffer-pixel scissor rect
+// (y-down from the top). Clips scene draws to the design region so content
+// authored just past the design edge (the ceiling overshoot + moon emitter
+// above y=1024) stays out of the letterbox margins -- matching the square case,
+// where the canvas bounds did the clipping. Reduces to the full canvas at 1x.
+CF_Rect scene_scissor()
+{
+	int box = (int)(CAVE_REF * scene_s + 0.5f);
+	CF_Rect r;
+	r.x = (int)(scene_ox + 0.5f);
+	r.w = box;
+	r.y = world_h - ((int)(scene_oy + 0.5f) + box);
+	r.h = box;
+	return r;
+}
+
 void begin_canvas_draw()
 {
 	cf_draw_push();
-	float ws = (float)CAVE_WORLD;
-	float half = ws * 0.5f;
+	cf_draw_push_scissor(scene_scissor());
 	cf_draw_TSR_absolute(cf_v2(0, 0), cf_v2(1, 1), 0);
-	cf_draw_projection(cf_ortho_2d(0, 0, ws, ws));
-	cf_draw_translate(-half, -half);
+	cf_draw_projection(cf_ortho_2d(0, 0, (float)world_w, (float)world_h));
+	cf_draw_translate(-world_w * 0.5f, -world_h * 0.5f);
+	cf_draw_translate(scene_ox, scene_oy);
+	cf_draw_scale(scene_s, scene_s);
 }
 
 void end_canvas_draw()
 {
+	cf_draw_pop_scissor();
 	cf_draw_pop();
+}
+
+// Design-space projection for the density canvas (which is authored and sampled
+// purely in the fixed REF design box, independent of the world resolution). The
+// water shader reconstructs design coords from the density uv, then maps to the
+// world fluence itself.
+void begin_design_draw()
+{
+	cf_draw_push();
+	float ws = (float)CAVE_REF;
+	float half = ws * 0.5f;
+	cf_draw_TSR_absolute(cf_v2(0, 0), cf_v2(1, 1), 0);
+	cf_draw_projection(cf_ortho_2d(0, 0, ws, ws));
+	cf_draw_translate(-half, -half);
 }
 
 // Premultiplied alpha blending onto an f16 canvas: alpha-1 draws replace what's below.
@@ -1489,7 +1604,7 @@ CF_Shader water_shd;
 
 void draw_density()
 {
-	begin_canvas_draw();
+	begin_design_draw();
 	push_additive_f16_render_state();
 	cf_draw_push_shader(blob_shd);
 	for (int i = 0; i < particle_count; i++) {
@@ -1511,9 +1626,15 @@ void draw_density()
 // (0 screen, 1 absorption, 2 emissivity, 3 albedo); col_a/col_b are per-mode.
 void draw_water_field(float mode, CF_Color col_a, CF_Color col_b)
 {
-	float ws = (float)CAVE_WORLD;
+	float ws = (float)CAVE_REF; // density canvas covers the design box; the scene
+	                            // transform (below) maps it into the world.
 	float threshold = 0.55f;
 	float hf_params[4] = { hf_x0, hf_x1, WATERLINE, root_time };
+	// The water body is authored in design space but samples the world-space
+	// fluence: hand it the world dims and design->world transform so it can map
+	// its design (wx,wy) to fluence uv.
+	float world4[4] = { (float)world_w, (float)world_h, 0, 0 };
+	float scene4[4] = { scene_s, scene_ox, scene_oy, (float)CAVE_REF };
 	cf_draw_push_shader(water_shd);
 	cf_draw_set_texture("u_heightfield", hf_tex);
 	cf_draw_set_texture("u_fluence", cf_canvas_get_target(hrc.fluence));
@@ -1521,6 +1642,8 @@ void draw_water_field(float mode, CF_Color col_a, CF_Color col_b)
 	cf_draw_set_uniform("u_col_a", &col_a, CF_UNIFORM_TYPE_FLOAT4, 1);
 	cf_draw_set_uniform("u_col_b", &col_b, CF_UNIFORM_TYPE_FLOAT4, 1);
 	cf_draw_set_uniform("u_hf", hf_params, CF_UNIFORM_TYPE_FLOAT4, 1);
+	cf_draw_set_uniform("u_world", world4, CF_UNIFORM_TYPE_FLOAT4, 1);
+	cf_draw_set_uniform("u_scene", scene4, CF_UNIFORM_TYPE_FLOAT4, 1);
 	cf_draw_set_uniform_float("u_mode", mode);
 	cf_draw_set_uniform_float("u_threshold", threshold);
 	cf_draw_push_alpha_discard(false);
@@ -1656,8 +1779,7 @@ const char* debug_view = NULL; // HRC_CAVE_VIEW=emissivity|absorption|diffuse|de
 
 void draw_screen()
 {
-	float ws = (float)CAVE_WORLD;
-	float half = ws * 0.5f;
+	CF_V2 wsz = cf_v2((float)world_w, (float)world_h);
 
 	if (debug_view) {
 		CF_Canvas c = hrc.fluence;
@@ -1665,22 +1787,30 @@ void draw_screen()
 		else if (!CF_STRCMP(debug_view, "absorption")) c = hrc.absorption;
 		else if (!CF_STRCMP(debug_view, "diffuse")) c = hrc.diffuse;
 		else if (!CF_STRCMP(debug_view, "density")) c = density_canvas;
-		cf_draw_canvas(c, cf_v2(0, 0), cf_v2(ws, ws));
+		cf_draw_canvas(c, cf_v2(0, 0), wsz);
 		return;
 	}
 
+	// Clip the whole composition to the design box: the world outside it is a
+	// letterbox margin, kept black (the emitter's faint upward glow would
+	// otherwise bleed into it). Reduces to the full window at a square world.
+	cf_draw_push_scissor(scene_scissor());
+
 	if (gi_on) {
-		cf_draw_canvas(hrc.fluence, cf_v2(0, 0), cf_v2(ws, ws));
+		cf_draw_canvas(hrc.fluence, cf_v2(0, 0), wsz);
 	} else {
 		// GI off: flat dim ambient on the albedo so the scene stays legible.
 		cf_draw_push_color(cf_make_color_rgb_f(0.55f, 0.55f, 0.6f));
-		cf_draw_canvas(hrc.diffuse, cf_v2(0, 0), cf_v2(ws, ws));
+		cf_draw_canvas(hrc.diffuse, cf_v2(0, 0), wsz);
 		cf_draw_pop_color();
 	}
 
-	// World-space overlays: root silhouettes + water surface.
+	// World-space overlays: root silhouettes + water surface. Same design->world
+	// transform as begin_canvas_draw, over the app's centered screen projection.
 	cf_draw_push();
-	cf_draw_translate(-half, -half);
+	cf_draw_translate(-world_w * 0.5f, -world_h * 0.5f);
+	cf_draw_translate(scene_ox, scene_oy);
+	cf_draw_scale(scene_s, scene_s);
 
 	if (!skip('r')) {
 		cf_draw_push_color(cf_make_color_rgb_f(0.02f, 0.02f, 0.025f));
@@ -1734,6 +1864,7 @@ void draw_screen()
 	cf_draw_pop_shader();
 
 	cf_draw_pop();
+	cf_draw_pop_scissor();
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -1741,7 +1872,8 @@ void draw_screen()
 
 void draw_hud()
 {
-	float half = (float)CAVE_WORLD * 0.5f;
+	float hx = (float)world_w * 0.5f;
+	float hy = (float)world_h * 0.5f;
 	smoothed_fps = smoothed_fps * 0.95f + (1.0f / cf_max(CF_DELTA_TIME, 1e-4f)) * 0.05f;
 
 	cf_draw_push_color(cf_make_color_rgba_f(0.7f, 0.75f, 0.8f, 0.9f));
@@ -1765,9 +1897,9 @@ void draw_hud()
 			water_sdf_on ? "on" : "circles",
 			bounce_on ? "on" : "off",
 			paused ? "paused" : "on");
-		cf_draw_text(buf, cf_v2(-half + 12.0f, half - 14.0f), -1);
+		cf_draw_text(buf, cf_v2(-hx + 12.0f, hy - 14.0f), -1);
 	} else {
-		cf_draw_text("F1", cf_v2(-half + 12.0f, half - 14.0f), -1);
+		cf_draw_text("F1", cf_v2(-hx + 12.0f, hy - 14.0f), -1);
 	}
 	cf_pop_font_size();
 	cf_draw_pop_color();
@@ -1790,7 +1922,8 @@ void handle_input()
 		autostir_t += dt;
 		mouse_world = cf_v2(350.0f + sinf(autostir_t * 0.9f) * 150.0f, 262.0f);
 	} else {
-		mouse_world = cf_v2(cf_mouse_x(), (float)CAVE_WORLD - cf_mouse_y());
+		// Screen pixel -> world (y up) -> design space (the sim's coordinates).
+		mouse_world = world_to_design(cf_v2(cf_mouse_x(), (float)world_h - cf_mouse_y()));
 	}
 	mouse_vel = cf_div_v2_f(cf_sub(mouse_world, prev), dt);
 
@@ -1852,7 +1985,32 @@ void hdr_smoke_test()
 
 int main(int argc, char* argv[])
 {
-	cf_make_app("Bioluminal", 0, 0, 0, CAVE_WORLD, CAVE_WORLD, CF_APP_OPTIONS_WINDOW_POS_CENTERED_BIT, argv[0]);
+	// Window / world resolution. HRC_CAVE_RES=WxH picks a non-square resolution
+	// (default the square CAVE_REF). Rounded to a multiple of 2*CAVE_UPSCALE so
+	// grid_w/grid_h = world/upscale stay integral and even.
+	world_w = CAVE_REF;
+	world_h = CAVE_REF;
+	{
+		const char* res = getenv("HRC_CAVE_RES");
+		if (res) {
+			int rw = 0, rh = 0;
+			if (sscanf(res, "%dx%d", &rw, &rh) == 2 && rw >= 256 && rh >= 256 && rw <= 4096 && rh <= 4096) {
+				int q = 2 * CAVE_UPSCALE;
+				world_w = (rw / q) * q;
+				world_h = (rh / q) * q;
+			}
+		}
+	}
+	grid_w = world_w / CAVE_UPSCALE;
+	grid_h = world_h / CAVE_UPSCALE;
+
+	// Design-space -> world: uniform scale to the smaller axis (never distort),
+	// centered. A square world gives s=1, offset 0 (identical to the old layout).
+	scene_s = (world_w < world_h ? world_w : world_h) / (float)CAVE_REF;
+	scene_ox = (world_w - CAVE_REF * scene_s) * 0.5f;
+	scene_oy = (world_h - CAVE_REF * scene_s) * 0.5f;
+
+	cf_make_app("Bioluminal", 0, 0, 0, world_w, world_h, CF_APP_OPTIONS_WINDOW_POS_CENTERED_BIT, argv[0]);
 	cf_clear_color(0, 0, 0, 1);
 
 	int perf = getenv("HRC_CAVE_PERF") != NULL;

@@ -17,8 +17,10 @@ layout(set = 1, binding = 0, rg16f) uniform writeonly image2D u_minmax;
 
 layout(set = 2, binding = 0) uniform Params
 {
-	int u_world_size;
-	int u_grid_size;
+	int u_world_w;
+	int u_world_h;
+	int u_grid_w;
+	int u_grid_h;
 };
 
 layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
@@ -26,16 +28,16 @@ layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
 void main()
 {
 	ivec2 gid = ivec2(gl_GlobalInvocationID.xy);
-	if (gid.x >= u_world_size || gid.y >= u_world_size) return;
+	if (gid.x >= u_world_w || gid.y >= u_world_h) return;
 
-	int S = u_world_size / u_grid_size;
+	ivec2 S = ivec2(u_world_w / u_grid_w, u_world_h / u_grid_h);
 	ivec2 grid_cell = gid / S;
 	ivec2 base = grid_cell * S;
-	float world = float(u_world_size);
+	vec2 world = vec2(float(u_world_w), float(u_world_h));
 
 	float total = 0.0;
-	for (int dy = 0; dy < S; dy++) {
-		for (int dx = 0; dx < S; dx++) {
+	for (int dy = 0; dy < S.y; dy++) {
+		for (int dx = 0; dx < S.x; dx++) {
 			ivec2 p = base + ivec2(dx, dy);
 			vec2 uv = (vec2(p) + 0.5) / world;
 			vec3 a = texture(u_absorption, uv).rgb;
@@ -43,6 +45,6 @@ void main()
 		}
 	}
 
-	float avg = total / float(S * S);
+	float avg = total / float(S.x * S.y);
 	imageStore(u_minmax, gid, vec4(avg, 0.0, 0.0, 0.0));
 }

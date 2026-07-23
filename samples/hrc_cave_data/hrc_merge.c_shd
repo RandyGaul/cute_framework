@@ -45,7 +45,8 @@ layout(std430, set = 1, binding = 0) writeonly buffer RCurrRad { uvec2 data[]; }
 layout(set = 2, binding = 0) uniform Params
 {
 	int u_cascade;      // n: the level we're building
-	int u_world_size;
+	int u_cascade_dim;  // grid cascade-axis dimension
+	int u_cross_dim;    // grid cross-axis dimension
 	int u_t_curr_w;     // width of T_n buffer
 	int u_t_next_w;     // width of T_{n+1} buffer
 	int u_r_prev_w;     // width of R_{n+1} buffer
@@ -54,6 +55,7 @@ layout(set = 2, binding = 0) uniform Params
 
 layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
 
+int ceil_div_pow2(int x, int n) { return (x + (1 << n) - 1) >> n; }
 int my_mod(int a, int b) { return ((a % b) + b) % b; }
 
 struct Interval
@@ -100,8 +102,8 @@ Interval T_load(int probe_x, int k, int y)
 {
 	int n = u_cascade;
 	int directions = (2 << n) + 1;
-	int num_probes = u_world_size >> n;
-	if (probe_x < 0 || probe_x >= num_probes || k < 0 || k >= directions || y < 0 || y >= u_world_size) {
+	int num_probes = ceil_div_pow2(u_cascade_dim, n);
+	if (probe_x < 0 || probe_x >= num_probes || k < 0 || k >= directions || y < 0 || y >= u_cross_dim) {
 		return Interval(vec3(0.0), vec3(1.0));
 	}
 	int idx = y * u_t_curr_w + probe_x * directions + k;
@@ -115,8 +117,8 @@ Interval T_load_next(int probe_x, int k, int y)
 {
 	int n = u_cascade + 1;
 	int directions = (2 << n) + 1;
-	int num_probes = u_world_size >> n;
-	if (probe_x < 0 || probe_x >= num_probes || k < 0 || k >= directions || y < 0 || y >= u_world_size) {
+	int num_probes = ceil_div_pow2(u_cascade_dim, n);
+	if (probe_x < 0 || probe_x >= num_probes || k < 0 || k >= directions || y < 0 || y >= u_cross_dim) {
 		return Interval(vec3(0.0), vec3(1.0));
 	}
 	int idx = y * u_t_next_w + probe_x * directions + k;
@@ -132,8 +134,8 @@ vec3 R_load(int probe_x, int i, int y)
 {
 	int n = u_cascade + 1;
 	int directions = 2 << n;
-	int num_probes = u_world_size >> n;
-	if (probe_x < 0 || probe_x >= num_probes || i < 0 || i >= directions || y < 0 || y >= u_world_size) {
+	int num_probes = ceil_div_pow2(u_cascade_dim, n);
+	if (probe_x < 0 || probe_x >= num_probes || i < 0 || i >= directions || y < 0 || y >= u_cross_dim) {
 		return vec3(0.0);
 	}
 	int idx = y * u_r_prev_w + probe_x * directions + i;
@@ -248,7 +250,7 @@ vec3 merge_even(int probe_x, int i, int y)
 void main()
 {
 	ivec2 gid = ivec2(gl_GlobalInvocationID.xy);
-	if (gid.x >= u_r_curr_w || gid.y >= u_world_size) return;
+	if (gid.x >= u_r_curr_w || gid.y >= u_cross_dim) return;
 
 	int directions = 2 << u_cascade;
 	int probe_x = gid.x / directions;

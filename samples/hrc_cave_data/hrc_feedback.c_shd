@@ -16,7 +16,8 @@ layout(set = 1, binding = 0, rgba16f) uniform image2D u_emissivity;
 
 layout(set = 2, binding = 0) uniform Params
 {
-	int u_world_size;
+	int u_world_w;
+	int u_world_h;
 };
 
 layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
@@ -24,7 +25,7 @@ layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
 void main()
 {
 	ivec2 gid = ivec2(gl_GlobalInvocationID.xy);
-	if (gid.x >= u_world_size || gid.y >= u_world_size) return;
+	if (gid.x >= u_world_w || gid.y >= u_world_h) return;
 
 	vec3 diffuse = imageLoad(u_diffuse, gid).rgb;
 	vec3 absrp = imageLoad(u_absorption, gid).rgb;
