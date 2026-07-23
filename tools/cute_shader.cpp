@@ -108,7 +108,7 @@ static const char* s_resolve_include(const char* path, void* user)
 }
 
 //--------------------------------------------------------------------------------------------------
-// Failure helper: matches the "header\ndetail" message shape of the glslang path.
+// Failure helper: error messages take a "header\ndetail" shape.
 
 static CF_ShaderCompilerResult s_failure(const char* header, const char* detail)
 {

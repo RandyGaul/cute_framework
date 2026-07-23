@@ -3,9 +3,6 @@
 #include <cstdint>
 using namespace Cute;
 
-#ifndef CF_RUNTIME_SHADER_COMPILATION
-#include "fluid_sim_data/fluid_sim_shd.h"
-#endif
 
 float w = 300*2;
 float h = 300*2;
@@ -24,11 +21,7 @@ int main(int argc, char* argv[])
 	cf_shader_directory("/fluid_sim_data");
 	mount_content_directory_as("/");
 
-#ifdef CF_RUNTIME_SHADER_COMPILATION
 	CF_Shader shd = cf_make_draw_shader("fluid_sim.shd");
-#else
-	CF_Shader shd = cf_make_draw_shader_from_bytecode(s_fluid_sim_shd_bytecode);
-#endif
 	CF_CanvasParams canvas_params = canvas_defaults((int)w, (int)h);
 	canvas_params.target.stream = true;
 	CF_Canvas canvas_a = make_canvas(canvas_params);

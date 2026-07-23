@@ -1,49 +1,38 @@
-if (TRUE) # Runtime shader compilation is always available; the compiler is tiny.
-	# cute-shader: the shader compiler front-end library, built on cute_spirv.h
-	# (CF's own GLSL -> SPIR-V compiler, no external dependencies). The GLSL ES
-	# 300 output for the GLES/WebGL2 backend comes from cute_spirv's transpiler.
-	set(CUTE_SHADER_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/cute_shader.cpp)
-	add_library(cute-shader STATIC ${CUTE_SHADER_SRCS})
-	install(TARGETS cute-shader
+# The shader compiler front-end (cute_shader.cpp) builds directly into the cute
+# target. It sits on cute_spirv.h, CF's own GLSL -> SPIR-V compiler with
+# transpiler backends for HLSL/MSL/GLSL ES 300 -- no external dependencies.
+target_sources(cute PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/cute_shader.cpp)
+
+# The CF_RUNTIME_SHADER_COMPILATION macro stays defined for backwards
+# compatibility with user code using the documented #ifdef idiom.
+target_compile_definitions(cute PUBLIC CF_RUNTIME_SHADER_COMPILATION)
+
+# cute-spirv-tests, the compiler's unit test suite. Runs standalone (no SDL);
+# validates emitted modules with spirv-val when CSPV_SPIRV_VAL points at it.
+if (CMAKE_CURRENT_SOURCE_DIR STREQUAL "${CMAKE_SOURCE_DIR}/tools")
+	add_executable(cute-spirv-tests ${CMAKE_CURRENT_SOURCE_DIR}/cute_spirv_test.c)
+	set_source_files_properties(${CMAKE_CURRENT_SOURCE_DIR}/cute_spirv_test.c PROPERTIES LANGUAGE CXX)
+	target_include_directories(cute-spirv-tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/../libraries ${CMAKE_CURRENT_SOURCE_DIR}/../include)
+	target_compile_definitions(cute-spirv-tests PRIVATE _CRT_SECURE_NO_WARNINGS)
+	set_target_properties(cute-spirv-tests PROPERTIES FOLDER "tools")
+endif()
+
+# cute-shaderc, an offline shader compiler
+if (CF_CUTE_SHADERC)
+	set(CUTE_SHADERC_SRCS
+		${CMAKE_CURRENT_SOURCE_DIR}/cute_shaderc.cpp
+		${CMAKE_CURRENT_SOURCE_DIR}/cute_shader.cpp)
+	# Standalone tools need a ckit implementation TU (CF apps get it from the
+	# cute library's src/cute_ckit.cpp).
+	list(APPEND CUTE_SHADERC_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/cute_shader_ckit.cpp)
+	add_executable(cute-shaderc ${CUTE_SHADERC_SRCS})
+	target_include_directories(cute-shaderc PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../include)
+	set_target_properties(cute-shaderc PROPERTIES FOLDER "tools")
+	install(TARGETS cute-shaderc
 	BUNDLE DESTINATION .
 	RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 	LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
 	ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
-	if (NOT MSVC AND NOT CF_FRAMEWORK_STATIC)
-		set_target_properties(cute-shader PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
-	endif()
-	target_include_directories(cute-shader PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../include)
-
-	# The CF_RUNTIME_SHADER_COMPILATION macro stays defined for backwards
-	# compatibility with user code using the documented #ifdef idiom.
-	target_compile_definitions(cute PUBLIC CF_RUNTIME_SHADER_COMPILATION)
-	set(CF_LINK_LIBS ${CF_LINK_LIBS} cute-shader PARENT_SCOPE)
-
-	# cute-spirv-tests, the compiler's unit test suite. Runs standalone (no SDL);
-	# validates emitted modules with spirv-val when CSPV_SPIRV_VAL points at it.
-	if (CMAKE_CURRENT_SOURCE_DIR STREQUAL "${CMAKE_SOURCE_DIR}/tools")
-		add_executable(cute-spirv-tests ${CMAKE_CURRENT_SOURCE_DIR}/cute_spirv_test.c)
-		set_source_files_properties(${CMAKE_CURRENT_SOURCE_DIR}/cute_spirv_test.c PROPERTIES LANGUAGE CXX)
-		target_include_directories(cute-spirv-tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/../libraries ${CMAKE_CURRENT_SOURCE_DIR}/../include)
-		target_compile_definitions(cute-spirv-tests PRIVATE _CRT_SECURE_NO_WARNINGS)
-		set_target_properties(cute-spirv-tests PROPERTIES FOLDER "tools")
-	endif()
-
-	# cute-shaderc, an offline shader compiler
-	if (CF_CUTE_SHADERC)
-		set(CUTE_SHADERC_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/cute_shaderc.cpp)
-		# Standalone tools need a ckit implementation TU (CF apps get it from the
-		# cute library's src/cute_ckit.cpp).
-		list(APPEND CUTE_SHADERC_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/cute_shader_ckit.cpp)
-		add_executable(cute-shaderc ${CUTE_SHADERC_SRCS})
-		target_link_libraries(cute-shaderc cute-shader)
-		set_target_properties(cute-shaderc PROPERTIES FOLDER "tools")
-		install(TARGETS cute-shaderc
-		BUNDLE DESTINATION .
-		RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-		LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-		ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
-	endif()
 endif()
 
 # docsparser, a standalone documentation generator (only depends on ckit.h)

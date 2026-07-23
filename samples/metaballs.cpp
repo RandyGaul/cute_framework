@@ -16,9 +16,6 @@ const char* s_shd = R"(
 	}
 )";
 
-#ifndef CF_RUNTIME_SHADER_COMPILATION
-#include "metaballs_shd.h"
-#endif
 
 CF_Canvas soft_circles;
 CF_Shader shd;
@@ -86,11 +83,7 @@ int main(int argc, char* argv[])
 	soft_circles = make_canvas(canvas_defaults(w, h));
 
 	
-#ifdef CF_RUNTIME_SHADER_COMPILATION
 	shd = cf_make_draw_shader_from_source(s_shd);
-#else
-	shd = cf_make_draw_shader_from_bytecode(metaballs);
-#endif
 
 	frame_index = 0;
 	fps = 0;

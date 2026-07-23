@@ -3,9 +3,6 @@
 
 using namespace Cute;
 
-#ifndef CF_RUNTIME_SHADER_COMPILATION
-#include "waves_data/waves_shd.h"
-#endif
 
 void mount_content_directory_as(const char* dir)
 {
@@ -27,11 +24,7 @@ int main(int argc, char* argv[])
 	CF_ASSERT(png.w == 128);
 	CF_ASSERT(png.h == 128);
 
-#ifdef CF_RUNTIME_SHADER_COMPILATION
 	CF_Shader shader = cf_make_draw_shader("waves.shd");
-#else
-	CF_Shader shader = cf_make_draw_shader_from_bytecode(s_waves_shd_bytecode);
-#endif
 
 	CF_TextureParams tex_params = texture_defaults(128, 128);
 	CF_Texture tex = make_texture(tex_params);

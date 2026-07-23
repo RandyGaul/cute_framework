@@ -121,9 +121,9 @@ void main()
 
 In CF shaders are written in GLSL (OpenGL Shading Language) version 450. This does not necessarily mean the backend powering the shaders is OpenGL, as the shaders are cross-compiled for all available backends.
 
-CF compiles shaders online making it very easy to write shaders once and have them _just work_ on all other platforms. As of now CF takes on some annoying dependencies to support runtime shader compilation. However, since CF is using SDL3 and SDL_GPU internally, eventually SDL will release a tool called SDL_Shader_Tools to entirely rememedy this dependency situation. For now though, a variety of open source tools for SPIRV cross-compilation get statically linked into cute. This does bloat library size by ~8mb in release builds, and does negatively affect initial compile times.
+CF compiles shaders online making it very easy to write shaders once and have them _just work_ on all other platforms. Shader compilation is handled entirely by CF's own built-in compiler, [cute_spirv](glsl_support.md) — no external tools, no extra dependencies, and no meaningful impact on library size or startup time. The compiler emits SPIR-V for Vulkan, HLSL (compiled by the system's D3D compiler) for D3D12, Metal Shading Language for Metal, and GLSL ES 300 for the GLES backend.
 
-Okay! And with the bad news out of the way, let's focus on how to write your shaders and ship them with your game in a cross-platform way. You have a few options:
+Let's focus on how to write your shaders and ship them with your game in a cross-platform way. You have a few options:
 
 - Compile shaders from glsl source on-disk
 - Compile shaders from glsl source from string (in-memory)

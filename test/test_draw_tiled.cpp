@@ -237,7 +237,6 @@ TEST_CASE(test_tiled_matches_mesh)
 // `shader()` stub end-to-end: attributes plumbing, uniform blocks, SDF coverage in
 // `color.a`, and that forcing the tiled path safely falls back to instanced.
 
-#ifdef CF_RUNTIME_SHADER_COMPILATION
 static const char* s_attr_shd_src = R"(
 layout (set = 3, binding = 1) uniform shd_uniforms {
 	vec4 u_tint;
@@ -263,11 +262,9 @@ static void s_scene_custom_shader()
 	cf_draw_pop_vertex_attributes();
 	cf_draw_pop_shader();
 }
-#endif
 
 TEST_CASE(test_draw_custom_shader)
 {
-#ifdef CF_RUNTIME_SHADER_COMPILATION
 	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, 640, 480, s_app_options(), NULL))) return true; // Headless CI: no display/GPU.
 
 	s_attr_shd = cf_make_draw_shader_from_source(s_attr_shd_src);
@@ -287,7 +284,6 @@ TEST_CASE(test_draw_custom_shader)
 	cf_free(px);
 	cf_destroy_shader(s_attr_shd);
 	cf_destroy_app();
-#endif
 	return true;
 }
 
@@ -592,7 +588,6 @@ TEST_CASE(test_draw_arrow_no_overdraw)
 // circle SDF, stroked variant, and both renderer paths (including SDF-based tile culling
 // which trusts the user's distance function).
 
-#ifdef CF_RUNTIME_SHADER_COMPILATION
 static const char* s_circle_sdf_src = R"(
 // params: a = center, b.x = radius
 float sdf(vec2 p, ShapeParams s)
@@ -648,11 +643,9 @@ static void s_scene_custom_circle_only()
 	cf_draw_custom_shape_fill(s_circle_shape, cf_make_aabb(cf_v2(-190, -40), cf_v2(-110, 40)), circle_params, 3);
 	cf_draw_pop_color();
 }
-#endif
 
 TEST_CASE(test_draw_custom_shapes)
 {
-#ifdef CF_RUNTIME_SHADER_COMPILATION
 	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, 640, 480, s_app_options(), NULL))) return true; // Headless CI: no display/GPU.
 
 	s_circle_shape = cf_make_custom_shape(s_circle_sdf_src);
@@ -685,7 +678,6 @@ TEST_CASE(test_draw_custom_shapes)
 	cf_free(a);
 	cf_free(b);
 	cf_destroy_app();
-#endif
 	return true;
 }
 
@@ -694,7 +686,6 @@ TEST_CASE(test_draw_custom_shapes)
 // opaque-cover occlusion through a user SDF, failed-registration recovery, and
 // invalid-handle draws.
 
-#ifdef CF_RUNTIME_SHADER_COMPILATION
 static const char* s_attr_circle_sdf_src = R"(
 // params: a = center, b.x = base radius, scaled by attributes.x at draw time.
 float sdf(vec2 p, ShapeParams s)
@@ -774,11 +765,9 @@ static void s_scene_invalid_handles()
 	cf_draw_custom_shape_fill(out_of_range, cf_make_aabb(cf_v2(-100, -100), cf_v2(100, 100)), params, 3);
 	cf_draw_pop_color();
 }
-#endif
 
 TEST_CASE(test_draw_custom_shapes_advanced)
 {
-#ifdef CF_RUNTIME_SHADER_COMPILATION
 	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, 640, 480, s_app_options(), NULL))) return true; // Headless CI: no display/GPU.
 
 	s_attr_circle_shape = cf_make_custom_shape(s_attr_circle_sdf_src);
@@ -832,7 +821,6 @@ TEST_CASE(test_draw_custom_shapes_advanced)
 	cf_free(a);
 	cf_free(b);
 	cf_destroy_app();
-#endif
 	return true;
 }
 
@@ -879,7 +867,6 @@ static void s_scene_shape_groups()
 	cf_draw_pop_color();
 }
 
-#ifdef CF_RUNTIME_SHADER_COMPILATION
 static const char* s_moon_sdf_src = R"(
 // params: a = center, b.x = radius, c = bite offset, d.x = bite radius
 float sdf(vec2 p, ShapeParams s)
@@ -908,7 +895,6 @@ static void s_scene_custom_crescent_only()
 	cf_draw_custom_shape_fill(s_moon_shape, cf_make_aabb(cf_v2(-260, -70), cf_v2(-110, 70)), params, 8);
 	cf_draw_pop_color();
 }
-#endif
 
 // -------------------------------------------------------------------------------------------------
 // Tile-list budget: a batch whose summed tile footprint exceeds the budget must route to
@@ -988,7 +974,6 @@ TEST_CASE(test_draw_shape_groups)
 	}
 	REQUIRE(s_diff_ok(a, b, w * h, "shape-groups tiled-vs-mesh"));
 
-#ifdef CF_RUNTIME_SHADER_COMPILATION
 	// A shape group and a hand-written custom sdf of the same CSG must produce the same
 	// distance field, hence the same pixels.
 	s_moon_shape = cf_make_custom_shape(s_moon_sdf_src);
@@ -996,7 +981,6 @@ TEST_CASE(test_draw_shape_groups)
 	REQUIRE(s_readback(s_scene_group_crescent_only, 0, w, h, a));
 	REQUIRE(s_readback(s_scene_custom_crescent_only, 0, w, h, b));
 	REQUIRE(s_diff_ok(a, b, w * h, "group-vs-custom-sdf crescent"));
-#endif
 
 	cf_free(a);
 	cf_free(b);

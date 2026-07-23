@@ -126,7 +126,6 @@ int main(int argc, char* argv[])
 	// the stub tints it. Created AFTER the custom shapes register (draw shaders bake in
 	// the custom shape set that exists when they compile).
 	CF_Shader gradient_shd = { 0 };
-#ifdef CF_RUNTIME_SHADER_COMPILATION
 	gradient_shd = cf_make_draw_shader_from_source(R"(
 		vec4 shader(vec4 color, ShaderParams params)
 		{
@@ -135,7 +134,6 @@ int main(int argc, char* argv[])
 			return vec4(g, 1.0) * color.a;
 		}
 	)");
-#endif
 
 	float t = screenshot ? 2.2f : 0;
 	int frame_index = 0;
