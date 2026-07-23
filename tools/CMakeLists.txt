@@ -1,10 +1,9 @@
 if (TRUE) # Runtime shader compilation is always available; the compiler is tiny.
 	# cute-shader: the shader compiler front-end library, built on cute_spirv.h
-	# (CF's own GLSL -> SPIR-V compiler, no external dependencies). SPIRV-Cross
-	# translates the SPIR-V for whichever backend is active.
+	# (CF's own GLSL -> SPIR-V compiler, no external dependencies). The GLSL ES
+	# 300 output for the GLES/WebGL2 backend comes from cute_spirv's transpiler.
 	set(CUTE_SHADER_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/cute_shader.cpp)
 	add_library(cute-shader STATIC ${CUTE_SHADER_SRCS})
-	target_link_libraries(cute-shader PRIVATE spirv-cross-c)
 	install(TARGETS cute-shader
 	BUNDLE DESTINATION .
 	RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
