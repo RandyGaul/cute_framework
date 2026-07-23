@@ -2856,6 +2856,31 @@ void cf_destroy_draw_list(CF_DrawList list)
 	s_draw->draw_lists.remove(list.id);
 }
 
+// Replayed geometry keeps its record-time coverage quad, whose AA inflation was
+// computed under the identity recording camera (roughly one world unit). When
+// the replay camera zooms out, the AA band widens in list-local units and the
+// fringe would clip against the stale quad -- harmless on the instanced path
+// (its vertex shader re-expands coverage from shape + aa), but the tiled walk
+// bins and rasterizes straight from the quad, visibly dimming subpixel shapes
+// (twinkling stars). Re-expand the quad by the extra band width along its own
+// edge axes, exact for the parallelogram quads every SDF shape records.
+static void s_replay_inflate_quad(BatchGeometry* g, float extra)
+{
+	if (g->is_sprite || g->is_text || g->csg_operand) return;
+	if (g->type == BATCH_GEOMETRY_TYPE_SPRITE || g->type == BATCH_GEOMETRY_TYPE_TRI) return;
+	CF_V2 u = g->box[1] - g->box[0];
+	CF_V2 v = g->box[3] - g->box[0];
+	float ul = len(u);
+	float vl = len(v);
+	if (ul <= 1.0e-6f || vl <= 1.0e-6f) return;
+	CF_V2 du = u * (extra / ul);
+	CF_V2 dv = v * (extra / vl);
+	g->box[0] = g->box[0] - du - dv;
+	g->box[1] = g->box[1] + du - dv;
+	g->box[2] = g->box[2] + du + dv;
+	g->box[3] = g->box[3] - du + dv;
+}
+
 void cf_draw_list_begin(CF_DrawList list)
 {
 	CF_DrawListData** data = s_draw->draw_lists.try_get(list.id);
@@ -2896,7 +2921,9 @@ void cf_draw_list_end()
 			for (int j = 0; j < copy.geoms.count(); ++j) {
 				BatchGeometry& g = copy.geoms[j];
 				CF_MUL_M32_M32(g.mvp, c.replay_mvp, g.mvp);
+				float extra = g.aa * (c.replay_aa_scale - 1.0f);
 				g.aa *= c.replay_aa_scale;
+				if (extra > 0) s_replay_inflate_quad(&g, extra);
 			}
 		}
 		if (copy.u.data) {
@@ -4873,7 +4900,9 @@ static void s_process_command(CF_Canvas canvas, CF_Command* cmd, CF_Command* nex
 			if (cmd->geoms_ref) {
 				BatchGeometry& g = s_draw->pending_geoms.last();
 				CF_MUL_M32_M32(g.mvp, cmd->replay_mvp, g.mvp);
+				float extra = g.aa * (cmd->replay_aa_scale - 1.0f);
 				g.aa *= cmd->replay_aa_scale;
+				if (extra > 0) s_replay_inflate_quad(&g, extra);
 			}
 			CF_PendingUV uv = { 0 };
 			s_draw->pending_uvs.add(uv);

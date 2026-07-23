@@ -1292,6 +1292,51 @@ static void s_scene_list_content()
 
 static void s_scene_list_immediate() { s_scene_list_content(); }
 static void s_scene_list_replay() { cf_draw_list(s_test_list); }
+
+// A starfield of small circles: subpixel once the camera zooms out, so nearly
+// all of each star's energy lives in the AA fringe. Replay must preserve that
+// fringe under a replay camera scale (regression: the recorded coverage quads
+// kept their identity-camera AA inflation, clipping the widened fringe --
+// dim, popping stars).
+static void s_star_field()
+{
+	CF_Rnd rnd = cf_rnd_seed(7);
+	for (int i = 0; i < 12; ++i) {
+		for (int j = 0; j < 8; ++j) {
+			float x = -2900.0f + i * 520.0f + cf_rnd_range_float(&rnd, -100, 100);
+			float y = -1850.0f + j * 470.0f + cf_rnd_range_float(&rnd, -100, 100);
+			cf_draw_push_color(cf_make_color_rgba_f(1, 1, 1, 1));
+			cf_draw_circle_fill2(cf_v2(x, y), cf_rnd_range_float(&rnd, 2, 4));
+			cf_draw_pop_color();
+		}
+	}
+}
+
+static CF_DrawList s_star_list;
+static void s_scene_stars_immediate()
+{
+	cf_draw_push();
+	cf_draw_scale(0.06f, 0.06f);
+	s_star_field();
+	cf_draw_pop();
+}
+static void s_scene_stars_replay()
+{
+	cf_draw_push();
+	cf_draw_scale(0.06f, 0.06f);
+	cf_draw_list(s_star_list);
+	cf_draw_pop();
+}
+
+// Total luminance, for comparing star energy between render paths.
+static double s_ink_sum(const CF_Pixel* px, int total)
+{
+	double sum = 0;
+	for (int i = 0; i < total; ++i) {
+		sum += px[i].colors.r + px[i].colors.g + px[i].colors.b;
+	}
+	return sum;
+}
 static void s_scene_list_replay_multi()
 {
 	cf_draw_list(s_test_list);
@@ -1328,6 +1373,27 @@ TEST_CASE(test_draw_lists)
 	REQUIRE(s_px_near(s_probe(b, w, h, -60), 0, 255, 0, 255, 3));   // Green box over replayed circle.
 	REQUIRE(s_px_near(s_probe(b, w, h, 100), 255, 0, 0, 255, 3));   // Second replay's circle at -60+160.
 	REQUIRE(s_px_near(s_probe(b, w, h, 10), 31, 61, 138, 153, 6));  // First replay's translucent quad.
+
+	// Subpixel stars under a zoomed-out replay camera must keep their AA-fringe
+	// energy: total luminance of replayed stars must match immediate drawing, on
+	// both the instanced and tiled paths (the tiled walk rasterizes from the
+	// recorded coverage quads, where a stale AA inflation clips the fringe).
+	s_star_list = cf_make_draw_list();
+	cf_draw_list_begin(s_star_list);
+	s_star_field();
+	cf_draw_list_end();
+	for (int mode = 0; mode <= 1; ++mode) {
+		REQUIRE(s_readback(s_scene_stars_immediate, mode, w, h, a));
+		REQUIRE(s_readback(s_scene_stars_replay, mode, w, h, b));
+		double ink_immediate = s_ink_sum(a, w * h);
+		double ink_replay = s_ink_sum(b, w * h);
+		REQUIRE(ink_immediate > 0);
+		if (!(ink_replay > ink_immediate * 0.85 && ink_replay < ink_immediate * 1.15)) {
+			printf("star ink mismatch (mode %d): immediate=%f replay=%f\n", mode, ink_immediate, ink_replay);
+			REQUIRE(false);
+		}
+	}
+	cf_destroy_draw_list(s_star_list);
 
 	cf_destroy_draw_list(s_test_list);
 	cf_free(a);
