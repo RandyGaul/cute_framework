@@ -96,15 +96,8 @@ struct BatchGeometry
 	             // GPU to recover world space per-pixel for SDF evaluation.
 };
 
-// The atlas cache carries only an index back into the
+// The atlas cache's opaque per-entry `udata` carries an index back into the
 // unified geometry stream (CF_Command::geoms). Atlas uvs come back via the callback.
-struct CF_AtlasEntrySeq
-{
-	int seq;
-};
-
-#define ATLAS_CACHE_ENTRY_GEOMETRY CF_AtlasEntrySeq
-
 #define ATLAS_CACHE_ASSERT CF_ASSERT
 #include <cute/cute_atlas_cache.h>
 
@@ -208,7 +201,7 @@ struct CF_Command
 	CF_DrawFilterMode filter_mode = CF_DRAW_FILTER_SMOOTH;
 	CF_RenderState render_state;
 	CF_Shader shader;
-	Cute::Array<atlas_cache_entry_t> items; // Sprite/text atlas entries; geom.seq indexes `geoms`.
+	Cute::Array<atlas_cache_entry_t> items; // Sprite/text atlas entries; udata indexes `geoms`.
 	CF_DrawUniform u;
 	bool is_canvas = false;
 	CF_Canvas canvas = { 0 };
@@ -230,7 +223,7 @@ struct CF_Command
 #define DRAW_PUSH_ITEM(s) \
 	do { \
 		CF_Command& cmd__ = s_draw->cmds.last(); \
-		(s).geom.seq = cmd__.geoms.count() - 1; \
+		(s).udata = (ATLAS_CACHE_U64)(cmd__.geoms.count() - 1); \
 		cmd__.items.add(s); \
 	} while (0)
 
@@ -288,7 +281,7 @@ struct CF_Draw
 	CF_V2 atlas_dims = cf_v2(2048, 2048);
 	CF_V2 texel_dims = cf_v2(1.0f/2048.0f, 1.0f/2048.0f);
 	bool delay_defrag = false;
-	atlas_cache_t sb;
+	atlas_cache_t atlas_cache;
 	CF_Material material;
 	CF_Arena uniform_arena;
 	Cute::Array<float> alpha_discards = { 1.0f };

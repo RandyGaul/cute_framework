@@ -528,8 +528,8 @@ int cf_app_draw_onto_screen(bool clear)
 	// This does atlas management internally.
 	// All references to backend texture id's are now invalid (fetch_image or cf_texture_handle).
 	if (!s_draw->delay_defrag) {
-		atlas_cache_tick(&s_draw->sb);
-		atlas_cache_defrag(&s_draw->sb);
+		atlas_cache_tick(&s_draw->atlas_cache);
+		atlas_cache_defrag(&s_draw->atlas_cache);
 	}
 
 	// Render any remaining geometry in the draw API.
@@ -555,8 +555,8 @@ int cf_app_draw_onto_screen(bool clear)
 	// before doing final rendering to reduce draw call count, but in the case where ImGui is rendered it's acceptable
 	// to have the perf-hit and delay until next frame.
 	if (s_draw->delay_defrag) {
-		atlas_cache_tick(&s_draw->sb);
-		atlas_cache_defrag(&s_draw->sb);
+		atlas_cache_tick(&s_draw->atlas_cache);
+		atlas_cache_defrag(&s_draw->atlas_cache);
 		s_draw->delay_defrag = false;
 	}
 
