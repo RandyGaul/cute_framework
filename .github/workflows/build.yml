@@ -144,7 +144,7 @@ jobs:
         run: |
           mkdir -p ./dist
           cp -v ./include/*.h ./dist
-          cp -R -v ./build/lib/libcute*.a ./dist
+          cp -R -v ./build/lib/libcute* ./dist
           tar -czvf artifact.tar.gz -C dist .
         if: runner.os == 'macOS'
 
@@ -152,7 +152,7 @@ jobs:
         run: |
           mkdir -p ./dist
           cp -v ./include/*.h ./dist
-          cp -v ./build/lib/libcute*.a ./dist
+          cp -v ./build/lib/libcute* ./dist
           tar -czvf artifact.tar.gz -C dist .
         if: runner.os == 'Linux'
 
