@@ -243,6 +243,19 @@ int bounce_on = 1;
 int paused = 0;
 float smoothed_fps = 60.0f;
 
+// Off-screen moonlight. When moon_sky_on, the HRC merge injects directional sky
+// radiance at the R_N boundary for rays exiting the top world edge toward the
+// moon, and the in-scene emitter is suppressed (all light enters through the
+// crack). moon_dir_gl points from the cave up the crack, in gl/gid space where
+// +y is DOWN, so world-up along the crack (slope +x per +y) is (CRACK_SLOPE, -1).
+int moon_sky_on = 1;      // HRC_CAVE_MOONSKY=0 falls back to the embedded emitter
+CF_V2 moon_dir_gl;        // set in main() from the crack slope
+float moon_cos = 0.960f;  // cos(~16 deg) cone half-angle. Wide enough that the
+                          // discrete cascade ray directions overlap into a smooth
+                          // shaft; narrowing it past this makes individual cone
+                          // rays visible as hard streaks (cascade quantization).
+struct { float x, y, z; } moon_color = { 26.0f, 33.0f, 41.0f };
+
 //--------------------------------------------------------------------------------------------------
 // Cascade compute pipeline (fixed config).
 
@@ -313,6 +326,16 @@ void hrc_compute()
 			cf_material_set_uniform_cs(hrc.mat_merge, "u_t_next_w", params + 3, CF_UNIFORM_TYPE_INT, 1);
 			cf_material_set_uniform_cs(hrc.mat_merge, "u_r_prev_w", params + 4, CF_UNIFORM_TYPE_INT, 1);
 			cf_material_set_uniform_cs(hrc.mat_merge, "u_r_curr_w", params + 5, CF_UNIFORM_TYPE_INT, 1);
+
+			// Off-screen sky injection: only at the coarsest cascade (R_N boundary).
+			int inject = (moon_sky_on && i == N - 1) ? 1 : 0;
+			cf_material_set_uniform_cs(hrc.mat_merge, "u_inject_sky", &inject, CF_UNIFORM_TYPE_INT, 1);
+			cf_material_set_uniform_cs(hrc.mat_merge, "u_rotate", &j, CF_UNIFORM_TYPE_INT, 1);
+			cf_material_set_uniform_cs(hrc.mat_merge, "u_moon_cos", &moon_cos, CF_UNIFORM_TYPE_FLOAT, 1);
+			float moon_dir4[4] = { moon_dir_gl.x, moon_dir_gl.y, 0, 0 };
+			cf_material_set_uniform_cs(hrc.mat_merge, "u_moon_dir", moon_dir4, CF_UNIFORM_TYPE_FLOAT4, 1);
+			float moon_col4[4] = { moon_color.x, moon_color.y, moon_color.z, 0 };
+			cf_material_set_uniform_cs(hrc.mat_merge, "u_moon_color", moon_col4, CF_UNIFORM_TYPE_FLOAT4, 1);
 
 			CF_ComputeDispatch d = cf_compute_dispatch_defaults(
 				hrc_div_ceil(dim * 2, CAVE_WG),
@@ -1569,9 +1592,13 @@ void draw_emissivity()
 	// aligned with the crack's slant and inset from its walls so the bright
 	// region reads as sky through the aperture, never a floating block. Cool
 	// blue-white at ~40 -- authored in plain physical units, no encode.
-	cf_draw_push_color(cf_make_color_rgb_f(60.0f, 74.0f, 88.0f));
-	draw_moon_emitter();
-	cf_draw_pop_color();
+	// Suppressed when moonlight enters via HRC sky injection (commit 2): all
+	// light then comes from outside through the crack, no in-scene emitter.
+	if (!moon_sky_on) {
+		cf_draw_push_color(cf_make_color_rgb_f(60.0f, 74.0f, 88.0f));
+		draw_moon_emitter();
+		cf_draw_pop_color();
+	}
 
 	draw_drip(0);
 	if (!skip('j')) draw_jelly(0);
@@ -1607,9 +1634,11 @@ void draw_absorption()
 	if (!skip('k')) cf_draw_list(list_rock_absorption);
 
 	// The moon slit must absorb to emit (radiance = emiss * (1 - T)).
-	cf_draw_push_color(cf_make_color_rgb_f(0.5f, 0.5f, 0.5f));
-	draw_moon_emitter();
-	cf_draw_pop_color();
+	if (!moon_sky_on) {
+		cf_draw_push_color(cf_make_color_rgb_f(0.5f, 0.5f, 0.5f));
+		draw_moon_emitter();
+		cf_draw_pop_color();
+	}
 
 	draw_drip(1);
 	if (!skip('j')) draw_jelly(1);
@@ -1856,6 +1885,14 @@ int main(int argc, char* argv[])
 	autostir = getenv("HRC_CAVE_AUTOSTIR") != NULL;
 	debug_view = getenv("HRC_CAVE_VIEW");
 
+	// Moon direction: up the crack in gl/gid space (+y down). world-up along the
+	// crack is (CRACK_SLOPE, +1) in world; negate y for gl space.
+	{
+		float dx = CRACK_SLOPE, dy = -1.0f;
+		float len = sqrtf(dx * dx + dy * dy);
+		moon_dir_gl = cf_v2(dx / len, dy / len);
+	}
+
 	// Scripted-run overrides for the F1 toggles.
 	{
 		const char* env;
@@ -1865,6 +1902,7 @@ int main(int argc, char* argv[])
 		if ((env = getenv("HRC_CAVE_WATER"))) water_sdf_on = atoi(env);
 		if ((env = getenv("HRC_CAVE_BOUNCE"))) bounce_on = atoi(env);
 		if ((env = getenv("HRC_CAVE_OVERLAY"))) show_overlay = atoi(env);
+		if ((env = getenv("HRC_CAVE_MOONSKY"))) moon_sky_on = atoi(env);
 		if ((env = getenv("HRC_CAVE_SKIP"))) skip_flags = env;
 	}
 

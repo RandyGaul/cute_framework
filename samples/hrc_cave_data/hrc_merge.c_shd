@@ -50,6 +50,14 @@ layout(set = 2, binding = 0) uniform Params
 	int u_t_next_w;     // width of T_{n+1} buffer
 	int u_r_prev_w;     // width of R_{n+1} buffer
 	int u_r_curr_w;     // width of R_n buffer
+	// Off-screen sky (moonlight) injection: replaces the R_N = 0 boundary at the
+	// coarsest cascade with directional sky radiance for rays exiting toward the
+	// moon. Set only for the n = N-1 dispatch (u_inject_sky != 0).
+	int u_inject_sky;
+	int u_rotate;       // current quadrant rotation j (0..3)
+	float u_moon_cos;   // cos(cone half-angle); rays within this of the moon see sky
+	vec4 u_moon_dir;    // xy = moon direction in gl/gid space (y down), normalized
+	vec4 u_moon_color;  // rgb = HDR sky radiance
 };
 
 layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
@@ -125,7 +133,49 @@ Interval T_load_next(int probe_x, int k, int y)
 	return Interval(rad.rgb, trn.rgb);
 }
 
-// Load angular fluence from R_{n+1}.
+// Marching axis (rotated +x) in gl/gid space for each quadrant rotation. Matches
+// the composite's quadrant_dir. Rotated +y is this turned 90 CCW: (-ax.y, ax.x).
+vec2 quadrant_axis(int rot)
+{
+	if (rot == 1) return vec2(0.0, 1.0);
+	if (rot == 2) return vec2(-1.0, 0.0);
+	if (rot == 3) return vec2(0.0, -1.0);
+	return vec2(1.0, 0.0);
+}
+
+// Directional sky radiance for cone i at the coarsest cascade (R_N). The cone's
+// rotated ray direction v_{n+1}(i+0.5) is mapped into gl/gid world space via the
+// rotation basis, then tested against the moon cone. Only rays whose WORLD
+// direction points up-and-toward-the-moon see sky; every other direction and the
+// other three world edges stay black.
+vec3 sky_radiance(int cone_i)
+{
+	int n = u_cascade + 1;                     // top cascade N
+	vec2 d_r = v_n(n, float(cone_i) + 0.5);    // rotated-space cone direction
+	vec2 ax = quadrant_axis(u_rotate);
+	vec2 ay = vec2(-ax.y, ax.x);
+	vec2 world_dir = normalize(d_r.x * ax + d_r.y * ay);
+	float c = dot(world_dir, u_moon_dir.xy);
+	float cone = smoothstep(u_moon_cos, mix(u_moon_cos, 1.0, 0.35), c);
+	return u_moon_color.rgb * cone;
+}
+
+// Sky contribution for cone i at the far end of a TRACED ray. Zero unless this
+// is the coarsest-cascade dispatch. Added only as the far_fluence of a
+// weighted_merge, so it is always multiplied by the traced transmittance
+// (occlusion) -- never injected as unattenuated light, and never into the even-
+// probe direct lookup (F0), which has no path to attenuate it.
+vec3 sky_at_top(int cone_i)
+{
+	if (u_inject_sky == 0) return vec3(0.0);
+	int directions = 2 << (u_cascade + 1);
+	if (cone_i < 0 || cone_i >= directions) return vec3(0.0);
+	return sky_radiance(cone_i);
+}
+
+// Load angular fluence from R_{n+1}. At the coarsest cascade the R ping buffer is
+// zero-initialized (R_N = 0); sky enters separately via sky_at_top on traced
+// paths, so this stays a plain buffer read.
 vec3 R_load(int probe_x, int i, int y)
 {
 	int n = u_cascade + 1;
@@ -192,13 +242,13 @@ vec3 merge_odd(int probe_x, int i, int y)
 	vec3 F_plus = weighted_merge(
 		T_load(probe_x, i + 1, y),
 		sc.w_plus,
-		R_load(next_probe_x, sc.j_plus, y + (i + 1) - pow2n)
+		R_load(next_probe_x, sc.j_plus, y + (i + 1) - pow2n) + sky_at_top(sc.j_plus)
 	);
 
 	vec3 F_minus = weighted_merge(
 		T_load(probe_x, i, y),
 		sc.w_minus,
-		R_load(next_probe_x, sc.j_minus, y + i - pow2n)
+		R_load(next_probe_x, sc.j_minus, y + i - pow2n) + sky_at_top(sc.j_minus)
 	);
 
 	return F_plus + F_minus;
@@ -227,16 +277,17 @@ vec3 merge_even(int probe_x, int i, int y)
 	vec3 F1_plus = weighted_merge(
 		T_load_next(next_probe_x, 2 * (i + 1), y),
 		sc.w_plus,
-		R_load(far_probe_x, sc.j_plus, y + 2 * (i + 1) - pow2n1)
+		R_load(far_probe_x, sc.j_plus, y + 2 * (i + 1) - pow2n1) + sky_at_top(sc.j_plus)
 	);
 
 	vec3 F1_minus = weighted_merge(
 		T_load_next(next_probe_x, 2 * i, y),
 		sc.w_minus,
-		R_load(far_probe_x, sc.j_minus, y + 2 * i - pow2n1)
+		R_load(far_probe_x, sc.j_minus, y + 2 * i - pow2n1) + sky_at_top(sc.j_minus)
 	);
 
-	// F0: direct lookup (Eq 16)
+	// F0: direct lookup (Eq 16). No sky here -- a co-located read has no traced
+	// segment to attenuate the boundary radiance through.
 	vec3 F0_plus  = R_load(next_probe_x, sc.j_plus,  y);
 	vec3 F0_minus = R_load(next_probe_x, sc.j_minus, y);
 
