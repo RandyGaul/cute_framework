@@ -294,7 +294,7 @@ static CF_ShaderBytecode cf_compile_shader_to_bytecode_internal(const char* shad
 		char* preprocessed = cute_shader_preprocess(user_shd, config);
 		if (preprocessed) {
 			payload_binding = cf_compute_payload_binding(preprocessed);
-			free(preprocessed);
+			cf_free(preprocessed);
 		}
 	}
 	snprintf(payload_binding_str, sizeof(payload_binding_str), "%d", payload_binding);

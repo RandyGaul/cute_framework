@@ -17,11 +17,20 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <cute_alloc.h>
 #include "cute/ckit.h"
 #define CUTE_SPIRV_IMPLEMENTATION
 #include "cute/cute_spirv.h"
 
 #include "cute_shader.h"
+
+static char* s_cf_strdup(const char* s)
+{
+	size_t len = strlen(s) + 1;
+	char* copy = (char*)cf_alloc(len);
+	memcpy(copy, s, len);
+	return copy;
+}
 
 //--------------------------------------------------------------------------------------------------
 // Default filesystem VFS (mirrors cute_shader.cpp's libc vfs).
@@ -34,11 +43,11 @@ static char* s_libc_read_file_content(const char* path, size_t* len, void* conte
 	fseek(file, 0, SEEK_END);
 	long size = ftell(file);
 	fseek(file, 0, SEEK_SET);
-	char* content = (char*)malloc(size + 1);
+	char* content = (char*)cf_alloc(size + 1);
 	size_t num_read = fread(content, 1, size, file);
 	fclose(file);
 	if (num_read != (size_t)size) {
-		free(content);
+		cf_free(content);
 		return NULL;
 	}
 	content[size] = '\0';
@@ -49,7 +58,7 @@ static char* s_libc_read_file_content(const char* path, size_t* len, void* conte
 static void s_libc_free_file_content(char* content, void* context)
 {
 	(void)context;
-	free(content);
+	cf_free(content);
 }
 
 static CF_ShaderCompilerVfs s_libc_vfs = {
@@ -116,7 +125,7 @@ static CF_ShaderCompilerResult s_failure(const char* header, const char* detail)
 	CF_ShaderCompilerResult result;
 	memset(&result, 0, sizeof(result));
 	result.success = false;
-	result.error_message = strdup(msg);
+	result.error_message = s_cf_strdup(msg);
 	sfree(msg);
 	return result;
 }
@@ -154,7 +163,7 @@ char* cute_shader_preprocess(const char* source, CF_ShaderCompilerConfig config)
 
 	char* out = NULL;
 	if (r.success && r.preprocessed) {
-		out = strdup(r.preprocessed);
+		out = s_cf_strdup(r.preprocessed);
 	}
 	cspv_free(&r);
 	return out;
@@ -210,9 +219,9 @@ CF_ShaderCompilerResult cute_shader_compile(const char* source, CF_ShaderCompile
 		return result;
 	}
 
-	// Bytecode blob (plain malloc; freed with free() by cute_shader_free_result).
+	// Bytecode blob (cf_alloc'd; freed with cf_free() by cute_shader_free_result).
 	size_t bytecode_size = r.word_count * sizeof(uint32_t);
-	void* bytecode = malloc(bytecode_size);
+	void* bytecode = cf_alloc(bytecode_size);
 	memcpy(bytecode, r.spirv, bytecode_size);
 
 	// GLSL 300 es source, from cute_spirv's transpiler backend (requested via
@@ -221,7 +230,7 @@ CF_ShaderCompilerResult cute_shader_compile(const char* source, CF_ShaderCompile
 	size_t glsl300_src_size = 0;
 	if (r.glsl300) {
 		glsl300_src_size = strlen(r.glsl300);
-		glsl300_src = (char*)malloc(glsl300_src_size + 1);
+		glsl300_src = (char*)cf_alloc(glsl300_src_size + 1);
 		memcpy(glsl300_src, r.glsl300, glsl300_src_size + 1);
 	}
 
@@ -230,7 +239,7 @@ CF_ShaderCompilerResult cute_shader_compile(const char* source, CF_ShaderCompile
 	size_t hlsl_src_size = 0;
 	if (r.hlsl) {
 		hlsl_src_size = strlen(r.hlsl);
-		hlsl_src = (char*)malloc(hlsl_src_size + 1);
+		hlsl_src = (char*)cf_alloc(hlsl_src_size + 1);
 		memcpy(hlsl_src, r.hlsl, hlsl_src_size + 1);
 	}
 
@@ -239,11 +248,11 @@ CF_ShaderCompilerResult cute_shader_compile(const char* source, CF_ShaderCompile
 	size_t msl_src_size = 0;
 	if (r.msl) {
 		msl_src_size = strlen(r.msl);
-		msl_src = (char*)malloc(msl_src_size + 1);
+		msl_src = (char*)cf_alloc(msl_src_size + 1);
 		memcpy(msl_src, r.msl, msl_src_size + 1);
 	}
 
-	// Reflection: map CSPV_Reflection to CF_ShaderInfo. Arrays are malloc'd (freed by
+	// Reflection: map CSPV_Reflection to CF_ShaderInfo. Arrays are cf_alloc'd (freed by
 	// cute_shader_free_result); names are interned strings from the compiler, which
 	// are immortal -- no copies, and free_result must not free them.
 	CSPV_Reflection* rf = &r.reflection;
@@ -267,8 +276,8 @@ CF_ShaderCompilerResult cute_shader_compile(const char* source, CF_ShaderCompile
 	const char** image_names = NULL;
 	int* image_binding_slots = NULL;
 	if (num_images > 0) {
-		image_names = (const char**)malloc(sizeof(char*) * num_images);
-		image_binding_slots = (int*)malloc(sizeof(int) * num_images);
+		image_names = (const char**)cf_alloc(sizeof(char*) * num_images);
+		image_binding_slots = (int*)cf_alloc(sizeof(int) * num_images);
 		for (int i = 0; i < num_images; ++i) {
 			image_names[i] = rf->samplers[i].name;
 			image_binding_slots[i] = rf->samplers[i].binding;
@@ -286,7 +295,7 @@ CF_ShaderCompilerResult cute_shader_compile(const char* source, CF_ShaderCompile
 	int num_uniforms = (int)asize(rf->uniform_blocks);
 	CF_ShaderUniformInfo* uniforms = NULL;
 	if (num_uniforms > 0) {
-		uniforms = (CF_ShaderUniformInfo*)malloc(sizeof(CF_ShaderUniformInfo) * num_uniforms);
+		uniforms = (CF_ShaderUniformInfo*)cf_alloc(sizeof(CF_ShaderUniformInfo) * num_uniforms);
 		for (int i = 0; i < num_uniforms; ++i) {
 			uniforms[i].block_name = rf->uniform_blocks[i].name;
 			uniforms[i].block_index = rf->uniform_blocks[i].binding;
@@ -298,7 +307,7 @@ CF_ShaderCompilerResult cute_shader_compile(const char* source, CF_ShaderCompile
 	int num_uniform_members = (int)asize(rf->uniform_members);
 	CF_ShaderUniformMemberInfo* uniform_members = NULL;
 	if (num_uniform_members > 0) {
-		uniform_members = (CF_ShaderUniformMemberInfo*)malloc(sizeof(CF_ShaderUniformMemberInfo) * num_uniform_members);
+		uniform_members = (CF_ShaderUniformMemberInfo*)cf_alloc(sizeof(CF_ShaderUniformMemberInfo) * num_uniform_members);
 		for (int i = 0; i < num_uniform_members; ++i) {
 			uniform_members[i].name = rf->uniform_members[i].name;
 			uniform_members[i].type = (CF_ShaderInfoDataType)rf->uniform_members[i].type;
@@ -310,7 +319,7 @@ CF_ShaderCompilerResult cute_shader_compile(const char* source, CF_ShaderCompile
 	int num_inputs = (int)asize(rf->inputs);
 	CF_ShaderInputInfo* inputs = NULL;
 	if (num_inputs > 0) {
-		inputs = (CF_ShaderInputInfo*)malloc(sizeof(CF_ShaderInputInfo) * num_inputs);
+		inputs = (CF_ShaderInputInfo*)cf_alloc(sizeof(CF_ShaderInputInfo) * num_inputs);
 		for (int i = 0; i < num_inputs; ++i) {
 			inputs[i].name = rf->inputs[i].name;
 			inputs[i].location = rf->inputs[i].location;
@@ -322,7 +331,7 @@ CF_ShaderCompilerResult cute_shader_compile(const char* source, CF_ShaderCompile
 	size_t preprocessed_size = 0;
 	if (config.return_preprocessed_source && r.preprocessed) {
 		preprocessed_size = slen(r.preprocessed);
-		preprocessed_copy = (char*)malloc(preprocessed_size + 1);
+		preprocessed_copy = (char*)cf_alloc(preprocessed_size + 1);
 		memcpy(preprocessed_copy, r.preprocessed, preprocessed_size + 1);
 	}
 
@@ -368,16 +377,16 @@ void cute_shader_free_result(CF_ShaderCompilerResult result)
 {
 	// Reflection names are interned strings (immortal) -- only the arrays are freed.
 	CF_ShaderInfo* shader_info = &result.bytecode.shader_info;
-	free(shader_info->inputs);
-	free(shader_info->uniform_members);
-	free(shader_info->uniforms);
-	free(shader_info->image_names);
-	free(shader_info->image_binding_slots);
+	cf_free(shader_info->inputs);
+	cf_free(shader_info->uniform_members);
+	cf_free(shader_info->uniforms);
+	cf_free(shader_info->image_names);
+	cf_free(shader_info->image_binding_slots);
 
-	free((void*)result.bytecode.glsl300_src);
-	free((void*)result.bytecode.hlsl_src);
-	free((void*)result.bytecode.msl_src);
-	free((void*)result.bytecode.content);
-	free((char*)result.preprocessed_source);
-	free((char*)result.error_message);
+	cf_free((void*)result.bytecode.glsl300_src);
+	cf_free((void*)result.bytecode.hlsl_src);
+	cf_free((void*)result.bytecode.msl_src);
+	cf_free((void*)result.bytecode.content);
+	cf_free((char*)result.preprocessed_source);
+	cf_free((char*)result.error_message);
 }

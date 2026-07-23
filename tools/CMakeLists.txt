@@ -25,6 +25,12 @@ if (CF_CUTE_SHADERC)
 	# Standalone tools need a ckit implementation TU (CF apps get it from the
 	# cute library's src/cute_ckit.cpp).
 	list(APPEND CUTE_SHADERC_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/cute_shader_ckit.cpp)
+	# ...and cf_alloc/cf_free themselves, so allocations go through the same
+	# knob as everywhere else in CF (CF apps get it from the cute library),
+	# plus the CF_ASSERT handler cute_alloc.cpp relies on.
+	list(APPEND CUTE_SHADERC_SRCS
+		${CMAKE_CURRENT_SOURCE_DIR}/../src/cute_alloc.cpp
+		${CMAKE_CURRENT_SOURCE_DIR}/cute_shader_assert.cpp)
 	add_executable(cute-shaderc ${CUTE_SHADERC_SRCS})
 	target_include_directories(cute-shaderc PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../include)
 	set_target_properties(cute-shaderc PROPERTIES FOLDER "tools")
