@@ -146,6 +146,83 @@ void hrc_set_grid(int grid)
 	}
 }
 
+// Total bytes of all grid-dependent cascade SSBOs at a given grid resolution.
+// uvec2 = 8 bytes/texel; two T buffers per level (rad+trn), three R buffers
+// (ping-pong pair + zero), four frustum buffers. Buffer height = grid rows.
+size_t hrc_buffer_bytes(int grid)
+{
+	int n = POW2_LOG2(grid);
+	size_t total = 0;
+	for (int i = 0; i <= n; i++) {
+		int rays = 2 * (1 << i) + 1;
+		int probes = grid >> i;
+		size_t w = (size_t)probes * rays;
+		total += (size_t)2 * w * grid * 8; // rad + trn
+	}
+	size_t r_row = (size_t)grid * 2 * grid * 8;
+	total += 3 * r_row; // r_rad[2] + r_zero
+	total += 4 * r_row; // frustum[4]
+	return total;
+}
+
+// Allocate the grid-dependent cascade SSBOs for the currently-set grid.
+void hrc_alloc_buffers()
+{
+	int grid = hrc.grid;
+	int n = hrc.n;
+	for (int i = 0; i <= n; i++) {
+		hrc.vrays_rad[i] = hrc_make_buf(hrc.vrays_w[i], grid);
+		hrc.vrays_trn[i] = hrc_make_buf(hrc.vrays_w[i], grid);
+	}
+	for (int i = 0; i < 2; i++)
+		hrc.r_rad[i] = hrc_make_buf(grid * 2, grid);
+	hrc.r_zero = hrc_make_buf(grid * 2, grid);
+	{
+		int sz = grid * 2 * grid * 8;
+		void* zeros = cf_calloc(sz, 1);
+		cf_update_storage_buffer(hrc.r_zero, zeros, sz);
+		cf_free(zeros);
+	}
+	for (int i = 0; i < 4; i++)
+		hrc.frustum[i] = hrc_make_buf(grid * 2, grid);
+}
+
+// Destroy all grid-dependent cascade SSBOs (guarded so unused levels are skipped).
+void hrc_free_buffers()
+{
+	for (int i = 0; i <= HRC_MAX_N; i++) {
+		if (hrc.vrays_rad[i].id) { cf_destroy_storage_buffer(hrc.vrays_rad[i]); hrc.vrays_rad[i].id = 0; }
+		if (hrc.vrays_trn[i].id) { cf_destroy_storage_buffer(hrc.vrays_trn[i]); hrc.vrays_trn[i].id = 0; }
+	}
+	for (int i = 0; i < 2; i++)
+		if (hrc.r_rad[i].id) { cf_destroy_storage_buffer(hrc.r_rad[i]); hrc.r_rad[i].id = 0; }
+	if (hrc.r_zero.id) { cf_destroy_storage_buffer(hrc.r_zero); hrc.r_zero.id = 0; }
+	for (int i = 0; i < 4; i++)
+		if (hrc.frustum[i].id) { cf_destroy_storage_buffer(hrc.frustum[i]); hrc.frustum[i].id = 0; }
+}
+
+// Change grid and reallocate the cascade buffers to fit (destroy + recreate).
+void hrc_resize(int grid)
+{
+	size_t before = hrc_buffer_bytes(hrc.grid);
+	hrc_free_buffers();
+	hrc_set_grid(grid);
+	hrc_alloc_buffers();
+	// Report to stderr so the bench CSV on stdout stays clean.
+	fprintf(stderr, "[hrc] grid -> %d: cascade buffers %.1f MB -> %.1f MB\n",
+		grid, before / (1024.0 * 1024.0), hrc_buffer_bytes(grid) / (1024.0 * 1024.0));
+}
+
+// Analytical per-grid memory report (printed once at init).
+void hrc_print_memory_table()
+{
+	printf("[hrc] per-grid cascade buffer footprint:\n");
+	int grids[4] = { 128, 256, 512, 1024 };
+	for (int i = 0; i < 4; i++)
+		printf("[hrc]   grid %4d: %7.1f MB\n", grids[i], hrc_buffer_bytes(grids[i]) / (1024.0 * 1024.0));
+	fflush(stdout);
+}
+
 void hrc_init()
 {
 	CF_MEMSET(&hrc, 0, sizeof(hrc));
@@ -166,41 +243,15 @@ void hrc_init()
 	hrc.prefilter_mode = 4;
 	hrc.blend_width = 4.0f;
 
-	// Precompute max T cascade dimensions for allocation.
-	int max_vrays_w[HRC_MAX_N + 1];
-	for (int i = 0; i <= HRC_MAX_N; i++) {
-		int interval = 1 << i;
-		int rays = 2 * interval + 1; // dense directions
-		int probes = HRC_WORLD_SIZE >> i;
-		max_vrays_w[i] = probes * rays;
-	}
-
 	// Scene input canvases (nearest-neighbor: discrete pixel grid, no sRGB-space blending).
 	// Mipmaps allocated for hardware mipmap prefilter mode.
 	hrc.emissivity = hrc_make_canvas(HRC_WORLD_SIZE, HRC_WORLD_SIZE, CF_PIXEL_FORMAT_R16G16B16A16_FLOAT, CF_FILTER_NEAREST, true);
 	hrc.absorption = hrc_make_canvas(HRC_WORLD_SIZE, HRC_WORLD_SIZE, CF_PIXEL_FORMAT_R16G16B16A16_FLOAT, CF_FILTER_NEAREST, true);
 
-	// Per-cascade T SSBOs (uvec2 per texel = 8 bytes, f16-packed). Allocated at max size.
-	for (int i = 0; i <= HRC_MAX_N; i++) {
-		hrc.vrays_rad[i] = hrc_make_buf(max_vrays_w[i], HRC_WORLD_SIZE);
-		hrc.vrays_trn[i] = hrc_make_buf(max_vrays_w[i], HRC_WORLD_SIZE);
-	}
-
-	// R ping-pong SSBOs + zero buffer for R_N = 0.
-	// Dense directions: R_n holds (grid >> n) * 2^(n+1) = 2 * grid entries per row.
-	for (int i = 0; i < 2; i++)
-		hrc.r_rad[i] = hrc_make_buf(HRC_WORLD_SIZE * 2, HRC_WORLD_SIZE);
-	hrc.r_zero = hrc_make_buf(HRC_WORLD_SIZE * 2, HRC_WORLD_SIZE);
-	{
-		int sz = HRC_WORLD_SIZE * 2 * HRC_WORLD_SIZE * 8;
-		void* zeros = cf_calloc(sz, 1);
-		cf_update_storage_buffer(hrc.r_zero, zeros, sz);
-		cf_free(zeros);
-	}
-
-	// Per-frustum output SSBOs (4 rotations, 2 cones per probe).
-	for (int i = 0; i < 4; i++)
-		hrc.frustum[i] = hrc_make_buf(HRC_WORLD_SIZE * 2, HRC_WORLD_SIZE);
+	// Per-grid cascade SSBOs (T levels, R ping-pong + zero, frustum outputs).
+	// Allocated for the ACTIVE grid only and reallocated on [H] grid change,
+	// instead of the old max-world-size allocation (~400MB with dense directions).
+	hrc_alloc_buffers();
 
 	// Final output canvas (linear filtering for smooth display).
 	hrc.fluence = hrc_make_canvas(HRC_WORLD_SIZE, HRC_WORLD_SIZE, CF_PIXEL_FORMAT_R8G8B8A8_UNORM, CF_FILTER_LINEAR, false);
@@ -243,15 +294,7 @@ void hrc_shutdown()
 {
 	cf_destroy_canvas(hrc.emissivity);
 	cf_destroy_canvas(hrc.absorption);
-	for (int i = 0; i <= HRC_MAX_N; i++) {
-		cf_destroy_storage_buffer(hrc.vrays_rad[i]);
-		cf_destroy_storage_buffer(hrc.vrays_trn[i]);
-	}
-	for (int i = 0; i < 2; i++)
-		cf_destroy_storage_buffer(hrc.r_rad[i]);
-	cf_destroy_storage_buffer(hrc.r_zero);
-	for (int i = 0; i < 4; i++)
-		cf_destroy_storage_buffer(hrc.frustum[i]);
+	hrc_free_buffers();
 	cf_destroy_canvas(hrc.fluence);
 	cf_destroy_canvas(hrc.minmax);
 	cf_destroy_canvas(hrc.emissivity_filtered);
@@ -651,10 +694,10 @@ void handle_input()
 		test_scene = (test_scene + 1) % 5;
 	}
 	if (cf_key_just_pressed(CF_KEY_H)) {
-		if      (hrc.grid == 128)  hrc_set_grid(256);
-		else if (hrc.grid == 256)  hrc_set_grid(512);
-		else if (hrc.grid == 512)  hrc_set_grid(1024);
-		else                       hrc_set_grid(128);
+		if      (hrc.grid == 128)  hrc_resize(256);
+		else if (hrc.grid == 256)  hrc_resize(512);
+		else if (hrc.grid == 512)  hrc_resize(1024);
+		else                       hrc_resize(128);
 		if (hrc.trace_levels > hrc.n + 1)
 			hrc.trace_levels = hrc.n + 1;
 	}
@@ -1025,7 +1068,7 @@ void bench_clear_feedback()
 void bench_apply(BenchConfig* c)
 {
 	test_scene = c->scene;
-	hrc_set_grid(c->grid);
+	if (c->grid != hrc.grid) hrc_resize(c->grid);
 	hrc.trace_levels = c->trace_levels;
 	hrc.upscale_mode = c->upscale_mode;
 	hrc.cminus1 = c->cminus1;
@@ -1136,6 +1179,7 @@ int main(int argc, char* argv[])
 	cf_make_app("HRC - Holographic Radiance Cascades", 0, 0, 0, HRC_WORLD_SIZE, HRC_WORLD_SIZE, CF_APP_OPTIONS_WINDOW_POS_CENTERED_BIT, argv[0]);
 
 	hrc_init();
+	hrc_print_memory_table();
 	scene_init();
 
 	// Dev overrides for headless/scripted runs (same toggles as the HUD keys).
