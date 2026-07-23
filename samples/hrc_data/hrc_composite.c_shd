@@ -23,10 +23,11 @@
 layout(set = 0, binding = 0) uniform sampler2D u_emissivity;
 layout(set = 0, binding = 1) uniform sampler2D u_absorption;
 layout(set = 0, binding = 2) uniform sampler2D u_minmax;
-layout(std430, set = 0, binding = 3) readonly buffer F0 { uvec2 data[]; } u_f0;
-layout(std430, set = 0, binding = 4) readonly buffer F1 { uvec2 data[]; } u_f1;
-layout(std430, set = 0, binding = 5) readonly buffer F2 { uvec2 data[]; } u_f2;
-layout(std430, set = 0, binding = 6) readonly buffer F3 { uvec2 data[]; } u_f3;
+layout(set = 0, binding = 3) uniform sampler2D u_minmax_mip; // (absMin, absMax, emisMax) per block
+layout(std430, set = 0, binding = 4) readonly buffer F0 { uvec2 data[]; } u_f0;
+layout(std430, set = 0, binding = 5) readonly buffer F1 { uvec2 data[]; } u_f1;
+layout(std430, set = 0, binding = 6) readonly buffer F2 { uvec2 data[]; } u_f2;
+layout(std430, set = 0, binding = 7) readonly buffer F3 { uvec2 data[]; } u_f3;
 layout(set = 1, binding = 0, rgba8) uniform writeonly image2D u_fluence;
 layout(set = 1, binding = 1, rgba16f) uniform image2D u_fluence_lin; // linear copy (feeds multibounce feedback)
 
@@ -38,7 +39,14 @@ layout(set = 2, binding = 0) uniform Params
 	int   u_debug_mode;
 	int   u_cminus1;       // 0 = skip c-1 gathering, 1 = raymarch c-1
 	int   u_upscale_mode;  // 0 = nearest, 1 = minmax bilinear, 2 = joint bilateral
+	int   u_use_mip;       // 1 = minmax-mip cell skipping on the c-1 march
+	int   u_mip_block;     // block size (world px) of the minmax mip
+	int   u_c1_selective;  // 1 = skip the c-1 march in uniform-open cells (use R_0 only)
 };
+
+#define MIP_EPS_EMPTY   0.01
+#define MIP_EPS_UNIFORM 0.02
+#define MIP_EPS_EMIS    0.001 // any emission (incl. faint multibounce) forces fine steps
 
 layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
 
@@ -137,9 +145,34 @@ Interval trace_cminus1(ivec2 world_pos, int rot)
 	vec3 acc_rad = vec3(0.0);
 	vec3 acc_trn = vec3(1.0);
 
-	for (int i = 0; i < num_steps; i++) {
+	int sgn = dir.x + dir.y; // ±1 along the march axis
+
+	int i = 0;
+	while (i < num_steps) {
 		ivec2 p = world_pos + dir * i;
 		vec2 uv = (vec2(p) + 0.5) / world;
+
+		// Minmax-mip cell skip on the short c-1 march (same logic as the trace DDA).
+		if (u_use_mip != 0) {
+			vec3 mm = textureLod(u_minmax_mip, uv, 0.0).rgb;
+			bool uniform_empty = mm.y < MIP_EPS_EMPTY;
+			bool uniform_fog   = mm.x > MIP_EPS_EMPTY && (mm.y - mm.x) < MIP_EPS_UNIFORM && mm.z < MIP_EPS_EMIS;
+			if (uniform_empty || uniform_fog) {
+				int B = u_mip_block;
+				int along = (dir.x != 0) ? p.x : p.y;
+				int bpos = along / B;
+				int steps_to_edge = (sgn > 0) ? (bpos + 1) * B - along : along - bpos * B + 1;
+				int M = min(steps_to_edge, num_steps - i);
+				if (M < 1) M = 1;
+				if (uniform_fog) {
+					vec3 op = texture(u_absorption, uv).rgb;
+					vec3 absrp = -log(max(vec3(1.0) - op, vec3(1e-7)));
+					acc_trn *= exp(-absrp * (step_abs * float(M)));
+				}
+				i += M;
+				continue;
+			}
+		}
 
 		// Decode emission/16 + opacity encoding (see hrc_trace.c_shd).
 		vec3 emiss = linear_from_srgb(texture(u_emissivity, uv).rgb) * 16.0;
@@ -149,6 +182,7 @@ Interval trace_cminus1(ivec2 world_pos, int rot)
 		vec3 trans = exp(-absrp * step_abs);
 		acc_rad += acc_trn * emiss * (vec3(1.0) - trans);
 		acc_trn *= trans;
+		i++;
 	}
 
 	return Interval(acc_rad, acc_trn);
@@ -274,6 +308,17 @@ vec3 sum_quadrants(ivec2 world_pos)
 		}
 	}
 
+	// c-1 selectivity: in a fully-uniform OPEN cell the c-1 march degenerates to
+	// (rad 0, transmittance 1), so the merge with R_0 is just R_0. Classify the
+	// pixel's own cell via the minmax mip and skip the march there. Open cells
+	// are never emissive (emitters are opaque), so no emission term is dropped.
+	bool c1_skip = false;
+	if (u_c1_selective != 0 && u_cminus1 != 0) {
+		vec2 uvp = (vec2(world_pos) + 0.5) / float(u_world_size);
+		float amax = textureLod(u_minmax_mip, uvp, 0.0).g;
+		c1_skip = amax < MIP_EPS_EMPTY;
+	}
+
 	vec3 total = vec3(0.0);
 	for (int rot = 0; rot < 4; rot++) {
 		vec3 r0;
@@ -317,7 +362,7 @@ vec3 sum_quadrants(ivec2 world_pos)
 		}
 
 		// c-1 gathering: trace to nearest probe, merge with (possibly interpolated) R_0.
-		if (u_cminus1 != 0) {
+		if (u_cminus1 != 0 && !c1_skip) {
 			Interval cminus1 = trace_cminus1(world_pos, rot);
 			total += cminus1.rad + cminus1.trn * r0;
 		} else {

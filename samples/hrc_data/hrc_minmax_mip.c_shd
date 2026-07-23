@@ -1,0 +1,62 @@
+// Min/max absorption + max emission per coarse block, for accelerated marching.
+//
+// Dispatched at (world_size / block) resolution. Each thread reduces one
+// block x block region of the WORLD-resolution scene and writes:
+//   .r = min absorption (max channel)   .g = max absorption (max channel)
+//   .b = max emission   (max channel)   .a = 0
+//
+// The trace DDA and the c-1 march sample this to classify a block as
+// uniform-empty (max abs ~0), uniform-fog (max-min abs ~0 and no emission),
+// or mixed. Uniform blocks are crossed with a single analytic Beer step;
+// only mixed/emissive blocks are fine-stepped. Because emitters in these
+// scenes are opaque (they absorb to emit), any block containing an emitter
+// has high absorption AND non-zero emission, so it is never skipped.
+//
+// Absorption is stored as a per-pixel OPACITY (1 - exp(-absorption)); decode
+// to the coefficient before reducing (see hrc_trace.c_shd).
+//
+// Pipeline:  minmax_mip -> [trace] -> [extend] -> [merge] -> [composite]
+//            ^^^^^^^^^^
+
+layout(set = 0, binding = 0) uniform sampler2D u_absorption;
+layout(set = 0, binding = 1) uniform sampler2D u_emissivity;
+layout(set = 1, binding = 0, rgba16f) uniform writeonly image2D u_mip;
+
+layout(set = 2, binding = 0) uniform Params
+{
+	int u_world_size;
+	int u_block;
+};
+
+layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+
+vec3 linear_from_srgb(vec3 c) { return pow(c, vec3(2.2)); }
+
+void main()
+{
+	ivec2 gid = ivec2(gl_GlobalInvocationID.xy);
+	int blocks = u_world_size / u_block;
+	if (gid.x >= blocks || gid.y >= blocks) return;
+
+	ivec2 base = gid * u_block;
+	float world = float(u_world_size);
+
+	float amin = 1e30;
+	float amax = 0.0;
+	float emax = 0.0;
+	for (int dy = 0; dy < u_block; dy++) {
+		for (int dx = 0; dx < u_block; dx++) {
+			ivec2 p = base + ivec2(dx, dy);
+			vec2 uv = (vec2(p) + 0.5) / world;
+			vec3 op = texture(u_absorption, uv).rgb;
+			vec3 absrp = -log(max(vec3(1.0) - op, vec3(1e-7)));
+			float a = max(max(absrp.r, absrp.g), absrp.b);
+			amin = min(amin, a);
+			amax = max(amax, a);
+			vec3 em = linear_from_srgb(texture(u_emissivity, uv).rgb) * 16.0;
+			emax = max(emax, max(max(em.r, em.g), em.b));
+		}
+	}
+
+	imageStore(u_mip, gid, vec4(amin, amax, emax, 0.0));
+}

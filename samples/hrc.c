@@ -14,6 +14,8 @@
 // https://github.com/entropylost/amitabha
 
 #include <cute.h>
+#include <stdio.h>
+#include <string.h>
 
 //--------------------------------------------------------------------------------------------------
 // Configuration.
@@ -38,6 +40,7 @@
 #define HRC_WG            16
 #define HRC_ABS_THRESHOLD 0.1f
 #define HRC_NUM_DEBUG 8   // debug modes 0..7
+#define HRC_MIP_BLOCK 8   // minmax-mip block size (world px) ~ "8px cells"
 
 //--------------------------------------------------------------------------------------------------
 // Shader loading.
@@ -86,6 +89,11 @@ typedef struct Hrc
 	CF_Canvas minmax;
 	CF_Material mat_minmax;
 	CF_ComputeShader cs_minmax;
+	CF_Canvas minmax_mip;        // coarse (absMin, absMax, emisMax) blocks for marching
+	CF_ComputeShader cs_minmax_mip;
+	int mip_march;               // minmax-mip cell skipping on the trace DDA + c-1 march
+	int c1_selective;            // skip the c-1 march in uniform-open cells (use R_0 only)
+	int max_levels;              // cap the cascade this many levels (-1 = full N); R at cap is the R_N=0 boundary
 	CF_Canvas emissivity_filtered;
 	CF_Canvas absorption_filtered;
 	CF_Material mat_prefilter;
@@ -145,6 +153,83 @@ void hrc_set_grid(int grid)
 	}
 }
 
+// Total bytes of all grid-dependent cascade SSBOs at a given grid resolution.
+// uvec2 = 8 bytes/texel; two T buffers per level (rad+trn), three R buffers
+// (ping-pong pair + zero), four frustum buffers. Buffer height = grid rows.
+size_t hrc_buffer_bytes(int grid)
+{
+	int n = POW2_LOG2(grid);
+	size_t total = 0;
+	for (int i = 0; i <= n; i++) {
+		int rays = 2 * (1 << i) + 1;
+		int probes = grid >> i;
+		size_t w = (size_t)probes * rays;
+		total += (size_t)2 * w * grid * 8; // rad + trn
+	}
+	size_t r_row = (size_t)grid * 2 * grid * 8;
+	total += 3 * r_row; // r_rad[2] + r_zero
+	total += 4 * r_row; // frustum[4]
+	return total;
+}
+
+// Allocate the grid-dependent cascade SSBOs for the currently-set grid.
+void hrc_alloc_buffers()
+{
+	int grid = hrc.grid;
+	int n = hrc.n;
+	for (int i = 0; i <= n; i++) {
+		hrc.vrays_rad[i] = hrc_make_buf(hrc.vrays_w[i], grid);
+		hrc.vrays_trn[i] = hrc_make_buf(hrc.vrays_w[i], grid);
+	}
+	for (int i = 0; i < 2; i++)
+		hrc.r_rad[i] = hrc_make_buf(grid * 2, grid);
+	hrc.r_zero = hrc_make_buf(grid * 2, grid);
+	{
+		int sz = grid * 2 * grid * 8;
+		void* zeros = cf_calloc(sz, 1);
+		cf_update_storage_buffer(hrc.r_zero, zeros, sz);
+		cf_free(zeros);
+	}
+	for (int i = 0; i < 4; i++)
+		hrc.frustum[i] = hrc_make_buf(grid * 2, grid);
+}
+
+// Destroy all grid-dependent cascade SSBOs (guarded so unused levels are skipped).
+void hrc_free_buffers()
+{
+	for (int i = 0; i <= HRC_MAX_N; i++) {
+		if (hrc.vrays_rad[i].id) { cf_destroy_storage_buffer(hrc.vrays_rad[i]); hrc.vrays_rad[i].id = 0; }
+		if (hrc.vrays_trn[i].id) { cf_destroy_storage_buffer(hrc.vrays_trn[i]); hrc.vrays_trn[i].id = 0; }
+	}
+	for (int i = 0; i < 2; i++)
+		if (hrc.r_rad[i].id) { cf_destroy_storage_buffer(hrc.r_rad[i]); hrc.r_rad[i].id = 0; }
+	if (hrc.r_zero.id) { cf_destroy_storage_buffer(hrc.r_zero); hrc.r_zero.id = 0; }
+	for (int i = 0; i < 4; i++)
+		if (hrc.frustum[i].id) { cf_destroy_storage_buffer(hrc.frustum[i]); hrc.frustum[i].id = 0; }
+}
+
+// Change grid and reallocate the cascade buffers to fit (destroy + recreate).
+void hrc_resize(int grid)
+{
+	size_t before = hrc_buffer_bytes(hrc.grid);
+	hrc_free_buffers();
+	hrc_set_grid(grid);
+	hrc_alloc_buffers();
+	// Report to stderr so the bench CSV on stdout stays clean.
+	fprintf(stderr, "[hrc] grid -> %d: cascade buffers %.1f MB -> %.1f MB\n",
+		grid, before / (1024.0 * 1024.0), hrc_buffer_bytes(grid) / (1024.0 * 1024.0));
+}
+
+// Analytical per-grid memory report (printed once at init).
+void hrc_print_memory_table()
+{
+	printf("[hrc] per-grid cascade buffer footprint:\n");
+	int grids[4] = { 128, 256, 512, 1024 };
+	for (int i = 0; i < 4; i++)
+		printf("[hrc]   grid %4d: %7.1f MB\n", grids[i], hrc_buffer_bytes(grids[i]) / (1024.0 * 1024.0));
+	fflush(stdout);
+}
+
 void hrc_init()
 {
 	CF_MEMSET(&hrc, 0, sizeof(hrc));
@@ -158,6 +243,8 @@ void hrc_init()
 	// quadrant seams already balance, and the blend only carves dark diagonals
 	// (measured spoke/neighborhood ratios: blend off 0.98-1.05, blend on 0.90-0.96).
 	hrc.blend_boundary = 0;
+	hrc.mip_march = 1; // minmax-mip cell skipping on by default
+	hrc.max_levels = -1; // full cascade by default
 	// Mip+max: mipmap-averaged emissivity (smooth lights) + max-absorption
 	// (conservative occlusion). Pure mipmap averaging melts thin opaque walls:
 	// a 2px absorption-4 wall box-filtered at 2x becomes absorption 2 and leaks
@@ -165,47 +252,25 @@ void hrc_init()
 	hrc.prefilter_mode = 4;
 	hrc.blend_width = 4.0f;
 
-	// Precompute max T cascade dimensions for allocation.
-	int max_vrays_w[HRC_MAX_N + 1];
-	for (int i = 0; i <= HRC_MAX_N; i++) {
-		int interval = 1 << i;
-		int rays = 2 * interval + 1; // dense directions
-		int probes = HRC_WORLD_SIZE >> i;
-		max_vrays_w[i] = probes * rays;
-	}
-
 	// Scene input canvases (nearest-neighbor: discrete pixel grid, no sRGB-space blending).
 	// Mipmaps allocated for hardware mipmap prefilter mode.
 	hrc.emissivity = hrc_make_canvas(HRC_WORLD_SIZE, HRC_WORLD_SIZE, CF_PIXEL_FORMAT_R16G16B16A16_FLOAT, CF_FILTER_NEAREST, true);
 	hrc.absorption = hrc_make_canvas(HRC_WORLD_SIZE, HRC_WORLD_SIZE, CF_PIXEL_FORMAT_R16G16B16A16_FLOAT, CF_FILTER_NEAREST, true);
 
-	// Per-cascade T SSBOs (uvec2 per texel = 8 bytes, f16-packed). Allocated at max size.
-	for (int i = 0; i <= HRC_MAX_N; i++) {
-		hrc.vrays_rad[i] = hrc_make_buf(max_vrays_w[i], HRC_WORLD_SIZE);
-		hrc.vrays_trn[i] = hrc_make_buf(max_vrays_w[i], HRC_WORLD_SIZE);
-	}
-
-	// R ping-pong SSBOs + zero buffer for R_N = 0.
-	// Dense directions: R_n holds (grid >> n) * 2^(n+1) = 2 * grid entries per row.
-	for (int i = 0; i < 2; i++)
-		hrc.r_rad[i] = hrc_make_buf(HRC_WORLD_SIZE * 2, HRC_WORLD_SIZE);
-	hrc.r_zero = hrc_make_buf(HRC_WORLD_SIZE * 2, HRC_WORLD_SIZE);
-	{
-		int sz = HRC_WORLD_SIZE * 2 * HRC_WORLD_SIZE * 8;
-		void* zeros = cf_calloc(sz, 1);
-		cf_update_storage_buffer(hrc.r_zero, zeros, sz);
-		cf_free(zeros);
-	}
-
-	// Per-frustum output SSBOs (4 rotations, 2 cones per probe).
-	for (int i = 0; i < 4; i++)
-		hrc.frustum[i] = hrc_make_buf(HRC_WORLD_SIZE * 2, HRC_WORLD_SIZE);
+	// Per-grid cascade SSBOs (T levels, R ping-pong + zero, frustum outputs).
+	// Allocated for the ACTIVE grid only and reallocated on [H] grid change,
+	// instead of the old max-world-size allocation (~400MB with dense directions).
+	hrc_alloc_buffers();
 
 	// Final output canvas (linear filtering for smooth display).
 	hrc.fluence = hrc_make_canvas(HRC_WORLD_SIZE, HRC_WORLD_SIZE, CF_PIXEL_FORMAT_R8G8B8A8_UNORM, CF_FILTER_LINEAR, false);
 
 	// Min/max absorption canvas (grid-res, allocated at world size to handle runtime grid changes).
 	hrc.minmax = hrc_make_canvas(HRC_WORLD_SIZE, HRC_WORLD_SIZE, CF_PIXEL_FORMAT_R16G16_FLOAT, CF_FILTER_NEAREST, false);
+
+	// Coarse minmax mip for accelerated marching: (absMin, absMax, emisMax) per
+	// HRC_MIP_BLOCK-sized world block, at world/block resolution.
+	hrc.minmax_mip = hrc_make_canvas(HRC_WORLD_SIZE / HRC_MIP_BLOCK, HRC_WORLD_SIZE / HRC_MIP_BLOCK, CF_PIXEL_FORMAT_R16G16B16A16_FLOAT, CF_FILTER_NEAREST, false);
 
 	// Prefiltered scene inputs (grid-res, allocated at world size).
 	hrc.emissivity_filtered = hrc_make_canvas(HRC_WORLD_SIZE, HRC_WORLD_SIZE, CF_PIXEL_FORMAT_R16G16B16A16_FLOAT, CF_FILTER_NEAREST, false);
@@ -233,6 +298,7 @@ void hrc_init()
 	hrc.cs_copy = load_compute_shader("/hrc_data/hrc_copy.c_shd");
 	hrc.cs_composite = load_compute_shader("/hrc_data/hrc_composite.c_shd");
 	hrc.cs_minmax = load_compute_shader("/hrc_data/hrc_minmax.c_shd");
+	hrc.cs_minmax_mip = load_compute_shader("/hrc_data/hrc_minmax_mip.c_shd");
 	hrc.cs_prefilter = load_compute_shader("/hrc_data/hrc_prefilter.c_shd");
 	hrc.cs_prefilter_gauss = load_compute_shader("/hrc_data/hrc_prefilter_gauss.c_shd");
 	hrc.cs_feedback = load_compute_shader("/hrc_data/hrc_feedback.c_shd");
@@ -242,17 +308,11 @@ void hrc_shutdown()
 {
 	cf_destroy_canvas(hrc.emissivity);
 	cf_destroy_canvas(hrc.absorption);
-	for (int i = 0; i <= HRC_MAX_N; i++) {
-		cf_destroy_storage_buffer(hrc.vrays_rad[i]);
-		cf_destroy_storage_buffer(hrc.vrays_trn[i]);
-	}
-	for (int i = 0; i < 2; i++)
-		cf_destroy_storage_buffer(hrc.r_rad[i]);
-	cf_destroy_storage_buffer(hrc.r_zero);
-	for (int i = 0; i < 4; i++)
-		cf_destroy_storage_buffer(hrc.frustum[i]);
+	hrc_free_buffers();
 	cf_destroy_canvas(hrc.fluence);
 	cf_destroy_canvas(hrc.minmax);
+	cf_destroy_canvas(hrc.minmax_mip);
+	cf_destroy_compute_shader(hrc.cs_minmax_mip);
 	cf_destroy_canvas(hrc.emissivity_filtered);
 	cf_destroy_canvas(hrc.absorption_filtered);
 	cf_destroy_canvas(hrc.diffuse);
@@ -286,9 +346,35 @@ void hrc_compute()
 	CF_Texture absrp_tex = cf_canvas_get_target(hrc.absorption);
 	CF_Texture fluence_tex = cf_canvas_get_target(hrc.fluence);
 	CF_Texture minmax_tex = cf_canvas_get_target(hrc.minmax);
+	CF_Texture minmax_mip_tex = cf_canvas_get_target(hrc.minmax_mip);
 
 	int dim = hrc.grid;
 	int N = hrc.n;
+
+	// Cascade level cap: stop early and treat R at the cap as the R_N=0 boundary.
+	// Only T_0..T_cap are built and only R_{cap-1}..R_0 are merged. This drops the
+	// longest-range (lowest-frequency) light in exchange for fewer extend/merge passes.
+	int cap = N;
+	if (hrc.max_levels >= 1 && hrc.max_levels < N) cap = hrc.max_levels;
+
+	// Build the coarse minmax mip (absMin, absMax, emisMax per block) from the
+	// final scene textures. The trace DDA and c-1 march sample it to skip
+	// uniform blocks. Built after feedback so it reflects this frame's emission.
+	if (hrc.mip_march) {
+		int world = HRC_WORLD_SIZE;
+		int block = HRC_MIP_BLOCK;
+		int blocks = world / block;
+		cf_material_set_texture_cs(hrc.mat_minmax, "u_absorption", absrp_tex);
+		cf_material_set_texture_cs(hrc.mat_minmax, "u_emissivity", emiss_tex);
+		cf_material_set_uniform_cs(hrc.mat_minmax, "u_world_size", &world, CF_UNIFORM_TYPE_INT, 1);
+		cf_material_set_uniform_cs(hrc.mat_minmax, "u_block", &block, CF_UNIFORM_TYPE_INT, 1);
+		CF_ComputeDispatch d = cf_compute_dispatch_defaults(
+			hrc_div_ceil(blocks, HRC_WG), hrc_div_ceil(blocks, HRC_WG), 1);
+		CF_Texture rw_tex[1] = { minmax_mip_tex };
+		d.rw_textures = rw_tex;
+		d.rw_texture_count = 1;
+		cf_dispatch_compute(hrc.cs_minmax_mip, hrc.mat_minmax, d);
+	}
 
 	// The trace shader marches raw full-resolution scene textures (prefiltering
 	// quantizes moving emitters into visible flicker and melts thin occluders),
@@ -302,6 +388,10 @@ void hrc_compute()
 	cf_material_set_uniform_cs(hrc.mat_trace, "u_mip_level", &mip_level, CF_UNIFORM_TYPE_FLOAT, 1);
 	cf_material_set_uniform_cs(hrc.mat_trace, "u_absrp_mip_level", &absrp_mip_level, CF_UNIFORM_TYPE_FLOAT, 1);
 	cf_material_set_uniform_cs(hrc.mat_trace, "u_upscale", &upscale, CF_UNIFORM_TYPE_INT, 1);
+	int mip_block = HRC_MIP_BLOCK;
+	cf_material_set_texture_cs(hrc.mat_trace, "u_minmax_mip", minmax_mip_tex);
+	cf_material_set_uniform_cs(hrc.mat_trace, "u_use_mip", &hrc.mip_march, CF_UNIFORM_TYPE_INT, 1);
+	cf_material_set_uniform_cs(hrc.mat_trace, "u_mip_block", &mip_block, CF_UNIFORM_TYPE_INT, 1);
 
 	for (int j = 0; j < 4; j++) {
 		// Seed T_0 when no levels are traced (sample at probe, no raymarching).
@@ -348,9 +438,9 @@ void hrc_compute()
 			cf_dispatch_compute(hrc.cs_trace, hrc.mat_trace, d);
 		}
 
-		// Extend remaining levels.
+		// Extend remaining levels (up to the cap).
 		int ext_start = hrc.trace_levels > 0 ? hrc.trace_levels : 1;
-		for (int i = ext_start; i <= N; i++) {
+		for (int i = ext_start; i <= cap; i++) {
 			int params[4] = { i, dim, hrc.vrays_w[i - 1], hrc.vrays_w[i] };
 			cf_material_set_uniform_cs(hrc.mat_extend, "u_cascade", params + 0, CF_UNIFORM_TYPE_INT, 1);
 			cf_material_set_uniform_cs(hrc.mat_extend, "u_world_size", params + 1, CF_UNIFORM_TYPE_INT, 1);
@@ -371,9 +461,10 @@ void hrc_compute()
 			cf_dispatch_compute(hrc.cs_extend, hrc.mat_extend, d);
 		}
 
-		// Merge R_{N-1} down to R_0. R rows hold 2 * dim entries (dense directions).
+		// Merge R_{cap-1} down to R_0. R rows hold 2 * dim entries (dense directions).
+		// R at the cap is the zero boundary (r_zero), same role R_N=0 plays at full depth.
 		int r_ping = 0;
-		for (int i = N - 1; i >= 0; i--) {
+		for (int i = cap - 1; i >= 0; i--) {
 			int params[6] = { i, dim, hrc.vrays_w[i], hrc.vrays_w[i + 1], dim * 2, dim * 2 };
 			cf_material_set_uniform_cs(hrc.mat_merge, "u_cascade", params + 0, CF_UNIFORM_TYPE_INT, 1);
 			cf_material_set_uniform_cs(hrc.mat_merge, "u_world_size", params + 1, CF_UNIFORM_TYPE_INT, 1);
@@ -387,7 +478,7 @@ void hrc_compute()
 				hrc_div_ceil(dim, HRC_WG),
 				1
 			);
-			CF_StorageBuffer r_prev = (i == N - 1) ? hrc.r_zero : hrc.r_rad[1 - r_ping];
+			CF_StorageBuffer r_prev = (i == cap - 1) ? hrc.r_zero : hrc.r_rad[1 - r_ping];
 			CF_StorageBuffer ro[5] = {
 				hrc.vrays_rad[i], hrc.vrays_trn[i],
 				hrc.vrays_rad[i + 1], hrc.vrays_trn[i + 1],
@@ -446,15 +537,20 @@ void hrc_compute()
 		int world = HRC_WORLD_SIZE;
 		float abs_thresh = HRC_ABS_THRESHOLD;
 		int debug = hrc.debug_mode <= 5 ? hrc.debug_mode : 0;
+		int mip_block = HRC_MIP_BLOCK;
 		cf_material_set_texture_cs(hrc.mat_composite, "u_emissivity", emiss_tex);
 		cf_material_set_texture_cs(hrc.mat_composite, "u_absorption", absrp_tex);
 		cf_material_set_texture_cs(hrc.mat_composite, "u_minmax", minmax_tex);
+		cf_material_set_texture_cs(hrc.mat_composite, "u_minmax_mip", minmax_mip_tex);
 		cf_material_set_uniform_cs(hrc.mat_composite, "u_world_size", &world, CF_UNIFORM_TYPE_INT, 1);
 		cf_material_set_uniform_cs(hrc.mat_composite, "u_grid_size", &dim, CF_UNIFORM_TYPE_INT, 1);
 		cf_material_set_uniform_cs(hrc.mat_composite, "u_abs_threshold", &abs_thresh, CF_UNIFORM_TYPE_FLOAT, 1);
 		cf_material_set_uniform_cs(hrc.mat_composite, "u_debug_mode", &debug, CF_UNIFORM_TYPE_INT, 1);
 		cf_material_set_uniform_cs(hrc.mat_composite, "u_cminus1", &hrc.cminus1, CF_UNIFORM_TYPE_INT, 1);
 		cf_material_set_uniform_cs(hrc.mat_composite, "u_upscale_mode", &hrc.upscale_mode, CF_UNIFORM_TYPE_INT, 1);
+		cf_material_set_uniform_cs(hrc.mat_composite, "u_use_mip", &hrc.mip_march, CF_UNIFORM_TYPE_INT, 1);
+		cf_material_set_uniform_cs(hrc.mat_composite, "u_mip_block", &mip_block, CF_UNIFORM_TYPE_INT, 1);
+		cf_material_set_uniform_cs(hrc.mat_composite, "u_c1_selective", &hrc.c1_selective, CF_UNIFORM_TYPE_INT, 1);
 
 		CF_ComputeDispatch d = cf_compute_dispatch_defaults(
 			hrc_div_ceil(world, HRC_WG),
@@ -511,6 +607,7 @@ typedef struct OrbLight
 } OrbLight;
 
 float time_acc = 0.0f;
+int freeze_time = 0; // HRC_FREEZE=1: hold time_acc fixed (freezes the pinhole gap sweep etc.)
 int test_scene = 0; // 0 = off, 1 = static centered light, 2 = slowly orbiting light
 
 // Test light center for this frame. The light is 8x8 world pixels -- the paper
@@ -649,10 +746,10 @@ void handle_input()
 		test_scene = (test_scene + 1) % 5;
 	}
 	if (cf_key_just_pressed(CF_KEY_H)) {
-		if      (hrc.grid == 128)  hrc_set_grid(256);
-		else if (hrc.grid == 256)  hrc_set_grid(512);
-		else if (hrc.grid == 512)  hrc_set_grid(1024);
-		else                       hrc_set_grid(128);
+		if      (hrc.grid == 128)  hrc_resize(256);
+		else if (hrc.grid == 256)  hrc_resize(512);
+		else if (hrc.grid == 512)  hrc_resize(1024);
+		else                       hrc_resize(128);
 		if (hrc.trace_levels > hrc.n + 1)
 			hrc.trace_levels = hrc.n + 1;
 	}
@@ -733,7 +830,7 @@ void update_lights()
 	float half = (float)HRC_WORLD_SIZE * 0.5f;
 	float ws = (float)HRC_WORLD_SIZE;
 	float dt = CF_DELTA_TIME;
-	time_acc += dt;
+	if (!freeze_time) time_acc += dt;
 	frame_light_count = 0;
 
 	// Orbiting lights.
@@ -930,6 +1027,237 @@ void draw_hud()
 }
 
 //--------------------------------------------------------------------------------------------------
+// Benchmark mode (HRC_BENCH=1).
+//
+// Iterates a fixed config sweep over deterministic scenes. For each config the
+// sample renders warmup frames (long enough for cornell's multibounce feedback
+// to settle), then times BENCH_TIMED frames with the wall clock, reads back the
+// fluence canvas, and prints one CSV row with average frame ms plus quality vs
+// the in-run 1x-grid reference for the same scene (RMSE on tonemapped luma +
+// max channel diff, both on the displayed rgba8 output). Exits when the sweep
+// completes. Run a Release build for meaningful timings.
+
+typedef struct BenchConfig
+{
+	int scene;        // HRC_TEST scene id (1 static, 3 cornell, 4 pinhole)
+	int grid;
+	int trace_levels;
+	int upscale_mode;
+	int cminus1;
+	int mip_march;    // minmax-mip cell skipping
+	int max_levels;   // cascade level cap (-1 = full)
+	int c1_selective; // c-1 selectivity (item 4)
+	int is_reference; // first row per scene; its readback becomes the quality baseline
+	const char* extras;
+} BenchConfig;
+
+#define BENCH_MAX_CONFIGS 128
+#define BENCH_WARMUP 30           // pipeline compile + steady state
+#define BENCH_WARMUP_FEEDBACK 120 // cornell: multibounce feedback settles ~60 frames; use 2x margin
+#define BENCH_TIMED 60
+
+typedef struct Bench
+{
+	int active;
+	int index;
+	int count;
+	BenchConfig configs[BENCH_MAX_CONFIGS];
+	int state;       // 0 = apply config, 1 = warmup, 2 = timed, 3 = wait on readback
+	int frames_left;
+	uint64_t t0;
+	double frame_ms;
+	CF_Readback readback;
+	uint8_t* ref[5];    // per-scene reference pixels, indexed by scene id
+	uint8_t* ab_ref[5]; // per-scene "nomip" image, for the mip-neutrality A/B diff
+} Bench;
+
+Bench bench;
+
+BenchConfig* bench_add(int scene, int grid, int upscale, int cm1, int is_ref, const char* extras)
+{
+	CF_ASSERT(bench.count < BENCH_MAX_CONFIGS);
+	BenchConfig* c = &bench.configs[bench.count++];
+	c->scene = scene;
+	c->grid = grid;
+	c->trace_levels = 3;
+	c->upscale_mode = upscale;
+	c->cminus1 = cm1;
+	c->mip_march = 1;      // mip on by default
+	c->max_levels = -1;    // full cascade by default
+	c->c1_selective = 0;   // off by default
+	c->is_reference = is_ref;
+	c->extras = extras;
+	return c;
+}
+
+void bench_init()
+{
+	bench.active = 1;
+	bench.state = 0;
+	freeze_time = 1;
+	time_acc = 1.0f; // fixed pinhole gap position
+	cf_app_set_present_mode(CF_PRESENT_MODE_IMMEDIATE); // uncap present so GPU time is measurable
+
+	int scenes[3] = { 1, 3, 4 };
+	for (int s = 0; s < 3; s++) {
+		int scene = scenes[s];
+		// 1x-grid reference row (quality baseline for this scene).
+		bench_add(scene, HRC_WORLD_SIZE, 1, 1, 1, "reference");
+		int grids[2] = { 512, 256 };
+		for (int g = 0; g < 2; g++) {
+			bench_add(scene, grids[g], 0, 1, 0, "");
+			bench_add(scene, grids[g], 1, 1, 0, "");
+			bench_add(scene, grids[g], 2, 1, 0, "");
+			bench_add(scene, grids[g], 1, 0, 0, "");
+		}
+		// Minmax-mip marching A/B at grid 512 (item 3 correctness/perf gate).
+		// nomip runs first and stashes its image; the mip row's rmse/maxdiff are
+		// measured DIRECTLY against that nomip image (neutrality), not the reference.
+		bench_add(scene, 512, 1, 1, 0, "nomip")->mip_march = 0;
+		bench_add(scene, 512, 1, 1, 0, "mip")->mip_march = 1;
+		// c-1 selectivity at grid 512 (item 4): skip the c-1 march in open cells.
+		bench_add(scene, 512, 1, 1, 0, "c1sel")->c1_selective = 1;
+		// Cascade level cap (item 5): stop N-1 / N-2 levels deep at grid 512 (N=9).
+		{
+			int N = POW2_LOG2(512);
+			bench_add(scene, 512, 1, 1, 0, "cap_N-1")->max_levels = N - 1;
+			bench_add(scene, 512, 1, 1, 0, "cap_N-2")->max_levels = N - 2;
+		}
+	}
+
+	printf("scene,grid,prefilter,upscale,cm1,mip,cap,c1sel,extras,frame_ms,rmse,maxdiff\n");
+	fflush(stdout);
+}
+
+// Clear last frame's fluence so cornell's feedback loop always converges from
+// the same starting state regardless of which config ran before.
+void bench_clear_feedback()
+{
+	begin_canvas_draw();
+	cf_render_to(hrc.fluence_lin, true);
+	end_canvas_draw();
+}
+
+void bench_apply(BenchConfig* c)
+{
+	test_scene = c->scene;
+	if (c->grid != hrc.grid) hrc_resize(c->grid);
+	hrc.trace_levels = c->trace_levels;
+	hrc.upscale_mode = c->upscale_mode;
+	hrc.cminus1 = c->cminus1;
+	hrc.mip_march = c->mip_march;
+	hrc.c1_selective = c->c1_selective;
+	hrc.max_levels = c->max_levels;
+	bench_clear_feedback();
+}
+
+void bench_metrics(const uint8_t* test, const uint8_t* ref, double* rmse, double* maxdiff)
+{
+	int n = HRC_WORLD_SIZE * HRC_WORLD_SIZE;
+	double sum_sq = 0.0;
+	int md = 0;
+	for (int i = 0; i < n; i++) {
+		const uint8_t* a = test + i * 4;
+		const uint8_t* b = ref + i * 4;
+		// Tonemapped luma on the displayed sRGB bytes.
+		double la = (0.2126 * a[0] + 0.7152 * a[1] + 0.0722 * a[2]) / 255.0;
+		double lb = (0.2126 * b[0] + 0.7152 * b[1] + 0.0722 * b[2]) / 255.0;
+		double d = la - lb;
+		sum_sq += d * d;
+		for (int ch = 0; ch < 3; ch++) {
+			int cd = abs((int)a[ch] - (int)b[ch]);
+			if (cd > md) md = cd;
+		}
+	}
+	*rmse = sqrt(sum_sq / (double)n);
+	*maxdiff = (double)md / 255.0;
+}
+
+const char* bench_scene_name(int scene)
+{
+	return scene == 1 ? "static" : scene == 2 ? "orbiting" : scene == 3 ? "cornell" : "pinhole";
+}
+
+// Called after cf_app_update, before the frame's draws (config must be in
+// place before the scene canvases render).
+void bench_pre_frame()
+{
+	if (bench.state == 0) {
+		bench_apply(&bench.configs[bench.index]);
+		BenchConfig* c = &bench.configs[bench.index];
+		bench.frames_left = (c->scene == 3) ? BENCH_WARMUP_FEEDBACK : BENCH_WARMUP;
+		bench.state = 1;
+	}
+}
+
+// Called after hrc_compute (the frame's GPU work has been submitted).
+void bench_post_frame()
+{
+	BenchConfig* c = &bench.configs[bench.index];
+	switch (bench.state) {
+	case 1: // warmup
+		if (--bench.frames_left <= 0) {
+			bench.frames_left = BENCH_TIMED;
+			bench.t0 = cf_get_ticks();
+			bench.state = 2;
+		}
+		break;
+	case 2: // timed
+		if (--bench.frames_left <= 0) {
+			uint64_t t1 = cf_get_ticks();
+			bench.frame_ms = (double)(t1 - bench.t0) / (double)cf_get_tick_frequency() * 1000.0 / (double)BENCH_TIMED;
+			bench.readback = cf_canvas_readback(hrc.fluence);
+			bench.state = 3;
+		}
+		break;
+	case 3: // wait on async readback (scene keeps rendering; it's static)
+		if (cf_readback_ready(bench.readback)) {
+			int size = cf_readback_size(bench.readback);
+			CF_ASSERT(size == HRC_WORLD_SIZE * HRC_WORLD_SIZE * 4);
+			uint8_t* pixels = (uint8_t*)cf_alloc(size);
+			cf_readback_data(bench.readback, pixels, size);
+			cf_destroy_readback(bench.readback);
+
+			double rmse = 0.0, maxdiff = 0.0;
+			if (c->is_reference) {
+				cf_free(bench.ref[c->scene]);
+				bench.ref[c->scene] = pixels; // take ownership
+			} else if (strcmp(c->extras, "nomip") == 0) {
+				// Measure vs reference AND stash the image for the mip A/B.
+				bench_metrics(pixels, bench.ref[c->scene], &rmse, &maxdiff);
+				cf_free(bench.ab_ref[c->scene]);
+				bench.ab_ref[c->scene] = pixels; // take ownership
+			} else if (strcmp(c->extras, "mip") == 0) {
+				// Direct neutrality diff against the nomip image (not the reference).
+				CF_ASSERT(bench.ab_ref[c->scene]);
+				bench_metrics(pixels, bench.ab_ref[c->scene], &rmse, &maxdiff);
+				cf_free(pixels);
+			} else {
+				CF_ASSERT(bench.ref[c->scene]);
+				bench_metrics(pixels, bench.ref[c->scene], &rmse, &maxdiff);
+				cf_free(pixels);
+			}
+
+			printf("%s,%d,%d,%d,%d,%d,%d,%d,%s,%.3f,%.5f,%.4f\n",
+				bench_scene_name(c->scene), c->grid, hrc.prefilter_mode, c->upscale_mode, c->cminus1,
+				c->mip_march, c->max_levels, c->c1_selective, c->extras, bench.frame_ms, rmse, maxdiff);
+			fflush(stdout);
+
+			bench.index++;
+			bench.state = 0;
+			if (bench.index >= bench.count) {
+				printf("BENCH DONE\n");
+				fflush(stdout);
+				for (int i = 0; i < 5; i++) { cf_free(bench.ref[i]); cf_free(bench.ab_ref[i]); }
+				bench.active = 0;
+				cf_app_signal_shutdown();
+			}
+		}
+		break;
+	}
+}
+
+//--------------------------------------------------------------------------------------------------
 // Entry point.
 
 int main(int argc, char* argv[])
@@ -937,6 +1265,7 @@ int main(int argc, char* argv[])
 	cf_make_app("HRC - Holographic Radiance Cascades", 0, 0, 0, HRC_WORLD_SIZE, HRC_WORLD_SIZE, CF_APP_OPTIONS_WINDOW_POS_CENTERED_BIT, argv[0]);
 
 	hrc_init();
+	hrc_print_memory_table();
 	scene_init();
 
 	// Dev overrides for headless/scripted runs (same toggles as the HUD keys).
@@ -948,11 +1277,18 @@ int main(int argc, char* argv[])
 		if ((env = getenv("HRC_BLEND_WIDTH"))) hrc.blend_width = (float)atof(env);
 		if ((env = getenv("HRC_CM1")))         hrc.cminus1 = atoi(env);
 		if ((env = getenv("HRC_TRACE")))       hrc.trace_levels = atoi(env);
+		if ((env = getenv("HRC_FREEZE")))      freeze_time = atoi(env);
+		if ((env = getenv("HRC_MIP")))         hrc.mip_march = atoi(env);
+		if ((env = getenv("HRC_CM1SEL")))      hrc.c1_selective = atoi(env);
+		if ((env = getenv("HRC_MAX_LEVELS")))  hrc.max_levels = atoi(env);
 	}
+
+	if (getenv("HRC_BENCH")) bench_init();
 
 	while (cf_app_is_running()) {
 		cf_app_update(NULL);
 		cf_draw_push_shape_aa(0);
+		if (bench.active) bench_pre_frame();
 		handle_input();
 		update_lights();
 		draw_emissivity();
@@ -961,8 +1297,9 @@ int main(int argc, char* argv[])
 		if (test_scene == 3) hrc_feedback();
 		hrc_compute();
 		display_fluence();
-		draw_hud();
+		if (!bench.active) draw_hud();
 		cf_app_draw_onto_screen(true);
+		if (bench.active) bench_post_frame();
 	}
 
 	hrc_shutdown();
