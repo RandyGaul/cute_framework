@@ -38,6 +38,21 @@ layout(set = 2, binding = 0) uniform Params
 	int   u_debug_mode;
 	int   u_cminus1;       // 0 = skip c-1 gathering, 1 = raymarch c-1
 	int   u_upscale_mode;  // 0 = nearest, 1 = minmax bilinear, 2 = joint bilateral
+
+	// Naive off-screen light (MODE 1 negative control): add the off-screen light
+	// UNOCCLUDED to every pixel, bypassing the cascade transmittance. This is the
+	// WRONG way -- it bleeds through on-screen walls. Correct injection (mode 2)
+	// happens inside the merge shader where on-screen transmittance still applies.
+	int   u_inject_mode;   // 1 = naive unoccluded add (this shader), else no-op here
+	int   u_light_type;    // 0 = infinite directional, 1 = finite point
+	float u_light_dirx;
+	float u_light_diry;
+	float u_light_posx;
+	float u_light_posy;
+	float u_light_r;
+	float u_light_g;
+	float u_light_b;
+	float u_light_falloff;
 };
 
 layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
@@ -324,6 +339,22 @@ vec3 sum_quadrants(ivec2 world_pos)
 			total += r0;
 		}
 	}
+
+	// MODE 1 (naive negative control): dump the off-screen light onto the pixel
+	// with NO occlusion. Behind an on-screen wall this bleeds through (wrong),
+	// which is exactly the artifact mode 2's in-cascade injection avoids.
+	if (u_inject_mode == 1) {
+		vec2 wp = (vec2(world_pos) + 0.5) / float(u_world_size);
+		vec3 col = vec3(u_light_r, u_light_g, u_light_b);
+		if (u_light_type == 0) {
+			total += col;
+		} else {
+			vec2 to_l = vec2(u_light_posx, u_light_posy) - wp;
+			float dist = length(to_l);
+			total += col / (1.0 + u_light_falloff * dist * dist);
+		}
+	}
+
 	return total;
 }
 
