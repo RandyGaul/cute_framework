@@ -106,6 +106,21 @@ jobs:
       - name: Build
         run: cmake --build build
 
+      # Runtime smoke test: launch a shader-heavy sample and make sure it does
+      # not crash. This catches native shader-compilation regressions (e.g. the
+      # MSL backend on macOS) that a build alone cannot detect. `waves`
+      # exercises both the default draw shader and a custom runtime shader.
+      - name: Smoke test sample (Linux, headless GPU)
+        if: runner.os == 'Linux'
+        run: xvfb-run -a -s "-screen 0 1280x720x24" ./.github/scripts/smoke_test.sh ./build/waves 8
+        env:
+          SDL_AUDIODRIVER: dummy
+          LIBGL_ALWAYS_SOFTWARE: "1"
+
+      - name: Smoke test sample
+        if: runner.os != 'Linux'
+        run: ./.github/scripts/smoke_test.sh ./build/waves 8
+
       - name: Tests (Linux, headless GPU)
         if: runner.os == 'Linux'
         run: xvfb-run -a -s "-screen 0 1280x720x24" ./build/tests
