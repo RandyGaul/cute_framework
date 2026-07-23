@@ -1245,6 +1245,29 @@ static void test_emitters(void)
 		}
 		cspv_free(&r);
 	}
+	// MSL emits shader functions as cf_shader member functions. Without a
+	// `thread` address-space qualifier they compile as address-space-generic,
+	// so passing a member array (a GLSL global) to a `thread T*` array
+	// parameter is rejected by Metal ("cannot initialize a parameter of type
+	// 'thread float2 *' with an lvalue of type '__metal_generic float2[8]'"
+	// -- the builtin draw shader's distance_polygon idiom). HLSL has no
+	// address spaces and must stay unqualified.
+	{
+		CSPV_Result r = s_emit_all(CSPV_STAGE_FRAGMENT,
+			"vec2 pts[8];\n"
+			"layout(location = 0) out vec4 result;\n"
+			"float poly(vec2 p, vec2 v[8], int n) { return v[0].x + p.x + float(n); }\n"
+			"void main() {\n"
+			"	pts[0] = vec2(1.0);\n"
+			"	result = vec4(poly(gl_FragCoord.xy, pts, 8));\n"
+			"}\n");
+		if (r.success) {
+			CHECK(strstr(r.msl, "thread float2* v, int n) thread\n") != NULL);
+			CHECK(strstr(r.msl, "cf_main_() thread\n") != NULL);
+			CHECK(strstr(r.hlsl, ") thread") == NULL);
+		}
+		cspv_free(&r);
+	}
 	// Struct-typed ternaries lower to cf_select_<name> in HLSL (FXC's ?: only
 	// accepts numeric operands, error X3020); MSL keeps the plain ternary.
 	{
