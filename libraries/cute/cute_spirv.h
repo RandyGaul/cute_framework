@@ -5932,6 +5932,24 @@ static void cspv_tp_expr(cspv_tp* g, cspv_expr* e, int prec)
 	cspv_tp_expr_to(g, e, e->want, prec);
 }
 
+// Named-instance buffer blocks (`buffer B { T data[]; } inst;`) have no block
+// scoping in HLSL/MSL; the single runtime-array member becomes one resource
+// named `inst_data`, and `inst.data` accesses collapse to that identifier.
+// Returns the owning declaration when `e` is such an access, else NULL.
+static cspv_decl* cspv_tp_named_buffer_member(cspv_tp* g, cspv_expr* e)
+{
+	if (e->kind != CSPV_E_MEMBER || e->u.member.base->kind != CSPV_E_REF) return NULL;
+	const char* inst = e->u.member.base->u.name;
+	for (int i = 0; i < (int)asize(g->ctx->decls); i++) {
+		cspv_decl* d = g->ctx->decls + i;
+		if (d->kind == CSPV_D_BLOCK && d->is_buffer && d->instance_name == inst &&
+		    d->num_members == 1 && d->member_names[0] == e->u.member.member) {
+			return d;
+		}
+	}
+	return NULL;
+}
+
 static void cspv_tp_expr_node(cspv_tp* g, cspv_expr* e, int prec)
 {
 	switch (e->kind) {
@@ -5942,6 +5960,13 @@ static void cspv_tp_expr_node(cspv_tp* g, cspv_expr* e, int prec)
 	case CSPV_E_REF: sappend(g->ctx->tp_out, cspv_tp_name(g, e->u.name)); break;
 
 	case CSPV_E_MEMBER:
+		if (g->hlsl || g->msl) {
+			cspv_decl* bd = cspv_tp_named_buffer_member(g, e);
+			if (bd) {
+				sfmt_append(g->ctx->tp_out, "%s_%s", bd->instance_name, bd->member_names[0]);
+				break;
+			}
+		}
 		cspv_tp_expr(g, e->u.member.base, 15);
 		sfmt_append(g->ctx->tp_out, ".%s", e->u.member.member);
 		break;
@@ -5956,13 +5981,16 @@ static void cspv_tp_expr_node(cspv_tp* g, cspv_expr* e, int prec)
 	case CSPV_E_LENGTH:
 		if (g->hlsl || g->msl) {
 			// Neither HLSL nor MSL has .length(): sized arrays print their constant
-			// length; runtime SSBO tails call the per-buffer <member>_len() helper
-			// (HLSL only; MSL rejects runtime .length() in validation -- Metal has
-			// no buffer-length query).
+			// length; runtime SSBO tails call the per-buffer _len() helper (HLSL
+			// only; MSL rejects runtime .length() in validation -- Metal has no
+			// buffer-length query).
 			cspv_expr* b = e->u.member.base;
 			cspv_type* bt = cspv_tp_rtype(g, b);
+			cspv_decl* bd = cspv_tp_named_buffer_member(g, b);
 			if (bt && bt->kind == CSPV_T_ARRAY && bt->cols >= 0) {
 				sfmt_append(g->ctx->tp_out, "%d", bt->cols);
+			} else if (g->hlsl && bd) {
+				sfmt_append(g->ctx->tp_out, "int(%s_%s_len())", bd->instance_name, bd->member_names[0]);
 			} else if (g->hlsl && b->kind == CSPV_E_REF) {
 				sfmt_append(g->ctx->tp_out, "int(%s_len())", b->u.name);
 			} else {
@@ -6580,6 +6608,15 @@ static void cspv_hlsl_call(cspv_tp* g, cspv_expr* e)
 	// Type constructors.
 	cspv_type* ctor = cspv_lookup_type(g->ctx, name);
 	if (ctor && e->u.call.array_size == -1) {
+		if (ctor->kind == CSPV_T_STRUCT) {
+			sfmt_append(*out, "cf_make_%s(", ctor->name);
+			for (int i = 0; i < argc; i++) {
+				if (i) sappend(*out, ", ");
+				cspv_tp_expr(g, args[i], 2);
+			}
+			spush(*out, ')');
+			return;
+		}
 		if (ctor->kind == CSPV_T_MAT) {
 			cspv_type* a0 = argc ? cspv_tp_rtype(g, args[0]) : NULL;
 			if (argc == 1 && a0 && a0->kind == CSPV_T_MAT) {
@@ -6625,11 +6662,16 @@ static void cspv_hlsl_call(cspv_tp* g, cspv_expr* e)
 
 	// Texture builtins: the sampler argument is always a plain reference
 	// (global uniform or function parameter), split into _tex/_smp pairs.
+	// Compute has no derivatives, so implicit-lod sampling lowers to lod 0
+	// there (FXC hard-errors on Sample in cs profiles; DXC/Vulkan tolerated it).
 	if (argc >= 1 && args[0]->kind == CSPV_E_REF && args[0]->rtype && args[0]->rtype->kind == CSPV_T_SAMPLER2D) {
 		const char* s = args[0]->u.name;
+		bool no_gradients = g->ctx->stage != CSPV_STAGE_FRAGMENT; // Vertex and compute have no derivatives.
 		if (!strcmp(name, "texture")) {
-			sfmt_append(*out, "%s_tex.Sample(%s_smp, ", s, s);
+			if (no_gradients) sfmt_append(*out, "%s_tex.SampleLevel(%s_smp, ", s, s);
+			else sfmt_append(*out, "%s_tex.Sample(%s_smp, ", s, s);
 			cspv_tp_expr(g, args[1], 2);
+			if (no_gradients) sappend(*out, ", 0");
 			spush(*out, ')');
 			return;
 		}
@@ -6642,8 +6684,10 @@ static void cspv_hlsl_call(cspv_tp* g, cspv_expr* e)
 			return;
 		}
 		if (!strcmp(name, "textureOffset")) {
-			sfmt_append(*out, "%s_tex.Sample(%s_smp, ", s, s);
+			if (no_gradients) sfmt_append(*out, "%s_tex.SampleLevel(%s_smp, ", s, s);
+			else sfmt_append(*out, "%s_tex.Sample(%s_smp, ", s, s);
 			cspv_tp_expr(g, args[1], 2);
+			if (no_gradients) sappend(*out, ", 0");
 			sappend(*out, ", ");
 			cspv_tp_expr(g, args[2], 2);
 			spush(*out, ')');
@@ -6792,7 +6836,13 @@ static void cspv_hlsl_validate_expr(cspv_ctx* ctx, cspv_expr* e, bool stmt_root)
 		const char* name = e->u.call.name;
 		cspv_type* t = cspv_lookup_type(ctx, name);
 		if (t && t->kind == CSPV_T_STRUCT) {
-			cspv_errorf(ctx, e->line, "struct constructors are not supported in HLSL output yet");
+			// Struct constructors print as cf_make_<name> factory calls; the
+			// factories only cover non-array fields.
+			for (int i = 0; i < (int)asize(t->field_types); i++) {
+				if (t->field_types[i]->kind == CSPV_T_ARRAY) {
+					cspv_errorf(ctx, e->line, "constructors for structs with array fields are not supported in HLSL/MSL output ('%s')", name);
+				}
+			}
 		}
 		if (e->u.call.array_size != -1 && !stmt_root) {
 			// stmt_root here means "declaration initializer position".
@@ -6849,6 +6899,26 @@ static int cspv_hlsl_natural_size(cspv_type* t)
 {
 	if (t->kind == CSPV_T_VEC) return t->cols * 4;
 	return 4; // Scalars (buffer-block struct fields are scalars or vectors only).
+}
+
+// GLSL struct constructors have no HLSL/MSL equivalent: emit a factory per
+// struct (skipped when a field is an array; validation rejects those ctors).
+static void cspv_tp_struct_factory(cspv_tp* g, cspv_type* t)
+{
+	cspv_ctx* ctx = g->ctx;
+	for (int i = 0; i < (int)asize(t->field_types); i++) {
+		if (t->field_types[i]->kind == CSPV_T_ARRAY) return;
+	}
+	sfmt_append(ctx->tp_out, "%s cf_make_%s(", t->name, t->name);
+	for (int i = 0; i < (int)asize(t->field_types); i++) {
+		if (i) sappend(ctx->tp_out, ", ");
+		sfmt_append(ctx->tp_out, "%s %s", cspv_tp_type_name(g, t->field_types[i]), t->field_names[i]);
+	}
+	sfmt_append(ctx->tp_out, ") { %s s_; ", t->name);
+	for (int i = 0; i < (int)asize(t->field_types); i++) {
+		sfmt_append(ctx->tp_out, "s_.%s = %s; ", t->field_names[i], t->field_names[i]);
+	}
+	sappend(ctx->tp_out, "return s_; }\n");
 }
 
 // Emit a struct definition. Buffer structs gain explicit padding so HLSL's
@@ -6926,8 +6996,8 @@ static void cspv_emit_hlsl(cspv_ctx* ctx)
 	for (int i = 0; i < (int)asize(ctx->decls); i++) {
 		cspv_decl* d = ctx->decls + i;
 		if (d->kind == CSPV_D_BLOCK) {
-			if (d->instance_name) {
-				cspv_errorf(ctx, d->line, "block instance names are not supported in HLSL output ('%s')", d->name);
+			if (!d->is_buffer && d->instance_name) {
+				cspv_errorf(ctx, d->line, "uniform block instance names are not supported in HLSL output ('%s')", d->name);
 			}
 			if (d->is_buffer && (d->num_members != 1 || d->member_types[0]->kind != CSPV_T_ARRAY || d->member_types[0]->cols != -1)) {
 				cspv_errorf(ctx, d->line, "buffer block '%s' must hold a single runtime array for HLSL output", d->name);
@@ -7038,6 +7108,7 @@ static void cspv_emit_hlsl(cspv_ctx* ctx)
 			}
 			spush(ctx->tp_out, '\n');
 			cspv_hlsl_struct(g, d->type, buffer_layout);
+			cspv_tp_struct_factory(g, d->type);
 			break;
 		}
 
@@ -7062,11 +7133,15 @@ static void cspv_emit_hlsl(cspv_ctx* ctx)
 			if (d->is_buffer) {
 				cspv_type* elem = d->member_types[0]->elem;
 				const char* elem_name = cspv_hlsl_type_name(elem);
-				const char* member = d->member_names[0];
+				// Named instances collapse to one `inst_member` resource (the
+				// member printer rewrites `inst.member` accesses to match).
+				char resname[128];
+				if (d->instance_name) snprintf(resname, sizeof(resname), "%s_%s", d->instance_name, d->member_names[0]);
+				else snprintf(resname, sizeof(resname), "%s", d->member_names[0]);
 				sfmt_append(ctx->tp_out, "%sStructuredBuffer<%s> %s : register(%c%d, space%d);\n",
-					d->readonly ? "" : "RW", elem_name, member,
+					d->readonly ? "" : "RW", elem_name, resname,
 					d->readonly ? 't' : 'u', d->binding, d->set);
-				sfmt_append(ctx->tp_out, "uint %s_len() { uint c, s; %s.GetDimensions(c, s); return c; }\n", member, member);
+				sfmt_append(ctx->tp_out, "uint %s_len() { uint c, s; %s.GetDimensions(c, s); return c; }\n", resname, resname);
 			} else {
 				// std140 offsets -> explicit packoffsets (HLSL cbuffer packing
 				// diverges from std140 for vec3-after-scalar and similar cases).
@@ -7298,6 +7373,15 @@ static void cspv_msl_call(cspv_tp* g, cspv_expr* e)
 	// no truncating constructor from a wider vector; swizzle instead.
 	cspv_type* ctor = cspv_lookup_type(g->ctx, name);
 	if (ctor && e->u.call.array_size == -1) {
+		if (ctor->kind == CSPV_T_STRUCT) {
+			sfmt_append(*out, "cf_make_%s(", ctor->name);
+			for (int i = 0; i < argc; i++) {
+				if (i) sappend(*out, ", ");
+				cspv_tp_expr(g, args[i], 2);
+			}
+			spush(*out, ')');
+			return;
+		}
 		if (argc == 1 && ctor->kind == CSPV_T_VEC) {
 			cspv_type* a0 = cspv_tp_rtype(g, args[0]);
 			if (a0 && a0->kind == CSPV_T_VEC && a0->cols > ctor->cols) {
@@ -7318,12 +7402,15 @@ static void cspv_msl_call(cspv_tp* g, cspv_expr* e)
 	}
 
 	// Texture builtins: the sampler argument is always a plain reference,
-	// split into _tex/_smp members (globals and parameters alike).
+	// split into _tex/_smp members (globals and parameters alike). Kernels
+	// have no derivatives, so implicit-lod sampling lowers to level(0) there.
 	if (argc >= 1 && args[0]->kind == CSPV_E_REF && args[0]->rtype && args[0]->rtype->kind == CSPV_T_SAMPLER2D) {
 		const char* s = args[0]->u.name;
+		bool no_gradients = g->ctx->stage != CSPV_STAGE_FRAGMENT; // Vertex and compute have no derivatives.
 		if (!strcmp(name, "texture")) {
 			sfmt_append(*out, "%s_tex.sample(%s_smp, ", s, s);
 			cspv_tp_expr(g, args[1], 2);
+			if (no_gradients) sappend(*out, ", level(0)");
 			spush(*out, ')');
 			return;
 		}
@@ -7338,6 +7425,7 @@ static void cspv_msl_call(cspv_tp* g, cspv_expr* e)
 		if (!strcmp(name, "textureOffset")) {
 			sfmt_append(*out, "%s_tex.sample(%s_smp, ", s, s);
 			cspv_tp_expr(g, args[1], 2);
+			if (no_gradients) sappend(*out, ", level(0)");
 			sappend(*out, ", ");
 			cspv_tp_expr(g, args[2], 2);
 			spush(*out, ')');
@@ -7572,8 +7660,8 @@ static void cspv_emit_msl(cspv_ctx* ctx)
 	for (int i = 0; i < (int)asize(ctx->decls); i++) {
 		cspv_decl* d = ctx->decls + i;
 		if (d->kind == CSPV_D_BLOCK) {
-			if (d->instance_name) {
-				cspv_errorf(ctx, d->line, "block instance names are not supported in MSL output ('%s')", d->name);
+			if (!d->is_buffer && d->instance_name) {
+				cspv_errorf(ctx, d->line, "uniform block instance names are not supported in MSL output ('%s')", d->name);
 			}
 			if (d->is_buffer && (d->num_members != 1 || d->member_types[0]->kind != CSPV_T_ARRAY || d->member_types[0]->cols != -1)) {
 				cspv_errorf(ctx, d->line, "buffer block '%s' must hold a single runtime array for MSL output", d->name);
@@ -7691,6 +7779,7 @@ static void cspv_emit_msl(cspv_ctx* ctx)
 				}
 				sappend(ctx->tp_out, "};\n");
 			}
+			cspv_tp_struct_factory(g, d->type);
 		} else if (d->kind == CSPV_D_BLOCK && !d->is_buffer) {
 			char sn[96];
 			snprintf(sn, sizeof(sn), "cf_ub_%s", d->name);
@@ -7714,8 +7803,13 @@ static void cspv_emit_msl(cspv_ctx* ctx)
 		cspv_decl* d = ctx->decls + i;
 		if (d->kind == CSPV_D_BLOCK) {
 			if (d->is_buffer) {
-				sfmt_append(ctx->tp_out, "\tdevice %s%s* %s;\n",
-					d->readonly ? "const " : "", cspv_hlsl_type_name(d->member_types[0]->elem), d->member_names[0]);
+				if (d->instance_name) {
+					sfmt_append(ctx->tp_out, "\tdevice %s%s* %s_%s;\n",
+						d->readonly ? "const " : "", cspv_hlsl_type_name(d->member_types[0]->elem), d->instance_name, d->member_names[0]);
+				} else {
+					sfmt_append(ctx->tp_out, "\tdevice %s%s* %s;\n",
+						d->readonly ? "const " : "", cspv_hlsl_type_name(d->member_types[0]->elem), d->member_names[0]);
+				}
 			} else {
 				sfmt_append(ctx->tp_out, "\tconstant cf_ub_%s* %s;\n", d->name, d->name);
 			}
@@ -7810,8 +7904,11 @@ static void cspv_emit_msl(cspv_ctx* ctx)
 				if (!compute) idx = uniform_count + (d->binding - texture_count);
 				else if (d->readonly) idx = uniform_count + (d->binding - texture_count);
 				else idx = uniform_count + ro_buffer_count + (d->binding - rw_texture_count);
+				char resname[128];
+				if (d->instance_name) snprintf(resname, sizeof(resname), "%s_%s", d->instance_name, d->member_names[0]);
+				else snprintf(resname, sizeof(resname), "%s", d->member_names[0]);
 				sfmt_append(ctx->tp_out, ", device %s%s* %s [[buffer(%d)]]",
-					d->readonly ? "const " : "", cspv_hlsl_type_name(d->member_types[0]->elem), d->member_names[0], idx);
+					d->readonly ? "const " : "", cspv_hlsl_type_name(d->member_types[0]->elem), resname, idx);
 			} else {
 				sfmt_append(ctx->tp_out, ", constant cf_ub_%s& %s [[buffer(%d)]]", d->name, d->name, d->binding);
 			}
@@ -7847,7 +7944,8 @@ static void cspv_emit_msl(cspv_ctx* ctx)
 			cspv_decl* d = ctx->decls + i;
 			const char* sep = first ? " " : ", ";
 			if (d->kind == CSPV_D_BLOCK) {
-				if (d->is_buffer) sfmt_append(ctx->tp_out, "%s%s", sep, d->member_names[0]);
+				if (d->is_buffer && d->instance_name) sfmt_append(ctx->tp_out, "%s%s_%s", sep, d->instance_name, d->member_names[0]);
+				else if (d->is_buffer) sfmt_append(ctx->tp_out, "%s%s", sep, d->member_names[0]);
 				else sfmt_append(ctx->tp_out, "%s&%s", sep, d->name);
 				first = false;
 			} else if (d->kind == CSPV_D_OPAQUE) {

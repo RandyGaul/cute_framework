@@ -1164,6 +1164,90 @@ static void test_errors_recursion(void)
 }
 
 //--------------------------------------------------------------------------------------------------
+// Transpiler emitter tests — assert on the emitted HLSL/MSL text, since dialect
+// restrictions (FXC instruction sets, MSL sampling rules) aren't visible in SPIR-V.
+
+static CSPV_Result s_emit_all(CSPV_Stage stage, const char* src)
+{
+	CSPV_Options opts;
+	memset(&opts, 0, sizeof(opts));
+	opts.emit_hlsl = true;
+	opts.emit_msl = true;
+	CSPV_Result r = cspv_compile_ex(src, stage, &opts);
+	CHECK_MSG(r.success, r.error_message);
+	if (r.success) {
+		CHECK(r.hlsl != NULL);
+		CHECK(r.msl != NULL);
+	}
+	return r;
+}
+
+static void test_emitters(void)
+{
+	// Implicit-lod sampling is fragment-only: FXC rejects Sample() in vs/cs
+	// profiles (X4532), and MSL requires an explicit lod outside fragment
+	// functions. Vertex texture fetch (the galaxy idiom) must lower to lod 0.
+	{
+		CSPV_Result r = s_emit_all(CSPV_STAGE_VERTEX,
+			"layout(set = 0, binding = 0) uniform sampler2D u_tex;\n"
+			"layout(location = 0) in vec2 in_uv;\n"
+			"void main() { gl_Position = texture(u_tex, in_uv); }\n");
+		if (r.success) {
+			CHECK(strstr(r.hlsl, ".SampleLevel(") != NULL);
+			CHECK(strstr(r.hlsl, ".Sample(") == NULL);
+			CHECK(strstr(r.msl, "level(0)") != NULL);
+		}
+		cspv_free(&r);
+	}
+	// Compute sampling lowers the same way, and instance-named buffer blocks
+	// (the hrc idiom) mangle to a flat <instance>_<member> resource.
+	{
+		CSPV_Result r = s_emit_all(CSPV_STAGE_COMPUTE,
+			"layout(local_size_x = 64) in;\n"
+			"layout(set = 0, binding = 0) uniform sampler2D u_tex;\n"
+			"layout(std430, set = 1, binding = 0) buffer Out { vec4 data[]; } u_out;\n"
+			"void main() {\n"
+			"	uint i = gl_GlobalInvocationID.x;\n"
+			"	u_out.data[i] = texture(u_tex, vec2(0.5));\n"
+			"}\n");
+		if (r.success) {
+			CHECK(strstr(r.hlsl, ".SampleLevel(") != NULL);
+			CHECK(strstr(r.msl, "level(0)") != NULL);
+			CHECK(strstr(r.hlsl, "u_out_data") != NULL);
+			CHECK(strstr(r.msl, "u_out_data") != NULL);
+		}
+		cspv_free(&r);
+	}
+	// Fragment sampling keeps implicit gradients.
+	{
+		CSPV_Result r = s_emit_all(CSPV_STAGE_FRAGMENT,
+			"layout(set = 2, binding = 0) uniform sampler2D u_tex;\n"
+			"layout(location = 0) in vec2 uv;\n"
+			"layout(location = 0) out vec4 result;\n"
+			"void main() { result = texture(u_tex, uv); }\n");
+		if (r.success) {
+			CHECK(strstr(r.hlsl, ".Sample(") != NULL);
+			CHECK(strstr(r.hlsl, ".SampleLevel(") == NULL);
+			CHECK(strstr(r.msl, "level(0)") == NULL);
+		}
+		cspv_free(&r);
+	}
+	// Struct constructors print as cf_make_<name> factories (neither HLSL nor
+	// MSL has struct constructor syntax).
+	{
+		CSPV_Result r = s_emit_all(CSPV_STAGE_FRAGMENT,
+			"struct Interval { float lo; float hi; };\n"
+			"layout(location = 0) out vec4 result;\n"
+			"void main() { Interval iv = Interval(0.0, 1.0); result = vec4(iv.lo, iv.hi, 0, 1); }\n");
+		if (r.success) {
+			CHECK(strstr(r.hlsl, "cf_make_Interval(") != NULL);
+			CHECK(strstr(r.msl, "cf_make_Interval(") != NULL);
+		}
+		cspv_free(&r);
+	}
+}
+
+//--------------------------------------------------------------------------------------------------
 
 int main(void)
 {
@@ -1191,6 +1275,7 @@ int main(void)
 	TEST(test_errors_semantic);
 	TEST(test_errors_stage_and_globals);
 	TEST(test_errors_recursion);
+	TEST(test_emitters);
 
 	printf("\n%d checks, %d failures.\n", g_checks, g_fails);
 	return g_fails ? 1 : 0;
