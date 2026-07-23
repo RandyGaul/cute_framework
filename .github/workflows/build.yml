@@ -191,10 +191,11 @@ jobs:
 
       - name: Configure
         run: >
-          emcmake cmake -B build
+          emcmake cmake -B build -GNinja
           -DCMAKE_C_COMPILER_LAUNCHER=ccache
           -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+          -DCMAKE_CXX_SCAN_FOR_MODULES=OFF
           -DCF_FRAMEWORK_STATIC=ON
 
       - name: Build
-        run: cmake --build build
+        run: cmake --build build -j
