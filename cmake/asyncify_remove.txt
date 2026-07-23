@@ -1,0 +1,26 @@
+# ASYNCIFY_REMOVE list for Emscripten (web) builds.
+#
+# These functions are proven to NEVER reach a suspend point -- they never
+# transitively call cf_sleep(), a coroutine yield, or an Emscripten fiber swap.
+# Removing them from ASYNCIFY instrumentation shrinks the wasm-opt pass (faster
+# link) and the output module (smaller/faster wasm), without affecting the paths
+# that genuinely suspend (the WebGL fence wait, the frame limiter, coroutines).
+#
+# Safety contract: a custom allocator installed via cf_allocator_override() must
+# not yield. The default allocator is malloc, which trivially satisfies this.
+#
+# Validate/extend this list with:  emcc ... -sASYNCIFY_ADVISE=1
+
+# Allocator hub -- indirect call through CF_Allocator.*_fn drags most of CF in.
+cf_alloc
+cf_free
+cf_calloc
+cf_realloc
+
+# cspv: CF's GLSL->SPIR-V compiler + GLSL-ES/HLSL/MSL transpiler backends.
+# Pure compute; instrumented only via its own internal indirect calls.
+cspv_*
+
+# Candidates to validate with -sASYNCIFY_ADVISE before enabling:
+# yyjson_*
+# cute_shader_*
