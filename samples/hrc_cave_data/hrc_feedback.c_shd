@@ -1,0 +1,42 @@
+// Multi-bounce feedback (amitabha multibounce.rs approach).
+//
+// Copied from hrc_data/hrc_feedback.c_shd with the legacy 8-bit encode removed:
+// the emissivity canvas stores linear HDR emission directly, so the bounce term
+// adds straight in with no sRGB/16x round trip.
+//
+// Adds last frame's fluence, tinted by the surface's diffuse albedo, into the
+// scene emissivity at absorbing pixels. Run after the scene draws emissivity
+// and before the cascade compute. Converges to multi-bounce GI across frames
+// as a geometric series (albedo < 1), with zero extra cascade passes.
+
+layout(set = 0, binding = 0, rgba16f) uniform readonly image2D u_fluence_lin;
+layout(set = 0, binding = 1, rgba16f) uniform readonly image2D u_diffuse;
+layout(set = 0, binding = 2, rgba16f) uniform readonly image2D u_absorption;
+layout(set = 1, binding = 0, rgba16f) uniform image2D u_emissivity;
+
+layout(set = 2, binding = 0) uniform Params
+{
+	int u_world_w;
+	int u_world_h;
+};
+
+layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+
+void main()
+{
+	ivec2 gid = ivec2(gl_GlobalInvocationID.xy);
+	if (gid.x >= u_world_w || gid.y >= u_world_h) return;
+
+	vec3 diffuse = imageLoad(u_diffuse, gid).rgb;
+	vec3 absrp = imageLoad(u_absorption, gid).rgb;
+	if (dot(diffuse, diffuse) == 0.0 || dot(absrp, absrp) == 0.0) return;
+
+	// Fluence sums cone radiance weighted by raw angular spans (2pi total), so
+	// normalize by 2pi to get average incident radiance before re-emission --
+	// otherwise the feedback loop gain exceeds 1 and blows up.
+	vec3 fluence = max(imageLoad(u_fluence_lin, gid).rgb, vec3(0.0));
+	vec3 bounce = diffuse * fluence * (1.0 / 6.2831853);
+
+	vec3 lin = imageLoad(u_emissivity, gid).rgb + bounce;
+	imageStore(u_emissivity, gid, vec4(lin, 1.0));
+}

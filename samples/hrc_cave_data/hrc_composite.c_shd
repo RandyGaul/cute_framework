@@ -1,0 +1,341 @@
+// Sum 4 quadrants with c-1 gathering, rim lighting, tonemapped output.
+//
+// Copied from hrc_data/hrc_composite.c_shd, trimmed to the cave's fixed config
+// (cminus1 on, minmax bilinear upscale, dense directions so no blur, no debug
+// modes) with the legacy 8-bit encode workarounds removed: emissivity is linear
+// HDR emission, absorption is the coefficient per world pixel, no decode.
+//
+// Rectangular: the world (world_w x world_h) and cascade grid (grid_w x grid_h)
+// may be non-square. Horizontal rotations (0,2) cascade along the width, vertical
+// rotations (1,3) along the height, so each quadrant's F buffer has a per-rotation
+// stride (cascade_dim = grid_w or grid_h). All grid<->world scaling is per axis.
+//
+// Additions for the cave:
+//   - Per-quadrant directional fluence (fluence_dir[4] pattern from the
+//     platformer's hrc_composite.c_shd): light arriving from +x/+y/-x/-y is
+//     kept separate so surfaces can be lit directionally.
+//   - Rim lighting: rock pixels near the surface estimate their outward normal
+//     from the absorption field gradient (the CSG SDF silhouette), sample the
+//     directional fluence just outside the surface, and add a thin rim of light
+//     on the side facing the net incoming light.
+//
+// Inputs:
+//   u_emissivity   -- scene emissivity (for c-1 trace)
+//   u_absorption   -- scene absorption (c-1 trace + edge tests + rim normals)
+//   u_f0..u_f3     -- R_0 per quadrant (per-rotation cascade_dim x cross_dim, uvec2 f16)
+//
+// Outputs:
+//   u_fluence      -- tonemapped display image (rgba8, world_w x world_h)
+//   u_fluence_lin  -- linear fluence (rgba16f, feeds multibounce feedback)
+
+layout(set = 0, binding = 0) uniform sampler2D u_emissivity;
+layout(set = 0, binding = 1) uniform sampler2D u_absorption;
+layout(set = 0, binding = 2) uniform sampler2D u_minmax;
+layout(std430, set = 0, binding = 3) readonly buffer F0 { uvec2 data[]; } u_f0;
+layout(std430, set = 0, binding = 4) readonly buffer F1 { uvec2 data[]; } u_f1;
+layout(std430, set = 0, binding = 5) readonly buffer F2 { uvec2 data[]; } u_f2;
+layout(std430, set = 0, binding = 6) readonly buffer F3 { uvec2 data[]; } u_f3;
+layout(set = 1, binding = 0, rgba8) uniform writeonly image2D u_fluence;
+layout(set = 1, binding = 1, rgba16f) uniform image2D u_fluence_lin;
+
+layout(set = 2, binding = 0) uniform Params
+{
+	int   u_world_w;       // output width  (e.g. 1024)
+	int   u_world_h;       // output height
+	int   u_grid_w;        // cascade grid width  (world_w / upscale)
+	int   u_grid_h;        // cascade grid height
+	float u_abs_threshold; // absorption similarity cutoff for gating/upscale
+	float u_exposure;      // tonemap exposure
+	int   u_rim;           // rim lighting on/off
+	float u_rim_strength;  // rim luminance scale (~0.3)
+	float u_rock_thresh;   // absorption luminance above this counts as rock
+};
+
+layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+
+struct Interval
+{
+	vec3 rad;
+	vec3 trn;
+};
+
+// Per-pixel fluence split by arrival direction (one component per quadrant).
+struct QuadSum
+{
+	vec3 total;
+	vec3 d0; // light arriving from +x
+	vec3 d1; // light arriving from +y
+	vec3 d2; // light arriving from -x
+	vec3 d3; // light arriving from -y
+};
+
+vec4 f16_load(uvec2 packed)
+{
+	return vec4(unpackHalf2x16(packed.x), unpackHalf2x16(packed.y));
+}
+
+vec3 srgb_from_linear(vec3 c)
+{
+	return pow(c, vec3(1.0 / 2.2));
+}
+
+// Per-rotation cascade / cross grid dimensions.
+int cascade_dim_of(int rot) { return (rot == 0 || rot == 2) ? u_grid_w : u_grid_h; }
+int cross_dim_of(int rot)   { return (rot == 0 || rot == 2) ? u_grid_h : u_grid_w; }
+
+// Map a grid-space point to rotated space (x = cascade axis, y = cross axis).
+// sx = grid_w-1, sy = grid_h-1 (rectangular-aware). Matches trace's rotation.
+ivec2 grid_to_rotated(ivec2 p, int rot, int sx, int sy)
+{
+	if (rot == 1) return ivec2(p.y, sx - p.x);
+	if (rot == 2) return ivec2(sx - p.x, sy - p.y);
+	if (rot == 3) return ivec2(sy - p.y, p.x);
+	return p;
+}
+
+// Inverse of grid_to_rotated: rotated-space coordinate back to grid space.
+ivec2 rotated_to_grid(ivec2 rp, int rot, int sx, int sy)
+{
+	if (rot == 1) return ivec2(sx - rp.y, rp.x);
+	if (rot == 2) return ivec2(sx - rp.x, sy - rp.y);
+	if (rot == 3) return ivec2(rp.y, sy - rp.x);
+	return rp;
+}
+
+// Load one half-quadrant cone from one quadrant's F buffer (per-rotation stride).
+vec3 F_cone(int rot, ivec2 rotated_pos, int cone)
+{
+	int cdim = cascade_dim_of(rot);
+	int xdim = cross_dim_of(rot);
+	if (rotated_pos.x < 0 || rotated_pos.x >= cdim || rotated_pos.y < 0 || rotated_pos.y >= xdim) return vec3(0.0);
+	int idx = (rotated_pos.y * cdim + rotated_pos.x) * 2 + cone;
+	if      (rot == 0) return f16_load(u_f0.data[idx]).rgb;
+	else if (rot == 1) return f16_load(u_f1.data[idx]).rgb;
+	else if (rot == 2) return f16_load(u_f2.data[idx]).rgb;
+	else               return f16_load(u_f3.data[idx]).rgb;
+}
+
+// World-space march direction for each quadrant's rotated +x axis.
+ivec2 quadrant_dir(int rot)
+{
+	if (rot == 1) return ivec2(0, 1);
+	if (rot == 2) return ivec2(-1, 0);
+	if (rot == 3) return ivec2(0, -1);
+	return ivec2(1, 0);
+}
+
+// Raymarch c-1 interval from the current pixel toward the nearest c0 probe.
+// HDR scene units: no decode (see hrc_cave_data/hrc_trace.c_shd).
+Interval trace_cminus1(ivec2 world_pos, int rot)
+{
+	// Cascade axis is width for rot 0/2, height for rot 1/3.
+	bool horiz = (rot == 0 || rot == 2);
+	int cworld = horiz ? u_world_w : u_world_h;
+	int cgrid  = horiz ? u_grid_w  : u_grid_h;
+	int cS = cworld / cgrid;
+	ivec2 dir = quadrant_dir(rot);
+
+	int pos_along;
+	if      (rot == 0) pos_along = world_pos.x;
+	else if (rot == 1) pos_along = world_pos.y;
+	else if (rot == 2) pos_along = (u_world_w - 1) - world_pos.x;
+	else               pos_along = (u_world_h - 1) - world_pos.y;
+
+	int grid_along = pos_along * cgrid / cworld;
+	int num_steps = (grid_along + 1) * cS - pos_along;
+
+	vec2 world = vec2(float(u_world_w), float(u_world_h));
+	float step_abs = 1.0;
+
+	vec3 acc_rad = vec3(0.0);
+	vec3 acc_trn = vec3(1.0);
+
+	for (int i = 0; i < num_steps; i++) {
+		ivec2 p = world_pos + dir * i;
+		vec2 uv = (vec2(p) + 0.5) / world;
+
+		vec3 emiss = texture(u_emissivity, uv).rgb;
+		vec3 absrp = texture(u_absorption, uv).rgb;
+
+		vec3 trans = exp(-absrp * step_abs);
+		acc_rad += acc_trn * emiss * (vec3(1.0) - trans);
+		acc_trn *= trans;
+	}
+
+	return Interval(acc_rad, acc_trn);
+}
+
+// Read min/max absorption from the world-resolution minmax texture.
+vec2 minmax_at(ivec2 grid_pos)
+{
+	grid_pos = clamp(grid_pos, ivec2(0), ivec2(u_grid_w - 1, u_grid_h - 1));
+	ivec2 S = ivec2(u_world_w / u_grid_w, u_world_h / u_grid_h);
+	return texelFetch(u_minmax, grid_pos * S, 0).rg;
+}
+
+// Read absorption magnitude at a world pixel.
+float absorption_at(ivec2 pos)
+{
+	vec2 world = vec2(float(u_world_w), float(u_world_h));
+	vec2 uv = (vec2(pos) + 0.5) / world;
+	vec3 a = texture(u_absorption, uv).rgb;
+	return dot(a, vec3(0.333));
+}
+
+// Absorption at the world-space center of a grid cell.
+float grid_absorption(ivec2 gp)
+{
+	ivec2 S = ivec2(u_world_w / u_grid_w, u_world_h / u_grid_h);
+	gp = clamp(gp, ivec2(0), ivec2(u_grid_w - 1, u_grid_h - 1));
+	return absorption_at(gp * S + S / 2);
+}
+
+// Load fluence from one quadrant at a rotated grid coordinate, bracket-averaged
+// over the two probes along the gather cross axis, gated on absorption
+// similarity so cones never average across a wall (see hrc_data composite).
+vec3 F_load(int rot, ivec2 rotated_pos)
+{
+	int sx = u_grid_w - 1;
+	int sy = u_grid_h - 1;
+	float a_c = grid_absorption(rotated_to_grid(rotated_pos, rot, sx, sy));
+	vec3 lo_c = F_cone(rot, rotated_pos, 0);
+	vec3 hi_c = F_cone(rot, rotated_pos, 1);
+	ivec2 rp_lo = rotated_pos + ivec2(0, -1);
+	ivec2 rp_hi = rotated_pos + ivec2(0, 1);
+	bool ok_lo = abs(grid_absorption(rotated_to_grid(rp_lo, rot, sx, sy)) - a_c) <= u_abs_threshold;
+	bool ok_hi = abs(grid_absorption(rotated_to_grid(rp_hi, rot, sx, sy)) - a_c) <= u_abs_threshold;
+	vec3 lo = 0.5 * (lo_c + (ok_lo ? F_cone(rot, rp_lo, 0) : lo_c));
+	vec3 hi = 0.5 * (hi_c + (ok_hi ? F_cone(rot, rp_hi, 1) : hi_c));
+	return lo + hi;
+}
+
+// Sum fluence from all 4 quadrants at a world-space pixel, with c-1 gathering
+// and minmax-gated bilinear upscale. Keeps the per-quadrant split for
+// directional lighting.
+QuadSum sum_quadrants(ivec2 world_pos)
+{
+	int sx = u_grid_w - 1;
+	int sy = u_grid_h - 1;
+	ivec2 grid_pos = ivec2(world_pos.x * u_grid_w / u_world_w, world_pos.y * u_grid_h / u_world_h);
+
+	vec2 fgrid = vec2(0.0);
+	ivec2 g0 = ivec2(0);
+	vec2 frac_pos = vec2(0.0);
+	float blend = 0.0; // 0=nearest, 1=bilinear
+
+	if (u_world_w > u_grid_w || u_world_h > u_grid_h) {
+		fgrid = vec2(world_pos) * vec2(float(u_grid_w), float(u_grid_h)) / vec2(float(u_world_w), float(u_world_h)) - 0.5;
+		g0 = ivec2(floor(fgrid));
+		frac_pos = fract(fgrid);
+
+		// Minmax: check absorption range across neighboring grid cells.
+		float max_range = 0.0;
+		for (int dy = 0; dy <= 1; dy++) {
+			for (int dx = 0; dx <= 1; dx++) {
+				vec2 mm = minmax_at(g0 + ivec2(dx, dy));
+				max_range = max(max_range, mm.g - mm.r);
+			}
+		}
+		blend = 1.0 - smoothstep(0.0, u_abs_threshold, max_range);
+	}
+
+	QuadSum qs = QuadSum(vec3(0.0), vec3(0.0), vec3(0.0), vec3(0.0), vec3(0.0));
+	for (int rot = 0; rot < 4; rot++) {
+		vec3 r0;
+
+		if (blend > 0.0) {
+			vec3 r00 = F_load(rot, grid_to_rotated(clamp(g0,              ivec2(0), ivec2(sx, sy)), rot, sx, sy) + ivec2(1, 0));
+			vec3 r10 = F_load(rot, grid_to_rotated(clamp(g0 + ivec2(1,0), ivec2(0), ivec2(sx, sy)), rot, sx, sy) + ivec2(1, 0));
+			vec3 r01 = F_load(rot, grid_to_rotated(clamp(g0 + ivec2(0,1), ivec2(0), ivec2(sx, sy)), rot, sx, sy) + ivec2(1, 0));
+			vec3 r11 = F_load(rot, grid_to_rotated(clamp(g0 + ivec2(1,1), ivec2(0), ivec2(sx, sy)), rot, sx, sy) + ivec2(1, 0));
+			vec3 r0_bilinear = mix(mix(r00, r10, frac_pos.x), mix(r01, r11, frac_pos.x), frac_pos.y);
+			if (blend < 1.0) {
+				ivec2 rp = grid_to_rotated(grid_pos, rot, sx, sy);
+				vec3 r0_nearest = F_load(rot, rp + ivec2(1, 0));
+				r0 = mix(r0_nearest, r0_bilinear, blend);
+			} else {
+				r0 = r0_bilinear;
+			}
+		} else {
+			ivec2 rp = grid_to_rotated(grid_pos, rot, sx, sy);
+			r0 = F_load(rot, rp + ivec2(1, 0));
+		}
+
+		// c-1 gathering: trace to nearest probe, merge with interpolated R_0.
+		Interval cminus1 = trace_cminus1(world_pos, rot);
+		vec3 contrib = cminus1.rad + cminus1.trn * r0;
+
+		if      (rot == 0) qs.d0 = contrib;
+		else if (rot == 1) qs.d1 = contrib;
+		else if (rot == 2) qs.d2 = contrib;
+		else               qs.d3 = contrib;
+		qs.total += contrib;
+	}
+	return qs;
+}
+
+// 1.0 where the world pixel is solid rock (high absorption), else 0.0.
+float rock_mask(ivec2 pos)
+{
+	pos = clamp(pos, ivec2(0), ivec2(u_world_w - 1, u_world_h - 1));
+	return absorption_at(pos) > u_rock_thresh ? 1.0 : 0.0;
+}
+
+// Rim light for rock pixels near the surface: outward normal from the rock
+// occupancy gradient (the CSG silhouette doubles as an SDF here), directional
+// fluence sampled just outside the surface, weighted by how much the surface
+// faces each arrival direction.
+vec3 rim_light(ivec2 pos)
+{
+	int R = 3;
+	float mxp = rock_mask(pos + ivec2( R,  0));
+	float mxn = rock_mask(pos + ivec2(-R,  0));
+	float myp = rock_mask(pos + ivec2( 0,  R));
+	float myn = rock_mask(pos + ivec2( 0, -R));
+	float mpp = rock_mask(pos + ivec2( R,  R));
+	float mpn = rock_mask(pos + ivec2( R, -R));
+	float mnp = rock_mask(pos + ivec2(-R,  R));
+	float mnn = rock_mask(pos + ivec2(-R, -R));
+
+	vec2 grad = vec2(
+		(mxp - mxn) + 0.5 * ((mpp + mpn) - (mnp + mnn)),
+		(myp - myn) + 0.5 * ((mpp + mnp) - (mpn + mnn))
+	);
+	float glen = length(grad);
+	if (glen < 0.25) return vec3(0.0); // deep interior or fully surrounded
+	vec2 n = -grad / glen; // outward: away from increasing rock occupancy
+
+	ivec2 p_out = pos + ivec2(int(round(n.x * 4.0)), int(round(n.y * 4.0)));
+	p_out = clamp(p_out, ivec2(0), ivec2(u_world_w - 1, u_world_h - 1));
+	if (rock_mask(p_out) > 0.5) return vec3(0.0);
+
+	QuadSum qs = sum_quadrants(p_out);
+	vec3 rim = max(n.x, 0.0) * qs.d0
+	         + max(n.y, 0.0) * qs.d1
+	         + max(-n.x, 0.0) * qs.d2
+	         + max(-n.y, 0.0) * qs.d3;
+	return rim * u_rim_strength;
+}
+
+void main()
+{
+	ivec2 gid = ivec2(gl_GlobalInvocationID.xy);
+	if (gid.x >= u_world_w || gid.y >= u_world_h) return;
+
+	QuadSum qs = sum_quadrants(gid);
+	vec3 fluence = qs.total;
+
+	// Rim lighting on rock surfaces.
+	if (u_rim != 0 && absorption_at(gid) > u_rock_thresh) {
+		fluence += rim_light(gid);
+	}
+
+	imageStore(u_fluence_lin, gid, vec4(fluence, 1.0));
+
+	// Luminance-based Reinhard before display encode (preserves hue at high
+	// intensity; per-channel Reinhard turns bright colors white).
+	float luma = dot(fluence, vec3(0.2126, 0.7152, 0.0722)) * u_exposure;
+	float tm = luma / (1.0 + luma);
+	vec3 display = luma > 1e-6 ? min(fluence * (tm / luma), vec3(1.0)) : vec3(0.0);
+	imageStore(u_fluence, gid, vec4(srgb_from_linear(display), 1.0));
+}
