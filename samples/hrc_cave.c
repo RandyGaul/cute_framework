@@ -317,6 +317,10 @@ float smoothed_fps = 60.0f;
 //       check: shadows must be straight and correctly oriented).
 int testlight = 0;
 float testlight_e = 2.0f; // HRC_CAVE_TESTLIGHT_E: emitter linear emission (per channel)
+float testlight_r = 8.0f; // HRC_CAVE_TESTLIGHT_R: emitter radius in world units. Default 8,
+                          // the paper's minimum supported source size -- a filled disc of this
+                          // radius should spread/soften the ±45° seam spokes that a near-point
+                          // source maximizes. Sweep smaller (1/2) to reproduce the point-source X.
 float testlight_ox = 0.0f, testlight_oy = 0.0f; // HRC_CAVE_TESTLIGHT_OX/OY: light offset from
                                                 // world center, as a fraction of world_w/world_h
 
@@ -1804,17 +1808,19 @@ void begin_world_draw()
 	cf_draw_translate(-world_w * 0.5f, -world_h * 0.5f);
 }
 
-// Centered 8x8 emissive square. 8x8 is the paper's minimum supported emitter
-// (sub-8x8 lights are a known HRC limitation), matching samples/hrc.c's static
-// test light. Bright, neutral-white HDR emission -- authored in linear physical
-// units (no encode), exactly like the cave's moon emitter.
+// Centered filled emissive disc of radius testlight_r (HRC_CAVE_TESTLIGHT_R,
+// default 8 world units). A finite disc -- rather than a near-point source --
+// spreads the emission over many cells so the rectangular cascade's ±45° seam
+// spokes should soften/round out; sub-8px sources are a known HRC limitation.
+// Bright, neutral-white HDR emission -- authored in linear physical units (no
+// encode), exactly like the cave's moon emitter.
 void draw_testlight_emissivity()
 {
 	begin_world_draw();
 	push_f16_render_state();
 	float cx = world_w * (0.5f + testlight_ox), cy = world_h * (0.5f + testlight_oy);
 	cf_draw_push_color(cf_make_color_rgb_f(testlight_e, testlight_e, testlight_e));
-	cf_draw_quad_fill(cf_make_aabb(cf_v2(cx - 4.0f, cy - 4.0f), cf_v2(cx + 4.0f, cy + 4.0f)), 0);
+	cf_draw_circle_fill2(cf_v2(cx, cy), testlight_r);
 	cf_draw_pop_color();
 	cf_draw_pop_render_state();
 	cf_render_to(hrc.emissivity, true);
@@ -1832,7 +1838,7 @@ void draw_testlight_absorption()
 	float cx = world_w * (0.5f + testlight_ox), cy = world_h * (0.5f + testlight_oy);
 
 	cf_draw_push_color(cf_make_color_rgb_f(0.5f, 0.5f, 0.5f));
-	cf_draw_quad_fill(cf_make_aabb(cf_v2(cx - 4.0f, cy - 4.0f), cf_v2(cx + 4.0f, cy + 4.0f)), 0);
+	cf_draw_circle_fill2(cf_v2(cx, cy), testlight_r);
 	cf_draw_pop_color();
 
 	if (testlight >= 2) {
@@ -2097,6 +2103,7 @@ int main(int argc, char* argv[])
 	debug_view = getenv("HRC_CAVE_VIEW");
 	{ const char* tl = getenv("HRC_CAVE_TESTLIGHT"); if (tl) testlight = atoi(tl); }
 	{ const char* te = getenv("HRC_CAVE_TESTLIGHT_E"); if (te) testlight_e = (float)atof(te); }
+	{ const char* tr = getenv("HRC_CAVE_TESTLIGHT_R"); if (tr) testlight_r = (float)atof(tr); }
 	{ const char* to = getenv("HRC_CAVE_TESTLIGHT_OX"); if (to) testlight_ox = (float)atof(to); }
 	{ const char* to = getenv("HRC_CAVE_TESTLIGHT_OY"); if (to) testlight_oy = (float)atof(to); }
 
