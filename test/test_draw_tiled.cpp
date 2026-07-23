@@ -1383,10 +1383,10 @@ TEST_CASE(test_draw_text_curves)
 
 TEST_SUITE(test_draw_tiled)
 {
-	// CF_TEST_ONLY=<case name> runs a single case. Used to validate the GLES3 backend
-	// one app per process: cycling many GL contexts in one process trips a driver quirk
-	// (the third context renders nothing on some Windows ES-profile drivers), which
-	// real apps -- one context for their whole lifetime -- never hit.
+	// CF_TEST_ONLY=<case name> runs a single case, useful when isolating one scene.
+	// (Cycling GL contexts across app lifetimes used to break the third context in a
+	// process -- a stale render-state diff cache eliding glViewport on the fresh
+	// context -- fixed in cf_gles_attach, so the full suite runs fine on GLES now.)
 	const char* only = getenv("CF_TEST_ONLY");
 #define RUN_TEST_CASE_IF(t) do { if (!only || CF_STRCMP(only, #t) == 0) { RUN_TEST_CASE(t); } } while (0)
 	RUN_TEST_CASE_IF(test_tile_range_basics);
