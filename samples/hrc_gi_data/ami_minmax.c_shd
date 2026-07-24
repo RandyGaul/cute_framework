@@ -1,0 +1,43 @@
+// Prefilter: box min/max of absorption over each HRC cell's full-res footprint.
+//
+// The display's upscale needs to know whether an HRC cell straddles an occluder
+// edge (interpolating across one leaks light through walls). Computing that
+// inline costs scale^2 fetches per corner per pixel -- 64 per pixel at quarter
+// res. Precomputing it once at HRC resolution makes the display's gate 4 cheap
+// fetches regardless of scale.
+//
+// Output: rg16f, r = min absorption, g = max absorption over the footprint.
+
+layout(set = 0, binding = 0) uniform sampler2D u_absorption;
+layout(set = 1, binding = 0, rg16f) uniform image2D u_minmax;
+
+layout(set = 2, binding = 0) uniform Params
+{
+	int u_hrc_w;
+	int u_hrc_h;
+	int u_full_w;
+	int u_full_h;
+	int u_scale;
+};
+
+layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+
+void main()
+{
+	ivec2 c = ivec2(gl_GlobalInvocationID.xy);
+	if (c.x >= u_hrc_w || c.y >= u_hrc_h) return;
+
+	ivec2 base = c * u_scale;
+	float mn = 1e30, mx = -1e30;
+	// One extra texel on each side: the gate must see the edge a bilinear tap
+	// would reach, not just the cell interior.
+	for (int dy = -1; dy <= u_scale; dy++) {
+		for (int dx = -1; dx <= u_scale; dx++) {
+			ivec2 p = clamp(base + ivec2(dx, dy), ivec2(0), ivec2(u_full_w - 1, u_full_h - 1));
+			float a = texelFetch(u_absorption, p, 0).r;
+			mn = min(mn, a);
+			mx = max(mx, a);
+		}
+	}
+	imageStore(u_minmax, c, vec4(mn, mx, 0.0, 1.0));
+}

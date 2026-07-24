@@ -1,0 +1,168 @@
+// Non-square generalization of ami_trace (store_level). Unified 2-group model:
+// each dispatch handles ONE rotation group of 4 segments (2 rotations x 2 y_offsets).
+//   Group HORIZ: rotations {0=+x, 2=-x}, cascade axis = screen width.
+//   Group VERT:  rotations {1=+y, 3=-y}, cascade axis = screen height.
+// All per-rotation dims (cascade/cross grid + world span) are derived from the
+// rotation's screen-axis vectors + (grid_w,grid_h,world_w,world_h). At square
+// dims this reproduces the packed-8 ami_trace per-rotation.
+//
+// Segment s in [0,4): rotation = (s<2)? u_rot0 : u_rot1,  y_offset = s & 1.
+// yy in [0, 4*cross_grid); local cy = yy - s*cross_grid.
+// size_x = ceil_div(cascade_grid, 2^n), directions = 2<<n, nrays = dirs+1.
+// Non-pow2 safe: sizing uses ceil_div and to_world normalizes in level-0 units.
+// T layout: idx = (yy*nrays + ray)*size_x + x.
+
+layout(set = 0, binding = 0) uniform sampler2D u_emission;
+layout(set = 0, binding = 1) uniform sampler2D u_opacity;
+
+layout(std430, set = 1, binding = 0) writeonly buffer OutRad { uvec2 data[]; } u_out_rad;
+layout(std430, set = 1, binding = 1) writeonly buffer OutTrn { uvec2 data[]; } u_out_trn;
+
+layout(set = 2, binding = 0) uniform Params
+{
+	int u_level;    // cascade level n
+	int u_grid_w;   // probe grid width  (in HRC space)
+	int u_grid_h;   // probe grid height (in HRC space)
+	int u_world_w;  // HRC display width  = full_w / scale
+	int u_world_h;  // HRC display height = full_h / scale
+	int u_rot0;     // rotation for segments 0,1
+	int u_rot1;     // rotation for segments 2,3
+	int u_scale;    // HRC space -> full-res scene ratio (1 = full, 2 = half, 4 = quarter)
+	int u_full_w;   // full-res scene width
+	int u_full_h;   // full-res scene height
+};
+
+layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+
+uvec2 f16_store(vec4 v) { return uvec2(packHalf2x16(v.xy), packHalf2x16(v.zw)); }
+
+struct Fl { vec3 rad; vec3 trn; };
+
+vec2 seg_rotation(int rot)
+{
+	if (rot == 1) return vec2(0.0, 1.0);
+	if (rot == 2) return vec2(-1.0, 0.0);
+	if (rot == 3) return vec2(0.0, -1.0);
+	return vec2(1.0, 0.0);
+}
+
+// screen span / grid dim along a unit axis vector.
+float world_along(vec2 dir) { return (abs(dir.x) > 0.5) ? float(u_world_w) : float(u_world_h); }
+int   grid_along(vec2 dir)  { return (abs(dir.x) > 0.5) ? u_grid_w : u_grid_h; }
+
+int cascade_grid(int rot) { return grid_along(seg_rotation(rot)); }
+int cross_grid(int rot)   { vec2 x = seg_rotation(rot); return grid_along(vec2(-x.y, x.x)); }
+// ceil_div, NOT >>, so a non-power-of-two cascade axis still collapses to one
+// probe at the top level instead of hitting 0 (matches hrc_vrays_w).
+int ceil_div(int a, int b) { return (a + b - 1) / b; }
+int size_x_of(int rot)    { return max(ceil_div(cascade_grid(rot), 1 << u_level), 1); }
+int directions_of()       { return 2 << u_level; }
+
+// Segment origin (screen). World corner for this rotation + dual sub-cell offset.
+vec2 seg_origin(int rot, int y_offset)
+{
+	vec2 x_dir = seg_rotation(rot);
+	vec2 y_dir = vec2(-x_dir.y, x_dir.x);
+	vec2 corner = vec2(float(u_world_w) * 0.5 * (1.0 - (x_dir.x + y_dir.x)),
+	                   float(u_world_h) * 0.5 * (1.0 - (x_dir.y + y_dir.y)));
+	return corner + y_dir * (float(y_offset) + 0.499) + x_dir * 0.501;
+}
+
+// Local cell -> screen: cascade spans world_along(x_dir) along x_dir; cross spans
+// world_along(y_dir) along y_dir.
+vec2 to_world(vec2 cell_local, int rot, int y_offset)
+{
+	vec2 x_dir = seg_rotation(rot);
+	vec2 y_dir = vec2(-x_dir.y, x_dir.x);
+	// Normalize the cascade axis in LEVEL-0 units (cell * 2^level / casc_grid), not
+	// cell / size_x(level). The latter only agrees across levels when
+	// size_x(n)*2^n == casc_grid exactly, i.e. only for power-of-two dims; with
+	// ceil_div sizing it places each level's probes at different world positions,
+	// so the levels disagree and the merge produces spokes.
+	float pn_c = cell_local.x * float(1 << u_level) / float(cascade_grid(rot));
+	float pn_x = cell_local.y / float(cross_grid(rot));
+	return pn_c * world_along(x_dir) * x_dir + pn_x * world_along(y_dir) * y_dir
+	       + seg_origin(rot, y_offset);
+}
+
+int ray_offset(int dir) { return dir - (directions_of() / 2); }
+
+// Voxel DDA march through emission/opacity (amitabha VoxelTracer::trace).
+// `start`/`end` arrive in HRC space; we march in FULL-RES scene space so
+// occlusion stays sharp even when the probe lattice is half/quarter res (thin
+// walls must not be stepped over). Segment lengths are therefore in full-res
+// pixels, which is what the per-pixel opacity expects.
+Fl trace_to(vec2 start, vec2 end)
+{
+	Fl f; f.rad = vec3(0.0); f.trn = vec3(1.0);
+	float sc = float(u_scale);
+	start *= sc; end *= sc;
+	vec2 d = end - start;
+	float len = length(d);
+	if (len < 1e-5) return f;
+	vec2 ray_dir = d / len;
+	vec2 inv_dir = 1.0 / (ray_dir + vec2(1e-30));
+	vec2 szf = vec2(float(u_full_w), float(u_full_h));
+	vec2 lo = (vec2(0.1) - start) * inv_dir;
+	vec2 hi = (szf - vec2(0.1) - start) * inv_dir;
+	vec2 tmn = min(lo, hi), tmx = max(lo, hi);
+	float start_t = max(max(tmn.x, tmn.y), 0.0);
+	float end_t = min(min(tmx.x, tmx.y), len) - start_t;
+	if (end_t <= 0.01) return f;
+
+	vec2 ray_start = start + start_t * ray_dir;
+	ivec2 pos = ivec2(floor(ray_start));
+	vec2 delta = abs(inv_dir);
+	vec2 sgn = sign(ray_dir);
+	ivec2 rstep = ivec2(sgn);
+	vec2 side = (sgn * (vec2(pos) - ray_start) + sgn * 0.5 + 0.5) * delta;
+	float last_t = 0.0;
+
+	for (int it = 0; it < 4000; it++) {
+		float next_t = min(side.x, side.y);
+		ivec2 fp = ivec2(pos);
+		vec3 emis = texelFetch(u_emission, fp, 0).rgb;
+		vec3 opac = texelFetch(u_opacity, fp, 0).rgb;
+		float seg = min(next_t, end_t) - last_t;
+		vec3 trans = exp(-opac * seg);
+		f.rad += f.trn * emis * (vec3(1.0) - trans);
+		f.trn *= trans;
+		last_t = next_t;
+		if (next_t >= end_t) break;
+		float mx = (side.x <= side.y) ? 1.0 : 0.0;
+		float my = (side.y <= side.x) ? 1.0 : 0.0;
+		side += vec2(mx, my) * delta;
+		pos  += ivec2(int(mx), int(my)) * rstep;
+	}
+	return f;
+}
+
+void main()
+{
+	int dirs = directions_of();
+	int nrays = dirs + 1;
+	int cg = cross_grid(u_rot0);        // uniform within a group
+	int gx = int(gl_GlobalInvocationID.x);
+	int yy = int(gl_GlobalInvocationID.y);
+	int seg = (cg > 0) ? (yy / cg) : 0; // 0..3
+	int rot = (seg < 2) ? u_rot0 : u_rot1;
+	int sx = size_x_of(rot);
+	int x   = gx % sx;
+	int ray = gx / sx;
+	if (gx >= sx * nrays || ray > dirs || yy >= 4 * cg) return;
+
+	int y_offset = seg & 1;
+	int cy = yy - seg * cg;
+
+	vec2 start = to_world(vec2(float(x),     float(cy)),                    rot, y_offset);
+	vec2 end   = to_world(vec2(float(x + 1), float(cy + ray_offset(ray))), rot, y_offset);
+
+	Fl f = trace_to(start, end);
+
+	int end_local_y = cy + ray_offset(ray);
+	if (end_local_y < 0 || end_local_y >= cg) f.trn = vec3(0.0);
+
+	int idx = (yy * nrays + ray) * sx + x;
+	u_out_rad.data[idx] = f16_store(vec4(f.rad, 1.0));
+	u_out_trn.data[idx] = f16_store(vec4(f.trn, 1.0));
+}

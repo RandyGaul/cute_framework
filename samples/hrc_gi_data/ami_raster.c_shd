@@ -1,0 +1,38 @@
+// Exact replica of amitabha's rect_brush (default.rs): for each rect, write
+// emission+opacity into the voxel textures where |pos+0.5 - center| < size (all).
+// One dispatch per rect, in draw order (later overwrites earlier), matching
+// world.write(pos, color) semantics bit-for-bit.
+
+layout(set = 1, binding = 0, rgba16f) uniform image2D u_emission;
+layout(set = 1, binding = 1, rgba16f) uniform image2D u_opacity;
+
+layout(set = 2, binding = 0) uniform Params
+{
+	vec4 u_rect;      // (center.x, center.y, size.x, size.y)  size = half-extents
+	vec4 u_emission_c; // emission rgb
+	vec4 u_opacity_c;  // opacity rgb
+	vec4 u_shape;      // (is_circle, radius, write_emission, _)
+};
+
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+
+void main()
+{
+	ivec2 p = ivec2(gl_GlobalInvocationID.xy);
+	ivec2 sz = imageSize(u_emission);
+	if (p.x >= sz.x || p.y >= sz.y) return;
+	vec2 rel = vec2(float(p.x) + 0.5, float(p.y) + 0.5) - u_rect.xy;
+	bool hit;
+	if (u_shape.x > 0.5) {
+		hit = length(rel) < u_shape.y; // circle (amitabha circle_brush)
+	} else {
+		vec2 d = abs(rel);
+		hit = d.x < u_rect.z && d.y < u_rect.w; // rect (amitabha rect_brush)
+	}
+	if (hit) {
+		// write_emission = 0 lets a pass clear//write opacity only, leaving emission
+		// (e.g. vector text already drawn into it) intact.
+		if (u_shape.z > 0.5) imageStore(u_emission, p, vec4(u_emission_c.rgb, 1.0));
+		imageStore(u_opacity,  p, vec4(u_opacity_c.rgb, 1.0));
+	}
+}
