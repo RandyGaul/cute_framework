@@ -14,7 +14,7 @@ include(cmake/StandardProjectSettings.cmake)
 include(GNUInstallDirs)
 # These are needed for how we use FetchContent.
 include(FetchContent)
-Set(FETCHCONTENT_QUIET FALSE)
+set(FETCHCONTENT_QUIET FALSE)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 # Todo - Fix how turning some of these off breaks the build.
@@ -68,10 +68,6 @@ if(MSVC)
 	add_compile_options("$<$<C_COMPILER_ID:MSVC>:/utf-8>")
 	add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/utf-8>")
 	add_compile_options(/MP)
-endif()
-
-if(CF_FRAMEWORK_WITH_HTTPS MATCHES OFF)
-	add_definitions(-DCF_NO_HTTPS)
 endif()
 
 configure_file(
@@ -300,7 +296,7 @@ endif()
 
 if(LINUX)
 	find_package(OpenGL REQUIRED)
-	set(CF_LINK_LIBS ${CF_LINK_LIBS} ${IOKIT} ${FOUNDATION} ${SECURITY} ${OPENGL_LIBRARIES})
+	set(CF_LINK_LIBS ${CF_LINK_LIBS} ${OPENGL_LIBRARIES})
 endif()
 
 if(CF_FRAMEWORK_STATIC)
