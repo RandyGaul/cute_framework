@@ -1,23 +1,38 @@
 // HRC 2D global illumination -- a compute-driven radiance-cascade GI renderer,
 // validated bit-exact against amitabha (Sannikov's reference implementation).
 //
-// The scene is authored as two canvases holding physical units: linear EMISSION
-// and an ABSORPTION coefficient per world pixel. Absorption is continuous, so a
-// surface is just a cell with huge absorption and fog is a cell with a little --
-// the same code path gives hard shadows and volumetric transmission.
+// The scene is authored as canvases holding physical units: linear EMISSION, an
+// ABSORPTION coefficient, and a DIFFUSE albedo, per world pixel. Absorption is
+// continuous, so a surface is just a cell with huge absorption and fog is a cell
+// with a little -- the same code path gives hard shadows and volumetric
+// transmission. Albedo feeds a multibounce pass so a surface reflects the light
+// landing on it instead of reading as a black cutout.
 //
 // Pipeline: direct-trace the low cascade levels, merge_up the rest, merge down,
 // then scatter-reconstruct per pixel. Output is directional (2D Fourier L1), so
 // surfaces can be shaded from a normal rather than just a scalar fluence.
 //
-// Scenes (HRC_SCENE=): cornell | glass | pinhole | rectroom | circ | showcase
+// Scenes, cycled with the LEFT/RIGHT arrow keys:
+//   cornell   diffuse bounce and soft shadows in a closed box
+//   glass     a translucent volume beside a solid occluder
+//   pinhole   five coloured sources beaming through one gap
+//   rectroom  a small emitter in a sealed room
+//   circ      a single emitter in open space
+//   showcase  coloured walls, haze, and a glowing volume
+//   text      type as the only geometry: emissive headlines light a hazy void
+//             while a non-emissive line silhouettes and casts shadows
 //
 // Env vars:
-//   HRC_SCENE=name      pick a scene (default cornell)
+//   HRC_SCENE=name      scene to start on (default cornell)
 //   HRC_RES=WxH         window / world resolution (default 1024x1024)
 //   HRC_SCALE=1|2|4     run the probe lattice at 1/N res and upscale
 //   HRC_EXPOSURE=f      display exposure bias
-//   HRC_SHOT=1          headless: render, dump, exit
+//   HRC_SAT=f           post-tonemap chroma (1.0 = untouched)
+//   HRC_SHOT=1          headless: render the starting scene, dump it, exit
+//
+// The text scene exposes its own tuning knobs: HRC_TXT_E (emission), _OABS/_EABS
+// (absorption), _OALB (albedo), _BIG/_SML (type size), _TRACK (letter-spacing),
+// _FOG (haze), and HRC_OVL_E/_O/_TONE/_WHITE for the composited stamp.
 
 #include <cute.h>
 #include <stdio.h>
@@ -391,9 +406,11 @@ static struct {
 	CF_StorageBuffer Trad[12], Ttrn[12], Rbuf[2], Rzero, R0h, R0v;
 	CF_Canvas dir[3];   // directional radiance, 2D Fourier L1: a0, a1, b1
 	CF_Canvas minmax;   // prefiltered box min/max absorption at HRC res
-	CF_ComputeShader cs_trace, cs_extend, cs_merge, cs_finish, cs_display, cs_minmax;
-	CF_Material m_trace, m_extend, m_merge, m_finish, m_display, m_minmax;
+	CF_ComputeShader cs_trace, cs_extend, cs_merge, cs_finish, cs_display, cs_minmax, cs_feedback;
+	CF_Material m_trace, m_extend, m_merge, m_finish, m_display, m_minmax, m_feedback;
 } nsx;
+
+const char* scene_name(void);
 
 // Display scale for the exact path's raw-AgX. The cave's authored emissivity sits
 // ~6x below amitabha's raw-AgX range; test scenes use amitabha-scale emission (1.0).
@@ -437,10 +454,12 @@ static void hrc_ns_init_once(void)
 	nsx.cs_finish  = load_compute_shader("/hrc_gi_data/ami_ns_finish.c_shd");
 	nsx.cs_display = load_compute_shader("/hrc_gi_data/ami_display.c_shd");
 	nsx.cs_minmax  = load_compute_shader("/hrc_gi_data/ami_minmax.c_shd");
+	nsx.cs_feedback= load_compute_shader("/hrc_gi_data/ami_feedback.c_shd");
 	nsx.minmax = hrc_make_canvas(hrc_w(), hrc_h(), CF_PIXEL_FORMAT_R16G16_FLOAT, CF_FILTER_NEAREST);
 	nsx.m_trace = cf_make_material(); nsx.m_extend = cf_make_material(); nsx.m_merge = cf_make_material();
 	nsx.m_finish = cf_make_material(); nsx.m_display = cf_make_material();
 	nsx.m_minmax = cf_make_material();
+	nsx.m_feedback = cf_make_material();
 	nsx.inited = 1;
 }
 
@@ -509,6 +528,26 @@ void hrc_ns_compute(void)
 	CF_Texture emis_tex = cf_canvas_get_target(hrc.emissivity);
 	CF_Texture opac_tex = cf_canvas_get_target(hrc.absorption);
 
+	// Multibounce: fold last frame's fluence, tinted by albedo, back into emission
+	// before tracing. This is what lights the visible FACE of an opaque surface --
+	// the cascade only reports light ARRIVING at a cell, so a pure absorber has
+	// nothing to show and reads as a black cutout. Runs after the scene draw (which
+	// rewrote emissivity) and before the cascade, so each frame adds one bounce.
+	{
+		int gather_r = 4;
+		float surface_thresh = 0.5f; // above fog (~0.003), below any authored surface
+		cf_material_set_uniform_cs(nsx.m_feedback, "u_world_w", &world_w, CF_UNIFORM_TYPE_INT, 1);
+		cf_material_set_uniform_cs(nsx.m_feedback, "u_world_h", &world_h, CF_UNIFORM_TYPE_INT, 1);
+		cf_material_set_uniform_cs(nsx.m_feedback, "u_gather_r", &gather_r, CF_UNIFORM_TYPE_INT, 1);
+		cf_material_set_uniform_cs(nsx.m_feedback, "u_surface_thresh", &surface_thresh, CF_UNIFORM_TYPE_FLOAT, 1);
+		CF_ComputeDispatch d = cf_compute_dispatch_defaults(hrc_div_ceil(world_w, 16), hrc_div_ceil(world_h, 16), 1);
+		CF_Texture ro[3] = { cf_canvas_get_target(hrc.fluence_lin), cf_canvas_get_target(hrc.diffuse), opac_tex };
+		d.ro_textures = ro; d.ro_texture_count = 3;
+		CF_Texture rw[1] = { emis_tex };
+		d.rw_textures = rw; d.rw_texture_count = 1;
+		cf_dispatch_compute(nsx.cs_feedback, nsx.m_feedback, d);
+	}
+
 	// horizontal group: rot 0,2  cascade=width;  vertical group: rot 1,3  cascade=height.
 	int gw = hrc_w() / 2, gh = hrc_h() / 2;
 	hrc_ns_group(emis_tex, opac_tex, 0, 2, gw, gh, nsx.R0h);
@@ -570,7 +609,7 @@ void hrc_ns_compute(void)
 		cf_material_set_texture_cs(nsx.m_display, "u_a0", cf_canvas_get_target(nsx.dir[0]));
 		cf_material_set_texture_cs(nsx.m_display, "u_a1", cf_canvas_get_target(nsx.dir[1]));
 		cf_material_set_texture_cs(nsx.m_display, "u_b1", cf_canvas_get_target(nsx.dir[2]));
-		cf_material_set_texture_cs(nsx.m_display, "u_unused", cf_canvas_get_target(nsx.dir[0]));
+		cf_material_set_texture_cs(nsx.m_display, "u_emission", emis_tex);
 		cf_material_set_texture_cs(nsx.m_display, "u_absorption", opac_tex);
 		cf_material_set_texture_cs(nsx.m_display, "u_minmax", cf_canvas_get_target(nsx.minmax));
 		cf_material_set_uniform_cs(nsx.m_display, "u_world_w",  &world_w,  CF_UNIFORM_TYPE_INT, 1);
@@ -584,6 +623,13 @@ void hrc_ns_compute(void)
 		  cf_material_set_uniform_cs(nsx.m_display, "u_hrc_w", &hw, CF_UNIFORM_TYPE_INT, 1);
 		  cf_material_set_uniform_cs(nsx.m_display, "u_hrc_h", &hh, CF_UNIFORM_TYPE_INT, 1);
 		  cf_material_set_uniform_cs(nsx.m_display, "u_abs_threshold", &abs_thresh, CF_UNIFORM_TYPE_FLOAT, 1); }
+		{ const char* e = getenv("HRC_EMISSIVE");
+		  float emissive = e ? (float)atof(e) : 1.0f;
+		  cf_material_set_uniform_cs(nsx.m_display, "u_emissive", &emissive, CF_UNIFORM_TYPE_FLOAT, 1);
+		  // Only the type scene asks for extra chroma; everything else stays at 1.0.
+		  const char* sv = getenv("HRC_SAT");
+		  float sat = sv ? (float)atof(sv) : (!CF_STRCMP(scene_name(), "text") ? 1.20f : 1.0f);
+		  cf_material_set_uniform_cs(nsx.m_display, "u_saturation", &sat, CF_UNIFORM_TYPE_FLOAT, 1); }
 		CF_ComputeDispatch d = cf_compute_dispatch_defaults(hrc_div_ceil(world_w, 16), hrc_div_ceil(world_h, 16), 1);
 		CF_Texture rw[2] = { cf_canvas_get_target(hrc.fluence), cf_canvas_get_target(hrc.fluence_lin) };
 		d.rw_textures = rw; d.rw_texture_count = 2;
@@ -596,10 +642,34 @@ void hrc_ns_compute(void)
 // HRC_SCENE = rectroom | cornell | pinhole  (use with HRC_RES).
 // Rasterize the selected scene into emissivity/absorption. Shared by the
 // interactive loop and the headless capture so both light the same thing.
+// Every scene the sample can show, in cycle order. HRC_SCENE picks the starting
+// one; the arrow keys move through them at runtime.
+static const char* g_scene_list[] = {
+	"cornell", "glass", "pinhole", "rectroom", "circ", "showcase", "text",
+};
+static const int g_scene_count = (int)(sizeof(g_scene_list) / sizeof(g_scene_list[0]));
+static int g_scene_index = 0;
+
 const char* scene_name(void)
 {
-	const char* n = getenv("HRC_SCENE");
-	return n ? n : "cornell";
+	return g_scene_list[g_scene_index];
+}
+
+// Point the sample at a scene by name. Unknown names leave the selection alone so
+// a typo in HRC_SCENE shows the default rather than crashing.
+static void scene_select(const char* name)
+{
+	if (!name) return;
+	for (int i = 0; i < g_scene_count; i++) {
+		if (!CF_STRCMP(name, g_scene_list[i])) { g_scene_index = i; return; }
+	}
+	printf("unknown HRC_SCENE '%s' -- showing %s\n", name, scene_name());
+	fflush(stdout);
+}
+
+static void scene_cycle(int delta)
+{
+	g_scene_index = (g_scene_index + delta + g_scene_count) % g_scene_count;
 }
 
 // The scene is drawn with the ordinary cf_draw API into two canvases:
@@ -608,7 +678,88 @@ const char* scene_name(void)
 // goes through the same path, so a glowing sign is just text drawn into the
 // emission canvas and it lights the room like any other emitter.
 //
-// channel: 0 = emission, 1 = absorption.
+// channel: 0 = emission, 1 = absorption, 2 = diffuse albedo (feeds the bounce
+// pass), 3 = the translucent stamp composited over the finished image.
+// Alpha of the translucent overlay stamp (channel 3), per line kind.
+static float g_overlay_emis = 0.45f;
+static float g_overlay_occ  = 0.72f;
+static float g_overlay_tone  = 0.70f;  // value of the opaque stamp
+static float g_overlay_white = 0.20f;  // how far the emissive stamp pulls to white
+
+// One centred line of the "text" scene, authored into whichever channel is being
+// drawn. Emissive lines carry emission plus just enough absorption to couple it;
+// occluding lines carry no emission, absorption dense enough to seal the stroke,
+// and an albedo so the bounce pass lights their visible face.
+static void text_line(int channel, const char* str, float y, float size,
+                      float er, float eg, float eb, float absorb, float albedo, float track)
+{
+	cf_push_font_size(size);
+	CF_V2 sz = cf_text_size(str, -1);
+	// Untracked lines fit by shrinking the type: a long headline scales down rather
+	// than running off the frame. Tracked lines fit further down by closing up their
+	// letter-spacing instead, which preserves the size.
+	float fit_w = (float)world_w * 0.92f;
+	if (track <= 0 && sz.x > fit_w) {
+		cf_pop_font_size();
+		cf_push_font_size(size * (fit_w / sz.x));
+		sz = cf_text_size(str, -1);
+	}
+	CF_Color c;
+	if (channel == 0)      c = cf_make_color_rgb_f(er, eg, eb);
+	else if (channel == 1) c = cf_make_color_rgb_f(absorb, absorb, absorb * 1.06f);
+	else if (channel == 2) c = cf_make_color_rgb_f(albedo, albedo, albedo * 1.03f);
+	else {
+		// Channel 3: the translucent stamp composited over the finished HRC image.
+		// The volumetric pass below already produced the glow and the cast shadows;
+		// this only puts a crisp, flat letterform back on top so the type reads.
+		// Emissive lines stamp their own hue, occluding lines stamp dark.
+		if (er + eg + eb > 0) {
+			// A hot emitter's core reads near-white, with the hue carried by the glow
+			// around it rather than the letterform itself. Stamping the raw normalized
+			// emission colour oversaturates, so pull it most of the way to white.
+			float m = er > eg ? (er > eb ? er : eb) : (eg > eb ? eg : eb);
+			float k = g_overlay_white;
+			c = cf_make_color_rgba_f(er / m * (1 - k) + k, eg / m * (1 - k) + k,
+			                         eb / m * (1 - k) + k, g_overlay_emis);
+		} else {
+			// Neutral and faintly warm. This line is a lit surface, not an emitter, so
+			// a hued stamp would read as though it were glowing; its contrast against
+			// the wash comes from value instead of colour.
+			float t = g_overlay_tone;
+			c = cf_make_color_rgba_f(t * 1.04f, t * 1.00f, t * 0.97f, g_overlay_occ);
+		}
+	}
+	cf_draw_push_color(c);
+	float baseline = y + sz.y * 0.5f;
+	if (track <= 0) {
+		// No tracking: one call, so the font's own kerning applies.
+		cf_draw_text(str, cf_v2(-sz.x * 0.5f, baseline), -1);
+	} else {
+		// Letter-spacing, which cf_draw has no API for: step glyph by glyph and add
+		// the extra advance by hand. Measure the tracked width first so the line
+		// still centres. ASCII only, which is all these captions are.
+		float glyphs = 0;
+		int n = 0;
+		for (const char* p = str; *p; ++p) { char ch[2] = { *p, 0 }; glyphs += cf_text_width(ch, -1); n++; }
+		// Auto-fit: tracking that would push the line past the frame gets pulled back,
+		// so a longer string just tracks tighter instead of running off the edge.
+		float maxw = (float)world_w * 0.92f;
+		if (n > 1 && glyphs + track * (n - 1) > maxw) {
+			track = (maxw - glyphs) / (float)(n - 1);
+			if (track < 0) track = 0;
+		}
+		float total = glyphs + track * (n > 0 ? n - 1 : 0);
+		float x = -total * 0.5f;
+		for (const char* p = str; *p; ++p) {
+			char ch[2] = { *p, 0 };
+			cf_draw_text(ch, cf_v2(x, baseline), -1);
+			x += cf_text_width(ch, -1) + track;
+		}
+	}
+	cf_draw_pop_color();
+	cf_pop_font_size();
+}
+
 static void scene_shapes(int channel, float W, float H)
 {
 	const char* name = scene_name();
@@ -619,6 +770,45 @@ static void scene_shapes(int channel, float W, float H)
 	int rectroom= !CF_STRCMP(name, "rectroom");
 	int emis = (channel == 0);
 	const float SOLID = 30000.0f;
+
+	// "text": type is the entire scene, after entropylost/amida's
+	// "thisisradiancecascades". Two emissive headlines light a hazy void, and one
+	// non-emissive line silhouettes against that wash while casting long shadows.
+	// Nothing else is in the frame -- no room, no walls -- so the only thing shaping
+	// the image is the light the letters themselves throw.
+	if (!CF_STRCMP(name, "text")) {
+		float EM  = getenv("HRC_TXT_E")   ? (float)atof(getenv("HRC_TXT_E"))   : 3.2f;
+		float OA  = getenv("HRC_TXT_OABS")? (float)atof(getenv("HRC_TXT_OABS")): 0.25f;
+		float OB  = getenv("HRC_TXT_OALB")? (float)atof(getenv("HRC_TXT_OALB")): 0.85f;
+		float EA  = getenv("HRC_TXT_EABS")? (float)atof(getenv("HRC_TXT_EABS")): 0.20f;
+		float BIG = getenv("HRC_TXT_BIG") ? (float)atof(getenv("HRC_TXT_BIG")) : 0.190f;
+		float SML = getenv("HRC_TXT_SML") ? (float)atof(getenv("HRC_TXT_SML")) : 0.125f;
+		float TRK = getenv("HRC_TXT_TRACK")?(float)atof(getenv("HRC_TXT_TRACK")):0.22f;
+		// A little haze over the whole frame. Without a participating medium the
+		// coloured light has nothing to scatter off and the field reads as washed-out
+		// grey -- it is fluence through vacuum. Fog gives the light something to
+		// stain, which is what makes the pink and mint actually fill the frame.
+		// Drawn first: brushes overwrite, so any solid laid down before it would be
+		// erased back to fog.
+		if (channel == 1) {
+			float fog = getenv("HRC_TXT_FOG") ? (float)atof(getenv("HRC_TXT_FOG")) : 0.005f;
+			cf_draw_push_color(cf_make_color_rgb_f(fog, fog, fog * 1.15f));
+			cf_draw_box_rounded_fill(cf_make_aabb(cf_v2(-W * 0.5f, -H * 0.5f), cf_v2(W * 0.5f, H * 0.5f)), 0);
+			cf_draw_pop_color();
+		}
+		// Zero emission, dense enough to seal the stroke, and a plain [0,1] albedo so
+		// the bounce pass lights its face. Tracked out wide so it spans the frame.
+		text_line(channel, "lookin cute ^_^", -H * 0.265f, H * SML, 0, 0, 0, OA, OB, H * SML * TRK);
+		// Cute Framework's own palette, normalized to hue and scaled by emission:
+		// pink #fea3a8 and mint #96dec6 off docs/stylesheets/cute.css and the logo.
+		text_line(channel, "CUTE",       H * 0.150f, H * BIG, EM * 1.000f, EM * 0.520f, EM * 0.550f, EA, 0, 0);
+		text_line(channel, "FRAMEWORK", -H * 0.055f, H * BIG, EM * 0.500f, EM * 1.000f, EM * 0.840f, EA, 0, 0);
+		return;
+	}
+
+	// Channels 2 (diffuse albedo) and 3 (overlay stamp) only carry the type scene;
+	// the room scenes author neither, so there is nothing to draw for them.
+	if (channel >= 2) return;
 
 	#define WALL(cx, cy, hw, hh) do { 		if (!emis) { cf_draw_push_color(cf_make_color_rgb_f(SOLID, SOLID, SOLID)); 			cf_draw_box_rounded_fill(cf_make_aabb(cf_v2((cx)-(hw), (cy)-(hh)), cf_v2((cx)+(hw), (cy)+(hh))), 0); 			cf_draw_pop_color(); } } while (0)
 	#define LIGHT(cx, cy, hw, hh, r, g, b) do { 		cf_draw_push_color(emis ? cf_make_color_rgb_f(r, g, b) : cf_make_color_rgb_f(SOLID, SOLID, SOLID)); 		cf_draw_box_rounded_fill(cf_make_aabb(cf_v2((cx)-(hw), (cy)-(hh)), cf_v2((cx)+(hw), (cy)+(hh))), 0); 		cf_draw_pop_color(); } while (0)
@@ -690,56 +880,100 @@ void hrc_ns_scene_draw(void)
 	float W = (float)world_w, H = (float)world_h;
 	cf_app_update(NULL); // acquire a command buffer
 	hrc_ns_init_once();
-	g_ns_exposure = 1.0f;
+	// The text scene is lit entirely by two large emitters filling the frame, so it
+	// sits far higher on the exposure curve than the room scenes. Pulling it down
+	// keeps the letter cores from clipping to white and lets the wash hold its hue
+	// and fall off into dark corners.
+	g_ns_exposure = !CF_STRCMP(scene_name(), "text") ? 0.10f : 1.0f;
 
-	for (int channel = 0; channel < 2; channel++) {
+	// 0 = emission, 1 = absorption, 2 = diffuse albedo (drives the bounce feedback).
+	for (int channel = 0; channel < 3; channel++) {
 		cf_draw_push();
 		cf_draw_projection(cf_ortho_2d(0, 0, W, H));
 		push_f16_render_state();
 		scene_shapes(channel, W, H);
 		cf_draw_pop_render_state();
 
-		cf_render_to(channel == 0 ? hrc.emissivity : hrc.absorption, true);
+		cf_render_to(channel == 0 ? hrc.emissivity : channel == 1 ? hrc.absorption : hrc.diffuse, true);
 		cf_draw_pop();
 	}
+}
+
+// Composite the type back over the finished HRC image with the ordinary draw
+// path: default shader, default blend, partial alpha. The cascade pass already
+// did the lighting -- glow, colour bleed, cast shadows -- but reconstructs it
+// through a light field, which is low-frequency by nature and leaves thin
+// letterforms soft. Stamping a flat translucent copy on top restores the crisp
+// edge while the volumetric result still shows through it.
+static void hrc_text_overlay(void)
+{
+	if (CF_STRCMP(scene_name(), "text")) return; // only the type scene stamps
+	{ const char* e = getenv("HRC_OVL_E"); if (e) g_overlay_emis = (float)atof(e); }
+	{ const char* o = getenv("HRC_OVL_O"); if (o) g_overlay_occ  = (float)atof(o); }
+	{ const char* t = getenv("HRC_OVL_TONE"); if (t) g_overlay_tone = (float)atof(t); }
+	{ const char* w = getenv("HRC_OVL_WHITE"); if (w) g_overlay_white = (float)atof(w); }
+	if (g_overlay_emis <= 0 && g_overlay_occ <= 0) return;
+
+	cf_draw_push();
+	cf_draw_projection(cf_ortho_2d(0, 0, (float)world_w, (float)world_h));
+	scene_shapes(3, (float)world_w, (float)world_h); // same layout, overlay colours
+	cf_render_to(hrc.fluence, false);                // composite, do not clear
+	cf_draw_pop();
 }
 
 // Headless capture: render the scene, settle, dump display + linear, exit.
 void hrc_ns_testscene(void)
 {
-	hrc_ns_scene_draw();
-
 	// Settle over several frames before reading back. A single frame is not safe:
 	// the readback can report ready before the GPU has finished the dispatches, and
 	// we capture zeros (reproducible on back-to-back runs). Re-running the compute
 	// each frame is idempotent here -- the scene textures don't change.
+	//
+	// hrc_ns_scene_draw opens a frame (cf_app_update), so each pass pairs it with one
+	// cf_app_draw_onto_screen to submit. Leaving a frame open no longer loses its GPU
+	// work, but pairing keeps the frame accounting obvious.
 	for (int f = 0; f < 6; f++) {
-		hrc_ns_scene_draw();   // redraw: the glyph atlas may not be built on frame 0
+		hrc_ns_scene_draw();   // opens the frame (cf_app_update)
 		hrc_ns_compute();
-		cf_app_draw_onto_screen(true);
-		cf_app_update(NULL);
+		hrc_text_overlay();    // translucent stamp over the finished image
+		cf_app_draw_onto_screen(true);   // submits it
 	}
-	hrc_ns_compute();
-	cf_app_draw_onto_screen(true);
 
 	CF_Readback rb = cf_canvas_readback(hrc.fluence);
 	CF_Readback rbl = cf_canvas_readback(hrc.fluence_lin);
 	for (int t = 0; t < 240 && (!cf_readback_ready(rb) || !cf_readback_ready(rbl)); t++) { cf_app_update(NULL); cf_app_draw_onto_screen(true); }
+	// Dumps land in the working directory. HRC_OUT can point them elsewhere; it is
+	// used as a prefix, so a trailing slash gives a directory and anything else
+	// prefixes the filename.
+	const char* out = getenv("HRC_OUT");
+	char path[512];
+	if (!out) out = "";
 	if (cf_readback_ready(rb)) {
 		int sz = cf_readback_size(rb);
 		unsigned char* buf = (unsigned char*)cf_alloc(sz);
 		cf_readback_data(rb, buf, sz);
-		FILE* f = fopen("C:/randy/hrc_shot.raw", "wb"); fwrite(buf, 1, sz, f); fclose(f); cf_free(buf);
-		printf("SCENE %s: %dx%d rgba8 -> C:/randy/hrc_shot.raw\n", getenv("HRC_SCENE"), world_w, world_h); fflush(stdout);
+		CF_SNPRINTF(path, sizeof(path), "%shrc_shot.raw", out);
+		FILE* f = fopen(path, "wb");
+		if (f) { fwrite(buf, 1, sz, f); fclose(f); printf("SCENE %s: %dx%d rgba8 -> %s\n", scene_name(), world_w, world_h, path); }
+		else    { printf("SCENE %s: failed to open %s for writing\n", scene_name(), path); }
+		fflush(stdout);
+		cf_free(buf);
 	}
 	if (cf_readback_ready(rbl)) {
 		int sz = cf_readback_size(rbl), N = world_w * world_h;
 		unsigned char* buf = (unsigned char*)cf_alloc(sz); cf_readback_data(rbl, buf, sz);
 		uint16_t* h = (uint16_t*)buf;
-		FILE* f = fopen("C:/randy/hrc_lin.raw", "wb");
-		for (int i = 0; i < N; i++) { float rgb[3] = { half_to_float(h[i*4+0]), half_to_float(h[i*4+1]), half_to_float(h[i*4+2]) }; fwrite(rgb, 4, 3, f); }
-		fclose(f); cf_free(buf);
-		printf("SCENE lin -> C:/randy/hrc_lin.raw\n"); fflush(stdout);
+		CF_SNPRINTF(path, sizeof(path), "%shrc_lin.raw", out);
+		FILE* f = fopen(path, "wb");
+		if (f) {
+			for (int i = 0; i < N; i++) { float rgb[3] = { half_to_float(h[i*4+0]), half_to_float(h[i*4+1]), half_to_float(h[i*4+2]) }; fwrite(rgb, 4, 3, f); }
+			fclose(f);
+			printf("SCENE lin -> %s\n", path);
+		} else {
+			printf("SCENE lin: failed to open %s for writing\n", path);
+		}
+		fflush(stdout);
+		cf_free(buf);
 	}
 	exit(0);
 }
@@ -778,28 +1012,36 @@ int main(int argc, char* argv[])
 	cf_make_font("/hrc_gi_data/calibri.ttf", cf_sintern("gi"));
 
 	// Headless: render one scene, dump it, exit. This is what regress.py drives.
-	if (getenv("HRC_SCENE")) hrc_ns_testscene();
+	scene_select(getenv("HRC_SCENE"));
+
+	// Headless capture is its own switch now that scenes cycle at runtime: HRC_SCENE
+	// only chooses where to start, in both modes.
+	if (getenv("HRC_SHOT")) hrc_ns_testscene();
 
 	// Interactive: draw the selected scene and light it every frame.
 	while (cf_app_is_running()) {
 		cf_app_update(NULL);
+		if (cf_key_just_pressed(CF_KEY_RIGHT) || cf_key_just_pressed(CF_KEY_SPACE)) scene_cycle(1);
+		if (cf_key_just_pressed(CF_KEY_LEFT)) scene_cycle(-1);
 		hrc_ns_scene_draw();
 		hrc_ns_compute();
+		hrc_text_overlay();
 		cf_draw_canvas(hrc.fluence, cf_v2(0, 0), cf_v2((float)world_w, (float)world_h));
 
-		// Scene title + controls, drawn like any other shape.
+		// Controls, drawn like any other shape. No scene title here: every scene
+		// captions itself inside the world, so a HUD copy would just duplicate it.
+		// Push/pop are balanced -- these stacks are global and leak across frames
+		// otherwise.
 		cf_push_font(cf_sintern("gi"));
-		cf_push_font(cf_sintern("gi"));
-		cf_push_font_size(world_h * 0.045f);
-		cf_draw_push_color(cf_make_color_rgb_f(1.0f, 0.93f, 0.78f));
-		cf_draw_text(scene_name(), cf_v2(-world_w * 0.46f, world_h * 0.42f), -1);
-		cf_draw_pop_color();
 		cf_push_font_size(world_h * 0.022f);
 		cf_draw_push_color(cf_make_color_rgb_f(0.62f, 0.72f, 0.80f));
-		cf_draw_text("HRC 2D global illumination", cf_v2(-world_w * 0.46f, world_h * 0.375f), -1);
-		cf_draw_text("HRC_SCENE=cornell|glass|pinhole|rectroom|circ|showcase    HRC_SCALE=1|2|4",
-			cf_v2(-world_w * 0.46f, -world_h * 0.45f), -1);
+		char hud[256];
+		CF_SNPRINTF(hud, sizeof(hud), "left / right : scene  (%d/%d %s)    HRC_SCALE=1|2|4",
+			g_scene_index + 1, g_scene_count, scene_name());
+		cf_draw_text(hud, cf_v2(-world_w * 0.46f, -world_h * 0.45f), -1);
 		cf_draw_pop_color();
+		cf_pop_font_size();
+		cf_pop_font();
 
 		cf_app_draw_onto_screen(true);
 	}

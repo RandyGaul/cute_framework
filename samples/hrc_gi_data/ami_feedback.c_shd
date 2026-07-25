@@ -1,0 +1,80 @@
+// Multibounce feedback (amitabha multibounce.rs approach), with a surface-aware
+// irradiance gather.
+//
+// Adds last frame's fluence, tinted by the surface's diffuse albedo, into the
+// scene emissivity. Runs after the scene draws its channels and before the
+// cascade, so each frame folds in one more bounce; with loop gain < 1 the series
+// converges geometrically and costs no extra cascade passes.
+//
+// This is what makes an opaque surface's FACE visible. The cascade only reports
+// light arriving at a cell, so a pure absorber has nothing to show and reads as a
+// black cutout. Give it an albedo and the light landing on it is re-emitted from
+// that cell, so the surface is lit by the actual scene -- colour bleed included --
+// while still blocking everything behind it.
+//
+// The subtlety, and why the naive version starves: the fluence stored AT an
+// absorbing cell is the light that survived getting there, i.e. it is already
+// behind the absorption we are trying to shade. For a wall interior that is
+// essentially zero, and for a glyph stroke a few pixels wide it is still only a
+// few percent of ambient -- so the face comes out black no matter the albedo. A
+// surface does not receive its own interior light, it receives what arrives from
+// OUTSIDE. So gather the field over the neighbourhood, skipping cells that are
+// themselves inside the occluder, and shade with that instead. This also avoids
+// needing a surface normal at all, which is what makes it hold up on strokes only
+// a few pixels across where the gradient is meaningless.
+//
+// Unlike hrc.c's version there is no sRGB/16 encoding here: hrc_gi stores raw
+// linear emission and raw absorption coefficients (the trace does exp(-opac*seg)
+// directly), so the bounce adds in linear space.
+
+layout(set = 0, binding = 0, rgba16f) uniform readonly image2D u_fluence_lin;
+layout(set = 0, binding = 1, rgba16f) uniform readonly image2D u_diffuse;
+layout(set = 0, binding = 2, rgba16f) uniform readonly image2D u_absorption;
+layout(set = 1, binding = 0, rgba16f) uniform image2D u_emissivity;
+
+layout(set = 2, binding = 0) uniform Params
+{
+	int   u_world_w;
+	int   u_world_h;
+	int   u_gather_r;       // neighbourhood radius for the irradiance gather
+	float u_surface_thresh; // absorption above this counts as "inside the occluder"
+};
+
+layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+
+ivec2 clamp_pos(ivec2 p) { return clamp(p, ivec2(0), ivec2(u_world_w - 1, u_world_h - 1)); }
+
+void main()
+{
+	ivec2 gid = ivec2(gl_GlobalInvocationID.xy);
+	if (gid.x >= u_world_w || gid.y >= u_world_h) return;
+
+	vec3 albedo = imageLoad(u_diffuse, gid).rgb;
+	if (dot(albedo, albedo) == 0.0) return; // no albedo authored: pure absorber
+
+	// Irradiance arriving at the surface: average the light field over nearby cells
+	// that are not themselves inside the occluder.
+	vec3 acc = vec3(0.0);
+	float n = 0.0;
+	for (int dy = -u_gather_r; dy <= u_gather_r; dy++) {
+		for (int dx = -u_gather_r; dx <= u_gather_r; dx++) {
+			ivec2 q = clamp_pos(gid + ivec2(dx, dy));
+			if (imageLoad(u_absorption, q).r > u_surface_thresh) continue; // inside: skip
+			acc += max(imageLoad(u_fluence_lin, q).rgb, vec3(0.0));
+			n += 1.0;
+		}
+	}
+	if (n == 0.0) return; // fully enclosed: genuinely no light reaches this surface
+
+	// Albedo here is a plain [0,1] reflectance, and the units work out for it:
+	// the gathered value is a fluence (cone radiance summed over 2pi of span), so
+	// dividing by 2pi recovers the mean incident radiance, and a Lambertian surface
+	// re-emits albedo times that as its own radiance -- which is exactly what the
+	// emission canvas stores. The loop gain is then albedo, not 2pi*albedo, so any
+	// physical reflectance converges. The display puts the 2pi back when it
+	// composites emission, so a surface reads as albedo of its surroundings.
+	vec3 bounce = albedo * (acc / n) * (1.0 / 6.28318530718);
+
+	vec3 existing = imageLoad(u_emissivity, gid).rgb;
+	imageStore(u_emissivity, gid, vec4(existing + bounce, 1.0));
+}
