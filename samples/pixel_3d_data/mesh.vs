@@ -13,12 +13,14 @@ layout (location = 0) out vec3 v_normal;
 layout (location = 1) out vec2 v_uv;
 layout (location = 2) out vec3 v_world_pos;
 layout (location = 3) out vec4 v_light_pos;
+layout (location = 4) out vec4 v_spot_pos;
 
 layout (set = 1, binding = 0) uniform uniform_block {
 	mat4 u_mvp;
 	mat4 u_model;
 	mat4 u_normal_matrix;
 	mat4 u_light_mvp;
+	mat4 u_spot_mvp;
 };
 
 void main()
@@ -29,5 +31,6 @@ void main()
 	v_uv = in_uv;
 	v_world_pos = (u_model * vec4(in_pos, 1.0)).xyz;
 	v_light_pos = u_light_mvp * vec4(in_pos, 1.0);
+	v_spot_pos = u_spot_mvp * vec4(in_pos, 1.0);
 	gl_Position = u_mvp * vec4(in_pos, 1.0);
 }

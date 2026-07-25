@@ -17,19 +17,24 @@
 // Geometry is built procedurally -- CF reads no model format, and a sample should not need an
 // asset pipeline.
 //
-// Keys: SPACE cycles edge modes, N shows the normal buffer, D the depth buffer,
-//       S toggles shadows, 1/2 change the pixel size.
+// Mouse: drag to orbit, wheel to zoom. R toggles an idle spin (off by default).
+// Keys:  SPACE cycles edge modes, N shows the normal buffer, D the depth buffer,
+//        S toggles shadows, 1/2 change the pixel size.
 
 #include <cute.h>
 
 #define WINDOW_W 960
 #define WINDOW_H 720
-#define SHADOW_SIZE 1024
+#define SHADOW_SIZE 2048       // three.js: directionalLight.shadow.mapSize.set(2048, 2048)
+#define SPOT_SHADOW_SIZE 1024  // The spot covers a much smaller area, so it needs less.
+#define SPOT_ANGLE (CF_PI / 16.0f)
+#define SPOT_RANGE 10.0f
 
-// three.js frames this scene with an orthographic camera two world units tall.
-#define VIEW_HEIGHT 2.0f
+// An orthographic camera frames by its view height, so the distance only has to keep the scene
+// between the near and far planes.
+#define CAM_DISTANCE 2.3094f   // length of three.js's (0, 2*tan(PI/6), 2)
 #define ZNEAR 0.1f
-#define ZFAR 20.0f
+#define ZFAR 10.0f
 
 #define MAX_OBJECTS 8
 
@@ -43,6 +48,7 @@ typedef struct Object
 	CF_Color emissive;
 	float textured;    // 1 to sample the checker texture, 0 for a flat colour.
 	float shininess;
+	float specular;    // three.js's MeshPhongMaterial.specular, as a linear grey.
 } Object;
 
 // ---------------------------------------------------------------------------------------------
@@ -66,7 +72,7 @@ static void push_face(CF_Vertex3D* verts, uint32_t* indices, int* vc, int* ic,
 	for (int i = 0; i < 6; ++i) indices[(*ic)++] = (uint32_t)base + quad[i];
 }
 
-static CF_Mesh build_box(float half)
+static CF_Mesh build_box(float half, float uv_tiles)
 {
 	CF_Vertex3D verts[24];
 	uint32_t indices[36];
@@ -82,7 +88,7 @@ static CF_Mesh build_box(float half)
 		CF_V3 nv = cf_v3(n[f][0], n[f][1], n[f][2]);
 		CF_V3 tv = cf_mul(cf_v3(t[f][0], t[f][1], t[f][2]), half);
 		CF_V3 bv = cf_mul(cf_v3(b[f][0], b[f][1], b[f][2]), half);
-		push_face(verts, indices, &vc, &ic, cf_mul(nv, half), tv, bv, nv, 1.0f);
+		push_face(verts, indices, &vc, &ic, cf_mul(nv, half), tv, bv, nv, uv_tiles);
 	}
 	return cf_make_mesh_3d(verts, vc, indices, ic);
 }
@@ -167,13 +173,35 @@ static CF_Canvas make_canvas_ex(int w, int h, CF_PixelFormat format)
 	return cf_make_canvas(params);
 }
 
-static void set_transform_uniforms(CF_Material m, CF_M4x4 mvp, CF_M4x4 model, CF_M4x4 light_mvp)
+// `normal_matrix` is passed in rather than derived from `model` because the passes want normals
+// in different spaces: the lit pass shades in world space, while the g-buffer needs VIEW space.
+// three.js's normal buffer is view-space (MeshNormalMaterial), and the edge shader's
+// vec3(1,1,1) bias is written against that -- feeding it world normals makes which crease
+// brightens depend on world orientation, so highlights swim as the camera orbits.
+static void set_transform_uniforms(CF_Material m, CF_M4x4 mvp, CF_M4x4 model, CF_M4x4 normal_matrix, CF_M4x4 light_mvp, CF_M4x4 spot_mvp)
 {
-	CF_M4x4 normal_matrix = cf_m4_normal_matrix(model);
 	cf_material_set_uniform_vs(m, "u_mvp", &mvp, CF_UNIFORM_TYPE_MAT4, 1);
 	cf_material_set_uniform_vs(m, "u_model", &model, CF_UNIFORM_TYPE_MAT4, 1);
 	cf_material_set_uniform_vs(m, "u_normal_matrix", &normal_matrix, CF_UNIFORM_TYPE_MAT4, 1);
 	cf_material_set_uniform_vs(m, "u_light_mvp", &light_mvp, CF_UNIFORM_TYPE_MAT4, 1);
+	cf_material_set_uniform_vs(m, "u_spot_mvp", &spot_mvp, CF_UNIFORM_TYPE_MAT4, 1);
+}
+
+// three.js's crystal spin easing: hold still for `downtime` seconds, then ease through a full
+// turn over the rest of `period`. Reproduced so the motion reads the same.
+static float ease_in_out_cubic(float x) { return x * x * 3.0f - x * x * x * 2.0f; }
+
+static float linear_step(float x, float edge0, float edge1)
+{
+	float m = 1.0f / (edge1 - edge0);
+	return cf_clamp(-m * edge0 + m * x, 0.0f, 1.0f);
+}
+
+static float stop_go_eased(float x, float downtime, float period)
+{
+	float cycle = CF_FLOORF(x / period);
+	float tween = x - cycle * period;
+	return cycle + ease_in_out_cubic(linear_step(tween, downtime, period));
 }
 
 static CF_M4x4 object_model(const Object* o, float time)
@@ -208,23 +236,25 @@ int main(int argc, char* argv[])
 
 	CF_Texture albedo = make_checker_texture();
 
-	CF_Mesh ground_mesh = build_ground(3.0f, 6.0f);
-	CF_Mesh box_mesh = build_box(0.28f);
-	CF_Mesh tall_mesh = build_box(0.22f);
-	CF_Mesh crystal_mesh = build_icosahedron(0.33f);
+	CF_Mesh ground_mesh = build_ground(1.0f, 3.0f);
+	CF_Mesh box_mesh = build_box(0.2f, 1.5f);    // three.js: addBox(.4, 0, 0, PI/4)
+	CF_Mesh tall_mesh = build_box(0.25f, 1.5f);  // three.js: addBox(.5, -.5, -.5, PI/4)
+	CF_Mesh crystal_mesh = build_icosahedron(0.2f);
 
 	// Colours lifted from the three.js example: 0x151729 background, a warm 0xfffecd key light,
 	// a cool 0x757f8e ambient, a 0xffc100 spot, and a 0x68b7e9 crystal with 0x4f7e8b emissive.
 	Object objects[MAX_OBJECTS];
 	int object_count = 0;
-	objects[object_count++] = (Object){ ground_mesh, cf_v3(0, -0.5f, 0), 0, 0,
-		cf_make_color_rgb_f(1.0f, 1.0f, 1.0f), cf_make_color_rgb_f(0, 0, 0), 1.0f, 8.0f };
-	objects[object_count++] = (Object){ box_mesh, cf_v3(-0.62f, -0.22f, 0.30f), 0, 0.4f,
-		cf_make_color_rgb_f(1.0f, 1.0f, 1.0f), cf_make_color_rgb_f(0, 0, 0), 1.0f, 24.0f };
-	objects[object_count++] = (Object){ tall_mesh, cf_v3(0.55f, -0.28f, -0.35f), 0, 0.9f,
-		cf_make_color_rgb_f(1.0f, 1.0f, 1.0f), cf_make_color_rgb_f(0, 0, 0), 1.0f, 24.0f };
-	objects[object_count++] = (Object){ crystal_mesh, cf_v3(0, -0.02f, 0), 0.6f, 0,
-		cf_make_color_rgb_f(0.408f, 0.718f, 0.914f), cf_make_color_rgb_f(0.078f, 0.124f, 0.137f), 0, 48.0f };
+	objects[object_count++] = (Object){ ground_mesh, cf_v3(0, 0, 0), 0, 0,
+		cf_make_color_rgb_f(1.0f, 1.0f, 1.0f), cf_make_color_rgb_f(0, 0, 0), 1.0f, 30.0f, 0.03f };
+	objects[object_count++] = (Object){ box_mesh, cf_v3(0, 0.2f, 0), 0, CF_PI / 4.0f,
+		cf_make_color_rgb_f(1.0f, 1.0f, 1.0f), cf_make_color_rgb_f(0, 0, 0), 1.0f, 30.0f, 0.03f };
+	objects[object_count++] = (Object){ tall_mesh, cf_v3(-0.5f, 0.25f, -0.5f), 0, CF_PI / 4.0f,
+		cf_make_color_rgb_f(1.0f, 1.0f, 1.0f), cf_make_color_rgb_f(0, 0, 0), 1.0f, 30.0f, 0.03f };
+	// The crystal hovers above the small box; its transform is animated per frame below.
+	int crystal = object_count;
+	objects[object_count++] = (Object){ crystal_mesh, cf_v3(0, 0.7f, 0), 0, 0,
+		cf_make_color_rgb_f(0.408f, 0.718f, 0.914f), cf_make_color_rgb_f(0.310f, 0.494f, 0.545f), 0, 10.0f, 0.6f };
 
 	CF_Material lit_material = cf_make_material();
 	CF_Material normal_material = cf_make_material();
@@ -244,18 +274,32 @@ int main(int argc, char* argv[])
 	// thresholds land on banding instead of geometry.
 	CF_Canvas normal_canvas = make_canvas_ex(lowres_w, lowres_h, CF_PIXEL_FORMAT_R16G16B16A16_FLOAT);
 	CF_Canvas shadow_canvas = make_canvas_ex(SHADOW_SIZE, SHADOW_SIZE, CF_PIXEL_FORMAT_R16G16B16A16_FLOAT);
+	CF_Canvas spot_shadow_canvas = make_canvas_ex(SPOT_SHADOW_SIZE, SPOT_SHADOW_SIZE, CF_PIXEL_FORMAT_R16G16B16A16_FLOAT);
 
 	// Each canvas keeps its own clear values, so no pass has to save and restore a global.
 	cf_canvas_set_clear_color(scene_canvas, cf_make_color_rgb_f(0.082f, 0.090f, 0.161f));
 	cf_canvas_set_clear_color(normal_canvas, cf_make_color_rgb_f(0, 0, 0));
 	cf_canvas_set_clear_color(shadow_canvas, cf_make_color_rgb_f(1.0f, 1.0f, 1.0f)); // Nothing occludes by default.
+	cf_canvas_set_clear_color(spot_shadow_canvas, cf_make_color_rgb_f(1.0f, 1.0f, 1.0f));
 
 	CF_V3 light_dir = cf_norm(cf_v3(-1.0f, -1.0f, -1.0f));   // three.js puts the key light at (100,100,100).
-	CF_V3 spot_pos = cf_v3(1.1f, 1.1f, 0);
-	CF_V4 light_color = cf_v4(1.0f, 0.996f, 0.804f, 1.0f);   // 0xfffecd
-	CF_V4 ambient = cf_v4(0.196f, 0.212f, 0.239f, 1.0f);     // 0x757f8e, scaled down
-	CF_V4 spot_color = cf_v4(1.0f, 0.757f, 0, 2.2f);         // 0xffc100, w = intensity
-	CF_V4 spot_params = cf_v4(CF_COSF(CF_PI / 9.0f), 0.35f, 6.0f, 1.4f);
+	CF_V3 spot_pos = cf_v3(2.0f, 2.0f, 0); // three.js: SpotLight at (2, 2, 0)
+	// Colours are linear here and gamma-encoded at the end of mesh_lit.fs, as three.js renders
+	// linear and converts on output. Intensities are three.js's divided by PI, which is the
+	// Lambert BRDF's 1/PI folded in -- that is what keeps shadowed ground at a readable mid grey
+	// instead of crushing it to black.
+	CF_V4 light_color = cf_v4(0.477f, 0.474f, 0.298f, 1.0f); // 0xfffecd at intensity 1.5
+	CF_V4 ambient = cf_v4(0.175f, 0.208f, 0.264f, 1.0f);     // 0x757f8e at intensity 3
+	CF_V4 spot_color = cf_v4(1.0f, 0.535f, 0, 3.2f);         // 0xffc100 at intensity 10
+	CF_V4 spot_params = cf_v4(CF_COSF(SPOT_ANGLE), 0.02f, SPOT_RANGE, 2.0f);
+
+	// Orbit camera. Distance only has to clear the near plane -- an orthographic projection
+	// takes its framing from view_height, not from how far away the camera sits.
+	float cam_azimuth = 0, cam_elevation = CF_PI / 6.0f; // three.js's starting angle.
+	float view_height = 2.0f;             // top = 1, bottom = -1
+	bool auto_rotate = false;
+	bool dragging = false;
+	float last_mx = 0, last_my = 0;
 
 	float normal_edge_strength = 0.3f; // three.js defaults.
 	float depth_edge_strength = 0.4f;
@@ -274,6 +318,31 @@ int main(int argc, char* argv[])
 		if (cf_key_just_pressed(CF_KEY_SPACE)) edge_mode = (edge_mode + 1) % 4;
 		if (cf_key_just_pressed(CF_KEY_1) && pixel_size > 1) pixel_size--;
 		if (cf_key_just_pressed(CF_KEY_2) && pixel_size < 8) pixel_size++;
+		if (cf_key_just_pressed(CF_KEY_R)) auto_rotate = !auto_rotate;
+
+		// Drag to orbit. The idle spin is off by default so it never fights the mouse; grabbing
+		// the camera also switches it off if R turned it on.
+		float mx = cf_mouse_x(), my = cf_mouse_y();
+		if (cf_mouse_down(CF_MOUSE_BUTTON_LEFT)) {
+			if (dragging) {
+				cam_azimuth -= (mx - last_mx) * 0.01f;
+				cam_elevation += (my - last_my) * 0.01f;
+				// Stop just short of the poles, where the up vector becomes degenerate and
+				// cf_look_at's cross product collapses.
+				cam_elevation = cf_clamp(cam_elevation, -1.45f, 1.45f);
+				auto_rotate = false;
+			}
+			dragging = true;
+		} else {
+			dragging = false;
+		}
+		last_mx = mx;
+		last_my = my;
+
+		float wheel = cf_mouse_wheel_motion();
+		if (wheel != 0) view_height = cf_clamp(view_height - wheel * 0.25f, 0.8f, 8.0f);
+
+		if (auto_rotate) cam_azimuth += CF_DELTA_TIME * 0.25f;
 
 		// Resizing the low-resolution buffers means rebuilding them.
 		int want_w = cf_app_get_width() / pixel_size, want_h = cf_app_get_height() / pixel_size;
@@ -292,19 +361,33 @@ int main(int argc, char* argv[])
 		float ds = (edge_mode == 0 || edge_mode == 2) ? depth_edge_strength : 0.0f;
 
 		// --- Camera: orthographic, slowly orbiting, exactly as three.js frames it. ---
+		// --- Crystal: hovers, spins in bursts, and pulses its glow through six discrete levels
+		//     so the brightness steps land on the pixel-art aesthetic rather than sliding. ---
+		objects[crystal].position = cf_v3(0, 0.7f + CF_SINF(t * 2.0f) * 0.05f, 0);
+		objects[crystal].spin_phase = stop_go_eased(t, 6.0f, 8.0f) * 2.0f * CF_PI;
+		// three.js quantizes this to six discrete levels; a smooth pulse reads better here.
+		float emissive_intensity = CF_SINF(t * 3.0f) * 0.5f + 0.5f;
+
 		float aspect = (float)lowres_w / (float)lowres_h;
-		float angle = t * 0.25f;
-		CF_V3 eye = cf_v3(CF_SINF(angle) * 2.0f, 2.0f * CF_TANF(CF_PI / 6.0f), CF_COSF(angle) * 2.0f);
+		float ce = CF_COSF(cam_elevation);
+		CF_V3 eye = cf_mul(cf_v3(CF_SINF(cam_azimuth) * ce, CF_SINF(cam_elevation), CF_COSF(cam_azimuth) * ce), CAM_DISTANCE);
 		CF_M4x4 view = cf_look_at(eye, cf_v3(0, 0, 0), cf_v3(0, 1.0f, 0));
-		CF_M4x4 proj = cf_ortho(-aspect * VIEW_HEIGHT * 0.5f, aspect * VIEW_HEIGHT * 0.5f,
-		                        -VIEW_HEIGHT * 0.5f, VIEW_HEIGHT * 0.5f, ZNEAR, ZFAR);
+		CF_M4x4 proj = cf_ortho(-aspect * view_height * 0.5f, aspect * view_height * 0.5f,
+		                        -view_height * 0.5f, view_height * 0.5f, ZNEAR, ZFAR);
 		CF_M4x4 view_proj = cf_mul(proj, view);
 
 		// --- Light: an orthographic view from the sun, tight enough to keep texel density up. ---
 		CF_V3 light_eye = cf_mul(light_dir, -4.0f);
 		CF_M4x4 light_view = cf_look_at(light_eye, cf_v3(0, 0, 0), cf_v3(0, 1.0f, 0));
-		CF_M4x4 light_proj = cf_ortho(-1.8f, 1.8f, -1.8f, 1.8f, 0.1f, 10.0f);
+		CF_M4x4 light_proj = cf_ortho(-1.5f, 1.5f, -1.5f, 1.5f, 0.1f, 10.0f);
 		CF_M4x4 light_vp = cf_mul(light_proj, light_view);
+
+		// The spot is a cone, so its shadow needs a perspective frustum rather than a box. The
+		// field of view is the full cone angle plus margin, so the penumbra does not run off the
+		// edge of the map.
+		CF_M4x4 spot_view = cf_look_at(spot_pos, cf_v3(0, 0, 0), cf_v3(0, 1.0f, 0));
+		CF_M4x4 spot_proj = cf_perspective(SPOT_ANGLE * 2.6f, 1.0f, 0.1f, SPOT_RANGE);
+		CF_M4x4 spot_vp = cf_mul(spot_proj, spot_view);
 
 		// --- Pass 1: shadow map. ---
 		cf_apply_canvas(shadow_canvas, true);
@@ -312,7 +395,20 @@ int main(int argc, char* argv[])
 			for (int i = 0; i < object_count; ++i) {
 				CF_M4x4 model = object_model(&objects[i], t);
 				CF_M4x4 light_mvp = cf_mul(light_vp, model);
-				set_transform_uniforms(shadow_material, light_mvp, model, light_mvp);
+				set_transform_uniforms(shadow_material, light_mvp, model, cf_m4_normal_matrix(model), light_mvp, light_mvp);
+				cf_apply_mesh(objects[i].mesh);
+				cf_apply_shader(shadow_shader, shadow_material);
+				cf_draw_elements();
+			}
+		}
+
+		// --- Pass 1b: the spot's shadow map, so the boxes block its light too. ---
+		cf_apply_canvas(spot_shadow_canvas, true);
+		if (shadows_on) {
+			for (int i = 0; i < object_count; ++i) {
+				CF_M4x4 model = object_model(&objects[i], t);
+				CF_M4x4 spot_mvp = cf_mul(spot_vp, model);
+				set_transform_uniforms(shadow_material, spot_mvp, model, cf_m4_normal_matrix(model), spot_mvp, spot_mvp);
 				cf_apply_mesh(objects[i].mesh);
 				cf_apply_shader(shadow_shader, shadow_material);
 				cf_draw_elements();
@@ -322,11 +418,15 @@ int main(int argc, char* argv[])
 		// --- Pass 2: lit colour. ---
 		CF_V4 light_dir4 = cf_v4_from_v3(light_dir, 0);
 		CF_V4 spot_pos4 = cf_v4_from_v3(spot_pos, 1.0f);
-		CF_V4 spot_dir4 = cf_v4_from_v3(cf_norm(cf_sub(cf_v3(0, -0.5f, 0), spot_pos)), 0);
+		// three.js's SpotLight target defaults to the origin; aiming below the floor drags the pool
+		// toward the light and flattens it.
+		CF_V3 spot_target = cf_v3(0, 0, 0);
+		CF_V4 spot_dir4 = cf_v4_from_v3(cf_norm(cf_sub(spot_target, spot_pos)), 0);
 		CF_V4 eye4 = cf_v4_from_v3(eye, 1.0f);
 
 		cf_material_set_texture_fs(lit_material, "u_albedo", albedo);
 		cf_material_set_texture_fs(lit_material, "u_shadow_map", cf_canvas_get_target(shadow_canvas));
+		cf_material_set_texture_fs(lit_material, "u_spot_shadow_map", cf_canvas_get_target(spot_shadow_canvas));
 		cf_material_set_uniform_fs(lit_material, "u_light_direction", &light_dir4, CF_UNIFORM_TYPE_FLOAT4, 1);
 		cf_material_set_uniform_fs(lit_material, "u_light_color", &light_color, CF_UNIFORM_TYPE_FLOAT4, 1);
 		cf_material_set_uniform_fs(lit_material, "u_ambient", &ambient, CF_UNIFORM_TYPE_FLOAT4, 1);
@@ -339,16 +439,23 @@ int main(int argc, char* argv[])
 		cf_apply_canvas(scene_canvas, true);
 		for (int i = 0; i < object_count; ++i) {
 			CF_M4x4 model = object_model(&objects[i], t);
-			set_transform_uniforms(lit_material, cf_mul(view_proj, model), model, cf_mul(light_vp, model));
+			set_transform_uniforms(lit_material, cf_mul(view_proj, model), model,
+				cf_m4_normal_matrix(model), cf_mul(light_vp, model), cf_mul(spot_vp, model));
 
 			CF_V4 base = cf_v4(objects[i].color.r, objects[i].color.g, objects[i].color.b, 1.0f);
-			CF_V4 emissive = cf_v4(objects[i].emissive.r, objects[i].emissive.g, objects[i].emissive.b, 1.0f);
+			float glow = (i == crystal) ? emissive_intensity : 1.0f;
+			CF_V4 emissive = cf_v4(objects[i].emissive.r * glow, objects[i].emissive.g * glow, objects[i].emissive.b * glow, 1.0f);
 			// z carries one shadow texel, so the fragment shader's PCF kernel does not have to
 			// know the shadow map's size.
+			// z and w carry one texel of each shadow map, so the fragment shader's PCF kernels do
+			// not have to know either map's size. Zero means "no shadowing".
 			CF_V4 material = cf_v4(objects[i].textured, objects[i].shininess,
-			                       shadows_on ? 1.0f / (float)SHADOW_SIZE : 0.0f, 0);
+			                       shadows_on ? 1.0f / (float)SHADOW_SIZE : 0.0f,
+			                       shadows_on ? 1.0f / (float)SPOT_SHADOW_SIZE : 0.0f);
 			cf_material_set_uniform_fs(lit_material, "u_base_color", &base, CF_UNIFORM_TYPE_FLOAT4, 1);
 			cf_material_set_uniform_fs(lit_material, "u_emissive", &emissive, CF_UNIFORM_TYPE_FLOAT4, 1);
+			CF_V4 specular = cf_v4(objects[i].specular, objects[i].specular, objects[i].specular, 1.0f);
+			cf_material_set_uniform_fs(lit_material, "u_specular", &specular, CF_UNIFORM_TYPE_FLOAT4, 1);
 			cf_material_set_uniform_fs(lit_material, "u_material", &material, CF_UNIFORM_TYPE_FLOAT4, 1);
 
 			cf_apply_mesh(objects[i].mesh);
@@ -360,7 +467,8 @@ int main(int argc, char* argv[])
 		cf_apply_canvas(normal_canvas, true);
 		for (int i = 0; i < object_count; ++i) {
 			CF_M4x4 model = object_model(&objects[i], t);
-			set_transform_uniforms(normal_material, cf_mul(view_proj, model), model, cf_mul(light_vp, model));
+			set_transform_uniforms(normal_material, cf_mul(view_proj, model), model,
+				cf_m4_normal_matrix(cf_mul(view, model)), cf_mul(light_vp, model), cf_mul(spot_vp, model));
 			cf_apply_mesh(objects[i].mesh);
 			cf_apply_shader(normal_shader, normal_material);
 			cf_draw_elements();
@@ -368,6 +476,11 @@ int main(int argc, char* argv[])
 
 		// --- Pass 4: composite, upscaled to the window. ---
 		float w = (float)cf_app_get_width(), h = (float)cf_app_get_height();
+		// The draw API overrides every bound texture's own sampler with one chosen from the
+		// current filter mode, which defaults to CF_DRAW_FILTER_SMOOTH -- so creating the canvas
+		// with CF_FILTER_NEAREST is not enough on its own. Without this the low-resolution buffer
+		// is smoothly interpolated on the way up and the pixels stop being pixels.
+		cf_draw_push_filter(CF_DRAW_FILTER_NEAREST);
 		cf_draw_push_shader(post_shader);
 		cf_draw_set_texture("scene_tex", cf_canvas_get_target(scene_canvas));
 		cf_draw_set_texture("normal_tex", cf_canvas_get_target(normal_canvas));
@@ -379,8 +492,10 @@ int main(int argc, char* argv[])
 		cf_draw_box_fill(cf_make_aabb(cf_v2(-w * 0.5f, -h * 0.5f), cf_v2(w * 0.5f, h * 0.5f)), 0);
 		cf_draw_pop_shape_aa();
 		cf_draw_pop_shader();
+		cf_draw_pop_filter();
 
 		cf_app_draw_onto_screen(true);
+
 	}
 
 	cf_destroy_shader(lit_shader);
@@ -393,6 +508,7 @@ int main(int argc, char* argv[])
 	cf_destroy_canvas(scene_canvas);
 	cf_destroy_canvas(normal_canvas);
 	cf_destroy_canvas(shadow_canvas);
+	cf_destroy_canvas(spot_shadow_canvas);
 	cf_destroy_texture(albedo);
 	cf_destroy_mesh(ground_mesh);
 	cf_destroy_mesh(box_mesh);

@@ -6,6 +6,7 @@ layout (location = 0) in vec3 v_normal;
 layout (location = 1) in vec2 v_uv;
 layout (location = 2) in vec3 v_world_pos;
 layout (location = 3) in vec4 v_light_pos;
+layout (location = 4) in vec4 v_spot_pos;
 
 layout (location = 0) out vec4 result;
 
