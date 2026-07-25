@@ -1,60 +1,95 @@
-// Composite pass: upscale the low-resolution scene and draw outlines found in the normal/depth
-// g-buffer. A draw shader (not a two-file shader) because the vertex stage is just a full-screen
-// quad -- CF's own is fine. Note the bindings start at 1: CF's fragment stage already occupies
-// binding 0 in both sets.
+// Composite pass: upscale the low-resolution scene and shade its edges.
+//
+// A port of three.js's RenderPixelatedPass. The important part is the last line: the edge
+// indicators MULTIPLY the texel rather than blending toward an ink colour. Depth edges (a
+// silhouette against something further away) darken; normal edges (a crease turned toward the
+// bias direction) brighten. That asymmetry is what makes the result read as shaded pixel art
+// rather than a cartoon outline.
+//
+// A draw shader, not a two-file shader: the vertex stage is a full-screen quad, so CF's own is
+// fine. Bindings start at 1 because CF's fragment stage already occupies binding 0 in both sets.
 
 layout (set = 2, binding = 1) uniform sampler2D scene_tex;
 layout (set = 2, binding = 2) uniform sampler2D normal_tex;
 
 layout (set = 3, binding = 1) uniform shd_uniforms {
-	vec2 u_texel;         // 1.0 / low-resolution size.
-	float u_edge_strength;
-	float u_show_normals;
+	vec2 u_texel;                 // 1.0 / low-resolution size
+	float u_normal_edge_strength;
+	float u_depth_edge_strength;
+	float u_view_mode;            // 0 = composite, 1 = normals, 2 = depth
 };
 
-// Compares the centre sample against its four neighbours. A normal that swings sharply is a
-// crease; a depth that jumps is a silhouette against something further away.
-float edge_amount(vec2 uv)
+// CF gives a canvas one colour target, so the g-buffer packs both: normal in rgb (encoded to
+// [0,1], as three.js's normal buffer is) and depth in alpha. three.js keeps them in two separate
+// textures, which is why it has both tNormal and tDepth.
+float getDepth(vec2 uv, int x, int y)
 {
-	vec4 c = texture(normal_tex, uv);
-	vec4 l = texture(normal_tex, uv + vec2(-u_texel.x, 0.0));
-	vec4 r = texture(normal_tex, uv + vec2( u_texel.x, 0.0));
-	vec4 d = texture(normal_tex, uv + vec2(0.0, -u_texel.y));
-	vec4 u = texture(normal_tex, uv + vec2(0.0,  u_texel.y));
+	return texture(normal_tex, uv + vec2(float(x), float(y)) * u_texel).a;
+}
 
-	// 1 - dot is 0 for parallel normals and grows as they diverge.
-	float n = 0.0;
-	n = max(n, 1.0 - dot(c.xyz, l.xyz));
-	n = max(n, 1.0 - dot(c.xyz, r.xyz));
-	n = max(n, 1.0 - dot(c.xyz, d.xyz));
-	n = max(n, 1.0 - dot(c.xyz, u.xyz));
+vec3 getNormal(vec2 uv, int x, int y)
+{
+	return texture(normal_tex, uv + vec2(float(x), float(y)) * u_texel).rgb * 2.0 - 1.0;
+}
 
-	float dep = 0.0;
-	dep = max(dep, abs(c.a - l.a));
-	dep = max(dep, abs(c.a - r.a));
-	dep = max(dep, abs(c.a - d.a));
-	dep = max(dep, abs(c.a - u.a));
+float depthEdgeIndicator(vec2 uv, float depth)
+{
+	float diff = 0.0;
+	diff += clamp(getDepth(uv, 1, 0) - depth, 0.0, 1.0);
+	diff += clamp(getDepth(uv, -1, 0) - depth, 0.0, 1.0);
+	diff += clamp(getDepth(uv, 0, 1) - depth, 0.0, 1.0);
+	diff += clamp(getDepth(uv, 0, -1) - depth, 0.0, 1.0);
+	return floor(smoothstep(0.01, 0.02, diff) * 2.0) / 2.0;
+}
 
-	// Depth needs a much tighter threshold than normals -- neighbouring pixels on a surface
-	// receding from the camera differ slightly in depth everywhere, and without this the whole
-	// ground plane outlines itself.
-	float crease = smoothstep(0.28, 0.5, n);
-	float silhouette = smoothstep(0.004, 0.012, dep);
-	return max(crease, silhouette);
+float neighborNormalEdgeIndicator(vec2 uv, int x, int y, float depth, vec3 normal)
+{
+	float depthDiff = getDepth(uv, x, y) - depth;
+	vec3 neighborNormal = getNormal(uv, x, y);
+
+	// Edge pixels should yield to faces whose normals are closer to the bias normal.
+	vec3 normalEdgeBias = vec3(1.0, 1.0, 1.0);
+	float normalDiff = dot(normal - neighborNormal, normalEdgeBias);
+	float normalIndicator = clamp(smoothstep(-0.01, 0.01, normalDiff), 0.0, 1.0);
+
+	// Only the shallower pixel should detect the normal edge.
+	float depthIndicator = clamp(sign(depthDiff * 0.25 + 0.0025), 0.0, 1.0);
+
+	return (1.0 - dot(normal, neighborNormal)) * depthIndicator * normalIndicator;
+}
+
+float normalEdgeIndicator(vec2 uv, float depth, vec3 normal)
+{
+	float indicator = 0.0;
+	indicator += neighborNormalEdgeIndicator(uv, 0, -1, depth, normal);
+	indicator += neighborNormalEdgeIndicator(uv, 0, 1, depth, normal);
+	indicator += neighborNormalEdgeIndicator(uv, -1, 0, depth, normal);
+	indicator += neighborNormalEdgeIndicator(uv, 1, 0, depth, normal);
+	return step(0.1, indicator);
 }
 
 vec4 shader(vec4 color, ShaderParams params)
 {
 	vec2 uv = params.screen_uv;
 
-	if (u_show_normals > 0.0) {
-		return vec4(texture(normal_tex, uv).xyz * 0.5 + 0.5, 1.0);
+	if (u_view_mode > 1.5) {
+		return vec4(vec3(getDepth(uv, 0, 0)), 1.0);
+	}
+	if (u_view_mode > 0.5) {
+		return vec4(getNormal(uv, 0, 0) * 0.5 + 0.5, 1.0);
 	}
 
-	vec4 scene = texture(scene_tex, uv);
-	float e = edge_amount(uv) * u_edge_strength;
+	vec4 texel = texture(scene_tex, uv);
+	float depth = getDepth(uv, 0, 0);
+	vec3 normal = getNormal(uv, 0, 0);
 
-	// Darken toward a blue-ish ink rather than pure black; flat black outlines read as holes.
-	vec3 ink = scene.rgb * 0.25 + vec3(0.02, 0.02, 0.06);
-	return vec4(mix(scene.rgb, ink, e), scene.a);
+	float dei = u_depth_edge_strength > 0.0 ? depthEdgeIndicator(uv, depth) : 0.0;
+	float nei = u_normal_edge_strength > 0.0 ? normalEdgeIndicator(uv, depth, normal) : 0.0;
+
+	// Depth edges darken, normal edges brighten, and depth wins where both fire.
+	float strength = dei > 0.0
+		? (1.0 - u_depth_edge_strength * dei)
+		: (1.0 + u_normal_edge_strength * nei);
+
+	return vec4(texel.rgb * strength, texel.a);
 }
