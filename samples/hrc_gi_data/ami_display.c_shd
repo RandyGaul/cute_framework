@@ -1,6 +1,5 @@
 // Display/composite for the exact HRC path: sum the 4 per-rotation radiance
-// textures, add rim light on rock surfaces, write linear fluence (feedback) and
-// the AgX-tonemapped display image.
+// textures, write linear fluence (feedback) and the AgX-tonemapped display image.
 //
 // No grid->world upscale here: ami_ns_finish scatters at WORLD resolution, so
 // radiance is already per-pixel (unlike the dual-lattice path whose R_0 lives at
@@ -11,8 +10,7 @@ layout(set = 0, binding = 0) uniform sampler2D u_a0;   // sum over cones (scalar
 layout(set = 0, binding = 1) uniform sampler2D u_a1;   // sum L*cos(theta)
 layout(set = 0, binding = 2) uniform sampler2D u_b1;   // sum L*sin(theta)
 layout(set = 0, binding = 3) uniform sampler2D u_emission;
-layout(set = 0, binding = 4) uniform sampler2D u_absorption;
-layout(set = 0, binding = 5) uniform sampler2D u_minmax; // prefiltered box min/max per HRC cell
+layout(set = 0, binding = 4) uniform sampler2D u_minmax; // prefiltered box min/max per HRC cell
 layout(set = 1, binding = 0, rgba8)   uniform image2D u_fluence;      // display (rgba8)
 layout(set = 1, binding = 1, rgba16f) uniform image2D u_fluence_lin;  // linear (feedback)
 
@@ -21,9 +19,6 @@ layout(set = 2, binding = 0) uniform Params
 	int   u_world_w;       // full-res output width
 	int   u_world_h;       // full-res output height
 	float u_exposure;      // per-scene display scale (raw AgX otherwise)
-	int   u_rim;           // rim light on/off
-	float u_rim_strength;
-	float u_rock_thresh;
 	int   u_scale;         // HRC space -> full-res ratio (1 = no upscale)
 	int   u_hrc_w;         // HRC radiance width  = world_w / scale
 	int   u_hrc_h;         // HRC radiance height = world_h / scale
@@ -62,9 +57,6 @@ vec3 agx_tonemap(vec3 v)
 }
 
 ivec2 clamp_pos(ivec2 p) { return clamp(p, ivec2(0), ivec2(u_world_w - 1, u_world_h - 1)); }
-float absorption_at(ivec2 p) { return texelFetch(u_absorption, clamp_pos(p), 0).r; }
-// 1.0 where the world pixel is solid rock (high absorption), else 0.0.
-float rock_mask(ivec2 p) { return absorption_at(p) > u_rock_thresh ? 1.0 : 0.0; }
 
 // Raw fetch from a per-rotation radiance texture (HRC-space coords).
 vec3 rad_texel(int band, ivec2 p)
@@ -115,50 +107,12 @@ vec3 rad_at(int rot, ivec2 p)
 	return mix(nearest, bil, blend);
 }
 
-// Rim light for rock pixels near the surface: outward normal from the rock
-// occupancy gradient, directional fluence sampled just outside the surface,
-// weighted by how much the surface faces each arrival direction.
-vec3 rim_light(ivec2 pos)
-{
-	int R = 3;
-	float mxp = rock_mask(pos + ivec2( R,  0));
-	float mxn = rock_mask(pos + ivec2(-R,  0));
-	float myp = rock_mask(pos + ivec2( 0,  R));
-	float myn = rock_mask(pos + ivec2( 0, -R));
-	float mpp = rock_mask(pos + ivec2( R,  R));
-	float mpn = rock_mask(pos + ivec2( R, -R));
-	float mnp = rock_mask(pos + ivec2(-R,  R));
-	float mnn = rock_mask(pos + ivec2(-R, -R));
-
-	vec2 grad = vec2(
-		(mxp - mxn) + 0.5 * ((mpp + mpn) - (mnp + mnn)),
-		(myp - myn) + 0.5 * ((mpp + mnp) - (mpn + mnn))
-	);
-	float glen = length(grad);
-	if (glen < 0.25) return vec3(0.0); // deep interior or fully surrounded
-	vec2 n = -grad / glen; // outward: away from increasing rock occupancy
-
-	ivec2 p_out = clamp_pos(pos + ivec2(int(round(n.x * 4.0)), int(round(n.y * 4.0))));
-	if (rock_mask(p_out) > 0.5) return vec3(0.0);
-
-	// Cosine-weighted hemisphere integral of L(t) about normal n, in closed form:
-	//   E(n) = a0/pi + (a1*n.x + b1*n.y)/2
-	// (DC term integrates to 2 over the hemisphere; the L1 terms to (pi/2)*cos.)
-	vec3 A0 = rad_at(0, p_out), A1 = rad_at(1, p_out), B1 = rad_at(2, p_out);
-	vec3 E = A0 * (1.0 / 3.14159265) + (A1 * n.x + B1 * n.y) * 0.5;
-	return max(E, vec3(0.0)) * u_rim_strength;
-}
-
 void main()
 {
 	ivec2 gid = ivec2(gl_GlobalInvocationID.xy);
 	if (gid.x >= u_world_w || gid.y >= u_world_h) return;
 
 	vec3 lin = rad_at(0, gid); // a0 == the old 4-rotation sum, bit for bit
-
-	if (u_rim != 0 && absorption_at(gid) > u_rock_thresh) {
-		lin += rim_light(gid);
-	}
 
 	// Feedback/linear output stays pure INCIDENT light. Emission must not go in here:
 	// it would make every emitter re-inject its own output through the multibounce
