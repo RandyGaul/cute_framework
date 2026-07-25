@@ -104,7 +104,10 @@ typedef struct CF_Canvas { uint64_t id; } CF_Canvas;
  * @remarks  A readback initiates an async GPU-to-CPU copy of pixel data from a canvas.
  *           Poll with `cf_readback_ready` and retrieve data with `cf_readback_data`.
  *           The pixel format matches the canvas target format (typically RGBA8, 4 bytes per pixel).
- *           On web/Emscripten builds, readback is unsupported and returns a zero handle.
+ *           The GLES backend (which is what web/Emscripten builds use) implements readback
+ *           synchronously: the copy has already happened by the time `cf_canvas_readback` returns and
+ *           `cf_readback_ready` is immediately true. The API shape is the same either way, so polling
+ *           code stays portable, but expect a pipeline stall there rather than an async copy.
  * @related  CF_Canvas cf_canvas_readback cf_readback_ready cf_readback_data cf_readback_size cf_destroy_readback
  */
 typedef struct CF_Readback { uint64_t id; } CF_Readback;
@@ -831,7 +834,9 @@ CF_API void CF_CALL cf_shader_on_error(void (*on_error_fn)(const char* error_mes
  *           ```
  *
  *           For uniforms you only have one uniform block available, and it *must* be named `uniform_block`. However, if your
- *           shader is make from the draw api (`cf_make_draw_shader`) uniform blocks must be named user_uniforms.
+ *           shader is made from the draw api (`cf_make_draw_shader`) the uniform block must be named `shd_uniforms`, and its
+ *           binding must start at 1 rather than 0 -- CF's own fragment stage already occupies `set = 2, binding = 0` for its
+ *           image sampler and `set = 3, binding = 0` for its uniform block.
  *
  *           Shaders that sit in the shader directory may be `#include`'d into another shader. Though, it doesn't work
  *           quite exactly like a C/C++ include, it's very similar -- each shader may be included into another
@@ -1189,7 +1194,9 @@ typedef struct CF_CanvasParams
 	/* @member The texture used to store pixel information when rendering to the canvas. See `CF_TextureParams`. */
 	CF_TextureParams target;
 
-	/* @member Defaults to false. If true enables a depth-stencil buffer attachment. */
+	/* @member Defaults to false. If true enables a depth-stencil buffer attachment. Required for any
+	   depth or stencil testing: without it the depth fields of `CF_RenderState` are silently ignored,
+	   which for 3d looks like the far side of a model drawing over the near side. */
 	bool depth_stencil_enable;
 
 	/* @member The texture used to store depth and stencil information when rendering to the canvas. See `CF_TextureParams`. */
@@ -1954,10 +1961,16 @@ typedef struct CF_RenderState
 	/* @member Controls how the GPU blends pixels together during compositing. See `CF_BlendState`. */
 	CF_BlendState blend;
 
-	/* @member Defines how to perform depth-testing. See `CF_CompareFunction`. */
+	/* @member Defines how to perform depth-testing. Depth testing runs when this is anything other
+	   than `CF_COMPARE_FUNCTION_ALWAYS` (the default) or when `depth_write_enabled` is true -- but
+	   only if the canvas has a depth buffer. See `CF_CompareFunction`. */
 	CF_CompareFunction depth_compare;
 
-	/* @member Must be true to enable depth-testing and use of the depth buffer. */
+	/* @member True to write depth values into the depth buffer. This alone does not reject anything:
+	   with the default `depth_compare` of `CF_COMPARE_FUNCTION_ALWAYS` you get a depth buffer that
+	   records but never occludes, so set `depth_compare` (usually `CF_COMPARE_FUNCTION_LESS_THAN`)
+	   as well. Both are ignored unless the canvas was made with `depth_stencil_enable` set to true.
+	   `cf_render_state_3d_defaults` sets all of this up. */
 	bool depth_write_enabled;
 
 	/* @member Sets up how to perform (if at all) stencil testing. See `CF_StencilParams`. */
@@ -1975,7 +1988,10 @@ typedef struct CF_RenderState
 	/* @member True to bias fragment depth values. */
 	bool enable_depth_bias;
 
-	/* @member True to enable depth clip, false to enable depth clamp. */
+	/* @member True to enable depth clip, false to enable depth clamp. Clipping discards fragments
+	   outside the near/far planes; clamping keeps them, pinned to the nearest plane, which is how
+	   shadow casters are usually kept from being clipped away. Only implemented on the SDL_GPU
+	   backend -- GLES has no equivalent of `GL_DEPTH_CLAMP` and silently ignores this. */
 	bool enable_depth_clip;
 } CF_RenderState;
 // @end
@@ -1987,6 +2003,33 @@ typedef struct CF_RenderState
  * @related  CF_RenderState cf_render_state_defaults cf_material_set_render_state
  */
 CF_API CF_RenderState CF_CALL cf_render_state_defaults(void);
+
+/**
+ * @function cf_render_state_3d_defaults
+ * @category graphics
+ * @brief    Returns a `CF_RenderState` set up for rendering 3d geometry.
+ * @return   `cf_render_state_defaults` plus depth writes on, a `CF_COMPARE_FUNCTION_LESS_THAN` depth
+ *           test, and back-face culling.
+ * @remarks  The 2d defaults deliberately leave depth testing off, which for 3d shows up as the far
+ *           side of a model drawing over the near side. This turns it on in one call.
+ *
+ *           **The canvas must have a depth buffer or none of this does anything.** `cf_canvas_defaults`
+ *           leaves `depth_stencil_enable` false, so opt in explicitly:
+ *
+ *           ```c
+ *           CF_CanvasParams params = cf_canvas_defaults(w, h);
+ *           params.depth_stencil_enable = true;
+ *           CF_Canvas canvas = cf_make_canvas(params);
+ *           cf_material_set_render_state(material, cf_render_state_3d_defaults());
+ *           ```
+ *
+ *           The `CF_COMPARE_FUNCTION_LESS_THAN` test assumes the depth buffer clears to 1.0 (the
+ *           default) and that your projection maps the near plane to 0 and the far plane to 1 --
+ *           which is what `cf_perspective` and `cf_ortho` produce. Back-face culling assumes
+ *           counter-clockwise front faces.
+ * @related  CF_RenderState cf_render_state_defaults cf_material_set_render_state CF_CanvasParams cf_perspective
+ */
+CF_API CF_RenderState CF_CALL cf_render_state_3d_defaults(void);
 
 //--------------------------------------------------------------------------------------------------
 // Material.
@@ -2332,6 +2375,7 @@ CF_INLINE void mesh_update_vertex_data(CF_Mesh mesh, void* data, int count) { cf
 CF_INLINE void mesh_update_index_data(CF_Mesh mesh, void* data, int count) { cf_mesh_update_index_data(mesh, data, count); }
 CF_INLINE void mesh_update_instance_data(CF_Mesh mesh, void* data, int count) { cf_mesh_update_instance_data(mesh, data, count); }
 CF_INLINE CF_RenderState render_state_defaults() { return cf_render_state_defaults(); }
+CF_INLINE CF_RenderState render_state_3d_defaults() { return cf_render_state_3d_defaults(); }
 CF_INLINE CF_Material make_material() { return cf_make_material(); }
 CF_INLINE void destroy_material(CF_Material material) { cf_destroy_material(material); }
 CF_INLINE void material_set_render_state(CF_Material material, CF_RenderState render_state) { cf_material_set_render_state(material, render_state); }
