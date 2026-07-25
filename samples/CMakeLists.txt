@@ -94,6 +94,7 @@ add_sample(canvas_readback canvas_readback.c)
 add_sample(glitch glitch.cpp)
 add_sample(customsprite custom_sprite.c)
 add_sample(sound_pan sound_pan.c)
+add_sample(pixel_3d pixel_3d.c)
 
 # Ensure that sample data is included in web build
 if (EMSCRIPTEN)
@@ -110,6 +111,7 @@ if (EMSCRIPTEN)
 	# samples die before their first frame.
 	target_link_options(hrc PRIVATE --preload-file "${CMAKE_CURRENT_SOURCE_DIR}/hrc_data@/hrc_data")
 	target_link_options(hrc_gi PRIVATE --preload-file "${CMAKE_CURRENT_SOURCE_DIR}/hrc_gi_data@/hrc_gi_data")
+	target_link_options(pixel_3d PRIVATE --preload-file "${CMAKE_CURRENT_SOURCE_DIR}/pixel_3d_data@/pixel_3d_data")
 endif ()
 
 # Copy over some folders for certain samples.
@@ -123,4 +125,5 @@ add_custom_command(TARGET scratch PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${C
 add_custom_command(TARGET 9_slice PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/9_slice_data $<TARGET_FILE_DIR:9_slice>/9_slice_data)
 add_custom_command(TARGET hrc PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/hrc_data $<TARGET_FILE_DIR:hrc>/hrc_data)
 add_custom_command(TARGET hrc_gi PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/hrc_gi_data $<TARGET_FILE_DIR:hrc_gi>/hrc_gi_data)
+add_custom_command(TARGET pixel_3d PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/pixel_3d_data $<TARGET_FILE_DIR:pixel_3d>/pixel_3d_data)
 add_custom_command(TARGET customsprite PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/custom_sprite_data $<TARGET_FILE_DIR:customsprite>/custom_sprite_data)

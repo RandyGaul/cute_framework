@@ -157,6 +157,7 @@ nav:
       - Noise: samples/noise.md
       - Outline (Stencil): samples/outline_stencil.md
       - Pivot: samples/pivot.md
+      - Pixel 3D: samples/pixel_3d.md
       - Platformer: samples/platformer.md
       - Polygon: samples/polygon.md
       - Rainbow Liquid: samples/rainbow_liquid.md

@@ -1,0 +1,60 @@
+// Composite pass: upscale the low-resolution scene and draw outlines found in the normal/depth
+// g-buffer. A draw shader (not a two-file shader) because the vertex stage is just a full-screen
+// quad -- CF's own is fine. Note the bindings start at 1: CF's fragment stage already occupies
+// binding 0 in both sets.
+
+layout (set = 2, binding = 1) uniform sampler2D scene_tex;
+layout (set = 2, binding = 2) uniform sampler2D normal_tex;
+
+layout (set = 3, binding = 1) uniform shd_uniforms {
+	vec2 u_texel;         // 1.0 / low-resolution size.
+	float u_edge_strength;
+	float u_show_normals;
+};
+
+// Compares the centre sample against its four neighbours. A normal that swings sharply is a
+// crease; a depth that jumps is a silhouette against something further away.
+float edge_amount(vec2 uv)
+{
+	vec4 c = texture(normal_tex, uv);
+	vec4 l = texture(normal_tex, uv + vec2(-u_texel.x, 0.0));
+	vec4 r = texture(normal_tex, uv + vec2( u_texel.x, 0.0));
+	vec4 d = texture(normal_tex, uv + vec2(0.0, -u_texel.y));
+	vec4 u = texture(normal_tex, uv + vec2(0.0,  u_texel.y));
+
+	// 1 - dot is 0 for parallel normals and grows as they diverge.
+	float n = 0.0;
+	n = max(n, 1.0 - dot(c.xyz, l.xyz));
+	n = max(n, 1.0 - dot(c.xyz, r.xyz));
+	n = max(n, 1.0 - dot(c.xyz, d.xyz));
+	n = max(n, 1.0 - dot(c.xyz, u.xyz));
+
+	float dep = 0.0;
+	dep = max(dep, abs(c.a - l.a));
+	dep = max(dep, abs(c.a - r.a));
+	dep = max(dep, abs(c.a - d.a));
+	dep = max(dep, abs(c.a - u.a));
+
+	// Depth needs a much tighter threshold than normals -- neighbouring pixels on a surface
+	// receding from the camera differ slightly in depth everywhere, and without this the whole
+	// ground plane outlines itself.
+	float crease = smoothstep(0.28, 0.5, n);
+	float silhouette = smoothstep(0.004, 0.012, dep);
+	return max(crease, silhouette);
+}
+
+vec4 shader(vec4 color, ShaderParams params)
+{
+	vec2 uv = params.screen_uv;
+
+	if (u_show_normals > 0.0) {
+		return vec4(texture(normal_tex, uv).xyz * 0.5 + 0.5, 1.0);
+	}
+
+	vec4 scene = texture(scene_tex, uv);
+	float e = edge_amount(uv) * u_edge_strength;
+
+	// Darken toward a blue-ish ink rather than pure black; flat black outlines read as holes.
+	vec3 ink = scene.rgb * 0.25 + vec3(0.02, 0.02, 0.06);
+	return vec4(mix(scene.rgb, ink, e), scene.a);
+}

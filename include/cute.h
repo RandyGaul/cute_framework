@@ -51,6 +51,7 @@
 #include "cute_json.h"
 #include "cute_math.h"
 #include "cute_math3d.h"
+#include "cute_3d.h"
 #include "cute_networking.h"
 #include "cute_noise.h"
 #include "cute_custom_sprite.h"

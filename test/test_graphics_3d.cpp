@@ -238,8 +238,74 @@ TEST_CASE(test_render_state_3d_defaults_depth_tests)
 	return true;
 }
 
+// The built-in lit shader is the one piece of GLSL CF ships for 3d, so a compile failure would
+// only surface in a user's app. Renders a full-screen quad facing the camera under a light aimed
+// straight at it, where the Lambert term is exactly 1 and the result is predictable.
+TEST_CASE(test_lit_shader_3d)
+{
+	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, W, H, s_app_options(), NULL))) return true; // Headless CI: no display/GPU.
+
+	CF_Shader shader = cf_make_lit_shader_3d();
+	REQUIRE(shader.id); // Compiles at all -- the whole point of this case.
+
+	// A quad in the z = 0 plane facing +z, already in clip space so no projection is needed.
+	CF_Vertex3D verts[4] = {
+		{ cf_v3(-0.8f, -0.8f, 0.0f), cf_v3(0, 0, 1.0f), cf_v2(0, 0) },
+		{ cf_v3( 0.8f, -0.8f, 0.0f), cf_v3(0, 0, 1.0f), cf_v2(1.0f, 0) },
+		{ cf_v3( 0.8f,  0.8f, 0.0f), cf_v3(0, 0, 1.0f), cf_v2(1.0f, 1.0f) },
+		{ cf_v3(-0.8f,  0.8f, 0.0f), cf_v3(0, 0, 1.0f), cf_v2(0, 1.0f) },
+	};
+	uint32_t indices[6] = { 0, 1, 2, 0, 2, 3 };
+	CF_Mesh mesh = cf_make_mesh_3d(verts, 4, indices, 6);
+
+	// 1x1 white albedo, so the output is the lighting term alone.
+	CF_TextureParams tp = cf_texture_defaults(1, 1);
+	CF_Texture white = cf_make_texture(tp);
+	CF_Pixel wpx = cf_pixel_white();
+	cf_texture_update(white, &wpx, (int)sizeof(CF_Pixel));
+
+	CF_Material material = cf_make_material();
+	CF_RenderState rs = cf_render_state_3d_defaults();
+	rs.cull_mode = CF_CULL_MODE_NONE; // Winding is not what this case is testing.
+	cf_material_set_render_state(material, rs);
+
+	// Light travels along -z, straight into a surface whose normal is +z, so N.L is 1.
+	cf_lit_shader_3d_set_transform(material, cf_m4_identity(), cf_m4_identity());
+	cf_lit_shader_3d_set_light(material, cf_v3(0, 0, -1.0f), cf_make_color_rgb_f(1.0f, 0, 0), cf_make_color_rgb_f(0, 0, 0));
+	cf_lit_shader_3d_set_albedo(material, white);
+
+	CF_CanvasParams params = cf_canvas_defaults(W, H);
+	params.depth_stencil_enable = true;
+	CF_Canvas canvas = cf_make_canvas(params);
+	CF_Pixel* px = (CF_Pixel*)cf_alloc(W * H * (int)sizeof(CF_Pixel));
+	cf_clear_color(0, 0, 0, 1);
+
+	cf_app_update(NULL);
+	cf_apply_canvas(canvas, true);
+	cf_apply_mesh(mesh);
+	cf_apply_shader(shader, material);
+	cf_draw_elements();
+	cf_app_draw_onto_screen(false);
+	s_readback(canvas, px);
+
+	// Fully lit by a red light: red channel saturated, nothing else.
+	REQUIRE(s_is(s_probe_ndc(px, 0.0f, 0.0f), 255, 0, 0));
+	// Outside the quad stays cleared, proving the quad did not simply cover everything.
+	REQUIRE(s_is(s_probe_ndc(px, 0.95f, 0.95f), 0, 0, 0));
+
+	cf_free(px);
+	cf_destroy_canvas(canvas);
+	cf_destroy_texture(white);
+	cf_destroy_shader(shader);
+	cf_destroy_material(material);
+	cf_destroy_mesh(mesh);
+	cf_destroy_app();
+	return true;
+}
+
 TEST_SUITE(test_graphics_3d)
 {
 	RUN_TEST_CASE(test_mat4_uniform_is_column_major);
 	RUN_TEST_CASE(test_render_state_3d_defaults_depth_tests);
+	RUN_TEST_CASE(test_lit_shader_3d);
 }
