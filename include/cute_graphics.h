@@ -1252,6 +1252,40 @@ CF_API CF_Texture CF_CALL cf_canvas_get_depth_stencil_target(CF_Canvas canvas);
  */
 CF_API void CF_CALL cf_clear_canvas(CF_Canvas canvas);
 
+/**
+ * @function cf_canvas_set_clear_color
+ * @category graphics
+ * @brief    Gives one canvas its own clear color, instead of the global `cf_clear_color`.
+ * @param    canvas  The canvas.
+ * @param    color   The color this canvas clears to from now on.
+ * @remarks  `cf_clear_color` sets a single global value that every clear reads, so a multi-pass
+ *           renderer wanting different clears per pass has to set the global before each pass and
+ *           put it back afterwards -- and forgetting the restore leaves the main screen clearing to
+ *           whatever the last pass wanted. This sets the value on the canvas once:
+ *
+ *           ```c
+ *           cf_canvas_set_clear_color(gbuffer, cf_color_black());
+ *           cf_canvas_set_clear_color(composite, cf_color_invisible());
+ *           ```
+ *
+ *           A canvas with no override set clears to the global, so existing code behaves exactly as
+ *           before. There is no way to go back to inheriting once set -- set the value you want.
+ * @related  CF_Canvas cf_clear_color cf_canvas_set_clear_depth_stencil cf_clear_canvas cf_apply_canvas
+ */
+CF_API void CF_CALL cf_canvas_set_clear_color(CF_Canvas canvas, CF_Color color);
+
+/**
+ * @function cf_canvas_set_clear_depth_stencil
+ * @category graphics
+ * @brief    Gives one canvas its own clear depth and stencil, instead of the global `cf_clear_depth_stencil`.
+ * @param    canvas   The canvas.
+ * @param    depth    The depth value this canvas clears to. 1.0 pairs with `CF_COMPARE_FUNCTION_LESS_THAN`.
+ * @param    stencil  The stencil value this canvas clears to.
+ * @remarks  See `cf_canvas_set_clear_color`. A canvas with no override clears to the global values.
+ * @related  CF_Canvas cf_clear_depth_stencil cf_canvas_set_clear_color cf_clear_canvas cf_render_state_3d_defaults
+ */
+CF_API void CF_CALL cf_canvas_set_clear_depth_stencil(CF_Canvas canvas, float depth, uint32_t stencil);
+
 //--------------------------------------------------------------------------------------------------
 // Readback.
 
