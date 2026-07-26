@@ -344,7 +344,7 @@ int main(int argc, char* argv[])
 	float depth_edge_strength = 0.4f;
 	bool shadows_on = true;
 	bool pixel_aligned_panning = true; // three.js defaults this on.
-	bool show_controls = true;
+	bool show_controls = false; // Off by default: the scene is the point, and TAB brings it up.
 	int view_mode = 0;
 	int edge_mode = 0;
 	float t = 0;
