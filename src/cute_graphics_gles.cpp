@@ -1133,6 +1133,14 @@ static inline void s_clear_canvas(const CF_GL_Canvas* canvas)
 	}
 	g_ctx.current_state.scissor_enabled = false;
 	glDisable(GL_SCISSOR_TEST);
+	// glClear is gated by the write masks just as it is by the scissor test. A depth mask left
+	// false by the previous pass silently drops GL_DEPTH_BUFFER_BIT, so a canvas cleared right
+	// after a depth-write-disabled pass keeps last frame's depth and z-rejects most of the
+	// geometry drawn into it. Force all three open; cf_gles_apply_shader sets every one of them
+	// unconditionally from the render state, so the next draw restores whatever it needs.
+	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+	glDepthMask(GL_TRUE);
+	glStencilMask(0xFF);
 	glClear(bits);
 }
 
