@@ -25,6 +25,14 @@ static int s_app_options()
 
 static bool s_near(int a, int b) { int d = a - b; return (d < 0 ? -d : d) < 24; }
 
+// A failed REQUIRE below returns out of the test case early, so destroying the app must
+// happen via RAII rather than a final statement -- otherwise the leaked app (and its
+// file system init) breaks cf_make_app in whichever test case runs next.
+struct AppDestroyGuard
+{
+	~AppDestroyGuard() { cf_destroy_app(); }
+};
+
 static CF_Pixel s_clear_and_read(CF_Canvas canvas, CF_Pixel* px)
 {
 	cf_app_update(NULL);
@@ -35,6 +43,17 @@ static CF_Pixel s_clear_and_read(CF_Canvas canvas, CF_Pixel* px)
 	while (!cf_readback_ready(rb)) {}
 	cf_readback_data(rb, px, W * H * (int)sizeof(CF_Pixel));
 	cf_destroy_readback(rb);
+
+	if (getenv("CF_TEST_DUMP")) {
+		// Debug aid: a stride/pitch bug shows up as row 0 reading correctly while row 1
+		// (and beyond) start mid-garbage; a wrong-clear bug reads uniformly wrong instead.
+		printf(
+			"backend=%s row0=%08x %08x row1=%08x %08x center=%08x\n",
+			cf_backend_type_to_string(cf_query_backend()),
+			px[0].val, px[1].val, px[W].val, px[W + 1].val, px[(H / 2) * W + (W / 2)].val
+		);
+	}
+
 	return px[(H / 2) * W + (W / 2)];
 }
 
@@ -44,6 +63,7 @@ static CF_Pixel s_clear_and_read(CF_Canvas canvas, CF_Pixel* px)
 TEST_CASE(test_per_canvas_clear_color)
 {
 	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, W, H, s_app_options(), NULL))) return true; // Headless CI: no display/GPU.
+	AppDestroyGuard app_guard;
 
 	CF_Canvas red_canvas = cf_make_canvas(cf_canvas_defaults(W, H));
 	CF_Canvas blue_canvas = cf_make_canvas(cf_canvas_defaults(W, H));
@@ -73,7 +93,6 @@ TEST_CASE(test_per_canvas_clear_color)
 	cf_destroy_canvas(red_canvas);
 	cf_destroy_canvas(blue_canvas);
 	cf_destroy_canvas(inherits);
-	cf_destroy_app();
 	return true;
 }
 
@@ -83,6 +102,7 @@ TEST_CASE(test_per_canvas_clear_color)
 TEST_CASE(test_canvas_clear_depth_is_honored)
 {
 	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, W, H, s_app_options(), NULL))) return true; // Headless CI: no display/GPU.
+	AppDestroyGuard app_guard;
 
 	const char* vs =
 		"layout (location = 0) in vec2 in_pos;\n"
@@ -152,7 +172,6 @@ TEST_CASE(test_canvas_clear_depth_is_honored)
 	cf_destroy_material(material);
 	cf_destroy_shader(shader);
 	cf_destroy_mesh(mesh);
-	cf_destroy_app();
 	return true;
 }
 
