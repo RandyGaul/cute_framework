@@ -2387,8 +2387,6 @@ void cf_sdlgpu_dispatch_compute(CF_ComputeShader shader, CF_Material material_ha
 	SDL_EndGPUComputePass(pass);
 }
 
-#endif
-
 void cf_sdlgpu_canvas_set_clear_color(CF_Canvas canvas_handle, CF_Color color)
 {
 	CF_CanvasInternal* canvas = (CF_CanvasInternal*)canvas_handle.id;
@@ -2405,3 +2403,5 @@ void cf_sdlgpu_canvas_set_clear_depth_stencil(CF_Canvas canvas_handle, float dep
 	canvas->clear_depth = depth;
 	canvas->clear_stencil = stencil;
 }
+
+#endif
