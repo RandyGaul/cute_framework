@@ -1323,8 +1323,16 @@ bool cf_sdlgpu_readback_ready(CF_Readback readback)
 	CF_ReadbackInternal* rb = (CF_ReadbackInternal*)readback.id;
 	if (!rb) return false;
 	if (rb->ready) return true;
-	rb->ready = SDL_QueryGPUFence(g_ctx.device, rb->fence);
-	return rb->ready;
+	if (!SDL_QueryGPUFence(g_ctx.device, rb->fence)) return false;
+	// A signaled fence only guarantees the GPU-side copy finished. On D3D12, a download
+	// whose row pitch needs realigning to the 256-byte copy alignment is unpacked into
+	// the transfer buffer lazily, on the next *wait* that observes the fence -- a query
+	// never does this. Without the wait below, cf_readback_data can read stale transfer
+	// buffer contents even though the fence already reports done. This call returns
+	// immediately, since the fence is already known signaled.
+	SDL_WaitForGPUFences(g_ctx.device, true, &rb->fence, 1);
+	rb->ready = true;
+	return true;
 }
 
 int cf_sdlgpu_readback_data(CF_Readback readback, void* data, int size)
