@@ -80,8 +80,13 @@ jobs:
 
       - name: Build documentation
         run: |
-          mkdocs build --clean
+          set -o pipefail
+          mkdocs build --clean 2>&1 | tee build.log
           mkdocs --version
+          if grep -q "is not found among documentation files" build.log; then
+            echo "::error::Broken internal documentation link(s) -- see warnings above."
+            exit 1
+          fi
 
       - name: Adjust permissions
         run: |
