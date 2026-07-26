@@ -325,6 +325,12 @@ CF_API void CF_CALL cf_draw_sprite(const CF_Sprite* sprite);
 CF_API void CF_CALL cf_draw_sprite_9_slice(const CF_Sprite* sprite);
 CF_API void CF_CALL cf_draw_sprite_9_slice_tiled(const CF_Sprite* sprite);
 
+/**
+ * @function cf_sprite_draw
+ * @category sprite
+ * @brief    Draws `sprite`. Alias for `cf_draw_sprite`.
+ * @related  cf_draw_sprite CF_Sprite
+ */
 CF_INLINE void cf_sprite_draw(CF_Sprite* sprite)
 {
 	cf_draw_sprite(sprite);

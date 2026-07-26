@@ -430,12 +430,12 @@ CF_API bool CF_CALL cf_query_pixel_format(CF_PixelFormat format, CF_PixelFormatO
 // Texture.
 
 /**
- * @enum     CF_TextureUsageFlagBits
+ * @enum     CF_TextureUsageBits
  * @category graphics
  * @brief    Bitmask flags that indicate the intended usage of a texture.
  * @remarks  These flags define how a texture will be utilized in graphics and compute pipelines.
  *           Multiple flags can be combined using a bitwise OR operation.
- * @related  CF_TextureUsageFlagBits CF_TextureUsageFlags
+ * @related  CF_TextureUsageBits CF_TextureUsageFlags
  */
 #define CF_TEXTURE_USAGE_DEFS \
 	/* @entry The texture will be used as a sampler in shaders. */                    \
@@ -1430,7 +1430,12 @@ typedef struct CF_VertexAttribute
 } CF_VertexAttribute;
 // @end
 
-// Max number of vertex attributes allowed on a mesh.
+/**
+ * @function CF_MESH_MAX_VERTEX_ATTRIBUTES
+ * @category graphics
+ * @brief    Max number of vertex attributes allowed on a mesh.
+ * @related  cf_make_mesh CF_VertexAttribute
+ */
 #define CF_MESH_MAX_VERTEX_ATTRIBUTES (32)
 
 /**
