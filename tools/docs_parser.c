@@ -16,6 +16,7 @@
 #include <string.h>
 #include <assert.h>
 #include <limits.h>
+#include <ctype.h>
 
 #ifdef _WIN32
 #include <io.h>
@@ -182,6 +183,7 @@ typedef struct State
 	Doc* docs; // dyna
 	CK_MAP(int) path_to_doc_index;  // key: sintern("/<cat>/<kind>/<name>.md") -- uniqueness + stale detection
 	CK_MAP(int) title_to_doc_index; // key: sintern(exact-case title) -- name -> page resolution
+	CK_MAP(int) enum_entry_to_doc_index; // key: sintern(entry name) -> parent enum's doc index
 	char** warnings; // dyna of sdyna strings -- unresolved @related entries and CF-API-shaped references
 } State;
 
@@ -277,6 +279,17 @@ static void flush_doc()
 	}
 	map_set(s->title_to_doc_index, (uint64_t)title_key, count);
 
+	// Enum values don't get their own page -- they're a table on their parent enum's page --
+	// but a reference to one should still resolve there. First entry wins on a name clash.
+	if (s->doc.type == DOC_ENUM) {
+		for (int i = 0; i < asize(s->doc.enum_entries); ++i) {
+			const char* entry_key = sintern(s->doc.enum_entries[i]);
+			if (!map_has(s->enum_entry_to_doc_index, (uint64_t)entry_key)) {
+				map_set(s->enum_entry_to_doc_index, (uint64_t)entry_key, count);
+			}
+		}
+	}
+
 	apush(s->docs, s->doc);
 	s->doc = make_doc();
 	sfree(name);
@@ -289,6 +302,8 @@ static int get_doc_index(const char* title)
 	// @remarks "```cpp" fence) scanned by auto_generate_links -- not a real reference.
 	if (!title || !*title) return -1;
 	int* ptr = map_get_ptr(s->title_to_doc_index, (uint64_t)sintern(title));
+	if (ptr) return *ptr;
+	ptr = map_get_ptr(s->enum_entry_to_doc_index, (uint64_t)sintern(title));
 	return ptr ? *ptr : -1;
 }
 
@@ -324,6 +339,18 @@ static int state_try_next(int ch) { int cp; const char* next = decode_UTF8(s->in
 // -------------------------------------------------------------------------------------------------
 // Linkify
 
+// True if `s` is a single C identifier -- not e.g. "cf_plane(n, d)" or "CF_MAP(T)", which a
+// backtick span can legitimately contain but which were never meant to name a doc page.
+static int is_identifier(const char* s)
+{
+	if (!s || !*s) return 0;
+	if (!(isalpha((unsigned char)*s) || *s == '_')) return 0;
+	for (const char* p = s + 1; *p; ++p) {
+		if (!(isalnum((unsigned char)*p) || *p == '_')) return 0;
+	}
+	return 1;
+}
+
 static char* linkify(Doc* from, char* text, const char* scan_str, int ticks)
 {
 	if (doc_has_link(scan_str)) {
@@ -334,7 +361,7 @@ static char* linkify(Doc* from, char* text, const char* scan_str, int ticks)
 		sfree(link);
 		sfree(coded_link);
 		sfree(scan_fmt);
-	} else if (!ticks || sprefix(scan_str, "CF_") || sprefix(scan_str, "cf_")) {
+	} else if (is_identifier(scan_str) && (!ticks || sprefix(scan_str, "CF_") || sprefix(scan_str, "cf_"))) {
 		// @related entries (ticks == 0) are always curated symbol names, so any miss is real --
 		// either a typo or a symbol that's missing its own doc block. Inline backtick references
 		// (ticks == 1) are mostly ordinary prose (`NULL`, `int`, a parameter name), so only flag
@@ -805,7 +832,11 @@ static int cmp_doc_index_by_title(const void* a, const void* b)
 
 static int cmp_cstr(const void* a, const void* b)
 {
-	return sicmp(*(const char* const*)a, *(const char* const*)b);
+	// strcmp, not sicmp: this sorts warning messages for a checked-in baseline diff, and
+	// case-insensitive comparison doesn't give a strict total order (e.g. once both cf_v2 and
+	// CF_V2 are documented, their warning lines would compare equal and qsort's tie-breaking
+	// isn't guaranteed stable across platforms).
+	return strcmp(*(const char* const*)a, *(const char* const*)b);
 }
 
 // -------------------------------------------------------------------------------------------------
