@@ -133,7 +133,7 @@ static int dir_exists(const char* path)
 // -------------------------------------------------------------------------------------------------
 // Doc types
 
-enum { DOC_EMPTY, DOC_ENUM, DOC_FUNCTION, DOC_STRUCT };
+enum { DOC_EMPTY, DOC_ENUM, DOC_FUNCTION, DOC_STRUCT, DOC_MACRO };
 
 typedef struct Doc
 {
@@ -143,7 +143,6 @@ typedef struct Doc
 	char* title;          // sdyna
 	char* file;           // sdyna
 	char* brief;          // sdyna
-	int this_index;
 	char* signature;      // sdyna
 	char** param_names;   // dyna of sdyna
 	char** param_briefs;  // dyna of sdyna
@@ -163,7 +162,6 @@ static Doc make_doc()
 {
 	Doc d;
 	memset(&d, 0, sizeof(d));
-	d.this_index = -1;
 	return d;
 }
 
@@ -178,11 +176,12 @@ typedef struct State
 	char* file;             // sdyna
 
 	CK_MAP(const char*) categories;
-	CK_MAP(const char**) category_index_lists; // value is dyna array of interned strings
+	CK_MAP(int*) category_index_lists; // value is dyna array of doc indices
 
 	Doc doc;
 	Doc* docs; // dyna
-	CK_MAP(int) page_to_doc_index;
+	CK_MAP(int) path_to_doc_index;  // key: sintern("/<cat>/<kind>/<name>.md") -- uniqueness + stale detection
+	CK_MAP(int) title_to_doc_index; // key: sintern(exact-case title) -- name -> page resolution
 } State;
 
 static State state;
@@ -198,52 +197,97 @@ static const char* get_relative_path()
 	return g_relative_path;
 }
 
+// Strips the docs-dir prefix from a full page path by pointer offset, e.g.
+// "./docs/math/struct/cf_v2.md" -> "/math/struct/cf_v2.md". `full` is always
+// g_relative_path-prefixed by construction (see flush_doc).
+static const char* docs_rel_of(const char* full)
+{
+	size_t n = strlen(g_relative_path);
+	assert(!strncmp(full, g_relative_path, n));
+	return full + n;
+}
+
+// Builds a markdown-relative link from the docs-root-relative page `from` to the
+// docs-root-relative page `to` (both begin with '/'). Emits one "../" per directory
+// level of `from`, then the target's path with its leading '/' dropped.
+//   from "/math/struct/cf_v2.md", to "/math/function/cf_add.md" -> "../../math/function/cf_add.md"
+//   from "/api_reference.md",     to "/math/macro/cf_v2.md"     -> "math/macro/cf_v2.md"
+// Returns a new sdyna string; the caller sfree()s it.
+static char* rel_link(const char* from, const char* to)
+{
+	int depth = -1; // The leading '/' is not a directory level.
+	for (const char* p = from; *p; ++p) if (*p == '/') ++depth;
+	char* out = smake("");
+	for (int i = 0; i < depth; ++i) sappend(out, "../");
+	sappend(out, to + 1); // Skip the target's leading '/'.
+	return out;
+}
+
+static const char* kind_dir(int type)
+{
+	switch (type) {
+	case DOC_FUNCTION: return "function";
+	case DOC_STRUCT:   return "struct";
+	case DOC_ENUM:     return "enum";
+	case DOC_MACRO:    return "macro";
+	default: panic("Doc reached flush_doc() with no type set."); return NULL;
+	}
+}
+
 // -------------------------------------------------------------------------------------------------
 // State helpers
 
 static void flush_doc()
 {
-	char* path = smake(get_relative_path());
-	char ch = '/';
-	spush(path, ch);
-	sappend(path, s->doc.web_category);
+	char* name = smake(s->doc.title);
+	stolower(name);
+	sreplace(name, " ", "_");
+	sappend(name, ".md");
 
-	char* title_lower = smake(s->doc.title);
-	stolower(title_lower);
-	sreplace(title_lower, " ", "_");
-	sappend(title_lower, ".md");
-
-	spush(path, ch);
-	sappend(path, title_lower);
+	char* rel = sfmake("/%s/%s/%s", s->doc.web_category, kind_dir(s->doc.type), name);
 
 	sfree(s->doc.path);
-	s->doc.path = path;
+	s->doc.path = sfmake("%s%s", get_relative_path(), rel);
 	sfree(s->doc.file);
 	s->doc.file = smake(s->file);
 
-	const char* key = sintern(title_lower);
-	if (map_has(s->page_to_doc_index, (uint64_t)key)) {
-		int idx = map_get(s->page_to_doc_index, (uint64_t)key);
+	int count = asize(s->docs);
+
+	// Uniqueness + stale-file detection, keyed on the kind-qualified page path. This is what
+	// lets `cf_v2` (macro) and `CF_V2` (struct) coexist -- they land on different keys.
+	const char* path_key = sintern(rel);
+	if (map_has(s->path_to_doc_index, (uint64_t)path_key)) {
+		int idx = map_get(s->path_to_doc_index, (uint64_t)path_key);
 		char* msg = sfmake("Tried to add a duplicate page for %s (found in file %s, previously seen in file %s).",
-			title_lower, s->doc.file, s->docs[idx].file);
+			rel, s->doc.file, s->docs[idx].file);
 		panic(msg);
 	}
-	int count = asize(s->docs);
-	map_set(s->page_to_doc_index, (uint64_t)key, count);
+	map_set(s->path_to_doc_index, (uint64_t)path_key, count);
+
+	// Name -> page resolution, keyed on the exact-case title. Must stay globally unique:
+	// @related refers to symbols by bare name, with no kind available to disambiguate.
+	const char* title_key = sintern(s->doc.title);
+	if (map_has(s->title_to_doc_index, (uint64_t)title_key)) {
+		int idx = map_get(s->title_to_doc_index, (uint64_t)title_key);
+		char* msg = sfmake("Two docs share the title '%s' (found in file %s, previously seen in file %s). "
+			"Titles must be globally unique because @related refers to them by bare name.",
+			s->doc.title, s->doc.file, s->docs[idx].file);
+		panic(msg);
+	}
+	map_set(s->title_to_doc_index, (uint64_t)title_key, count);
+
 	apush(s->docs, s->doc);
 	s->doc = make_doc();
-	sfree(title_lower);
+	sfree(name);
+	sfree(rel);
 }
 
-static int get_doc_index(const char* title_raw)
+static int get_doc_index(const char* title)
 {
-	char* title = smake(title_raw);
-	stolower(title);
-	sreplace(title, " ", "_");
-	sappend(title, ".md");
-	const char* key = sintern(title);
-	int* ptr = map_get_ptr(s->page_to_doc_index, (uint64_t)key);
-	sfree(title);
+	// NULL/empty happens for adjacent backticks (` `` ` inside a fenced code block, e.g. a
+	// @remarks "```cpp" fence) scanned by auto_generate_links -- not a real reference.
+	if (!title || !*title) return -1;
+	int* ptr = map_get_ptr(s->title_to_doc_index, (uint64_t)sintern(title));
 	return ptr ? *ptr : -1;
 }
 
@@ -252,18 +296,15 @@ static int doc_has_link(const char* title)
 	return get_doc_index(title) != -1;
 }
 
-static char* doc_get_link(const char* title)
+static char* doc_get_link(Doc* from, const char* title)
 {
 	int index = get_doc_index(title);
-	char* link = smake(s->docs[index].path);
-	sreplace(link, get_relative_path(), "");
-	return link;
+	return rel_link(docs_rel_of(from->path), docs_rel_of(s->docs[index].path));
 }
 
-static int has_doc(const char* file)
+static int has_page(const char* docs_rel)
 {
-	const char* key = sintern(file);
-	return map_has(s->page_to_doc_index, (uint64_t)key);
+	return map_has(s->path_to_doc_index, (uint64_t)sintern(docs_rel));
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -282,11 +323,11 @@ static int state_try_next(int ch) { int cp; const char* next = decode_UTF8(s->in
 // -------------------------------------------------------------------------------------------------
 // Linkify
 
-static char* linkify(char* text, const char* scan_str, int ticks)
+static char* linkify(Doc* from, char* text, const char* scan_str, int ticks)
 {
 	if (doc_has_link(scan_str)) {
-		char* link = doc_get_link(scan_str);
-		char* coded_link = sfmake("[%s](..%s)", scan_str, link);
+		char* link = doc_get_link(from, scan_str);
+		char* coded_link = sfmake("[%s](%s)", scan_str, link);
 		char* scan_fmt = ticks ? sfmake("`%s`", scan_str) : smake(scan_str);
 		sreplace(text, scan_fmt, coded_link);
 		sfree(link);
@@ -307,11 +348,11 @@ static void emit_title(FILE* fp, Doc* doc)
 	fprintf(fp, "# %s\n\n", doc->title);
 	char* link_lower = smake(doc->web_category);
 	stolower(link_lower);
-	char* link = linkify(smake(doc->web_category), doc->web_category, 0);
-	fprintf(fp, "Category: [%s](../api_reference.md#%s)  \n", doc->web_category, link_lower);
+	char* ref = rel_link(docs_rel_of(doc->path), "/api_reference.md");
+	fprintf(fp, "Category: [%s](%s#%s)  \n", doc->web_category, ref, link_lower);
 	fprintf(fp, "GitHub: [%s](https://github.com/RandyGaul/cute_framework/blob/master/include/%s)  \n---\n\n", doc->file, doc->file);
 	sfree(link_lower);
-	sfree(link);
+	sfree(ref);
 }
 
 static void emit_brief(FILE* fp, Doc* doc)
@@ -612,17 +653,32 @@ static void parse_comment_block()
 	}
 }
 
+// True if a source line is a preprocessor #define, tolerating "#   define" / "#\tdefine".
+static int is_define_line(const char* line)
+{
+	if (!line || *line != '#') return 0;
+	const char* p = line + 1;
+	while (*p == ' ' || *p == '\t') ++p;
+	return !strncmp(p, "define", 6);
+}
+
 static void parse_function()
 {
-	s->doc.type = DOC_FUNCTION;
 	parse_comment_block();
 	char* sig = parse_line();
-	sreplace(sig, "CF_API ", "");
-	sreplace(sig, "CF_CALL ", "");
-	sreplace(sig, "CF_INLINE ", "");
-	char* brace = sfind(sig, " {");
-	if (brace) {
-		asetlen(sig, (int)(brace - sig));
+	if (is_define_line(sig)) {
+		// The documented symbol is a macro. Render the #define line verbatim -- the
+		// CF_API/CF_CALL/CF_INLINE strips and " {" truncation below are meaningless here.
+		s->doc.type = DOC_MACRO;
+	} else {
+		s->doc.type = DOC_FUNCTION;
+		sreplace(sig, "CF_API ", "");
+		sreplace(sig, "CF_CALL ", "");
+		sreplace(sig, "CF_INLINE ", "");
+		char* brace = sfind(sig, " {");
+		if (brace) {
+			asetlen(sig, (int)(brace - sig));
+		}
 	}
 	sfree(s->doc.signature);
 	s->doc.signature = sig;
@@ -650,7 +706,6 @@ static void parse_struct()
 			} else if (sequ(s->token, "@function")) {
 				apush(doc->member_functions, asize(s->docs));
 				parse_function();
-				s->docs[asize(s->docs) - 1].this_index = doc_index;
 				doc = &s->docs[doc_index]; // Re-fetch, docs array may have reallocated.
 			} else if (sequ(s->token, "@end")) {
 				break;
@@ -702,7 +757,7 @@ static void parse_header(const char* include_dir, const char* header)
 // -------------------------------------------------------------------------------------------------
 // Auto-generate links
 
-static char* auto_generate_links(char* text)
+static char* auto_generate_links(Doc* from, char* text)
 {
 	if (!text) return text;
 	char* scan = NULL;
@@ -714,7 +769,7 @@ static char* auto_generate_links(char* text)
 			if (ch != '`') {
 				spush(scan, ch);
 			} else {
-				text = linkify(text, scan, 1);
+				text = linkify(from, text, scan, 1);
 				found = 0;
 				sfree(scan);
 				scan = NULL;
@@ -732,41 +787,52 @@ static char* auto_generate_links(char* text)
 // -------------------------------------------------------------------------------------------------
 // String comparison for qsort
 
-static int cmp_istr(const void* a, const void* b)
+static int cmp_doc_index_by_title(const void* a, const void* b)
 {
-	const char* sa = *(const char**)a;
-	const char* sb = *(const char**)b;
-	return sicmp(sa, sb);
+	const Doc* da = &s->docs[*(const int*)a];
+	const Doc* db = &s->docs[*(const int*)b];
+	return sicmp(da->title, db->title);
 }
 
 // -------------------------------------------------------------------------------------------------
 // Save API reference links
 
-static void save_api_reference_links(FILE* fp, const char* category, const char** pages, int page_count, const char* type,
-	CK_MAP(const char**) related)
+static void save_api_reference_section(FILE* fp, const int* pages, const char* heading)
 {
-	if (page_count) {
-		fprintf(fp, "### %s\n", type);
-		for (int i = 0; i < page_count; ++i) {
-			char* page_lower = smake(pages[i]);
-			stolower(page_lower);
-			sreplace(page_lower, " ", "_");
-			fprintf(fp, "- [%s](%s/%s.md)\n", pages[i], category, page_lower);
-			sfree(page_lower);
-		}
-		fprintf(fp, "\n\n");
+	if (!asize(pages)) return;
+	fprintf(fp, "### %s\n", heading);
+	for (int i = 0; i < asize(pages); ++i) {
+		Doc* d = &s->docs[pages[i]];
+		char* link = rel_link("/api_reference.md", docs_rel_of(d->path));
+		fprintf(fp, "- [%s](%s)\n", d->title, link);
+		sfree(link);
 	}
+	fprintf(fp, "\n\n");
+}
+
+// Filters `index_list` down to docs of `type`, sorts by title, and emits them under `heading`.
+static void emit_kind_section(FILE* fp, const int* index_list, int type, const char* heading)
+{
+	int* picked = NULL;
+	for (int j = 0; j < asize(index_list); ++j) {
+		if (s->docs[index_list[j]].type == type) apush(picked, index_list[j]);
+	}
+	qsort(picked, (size_t)asize(picked), sizeof(int), cmp_doc_index_by_title);
+	save_api_reference_section(fp, picked, heading);
+	afree(picked);
+}
+
+static void save_related_reading(FILE* fp, const char* category, CK_MAP(const char**) related)
+{
 	const char*** related_ptr = map_get_ptr(related, (uint64_t)sintern(category));
-	if (related_ptr && *related_ptr) {
-		const char** related_links = *related_ptr;
-		if (asize(related_links)) {
-			fprintf(fp, "### Related Reading\n");
-			for (int i = 0; i < asize(related_links); ++i) {
-				fprintf(fp, "%s\n", related_links[i]);
-			}
-			fprintf(fp, "\n");
-		}
+	if (!related_ptr || !*related_ptr) return;
+	const char** related_links = *related_ptr;
+	if (!asize(related_links)) return;
+	fprintf(fp, "### Related Reading\n");
+	for (int i = 0; i < asize(related_links); ++i) {
+		fprintf(fp, "%s\n", related_links[i]);
 	}
+	fprintf(fp, "\n");
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -829,6 +895,39 @@ static void dir_close(DirIter* it)
 }
 
 // -------------------------------------------------------------------------------------------------
+// Stale file cleanup
+
+static const char* g_kind_dirs[] = { "function", "struct", "enum", "macro" };
+
+static int is_kind_dir_name(const char* name)
+{
+	for (int i = 0; i < (int)(sizeof(g_kind_dirs) / sizeof(g_kind_dirs[0])); ++i) {
+		if (sequ(name, g_kind_dirs[i])) return 1;
+	}
+	return 0;
+}
+
+// Snapshots a directory's entry names so remove() never runs against a live DirIter.
+static char** dir_list(const char* path)
+{
+	char** names = NULL;
+	DirIter it = dir_open(path);
+	const char* f;
+	while ((f = dir_next(&it))) {
+		if (f[0] == '.') continue; // Skips ".", "..", and dotfiles.
+		apush(names, smake(f));
+	}
+	dir_close(&it);
+	return names;
+}
+
+static void remove_page(const char* path)
+{
+	remove(path);
+	printf("Removed %s\n", path);
+}
+
+// -------------------------------------------------------------------------------------------------
 // Main
 
 int main(int argc, char* argv[])
@@ -885,20 +984,20 @@ int main(int argc, char* argv[])
 	// Auto-generate links.
 	for (int i = 0; i < asize(s->docs); ++i) {
 		Doc* doc = &s->docs[i];
-		doc->brief = auto_generate_links(doc->brief);
+		doc->brief = auto_generate_links(doc, doc->brief);
 		for (int j = 0; j < asize(doc->param_briefs); ++j) {
-			doc->param_briefs[j] = auto_generate_links(doc->param_briefs[j]);
+			doc->param_briefs[j] = auto_generate_links(doc, doc->param_briefs[j]);
 		}
 		for (int j = 0; j < asize(doc->enum_entry_briefs); ++j) {
-			doc->enum_entry_briefs[j] = auto_generate_links(doc->enum_entry_briefs[j]);
+			doc->enum_entry_briefs[j] = auto_generate_links(doc, doc->enum_entry_briefs[j]);
 		}
 		for (int j = 0; j < asize(doc->member_briefs); ++j) {
-			doc->member_briefs[j] = auto_generate_links(doc->member_briefs[j]);
+			doc->member_briefs[j] = auto_generate_links(doc, doc->member_briefs[j]);
 		}
-		doc->return_value = auto_generate_links(doc->return_value);
-		doc->example_brief = auto_generate_links(doc->example_brief);
-		doc->example = auto_generate_links(doc->example);
-		doc->remarks = auto_generate_links(doc->remarks);
+		doc->return_value = auto_generate_links(doc, doc->return_value);
+		doc->example_brief = auto_generate_links(doc, doc->example_brief);
+		doc->example = auto_generate_links(doc, doc->example);
+		doc->remarks = auto_generate_links(doc, doc->remarks);
 		for (int j = 0; j < asize(doc->related);) {
 			const char* rel = doc->related[j];
 			if (sequ(rel, doc->title)) {
@@ -906,7 +1005,7 @@ int main(int argc, char* argv[])
 				adel(doc->related, j);
 				continue;
 			}
-			char* linked = linkify(smake(rel), rel, 0);
+			char* linked = linkify(doc, smake(rel), rel, 0);
 			sappend(linked, "  ");
 			sfree(doc->related[j]);
 			doc->related[j] = linked;
@@ -918,10 +1017,13 @@ int main(int argc, char* argv[])
 	for (int i = 0; i < asize(s->docs); ++i) {
 		Doc* doc = &s->docs[i];
 		{
-			// Create category directory.
-			char* dir = sppop(doc->path);
-			dp_mkdir(dir);
-			sfree(dir);
+			// Create <docs>/<category>/ then <docs>/<category>/<kind>/, parent first.
+			char* kind_path = sppop(doc->path);
+			char* cat_path = sppop(kind_path);
+			dp_mkdir(cat_path);
+			dp_mkdir(kind_path);
+			sfree(cat_path);
+			sfree(kind_path);
 		}
 		FILE* fp = fopen(doc->path, "wb");
 		if (!fp) {
@@ -930,11 +1032,11 @@ int main(int argc, char* argv[])
 		}
 		const char* category = sintern(doc->web_category);
 		if (!map_has(s->category_index_lists, (uint64_t)category)) {
-			const char** empty = NULL;
+			int* empty = NULL;
 			map_set(s->category_index_lists, (uint64_t)category, empty);
 		}
-		const char*** arr_ptr = map_get_ptr(s->category_index_lists, (uint64_t)category);
-		apush(*arr_ptr, sintern(doc->title));
+		int** arr_ptr = map_get_ptr(s->category_index_lists, (uint64_t)category);
+		apush(*arr_ptr, i);
 
 		if (doc->type == DOC_ENUM) {
 			emit_title(fp, doc);
@@ -943,7 +1045,7 @@ int main(int argc, char* argv[])
 			emit_example(fp, doc);
 			emit_remarks(fp, doc);
 			emit_related(fp, doc);
-		} else if (doc->type == DOC_FUNCTION) {
+		} else if (doc->type == DOC_FUNCTION || doc->type == DOC_MACRO) {
 			emit_title(fp, doc);
 			emit_brief(fp, doc);
 			emit_signature(fp, doc);
@@ -960,6 +1062,9 @@ int main(int argc, char* argv[])
 			emit_example(fp, doc);
 			emit_remarks(fp, doc);
 			emit_related(fp, doc);
+		} else {
+			char* msg = sfmake("Doc '%s' has unhandled type %d.", doc->title, doc->type);
+			panic(msg);
 		}
 		printf("Wrote %s\n", doc->path);
 		fclose(fp);
@@ -1018,51 +1123,15 @@ int main(int argc, char* argv[])
 
 		for (int i = 0; i < map_size(s->categories); ++i) {
 			const char* category = (const char*)map_key(s->categories, i);
-			const char*** list_ptr = map_get_ptr(s->category_index_lists, (uint64_t)category);
-			const char** index_list = list_ptr ? *list_ptr : NULL;
+			int** list_ptr = map_get_ptr(s->category_index_lists, (uint64_t)category);
+			const int* index_list = list_ptr ? *list_ptr : NULL;
 			fprintf(fp, "## %s\n\n", category);
 
-			// Functions
-			{
-				const char** functions = NULL;
-				for (int j = 0; j < asize(index_list); ++j) {
-					const char* title = index_list[j];
-					if (s->docs[get_doc_index(title)].type == DOC_FUNCTION) {
-						apush(functions, title);
-					}
-				}
-				qsort(functions, (size_t)asize(functions), sizeof(const char*), cmp_istr);
-				save_api_reference_links(fp, category, functions, asize(functions), "functions", related);
-				afree(functions);
-			}
-
-			// Structs
-			{
-				const char** structs = NULL;
-				for (int j = 0; j < asize(index_list); ++j) {
-					const char* title = index_list[j];
-					if (s->docs[get_doc_index(title)].type == DOC_STRUCT) {
-						apush(structs, title);
-					}
-				}
-				qsort(structs, (size_t)asize(structs), sizeof(const char*), cmp_istr);
-				save_api_reference_links(fp, category, structs, asize(structs), "structs", related);
-				afree(structs);
-			}
-
-			// Enums
-			{
-				const char** enums = NULL;
-				for (int j = 0; j < asize(index_list); ++j) {
-					const char* title = index_list[j];
-					if (s->docs[get_doc_index(title)].type == DOC_ENUM) {
-						apush(enums, title);
-					}
-				}
-				qsort(enums, (size_t)asize(enums), sizeof(const char*), cmp_istr);
-				save_api_reference_links(fp, category, enums, asize(enums), "enums", related);
-				afree(enums);
-			}
+			emit_kind_section(fp, index_list, DOC_FUNCTION, "functions");
+			emit_kind_section(fp, index_list, DOC_MACRO, "macros");
+			emit_kind_section(fp, index_list, DOC_STRUCT, "structs");
+			emit_kind_section(fp, index_list, DOC_ENUM, "enums");
+			save_related_reading(fp, category, related);
 		}
 		fclose(fp);
 		sfree(ref_path);
@@ -1072,22 +1141,32 @@ int main(int argc, char* argv[])
 	// Delete old document files that are no longer used.
 	for (int i = 0; i < map_size(s->categories); ++i) {
 		const char* category = (const char*)map_key(s->categories, i);
-		char* dir_path = sfmake("%s/%s", docs_dir, category);
-		DirIter dir = dir_open(dir_path);
-		const char* f;
-		while ((f = dir_next(&dir))) {
-			if (siequ(f, "enums.md") || siequ(f, "functions.md") || siequ(f, "structs.md")) {
-				continue;
+		char* cat_dir = sfmake("%s/%s", docs_dir, category);
+		char** entries = dir_list(cat_dir);
+		for (int j = 0; j < asize(entries); ++j) {
+			char* full = sfmake("%s/%s", cat_dir, entries[j]);
+			if (is_kind_dir_name(entries[j]) && dir_exists(full)) {
+				char** pages = dir_list(full);
+				for (int k = 0; k < asize(pages); ++k) {
+					char* rel = sfmake("/%s/%s/%s", category, entries[j], pages[k]);
+					if (!has_page(rel)) {
+						char* p = sfmake("%s/%s", full, pages[k]);
+						remove_page(p);
+						sfree(p);
+					}
+					sfree(rel);
+					sfree(pages[k]);
+				}
+				afree(pages);
+			} else if (spext_equ(entries[j], ".md")) {
+				// Orphaned flat page from the pre-kind-directory layout.
+				remove_page(full);
 			}
-			if (f[0] == '.') continue;
-			if (!has_doc(f)) {
-				char* filepath = sfmake("%s/%s", dir_path, f);
-				remove(filepath);
-				sfree(filepath);
-			}
+			sfree(full);
+			sfree(entries[j]);
 		}
-		dir_close(&dir);
-		sfree(dir_path);
+		afree(entries);
+		sfree(cat_dir);
 	}
 
 	printf("docsparser: Success!\n");
