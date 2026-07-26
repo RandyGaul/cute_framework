@@ -198,7 +198,7 @@ typedef struct CF_V2
  * @category math
  * @brief    Rotation about an axis composed of cos/sin pair.
  * @remarks  You can construct a `CF_SinCos` with the function `cf_sincos()`/`cf_sincos_f()`.
- * @related  CF_SinCos cf_sincos cf_sincos_f cf_x_axis cf_y_axis cf_mul_sc_v2 cf_mul_T_sc_v2
+ * @related  CF_SinCos cf_sincos_f cf_x_axis cf_y_axis cf_mul_sc_v2 cf_mul_T_sc_v2
  */
 typedef struct CF_SinCos
 {
@@ -1541,7 +1541,7 @@ CF_INLINE CF_V2 cf_safe_invert_v2(CF_V2 a) { return cf_v2(cf_safe_invert_f(a.x),
  * @category math
  * @brief    Returns the full-range (0-2pi) angle of the vector or rotation input.
  * @remarks  Works with raw (y, x), `CF_V2`, or `CF_SinCos` values.
- * @related  cf_sin cf_cos cf_sincos cf_mul cf_mul_T
+ * @related  cf_sin cf_cos CF_SinCos cf_mul cf_mul_T
  */
 #define cf_atan2_360(a, b)
 #undef cf_atan2_360
@@ -2185,7 +2185,7 @@ CF_INLINE CF_Transform cf_make_transform_TR(CF_V2 p, float radians) { CF_Transfo
  * @brief    Constructs a halfspace (2D plane) from a normal and distance or from a normal and point.
  * @remarks  `cf_plane(n, d)` creates a plane with signed distance `d` from the origin.
  *           `cf_plane(n, p)` creates a plane passing through point `p` with normal `n`.
- * @related  cf_halfspace cf_mul cf_mul_T cf_dot
+ * @related  CF_Halfspace cf_mul cf_mul_T cf_dot
  */
 #define cf_plane(a, b)
 #undef cf_plane
@@ -2914,7 +2914,7 @@ CF_API bool CF_CALL cf_poly_to_poly(const CF_Poly* A, const CF_Poly* B);
  * @brief    Returns a raycast to a circle.
  * @param    A          The ray.
  * @param    B          The circle.
- * @return   `CF_Raycast` results are placed here. See `CF_RayCast`.
+ * @return   `CF_Raycast` results are placed here. See `CF_Raycast`.
  * @related  CF_Ray CF_Circle CF_Raycast cf_ray_to_circle cf_ray_to_aabb cf_ray_to_capsule cf_ray_to_poly
  */
 CF_API CF_Raycast CF_CALL cf_ray_to_circle(CF_Ray A, CF_Circle B);
@@ -2925,7 +2925,7 @@ CF_API CF_Raycast CF_CALL cf_ray_to_circle(CF_Ray A, CF_Circle B);
  * @brief    Returns a raycast to an aabb.
  * @param    A          The ray.
  * @param    B          The Aabb.
- * @return   `CF_Raycast` results are placed here. See `CF_RayCast`.
+ * @return   `CF_Raycast` results are placed here. See `CF_Raycast`.
  * @related  CF_Ray CF_Aabb CF_Raycast cf_ray_to_circle cf_ray_to_aabb cf_ray_to_capsule cf_ray_to_poly
  */
 CF_API CF_Raycast CF_CALL cf_ray_to_aabb(CF_Ray A, CF_Aabb B);
@@ -2936,7 +2936,7 @@ CF_API CF_Raycast CF_CALL cf_ray_to_aabb(CF_Ray A, CF_Aabb B);
  * @brief    Returns a raycast to a capsule.
  * @param    A          The ray.
  * @param    B          The capsule.
- * @return   `CF_Raycast` results are placed here. See `CF_RayCast`.
+ * @return   `CF_Raycast` results are placed here. See `CF_Raycast`.
  * @related  CF_Ray CF_Capsule CF_Raycast cf_ray_to_circle cf_ray_to_aabb cf_ray_to_capsule cf_ray_to_poly
  */
 CF_API CF_Raycast CF_CALL cf_ray_to_capsule(CF_Ray A, CF_Capsule B);
@@ -2947,7 +2947,7 @@ CF_API CF_Raycast CF_CALL cf_ray_to_capsule(CF_Ray A, CF_Capsule B);
  * @brief    Returns a raycast to a polygon.
  * @param    A          The ray.
  * @param    B          The polygon.
- * @return   `CF_Raycast` results are placed here. See `CF_RayCast`.
+ * @return   `CF_Raycast` results are placed here. See `CF_Raycast`.
  * @related  CF_Ray CF_Poly CF_Raycast cf_ray_to_circle cf_ray_to_aabb cf_ray_to_capsule cf_ray_to_poly
  */
 CF_API CF_Raycast CF_CALL cf_ray_to_poly(CF_Ray A, const CF_Poly* B);
