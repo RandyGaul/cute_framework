@@ -18,6 +18,7 @@ set(CF_TEST_SRCS
 	test_markups.cpp
 	test_draw_tiled.cpp
 	test_graphics_3d.cpp
+	test_shader_directory.cpp
 	test_math.cpp
 	test_math.c
 	test_ckit.c

@@ -33,8 +33,10 @@ static void s_shader_directory_recursive(CF_Path path)
 		} else {
 			CF_Stat stat;
 			fs_stat(p, &stat);
-			String ext = p.ext();
-			if (ext == ".vs" || ext == ".fs" || ext == ".shd" || ext == ".c_shd") {
+			// spext_equ rather than comparing p.ext(): cf_path_get_ext returns NULL for a file with
+			// no extension, and String::operator== would strcmp that null pointer.
+			if (spext_equ(p.c_str(), ".vs") || spext_equ(p.c_str(), ".fs") ||
+			    spext_equ(p.c_str(), ".shd") || spext_equ(p.c_str(), ".c_shd")) {
 				// Exclude app->shader_directory for easier lookups.
 				// e.g. app->shader_directory is "/shaders" and contains
 				// "/shaders/my_shader.shd", the user needs to only reference it by:
@@ -135,8 +137,10 @@ static void s_shader_watch_recursive(CF_Path path)
 		} else {
 			CF_Stat stat;
 			fs_stat(p, &stat);
-			String ext = p.ext();
-			if (ext == ".vs" || ext == ".fs" || ext == ".shd" || ext == ".c_shd") {
+			// spext_equ rather than comparing p.ext(): cf_path_get_ext returns NULL for a file with
+			// no extension, and String::operator== would strcmp that null pointer.
+			if (spext_equ(p.c_str(), ".vs") || spext_equ(p.c_str(), ".fs") ||
+			    spext_equ(p.c_str(), ".shd") || spext_equ(p.c_str(), ".c_shd")) {
 				const char* key = sintern(path + dir[i]);
 				CF_ShaderFileInfo& info = app->shader_file_infos.find(key);
 				if (info.stat.last_modified_time < stat.last_modified_time) {
