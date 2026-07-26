@@ -175,6 +175,12 @@ typedef struct CF_V2
 } CF_V2;
 // @end
 
+/**
+ * @function cf_v2
+ * @category math
+ * @brief    Constructs a `CF_V2` from `x` and `y`, or splats a single value to both components.
+ * @related  CF_V2 cf_add cf_sub cf_dot
+ */
 #define cf_v2(...)
 #undef cf_v2
 // We implement cf_v2 in this odd way to 100% for sure force-inline a static initializer. This ensures
@@ -197,8 +203,8 @@ typedef struct CF_V2
  * @struct   CF_SinCos
  * @category math
  * @brief    Rotation about an axis composed of cos/sin pair.
- * @remarks  You can construct a `CF_SinCos` with the function `cf_sincos()`/`cf_sincos_f()`.
- * @related  CF_SinCos cf_sincos_f cf_x_axis cf_y_axis cf_mul_sc_v2 cf_mul_T_sc_v2
+ * @remarks  You can construct a `CF_SinCos` with the function `cf_sincos`.
+ * @related  CF_SinCos cf_sincos cf_x_axis cf_y_axis cf_mul_sc_v2 cf_mul_T_sc_v2
  */
 typedef struct CF_SinCos
 {
@@ -487,6 +493,12 @@ CF_INLINE int32_t  cf_min_i32(int32_t  a, int32_t  b) { return a < b ? a : b; }
 CF_INLINE uint32_t cf_min_u32(uint32_t a, uint32_t b) { return a < b ? a : b; }
 CF_INLINE int64_t  cf_min_i64(int64_t  a, int64_t  b) { return a < b ? a : b; }
 CF_INLINE uint64_t cf_min_u64(uint64_t a, uint64_t b) { return a < b ? a : b; }
+/**
+ * @function cf_min_v2
+ * @category math
+ * @brief    Returns the component-wise minimum of two vectors.
+ * @related  cf_min cf_max_v2 cf_clamp_v2 cf_clamp01_v2 cf_abs_v2
+ */
 CF_INLINE CF_V2    cf_min_v2 (CF_V2    a, CF_V2    b) { return (CF_V2){ cf_min_f(a.x, b.x), cf_min_f(a.y, b.y) }; }
 #define cf_min(a, b)          \
 	_Generic((a),             \
@@ -538,6 +550,12 @@ CF_INLINE int32_t  cf_max_i32(int32_t  a, int32_t  b) { return a > b ? a : b; }
 CF_INLINE uint32_t cf_max_u32(uint32_t a, uint32_t b) { return a > b ? a : b; }
 CF_INLINE int64_t  cf_max_i64(int64_t  a, int64_t  b) { return a > b ? a : b; }
 CF_INLINE uint64_t cf_max_u64(uint64_t a, uint64_t b) { return a > b ? a : b; }
+/**
+ * @function cf_max_v2
+ * @category math
+ * @brief    Returns the component-wise maximum of two vectors.
+ * @related  cf_max cf_min_v2 cf_clamp_v2 cf_clamp01_v2 cf_abs_v2
+ */
 CF_INLINE CF_V2    cf_max_v2 (CF_V2    a, CF_V2    b) { return cf_v2(cf_max_f(a.x, b.x), cf_max_f(a.y, b.y)); }
 #define cf_max(a, b)          \
 	_Generic((a),             \
@@ -589,6 +607,12 @@ CF_INLINE uint8_t  cf_abs_u8 (uint8_t  x) { return x; }
 CF_INLINE uint16_t cf_abs_u16(uint16_t x) { return x; }
 CF_INLINE uint32_t cf_abs_u32(uint32_t x) { return x; }
 CF_INLINE uint64_t cf_abs_u64(uint64_t x) { return x; }
+/**
+ * @function cf_abs_v2
+ * @category math
+ * @brief    Returns the component-wise absolute value of a vector.
+ * @related  cf_abs cf_min_v2 cf_max_v2 cf_clamp_v2 cf_clamp01_v2
+ */
 CF_INLINE CF_V2    cf_abs_v2 (CF_V2    x) { return cf_v2(cf_abs_f(x.x), cf_abs_f(x.y)); }
 #define cf_abs(x)             \
 	_Generic((x),             \
@@ -640,6 +664,12 @@ CF_INLINE int32_t  cf_clamp_i32(int32_t  x, int32_t  lo, int32_t  hi) { return c
 CF_INLINE uint32_t cf_clamp_u32(uint32_t x, uint32_t lo, uint32_t hi) { return cf_max(lo, cf_min(x, hi)); }
 CF_INLINE int64_t  cf_clamp_i64(int64_t  x, int64_t  lo, int64_t  hi) { return cf_max(lo, cf_min(x, hi)); }
 CF_INLINE uint64_t cf_clamp_u64(uint64_t x, uint64_t lo, uint64_t hi) { return cf_max(lo, cf_min(x, hi)); }
+/**
+ * @function cf_clamp_v2
+ * @category math
+ * @brief    Returns `x` with each component clamped between the matching components of `lo` and `hi`.
+ * @related  cf_clamp cf_clamp01_v2 cf_min_v2 cf_max_v2 cf_abs_v2
+ */
 CF_INLINE CF_V2    cf_clamp_v2 (CF_V2    x, CF_V2    lo, CF_V2    hi) { return cf_max(lo, cf_min(x, hi)); }
 #define cf_clamp(x, lo, hi)     \
 	_Generic((x),               \
@@ -691,6 +721,12 @@ CF_INLINE int32_t  cf_clamp01_i32(int32_t  x) { return cf_max((int32_t)0, (int32
 CF_INLINE uint32_t cf_clamp01_u32(uint32_t x) { return cf_max((uint32_t)0, (uint32_t)cf_min(x, (uint32_t)1)); }
 CF_INLINE int64_t  cf_clamp01_i64(int64_t  x) { return cf_max((int64_t)0, (int64_t)cf_min(x, (int64_t)1)); }
 CF_INLINE uint64_t cf_clamp01_u64(uint64_t x) { return cf_max((uint64_t)0, (uint64_t)cf_min(x, (uint64_t)1)); }
+/**
+ * @function cf_clamp01_v2
+ * @category math
+ * @brief    Returns `x` with each component clamped between 0 and 1.
+ * @related  cf_clamp01 cf_clamp_v2 cf_min_v2 cf_max_v2 cf_abs_v2
+ */
 CF_INLINE CF_V2    cf_clamp01_v2 (CF_V2    x) { return cf_max_v2(cf_v2(0), cf_min_v2(x, cf_v2(1))); }
 #define cf_clamp01(x)             \
 	_Generic((x),                 \
@@ -800,6 +836,12 @@ CF_INLINE CF_V2 cf_div(CF_V2 a, float b) { return cf_v2(a.x / b, a.y / b); }
 extern "C" {
 #else
 CF_INLINE CF_V2 cf_div_v2  (CF_V2 a, CF_V2 b) { return cf_v2(a.x / b.x, a.y / b.y); }
+/**
+ * @function cf_div_v2_f
+ * @category math
+ * @brief    Divides vector `a` by scalar `b`, component-wise.
+ * @related  cf_div CF_V2 cf_mul_v2_f
+ */
 CF_INLINE CF_V2 cf_div_v2_f(CF_V2 a, float b) { return cf_v2(a.x / b, a.y / b); }
 #define cf_div(a, b)          \
 	_Generic((b),             \
@@ -1462,6 +1504,12 @@ CF_INLINE CF_V2 cf_cw90(CF_V2 a) { return cf_v2(a.y, -a.x); }
  */
 CF_INLINE float cf_det2(CF_V2 a, CF_V2 b) { return a.x * b.y - a.y * b.x; }
 
+/**
+ * @function cf_sincos
+ * @category math
+ * @brief    Constructs a `CF_SinCos` rotation from an angle in radians.
+ * @related  CF_SinCos cf_x_axis cf_y_axis cf_mul_sc_v2 cf_mul_T_sc_v2
+ */
 #define cf_sincos(a)
 #undef cf_sincos
 #ifdef __cplusplus
@@ -1687,21 +1735,81 @@ CF_INLINE CF_V2 cf_intersect_halfspace2(CF_Halfspace h, CF_V2 a, CF_V2 b) { retu
 CF_INLINE CF_V2 cf_intersect_halfspace3(CF_Halfspace ha, CF_Halfspace hb) { CF_V2 a = {ha.n.x, hb.n.x}, b = {ha.n.y, hb.n.y}, c = {ha.d, hb.d}; float x = cf_det2(c, b) / cf_det2(a, b); float y = cf_det2(a, c) / cf_det2(a, b); return cf_v2(x, y); }
 
 
+/**
+ * @function cf_mul_sc_v2
+ * @category math
+ * @brief    Rotates vector `b` by rotation `a`.
+ * @related  cf_mul CF_SinCos cf_mul_T_sc_v2 cf_mul_sc
+ */
 CF_INLINE CF_V2 cf_mul_sc_v2(CF_SinCos a, CF_V2 b) { return cf_v2(a.c * b.x - a.s * b.y, a.s * b.x + a.c * b.y); }
+/**
+ * @function cf_mul_T_sc_v2
+ * @category math
+ * @brief    Rotates vector `b` by the inverse of rotation `a`.
+ * @related  cf_mul_T CF_SinCos cf_mul_sc_v2 cf_mul_T_sc
+ */
 CF_INLINE CF_V2 cf_mul_T_sc_v2(CF_SinCos a, CF_V2 b) { return cf_v2(a.c * b.x + a.s * b.y, -a.s * b.x + a.c * b.y); }
+/**
+ * @function cf_mul_sc
+ * @category math
+ * @brief    Composes two rotations, returning the rotation equivalent to applying `b` then `a`.
+ * @related  cf_mul CF_SinCos cf_mul_T_sc cf_mul_sc_v2
+ */
 CF_INLINE CF_SinCos cf_mul_sc(CF_SinCos a, CF_SinCos b) { CF_SinCos c; c.c = a.c * b.c - a.s * b.s; c.s = a.s * b.c + a.c * b.s; return c; }
+/**
+ * @function cf_mul_T_sc
+ * @category math
+ * @brief    Composes two rotations using the inverse of `a`.
+ * @related  cf_mul_T CF_SinCos cf_mul_sc cf_mul_T_sc_v2
+ */
 CF_INLINE CF_SinCos cf_mul_T_sc(CF_SinCos a, CF_SinCos b) { CF_SinCos c; c.c = a.c * b.c + a.s * b.s; c.s = a.c * b.s - a.s * b.c; return c; }
 
+/**
+ * @function cf_mul_v2_f
+ * @category math
+ * @brief    Scales vector `a` by scalar `b`, component-wise.
+ * @related  cf_mul CF_V2 cf_div_v2_f
+ */
 CF_INLINE CF_V2 cf_mul_v2_f(CF_V2 a, float b) { return cf_v2(a.x * b, a.y * b); }
 CF_INLINE CF_V2 cf_mul_v2(CF_V2 a, CF_V2 b) { return cf_v2(a.x * b.x, a.y * b.y); }
 
+/**
+ * @function cf_mul_m2_f
+ * @category math
+ * @brief    Scales each column of matrix `a` by scalar `b`.
+ * @related  cf_mul CF_M2x2 cf_mul_m2 cf_mul_m2_v2
+ */
 CF_INLINE CF_M2x2 cf_mul_m2_f(CF_M2x2 a, float b) { CF_M2x2 c; c.x = cf_mul_v2_f(a.x, b); c.y = cf_mul_v2_f(a.y, b); return c; }
+/**
+ * @function cf_mul_m2_v2
+ * @category math
+ * @brief    Transforms vector `b` by matrix `a`.
+ * @related  cf_mul CF_M2x2 cf_mul_m2 cf_mul_m2_f
+ */
 CF_INLINE CF_V2 cf_mul_m2_v2(CF_M2x2 a, CF_V2 b)   { CF_V2 c; c.x = a.x.x * b.x + a.y.x * b.y; c.y = a.x.y * b.x + a.y.y * b.y; return c; }
 CF_INLINE CF_V2 cf_mul_T_m2_v2(CF_M2x2 a, CF_V2 b) { CF_V2 c; c.x = a.x.x * b.x + a.x.y * b.y; c.y = a.y.x * b.x + a.y.y * b.y; return c; }
+/**
+ * @function cf_mul_m2
+ * @category math
+ * @brief    Composes two 2x2 matrices, returning the matrix equivalent to applying `b` then `a`.
+ * @related  cf_mul CF_M2x2 cf_mul_m2_v2 cf_mul_m2_f
+ */
 CF_INLINE CF_M2x2 cf_mul_m2(CF_M2x2 a, CF_M2x2 b) { CF_M2x2 c; c.x = cf_mul_m2_v2(a, b.x);  c.y = cf_mul_m2_v2(a, b.y); return c; }
 CF_INLINE CF_M2x2 cf_mul_T_m2(CF_M2x2 a, CF_M2x2 b) { CF_M2x2 c; c.x = cf_mul_T_m2_v2(a, b.x); c.y = cf_mul_T_m2_v2(a, b.y); return c; }
 
+/**
+ * @function cf_mul_m32_v2
+ * @category math
+ * @brief    Transforms point `b` by the 3x2 (affine) matrix `a`.
+ * @related  cf_mul CF_M3x2 cf_mul_m32
+ */
 CF_INLINE CF_V2 cf_mul_m32_v2(CF_M3x2 a, CF_V2 b) { return cf_add(cf_mul_m2_v2(a.m, b), a.p); }
+/**
+ * @function cf_mul_m32
+ * @category math
+ * @brief    Composes two 3x2 (affine) matrices, returning the matrix equivalent to applying `b` then `a`.
+ * @related  cf_mul CF_M3x2 cf_mul_m32_v2
+ */
 CF_INLINE CF_M3x2 cf_mul_m32(CF_M3x2 a, CF_M3x2 b) { CF_M3x2 c; c.m = cf_mul_m2(a.m, b.m); c.p = cf_add(cf_mul_m2_v2(a.m, b.p), a.p); return c; }
 
 // Macro alternatives -- flat expansion, guaranteed inline in debug builds.
@@ -1743,11 +1851,47 @@ CF_INLINE CF_M3x2 cf_mul_m32(CF_M3x2 a, CF_M3x2 b) { CF_M3x2 c; c.m = cf_mul_m2(
 	(dst).p = (pos); \
 } while (0)
 
+/**
+ * @function cf_mul_tf_v2
+ * @category math
+ * @brief    Transforms point `b` by transform `a`.
+ * @related  cf_mul CF_Transform cf_mul_T_tf_v2 cf_mul_tf
+ */
 CF_INLINE CF_V2 cf_mul_tf_v2(CF_Transform a, CF_V2 b) { return cf_add(cf_mul_sc_v2(a.r, b), a.p); }
+/**
+ * @function cf_mul_T_tf_v2
+ * @category math
+ * @brief    Transforms point `b` by the inverse of transform `a`.
+ * @related  cf_mul_T CF_Transform cf_mul_tf_v2 cf_mul_T_tf
+ */
 CF_INLINE CF_V2 cf_mul_T_tf_v2(CF_Transform a, CF_V2 b) { return cf_mul_T_sc_v2(a.r, cf_sub(b, a.p)); }
+/**
+ * @function cf_mul_tf
+ * @category math
+ * @brief    Composes two transforms, returning the transform equivalent to applying `b` then `a`.
+ * @related  cf_mul CF_Transform cf_mul_T_tf cf_mul_tf_v2
+ */
 CF_INLINE CF_Transform cf_mul_tf(CF_Transform a, CF_Transform b) { CF_Transform c; c.r = cf_mul_sc(a.r, b.r); c.p = cf_add(cf_mul_sc_v2(a.r, b.p), a.p); return c; }
+/**
+ * @function cf_mul_T_tf
+ * @category math
+ * @brief    Composes two transforms using the inverse of `a`.
+ * @related  cf_mul_T CF_Transform cf_mul_tf cf_mul_T_tf_v2
+ */
 CF_INLINE CF_Transform cf_mul_T_tf(CF_Transform a, CF_Transform b) { CF_Transform c; c.r = cf_mul_T_sc(a.r, b.r); c.p = cf_mul_T_sc_v2(a.r, cf_sub(b.p, a.p)); return c; }
+/**
+ * @function cf_mul_tf_hs
+ * @category math
+ * @brief    Transforms halfspace (plane) `b` by transform `a`.
+ * @related  cf_mul CF_Transform CF_Halfspace cf_mul_T_tf_hs
+ */
 CF_INLINE CF_Halfspace cf_mul_tf_hs(CF_Transform a, CF_Halfspace b) { CF_Halfspace c; c.n = cf_mul_sc_v2(a.r, b.n); c.d = cf_dot(cf_mul_tf_v2(a, cf_origin(b)), c.n); return c; }
+/**
+ * @function cf_mul_T_tf_hs
+ * @category math
+ * @brief    Transforms halfspace (plane) `b` by the inverse of transform `a`.
+ * @related  cf_mul_T CF_Transform CF_Halfspace cf_mul_tf_hs
+ */
 CF_INLINE CF_Halfspace cf_mul_T_tf_hs(CF_Transform a, CF_Halfspace b) { CF_Halfspace c; c.n = cf_mul_T_sc_v2(a.r, b.n); c.d = cf_dot(cf_mul_T_tf_v2(a, cf_origin(b)), c.n); return c; }
 
 /**
@@ -2041,7 +2185,7 @@ CF_INLINE CF_V2 cf_bezier2(CF_V2 a, CF_V2 c0, CF_V2 c1, CF_V2 b, float t) { retu
  * @function cf_x_axis
  * @category math
  * @brief    Returns the x-axis of the 2x2 rotation matrix represented by `CF_SinCos`.
- * @related  CF_SinCos cf_sincos_f cf_x_axis cf_y_axis cf_mul_sc_v2 cf_mul_T_sc_v2 cf_mul_sc cf_mul_T_sc
+ * @related  CF_SinCos cf_sincos cf_x_axis cf_y_axis cf_mul_sc_v2 cf_mul_T_sc_v2 cf_mul_sc cf_mul_T_sc
  */
 CF_INLINE CF_V2 cf_x_axis(CF_SinCos r) { return cf_v2(r.c, r.s); }
 
@@ -2049,7 +2193,7 @@ CF_INLINE CF_V2 cf_x_axis(CF_SinCos r) { return cf_v2(r.c, r.s); }
  * @function cf_y_axis
  * @category math
  * @brief    Returns the y-axis of the 2x2 rotation matrix represented by `CF_SinCos`.
- * @related  CF_SinCos cf_sincos_f cf_x_axis cf_y_axis cf_mul_sc_v2 cf_mul_T_sc_v2 cf_mul_sc cf_mul_T_sc
+ * @related  CF_SinCos cf_sincos cf_x_axis cf_y_axis cf_mul_sc_v2 cf_mul_T_sc_v2 cf_mul_sc cf_mul_T_sc
  */
 CF_INLINE CF_V2 cf_y_axis(CF_SinCos r) { return cf_v2(-r.s, r.c); }
 
