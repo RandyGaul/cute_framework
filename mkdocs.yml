@@ -126,9 +126,52 @@ nav:
   - Samples:
       - samples/index.md
       # Sample pages are generated with tools/generate_sample_pages.rb by reading this file
+      - 9-Slice: samples/nine_slice.md
+      - Basic Camera: samples/basic_camera.md
+      - Basic Indexed Rendering: samples/basicindexedrendering.md
+      - Basic Instancing: samples/basicinstancing.md
+      - Basic Shapes: samples/basicshapes.md
+      - Basic Sprite: samples/basicsprite.md
+      - Blend Modes: samples/blend_modes.md
+      - Clay UI: samples/clay.md
+      - Clay UI Animations: samples/clay_ui_animations.md
+      - Custom Shapes: samples/custom_shapes.md
+      - Custom Sprite: samples/customsprite.md
+      - Dear ImGui: samples/imgui.md
+      - Dear ImGui Texture: samples/imgui_texture.md
+      - Draw Lists: samples/draw_lists.md
+      - Draw to Texture: samples/draw_to_texture.md
+      - Easy Sprite: samples/easysprite.md
+      - Fetch Image: samples/fetch_image.md
       - Fluid Sim: samples/fluid_sim.md
-      - Waves: samples/waves.md
+      - Font Debug: samples/font_debug.md
+      - Glitch: samples/glitch.md
+      - Hello Triangle: samples/hello_triangle.md
+      - HiDPI: samples/hidpi.md
+      - IME Text Input: samples/ime.md
+      - Import Spritesheet: samples/import_spritesheet.md
+      - Input Binding: samples/input_binding.md
+      - Joypad: samples/joypad.md
+      - Mandala: samples/mandala.md
+      - Metaballs: samples/metaballs.md
+      - Noise: samples/noise.md
+      - Outline (Stencil): samples/outline_stencil.md
+      - Pivot: samples/pivot.md
+      - Platformer: samples/platformer.md
+      - Polygon: samples/polygon.md
+      - Rainbow Liquid: samples/rainbow_liquid.md
+      - Recolor: samples/recolor.md
+      - Shallow Water: samples/shallow_water.md
+      - Sound Pan: samples/sound_pan.md
       - Space Shooter: samples/spaceshooter.md
+      - Stencil Pie Chart: samples/stencil_pie_chart.md
+      - Text Drawing: samples/textdrawing.md
+      - Tile Performance: samples/tile_perf.md
+      - Timestep: samples/timestep.md
+      - Vector Paths: samples/vector_paths.md
+      - Vector Text: samples/vector_text.md
+      - Waves: samples/waves.md
+      - Window Resizing: samples/windowresizing.md
   - Made with CF: made_with_cf.md
   - Community / Ask for Help: community_ask_for_help.md
   - API Reference: api_reference.md
