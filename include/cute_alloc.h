@@ -91,7 +91,7 @@ CF_API void CF_CALL cf_free(void* ptr);
  * @function cf_calloc
  * @category allocator
  * @brief    Allocates a block of memory `size * count` bytes in size.
- * @remarks  The memory returned is completely zero'd out. Generally this is more efficient than calling `cf_malloc` and
+ * @remarks  The memory returned is completely zero'd out. Generally this is more efficient than calling `cf_alloc` and
  *           then clearing the memory to zero yourself. Though, it's not a concern for most games.
  * @related  CF_Allocator cf_allocator_override cf_allocator_restore_default cf_alloc cf_free cf_calloc cf_realloc
  */
@@ -101,7 +101,7 @@ CF_API void* CF_CALL cf_calloc(size_t size, size_t count);
  * @function cf_realloc
  * @category allocator
  * @brief    Reallocates a block of memory to a new size.
- * @remarks  You must reassign your old pointer! Generally this is more efficient than calling `cf_malloc`, `cf_free`, and
+ * @remarks  You must reassign your old pointer! Generally this is more efficient than calling `cf_alloc`, `cf_free`, and
  *           `CF_MEMCPY` yourself. Though, this is not a concern for most games.
  * @related  CF_Allocator cf_allocator_override cf_allocator_restore_default cf_alloc cf_free cf_calloc cf_realloc
  */
