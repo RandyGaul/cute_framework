@@ -182,6 +182,7 @@ typedef struct State
 	Doc* docs; // dyna
 	CK_MAP(int) path_to_doc_index;  // key: sintern("/<cat>/<kind>/<name>.md") -- uniqueness + stale detection
 	CK_MAP(int) title_to_doc_index; // key: sintern(exact-case title) -- name -> page resolution
+	char** warnings; // dyna of sdyna strings -- unresolved @related entries and CF-API-shaped references
 } State;
 
 static State state;
@@ -333,6 +334,14 @@ static char* linkify(Doc* from, char* text, const char* scan_str, int ticks)
 		sfree(link);
 		sfree(coded_link);
 		sfree(scan_fmt);
+	} else if (!ticks || sprefix(scan_str, "CF_") || sprefix(scan_str, "cf_")) {
+		// @related entries (ticks == 0) are always curated symbol names, so any miss is real --
+		// either a typo or a symbol that's missing its own doc block. Inline backtick references
+		// (ticks == 1) are mostly ordinary prose (`NULL`, `int`, a parameter name), so only flag
+		// ones shaped like a CF API identifier to keep this from drowning in false positives.
+		const char* kind = ticks ? "reference" : "@related entry";
+		char* msg = sfmake("%s: %s has an unresolved %s to `%s`.", from->file, from->title, kind, scan_str);
+		apush(s->warnings, msg);
 	}
 	return text;
 }
@@ -794,6 +803,11 @@ static int cmp_doc_index_by_title(const void* a, const void* b)
 	return sicmp(da->title, db->title);
 }
 
+static int cmp_cstr(const void* a, const void* b)
+{
+	return sicmp(*(const char* const*)a, *(const char* const*)b);
+}
+
 // -------------------------------------------------------------------------------------------------
 // Save API reference links
 
@@ -1170,6 +1184,16 @@ int main(int argc, char* argv[])
 	}
 
 	printf("docsparser: Success!\n");
+
+	if (asize(s->warnings)) {
+		qsort(s->warnings, (size_t)asize(s->warnings), sizeof(char*), cmp_cstr);
+		printf("\nWARNING -- %d unresolved documentation reference(s):\n", asize(s->warnings));
+		for (int i = 0; i < asize(s->warnings); ++i) {
+			printf("  %s\n", s->warnings[i]);
+			sfree(s->warnings[i]);
+		}
+	}
+	afree(s->warnings);
 
 	sfree(include_dir);
 	sfree(cf_root);
