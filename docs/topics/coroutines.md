@@ -1,6 +1,6 @@
 # Coroutines
 
-A [CF_Coroutine](../coroutine/cf_coroutine.md) is a function that can be paused and resumed at a later time. The function can be paused and resumed any number of times before finally exiting. This provides a great way to implement state machines, cutscenes, or anything else that requires doing some actions over a number of frames.
+A [CF_Coroutine](../coroutine/struct/cf_coroutine.md) is a function that can be paused and resumed at a later time. The function can be paused and resumed any number of times before finally exiting. This provides a great way to implement state machines, cutscenes, or anything else that requires doing some actions over a number of frames.
 
 > [!NOTE]
 > You should beef up the stack_size to 1 or 2 MB (you may use e.g. `CF_MB * 2`) if you wish to call into APIs such as DirectX. A variety of APIs and libraries out there have very deep or complex call stacks -- so the default size may cause stack overflows in such cases.
@@ -101,7 +101,7 @@ Not only programmer effort becomes wasted, but the state machine `build_circle` 
 
 ## The Right Tool for the Job
 
-Thinking of a coroutine a bit more like a stack data structure, the `build_circle` function can be reimplemented with the help of one special function: [cf_coroutine_yield](../coroutine/cf_coroutine_yield.md), which pauses the function for later resuming.
+Thinking of a coroutine a bit more like a stack data structure, the `build_circle` function can be reimplemented with the help of one special function: [cf_coroutine_yield](../coroutine/function/cf_coroutine_yield.md), which pauses the function for later resuming.
 
 The dubious parts of the last section can be changed to use local variables, replacing ad-hoc stack implementations with local variables on the coroutine's local stack.
 

@@ -6,7 +6,7 @@ CF ships its own shader compiler, `cute_spirv`, which compiles a well-defined su
 ## Runtime Shader Compilation
 
 CF compiles shaders of the format GLSL 450 (see [GLSL Support](glsl_support.md) for the supported subset). Runtime compilation is always available on every platform, including web builds -- the compiler is tiny, fast, and part of CF itself, so there is no build option to disable it and nothing to install.
-You can compile a shader by calling [`cf_make_shader_from_source`](../graphics/cf_make_shader_from_source.md).
+You can compile a shader by calling [`cf_make_shader_from_source`](../graphics/function/cf_make_shader_from_source.md).
 
 ## Precompiling Shaders
 
@@ -40,16 +40,16 @@ cute-shaderc -I./my_shaders -type=draw -oheader=my_shader.h -varname=my_shader m
 
 `-oheader=` indicates where you want to output the header file.
 
-`-varname=` indicates the name of the static variable of the type [`CF_ShaderBytecode`](../graphics/cf_shaderbytecode.md).
+`-varname=` indicates the name of the static variable of the type [`CF_ShaderBytecode`](../graphics/struct/cf_shaderbytecode.md).
 This variable will be defined in the generated header.
 It can be passed to related shader functions (explained below).
 
 The `-type=` flag indicates which type of shader you want to compile:
 
 * `vertex` and `fragment` are for compiling [low level shaders](../topics/low_level_graphics.md?id=shaders).
-  The result should be passed into [`cf_make_shader_from_bytecode`](../graphics/cf_make_shader_from_bytecode.md).
+  The result should be passed into [`cf_make_shader_from_bytecode`](../graphics/function/cf_make_shader_from_bytecode.md).
 * `draw` is for compiling [custom draw shaders](../topics/drawing.md?id=shaders).
-  The result should be passed into [`cf_make_draw_shader_from_bytecode`](../draw/cf_make_draw_shader_from_bytecode.md).
+  The result should be passed into [`cf_make_draw_shader_from_bytecode`](../draw/function/cf_make_draw_shader_from_bytecode.md).
 
 The `-I` flag will be explained in the "Shader inclusion" section below.
 
@@ -118,7 +118,7 @@ To make reusable utility functions, CF supports shaders including each other wit
 
 "Include guard", usually seen in C/C++, is not needed (e.g. `#pragma once`). Each file will only be included once and subsequent inclusions are ignored.
 
-With online compilation, the include directory must be set with [`cf_shader_directory`](../graphics/cf_shader_directory.md). For example: `cf_shader_directory("/shaders")`. Take note that this is a path in the [VFS](./virtual_file_system.md), hence, the leading slash ('/'). When shaders inclusions occur they always search relative to this shader directory, and *never* search outside of it. You may organize your shaders _within the shader directory_ however you like, but they cannot exist outside the shader directory.
+With online compilation, the include directory must be set with [`cf_shader_directory`](../graphics/function/cf_shader_directory.md). For example: `cf_shader_directory("/shaders")`. Take note that this is a path in the [VFS](./virtual_file_system.md), hence, the leading slash ('/'). When shaders inclusions occur they always search relative to this shader directory, and *never* search outside of it. You may organize your shaders _within the shader directory_ however you like, but they cannot exist outside the shader directory.
 
 With offline compilation, the include directory is set with the `-I` flag. You run the shader compiler on the command line, after building the shader compiler `scute-shaderc`. For example: `cute-shaderc -Ishaders -o src/my_shader_shd.h my_shader.shd`. Take note that this is a path in your actual filesystem, and not a path in the [VFS](./virtual_file_system.md).
 The include directory is relative to wherever you run the command.
@@ -187,10 +187,10 @@ When using `shared` memory with `barrier()` in compute shaders, all threads in a
 
 Errors in [custom draw shaders](../topics/drawing.md?id=shaders) loaded from disk are reported under the shader's own path with correct line numbers (e.g. `my_shader.shd:12: error: ...`). Shaders compiled from an in-memory string report as `shader_stub.shd` since there is no path to name.
 
-The most recent compile error is always available from [cf_shader_compile_error](../graphics/cf_shader_compile_error.md). You can also register a callback with [cf_shader_on_error](../graphics/cf_shader_on_error.md) to be invoked whenever any shader compile fails -- including failures during automatic live-reload -- which makes it easy to display shader errors on-screen while iterating.
+The most recent compile error is always available from [cf_shader_compile_error](../graphics/function/cf_shader_compile_error.md). You can also register a callback with [cf_shader_on_error](../graphics/function/cf_shader_on_error.md) to be invoked whenever any shader compile fails -- including failures during automatic live-reload -- which makes it easy to display shader errors on-screen while iterating.
 
 ## Bytecode Stability
 
-The `CF_ShaderBytecode` struct, whether coming from [`cf_compile_shader_to_bytecode`](../graphics/cf_compile_shader_to_bytecode.md) or the `cute-shaderc` compiler, should be treated as opaque. It should not be modified in any way and only passed verbatim to related functions: [`cf_make_shader_from_bytecode`](../graphics/cf_make_shader_from_bytecode.md) and [`cf_make_draw_shader_from_bytecode`](../draw/cf_make_draw_shader_from_bytecode.md).
+The `CF_ShaderBytecode` struct, whether coming from [`cf_compile_shader_to_bytecode`](../graphics/function/cf_compile_shader_to_bytecode.md) or the `cute-shaderc` compiler, should be treated as opaque. It should not be modified in any way and only passed verbatim to related functions: [`cf_make_shader_from_bytecode`](../graphics/function/cf_make_shader_from_bytecode.md) and [`cf_make_draw_shader_from_bytecode`](../draw/function/cf_make_draw_shader_from_bytecode.md).
 
 The signatures of these functions are stable, but the inner structure of the bytecode may change between CF versions -- recompile your shaders with the matching `cute-shaderc` when updating CF.

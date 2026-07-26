@@ -37,7 +37,7 @@ The client then reads the connect token, which contains a list of game servers t
        +--------+
 ```
 
-Once you get a connect token make a call to [`cf_client_connect`](../net/cf_client_connect.md).
+Once you get a connect token make a call to [`cf_client_connect`](../net/function/cf_client_connect.md).
 
 ## Web Service
 
@@ -45,11 +45,11 @@ The web service distributes connect tokens. CF does not provide an implementatio
 
 ## Generating Connect Tokens
 
-The function [`cf_generate_connect_token`](../net/cf_generate_connect_token.md) can be used to generate connect tokens for the web service to distribute.
+The function [`cf_generate_connect_token`](../net/function/cf_generate_connect_token.md) can be used to generate connect tokens for the web service to distribute.
 
 ## Dedicated Game Servers
 
-The game server itself is an instance of [`CF_Server`](../net/cf_server.md) created by calling [`cf_make_server`](../net/cf_make_server.md). The server mediates connections from all clients; the server can at any moment force a client to disconnect, and only accepts new connections with clients that provide a valid connect token and pass the security handshake.
+The game server itself is an instance of [`CF_Server`](../net/struct/cf_server.md) created by calling [`cf_make_server`](../net/function/cf_make_server.md). The server mediates connections from all clients; the server can at any moment force a client to disconnect, and only accepts new connections with clients that provide a valid connect token and pass the security handshake.
 
 ## Example Client and Server
 

@@ -10,7 +10,7 @@ There are three binding types, each building on the previous:
 
 ## Button Bindings
 
-A [`CF_ButtonBinding`](../binding/cf_buttonbinding.md) aggregates multiple physical inputs into a single logical button. Any of the bound inputs being active will activate the binding.
+A [`CF_ButtonBinding`](../binding/struct/cf_buttonbinding.md) aggregates multiple physical inputs into a single logical button. Any of the bound inputs being active will activate the binding.
 
 ```c
 // Create a "jump" button bound to spacebar, joypad A, and left trigger.
@@ -31,11 +31,11 @@ if (cf_button_binding_down(jump)) {
 cf_destroy_binding(jump);
 ```
 
-The `press_buffer` parameter to [`cf_make_button_binding`](../binding/cf_make_button_binding.md) controls how long a press/release event stays active, in seconds. This means that even if your gameplay code checks the binding a few frames late, the press still registers. Use [`cf_button_binding_consume_press`](../binding/cf_button_binding_consume_press.md) to consume a buffered event so it only triggers once.
+The `press_buffer` parameter to [`cf_make_button_binding`](../binding/function/cf_make_button_binding.md) controls how long a press/release event stays active, in seconds. This means that even if your gameplay code checks the binding a few frames late, the press still registers. Use [`cf_button_binding_consume_press`](../binding/function/cf_button_binding_consume_press.md) to consume a buffered event so it only triggers once.
 
 ## Axis Bindings
 
-A [`CF_AxisBinding`](../binding/cf_axisbinding.md) combines a negative and positive button binding into a single axis that outputs values from -1 to 1.
+A [`CF_AxisBinding`](../binding/struct/cf_axisbinding.md) combines a negative and positive button binding into a single axis that outputs values from -1 to 1.
 
 ```c
 // Create a horizontal movement axis.
@@ -48,7 +48,7 @@ float x = cf_binding_value(move_x); // -1 to 1
 float sign = cf_binding_sign(move_x); // -1, 0, or 1
 ```
 
-When both directions are pressed simultaneously, the conflict resolution mode determines the result. Set it with [`cf_axis_binding_set_conflict`](../binding/cf_axis_binding_set_conflict.md):
+When both directions are pressed simultaneously, the conflict resolution mode determines the result. Set it with [`cf_axis_binding_set_conflict`](../binding/function/cf_axis_binding_set_conflict.md):
 
 - `CF_AXIS_CONFLICT_NEWEST` (default) -- Use the most recently pressed direction.
 - `CF_AXIS_CONFLICT_OLDEST` -- Use the first pressed direction.
@@ -56,7 +56,7 @@ When both directions are pressed simultaneously, the conflict resolution mode de
 
 ## Stick Bindings
 
-A [`CF_StickBinding`](../binding/cf_stickbinding.md) combines two axis bindings (X and Y) into a 2D stick that returns a `CF_V2`.
+A [`CF_StickBinding`](../binding/struct/cf_stickbinding.md) combines two axis bindings (X and Y) into a 2D stick that returns a `CF_V2`.
 
 ```c
 // Create a movement stick with WASD + left analog stick + d-pad.
@@ -69,25 +69,25 @@ CF_V2 dir = cf_binding_value(move);   // Each component -1 to 1.
 CF_V2 sign = cf_binding_sign(move);   // Each component -1, 0, or 1.
 ```
 
-Convenience functions [`cf_stick_binding_add_wasd`](../binding/cf_stick_binding_add_wasd.md), [`cf_stick_binding_add_arrow_keys`](../binding/cf_stick_binding_add_arrow_keys.md), and [`cf_stick_binding_add_dpad`](../binding/cf_stick_binding_add_dpad.md) bind common key/button groups in a single call.
+Convenience functions [`cf_stick_binding_add_wasd`](../binding/function/cf_stick_binding_add_wasd.md), [`cf_stick_binding_add_arrow_keys`](../binding/function/cf_stick_binding_add_arrow_keys.md), and [`cf_stick_binding_add_dpad`](../binding/function/cf_stick_binding_add_dpad.md) bind common key/button groups in a single call.
 
 ## Input Buffering
 
-Input buffering is a technique for forgiving input timing. When creating a button binding, you specify a `press_buffer` duration in seconds. During this window, [`cf_binding_pressed`](../binding/cf_binding_pressed.md) and [`cf_binding_released`](../binding/cf_binding_released.md) will continue to return true, even if the physical input has already changed.
+Input buffering is a technique for forgiving input timing. When creating a button binding, you specify a `press_buffer` duration in seconds. During this window, [`cf_binding_pressed`](../binding/macro/cf_binding_pressed.md) and [`cf_binding_released`](../binding/macro/cf_binding_released.md) will continue to return true, even if the physical input has already changed.
 
 This is useful for platformers where the player presses jump slightly before landing. By buffering the press for 0.1 seconds, the jump will still register when the character touches the ground.
 
-To prevent a buffered press from firing multiple times, use [`cf_binding_consume_press`](../binding/cf_binding_consume_press.md). Once consumed, the press will not report again until a new physical press occurs.
+To prevent a buffered press from firing multiple times, use [`cf_binding_consume_press`](../binding/macro/cf_binding_consume_press.md). Once consumed, the press will not report again until a new physical press occurs.
 
 ## Deadzone
 
 Analog stick inputs use a global deadzone threshold to filter out stick drift. By default this is 0.15. Values below the deadzone are zeroed out, and the remaining range is remapped to 0..1.
 
-Use [`cf_binding_get_deadzone`](../binding/cf_binding_get_deadzone.md) and [`cf_binding_set_deadzone`](../binding/cf_binding_set_deadzone.md) to read or adjust the threshold.
+Use [`cf_binding_get_deadzone`](../binding/function/cf_binding_get_deadzone.md) and [`cf_binding_set_deadzone`](../binding/function/cf_binding_set_deadzone.md) to read or adjust the threshold.
 
 ## Joypad Connection Tracking
 
-Register a callback with [`cf_register_joypad_connect_callback`](../binding/cf_register_joypad_connect_callback.md) to be notified when joypads connect or disconnect. This is useful for showing controller UI prompts or adjusting player assignments.
+Register a callback with [`cf_register_joypad_connect_callback`](../binding/function/cf_register_joypad_connect_callback.md) to be notified when joypads connect or disconnect. This is useful for showing controller UI prompts or adjusting player assignments.
 
 ```c
 void on_joypad(int player_index, bool connected, void* udata) {

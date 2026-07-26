@@ -14,12 +14,12 @@ CF wraps [low level 3D rendering APIs](../api_reference.md#graphics). The backen
 
 The major primitives that make up the graphics layer of CF are:
 
-- [`CF_Canvas`](../graphics/cf_canvas.md) - A texture that can be rendered to.
-- [`CF_Texture`](../graphics/cf_texture.md) - Stores image data on the GPU. Can be drawn onto the screen.
-- [`CF_Mesh`](../graphics/cf_mesh.md) - Stores vertex data (triangles) for the GPU to process and draw.
-- [`CF_Shader`](../graphics/cf_shader.md) - A small program on the GPU to transform a mesh's vertices into pixels on the screen.
-- [`CF_RenderState`](../graphics/cf_renderstate.md) - Settings for the rendering, such as stencil or blend state options.
-- [`CF_Material`](../graphics/cf_material.md) - A collection of inputs to a shader, including uniforms and textures.
+- [`CF_Canvas`](../graphics/struct/cf_canvas.md) - A texture that can be rendered to.
+- [`CF_Texture`](../graphics/struct/cf_texture.md) - Stores image data on the GPU. Can be drawn onto the screen.
+- [`CF_Mesh`](../graphics/struct/cf_mesh.md) - Stores vertex data (triangles) for the GPU to process and draw.
+- [`CF_Shader`](../graphics/struct/cf_shader.md) - A small program on the GPU to transform a mesh's vertices into pixels on the screen.
+- [`CF_RenderState`](../graphics/struct/cf_renderstate.md) - Settings for the rendering, such as stencil or blend state options.
+- [`CF_Material`](../graphics/struct/cf_material.md) - A collection of inputs to a shader, including uniforms and textures.
 
 To draw a single frame the overall flow looks something like the following pseudocode:
 
@@ -41,18 +41,18 @@ for each canvas {
 }
 ```
 
-The important functions are are the apply functions. Each apply function is used on a low level graphics primitive to compose our draw calls ([`cf_draw_elements`](../graphics/cf_draw_elements.md)).
+The important functions are are the apply functions. Each apply function is used on a low level graphics primitive to compose our draw calls ([`cf_draw_elements`](../graphics/function/cf_draw_elements.md)).
 
-- [`cf_apply_canvas`](../graphics/cf_apply_canvas.md)
-- [`cf_apply_mesh`](../graphics/cf_apply_mesh.md)
-- [`cf_apply_shader`](../graphics/cf_apply_shader.md)
-- [`cf_draw_elements`](../graphics/cf_draw_elements.md)
+- [`cf_apply_canvas`](../graphics/function/cf_apply_canvas.md)
+- [`cf_apply_mesh`](../graphics/function/cf_apply_mesh.md)
+- [`cf_apply_shader`](../graphics/function/cf_apply_shader.md)
+- [`cf_draw_elements`](../graphics/function/cf_draw_elements.md)
 
 ## Meshes
 
 The GPU wants to render triangles. A mesh contains triangle data and uploads them to the GPU. Typically a mesh is built on the CPU one-time, or updated with data each frame for animating geometry. The vertices of a mesh will be sent to a shader as inputs to the vertex shader.
 
-To construct a mesh the layout of the vertices in memory must be described. We do this with an array of vertex attributes [`CF_VertexAttribute`](../graphics/cf_vertexattribute.md).
+To construct a mesh the layout of the vertices in memory must be described. We do this with an array of vertex attributes [`CF_VertexAttribute`](../graphics/struct/cf_vertexattribute.md).
 
 > Example code snippet for filling out an array of vertex attributes.
 
@@ -72,7 +72,7 @@ attrs[2].offset = CF_OFFSET_OF(DrawVertex, color);
 cf_mesh_set_attributes(draw->mesh, attrs, CF_ARRAY_SIZE(attrs), sizeof(DrawVertex), 0);
 ```
 
-The `"name"` in the above snippet corresponds to the name of vertex attribute inputs for a vertex shader (more on shaders later). The vertex data will need to be set with [`cf_mesh_update_vertex_data`](../graphics/cf_mesh_update_vertex_data.md).
+The `"name"` in the above snippet corresponds to the name of vertex attribute inputs for a vertex shader (more on shaders later). The vertex data will need to be set with [`cf_mesh_update_vertex_data`](../graphics/function/cf_mesh_update_vertex_data.md).
 
 ## Shaders
 
@@ -130,11 +130,11 @@ Let's focus on how to write your shaders and ship them with your game in a cross
 - Compile shaders from bytecode (SPIRV)
 - Compile [draw-API compatible fragment shaders](drawing.md#shaders)
 
-To compile shaders from glsl source code on-disk you must first call [cf_shader_directory](../graphics/cf_shader_directory.md). This tells the application where the shader folder is. Shaders in this directory live-reload automatically when they change on-disk; to handle reloads yourself instead, setup a callback via [cf_shader_on_changed](../graphics/cf_shader_on_changed.md), which disables the automatic reload and hands notifications to you. Compile errors can be fetched with [cf_shader_compile_error](../graphics/cf_shader_compile_error.md) or reported through a [cf_shader_on_error](../graphics/cf_shader_on_error.md) callback. Once done you may then call [cf_make_shader](../graphics/cf_make_shader.md)
+To compile shaders from glsl source code on-disk you must first call [cf_shader_directory](../graphics/function/cf_shader_directory.md). This tells the application where the shader folder is. Shaders in this directory live-reload automatically when they change on-disk; to handle reloads yourself instead, setup a callback via [cf_shader_on_changed](../graphics/function/cf_shader_on_changed.md), which disables the automatic reload and hands notifications to you. Compile errors can be fetched with [cf_shader_compile_error](../graphics/function/cf_shader_compile_error.md) or reported through a [cf_shader_on_error](../graphics/function/cf_shader_on_error.md) callback. Once done you may then call [cf_make_shader](../graphics/function/cf_make_shader.md)
 
-To compile shaders from glsl source code from string (in-memory) simply call [cf_make_shader_from_source](../graphics/cf_make_shader_from_source.md).
+To compile shaders from glsl source code from string (in-memory) simply call [cf_make_shader_from_source](../graphics/function/cf_make_shader_from_source.md).
 
-To compile shaders from bytecode (SPIRV) you must first compile them to a bytecode blob. This is a good way to speed up shader compilation when you ship your game, as the bytecode blobs can be shipped alongside your game. Call [cf_compile_shader_to_bytecode](../graphics/cf_compile_shader_to_bytecode.md) to generate a bytecode blob. You can then create a finalized shader by calling [cf_make_shader_from_bytecode](../graphics/cf_make_shader_from_bytecode.md).
+To compile shaders from bytecode (SPIRV) you must first compile them to a bytecode blob. This is a good way to speed up shader compilation when you ship your game, as the bytecode blobs can be shipped alongside your game. Call [cf_compile_shader_to_bytecode](../graphics/function/cf_compile_shader_to_bytecode.md) to generate a bytecode blob. You can then create a finalized shader by calling [cf_make_shader_from_bytecode](../graphics/function/cf_make_shader_from_bytecode.md).
 
 Shader compilation is explained in more details [here](shader_compilation.md).
 
@@ -201,7 +201,7 @@ These steps are a little simplified, but give one option for a good (but abstrac
 
 ## Materials
 
-[CF_Material](../graphics/cf_material.md) acts like a bag of inputs to shaders. Unlike meshes, materials don't hold vertices but instead hold uniforms and textures.
+[CF_Material](../graphics/struct/cf_material.md) acts like a bag of inputs to shaders. Unlike meshes, materials don't hold vertices but instead hold uniforms and textures.
 
 ### Uniforms
 
@@ -217,11 +217,11 @@ layout (set = 1, binding = 0) uniform fs_params {
 
 For vertex shaders textures have `set = 0`, while the uniform block has `set = 1`. For fragment shaders textures use `set = 2`, while the uniform block must use `set = 3`.
 
-In C++ we can set values for these uniforms by name using [`cf_material_set_uniform_vs`](../graphics/cf_material_set_uniform_vs.md) for vertex shaders, or [`cf_material_set_uniform_fs`](../graphics/cf_material_set_uniform_fs.md) for fragment shaders.
+In C++ we can set values for these uniforms by name using [`cf_material_set_uniform_vs`](../graphics/function/cf_material_set_uniform_vs.md) for vertex shaders, or [`cf_material_set_uniform_fs`](../graphics/function/cf_material_set_uniform_fs.md) for fragment shaders.
 
-[CF_Material](../graphics/cf_material.md) has the cool feature to dynamically line up uniforms it stores with shaders. This means that a material can hold _many_ different uniforms, but only those that have a matching name will be sent to the shader. All other are simply ignored. This is great for making materials that can be applied to many different shaders, or making many different shaders that share a common material. Mix-and-matching is highly encouraged!
+[CF_Material](../graphics/struct/cf_material.md) has the cool feature to dynamically line up uniforms it stores with shaders. This means that a material can hold _many_ different uniforms, but only those that have a matching name will be sent to the shader. All other are simply ignored. This is great for making materials that can be applied to many different shaders, or making many different shaders that share a common material. Mix-and-matching is highly encouraged!
 
-You can set textures on a material as well via [`cf_material_set_texture_vs`](../graphics/cf_material_set_texture_vs.md) for the vertex shader, or [`cf_material_set_texture_fs`](../graphics/cf_material_set_texture_fs.md) for the fragment shader. More on textures in the next section.
+You can set textures on a material as well via [`cf_material_set_texture_vs`](../graphics/function/cf_material_set_texture_vs.md) for the vertex shader, or [`cf_material_set_texture_fs`](../graphics/function/cf_material_set_texture_fs.md) for the fragment shader. More on textures in the next section.
 
 ## Compute Shaders
 
@@ -231,7 +231,7 @@ Compute shaders run on the GPU outside the normal graphics pipeline. They are av
 
 Resources are bound through two mechanisms:
 
-- **Material** (name-matched): Sampled textures via [`cf_material_set_texture_cs`](../graphics/cf_material_set_texture_cs.md), uniforms via [`cf_material_set_uniform_cs`](../graphics/cf_material_set_uniform_cs.md).
+- **Material** (name-matched): Sampled textures via [`cf_material_set_texture_cs`](../graphics/function/cf_material_set_texture_cs.md), uniforms via [`cf_material_set_uniform_cs`](../graphics/function/cf_material_set_uniform_cs.md).
 - **Dispatch struct** (positional): Read-write storage textures via `CF_ComputeDispatch::rw_textures`, readonly storage textures via `CF_ComputeDispatch::ro_textures`.
 
 ```c
@@ -254,7 +254,7 @@ UV-coordinates are two floats, each in the range from `[0,1]`. The coordinate (0
 
 ## Canvases
 
-[`CF_Canvas`](../graphics/cf_canvas.md) represents a texture the GPU can render within. Instead of rendering to the screen itself, sometimes advanced rendering techniques require first rendering to a texture. This is common for some techniques such as reflections, or shadows. Here's an example image showing some basic reflections, using a canvas and some [stenciling techniques](https://en.wikipedia.org/wiki/Stencil_buffer).
+[`CF_Canvas`](../graphics/struct/cf_canvas.md) represents a texture the GPU can render within. Instead of rendering to the screen itself, sometimes advanced rendering techniques require first rendering to a texture. This is common for some techniques such as reflections, or shadows. Here's an example image showing some basic reflections, using a canvas and some [stenciling techniques](https://en.wikipedia.org/wiki/Stencil_buffer).
 
 <p align="center">
 <img src=https://github.com/RandyGaul/cute_framework/blob/master/assets/block_man_final.gif?raw=true>
@@ -264,4 +264,4 @@ UV-coordinates are two floats, each in the range from `[0,1]`. The coordinate (0
 
 The app window itself has a [default canvas](application_window.md#resizing-windows). This canvas is used for higher-level [`Drawing API`](drawing.md) to get things onto the screen. By default CF collects everything and automatically displays it onto the default canvas.
 
-However, for custom rendering techniques you must fetch and render to the app's canvas to display rendered contents on the screen. Use [`cf_app_get_canvas`](../app/cf_app_get_canvas.md) along with [`cf_app_get_canvas_height`](../app/cf_app_get_canvas_height.md) and [`cf_app_get_canvas_width`](../app/cf_app_get_canvas_width.md). You may then render to this canvas (or any other canvas) with [`cf_render_to`](../draw/cf_render_to.md).
+However, for custom rendering techniques you must fetch and render to the app's canvas to display rendered contents on the screen. Use [`cf_app_get_canvas`](../app/function/cf_app_get_canvas.md) along with [`cf_app_get_canvas_height`](../app/function/cf_app_get_canvas_height.md) and [`cf_app_get_canvas_width`](../app/function/cf_app_get_canvas_width.md). You may then render to this canvas (or any other canvas) with [`cf_render_to`](../draw/function/cf_render_to.md).
