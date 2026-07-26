@@ -1,8 +1,8 @@
 /*
-    Cute Framework
-    Copyright (C) 2025 Randy Gaul https://randygaul.github.io/
+	Cute Framework
+	Copyright (C) 2026 Randy Gaul https://randygaul.github.io/
 
-    This software is dual-licensed with zlib or Unlicense, check LICENSE.txt for more info
+	This software is dual-licensed with zlib or Unlicense, check LICENSE.txt for more info
 */
 
 #include "test_harness.h"
