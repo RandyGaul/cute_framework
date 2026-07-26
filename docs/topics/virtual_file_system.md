@@ -28,7 +28,7 @@ The above snippet will give the folder `"C:/Users/Randy/Documents/data"`, which 
 - No colons `:`
 
 > [!NOTE]
-> **Normalizing** a path is the process of removing relative directories, removing redundant or Windows style slashes, and attempting to convert the string to a more platform-independant form. You can still normalize platform-dependent paths too though. Call [`cf_path_normalize`](../path/macro/cf_path_normalize.md) to normalize a string path.
+> **Normalizing** a path is the process of removing relative directories, removing redundant or Windows style slashes, and attempting to convert the string to a more platform-independent form. You can still normalize platform-dependent paths too though. Call [`cf_path_normalize`](../path/macro/cf_path_normalize.md) to normalize a string path.
 
 By mounting we achieve great portability by using platform-independent paths within our game. The paths are also more secure by removing relative paths (which reduce the chances of anyone accessing unanticipated directories), and most important of all grants versatility.
 
@@ -113,7 +113,7 @@ CF_ASSERT(!cf_is_error(result));
 
 ## Editors or Asset Hotloading
 
-Sometimes it is necessary to convert a virtual path to an actual platform-dependant path. For example, if you're building an editor and wish to modify assets on disk, you'll of course need access to the real path. Similarly, if you want to watch files on disk and see when they're modified to perform asset hotloading, real paths are again going to be necessary.
+Sometimes it is necessary to convert a virtual path to an actual platform-dependent path. For example, if you're building an editor and wish to modify assets on disk, you'll of course need access to the real path. Similarly, if you want to watch files on disk and see when they're modified to perform asset hotloading, real paths are again going to be necessary.
 
 You can convert a virtual path to a real path with [`cf_fs_get_actual_path`](../file/function/cf_fs_get_actual_path.md).
 
@@ -123,7 +123,7 @@ If you just want to read an entire file's contents to memory then try using [`cf
 
 ## Enumerating Directories
 
-The function [`cf_fs_enumerate_directory`](../file/function/cf_fs_enumerate_directory.md) returns an array of strings of all filse within a directory. This is great for looping over the names of files within a particular folder.
+The function [`cf_fs_enumerate_directory`](../file/function/cf_fs_enumerate_directory.md) returns an array of strings of all files within a directory. This is great for looping over the names of files within a particular folder.
 
 ```cpp
 const char** dirs_ptr = cf_fs_enumerate_directory("/data");
