@@ -16,11 +16,7 @@ layout (location = 3) out vec4 v_light_pos;
 layout (location = 4) out vec4 v_spot_pos;
 
 layout (set = 1, binding = 0) uniform uniform_block {
-	mat4 u_mvp;
-	mat4 u_model;
-	mat4 u_normal_matrix;
-	mat4 u_light_mvp;
-	mat4 u_spot_mvp;
+#include "uniform_members.shd"
 };
 
 void main()

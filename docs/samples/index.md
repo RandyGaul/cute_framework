@@ -283,6 +283,15 @@ Interactive samples demonstrating Cute Framework features. Click any card to pla
     [:octicons-arrow-right-24: Play](pivot.md)
 
 
+- **[Pixel 3D](pixel_3d.md)**
+
+    ---
+
+    Interactive sample demonstrating pixel 3d features.
+
+    [:octicons-arrow-right-24: Play](pixel_3d.md)
+
+
 - **[Platformer](platformer.md)**
 
     ---

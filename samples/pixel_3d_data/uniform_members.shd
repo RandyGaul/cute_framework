@@ -1,0 +1,28 @@
+// The members of `uniform_block`, shared verbatim by mesh.vs and mesh_lit.fs.
+//
+// CF requires the block to be named `uniform_block` in every stage. On desktop the two stages
+// land in separate descriptor sets (vertex set 1, fragment set 3) so their contents can differ,
+// but GLES links both stages into one program with a single block namespace -- there, two blocks
+// of the same name and different layouts is a link error:
+//
+//   "Field numbers of uniform block 'uniform_block' differ between VERTEX and FRAGMENT shaders."
+//
+// So both stages declare the full set and simply ignore the half they do not use. Keeping it in
+// one file is what guarantees the layouts stay identical.
+	mat4 u_mvp;
+	mat4 u_model;
+	mat4 u_normal_matrix;
+	mat4 u_light_mvp;
+	mat4 u_spot_mvp;
+	vec4 u_light_direction; // xyz: direction the light travels
+	vec4 u_light_color;
+	vec4 u_ambient;
+	vec4 u_spot_pos;        // xyz: world position
+	vec4 u_spot_dir;        // xyz: direction the cone points
+	vec4 u_spot_color;      // rgb, a: intensity
+	vec4 u_spot_params;     // x: cos(angle), y: penumbra, z: range, w: decay
+	vec4 u_base_color;      // per-object tint
+	vec4 u_emissive;        // per-object emissive
+	vec4 u_specular;        // rgb: specular colour
+	vec4 u_material;        // x: sample albedo, y: shininess, z/w: shadow texel sizes
+	vec4 u_eye;             // xyz: camera world position

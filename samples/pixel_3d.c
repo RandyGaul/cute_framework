@@ -1,5 +1,8 @@
-// A port of three.js's webgl_postprocessing_pixel onto CF's low-level graphics API: a 3d scene
-// rendered into a low-resolution canvas and composited back with a pixel-art edge pass.
+// Inspired by (and closely following) three.js's pixelation example:
+//   https://threejs.org/examples/webgl_postprocessing_pixel.html
+//
+// A port of it onto CF's low-level graphics API: a 3d scene rendered into a low-resolution canvas
+// and composited back with a pixel-art edge pass.
 //
 // Four passes, none of which needed anything CF did not already have:
 //   1. shadow   -- scene depth from the light's point of view, into a 1024x1024 float canvas
@@ -18,10 +21,13 @@
 // asset pipeline.
 //
 // Mouse: drag to orbit, wheel to zoom. R toggles an idle spin (off by default).
-// Keys:  SPACE cycles edge modes, N shows the normal buffer, D the depth buffer,
-//        S toggles shadows, 1/2 change the pixel size.
+// Keys:  TAB opens the controls panel; SPACE cycles edge modes; N and D show the normal and depth
+//        buffers; S toggles shadows; 1/2 change the pixel size.
 
 #include <cute.h>
+#include <dcimgui.h>
+
+#include "proggy.h"
 
 #define WINDOW_W 960
 #define WINDOW_H 720
@@ -72,7 +78,7 @@ static void push_face(CF_Vertex3D* verts, uint32_t* indices, int* vc, int* ic,
 	for (int i = 0; i < 6; ++i) indices[(*ic)++] = (uint32_t)base + quad[i];
 }
 
-static CF_Mesh build_box(float half, float uv_tiles)
+static CF_Mesh build_box(CF_V3 half, float uv_tiles)
 {
 	CF_Vertex3D verts[24];
 	uint32_t indices[36];
@@ -90,16 +96,6 @@ static CF_Mesh build_box(float half, float uv_tiles)
 		CF_V3 bv = cf_mul(cf_v3(b[f][0], b[f][1], b[f][2]), half);
 		push_face(verts, indices, &vc, &ic, cf_mul(nv, half), tv, bv, nv, uv_tiles);
 	}
-	return cf_make_mesh_3d(verts, vc, indices, ic);
-}
-
-static CF_Mesh build_ground(float half, float uv_tiles)
-{
-	CF_Vertex3D verts[4];
-	uint32_t indices[6];
-	int vc = 0, ic = 0;
-	push_face(verts, indices, &vc, &ic, cf_v3(0, 0, 0),
-	          cf_v3(half, 0, 0), cf_v3(0, 0, -half), cf_v3(0, 1.0f, 0), uv_tiles);
 	return cf_make_mesh_3d(verts, vc, indices, ic);
 }
 
@@ -178,13 +174,24 @@ static CF_Canvas make_canvas_ex(int w, int h, CF_PixelFormat format)
 // three.js's normal buffer is view-space (MeshNormalMaterial), and the edge shader's
 // vec3(1,1,1) bias is written against that -- feeding it world normals makes which crease
 // brightens depend on world orientation, so highlights swim as the camera orbits.
+// Uploads to both stages' copies of the shared block. On desktop the vertex and fragment blocks
+// are separate descriptor sets and each stage would only need its own half. GLES links both
+// stages into one program where `uniform_block` resolves to a single GL block, so only one
+// stage's buffer binding survives -- writing identical contents to both means it does not matter
+// which one wins. See pixel_3d_data/uniform_members.shd.
+static void set_uniform_both(CF_Material m, const char* name, void* value, CF_UniformType type)
+{
+	cf_material_set_uniform_vs(m, name, value, type, 1);
+	cf_material_set_uniform_fs(m, name, value, type, 1);
+}
+
 static void set_transform_uniforms(CF_Material m, CF_M4x4 mvp, CF_M4x4 model, CF_M4x4 normal_matrix, CF_M4x4 light_mvp, CF_M4x4 spot_mvp)
 {
-	cf_material_set_uniform_vs(m, "u_mvp", &mvp, CF_UNIFORM_TYPE_MAT4, 1);
-	cf_material_set_uniform_vs(m, "u_model", &model, CF_UNIFORM_TYPE_MAT4, 1);
-	cf_material_set_uniform_vs(m, "u_normal_matrix", &normal_matrix, CF_UNIFORM_TYPE_MAT4, 1);
-	cf_material_set_uniform_vs(m, "u_light_mvp", &light_mvp, CF_UNIFORM_TYPE_MAT4, 1);
-	cf_material_set_uniform_vs(m, "u_spot_mvp", &spot_mvp, CF_UNIFORM_TYPE_MAT4, 1);
+	set_uniform_both(m, "u_mvp", &mvp, CF_UNIFORM_TYPE_MAT4);
+	set_uniform_both(m, "u_model", &model, CF_UNIFORM_TYPE_MAT4);
+	set_uniform_both(m, "u_normal_matrix", &normal_matrix, CF_UNIFORM_TYPE_MAT4);
+	set_uniform_both(m, "u_light_mvp", &light_mvp, CF_UNIFORM_TYPE_MAT4);
+	set_uniform_both(m, "u_spot_mvp", &spot_mvp, CF_UNIFORM_TYPE_MAT4);
 }
 
 // three.js's crystal spin easing: hold still for `downtime` seconds, then ease through a full
@@ -202,6 +209,33 @@ static float stop_go_eased(float x, float downtime, float period)
 	float cycle = CF_FLOORF(x / period);
 	float tween = x - cycle * period;
 	return cycle + ease_in_out_cubic(linear_step(tween, downtime, period));
+}
+
+// three.js's pixelAlignFrustum. Without it the low-resolution grid is fixed in screen space while
+// the scene slides underneath it, so every edge crawls and shimmers as the camera moves. Nudging
+// the frustum by the camera's sub-pixel offset pins the grid to the world instead.
+static CF_M4x4 pixel_aligned_ortho(CF_M4x4 view, CF_V3 eye, float world_w, float world_h,
+                                   int lowres_w, int lowres_h, bool align)
+{
+	float half_w = world_w * 0.5f, half_h = world_h * 0.5f;
+	if (!align) return cf_ortho(-half_w, half_w, -half_h, half_h, ZNEAR, ZFAR);
+
+	float pixel_w = world_w / (float)lowres_w;
+	float pixel_h = world_h / (float)lowres_h;
+
+	// A view matrix is the inverse of the camera's transform, so its first two rows are the
+	// camera's right and up axes in world space.
+	CF_V3 cam_right = cf_v3(view.elements[0], view.elements[4], view.elements[8]);
+	CF_V3 cam_up = cf_v3(view.elements[1], view.elements[5], view.elements[9]);
+
+	// How far along those axes the camera sits, measured in pixels, and the leftover fraction.
+	float along_right = cf_dot(eye, cam_right) / pixel_w;
+	float along_up = cf_dot(eye, cam_up) / pixel_h;
+	float fract_x = (along_right - CF_ROUNDF(along_right)) * pixel_w;
+	float fract_y = (along_up - CF_ROUNDF(along_up)) * pixel_h;
+
+	return cf_ortho(-half_w - fract_x, half_w - fract_x,
+	                -half_h - fract_y, half_h - fract_y, ZNEAR, ZFAR);
 }
 
 static CF_M4x4 object_model(const Object* o, float time)
@@ -226,6 +260,8 @@ int main(int argc, char* argv[])
 	cf_fs_mount(data_dir, "/pixel_3d_data", false);
 	cf_string_free(data_dir);
 	cf_shader_directory("/pixel_3d_data");
+	cf_app_init_imgui();
+	cf_make_font_from_memory(proggy_data, proggy_sz, "ProggyClean");
 
 	// One vertex stage, three fragment stages. This is what the two-file cf_make_shader path is
 	// for: a draw shader has no hook for a custom vertex stage.
@@ -236,16 +272,19 @@ int main(int argc, char* argv[])
 
 	CF_Texture albedo = make_checker_texture();
 
-	CF_Mesh ground_mesh = build_ground(1.0f, 3.0f);
-	CF_Mesh box_mesh = build_box(0.2f, 1.5f);    // three.js: addBox(.4, 0, 0, PI/4)
-	CF_Mesh tall_mesh = build_box(0.25f, 1.5f);  // three.js: addBox(.5, -.5, -.5, PI/4)
+	// three.js uses a flat PlaneGeometry here. A closed slab instead, because a single-sided quad
+	// disappears under back-face culling on the GLES backend while surviving on SDL_GPU -- the two
+	// disagree on its winding. Closed geometry is correct on both and keeps culling on.
+	CF_Mesh ground_mesh = build_box(cf_v3(1.0f, 0.02f, 1.0f), 3.0f);
+	CF_Mesh box_mesh = build_box(cf_v3(0.2f, 0.2f, 0.2f), 1.5f);     // three.js: addBox(.4, 0, 0, PI/4)
+	CF_Mesh tall_mesh = build_box(cf_v3(0.25f, 0.25f, 0.25f), 1.5f); // three.js: addBox(.5, -.5, -.5, PI/4)
 	CF_Mesh crystal_mesh = build_icosahedron(0.2f);
 
 	// Colours lifted from the three.js example: 0x151729 background, a warm 0xfffecd key light,
 	// a cool 0x757f8e ambient, a 0xffc100 spot, and a 0x68b7e9 crystal with 0x4f7e8b emissive.
 	Object objects[MAX_OBJECTS];
 	int object_count = 0;
-	objects[object_count++] = (Object){ ground_mesh, cf_v3(0, 0, 0), 0, 0,
+	objects[object_count++] = (Object){ ground_mesh, cf_v3(0, -0.02f, 0), 0, 0,
 		cf_make_color_rgb_f(1.0f, 1.0f, 1.0f), cf_make_color_rgb_f(0, 0, 0), 1.0f, 30.0f, 0.03f };
 	objects[object_count++] = (Object){ box_mesh, cf_v3(0, 0.2f, 0), 0, CF_PI / 4.0f,
 		cf_make_color_rgb_f(1.0f, 1.0f, 1.0f), cf_make_color_rgb_f(0, 0, 0), 1.0f, 30.0f, 0.03f };
@@ -304,6 +343,8 @@ int main(int argc, char* argv[])
 	float normal_edge_strength = 0.3f; // three.js defaults.
 	float depth_edge_strength = 0.4f;
 	bool shadows_on = true;
+	bool pixel_aligned_panning = true; // three.js defaults this on.
+	bool show_controls = true;
 	int view_mode = 0;
 	int edge_mode = 0;
 	float t = 0;
@@ -312,18 +353,32 @@ int main(int argc, char* argv[])
 		cf_app_update(NULL);
 		t += CF_DELTA_TIME;
 
-		if (cf_key_just_pressed(CF_KEY_N)) view_mode = (view_mode == 1) ? 0 : 1;
-		if (cf_key_just_pressed(CF_KEY_D)) view_mode = (view_mode == 2) ? 0 : 2;
-		if (cf_key_just_pressed(CF_KEY_S)) shadows_on = !shadows_on;
-		if (cf_key_just_pressed(CF_KEY_SPACE)) edge_mode = (edge_mode + 1) % 4;
-		if (cf_key_just_pressed(CF_KEY_1) && pixel_size > 1) pixel_size--;
-		if (cf_key_just_pressed(CF_KEY_2) && pixel_size < 8) pixel_size++;
-		if (cf_key_just_pressed(CF_KEY_R)) auto_rotate = !auto_rotate;
+		// Dear ImGui gets first refusal on input: without this, dragging a slider also drags the
+		// camera, and a keyboard shortcut fires while typing a value into a widget.
+		ImGuiIO* io = ImGui_GetIO();
+		bool ui_wants_mouse = io->WantCaptureMouse;
+		bool ui_wants_keys = io->WantCaptureKeyboard;
+
+		if (!ui_wants_keys) {
+			if (cf_key_just_pressed(CF_KEY_N)) view_mode = (view_mode == 1) ? 0 : 1;
+			if (cf_key_just_pressed(CF_KEY_D)) view_mode = (view_mode == 2) ? 0 : 2;
+			if (cf_key_just_pressed(CF_KEY_S)) shadows_on = !shadows_on;
+			if (cf_key_just_pressed(CF_KEY_SPACE)) edge_mode = (edge_mode + 1) % 4;
+			// Same range as the slider, so the two ways of changing it agree.
+			if (cf_key_just_pressed(CF_KEY_1) && pixel_size > 1) pixel_size--;
+			if (cf_key_just_pressed(CF_KEY_2) && pixel_size < 16) pixel_size++;
+			if (cf_key_just_pressed(CF_KEY_R)) auto_rotate = !auto_rotate;
+			if (cf_key_just_pressed(CF_KEY_TAB)) show_controls = !show_controls;
+		}
 
 		// Drag to orbit. The idle spin is off by default so it never fights the mouse; grabbing
 		// the camera also switches it off if R turned it on.
 		float mx = cf_mouse_x(), my = cf_mouse_y();
-		if (cf_mouse_down(CF_MOUSE_BUTTON_LEFT)) {
+		if (ui_wants_mouse) {
+			// Drop any in-progress orbit, so letting go over a widget cannot resume it later
+			// with a stale anchor and snap the camera.
+			dragging = false;
+		} else if (cf_mouse_down(CF_MOUSE_BUTTON_LEFT)) {
 			if (dragging) {
 				cam_azimuth -= (mx - last_mx) * 0.01f;
 				cam_elevation += (my - last_my) * 0.01f;
@@ -340,7 +395,7 @@ int main(int argc, char* argv[])
 		last_my = my;
 
 		float wheel = cf_mouse_wheel_motion();
-		if (wheel != 0) view_height = cf_clamp(view_height - wheel * 0.25f, 0.8f, 8.0f);
+		if (wheel != 0 && !ui_wants_mouse) view_height = cf_clamp(view_height - wheel * 0.25f, 0.8f, 8.0f);
 
 		if (auto_rotate) cam_azimuth += CF_DELTA_TIME * 0.25f;
 
@@ -372,8 +427,8 @@ int main(int argc, char* argv[])
 		float ce = CF_COSF(cam_elevation);
 		CF_V3 eye = cf_mul(cf_v3(CF_SINF(cam_azimuth) * ce, CF_SINF(cam_elevation), CF_COSF(cam_azimuth) * ce), CAM_DISTANCE);
 		CF_M4x4 view = cf_look_at(eye, cf_v3(0, 0, 0), cf_v3(0, 1.0f, 0));
-		CF_M4x4 proj = cf_ortho(-aspect * view_height * 0.5f, aspect * view_height * 0.5f,
-		                        -view_height * 0.5f, view_height * 0.5f, ZNEAR, ZFAR);
+		CF_M4x4 proj = pixel_aligned_ortho(view, eye, aspect * view_height, view_height,
+		                                   lowres_w, lowres_h, pixel_aligned_panning);
 		CF_M4x4 view_proj = cf_mul(proj, view);
 
 		// --- Light: an orthographic view from the sun, tight enough to keep texel density up. ---
@@ -427,14 +482,14 @@ int main(int argc, char* argv[])
 		cf_material_set_texture_fs(lit_material, "u_albedo", albedo);
 		cf_material_set_texture_fs(lit_material, "u_shadow_map", cf_canvas_get_target(shadow_canvas));
 		cf_material_set_texture_fs(lit_material, "u_spot_shadow_map", cf_canvas_get_target(spot_shadow_canvas));
-		cf_material_set_uniform_fs(lit_material, "u_light_direction", &light_dir4, CF_UNIFORM_TYPE_FLOAT4, 1);
-		cf_material_set_uniform_fs(lit_material, "u_light_color", &light_color, CF_UNIFORM_TYPE_FLOAT4, 1);
-		cf_material_set_uniform_fs(lit_material, "u_ambient", &ambient, CF_UNIFORM_TYPE_FLOAT4, 1);
-		cf_material_set_uniform_fs(lit_material, "u_spot_pos", &spot_pos4, CF_UNIFORM_TYPE_FLOAT4, 1);
-		cf_material_set_uniform_fs(lit_material, "u_spot_dir", &spot_dir4, CF_UNIFORM_TYPE_FLOAT4, 1);
-		cf_material_set_uniform_fs(lit_material, "u_spot_color", &spot_color, CF_UNIFORM_TYPE_FLOAT4, 1);
-		cf_material_set_uniform_fs(lit_material, "u_spot_params", &spot_params, CF_UNIFORM_TYPE_FLOAT4, 1);
-		cf_material_set_uniform_fs(lit_material, "u_eye", &eye4, CF_UNIFORM_TYPE_FLOAT4, 1);
+		set_uniform_both(lit_material, "u_light_direction", &light_dir4, CF_UNIFORM_TYPE_FLOAT4);
+		set_uniform_both(lit_material, "u_light_color", &light_color, CF_UNIFORM_TYPE_FLOAT4);
+		set_uniform_both(lit_material, "u_ambient", &ambient, CF_UNIFORM_TYPE_FLOAT4);
+		set_uniform_both(lit_material, "u_spot_pos", &spot_pos4, CF_UNIFORM_TYPE_FLOAT4);
+		set_uniform_both(lit_material, "u_spot_dir", &spot_dir4, CF_UNIFORM_TYPE_FLOAT4);
+		set_uniform_both(lit_material, "u_spot_color", &spot_color, CF_UNIFORM_TYPE_FLOAT4);
+		set_uniform_both(lit_material, "u_spot_params", &spot_params, CF_UNIFORM_TYPE_FLOAT4);
+		set_uniform_both(lit_material, "u_eye", &eye4, CF_UNIFORM_TYPE_FLOAT4);
 
 		cf_apply_canvas(scene_canvas, true);
 		for (int i = 0; i < object_count; ++i) {
@@ -452,11 +507,11 @@ int main(int argc, char* argv[])
 			CF_V4 material = cf_v4(objects[i].textured, objects[i].shininess,
 			                       shadows_on ? 1.0f / (float)SHADOW_SIZE : 0.0f,
 			                       shadows_on ? 1.0f / (float)SPOT_SHADOW_SIZE : 0.0f);
-			cf_material_set_uniform_fs(lit_material, "u_base_color", &base, CF_UNIFORM_TYPE_FLOAT4, 1);
-			cf_material_set_uniform_fs(lit_material, "u_emissive", &emissive, CF_UNIFORM_TYPE_FLOAT4, 1);
+			set_uniform_both(lit_material, "u_base_color", &base, CF_UNIFORM_TYPE_FLOAT4);
+			set_uniform_both(lit_material, "u_emissive", &emissive, CF_UNIFORM_TYPE_FLOAT4);
 			CF_V4 specular = cf_v4(objects[i].specular, objects[i].specular, objects[i].specular, 1.0f);
-			cf_material_set_uniform_fs(lit_material, "u_specular", &specular, CF_UNIFORM_TYPE_FLOAT4, 1);
-			cf_material_set_uniform_fs(lit_material, "u_material", &material, CF_UNIFORM_TYPE_FLOAT4, 1);
+			set_uniform_both(lit_material, "u_specular", &specular, CF_UNIFORM_TYPE_FLOAT4);
+			set_uniform_both(lit_material, "u_material", &material, CF_UNIFORM_TYPE_FLOAT4);
 
 			cf_apply_mesh(objects[i].mesh);
 			cf_apply_shader(lit_shader, lit_material);
@@ -493,6 +548,35 @@ int main(int argc, char* argv[])
 		cf_draw_pop_shape_aa();
 		cf_draw_pop_shader();
 		cf_draw_pop_filter();
+
+		// --- Shortcut hints along the bottom. Drawn after the composite and outside the
+		//     nearest-filter push, so the text stays crisp rather than being pixelated. ---
+		{
+			const char* hints = "drag orbit   wheel zoom   TAB controls   SPACE edges   N normals   D depth   S shadows   1/2 pixel size   R spin";
+			cf_push_font("ProggyClean");
+			cf_push_font_size(13.0f);
+			CF_V2 size = cf_text_size(hints, -1);
+			CF_V2 at = cf_v2(-size.x * 0.5f, -h * 0.5f + size.y + 10.0f);
+			// A dark pass offset by a pixel keeps the text legible over the bright ground.
+			cf_draw_push_color(cf_make_color_rgba_f(0, 0, 0, 0.65f));
+			cf_draw_text(hints, cf_v2(at.x + 1.0f, at.y - 1.0f), -1);
+			cf_draw_pop_color();
+			cf_draw_push_color(cf_make_color_rgb_f(0.88f, 0.90f, 0.95f));
+			cf_draw_text(hints, at, -1);
+			cf_draw_pop_color();
+			cf_pop_font_size();
+			cf_pop_font();
+		}
+
+		// --- Controls, mirroring the dat.GUI panel in the three.js example. ---
+		if (show_controls) {
+			ImGui_Begin("Controls", &show_controls, 0);
+			ImGui_SliderInt("pixelSize", &pixel_size, 1, 16);
+			ImGui_SliderFloat("normalEdgeStrength", &normal_edge_strength, 0.0f, 2.0f);
+			ImGui_SliderFloat("depthEdgeStrength", &depth_edge_strength, 0.0f, 1.0f);
+			ImGui_Checkbox("pixelAlignedPanning", &pixel_aligned_panning);
+			ImGui_End();
+		}
 
 		cf_app_draw_onto_screen(true);
 

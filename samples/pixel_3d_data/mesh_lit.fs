@@ -22,18 +22,7 @@ layout (set = 2, binding = 1) uniform sampler2D u_shadow_map;
 layout (set = 2, binding = 2) uniform sampler2D u_spot_shadow_map;
 
 layout (set = 3, binding = 0) uniform uniform_block {
-	vec4 u_light_direction; // xyz: direction the light travels
-	vec4 u_light_color;
-	vec4 u_ambient;
-	vec4 u_spot_pos;        // xyz: world position
-	vec4 u_spot_dir;        // xyz: direction the cone points
-	vec4 u_spot_color;      // rgb, a: intensity
-	vec4 u_spot_params;     // x: cos(angle), y: penumbra, z: range, w: decay
-	vec4 u_base_color;      // per-object tint
-	vec4 u_emissive;        // per-object emissive
-	vec4 u_specular;        // rgb: specular colour (three.js's MeshPhongMaterial.specular)
-	vec4 u_material;        // x: 1 to sample u_albedo, y: shininess, z/w: shadow texel sizes
-	vec4 u_eye;             // xyz: camera world position, for the specular term
+#include "uniform_members.shd"
 };
 
 // Blinn-Phong's normalization factor. The light colours arrive pre-divided by PI (the Lambert
