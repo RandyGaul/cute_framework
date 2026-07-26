@@ -31,7 +31,23 @@ jobs:
         run: gcc tools/docs_parser.c -Ilibraries -o docsparser
 
       - name: Generate documentation
-        run: ./docsparser
+        run: |
+          set -o pipefail
+          ./docsparser | tee /tmp/docsparser.log
+
+      - name: Check for new undocumented references
+        run: |
+          grep '^  ' /tmp/docsparser.log | sed 's/^  //' | sort > /tmp/docs-warnings-current.txt
+          sort tools/docs_warnings_baseline.txt > /tmp/docs-warnings-baseline.txt
+          NEW=$(comm -13 /tmp/docs-warnings-baseline.txt /tmp/docs-warnings-current.txt)
+          if [ -n "$NEW" ]; then
+            echo "::error::New unresolved documentation reference(s) -- not in tools/docs_warnings_baseline.txt:"
+            echo "$NEW"
+            echo ""
+            echo "If this is a real symbol that's now documented, or the baseline needs updating for another reason,"
+            echo "regenerate tools/docs_warnings_baseline.txt from a local docsparser run."
+            exit 1
+          fi
 
       # Shaders compile at runtime on all platforms (including web), so the web
       # sample builds below need no precompiled shader headers.
