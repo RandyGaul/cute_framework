@@ -81,9 +81,9 @@ jobs:
       - name: Build documentation
         run: |
           set -o pipefail
-          mkdocs build --clean 2>&1 | tee build.log
+          mkdocs build --clean 2>&1 | tee /tmp/mkdocs-build.log
           mkdocs --version
-          if grep -q "is not found among documentation files" build.log; then
+          if grep -qE "contains a link '[^']*\.md'.*is not found among documentation files" /tmp/mkdocs-build.log; then
             echo "::error::Broken internal documentation link(s) -- see warnings above."
             exit 1
           fi
