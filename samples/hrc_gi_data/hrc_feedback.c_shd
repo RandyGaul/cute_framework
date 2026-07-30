@@ -1,4 +1,4 @@
-// Multibounce feedback, amitabha multibounce.rs semantics: add last frame's
+// Multibounce feedback: add last frame's
 // fluence AT THIS CELL, tinted by the surface's diffuse albedo, into the scene
 // emissivity. Runs after the scene draws its channels and before the cascade, so
 // each frame folds in one more bounce; with loop gain < 1 the series converges
@@ -11,7 +11,7 @@
 // included -- while still blocking everything behind it.
 //
 // Per-cell feedback only works because diffuse solids carry FINITE absorption
-// (0.5/px, like amitabha's walls), not an effectively-infinite coefficient:
+// (0.5/px), not an effectively-infinite coefficient:
 // light then penetrates the first few pixels of a face and those cells hold real
 // fluence to re-emit, brightest at the surface and fading inward -- which is
 // exactly how the reference's walls read. A solid at 30000 starves this loop

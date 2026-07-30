@@ -1,7 +1,7 @@
 // Display/composite for the exact HRC path: sum the 4 per-rotation radiance
 // textures, write linear fluence (feedback) and the AgX-tonemapped display image.
 //
-// No grid->world upscale here at ANY cascade scale: ami_ns_finish gathers per
+// No grid->world upscale here at ANY cascade scale: hrc_finish gathers per
 // display pixel (display-res c-1), so the radiance textures are always full
 // resolution and this pass just fetches them.
 
@@ -108,7 +108,7 @@ void main()
 
 	// Feedback/linear output stays pure INCIDENT light. Emission must not go in here:
 	// it would make every emitter re-inject its own output through the multibounce
-	// loop and amplify itself, and this is also the buffer the amitabha equivalence
+	// loop and amplify itself, and this is also the buffer the reference equivalence
 	// check reads.
 	imageStore(u_fluence_lin, gid, vec4(lin, 1.0));
 

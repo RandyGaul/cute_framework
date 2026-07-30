@@ -1,17 +1,15 @@
-// Non-square generalization of ami_trace (store_level). Unified 2-group model:
+// HRC trace: direct-trace one cascade level's ray intervals. Unified 2-group model:
 // each dispatch handles ONE rotation group of 4 segments (2 rotations x 2 y_offsets).
 //   Group HORIZ: rotations {0=+x, 2=-x}, cascade axis = screen width.
 //   Group VERT:  rotations {1=+y, 3=-y}, cascade axis = screen height.
 // All per-rotation dims (cascade/cross grid + world span) are derived from the
-// rotation's screen-axis vectors + (grid_w,grid_h,world_w,world_h). At square
-// dims this reproduces the packed-8 ami_trace per-rotation.
+// rotation's screen-axis vectors + (grid_w,grid_h,world_w,world_h).
 //
 // Segment s in [0,4): rotation = (s<2)? u_rot0 : u_rot1,  y_offset = s & 1.
 // yy in [0, 4*cross_grid); local cy = yy - s*cross_grid.
 // size_x = ceil_div(cascade_grid, 2^n), directions = 2<<n, nrays = dirs+1.
 // Non-pow2 safe: sizing uses ceil_div and to_world normalizes in level-0 units.
-// T layout: idx = (x*nrays + ray)*(4*cross) + yy -- yy INNERMOST (amitabha's
-// CellY-innermost axis order). The cross extent never shrinks with cascade
+// T layout: idx = (x*nrays + ray)*(4*cross) + yy -- yy INNERMOST. The cross extent never shrinks with cascade
 // level, so warps of consecutive yy stay fully coalesced at every level; an
 // x-innermost layout degrades at depth as size_x collapses below a warp.
 // One fused uvec4 per ray holds rad+trn (6 halves packed, w spare) -- a single
@@ -101,7 +99,7 @@ vec2 to_world(vec2 cell_local, int rot, int y_offset)
 
 int ray_offset(int dir) { return dir - (directions_of() / 2); }
 
-// Voxel DDA march through emission/opacity (amitabha VoxelTracer::trace).
+// Voxel DDA march through the emission/opacity canvases.
 // `start`/`end` arrive in HRC space; we march in FULL-RES scene space so
 // occlusion stays sharp even when the probe lattice is half/quarter res (thin
 // walls must not be stepped over). Segment lengths are therefore in full-res

@@ -53,31 +53,16 @@
 
 //--------------------------------------------------------------------------------------------------
 // Configuration.
-//
-// The cave is authored in a fixed 1024x1024 DESIGN space (GI_REF). The runtime
-// WORLD (scene canvases + GI grid + window) can be any non-square resolution: the
-// design scene is uniformly scaled by scene_s and centered into the world, so
-// shapes never distort and a square world reduces exactly to the old 1x layout.
-// The HRC cascade runs genuinely rectangular over the full world grid.
 
-#define GI_REF      1024      // design-space resolution the scene is authored in
-#define GI_UPSCALE  2         // world pixels per cascade grid cell (per axis)
+#define GI_REF      1024      // default world resolution (HRC_RES overrides)
 #define GI_N_MAX    11        // array sizing: log2_ceil of the largest grid axis
-#define GI_TRACE_LEVELS 3  // direct-trace levels 0..2, merge_up (extend) above (amitabha uses 2)
-#define GI_WG    16
+#define GI_TRACE_LEVELS 3     // direct-trace levels 0..2, extend the rest
 #define GI_ABS_THRESHOLD 0.1f
 
-// Runtime world / grid dimensions (set in main() from the window size).
-int world_w = GI_REF, world_h = GI_REF;   // scene canvas + display resolution (view + 2*pad)
+// Runtime world dimensions (set in main() from the window size).
+int world_w = GI_REF, world_h = GI_REF;   // scene canvas + cascade resolution (view + 2*pad)
 int view_w = GI_REF, view_h = GI_REF;     // the window: centre crop of the world
 int g_pad = 0;                            // HRC_PAD: off-screen light ring, px per side
-int grid_w = GI_REF / GI_UPSCALE;         // cascade probe lattice (world / upscale)
-int grid_h = GI_REF / GI_UPSCALE;
-int n_horiz = 9, n_vert = 9, n_max = 9;       // per-axis cascade depth (log2_ceil grid)
-
-// Design-space -> world transform: uniform scale + centering offset.
-float scene_s = 1.0f;
-float scene_ox = 0.0f, scene_oy = 0.0f;
 
 
 
@@ -112,8 +97,7 @@ CF_Shader load_draw_shader(const char* path)
 }
 
 //--------------------------------------------------------------------------------------------------
-// HRC state (trimmed from samples/hrc.c: fixed grid 512, trace 3, cminus1 on,
-// minmax upscale, dense directions, no debug modes).
+// HRC state.
 
 typedef struct Hrc
 {
@@ -163,11 +147,6 @@ void hrc_init()
 {
 	CF_MEMSET(&hrc, 0, sizeof(hrc));
 
-	// Per-axis cascade depth. Horizontal rotations (0,2) cascade along the width
-	// (grid_w); vertical rotations (1,3) along the height (grid_h).
-	n_horiz = hrc_log2_ceil(grid_w);
-	n_vert = hrc_log2_ceil(grid_h);
-	n_max = n_horiz > n_vert ? n_horiz : n_vert;
 
 
 	hrc.emissivity = hrc_make_canvas(world_w, world_h, CF_PIXEL_FORMAT_R16G16B16A16_FLOAT, CF_FILTER_NEAREST);
@@ -188,21 +167,13 @@ void hrc_shutdown()
 }
 
 //--------------------------------------------------------------------------------------------------
-// Feature toggles (F1 overlay).
-
-
-
-// Runtime toggles. Only the ones that actually drive something live here; the
-// cave sample this grew out of also declared gi/fog/water/overlay flags that were
-// never wired to anything, so they are gone rather than sitting on a key that
-// does nothing.
+// Runtime toggles.
 int bounce_on = 1;  // multibounce feedback pass
 int blur_on = 1;    // paper's 1px cross blur over the fluence (checkerboard fix)
-float smoothed_fps = 60.0f;
 
 // Perf knobs, all env-driven so a timing matrix needs no rebuilds.
 //   HRC_TRACE_LEVELS=n  direct-trace levels 0..n-1, merge_up (extend) above
-//                       (default GI_TRACE_LEVELS; amitabha uses 2)
+//                       (default GI_TRACE_LEVELS)
 //   HRC_MAX_LEVELS=n    stop the cascade after n levels (0 = full depth). Far
 //                       light beyond the capped interval length is lost, which
 //                       an enclosed room never notices.
@@ -225,83 +196,9 @@ float g_abs_zoom = 1.0f;
 // headless capture always renders the same frame and stays reproducible.
 float g_scene_time = 0.0f;
 
-// HRC_TESTLIGHT: isolated-light debug mode that exercises the rectangular
-// cascade in isolation (no water/rock/jelly/drip/runes/roots, no design-space
-// letterbox). The scene is authored DIRECTLY in world space filling the window.
-//   1 = a single centered 8x8 emissive square (the paper's minimum supported
-//       emitter, matching samples/hrc.c's known-good static test light). Pure
-//       radial-symmetry test: a centered point light must read the same at any
-//       world aspect (circle, no directional bias, no spokes).
-//   2 = the 8x8 light plus two box occluders offset from center (shadow-shape
-//       check: shadows must be straight and correctly oriented).
-int testlight = 0;
-float testlight_e = 2.0f; // HRC_TESTLIGHT_E: emitter linear emission (per channel)
-float testlight_r = 8.0f; // HRC_TESTLIGHT_R: emitter radius in world units. Default 8,
-                          // the paper's minimum supported source size -- a filled disc of this
-                          // radius should spread/soften the ±45° seam spokes that a near-point
-                          // source maximizes. Sweep smaller (1/2) to reproduce the point-source X.
-float testlight_ox = 0.0f, testlight_oy = 0.0f; // HRC_TESTLIGHT_OX/OY: light offset from
-                                                // world center, as a fraction of world_w/world_h
-
-//--------------------------------------------------------------------------------------------------
-// Cascade compute pipeline (fixed config).
-
-
-// Multibounce feedback: inject last frame's fluence, tinted by albedo, into emissivity.
 
 //--------------------------------------------------------------------------------------------------
 // Drawing helpers.
-
-// Project the world canvas (world_w x world_h) and fold in the design->world
-// scene transform, so all design-authored draws (rock, water, jelly, ...) land
-// uniformly scaled + centered into the world. At a square world this is the
-// identity 1x layout.
-// The design box mapped into the world, as a framebuffer-pixel scissor rect
-// (y-down from the top). Clips scene draws to the design region so content
-// authored just past the design edge (the ceiling overshoot + moon emitter
-// above y=1024) stays out of the letterbox margins -- matching the square case,
-// where the canvas bounds did the clipping. Reduces to the full canvas at 1x.
-CF_Rect scene_scissor()
-{
-	int box = (int)(GI_REF * scene_s + 0.5f);
-	CF_Rect r;
-	r.x = (int)(scene_ox + 0.5f);
-	r.w = box;
-	r.y = world_h - ((int)(scene_oy + 0.5f) + box);
-	r.h = box;
-	return r;
-}
-
-void begin_canvas_draw()
-{
-	cf_draw_push();
-	cf_draw_push_scissor(scene_scissor());
-	cf_draw_TSR_absolute(cf_v2(0, 0), cf_v2(1, 1), 0);
-	cf_draw_projection(cf_ortho_2d(0, 0, (float)world_w, (float)world_h));
-	cf_draw_translate(-world_w * 0.5f, -world_h * 0.5f);
-	cf_draw_translate(scene_ox, scene_oy);
-	cf_draw_scale(scene_s, scene_s);
-}
-
-void end_canvas_draw()
-{
-	cf_draw_pop_scissor();
-	cf_draw_pop();
-}
-
-// Design-space projection for the density canvas (which is authored and sampled
-// purely in the fixed REF design box, independent of the world resolution). The
-// water shader reconstructs design coords from the density uv, then maps to the
-// world fluence itself.
-void begin_design_draw()
-{
-	cf_draw_push();
-	float ws = (float)GI_REF;
-	float half = ws * 0.5f;
-	cf_draw_TSR_absolute(cf_v2(0, 0), cf_v2(1, 1), 0);
-	cf_draw_projection(cf_ortho_2d(0, 0, ws, ws));
-	cf_draw_translate(-half, -half);
-}
 
 // Premultiplied alpha blending onto an f16 canvas: alpha-1 draws replace what's below.
 void push_f16_render_state()
@@ -317,22 +214,9 @@ void push_f16_render_state()
 	cf_draw_push_render_state(rs);
 }
 
-// Pure additive blending onto an f16 canvas (particle density splats).
-void push_additive_f16_render_state()
-{
-	CF_RenderState rs = cf_render_state_defaults();
-	rs.blend.pixel_format = CF_PIXEL_FORMAT_R16G16B16A16_FLOAT;
-	rs.blend.rgb_src_blend_factor = CF_BLENDFACTOR_ONE;
-	rs.blend.rgb_dst_blend_factor = CF_BLENDFACTOR_ONE;
-	rs.blend.rgb_op = CF_BLEND_OP_ADD;
-	rs.blend.alpha_src_blend_factor = CF_BLENDFACTOR_ONE;
-	rs.blend.alpha_dst_blend_factor = CF_BLENDFACTOR_ONE;
-	rs.blend.alpha_op = CF_BLEND_OP_ADD;
-	cf_draw_push_render_state(rs);
-}
 
 //--------------------------------------------------------------------------------------------------
-// HDR draw-color smoke test: draw (4,2,1) to an rgba16f canvas and read it back.
+// f16 helpers.
 
 float half_to_float(uint16_t h)
 {
@@ -346,38 +230,6 @@ float half_to_float(uint16_t h)
 	return v.f;
 }
 
-void hdr_smoke_test()
-{
-	int n = 64;
-	CF_Canvas c = hrc_make_canvas(n, n, CF_PIXEL_FORMAT_R16G16B16A16_FLOAT, CF_FILTER_NEAREST);
-	cf_draw_push();
-	cf_draw_TSR_absolute(cf_v2(0, 0), cf_v2(1, 1), 0);
-	cf_draw_projection(cf_ortho_2d(0, 0, (float)n, (float)n));
-	cf_draw_translate((float)-n * 0.5f, (float)-n * 0.5f);
-	push_f16_render_state();
-	cf_draw_push_color(cf_make_color_rgb_f(4.0f, 2.0f, 1.0f));
-	cf_draw_quad_fill(cf_make_aabb(cf_v2(0, 0), cf_v2((float)n, (float)n)), 0);
-	cf_draw_pop_color();
-	cf_draw_pop_render_state();
-	cf_render_to(c, true);
-	cf_draw_pop();
-
-	// Submit the frame's GPU work so the readback sees the draw.
-	cf_app_draw_onto_screen(false);
-
-	CF_Readback rb = cf_canvas_readback(c);
-	while (!cf_readback_ready(rb)) {}
-	uint16_t* px = (uint16_t*)cf_alloc(n * n * 8);
-	cf_readback_data(rb, px, n * n * 8);
-	cf_destroy_readback(rb);
-	int center = (n / 2 * n + n / 2) * 4;
-	printf("HDR smoke test: drew (4,2,1), read back (%.3f, %.3f, %.3f) -- %s\n",
-		half_to_float(px[center + 0]), half_to_float(px[center + 1]), half_to_float(px[center + 2]),
-		half_to_float(px[center]) > 3.5f ? "PASS" : "FAIL");
-	fflush(stdout);
-	cf_free(px);
-	cf_destroy_canvas(c);
-}
 
 //--------------------------------------------------------------------------------------------------
 // Entry point.
@@ -395,48 +247,13 @@ static void ap_hsv(float h, float s, float v, float* r, float* g, float* b)
 	*r = rr + m; *g = gg + m; *b = bb + m;
 }
 
-static void ap_rect(float cx, float cy, float hw, float hh)
-{
-	cf_draw_quad_fill(cf_make_aabb(cf_v2(cx - hw, cy - hh), cf_v2(cx + hw, cy + hh)), 0);
-}
 
-// Compute-shader rasterizer: exact replica of amitabha's rect_brush coverage
-// (|pos+0.5 - center| < size). One dispatch per rect, later overwrites earlier.
-static CF_ComputeShader g_cs_raster;
-static CF_Material      g_m_raster;
-static int              g_raster_inited = 0;
-static float            g_write_emission = 1.0f;
-static void ami_raster_shape(CF_Texture emis_tex, CF_Texture opac_tex, int D,
-                             float is_circle, float radius,
-                             float cx, float cy, float sx, float sy,
-                             float er, float eg, float eb,
-                             float or_, float og, float ob)
-{
-	float rect[4]  = { cx, cy, sx, sy };
-	float em[4]    = { er, eg, eb, 0.0f };
-	float op[4]    = { or_, og, ob, 0.0f };
-	float shape[4] = { is_circle, radius, g_write_emission, 0.0f };
-	cf_material_set_uniform_cs(g_m_raster, "u_rect",       rect,  CF_UNIFORM_TYPE_FLOAT4, 1);
-	cf_material_set_uniform_cs(g_m_raster, "u_emission_c", em,    CF_UNIFORM_TYPE_FLOAT4, 1);
-	cf_material_set_uniform_cs(g_m_raster, "u_opacity_c",  op,    CF_UNIFORM_TYPE_FLOAT4, 1);
-	cf_material_set_uniform_cs(g_m_raster, "u_shape",      shape, CF_UNIFORM_TYPE_FLOAT4, 1);
-	CF_ComputeDispatch d = cf_compute_dispatch_defaults(hrc_div_ceil(D, 8), hrc_div_ceil(D, 8), 1);
-	CF_Texture rw[2] = { emis_tex, opac_tex };
-	d.rw_textures = rw; d.rw_texture_count = 2;
-	cf_dispatch_compute(g_cs_raster, g_m_raster, d);
-}
-static void ami_raster_rect(CF_Texture et, CF_Texture ot, int D,
-                            float cx, float cy, float sx, float sy,
-                            float er, float eg, float eb, float or_, float og, float ob)
-{
-	ami_raster_shape(et, ot, D, 0.0f, 0.0f, cx, cy, sx, sy, er, eg, eb, or_, og, ob);
-}
 
 
 //--------------------------------------------------------------------------------------------------
 // Non-square exact HRC (unified 2-group model): horizontal group (rot 0,2;
 // cascade=width) + vertical group (rot 1,3; cascade=height), each 4 segments.
-// Handles square and non-square uniformly. ami_ns_trace/merge/finish + ami_display.
+// Handles square and non-square uniformly. hrc_trace/merge/finish + hrc_display.
 static struct {
 	int inited, maxd, nlev;
 	// Tbuf: fused rad+trn per ray (one uvec4 = 6 packed halves), so every trace/
@@ -448,14 +265,12 @@ static struct {
 	CF_Canvas dir[3];   // directional radiance, 2D Fourier L1: a0, a1, b1
 	CF_ComputeShader cs_trace, cs_extend, cs_merge, cs_finish, cs_display, cs_feedback;
 	CF_Material m_trace, m_extend, m_merge, m_finish, m_display, m_feedback;
-} nsx;
+} gi;
 
 const char* scene_name(void);
 
-// Display scale for the exact path's raw-AgX. The cave's authored emissivity sits
-// ~6x below amitabha's raw-AgX range; test scenes use amitabha-scale emission (1.0).
-#define GI_DISPLAY_SCALE 6.0f
-float g_ns_exposure = GI_DISPLAY_SCALE;
+// Per-scene display exposure for the raw-AgX tonemap (hrc_scene_draw sets it).
+float g_exposure = 1.0f;
 
 // HRC_SCALE: run the cascade at 1/N resolution and upscale on display.
 // The DDA still marches the FULL-RES scene, so occlusion stays sharp; only the
@@ -468,16 +283,16 @@ int hrc_h(void) { return world_h / g_hrc_scale; }
 // the largest configuration -- so changing scale only changes how much of it is
 // used. Reallocating instead would mean destroying buffers the GPU may still be
 // reading from, which is not worth it for a display toggle.
-static void hrc_ns_apply_scale(void)
+static void hrc_apply_scale(void)
 {
 	int gw = hrc_w() / 2, gh = hrc_h() / 2;
-	nsx.maxd = gw > gh ? gw : gh;
-	nsx.nlev = hrc_log2_ceil(nsx.maxd) + 1;   // levels 0..nlev-1
+	gi.maxd = gw > gh ? gw : gh;
+	gi.nlev = hrc_log2_ceil(gi.maxd) + 1;   // levels 0..nlev-1
 }
 
-static void hrc_ns_init_once(void)
+static void hrc_init_once(void)
 {
-	if (nsx.inited) { hrc_ns_apply_scale(); return; }
+	if (gi.inited) { hrc_apply_scale(); return; }
 	// Allocate at scale 1 regardless of the starting scale, so the keys never need
 	// to resize anything. MAXD/NLEV here are capacities, not the working extents.
 	int gw = world_w / 2, gh = world_h / 2;
@@ -486,96 +301,96 @@ static void hrc_ns_init_once(void)
 	for (int n = 0; n < NLEV; n++) {
 		int sx = hrc_div_ceil(MAXD, 1 << n), dirs = 2 << n, nrays = dirs + 1;
 		int elems = sx * (4 * MAXD) * nrays;
-		nsx.Tbuf[n] = hrc_make_buf(elems * 2, 1); // uvec4 per element (hrc_make_buf sizes in 8-byte units)
+		gi.Tbuf[n] = hrc_make_buf(elems * 2, 1); // uvec4 per element (hrc_make_buf sizes in 8-byte units)
 	}
 	int maxR = 0;
 	for (int n = 0; n < NLEV; n++) { int e = hrc_div_ceil(MAXD, 1 << n) * (4 * MAXD) * (2 << n); if (e > maxR) maxR = e; }
-	nsx.Rbuf[0] = hrc_make_buf(maxR, 1);
-	nsx.Rbuf[1] = hrc_make_buf(maxR, 1);
-	nsx.Rzero   = hrc_make_buf(maxR, 1);
-	{ void* z = cf_calloc((size_t)maxR * 8, 1); cf_update_storage_buffer(nsx.Rzero, z, (size_t)maxR * 8); cf_free(z); }
+	gi.Rbuf[0] = hrc_make_buf(maxR, 1);
+	gi.Rbuf[1] = hrc_make_buf(maxR, 1);
+	gi.Rzero   = hrc_make_buf(maxR, 1);
+	{ void* z = cf_calloc((size_t)maxR * 8, 1); cf_update_storage_buffer(gi.Rzero, z, (size_t)maxR * 8); cf_free(z); }
 	int r0sz = MAXD * 2 * (4 * MAXD); // = 8*MAXD*MAXD
-	nsx.R0h = hrc_make_buf(r0sz, 1);
-	nsx.R0v = hrc_make_buf(r0sz, 1);
+	gi.R0h = hrc_make_buf(r0sz, 1);
+	gi.R0v = hrc_make_buf(r0sz, 1);
 	for (int i = 0; i < 3; i++)
-		nsx.dir[i] = hrc_make_canvas(world_w, world_h, CF_PIXEL_FORMAT_R16G16B16A16_FLOAT, CF_FILTER_NEAREST);
-	nsx.cs_trace   = load_compute_shader("/hrc_gi_data/ami_ns_trace.c_shd");
-	nsx.cs_extend  = load_compute_shader("/hrc_gi_data/ami_ns_extend.c_shd");
-	nsx.cs_merge   = load_compute_shader("/hrc_gi_data/ami_ns_merge.c_shd");
-	nsx.cs_finish  = load_compute_shader("/hrc_gi_data/ami_ns_finish.c_shd");
-	nsx.cs_display = load_compute_shader("/hrc_gi_data/ami_display.c_shd");
-	nsx.cs_feedback= load_compute_shader("/hrc_gi_data/ami_feedback.c_shd");
-	nsx.m_trace = cf_make_material(); nsx.m_extend = cf_make_material(); nsx.m_merge = cf_make_material();
-	nsx.m_finish = cf_make_material(); nsx.m_display = cf_make_material();
-	nsx.m_feedback = cf_make_material();
-	nsx.inited = 1;
-	hrc_ns_apply_scale();
+		gi.dir[i] = hrc_make_canvas(world_w, world_h, CF_PIXEL_FORMAT_R16G16B16A16_FLOAT, CF_FILTER_NEAREST);
+	gi.cs_trace   = load_compute_shader("/hrc_gi_data/hrc_trace.c_shd");
+	gi.cs_extend  = load_compute_shader("/hrc_gi_data/hrc_extend.c_shd");
+	gi.cs_merge   = load_compute_shader("/hrc_gi_data/hrc_merge.c_shd");
+	gi.cs_finish  = load_compute_shader("/hrc_gi_data/hrc_finish.c_shd");
+	gi.cs_display = load_compute_shader("/hrc_gi_data/hrc_display.c_shd");
+	gi.cs_feedback= load_compute_shader("/hrc_gi_data/hrc_feedback.c_shd");
+	gi.m_trace = cf_make_material(); gi.m_extend = cf_make_material(); gi.m_merge = cf_make_material();
+	gi.m_finish = cf_make_material(); gi.m_display = cf_make_material();
+	gi.m_feedback = cf_make_material();
+	gi.inited = 1;
+	hrc_apply_scale();
 }
 
 // Run one rotation group (trace -> merge -> R0_group).
-static void hrc_ns_group(CF_Texture emis_tex, CF_Texture opac_tex,
+static void hrc_group(CF_Texture emis_tex, CF_Texture opac_tex,
                          int rot0, int rot1, int casc_grid, int cross_grid, CF_StorageBuffer R0out)
 {
 	int NLEV = hrc_log2_ceil(casc_grid) + 1;
 	if (g_max_levels > 0 && NLEV > g_max_levels) NLEV = g_max_levels > 2 ? g_max_levels : 2;
 	// Direct-trace only the lowest g_trace_levels; build the rest with merge_up
-	// (ami_ns_extend), which composites two half-length intervals from the level
+	// (hrc_extend), which composites two half-length intervals from the level
 	// below instead of re-marching the scene. Direct tracing costs O(2^n) per probe
-	// at level n, so the deep levels dominate -- amitabha traces 2 by default.
+	// at level n, so the deep levels dominate -- the reference traces 2 by default.
 	for (int n = 0; !skip_pass('t') && n < NLEV && n < g_trace_levels; n++) {
 		int sx = hrc_div_ceil(casc_grid, 1 << n), dirs = 2 << n, nrays = dirs + 1;
 		int P[10] = { n, hrc_w()/2, hrc_h()/2, hrc_w(), hrc_h(), rot0, rot1, g_hrc_scale, world_w, world_h };
-		cf_material_set_uniform_cs(nsx.m_trace, "u_level",   P + 0, CF_UNIFORM_TYPE_INT, 1);
-		cf_material_set_uniform_cs(nsx.m_trace, "u_grid_w",  P + 1, CF_UNIFORM_TYPE_INT, 1);
-		cf_material_set_uniform_cs(nsx.m_trace, "u_grid_h",  P + 2, CF_UNIFORM_TYPE_INT, 1);
-		cf_material_set_uniform_cs(nsx.m_trace, "u_world_w", P + 3, CF_UNIFORM_TYPE_INT, 1);
-		cf_material_set_uniform_cs(nsx.m_trace, "u_world_h", P + 4, CF_UNIFORM_TYPE_INT, 1);
-		cf_material_set_uniform_cs(nsx.m_trace, "u_rot0",    P + 5, CF_UNIFORM_TYPE_INT, 1);
-		cf_material_set_uniform_cs(nsx.m_trace, "u_rot1",    P + 6, CF_UNIFORM_TYPE_INT, 1);
-		cf_material_set_uniform_cs(nsx.m_trace, "u_scale",   P + 7, CF_UNIFORM_TYPE_INT, 1);
-		cf_material_set_uniform_cs(nsx.m_trace, "u_full_w",  P + 8, CF_UNIFORM_TYPE_INT, 1);
-		cf_material_set_uniform_cs(nsx.m_trace, "u_full_h",  P + 9, CF_UNIFORM_TYPE_INT, 1);
-		cf_material_set_uniform_cs(nsx.m_trace, "u_abs_zoom", &g_abs_zoom, CF_UNIFORM_TYPE_FLOAT, 1);
-		cf_material_set_texture_cs(nsx.m_trace, "u_emission", emis_tex);
-		cf_material_set_texture_cs(nsx.m_trace, "u_opacity",  opac_tex);
+		cf_material_set_uniform_cs(gi.m_trace, "u_level",   P + 0, CF_UNIFORM_TYPE_INT, 1);
+		cf_material_set_uniform_cs(gi.m_trace, "u_grid_w",  P + 1, CF_UNIFORM_TYPE_INT, 1);
+		cf_material_set_uniform_cs(gi.m_trace, "u_grid_h",  P + 2, CF_UNIFORM_TYPE_INT, 1);
+		cf_material_set_uniform_cs(gi.m_trace, "u_world_w", P + 3, CF_UNIFORM_TYPE_INT, 1);
+		cf_material_set_uniform_cs(gi.m_trace, "u_world_h", P + 4, CF_UNIFORM_TYPE_INT, 1);
+		cf_material_set_uniform_cs(gi.m_trace, "u_rot0",    P + 5, CF_UNIFORM_TYPE_INT, 1);
+		cf_material_set_uniform_cs(gi.m_trace, "u_rot1",    P + 6, CF_UNIFORM_TYPE_INT, 1);
+		cf_material_set_uniform_cs(gi.m_trace, "u_scale",   P + 7, CF_UNIFORM_TYPE_INT, 1);
+		cf_material_set_uniform_cs(gi.m_trace, "u_full_w",  P + 8, CF_UNIFORM_TYPE_INT, 1);
+		cf_material_set_uniform_cs(gi.m_trace, "u_full_h",  P + 9, CF_UNIFORM_TYPE_INT, 1);
+		cf_material_set_uniform_cs(gi.m_trace, "u_abs_zoom", &g_abs_zoom, CF_UNIFORM_TYPE_FLOAT, 1);
+		cf_material_set_texture_cs(gi.m_trace, "u_emission", emis_tex);
+		cf_material_set_texture_cs(gi.m_trace, "u_opacity",  opac_tex);
 		CF_ComputeDispatch d = cf_compute_dispatch_defaults(hrc_div_ceil(4 * cross_grid, 64), hrc_div_ceil(sx * nrays, 4), 1);
-		CF_StorageBuffer rw[1] = { nsx.Tbuf[n] }; d.rw_buffers = rw; d.rw_buffer_count = 1;
-		cf_dispatch_compute(nsx.cs_trace, nsx.m_trace, d);
+		CF_StorageBuffer rw[1] = { gi.Tbuf[n] }; d.rw_buffers = rw; d.rw_buffer_count = 1;
+		cf_dispatch_compute(gi.cs_trace, gi.m_trace, d);
 	}
 	// Extend remaining levels from the level below (merge_up).
 	for (int n = g_trace_levels; !skip_pass('e') && n < NLEV; n++) {
 		int sx = hrc_div_ceil(casc_grid, 1 << n), dirs = 2 << n, nrays = dirs + 1;
 		int P[3] = { n, casc_grid, cross_grid };
-		cf_material_set_uniform_cs(nsx.m_extend, "u_level",      P + 0, CF_UNIFORM_TYPE_INT, 1);
-		cf_material_set_uniform_cs(nsx.m_extend, "u_casc_grid",  P + 1, CF_UNIFORM_TYPE_INT, 1);
-		cf_material_set_uniform_cs(nsx.m_extend, "u_cross_grid", P + 2, CF_UNIFORM_TYPE_INT, 1);
+		cf_material_set_uniform_cs(gi.m_extend, "u_level",      P + 0, CF_UNIFORM_TYPE_INT, 1);
+		cf_material_set_uniform_cs(gi.m_extend, "u_casc_grid",  P + 1, CF_UNIFORM_TYPE_INT, 1);
+		cf_material_set_uniform_cs(gi.m_extend, "u_cross_grid", P + 2, CF_UNIFORM_TYPE_INT, 1);
 		CF_ComputeDispatch d = cf_compute_dispatch_defaults(hrc_div_ceil(4 * cross_grid, 64), hrc_div_ceil(sx * nrays, 4), 1);
-		CF_StorageBuffer ro[1] = { nsx.Tbuf[n - 1] }; d.ro_buffers = ro; d.ro_buffer_count = 1;
-		CF_StorageBuffer rw[1] = { nsx.Tbuf[n] }; d.rw_buffers = rw; d.rw_buffer_count = 1;
-		cf_dispatch_compute(nsx.cs_extend, nsx.m_extend, d);
+		CF_StorageBuffer ro[1] = { gi.Tbuf[n - 1] }; d.ro_buffers = ro; d.ro_buffer_count = 1;
+		CF_StorageBuffer rw[1] = { gi.Tbuf[n] }; d.rw_buffers = rw; d.rw_buffer_count = 1;
+		cf_dispatch_compute(gi.cs_extend, gi.m_extend, d);
 	}
 	// merge down (NLEV-2)..0, final level 0 -> R0out
 	int r_out = 0;
 	for (int i = NLEV - 2; !skip_pass('m') && i >= 0; i--) {
 		int sx = hrc_div_ceil(casc_grid, 1 << i), dirs = 2 << i;
 		int P[3] = { i, casc_grid, cross_grid };
-		cf_material_set_uniform_cs(nsx.m_merge, "u_level",     P + 0, CF_UNIFORM_TYPE_INT, 1);
-		cf_material_set_uniform_cs(nsx.m_merge, "u_casc_grid", P + 1, CF_UNIFORM_TYPE_INT, 1);
-		cf_material_set_uniform_cs(nsx.m_merge, "u_cross_grid",P + 2, CF_UNIFORM_TYPE_INT, 1);
-		CF_StorageBuffer Rprev = (i == NLEV - 2) ? nsx.Rzero : nsx.Rbuf[1 - r_out];
-		CF_StorageBuffer Rdst  = (i == 0) ? R0out : nsx.Rbuf[r_out];
+		cf_material_set_uniform_cs(gi.m_merge, "u_level",     P + 0, CF_UNIFORM_TYPE_INT, 1);
+		cf_material_set_uniform_cs(gi.m_merge, "u_casc_grid", P + 1, CF_UNIFORM_TYPE_INT, 1);
+		cf_material_set_uniform_cs(gi.m_merge, "u_cross_grid",P + 2, CF_UNIFORM_TYPE_INT, 1);
+		CF_StorageBuffer Rprev = (i == NLEV - 2) ? gi.Rzero : gi.Rbuf[1 - r_out];
+		CF_StorageBuffer Rdst  = (i == 0) ? R0out : gi.Rbuf[r_out];
 		CF_ComputeDispatch d = cf_compute_dispatch_defaults(hrc_div_ceil(4 * cross_grid, 64), hrc_div_ceil(dirs, 2), hrc_div_ceil(sx, 2));
-		CF_StorageBuffer ro[3] = { nsx.Tbuf[i], nsx.Tbuf[i + 1], Rprev };
+		CF_StorageBuffer ro[3] = { gi.Tbuf[i], gi.Tbuf[i + 1], Rprev };
 		d.ro_buffers = ro; d.ro_buffer_count = 3;
 		CF_StorageBuffer rw[1] = { Rdst }; d.rw_buffers = rw; d.rw_buffer_count = 1;
-		cf_dispatch_compute(nsx.cs_merge, nsx.m_merge, d);
+		cf_dispatch_compute(gi.cs_merge, gi.m_merge, d);
 		if (i > 0) r_out ^= 1;
 	}
 }
 
-void hrc_ns_compute(void)
+void hrc_compute(void)
 {
-	hrc_ns_init_once();
+	hrc_init_once();
 	CF_Texture emis_tex = cf_canvas_get_target(hrc.emissivity);
 	CF_Texture opac_tex = cf_canvas_get_target(hrc.absorption);
 
@@ -586,89 +401,87 @@ void hrc_ns_compute(void)
 	// nothing to show and reads as a black cutout. Runs after the scene draw (which
 	// rewrote emissivity) and before the cascade, so each frame adds one bounce.
 	if (bounce_on && !skip_pass('b')) {
-		cf_material_set_uniform_cs(nsx.m_feedback, "u_world_w", &world_w, CF_UNIFORM_TYPE_INT, 1);
-		cf_material_set_uniform_cs(nsx.m_feedback, "u_world_h", &world_h, CF_UNIFORM_TYPE_INT, 1);
+		cf_material_set_uniform_cs(gi.m_feedback, "u_world_w", &world_w, CF_UNIFORM_TYPE_INT, 1);
+		cf_material_set_uniform_cs(gi.m_feedback, "u_world_h", &world_h, CF_UNIFORM_TYPE_INT, 1);
 		CF_ComputeDispatch d = cf_compute_dispatch_defaults(hrc_div_ceil(world_w, 16), hrc_div_ceil(world_h, 16), 1);
 		CF_Texture ro[2] = { cf_canvas_get_target(hrc.fluence_lin), cf_canvas_get_target(hrc.diffuse) };
 		d.ro_textures = ro; d.ro_texture_count = 2;
 		CF_Texture rw[1] = { emis_tex };
 		d.rw_textures = rw; d.rw_texture_count = 1;
-		cf_dispatch_compute(nsx.cs_feedback, nsx.m_feedback, d);
+		cf_dispatch_compute(gi.cs_feedback, gi.m_feedback, d);
 	}
 
 	// horizontal group: rot 0,2  cascade=width;  vertical group: rot 1,3  cascade=height.
 	int gw = hrc_w() / 2, gh = hrc_h() / 2;
-	hrc_ns_group(emis_tex, opac_tex, 0, 2, gw, gh, nsx.R0h);
-	hrc_ns_group(emis_tex, opac_tex, 1, 3, gh, gw, nsx.R0v);
+	hrc_group(emis_tex, opac_tex, 0, 2, gw, gh, gi.R0h);
+	hrc_group(emis_tex, opac_tex, 1, 3, gh, gw, gi.R0v);
 
 	// finish: each rotation scatters into its OWN texture.  rot0->(R0h,local0)
 	//         rot2->(R0h,local1)  rot1->(R0v,local0)  rot3->(R0v,local1).
-	for (int i = 0; i < 3; i++) cf_render_to(nsx.dir[i], true); // clear (scatter skips edges)
+	for (int i = 0; i < 3; i++) cf_render_to(gi.dir[i], true); // clear (scatter skips edges)
 	int rots[4]      = { 0, 2, 1, 3 };
 	int local[4]     = { 0, 1, 0, 1 };
-	CF_StorageBuffer grp[4] = { nsx.R0h, nsx.R0h, nsx.R0v, nsx.R0v };
+	CF_StorageBuffer grp[4] = { gi.R0h, gi.R0h, gi.R0v, gi.R0v };
 	for (int k = 0; !skip_pass('f') && k < 4; k++) {
 		int rot = rots[k];
 		int horiz = (rot == 0 || rot == 2);
 		// Dispatch at FULL display res: the finish gathers per display pixel even
-		// when the cascade runs reduced (display-res c-1, see ami_ns_finish).
+		// when the cascade runs reduced (display-res c-1, see hrc_finish).
 		int world_c = horiz ? world_w : world_h;
 		int world_x = horiz ? world_h : world_w;
 		int P[9] = { gw, gh, hrc_w(), hrc_h(), rot, local[k], g_hrc_scale, world_w, world_h };
-		cf_material_set_uniform_cs(nsx.m_finish, "u_grid_w",   P + 0, CF_UNIFORM_TYPE_INT, 1);
-		cf_material_set_uniform_cs(nsx.m_finish, "u_grid_h",   P + 1, CF_UNIFORM_TYPE_INT, 1);
-		cf_material_set_uniform_cs(nsx.m_finish, "u_world_w",  P + 2, CF_UNIFORM_TYPE_INT, 1);
-		cf_material_set_uniform_cs(nsx.m_finish, "u_world_h",  P + 3, CF_UNIFORM_TYPE_INT, 1);
-		cf_material_set_uniform_cs(nsx.m_finish, "u_rot",      P + 4, CF_UNIFORM_TYPE_INT, 1);
-		cf_material_set_uniform_cs(nsx.m_finish, "u_local_rot",P + 5, CF_UNIFORM_TYPE_INT, 1);
-		cf_material_set_uniform_cs(nsx.m_finish, "u_scale",    P + 6, CF_UNIFORM_TYPE_INT, 1);
-		cf_material_set_uniform_cs(nsx.m_finish, "u_full_w",   P + 7, CF_UNIFORM_TYPE_INT, 1);
-		cf_material_set_uniform_cs(nsx.m_finish, "u_full_h",   P + 8, CF_UNIFORM_TYPE_INT, 1);
-		cf_material_set_uniform_cs(nsx.m_finish, "u_abs_zoom", &g_abs_zoom, CF_UNIFORM_TYPE_FLOAT, 1);
-		cf_material_set_texture_cs(nsx.m_finish, "u_emission", emis_tex);
-		cf_material_set_texture_cs(nsx.m_finish, "u_opacity",  opac_tex);
+		cf_material_set_uniform_cs(gi.m_finish, "u_grid_w",   P + 0, CF_UNIFORM_TYPE_INT, 1);
+		cf_material_set_uniform_cs(gi.m_finish, "u_grid_h",   P + 1, CF_UNIFORM_TYPE_INT, 1);
+		cf_material_set_uniform_cs(gi.m_finish, "u_world_w",  P + 2, CF_UNIFORM_TYPE_INT, 1);
+		cf_material_set_uniform_cs(gi.m_finish, "u_world_h",  P + 3, CF_UNIFORM_TYPE_INT, 1);
+		cf_material_set_uniform_cs(gi.m_finish, "u_rot",      P + 4, CF_UNIFORM_TYPE_INT, 1);
+		cf_material_set_uniform_cs(gi.m_finish, "u_local_rot",P + 5, CF_UNIFORM_TYPE_INT, 1);
+		cf_material_set_uniform_cs(gi.m_finish, "u_scale",    P + 6, CF_UNIFORM_TYPE_INT, 1);
+		cf_material_set_uniform_cs(gi.m_finish, "u_full_w",   P + 7, CF_UNIFORM_TYPE_INT, 1);
+		cf_material_set_uniform_cs(gi.m_finish, "u_full_h",   P + 8, CF_UNIFORM_TYPE_INT, 1);
+		cf_material_set_uniform_cs(gi.m_finish, "u_abs_zoom", &g_abs_zoom, CF_UNIFORM_TYPE_FLOAT, 1);
+		cf_material_set_texture_cs(gi.m_finish, "u_emission", emis_tex);
+		cf_material_set_texture_cs(gi.m_finish, "u_opacity",  opac_tex);
 		CF_ComputeDispatch d = cf_compute_dispatch_defaults(hrc_div_ceil(world_c, 8), hrc_div_ceil(world_x, 8), 1);
 		CF_StorageBuffer ro[1] = { grp[k] }; d.ro_buffers = ro; d.ro_buffer_count = 1;
-		CF_Texture rw[3] = { cf_canvas_get_target(nsx.dir[0]), cf_canvas_get_target(nsx.dir[1]),
-		                     cf_canvas_get_target(nsx.dir[2]) };
+		CF_Texture rw[3] = { cf_canvas_get_target(gi.dir[0]), cf_canvas_get_target(gi.dir[1]),
+		                     cf_canvas_get_target(gi.dir[2]) };
 		d.rw_textures = rw; d.rw_texture_count = 3;
-		cf_dispatch_compute(nsx.cs_finish, nsx.m_finish, d);
+		cf_dispatch_compute(gi.cs_finish, gi.m_finish, d);
 	}
 
-	// display: AgX(radiance * scale) -> fluence, linear -> fluence_lin.
-	// g_ns_exposure is the scene's display scale: 1.0 for amitabha-scale emission,
-	// ~6 for the cave (whose authored emissivity sits ~6x below amitabha's range).
+	// display: AgX(radiance * exposure) -> fluence, linear -> fluence_lin.
 	if (!skip_pass('d')) {
 		const char* ev = getenv("HRC_EXPOSURE");
-		float exposure = ev ? (float)atof(ev) : g_ns_exposure;
-		cf_material_set_texture_cs(nsx.m_display, "u_a0", cf_canvas_get_target(nsx.dir[0]));
-		cf_material_set_texture_cs(nsx.m_display, "u_a1", cf_canvas_get_target(nsx.dir[1]));
-		cf_material_set_texture_cs(nsx.m_display, "u_b1", cf_canvas_get_target(nsx.dir[2]));
-		cf_material_set_texture_cs(nsx.m_display, "u_emission", emis_tex);
-		cf_material_set_texture_cs(nsx.m_display, "u_absorption", opac_tex);
-		cf_material_set_uniform_cs(nsx.m_display, "u_blur", &blur_on, CF_UNIFORM_TYPE_INT, 1);
-		cf_material_set_uniform_cs(nsx.m_display, "u_world_w",  &world_w,  CF_UNIFORM_TYPE_INT, 1);
-		cf_material_set_uniform_cs(nsx.m_display, "u_world_h",  &world_h,  CF_UNIFORM_TYPE_INT, 1);
-		cf_material_set_uniform_cs(nsx.m_display, "u_exposure", &exposure, CF_UNIFORM_TYPE_FLOAT, 1);
+		float exposure = ev ? (float)atof(ev) : g_exposure;
+		cf_material_set_texture_cs(gi.m_display, "u_a0", cf_canvas_get_target(gi.dir[0]));
+		cf_material_set_texture_cs(gi.m_display, "u_a1", cf_canvas_get_target(gi.dir[1]));
+		cf_material_set_texture_cs(gi.m_display, "u_b1", cf_canvas_get_target(gi.dir[2]));
+		cf_material_set_texture_cs(gi.m_display, "u_emission", emis_tex);
+		cf_material_set_texture_cs(gi.m_display, "u_absorption", opac_tex);
+		cf_material_set_uniform_cs(gi.m_display, "u_blur", &blur_on, CF_UNIFORM_TYPE_INT, 1);
+		cf_material_set_uniform_cs(gi.m_display, "u_world_w",  &world_w,  CF_UNIFORM_TYPE_INT, 1);
+		cf_material_set_uniform_cs(gi.m_display, "u_world_h",  &world_h,  CF_UNIFORM_TYPE_INT, 1);
+		cf_material_set_uniform_cs(gi.m_display, "u_exposure", &exposure, CF_UNIFORM_TYPE_FLOAT, 1);
 		{ float abs_thresh = GI_ABS_THRESHOLD;
-		  cf_material_set_uniform_cs(nsx.m_display, "u_scale", &g_hrc_scale, CF_UNIFORM_TYPE_INT, 1);
-		  cf_material_set_uniform_cs(nsx.m_display, "u_abs_threshold", &abs_thresh, CF_UNIFORM_TYPE_FLOAT, 1); }
+		  cf_material_set_uniform_cs(gi.m_display, "u_scale", &g_hrc_scale, CF_UNIFORM_TYPE_INT, 1);
+		  cf_material_set_uniform_cs(gi.m_display, "u_abs_threshold", &abs_thresh, CF_UNIFORM_TYPE_FLOAT, 1); }
 		{ const char* e = getenv("HRC_EMISSIVE");
 		  float emissive = e ? (float)atof(e) : 1.0f;
-		  cf_material_set_uniform_cs(nsx.m_display, "u_emissive", &emissive, CF_UNIFORM_TYPE_FLOAT, 1);
+		  cf_material_set_uniform_cs(gi.m_display, "u_emissive", &emissive, CF_UNIFORM_TYPE_FLOAT, 1);
 		  // Only the type scene asks for extra chroma; everything else stays at 1.0.
 		  const char* sv = getenv("HRC_SAT");
 		  float sat = sv ? (float)atof(sv) : (!CF_STRCMP(scene_name(), "text") ? 1.20f : 1.0f);
-		  cf_material_set_uniform_cs(nsx.m_display, "u_saturation", &sat, CF_UNIFORM_TYPE_FLOAT, 1); }
+		  cf_material_set_uniform_cs(gi.m_display, "u_saturation", &sat, CF_UNIFORM_TYPE_FLOAT, 1); }
 		CF_ComputeDispatch d = cf_compute_dispatch_defaults(hrc_div_ceil(world_w, 16), hrc_div_ceil(world_h, 16), 1);
 		CF_Texture rw[2] = { cf_canvas_get_target(hrc.fluence), cf_canvas_get_target(hrc.fluence_lin) };
 		d.rw_textures = rw; d.rw_texture_count = 2;
-		cf_dispatch_compute(nsx.cs_display, nsx.m_display, d);
+		cf_dispatch_compute(gi.cs_display, gi.m_display, d);
 	}
 }
 
 // Headless test scenes for the non-square exact HRC: rasterize a scene into
-// emissivity/absorption, render via hrc_ns_compute, capture -> cave_shot.raw, exit.
+// emissivity/absorption, render via hrc_compute, capture -> cave_shot.raw, exit.
 // HRC_SCENE = rectroom | cornell | pinhole  (use with HRC_RES).
 // Rasterize the selected scene into emissivity/absorption. Shared by the
 // interactive loop and the headless capture so both light the same thing.
@@ -878,7 +691,7 @@ static void scene_shapes(int channel, float W, float H)
 	// under 1: the bounce series converges to 1/(1-albedo) times the direct
 	// light, so values near unity pile up over the settle frames and wash out.
 	const float WALL_ALB = 0.70f;
-	// Absorption for diffuse solids. Finite (amitabha's walls use 0.5/px), NOT
+	// Absorption for diffuse solids. Finite (the reference's walls use 0.5/px), NOT
 	// SOLID: the per-cell bounce feedback re-emits the fluence stored AT a
 	// surface cell, and at infinite absorption that is zero -- the face starves
 	// and the object reads as a black cutout with a lit 1px rim. At 0.5 light
@@ -1535,13 +1348,13 @@ static void bloom_draw(void)
 
 // Rasterize the selected scene into emission + absorption. Shared by the
 // interactive loop and the headless capture so both light the same thing.
-void hrc_ns_scene_draw(void)
+void hrc_scene_draw(void)
 {
 	// Author to VIEW dims: the projection spans the padded canvas, so content
 	// sized to the window lands centred with the HRC_PAD ring empty around it.
 	float W = (float)view_w, H = (float)view_h;
 	cf_app_update(NULL); // acquire a command buffer
-	hrc_ns_init_once();
+	hrc_init_once();
 	// The text scene is lit entirely by two large emitters filling the frame, so it
 	// sits far higher on the exposure curve than the room scenes. Pulling it down
 	// keeps the letter cores from clipping to white and lets the wash hold its hue
@@ -1549,28 +1362,31 @@ void hrc_ns_scene_draw(void)
 	// Per-scene display scale. The bounce-lit room needs pulling down as well: a
 	// closed box with reflective walls converges to roughly 1/(1-albedo) times the
 	// direct light, which clips at the room scenes' default exposure.
-	g_ns_exposure = 1.0f;
-	if (!CF_STRCMP(scene_name(), "text"))  g_ns_exposure = 0.10f;
-	if (!CF_STRCMP(scene_name(), "orbit")) g_ns_exposure = 2.0f;
+	g_exposure = 1.0f;
+	if (!CF_STRCMP(scene_name(), "text"))  g_exposure = 0.10f;
+	if (!CF_STRCMP(scene_name(), "orbit")) g_exposure = 2.0f;
 
 	// The arcology replays recorded draw lists under an animated camera instead
 	// of re-authoring shapes per channel; it owns g_abs_zoom while active.
 	if (!CF_STRCMP(scene_name(), "arcology")) {
-		g_ns_exposure = 1.2f;
+		g_exposure = 1.2f;
 		arcology_draw();
 		return;
 	}
 	if (!CF_STRCMP(scene_name(), "bloom")) {
-		g_ns_exposure = 1.15f;
+		g_exposure = 1.15f;
 		bloom_draw();
 		return;
 	}
 	g_abs_zoom = 1.0f;
 
 	// 0 = emission, 1 = absorption, 2 = diffuse albedo (drives the bounce feedback).
+	// The projection spans the PADDED canvas while the shapes are authored to
+	// VIEW dims, so content lands centred at 1:1 with the HRC_PAD ring empty
+	// around it -- the window crop then shows exactly the authored scene.
 	for (int channel = 0; channel < 3; channel++) {
 		cf_draw_push();
-		cf_draw_projection(cf_ortho_2d(0, 0, W, H));
+		cf_draw_projection(cf_ortho_2d(0, 0, (float)world_w, (float)world_h));
 		push_f16_render_state();
 		scene_shapes(channel, W, H);
 		cf_draw_pop_render_state();
@@ -1597,13 +1413,13 @@ static void hrc_text_overlay(void)
 
 	cf_draw_push();
 	cf_draw_projection(cf_ortho_2d(0, 0, (float)world_w, (float)world_h));
-	scene_shapes(3, (float)world_w, (float)world_h); // same layout, overlay colours
+	scene_shapes(3, (float)view_w, (float)view_h); // same layout (VIEW dims, like the lit pass), overlay colours
 	cf_render_to(hrc.fluence, false);                // composite, do not clear
 	cf_draw_pop();
 }
 
 // Headless capture: render the scene, settle, dump display + linear, exit.
-void hrc_ns_testscene(void)
+void hrc_testscene(void)
 {
 	// Settle over several frames before reading back. A single frame is not safe:
 	// the readback can report ready before the GPU has finished the dispatches, and
@@ -1617,14 +1433,14 @@ void hrc_ns_testscene(void)
 	// the interactive app ever looks. (HRC_SETTLE overrides, mostly for quick
 	// artifact checks where bounce convergence is irrelevant.)
 	//
-	// hrc_ns_scene_draw opens a frame (cf_app_update), so each pass pairs it with one
+	// hrc_scene_draw opens a frame (cf_app_update), so each pass pairs it with one
 	// cf_app_draw_onto_screen to submit. Leaving a frame open no longer loses its GPU
 	// work, but pairing keeps the frame accounting obvious.
 	int settle = getenv("HRC_SETTLE") ? atoi(getenv("HRC_SETTLE")) : 48;
 	if (settle < 2) settle = 2;
 	for (int f = 0; f < settle; f++) {
-		hrc_ns_scene_draw();   // opens the frame (cf_app_update)
-		hrc_ns_compute();
+		hrc_scene_draw();   // opens the frame (cf_app_update)
+		hrc_compute();
 		hrc_text_overlay();    // translucent stamp over the finished image
 		cf_app_draw_onto_screen(true);   // submits it
 	}
@@ -1672,7 +1488,7 @@ void hrc_ns_testscene(void)
 int main(int argc, char* argv[])
 {
 	// Window / world resolution. HRC_RES=WxH picks a non-square resolution
-	// (rounded to a multiple of 2*GI_UPSCALE so the probe lattice stays integral).
+	// (rounded to a multiple of 4 so the probe lattice stays integral).
 	world_w = GI_REF;
 	world_h = GI_REF;
 	{
@@ -1680,7 +1496,7 @@ int main(int argc, char* argv[])
 		if (res) {
 			int rw = 0, rh = 0;
 			if (sscanf(res, "%dx%d", &rw, &rh) == 2 && rw >= 256 && rh >= 256 && rw <= 4096 && rh <= 4096) {
-				int q = 2 * GI_UPSCALE;
+				int q = 4;
 				world_w = (rw / q) * q;
 				world_h = (rh / q) * q;
 			}
@@ -1703,11 +1519,6 @@ int main(int argc, char* argv[])
 	world_w = view_w + 2 * g_pad;
 	world_h = view_h + 2 * g_pad;
 
-	grid_w = world_w / GI_UPSCALE;
-	grid_h = world_h / GI_UPSCALE;
-	scene_s = (view_w < view_h ? view_w : view_h) / (float)GI_REF;
-	scene_ox = (world_w - GI_REF * scene_s) * 0.5f;
-	scene_oy = (world_h - GI_REF * scene_s) * 0.5f;
 
 	cf_make_app("HRC GI", 0, 0, 0, view_w, view_h, CF_APP_OPTIONS_WINDOW_POS_CENTERED_BIT, argv[0]);
 	cf_clear_color(0, 0, 0, 1);
@@ -1722,14 +1533,13 @@ int main(int argc, char* argv[])
 	{ const char* sk = getenv("HRC_SKIP"); if (sk) g_skip = sk; }
 
 	hrc_init();
-	cf_make_font("/hrc_gi_data/calibri.ttf", cf_sintern("gi"));
 
 	// Headless: render one scene, dump it, exit. This is what regress.py drives.
 	scene_select(getenv("HRC_SCENE"));
 
 	// Headless capture is its own switch now that scenes cycle at runtime: HRC_SCENE
 	// only chooses where to start, in both modes.
-	if (getenv("HRC_SHOT")) hrc_ns_testscene();
+	if (getenv("HRC_SHOT")) hrc_testscene();
 
 	// HRC_PERF=N: time N frames of the full per-frame pipeline (scene draw +
 	// bounce + cascade + display + present) after a warmup, print ms/frame, exit.
@@ -1740,14 +1550,14 @@ int main(int argc, char* argv[])
 		if (N < 10) N = 200;
 		cf_app_set_present_mode(CF_PRESENT_MODE_IMMEDIATE);
 		for (int f = 0; f < 30; f++) {
-			hrc_ns_scene_draw();
-			hrc_ns_compute();
+			hrc_scene_draw();
+			hrc_compute();
 			cf_app_draw_onto_screen(true);
 		}
 		uint64_t t0 = cf_get_ticks();
 		for (int f = 0; f < N; f++) {
-			hrc_ns_scene_draw();
-			hrc_ns_compute();
+			hrc_scene_draw();
+			hrc_compute();
 			cf_app_draw_onto_screen(true);
 		}
 		double ms = (double)(cf_get_ticks() - t0) / (double)cf_get_tick_frequency() * 1000.0 / N;
@@ -1776,11 +1586,11 @@ int main(int argc, char* argv[])
 		size_t frame_bytes = (size_t)world_w * world_h * 4;
 		unsigned char* buf = (unsigned char*)cf_alloc(frame_bytes);
 		// settle the bounce before frame 0 so the clip doesn't open mid-converge
-		for (int f = 0; f < 24; f++) { hrc_ns_scene_draw(); hrc_ns_compute(); cf_app_draw_onto_screen(true); }
+		for (int f = 0; f < 24; f++) { hrc_scene_draw(); hrc_compute(); cf_app_draw_onto_screen(true); }
 		for (int f = 0; f < N; f++) {
 			g_scene_time = f * dt;
-			hrc_ns_scene_draw();
-			hrc_ns_compute();
+			hrc_scene_draw();
+			hrc_compute();
 			cf_app_draw_onto_screen(true);
 			CF_Readback rb = cf_canvas_readback(hrc.fluence);
 			for (int t2 = 0; t2 < 240 && !cf_readback_ready(rb); t2++) { cf_app_update(NULL); cf_app_draw_onto_screen(true); }
@@ -1806,13 +1616,13 @@ int main(int argc, char* argv[])
 		if (cf_key_just_pressed(CF_KEY_LEFT)) scene_cycle(-1);
 		// Cascade scale. Storage is sized for scale 1, so this only changes the
 		// working extents and the dispatch sizes -- nothing is reallocated.
-		if (cf_key_just_pressed(CF_KEY_1)) { g_hrc_scale = 1; hrc_ns_apply_scale(); }
-		if (cf_key_just_pressed(CF_KEY_2)) { g_hrc_scale = 2; hrc_ns_apply_scale(); }
-		if (cf_key_just_pressed(CF_KEY_4)) { g_hrc_scale = 4; hrc_ns_apply_scale(); }
+		if (cf_key_just_pressed(CF_KEY_1)) { g_hrc_scale = 1; hrc_apply_scale(); }
+		if (cf_key_just_pressed(CF_KEY_2)) { g_hrc_scale = 2; hrc_apply_scale(); }
+		if (cf_key_just_pressed(CF_KEY_4)) { g_hrc_scale = 4; hrc_apply_scale(); }
 		if (cf_key_just_pressed(CF_KEY_B)) bounce_on = !bounce_on;
 		if (cf_key_just_pressed(CF_KEY_C)) blur_on = !blur_on;
-		hrc_ns_scene_draw();
-		hrc_ns_compute();
+		hrc_scene_draw();
+		hrc_compute();
 		hrc_text_overlay();
 		cf_draw_canvas(hrc.fluence, cf_v2(0, 0), cf_v2((float)world_w, (float)world_h));
 
@@ -1820,7 +1630,6 @@ int main(int argc, char* argv[])
 		// captions itself inside the world, so a HUD copy would just duplicate it.
 		// Push/pop are balanced -- these stacks are global and leak across frames
 		// otherwise.
-		cf_push_font(cf_sintern("gi"));
 		cf_push_font_size(view_h * 0.022f);
 		cf_draw_push_color(cf_make_color_rgb_f(0.62f, 0.72f, 0.80f));
 		char hud[256];
@@ -1832,7 +1641,6 @@ int main(int argc, char* argv[])
 		cf_draw_text(hud, cf_v2(-view_w * 0.46f, -view_h * 0.45f), -1);
 		cf_draw_pop_color();
 		cf_pop_font_size();
-		cf_pop_font();
 
 		cf_app_draw_onto_screen(true);
 	}

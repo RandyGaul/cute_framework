@@ -1,11 +1,11 @@
-// Non-square generalization of ami_merge. Index-only (no world geometry), so the
-// only change vs ami_merge is: BASE -> (u_casc_grid for size_x, u_cross_grid for
-// packing), and 8*BASE -> 4*u_cross_grid (one rotation group = 4 segments).
+// HRC merge-down pass. Index-only (no world geometry): each level-n ray folds
+// in the two level-n+1 rays it splits into, walking the cascade coarse to fine
+// (one rotation group = 4 segments).
 //
 //   T_k: idx = (x*(dirs_k+1) + ray)*(4*cross) + yy
 //   R_k: idx = (x*dirs_k + cone)*(4*cross) + yy
 // where dirs_k = 2<<k, size_x_k = ceil_div(casc_grid, 2^k), yy in [0, 4*cross_grid).
-// yy INNERMOST (amitabha's CellY-innermost axis order): a warp of consecutive yy
+// yy INNERMOST: a warp of consecutive yy
 // reads T and R contiguously at every level -- including the yy+offset*factor
 // neighbour loads, which just shift the run. x-innermost coalescing collapses at
 // deep levels where size_x shrinks below a warp.
@@ -42,7 +42,7 @@ void t_unpack(uvec4 p, out vec3 rad, out vec3 trn)
 
 int dirs_of(int n)   { return 2 << n; }
 // ceil_div, NOT >>, so a non-power-of-two cascade axis collapses to one probe
-// at the top level instead of 0 (matches hrc_vrays_w / ami_ns_trace).
+// at the top level instead of 0 (matches hrc_trace).
 int ceil_div(int a, int b) { return (a + b - 1) / b; }
 int sizex_of(int n)  { return max(ceil_div(u_casc_grid, 1 << n), 1); }
 int packH()          { return 4 * u_cross_grid; }

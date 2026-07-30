@@ -1,12 +1,11 @@
-// Port of amitabha's merge_up (trace.rs): build cascade level n from level n-1
+// HRC extend pass (merge_up): build cascade level n from level n-1
 // by compositing two half-length intervals, instead of re-marching the scene.
 //
 // Direct-tracing every level is O(2^n) work per probe at level n (rays get longer
 // as the cascade deepens), so the top levels dominate. merge_up is O(1) per output
-// element -- it stitches the already-traced level below. This is what amitabha
-// does for levels >= traced_levels (its default is 2).
+// element -- it stitches the already-traced level below.
 //
-// T layout (same as ami_ns_trace): idx = (x*(dirs_k+1) + ray)*(4*cross) + yy
+// T layout (same as hrc_trace): idx = (x*(dirs_k+1) + ray)*(4*cross) + yy
 //   dirs_k = 2<<k, size_x_k = ceil_div(casc_grid, 2^k), yy in [0, 4*cross_grid).
 // yy innermost: warps of consecutive yy load/store contiguously at every level.
 
@@ -40,8 +39,8 @@ int dirs_of(int n)  { return 2 << n; }
 int sizex_of(int n) { return max(ceil_div(u_casc_grid, 1 << n), 1); }
 int packH()         { return 4 * u_cross_grid; }
 
-// Load from level n-1. `opt` = return empty (transparent) when out of range,
-// matching amitabha's load_opt; otherwise the unchecked load.
+// Load from level n-1. `opt` = return empty (transparent) when out of range;
+// otherwise the unchecked load.
 void last_load(int x, int yy, int ray, bool opt, out vec3 rad, out vec3 trn)
 {
 	int n = u_level - 1;

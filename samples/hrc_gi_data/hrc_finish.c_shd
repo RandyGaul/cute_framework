@@ -1,4 +1,4 @@
-// Non-square generalization of ami_finish (finish_kernel + merge_0 + trace_0),
+// HRC finish: per-display-pixel reconstruction (merge_0 + a level-0 trace),
 // unified 2-group model. Dispatched once per global rotation u_rot with that
 // rotation's GROUP R_0 buffer (4 segments: local rot 0 -> segs 0,1; local rot 1
 // -> segs 2,3). u_local_rot in {0,1} says which the group u_rot is.
@@ -11,7 +11,7 @@
 // is what carries hard shadow edges, so shadows resolve at display resolution
 // while everything above level 0 stays cheap -- Sannikov's recipe for making a
 // low-res cascade look native. This replaces the old minmax-gated bilinear
-// upscale in ami_display: interpolation now happens THROUGH the scene (the
+// upscale in hrc_display: interpolation now happens THROUGH the scene (the
 // trace's transmittance handles occlusion) instead of across probe texels.
 // At u_scale == 1 every expression reduces to the original path, bit for bit.
 //
@@ -36,7 +36,7 @@ layout(set = 2, binding = 0) uniform Params
 	int u_scale;      // HRC space -> full-res scene ratio
 	int u_full_w;     // full-res scene width
 	int u_full_h;     // full-res scene height
-	float u_abs_zoom; // absorption units-per-pixel factor (see ami_ns_trace)
+	float u_abs_zoom; // absorption units-per-pixel factor (see hrc_trace)
 };
 
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
@@ -132,7 +132,7 @@ bool contains0(int yy, int local_seg) { int ly = yy - CROSS() * local_seg; retur
 
 // qpos: the querying display pixel's own position in HRC world units. Only used
 // at u_scale > 1; at scale 1 the original probe-space derivation is kept so the
-// output stays bit-exact with the validated amitabha port.
+// output stays bit-exact with the validated reference port.
 void trace_0(ivec2 cell, int local_seg, bool parity, vec2 qpos, out vec3 lo_rad, out vec3 lo_trn, out vec3 hi_rad, out vec3 hi_trn)
 {
 	int yoff = local_seg & 1;
