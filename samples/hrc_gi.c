@@ -19,9 +19,10 @@
 //   rectroom  a small emitter in a sealed room
 //   circ      a single emitter in open space
 //   showcase  coloured walls, haze, and a glowing volume
-//   arcology  a terraced mega-tower of ~2500 lit rooms, recorded once into
-//             CF_DrawLists and replayed under a camera that pulls back ~50x
-//             from a single lamp-lit room to the whole structure in the haze
+//   maze      an interactive bounce-light playground: a generated maze whose
+//             walls catch and re-emit light. SPACE toggles a probe light that
+//             rides the cursor, left click drops coloured lights, right click
+//             removes the nearest one -- watch the bounce crawl around corners
 //   text      type as the only geometry: emissive headlines light a hazy void
 //             while a non-emissive line silhouettes and casts shadows
 //
@@ -35,7 +36,7 @@
 //                       C toggles it at runtime
 //   HRC_SHOT=1          headless: render the starting scene, dump it, exit
 //   HRC_PERF=N          headless: time N frames (vsync off), print ms/frame, exit
-//   HRC_ZOOM_T=u        arcology only: pin the zoom phase to u in [0,1]
+//   HRC_ZOOM_T=u        bloom only: pin the zoom phase to u in [0,1]
 //   HRC_TRACE_LEVELS=n  direct-trace levels before extend takes over (default 3)
 //   HRC_MAX_LEVELS=n    cap cascade depth (0 = full)
 //   HRC_SKIP=tembfd     skip passes for cost attribution (timing only)
@@ -186,7 +187,7 @@ const char* g_skip = "";
 int skip_pass(char c) { return strchr(g_skip, c) != NULL; }
 
 // Absorption units-per-pixel factor fed to the marching shaders. Fixed scenes
-// author per-pixel coefficients and leave this at 1 (bit-exact). The arcology
+// author per-pixel coefficients and leave this at 1 (bit-exact). The bloom
 // zoom scene authors per DESIGN UNIT and sets this to (design units per world
 // pixel) every frame, so optical depth is invariant under camera zoom -- a wall
 // that seals a room close up still seals it from across the valley.
@@ -271,6 +272,7 @@ const char* scene_name(void);
 
 // Per-scene display exposure for the raw-AgX tonemap (hrc_scene_draw sets it).
 float g_exposure = 1.0f;
+float g_bounce_boost = 1.0f; // demo gain on the feedback loop (maze runs 2x)
 
 // HRC_SCALE: run the cascade at 1/N resolution and upscale on display.
 // The DDA still marches the FULL-RES scene, so occlusion stays sharp; only the
@@ -403,6 +405,7 @@ void hrc_compute(void)
 	if (bounce_on && !skip_pass('b')) {
 		cf_material_set_uniform_cs(gi.m_feedback, "u_world_w", &world_w, CF_UNIFORM_TYPE_INT, 1);
 		cf_material_set_uniform_cs(gi.m_feedback, "u_world_h", &world_h, CF_UNIFORM_TYPE_INT, 1);
+		cf_material_set_uniform_cs(gi.m_feedback, "u_boost", &g_bounce_boost, CF_UNIFORM_TYPE_FLOAT, 1);
 		CF_ComputeDispatch d = cf_compute_dispatch_defaults(hrc_div_ceil(world_w, 16), hrc_div_ceil(world_h, 16), 1);
 		CF_Texture ro[2] = { cf_canvas_get_target(hrc.fluence_lin), cf_canvas_get_target(hrc.diffuse) };
 		d.ro_textures = ro; d.ro_texture_count = 2;
@@ -488,7 +491,7 @@ void hrc_compute(void)
 // Every scene the sample can show, in cycle order. HRC_SCENE picks the starting
 // one; the arrow keys move through them at runtime.
 static const char* g_scene_list[] = {
-	"cornell", "glass", "pinhole", "rectroom", "circ", "showcase", "orbit", "arcology", "bloom", "text",
+	"cornell", "glass", "pinhole", "rectroom", "circ", "showcase", "orbit", "maze", "bloom", "text",
 };
 static const int g_scene_count = (int)(sizeof(g_scene_list) / sizeof(g_scene_list[0]));
 static int g_scene_index = 0;
@@ -603,6 +606,176 @@ static void text_line(int channel, const char* str, float y, float size,
 	cf_pop_font_size();
 }
 
+//--------------------------------------------------------------------------------------------------
+// Shared deterministic hash for procedural scene content.
+
+static uint32_t arc_hash(uint32_t x)
+{
+	x ^= x >> 16; x *= 0x7feb352du;
+	x ^= x >> 15; x *= 0x846ca68bu;
+	x ^= x >> 16; return x;
+}
+
+//--------------------------------------------------------------------------------------------------
+// "maze": an interactive bounce-light playground. A depth-first maze whose
+// walls are finite-absorption diffuse surfaces, so every corridor face catches
+// and re-emits whatever light reaches it. The feedback folds in one bounce per
+// frame, which is the whole point of the scene: drop a light and watch the
+// glow crawl down corridors and soak around corners frame by frame (B toggles
+// the bounce off for contrast). SPACE toggles a probe light riding the cursor;
+// left click drops a coloured light; right click removes the nearest one.
+
+#define MZ_N 7         // cells per side
+#define MZ_P 132.0f    // cell pitch in view units
+#define MZ_T 14.0f     // wall thickness
+#define MZ_MAX_LIGHTS 64
+
+static uint8_t g_mz_right[MZ_N * MZ_N]; // wall between (c,r) and (c+1,r)
+static uint8_t g_mz_top[MZ_N * MZ_N];   // wall between (c,r) and (c,r+1)
+static int g_mz_inited = 0;
+static struct { float x, y, hue; } g_mz_lights[MZ_MAX_LIGHTS];
+static int g_mz_nlights = 0;
+static int g_mz_probe_on = 0;
+static float g_mz_mx = 0.0f, g_mz_my = 0.0f; // cursor in scene coords
+
+static void maze_gen(void)
+{
+	uint8_t visited[MZ_N * MZ_N] = { 0 };
+	int stack[MZ_N * MZ_N];
+	int top = 0;
+	uint32_t rng = 0x9E3779B9u;
+	for (int i = 0; i < MZ_N * MZ_N; i++) { g_mz_right[i] = 1; g_mz_top[i] = 1; }
+	stack[top++] = 0;
+	visited[0] = 1;
+	while (top > 0) {
+		int cell = stack[top - 1];
+		int c = cell % MZ_N, r = cell / MZ_N;
+		// gather unvisited neighbours
+		int opts[4], nopts = 0;
+		if (c + 1 < MZ_N && !visited[cell + 1])      opts[nopts++] = 0; // right
+		if (c - 1 >= 0   && !visited[cell - 1])      opts[nopts++] = 1; // left
+		if (r + 1 < MZ_N && !visited[cell + MZ_N])   opts[nopts++] = 2; // up
+		if (r - 1 >= 0   && !visited[cell - MZ_N])   opts[nopts++] = 3; // down
+		if (!nopts) { top--; continue; }
+		int d = opts[arc_hash(rng++) % nopts];
+		int next = cell;
+		if (d == 0)      { g_mz_right[cell] = 0;        next = cell + 1; }
+		else if (d == 1) { g_mz_right[cell - 1] = 0;    next = cell - 1; }
+		else if (d == 2) { g_mz_top[cell] = 0;          next = cell + MZ_N; }
+		else             { g_mz_top[cell - MZ_N] = 0;   next = cell - MZ_N; }
+		visited[next] = 1;
+		stack[top++] = next;
+	}
+	// one starter light so the scene never opens pitch black (right click
+	// removes it like any other). Spawn at the openest junction nearest the
+	// centre: a dead-end pocket makes first-bounce light nearly invisible.
+	{
+		int best = MZ_N / 2 * MZ_N + MZ_N / 2, bopen = -1;
+		float bdist = 1e30f;
+		for (int r = 0; r < MZ_N; r++) {
+			for (int c = 0; c < MZ_N; c++) {
+				int cell = r * MZ_N + c;
+				int open = 0;
+				if (c + 1 < MZ_N && !g_mz_right[cell]) open++;
+				if (c - 1 >= 0 && !g_mz_right[cell - 1]) open++;
+				if (r + 1 < MZ_N && !g_mz_top[cell]) open++;
+				if (r - 1 >= 0 && !g_mz_top[cell - MZ_N]) open++;
+				float dx = c - (MZ_N - 1) * 0.5f, dy = r - (MZ_N - 1) * 0.5f;
+				float d = dx * dx + dy * dy;
+				if (open > bopen || (open == bopen && d < bdist)) { bopen = open; bdist = d; best = cell; }
+			}
+		}
+		float o = -MZ_N * MZ_P * 0.5f;
+		g_mz_lights[0].x = o + (best % MZ_N) * MZ_P + MZ_P * 0.5f;
+		g_mz_lights[0].y = o + (best / MZ_N) * MZ_P + MZ_P * 0.5f;
+		g_mz_lights[0].hue = 45.0f;
+		g_mz_nlights = 1;
+	}
+	g_mz_inited = 1;
+}
+
+// Composite wall brush: a thin low-absorption SKIN wrapped around a dense
+// core, drawn in two passes (all skins, then all cores) so segment joints
+// never leave a low-absorption seam. One material cannot serve the bounce and
+// stay light-tight: dense everywhere starves the feedback (a face cell sits in
+// the shadow of its own absorption and holds no fluence to re-emit), thin
+// everywhere turns the wall translucent under a hot light. The skin receives
+// nearly unattenuated light and re-emits albedo's worth of it; the core seals.
+#define MZ_SKIN 3.0f
+static void mz_wall(int channel, int core_pass, float cx, float cy, float hw, float hh)
+{
+	if (!core_pass) {
+		if (channel == 1)      cf_draw_push_color(cf_make_color_rgb_f(0.35f, 0.35f, 0.37f));
+		else if (channel == 2) cf_draw_push_color(cf_make_color_rgb_f(0.85f, 0.83f, 0.79f));
+		else return;
+		cf_draw_quad_fill(cf_make_aabb(cf_v2(cx - hw, cy - hh), cf_v2(cx + hw, cy + hh)), 0);
+		cf_draw_pop_color();
+	} else {
+		if (channel != 1 || hw <= MZ_SKIN || hh <= MZ_SKIN) return;
+		cf_draw_push_color(cf_make_color_rgb_f(3.0f, 3.0f, 3.1f));
+		cf_draw_quad_fill(cf_make_aabb(cf_v2(cx - hw + MZ_SKIN, cy - hh + MZ_SKIN), cf_v2(cx + hw - MZ_SKIN, cy + hh - MZ_SKIN)), 0);
+		cf_draw_pop_color();
+	}
+}
+
+static void mz_walls_all(int channel, int core_pass)
+{
+	float span = MZ_N * MZ_P;
+	float o = -span * 0.5f;
+	mz_wall(channel, core_pass, 0,  span * 0.5f, span * 0.5f + MZ_T * 0.5f, MZ_T * 0.5f);
+	mz_wall(channel, core_pass, 0, -span * 0.5f, span * 0.5f + MZ_T * 0.5f, MZ_T * 0.5f);
+	mz_wall(channel, core_pass,  span * 0.5f, 0, MZ_T * 0.5f, span * 0.5f + MZ_T * 0.5f);
+	mz_wall(channel, core_pass, -span * 0.5f, 0, MZ_T * 0.5f, span * 0.5f + MZ_T * 0.5f);
+	for (int r = 0; r < MZ_N; r++) {
+		for (int c = 0; c < MZ_N; c++) {
+			int cell = r * MZ_N + c;
+			if (c + 1 < MZ_N && g_mz_right[cell])
+				mz_wall(channel, core_pass, o + (c + 1) * MZ_P, o + r * MZ_P + MZ_P * 0.5f, MZ_T * 0.5f, MZ_P * 0.5f + MZ_T * 0.5f);
+			if (r + 1 < MZ_N && g_mz_top[cell])
+				mz_wall(channel, core_pass, o + c * MZ_P + MZ_P * 0.5f, o + (r + 1) * MZ_P, MZ_P * 0.5f + MZ_T * 0.5f, MZ_T * 0.5f);
+		}
+	}
+}
+
+static void maze_scene(int channel, float W, float H)
+{
+	if (!g_mz_inited) maze_gen();
+	const float EMIT_ABS = 0.5f;
+
+	// a whisper of haze so the corridors show beams, not just lit walls
+	if (channel == 1) {
+		cf_draw_push_color(cf_make_color_rgb_f(0.0007f, 0.0007f, 0.0008f));
+		cf_draw_quad_fill(cf_make_aabb(cf_v2(-W * 0.5f, -H * 0.5f), cf_v2(W * 0.5f, H * 0.5f)), 0);
+		cf_draw_pop_color();
+	}
+
+	// walls: every skin first, every core second (see mz_wall)
+	mz_walls_all(channel, 0);
+	mz_walls_all(channel, 1);
+
+	// lights: the cursor probe plus everything the user has dropped. Emitters
+	// carry EMIT_ABS, never albedo (a light amplifying itself through the
+	// bounce loop runs away).
+	if (channel > 1) return;
+	int emis = (channel == 0);
+	// HOT lights on purpose: every bounce costs roughly an order of magnitude,
+	// so seeing second-bounce light two corners away needs serious source flux.
+	// The direct pool clips to white under AgX; the indirect crawl is the show.
+	if (g_mz_probe_on) {
+		cf_draw_push_color(emis ? cf_make_color_rgb_f(11.0f, 10.0f, 8.5f)
+		                        : cf_make_color_rgb_f(EMIT_ABS, EMIT_ABS, EMIT_ABS));
+		cf_draw_circle_fill(cf_make_circle(cf_v2(g_mz_mx, g_mz_my), 15));
+		cf_draw_pop_color();
+	}
+	for (int i = 0; i < g_mz_nlights; i++) {
+		float r2, g2, b2; ap_hsv(g_mz_lights[i].hue, 0.7f, 1.0f, &r2, &g2, &b2);
+		cf_draw_push_color(emis ? cf_make_color_rgb_f(9.0f * r2, 9.0f * g2, 9.0f * b2)
+		                        : cf_make_color_rgb_f(EMIT_ABS, EMIT_ABS, EMIT_ABS));
+		cf_draw_circle_fill(cf_make_circle(cf_v2(g_mz_lights[i].x, g_mz_lights[i].y), 15));
+		cf_draw_pop_color();
+	}
+}
+
 static void scene_shapes(int channel, float W, float H)
 {
 	const char* name = scene_name();
@@ -612,6 +785,7 @@ static void scene_shapes(int channel, float W, float H)
 	int glass   = !CF_STRCMP(name, "glass");
 	int rectroom= !CF_STRCMP(name, "rectroom");
 	int orbit   = !CF_STRCMP(name, "orbit");
+	if (!CF_STRCMP(name, "maze")) { if (channel < 3) maze_scene(channel, W, H); return; }
 	int emis = (channel == 0);
 	const float SOLID = 30000.0f;
 	// Absorption for anything that EMITS. Never SOLID: at infinite absorption a light
@@ -830,210 +1004,6 @@ static void scene_shapes(int channel, float W, float H)
 	#undef WALL
 	#undef LIGHT
 	#undef FOG
-}
-
-//--------------------------------------------------------------------------------------------------
-// "arcology": a Soleri-style terraced mega-tower at night, authored ONCE into
-// three CF_DrawLists (emission / absorption / albedo) and replayed every frame
-// under an animated camera. The view opens inside a single lamp-lit room on the
-// bottom terrace and pulls back ~50x until the whole tower stands in the haze --
-// a few thousand recorded shapes, all relit per frame by the cascade.
-//
-// Composition rules this scene lives by (learned the hard way on earlier
-// attempts): symmetry plus a strict size hierarchy, not a uniform grid; rooms
-// vary WITHIN a structural frame (party walls every few bays, continuous floor
-// slabs); light is the subject -- windows brighten toward the core and crown to
-// lead the eye up the axis; the crown fades into haze for depth.
-//
-// Units: authored in DESIGN UNITS on a 16384-wide domain. Absorption is a
-// per-UNIT coefficient; g_abs_zoom converts to per-pixel in the shaders, so
-// optical depth doesn't change as the camera zooms.
-
-#define ARC_D      16384.0f  // design domain width/height
-#define ARC_CX     8192.0f   // tower axis
-#define ARC_GROUND 1400.0f   // ground top
-#define ARC_NT     44        // terraces
-#define ARC_LH     290.0f    // terrace height (slab to slab)
-#define ARC_HW0    5000.0f   // bottom terrace half-width
-#define ARC_TAPER  0.955f    // per-terrace half-width falloff
-#define ARC_WABS   0.5f      // solid absorption per unit (opaque past ~15 units)
-#define ARC_EABS   0.012f    // emitter absorption per unit (glows, no self-shadow)
-
-static uint32_t arc_hash(uint32_t x)
-{
-	x ^= x >> 16; x *= 0x7feb352du;
-	x ^= x >> 15; x *= 0x846ca68bu;
-	x ^= x >> 16; return x;
-}
-
-// One brush, three channels: which color it lays down depends on the channel
-// being recorded. Zero-valued draws are skipped -- nothing in this scene needs
-// to carve an earlier draw back to zero.
-static int g_arc_ch;
-static void arc_shape(int circle, float cx, float cy, float a, float b,
-                      float er, float eg, float eb, float au,
-                      float dr, float dg, float db)
-{
-	CF_Color c;
-	if (g_arc_ch == 0)      { if (er + eg + eb <= 0) return; c = cf_make_color_rgb_f(er, eg, eb); }
-	else if (g_arc_ch == 1) { if (au <= 0) return;           c = cf_make_color_rgb_f(au, au, au * 1.06f); }
-	else                    { if (dr + dg + db <= 0) return; c = cf_make_color_rgb_f(dr, dg, db); }
-	cf_draw_push_color(c);
-	if (circle) cf_draw_circle_fill(cf_make_circle(cf_v2(cx, cy), a));
-	else        cf_draw_quad_fill(cf_make_aabb(cf_v2(cx - a, cy - b), cf_v2(cx + a, cy + b)), 0);
-	cf_draw_pop_color();
-}
-#define ARECT(cx, cy, hw, hh, ...) arc_shape(0, cx, cy, hw, hh, __VA_ARGS__)
-#define ACIRC(cx, cy, r, ...)      arc_shape(1, cx, cy, r, 0,  __VA_ARGS__)
-
-static float arc_hw(int i) { return ARC_HW0 * powf(ARC_TAPER, (float)i); }
-
-// The whole scene, one channel at a time (called under draw-list recording).
-static void arc_shapes(void)
-{
-	// Haze first: brushes overwrite, so participating media must go down before
-	// anything solid. A thin wash everywhere gives every light a halo; denser
-	// bands hug the ground so the tower rises out of fog.
-	ARECT(ARC_CX, ARC_D * 0.5f, ARC_D * 0.5f, ARC_D * 0.5f, 0, 0, 0, 0.00012f, 0, 0, 0);
-	ARECT(ARC_CX, ARC_GROUND + 1300.0f, ARC_D * 0.5f, 1300.0f, 0, 0, 0, 0.00035f, 0, 0, 0);
-	ARECT(ARC_CX, ARC_GROUND + 320.0f,  ARC_D * 0.5f, 320.0f,  0, 0, 0, 0.00090f, 0, 0, 0);
-
-	// Moon: cool, dim, high on the flank opposite nothing in particular -- it
-	// balances the warm tower without competing with it.
-	ACIRC(ARC_CX - 5600.0f, 12600.0f, 480.0f, 0.50f, 0.56f, 0.72f, 0.004f, 0, 0, 0);
-
-	// Stars: deterministic scatter, skipped where the tower stands.
-	for (uint32_t s = 0; s < 300; s++) {
-		float sx = (float)(arc_hash(s * 2 + 1) % 16384);
-		float sy = 2600.0f + (float)(arc_hash(s * 2 + 2) % 13000);
-		int lvl = (int)((sy - ARC_GROUND) / ARC_LH);
-		if (lvl >= 0 && lvl < ARC_NT && fabsf(sx - ARC_CX) < arc_hw(lvl) + 300.0f) continue;
-		float b = 0.30f + (float)(arc_hash(s * 3 + 7) % 100) * 0.005f;
-		ARECT(sx, sy, 5, 5, 0.7f * b, 0.8f * b, 1.0f * b, 0.02f, 0, 0, 0);
-	}
-
-	// Ground: a dark diffuse slab; the plaza lamps and the tower's own light are
-	// what make it read.
-	ARECT(ARC_CX, ARC_GROUND * 0.5f, ARC_D * 0.5f, ARC_GROUND * 0.5f, 0, 0, 0, ARC_WABS, 0.42f, 0.40f, 0.38f);
-
-	// Plaza lamps flanking the base: foreground scale cue for the first seconds
-	// of pull-back.
-	for (int k = 0; k < 5; k++) {
-		for (int side = -1; side <= 1; side += 2) {
-			float x = ARC_CX + side * (ARC_HW0 + 450.0f + k * 560.0f);
-			ARECT(x, ARC_GROUND + 55.0f, 7, 55, 0, 0, 0, ARC_WABS, 0.5f, 0.5f, 0.5f);
-			ARECT(x, ARC_GROUND + 128.0f, 16, 12, 2.6f, 1.9f, 1.0f, ARC_EABS, 0, 0, 0);
-		}
-	}
-
-	// Terraces: floor slab + window row + party walls every 5 bays.
-	for (int i = 0; i < ARC_NT; i++) {
-		float y0 = ARC_GROUND + i * ARC_LH;
-		float hw = arc_hw(i);
-		ARECT(ARC_CX, y0 + 35.0f, hw + 60.0f, 35.0f, 0, 0, 0, ARC_WABS, 0.60f, 0.58f, 0.55f);
-
-		int nw = (int)((2.0f * hw - 120.0f) / 96.0f);
-		if (nw < 3) nw = 3;
-		float x0 = ARC_CX - nw * 96.0f * 0.5f + 48.0f;
-		for (int w = 0; w < nw; w++) {
-			float bx = x0 + w * 96.0f;
-			if (w % 5 == 0)
-				ARECT(bx - 48.0f, y0 + 180.0f, 9, 110, 0, 0, 0, ARC_WABS, 0.60f, 0.58f, 0.55f);
-			// the start room replaces the centre bays of terrace 0
-			if (i == 0 && fabsf(bx - ARC_CX) < 250.0f) continue;
-			// A third of the windows are dark. The contrast is what makes the rest
-			// read as individual rooms instead of one continuous lightbox -- with
-			// too few dark rooms the whole facade saturates into a flat texture.
-			if (arc_hash((uint32_t)(i * 131 + w)) % 3 == 0) continue;
-			// Hierarchy: brighter toward the core and toward the crown. Kept DIM
-			// overall (peak ~1.4): hot windows blow to white under AgX and every
-			// bay's air glows like a lit fog box, flattening the tower.
-			float dx = (bx - ARC_CX) / hw;
-			float b = (0.35f + 0.75f * expf(-dx * dx * 2.0f)) * (0.60f + 0.55f * (float)i / ARC_NT);
-			// Cluster tint: overwhelmingly warm amber; pale is common, teal a rare
-			// accent. Equal-weight palettes read as painted stripes.
-			uint32_t k = arc_hash((uint32_t)(i * 17 + w / 5)) % 8;
-			float tr = 1.00f, tg = 0.64f, tb = 0.36f;                // amber
-			if (k >= 5 && k <= 6) { tr = 0.94f; tg = 0.83f; tb = 0.66f; } // pale
-			else if (k == 7)      { tr = 0.55f; tg = 0.78f; tb = 0.82f; } // teal
-			ARECT(bx, y0 + 150.0f, 23, 32, 1.15f * b * tr, 1.15f * b * tg, 1.15f * b * tb, ARC_EABS, 0, 0, 0);
-		}
-	}
-
-	// Crown: cap slab, a beacon shaft, and a soft halo that the haze catches.
-	{
-		float yt = ARC_GROUND + ARC_NT * ARC_LH;
-		float hwt = arc_hw(ARC_NT - 1);
-		ARECT(ARC_CX, yt + 30.0f, hwt + 80.0f, 30.0f, 0, 0, 0, ARC_WABS, 0.60f, 0.58f, 0.55f);
-		ACIRC(ARC_CX, yt + 520.0f, 300.0f, 0.22f, 0.20f, 0.17f, 0.0015f, 0, 0, 0);
-		ARECT(ARC_CX, yt + 480.0f, 34, 420, 3.6f, 3.2f, 2.4f, 0.006f, 0, 0, 0);
-	}
-
-	// The start room, centre of terrace 0: party walls, a hanging lamp, a table
-	// and a shelf. The camera opens here -- one bounce-lit interior before the
-	// pull-back gives the tower scale.
-	{
-		float y0 = ARC_GROUND;
-		ARECT(ARC_CX - 240.0f, y0 + 180.0f, 10, 110, 0, 0, 0, ARC_WABS, 0.62f, 0.60f, 0.57f);
-		ARECT(ARC_CX + 240.0f, y0 + 180.0f, 10, 110, 0, 0, 0, ARC_WABS, 0.62f, 0.60f, 0.57f);
-		ARECT(ARC_CX, y0 + 272.0f, 3, 18, 0, 0, 0, ARC_WABS, 0.30f, 0.30f, 0.30f);   // cord
-		ARECT(ARC_CX, y0 + 246.0f, 26, 10, 3.4f, 2.5f, 1.4f, ARC_EABS, 0, 0, 0);     // lamp
-		ARECT(ARC_CX - 90.0f, y0 + 96.0f, 46, 8, 0, 0, 0, ARC_WABS, 0.55f, 0.50f, 0.45f); // table top
-		ARECT(ARC_CX - 124.0f, y0 + 79.0f, 5, 12, 0, 0, 0, ARC_WABS, 0.45f, 0.42f, 0.40f);
-		ARECT(ARC_CX - 56.0f,  y0 + 79.0f, 5, 12, 0, 0, 0, ARC_WABS, 0.45f, 0.42f, 0.40f);
-		ARECT(ARC_CX + 150.0f, y0 + 140.0f, 30, 70, 0, 0, 0, ARC_WABS, 0.48f, 0.44f, 0.40f); // shelf
-	}
-}
-
-// Record once, replay every frame under the animated camera.
-static CF_DrawList g_arc_dl[3];
-static int g_arc_recorded = 0;
-
-static void arcology_draw(void)
-{
-	if (!g_arc_recorded) {
-		for (int ch = 0; ch < 3; ch++) {
-			g_arc_dl[ch] = cf_make_draw_list();
-			g_arc_ch = ch;
-			cf_draw_list_begin(g_arc_dl[ch]);
-			arc_shapes();
-			cf_draw_list_end();
-		}
-		g_arc_recorded = 1;
-	}
-
-	// Camera: ease along a log-scale zoom from inside the start room to the full
-	// tower, ping-ponging. HRC_ZOOM_T=u pins the phase (headless captures).
-	float u;
-	{
-		const char* zt = getenv("HRC_ZOOM_T");
-		if (zt) {
-			u = (float)atof(zt);
-		} else {
-			const float T = 36.0f;
-			float raw = fmodf(g_scene_time, 2.0f * T) / T;
-			u = raw < 1.0f ? raw : 2.0f - raw;
-		}
-		if (u < 0) u = 0; if (u > 1) u = 1;
-		u = u * u * (3.0f - 2.0f * u); // smoothstep ease
-	}
-	const float vw0 = 340.0f, vw1 = 16500.0f;
-	float vw = vw0 * powf(vw1 / vw0, u) * (float)world_w / (float)view_w;
-	float vh = vw * (float)world_h / (float)world_w;
-	float camx = ARC_CX;
-	float camy = (ARC_GROUND + 180.0f) * (1.0f - u) + 7400.0f * u;
-	g_abs_zoom = vw / (float)world_w;
-
-	CF_Canvas targets[3] = { hrc.emissivity, hrc.absorption, hrc.diffuse };
-	for (int ch = 0; ch < 3; ch++) {
-		cf_draw_push();
-		cf_draw_projection(cf_ortho_2d(camx, camy, vw, vh));
-		push_f16_render_state();
-		cf_draw_list(g_arc_dl[ch]);
-		cf_draw_pop_render_state();
-		cf_render_to(targets[ch], true);
-		cf_draw_pop();
-	}
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -1363,16 +1333,11 @@ void hrc_scene_draw(void)
 	// closed box with reflective walls converges to roughly 1/(1-albedo) times the
 	// direct light, which clips at the room scenes' default exposure.
 	g_exposure = 1.0f;
+	g_bounce_boost = 1.0f;
+	if (!CF_STRCMP(scene_name(), "maze")) { g_exposure = 2.5f; g_bounce_boost = 2.0f; }
 	if (!CF_STRCMP(scene_name(), "text"))  g_exposure = 0.10f;
 	if (!CF_STRCMP(scene_name(), "orbit")) g_exposure = 2.0f;
 
-	// The arcology replays recorded draw lists under an animated camera instead
-	// of re-authoring shapes per channel; it owns g_abs_zoom while active.
-	if (!CF_STRCMP(scene_name(), "arcology")) {
-		g_exposure = 1.2f;
-		arcology_draw();
-		return;
-	}
 	if (!CF_STRCMP(scene_name(), "bloom")) {
 		g_exposure = 1.15f;
 		bloom_draw();
@@ -1612,8 +1577,32 @@ int main(int argc, char* argv[])
 	while (cf_app_is_running()) {
 		cf_app_update(NULL);
 		g_scene_time += CF_DELTA_TIME;
-		if (cf_key_just_pressed(CF_KEY_RIGHT) || cf_key_just_pressed(CF_KEY_SPACE)) scene_cycle(1);
+		if (cf_key_just_pressed(CF_KEY_RIGHT)) scene_cycle(1);
 		if (cf_key_just_pressed(CF_KEY_LEFT)) scene_cycle(-1);
+		// Maze interaction: SPACE toggles the cursor probe light, left click
+		// drops a coloured light (hue walks the golden angle so neighbours
+		// differ), right click removes the nearest one.
+		if (!CF_STRCMP(scene_name(), "maze")) {
+			g_mz_mx = cf_mouse_x() - view_w * 0.5f;
+			g_mz_my = view_h * 0.5f - cf_mouse_y();
+			if (cf_key_just_pressed(CF_KEY_SPACE)) g_mz_probe_on = !g_mz_probe_on;
+			if (cf_mouse_just_pressed(CF_MOUSE_BUTTON_LEFT) && g_mz_nlights < MZ_MAX_LIGHTS) {
+				g_mz_lights[g_mz_nlights].x = g_mz_mx;
+				g_mz_lights[g_mz_nlights].y = g_mz_my;
+				g_mz_lights[g_mz_nlights].hue = fmodf(40.0f + g_mz_nlights * 137.5f, 360.0f);
+				g_mz_nlights++;
+			}
+			if (cf_mouse_just_pressed(CF_MOUSE_BUTTON_RIGHT) && g_mz_nlights > 0) {
+				int best = 0;
+				float bd = 1e30f;
+				for (int i = 0; i < g_mz_nlights; i++) {
+					float dx = g_mz_lights[i].x - g_mz_mx, dy = g_mz_lights[i].y - g_mz_my;
+					float d = dx * dx + dy * dy;
+					if (d < bd) { bd = d; best = i; }
+				}
+				g_mz_lights[best] = g_mz_lights[--g_mz_nlights];
+			}
+		}
 		// Cascade scale. Storage is sized for scale 1, so this only changes the
 		// working extents and the dispatch sizes -- nothing is reallocated.
 		if (cf_key_just_pressed(CF_KEY_1)) { g_hrc_scale = 1; hrc_apply_scale(); }
@@ -1639,6 +1628,13 @@ int main(int argc, char* argv[])
 		CF_SNPRINTF(hud, sizeof(hud), "left/right scene    1/2/4 cascade scale    B bounce %s    C blur %s",
 			bounce_on ? "on" : "off", blur_on ? "on" : "off");
 		cf_draw_text(hud, cf_v2(-view_w * 0.46f, -view_h * 0.45f), -1);
+		if (!CF_STRCMP(scene_name(), "maze")) {
+			// top of the window: a third line under the controls falls off the
+			// bottom edge
+			CF_SNPRINTF(hud, sizeof(hud), "space probe light %s    LMB add light    RMB remove    (%d placed)",
+				g_mz_probe_on ? "on" : "off", g_mz_nlights);
+			cf_draw_text(hud, cf_v2(-view_w * 0.46f, view_h * 0.47f), -1);
+		}
 		cf_draw_pop_color();
 		cf_pop_font_size();
 
