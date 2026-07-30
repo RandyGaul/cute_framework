@@ -10,13 +10,17 @@
 // yy in [0, 4*cross_grid); local cy = yy - s*cross_grid.
 // size_x = ceil_div(cascade_grid, 2^n), directions = 2<<n, nrays = dirs+1.
 // Non-pow2 safe: sizing uses ceil_div and to_world normalizes in level-0 units.
-// T layout: idx = (yy*nrays + ray)*size_x + x.
+// T layout: idx = (x*nrays + ray)*(4*cross) + yy -- yy INNERMOST (amitabha's
+// CellY-innermost axis order). The cross extent never shrinks with cascade
+// level, so warps of consecutive yy stay fully coalesced at every level; an
+// x-innermost layout degrades at depth as size_x collapses below a warp.
+// One fused uvec4 per ray holds rad+trn (6 halves packed, w spare) -- a single
+// 16-byte store instead of two 8-byte stores into separate buffers.
 
 layout(set = 0, binding = 0) uniform sampler2D u_emission;
 layout(set = 0, binding = 1) uniform sampler2D u_opacity;
 
-layout(std430, set = 1, binding = 0) writeonly buffer OutRad { uvec2 data[]; } u_out_rad;
-layout(std430, set = 1, binding = 1) writeonly buffer OutTrn { uvec2 data[]; } u_out_trn;
+layout(std430, set = 1, binding = 0) writeonly buffer OutT { uvec4 data[]; } u_out_t;
 
 layout(set = 2, binding = 0) uniform Params
 {
@@ -30,11 +34,21 @@ layout(set = 2, binding = 0) uniform Params
 	int u_scale;    // HRC space -> full-res scene ratio (1 = full, 2 = half, 4 = quarter)
 	int u_full_w;   // full-res scene width
 	int u_full_h;   // full-res scene height
+	float u_abs_zoom; // absorption units-per-pixel factor. 1.0 = coefficients are
+	                  // per-pixel (all fixed scenes, bit-exact). A zooming scene
+	                  // authors absorption per DESIGN UNIT and sets this to
+	                  // (design units per world pixel), so a wall's optical depth
+	                  // is invariant under camera zoom instead of thinning out.
 };
 
-layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+// yy rides gl_GlobalInvocationID.x so a warp spans 64 consecutive yy (coalesced
+// stores + adjacent-row texture fetches); (x, ray) ride y.
+layout(local_size_x = 64, local_size_y = 4, local_size_z = 1) in;
 
-uvec2 f16_store(vec4 v) { return uvec2(packHalf2x16(v.xy), packHalf2x16(v.zw)); }
+uvec4 t_pack(vec3 rad, vec3 trn)
+{
+	return uvec4(packHalf2x16(rad.rg), packHalf2x16(vec2(rad.b, trn.r)), packHalf2x16(trn.gb), 0u);
+}
 
 struct Fl { vec3 rad; vec3 trn; };
 
@@ -122,7 +136,7 @@ Fl trace_to(vec2 start, vec2 end)
 		float next_t = min(side.x, side.y);
 		ivec2 fp = ivec2(pos);
 		vec3 emis = texelFetch(u_emission, fp, 0).rgb;
-		vec3 opac = texelFetch(u_opacity, fp, 0).rgb;
+		vec3 opac = texelFetch(u_opacity, fp, 0).rgb * u_abs_zoom;
 		float seg = min(next_t, end_t) - last_t;
 		vec3 trans = exp(-opac * seg);
 		f.rad += f.trn * emis * (vec3(1.0) - trans);
@@ -142,8 +156,8 @@ void main()
 	int dirs = directions_of();
 	int nrays = dirs + 1;
 	int cg = cross_grid(u_rot0);        // uniform within a group
-	int gx = int(gl_GlobalInvocationID.x);
-	int yy = int(gl_GlobalInvocationID.y);
+	int yy = int(gl_GlobalInvocationID.x);
+	int gx = int(gl_GlobalInvocationID.y);
 	int seg = (cg > 0) ? (yy / cg) : 0; // 0..3
 	int rot = (seg < 2) ? u_rot0 : u_rot1;
 	int sx = size_x_of(rot);
@@ -162,7 +176,6 @@ void main()
 	int end_local_y = cy + ray_offset(ray);
 	if (end_local_y < 0 || end_local_y >= cg) f.trn = vec3(0.0);
 
-	int idx = (yy * nrays + ray) * sx + x;
-	u_out_rad.data[idx] = f16_store(vec4(f.rad, 1.0));
-	u_out_trn.data[idx] = f16_store(vec4(f.trn, 1.0));
+	int idx = (x * nrays + ray) * (4 * cg) + yy;
+	u_out_t.data[idx] = t_pack(f.rad, f.trn);
 }

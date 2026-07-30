@@ -1,16 +1,16 @@
 // Display/composite for the exact HRC path: sum the 4 per-rotation radiance
 // textures, write linear fluence (feedback) and the AgX-tonemapped display image.
 //
-// No grid->world upscale here: ami_ns_finish scatters at WORLD resolution, so
-// radiance is already per-pixel (unlike the dual-lattice path whose R_0 lives at
-// grid resolution and needed minmax-gated bilinear interpolation).
+// No grid->world upscale here at ANY cascade scale: ami_ns_finish gathers per
+// display pixel (display-res c-1), so the radiance textures are always full
+// resolution and this pass just fetches them.
 
 // Directional radiance as 2D Fourier L1: L(t) ~ a0/(2pi) + (a1*cos t + b1*sin t)/pi
 layout(set = 0, binding = 0) uniform sampler2D u_a0;   // sum over cones (scalar fluence)
 layout(set = 0, binding = 1) uniform sampler2D u_a1;   // sum L*cos(theta)
 layout(set = 0, binding = 2) uniform sampler2D u_b1;   // sum L*sin(theta)
 layout(set = 0, binding = 3) uniform sampler2D u_emission;
-layout(set = 0, binding = 4) uniform sampler2D u_minmax; // prefiltered box min/max per HRC cell
+layout(set = 0, binding = 4) uniform sampler2D u_absorption; // scene absorption (blur gate)
 layout(set = 1, binding = 0, rgba8)   uniform image2D u_fluence;      // display (rgba8)
 layout(set = 1, binding = 1, rgba16f) uniform image2D u_fluence_lin;  // linear (feedback)
 
@@ -19,12 +19,11 @@ layout(set = 2, binding = 0) uniform Params
 	int   u_world_w;       // full-res output width
 	int   u_world_h;       // full-res output height
 	float u_exposure;      // per-scene display scale (raw AgX otherwise)
-	int   u_scale;         // HRC space -> full-res ratio (1 = no upscale)
-	int   u_hrc_w;         // HRC radiance width  = world_w / scale
-	int   u_hrc_h;         // HRC radiance height = world_h / scale
-	float u_abs_threshold; // minmax gate: absorption range that forces nearest
+	int   u_scale;         // cascade reduction factor; spaces the blur taps
+	float u_abs_threshold; // blur gate: opacity difference that rejects a tap
 	float u_emissive;      // weight on a surface's own emitted radiance
 	float u_saturation;    // post-tonemap chroma; 1.0 leaves the image untouched
+	int   u_blur;          // 1 = paper's 1px cross blur on the fluence (Eq 21)
 };
 
 layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
@@ -58,53 +57,46 @@ vec3 agx_tonemap(vec3 v)
 
 ivec2 clamp_pos(ivec2 p) { return clamp(p, ivec2(0), ivec2(u_world_w - 1, u_world_h - 1)); }
 
-// Raw fetch from a per-rotation radiance texture (HRC-space coords).
-vec3 rad_texel(int band, ivec2 p)
+// Fetch from a per-rotation radiance texture. Always full-res: the finish pass
+// gathers per display pixel at every cascade scale, so no upscale happens here.
+vec3 rad_at(int band, ivec2 p)
 {
-	p = clamp(p, ivec2(0), ivec2(u_hrc_w - 1, u_hrc_h - 1));
+	p = clamp_pos(p);
 	if (band == 0) return texelFetch(u_a0, p, 0).rgb;
 	if (band == 1) return texelFetch(u_a1, p, 0).rgb;
 	return texelFetch(u_b1, p, 0).rgb;
 }
 
-// Box min/max of absorption over the full-res footprint of one HRC cell. A cell
-// straddling an occluder edge has a large range -> we must not interpolate across
-// it, or light bleeds through walls. This is the HRC-appropriate prefilter: the
-// gate is on the OCCLUDER field, which is what makes interpolation invalid, not
-// on the radiance itself.
-vec2 cell_minmax(ivec2 c)
+// Mean absorption at a full-res pixel: the gate for the cross blur below.
+float abs_at(ivec2 p)
 {
-	c = clamp(c, ivec2(0), ivec2(u_hrc_w - 1, u_hrc_h - 1));
-	return texelFetch(u_minmax, c, 0).rg; // precomputed by ami_minmax
+	vec3 a = texelFetch(u_absorption, clamp_pos(p), 0).rgb;
+	return (a.x + a.y + a.z) * (1.0 / 3.0);
 }
 
-// Sample radiance at a FULL-RES pixel, upscaling from HRC space with a
-// minmax-gated bilinear: smooth where the occluder field is uniform, snapping to
-// nearest across occluder boundaries.
-vec3 rad_at(int rot, ivec2 p)
+// The paper's checkerboard mitigation (Eq 21): a 1px cross blur over the summed
+// fluence, kernel (1/8)[[0,1,0],[1,4,1],[0,1,0]], ignoring neighbours whose
+// opacity differs significantly from the target so light never smears across an
+// occluder edge. HRC's levels >= 1 step probes by multiples of 2, so odd- and
+// even-y probes never exchange radiance in the cascade itself; this couples them
+// after the fact. Taps step by u_scale so they land on adjacent PROBES, not
+// adjacent display pixels, when the cascade runs at reduced resolution. Skipped
+// taps renormalize rather than darken. u_abs_threshold doubles as the "differs
+// significantly" test -- it is the same occluder-discontinuity meaning as the
+// upscale gate.
+vec3 fluence_at(ivec2 gid)
 {
-	p = clamp_pos(p);
-	if (u_scale == 1) return rad_texel(rot, p);
-
-	vec2 f = (vec2(p) + 0.5) / float(u_scale) - 0.5;
-	ivec2 g0 = ivec2(floor(f));
-	vec2 t = fract(f);
-
-	float range = 0.0;
-	for (int dy = 0; dy <= 1; dy++)
-		for (int dx = 0; dx <= 1; dx++) {
-			vec2 mm = cell_minmax(g0 + ivec2(dx, dy));
-			range = max(range, mm.y - mm.x);
-		}
-	float blend = 1.0 - smoothstep(0.0, u_abs_threshold, range); // 1 = bilinear, 0 = nearest
-
-	vec3 c00 = rad_texel(rot, g0);
-	vec3 c10 = rad_texel(rot, g0 + ivec2(1, 0));
-	vec3 c01 = rad_texel(rot, g0 + ivec2(0, 1));
-	vec3 c11 = rad_texel(rot, g0 + ivec2(1, 1));
-	vec3 bil = mix(mix(c00, c10, t.x), mix(c01, c11, t.x), t.y);
-	vec3 nearest = rad_texel(rot, ivec2(round(f)));
-	return mix(nearest, bil, blend);
+	vec3 c = rad_at(0, gid);
+	if (u_blur == 0) return c;
+	float oc = abs_at(gid);
+	vec3 acc = 4.0 * c;
+	float wsum = 4.0;
+	ivec2 q;
+	q = gid + ivec2( u_scale, 0); if (abs(abs_at(q) - oc) <= u_abs_threshold) { acc += rad_at(0, q); wsum += 1.0; }
+	q = gid + ivec2(-u_scale, 0); if (abs(abs_at(q) - oc) <= u_abs_threshold) { acc += rad_at(0, q); wsum += 1.0; }
+	q = gid + ivec2(0,  u_scale); if (abs(abs_at(q) - oc) <= u_abs_threshold) { acc += rad_at(0, q); wsum += 1.0; }
+	q = gid + ivec2(0, -u_scale); if (abs(abs_at(q) - oc) <= u_abs_threshold) { acc += rad_at(0, q); wsum += 1.0; }
+	return acc / wsum;
 }
 
 void main()
@@ -112,7 +104,7 @@ void main()
 	ivec2 gid = ivec2(gl_GlobalInvocationID.xy);
 	if (gid.x >= u_world_w || gid.y >= u_world_h) return;
 
-	vec3 lin = rad_at(0, gid); // a0 == the old 4-rotation sum, bit for bit
+	vec3 lin = fluence_at(gid); // a0 == the 4-rotation sum, cross-blurred if enabled
 
 	// Feedback/linear output stays pure INCIDENT light. Emission must not go in here:
 	// it would make every emitter re-inject its own output through the multibounce

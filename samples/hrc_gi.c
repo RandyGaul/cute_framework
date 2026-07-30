@@ -19,6 +19,9 @@
 //   rectroom  a small emitter in a sealed room
 //   circ      a single emitter in open space
 //   showcase  coloured walls, haze, and a glowing volume
+//   arcology  a terraced mega-tower of ~2500 lit rooms, recorded once into
+//             CF_DrawLists and replayed under a camera that pulls back ~50x
+//             from a single lamp-lit room to the whole structure in the haze
 //   text      type as the only geometry: emissive headlines light a hazy void
 //             while a non-emissive line silhouettes and casts shadows
 //
@@ -28,7 +31,14 @@
 //   HRC_SCALE=1|2|4     run the probe lattice at 1/N res and upscale
 //   HRC_EXPOSURE=f      display exposure bias
 //   HRC_SAT=f           post-tonemap chroma (1.0 = untouched)
+//   HRC_BLUR=0|1        the paper's 1px cross blur over the fluence (default 1);
+//                       C toggles it at runtime
 //   HRC_SHOT=1          headless: render the starting scene, dump it, exit
+//   HRC_PERF=N          headless: time N frames (vsync off), print ms/frame, exit
+//   HRC_ZOOM_T=u        arcology only: pin the zoom phase to u in [0,1]
+//   HRC_TRACE_LEVELS=n  direct-trace levels before extend takes over (default 3)
+//   HRC_MAX_LEVELS=n    cap cascade depth (0 = full)
+//   HRC_SKIP=tembfd     skip passes for cost attribution (timing only)
 //
 // The text scene exposes its own tuning knobs: HRC_TXT_E (emission), _OABS/_EABS
 // (absorption), _OALB (albedo), _BIG/_SML (type size), _TRACK (letter-spacing),
@@ -58,7 +68,9 @@
 #define GI_ABS_THRESHOLD 0.1f
 
 // Runtime world / grid dimensions (set in main() from the window size).
-int world_w = GI_REF, world_h = GI_REF;   // scene canvas + display resolution
+int world_w = GI_REF, world_h = GI_REF;   // scene canvas + display resolution (view + 2*pad)
+int view_w = GI_REF, view_h = GI_REF;     // the window: centre crop of the world
+int g_pad = 0;                            // HRC_PAD: off-screen light ring, px per side
 int grid_w = GI_REF / GI_UPSCALE;         // cascade probe lattice (world / upscale)
 int grid_h = GI_REF / GI_UPSCALE;
 int n_horiz = 9, n_vert = 9, n_max = 9;       // per-axis cascade depth (log2_ceil grid)
@@ -185,7 +197,29 @@ void hrc_shutdown()
 // never wired to anything, so they are gone rather than sitting on a key that
 // does nothing.
 int bounce_on = 1;  // multibounce feedback pass
+int blur_on = 1;    // paper's 1px cross blur over the fluence (checkerboard fix)
 float smoothed_fps = 60.0f;
+
+// Perf knobs, all env-driven so a timing matrix needs no rebuilds.
+//   HRC_TRACE_LEVELS=n  direct-trace levels 0..n-1, merge_up (extend) above
+//                       (default GI_TRACE_LEVELS; amitabha uses 2)
+//   HRC_MAX_LEVELS=n    stop the cascade after n levels (0 = full depth). Far
+//                       light beyond the capped interval length is lost, which
+//                       an enclosed room never notices.
+//   HRC_SKIP=letters    skip passes wholesale, for pass-cost attribution:
+//                       t trace, e extend, m merge, f finish, d display, b bounce.
+//                       The image is garbage with anything skipped; timing-only.
+int g_trace_levels = GI_TRACE_LEVELS;
+int g_max_levels = 0;
+const char* g_skip = "";
+int skip_pass(char c) { return strchr(g_skip, c) != NULL; }
+
+// Absorption units-per-pixel factor fed to the marching shaders. Fixed scenes
+// author per-pixel coefficients and leave this at 1 (bit-exact). The arcology
+// zoom scene authors per DESIGN UNIT and sets this to (design units per world
+// pixel) every frame, so optical depth is invariant under camera zoom -- a wall
+// that seals a room close up still seals it from across the valley.
+float g_abs_zoom = 1.0f;
 
 // Wall-clock for animated scenes. Advanced by the interactive loop only, so a
 // headless capture always renders the same frame and stays reproducible.
@@ -405,11 +439,15 @@ static void ami_raster_rect(CF_Texture et, CF_Texture ot, int D,
 // Handles square and non-square uniformly. ami_ns_trace/merge/finish + ami_display.
 static struct {
 	int inited, maxd, nlev;
-	CF_StorageBuffer Trad[12], Ttrn[12], Rbuf[2], Rzero, R0h, R0v;
+	// Tbuf: fused rad+trn per ray (one uvec4 = 6 packed halves), so every trace/
+	// extend/merge access is a single 16-byte transaction instead of two 8-byte
+	// ones against split rad/trn buffers. Measured perf-neutral on an RTX-class
+	// GPU (the L2 was absorbing the split traffic), kept because half the buffers
+	// and bindings is simply less to hold: output verified bit-exact either way.
+	CF_StorageBuffer Tbuf[12], Rbuf[2], Rzero, R0h, R0v;
 	CF_Canvas dir[3];   // directional radiance, 2D Fourier L1: a0, a1, b1
-	CF_Canvas minmax;   // prefiltered box min/max absorption at HRC res
-	CF_ComputeShader cs_trace, cs_extend, cs_merge, cs_finish, cs_display, cs_minmax, cs_feedback;
-	CF_Material m_trace, m_extend, m_merge, m_finish, m_display, m_minmax, m_feedback;
+	CF_ComputeShader cs_trace, cs_extend, cs_merge, cs_finish, cs_display, cs_feedback;
+	CF_Material m_trace, m_extend, m_merge, m_finish, m_display, m_feedback;
 } nsx;
 
 const char* scene_name(void);
@@ -448,8 +486,7 @@ static void hrc_ns_init_once(void)
 	for (int n = 0; n < NLEV; n++) {
 		int sx = hrc_div_ceil(MAXD, 1 << n), dirs = 2 << n, nrays = dirs + 1;
 		int elems = sx * (4 * MAXD) * nrays;
-		nsx.Trad[n] = hrc_make_buf(elems, 1);
-		nsx.Ttrn[n] = hrc_make_buf(elems, 1);
+		nsx.Tbuf[n] = hrc_make_buf(elems * 2, 1); // uvec4 per element (hrc_make_buf sizes in 8-byte units)
 	}
 	int maxR = 0;
 	for (int n = 0; n < NLEV; n++) { int e = hrc_div_ceil(MAXD, 1 << n) * (4 * MAXD) * (2 << n); if (e > maxR) maxR = e; }
@@ -467,12 +504,9 @@ static void hrc_ns_init_once(void)
 	nsx.cs_merge   = load_compute_shader("/hrc_gi_data/ami_ns_merge.c_shd");
 	nsx.cs_finish  = load_compute_shader("/hrc_gi_data/ami_ns_finish.c_shd");
 	nsx.cs_display = load_compute_shader("/hrc_gi_data/ami_display.c_shd");
-	nsx.cs_minmax  = load_compute_shader("/hrc_gi_data/ami_minmax.c_shd");
 	nsx.cs_feedback= load_compute_shader("/hrc_gi_data/ami_feedback.c_shd");
-	nsx.minmax = hrc_make_canvas(world_w, world_h, CF_PIXEL_FORMAT_R16G16_FLOAT, CF_FILTER_NEAREST);
 	nsx.m_trace = cf_make_material(); nsx.m_extend = cf_make_material(); nsx.m_merge = cf_make_material();
 	nsx.m_finish = cf_make_material(); nsx.m_display = cf_make_material();
-	nsx.m_minmax = cf_make_material();
 	nsx.m_feedback = cf_make_material();
 	nsx.inited = 1;
 	hrc_ns_apply_scale();
@@ -483,11 +517,12 @@ static void hrc_ns_group(CF_Texture emis_tex, CF_Texture opac_tex,
                          int rot0, int rot1, int casc_grid, int cross_grid, CF_StorageBuffer R0out)
 {
 	int NLEV = hrc_log2_ceil(casc_grid) + 1;
-	// Direct-trace only the lowest GI_TRACE_LEVELS; build the rest with merge_up
+	if (g_max_levels > 0 && NLEV > g_max_levels) NLEV = g_max_levels > 2 ? g_max_levels : 2;
+	// Direct-trace only the lowest g_trace_levels; build the rest with merge_up
 	// (ami_ns_extend), which composites two half-length intervals from the level
 	// below instead of re-marching the scene. Direct tracing costs O(2^n) per probe
 	// at level n, so the deep levels dominate -- amitabha traces 2 by default.
-	for (int n = 0; n < NLEV && n < GI_TRACE_LEVELS; n++) {
+	for (int n = 0; !skip_pass('t') && n < NLEV && n < g_trace_levels; n++) {
 		int sx = hrc_div_ceil(casc_grid, 1 << n), dirs = 2 << n, nrays = dirs + 1;
 		int P[10] = { n, hrc_w()/2, hrc_h()/2, hrc_w(), hrc_h(), rot0, rot1, g_hrc_scale, world_w, world_h };
 		cf_material_set_uniform_cs(nsx.m_trace, "u_level",   P + 0, CF_UNIFORM_TYPE_INT, 1);
@@ -500,27 +535,28 @@ static void hrc_ns_group(CF_Texture emis_tex, CF_Texture opac_tex,
 		cf_material_set_uniform_cs(nsx.m_trace, "u_scale",   P + 7, CF_UNIFORM_TYPE_INT, 1);
 		cf_material_set_uniform_cs(nsx.m_trace, "u_full_w",  P + 8, CF_UNIFORM_TYPE_INT, 1);
 		cf_material_set_uniform_cs(nsx.m_trace, "u_full_h",  P + 9, CF_UNIFORM_TYPE_INT, 1);
+		cf_material_set_uniform_cs(nsx.m_trace, "u_abs_zoom", &g_abs_zoom, CF_UNIFORM_TYPE_FLOAT, 1);
 		cf_material_set_texture_cs(nsx.m_trace, "u_emission", emis_tex);
 		cf_material_set_texture_cs(nsx.m_trace, "u_opacity",  opac_tex);
-		CF_ComputeDispatch d = cf_compute_dispatch_defaults(hrc_div_ceil(sx * nrays, 16), hrc_div_ceil(4 * cross_grid, 16), 1);
-		CF_StorageBuffer rw[2] = { nsx.Trad[n], nsx.Ttrn[n] }; d.rw_buffers = rw; d.rw_buffer_count = 2;
+		CF_ComputeDispatch d = cf_compute_dispatch_defaults(hrc_div_ceil(4 * cross_grid, 64), hrc_div_ceil(sx * nrays, 4), 1);
+		CF_StorageBuffer rw[1] = { nsx.Tbuf[n] }; d.rw_buffers = rw; d.rw_buffer_count = 1;
 		cf_dispatch_compute(nsx.cs_trace, nsx.m_trace, d);
 	}
 	// Extend remaining levels from the level below (merge_up).
-	for (int n = GI_TRACE_LEVELS; n < NLEV; n++) {
+	for (int n = g_trace_levels; !skip_pass('e') && n < NLEV; n++) {
 		int sx = hrc_div_ceil(casc_grid, 1 << n), dirs = 2 << n, nrays = dirs + 1;
 		int P[3] = { n, casc_grid, cross_grid };
 		cf_material_set_uniform_cs(nsx.m_extend, "u_level",      P + 0, CF_UNIFORM_TYPE_INT, 1);
 		cf_material_set_uniform_cs(nsx.m_extend, "u_casc_grid",  P + 1, CF_UNIFORM_TYPE_INT, 1);
 		cf_material_set_uniform_cs(nsx.m_extend, "u_cross_grid", P + 2, CF_UNIFORM_TYPE_INT, 1);
-		CF_ComputeDispatch d = cf_compute_dispatch_defaults(hrc_div_ceil(sx * nrays, 16), hrc_div_ceil(4 * cross_grid, 16), 1);
-		CF_StorageBuffer ro[2] = { nsx.Trad[n - 1], nsx.Ttrn[n - 1] }; d.ro_buffers = ro; d.ro_buffer_count = 2;
-		CF_StorageBuffer rw[2] = { nsx.Trad[n], nsx.Ttrn[n] }; d.rw_buffers = rw; d.rw_buffer_count = 2;
+		CF_ComputeDispatch d = cf_compute_dispatch_defaults(hrc_div_ceil(4 * cross_grid, 64), hrc_div_ceil(sx * nrays, 4), 1);
+		CF_StorageBuffer ro[1] = { nsx.Tbuf[n - 1] }; d.ro_buffers = ro; d.ro_buffer_count = 1;
+		CF_StorageBuffer rw[1] = { nsx.Tbuf[n] }; d.rw_buffers = rw; d.rw_buffer_count = 1;
 		cf_dispatch_compute(nsx.cs_extend, nsx.m_extend, d);
 	}
 	// merge down (NLEV-2)..0, final level 0 -> R0out
 	int r_out = 0;
-	for (int i = NLEV - 2; i >= 0; i--) {
+	for (int i = NLEV - 2; !skip_pass('m') && i >= 0; i--) {
 		int sx = hrc_div_ceil(casc_grid, 1 << i), dirs = 2 << i;
 		int P[3] = { i, casc_grid, cross_grid };
 		cf_material_set_uniform_cs(nsx.m_merge, "u_level",     P + 0, CF_UNIFORM_TYPE_INT, 1);
@@ -528,9 +564,9 @@ static void hrc_ns_group(CF_Texture emis_tex, CF_Texture opac_tex,
 		cf_material_set_uniform_cs(nsx.m_merge, "u_cross_grid",P + 2, CF_UNIFORM_TYPE_INT, 1);
 		CF_StorageBuffer Rprev = (i == NLEV - 2) ? nsx.Rzero : nsx.Rbuf[1 - r_out];
 		CF_StorageBuffer Rdst  = (i == 0) ? R0out : nsx.Rbuf[r_out];
-		CF_ComputeDispatch d = cf_compute_dispatch_defaults(hrc_div_ceil(sx, 8), hrc_div_ceil(dirs, 8), 4 * cross_grid);
-		CF_StorageBuffer ro[5] = { nsx.Trad[i], nsx.Ttrn[i], nsx.Trad[i + 1], nsx.Ttrn[i + 1], Rprev };
-		d.ro_buffers = ro; d.ro_buffer_count = 5;
+		CF_ComputeDispatch d = cf_compute_dispatch_defaults(hrc_div_ceil(4 * cross_grid, 64), hrc_div_ceil(dirs, 2), hrc_div_ceil(sx, 2));
+		CF_StorageBuffer ro[3] = { nsx.Tbuf[i], nsx.Tbuf[i + 1], Rprev };
+		d.ro_buffers = ro; d.ro_buffer_count = 3;
 		CF_StorageBuffer rw[1] = { Rdst }; d.rw_buffers = rw; d.rw_buffer_count = 1;
 		cf_dispatch_compute(nsx.cs_merge, nsx.m_merge, d);
 		if (i > 0) r_out ^= 1;
@@ -549,16 +585,12 @@ void hrc_ns_compute(void)
 	// the cascade only reports light ARRIVING at a cell, so a pure absorber has
 	// nothing to show and reads as a black cutout. Runs after the scene draw (which
 	// rewrote emissivity) and before the cascade, so each frame adds one bounce.
-	if (bounce_on) {
-		int gather_r = 10;
-		float surface_thresh = 0.5f; // above fog (~0.003), below any authored surface
+	if (bounce_on && !skip_pass('b')) {
 		cf_material_set_uniform_cs(nsx.m_feedback, "u_world_w", &world_w, CF_UNIFORM_TYPE_INT, 1);
 		cf_material_set_uniform_cs(nsx.m_feedback, "u_world_h", &world_h, CF_UNIFORM_TYPE_INT, 1);
-		cf_material_set_uniform_cs(nsx.m_feedback, "u_gather_r", &gather_r, CF_UNIFORM_TYPE_INT, 1);
-		cf_material_set_uniform_cs(nsx.m_feedback, "u_surface_thresh", &surface_thresh, CF_UNIFORM_TYPE_FLOAT, 1);
 		CF_ComputeDispatch d = cf_compute_dispatch_defaults(hrc_div_ceil(world_w, 16), hrc_div_ceil(world_h, 16), 1);
-		CF_Texture ro[3] = { cf_canvas_get_target(hrc.fluence_lin), cf_canvas_get_target(hrc.diffuse), opac_tex };
-		d.ro_textures = ro; d.ro_texture_count = 3;
+		CF_Texture ro[2] = { cf_canvas_get_target(hrc.fluence_lin), cf_canvas_get_target(hrc.diffuse) };
+		d.ro_textures = ro; d.ro_texture_count = 2;
 		CF_Texture rw[1] = { emis_tex };
 		d.rw_textures = rw; d.rw_texture_count = 1;
 		cf_dispatch_compute(nsx.cs_feedback, nsx.m_feedback, d);
@@ -575,11 +607,13 @@ void hrc_ns_compute(void)
 	int rots[4]      = { 0, 2, 1, 3 };
 	int local[4]     = { 0, 1, 0, 1 };
 	CF_StorageBuffer grp[4] = { nsx.R0h, nsx.R0h, nsx.R0v, nsx.R0v };
-	for (int k = 0; k < 4; k++) {
+	for (int k = 0; !skip_pass('f') && k < 4; k++) {
 		int rot = rots[k];
 		int horiz = (rot == 0 || rot == 2);
-		int world_c = horiz ? hrc_w() : hrc_h();
-		int world_x = horiz ? hrc_h() : hrc_w();
+		// Dispatch at FULL display res: the finish gathers per display pixel even
+		// when the cascade runs reduced (display-res c-1, see ami_ns_finish).
+		int world_c = horiz ? world_w : world_h;
+		int world_x = horiz ? world_h : world_w;
 		int P[9] = { gw, gh, hrc_w(), hrc_h(), rot, local[k], g_hrc_scale, world_w, world_h };
 		cf_material_set_uniform_cs(nsx.m_finish, "u_grid_w",   P + 0, CF_UNIFORM_TYPE_INT, 1);
 		cf_material_set_uniform_cs(nsx.m_finish, "u_grid_h",   P + 1, CF_UNIFORM_TYPE_INT, 1);
@@ -590,6 +624,7 @@ void hrc_ns_compute(void)
 		cf_material_set_uniform_cs(nsx.m_finish, "u_scale",    P + 6, CF_UNIFORM_TYPE_INT, 1);
 		cf_material_set_uniform_cs(nsx.m_finish, "u_full_w",   P + 7, CF_UNIFORM_TYPE_INT, 1);
 		cf_material_set_uniform_cs(nsx.m_finish, "u_full_h",   P + 8, CF_UNIFORM_TYPE_INT, 1);
+		cf_material_set_uniform_cs(nsx.m_finish, "u_abs_zoom", &g_abs_zoom, CF_UNIFORM_TYPE_FLOAT, 1);
 		cf_material_set_texture_cs(nsx.m_finish, "u_emission", emis_tex);
 		cf_material_set_texture_cs(nsx.m_finish, "u_opacity",  opac_tex);
 		CF_ComputeDispatch d = cf_compute_dispatch_defaults(hrc_div_ceil(world_c, 8), hrc_div_ceil(world_x, 8), 1);
@@ -600,39 +635,23 @@ void hrc_ns_compute(void)
 		cf_dispatch_compute(nsx.cs_finish, nsx.m_finish, d);
 	}
 
-	// prefilter: box min/max absorption per HRC cell (gates the upscale).
-	if (g_hrc_scale > 1) {
-		int hw = hrc_w(), hh = hrc_h();
-		int P[5] = { hw, hh, world_w, world_h, g_hrc_scale };
-		cf_material_set_texture_cs(nsx.m_minmax, "u_absorption", opac_tex);
-		cf_material_set_uniform_cs(nsx.m_minmax, "u_hrc_w",  P + 0, CF_UNIFORM_TYPE_INT, 1);
-		cf_material_set_uniform_cs(nsx.m_minmax, "u_hrc_h",  P + 1, CF_UNIFORM_TYPE_INT, 1);
-		cf_material_set_uniform_cs(nsx.m_minmax, "u_full_w", P + 2, CF_UNIFORM_TYPE_INT, 1);
-		cf_material_set_uniform_cs(nsx.m_minmax, "u_full_h", P + 3, CF_UNIFORM_TYPE_INT, 1);
-		cf_material_set_uniform_cs(nsx.m_minmax, "u_scale",  P + 4, CF_UNIFORM_TYPE_INT, 1);
-		CF_ComputeDispatch d = cf_compute_dispatch_defaults(hrc_div_ceil(hw, 16), hrc_div_ceil(hh, 16), 1);
-		CF_Texture rw[1] = { cf_canvas_get_target(nsx.minmax) }; d.rw_textures = rw; d.rw_texture_count = 1;
-		cf_dispatch_compute(nsx.cs_minmax, nsx.m_minmax, d);
-	}
-
 	// display: AgX(radiance * scale) -> fluence, linear -> fluence_lin.
 	// g_ns_exposure is the scene's display scale: 1.0 for amitabha-scale emission,
 	// ~6 for the cave (whose authored emissivity sits ~6x below amitabha's range).
-	{
+	if (!skip_pass('d')) {
 		const char* ev = getenv("HRC_EXPOSURE");
 		float exposure = ev ? (float)atof(ev) : g_ns_exposure;
 		cf_material_set_texture_cs(nsx.m_display, "u_a0", cf_canvas_get_target(nsx.dir[0]));
 		cf_material_set_texture_cs(nsx.m_display, "u_a1", cf_canvas_get_target(nsx.dir[1]));
 		cf_material_set_texture_cs(nsx.m_display, "u_b1", cf_canvas_get_target(nsx.dir[2]));
 		cf_material_set_texture_cs(nsx.m_display, "u_emission", emis_tex);
-		cf_material_set_texture_cs(nsx.m_display, "u_minmax", cf_canvas_get_target(nsx.minmax));
+		cf_material_set_texture_cs(nsx.m_display, "u_absorption", opac_tex);
+		cf_material_set_uniform_cs(nsx.m_display, "u_blur", &blur_on, CF_UNIFORM_TYPE_INT, 1);
 		cf_material_set_uniform_cs(nsx.m_display, "u_world_w",  &world_w,  CF_UNIFORM_TYPE_INT, 1);
 		cf_material_set_uniform_cs(nsx.m_display, "u_world_h",  &world_h,  CF_UNIFORM_TYPE_INT, 1);
 		cf_material_set_uniform_cs(nsx.m_display, "u_exposure", &exposure, CF_UNIFORM_TYPE_FLOAT, 1);
-		{ int hw = hrc_w(), hh = hrc_h(); float abs_thresh = GI_ABS_THRESHOLD;
+		{ float abs_thresh = GI_ABS_THRESHOLD;
 		  cf_material_set_uniform_cs(nsx.m_display, "u_scale", &g_hrc_scale, CF_UNIFORM_TYPE_INT, 1);
-		  cf_material_set_uniform_cs(nsx.m_display, "u_hrc_w", &hw, CF_UNIFORM_TYPE_INT, 1);
-		  cf_material_set_uniform_cs(nsx.m_display, "u_hrc_h", &hh, CF_UNIFORM_TYPE_INT, 1);
 		  cf_material_set_uniform_cs(nsx.m_display, "u_abs_threshold", &abs_thresh, CF_UNIFORM_TYPE_FLOAT, 1); }
 		{ const char* e = getenv("HRC_EMISSIVE");
 		  float emissive = e ? (float)atof(e) : 1.0f;
@@ -656,7 +675,7 @@ void hrc_ns_compute(void)
 // Every scene the sample can show, in cycle order. HRC_SCENE picks the starting
 // one; the arrow keys move through them at runtime.
 static const char* g_scene_list[] = {
-	"cornell", "glass", "pinhole", "rectroom", "circ", "showcase", "orbit", "text",
+	"cornell", "glass", "pinhole", "rectroom", "circ", "showcase", "orbit", "arcology", "bloom", "text",
 };
 static const int g_scene_count = (int)(sizeof(g_scene_list) / sizeof(g_scene_list[0]));
 static int g_scene_index = 0;
@@ -709,7 +728,7 @@ static void text_line(int channel, const char* str, float y, float size,
 	// Untracked lines fit by shrinking the type: a long headline scales down rather
 	// than running off the frame. Tracked lines fit further down by closing up their
 	// letter-spacing instead, which preserves the size.
-	float fit_w = (float)world_w * 0.92f;
+	float fit_w = (float)view_w * 0.92f;
 	if (track <= 0 && sz.x > fit_w) {
 		cf_pop_font_size();
 		cf_push_font_size(size * (fit_w / sz.x));
@@ -754,7 +773,7 @@ static void text_line(int channel, const char* str, float y, float size,
 		for (const char* p = str; *p; ++p) { char ch[2] = { *p, 0 }; glyphs += cf_text_width(ch, -1); n++; }
 		// Auto-fit: tracking that would push the line past the frame gets pulled back,
 		// so a longer string just tracks tighter instead of running off the edge.
-		float maxw = (float)world_w * 0.92f;
+		float maxw = (float)view_w * 0.92f;
 		if (n > 1 && glyphs + track * (n - 1) > maxw) {
 			track = (maxw - glyphs) / (float)(n - 1);
 			if (track < 0) track = 0;
@@ -799,7 +818,7 @@ static void scene_shapes(int channel, float W, float H)
 	if (!CF_STRCMP(name, "text")) {
 		float EM  = getenv("HRC_TXT_E")   ? (float)atof(getenv("HRC_TXT_E"))   : 3.2f;
 		float OA  = getenv("HRC_TXT_OABS")? (float)atof(getenv("HRC_TXT_OABS")): 0.25f;
-		float OB  = getenv("HRC_TXT_OALB")? (float)atof(getenv("HRC_TXT_OALB")): 0.85f;
+		float OB  = getenv("HRC_TXT_OALB")? (float)atof(getenv("HRC_TXT_OALB")): 0.75f;
 		float EA  = getenv("HRC_TXT_EABS")? (float)atof(getenv("HRC_TXT_EABS")): 0.20f;
 		float BIG = getenv("HRC_TXT_BIG") ? (float)atof(getenv("HRC_TXT_BIG")) : 0.190f;
 		float SML = getenv("HRC_TXT_SML") ? (float)atof(getenv("HRC_TXT_SML")) : 0.125f;
@@ -825,8 +844,11 @@ static void scene_shapes(int channel, float W, float H)
 			// pixels and the rest stays black. At this thickness the whole border
 			// catches light and reads as a lit frame.
 			float t = H * 0.009f;
-			float a = getenv("HRC_TXT_WALL") ? (float)atof(getenv("HRC_TXT_WALL")) : 0.90f;
-			CF_Color c = (channel == 1) ? cf_make_color_rgb_f(SOLID, SOLID, SOLID)
+			float a = getenv("HRC_TXT_WALL") ? (float)atof(getenv("HRC_TXT_WALL")) : 0.80f;
+			// Finite absorption like every diffuse solid: the per-cell bounce
+			// feeds on the fluence stored in the face cells, which an
+			// effectively-infinite coefficient would zero out.
+			CF_Color c = (channel == 1) ? cf_make_color_rgb_f(0.5f, 0.5f, 0.5f)
 			                            : cf_make_color_rgb_f(a, a, a);
 			if (channel == 1 || channel == 2) {
 				cf_draw_push_color(c);
@@ -847,12 +869,26 @@ static void scene_shapes(int channel, float W, float H)
 		return;
 	}
 
-	// Channel 3 (the overlay stamp) is the type scene's alone. Channel 2 is diffuse
-	// albedo, which only orbit authors among the room scenes.
+	// Channel 3 (the overlay stamp) is the type scene's alone.
 	if (channel == 3) return;
-	if (channel == 2 && !orbit) return;
 
-	#define WALL(cx, cy, hw, hh) do { 		if (channel == 1) { cf_draw_push_color(cf_make_color_rgb_f(SOLID, SOLID, SOLID)); 			cf_draw_box_rounded_fill(cf_make_aabb(cf_v2((cx)-(hw), (cy)-(hh)), cf_v2((cx)+(hw), (cy)+(hh))), 0); 			cf_draw_pop_color(); } } while (0)
+	// Every solid surface carries a diffuse albedo so the bounce pass lights its
+	// face -- without it a wall is a black cutout (the cascade only reports light
+	// ARRIVING at a cell, and none arrives inside a pure absorber). Kept well
+	// under 1: the bounce series converges to 1/(1-albedo) times the direct
+	// light, so values near unity pile up over the settle frames and wash out.
+	const float WALL_ALB = 0.70f;
+	// Absorption for diffuse solids. Finite (amitabha's walls use 0.5/px), NOT
+	// SOLID: the per-cell bounce feedback re-emits the fluence stored AT a
+	// surface cell, and at infinite absorption that is zero -- the face starves
+	// and the object reads as a black cutout with a lit 1px rim. At 0.5 light
+	// soaks the first few pixels of a face (visibly, like the reference's
+	// Cornell walls) while anything thicker than ~15px stays fully opaque
+	// (transmittance e^-0.5/px). Pinhole is the exception: its walls are thin
+	// pure occluders whose job is a light-tight seal, so they stay SOLID.
+	const float DIFF_ABS = 0.5f;
+	float wall_abs = pinhole ? SOLID : DIFF_ABS;
+	#define WALL(cx, cy, hw, hh) do { 		if (channel == 1) { cf_draw_push_color(cf_make_color_rgb_f(wall_abs, wall_abs, wall_abs)); 			cf_draw_box_rounded_fill(cf_make_aabb(cf_v2((cx)-(hw), (cy)-(hh)), cf_v2((cx)+(hw), (cy)+(hh))), 0); 			cf_draw_pop_color(); } 		else if (channel == 2) { cf_draw_push_color(cf_make_color_rgb_f(WALL_ALB, WALL_ALB, WALL_ALB)); 			cf_draw_box_rounded_fill(cf_make_aabb(cf_v2((cx)-(hw), (cy)-(hh)), cf_v2((cx)+(hw), (cy)+(hh))), 0); 			cf_draw_pop_color(); } } while (0)
 	#define LIGHT(cx, cy, hw, hh, r, g, b) do { 		if (channel > 1) break; 		cf_draw_push_color(emis ? cf_make_color_rgb_f(r, g, b) : cf_make_color_rgb_f(EMIT_ABS, EMIT_ABS, EMIT_ABS)); 		cf_draw_box_rounded_fill(cf_make_aabb(cf_v2((cx)-(hw), (cy)-(hh)), cf_v2((cx)+(hw), (cy)+(hh))), 0); 		cf_draw_pop_color(); } while (0)
 	#define FOG(cx, cy, hw, hh, d) do { 		if (channel == 1) { cf_draw_push_color(cf_make_color_rgb_f(d, d, (d) * 1.15f)); 			cf_draw_box_rounded_fill(cf_make_aabb(cf_v2((cx)-(hw), (cy)-(hh)), cf_v2((cx)+(hw), (cy)+(hh))), 0); 			cf_draw_pop_color(); } } while (0)
 
@@ -871,15 +907,21 @@ static void scene_shapes(int channel, float W, float H)
 		// the diagonals. The result is a +-45 degree modulation of the emitted light: a
 		// hard X across the frame. A finite coefficient lets the whole volume emit, and
 		// the source reads as the round, radially symmetric disc it is meant to be.
-		cf_draw_push_color(emis ? cf_make_color_rgb_f(3, 3, 3) : cf_make_color_rgb_f(EMIT_ABS, EMIT_ABS, EMIT_ABS));
-		cf_draw_circle_fill(cf_make_circle(cf_v2(0, 0), 8));
-		cf_draw_pop_color();
+		// channel < 2: emitters carry no albedo -- a light re-emitting its own output
+		// through the bounce loop would amplify itself.
+		if (channel < 2) {
+			cf_draw_push_color(emis ? cf_make_color_rgb_f(3, 3, 3) : cf_make_color_rgb_f(EMIT_ABS, EMIT_ABS, EMIT_ABS));
+			cf_draw_circle_fill(cf_make_circle(cf_v2(0, 0), 8));
+			cf_draw_pop_color();
+		}
 	} else if (rectroom) {
 		// Finite absorption, same reason as circ: a SOLID emitter only radiates from
 		// its staircased rim and throws +-45 degree spokes.
-		cf_draw_push_color(emis ? cf_make_color_rgb_f(2.5f, 2.5f, 2.5f) : cf_make_color_rgb_f(EMIT_ABS, EMIT_ABS, EMIT_ABS));
-		cf_draw_circle_fill(cf_make_circle(cf_v2(0, 0), 24));
-		cf_draw_pop_color();
+		if (channel < 2) {
+			cf_draw_push_color(emis ? cf_make_color_rgb_f(2.5f, 2.5f, 2.5f) : cf_make_color_rgb_f(EMIT_ABS, EMIT_ABS, EMIT_ABS));
+			cf_draw_circle_fill(cf_make_circle(cf_v2(0, 0), 24));
+			cf_draw_pop_color();
+		}
 	} else if (cornell) {
 		LIGHT(0, H*0.5f - 26, W*0.09f, 5, 4.0f, 3.7f, 3.2f);
 		WALL(-W*0.10f, -H*0.06f, W*0.028f, H*0.16f);
@@ -888,9 +930,15 @@ static void scene_shapes(int channel, float W, float H)
 		LIGHT(0, H*0.5f - 26, W*0.13f, 5, 4.0f, 3.7f, 3.2f);
 		// see-through volume: finite absorption, so light is attenuated THROUGH it
 		FOG(-W*0.12f, -H*0.06f, W*0.070f, H*0.20f, 0.017f);
-		// solid circle occluder alongside: crisp umbra for contrast
-		if (!emis) {
-			cf_draw_push_color(cf_make_color_rgb_f(SOLID, SOLID, SOLID));
+		// solid circle occluder alongside: crisp umbra for contrast. Albedo on
+		// channel 2 so its lit face shows -- NOT the SOLID coefficient, which would
+		// be a runaway loop gain if it landed in the diffuse canvas.
+		if (channel == 1) {
+			cf_draw_push_color(cf_make_color_rgb_f(DIFF_ABS, DIFF_ABS, DIFF_ABS));
+			cf_draw_circle_fill(cf_make_circle(cf_v2(W*0.14f, -H*0.06f), H*0.135f));
+			cf_draw_pop_color();
+		} else if (channel == 2) {
+			cf_draw_push_color(cf_make_color_rgb_f(0.60f, 0.60f, 0.60f));
 			cf_draw_circle_fill(cf_make_circle(cf_v2(W*0.14f, -H*0.06f), H*0.135f));
 			cf_draw_pop_color();
 		}
@@ -914,16 +962,17 @@ static void scene_shapes(int channel, float W, float H)
 		WALL(-W*0.5f + 12, 0, 12, H*0.5f);
 		WALL(W*0.5f - 12, 0, 12, H*0.5f);
 		if (channel == 2) {
-			// Tinted walls: warm left, cool right, neutral floor/ceiling. Kept well
-			// under 1 -- the bounce series converges to 1/(1-albedo), so values near
-			// unity pile up over the settle frames and wash the room out.
-			cf_draw_push_color(cf_make_color_rgb_f(0.90f, 0.16f, 0.10f));
+			// Tinted walls: warm left, cool right, neutral floor/ceiling. Kept to
+			// physically plausible reflectances (well under 1) -- the bounce series
+			// converges to 1/(1-albedo), so values near unity pile up over the
+			// settle frames and wash the room out.
+			cf_draw_push_color(cf_make_color_rgb_f(0.75f, 0.13f, 0.08f));
 			cf_draw_box_rounded_fill(cf_make_aabb(cf_v2(-W*0.5f, -H*0.5f), cf_v2(-W*0.5f + 26, H*0.5f)), 0);
 			cf_draw_pop_color();
-			cf_draw_push_color(cf_make_color_rgb_f(0.10f, 0.24f, 0.92f));
+			cf_draw_push_color(cf_make_color_rgb_f(0.08f, 0.20f, 0.75f));
 			cf_draw_box_rounded_fill(cf_make_aabb(cf_v2(W*0.5f - 26, -H*0.5f), cf_v2(W*0.5f, H*0.5f)), 0);
 			cf_draw_pop_color();
-			cf_draw_push_color(cf_make_color_rgb_f(0.80f, 0.80f, 0.78f));
+			cf_draw_push_color(cf_make_color_rgb_f(0.68f, 0.68f, 0.66f));
 			cf_draw_box_rounded_fill(cf_make_aabb(cf_v2(-W*0.5f, H*0.5f - 26), cf_v2(W*0.5f, H*0.5f)), 0);
 			cf_draw_box_rounded_fill(cf_make_aabb(cf_v2(-W*0.5f, -H*0.5f), cf_v2(W*0.5f, -H*0.5f + 26)), 0);
 			cf_draw_pop_color();
@@ -937,7 +986,7 @@ static void scene_shapes(int channel, float W, float H)
 		// The travelling light: a clean circular orbit clear of both the pillars and
 		// the walls. Radius 10 keeps it above the paper's minimum source size, and
 		// EMIT_ABS keeps it from occluding itself.
-		{
+		if (channel < 2) {
 			float t = g_scene_time * 0.5f;
 			float ox = cosf(t) * W * 0.30f;
 			float oy = sinf(t) * H * 0.30f;
@@ -956,9 +1005,13 @@ static void scene_shapes(int channel, float W, float H)
 		LIGHT(W*0.47f - 31, 0, 7, H*0.42f, 0.14f, 1.1f, 6.0f);
 		LIGHT(0, H*0.5f - 34, W*0.09f, 5, 3.2f, 3.0f, 2.6f);
 		WALL(-W*0.16f, H*0.04f, W*0.030f, H*0.16f);
-		cf_draw_push_color(emis ? cf_make_color_rgb_f(1.3f, 0.5f, 2.0f) : cf_make_color_rgb_f(0.020f, 0.016f, 0.024f));
-		cf_draw_circle_fill(cf_make_circle(cf_v2(W*0.13f, -H*0.16f), H*0.13f));
-		cf_draw_pop_color();
+		// The glowing gas volume emits; it carries no albedo (channel < 2), like
+		// every other emitter.
+		if (channel < 2) {
+			cf_draw_push_color(emis ? cf_make_color_rgb_f(1.3f, 0.5f, 2.0f) : cf_make_color_rgb_f(0.020f, 0.016f, 0.024f));
+			cf_draw_circle_fill(cf_make_circle(cf_v2(W*0.13f, -H*0.16f), H*0.13f));
+			cf_draw_pop_color();
+		}
 	}
 
 	#undef WALL
@@ -966,11 +1019,527 @@ static void scene_shapes(int channel, float W, float H)
 	#undef FOG
 }
 
+//--------------------------------------------------------------------------------------------------
+// "arcology": a Soleri-style terraced mega-tower at night, authored ONCE into
+// three CF_DrawLists (emission / absorption / albedo) and replayed every frame
+// under an animated camera. The view opens inside a single lamp-lit room on the
+// bottom terrace and pulls back ~50x until the whole tower stands in the haze --
+// a few thousand recorded shapes, all relit per frame by the cascade.
+//
+// Composition rules this scene lives by (learned the hard way on earlier
+// attempts): symmetry plus a strict size hierarchy, not a uniform grid; rooms
+// vary WITHIN a structural frame (party walls every few bays, continuous floor
+// slabs); light is the subject -- windows brighten toward the core and crown to
+// lead the eye up the axis; the crown fades into haze for depth.
+//
+// Units: authored in DESIGN UNITS on a 16384-wide domain. Absorption is a
+// per-UNIT coefficient; g_abs_zoom converts to per-pixel in the shaders, so
+// optical depth doesn't change as the camera zooms.
+
+#define ARC_D      16384.0f  // design domain width/height
+#define ARC_CX     8192.0f   // tower axis
+#define ARC_GROUND 1400.0f   // ground top
+#define ARC_NT     44        // terraces
+#define ARC_LH     290.0f    // terrace height (slab to slab)
+#define ARC_HW0    5000.0f   // bottom terrace half-width
+#define ARC_TAPER  0.955f    // per-terrace half-width falloff
+#define ARC_WABS   0.5f      // solid absorption per unit (opaque past ~15 units)
+#define ARC_EABS   0.012f    // emitter absorption per unit (glows, no self-shadow)
+
+static uint32_t arc_hash(uint32_t x)
+{
+	x ^= x >> 16; x *= 0x7feb352du;
+	x ^= x >> 15; x *= 0x846ca68bu;
+	x ^= x >> 16; return x;
+}
+
+// One brush, three channels: which color it lays down depends on the channel
+// being recorded. Zero-valued draws are skipped -- nothing in this scene needs
+// to carve an earlier draw back to zero.
+static int g_arc_ch;
+static void arc_shape(int circle, float cx, float cy, float a, float b,
+                      float er, float eg, float eb, float au,
+                      float dr, float dg, float db)
+{
+	CF_Color c;
+	if (g_arc_ch == 0)      { if (er + eg + eb <= 0) return; c = cf_make_color_rgb_f(er, eg, eb); }
+	else if (g_arc_ch == 1) { if (au <= 0) return;           c = cf_make_color_rgb_f(au, au, au * 1.06f); }
+	else                    { if (dr + dg + db <= 0) return; c = cf_make_color_rgb_f(dr, dg, db); }
+	cf_draw_push_color(c);
+	if (circle) cf_draw_circle_fill(cf_make_circle(cf_v2(cx, cy), a));
+	else        cf_draw_quad_fill(cf_make_aabb(cf_v2(cx - a, cy - b), cf_v2(cx + a, cy + b)), 0);
+	cf_draw_pop_color();
+}
+#define ARECT(cx, cy, hw, hh, ...) arc_shape(0, cx, cy, hw, hh, __VA_ARGS__)
+#define ACIRC(cx, cy, r, ...)      arc_shape(1, cx, cy, r, 0,  __VA_ARGS__)
+
+static float arc_hw(int i) { return ARC_HW0 * powf(ARC_TAPER, (float)i); }
+
+// The whole scene, one channel at a time (called under draw-list recording).
+static void arc_shapes(void)
+{
+	// Haze first: brushes overwrite, so participating media must go down before
+	// anything solid. A thin wash everywhere gives every light a halo; denser
+	// bands hug the ground so the tower rises out of fog.
+	ARECT(ARC_CX, ARC_D * 0.5f, ARC_D * 0.5f, ARC_D * 0.5f, 0, 0, 0, 0.00012f, 0, 0, 0);
+	ARECT(ARC_CX, ARC_GROUND + 1300.0f, ARC_D * 0.5f, 1300.0f, 0, 0, 0, 0.00035f, 0, 0, 0);
+	ARECT(ARC_CX, ARC_GROUND + 320.0f,  ARC_D * 0.5f, 320.0f,  0, 0, 0, 0.00090f, 0, 0, 0);
+
+	// Moon: cool, dim, high on the flank opposite nothing in particular -- it
+	// balances the warm tower without competing with it.
+	ACIRC(ARC_CX - 5600.0f, 12600.0f, 480.0f, 0.50f, 0.56f, 0.72f, 0.004f, 0, 0, 0);
+
+	// Stars: deterministic scatter, skipped where the tower stands.
+	for (uint32_t s = 0; s < 300; s++) {
+		float sx = (float)(arc_hash(s * 2 + 1) % 16384);
+		float sy = 2600.0f + (float)(arc_hash(s * 2 + 2) % 13000);
+		int lvl = (int)((sy - ARC_GROUND) / ARC_LH);
+		if (lvl >= 0 && lvl < ARC_NT && fabsf(sx - ARC_CX) < arc_hw(lvl) + 300.0f) continue;
+		float b = 0.30f + (float)(arc_hash(s * 3 + 7) % 100) * 0.005f;
+		ARECT(sx, sy, 5, 5, 0.7f * b, 0.8f * b, 1.0f * b, 0.02f, 0, 0, 0);
+	}
+
+	// Ground: a dark diffuse slab; the plaza lamps and the tower's own light are
+	// what make it read.
+	ARECT(ARC_CX, ARC_GROUND * 0.5f, ARC_D * 0.5f, ARC_GROUND * 0.5f, 0, 0, 0, ARC_WABS, 0.42f, 0.40f, 0.38f);
+
+	// Plaza lamps flanking the base: foreground scale cue for the first seconds
+	// of pull-back.
+	for (int k = 0; k < 5; k++) {
+		for (int side = -1; side <= 1; side += 2) {
+			float x = ARC_CX + side * (ARC_HW0 + 450.0f + k * 560.0f);
+			ARECT(x, ARC_GROUND + 55.0f, 7, 55, 0, 0, 0, ARC_WABS, 0.5f, 0.5f, 0.5f);
+			ARECT(x, ARC_GROUND + 128.0f, 16, 12, 2.6f, 1.9f, 1.0f, ARC_EABS, 0, 0, 0);
+		}
+	}
+
+	// Terraces: floor slab + window row + party walls every 5 bays.
+	for (int i = 0; i < ARC_NT; i++) {
+		float y0 = ARC_GROUND + i * ARC_LH;
+		float hw = arc_hw(i);
+		ARECT(ARC_CX, y0 + 35.0f, hw + 60.0f, 35.0f, 0, 0, 0, ARC_WABS, 0.60f, 0.58f, 0.55f);
+
+		int nw = (int)((2.0f * hw - 120.0f) / 96.0f);
+		if (nw < 3) nw = 3;
+		float x0 = ARC_CX - nw * 96.0f * 0.5f + 48.0f;
+		for (int w = 0; w < nw; w++) {
+			float bx = x0 + w * 96.0f;
+			if (w % 5 == 0)
+				ARECT(bx - 48.0f, y0 + 180.0f, 9, 110, 0, 0, 0, ARC_WABS, 0.60f, 0.58f, 0.55f);
+			// the start room replaces the centre bays of terrace 0
+			if (i == 0 && fabsf(bx - ARC_CX) < 250.0f) continue;
+			// A third of the windows are dark. The contrast is what makes the rest
+			// read as individual rooms instead of one continuous lightbox -- with
+			// too few dark rooms the whole facade saturates into a flat texture.
+			if (arc_hash((uint32_t)(i * 131 + w)) % 3 == 0) continue;
+			// Hierarchy: brighter toward the core and toward the crown. Kept DIM
+			// overall (peak ~1.4): hot windows blow to white under AgX and every
+			// bay's air glows like a lit fog box, flattening the tower.
+			float dx = (bx - ARC_CX) / hw;
+			float b = (0.35f + 0.75f * expf(-dx * dx * 2.0f)) * (0.60f + 0.55f * (float)i / ARC_NT);
+			// Cluster tint: overwhelmingly warm amber; pale is common, teal a rare
+			// accent. Equal-weight palettes read as painted stripes.
+			uint32_t k = arc_hash((uint32_t)(i * 17 + w / 5)) % 8;
+			float tr = 1.00f, tg = 0.64f, tb = 0.36f;                // amber
+			if (k >= 5 && k <= 6) { tr = 0.94f; tg = 0.83f; tb = 0.66f; } // pale
+			else if (k == 7)      { tr = 0.55f; tg = 0.78f; tb = 0.82f; } // teal
+			ARECT(bx, y0 + 150.0f, 23, 32, 1.15f * b * tr, 1.15f * b * tg, 1.15f * b * tb, ARC_EABS, 0, 0, 0);
+		}
+	}
+
+	// Crown: cap slab, a beacon shaft, and a soft halo that the haze catches.
+	{
+		float yt = ARC_GROUND + ARC_NT * ARC_LH;
+		float hwt = arc_hw(ARC_NT - 1);
+		ARECT(ARC_CX, yt + 30.0f, hwt + 80.0f, 30.0f, 0, 0, 0, ARC_WABS, 0.60f, 0.58f, 0.55f);
+		ACIRC(ARC_CX, yt + 520.0f, 300.0f, 0.22f, 0.20f, 0.17f, 0.0015f, 0, 0, 0);
+		ARECT(ARC_CX, yt + 480.0f, 34, 420, 3.6f, 3.2f, 2.4f, 0.006f, 0, 0, 0);
+	}
+
+	// The start room, centre of terrace 0: party walls, a hanging lamp, a table
+	// and a shelf. The camera opens here -- one bounce-lit interior before the
+	// pull-back gives the tower scale.
+	{
+		float y0 = ARC_GROUND;
+		ARECT(ARC_CX - 240.0f, y0 + 180.0f, 10, 110, 0, 0, 0, ARC_WABS, 0.62f, 0.60f, 0.57f);
+		ARECT(ARC_CX + 240.0f, y0 + 180.0f, 10, 110, 0, 0, 0, ARC_WABS, 0.62f, 0.60f, 0.57f);
+		ARECT(ARC_CX, y0 + 272.0f, 3, 18, 0, 0, 0, ARC_WABS, 0.30f, 0.30f, 0.30f);   // cord
+		ARECT(ARC_CX, y0 + 246.0f, 26, 10, 3.4f, 2.5f, 1.4f, ARC_EABS, 0, 0, 0);     // lamp
+		ARECT(ARC_CX - 90.0f, y0 + 96.0f, 46, 8, 0, 0, 0, ARC_WABS, 0.55f, 0.50f, 0.45f); // table top
+		ARECT(ARC_CX - 124.0f, y0 + 79.0f, 5, 12, 0, 0, 0, ARC_WABS, 0.45f, 0.42f, 0.40f);
+		ARECT(ARC_CX - 56.0f,  y0 + 79.0f, 5, 12, 0, 0, 0, ARC_WABS, 0.45f, 0.42f, 0.40f);
+		ARECT(ARC_CX + 150.0f, y0 + 140.0f, 30, 70, 0, 0, 0, ARC_WABS, 0.48f, 0.44f, 0.40f); // shelf
+	}
+}
+
+// Record once, replay every frame under the animated camera.
+static CF_DrawList g_arc_dl[3];
+static int g_arc_recorded = 0;
+
+static void arcology_draw(void)
+{
+	if (!g_arc_recorded) {
+		for (int ch = 0; ch < 3; ch++) {
+			g_arc_dl[ch] = cf_make_draw_list();
+			g_arc_ch = ch;
+			cf_draw_list_begin(g_arc_dl[ch]);
+			arc_shapes();
+			cf_draw_list_end();
+		}
+		g_arc_recorded = 1;
+	}
+
+	// Camera: ease along a log-scale zoom from inside the start room to the full
+	// tower, ping-ponging. HRC_ZOOM_T=u pins the phase (headless captures).
+	float u;
+	{
+		const char* zt = getenv("HRC_ZOOM_T");
+		if (zt) {
+			u = (float)atof(zt);
+		} else {
+			const float T = 36.0f;
+			float raw = fmodf(g_scene_time, 2.0f * T) / T;
+			u = raw < 1.0f ? raw : 2.0f - raw;
+		}
+		if (u < 0) u = 0; if (u > 1) u = 1;
+		u = u * u * (3.0f - 2.0f * u); // smoothstep ease
+	}
+	const float vw0 = 340.0f, vw1 = 16500.0f;
+	float vw = vw0 * powf(vw1 / vw0, u) * (float)world_w / (float)view_w;
+	float vh = vw * (float)world_h / (float)world_w;
+	float camx = ARC_CX;
+	float camy = (ARC_GROUND + 180.0f) * (1.0f - u) + 7400.0f * u;
+	g_abs_zoom = vw / (float)world_w;
+
+	CF_Canvas targets[3] = { hrc.emissivity, hrc.absorption, hrc.diffuse };
+	for (int ch = 0; ch < 3; ch++) {
+		cf_draw_push();
+		cf_draw_projection(cf_ortho_2d(camx, camy, vw, vh));
+		push_f16_render_state();
+		cf_draw_list(g_arc_dl[ch]);
+		cf_draw_pop_render_state();
+		cf_render_to(targets[ch], true);
+		cf_draw_pop();
+	}
+}
+
+//--------------------------------------------------------------------------------------------------
+// "bloom": a demoscene piece -- pure geometry, no representation. A phyllotaxis
+// spiral (r = c*sqrt(n), theta = n * golden angle) of ~3400 emitters carries a
+// hue wheel outward from a white-gold core; every 13th node runs brighter,
+// which traces the 13-parastichy arms the pattern already contains. Dark vanes
+// cast spoke shadows through the haze, thin rings halo like drafting lines, and
+// heavily-feathered discs (cf_draw_push_shape_aa cranked far past its usual
+// 1.5) lay down smoke for the light to stain. Phyllotaxis is self-similar, so
+// the pull-back is composed at every scale -- the same reason a sunflower
+// survives being looked at closely.
+
+#define BLM_N     3400
+#define BLM_C     470.0f          // r = BLM_C * sqrt(n)
+#define BLM_GOLD  2.39996323f     // golden angle, radians
+
+static int g_blm_ch;
+// kind: 0 rect (half-extents a,b), 1 filled circle (radius a), 2 ring (radius
+// a, stroke thickness b). aa is the shape antialias scale -- large values
+// feather the border into soft smoke.
+static void blm_shape(int kind, float cx, float cy, float a, float b, float rot, float aa,
+                      float er, float eg, float eb, float ar, float ag, float ab_,
+                      float dr, float dg, float db)
+{
+	CF_Color c;
+	if (g_blm_ch == 0)      { if (er + eg + eb <= 0) return; c = cf_make_color_rgb_f(er, eg, eb); }
+	else if (g_blm_ch == 1) { if (ar + ag + ab_ <= 0) return; c = cf_make_color_rgb_f(ar, ag, ab_); }
+	else                    { if (dr + dg + db <= 0) return; c = cf_make_color_rgb_f(dr, dg, db); }
+	cf_draw_push();
+	cf_draw_push_shape_aa(aa);
+	if (rot != 0) { cf_draw_translate(cx, cy); cf_draw_rotate(rot); cx = 0; cy = 0; }
+	cf_draw_push_color(c);
+	if (kind == 1)      cf_draw_circle_fill(cf_make_circle(cf_v2(cx, cy), a));
+	else if (kind == 2) cf_draw_circle(cf_make_circle(cf_v2(cx, cy), a), b);
+	else                cf_draw_quad_fill(cf_make_aabb(cf_v2(cx - a, cy - b), cf_v2(cx + a, cy + b)), 0);
+	cf_draw_pop_color();
+	cf_draw_pop_shape_aa();
+	cf_draw_pop();
+}
+
+// Background layer: haze, smoke, and the guide rings -- everything that is
+// rotation-invariant or too diffuse to read as moving. Recorded once.
+static void blm_shapes_bg(void)
+{
+	blm_shape(0, 0, 0, 40000.0f, 40000.0f, 0, 1.5f, 0, 0, 0, 0.000022f, 0.000022f, 0.000026f, 0, 0, 0);
+	for (int k = 0; k < 40; k++) {
+		float t = (float)k / 39.0f;
+		float ang = t * 4.7f + (float)(arc_hash((uint32_t)(k * 7 + 3)) % 100) * 0.006f;
+		float r = 6500.0f + t * 20000.0f;
+		float rad = 2200.0f + (float)(arc_hash((uint32_t)(k * 7 + 5)) % 2400);
+		float hr, hg, hb; ap_hsv(fmodf(t * 300.0f + 210.0f, 360.0f), 0.5f, 1.0f, &hr, &hg, &hb);
+		float f = 0.00100f;
+		blm_shape(1, cosf(ang) * r, sinf(ang) * r, rad, 0, 0, 60.0f, 0, 0, 0,
+		          f * (1.2f - 0.6f * hr), f * (1.2f - 0.6f * hg), f * (1.2f - 0.6f * hb), 0, 0, 0);
+	}
+	for (int k = 0; k < 14; k++) {
+		float ang = (float)k * 1.7f + 0.9f;
+		float r = 4200.0f + (float)(arc_hash((uint32_t)(k * 11 + 40)) % 14000);
+		blm_shape(1, cosf(ang) * r, sinf(ang) * r, 1500.0f + (float)(arc_hash((uint32_t)(k * 11 + 41)) % 1500), 0, 0, 60.0f,
+		          0, 0, 0, 0.00030f, 0.00030f, 0.00030f, 0.30f, 0.30f, 0.32f);
+	}
+	// rings: centred circles are invariant under the band rotations, so they
+	// live here as still reference lines the moving layers play against
+	{
+		float rr[3] = { 2600.0f, 5300.0f, 8600.0f };
+		for (int k = 0; k < 3; k++) {
+			float hr, hg, hb; ap_hsv(fmodf(40.0f + rr[k] * 0.010f, 360.0f), 0.55f, 1.0f, &hr, &hg, &hb);
+			blm_shape(2, 0, 0, rr[k], 85.0f, 0, 2.0f, 0.10f * hr, 0.10f * hg, 0.10f * hb, 0.010f, 0.010f, 0.010f, 0, 0, 0);
+		}
+	}
+}
+
+// The bead field, split into three radial bands that counter-rotate at replay
+// like an astrolabe. Lamps (n % 55) are NOT recorded -- they draw live in
+// blm_lights so they can pulse and precess against the bands.
+#define BLM_BAND_R0 9500.0f
+#define BLM_BAND_R1 18500.0f
+// Four motion layers: inner, mid, and the outer band split into two
+// interleaved streams (even/odd n) that counter-flow through each other --
+// at the rim, neighbouring beads slide past one another instead of moving as
+// one rigid sheet.
+static const float g_blm_band_w[4] = { 0.045f, -0.032f, 0.022f, -0.014f }; // rad/s
+static void blm_beads(int band)
+{
+	for (int n = 1; n <= BLM_N; n++) {
+		float r = BLM_C * sqrtf((float)n);
+		int b = r < BLM_BAND_R0 ? 0 : r < BLM_BAND_R1 ? 1 : ((n & 1) ? 2 : 3);
+		if (b != band) continue;
+		float th = (float)n * BLM_GOLD;
+		float x = cosf(th) * r, y = sinf(th) * r;
+		uint32_t hsh = arc_hash((uint32_t)n * 2654435761u);
+		float h01 = (float)(hsh % 1000) * 0.001f;
+		// order decays outward: perfect lattice at the core, growing positional
+		// scatter toward the rim (r^2-weighted jitter)
+		float rf = r / 27500.0f;
+		float jr = rf * rf * 950.0f;
+		x += ((float)(arc_hash(hsh + 1) % 1000) * 0.002f - 1.0f) * jr;
+		y += ((float)(arc_hash(hsh + 2) % 1000) * 0.002f - 1.0f) * jr;
+		float s = (14.0f + r * 0.0068f) * (0.45f + 2.0f * h01 * h01);
+		if (n % 34 == 0) s *= 2.6f;
+		// the rim goes bimodal: much of it thins to dust while every 144th node
+		// is a glass boulder big enough to throw a real shadow
+		if (rf > 0.5f && (hsh % 5) < 2) s *= 0.45f;
+		if (n % 144 == 0) s *= 4.5f;
+		float hue = fmodf(200.0f + r * 0.0125f, 360.0f);
+		float hr, hg, hb; ap_hsv(hue, 0.88f, 1.0f, &hr, &hg, &hb);
+		float A = (n % 144 == 0) ? 0.10f : 0.045f;
+		float ar2 = A * (1.15f - 0.75f * hr), ag2 = A * (1.15f - 0.75f * hg), ab2 = A * (1.15f - 0.75f * hb);
+		float dr2 = 0.55f * hr, dg2 = 0.55f * hg, db2 = 0.55f * hb;
+		float er2 = 0.07f * hr, eg2 = 0.07f * hg, eb2 = 0.07f * hb;
+		uint32_t kind = hsh % 10;
+		if (kind < 5)      blm_shape(1, x, y, s, 0, 0, 2.0f, er2, eg2, eb2, ar2, ag2, ab2, dr2, dg2, db2);
+		else if (kind < 8) blm_shape(0, x, y, s * 0.8f, s * 0.8f, th, 2.0f, er2, eg2, eb2, ar2, ag2, ab2, dr2, dg2, db2);
+		else               blm_shape(2, x, y, s, s * 0.38f, 0, 2.0f, er2, eg2, eb2, ar2, ag2, ab2, dr2, dg2, db2);
+	}
+}
+
+// Drifting volumetrics, drawn immediate every frame: great soft fog masses on
+// slow incommensurate orbits. Light passing through them tints toward their
+// hue; lamps behind them dim and halo.
+static void blm_volumetrics(float t)
+{
+	for (int k = 0; k < 7; k++) {
+		uint32_t h = arc_hash((uint32_t)(k * 977 + 5));
+		float orbit = 8000.0f + (float)(h % 9000);
+		float w = (0.038f + (float)(h % 97) * 0.00035f) * ((k & 1) ? 1.0f : -1.0f);
+		float ph = (float)k * 2.4f;
+		float x = cosf(ph + w * t) * orbit, y = sinf(ph + w * t) * orbit;
+		float r = 2600.0f + (float)(h % 2800);
+		float hr, hg, hb; ap_hsv((float)((k * 47) % 360), 0.5f, 1.0f, &hr, &hg, &hb);
+		float f = 0.0012f;
+		blm_shape(1, x, y, r, 0, 0, 70.0f, 0, 0, 0,
+		          f * (1.2f - 0.6f * hr), f * (1.2f - 0.6f * hg), f * (1.2f - 0.6f * hb),
+		          0.12f, 0.12f, 0.13f);
+	}
+	{
+		float x = cosf(0.9f + t * 0.021f) * 16500.0f;
+		float y = sinf(0.9f + t * 0.021f) * 16500.0f;
+		blm_shape(1, x, y, 8500.0f, 0, 0, 80.0f, 0, 0, 0, 0.00075f, 0.00070f, 0.00090f, 0.10f, 0.10f, 0.11f);
+	}
+}
+
+// Edge ramp for the live lights: 1 inside the VISIBLE rect, easing to 0 at the
+// outer edge of the padded canvas (HRC_PAD). A light drifting toward the frame
+// fades up across the border ring instead of popping the moment its pixels
+// exist -- set each frame from the camera by bloom_draw.
+static float g_blm_vis_hw, g_blm_vis_hh, g_blm_marg;
+static float g_blm_zoom_u = 1.0f; // eased zoom phase, 0 = close-up (blm_lights adapts the core)
+static float blm_edge_ramp(float x, float y)
+{
+	if (g_blm_marg <= 1.0f) return 1.0f;
+	float dx = fabsf(x) - g_blm_vis_hw;
+	float dy = fabsf(y) - g_blm_vis_hh;
+	float d = dx > dy ? dx : dy;
+	if (d <= 0.0f) return 1.0f;
+	if (d >= g_blm_marg) return 0.0f;
+	float q = 1.0f - d / g_blm_marg;
+	return q * q * (3.0f - 2.0f * q);
+}
+
+// Soft ember swarm around the core, the close-zoom payoff: embers in three
+// orbital shells whirling prograde with Keplerian-ish speed falloff -- layered
+// clockwork parallax up close, invisible dust from afar. Each ember is
+// VOLUMETRIC: pass 1 (early, with the fog) lays down a heavily feathered
+// absorption puff with a whisper of albedo -- its own little participating
+// medium -- and pass 2 (after the lights) sets a deep-orange emissive heart
+// inside it, so the glow scatters within the puff instead of reading as a
+// flat disc. Hearts shade orange to ember-red across the shells.
+static void blm_embers(float t, int clouds_pass)
+{
+	static const float shell_r[3] = { 780.0f, 1450.0f, 2150.0f };
+	for (int k = 0; k < 90; k++) {
+		uint32_t h = arc_hash((uint32_t)(k * 613 + 17));
+		int shell = k % 3;
+		float rk = shell_r[shell] + (float)(h % 280) - 140.0f;
+		float tt = (float)shell * 0.5f;
+		float w = 0.5f * powf(900.0f / rk, 1.2f);
+		float ang = (float)(h % 628) * 0.01f + w * t;
+		float x = cosf(ang) * rk, y = sinf(ang) * rk;
+		float ramp = blm_edge_ramp(x, y);
+		if (ramp <= 0.0f) continue;
+		float sz = 16.0f + (float)(arc_hash(h) % 34);
+		if (clouds_pass) {
+			// the puff: warm-shadowed smoke (absorbs blue hardest) that both
+			// glows from its heart and catches the core light on its albedo
+			blm_shape(1, x, y, sz * 3.4f, 0, 0, 40.0f, 0, 0, 0,
+			          0.0038f, 0.0060f, 0.0095f, 0.16f, 0.11f, 0.07f);
+		} else {
+			float tw = 0.75f + 0.25f * sinf(t * (1.3f + tt) + (float)k);
+			// kept dim on purpose: hot orange rides AgX's shoulder into yellow,
+			// so the deep-ember read comes from LOW emission and a red-heavy ratio
+			float e = (0.36f + 0.30f * (1.0f - tt)) * tw * ramp;
+			blm_shape(1, x, y, sz, 0, 0, 16.0f,
+			          (1.05f * (1.0f - tt) + 0.80f * tt) * e,
+			          (0.28f * (1.0f - tt) + 0.13f * tt) * e,
+			          (0.05f * (1.0f - tt) + 0.04f * tt) * e,
+			          0.014f, 0.014f, 0.014f, 0, 0, 0);
+		}
+	}
+}
+
+// The lights, all live: a fleet of twelve orbiters on Keplerian-ish paths in
+// mixed directions -- sizes run from hot little sparks to big soft suns
+// (smaller burns hotter, so every light reads distinct) -- plus the breathing
+// zoom-adaptive core. Moving lights dragging shadows around the glass field
+// ARE the show; the recorded geometry just gives them something to relight.
+static void blm_lights(float t)
+{
+	for (int k = 0; k < 12; k++) {
+		uint32_t h = arc_hash((uint32_t)(k * 331 + 7));
+		float R = 3600.0f + 22000.0f * ((float)k + 0.4f * (float)(h % 100) * 0.01f) / 12.0f;
+		float w = 0.45f * powf(4200.0f / R, 0.85f) * ((h & 4) ? 1.0f : -1.0f);
+		float ang = (float)(h % 628) * 0.01f + w * t;
+		float x = cosf(ang) * R, y = sinf(ang) * R;
+		float ramp = blm_edge_ramp(x, y);
+		if (ramp <= 0.0f) continue;
+		// size grows with orbit radius: quick hot sparks weave the inner field,
+		// the big soft suns patrol the rim
+		float h01 = (float)(h % 1000) * 0.001f;
+		float rn = (R - 3600.0f) / 22000.0f;
+		float sz = (110.0f + 800.0f * rn * rn) * (0.8f + 0.5f * h01);
+		float hue = fmodf(30.0f + (float)k * 137.5f, 360.0f);
+		float hr, hg, hb; ap_hsv(hue, (k % 3) ? 0.65f : 0.15f, 1.0f, &hr, &hg, &hb);
+		float e = (0.9f + 260.0f / sz) * ramp;
+		blm_shape(1, x, y, sz, 0, 0, 2.5f, e * hr, e * hg, e * hb, 0.010f, 0.010f, 0.010f, 0, 0, 0);
+	}
+	{
+		// Exposure adaptation: at close zoom the core fills the frame and a
+		// fixed emission whites it out, so its brightness follows the camera --
+		// a soft glowing heart up close, a blazing beacon from far away.
+		float breath = (0.85f + 0.30f * sinf(t * 0.9f)) * (0.18f + 0.82f * powf(g_blm_zoom_u, 0.7f));
+		blm_shape(1, 0, 0, 440.0f, 0, 0, 8.0f, 1.5f * breath, 1.35f * breath, 1.05f * breath, 0.010f, 0.010f, 0.010f, 0, 0, 0);
+		blm_shape(1, 0, 0, 250.0f, 0, 0, 3.0f, 2.5f * breath, 2.3f * breath, 1.9f * breath, 0.014f, 0.014f, 0.014f, 0, 0, 0);
+	}
+}
+
+static CF_DrawList g_blm_bg[3], g_blm_band[4][3]; // [band][channel]
+static int g_blm_recorded = 0;
+
+static void bloom_draw(void)
+{
+	if (!g_blm_recorded) {
+		for (int ch = 0; ch < 3; ch++) {
+			g_blm_ch = ch;
+			g_blm_bg[ch] = cf_make_draw_list();
+			cf_draw_list_begin(g_blm_bg[ch]);
+			blm_shapes_bg();
+			cf_draw_list_end();
+			for (int b = 0; b < 4; b++) {
+				g_blm_band[b][ch] = cf_make_draw_list();
+				cf_draw_list_begin(g_blm_band[b][ch]);
+				blm_beads(b);
+				cf_draw_list_end();
+			}
+		}
+		g_blm_recorded = 1;
+	}
+
+	// Camera: 32s-per-leg eased ping-pong log zoom. The motion inside the frame
+	// comes from the layers, not the camera: counter-rotating bands, precessing
+	// pulsing lamps, orbiters, breathing core, drifting fog.
+	float u;
+	{
+		const char* zt = getenv("HRC_ZOOM_T");
+		if (zt) {
+			u = (float)atof(zt);
+		} else {
+			const float T = 32.0f;
+			float raw = fmodf(g_scene_time, 2.0f * T) / T;
+			u = raw < 1.0f ? raw : 2.0f - raw;
+		}
+		if (u < 0) u = 0; if (u > 1) u = 1;
+		u = u * u * (3.0f - 2.0f * u);
+	}
+	const float vw0 = 1600.0f, vw1 = 60000.0f;
+	float vw = vw0 * powf(vw1 / vw0, u);
+	float vh = vw * (float)view_h / (float)view_w;
+	// the cascade canvas extends HRC_PAD pixels past the window on every side:
+	// the projection covers the padded extent, the window shows the centre crop,
+	// and lights ramp up across the border ring (blm_edge_ramp) before entering
+	float vwp = vw * (float)world_w / (float)view_w;
+	float vhp = vh * (float)world_h / (float)view_h;
+	g_blm_vis_hw = vw * 0.5f;
+	g_blm_vis_hh = vh * 0.5f;
+	g_blm_marg = (vwp - vw) * 0.5f;
+	g_blm_zoom_u = u;
+	g_abs_zoom = vwp / (float)world_w;
+
+	CF_Canvas targets[3] = { hrc.emissivity, hrc.absorption, hrc.diffuse };
+	for (int ch = 0; ch < 3; ch++) {
+		cf_draw_push();
+		cf_draw_projection(cf_ortho_2d(0, 0, vwp, vhp));
+		push_f16_render_state();
+		cf_draw_list(g_blm_bg[ch]);
+		g_blm_ch = ch;
+		blm_volumetrics(g_scene_time);
+		blm_embers(g_scene_time, 1);
+		for (int b = 0; b < 4; b++) {
+			cf_draw_push();
+			cf_draw_rotate(g_blm_band_w[b] * g_scene_time);
+			cf_draw_list(g_blm_band[b][ch]);
+			cf_draw_pop();
+		}
+		blm_lights(g_scene_time);
+		blm_embers(g_scene_time, 0);
+		cf_draw_pop_render_state();
+		cf_render_to(targets[ch], true);
+		cf_draw_pop();
+	}
+}
+
 // Rasterize the selected scene into emission + absorption. Shared by the
 // interactive loop and the headless capture so both light the same thing.
 void hrc_ns_scene_draw(void)
 {
-	float W = (float)world_w, H = (float)world_h;
+	// Author to VIEW dims: the projection spans the padded canvas, so content
+	// sized to the window lands centred with the HRC_PAD ring empty around it.
+	float W = (float)view_w, H = (float)view_h;
 	cf_app_update(NULL); // acquire a command buffer
 	hrc_ns_init_once();
 	// The text scene is lit entirely by two large emitters filling the frame, so it
@@ -983,6 +1552,20 @@ void hrc_ns_scene_draw(void)
 	g_ns_exposure = 1.0f;
 	if (!CF_STRCMP(scene_name(), "text"))  g_ns_exposure = 0.10f;
 	if (!CF_STRCMP(scene_name(), "orbit")) g_ns_exposure = 2.0f;
+
+	// The arcology replays recorded draw lists under an animated camera instead
+	// of re-authoring shapes per channel; it owns g_abs_zoom while active.
+	if (!CF_STRCMP(scene_name(), "arcology")) {
+		g_ns_exposure = 1.2f;
+		arcology_draw();
+		return;
+	}
+	if (!CF_STRCMP(scene_name(), "bloom")) {
+		g_ns_exposure = 1.15f;
+		bloom_draw();
+		return;
+	}
+	g_abs_zoom = 1.0f;
 
 	// 0 = emission, 1 = absorption, 2 = diffuse albedo (drives the bounce feedback).
 	for (int channel = 0; channel < 3; channel++) {
@@ -1027,10 +1610,19 @@ void hrc_ns_testscene(void)
 	// we capture zeros (reproducible on back-to-back runs). Re-running the compute
 	// each frame is idempotent here -- the scene textures don't change.
 	//
+	// 48 frames, not a handful: each frame folds in one bounce, and the bounce
+	// does more than converge a brightness series -- it diffuses light INTO the
+	// finite-absorption walls one cell per iteration, which is what makes a wall's
+	// face read lit through its thickness. Capturing early shows walls darker than
+	// the interactive app ever looks. (HRC_SETTLE overrides, mostly for quick
+	// artifact checks where bounce convergence is irrelevant.)
+	//
 	// hrc_ns_scene_draw opens a frame (cf_app_update), so each pass pairs it with one
 	// cf_app_draw_onto_screen to submit. Leaving a frame open no longer loses its GPU
 	// work, but pairing keeps the frame accounting obvious.
-	for (int f = 0; f < 6; f++) {
+	int settle = getenv("HRC_SETTLE") ? atoi(getenv("HRC_SETTLE")) : 48;
+	if (settle < 2) settle = 2;
+	for (int f = 0; f < settle; f++) {
 		hrc_ns_scene_draw();   // opens the frame (cf_app_update)
 		hrc_ns_compute();
 		hrc_text_overlay();    // translucent stamp over the finished image
@@ -1094,17 +1686,40 @@ int main(int argc, char* argv[])
 			}
 		}
 	}
+	// HRC_PAD=N: extend the lighting world N pixels past the window on every
+	// side (default 96, 0 restores the exact viewport-sized cascade). Off-screen
+	// emitters in the ring still light the visible frame, so lights no longer
+	// pop into existence at the edge; animated scenes also ramp them across the
+	// ring. Costs ((view+2*pad)/view)^2 in cascade work.
+	view_w = world_w;
+	view_h = world_h;
+	{
+		const char* pd = getenv("HRC_PAD");
+		g_pad = pd ? atoi(pd) : 96;
+		if (g_pad < 0) g_pad = 0;
+		if (g_pad > 512) g_pad = 512;
+		g_pad = (g_pad / 4) * 4;
+	}
+	world_w = view_w + 2 * g_pad;
+	world_h = view_h + 2 * g_pad;
+
 	grid_w = world_w / GI_UPSCALE;
 	grid_h = world_h / GI_UPSCALE;
-	scene_s = (world_w < world_h ? world_w : world_h) / (float)GI_REF;
+	scene_s = (view_w < view_h ? view_w : view_h) / (float)GI_REF;
 	scene_ox = (world_w - GI_REF * scene_s) * 0.5f;
 	scene_oy = (world_h - GI_REF * scene_s) * 0.5f;
 
-	cf_make_app("HRC GI", 0, 0, 0, world_w, world_h, CF_APP_OPTIONS_WINDOW_POS_CENTERED_BIT, argv[0]);
+	cf_make_app("HRC GI", 0, 0, 0, view_w, view_h, CF_APP_OPTIONS_WINDOW_POS_CENTERED_BIT, argv[0]);
 	cf_clear_color(0, 0, 0, 1);
 
 	{ const char* hs = getenv("HRC_SCALE"); if (hs) { int v = atoi(hs);
 		if (v == 1 || v == 2 || v == 4) g_hrc_scale = v; } }
+	{ const char* hb = getenv("HRC_BLUR"); if (hb) blur_on = atoi(hb) != 0; }
+	{ const char* tl = getenv("HRC_TRACE_LEVELS"); if (tl) { int v = atoi(tl);
+		if (v >= 1 && v <= GI_N_MAX) g_trace_levels = v; } }
+	{ const char* ml = getenv("HRC_MAX_LEVELS"); if (ml) { int v = atoi(ml);
+		if (v >= 2) g_max_levels = v; } }
+	{ const char* sk = getenv("HRC_SKIP"); if (sk) g_skip = sk; }
 
 	hrc_init();
 	cf_make_font("/hrc_gi_data/calibri.ttf", cf_sintern("gi"));
@@ -1115,6 +1730,73 @@ int main(int argc, char* argv[])
 	// Headless capture is its own switch now that scenes cycle at runtime: HRC_SCENE
 	// only chooses where to start, in both modes.
 	if (getenv("HRC_SHOT")) hrc_ns_testscene();
+
+	// HRC_PERF=N: time N frames of the full per-frame pipeline (scene draw +
+	// bounce + cascade + display + present) after a warmup, print ms/frame, exit.
+	// Present mode goes immediate so vsync cannot clamp the number. Combine with
+	// HRC_SKIP / HRC_TRACE_LEVELS / HRC_MAX_LEVELS / HRC_SCALE for a timing matrix.
+	if (getenv("HRC_PERF")) {
+		int N = atoi(getenv("HRC_PERF"));
+		if (N < 10) N = 200;
+		cf_app_set_present_mode(CF_PRESENT_MODE_IMMEDIATE);
+		for (int f = 0; f < 30; f++) {
+			hrc_ns_scene_draw();
+			hrc_ns_compute();
+			cf_app_draw_onto_screen(true);
+		}
+		uint64_t t0 = cf_get_ticks();
+		for (int f = 0; f < N; f++) {
+			hrc_ns_scene_draw();
+			hrc_ns_compute();
+			cf_app_draw_onto_screen(true);
+		}
+		double ms = (double)(cf_get_ticks() - t0) / (double)cf_get_tick_frequency() * 1000.0 / N;
+		printf("PERF %s %dx%d scale=%d trace=%d cap=%d skip='%s' blur=%d bounce=%d: %.3f ms/frame\n",
+			scene_name(), world_w, world_h, g_hrc_scale, g_trace_levels, g_max_levels,
+			g_skip, blur_on, bounce_on, ms);
+		fflush(stdout);
+		exit(0);
+	}
+
+	// HRC_VIDEO=N: headless video capture -- render N frames stepping the scene
+	// clock by HRC_VIDEO_DT seconds each (default 4/30: 4x time compression at a
+	// 30fps timeline), append rgba8 fluence frames to hrc_video.raw, exit. Pipe
+	// the file through ffmpeg (-f rawvideo -pixel_format rgba) for a shareable
+	// clip of the animated scenes.
+	if (getenv("HRC_VIDEO")) {
+		int N = atoi(getenv("HRC_VIDEO"));
+		if (N < 1) N = 240;
+		float dt = getenv("HRC_VIDEO_DT") ? (float)atof(getenv("HRC_VIDEO_DT")) : (4.0f / 30.0f);
+		const char* out = getenv("HRC_OUT");
+		if (!out) out = "";
+		char path[512];
+		CF_SNPRINTF(path, sizeof(path), "%shrc_video.raw", out);
+		FILE* vf = fopen(path, "wb");
+		if (!vf) { printf("VIDEO: cannot open %s\n", path); exit(1); }
+		size_t frame_bytes = (size_t)world_w * world_h * 4;
+		unsigned char* buf = (unsigned char*)cf_alloc(frame_bytes);
+		// settle the bounce before frame 0 so the clip doesn't open mid-converge
+		for (int f = 0; f < 24; f++) { hrc_ns_scene_draw(); hrc_ns_compute(); cf_app_draw_onto_screen(true); }
+		for (int f = 0; f < N; f++) {
+			g_scene_time = f * dt;
+			hrc_ns_scene_draw();
+			hrc_ns_compute();
+			cf_app_draw_onto_screen(true);
+			CF_Readback rb = cf_canvas_readback(hrc.fluence);
+			for (int t2 = 0; t2 < 240 && !cf_readback_ready(rb); t2++) { cf_app_update(NULL); cf_app_draw_onto_screen(true); }
+			if (cf_readback_ready(rb)) {
+				cf_readback_data(rb, buf, frame_bytes);
+				fwrite(buf, 1, frame_bytes, vf);
+			}
+			cf_destroy_readback(rb);
+			if (f % 60 == 0) { printf("VIDEO frame %d/%d\n", f, N); fflush(stdout); }
+		}
+		fclose(vf);
+		cf_free(buf);
+		printf("VIDEO: wrote %d frames %dx%d rgba8 -> %s\n", N, world_w, world_h, path);
+		fflush(stdout);
+		exit(0);
+	}
 
 	// Interactive: draw the selected scene and light it every frame.
 	while (cf_app_is_running()) {
@@ -1128,6 +1810,7 @@ int main(int argc, char* argv[])
 		if (cf_key_just_pressed(CF_KEY_2)) { g_hrc_scale = 2; hrc_ns_apply_scale(); }
 		if (cf_key_just_pressed(CF_KEY_4)) { g_hrc_scale = 4; hrc_ns_apply_scale(); }
 		if (cf_key_just_pressed(CF_KEY_B)) bounce_on = !bounce_on;
+		if (cf_key_just_pressed(CF_KEY_C)) blur_on = !blur_on;
 		hrc_ns_scene_draw();
 		hrc_ns_compute();
 		hrc_text_overlay();
@@ -1138,15 +1821,15 @@ int main(int argc, char* argv[])
 		// Push/pop are balanced -- these stacks are global and leak across frames
 		// otherwise.
 		cf_push_font(cf_sintern("gi"));
-		cf_push_font_size(world_h * 0.022f);
+		cf_push_font_size(view_h * 0.022f);
 		cf_draw_push_color(cf_make_color_rgb_f(0.62f, 0.72f, 0.80f));
 		char hud[256];
 		CF_SNPRINTF(hud, sizeof(hud), "%s   (%d/%d)      %dx%d  cascade 1/%d",
 			scene_name(), g_scene_index + 1, g_scene_count, world_w, world_h, g_hrc_scale);
-		cf_draw_text(hud, cf_v2(-world_w * 0.46f, -world_h * 0.415f), -1);
-		CF_SNPRINTF(hud, sizeof(hud), "left/right scene    1/2/4 cascade scale    B bounce %s",
-			bounce_on ? "on" : "off");
-		cf_draw_text(hud, cf_v2(-world_w * 0.46f, -world_h * 0.45f), -1);
+		cf_draw_text(hud, cf_v2(-view_w * 0.46f, -view_h * 0.415f), -1);
+		CF_SNPRINTF(hud, sizeof(hud), "left/right scene    1/2/4 cascade scale    B bounce %s    C blur %s",
+			bounce_on ? "on" : "off", blur_on ? "on" : "off");
+		cf_draw_text(hud, cf_v2(-view_w * 0.46f, -view_h * 0.45f), -1);
 		cf_draw_pop_color();
 		cf_pop_font_size();
 		cf_pop_font();

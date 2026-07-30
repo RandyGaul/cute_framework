@@ -6,13 +6,14 @@
 // element -- it stitches the already-traced level below. This is what amitabha
 // does for levels >= traced_levels (its default is 2).
 //
-// T layout (same as ami_ns_trace): idx = (yy*(dirs_k+1) + ray)*size_x_k + x
+// T layout (same as ami_ns_trace): idx = (x*(dirs_k+1) + ray)*(4*cross) + yy
 //   dirs_k = 2<<k, size_x_k = ceil_div(casc_grid, 2^k), yy in [0, 4*cross_grid).
+// yy innermost: warps of consecutive yy load/store contiguously at every level.
 
-layout(std430, set = 0, binding = 0) readonly  buffer LastRad { uvec2 data[]; } u_last_rad;
-layout(std430, set = 0, binding = 1) readonly  buffer LastTrn { uvec2 data[]; } u_last_trn;
-layout(std430, set = 1, binding = 0) writeonly buffer OutRad  { uvec2 data[]; } u_out_rad;
-layout(std430, set = 1, binding = 1) writeonly buffer OutTrn  { uvec2 data[]; } u_out_trn;
+// Fused T element: rad+trn as 6 packed halves in one uvec4 (w spare), so each
+// probe is one 16-byte load/store instead of two 8-byte ones in split buffers.
+layout(std430, set = 0, binding = 0) readonly  buffer LastT { uvec4 data[]; } u_last_t;
+layout(std430, set = 1, binding = 0) writeonly buffer OutT  { uvec4 data[]; } u_out_t;
 
 layout(set = 2, binding = 0) uniform Params
 {
@@ -21,10 +22,18 @@ layout(set = 2, binding = 0) uniform Params
 	int u_cross_grid;  // cross-axis probe grid dim
 };
 
-layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+layout(local_size_x = 64, local_size_y = 4, local_size_z = 1) in;
 
-vec4 f16_load(uvec2 p) { return vec4(unpackHalf2x16(p.x), unpackHalf2x16(p.y)); }
-uvec2 f16_store(vec4 v) { return uvec2(packHalf2x16(v.xy), packHalf2x16(v.zw)); }
+void t_unpack(uvec4 p, out vec3 rad, out vec3 trn)
+{
+	vec2 a = unpackHalf2x16(p.x), b = unpackHalf2x16(p.y), c = unpackHalf2x16(p.z);
+	rad = vec3(a, b.x);
+	trn = vec3(b.y, c);
+}
+uvec4 t_pack(vec3 rad, vec3 trn)
+{
+	return uvec4(packHalf2x16(rad.rg), packHalf2x16(vec2(rad.b, trn.r)), packHalf2x16(trn.gb), 0u);
+}
 
 int ceil_div(int a, int b) { return (a + b - 1) / b; }
 int dirs_of(int n)  { return 2 << n; }
@@ -41,9 +50,8 @@ void last_load(int x, int yy, int ray, bool opt, out vec3 rad, out vec3 trn)
 		rad = vec3(0.0); trn = vec3(1.0); // empty fluence
 		return;
 	}
-	int idx = (yy * (dirs + 1) + ray) * sx + x;
-	rad = f16_load(u_last_rad.data[idx]).rgb;
-	trn = f16_load(u_last_trn.data[idx]).rgb;
+	int idx = (x * (dirs + 1) + ray) * packH() + yy;
+	t_unpack(u_last_t.data[idx], rad, trn);
 }
 
 // over(near, far): radiance = near.rad + near.trn*far.rad, trn = near.trn*far.trn
@@ -57,8 +65,8 @@ void main()
 {
 	int n = u_level;
 	int dirs = dirs_of(n), nrays = dirs + 1, sx = sizex_of(n);
-	int gx = int(gl_GlobalInvocationID.x);
-	int yy = int(gl_GlobalInvocationID.y);
+	int yy = int(gl_GlobalInvocationID.x);
+	int gx = int(gl_GlobalInvocationID.y);
 	int x   = gx % sx;
 	int ray = gx / sx;
 	if (gx >= sx * nrays || ray > dirs || yy >= packH()) return;
@@ -94,7 +102,6 @@ void main()
 		trn = (lt + ut) * 0.5;
 	}
 
-	int idx = (yy * nrays + ray) * sx + x;
-	u_out_rad.data[idx] = f16_store(vec4(rad, 1.0));
-	u_out_trn.data[idx] = f16_store(vec4(trn, 1.0));
+	int idx = (x * nrays + ray) * packH() + yy;
+	u_out_t.data[idx] = t_pack(rad, trn);
 }
