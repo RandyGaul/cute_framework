@@ -100,9 +100,14 @@ if (EMSCRIPTEN)
 	target_link_options(waves PRIVATE --preload-file "${CMAKE_CURRENT_SOURCE_DIR}/waves_data@/waves_data")
 	target_link_options(spaceshooter PRIVATE --preload-file "${CMAKE_CURRENT_SOURCE_DIR}/spaceshooter_data@/spaceshooter_data")
 	target_link_options(fluid_sim PRIVATE --preload-file "${CMAKE_CURRENT_SOURCE_DIR}/fluid_sim_data@/fluid_sim_data")
-	# The HRC samples load every compute shader (and hrc_gi's font) from their data
-	# dir at startup and exit(1) if one is missing, so the web build needs these
-	# preloaded or the samples die before their first frame.
+	target_link_options(shallow_water PRIVATE --preload-file "${CMAKE_CURRENT_SOURCE_DIR}/shallow_water_data@/shallow_water_data")
+	target_link_options(import_spritesheet PRIVATE --preload-file "${CMAKE_CURRENT_SOURCE_DIR}/import_spritesheet_data@/import_spritesheet_data")
+	target_link_options(pivot PRIVATE --preload-file "${CMAKE_CURRENT_SOURCE_DIR}/pivot_data@/pivot_data")
+	target_link_options(9_slice PRIVATE --preload-file "${CMAKE_CURRENT_SOURCE_DIR}/9_slice_data@/9_slice_data")
+	target_link_options(customsprite PRIVATE --preload-file "${CMAKE_CURRENT_SOURCE_DIR}/custom_sprite_data@/custom_sprite_data")
+	# The HRC samples load every compute shader from their data dir at startup and
+	# exit(1) if one is missing, so the web build needs these preloaded or the
+	# samples die before their first frame.
 	target_link_options(hrc PRIVATE --preload-file "${CMAKE_CURRENT_SOURCE_DIR}/hrc_data@/hrc_data")
 	target_link_options(hrc_gi PRIVATE --preload-file "${CMAKE_CURRENT_SOURCE_DIR}/hrc_gi_data@/hrc_gi_data")
 endif ()
