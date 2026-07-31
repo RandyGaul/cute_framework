@@ -912,6 +912,22 @@ bool cf_sdlgpu_set_present_mode(CF_PresentMode mode)
 
 void cf_sdlgpu_begin_frame()
 {
+	// A frame may still be open here: cf_app_update was called again without an
+	// intervening cf_app_draw_onto_screen. Close it out rather than overwriting the
+	// handle. Dropping it leaks the command buffer -- SDL_GPU requires every acquired
+	// buffer be submitted or cancelled -- and silently discards everything recorded
+	// into it. That loss is invisible at the call site but not harmless: texture
+	// uploads go with it, while the CPU-side caches that issued them still consider
+	// the data resident and never re-upload. A font atlas page lost this way leaves
+	// glyphs sampling empty texels, so text rasterizes to nothing for the rest of the
+	// run while ordinary shapes keep drawing fine.
+	if (g_ctx.cmd) {
+		s_end_active_pass();
+		SDL_SubmitGPUCommandBuffer(g_ctx.cmd);
+		g_ctx.cmd = NULL;
+		g_ctx.canvas = NULL;
+		g_ctx.swapchain_tex = NULL;
+	}
 	g_ctx.cmd = SDL_AcquireGPUCommandBuffer(g_ctx.device);
 	g_ctx.skip_drawing = false;
 }

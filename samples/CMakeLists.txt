@@ -89,6 +89,7 @@ add_sample(input_binding input_binding.c)
 add_sample(compute compute.c)
 add_sample(galaxy galaxy.c)
 add_sample(hrc hrc.c)
+add_sample(hrc_gi hrc_gi.c)
 add_sample(canvas_readback canvas_readback.c)
 add_sample(glitch glitch.cpp)
 add_sample(customsprite custom_sprite.c)
@@ -104,6 +105,11 @@ if (EMSCRIPTEN)
 	target_link_options(pivot PRIVATE --preload-file "${CMAKE_CURRENT_SOURCE_DIR}/pivot_data@/pivot_data")
 	target_link_options(9_slice PRIVATE --preload-file "${CMAKE_CURRENT_SOURCE_DIR}/9_slice_data@/9_slice_data")
 	target_link_options(customsprite PRIVATE --preload-file "${CMAKE_CURRENT_SOURCE_DIR}/custom_sprite_data@/custom_sprite_data")
+	# The HRC samples load every compute shader from their data dir at startup and
+	# exit(1) if one is missing, so the web build needs these preloaded or the
+	# samples die before their first frame.
+	target_link_options(hrc PRIVATE --preload-file "${CMAKE_CURRENT_SOURCE_DIR}/hrc_data@/hrc_data")
+	target_link_options(hrc_gi PRIVATE --preload-file "${CMAKE_CURRENT_SOURCE_DIR}/hrc_gi_data@/hrc_gi_data")
 endif ()
 
 # Copy over some folders for certain samples.
@@ -116,4 +122,5 @@ add_custom_command(TARGET pivot PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_direc
 add_custom_command(TARGET scratch PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/../assets/CF_Logo_Pixel.png $<TARGET_FILE_DIR:scratch>/app_icon.png)
 add_custom_command(TARGET 9_slice PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/9_slice_data $<TARGET_FILE_DIR:9_slice>/9_slice_data)
 add_custom_command(TARGET hrc PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/hrc_data $<TARGET_FILE_DIR:hrc>/hrc_data)
+add_custom_command(TARGET hrc_gi PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/hrc_gi_data $<TARGET_FILE_DIR:hrc_gi>/hrc_gi_data)
 add_custom_command(TARGET customsprite PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/custom_sprite_data $<TARGET_FILE_DIR:customsprite>/custom_sprite_data)

@@ -1,0 +1,106 @@
+// HRC extend pass (merge_up): build cascade level n from level n-1
+// by compositing two half-length intervals, instead of re-marching the scene.
+//
+// Direct-tracing every level is O(2^n) work per probe at level n (rays get longer
+// as the cascade deepens), so the top levels dominate. merge_up is O(1) per output
+// element -- it stitches the already-traced level below.
+//
+// T layout (same as hrc_trace): idx = (x*(dirs_k+1) + ray)*(4*cross) + yy
+//   dirs_k = 2<<k, size_x_k = ceil_div(casc_grid, 2^k), yy in [0, 4*cross_grid).
+// yy innermost: warps of consecutive yy load/store contiguously at every level.
+
+// Fused T element: rad+trn as 6 packed halves in one uvec4 (w spare), so each
+// probe is one 16-byte load/store instead of two 8-byte ones in split buffers.
+layout(std430, set = 0, binding = 0) readonly  buffer LastT { uvec4 data[]; } u_last_t;
+layout(std430, set = 1, binding = 0) writeonly buffer OutT  { uvec4 data[]; } u_out_t;
+
+layout(set = 2, binding = 0) uniform Params
+{
+	int u_level;       // cascade level n being produced (>= 1)
+	int u_casc_grid;   // cascade-axis probe grid dim
+	int u_cross_grid;  // cross-axis probe grid dim
+};
+
+layout(local_size_x = 64, local_size_y = 4, local_size_z = 1) in;
+
+void t_unpack(uvec4 p, out vec3 rad, out vec3 trn)
+{
+	vec2 a = unpackHalf2x16(p.x), b = unpackHalf2x16(p.y), c = unpackHalf2x16(p.z);
+	rad = vec3(a, b.x);
+	trn = vec3(b.y, c);
+}
+uvec4 t_pack(vec3 rad, vec3 trn)
+{
+	return uvec4(packHalf2x16(rad.rg), packHalf2x16(vec2(rad.b, trn.r)), packHalf2x16(trn.gb), 0u);
+}
+
+int ceil_div(int a, int b) { return (a + b - 1) / b; }
+int dirs_of(int n)  { return 2 << n; }
+int sizex_of(int n) { return max(ceil_div(u_casc_grid, 1 << n), 1); }
+int packH()         { return 4 * u_cross_grid; }
+
+// Load from level n-1. `opt` = return empty (transparent) when out of range;
+// otherwise the unchecked load.
+void last_load(int x, int yy, int ray, bool opt, out vec3 rad, out vec3 trn)
+{
+	int n = u_level - 1;
+	int dirs = dirs_of(n), sx = sizex_of(n);
+	if (x < 0 || x >= sx || ray < 0 || ray > dirs || yy < 0 || yy >= packH()) {
+		rad = vec3(0.0); trn = vec3(1.0); // empty fluence
+		return;
+	}
+	int idx = (x * (dirs + 1) + ray) * packH() + yy;
+	t_unpack(u_last_t.data[idx], rad, trn);
+}
+
+// over(near, far): radiance = near.rad + near.trn*far.rad, trn = near.trn*far.trn
+void over(vec3 nr, vec3 nt, vec3 fr, vec3 ft, out vec3 orad, out vec3 otrn)
+{
+	orad = nr + nt * fr;
+	otrn = nt * ft;
+}
+
+void main()
+{
+	int n = u_level;
+	int dirs = dirs_of(n), nrays = dirs + 1, sx = sizex_of(n);
+	int yy = int(gl_GlobalInvocationID.x);
+	int gx = int(gl_GlobalInvocationID.y);
+	int x   = gx % sx;
+	int ray = gx / sx;
+	if (gx >= sx * nrays || ray > dirs || yy >= packH()) return;
+
+	int last_x = x * 2;
+	int offset = ray - dirs / 2;          // grid.ray_offset(dir)
+
+	vec3 rad, trn;
+	if (ray % 2 == 0) {
+		int last_dir = ray / 2;
+		vec3 ar, at, br, bt;
+		last_load(last_x, yy, last_dir, false, ar, at);
+		// midpoint probe: cell + (1, offset/2) at the same direction
+		last_load(last_x + 1, yy + offset / 2, last_dir, true, br, bt);
+		over(ar, at, br, bt, rad, trn);
+	} else {
+		int lo_dir = ray / 2;
+		int hi_dir = ray / 2 + 1;
+		// floor/ceil of offset/2 for the two midpoints (C-style trunc is wrong for
+		// negatives, so compute floor/ceil explicitly).
+		int fdiv = int(floor(float(offset) * 0.5));
+		int cdiv = int(ceil (float(offset) * 0.5));
+		vec3 ar, at, br, bt, cr, ct, dr, dt;
+		last_load(last_x, yy, lo_dir, false, ar, at);
+		last_load(last_x + 1, yy + fdiv, hi_dir, true, br, bt);
+		vec3 lr, lt; over(ar, at, br, bt, lr, lt);
+
+		last_load(last_x, yy, hi_dir, false, cr, ct);
+		last_load(last_x + 1, yy + cdiv, lo_dir, true, dr, dt);
+		vec3 ur, ut; over(cr, ct, dr, dt, ur, ut);
+
+		rad = (lr + ur) * 0.5;   // Fluence::blend
+		trn = (lt + ut) * 0.5;
+	}
+
+	int idx = (x * nrays + ray) * packH() + yy;
+	u_out_t.data[idx] = t_pack(rad, trn);
+}

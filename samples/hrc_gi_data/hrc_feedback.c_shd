@@ -1,0 +1,65 @@
+// Multibounce feedback: add last frame's
+// fluence AT THIS CELL, tinted by the surface's diffuse albedo, into the scene
+// emissivity. Runs after the scene draws its channels and before the cascade, so
+// each frame folds in one more bounce; with loop gain < 1 the series converges
+// geometrically and costs no extra cascade passes.
+//
+// This is what makes an opaque surface's FACE visible. The cascade only reports
+// light arriving at a cell, so a pure absorber has nothing to show and reads as
+// a black cutout. Give it an albedo and the light landing on it is re-emitted
+// from that cell, so the surface is lit by the actual scene -- colour bleed
+// included -- while still blocking everything behind it.
+//
+// Per-cell feedback only works because diffuse solids carry FINITE absorption
+// (0.5/px), not an effectively-infinite coefficient:
+// light then penetrates the first few pixels of a face and those cells hold real
+// fluence to re-emit, brightest at the surface and fading inward -- which is
+// exactly how the reference's walls read. A solid at 30000 starves this loop
+// (the fluence stored inside it is zero) and needs a neighbourhood-gather hack;
+// an earlier version of this shader did that, at 441 taps per pixel.
+//
+// No sRGB/16 encoding here: hrc_gi stores raw linear emission and raw absorption
+// coefficients (the trace does exp(-opac*seg) directly), so the bounce adds in
+// linear space.
+
+layout(set = 0, binding = 0, rgba16f) uniform readonly image2D u_fluence_lin;
+layout(set = 0, binding = 1, rgba16f) uniform readonly image2D u_diffuse;
+layout(set = 1, binding = 0, rgba16f) uniform image2D u_emissivity;
+
+layout(set = 2, binding = 0) uniform Params
+{
+	int   u_world_w;
+	int   u_world_h;
+	float u_boost; // demo gain on the bounce; 1.0 = physical. The maze scene
+	               // runs hotter so indirect light stays readable in narrow
+	               // corridors (its geometry keeps the loop gain under 1).
+};
+
+layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+
+void main()
+{
+	ivec2 gid = ivec2(gl_GlobalInvocationID.xy);
+	if (gid.x >= u_world_w || gid.y >= u_world_h) return;
+
+	vec3 albedo = imageLoad(u_diffuse, gid).rgb;
+	if (dot(albedo, albedo) == 0.0) return; // no albedo authored: pure absorber
+	// The bounce series converges to 1/(1-albedo) times the direct light, so an
+	// albedo at or above 1 diverges over the settle frames. Physical reflectances
+	// top out well below that; clamp so no authored value (or env override) can
+	// run the loop gain to the rail.
+	albedo = min(albedo, vec3(0.9));
+
+	// Albedo here is a plain [0,1] reflectance, and the units work out for it:
+	// fluence is cone radiance summed over 2pi of span, so dividing by 2pi
+	// recovers the mean incident radiance, and a Lambertian surface re-emits
+	// albedo times that as its own radiance -- which is exactly what the emission
+	// canvas stores. The loop gain is then albedo, not 2pi*albedo, so any
+	// physical reflectance converges. The display puts the 2pi back when it
+	// composites emission, so a surface reads as albedo of its surroundings.
+	vec3 fl = max(imageLoad(u_fluence_lin, gid).rgb, vec3(0.0));
+	vec3 bounce = albedo * fl * (u_boost / 6.28318530718);
+
+	vec3 existing = imageLoad(u_emissivity, gid).rgb;
+	imageStore(u_emissivity, gid, vec4(existing + bounce, 1.0));
+}
