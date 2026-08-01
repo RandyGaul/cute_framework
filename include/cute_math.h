@@ -2645,6 +2645,7 @@ CF_INLINE CF_Raycast cf_ray_to_halfspace(CF_Ray A, CF_Halfspace B)
  * @param    b          The end point of a line segment.
  * @param    p          The query point.
  * @remarks  See [this article](https://randygaul.github.io/math/collision-detection/2014/07/01/Distance-Point-to-Line-Segment.html) for implementation details.
+ *           If `a == b` the segment is a point and the squared distance from `p` to `a` is returned.
  * @related  CF_V2 CF_Ray
  */
 CF_INLINE float cf_distance_sq(CF_V2 a, CF_V2 b, CF_V2 p)
