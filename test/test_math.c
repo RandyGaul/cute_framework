@@ -120,6 +120,65 @@ TEST_CASE(test_atan2_360_mixed_c) {
 	return true;
 }
 
+TEST_CASE(test_mul_T_m3x2_c) {
+	/* T(m) * v undoes m * v: transform a world point into m's local space. */
+	CF_M3x2 m = cf_make_translation(3.0f, 4.0f);
+	CF_V2 world = cf_v2(3.0f, 5.0f);
+	CF_V2 local = cf_mul_T(m, world);
+	REQUIRE(local.x == 0.0f);
+	REQUIRE(local.y == 1.0f);
+
+	/* T(a) * (a * b) == b for matrix-matrix. */
+	CF_M3x2 a = cf_make_translation(1.0f, 2.0f);
+	CF_M3x2 ab = cf_mul(a, m);
+	CF_M3x2 back = cf_mul_T(a, ab);
+	REQUIRE(back.p.x == 3.0f);
+	REQUIRE(back.p.y == 4.0f);
+
+	return true;
+}
+
+TEST_CASE(test_atan2_v2_one_arg_c) {
+	CF_V2 v = cf_v2(0.0f, 1.0f);
+	float angle = cf_atan2(v);
+	REQUIRE(cf_abs(angle - CF_PI / 2.0f) < 1e-6f);
+
+	/* Two-arg forms must keep working through the same macro. */
+	float angle2 = cf_atan2(1.0f, 0.0f);
+	REQUIRE(cf_abs(angle2 - CF_PI / 2.0f) < 1e-6f);
+	double angle3 = cf_atan2(0.0, 1.0);
+	REQUIRE(angle3 == 0.0);
+
+	return true;
+}
+
+TEST_CASE(test_make_scale_translation_3arg_c) {
+	CF_V2 p = cf_v2(5.0f, 6.0f);
+	CF_M3x2 m = cf_make_scale_translation(2.0f, 3.0f, p);
+	REQUIRE(m.m.x.x == 2.0f);
+	REQUIRE(m.m.y.y == 3.0f);
+	REQUIRE(m.p.x == 5.0f);
+	REQUIRE(m.p.y == 6.0f);
+
+	/* Two-arg forms must keep working through the same macro. */
+	CF_M3x2 m2 = cf_make_scale_translation(cf_v2(2.0f, 3.0f), p);
+	REQUIRE(m2.m.x.x == 2.0f);
+	REQUIRE(m2.m.y.y == 3.0f);
+	CF_M3x2 m3 = cf_make_scale_translation(4.0f, p);
+	REQUIRE(m3.m.x.x == 4.0f);
+	REQUIRE(m3.m.y.y == 4.0f);
+
+	return true;
+}
+
+TEST_CASE(test_atan2_360_v2_literal_c) {
+	/* A cf_v2(...) literal used to mis-split inside the arity dispatcher
+	   before cf_v2's expansion was parenthesized. */
+	float angle = cf_atan2_360(cf_v2(1.0f, 0.0f));
+	REQUIRE(angle >= 0.0f && angle <= CF_PI * 2.0f);
+	return true;
+}
+
 TEST_SUITE(test_math_c) {
 	RUN_TEST_CASE(test_make_translation_v2_c);
 	RUN_TEST_CASE(test_make_translation_floats_c);
@@ -129,4 +188,8 @@ TEST_SUITE(test_math_c) {
 	RUN_TEST_CASE(test_atan2_360_v2_c);
 	RUN_TEST_CASE(test_atan2_360_sincos_c);
 	RUN_TEST_CASE(test_atan2_360_mixed_c);
+	RUN_TEST_CASE(test_mul_T_m3x2_c);
+	RUN_TEST_CASE(test_atan2_v2_one_arg_c);
+	RUN_TEST_CASE(test_make_scale_translation_3arg_c);
+	RUN_TEST_CASE(test_atan2_360_v2_literal_c);
 }
