@@ -2531,6 +2531,7 @@ CF_INLINE int cf_collide_aabb(CF_Aabb a, CF_Aabb b) { return cf_overlaps(a, b); 
  * @function cf_make_aabb_verts
  * @category math
  * @brief    Returns a `CF_Aabb` that tightly contains all input verts.
+ * @remarks  If `count <= 0` a zero'd out `CF_Aabb` is returned and `verts` is not read (it may be `NULL`).
  * @related  CF_Aabb cf_make_aabb_verts cf_aabb_verts
  */
 CF_INLINE CF_Aabb cf_make_aabb_verts(const CF_V2* verts, int count)
