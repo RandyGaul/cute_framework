@@ -2613,10 +2613,10 @@ CF_INLINE CF_V2 cf_endpoint(CF_Ray r) { return cf_add(r.p, cf_mul_v2_f(r.d, r.t)
 /**
  * @function cf_ray_to_halfspace
  * @category collision
- * @brief    Returns a raycast to a halfspace (plane)
+ * @brief    Returns a raycast to a halfspace (plane).
  * @param    A          The ray.
  * @param    B          The plane.
- * @param    Returns a `CF_Raycast` containing results about the raycast.
+ * @return   A `CF_Raycast` containing results about the raycast.
  * @related  CF_Ray
  */
 CF_INLINE CF_Raycast cf_ray_to_halfspace(CF_Ray A, CF_Halfspace B)
