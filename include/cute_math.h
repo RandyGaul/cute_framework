@@ -2535,6 +2535,7 @@ CF_INLINE int cf_collide_aabb(CF_Aabb a, CF_Aabb b) { return cf_overlaps(a, b); 
  */
 CF_INLINE CF_Aabb cf_make_aabb_verts(const CF_V2* verts, int count)
 {
+	if (count <= 0) return cf_make_aabb(cf_v2(0, 0), cf_v2(0, 0));
 	CF_V2 vmin = verts[0];
 	CF_V2 vmax = vmin;
 	for (int i = 0; i < count; ++i) {
@@ -2650,6 +2651,11 @@ CF_INLINE float cf_distance_sq(CF_V2 a, CF_V2 b, CF_V2 p)
 {
 	CF_V2 n = cf_sub(b, a);
 	CF_V2 pa = cf_sub(a, p);
+	float nn = cf_dot(n, n);
+
+	// Degenerate segment where a == b
+	if (nn == 0.0f) return cf_dot(pa, pa);
+
 	float c = cf_dot(n, pa);
 
 	// Closest point is a
@@ -2660,7 +2666,7 @@ CF_INLINE float cf_distance_sq(CF_V2 a, CF_V2 b, CF_V2 p)
 	if (cf_dot(n, bp) > 0.0f) return cf_dot(bp, bp);
 
 	// Closest point is between a and b
-	CF_V2 e = cf_sub(pa, cf_mul_v2_f(n, (c / cf_dot(n, n))));
+	CF_V2 e = cf_sub(pa, cf_mul_v2_f(n, (c / nn)));
 	return cf_dot(e, e);
 }
 

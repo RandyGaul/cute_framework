@@ -120,6 +120,51 @@ TEST_CASE(test_atan2_360_mixed_c) {
 	return true;
 }
 
+TEST_CASE(test_polygon_degenerate_c) {
+	/* Zero-area (collinear) polygon: results must be finite, falling back
+	   to the vertex average. */
+	CF_Poly line;
+	line.count = 3;
+	line.verts[0] = cf_v2(0, 0);
+	line.verts[1] = cf_v2(1, 0);
+	line.verts[2] = cf_v2(2, 0);
+	CF_V2 com = cf_center_of_mass(line);
+	REQUIRE(com.x == com.x && com.y == com.y); /* not NaN */
+	REQUIRE(cf_abs(com.x - 1.0f) < 1e-4f);
+
+	CF_V2 pts[3];
+	pts[0] = cf_v2(0, 0);
+	pts[1] = cf_v2(1, 0);
+	pts[2] = cf_v2(2, 0);
+	CF_V2 cen = cf_centroid(pts, 3);
+	REQUIRE(cen.x == cen.x && cen.y == cen.y); /* not NaN */
+	REQUIRE(cf_abs(cen.x - 1.0f) < 1e-4f);
+
+	/* count == 0 must not divide by zero (nor read verts[0]). */
+	CF_Poly empty;
+	empty.count = 0;
+	CF_V2 z = cf_center_of_mass(empty);
+	REQUIRE(z.x == 0.0f && z.y == 0.0f);
+
+	return true;
+}
+
+TEST_CASE(test_distance_sq_degenerate_c) {
+	/* Zero-length segment: squared distance to the point a == b. */
+	float d = cf_distance_sq(cf_v2(1, 1), cf_v2(1, 1), cf_v2(5, 5));
+	REQUIRE(d == d); /* not NaN */
+	REQUIRE(cf_abs(d - 32.0f) < 1e-4f);
+	return true;
+}
+
+TEST_CASE(test_make_aabb_verts_empty_c) {
+	/* count == 0 must not read verts[0]. */
+	CF_Aabb bb = cf_make_aabb_verts(NULL, 0);
+	REQUIRE(bb.min.x == 0.0f && bb.min.y == 0.0f);
+	REQUIRE(bb.max.x == 0.0f && bb.max.y == 0.0f);
+	return true;
+}
+
 TEST_SUITE(test_math_c) {
 	RUN_TEST_CASE(test_make_translation_v2_c);
 	RUN_TEST_CASE(test_make_translation_floats_c);
@@ -129,4 +174,7 @@ TEST_SUITE(test_math_c) {
 	RUN_TEST_CASE(test_atan2_360_v2_c);
 	RUN_TEST_CASE(test_atan2_360_sincos_c);
 	RUN_TEST_CASE(test_atan2_360_mixed_c);
+	RUN_TEST_CASE(test_polygon_degenerate_c);
+	RUN_TEST_CASE(test_distance_sq_degenerate_c);
+	RUN_TEST_CASE(test_make_aabb_verts_empty_c);
 }
