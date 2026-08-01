@@ -146,6 +146,20 @@ TEST_CASE(test_polygon_degenerate_c) {
 	CF_V2 z = cf_center_of_mass(empty);
 	REQUIRE(z.x == 0.0f && z.y == 0.0f);
 
+	/* count == 1 and count == 2: the point and the segment midpoint. */
+	CF_Poly point;
+	point.count = 1;
+	point.verts[0] = cf_v2(3, 4);
+	CF_V2 one = cf_center_of_mass(point);
+	REQUIRE(one.x == 3.0f && one.y == 4.0f);
+
+	CF_Poly seg;
+	seg.count = 2;
+	seg.verts[0] = cf_v2(0, 0);
+	seg.verts[1] = cf_v2(2, 6);
+	CF_V2 mid = cf_center_of_mass(seg);
+	REQUIRE(mid.x == 1.0f && mid.y == 3.0f);
+
 	return true;
 }
 
