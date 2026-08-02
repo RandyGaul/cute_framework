@@ -1127,7 +1127,9 @@ void cf_sdlgpu_texture_update_layer(CF_Texture texture_handle, void* data, int s
 	if (tex->type == CF_TEXTURE_TYPE_3D) dst.z = (Uint32)layer;
 	else dst.layer = (Uint32)layer;
 	dst.d = 1;
-	SDL_UploadToGPUTexture(pass, &src, &dst, true);
+	// cycle = false, unlike whole-texture updates: cycling swaps the texture's backing
+	// memory, which would discard the faces/layers uploaded just before this one.
+	SDL_UploadToGPUTexture(pass, &src, &dst, false);
 	SDL_EndGPUCopyPass(pass);
 	SDL_ReleaseGPUTransferBuffer(g_ctx.device, buf);
 	if (!g_ctx.cmd) SDL_SubmitGPUCommandBuffer(cmd);
