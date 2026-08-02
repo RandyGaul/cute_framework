@@ -6684,6 +6684,35 @@ static const char* cspv_hlsl_atomic(const char* name)
 	return NULL;
 }
 
+// HLSL/MSL texture object types per sampler dim. Shadow samplers pair a plain 2D texture
+// with a comparison sampler state; the dim only changes the texture object for the rest.
+static const char* cspv_hlsl_sampler_tex(const cspv_type* t)
+{
+	switch (t->cols) {
+	case CSPV_SDIM_CUBE: return "TextureCube<float4>";
+	case CSPV_SDIM_3D: return "Texture3D<float4>";
+	case CSPV_SDIM_2D_ARRAY: return "Texture2DArray<float4>";
+	case CSPV_SDIM_2D_SHADOW: return "Texture2D<float4>";
+	default: return t->elem && t->elem->kind == CSPV_T_UINT ? "Texture2D<uint4>" : "Texture2D<float4>";
+	}
+}
+
+static const char* cspv_hlsl_sampler_smp(const cspv_type* t)
+{
+	return t->cols == CSPV_SDIM_2D_SHADOW ? "SamplerComparisonState" : "SamplerState";
+}
+
+static const char* cspv_msl_sampler_tex(const cspv_type* t)
+{
+	switch (t->cols) {
+	case CSPV_SDIM_CUBE: return "texturecube<float>";
+	case CSPV_SDIM_3D: return "texture3d<float>";
+	case CSPV_SDIM_2D_ARRAY: return "texture2d_array<float>";
+	case CSPV_SDIM_2D_SHADOW: return "depth2d<float>";
+	default: return t->elem && t->elem->kind == CSPV_T_UINT ? "texture2d<uint>" : "texture2d<float>";
+	}
+}
+
 static void cspv_hlsl_call(cspv_tp* g, cspv_expr* e)
 {
 	CK_SDYNA char** out = &g->ctx->tp_out;
@@ -6756,6 +6785,21 @@ static void cspv_hlsl_call(cspv_tp* g, cspv_expr* e)
 	if (argc >= 1 && args[0]->kind == CSPV_E_REF && args[0]->rtype && args[0]->rtype->kind == CSPV_T_SAMPLER2D) {
 		const char* s = args[0]->u.name;
 		bool no_gradients = g->ctx->stage != CSPV_STAGE_FRAGMENT; // Vertex and compute have no derivatives.
+		bool shadow = args[0]->rtype->cols == CSPV_SDIM_2D_SHADOW;
+		if (shadow && (!strcmp(name, "texture") || !strcmp(name, "textureLod"))) {
+			// Comparison sampling: split the vec3 into coords + reference. The coordinate
+			// expression is emitted twice, so it must be side-effect free -- true of every
+			// shader in practice, and of everything the checker accepts today. Level-zero
+			// on purpose: shadow maps are single-mip, and SampleCmp needs gradients that
+			// vertex/compute stages lack (textureLod's lod argument is ignored, as level
+			// zero is the only mip a comparison fetch supports across our targets).
+			sfmt_append(*out, "%s_tex.SampleCmpLevelZero(%s_smp, (", s, s);
+			cspv_tp_expr(g, args[1], 2);
+			sappend(*out, ").xy, (");
+			cspv_tp_expr(g, args[1], 2);
+			sappend(*out, ").z)");
+			return;
+		}
 		if (!strcmp(name, "texture")) {
 			if (no_gradients) sfmt_append(*out, "%s_tex.SampleLevel(%s_smp, ", s, s);
 			else sfmt_append(*out, "%s_tex.Sample(%s_smp, ", s, s);
@@ -7069,9 +7113,9 @@ static void cspv_hlsl_func(cspv_tp* g, cspv_decl* d)
 		first = false;
 		if (d->params[i].type->kind == CSPV_T_SAMPLER2D) {
 			// Samplers expand into a texture + sampler-state pair.
-			bool is_uint = d->params[i].type->elem && d->params[i].type->elem->kind == CSPV_T_UINT;
-			sfmt_append(ctx->tp_out, "Texture2D%s %s_tex, SamplerState %s_smp",
-				is_uint ? "<uint4>" : "<float4>", d->params[i].name, d->params[i].name);
+			sfmt_append(ctx->tp_out, "%s %s_tex, %s %s_smp",
+				cspv_hlsl_sampler_tex(d->params[i].type), d->params[i].name,
+				cspv_hlsl_sampler_smp(d->params[i].type), d->params[i].name);
 			apush(g->shadows, d->params[i].name);
 			continue;
 		}
@@ -7262,11 +7306,10 @@ static void cspv_emit_hlsl(cspv_ctx* ctx)
 
 		case CSPV_D_OPAQUE:
 			if (d->type->kind == CSPV_T_SAMPLER2D) {
-				bool is_uint = d->type->elem && d->type->elem->kind == CSPV_T_UINT;
-				sfmt_append(ctx->tp_out, "Texture2D%s %s_tex : register(t%d, space%d);\n",
-					is_uint ? "<uint4>" : "<float4>", d->name, d->binding, d->set);
-				sfmt_append(ctx->tp_out, "SamplerState %s_smp : register(s%d, space%d);\n",
-					d->name, d->binding, d->set);
+				sfmt_append(ctx->tp_out, "%s %s_tex : register(t%d, space%d);\n",
+					cspv_hlsl_sampler_tex(d->type), d->name, d->binding, d->set);
+				sfmt_append(ctx->tp_out, "%s %s_smp : register(s%d, space%d);\n",
+					cspv_hlsl_sampler_smp(d->type), d->name, d->binding, d->set);
 			} else {
 				const char* elem = cspv_hlsl_image_elem(d->type->cols);
 				sfmt_append(ctx->tp_out, "%sTexture2D<%s> %s : register(%c%d, space%d);\n",
@@ -7502,6 +7545,40 @@ static void cspv_msl_call(cspv_tp* g, cspv_expr* e)
 	if (argc >= 1 && args[0]->kind == CSPV_E_REF && args[0]->rtype && args[0]->rtype->kind == CSPV_T_SAMPLER2D) {
 		const char* s = args[0]->u.name;
 		bool no_gradients = g->ctx->stage != CSPV_STAGE_FRAGMENT; // Vertex and compute have no derivatives.
+		int sdim = args[0]->rtype->cols;
+		bool shadow = sdim == CSPV_SDIM_2D_SHADOW;
+		bool arrayed = sdim == CSPV_SDIM_2D_ARRAY;
+		if (shadow && (!strcmp(name, "texture") || !strcmp(name, "textureLod"))) {
+			// depth2d comparison fetch; coords + reference split from the vec3. The
+			// coordinate is emitted twice, so it must be side-effect free. Level zero for
+			// the same reasons as the HLSL emitter (single-mip shadow maps, no gradients
+			// outside fragment stages).
+			sfmt_append(*out, "%s_tex.sample_compare(%s_smp, (", s, s);
+			cspv_tp_expr(g, args[1], 2);
+			sappend(*out, ").xy, (");
+			cspv_tp_expr(g, args[1], 2);
+			sappend(*out, ").z");
+			if (no_gradients) sappend(*out, ", level(0)");
+			spush(*out, ')');
+			return;
+		}
+		if (arrayed && (!strcmp(name, "texture") || !strcmp(name, "textureLod"))) {
+			// MSL array textures take the layer as a separate integer argument.
+			sfmt_append(*out, "%s_tex.sample(%s_smp, (", s, s);
+			cspv_tp_expr(g, args[1], 2);
+			sappend(*out, ").xy, uint(rint((");
+			cspv_tp_expr(g, args[1], 2);
+			sappend(*out, ").z))");
+			if (!strcmp(name, "textureLod")) {
+				sappend(*out, ", level(");
+				cspv_tp_expr(g, args[2], 2);
+				spush(*out, ')');
+			} else if (no_gradients) {
+				sappend(*out, ", level(0)");
+			}
+			spush(*out, ')');
+			return;
+		}
 		if (!strcmp(name, "texture")) {
 			sfmt_append(*out, "%s_tex.sample(%s_smp, ", s, s);
 			cspv_tp_expr(g, args[1], 2);
@@ -7731,8 +7808,7 @@ static void cspv_msl_func(cspv_tp* g, cspv_decl* d)
 		cspv_type* pt = d->params[i].type;
 		const char* pn = d->params[i].name;
 		if (pt->kind == CSPV_T_SAMPLER2D) {
-			bool is_uint = pt->elem && pt->elem->kind == CSPV_T_UINT;
-			sfmt_append(ctx->tp_out, "texture2d<%s> %s_tex, sampler %s_smp", is_uint ? "uint" : "float", pn, pn);
+			sfmt_append(ctx->tp_out, "%s %s_tex, sampler %s_smp", cspv_msl_sampler_tex(pt), pn, pn);
 		} else if (pt->kind == CSPV_T_ARRAY) {
 			sfmt_append(ctx->tp_out, "thread %s* %s", cspv_hlsl_type_name(pt->elem), pn);
 		} else if (d->params[i].qual) {
@@ -7914,9 +7990,8 @@ static void cspv_emit_msl(cspv_ctx* ctx)
 			}
 		} else if (d->kind == CSPV_D_OPAQUE) {
 			if (d->type->kind == CSPV_T_SAMPLER2D) {
-				bool is_uint = d->type->elem && d->type->elem->kind == CSPV_T_UINT;
-				sfmt_append(ctx->tp_out, "\ttexture2d<%s> %s_tex;\n\tsampler %s_smp;\n",
-					is_uint ? "uint" : "float", d->name, d->name);
+				sfmt_append(ctx->tp_out, "\t%s %s_tex;\n\tsampler %s_smp;\n",
+					cspv_msl_sampler_tex(d->type), d->name, d->name);
 			} else {
 				sfmt_append(ctx->tp_out, "\t%s %s;\n", cspv_msl_image_type(d->type->cols, d->readonly), d->name);
 			}
@@ -8015,9 +8090,8 @@ static void cspv_emit_msl(cspv_ctx* ctx)
 			bool rw_image = d->type->kind == CSPV_T_IMAGE2D && !d->readonly;
 			int idx = (compute && rw_image) ? texture_count + d->binding : d->binding;
 			if (d->type->kind == CSPV_T_SAMPLER2D) {
-				bool is_uint = d->type->elem && d->type->elem->kind == CSPV_T_UINT;
-				sfmt_append(ctx->tp_out, ", texture2d<%s> %s_tex [[texture(%d)]], sampler %s_smp [[sampler(%d)]]",
-					is_uint ? "uint" : "float", d->name, idx, d->name, idx);
+				sfmt_append(ctx->tp_out, ", %s %s_tex [[texture(%d)]], sampler %s_smp [[sampler(%d)]]",
+					cspv_msl_sampler_tex(d->type), d->name, idx, d->name, idx);
 			} else {
 				sfmt_append(ctx->tp_out, ", %s %s [[texture(%d)]]", cspv_msl_image_type(d->type->cols, d->readonly), d->name, idx);
 			}

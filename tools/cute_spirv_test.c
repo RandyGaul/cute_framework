@@ -1221,6 +1221,77 @@ static CSPV_Result s_emit_all(CSPV_Stage stage, const char* src)
 	return r;
 }
 
+static void test_sampler_dims_emitters(void)
+{
+	// Every emitter must speak the new sampler dims: correct texture object types in
+	// HLSL/MSL, comparison sampling for shadow, and native GLSL types for ES.
+	{
+		CSPV_Result r = s_emit_all(CSPV_STAGE_FRAGMENT,
+			"layout(set = 2, binding = 0) uniform samplerCube s;\n"
+			FS_MAIN("result = texture(s, vec3(0, 1, 0));"));
+		if (r.success) {
+			CHECK(strstr(r.hlsl, "TextureCube<float4>") != NULL);
+			CHECK(strstr(r.msl, "texturecube<float>") != NULL);
+		}
+		cspv_free(&r);
+	}
+	{
+		CSPV_Result r = s_emit_all(CSPV_STAGE_FRAGMENT,
+			"layout(set = 2, binding = 0) uniform sampler2DArray s;\n"
+			FS_MAIN("result = texture(s, vec3(0.5, 0.5, 3.0));"));
+		if (r.success) {
+			CHECK(strstr(r.hlsl, "Texture2DArray<float4>") != NULL);
+			CHECK(strstr(r.msl, "texture2d_array<float>") != NULL);
+			CHECK(strstr(r.msl, "uint(rint(") != NULL); // Layer index splits out in MSL.
+		}
+		cspv_free(&r);
+	}
+	{
+		CSPV_Result r = s_emit_all(CSPV_STAGE_FRAGMENT,
+			"layout(set = 2, binding = 0) uniform sampler2DShadow s;\n"
+			FS_MAIN("result = vec4(texture(s, vec3(0.5, 0.5, 0.7)));"));
+		if (r.success) {
+			CHECK(strstr(r.hlsl, "SamplerComparisonState") != NULL);
+			CHECK(strstr(r.hlsl, ".SampleCmpLevelZero(") != NULL);
+			CHECK(strstr(r.msl, "depth2d<float>") != NULL);
+			CHECK(strstr(r.msl, ".sample_compare(") != NULL);
+		}
+		cspv_free(&r);
+	}
+	{
+		// ES 3.00 output keeps the native GLSL types and generic texture() calls.
+		CSPV_Options opts;
+		memset(&opts, 0, sizeof(opts));
+		opts.emit_glsl300 = true;
+		CSPV_Result r = cspv_compile_ex(
+			"layout(set = 2, binding = 0) uniform samplerCube s;\n"
+			"layout(set = 2, binding = 1) uniform sampler2DShadow sh;\n"
+			FS_MAIN("result = texture(s, vec3(0, 1, 0)) + vec4(texture(sh, vec3(0.5, 0.5, 0.7)));"),
+			CSPV_STAGE_FRAGMENT, &opts);
+		CHECK_MSG(r.success, r.error_message);
+		if (r.success) {
+			CHECK(r.glsl300 != NULL);
+			if (r.glsl300) {
+				CHECK(strstr(r.glsl300, "samplerCube") != NULL);
+				CHECK(strstr(r.glsl300, "sampler2DShadow") != NULL);
+			}
+		}
+		cspv_free(&r);
+	}
+	{
+		// Vertex-stage shadow sampling must still lower to an explicit level.
+		CSPV_Result r = s_emit_all(CSPV_STAGE_VERTEX,
+			"layout(set = 1, binding = 0) uniform sampler2DShadow s;\n"
+			"void main() { gl_Position = vec4(texture(s, vec3(0.5, 0.5, 0.7))); }\n");
+		if (r.success) {
+			CHECK(strstr(r.hlsl, ".SampleCmpLevelZero(") != NULL);
+			CHECK(strstr(r.msl, ".sample_compare(") != NULL);
+			CHECK(strstr(r.msl, "level(0)") != NULL);
+		}
+		cspv_free(&r);
+	}
+}
+
 static void test_emitters(void)
 {
 	// Implicit-lod sampling is fragment-only: FXC rejects Sample() in vs/cs
@@ -1353,6 +1424,7 @@ int main(void)
 	TEST(test_errors_syntax);
 	TEST(test_errors_semantic);
 	TEST(test_sampler_dims);
+	TEST(test_sampler_dims_emitters);
 	TEST(test_errors_stage_and_globals);
 	TEST(test_errors_recursion);
 	TEST(test_emitters);
