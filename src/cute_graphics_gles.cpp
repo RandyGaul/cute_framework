@@ -1577,6 +1577,11 @@ void cf_gles_apply_shader(CF_Shader shader_handle, CF_Material material_handle)
 	} else {
 		glEnable(GL_CULL_FACE);
 		glCullFace(s_wrap(render_state.cull_mode));
+		// The GLSL ES transpiler emits `gl_Position.y = -gl_Position.y` so canvases come out with
+		// row 0 at the top, matching the other backends. That negation mirrors every triangle, so
+		// geometry CF considers front-facing reaches the rasterizer wound clockwise -- leaving GL
+		// at its GL_CCW default would cull exactly the wrong faces and turn solids inside out.
+		glFrontFace(GL_CW);
 	}
 
 	// Depth.
