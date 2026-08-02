@@ -432,8 +432,11 @@ void cf_destroy_app()
 	cf_destroy_custom_sprite_cache();
 	cs_shutdown();
 	destroy_mutex(&app->on_sound_finish_mutex);
+	cf_free_buffered_events();
+	destroy_mutex(&app->buffered_events_mutex);
 	if (app->window) SDL_DestroyWindow(app->window);
-	SDL_Quit();
+	// Under SDL's main callbacks, SDL itself calls SDL_Quit after SDL_AppQuit returns.
+	if (!(app->options & CF_APP_OPTIONS_MAIN_CALLBACKS_BIT)) SDL_Quit();
 	CF_Image* easy_sprites = app->easy_sprites.items();
 	for (int i = 0; i < app->easy_sprites.count(); ++i) {
 		cf_image_free(&easy_sprites[i]);
@@ -446,17 +449,32 @@ void cf_destroy_app()
 
 bool cf_app_is_running()
 {
-	return app->running;
+	// Null-safe so the CF_MAIN_USE_CALLBACKS glue (and classic loops) behave when the
+	// user already destroyed the app, e.g. from within their own update function.
+	return app ? app->running : false;
+}
+
+CF_AppOptionFlags cf_app_get_options()
+{
+	// Null-safe, matching cf_app_is_running. The CF_MAIN_USE_CALLBACKS glue reads this to
+	// check the app actually opted into callback mode, and must not fault when cf_main_init
+	// returned success without ever calling cf_make_app.
+	return app ? app->options : 0;
 }
 
 void cf_app_signal_shutdown()
 {
-	app->running = 0;
+	if (app) app->running = 0;
 }
 
 static void s_on_update(void* udata)
 {
-	cf_pump_input_msgs();
+	// Buffered events drain in every mode: a stray cf_app_process_event call in a classic
+	// loop must not lose events, and must never turn the internal pump off.
+	cf_drain_buffered_events();
+	if (!(app->options & CF_APP_OPTIONS_MAIN_CALLBACKS_BIT)) {
+		cf_pump_input_msgs();
+	}
 	cf_binding_update();
 	if (app->audio_needs_updates) {
 		cs_update(CF_DELTA_TIME);

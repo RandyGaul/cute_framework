@@ -20,6 +20,10 @@ TEST_CASE(test_app_destroy_safety)
 	CHECK(cf_is_error(cf_make_app(NULL, 0, 0, 0, 0, 0, CF_APP_OPTIONS_HIDDEN_BIT | CF_APP_OPTIONS_NO_GFX_BIT | CF_APP_OPTIONS_NO_AUDIO_BIT, NULL)));
 	cf_destroy_app();
 	cf_destroy_app();
+	// Queries must be safe (not crash) after destruction -- the CF_MAIN_USE_CALLBACKS glue
+	// calls cf_app_is_running right after a user's cf_main_update, which may have destroyed
+	// the app.
+	REQUIRE(!cf_app_is_running());
 	return true;
 }
 
@@ -44,6 +48,120 @@ TEST_CASE(test_app_no_gfx_state_defaults)
 	REQUIRE(cf_app_get_canvas_width() == 0);
 	REQUIRE(cf_app_get_canvas_height() == 0);
 	cf_destroy_app();
+	return true;
+}
+
+TEST_CASE(test_app_main_callbacks_event_buffering)
+{
+	// Feeding an event with no app must be a safe no-op.
+	SDL_Event event = { };
+	event.type = SDL_EVENT_KEY_DOWN;
+	event.key.scancode = SDL_SCANCODE_SPACE;
+	event.key.repeat = false;
+	cf_app_process_event(&event);
+
+	CHECK(cf_is_error(cf_make_app(NULL, 0, 0, 0, 0, 0, CF_APP_OPTIONS_HIDDEN_BIT | CF_APP_OPTIONS_NO_GFX_BIT | CF_APP_OPTIONS_NO_AUDIO_BIT, NULL)));
+
+	// Events fed from SDL_AppEvent are buffered, not applied immediately -- otherwise
+	// cf_app_update's begin-frame copy of key state to `prev` would erase the transition
+	// and just_pressed could never fire in callback mode.
+	cf_app_process_event(&event);
+	REQUIRE(!cf_key_down(CF_KEY_SPACE));
+
+	cf_app_update(NULL);
+	REQUIRE(cf_key_down(CF_KEY_SPACE));
+	REQUIRE(cf_key_just_pressed(CF_KEY_SPACE));
+
+	// A stray cf_app_process_event call must NOT flip the app into callback mode --
+	// that would permanently disable the internal event pump for classic-loop apps.
+	// Only CF_APP_OPTIONS_MAIN_CALLBACKS_BIT enables callback mode.
+	REQUIRE(!(cf_app_get_options() & CF_APP_OPTIONS_MAIN_CALLBACKS_BIT));
+
+	cf_destroy_app();
+	return true;
+}
+
+TEST_CASE(test_app_main_callbacks_text_event_deep_copy)
+{
+	CHECK(cf_is_error(cf_make_app(NULL, 0, 0, 0, 0, 0, CF_APP_OPTIONS_HIDDEN_BIT | CF_APP_OPTIONS_NO_GFX_BIT | CF_APP_OPTIONS_NO_AUDIO_BIT, NULL)));
+
+	// SDL text events carry pointers into SDL temporary memory that is freed before the
+	// next update runs -- the buffer must deep-copy the string, not the pointer. Simulate
+	// the free by clobbering the string after feeding the event.
+	char text[8];
+	CF_STRCPY(text, "hi");
+	SDL_Event event = { };
+	event.type = SDL_EVENT_TEXT_INPUT;
+	event.text.text = text;
+	cf_app_process_event(&event);
+	CF_MEMSET(text, 'X', sizeof(text) - 1);
+	text[sizeof(text) - 1] = 0;
+
+	cf_app_update(NULL);
+	REQUIRE(cf_input_text_has_data());
+	// cf_input_text_pop_utf32 pops from the end of the buffer.
+	REQUIRE(cf_input_text_pop_utf32() == (int)'i');
+	REQUIRE(cf_input_text_pop_utf32() == (int)'h');
+	cf_input_text_clear();
+
+	cf_destroy_app();
+	return true;
+}
+
+TEST_CASE(test_app_main_callbacks_event_buffer_cap)
+{
+	CHECK(cf_is_error(cf_make_app(NULL, 0, 0, 0, 0, 0, CF_APP_OPTIONS_HIDDEN_BIT | CF_APP_OPTIONS_NO_GFX_BIT | CF_APP_OPTIONS_NO_AUDIO_BIT, NULL)));
+
+	// The buffer must not grow without bound if events arrive while the app is not
+	// updating; oldest events are dropped first.
+	SDL_Event event = { };
+	event.type = SDL_EVENT_MOUSE_WHEEL;
+	for (int i = 0; i < CF_MAX_BUFFERED_EVENTS + 10; ++i) {
+		cf_app_process_event(&event);
+	}
+	REQUIRE(app->buffered_events.count() == CF_MAX_BUFFERED_EVENTS);
+
+	cf_app_update(NULL);
+	REQUIRE(app->buffered_events.count() == 0);
+
+	cf_destroy_app();
+	return true;
+}
+
+TEST_CASE(test_app_main_callbacks_quit_event)
+{
+	CHECK(cf_is_error(cf_make_app(NULL, 0, 0, 0, 0, 0, CF_APP_OPTIONS_HIDDEN_BIT | CF_APP_OPTIONS_NO_GFX_BIT | CF_APP_OPTIONS_NO_AUDIO_BIT, NULL)));
+	REQUIRE(cf_app_is_running());
+
+	SDL_Event event = { };
+	event.type = SDL_EVENT_QUIT;
+	cf_app_process_event(&event);
+	REQUIRE(cf_app_is_running());
+
+	cf_app_update(NULL);
+	REQUIRE(!cf_app_is_running());
+
+	cf_destroy_app();
+	return true;
+}
+
+TEST_CASE(test_app_main_callbacks_option_bit)
+{
+	// The bit is what turns the internal pump off, and cf_app_get_options reports it back --
+	// the CF_MAIN_USE_CALLBACKS glue reads it to catch an app that forgot to pass it.
+	CHECK(cf_is_error(cf_make_app(NULL, 0, 0, 0, 0, 0, CF_APP_OPTIONS_HIDDEN_BIT | CF_APP_OPTIONS_NO_GFX_BIT | CF_APP_OPTIONS_NO_AUDIO_BIT | CF_APP_OPTIONS_MAIN_CALLBACKS_BIT, NULL)));
+	REQUIRE(cf_app_get_options() & CF_APP_OPTIONS_MAIN_CALLBACKS_BIT);
+	cf_destroy_app();
+
+	// Unlike the process-wide latch this replaced, the mode is per-app: recreating without
+	// the bit must come back in classic-loop mode, with no lingering process state.
+	CHECK(cf_is_error(cf_make_app(NULL, 0, 0, 0, 0, 0, CF_APP_OPTIONS_HIDDEN_BIT | CF_APP_OPTIONS_NO_GFX_BIT | CF_APP_OPTIONS_NO_AUDIO_BIT, NULL)));
+	REQUIRE(!(cf_app_get_options() & CF_APP_OPTIONS_MAIN_CALLBACKS_BIT));
+	cf_destroy_app();
+
+	// Null-safe outside an app's lifetime, so the glue's guard can't fault when cf_main_init
+	// returns success without ever calling cf_make_app.
+	REQUIRE(cf_app_get_options() == 0);
 	return true;
 }
 
@@ -216,6 +334,11 @@ TEST_SUITE(test_app)
 	RUN_TEST_CASE(test_app_destroy_safety);
 	RUN_TEST_CASE(test_app_power_state_mapping);
 	RUN_TEST_CASE(test_app_no_gfx_state_defaults);
+	RUN_TEST_CASE(test_app_main_callbacks_event_buffering);
+	RUN_TEST_CASE(test_app_main_callbacks_text_event_deep_copy);
+	RUN_TEST_CASE(test_app_main_callbacks_event_buffer_cap);
+	RUN_TEST_CASE(test_app_main_callbacks_quit_event);
+	RUN_TEST_CASE(test_app_main_callbacks_option_bit);
 	RUN_TEST_CASE(test_display_count_matches_list);
 	RUN_TEST_CASE(test_display_invalid_id_is_safe);
 

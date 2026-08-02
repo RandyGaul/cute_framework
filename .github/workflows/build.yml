@@ -121,6 +121,21 @@ jobs:
         if: runner.os != 'Linux'
         run: ./.github/scripts/smoke_test.sh ./build/hrc 8
 
+      # The only end-to-end check that the main-callbacks loop actually boots: the
+      # host drives the frames here, so a broken SDL_AppInit/SDL_AppIterate path
+      # exits immediately instead of failing to build. Also catches a regression in
+      # the CF_APP_OPTIONS_MAIN_CALLBACKS_BIT guard, which exits non-zero at startup.
+      - name: Smoke test main callbacks (Linux, headless GPU)
+        if: runner.os == 'Linux'
+        run: xvfb-run -a -s "-screen 0 1280x720x24" ./.github/scripts/smoke_test.sh ./build/main_callbacks 8
+        env:
+          SDL_AUDIODRIVER: dummy
+          LIBGL_ALWAYS_SOFTWARE: "1"
+
+      - name: Smoke test main callbacks
+        if: runner.os != 'Linux'
+        run: ./.github/scripts/smoke_test.sh ./build/main_callbacks 8
+
       - name: Tests (Linux, headless GPU)
         if: runner.os == 'Linux'
         run: xvfb-run -a -s "-screen 0 1280x720x24" ./build/tests

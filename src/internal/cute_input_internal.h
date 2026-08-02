@@ -23,6 +23,8 @@ struct CF_Haptic;
 
 void cf_begin_frame_input();
 void cf_pump_input_msgs();
+void cf_drain_buffered_events();
+void cf_free_buffered_events();
 void cf_joypad_update();
 void cf_joypad_on_button_up(SDL_JoystickID id, int button);
 void cf_joypad_on_button_down(SDL_JoystickID id, int button);

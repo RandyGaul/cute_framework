@@ -732,6 +732,65 @@ void cf_pump_input_msgs()
 	}
 }
 
+// SDL text events carry pointers into SDL "temporary memory" that SDL frees before the next
+// update can drain the buffer -- deep-copy the strings on buffer, free them after handling.
+static void s_deep_copy_event(SDL_Event* event)
+{
+	if (event->type == SDL_EVENT_TEXT_INPUT && event->text.text) {
+		event->text.text = SDL_strdup(event->text.text);
+	} else if (event->type == SDL_EVENT_TEXT_EDITING && event->edit.text) {
+		event->edit.text = SDL_strdup(event->edit.text);
+	}
+}
+
+static void s_free_event(SDL_Event* event)
+{
+	if (event->type == SDL_EVENT_TEXT_INPUT) {
+		SDL_free((void*)event->text.text);
+	} else if (event->type == SDL_EVENT_TEXT_EDITING) {
+		SDL_free((void*)event->edit.text);
+	}
+}
+
+void cf_app_process_event(void* event)
+{
+	if (!app || !event) return;
+	// void* keeps SDL out of cute_app.h -- callers must hand us the SDL_Event* from SDL_AppEvent.
+	SDL_Event copy = *(SDL_Event*)event;
+	s_deep_copy_event(&copy);
+	// The mutex matters because SDL can invoke SDL_AppEvent from other threads for some
+	// events (e.g. mobile lifecycle events are dispatched from the pushing thread).
+	cf_mutex_lock(&app->buffered_events_mutex);
+	if (app->buffered_events.count() == CF_MAX_BUFFERED_EVENTS) {
+		// Full: drop the oldest event, preserving the order of the rest.
+		s_free_event(&app->buffered_events[0]);
+		CF_MEMMOVE(app->buffered_events.data(), app->buffered_events.data() + 1, sizeof(SDL_Event) * (CF_MAX_BUFFERED_EVENTS - 1));
+		app->buffered_events.pop();
+	}
+	app->buffered_events.add(copy);
+	cf_mutex_unlock(&app->buffered_events_mutex);
+}
+
+void cf_drain_buffered_events()
+{
+	// Move the array out under the lock so event handlers run unlocked.
+	cf_mutex_lock(&app->buffered_events_mutex);
+	Cute::Array<SDL_Event> events = cf_move(app->buffered_events);
+	cf_mutex_unlock(&app->buffered_events_mutex);
+	for (int i = 0; i < events.count(); ++i) {
+		s_handle_event(&events[i]);
+		s_free_event(&events[i]);
+	}
+}
+
+void cf_free_buffered_events()
+{
+	for (int i = 0; i < app->buffered_events.count(); ++i) {
+		s_free_event(&app->buffered_events[i]);
+	}
+	app->buffered_events.clear();
+}
+
 namespace Cute
 {
 	Array<CF_Touch> CF_CALL touch_get_all() { return app->touches; }

@@ -162,6 +162,7 @@ nav:
       - Import Spritesheet: samples/import_spritesheet.md
       - Input Binding: samples/input_binding.md
       - Joypad: samples/joypad.md
+      - Main Callbacks: samples/main_callbacks.md
       - Mandala: samples/mandala.md
       - Metaballs: samples/metaballs.md
       - Model 3D: samples/model3d.md
