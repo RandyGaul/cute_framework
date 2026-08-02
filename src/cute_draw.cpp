@@ -2919,6 +2919,7 @@ void cf_destroy_draw_list(CF_DrawList list)
 	if (!data) return;
 	CF_ASSERT(s_draw->recording_list != *data);
 	s_draw_list_free_uniforms(*data);
+	cf_draw3d_free_list_cmds(*data);
 	(*data)->~CF_DrawListData();
 	CF_FREE(*data);
 	s_draw->draw_lists.remove(list.id);
@@ -2963,6 +2964,7 @@ void cf_draw_list_begin(CF_DrawList list)
 	s_draw->projection = cf_make_identity();
 	s_draw->mvp = cf_make_identity();
 	s_draw->set_aaf();
+	cf_draw3d_list_begin();
 	s_draw->add_cmd();
 }
 
@@ -2973,14 +2975,16 @@ void cf_draw_list_end()
 	if (!data) return;
 	s_draw->recording_list = NULL;
 	s_draw_list_free_uniforms(data);
+	cf_draw3d_free_list_cmds(data);
 	data->cmds.clear();
 	for (int i = s_draw->recording_mark; i < s_draw->cmds.count(); ++i) {
 		CF_Command& c = s_draw->cmds[i];
 		CF_ASSERT(!c.is_canvas); // Canvas blits reference mutable textures; not retainable.
 		if (c.is_canvas) continue;
 		// Skip state-only churn (empty commands from stack pushes during recording).
-		if (c.geoms.count() == 0 && !c.geoms_ref && c.items.count() == 0 && !c.u.data && !c.u.is_texture) continue;
+		if (c.geoms.count() == 0 && !c.geoms_ref && c.items.count() == 0 && !c.u.data && !c.u.is_texture && !c.mesh3d) continue;
 		CF_Command copy = c;
+		c.mesh3d = NULL; // The list owns the payload now.
 		if (c.geoms_ref) {
 			// A nested replay recorded into this list: resolve the borrowed geometry to
 			// an owned copy so lists never reference each other's storage.
@@ -3004,6 +3008,7 @@ void cf_draw_list_end()
 		data->cmds.add(copy);
 	}
 	s_draw->cmds.set_count(s_draw->recording_mark);
+	cf_draw3d_list_end(data); // Restores the 3d transform stack and bakes mesh commands.
 	cf_draw_pop(); // Restores camera, projection, mvp, and aaf.
 }
 
@@ -3031,6 +3036,10 @@ void cf_draw_list(CF_DrawList list)
 		c.geoms_ref = &src.geoms;
 		c.replay_mvp = s_draw->mvp;
 		c.replay_aa_scale = inv_cam_scale;
+		if (src.mesh3d) {
+			c.geoms_ref = NULL;
+			cf_draw3d_replay_cmd(&c, &src);
+		}
 	}
 	// Reopen a command carrying the caller's current state for subsequent draws.
 	s_draw->add_cmd();

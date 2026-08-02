@@ -341,10 +341,180 @@ TEST_CASE(test_draw3d_escape_hatch)
 	return true;
 }
 
+// Draw lists: record interleaved submissions of two meshes, bake, and replay under two
+// different live cameras -- the recorded level renders where the replay-time view says, and
+// a transform pushed at replay time moves the whole list.
+TEST_CASE(test_draw3d_draw_list)
+{
+	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, W, H, s_options(), NULL))) return true; // Headless CI: no display/GPU.
+
+	CF_Mesh mesh_a = s_make_quad(0.2f);
+	CF_Mesh mesh_b = s_make_quad(0.1f);
+	CF_Shader shader = cf_make_shader_from_source(s_vs, s_fs);
+	REQUIRE(shader.id);
+	CF_CanvasParams params = cf_canvas_defaults(W, H);
+	params.depth_stencil_enable = true;
+	CF_Canvas canvas = cf_make_canvas(params);
+	CF_Pixel* px = (CF_Pixel*)cf_alloc(W * H * (int)sizeof(CF_Pixel));
+
+	cf_draw3d_push_projection(cf_ortho(-1, 1, -1, 1, -1, 1));
+	cf_draw3d_push_shader(shader);
+
+	// Record A-B-A-B so the bake has something to group (A's fold together, B's fold together).
+	CF_DrawList list = cf_make_draw_list();
+	cf_draw_list_begin(list);
+	struct { CF_Mesh mesh; CF_V3 at; CF_V4 color; } spots[4] = {
+		{ mesh_a, cf_v3(-0.5f,  0.5f, 0), cf_v4(1, 0, 0, 1) },
+		{ mesh_b, cf_v3( 0.5f,  0.5f, 0), cf_v4(0, 1, 0, 1) },
+		{ mesh_a, cf_v3(-0.5f, -0.5f, 0), cf_v4(0, 0, 1, 1) },
+		{ mesh_b, cf_v3( 0.5f, -0.5f, 0), cf_v4(1, 1, 0, 1) },
+	};
+	for (int i = 0; i < 4; ++i) {
+		cf_draw3d_push();
+		cf_draw3d_translate(spots[i].at);
+		cf_draw3d_push_mesh_attributes(spots[i].color);
+		cf_draw3d_mesh(spots[i].mesh);
+		cf_draw3d_pop_mesh_attributes();
+		cf_draw3d_pop();
+	}
+	cf_draw_list_end();
+
+	// Replay 1: identity view -- everything where it was recorded. +y up puts red/green on top.
+	cf_app_update(NULL);
+	cf_draw_list(list);
+	cf_render_to(canvas, true);
+	cf_app_draw_onto_screen(false);
+	CF_Readback rb = cf_canvas_readback(canvas);
+	REQUIRE(rb.id);
+	while (!cf_readback_ready(rb)) {}
+	cf_readback_data(rb, px, W * H * (int)sizeof(CF_Pixel));
+	cf_destroy_readback(rb);
+	CF_Pixel tl = s_pixel(px, 0.25f, 0.25f);
+	CF_Pixel tr = s_pixel(px, 0.75f, 0.25f);
+	CF_Pixel bl = s_pixel(px, 0.25f, 0.75f);
+	CF_Pixel br = s_pixel(px, 0.75f, 0.75f);
+	REQUIRE(tl.colors.r > 200 && tl.colors.g < 60 && tl.colors.b < 60);
+	REQUIRE(tr.colors.g > 200 && tr.colors.r < 60);
+	REQUIRE(bl.colors.b > 200 && bl.colors.r < 60);
+	REQUIRE(br.colors.r > 200 && br.colors.g > 200 && br.colors.b < 60);
+
+	// Replay 2: the camera is live -- a view shifting the world right by 1 pushes the left
+	// column to the center. And the whole list moves for free under a replay-time transform.
+	cf_app_update(NULL);
+	cf_draw3d_push_view(cf_m4_translate(cf_v3(0.5f, 0, 0)));
+	cf_draw3d_push();
+	cf_draw3d_translate(cf_v3(0, -0.5f, 0));
+	cf_draw_list(list);
+	cf_draw3d_pop();
+	cf_draw3d_pop_view();
+	cf_render_to(canvas, true);
+	cf_app_draw_onto_screen(false);
+	rb = cf_canvas_readback(canvas);
+	REQUIRE(rb.id);
+	while (!cf_readback_ready(rb)) {}
+	cf_readback_data(rb, px, W * H * (int)sizeof(CF_Pixel));
+	cf_destroy_readback(rb);
+	// Recorded (-0.5, 0.5) + view shift (0.5) + list move (-0.5) = NDC (0, 0) = center.
+	CF_Pixel center = s_pixel(px, 0.5f, 0.5f);
+	REQUIRE(center.colors.r > 200 && center.colors.g < 60 && center.colors.b < 60);
+
+	cf_destroy_draw_list(list);
+	cf_draw3d_pop_shader();
+	cf_draw3d_pop_projection();
+	cf_free(px);
+	cf_destroy_canvas(canvas);
+	cf_destroy_shader(shader);
+	cf_destroy_mesh(mesh_a);
+	cf_destroy_mesh(mesh_b);
+	cf_destroy_app();
+	return true;
+}
+
+// Baked lists carry exact inverse-transpose normal matrices; the immediate path reuses the
+// model rows. Render in_nmat0.x as color under scale(2,1,1): immediate sees 2.0 (saturates),
+// baked sees the exact 0.5.
+static const char* s_nmat_vs =
+"layout (location = 0) in vec3 in_pos;\n"
+"layout (location = 8) in vec4 in_model0;\n"
+"layout (location = 9) in vec4 in_model1;\n"
+"layout (location = 10) in vec4 in_model2;\n"
+"layout (location = 12) in vec4 in_nmat0;\n"
+"layout (location = 0) out vec4 v_color;\n"
+"layout (set = 1, binding = 0) uniform uniform_block {\n"
+"    mat4 u_view_projection;\n"
+"};\n"
+"void main() {\n"
+"    vec4 p = vec4(in_pos, 1.0);\n"
+"    vec3 world = vec3(dot(in_model0, p), dot(in_model1, p), dot(in_model2, p));\n"
+"    v_color = vec4(in_nmat0.x * 0.5, 0, 0, 1);\n"
+"    gl_Position = u_view_projection * vec4(world, 1.0);\n"
+"}\n";
+
+TEST_CASE(test_draw3d_baked_normal_matrices)
+{
+	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, W, H, s_options(), NULL))) return true; // Headless CI: no display/GPU.
+
+	CF_Mesh mesh = s_make_quad(0.3f);
+	CF_Shader shader = cf_make_shader_from_source(s_nmat_vs, s_fs);
+	REQUIRE(shader.id);
+	CF_CanvasParams params = cf_canvas_defaults(W, H);
+	params.depth_stencil_enable = true;
+	CF_Canvas canvas = cf_make_canvas(params);
+	CF_Pixel* px = (CF_Pixel*)cf_alloc(W * H * (int)sizeof(CF_Pixel));
+
+	cf_draw3d_push_projection(cf_ortho(-1, 1, -1, 1, -1, 1));
+	cf_draw3d_push_shader(shader);
+
+	for (int pass = 0; pass < 2; ++pass) {
+		cf_app_update(NULL);
+		CF_DrawList list = { 0 };
+		if (pass == 1) {
+			list = cf_make_draw_list();
+			cf_draw_list_begin(list);
+		}
+		cf_draw3d_push();
+		cf_draw3d_scale(cf_v3(2.0f, 1.0f, 1.0f));
+		cf_draw3d_mesh(mesh);
+		cf_draw3d_pop();
+		if (pass == 1) {
+			cf_draw_list_end();
+			cf_draw_list(list);
+		}
+		cf_render_to(canvas, true);
+		cf_app_draw_onto_screen(false);
+
+		CF_Readback rb = cf_canvas_readback(canvas);
+		REQUIRE(rb.id);
+		while (!cf_readback_ready(rb)) {}
+		cf_readback_data(rb, px, W * H * (int)sizeof(CF_Pixel));
+		cf_destroy_readback(rb);
+		CF_Pixel center = s_pixel(px, 0.5f, 0.5f);
+		if (pass == 0) {
+			// Immediate: nmat row = model row = 2.0 -> 2.0 * 0.5 = 1.0 -> saturated red.
+			REQUIRE(center.colors.r > 240);
+		} else {
+			// Baked: exact inverse-transpose gives 0.5 -> 0.5 * 0.5 = 0.25 -> ~64.
+			REQUIRE(center.colors.r > 44 && center.colors.r < 84);
+			cf_destroy_draw_list(list);
+		}
+	}
+
+	cf_draw3d_pop_shader();
+	cf_draw3d_pop_projection();
+	cf_free(px);
+	cf_destroy_canvas(canvas);
+	cf_destroy_shader(shader);
+	cf_destroy_mesh(mesh);
+	cf_destroy_app();
+	return true;
+}
+
 TEST_SUITE(test_draw3d)
 {
 	RUN_TEST_CASE(test_draw3d_transforms_and_coalescing);
 	RUN_TEST_CASE(test_draw3d_layers_with_2d);
 	RUN_TEST_CASE(test_draw3d_uniform_capture);
 	RUN_TEST_CASE(test_draw3d_escape_hatch);
+	RUN_TEST_CASE(test_draw3d_draw_list);
+	RUN_TEST_CASE(test_draw3d_baked_normal_matrices);
 }

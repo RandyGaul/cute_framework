@@ -62,11 +62,15 @@ struct CF_MeshCmd3d
 {
 	CF_Mesh mesh = { 0 };
 	bool escape = false; // Mesh has its own instance buffer: drawn as-is, no reserved attributes.
-	CF_M4x4 vp;          // projection * view, captured at submission.
+	CF_M4x4 vp;          // projection * view, captured at submission (or composed live at replay).
 	uint64_t state_version = 0; // s_draw3d->version at capture; cheap uniform/texture equality.
 	Cute::Array<CF_MeshInstance3d> instances;
+	// Draw list replay: instances borrowed from the baked list, exactly like CF_Command's
+	// geoms_ref -- replays never deep-copy instance data. NULL for ordinary commands.
+	const Cute::Array<CF_MeshInstance3d>* instances_ref = NULL;
 	Cute::Array<CF_Uniform3d> uniforms; // data points into uniform_block.
 	void* uniform_block = NULL;         // One allocation holding every captured uniform's bytes.
+	                                    // NULL when the bytes are borrowed (replay payloads).
 	Cute::Array<CF_TextureBinding3d> textures;
 
 	~CF_MeshCmd3d() { if (uniform_block) CF_FREE(uniform_block); }
@@ -302,8 +306,6 @@ void cf_draw3d_mesh(CF_Mesh mesh)
 	CF_Shader shader = s_draw3d->shaders.last();
 	CF_ASSERT(shader.id); // No default 3d shader -- push one first (see the shader contract in cute_draw3d.h).
 	if (!shader.id) return;
-	// Draw-list recording of 3d submissions lands with the bake work.
-	CF_ASSERT(!s_draw->recording_list);
 
 	bool ours = cf_mesh_has_vertex_attribute(mesh, "in_model0");
 	bool escape = !ours && cf_mesh_instance_stride(mesh) != 0;
@@ -314,7 +316,7 @@ void cf_draw3d_mesh(CF_Mesh mesh)
 		CF_Command* under = s_coalesce_candidate();
 		if (under) {
 			CF_MeshCmd3d* mc = under->mesh3d;
-			if (mc->mesh.id == mesh.id && !mc->escape
+			if (mc->mesh.id == mesh.id && !mc->escape && !mc->instances_ref
 				&& mc->state_version == s_draw3d->version
 				&& !CF_MEMCMP(&mc->vp, &vp, sizeof(vp))
 				&& under->shader.id == shader.id
@@ -391,11 +393,12 @@ void cf_draw3d_process(CF_Command* cmd, CF_Canvas canvas, bool clear)
 	CF_MeshCmd3d* mc = cmd->mesh3d;
 	cf_apply_canvas(canvas, clear);
 
-	if (!mc->escape && mc->instances.count()) {
+	const Cute::Array<CF_MeshInstance3d>& instances = mc->instances_ref ? *mc->instances_ref : mc->instances;
+	if (!mc->escape && instances.count()) {
 		if (!cf_mesh_has_vertex_attribute(mc->mesh, "in_model0")) {
 			s_augment_mesh(mc->mesh);
 		}
-		cf_mesh_update_instance_data(mc->mesh, mc->instances.data(), mc->instances.count());
+		cf_mesh_update_instance_data(mc->mesh, (void*)instances.data(), instances.count());
 	}
 	cf_apply_mesh(mc->mesh);
 
@@ -428,4 +431,159 @@ void cf_draw3d_process(CF_Command* cmd, CF_Canvas canvas, bool clear)
 	}
 
 	cf_draw_elements();
+}
+
+//--------------------------------------------------------------------------------------------------
+// Draw lists. Recording runs through the ordinary submission path (commands accumulate past
+// recording_mark and move into the list at cf_draw_list_end); the hooks below add the 3d
+// semantics: list-local transforms while recording, the bake (grouping + exact normal
+// matrices), and replay payloads that borrow the baked list's instances under a live camera.
+
+void cf_draw3d_list_begin()
+{
+	// Record in list-local space: replay composes the then-current transform stack on top.
+	s_draw3d->transforms.add(cf_m4_identity());
+}
+
+// True when two mesh commands render identically except for their per-instance data -- the
+// bake grouping predicate. Uniform/texture captures compare by content (not version) so
+// A-B-A submission orders still fold both A's together.
+static bool s_bake_group_match(const CF_Command* a, const CF_Command* b)
+{
+	const CF_MeshCmd3d* ma = a->mesh3d;
+	const CF_MeshCmd3d* mb = b->mesh3d;
+	if (ma->mesh.id != mb->mesh.id) return false;
+	if (ma->escape || mb->escape) return false;
+	if (a->shader.id != b->shader.id) return false;
+	if (!(a->render_state == b->render_state)) return false;
+	if (a->layer != b->layer) return false;
+	if (!(a->scissor == b->scissor)) return false;
+	if (!(a->viewport == b->viewport)) return false;
+	if (ma->uniforms.count() != mb->uniforms.count()) return false;
+	for (int i = 0; i < ma->uniforms.count(); ++i) {
+		const CF_Uniform3d& ua = ma->uniforms[i];
+		const CF_Uniform3d& ub = mb->uniforms[i];
+		if (ua.name != ub.name || ua.type != ub.type || ua.array_length != ub.array_length || ua.size != ub.size) return false;
+		if (CF_MEMCMP(ua.data, ub.data, ua.size)) return false;
+	}
+	if (ma->textures.count() != mb->textures.count()) return false;
+	for (int i = 0; i < ma->textures.count(); ++i) {
+		if (ma->textures[i].name != mb->textures[i].name) return false;
+		if (ma->textures[i].texture.id != mb->textures[i].texture.id) return false;
+	}
+	return true;
+}
+
+// Resolves a payload's borrowed data to owned copies -- a nested replay recorded into this
+// list must never reference another list's storage (mirrors the geoms_ref resolution in
+// cf_draw_list_end).
+static void s_own_payload(CF_MeshCmd3d* mc)
+{
+	if (mc->instances_ref) {
+		mc->instances = *mc->instances_ref;
+		mc->instances_ref = NULL;
+	}
+	if (!mc->uniform_block && mc->uniforms.count()) {
+		int total = 0;
+		for (int i = 0; i < mc->uniforms.count(); ++i) total += mc->uniforms[i].size;
+		mc->uniform_block = CF_ALLOC(total);
+		int offset = 0;
+		for (int i = 0; i < mc->uniforms.count(); ++i) {
+			CF_Uniform3d& u = mc->uniforms[i];
+			void* dst = (char*)mc->uniform_block + offset;
+			CF_MEMCPY(dst, u.data, u.size);
+			u.data = dst;
+			offset += u.size;
+		}
+	}
+}
+
+// Rebuilds the affine 4x4 from an instance's three baked model rows.
+static CF_M4x4 s_model_from_rows(const CF_MeshInstance3d* inst)
+{
+	CF_M4x4 m = cf_m4_identity();
+	const CF_V4* rows[3] = { &inst->model0, &inst->model1, &inst->model2 };
+	for (int r = 0; r < 3; ++r) {
+		m.elements[0 * 4 + r] = rows[r]->x;
+		m.elements[1 * 4 + r] = rows[r]->y;
+		m.elements[2 * 4 + r] = rows[r]->z;
+		m.elements[3 * 4 + r] = rows[r]->w;
+	}
+	return m;
+}
+
+void cf_draw3d_list_end(CF_DrawListData* data)
+{
+	// Restore the pre-recording transform stack.
+	cf_draw3d_pop();
+
+	// Own any borrowed payload data, then group: every later command whose full state matches
+	// an earlier one folds its instances into that command, so replay issues one instanced
+	// draw per unique state regardless of submission order. Depth testing owns the ordering
+	// this discards -- the documented bake semantic.
+	int count = data->cmds.count();
+	for (int i = 0; i < count; ++i) {
+		if (!data->cmds[i].mesh3d) continue;
+		s_own_payload(data->cmds[i].mesh3d);
+	}
+	for (int i = 0; i < count; ++i) {
+		CF_MeshCmd3d* group = data->cmds[i].mesh3d;
+		if (!group || group->escape) continue;
+		for (int j = i + 1; j < count; ++j) {
+			CF_MeshCmd3d* mc = data->cmds[j].mesh3d;
+			if (!mc || mc->escape) continue;
+			if (!s_bake_group_match(&data->cmds[i], &data->cmds[j])) continue;
+			for (int k = 0; k < mc->instances.count(); ++k) {
+				group->instances.add(mc->instances[k]);
+			}
+			cf_draw3d_free_cmd(&data->cmds[j]);
+		}
+	}
+	// Compact out the merged-away commands (their payloads are freed; order is preserved).
+	int w = 0;
+	for (int r = 0; r < count; ++r) {
+		CF_Command& c = data->cmds[r];
+		if (!c.mesh3d && c.geoms.count() == 0 && !c.geoms_ref && c.items.count() == 0 && !c.u.data && !c.u.is_texture) continue;
+		if (w != r) data->cmds[w] = data->cmds[r];
+		++w;
+	}
+	data->cmds.set_count(w);
+
+	// Exact per-instance normal matrices, computed once at bake (the immediate path derives
+	// them from the model rows instead -- see the header).
+	for (int i = 0; i < data->cmds.count(); ++i) {
+		CF_MeshCmd3d* mc = data->cmds[i].mesh3d;
+		if (!mc) continue;
+		for (int k = 0; k < mc->instances.count(); ++k) {
+			CF_MeshInstance3d& inst = mc->instances[k];
+			CF_M4x4 n = cf_m4_normal_matrix(s_model_from_rows(&inst));
+			inst.nmat0 = cf_v4(n.elements[0], n.elements[4], n.elements[8], 0);
+			inst.nmat1 = cf_v4(n.elements[1], n.elements[5], n.elements[9], 0);
+			inst.nmat2 = cf_v4(n.elements[2], n.elements[6], n.elements[10], 0);
+		}
+	}
+}
+
+void cf_draw3d_replay_cmd(CF_Command* dst, const CF_Command* src)
+{
+	const CF_MeshCmd3d* smc = src->mesh3d;
+	CF_MeshCmd3d* mc = CF_NEW(CF_MeshCmd3d);
+	mc->mesh = smc->mesh;
+	mc->escape = smc->escape;
+	// Cameras are live at replay, and the current 3d transform stack moves the whole list:
+	// final position = P * V * T_now * M_baked. Note a rotation in T_now does not reach the
+	// baked in_nmat lanes -- lighting under whole-list rotation is the shader's business.
+	CF_M4x4 vp = cf_mul_m4(s_draw3d->projections.last(), s_draw3d->views.last());
+	mc->vp = cf_mul_m4(vp, s_draw3d->transforms.last());
+	mc->instances_ref = &smc->instances;
+	mc->uniforms = smc->uniforms; // Bytes stay in the list's uniform_block (borrowed).
+	mc->textures = smc->textures;
+	dst->mesh3d = mc;
+}
+
+void cf_draw3d_free_list_cmds(CF_DrawListData* data)
+{
+	for (int i = 0; i < data->cmds.count(); ++i) {
+		cf_draw3d_free_cmd(&data->cmds[i]);
+	}
 }

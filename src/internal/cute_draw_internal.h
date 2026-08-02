@@ -412,6 +412,13 @@ void cf_make_draw3d();
 void cf_destroy_draw3d();
 void cf_draw3d_process(CF_Command* cmd, CF_Canvas canvas, bool clear);
 void cf_draw3d_free_cmd(CF_Command* cmd);
+// Draw-list hooks: list-local 3d transforms while recording; bake (grouping + exact normal
+// matrices) at end; replay payloads borrowing the baked instances under a live camera; and
+// payload cleanup when a list's commands are cleared or destroyed.
+void cf_draw3d_list_begin();
+void cf_draw3d_list_end(struct CF_DrawListData* data);
+void cf_draw3d_replay_cmd(CF_Command* dst, const CF_Command* src);
+void cf_draw3d_free_list_cmds(struct CF_DrawListData* data);
 
 // We slice up a 64-bit int into lo + hi ranges to map where we can fetch pixels
 // from. This slices up the 64-bit range into 16 unique range. The ranges are inclusive.
