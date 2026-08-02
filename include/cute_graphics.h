@@ -28,12 +28,6 @@ extern "C" {
  *
  * If you want to draw sprites, lines/shapes, or text, see: cute_draw.h
  *
- * Quick list of unsupported features. CF's focus is on the 2D use case, so most of these features are
- * omitted since they aren't super useful for 2D.
- *
- *     - Cube map
- *     - 3D textures
- *     - Texture arrays
  *
  * The basic flow of rendering a frame looks something like this:
  *
@@ -571,6 +565,94 @@ CF_INLINE const char* cf_wrap_mode_string(CF_WrapMode mode) {
 }
 
 /**
+ * @enum     CF_CompareFunction
+ * @category graphics
+ * @brief    Compare operations available for depth/stencil.
+ * @related  CF_CompareFunction cf_compare_function_string CF_StencilOp CF_StencilFunction
+ */
+#define CF_COMPARE_FUNCTION_DEFS \
+	/* @entry Always perform the operation. */         \
+	CF_ENUM(COMPARE_FUNCTION_ALWAYS,                0) \
+	/* @entry Never perform the operation. */          \
+	CF_ENUM(COMPARE_FUNCTION_NEVER,                 1) \
+	/* @entry < */                                     \
+	CF_ENUM(COMPARE_FUNCTION_LESS_THAN,             2) \
+	/* @entry == */                                    \
+	CF_ENUM(COMPARE_FUNCTION_EQUAL,                 3) \
+	/* @entry != */                                    \
+	CF_ENUM(COMPARE_FUNCTION_NOT_EQUAL,             4) \
+	/* @entry <= */                                    \
+	CF_ENUM(COMPARE_FUNCTION_LESS_THAN_OR_EQUAL,    5) \
+	/* @entry > */                                     \
+	CF_ENUM(COMPARE_FUNCTION_GREATER_THAN,          6) \
+	/* @entry >= */                                    \
+	CF_ENUM(COMPARE_FUNCTION_GREATER_THAN_OR_EQUAL, 7) \
+	/* @end */
+
+typedef enum CF_CompareFunction
+{
+	#define CF_ENUM(K, V) CF_##K = V,
+	CF_COMPARE_FUNCTION_DEFS
+	#undef CF_ENUM
+} CF_CompareFunction;
+
+/**
+ * @function cf_compare_function_string
+ * @category graphics
+ * @brief    Returns a `CF_CompareFunction` converted to a C string.
+ * @related  CF_CompareFunction cf_compare_function_string CF_StencilOp CF_StencilFunction
+ */
+CF_INLINE const char* cf_compare_function_string(CF_CompareFunction compare) {
+	switch (compare) {
+	#define CF_ENUM(K, V) case CF_##K: return CF_STRINGIZE(CF_##K);
+	CF_COMPARE_FUNCTION_DEFS
+	#undef CF_ENUM
+	default: return NULL;
+	}
+}
+
+/**
+ * @enum     CF_TextureType
+ * @category graphics
+ * @brief    The shape of a texture: 2D, cube map, 3D, or 2D array.
+ * @remarks  Matches the sampler type in the shader: `sampler2D`, `samplerCube`, `sampler3D`, or
+ *           `sampler2DArray`. See `CF_TextureParams` and `cf_texture_update_layer`.
+ * @related  CF_TextureType cf_texture_type_to_string CF_TextureParams cf_make_texture cf_texture_update_layer
+ */
+#define CF_TEXTURE_TYPE_DEFS \
+	/* @entry An ordinary 2D texture (the default). */                                          \
+	CF_ENUM(TEXTURE_TYPE_2D,       0)                                                           \
+	/* @entry A cube map: six square 2D faces, sampled by direction with `samplerCube`. */      \
+	CF_ENUM(TEXTURE_TYPE_CUBE,     1)                                                           \
+	/* @entry A 3D (volume) texture, sampled with `sampler3D`. */                               \
+	CF_ENUM(TEXTURE_TYPE_3D,       2)                                                           \
+	/* @entry An array of 2D layers, sampled with `sampler2DArray`. */                          \
+	CF_ENUM(TEXTURE_TYPE_2D_ARRAY, 3)                                                           \
+	/* @end */
+
+typedef enum CF_TextureType
+{
+	#define CF_ENUM(K, V) CF_##K = V,
+	CF_TEXTURE_TYPE_DEFS
+	#undef CF_ENUM
+} CF_TextureType;
+
+/**
+ * @function cf_texture_type_to_string
+ * @category graphics
+ * @brief    Returns a `CF_TextureType` value as a string.
+ * @related  CF_TextureType
+ */
+CF_INLINE const char* cf_texture_type_to_string(CF_TextureType type) {
+	switch (type) {
+	#define CF_ENUM(K, V) case CF_##K: return CF_STRINGIZE(CF_##K);
+	CF_TEXTURE_TYPE_DEFS
+	#undef CF_ENUM
+	default: return NULL;
+	}
+}
+
+/**
  * @struct   CF_TextureParams
  * @category graphics
  * @brief    A collection of parameters to create a `CF_Texture` with `cf_make_texture`.
@@ -617,6 +699,24 @@ typedef struct CF_TextureParams
 
 	/* @member Set this to true if you plan to update the texture contents each frame. */
 	bool stream;
+
+	/* @member The texture's shape (2D, cube, 3D, or 2D array). Defaults to `CF_TEXTURE_TYPE_2D`,
+	   so zero-initialized params behave exactly as before this member existed. See `CF_TextureType`. */
+	CF_TextureType texture_type;
+
+	/* @member For `CF_TEXTURE_TYPE_2D_ARRAY` the number of layers; for `CF_TEXTURE_TYPE_3D` the
+	   depth. Zero means one. Cube maps always have six faces and ignore this. Upload individual
+	   faces/layers/slices with `cf_texture_update_layer`. */
+	int layer_count;
+
+	/* @member True to make this a comparison (shadow) sampler: `sampler2DShadow` in the shader,
+	   where each fetch compares the reference value against the texel and returns a visibility
+	   factor, with hardware PCF where available. Pair with a depth `pixel_format` and
+	   `compare_function` (typically `CF_COMPARE_FUNCTION_LESS_THAN_OR_EQUAL`). */
+	bool compare_enable;
+
+	/* @member The comparison used when `compare_enable` is true. See `CF_CompareFunction`. */
+	CF_CompareFunction compare_function;
 } CF_TextureParams;
 // @end
 
@@ -673,6 +773,20 @@ CF_API void CF_CALL cf_texture_update(CF_Texture texture, void* data, int size);
  * @related  CF_TextureParams CF_Texture cf_make_texture cf_destroy_texture cf_texture_update cf_texture_update_mip cf_generate_mipmaps
  */
 CF_API void CF_CALL cf_texture_update_mip(CF_Texture texture, void* data, int size, int mip_level);
+
+/**
+ * @function cf_texture_update_layer
+ * @category graphics
+ * @brief    Uploads pixels to one face, layer, or slice of a non-2D texture.
+ * @param    texture  The texture, made with a `CF_TextureType` other than 2D.
+ * @param    data     The pixel data for one full face/layer/slice.
+ * @param    size     The size of `data` in bytes.
+ * @param    layer    Cube face index 0-5 (+X, -X, +Y, -Y, +Z, -Z), array layer, or 3D z-slice.
+ * @remarks  `cf_texture_update` uploads the whole image of a 2D texture; this is its per-layer
+ *           counterpart for cube maps, texture arrays, and 3D textures (mip level 0).
+ * @related  CF_Texture CF_TextureType cf_texture_update cf_texture_update_mip cf_make_texture
+ */
+CF_API void CF_CALL cf_texture_update_layer(CF_Texture texture, void* data, int size, int layer);
 
 /**
  * @function cf_generate_mipmaps
@@ -1676,52 +1790,6 @@ CF_INLINE const char* cf_cull_mode_string(CF_CullMode mode) {
 	}
 }
 
-/**
- * @enum     CF_CompareFunction
- * @category graphics
- * @brief    Compare operations available for depth/stencil.
- * @related  CF_CompareFunction cf_compare_function_string CF_StencilOp CF_StencilFunction
- */
-#define CF_COMPARE_FUNCTION_DEFS \
-	/* @entry Always perform the operation. */         \
-	CF_ENUM(COMPARE_FUNCTION_ALWAYS,                0) \
-	/* @entry Never perform the operation. */          \
-	CF_ENUM(COMPARE_FUNCTION_NEVER,                 1) \
-	/* @entry < */                                     \
-	CF_ENUM(COMPARE_FUNCTION_LESS_THAN,             2) \
-	/* @entry == */                                    \
-	CF_ENUM(COMPARE_FUNCTION_EQUAL,                 3) \
-	/* @entry != */                                    \
-	CF_ENUM(COMPARE_FUNCTION_NOT_EQUAL,             4) \
-	/* @entry <= */                                    \
-	CF_ENUM(COMPARE_FUNCTION_LESS_THAN_OR_EQUAL,    5) \
-	/* @entry > */                                     \
-	CF_ENUM(COMPARE_FUNCTION_GREATER_THAN,          6) \
-	/* @entry >= */                                    \
-	CF_ENUM(COMPARE_FUNCTION_GREATER_THAN_OR_EQUAL, 7) \
-	/* @end */
-
-typedef enum CF_CompareFunction
-{
-	#define CF_ENUM(K, V) CF_##K = V,
-	CF_COMPARE_FUNCTION_DEFS
-	#undef CF_ENUM
-} CF_CompareFunction;
-
-/**
- * @function cf_compare_function_string
- * @category graphics
- * @brief    Returns a `CF_CompareFunction` converted to a C string.
- * @related  CF_CompareFunction cf_compare_function_string CF_StencilOp CF_StencilFunction
- */
-CF_INLINE const char* cf_compare_function_string(CF_CompareFunction compare) {
-	switch (compare) {
-	#define CF_ENUM(K, V) case CF_##K: return CF_STRINGIZE(CF_##K);
-	CF_COMPARE_FUNCTION_DEFS
-	#undef CF_ENUM
-	default: return NULL;
-	}
-}
 
 /**
  * @enum     CF_StencilOp
@@ -2517,6 +2585,7 @@ CF_INLINE void apply_shader(CF_Shader shader, CF_Material material) { cf_apply_s
 CF_INLINE void draw_elements() { cf_draw_elements(); }
 CF_INLINE bool query_pixel_format(CF_PixelFormat format, CF_PixelFormatOp op) { return cf_query_pixel_format(format, op); }
 CF_INLINE void texture_update_mip(CF_Texture texture, void* data, int size, int mip_level) { cf_texture_update_mip(texture, data, size, mip_level); }
+CF_INLINE void texture_update_layer(CF_Texture texture, void* data, int size, int layer) { cf_texture_update_layer(texture, data, size, layer); }
 CF_INLINE void generate_mipmaps(CF_Texture texture) { cf_generate_mipmaps(texture); }
 CF_INLINE uint64_t texture_handle(CF_Texture texture) { return cf_texture_handle(texture); }
 CF_INLINE uint64_t texture_binding_handle(CF_Texture texture) { return cf_texture_binding_handle(texture); }

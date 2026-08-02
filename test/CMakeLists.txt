@@ -22,6 +22,7 @@ set(CF_TEST_SRCS
 	test_shader_directory.cpp
 	test_canvas_clear.cpp
 	test_mrt.cpp
+	test_texture_types.cpp
 	test_math.cpp
 	test_math.c
 	test_math3d.cpp

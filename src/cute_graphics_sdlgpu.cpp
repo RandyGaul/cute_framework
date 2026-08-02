@@ -68,6 +68,8 @@ struct CF_TextureInternal
 	CF_PixelFormat pixel_format;
 	SDL_GPUTextureFormat format;
 	SDL_GPUTextureSamplerBinding binding;
+	CF_TextureType type;
+	int layers; // Array layers, 3D depth, or 6 for cube maps.
 };
 
 struct CF_ReadbackInternal
@@ -552,6 +554,14 @@ static inline CF_Texture s_make_texture(CF_TextureParams params, CF_SampleCount 
 	tex_info.width = (Uint32)params.width;
 	tex_info.height = (Uint32)params.height;
 	tex_info.format = s_wrap(params.pixel_format);
+	int layers = 1;
+	switch (params.texture_type) {
+	case CF_TEXTURE_TYPE_CUBE:     tex_info.type = SDL_GPU_TEXTURETYPE_CUBE;     layers = 6; break;
+	case CF_TEXTURE_TYPE_3D:       tex_info.type = SDL_GPU_TEXTURETYPE_3D;       layers = cf_max(params.layer_count, 1); break;
+	case CF_TEXTURE_TYPE_2D_ARRAY: tex_info.type = SDL_GPU_TEXTURETYPE_2D_ARRAY; layers = cf_max(params.layer_count, 1); break;
+	default: break;
+	}
+	tex_info.layer_count_or_depth = (Uint32)layers;
 
 	// Not allowed to sample from MSAA textures.
 	tex_info.usage = sample_count == CF_SAMPLE_COUNT_1 ? params.usage : (params.usage & ~(SDL_GPU_TEXTUREUSAGE_SAMPLER));
@@ -569,8 +579,9 @@ static inline CF_Texture s_make_texture(CF_TextureParams params, CF_SampleCount 
 
 	SDL_GPUSampler* sampler = NULL;
 	// Depth/stencil textures don't need their own sampler, as the associated color
-	// texture in the owning canvas already has a sampler attached.
-	if (!s_is_depth(params.pixel_format)) {
+	// texture in the owning canvas already has a sampler attached -- except comparison
+	// (shadow) samplers, which exist precisely to sample a depth texture.
+	if (!s_is_depth(params.pixel_format) || params.compare_enable) {
 		SDL_GPUSamplerCreateInfo sampler_info = SDL_GPUSamplerCreateInfoDefaults();
 		sampler_info.mip_lod_bias = params.mip_lod_bias;
 		sampler_info.max_anisotropy = params.max_anisotropy;
@@ -579,6 +590,12 @@ static inline CF_Texture s_make_texture(CF_TextureParams params, CF_SampleCount 
 		sampler_info.mipmap_mode = s_wrap(params.mip_filter);
 		sampler_info.address_mode_u = s_wrap(params.wrap_u);
 		sampler_info.address_mode_v = s_wrap(params.wrap_v);
+		if (params.compare_enable) {
+			// Comparison (shadow) sampling: each fetch compares the reference against the
+			// texel, pairing with sampler2DShadow in the shader.
+			sampler_info.enable_compare = true;
+			sampler_info.compare_op = s_wrap(params.compare_function);
+		}
 		sampler = SDL_CreateGPUSampler(g_ctx.device, &sampler_info);
 		CF_ASSERT(sampler);
 		if (!sampler) {
@@ -606,6 +623,8 @@ static inline CF_Texture s_make_texture(CF_TextureParams params, CF_SampleCount 
 	tex_internal->buf = buf;
 	tex_internal->sampler = sampler;
 	tex_internal->pixel_format = params.pixel_format;
+	tex_internal->type = params.texture_type;
+	tex_internal->layers = layers;
 	tex_internal->format = tex_info.format;
 	tex_internal->binding.texture = tex;
 	tex_internal->binding.sampler = sampler;
@@ -1077,6 +1096,40 @@ void cf_sdlgpu_texture_update(CF_Texture texture_handle, void* data, int size)
 	SDL_UploadToGPUTexture(pass, &src, &dst, true);
 	SDL_EndGPUCopyPass(pass);
 	if (!tex->buf) SDL_ReleaseGPUTransferBuffer(g_ctx.device, buf);
+	if (!g_ctx.cmd) SDL_SubmitGPUCommandBuffer(cmd);
+}
+
+void cf_sdlgpu_texture_update_layer(CF_Texture texture_handle, void* data, int size, int layer)
+{
+	s_end_active_pass();
+	CF_TextureInternal* tex = (CF_TextureInternal*)texture_handle.id;
+	if (!tex || layer < 0 || layer >= tex->layers) return;
+
+	SDL_GPUTransferBufferCreateInfo tbuf_info = {
+		.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD,
+		.size = (Uint32)size,
+		.props = 0,
+	};
+	SDL_GPUTransferBuffer* buf = SDL_CreateGPUTransferBuffer(g_ctx.device, &tbuf_info);
+	void* p = SDL_MapGPUTransferBuffer(g_ctx.device, buf, true);
+	CF_MEMCPY(p, data, size);
+	SDL_UnmapGPUTransferBuffer(g_ctx.device, buf);
+
+	SDL_GPUCommandBuffer* cmd = g_ctx.cmd ? g_ctx.cmd : SDL_AcquireGPUCommandBuffer(g_ctx.device);
+	SDL_GPUCopyPass* pass = SDL_BeginGPUCopyPass(cmd);
+	SDL_GPUTextureTransferInfo src;
+	src.transfer_buffer = buf;
+	src.offset = 0;
+	src.pixels_per_row = 0;
+	src.rows_per_layer = 0;
+	SDL_GPUTextureRegion dst = SDL_GPUTextureRegionDefaults(tex, tex->w, tex->h);
+	// Cube faces and array layers address by layer; 3D slices address by z.
+	if (tex->type == CF_TEXTURE_TYPE_3D) dst.z = (Uint32)layer;
+	else dst.layer = (Uint32)layer;
+	dst.d = 1;
+	SDL_UploadToGPUTexture(pass, &src, &dst, true);
+	SDL_EndGPUCopyPass(pass);
+	SDL_ReleaseGPUTransferBuffer(g_ctx.device, buf);
 	if (!g_ctx.cmd) SDL_SubmitGPUCommandBuffer(cmd);
 }
 

@@ -163,6 +163,10 @@ struct CF_GL_Texture
 	GLint mag_filter = GL_LINEAR;
 	GLint wrap_u = GL_REPEAT;
 	GLint wrap_v = GL_REPEAT;
+	GLenum target = GL_TEXTURE_2D; // GL_TEXTURE_CUBE_MAP / GL_TEXTURE_3D / GL_TEXTURE_2D_ARRAY.
+	int layers = 1;                // Array layers, 3D depth, or 6 for cube maps.
+	bool compare = false;          // Comparison (shadow) sampling.
+	GLenum compare_func = GL_LEQUAL;
 	CF_GL_Ring ring;
 	int active_slot = -1;
 };
@@ -824,12 +828,19 @@ bool cf_gles_query_pixel_format(CF_PixelFormat format, CF_PixelFormatOp op)
 
 static inline void s_apply_sampler_state_to_handle(const CF_GL_Texture* t, GLuint handle)
 {
-	glBindTexture(GL_TEXTURE_2D, handle);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, t->min_filter);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, t->mag_filter);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, t->wrap_u);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, t->wrap_v);
-	glBindTexture(GL_TEXTURE_2D, 0);
+	glBindTexture(t->target, handle);
+	glTexParameteri(t->target, GL_TEXTURE_MIN_FILTER, t->min_filter);
+	glTexParameteri(t->target, GL_TEXTURE_MAG_FILTER, t->mag_filter);
+	glTexParameteri(t->target, GL_TEXTURE_WRAP_S, t->wrap_u);
+	glTexParameteri(t->target, GL_TEXTURE_WRAP_T, t->wrap_v);
+	if (t->target == GL_TEXTURE_CUBE_MAP || t->target == GL_TEXTURE_3D) {
+		glTexParameteri(t->target, GL_TEXTURE_WRAP_R, t->wrap_u);
+	}
+	if (t->compare) {
+		glTexParameteri(t->target, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
+		glTexParameteri(t->target, GL_TEXTURE_COMPARE_FUNC, t->compare_func);
+	}
+	glBindTexture(t->target, 0);
 }
 
 static inline void s_apply_sampler_params(CF_GL_Texture* t, const CF_TextureParams& p)
@@ -858,9 +869,17 @@ static inline bool s_texture_allocate_storage(CF_GL_Texture* t, CF_GL_Slot* slot
 		glGenTextures(1, &slot->handle);
 	}
 	if (!slot->handle) return false;
-	glBindTexture(GL_TEXTURE_2D, slot->handle);
-	glTexImage2D(GL_TEXTURE_2D, 0, t->internal_fmt, t->w, t->h, 0, t->upload_fmt, t->upload_type, NULL);
-	glBindTexture(GL_TEXTURE_2D, 0);
+	glBindTexture(t->target, slot->handle);
+	if (t->target == GL_TEXTURE_CUBE_MAP) {
+		for (int face = 0; face < 6; ++face) {
+			glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, 0, t->internal_fmt, t->w, t->h, 0, t->upload_fmt, t->upload_type, NULL);
+		}
+	} else if (t->target == GL_TEXTURE_3D || t->target == GL_TEXTURE_2D_ARRAY) {
+		glTexImage3D(t->target, 0, t->internal_fmt, t->w, t->h, t->layers, 0, t->upload_fmt, t->upload_type, NULL);
+	} else {
+		glTexImage2D(GL_TEXTURE_2D, 0, t->internal_fmt, t->w, t->h, 0, t->upload_fmt, t->upload_type, NULL);
+	}
+	glBindTexture(t->target, 0);
 	CF_POLL_OPENGL_ERROR();
 	return true;
 }
@@ -933,6 +952,14 @@ CF_Texture cf_gles_make_texture(CF_TextureParams params)
 	CF_GL_Texture* t = (CF_GL_Texture*)CF_CALLOC(sizeof(CF_GL_Texture));
 	t->w = params.width;
 	t->h = params.height;
+	switch (params.texture_type) {
+	case CF_TEXTURE_TYPE_CUBE:     t->target = GL_TEXTURE_CUBE_MAP; t->layers = 6; break;
+	case CF_TEXTURE_TYPE_3D:       t->target = GL_TEXTURE_3D;       t->layers = params.layer_count > 1 ? params.layer_count : 1; break;
+	case CF_TEXTURE_TYPE_2D_ARRAY: t->target = GL_TEXTURE_2D_ARRAY; t->layers = params.layer_count > 1 ? params.layer_count : 1; break;
+	default:                       t->target = GL_TEXTURE_2D;       t->layers = 1; break;
+	}
+	t->compare = params.compare_enable;
+	if (params.compare_enable) t->compare_func = s_wrap(params.compare_function);
 	t->internal_fmt = info->internal_fmt;
 	t->upload_fmt   = info->upload_fmt;
 	t->upload_type  = info->upload_type;
@@ -955,9 +982,9 @@ CF_Texture cf_gles_make_texture(CF_TextureParams params)
 	t->active_slot = slot_index;
 	s_apply_sampler_params(t, params);
 	if (params.allocate_mipmaps) {
-		glBindTexture(GL_TEXTURE_2D, t->id);
-		glGenerateMipmap(GL_TEXTURE_2D);
-		glBindTexture(GL_TEXTURE_2D, 0);
+		glBindTexture(t->target, t->id);
+		glGenerateMipmap(t->target);
+		glBindTexture(t->target, 0);
 	}
 	CF_POLL_OPENGL_ERROR();
 
@@ -986,6 +1013,7 @@ void cf_gles_destroy_texture(CF_Texture tex)
 void cf_gles_texture_update(CF_Texture tex, void* data, int /*size*/)
 {
 	CF_GL_Texture* t = (CF_GL_Texture*)(uintptr_t)tex.id;
+	CF_ASSERT(t->target == GL_TEXTURE_2D); // Non-2D textures upload per face/layer/slice.
 	int slot_index = -1;
 	CF_GL_Slot* slot = s_acquire_or_wait(&t->ring, g_ctx.frame_index, &slot_index);
 	if (!slot) return;
@@ -997,6 +1025,23 @@ void cf_gles_texture_update(CF_Texture tex, void* data, int /*size*/)
 	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, t->w, t->h, t->upload_fmt, t->upload_type, data);
 	if (t->has_mips) glGenerateMipmap(GL_TEXTURE_2D);
 	glBindTexture(GL_TEXTURE_2D, 0);
+	CF_POLL_OPENGL_ERROR();
+}
+
+void cf_gles_texture_update_layer(CF_Texture tex, void* data, int /*size*/, int layer)
+{
+	CF_GL_Texture* t = (CF_GL_Texture*)(uintptr_t)tex.id;
+	if (!t || layer < 0 || layer >= t->layers) return;
+	// Per-layer uploads update in place (no ring rotation): faces of one cube must all
+	// land in the same storage, and non-2D textures aren't the streaming case anyway.
+	glBindTexture(t->target, t->id);
+	if (t->target == GL_TEXTURE_CUBE_MAP) {
+		glTexSubImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + layer, 0, 0, 0, t->w, t->h, t->upload_fmt, t->upload_type, data);
+	} else {
+		glTexSubImage3D(t->target, 0, 0, 0, layer, t->w, t->h, 1, t->upload_fmt, t->upload_type, data);
+	}
+	if (t->has_mips) glGenerateMipmap(t->target);
+	glBindTexture(t->target, 0);
 	CF_POLL_OPENGL_ERROR();
 }
 
@@ -1708,11 +1753,11 @@ void cf_gles_apply_shader(CF_Shader shader_handle, CF_Material material_handle)
 			const CF_GL_TextureBinding* binding = &shader->texture_bindings[image_index];
 			if (binding->name == material_tex.name) {
 				glActiveTexture(GL_TEXTURE0 + texture_unit);
-				glBindTexture(GL_TEXTURE_2D, texture->id);
+				glBindTexture(texture->target, texture->id);
 				if (g_ctx.has_filter_override) {
 					GLenum gl_filter = (g_ctx.filter_override == CF_FILTER_NEAREST) ? GL_NEAREST : GL_LINEAR;
-					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, gl_filter);
-					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, gl_filter);
+					glTexParameteri(texture->target, GL_TEXTURE_MIN_FILTER, gl_filter);
+					glTexParameteri(texture->target, GL_TEXTURE_MAG_FILTER, gl_filter);
 				}
 				glUniform1i(binding->location, texture_unit);
 				++texture_unit;
@@ -1729,11 +1774,11 @@ void cf_gles_apply_shader(CF_Shader shader_handle, CF_Material material_handle)
 			const CF_GL_TextureBinding* binding = &shader->vs_texture_bindings[image_index];
 			if (binding->name == material_tex.name) {
 				glActiveTexture(GL_TEXTURE0 + texture_unit);
-				glBindTexture(GL_TEXTURE_2D, texture->id);
+				glBindTexture(texture->target, texture->id);
 				if (g_ctx.has_filter_override) {
 					GLenum gl_filter = (g_ctx.filter_override == CF_FILTER_NEAREST) ? GL_NEAREST : GL_LINEAR;
-					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, gl_filter);
-					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, gl_filter);
+					glTexParameteri(texture->target, GL_TEXTURE_MIN_FILTER, gl_filter);
+					glTexParameteri(texture->target, GL_TEXTURE_MAG_FILTER, gl_filter);
 				}
 				glUniform1i(binding->location, texture_unit);
 				++texture_unit;

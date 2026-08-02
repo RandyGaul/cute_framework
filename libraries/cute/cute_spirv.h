@@ -52,9 +52,13 @@
 		barriers, shared memory, and a full preprocessor with #include).
 
 		Not supported: doubles, non-square matrices, geometry/tessellation
-		stages, sampler3D/samplerCube/shadow samplers, multi-dimensional arrays,
-		out/inout function parameters, # and ## preprocessor operators. The
-		subset is documented precisely in CF's docs and grows on request.
+		stages, multi-dimensional arrays, out/inout function parameters, # and
+		## preprocessor operators. The subset is documented precisely in CF's
+		docs and grows on request.
+
+		samplerCube, sampler3D, sampler2DArray and sampler2DShadow are
+		supported through texture()/textureLod on every backend;
+		texelFetch/textureSize/textureOffset remain sampler2D-only.
 
 	Revision history:
 		1.00 (07/21/2026) initial release: preprocessor, full CF-GLSL subset,
@@ -80,10 +84,12 @@
 		                  struct whose methods are the user's functions, so no
 		                  state threading is needed. Compute reflection now
 		                  carries local_size so Metal pipelines can dispatch.
+		1.04 (08/02/2026) samplerCube/sampler3D/sampler2DArray/sampler2DShadow across
+		                  SPIR-V, ES 3.00, HLSL and MSL backends (texture/textureLod;
+		                  comparison fetches are level-zero everywhere).
 */
 #ifndef CUTE_SPIRV_H
 #define CUTE_SPIRV_H
-
 #ifndef CKIT_H
 #error "cute_spirv.h requires cute/ckit.h -- include it first"
 #endif
