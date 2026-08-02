@@ -1395,7 +1395,7 @@ void cf_gles_apply_mesh(CF_Mesh mesh_handle)
 	g_ctx.mesh = mesh;
 }
 
-static void s_build_uniforms(GLuint program, CF_GL_ShaderInfo* shader_info, const CF_ShaderInfo* uniform_info, GLuint* binding_point)
+static void s_build_uniforms(GLuint program, CF_GL_ShaderInfo* shader_info, const CF_ShaderInfo* uniform_info, GLuint* binding_point, bool is_vs)
 {
 	shader_info->uniform_members = (CF_ShaderUniformMemberInfo*)CF_ALLOC(sizeof(CF_ShaderUniformMemberInfo) * uniform_info->num_uniform_members);
 	for (int member_index = 0; member_index < uniform_info->num_uniform_members; ++member_index) {
@@ -1421,7 +1421,11 @@ static void s_build_uniforms(GLuint program, CF_GL_ShaderInfo* shader_info, cons
 		glBufferData(GL_UNIFORM_BUFFER, shader_info->uniform_blocks[block_index].info.block_size, NULL, GL_DYNAMIC_DRAW);
 		// GLES 3.00 and WebGL do not support explicit binding (i.e: layout(binding = x))
 		// Thus, we have to query this after linking.
-		GLuint index = glGetUniformBlockIndex(program, block->info.block_name);
+		// The ES emitter stage-prefixes block names so both stages can each have their
+		// own uniform_block in the program's single block namespace.
+		char gl_block_name[256];
+		snprintf(gl_block_name, sizeof(gl_block_name), "%s%s", is_vs ? "cf_vs_" : "cf_fs_", block->info.block_name);
+		GLuint index = glGetUniformBlockIndex(program, gl_block_name);
 		if (index == GL_INVALID_INDEX) {
 			// The block could be optimized out
 			block->info.block_index = -1;
@@ -1470,8 +1474,8 @@ CF_Shader cf_gles_make_shader_from_bytecode(CF_ShaderBytecode vertex_bytecode, C
 	}
 
 	GLuint binding_point = 0;
-	s_build_uniforms(program, &shader->vs, &vertex_bytecode.shader_info, &binding_point);
-	s_build_uniforms(program, &shader->fs, &fragment_bytecode.shader_info, &binding_point);
+	s_build_uniforms(program, &shader->vs, &vertex_bytecode.shader_info, &binding_point, true);
+	s_build_uniforms(program, &shader->fs, &fragment_bytecode.shader_info, &binding_point, false);
 
 	return { (uintptr_t)(uintptr_t)shader };
 }

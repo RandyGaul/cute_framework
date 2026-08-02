@@ -6563,7 +6563,11 @@ static void cspv_emit_glsl300(cspv_ctx* ctx)
 		}
 
 		case CSPV_D_BLOCK:
-			sfmt_append(ctx->tp_out, "\nlayout(std140) uniform %s\n{\n", d->name);
+			// Stage-prefixed: GLES links vertex and fragment into one program with a
+			// single block namespace, and CF names both stages' blocks uniform_block.
+			// Reflection keeps the canonical name; the GL-side name carries the stage.
+			sfmt_append(ctx->tp_out, "\nlayout(std140) uniform %s%s\n{\n",
+				ctx->stage == CSPV_STAGE_VERTEX ? "cf_vs_" : "cf_fs_", d->name);
 			for (int j = 0; j < d->num_members; j++) {
 				spush(ctx->tp_out, '\t');
 				cspv_tp_var(g, d->member_types[j], d->member_names[j]);

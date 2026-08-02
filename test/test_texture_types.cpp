@@ -76,7 +76,10 @@ static CF_Pixel s_draw_and_read(CF_Canvas canvas, CF_Mesh mesh, CF_Shader shader
 
 TEST_CASE(test_cube_map_sample)
 {
-	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, W, H, CF_APP_OPTIONS_HIDDEN_BIT | CF_APP_OPTIONS_NO_AUDIO_BIT, NULL))) return true; // Headless CI: no display/GPU.
+	int options = CF_APP_OPTIONS_HIDDEN_BIT | CF_APP_OPTIONS_NO_AUDIO_BIT;
+	const char* gles = getenv("CF_TEST_GLES");
+	if (gles && *gles == '1') options |= CF_APP_OPTIONS_GFX_OPENGL_BIT | CF_APP_OPTIONS_GFX_DEBUG_BIT;
+	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, W, H, options, NULL))) return true; // Headless CI: no display/GPU.
 
 	CF_TextureParams tp = cf_texture_defaults(32, 32);
 	tp.texture_type = CF_TEXTURE_TYPE_CUBE;
@@ -126,7 +129,10 @@ TEST_CASE(test_cube_map_sample)
 
 TEST_CASE(test_texture_array_sample)
 {
-	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, W, H, CF_APP_OPTIONS_HIDDEN_BIT | CF_APP_OPTIONS_NO_AUDIO_BIT, NULL))) return true; // Headless CI: no display/GPU.
+	int options = CF_APP_OPTIONS_HIDDEN_BIT | CF_APP_OPTIONS_NO_AUDIO_BIT;
+	const char* gles = getenv("CF_TEST_GLES");
+	if (gles && *gles == '1') options |= CF_APP_OPTIONS_GFX_OPENGL_BIT | CF_APP_OPTIONS_GFX_DEBUG_BIT;
+	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, W, H, options, NULL))) return true; // Headless CI: no display/GPU.
 
 	CF_TextureParams tp = cf_texture_defaults(32, 32);
 	tp.texture_type = CF_TEXTURE_TYPE_2D_ARRAY;

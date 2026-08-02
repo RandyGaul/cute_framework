@@ -56,7 +56,10 @@ static CF_Pixel s_readback_center(CF_Canvas canvas, int index, CF_Pixel* px)
 
 TEST_CASE(test_mrt_draw_and_clear)
 {
-	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, W, H, CF_APP_OPTIONS_HIDDEN_BIT | CF_APP_OPTIONS_NO_AUDIO_BIT, NULL))) return true; // Headless CI: no display/GPU.
+	int options = CF_APP_OPTIONS_HIDDEN_BIT | CF_APP_OPTIONS_NO_AUDIO_BIT;
+	const char* gles = getenv("CF_TEST_GLES");
+	if (gles && *gles == '1') options |= CF_APP_OPTIONS_GFX_OPENGL_BIT | CF_APP_OPTIONS_GFX_DEBUG_BIT;
+	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, W, H, options, NULL))) return true; // Headless CI: no display/GPU.
 
 	CF_CanvasParams params = cf_canvas_defaults(W, H);
 	params.target_count = 2;
@@ -113,7 +116,10 @@ TEST_CASE(test_mrt_draw_and_clear)
 // this member existed -- the compatibility contract for every existing caller.
 TEST_CASE(test_mrt_single_target_compat)
 {
-	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, W, H, CF_APP_OPTIONS_HIDDEN_BIT | CF_APP_OPTIONS_NO_AUDIO_BIT, NULL))) return true; // Headless CI: no display/GPU.
+	int options = CF_APP_OPTIONS_HIDDEN_BIT | CF_APP_OPTIONS_NO_AUDIO_BIT;
+	const char* gles = getenv("CF_TEST_GLES");
+	if (gles && *gles == '1') options |= CF_APP_OPTIONS_GFX_OPENGL_BIT | CF_APP_OPTIONS_GFX_DEBUG_BIT;
+	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, W, H, options, NULL))) return true; // Headless CI: no display/GPU.
 
 	CF_CanvasParams params = cf_canvas_defaults(W, H);
 	params.target_count = 0; // Zero means one.

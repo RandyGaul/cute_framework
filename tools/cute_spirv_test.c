@@ -1266,7 +1266,8 @@ static void test_sampler_dims_emitters(void)
 		CSPV_Result r = cspv_compile_ex(
 			"layout(set = 2, binding = 0) uniform samplerCube s;\n"
 			"layout(set = 2, binding = 1) uniform sampler2DShadow sh;\n"
-			FS_MAIN("result = texture(s, vec3(0, 1, 0)) + vec4(texture(sh, vec3(0.5, 0.5, 0.7)));"),
+			"layout(set = 3, binding = 0) uniform uniform_block { vec4 u_dir; };\n"
+			FS_MAIN("result = texture(s, u_dir.xyz) + vec4(texture(sh, vec3(0.5, 0.5, 0.7)));"),
 			CSPV_STAGE_FRAGMENT, &opts);
 		CHECK_MSG(r.success, r.error_message);
 		if (r.success) {
@@ -1274,6 +1275,9 @@ static void test_sampler_dims_emitters(void)
 			if (r.glsl300) {
 				CHECK(strstr(r.glsl300, "samplerCube") != NULL);
 				CHECK(strstr(r.glsl300, "sampler2DShadow") != NULL);
+				// ES block names carry the stage so vs and fs can both declare
+				// uniform_block in one linked program.
+				CHECK(strstr(r.glsl300, "cf_fs_uniform_block") != NULL);
 			}
 		}
 		cspv_free(&r);
