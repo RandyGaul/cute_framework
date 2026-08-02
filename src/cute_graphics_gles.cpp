@@ -176,6 +176,13 @@ struct CF_GL_Canvas
 	bool has_depth;
 	bool has_stencil;
 
+	// Per-canvas clear overrides; unset means fall back to the globals.
+	bool has_clear_color;
+	CF_Color clear_color;
+	bool has_clear_depth_stencil;
+	float clear_depth;
+	uint32_t clear_stencil;
+
 	CF_Texture cf_color;
 };
 
@@ -1114,13 +1121,14 @@ CF_Texture cf_gles_canvas_get_depth_stencil_target(CF_Canvas)
 static inline void s_clear_canvas(const CF_GL_Canvas* canvas)
 {
 	GLbitfield bits = GL_COLOR_BUFFER_BIT;
-	glClearColor(app->clear_color.r, app->clear_color.g, app->clear_color.b, app->clear_color.a);
+	CF_Color cc = canvas->has_clear_color ? canvas->clear_color : app->clear_color;
+	glClearColor(cc.r, cc.g, cc.b, cc.a);
 	if (s_canvas_has_depth(canvas)) {
-		glClearDepthf(app->clear_depth);
+		glClearDepthf(canvas->has_clear_depth_stencil ? canvas->clear_depth : app->clear_depth);
 		bits |= GL_DEPTH_BUFFER_BIT;
 	}
 	if (s_canvas_has_stencil(canvas)) {
-		glClearStencil((GLint)app->clear_stencil);
+		glClearStencil((GLint)(canvas->has_clear_depth_stencil ? canvas->clear_stencil : app->clear_stencil));
 		bits |= GL_STENCIL_BUFFER_BIT;
 	}
 	g_ctx.current_state.scissor_enabled = false;
@@ -1577,6 +1585,11 @@ void cf_gles_apply_shader(CF_Shader shader_handle, CF_Material material_handle)
 	} else {
 		glEnable(GL_CULL_FACE);
 		glCullFace(s_wrap(render_state.cull_mode));
+		// The GLSL ES transpiler emits `gl_Position.y = -gl_Position.y` so canvases come out with
+		// row 0 at the top, matching the other backends. That negation mirrors every triangle, so
+		// geometry CF considers front-facing reaches the rasterizer wound clockwise -- leaving GL
+		// at its GL_CCW default would cull exactly the wrong faces and turn solids inside out.
+		glFrontFace(GL_CW);
 	}
 
 	// Depth.
@@ -2037,4 +2050,21 @@ void cf_gles_destroy_readback(CF_Readback readback)
 	if (!rb) return;
 	CF_FREE(rb->data);
 	CF_FREE(rb);
+}
+
+void cf_gles_canvas_set_clear_color(CF_Canvas canvas_handle, CF_Color color)
+{
+	CF_GL_Canvas* canvas = (CF_GL_Canvas*)(uintptr_t)canvas_handle.id;
+	if (!canvas) return;
+	canvas->has_clear_color = true;
+	canvas->clear_color = color;
+}
+
+void cf_gles_canvas_set_clear_depth_stencil(CF_Canvas canvas_handle, float depth, uint32_t stencil)
+{
+	CF_GL_Canvas* canvas = (CF_GL_Canvas*)(uintptr_t)canvas_handle.id;
+	if (!canvas) return;
+	canvas->has_clear_depth_stencil = true;
+	canvas->clear_depth = depth;
+	canvas->clear_stencil = stencil;
 }

@@ -847,6 +847,27 @@ CF_API void CF_CALL cf_shader_on_error(void (*on_error_fn)(const char* error_mes
 CF_API CF_Shader CF_CALL cf_make_shader(const char* vertex_path, const char* fragment_path);
 
 /**
+ * @function cf_shader_reload_from_files
+ * @category graphics
+ * @brief    Recompiles a shader made by `cf_make_shader` from its original vertex and fragment files.
+ * @param    shader  The shader to reload.
+ * @return   Returns true if the shader was rebuilt, false if it did not come from `cf_make_shader`
+ *           or if the rebuild failed.
+ * @remarks  On failure the existing shader keeps working and the reason is available from
+ *           `cf_shader_compile_error`, so a typo saved mid-edit does not blank the screen.
+ *
+ *           Unlike `cf_shader_reload`, which returns a fresh handle for draw shaders, this swaps the
+ *           shader's contents in place -- every copy of the handle stays valid, including ones
+ *           already handed to a `CF_Material`.
+ *
+ *           Shaders under `cf_shader_directory` reload automatically when their files change, so
+ *           this is only needed when driving reloads by hand from `cf_shader_on_changed` (which
+ *           turns the automatic path off).
+ * @related  cf_make_shader cf_shader_reload cf_compute_shader_reload cf_shader_directory cf_shader_on_changed cf_shader_compile_error
+ */
+CF_API bool CF_CALL cf_shader_reload_from_files(CF_Shader* shader);
+
+/**
  * @function cf_make_shader_from_source
  * @category graphics
  * @brief    Creates a shader from strings containing glsl source code.
@@ -1258,6 +1279,40 @@ CF_API CF_Texture CF_CALL cf_canvas_get_depth_stencil_target(CF_Canvas canvas);
  * @related  cf_make_canvas cf_clear_color cf_clear_depth_stencil
  */
 CF_API void CF_CALL cf_clear_canvas(CF_Canvas canvas);
+
+/**
+ * @function cf_canvas_set_clear_color
+ * @category graphics
+ * @brief    Gives one canvas its own clear color, instead of the global `cf_clear_color`.
+ * @param    canvas  The canvas.
+ * @param    color   The color this canvas clears to from now on.
+ * @remarks  `cf_clear_color` sets a single global value that every clear reads, so a multi-pass
+ *           renderer wanting different clears per pass has to set the global before each pass and
+ *           put it back afterwards -- and forgetting the restore leaves the main screen clearing to
+ *           whatever the last pass wanted. This sets the value on the canvas once:
+ *
+ *           ```c
+ *           cf_canvas_set_clear_color(gbuffer, cf_color_black());
+ *           cf_canvas_set_clear_color(composite, cf_color_invisible());
+ *           ```
+ *
+ *           A canvas with no override set clears to the global, so existing code behaves exactly as
+ *           before. There is no way to go back to inheriting once set -- set the value you want.
+ * @related  CF_Canvas cf_clear_color cf_canvas_set_clear_depth_stencil cf_clear_canvas cf_apply_canvas
+ */
+CF_API void CF_CALL cf_canvas_set_clear_color(CF_Canvas canvas, CF_Color color);
+
+/**
+ * @function cf_canvas_set_clear_depth_stencil
+ * @category graphics
+ * @brief    Gives one canvas its own clear depth and stencil, instead of the global `cf_clear_depth_stencil`.
+ * @param    canvas   The canvas.
+ * @param    depth    The depth value this canvas clears to. 1.0 pairs with `CF_COMPARE_FUNCTION_LESS_THAN`.
+ * @param    stencil  The stencil value this canvas clears to.
+ * @remarks  See `cf_canvas_set_clear_color`. A canvas with no override clears to the global values.
+ * @related  CF_Canvas cf_clear_depth_stencil cf_canvas_set_clear_color cf_clear_canvas cf_render_state_3d_defaults
+ */
+CF_API void CF_CALL cf_canvas_set_clear_depth_stencil(CF_Canvas canvas, float depth, uint32_t stencil);
 
 //--------------------------------------------------------------------------------------------------
 // Readback.
@@ -2364,6 +2419,8 @@ CF_INLINE void destroy_canvas(CF_Canvas canvas) { cf_destroy_canvas(canvas); }
 CF_INLINE CF_Texture canvas_get_target(CF_Canvas canvas) { return cf_canvas_get_target(canvas); }
 CF_INLINE CF_Texture canvas_get_depth_stencil_target(CF_Canvas canvas) { return cf_canvas_get_depth_stencil_target(canvas); }
 CF_INLINE void clear_canvas(CF_Canvas canvas) { cf_clear_canvas(canvas); }
+CF_INLINE void canvas_set_clear_color(CF_Canvas canvas, CF_Color color) { cf_canvas_set_clear_color(canvas, color); }
+CF_INLINE void canvas_set_clear_depth_stencil(CF_Canvas canvas, float depth, uint32_t stencil) { cf_canvas_set_clear_depth_stencil(canvas, depth, stencil); }
 CF_INLINE CF_Readback canvas_readback(CF_Canvas canvas) { return cf_canvas_readback(canvas); }
 CF_INLINE bool readback_ready(CF_Readback readback) { return cf_readback_ready(readback); }
 CF_INLINE int readback_data(CF_Readback readback, void* data, int size) { return cf_readback_data(readback, data, size); }

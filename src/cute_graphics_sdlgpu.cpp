@@ -33,10 +33,23 @@ struct CF_CanvasInternal
 
 	bool clear;
 
+	// Per-canvas clear overrides. Unset means "use the global cf_clear_color /
+	// cf_clear_depth_stencil", so existing code is unaffected.
+	bool has_clear_color;
+	CF_Color clear_color;
+	bool has_clear_depth_stencil;
+	float clear_depth;
+	uint32_t clear_stencil;
+
 	// These get set by cf_apply_* functions.
 	struct CF_MeshInternal* mesh;
 	SDL_GPURenderPass* pass;
 };
+
+// Per-canvas clear values, falling back to the globals when the canvas has no override.
+static CF_Color s_clear_color(const CF_CanvasInternal* c) { return (c && c->has_clear_color) ? c->clear_color : app->clear_color; }
+static float s_clear_depth(const CF_CanvasInternal* c) { return (c && c->has_clear_depth_stencil) ? c->clear_depth : app->clear_depth; }
+static uint32_t s_clear_stencil(const CF_CanvasInternal* c) { return (c && c->has_clear_depth_stencil) ? c->clear_stencil : app->clear_stencil; }
 
 struct CF_TextureInternal
 {
@@ -912,6 +925,22 @@ bool cf_sdlgpu_set_present_mode(CF_PresentMode mode)
 
 void cf_sdlgpu_begin_frame()
 {
+	// A frame may still be open here: cf_app_update was called again without an
+	// intervening cf_app_draw_onto_screen. Close it out rather than overwriting the
+	// handle. Dropping it leaks the command buffer -- SDL_GPU requires every acquired
+	// buffer be submitted or cancelled -- and silently discards everything recorded
+	// into it. That loss is invisible at the call site but not harmless: texture
+	// uploads go with it, while the CPU-side caches that issued them still consider
+	// the data resident and never re-upload. A font atlas page lost this way leaves
+	// glyphs sampling empty texels, so text rasterizes to nothing for the rest of the
+	// run while ordinary shapes keep drawing fine.
+	if (g_ctx.cmd) {
+		s_end_active_pass();
+		SDL_SubmitGPUCommandBuffer(g_ctx.cmd);
+		g_ctx.cmd = NULL;
+		g_ctx.canvas = NULL;
+		g_ctx.swapchain_tex = NULL;
+	}
 	g_ctx.cmd = SDL_AcquireGPUCommandBuffer(g_ctx.device);
 	g_ctx.skip_drawing = false;
 }
@@ -1196,20 +1225,20 @@ void cf_sdlgpu_clear_canvas(CF_Canvas canvas_handle)
 
 	SDL_GPUColorTargetInfo color_info = {
 		.texture = canvas->texture,
-		.clear_color = { app->clear_color.r, app->clear_color.g, app->clear_color.b, app->clear_color.a },
+		.clear_color = { s_clear_color(canvas).r, s_clear_color(canvas).g, s_clear_color(canvas).b, s_clear_color(canvas).a },
 		.load_op = SDL_GPU_LOADOP_CLEAR,
 		.store_op = SDL_GPU_STOREOP_STORE,
 		.cycle = true,
 	};
 	SDL_GPUDepthStencilTargetInfo depth_stencil_info = {
 		.texture = canvas->depth_stencil,
-		.clear_depth = 1.0f,
+		.clear_depth = s_clear_depth(canvas),
 		.load_op = SDL_GPU_LOADOP_CLEAR,
 		.store_op = SDL_GPU_STOREOP_STORE,
 		.stencil_load_op = SDL_GPU_LOADOP_CLEAR,
 		.stencil_store_op = SDL_GPU_STOREOP_STORE,
 		.cycle = true,
-		.clear_stencil = 0,
+		.clear_stencil = (Uint8)s_clear_stencil(canvas),
 	};
 	SDL_GPURenderPass* renderPass = SDL_BeginGPURenderPass(cmd, &color_info, 1, canvas->depth_stencil ? &depth_stencil_info : NULL);
 	SDL_EndGPURenderPass(renderPass);
@@ -1310,8 +1339,16 @@ bool cf_sdlgpu_readback_ready(CF_Readback readback)
 	CF_ReadbackInternal* rb = (CF_ReadbackInternal*)readback.id;
 	if (!rb) return false;
 	if (rb->ready) return true;
-	rb->ready = SDL_QueryGPUFence(g_ctx.device, rb->fence);
-	return rb->ready;
+	if (!SDL_QueryGPUFence(g_ctx.device, rb->fence)) return false;
+	// A signaled fence only guarantees the GPU-side copy finished. On D3D12, a download
+	// whose row pitch needs realigning to the 256-byte copy alignment is unpacked into
+	// the transfer buffer lazily, on the next *wait* that observes the fence -- a query
+	// never does this. Without the wait below, cf_readback_data can read stale transfer
+	// buffer contents even though the fence already reports done. This call returns
+	// immediately, since the fence is already known signaled.
+	SDL_WaitForGPUFences(g_ctx.device, true, &rb->fence, 1);
+	rb->ready = true;
+	return true;
 }
 
 int cf_sdlgpu_readback_data(CF_Readback readback, void* data, int size)
@@ -1808,7 +1845,8 @@ void cf_sdlgpu_apply_shader(CF_Shader shader_handle, CF_Material material_handle
 		SDL_GPUColorTargetInfo pass_color_info;
 		CF_MEMSET(&pass_color_info, 0, sizeof(pass_color_info));
 		pass_color_info.texture = g_ctx.canvas->texture;
-		pass_color_info.clear_color = { app->clear_color.r, app->clear_color.g, app->clear_color.b, app->clear_color.a };
+		CF_Color cc = s_clear_color(g_ctx.canvas);
+		pass_color_info.clear_color = { cc.r, cc.g, cc.b, cc.a };
 		pass_color_info.load_op = g_ctx.canvas->clear ? SDL_GPU_LOADOP_CLEAR : SDL_GPU_LOADOP_LOAD;
 		pass_color_info.cycle = g_ctx.canvas->clear ? true : false;
 		if (g_ctx.canvas->sample_count == CF_SAMPLE_COUNT_1) {
@@ -1824,8 +1862,8 @@ void cf_sdlgpu_apply_shader(CF_Shader shader_handle, CF_Material material_handle
 		SDL_GPUDepthStencilTargetInfo* depth_stencil_ptr = NULL;
 		if (g_ctx.canvas->depth_stencil) {
 			pass_depth_stencil_info.texture = g_ctx.canvas->depth_stencil;
-			pass_depth_stencil_info.clear_depth = app->clear_depth;
-			pass_depth_stencil_info.clear_stencil = app->clear_stencil;
+			pass_depth_stencil_info.clear_depth = s_clear_depth(g_ctx.canvas);
+			pass_depth_stencil_info.clear_stencil = (Uint8)s_clear_stencil(g_ctx.canvas);
 			pass_depth_stencil_info.load_op = g_ctx.canvas->clear ? SDL_GPU_LOADOP_CLEAR : SDL_GPU_LOADOP_LOAD;
 			pass_depth_stencil_info.store_op = SDL_GPU_STOREOP_STORE;
 			pass_depth_stencil_info.stencil_load_op = g_ctx.canvas->clear ? SDL_GPU_LOADOP_CLEAR : SDL_GPU_LOADOP_LOAD;
@@ -2371,6 +2409,23 @@ void cf_sdlgpu_dispatch_compute(CF_ComputeShader shader, CF_Material material_ha
 	// Dispatch.
 	SDL_DispatchGPUCompute(pass, (Uint32)dispatch.group_count_x, (Uint32)dispatch.group_count_y, (Uint32)dispatch.group_count_z);
 	SDL_EndGPUComputePass(pass);
+}
+
+void cf_sdlgpu_canvas_set_clear_color(CF_Canvas canvas_handle, CF_Color color)
+{
+	CF_CanvasInternal* canvas = (CF_CanvasInternal*)canvas_handle.id;
+	if (!canvas) return;
+	canvas->has_clear_color = true;
+	canvas->clear_color = color;
+}
+
+void cf_sdlgpu_canvas_set_clear_depth_stencil(CF_Canvas canvas_handle, float depth, uint32_t stencil)
+{
+	CF_CanvasInternal* canvas = (CF_CanvasInternal*)canvas_handle.id;
+	if (!canvas) return;
+	canvas->has_clear_depth_stencil = true;
+	canvas->clear_depth = depth;
+	canvas->clear_stencil = stencil;
 }
 
 #endif

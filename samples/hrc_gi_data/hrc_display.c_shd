@@ -1,0 +1,139 @@
+// Display/composite for the exact HRC path: sum the 4 per-rotation radiance
+// textures, write linear fluence (feedback) and the AgX-tonemapped display image.
+//
+// No grid->world upscale here at ANY cascade scale: hrc_finish gathers per
+// display pixel (display-res c-1), so the radiance textures are always full
+// resolution and this pass just fetches them.
+
+// Directional radiance as 2D Fourier L1: L(t) ~ a0/(2pi) + (a1*cos t + b1*sin t)/pi
+layout(set = 0, binding = 0) uniform sampler2D u_a0;   // sum over cones (scalar fluence)
+layout(set = 0, binding = 1) uniform sampler2D u_a1;   // sum L*cos(theta)
+layout(set = 0, binding = 2) uniform sampler2D u_b1;   // sum L*sin(theta)
+layout(set = 0, binding = 3) uniform sampler2D u_emission;
+layout(set = 0, binding = 4) uniform sampler2D u_absorption; // scene absorption (blur gate)
+layout(set = 1, binding = 0, rgba8)   uniform image2D u_fluence;      // display (rgba8)
+layout(set = 1, binding = 1, rgba16f) uniform image2D u_fluence_lin;  // linear (feedback)
+
+layout(set = 2, binding = 0) uniform Params
+{
+	int   u_world_w;       // full-res output width
+	int   u_world_h;       // full-res output height
+	float u_exposure;      // per-scene display scale (raw AgX otherwise)
+	int   u_scale;         // cascade reduction factor; spaces the blur taps
+	float u_abs_threshold; // blur gate: opacity difference that rejects a tap
+	float u_emissive;      // weight on a surface's own emitted radiance
+	float u_saturation;    // post-tonemap chroma; 1.0 leaves the image untouched
+	int   u_blur;          // 1 = paper's 1px cross blur on the fluence (Eq 21)
+};
+
+layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+
+vec3 agx_contrast(vec3 x)
+{
+	vec3 x2 = x * x;
+	vec3 x4 = x2 * x2;
+	return 15.5 * x4 * x2 - 40.14 * x4 * x + 31.96 * x4 - 6.868 * x2 * x
+	     + 0.4298 * x2 + 0.1191 * x - 0.00232;
+}
+vec3 agx_tonemap(vec3 v)
+{
+	const mat3 agx_in = mat3(
+		0.842479062253094, 0.0423282422610123, 0.0423756549057051,
+		0.0784335999999992, 0.878468636469772,  0.0784336,
+		0.0792237451477643, 0.0791661274605434, 0.879142973793104);
+	const mat3 agx_out = mat3(
+		 1.19687900512017,   -0.0528968517574562, -0.0529716355144438,
+		-0.0980208811401368,  1.15190312990417,   -0.0980434501171241,
+		-0.0990297440797205, -0.0989611768448433,  1.15107367264116);
+	const float min_ev = -12.47393;
+	const float max_ev = 4.026069;
+	v = agx_in * v;
+	v = clamp(log2(v), min_ev, max_ev);
+	v = (v - min_ev) / (max_ev - min_ev);
+	v = agx_contrast(v);
+	v = agx_out * v;
+	return clamp(v, 0.0, 1.0);
+}
+
+ivec2 clamp_pos(ivec2 p) { return clamp(p, ivec2(0), ivec2(u_world_w - 1, u_world_h - 1)); }
+
+// Fetch from a per-rotation radiance texture. Always full-res: the finish pass
+// gathers per display pixel at every cascade scale, so no upscale happens here.
+vec3 rad_at(int band, ivec2 p)
+{
+	p = clamp_pos(p);
+	if (band == 0) return texelFetch(u_a0, p, 0).rgb;
+	if (band == 1) return texelFetch(u_a1, p, 0).rgb;
+	return texelFetch(u_b1, p, 0).rgb;
+}
+
+// Mean absorption at a full-res pixel: the gate for the cross blur below.
+float abs_at(ivec2 p)
+{
+	vec3 a = texelFetch(u_absorption, clamp_pos(p), 0).rgb;
+	return (a.x + a.y + a.z) * (1.0 / 3.0);
+}
+
+// The paper's checkerboard mitigation (Eq 21): a 1px cross blur over the summed
+// fluence, kernel (1/8)[[0,1,0],[1,4,1],[0,1,0]], ignoring neighbours whose
+// opacity differs significantly from the target so light never smears across an
+// occluder edge. HRC's levels >= 1 step probes by multiples of 2, so odd- and
+// even-y probes never exchange radiance in the cascade itself; this couples them
+// after the fact. Taps step by u_scale so they land on adjacent PROBES, not
+// adjacent display pixels, when the cascade runs at reduced resolution. Skipped
+// taps renormalize rather than darken. u_abs_threshold doubles as the "differs
+// significantly" test -- it is the same occluder-discontinuity meaning as the
+// upscale gate.
+vec3 fluence_at(ivec2 gid)
+{
+	vec3 c = rad_at(0, gid);
+	if (u_blur == 0) return c;
+	float oc = abs_at(gid);
+	vec3 acc = 4.0 * c;
+	float wsum = 4.0;
+	ivec2 q;
+	q = gid + ivec2( u_scale, 0); if (abs(abs_at(q) - oc) <= u_abs_threshold) { acc += rad_at(0, q); wsum += 1.0; }
+	q = gid + ivec2(-u_scale, 0); if (abs(abs_at(q) - oc) <= u_abs_threshold) { acc += rad_at(0, q); wsum += 1.0; }
+	q = gid + ivec2(0,  u_scale); if (abs(abs_at(q) - oc) <= u_abs_threshold) { acc += rad_at(0, q); wsum += 1.0; }
+	q = gid + ivec2(0, -u_scale); if (abs(abs_at(q) - oc) <= u_abs_threshold) { acc += rad_at(0, q); wsum += 1.0; }
+	return acc / wsum;
+}
+
+void main()
+{
+	ivec2 gid = ivec2(gl_GlobalInvocationID.xy);
+	if (gid.x >= u_world_w || gid.y >= u_world_h) return;
+
+	vec3 lin = fluence_at(gid); // a0 == the 4-rotation sum, cross-blurred if enabled
+
+	// Feedback/linear output stays pure INCIDENT light. Emission must not go in here:
+	// it would make every emitter re-inject its own output through the multibounce
+	// loop and amplify itself, and this is also the buffer the reference equivalence
+	// check reads.
+	imageStore(u_fluence_lin, gid, vec4(lin, 1.0));
+
+	// The camera, unlike the light field, also sees a surface's own emitted radiance.
+	// Fluence alone is what an emitter CASTS -- soft and low-frequency by
+	// construction -- so anything thin, like a glyph stroke, reads as a fuzzy bright
+	// smear with no legible silhouette. Adding emission here composites emissive
+	// geometry at full world resolution with its real shape, and puts the cascade
+	// glow around it rather than in place of it.
+	// UNITS: a0 is a fluence -- cone radiance summed over 2pi of angular span, so
+	// 2pi times the mean radiance. The emission canvas holds a RADIANCE (the trace
+	// uses it as one, adding emis*(1-trans) per step). Adding the two directly would
+	// mix units and understate every emitter by 2pi, so convert emission into the
+	// fluence units the rest of this pass works in. Keeping this honest is what lets
+	// the bounce pass author a plain [0,1] albedo: a surface re-emitting
+	// albedo*a0/(2pi) then displays at albedo*a0, i.e. albedo of its surroundings.
+	const float TWO_PI = 6.28318530718;
+	vec3 view = lin + texelFetch(u_emission, clamp_pos(gid), 0).rgb * u_emissive * TWO_PI;
+	vec3 disp = agx_tonemap(view * u_exposure);
+	// AgX pulls chroma out of anything bright -- the filmic shoulder walks saturated
+	// colour toward white. For a scene that IS its colour, pull some back after the
+	// curve. 1.0 is a no-op, so the room scenes are unaffected.
+	if (u_saturation != 1.0) {
+		float luma = dot(disp, vec3(0.2126, 0.7152, 0.0722));
+		disp = clamp(mix(vec3(luma), disp, u_saturation), 0.0, 1.0);
+	}
+	imageStore(u_fluence, gid, vec4(disp, 1.0));
+}

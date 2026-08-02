@@ -1,0 +1,132 @@
+// HRC merge-down pass. Index-only (no world geometry): each level-n ray folds
+// in the two level-n+1 rays it splits into, walking the cascade coarse to fine
+// (one rotation group = 4 segments).
+//
+//   T_k: idx = (x*(dirs_k+1) + ray)*(4*cross) + yy
+//   R_k: idx = (x*dirs_k + cone)*(4*cross) + yy
+// where dirs_k = 2<<k, size_x_k = ceil_div(casc_grid, 2^k), yy in [0, 4*cross_grid).
+// yy INNERMOST: a warp of consecutive yy
+// reads T and R contiguously at every level -- including the yy+offset*factor
+// neighbour loads, which just shift the run. x-innermost coalescing collapses at
+// deep levels where size_x shrinks below a warp.
+
+// Fused T element: rad+trn as 6 packed halves in one uvec4 (w spare) -- one
+// 16-byte load per probe instead of two 8-byte loads from split buffers.
+layout(std430, set = 0, binding = 0) readonly  buffer Tcurr    { uvec4 data[]; } u_tc;
+layout(std430, set = 0, binding = 1) readonly  buffer Tnext    { uvec4 data[]; } u_tn;
+layout(std430, set = 0, binding = 2) readonly  buffer RnextRad { uvec2 data[]; } u_rn_rad;
+layout(std430, set = 1, binding = 0) writeonly buffer RcurrRad { uvec2 data[]; } u_rc_rad;
+
+layout(set = 2, binding = 0) uniform Params
+{
+	int u_level;      // n
+	int u_casc_grid;  // cascade-axis probe grid dim
+	int u_cross_grid; // cross-axis probe grid dim
+};
+
+// yy on x (64 wide, coalesced), dir on y, cell x on z. dirs_n >= 2 always, so
+// the 2-wide dir dim never wastes lanes; sx can go odd/1 at the top levels,
+// which idles at most half the 2-wide z dim there.
+layout(local_size_x = 64, local_size_y = 2, local_size_z = 2) in;
+
+const float TAU = 6.28318530718;
+
+vec4 f16_load(uvec2 p) { return vec4(unpackHalf2x16(p.x), unpackHalf2x16(p.y)); }
+uvec2 f16_store(vec4 v) { return uvec2(packHalf2x16(v.xy), packHalf2x16(v.zw)); }
+void t_unpack(uvec4 p, out vec3 rad, out vec3 trn)
+{
+	vec2 a = unpackHalf2x16(p.x), b = unpackHalf2x16(p.y), c = unpackHalf2x16(p.z);
+	rad = vec3(a, b.x);
+	trn = vec3(b.y, c);
+}
+
+int dirs_of(int n)   { return 2 << n; }
+// ceil_div, NOT >>, so a non-power-of-two cascade axis collapses to one probe
+// at the top level instead of 0 (matches hrc_trace).
+int ceil_div(int a, int b) { return (a + b - 1) / b; }
+int sizex_of(int n)  { return max(ceil_div(u_casc_grid, 1 << n), 1); }
+int packH()          { return 4 * u_cross_grid; }
+
+float ray_angle(int directions, float d)
+{
+	return atan(d - float(directions) / 2.0 + 0.5, float(directions) / 2.0);
+}
+float angle_size(int directions, int dir)
+{
+	return ray_angle(directions, float(dir) + 0.5) - ray_angle(directions, float(dir) - 0.5);
+}
+
+void Tcurr(int x, int yy, int ray, out vec3 rad, out vec3 trn)
+{
+	int n = u_level; int dirs = dirs_of(n); int sx = sizex_of(n);
+	if (x < 0 || x >= sx || ray < 0 || ray > dirs || yy < 0 || yy >= packH()) { rad = vec3(0.0); trn = vec3(1.0); return; }
+	int idx = (x * (dirs + 1) + ray) * packH() + yy;
+	t_unpack(u_tc.data[idx], rad, trn);
+}
+void Tnext(int x, int yy, int ray, out vec3 rad, out vec3 trn)
+{
+	int n = u_level + 1; int dirs = dirs_of(n); int sx = sizex_of(n);
+	if (x < 0 || x >= sx || ray < 0 || ray > dirs || yy < 0 || yy >= packH()) { rad = vec3(0.0); trn = vec3(1.0); return; }
+	int idx = (x * (dirs + 1) + ray) * packH() + yy;
+	t_unpack(u_tn.data[idx], rad, trn);
+}
+vec3 Rnext(int x, int yy, int cone)
+{
+	int n = u_level + 1; int dirs = dirs_of(n); int sx = sizex_of(n);
+	if (x < 0 || x >= sx || cone < 0 || cone >= dirs || yy < 0 || yy >= packH()) return vec3(0.0);
+	int idx = (x * dirs + cone) * packH() + yy;
+	return f16_load(u_rn_rad.data[idx]).rgb;
+}
+
+void main()
+{
+	ivec3 gid = ivec3(gl_GlobalInvocationID);
+	int yy  = gid.x;
+	int dir = gid.y;
+	int x   = gid.z;
+	int n = u_level;
+	int dirs_n = dirs_of(n);
+	int sx_n = sizex_of(n);
+	if (x >= sx_n || dir >= dirs_n || yy >= packH()) return;
+
+	int dirs_np = dirs_of(n + 1);
+
+	int lower_dir = dir * 2;
+	int upper_dir = dir * 2 + 1;
+	int lower_off_y = dir - dirs_n / 2;
+	int upper_off_y = dir - dirs_n / 2 + 1;
+	int factor = (x % 2 == 0) ? 2 : 1;
+
+	float lower_size = angle_size(dirs_np, lower_dir);
+	float upper_size = angle_size(dirs_np, upper_dir);
+
+	vec3 lo_rad, lo_trn, hi_rad, hi_trn;
+	if (x % 2 == 0) {
+		Tnext(x / 2, yy, lower_dir,     lo_rad, lo_trn);
+		Tnext(x / 2, yy, (dir + 1) * 2, hi_rad, hi_trn);
+	} else {
+		Tcurr(x, yy, dir,     lo_rad, lo_trn);
+		Tcurr(x, yy, dir + 1, hi_rad, hi_trn);
+	}
+	lo_rad *= lower_size / TAU;
+	hi_rad *= upper_size / TAU;
+
+	int nx_l = (x + 1 * factor) / 2;
+	int ny_l = yy + lower_off_y * factor;
+	int nx_u = (x + 1 * factor) / 2;
+	int ny_u = yy + upper_off_y * factor;
+	vec3 next_lower = lo_rad + lo_trn * Rnext(nx_l, ny_l, lower_dir);
+	vec3 next_upper = hi_rad + hi_trn * Rnext(nx_u, ny_u, upper_dir);
+
+	vec3 result;
+	if (x % 2 == 0) {
+		vec3 loc_l = Rnext(x / 2, yy, lower_dir);
+		vec3 loc_u = Rnext(x / 2, yy, upper_dir);
+		result = 0.5 * (loc_l + next_lower) + 0.5 * (loc_u + next_upper);
+	} else {
+		result = next_lower + next_upper;
+	}
+
+	int idx = (x * dirs_n + dir) * packH() + yy;
+	u_rc_rad.data[idx] = f16_store(vec4(result, 1.0));
+}
