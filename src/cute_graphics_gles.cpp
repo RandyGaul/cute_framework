@@ -1272,6 +1272,13 @@ static inline void s_clear_canvas(const CF_GL_Canvas* canvas)
 	}
 	g_ctx.current_state.scissor_enabled = false;
 	glDisable(GL_SCISSOR_TEST);
+	// Clears are gated by the write masks exactly like draws, so force everything
+	// writable -- a 2d pass ending with depth writes off would otherwise silently turn
+	// the next frame's depth clear into a no-op (the scissor line above is the same
+	// lesson for the scissor box). Per-draw state application rebuilds these anyway.
+	glDepthMask(GL_TRUE);
+	glStencilMask(0xFF);
+	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 	// Color clears go through glClearBufferfv so each target can have its own clear color;
 	// depth/stencil still clear through glClear.
 	for (int i = 0; i < clear_target_count; ++i) {
@@ -1727,6 +1734,7 @@ static inline void s_apply_vertex_attributes(CF_GL_Shader* shader, CF_GL_Mesh* m
 		}
 		glVertexAttribDivisor((GLuint)loc, per_instance ? 1 : 0);
 
+
 		attribute_mask |= 1ULL << loc;
 	}
 
@@ -1889,6 +1897,8 @@ void cf_gles_draw_elements()
 
 	GLenum prim = s_wrap(material->state.primitive_type);
 	int instance_count = (mesh->instance.id && mesh->instance.count > 0) ? mesh->instance.count : 0;
+
+
 
 	if (mesh->ibo.id && mesh->ibo.count > 0) {
 		GLenum elem = (mesh->ibo.stride == 2) ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT;
