@@ -180,6 +180,11 @@ struct CF_GL_Canvas
 	bool has_depth;
 	bool has_stencil;
 
+	// Depth as a sampleable texture instead of a renderbuffer, used when the canvas's
+	// depth target requests SAMPLER usage (shadow maps). Zero id when the renderbuffer
+	// path is in use.
+	CF_Texture cf_depth;
+
 	// Additional color targets for MRT ([0] unused -- `color`/`cf_color` are target 0).
 	int target_count;
 	GLuint colors_mrt[CF_MAX_CANVAS_TARGETS];
@@ -599,6 +604,7 @@ static inline void s_load_format_caps()
 
 		// Example conservative assumptions:
 		if (!info.is_integer) info.caps |= CF_GL_FMT_CAP_SAMPLE; // can sample
+		if (info.is_depth) info.caps |= CF_GL_FMT_CAP_SAMPLE;     // depth textures sample (shadow maps)
 		if (!info.is_integer) info.caps |= CF_GL_FMT_CAP_LINEAR; // linear filter on normalized formats
 		if (!info.is_depth) info.caps |= CF_GL_FMT_CAP_COLOR; // color attachment support on non-depth formats
 
@@ -1127,16 +1133,26 @@ CF_Canvas cf_gles_make_canvas(CF_CanvasParams params)
 		c->colors_mrt[i] = ((CF_GL_Texture*)(uintptr_t)t.id)->id;
 	}
 
-	// Septh/stencil (renderbuffer).
+	// Depth/stencil: a renderbuffer normally, or a sampleable depth texture when the
+	// depth target requests SAMPLER usage (the shadow-map case).
 	if (params.depth_stencil_enable) {
 	CF_GL_PixelFormatInfo* depth_info = s_find_pixel_format_info(params.depth_stencil_target.pixel_format);
 	c->has_depth = depth_info && (depth_info->caps & CF_GL_FMT_CAP_DEPTH);
 	c->has_stencil = depth_info && depth_info->has_stencil && (depth_info->caps & CF_GL_FMT_CAP_STENCIL);
+	if (params.depth_stencil_target.usage & CF_TEXTURE_USAGE_SAMPLER_BIT) {
+	c->cf_depth = cf_gles_make_texture(params.depth_stencil_target);
+	if (!c->cf_depth.id) {
+	cf_gles_destroy_texture(color);
+	CF_FREE(c);
+	return CF_Canvas{};
+	}
+	} else {
 	c->depth = s_make_depth_renderbuffer(params.depth_stencil_target);
 	if (!c->depth) {
 	cf_gles_destroy_texture(color);
 	CF_FREE(c);
 	return CF_Canvas{};
+	}
 	}
 	}
 
@@ -1156,6 +1172,9 @@ CF_Canvas cf_gles_make_canvas(CF_CanvasParams params)
 	if (c->depth) {
 		GLenum attachment = c->has_stencil ? GL_DEPTH_STENCIL_ATTACHMENT : GL_DEPTH_ATTACHMENT;
 		glFramebufferRenderbuffer(GL_FRAMEBUFFER, attachment, GL_RENDERBUFFER, c->depth);
+	} else if (c->cf_depth.id) {
+		GLenum attachment = c->has_stencil ? GL_DEPTH_STENCIL_ATTACHMENT : GL_DEPTH_ATTACHMENT;
+		glFramebufferTexture2D(GL_FRAMEBUFFER, attachment, GL_TEXTURE_2D, ((CF_GL_Texture*)(uintptr_t)c->cf_depth.id)->id, 0);
 	}
 	CF_ASSERT(glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE);
 	CF_POLL_OPENGL_ERROR();
@@ -1168,6 +1187,7 @@ void cf_gles_destroy_canvas(CF_Canvas ch)
 	if (!ch.id) return;
 	CF_GL_Canvas* c = (CF_GL_Canvas*)(uintptr_t)ch.id;
 	if (c->depth) glDeleteRenderbuffers(1, &c->depth);
+	if (c->cf_depth.id) cf_gles_destroy_texture(c->cf_depth);
 	if (c->fbo) glDeleteFramebuffers(1, &c->fbo);
 	cf_gles_destroy_texture(c->cf_color);
 	for (int i = 1; i < c->target_count; ++i) {
@@ -1199,10 +1219,12 @@ CF_Texture cf_gles_canvas_get_target2(CF_Canvas ch, int index)
 	return index == 0 ? c->cf_color : c->cf_colors_mrt[index];
 }
 
-CF_Texture cf_gles_canvas_get_depth_stencil_target(CF_Canvas)
+CF_Texture cf_gles_canvas_get_depth_stencil_target(CF_Canvas ch)
 {
-	// GLES uses renderbuffers for depth/stencil, which are not sampleable as textures.
-	return CF_Texture{};
+	// Sampleable only when the canvas asked for it: give the depth target SAMPLER usage
+	// and it is backed by a depth texture rather than a renderbuffer.
+	CF_GL_Canvas* c = (CF_GL_Canvas*)(uintptr_t)ch.id;
+	return c ? c->cf_depth : CF_Texture{};
 }
 
 static inline void s_clear_canvas(const CF_GL_Canvas* canvas)
