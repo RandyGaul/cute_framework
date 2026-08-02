@@ -377,7 +377,9 @@ CF_API void CF_CALL cf_draw3d_set_uniform_color(const char* name, CF_Color val);
  * @param    name     The name of the sampler uniform in the shader.
  * @param    texture  The texture to bind.
  * @remarks  Bind a canvas's targets to sample a previous pass: `cf_canvas_get_target` for color,
- *           `cf_canvas_get_depth_stencil_target` for depth.
+ *           `cf_canvas_get_depth_stencil_target` for depth. When mapping clip-space positions to
+ *           canvas uvs (shadow maps), v runs top-down: `uv = vec2(ndc.x, -ndc.y) * 0.5 + 0.5` on
+ *           every backend. See the draw3d sample for a complete shadow-mapped scene.
  * @related  cf_draw3d_set_texture cf_draw3d_set_uniform CF_Texture cf_canvas_get_target cf_canvas_get_depth_stencil_target
  */
 CF_API void CF_CALL cf_draw3d_set_texture(const char* name, CF_Texture texture);

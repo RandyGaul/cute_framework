@@ -532,6 +532,11 @@ void cf_draw3d_process(CF_Command* cmd, CF_Canvas canvas, bool clear)
 
 	CF_Material material = s_draw3d->material;
 	cf_material_set_render_state(material, cmd->render_state);
+	// u_image is always bound: the atlas page for sprite-textured draws (below), and the 1x1
+	// white texture otherwise -- shaders sampling u_image degrade gracefully with no sprite
+	// pushed, matching the 2d layer's shape-only draws.
+	cf_material_set_texture_vs(material, "u_image", s_draw->white_texture);
+	cf_material_set_texture_fs(material, "u_image", s_draw->white_texture);
 	for (int i = 0; i < mc->textures.count(); ++i) {
 		// Both stages: unmatched names are ignored at bind, and vertex texture fetch matters
 		// for 3d (vertex animation textures and friends).

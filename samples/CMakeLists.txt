@@ -41,6 +41,7 @@ add_sample(vector_text vector_text.cpp)
 add_sample(blend_modes blend_modes.cpp)
 add_sample(vector_paths vector_paths.cpp)
 add_sample(draw_lists draw_lists.cpp)
+add_sample(draw3d draw3d.cpp)
 target_include_directories(mandala PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../src) # internal/cute_draw_internal.h for renderer toggles/stats.
 add_sample(tile_perf tile_perf.cpp)
 target_include_directories(tile_perf PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../src) # internal/cute_draw_internal.h for the tiled toggle.
