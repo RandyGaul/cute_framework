@@ -317,6 +317,8 @@ enum
 	CSpvOpTranspose            = 84,
 	CSpvOpImageSampleImplicitLod = 87,
 	CSpvOpImageSampleExplicitLod = 88,
+	CSpvOpImageSampleDrefImplicitLod = 89,
+	CSpvOpImageSampleDrefExplicitLod = 90,
 	CSpvOpImageFetch           = 95,
 	CSpvOpImageRead            = 98,
 	CSpvOpImageWrite           = 99,
@@ -611,6 +613,18 @@ typedef enum cspv_type_kind
 	CSPV_T_IMAGE2D,   // Storage image; cols = SPIR-V image format (-1 = formatless placeholder).
 } cspv_type_kind;
 
+// Sampler dimensionality, stored in cspv_type.cols for kind CSPV_T_SAMPLER2D. The 2D
+// value is zero so every pre-existing construction site (and zeroed type) stays a plain
+// sampler2D without edits.
+enum
+{
+	CSPV_SDIM_2D = 0,
+	CSPV_SDIM_CUBE = 1,
+	CSPV_SDIM_3D = 2,
+	CSPV_SDIM_2D_ARRAY = 3,
+	CSPV_SDIM_2D_SHADOW = 4,
+};
+
 typedef struct cspv_type
 {
 	cspv_type_kind kind;
@@ -834,6 +848,12 @@ typedef struct cspv_ctx
 	cspv_type* t_mat[3];   // mat2..mat4
 	cspv_type* t_sampler2d;
 	cspv_type* t_usampler2d; // elem = uint (texelFetch yields uvec4).
+	// Non-2D sampler dims share kind CSPV_T_SAMPLER2D; cols carries the dim tag
+	// (see CSPV_SDIM_*). Float-sampled only -- the u-variants grow on request.
+	cspv_type* t_samplercube;
+	cspv_type* t_sampler3d;
+	cspv_type* t_sampler2darray;
+	cspv_type* t_sampler2dshadow;
 	CK_MAP(cspv_type*) type_names;  // interned name -> type
 	CK_MAP(cspv_type*) array_types; // (elem ptr, len) -> canonical array type
 	CK_MAP(cspv_type*) image_types; // format -> canonical image2D type
@@ -1918,8 +1938,16 @@ static uint32_t cspv_type_id(cspv_ctx* ctx, cspv_type* type)
 		// Sampled type is float (sampler2D) or uint (usampler2D).
 		uint32_t sampled_tid = cspv_type_id(ctx, type->elem ? type->elem : ctx->t_float);
 		uint32_t img = cspv_new_id(ctx);
-		// Sampled type, dim 2D (=1), depth 0, arrayed 0, ms 0, sampled 1, format Unknown (=0).
-		uint32_t w[8] = { img, sampled_tid, 1, 0, 0, 0, 1, 0 };
+		// SPIR-V Dim: 2D = 1, 3D = 2, Cube = 3. Arrays set Arrayed, shadow sets Depth.
+		uint32_t dim = 1, depth = 0, arrayed = 0;
+		switch (type->cols) {
+		case CSPV_SDIM_CUBE: dim = 3; break;
+		case CSPV_SDIM_3D: dim = 2; break;
+		case CSPV_SDIM_2D_ARRAY: arrayed = 1; break;
+		case CSPV_SDIM_2D_SHADOW: depth = 1; break;
+		}
+		// Sampled type, dim, depth, arrayed, ms 0, sampled 1, format Unknown (=0).
+		uint32_t w[8] = { img, sampled_tid, dim, depth, arrayed, 0, 1, 0 };
 		cspv_emit(&ctx->globals, CSpvOpTypeImage, w, 8);
 		cspv_emit2(&ctx->globals, CSpvOpTypeSampledImage, id, img);
 		if (type->elem && type->elem->kind == CSPV_T_UINT) ctx->usampler2d_image_tid = img;
@@ -2907,7 +2935,14 @@ static const char* cspv_type_name(cspv_type* t)
 	case CSPV_T_INT: return "int";
 	case CSPV_T_UINT: return "uint";
 	case CSPV_T_FLOAT: return "float";
-	case CSPV_T_SAMPLER2D: return t->elem && t->elem->kind == CSPV_T_UINT ? "usampler2D" : "sampler2D";
+	case CSPV_T_SAMPLER2D:
+		switch (t->cols) {
+		case CSPV_SDIM_CUBE: return "samplerCube";
+		case CSPV_SDIM_3D: return "sampler3D";
+		case CSPV_SDIM_2D_ARRAY: return "sampler2DArray";
+		case CSPV_SDIM_2D_SHADOW: return "sampler2DShadow";
+		default: return t->elem && t->elem->kind == CSPV_T_UINT ? "usampler2D" : "sampler2D";
+		}
 	case CSPV_T_ARRAY: return "array";
 	case CSPV_T_STRUCT: return t->name;
 	case CSPV_T_IMAGE2D: return "image2D";
@@ -3745,13 +3780,41 @@ static cspv_value cspv_gen_intrin(cspv_ctx* ctx, cspv_expr* e, cspv_intrin* in)
 	    in->kind == CSPV_INTRIN_TEXEL_FETCH || in->kind == CSPV_INTRIN_TEXTURE_SIZE) {
 		cspv_type* st = NULL;
 		uint32_t sampler = cspv_gen_rvalue(ctx, e->u.call.args[0], &st);
-		if (st->kind != CSPV_T_SAMPLER2D) cspv_errorf(ctx, e->line, "'%s' requires a sampler2D", e->u.call.name);
+		if (st->kind != CSPV_T_SAMPLER2D) cspv_errorf(ctx, e->line, "'%s' requires a sampler type", e->u.call.name);
+		int sdim = st->cols;
+		bool shadow = sdim == CSPV_SDIM_2D_SHADOW;
+		// texelFetch/textureSize/textureOffset stay 2D-only for now; the sampled-image ops
+		// below handle every dim.
+		if (sdim != CSPV_SDIM_2D &&
+		    (in->kind == CSPV_INTRIN_TEXTURE_OFFSET || in->kind == CSPV_INTRIN_TEXEL_FETCH || in->kind == CSPV_INTRIN_TEXTURE_SIZE)) {
+			cspv_errorf(ctx, e->line, "'%s' requires a sampler2D", e->u.call.name);
+		}
 		bool uint_sampler = st->elem && st->elem->kind == CSPV_T_UINT;
 		cspv_type* vec4_t = uint_sampler ? ctx->t_uvec[2] : ctx->t_vec[2];
+		// Coordinate: vec2 for 2D, vec3 for cube/3D/array, and vec3 for 2D shadow
+		// (xy coords + z reference, split below for SPIR-V's separate Dref operand).
+		cspv_type* coord_t = sdim == CSPV_SDIM_2D ? ctx->t_vec[0] : ctx->t_vec[1];
 
 		if (in->kind == CSPV_INTRIN_TEXTURE) {
-			uint32_t coord = cspv_gen_rvalue_as(ctx, e->u.call.args[1], ctx->t_vec[0]);
+			uint32_t coord = cspv_gen_rvalue_as(ctx, e->u.call.args[1], coord_t);
 			uint32_t result = cspv_new_id(ctx);
+			if (shadow) {
+				// texture(sampler2DShadow, vec3(uv, ref)) yields a float visibility factor.
+				uint32_t xy = cspv_new_id(ctx);
+				uint32_t sw[7] = { cspv_type_id(ctx, ctx->t_vec[0]), xy, coord, coord, 0, 1 };
+				cspv_emit(&ctx->body, CSpvOpVectorShuffle, sw, 6);
+				uint32_t dref = cspv_new_id(ctx);
+				cspv_emit4(&ctx->body, CSpvOpCompositeExtract, cspv_type_id(ctx, ctx->t_float), dref, coord, 2);
+				if (ctx->stage == CSPV_STAGE_FRAGMENT) {
+					uint32_t w[5] = { cspv_type_id(ctx, ctx->t_float), result, sampler, xy, dref };
+					cspv_emit(&ctx->body, CSpvOpImageSampleDrefImplicitLod, w, 5);
+				} else {
+					uint32_t lod = cspv_const_float(ctx, 0.0f);
+					uint32_t w[7] = { cspv_type_id(ctx, ctx->t_float), result, sampler, xy, dref, 0x2 /* Lod */, lod };
+					cspv_emit(&ctx->body, CSpvOpImageSampleDrefExplicitLod, w, 7);
+				}
+				return cspv_rvalue(ctx->t_float, result);
+			}
 			if (ctx->stage == CSPV_STAGE_FRAGMENT) {
 				cspv_emit4(&ctx->body, CSpvOpImageSampleImplicitLod, cspv_type_id(ctx, vec4_t), result, sampler, coord);
 			} else {
@@ -3780,9 +3843,19 @@ static cspv_value cspv_gen_intrin(cspv_ctx* ctx, cspv_expr* e, cspv_intrin* in)
 		}
 
 		if (in->kind == CSPV_INTRIN_TEXTURE_LOD) {
-			uint32_t coord = cspv_gen_rvalue_as(ctx, e->u.call.args[1], ctx->t_vec[0]);
+			uint32_t coord = cspv_gen_rvalue_as(ctx, e->u.call.args[1], coord_t);
 			uint32_t lod = cspv_gen_rvalue_as(ctx, e->u.call.args[2], ctx->t_float);
 			uint32_t result = cspv_new_id(ctx);
+			if (shadow) {
+				uint32_t xy = cspv_new_id(ctx);
+				uint32_t sw[7] = { cspv_type_id(ctx, ctx->t_vec[0]), xy, coord, coord, 0, 1 };
+				cspv_emit(&ctx->body, CSpvOpVectorShuffle, sw, 6);
+				uint32_t dref = cspv_new_id(ctx);
+				cspv_emit4(&ctx->body, CSpvOpCompositeExtract, cspv_type_id(ctx, ctx->t_float), dref, coord, 2);
+				uint32_t w[7] = { cspv_type_id(ctx, ctx->t_float), result, sampler, xy, dref, 0x2 /* Lod */, lod };
+				cspv_emit(&ctx->body, CSpvOpImageSampleDrefExplicitLod, w, 7);
+				return cspv_rvalue(ctx->t_float, result);
+			}
 			uint32_t w[6] = { cspv_type_id(ctx, vec4_t), result, sampler, coord, 0x2 /* Lod */, lod };
 			cspv_emit(&ctx->body, CSpvOpImageSampleExplicitLod, w, 6);
 			return cspv_rvalue(vec4_t, result);
@@ -8074,8 +8147,12 @@ static void cspv_init_types(cspv_ctx* ctx)
 		ctx->t_bvec[i] = cspv_make_type(ctx, CSPV_T_VEC, ctx->t_bool, i + 2, 0);
 		ctx->t_mat[i] = cspv_make_type(ctx, CSPV_T_MAT, ctx->t_float, i + 2, i + 2);
 	}
-	ctx->t_sampler2d = cspv_make_type(ctx, CSPV_T_SAMPLER2D, ctx->t_float, 0, 0);
-	ctx->t_usampler2d = cspv_make_type(ctx, CSPV_T_SAMPLER2D, ctx->t_uint, 0, 0);
+	ctx->t_sampler2d = cspv_make_type(ctx, CSPV_T_SAMPLER2D, ctx->t_float, CSPV_SDIM_2D, 0);
+	ctx->t_usampler2d = cspv_make_type(ctx, CSPV_T_SAMPLER2D, ctx->t_uint, CSPV_SDIM_2D, 0);
+	ctx->t_samplercube = cspv_make_type(ctx, CSPV_T_SAMPLER2D, ctx->t_float, CSPV_SDIM_CUBE, 0);
+	ctx->t_sampler3d = cspv_make_type(ctx, CSPV_T_SAMPLER2D, ctx->t_float, CSPV_SDIM_3D, 0);
+	ctx->t_sampler2darray = cspv_make_type(ctx, CSPV_T_SAMPLER2D, ctx->t_float, CSPV_SDIM_2D_ARRAY, 0);
+	ctx->t_sampler2dshadow = cspv_make_type(ctx, CSPV_T_SAMPLER2D, ctx->t_float, CSPV_SDIM_2D_SHADOW, 0);
 
 	cspv_register_type(ctx, "bool", ctx->t_bool);
 	cspv_register_type(ctx, "int", ctx->t_int);
@@ -8095,6 +8172,10 @@ static void cspv_init_types(cspv_ctx* ctx)
 	cspv_register_type(ctx, "bvec4", ctx->t_bvec[2]);
 	cspv_register_type(ctx, "sampler2D", ctx->t_sampler2d);
 	cspv_register_type(ctx, "usampler2D", ctx->t_usampler2d);
+	cspv_register_type(ctx, "samplerCube", ctx->t_samplercube);
+	cspv_register_type(ctx, "sampler3D", ctx->t_sampler3d);
+	cspv_register_type(ctx, "sampler2DArray", ctx->t_sampler2darray);
+	cspv_register_type(ctx, "sampler2DShadow", ctx->t_sampler2dshadow);
 	cspv_register_type(ctx, "mat2", ctx->t_mat[0]);
 	cspv_register_type(ctx, "mat3", ctx->t_mat[1]);
 	cspv_register_type(ctx, "mat4", ctx->t_mat[2]);

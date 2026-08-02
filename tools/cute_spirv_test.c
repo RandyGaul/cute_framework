@@ -1111,6 +1111,45 @@ static void test_errors_syntax(void)
 	expect_err(CSPV_STAGE_FRAGMENT, "void main() { float x = 1.0 }", "expected ';'");
 }
 
+static void test_sampler_dims(void)
+{
+	// Cube, 3D, and array samplers take vec3 coords and yield vec4.
+	expect_ok(CSPV_STAGE_FRAGMENT,
+		"layout(set = 2, binding = 0) uniform samplerCube s;\n"
+		FS_MAIN("result = texture(s, vec3(0, 1, 0)) + textureLod(s, vec3(1, 0, 0), 2.0);"));
+	expect_ok(CSPV_STAGE_FRAGMENT,
+		"layout(set = 2, binding = 0) uniform sampler3D s;\n"
+		FS_MAIN("result = texture(s, vec3(0.5));"));
+	expect_ok(CSPV_STAGE_FRAGMENT,
+		"layout(set = 2, binding = 0) uniform sampler2DArray s;\n"
+		FS_MAIN("result = texture(s, vec3(0.5, 0.5, 3.0));"));
+
+	// Shadow sampling yields a scalar visibility factor, in fragment (implicit lod)
+	// and vertex (lowered to explicit lod 0) stages alike.
+	expect_ok(CSPV_STAGE_FRAGMENT,
+		"layout(set = 2, binding = 0) uniform sampler2DShadow s;\n"
+		FS_MAIN("float vis = texture(s, vec3(0.5, 0.5, 0.7)); result = vec4(vis);"));
+	expect_ok(CSPV_STAGE_VERTEX,
+		"layout(set = 1, binding = 0) uniform sampler2DShadow s;\n"
+		"void main() { float vis = texture(s, vec3(0.5, 0.5, 0.7)); gl_Position = vec4(vis); }");
+	expect_ok(CSPV_STAGE_FRAGMENT,
+		"layout(set = 2, binding = 0) uniform sampler2DShadow s;\n"
+		FS_MAIN("result = vec4(textureLod(s, vec3(0.5, 0.5, 0.7), 0.0));"));
+
+	// Coordinate types are enforced per dim.
+	expect_err(CSPV_STAGE_FRAGMENT,
+		"layout(set = 2, binding = 0) uniform samplerCube s;\n"
+		FS_MAIN("result = texture(s, vec2(0));"), "vec3");
+
+	// The image-op intrinsics stay 2D-only for now.
+	expect_err(CSPV_STAGE_FRAGMENT,
+		"layout(set = 2, binding = 0) uniform samplerCube s;\n"
+		FS_MAIN("result = texelFetch(s, ivec2(0), 0);"), "sampler2D");
+	expect_err(CSPV_STAGE_FRAGMENT,
+		"layout(set = 2, binding = 0) uniform sampler3D s;\n"
+		FS_MAIN("ivec2 sz = textureSize(s, 0); result = vec4(sz.x);"), "sampler2D");
+}
+
 static void test_errors_semantic(void)
 {
 	expect_err(CSPV_STAGE_FRAGMENT, FS_MAIN("x = 1.0;"), "undeclared identifier 'x'");
@@ -1124,7 +1163,7 @@ static void test_errors_semantic(void)
 	expect_err(CSPV_STAGE_FRAGMENT, FS_MAIN("vec2 a = vec2(1); vec2 b = vec2(2); bool c = a < b;"), "scalar operands");
 	expect_err(CSPV_STAGE_FRAGMENT, FS_MAIN("float x = 1.0 & 2.0;"), "integer operands");
 	expect_err(CSPV_STAGE_FRAGMENT, FS_MAIN("result = bad(1.0);"), "unknown function 'bad'");
-	expect_err(CSPV_STAGE_FRAGMENT, FS_MAIN("result = vec4(texture(1.0, vec2(0)));"), "sampler2D");
+	expect_err(CSPV_STAGE_FRAGMENT, FS_MAIN("result = vec4(texture(1.0, vec2(0)));"), "sampler type");
 	expect_err(CSPV_STAGE_FRAGMENT, FS_MAIN("float x = clamp(1.0);"), "expects 3 argument");
 	expect_err(CSPV_STAGE_FRAGMENT, FS_MAIN("result = vec4(1, 2, 3, 4, 5);"), "components");
 	expect_err(CSPV_STAGE_FRAGMENT, FS_MAIN("result = vec4(vec2(1));"), "cannot construct");
@@ -1313,6 +1352,7 @@ int main(void)
 	TEST(test_io_and_uniforms);
 	TEST(test_errors_syntax);
 	TEST(test_errors_semantic);
+	TEST(test_sampler_dims);
 	TEST(test_errors_stage_and_globals);
 	TEST(test_errors_recursion);
 	TEST(test_emitters);
