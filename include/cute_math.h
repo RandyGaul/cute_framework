@@ -488,20 +488,24 @@ CF_INLINE uint32_t cf_min_u32(uint32_t a, uint32_t b) { return a < b ? a : b; }
 CF_INLINE int64_t  cf_min_i64(int64_t  a, int64_t  b) { return a < b ? a : b; }
 CF_INLINE uint64_t cf_min_u64(uint64_t a, uint64_t b) { return a < b ? a : b; }
 CF_INLINE CF_V2    cf_min_v2 (CF_V2    a, CF_V2    b) { return (CF_V2){ cf_min_f(a.x, b.x), cf_min_f(a.y, b.y) }; }
-#define cf_min(a, b)          \
-	_Generic((a),             \
-		float:    cf_min_f,   \
-		double:   cf_min_d,   \
-		int8_t:   cf_min_i8,  \
-		uint8_t:  cf_min_u8,  \
-		int16_t:  cf_min_i16, \
-		uint16_t: cf_min_u16, \
-		int32_t:  cf_min_i32, \
-		uint32_t: cf_min_u32, \
-		int64_t:  cf_min_i64, \
-		uint64_t: cf_min_u64, \
-		CF_V2:    cf_min_v2,  \
-		default:  cf_min_i32  \
+// The scalar and 2D dispatch cases, factored out so `cute_math3d.h` can redefine
+// `cf_min` with the 3D cases appended instead of duplicating this list.
+#define CF_MIN_CASES      \
+	float:    cf_min_f,   \
+	double:   cf_min_d,   \
+	int8_t:   cf_min_i8,  \
+	uint8_t:  cf_min_u8,  \
+	int16_t:  cf_min_i16, \
+	uint16_t: cf_min_u16, \
+	int32_t:  cf_min_i32, \
+	uint32_t: cf_min_u32, \
+	int64_t:  cf_min_i64, \
+	uint64_t: cf_min_u64, \
+	CF_V2:    cf_min_v2
+#define cf_min(a, b)        \
+	_Generic((a),           \
+		CF_MIN_CASES,       \
+		default: cf_min_i32 \
 	)((a), (b))
 #endif
 
@@ -539,20 +543,23 @@ CF_INLINE uint32_t cf_max_u32(uint32_t a, uint32_t b) { return a > b ? a : b; }
 CF_INLINE int64_t  cf_max_i64(int64_t  a, int64_t  b) { return a > b ? a : b; }
 CF_INLINE uint64_t cf_max_u64(uint64_t a, uint64_t b) { return a > b ? a : b; }
 CF_INLINE CF_V2    cf_max_v2 (CF_V2    a, CF_V2    b) { return cf_v2(cf_max_f(a.x, b.x), cf_max_f(a.y, b.y)); }
-#define cf_max(a, b)          \
-	_Generic((a),             \
-		float:    cf_max_f,   \
-		double:   cf_max_d,   \
-		int8_t:   cf_max_i8,  \
-		uint8_t:  cf_max_u8,  \
-		int16_t:  cf_max_i16, \
-		uint16_t: cf_max_u16, \
-		int32_t:  cf_max_i32, \
-		uint32_t: cf_max_u32, \
-		int64_t:  cf_max_i64, \
-		uint64_t: cf_max_u64, \
-		CF_V2:    cf_max_v2,  \
-		default:  cf_max_i32  \
+// See `CF_MIN_CASES`.
+#define CF_MAX_CASES      \
+	float:    cf_max_f,   \
+	double:   cf_max_d,   \
+	int8_t:   cf_max_i8,  \
+	uint8_t:  cf_max_u8,  \
+	int16_t:  cf_max_i16, \
+	uint16_t: cf_max_u16, \
+	int32_t:  cf_max_i32, \
+	uint32_t: cf_max_u32, \
+	int64_t:  cf_max_i64, \
+	uint64_t: cf_max_u64, \
+	CF_V2:    cf_max_v2
+#define cf_max(a, b)        \
+	_Generic((a),           \
+		CF_MAX_CASES,       \
+		default: cf_max_i32 \
 	)((a), (b))
 #endif
 
@@ -590,20 +597,23 @@ CF_INLINE uint16_t cf_abs_u16(uint16_t x) { return x; }
 CF_INLINE uint32_t cf_abs_u32(uint32_t x) { return x; }
 CF_INLINE uint64_t cf_abs_u64(uint64_t x) { return x; }
 CF_INLINE CF_V2    cf_abs_v2 (CF_V2    x) { return cf_v2(cf_abs_f(x.x), cf_abs_f(x.y)); }
-#define cf_abs(x)             \
-	_Generic((x),             \
-		float:    cf_abs_f,   \
-		double:   cf_abs_d,   \
-		int8_t:   cf_abs_i8,  \
-		uint8_t:  cf_abs_u8,  \
-		int16_t:  cf_abs_i16, \
-		uint16_t: cf_abs_u16, \
-		int32_t:  cf_abs_i32, \
-		uint32_t: cf_abs_u32, \
-		int64_t:  cf_abs_i64, \
-		uint64_t: cf_abs_u64, \
-		CF_V2:    cf_abs_v2,  \
-		default:  cf_abs_i32  \
+// See `CF_MIN_CASES`.
+#define CF_ABS_CASES      \
+	float:    cf_abs_f,   \
+	double:   cf_abs_d,   \
+	int8_t:   cf_abs_i8,  \
+	uint8_t:  cf_abs_u8,  \
+	int16_t:  cf_abs_i16, \
+	uint16_t: cf_abs_u16, \
+	int32_t:  cf_abs_i32, \
+	uint32_t: cf_abs_u32, \
+	int64_t:  cf_abs_i64, \
+	uint64_t: cf_abs_u64, \
+	CF_V2:    cf_abs_v2
+#define cf_abs(x)           \
+	_Generic((x),           \
+		CF_ABS_CASES,       \
+		default: cf_abs_i32 \
 	)(x)
 #endif
 
@@ -775,7 +785,23 @@ CF_INLINE float cf_intersect(float da, float db) { return da / (da - db); }
  * @brief    Adds two 2D vectors component-wise.
  * @related  cf_sub cf_mul cf_div cf_dot cf_length
  */
+#define cf_add(a, b)
+#undef cf_add
+#ifdef __cplusplus
+} // extern "C"
 CF_INLINE CF_V2 cf_add(CF_V2 a, CF_V2 b) { return cf_v2(a.x + b.x, a.y + b.y); }
+extern "C" {
+#else
+CF_INLINE CF_V2 cf_add_v2(CF_V2 a, CF_V2 b) { return cf_v2(a.x + b.x, a.y + b.y); }
+// See `CF_MIN_CASES`.
+#define CF_ADD_CASES \
+	CF_V2: cf_add_v2
+#define cf_add(a, b)       \
+	_Generic((a),          \
+		CF_ADD_CASES,      \
+		default: cf_add_v2 \
+	)((a), (b))
+#endif
 
 /**
  * @function cf_sub
@@ -783,7 +809,23 @@ CF_INLINE CF_V2 cf_add(CF_V2 a, CF_V2 b) { return cf_v2(a.x + b.x, a.y + b.y); }
  * @brief    Subtracts two 2D vectors component-wise.
  * @related  cf_add cf_mul cf_div cf_dot cf_length
  */
+#define cf_sub(a, b)
+#undef cf_sub
+#ifdef __cplusplus
+} // extern "C"
 CF_INLINE CF_V2 cf_sub(CF_V2 a, CF_V2 b) { return cf_v2(a.x - b.x, a.y - b.y); }
+extern "C" {
+#else
+CF_INLINE CF_V2 cf_sub_v2(CF_V2 a, CF_V2 b) { return cf_v2(a.x - b.x, a.y - b.y); }
+// See `CF_MIN_CASES`.
+#define CF_SUB_CASES \
+	CF_V2: cf_sub_v2
+#define cf_sub(a, b)       \
+	_Generic((a),          \
+		CF_SUB_CASES,      \
+		default: cf_sub_v2 \
+	)((a), (b))
+#endif
 
 /**
  * @function cf_div
@@ -801,11 +843,20 @@ extern "C" {
 #else
 CF_INLINE CF_V2 cf_div_v2  (CF_V2 a, CF_V2 b) { return cf_v2(a.x / b.x, a.y / b.y); }
 CF_INLINE CF_V2 cf_div_v2_f(CF_V2 a, float b) { return cf_v2(a.x / b, a.y / b); }
-#define cf_div(a, b)          \
-	_Generic((b),             \
-		CF_V2:   cf_div_v2,   \
+// Dispatches on `a` first so `cute_math3d.h` can add CF_V3/CF_V4 rows -- dispatching on
+// `b` alone cannot tell cf_div(CF_V2, float) from cf_div(CF_V3, float). The cases macro
+// is function-like because it must forward `b` to the inner _Generic; an object-like
+// macro would capture whatever `b` happens to mean at the call site. See `CF_MIN_CASES`.
+#define CF_DIV_CASES(b)      \
+	CF_V2: _Generic(b,     \
+		CF_V2:   cf_div_v2,  \
 		float:   cf_div_v2_f, \
-		default: cf_div_v2_f  \
+		default: cf_div_v2_f \
+	)
+#define cf_div(a, b)         \
+	_Generic((a),            \
+		CF_DIV_CASES((b)),     \
+		default: cf_div_v2_f \
 	)((a), (b))
 #endif
 
@@ -1426,7 +1477,23 @@ CF_INLINE float cf_back_in_out(float x) { if (x < 0.5f) { float f = 2.0f * x; re
  * @brief    Returns the dot product of two vectors.
  * @related  CF_V2 cf_add cf_sub cf_dot cf_mul_v2_f cf_div_v2_f
  */
+#define cf_dot(a, b)
+#undef cf_dot
+#ifdef __cplusplus
+} // extern "C"
 CF_INLINE float cf_dot(CF_V2 a, CF_V2 b) { return a.x * b.x + a.y * b.y; }
+extern "C" {
+#else
+CF_INLINE float cf_dot_v2(CF_V2 a, CF_V2 b) { return a.x * b.x + a.y * b.y; }
+// See `CF_MIN_CASES`.
+#define CF_DOT_CASES \
+	CF_V2: cf_dot_v2
+#define cf_dot(a, b)       \
+	_Generic((a),          \
+		CF_DOT_CASES,      \
+		default: cf_dot_v2 \
+	)((a), (b))
+#endif
 
 /**
  * @function cf_skew
@@ -1494,23 +1561,42 @@ extern "C" {
 CF_INLINE float cf_cross_v2(CF_V2 a, CF_V2 b) { return cf_det2(a, b); }
 CF_INLINE CF_V2 cf_cross_v2_f(CF_V2 a, float b) { return cf_v2(b * a.y, -b * a.x); }
 CF_INLINE CF_V2 cf_cross_f_v2(float a, CF_V2 b) { return cf_v2(-a * b.y, a * b.x); }
-#define cf_cross(a, b)              \
-	_Generic((a),                   \
-		CF_V2: _Generic((b),        \
-			CF_V2:   cf_cross_v2,   \
-			float:   cf_cross_v2_f, \
-			default: cf_cross_v2_f  \
-		),                          \
-		float: _Generic((b),        \
-			CF_V2:   cf_cross_f_v2, \
-			default: cf_cross_f_v2  \
-		),                          \
-	default: cf_cross_v2            \
+// Function-like so `b` reaches the inner _Generic. See `CF_DIV_CASES`.
+#define CF_CROSS_CASES(b)           \
+	CF_V2: _Generic(b,            \
+		CF_V2:   cf_cross_v2,       \
+		float:   cf_cross_v2_f,     \
+		default: cf_cross_v2_f      \
+	),                              \
+	float: _Generic(b,            \
+		CF_V2:   cf_cross_f_v2,     \
+		default: cf_cross_f_v2      \
+	)
+#define cf_cross(a, b)      \
+	_Generic((a),           \
+		CF_CROSS_CASES((b)),  \
+	default: cf_cross_v2    \
 	)((a), (b))
 #endif
 
 
+#define cf_neg(a)
+#undef cf_neg
+#ifdef __cplusplus
+} // extern "C"
 CF_INLINE CF_V2 cf_neg(CF_V2 a) { return cf_v2(-a.x, -a.y); }
+extern "C" {
+#else
+CF_INLINE CF_V2 cf_neg_v2(CF_V2 a) { return cf_v2(-a.x, -a.y); }
+// See `CF_MIN_CASES`.
+#define CF_NEG_CASES \
+	CF_V2: cf_neg_v2
+#define cf_neg(a)          \
+	_Generic((a),          \
+		CF_NEG_CASES,      \
+		default: cf_neg_v2 \
+	)(a)
+#endif
 
 /**
  * @function cf_safe_invert
@@ -1775,35 +1861,38 @@ CF_INLINE CF_Transform cf_mul(CF_Transform a, CF_Transform b) { CF_Transform c; 
 CF_INLINE CF_Halfspace cf_mul(CF_Transform a, CF_Halfspace b) { CF_Halfspace c; c.n = cf_mul_sc_v2(a.r,b.n); c.d = cf_dot(cf_mul_tf_v2(a,cf_origin(b)),c.n); return c; }
 extern "C" {
 #else
+// Function-like so `b` reaches the inner _Generic. See `CF_DIV_CASES`.
+#define CF_MUL_CASES(b) \
+	CF_SinCos: _Generic(b, \
+		CF_SinCos: cf_mul_sc, \
+		CF_V2:     cf_mul_sc_v2, \
+		default:   cf_mul_sc \
+	), \
+	CF_V2: _Generic(b, \
+		CF_V2:   cf_mul_v2, \
+		float:   cf_mul_v2_f, \
+		default: cf_mul_v2 \
+	), \
+	CF_M2x2: _Generic(b, \
+		CF_M2x2: cf_mul_m2, \
+		CF_V2:   cf_mul_m2_v2, \
+		float:   cf_mul_m2_f, \
+		default: cf_mul_m2 \
+	), \
+	CF_M3x2: _Generic(b, \
+		CF_M3x2: cf_mul_m32, \
+		CF_V2:   cf_mul_m32_v2, \
+		default: cf_mul_m32_v2 \
+	), \
+	CF_Transform: _Generic(b, \
+		CF_Transform: cf_mul_tf, \
+		CF_V2:        cf_mul_tf_v2, \
+		CF_Halfspace: cf_mul_tf_hs, \
+		default:      cf_mul_tf_v2 \
+	)
 #define cf_mul(a, b) \
 	_Generic((a), \
-		CF_SinCos: _Generic((b), \
-			CF_SinCos: cf_mul_sc, \
-			CF_V2:     cf_mul_sc_v2, \
-			default:   cf_mul_sc \
-		), \
-		CF_V2: _Generic((b), \
-			CF_V2:   cf_mul_v2, \
-			float:   cf_mul_v2_f, \
-			default: cf_mul_v2 \
-		), \
-		CF_M2x2: _Generic((b), \
-			CF_M2x2: cf_mul_m2, \
-			CF_V2:   cf_mul_m2_v2, \
-			float:   cf_mul_m2_f, \
-			default: cf_mul_m2 \
-		), \
-		CF_M3x2: _Generic((b), \
-			CF_M3x2: cf_mul_m32, \
-			CF_V2:   cf_mul_m32_v2, \
-			default: cf_mul_m32_v2 \
-		), \
-		CF_Transform: _Generic((b), \
-			CF_Transform: cf_mul_tf, \
-			CF_V2:        cf_mul_tf_v2, \
-			CF_Halfspace: cf_mul_tf_hs, \
-			default:      cf_mul_tf_v2 \
-		), \
+		CF_MUL_CASES((b)), \
 	default: cf_mul_v2 \
 	)((a), (b))
 #endif
@@ -1931,12 +2020,16 @@ extern "C" {
 CF_INLINE float  cf_lerp_f (float  a, float  b, float  t) { return a + (b - a) * t; }
 CF_INLINE double cf_lerp_d (double a, double b, double t) { return a + (b - a) * t; }
 CF_INLINE CF_V2  cf_lerp(CF_V2  a, CF_V2  b, float  t) { return cf_add(a, cf_mul_v2_f(cf_sub(b, a), t)); }
-#define cf_lerp(a, b, t)     \
-	_Generic((a),            \
-		float:   cf_lerp_f,  \
-		double:  cf_lerp_d,  \
-		CF_V2:   cf_lerp, \
-		default: cf_lerp_f   \
+// `cf_lerp` in the CF_V2 row is the unsuffixed function declared just above -- it is not
+// followed by `(` here, so the function-like macro below does not expand it. See `CF_MIN_CASES`.
+#define CF_LERP_CASES   \
+	float:   cf_lerp_f, \
+	double:  cf_lerp_d, \
+	CF_V2:   cf_lerp
+#define cf_lerp(a, b, t)   \
+	_Generic((a),          \
+		CF_LERP_CASES,     \
+		default: cf_lerp_f \
 	)((a), (b), (t))
 #endif
 
@@ -1962,7 +2055,23 @@ CF_INLINE float cf_hmax(CF_V2 a) { return cf_max(a.x, a.y); }
  * @brief    Returns length of a vector.
  * @related  CF_V2 cf_len cf_distance cf_norm cf_safe_norm
  */
+#define cf_len(a)
+#undef cf_len
+#ifdef __cplusplus
+} // extern "C"
 CF_INLINE float cf_len(CF_V2 a) { return CF_SQRTF(cf_dot(a, a)); }
+extern "C" {
+#else
+CF_INLINE float cf_len_v2(CF_V2 a) { return CF_SQRTF(cf_dot_v2(a, a)); }
+// See `CF_MIN_CASES`.
+#define CF_LEN_CASES \
+	CF_V2: cf_len_v2
+#define cf_len(a)          \
+	_Generic((a),          \
+		CF_LEN_CASES,      \
+		default: cf_len_v2 \
+	)(a)
+#endif
 
 /**
  * @function cf_len_sq
@@ -1970,7 +2079,23 @@ CF_INLINE float cf_len(CF_V2 a) { return CF_SQRTF(cf_dot(a, a)); }
  * @brief    Returns squared length of a vector.
  * @related  CF_V2 cf_len cf_distance cf_norm cf_safe_norm
  */
+#define cf_len_sq(a)
+#undef cf_len_sq
+#ifdef __cplusplus
+} // extern "C"
 CF_INLINE float cf_len_sq(CF_V2 a) { return cf_dot(a, a); }
+extern "C" {
+#else
+CF_INLINE float cf_len_sq_v2(CF_V2 a) { return cf_dot_v2(a, a); }
+// See `CF_MIN_CASES`.
+#define CF_LEN_SQ_CASES \
+	CF_V2: cf_len_sq_v2
+#define cf_len_sq(a)          \
+	_Generic((a),             \
+		CF_LEN_SQ_CASES,      \
+		default: cf_len_sq_v2 \
+	)(a)
+#endif
 
 /**
  * @function cf_distance
@@ -1978,7 +2103,23 @@ CF_INLINE float cf_len_sq(CF_V2 a) { return cf_dot(a, a); }
  * @brief    Returns distance between two points.
  * @related  CF_V2 cf_len cf_distance cf_norm cf_safe_norm
  */
+#define cf_distance(a, b)
+#undef cf_distance
+#ifdef __cplusplus
+} // extern "C"
 CF_INLINE float cf_distance(CF_V2 a, CF_V2 b) { CF_V2 d = cf_sub(b, a); return CF_SQRTF(cf_dot(d, d)); }
+extern "C" {
+#else
+CF_INLINE float cf_distance_v2(CF_V2 a, CF_V2 b) { CF_V2 d = cf_sub_v2(b, a); return CF_SQRTF(cf_dot_v2(d, d)); }
+// See `CF_MIN_CASES`.
+#define CF_DISTANCE_CASES \
+	CF_V2: cf_distance_v2
+#define cf_distance(a, b)       \
+	_Generic((a),               \
+		CF_DISTANCE_CASES,      \
+		default: cf_distance_v2 \
+	)((a), (b))
+#endif
 
 /**
  * @function cf_norm
@@ -1987,7 +2128,23 @@ CF_INLINE float cf_distance(CF_V2 a, CF_V2 b) { CF_V2 d = cf_sub(b, a); return C
  * @remarks  Normalized vectors have unit-length without changing the vector's direction. Fails if the vector has a length of zero.
  * @related  CF_V2 cf_len cf_distance cf_norm cf_safe_norm
  */
+#define cf_norm(a)
+#undef cf_norm
+#ifdef __cplusplus
+} // extern "C"
 CF_INLINE CF_V2 cf_norm(CF_V2 a) { return cf_div(a, cf_len(a)); }
+extern "C" {
+#else
+CF_INLINE CF_V2 cf_norm_v2(CF_V2 a) { return cf_div_v2_f(a, cf_len_v2(a)); }
+// See `CF_MIN_CASES`.
+#define CF_NORM_CASES \
+	CF_V2: cf_norm_v2
+#define cf_norm(a)          \
+	_Generic((a),           \
+		CF_NORM_CASES,      \
+		default: cf_norm_v2 \
+	)(a)
+#endif
 
 /**
  * @function cf_safe_norm
@@ -1997,7 +2154,23 @@ CF_INLINE CF_V2 cf_norm(CF_V2 a) { return cf_div(a, cf_len(a)); }
  *           the case of a zero vector.
  * @related  CF_V2 cf_len cf_distance cf_norm cf_safe_norm
  */
+#define cf_safe_norm(a)
+#undef cf_safe_norm
+#ifdef __cplusplus
+} // extern "C"
 CF_INLINE CF_V2 cf_safe_norm(CF_V2 a) { float sq = cf_dot(a, a); return sq != 0.0f ? cf_div(a, CF_SQRTF(sq)) : cf_v2(0, 0); }
+extern "C" {
+#else
+CF_INLINE CF_V2 cf_safe_norm_v2(CF_V2 a) { float sq = cf_dot_v2(a, a); return sq != 0.0f ? cf_div_v2_f(a, CF_SQRTF(sq)) : cf_v2(0, 0); }
+// See `CF_MIN_CASES`.
+#define CF_SAFE_NORM_CASES \
+	CF_V2: cf_safe_norm_v2
+#define cf_safe_norm(a)          \
+	_Generic((a),                \
+		CF_SAFE_NORM_CASES,      \
+		default: cf_safe_norm_v2 \
+	)(a)
+#endif
 
 /**
  * @function cf_reflect

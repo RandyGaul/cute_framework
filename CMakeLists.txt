@@ -163,6 +163,7 @@ set(CF_PUBLIC_HDRS
 	include/cute_string.h
 	include/cute_defer.h
 	include/cute_math.h
+	include/cute_math3d.h
 	include/cute_draw.h
 	include/cute_debug_printf.h
 	include/cute_image.h
