@@ -26,6 +26,7 @@ set(CF_TEST_SRCS
 	test_shadow_sampling.cpp
 	test_instancing.cpp
 	test_draw3d.cpp
+	test_uniform_arrays.cpp
 	test_math.cpp
 	test_math.c
 	test_math3d.cpp

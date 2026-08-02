@@ -87,6 +87,11 @@
 		1.04 (08/02/2026) samplerCube/sampler3D/sampler2DArray/sampler2DShadow across
 		                  SPIR-V, ES 3.00, HLSL and MSL backends (texture/textureLod;
 		                  comparison fetches are level-zero everywhere).
+		1.05 (08/02/2026) Sized arrays in uniform/buffer blocks (`mat4 u_bones[6];`),
+		                  vec4/ivec4/uvec4/mat4 elements, dynamic indexing, across
+		                  all four backends -- the skinning palette case. Element
+		                  set chosen so std140, std430, HLSL cbuffer, and MSL
+		                  natural strides all coincide.
 */
 #ifndef CUTE_SPIRV_H
 #define CUTE_SPIRV_H
@@ -4976,6 +4981,13 @@ static void cspv_std140_layout(cspv_ctx* ctx, cspv_type* t, int line, int* align
 		*align = 16;
 		*size = t->cols * 16;
 		return;
+	case CSPV_T_ARRAY:
+		// Sized block arrays (vec4/mat4 elements, enforced at parse): the stride is
+		// the element's own size, so std140 and std430 agree and match every backend.
+		cspv_std140_layout(ctx, t->elem, line, align, size);
+		*align = 16;
+		*size = *size * t->cols;
+		return;
 	default:
 		cspv_errorf(ctx, line, "type '%s' is not supported in uniform blocks yet", cspv_type_name(t));
 	}
@@ -5007,6 +5019,13 @@ static void cspv_std430_layout(cspv_ctx* ctx, cspv_type* t, int line, int* align
 		*size = (offset + max_align - 1) / max_align * max_align;
 		return;
 	}
+	case CSPV_T_ARRAY:
+		// Sized block arrays: vec4/mat4 elements only (see the uniform-block parser),
+		// where std430 and std140 strides coincide.
+		cspv_std430_layout(ctx, t->elem, line, align, size);
+		*align = 16;
+		*size = *size * t->cols;
+		return;
 	default:
 		cspv_errorf(ctx, line, "type '%s' is not supported in buffer blocks", cspv_type_name(t));
 	}
@@ -5062,6 +5081,27 @@ static uint32_t cspv_laid_runtime_array_tid(cspv_ctx* ctx, cspv_type* elem, int 
 	cspv_emit2(&ctx->globals, CSpvOpTypeRuntimeArray, id, elem_tid);
 	cspv_emit3(&ctx->decos, CSpvOpDecorate, id, CSpvDecorationArrayStride, (uint32_t)stride);
 	map_set(ctx->laid_array_tids, (uint64_t)(uintptr_t)elem, id);
+	map_set(ctx->laid_elem_tids, id, elem_tid);
+	return id;
+}
+
+// Sized array block member (vec4/mat4 elements), with its ArrayStride decoration. A
+// distinct id from the canonical array type: the same (elem, len) can also appear as a
+// function-local array, where stride decorations are forbidden. Cached in laid_array_tids
+// keyed by the array type itself -- runtime arrays key by element type, so the two key
+// spaces never collide.
+static uint32_t cspv_laid_sized_array_tid(cspv_ctx* ctx, cspv_type* arr, int line)
+{
+	uint32_t* found = map_get_ptr(ctx->laid_array_tids, (uint64_t)(uintptr_t)arr);
+	if (found) return *found;
+	uint32_t elem_tid = cspv_type_id(ctx, arr->elem);
+	int align = 0, stride = 0;
+	cspv_std140_layout(ctx, arr->elem, line, &align, &stride);
+	uint32_t len = cspv_const_scalar(ctx, ctx->t_uint, (uint32_t)arr->cols);
+	uint32_t id = cspv_new_id(ctx);
+	cspv_emit3(&ctx->globals, CSpvOpTypeArray, id, elem_tid, len);
+	cspv_emit3(&ctx->decos, CSpvOpDecorate, id, CSpvDecorationArrayStride, (uint32_t)stride);
+	map_set(ctx->laid_array_tids, (uint64_t)(uintptr_t)arr, id);
 	map_set(ctx->laid_elem_tids, id, elem_tid);
 	return id;
 }
@@ -5133,7 +5173,27 @@ static void cspv_gen_uniform_block(cspv_ctx* ctx, cspv_layout* layout, const cha
 				}
 				mtype = cspv_array_type(ctx, mtype, -1);
 			} else {
-				cspv_errorf(ctx, mline, "sized arrays in blocks are not supported yet");
+				// `type name[N];` -- a sized array member (bone palettes and friends).
+				// Elements are vec4s or mat4s only: std140 pads every element out to 16
+				// bytes anyway, and this exact set keeps the native array stride identical
+				// across all four backends (SPIR-V, GLSL-ES, HLSL cbuffers, MSL) with no
+				// padding games. Widen a float[] to a vec4[] and index .x/.y/.z/.w.
+				cspv_expr* size_expr = cspv_parse_assign(ctx);
+				cspv_type* st = NULL;
+				uint32_t bits = 0;
+				cspv_const_fold_scalar(ctx, size_expr, &st, &bits);
+				if (st->kind != CSPV_T_INT && st->kind != CSPV_T_UINT) {
+					cspv_errorf(ctx, mline, "array size must be an integer constant expression");
+				}
+				int alen = (int)(int32_t)bits;
+				if (alen <= 0) cspv_errorf(ctx, mline, "array size must be positive");
+				cspv_expect_punct(ctx, ']');
+				bool vec4ish = mtype->kind == CSPV_T_VEC && mtype->cols == 4;
+				bool mat4ish = mtype->kind == CSPV_T_MAT && mtype->cols == 4 && mtype->rows == 4;
+				if (!vec4ish && !mat4ish) {
+					cspv_errorf(ctx, mline, "sized array block members must have vec4, ivec4, uvec4, or mat4 elements");
+				}
+				mtype = cspv_array_type(ctx, mtype, alen);
 			}
 		}
 		if (mtype->kind == CSPV_T_STRUCT && !is_buffer) {
@@ -5169,6 +5229,8 @@ static void cspv_gen_uniform_block(cspv_ctx* ctx, cspv_layout* layout, const cha
 			apush(member_tids, cspv_laid_struct_tid(ctx, mt, member_lines[i]));
 		} else if (mt->kind == CSPV_T_ARRAY && mt->cols == -1 && mt->elem->kind == CSPV_T_STRUCT) {
 			apush(member_tids, cspv_laid_runtime_array_tid(ctx, mt->elem, member_lines[i]));
+		} else if (mt->kind == CSPV_T_ARRAY && mt->cols >= 0) {
+			apush(member_tids, cspv_laid_sized_array_tid(ctx, mt, member_lines[i]));
 		} else {
 			apush(member_tids, cspv_type_id(ctx, mt));
 		}
@@ -5201,14 +5263,22 @@ static void cspv_gen_uniform_block(cspv_ctx* ctx, cspv_layout* layout, const cha
 		if (!is_buffer) {
 			CSPV_ReflectionMember rm;
 			rm.name = member_names[i];
-			rm.type = cspv_reflect_type(member_types[i]);
+			if (member_types[i]->kind == CSPV_T_ARRAY && member_types[i]->cols >= 0) {
+				rm.type = cspv_reflect_type(member_types[i]->elem);
+				rm.array_length = member_types[i]->cols;
+			} else {
+				rm.type = cspv_reflect_type(member_types[i]);
+				rm.array_length = 1;
+			}
 			rm.offset = offset;
-			rm.array_length = 1;
 			apush(ctx->reflection.uniform_members, rm);
 		}
 		uint32_t deco[4] = { struct_id, (uint32_t)i, CSpvDecorationOffset, (uint32_t)offset };
 		cspv_emit(&ctx->decos, CSpvOpMemberDecorate, deco, 4);
-		if (member_types[i]->kind == CSPV_T_MAT) {
+		// Matrix layout decorations sit on the struct member and reach through arrays.
+		cspv_type* deco_mt = member_types[i]->kind == CSPV_T_ARRAY && member_types[i]->cols >= 0
+			? member_types[i]->elem : member_types[i];
+		if (deco_mt->kind == CSPV_T_MAT) {
 			uint32_t cm[3] = { struct_id, (uint32_t)i, CSpvDecorationColMajor };
 			cspv_emit(&ctx->decos, CSpvOpMemberDecorate, cm, 3);
 			uint32_t ms[4] = { struct_id, (uint32_t)i, CSpvDecorationMatrixStride, 16 };
@@ -5238,7 +5308,13 @@ static void cspv_gen_uniform_block(cspv_ctx* ctx, cspv_layout* layout, const cha
 
 	if (instance_name) {
 		// Named instance: register one symbol whose type is a struct view of the
-		// block; field access reuses the regular struct AccessChain path.
+		// block; field access reuses the regular struct AccessChain path. Sized array
+		// members would need laid types threaded through that path -- defer until asked.
+		for (int i = 0; i < (int)asize(member_types); i++) {
+			if (member_types[i]->kind == CSPV_T_ARRAY && member_types[i]->cols >= 0) {
+				cspv_errorf(ctx, member_lines[i], "sized array members are not supported in named block instances yet");
+			}
+		}
 		cspv_type* view = (cspv_type*)cspv_arena_alloc(&ctx->arena, sizeof(cspv_type));
 		memset(view, 0, sizeof(*view));
 		view->kind = CSPV_T_STRUCT;
@@ -5257,7 +5333,8 @@ static void cspv_gen_uniform_block(cspv_ctx* ctx, cspv_layout* layout, const cha
 			cspv_symbol* sym = cspv_add_symbol(ctx, member_names[i], CSPV_SYM_BLOCK_MEMBER, member_types[i], var, storage, member_lines[i]);
 			sym->member_index = i;
 			cspv_type* mt = member_types[i];
-			bool laid = mt->kind == CSPV_T_STRUCT || (mt->kind == CSPV_T_ARRAY && mt->cols == -1 && mt->elem->kind == CSPV_T_STRUCT);
+			bool laid = mt->kind == CSPV_T_STRUCT || (mt->kind == CSPV_T_ARRAY && mt->cols == -1 && mt->elem->kind == CSPV_T_STRUCT)
+				|| (mt->kind == CSPV_T_ARRAY && mt->cols >= 0);
 			sym->laid_tid = laid ? member_tids[i] : 0;
 		}
 	}
@@ -7301,7 +7378,8 @@ static void cspv_emit_hlsl(cspv_ctx* ctx)
 					cspv_std140_layout(ctx, d->member_types[j], d->line, &align, &size);
 					offset = (offset + align - 1) / align * align;
 					spush(ctx->tp_out, '\t');
-					if (d->member_types[j]->kind == CSPV_T_MAT) sappend(ctx->tp_out, "column_major ");
+					cspv_type* cm_mt = d->member_types[j]->kind == CSPV_T_ARRAY ? d->member_types[j]->elem : d->member_types[j];
+					if (cm_mt->kind == CSPV_T_MAT) sappend(ctx->tp_out, "column_major ");
 					cspv_tp_var(g, d->member_types[j], d->member_names[j]);
 					static const char* swz[4] = { "", ".y", ".z", ".w" };
 					int comp = (offset % 16) / 4;
@@ -7476,6 +7554,13 @@ static void cspv_msl_natural_layout(cspv_type* t, int* align, int* size)
 		*align = 16; *size = 16; return;
 	}
 	if (t->kind == CSPV_T_MAT) { *align = 16; *size = t->cols * 16; return; } // float4x4 only (validated).
+	if (t->kind == CSPV_T_ARRAY) {
+		// Sized block arrays have vec4/mat4 elements, whose natural MSL stride equals
+		// their std140 stride -- arrays never introduce padding.
+		cspv_msl_natural_layout(t->elem, align, size);
+		*size = *size * t->cols;
+		return;
+	}
 	*align = 4; *size = 4;
 }
 
@@ -7502,7 +7587,11 @@ static void cspv_msl_offset_struct(cspv_tp* g, const char* name, int num_members
 			sfmt_append(ctx->tp_out, "\tfloat cf_pad%d;\n", pad_index++);
 			natural += 4;
 		}
-		sfmt_append(ctx->tp_out, "\t%s %s;\n", cspv_msl_member_type_name(mt), member_names[i]);
+		if (mt->kind == CSPV_T_ARRAY) {
+			sfmt_append(ctx->tp_out, "\t%s %s[%d];\n", cspv_msl_member_type_name(mt->elem), member_names[i], mt->cols);
+		} else {
+			sfmt_append(ctx->tp_out, "\t%s %s;\n", cspv_msl_member_type_name(mt), member_names[i]);
+		}
 		natural += nat_size;
 		offset += size;
 	}

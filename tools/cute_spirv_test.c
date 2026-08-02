@@ -1296,6 +1296,137 @@ static void test_sampler_dims_emitters(void)
 	}
 }
 
+
+
+// Sized arrays in uniform blocks: the skinning-palette case. mat4/vec4 elements, std140
+// strides, dynamic indexing, correct reflection, and native declarations from every emitter.
+static void test_block_arrays(void)
+{
+	// Dynamic indexing of a mat4 palette, plus a vec4 table -- the SPIR-V must validate.
+	// Skinning blends transformed positions rather than matrices (matrix addition is not
+	// in the language, and the blended-position form is cheaper anyway).
+	expect_ok(CSPV_STAGE_VERTEX,
+		"layout(location = 0) in vec3 in_pos;\n"
+		"layout(location = 1) in vec2 in_joints;\n"
+		"layout(location = 2) in vec2 in_weights;\n"
+		"layout(set = 1, binding = 0) uniform uniform_block {\n"
+		"	mat4 u_vp;\n"
+		"	mat4 u_bones[6];\n"
+		"	vec4 u_tints[3];\n"
+		"};\n"
+		"void main() {\n"
+		"	vec4 p = vec4(in_pos, 1.0);\n"
+		"	vec4 skinned = u_bones[int(in_joints.x)] * p * in_weights.x + u_bones[int(in_joints.y)] * p * in_weights.y;\n"
+		"	gl_Position = u_vp * skinned + u_tints[2] + u_tints[int(in_joints.x)];\n"
+		"}\n");
+
+	// Reflection: array members report their element type, array_length, and std140
+	// offsets (mat4[6] strides 64; vec4[3] strides 16), and the block size includes them.
+	{
+		CSPV_Result r = cspv_compile(
+			"layout(set = 1, binding = 0) uniform uniform_block {\n"
+			"	mat4 u_vp;\n"
+			"	mat4 u_bones[6];\n"
+			"	vec4 u_tints[3];\n"
+			"	float u_tail;\n"
+			"};\n"
+			"void main() { gl_Position = u_vp * u_bones[1] * (u_tints[0] + vec4(u_tail)); }\n",
+			CSPV_STAGE_VERTEX);
+		CHECK_MSG(r.success, r.error_message);
+		if (r.success) {
+			CSPV_Reflection* rf = &r.reflection;
+			CHECK(asize(rf->uniform_blocks) == 1);
+			CSPV_ReflectionMember* m = rf->uniform_members;
+			CHECK(sequ(m[0].name, "u_vp") && m[0].type == CSPV_TYPE_MAT4 && m[0].offset == 0 && m[0].array_length == 1);
+			CHECK(sequ(m[1].name, "u_bones") && m[1].type == CSPV_TYPE_MAT4 && m[1].offset == 64 && m[1].array_length == 6);
+			CHECK(sequ(m[2].name, "u_tints") && m[2].type == CSPV_TYPE_FLOAT4 && m[2].offset == 448 && m[2].array_length == 3);
+			CHECK(sequ(m[3].name, "u_tail") && m[3].offset == 496);
+			CHECK(rf->uniform_blocks[0].size == 512); // 496 + 4 rounded up to 16.
+		}
+		cspv_free(&r);
+	}
+
+	// The element restriction is enforced: everything std140 would pad gets rejected
+	// with a pointer at the fix.
+	expect_err(CSPV_STAGE_VERTEX,
+		"layout(set = 1, binding = 0) uniform uniform_block { float u_w[4]; };\n"
+		"void main() { gl_Position = vec4(u_w[0]); }\n", "vec4");
+	expect_err(CSPV_STAGE_VERTEX,
+		"layout(set = 1, binding = 0) uniform uniform_block { vec3 u_v[4]; };\n"
+		"void main() { gl_Position = vec4(u_v[0], 1.0); }\n", "vec4");
+}
+
+static void test_block_arrays_emitters(void)
+{
+	// TEMP: dump the kelp VS transpiled to ES300.
+	{
+		CSPV_Options od; memset(&od, 0, sizeof(od));
+		od.emit_glsl300 = true;
+		CSPV_Result rd = cspv_compile_ex(
+		"layout (location = 0) in vec3 in_pos;\n"
+		"layout (location = 1) in vec3 in_normal;\n"
+		"layout (location = 2) in vec2 in_joints;\n"
+		"layout (location = 3) in vec2 in_weights;\n"
+		"layout (location = 8)  in vec4 in_model0;\n"
+		"layout (location = 9)  in vec4 in_model1;\n"
+		"layout (location = 10) in vec4 in_model2;\n"
+		"layout (location = 15) in vec4 in_mesh_attributes;\n"
+		"layout (location = 0) out vec3 v_normal;\n"
+		"layout (location = 1) out vec4 v_attrs;\n"
+		"layout (location = 2) out float v_height;\n"
+		"layout (set = 1, binding = 0) uniform uniform_block {\n"
+		"    mat4 u_view_projection;\n"
+		"    mat4 u_bones[6];\n"
+		"};\n"
+		"void main() {\n"
+		"    vec4 p0 = vec4(in_pos, 1.0);\n"
+		"    vec4 n0 = vec4(in_normal, 0.0);\n"
+		"    vec3 pos = (u_bones[int(in_joints.x)] * p0 * in_weights.x + u_bones[int(in_joints.y)] * p0 * in_weights.y).xyz;\n"
+		"    vec3 nrm = normalize((u_bones[int(in_joints.x)] * n0 * in_weights.x + u_bones[int(in_joints.y)] * n0 * in_weights.y).xyz);\n"
+		"    vec4 p = vec4(pos, 1.0);\n"
+		"    vec3 world = vec3(dot(in_model0, p), dot(in_model1, p), dot(in_model2, p));\n"
+		"    v_normal = normalize(vec3(dot(in_model0.xyz, nrm), dot(in_model1.xyz, nrm), dot(in_model2.xyz, nrm)));\n"
+		"    v_attrs = in_mesh_attributes;\n"
+		"    v_height = in_pos.y / 2.6;\n"
+		"    gl_Position = u_view_projection * vec4(world, 1.0);\n"
+		"}\n"
+		, CSPV_STAGE_VERTEX, &od);
+		if (rd.success) { puts("==== ES300 ===="); puts(rd.glsl300); puts("==== END ===="); }
+		else puts(rd.error_message);
+		cspv_free(&rd);
+	}
+	// Every backend declares the array natively and indexes it dynamically. ES output is
+	// requested explicitly -- s_emit_all covers HLSL/MSL only.
+	CSPV_Options opts;
+	memset(&opts, 0, sizeof(opts));
+	opts.emit_glsl300 = true;
+	opts.emit_hlsl = true;
+	opts.emit_msl = true;
+	CSPV_Result r = cspv_compile_ex(
+		"layout(location = 0) in vec3 in_pos;\n"
+		"layout(location = 1) in vec2 in_joints;\n"
+		"layout(set = 1, binding = 0) uniform uniform_block {\n"
+		"	mat4 u_vp;\n"
+		"	mat4 u_bones[6];\n"
+		"	vec4 u_tints[3];\n"
+		"};\n"
+		"void main() { gl_Position = u_vp * u_bones[int(in_joints.x)] * vec4(in_pos, 1.0) + u_tints[1]; }\n",
+		CSPV_STAGE_VERTEX, &opts);
+	CHECK_MSG(r.success, r.error_message);
+	if (r.success) {
+		CHECK(r.glsl300 && strstr(r.glsl300, "u_bones[6]") != NULL);
+		CHECK(r.glsl300 && strstr(r.glsl300, "u_tints[3]") != NULL);
+		CHECK(r.hlsl && strstr(r.hlsl, "u_bones[6]") != NULL);
+		CHECK(r.hlsl && strstr(r.hlsl, "column_major") != NULL);
+		// mat4[6] lands at std140 offset 64 = register c4; vec4[3] at 448 = c28.
+		CHECK(r.hlsl && strstr(r.hlsl, "packoffset(c4)") != NULL);
+		CHECK(r.hlsl && strstr(r.hlsl, "packoffset(c28)") != NULL);
+		CHECK(r.msl && strstr(r.msl, "u_bones[6]") != NULL);
+		CHECK(r.msl && strstr(r.msl, "u_tints[3]") != NULL);
+	}
+	cspv_free(&r);
+}
+
 static void test_emitters(void)
 {
 	// Implicit-lod sampling is fragment-only: FXC rejects Sample() in vs/cs
@@ -1429,6 +1560,8 @@ int main(void)
 	TEST(test_errors_semantic);
 	TEST(test_sampler_dims);
 	TEST(test_sampler_dims_emitters);
+	TEST(test_block_arrays);
+	TEST(test_block_arrays_emitters);
 	TEST(test_errors_stage_and_globals);
 	TEST(test_errors_recursion);
 	TEST(test_emitters);
