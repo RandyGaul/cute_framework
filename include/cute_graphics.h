@@ -1721,6 +1721,22 @@ CF_API void CF_CALL cf_mesh_set_index_buffer(CF_Mesh mesh, int index_buffer_size
 CF_API void CF_CALL cf_mesh_set_instance_buffer(CF_Mesh mesh, int instance_buffer_size_in_bytes, int instance_stride);
 
 /**
+ * @function cf_mesh_append_attributes
+ * @category graphics
+ * @brief    Appends vertex attributes to a mesh after creation.
+ * @param    mesh             The mesh.
+ * @param    attributes       The attributes to append. See `CF_VertexAttribute`.
+ * @param    attribute_count  How many to append.
+ * @remarks  Chiefly for per-instance attributes (`per_instance` set to true): a mesh created with
+ *           only its vertex layout can gain instancing later without being rebuilt -- declare the
+ *           instance attributes here, then call `cf_mesh_set_instance_buffer` and
+ *           `cf_mesh_update_instance_data`. Appending beyond `CF_MESH_MAX_VERTEX_ATTRIBUTES`
+ *           ignores the extras, matching `cf_make_mesh`.
+ * @related  CF_Mesh cf_make_mesh CF_VertexAttribute cf_mesh_set_instance_buffer cf_mesh_update_instance_data
+ */
+CF_API void CF_CALL cf_mesh_append_attributes(CF_Mesh mesh, const CF_VertexAttribute* attributes, int attribute_count);
+
+/**
  * @function cf_destroy_mesh
  * @category graphics
  * @brief    Frees up a `CF_Mesh` previously created with `cf_make_mesh`.
@@ -2603,6 +2619,7 @@ CF_INLINE uint64_t texture_handle(CF_Texture texture) { return cf_texture_handle
 CF_INLINE uint64_t texture_binding_handle(CF_Texture texture) { return cf_texture_binding_handle(texture); }
 CF_INLINE void mesh_set_index_buffer(CF_Mesh mesh, int index_buffer_size_in_bytes, int index_bit_count) { cf_mesh_set_index_buffer(mesh, index_buffer_size_in_bytes, index_bit_count); }
 CF_INLINE void mesh_set_instance_buffer(CF_Mesh mesh, int instance_buffer_size_in_bytes, int instance_stride) { cf_mesh_set_instance_buffer(mesh, instance_buffer_size_in_bytes, instance_stride); }
+CF_INLINE void mesh_append_attributes(CF_Mesh mesh, const CF_VertexAttribute* attributes, int attribute_count) { cf_mesh_append_attributes(mesh, attributes, attribute_count); }
 CF_INLINE void clear_depth_stencil(float depth, uint32_t stencil) { cf_clear_depth_stencil(depth, stencil); }
 CF_INLINE void apply_stencil_reference(int reference) { cf_apply_stencil_reference(reference); }
 CF_INLINE void apply_blend_constants(float r, float g, float b, float a) { cf_apply_blend_constants(r, g, b, a); }

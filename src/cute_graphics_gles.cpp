@@ -1343,6 +1343,16 @@ void cf_gles_mesh_set_index_buffer(CF_Mesh mh, int index_buffer_size_in_bytes, i
 	CF_POLL_OPENGL_ERROR();
 }
 
+void cf_gles_mesh_append_attributes(CF_Mesh mesh_handle, const CF_VertexAttribute* attributes, int attribute_count)
+{
+	CF_GL_Mesh* mesh = (CF_GL_Mesh*)(uintptr_t)mesh_handle.id;
+	for (int i = 0; i < attribute_count && mesh->attribute_count < CF_MESH_MAX_VERTEX_ATTRIBUTES; ++i) {
+		CF_VertexAttribute attr = attributes[i];
+		attr.name = cf_sintern(attr.name);
+		mesh->attributes[mesh->attribute_count++] = attr;
+	}
+}
+
 void cf_gles_mesh_set_instance_buffer(CF_Mesh mh, int instance_buffer_size_in_bytes, int instance_stride)
 {
 	auto* m = (CF_GL_Mesh*)(uintptr_t)mh.id;

@@ -1560,6 +1560,16 @@ void cf_sdlgpu_mesh_set_index_buffer(CF_Mesh mesh_handle, int index_buffer_size_
 	mesh->indices.transfer_buffer = SDL_CreateGPUTransferBuffer(g_ctx.device, &tbuf_info);
 }
 
+void cf_sdlgpu_mesh_append_attributes(CF_Mesh mesh_handle, const CF_VertexAttribute* attributes, int attribute_count)
+{
+	CF_MeshInternal* mesh = (CF_MeshInternal*)mesh_handle.id;
+	for (int i = 0; i < attribute_count && mesh->attribute_count < CF_MESH_MAX_VERTEX_ATTRIBUTES; ++i) {
+		CF_VertexAttribute attr = attributes[i];
+		attr.name = sintern(attr.name);
+		mesh->attributes[mesh->attribute_count++] = attr;
+	}
+}
+
 void cf_sdlgpu_mesh_set_instance_buffer(CF_Mesh mesh_handle, int instance_buffer_size_in_bytes, int instance_stride)
 {
 	CF_MeshInternal* mesh = (CF_MeshInternal*)mesh_handle.id;
