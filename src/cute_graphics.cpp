@@ -623,6 +623,10 @@ CF_CanvasParams cf_canvas_defaults(int w, int h)
 		params.name = NULL;
 		params.target = cf_texture_defaults(w, h);
 		params.target.usage |= CF_TEXTURE_USAGE_COLOR_TARGET_BIT;
+		// Pre-fill every color target slot identically, so a multi-target canvas only needs
+		// target_count set (and usually pixel formats tweaked) rather than full param setup.
+		for (int i = 1; i < CF_MAX_CANVAS_TARGETS; ++i) params.targets[i] = params.target;
+		params.target_count = 1;
 		params.depth_stencil_enable = false;
 		params.depth_stencil_target = cf_texture_defaults(w, h);
 		params.depth_stencil_target.pixel_format = CF_PIXEL_FORMAT_D16_UNORM;
@@ -981,12 +985,15 @@ CF_DISPATCH_SHIM(uint64_t, texture_binding_handle, (CF_Texture texture), texture
 CF_DISPATCH_SHIM(CF_Canvas, make_canvas, (CF_CanvasParams params), params)
 CF_DISPATCH_SHIM_VOID(destroy_canvas, (CF_Canvas canvas_handle), canvas_handle)
 CF_DISPATCH_SHIM(CF_Texture, canvas_get_target, (CF_Canvas canvas_handle), canvas_handle)
+CF_DISPATCH_SHIM(CF_Texture, canvas_get_target2, (CF_Canvas canvas_handle, int index), canvas_handle, index)
 CF_DISPATCH_SHIM(CF_Texture, canvas_get_depth_stencil_target, (CF_Canvas canvas_handle), canvas_handle)
 CF_DISPATCH_SHIM_VOID(canvas_get_size, (CF_Canvas canvas_handle, int* w, int* h), canvas_handle, w, h)
 CF_DISPATCH_SHIM_VOID(clear_canvas, (CF_Canvas canvas_handle), canvas_handle)
 CF_DISPATCH_SHIM_VOID(canvas_set_clear_color, (CF_Canvas canvas_handle, CF_Color color), canvas_handle, color)
+CF_DISPATCH_SHIM_VOID(canvas_set_clear_color2, (CF_Canvas canvas_handle, int index, CF_Color color), canvas_handle, index, color)
 CF_DISPATCH_SHIM_VOID(canvas_set_clear_depth_stencil, (CF_Canvas canvas_handle, float depth, uint32_t stencil), canvas_handle, depth, stencil)
 CF_DISPATCH_SHIM(CF_Readback, canvas_readback, (CF_Canvas canvas), canvas)
+CF_DISPATCH_SHIM(CF_Readback, canvas_readback2, (CF_Canvas canvas, int index), canvas, index)
 CF_DISPATCH_SHIM(bool, readback_ready, (CF_Readback readback), readback)
 CF_DISPATCH_SHIM(int, readback_data, (CF_Readback readback, void* data, int size), readback, data, size)
 CF_DISPATCH_SHIM(int, readback_size, (CF_Readback readback), readback)

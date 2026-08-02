@@ -31,12 +31,18 @@ struct CF_CanvasInternal
 	SDL_GPUSampler* sampler;
 	SDL_GPUTexture* depth_stencil;
 
+	// Additional color targets for MRT ([0] unused -- the members above are target 0, kept
+	// singular so the single-target hot paths read naturally).
+	int target_count;
+	CF_Texture cf_textures_mrt[CF_MAX_CANVAS_TARGETS];
+	SDL_GPUTexture* textures_mrt[CF_MAX_CANVAS_TARGETS];
+
 	bool clear;
 
 	// Per-canvas clear overrides. Unset means "use the global cf_clear_color /
-	// cf_clear_depth_stencil", so existing code is unaffected.
-	bool has_clear_color;
-	CF_Color clear_color;
+	// cf_clear_depth_stencil", so existing code is unaffected. Indexed per color target.
+	bool has_clear_color[CF_MAX_CANVAS_TARGETS];
+	CF_Color clear_color[CF_MAX_CANVAS_TARGETS];
 	bool has_clear_depth_stencil;
 	float clear_depth;
 	uint32_t clear_stencil;
@@ -47,7 +53,8 @@ struct CF_CanvasInternal
 };
 
 // Per-canvas clear values, falling back to the globals when the canvas has no override.
-static CF_Color s_clear_color(const CF_CanvasInternal* c) { return (c && c->has_clear_color) ? c->clear_color : app->clear_color; }
+static CF_Color s_clear_color2(const CF_CanvasInternal* c, int i) { return (c && c->has_clear_color[i]) ? c->clear_color[i] : app->clear_color; }
+static CF_Color s_clear_color(const CF_CanvasInternal* c) { return s_clear_color2(c, 0); }
 static float s_clear_depth(const CF_CanvasInternal* c) { return (c && c->has_clear_depth_stencil) ? c->clear_depth : app->clear_depth; }
 static uint32_t s_clear_stencil(const CF_CanvasInternal* c) { return (c && c->has_clear_depth_stencil) ? c->clear_stencil : app->clear_stencil; }
 
@@ -77,7 +84,8 @@ struct CF_ReadbackInternal
 struct CF_PipelineKey
 {
 	// Canvas state.
-	SDL_GPUTextureFormat color_format;
+	SDL_GPUTextureFormat color_formats[CF_MAX_CANVAS_TARGETS];
+	int color_target_count;
 	SDL_GPUTextureFormat depth_format;
 	bool has_depth_stencil;
 	int sample_count;
@@ -1185,6 +1193,17 @@ CF_Canvas cf_sdlgpu_make_canvas(CF_CanvasParams params)
 			canvas->texture = ((CF_TextureInternal*)canvas->cf_texture.id)->tex;
 			canvas->sampler = ((CF_TextureInternal*)canvas->cf_texture.id)->sampler;
 		}
+		// Additional MRT color targets. MSAA is restricted to single-target canvases for now
+		// (per-target resolve plumbing isn't worth it until someone needs it).
+		canvas->target_count = params.target_count > 1 ? params.target_count : 1;
+		if (canvas->target_count > CF_MAX_CANVAS_TARGETS) canvas->target_count = CF_MAX_CANVAS_TARGETS;
+		CF_ASSERT(canvas->target_count == 1 || params.sample_count == CF_SAMPLE_COUNT_1);
+		for (int i = 1; i < canvas->target_count; ++i) {
+			canvas->cf_textures_mrt[i] = s_make_texture(params.targets[i], params.sample_count);
+			if (canvas->cf_textures_mrt[i].id) {
+				canvas->textures_mrt[i] = ((CF_TextureInternal*)canvas->cf_textures_mrt[i].id)->tex;
+			}
+		}
 		if (params.depth_stencil_enable) {
 			canvas->cf_depth_stencil = s_make_texture(params.depth_stencil_target, params.sample_count);
 			if (canvas->cf_depth_stencil.id) {
@@ -1223,13 +1242,16 @@ void cf_sdlgpu_clear_canvas(CF_Canvas canvas_handle)
 	CF_CanvasInternal* canvas = (CF_CanvasInternal*)canvas_handle.id;
 	SDL_GPUCommandBuffer* cmd = g_ctx.cmd ? g_ctx.cmd : SDL_AcquireGPUCommandBuffer(g_ctx.device);
 
-	SDL_GPUColorTargetInfo color_info = {
-		.texture = canvas->texture,
-		.clear_color = { s_clear_color(canvas).r, s_clear_color(canvas).g, s_clear_color(canvas).b, s_clear_color(canvas).a },
-		.load_op = SDL_GPU_LOADOP_CLEAR,
-		.store_op = SDL_GPU_STOREOP_STORE,
-		.cycle = true,
-	};
+	SDL_GPUColorTargetInfo color_infos[CF_MAX_CANVAS_TARGETS] = { };
+	int target_count = canvas->target_count > 1 ? canvas->target_count : 1;
+	for (int i = 0; i < target_count; ++i) {
+		CF_Color cc = s_clear_color2(canvas, i);
+		color_infos[i].texture = i == 0 ? canvas->texture : canvas->textures_mrt[i];
+		color_infos[i].clear_color = { cc.r, cc.g, cc.b, cc.a };
+		color_infos[i].load_op = SDL_GPU_LOADOP_CLEAR;
+		color_infos[i].store_op = SDL_GPU_STOREOP_STORE;
+		color_infos[i].cycle = true;
+	}
 	SDL_GPUDepthStencilTargetInfo depth_stencil_info = {
 		.texture = canvas->depth_stencil,
 		.clear_depth = s_clear_depth(canvas),
@@ -1240,7 +1262,7 @@ void cf_sdlgpu_clear_canvas(CF_Canvas canvas_handle)
 		.cycle = true,
 		.clear_stencil = (Uint8)s_clear_stencil(canvas),
 	};
-	SDL_GPURenderPass* renderPass = SDL_BeginGPURenderPass(cmd, &color_info, 1, canvas->depth_stencil ? &depth_stencil_info : NULL);
+	SDL_GPURenderPass* renderPass = SDL_BeginGPURenderPass(cmd, color_infos, (Uint32)target_count, canvas->depth_stencil ? &depth_stencil_info : NULL);
 	SDL_EndGPURenderPass(renderPass);
 	canvas->clear = false;
 
@@ -1251,6 +1273,9 @@ void cf_sdlgpu_destroy_canvas(CF_Canvas canvas_handle)
 {
 	CF_CanvasInternal* canvas = (CF_CanvasInternal*)canvas_handle.id;
 		cf_sdlgpu_destroy_texture(canvas->cf_texture);
+		for (int i = 1; i < canvas->target_count; ++i) {
+			if (canvas->cf_textures_mrt[i].id) cf_sdlgpu_destroy_texture(canvas->cf_textures_mrt[i]);
+		}
 		if (canvas->resolve_texture) cf_sdlgpu_destroy_texture(canvas->cf_resolve_texture);
 		if (canvas->depth_stencil) cf_sdlgpu_destroy_texture(canvas->cf_depth_stencil);
 	CF_FREE(canvas);
@@ -1262,24 +1287,37 @@ CF_Texture cf_sdlgpu_canvas_get_target(CF_Canvas canvas_handle)
 	return canvas->resolve_texture ? canvas->cf_resolve_texture : canvas->cf_texture;
 }
 
+CF_Texture cf_sdlgpu_canvas_get_target2(CF_Canvas canvas_handle, int index)
+{
+	CF_CanvasInternal* canvas = (CF_CanvasInternal*)canvas_handle.id;
+	if (!canvas || index < 0 || index >= (canvas->target_count > 1 ? canvas->target_count : 1)) return { 0 };
+	if (index == 0) return cf_sdlgpu_canvas_get_target(canvas_handle);
+	return canvas->cf_textures_mrt[index];
+}
+
 CF_Texture cf_sdlgpu_canvas_get_depth_stencil_target(CF_Canvas canvas_handle)
 {
 	CF_CanvasInternal* canvas = (CF_CanvasInternal*)canvas_handle.id;
 	return canvas->cf_depth_stencil;
 }
 
-CF_Readback cf_sdlgpu_canvas_readback(CF_Canvas canvas_handle)
+CF_Readback cf_sdlgpu_canvas_readback2(CF_Canvas canvas_handle, int index)
 {
 	CF_CanvasInternal* canvas = (CF_CanvasInternal*)canvas_handle.id;
 	if (!canvas) return { 0 };
+	if (index < 0 || index >= (canvas->target_count > 1 ? canvas->target_count : 1)) return { 0 };
 
 	s_end_active_pass();
 
 	// Pick source texture: resolve_texture for MSAA canvases, texture for non-MSAA.
-	SDL_GPUTexture* src_texture = canvas->resolve_texture ? canvas->resolve_texture : canvas->texture;
-	CF_TextureInternal* tex_internal = canvas->resolve_texture
-		? (CF_TextureInternal*)canvas->cf_resolve_texture.id
-		: (CF_TextureInternal*)canvas->cf_texture.id;
+	SDL_GPUTexture* src_texture = index == 0
+		? (canvas->resolve_texture ? canvas->resolve_texture : canvas->texture)
+		: canvas->textures_mrt[index];
+	CF_TextureInternal* tex_internal = index == 0
+		? (canvas->resolve_texture
+			? (CF_TextureInternal*)canvas->cf_resolve_texture.id
+			: (CF_TextureInternal*)canvas->cf_texture.id)
+		: (CF_TextureInternal*)canvas->cf_textures_mrt[index].id;
 
 	int texel_size = (int)SDL_GPUTextureFormatTexelBlockSize(tex_internal->format);
 	int total_size = canvas->w * canvas->h * texel_size;
@@ -1653,8 +1691,10 @@ static inline void s_copy_uniforms(SDL_GPUCommandBuffer* cmd, CF_Arena* arena, C
 static inline SDL_GPUGraphicsPipeline* s_build_pipeline(CF_ShaderInternal* shader, CF_RenderState* state, CF_MeshInternal* mesh)
 {
 	CF_TextureInternal* tex = (CF_TextureInternal*)g_ctx.canvas->cf_texture.id;
-	SDL_GPUColorTargetDescription color_info;
-	CF_MEMSET(&color_info, 0, sizeof(color_info));
+	int color_target_count = g_ctx.canvas->target_count > 1 ? g_ctx.canvas->target_count : 1;
+	SDL_GPUColorTargetDescription color_infos[CF_MAX_CANVAS_TARGETS];
+	CF_MEMSET(color_infos, 0, sizeof(color_infos));
+	SDL_GPUColorTargetDescription& color_info = color_infos[0];
 	CF_ASSERT(g_ctx.canvas->texture);
 	color_info.format = tex->format;
 	color_info.blend_state.enable_blend = state->blend.enabled;
@@ -1670,11 +1710,18 @@ static inline SDL_GPUGraphicsPipeline* s_build_pipeline(CF_ShaderInternal* shade
 	int mask_a = (int)state->blend.write_A_enabled << 3;
 	color_info.blend_state.color_write_mask = (uint32_t)(mask_r | mask_g | mask_b | mask_a);
 
+	// Every color target shares target 0's blend state (per-target blend can come later if
+	// someone needs it); formats come from each target's texture.
+	for (int i = 1; i < color_target_count; ++i) {
+		color_infos[i] = color_infos[0];
+		color_infos[i].format = ((CF_TextureInternal*)g_ctx.canvas->cf_textures_mrt[i].id)->format;
+	}
+
 	SDL_GPUGraphicsPipelineCreateInfo pip_info;
 	CF_MEMSET(&pip_info, 0, sizeof(pip_info));
 	pip_info.primitive_type = s_wrap(state->primitive_type);
-	pip_info.target_info.num_color_targets = 1;
-	pip_info.target_info.color_target_descriptions = &color_info;
+	pip_info.target_info.num_color_targets = (Uint32)color_target_count;
+	pip_info.target_info.color_target_descriptions = color_infos;
 	pip_info.vertex_shader = shader->vs;
 	pip_info.fragment_shader = shader->fs;
 	// Always declare depth-stencil target if the canvas has one, regardless of whether
@@ -1776,8 +1823,11 @@ static CF_PipelineKey s_make_pipeline_key(CF_RenderState* state, CF_MeshInternal
 	CF_MEMSET(&key, 0, sizeof(key));
 
 	// Canvas state.
-	CF_TextureInternal* tex = (CF_TextureInternal*)g_ctx.canvas->cf_texture.id;
-	key.color_format = tex->format;
+	key.color_target_count = g_ctx.canvas->target_count > 1 ? g_ctx.canvas->target_count : 1;
+	for (int i = 0; i < key.color_target_count; ++i) {
+		CF_TextureInternal* tex_i = (CF_TextureInternal*)(i == 0 ? g_ctx.canvas->cf_texture.id : g_ctx.canvas->cf_textures_mrt[i].id);
+		key.color_formats[i] = tex_i->format;
+	}
 	key.sample_count = (int)g_ctx.canvas->sample_count;
 	CF_TextureInternal* depth_texture = g_ctx.canvas->depth_stencil ? (CF_TextureInternal*)g_ctx.canvas->cf_depth_stencil.id : NULL;
 	if (depth_texture) {
@@ -1842,18 +1892,22 @@ void cf_sdlgpu_apply_shader(CF_Shader shader_handle, CF_Material material_handle
 	// Begin a new render pass if needed, or reuse the active one.
 	SDL_GPURenderPass* pass = g_ctx.active_pass;
 	if (!pass) {
-		SDL_GPUColorTargetInfo pass_color_info;
-		CF_MEMSET(&pass_color_info, 0, sizeof(pass_color_info));
-		pass_color_info.texture = g_ctx.canvas->texture;
-		CF_Color cc = s_clear_color(g_ctx.canvas);
-		pass_color_info.clear_color = { cc.r, cc.g, cc.b, cc.a };
-		pass_color_info.load_op = g_ctx.canvas->clear ? SDL_GPU_LOADOP_CLEAR : SDL_GPU_LOADOP_LOAD;
-		pass_color_info.cycle = g_ctx.canvas->clear ? true : false;
-		if (g_ctx.canvas->sample_count == CF_SAMPLE_COUNT_1) {
-			pass_color_info.store_op = SDL_GPU_STOREOP_STORE;
-		} else {
-			pass_color_info.store_op = SDL_GPU_STOREOP_RESOLVE_AND_STORE;
-			pass_color_info.resolve_texture = g_ctx.canvas->resolve_texture;
+		int pass_target_count = g_ctx.canvas->target_count > 1 ? g_ctx.canvas->target_count : 1;
+		SDL_GPUColorTargetInfo pass_color_infos[CF_MAX_CANVAS_TARGETS];
+		CF_MEMSET(pass_color_infos, 0, sizeof(pass_color_infos));
+		for (int i = 0; i < pass_target_count; ++i) {
+			SDL_GPUColorTargetInfo& pass_color_info = pass_color_infos[i];
+			pass_color_info.texture = i == 0 ? g_ctx.canvas->texture : g_ctx.canvas->textures_mrt[i];
+			CF_Color cc = s_clear_color2(g_ctx.canvas, i);
+			pass_color_info.clear_color = { cc.r, cc.g, cc.b, cc.a };
+			pass_color_info.load_op = g_ctx.canvas->clear ? SDL_GPU_LOADOP_CLEAR : SDL_GPU_LOADOP_LOAD;
+			pass_color_info.cycle = g_ctx.canvas->clear ? true : false;
+			if (g_ctx.canvas->sample_count == CF_SAMPLE_COUNT_1) {
+				pass_color_info.store_op = SDL_GPU_STOREOP_STORE;
+			} else {
+				pass_color_info.store_op = SDL_GPU_STOREOP_RESOLVE_AND_STORE;
+				pass_color_info.resolve_texture = g_ctx.canvas->resolve_texture;
+			}
 		}
 
 		// Always include depth-stencil if the canvas has one.
@@ -1868,11 +1922,11 @@ void cf_sdlgpu_apply_shader(CF_Shader shader_handle, CF_Material material_handle
 			pass_depth_stencil_info.store_op = SDL_GPU_STOREOP_STORE;
 			pass_depth_stencil_info.stencil_load_op = g_ctx.canvas->clear ? SDL_GPU_LOADOP_CLEAR : SDL_GPU_LOADOP_LOAD;
 			pass_depth_stencil_info.stencil_store_op = SDL_GPU_STOREOP_STORE;
-			pass_depth_stencil_info.cycle = pass_color_info.cycle;
+			pass_depth_stencil_info.cycle = pass_color_infos[0].cycle;
 			depth_stencil_ptr = &pass_depth_stencil_info;
 		}
 
-		pass = SDL_BeginGPURenderPass(cmd, &pass_color_info, 1, depth_stencil_ptr);
+		pass = SDL_BeginGPURenderPass(cmd, pass_color_infos, (Uint32)pass_target_count, depth_stencil_ptr);
 		CF_ASSERT(pass);
 		g_ctx.active_pass = pass;
 		g_ctx.canvas->pass = pass;
@@ -2411,12 +2465,27 @@ void cf_sdlgpu_dispatch_compute(CF_ComputeShader shader, CF_Material material_ha
 	SDL_EndGPUComputePass(pass);
 }
 
+CF_Readback cf_sdlgpu_canvas_readback(CF_Canvas canvas_handle)
+{
+	return cf_sdlgpu_canvas_readback2(canvas_handle, 0);
+}
+
 void cf_sdlgpu_canvas_set_clear_color(CF_Canvas canvas_handle, CF_Color color)
 {
 	CF_CanvasInternal* canvas = (CF_CanvasInternal*)canvas_handle.id;
 	if (!canvas) return;
-	canvas->has_clear_color = true;
-	canvas->clear_color = color;
+	for (int i = 0; i < CF_MAX_CANVAS_TARGETS; ++i) {
+		canvas->has_clear_color[i] = true;
+		canvas->clear_color[i] = color;
+	}
+}
+
+void cf_sdlgpu_canvas_set_clear_color2(CF_Canvas canvas_handle, int index, CF_Color color)
+{
+	CF_CanvasInternal* canvas = (CF_CanvasInternal*)canvas_handle.id;
+	if (!canvas || index < 0 || index >= CF_MAX_CANVAS_TARGETS) return;
+	canvas->has_clear_color[index] = true;
+	canvas->clear_color[index] = color;
 }
 
 void cf_sdlgpu_canvas_set_clear_depth_stencil(CF_Canvas canvas_handle, float depth, uint32_t stencil)

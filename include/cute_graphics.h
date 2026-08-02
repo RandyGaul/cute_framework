@@ -31,7 +31,6 @@ extern "C" {
  * Quick list of unsupported features. CF's focus is on the 2D use case, so most of these features are
  * omitted since they aren't super useful for 2D.
  *
- *     - Multiple render targets (aka color/texture attachments)
  *     - Cube map
  *     - 3D textures
  *     - Texture arrays
@@ -1198,6 +1197,16 @@ CF_INLINE const char* cf_samplecount_string(CF_SampleCount count) {
 }
 
 /**
+ * @function CF_MAX_CANVAS_TARGETS
+ * @category graphics
+ * @brief    The maximum number of color targets a single canvas may have.
+ * @remarks  Four is the portable guarantee: both SDL_GPU and WebGL2/GLES 3.0 support at least
+ *           four simultaneous color attachments.
+ * @related  CF_CanvasParams cf_make_canvas cf_canvas_get_target2
+ */
+#define CF_MAX_CANVAS_TARGETS 4
+
+/**
  * @struct   CF_CanvasParams
  * @category graphics
  * @brief    A texture the GPU can draw upon (with an optional depth/stencil texture).
@@ -1212,8 +1221,21 @@ typedef struct CF_CanvasParams
 	/* @member The name of the canvas, for debug purposes. */
 	const char* name;
 
-	/* @member The texture used to store pixel information when rendering to the canvas. See `CF_TextureParams`. */
-	CF_TextureParams target;
+	/* @member The color target(s). `target` aliases `targets[0]`, so single-target code reads and
+	   writes exactly as before. For multiple render targets set `target_count` and fill
+	   `targets[1]` through `targets[target_count - 1]` -- `cf_canvas_defaults` pre-fills every slot
+	   with the same defaults, so typically only the pixel formats need adjusting. A fragment
+	   shader writes them via `layout (location = N) out`. See `CF_TextureParams`. */
+	union
+	{
+		CF_TextureParams target;
+		CF_TextureParams targets[CF_MAX_CANVAS_TARGETS];
+	};
+
+	/* @member How many color targets this canvas has, from 1 to `CF_MAX_CANVAS_TARGETS`. Zero means
+	   one, so zero-initialized params behave exactly as before this member existed. Multiple render
+	   targets currently require `sample_count` of `CF_SAMPLE_COUNT_1`. */
+	int target_count;
 
 	/* @member Defaults to false. If true enables a depth-stencil buffer attachment. Required for any
 	   depth or stencil testing: without it the depth fields of `CF_RenderState` are silently ignored,
@@ -1262,6 +1284,20 @@ CF_API void CF_CALL cf_destroy_canvas(CF_Canvas canvas);
 CF_API CF_Texture CF_CALL cf_canvas_get_target(CF_Canvas canvas);
 
 /**
+ * @function cf_canvas_get_target2
+ * @category graphics
+ * @brief    Fetches one of the canvas's color targets as a texture, by index.
+ * @param    canvas  The canvas.
+ * @param    index   Which color target, from 0 to `target_count - 1`.
+ * @return   Returns the texture backing that color target, or a zero'd texture for an out-of-range
+ *           index. `cf_canvas_get_target` is equivalent to index 0.
+ * @remarks  This is how a later pass samples a g-buffer: bind each target you need with
+ *           `cf_material_set_texture_fs` (or `cf_draw_set_texture`).
+ * @related  CF_Canvas cf_canvas_get_target cf_canvas_readback2 CF_CanvasParams
+ */
+CF_API CF_Texture CF_CALL cf_canvas_get_target2(CF_Canvas canvas, int index);
+
+/**
  * @function cf_canvas_get_depth_stencil_target
  * @category graphics
  * @brief    Returns the `depth_stencil_target` texture the canvas renders upon.
@@ -1303,6 +1339,21 @@ CF_API void CF_CALL cf_clear_canvas(CF_Canvas canvas);
 CF_API void CF_CALL cf_canvas_set_clear_color(CF_Canvas canvas, CF_Color color);
 
 /**
+ * @function cf_canvas_set_clear_color2
+ * @category graphics
+ * @brief    Gives one color target of a multi-target canvas its own clear color.
+ * @param    canvas  The canvas.
+ * @param    index   Which color target, from 0 to `target_count - 1`.
+ * @param    color   The color this target clears to from now on.
+ * @remarks  A g-buffer typically wants different clears per attachment -- transparent black for
+ *           color, far-plane values for depth-carrying targets. `cf_canvas_set_clear_color` sets
+ *           every target at once; this sets just one. Targets with no override clear to the
+ *           global `cf_clear_color`.
+ * @related  CF_Canvas cf_canvas_set_clear_color cf_clear_color CF_CanvasParams
+ */
+CF_API void CF_CALL cf_canvas_set_clear_color2(CF_Canvas canvas, int index, CF_Color color);
+
+/**
  * @function cf_canvas_set_clear_depth_stencil
  * @category graphics
  * @brief    Gives one canvas its own clear depth and stencil, instead of the global `cf_clear_depth_stencil`.
@@ -1328,6 +1379,19 @@ CF_API void CF_CALL cf_canvas_set_clear_depth_stencil(CF_Canvas canvas, float de
  * @related  CF_Readback cf_readback_ready cf_readback_data cf_readback_size cf_destroy_readback
  */
 CF_API CF_Readback CF_CALL cf_canvas_readback(CF_Canvas canvas);
+
+/**
+ * @function cf_canvas_readback2
+ * @category graphics
+ * @brief    Initiates a readback of one specific color target of a multi-target canvas.
+ * @param    canvas  The canvas.
+ * @param    index   Which color target, from 0 to `target_count - 1`.
+ * @return   Returns a `CF_Readback`, or a zero'd handle for an out-of-range index.
+ * @remarks  `cf_canvas_readback` is equivalent to index 0. The pixel format matches that target's
+ *           format.
+ * @related  CF_Readback cf_canvas_readback cf_readback_ready cf_readback_data cf_canvas_get_target2
+ */
+CF_API CF_Readback CF_CALL cf_canvas_readback2(CF_Canvas canvas, int index);
 
 /**
  * @function cf_readback_ready
@@ -2417,6 +2481,7 @@ CF_INLINE CF_CanvasParams canvas_defaults(int w, int h) { return cf_canvas_defau
 CF_INLINE CF_Canvas make_canvas(CF_CanvasParams pass_params) { return cf_make_canvas(pass_params); }
 CF_INLINE void destroy_canvas(CF_Canvas canvas) { cf_destroy_canvas(canvas); }
 CF_INLINE CF_Texture canvas_get_target(CF_Canvas canvas) { return cf_canvas_get_target(canvas); }
+CF_INLINE CF_Texture canvas_get_target2(CF_Canvas canvas, int index) { return cf_canvas_get_target2(canvas, index); }
 CF_INLINE CF_Texture canvas_get_depth_stencil_target(CF_Canvas canvas) { return cf_canvas_get_depth_stencil_target(canvas); }
 CF_INLINE void clear_canvas(CF_Canvas canvas) { cf_clear_canvas(canvas); }
 CF_INLINE void canvas_set_clear_color(CF_Canvas canvas, CF_Color color) { cf_canvas_set_clear_color(canvas, color); }

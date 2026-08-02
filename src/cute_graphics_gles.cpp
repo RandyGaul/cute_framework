@@ -176,9 +176,14 @@ struct CF_GL_Canvas
 	bool has_depth;
 	bool has_stencil;
 
-	// Per-canvas clear overrides; unset means fall back to the globals.
-	bool has_clear_color;
-	CF_Color clear_color;
+	// Additional color targets for MRT ([0] unused -- `color`/`cf_color` are target 0).
+	int target_count;
+	GLuint colors_mrt[CF_MAX_CANVAS_TARGETS];
+	CF_Texture cf_colors_mrt[CF_MAX_CANVAS_TARGETS];
+
+	// Per-canvas clear overrides; unset means fall back to the globals. Indexed per color target.
+	bool has_clear_color[CF_MAX_CANVAS_TARGETS];
+	CF_Color clear_color[CF_MAX_CANVAS_TARGETS];
 	bool has_clear_depth_stencil;
 	float clear_depth;
 	uint32_t clear_stencil;
@@ -1034,9 +1039,14 @@ uint64_t cf_gles_texture_binding_handle(CF_Texture t)
 
 CF_Canvas cf_gles_make_canvas(CF_CanvasParams params)
 {
-	if (!cf_gles_texture_supports_format(params.target.pixel_format, (CF_TextureUsageBits)params.target.usage)) {
-		CF_ASSERT(!"Unsupported color target format for GLES backend.");
-		return CF_Canvas{};
+	int target_count = params.target_count > 1 ? params.target_count : 1;
+	if (target_count > CF_MAX_CANVAS_TARGETS) target_count = CF_MAX_CANVAS_TARGETS;
+	CF_ASSERT(target_count == 1 || params.sample_count == CF_SAMPLE_COUNT_1);
+	for (int i = 0; i < target_count; ++i) {
+		if (!cf_gles_texture_supports_format(params.targets[i].pixel_format, (CF_TextureUsageBits)params.targets[i].usage)) {
+			CF_ASSERT(!"Unsupported color target format for GLES backend.");
+			return CF_Canvas{};
+		}
 	}
 	if (params.depth_stencil_enable) {
 		if (!cf_gles_texture_supports_format(params.depth_stencil_target.pixel_format, (CF_TextureUsageBits)params.depth_stencil_target.usage)) {
@@ -1059,6 +1069,18 @@ CF_Canvas cf_gles_make_canvas(CF_CanvasParams params)
 	return CF_Canvas{};
 	}
 	c->color = ((CF_GL_Texture*)(uintptr_t)color.id)->id;
+	c->target_count = target_count;
+	for (int i = 1; i < target_count; ++i) {
+		CF_Texture t = cf_gles_make_texture(params.targets[i]);
+		if (!t.id) {
+			for (int j = 1; j < i; ++j) cf_gles_destroy_texture(c->cf_colors_mrt[j]);
+			cf_gles_destroy_texture(color);
+			CF_FREE(c);
+			return CF_Canvas{};
+		}
+		c->cf_colors_mrt[i] = t;
+		c->colors_mrt[i] = ((CF_GL_Texture*)(uintptr_t)t.id)->id;
+	}
 
 	// Septh/stencil (renderbuffer).
 	if (params.depth_stencil_enable) {
@@ -1076,6 +1098,16 @@ CF_Canvas cf_gles_make_canvas(CF_CanvasParams params)
 	glGenFramebuffers(1, &c->fbo);
 	s_bind_framebuffer(c->fbo);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, c->color, 0);
+	for (int i = 1; i < target_count; ++i) {
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + i, GL_TEXTURE_2D, c->colors_mrt[i], 0);
+	}
+	if (target_count > 1) {
+		// Draw-buffer bindings are framebuffer state, so setting them once here covers
+		// every subsequent bind of this FBO.
+		GLenum bufs[CF_MAX_CANVAS_TARGETS];
+		for (int i = 0; i < target_count; ++i) bufs[i] = GL_COLOR_ATTACHMENT0 + (GLenum)i;
+		glDrawBuffers(target_count, bufs);
+	}
 	if (c->depth) {
 		GLenum attachment = c->has_stencil ? GL_DEPTH_STENCIL_ATTACHMENT : GL_DEPTH_ATTACHMENT;
 		glFramebufferRenderbuffer(GL_FRAMEBUFFER, attachment, GL_RENDERBUFFER, c->depth);
@@ -1093,6 +1125,9 @@ void cf_gles_destroy_canvas(CF_Canvas ch)
 	if (c->depth) glDeleteRenderbuffers(1, &c->depth);
 	if (c->fbo) glDeleteFramebuffers(1, &c->fbo);
 	cf_gles_destroy_texture(c->cf_color);
+	for (int i = 1; i < c->target_count; ++i) {
+		if (c->cf_colors_mrt[i].id) cf_gles_destroy_texture(c->cf_colors_mrt[i]);
+	}
 	CF_POLL_OPENGL_ERROR();
 	CF_FREE(c);
 }
@@ -1112,6 +1147,13 @@ CF_Texture cf_gles_canvas_get_target(CF_Canvas ch)
 	return c->cf_color;
 }
 
+CF_Texture cf_gles_canvas_get_target2(CF_Canvas ch, int index)
+{
+	CF_GL_Canvas* c = (CF_GL_Canvas*)(uintptr_t)ch.id;
+	if (!c || index < 0 || index >= (c->target_count > 1 ? c->target_count : 1)) return { 0 };
+	return index == 0 ? c->cf_color : c->cf_colors_mrt[index];
+}
+
 CF_Texture cf_gles_canvas_get_depth_stencil_target(CF_Canvas)
 {
 	// GLES uses renderbuffers for depth/stencil, which are not sampleable as textures.
@@ -1120,9 +1162,8 @@ CF_Texture cf_gles_canvas_get_depth_stencil_target(CF_Canvas)
 
 static inline void s_clear_canvas(const CF_GL_Canvas* canvas)
 {
-	GLbitfield bits = GL_COLOR_BUFFER_BIT;
-	CF_Color cc = canvas->has_clear_color ? canvas->clear_color : app->clear_color;
-	glClearColor(cc.r, cc.g, cc.b, cc.a);
+	GLbitfield bits = 0;
+	int clear_target_count = canvas->target_count > 1 ? canvas->target_count : 1;
 	if (s_canvas_has_depth(canvas)) {
 		glClearDepthf(canvas->has_clear_depth_stencil ? canvas->clear_depth : app->clear_depth);
 		bits |= GL_DEPTH_BUFFER_BIT;
@@ -1133,7 +1174,14 @@ static inline void s_clear_canvas(const CF_GL_Canvas* canvas)
 	}
 	g_ctx.current_state.scissor_enabled = false;
 	glDisable(GL_SCISSOR_TEST);
-	glClear(bits);
+	// Color clears go through glClearBufferfv so each target can have its own clear color;
+	// depth/stencil still clear through glClear.
+	for (int i = 0; i < clear_target_count; ++i) {
+		CF_Color cc = canvas->has_clear_color[i] ? canvas->clear_color[i] : app->clear_color;
+		float rgba[4] = { cc.r, cc.g, cc.b, cc.a };
+		glClearBufferfv(GL_COLOR, i, rgba);
+	}
+	if (bits) glClear(bits);
 }
 
 void cf_gles_clear_canvas(CF_Canvas canvas_handle)
@@ -2007,21 +2055,28 @@ struct CF_GL_Readback
 	int size;
 };
 
-CF_Readback cf_gles_canvas_readback(CF_Canvas canvas)
+CF_Readback cf_gles_canvas_readback2(CF_Canvas canvas, int index)
 {
 	CF_GL_Canvas* c = (CF_GL_Canvas*)(uintptr_t)canvas.id;
-	if (!c) return { 0 };
+	if (!c || index < 0 || index >= (c->target_count > 1 ? c->target_count : 1)) return { 0 };
 	int w = c->w, h = c->h;
 	CF_GL_Readback* rb = (CF_GL_Readback*)CF_ALLOC(sizeof(CF_GL_Readback));
 	rb->size = w * h * 4;
 	rb->data = CF_ALLOC(rb->size);
 	GLuint prev_fbo = g_ctx.fbo;
 	s_bind_framebuffer(c->fbo);
+	if (index != 0) glReadBuffer(GL_COLOR_ATTACHMENT0 + (GLenum)index);
 	glPixelStorei(GL_PACK_ALIGNMENT, 4);
 	glReadPixels(0, 0, w, h, GL_RGBA, GL_UNSIGNED_BYTE, rb->data);
+	if (index != 0) glReadBuffer(GL_COLOR_ATTACHMENT0);
 	s_bind_framebuffer(prev_fbo);
 	CF_POLL_OPENGL_ERROR();
 	return { (uint64_t)(uintptr_t)rb };
+}
+
+CF_Readback cf_gles_canvas_readback(CF_Canvas canvas)
+{
+	return cf_gles_canvas_readback2(canvas, 0);
 }
 
 bool cf_gles_readback_ready(CF_Readback readback)
@@ -2056,8 +2111,18 @@ void cf_gles_canvas_set_clear_color(CF_Canvas canvas_handle, CF_Color color)
 {
 	CF_GL_Canvas* canvas = (CF_GL_Canvas*)(uintptr_t)canvas_handle.id;
 	if (!canvas) return;
-	canvas->has_clear_color = true;
-	canvas->clear_color = color;
+	for (int i = 0; i < CF_MAX_CANVAS_TARGETS; ++i) {
+		canvas->has_clear_color[i] = true;
+		canvas->clear_color[i] = color;
+	}
+}
+
+void cf_gles_canvas_set_clear_color2(CF_Canvas canvas_handle, int index, CF_Color color)
+{
+	CF_GL_Canvas* canvas = (CF_GL_Canvas*)(uintptr_t)canvas_handle.id;
+	if (!canvas || index < 0 || index >= CF_MAX_CANVAS_TARGETS) return;
+	canvas->has_clear_color[index] = true;
+	canvas->clear_color[index] = color;
 }
 
 void cf_gles_canvas_set_clear_depth_stencil(CF_Canvas canvas_handle, float depth, uint32_t stencil)
