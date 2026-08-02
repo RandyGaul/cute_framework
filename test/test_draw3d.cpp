@@ -620,6 +620,151 @@ TEST_CASE(test_draw3d_sprite_textured)
 	return true;
 }
 
+
+// Sprite texturing through a BAKED list: recorded submissions store image ids, the bake
+// merges their image tables, and every replay re-resolves against the current atlas -- so
+// two frames of replay must both sample the right images.
+TEST_CASE(test_draw3d_sprite_textured_baked)
+{
+	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, W, H, s_options(), NULL))) return true; // Headless CI: no display/GPU.
+
+	struct Vertex { float x, y, z, u, v; };
+	Vertex verts[6] = {
+		{ -0.2f, -0.2f, 0, 0, 1 }, { 0.2f, -0.2f, 0, 1, 1 }, { 0.2f, 0.2f, 0, 1, 0 },
+		{ -0.2f, -0.2f, 0, 0, 1 }, { 0.2f, 0.2f, 0, 1, 0 }, { -0.2f, 0.2f, 0, 0, 0 },
+	};
+	CF_VertexAttribute attrs[2] = { };
+	attrs[0].name = "in_pos";
+	attrs[0].format = CF_VERTEX_FORMAT_FLOAT3;
+	attrs[0].offset = CF_OFFSET_OF(Vertex, x);
+	attrs[1].name = "in_uv";
+	attrs[1].format = CF_VERTEX_FORMAT_FLOAT2;
+	attrs[1].offset = CF_OFFSET_OF(Vertex, u);
+	CF_Mesh mesh = cf_make_mesh(sizeof(verts), attrs, 2, sizeof(Vertex));
+	cf_mesh_update_vertex_data(mesh, verts, 6);
+
+	CF_Pixel red[64], green[64];
+	for (int i = 0; i < 64; ++i) {
+		red[i] = cf_make_pixel_rgba(255, 0, 0, 255);
+		green[i] = cf_make_pixel_rgba(0, 255, 0, 255);
+	}
+	CF_Sprite sprite_red = cf_make_easy_sprite_from_pixels(red, 8, 8);
+	CF_Sprite sprite_green = cf_make_easy_sprite_from_pixels(green, 8, 8);
+
+	CF_Shader shader = cf_make_shader_from_source(s_sprite_vs, s_sprite_fs);
+	REQUIRE(shader.id);
+	CF_CanvasParams params = cf_canvas_defaults(W, H);
+	params.depth_stencil_enable = true;
+	CF_Canvas canvas = cf_make_canvas(params);
+	CF_Pixel* px = (CF_Pixel*)cf_alloc(W * H * (int)sizeof(CF_Pixel));
+
+	cf_draw3d_push_projection(cf_ortho(-1, 1, -1, 1, -1, 1));
+	cf_draw3d_push_shader(shader);
+
+	// Record once: two sprite-textured submissions that bake into one instanced group.
+	CF_DrawList list = cf_make_draw_list();
+	cf_draw_list_begin(list);
+	cf_draw3d_push();
+	cf_draw3d_translate(cf_v3(-0.5f, 0, 0));
+	cf_draw3d_push_texture(&sprite_red);
+	cf_draw3d_mesh(mesh);
+	cf_draw3d_pop_texture();
+	cf_draw3d_pop();
+	cf_draw3d_push();
+	cf_draw3d_translate(cf_v3(0.5f, 0, 0));
+	cf_draw3d_push_texture(&sprite_green);
+	cf_draw3d_mesh(mesh);
+	cf_draw3d_pop_texture();
+	cf_draw3d_pop();
+	cf_draw_list_end();
+
+	// Replay across two frames; the second frame re-resolves against the settled atlas.
+	for (int frame = 0; frame < 2; ++frame) {
+		cf_app_update(NULL);
+		cf_draw_list(list);
+		cf_render_to(canvas, true);
+		cf_app_draw_onto_screen(false);
+
+		CF_Readback rb = cf_canvas_readback(canvas);
+		REQUIRE(rb.id);
+		while (!cf_readback_ready(rb)) {}
+		cf_readback_data(rb, px, W * H * (int)sizeof(CF_Pixel));
+		cf_destroy_readback(rb);
+
+		CF_Pixel left = s_pixel(px, 0.25f, 0.5f);
+		CF_Pixel right = s_pixel(px, 0.75f, 0.5f);
+		REQUIRE(left.colors.r > 200 && left.colors.g < 60);
+		REQUIRE(right.colors.g > 200 && right.colors.r < 60);
+	}
+
+	cf_destroy_draw_list(list);
+	cf_draw3d_pop_shader();
+	cf_draw3d_pop_projection();
+	cf_free(px);
+	cf_destroy_canvas(canvas);
+	cf_destroy_shader(shader);
+	cf_destroy_mesh(mesh);
+	cf_easy_sprite_unload(&sprite_red);
+	cf_easy_sprite_unload(&sprite_green);
+	cf_destroy_app();
+	return true;
+}
+
+// Mesh submissions into a multi-render-target canvas: the access layer's MRT composes with
+// the draw3d layer -- one submission writes both targets.
+static const char* s_mrt_fs =
+"layout (location = 0) in vec4 v_color;\n"
+"layout (location = 0) out vec4 out_a;\n"
+"layout (location = 1) out vec4 out_b;\n"
+"void main() {\n"
+"    out_a = v_color;\n"
+"    out_b = vec4(1.0 - v_color.rgb, 1.0);\n"
+"}\n";
+
+TEST_CASE(test_draw3d_mrt)
+{
+	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, W, H, s_options(), NULL))) return true; // Headless CI: no display/GPU.
+
+	CF_Mesh mesh = s_make_quad(0.5f);
+	CF_Shader shader = cf_make_shader_from_source(s_vs, s_mrt_fs);
+	REQUIRE(shader.id);
+	CF_CanvasParams params = cf_canvas_defaults(W, H);
+	params.depth_stencil_enable = true;
+	params.target_count = 2;
+	CF_Canvas canvas = cf_make_canvas(params);
+	REQUIRE(canvas.id);
+	CF_Pixel* px = (CF_Pixel*)cf_alloc(W * H * (int)sizeof(CF_Pixel));
+
+	cf_app_update(NULL);
+	cf_draw3d_push_projection(cf_ortho(-1, 1, -1, 1, -1, 1));
+	cf_draw3d_push_shader(shader);
+	cf_draw3d_push_mesh_attributes(cf_v4(1, 0, 0, 1)); // Red -> target 0 red, target 1 cyan.
+	cf_draw3d_mesh(mesh);
+	cf_draw3d_pop_mesh_attributes();
+	cf_draw3d_pop_shader();
+	cf_draw3d_pop_projection();
+	cf_render_to(canvas, true);
+	cf_app_draw_onto_screen(false);
+
+	for (int i = 0; i < 2; ++i) {
+		CF_Readback rb = cf_canvas_readback2(canvas, i);
+		REQUIRE(rb.id);
+		while (!cf_readback_ready(rb)) {}
+		cf_readback_data(rb, px, W * H * (int)sizeof(CF_Pixel));
+		cf_destroy_readback(rb);
+		CF_Pixel c = s_pixel(px, 0.5f, 0.5f);
+		if (i == 0) REQUIRE(c.colors.r > 200 && c.colors.g < 60 && c.colors.b < 60);
+		else REQUIRE(c.colors.r < 60 && c.colors.g > 200 && c.colors.b > 200);
+	}
+
+	cf_free(px);
+	cf_destroy_canvas(canvas);
+	cf_destroy_shader(shader);
+	cf_destroy_mesh(mesh);
+	cf_destroy_app();
+	return true;
+}
+
 TEST_SUITE(test_draw3d)
 {
 	RUN_TEST_CASE(test_draw3d_transforms_and_coalescing);
@@ -629,4 +774,6 @@ TEST_SUITE(test_draw3d)
 	RUN_TEST_CASE(test_draw3d_draw_list);
 	RUN_TEST_CASE(test_draw3d_baked_normal_matrices);
 	RUN_TEST_CASE(test_draw3d_sprite_textured);
+	RUN_TEST_CASE(test_draw3d_sprite_textured_baked);
+	RUN_TEST_CASE(test_draw3d_mrt);
 }

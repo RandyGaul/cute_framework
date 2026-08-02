@@ -477,6 +477,9 @@ static void s_augment_mesh(CF_Mesh mesh)
 		attrs[i].per_instance = true;
 	}
 	cf_mesh_append_attributes(mesh, attrs, 8);
+	// Appending past CF_MESH_MAX_VERTEX_ATTRIBUTES silently drops the extras (matching
+	// cf_make_mesh); a mesh that dense would render garbage with no error, so say so here.
+	CF_ASSERT(cf_mesh_has_vertex_attribute(mesh, "in_mesh_attributes"));
 	cf_mesh_set_instance_buffer(mesh, (int)sizeof(CF_MeshInstance3d) * 16, (int)sizeof(CF_MeshInstance3d));
 }
 
