@@ -701,12 +701,17 @@ static void s_handle_event(SDL_Event* event)
 	case SDL_EVENT_FINGER_MOTION:
 	{
 		uint64_t id = (uint64_t)event->tfinger.fingerID;
-		CF_Touch touch;
-		if (cf_touch_get(id, &touch)) {
-			touch.pressure = event->tfinger.pressure;
-			touch.x = event->tfinger.x * app->w;
-			touch.y = event->tfinger.y * app->h;
-		} else {
+		bool found = false;
+		for (int i = 0; i < app->touches.size(); ++i) {
+			if (app->touches[i].id == id) {
+				app->touches[i].pressure = event->tfinger.pressure;
+				app->touches[i].x = event->tfinger.x * app->w;
+				app->touches[i].y = event->tfinger.y * app->h;
+				found = true;
+				break;
+			}
+		}
+		if (!found) {
 			CF_Touch& touch = app->touches.add();
 			touch.id = id;
 			touch.pressure = event->tfinger.pressure;

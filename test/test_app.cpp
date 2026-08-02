@@ -128,6 +128,35 @@ TEST_CASE(test_app_main_callbacks_event_buffer_cap)
 	return true;
 }
 
+TEST_CASE(test_app_touch_motion_updates_stored_touch)
+{
+	CHECK(cf_is_error(cf_make_app(NULL, 0, 0, 0, 0, 0, CF_APP_OPTIONS_HIDDEN_BIT | CF_APP_OPTIONS_NO_GFX_BIT | CF_APP_OPTIONS_NO_AUDIO_BIT, NULL)));
+
+	SDL_Event event = { };
+	event.type = SDL_EVENT_FINGER_DOWN;
+	event.tfinger.fingerID = 7;
+	event.tfinger.x = 0.25f;
+	event.tfinger.y = 0.25f;
+	event.tfinger.pressure = 0.5f;
+	cf_app_process_event(&event);
+	cf_app_update(NULL);
+
+	// Finger motion must update the touch stored in the app, not a local copy.
+	event.type = SDL_EVENT_FINGER_MOTION;
+	event.tfinger.x = 0.75f;
+	event.tfinger.y = 0.75f;
+	event.tfinger.pressure = 1.0f;
+	cf_app_process_event(&event);
+	cf_app_update(NULL);
+
+	CF_Touch touch = { };
+	REQUIRE(cf_touch_get(7, &touch));
+	REQUIRE(touch.pressure == 1.0f);
+
+	cf_destroy_app();
+	return true;
+}
+
 TEST_CASE(test_app_main_callbacks_quit_event)
 {
 	CHECK(cf_is_error(cf_make_app(NULL, 0, 0, 0, 0, 0, CF_APP_OPTIONS_HIDDEN_BIT | CF_APP_OPTIONS_NO_GFX_BIT | CF_APP_OPTIONS_NO_AUDIO_BIT, NULL)));
@@ -337,6 +366,7 @@ TEST_SUITE(test_app)
 	RUN_TEST_CASE(test_app_main_callbacks_event_buffering);
 	RUN_TEST_CASE(test_app_main_callbacks_text_event_deep_copy);
 	RUN_TEST_CASE(test_app_main_callbacks_event_buffer_cap);
+	RUN_TEST_CASE(test_app_touch_motion_updates_stored_touch);
 	RUN_TEST_CASE(test_app_main_callbacks_quit_event);
 	RUN_TEST_CASE(test_app_main_callbacks_option_bit);
 	RUN_TEST_CASE(test_display_count_matches_list);
