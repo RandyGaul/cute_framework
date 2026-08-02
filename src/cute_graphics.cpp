@@ -1010,6 +1010,8 @@ CF_DISPATCH_SHIM(CF_Mesh, make_mesh, (int vertex_buffer_size, const CF_VertexAtt
 CF_DISPATCH_SHIM_VOID(mesh_set_index_buffer, (CF_Mesh mesh_handle, int index_buffer_size_in_bytes, int index_bit_count), mesh_handle, index_buffer_size_in_bytes, index_bit_count)
 CF_DISPATCH_SHIM_VOID(mesh_set_instance_buffer, (CF_Mesh mesh_handle, int instance_buffer_size_in_bytes, int instance_stride), mesh_handle, instance_buffer_size_in_bytes, instance_stride)
 CF_DISPATCH_SHIM_VOID(mesh_append_attributes, (CF_Mesh mesh_handle, const CF_VertexAttribute* attributes, int attribute_count), mesh_handle, attributes, attribute_count)
+CF_DISPATCH_SHIM(bool, mesh_has_vertex_attribute, (CF_Mesh mesh_handle, const char* name), mesh_handle, name)
+CF_DISPATCH_SHIM(int, mesh_instance_stride, (CF_Mesh mesh_handle), mesh_handle)
 CF_DISPATCH_SHIM_VOID(destroy_mesh, (CF_Mesh mesh_handle), mesh_handle)
 CF_DISPATCH_SHIM_VOID(mesh_update_vertex_data, (CF_Mesh mesh_handle, void* data, int count), mesh_handle, data, count)
 CF_DISPATCH_SHIM_VOID(mesh_update_index_data, (CF_Mesh mesh_handle, void* data, int count), mesh_handle, data, count)

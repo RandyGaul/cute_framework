@@ -300,4 +300,11 @@ void cf_pop_gpu_label();
 // instance data comes from storage buffers indexed by gl_InstanceIndex.
 void cf_draw_elements_instanced(int instance_count);
 
+// Mesh introspection for the draw3d layer (cute_draw3d.cpp): whether an attribute with this
+// name exists (used to detect its reserved instance attributes), and the mesh's instance
+// stride (0 when no instance buffer is set -- a nonzero stride on a mesh without the reserved
+// attributes marks user-owned instancing, the draw3d escape hatch).
+bool cf_mesh_has_vertex_attribute(CF_Mesh mesh, const char* name);
+int cf_mesh_instance_stride(CF_Mesh mesh);
+
 #endif // CF_GRAPHICS_INTERNAL_H

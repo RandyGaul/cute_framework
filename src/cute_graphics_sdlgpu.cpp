@@ -1570,6 +1570,21 @@ void cf_sdlgpu_mesh_append_attributes(CF_Mesh mesh_handle, const CF_VertexAttrib
 	}
 }
 
+bool cf_sdlgpu_mesh_has_vertex_attribute(CF_Mesh mesh_handle, const char* name)
+{
+	CF_MeshInternal* mesh = (CF_MeshInternal*)mesh_handle.id;
+	for (int i = 0; i < mesh->attribute_count; ++i) {
+		if (!CF_STRCMP(mesh->attributes[i].name, name)) return true;
+	}
+	return false;
+}
+
+int cf_sdlgpu_mesh_instance_stride(CF_Mesh mesh_handle)
+{
+	CF_MeshInternal* mesh = (CF_MeshInternal*)mesh_handle.id;
+	return mesh->instances.stride;
+}
+
 void cf_sdlgpu_mesh_set_instance_buffer(CF_Mesh mesh_handle, int instance_buffer_size_in_bytes, int instance_stride)
 {
 	CF_MeshInternal* mesh = (CF_MeshInternal*)mesh_handle.id;

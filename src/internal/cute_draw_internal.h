@@ -220,6 +220,9 @@ struct CF_Command
 	const Cute::Array<BatchGeometry>* geoms_ref = NULL;
 	CF_M3x2 replay_mvp;
 	float replay_aa_scale = 1.0f;
+	// 3d mesh submission payload (cf_draw3d_mesh), owned by this command and freed via
+	// cf_draw3d_free_cmd when the command is destroyed. See cute_draw3d.cpp.
+	struct CF_MeshCmd3d* mesh3d = NULL;
 };
 
 // Pushes a sprite/text atlas entry whose geometry was just appended via s_push_geom().
@@ -401,6 +404,14 @@ struct CF_DrawListData
 
 void cf_make_draw();
 void cf_destroy_draw();
+
+// 3d mesh submission layer (cute_draw3d.cpp). Made/destroyed inside cf_make_draw and
+// cf_destroy_draw; cf_draw3d_process renders one mesh command from s_process_command after
+// pending 2d geometry has flushed; cf_draw3d_free_cmd releases a command's mesh payload.
+void cf_make_draw3d();
+void cf_destroy_draw3d();
+void cf_draw3d_process(CF_Command* cmd, CF_Canvas canvas, bool clear);
+void cf_draw3d_free_cmd(CF_Command* cmd);
 
 // We slice up a 64-bit int into lo + hi ranges to map where we can fetch pixels
 // from. This slices up the 64-bit range into 16 unique range. The ranges are inclusive.

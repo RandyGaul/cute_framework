@@ -913,6 +913,9 @@ void cf_make_draw()
 	// AtlasCacheer.
 	s_init_atlas_cache(2048, 2048);
 
+	// 3d mesh submission layer.
+	cf_make_draw3d();
+
 	// Create samplers for filter mode switching.
 	s_draw->sampler_nearest = cf_create_draw_sampler(CF_FILTER_NEAREST);
 	s_draw->sampler_linear = cf_create_draw_sampler(CF_FILTER_LINEAR);
@@ -971,6 +974,7 @@ void cf_make_draw()
 
 void cf_destroy_draw()
 {
+	cf_destroy_draw3d();
 	if (s_draw->blit_init) {
 		cf_destroy_mesh(s_draw->blit_mesh);
 	}
@@ -4953,6 +4957,23 @@ static void s_process_command(CF_Canvas canvas, CF_Command* cmd, CF_Command* nex
 		return;
 	}
 
+	// Draw a 3d mesh command (cf_draw3d_mesh). Like canvas blits, meshes issue their own draw
+	// call: flush accumulated 2d geometry first so paint order holds across the boundary.
+	if (cmd->mesh3d) {
+		if (s_draw->need_flush) {
+			s_draw->need_flush = false;
+			if (!s_draw->delay_defrag) {
+				atlas_cache_defrag(&s_draw->atlas_cache);
+			}
+			atlas_cache_flush(&s_draw->atlas_cache);
+			s_flush_pending_geoms();
+		}
+		cf_draw3d_process(cmd, canvas, clear && !s_draw->has_drawn_something);
+		clear = false; // Only clear `canvas` once.
+		s_draw->has_drawn_something = true;
+		return;
+	}
+
 	// Collate the drawable items: all geometry appends to the flush-ordered stream;
 	// sprites/text additionally push a small atlas entry to the atlas_cache whose seq
 	// is rebased to index the stream (commands were layer-sorted, so the rebase
@@ -5032,7 +5053,7 @@ void cf_render_layers_to(CF_Canvas canvas, int layer_lo, int layer_hi, bool clea
 		int next_draw_layer = 0;
 		for (int i = s_draw->cmds.count() - 1; i >= 0; i--) {
 			CF_Command& cmd = s_draw->cmds[i];
-			if (cmd.geoms.count() || cmd.geoms_ref || cmd.is_canvas) {
+			if (cmd.geoms.count() || cmd.geoms_ref || cmd.is_canvas || cmd.mesh3d) {
 				next_draw_layer = cmd.layer;
 			} else {
 				cmd.layer = next_draw_layer;
@@ -5077,6 +5098,7 @@ void cf_render_layers_to(CF_Canvas canvas, int layer_lo, int layer_hi, bool clea
 	// Remove commands that were processed.
 	for (int i = 0; i < s_draw->cmds.size();) {
 		if (s_draw->cmds[i].processed) {
+			cf_draw3d_free_cmd(&s_draw->cmds[i]);
 			s_draw->cmds.unordered_remove(i);
 		} else {
 			++i;

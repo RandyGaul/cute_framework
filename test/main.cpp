@@ -50,6 +50,7 @@ TEST_SUITE(test_mrt);
 TEST_SUITE(test_texture_types);
 TEST_SUITE(test_shadow_sampling);
 TEST_SUITE(test_instancing);
+TEST_SUITE(test_draw3d);
 TEST_SUITE(test_math);
 TEST_SUITE(test_math3d);
 extern "C" {
@@ -106,6 +107,7 @@ int main(int argc, char* argv[])
 	RUN_TRACED(test_texture_types);
 	RUN_TRACED(test_shadow_sampling);
 	RUN_TRACED(test_instancing);
+	RUN_TRACED(test_draw3d);
 	RUN_TRACED(test_math);
 	RUN_TRACED(test_math_c);
 	RUN_TRACED(test_math3d);

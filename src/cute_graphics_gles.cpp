@@ -1353,6 +1353,21 @@ void cf_gles_mesh_append_attributes(CF_Mesh mesh_handle, const CF_VertexAttribut
 	}
 }
 
+bool cf_gles_mesh_has_vertex_attribute(CF_Mesh mh, const char* name)
+{
+	auto* m = (CF_GL_Mesh*)(uintptr_t)mh.id;
+	for (int i = 0; i < m->attribute_count; ++i) {
+		if (!CF_STRCMP(m->attributes[i].name, name)) return true;
+	}
+	return false;
+}
+
+int cf_gles_mesh_instance_stride(CF_Mesh mh)
+{
+	auto* m = (CF_GL_Mesh*)(uintptr_t)mh.id;
+	return m->instance.stride;
+}
+
 void cf_gles_mesh_set_instance_buffer(CF_Mesh mh, int instance_buffer_size_in_bytes, int instance_stride)
 {
 	auto* m = (CF_GL_Mesh*)(uintptr_t)mh.id;
