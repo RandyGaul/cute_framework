@@ -214,12 +214,15 @@ static void s_record_city(CF_Mesh cube)
 	for (int i = 0; i < CITY_N; ++i) {
 		for (int j = 0; j < CITY_N; ++j) {
 			if (cf_rnd_range_float(&rnd, 0, 1) < 0.08f) continue; // Plaza.
-			float x = (i - CITY_N * 0.5f) * CITY_SPACING + cf_rnd_range_float(&rnd, -0.4f, 0.4f);
-			float z = (j - CITY_N * 0.5f) * CITY_SPACING + cf_rnd_range_float(&rnd, -0.4f, 0.4f);
+			// Footprint plus jitter always fits the cell: max half-extent 1.25 + 0.35 of
+			// jitter leaves a gap between neighbors, so facades never interpenetrate and
+			// z-fight (two coincident walls both drawing window lights shimmer badly).
+			float x = (i - CITY_N * 0.5f) * CITY_SPACING + cf_rnd_range_float(&rnd, -0.35f, 0.35f);
+			float z = (j - CITY_N * 0.5f) * CITY_SPACING + cf_rnd_range_float(&rnd, -0.35f, 0.35f);
 			float downtown = cf_max(0.0f, 1.0f - CF_SQRTF(x * x + z * z) / CITY_EXTENT);
 			float h = cf_rnd_range_float(&rnd, 1.5f, 4.0f) + downtown * downtown * cf_rnd_range_float(&rnd, 0, 34.0f);
-			float w = cf_rnd_range_float(&rnd, 0.8f, 1.4f);
-			float d = cf_rnd_range_float(&rnd, 0.8f, 1.4f);
+			float w = cf_rnd_range_float(&rnd, 0.7f, 1.25f);
+			float d = cf_rnd_range_float(&rnd, 0.7f, 1.25f);
 			float shade = cf_rnd_range_float(&rnd, 0.35f, 0.7f);
 			CF_V4 tint = cf_v4(
 				shade * cf_rnd_range_float(&rnd, 0.85f, 1.0f),
@@ -327,7 +330,7 @@ int main(int argc, char* argv[])
 		CF_V3 eye = s_fly_path(t);
 		CF_V3 ahead = s_fly_path(t + 6.0f);
 		CF_V3 look = cf_v3(ahead.x, ahead.y - 6.0f, ahead.z);
-		cf_draw3d_push_projection(cf_perspective(CF_PI / 3.2f, (float)w / (float)h, 0.5f, 900.0f));
+		cf_draw3d_push_projection(cf_perspective(CF_PI / 3.2f, (float)w / (float)h, 1.0f, 900.0f));
 		cf_draw3d_push_view(cf_look_at(eye, look, cf_v3(0, 1, 0)));
 		cf_draw_list(city_lit);
 		cf_draw3d_pop_view();
