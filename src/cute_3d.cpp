@@ -63,6 +63,11 @@ static const char* s_lit_fs =
 
 CF_Mesh cf_make_mesh_3d(const CF_Vertex3D* vertices, int vertex_count, const uint32_t* indices, int index_count)
 {
+	// A negative count would survive the backend's `if (vertex_buffer_size)` guard and then be
+	// cast to Uint32, asking the driver for a multi-gigabyte buffer.
+	CF_ASSERT(vertices);
+	CF_ASSERT(vertex_count > 0);
+
 	CF_VertexAttribute attrs[3] = { };
 	attrs[0].name = "in_pos";
 	attrs[0].format = CF_VERTEX_FORMAT_FLOAT3;
