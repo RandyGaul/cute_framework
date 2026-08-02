@@ -42,6 +42,7 @@ add_sample(blend_modes blend_modes.cpp)
 add_sample(vector_paths vector_paths.cpp)
 add_sample(draw_lists draw_lists.cpp)
 add_sample(draw3d draw3d.cpp)
+add_sample(pixel_3d pixel_3d.c)
 target_include_directories(mandala PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../src) # internal/cute_draw_internal.h for renderer toggles/stats.
 add_sample(tile_perf tile_perf.cpp)
 target_include_directories(tile_perf PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../src) # internal/cute_draw_internal.h for the tiled toggle.
@@ -111,6 +112,7 @@ if (EMSCRIPTEN)
 	# samples die before their first frame.
 	target_link_options(hrc PRIVATE --preload-file "${CMAKE_CURRENT_SOURCE_DIR}/hrc_data@/hrc_data")
 	target_link_options(hrc_gi PRIVATE --preload-file "${CMAKE_CURRENT_SOURCE_DIR}/hrc_gi_data@/hrc_gi_data")
+	target_link_options(pixel_3d PRIVATE --preload-file "${CMAKE_CURRENT_SOURCE_DIR}/pixel_3d_data@/pixel_3d_data")
 endif ()
 
 # Copy over some folders for certain samples.
@@ -124,4 +126,5 @@ add_custom_command(TARGET scratch PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${C
 add_custom_command(TARGET 9_slice PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/9_slice_data $<TARGET_FILE_DIR:9_slice>/9_slice_data)
 add_custom_command(TARGET hrc PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/hrc_data $<TARGET_FILE_DIR:hrc>/hrc_data)
 add_custom_command(TARGET hrc_gi PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/hrc_gi_data $<TARGET_FILE_DIR:hrc_gi>/hrc_gi_data)
+add_custom_command(TARGET pixel_3d PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/pixel_3d_data $<TARGET_FILE_DIR:pixel_3d>/pixel_3d_data)
 add_custom_command(TARGET customsprite PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/custom_sprite_data $<TARGET_FILE_DIR:customsprite>/custom_sprite_data)
