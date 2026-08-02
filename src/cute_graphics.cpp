@@ -23,6 +23,11 @@ using namespace Cute;
 
 static Map<const char*> s_compute_shader_paths;
 
+// Source paths for shaders made by cf_make_shader, so they can hot-reload like draw and compute
+// shaders already do. Draw and compute shaders each need only one path, hence the separate map.
+struct CF_GraphicsShaderPaths { const char* vertex_path; const char* fragment_path; };
+static Map<CF_GraphicsShaderPaths> s_graphics_shader_paths;
+
 static void s_shader_directory_recursive(CF_Path path)
 {
 	Array<CF_Path> dir = CF_Directory::enumerate(app->shader_directory + path);
@@ -104,6 +109,29 @@ static void s_shader_auto_reload(const char* changed_key)
 					cf_destroy_shader_internal(fresh_blit);
 				}
 			}
+		}
+	}
+
+	// Two-file graphics shaders. The stored paths are whatever the user passed to cf_make_shader,
+	// which is a full VFS path, while `changed_key` is relative to the shader directory -- so
+	// resolve the key to its full path and compare interned pointers.
+	{
+		const char* changed_full = NULL;
+		CF_ShaderFileInfo* info = app->shader_file_infos.try_find(sintern(changed_key));
+		if (info) changed_full = info->path;
+
+		Array<uint64_t> gs_ids;
+		int gn = s_graphics_shader_paths.count();
+		for (int i = 0; i < gn; ++i) {
+			CF_GraphicsShaderPaths p = s_graphics_shader_paths.items()[i];
+			bool hit = (changed_full && (p.vertex_path == changed_full || p.fragment_path == changed_full)) ||
+			           matches(p.vertex_path) || matches(p.fragment_path);
+			if (hit) gs_ids.add(s_graphics_shader_paths.keys()[i]);
+		}
+		// cf_make_shader mutates s_graphics_shader_paths, so reload only after collecting.
+		for (int i = 0; i < gs_ids.count(); ++i) {
+			CF_Shader old = { gs_ids[i] };
+			cf_shader_reload_from_files(&old);
 		}
 	}
 
@@ -458,6 +486,7 @@ void cf_unload_internal_shaders()
 void cf_destroy_shader(CF_Shader shader_handle)
 {
 	s_draw->shader_paths.remove(shader_handle.id);
+	s_graphics_shader_paths.remove(shader_handle.id);
 
 	// Draw shaders automatically have blit shaders generated, so clean that up as well,
 	// if it exists. See `cf_make_draw_shader`.
@@ -795,15 +824,50 @@ void cf_clear_depth_stencil(float depth, uint32_t stencil)
 
 CF_Shader cf_make_shader(const char* vertex_path, const char* fragment_path)
 {
-	// Make sure each file can be found.
 	char* vs = fs_read_entire_file_to_memory_and_nul_terminate(vertex_path);
 	char* fs = fs_read_entire_file_to_memory_and_nul_terminate(fragment_path);
-	CF_ASSERT(vs);
-	CF_ASSERT(fs);
+
+	// Report a missing file the same way a compile error is reported, rather than asserting.
+	// Hot reload fires on filesystem timestamps and will happily catch a file mid-write, and the
+	// whole point of reloading is that a bad edit leaves the old shader running instead of
+	// taking the app down.
+	if (!vs || !fs) {
+		s_shader_compile_error = String("Unable to read shader file: ") + (vs ? fragment_path : vertex_path);
+		fprintf(stderr, "%s\n", s_shader_compile_error.c_str());
+		if (s_shader_error_fn) s_shader_error_fn(s_shader_compile_error.c_str(), s_shader_error_udata);
+		if (vs) CF_FREE(vs);
+		if (fs) CF_FREE(fs);
+		CF_Shader result = { 0 };
+		return result;
+	}
+
 	CF_Shader shader = cf_make_shader_from_source(vs, fs);
 	CF_FREE(vs);
 	CF_FREE(fs);
+
+	if (shader.id) {
+		CF_GraphicsShaderPaths paths;
+		paths.vertex_path = sintern(vertex_path);
+		paths.fragment_path = sintern(fragment_path);
+		s_graphics_shader_paths.add(shader.id, paths);
+	}
 	return shader;
+}
+
+bool cf_shader_reload_from_files(CF_Shader* shader)
+{
+	if (!shader) return false;
+	CF_GraphicsShaderPaths* paths = s_graphics_shader_paths.try_find(shader->id);
+	if (!paths) return false;
+
+	CF_Shader fresh = cf_make_shader(paths->vertex_path, paths->fragment_path);
+	if (!fresh.id) return false; // Compile or read error; the caller's shader keeps working.
+
+	// Swap guts rather than handles, so every copy of this handle -- including ones already
+	// handed to a CF_Material -- keeps working.
+	cf_shader_swap_contents(*shader, fresh);
+	cf_destroy_shader(fresh);
+	return true;
 }
 
 CF_Shader cf_make_shader_from_source(const char* vertex_src, const char* fragment_src)

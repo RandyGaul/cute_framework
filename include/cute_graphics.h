@@ -842,6 +842,27 @@ CF_API void CF_CALL cf_shader_on_error(void (*on_error_fn)(const char* error_mes
 CF_API CF_Shader CF_CALL cf_make_shader(const char* vertex_path, const char* fragment_path);
 
 /**
+ * @function cf_shader_reload_from_files
+ * @category graphics
+ * @brief    Recompiles a shader made by `cf_make_shader` from its original vertex and fragment files.
+ * @param    shader  The shader to reload.
+ * @return   Returns true if the shader was rebuilt, false if it did not come from `cf_make_shader`
+ *           or if the rebuild failed.
+ * @remarks  On failure the existing shader keeps working and the reason is available from
+ *           `cf_shader_compile_error`, so a typo saved mid-edit does not blank the screen.
+ *
+ *           Unlike `cf_shader_reload`, which returns a fresh handle for draw shaders, this swaps the
+ *           shader's contents in place -- every copy of the handle stays valid, including ones
+ *           already handed to a `CF_Material`.
+ *
+ *           Shaders under `cf_shader_directory` reload automatically when their files change, so
+ *           this is only needed when driving reloads by hand from `cf_shader_on_changed` (which
+ *           turns the automatic path off).
+ * @related  cf_make_shader cf_shader_reload cf_compute_shader_reload cf_shader_directory cf_shader_on_changed cf_shader_compile_error
+ */
+CF_API bool CF_CALL cf_shader_reload_from_files(CF_Shader* shader);
+
+/**
  * @function cf_make_shader_from_source
  * @category graphics
  * @brief    Creates a shader from strings containing glsl source code.

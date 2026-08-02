@@ -42,6 +42,7 @@ TEST_SUITE(test_string);
 TEST_SUITE(test_json);
 TEST_SUITE(test_markups);
 TEST_SUITE(test_draw_tiled);
+TEST_SUITE(test_shader_reload);
 TEST_SUITE(test_shader_directory);
 TEST_SUITE(test_canvas_clear);
 TEST_SUITE(test_math);
@@ -90,6 +91,7 @@ int main(int argc, char* argv[])
 	RUN_TRACED(test_json);
 	RUN_TRACED(test_markups);
 	RUN_TRACED(test_draw_tiled);
+	RUN_TRACED(test_shader_reload);
 	RUN_TRACED(test_shader_directory);
 	RUN_TRACED(test_canvas_clear);
 	RUN_TRACED(test_math);
