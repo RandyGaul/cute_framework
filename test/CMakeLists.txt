@@ -17,6 +17,7 @@ set(CF_TEST_SRCS
 	test_json.cpp
 	test_markups.cpp
 	test_draw_tiled.cpp
+	test_graphics_3d.cpp
 	test_shader_reload.cpp
 	test_shader_directory.cpp
 	test_canvas_clear.cpp

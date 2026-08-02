@@ -677,6 +677,15 @@ CF_RenderState cf_render_state_defaults()
 	return state;
 }
 
+CF_RenderState cf_render_state_3d_defaults()
+{
+	CF_RenderState state = cf_render_state_defaults();
+	state.depth_write_enabled = true;
+	state.depth_compare = CF_COMPARE_FUNCTION_LESS_THAN;
+	state.cull_mode = CF_CULL_MODE_BACK;
+	return state;
+}
+
 CF_Material cf_make_material()
 {
 	CF_MaterialInternal* material = CF_NEW(CF_MaterialInternal);
