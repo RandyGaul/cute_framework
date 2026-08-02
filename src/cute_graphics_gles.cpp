@@ -180,6 +180,9 @@ struct CF_GL_Canvas
 	bool has_depth;
 	bool has_stencil;
 
+	// Rendering into a face/layer of a user-owned texture; the canvas does not own it.
+	bool attached;
+
 	// Depth as a sampleable texture instead of a renderbuffer, used when the canvas's
 	// depth target requests SAMPLER usage (shadow maps). Zero id when the renderbuffer
 	// path is in use.
@@ -1107,12 +1110,20 @@ CF_Canvas cf_gles_make_canvas(CF_CanvasParams params)
 	}
 
 	CF_GL_Canvas* c = (CF_GL_Canvas*)CF_CALLOC(sizeof(CF_GL_Canvas));
-	c->w = params.target.width;
-	c->h = params.target.height;
 	c->has_depth = false;
 	c->has_stencil = false;
 
-	// Color.
+	// Color: an owned 2D texture, or an attached face/layer of a user texture.
+	if (params.attach_target.id) {
+		CF_GL_Texture* attach = (CF_GL_Texture*)(uintptr_t)params.attach_target.id;
+		c->attached = true;
+		c->w = attach->w;
+		c->h = attach->h;
+		c->cf_color = params.attach_target;
+		c->color = attach->id;
+	} else {
+	c->w = params.target.width;
+	c->h = params.target.height;
 	CF_Texture color = cf_gles_make_texture(params.target);
 	c->cf_color = color;
 	if (!color.id) {
@@ -1120,12 +1131,13 @@ CF_Canvas cf_gles_make_canvas(CF_CanvasParams params)
 	return CF_Canvas{};
 	}
 	c->color = ((CF_GL_Texture*)(uintptr_t)color.id)->id;
+	}
 	c->target_count = target_count;
 	for (int i = 1; i < target_count; ++i) {
 		CF_Texture t = cf_gles_make_texture(params.targets[i]);
 		if (!t.id) {
 			for (int j = 1; j < i; ++j) cf_gles_destroy_texture(c->cf_colors_mrt[j]);
-			cf_gles_destroy_texture(color);
+			if (!c->attached) cf_gles_destroy_texture(c->cf_color);
 			CF_FREE(c);
 			return CF_Canvas{};
 		}
@@ -1142,14 +1154,14 @@ CF_Canvas cf_gles_make_canvas(CF_CanvasParams params)
 	if (params.depth_stencil_target.usage & CF_TEXTURE_USAGE_SAMPLER_BIT) {
 	c->cf_depth = cf_gles_make_texture(params.depth_stencil_target);
 	if (!c->cf_depth.id) {
-	cf_gles_destroy_texture(color);
+	if (!c->attached) cf_gles_destroy_texture(c->cf_color);
 	CF_FREE(c);
 	return CF_Canvas{};
 	}
 	} else {
 	c->depth = s_make_depth_renderbuffer(params.depth_stencil_target);
 	if (!c->depth) {
-	cf_gles_destroy_texture(color);
+	if (!c->attached) cf_gles_destroy_texture(c->cf_color);
 	CF_FREE(c);
 	return CF_Canvas{};
 	}
@@ -1158,7 +1170,20 @@ CF_Canvas cf_gles_make_canvas(CF_CanvasParams params)
 
 	glGenFramebuffers(1, &c->fbo);
 	s_bind_framebuffer(c->fbo);
+	if (c->attached) {
+		CF_GL_Texture* attach = (CF_GL_Texture*)(uintptr_t)params.attach_target.id;
+		if (attach->target == GL_TEXTURE_CUBE_MAP) {
+			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+				GL_TEXTURE_CUBE_MAP_POSITIVE_X + params.attach_layer, c->color, 0);
+		} else if (attach->target == GL_TEXTURE_2D) {
+			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, c->color, 0);
+		} else {
+			// 2D arrays and 3D textures attach by layer/slice.
+			glFramebufferTextureLayer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, c->color, 0, params.attach_layer);
+		}
+	} else {
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, c->color, 0);
+	}
 	for (int i = 1; i < target_count; ++i) {
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + i, GL_TEXTURE_2D, c->colors_mrt[i], 0);
 	}
@@ -1188,8 +1213,14 @@ void cf_gles_destroy_canvas(CF_Canvas ch)
 	CF_GL_Canvas* c = (CF_GL_Canvas*)(uintptr_t)ch.id;
 	if (c->depth) glDeleteRenderbuffers(1, &c->depth);
 	if (c->cf_depth.id) cf_gles_destroy_texture(c->cf_depth);
-	if (c->fbo) glDeleteFramebuffers(1, &c->fbo);
-	cf_gles_destroy_texture(c->cf_color);
+	if (c->fbo) {
+		// Deleting the currently bound framebuffer reverts GL's binding to zero; the
+		// bind cache must follow, or a new FBO that reuses this id is never truly
+		// bound and its attachments land on the default framebuffer.
+		if (g_ctx.fbo == c->fbo) g_ctx.fbo = 0;
+		glDeleteFramebuffers(1, &c->fbo);
+	}
+	if (!c->attached) cf_gles_destroy_texture(c->cf_color);
 	for (int i = 1; i < c->target_count; ++i) {
 		if (c->cf_colors_mrt[i].id) cf_gles_destroy_texture(c->cf_colors_mrt[i]);
 	}

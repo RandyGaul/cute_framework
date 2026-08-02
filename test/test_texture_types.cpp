@@ -178,8 +178,71 @@ TEST_CASE(test_texture_array_sample)
 	return true;
 }
 
+// Render INTO cube faces through attached canvases (the point-light shadow pattern),
+// then sample the cube to verify each face took its clear color.
+TEST_CASE(test_render_to_cube_face)
+{
+	int options = CF_APP_OPTIONS_HIDDEN_BIT | CF_APP_OPTIONS_NO_AUDIO_BIT;
+	const char* gles = getenv("CF_TEST_GLES");
+	if (gles && *gles == '1') options |= CF_APP_OPTIONS_GFX_OPENGL_BIT | CF_APP_OPTIONS_GFX_DEBUG_BIT;
+	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, W, H, options, NULL))) return true; // Headless CI: no display/GPU.
+
+	CF_TextureParams tp = cf_texture_defaults(32, 32);
+	tp.texture_type = CF_TEXTURE_TYPE_CUBE;
+	tp.usage |= CF_TEXTURE_USAGE_COLOR_TARGET_BIT;
+	CF_Texture cube = cf_make_texture(tp);
+	REQUIRE(cube.id);
+
+	// One canvas per face used; clear +X red and -Y green through them.
+	struct { int face; CF_Color color; } faces[2] = {
+		{ 0, cf_make_color_rgb_f(1.0f, 0, 0) },
+		{ 3, cf_make_color_rgb_f(0, 1.0f, 0) },
+	};
+	cf_app_update(NULL);
+	for (int i = 0; i < 2; ++i) {
+		CF_CanvasParams params = cf_canvas_defaults(32, 32);
+		params.attach_target = cube;
+		params.attach_layer = faces[i].face;
+		CF_Canvas canvas = cf_make_canvas(params);
+		REQUIRE(canvas.id);
+		cf_canvas_set_clear_color(canvas, faces[i].color);
+		cf_clear_canvas(canvas);
+		cf_destroy_canvas(canvas);
+	}
+	cf_app_draw_onto_screen(false);
+
+	// Sample the cube: +X must be red, -Y green.
+	CF_Shader shader = cf_make_shader_from_source(s_vs, s_cube_fs);
+	REQUIRE(shader.id);
+	CF_Mesh mesh = s_make_fullscreen_quad();
+	CF_Material material = cf_make_material();
+	CF_Canvas out = cf_make_canvas(cf_canvas_defaults(W, H));
+	CF_Pixel* px = (CF_Pixel*)cf_alloc(W * H * (int)sizeof(CF_Pixel));
+	cf_material_set_texture_fs(material, "u_cube", cube);
+
+	float dir[4] = { 1.0f, 0.0f, 0.0f, 0.0f };
+	cf_material_set_uniform_fs(material, "u_dir", dir, CF_UNIFORM_TYPE_FLOAT4, 1);
+	CF_Pixel c = s_draw_and_read(out, mesh, shader, material, px);
+	REQUIRE(c.colors.r > 200 && c.colors.g < 60);
+
+	float dir2[4] = { 0.0f, -1.0f, 0.0f, 0.0f };
+	cf_material_set_uniform_fs(material, "u_dir", dir2, CF_UNIFORM_TYPE_FLOAT4, 1);
+	c = s_draw_and_read(out, mesh, shader, material, px);
+	REQUIRE(c.colors.g > 200 && c.colors.r < 60);
+
+	cf_free(px);
+	cf_destroy_canvas(out);
+	cf_destroy_material(material);
+	cf_destroy_mesh(mesh);
+	cf_destroy_shader(shader);
+	cf_destroy_texture(cube);
+	cf_destroy_app();
+	return true;
+}
+
 TEST_SUITE(test_texture_types)
 {
 	RUN_TEST_CASE(test_cube_map_sample);
 	RUN_TEST_CASE(test_texture_array_sample);
+	RUN_TEST_CASE(test_render_to_cube_face);
 }

@@ -1351,6 +1351,18 @@ typedef struct CF_CanvasParams
 	   targets currently require `sample_count` of `CF_SAMPLE_COUNT_1`. */
 	int target_count;
 
+	/* @member Optional: render into one face/layer/slice of an existing cube, array, or 3D texture
+	   instead of creating a color target. The texture needs `CF_TEXTURE_USAGE_COLOR_TARGET_BIT`.
+	   The classic use is point-light shadows: make one cube texture, then six canvases attached to
+	   its faces, and render the scene once per face. The canvas does not own the texture --
+	   destroying the canvas leaves it alive, and `cf_canvas_get_target` returns it. Zero'd handle
+	   (the default) creates an owned 2D target as usual. */
+	CF_Texture attach_target;
+
+	/* @member Which face (0-5: +X, -X, +Y, -Y, +Z, -Z), array layer, or 3D slice of
+	   `attach_target` to render into. */
+	int attach_layer;
+
 	/* @member Defaults to false. If true enables a depth-stencil buffer attachment. Required for any
 	   depth or stencil testing: without it the depth fields of `CF_RenderState` are silently ignored,
 	   which for 3d looks like the far side of a model drawing over the near side. */
