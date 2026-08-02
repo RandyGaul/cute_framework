@@ -12,6 +12,7 @@
 #include "cute_math3d.h"
 #include "cute_graphics.h"
 #include "cute_draw.h"
+#include "cute_sprite.h"
 
 //--------------------------------------------------------------------------------------------------
 // C API
@@ -52,10 +53,11 @@
 //     layout (location = 8)  in vec4 in_model0;          // model transform, affine row 0
 //     layout (location = 9)  in vec4 in_model1;          // row 1
 //     layout (location = 10) in vec4 in_model2;          // row 2
-//     layout (location = 11) in vec4 in_nmat0;           // normal matrix row 0 (optional)
-//     layout (location = 12) in vec4 in_nmat1;           // row 1
-//     layout (location = 13) in vec4 in_nmat2;           // row 2
-//     layout (location = 14) in vec4 in_mesh_attributes; // cf_draw3d_push_mesh_attributes
+//     layout (location = 11) in vec4 in_uv_rect;         // cf_draw3d_push_texture's atlas sub-rect
+//     layout (location = 12) in vec4 in_nmat0;           // normal matrix row 0 (optional)
+//     layout (location = 13) in vec4 in_nmat1;           // row 1
+//     layout (location = 14) in vec4 in_nmat2;           // row 2
+//     layout (location = 15) in vec4 in_mesh_attributes; // cf_draw3d_push_mesh_attributes
 //
 //     layout (set = 1, binding = 0) uniform uniform_block {
 //         mat4 u_view_projection;                        // set by this layer from the camera stacks
@@ -381,6 +383,48 @@ CF_API void CF_CALL cf_draw3d_set_uniform_color(const char* name, CF_Color val);
 CF_API void CF_CALL cf_draw3d_set_texture(const char* name, CF_Texture texture);
 
 //--------------------------------------------------------------------------------------------------
+// Sprite-textured meshes. Meshes can be textured straight from CF's sprite/texture economy: the
+// image lives wherever the atlas compiler decides, the sub-rect rides the `in_uv_rect` instance
+// lane, and the shader samples `texture(u_image, mix(in_uv_rect.xy, in_uv_rect.zw, in_uv))`.
+// There is no atlas API to hold correctly -- no pages, rects or pinning -- and drawing meshes
+// together is itself the signal the atlas compiler uses to pack their images together, so draw
+// calls converge downward as it learns the scene. Baked draw lists store image ids and refresh
+// their uv_rect lanes only when the atlas reshuffles.
+//
+// Mesh UVs must lie in [0, 1]: hardware wrap cannot tile inside an atlas sub-rect. Meshes with
+// tiling UVs bind a standalone `CF_Texture` via `cf_draw3d_set_texture` instead.
+
+/**
+ * @function cf_draw3d_push_texture
+ * @category draw3d
+ * @brief    Textures subsequent mesh submissions with a sprite's current frame.
+ * @param    sprite  The sprite whose current frame supplies the image.
+ * @remarks  The image participates in CF's texture atlas exactly like 2d sprite drawing, so many
+ *           meshes with many different images still coalesce into few instanced draws -- and an
+ *           animated sprite animates on the mesh. The shader receives the atlas page as `u_image`
+ *           and the frame's sub-rect as `in_uv_rect`; mesh UVs must lie in [0, 1]. For tiling UVs
+ *           or hand-managed textures use `cf_draw3d_set_texture` instead.
+ * @related  cf_draw3d_push_texture cf_draw3d_pop_texture cf_draw3d_peek_texture cf_draw3d_set_texture cf_draw3d_mesh CF_Sprite
+ */
+CF_API void CF_CALL cf_draw3d_push_texture(const CF_Sprite* sprite);
+
+/**
+ * @function cf_draw3d_pop_texture
+ * @category draw3d
+ * @brief    Pops the last sprite texture; submissions revert to the previous one (or none).
+ * @related  cf_draw3d_push_texture cf_draw3d_pop_texture cf_draw3d_peek_texture
+ */
+CF_API void CF_CALL cf_draw3d_pop_texture(void);
+
+/**
+ * @function cf_draw3d_peek_texture
+ * @category draw3d
+ * @brief    Returns the current sprite used for texturing, or `NULL` when none is pushed.
+ * @related  cf_draw3d_push_texture cf_draw3d_pop_texture cf_draw3d_peek_texture
+ */
+CF_API const CF_Sprite* CF_CALL cf_draw3d_peek_texture(void);
+
+//--------------------------------------------------------------------------------------------------
 // Mesh attributes. One vec4 of per-submission data, delivered to the shader as
 // `in_mesh_attributes` -- per-mesh tint, random seed, uv offset, or whatever your shading wants.
 // The 3d member of the granularity family: `cf_draw_push_vertex_attributes` is per-vertex,
@@ -480,6 +524,9 @@ CF_INLINE void draw3d_set_uniform(const char* name, CF_M4x4 val) { cf_draw3d_set
 CF_INLINE void draw3d_set_uniform(const char* name, CF_Color val) { cf_draw3d_set_uniform_color(name, val); }
 CF_INLINE void draw3d_set_texture(const char* name, CF_Texture texture) { cf_draw3d_set_texture(name, texture); }
 
+CF_INLINE void draw3d_push_texture(const CF_Sprite* sprite) { cf_draw3d_push_texture(sprite); }
+CF_INLINE void draw3d_pop_texture() { cf_draw3d_pop_texture(); }
+CF_INLINE const CF_Sprite* draw3d_peek_texture() { return cf_draw3d_peek_texture(); }
 CF_INLINE void draw3d_push_mesh_attributes(CF_V4 attributes) { cf_draw3d_push_mesh_attributes(attributes); }
 CF_INLINE CF_V4 draw3d_pop_mesh_attributes() { return cf_draw3d_pop_mesh_attributes(); }
 CF_INLINE CF_V4 draw3d_peek_mesh_attributes() { return cf_draw3d_peek_mesh_attributes(); }
