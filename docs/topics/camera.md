@@ -118,3 +118,11 @@ cf_draw_box(cf_make_aabb(cf_v2(-5,-5),cf_v2(5,5)),1,0.5);
 ```
 
 The box will be drawn at `(50,0)` but will itself be rotated locally by 45 degrees.
+
+## 3D Cameras
+
+Everything on this page is the 2D camera, and it never affects 3D meshes. The
+[3D drawing layer](drawing_3d.md) has its own projection and view stacks
+(`cf_draw3d_push_projection` / `cf_draw3d_push_view`), fed by `cf_perspective`, `cf_ortho`,
+and `cf_look_at` from cute_math3d.h. The two camera systems are independent by design --
+your HUD's 2D camera can shake while the 3D world holds still, and vice versa.

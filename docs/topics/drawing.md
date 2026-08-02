@@ -414,3 +414,13 @@ Once done your custom shader will be able to apply itself to anything drawn thro
 ## Compiling Shaders
 
 While the above is all you need to get started with shaders, to learn more about shader compilation, refer to [Shader Compilation](../topics/shader_compilation.md).
+
+## Drawing in 3D
+
+Meshes have their own stack-based API in [cute_draw3d.h](drawing_3d.md), and it shares this
+command stream: `cf_draw_push_layer` orders meshes against sprites/shapes/text, draw lists
+record 3D submissions too, and `cf_render_to` flushes everything together. The rule for what
+carries over: state describing *where and when* a draw lands (layers, scissor, viewport, draw
+lists, render targets) is shared, while state describing *how pixels are produced* (colors,
+blends, shaders, uniforms, cameras) stays per-domain. See the [3D Drawing](drawing_3d.md)
+topic for the whole story.

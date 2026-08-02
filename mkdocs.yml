@@ -97,6 +97,7 @@ nav:
       - Game Loop and Time: topics/game_loop_and_time.md
       - File I/O: topics/file_io.md
       - Drawing: topics/drawing.md
+      - 3D Drawing: topics/drawing_3d.md
       - Debug/Tools UI: topics/dear_imgui.md
       - Allocators: topics/allocator.md
       - Android Builds: topics/android.md
@@ -132,7 +133,9 @@ nav:
       - Basic Instancing: samples/basicinstancing.md
       - Basic Shapes: samples/basicshapes.md
       - Basic Sprite: samples/basicsprite.md
+      - Billboards 3D: samples/billboards.md
       - Blend Modes: samples/blend_modes.md
+      - City 3D: samples/draw3d.md
       - Clay UI: samples/clay.md
       - Clay UI Animations: samples/clay_ui_animations.md
       - Custom Shapes: samples/custom_shapes.md
@@ -155,19 +158,23 @@ nav:
       - Mandala: samples/mandala.md
       - Metaballs: samples/metaballs.md
       - Noise: samples/noise.md
+      - OBJ Loading: samples/obj_loading.md
       - Outline (Stencil): samples/outline_stencil.md
       - Pivot: samples/pivot.md
+      - Pixel 3D: samples/pixel_3d.md
       - Platformer: samples/platformer.md
       - Polygon: samples/polygon.md
       - Rainbow Liquid: samples/rainbow_liquid.md
       - Recolor: samples/recolor.md
       - Shallow Water: samples/shallow_water.md
+      - Skinning 3D: samples/skinning.md
       - Sound Pan: samples/sound_pan.md
       - Space Shooter: samples/spaceshooter.md
       - Stencil Pie Chart: samples/stencil_pie_chart.md
       - Text Drawing: samples/textdrawing.md
       - Tile Performance: samples/tile_perf.md
       - Timestep: samples/timestep.md
+      - Transparency 3D: samples/transparency3d.md
       - Vector Paths: samples/vector_paths.md
       - Vector Text: samples/vector_text.md
       - Waves: samples/waves.md

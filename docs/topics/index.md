@@ -4,6 +4,7 @@ To learn about a specific area in Cute Framework visit one of these topic articl
 2. [Game Loop and Time](./game_loop_and_time.md)
 3. [File I/O](./file_io.md)
 3. [Drawing](./drawing.md)
+4. [3D Drawing](./drawing_3d.md)
 4. [Transforms](./camera.md)
 5. [Dear ImGui](./dear_imgui.md)
 

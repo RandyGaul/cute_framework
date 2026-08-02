@@ -341,15 +341,6 @@ CF renders through `SDL_Gpu`(https://wiki.libsdl.org/SDL3/CategoryGPU), a well-w
  *
  * If you want to draw sprites, lines/shapes, or text, see: cute_draw.h
  *
- * Quick list of unsupported features. CF's focus is on the 2D use case, so most of these features are
- * omit since they aren't super useful for 2D.
- *
- *     - Blend color constant
- *     - Multiple render targets (aka color/texture attachments)
- *     - Cube map
- *     - 3D textures
- *     - Texture arrays
- *
  * The basic flow of rendering a frame looks something like this:
  *
  *     for each canvas {
@@ -369,6 +360,8 @@ CF renders through `SDL_Gpu`(https://wiki.libsdl.org/SDL3/CategoryGPU), a well-w
  *     }
  */
 ```
+
+The old caveat list that used to live here (no multiple render targets, no cube maps, no 3D or array textures) is gone: the low level layer now carries the full 3D access inventory -- MRT, cube/3D/array textures with per-layer upload, depth-texture sampling with comparison samplers, and rendering into individual cube faces or array layers. On top of it sits [cute_draw3d.h](drawing_3d.md), an immediate-mode 3D submission layer sharing the 2D command stream, with the same access-not-policy philosophy: CF moves transforms and submissions, and every shading decision stays yours.
 
 The API is largely centered around constructing shaders [CF_Shader](https://randygaul.github.io/cute_framework/graphics/cf_make_shader), canvases ([CF_Canvas](https://randygaul.github.io/cute_framework/graphics/cf_make_canvas)), meshes ([CF_Mesh](https://randygaul.github.io/cute_framework/graphics/cf_make_mesh), materials ([CF_Material](https://randygaul.github.io/cute_framework/graphics/cf_make_material)), and textures ([CF_Texture](https://randygaul.github.io/cute_framework/graphics/cf_make_texture)). The shader itself is constructed originally from input GLSL 450, compiled by CF's own [cute_spirv.h](https://github.com/RandyGaul/cute_framework/blob/master/libraries/cute/cute_spirv.h) (more on that in the next section) straight to whatever the active backend consumes: SPIR-V for Vulkan, HLSL fed through the system's FXC for D3D12, MSL source for Metal, and GLSL ES 300 for the GLES backend -- no external cross-compilers involved.
 

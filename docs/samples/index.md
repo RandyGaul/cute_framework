@@ -58,6 +58,14 @@ Interactive samples demonstrating Cute Framework features. Click any card to pla
     [:octicons-arrow-right-24: Play](basicsprite.md)
 
 
+- **[Billboards 3D](billboards.md)**
+
+    ---
+
+    Sprite-textured camera-facing quads: cutout trees and additive fireflies through the texture atlas.
+
+    [:octicons-arrow-right-24: Play](billboards.md)
+
 - **[Blend Modes](blend_modes.md)**
 
     ---
@@ -66,6 +74,14 @@ Interactive samples demonstrating Cute Framework features. Click any card to pla
 
     [:octicons-arrow-right-24: Play](blend_modes.md)
 
+
+- **[City 3D](draw3d.md)**
+
+    ---
+
+    10,000 buildings in one baked draw list per pass, with a shadow-mapped sun, fog, and window lights.
+
+    [:octicons-arrow-right-24: Play](draw3d.md)
 
 - **[Clay UI](clay.md)**
 
@@ -265,6 +281,14 @@ Interactive samples demonstrating Cute Framework features. Click any card to pla
     [:octicons-arrow-right-24: Play](noise.md)
 
 
+- **[OBJ Loading](obj_loading.md)**
+
+    ---
+
+    A ~90 line OBJ parser feeding cf_make_mesh -- model formats are user space, and this is the whole cost.
+
+    [:octicons-arrow-right-24: Play](obj_loading.md)
+
 - **[Outline (Stencil)](outline_stencil.md)**
 
     ---
@@ -282,6 +306,14 @@ Interactive samples demonstrating Cute Framework features. Click any card to pla
 
     [:octicons-arrow-right-24: Play](pivot.md)
 
+
+- **[Pixel 3D](pixel_3d.md)**
+
+    ---
+
+    A multi-pass pixel-art 3D pipeline: shadow maps, a lit pass, a view-space g-buffer, and an edge-detect composite.
+
+    [:octicons-arrow-right-24: Play](pixel_3d.md)
 
 - **[Platformer](platformer.md)**
 
@@ -327,6 +359,14 @@ Interactive samples demonstrating Cute Framework features. Click any card to pla
 
     [:octicons-arrow-right-24: Play](shallow_water.md)
 
+
+- **[Skinning 3D](skinning.md)**
+
+    ---
+
+    GPU skinning with joint/weight attributes and a mat4 bone-palette uniform; sixty kelp strands in one instanced draw.
+
+    [:octicons-arrow-right-24: Play](skinning.md)
 
 - **[Sound Pan](sound_pan.md)**
 
@@ -381,6 +421,14 @@ Interactive samples demonstrating Cute Framework features. Click any card to pla
 
     [:octicons-arrow-right-24: Play](timestep.md)
 
+
+- **[Transparency 3D](transparency3d.md)**
+
+    ---
+
+    Sorted alpha blending done honestly -- opaque first, back-to-front translucents, and a toggle to watch it break.
+
+    [:octicons-arrow-right-24: Play](transparency3d.md)
 
 - **[Vector Paths](vector_paths.md)**
 
