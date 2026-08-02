@@ -32,6 +32,29 @@
 // drawing, `cf_render_to` flushes everything together, and `CF_DrawList` records 3d submissions
 // just like 2d ones (see the DRAW LISTS section below).
 //
+// WHAT CARRIES OVER FROM cute_draw.h
+//
+// One rule decides it: state describing WHERE and WHEN a draw lands (stream structure) is shared;
+// state describing HOW pixels are produced (shading) belongs to one domain or the other.
+//
+// Shared -- these cute_draw.h calls apply to mesh submissions too:
+//
+//     cf_draw_push_layer / pop / peek       Orders meshes against 2d drawing and each other.
+//     cf_draw_push_scissor / pop / peek     Captured per submission, like everything else.
+//     cf_draw_push_viewport / pop / peek
+//     cf_make_draw_list, cf_draw_list_begin / end, cf_draw_list      Records + bakes meshes.
+//     cf_render_to, cf_render_layers_to, cf_app_draw_onto_screen     The flush.
+//
+// Everything else in cute_draw.h is 2d-geometry-only: colors, blend modes, filter, alpha discard,
+// shape antialiasing, tri/vertex attributes, text state, and the 2d camera never touch meshes.
+// Four concepts exist on BOTH sides as parallel stacks with zero crossover -- the 2d and 3d
+// versions are independent by design, and pushing one never affects the other:
+//
+//     cf_draw_push_shader        vs  cf_draw3d_push_shader
+//     cf_draw_push_render_state  vs  cf_draw3d_push_render_state
+//     cf_draw_set_uniform/_texture  vs  cf_draw3d_set_uniform/_texture
+//     cf_draw_push (2d camera)   vs  cf_draw3d_push (3d transform)
+//
 // Instancing is automatic. Consecutive submissions of the same mesh under the same shader, render
 // state, textures and uniforms coalesce into a single instanced draw at flush -- drawing one rock
 // 500 times in a loop is one draw call, the same way 500 sprites are. You never ask for

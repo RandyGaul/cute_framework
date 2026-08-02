@@ -488,7 +488,8 @@ typedef struct CF_DrawList { uint64_t id; } CF_DrawList;
  * @function cf_make_draw_list
  * @category draw
  * @brief    Creates an empty draw list. Fill it with `cf_draw_list_begin`/`cf_draw_list_end`.
- * @related  CF_DrawList cf_make_draw_list cf_draw_list_begin cf_draw_list_end cf_draw_list cf_destroy_draw_list
+ * @remarks  Draw lists record 3d mesh submissions (`cf_draw3d_mesh`) alongside 2d drawing; mesh recordings additionally bake into instanced draws -- see the DRAW LISTS section of cute_draw3d.h.
+ * @related  CF_DrawList cf_make_draw_list cf_draw_list_begin cf_draw_list_end cf_draw_list cf_destroy_draw_list cf_draw3d_mesh
  */
 CF_API CF_DrawList CF_CALL cf_make_draw_list(void);
 
@@ -705,7 +706,8 @@ CF_API void CF_CALL cf_draw_shape_group_end_stroked(float thickness);
  * @param    layer      The layer.
  * @remarks  Draw layers are sorted before rendering. Lower numbers are rendered first, while larger numbers are rendered last.
  *           This can be used to pick which sprites/shapes should draw on top of each other.
- * @related  cf_draw_push_layer cf_draw_pop_layer cf_draw_peek_layer
+ *           Layers are stream-structural state, so they also order 3d mesh submissions (`cf_draw3d_mesh`) against 2d drawing and each other.
+ * @related  cf_draw_push_layer cf_draw_pop_layer cf_draw_peek_layer cf_draw3d_mesh
  */
 CF_API void CF_CALL cf_draw_push_layer(int layer);
 
@@ -1533,7 +1535,8 @@ CF_API float CF_CALL cf_peek_text_stroke(void);
  * @category draw
  * @brief    Pushes a `CF_Rect` for the viewport to render within.
  * @param    viewport     The viewport.
- * @related  cf_draw_push_viewport cf_draw_pop_viewport cf_draw_peek_viewport
+ * @remarks  Applies to 3d mesh submissions (`cf_draw3d_mesh`) as well as 2d drawing.
+ * @related  cf_draw_push_viewport cf_draw_pop_viewport cf_draw_peek_viewport cf_draw3d_mesh
  */
 CF_API void CF_CALL cf_draw_push_viewport(CF_Rect viewport);
 
@@ -1558,7 +1561,8 @@ CF_API CF_Rect CF_CALL cf_draw_peek_viewport(void);
  * @category draw
  * @brief    Pushes a `CF_Rect` for the scissor to render within.
  * @param    scissor      The scissor box.
- * @related  cf_draw_push_scissor cf_draw_pop_scissor cf_draw_peek_scissor
+ * @remarks  Applies to 3d mesh submissions (`cf_draw3d_mesh`) as well as 2d drawing.
+ * @related  cf_draw_push_scissor cf_draw_pop_scissor cf_draw_peek_scissor cf_draw3d_mesh
  */
 CF_API void CF_CALL cf_draw_push_scissor(CF_Rect scissor);
 
@@ -1583,6 +1587,7 @@ CF_API CF_Rect CF_CALL cf_draw_peek_scissor(void);
  * @category draw
  * @brief    Pushes a `CF_RenderState` for controlling various rendering settings.
  * @param    render_state  Various types of rendering states.
+ * @remarks  Applies to 2d drawing only -- meshes use `cf_draw3d_push_render_state`.
  * @related  CF_RenderState cf_draw_push_render_state cf_draw_pop_render_state cf_draw_peek_render_state
  */
 CF_API void CF_CALL cf_draw_push_render_state(CF_RenderState render_state);
@@ -1694,6 +1699,7 @@ CF_API bool CF_CALL cf_shader_reload(CF_Shader* shader);
  * @function cf_draw_push_shader
  * @category draw
  * @brief    Pushes a custom shader.
+ * @remarks  This shader stack applies to 2d drawing only -- meshes use `cf_draw3d_push_shader`.
  * @related  CF_Shader cf_draw_push_shader cf_draw_pop_shader cf_draw_peek_shader
  */
 CF_API void CF_CALL cf_draw_push_shader(CF_Shader shader);
@@ -1869,6 +1875,7 @@ CF_API CF_DrawBlend CF_CALL cf_draw_peek_blend(void);
  * @param    name     The name of the uniform this texture will bind to.
  * @param    texture  The texture to bind.
  * @remarks  This is useful for custom shaders. See `cf_draw_push_shader`.
+ *           Applies to 2d drawing only -- meshes use `cf_draw3d_set_texture`.
  * @related  cf_draw_set_texture cf_draw_set_uniform cf_draw_set_uniform_int cf_draw_set_uniform_float cf_draw_set_uniform_v2 cf_draw_set_uniform_color
  */
 CF_API void CF_CALL cf_draw_set_texture(const char* name, CF_Texture texture);
@@ -1881,6 +1888,7 @@ CF_API void CF_CALL cf_draw_set_texture(const char* name, CF_Texture texture);
  * @param    data          A pointer to the data to send to the shader.
  * @param    type          The `CF_UniformType` of data to send.
  * @param    array_length  The number of elements of `CF_UniformType` to send.
+ * @remarks  Applies to 2d drawing only -- meshes use `cf_draw3d_set_uniform`.
  * @related  cf_draw_set_texture cf_draw_set_uniform cf_draw_set_uniform_int cf_draw_set_uniform_float cf_draw_set_uniform_v2 cf_draw_set_uniform_color
  */
 CF_API void CF_CALL cf_draw_set_uniform(const char* name, void* data, CF_UniformType type, int array_length);
