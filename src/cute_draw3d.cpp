@@ -13,9 +13,12 @@
 #include <cute_map.h>
 #include <cute_string.h>
 
+#include <cute_sprite.h>
+
 #include <internal/cute_alloc_internal.h>
 #include <internal/cute_draw_internal.h>
 #include <internal/cute_graphics_internal.h>
+#include <internal/cute_aseprite_cache_internal.h>
 
 using namespace Cute;
 
@@ -55,6 +58,16 @@ struct CF_TextureBinding3d
 	CF_Texture texture;
 };
 
+// One instance's sprite image, captured at submission (cf_draw3d_push_texture). The entry is
+// the atlas-cache template (image id, dimensions, local uv sub-rect); resolution to a page
+// texture + atlas uv rect happens per flush in cf_draw3d_process, which is also the usage
+// signal the atlas compiler packs by.
+struct CF_ImageRef3d
+{
+	atlas_cache_entry_t entry;
+	bool bordered; // Atlased images carry a 1px border (inset one texel); premade rects don't.
+};
+
 // The per-command payload for a 3d mesh draw, owned by its CF_Command (freed via
 // cf_draw3d_free_cmd when the command is destroyed). The command's own shader/render_state/
 // layer/scissor/viewport fields carry the rest of the captured state.
@@ -68,6 +81,12 @@ struct CF_MeshCmd3d
 	// Draw list replay: instances borrowed from the baked list, exactly like CF_Command's
 	// geoms_ref -- replays never deep-copy instance data. NULL for ordinary commands.
 	const Cute::Array<CF_MeshInstance3d>* instances_ref = NULL;
+	// Sprite texturing (cf_draw3d_push_texture): one image per instance, parallel to
+	// `instances`. Presence splits coalescing (it changes what the shader samples); the
+	// images themselves vary freely across instances.
+	bool sprite_textured = false;
+	Cute::Array<CF_ImageRef3d> image_refs;
+	const Cute::Array<CF_ImageRef3d>* image_refs_ref = NULL;
 	Cute::Array<CF_Uniform3d> uniforms; // data points into uniform_block.
 	void* uniform_block = NULL;         // One allocation holding every captured uniform's bytes.
 	                                    // NULL when the bytes are borrowed (replay payloads).
@@ -97,6 +116,14 @@ struct CF_Draw3d
 	uint64_t version = 1;
 
 	CF_Material material = { 0 };
+
+	// Sprite-texturing scratch, valid only inside cf_draw3d_process: the atlas report hook
+	// routes uv results here (parallel to the command's instances) while `resolving` is set,
+	// and `staged` holds uv-filled instance copies for the per-page uploads.
+	bool resolving = false;
+	Cute::Array<CF_PendingUV> resolve_uvs;
+	Cute::Array<CF_MeshInstance3d> staged;
+	Cute::Array<CF_MeshInstance3d> page;
 };
 
 static CF_Draw3d* s_draw3d;
@@ -287,6 +314,63 @@ static CF_MeshInstance3d s_instance()
 	return inst;
 }
 
+// Captures a sprite's current frame as an atlas entry template, mirroring cf_draw_sprite's
+// image-id resolution (asset sprites, blend layers, easy sprites, premade sub-images).
+static CF_ImageRef3d s_image_ref(const CF_Sprite* sprite)
+{
+	CF_ImageRef3d ref = { };
+	atlas_cache_entry_t& s = ref.entry;
+	s.minx = 0;
+	s.miny = 0;
+	s.maxx = 1;
+	s.maxy = 1;
+	ref.bordered = true;
+	if (sprite->id != CF_SPRITE_ID_INVALID) {
+		if (sprite->blend_index > 0) {
+			CF_SpriteAsset* asset = cf_sprite_get_asset(sprite->id);
+			const char* anim_name = sprite->animation_name;
+			const CF_Animation* anim = anim_name ? map_get(asset->animations, anim_name) : NULL;
+			int global_frame = sprite->frame_index + (anim ? anim->frame_offset : 0);
+			s.image_id = asset->blend_frame_ids[sprite->blend_index][global_frame];
+		} else {
+			s.image_id = sprite->_image_id;
+		}
+	} else if (sprite->easy_sprite_id >= CF_PREMADE_ID_RANGE_LO && sprite->easy_sprite_id <= CF_PREMADE_ID_RANGE_HI) {
+		CF_AtlasSubImage sub_image = s_draw->premade_sub_image_id_to_sub_image.find(sprite->easy_sprite_id);
+		s.minx = sub_image.minx;
+		s.maxx = sub_image.maxx;
+		s.miny = sub_image.miny;
+		s.maxy = sub_image.maxy;
+		s.image_id = sprite->easy_sprite_id;
+		s.texture_id = sub_image.image_id; // @JANK - Hijacked to store texture_id, matching cf_draw_sprite.
+		ref.bordered = false;
+	} else {
+		s.image_id = sprite->easy_sprite_id;
+	}
+	s.w = sprite->w;
+	s.h = sprite->h;
+	return ref;
+}
+
+// Routes atlas uv results to the mesh command being resolved in cf_draw3d_process (the 2d
+// batch callback calls this first and falls through to its own table otherwise).
+bool cf_draw3d_atlas_report(atlas_cache_entry_t* entries, int count, int texture_w, int texture_h)
+{
+	if (!s_draw3d || !s_draw3d->resolving) return false;
+	for (int i = 0; i < count; ++i) {
+		const atlas_cache_entry_t* s = entries + i;
+		CF_PendingUV& uv = s_draw3d->resolve_uvs[(int)s->udata];
+		uv.texture_id = s->texture_id;
+		uv.minx = s->minx;
+		uv.miny = s->miny;
+		uv.maxx = s->maxx;
+		uv.maxy = s->maxy;
+		uv.tex_w = texture_w;
+		uv.tex_h = texture_h;
+	}
+	return true;
+}
+
 // A mesh submission leaves a fresh empty command on top of the stream so subsequent 2d drawing
 // never lands on the mesh command (mirroring cf_draw_canvas). Coalescing therefore looks at the
 // command *under* the top, provided the top is still untouched.
@@ -311,12 +395,15 @@ void cf_draw3d_mesh(CF_Mesh mesh)
 	bool escape = !ours && cf_mesh_instance_stride(mesh) != 0;
 	CF_M4x4 vp = cf_mul_m4(s_draw3d->projections.last(), s_draw3d->views.last());
 	CF_RenderState rs = s_draw3d->render_states.last();
+	const CF_Sprite* sprite = s_draw3d->sprites.last();
+	bool sprite_textured = sprite && !escape;
 
 	if (!escape) {
 		CF_Command* under = s_coalesce_candidate();
 		if (under) {
 			CF_MeshCmd3d* mc = under->mesh3d;
 			if (mc->mesh.id == mesh.id && !mc->escape && !mc->instances_ref
+				&& mc->sprite_textured == sprite_textured
 				&& mc->state_version == s_draw3d->version
 				&& !CF_MEMCMP(&mc->vp, &vp, sizeof(vp))
 				&& under->shader.id == shader.id
@@ -325,6 +412,7 @@ void cf_draw3d_mesh(CF_Mesh mesh)
 				&& under->scissor == s_draw->scissors.last()
 				&& under->viewport == s_draw->viewports.last()) {
 				mc->instances.add(s_instance());
+				if (sprite_textured) mc->image_refs.add(s_image_ref(sprite));
 				return;
 			}
 		}
@@ -356,8 +444,12 @@ void cf_draw3d_mesh(CF_Mesh mesh)
 		}
 	}
 	mc->textures = s_draw3d->textures;
+	mc->sprite_textured = sprite_textured;
 
-	if (!escape) mc->instances.add(s_instance());
+	if (!escape) {
+		mc->instances.add(s_instance());
+		if (sprite_textured) mc->image_refs.add(s_image_ref(sprite));
+	}
 
 	// Keep subsequent 2d drawing off this command.
 	s_draw->add_cmd();
@@ -394,11 +486,47 @@ void cf_draw3d_process(CF_Command* cmd, CF_Canvas canvas, bool clear)
 	cf_apply_canvas(canvas, clear);
 
 	const Cute::Array<CF_MeshInstance3d>& instances = mc->instances_ref ? *mc->instances_ref : mc->instances;
+	bool textured = mc->sprite_textured && !mc->escape && instances.count();
+	if (textured) {
+		// Resolve every instance's image through the atlas. Pushing entries per flush is both
+		// the uv lookup and the usage signal: images drawn together pack into shared pages,
+		// so page splits (extra draws below) converge away as the atlas learns the scene.
+		const Cute::Array<CF_ImageRef3d>& image_refs = mc->image_refs_ref ? *mc->image_refs_ref : mc->image_refs;
+		CF_ASSERT(image_refs.count() == instances.count());
+		s_draw3d->resolve_uvs.clear();
+		s_draw3d->resolve_uvs.set_count(instances.count());
+		for (int i = 0; i < instances.count(); ++i) {
+			atlas_cache_entry_t e = image_refs[i].entry;
+			e.udata = (ATLAS_CACHE_U64)i;
+			atlas_cache_push(&s_draw->atlas_cache, e);
+		}
+		s_draw3d->resolving = true;
+		if (!s_draw->delay_defrag) {
+			atlas_cache_defrag(&s_draw->atlas_cache);
+		}
+		atlas_cache_flush(&s_draw->atlas_cache);
+		s_draw3d->resolving = false;
+
+		// Stage uv-filled instance copies. The rect packs as (minx, maxy, maxx, miny) so mesh
+		// uv (0, 0) samples the image's top-left, matching 2d sprites; atlased images inset
+		// one texel to skip the 1px border ring.
+		s_draw3d->staged.clear();
+		for (int i = 0; i < instances.count(); ++i) {
+			const CF_PendingUV& uv = s_draw3d->resolve_uvs[i];
+			CF_MeshInstance3d inst = instances[i];
+			float du = image_refs[i].bordered && uv.tex_w ? 1.0f / (float)uv.tex_w : 0;
+			float dv = image_refs[i].bordered && uv.tex_h ? 1.0f / (float)uv.tex_h : 0;
+			inst.uv_rect = cf_v4(uv.minx + du, uv.maxy - dv, uv.maxx - du, uv.miny + dv);
+			s_draw3d->staged.add(inst);
+		}
+	}
 	if (!mc->escape && instances.count()) {
 		if (!cf_mesh_has_vertex_attribute(mc->mesh, "in_model0")) {
 			s_augment_mesh(mc->mesh);
 		}
-		cf_mesh_update_instance_data(mc->mesh, (void*)instances.data(), instances.count());
+		if (!textured) {
+			cf_mesh_update_instance_data(mc->mesh, (void*)instances.data(), instances.count());
+		}
 	}
 	cf_apply_mesh(mc->mesh);
 
@@ -419,18 +547,46 @@ void cf_draw3d_process(CF_Command* cmd, CF_Canvas canvas, bool clear)
 
 	// 3d textures sample with their own sampler settings, not the 2d filter-mode override.
 	cf_set_sampler_override(NULL);
-	cf_apply_shader(cmd->shader, material);
 
 	CF_Rect viewport = cmd->viewport;
-	if (viewport.w >= 0 && viewport.h >= 0) {
-		cf_apply_viewport(viewport.x, viewport.y, viewport.w, viewport.h);
-	}
 	CF_Rect scissor = cmd->scissor;
-	if (scissor.w >= 0 && scissor.h >= 0) {
-		cf_apply_scissor(scissor.x, scissor.y, scissor.w, scissor.h);
+
+	if (!textured) {
+		cf_apply_shader(cmd->shader, material);
+		if (viewport.w >= 0 && viewport.h >= 0) cf_apply_viewport(viewport.x, viewport.y, viewport.w, viewport.h);
+		if (scissor.w >= 0 && scissor.h >= 0) cf_apply_scissor(scissor.x, scissor.y, scissor.w, scissor.h);
+		cf_draw_elements();
+		return;
 	}
 
-	cf_draw_elements();
+	// One instanced draw per atlas page the images resolved to, first-appearance order.
+	// Consuming entries by zeroing their texture_id keeps this allocation-free.
+	for (;;) {
+		uint64_t page = 0;
+		for (int i = 0; i < s_draw3d->resolve_uvs.count(); ++i) {
+			if (s_draw3d->resolve_uvs[i].texture_id) {
+				page = s_draw3d->resolve_uvs[i].texture_id;
+				break;
+			}
+		}
+		if (!page) break;
+		s_draw3d->page.clear();
+		for (int i = 0; i < s_draw3d->resolve_uvs.count(); ++i) {
+			if (s_draw3d->resolve_uvs[i].texture_id == page) {
+				s_draw3d->page.add(s_draw3d->staged[i]);
+				s_draw3d->resolve_uvs[i].texture_id = 0;
+			}
+		}
+		CF_Texture atlas;
+		atlas.id = page;
+		cf_material_set_texture_vs(material, "u_image", atlas);
+		cf_material_set_texture_fs(material, "u_image", atlas);
+		cf_mesh_update_instance_data(mc->mesh, s_draw3d->page.data(), s_draw3d->page.count());
+		cf_apply_shader(cmd->shader, material);
+		if (viewport.w >= 0 && viewport.h >= 0) cf_apply_viewport(viewport.x, viewport.y, viewport.w, viewport.h);
+		if (scissor.w >= 0 && scissor.h >= 0) cf_apply_scissor(scissor.x, scissor.y, scissor.w, scissor.h);
+		cf_draw_elements();
+	}
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -454,6 +610,7 @@ static bool s_bake_group_match(const CF_Command* a, const CF_Command* b)
 	const CF_MeshCmd3d* mb = b->mesh3d;
 	if (ma->mesh.id != mb->mesh.id) return false;
 	if (ma->escape || mb->escape) return false;
+	if (ma->sprite_textured != mb->sprite_textured) return false;
 	if (a->shader.id != b->shader.id) return false;
 	if (!(a->render_state == b->render_state)) return false;
 	if (a->layer != b->layer) return false;
@@ -482,6 +639,10 @@ static void s_own_payload(CF_MeshCmd3d* mc)
 	if (mc->instances_ref) {
 		mc->instances = *mc->instances_ref;
 		mc->instances_ref = NULL;
+	}
+	if (mc->image_refs_ref) {
+		mc->image_refs = *mc->image_refs_ref;
+		mc->image_refs_ref = NULL;
 	}
 	if (!mc->uniform_block && mc->uniforms.count()) {
 		int total = 0;
@@ -536,6 +697,9 @@ void cf_draw3d_list_end(CF_DrawListData* data)
 			for (int k = 0; k < mc->instances.count(); ++k) {
 				group->instances.add(mc->instances[k]);
 			}
+			for (int k = 0; k < mc->image_refs.count(); ++k) {
+				group->image_refs.add(mc->image_refs[k]);
+			}
 			cf_draw3d_free_cmd(&data->cmds[j]);
 		}
 	}
@@ -576,6 +740,8 @@ void cf_draw3d_replay_cmd(CF_Command* dst, const CF_Command* src)
 	CF_M4x4 vp = cf_mul_m4(s_draw3d->projections.last(), s_draw3d->views.last());
 	mc->vp = cf_mul_m4(vp, s_draw3d->transforms.last());
 	mc->instances_ref = &smc->instances;
+	mc->sprite_textured = smc->sprite_textured;
+	mc->image_refs_ref = smc->sprite_textured ? &smc->image_refs : NULL;
 	mc->uniforms = smc->uniforms; // Bytes stay in the list's uniform_block (borrowed).
 	mc->textures = smc->textures;
 	dst->mesh3d = mc;

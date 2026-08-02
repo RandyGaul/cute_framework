@@ -417,6 +417,9 @@ void cf_draw3d_free_cmd(CF_Command* cmd);
 // payload cleanup when a list's commands are cleared or destroyed.
 void cf_draw3d_list_begin();
 void cf_draw3d_list_end(struct CF_DrawListData* data);
+// Atlas uv routing for sprite-textured meshes: the 2d batch callback calls this first; it
+// consumes the report when a mesh command is mid-resolution in cf_draw3d_process.
+bool cf_draw3d_atlas_report(atlas_cache_entry_t* entries, int count, int texture_w, int texture_h);
 void cf_draw3d_replay_cmd(CF_Command* dst, const CF_Command* src);
 void cf_draw3d_free_list_cmds(struct CF_DrawListData* data);
 

@@ -795,6 +795,9 @@ static void s_draw_report_tiled(const BatchGeometry* geoms, const CF_PendingUV* 
 static void s_draw_report(atlas_cache_entry_t* entries, int count, int texture_w, int texture_h, void* udata)
 {
 	CF_UNUSED(udata);
+	// Sprite-textured mesh commands resolve their uvs through dedicated flushes; route those
+	// reports to the draw3d layer (see cf_draw3d_process).
+	if (cf_draw3d_atlas_report(entries, count, texture_w, texture_h)) return;
 	// Stash each entry's atlas uvs + texture into the per-flush uv table. Rendering
 	// happens after the flush (s_flush_pending_geoms): the stream renders in paint
 	// order, splitting into a new draw wherever the bound texture changes, so paint

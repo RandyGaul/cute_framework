@@ -509,6 +509,117 @@ TEST_CASE(test_draw3d_baked_normal_matrices)
 	return true;
 }
 
+// Sprite-textured meshes: two quads textured by two different easy sprites coalesce into one
+// submission group, resolve through the texture atlas, and sample their own image via the
+// in_uv_rect instance lane.
+static const char* s_sprite_vs =
+"layout (location = 0) in vec3 in_pos;\n"
+"layout (location = 1) in vec2 in_uv;\n"
+"layout (location = 8) in vec4 in_model0;\n"
+"layout (location = 9) in vec4 in_model1;\n"
+"layout (location = 10) in vec4 in_model2;\n"
+"layout (location = 11) in vec4 in_uv_rect;\n"
+"layout (location = 0) out vec2 v_uv;\n"
+"layout (set = 1, binding = 0) uniform uniform_block {\n"
+"    mat4 u_view_projection;\n"
+"};\n"
+"void main() {\n"
+"    vec4 p = vec4(in_pos, 1.0);\n"
+"    vec3 world = vec3(dot(in_model0, p), dot(in_model1, p), dot(in_model2, p));\n"
+"    v_uv = mix(in_uv_rect.xy, in_uv_rect.zw, in_uv);\n"
+"    gl_Position = u_view_projection * vec4(world, 1.0);\n"
+"}\n";
+
+static const char* s_sprite_fs =
+"layout (location = 0) in vec2 v_uv;\n"
+"layout (location = 0) out vec4 result;\n"
+"layout (set = 2, binding = 0) uniform sampler2D u_image;\n"
+"void main() { result = texture(u_image, v_uv); }\n";
+
+TEST_CASE(test_draw3d_sprite_textured)
+{
+	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, W, H, s_options(), NULL))) return true; // Headless CI: no display/GPU.
+
+	// A quad with uvs; uv (0, 0) samples the image's top-left, like 2d sprites.
+	struct Vertex { float x, y, z, u, v; };
+	Vertex verts[6] = {
+		{ -0.2f, -0.2f, 0, 0, 1 }, { 0.2f, -0.2f, 0, 1, 1 }, { 0.2f, 0.2f, 0, 1, 0 },
+		{ -0.2f, -0.2f, 0, 0, 1 }, { 0.2f, 0.2f, 0, 1, 0 }, { -0.2f, 0.2f, 0, 0, 0 },
+	};
+	CF_VertexAttribute attrs[2] = { };
+	attrs[0].name = "in_pos";
+	attrs[0].format = CF_VERTEX_FORMAT_FLOAT3;
+	attrs[0].offset = CF_OFFSET_OF(Vertex, x);
+	attrs[1].name = "in_uv";
+	attrs[1].format = CF_VERTEX_FORMAT_FLOAT2;
+	attrs[1].offset = CF_OFFSET_OF(Vertex, u);
+	CF_Mesh mesh = cf_make_mesh(sizeof(verts), attrs, 2, sizeof(Vertex));
+	cf_mesh_update_vertex_data(mesh, verts, 6);
+
+	// Two 8x8 solid-color sprites.
+	CF_Pixel red[64], green[64];
+	for (int i = 0; i < 64; ++i) {
+		red[i] = cf_make_pixel_rgba(255, 0, 0, 255);
+		green[i] = cf_make_pixel_rgba(0, 255, 0, 255);
+	}
+	CF_Sprite sprite_red = cf_make_easy_sprite_from_pixels(red, 8, 8);
+	CF_Sprite sprite_green = cf_make_easy_sprite_from_pixels(green, 8, 8);
+
+	CF_Shader shader = cf_make_shader_from_source(s_sprite_vs, s_sprite_fs);
+	REQUIRE(shader.id);
+	CF_CanvasParams params = cf_canvas_defaults(W, H);
+	params.depth_stencil_enable = true;
+	CF_Canvas canvas = cf_make_canvas(params);
+	CF_Pixel* px = (CF_Pixel*)cf_alloc(W * H * (int)sizeof(CF_Pixel));
+
+	cf_draw3d_push_projection(cf_ortho(-1, 1, -1, 1, -1, 1));
+	cf_draw3d_push_shader(shader);
+
+	// Two frames: images may land on separate pages first flush; the second frame draws from
+	// the settled atlas.
+	for (int frame = 0; frame < 2; ++frame) {
+		cf_app_update(NULL);
+		cf_draw3d_push();
+		cf_draw3d_translate(cf_v3(-0.5f, 0, 0));
+		cf_draw3d_push_texture(&sprite_red);
+		cf_draw3d_mesh(mesh);
+		cf_draw3d_pop_texture();
+		cf_draw3d_pop();
+
+		cf_draw3d_push();
+		cf_draw3d_translate(cf_v3(0.5f, 0, 0));
+		cf_draw3d_push_texture(&sprite_green);
+		cf_draw3d_mesh(mesh);
+		cf_draw3d_pop_texture();
+		cf_draw3d_pop();
+
+		cf_render_to(canvas, true);
+		cf_app_draw_onto_screen(false);
+	}
+
+	CF_Readback rb = cf_canvas_readback(canvas);
+	REQUIRE(rb.id);
+	while (!cf_readback_ready(rb)) {}
+	cf_readback_data(rb, px, W * H * (int)sizeof(CF_Pixel));
+	cf_destroy_readback(rb);
+
+	CF_Pixel left = s_pixel(px, 0.25f, 0.5f);
+	CF_Pixel right = s_pixel(px, 0.75f, 0.5f);
+	REQUIRE(left.colors.r > 200 && left.colors.g < 60);
+	REQUIRE(right.colors.g > 200 && right.colors.r < 60);
+
+	cf_draw3d_pop_shader();
+	cf_draw3d_pop_projection();
+	cf_free(px);
+	cf_destroy_canvas(canvas);
+	cf_destroy_shader(shader);
+	cf_destroy_mesh(mesh);
+	cf_easy_sprite_unload(&sprite_red);
+	cf_easy_sprite_unload(&sprite_green);
+	cf_destroy_app();
+	return true;
+}
+
 TEST_SUITE(test_draw3d)
 {
 	RUN_TEST_CASE(test_draw3d_transforms_and_coalescing);
@@ -517,4 +628,5 @@ TEST_SUITE(test_draw3d)
 	RUN_TEST_CASE(test_draw3d_escape_hatch);
 	RUN_TEST_CASE(test_draw3d_draw_list);
 	RUN_TEST_CASE(test_draw3d_baked_normal_matrices);
+	RUN_TEST_CASE(test_draw3d_sprite_textured);
 }
