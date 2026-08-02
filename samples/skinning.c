@@ -26,10 +26,10 @@
 #include <cute.h>
 #include <stdio.h>
 
-#define BONES 6
+#define BONES 8
 #define KELP_HEIGHT 2.6f
 #define BONE_SPACING (KELP_HEIGHT / (float)(BONES - 1))
-#define RINGS 12
+#define RINGS 26
 #define SIDES 6
 #define STRANDS 60
 
@@ -53,7 +53,7 @@ static const char* s_kelp_vs =
 "layout (location = 2) out float v_height;\n"
 "layout (set = 1, binding = 0) uniform uniform_block {\n"
 "    mat4 u_view_projection;\n"
-"    mat4 u_bones[6];\n"
+"    mat4 u_bones[8];\n"
 "};\n"
 "void main() {\n"
 "    // Blend transformed positions rather than matrices -- two mat*vec products beat\n"
