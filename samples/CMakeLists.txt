@@ -45,6 +45,7 @@ add_sample(draw3d draw3d.cpp)
 add_sample(pixel_3d pixel_3d.c)
 add_sample(skinning skinning.c)
 add_sample(billboards billboards.c)
+add_sample(shapes3d shapes3d.c)
 add_sample(transparency3d transparency3d.c)
 add_sample(obj_loading obj_loading.c)
 target_include_directories(mandala PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../src) # internal/cute_draw_internal.h for renderer toggles/stats.

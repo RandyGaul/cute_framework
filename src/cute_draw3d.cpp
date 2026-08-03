@@ -129,6 +129,18 @@ struct CF_Draw3d
 	// uv (0,0) at the image's top-left like 2d sprites).
 	CF_Mesh sprite_quad = { 0 };
 
+	// Shape drawing (see the shapes section): color stack plus lazily-built stroke quad,
+	// solid meshes, and built-in shaders, all created on first shape call.
+	Cute::Array<CF_Color> colors;
+	CF_Mesh stroke_quad = { 0 };
+	CF_Shader stroke_shd = { 0 };
+	CF_Shader solid_shd = { 0 };
+	CF_RenderState stroke_rs;
+	CF_Mesh cube_mesh = { 0 };
+	CF_Mesh sphere_mesh = { 0 };
+	CF_Mesh cone_mesh = { 0 };
+	Cute::Map<CF_Mesh> torus_meshes; // Keyed by quantized tube/major ratio.
+
 	// Sprite-texturing scratch, valid only inside cf_draw3d_process: the atlas report hook
 	// routes uv results here (parallel to the command's instances) while `resolving` is set,
 	// and `staged` holds uv-filled instance copies for the per-page uploads.
@@ -151,6 +163,7 @@ void cf_make_draw3d()
 	s_draw3d->render_states.add(cf_render_state_3d_defaults());
 	s_draw3d->mesh_attributes.add(cf_v4(0));
 	s_draw3d->sprites.add(NULL);
+	s_draw3d->colors.add(cf_color_white());
 	s_draw3d->material = cf_make_material();
 }
 
@@ -173,6 +186,17 @@ void cf_destroy_draw3d()
 		CF_FREE(s_draw3d->uniforms[i].data);
 	}
 	if (s_draw3d->sprite_quad.id) cf_destroy_mesh(s_draw3d->sprite_quad);
+	if (s_draw3d->stroke_quad.id) {
+		cf_destroy_mesh(s_draw3d->stroke_quad);
+		cf_destroy_shader(s_draw3d->stroke_shd);
+		cf_destroy_shader(s_draw3d->solid_shd);
+	}
+	if (s_draw3d->cube_mesh.id) cf_destroy_mesh(s_draw3d->cube_mesh);
+	if (s_draw3d->sphere_mesh.id) cf_destroy_mesh(s_draw3d->sphere_mesh);
+	if (s_draw3d->cone_mesh.id) cf_destroy_mesh(s_draw3d->cone_mesh);
+	for (int i = 0; i < s_draw3d->torus_meshes.count(); ++i) {
+		cf_destroy_mesh(s_draw3d->torus_meshes.items()[i]);
+	}
 	cf_destroy_material(s_draw3d->material);
 	s_draw3d->~CF_Draw3d();
 	CF_FREE(s_draw3d);
@@ -397,18 +421,17 @@ static CF_Command* s_coalesce_candidate()
 	return under.mesh3d ? &under : NULL;
 }
 
-void cf_draw3d_mesh(CF_Mesh mesh)
+// The shared submission tail behind cf_draw3d_mesh and the built-in shapes: coalesce or open
+// a new command carrying `inst` (already built -- from the transform stack for user meshes,
+// raw shape lanes for strokes).
+static void s_submit(CF_Mesh mesh, const CF_MeshInstance3d& inst, bool escape, const CF_Sprite* sprite)
 {
-	CF_ASSERT(mesh.id);
 	CF_Shader shader = s_draw3d->shaders.last();
 	CF_ASSERT(shader.id); // No default 3d shader -- push one first (see the shader contract in cute_draw3d.h).
 	if (!shader.id) return;
 
-	bool ours = cf_mesh_has_vertex_attribute(mesh, "in_model0");
-	bool escape = !ours && cf_mesh_instance_stride(mesh) != 0;
 	CF_M4x4 vp = cf_mul_m4(s_draw3d->projections.last(), s_draw3d->views.last());
 	CF_RenderState rs = s_draw3d->render_states.last();
-	const CF_Sprite* sprite = s_draw3d->sprites.last();
 	bool sprite_textured = sprite && !escape;
 
 	if (!escape) {
@@ -424,7 +447,7 @@ void cf_draw3d_mesh(CF_Mesh mesh)
 				&& under->layer == s_draw->layers.last()
 				&& under->scissor == s_draw->scissors.last()
 				&& under->viewport == s_draw->viewports.last()) {
-				mc->instances.add(s_instance());
+				mc->instances.add(inst);
 				if (sprite_textured) mc->image_refs.add(s_image_ref(sprite));
 				return;
 			}
@@ -460,12 +483,23 @@ void cf_draw3d_mesh(CF_Mesh mesh)
 	mc->sprite_textured = sprite_textured;
 
 	if (!escape) {
-		mc->instances.add(s_instance());
+		mc->instances.add(inst);
 		if (sprite_textured) mc->image_refs.add(s_image_ref(sprite));
 	}
 
 	// Keep subsequent 2d drawing off this command.
 	s_draw->add_cmd();
+}
+
+void cf_draw3d_mesh(CF_Mesh mesh)
+{
+	CF_ASSERT(mesh.id);
+	bool ours = cf_mesh_has_vertex_attribute(mesh, "in_model0");
+	bool escape = !ours && cf_mesh_instance_stride(mesh) != 0;
+	CF_MeshInstance3d inst;
+	if (!escape) inst = s_instance();
+	else CF_MEMSET(&inst, 0, sizeof(inst));
+	s_submit(mesh, inst, escape, s_draw3d->sprites.last());
 }
 
 // The shared quad + submission tail behind cf_draw3d_sprite and cf_draw3d_billboard. The
@@ -514,6 +548,518 @@ void cf_draw3d_billboard(const CF_Sprite* sprite, CF_V3 position)
 	basis.elements[4] = view.elements[1]; basis.elements[5] = view.elements[5]; basis.elements[6]  = view.elements[9];
 	basis.elements[8] = view.elements[2]; basis.elements[9] = view.elements[6]; basis.elements[10] = view.elements[10];
 	s_submit_sprite_quad(sprite, position, &basis);
+}
+
+//--------------------------------------------------------------------------------------------------
+// Shapes: SDF strokes and solid primitives, the 3d analog of cute_draw.h's shape drawing.
+//
+// Strokes (lines, polylines, rings, arcs) are instances of one shared corner quad under a
+// built-in shader: the vertex stage expands a camera-facing ribbon (or a flat disc quad)
+// padded by an anti-aliasing band, and the fragment stage evaluates the shape's signed
+// distance with a screen-space fade -- local AA that needs no MSAA, plus thin-line fading
+// (sub-pixel strokes clamp to half a pixel of width and fade alpha instead of shimmering).
+// Shape parameters ride the reserved instance lanes reinterpreted as raw data, so strokes
+// coalesce, layer-sort, and record into draw lists exactly like meshes -- a wireframe level
+// bakes into one persistent-buffer instanced draw.
+//
+// Solids (cube, sphere, cone, torus) are lazily-built unit meshes drawn through the ordinary
+// submission path under a built-in hemisphere-lit shader, colored by the color stack.
+
+static const char* s_stroke_vs =
+"layout (location = 0) in vec2 in_corner;\n"
+"layout (location = 8)  in vec4 in_model0;\n"          // Segment: a.xyz, half-thickness at a. Ring: center.xyz, radius.
+"layout (location = 9)  in vec4 in_model1;\n"          // Segment: b.xyz, half-thickness at b. Ring: normal.xyz, half-thickness.
+"layout (location = 11) in vec4 in_uv_rect;\n"         // Color (at a, for segments).
+"layout (location = 12) in vec4 in_nmat0;\n"           // Color at b (segments).
+"layout (location = 13) in vec4 in_nmat1;\n"           // x: kind (0 segment, 1 ring). y: angle0, z: sweep, w: fill flag.
+"layout (location = 0) out vec2 v_local;\n"
+"layout (location = 1) out vec4 v_seg;\n"              // Segment: len, ht0, ht1, ppw. Ring: radius, ht, ppw, fill.
+"layout (location = 2) out vec4 v_c0;\n"
+"layout (location = 3) out vec4 v_c1;\n"
+"layout (location = 4) out vec4 v_arc;\n"              // cos/sin of arc edge directions (rings).
+"layout (location = 5) out float v_kind;\n"
+"layout (set = 1, binding = 0) uniform uniform_block {\n"
+"    mat4 u_view_projection;\n"
+"    vec4 u_shape_eye;\n"
+"    vec4 u_shape_res;\n"
+"};\n"
+"void main() {\n"
+"    float kind = in_nmat1.x;\n"
+"    vec3 world;\n"
+"    if (kind < 0.5) {\n"
+"        vec3 a = in_model0.xyz;\n"
+"        vec3 b = in_model1.xyz;\n"
+"        vec3 d = b - a;\n"
+"        float len = length(d);\n"
+"        vec3 dir = len > 0.0001 ? d / len : vec3(1, 0, 0);\n"
+"        vec3 mid = (a + b) * 0.5;\n"
+"        vec3 across = normalize(cross(dir, u_shape_eye.xyz - mid));\n"
+"        vec4 cc = u_view_projection * vec4(mid, 1.0);\n"
+"        vec4 ca = u_view_projection * vec4(mid + across, 1.0);\n"
+"        vec2 ppx = (ca.xy / max(ca.w, 0.0001) - cc.xy / max(cc.w, 0.0001)) * u_shape_res.xy * 0.5;\n"
+"        float ppw = max(length(ppx), 0.0001);\n"
+"        float aa = 1.5 / ppw;\n"
+"        float htmax = max(in_model0.w, in_model1.w);\n"
+"        float ext = max(htmax, 0.5 / ppw) + aa;\n"
+"        float s = mix(-ext, len + ext, in_corner.x + 0.5);\n"
+"        float t = ext * in_corner.y * 2.0;\n"
+"        world = a + dir * s + across * t;\n"
+"        v_local = vec2(s, t);\n"
+"        v_seg = vec4(len, in_model0.w, in_model1.w, ppw);\n"
+"    } else {\n"
+"        vec3 center = in_model0.xyz;\n"
+"        vec3 n = normalize(in_model1.xyz);\n"
+"        vec3 h = abs(n.y) < 0.99 ? vec3(0, 1, 0) : vec3(1, 0, 0);\n"
+"        vec3 bx = normalize(cross(h, n));\n"
+"        vec3 by = cross(n, bx);\n"
+"        vec4 cc = u_view_projection * vec4(center, 1.0);\n"
+"        vec4 ca = u_view_projection * vec4(center + bx, 1.0);\n"
+"        vec2 ppx = (ca.xy / max(ca.w, 0.0001) - cc.xy / max(cc.w, 0.0001)) * u_shape_res.xy * 0.5;\n"
+"        float ppw = max(length(ppx), 0.0001);\n"
+"        float aa = 1.5 / ppw;\n"
+"        float ext = in_model0.w + max(in_model1.w, 0.5 / ppw) + aa;\n"
+"        vec2 l = in_corner * 2.0 * ext;\n"
+"        world = center + bx * l.x + by * l.y;\n"
+"        v_local = l;\n"
+"        v_seg = vec4(in_model0.w, in_model1.w, ppw, in_nmat1.w);\n"
+"    }\n"
+"    float a0 = in_nmat1.y;\n"
+"    float a1 = in_nmat1.y + in_nmat1.z;\n"
+"    v_arc = vec4(cos(a0), sin(a0), cos(a1), sin(a1));\n"
+"    v_c0 = in_uv_rect;\n"
+"    v_c1 = in_nmat0;\n"
+"    v_kind = kind + (in_nmat1.z >= 6.28 ? 2.0 : 0.0);\n" // +2 marks a full ring (skip arc clipping).
+"    gl_Position = u_view_projection * vec4(world, 1.0);\n"
+"}\n";
+
+static const char* s_stroke_fs =
+"layout (location = 0) in vec2 v_local;\n"
+"layout (location = 1) in vec4 v_seg;\n"
+"layout (location = 2) in vec4 v_c0;\n"
+"layout (location = 3) in vec4 v_c1;\n"
+"layout (location = 4) in vec4 v_arc;\n"
+"layout (location = 5) in float v_kind;\n"
+"layout (location = 0) out vec4 result;\n"
+"void main() {\n"
+"    float d;\n"
+"    vec4 col;\n"
+"    float fade = 1.0;\n"
+"    float ppw;\n"
+"    if (v_kind < 0.5) {\n"
+"        float len = v_seg.x;\n"
+"        ppw = v_seg.w;\n"
+"        float sc = clamp(v_local.x, 0.0, len);\n"
+"        float f = len > 0.0001 ? sc / len : 0.0;\n"
+"        float ht = mix(v_seg.y, v_seg.z, f);\n"
+"        float ht_eff = max(ht, 0.5 / ppw);\n"
+"        fade = clamp(ht * ppw * 2.0, 0.0, 1.0);\n"
+"        d = length(vec2(v_local.x - sc, v_local.y)) - ht_eff;\n"
+"        col = mix(v_c0, v_c1, f);\n"
+"    } else {\n"
+"        float radius = v_seg.x;\n"
+"        float ht = v_seg.y;\n"
+"        ppw = v_seg.z;\n"
+"        col = v_c0;\n"
+"        if (v_seg.w > 0.5) {\n"
+"            d = length(v_local) - radius; // Filled disc: edge AA only.\n"
+"        } else {\n"
+"            float ht_eff = max(ht, 0.5 / ppw);\n"
+"            fade = clamp(ht * ppw * 2.0, 0.0, 1.0);\n"
+"            bool inside = true;\n"
+"            if (v_kind < 2.5) {\n"
+"                // Arc: half-plane containment against the edge directions (no atan needed).\n"
+"                vec2 e0 = v_arc.xy;\n"
+"                vec2 e1 = v_arc.zw;\n"
+"                float c0 = e0.x * v_local.y - e0.y * v_local.x;\n"
+"                float c1 = e1.x * v_local.y - e1.y * v_local.x;\n"
+"                bool wide = (e0.x * e1.y - e0.y * e1.x) < 0.0;\n"
+"                inside = wide ? (c0 >= 0.0 || c1 <= 0.0) : (c0 >= 0.0 && c1 <= 0.0);\n"
+"            }\n"
+"            if (inside) {\n"
+"                d = abs(length(v_local) - radius) - ht_eff;\n"
+"            } else {\n"
+"                vec2 p0 = v_arc.xy * radius;\n"
+"                vec2 p1 = v_arc.zw * radius;\n"
+"                d = min(length(v_local - p0), length(v_local - p1)) - ht_eff; // Round arc ends.\n"
+"            }\n"
+"        }\n"
+"    }\n"
+"    float alpha = clamp(0.5 - d * ppw, 0.0, 1.0) * fade * col.a;\n"
+"    result = vec4(col.rgb * alpha, alpha); // Premultiplied.\n"
+"}\n";
+
+static const char* s_solid_vs =
+"layout (location = 0) in vec3 in_pos;\n"
+"layout (location = 1) in vec3 in_normal;\n"
+"layout (location = 8)  in vec4 in_model0;\n"
+"layout (location = 9)  in vec4 in_model1;\n"
+"layout (location = 10) in vec4 in_model2;\n"
+"layout (location = 12) in vec4 in_nmat0;\n"
+"layout (location = 13) in vec4 in_nmat1;\n"
+"layout (location = 14) in vec4 in_nmat2;\n"
+"layout (location = 15) in vec4 in_mesh_attributes;\n"
+"layout (location = 0) out vec3 v_normal;\n"
+"layout (location = 1) out vec4 v_color;\n"
+"layout (set = 1, binding = 0) uniform uniform_block {\n"
+"    mat4 u_view_projection;\n"
+"};\n"
+"void main() {\n"
+"    vec4 p = vec4(in_pos, 1.0);\n"
+"    vec3 world = vec3(dot(in_model0, p), dot(in_model1, p), dot(in_model2, p));\n"
+"    v_normal = normalize(vec3(dot(in_nmat0.xyz, in_normal), dot(in_nmat1.xyz, in_normal), dot(in_nmat2.xyz, in_normal)));\n"
+"    v_color = in_mesh_attributes;\n"
+"    gl_Position = u_view_projection * vec4(world, 1.0);\n"
+"}\n";
+
+static const char* s_solid_fs =
+"layout (location = 0) in vec3 v_normal;\n"
+"layout (location = 1) in vec4 v_color;\n"
+"layout (location = 0) out vec4 result;\n"
+"void main() {\n"
+"    vec3 n = normalize(v_normal);\n"
+"    float key = max(dot(n, normalize(vec3(0.4, 0.75, 0.5))), 0.0);\n"
+"    float hemi = 0.5 + 0.5 * n.y;\n"
+"    result = vec4(v_color.rgb * (0.35 + 0.15 * hemi + 0.5 * key), v_color.a);\n"
+"}\n";
+
+// Lazily builds the stroke quad, solid meshes, and built-in shaders on first shape use.
+static void s_shapes_init()
+{
+	if (s_draw3d->stroke_quad.id) return;
+	CF_V2 corners[6] = { { -0.5f, -0.5f }, { 0.5f, -0.5f }, { 0.5f, 0.5f }, { -0.5f, -0.5f }, { 0.5f, 0.5f }, { -0.5f, 0.5f } };
+	CF_VertexAttribute cattr[1] = { };
+	cattr[0].name = "in_corner";
+	cattr[0].format = CF_VERTEX_FORMAT_FLOAT2;
+	cattr[0].offset = 0;
+	s_draw3d->stroke_quad = cf_make_mesh((int)sizeof(corners), cattr, 1, (int)sizeof(CF_V2));
+	cf_mesh_update_vertex_data(s_draw3d->stroke_quad, corners, 6);
+	s_draw3d->stroke_shd = cf_make_shader_from_source(s_stroke_vs, s_stroke_fs);
+	s_draw3d->solid_shd = cf_make_shader_from_source(s_solid_vs, s_solid_fs);
+
+	// Stroke render state: premultiplied blend, depth test but no writes, no culling. Strokes
+	// are anti-aliased and translucent-edged by construction, so they never own the depth
+	// buffer; solids use whatever render state the user has pushed (3d defaults work).
+	s_draw3d->stroke_rs = cf_render_state_3d_defaults();
+	s_draw3d->stroke_rs.cull_mode = CF_CULL_MODE_NONE;
+	s_draw3d->stroke_rs.depth_write_enabled = false;
+	s_draw3d->stroke_rs.blend.enabled = true;
+	s_draw3d->stroke_rs.blend.rgb_src_blend_factor = CF_BLENDFACTOR_ONE;
+	s_draw3d->stroke_rs.blend.rgb_dst_blend_factor = CF_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
+	s_draw3d->stroke_rs.blend.rgb_op = CF_BLEND_OP_ADD;
+	s_draw3d->stroke_rs.blend.alpha_src_blend_factor = CF_BLENDFACTOR_ONE;
+	s_draw3d->stroke_rs.blend.alpha_dst_blend_factor = CF_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
+	s_draw3d->stroke_rs.blend.alpha_op = CF_BLEND_OP_ADD;
+}
+
+// Camera info for the stroke vertex stage, refreshed whenever the view changes (set_uniform
+// dedups identical bytes, so this only bumps the coalescing version on real camera motion).
+static void s_shapes_set_eye()
+{
+	const CF_M4x4& v = s_draw3d->views.last();
+	// view = [R | t]; the camera's world position satisfies R*eye + t = 0 -> eye = -R^T t.
+	CF_V3 t = cf_v3(v.elements[12], v.elements[13], v.elements[14]);
+	CF_V4 eye = cf_v4(
+		-(v.elements[0] * t.x + v.elements[1] * t.y + v.elements[2] * t.z),
+		-(v.elements[4] * t.x + v.elements[5] * t.y + v.elements[6] * t.z),
+		-(v.elements[8] * t.x + v.elements[9] * t.y + v.elements[10] * t.z), 1.0f);
+	cf_draw3d_set_uniform("u_shape_eye", &eye, CF_UNIFORM_TYPE_FLOAT4, 1);
+}
+
+// Submits one stroke instance under the built-in stroke shader and render state. The current
+// transform stack has already been applied to the world-space inputs by the callers.
+static void s_submit_stroke(const CF_MeshInstance3d& inst)
+{
+	s_shapes_init();
+	s_shapes_set_eye();
+	cf_draw3d_push_shader(s_draw3d->stroke_shd);
+	cf_draw3d_push_render_state(s_draw3d->stroke_rs);
+	s_submit(s_draw3d->stroke_quad, inst, false, NULL);
+	cf_draw3d_pop_render_state();
+	cf_draw3d_pop_shader();
+}
+
+void cf_draw3d_push_color(CF_Color c) { s_draw3d->colors.add(c); }
+CF_Color cf_draw3d_pop_color() { if (s_draw3d->colors.count() > 1) return s_draw3d->colors.pop(); return s_draw3d->colors.last(); }
+CF_Color cf_draw3d_peek_color() { return s_draw3d->colors.last(); }
+
+static CF_INLINE CF_V4 s_color4() { CF_Color c = s_draw3d->colors.last(); return cf_v4(c.r, c.g, c.b, c.a); }
+
+void cf_draw3d_line2(CF_V3 p0, CF_V3 p1, float thickness0, float thickness1)
+{
+	CF_MeshInstance3d inst = { };
+	CF_V3 a = cf_draw3d_mul(p0);
+	CF_V3 b = cf_draw3d_mul(p1);
+	inst.model0 = cf_v4(a.x, a.y, a.z, thickness0 * 0.5f);
+	inst.model1 = cf_v4(b.x, b.y, b.z, thickness1 * 0.5f);
+	inst.uv_rect = s_color4();
+	inst.nmat0 = inst.uv_rect;
+	inst.nmat1 = cf_v4(0, 0, 0, 0);
+	s_submit_stroke(inst);
+}
+
+void cf_draw3d_line(CF_V3 p0, CF_V3 p1, float thickness) { cf_draw3d_line2(p0, p1, thickness, thickness); }
+
+void cf_draw3d_polyline(const CF_V3* points, int count, float thickness, bool loop)
+{
+	if (count < 2) return;
+	for (int i = 0; i < count - 1; ++i) cf_draw3d_line(points[i], points[i + 1], thickness);
+	if (loop) cf_draw3d_line(points[count - 1], points[0], thickness);
+}
+
+static void s_ring(CF_V3 center, CF_V3 normal, float radius, float half_thickness, float a0, float sweep, bool fill)
+{
+	CF_MeshInstance3d inst = { };
+	CF_V3 c = cf_draw3d_mul(center);
+	// Rotate the plane normal by the transform's upper 3x3 (no translation).
+	const CF_M4x4& m = s_draw3d->transforms.last();
+	CF_V3 n = cf_v3(
+		m.elements[0] * normal.x + m.elements[4] * normal.y + m.elements[8] * normal.z,
+		m.elements[1] * normal.x + m.elements[5] * normal.y + m.elements[9] * normal.z,
+		m.elements[2] * normal.x + m.elements[6] * normal.y + m.elements[10] * normal.z);
+	inst.model0 = cf_v4(c.x, c.y, c.z, radius);
+	inst.model1 = cf_v4(n.x, n.y, n.z, half_thickness);
+	inst.uv_rect = s_color4();
+	inst.nmat0 = inst.uv_rect;
+	inst.nmat1 = cf_v4(1.0f, a0, sweep, fill ? 1.0f : 0.0f);
+	s_submit_stroke(inst);
+}
+
+void cf_draw3d_circle(CF_V3 center, CF_V3 normal, float radius, float thickness)
+{
+	s_ring(center, normal, radius, thickness * 0.5f, 0, 7.0f, false);
+}
+
+void cf_draw3d_circle_fill(CF_V3 center, CF_V3 normal, float radius)
+{
+	s_ring(center, normal, radius, 0, 0, 7.0f, true);
+}
+
+void cf_draw3d_arc(CF_V3 center, CF_V3 normal, float radius, float angle0, float sweep, float thickness)
+{
+	s_ring(center, normal, radius, thickness * 0.5f, angle0, sweep, false);
+}
+
+void cf_draw3d_box_wire(CF_V3 center, CF_V3 half_extents, float thickness)
+{
+	CF_V3 c = center, e = half_extents;
+	CF_V3 v[8];
+	for (int i = 0; i < 8; ++i) {
+		v[i] = cf_v3(c.x + (i & 1 ? e.x : -e.x), c.y + (i & 2 ? e.y : -e.y), c.z + (i & 4 ? e.z : -e.z));
+	}
+	int edges[12][2] = { {0,1},{2,3},{4,5},{6,7}, {0,2},{1,3},{4,6},{5,7}, {0,4},{1,5},{2,6},{3,7} };
+	for (int i = 0; i < 12; ++i) cf_draw3d_line(v[edges[i][0]], v[edges[i][1]], thickness);
+}
+
+void cf_draw3d_axes(float length, float thickness)
+{
+	CF_Color colors[3] = { cf_make_color_rgb_f(0.9f, 0.2f, 0.25f), cf_make_color_rgb_f(0.3f, 0.85f, 0.3f), cf_make_color_rgb_f(0.25f, 0.5f, 0.95f) };
+	CF_V3 axes[3] = { cf_v3(length, 0, 0), cf_v3(0, length, 0), cf_v3(0, 0, length) };
+	for (int i = 0; i < 3; ++i) {
+		cf_draw3d_push_color(colors[i]);
+		cf_draw3d_line(cf_v3(0, 0, 0), axes[i], thickness);
+		cf_draw3d_pop_color();
+	}
+}
+
+void cf_draw3d_arrow(CF_V3 a, CF_V3 b, float thickness, float arrow_width)
+{
+	CF_V3 d = cf_sub_v3(b, a);
+	float len = cf_len_v3(d);
+	if (len < 0.0001f) return;
+	CF_V3 dir = cf_div_v3_f(d, len);
+	float head = arrow_width * 1.8f;
+	if (head > len) head = len;
+	CF_V3 neck = cf_add_v3(a, cf_mul_v3_f(dir, len - head));
+	cf_draw3d_line(a, neck, thickness);
+	cf_draw3d_cone(neck, b, arrow_width);
+}
+
+//--------------------------------------------------------------------------------------------------
+// Solid primitives: lazily-built unit meshes through the ordinary submission path.
+
+struct CF_SolidVertex { CF_V3 pos; CF_V3 n; };
+
+static CF_Mesh s_make_solid(const Cute::Array<CF_SolidVertex>& verts)
+{
+	CF_VertexAttribute attrs[2] = { };
+	attrs[0].name = "in_pos";
+	attrs[0].format = CF_VERTEX_FORMAT_FLOAT3;
+	attrs[0].offset = CF_OFFSET_OF(CF_SolidVertex, pos);
+	attrs[1].name = "in_normal";
+	attrs[1].format = CF_VERTEX_FORMAT_FLOAT3;
+	attrs[1].offset = CF_OFFSET_OF(CF_SolidVertex, n);
+	CF_Mesh m = cf_make_mesh(verts.count() * (int)sizeof(CF_SolidVertex), attrs, 2, (int)sizeof(CF_SolidVertex));
+	cf_mesh_update_vertex_data(m, (void*)verts.data(), verts.count());
+	return m;
+}
+
+// Column-vector basis + translation as a CF_M4x4 (column-major storage).
+static CF_M4x4 s_basis_m4(CF_V3 x, CF_V3 y, CF_V3 z, CF_V3 t)
+{
+	CF_M4x4 m = cf_m4_identity();
+	m.elements[0] = x.x; m.elements[1] = x.y; m.elements[2]  = x.z;
+	m.elements[4] = y.x; m.elements[5] = y.y; m.elements[6]  = y.z;
+	m.elements[8] = z.x; m.elements[9] = z.y; m.elements[10] = z.z;
+	m.elements[12] = t.x; m.elements[13] = t.y; m.elements[14] = t.z;
+	return m;
+}
+
+// Any orthonormal frame perpendicular to n (shared by rings, cones, and tori).
+static void s_perp_basis(CF_V3 n, CF_V3* bx, CF_V3* bz)
+{
+	CF_V3 h = CF_FABSF(n.y) < 0.99f ? cf_v3(0, 1, 0) : cf_v3(1, 0, 0);
+	*bx = cf_norm_v3(cf_cross_v3(h, n));
+	*bz = cf_cross_v3(n, *bx);
+}
+
+// Submits one solid instance: local placement composed under the transform stack, colored by
+// the color stack, under the built-in hemisphere-lit shader and the user's render state.
+static void s_submit_solid(CF_Mesh mesh, const CF_M4x4& local)
+{
+	s_shapes_init();
+	CF_M4x4 m = cf_mul_m4(s_draw3d->transforms.last(), local);
+	CF_MeshInstance3d inst;
+	inst.model0 = s_row(m, 0);
+	inst.model1 = s_row(m, 1);
+	inst.model2 = s_row(m, 2);
+	inst.uv_rect = cf_v4(0, 0, 1, 1);
+	// Normal matrix: the rotation with each column re-normalized, correct under per-axis scale
+	// (which is all the shape placements below ever produce).
+	CF_V3 c0 = cf_safe_norm_v3(cf_v3(m.elements[0], m.elements[1], m.elements[2]));
+	CF_V3 c1 = cf_safe_norm_v3(cf_v3(m.elements[4], m.elements[5], m.elements[6]));
+	CF_V3 c2 = cf_safe_norm_v3(cf_v3(m.elements[8], m.elements[9], m.elements[10]));
+	inst.nmat0 = cf_v4(c0.x, c1.x, c2.x, 0);
+	inst.nmat1 = cf_v4(c0.y, c1.y, c2.y, 0);
+	inst.nmat2 = cf_v4(c0.z, c1.z, c2.z, 0);
+	inst.mesh_attributes = s_color4();
+	cf_draw3d_push_shader(s_draw3d->solid_shd);
+	s_submit(mesh, inst, false, NULL);
+	cf_draw3d_pop_shader();
+}
+
+void cf_draw3d_cube(CF_V3 center, CF_V3 half_extents)
+{
+	s_shapes_init();
+	if (!s_draw3d->cube_mesh.id) {
+		Cute::Array<CF_SolidVertex> v;
+		// Unit cube, half-extent 1, CCW from outside.
+		for (int f = 0; f < 6; ++f) {
+			int axis = f >> 1;
+			float sign = (f & 1) ? -1.0f : 1.0f;
+			CF_V3 n = cf_v3(axis == 0 ? sign : 0, axis == 1 ? sign : 0, axis == 2 ? sign : 0);
+			CF_V3 u = cf_v3(n.y, n.z, n.x); // Perpendicular by rotation of components.
+			CF_V3 w = cf_cross_v3(n, u);
+			CF_V3 q[4] = {
+				cf_add_v3(n, cf_add_v3(cf_mul_v3_f(u, -1), cf_mul_v3_f(w, -1))),
+				cf_add_v3(n, cf_add_v3(cf_mul_v3_f(u,  1), cf_mul_v3_f(w, -1))),
+				cf_add_v3(n, cf_add_v3(cf_mul_v3_f(u,  1), cf_mul_v3_f(w,  1))),
+				cf_add_v3(n, cf_add_v3(cf_mul_v3_f(u, -1), cf_mul_v3_f(w,  1))),
+			};
+			int idx[6] = { 0, 1, 2, 0, 2, 3 };
+			for (int i = 0; i < 6; ++i) v.add({ q[idx[i]], n });
+		}
+		s_draw3d->cube_mesh = s_make_solid(v);
+	}
+	CF_M4x4 local = s_basis_m4(cf_v3(half_extents.x, 0, 0), cf_v3(0, half_extents.y, 0), cf_v3(0, 0, half_extents.z), center);
+	s_submit_solid(s_draw3d->cube_mesh, local);
+}
+
+void cf_draw3d_sphere(CF_V3 center, float radius)
+{
+	s_shapes_init();
+	if (!s_draw3d->sphere_mesh.id) {
+		Cute::Array<CF_SolidVertex> v;
+		const int STACKS = 16, SLICES = 24;
+		for (int i = 0; i < STACKS; ++i) {
+			float p0 = CF_PI * ((float)i / STACKS - 0.5f);
+			float p1 = CF_PI * ((float)(i + 1) / STACKS - 0.5f);
+			for (int j = 0; j < SLICES; ++j) {
+				float t0 = 2.0f * CF_PI * (float)j / SLICES;
+				float t1 = 2.0f * CF_PI * (float)(j + 1) / SLICES;
+				CF_V3 a = cf_v3(CF_COSF(p0) * CF_COSF(t0), CF_SINF(p0), CF_COSF(p0) * CF_SINF(t0));
+				CF_V3 b = cf_v3(CF_COSF(p0) * CF_COSF(t1), CF_SINF(p0), CF_COSF(p0) * CF_SINF(t1));
+				CF_V3 c = cf_v3(CF_COSF(p1) * CF_COSF(t1), CF_SINF(p1), CF_COSF(p1) * CF_SINF(t1));
+				CF_V3 d = cf_v3(CF_COSF(p1) * CF_COSF(t0), CF_SINF(p1), CF_COSF(p1) * CF_SINF(t0));
+				v.add({ a, a }); v.add({ c, c }); v.add({ b, b });
+				v.add({ a, a }); v.add({ d, d }); v.add({ c, c });
+			}
+		}
+		s_draw3d->sphere_mesh = s_make_solid(v);
+	}
+	CF_M4x4 local = s_basis_m4(cf_v3(radius, 0, 0), cf_v3(0, radius, 0), cf_v3(0, 0, radius), center);
+	s_submit_solid(s_draw3d->sphere_mesh, local);
+}
+
+void cf_draw3d_cone(CF_V3 base, CF_V3 tip, float radius)
+{
+	s_shapes_init();
+	if (!s_draw3d->cone_mesh.id) {
+		Cute::Array<CF_SolidVertex> v;
+		// Unit cone: base circle radius 1 at y = 0, tip at y = 1, smooth slant normals.
+		const int SLICES = 32;
+		for (int j = 0; j < SLICES; ++j) {
+			float t0 = 2.0f * CF_PI * (float)j / SLICES;
+			float t1 = 2.0f * CF_PI * (float)(j + 1) / SLICES;
+			float tm = (t0 + t1) * 0.5f;
+			CF_V3 b0 = cf_v3(CF_COSF(t0), 0, CF_SINF(t0));
+			CF_V3 b1 = cf_v3(CF_COSF(t1), 0, CF_SINF(t1));
+			CF_V3 n0 = cf_norm_v3(cf_v3(CF_COSF(t0), 1, CF_SINF(t0)));
+			CF_V3 n1 = cf_norm_v3(cf_v3(CF_COSF(t1), 1, CF_SINF(t1)));
+			CF_V3 nm = cf_norm_v3(cf_v3(CF_COSF(tm), 1, CF_SINF(tm)));
+			v.add({ b0, n0 }); v.add({ cf_v3(0, 1, 0), nm }); v.add({ b1, n1 });
+			// Base cap.
+			CF_V3 dn = cf_v3(0, -1, 0);
+			v.add({ b0, dn }); v.add({ b1, dn }); v.add({ cf_v3(0, 0, 0), dn });
+		}
+		s_draw3d->cone_mesh = s_make_solid(v);
+	}
+	CF_V3 axis = cf_sub_v3(tip, base);
+	if (cf_len_v3(axis) < 0.00001f) return;
+	CF_V3 bx, bz;
+	s_perp_basis(cf_norm_v3(axis), &bx, &bz);
+	CF_M4x4 local = s_basis_m4(cf_mul_v3_f(bx, radius), axis, cf_mul_v3_f(bz, radius), base);
+	s_submit_solid(s_draw3d->cone_mesh, local);
+}
+
+void cf_draw3d_torus(CF_V3 center, CF_V3 normal, float radius, float tube_radius)
+{
+	s_shapes_init();
+	// Tube/major ratio bakes into the mesh; cache one mesh per quantized ratio.
+	float ratio = cf_clamp(tube_radius / cf_max(radius, 0.00001f), 0.01f, 0.99f);
+	uint64_t key = (uint64_t)(ratio * 256.0f);
+	CF_Mesh* found = s_draw3d->torus_meshes.try_find(key);
+	CF_Mesh mesh = found ? *found : CF_Mesh { 0 };
+	if (!mesh.id) {
+		float r = (float)key / 256.0f;
+		Cute::Array<CF_SolidVertex> v;
+		const int MAJ = 32, MIN = 16;
+		for (int i = 0; i < MAJ; ++i) {
+			float a0 = 2.0f * CF_PI * (float)i / MAJ;
+			float a1 = 2.0f * CF_PI * (float)(i + 1) / MAJ;
+			for (int j = 0; j < MIN; ++j) {
+				float b0 = 2.0f * CF_PI * (float)j / MIN;
+				float b1 = 2.0f * CF_PI * (float)(j + 1) / MIN;
+				// Major angle around y, minor angle around the ring's local circle.
+				auto P = [&](float a, float b, CF_V3* n) {
+					CF_V3 ring = cf_v3(CF_COSF(a), 0, CF_SINF(a));
+					*n = cf_add_v3(cf_mul_v3_f(ring, CF_COSF(b)), cf_v3(0, CF_SINF(b), 0));
+					return cf_add_v3(ring, cf_mul_v3_f(*n, r));
+				};
+				CF_V3 na, nb, nc, nd;
+				CF_V3 pa = P(a0, b0, &na), pb = P(a1, b0, &nb), pc = P(a1, b1, &nc), pd = P(a0, b1, &nd);
+				v.add({ pa, na }); v.add({ pc, nc }); v.add({ pb, nb });
+				v.add({ pa, na }); v.add({ pd, nd }); v.add({ pc, nc });
+			}
+		}
+		mesh = s_make_solid(v);
+		s_draw3d->torus_meshes.insert(key, mesh);
+	}
+	CF_V3 n = cf_safe_norm_v3(normal);
+	if (cf_len_v3(n) == 0) n = cf_v3(0, 1, 0);
+	CF_V3 bx, bz;
+	s_perp_basis(n, &bx, &bz);
+	CF_M4x4 local = s_basis_m4(cf_mul_v3_f(bx, radius), cf_mul_v3_f(n, radius), cf_mul_v3_f(bz, radius), center);
+	s_submit_solid(mesh, local);
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -643,6 +1189,12 @@ void cf_draw3d_process(CF_Command* cmd, CF_Canvas canvas, bool clear)
 		cf_material_set_uniform_fs(material, u.name, u.data, u.type, u.array_length);
 	}
 	cf_material_set_uniform_vs(material, "u_view_projection", &mc->vp, CF_UNIFORM_TYPE_MAT4, 1);
+	// Canvas dimensions for the built-in stroke shader's pixel-density math; unmatched
+	// uniform names are ignored at bind time, so this is free for every other shader.
+	int canvas_w, canvas_h;
+	cf_current_canvas_size(&canvas_w, &canvas_h);
+	CF_V4 shape_res = cf_v4((float)canvas_w, (float)canvas_h, 0, 0);
+	cf_material_set_uniform_vs(material, "u_shape_res", &shape_res, CF_UNIFORM_TYPE_FLOAT4, 1);
 
 	// 3d textures sample with their own sampler settings, not the 2d filter-mode override.
 	cf_set_sampler_override(NULL);

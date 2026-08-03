@@ -543,6 +543,199 @@ CF_API void CF_CALL cf_draw3d_sprite(const CF_Sprite* sprite, CF_V3 position);
 CF_API void CF_CALL cf_draw3d_billboard(const CF_Sprite* sprite, CF_V3 position);
 
 //--------------------------------------------------------------------------------------------------
+// Shapes. The 3d analog of `cute_draw.h`'s shape drawing: debug lines, gizmos, and simple solid
+// primitives with no shader or mesh setup required. Strokes (lines, circles, arcs) render as
+// anti-aliased signed-distance ribbons -- smooth edges at any zoom without MSAA, and strokes
+// thinner than a pixel fade out instead of shimmering. Solids (cube, sphere, cone, torus) draw
+// with a simple built-in hemisphere light. All shapes respect the transform stack, the color
+// stack below, layers, and draw list recording, and consecutive strokes batch into a single
+// instanced draw.
+
+/**
+ * @function cf_draw3d_push_color
+ * @category draw3d
+ * @brief    Pushes a color for subsequent 3d shape drawing.
+ * @param    c  The color.
+ * @remarks  Applies to all `cf_draw3d_` shape functions (lines, circles, solids). Defaults to white.
+ * @related  cf_draw3d_pop_color cf_draw3d_peek_color cf_draw3d_line cf_draw3d_cube
+ */
+CF_API void CF_CALL cf_draw3d_push_color(CF_Color c);
+
+/**
+ * @function cf_draw3d_pop_color
+ * @category draw3d
+ * @brief    Pops and returns the last color pushed by `cf_draw3d_push_color`.
+ * @related  cf_draw3d_push_color cf_draw3d_peek_color
+ */
+CF_API CF_Color CF_CALL cf_draw3d_pop_color(void);
+
+/**
+ * @function cf_draw3d_peek_color
+ * @category draw3d
+ * @brief    Returns the current 3d shape color without popping it.
+ * @related  cf_draw3d_push_color cf_draw3d_pop_color
+ */
+CF_API CF_Color CF_CALL cf_draw3d_peek_color(void);
+
+/**
+ * @function cf_draw3d_line
+ * @category draw3d
+ * @brief    Draws an anti-aliased 3d line segment with round caps.
+ * @param    p0         The first endpoint.
+ * @param    p1         The second endpoint.
+ * @param    thickness  The line's width in world units.
+ * @remarks  Thickness is measured in world units, so lines get thinner with distance under a
+ *           perspective camera; lines thinner than a pixel fade out gracefully rather than
+ *           aliasing. Endpoints respect the transform stack (`cf_draw3d_push`).
+ * @related  cf_draw3d_line2 cf_draw3d_polyline cf_draw3d_arrow cf_draw3d_push_color cf_draw3d_box_wire
+ */
+CF_API void CF_CALL cf_draw3d_line(CF_V3 p0, CF_V3 p1, float thickness);
+
+/**
+ * @function cf_draw3d_line2
+ * @category draw3d
+ * @brief    Draws an anti-aliased 3d line segment with a different thickness at each end.
+ * @param    p0          The first endpoint.
+ * @param    p1          The second endpoint.
+ * @param    thickness0  Width at `p0` in world units.
+ * @param    thickness1  Width at `p1` in world units.
+ * @related  cf_draw3d_line cf_draw3d_polyline cf_draw3d_arrow
+ */
+CF_API void CF_CALL cf_draw3d_line2(CF_V3 p0, CF_V3 p1, float thickness0, float thickness1);
+
+/**
+ * @function cf_draw3d_polyline
+ * @category draw3d
+ * @brief    Draws connected anti-aliased line segments through a list of points.
+ * @param    points     Array of points.
+ * @param    count      Number of points.
+ * @param    thickness  The line's width in world units.
+ * @param    loop       True to connect the last point back to the first.
+ * @remarks  Segments join with round caps, which look correct at any join angle.
+ * @related  cf_draw3d_line cf_draw3d_box_wire cf_draw3d_push_color
+ */
+CF_API void CF_CALL cf_draw3d_polyline(const CF_V3* points, int count, float thickness, bool loop);
+
+/**
+ * @function cf_draw3d_arrow
+ * @category draw3d
+ * @brief    Draws a line from `a` to `b` capped with a solid cone arrowhead at `b`.
+ * @param    a            The tail.
+ * @param    b            The tip.
+ * @param    thickness    The shaft's width in world units.
+ * @param    arrow_width  The arrowhead's base radius in world units.
+ * @related  cf_draw3d_line cf_draw3d_axes cf_draw3d_cone
+ */
+CF_API void CF_CALL cf_draw3d_arrow(CF_V3 a, CF_V3 b, float thickness, float arrow_width);
+
+/**
+ * @function cf_draw3d_circle
+ * @category draw3d
+ * @brief    Draws an anti-aliased circle outline in 3d.
+ * @param    center     The circle's center.
+ * @param    normal     The plane's normal (need not be normalized).
+ * @param    radius     The circle's radius.
+ * @param    thickness  The stroke's width in world units.
+ * @related  cf_draw3d_circle_fill cf_draw3d_arc cf_draw3d_sphere
+ */
+CF_API void CF_CALL cf_draw3d_circle(CF_V3 center, CF_V3 normal, float radius, float thickness);
+
+/**
+ * @function cf_draw3d_circle_fill
+ * @category draw3d
+ * @brief    Draws an anti-aliased filled disc in 3d.
+ * @param    center  The disc's center.
+ * @param    normal  The plane's normal (need not be normalized).
+ * @param    radius  The disc's radius.
+ * @related  cf_draw3d_circle cf_draw3d_arc
+ */
+CF_API void CF_CALL cf_draw3d_circle_fill(CF_V3 center, CF_V3 normal, float radius);
+
+/**
+ * @function cf_draw3d_arc
+ * @category draw3d
+ * @brief    Draws an anti-aliased arc (a partial circle outline) with round ends.
+ * @param    center     The arc's center.
+ * @param    normal     The plane's normal (need not be normalized).
+ * @param    radius     The arc's radius.
+ * @param    angle0     Starting angle in radians, measured in the arc's plane.
+ * @param    sweep      Radians swept counter-clockwise from `angle0`. `CF_TAU` or more draws a full circle.
+ * @param    thickness  The stroke's width in world units.
+ * @related  cf_draw3d_circle cf_draw3d_circle_fill
+ */
+CF_API void CF_CALL cf_draw3d_arc(CF_V3 center, CF_V3 normal, float radius, float angle0, float sweep, float thickness);
+
+/**
+ * @function cf_draw3d_box_wire
+ * @category draw3d
+ * @brief    Draws the twelve edges of an axis-aligned box as anti-aliased lines.
+ * @param    center        The box's center.
+ * @param    half_extents  Half the box's size along each axis.
+ * @param    thickness     The stroke's width in world units.
+ * @remarks  Axis-aligned in local space -- push a rotation onto the transform stack for an
+ *           oriented box. The classic bounding-box debug visualization.
+ * @related  cf_draw3d_cube cf_draw3d_line cf_draw3d_push
+ */
+CF_API void CF_CALL cf_draw3d_box_wire(CF_V3 center, CF_V3 half_extents, float thickness);
+
+/**
+ * @function cf_draw3d_axes
+ * @category draw3d
+ * @brief    Draws x/y/z axis lines from the local origin, colored red/green/blue.
+ * @param    length     Each axis line's length in world units.
+ * @param    thickness  The stroke's width in world units.
+ * @remarks  Respects the transform stack, so pushing an object's transform first draws that
+ *           object's local frame -- the standard orientation gizmo.
+ * @related  cf_draw3d_arrow cf_draw3d_line cf_draw3d_push
+ */
+CF_API void CF_CALL cf_draw3d_axes(float length, float thickness);
+
+/**
+ * @function cf_draw3d_cube
+ * @category draw3d
+ * @brief    Draws a solid box lit by a simple built-in hemisphere light.
+ * @param    center        The box's center.
+ * @param    half_extents  Half the box's size along each axis.
+ * @remarks  Colored by `cf_draw3d_push_color` and drawn under the current render state (depth
+ *           testing on by default). Push a rotation onto the transform stack for an oriented box.
+ * @related  cf_draw3d_sphere cf_draw3d_cone cf_draw3d_torus cf_draw3d_box_wire cf_draw3d_push_color
+ */
+CF_API void CF_CALL cf_draw3d_cube(CF_V3 center, CF_V3 half_extents);
+
+/**
+ * @function cf_draw3d_sphere
+ * @category draw3d
+ * @brief    Draws a solid sphere lit by a simple built-in hemisphere light.
+ * @param    center  The sphere's center.
+ * @param    radius  The sphere's radius.
+ * @related  cf_draw3d_cube cf_draw3d_cone cf_draw3d_torus cf_draw3d_circle cf_draw3d_push_color
+ */
+CF_API void CF_CALL cf_draw3d_sphere(CF_V3 center, float radius);
+
+/**
+ * @function cf_draw3d_cone
+ * @category draw3d
+ * @brief    Draws a solid cone lit by a simple built-in hemisphere light.
+ * @param    base    The center of the cone's circular base.
+ * @param    tip     The cone's apex.
+ * @param    radius  The base's radius.
+ * @related  cf_draw3d_cube cf_draw3d_sphere cf_draw3d_torus cf_draw3d_arrow cf_draw3d_push_color
+ */
+CF_API void CF_CALL cf_draw3d_cone(CF_V3 base, CF_V3 tip, float radius);
+
+/**
+ * @function cf_draw3d_torus
+ * @category draw3d
+ * @brief    Draws a solid torus lit by a simple built-in hemisphere light.
+ * @param    center       The torus's center.
+ * @param    normal       The normal of the torus's plane (need not be normalized).
+ * @param    radius       The major radius, from the center to the middle of the tube.
+ * @param    tube_radius  The tube's radius.
+ * @related  cf_draw3d_cube cf_draw3d_sphere cf_draw3d_cone cf_draw3d_circle cf_draw3d_push_color
+ */
+CF_API void CF_CALL cf_draw3d_torus(CF_V3 center, CF_V3 normal, float radius, float tube_radius);
+
+//--------------------------------------------------------------------------------------------------
 // Projection helpers. These bridge the 3d camera stacks and the 2d draw API's world space --
 // the space `cf_draw_text` draws in and `cf_screen_to_world` converts mouse coordinates into.
 // Together they cover the two classic needs: labels over 3d objects, and mouse picking.
@@ -641,6 +834,22 @@ CF_INLINE CF_V4 draw3d_peek_mesh_attributes() { return cf_draw3d_peek_mesh_attri
 CF_INLINE void draw3d_mesh(CF_Mesh mesh) { cf_draw3d_mesh(mesh); }
 CF_INLINE void draw3d_sprite(const CF_Sprite* sprite, CF_V3 position) { cf_draw3d_sprite(sprite, position); }
 CF_INLINE void draw3d_billboard(const CF_Sprite* sprite, CF_V3 position) { cf_draw3d_billboard(sprite, position); }
+CF_INLINE void draw3d_push_color(CF_Color c) { cf_draw3d_push_color(c); }
+CF_INLINE CF_Color draw3d_pop_color() { return cf_draw3d_pop_color(); }
+CF_INLINE CF_Color draw3d_peek_color() { return cf_draw3d_peek_color(); }
+CF_INLINE void draw3d_line(CF_V3 p0, CF_V3 p1, float thickness) { cf_draw3d_line(p0, p1, thickness); }
+CF_INLINE void draw3d_line2(CF_V3 p0, CF_V3 p1, float thickness0, float thickness1) { cf_draw3d_line2(p0, p1, thickness0, thickness1); }
+CF_INLINE void draw3d_polyline(const CF_V3* points, int count, float thickness, bool loop) { cf_draw3d_polyline(points, count, thickness, loop); }
+CF_INLINE void draw3d_arrow(CF_V3 a, CF_V3 b, float thickness, float arrow_width) { cf_draw3d_arrow(a, b, thickness, arrow_width); }
+CF_INLINE void draw3d_circle(CF_V3 center, CF_V3 normal, float radius, float thickness) { cf_draw3d_circle(center, normal, radius, thickness); }
+CF_INLINE void draw3d_circle_fill(CF_V3 center, CF_V3 normal, float radius) { cf_draw3d_circle_fill(center, normal, radius); }
+CF_INLINE void draw3d_arc(CF_V3 center, CF_V3 normal, float radius, float angle0, float sweep, float thickness) { cf_draw3d_arc(center, normal, radius, angle0, sweep, thickness); }
+CF_INLINE void draw3d_box_wire(CF_V3 center, CF_V3 half_extents, float thickness) { cf_draw3d_box_wire(center, half_extents, thickness); }
+CF_INLINE void draw3d_axes(float length, float thickness) { cf_draw3d_axes(length, thickness); }
+CF_INLINE void draw3d_cube(CF_V3 center, CF_V3 half_extents) { cf_draw3d_cube(center, half_extents); }
+CF_INLINE void draw3d_sphere(CF_V3 center, float radius) { cf_draw3d_sphere(center, radius); }
+CF_INLINE void draw3d_cone(CF_V3 base, CF_V3 tip, float radius) { cf_draw3d_cone(base, tip, radius); }
+CF_INLINE void draw3d_torus(CF_V3 center, CF_V3 normal, float radius, float tube_radius) { cf_draw3d_torus(center, normal, radius, tube_radius); }
 CF_INLINE CF_V3 draw3d_project(CF_V3 world_position) { return cf_draw3d_project(world_position); }
 CF_INLINE void draw3d_unproject(CF_V2 point, CF_V3* origin_out, CF_V3* direction_out) { cf_draw3d_unproject(point, origin_out, direction_out); }
 

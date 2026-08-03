@@ -942,6 +942,72 @@ TEST_CASE(test_draw3d_msaa)
 	return true;
 }
 
+// Built-in SDF shapes: strokes (line, filled disc) and solids (cube, sphere) hit their pixels
+// under the built-in shaders, honoring the color stack, with no user shader pushed at all.
+TEST_CASE(test_draw3d_shapes)
+{
+	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, W, H, s_options(), NULL))) return true; // Headless CI: no display/GPU.
+
+	CF_CanvasParams params = cf_canvas_defaults(W, H);
+	params.depth_stencil_enable = true;
+	CF_Canvas canvas = cf_make_canvas(params);
+	CF_Pixel* px = (CF_Pixel*)cf_alloc(W * H * (int)sizeof(CF_Pixel));
+
+	cf_app_update(NULL);
+	cf_draw3d_push_projection(cf_ortho(-1, 1, -1, 1, 0.1f, 10.0f));
+	cf_draw3d_push_view(cf_look_at(cf_v3(0, 0, 2), cf_v3(0, 0, 0), cf_v3(0, 1, 0)));
+
+	// A green stroke through the center, a red disc left, a blue cube right, a yellow sphere top.
+	cf_draw3d_push_color(cf_make_color_rgb_f(0, 1, 0));
+	cf_draw3d_line(cf_v3(-0.2f, 0, 0), cf_v3(0.2f, 0, 0), 0.1f);
+	cf_draw3d_pop_color();
+	cf_draw3d_push_color(cf_make_color_rgb_f(1, 0, 0));
+	cf_draw3d_circle_fill(cf_v3(-0.5f, 0, 0), cf_v3(0, 0, 1), 0.2f);
+	cf_draw3d_pop_color();
+	cf_draw3d_push_color(cf_make_color_rgb_f(0, 0, 1));
+	cf_draw3d_cube(cf_v3(0.5f, 0, 0), cf_v3(0.2f, 0.2f, 0.2f));
+	cf_draw3d_pop_color();
+	cf_draw3d_push_color(cf_make_color_rgb_f(1, 1, 0));
+	cf_draw3d_sphere(cf_v3(0, 0.5f, 0), 0.2f);
+	cf_draw3d_pop_color();
+	// The rest of the catalog as smoke coverage (correct pixels eyeballed in the shapes sample).
+	cf_draw3d_circle(cf_v3(-0.5f, -0.5f, 0), cf_v3(0, 0, 1), 0.15f, 0.02f);
+	cf_draw3d_arc(cf_v3(0.5f, -0.5f, 0), cf_v3(0, 0, 1), 0.15f, 0, 3.0f, 0.02f);
+	cf_draw3d_box_wire(cf_v3(0, -0.5f, 0), cf_v3(0.1f, 0.1f, 0.1f), 0.02f);
+	cf_draw3d_arrow(cf_v3(-0.8f, -0.8f, 0), cf_v3(-0.6f, -0.8f, 0), 0.02f, 0.05f);
+	cf_draw3d_torus(cf_v3(0.8f, 0.8f, 0), cf_v3(0, 0, 1), 0.1f, 0.03f);
+	cf_draw3d_push();
+	cf_draw3d_translate(cf_v3(-0.8f, 0.8f, 0));
+	cf_draw3d_axes(0.1f, 0.02f);
+	cf_draw3d_pop();
+
+	cf_render_to(canvas, true);
+	cf_app_draw_onto_screen(false);
+
+	CF_Readback rb = cf_canvas_readback(canvas);
+	REQUIRE(rb.id);
+	while (!cf_readback_ready(rb)) {}
+	cf_readback_data(rb, px, W * H * (int)sizeof(CF_Pixel));
+	cf_destroy_readback(rb);
+
+	CF_Pixel center = s_pixel(px, 0.5f, 0.5f);
+	CF_Pixel left = s_pixel(px, 0.25f, 0.5f);
+	CF_Pixel right = s_pixel(px, 0.75f, 0.5f);
+	CF_Pixel top = s_pixel(px, 0.5f, 0.25f);
+	REQUIRE(center.colors.g > 200 && center.colors.r < 60);
+	REQUIRE(left.colors.r > 200 && left.colors.g < 60);
+	// Solids are hemisphere-lit, so their channels dim but keep their hue.
+	REQUIRE(right.colors.b > 80 && right.colors.r < 60);
+	REQUIRE(top.colors.r > 80 && top.colors.g > 60 && top.colors.b < 60);
+
+	cf_draw3d_pop_view();
+	cf_draw3d_pop_projection();
+	cf_free(px);
+	cf_destroy_canvas(canvas);
+	cf_destroy_app();
+	return true;
+}
+
 TEST_SUITE(test_draw3d)
 {
 	RUN_TEST_CASE(test_draw3d_transforms_and_coalescing);
@@ -956,4 +1022,5 @@ TEST_SUITE(test_draw3d)
 	RUN_TEST_CASE(test_draw3d_project_unproject);
 	RUN_TEST_CASE(test_draw3d_sprite_and_billboard);
 	RUN_TEST_CASE(test_draw3d_msaa);
+	RUN_TEST_CASE(test_draw3d_shapes);
 }
