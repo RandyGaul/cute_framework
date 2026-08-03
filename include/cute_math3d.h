@@ -406,6 +406,68 @@ CF_INLINE CF_Quat cf_quat_slerp(CF_Quat a, CF_Quat b, float t)
 	return cf_quat(a.x * wa + b.x * wb, a.y * wa + b.y * wb, a.z * wa + b.z * wb, a.w * wa + b.w * wb);
 }
 
+/**
+ * @function cf_quat_from_to
+ * @category math
+ * @brief    Returns the shortest rotation taking direction `from` onto direction `to`.
+ * @param    from  The starting direction. Need not be unit length.
+ * @param    to    The ending direction. Need not be unit length.
+ * @remarks  The workhorse of aiming: point a turret at a target, align a decal to a surface
+ *           normal, tilt a character to a slope. Exactly-opposed directions have no unique
+ *           answer, so a perpendicular axis is chosen arbitrarily.
+ * @related  CF_Quat cf_quat_from_axis_angle cf_quat_slerp cf_quat_from_basis
+ */
+CF_INLINE CF_Quat cf_quat_from_to(CF_V3 from, CF_V3 to)
+{
+	CF_V3 a = cf_safe_norm_v3(from);
+	CF_V3 b = cf_safe_norm_v3(to);
+	float d = cf_dot_v3(a, b);
+	if (d >= 1.0f - 1e-6f) return cf_quat_identity();
+	if (d <= -1.0f + 1e-6f) {
+		// Opposed: any perpendicular axis is a valid 180-degree turn. Cross with whichever
+		// cardinal axis `a` leans on least, so the cross never degenerates.
+		CF_V3 axis = CF_FABSF(a.x) < 0.9f ? cf_v3(1, 0, 0) : cf_v3(0, 1, 0);
+		return cf_quat_from_axis_angle(cf_norm_v3(cf_cross_v3(a, axis)), CF_PI);
+	}
+	CF_V3 c = cf_cross_v3(a, b);
+	// The half-angle form: (cross, 1 + dot) normalized is the half-way rotation.
+	return cf_quat_norm(cf_quat(c.x, c.y, c.z, 1.0f + d));
+}
+
+/**
+ * @function cf_quat_from_basis
+ * @category math
+ * @brief    Builds a rotation from three orthonormal basis vectors (the rotation's columns).
+ * @param    x  The direction the +x axis maps to.
+ * @param    y  The direction the +y axis maps to.
+ * @param    z  The direction the +z axis maps to.
+ * @remarks  Assumes a right-handed orthonormal basis; a mirrored (negative determinant) basis
+ *           has no quaternion and produces garbage. Use `cf_quat_from_m4` to pull the rotation
+ *           out of a full transform instead.
+ * @related  CF_Quat cf_quat_from_m4 cf_quat_from_to cf_quat_to_m4
+ */
+CF_INLINE CF_Quat cf_quat_from_basis(CF_V3 x, CF_V3 y, CF_V3 z)
+{
+	// Shepperd's method: pick the largest of the four possible divisors so the square root
+	// never lands near zero.
+	float trace = x.x + y.y + z.z;
+	CF_Quat q;
+	if (trace > 0) {
+		float s = CF_SQRTF(trace + 1.0f) * 2.0f;
+		q = cf_quat((y.z - z.y) / s, (z.x - x.z) / s, (x.y - y.x) / s, 0.25f * s);
+	} else if (x.x > y.y && x.x > z.z) {
+		float s = CF_SQRTF(1.0f + x.x - y.y - z.z) * 2.0f;
+		q = cf_quat(0.25f * s, (y.x + x.y) / s, (z.x + x.z) / s, (y.z - z.y) / s);
+	} else if (y.y > z.z) {
+		float s = CF_SQRTF(1.0f + y.y - x.x - z.z) * 2.0f;
+		q = cf_quat((y.x + x.y) / s, 0.25f * s, (z.y + y.z) / s, (z.x - x.z) / s);
+	} else {
+		float s = CF_SQRTF(1.0f + z.z - x.x - y.y) * 2.0f;
+		q = cf_quat((z.x + x.z) / s, (z.y + y.z) / s, 0.25f * s, (x.y - y.x) / s);
+	}
+	return cf_quat_norm(q);
+}
+
 //--------------------------------------------------------------------------------------------------
 // 4x4 matrices.
 
@@ -482,6 +544,59 @@ CF_INLINE CF_M4x4 cf_m4_scale(CF_V3 s)
 	m.elements[5] = s.y;
 	m.elements[10] = s.z;
 	return m;
+}
+
+/**
+ * @function cf_quat_from_m4
+ * @category math
+ * @brief    Extracts the rotation from a transform matrix.
+ * @param    m  A transform whose upper 3x3 is a rotation, optionally with positive scale.
+ * @remarks  Scale is divided out per column, so this reads the rotation off a composed
+ *           translate-rotate-scale transform. A mirrored (negative determinant) transform has no
+ *           rotation to extract and produces garbage -- see `cf_m4_decompose`, which reports the
+ *           flip in its scale.
+ * @related  CF_Quat CF_M4x4 cf_quat_to_m4 cf_quat_from_basis cf_m4_decompose
+ */
+CF_INLINE CF_Quat cf_quat_from_m4(CF_M4x4 m)
+{
+	CF_V3 x = cf_safe_norm_v3(cf_v3(m.elements[0], m.elements[1], m.elements[2]));
+	CF_V3 y = cf_safe_norm_v3(cf_v3(m.elements[4], m.elements[5], m.elements[6]));
+	CF_V3 z = cf_safe_norm_v3(cf_v3(m.elements[8], m.elements[9], m.elements[10]));
+	return cf_quat_from_basis(x, y, z);
+}
+
+/**
+ * @function cf_m4_decompose
+ * @category math
+ * @brief    Splits a transform matrix into translation, rotation, and scale.
+ * @param    m            The transform to decompose.
+ * @param    translation  Written with the translation. May be NULL.
+ * @param    rotation     Written with the rotation. May be NULL.
+ * @param    scale        Written with the per-axis scale. May be NULL.
+ * @remarks  Assumes `m` is a translate-rotate-scale composition with no shear (skew silently
+ *           folds into the rotation). A mirrored transform reports a negative x scale, since a
+ *           flip cannot live in the quaternion. The inverse of building one with
+ *           `cf_m4_translate * cf_quat_to_m4 * cf_m4_scale` -- useful for pulling a bone's pose
+ *           out of a world matrix, or blending between authored transforms.
+ * @related  CF_M4x4 CF_Quat cf_quat_from_m4 cf_quat_to_m4 cf_m4_translate cf_m4_scale
+ */
+CF_INLINE void cf_m4_decompose(CF_M4x4 m, CF_V3* translation, CF_Quat* rotation, CF_V3* scale)
+{
+	if (translation) *translation = cf_v3(m.elements[12], m.elements[13], m.elements[14]);
+	CF_V3 x = cf_v3(m.elements[0], m.elements[1], m.elements[2]);
+	CF_V3 y = cf_v3(m.elements[4], m.elements[5], m.elements[6]);
+	CF_V3 z = cf_v3(m.elements[8], m.elements[9], m.elements[10]);
+	float sx = cf_len_v3(x), sy = cf_len_v3(y), sz = cf_len_v3(z);
+	// A negative determinant means one axis is mirrored. Which one is unknowable, so fold
+	// the flip into x by convention -- the same choice glTF importers make.
+	if (cf_dot_v3(cf_cross_v3(x, y), z) < 0) sx = -sx;
+	if (scale) *scale = cf_v3(sx, sy, sz);
+	if (rotation) {
+		*rotation = cf_quat_from_basis(
+			sx != 0 ? cf_div_v3_f(x, sx) : cf_v3(1, 0, 0),
+			sy != 0 ? cf_div_v3_f(y, sy) : cf_v3(0, 1, 0),
+			sz != 0 ? cf_div_v3_f(z, sz) : cf_v3(0, 0, 1));
+	}
 }
 
 /**
@@ -892,6 +1007,9 @@ CF_INLINE quat quat_from_axis_angle(v3 axis, float radians) { return cf_quat_fro
 CF_INLINE quat norm(quat q) { return cf_quat_norm(q); }
 CF_INLINE quat conjugate(quat q) { return cf_quat_conjugate(q); }
 CF_INLINE quat slerp(quat a, quat b, float t) { return cf_quat_slerp(a, b, t); }
+CF_INLINE quat quat_from_to(v3 from, v3 to) { return cf_quat_from_to(from, to); }
+CF_INLINE quat quat_from_basis(v3 x, v3 y, v3 z) { return cf_quat_from_basis(x, y, z); }
+CF_INLINE quat quat_from_m4(m4 m) { return cf_quat_from_m4(m); }
 CF_INLINE m4 to_m4(quat q) { return cf_quat_to_m4(q); }
 
 CF_INLINE m4 m4_identity() { return cf_m4_identity(); }
@@ -904,6 +1022,7 @@ CF_INLINE m4 m4_rotate_z(float radians) { return cf_m4_rotate_z(radians); }
 CF_INLINE m4 transpose(m4 a) { return cf_m4_transpose(a); }
 CF_INLINE m4 invert(m4 a) { return cf_m4_invert(a); }
 CF_INLINE m4 normal_matrix(m4 model) { return cf_m4_normal_matrix(model); }
+CF_INLINE void m4_decompose(m4 m, v3* translation, quat* rotation, v3* scale) { cf_m4_decompose(m, translation, rotation, scale); }
 CF_INLINE v3 transform_point(m4 m, v3 p) { return cf_m4_transform_point(m, p); }
 CF_INLINE v3 transform_dir(m4 m, v3 d) { return cf_m4_transform_dir(m, d); }
 

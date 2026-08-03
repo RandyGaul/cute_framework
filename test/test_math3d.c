@@ -297,6 +297,78 @@ TEST_CASE(test_mul_macros_c) {
 	return true;
 }
 
+// cf_quat_from_to: the aiming primitive. Must produce the shortest arc, survive parallel and
+// exactly-opposed inputs, and not care about input length.
+TEST_CASE(test_quat_from_to_c) {
+	CF_V3 x = cf_v3(1, 0, 0), y = cf_v3(0, 1, 0), z = cf_v3(0, 0, 1);
+
+	// Rotating x onto y actually lands on y, and takes z with it (shortest arc about +z).
+	CF_Quat q = cf_quat_from_to(x, y);
+	REQUIRE(near_v3(cf_mul(q, x), y));
+	REQUIRE(near_v3(cf_mul(q, z), z));
+
+	// Unnormalized inputs give the same answer.
+	REQUIRE(near_v3(cf_mul(cf_quat_from_to(cf_mul(x, 7.0f), cf_mul(y, 0.25f)), x), y));
+
+	// Parallel: identity, no NaNs.
+	REQUIRE(near_v3(cf_mul(cf_quat_from_to(y, y), x), x));
+
+	// Opposed: any 180-degree turn is valid, so assert the outcome, not the axis.
+	CF_Quat flip = cf_quat_from_to(x, cf_mul(x, -1.0f));
+	REQUIRE(near_v3(cf_mul(flip, x), cf_v3(-1, 0, 0)));
+	CF_Quat flip_z = cf_quat_from_to(z, cf_mul(z, -1.0f));
+	REQUIRE(near_v3(cf_mul(flip_z, z), cf_v3(0, 0, -1)));
+	return true;
+}
+
+// cf_quat_from_m4 and cf_m4_decompose invert matrix composition.
+TEST_CASE(test_m4_decompose_c) {
+	CF_V3 t = cf_v3(3, -4, 5);
+	CF_Quat r = cf_quat_from_axis_angle(cf_norm(cf_v3(1, 2, 3)), 1.1f);
+	CF_V3 s = cf_v3(2, 3, 4);
+	CF_M4x4 m = cf_mul(cf_mul(cf_m4_translate(t), cf_quat_to_m4(r)), cf_m4_scale(s));
+
+	CF_V3 dt, ds;
+	CF_Quat dr;
+	cf_m4_decompose(m, &dt, &dr, &ds);
+	REQUIRE(near_v3(dt, t));
+	REQUIRE(near_v3(ds, s));
+	// Quaternions double-cover rotations, so compare what they do, not their components.
+	REQUIRE(near_v3(cf_mul(dr, cf_v3(1, 0, 0)), cf_mul(r, cf_v3(1, 0, 0))));
+	REQUIRE(near_v3(cf_mul(dr, cf_v3(0, 0, 1)), cf_mul(r, cf_v3(0, 0, 1))));
+
+	// Recomposing reproduces the original matrix.
+	CF_M4x4 back = cf_mul(cf_mul(cf_m4_translate(dt), cf_quat_to_m4(dr)), cf_m4_scale(ds));
+	for (int k = 0; k < 16; ++k) REQUIRE(near_f(back.elements[k], m.elements[k]));
+
+	// Rotation-only extraction ignores scale.
+	CF_Quat only = cf_quat_from_m4(m);
+	REQUIRE(near_v3(cf_mul(only, cf_v3(0, 1, 0)), cf_mul(r, cf_v3(0, 1, 0))));
+
+	// NULL outputs are allowed.
+	cf_m4_decompose(m, NULL, NULL, NULL);
+
+	// A mirrored transform reports the flip in x rather than corrupting the rotation.
+	CF_M4x4 mirrored = cf_mul(cf_quat_to_m4(r), cf_m4_scale(cf_v3(-1, 1, 1)));
+	cf_m4_decompose(mirrored, NULL, NULL, &ds);
+	REQUIRE(ds.x < 0);
+	return true;
+}
+
+// cf_quat_from_basis round-trips against cf_quat_to_m4's columns.
+TEST_CASE(test_quat_from_basis_c) {
+	CF_Quat r = cf_quat_from_axis_angle(cf_norm(cf_v3(-2, 1, 0.5f)), 2.3f);
+	CF_M4x4 m = cf_quat_to_m4(r);
+	CF_Quat back = cf_quat_from_basis(
+		cf_v3(m.elements[0], m.elements[1], m.elements[2]),
+		cf_v3(m.elements[4], m.elements[5], m.elements[6]),
+		cf_v3(m.elements[8], m.elements[9], m.elements[10]));
+	REQUIRE(near_v3(cf_mul(back, cf_v3(1, 0, 0)), cf_mul(r, cf_v3(1, 0, 0))));
+	REQUIRE(near_v3(cf_mul(back, cf_v3(0, 1, 0)), cf_mul(r, cf_v3(0, 1, 0))));
+	REQUIRE(near_v3(cf_mul(back, cf_v3(0, 0, 1)), cf_mul(r, cf_v3(0, 0, 1))));
+	return true;
+}
+
 TEST_SUITE(test_math3d_c) {
 	RUN_TEST_CASE(test_v3_construct_c);
 	RUN_TEST_CASE(test_m4_is_column_major_c);
@@ -314,4 +386,7 @@ TEST_SUITE(test_math3d_c) {
 	RUN_TEST_CASE(test_quat_rotation_c);
 	RUN_TEST_CASE(test_quat_slerp_c);
 	RUN_TEST_CASE(test_mul_macros_c);
+	RUN_TEST_CASE(test_quat_from_to_c);
+	RUN_TEST_CASE(test_m4_decompose_c);
+	RUN_TEST_CASE(test_quat_from_basis_c);
 }
