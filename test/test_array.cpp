@@ -76,6 +76,8 @@ TEST_CASE(test_array_hash)
 	REQUIRE(cf_array_hash(e) == cf_fnv1a(f, sizeof(f)));
 
 	cf_array_free(e);
+
+	return true;
 }
 
 TEST_SUITE(test_array)
