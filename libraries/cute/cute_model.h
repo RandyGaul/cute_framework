@@ -48,19 +48,28 @@
 	FORMAT SUPPORT
 
 		- GLB (binary container) with an embedded buffer, and plain .gltf JSON with
-		  base64 data-URI buffers. External .bin file references are NOT resolved
-		  (this header does no file IO) -- read the file yourself and prefer GLB.
+		  base64 data-URI buffers. External file references (.bin buffers, image
+		  files) resolve through the read callback in CM_LoadParams -- this header
+		  does no file IO of its own. Without a callback, only self-contained files
+		  load.
 		- Attributes: POSITION (required), NORMAL (generated smooth if absent),
-		  TEXCOORD_0 (float / normalized u8 / normalized u16), JOINTS_0 (u8 / u16),
-		  WEIGHTS_0 (float / normalized u8 / normalized u16).
+		  TANGENT (generated from uvs + normals if absent), TEXCOORD_0 and COLOR_0
+		  (float / normalized u8 / normalized u16), JOINTS_0 (u8 / u16), WEIGHTS_0
+		  (float / normalized u8 / normalized u16).
 		- Indices u8/u16/u32 (widened to u32); unindexed primitives get 0..n-1.
-		- Animations: translation/rotation/scale channels, STEP and LINEAR
-		  interpolation (rotation uses shortest-path slerp). CUBICSPLINE loads its
-		  key values and plays back linearly. Morph target (weights) channels are
-		  skipped.
+		- Animations: translation/rotation/scale channels with STEP, LINEAR
+		  (shortest-path slerp for rotations), and CUBICSPLINE (proper Hermite
+		  evaluation) interpolation. Morph target (weights) channels are skipped.
 		- Node `matrix` transforms are decomposed to TRS (assumes no shear).
-		- Materials: base color factor + base color texture image index only.
-		- Not supported: sparse accessors, Draco/meshopt compression, morph targets.
+		- Materials: the full pbrMetallicRoughness set (base color, metallic/
+		  roughness, normal, occlusion, emissive factors and textures), alpha
+		  mode/cutoff, double-sided, and KHR_texture_transform per texture slot.
+		- Not supported: sparse accessors, Draco/meshopt compression, morph
+		  targets, KHR_materials_* extensions (sheen, clearcoat, ...).
+
+	Generated tangents use area-weighted accumulation (Lengyel), orthonormalized
+	against the normal -- good for typical assets, but bake-critical normal maps
+	should ship authored (MikkTSpace) tangents in the file.
 
 	All matrices are column-major float[16], matching GLSL and Cute Framework.
 */
@@ -92,7 +101,10 @@ typedef struct CM_Primitive
 	int vertex_count;
 	float* positions;   // 3 floats per vertex. Never NULL.
 	float* normals;     // 3 floats per vertex. Generated (smooth) when the file has none.
+	float* tangents;    // 4 floats per vertex (xyz + w handedness sign). Generated from
+	                    // uvs + normals when the file has none; NULL without uvs.
 	float* uvs;         // 2 floats per vertex, or NULL.
+	float* colors;      // 4 floats per vertex (COLOR_0), or NULL.
 	uint16_t* joints;   // 4 per vertex, or NULL for unskinned meshes.
 	float* weights;     // 4 per vertex, or NULL for unskinned meshes.
 	int index_count;
@@ -137,6 +149,7 @@ typedef enum CM_Interpolation
 {
 	CM_INTERP_LINEAR,
 	CM_INTERP_STEP,
+	CM_INTERP_CUBIC, // glTF CUBICSPLINE; see CM_Channel::values for the key layout.
 } CM_Interpolation;
 
 typedef struct CM_Channel
@@ -146,7 +159,10 @@ typedef struct CM_Channel
 	CM_Interpolation interpolation;
 	int key_count;
 	float* times;                 // Ascending keyframe times in seconds.
-	float* values;                // 3 floats per key (T/S) or 4 (R, quat xyzw).
+	float* values;                // One element per key: 3 floats (T/S) or 4 (R, quat xyzw).
+	                              // CM_INTERP_CUBIC keys hold glTF's in-tangent/value/
+	                              // out-tangent triples: 3 elements per key, value in the
+	                              // middle. cm_animate handles both layouts.
 } CM_Channel;
 
 typedef struct CM_Animation
@@ -166,11 +182,42 @@ typedef struct CM_Image
 	int size;
 } CM_Image;
 
+// One material texture slot: an image index plus its KHR_texture_transform (identity
+// when the file carries none). Apply as uv' = offset + rotate(rotation) * (uv * scale).
+typedef struct CM_TextureRef
+{
+	int image;       // Index into model->images, or -1 when the slot is unused.
+	float offset[2];
+	float scale[2];  // Defaults to (1, 1).
+	float rotation;  // Radians, clockwise about the uv origin per the extension spec.
+} CM_TextureRef;
+
+typedef enum CM_AlphaMode
+{
+	CM_ALPHA_OPAQUE,
+	CM_ALPHA_MASK,   // Cut out at alpha_cutoff.
+	CM_ALPHA_BLEND,
+} CM_AlphaMode;
+
+// The full pbrMetallicRoughness set, as data -- what your renderer does with it is its
+// business. Unused texture slots have image == -1; factors always hold spec defaults.
 typedef struct CM_Material
 {
-	const char* name;        // Interned; "" if unnamed.
-	float base_color[4];     // Base color factor (defaults to white).
-	int base_color_image;    // Index into model->images, or -1.
+	const char* name;             // Interned; "" if unnamed.
+	float base_color[4];          // Base color factor (defaults to white).
+	CM_TextureRef base_color_texture;
+	float metallic;               // Factor, default 1.
+	float roughness;              // Factor, default 1.
+	CM_TextureRef metallic_roughness_texture; // G = roughness, B = metallic, per spec.
+	CM_TextureRef normal_texture;
+	float normal_scale;           // Default 1.
+	CM_TextureRef occlusion_texture;          // R channel, per spec.
+	float occlusion_strength;     // Default 1.
+	float emissive[3];            // Emissive factor, default black.
+	CM_TextureRef emissive_texture;
+	CM_AlphaMode alpha_mode;
+	float alpha_cutoff;           // Default 0.5; meaningful under CM_ALPHA_MASK.
+	int double_sided;
 } CM_Material;
 
 typedef struct CM_Model
@@ -187,10 +234,24 @@ typedef struct CM_Model
 //--------------------------------------------------------------------------------------------------
 // Loading.
 
-// Loads a GLB or .gltf (JSON with base64 buffers) model from memory. Returns NULL on
-// failure -- call cm_error() for a human-readable reason. The returned model owns all
-// of its arrays; free the whole thing with cm_free.
+// Optional hooks for cm_load_ex. cute_model does no file IO of its own; when a .gltf
+// references external files (a .bin buffer, image files), each URI -- percent-decoded,
+// relative to the model file -- is handed to read_fn. Return the file's bytes from any
+// allocator; free_fn (when non-NULL) is called once cute_model has copied what it needs.
+typedef struct CM_LoadParams
+{
+	void* (*read_fn)(const char* path, int* size_out, void* udata);
+	void (*free_fn)(void* data, void* udata);
+	void* udata;
+} CM_LoadParams;
+
+// Loads a GLB or .gltf model from memory. Returns NULL on failure -- call cm_error()
+// for a human-readable reason. The returned model owns all of its arrays; free the
+// whole thing with cm_free.
 CM_Model* cm_load(const void* data, int size);
+
+// cm_load with external-file resolution (see CM_LoadParams).
+CM_Model* cm_load_ex(const void* data, int size, CM_LoadParams params);
 
 // The reason the last cm_load returned NULL. Static storage, valid until the next call.
 const char* cm_error(void);
@@ -223,6 +284,10 @@ void cm_world_transforms(const CM_Model* model, const CM_Transform* locals, floa
 // Per the glTF spec the skinned mesh's node transform is NOT included -- render the
 // mesh under any model transform you like.
 void cm_skin_palette(const CM_Model* model, int skin_index, const float* world, float* palette);
+
+// Blends two whole poses: out = lerp(a, b, t) per node, with shortest-path slerp for
+// rotations. Sample two clips into separate local arrays and blend for crossfades.
+void cm_blend(const CM_Model* model, const CM_Transform* a, const CM_Transform* b, float t, CM_Transform* out);
 
 #endif // CUTE_MODEL_H
 
@@ -434,8 +499,8 @@ static int cm_jget(const CM_Json* j, int v, const char* key)
 }
 static int cm_jlen(const CM_Json* j, int v) { return v < 0 ? 0 : asize(j->vals[v].items); }
 static int cm_jat(const CM_Json* j, int v, int i) { return (v < 0 || i < 0 || i >= asize(j->vals[v].items)) ? -1 : j->vals[v].items[i]; }
-static double cm_jnum(const CM_Json* j, int v, double default_value) { return (v >= 0 && j->vals[v].kind == 'n') ? j->vals[v].num : default_value; }
-static int cm_jint(const CM_Json* j, int v, int default_value) { return (v >= 0 && j->vals[v].kind == 'n') ? (int)j->vals[v].num : default_value; }
+static double cm_jnum(const CM_Json* j, int v, double default_value) { return (v >= 0 && (j->vals[v].kind == 'n' || j->vals[v].kind == 'b')) ? j->vals[v].num : default_value; }
+static int cm_jint(const CM_Json* j, int v, int default_value) { return (v >= 0 && (j->vals[v].kind == 'n' || j->vals[v].kind == 'b')) ? (int)j->vals[v].num : default_value; }
 static const char* cm_jstr(const CM_Json* j, int v, const char* default_value) { return (v >= 0 && j->vals[v].kind == 's') ? j->vals[v].str : default_value; }
 static int cm_jget_int(const CM_Json* j, int v, const char* key, int default_value) { return cm_jint(j, cm_jget(j, v, key), default_value); }
 
@@ -481,11 +546,48 @@ typedef struct CM_Loader
 {
 	CM_Json json;
 	int root;
-	// One decoded blob per glTF buffer (GLB binary chunk or base64). Not owned unless flagged.
+	CM_LoadParams params;
+	// One decoded blob per glTF buffer (GLB binary chunk, base64, or read callback).
+	// Not owned unless flagged.
 	uint8_t** buffers;      // ckit array.
 	int* buffer_sizes;      // ckit array.
 	int* buffer_owned;      // ckit array.
 } CM_Loader;
+
+// Percent-decodes a URI into a fresh ckit string ("my%20model.bin" -> "my model.bin").
+static char* cm_uri_decode(const char* uri)
+{
+	char* s = NULL;
+	for (const char* p = uri; *p; ++p) {
+		if (*p == '%' && p[1] && p[2]) {
+			int hi = p[1] >= 'a' ? p[1] - 'a' + 10 : p[1] >= 'A' ? p[1] - 'A' + 10 : p[1] - '0';
+			int lo = p[2] >= 'a' ? p[2] - 'a' + 10 : p[2] >= 'A' ? p[2] - 'A' + 10 : p[2] - '0';
+			apush(s, (char)((hi << 4) | lo));
+			p += 2;
+		} else {
+			apush(s, *p);
+		}
+	}
+	apush(s, '\0');
+	return s;
+}
+
+// Resolves an external URI through the user's read callback, copying the result into a
+// CM_ALLOC'd buffer so ownership is uniform. NULL when no callback or the read fails.
+static uint8_t* cm_read_external(CM_Loader* l, const char* uri, int* out_size)
+{
+	if (!l->params.read_fn) return NULL;
+	char* path = cm_uri_decode(uri);
+	int size = 0;
+	void* data = l->params.read_fn(path, &size, l->params.udata);
+	afree(path);
+	if (!data || size <= 0) return NULL;
+	uint8_t* copy = (uint8_t*)CM_ALLOC((size_t)size);
+	memcpy(copy, data, (size_t)size);
+	if (l->params.free_fn) l->params.free_fn(data, l->params.udata);
+	*out_size = size;
+	return copy;
+}
 
 static int cm_component_size(int component_type)
 {
@@ -717,6 +819,57 @@ static float* cm_generate_normals(const float* positions, int vertex_count, cons
 	return n;
 }
 
+// Area-weighted tangent accumulation (Lengyel), orthonormalized against the normal;
+// w carries the bitangent's handedness sign. Bake-critical normal maps should ship
+// authored (MikkTSpace) tangents instead.
+static float* cm_generate_tangents(const float* positions, const float* normals, const float* uvs, int vertex_count, const uint32_t* indices, int index_count)
+{
+	float* tan = (float*)CM_ALLOC(sizeof(float) * 3 * (size_t)vertex_count);
+	float* bitan = (float*)CM_ALLOC(sizeof(float) * 3 * (size_t)vertex_count);
+	memset(tan, 0, sizeof(float) * 3 * (size_t)vertex_count);
+	memset(bitan, 0, sizeof(float) * 3 * (size_t)vertex_count);
+	for (int i = 0; i + 2 < index_count; i += 3) {
+		uint32_t ia = indices[i], ib = indices[i + 1], ic = indices[i + 2];
+		if (ia >= (uint32_t)vertex_count || ib >= (uint32_t)vertex_count || ic >= (uint32_t)vertex_count) continue;
+		const float* pa = positions + ia * 3;
+		const float* pb = positions + ib * 3;
+		const float* pc = positions + ic * 3;
+		float e1[3] = { pb[0] - pa[0], pb[1] - pa[1], pb[2] - pa[2] };
+		float e2[3] = { pc[0] - pa[0], pc[1] - pa[1], pc[2] - pa[2] };
+		float du1 = uvs[ib * 2] - uvs[ia * 2], dv1 = uvs[ib * 2 + 1] - uvs[ia * 2 + 1];
+		float du2 = uvs[ic * 2] - uvs[ia * 2], dv2 = uvs[ic * 2 + 1] - uvs[ia * 2 + 1];
+		float det = du1 * dv2 - du2 * dv1;
+		if (det == 0) continue;
+		float r = 1.0f / det;
+		float t[3] = { (e1[0] * dv2 - e2[0] * dv1) * r, (e1[1] * dv2 - e2[1] * dv1) * r, (e1[2] * dv2 - e2[2] * dv1) * r };
+		float b[3] = { (e2[0] * du1 - e1[0] * du2) * r, (e2[1] * du1 - e1[1] * du2) * r, (e2[2] * du1 - e1[2] * du2) * r };
+		for (int k = 0; k < 3; ++k) {
+			tan[ia * 3 + k] += t[k]; tan[ib * 3 + k] += t[k]; tan[ic * 3 + k] += t[k];
+			bitan[ia * 3 + k] += b[k]; bitan[ib * 3 + k] += b[k]; bitan[ic * 3 + k] += b[k];
+		}
+	}
+	float* out = (float*)CM_ALLOC(sizeof(float) * 4 * (size_t)vertex_count);
+	for (int i = 0; i < vertex_count; ++i) {
+		const float* n = normals + i * 3;
+		const float* t = tan + i * 3;
+		// Gram-Schmidt against the normal.
+		float ndt = n[0] * t[0] + n[1] * t[1] + n[2] * t[2];
+		float o[3] = { t[0] - n[0] * ndt, t[1] - n[1] * ndt, t[2] - n[2] * ndt };
+		float len = sqrtf(o[0] * o[0] + o[1] * o[1] + o[2] * o[2]);
+		if (len > 1.0e-8f) { o[0] /= len; o[1] /= len; o[2] /= len; }
+		else { o[0] = 1; o[1] = 0; o[2] = 0; } // Degenerate uv area: any perpendicular works.
+		float cx = n[1] * t[2] - n[2] * t[1];
+		float cy = n[2] * t[0] - n[0] * t[2];
+		float cz = n[0] * t[1] - n[1] * t[0];
+		const float* b = bitan + i * 3;
+		float w = (cx * b[0] + cy * b[1] + cz * b[2]) < 0 ? -1.0f : 1.0f;
+		out[i * 4] = o[0]; out[i * 4 + 1] = o[1]; out[i * 4 + 2] = o[2]; out[i * 4 + 3] = w;
+	}
+	CM_FREE(tan);
+	CM_FREE(bitan);
+	return out;
+}
+
 static int cm_load_primitive(CM_Loader* l, int prim, CM_Primitive* out)
 {
 	const CM_Json* j = &l->json;
@@ -734,6 +887,19 @@ static int cm_load_primitive(CM_Loader* l, int prim, CM_Primitive* out)
 		int n;
 		out->uvs = cm_read_floats(l, uv_accessor, 2, &n);
 		if (!out->uvs) return 0;
+	}
+
+	int color_accessor = cm_jget_int(j, attrs, "COLOR_0", -1);
+	if (color_accessor >= 0) {
+		// COLOR_0 may be VEC3; cm_read_floats pads with 0, so force alpha to 1 after.
+		CM_Accessor ca;
+		if (!cm_resolve_accessor(l, color_accessor, &ca)) return 0;
+		int n;
+		out->colors = cm_read_floats(l, color_accessor, 4, &n);
+		if (!out->colors) return 0;
+		if (ca.components == 3) {
+			for (int i = 0; i < n; ++i) out->colors[i * 4 + 3] = 1.0f;
+		}
 	}
 
 	int joints_accessor = cm_jget_int(j, attrs, "JOINTS_0", -1);
@@ -785,6 +951,15 @@ static int cm_load_primitive(CM_Loader* l, int prim, CM_Primitive* out)
 	} else {
 		out->normals = cm_generate_normals(out->positions, out->vertex_count, out->indices, out->index_count);
 	}
+
+	int tangent_accessor = cm_jget_int(j, attrs, "TANGENT", -1);
+	if (tangent_accessor >= 0) {
+		int n;
+		out->tangents = cm_read_floats(l, tangent_accessor, 4, &n);
+		if (!out->tangents) return 0;
+	} else if (out->uvs) {
+		out->tangents = cm_generate_tangents(out->positions, out->normals, out->uvs, out->vertex_count, out->indices, out->index_count);
+	}
 	return 1;
 }
 
@@ -792,7 +967,9 @@ static void cm_free_primitive(CM_Primitive* p)
 {
 	if (p->positions) CM_FREE(p->positions);
 	if (p->normals) CM_FREE(p->normals);
+	if (p->tangents) CM_FREE(p->tangents);
 	if (p->uvs) CM_FREE(p->uvs);
+	if (p->colors) CM_FREE(p->colors);
 	if (p->joints) CM_FREE(p->joints);
 	if (p->weights) CM_FREE(p->weights);
 	if (p->indices) CM_FREE(p->indices);
@@ -830,6 +1007,28 @@ void cm_free(CM_Model* model)
 	if (model->materials) CM_FREE(model->materials);
 	if (model->order) CM_FREE(model->order);
 	CM_FREE(model);
+}
+
+// Resolves a glTF textureInfo object to an image index plus its KHR_texture_transform.
+static CM_TextureRef cm_load_texture_ref(CM_Loader* l, int tex_info)
+{
+	const CM_Json* j = &l->json;
+	CM_TextureRef ref;
+	memset(&ref, 0, sizeof(ref));
+	ref.image = -1;
+	ref.scale[0] = ref.scale[1] = 1;
+	int texture = cm_jat(j, cm_jget(j, l->root, "textures"), cm_jget_int(j, tex_info, "index", -1));
+	if (texture < 0) return ref;
+	ref.image = cm_jget_int(j, texture, "source", -1);
+	int xform = cm_jget(j, cm_jget(j, tex_info, "extensions"), "KHR_texture_transform");
+	if (xform >= 0) {
+		int off = cm_jget(j, xform, "offset");
+		int sc = cm_jget(j, xform, "scale");
+		for (int k = 0; k < 2 && k < cm_jlen(j, off); ++k) ref.offset[k] = (float)cm_jnum(j, cm_jat(j, off, k), 0);
+		for (int k = 0; k < 2 && k < cm_jlen(j, sc); ++k) ref.scale[k] = (float)cm_jnum(j, cm_jat(j, sc, k), 1);
+		ref.rotation = (float)cm_jnum(j, cm_jget(j, xform, "rotation"), 0);
+	}
+	return ref;
 }
 
 static CM_Model* cm_load_from_json(CM_Loader* l)
@@ -982,7 +1181,7 @@ static CM_Model* cm_load_from_json(CM_Loader* l)
 			out->node = cm_jget_int(j, target, "node", -1);
 			if (out->node < 0 || out->node >= model->node_count) continue;
 			out->path = cp;
-			out->interpolation = !strcmp(interp, "STEP") ? CM_INTERP_STEP : CM_INTERP_LINEAR;
+			out->interpolation = cubic ? CM_INTERP_CUBIC : !strcmp(interp, "STEP") ? CM_INTERP_STEP : CM_INTERP_LINEAR;
 			int key_count = 0;
 			out->times = cm_read_floats(l, cm_jget_int(j, sampler, "input", -1), 1, &key_count);
 			if (!out->times) { cm_free(model); return NULL; }
@@ -990,18 +1189,13 @@ static CM_Model* cm_load_from_json(CM_Loader* l)
 			int value_count = 0;
 			float* values = cm_read_floats(l, cm_jget_int(j, sampler, "output", -1), lanes, &value_count);
 			if (!values) { CM_FREE(out->times); out->times = NULL; cm_free(model); return NULL; }
-			if (cubic) {
-				// CUBICSPLINE stores in-tangent/value/out-tangent triples; keep the values.
-				if (value_count < key_count * 3) { CM_FREE(values); CM_FREE(out->times); out->times = NULL; cm_free(model); CM_FAIL("cubic channel is short on values"); }
-				out->values = (float*)CM_ALLOC(sizeof(float) * (size_t)lanes * (size_t)key_count);
-				for (int k = 0; k < key_count; ++k) {
-					memcpy(out->values + k * lanes, values + (k * 3 + 1) * lanes, sizeof(float) * (size_t)lanes);
-				}
-				CM_FREE(values);
-			} else {
-				if (value_count < key_count) { CM_FREE(values); CM_FREE(out->times); out->times = NULL; cm_free(model); CM_FAIL("channel is short on values"); }
-				out->values = values;
+			// CUBICSPLINE keys are in-tangent/value/out-tangent triples, kept verbatim for
+			// Hermite evaluation in cm_animate.
+			if (value_count < (cubic ? key_count * 3 : key_count)) {
+				CM_FREE(values); CM_FREE(out->times); out->times = NULL; cm_free(model);
+				CM_FAIL("animation channel is short on values");
 			}
+			out->values = values;
 			if (key_count && out->times[key_count - 1] > anim->duration) anim->duration = out->times[key_count - 1];
 			anim->channel_count++;
 		}
@@ -1020,37 +1214,65 @@ static CM_Model* cm_load_from_json(CM_Loader* l)
 		image->name = cm_jstr(j, cm_jget(j, im, "name"), "");
 		image->mime_type = cm_jstr(j, cm_jget(j, im, "mimeType"), "");
 		int bv = cm_jat(j, cm_jget(j, l->root, "bufferViews"), cm_jget_int(j, im, "bufferView", -1));
-		if (bv < 0) continue; // External URI images stay empty.
-		int buffer = cm_jget_int(j, bv, "buffer", 0);
-		int offset = cm_jget_int(j, bv, "byteOffset", 0);
-		int length = cm_jget_int(j, bv, "byteLength", 0);
-		if (buffer < 0 || buffer >= asize(l->buffers) || !l->buffers[buffer]) continue;
-		if (offset + length > l->buffer_sizes[buffer]) continue;
-		image->data = (uint8_t*)CM_ALLOC((size_t)(length ? length : 1));
-		memcpy(image->data, l->buffers[buffer] + offset, (size_t)length);
-		image->size = length;
+		if (bv >= 0) {
+			int buffer = cm_jget_int(j, bv, "buffer", 0);
+			int offset = cm_jget_int(j, bv, "byteOffset", 0);
+			int length = cm_jget_int(j, bv, "byteLength", 0);
+			if (buffer < 0 || buffer >= asize(l->buffers) || !l->buffers[buffer]) continue;
+			if (offset + length > l->buffer_sizes[buffer]) continue;
+			image->data = (uint8_t*)CM_ALLOC((size_t)(length ? length : 1));
+			memcpy(image->data, l->buffers[buffer] + offset, (size_t)length);
+			image->size = length;
+		} else {
+			// External or data-URI image file.
+			const char* uri = cm_jstr(j, cm_jget(j, im, "uri"), NULL);
+			if (!uri) continue;
+			if (!strncmp(uri, "data:", 5)) {
+				const char* comma = strchr(uri, ',');
+				if (comma) image->data = cm_base64_decode(comma + 1, &image->size);
+			} else {
+				image->data = cm_read_external(l, uri, &image->size);
+			}
+		}
 	}
 
-	// Materials: base color only.
+	// Materials: the full pbrMetallicRoughness set plus KHR_texture_transform.
 	int jmaterials = cm_jget(j, l->root, "materials");
 	model->material_count = cm_jlen(j, jmaterials);
 	if (model->material_count) {
 		model->materials = (CM_Material*)CM_ALLOC(sizeof(CM_Material) * (size_t)model->material_count);
 		memset(model->materials, 0, sizeof(CM_Material) * (size_t)model->material_count);
 	}
-	int jtextures = cm_jget(j, l->root, "textures");
 	for (int i = 0; i < model->material_count; ++i) {
 		int m = cm_jat(j, jmaterials, i);
 		CM_Material* material = model->materials + i;
 		material->name = cm_jstr(j, cm_jget(j, m, "name"), "");
 		material->base_color[0] = material->base_color[1] = material->base_color[2] = material->base_color[3] = 1;
-		material->base_color_image = -1;
+		material->metallic = 1;
+		material->roughness = 1;
+		material->normal_scale = 1;
+		material->occlusion_strength = 1;
+		material->alpha_cutoff = 0.5f;
 		int pbr = cm_jget(j, m, "pbrMetallicRoughness");
 		int factor = cm_jget(j, pbr, "baseColorFactor");
 		for (int k = 0; k < 4 && k < cm_jlen(j, factor); ++k) material->base_color[k] = (float)cm_jnum(j, cm_jat(j, factor, k), 1);
-		int tex_info = cm_jget(j, pbr, "baseColorTexture");
-		int texture = cm_jat(j, jtextures, cm_jget_int(j, tex_info, "index", -1));
-		if (texture >= 0) material->base_color_image = cm_jget_int(j, texture, "source", -1);
+		material->metallic = (float)cm_jnum(j, cm_jget(j, pbr, "metallicFactor"), 1);
+		material->roughness = (float)cm_jnum(j, cm_jget(j, pbr, "roughnessFactor"), 1);
+		material->base_color_texture = cm_load_texture_ref(l, cm_jget(j, pbr, "baseColorTexture"));
+		material->metallic_roughness_texture = cm_load_texture_ref(l, cm_jget(j, pbr, "metallicRoughnessTexture"));
+		int normal = cm_jget(j, m, "normalTexture");
+		material->normal_texture = cm_load_texture_ref(l, normal);
+		material->normal_scale = (float)cm_jnum(j, cm_jget(j, normal, "scale"), 1);
+		int occlusion = cm_jget(j, m, "occlusionTexture");
+		material->occlusion_texture = cm_load_texture_ref(l, occlusion);
+		material->occlusion_strength = (float)cm_jnum(j, cm_jget(j, occlusion, "strength"), 1);
+		int emissive = cm_jget(j, m, "emissiveFactor");
+		for (int k = 0; k < 3 && k < cm_jlen(j, emissive); ++k) material->emissive[k] = (float)cm_jnum(j, cm_jat(j, emissive, k), 0);
+		material->emissive_texture = cm_load_texture_ref(l, cm_jget(j, m, "emissiveTexture"));
+		const char* alpha_mode = cm_jstr(j, cm_jget(j, m, "alphaMode"), "OPAQUE");
+		material->alpha_mode = !strcmp(alpha_mode, "MASK") ? CM_ALPHA_MASK : !strcmp(alpha_mode, "BLEND") ? CM_ALPHA_BLEND : CM_ALPHA_OPAQUE;
+		material->alpha_cutoff = (float)cm_jnum(j, cm_jget(j, m, "alphaCutoff"), 0.5);
+		material->double_sided = cm_jint(j, cm_jget(j, m, "doubleSided"), 0);
 	}
 
 	return model;
@@ -1058,10 +1280,18 @@ static CM_Model* cm_load_from_json(CM_Loader* l)
 
 CM_Model* cm_load(const void* data, int size)
 {
+	CM_LoadParams params;
+	memset(&params, 0, sizeof(params));
+	return cm_load_ex(data, size, params);
+}
+
+CM_Model* cm_load_ex(const void* data, int size, CM_LoadParams params)
+{
 	cm_g_error[0] = 0;
 	const uint8_t* bytes = (const uint8_t*)data;
 	CM_Loader l;
 	memset(&l, 0, sizeof(l));
+	l.params = params;
 	const char* json_text = NULL;
 	int json_size = 0;
 	const uint8_t* bin = NULL;
@@ -1098,7 +1328,7 @@ CM_Model* cm_load(const void* data, int size)
 	l.root = 0;
 
 	// Resolve buffers: buffer 0 may be the GLB binary chunk; data URIs decode; external
-	// file URIs are unsupported (this header does no IO).
+	// file URIs go through the read callback (this header does no IO of its own).
 	int jbuffers = cm_jget(&l.json, l.root, "buffers");
 	for (int i = 0; i < cm_jlen(&l.json, jbuffers); ++i) {
 		int b = cm_jat(&l.json, jbuffers, i);
@@ -1115,6 +1345,9 @@ CM_Model* cm_load(const void* data, int size)
 				ptr = cm_base64_decode(comma + 1, &len);
 				owned = 1;
 			}
+		} else {
+			ptr = cm_read_external(&l, uri, &len);
+			owned = ptr != NULL;
 		}
 		apush(l.buffers, ptr);
 		apush(l.buffer_sizes, len);
@@ -1155,15 +1388,20 @@ void cm_animate(const CM_Model* model, const CM_Animation* animation, float time
 	for (int c = 0; c < animation->channel_count; ++c) {
 		const CM_Channel* ch = animation->channels + c;
 		int lanes = ch->path == CM_PATH_ROTATION ? 4 : 3;
+		// CUBICSPLINE keys are (in-tangent, value, out-tangent) triples; the value of key
+		// k sits at element k*3 + 1.
+		int cubic = ch->interpolation == CM_INTERP_CUBIC;
+		int key_stride = cubic ? lanes * 3 : lanes;
+		int value_offset = cubic ? lanes : 0;
 		float* target = ch->path == CM_PATH_TRANSLATION ? locals[ch->node].translation
 		              : ch->path == CM_PATH_ROTATION ? locals[ch->node].rotation
 		              : locals[ch->node].scale;
 		if (ch->key_count == 1 || time <= ch->times[0]) {
-			memcpy(target, ch->values, sizeof(float) * (size_t)lanes);
+			memcpy(target, ch->values + value_offset, sizeof(float) * (size_t)lanes);
 			continue;
 		}
 		if (time >= ch->times[ch->key_count - 1]) {
-			memcpy(target, ch->values + (size_t)(ch->key_count - 1) * lanes, sizeof(float) * (size_t)lanes);
+			memcpy(target, ch->values + (size_t)(ch->key_count - 1) * key_stride + value_offset, sizeof(float) * (size_t)lanes);
 			continue;
 		}
 		// Binary search for the bracketing pair.
@@ -1175,15 +1413,44 @@ void cm_animate(const CM_Model* model, const CM_Animation* animation, float time
 		}
 		float span = ch->times[hi] - ch->times[lo];
 		float t = span > 0 ? (time - ch->times[lo]) / span : 0;
-		const float* a = ch->values + (size_t)lo * lanes;
-		const float* b = ch->values + (size_t)hi * lanes;
+		const float* a = ch->values + (size_t)lo * key_stride + value_offset;
+		const float* b = ch->values + (size_t)hi * key_stride + value_offset;
 		if (ch->interpolation == CM_INTERP_STEP) {
 			memcpy(target, a, sizeof(float) * (size_t)lanes);
+		} else if (cubic) {
+			// glTF's Hermite basis: out-tangent of the left key, in-tangent of the right,
+			// both scaled by the key span. Rotations normalize after (per spec).
+			const float* out_tan = a + lanes;  // Key lo's out-tangent trails its value.
+			const float* in_tan = b - lanes;   // Key hi's in-tangent precedes its value.
+			float t2 = t * t, t3 = t2 * t;
+			float h00 = 2 * t3 - 3 * t2 + 1;
+			float h10 = t3 - 2 * t2 + t;
+			float h01 = -2 * t3 + 3 * t2;
+			float h11 = t3 - t2;
+			for (int k = 0; k < lanes; ++k) {
+				target[k] = h00 * a[k] + h10 * span * out_tan[k] + h01 * b[k] + h11 * span * in_tan[k];
+			}
+			if (ch->path == CM_PATH_ROTATION) {
+				float len = sqrtf(target[0] * target[0] + target[1] * target[1] + target[2] * target[2] + target[3] * target[3]);
+				if (len > 0) { target[0] /= len; target[1] /= len; target[2] /= len; target[3] /= len; }
+				else target[3] = 1;
+			}
 		} else if (ch->path == CM_PATH_ROTATION) {
 			cm_quat_slerp(a, b, t, target);
 		} else {
 			for (int k = 0; k < lanes; ++k) target[k] = a[k] + (b[k] - a[k]) * t;
 		}
+	}
+}
+
+void cm_blend(const CM_Model* model, const CM_Transform* a, const CM_Transform* b, float t, CM_Transform* out)
+{
+	for (int i = 0; i < model->node_count; ++i) {
+		for (int k = 0; k < 3; ++k) {
+			out[i].translation[k] = a[i].translation[k] + (b[i].translation[k] - a[i].translation[k]) * t;
+			out[i].scale[k] = a[i].scale[k] + (b[i].scale[k] - a[i].scale[k]) * t;
+		}
+		cm_quat_slerp(a[i].rotation, b[i].rotation, t, out[i].rotation);
 	}
 }
 

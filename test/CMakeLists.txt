@@ -32,6 +32,7 @@ set(CF_TEST_SRCS
 	test_math3d.cpp
 	test_math3d.c
 	test_ckit.c
+	test_model.cpp
 )
 set(CF_TEST_HDRS test_harness.h)
 

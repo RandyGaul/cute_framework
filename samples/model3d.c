@@ -119,8 +119,8 @@ static CF_Mesh s_make_mesh(const CM_Primitive* prim, int* out_count)
 // The fox's base color texture ships inside the GLB as a PNG.
 static CF_Texture s_make_texture(const CM_Model* model)
 {
-	if (model->material_count && model->materials[0].base_color_image >= 0) {
-		CM_Image* image = model->images + model->materials[0].base_color_image;
+	if (model->material_count && model->materials[0].base_color_texture.image >= 0) {
+		CM_Image* image = model->images + model->materials[0].base_color_texture.image;
 		CF_Image img;
 		if (!cf_is_error(cf_image_load_png_from_memory(image->data, image->size, &img))) {
 			CF_TextureParams params = cf_texture_defaults(img.w, img.h);

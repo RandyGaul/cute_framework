@@ -54,6 +54,7 @@ TEST_SUITE(test_draw3d);
 TEST_SUITE(test_uniform_arrays);
 TEST_SUITE(test_math);
 TEST_SUITE(test_math3d);
+TEST_SUITE(test_model);
 extern "C" {
 TEST_SUITE(test_math_c);
 TEST_SUITE(test_math3d_c);
@@ -114,6 +115,7 @@ int main(int argc, char* argv[])
 	RUN_TRACED(test_math_c);
 	RUN_TRACED(test_math3d);
 	RUN_TRACED(test_math3d_c);
+	RUN_TRACED(test_model);
 	RUN_TRACED(test_ckit);
 #undef RUN_TRACED
 
