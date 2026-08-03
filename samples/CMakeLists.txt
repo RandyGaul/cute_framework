@@ -50,6 +50,7 @@ add_sample(lines3d lines3d.c)
 add_sample(point_light point_light.c)
 add_sample(transparency3d transparency3d.c)
 add_sample(obj_loading obj_loading.c)
+add_sample(model3d model3d.c)
 target_include_directories(mandala PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../src) # internal/cute_draw_internal.h for renderer toggles/stats.
 add_sample(tile_perf tile_perf.cpp)
 target_include_directories(tile_perf PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../src) # internal/cute_draw_internal.h for the tiled toggle.
@@ -121,6 +122,7 @@ if (EMSCRIPTEN)
 	target_link_options(hrc_gi PRIVATE --preload-file "${CMAKE_CURRENT_SOURCE_DIR}/hrc_gi_data@/hrc_gi_data")
 	target_link_options(pixel_3d PRIVATE --preload-file "${CMAKE_CURRENT_SOURCE_DIR}/pixel_3d_data@/pixel_3d_data")
 	target_link_options(obj_loading PRIVATE --preload-file "${CMAKE_CURRENT_SOURCE_DIR}/obj_loading_data@/obj_loading_data")
+	target_link_options(model3d PRIVATE --preload-file "${CMAKE_CURRENT_SOURCE_DIR}/model3d_data@/model3d_data")
 endif ()
 
 # Copy over some folders for certain samples.
@@ -136,4 +138,5 @@ add_custom_command(TARGET hrc PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directo
 add_custom_command(TARGET hrc_gi PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/hrc_gi_data $<TARGET_FILE_DIR:hrc_gi>/hrc_gi_data)
 add_custom_command(TARGET pixel_3d PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/pixel_3d_data $<TARGET_FILE_DIR:pixel_3d>/pixel_3d_data)
 add_custom_command(TARGET obj_loading PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/obj_loading_data $<TARGET_FILE_DIR:obj_loading>/obj_loading_data)
+add_custom_command(TARGET model3d PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/model3d_data $<TARGET_FILE_DIR:model3d>/model3d_data)
 add_custom_command(TARGET customsprite PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/custom_sprite_data $<TARGET_FILE_DIR:customsprite>/custom_sprite_data)
