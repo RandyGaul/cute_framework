@@ -911,12 +911,13 @@ static CF_M4x4 s_basis_m4(CF_V3 x, CF_V3 y, CF_V3 z, CF_V3 t)
 	return m;
 }
 
-// Any orthonormal frame perpendicular to n (shared by rings, cones, and tori).
+// Any orthonormal frame perpendicular to n, right-handed as the columns (bx, n, bz) -- a
+// negative-determinant frame would mirror the mesh and flip its winding under back-face culling.
 static void s_perp_basis(CF_V3 n, CF_V3* bx, CF_V3* bz)
 {
 	CF_V3 h = CF_FABSF(n.y) < 0.99f ? cf_v3(0, 1, 0) : cf_v3(1, 0, 0);
 	*bx = cf_norm_v3(cf_cross_v3(h, n));
-	*bz = cf_cross_v3(n, *bx);
+	*bz = cf_cross_v3(*bx, n);
 }
 
 // Submits one solid instance: local placement composed under the transform stack, colored by
