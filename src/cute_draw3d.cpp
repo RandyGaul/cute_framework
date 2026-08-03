@@ -145,6 +145,7 @@ struct CF_Draw3d
 	Cute::Array<CF_Color> colors;
 	Cute::Array<CF_V3> dashes; // x: on length, y: off length, z: phase (world units).
 	Cute::Array<bool> stroke_pixels; // cf_draw3d_push_stroke_pixels: thickness in pixels, not world units.
+	Cute::Array<bool> stroke_depth_writes; // cf_draw3d_push_stroke_depth_write: strokes own the depth buffer.
 	// Shape effects (cf_draw3d_push_outline / _glow), the 3d twin of the 2d effect stack.
 	Cute::Array<CF_Color> outlines;
 	Cute::Array<float> outline_widths;
@@ -188,6 +189,7 @@ void cf_make_draw3d()
 	s_draw3d->colors.add(cf_color_white());
 	s_draw3d->dashes.add(cf_v3(0, 0, 0)); // Solid strokes by default.
 	s_draw3d->stroke_pixels.add(false);   // World-unit thickness by default.
+	s_draw3d->stroke_depth_writes.add(false); // Strokes don't own depth by default.
 	s_draw3d->outlines.add(cf_make_color_rgba_f(0, 0, 0, 0));
 	s_draw3d->outline_widths.add(0);
 	s_draw3d->glows.add(cf_make_color_rgba_f(0, 0, 0, 0));
@@ -849,6 +851,9 @@ static const char* s_stroke_fs_main =
 "    sp.kind = v_kind < 0.5 ? 0.0 : (v_seg.w > 0.5 ? 2.0 : 1.0);\n"
 "    sp.attributes = v_attr;\n"
 "    result = shader(shape_color, sp);\n"
+"    // Depth-writing strokes keep only their solid core: letting the anti-aliased fringe own\n"
+"    // depth would punch faint halos into everything drawn behind it afterwards.\n"
+"    if (u_shape_fx.z > 0.5 && result.a < 0.5) discard;\n"
 "}\n";
 
 static const char* s_solid_vs =
@@ -933,16 +938,16 @@ static void s_shapes_init()
 }
 
 // The stroke render state composes on top of whatever the user has pushed, forcing only
-// what the technique itself demands: premultiplied blend, no depth writes, no culling.
-// Strokes are anti-aliased and translucent-edged by construction, so they never own the
-// depth buffer -- but the user's depth *test* passes through, so pushing a render state
-// with CF_COMPARE_FUNCTION_ALWAYS draws x-ray overlay strokes (a skeleton through a
-// mesh), and the default 3d state keeps strokes properly occluded by solids.
+// what the technique itself demands: premultiplied blend and no culling. Strokes are
+// anti-aliased and translucent-edged, so by default they don't own the depth buffer -- but
+// the user's depth *test* passes through, so pushing CF_COMPARE_FUNCTION_ALWAYS draws x-ray
+// overlay strokes (a skeleton through a mesh), and cf_draw3d_push_stroke_depth_write turns
+// depth writes back on for wireframes that should occlude themselves.
 static CF_RenderState s_stroke_render_state()
 {
 	CF_RenderState rs = s_draw3d->render_states.last();
 	rs.cull_mode = CF_CULL_MODE_NONE;
-	rs.depth_write_enabled = false;
+	rs.depth_write_enabled = s_draw3d->stroke_depth_writes.last();
 	rs.blend.enabled = true;
 	rs.blend.rgb_src_blend_factor = CF_BLENDFACTOR_ONE;
 	rs.blend.rgb_dst_blend_factor = CF_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
@@ -975,7 +980,8 @@ static void s_shapes_set_fx()
 {
 	CF_Color o = s_draw3d->outlines.last();
 	CF_Color g = s_draw3d->glows.last();
-	CF_V4 params = cf_v4(s_draw3d->outline_widths.last(), s_draw3d->glow_radii.last(), 0, 0);
+	CF_V4 params = cf_v4(s_draw3d->outline_widths.last(), s_draw3d->glow_radii.last(),
+		s_draw3d->stroke_depth_writes.last() ? 1.0f : 0.0f, 0);
 	CF_V4 outline = cf_v4(o.r * o.a, o.g * o.a, o.b * o.a, o.a); // Premultiplied.
 	CF_V4 glow = cf_v4(g.r * g.a, g.g * g.a, g.b * g.a, g.a);
 	cf_draw3d_set_uniform("u_shape_fx", &params, CF_UNIFORM_TYPE_FLOAT4, 1);
@@ -1021,6 +1027,10 @@ void cf_draw3d_pop_glow() { if (s_draw3d->glows.count() > 1) { s_draw3d->glows.p
 void cf_draw3d_push_stroke_pixels(bool screen_space) { s_draw3d->stroke_pixels.add(screen_space); }
 bool cf_draw3d_pop_stroke_pixels() { if (s_draw3d->stroke_pixels.count() > 1) return s_draw3d->stroke_pixels.pop(); return s_draw3d->stroke_pixels.last(); }
 bool cf_draw3d_peek_stroke_pixels() { return s_draw3d->stroke_pixels.last(); }
+
+void cf_draw3d_push_stroke_depth_write(bool depth_write) { s_draw3d->stroke_depth_writes.add(depth_write); }
+bool cf_draw3d_pop_stroke_depth_write() { if (s_draw3d->stroke_depth_writes.count() > 1) return s_draw3d->stroke_depth_writes.pop(); return s_draw3d->stroke_depth_writes.last(); }
+bool cf_draw3d_peek_stroke_depth_write() { return s_draw3d->stroke_depth_writes.last(); }
 
 CF_Shader cf_make_draw3d_shape_shader_from_source(const char* src)
 {

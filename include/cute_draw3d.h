@@ -738,6 +738,37 @@ CF_API bool CF_CALL cf_draw3d_pop_stroke_pixels(void);
 CF_API bool CF_CALL cf_draw3d_peek_stroke_pixels(void);
 
 /**
+ * @function cf_draw3d_push_stroke_depth_write
+ * @category draw3d
+ * @brief    Lets subsequent strokes write to the depth buffer, so they occlude each other.
+ * @param    depth_write  True to write depth, false (the default) to only test against it.
+ * @remarks  Strokes are anti-aliased ribbons, so by default they test depth but never write it:
+ *           an AA fringe that owned depth would punch faint halos into whatever draws behind it
+ *           later. That default also means strokes cannot occlude *each other* -- a wireframe box
+ *           shows its back edges drawn over its front ones. Push this to trade the halo risk for
+ *           self-occlusion, which is what an opaque wireframe usually wants. Only the stroke's
+ *           solid core writes depth (fringe fragments are discarded), so the trade is small.
+ * @related  cf_draw3d_pop_stroke_depth_write cf_draw3d_push_render_state cf_draw3d_box_wire
+ */
+CF_API void CF_CALL cf_draw3d_push_stroke_depth_write(bool depth_write);
+
+/**
+ * @function cf_draw3d_pop_stroke_depth_write
+ * @category draw3d
+ * @brief    Pops and returns the last stroke depth-write mode.
+ * @related  cf_draw3d_push_stroke_depth_write cf_draw3d_peek_stroke_depth_write
+ */
+CF_API bool CF_CALL cf_draw3d_pop_stroke_depth_write(void);
+
+/**
+ * @function cf_draw3d_peek_stroke_depth_write
+ * @category draw3d
+ * @brief    Returns the current stroke depth-write mode.
+ * @related  cf_draw3d_push_stroke_depth_write cf_draw3d_pop_stroke_depth_write
+ */
+CF_API bool CF_CALL cf_draw3d_peek_stroke_depth_write(void);
+
+/**
  * @function cf_make_draw3d_shape_shader
  * @category draw3d
  * @brief    Compiles a user shape shader from a file, for customizing built-in 3d shape rendering.
@@ -1053,6 +1084,9 @@ CF_INLINE void draw3d_push_outline(CF_Color color, float width) { cf_draw3d_push
 CF_INLINE void draw3d_pop_outline() { cf_draw3d_pop_outline(); }
 CF_INLINE void draw3d_push_glow(CF_Color color, float radius) { cf_draw3d_push_glow(color, radius); }
 CF_INLINE void draw3d_pop_glow() { cf_draw3d_pop_glow(); }
+CF_INLINE void draw3d_push_stroke_depth_write(bool depth_write) { cf_draw3d_push_stroke_depth_write(depth_write); }
+CF_INLINE bool draw3d_pop_stroke_depth_write() { return cf_draw3d_pop_stroke_depth_write(); }
+CF_INLINE bool draw3d_peek_stroke_depth_write() { return cf_draw3d_peek_stroke_depth_write(); }
 CF_INLINE void draw3d_push_stroke_pixels(bool screen_space) { cf_draw3d_push_stroke_pixels(screen_space); }
 CF_INLINE bool draw3d_pop_stroke_pixels() { return cf_draw3d_pop_stroke_pixels(); }
 CF_INLINE bool draw3d_peek_stroke_pixels() { return cf_draw3d_peek_stroke_pixels(); }

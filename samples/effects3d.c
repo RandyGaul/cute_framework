@@ -69,10 +69,10 @@ int main(int argc, char* argv[])
 		neon.blend.enabled = true;
 		neon.blend.rgb_src_blend_factor = CF_BLENDFACTOR_ONE;
 		neon.blend.rgb_dst_blend_factor = CF_BLENDFACTOR_ONE;
-		neon.blend.rgb_op = CF_BLEND_OP_ADD;
+		neon.blend.rgb_op = CF_BLEND_OP_MAX;
 		neon.blend.alpha_src_blend_factor = CF_BLENDFACTOR_ONE;
 		neon.blend.alpha_dst_blend_factor = CF_BLENDFACTOR_ONE;
-		neon.blend.alpha_op = CF_BLEND_OP_ADD;
+		neon.blend.alpha_op = CF_BLEND_OP_MAX;
 		cf_draw3d_push_render_state(neon);
 		if (effects_on) {
 			cf_draw3d_push_glow(cf_make_color_rgba_f(1.0f, 0.15f, 0.55f, pulse), 0.28f);
@@ -93,6 +93,11 @@ int main(int argc, char* argv[])
 
 		// A selection box: thin strokes that would vanish against the grid, made legible by a
 		// dark outline rather than by shouting with thickness.
+		//
+		// Strokes don't write depth by default -- an anti-aliased fringe that owned depth would
+		// punch halos into later draws -- but that also stops a wireframe from occluding itself,
+		// so the box's back edges draw over its front ones. Opting in fixes exactly that.
+		cf_draw3d_push_stroke_depth_write(true);
 		if (effects_on) {
 			cf_draw3d_push_outline(cf_make_color_rgba_f(0, 0, 0, 0.9f), 0.02f);
 		}
@@ -100,12 +105,24 @@ int main(int argc, char* argv[])
 		cf_draw3d_box_wire(cf_v3(2.4f, 0.65f, 0), cf_v3(0.6f, 0.6f, 0.6f), 0.012f);
 		cf_draw3d_pop_color();
 		if (effects_on) cf_draw3d_pop_outline();
+		cf_draw3d_pop_stroke_depth_write();
 
-		// A rotation gizmo with both effects at once: the glow reads as energy, the outline
-		// keeps it crisp where it crosses the grid.
+		// A rotation gizmo, also glowing. Glowing things want a lightening blend so they add to
+		// whatever they overlap: a dark outline here would darken the neon behind it, and even
+		// plain alpha blending lets a low-alpha glow edge dim what it covers. CF_BLEND_OP_MAX
+		// takes the brighter of source and destination, so overlapping glows never darken and
+		// never blow out the way pure additive does.
+		CF_RenderState lighten = cf_render_state_3d_defaults();
+		lighten.blend.enabled = true;
+		lighten.blend.rgb_src_blend_factor = CF_BLENDFACTOR_ONE;
+		lighten.blend.rgb_dst_blend_factor = CF_BLENDFACTOR_ONE;
+		lighten.blend.rgb_op = CF_BLEND_OP_MAX;
+		lighten.blend.alpha_src_blend_factor = CF_BLENDFACTOR_ONE;
+		lighten.blend.alpha_dst_blend_factor = CF_BLENDFACTOR_ONE;
+		lighten.blend.alpha_op = CF_BLEND_OP_MAX;
+		cf_draw3d_push_render_state(lighten);
 		if (effects_on) {
 			cf_draw3d_push_glow(cf_make_color_rgba_f(0.3f, 0.7f, 1.0f, 0.8f), 0.18f);
-			cf_draw3d_push_outline(cf_make_color_rgba_f(0, 0, 0.1f, 0.8f), 0.015f);
 		}
 		cf_draw3d_push_color(cf_make_color_rgb_f(0.75f, 0.9f, 1.0f));
 		CF_V3 hub = cf_v3(-2.4f, 0.9f, 0);
@@ -113,10 +130,8 @@ int main(int argc, char* argv[])
 		cf_draw3d_arc(hub, cf_v3(1, 0, 0), 0.55f, t, 4.0f, 0.02f);
 		cf_draw3d_arc(hub, cf_v3(0, 0, 1), 0.55f, -t * 1.3f, 4.0f, 0.02f);
 		cf_draw3d_pop_color();
-		if (effects_on) {
-			cf_draw3d_pop_outline();
-			cf_draw3d_pop_glow();
-		}
+		if (effects_on) cf_draw3d_pop_glow();
+		cf_draw3d_pop_render_state();
 
 		cf_draw3d_pop_view();
 		cf_draw3d_pop_projection();
