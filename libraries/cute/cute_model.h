@@ -53,19 +53,27 @@
 		  does no file IO of its own. Without a callback, only self-contained files
 		  load.
 		- Attributes: POSITION (required), NORMAL (generated smooth if absent),
-		  TANGENT (generated from uvs + normals if absent), TEXCOORD_0 and COLOR_0
-		  (float / normalized u8 / normalized u16), JOINTS_0 (u8 / u16), WEIGHTS_0
-		  (float / normalized u8 / normalized u16).
+		  TANGENT (generated from uvs + normals if absent), TEXCOORD_0/TEXCOORD_1
+		  and COLOR_0 (float / normalized u8 / normalized u16), JOINTS_0 (u8 / u16),
+		  WEIGHTS_0 (float / normalized u8 / normalized u16).
 		- Indices u8/u16/u32 (widened to u32); unindexed primitives get 0..n-1.
-		- Animations: translation/rotation/scale channels with STEP, LINEAR
+		- Sparse accessors (morph targets' usual encoding) for float streams.
+		- Morph targets: position/normal/tangent delta streams per primitive, mesh
+		  default weights, and animated weights channels (cm_animate_weights).
+		- Animations: translation/rotation/scale/weights channels with STEP, LINEAR
 		  (shortest-path slerp for rotations), and CUBICSPLINE (proper Hermite
-		  evaluation) interpolation. Morph target (weights) channels are skipped.
+		  evaluation) interpolation.
 		- Node `matrix` transforms are decomposed to TRS (assumes no shear).
 		- Materials: the full pbrMetallicRoughness set (base color, metallic/
 		  roughness, normal, occlusion, emissive factors and textures), alpha
-		  mode/cutoff, double-sided, and KHR_texture_transform per texture slot.
-		- Not supported: sparse accessors, Draco/meshopt compression, morph
-		  targets, KHR_materials_* extensions (sheen, clearcoat, ...).
+		  mode/cutoff, double-sided, per-slot TEXCOORD set selection, and
+		  KHR_texture_transform per texture slot.
+		- KHR_lights_punctual: designer-placed lights as plain data on nodes.
+		- Raw "extras" JSON passes through on nodes, meshes, and materials --
+		  Blender custom properties export there, so gameplay markup authored in
+		  the DCC (spawn points, sockets, flags) arrives intact for you to parse.
+		- Not supported: Draco/meshopt compression, KHR_materials_* extensions
+		  (sheen, clearcoat, ...), sparse integer streams (joints/indices).
 
 	Generated tangents use area-weighted accumulation (Lengyel), orthonormalized
 	against the normal -- good for typical assets, but bake-critical normal maps
@@ -96,6 +104,15 @@ typedef struct CM_Transform
 
 // One drawable vertex stream (a glTF primitive). Streams are separate tightly-packed
 // arrays; interleave (or don't) however your renderer likes.
+// One morph target's delta streams (glTF primitive targets). Each non-NULL array holds
+// 3 floats per vertex to add, scaled by the target's weight, onto the base attribute.
+typedef struct CM_MorphTarget
+{
+	float* positions;
+	float* normals;
+	float* tangents; // xyz deltas only; handedness never morphs.
+} CM_MorphTarget;
+
 typedef struct CM_Primitive
 {
 	int vertex_count;
@@ -103,20 +120,26 @@ typedef struct CM_Primitive
 	float* normals;     // 3 floats per vertex. Generated (smooth) when the file has none.
 	float* tangents;    // 4 floats per vertex (xyz + w handedness sign). Generated from
 	                    // uvs + normals when the file has none; NULL without uvs.
-	float* uvs;         // 2 floats per vertex, or NULL.
+	float* uvs;         // 2 floats per vertex (TEXCOORD_0), or NULL.
+	float* uvs1;        // 2 floats per vertex (TEXCOORD_1, lightmaps/AO), or NULL.
 	float* colors;      // 4 floats per vertex (COLOR_0), or NULL.
 	uint16_t* joints;   // 4 per vertex, or NULL for unskinned meshes.
 	float* weights;     // 4 per vertex, or NULL for unskinned meshes.
 	int index_count;
 	uint32_t* indices;  // Never NULL (generated 0..n-1 for unindexed primitives).
 	int material;       // Index into model->materials, or -1.
+	int target_count;   // Morph targets (blendshapes).
+	CM_MorphTarget* targets;
 } CM_Primitive;
 
 typedef struct CM_Mesh
 {
-	const char* name;   // Interned; "" if unnamed.
+	const char* name;    // Interned; "" if unnamed.
 	int primitive_count;
 	CM_Primitive* primitives;
+	float* weights;      // Default morph weights (target_count of them), or NULL for zeros.
+	int weight_count;
+	const char* extras;  // Raw JSON of the glTF "extras" object, or NULL.
 } CM_Mesh;
 
 typedef struct CM_Node
@@ -127,8 +150,31 @@ typedef struct CM_Node
 	int child_count;
 	int mesh;           // Index into model->meshes, or -1.
 	int skin;           // Index into model->skins, or -1.
+	int light;          // Index into model->lights (KHR_lights_punctual), or -1.
 	CM_Transform rest;  // Local rest-pose transform.
+	const char* extras; // Raw JSON of the glTF "extras" object -- Blender custom
+	                    // properties land here -- or NULL. Parse it however you like.
 } CM_Node;
+
+// A designer-placed light (KHR_lights_punctual): position and orientation come from the
+// owning node's world transform (lights aim down the node's -z, per the spec).
+typedef enum CM_LightType
+{
+	CM_LIGHT_DIRECTIONAL,
+	CM_LIGHT_POINT,
+	CM_LIGHT_SPOT,
+} CM_LightType;
+
+typedef struct CM_Light
+{
+	const char* name;  // Interned; "" if unnamed.
+	CM_LightType type;
+	float color[3];    // Linear RGB, defaults to white.
+	float intensity;   // Candela (point/spot) or lux (directional); default 1.
+	float range;       // 0 means unbounded.
+	float inner_cone;  // Spot angles in radians.
+	float outer_cone;
+} CM_Light;
 
 typedef struct CM_Skin
 {
@@ -143,6 +189,7 @@ typedef enum CM_ChannelPath
 	CM_PATH_TRANSLATION,
 	CM_PATH_ROTATION,
 	CM_PATH_SCALE,
+	CM_PATH_WEIGHTS, // Morph target weights; sampled via cm_animate_weights.
 } CM_ChannelPath;
 
 typedef enum CM_Interpolation
@@ -157,12 +204,13 @@ typedef struct CM_Channel
 	int node;                     // Target node index.
 	CM_ChannelPath path;
 	CM_Interpolation interpolation;
+	int component_count;          // Floats per element: 3 (T/S), 4 (R), morph target count (weights).
 	int key_count;
 	float* times;                 // Ascending keyframe times in seconds.
-	float* values;                // One element per key: 3 floats (T/S) or 4 (R, quat xyzw).
+	float* values;                // One element (component_count floats) per key.
 	                              // CM_INTERP_CUBIC keys hold glTF's in-tangent/value/
 	                              // out-tangent triples: 3 elements per key, value in the
-	                              // middle. cm_animate handles both layouts.
+	                              // middle. The sampling functions handle both layouts.
 } CM_Channel;
 
 typedef struct CM_Animation
@@ -182,11 +230,13 @@ typedef struct CM_Image
 	int size;
 } CM_Image;
 
-// One material texture slot: an image index plus its KHR_texture_transform (identity
-// when the file carries none). Apply as uv' = offset + rotate(rotation) * (uv * scale).
+// One material texture slot: an image index, which TEXCOORD set it samples, and its
+// KHR_texture_transform (identity when the file carries none). Apply as
+// uv' = offset + rotate(rotation) * (uv * scale).
 typedef struct CM_TextureRef
 {
 	int image;       // Index into model->images, or -1 when the slot is unused.
+	int uv_set;      // 0 samples CM_Primitive::uvs, 1 samples uvs1.
 	float offset[2];
 	float scale[2];  // Defaults to (1, 1).
 	float rotation;  // Radians, clockwise about the uv origin per the extension spec.
@@ -218,6 +268,7 @@ typedef struct CM_Material
 	CM_AlphaMode alpha_mode;
 	float alpha_cutoff;           // Default 0.5; meaningful under CM_ALPHA_MASK.
 	int double_sided;
+	const char* extras;           // Raw JSON of the glTF "extras" object, or NULL.
 } CM_Material;
 
 typedef struct CM_Model
@@ -228,6 +279,7 @@ typedef struct CM_Model
 	int animation_count; CM_Animation* animations;
 	int image_count;     CM_Image* images;
 	int material_count;  CM_Material* materials;
+	int light_count;     CM_Light* lights;
 	int* order;          // node_count node indices, parents always before children.
 } CM_Model;
 
@@ -261,6 +313,10 @@ void cm_free(CM_Model* model);
 // Finds an animation by (case-sensitive) name, or NULL.
 CM_Animation* cm_find_animation(const CM_Model* model, const char* name);
 
+// Finds a node by (case-sensitive) name -- attach props to bones, look up authored
+// markers, etc. Returns the node index, or -1.
+int cm_find_node(const CM_Model* model, const char* name);
+
 //--------------------------------------------------------------------------------------------------
 // Runtime. All output arrays are caller-allocated:
 //   locals  -- model->node_count CM_Transforms.
@@ -288,6 +344,12 @@ void cm_skin_palette(const CM_Model* model, int skin_index, const float* world, 
 // Blends two whole poses: out = lerp(a, b, t) per node, with shortest-path slerp for
 // rotations. Sample two clips into separate local arrays and blend for crossfades.
 void cm_blend(const CM_Model* model, const CM_Transform* a, const CM_Transform* b, float t, CM_Transform* out);
+
+// Samples `animation`'s morph-weight channels targeting `node` into weights (up to
+// weight_count entries, matching the mesh's target_count). Entries stay untouched when
+// the animation has no weights channel for the node, so prefill with the mesh's default
+// weights (CM_Mesh::weights) or zeros. Apply as: vertex += sum(weights[i] * delta[i]).
+void cm_animate_weights(const CM_Model* model, const CM_Animation* animation, float time, int node, float* weights, int weight_count);
 
 #endif // CUTE_MODEL_H
 
@@ -320,8 +382,10 @@ typedef struct CM_JVal
 	char kind; // 'o' object, 'a' array, 's' string, 'n' number, 'b' bool, 'z' null.
 	double num;
 	const char* str;
-	int* items;        // ckit array of value indices (arrays and objects).
-	const char** keys; // ckit array of interned member names, parallel to items (objects).
+	int* items;           // ckit array of value indices (arrays and objects).
+	const char** keys;    // ckit array of interned member names, parallel to items (objects).
+	const char* src_begin; // Source span of this value, for raw "extras" passthrough.
+	const char* src_end;
 } CM_JVal;
 
 typedef struct CM_Json
@@ -346,6 +410,20 @@ static void cm_jskip_ws(CM_Json* j)
 }
 
 static int cm_jparse_value(CM_Json* j); // Returns value index + 1, or 0 on failure.
+static int cm_jparse_value_inner(CM_Json* j);
+
+// Wraps the parser proper to record each value's source span (raw "extras" passthrough).
+static int cm_jparse_value(CM_Json* j)
+{
+	cm_jskip_ws(j);
+	const char* begin = j->p;
+	int r = cm_jparse_value_inner(j);
+	if (r) {
+		j->vals[r - 1].src_begin = begin;
+		j->vals[r - 1].src_end = j->p;
+	}
+	return r;
+}
 
 static int cm_jparse_string(CM_Json* j, const char** out)
 {
@@ -397,7 +475,7 @@ static int cm_jparse_string(CM_Json* j, const char** out)
 	return 1;
 }
 
-static int cm_jparse_value(CM_Json* j)
+static int cm_jparse_value_inner(CM_Json* j)
 {
 	cm_jskip_ws(j);
 	if (j->p >= j->end) return 0;
@@ -627,14 +705,21 @@ static int cm_resolve_accessor(CM_Loader* l, int accessor_index, CM_Accessor* ou
 	int accessors = cm_jget(j, l->root, "accessors");
 	int a = cm_jat(j, accessors, accessor_index);
 	if (a < 0) CM_FAIL("accessor %d missing", accessor_index);
-	if (cm_jget(j, a, "sparse") >= 0) CM_FAIL("sparse accessors are not supported");
 	int component_type = cm_jget_int(j, a, "componentType", 0);
 	int csize = cm_component_size(component_type);
 	int components = cm_type_components(cm_jstr(j, cm_jget(j, a, "type"), ""));
 	int count = cm_jget_int(j, a, "count", 0);
 	if (!csize || !components || count <= 0) CM_FAIL("accessor %d has invalid layout", accessor_index);
 	int bv = cm_jat(j, cm_jget(j, l->root, "bufferViews"), cm_jget_int(j, a, "bufferView", -1));
-	if (bv < 0) CM_FAIL("accessor %d has no bufferView (zero-filled accessors unsupported)", accessor_index);
+	if (bv < 0) {
+		// No bufferView: a zero-filled base, legal for sparse accessors. cm_read_floats
+		// handles it; direct binary readers (joints, indices) must check for NULL data.
+		memset(out, 0, sizeof(*out));
+		out->count = count;
+		out->components = components;
+		out->component_type = component_type;
+		return 1;
+	}
 	int buffer = cm_jget_int(j, bv, "buffer", 0);
 	if (buffer < 0 || buffer >= asize(l->buffers) || !l->buffers[buffer]) CM_FAIL("accessor %d references missing buffer data", accessor_index);
 	int bv_offset = cm_jget_int(j, bv, "byteOffset", 0);
@@ -667,18 +752,68 @@ static float cm_read_component(const uint8_t* p, int component_type, int normali
 	return 0;
 }
 
-// Decodes an accessor into `want` floats per element (padding with 0, truncating extras).
-// Returns a CM_ALLOC'd array of count*want floats, or NULL.
+// Decodes an accessor into `want` floats per element (padding with 0, truncating extras),
+// applying sparse substitution when present. Returns a CM_ALLOC'd array of count*want
+// floats, or NULL.
 static float* cm_read_floats(CM_Loader* l, int accessor_index, int want, int* out_count)
 {
+	const CM_Json* j = &l->json;
 	CM_Accessor a;
 	if (!cm_resolve_accessor(l, accessor_index, &a)) return NULL;
 	int csize = cm_component_size(a.component_type);
 	float* out = (float*)CM_ALLOC(sizeof(float) * (size_t)a.count * (size_t)want);
-	for (int i = 0; i < a.count; ++i) {
-		const uint8_t* p = a.data + (size_t)i * (size_t)a.stride;
-		for (int c = 0; c < want; ++c) {
-			out[i * want + c] = c < a.components ? cm_read_component(p + c * csize, a.component_type, a.normalized) : 0.0f;
+	if (a.data) {
+		for (int i = 0; i < a.count; ++i) {
+			const uint8_t* p = a.data + (size_t)i * (size_t)a.stride;
+			for (int c = 0; c < want; ++c) {
+				out[i * want + c] = c < a.components ? cm_read_component(p + c * csize, a.component_type, a.normalized) : 0.0f;
+			}
+		}
+	} else {
+		memset(out, 0, sizeof(float) * (size_t)a.count * (size_t)want);
+	}
+
+	// Sparse substitution: `count` overrides at explicit indices (morph targets live here).
+	int ja = cm_jat(j, cm_jget(j, l->root, "accessors"), accessor_index);
+	int sparse = cm_jget(j, ja, "sparse");
+	if (sparse >= 0) {
+		int jviews = cm_jget(j, l->root, "bufferViews");
+		int sparse_count = cm_jget_int(j, sparse, "count", 0);
+		int jindices = cm_jget(j, sparse, "indices");
+		int jvalues = cm_jget(j, sparse, "values");
+		int itype = cm_jget_int(j, jindices, "componentType", 0);
+		int isize = cm_component_size(itype);
+		int ibv = cm_jat(j, jviews, cm_jget_int(j, jindices, "bufferView", -1));
+		int vbv = cm_jat(j, jviews, cm_jget_int(j, jvalues, "bufferView", -1));
+		int ibuf = cm_jget_int(j, ibv, "buffer", 0);
+		int vbuf = cm_jget_int(j, vbv, "buffer", 0);
+		if (ibv < 0 || vbv < 0 || !isize || (itype != 5121 && itype != 5123 && itype != 5125)
+			|| ibuf < 0 || ibuf >= asize(l->buffers) || !l->buffers[ibuf]
+			|| vbuf < 0 || vbuf >= asize(l->buffers) || !l->buffers[vbuf]) {
+			CM_FREE(out);
+			snprintf(cm_g_error, sizeof(cm_g_error), "accessor %d has a malformed sparse block", accessor_index);
+			return NULL;
+		}
+		int ioffset = cm_jget_int(j, ibv, "byteOffset", 0) + cm_jget_int(j, jindices, "byteOffset", 0);
+		int voffset = cm_jget_int(j, vbv, "byteOffset", 0) + cm_jget_int(j, jvalues, "byteOffset", 0);
+		int vstride = csize * a.components;
+		if (ioffset + isize * sparse_count > l->buffer_sizes[ibuf] || voffset + vstride * sparse_count > l->buffer_sizes[vbuf]) {
+			CM_FREE(out);
+			snprintf(cm_g_error, sizeof(cm_g_error), "accessor %d sparse block reads out of bounds", accessor_index);
+			return NULL;
+		}
+		const uint8_t* ip = l->buffers[ibuf] + ioffset;
+		const uint8_t* vp = l->buffers[vbuf] + voffset;
+		for (int s = 0; s < sparse_count; ++s) {
+			uint32_t index;
+			if (isize == 1) index = ip[s];
+			else if (isize == 2) { uint16_t v; memcpy(&v, ip + s * 2, 2); index = v; }
+			else { memcpy(&index, ip + s * 4, 4); }
+			if (index >= (uint32_t)a.count) continue;
+			const uint8_t* p = vp + (size_t)s * (size_t)vstride;
+			for (int c = 0; c < want; ++c) {
+				out[index * want + c] = c < a.components ? cm_read_component(p + c * csize, a.component_type, a.normalized) : 0.0f;
+			}
 		}
 	}
 	*out_count = a.count;
@@ -889,6 +1024,13 @@ static int cm_load_primitive(CM_Loader* l, int prim, CM_Primitive* out)
 		if (!out->uvs) return 0;
 	}
 
+	int uv1_accessor = cm_jget_int(j, attrs, "TEXCOORD_1", -1);
+	if (uv1_accessor >= 0) {
+		int n;
+		out->uvs1 = cm_read_floats(l, uv1_accessor, 2, &n);
+		if (!out->uvs1) return 0;
+	}
+
 	int color_accessor = cm_jget_int(j, attrs, "COLOR_0", -1);
 	if (color_accessor >= 0) {
 		// COLOR_0 may be VEC3; cm_read_floats pads with 0, so force alpha to 1 after.
@@ -908,6 +1050,7 @@ static int cm_load_primitive(CM_Loader* l, int prim, CM_Primitive* out)
 		CM_Accessor ja;
 		if (!cm_resolve_accessor(l, joints_accessor, &ja)) return 0;
 		int csize = cm_component_size(ja.component_type);
+		if (!ja.data) CM_FAIL("sparse JOINTS_0 is not supported");
 		if (ja.component_type != 5121 && ja.component_type != 5123) CM_FAIL("JOINTS_0 must be u8 or u16");
 		out->joints = (uint16_t*)CM_ALLOC(sizeof(uint16_t) * 4 * (size_t)ja.count);
 		for (int i = 0; i < ja.count; ++i) {
@@ -928,6 +1071,7 @@ static int cm_load_primitive(CM_Loader* l, int prim, CM_Primitive* out)
 		CM_Accessor ia;
 		if (!cm_resolve_accessor(l, indices_accessor, &ia)) return 0;
 		int csize = cm_component_size(ia.component_type);
+		if (!ia.data) CM_FAIL("sparse indices are not supported");
 		if (ia.component_type != 5121 && ia.component_type != 5123 && ia.component_type != 5125) CM_FAIL("indices must be u8, u16, or u32");
 		out->index_count = ia.count;
 		out->indices = (uint32_t*)CM_ALLOC(sizeof(uint32_t) * (size_t)ia.count);
@@ -960,6 +1104,24 @@ static int cm_load_primitive(CM_Loader* l, int prim, CM_Primitive* out)
 	} else if (out->uvs) {
 		out->tangents = cm_generate_tangents(out->positions, out->normals, out->uvs, out->vertex_count, out->indices, out->index_count);
 	}
+
+	// Morph targets: per-target delta streams (sparse accessors are the common encoding).
+	int jtargets = cm_jget(j, prim, "targets");
+	out->target_count = cm_jlen(j, jtargets);
+	if (out->target_count) {
+		out->targets = (CM_MorphTarget*)CM_ALLOC(sizeof(CM_MorphTarget) * (size_t)out->target_count);
+		memset(out->targets, 0, sizeof(CM_MorphTarget) * (size_t)out->target_count);
+		for (int t = 0; t < out->target_count; ++t) {
+			int target = cm_jat(j, jtargets, t);
+			int n;
+			int pos = cm_jget_int(j, target, "POSITION", -1);
+			int nrm = cm_jget_int(j, target, "NORMAL", -1);
+			int tan = cm_jget_int(j, target, "TANGENT", -1);
+			if (pos >= 0 && !(out->targets[t].positions = cm_read_floats(l, pos, 3, &n))) return 0;
+			if (nrm >= 0 && !(out->targets[t].normals = cm_read_floats(l, nrm, 3, &n))) return 0;
+			if (tan >= 0 && !(out->targets[t].tangents = cm_read_floats(l, tan, 3, &n))) return 0;
+		}
+	}
 	return 1;
 }
 
@@ -969,10 +1131,30 @@ static void cm_free_primitive(CM_Primitive* p)
 	if (p->normals) CM_FREE(p->normals);
 	if (p->tangents) CM_FREE(p->tangents);
 	if (p->uvs) CM_FREE(p->uvs);
+	if (p->uvs1) CM_FREE(p->uvs1);
 	if (p->colors) CM_FREE(p->colors);
 	if (p->joints) CM_FREE(p->joints);
 	if (p->weights) CM_FREE(p->weights);
 	if (p->indices) CM_FREE(p->indices);
+	for (int t = 0; t < p->target_count; ++t) {
+		if (p->targets[t].positions) CM_FREE(p->targets[t].positions);
+		if (p->targets[t].normals) CM_FREE(p->targets[t].normals);
+		if (p->targets[t].tangents) CM_FREE(p->targets[t].tangents);
+	}
+	if (p->targets) CM_FREE(p->targets);
+}
+
+// Copies an object's raw "extras" JSON out of the source text, or NULL when absent.
+static const char* cm_extras(CM_Loader* l, int obj)
+{
+	int e = cm_jget(&l->json, obj, "extras");
+	if (e < 0) return NULL;
+	const CM_JVal* v = l->json.vals + e;
+	int n = (int)(v->src_end - v->src_begin);
+	char* s = (char*)CM_ALLOC((size_t)n + 1);
+	memcpy(s, v->src_begin, (size_t)n);
+	s[n] = 0;
+	return s;
 }
 
 void cm_free(CM_Model* model)
@@ -981,12 +1163,19 @@ void cm_free(CM_Model* model)
 	for (int i = 0; i < model->mesh_count; ++i) {
 		for (int p = 0; p < model->meshes[i].primitive_count; ++p) cm_free_primitive(model->meshes[i].primitives + p);
 		if (model->meshes[i].primitives) CM_FREE(model->meshes[i].primitives);
+		if (model->meshes[i].weights) CM_FREE(model->meshes[i].weights);
+		if (model->meshes[i].extras) CM_FREE((void*)model->meshes[i].extras);
 	}
 	if (model->meshes) CM_FREE(model->meshes);
 	for (int i = 0; i < model->node_count; ++i) {
 		if (model->nodes[i].children) CM_FREE(model->nodes[i].children);
+		if (model->nodes[i].extras) CM_FREE((void*)model->nodes[i].extras);
 	}
 	if (model->nodes) CM_FREE(model->nodes);
+	for (int i = 0; i < model->material_count; ++i) {
+		if (model->materials[i].extras) CM_FREE((void*)model->materials[i].extras);
+	}
+	if (model->lights) CM_FREE(model->lights);
 	for (int i = 0; i < model->skin_count; ++i) {
 		if (model->skins[i].joints) CM_FREE(model->skins[i].joints);
 		if (model->skins[i].inverse_binds) CM_FREE(model->skins[i].inverse_binds);
@@ -1020,6 +1209,7 @@ static CM_TextureRef cm_load_texture_ref(CM_Loader* l, int tex_info)
 	int texture = cm_jat(j, cm_jget(j, l->root, "textures"), cm_jget_int(j, tex_info, "index", -1));
 	if (texture < 0) return ref;
 	ref.image = cm_jget_int(j, texture, "source", -1);
+	ref.uv_set = cm_jget_int(j, tex_info, "texCoord", 0);
 	int xform = cm_jget(j, cm_jget(j, tex_info, "extensions"), "KHR_texture_transform");
 	if (xform >= 0) {
 		int off = cm_jget(j, xform, "offset");
@@ -1051,6 +1241,8 @@ static CM_Model* cm_load_from_json(CM_Loader* l)
 		node->parent = -1;
 		node->mesh = cm_jget_int(j, n, "mesh", -1);
 		node->skin = cm_jget_int(j, n, "skin", -1);
+		node->light = cm_jget_int(j, cm_jget(j, cm_jget(j, n, "extensions"), "KHR_lights_punctual"), "light", -1);
+		node->extras = cm_extras(l, n);
 		cm_default_transform(&node->rest);
 		int matrix = cm_jget(j, n, "matrix");
 		if (matrix >= 0 && cm_jlen(j, matrix) == 16) {
@@ -1104,6 +1296,13 @@ static CM_Model* cm_load_from_json(CM_Loader* l)
 		int m = cm_jat(j, jmeshes, i);
 		CM_Mesh* mesh = model->meshes + i;
 		mesh->name = cm_jstr(j, cm_jget(j, m, "name"), "");
+		mesh->extras = cm_extras(l, m);
+		int jweights = cm_jget(j, m, "weights");
+		mesh->weight_count = cm_jlen(j, jweights);
+		if (mesh->weight_count) {
+			mesh->weights = (float*)CM_ALLOC(sizeof(float) * (size_t)mesh->weight_count);
+			for (int k = 0; k < mesh->weight_count; ++k) mesh->weights[k] = (float)cm_jnum(j, cm_jat(j, jweights, k), 0);
+		}
 		int prims = cm_jget(j, m, "primitives");
 		mesh->primitive_count = cm_jlen(j, prims);
 		if (mesh->primitive_count) {
@@ -1167,30 +1366,47 @@ static CM_Model* cm_load_from_json(CM_Loader* l)
 			int ch = cm_jat(j, channels, c);
 			int target = cm_jget(j, ch, "target");
 			const char* path = cm_jstr(j, cm_jget(j, target, "path"), "");
+			int node = cm_jget_int(j, target, "node", -1);
+			if (node < 0 || node >= model->node_count) continue;
 			CM_ChannelPath cp;
 			int lanes;
 			if (!strcmp(path, "translation")) { cp = CM_PATH_TRANSLATION; lanes = 3; }
 			else if (!strcmp(path, "rotation")) { cp = CM_PATH_ROTATION; lanes = 4; }
 			else if (!strcmp(path, "scale")) { cp = CM_PATH_SCALE; lanes = 3; }
-			else continue; // Morph target weights: skipped.
+			else if (!strcmp(path, "weights")) {
+				// Morph weights: one lane per target on the node's mesh.
+				cp = CM_PATH_WEIGHTS;
+				int mesh = model->nodes[node].mesh;
+				lanes = mesh >= 0 && model->meshes[mesh].primitive_count ? model->meshes[mesh].primitives[0].target_count : 0;
+				if (!lanes) continue;
+			}
+			else continue;
 			int sampler = cm_jat(j, samplers, cm_jget_int(j, ch, "sampler", -1));
 			if (sampler < 0) continue;
 			const char* interp = cm_jstr(j, cm_jget(j, sampler, "interpolation"), "LINEAR");
 			int cubic = !strcmp(interp, "CUBICSPLINE");
 			CM_Channel* out = anim->channels + anim->channel_count;
-			out->node = cm_jget_int(j, target, "node", -1);
-			if (out->node < 0 || out->node >= model->node_count) continue;
+			out->node = node;
 			out->path = cp;
+			out->component_count = lanes;
 			out->interpolation = cubic ? CM_INTERP_CUBIC : !strcmp(interp, "STEP") ? CM_INTERP_STEP : CM_INTERP_LINEAR;
 			int key_count = 0;
 			out->times = cm_read_floats(l, cm_jget_int(j, sampler, "input", -1), 1, &key_count);
 			if (!out->times) { cm_free(model); return NULL; }
 			out->key_count = key_count;
+			// Weights outputs are SCALAR runs (lanes per key); vector paths read whole
+			// elements. Both land in the same key-major float layout.
 			int value_count = 0;
-			float* values = cm_read_floats(l, cm_jget_int(j, sampler, "output", -1), lanes, &value_count);
+			float* values;
+			if (cp == CM_PATH_WEIGHTS) {
+				values = cm_read_floats(l, cm_jget_int(j, sampler, "output", -1), 1, &value_count);
+				value_count /= lanes;
+			} else {
+				values = cm_read_floats(l, cm_jget_int(j, sampler, "output", -1), lanes, &value_count);
+			}
 			if (!values) { CM_FREE(out->times); out->times = NULL; cm_free(model); return NULL; }
 			// CUBICSPLINE keys are in-tangent/value/out-tangent triples, kept verbatim for
-			// Hermite evaluation in cm_animate.
+			// Hermite evaluation at sample time.
 			if (value_count < (cubic ? key_count * 3 : key_count)) {
 				CM_FREE(values); CM_FREE(out->times); out->times = NULL; cm_free(model);
 				CM_FAIL("animation channel is short on values");
@@ -1273,6 +1489,30 @@ static CM_Model* cm_load_from_json(CM_Loader* l)
 		material->alpha_mode = !strcmp(alpha_mode, "MASK") ? CM_ALPHA_MASK : !strcmp(alpha_mode, "BLEND") ? CM_ALPHA_BLEND : CM_ALPHA_OPAQUE;
 		material->alpha_cutoff = (float)cm_jnum(j, cm_jget(j, m, "alphaCutoff"), 0.5);
 		material->double_sided = cm_jint(j, cm_jget(j, m, "doubleSided"), 0);
+		material->extras = cm_extras(l, m);
+	}
+
+	// Designer-placed lights (KHR_lights_punctual); nodes reference them by index.
+	int jlights = cm_jget(j, cm_jget(j, cm_jget(j, l->root, "extensions"), "KHR_lights_punctual"), "lights");
+	model->light_count = cm_jlen(j, jlights);
+	if (model->light_count) {
+		model->lights = (CM_Light*)CM_ALLOC(sizeof(CM_Light) * (size_t)model->light_count);
+		memset(model->lights, 0, sizeof(CM_Light) * (size_t)model->light_count);
+	}
+	for (int i = 0; i < model->light_count; ++i) {
+		int lt = cm_jat(j, jlights, i);
+		CM_Light* light = model->lights + i;
+		light->name = cm_jstr(j, cm_jget(j, lt, "name"), "");
+		const char* type = cm_jstr(j, cm_jget(j, lt, "type"), "directional");
+		light->type = !strcmp(type, "point") ? CM_LIGHT_POINT : !strcmp(type, "spot") ? CM_LIGHT_SPOT : CM_LIGHT_DIRECTIONAL;
+		light->color[0] = light->color[1] = light->color[2] = 1;
+		int color = cm_jget(j, lt, "color");
+		for (int k = 0; k < 3 && k < cm_jlen(j, color); ++k) light->color[k] = (float)cm_jnum(j, cm_jat(j, color, k), 1);
+		light->intensity = (float)cm_jnum(j, cm_jget(j, lt, "intensity"), 1);
+		light->range = (float)cm_jnum(j, cm_jget(j, lt, "range"), 0);
+		int spot = cm_jget(j, lt, "spot");
+		light->inner_cone = (float)cm_jnum(j, cm_jget(j, spot, "innerConeAngle"), 0);
+		light->outer_cone = (float)cm_jnum(j, cm_jget(j, spot, "outerConeAngle"), 0.7853981634); // pi/4 per spec.
 	}
 
 	return model;
@@ -1382,65 +1622,93 @@ void cm_rest_pose(const CM_Model* model, CM_Transform* locals)
 	for (int i = 0; i < model->node_count; ++i) locals[i] = model->nodes[i].rest;
 }
 
+// Samples one channel at `time` into out[lanes], where lanes never exceeds
+// ch->component_count. Handles the STEP/LINEAR/CUBICSPLINE layouts; rotations get
+// shortest-path slerp (linear) or post-normalization (cubic), per spec.
+static void cm_sample_channel(const CM_Channel* ch, float time, int lanes, float* out)
+{
+	int is_quat = ch->path == CM_PATH_ROTATION;
+	// CUBICSPLINE keys are (in-tangent, value, out-tangent) triples; the value of key k
+	// sits at element k*3 + 1.
+	int cubic = ch->interpolation == CM_INTERP_CUBIC;
+	int stride = cubic ? ch->component_count * 3 : ch->component_count;
+	int value_offset = cubic ? ch->component_count : 0;
+	if (ch->key_count == 1 || time <= ch->times[0]) {
+		memcpy(out, ch->values + value_offset, sizeof(float) * (size_t)lanes);
+		return;
+	}
+	if (time >= ch->times[ch->key_count - 1]) {
+		memcpy(out, ch->values + (size_t)(ch->key_count - 1) * stride + value_offset, sizeof(float) * (size_t)lanes);
+		return;
+	}
+	// Binary search for the bracketing pair.
+	int lo = 0, hi = ch->key_count - 1;
+	while (hi - lo > 1) {
+		int mid = (lo + hi) >> 1;
+		if (ch->times[mid] <= time) lo = mid;
+		else hi = mid;
+	}
+	float span = ch->times[hi] - ch->times[lo];
+	float t = span > 0 ? (time - ch->times[lo]) / span : 0;
+	const float* a = ch->values + (size_t)lo * stride + value_offset;
+	const float* b = ch->values + (size_t)hi * stride + value_offset;
+	if (ch->interpolation == CM_INTERP_STEP) {
+		memcpy(out, a, sizeof(float) * (size_t)lanes);
+	} else if (cubic) {
+		// glTF's Hermite basis: out-tangent of the left key, in-tangent of the right,
+		// both scaled by the key span.
+		const float* out_tan = a + ch->component_count; // Key lo's out-tangent trails its value.
+		const float* in_tan = b - ch->component_count;  // Key hi's in-tangent precedes its value.
+		float t2 = t * t, t3 = t2 * t;
+		float h00 = 2 * t3 - 3 * t2 + 1;
+		float h10 = t3 - 2 * t2 + t;
+		float h01 = -2 * t3 + 3 * t2;
+		float h11 = t3 - t2;
+		for (int k = 0; k < lanes; ++k) {
+			out[k] = h00 * a[k] + h10 * span * out_tan[k] + h01 * b[k] + h11 * span * in_tan[k];
+		}
+		if (is_quat) {
+			float len = sqrtf(out[0] * out[0] + out[1] * out[1] + out[2] * out[2] + out[3] * out[3]);
+			if (len > 0) { out[0] /= len; out[1] /= len; out[2] /= len; out[3] /= len; }
+			else out[3] = 1;
+		}
+	} else if (is_quat) {
+		cm_quat_slerp(a, b, t, out);
+	} else {
+		for (int k = 0; k < lanes; ++k) out[k] = a[k] + (b[k] - a[k]) * t;
+	}
+}
+
 void cm_animate(const CM_Model* model, const CM_Animation* animation, float time, CM_Transform* locals)
 {
 	(void)model;
 	for (int c = 0; c < animation->channel_count; ++c) {
 		const CM_Channel* ch = animation->channels + c;
-		int lanes = ch->path == CM_PATH_ROTATION ? 4 : 3;
-		// CUBICSPLINE keys are (in-tangent, value, out-tangent) triples; the value of key
-		// k sits at element k*3 + 1.
-		int cubic = ch->interpolation == CM_INTERP_CUBIC;
-		int key_stride = cubic ? lanes * 3 : lanes;
-		int value_offset = cubic ? lanes : 0;
+		if (ch->path == CM_PATH_WEIGHTS) continue; // See cm_animate_weights.
 		float* target = ch->path == CM_PATH_TRANSLATION ? locals[ch->node].translation
 		              : ch->path == CM_PATH_ROTATION ? locals[ch->node].rotation
 		              : locals[ch->node].scale;
-		if (ch->key_count == 1 || time <= ch->times[0]) {
-			memcpy(target, ch->values + value_offset, sizeof(float) * (size_t)lanes);
-			continue;
-		}
-		if (time >= ch->times[ch->key_count - 1]) {
-			memcpy(target, ch->values + (size_t)(ch->key_count - 1) * key_stride + value_offset, sizeof(float) * (size_t)lanes);
-			continue;
-		}
-		// Binary search for the bracketing pair.
-		int lo = 0, hi = ch->key_count - 1;
-		while (hi - lo > 1) {
-			int mid = (lo + hi) >> 1;
-			if (ch->times[mid] <= time) lo = mid;
-			else hi = mid;
-		}
-		float span = ch->times[hi] - ch->times[lo];
-		float t = span > 0 ? (time - ch->times[lo]) / span : 0;
-		const float* a = ch->values + (size_t)lo * key_stride + value_offset;
-		const float* b = ch->values + (size_t)hi * key_stride + value_offset;
-		if (ch->interpolation == CM_INTERP_STEP) {
-			memcpy(target, a, sizeof(float) * (size_t)lanes);
-		} else if (cubic) {
-			// glTF's Hermite basis: out-tangent of the left key, in-tangent of the right,
-			// both scaled by the key span. Rotations normalize after (per spec).
-			const float* out_tan = a + lanes;  // Key lo's out-tangent trails its value.
-			const float* in_tan = b - lanes;   // Key hi's in-tangent precedes its value.
-			float t2 = t * t, t3 = t2 * t;
-			float h00 = 2 * t3 - 3 * t2 + 1;
-			float h10 = t3 - 2 * t2 + t;
-			float h01 = -2 * t3 + 3 * t2;
-			float h11 = t3 - t2;
-			for (int k = 0; k < lanes; ++k) {
-				target[k] = h00 * a[k] + h10 * span * out_tan[k] + h01 * b[k] + h11 * span * in_tan[k];
-			}
-			if (ch->path == CM_PATH_ROTATION) {
-				float len = sqrtf(target[0] * target[0] + target[1] * target[1] + target[2] * target[2] + target[3] * target[3]);
-				if (len > 0) { target[0] /= len; target[1] /= len; target[2] /= len; target[3] /= len; }
-				else target[3] = 1;
-			}
-		} else if (ch->path == CM_PATH_ROTATION) {
-			cm_quat_slerp(a, b, t, target);
-		} else {
-			for (int k = 0; k < lanes; ++k) target[k] = a[k] + (b[k] - a[k]) * t;
-		}
+		cm_sample_channel(ch, time, ch->component_count, target);
 	}
+}
+
+void cm_animate_weights(const CM_Model* model, const CM_Animation* animation, float time, int node, float* weights, int weight_count)
+{
+	(void)model;
+	for (int c = 0; c < animation->channel_count; ++c) {
+		const CM_Channel* ch = animation->channels + c;
+		if (ch->path != CM_PATH_WEIGHTS || ch->node != node) continue;
+		int lanes = weight_count < ch->component_count ? weight_count : ch->component_count;
+		cm_sample_channel(ch, time, lanes, weights);
+	}
+}
+
+int cm_find_node(const CM_Model* model, const char* name)
+{
+	for (int i = 0; i < model->node_count; ++i) {
+		if (!strcmp(model->nodes[i].name, name)) return i;
+	}
+	return -1;
 }
 
 void cm_blend(const CM_Model* model, const CM_Transform* a, const CM_Transform* b, float t, CM_Transform* out)
