@@ -150,7 +150,6 @@ struct CF_Draw3d
 	CF_Mesh stroke_quad = { 0 };
 	CF_Shader stroke_shd = { 0 };
 	CF_Shader solid_shd = { 0 };
-	CF_RenderState stroke_rs;
 	CF_Mesh cube_mesh = { 0 };
 	CF_Mesh sphere_mesh = { 0 };
 	CF_Mesh cone_mesh = { 0 };
@@ -880,20 +879,27 @@ static void s_shapes_init()
 	cf_mesh_update_vertex_data(s_draw3d->stroke_quad, corners, 6);
 	s_draw3d->stroke_shd = s_compose_shape_shader(s_stroke_vs, s_stroke_fs_prefix, s_shape_stub_default, s_stroke_fs_main);
 	s_draw3d->solid_shd = s_compose_shape_shader(s_solid_vs, s_solid_fs_prefix, s_shape_stub_default, s_solid_fs_main);
+}
 
-	// Stroke render state: premultiplied blend, depth test but no writes, no culling. Strokes
-	// are anti-aliased and translucent-edged by construction, so they never own the depth
-	// buffer; solids use whatever render state the user has pushed (3d defaults work).
-	s_draw3d->stroke_rs = cf_render_state_3d_defaults();
-	s_draw3d->stroke_rs.cull_mode = CF_CULL_MODE_NONE;
-	s_draw3d->stroke_rs.depth_write_enabled = false;
-	s_draw3d->stroke_rs.blend.enabled = true;
-	s_draw3d->stroke_rs.blend.rgb_src_blend_factor = CF_BLENDFACTOR_ONE;
-	s_draw3d->stroke_rs.blend.rgb_dst_blend_factor = CF_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
-	s_draw3d->stroke_rs.blend.rgb_op = CF_BLEND_OP_ADD;
-	s_draw3d->stroke_rs.blend.alpha_src_blend_factor = CF_BLENDFACTOR_ONE;
-	s_draw3d->stroke_rs.blend.alpha_dst_blend_factor = CF_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
-	s_draw3d->stroke_rs.blend.alpha_op = CF_BLEND_OP_ADD;
+// The stroke render state composes on top of whatever the user has pushed, forcing only
+// what the technique itself demands: premultiplied blend, no depth writes, no culling.
+// Strokes are anti-aliased and translucent-edged by construction, so they never own the
+// depth buffer -- but the user's depth *test* passes through, so pushing a render state
+// with CF_COMPARE_FUNCTION_ALWAYS draws x-ray overlay strokes (a skeleton through a
+// mesh), and the default 3d state keeps strokes properly occluded by solids.
+static CF_RenderState s_stroke_render_state()
+{
+	CF_RenderState rs = s_draw3d->render_states.last();
+	rs.cull_mode = CF_CULL_MODE_NONE;
+	rs.depth_write_enabled = false;
+	rs.blend.enabled = true;
+	rs.blend.rgb_src_blend_factor = CF_BLENDFACTOR_ONE;
+	rs.blend.rgb_dst_blend_factor = CF_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
+	rs.blend.rgb_op = CF_BLEND_OP_ADD;
+	rs.blend.alpha_src_blend_factor = CF_BLENDFACTOR_ONE;
+	rs.blend.alpha_dst_blend_factor = CF_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
+	rs.blend.alpha_op = CF_BLEND_OP_ADD;
+	return rs;
 }
 
 // Camera info for the stroke vertex stage, refreshed whenever the view changes (set_uniform
@@ -925,7 +931,7 @@ static void s_submit_stroke(CF_MeshInstance3d inst)
 	CF_Shader top = s_draw3d->shaders.last();
 	CF_ShapeShaderBundle* bundle = top.id ? s_draw3d->shape_shaders.try_find(top.id) : NULL;
 	cf_draw3d_push_shader(bundle ? bundle->stroke : s_draw3d->stroke_shd);
-	cf_draw3d_push_render_state(s_draw3d->stroke_rs);
+	cf_draw3d_push_render_state(s_stroke_render_state());
 	s_submit(s_draw3d->stroke_quad, inst, false, NULL);
 	cf_draw3d_pop_render_state();
 	cf_draw3d_pop_shader();
