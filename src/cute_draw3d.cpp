@@ -146,6 +146,10 @@ struct CF_Draw3d
 	Cute::Array<CF_V3> dashes; // x: on length, y: off length, z: phase (world units).
 	Cute::Array<bool> stroke_pixels; // cf_draw3d_push_stroke_pixels: thickness in pixels, not world units.
 	Cute::Array<bool> stroke_depth_writes; // cf_draw3d_push_stroke_depth_write: strokes own the depth buffer.
+	// Which half of a stroke to emit: 0 both, 1 effects only, 2 core only. Multi-segment shape
+	// helpers split themselves into an effects pass then a core pass so a neighbor's outline can
+	// never land on top of (or depth-reject) an adjacent segment's core at a shared joint.
+	int stroke_pass = 0;
 	// Shape effects (cf_draw3d_push_outline / _glow), the 3d twin of the 2d effect stack.
 	Cute::Array<CF_Color> outlines;
 	Cute::Array<float> outline_widths;
@@ -647,7 +651,13 @@ static const char* s_stroke_vs =
 "        float len = length(d);\n"
 "        vec3 dir = len > 0.0001 ? d / len : vec3(1, 0, 0);\n"
 "        vec3 mid = (a + b) * 0.5;\n"
-"        vec3 across = normalize(cross(dir, u_shape_eye.xyz - mid));\n"
+"        // Camera-facing ribbon. A segment pointing near the camera makes this cross product\n"
+"        // collapse -- and flip sign as it passes through -- which spins the ribbon. Fall back\n"
+"        // to any fixed perpendicular there so the orientation stays continuous.\n"
+"        vec3 cr = cross(dir, u_shape_eye.xyz - mid);\n"
+"        float crl = length(cr);\n"
+"        vec3 across = crl > 0.0001 ? cr / crl\n"
+"            : normalize(cross(dir, abs(dir.y) < 0.99 ? vec3(0, 1, 0) : vec3(1, 0, 0)));\n"
 "        // Pixels-per-world-unit at THIS corner's end -- a midpoint estimate starves the quad\n"
 "        // at the far end of a long segment under perspective, and pixels the rasterizer never\n"
 "        // produces can't be blended back by any amount of fragment AA (dotted-line gaps).\n"
@@ -825,12 +835,12 @@ static const char* s_stroke_fs_main =
 "        d = raw;\n"
 "    }\n"
 "    float alpha = clamp(0.5 - d / wpp, 0.0, 1.0) * fade * col.a;\n"
-"    vec4 shape_color = vec4(col.rgb * alpha, alpha); // Premultiplied.\n"
+"    vec4 core = vec4(col.rgb * alpha, alpha); // Premultiplied.\n"
 "    // Shape effects, from the same signed distance: an outline band hugging the stroke's edge\n"
-"    // and a squared falloff past it, both drawn under the stroke itself. The vertex stage\n"
+"    // and a squared falloff past it, both belonging under the stroke itself. The vertex stage\n"
 "    // padded the ribbon by their reach, so nothing clips.\n"
+"    vec4 under = vec4(0.0);\n"
 "    if (u_shape_fx.x > 0.0 || u_shape_fx.y > 0.0) {\n"
-"        vec4 under = vec4(0.0);\n"
 "        if (u_shape_fx.y > 0.0) {\n"
 "            float t = clamp(1.0 - max(d, 0.0) / u_shape_fx.y, 0.0, 1.0);\n"
 "            under = u_shape_glow * (t * t);\n"
@@ -840,8 +850,12 @@ static const char* s_stroke_fs_main =
 "            vec4 edge = u_shape_outline * cov;\n"
 "            under = edge + under * (1.0 - edge.a);\n"
 "        }\n"
-"        shape_color = shape_color + under * (1.0 - shape_color.a);\n"
 "    }\n"
+"    // Pass select (u_shape_fx.w): 0 draws the whole stroke, 1 only its effects, 2 only its\n"
+"    // core. Multi-segment shapes run 1 then 2 so no segment's outline can cover a neighbor's\n"
+"    // core at a shared joint.\n"
+"    vec4 shape_color = u_shape_fx.w < 0.5 ? core + under * (1.0 - core.a)\n"
+"                     : (u_shape_fx.w < 1.5 ? under : core);\n"
 "    ShapeParams sp;\n"
 "    sp.world_pos = v_world;\n"
 "    sp.eye = u_shape_eye.xyz;\n"
@@ -947,14 +961,27 @@ static CF_RenderState s_stroke_render_state()
 {
 	CF_RenderState rs = s_draw3d->render_states.last();
 	rs.cull_mode = CF_CULL_MODE_NONE;
-	rs.depth_write_enabled = s_draw3d->stroke_depth_writes.last();
+	rs.depth_write_enabled = s_draw3d->stroke_depth_writes.last() && s_draw3d->stroke_pass != 1;
+	// Strokes emit premultiplied coverage, so they need *a* blend -- but which one is the
+	// caller's business. Only substitute premultiplied "over" when the pushed state still
+	// carries the default opaque-replace blend (ONE/ZERO), i.e. when the caller has not asked
+	// for anything; an explicitly pushed blend (additive or CF_BLEND_OP_MAX for glow, say)
+	// passes through untouched.
+	bool blend_is_default = rs.blend.rgb_src_blend_factor == CF_BLENDFACTOR_ONE
+		&& rs.blend.rgb_dst_blend_factor == CF_BLENDFACTOR_ZERO
+		&& rs.blend.alpha_src_blend_factor == CF_BLENDFACTOR_ONE
+		&& rs.blend.alpha_dst_blend_factor == CF_BLENDFACTOR_ZERO
+		&& rs.blend.rgb_op == CF_BLEND_OP_ADD
+		&& rs.blend.alpha_op == CF_BLEND_OP_ADD;
+	if (blend_is_default) {
+		rs.blend.rgb_src_blend_factor = CF_BLENDFACTOR_ONE;
+		rs.blend.rgb_dst_blend_factor = CF_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
+		rs.blend.rgb_op = CF_BLEND_OP_ADD;
+		rs.blend.alpha_src_blend_factor = CF_BLENDFACTOR_ONE;
+		rs.blend.alpha_dst_blend_factor = CF_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
+		rs.blend.alpha_op = CF_BLEND_OP_ADD;
+	}
 	rs.blend.enabled = true;
-	rs.blend.rgb_src_blend_factor = CF_BLENDFACTOR_ONE;
-	rs.blend.rgb_dst_blend_factor = CF_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
-	rs.blend.rgb_op = CF_BLEND_OP_ADD;
-	rs.blend.alpha_src_blend_factor = CF_BLENDFACTOR_ONE;
-	rs.blend.alpha_dst_blend_factor = CF_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
-	rs.blend.alpha_op = CF_BLEND_OP_ADD;
 	return rs;
 }
 
@@ -980,8 +1007,11 @@ static void s_shapes_set_fx()
 {
 	CF_Color o = s_draw3d->outlines.last();
 	CF_Color g = s_draw3d->glows.last();
+	// The effects pass never writes depth: only a stroke's solid core should own it, or a
+	// neighbor's outline wins shared joints and eats the adjacent core.
+	bool depth_write = s_draw3d->stroke_depth_writes.last() && s_draw3d->stroke_pass != 1;
 	CF_V4 params = cf_v4(s_draw3d->outline_widths.last(), s_draw3d->glow_radii.last(),
-		s_draw3d->stroke_depth_writes.last() ? 1.0f : 0.0f, 0);
+		depth_write ? 1.0f : 0.0f, (float)s_draw3d->stroke_pass);
 	CF_V4 outline = cf_v4(o.r * o.a, o.g * o.a, o.b * o.a, o.a); // Premultiplied.
 	CF_V4 glow = cf_v4(g.r * g.a, g.g * g.a, g.b * g.a, g.a);
 	cf_draw3d_set_uniform("u_shape_fx", &params, CF_UNIFORM_TYPE_FLOAT4, 1);
@@ -1157,9 +1187,30 @@ void cf_draw3d_line2(CF_V3 p0, CF_V3 p1, float thickness0, float thickness1)
 
 void cf_draw3d_line(CF_V3 p0, CF_V3 p1, float thickness) { cf_draw3d_line2(p0, p1, thickness, thickness); }
 
+// Multi-segment shapes draw their effects for every segment before any core, so a segment's
+// outline can never sit on top of -- or, under depth writes, reject -- a neighbor's core where
+// they share a joint. With no effects active there is nothing to separate, so it stays one pass.
+// Returns the number of passes to run; s_pass_begin/end set the mode around each.
+static int s_stroke_pass_count()
+{
+	if (s_draw3d->stroke_pass != 0) return 1; // Already inside a pass; never split again.
+	return (s_draw3d->outline_widths.last() > 0 || s_draw3d->glow_radii.last() > 0) ? 2 : 1;
+}
+static void s_stroke_pass_begin(int passes, int i) { s_draw3d->stroke_pass = passes == 1 ? 0 : (i == 0 ? 1 : 2); }
+static void s_stroke_pass_end() { s_draw3d->stroke_pass = 0; }
+
 void cf_draw3d_polyline(const CF_V3* points, int count, float thickness, bool loop)
 {
 	if (count < 2) return;
+	int passes = s_stroke_pass_count();
+	if (passes > 1) {
+		for (int p = 0; p < passes; ++p) {
+			s_stroke_pass_begin(passes, p);
+			cf_draw3d_polyline(points, count, thickness, loop);
+		}
+		s_stroke_pass_end();
+		return;
+	}
 	CF_V3 dash = s_draw3d->dashes.last();
 	float arclength = 0;
 	for (int i = 0; i < count; ++i) {
@@ -1218,6 +1269,15 @@ void cf_draw3d_arc(CF_V3 center, CF_V3 normal, float radius, float angle0, float
 
 void cf_draw3d_box_wire(CF_V3 center, CF_V3 half_extents, float thickness)
 {
+	int passes = s_stroke_pass_count();
+	if (passes > 1) {
+		for (int p = 0; p < passes; ++p) {
+			s_stroke_pass_begin(passes, p);
+			cf_draw3d_box_wire(center, half_extents, thickness);
+		}
+		s_stroke_pass_end();
+		return;
+	}
 	CF_V3 c = center, e = half_extents;
 	CF_V3 v[8];
 	for (int i = 0; i < 8; ++i) {
@@ -1229,6 +1289,15 @@ void cf_draw3d_box_wire(CF_V3 center, CF_V3 half_extents, float thickness)
 
 void cf_draw3d_axes(float length, float thickness)
 {
+	int passes = s_stroke_pass_count();
+	if (passes > 1) {
+		for (int p = 0; p < passes; ++p) {
+			s_stroke_pass_begin(passes, p);
+			cf_draw3d_axes(length, thickness);
+		}
+		s_stroke_pass_end();
+		return;
+	}
 	CF_Color colors[3] = { cf_make_color_rgb_f(0.9f, 0.2f, 0.25f), cf_make_color_rgb_f(0.3f, 0.85f, 0.3f), cf_make_color_rgb_f(0.25f, 0.5f, 0.95f) };
 	CF_V3 axes[3] = { cf_v3(length, 0, 0), cf_v3(0, length, 0), cf_v3(0, 0, length) };
 	for (int i = 0; i < 3; ++i) {

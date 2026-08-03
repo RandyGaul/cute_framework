@@ -24,7 +24,7 @@ typedef struct Stroke { int count; CF_V2 pts[8]; } Stroke;
 // Block letters spelling "CF", in a 0..1 box per letter.
 static const Stroke s_letters[] = {
 	// C
-	{ 5, { { 0.9f, 0.85f }, { 0.15f, 0.85f }, { 0.15f, 0.15f }, { 0.9f, 0.15f } } },
+	{ 4, { { 0.9f, 0.85f }, { 0.15f, 0.85f }, { 0.15f, 0.15f }, { 0.9f, 0.15f } } },
 	// F
 	{ 3, { { 0.15f, 0.15f }, { 0.15f, 0.85f }, { 0.85f, 0.85f } } },
 	{ 2, { { 0.15f, 0.5f }, { 0.7f, 0.5f } } },
@@ -91,21 +91,33 @@ int main(int argc, char* argv[])
 		if (effects_on) cf_draw3d_pop_glow();
 		cf_draw3d_pop_render_state();
 
-		// A selection box: thin strokes that would vanish against the grid, made legible by a
-		// dark outline rather than by shouting with thickness.
-		//
-		// Strokes don't write depth by default -- an anti-aliased fringe that owned depth would
-		// punch halos into later draws -- but that also stops a wireframe from occluding itself,
-		// so the box's back edges draw over its front ones. Opting in fixes exactly that.
+		// A selection box, outlined and self-occluding at once. Strokes don't write depth by
+		// default -- an anti-aliased fringe that owned depth would punch halos into later draws
+		// -- but that also stops a wireframe from occluding itself, so the box's back edges draw
+		// over its front ones. Opting in fixes exactly that. cf_draw3d_box_wire draws all twelve
+		// outlines before any core, so no corner's outline lands on a neighbor's core.
 		cf_draw3d_push_stroke_depth_write(true);
 		if (effects_on) {
-			cf_draw3d_push_outline(cf_make_color_rgba_f(0, 0, 0, 0.9f), 0.02f);
+			cf_draw3d_push_outline(cf_make_color_rgba_f(0.05f, 0.35f, 0.15f, 0.95f), 0.03f);
 		}
-		cf_draw3d_push_color(cf_make_color_rgb_f(0.4f, 1.0f, 0.6f));
+		cf_draw3d_push_color(cf_make_color_rgb_f(0.5f, 1.0f, 0.7f));
 		cf_draw3d_box_wire(cf_v3(2.4f, 0.65f, 0), cf_v3(0.6f, 0.6f, 0.6f), 0.012f);
 		cf_draw3d_pop_color();
 		if (effects_on) cf_draw3d_pop_outline();
 		cf_draw3d_pop_stroke_depth_write();
+
+		// Where an outline shines instead: a flat selection ring on the ground, its thin core
+		// wrapped in a wider contrasting band. One closed shape, so there are no joints to fight
+		// over, and no depth writes needed. The outline draws under the core, so you get a white
+		// halo with the orange stroke riding on top -- pick a color that contrasts with the
+		// *background*, not with the stroke.
+		if (effects_on) {
+			cf_draw3d_push_outline(cf_make_color_rgba_f(1.0f, 1.0f, 1.0f, 0.95f), 0.05f);
+		}
+		cf_draw3d_push_color(cf_make_color_rgb_f(1.0f, 0.5f, 0.05f));
+		cf_draw3d_circle(cf_v3(2.4f, 0.02f, 0), cf_v3(0, 1, 0), 0.95f, 0.02f);
+		cf_draw3d_pop_color();
+		if (effects_on) cf_draw3d_pop_outline();
 
 		// A rotation gizmo, also glowing. Glowing things want a lightening blend so they add to
 		// whatever they overlap: a dark outline here would darken the neon behind it, and even

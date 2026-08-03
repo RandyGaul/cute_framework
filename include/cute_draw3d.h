@@ -595,6 +595,13 @@ CF_API void CF_CALL cf_draw3d_billboard(const CF_Sprite* sprite, CF_V3 position)
 // scale a camera-facing ribbon has no single correct width, so the largest axis wins.) Thickness
 // can instead be read as screen pixels -- see `cf_draw3d_push_stroke_pixels`, the mode gizmos and
 // debug overlays usually want.
+//
+// Strokes compose their render state on top of whatever you push, forcing only what the
+// technique itself needs. The depth *test*, target write masks, and stencil pass through
+// untouched; depth writes are off unless `cf_draw3d_push_stroke_depth_write` turns them on; and
+// the blend is premultiplied "over" only while the pushed state still carries the default
+// opaque-replace blend. Push a real blend and it wins -- `CF_BLEND_OP_MAX` for glows that must
+// never darken what they overlap, additive for light accumulation, and so on.
 
 /**
  * @function cf_draw3d_push_color
@@ -748,6 +755,13 @@ CF_API bool CF_CALL cf_draw3d_peek_stroke_pixels(void);
  *           shows its back edges drawn over its front ones. Push this to trade the halo risk for
  *           self-occlusion, which is what an opaque wireframe usually wants. Only the stroke's
  *           solid core writes depth (fringe fragments are discarded), so the trade is small.
+ *
+ *           Effects never write depth, only cores do, and the multi-segment helpers
+ *           (`cf_draw3d_box_wire`, `cf_draw3d_polyline`, `cf_draw3d_axes`) draw every segment's
+ *           effects before any segment's core -- so outlines and depth writes compose, and a
+ *           corner never shows one edge's outline sitting on its neighbor's core. Hand-rolled
+ *           multi-stroke shapes made of individual `cf_draw3d_line` calls don't get that
+ *           separation, so their shared joints can still show it.
  * @related  cf_draw3d_pop_stroke_depth_write cf_draw3d_push_render_state cf_draw3d_box_wire
  */
 CF_API void CF_CALL cf_draw3d_push_stroke_depth_write(bool depth_write);
