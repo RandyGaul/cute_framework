@@ -117,6 +117,10 @@ struct CF_Draw3d
 
 	CF_Material material = { 0 };
 
+	// The shared unit quad behind cf_draw3d_sprite, made on first use (pos + uv, centered,
+	// uv (0,0) at the image's top-left like 2d sprites).
+	CF_Mesh sprite_quad = { 0 };
+
 	// Sprite-texturing scratch, valid only inside cf_draw3d_process: the atlas report hook
 	// routes uv results here (parallel to the command's instances) while `resolving` is set,
 	// and `staged` holds uv-filled instance copies for the per-page uploads.
@@ -160,6 +164,7 @@ void cf_destroy_draw3d()
 	for (int i = 0; i < s_draw3d->uniforms.count(); ++i) {
 		CF_FREE(s_draw3d->uniforms[i].data);
 	}
+	if (s_draw3d->sprite_quad.id) cf_destroy_mesh(s_draw3d->sprite_quad);
 	cf_destroy_material(s_draw3d->material);
 	s_draw3d->~CF_Draw3d();
 	CF_FREE(s_draw3d);
@@ -453,6 +458,84 @@ void cf_draw3d_mesh(CF_Mesh mesh)
 
 	// Keep subsequent 2d drawing off this command.
 	s_draw->add_cmd();
+}
+
+// The shared quad + submission tail behind cf_draw3d_sprite and cf_draw3d_billboard. The
+// `basis` orients the quad (NULL keeps the transform stack's orientation).
+static void s_submit_sprite_quad(const CF_Sprite* sprite, CF_V3 position, const CF_M4x4* basis)
+{
+	CF_ASSERT(sprite);
+	if (!s_draw3d->sprite_quad.id) {
+		struct QuadVertex { CF_V3 pos; CF_V2 uv; };
+		QuadVertex verts[6] = {
+			{ { -0.5f, -0.5f, 0 }, { 0, 1 } }, { { 0.5f, -0.5f, 0 }, { 1, 1 } }, { { 0.5f, 0.5f, 0 }, { 1, 0 } },
+			{ { -0.5f, -0.5f, 0 }, { 0, 1 } }, { { 0.5f, 0.5f, 0 }, { 1, 0 } }, { { -0.5f, 0.5f, 0 }, { 0, 0 } },
+		};
+		CF_VertexAttribute attrs[2] = { };
+		attrs[0].name = "in_pos";
+		attrs[0].format = CF_VERTEX_FORMAT_FLOAT3;
+		attrs[0].offset = CF_OFFSET_OF(QuadVertex, pos);
+		attrs[1].name = "in_uv";
+		attrs[1].format = CF_VERTEX_FORMAT_FLOAT2;
+		attrs[1].offset = CF_OFFSET_OF(QuadVertex, uv);
+		s_draw3d->sprite_quad = cf_make_mesh((int)sizeof(verts), attrs, 2, (int)sizeof(QuadVertex));
+		cf_mesh_update_vertex_data(s_draw3d->sprite_quad, verts, 6);
+	}
+
+	cf_draw3d_push();
+	cf_draw3d_translate(position);
+	if (basis) cf_draw3d_transform(*basis);
+	cf_draw3d_scale(cf_v3((float)sprite->w * sprite->scale.x, (float)sprite->h * sprite->scale.y, 1.0f));
+	cf_draw3d_push_texture(sprite);
+	cf_draw3d_mesh(s_draw3d->sprite_quad);
+	cf_draw3d_pop_texture();
+	cf_draw3d_pop();
+}
+
+void cf_draw3d_sprite(const CF_Sprite* sprite, CF_V3 position)
+{
+	s_submit_sprite_quad(sprite, position, NULL);
+}
+
+void cf_draw3d_billboard(const CF_Sprite* sprite, CF_V3 position)
+{
+	// Aim the quad with the camera's own axes, straight out of the view matrix's rows.
+	const CF_M4x4& view = s_draw3d->views.last();
+	CF_M4x4 basis = cf_m4_identity();
+	basis.elements[0] = view.elements[0]; basis.elements[1] = view.elements[4]; basis.elements[2]  = view.elements[8];
+	basis.elements[4] = view.elements[1]; basis.elements[5] = view.elements[5]; basis.elements[6]  = view.elements[9];
+	basis.elements[8] = view.elements[2]; basis.elements[9] = view.elements[6]; basis.elements[10] = view.elements[10];
+	s_submit_sprite_quad(sprite, position, &basis);
+}
+
+//--------------------------------------------------------------------------------------------------
+// Projection helpers. Both route through the 2d camera's mvp rather than raw pixels, so they
+// compose exactly with cf_draw_text / cf_screen_to_world no matter where the 2d camera sits:
+// 3d ndc IS clip-space xy, which is precisely what the 2d mvp maps its own world into.
+
+CF_V3 cf_draw3d_project(CF_V3 world_position)
+{
+	CF_M4x4 vp = cf_mul_m4(s_draw3d->projections.last(), s_draw3d->views.last());
+	CF_V4 clip = cf_mul_m4_v4(vp, cf_v4(world_position.x, world_position.y, world_position.z, 1.0f));
+	if (clip.w <= 0) {
+		return cf_v3(0, 0, -1.0f); // Behind the camera; a negative z marks xy unusable.
+	}
+	CF_V2 ndc = cf_v2(clip.x / clip.w, clip.y / clip.w);
+	CF_V2 out = cf_mul_m32_v2(cf_invert(s_draw->mvp), ndc);
+	return cf_v3(out.x, out.y, clip.z / clip.w);
+}
+
+void cf_draw3d_unproject(CF_V2 point, CF_V3* origin_out, CF_V3* direction_out)
+{
+	CF_V2 ndc = cf_mul_m32_v2(s_draw->mvp, point);
+	CF_M4x4 vp = cf_mul_m4(s_draw3d->projections.last(), s_draw3d->views.last());
+	CF_M4x4 inv = cf_m4_invert(vp);
+	CF_V4 p0 = cf_mul_m4_v4(inv, cf_v4(ndc.x, ndc.y, 0.0f, 1.0f)); // Near plane (clip z = 0).
+	CF_V4 p1 = cf_mul_m4_v4(inv, cf_v4(ndc.x, ndc.y, 1.0f, 1.0f)); // Far plane (clip z = 1).
+	CF_V3 a = cf_v3(p0.x / p0.w, p0.y / p0.w, p0.z / p0.w);
+	CF_V3 b = cf_v3(p1.x / p1.w, p1.y / p1.w, p1.z / p1.w);
+	if (origin_out) *origin_out = a;
+	if (direction_out) *direction_out = cf_norm_v3(cf_sub_v3(b, a));
 }
 
 //--------------------------------------------------------------------------------------------------

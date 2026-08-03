@@ -765,6 +765,183 @@ TEST_CASE(test_draw3d_mrt)
 	return true;
 }
 
+
+// Projection helpers: project and unproject are inverses through both camera systems, for
+// perspective and orthographic projections alike.
+TEST_CASE(test_draw3d_project_unproject)
+{
+	int options = CF_APP_OPTIONS_HIDDEN_BIT | CF_APP_OPTIONS_NO_AUDIO_BIT;
+	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, W, H, options, NULL))) return true; // Headless CI: no display/GPU.
+
+	CF_M4x4 projections[2] = {
+		cf_perspective(CF_PI / 3.0f, 1.0f, 0.5f, 100.0f),
+		cf_ortho(-4, 4, -4, 4, 0.5f, 100.0f),
+	};
+	for (int p = 0; p < 2; ++p) {
+		cf_draw3d_push_projection(projections[p]);
+		cf_draw3d_push_view(cf_look_at(cf_v3(3, 4, 8), cf_v3(0, 1, 0), cf_v3(0, 1, 0)));
+
+		CF_V3 world = cf_v3(0.7f, 1.3f, -0.4f);
+		CF_V3 projected = cf_draw3d_project(world);
+		REQUIRE(projected.z > 0 && projected.z < 1);
+
+		// Unprojecting the same 2d point must produce a ray passing through the world point.
+		CF_V3 origin, dir;
+		cf_draw3d_unproject(cf_v2(projected.x, projected.y), &origin, &dir);
+		CF_V3 to_p = cf_sub_v3(world, origin);
+		float t = cf_dot_v3(to_p, dir);
+		REQUIRE(t > 0); // In front of the near plane.
+		CF_V3 closest = cf_add_v3(origin, cf_mul_v3_f(dir, t));
+		CF_V3 err = cf_sub_v3(closest, world);
+		REQUIRE(cf_len_v3(err) < 0.001f);
+
+		// A point behind a perspective camera reports a negative depth.
+		if (p == 0) {
+			CF_V3 behind = cf_draw3d_project(cf_v3(6, 8, 16));
+			REQUIRE(behind.z < 0);
+		}
+
+		cf_draw3d_pop_view();
+		cf_draw3d_pop_projection();
+	}
+
+	cf_destroy_app();
+	return true;
+}
+
+// cf_draw3d_sprite is a plain quad oriented by the transform stack; cf_draw3d_billboard aims
+// itself at the camera. A side-on camera tells them apart: the billboard shows its face, the
+// plain sprite is edge-on and invisible.
+TEST_CASE(test_draw3d_sprite_and_billboard)
+{
+	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, W, H, s_options(), NULL))) return true; // Headless CI: no display/GPU.
+
+	CF_Pixel red[64], green[64];
+	for (int i = 0; i < 64; ++i) {
+		red[i] = cf_make_pixel_rgba(255, 0, 0, 255);
+		green[i] = cf_make_pixel_rgba(0, 255, 0, 255);
+	}
+	CF_Sprite sprite_red = cf_make_easy_sprite_from_pixels(red, 8, 8);
+	CF_Sprite sprite_green = cf_make_easy_sprite_from_pixels(green, 8, 8);
+	// World size = pixels * scale: 8 * 0.05 = 0.4 units.
+	sprite_red.scale = cf_v2(0.05f, 0.05f);
+	sprite_green.scale = cf_v2(0.05f, 0.05f);
+
+	CF_Shader shader = cf_make_shader_from_source(s_sprite_vs, s_sprite_fs);
+	REQUIRE(shader.id);
+	CF_CanvasParams params = cf_canvas_defaults(W, H);
+	params.depth_stencil_enable = true;
+	CF_Canvas canvas = cf_make_canvas(params);
+	CF_Pixel* px = (CF_Pixel*)cf_alloc(W * H * (int)sizeof(CF_Pixel));
+	CF_RenderState rs = cf_render_state_3d_defaults();
+	rs.cull_mode = CF_CULL_MODE_NONE;
+
+	cf_draw3d_push_shader(shader);
+	cf_draw3d_push_render_state(rs);
+
+	// Front-on camera: two plain sprites, side by side, coalescing like any mesh.
+	cf_app_update(NULL);
+	cf_draw3d_push_projection(cf_ortho(-1, 1, -1, 1, -1, 1));
+	cf_draw3d_sprite(&sprite_red, cf_v3(-0.5f, 0, 0));
+	cf_draw3d_sprite(&sprite_green, cf_v3(0.5f, 0, 0));
+	cf_render_to(canvas, true);
+	cf_app_draw_onto_screen(false);
+	cf_draw3d_pop_projection();
+
+	CF_Readback rb = cf_canvas_readback(canvas);
+	REQUIRE(rb.id);
+	while (!cf_readback_ready(rb)) {}
+	cf_readback_data(rb, px, W * H * (int)sizeof(CF_Pixel));
+	cf_destroy_readback(rb);
+	CF_Pixel left = s_pixel(px, 0.25f, 0.5f);
+	CF_Pixel right = s_pixel(px, 0.75f, 0.5f);
+	REQUIRE(left.colors.r > 200 && left.colors.g < 60);
+	REQUIRE(right.colors.g > 200 && right.colors.r < 60);
+
+	// Side-on camera at +x: a plain sprite quad is edge-on (invisible), a billboard faces us.
+	for (int use_billboard = 0; use_billboard < 2; ++use_billboard) {
+		cf_app_update(NULL);
+		cf_draw3d_push_projection(cf_ortho(-1, 1, -1, 1, 0.1f, 10.0f));
+		cf_draw3d_push_view(cf_look_at(cf_v3(3, 0, 0), cf_v3(0, 0, 0), cf_v3(0, 1, 0)));
+		if (use_billboard) cf_draw3d_billboard(&sprite_green, cf_v3(0, 0, 0));
+		else cf_draw3d_sprite(&sprite_red, cf_v3(0, 0, 0));
+		cf_draw3d_pop_view();
+		cf_draw3d_pop_projection();
+		cf_render_to(canvas, true);
+		cf_app_draw_onto_screen(false);
+
+		rb = cf_canvas_readback(canvas);
+		REQUIRE(rb.id);
+		while (!cf_readback_ready(rb)) {}
+		cf_readback_data(rb, px, W * H * (int)sizeof(CF_Pixel));
+		cf_destroy_readback(rb);
+		CF_Pixel center = s_pixel(px, 0.5f, 0.5f);
+		if (use_billboard) REQUIRE(center.colors.g > 200);
+		else REQUIRE(center.colors.r < 60 && center.colors.g < 60); // Edge-on: nothing.
+	}
+
+	cf_draw3d_pop_render_state();
+	cf_draw3d_pop_shader();
+	cf_free(px);
+	cf_destroy_canvas(canvas);
+	cf_destroy_shader(shader);
+	cf_easy_sprite_unload(&sprite_red);
+	cf_easy_sprite_unload(&sprite_green);
+	cf_destroy_app();
+	return true;
+}
+
+// Mesh submissions into an MSAA canvas: the multisampled pipeline paths compose with draw3d.
+// The result reads back through a blit into a single-sample canvas (which is also where the
+// resolve happens on backends that multisample; GLES clamps to one sample and still passes).
+TEST_CASE(test_draw3d_msaa)
+{
+	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, W, H, s_options(), NULL))) return true; // Headless CI: no display/GPU.
+
+	CF_Mesh mesh = s_make_quad(0.5f);
+	CF_Shader shader = cf_make_shader_from_source(s_vs, s_fs);
+	REQUIRE(shader.id);
+	CF_CanvasParams params = cf_canvas_defaults(W, H);
+	params.depth_stencil_enable = true;
+	params.sample_count = CF_SAMPLE_COUNT_4;
+	CF_Canvas msaa = cf_make_canvas(params);
+	REQUIRE(msaa.id);
+	CF_Canvas plain = cf_make_canvas(cf_canvas_defaults(W, H));
+	CF_Pixel* px = (CF_Pixel*)cf_alloc(W * H * (int)sizeof(CF_Pixel));
+
+	cf_app_update(NULL);
+	cf_draw3d_push_projection(cf_ortho(-1, 1, -1, 1, -1, 1));
+	cf_draw3d_push_shader(shader);
+	cf_draw3d_push_mesh_attributes(cf_v4(0, 1, 0, 1));
+	cf_draw3d_mesh(mesh);
+	cf_draw3d_pop_mesh_attributes();
+	cf_draw3d_pop_shader();
+	cf_draw3d_pop_projection();
+	cf_render_to(msaa, true);
+
+	// Blit the (resolved) msaa canvas into a plain one for readback.
+	cf_draw_canvas(msaa, cf_v2(0, 0), cf_v2((float)W, (float)H));
+	cf_render_to(plain, true);
+	cf_app_draw_onto_screen(false);
+
+	CF_Readback rb = cf_canvas_readback(plain);
+	REQUIRE(rb.id);
+	while (!cf_readback_ready(rb)) {}
+	cf_readback_data(rb, px, W * H * (int)sizeof(CF_Pixel));
+	cf_destroy_readback(rb);
+
+	CF_Pixel center = s_pixel(px, 0.5f, 0.5f);
+	REQUIRE(center.colors.g > 200 && center.colors.r < 60);
+
+	cf_free(px);
+	cf_destroy_canvas(msaa);
+	cf_destroy_canvas(plain);
+	cf_destroy_shader(shader);
+	cf_destroy_mesh(mesh);
+	cf_destroy_app();
+	return true;
+}
+
 TEST_SUITE(test_draw3d)
 {
 	RUN_TEST_CASE(test_draw3d_transforms_and_coalescing);
@@ -776,4 +953,7 @@ TEST_SUITE(test_draw3d)
 	RUN_TEST_CASE(test_draw3d_sprite_textured);
 	RUN_TEST_CASE(test_draw3d_sprite_textured_baked);
 	RUN_TEST_CASE(test_draw3d_mrt);
+	RUN_TEST_CASE(test_draw3d_project_unproject);
+	RUN_TEST_CASE(test_draw3d_sprite_and_billboard);
+	RUN_TEST_CASE(test_draw3d_msaa);
 }

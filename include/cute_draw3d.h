@@ -505,6 +505,88 @@ CF_API CF_V4 CF_CALL cf_draw3d_peek_mesh_attributes(void);
  */
 CF_API void CF_CALL cf_draw3d_mesh(CF_Mesh mesh);
 
+/**
+ * @function cf_draw3d_sprite
+ * @category draw3d
+ * @brief    Submits a sprite as a textured quad at a 3d position, oriented by the transform stack.
+ * @param    sprite    The sprite. Its current frame supplies the image, exactly like
+ *                     `cf_draw3d_push_texture`; animated sprites animate in the world.
+ * @param    position  The world position of the quad's center.
+ * @remarks  This is sugar over `cf_draw3d_mesh`: a shared unit quad in the xy plane (facing +z
+ *           under an identity transform), sized `sprite->w` by `sprite->h` pixels times
+ *           `sprite->scale` (set the scale to your world-units-per-pixel), composed onto the
+ *           current transform stack, and submitted with the sprite pushed as its texture. Rotate
+ *           it like anything else -- `cf_draw3d_rotate` before the call orients the quad, which
+ *           is the tool for decals, standees, and paper-doll planes. Everything about mesh
+ *           submission applies: your pushed shader receives the image via the contract's
+ *           `in_uv`/`in_uv_rect` lanes, consecutive sprites coalesce into one instanced draw,
+ *           and many different images share that draw through the texture atlas.
+ *
+ *           For quads that automatically face the camera, use `cf_draw3d_billboard`.
+ * @related  cf_draw3d_billboard cf_draw3d_mesh cf_draw3d_push_texture CF_Sprite cf_draw3d_push_shader
+ */
+CF_API void CF_CALL cf_draw3d_sprite(const CF_Sprite* sprite, CF_V3 position);
+
+/**
+ * @function cf_draw3d_billboard
+ * @category draw3d
+ * @brief    Submits a sprite as a camera-facing quad at a 3d position -- a billboard.
+ * @param    sprite    The sprite whose current frame supplies the image.
+ * @param    position  The world position of the quad's center.
+ * @remarks  Like `cf_draw3d_sprite`, but the quad is aimed with the current view's camera axes
+ *           so it always faces the screen -- particles, pickups, impostors. The facing is full
+ *           (spherical); for cylindrical billboards that pivot around y without tilting back
+ *           (trees), build the basis yourself -- see the billboards sample, it is a handful of
+ *           lines.
+ * @related  cf_draw3d_sprite cf_draw3d_mesh cf_draw3d_push_texture CF_Sprite cf_draw3d_push_view
+ */
+CF_API void CF_CALL cf_draw3d_billboard(const CF_Sprite* sprite, CF_V3 position);
+
+//--------------------------------------------------------------------------------------------------
+// Projection helpers. These bridge the 3d camera stacks and the 2d draw API's world space --
+// the space `cf_draw_text` draws in and `cf_screen_to_world` converts mouse coordinates into.
+// Together they cover the two classic needs: labels over 3d objects, and mouse picking.
+
+/**
+ * @function cf_draw3d_project
+ * @category draw3d
+ * @brief    Projects a 3d world position to the 2d draw API's world space.
+ * @param    world_position  The 3d position, in the space `cf_draw3d_mesh` submissions use.
+ * @return   Returns xy in 2d draw coordinates and z as the depth in [0, 1]. A negative z means
+ *           the position is behind the camera and xy are unusable.
+ * @remarks  Uses the current 3d projection/view stacks and the current 2d camera, so drawing 2d
+ *           at the returned xy lands on the same pixel the 3d position rasterizes to -- health
+ *           bars, nameplates, and damage numbers over 3d objects:
+ *
+ *           ```c
+ *           CF_V3 p = cf_draw3d_project(enemy_position);
+ *           if (p.z >= 0) cf_draw_text("orc", cf_v2(p.x, p.y + 12.0f), -1);
+ *           ```
+ * @related  cf_draw3d_unproject cf_draw3d_push_projection cf_draw3d_push_view cf_world_to_screen
+ */
+CF_API CF_V3 CF_CALL cf_draw3d_project(CF_V3 world_position);
+
+/**
+ * @function cf_draw3d_unproject
+ * @category draw3d
+ * @brief    Turns a 2d point into a 3d ray under the current camera stacks.
+ * @param    point          A point in the 2d draw API's world space.
+ * @param    origin_out     The ray's origin on the near plane. Can be `NULL`.
+ * @param    direction_out  The ray's normalized direction. Can be `NULL`.
+ * @remarks  The front half of mouse picking -- convert the mouse with `cf_screen_to_world`, then
+ *           cast the returned ray against your own scene representation:
+ *
+ *           ```c
+ *           CF_V3 origin, dir;
+ *           cf_draw3d_unproject(cf_screen_to_world(cf_v2(cf_mouse_x(), cf_mouse_y())), &origin, &dir);
+ *           ```
+ *
+ *           Works for perspective and orthographic projections alike (orthographic rays share a
+ *           direction but differ in origin).
+ * @related  cf_draw3d_project cf_screen_to_world cf_draw3d_push_projection cf_draw3d_push_view
+ */
+CF_API void CF_CALL cf_draw3d_unproject(CF_V2 point, CF_V3* origin_out, CF_V3* direction_out);
+
 #ifdef __cplusplus
 }
 #endif // __cplusplus
@@ -557,6 +639,10 @@ CF_INLINE CF_V4 draw3d_pop_mesh_attributes() { return cf_draw3d_pop_mesh_attribu
 CF_INLINE CF_V4 draw3d_peek_mesh_attributes() { return cf_draw3d_peek_mesh_attributes(); }
 
 CF_INLINE void draw3d_mesh(CF_Mesh mesh) { cf_draw3d_mesh(mesh); }
+CF_INLINE void draw3d_sprite(const CF_Sprite* sprite, CF_V3 position) { cf_draw3d_sprite(sprite, position); }
+CF_INLINE void draw3d_billboard(const CF_Sprite* sprite, CF_V3 position) { cf_draw3d_billboard(sprite, position); }
+CF_INLINE CF_V3 draw3d_project(CF_V3 world_position) { return cf_draw3d_project(world_position); }
+CF_INLINE void draw3d_unproject(CF_V2 point, CF_V3* origin_out, CF_V3* direction_out) { cf_draw3d_unproject(point, origin_out, direction_out); }
 
 }
 
