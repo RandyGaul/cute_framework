@@ -92,6 +92,10 @@
 		                  all four backends -- the skinning palette case. Element
 		                  set chosen so std140, std430, HLSL cbuffer, and MSL
 		                  natural strides all coincide.
+		1.06 (08/03/2026) samplerCubeShadow (vec4 direction + reference coordinate,
+		                  comparison fetches level-zero like the other shadow dims)
+		                  and matrix addition/subtraction (decomposed per column
+		                  for SPIR-V; native in every transpiler).
 */
 #ifndef CUTE_SPIRV_H
 #define CUTE_SPIRV_H
@@ -634,6 +638,7 @@ enum
 	CSPV_SDIM_3D = 2,
 	CSPV_SDIM_2D_ARRAY = 3,
 	CSPV_SDIM_2D_SHADOW = 4,
+	CSPV_SDIM_CUBE_SHADOW = 5,
 };
 
 typedef struct cspv_type
@@ -865,6 +870,7 @@ typedef struct cspv_ctx
 	cspv_type* t_sampler3d;
 	cspv_type* t_sampler2darray;
 	cspv_type* t_sampler2dshadow;
+	cspv_type* t_samplercubeshadow;
 	CK_MAP(cspv_type*) type_names;  // interned name -> type
 	CK_MAP(cspv_type*) array_types; // (elem ptr, len) -> canonical array type
 	CK_MAP(cspv_type*) image_types; // format -> canonical image2D type
@@ -1956,6 +1962,7 @@ static uint32_t cspv_type_id(cspv_ctx* ctx, cspv_type* type)
 		case CSPV_SDIM_3D: dim = 2; break;
 		case CSPV_SDIM_2D_ARRAY: arrayed = 1; break;
 		case CSPV_SDIM_2D_SHADOW: depth = 1; break;
+		case CSPV_SDIM_CUBE_SHADOW: dim = 3; depth = 1; break;
 		}
 		// Sampled type, dim, depth, arrayed, ms 0, sampled 1, format Unknown (=0).
 		uint32_t w[8] = { img, sampled_tid, dim, depth, arrayed, 0, 1, 0 };
@@ -2952,6 +2959,7 @@ static const char* cspv_type_name(cspv_type* t)
 		case CSPV_SDIM_3D: return "sampler3D";
 		case CSPV_SDIM_2D_ARRAY: return "sampler2DArray";
 		case CSPV_SDIM_2D_SHADOW: return "sampler2DShadow";
+		case CSPV_SDIM_CUBE_SHADOW: return "samplerCubeShadow";
 		default: return t->elem && t->elem->kind == CSPV_T_UINT ? "usampler2D" : "sampler2D";
 		}
 	case CSPV_T_ARRAY: return "array";
@@ -3160,10 +3168,32 @@ static cspv_type* cspv_unify_types(cspv_ctx* ctx, cspv_type* at, cspv_type* bt, 
 // Emit an arithmetic/bitwise/comparison binary op on balanced operands.
 static cspv_value cspv_gen_binop(cspv_ctx* ctx, int op, int line, uint32_t a, cspv_type* at, uint32_t b, cspv_type* bt)
 {
-	// Matrix operations (square matrices only; '*' is the only supported operator).
+	// Matrix operations (square matrices only).
 	if (at->kind == CSPV_T_MAT || bt->kind == CSPV_T_MAT) {
+		// Addition/subtraction: SPIR-V has no matrix OpFAdd/OpFSub, so decompose into
+		// per-column vector ops and reassemble. The transpilers print `m + m` natively.
+		if ((op == '+' || op == '-') && at->kind == CSPV_T_MAT && bt->kind == CSPV_T_MAT) {
+			if (at != bt) cspv_errorf(ctx, line, "matrix size mismatch");
+			cspv_type* col_t = ctx->t_vec[at->rows - 2];
+			uint32_t col_tid = cspv_type_id(ctx, col_t);
+			uint32_t cols[4];
+			for (int c = 0; c < at->cols; ++c) {
+				uint32_t ca = cspv_new_id(ctx);
+				cspv_emit4(&ctx->body, CSpvOpCompositeExtract, col_tid, ca, a, (uint32_t)c);
+				uint32_t cb = cspv_new_id(ctx);
+				cspv_emit4(&ctx->body, CSpvOpCompositeExtract, col_tid, cb, b, (uint32_t)c);
+				uint32_t cr = cspv_new_id(ctx);
+				cspv_emit4(&ctx->body, op == '+' ? CSpvOpFAdd : CSpvOpFSub, col_tid, cr, ca, cb);
+				cols[c] = cr;
+			}
+			uint32_t result = cspv_new_id(ctx);
+			uint32_t w[2 + 4] = { cspv_type_id(ctx, at), result };
+			for (int c = 0; c < at->cols; ++c) w[2 + c] = cols[c];
+			cspv_emit(&ctx->body, CSpvOpCompositeConstruct, w, 2 + at->cols);
+			return cspv_rvalue(at, result);
+		}
 		if (op != '*') {
-			cspv_errorf(ctx, line, "only '*' is supported with matrix operands");
+			cspv_errorf(ctx, line, "only '*', '+', and '-' are supported with matrix operands");
 		}
 		uint32_t result = cspv_new_id(ctx);
 		if (at->kind == CSPV_T_MAT && bt->kind == CSPV_T_MAT) {
@@ -3793,7 +3823,7 @@ static cspv_value cspv_gen_intrin(cspv_ctx* ctx, cspv_expr* e, cspv_intrin* in)
 		uint32_t sampler = cspv_gen_rvalue(ctx, e->u.call.args[0], &st);
 		if (st->kind != CSPV_T_SAMPLER2D) cspv_errorf(ctx, e->line, "'%s' requires a sampler type", e->u.call.name);
 		int sdim = st->cols;
-		bool shadow = sdim == CSPV_SDIM_2D_SHADOW;
+		bool shadow = sdim == CSPV_SDIM_2D_SHADOW || sdim == CSPV_SDIM_CUBE_SHADOW;
 		// texelFetch/textureSize/textureOffset stay 2D-only for now; the sampled-image ops
 		// below handle every dim.
 		if (sdim != CSPV_SDIM_2D &&
@@ -3802,20 +3832,25 @@ static cspv_value cspv_gen_intrin(cspv_ctx* ctx, cspv_expr* e, cspv_intrin* in)
 		}
 		bool uint_sampler = st->elem && st->elem->kind == CSPV_T_UINT;
 		cspv_type* vec4_t = uint_sampler ? ctx->t_uvec[2] : ctx->t_vec[2];
-		// Coordinate: vec2 for 2D, vec3 for cube/3D/array, and vec3 for 2D shadow
-		// (xy coords + z reference, split below for SPIR-V's separate Dref operand).
-		cspv_type* coord_t = sdim == CSPV_SDIM_2D ? ctx->t_vec[0] : ctx->t_vec[1];
+		// Coordinate: vec2 for 2D, vec3 for cube/3D/array, vec3 for 2D shadow (xy + z
+		// reference), and vec4 for cube shadow (xyz direction + w reference); shadow
+		// references split below for SPIR-V's separate Dref operand.
+		cspv_type* coord_t = sdim == CSPV_SDIM_2D ? ctx->t_vec[0] :
+		                     sdim == CSPV_SDIM_CUBE_SHADOW ? ctx->t_vec[2] : ctx->t_vec[1];
 
 		if (in->kind == CSPV_INTRIN_TEXTURE) {
 			uint32_t coord = cspv_gen_rvalue_as(ctx, e->u.call.args[1], coord_t);
 			uint32_t result = cspv_new_id(ctx);
 			if (shadow) {
-				// texture(sampler2DShadow, vec3(uv, ref)) yields a float visibility factor.
+				// texture(sampler2DShadow, vec3(uv, ref)) / texture(samplerCubeShadow,
+				// vec4(dir, ref)) yield a float visibility factor. Split the reference off
+				// the trailing coordinate component.
+				bool cube = sdim == CSPV_SDIM_CUBE_SHADOW;
 				uint32_t xy = cspv_new_id(ctx);
-				uint32_t sw[7] = { cspv_type_id(ctx, ctx->t_vec[0]), xy, coord, coord, 0, 1 };
-				cspv_emit(&ctx->body, CSpvOpVectorShuffle, sw, 6);
+				uint32_t sw[8] = { cspv_type_id(ctx, cube ? ctx->t_vec[1] : ctx->t_vec[0]), xy, coord, coord, 0, 1, 2 };
+				cspv_emit(&ctx->body, CSpvOpVectorShuffle, sw, cube ? 7 : 6);
 				uint32_t dref = cspv_new_id(ctx);
-				cspv_emit4(&ctx->body, CSpvOpCompositeExtract, cspv_type_id(ctx, ctx->t_float), dref, coord, 2);
+				cspv_emit4(&ctx->body, CSpvOpCompositeExtract, cspv_type_id(ctx, ctx->t_float), dref, coord, cube ? 3u : 2u);
 				if (ctx->stage == CSPV_STAGE_FRAGMENT) {
 					uint32_t w[5] = { cspv_type_id(ctx, ctx->t_float), result, sampler, xy, dref };
 					cspv_emit(&ctx->body, CSpvOpImageSampleDrefImplicitLod, w, 5);
@@ -3854,6 +3889,9 @@ static cspv_value cspv_gen_intrin(cspv_ctx* ctx, cspv_expr* e, cspv_intrin* in)
 		}
 
 		if (in->kind == CSPV_INTRIN_TEXTURE_LOD) {
+			if (sdim == CSPV_SDIM_CUBE_SHADOW) {
+				cspv_errorf(ctx, e->line, "textureLod is not supported with samplerCubeShadow (GLSL has no such overload)");
+			}
 			uint32_t coord = cspv_gen_rvalue_as(ctx, e->u.call.args[1], coord_t);
 			uint32_t lod = cspv_gen_rvalue_as(ctx, e->u.call.args[2], ctx->t_float);
 			uint32_t result = cspv_new_id(ctx);
@@ -6780,13 +6818,15 @@ static const char* cspv_hlsl_sampler_tex(const cspv_type* t)
 	case CSPV_SDIM_3D: return "Texture3D<float4>";
 	case CSPV_SDIM_2D_ARRAY: return "Texture2DArray<float4>";
 	case CSPV_SDIM_2D_SHADOW: return "Texture2D<float4>";
+	case CSPV_SDIM_CUBE_SHADOW: return "TextureCube<float4>";
 	default: return t->elem && t->elem->kind == CSPV_T_UINT ? "Texture2D<uint4>" : "Texture2D<float4>";
 	}
 }
 
 static const char* cspv_hlsl_sampler_smp(const cspv_type* t)
 {
-	return t->cols == CSPV_SDIM_2D_SHADOW ? "SamplerComparisonState" : "SamplerState";
+	return t->cols == CSPV_SDIM_2D_SHADOW || t->cols == CSPV_SDIM_CUBE_SHADOW
+		? "SamplerComparisonState" : "SamplerState";
 }
 
 static const char* cspv_msl_sampler_tex(const cspv_type* t)
@@ -6796,6 +6836,7 @@ static const char* cspv_msl_sampler_tex(const cspv_type* t)
 	case CSPV_SDIM_3D: return "texture3d<float>";
 	case CSPV_SDIM_2D_ARRAY: return "texture2d_array<float>";
 	case CSPV_SDIM_2D_SHADOW: return "depth2d<float>";
+	case CSPV_SDIM_CUBE_SHADOW: return "depthcube<float>";
 	default: return t->elem && t->elem->kind == CSPV_T_UINT ? "texture2d<uint>" : "texture2d<float>";
 	}
 }
@@ -6872,19 +6913,22 @@ static void cspv_hlsl_call(cspv_tp* g, cspv_expr* e)
 	if (argc >= 1 && args[0]->kind == CSPV_E_REF && args[0]->rtype && args[0]->rtype->kind == CSPV_T_SAMPLER2D) {
 		const char* s = args[0]->u.name;
 		bool no_gradients = g->ctx->stage != CSPV_STAGE_FRAGMENT; // Vertex and compute have no derivatives.
-		bool shadow = args[0]->rtype->cols == CSPV_SDIM_2D_SHADOW;
+		int hdim = args[0]->rtype->cols;
+		bool shadow = hdim == CSPV_SDIM_2D_SHADOW || hdim == CSPV_SDIM_CUBE_SHADOW;
 		if (shadow && (!strcmp(name, "texture") || !strcmp(name, "textureLod"))) {
-			// Comparison sampling: split the vec3 into coords + reference. The coordinate
-			// expression is emitted twice, so it must be side-effect free -- true of every
-			// shader in practice, and of everything the checker accepts today. Level-zero
-			// on purpose: shadow maps are single-mip, and SampleCmp needs gradients that
-			// vertex/compute stages lack (textureLod's lod argument is ignored, as level
-			// zero is the only mip a comparison fetch supports across our targets).
+			// Comparison sampling: split the coords + reference (vec3 -> xy/z for 2D,
+			// vec4 -> xyz/w for cube). The coordinate expression is emitted twice, so it
+			// must be side-effect free -- true of every shader in practice, and of
+			// everything the checker accepts today. Level-zero on purpose: shadow maps are
+			// single-mip, and SampleCmp needs gradients that vertex/compute stages lack
+			// (textureLod's lod argument is ignored, as level zero is the only mip a
+			// comparison fetch supports across our targets).
+			bool hcube = hdim == CSPV_SDIM_CUBE_SHADOW;
 			sfmt_append(*out, "%s_tex.SampleCmpLevelZero(%s_smp, (", s, s);
 			cspv_tp_expr(g, args[1], 2);
-			sappend(*out, ").xy, (");
+			sappend(*out, hcube ? ").xyz, (" : ").xy, (");
 			cspv_tp_expr(g, args[1], 2);
-			sappend(*out, ").z)");
+			sappend(*out, hcube ? ").w)" : ").z)");
 			return;
 		}
 		if (!strcmp(name, "texture")) {
@@ -7645,18 +7689,20 @@ static void cspv_msl_call(cspv_tp* g, cspv_expr* e)
 		const char* s = args[0]->u.name;
 		bool no_gradients = g->ctx->stage != CSPV_STAGE_FRAGMENT; // Vertex and compute have no derivatives.
 		int sdim = args[0]->rtype->cols;
-		bool shadow = sdim == CSPV_SDIM_2D_SHADOW;
+		bool shadow = sdim == CSPV_SDIM_2D_SHADOW || sdim == CSPV_SDIM_CUBE_SHADOW;
 		bool arrayed = sdim == CSPV_SDIM_2D_ARRAY;
 		if (shadow && (!strcmp(name, "texture") || !strcmp(name, "textureLod"))) {
-			// depth2d comparison fetch; coords + reference split from the vec3. The
+			// depth2d/depthcube comparison fetch; coords + reference split from the
+			// coordinate vector (vec3 -> xy/z for 2D, vec4 -> xyz/w for cube). The
 			// coordinate is emitted twice, so it must be side-effect free. Level zero for
 			// the same reasons as the HLSL emitter (single-mip shadow maps, no gradients
 			// outside fragment stages).
+			bool mcube = sdim == CSPV_SDIM_CUBE_SHADOW;
 			sfmt_append(*out, "%s_tex.sample_compare(%s_smp, (", s, s);
 			cspv_tp_expr(g, args[1], 2);
-			sappend(*out, ").xy, (");
+			sappend(*out, mcube ? ").xyz, (" : ").xy, (");
 			cspv_tp_expr(g, args[1], 2);
-			sappend(*out, ").z");
+			sappend(*out, mcube ? ").w" : ").z");
 			if (no_gradients) sappend(*out, ", level(0)");
 			spush(*out, ')');
 			return;
@@ -8326,6 +8372,7 @@ static void cspv_init_types(cspv_ctx* ctx)
 	ctx->t_sampler3d = cspv_make_type(ctx, CSPV_T_SAMPLER2D, ctx->t_float, CSPV_SDIM_3D, 0);
 	ctx->t_sampler2darray = cspv_make_type(ctx, CSPV_T_SAMPLER2D, ctx->t_float, CSPV_SDIM_2D_ARRAY, 0);
 	ctx->t_sampler2dshadow = cspv_make_type(ctx, CSPV_T_SAMPLER2D, ctx->t_float, CSPV_SDIM_2D_SHADOW, 0);
+	ctx->t_samplercubeshadow = cspv_make_type(ctx, CSPV_T_SAMPLER2D, ctx->t_float, CSPV_SDIM_CUBE_SHADOW, 0);
 
 	cspv_register_type(ctx, "bool", ctx->t_bool);
 	cspv_register_type(ctx, "int", ctx->t_int);
@@ -8349,6 +8396,7 @@ static void cspv_init_types(cspv_ctx* ctx)
 	cspv_register_type(ctx, "sampler3D", ctx->t_sampler3d);
 	cspv_register_type(ctx, "sampler2DArray", ctx->t_sampler2darray);
 	cspv_register_type(ctx, "sampler2DShadow", ctx->t_sampler2dshadow);
+	cspv_register_type(ctx, "samplerCubeShadow", ctx->t_samplercubeshadow);
 	cspv_register_type(ctx, "mat2", ctx->t_mat[0]);
 	cspv_register_type(ctx, "mat3", ctx->t_mat[1]);
 	cspv_register_type(ctx, "mat4", ctx->t_mat[2]);

@@ -21,7 +21,7 @@ Vertex, fragment, and compute.
 - Structs (declaration, constructors, field access, nesting in arrays, use as function parameters/returns)
 - Sized arrays of any of the above, including `T[](...)` and `T[N](...)` constructors and `.length()`; both `vec2[8] v` and `vec2 v[8]` declarator forms
 - Sized arrays inside uniform/buffer blocks (`mat4 u_bones[6];`) with dynamic indexing -- the skinning-palette case. Elements are restricted to `vec4`/`ivec4`/`uvec4`/`mat4`, the set where std140, std430, HLSL cbuffer, and MSL strides all coincide; widen a `float[]` to a `vec4[]` and index components
-- Opaque types: `sampler2D`, `usampler2D`, `samplerCube`, `sampler3D`, `sampler2DArray`, `sampler2DShadow` (comparison fetches are level-zero on every backend), formatted `image2D` (formats: `rgba32f`, `rgba16f`, `rg32f`, `rg16f`, `r32f`, `r16f`, `rgba8`, `rgba8ui`, `r32ui`)
+- Opaque types: `sampler2D`, `usampler2D`, `samplerCube`, `sampler3D`, `sampler2DArray`, `sampler2DShadow`, `samplerCubeShadow` (comparison fetches are level-zero on every backend), formatted `image2D` (formats: `rgba32f`, `rgba16f`, `rg32f`, `rg16f`, `r32f`, `r16f`, `rgba8`, `rgba8ui`, `r32ui`)
 - Precision qualifiers (`highp`/`mediump`/`lowp`) are accepted and ignored
 
 ### Declarations
@@ -55,8 +55,8 @@ These are outside the subset today. None of them appear in CF's shaders or sampl
 
 - `double` precision, non-square matrices (`mat4x3` etc.)
 - Geometry/tessellation stages, subroutines
-- Arrays of samplers (`sampler2D s[4]`); `samplerCubeShadow`
-- Matrix addition/subtraction (`mat4 + mat4`) -- only `*` works with matrix operands; blend transformed vectors instead (it is cheaper anyway)
+- Arrays of samplers (`sampler2D s[4]`)
+- Matrix division and comparison -- `*`, `+`, and `-` are the matrix operators
 - Multi-dimensional arrays; block-array elements other than `vec4`/`ivec4`/`uvec4`/`mat4`; sized arrays in *named* block instances; nested structs inside buffer-block structs
 - Stringize (`#`) and paste (`##`) preprocessor operators
 - `precise`, `invariant`, specialization constants

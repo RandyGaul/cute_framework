@@ -1136,6 +1136,18 @@ static void test_sampler_dims(void)
 		"layout(set = 2, binding = 0) uniform sampler2DShadow s;\n"
 		FS_MAIN("result = vec4(textureLod(s, vec3(0.5, 0.5, 0.7), 0.0));"));
 
+	// Cube shadows take a vec4 (direction + reference) and yield a scalar; textureLod has
+	// no such GLSL overload and stays rejected.
+	expect_ok(CSPV_STAGE_FRAGMENT,
+		"layout(set = 2, binding = 0) uniform samplerCubeShadow s;\n"
+		FS_MAIN("float vis = texture(s, vec4(0.0, 1.0, 0.0, 0.6)); result = vec4(vis);"));
+	expect_ok(CSPV_STAGE_VERTEX,
+		"layout(set = 1, binding = 0) uniform samplerCubeShadow s;\n"
+		"void main() { gl_Position = vec4(texture(s, vec4(1.0, 0.0, 0.0, 0.5))); }");
+	expect_err(CSPV_STAGE_FRAGMENT,
+		"layout(set = 2, binding = 0) uniform samplerCubeShadow s;\n"
+		FS_MAIN("result = vec4(textureLod(s, vec4(0.0, 1.0, 0.0, 0.6), 0.0));"), "samplerCubeShadow");
+
 	// Coordinate types are enforced per dim.
 	expect_err(CSPV_STAGE_FRAGMENT,
 		"layout(set = 2, binding = 0) uniform samplerCube s;\n"
@@ -1191,7 +1203,9 @@ static void test_errors_stage_and_globals(void)
 	expect_err(CSPV_STAGE_FRAGMENT,
 		"float f(float x) { }\nvoid main() { }", "missing a return");
 	expect_err(CSPV_STAGE_COMPUTE, "void main() { }", "must declare layout(local_size");
-	expect_err(CSPV_STAGE_FRAGMENT, FS_MAIN("mat2 m = mat2(1); mat2 n = m + m;"), "only '*' is supported");
+	// Matrix + and - decompose into per-column vector ops; anything else stays an error.
+	expect_ok(CSPV_STAGE_FRAGMENT, FS_MAIN("mat2 m = mat2(1); mat2 n = m + m; mat4 o = mat4(2) - mat4(1); result = vec4(n[0], o[0].xy);"));
+	expect_err(CSPV_STAGE_FRAGMENT, FS_MAIN("mat2 m = mat2(1); mat2 n = m / m;"), "matrix operands");
 	expect_err(CSPV_STAGE_FRAGMENT, "layout(location = 0) out vec4 result;\nvoid main() { result.x = gl_Position.x; }", "undeclared identifier 'gl_Position'");
 }
 
@@ -1232,6 +1246,20 @@ static void test_sampler_dims_emitters(void)
 		if (r.success) {
 			CHECK(strstr(r.hlsl, "TextureCube<float4>") != NULL);
 			CHECK(strstr(r.msl, "texturecube<float>") != NULL);
+		}
+		cspv_free(&r);
+	}
+	{
+		CSPV_Result r = s_emit_all(CSPV_STAGE_FRAGMENT,
+			"layout(set = 2, binding = 0) uniform samplerCubeShadow s;\n"
+			FS_MAIN("result = vec4(texture(s, vec4(0.0, 1.0, 0.0, 0.6)));"));
+		if (r.success) {
+			CHECK(strstr(r.hlsl, "TextureCube<float4>") != NULL);
+			CHECK(strstr(r.hlsl, "SamplerComparisonState") != NULL);
+			CHECK(strstr(r.hlsl, "SampleCmpLevelZero") != NULL);
+			CHECK(strstr(r.hlsl, ").xyz, (") != NULL); // vec4 splits as xyz + w.
+			CHECK(strstr(r.msl, "depthcube<float>") != NULL);
+			CHECK(strstr(r.msl, "sample_compare") != NULL);
 		}
 		cspv_free(&r);
 	}
