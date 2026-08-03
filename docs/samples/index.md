@@ -74,6 +74,14 @@ Interactive samples demonstrating Cute Framework features. Click any card to pla
 
     [:octicons-arrow-right-24: Play](shapes3d.md)
 
+- **[Point Light Shadows](point_light.md)**
+
+    ---
+
+    Omnidirectional shadows: one cube texture, six attached face canvases, distance compare in the shader.
+
+    [:octicons-arrow-right-24: Play](point_light.md)
+
 - **[Blend Modes](blend_modes.md)**
 
     ---

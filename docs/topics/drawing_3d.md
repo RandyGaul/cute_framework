@@ -173,6 +173,7 @@ Each common 3D need has a sample showing the pattern, because each one is a patt
 | `transparency3d` | Sorted alpha done honestly -- opaque first, back-to-front translucents, with a toggle to watch unsorted blending break |
 | `obj_loading` | A ~90 line OBJ parser into `cf_make_mesh`; model formats are user space, and this is the whole cost |
 | `shapes3d` | The shape catalog moving: gizmos, grids, arcs, tapered lines, solids -- zero setup |
+| `point_light` | Omnidirectional shadows: six face passes into one cube texture via `attach_target`, distance compare in the lit pass |
 
 ## Below This Layer
 
