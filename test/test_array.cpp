@@ -53,12 +53,17 @@ TEST_CASE(test_array_list_init)
 	REQUIRE(!CF_STRCMP(d[1].c_str(), "b"));
 	REQUIRE(!CF_STRCMP(d[2].c_str(), "c"));
 
-	Array<int> e = {
-		1,
-		2,
-		3,
-		4
-	};
+	return true;
+}
+
+TEST_CASE(test_array_hash)
+{
+	CF_ARRAY(int) e = NULL;
+	cf_array_push(e, 1);
+	cf_array_push(e, 2);
+	cf_array_push(e, 3);
+	cf_array_push(e, 4);
+		
 	int f[] = {
 		1,
 		2,
@@ -66,13 +71,15 @@ TEST_CASE(test_array_list_init)
 		4
 	};
 
-	REQUIRE(cf_array_hash(e) == cf_fnv1a(e, sizeof(*e) * e.count()));
-	REQUIRE(cf_array_hash(e) == cf_fnv1a(f, sizeof(f));
+	// Verify that both ck_hash_fnv1a matches cf_fnv1a.
+	REQUIRE(cf_array_hash(e) == cf_fnv1a(e, sizeof(*e) * cf_array_count(e)));
+	REQUIRE(cf_array_hash(e) == cf_fnv1a(f, sizeof(f)));
 
-	return true;
+	cf_array_free(e);
 }
 
 TEST_SUITE(test_array)
 {
 	RUN_TEST_CASE(test_array_list_init);
+	RUN_TEST_CASE(test_array_hash);
 }
