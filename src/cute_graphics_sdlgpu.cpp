@@ -193,6 +193,8 @@ static struct
 	int msaa_sample_count;
 	CF_CanvasInternal* canvas;
 	SDL_GPUSampler* sampler_override;
+	SDL_GPUBuffer* instance_override;   // Draw3d baked lists: replaces the applied mesh's
+	int instance_override_count;        // instance buffer for exactly one draw.
 	SDL_GPURenderPass* active_pass;
 } g_ctx = { };
 
@@ -1570,6 +1572,56 @@ void cf_sdlgpu_mesh_append_attributes(CF_Mesh mesh_handle, const CF_VertexAttrib
 	}
 }
 
+static inline void s_update_buffer(CF_Buffer* buffer, int element_count, void* data, int size, SDL_GPUBufferUsageFlags flags);
+
+// Standalone instance buffers (draw3d baked lists). Just a CF_Buffer without a mesh.
+struct CF_InstanceBufferInternal
+{
+	CF_Buffer buf;
+};
+
+uint64_t cf_sdlgpu_make_instance_buffer(int size_in_bytes, int stride)
+{
+	CF_InstanceBufferInternal* b = (CF_InstanceBufferInternal*)CF_CALLOC(sizeof(CF_InstanceBufferInternal));
+	b->buf.size = size_in_bytes;
+	b->buf.stride = stride;
+	SDL_GPUBufferCreateInfo buf_info = {
+		.usage = SDL_GPU_BUFFERUSAGE_VERTEX,
+		.size = (Uint32)size_in_bytes,
+		.props = 0,
+	};
+	b->buf.buffer = SDL_CreateGPUBuffer(g_ctx.device, &buf_info);
+	SDL_GPUTransferBufferCreateInfo tbuf_info = {
+		.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD,
+		.size = (Uint32)size_in_bytes,
+		.props = 0,
+	};
+	b->buf.transfer_buffer = SDL_CreateGPUTransferBuffer(g_ctx.device, &tbuf_info);
+	return (uint64_t)(uintptr_t)b;
+}
+
+void cf_sdlgpu_update_instance_buffer(uint64_t handle, void* data, int count)
+{
+	CF_InstanceBufferInternal* b = (CF_InstanceBufferInternal*)(uintptr_t)handle;
+	s_update_buffer(&b->buf, count, data, count * b->buf.stride, SDL_GPU_BUFFERUSAGE_VERTEX);
+}
+
+void cf_sdlgpu_destroy_instance_buffer(uint64_t handle)
+{
+	CF_InstanceBufferInternal* b = (CF_InstanceBufferInternal*)(uintptr_t)handle;
+	if (!b) return;
+	if (b->buf.buffer) SDL_ReleaseGPUBuffer(g_ctx.device, b->buf.buffer);
+	if (b->buf.transfer_buffer) SDL_ReleaseGPUTransferBuffer(g_ctx.device, b->buf.transfer_buffer);
+	CF_FREE(b);
+}
+
+void cf_sdlgpu_apply_instance_buffer_override(uint64_t handle, int count)
+{
+	CF_InstanceBufferInternal* b = (CF_InstanceBufferInternal*)(uintptr_t)handle;
+	g_ctx.instance_override = b ? b->buf.buffer : NULL;
+	g_ctx.instance_override_count = b ? count : 0;
+}
+
 bool cf_sdlgpu_mesh_has_vertex_attribute(CF_Mesh mesh_handle, const char* name)
 {
 	CF_MeshInternal* mesh = (CF_MeshInternal*)mesh_handle.id;
@@ -2048,12 +2100,13 @@ void cf_sdlgpu_apply_shader(CF_Shader shader_handle, CF_Material material_handle
 	SDL_GPUBufferBinding bind[2];
 	bool has_vertex_data = mesh->vertices.buffer != NULL;
 	bool has_instance_data = mesh->instances.buffer != NULL;
+	SDL_GPUBuffer* instance_buffer = g_ctx.instance_override ? g_ctx.instance_override : mesh->instances.buffer;
 	if (has_vertex_data && has_instance_data) {
 		bind[0].buffer = mesh->vertices.buffer; bind[0].offset = 0;
-		bind[1].buffer = mesh->instances.buffer; bind[1].offset = 0;
+		bind[1].buffer = instance_buffer; bind[1].offset = 0;
 		SDL_BindGPUVertexBuffers(pass, 0, bind, 2);
 	} else if (has_instance_data) {
-		bind[0].buffer = mesh->instances.buffer; bind[0].offset = 0;
+		bind[0].buffer = instance_buffer; bind[0].offset = 0;
 		SDL_BindGPUVertexBuffers(pass, 0, bind, 1);
 	} else {
 		bind[0].buffer = mesh->vertices.buffer; bind[0].offset = 0;
@@ -2145,10 +2198,12 @@ void cf_sdlgpu_draw_elements()
 {
 	CF_MeshInternal* mesh = g_ctx.canvas->mesh;
 	if (mesh->instances.buffer) {
+		int instance_count = g_ctx.instance_override ? g_ctx.instance_override_count : mesh->instances.element_count;
+		g_ctx.instance_override = NULL; // One draw only.
 		if (mesh->indices.buffer) {
-			SDL_DrawGPUIndexedPrimitives(g_ctx.canvas->pass, mesh->indices.element_count, mesh->instances.element_count, 0, 0, 0);
+			SDL_DrawGPUIndexedPrimitives(g_ctx.canvas->pass, mesh->indices.element_count, instance_count, 0, 0, 0);
 		} else {
-			SDL_DrawGPUPrimitives(g_ctx.canvas->pass, mesh->vertices.element_count, mesh->instances.element_count, 0, 0);
+			SDL_DrawGPUPrimitives(g_ctx.canvas->pass, mesh->vertices.element_count, instance_count, 0, 0);
 		}
 	} else {
 		if (mesh->indices.buffer) {

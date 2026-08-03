@@ -307,4 +307,14 @@ void cf_draw_elements_instanced(int instance_count);
 bool cf_mesh_has_vertex_attribute(CF_Mesh mesh, const char* name);
 int cf_mesh_instance_stride(CF_Mesh mesh);
 
+// Standalone per-instance vertex buffers for the draw3d layer's baked draw lists: uploaded
+// once at bake, then bound in place of the applied mesh's own instance buffer for exactly one
+// draw via the override (set it before cf_apply_shader; it clears itself after the next
+// cf_draw_elements). The mesh must still declare its per-instance attributes -- the override
+// only swaps which buffer feeds them, so strides must match the mesh's instance stride.
+uint64_t cf_make_instance_buffer(int size_in_bytes, int stride);
+void cf_update_instance_buffer(uint64_t handle, void* data, int count);
+void cf_destroy_instance_buffer(uint64_t handle);
+void cf_apply_instance_buffer_override(uint64_t handle, int count);
+
 #endif // CF_GRAPHICS_INTERNAL_H

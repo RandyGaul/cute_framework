@@ -91,8 +91,16 @@ struct CF_MeshCmd3d
 	void* uniform_block = NULL;         // One allocation holding every captured uniform's bytes.
 	                                    // NULL when the bytes are borrowed (replay payloads).
 	Cute::Array<CF_TextureBinding3d> textures;
+	// Baked lists: the instance data lives on the GPU permanently, uploaded once at bake, so
+	// replays skip the per-flush CPU upload entirely. Replay payloads borrow the handle.
+	uint64_t gpu_instances = 0;
+	bool owns_gpu_instances = false;
 
-	~CF_MeshCmd3d() { if (uniform_block) CF_FREE(uniform_block); }
+	~CF_MeshCmd3d()
+	{
+		if (uniform_block) CF_FREE(uniform_block);
+		if (owns_gpu_instances && gpu_instances) cf_destroy_instance_buffer(gpu_instances);
+	}
 };
 
 struct CF_Draw3d
@@ -610,7 +618,7 @@ void cf_draw3d_process(CF_Command* cmd, CF_Canvas canvas, bool clear)
 		if (!cf_mesh_has_vertex_attribute(mc->mesh, "in_model0")) {
 			s_augment_mesh(mc->mesh);
 		}
-		if (!textured) {
+		if (!textured && !mc->gpu_instances) {
 			cf_mesh_update_instance_data(mc->mesh, (void*)instances.data(), instances.count());
 		}
 	}
@@ -643,6 +651,8 @@ void cf_draw3d_process(CF_Command* cmd, CF_Canvas canvas, bool clear)
 	CF_Rect scissor = cmd->scissor;
 
 	if (!textured) {
+		// Baked groups draw straight from their persistent buffer -- no upload happened.
+		if (mc->gpu_instances) cf_apply_instance_buffer_override(mc->gpu_instances, instances.count());
 		cf_apply_shader(cmd->shader, material);
 		if (viewport.w >= 0 && viewport.h >= 0) cf_apply_viewport(viewport.x, viewport.y, viewport.w, viewport.h);
 		if (scissor.w >= 0 && scissor.h >= 0) cf_apply_scissor(scissor.x, scissor.y, scissor.w, scissor.h);
@@ -731,6 +741,8 @@ static void s_own_payload(CF_MeshCmd3d* mc)
 		mc->instances = *mc->instances_ref;
 		mc->instances_ref = NULL;
 	}
+	mc->gpu_instances = 0; // Borrowed from another list, if set; this list bakes its own.
+	mc->owns_gpu_instances = false;
 	if (mc->image_refs_ref) {
 		mc->image_refs = *mc->image_refs_ref;
 		mc->image_refs_ref = NULL;
@@ -817,6 +829,18 @@ void cf_draw3d_list_end(CF_DrawListData* data)
 			inst.nmat2 = cf_v4(n.elements[2], n.elements[6], n.elements[10], 0);
 		}
 	}
+
+	// The instance data is final now (sprite-textured groups excepted -- their uv lanes
+	// refresh against the atlas every flush): upload each group once to a persistent GPU
+	// buffer, so replays cost zero instance bandwidth.
+	for (int i = 0; i < data->cmds.count(); ++i) {
+		CF_MeshCmd3d* mc = data->cmds[i].mesh3d;
+		if (!mc || mc->escape || mc->sprite_textured || !mc->instances.count()) continue;
+		int bytes = mc->instances.count() * (int)sizeof(CF_MeshInstance3d);
+		mc->gpu_instances = cf_make_instance_buffer(bytes, (int)sizeof(CF_MeshInstance3d));
+		cf_update_instance_buffer(mc->gpu_instances, mc->instances.data(), mc->instances.count());
+		mc->owns_gpu_instances = true;
+	}
 }
 
 void cf_draw3d_replay_cmd(CF_Command* dst, const CF_Command* src)
@@ -831,6 +855,7 @@ void cf_draw3d_replay_cmd(CF_Command* dst, const CF_Command* src)
 	CF_M4x4 vp = cf_mul_m4(s_draw3d->projections.last(), s_draw3d->views.last());
 	mc->vp = cf_mul_m4(vp, s_draw3d->transforms.last());
 	mc->instances_ref = &smc->instances;
+	mc->gpu_instances = smc->gpu_instances; // Borrowed; the list's payload owns it.
 	mc->sprite_textured = smc->sprite_textured;
 	mc->image_refs_ref = smc->sprite_textured ? &smc->image_refs : NULL;
 	mc->uniforms = smc->uniforms; // Bytes stay in the list's uniform_block (borrowed).

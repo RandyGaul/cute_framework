@@ -1360,6 +1360,60 @@ void cf_gles_mesh_append_attributes(CF_Mesh mesh_handle, const CF_VertexAttribut
 	}
 }
 
+// Standalone instance buffers (draw3d baked lists): a plain GL buffer, no streaming ring --
+// contents upload at bake and change rarely, and glBufferData re-specifies on update.
+struct CF_GL_InstanceBuffer
+{
+	GLuint id;
+	int size;
+	int stride;
+};
+
+static GLuint s_gl_instance_override = 0;
+static int s_gl_instance_override_count = 0;
+static int s_gl_instance_override_stride = 0;
+
+uint64_t cf_gles_make_instance_buffer(int size_in_bytes, int stride)
+{
+	CF_GL_InstanceBuffer* b = (CF_GL_InstanceBuffer*)CF_CALLOC(sizeof(CF_GL_InstanceBuffer));
+	b->size = size_in_bytes;
+	b->stride = stride;
+	glGenBuffers(1, &b->id);
+	glBindBuffer(GL_ARRAY_BUFFER, b->id);
+	glBufferData(GL_ARRAY_BUFFER, size_in_bytes, NULL, GL_STATIC_DRAW);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	CF_POLL_OPENGL_ERROR();
+	return (uint64_t)(uintptr_t)b;
+}
+
+void cf_gles_update_instance_buffer(uint64_t handle, void* data, int count)
+{
+	CF_GL_InstanceBuffer* b = (CF_GL_InstanceBuffer*)(uintptr_t)handle;
+	int bytes = count * b->stride;
+	glBindBuffer(GL_ARRAY_BUFFER, b->id);
+	if (bytes > b->size) b->size = bytes;
+	glBufferData(GL_ARRAY_BUFFER, b->size, NULL, GL_STATIC_DRAW); // Orphan: updates are rare.
+	glBufferSubData(GL_ARRAY_BUFFER, 0, bytes, data);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	CF_POLL_OPENGL_ERROR();
+}
+
+void cf_gles_destroy_instance_buffer(uint64_t handle)
+{
+	CF_GL_InstanceBuffer* b = (CF_GL_InstanceBuffer*)(uintptr_t)handle;
+	if (!b) return;
+	if (b->id) glDeleteBuffers(1, &b->id);
+	CF_FREE(b);
+}
+
+void cf_gles_apply_instance_buffer_override(uint64_t handle, int count)
+{
+	CF_GL_InstanceBuffer* b = (CF_GL_InstanceBuffer*)(uintptr_t)handle;
+	s_gl_instance_override = b ? b->id : 0;
+	s_gl_instance_override_count = b ? count : 0;
+	s_gl_instance_override_stride = b ? b->stride : 0;
+}
+
 bool cf_gles_mesh_has_vertex_attribute(CF_Mesh mh, const char* name)
 {
 	auto* m = (CF_GL_Mesh*)(uintptr_t)mh.id;
@@ -1689,8 +1743,15 @@ static inline void s_apply_vertex_attributes(CF_GL_Shader* shader, CF_GL_Mesh* m
 
 		const bool per_instance = attrib->per_instance;
 		CF_GL_Buffer& buf = per_instance ? mesh->instance : mesh->vbo;
-		if (!buf.id) continue;
+		GLuint buf_id = buf.id;
+		GLsizei buf_stride = buf.stride;
 		GLintptr base_offset = per_instance ? mesh->instance.active_offset : mesh->vbo.active_offset;
+		if (per_instance && s_gl_instance_override) {
+			buf_id = s_gl_instance_override;
+			buf_stride = s_gl_instance_override_stride;
+			base_offset = 0;
+		}
+		if (!buf_id) continue;
 
 		GLenum type = GL_FLOAT;
 		GLint comps = 4;
@@ -1722,15 +1783,15 @@ static inline void s_apply_vertex_attributes(CF_GL_Shader* shader, CF_GL_Mesh* m
 			case CF_VERTEX_FORMAT_HALF4:	type = GL_HALF_FLOAT; comps = 4; break;
 			default: break;
 		}
-		glBindBuffer(GL_ARRAY_BUFFER, buf.id);
+		glBindBuffer(GL_ARRAY_BUFFER, buf_id);
 		if (!(g_ctx.enabled_vertex_attrib_mask & (1ULL << loc))) {
 			glEnableVertexAttribArray((GLuint)loc);
 		}
 		const void* pointer = (const void*)(intptr_t)(attrib->offset + base_offset);
 		if (type == GL_INT) {
-			glVertexAttribIPointer((GLuint)loc, comps, type, buf.stride, pointer);
+			glVertexAttribIPointer((GLuint)loc, comps, type, buf_stride, pointer);
 		} else {
-			glVertexAttribPointer((GLuint)loc, comps, type, norm, buf.stride, pointer);
+			glVertexAttribPointer((GLuint)loc, comps, type, norm, buf_stride, pointer);
 		}
 		glVertexAttribDivisor((GLuint)loc, per_instance ? 1 : 0);
 
@@ -1897,6 +1958,10 @@ void cf_gles_draw_elements()
 
 	GLenum prim = s_wrap(material->state.primitive_type);
 	int instance_count = (mesh->instance.id && mesh->instance.count > 0) ? mesh->instance.count : 0;
+	if (s_gl_instance_override) {
+		instance_count = s_gl_instance_override_count;
+		s_gl_instance_override = 0; // One draw only.
+	}
 
 
 
