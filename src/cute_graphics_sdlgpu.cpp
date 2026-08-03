@@ -35,6 +35,9 @@ struct CF_CanvasInternal
 	// does not own its color texture, and passes address the given layer.
 	bool attached;
 	int attach_layer;
+	// Depth-format attach targets flip the meaning: the attach becomes the canvas's DEPTH
+	// target (shadow cubes), there is no color side at all, and the depth is borrowed.
+	bool attached_depth;
 
 	// Additional color targets for MRT ([0] unused -- the members above are target 0, kept
 	// singular so the single-target hot paths read naturally).
@@ -1243,12 +1246,40 @@ void cf_sdlgpu_destroy_shader_internal(CF_Shader shader_handle)
 	CF_FREE(shd);
 }
 
+static bool s_sdl_format_is_depth(SDL_GPUTextureFormat format)
+{
+	switch (format) {
+	case SDL_GPU_TEXTUREFORMAT_D16_UNORM:
+	case SDL_GPU_TEXTUREFORMAT_D24_UNORM:
+	case SDL_GPU_TEXTUREFORMAT_D32_FLOAT:
+	case SDL_GPU_TEXTUREFORMAT_D24_UNORM_S8_UINT:
+	case SDL_GPU_TEXTUREFORMAT_D32_FLOAT_S8_UINT: return true;
+	default: return false;
+	}
+}
+
 CF_Canvas cf_sdlgpu_make_canvas(CF_CanvasParams params)
 {
 	CF_CanvasInternal* canvas = (CF_CanvasInternal*)CF_CALLOC(sizeof(CF_CanvasInternal));
 	if (params.attach_target.id) {
 		// Render into one face/layer of an existing texture; the canvas owns nothing color-side.
 		CF_TextureInternal* attach = (CF_TextureInternal*)params.attach_target.id;
+		if (s_sdl_format_is_depth(attach->format)) {
+			// A depth-format attach becomes the canvas's DEPTH target: a depth-only pass with
+			// no color side at all -- the shadow-cube case (render each face of a depth cube,
+			// then sample it with samplerCubeShadow).
+			canvas->attached = true; // Owns nothing: color side absent, depth side borrowed.
+			canvas->attached_depth = true;
+			canvas->attach_layer = params.attach_layer;
+			canvas->w = attach->w;
+			canvas->h = attach->h;
+			canvas->sample_count = CF_SAMPLE_COUNT_1;
+			canvas->cf_depth_stencil = params.attach_target;
+			canvas->depth_stencil = attach->tex;
+			CF_Canvas result;
+			result.id = (uint64_t)canvas;
+			return result;
+		}
 		canvas->attached = true;
 		canvas->attach_layer = params.attach_layer;
 		canvas->w = attach->w;
@@ -1329,7 +1360,7 @@ void cf_sdlgpu_clear_canvas(CF_Canvas canvas_handle)
 	SDL_GPUCommandBuffer* cmd = g_ctx.cmd ? g_ctx.cmd : SDL_AcquireGPUCommandBuffer(g_ctx.device);
 
 	SDL_GPUColorTargetInfo color_infos[CF_MAX_CANVAS_TARGETS] = { };
-	int target_count = canvas->target_count > 1 ? canvas->target_count : 1;
+	int target_count = canvas->attached_depth ? 0 : (canvas->target_count > 1 ? canvas->target_count : 1);
 	for (int i = 0; i < target_count; ++i) {
 		CF_Color cc = s_clear_color2(canvas, i);
 		color_infos[i].texture = i == 0 ? canvas->texture : canvas->textures_mrt[i];
@@ -1346,8 +1377,9 @@ void cf_sdlgpu_clear_canvas(CF_Canvas canvas_handle)
 		.store_op = SDL_GPU_STOREOP_STORE,
 		.stencil_load_op = SDL_GPU_LOADOP_CLEAR,
 		.stencil_store_op = SDL_GPU_STOREOP_STORE,
-		.cycle = true,
+		.cycle = canvas->attached_depth ? false : true,
 		.clear_stencil = (Uint8)s_clear_stencil(canvas),
+		.layer = (Uint8)(canvas->attached_depth ? canvas->attach_layer : 0),
 	};
 	SDL_GPURenderPass* renderPass = SDL_BeginGPURenderPass(cmd, color_infos, (Uint32)target_count, canvas->depth_stencil ? &depth_stencil_info : NULL);
 	SDL_EndGPURenderPass(renderPass);
@@ -1364,7 +1396,7 @@ void cf_sdlgpu_destroy_canvas(CF_Canvas canvas_handle)
 			if (canvas->cf_textures_mrt[i].id) cf_sdlgpu_destroy_texture(canvas->cf_textures_mrt[i]);
 		}
 		if (canvas->resolve_texture) cf_sdlgpu_destroy_texture(canvas->cf_resolve_texture);
-		if (canvas->depth_stencil) cf_sdlgpu_destroy_texture(canvas->cf_depth_stencil);
+		if (canvas->depth_stencil && !canvas->attached_depth) cf_sdlgpu_destroy_texture(canvas->cf_depth_stencil);
 	CF_FREE(canvas);
 }
 
@@ -1853,12 +1885,14 @@ static inline void s_copy_uniforms(SDL_GPUCommandBuffer* cmd, CF_Arena* arena, C
 static inline SDL_GPUGraphicsPipeline* s_build_pipeline(CF_ShaderInternal* shader, CF_RenderState* state, CF_MeshInternal* mesh)
 {
 	CF_TextureInternal* tex = (CF_TextureInternal*)g_ctx.canvas->cf_texture.id;
-	int color_target_count = g_ctx.canvas->target_count > 1 ? g_ctx.canvas->target_count : 1;
+	int color_target_count = g_ctx.canvas->attached_depth ? 0 : (g_ctx.canvas->target_count > 1 ? g_ctx.canvas->target_count : 1);
 	SDL_GPUColorTargetDescription color_infos[CF_MAX_CANVAS_TARGETS];
 	CF_MEMSET(color_infos, 0, sizeof(color_infos));
 	SDL_GPUColorTargetDescription& color_info = color_infos[0];
-	CF_ASSERT(g_ctx.canvas->texture);
-	color_info.format = tex->format;
+	if (color_target_count) {
+		CF_ASSERT(g_ctx.canvas->texture);
+		color_info.format = tex->format;
+	}
 	color_info.blend_state.enable_blend = state->blend.enabled;
 	color_info.blend_state.alpha_blend_op = s_wrap(state->blend.alpha_op);
 	color_info.blend_state.color_blend_op = s_wrap(state->blend.rgb_op);
@@ -1985,7 +2019,7 @@ static CF_PipelineKey s_make_pipeline_key(CF_RenderState* state, CF_MeshInternal
 	CF_MEMSET(&key, 0, sizeof(key));
 
 	// Canvas state.
-	key.color_target_count = g_ctx.canvas->target_count > 1 ? g_ctx.canvas->target_count : 1;
+	key.color_target_count = g_ctx.canvas->attached_depth ? 0 : (g_ctx.canvas->target_count > 1 ? g_ctx.canvas->target_count : 1);
 	for (int i = 0; i < key.color_target_count; ++i) {
 		CF_TextureInternal* tex_i = (CF_TextureInternal*)(i == 0 ? g_ctx.canvas->cf_texture.id : g_ctx.canvas->cf_textures_mrt[i].id);
 		key.color_formats[i] = tex_i->format;
@@ -2054,7 +2088,7 @@ void cf_sdlgpu_apply_shader(CF_Shader shader_handle, CF_Material material_handle
 	// Begin a new render pass if needed, or reuse the active one.
 	SDL_GPURenderPass* pass = g_ctx.active_pass;
 	if (!pass) {
-		int pass_target_count = g_ctx.canvas->target_count > 1 ? g_ctx.canvas->target_count : 1;
+		int pass_target_count = g_ctx.canvas->attached_depth ? 0 : (g_ctx.canvas->target_count > 1 ? g_ctx.canvas->target_count : 1);
 		SDL_GPUColorTargetInfo pass_color_infos[CF_MAX_CANVAS_TARGETS];
 		CF_MEMSET(pass_color_infos, 0, sizeof(pass_color_infos));
 		for (int i = 0; i < pass_target_count; ++i) {
@@ -2085,7 +2119,9 @@ void cf_sdlgpu_apply_shader(CF_Shader shader_handle, CF_Material material_handle
 			pass_depth_stencil_info.store_op = SDL_GPU_STOREOP_STORE;
 			pass_depth_stencil_info.stencil_load_op = g_ctx.canvas->clear ? SDL_GPU_LOADOP_CLEAR : SDL_GPU_LOADOP_LOAD;
 			pass_depth_stencil_info.stencil_store_op = SDL_GPU_STOREOP_STORE;
-			pass_depth_stencil_info.cycle = pass_color_infos[0].cycle;
+			// Attached depth is a shared user texture: never cycle it, and address the face.
+			pass_depth_stencil_info.cycle = g_ctx.canvas->attached_depth ? false : pass_color_infos[0].cycle;
+			pass_depth_stencil_info.layer = (Uint8)(g_ctx.canvas->attached_depth ? g_ctx.canvas->attach_layer : 0);
 			depth_stencil_ptr = &pass_depth_stencil_info;
 		}
 

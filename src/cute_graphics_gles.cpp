@@ -182,6 +182,9 @@ struct CF_GL_Canvas
 
 	// Rendering into a face/layer of a user-owned texture; the canvas does not own it.
 	bool attached;
+	// Depth-format attach targets become the canvas's DEPTH attachment instead (shadow
+	// cubes): no color side, draw buffer GL_NONE.
+	bool attached_depth;
 
 	// Depth as a sampleable texture instead of a renderbuffer, used when the canvas's
 	// depth target requests SAMPLER usage (shadow maps). Zero id when the renderbuffer
@@ -1113,14 +1116,31 @@ CF_Canvas cf_gles_make_canvas(CF_CanvasParams params)
 	c->has_depth = false;
 	c->has_stencil = false;
 
-	// Color: an owned 2D texture, or an attached face/layer of a user texture.
+	// Color: an owned 2D texture, or an attached face/layer of a user texture. A DEPTH-format
+	// attach becomes the depth attachment instead, with no color side at all.
 	if (params.attach_target.id) {
 		CF_GL_Texture* attach = (CF_GL_Texture*)(uintptr_t)params.attach_target.id;
 		c->attached = true;
 		c->w = attach->w;
 		c->h = attach->h;
-		c->cf_color = params.attach_target;
-		c->color = attach->id;
+		switch (attach->internal_fmt) {
+		case GL_DEPTH_COMPONENT16:
+		case GL_DEPTH_COMPONENT24:
+		case GL_DEPTH_COMPONENT32F:
+			c->attached_depth = true;
+			c->has_depth = true;
+			break;
+		case GL_DEPTH24_STENCIL8:
+		case GL_DEPTH32F_STENCIL8:
+			c->attached_depth = true;
+			c->has_depth = true;
+			c->has_stencil = true;
+			break;
+		default:
+			c->cf_color = params.attach_target;
+			c->color = attach->id;
+			break;
+		}
 	} else {
 	c->w = params.target.width;
 	c->h = params.target.height;
@@ -1146,8 +1166,9 @@ CF_Canvas cf_gles_make_canvas(CF_CanvasParams params)
 	}
 
 	// Depth/stencil: a renderbuffer normally, or a sampleable depth texture when the
-	// depth target requests SAMPLER usage (the shadow-map case).
-	if (params.depth_stencil_enable) {
+	// depth target requests SAMPLER usage (the shadow-map case). Depth-attached canvases
+	// already have their depth: the attach target itself.
+	if (params.depth_stencil_enable && !c->attached_depth) {
 	CF_GL_PixelFormatInfo* depth_info = s_find_pixel_format_info(params.depth_stencil_target.pixel_format);
 	c->has_depth = depth_info && (depth_info->caps & CF_GL_FMT_CAP_DEPTH);
 	c->has_stencil = depth_info && depth_info->has_stencil && (depth_info->caps & CF_GL_FMT_CAP_STENCIL);
@@ -1170,7 +1191,22 @@ CF_Canvas cf_gles_make_canvas(CF_CanvasParams params)
 
 	glGenFramebuffers(1, &c->fbo);
 	s_bind_framebuffer(c->fbo);
-	if (c->attached) {
+	if (c->attached_depth) {
+		CF_GL_Texture* attach = (CF_GL_Texture*)(uintptr_t)params.attach_target.id;
+		GLenum attachment = c->has_stencil ? GL_DEPTH_STENCIL_ATTACHMENT : GL_DEPTH_ATTACHMENT;
+		if (attach->target == GL_TEXTURE_CUBE_MAP) {
+			glFramebufferTexture2D(GL_FRAMEBUFFER, attachment,
+				GL_TEXTURE_CUBE_MAP_POSITIVE_X + params.attach_layer, attach->id, 0);
+		} else if (attach->target == GL_TEXTURE_2D) {
+			glFramebufferTexture2D(GL_FRAMEBUFFER, attachment, GL_TEXTURE_2D, attach->id, 0);
+		} else {
+			glFramebufferTextureLayer(GL_FRAMEBUFFER, attachment, attach->id, 0, params.attach_layer);
+		}
+		// Depth-only: no color buffer to draw into or read from.
+		GLenum none = GL_NONE;
+		glDrawBuffers(1, &none);
+		glReadBuffer(GL_NONE);
+	} else if (c->attached) {
 		CF_GL_Texture* attach = (CF_GL_Texture*)(uintptr_t)params.attach_target.id;
 		if (attach->target == GL_TEXTURE_CUBE_MAP) {
 			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
@@ -1261,7 +1297,7 @@ CF_Texture cf_gles_canvas_get_depth_stencil_target(CF_Canvas ch)
 static inline void s_clear_canvas(const CF_GL_Canvas* canvas)
 {
 	GLbitfield bits = 0;
-	int clear_target_count = canvas->target_count > 1 ? canvas->target_count : 1;
+	int clear_target_count = canvas->attached_depth ? 0 : (canvas->target_count > 1 ? canvas->target_count : 1);
 	if (s_canvas_has_depth(canvas)) {
 		glClearDepthf(canvas->has_clear_depth_stencil ? canvas->clear_depth : app->clear_depth);
 		bits |= GL_DEPTH_BUFFER_BIT;

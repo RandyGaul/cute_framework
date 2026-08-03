@@ -1356,7 +1356,14 @@ typedef struct CF_CanvasParams
 	   The classic use is point-light shadows: make one cube texture, then six canvases attached to
 	   its faces, and render the scene once per face. The canvas does not own the texture --
 	   destroying the canvas leaves it alive, and `cf_canvas_get_target` returns it. Zero'd handle
-	   (the default) creates an owned 2D target as usual. */
+	   (the default) creates an owned 2D target as usual.
+
+	   A DEPTH-format attach (needs `CF_TEXTURE_USAGE_DEPTH_STENCIL_TARGET_BIT`) flips the meaning:
+	   the texture becomes the canvas's depth attachment and there is no color side at all -- a
+	   depth-only pass, pairing with `compare_enable` and `samplerCubeShadow`/`sampler2DShadow` for
+	   shadow maps. Note: cube-face DEPTH rendering currently only lands on the OpenGL ES backend
+	   and SDL_GPU's Vulkan/Metal drivers -- SDL_GPU's D3D12 driver creates only 2D depth views, so
+	   depth cube faces silently miss there (2D depth attaches work everywhere). */
 	CF_Texture attach_target;
 
 	/* @member Which face (0-5: +X, -X, +Y, -Y, +Z, -Z), array layer, or 3D slice of

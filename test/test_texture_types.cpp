@@ -240,9 +240,154 @@ TEST_CASE(test_render_to_cube_face)
 	return true;
 }
 
+static const char* s_depth_vs =
+"layout (location = 0) in vec2 in_pos;\n"
+"layout (set = 1, binding = 0) uniform uniform_block {\n"
+"    vec4 u_depth;\n"
+"};\n"
+"void main() { gl_Position = vec4(in_pos, u_depth.x, 1.0); }\n";
+
+static const char* s_depth_fs =
+"layout (location = 0) out vec4 result;\n"
+"void main() { result = vec4(1.0); }\n";
+
+static const char* s_shadow_2d_fs =
+"layout (location = 0) out vec4 result;\n"
+"layout (set = 2, binding = 0) uniform sampler2DShadow u_shadow;\n"
+"layout (set = 3, binding = 0) uniform uniform_block {\n"
+"    vec4 u_dirref;\n"
+"};\n"
+"void main() { float vis = texture(u_shadow, vec3(0.5, 0.5, u_dirref.w)); result = vec4(vis, 0.0, 0.0, 1.0); }\n";
+
+static const char* s_shadow_cube_fs =
+"layout (location = 0) out vec4 result;\n"
+"layout (set = 2, binding = 0) uniform samplerCubeShadow u_shadow;\n"
+"layout (set = 3, binding = 0) uniform uniform_block {\n"
+"    vec4 u_dirref;\n"
+"};\n"
+"void main() { float vis = texture(u_shadow, vec4(u_dirref.xyz, u_dirref.w)); result = vec4(vis, 0.0, 0.0, 1.0); }\n";
+
+// Renders a known depth into an attached depth texture (layer `layer`), no color side at all,
+// through a depth-only canvas.
+static void s_render_depth_face(CF_Texture target, int layer, float depth_value, CF_Mesh mesh, CF_Shader shd, CF_Material mat)
+{
+	CF_CanvasParams params = cf_canvas_defaults(32, 32);
+	params.attach_target = target;
+	params.attach_layer = layer;
+	CF_Canvas canvas = cf_make_canvas(params);
+	float depth[4] = { depth_value, 0, 0, 0 };
+	cf_material_set_uniform_vs(mat, "u_depth", depth, CF_UNIFORM_TYPE_FLOAT4, 1);
+	cf_apply_canvas(canvas, true);
+	cf_apply_mesh(mesh);
+	cf_apply_shader(shd, mat);
+	cf_draw_elements();
+	cf_app_draw_onto_screen(false);
+	cf_destroy_canvas(canvas);
+}
+
+// A depth-format attach_target becomes the canvas's DEPTH attachment: render known depths into
+// user depth textures through depth-only canvases, then verify with hardware comparison fetches
+// (LESS_THAN_OR_EQUAL: lit when ref <= stored). The 2D case runs everywhere; the cube case runs
+// on GLES only for now -- SDL_GPU's D3D12 backend creates only TEXTURE2D-dimension depth views,
+// so cube-face depth rendering silently misses there (Vulkan/Metal are expected to work).
+TEST_CASE(test_depth_attach)
+{
+	int options = CF_APP_OPTIONS_HIDDEN_BIT | CF_APP_OPTIONS_NO_AUDIO_BIT;
+	const char* gles = getenv("CF_TEST_GLES");
+	bool is_gles = gles && *gles == '1';
+	if (is_gles) options |= CF_APP_OPTIONS_GFX_OPENGL_BIT | CF_APP_OPTIONS_GFX_DEBUG_BIT;
+	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, W, H, options, NULL))) return true; // Headless CI: no display/GPU.
+
+	CF_Shader depth_shd = cf_make_shader_from_source(s_depth_vs, s_depth_fs);
+	REQUIRE(depth_shd.id);
+	CF_Mesh mesh = s_make_fullscreen_quad();
+	CF_Material depth_mat = cf_make_material();
+	CF_RenderState rs = cf_render_state_defaults();
+	rs.depth_write_enabled = true;
+	rs.depth_compare = CF_COMPARE_FUNCTION_ALWAYS;
+	cf_material_set_render_state(depth_mat, rs);
+
+	CF_Material material = cf_make_material();
+	CF_Canvas out = cf_make_canvas(cf_canvas_defaults(W, H));
+	CF_Pixel* px = (CF_Pixel*)cf_alloc(W * H * (int)sizeof(CF_Pixel));
+
+	// 2D: attach a plain depth texture, write 0.25, comparison-fetch around it.
+	{
+		CF_TextureParams tp = cf_texture_defaults(32, 32);
+		tp.pixel_format = CF_PIXEL_FORMAT_D32_FLOAT;
+		tp.usage = CF_TEXTURE_USAGE_DEPTH_STENCIL_TARGET_BIT | CF_TEXTURE_USAGE_SAMPLER_BIT;
+		tp.compare_enable = true;
+		tp.compare_function = CF_COMPARE_FUNCTION_LESS_THAN_OR_EQUAL;
+		CF_Texture depth_2d = cf_make_texture(tp);
+		REQUIRE(depth_2d.id);
+
+		cf_app_update(NULL);
+		s_render_depth_face(depth_2d, 0, 0.25f, mesh, depth_shd, depth_mat);
+
+		CF_Shader shadow_shd = cf_make_shader_from_source(s_vs, s_shadow_2d_fs);
+		REQUIRE(shadow_shd.id);
+		cf_material_set_texture_fs(material, "u_shadow", depth_2d);
+		struct { float ref; bool lit; } probes[2] = { { 0.10f, true }, { 0.60f, false } };
+		for (int i = 0; i < 2; ++i) {
+			float dirref[4] = { 0, 0, 0, probes[i].ref };
+			cf_material_set_uniform_fs(material, "u_dirref", dirref, CF_UNIFORM_TYPE_FLOAT4, 1);
+			CF_Pixel c = s_draw_and_read(out, mesh, shadow_shd, material, px);
+			if (probes[i].lit) { REQUIRE(c.colors.r > 200); }
+			else { REQUIRE(c.colors.r < 60); }
+		}
+		cf_destroy_shader(shadow_shd);
+		cf_destroy_texture(depth_2d);
+	}
+
+	// Cube: +X face holds 0.25, -Y face holds 0.75, probed through samplerCubeShadow.
+	if (is_gles) {
+		CF_TextureParams tp = cf_texture_defaults(32, 32);
+		tp.texture_type = CF_TEXTURE_TYPE_CUBE;
+		tp.pixel_format = CF_PIXEL_FORMAT_D32_FLOAT;
+		tp.usage = CF_TEXTURE_USAGE_DEPTH_STENCIL_TARGET_BIT | CF_TEXTURE_USAGE_SAMPLER_BIT;
+		tp.compare_enable = true;
+		tp.compare_function = CF_COMPARE_FUNCTION_LESS_THAN_OR_EQUAL;
+		CF_Texture cube = cf_make_texture(tp);
+		REQUIRE(cube.id);
+
+		cf_app_update(NULL);
+		s_render_depth_face(cube, 0, 0.25f, mesh, depth_shd, depth_mat);
+		s_render_depth_face(cube, 3, 0.75f, mesh, depth_shd, depth_mat);
+
+		CF_Shader shadow_shd = cf_make_shader_from_source(s_vs, s_shadow_cube_fs);
+		REQUIRE(shadow_shd.id);
+		cf_material_set_texture_fs(material, "u_shadow", cube);
+		struct { float dir[3]; float ref; bool lit; } probes[4] = {
+			{ {  1, 0, 0 }, 0.10f, true  },
+			{ {  1, 0, 0 }, 0.60f, false },
+			{ { 0, -1, 0 }, 0.60f, true  },
+			{ { 0, -1, 0 }, 0.90f, false },
+		};
+		for (int i = 0; i < 4; ++i) {
+			float dirref[4] = { probes[i].dir[0], probes[i].dir[1], probes[i].dir[2], probes[i].ref };
+			cf_material_set_uniform_fs(material, "u_dirref", dirref, CF_UNIFORM_TYPE_FLOAT4, 1);
+			CF_Pixel c = s_draw_and_read(out, mesh, shadow_shd, material, px);
+			if (probes[i].lit) { REQUIRE(c.colors.r > 200); }
+			else { REQUIRE(c.colors.r < 60); }
+		}
+		cf_destroy_shader(shadow_shd);
+		cf_destroy_texture(cube);
+	}
+
+	cf_free(px);
+	cf_destroy_canvas(out);
+	cf_destroy_material(material);
+	cf_destroy_material(depth_mat);
+	cf_destroy_mesh(mesh);
+	cf_destroy_shader(depth_shd);
+	cf_destroy_app();
+	return true;
+}
+
 TEST_SUITE(test_texture_types)
 {
 	RUN_TEST_CASE(test_cube_map_sample);
 	RUN_TEST_CASE(test_texture_array_sample);
 	RUN_TEST_CASE(test_render_to_cube_face);
+	RUN_TEST_CASE(test_depth_attach);
 }
