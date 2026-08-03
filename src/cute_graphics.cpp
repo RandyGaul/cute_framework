@@ -496,6 +496,10 @@ void cf_destroy_shader(CF_Shader shader_handle)
 		s_draw->draw_shd_to_blit_shd.remove(shader_handle.id);
 	}
 
+	// 3d shape shaders pair a hidden solid-variant sibling with the canonical handle. See
+	// `cf_make_draw3d_shape_shader`.
+	cf_draw3d_destroy_shape_shader_sibling(shader_handle.id);
+
 	cf_destroy_shader_internal(shader_handle);
 }
 

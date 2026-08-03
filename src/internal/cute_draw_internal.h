@@ -417,6 +417,11 @@ void cf_make_draw3d();
 void cf_destroy_draw3d();
 void cf_draw3d_process(CF_Command* cmd, CF_Canvas canvas, bool clear);
 void cf_draw3d_free_cmd(CF_Command* cmd);
+
+// Called by cf_destroy_shader: destroys the hidden solid-variant sibling of a 3d shape
+// shader's canonical handle (see cf_make_draw3d_shape_shader). Returns false if the id is
+// not a shape shader.
+bool cf_draw3d_destroy_shape_shader_sibling(uint64_t shader_id);
 // Draw-list hooks: list-local 3d transforms while recording; bake (grouping + exact normal
 // matrices) at end; replay payloads borrowing the baked instances under a live camera; and
 // payload cleanup when a list's commands are cleared or destroyed.

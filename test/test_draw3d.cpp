@@ -1018,6 +1018,61 @@ TEST_CASE(test_draw3d_shapes)
 	return true;
 }
 
+// Shape shader stubs (cf_make_draw3d_shape_shader): a user snippet post-processes the
+// built-in stroke and solid results, with per-shape attributes flowing through ShapeParams.
+TEST_CASE(test_draw3d_shape_shader)
+{
+	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, W, H, s_options(), NULL))) return true; // Headless CI: no display/GPU.
+
+	CF_CanvasParams params = cf_canvas_defaults(W, H);
+	params.depth_stencil_enable = true;
+	CF_Canvas canvas = cf_make_canvas(params);
+	CF_Pixel* px = (CF_Pixel*)cf_alloc(W * H * (int)sizeof(CF_Pixel));
+
+	// Swaps every shape's color for its attributes lane, premultiplied-safe.
+	CF_Shader shd = cf_make_draw3d_shape_shader_from_source(
+		"vec4 shader(vec4 color, ShapeParams params)\n"
+		"{\n"
+		"    return vec4(params.attributes.rgb * color.a, color.a);\n"
+		"}\n");
+	REQUIRE(shd.id);
+
+	cf_app_update(NULL);
+	cf_draw3d_push_projection(cf_ortho(-1, 1, -1, 1, 0.1f, 10.0f));
+	cf_draw3d_push_view(cf_look_at(cf_v3(0, 0, 2), cf_v3(0, 0, 0), cf_v3(0, 1, 0)));
+
+	cf_draw3d_push_shader(shd);
+	cf_draw3d_push_mesh_attributes(cf_v4(1, 0, 1, 1)); // Magenta via the stub.
+	cf_draw3d_push_color(cf_make_color_rgb_f(0, 1, 0)); // Green built-in result, replaced.
+	cf_draw3d_line(cf_v3(-0.5f, 0, 0), cf_v3(0.5f, 0, 0), 0.2f); // Stroke pipeline.
+	cf_draw3d_sphere(cf_v3(0, 0.5f, 0), 0.2f);                   // Solid pipeline.
+	cf_draw3d_pop_color();
+	cf_draw3d_pop_mesh_attributes();
+	cf_draw3d_pop_shader();
+
+	cf_render_to(canvas, true);
+	cf_app_draw_onto_screen(false);
+
+	CF_Readback rb = cf_canvas_readback(canvas);
+	REQUIRE(rb.id);
+	while (!cf_readback_ready(rb)) {}
+	cf_readback_data(rb, px, W * H * (int)sizeof(CF_Pixel));
+	cf_destroy_readback(rb);
+
+	CF_Pixel center = s_pixel(px, 0.5f, 0.5f); // Stroke, tinted by the stub.
+	CF_Pixel top = s_pixel(px, 0.5f, 0.25f);   // Solid, tinted by the stub.
+	REQUIRE(center.colors.r > 200 && center.colors.g < 60 && center.colors.b > 200);
+	REQUIRE(top.colors.r > 100 && top.colors.g < 60 && top.colors.b > 100);
+
+	cf_draw3d_pop_view();
+	cf_draw3d_pop_projection();
+	cf_destroy_shader(shd); // Also destroys the hidden solid-variant sibling.
+	cf_free(px);
+	cf_destroy_canvas(canvas);
+	cf_destroy_app();
+	return true;
+}
+
 TEST_SUITE(test_draw3d)
 {
 	RUN_TEST_CASE(test_draw3d_transforms_and_coalescing);
@@ -1033,4 +1088,5 @@ TEST_SUITE(test_draw3d)
 	RUN_TEST_CASE(test_draw3d_sprite_and_billboard);
 	RUN_TEST_CASE(test_draw3d_msaa);
 	RUN_TEST_CASE(test_draw3d_shapes);
+	RUN_TEST_CASE(test_draw3d_shape_shader);
 }

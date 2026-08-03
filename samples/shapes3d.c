@@ -16,6 +16,10 @@
 //
 // Solids (cube, sphere, cone, torus) draw with a built-in hemisphere light and the color
 // stack. Strokes batch: the whole grid is one instanced draw.
+//
+// The whole scene renders under a shape shader (cf_make_draw3d_shape_shader): a small
+// user stub that post-processes every built-in shape result -- here, depth fog fading
+// strokes and solids alike toward the horizon.
 
 #include <cute.h>
 #include <stdio.h>
@@ -26,6 +30,20 @@ int main(int argc, char* argv[])
 	CF_Result result = cf_make_app("3D Shapes", 0, 0, 0, 960, 540, options, argv[0]);
 	if (cf_is_error(result)) return -1;
 	cf_app_set_present_mode(CF_PRESENT_MODE_VSYNC);
+
+	// Depth fog as a shape shader stub: runs after each shape's built-in shading, so
+	// strokes keep their AA/fade and solids their hemisphere light. Strokes arrive
+	// premultiplied -- `u_fog_color * color.a` keeps the blend correct.
+	CF_Shader fog = cf_make_draw3d_shape_shader_from_source(
+		"layout (set = 3, binding = 1) uniform shd_uniforms {\n"
+		"    vec4 u_fog_color;\n"
+		"    float u_fog_density;\n"
+		"};\n"
+		"vec4 shader(vec4 color, ShapeParams params)\n"
+		"{\n"
+		"    float f = 1.0 - exp(-u_fog_density * distance(params.world_pos, params.eye));\n"
+		"    return mix(color, u_fog_color * color.a, f);\n"
+		"}\n");
 
 	float t = 0;
 	while (cf_app_is_running()) {
@@ -39,6 +57,12 @@ int main(int argc, char* argv[])
 		cf_app_get_size(&w, &h);
 		cf_draw3d_push_projection(cf_perspective(CF_PI / 4.0f, (float)w / (float)h, 0.1f, 100.0f));
 		cf_draw3d_push_view(cf_look_at(eye, cf_v3(0, 0.5f, 0), cf_v3(0, 1, 0)));
+
+		CF_V4 fog_color = cf_v4(0.02f, 0.025f, 0.04f, 1.0f);
+		float fog_density = 0.09f;
+		cf_draw3d_set_uniform("u_fog_color", &fog_color, CF_UNIFORM_TYPE_FLOAT4, 1);
+		cf_draw3d_set_uniform("u_fog_density", &fog_density, CF_UNIFORM_TYPE_FLOAT, 1);
+		cf_draw3d_push_shader(fog);
 
 		// Ground grid -- one batched instanced draw. Distant lines drop below a pixel wide
 		// and fade instead of aliasing.
@@ -118,6 +142,7 @@ int main(int argc, char* argv[])
 		cf_draw3d_arrow(cf_v3(0, 2.6f, 0), cf_v3(cosf(t) * 1.5f, 2.2f, sinf(t) * 1.5f), 0.03f, 0.09f);
 		cf_draw3d_pop_color();
 
+		cf_draw3d_pop_shader();
 		cf_draw3d_pop_view();
 		cf_draw3d_pop_projection();
 

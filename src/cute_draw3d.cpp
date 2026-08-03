@@ -12,6 +12,7 @@
 #include <cute_array.h>
 #include <cute_map.h>
 #include <cute_string.h>
+#include <cute_file_system.h>
 
 #include <cute_sprite.h>
 
@@ -103,6 +104,14 @@ struct CF_MeshCmd3d
 	}
 };
 
+// One user shape-shader stub compiled against both built-in shape pipelines
+// (cf_make_draw3d_shape_shader). The stroke variant's handle is the canonical id.
+struct CF_ShapeShaderBundle
+{
+	CF_Shader stroke = { 0 };
+	CF_Shader solid = { 0 };
+};
+
 struct CF_Draw3d
 {
 	// Camera and transform stacks (cf_draw3d_push_projection/push_view/push).
@@ -133,6 +142,9 @@ struct CF_Draw3d
 	// quad, solid meshes, and built-in shaders, all created on first shape call.
 	Cute::Array<CF_Color> colors;
 	Cute::Array<CF_V3> dashes; // x: on length, y: off length, z: phase (world units).
+	// User shape shaders (cf_make_draw3d_shape_shader): one stub compiled against both
+	// built-in fragment pipelines, keyed by the canonical (stroke-variant) handle id.
+	Cute::Map<CF_ShapeShaderBundle> shape_shaders;
 	CF_Mesh stroke_quad = { 0 };
 	CF_Shader stroke_shd = { 0 };
 	CF_Shader solid_shd = { 0 };
@@ -196,6 +208,15 @@ void cf_destroy_draw3d()
 	if (s_draw3d->cube_mesh.id) cf_destroy_mesh(s_draw3d->cube_mesh);
 	if (s_draw3d->sphere_mesh.id) cf_destroy_mesh(s_draw3d->sphere_mesh);
 	if (s_draw3d->cone_mesh.id) cf_destroy_mesh(s_draw3d->cone_mesh);
+	// User shape shaders still alive at shutdown: destroy both variants of each bundle
+	// directly (the map is cleared with the struct below, so no double-free via the
+	// cf_destroy_shader sibling hook).
+	for (int i = 0; i < s_draw3d->shape_shaders.count(); ++i) {
+		CF_ShapeShaderBundle b = s_draw3d->shape_shaders.items()[i];
+		cf_destroy_shader_internal(b.stroke);
+		cf_destroy_shader_internal(b.solid);
+	}
+	s_draw3d->shape_shaders.clear();
 	for (int i = 0; i < s_draw3d->torus_meshes.count(); ++i) {
 		cf_destroy_mesh(s_draw3d->torus_meshes.items()[i]);
 	}
@@ -575,6 +596,7 @@ static const char* s_stroke_vs =
 "layout (location = 12) in vec4 in_nmat0;\n"           // Color at b (segments).
 "layout (location = 13) in vec4 in_nmat1;\n"           // x: kind (0 segment, 1 ring). y: angle0, z: sweep, w: fill flag.
 "layout (location = 14) in vec4 in_nmat2;\n"           // Dash: on length, off length, phase (world units).
+"layout (location = 15) in vec4 in_mesh_attributes;\n" // User attributes (cf_draw3d_push_mesh_attributes).
 "layout (location = 0) out vec2 v_local;\n"
 "layout (location = 1) out vec4 v_seg;\n"              // Segment: len, ht0, ht1, ppw. Ring: radius, ht, ppw, fill.
 "layout (location = 2) out vec4 v_c0;\n"
@@ -582,6 +604,8 @@ static const char* s_stroke_vs =
 "layout (location = 4) out vec4 v_arc;\n"              // cos/sin of arc edge directions (rings).
 "layout (location = 5) out float v_kind;\n"
 "layout (location = 6) out vec4 v_dash;\n"
+"layout (location = 7) out vec3 v_world;\n"            // Fragment world position for shape shader stubs.
+"layout (location = 8) out vec4 v_attr;\n"
 "layout (set = 1, binding = 0) uniform uniform_block {\n"
 "    mat4 u_view_projection;\n"
 "    vec4 u_shape_eye;\n"
@@ -641,10 +665,33 @@ static const char* s_stroke_vs =
 "    v_c1 = in_nmat0;\n"
 "    v_kind = kind + (in_nmat1.z >= 6.28 ? 2.0 : 0.0);\n" // +2 marks a full ring (skip arc clipping).
 "    v_dash = in_nmat2;\n"
+"    v_world = world;\n"
+"    v_attr = in_mesh_attributes;\n"
 "    gl_Position = u_view_projection * vec4(world, 1.0);\n"
 "}\n";
 
-static const char* s_stroke_fs =
+// User-customizable shape shading: cf_make_draw3d_shape_shader stitches a user-defined
+//     vec4 shader(vec4 color, ShapeParams params)
+// between a built-in fragment prefix and main, so the built-in result (anti-aliased
+// premultiplied strokes, hemisphere-lit solids) post-processes through the stub -- the 3d
+// analog of the 2d draw shader contract. The default stub is the identity and compiles
+// into the built-in shaders themselves.
+static const char* s_shape_params_glsl =
+"struct ShapeParams\n"
+"{\n"
+"    vec3 world_pos;   // Fragment world position on the stroke ribbon / solid surface.\n"
+"    vec3 eye;         // Camera world position.\n"
+"    vec3 normal;      // Solid surface normal; camera-facing for strokes.\n"
+"    float sdf;        // Strokes: signed world-space distance to the stroke edge. Solids: 0.\n"
+"    float fade;       // Thin-stroke fade already baked into color. Solids: 1.\n"
+"    float kind;       // 0 line/arc body, 1 ring, 2 filled disc, 3 solid.\n"
+"    vec4 attributes;  // cf_draw3d_push_mesh_attributes, captured per shape.\n"
+"};\n";
+
+static const char* s_shape_stub_default =
+"vec4 shader(vec4 color, ShapeParams params) { return color; }\n";
+
+static const char* s_stroke_fs_prefix =
 "layout (location = 0) in vec2 v_local;\n"
 "layout (location = 1) in vec4 v_seg;\n"
 "layout (location = 2) in vec4 v_c0;\n"
@@ -652,7 +699,14 @@ static const char* s_stroke_fs =
 "layout (location = 4) in vec4 v_arc;\n"
 "layout (location = 5) in float v_kind;\n"
 "layout (location = 6) in vec4 v_dash;\n"
+"layout (location = 7) in vec3 v_world;\n"
+"layout (location = 8) in vec4 v_attr;\n"
 "layout (location = 0) out vec4 result;\n"
+"layout (set = 3, binding = 0) uniform shape_fs_block {\n"
+"    vec4 u_shape_eye;\n"
+"};\n";
+
+static const char* s_stroke_fs_main =
 "void main() {\n"
 "    float raw;\n" // Signed distance to the shape's skeleton, in world units.
 "    float ht;\n"  // Stroke half-thickness; negative marks a filled shape (edge AA only).
@@ -734,7 +788,15 @@ static const char* s_stroke_fs =
 "        d = raw;\n"
 "    }\n"
 "    float alpha = clamp(0.5 - d / wpp, 0.0, 1.0) * fade * col.a;\n"
-"    result = vec4(col.rgb * alpha, alpha); // Premultiplied.\n"
+"    ShapeParams sp;\n"
+"    sp.world_pos = v_world;\n"
+"    sp.eye = u_shape_eye.xyz;\n"
+"    sp.normal = normalize(u_shape_eye.xyz - v_world);\n"
+"    sp.sdf = d;\n"
+"    sp.fade = fade;\n"
+"    sp.kind = v_kind < 0.5 ? 0.0 : (v_seg.w > 0.5 ? 2.0 : 1.0);\n"
+"    sp.attributes = v_attr;\n"
+"    result = shader(vec4(col.rgb * alpha, alpha), sp); // Premultiplied.\n"
 "}\n";
 
 static const char* s_solid_vs =
@@ -743,12 +805,15 @@ static const char* s_solid_vs =
 "layout (location = 8)  in vec4 in_model0;\n"
 "layout (location = 9)  in vec4 in_model1;\n"
 "layout (location = 10) in vec4 in_model2;\n"
+"layout (location = 11) in vec4 in_uv_rect;\n"          // User attributes (color rides in_mesh_attributes).
 "layout (location = 12) in vec4 in_nmat0;\n"
 "layout (location = 13) in vec4 in_nmat1;\n"
 "layout (location = 14) in vec4 in_nmat2;\n"
 "layout (location = 15) in vec4 in_mesh_attributes;\n"
 "layout (location = 0) out vec3 v_normal;\n"
 "layout (location = 1) out vec4 v_color;\n"
+"layout (location = 2) out vec3 v_world;\n"
+"layout (location = 3) out vec4 v_attr;\n"
 "layout (set = 1, binding = 0) uniform uniform_block {\n"
 "    mat4 u_view_projection;\n"
 "};\n"
@@ -757,19 +822,48 @@ static const char* s_solid_vs =
 "    vec3 world = vec3(dot(in_model0, p), dot(in_model1, p), dot(in_model2, p));\n"
 "    v_normal = normalize(vec3(dot(in_nmat0.xyz, in_normal), dot(in_nmat1.xyz, in_normal), dot(in_nmat2.xyz, in_normal)));\n"
 "    v_color = in_mesh_attributes;\n"
+"    v_world = world;\n"
+"    v_attr = in_uv_rect;\n"
 "    gl_Position = u_view_projection * vec4(world, 1.0);\n"
 "}\n";
 
-static const char* s_solid_fs =
+static const char* s_solid_fs_prefix =
 "layout (location = 0) in vec3 v_normal;\n"
 "layout (location = 1) in vec4 v_color;\n"
+"layout (location = 2) in vec3 v_world;\n"
+"layout (location = 3) in vec4 v_attr;\n"
 "layout (location = 0) out vec4 result;\n"
+"layout (set = 3, binding = 0) uniform shape_fs_block {\n"
+"    vec4 u_shape_eye;\n"
+"};\n";
+
+static const char* s_solid_fs_main =
 "void main() {\n"
 "    vec3 n = normalize(v_normal);\n"
 "    float key = max(dot(n, normalize(vec3(0.4, 0.75, 0.5))), 0.0);\n"
 "    float hemi = 0.5 + 0.5 * n.y;\n"
-"    result = vec4(v_color.rgb * (0.35 + 0.15 * hemi + 0.5 * key), v_color.a);\n"
+"    ShapeParams sp;\n"
+"    sp.world_pos = v_world;\n"
+"    sp.eye = u_shape_eye.xyz;\n"
+"    sp.normal = n;\n"
+"    sp.sdf = 0.0;\n"
+"    sp.fade = 1.0;\n"
+"    sp.kind = 3.0;\n"
+"    sp.attributes = v_attr;\n"
+"    result = shader(vec4(v_color.rgb * (0.35 + 0.15 * hemi + 0.5 * key), v_color.a), sp);\n"
 "}\n";
+
+// Stitches a shape-shader fragment stage: pipeline prefix (varyings + built-in uniforms),
+// the shared ShapeParams struct, the user's (or default identity) stub, then the built-in
+// main that computes the shape's result and routes it through shader().
+static CF_Shader s_compose_shape_shader(const char* vs, const char* prefix, const char* stub, const char* main)
+{
+	Cute::String fs = prefix;
+	fs.append(s_shape_params_glsl);
+	fs.append(stub);
+	fs.append(main);
+	return cf_make_shader_from_source(vs, fs.c_str());
+}
 
 // Lazily builds the stroke quad, solid meshes, and built-in shaders on first shape use.
 static void s_shapes_init()
@@ -782,8 +876,8 @@ static void s_shapes_init()
 	cattr[0].offset = 0;
 	s_draw3d->stroke_quad = cf_make_mesh((int)sizeof(corners), cattr, 1, (int)sizeof(CF_V2));
 	cf_mesh_update_vertex_data(s_draw3d->stroke_quad, corners, 6);
-	s_draw3d->stroke_shd = cf_make_shader_from_source(s_stroke_vs, s_stroke_fs);
-	s_draw3d->solid_shd = cf_make_shader_from_source(s_solid_vs, s_solid_fs);
+	s_draw3d->stroke_shd = s_compose_shape_shader(s_stroke_vs, s_stroke_fs_prefix, s_shape_stub_default, s_stroke_fs_main);
+	s_draw3d->solid_shd = s_compose_shape_shader(s_solid_vs, s_solid_fs_prefix, s_shape_stub_default, s_solid_fs_main);
 
 	// Stroke render state: premultiplied blend, depth test but no writes, no culling. Strokes
 	// are anti-aliased and translucent-edged by construction, so they never own the depth
@@ -815,14 +909,20 @@ static void s_shapes_set_eye()
 }
 
 // Submits one stroke instance under the built-in stroke shader and render state. The current
-// transform stack has already been applied to the world-space inputs by the callers.
+// transform stack has already been applied to the world-space inputs by the callers. A pushed
+// shape shader (cf_make_draw3d_shape_shader) swaps in its stroke variant; plain mesh shaders
+// don't apply to strokes (the ribbon vertex stage and SDF contract are built in) and are
+// ignored here.
 static void s_submit_stroke(CF_MeshInstance3d inst)
 {
 	s_shapes_init();
 	s_shapes_set_eye();
 	CF_V3 dash = s_draw3d->dashes.last();
 	inst.nmat2 = cf_v4(dash.x, dash.y, dash.z, 0);
-	cf_draw3d_push_shader(s_draw3d->stroke_shd);
+	inst.mesh_attributes = s_draw3d->mesh_attributes.last();
+	CF_Shader top = s_draw3d->shaders.last();
+	CF_ShapeShaderBundle* bundle = top.id ? s_draw3d->shape_shaders.try_find(top.id) : NULL;
+	cf_draw3d_push_shader(bundle ? bundle->stroke : s_draw3d->stroke_shd);
 	cf_draw3d_push_render_state(s_draw3d->stroke_rs);
 	s_submit(s_draw3d->stroke_quad, inst, false, NULL);
 	cf_draw3d_pop_render_state();
@@ -836,6 +936,49 @@ CF_Color cf_draw3d_peek_color() { return s_draw3d->colors.last(); }
 void cf_draw3d_push_dash(float on_length, float off_length, float phase) { s_draw3d->dashes.add(cf_v3(on_length, off_length, phase)); }
 CF_V3 cf_draw3d_pop_dash() { if (s_draw3d->dashes.count() > 1) return s_draw3d->dashes.pop(); return s_draw3d->dashes.last(); }
 CF_V3 cf_draw3d_peek_dash() { return s_draw3d->dashes.last(); }
+
+CF_Shader cf_make_draw3d_shape_shader_from_source(const char* src)
+{
+	s_shapes_init();
+	CF_Shader stroke = s_compose_shape_shader(s_stroke_vs, s_stroke_fs_prefix, src, s_stroke_fs_main);
+	if (!stroke.id) return stroke;
+	CF_Shader solid = s_compose_shape_shader(s_solid_vs, s_solid_fs_prefix, src, s_solid_fs_main);
+	if (!solid.id) {
+		cf_destroy_shader(stroke);
+		return solid;
+	}
+	CF_ShapeShaderBundle bundle;
+	bundle.stroke = stroke;
+	bundle.solid = solid;
+	s_draw3d->shape_shaders.insert(stroke.id, bundle);
+	return stroke; // The stroke variant's handle is the bundle's canonical id.
+}
+
+CF_Shader cf_make_draw3d_shape_shader(const char* virtual_path)
+{
+	size_t size = 0;
+	char* src = (char*)cf_fs_read_entire_file_to_memory_and_nul_terminate(virtual_path, &size);
+	if (!src) {
+		CF_Shader result = { 0 };
+		return result;
+	}
+	CF_Shader result = cf_make_draw3d_shape_shader_from_source(src);
+	cf_free(src);
+	return result;
+}
+
+// Called by cf_destroy_shader: a shape shader's canonical handle owns a hidden solid-variant
+// sibling; destroy it and drop the bundle when the canonical handle dies.
+bool cf_draw3d_destroy_shape_shader_sibling(uint64_t shader_id)
+{
+	if (!s_draw3d) return false;
+	CF_ShapeShaderBundle* bundle = s_draw3d->shape_shaders.try_find(shader_id);
+	if (!bundle) return false;
+	CF_Shader solid = bundle->solid;
+	s_draw3d->shape_shaders.remove(shader_id);
+	cf_destroy_shader(solid);
+	return true;
+}
 
 static CF_INLINE CF_V4 s_color4() { CF_Color c = s_draw3d->colors.last(); return cf_v4(c.r, c.g, c.b, c.a); }
 
@@ -987,16 +1130,20 @@ static void s_perp_basis(CF_V3 n, CF_V3* bx, CF_V3* bz)
 }
 
 // Submits one solid instance: local placement composed under the transform stack, colored by
-// the color stack, under the built-in hemisphere-lit shader and the user's render state.
+// the color stack, under the user's render state. Shader selection honors the stack: a shape
+// shader (cf_make_draw3d_shape_shader) swaps in its solid variant over the built-in hemisphere
+// light; a plain shader is a full replacement under the documented mesh contract; otherwise
+// the built-in hemisphere shader applies.
 static void s_submit_solid(CF_Mesh mesh, const CF_M4x4& local)
 {
 	s_shapes_init();
+	s_shapes_set_eye();
 	CF_M4x4 m = cf_mul_m4(s_draw3d->transforms.last(), local);
 	CF_MeshInstance3d inst;
 	inst.model0 = s_row(m, 0);
 	inst.model1 = s_row(m, 1);
 	inst.model2 = s_row(m, 2);
-	inst.uv_rect = cf_v4(0, 0, 1, 1);
+	inst.uv_rect = s_draw3d->mesh_attributes.last(); // User attributes; color rides mesh_attributes.
 	// Normal matrix: the rotation with each column re-normalized, correct under per-axis scale
 	// (which is all the shape placements below ever produce).
 	CF_V3 c0 = cf_safe_norm_v3(cf_v3(m.elements[0], m.elements[1], m.elements[2]));
@@ -1006,9 +1153,14 @@ static void s_submit_solid(CF_Mesh mesh, const CF_M4x4& local)
 	inst.nmat1 = cf_v4(c0.y, c1.y, c2.y, 0);
 	inst.nmat2 = cf_v4(c0.z, c1.z, c2.z, 0);
 	inst.mesh_attributes = s_color4();
-	cf_draw3d_push_shader(s_draw3d->solid_shd);
+	CF_Shader top = s_draw3d->shaders.last();
+	CF_ShapeShaderBundle* bundle = top.id ? s_draw3d->shape_shaders.try_find(top.id) : NULL;
+	bool pushed = true;
+	if (bundle) cf_draw3d_push_shader(bundle->solid);
+	else if (!top.id) cf_draw3d_push_shader(s_draw3d->solid_shd);
+	else pushed = false; // Plain user shader: full replacement, already on the stack.
 	s_submit(mesh, inst, false, NULL);
-	cf_draw3d_pop_shader();
+	if (pushed) cf_draw3d_pop_shader();
 }
 
 void cf_draw3d_cube(CF_V3 center, CF_V3 half_extents)

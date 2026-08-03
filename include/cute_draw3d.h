@@ -276,7 +276,14 @@ CF_API CF_V3 CF_CALL cf_draw3d_mul(CF_V3 p);
  * @remarks  There is no default 3d shader -- submitting a mesh without a shader pushed is an
  *           error. This is deliberate: this layer makes no assumptions about how you shade.
  *           Shaders under `cf_shader_directory` hot-reload automatically while you edit.
- * @related  CF_Shader cf_make_shader cf_draw3d_push_shader cf_draw3d_pop_shader cf_draw3d_peek_shader cf_draw3d_mesh
+ *
+ *           Built-in shapes interpret the top of this stack by the shader's kind:
+ *           a shape shader (`cf_make_draw3d_shape_shader`) post-processes the built-in
+ *           stroke/solid result through its stub; a plain shader fully replaces the solid
+ *           pipeline (the ordinary mesh contract) and is ignored by strokes, whose ribbon
+ *           vertex stage and distance-field fragment are built in; with nothing pushed,
+ *           shapes use their built-ins.
+ * @related  CF_Shader cf_make_shader cf_make_draw3d_shape_shader cf_draw3d_push_shader cf_draw3d_pop_shader cf_draw3d_peek_shader cf_draw3d_mesh
  */
 CF_API void CF_CALL cf_draw3d_push_shader(CF_Shader shader);
 
@@ -612,6 +619,55 @@ CF_API CF_V3 CF_CALL cf_draw3d_pop_dash(void);
 CF_API CF_V3 CF_CALL cf_draw3d_peek_dash(void);
 
 /**
+ * @function cf_make_draw3d_shape_shader
+ * @category draw3d
+ * @brief    Compiles a user shape shader from a file, for customizing built-in 3d shape rendering.
+ * @param    virtual_path  A virtual path to the shader snippet (see the Virtual File System topic).
+ * @remarks  The 3d analog of the 2d draw shader contract: your snippet defines
+ *
+ *           ```glsl
+ *           vec4 shader(vec4 color, ShapeParams params)
+ *           ```
+ *
+ *           which post-processes the built-in result of every shape drawn while the shader is
+ *           pushed (`cf_draw3d_push_shader`). Strokes arrive premultiplied with local AA and
+ *           thin-line fading already applied -- scale the whole vec4 or lerp with
+ *           `mix(color, tint * color.a, t)` to stay premultiplied-safe; solids arrive
+ *           hemisphere-lit with straight alpha. `ShapeParams` provides:
+ *
+ *           ```glsl
+ *           struct ShapeParams
+ *           {
+ *               vec3 world_pos;   // Fragment world position on the stroke ribbon / solid surface.
+ *               vec3 eye;         // Camera world position.
+ *               vec3 normal;      // Solid surface normal; camera-facing for strokes.
+ *               float sdf;        // Strokes: signed world-space distance to the stroke edge. Solids: 0.
+ *               float fade;       // Thin-stroke fade already baked into color. Solids: 1.
+ *               float kind;       // 0 line/arc body, 1 ring, 2 filled disc, 3 solid.
+ *               vec4 attributes;  // cf_draw3d_push_mesh_attributes, captured per shape.
+ *           };
+ *           ```
+ *
+ *           Declare samplers at `set = 2` and uniform blocks at `set = 3, binding = 1` (binding 0
+ *           belongs to the built-ins), exactly like 2d draw shaders; values flow through
+ *           `cf_draw3d_set_uniform` and `cf_draw3d_set_texture` as usual. Destroy the returned
+ *           shader with `cf_destroy_shader`. Unlike `cf_shader_directory` shaders, shape shader
+ *           snippets do not hot-reload.
+ * @related  cf_make_draw3d_shape_shader_from_source cf_draw3d_push_shader cf_draw3d_set_uniform cf_draw3d_push_mesh_attributes
+ */
+CF_API CF_Shader CF_CALL cf_make_draw3d_shape_shader(const char* virtual_path);
+
+/**
+ * @function cf_make_draw3d_shape_shader_from_source
+ * @category draw3d
+ * @brief    Compiles a user shape shader from an in-memory snippet.
+ * @param    src  The snippet source defining `vec4 shader(vec4 color, ShapeParams params)`.
+ * @remarks  See `cf_make_draw3d_shape_shader` for the full contract.
+ * @related  cf_make_draw3d_shape_shader cf_draw3d_push_shader
+ */
+CF_API CF_Shader CF_CALL cf_make_draw3d_shape_shader_from_source(const char* src);
+
+/**
  * @function cf_draw3d_line
  * @category draw3d
  * @brief    Draws an anti-aliased 3d line segment with round caps.
@@ -874,6 +930,8 @@ CF_INLINE CF_Color draw3d_peek_color() { return cf_draw3d_peek_color(); }
 CF_INLINE void draw3d_push_dash(float on_length, float off_length, float phase) { cf_draw3d_push_dash(on_length, off_length, phase); }
 CF_INLINE CF_V3 draw3d_pop_dash() { return cf_draw3d_pop_dash(); }
 CF_INLINE CF_V3 draw3d_peek_dash() { return cf_draw3d_peek_dash(); }
+CF_INLINE CF_Shader make_draw3d_shape_shader(const char* virtual_path) { return cf_make_draw3d_shape_shader(virtual_path); }
+CF_INLINE CF_Shader make_draw3d_shape_shader_from_source(const char* src) { return cf_make_draw3d_shape_shader_from_source(src); }
 CF_INLINE void draw3d_line(CF_V3 p0, CF_V3 p1, float thickness) { cf_draw3d_line(p0, p1, thickness); }
 CF_INLINE void draw3d_line2(CF_V3 p0, CF_V3 p1, float thickness0, float thickness1) { cf_draw3d_line2(p0, p1, thickness0, thickness1); }
 CF_INLINE void draw3d_polyline(const CF_V3* points, int count, float thickness, bool loop) { cf_draw3d_polyline(points, count, thickness, loop); }
