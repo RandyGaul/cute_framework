@@ -8,8 +8,10 @@
 // High-quality 3d line drawing: wireframe icosahedra, black strokes on a white page.
 // Each stroke is a signed-distance ribbon: locally anti-aliased with no MSAA, and
 // strokes thinner than a pixel clamp to half-pixel width and fade alpha instead of
-// shimmering. Cages fan out into the distance, where every stroke is sub-pixel: they
-// should melt into uniform grey, never speckle. The dashed ring shows the dash stack.
+// shimmering. Edge thickness maps to eye distance per endpoint, so each cage wears
+// full-weight ink up front and dissolves to faded hairlines around back. Cages fan
+// out into the distance, where every stroke is sub-pixel: they should melt into
+// uniform grey, never speckle. The dashed ring shows the dash stack.
 
 #include <cute.h>
 #include <float.h>
@@ -50,8 +52,9 @@ int main(int argc, char* argv[])
 
 		int w, h;
 		cf_app_get_size(&w, &h);
+		CF_V3 eye = cf_v3(0, 0.6f, 4.2f);
 		cf_draw3d_push_projection(cf_perspective(CF_PI / 5.0f, (float)w / (float)h, 0.1f, 100.0f));
-		cf_draw3d_push_view(cf_look_at(cf_v3(0, 0.6f, 4.2f), cf_v3(0, 0, 0), cf_v3(0, 1, 0)));
+		cf_draw3d_push_view(cf_look_at(eye, cf_v3(0, 0, 0), cf_v3(0, 1, 0)));
 
 		// The hero cage, then cages receding into the distance -- every stroke on the far
 		// ones lands deep sub-pixel, the acid test for thin-stroke fading. They fan out
@@ -66,17 +69,30 @@ int main(int argc, char* argv[])
 		};
 		cf_draw3d_push_color(cf_color_black());
 		for (int c = 0; c < 5; ++c) {
-			cf_draw3d_push();
-			cf_draw3d_translate(at[c]);
-			cf_draw3d_rotate(cf_quat_from_axis_angle(cf_norm_v3(cf_v3(0.3f, 1.0f, 0.15f)), t * 0.3f + (float)c));
+			// Per-end thickness mapped from eye distance: the near face of each cage draws
+			// with full-weight ink and edges taper to hairlines toward the back, where the
+			// thin-stroke fade dissolves them -- depth reads straight out of the line weight.
+			CF_Quat q = cf_quat_from_axis_angle(cf_norm_v3(cf_v3(0.3f, 1.0f, 0.15f)), t * 0.3f + (float)c);
+			CF_V3 rv[12];
+			float depth[12];
+			float dmin = FLT_MAX, dmax = -FLT_MAX;
+			for (int i = 0; i < 12; ++i) {
+				rv[i] = cf_add_v3(cf_mul_q_v3(q, v[i]), at[c]);
+				depth[i] = cf_len_v3(cf_sub_v3(rv[i], eye));
+				dmin = cf_min(dmin, depth[i]);
+				dmax = cf_max(dmax, depth[i]);
+			}
 			for (int i = 0; i < 12; ++i) {
 				for (int j = i + 1; j < 12; ++j) {
 					// Exterior edges only: the 30 closest vertex pairs.
 					float len = cf_len_v3(cf_sub_v3(v[i], v[j]));
-					if (len < edge_len * 1.05f) cf_draw3d_line(v[i], v[j], 0.016f);
+					if (len < edge_len * 1.05f) {
+						float ti = 0.024f + (0.0012f - 0.024f) * (depth[i] - dmin) / (dmax - dmin);
+						float tj = 0.024f + (0.0012f - 0.024f) * (depth[j] - dmin) / (dmax - dmin);
+						cf_draw3d_line2(rv[i], rv[j], ti, tj);
+					}
 				}
 			}
-			cf_draw3d_pop();
 		}
 
 		// A dashed orbit ring around the hero cage, phase-animated for marching ants.
