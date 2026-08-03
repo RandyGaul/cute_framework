@@ -792,10 +792,14 @@ void cf_drain_buffered_events()
 
 void cf_free_buffered_events()
 {
-	for (int i = 0; i < app->buffered_events.count(); ++i) {
-		s_free_event(&app->buffered_events[i]);
+	// Same move-out-then-free-unlocked pattern as cf_drain_buffered_events, so a concurrent
+	// cf_app_process_event call can't iterate/mutate the array at the same time as this loop.
+	cf_mutex_lock(&app->buffered_events_mutex);
+	Cute::Array<SDL_Event> events = cf_move(app->buffered_events);
+	cf_mutex_unlock(&app->buffered_events_mutex);
+	for (int i = 0; i < events.count(); ++i) {
+		s_free_event(&events[i]);
 	}
-	app->buffered_events.clear();
 }
 
 namespace Cute
