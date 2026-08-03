@@ -145,6 +145,11 @@ struct CF_Draw3d
 	Cute::Array<CF_Color> colors;
 	Cute::Array<CF_V3> dashes; // x: on length, y: off length, z: phase (world units).
 	Cute::Array<bool> stroke_pixels; // cf_draw3d_push_stroke_pixels: thickness in pixels, not world units.
+	// Shape effects (cf_draw3d_push_outline / _glow), the 3d twin of the 2d effect stack.
+	Cute::Array<CF_Color> outlines;
+	Cute::Array<float> outline_widths;
+	Cute::Array<CF_Color> glows;
+	Cute::Array<float> glow_radii;
 	// User shape shaders (cf_make_draw3d_shape_shader): one stub compiled against both
 	// built-in fragment pipelines, keyed by the canonical (stroke-variant) handle id.
 	Cute::Map<CF_ShapeShaderBundle> shape_shaders;
@@ -183,6 +188,10 @@ void cf_make_draw3d()
 	s_draw3d->colors.add(cf_color_white());
 	s_draw3d->dashes.add(cf_v3(0, 0, 0)); // Solid strokes by default.
 	s_draw3d->stroke_pixels.add(false);   // World-unit thickness by default.
+	s_draw3d->outlines.add(cf_make_color_rgba_f(0, 0, 0, 0));
+	s_draw3d->outline_widths.add(0);
+	s_draw3d->glows.add(cf_make_color_rgba_f(0, 0, 0, 0));
+	s_draw3d->glow_radii.add(0);
 	s_draw3d->material = cf_make_material();
 }
 
@@ -623,9 +632,11 @@ static const char* s_stroke_vs =
 "    mat4 u_view_projection;\n"
 "    vec4 u_shape_eye;\n"
 "    vec4 u_shape_res;\n"
+"    vec4 u_shape_fx;\n" // x: outline width, y: glow radius (world units).
 "};\n"
 "void main() {\n"
 "    float kind = in_nmat1.x;\n"
+"    float fx_extent = max(u_shape_fx.x, u_shape_fx.y);\n"
 "    vec3 world;\n"
 "    if (kind < 0.5) {\n"
 "        vec3 a = in_model0.xyz;\n"
@@ -653,7 +664,7 @@ static const char* s_stroke_vs =
 "        float ht0 = in_nmat2.w > 0.5 ? in_model0.w / max(length(pxa), 0.0001) : in_model0.w;\n"
 "        float ht1 = in_nmat2.w > 0.5 ? in_model1.w / max(length(pxb), 0.0001) : in_model1.w;\n"
 "        float htmax = max(ht0, ht1);\n"
-"        float ext = max(htmax, 0.5 / ppw) + aa;\n"
+"        float ext = max(htmax, 0.5 / ppw) + aa + fx_extent;\n"
 "        float s = mix(-ext, len + ext, cx);\n"
 "        float t = ext * in_corner.y * 2.0;\n"
 "        world = a + dir * s + across * t;\n"
@@ -673,7 +684,7 @@ static const char* s_stroke_vs =
 "        // Screen-space mode: ring half-thickness arrives in pixels (the radius stays in\n"
 "        // world units -- a ring's size is geometry, only its stroke width is screen-space).\n"
 "        float rht = in_nmat2.w > 0.5 ? in_model1.w / ppw : in_model1.w;\n"
-"        float ext = in_model0.w + max(rht, 0.5 / ppw) + aa;\n"
+"        float ext = in_model0.w + max(rht, 0.5 / ppw) + aa + fx_extent;\n"
 "        vec2 l = in_corner * 2.0 * ext;\n"
 "        world = center + bx * l.x + by * l.y;\n"
 "        v_local = l;\n"
@@ -725,6 +736,9 @@ static const char* s_stroke_fs_prefix =
 "layout (location = 0) out vec4 result;\n"
 "layout (set = 3, binding = 0) uniform shape_fs_block {\n"
 "    vec4 u_shape_eye;\n"
+"    vec4 u_shape_fx;\n"        // x: outline width, y: glow radius (world units).
+"    vec4 u_shape_outline;\n"   // Premultiplied outline color.
+"    vec4 u_shape_glow;\n"      // Premultiplied glow color.
 "};\n";
 
 static const char* s_stroke_fs_main =
@@ -809,6 +823,23 @@ static const char* s_stroke_fs_main =
 "        d = raw;\n"
 "    }\n"
 "    float alpha = clamp(0.5 - d / wpp, 0.0, 1.0) * fade * col.a;\n"
+"    vec4 shape_color = vec4(col.rgb * alpha, alpha); // Premultiplied.\n"
+"    // Shape effects, from the same signed distance: an outline band hugging the stroke's edge\n"
+"    // and a squared falloff past it, both drawn under the stroke itself. The vertex stage\n"
+"    // padded the ribbon by their reach, so nothing clips.\n"
+"    if (u_shape_fx.x > 0.0 || u_shape_fx.y > 0.0) {\n"
+"        vec4 under = vec4(0.0);\n"
+"        if (u_shape_fx.y > 0.0) {\n"
+"            float t = clamp(1.0 - max(d, 0.0) / u_shape_fx.y, 0.0, 1.0);\n"
+"            under = u_shape_glow * (t * t);\n"
+"        }\n"
+"        if (u_shape_fx.x > 0.0) {\n"
+"            float cov = clamp(0.5 - (d - u_shape_fx.x) / wpp, 0.0, 1.0);\n"
+"            vec4 edge = u_shape_outline * cov;\n"
+"            under = edge + under * (1.0 - edge.a);\n"
+"        }\n"
+"        shape_color = shape_color + under * (1.0 - shape_color.a);\n"
+"    }\n"
 "    ShapeParams sp;\n"
 "    sp.world_pos = v_world;\n"
 "    sp.eye = u_shape_eye.xyz;\n"
@@ -817,7 +848,7 @@ static const char* s_stroke_fs_main =
 "    sp.fade = fade;\n"
 "    sp.kind = v_kind < 0.5 ? 0.0 : (v_seg.w > 0.5 ? 2.0 : 1.0);\n"
 "    sp.attributes = v_attr;\n"
-"    result = shader(vec4(col.rgb * alpha, alpha), sp); // Premultiplied.\n"
+"    result = shader(shape_color, sp);\n"
 "}\n";
 
 static const char* s_solid_vs =
@@ -936,6 +967,22 @@ static void s_shapes_set_eye()
 	cf_draw3d_set_uniform("u_shape_eye", &eye, CF_UNIFORM_TYPE_FLOAT4, 1);
 }
 
+// Shape effect uniforms for the stroke shader. Effects ride uniforms rather than instance lanes
+// (strokes have none free), so a run of strokes sharing effects still coalesces into one draw
+// and changing effects splits the batch -- set_uniform dedups identical bytes, so setting the
+// same values every frame costs nothing.
+static void s_shapes_set_fx()
+{
+	CF_Color o = s_draw3d->outlines.last();
+	CF_Color g = s_draw3d->glows.last();
+	CF_V4 params = cf_v4(s_draw3d->outline_widths.last(), s_draw3d->glow_radii.last(), 0, 0);
+	CF_V4 outline = cf_v4(o.r * o.a, o.g * o.a, o.b * o.a, o.a); // Premultiplied.
+	CF_V4 glow = cf_v4(g.r * g.a, g.g * g.a, g.b * g.a, g.a);
+	cf_draw3d_set_uniform("u_shape_fx", &params, CF_UNIFORM_TYPE_FLOAT4, 1);
+	cf_draw3d_set_uniform("u_shape_outline", &outline, CF_UNIFORM_TYPE_FLOAT4, 1);
+	cf_draw3d_set_uniform("u_shape_glow", &glow, CF_UNIFORM_TYPE_FLOAT4, 1);
+}
+
 // Submits one stroke instance under the built-in stroke shader and render state. The current
 // transform stack has already been applied to the world-space inputs by the callers. A pushed
 // shape shader (cf_make_draw3d_shape_shader) swaps in its stroke variant; plain mesh shaders
@@ -945,6 +992,7 @@ static void s_submit_stroke(CF_MeshInstance3d inst)
 {
 	s_shapes_init();
 	s_shapes_set_eye();
+	s_shapes_set_fx();
 	CF_V3 dash = s_draw3d->dashes.last();
 	inst.nmat2 = cf_v4(dash.x, dash.y, dash.z, s_draw3d->stroke_pixels.last() ? 1.0f : 0.0f);
 	inst.mesh_attributes = s_draw3d->mesh_attributes.last();
@@ -964,6 +1012,11 @@ CF_Color cf_draw3d_peek_color() { return s_draw3d->colors.last(); }
 void cf_draw3d_push_dash(float on_length, float off_length, float phase) { s_draw3d->dashes.add(cf_v3(on_length, off_length, phase)); }
 CF_V3 cf_draw3d_pop_dash() { if (s_draw3d->dashes.count() > 1) return s_draw3d->dashes.pop(); return s_draw3d->dashes.last(); }
 CF_V3 cf_draw3d_peek_dash() { return s_draw3d->dashes.last(); }
+
+void cf_draw3d_push_outline(CF_Color color, float width) { s_draw3d->outlines.add(color); s_draw3d->outline_widths.add(width); }
+void cf_draw3d_pop_outline() { if (s_draw3d->outlines.count() > 1) { s_draw3d->outlines.pop(); s_draw3d->outline_widths.pop(); } }
+void cf_draw3d_push_glow(CF_Color color, float radius) { s_draw3d->glows.add(color); s_draw3d->glow_radii.add(radius); }
+void cf_draw3d_pop_glow() { if (s_draw3d->glows.count() > 1) { s_draw3d->glows.pop(); s_draw3d->glow_radii.pop(); } }
 
 void cf_draw3d_push_stroke_pixels(bool screen_space) { s_draw3d->stroke_pixels.add(screen_space); }
 bool cf_draw3d_pop_stroke_pixels() { if (s_draw3d->stroke_pixels.count() > 1) return s_draw3d->stroke_pixels.pop(); return s_draw3d->stroke_pixels.last(); }

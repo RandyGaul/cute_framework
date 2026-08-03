@@ -785,6 +785,54 @@ CF_API void CF_CALL cf_draw_push_dash(float on_length, float off_length, float p
 CF_API void CF_CALL cf_draw_pop_dash(void);
 
 /**
+ * @function cf_draw_push_outline
+ * @category draw
+ * @brief    Draws an outline around subsequent shapes.
+ * @param    color  The outline color.
+ * @param    width  Outline width in world units. Zero (the default) disables it.
+ * @remarks  The outline is a band hugging the shape's edge, drawn *under* the shape itself, so a
+ *           translucent fill shows the solid outline through it rather than doubling up. It comes
+ *           straight out of the signed distance the shape already computes -- no second draw, no
+ *           extra geometry, and it anti-aliases exactly like the shape does. Works on every SDF
+ *           shape (circles, boxes, capsules, triangles, polygons, arrows, custom shapes, shape
+ *           groups) and composes with `cf_draw_push_glow`. Sprites and text ignore it.
+ * @related  cf_draw_pop_outline cf_draw_push_glow cf_draw_push_color
+ */
+CF_API void CF_CALL cf_draw_push_outline(CF_Color color, float width);
+
+/**
+ * @function cf_draw_pop_outline
+ * @category draw
+ * @brief    Pops the last outline pushed by `cf_draw_push_outline`.
+ * @related  cf_draw_push_outline cf_draw_push_glow
+ */
+CF_API void CF_CALL cf_draw_pop_outline(void);
+
+/**
+ * @function cf_draw_push_glow
+ * @category draw
+ * @brief    Draws a glow around subsequent shapes.
+ * @param    color   The glow color. Its alpha scales the effect's strength.
+ * @param    radius  How far the glow reaches past the shape, in world units. Zero (the default)
+ *                   disables it.
+ * @remarks  A smooth falloff radiating from the shape's edge, evaluated from the shape's own
+ *           signed distance -- exact at any zoom, with no blur pass, no render target, and no
+ *           blurry-sprite fakery. Drawn under both the outline and the shape. Coverage and tile
+ *           binning grow to fit the radius automatically. Works on every SDF shape; sprites and
+ *           text ignore it. For an additive neon look, pair it with `cf_draw_push_blend`.
+ * @related  cf_draw_pop_glow cf_draw_push_outline cf_draw_push_blend
+ */
+CF_API void CF_CALL cf_draw_push_glow(CF_Color color, float radius);
+
+/**
+ * @function cf_draw_pop_glow
+ * @category draw
+ * @brief    Pops the last glow pushed by `cf_draw_push_glow`.
+ * @related  cf_draw_push_glow cf_draw_push_outline
+ */
+CF_API void CF_CALL cf_draw_pop_glow(void);
+
+/**
  * @function cf_draw_push_shape_aa
  * @category draw
  * @brief    Pushes the shape antialias scale.
@@ -2346,6 +2394,10 @@ CF_INLINE CF_Color draw_pop_color() { return cf_draw_pop_color(); }
 CF_INLINE CF_Color draw_peek_color() { return cf_draw_peek_color(); }
 CF_INLINE void draw_push_dash(float on_length, float off_length, float phase) { cf_draw_push_dash(on_length, off_length, phase); }
 CF_INLINE void draw_pop_dash() { cf_draw_pop_dash(); }
+CF_INLINE void draw_push_outline(CF_Color color, float width) { cf_draw_push_outline(color, width); }
+CF_INLINE void draw_pop_outline() { cf_draw_pop_outline(); }
+CF_INLINE void draw_push_glow(CF_Color color, float radius) { cf_draw_push_glow(color, radius); }
+CF_INLINE void draw_pop_glow() { cf_draw_pop_glow(); }
 CF_INLINE void draw_push_shape_aa(float aa) { cf_draw_push_shape_aa(aa); }
 CF_INLINE float draw_pop_shape_aa() { return cf_draw_pop_shape_aa(); }
 CF_INLINE float draw_peek_shape_aa() { return cf_draw_peek_shape_aa(); }

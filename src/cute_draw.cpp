@@ -175,6 +175,13 @@ static CF_INLINE BatchGeometry& s_push_geom()
 	BatchGeometry& g = cmd.geoms.add();
 	g.mvp = s_draw->mvp;
 	g.blend = s_draw->blends.last();
+	// Stroke/effect state is captured for every geometry here rather than per emitter, so a
+	// shape type that never looks at it still has it well-defined.
+	g.dash = s_draw->dashes.last();
+	g.fx.outline = premultiply(s_draw->outlines.last());
+	g.fx.outline_width = s_draw->outline_widths.last();
+	g.fx.glow = premultiply(s_draw->glows.last());
+	g.fx.glow_radius = s_draw->glow_radii.last();
 	return g;
 }
 
@@ -404,6 +411,17 @@ static void s_draw_report_tiled(const BatchGeometry* geoms, const CF_PendingUV* 
 			axmax = cf_max(axmax, poly[j].x);
 			aymax = cf_max(aymax, poly[j].y);
 		}
+		// An outline or glow paints past the shape's own coverage box, so grow the pixel AABB
+		// the tile walk masks against by that reach (world units scaled into pixels by the mvp).
+		if (!instanced) {
+			float fx_extent = cf_max(geom.fx.outline_width, geom.fx.glow_radius);
+			if (fx_extent > 0) {
+				float sx = cf_len(cf_v2(geom.mvp.m.x.x, geom.mvp.m.x.y)) * w2;
+				float sy = cf_len(cf_v2(geom.mvp.m.y.x, geom.mvp.m.y.y)) * h2;
+				float pad = fx_extent * cf_max(sx, sy);
+				axmin -= pad; aymin -= pad; axmax += pad; aymax += pad;
+			}
+		}
 
 		CF_TileCmd tc;
 		CF_MEMSET(&tc, 0, sizeof(tc));
@@ -617,12 +635,25 @@ static void s_draw_report_tiled(const BatchGeometry* geoms, const CF_PendingUV* 
 		}	break;
 		}
 
+		// Shape effects: a trailing payload block (outline rgba, glow rgba, widths) pointed at
+		// by tc.fx.x. tc.fx.y is how far past the shape the effects reach, so the coverage quad
+		// and the tile cull can pad for a glow rather than clipping it.
+		if (is_sdf && (geom.fx.outline_width > 0 || geom.fx.glow_radius > 0)) {
+			uint32_t fx_offset = (uint32_t)pay.count();
+			CF_MEMCPY(&tc.fx[0], &fx_offset, sizeof(fx_offset));
+			tc.fx[1] = cf_max(geom.fx.outline_width, geom.fx.glow_radius);
+			pay.add({ geom.fx.outline.r, geom.fx.outline.g, geom.fx.outline.b, geom.fx.outline.a });
+			pay.add({ geom.fx.glow.r, geom.fx.glow.g, geom.fx.glow.b, geom.fx.glow.a });
+			pay.add({ geom.fx.outline_width, geom.fx.glow_radius, 0, 0 });
+		}
+
 		// Opaque-cover cull candidate? Filled SDF shape at full alpha under normal
 		// blending (additive/multiply/screen shapes never hide what's beneath).
 		// Clipped segments are excluded: their planes can cut mid-tile, so "interior
 		// covers the tile" cannot be decided from the SDF alone.
 		// Dashed strokes never claim opaque cover: their gaps don't hide what's beneath.
-		if (is_sdf && tc.fill == 1.0f && geom.alpha >= 1.0f && geom.color.a >= 1.0f && geom.type != BATCH_GEOMETRY_TYPE_SEGMENT_CLIPPED && blend == CF_DRAW_BLEND_NORMAL && !(tc.type & 16u)) {
+		// Neither do effects: an outline or glow extends past the shape's own interior.
+		if (is_sdf && tc.fill == 1.0f && geom.alpha >= 1.0f && geom.color.a >= 1.0f && geom.type != BATCH_GEOMETRY_TYPE_SEGMENT_CLIPPED && blend == CF_DRAW_BLEND_NORMAL && !(tc.type & 16u) && tc.fx[1] == 0) {
 			tc.opaque = 1.0f;
 		}
 
@@ -4433,6 +4464,34 @@ void cf_draw_pop_dash()
 {
 	if (s_draw->dashes.count() > 1) {
 		s_draw->dashes.pop();
+	}
+}
+
+void cf_draw_push_outline(CF_Color color, float width)
+{
+	s_draw->outlines.add(color);
+	s_draw->outline_widths.add(width);
+}
+
+void cf_draw_pop_outline()
+{
+	if (s_draw->outlines.count() > 1) {
+		s_draw->outlines.pop();
+		s_draw->outline_widths.pop();
+	}
+}
+
+void cf_draw_push_glow(CF_Color color, float radius)
+{
+	s_draw->glows.add(color);
+	s_draw->glow_radii.add(radius);
+}
+
+void cf_draw_pop_glow()
+{
+	if (s_draw->glows.count() > 1) {
+		s_draw->glows.pop();
+		s_draw->glow_radii.pop();
 	}
 }
 

@@ -543,6 +543,60 @@ TEST_CASE(test_draw_polyline_segments)
 }
 
 // -------------------------------------------------------------------------------------------------
+// Shape effects (cf_draw_push_outline / cf_draw_push_glow): an outline band hugs the shape's
+// edge, a glow falls off past it, and both come from the shape's own signed distance -- so they
+// must land identically on the instanced and tiled paths.
+
+static void s_scene_effects()
+{
+	// A green disc of radius 60 at x = -150, with a 20-wide red outline.
+	cf_draw_push_color(cf_make_color_rgb_f(0, 1, 0));
+	cf_draw_push_outline(cf_make_color_rgb_f(1, 0, 0), 20.0f);
+	cf_draw_circle_fill2(cf_v2(-150, 0), 60);
+	cf_draw_pop_outline();
+	cf_draw_pop_color();
+
+	// A blue disc of radius 40 at x = 150 with a 60-unit magenta glow.
+	cf_draw_push_color(cf_make_color_rgb_f(0, 0, 1));
+	cf_draw_push_glow(cf_make_color_rgb_f(1, 0, 1), 60.0f);
+	cf_draw_circle_fill2(cf_v2(150, 0), 40);
+	cf_draw_pop_glow();
+	cf_draw_pop_color();
+}
+
+TEST_CASE(test_draw_shape_effects)
+{
+	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, 640, 480, s_app_options(), NULL))) return true; // Headless CI: no display/GPU.
+
+	int w = 640, h = 480;
+	CF_Pixel* a = (CF_Pixel*)cf_alloc(w * h * sizeof(CF_Pixel));
+	CF_Pixel* b = (CF_Pixel*)cf_alloc(w * h * sizeof(CF_Pixel));
+	CF_Pixel* px[2] = { a, b };
+	for (int mode = 0; mode <= 1; ++mode) {
+		REQUIRE(s_readback(s_scene_effects, mode, w, h, px[mode]));
+		// Disc interior is green; the band just past its edge is the red outline; past that,
+		// nothing. Radius 60, outline 20 -> outline covers 60..80 from center.
+		REQUIRE(s_px_near(s_probe(px[mode], w, h, -150), 0, 255, 0, 255, 3));  // Center: fill.
+		REQUIRE(s_px_near(s_probe(px[mode], w, h, -80), 255, 0, 0, 255, 3));   // 70 out: outline.
+		REQUIRE(s_px_near(s_probe(px[mode], w, h, -60), 0, 0, 0, 0, 0));       // 90 out: clear.
+
+		// Glow: blue at the center, magenta fading outward, gone past the radius. The falloff
+		// is squared, so at half the glow radius coverage is 25%.
+		REQUIRE(s_px_near(s_probe(px[mode], w, h, 150), 0, 0, 255, 255, 3));   // Center: fill.
+		CF_Pixel mid = s_probe(px[mode], w, h, 220);                            // 70 out (30 into a 60 glow).
+		REQUIRE(mid.colors.r > 20 && mid.colors.b > 20 && mid.colors.g < 40);   // Magenta-ish, partial.
+		REQUIRE(mid.colors.a > 20 && mid.colors.a < 240);                       // Genuinely a falloff.
+		REQUIRE(s_px_near(s_probe(px[mode], w, h, 265), 0, 0, 0, 0, 2));        // Past the glow: clear.
+	}
+	REQUIRE(s_diff_ok(a, b, w * h, "shape-effects tiled-vs-mesh"));
+
+	cf_free(a);
+	cf_free(b);
+	cf_destroy_app();
+	return true;
+}
+
+// -------------------------------------------------------------------------------------------------
 // Dashed strokes (cf_draw_push_dash): dash-center pixels ink, gap-center pixels stay
 // empty, on both the instanced and tiled paths.
 
@@ -1816,6 +1870,7 @@ TEST_SUITE(test_draw_tiled)
 	RUN_TEST_CASE_IF(test_draw_render_states);
 	RUN_TEST_CASE_IF(test_draw_layers);
 	RUN_TEST_CASE_IF(test_draw_polyline_segments);
+	RUN_TEST_CASE_IF(test_draw_shape_effects);
 	RUN_TEST_CASE_IF(test_draw_dashed_strokes);
 	RUN_TEST_CASE_IF(test_draw_dashed_polyline_flow);
 	RUN_TEST_CASE_IF(test_draw_arrow_no_overdraw);

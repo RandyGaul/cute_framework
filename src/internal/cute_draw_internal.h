@@ -21,6 +21,16 @@ extern struct CF_Draw* s_draw;
 // Dash pattern for strokes (cf_draw_push_dash), all in world units. on == 0 means solid.
 struct CF_DrawDash { float on, off, phase; };
 
+// Shape effects (cf_draw_push_outline / cf_draw_push_glow). A zero width/radius disables that
+// effect; both zero means the command carries no effect block at all.
+struct CF_DrawEffects
+{
+	CF_Color outline;      // Premultiplied at capture.
+	float outline_width;
+	CF_Color glow;         // Premultiplied at capture.
+	float glow_radius;
+};
+
 enum BatchGeometryType : int
 {
 	BATCH_GEOMETRY_TYPE_TRI,
@@ -76,6 +86,7 @@ struct BatchGeometry
 	float stroke;
 	float aa;
 	CF_DrawDash dash; // Captured from the dash stack; on == 0 means solid.
+	CF_DrawEffects fx; // Captured from the outline/glow stacks.
 	bool is_text;
 	bool is_sprite;
 	bool fill;
@@ -160,6 +171,10 @@ struct CF_TileCmd
 	float fill, n, opaque; // opaque: filled SDF shape at full alpha AND normal blend -- opaque-cover cull candidate.
 	uint32_t color_ba; // packHalf2x16(premultiplied ba); shader reads it via floatBitsToUint(misc.w).
 	float user[4]; // User params (ShaderParams.attributes for custom draw shaders).
+	// Shape effects (cf_draw_push_outline / _glow). x: payload offset of the effect block in
+	// vec4 units, as float bits; 0 means no effects. y: how far past the shape's own extent the
+	// effects reach, so coverage quads and tile culling can pad for a glow. zw reserved.
+	float fx[4];
 };
 
 struct CF_TileV4 { float x, y, z, w; };
@@ -299,6 +314,10 @@ struct CF_Draw
 	Cute::Array<int> blends = { 0 }; // CF_DrawBlend stack (cf_draw_push_blend).
 	Cute::Array<CF_Color> colors = { cf_color_white() };
 	Cute::Array<CF_DrawDash> dashes = { { 0, 0, 0 } }; // cf_draw_push_dash stack; on = 0 means solid.
+	Cute::Array<CF_Color> outlines = { { 0, 0, 0, 0 } }; // cf_draw_push_outline stack.
+	Cute::Array<float> outline_widths = { 0 };
+	Cute::Array<CF_Color> glows = { { 0, 0, 0, 0 } };    // cf_draw_push_glow stack.
+	Cute::Array<float> glow_radii = { 0 };
 	Cute::Array<float> antialias = { 1.5f };
 	Cute::Array<CF_RenderState> render_states;
 	Cute::Array<CF_Rect> scissors = { { 0, 0, -1, -1 } };

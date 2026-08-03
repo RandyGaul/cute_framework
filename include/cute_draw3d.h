@@ -657,6 +657,54 @@ CF_API CF_V3 CF_CALL cf_draw3d_pop_dash(void);
 CF_API CF_V3 CF_CALL cf_draw3d_peek_dash(void);
 
 /**
+ * @function cf_draw3d_push_outline
+ * @category draw3d
+ * @brief    Draws an outline around subsequent 3d strokes.
+ * @param    color  The outline color.
+ * @param    width  Outline width in world units. Zero (the default) disables it.
+ * @remarks  The 3d twin of `cf_draw_push_outline`: a band hugging the stroke's edge, drawn under
+ *           the stroke itself, straight out of the same signed distance the stroke already
+ *           evaluates -- no second pass and no extra geometry. Ideal for making a selected
+ *           wireframe or gizmo read against a busy scene. Applies to strokes (lines, polylines,
+ *           circles, arcs, wire boxes); solids ignore it. Unlike the 2d effect stack these ride
+ *           uniforms rather than instance lanes, so strokes sharing effects still coalesce into
+ *           one draw while changing effects splits the batch.
+ * @related  cf_draw3d_pop_outline cf_draw3d_push_glow cf_draw_push_outline
+ */
+CF_API void CF_CALL cf_draw3d_push_outline(CF_Color color, float width);
+
+/**
+ * @function cf_draw3d_pop_outline
+ * @category draw3d
+ * @brief    Pops the last outline pushed by `cf_draw3d_push_outline`.
+ * @related  cf_draw3d_push_outline cf_draw3d_push_glow
+ */
+CF_API void CF_CALL cf_draw3d_pop_outline(void);
+
+/**
+ * @function cf_draw3d_push_glow
+ * @category draw3d
+ * @brief    Draws a glow around subsequent 3d strokes.
+ * @param    color   The glow color. Its alpha scales the effect's strength.
+ * @param    radius  How far the glow reaches past the stroke, in world units. Zero (the default)
+ *                   disables it.
+ * @remarks  A smooth falloff radiating from the stroke's edge, evaluated analytically from its
+ *           signed distance -- exact at any distance, no blur pass and no render target. The
+ *           camera-facing ribbon grows automatically to fit the radius. Applies to strokes only;
+ *           solids ignore it. Pair with an additive blend in the pushed render state for neon.
+ * @related  cf_draw3d_pop_glow cf_draw3d_push_outline cf_draw_push_glow
+ */
+CF_API void CF_CALL cf_draw3d_push_glow(CF_Color color, float radius);
+
+/**
+ * @function cf_draw3d_pop_glow
+ * @category draw3d
+ * @brief    Pops the last glow pushed by `cf_draw3d_push_glow`.
+ * @related  cf_draw3d_push_glow cf_draw3d_push_outline
+ */
+CF_API void CF_CALL cf_draw3d_pop_glow(void);
+
+/**
  * @function cf_draw3d_push_stroke_pixels
  * @category draw3d
  * @brief    Switches stroke thickness between world units and screen pixels.
@@ -1001,6 +1049,10 @@ CF_INLINE CF_Color draw3d_peek_color() { return cf_draw3d_peek_color(); }
 CF_INLINE void draw3d_push_mesh_attributes2(CF_V4 attributes) { cf_draw3d_push_mesh_attributes2(attributes); }
 CF_INLINE CF_V4 draw3d_pop_mesh_attributes2() { return cf_draw3d_pop_mesh_attributes2(); }
 CF_INLINE CF_V4 draw3d_peek_mesh_attributes2() { return cf_draw3d_peek_mesh_attributes2(); }
+CF_INLINE void draw3d_push_outline(CF_Color color, float width) { cf_draw3d_push_outline(color, width); }
+CF_INLINE void draw3d_pop_outline() { cf_draw3d_pop_outline(); }
+CF_INLINE void draw3d_push_glow(CF_Color color, float radius) { cf_draw3d_push_glow(color, radius); }
+CF_INLINE void draw3d_pop_glow() { cf_draw3d_pop_glow(); }
 CF_INLINE void draw3d_push_stroke_pixels(bool screen_space) { cf_draw3d_push_stroke_pixels(screen_space); }
 CF_INLINE bool draw3d_pop_stroke_pixels() { return cf_draw3d_pop_stroke_pixels(); }
 CF_INLINE bool draw3d_peek_stroke_pixels() { return cf_draw3d_peek_stroke_pixels(); }
