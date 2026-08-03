@@ -260,7 +260,77 @@ TEST_CASE(test_model_gltf_external)
 	return true;
 }
 
+// Hostile-input regressions, all found by tools/cute_model_fuzz.c. Every case here
+// crashed or read out of bounds before the hardening pass; they must now be rejected
+// cleanly (NULL + an error string), never accepted with a dangling index.
+TEST_CASE(test_model_malformed_rejected)
+{
+	// A GLB whose chunk length wraps 32-bit arithmetic: the walk must not step outside
+	// the buffer looking for the next chunk header.
+	uint8_t glb[64];
+	CF_MEMSET(glb, 0, sizeof(glb));
+	CF_MEMCPY(glb, "glTF", 4);
+	uint32_t version = 2, total = (uint32_t)sizeof(glb);
+	CF_MEMCPY(glb + 4, &version, 4);
+	CF_MEMCPY(glb + 8, &total, 4);
+	uint32_t chunk_size = 0xFFFFFFFFu, chunk_type = 0x4E4F534Au; // "JSON", absurd length.
+	CF_MEMCPY(glb + 12, &chunk_size, 4);
+	CF_MEMCPY(glb + 16, &chunk_type, 4);
+	REQUIRE(!cm_load(glb, (int)sizeof(glb)));
+	REQUIRE(cm_error()[0]);
+
+	// An accessor whose stride * count overflows int: the span check must catch it.
+	const char* overflow_accessor =
+		"{\"asset\":{\"version\":\"2.0\"},"
+		"\"meshes\":[{\"primitives\":[{\"attributes\":{\"POSITION\":0}}]}],"
+		"\"accessors\":[{\"bufferView\":0,\"componentType\":5126,\"type\":\"VEC3\",\"count\":2000000,\"byteOffset\":0}],"
+		"\"bufferViews\":[{\"buffer\":0,\"byteOffset\":0,\"byteLength\":12,\"byteStride\":2000000}],"
+		"\"buffers\":[{\"uri\":\"data:application/octet-stream;base64,AAAAAAAAAAAAAAAA\",\"byteLength\":12}]}";
+	REQUIRE(!cm_load(overflow_accessor, (int)CF_STRLEN(overflow_accessor)));
+
+	// Negative offsets are nonsense and must be rejected rather than indexed with.
+	const char* negative_offset =
+		"{\"asset\":{\"version\":\"2.0\"},"
+		"\"meshes\":[{\"primitives\":[{\"attributes\":{\"POSITION\":0}}]}],"
+		"\"accessors\":[{\"bufferView\":0,\"componentType\":5126,\"type\":\"VEC3\",\"count\":1,\"byteOffset\":-64}],"
+		"\"bufferViews\":[{\"buffer\":0,\"byteOffset\":0,\"byteLength\":12}],"
+		"\"buffers\":[{\"uri\":\"data:application/octet-stream;base64,AAAAAAAAAAAAAAAA\",\"byteLength\":12}]}";
+	REQUIRE(!cm_load(negative_offset, (int)CF_STRLEN(negative_offset)));
+
+	// A skin joint pointing past the node array: cm_skin_palette would index `world`
+	// out of bounds, so the load must fail instead.
+	const char* bad_joint =
+		"{\"asset\":{\"version\":\"2.0\"},"
+		"\"nodes\":[{\"name\":\"a\"}],"
+		"\"skins\":[{\"joints\":[99]}]}";
+	REQUIRE(!cm_load(bad_joint, (int)CF_STRLEN(bad_joint)));
+
+	// A node listed as its own child, and one listed under two parents: the topological
+	// walk must not write past the order array.
+	const char* bad_hierarchy =
+		"{\"asset\":{\"version\":\"2.0\"},"
+		"\"nodes\":[{\"children\":[0,1,2]},{\"children\":[2]},{}]}";
+	CM_Model* model = cm_load(bad_hierarchy, (int)CF_STRLEN(bad_hierarchy));
+	REQUIRE(model); // Self-reference dropped, duplicate child ignored: still a valid tree.
+	REQUIRE(model->node_count == 3);
+	cm_free(model);
+
+	// Dangling cross-references degrade to "absent" rather than reaching the caller.
+	const char* dangling =
+		"{\"asset\":{\"version\":\"2.0\"},"
+		"\"nodes\":[{\"mesh\":7,\"skin\":3,\"extensions\":{\"KHR_lights_punctual\":{\"light\":5}}}]}";
+	model = cm_load(dangling, (int)CF_STRLEN(dangling));
+	REQUIRE(model);
+	REQUIRE(model->nodes[0].mesh == -1);
+	REQUIRE(model->nodes[0].skin == -1);
+	REQUIRE(model->nodes[0].light == -1);
+	cm_free(model);
+
+	return true;
+}
+
 TEST_SUITE(test_model)
 {
 	RUN_TEST_CASE(test_model_gltf_external);
+	RUN_TEST_CASE(test_model_malformed_rejected);
 }

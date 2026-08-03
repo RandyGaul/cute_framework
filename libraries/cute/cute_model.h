@@ -710,6 +710,10 @@ static int cm_resolve_accessor(CM_Loader* l, int accessor_index, CM_Accessor* ou
 	int components = cm_type_components(cm_jstr(j, cm_jget(j, a, "type"), ""));
 	int count = cm_jget_int(j, a, "count", 0);
 	if (!csize || !components || count <= 0) CM_FAIL("accessor %d has invalid layout", accessor_index);
+	// A bufferView-backed accessor is bounded by its buffer below, but a zero-filled one
+	// (sparse) has nothing bounding `count`, and callers allocate count * components
+	// floats up front. No real asset holds 64M elements in one accessor.
+	if (count > (1 << 26)) CM_FAIL("accessor %d has an implausible count (%d)", accessor_index, count);
 	int bv = cm_jat(j, cm_jget(j, l->root, "bufferViews"), cm_jget_int(j, a, "bufferView", -1));
 	if (bv < 0) {
 		// No bufferView: a zero-filled base, legal for sparse accessors. cm_read_floats
@@ -727,8 +731,14 @@ static int cm_resolve_accessor(CM_Loader* l, int accessor_index, CM_Accessor* ou
 	int stride = cm_jget_int(j, bv, "byteStride", 0);
 	if (!stride) stride = csize * components;
 	int a_offset = cm_jget_int(j, a, "byteOffset", 0);
-	int end = bv_offset + a_offset + stride * (count - 1) + csize * components;
-	if (end > l->buffer_sizes[buffer] || bv_offset + bv_length > l->buffer_sizes[buffer]) CM_FAIL("accessor %d reads out of bounds", accessor_index);
+	// Offsets, strides, and counts are all file data. Negatives are nonsense, and the
+	// span math must run in int64: `stride * (count - 1)` in int wraps on a hostile
+	// stride, and a wrapped span passes any bounds check you write against it.
+	if (bv_offset < 0 || bv_length < 0 || stride < 0 || a_offset < 0) CM_FAIL("accessor %d has a negative offset or stride", accessor_index);
+	int64_t span = (int64_t)bv_offset + a_offset + (int64_t)stride * (count - 1) + (int64_t)csize * components;
+	if (span > (int64_t)l->buffer_sizes[buffer] || (int64_t)bv_offset + bv_length > (int64_t)l->buffer_sizes[buffer]) {
+		CM_FAIL("accessor %d reads out of bounds", accessor_index);
+	}
 	out->data = l->buffers[buffer] + bv_offset + a_offset;
 	out->stride = stride;
 	out->count = count;
@@ -794,10 +804,13 @@ static float* cm_read_floats(CM_Loader* l, int accessor_index, int want, int* ou
 			snprintf(cm_g_error, sizeof(cm_g_error), "accessor %d has a malformed sparse block", accessor_index);
 			return NULL;
 		}
-		int ioffset = cm_jget_int(j, ibv, "byteOffset", 0) + cm_jget_int(j, jindices, "byteOffset", 0);
-		int voffset = cm_jget_int(j, vbv, "byteOffset", 0) + cm_jget_int(j, jvalues, "byteOffset", 0);
-		int vstride = csize * a.components;
-		if (ioffset + isize * sparse_count > l->buffer_sizes[ibuf] || voffset + vstride * sparse_count > l->buffer_sizes[vbuf]) {
+		int64_t ioffset = (int64_t)cm_jget_int(j, ibv, "byteOffset", 0) + cm_jget_int(j, jindices, "byteOffset", 0);
+		int64_t voffset = (int64_t)cm_jget_int(j, vbv, "byteOffset", 0) + cm_jget_int(j, jvalues, "byteOffset", 0);
+		int64_t vstride = (int64_t)csize * a.components;
+		// Same discipline as cm_resolve_accessor: reject negatives, span in int64.
+		if (sparse_count < 0 || ioffset < 0 || voffset < 0
+			|| ioffset + (int64_t)isize * sparse_count > (int64_t)l->buffer_sizes[ibuf]
+			|| voffset + vstride * sparse_count > (int64_t)l->buffer_sizes[vbuf]) {
 			CM_FREE(out);
 			snprintf(cm_g_error, sizeof(cm_g_error), "accessor %d sparse block reads out of bounds", accessor_index);
 			return NULL;
@@ -1017,11 +1030,19 @@ static int cm_load_primitive(CM_Loader* l, int prim, CM_Primitive* out)
 	out->positions = cm_read_floats(l, pos_accessor, 3, &out->vertex_count);
 	if (!out->positions) return 0;
 
+	// Per spec every attribute accessor in a primitive has the same count. Enforcing it
+	// is what lets the generators and the interleaving loop below index all streams with
+	// one vertex index; a short stream would be read out of bounds.
+	#define CM_CHECK_COUNT(n, what) do { \
+		if ((n) < out->vertex_count) CM_FAIL("primitive attribute %s has %d elements, POSITION has %d", (what), (n), out->vertex_count); \
+	} while (0)
+
 	int uv_accessor = cm_jget_int(j, attrs, "TEXCOORD_0", -1);
 	if (uv_accessor >= 0) {
 		int n;
 		out->uvs = cm_read_floats(l, uv_accessor, 2, &n);
 		if (!out->uvs) return 0;
+		CM_CHECK_COUNT(n, "TEXCOORD_0");
 	}
 
 	int uv1_accessor = cm_jget_int(j, attrs, "TEXCOORD_1", -1);
@@ -1029,6 +1050,7 @@ static int cm_load_primitive(CM_Loader* l, int prim, CM_Primitive* out)
 		int n;
 		out->uvs1 = cm_read_floats(l, uv1_accessor, 2, &n);
 		if (!out->uvs1) return 0;
+		CM_CHECK_COUNT(n, "TEXCOORD_1");
 	}
 
 	int color_accessor = cm_jget_int(j, attrs, "COLOR_0", -1);
@@ -1039,6 +1061,7 @@ static int cm_load_primitive(CM_Loader* l, int prim, CM_Primitive* out)
 		int n;
 		out->colors = cm_read_floats(l, color_accessor, 4, &n);
 		if (!out->colors) return 0;
+		CM_CHECK_COUNT(n, "COLOR_0");
 		if (ca.components == 3) {
 			for (int i = 0; i < n; ++i) out->colors[i * 4 + 3] = 1.0f;
 		}
@@ -1052,6 +1075,7 @@ static int cm_load_primitive(CM_Loader* l, int prim, CM_Primitive* out)
 		int csize = cm_component_size(ja.component_type);
 		if (!ja.data) CM_FAIL("sparse JOINTS_0 is not supported");
 		if (ja.component_type != 5121 && ja.component_type != 5123) CM_FAIL("JOINTS_0 must be u8 or u16");
+		CM_CHECK_COUNT(ja.count, "JOINTS_0");
 		out->joints = (uint16_t*)CM_ALLOC(sizeof(uint16_t) * 4 * (size_t)ja.count);
 		for (int i = 0; i < ja.count; ++i) {
 			const uint8_t* p = ja.data + (size_t)i * (size_t)ja.stride;
@@ -1064,6 +1088,7 @@ static int cm_load_primitive(CM_Loader* l, int prim, CM_Primitive* out)
 		int n;
 		out->weights = cm_read_floats(l, weights_accessor, 4, &n);
 		if (!out->weights) return 0;
+		CM_CHECK_COUNT(n, "WEIGHTS_0");
 	}
 
 	int indices_accessor = cm_jget_int(j, prim, "indices", -1);
@@ -1092,6 +1117,7 @@ static int cm_load_primitive(CM_Loader* l, int prim, CM_Primitive* out)
 		int n;
 		out->normals = cm_read_floats(l, normal_accessor, 3, &n);
 		if (!out->normals) return 0;
+		CM_CHECK_COUNT(n, "NORMAL");
 	} else {
 		out->normals = cm_generate_normals(out->positions, out->vertex_count, out->indices, out->index_count);
 	}
@@ -1101,6 +1127,7 @@ static int cm_load_primitive(CM_Loader* l, int prim, CM_Primitive* out)
 		int n;
 		out->tangents = cm_read_floats(l, tangent_accessor, 4, &n);
 		if (!out->tangents) return 0;
+		CM_CHECK_COUNT(n, "TANGENT");
 	} else if (out->uvs) {
 		out->tangents = cm_generate_tangents(out->positions, out->normals, out->uvs, out->vertex_count, out->indices, out->index_count);
 	}
@@ -1117,11 +1144,21 @@ static int cm_load_primitive(CM_Loader* l, int prim, CM_Primitive* out)
 			int pos = cm_jget_int(j, target, "POSITION", -1);
 			int nrm = cm_jget_int(j, target, "NORMAL", -1);
 			int tan = cm_jget_int(j, target, "TANGENT", -1);
-			if (pos >= 0 && !(out->targets[t].positions = cm_read_floats(l, pos, 3, &n))) return 0;
-			if (nrm >= 0 && !(out->targets[t].normals = cm_read_floats(l, nrm, 3, &n))) return 0;
-			if (tan >= 0 && !(out->targets[t].tangents = cm_read_floats(l, tan, 3, &n))) return 0;
+			if (pos >= 0) {
+				if (!(out->targets[t].positions = cm_read_floats(l, pos, 3, &n))) return 0;
+				CM_CHECK_COUNT(n, "morph target POSITION");
+			}
+			if (nrm >= 0) {
+				if (!(out->targets[t].normals = cm_read_floats(l, nrm, 3, &n))) return 0;
+				CM_CHECK_COUNT(n, "morph target NORMAL");
+			}
+			if (tan >= 0) {
+				if (!(out->targets[t].tangents = cm_read_floats(l, tan, 3, &n))) return 0;
+				CM_CHECK_COUNT(n, "morph target TANGENT");
+			}
 		}
 	}
+	#undef CM_CHECK_COUNT
 	return 1;
 }
 
@@ -1257,32 +1294,50 @@ static CM_Model* cm_load_from_json(CM_Loader* l)
 			for (int k = 0; k < 4 && k < cm_jlen(j, r); ++k) node->rest.rotation[k] = (float)cm_jnum(j, cm_jat(j, r, k), 0);
 			for (int k = 0; k < 3 && k < cm_jlen(j, s); ++k) node->rest.scale[k] = (float)cm_jnum(j, cm_jat(j, s, k), 1);
 		}
+		// Child indices are file data: drop anything out of range (self-references
+		// included) so the hierarchy walk below can trust them.
 		int children = cm_jget(j, n, "children");
-		node->child_count = cm_jlen(j, children);
-		if (node->child_count) {
-			node->children = (int*)CM_ALLOC(sizeof(int) * (size_t)node->child_count);
-			for (int k = 0; k < node->child_count; ++k) node->children[k] = cm_jint(j, cm_jat(j, children, k), -1);
+		int listed = cm_jlen(j, children);
+		if (listed) {
+			node->children = (int*)CM_ALLOC(sizeof(int) * (size_t)listed);
+			for (int k = 0; k < listed; ++k) {
+				int c = cm_jint(j, cm_jat(j, children, k), -1);
+				if (c >= 0 && c < model->node_count && c != i) node->children[node->child_count++] = c;
+			}
 		}
 	}
+	// Parent links, first writer wins: a node listed under two parents is not a tree, and
+	// the second link would orphan it from the traversal below.
 	for (int i = 0; i < model->node_count; ++i) {
 		for (int k = 0; k < model->nodes[i].child_count; ++k) {
 			int c = model->nodes[i].children[k];
-			if (c >= 0 && c < model->node_count) model->nodes[c].parent = i;
+			if (model->nodes[c].parent < 0) model->nodes[c].parent = i;
 		}
 	}
 
-	// Topological order: roots first, then children (hierarchies are trees in glTF).
+	// Topological order: roots first, then children breadth-first. `emitted` keeps a
+	// malformed hierarchy (a node reachable from several parents, or a cycle) from
+	// pushing the same node twice and running off the end of the array.
 	model->order = (int*)CM_ALLOC(sizeof(int) * (size_t)(model->node_count ? model->node_count : 1));
 	{
+		uint8_t* emitted = (uint8_t*)CM_ALLOC((size_t)(model->node_count ? model->node_count : 1));
+		memset(emitted, 0, (size_t)(model->node_count ? model->node_count : 1));
 		int n = 0;
 		for (int i = 0; i < model->node_count; ++i) {
-			if (model->nodes[i].parent < 0) model->order[n++] = i;
+			if (model->nodes[i].parent < 0) { emitted[i] = 1; model->order[n++] = i; }
 		}
-		for (int cursor = 0; cursor < n && n < model->node_count; ++cursor) {
+		for (int cursor = 0; cursor < n; ++cursor) {
 			CM_Node* node = model->nodes + model->order[cursor];
-			for (int k = 0; k < node->child_count; ++k) model->order[n++] = node->children[k];
+			for (int k = 0; k < node->child_count; ++k) {
+				int c = node->children[k];
+				if (emitted[c]) continue;
+				emitted[c] = 1;
+				model->order[n++] = c;
+			}
 		}
-		if (n != model->node_count) { cm_free(model); CM_FAIL("node hierarchy contains a cycle"); }
+		int complete = n == model->node_count;
+		CM_FREE(emitted);
+		if (!complete) { cm_free(model); CM_FAIL("node hierarchy contains a cycle"); }
 	}
 
 	// Meshes.
@@ -1377,7 +1432,8 @@ static CM_Model* cm_load_from_json(CM_Loader* l)
 				// Morph weights: one lane per target on the node's mesh.
 				cp = CM_PATH_WEIGHTS;
 				int mesh = model->nodes[node].mesh;
-				lanes = mesh >= 0 && model->meshes[mesh].primitive_count ? model->meshes[mesh].primitives[0].target_count : 0;
+				lanes = mesh >= 0 && mesh < model->mesh_count && model->meshes[mesh].primitive_count
+					? model->meshes[mesh].primitives[0].target_count : 0;
 				if (!lanes) continue;
 			}
 			else continue;
@@ -1435,7 +1491,7 @@ static CM_Model* cm_load_from_json(CM_Loader* l)
 			int offset = cm_jget_int(j, bv, "byteOffset", 0);
 			int length = cm_jget_int(j, bv, "byteLength", 0);
 			if (buffer < 0 || buffer >= asize(l->buffers) || !l->buffers[buffer]) continue;
-			if (offset + length > l->buffer_sizes[buffer]) continue;
+			if (offset < 0 || length < 0 || (int64_t)offset + length > (int64_t)l->buffer_sizes[buffer]) continue;
 			image->data = (uint8_t*)CM_ALLOC((size_t)(length ? length : 1));
 			memcpy(image->data, l->buffers[buffer] + offset, (size_t)length);
 			image->size = length;
@@ -1515,6 +1571,40 @@ static CM_Model* cm_load_from_json(CM_Loader* l)
 		light->outer_cone = (float)cm_jnum(j, cm_jget(j, spot, "outerConeAngle"), 0.7853981634); // pi/4 per spec.
 	}
 
+	// Cross-reference validation. Every index above came from the file, and callers index
+	// straight into these arrays -- an out-of-range reference must never reach them.
+	// Danglers that have a safe "absent" value become -1; a bad joint index does not (the
+	// palette is positional, and silently posing the wrong bone is worse than refusing),
+	// so that one fails the load.
+	for (int i = 0; i < model->node_count; ++i) {
+		CM_Node* node = model->nodes + i;
+		if (node->mesh >= model->mesh_count) node->mesh = -1;
+		if (node->skin >= model->skin_count) node->skin = -1;
+		if (node->light >= model->light_count) node->light = -1;
+	}
+	for (int i = 0; i < model->mesh_count; ++i) {
+		for (int p = 0; p < model->meshes[i].primitive_count; ++p) {
+			CM_Primitive* prim = model->meshes[i].primitives + p;
+			if (prim->material >= model->material_count) prim->material = -1;
+		}
+	}
+	for (int i = 0; i < model->material_count; ++i) {
+		CM_TextureRef* slots[5] = {
+			&model->materials[i].base_color_texture, &model->materials[i].metallic_roughness_texture,
+			&model->materials[i].normal_texture, &model->materials[i].occlusion_texture,
+			&model->materials[i].emissive_texture,
+		};
+		for (int s = 0; s < 5; ++s) {
+			if (slots[s]->image >= model->image_count) slots[s]->image = -1;
+		}
+	}
+	for (int i = 0; i < model->skin_count; ++i) {
+		for (int k = 0; k < model->skins[i].joint_count; ++k) {
+			int joint = model->skins[i].joints[k];
+			if (joint < 0 || joint >= model->node_count) { cm_free(model); CM_FAIL("skin %d joint %d is out of range", i, k); }
+		}
+	}
+
 	return model;
 }
 
@@ -1537,23 +1627,30 @@ CM_Model* cm_load_ex(const void* data, int size, CM_LoadParams params)
 	const uint8_t* bin = NULL;
 	int bin_size = 0;
 
+	if (size < 0) CM_FAIL("negative size");
 	if (size >= 12 && !memcmp(bytes, "glTF", 4)) {
-		// GLB container: 12-byte header then 8-byte-headed chunks, 4-byte aligned.
+		// GLB container: 12-byte header then 8-byte-headed chunks, 4-byte aligned. Every
+		// length here is attacker-controlled, so the whole walk runs in uint64 -- 32-bit
+		// arithmetic on a hostile chunk_size wraps, and a wrapped offset reads wherever it
+		// likes.
 		uint32_t version, total;
 		memcpy(&version, bytes + 4, 4);
 		memcpy(&total, bytes + 8, 4);
 		if (version != 2) CM_FAIL("GLB version %u (only 2 is supported)", version);
-		if ((int)total > size) CM_FAIL("GLB length field exceeds the provided data");
-		int at = 12;
-		while (at + 8 <= (int)total) {
+		if ((uint64_t)total > (uint64_t)size) CM_FAIL("GLB length field exceeds the provided data");
+		uint64_t at = 12;
+		uint64_t end = total;
+		while (at + 8 <= end) {
 			uint32_t chunk_size, chunk_type;
 			memcpy(&chunk_size, bytes + at, 4);
 			memcpy(&chunk_type, bytes + at + 4, 4);
 			at += 8;
-			if (at + (int)chunk_size > (int)total) CM_FAIL("GLB chunk overruns the file");
+			if ((uint64_t)chunk_size > end - at) CM_FAIL("GLB chunk overruns the file");
 			if (chunk_type == 0x4E4F534A) { json_text = (const char*)(bytes + at); json_size = (int)chunk_size; } // "JSON"
 			else if (chunk_type == 0x004E4942) { bin = bytes + at; bin_size = (int)chunk_size; }                  // "BIN"
-			at += (int)((chunk_size + 3u) & ~3u);
+			uint64_t advance = ((uint64_t)chunk_size + 3u) & ~(uint64_t)3u;
+			if (advance == 0) break; // Zero-length chunk: nothing more to walk.
+			at += advance;
 		}
 		if (!json_text) CM_FAIL("GLB has no JSON chunk");
 	} else {
