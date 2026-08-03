@@ -60,7 +60,7 @@ TEST_CASE(test_array_list_init)
 		4
 	};
 
-	REQUIRE(cf_array_hash(e) == cf_fnv1a(e, sizeof(*e) * e.count());
+	REQUIRE(cf_array_hash(e) == cf_fnv1a(e, sizeof(*e) * e.count()));
 
 	return true;
 }
