@@ -857,8 +857,26 @@ void cf_draw3d_line(CF_V3 p0, CF_V3 p1, float thickness) { cf_draw3d_line2(p0, p
 void cf_draw3d_polyline(const CF_V3* points, int count, float thickness, bool loop)
 {
 	if (count < 2) return;
-	for (int i = 0; i < count - 1; ++i) cf_draw3d_line(points[i], points[i + 1], thickness);
-	if (loop) cf_draw3d_line(points[count - 1], points[0], thickness);
+	CF_V3 dash = s_draw3d->dashes.last();
+	float arclength = 0;
+	for (int i = 0; i < count; ++i) {
+		int j = i + 1;
+		if (j == count) {
+			if (!loop) break;
+			j = 0;
+		}
+		if (dash.x > 0) {
+			// Each segment's pattern coordinate restarts at its own start point, so shifting
+			// the phase back by the arclength walked so far keeps dashes flowing through the
+			// joints -- marching ants run unbroken around a loop.
+			s_draw3d->dashes.add(cf_v3(dash.x, dash.y, dash.z - arclength));
+			cf_draw3d_line(points[i], points[j], thickness);
+			s_draw3d->dashes.pop();
+			arclength += cf_len_v3(cf_sub_v3(points[j], points[i]));
+		} else {
+			cf_draw3d_line(points[i], points[j], thickness);
+		}
+	}
 }
 
 static void s_ring(CF_V3 center, CF_V3 normal, float radius, float half_thickness, float a0, float sweep, bool fill)
