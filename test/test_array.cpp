@@ -53,6 +53,15 @@ TEST_CASE(test_array_list_init)
 	REQUIRE(!CF_STRCMP(d[1].c_str(), "b"));
 	REQUIRE(!CF_STRCMP(d[2].c_str(), "c"));
 
+	Array<int> e = {
+		1,
+		2,
+		3,
+		4
+	};
+
+	REQUIRE(cf_array_hash(e) == cf_fnv1a(e, sizeof(*e) * e.count());
+
 	return true;
 }
 

@@ -178,7 +178,7 @@ using remove_reference = cf_remove_reference<T>;
 // Not sure where to put this... Here is good I guess.
 CF_INLINE uint64_t cf_fnv1a(const void* data, int size)
 {
-	const char* s = (const char*)data;
+	const unsigned char* s = (const unsigned char*)data;
 	uint64_t h = 14695981039346656037ULL;
 	while (size--) {
 		h = h ^ (uint64_t)(*s++);
