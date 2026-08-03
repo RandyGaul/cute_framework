@@ -112,6 +112,10 @@ static void s_shader_auto_reload(const char* changed_key)
 		}
 	}
 
+	// 3d shape shaders (stroke + solid variant pairs). Reload logic lives with their
+	// stitching code in cute_draw3d.cpp.
+	cf_draw3d_reload_shape_shaders(changed_key);
+
 	// Two-file graphics shaders. The stored paths are whatever the user passed to cf_make_shader,
 	// which is a full VFS path, while `changed_key` is relative to the shader directory -- so
 	// resolve the key to its full path and compare interned pointers.

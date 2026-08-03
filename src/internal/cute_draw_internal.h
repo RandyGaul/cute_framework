@@ -422,6 +422,10 @@ void cf_draw3d_free_cmd(CF_Command* cmd);
 // shader's canonical handle (see cf_make_draw3d_shape_shader). Returns false if the id is
 // not a shape shader.
 bool cf_draw3d_destroy_shape_shader_sibling(uint64_t shader_id);
+
+// Called by the shader-directory watcher: hot-reloads every 3d shape shader made from
+// `changed_key`, swapping fresh guts into both variants of each affected bundle.
+void cf_draw3d_reload_shape_shaders(const char* changed_key);
 // Draw-list hooks: list-local 3d transforms while recording; bake (grouping + exact normal
 // matrices) at end; replay payloads borrowing the baked instances under a live camera; and
 // payload cleanup when a list's commands are cleared or destroyed.

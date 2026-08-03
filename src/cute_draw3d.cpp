@@ -17,6 +17,7 @@
 #include <cute_sprite.h>
 
 #include <internal/cute_alloc_internal.h>
+#include <internal/cute_app_internal.h>
 #include <internal/cute_draw_internal.h>
 #include <internal/cute_graphics_internal.h>
 #include <internal/cute_aseprite_cache_internal.h>
@@ -145,6 +146,7 @@ struct CF_Draw3d
 	// User shape shaders (cf_make_draw3d_shape_shader): one stub compiled against both
 	// built-in fragment pipelines, keyed by the canonical (stroke-variant) handle id.
 	Cute::Map<CF_ShapeShaderBundle> shape_shaders;
+	Cute::Map<const char*> shape_shader_paths; // canonical id -> interned file path for hot reload.
 	CF_Mesh stroke_quad = { 0 };
 	CF_Shader stroke_shd = { 0 };
 	CF_Shader solid_shd = { 0 };
@@ -954,17 +956,67 @@ CF_Shader cf_make_draw3d_shape_shader_from_source(const char* src)
 	return stroke; // The stroke variant's handle is the bundle's canonical id.
 }
 
+// Resolves a shape-shader path like the 2d draw shaders do: relative to the watched
+// shader directory when one is set (which is also what makes hot reload possible),
+// falling back to a direct virtual-filesystem read.
+static char* s_read_shape_shader_source(const char* path)
+{
+	CF_Path p = CF_Path("/") + path;
+	CF_ShaderFileInfo* info = app->shader_file_infos.try_find(sintern(p));
+	size_t size = 0;
+	return cf_fs_read_entire_file_to_memory_and_nul_terminate(info ? info->path : path, &size);
+}
+
 CF_Shader cf_make_draw3d_shape_shader(const char* virtual_path)
 {
-	size_t size = 0;
-	char* src = (char*)cf_fs_read_entire_file_to_memory_and_nul_terminate(virtual_path, &size);
+	char* src = s_read_shape_shader_source(virtual_path);
 	if (!src) {
 		CF_Shader result = { 0 };
 		return result;
 	}
 	CF_Shader result = cf_make_draw3d_shape_shader_from_source(src);
 	cf_free(src);
+	if (result.id) s_draw3d->shape_shader_paths.insert(result.id, sintern(virtual_path));
 	return result;
+}
+
+// Called by the shader-directory watcher (s_shader_auto_reload): recompiles every shape
+// shader made from `changed_key` and swaps the fresh guts into both existing handles, so
+// user-held handles and already-recorded commands stay valid. On compile failure the old
+// shaders keep working, matching the 2d draw shader reload behavior.
+void cf_draw3d_reload_shape_shaders(const char* changed_key)
+{
+	if (!s_draw3d) return;
+	// Stored paths may lack the watch key's leading slash.
+	auto matches = [&](const char* stored) {
+		return stored == changed_key || (changed_key[0] == '/' && !CF_STRCMP(stored, changed_key + 1));
+	};
+	Cute::Array<uint64_t> ids;
+	Cute::Array<const char*> paths;
+	for (int i = 0; i < s_draw3d->shape_shader_paths.count(); ++i) {
+		if (matches(s_draw3d->shape_shader_paths.items()[i])) {
+			ids.add(s_draw3d->shape_shader_paths.keys()[i]);
+			paths.add(s_draw3d->shape_shader_paths.items()[i]);
+		}
+	}
+	for (int i = 0; i < ids.count(); ++i) {
+		CF_ShapeShaderBundle* bundle = s_draw3d->shape_shaders.try_find(ids[i]);
+		if (!bundle) continue;
+		char* src = s_read_shape_shader_source(paths[i]);
+		if (!src) continue;
+		CF_Shader fresh_stroke = s_compose_shape_shader(s_stroke_vs, s_stroke_fs_prefix, src, s_stroke_fs_main);
+		CF_Shader fresh_solid = fresh_stroke.id ? s_compose_shape_shader(s_solid_vs, s_solid_fs_prefix, src, s_solid_fs_main) : CF_Shader { 0 };
+		cf_free(src);
+		if (!fresh_stroke.id || !fresh_solid.id) {
+			if (fresh_stroke.id) cf_destroy_shader_internal(fresh_stroke);
+			continue; // Compile error; keep the old shaders.
+		}
+		CF_Shader old = { ids[i] };
+		cf_shader_swap_contents(old, fresh_stroke);
+		cf_destroy_shader_internal(fresh_stroke);
+		cf_shader_swap_contents(bundle->solid, fresh_solid);
+		cf_destroy_shader_internal(fresh_solid);
+	}
 }
 
 // Called by cf_destroy_shader: a shape shader's canonical handle owns a hidden solid-variant
@@ -976,6 +1028,7 @@ bool cf_draw3d_destroy_shape_shader_sibling(uint64_t shader_id)
 	if (!bundle) return false;
 	CF_Shader solid = bundle->solid;
 	s_draw3d->shape_shaders.remove(shader_id);
+	s_draw3d->shape_shader_paths.remove(shader_id);
 	cf_destroy_shader(solid);
 	return true;
 }
