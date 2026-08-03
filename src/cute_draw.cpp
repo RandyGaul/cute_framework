@@ -5115,6 +5115,25 @@ void cf_render_layers_to(CF_Canvas canvas, int layer_lo, int layer_hi, bool clea
 		else return a.layer < b.layer;
 	});
 
+	// Within each maximal run of consecutive 3d commands in a layer, move depth-writing
+	// commands (opaque solids) ahead of non-writing ones (translucent strokes) -- the classic
+	// opaque-then-translucent split as the 3d default. Strokes then depth-test against every
+	// solid in their run regardless of submission interleave (an arrow's shaft vs its cone
+	// head), while 2d commands and layer boundaries still fence exactly as before.
+	{
+		int n = s_draw->cmds.count();
+		int i = 0;
+		while (i < n) {
+			if (!s_draw->cmds[i].mesh3d) { ++i; continue; }
+			int j = i + 1;
+			while (j < n && s_draw->cmds[j].mesh3d && s_draw->cmds[j].layer == s_draw->cmds[i].layer) ++j;
+			std::stable_partition(s_draw->cmds.begin() + i, s_draw->cmds.begin() + j, [](const CF_Command& c) {
+				return c.render_state.depth_write_enabled;
+			});
+			i = j;
+		}
+	}
+
 	// Process each rendering command.
 	int count = s_draw->cmds.count();
 	for (int i = 0; i < count; ++i) {
