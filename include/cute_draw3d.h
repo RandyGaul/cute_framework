@@ -490,6 +490,38 @@ CF_API CF_V4 CF_CALL cf_draw3d_pop_mesh_attributes(void);
  */
 CF_API CF_V4 CF_CALL cf_draw3d_peek_mesh_attributes(void);
 
+/**
+ * @function cf_draw3d_push_mesh_attributes2
+ * @category draw3d
+ * @brief    Pushes a second vec4 of per-submission data, delivered as `in_uv_rect`.
+ * @param    attributes  The value delivered to the shader as `in_uv_rect`.
+ * @remarks  The `in_uv_rect` lane carries the atlas sub-rect while a sprite texture is pushed
+ *           (`cf_draw3d_push_texture`); with none pushed it is free, so it doubles as a second
+ *           user attributes lane at zero extra bandwidth -- material indices, a second tint, ocean
+ *           phase, whatever your shader wants. Defaults to `(0, 0, 1, 1)` (the full uv rect), so
+ *           shaders that sample `u_image` against the white fallback keep working. Like
+ *           `cf_draw3d_push_mesh_attributes`, differing values never split coalescing. Pushing a
+ *           sprite texture overrides this lane for those submissions.
+ * @related  cf_draw3d_push_mesh_attributes cf_draw3d_pop_mesh_attributes2 cf_draw3d_peek_mesh_attributes2 cf_draw3d_push_texture
+ */
+CF_API void CF_CALL cf_draw3d_push_mesh_attributes2(CF_V4 attributes);
+
+/**
+ * @function cf_draw3d_pop_mesh_attributes2
+ * @category draw3d
+ * @brief    Pops and returns the last second-lane mesh attributes.
+ * @related  cf_draw3d_push_mesh_attributes2 cf_draw3d_peek_mesh_attributes2
+ */
+CF_API CF_V4 CF_CALL cf_draw3d_pop_mesh_attributes2(void);
+
+/**
+ * @function cf_draw3d_peek_mesh_attributes2
+ * @category draw3d
+ * @brief    Returns the current second-lane mesh attributes.
+ * @related  cf_draw3d_push_mesh_attributes2 cf_draw3d_pop_mesh_attributes2
+ */
+CF_API CF_V4 CF_CALL cf_draw3d_peek_mesh_attributes2(void);
+
 //--------------------------------------------------------------------------------------------------
 // Submission.
 
@@ -557,6 +589,12 @@ CF_API void CF_CALL cf_draw3d_billboard(const CF_Sprite* sprite, CF_V3 position)
 // with a simple built-in hemisphere light. All shapes respect the transform stack, the color
 // stack below, layers, and draw list recording, and consecutive strokes batch into a single
 // instanced draw.
+//
+// The transform stack scales shape scalars, not just positions: pushing a 2x scale doubles a
+// circle's radius and a line's thickness the same way it doubles a sphere. (Under non-uniform
+// scale a camera-facing ribbon has no single correct width, so the largest axis wins.) Thickness
+// can instead be read as screen pixels -- see `cf_draw3d_push_stroke_pixels`, the mode gizmos and
+// debug overlays usually want.
 
 /**
  * @function cf_draw3d_push_color
@@ -617,6 +655,39 @@ CF_API CF_V3 CF_CALL cf_draw3d_pop_dash(void);
  * @related  cf_draw3d_push_dash cf_draw3d_pop_dash
  */
 CF_API CF_V3 CF_CALL cf_draw3d_peek_dash(void);
+
+/**
+ * @function cf_draw3d_push_stroke_pixels
+ * @category draw3d
+ * @brief    Switches stroke thickness between world units and screen pixels.
+ * @param    screen_space  True to read thickness as pixels, false (the default) as world units.
+ * @remarks  World-unit strokes are geometry: they get thinner with distance like everything else,
+ *           which is what a wireframe or a drawn-in-the-world annotation wants. Screen-space
+ *           strokes hold a constant on-screen width at any distance -- what editor gizmos,
+ *           selection outlines, and debug overlays want. Thickness passed to `cf_draw3d_line` and
+ *           friends is interpreted per this stack; shape *positions* and circle/arc radii stay in
+ *           world units either way, since a shape's size is geometry and only its stroke width is
+ *           a screen-space choice. Local anti-aliasing and sub-pixel fading work identically in
+ *           both modes.
+ * @related  cf_draw3d_pop_stroke_pixels cf_draw3d_peek_stroke_pixels cf_draw3d_line cf_draw3d_circle
+ */
+CF_API void CF_CALL cf_draw3d_push_stroke_pixels(bool screen_space);
+
+/**
+ * @function cf_draw3d_pop_stroke_pixels
+ * @category draw3d
+ * @brief    Pops and returns the last stroke sizing mode.
+ * @related  cf_draw3d_push_stroke_pixels cf_draw3d_peek_stroke_pixels
+ */
+CF_API bool CF_CALL cf_draw3d_pop_stroke_pixels(void);
+
+/**
+ * @function cf_draw3d_peek_stroke_pixels
+ * @category draw3d
+ * @brief    Returns the current stroke sizing mode.
+ * @related  cf_draw3d_push_stroke_pixels cf_draw3d_pop_stroke_pixels
+ */
+CF_API bool CF_CALL cf_draw3d_peek_stroke_pixels(void);
 
 /**
  * @function cf_make_draw3d_shape_shader
@@ -927,6 +998,12 @@ CF_INLINE void draw3d_billboard(const CF_Sprite* sprite, CF_V3 position) { cf_dr
 CF_INLINE void draw3d_push_color(CF_Color c) { cf_draw3d_push_color(c); }
 CF_INLINE CF_Color draw3d_pop_color() { return cf_draw3d_pop_color(); }
 CF_INLINE CF_Color draw3d_peek_color() { return cf_draw3d_peek_color(); }
+CF_INLINE void draw3d_push_mesh_attributes2(CF_V4 attributes) { cf_draw3d_push_mesh_attributes2(attributes); }
+CF_INLINE CF_V4 draw3d_pop_mesh_attributes2() { return cf_draw3d_pop_mesh_attributes2(); }
+CF_INLINE CF_V4 draw3d_peek_mesh_attributes2() { return cf_draw3d_peek_mesh_attributes2(); }
+CF_INLINE void draw3d_push_stroke_pixels(bool screen_space) { cf_draw3d_push_stroke_pixels(screen_space); }
+CF_INLINE bool draw3d_pop_stroke_pixels() { return cf_draw3d_pop_stroke_pixels(); }
+CF_INLINE bool draw3d_peek_stroke_pixels() { return cf_draw3d_peek_stroke_pixels(); }
 CF_INLINE void draw3d_push_dash(float on_length, float off_length, float phase) { cf_draw3d_push_dash(on_length, off_length, phase); }
 CF_INLINE CF_V3 draw3d_pop_dash() { return cf_draw3d_pop_dash(); }
 CF_INLINE CF_V3 draw3d_peek_dash() { return cf_draw3d_peek_dash(); }

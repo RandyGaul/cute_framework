@@ -1073,6 +1073,156 @@ TEST_CASE(test_draw3d_shape_shader)
 	return true;
 }
 
+// Stroke sizing: thickness scales with the transform stack in world mode, and holds a constant
+// on-screen width under perspective in pixel mode. Also covers the second attributes lane.
+TEST_CASE(test_draw3d_stroke_sizing)
+{
+	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, W, H, s_options(), NULL))) return true; // Headless CI: no display/GPU.
+
+	CF_CanvasParams params = cf_canvas_defaults(W, H);
+	params.depth_stencil_enable = true;
+	CF_Canvas canvas = cf_make_canvas(params);
+	CF_Pixel* px = (CF_Pixel*)cf_alloc(W * H * (int)sizeof(CF_Pixel));
+
+	// World-unit thickness under a 3x scale must draw 3x thicker.
+	cf_app_update(NULL);
+	cf_draw3d_push_projection(cf_ortho(-1, 1, -1, 1, 0.1f, 10.0f));
+	cf_draw3d_push_view(cf_look_at(cf_v3(0, 0, 2), cf_v3(0, 0, 0), cf_v3(0, 1, 0)));
+	cf_draw3d_push_color(cf_make_color_rgb_f(0, 1, 0));
+	cf_draw3d_line(cf_v3(-0.9f, 0.5f, 0), cf_v3(0.9f, 0.5f, 0), 0.04f);
+	cf_draw3d_push();
+	cf_draw3d_scale(cf_v3(3.0f));
+	// Same thickness argument, but the stack scale must triple it. Positions are divided by
+	// 3 so the scaled line lands where the unscaled one would.
+	cf_draw3d_line(cf_v3(-0.3f, -0.2f, 0), cf_v3(0.3f, -0.2f, 0), 0.04f);
+	cf_draw3d_pop();
+	cf_draw3d_pop_color();
+	cf_render_to(canvas, true);
+	cf_app_draw_onto_screen(false);
+	CF_Readback rb = cf_canvas_readback(canvas);
+	REQUIRE(rb.id);
+	while (!cf_readback_ready(rb)) {}
+	cf_readback_data(rb, px, W * H * (int)sizeof(CF_Pixel));
+	cf_destroy_readback(rb);
+	// Both lines cross x = center; count them separately by scanning halves.
+	int top = 0, bottom = 0;
+	for (int y = 0; y < H / 2; ++y) if (px[y * W + W / 2].colors.a > 40) top++;
+	for (int y = H / 2; y < H; ++y) if (px[y * W + W / 2].colors.a > 40) bottom++;
+	REQUIRE(top > 0 && bottom > 0);
+	// The scaled line is meaningfully thicker than the unscaled one (3x nominal, allowing
+	// for AA fringe on a small canvas).
+	int thin = top < bottom ? top : bottom;
+	int thick = top < bottom ? bottom : top;
+	REQUIRE(thick >= thin * 2);
+	cf_draw3d_pop_view();
+	cf_draw3d_pop_projection();
+
+	// Pixel mode under perspective: two lines at very different depths must render the same
+	// on-screen width, where world-unit thickness would halve with distance.
+	cf_app_update(NULL);
+	cf_draw3d_push_projection(cf_perspective(CF_PI / 3.0f, 1.0f, 0.1f, 100.0f));
+	cf_draw3d_push_view(cf_look_at(cf_v3(0, 0, 0), cf_v3(0, 0, -1), cf_v3(0, 1, 0)));
+	cf_draw3d_push_color(cf_make_color_rgb_f(0, 1, 0));
+	cf_draw3d_push_stroke_pixels(true);
+	cf_draw3d_line(cf_v3(-5, 1.2f, -4), cf_v3(5, 1.2f, -4), 5.0f);   // Near.
+	cf_draw3d_line(cf_v3(-5, -1.2f, -8), cf_v3(5, -1.2f, -8), 5.0f); // Twice as far.
+	cf_draw3d_pop_stroke_pixels();
+	cf_draw3d_pop_color();
+	cf_render_to(canvas, true);
+	cf_app_draw_onto_screen(false);
+	rb = cf_canvas_readback(canvas);
+	REQUIRE(rb.id);
+	while (!cf_readback_ready(rb)) {}
+	cf_readback_data(rb, px, W * H * (int)sizeof(CF_Pixel));
+	cf_destroy_readback(rb);
+	int near_px = 0, far_px = 0;
+	for (int y = 0; y < H / 2; ++y) if (px[y * W + W / 2].colors.a > 40) near_px++;
+	for (int y = H / 2; y < H; ++y) if (px[y * W + W / 2].colors.a > 40) far_px++;
+	REQUIRE(near_px > 0 && far_px > 0);
+	// Equal within a pixel of AA slop -- world-unit sizing would differ by 2x.
+	int diff = near_px - far_px;
+	if (diff < 0) diff = -diff;
+	REQUIRE(diff <= 1);
+	cf_draw3d_pop_view();
+	cf_draw3d_pop_projection();
+
+	cf_free(px);
+	cf_destroy_canvas(canvas);
+	cf_destroy_app();
+	return true;
+}
+
+// The second per-instance lane rides in_uv_rect when no sprite texture is pushed.
+TEST_CASE(test_draw3d_attributes2)
+{
+	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, W, H, s_options(), NULL))) return true; // Headless CI: no display/GPU.
+
+	CF_CanvasParams params = cf_canvas_defaults(W, H);
+	params.depth_stencil_enable = true;
+	CF_Canvas canvas = cf_make_canvas(params);
+	CF_Pixel* px = (CF_Pixel*)cf_alloc(W * H * (int)sizeof(CF_Pixel));
+
+	const char* vs =
+		"layout (location = 0) in vec3 in_pos;\n"
+		"layout (location = 8)  in vec4 in_model0;\n"
+		"layout (location = 9)  in vec4 in_model1;\n"
+		"layout (location = 10) in vec4 in_model2;\n"
+		"layout (location = 11) in vec4 in_uv_rect;\n"
+		"layout (location = 0) out vec4 v_color;\n"
+		"layout (set = 1, binding = 0) uniform uniform_block { mat4 u_view_projection; };\n"
+		"void main() {\n"
+		"    vec4 p = vec4(in_pos, 1.0);\n"
+		"    vec3 world = vec3(dot(in_model0, p), dot(in_model1, p), dot(in_model2, p));\n"
+		"    v_color = in_uv_rect;\n"
+		"    gl_Position = u_view_projection * vec4(world, 1.0);\n"
+		"}\n";
+	const char* fs =
+		"layout (location = 0) in vec4 v_color;\n"
+		"layout (location = 0) out vec4 result;\n"
+		"void main() { result = v_color; }\n";
+	CF_Shader shader = cf_make_shader_from_source(vs, fs);
+	REQUIRE(shader.id);
+
+	CF_V3 tri[3] = { cf_v3(-0.8f, -0.8f, 0), cf_v3(0.8f, -0.8f, 0), cf_v3(0, 0.8f, 0) };
+	CF_VertexAttribute attr = { };
+	attr.name = "in_pos";
+	attr.format = CF_VERTEX_FORMAT_FLOAT3;
+	attr.offset = 0;
+	CF_Mesh mesh = cf_make_mesh((int)sizeof(tri), &attr, 1, (int)sizeof(CF_V3));
+	cf_mesh_update_vertex_data(mesh, tri, 3);
+
+	cf_app_update(NULL);
+	cf_draw3d_push_projection(cf_ortho(-1, 1, -1, 1, 0.1f, 10.0f));
+	cf_draw3d_push_view(cf_look_at(cf_v3(0, 0, 2), cf_v3(0, 0, 0), cf_v3(0, 1, 0)));
+	cf_draw3d_push_shader(shader);
+	cf_draw3d_push_mesh_attributes2(cf_v4(1, 0, 1, 1)); // Magenta through the second lane.
+	cf_draw3d_mesh(mesh);
+	cf_draw3d_pop_mesh_attributes2();
+	cf_draw3d_pop_shader();
+
+	cf_render_to(canvas, true);
+	cf_app_draw_onto_screen(false);
+	CF_Readback rb = cf_canvas_readback(canvas);
+	REQUIRE(rb.id);
+	while (!cf_readback_ready(rb)) {}
+	cf_readback_data(rb, px, W * H * (int)sizeof(CF_Pixel));
+	cf_destroy_readback(rb);
+
+	CF_Pixel center = s_pixel(px, 0.5f, 0.5f);
+	REQUIRE(center.colors.r > 200 && center.colors.g < 60 && center.colors.b > 200);
+	// The default is the full uv rect, so untextured shaders sampling u_image still work.
+	REQUIRE(cf_draw3d_peek_mesh_attributes2().x == 0 && cf_draw3d_peek_mesh_attributes2().z == 1);
+
+	cf_draw3d_pop_view();
+	cf_draw3d_pop_projection();
+	cf_free(px);
+	cf_destroy_mesh(mesh);
+	cf_destroy_shader(shader);
+	cf_destroy_canvas(canvas);
+	cf_destroy_app();
+	return true;
+}
+
 TEST_SUITE(test_draw3d)
 {
 	RUN_TEST_CASE(test_draw3d_transforms_and_coalescing);
@@ -1089,4 +1239,6 @@ TEST_SUITE(test_draw3d)
 	RUN_TEST_CASE(test_draw3d_msaa);
 	RUN_TEST_CASE(test_draw3d_shapes);
 	RUN_TEST_CASE(test_draw3d_shape_shader);
+	RUN_TEST_CASE(test_draw3d_stroke_sizing);
+	RUN_TEST_CASE(test_draw3d_attributes2);
 }

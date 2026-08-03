@@ -124,6 +124,7 @@ struct CF_Draw3d
 	Cute::Array<CF_Shader> shaders;
 	Cute::Array<CF_RenderState> render_states;
 	Cute::Array<CF_V4> mesh_attributes;
+	Cute::Array<CF_V4> mesh_attributes2; // Rides in_uv_rect when no sprite texture is pushed.
 	Cute::Array<const CF_Sprite*> sprites; // cf_draw3d_push_texture stack.
 
 	// Live uniform/texture state (cf_draw3d_set_uniform/set_texture). `version` bumps on every
@@ -143,6 +144,7 @@ struct CF_Draw3d
 	// quad, solid meshes, and built-in shaders, all created on first shape call.
 	Cute::Array<CF_Color> colors;
 	Cute::Array<CF_V3> dashes; // x: on length, y: off length, z: phase (world units).
+	Cute::Array<bool> stroke_pixels; // cf_draw3d_push_stroke_pixels: thickness in pixels, not world units.
 	// User shape shaders (cf_make_draw3d_shape_shader): one stub compiled against both
 	// built-in fragment pipelines, keyed by the canonical (stroke-variant) handle id.
 	Cute::Map<CF_ShapeShaderBundle> shape_shaders;
@@ -176,9 +178,11 @@ void cf_make_draw3d()
 	s_draw3d->shaders.add(none); // No default 3d shader -- see cf_draw3d_push_shader.
 	s_draw3d->render_states.add(cf_render_state_3d_defaults());
 	s_draw3d->mesh_attributes.add(cf_v4(0));
+	s_draw3d->mesh_attributes2.add(cf_v4(0, 0, 1, 1)); // Full uv rect: the untextured default.
 	s_draw3d->sprites.add(NULL);
 	s_draw3d->colors.add(cf_color_white());
 	s_draw3d->dashes.add(cf_v3(0, 0, 0)); // Solid strokes by default.
+	s_draw3d->stroke_pixels.add(false);   // World-unit thickness by default.
 	s_draw3d->material = cf_make_material();
 }
 
@@ -348,6 +352,10 @@ void cf_draw3d_push_mesh_attributes(CF_V4 attributes) { s_draw3d->mesh_attribute
 CF_V4 cf_draw3d_pop_mesh_attributes() { if (s_draw3d->mesh_attributes.count() > 1) return s_draw3d->mesh_attributes.pop(); return s_draw3d->mesh_attributes.last(); }
 CF_V4 cf_draw3d_peek_mesh_attributes() { return s_draw3d->mesh_attributes.last(); }
 
+void cf_draw3d_push_mesh_attributes2(CF_V4 attributes) { s_draw3d->mesh_attributes2.add(attributes); }
+CF_V4 cf_draw3d_pop_mesh_attributes2() { if (s_draw3d->mesh_attributes2.count() > 1) return s_draw3d->mesh_attributes2.pop(); return s_draw3d->mesh_attributes2.last(); }
+CF_V4 cf_draw3d_peek_mesh_attributes2() { return s_draw3d->mesh_attributes2.last(); }
+
 //--------------------------------------------------------------------------------------------------
 // Submission.
 
@@ -365,7 +373,11 @@ static CF_MeshInstance3d s_instance()
 	inst.model0 = s_row(model, 0);
 	inst.model1 = s_row(model, 1);
 	inst.model2 = s_row(model, 2);
-	inst.uv_rect = cf_v4(0, 0, 1, 1);
+	// in_uv_rect carries the atlas sub-rect when a sprite texture is pushed; with none pushed
+	// the lane is free, so it doubles as a second user attributes lane (see
+	// cf_draw3d_push_mesh_attributes2). Untextured submissions default to the full rect, which
+	// is what a shader sampling u_image against the 1x1 white fallback expects.
+	inst.uv_rect = s_draw3d->sprites.last() ? cf_v4(0, 0, 1, 1) : s_draw3d->mesh_attributes2.last();
 	// The immediate path reuses the model rows as the normal matrix (exact for rigid transforms
 	// and uniform scale -- see the header); baked draw lists compute exact ones.
 	inst.nmat0 = cf_v4(inst.model0.x, inst.model0.y, inst.model0.z, 0);
@@ -635,13 +647,18 @@ static const char* s_stroke_vs =
 "        float cx = in_corner.x + 0.5;\n"
 "        float ppw = max(mix(length(pxa), length(pxb), cx), 0.0001);\n"
 "        float aa = 3.0 / ppw;\n"
-"        float htmax = max(in_model0.w, in_model1.w);\n"
+"        // Screen-space mode: half-thickness arrives in pixels, so divide by this end's\n"
+"        // pixels-per-world-unit to get the world width that covers it. Perspective then\n"
+"        // cancels out and the stroke holds a constant on-screen width at any distance.\n"
+"        float ht0 = in_nmat2.w > 0.5 ? in_model0.w / max(length(pxa), 0.0001) : in_model0.w;\n"
+"        float ht1 = in_nmat2.w > 0.5 ? in_model1.w / max(length(pxb), 0.0001) : in_model1.w;\n"
+"        float htmax = max(ht0, ht1);\n"
 "        float ext = max(htmax, 0.5 / ppw) + aa;\n"
 "        float s = mix(-ext, len + ext, cx);\n"
 "        float t = ext * in_corner.y * 2.0;\n"
 "        world = a + dir * s + across * t;\n"
 "        v_local = vec2(s, t);\n"
-"        v_seg = vec4(len, in_model0.w, in_model1.w, ppw);\n"
+"        v_seg = vec4(len, ht0, ht1, ppw);\n"
 "    } else {\n"
 "        vec3 center = in_model0.xyz;\n"
 "        vec3 n = normalize(in_model1.xyz);\n"
@@ -653,11 +670,14 @@ static const char* s_stroke_vs =
 "        vec2 ppx = (ca.xy / max(ca.w, 0.0001) - cc.xy / max(cc.w, 0.0001)) * u_shape_res.xy * 0.5;\n"
 "        float ppw = max(length(ppx), 0.0001);\n"
 "        float aa = 3.0 / ppw;\n"
-"        float ext = in_model0.w + max(in_model1.w, 0.5 / ppw) + aa;\n"
+"        // Screen-space mode: ring half-thickness arrives in pixels (the radius stays in\n"
+"        // world units -- a ring's size is geometry, only its stroke width is screen-space).\n"
+"        float rht = in_nmat2.w > 0.5 ? in_model1.w / ppw : in_model1.w;\n"
+"        float ext = in_model0.w + max(rht, 0.5 / ppw) + aa;\n"
 "        vec2 l = in_corner * 2.0 * ext;\n"
 "        world = center + bx * l.x + by * l.y;\n"
 "        v_local = l;\n"
-"        v_seg = vec4(in_model0.w, in_model1.w, ppw, in_nmat1.w);\n"
+"        v_seg = vec4(in_model0.w, rht, ppw, in_nmat1.w);\n"
 "    }\n"
 "    float a0 = in_nmat1.y;\n"
 "    float a1 = in_nmat1.y + in_nmat1.z;\n"
@@ -926,7 +946,7 @@ static void s_submit_stroke(CF_MeshInstance3d inst)
 	s_shapes_init();
 	s_shapes_set_eye();
 	CF_V3 dash = s_draw3d->dashes.last();
-	inst.nmat2 = cf_v4(dash.x, dash.y, dash.z, 0);
+	inst.nmat2 = cf_v4(dash.x, dash.y, dash.z, s_draw3d->stroke_pixels.last() ? 1.0f : 0.0f);
 	inst.mesh_attributes = s_draw3d->mesh_attributes.last();
 	CF_Shader top = s_draw3d->shaders.last();
 	CF_ShapeShaderBundle* bundle = top.id ? s_draw3d->shape_shaders.try_find(top.id) : NULL;
@@ -944,6 +964,10 @@ CF_Color cf_draw3d_peek_color() { return s_draw3d->colors.last(); }
 void cf_draw3d_push_dash(float on_length, float off_length, float phase) { s_draw3d->dashes.add(cf_v3(on_length, off_length, phase)); }
 CF_V3 cf_draw3d_pop_dash() { if (s_draw3d->dashes.count() > 1) return s_draw3d->dashes.pop(); return s_draw3d->dashes.last(); }
 CF_V3 cf_draw3d_peek_dash() { return s_draw3d->dashes.last(); }
+
+void cf_draw3d_push_stroke_pixels(bool screen_space) { s_draw3d->stroke_pixels.add(screen_space); }
+bool cf_draw3d_pop_stroke_pixels() { if (s_draw3d->stroke_pixels.count() > 1) return s_draw3d->stroke_pixels.pop(); return s_draw3d->stroke_pixels.last(); }
+bool cf_draw3d_peek_stroke_pixels() { return s_draw3d->stroke_pixels.last(); }
 
 CF_Shader cf_make_draw3d_shape_shader_from_source(const char* src)
 {
@@ -1041,13 +1065,27 @@ bool cf_draw3d_destroy_shape_shader_sibling(uint64_t shader_id)
 
 static CF_INLINE CF_V4 s_color4() { CF_Color c = s_draw3d->colors.last(); return cf_v4(c.r, c.g, c.b, c.a); }
 
+// Uniform scale factor of the current transform stack, applied to shape scalars (thickness,
+// radius, arrow width) so they scale with the geometry they belong to -- pushing a 2x scale
+// grows a circle's radius the same way it grows a sphere's. Under non-uniform scale there is
+// no single right answer for a camera-facing ribbon's width, so the largest axis wins.
+static float s_stack_scale()
+{
+	const CF_M4x4& m = s_draw3d->transforms.last();
+	float sx = cf_len_v3(cf_v3(m.elements[0], m.elements[1], m.elements[2]));
+	float sy = cf_len_v3(cf_v3(m.elements[4], m.elements[5], m.elements[6]));
+	float sz = cf_len_v3(cf_v3(m.elements[8], m.elements[9], m.elements[10]));
+	return cf_max(sx, cf_max(sy, sz));
+}
+
 void cf_draw3d_line2(CF_V3 p0, CF_V3 p1, float thickness0, float thickness1)
 {
 	CF_MeshInstance3d inst = { };
 	CF_V3 a = cf_draw3d_mul(p0);
 	CF_V3 b = cf_draw3d_mul(p1);
-	inst.model0 = cf_v4(a.x, a.y, a.z, thickness0 * 0.5f);
-	inst.model1 = cf_v4(b.x, b.y, b.z, thickness1 * 0.5f);
+	float s = s_draw3d->stroke_pixels.last() ? 1.0f : s_stack_scale();
+	inst.model0 = cf_v4(a.x, a.y, a.z, thickness0 * 0.5f * s);
+	inst.model1 = cf_v4(b.x, b.y, b.z, thickness1 * 0.5f * s);
 	inst.uv_rect = s_color4();
 	inst.nmat0 = inst.uv_rect;
 	inst.nmat1 = cf_v4(0, 0, 0, 0);
@@ -1091,8 +1129,9 @@ static void s_ring(CF_V3 center, CF_V3 normal, float radius, float half_thicknes
 		m.elements[0] * normal.x + m.elements[4] * normal.y + m.elements[8] * normal.z,
 		m.elements[1] * normal.x + m.elements[5] * normal.y + m.elements[9] * normal.z,
 		m.elements[2] * normal.x + m.elements[6] * normal.y + m.elements[10] * normal.z);
-	inst.model0 = cf_v4(c.x, c.y, c.z, radius);
-	inst.model1 = cf_v4(n.x, n.y, n.z, half_thickness);
+	float s = s_stack_scale();
+	inst.model0 = cf_v4(c.x, c.y, c.z, radius * s);
+	inst.model1 = cf_v4(n.x, n.y, n.z, half_thickness * (s_draw3d->stroke_pixels.last() ? 1.0f : s));
 	inst.uv_rect = s_color4();
 	inst.nmat0 = inst.uv_rect;
 	inst.nmat1 = cf_v4(1.0f, a0, sweep, fill ? 1.0f : 0.0f);

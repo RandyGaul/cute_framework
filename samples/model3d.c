@@ -248,10 +248,9 @@ int main(int argc, char* argv[])
 				if (parent < 0) continue;
 				CF_V3 a = cf_v3(world[node * 16 + 12], world[node * 16 + 13], world[node * 16 + 14]);
 				CF_V3 b = cf_v3(world[parent * 16 + 12], world[parent * 16 + 13], world[parent * 16 + 14]);
-				// Stroke thickness is in world units and doesn't scale with the transform
-				// stack, so size it for the final on-screen scale, not the fox's
-				// centimeter-scale model space.
-				cf_draw3d_line(a, b, 0.02f);
+				// Thickness scales with the transform stack like the geometry it annotates,
+				// so this is in the fox's own (centimeter-scale) model space.
+				cf_draw3d_line(a, b, 0.8f);
 			}
 			cf_draw3d_pop_color();
 			cf_draw3d_pop_render_state();
