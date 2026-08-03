@@ -59,8 +59,15 @@ TEST_CASE(test_array_list_init)
 		3,
 		4
 	};
+	int f[] = {
+		1,
+		2,
+		3,
+		4
+	};
 
 	REQUIRE(cf_array_hash(e) == cf_fnv1a(e, sizeof(*e) * e.count()));
+	REQUIRE(cf_array_hash(e) == cf_fnv1a(f, sizeof(f));
 
 	return true;
 }
