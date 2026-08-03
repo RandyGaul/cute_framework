@@ -95,6 +95,25 @@ cf_draw3d_set_uniform_m4("u_light_vp", light_vp);
 
 One convention worth memorizing: when your shader maps clip-space positions to canvas uvs (shadow maps, screen-space reads), **v runs top-down** -- `uv = vec2(ndc.x, -ndc.y) * 0.5 + 0.5` on every backend.
 
+## Shapes and Debug Drawing
+
+The 2D API's shape catalog exists in 3D too, and needs no shader, mesh, or material at all:
+
+```cpp
+cf_draw3d_push_color(cf_color_red());
+cf_draw3d_line(a, b, 0.05f);                            // Round caps, world-unit thickness.
+cf_draw3d_arrow(from, to, 0.03f, 0.1f);                 // Line + solid cone head.
+cf_draw3d_circle(center, normal, 1.0f, 0.02f);          // Plus circle_fill and arc.
+cf_draw3d_box_wire(center, half_extents, 0.02f);        // 12 edges; the AABB debug classic.
+cf_draw3d_axes(1.0f, 0.04f);                            // RGB local frame under the transform stack.
+cf_draw3d_cube(center, half_extents);                   // Solids: cube, sphere, cone, torus,
+cf_draw3d_pop_color();                                  // hemisphere-lit, colored by the stack.
+```
+
+Strokes render as camera-facing ribbons under a built-in signed-distance shader: edges are locally anti-aliased with no MSAA, and a stroke that falls below a pixel wide clamps to half-pixel width and fades its alpha instead of shimmering -- a distant wireframe grid stays calm. Thickness is in world units, so strokes recede with perspective like geometry, not screen overlays (`cf_draw3d_line2` varies thickness per-end for tapers).
+
+Shape parameters ride the same reserved instance lanes as meshes, so strokes coalesce into instanced draws, order against layers, and record into draw lists -- a wireframe level bakes like anything else. Solids run through the ordinary mesh path with lazily-built unit meshes. See the `shapes3d` sample for the whole catalog moving.
+
 ## Sprite-Textured Meshes
 
 Meshes can be textured straight out of CF's sprite economy:
@@ -153,6 +172,7 @@ Each common 3D need has a sample showing the pattern, because each one is a patt
 | `billboards` | Sprite-textured camera-facing quads: cutout trees (depth-ordered, no sorting) and additive fireflies (order-independent) |
 | `transparency3d` | Sorted alpha done honestly -- opaque first, back-to-front translucents, with a toggle to watch unsorted blending break |
 | `obj_loading` | A ~90 line OBJ parser into `cf_make_mesh`; model formats are user space, and this is the whole cost |
+| `shapes3d` | The shape catalog moving: gizmos, grids, arcs, tapered lines, solids -- zero setup |
 
 ## Below This Layer
 

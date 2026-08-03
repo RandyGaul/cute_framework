@@ -66,6 +66,14 @@ Interactive samples demonstrating Cute Framework features. Click any card to pla
 
     [:octicons-arrow-right-24: Play](billboards.md)
 
+- **[3D Shapes](shapes3d.md)**
+
+    ---
+
+    Anti-aliased SDF lines, circles, arcs, and solid primitives -- gizmos and debug drawing with zero setup.
+
+    [:octicons-arrow-right-24: Play](shapes3d.md)
+
 - **[Blend Modes](blend_modes.md)**
 
     ---

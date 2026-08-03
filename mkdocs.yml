@@ -168,6 +168,7 @@ nav:
       - Recolor: samples/recolor.md
       - Shallow Water: samples/shallow_water.md
       - Skinning 3D: samples/skinning.md
+      - 3D Shapes: samples/shapes3d.md
       - Sound Pan: samples/sound_pan.md
       - Space Shooter: samples/spaceshooter.md
       - Stencil Pie Chart: samples/stencil_pie_chart.md
