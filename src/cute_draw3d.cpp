@@ -129,9 +129,10 @@ struct CF_Draw3d
 	// uv (0,0) at the image's top-left like 2d sprites).
 	CF_Mesh sprite_quad = { 0 };
 
-	// Shape drawing (see the shapes section): color stack plus lazily-built stroke quad,
-	// solid meshes, and built-in shaders, all created on first shape call.
+	// Shape drawing (see the shapes section): color and dash stacks plus lazily-built stroke
+	// quad, solid meshes, and built-in shaders, all created on first shape call.
 	Cute::Array<CF_Color> colors;
+	Cute::Array<CF_V3> dashes; // x: on length, y: off length, z: phase (world units).
 	CF_Mesh stroke_quad = { 0 };
 	CF_Shader stroke_shd = { 0 };
 	CF_Shader solid_shd = { 0 };
@@ -164,6 +165,7 @@ void cf_make_draw3d()
 	s_draw3d->mesh_attributes.add(cf_v4(0));
 	s_draw3d->sprites.add(NULL);
 	s_draw3d->colors.add(cf_color_white());
+	s_draw3d->dashes.add(cf_v3(0, 0, 0)); // Solid strokes by default.
 	s_draw3d->material = cf_make_material();
 }
 
@@ -572,12 +574,14 @@ static const char* s_stroke_vs =
 "layout (location = 11) in vec4 in_uv_rect;\n"         // Color (at a, for segments).
 "layout (location = 12) in vec4 in_nmat0;\n"           // Color at b (segments).
 "layout (location = 13) in vec4 in_nmat1;\n"           // x: kind (0 segment, 1 ring). y: angle0, z: sweep, w: fill flag.
+"layout (location = 14) in vec4 in_nmat2;\n"           // Dash: on length, off length, phase (world units).
 "layout (location = 0) out vec2 v_local;\n"
 "layout (location = 1) out vec4 v_seg;\n"              // Segment: len, ht0, ht1, ppw. Ring: radius, ht, ppw, fill.
 "layout (location = 2) out vec4 v_c0;\n"
 "layout (location = 3) out vec4 v_c1;\n"
 "layout (location = 4) out vec4 v_arc;\n"              // cos/sin of arc edge directions (rings).
 "layout (location = 5) out float v_kind;\n"
+"layout (location = 6) out vec4 v_dash;\n"
 "layout (set = 1, binding = 0) uniform uniform_block {\n"
 "    mat4 u_view_projection;\n"
 "    vec4 u_shape_eye;\n"
@@ -594,14 +598,21 @@ static const char* s_stroke_vs =
 "        vec3 dir = len > 0.0001 ? d / len : vec3(1, 0, 0);\n"
 "        vec3 mid = (a + b) * 0.5;\n"
 "        vec3 across = normalize(cross(dir, u_shape_eye.xyz - mid));\n"
-"        vec4 cc = u_view_projection * vec4(mid, 1.0);\n"
-"        vec4 ca = u_view_projection * vec4(mid + across, 1.0);\n"
-"        vec2 ppx = (ca.xy / max(ca.w, 0.0001) - cc.xy / max(cc.w, 0.0001)) * u_shape_res.xy * 0.5;\n"
-"        float ppw = max(length(ppx), 0.0001);\n"
+"        // Pixels-per-world-unit at THIS corner's end -- a midpoint estimate starves the quad\n"
+"        // at the far end of a long segment under perspective, and pixels the rasterizer never\n"
+"        // produces can't be blended back by any amount of fragment AA (dotted-line gaps).\n"
+"        vec4 cca = u_view_projection * vec4(a, 1.0);\n"
+"        vec4 caa = u_view_projection * vec4(a + across, 1.0);\n"
+"        vec4 ccb = u_view_projection * vec4(b, 1.0);\n"
+"        vec4 cab = u_view_projection * vec4(b + across, 1.0);\n"
+"        vec2 pxa = (caa.xy / max(caa.w, 0.0001) - cca.xy / max(cca.w, 0.0001)) * u_shape_res.xy * 0.5;\n"
+"        vec2 pxb = (cab.xy / max(cab.w, 0.0001) - ccb.xy / max(ccb.w, 0.0001)) * u_shape_res.xy * 0.5;\n"
+"        float cx = in_corner.x + 0.5;\n"
+"        float ppw = max(mix(length(pxa), length(pxb), cx), 0.0001);\n"
 "        float aa = 3.0 / ppw;\n"
 "        float htmax = max(in_model0.w, in_model1.w);\n"
 "        float ext = max(htmax, 0.5 / ppw) + aa;\n"
-"        float s = mix(-ext, len + ext, in_corner.x + 0.5);\n"
+"        float s = mix(-ext, len + ext, cx);\n"
 "        float t = ext * in_corner.y * 2.0;\n"
 "        world = a + dir * s + across * t;\n"
 "        v_local = vec2(s, t);\n"
@@ -629,6 +640,7 @@ static const char* s_stroke_vs =
 "    v_c0 = in_uv_rect;\n"
 "    v_c1 = in_nmat0;\n"
 "    v_kind = kind + (in_nmat1.z >= 6.28 ? 2.0 : 0.0);\n" // +2 marks a full ring (skip arc clipping).
+"    v_dash = in_nmat2;\n"
 "    gl_Position = u_view_projection * vec4(world, 1.0);\n"
 "}\n";
 
@@ -639,25 +651,39 @@ static const char* s_stroke_fs =
 "layout (location = 3) in vec4 v_c1;\n"
 "layout (location = 4) in vec4 v_arc;\n"
 "layout (location = 5) in float v_kind;\n"
+"layout (location = 6) in vec4 v_dash;\n"
 "layout (location = 0) out vec4 result;\n"
 "void main() {\n"
 "    float raw;\n" // Signed distance to the shape's skeleton, in world units.
 "    float ht;\n"  // Stroke half-thickness; negative marks a filled shape (edge AA only).
 "    vec4 col;\n"
+"    vec2 g;\n"    // Direction of the distance gradient in v_local space.
 "    if (v_kind < 0.5) {\n"
 "        float len = v_seg.x;\n"
 "        float sc = clamp(v_local.x, 0.0, len);\n"
 "        float f = len > 0.0001 ? sc / len : 0.0;\n"
 "        ht = mix(v_seg.y, v_seg.z, f);\n"
-"        raw = length(vec2(v_local.x - sc, v_local.y));\n"
 "        col = mix(v_c0, v_c1, f);\n"
+"        float lng = abs(v_local.x - sc);\n" // Longitudinal overshoot past the endpoints.
+"        if (v_dash.x > 0.0) {\n"
+"            // Dash pattern along the segment; each dash gets round caps for free.\n"
+"            float p = v_dash.x + v_dash.y;\n"
+"            float m = mod(sc - v_dash.z, p);\n"
+"            lng = max(lng, max(abs(m - v_dash.x * 0.5) - v_dash.x * 0.5, 0.0));\n"
+"        }\n"
+"        vec2 q = vec2(lng, v_local.y);\n"
+"        raw = length(q);\n"
+"        g = raw > 0.0000001 ? q / raw : vec2(0.0, 1.0);\n"
 "    } else {\n"
 "        float radius = v_seg.x;\n"
 "        ht = v_seg.y;\n"
 "        col = v_c0;\n"
+"        float lr = max(length(v_local), 0.0000001);\n"
+"        vec2 rhat = v_local / lr;\n"
 "        if (v_seg.w > 0.5) {\n"
-"            raw = length(v_local) - radius;\n" // Filled disc.
+"            raw = lr - radius;\n" // Filled disc.
 "            ht = -1.0;\n"
+"            g = rhat;\n"
 "        } else {\n"
 "            bool inside = true;\n"
 "            if (v_kind < 2.5) {\n"
@@ -670,18 +696,34 @@ static const char* s_stroke_fs =
 "                inside = wide ? (c0 >= 0.0 || c1 <= 0.0) : (c0 >= 0.0 && c1 <= 0.0);\n"
 "            }\n"
 "            if (inside) {\n"
-"                raw = abs(length(v_local) - radius);\n"
+"                float lng = 0.0;\n"
+"                if (v_dash.x > 0.0) {\n"
+"                    // Dash pattern along the arclength (phase in world units, animatable).\n"
+"                    float p = v_dash.x + v_dash.y;\n"
+"                    float m = mod(atan(v_local.y, v_local.x) * radius - v_dash.z, p);\n"
+"                    lng = max(abs(m - v_dash.x * 0.5) - v_dash.x * 0.5, 0.0);\n"
+"                }\n"
+"                vec2 q = vec2(lng, lr - radius);\n"
+"                raw = length(q);\n"
+"                vec2 that = vec2(-rhat.y, rhat.x);\n"
+"                g = raw > 0.0000001 ? (that * q.x + rhat * q.y) / raw : rhat;\n"
 "            } else {\n"
-"                vec2 p0 = v_arc.xy * radius;\n"
-"                vec2 p1 = v_arc.zw * radius;\n"
-"                raw = min(length(v_local - p0), length(v_local - p1));\n" // Round arc ends.
+"                vec2 q0 = v_local - v_arc.xy * radius;\n"
+"                vec2 q1 = v_local - v_arc.zw * radius;\n"
+"                float l0 = length(q0);\n"
+"                float l1 = length(q1);\n"
+"                raw = min(l0, l1);\n" // Round arc ends.
+"                vec2 qc = l0 < l1 ? q0 : q1;\n"
+"                g = raw > 0.0000001 ? qc / raw : rhat;\n"
 "            }\n"
 "        }\n"
 "    }\n"
-"    // Per-fragment anti-aliasing: fwidth(raw) is how many world units one pixel spans HERE,\n"
-"    // exact under perspective where any per-instance estimate goes soft near and hard far.\n"
-"    // Strokes thinner than a pixel clamp to half-pixel width and fade alpha instead.\n"
-"    float wpp = max(fwidth(raw), 0.000001);\n"
+"    // Per-fragment anti-aliasing: how many world units one pixel spans HERE, along the\n"
+"    // distance gradient. Chained through the smooth varying v_local rather than fwidth(raw):\n"
+"    // the distance field folds at the skeleton, so fwidth collapses across the fold -- which\n"
+"    // is exactly where every pixel of a sub-pixel hairline lives. The fold-side speckle reads\n"
+"    // as white gaps in thin strokes; the chain rule through g is fold-free and exact.\n"
+"    float wpp = max(length(vec2(dot(g, dFdx(v_local)), dot(g, dFdy(v_local)))), 0.000001);\n"
 "    float fade = 1.0;\n"
 "    float d;\n"
 "    if (ht >= 0.0) {\n"
@@ -774,10 +816,12 @@ static void s_shapes_set_eye()
 
 // Submits one stroke instance under the built-in stroke shader and render state. The current
 // transform stack has already been applied to the world-space inputs by the callers.
-static void s_submit_stroke(const CF_MeshInstance3d& inst)
+static void s_submit_stroke(CF_MeshInstance3d inst)
 {
 	s_shapes_init();
 	s_shapes_set_eye();
+	CF_V3 dash = s_draw3d->dashes.last();
+	inst.nmat2 = cf_v4(dash.x, dash.y, dash.z, 0);
 	cf_draw3d_push_shader(s_draw3d->stroke_shd);
 	cf_draw3d_push_render_state(s_draw3d->stroke_rs);
 	s_submit(s_draw3d->stroke_quad, inst, false, NULL);
@@ -788,6 +832,10 @@ static void s_submit_stroke(const CF_MeshInstance3d& inst)
 void cf_draw3d_push_color(CF_Color c) { s_draw3d->colors.add(c); }
 CF_Color cf_draw3d_pop_color() { if (s_draw3d->colors.count() > 1) return s_draw3d->colors.pop(); return s_draw3d->colors.last(); }
 CF_Color cf_draw3d_peek_color() { return s_draw3d->colors.last(); }
+
+void cf_draw3d_push_dash(float on_length, float off_length, float phase) { s_draw3d->dashes.add(cf_v3(on_length, off_length, phase)); }
+CF_V3 cf_draw3d_pop_dash() { if (s_draw3d->dashes.count() > 1) return s_draw3d->dashes.pop(); return s_draw3d->dashes.last(); }
+CF_V3 cf_draw3d_peek_dash() { return s_draw3d->dashes.last(); }
 
 static CF_INLINE CF_V4 s_color4() { CF_Color c = s_draw3d->colors.last(); return cf_v4(c.r, c.g, c.b, c.a); }
 

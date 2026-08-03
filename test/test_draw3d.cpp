@@ -976,6 +976,12 @@ TEST_CASE(test_draw3d_shapes)
 	cf_draw3d_box_wire(cf_v3(0, -0.5f, 0), cf_v3(0.1f, 0.1f, 0.1f), 0.02f);
 	cf_draw3d_arrow(cf_v3(-0.8f, -0.8f, 0), cf_v3(-0.6f, -0.8f, 0), 0.02f, 0.05f);
 	cf_draw3d_torus(cf_v3(0.8f, 0.8f, 0), cf_v3(0, 0, 1), 0.1f, 0.03f);
+	// A magenta dashed line along the bottom: dash centers hit their pixels, gap centers don't.
+	cf_draw3d_push_color(cf_make_color_rgb_f(1, 0, 1));
+	cf_draw3d_push_dash(0.3f, 0.3f, 0);
+	cf_draw3d_line(cf_v3(-0.6f, -0.75f, 0), cf_v3(0.6f, -0.75f, 0), 0.1f);
+	cf_draw3d_pop_dash();
+	cf_draw3d_pop_color();
 	cf_draw3d_push();
 	cf_draw3d_translate(cf_v3(-0.8f, 0.8f, 0));
 	cf_draw3d_axes(0.1f, 0.02f);
@@ -999,6 +1005,10 @@ TEST_CASE(test_draw3d_shapes)
 	// Solids are hemisphere-lit, so their channels dim but keep their hue.
 	REQUIRE(right.colors.b > 80 && right.colors.r < 60);
 	REQUIRE(top.colors.r > 80 && top.colors.g > 60 && top.colors.b < 60);
+	CF_Pixel dash_on = s_pixel(px, 0.275f, 0.875f);
+	CF_Pixel dash_off = s_pixel(px, 0.425f, 0.875f);
+	REQUIRE(dash_on.colors.r > 200 && dash_on.colors.b > 200);
+	REQUIRE(dash_off.colors.r < 60);
 
 	cf_draw3d_pop_view();
 	cf_draw3d_pop_projection();

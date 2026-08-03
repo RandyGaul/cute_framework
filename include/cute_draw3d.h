@@ -578,6 +578,40 @@ CF_API CF_Color CF_CALL cf_draw3d_pop_color(void);
 CF_API CF_Color CF_CALL cf_draw3d_peek_color(void);
 
 /**
+ * @function cf_draw3d_push_dash
+ * @category draw3d
+ * @brief    Pushes a dash pattern for subsequent 3d stroke drawing.
+ * @param    on_length   Length of each dash in world units.
+ * @param    off_length  Length of each gap in world units.
+ * @param    phase       Offset into the pattern in world units -- animate for marching ants.
+ * @remarks  Applies to strokes (lines, polylines, circles, arcs, wire boxes); solids ignore it.
+ *           Each dash gets round caps and the same local anti-aliasing and thin-stroke fading as
+ *           solid strokes. An `on_length` of zero (the default) draws solid strokes. On full
+ *           circles the pattern wraps at the seam unless `on_length + off_length` divides the
+ *           circumference evenly.
+ * @related  cf_draw3d_pop_dash cf_draw3d_peek_dash cf_draw3d_line cf_draw3d_circle cf_draw3d_arc
+ */
+CF_API void CF_CALL cf_draw3d_push_dash(float on_length, float off_length, float phase);
+
+/**
+ * @function cf_draw3d_pop_dash
+ * @category draw3d
+ * @brief    Pops and returns the last dash pattern pushed by `cf_draw3d_push_dash`.
+ * @remarks  The returned vector holds x: on length, y: off length, z: phase.
+ * @related  cf_draw3d_push_dash cf_draw3d_peek_dash
+ */
+CF_API CF_V3 CF_CALL cf_draw3d_pop_dash(void);
+
+/**
+ * @function cf_draw3d_peek_dash
+ * @category draw3d
+ * @brief    Returns the current dash pattern without popping it.
+ * @remarks  The returned vector holds x: on length, y: off length, z: phase.
+ * @related  cf_draw3d_push_dash cf_draw3d_pop_dash
+ */
+CF_API CF_V3 CF_CALL cf_draw3d_peek_dash(void);
+
+/**
  * @function cf_draw3d_line
  * @category draw3d
  * @brief    Draws an anti-aliased 3d line segment with round caps.
@@ -837,6 +871,9 @@ CF_INLINE void draw3d_billboard(const CF_Sprite* sprite, CF_V3 position) { cf_dr
 CF_INLINE void draw3d_push_color(CF_Color c) { cf_draw3d_push_color(c); }
 CF_INLINE CF_Color draw3d_pop_color() { return cf_draw3d_pop_color(); }
 CF_INLINE CF_Color draw3d_peek_color() { return cf_draw3d_peek_color(); }
+CF_INLINE void draw3d_push_dash(float on_length, float off_length, float phase) { cf_draw3d_push_dash(on_length, off_length, phase); }
+CF_INLINE CF_V3 draw3d_pop_dash() { return cf_draw3d_pop_dash(); }
+CF_INLINE CF_V3 draw3d_peek_dash() { return cf_draw3d_peek_dash(); }
 CF_INLINE void draw3d_line(CF_V3 p0, CF_V3 p1, float thickness) { cf_draw3d_line(p0, p1, thickness); }
 CF_INLINE void draw3d_line2(CF_V3 p0, CF_V3 p1, float thickness0, float thickness1) { cf_draw3d_line2(p0, p1, thickness0, thickness1); }
 CF_INLINE void draw3d_polyline(const CF_V3* points, int count, float thickness, bool loop) { cf_draw3d_polyline(points, count, thickness, loop); }
