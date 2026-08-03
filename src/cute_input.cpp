@@ -606,7 +606,8 @@ static void s_handle_event(SDL_Event* event)
 
 	case SDL_EVENT_TEXT_INPUT:
 	{
-		cf_input_text_add_utf8(event->text.text);
+		// text.text can be NULL if s_deep_copy_event's SDL_strdup failed under OOM.
+		if (event->text.text) cf_input_text_add_utf8(event->text.text);
 		app->ime_composition.clear();
 		app->ime_composition_cursor = 0;
 		app->ime_composition_selection_len = 0;
@@ -614,12 +615,13 @@ static void s_handle_event(SDL_Event* event)
 
 	case SDL_EVENT_TEXT_EDITING:
 	{
+		// edit.text can be NULL if s_deep_copy_event's SDL_strdup failed under OOM.
 		app->ime_composition.clear();
 		const char* text = event->edit.text;
-		while (*text) app->ime_composition.add(*text++);
+		if (text) while (*text) app->ime_composition.add(*text++);
 		app->ime_composition.add(0);
-		app->ime_composition_cursor = event->edit.start;
-		app->ime_composition_selection_len = event->edit.length;
+		app->ime_composition_cursor = text ? event->edit.start : 0;
+		app->ime_composition_selection_len = text ? event->edit.length : 0;
 	}	break;
 
 	case SDL_EVENT_MOUSE_MOTION:

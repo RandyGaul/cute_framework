@@ -108,6 +108,33 @@ TEST_CASE(test_app_main_callbacks_text_event_deep_copy)
 	return true;
 }
 
+TEST_CASE(test_app_main_callbacks_null_text_is_safe)
+{
+	CHECK(cf_is_error(cf_make_app(NULL, 0, 0, 0, 0, 0, CF_APP_OPTIONS_HIDDEN_BIT | CF_APP_OPTIONS_NO_GFX_BIT | CF_APP_OPTIONS_NO_AUDIO_BIT, NULL)));
+
+	// s_deep_copy_event's SDL_strdup can return NULL under OOM, leaving text.text/edit.text
+	// NULL -- s_handle_event must not dereference it unconditionally.
+	SDL_Event text_input = { };
+	text_input.type = SDL_EVENT_TEXT_INPUT;
+	text_input.text.text = NULL;
+	cf_app_process_event(&text_input);
+
+	SDL_Event text_editing = { };
+	text_editing.type = SDL_EVENT_TEXT_EDITING;
+	text_editing.edit.text = NULL;
+	text_editing.edit.start = 3;
+	text_editing.edit.length = 2;
+	cf_app_process_event(&text_editing);
+
+	cf_app_update(NULL);
+	REQUIRE(!cf_input_text_has_data());
+	REQUIRE(app->ime_composition_cursor == 0);
+	REQUIRE(app->ime_composition_selection_len == 0);
+
+	cf_destroy_app();
+	return true;
+}
+
 TEST_CASE(test_app_main_callbacks_event_buffer_cap)
 {
 	CHECK(cf_is_error(cf_make_app(NULL, 0, 0, 0, 0, 0, CF_APP_OPTIONS_HIDDEN_BIT | CF_APP_OPTIONS_NO_GFX_BIT | CF_APP_OPTIONS_NO_AUDIO_BIT, NULL)));
@@ -365,6 +392,7 @@ TEST_SUITE(test_app)
 	RUN_TEST_CASE(test_app_no_gfx_state_defaults);
 	RUN_TEST_CASE(test_app_main_callbacks_event_buffering);
 	RUN_TEST_CASE(test_app_main_callbacks_text_event_deep_copy);
+	RUN_TEST_CASE(test_app_main_callbacks_null_text_is_safe);
 	RUN_TEST_CASE(test_app_main_callbacks_event_buffer_cap);
 	RUN_TEST_CASE(test_app_touch_motion_updates_stored_touch);
 	RUN_TEST_CASE(test_app_main_callbacks_quit_event);
