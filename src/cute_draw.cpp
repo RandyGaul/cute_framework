@@ -564,6 +564,11 @@ static void s_draw_report_tiled(const BatchGeometry* geoms, const CF_PendingUV* 
 				pay.add({ geom.shape[0].x, geom.shape[0].y, geom.shape[1].x, geom.shape[1].y });
 				pay.add({ geom.shape[2].x, geom.shape[2].y, geom.shape[3].x, geom.shape[3].y });
 				pay.add({ geom.shape[4].x, geom.shape[4].y, 0, 0 });
+				if (geom.dash.on > 0) {
+					// Dash flag bit + a trailing (on, off, phase) payload vec4.
+					tc.type |= 16u;
+					pay.add({ geom.dash.on, geom.dash.off, geom.dash.phase, 0 });
+				}
 			} else if (geom.type == BATCH_GEOMETRY_TYPE_CUSTOM) {
 				// P0..P3: the 16 user params. P4: pre-padded world bounds for the
 				// instanced VS coverage quad.
@@ -599,6 +604,15 @@ static void s_draw_report_tiled(const BatchGeometry* geoms, const CF_PendingUV* 
 			} else {
 				pay.add({ geom.shape[0].x, geom.shape[0].y, geom.shape[1].x, geom.shape[1].y });
 				pay.add({ geom.shape[2].x, geom.shape[2].y, 0, 0 });
+				// Dash a stroked circle or a line (filled capsule with distinct endpoints);
+				// a dashed *filled disc* makes no sense, so fills with coincident endpoints
+				// stay solid even under an active dash stack. Only segment-family shapes
+				// (type 3) dash -- boxes, triangles, and arrows have no arclength here.
+				bool degenerate = geom.shape[0].x == geom.shape[1].x && geom.shape[0].y == geom.shape[1].y;
+				if (tc.type == 3u && geom.dash.on > 0 && !(geom.fill && degenerate)) {
+					tc.type |= 16u;
+					pay.add({ geom.dash.on, geom.dash.off, geom.dash.phase, 0 });
+				}
 			}
 		}	break;
 		}
@@ -607,7 +621,8 @@ static void s_draw_report_tiled(const BatchGeometry* geoms, const CF_PendingUV* 
 		// blending (additive/multiply/screen shapes never hide what's beneath).
 		// Clipped segments are excluded: their planes can cut mid-tile, so "interior
 		// covers the tile" cannot be decided from the SDF alone.
-		if (is_sdf && tc.fill == 1.0f && geom.alpha >= 1.0f && geom.color.a >= 1.0f && geom.type != BATCH_GEOMETRY_TYPE_SEGMENT_CLIPPED && blend == CF_DRAW_BLEND_NORMAL) {
+		// Dashed strokes never claim opaque cover: their gaps don't hide what's beneath.
+		if (is_sdf && tc.fill == 1.0f && geom.alpha >= 1.0f && geom.color.a >= 1.0f && geom.type != BATCH_GEOMETRY_TYPE_SEGMENT_CLIPPED && blend == CF_DRAW_BLEND_NORMAL && !(tc.type & 16u)) {
 			tc.opaque = 1.0f;
 		}
 
@@ -1723,6 +1738,7 @@ static void s_draw_circle(v2 position, float stroke, float radius, bool fill)
 	g.stroke = stroke;
 	g.fill = fill;
 	g.aa = aaf;
+	g.dash = s_draw->dashes.last();
 	g.user_params = s_draw->user_params.last();
 }
 
@@ -1768,6 +1784,7 @@ static void s_draw_capsule(v2 a, v2 b, float stroke, float radius, bool fill)
 	g.stroke = stroke;
 	g.fill = fill;
 	g.aa = s_draw->aaf;
+	g.dash = s_draw->dashes.last();
 	g.user_params = s_draw->user_params.last();
 }
 
@@ -1881,6 +1898,8 @@ void cf_draw_polyline(const CF_V2* pts, int count, float thickness, bool loop)
 	CF_Color color = premultiply(s_draw->colors.last());
 	CF_Color user_params = s_draw->user_params.last();
 	float aaf = s_draw->aaf;
+	CF_DrawDash dash = s_draw->dashes.last();
+	float dash_arclength = 0; // Accumulated so the pattern flows unbroken through joints.
 
 	// Bisector of two segment directions; perpendicular split for exact 180 folds.
 	auto bisect = [](v2 da, v2 db) {
@@ -1917,6 +1936,11 @@ void cf_draw_polyline(const CF_V2* pts, int count, float thickness, bool loop)
 		g.stroke = 0;
 		g.fill = true;
 		g.aa = aaf;
+		// The shader's pattern coordinate restarts at each segment's own `a`, so shifting
+		// the phase back by the arclength walked so far keeps dashes flowing through joints.
+		g.dash = dash;
+		g.dash.phase = dash.phase - dash_arclength;
+		dash_arclength += len(b - a);
 		g.user_params = user_params;
 
 		// Plane 0 (strict) keeps the far side of the start joint's bisector; plane 1
@@ -4398,6 +4422,18 @@ CF_Color cf_draw_pop_color()
 CF_Color cf_draw_peek_color()
 {
 	return s_draw->colors.last();
+}
+
+void cf_draw_push_dash(float on_length, float off_length, float phase)
+{
+	s_draw->dashes.add({ on_length, off_length, phase });
+}
+
+void cf_draw_pop_dash()
+{
+	if (s_draw->dashes.count() > 1) {
+		s_draw->dashes.pop();
+	}
 }
 
 void cf_draw_push_shape_aa(float aa)

@@ -760,6 +760,31 @@ CF_API CF_Color CF_CALL cf_draw_pop_color(void);
 CF_API CF_Color CF_CALL cf_draw_peek_color(void);
 
 /**
+ * @function cf_draw_push_dash
+ * @category draw
+ * @brief    Pushes a dash pattern for subsequent stroke drawing.
+ * @param    on_length   Length of each dash in world units.
+ * @param    off_length  Length of each gap in world units.
+ * @param    phase       Offset into the pattern in world units -- animate for marching ants.
+ * @remarks  Applies to lines (`cf_draw_line`), polylines (dashes flow unbroken through the
+ *           joints), and circle outlines (`cf_draw_circle`, dashed along the ring; the pattern
+ *           wraps at the seam unless `on_length + off_length` divides the circumference evenly).
+ *           Each dash gets round caps and the usual anti-aliasing. An `on_length` of zero (the
+ *           default) draws solid strokes. Filled shapes ignore the dash stack. This is the 2d
+ *           analog of `cf_draw3d_push_dash`.
+ * @related  cf_draw_pop_dash cf_draw_line cf_draw_polyline cf_draw_circle
+ */
+CF_API void CF_CALL cf_draw_push_dash(float on_length, float off_length, float phase);
+
+/**
+ * @function cf_draw_pop_dash
+ * @category draw
+ * @brief    Pops the last dash pattern pushed by `cf_draw_push_dash`.
+ * @related  cf_draw_push_dash cf_draw_line cf_draw_polyline cf_draw_circle
+ */
+CF_API void CF_CALL cf_draw_pop_dash(void);
+
+/**
  * @function cf_draw_push_shape_aa
  * @category draw
  * @brief    Pushes the shape antialias scale.
@@ -2319,6 +2344,8 @@ CF_INLINE int draw_peek_layer() { return cf_draw_peek_layer(); }
 CF_INLINE void draw_push_color(CF_Color c) { cf_draw_push_color(c); }
 CF_INLINE CF_Color draw_pop_color() { return cf_draw_pop_color(); }
 CF_INLINE CF_Color draw_peek_color() { return cf_draw_peek_color(); }
+CF_INLINE void draw_push_dash(float on_length, float off_length, float phase) { cf_draw_push_dash(on_length, off_length, phase); }
+CF_INLINE void draw_pop_dash() { cf_draw_pop_dash(); }
 CF_INLINE void draw_push_shape_aa(float aa) { cf_draw_push_shape_aa(aa); }
 CF_INLINE float draw_pop_shape_aa() { return cf_draw_pop_shape_aa(); }
 CF_INLINE float draw_peek_shape_aa() { return cf_draw_peek_shape_aa(); }

@@ -543,6 +543,88 @@ TEST_CASE(test_draw_polyline_segments)
 }
 
 // -------------------------------------------------------------------------------------------------
+// Dashed strokes (cf_draw_push_dash): dash-center pixels ink, gap-center pixels stay
+// empty, on both the instanced and tiled paths.
+
+static void s_scene_dashed_strokes()
+{
+	cf_draw_push_color(cf_make_color_rgb_f(1.0f, 0, 0));
+	// Line from x=-250 to -50: on=50/off=50 lays dashes [-250,-200], [-150,-100] and
+	// gaps between.
+	cf_draw_push_dash(50, 50, 0);
+	cf_draw_line(cf_v2(-250, 0), cf_v2(-50, 0), 12.0f);
+	cf_draw_pop_dash();
+	// Circle outline at (150, 0) r=100: phase centers a dash on the ring's right
+	// crossing (arclength 0) and lands both left crossings (arclength +-pi*r) mid-gap.
+	cf_draw_push_dash(100, 100, -50);
+	cf_draw_circle2(cf_v2(150, 0), 100, 10);
+	cf_draw_pop_dash();
+	cf_draw_pop_color();
+}
+
+TEST_CASE(test_draw_dashed_strokes)
+{
+	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, 640, 480, s_app_options(), NULL))) return true; // Headless CI: no display/GPU.
+
+	int w = 640, h = 480;
+	CF_Pixel* a = (CF_Pixel*)cf_alloc(w * h * sizeof(CF_Pixel));
+	CF_Pixel* b = (CF_Pixel*)cf_alloc(w * h * sizeof(CF_Pixel));
+	CF_Pixel* px[2] = { a, b };
+	for (int mode = 0; mode <= 1; ++mode) {
+		REQUIRE(s_readback(s_scene_dashed_strokes, mode, w, h, px[mode]));
+		REQUIRE(s_px_near(s_probe(px[mode], w, h, -225), 255, 0, 0, 255, 3)); // Line: first dash.
+		REQUIRE(s_px_near(s_probe(px[mode], w, h, -175), 0, 0, 0, 0, 0));     // Line: first gap.
+		REQUIRE(s_px_near(s_probe(px[mode], w, h, -125), 255, 0, 0, 255, 3)); // Line: second dash.
+		REQUIRE(s_px_near(s_probe(px[mode], w, h, -75), 0, 0, 0, 0, 0));      // Line: second gap.
+		REQUIRE(s_px_near(s_probe(px[mode], w, h, 250), 255, 0, 0, 255, 3));  // Ring: dash at right crossing.
+		REQUIRE(s_px_near(s_probe(px[mode], w, h, 50), 0, 0, 0, 0, 0));       // Ring: gap at left crossing.
+	}
+	REQUIRE(s_diff_ok(a, b, w * h, "dashed-strokes tiled-vs-mesh"));
+
+	cf_free(a);
+	cf_free(b);
+	cf_destroy_app();
+	return true;
+}
+
+// A dashed polyline's pattern flows unbroken through joints: with segment lengths 150
+// and a 200-long dash, the first dash must cross the joint at x=0 and the first gap must
+// start mid-second-segment -- a per-segment phase reset would ink the whole second
+// segment instead.
+
+static void s_scene_dashed_polyline()
+{
+	CF_V2 pts[3] = { cf_v2(-150, 0), cf_v2(0, 0), cf_v2(150, 0) };
+	cf_draw_push_color(cf_make_color_rgb_f(1.0f, 0, 0));
+	cf_draw_push_dash(200, 100, 0);
+	cf_draw_polyline(pts, 3, 12.0f, false);
+	cf_draw_pop_dash();
+	cf_draw_pop_color();
+}
+
+TEST_CASE(test_draw_dashed_polyline_flow)
+{
+	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, 640, 480, s_app_options(), NULL))) return true; // Headless CI: no display/GPU.
+
+	int w = 640, h = 480;
+	CF_Pixel* a = (CF_Pixel*)cf_alloc(w * h * sizeof(CF_Pixel));
+	CF_Pixel* b = (CF_Pixel*)cf_alloc(w * h * sizeof(CF_Pixel));
+	CF_Pixel* px[2] = { a, b };
+	for (int mode = 0; mode <= 1; ++mode) {
+		REQUIRE(s_readback(s_scene_dashed_polyline, mode, w, h, px[mode]));
+		REQUIRE(s_px_near(s_probe(px[mode], w, h, -100), 255, 0, 0, 255, 3)); // First segment: mid-dash.
+		REQUIRE(s_px_near(s_probe(px[mode], w, h, 25), 255, 0, 0, 255, 3));   // Second segment: dash continues past the joint.
+		REQUIRE(s_px_near(s_probe(px[mode], w, h, 100), 0, 0, 0, 0, 0));      // Second segment: gap (fails if phase resets per segment).
+	}
+	REQUIRE(s_diff_ok(a, b, w * h, "dashed-polyline tiled-vs-mesh"));
+
+	cf_free(a);
+	cf_free(b);
+	cf_destroy_app();
+	return true;
+}
+
+// -------------------------------------------------------------------------------------------------
 // The builtin arrow renders as a single SDF command (capsule shaft unioned with the
 // triangular head). A translucent arrow must therefore blend exactly once everywhere --
 // in particular at the shaft/head seam, where the old two-command arrow double-blended.
@@ -1734,6 +1816,8 @@ TEST_SUITE(test_draw_tiled)
 	RUN_TEST_CASE_IF(test_draw_render_states);
 	RUN_TEST_CASE_IF(test_draw_layers);
 	RUN_TEST_CASE_IF(test_draw_polyline_segments);
+	RUN_TEST_CASE_IF(test_draw_dashed_strokes);
+	RUN_TEST_CASE_IF(test_draw_dashed_polyline_flow);
 	RUN_TEST_CASE_IF(test_draw_arrow_no_overdraw);
 	RUN_TEST_CASE_IF(test_draw_custom_shapes);
 	RUN_TEST_CASE_IF(test_draw_custom_shapes_advanced);

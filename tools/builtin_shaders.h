@@ -326,6 +326,38 @@ float distance_arrow(vec2 p, vec2 a, vec2 b, float r, float w)
 	float dt = distance_triangle(p, b, base + t, base - t);
 	return min(ds, dt);
 }
+
+// Longitudinal dash distance: 0 inside a dash, growing across each gap. s is the
+// arclength along the stroke and dash holds (on length, off length, phase), all in
+// world units. Combining it with the lateral distance via length() rounds dash caps.
+float dash_dl(float s, vec3 dash)
+{
+	float p = dash.x + dash.y;
+	float m = mod(s - dash.z, p);
+	return max(abs(m - dash.x * 0.5) - dash.x * 0.5, 0.0);
+}
+
+// Dashed segment/circle distance, shared by both draw fragment paths. a/b are the
+// segment endpoints (equal for a circle of radius r around a), d is the shape's
+// undashed skeleton distance at p. Returns a distance that still behaves under the
+// uniform `d - radius` the caller applies: dashed lines stay filled capsules per
+// dash, dashed circle outlines dash along the ring's arclength.
+float dash_segment(vec2 p, vec2 a, vec2 b, float d, float r, vec3 dash)
+{
+	vec2 ab = b - a;
+	float l2 = dot(ab, ab);
+	if (l2 > 1.0e-12) {
+		// Segment: dash along the spine projection.
+		float s = clamp(dot(p - a, ab) / l2, 0.0, 1.0) * sqrt(l2);
+		return length(vec2(dash_dl(s, dash), d));
+	} else {
+		// Circle outline: dash along the ring at radius r; +r cancels the caller's -r
+		// so the result lands on the ring skeleton, not the disc boundary.
+		vec2 q = p - a;
+		float s = atan(q.y, q.x) * r;
+		return length(vec2(dash_dl(s, dash), d - r)) + r;
+	}
+}
 )";
 
 // Default custom-shape include: no shapes registered. cf_make_custom_shape() swaps in a
@@ -710,6 +742,7 @@ void main()
 	} else if (is_seg) {
 		d = distance_segment(v_pos, v_ab.xy, v_ab.zw);
 		d = min(d, distance_segment(v_pos, v_ab.zw, v_cd.xy));
+		if (v_gh.w > 0.5) d = dash_segment(v_pos, v_ab.xy, v_ab.zw, d, v_radius, v_gh.xyz);
 	} else if (is_tri_sdf) {
 		d = distance_triangle(v_pos, v_ab.xy, v_ab.zw, v_cd.xy);
 	} else if (is_poly) {
@@ -724,6 +757,7 @@ void main()
 		d = distance_polygon(v_pos, pts, v_n);
 	} else if (is_seg_clip) {
 		d = distance_segment(v_pos, v_ab.xy, v_ab.zw);
+		if (v_gh.w > 0.5) d = dash_segment(v_pos, v_ab.xy, v_ab.zw, d, v_radius, v_gh.xyz);
 	} else if (is_arrow) {
 		d = distance_arrow(v_pos, v_ab.xy, v_ab.zw, v_cd.x, v_cd.y);
 	} else if (is_custom) {
@@ -901,7 +935,8 @@ void main()
 	for (uint i = range.y; i > 0u;) {
 		--i;
 		Cmd cmd = cmds[tile_list[range.x + i]];
-		uint type = cmd.meta.x;
+		uint type = cmd.meta.x & 15u;         // Low bits: shape type.
+		bool dashed = (cmd.meta.x & 16u) != 0u; // Dash flag: a dash vec4 trails the payload.
 		vec4 col = cf_unpack_half4(cmd.meta.y, floatBitsToUint(cmd.misc.w));
 		uint po = cmd.meta.z;
 
@@ -1033,6 +1068,7 @@ void main()
 			} else if (type == CMD_TYPE_SEGMENT) {
 				d = distance_segment(p, P0.xy, P0.zw);
 				d = min(d, distance_segment(p, P0.zw, P1.xy));
+				if (dashed) d = dash_segment(p, P0.xy, P0.zw, d, cmd.shape.x, payload[po + 2u].xyz);
 			} else if (type == CMD_TYPE_TRI_SDF) {
 				d = distance_triangle(p, P0.xy, P0.zw, P1.xy);
 			} else if (type == CMD_TYPE_SEG_CLIP) {
@@ -1042,6 +1078,7 @@ void main()
 				vec4 P2 = payload[po + 2u];
 				bool keep = dot(P1.xy, p) - P2.x < 0.0 && dot(P1.zw, p) - P2.y <= 0.0;
 				clip = keep ? 1.0 : 0.0;
+				if (dashed) d = dash_segment(p, P0.xy, P0.zw, d, cmd.shape.x, payload[po + 3u].xyz);
 			} else if (type == CMD_TYPE_ARROW) {
 				d = distance_arrow(p, P0.xy, P0.zw, P1.x, P1.y);
 			} else if (type == CMD_TYPE_CUSTOM) {
@@ -1164,7 +1201,8 @@ void main()
 {
 	Cmd cmd = cf_cmd(uint(gl_InstanceIndex));
 	vec4 user_out = cmd.user;
-	uint type = cmd.meta.x;
+	uint type = cmd.meta.x & 15u;         // Low bits: shape type.
+	bool dashed = (cmd.meta.x & 16u) != 0u; // Dash flag: a dash vec4 trails the payload.
 	uint po = cmd.meta.z;
 	int corner = int(in_corner + 0.5);
 	vec4 P0 = cf_payload(po);
@@ -1229,6 +1267,8 @@ void main()
 		vec2 t = skew(n0);
 		pos = corner == 0 ? a - n0 + t : (corner == 1 ? b + n0 + t : (corner == 2 ? b + n0 - t : a - n0 - t));
 		if (type == 7u) ef = cf_payload(po + 2u);
+		// Dash params (on, off, phase) ride the otherwise-unused gh varying; w flags it on.
+		if (dashed) gh = vec4(cf_payload(po + (type == 7u ? 3u : 2u)).xyz, 1.0);
 	} else if (type == 5u) {
 		// SDF triangle: padded AABB of the three verts.
 		vec2 mn = min(P0.xy, min(P0.zw, P1.xy)) - vec2(pad);
@@ -1357,7 +1397,7 @@ void main()
 "	uint po = cmd.meta.z;\n" \
 "	vec4 P0 = payload[po];\n" \
 "	vec4 P1 = payload[po + 1u];\n" \
-"	uint type = cmd.meta.x;\n" \
+"	uint type = cmd.meta.x & 15u; /* Low bits: shape type. Dashes only remove ink, so culling on the undashed SDF stays conservative. */\n" \
 "	float d;\n" \
 "	if (type == 2u) {\n" \
 "		d = distance_box(p, P0.xy, P0.zw, P1.xy);\n" \
@@ -1389,7 +1429,7 @@ void main()
 "}\n" \
 "bool tile_touched(Cmd cmd, int tx, int ty)\n" \
 "{\n" \
-"	uint type = cmd.meta.x;\n" \
+"	uint type = cmd.meta.x & 15u;\n" \
 "	if (type <= 1u || type == 4u || type == 11u) return true; /* Sprites/text/tris/glyphs: AABB only. */\n" \
 "	float r_tile;\n" \
 "	float d = cmd_distance_at(cmd, tx, ty, r_tile);\n" \

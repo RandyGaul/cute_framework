@@ -18,6 +18,9 @@
 
 extern struct CF_Draw* s_draw;
 
+// Dash pattern for strokes (cf_draw_push_dash), all in world units. on == 0 means solid.
+struct CF_DrawDash { float on, off, phase; };
+
 enum BatchGeometryType : int
 {
 	BATCH_GEOMETRY_TYPE_TRI,
@@ -72,6 +75,7 @@ struct BatchGeometry
 	float radius;
 	float stroke;
 	float aa;
+	CF_DrawDash dash; // Captured from the dash stack; on == 0 means solid.
 	bool is_text;
 	bool is_sprite;
 	bool fill;
@@ -294,6 +298,7 @@ struct CF_Draw
 	Cute::Array<CF_DrawFilterMode> filter_modes = { CF_DRAW_FILTER_SMOOTH };
 	Cute::Array<int> blends = { 0 }; // CF_DrawBlend stack (cf_draw_push_blend).
 	Cute::Array<CF_Color> colors = { cf_color_white() };
+	Cute::Array<CF_DrawDash> dashes = { { 0, 0, 0 } }; // cf_draw_push_dash stack; on = 0 means solid.
 	Cute::Array<float> antialias = { 1.5f };
 	Cute::Array<CF_RenderState> render_states;
 	Cute::Array<CF_Rect> scissors = { { 0, 0, -1, -1 } };
