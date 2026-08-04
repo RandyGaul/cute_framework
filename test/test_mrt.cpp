@@ -112,6 +112,68 @@ TEST_CASE(test_mrt_draw_and_clear)
 	return true;
 }
 
+// Per-target blend state: each color target gets its own CF_BlendState when blend_count is
+// set (blends[0] aliases the legacy blend member). Verified with write masks -- both shader
+// outputs write white, but target 1's mask only lets green through -- because a wrong-target
+// blend assignment then shows up as an unmistakably wrong color. SDL_GPU backends only; GLES
+// has no indexed blend and shares blends[0].
+TEST_CASE(test_mrt_per_target_blend)
+{
+	const char* gles = getenv("CF_TEST_GLES");
+	if (gles && *gles == '1') return true; // No indexed blend on GLES3.
+	int options = CF_APP_OPTIONS_HIDDEN_BIT | CF_APP_OPTIONS_NO_AUDIO_BIT;
+	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, W, H, options, NULL))) return true; // Headless CI: no display/GPU.
+
+	static const char* white_fs =
+	"layout (location = 0) out vec4 out_a;\n"
+	"layout (location = 1) out vec4 out_b;\n"
+	"void main() {\n"
+	"    out_a = vec4(1.0, 1.0, 1.0, 1.0);\n"
+	"    out_b = vec4(1.0, 1.0, 1.0, 1.0);\n"
+	"}\n";
+
+	CF_CanvasParams params = cf_canvas_defaults(W, H);
+	params.target_count = 2;
+	CF_Canvas canvas = cf_make_canvas(params);
+	REQUIRE(canvas.id);
+	// Clear both targets to black so masked-off channels stay 0.
+	cf_canvas_set_clear_color2(canvas, 0, cf_make_color_rgb_f(0, 0, 0));
+	cf_canvas_set_clear_color2(canvas, 1, cf_make_color_rgb_f(0, 0, 0));
+
+	CF_Shader shader = cf_make_shader_from_source(s_vs, white_fs);
+	REQUIRE(shader.id);
+	CF_Mesh mesh = s_make_fullscreen_quad();
+	CF_Material material = cf_make_material();
+
+	CF_RenderState rs = cf_render_state_defaults();
+	rs.blend_count = 2;
+	rs.blends[1] = rs.blends[0];
+	rs.blends[1].write_R_enabled = false;
+	rs.blends[1].write_B_enabled = false; // Target 1 keeps only green (and alpha).
+	cf_material_set_render_state(material, rs);
+
+	CF_Pixel* px = (CF_Pixel*)cf_alloc(W * H * (int)sizeof(CF_Pixel));
+	cf_app_update(NULL);
+	cf_apply_canvas(canvas, true);
+	cf_apply_mesh(mesh);
+	cf_apply_shader(shader, material);
+	cf_draw_elements();
+	cf_app_draw_onto_screen(false);
+
+	CF_Pixel a = s_readback_center(canvas, 0, px);
+	CF_Pixel b = s_readback_center(canvas, 1, px);
+	REQUIRE(a.colors.r > 200 && a.colors.g > 200 && a.colors.b > 200); // Target 0 untouched: white.
+	REQUIRE(b.colors.g > 200 && b.colors.r < 60 && b.colors.b < 60);   // Target 1 masked: green only.
+
+	cf_free(px);
+	cf_destroy_material(material);
+	cf_destroy_mesh(mesh);
+	cf_destroy_shader(shader);
+	cf_destroy_canvas(canvas);
+	cf_destroy_app();
+	return true;
+}
+
 // A single-target canvas made with zero-initialized target_count must behave exactly as before
 // this member existed -- the compatibility contract for every existing caller.
 TEST_CASE(test_mrt_single_target_compat)
@@ -145,4 +207,5 @@ TEST_SUITE(test_mrt)
 {
 	RUN_TEST_CASE(test_mrt_draw_and_clear);
 	RUN_TEST_CASE(test_mrt_single_target_compat);
+	RUN_TEST_CASE(test_mrt_per_target_blend);
 }

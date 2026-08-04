@@ -2267,8 +2267,23 @@ typedef struct CF_RenderState
 	/* @member Controls whether or not to cull triangles based on their winding order. See `CF_CullMode`. */
 	CF_CullMode cull_mode;
 
-	/* @member Controls how the GPU blends pixels together during compositing. See `CF_BlendState`. */
-	CF_BlendState blend;
+	/* @member Controls how the GPU blends pixels together during compositing. `blend` aliases
+	   `blends[0]`, so single-target code reads and writes exactly as before. For a multiple-
+	   render-target canvas, set `blend_count` to the canvas's `target_count` and fill
+	   `blends[1]` onward to give each color target its own blend and write mask -- e.g. a
+	   deferred light-accumulation pass blending additively into target 0 while write-masking
+	   a material target off. See `CF_BlendState`. */
+	union
+	{
+		CF_BlendState blend;
+		CF_BlendState blends[CF_MAX_CANVAS_TARGETS];
+	};
+
+	/* @member How many entries of `blends` are meaningful. Zero or one means every color target
+	   shares `blends[0]` (exactly the old behavior, so zero-initialized state is unchanged).
+	   Per-target blend is SDL_GPU-only: the GLES backend has no indexed blend (ES 3.0) and
+	   applies `blends[0]` to every target. */
+	int blend_count;
 
 	/* @member Defines how to perform depth-testing. Depth testing runs when this is anything other
 	   than `CF_COMPARE_FUNCTION_ALWAYS` (the default) or when `depth_write_enabled` is true -- but

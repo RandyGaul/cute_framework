@@ -1926,23 +1926,30 @@ static inline SDL_GPUGraphicsPipeline* s_build_pipeline(CF_ShaderInternal* shade
 		CF_ASSERT(g_ctx.canvas->texture);
 		color_info.format = tex->format;
 	}
-	color_info.blend_state.enable_blend = state->blend.enabled;
-	color_info.blend_state.alpha_blend_op = s_wrap(state->blend.alpha_op);
-	color_info.blend_state.color_blend_op = s_wrap(state->blend.rgb_op);
-	color_info.blend_state.src_color_blendfactor = s_wrap(state->blend.rgb_src_blend_factor);
-	color_info.blend_state.src_alpha_blendfactor = s_wrap(state->blend.alpha_src_blend_factor);
-	color_info.blend_state.dst_color_blendfactor = s_wrap(state->blend.rgb_dst_blend_factor);
-	color_info.blend_state.dst_alpha_blendfactor = s_wrap(state->blend.alpha_dst_blend_factor);
-	int mask_r = (int)state->blend.write_R_enabled << 0;
-	int mask_g = (int)state->blend.write_G_enabled << 1;
-	int mask_b = (int)state->blend.write_B_enabled << 2;
-	int mask_a = (int)state->blend.write_A_enabled << 3;
-	color_info.blend_state.color_write_mask = (uint32_t)(mask_r | mask_g | mask_b | mask_a);
+	auto fill_blend = [](SDL_GPUColorTargetDescription* info, const CF_BlendState* blend) {
+		info->blend_state.enable_blend = blend->enabled;
+		info->blend_state.alpha_blend_op = s_wrap(blend->alpha_op);
+		info->blend_state.color_blend_op = s_wrap(blend->rgb_op);
+		info->blend_state.src_color_blendfactor = s_wrap(blend->rgb_src_blend_factor);
+		info->blend_state.src_alpha_blendfactor = s_wrap(blend->alpha_src_blend_factor);
+		info->blend_state.dst_color_blendfactor = s_wrap(blend->rgb_dst_blend_factor);
+		info->blend_state.dst_alpha_blendfactor = s_wrap(blend->alpha_dst_blend_factor);
+		int mask_r = (int)blend->write_R_enabled << 0;
+		int mask_g = (int)blend->write_G_enabled << 1;
+		int mask_b = (int)blend->write_B_enabled << 2;
+		int mask_a = (int)blend->write_A_enabled << 3;
+		info->blend_state.color_write_mask = (uint32_t)(mask_r | mask_g | mask_b | mask_a);
+		// SDL_GPU ignores color_write_mask (writes all channels) unless this is set -- without
+		// it CF's write_*_enabled flags silently did nothing on this backend.
+		info->blend_state.enable_color_write_mask = info->blend_state.color_write_mask != 0xF;
+	};
+	fill_blend(&color_info, &state->blend);
 
-	// Every color target shares target 0's blend state (per-target blend can come later if
-	// someone needs it); formats come from each target's texture.
+	// Later targets take their own blend when the render state carries one (blend_count > i);
+	// otherwise they share target 0's, the pre-per-target behavior. Formats come from each
+	// target's texture.
 	for (int i = 1; i < color_target_count; ++i) {
-		color_infos[i] = color_infos[0];
+		fill_blend(&color_infos[i], state->blend_count > i ? &state->blends[i] : &state->blend);
 		color_infos[i].format = ((CF_TextureInternal*)g_ctx.canvas->cf_textures_mrt[i].id)->format;
 	}
 
