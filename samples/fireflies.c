@@ -925,6 +925,10 @@ int main(int argc, char* argv[])
 	if (cf_is_error(result)) return -1;
 	cf_app_set_present_mode(CF_PRESENT_MODE_VSYNC);
 	cf_fs_set_write_directory(cf_fs_get_base_directory());
+	if (!g_auto.enabled) {
+		// First-person look: capture the mouse and read raw deltas.
+		cf_mouse_set_relative_mode(true);
+	}
 
 	s_build_world();
 	s_spawn_fireflies();
