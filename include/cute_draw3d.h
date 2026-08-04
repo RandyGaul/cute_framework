@@ -706,6 +706,29 @@ CF_API CF_V4 CF_CALL cf_draw3d_peek_mesh_attributes2(void);
 CF_API void CF_CALL cf_draw3d_mesh(CF_Mesh mesh);
 
 /**
+ * @function cf_draw3d_mesh_range
+ * @category draw3d
+ * @brief    Submits a contiguous element range of a mesh under the current 3d state.
+ * @param    mesh           The mesh, from `cf_make_mesh`.
+ * @param    first_element  The first index (indexed meshes) or first vertex (non-indexed) to draw.
+ * @param    element_count  How many indices or vertices to draw.
+ * @remarks  The geometry-arena companion to `cf_draw3d_mesh`: pack many small meshes into one
+ *           `CF_Mesh` and submit each as a range. Because every submission shares the same mesh,
+ *           interleaving different ranges no longer splits the batch -- range submissions under
+ *           the same state coalesce into ONE command that binds everything once and issues one
+ *           tight range draw per contiguous record, where the same interleaving as separate
+ *           meshes would cost a full state rebind per submission. Consecutive submissions of the
+ *           SAME range still collapse into a single instanced draw, exactly like `cf_draw3d_mesh`.
+ *
+ *           An indexed arena writes its indices absolute into the shared vertex buffer -- there
+ *           is deliberately no base-vertex offset (it would not port to GLES3). Ranges do not
+ *           compose with `cf_draw3d_push_texture`'s sprite texturing. Ordering, translucency
+ *           sorting, and the escape hatch behave exactly as documented on `cf_draw3d_mesh`.
+ * @related  cf_draw3d_mesh CF_Mesh cf_make_mesh cf_draw_elements_range cf_draw3d_stats
+ */
+CF_API void CF_CALL cf_draw3d_mesh_range(CF_Mesh mesh, int first_element, int element_count);
+
+/**
  * @function cf_draw3d_sprite
  * @category draw3d
  * @brief    Submits a sprite as a textured quad at a 3d position, oriented by the transform stack.
@@ -1248,6 +1271,7 @@ CF_INLINE CF_V4 draw3d_pop_mesh_attributes() { return cf_draw3d_pop_mesh_attribu
 CF_INLINE CF_V4 draw3d_peek_mesh_attributes() { return cf_draw3d_peek_mesh_attributes(); }
 
 CF_INLINE void draw3d_mesh(CF_Mesh mesh) { cf_draw3d_mesh(mesh); }
+CF_INLINE void draw3d_mesh_range(CF_Mesh mesh, int first_element, int element_count) { cf_draw3d_mesh_range(mesh, first_element, element_count); }
 CF_INLINE void draw3d_sprite(const CF_Sprite* sprite, CF_V3 position) { cf_draw3d_sprite(sprite, position); }
 CF_INLINE void draw3d_billboard(const CF_Sprite* sprite, CF_V3 position) { cf_draw3d_billboard(sprite, position); }
 CF_INLINE void draw3d_push_color(CF_Color c) { cf_draw3d_push_color(c); }

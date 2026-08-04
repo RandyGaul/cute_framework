@@ -76,6 +76,14 @@ struct CF_ImageRef3d
 	bool bordered; // Atlased images carry a 1px border (inset one texel); premade rects don't.
 };
 
+// One sub-mesh draw record within a coalesced command (see CF_MeshCmd3d::runs).
+struct CF_MeshRun3d
+{
+	int first;
+	int count;
+	int ninst;
+};
+
 // The per-command payload for a 3d mesh draw, owned by its CF_Command (freed via
 // cf_draw3d_free_cmd when the command is destroyed). The command's own shader/render_state/
 // layer/scissor/viewport fields carry the rest of the captured state.
@@ -90,6 +98,11 @@ struct CF_MeshCmd3d
 	uint64_t state_hash = 0;
 	uint64_t vp_id = 0; // Camera change id at capture; equal ids mean identical vp bytes.
 	Cute::Array<CF_MeshInstance3d> instances;
+	// Sub-mesh draw records, parallel to `instances` (cf_draw3d_mesh_range): run r draws
+	// elements [first, first + count) for the next `ninst` instances. first < 0 means the
+	// whole mesh. One whole-mesh run is the common case and draws through the classic
+	// single-call path; anything else binds once and issues one range draw per run.
+	Cute::Array<CF_MeshRun3d> runs;
 	// Draw list replay: instances borrowed from the baked list, exactly like CF_Command's
 	// geoms_ref -- replays never deep-copy instance data. NULL for ordinary commands.
 	const Cute::Array<CF_MeshInstance3d>* instances_ref = NULL;
@@ -574,7 +587,7 @@ static CF_Command* s_coalesce_candidate()
 // submissions ignore that bucket entirely, so a debug stroke's camera-eye or effect churn
 // never splits a user mesh batch. `anchor` is the submission's world position, used only as
 // the translucency sort key (see CF_Command::depth3d).
-static void s_submit(CF_Mesh mesh, const CF_MeshInstance3d& inst, bool escape, const CF_Sprite* sprite, bool shape, CF_V3 anchor)
+static void s_submit(CF_Mesh mesh, const CF_MeshInstance3d& inst, bool escape, const CF_Sprite* sprite, bool shape, CF_V3 anchor, int first_element = -1, int element_count = -1)
 {
 	// View-space depth of the anchor: the flush sorts translucent commands on this.
 	const CF_M4x4& vm = s_draw3d->views.last();
@@ -620,6 +633,16 @@ static void s_submit(CF_Mesh mesh, const CF_MeshInstance3d& inst, bool escape, c
 			      : CF_DRAW_SPLIT_3D_NONE;
 			if (split == CF_DRAW_SPLIT_3D_NONE) {
 				mc->instances.add(inst);
+				// Same range as the running record: one more instance of it. A different
+				// range opens a new record -- the command still coalesces, and process
+				// time draws the records back to back with nothing rebound between.
+				CF_MeshRun3d& last_run = mc->runs.last();
+				if (last_run.first == first_element && last_run.count == element_count) {
+					last_run.ninst++;
+				} else {
+					CF_MeshRun3d run = { first_element, element_count, 1 };
+					mc->runs.add(run);
+				}
 				if (sprite_textured) mc->image_refs.add(s_image_ref(sprite));
 				// Back-to-front sorting keys off the farthest member, so a group never
 				// sorts in front of a command it partially sits behind.
@@ -675,6 +698,8 @@ static void s_submit(CF_Mesh mesh, const CF_MeshInstance3d& inst, bool escape, c
 		mc->instances.add(inst);
 		if (sprite_textured) mc->image_refs.add(s_image_ref(sprite));
 	}
+	CF_MeshRun3d run = { first_element, element_count, 1 };
+	mc->runs.add(run);
 
 	// Keep subsequent 2d drawing off this command.
 	s_draw->add_cmd();
@@ -696,6 +721,24 @@ void cf_draw3d_mesh(CF_Mesh mesh)
 	const CF_M4x4& model = s_draw3d->transforms.last();
 	CF_V3 anchor = cf_v3(model.elements[12], model.elements[13], model.elements[14]);
 	s_submit(mesh, inst, escape, s_draw3d->sprites.last(), false, anchor);
+}
+
+void cf_draw3d_mesh_range(CF_Mesh mesh, int first_element, int element_count)
+{
+	CF_ASSERT(mesh.id);
+	CF_ASSERT(first_element >= 0 && element_count > 0);
+	// Ranges don't compose with sprite texturing -- the per-page split in the textured path
+	// draws the whole mesh per atlas page and would ignore the range.
+	CF_ASSERT(s_draw3d->sprites.last() == NULL);
+	bool ours = cf_mesh_draw3d_augmented(mesh);
+	bool escape = !ours && cf_mesh_instance_stride(mesh) != 0;
+	CF_ASSERT(ours || escape || !cf_mesh_has_vertex_attribute(mesh, "in_model0"));
+	CF_MeshInstance3d inst;
+	if (!escape) inst = s_instance();
+	else CF_MEMSET(&inst, 0, sizeof(inst));
+	const CF_M4x4& model = s_draw3d->transforms.last();
+	CF_V3 anchor = cf_v3(model.elements[12], model.elements[13], model.elements[14]);
+	s_submit(mesh, inst, escape, NULL, false, anchor, first_element, element_count);
 }
 
 // The shared quad + submission tail behind cf_draw3d_sprite and cf_draw3d_billboard. The
@@ -1818,9 +1861,11 @@ void cf_draw3d_process(CF_Command* cmd, CF_Canvas canvas, bool clear)
 		if (!cf_mesh_draw3d_augmented(mc->mesh)) {
 			s_augment_mesh(mc->mesh);
 		}
-		if (!textured && !mc->gpu_instances && mc->staged_offset < 0) {
+		if (!textured && !mc->gpu_instances && mc->staged_offset < 0 && mc->runs.count() <= 1) {
 			// Not staged (a flush outside cf_render_layers_to's prepare pass): upload into the
 			// mesh's own buffer, paying the mid-pass upload the prepare pass exists to avoid.
+			// Multi-run commands upload per record below instead -- each record needs its own
+			// slice of the buffer.
 			cf_mesh_update_instance_data(mc->mesh, (void*)instances.data(), instances.count());
 		}
 	}
@@ -1859,19 +1904,66 @@ void cf_draw3d_process(CF_Command* cmd, CF_Canvas canvas, bool clear)
 	CF_Rect scissor = cmd->scissor;
 
 	if (!textured) {
-		// Baked groups draw straight from their persistent buffer -- no upload happened.
-		// Staged commands bind their slice of the shared staging buffer the same way.
-		if (mc->gpu_instances) {
-			cf_apply_instance_buffer_override(mc->gpu_instances, instances.count(), 0);
-		} else if (mc->staged_offset >= 0) {
-			cf_apply_instance_buffer_override(s_draw3d->staging_instances, instances.count(), mc->staged_offset);
+		int nruns = mc->runs.count();
+		bool ranged = nruns > 1 || (nruns == 1 && mc->runs[0].first >= 0);
+		if (!ranged) {
+			// Baked groups draw straight from their persistent buffer -- no upload happened.
+			// Staged commands bind their slice of the shared staging buffer the same way.
+			if (mc->gpu_instances) {
+				cf_apply_instance_buffer_override(mc->gpu_instances, instances.count(), 0);
+			} else if (mc->staged_offset >= 0) {
+				cf_apply_instance_buffer_override(s_draw3d->staging_instances, instances.count(), mc->staged_offset);
+				mc->staged_offset = -1;
+			}
+			cf_apply_shader(cmd->shader, material);
+			if (mc->vs_storage_count) cf_apply_vs_storage_buffers(mc->vs_storage, mc->vs_storage_count);
+			if (viewport.w >= 0 && viewport.h >= 0) cf_apply_viewport(viewport.x, viewport.y, viewport.w, viewport.h);
+			if (scissor.w >= 0 && scissor.h >= 0) cf_apply_scissor(scissor.x, scissor.y, scissor.w, scissor.h);
+			cf_draw_elements();
+			return;
+		}
+
+		// Ranged command (cf_draw3d_mesh_range): the whole batch shares one mesh, shader,
+		// material, and camera -- the coalescing win -- and geometry varies per record.
+		const int stride = (int)sizeof(CF_MeshInstance3d);
+		uint64_t src = mc->gpu_instances;
+		int src_base = 0;
+		if (!src && mc->staged_offset >= 0) {
+			src = s_draw3d->staging_instances;
+			src_base = mc->staged_offset;
 			mc->staged_offset = -1;
 		}
+		if (!src && !mc->escape && nruns > 1) {
+			// No staged slice to rebind per record (a flush without a prepare pass): upload
+			// each record's instances into the mesh's own buffer and re-apply, paying the
+			// mid-pass cost per record that the prepare pass exists to avoid.
+			int inst_base = 0;
+			for (int r = 0; r < nruns; ++r) {
+				const CF_MeshRun3d run = mc->runs[r];
+				cf_mesh_update_instance_data(mc->mesh, (void*)(instances.data() + inst_base), run.ninst);
+				cf_apply_shader(cmd->shader, material);
+				if (mc->vs_storage_count) cf_apply_vs_storage_buffers(mc->vs_storage, mc->vs_storage_count);
+				if (viewport.w >= 0 && viewport.h >= 0) cf_apply_viewport(viewport.x, viewport.y, viewport.w, viewport.h);
+				if (scissor.w >= 0 && scissor.h >= 0) cf_apply_scissor(scissor.x, scissor.y, scissor.w, scissor.h);
+				cf_draw_elements_range(run.first < 0 ? 0 : run.first, run.first < 0 ? -1 : run.count, run.ninst);
+				inst_base += run.ninst;
+			}
+			return;
+		}
+		// Bind everything once, then one range draw per record. The instance override
+		// rebinds per record as a slice of the shared source; nothing else is touched.
+		if (src) cf_apply_instance_buffer_override(src, mc->runs[0].ninst, src_base);
 		cf_apply_shader(cmd->shader, material);
 		if (mc->vs_storage_count) cf_apply_vs_storage_buffers(mc->vs_storage, mc->vs_storage_count);
 		if (viewport.w >= 0 && viewport.h >= 0) cf_apply_viewport(viewport.x, viewport.y, viewport.w, viewport.h);
 		if (scissor.w >= 0 && scissor.h >= 0) cf_apply_scissor(scissor.x, scissor.y, scissor.w, scissor.h);
-		cf_draw_elements();
+		int inst_base = 0;
+		for (int r = 0; r < nruns; ++r) {
+			const CF_MeshRun3d run = mc->runs[r];
+			if (src && r > 0) cf_apply_instance_buffer_override(src, run.ninst, src_base + inst_base * stride);
+			cf_draw_elements_range(run.first < 0 ? 0 : run.first, run.first < 0 ? -1 : run.count, mc->escape ? 0 : run.ninst);
+			inst_base += run.ninst;
+		}
 		return;
 	}
 
@@ -2060,6 +2152,17 @@ void cf_draw3d_list_end(CF_DrawListData* data)
 				if (!s_bake_group_match(&data->cmds[j], &data->cmds[i])) continue;
 				CF_MeshCmd3d* group = data->cmds[j].mesh3d;
 				for (int k = 0; k < mc->instances.count(); ++k) group->instances.add(mc->instances[k]);
+				// Runs ride along parallel to the instances; a boundary pair covering the
+				// same range folds into one record so grouped whole-mesh commands still
+				// replay as a single instanced draw.
+				for (int k = 0; k < mc->runs.count(); ++k) {
+					const CF_MeshRun3d& r = mc->runs[k];
+					if (group->runs.count() && group->runs.last().first == r.first && group->runs.last().count == r.count) {
+						group->runs.last().ninst += r.ninst;
+					} else {
+						group->runs.add(r);
+					}
+				}
 				for (int k = 0; k < mc->image_refs.count(); ++k) group->image_refs.add(mc->image_refs[k]);
 				cf_draw3d_free_cmd(&data->cmds[i]);
 				merged_into = j;
@@ -2117,6 +2220,7 @@ void cf_draw3d_replay_cmd(CF_Command* dst, const CF_Command* src)
 	CF_M4x4 vp = cf_mul_m4(s_draw3d->projections.last(), s_draw3d->views.last());
 	mc->vp = cf_mul_m4(vp, s_draw3d->transforms.last());
 	mc->instances_ref = &smc->instances;
+	mc->runs = smc->runs; // Small; copied so replay commands stay self-contained.
 	mc->gpu_instances = smc->gpu_instances; // Borrowed; the list's payload owns it.
 	mc->sprite_textured = smc->sprite_textured;
 	mc->image_refs_ref = smc->sprite_textured ? &smc->image_refs : NULL;

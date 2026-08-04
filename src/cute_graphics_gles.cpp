@@ -231,6 +231,12 @@ struct CF_GL_Mesh
 	// its own instance buffer. Lives on the mesh (not in the draw layer) so a destroyed handle
 	// reused for a new mesh can never inherit a stale classification.
 	bool draw3d_augmented = false;
+
+	// glGetAttribLocation results for the last shader this mesh drew with -- a per-attribute
+	// driver string lookup otherwise paid on every draw. Keyed on the shader's generation
+	// (never recycled, unlike program ids); appending attributes resets the key.
+	uint64_t attrib_cache_generation = 0;
+	GLint attrib_locs[CF_MESH_MAX_VERTEX_ATTRIBUTES];
 };
 
 struct CF_GL_ShaderUniformBlock
@@ -261,6 +267,10 @@ struct CF_GL_Shader
 	// (ivec/uvec), which must bind through glVertexAttribIPointer -- the float path would
 	// int-to-float convert and the shader would read garbage bits. Built once at link.
 	uint64_t integer_attrib_mask;
+
+	// Unique per shader object, never recycled (GL program ids are): meshes key their
+	// attribute-location caches on this so a stale cache can't survive program-id reuse.
+	uint64_t generation;
 
 	int num_texture_bindings;
 	CF_GL_TextureBinding* texture_bindings;
@@ -381,6 +391,7 @@ static struct
 	// region copies (cf_gles_texture_copy_region). Owned by the current GL context.
 	GLuint scratch_read_fbo;
 	CF_MaterialInternal* material;
+	CF_GL_Shader* shader; // Last applied; range draws rebind attributes against it.
 	CF_GL_Mesh* mesh;
 	CF_GL_Canvas* canvas;
 	uint64_t enabled_vertex_attrib_mask;
@@ -1481,6 +1492,7 @@ void cf_gles_mesh_append_attributes(CF_Mesh mesh_handle, const CF_VertexAttribut
 		attr.name = cf_sintern(attr.name);
 		mesh->attributes[mesh->attribute_count++] = attr;
 	}
+	mesh->attrib_cache_generation = 0; // New attributes: stale location cache.
 }
 
 // Standalone instance buffers (draw3d baked lists): a plain GL buffer, no streaming ring --
@@ -1756,6 +1768,8 @@ CF_Shader cf_gles_make_shader_from_bytecode(CF_ShaderBytecode vertex_bytecode, C
 	CF_GL_Shader* shader = (CF_GL_Shader*)CF_CALLOC(sizeof(CF_GL_Shader));
 	shader->program = program;
 	shader->integer_attrib_mask = s_integer_attrib_mask(program);
+	static uint64_t s_shader_generation;
+	shader->generation = ++s_shader_generation;
 
 	// FS texture bindings.
 	shader->texture_bindings = (CF_GL_TextureBinding*)CF_ALLOC(sizeof(CF_GL_TextureBinding) * fragment_bytecode.shader_info.num_images);
@@ -1907,9 +1921,16 @@ static inline void s_apply_vertex_attributes(CF_GL_Shader* shader, CF_GL_Mesh* m
 
 	uint64_t attribute_mask = 0;
 
+	if (mesh->attrib_cache_generation != shader->generation) {
+		for (int i = 0; i < mesh->attribute_count; ++i) {
+			mesh->attrib_locs[i] = glGetAttribLocation(shader->program, mesh->attributes[i].name);
+		}
+		mesh->attrib_cache_generation = shader->generation;
+	}
+
 	for (int i = 0; i < mesh->attribute_count; ++i) {
 		const CF_VertexAttribute* attrib = &mesh->attributes[i];
-		GLint loc = glGetAttribLocation(shader->program, attrib->name);
+		GLint loc = mesh->attrib_locs[i];
 		if (loc < 0 || loc >= 64) continue;
 
 		const bool per_instance = attrib->per_instance;
@@ -1995,6 +2016,7 @@ void cf_gles_apply_shader(CF_Shader shader_handle, CF_Material material_handle)
 	CF_GL_Shader* shader = (CF_GL_Shader*)(uintptr_t)shader_handle.id;
 	CF_MaterialInternal* material = (CF_MaterialInternal*)(uintptr_t)material_handle.id;
 	g_ctx.material = material;
+	g_ctx.shader = shader;
 
 	// Render state.
 	CF_RenderState render_state = material->state;
@@ -2184,6 +2206,61 @@ void cf_gles_draw_elements()
 		if (texture->active_slot >= 0 && texture->active_slot < texture->ring.count) {
 			s_set_slot_fence(texture->ring.slots[texture->active_slot]);
 		}
+	}
+
+	CF_POLL_OPENGL_ERROR();
+	++app->draw_call_count;
+	g_ctx.target_state = s_default_state(g_ctx.canvas);
+}
+
+void cf_gles_draw_elements_range(int first_element, int element_count, int instance_count)
+{
+	CF_GL_Mesh* mesh = g_ctx.mesh;
+	CF_MaterialInternal* material = g_ctx.material;
+	CF_ASSERT(mesh != NULL);
+	CF_ASSERT(material != NULL);
+
+	s_apply_state();
+
+	// Attribute pointers bind at apply-shader time; a pending override means this draw sources
+	// a different instance slice, so rebind against the last applied shader.
+	if (s_gl_instance_override && g_ctx.shader) s_apply_vertex_attributes(g_ctx.shader, mesh);
+
+	GLenum prim = s_wrap(material->state.primitive_type);
+	int ninst = instance_count;
+	if (ninst <= 0) {
+		if (s_gl_instance_override) ninst = s_gl_instance_override_count;
+		else if (mesh->instance.id && mesh->instance.count > 0) ninst = mesh->instance.count;
+		else ninst = 0;
+	}
+	s_gl_instance_override = 0; // One draw only, same contract as cf_gles_draw_elements.
+
+	if (mesh->ibo.id && mesh->ibo.count > 0) {
+		GLenum elem = (mesh->ibo.stride == 2) ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT;
+		int count = element_count >= 0 ? element_count : mesh->ibo.count;
+		const void* offset = (const void*)(intptr_t)(mesh->ibo.active_offset + first_element * mesh->ibo.stride);
+		if (ninst > 0) {
+			glDrawElementsInstanced(prim, count, elem, offset, ninst);
+		} else {
+			glDrawElements(prim, count, elem, offset);
+		}
+	} else {
+		int count = element_count >= 0 ? element_count : mesh->vbo.count;
+		if (ninst > 0) {
+			glDrawArraysInstanced(prim, first_element, count, ninst);
+		} else {
+			glDrawArrays(prim, first_element, count);
+		}
+	}
+
+	if (mesh->vbo.active_slot >= 0 && mesh->vbo.active_slot < mesh->vbo.ring.count) {
+		s_set_slot_fence(mesh->vbo.ring.slots[mesh->vbo.active_slot]);
+	}
+	if (mesh->ibo.active_slot >= 0 && mesh->ibo.active_slot < mesh->ibo.ring.count) {
+		s_set_slot_fence(mesh->ibo.ring.slots[mesh->ibo.active_slot]);
+	}
+	if (mesh->instance.active_slot >= 0 && mesh->instance.active_slot < mesh->instance.ring.count) {
+		s_set_slot_fence(mesh->instance.ring.slots[mesh->instance.active_slot]);
 	}
 
 	CF_POLL_OPENGL_ERROR();

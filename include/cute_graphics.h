@@ -2793,6 +2793,23 @@ CF_API void CF_CALL cf_draw_elements(void);
 CF_API void CF_CALL cf_draw_elements_instanced(int instance_count);
 
 /**
+ * @function cf_draw_elements_range
+ * @category graphics
+ * @brief    Draws a contiguous element range of the last applied mesh.
+ * @param    first_element    The first index (indexed meshes) or first vertex (non-indexed) to draw.
+ * @param    element_count    How many indices or vertices to draw.
+ * @param    instance_count   Instances to draw; pass 0 to inherit the mesh's instance count
+ *                            (or the pending instance-buffer override's), like `cf_draw_elements`.
+ * @remarks  The workhorse for geometry arenas: pack many small meshes into one `CF_Mesh` and
+ *           draw sub-ranges without rebinding anything between draws. There is deliberately no
+ *           base-vertex parameter -- an indexed arena writes indices absolute into the shared
+ *           vertex buffer, which keeps the call portable to GLES3. `cf_draw3d_mesh_range`
+ *           builds on this to batch interleaved sub-mesh draws into one command.
+ * @related  cf_draw_elements cf_draw_elements_instanced cf_draw3d_mesh_range
+ */
+CF_API void CF_CALL cf_draw_elements_range(int first_element, int element_count, int instance_count);
+
+/**
  * @struct   CF_DrawIndirectArgs
  * @category graphics
  * @brief    One non-indexed indirect draw's arguments, as laid out in the args buffer.
@@ -2885,6 +2902,7 @@ namespace Cute
 CF_INLINE void apply_vs_storage_buffers(CF_StorageBuffer* buffers, int count) { cf_apply_vs_storage_buffers(buffers, count); }
 CF_INLINE void apply_fs_storage_buffers(CF_StorageBuffer* buffers, int count) { cf_apply_fs_storage_buffers(buffers, count); }
 CF_INLINE void draw_elements_instanced(int instance_count) { cf_draw_elements_instanced(instance_count); }
+CF_INLINE void draw_elements_range(int first_element, int element_count, int instance_count = 0) { cf_draw_elements_range(first_element, element_count, instance_count); }
 CF_INLINE void draw_elements_indirect(CF_StorageBuffer args, int offset, int draw_count) { cf_draw_elements_indirect(args, offset, draw_count); }
 CF_INLINE void push_gpu_label(const char* name) { cf_push_gpu_label(name); }
 CF_INLINE void pop_gpu_label() { cf_pop_gpu_label(); }

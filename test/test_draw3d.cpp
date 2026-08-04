@@ -132,10 +132,11 @@ TEST_CASE(test_draw3d_transforms_and_coalescing)
 }
 
 // Not an assertion test -- a benchmark, kept in the suite so flush-path changes get measured
-// instead of guessed at (the geometry-arena lesson). Two scenarios over 200 frames each:
+// instead of guessed at (the geometry-arena lesson). Three scenarios over 200 frames each:
 // interleaved (2000 objects cycling 6 meshes -- every submission breaks the batch, so the
-// flush pays per-command instance uploads) and batched (2000 instances of 1 mesh -- one
-// upload). Prints milliseconds; always passes.
+// flush pays per-command instance uploads), batched (2000 instances of 1 mesh -- one upload),
+// and range-arena (the same 6 quads packed into one mesh, drawn via cf_draw3d_mesh_range --
+// the interleaving coalesces again). Prints milliseconds; always passes.
 TEST_CASE(test_draw3d_bench)
 {
 	// Costs tens of seconds by design; opt in when measuring flush-path changes.
@@ -145,6 +146,23 @@ TEST_CASE(test_draw3d_bench)
 
 	CF_Mesh meshes[6];
 	for (int i = 0; i < 6; ++i) meshes[i] = s_make_quad(0.01f + 0.002f * i);
+	// The same 6 quads packed into one arena mesh, drawn via ranges in scenario 2.
+	struct BenchVertex { float x, y, z; };
+	BenchVertex arena_verts[36];
+	for (int i = 0; i < 6; ++i) {
+		float half = 0.01f + 0.002f * i;
+		BenchVertex quad[6] = {
+			{ -half, -half, 0 }, { half, -half, 0 }, { half, half, 0 },
+			{ -half, -half, 0 }, { half, half, 0 }, { -half, half, 0 },
+		};
+		CF_MEMCPY(arena_verts + i * 6, quad, sizeof(quad));
+	}
+	CF_VertexAttribute arena_attrs[1] = { };
+	arena_attrs[0].name = "in_pos";
+	arena_attrs[0].format = CF_VERTEX_FORMAT_FLOAT3;
+	arena_attrs[0].offset = 0;
+	CF_Mesh arena = cf_make_mesh(sizeof(arena_verts), arena_attrs, 1, sizeof(BenchVertex));
+	cf_mesh_update_vertex_data(arena, arena_verts, 36);
 	CF_Shader shader = cf_make_shader_from_source(s_vs, s_fs);
 	REQUIRE(shader.id);
 	CF_CanvasParams params = cf_canvas_defaults(256, 256);
@@ -153,7 +171,8 @@ TEST_CASE(test_draw3d_bench)
 
 	const int FRAMES = 200;
 	const int OBJECTS = 2000;
-	for (int scenario = 0; scenario < 2; ++scenario) {
+	const char* names[3] = { "interleaved-6-mesh", "single-mesh-batched", "interleaved-6-range-arena" };
+	for (int scenario = 0; scenario < 3; ++scenario) {
 		// Warm up buffers and pipelines outside the timed window.
 		for (int warm = 0; warm < 5; ++warm) {
 			cf_app_update(NULL);
@@ -162,7 +181,8 @@ TEST_CASE(test_draw3d_bench)
 			for (int i = 0; i < OBJECTS; ++i) {
 				cf_draw3d_push();
 				cf_draw3d_translate(cf_v3((i % 50) * 0.04f - 1.0f, (i / 50) * 0.045f - 1.0f, 0));
-				cf_draw3d_mesh(meshes[scenario == 0 ? i % 6 : 0]);
+				if (scenario == 2) cf_draw3d_mesh_range(arena, (i % 6) * 6, 6);
+				else cf_draw3d_mesh(meshes[scenario == 0 ? i % 6 : 0]);
 				cf_draw3d_pop();
 			}
 			cf_render_to(canvas, true);
@@ -177,7 +197,8 @@ TEST_CASE(test_draw3d_bench)
 			for (int i = 0; i < OBJECTS; ++i) {
 				cf_draw3d_push();
 				cf_draw3d_translate(cf_v3((i % 50) * 0.04f - 1.0f, (i / 50) * 0.045f - 1.0f, 0));
-				cf_draw3d_mesh(meshes[scenario == 0 ? i % 6 : 0]);
+				if (scenario == 2) cf_draw3d_mesh_range(arena, (i % 6) * 6, 6);
+				else cf_draw3d_mesh(meshes[scenario == 0 ? i % 6 : 0]);
 				cf_draw3d_pop();
 			}
 			cf_render_to(canvas, true);
@@ -186,12 +207,99 @@ TEST_CASE(test_draw3d_bench)
 		cf_gpu_sync();
 		double ms = (cf_get_ticks() / (double)cf_get_tick_frequency() - t0) * 1000.0 / FRAMES;
 		printf("[bench] draw3d %s: %.3f ms/frame (%d objects, %d frames)\n",
-			scenario == 0 ? "interleaved-6-mesh" : "single-mesh-batched", ms, OBJECTS, FRAMES);
+			names[scenario], ms, OBJECTS, FRAMES);
 	}
 
+	cf_destroy_mesh(arena);
 	for (int i = 0; i < 6; ++i) cf_destroy_mesh(meshes[i]);
 	cf_destroy_canvas(canvas);
 	cf_destroy_shader(shader);
+	test_destroy_app();
+	return true;
+}
+
+// Geometry arena: two quads packed into one mesh, submitted interleaved as ranges with
+// per-submission attributes. The interleaving that would split per-mesh batches coalesces
+// into ONE command here, and each range still renders its own geometry and color.
+TEST_CASE(test_draw3d_mesh_range)
+{
+	if (!test_make_app(W, H)) return true; // Headless CI: no display/GPU.
+
+	// Quad A centered at (-0.5, 0), quad B at (+0.5, 0), one shared vertex buffer.
+	struct Vertex { float x, y, z; };
+	Vertex verts[12];
+	const float half = 0.3f;
+	const float centers[2] = { -0.5f, 0.5f };
+	for (int q = 0; q < 2; ++q) {
+		float cx = centers[q];
+		Vertex quad[6] = {
+			{ cx - half, -half, 0 }, { cx + half, -half, 0 }, { cx + half, half, 0 },
+			{ cx - half, -half, 0 }, { cx + half, half, 0 }, { cx - half, half, 0 },
+		};
+		CF_MEMCPY(verts + q * 6, quad, sizeof(quad));
+	}
+	CF_VertexAttribute attrs[1] = { };
+	attrs[0].name = "in_pos";
+	attrs[0].format = CF_VERTEX_FORMAT_FLOAT3;
+	attrs[0].offset = 0;
+	CF_Mesh arena = cf_make_mesh(sizeof(verts), attrs, 1, sizeof(Vertex));
+	cf_mesh_update_vertex_data(arena, verts, 12);
+
+	CF_Shader shader = cf_make_shader_from_source(s_vs, s_fs);
+	REQUIRE(shader.id);
+	CF_CanvasParams params = cf_canvas_defaults(W, H);
+	params.depth_stencil_enable = true;
+	CF_Canvas canvas = cf_make_canvas(params);
+	CF_Pixel* px = (CF_Pixel*)cf_alloc(W * H * (int)sizeof(CF_Pixel));
+
+	cf_app_update(NULL);
+	cf_draw3d_push_projection(cf_ortho(-1, 1, -1, 1, -1, 1));
+	cf_draw3d_push_shader(shader);
+	cf_draw3d_stats(); // Clear anything from setup.
+
+	// Red A, green B: interleaved ranges of one mesh, still one command.
+	cf_draw3d_push_mesh_attributes(cf_v4(1, 0, 0, 1));
+	cf_draw3d_mesh_range(arena, 0, 6);
+	cf_draw3d_pop_mesh_attributes();
+	cf_draw3d_push_mesh_attributes(cf_v4(0, 1, 0, 1));
+	cf_draw3d_mesh_range(arena, 6, 6);
+	cf_draw3d_pop_mesh_attributes();
+	// Range B again, translated to the upper-left in blue: a third record, same command.
+	cf_draw3d_push();
+	cf_draw3d_translate(cf_v3(-1.0f, 0.5f, 0));
+	cf_draw3d_push_mesh_attributes(cf_v4(0, 0, 1, 1));
+	cf_draw3d_mesh_range(arena, 6, 6);
+	cf_draw3d_pop_mesh_attributes();
+	cf_draw3d_pop();
+
+	CF_DrawStats3d stats = cf_draw3d_stats();
+	REQUIRE(stats.commands == 1);
+	REQUIRE(stats.instances == 3);
+
+	cf_render_to(canvas, true);
+	cf_app_draw_onto_screen(false);
+
+	CF_Readback rb = cf_canvas_readback(canvas);
+	REQUIRE(rb.id);
+	while (!cf_readback_ready(rb)) {}
+	cf_readback_data(rb, px, W * H * (int)sizeof(CF_Pixel));
+	cf_destroy_readback(rb);
+
+	CF_Pixel left = s_pixel(px, 0.25f, 0.5f);
+	CF_Pixel right = s_pixel(px, 0.75f, 0.5f);
+	CF_Pixel upper_left = s_pixel(px, 0.25f, 0.25f);
+	CF_Pixel center = s_pixel(px, 0.5f, 0.5f);
+	REQUIRE(left.colors.r > 200 && left.colors.g < 60 && left.colors.b < 60);
+	REQUIRE(right.colors.g > 200 && right.colors.r < 60 && right.colors.b < 60);
+	REQUIRE(upper_left.colors.b > 200 && upper_left.colors.r < 60);
+	REQUIRE(center.colors.r < 60 && center.colors.g < 60 && center.colors.b < 60);
+
+	cf_draw3d_pop_shader();
+	cf_draw3d_pop_projection();
+	cf_free(px);
+	cf_destroy_canvas(canvas);
+	cf_destroy_shader(shader);
+	cf_destroy_mesh(arena);
 	test_destroy_app();
 	return true;
 }
@@ -1519,5 +1627,6 @@ TEST_SUITE(test_draw3d)
 	RUN_TEST_CASE(test_draw3d_stats);
 	RUN_TEST_CASE(test_draw3d_depth_writer_order);
 	RUN_TEST_CASE(test_draw3d_translucent_sort);
+	RUN_TEST_CASE(test_draw3d_mesh_range);
 	RUN_TEST_CASE(test_draw3d_bench);
 }

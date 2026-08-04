@@ -2393,6 +2393,34 @@ void cf_sdlgpu_draw_elements()
 	app->draw_call_count++;
 }
 
+void cf_sdlgpu_draw_elements_range(int first_element, int element_count, int instance_count)
+{
+	CF_MeshInternal* mesh = g_ctx.canvas->mesh;
+	SDL_GPURenderPass* pass = g_ctx.canvas->pass;
+	SDL_GPUBuffer* instance_override = g_ctx.instance_override;
+	g_ctx.instance_override = NULL;
+	if (instance_override) {
+		// Rebind just the instance slot: cf_apply_shader bound the previous slice, and range
+		// draws cycle overrides between draws without re-applying the whole shader.
+		SDL_GPUBufferBinding bind = { instance_override, (Uint32)g_ctx.instance_override_offset };
+		SDL_BindGPUVertexBuffers(pass, mesh->vertices.buffer ? 1 : 0, &bind, 1);
+	}
+	int ninst = instance_count;
+	if (ninst <= 0) {
+		if (instance_override) ninst = g_ctx.instance_override_count;
+		else if (mesh->instances.buffer) ninst = mesh->instances.element_count;
+		else ninst = 1;
+	}
+	if (mesh->indices.buffer) {
+		int count = element_count >= 0 ? element_count : mesh->indices.element_count;
+		SDL_DrawGPUIndexedPrimitives(pass, (Uint32)count, (Uint32)ninst, (Uint32)first_element, 0, 0);
+	} else {
+		int count = element_count >= 0 ? element_count : mesh->vertices.element_count;
+		SDL_DrawGPUPrimitives(pass, (Uint32)count, (Uint32)ninst, (Uint32)first_element, 0);
+	}
+	app->draw_call_count++;
+}
+
 void* cf_sdlgpu_create_draw_sampler(CF_Filter filter)
 {
 	SDL_GPUSamplerCreateInfo sampler_info = SDL_GPUSamplerCreateInfoDefaults();
