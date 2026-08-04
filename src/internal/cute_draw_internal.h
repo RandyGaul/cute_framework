@@ -315,6 +315,11 @@ struct CF_Draw
 	CF_V2 atlas_dims = cf_v2(2048, 2048);
 	CF_V2 texel_dims = cf_v2(1.0f/2048.0f, 1.0f/2048.0f);
 	bool delay_defrag = false;
+	// Latch for cf_atlas_defrag_once: defrag walks every atlas and can rebuild pages
+	// (re-fetching their pixels), so flush sites run it at most once per frame. Reset at
+	// cf_app_update; images first seen after this frame's defrag ride the lonely buffer
+	// until the next frame packs them.
+	bool defragged_this_frame = false;
 	atlas_cache_t atlas_cache;
 	CF_Material material;
 	CF_Arena uniform_arena;
@@ -445,6 +450,15 @@ void cf_make_draw3d();
 void cf_destroy_draw3d();
 void cf_draw3d_process(CF_Command* cmd, CF_Canvas canvas, bool clear);
 void cf_draw3d_free_cmd(CF_Command* cmd);
+
+// Runs the atlas defrag at most once per frame (see CF_Draw::defragged_this_frame).
+void cf_atlas_defrag_once();
+
+// Called by cf_render_layers_to before the canvas (and its render pass) is applied: stages
+// every in-range untextured mesh command's instance data into one shared GPU instance buffer
+// in a single upload, so cf_draw3d_process never tears down the live render pass to upload.
+// Commands bind their slice via the instance-buffer override's byte offset.
+void cf_draw3d_prepare_uploads(int layer_lo, int layer_hi);
 
 // Called by cf_destroy_shader: destroys the hidden solid-variant sibling of a 3d shape
 // shader's canonical handle (see cf_make_draw3d_shape_shader). Returns false if the id is

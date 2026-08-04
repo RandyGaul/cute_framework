@@ -107,6 +107,10 @@ struct CF_MeshCmd3d
 	// replays skip the per-flush CPU upload entirely. Replay payloads borrow the handle.
 	uint64_t gpu_instances = 0;
 	bool owns_gpu_instances = false;
+	// Byte offset of this command's slice in the shared staging buffer, set by
+	// cf_draw3d_prepare_uploads before the render pass opens and consumed once at process
+	// time. -1 means not staged (escape, textured, baked, or a flush without a prepare pass).
+	int staged_offset = -1;
 
 	~CF_MeshCmd3d()
 	{
@@ -205,6 +209,13 @@ struct CF_Draw3d
 	Cute::Array<CF_PendingUV> resolve_uvs;
 	Cute::Array<CF_MeshInstance3d> staged;
 	Cute::Array<CF_MeshInstance3d> page;
+
+	// Shared per-flush instance staging (cf_draw3d_prepare_uploads): every untextured mesh
+	// command's instances land here in one upload before the render pass opens, and each
+	// command binds its slice by byte offset -- uploading mid-pass tears the pass down
+	// (a framebuffer store/load round trip per command on tilers).
+	uint64_t staging_instances = 0;
+	Cute::Array<CF_MeshInstance3d> staging_scratch;
 };
 
 static CF_Draw3d* s_draw3d;
@@ -276,6 +287,7 @@ void cf_destroy_draw3d()
 	for (int i = 0; i < s_draw3d->torus_meshes.count(); ++i) {
 		cf_destroy_mesh(s_draw3d->torus_meshes.items()[i]);
 	}
+	if (s_draw3d->staging_instances) cf_destroy_instance_buffer(s_draw3d->staging_instances);
 	cf_destroy_material(s_draw3d->material);
 	s_draw3d->~CF_Draw3d();
 	CF_FREE(s_draw3d);
@@ -1685,6 +1697,37 @@ static void s_augment_mesh(CF_Mesh mesh)
 	cf_mesh_set_draw3d_augmented(mesh);
 }
 
+void cf_draw3d_prepare_uploads(int layer_lo, int layer_hi)
+{
+	// Stage every in-range untextured mesh command's instances into one shared buffer with a
+	// single upload, before cf_render_layers_to applies the canvas: uploading from inside
+	// cf_draw3d_process would tear down the live render pass per command. Augmentation (which
+	// creates GPU buffers) moves up here for the same reason. Textured commands are excluded
+	// -- their uv lanes resolve against the atlas at process time -- and baked/escape
+	// commands carry their own buffers.
+	s_draw3d->staging_scratch.clear();
+	for (int i = 0; i < s_draw->cmds.count(); ++i) {
+		CF_MeshCmd3d* mc = s_draw->cmds[i].mesh3d;
+		if (!mc) continue;
+		if (s_draw->cmds[i].layer < layer_lo || s_draw->cmds[i].layer > layer_hi) continue;
+		if (mc->escape) continue;
+		const Cute::Array<CF_MeshInstance3d>& instances = mc->instances_ref ? *mc->instances_ref : mc->instances;
+		if (!instances.count()) continue;
+		if (!cf_mesh_draw3d_augmented(mc->mesh)) s_augment_mesh(mc->mesh);
+		if (mc->sprite_textured || mc->gpu_instances) continue;
+		mc->staged_offset = s_draw3d->staging_scratch.count() * (int)sizeof(CF_MeshInstance3d);
+		for (int k = 0; k < instances.count(); ++k) s_draw3d->staging_scratch.add(instances[k]);
+	}
+	if (!s_draw3d->staging_scratch.count()) return;
+	if (!s_draw3d->staging_instances) {
+		s_draw3d->staging_instances = cf_make_instance_buffer(
+			s_draw3d->staging_scratch.count() * (int)sizeof(CF_MeshInstance3d), (int)sizeof(CF_MeshInstance3d));
+	}
+	// The backend grows the buffer as needed and cycles it, so per-flush reuse never stalls
+	// on in-flight draws.
+	cf_update_instance_buffer(s_draw3d->staging_instances, s_draw3d->staging_scratch.data(), s_draw3d->staging_scratch.count());
+}
+
 void cf_draw3d_process(CF_Command* cmd, CF_Canvas canvas, bool clear)
 {
 	CF_MeshCmd3d* mc = cmd->mesh3d;
@@ -1706,9 +1749,7 @@ void cf_draw3d_process(CF_Command* cmd, CF_Canvas canvas, bool clear)
 			atlas_cache_push(&s_draw->atlas_cache, e);
 		}
 		s_draw3d->resolving = true;
-		if (!s_draw->delay_defrag) {
-			atlas_cache_defrag(&s_draw->atlas_cache);
-		}
+		cf_atlas_defrag_once();
 		atlas_cache_flush(&s_draw->atlas_cache);
 		s_draw3d->resolving = false;
 
@@ -1729,7 +1770,9 @@ void cf_draw3d_process(CF_Command* cmd, CF_Canvas canvas, bool clear)
 		if (!cf_mesh_draw3d_augmented(mc->mesh)) {
 			s_augment_mesh(mc->mesh);
 		}
-		if (!textured && !mc->gpu_instances) {
+		if (!textured && !mc->gpu_instances && mc->staged_offset < 0) {
+			// Not staged (a flush outside cf_render_layers_to's prepare pass): upload into the
+			// mesh's own buffer, paying the mid-pass upload the prepare pass exists to avoid.
 			cf_mesh_update_instance_data(mc->mesh, (void*)instances.data(), instances.count());
 		}
 	}
@@ -1769,7 +1812,13 @@ void cf_draw3d_process(CF_Command* cmd, CF_Canvas canvas, bool clear)
 
 	if (!textured) {
 		// Baked groups draw straight from their persistent buffer -- no upload happened.
-		if (mc->gpu_instances) cf_apply_instance_buffer_override(mc->gpu_instances, instances.count());
+		// Staged commands bind their slice of the shared staging buffer the same way.
+		if (mc->gpu_instances) {
+			cf_apply_instance_buffer_override(mc->gpu_instances, instances.count(), 0);
+		} else if (mc->staged_offset >= 0) {
+			cf_apply_instance_buffer_override(s_draw3d->staging_instances, instances.count(), mc->staged_offset);
+			mc->staged_offset = -1;
+		}
 		cf_apply_shader(cmd->shader, material);
 		if (viewport.w >= 0 && viewport.h >= 0) cf_apply_viewport(viewport.x, viewport.y, viewport.w, viewport.h);
 		if (scissor.w >= 0 && scissor.h >= 0) cf_apply_scissor(scissor.x, scissor.y, scissor.w, scissor.h);

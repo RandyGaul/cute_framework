@@ -1412,6 +1412,7 @@ struct CF_GL_InstanceBuffer
 static GLuint s_gl_instance_override = 0;
 static int s_gl_instance_override_count = 0;
 static int s_gl_instance_override_stride = 0;
+static int s_gl_instance_override_offset = 0; // Byte offset: the bound slice of a shared buffer.
 
 uint64_t cf_gles_make_instance_buffer(int size_in_bytes, int stride)
 {
@@ -1446,12 +1447,13 @@ void cf_gles_destroy_instance_buffer(uint64_t handle)
 	CF_FREE(b);
 }
 
-void cf_gles_apply_instance_buffer_override(uint64_t handle, int count)
+void cf_gles_apply_instance_buffer_override(uint64_t handle, int count, int offset_bytes)
 {
 	CF_GL_InstanceBuffer* b = (CF_GL_InstanceBuffer*)(uintptr_t)handle;
 	s_gl_instance_override = b ? b->id : 0;
 	s_gl_instance_override_count = b ? count : 0;
 	s_gl_instance_override_stride = b ? b->stride : 0;
+	s_gl_instance_override_offset = b ? offset_bytes : 0;
 }
 
 bool cf_gles_mesh_has_vertex_attribute(CF_Mesh mh, const char* name)
@@ -1801,7 +1803,7 @@ static inline void s_apply_vertex_attributes(CF_GL_Shader* shader, CF_GL_Mesh* m
 		if (per_instance && s_gl_instance_override) {
 			buf_id = s_gl_instance_override;
 			buf_stride = s_gl_instance_override_stride;
-			base_offset = 0;
+			base_offset = s_gl_instance_override_offset;
 		}
 		if (!buf_id) continue;
 

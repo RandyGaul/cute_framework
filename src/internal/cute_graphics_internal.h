@@ -322,6 +322,8 @@ void cf_mesh_set_draw3d_augmented(CF_Mesh mesh);
 uint64_t cf_make_instance_buffer(int size_in_bytes, int stride);
 void cf_update_instance_buffer(uint64_t handle, void* data, int count);
 void cf_destroy_instance_buffer(uint64_t handle);
-void cf_apply_instance_buffer_override(uint64_t handle, int count);
+// `offset_bytes` positions the binding within the buffer, so many commands can share one
+// per-flush staging buffer (each binds its own slice). Must be a multiple of the stride.
+void cf_apply_instance_buffer_override(uint64_t handle, int count, int offset_bytes);
 
 #endif // CF_GRAPHICS_INTERNAL_H

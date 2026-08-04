@@ -138,6 +138,68 @@ TEST_CASE(test_draw3d_transforms_and_coalescing)
 	return true;
 }
 
+// Not an assertion test -- a benchmark, kept in the suite so flush-path changes get measured
+// instead of guessed at (the geometry-arena lesson). Two scenarios over 200 frames each:
+// interleaved (2000 objects cycling 6 meshes -- every submission breaks the batch, so the
+// flush pays per-command instance uploads) and batched (2000 instances of 1 mesh -- one
+// upload). Prints milliseconds; always passes.
+TEST_CASE(test_draw3d_bench)
+{
+	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, 256, 256, s_options(), NULL))) return true; // Headless CI: no display/GPU.
+
+	CF_Mesh meshes[6];
+	for (int i = 0; i < 6; ++i) meshes[i] = s_make_quad(0.01f + 0.002f * i);
+	CF_Shader shader = cf_make_shader_from_source(s_vs, s_fs);
+	REQUIRE(shader.id);
+	CF_CanvasParams params = cf_canvas_defaults(256, 256);
+	params.depth_stencil_enable = true;
+	CF_Canvas canvas = cf_make_canvas(params);
+
+	const int FRAMES = 200;
+	const int OBJECTS = 2000;
+	for (int scenario = 0; scenario < 2; ++scenario) {
+		// Warm up buffers and pipelines outside the timed window.
+		for (int warm = 0; warm < 5; ++warm) {
+			cf_app_update(NULL);
+			cf_draw3d_push_projection(cf_ortho(-1, 1, -1, 1, -1, 1));
+			cf_draw3d_push_shader(shader);
+			for (int i = 0; i < OBJECTS; ++i) {
+				cf_draw3d_push();
+				cf_draw3d_translate(cf_v3((i % 50) * 0.04f - 1.0f, (i / 50) * 0.045f - 1.0f, 0));
+				cf_draw3d_mesh(meshes[scenario == 0 ? i % 6 : 0]);
+				cf_draw3d_pop();
+			}
+			cf_render_to(canvas, true);
+			cf_app_draw_onto_screen(false);
+		}
+		cf_gpu_sync();
+		double t0 = cf_get_ticks() / (double)cf_get_tick_frequency();
+		for (int f = 0; f < FRAMES; ++f) {
+			cf_app_update(NULL);
+			cf_draw3d_push_projection(cf_ortho(-1, 1, -1, 1, -1, 1));
+			cf_draw3d_push_shader(shader);
+			for (int i = 0; i < OBJECTS; ++i) {
+				cf_draw3d_push();
+				cf_draw3d_translate(cf_v3((i % 50) * 0.04f - 1.0f, (i / 50) * 0.045f - 1.0f, 0));
+				cf_draw3d_mesh(meshes[scenario == 0 ? i % 6 : 0]);
+				cf_draw3d_pop();
+			}
+			cf_render_to(canvas, true);
+			cf_app_draw_onto_screen(false);
+		}
+		cf_gpu_sync();
+		double ms = (cf_get_ticks() / (double)cf_get_tick_frequency() - t0) * 1000.0 / FRAMES;
+		printf("[bench] draw3d %s: %.3f ms/frame (%d objects, %d frames)\n",
+			scenario == 0 ? "interleaved-6-mesh" : "single-mesh-batched", ms, OBJECTS, FRAMES);
+	}
+
+	for (int i = 0; i < 6; ++i) cf_destroy_mesh(meshes[i]);
+	cf_destroy_canvas(canvas);
+	cf_destroy_shader(shader);
+	cf_destroy_app();
+	return true;
+}
+
 // Meshes ride the shared command stream: cf_draw_push_layer orders a mesh against 2d drawing
 // in a single cf_render_to, in both directions.
 TEST_CASE(test_draw3d_layers_with_2d)
@@ -1386,4 +1448,5 @@ TEST_SUITE(test_draw3d)
 	RUN_TEST_CASE(test_draw3d_attributes2);
 	RUN_TEST_CASE(test_draw3d_stats);
 	RUN_TEST_CASE(test_draw3d_depth_writer_order);
+	RUN_TEST_CASE(test_draw3d_bench);
 }

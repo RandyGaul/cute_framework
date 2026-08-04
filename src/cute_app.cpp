@@ -464,6 +464,7 @@ static void s_on_update(void* udata)
 
 void cf_app_update(CF_OnUpdateFn* on_update)
 {
+	if (s_draw) s_draw->defragged_this_frame = false; // New frame: the defrag latch re-arms.
 	if (app->gfx_enabled) {
 		if (app->using_imgui) {
 			if (app->gfx_backend_type == CF_BACKEND_TYPE_GLES3) {
@@ -529,7 +530,11 @@ int cf_app_draw_onto_screen(bool clear)
 	// All references to backend texture id's are now invalid (fetch_image or cf_texture_handle).
 	if (!s_draw->delay_defrag) {
 		atlas_cache_tick(&s_draw->atlas_cache);
+		// The authoritative once-per-frame defrag, placed before the final render below so
+		// everything packs ahead of it. Flush sites earlier in the frame use the same latch
+		// (cf_atlas_defrag_once), so a frame sees at most this defrag plus one mid-frame one.
 		atlas_cache_defrag(&s_draw->atlas_cache);
+		s_draw->defragged_this_frame = true;
 	}
 
 	// Render any remaining geometry in the draw API.

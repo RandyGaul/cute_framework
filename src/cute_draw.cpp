@@ -5140,16 +5140,30 @@ static void s_process_command(CF_Canvas canvas, CF_Command* cmd, CF_Command* nex
 		// Process the collated drawable items. Might get split up into multiple draw calls depending on
 		// the atlas compiler.
 		s_draw->need_flush = false;
-		if (!s_draw->delay_defrag) {
-			atlas_cache_defrag(&s_draw->atlas_cache);
-		}
+		cf_atlas_defrag_once();
 		atlas_cache_flush(&s_draw->atlas_cache);
 		s_flush_pending_geoms();
 	}
 }
 
+// Runs the atlas defrag at most once per frame. Defrag walks every atlas and can rebuild
+// pages (re-fetching every resident image's pixels), so per-flush invocation turns a frame
+// with N mesh/canvas fences into N full defrags. Images first seen after this frame's defrag
+// ride the lonely buffer (own texture, own batch) until the next frame's defrag packs them:
+// one frame of extra draw calls for brand-new content, instead of N defrags every frame.
+void cf_atlas_defrag_once()
+{
+	if (s_draw->delay_defrag || s_draw->defragged_this_frame) return;
+	s_draw->defragged_this_frame = true;
+	atlas_cache_defrag(&s_draw->atlas_cache);
+}
+
 void cf_render_layers_to(CF_Canvas canvas, int layer_lo, int layer_hi, bool clear)
 {
+	// Stage 3d instance uploads while no render pass is live -- must run before the canvas
+	// (and its pass) is applied. See cf_draw3d_prepare_uploads.
+	cf_draw3d_prepare_uploads(layer_lo, layer_hi);
+
 	// We will render to this canvas.
 	cf_apply_canvas(canvas, clear);
 
@@ -5216,9 +5230,7 @@ void cf_render_layers_to(CF_Canvas canvas, int layer_lo, int layer_hi, bool clea
 	}
 	if (s_draw->need_flush) {
 		s_draw->need_flush = false;
-		if (!s_draw->delay_defrag) {
-			atlas_cache_defrag(&s_draw->atlas_cache);
-		}
+		cf_atlas_defrag_once();
 		atlas_cache_flush(&s_draw->atlas_cache);
 		s_flush_pending_geoms();
 	}

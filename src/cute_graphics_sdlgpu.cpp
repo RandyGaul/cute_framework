@@ -200,8 +200,9 @@ static struct
 	int msaa_sample_count;
 	CF_CanvasInternal* canvas;
 	SDL_GPUSampler* sampler_override;
-	SDL_GPUBuffer* instance_override;   // Draw3d baked lists: replaces the applied mesh's
-	int instance_override_count;        // instance buffer for exactly one draw.
+	SDL_GPUBuffer* instance_override;   // Draw3d baked lists / staged uploads: replaces the
+	int instance_override_count;        // applied mesh's instance buffer for exactly one draw,
+	int instance_override_offset;       // bound at this byte offset (a slice of a shared buffer).
 	SDL_GPURenderPass* active_pass;
 } g_ctx = { };
 
@@ -1651,11 +1652,12 @@ void cf_sdlgpu_destroy_instance_buffer(uint64_t handle)
 	CF_FREE(b);
 }
 
-void cf_sdlgpu_apply_instance_buffer_override(uint64_t handle, int count)
+void cf_sdlgpu_apply_instance_buffer_override(uint64_t handle, int count, int offset_bytes)
 {
 	CF_InstanceBufferInternal* b = (CF_InstanceBufferInternal*)(uintptr_t)handle;
 	g_ctx.instance_override = b ? b->buf.buffer : NULL;
 	g_ctx.instance_override_count = b ? count : 0;
+	g_ctx.instance_override_offset = b ? offset_bytes : 0;
 }
 
 bool cf_sdlgpu_mesh_has_vertex_attribute(CF_Mesh mesh_handle, const char* name)
@@ -2153,12 +2155,13 @@ void cf_sdlgpu_apply_shader(CF_Shader shader_handle, CF_Material material_handle
 	bool has_vertex_data = mesh->vertices.buffer != NULL;
 	bool has_instance_data = mesh->instances.buffer != NULL;
 	SDL_GPUBuffer* instance_buffer = g_ctx.instance_override ? g_ctx.instance_override : mesh->instances.buffer;
+	Uint32 instance_offset = g_ctx.instance_override ? (Uint32)g_ctx.instance_override_offset : 0;
 	if (has_vertex_data && has_instance_data) {
 		bind[0].buffer = mesh->vertices.buffer; bind[0].offset = 0;
-		bind[1].buffer = instance_buffer; bind[1].offset = 0;
+		bind[1].buffer = instance_buffer; bind[1].offset = instance_offset;
 		SDL_BindGPUVertexBuffers(pass, 0, bind, 2);
 	} else if (has_instance_data) {
-		bind[0].buffer = instance_buffer; bind[0].offset = 0;
+		bind[0].buffer = instance_buffer; bind[0].offset = instance_offset;
 		SDL_BindGPUVertexBuffers(pass, 0, bind, 1);
 	} else {
 		bind[0].buffer = mesh->vertices.buffer; bind[0].offset = 0;
