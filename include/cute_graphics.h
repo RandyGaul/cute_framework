@@ -1178,6 +1178,11 @@ typedef struct CF_StorageBufferParams
 
 	/* @member GPU can read in graphics vertex/fragment stage (default false). */
 	bool graphics_readable;
+
+	/* @member Buffer can source indirect draws via `cf_draw_elements_indirect` (default false).
+	   Combine with `compute_writable` for GPU-driven rendering: a compute pass culls and writes
+	   draw arguments, the draw call reads them, and the CPU never sees a count. */
+	bool indirect_drawable;
 } CF_StorageBufferParams;
 // @end
 
@@ -1194,6 +1199,7 @@ CF_INLINE CF_StorageBufferParams cf_storage_buffer_defaults(int size) {
 	params.compute_readable = true;
 	params.compute_writable = false;
 	params.graphics_readable = false;
+	params.indirect_drawable = false;
 	return params;
 }
 
@@ -2667,6 +2673,65 @@ CF_API void CF_CALL cf_draw_elements(void);
 CF_API void CF_CALL cf_draw_elements_instanced(int instance_count);
 
 /**
+ * @struct   CF_DrawIndirectArgs
+ * @category graphics
+ * @brief    One non-indexed indirect draw's arguments, as laid out in the args buffer.
+ * @remarks  Write these into a storage buffer (from the CPU or a compute shader) and draw with
+ *           `cf_draw_elements_indirect`. The layout is the GPU-native indirect command layout.
+ * @related  CF_DrawIndexedIndirectArgs cf_draw_elements_indirect CF_StorageBuffer
+ */
+typedef struct CF_DrawIndirectArgs
+{
+	/* @member Vertices to draw per instance. */
+	uint32_t vertex_count;
+	/* @member Instances to draw; the shader sees `gl_InstanceIndex`. */
+	uint32_t instance_count;
+	/* @member Index of the first vertex. */
+	uint32_t first_vertex;
+	/* @member First instance ID. Keep 0 for portability. */
+	uint32_t first_instance;
+} CF_DrawIndirectArgs;
+// @end
+
+/**
+ * @struct   CF_DrawIndexedIndirectArgs
+ * @category graphics
+ * @brief    One indexed indirect draw's arguments, used when the applied mesh has an index buffer.
+ * @related  CF_DrawIndirectArgs cf_draw_elements_indirect CF_StorageBuffer
+ */
+typedef struct CF_DrawIndexedIndirectArgs
+{
+	/* @member Indices to draw per instance. */
+	uint32_t index_count;
+	/* @member Instances to draw. */
+	uint32_t instance_count;
+	/* @member Base index within the index buffer. */
+	uint32_t first_index;
+	/* @member Added to each index before fetching the vertex. */
+	int32_t vertex_offset;
+	/* @member First instance ID. Keep 0 for portability. */
+	uint32_t first_instance;
+} CF_DrawIndexedIndirectArgs;
+// @end
+
+/**
+ * @function cf_draw_elements_indirect
+ * @category graphics
+ * @brief    Draws the applied mesh with arguments read from a GPU buffer instead of the CPU.
+ * @param    args          A storage buffer created with `indirect_drawable`, holding
+ *                         `CF_DrawIndirectArgs` (or `CF_DrawIndexedIndirectArgs` when the mesh
+ *                         has an index buffer) at `offset`.
+ * @param    offset        Byte offset of the first draw's arguments within `args`.
+ * @param    draw_count    How many consecutive argument blocks to draw.
+ * @remarks  Call in place of `cf_draw_elements`, after `cf_apply_shader`. This closes the
+ *           GPU-driven loop: a compute shader culls, compacts, and writes counts into the args
+ *           buffer (`compute_writable` + `indirect_drawable`), and the draw consumes them with
+ *           no CPU readback. SDL_GPU backends only; not available on GLES3/web.
+ * @related  cf_draw_elements CF_DrawIndirectArgs CF_DrawIndexedIndirectArgs cf_make_storage_buffer cf_dispatch_compute
+ */
+CF_API void CF_CALL cf_draw_elements_indirect(CF_StorageBuffer args, int offset, int draw_count);
+
+/**
  * @function cf_push_gpu_label
  * @category graphics
  * @brief    Pushes a named region onto the GPU timeline, visible in RenderDoc/Nsight/PIX.
@@ -2700,6 +2765,7 @@ namespace Cute
 CF_INLINE void apply_vs_storage_buffers(CF_StorageBuffer* buffers, int count) { cf_apply_vs_storage_buffers(buffers, count); }
 CF_INLINE void apply_fs_storage_buffers(CF_StorageBuffer* buffers, int count) { cf_apply_fs_storage_buffers(buffers, count); }
 CF_INLINE void draw_elements_instanced(int instance_count) { cf_draw_elements_instanced(instance_count); }
+CF_INLINE void draw_elements_indirect(CF_StorageBuffer args, int offset, int draw_count) { cf_draw_elements_indirect(args, offset, draw_count); }
 CF_INLINE void push_gpu_label(const char* name) { cf_push_gpu_label(name); }
 CF_INLINE void pop_gpu_label() { cf_pop_gpu_label(); }
 CF_INLINE bool texture_supports_format(CF_PixelFormat format, CF_TextureUsageBits usage) { return cf_texture_supports_format(format, usage); }

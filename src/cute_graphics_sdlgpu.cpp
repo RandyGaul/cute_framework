@@ -2494,6 +2494,7 @@ CF_StorageBuffer cf_sdlgpu_make_storage_buffer(CF_StorageBufferParams params)
 	if (params.compute_readable) usage |= SDL_GPU_BUFFERUSAGE_COMPUTE_STORAGE_READ;
 	if (params.compute_writable) usage |= SDL_GPU_BUFFERUSAGE_COMPUTE_STORAGE_WRITE;
 	if (params.graphics_readable) usage |= SDL_GPU_BUFFERUSAGE_GRAPHICS_STORAGE_READ;
+	if (params.indirect_drawable) usage |= SDL_GPU_BUFFERUSAGE_INDIRECT;
 	sb->usage = usage;
 
 	SDL_GPUBufferCreateInfo buf_info = {};
@@ -2532,6 +2533,23 @@ void cf_sdlgpu_apply_vs_storage_buffers(CF_StorageBuffer* buffers, int count)
 		bufs[i] = ((CF_StorageBufferInternal*)buffers[i].id)->buffer;
 	}
 	SDL_BindGPUVertexStorageBuffers(g_ctx.active_pass, 0, bufs, (Uint32)count);
+}
+
+void cf_sdlgpu_draw_elements_indirect(CF_StorageBuffer args, int offset, int draw_count)
+{
+	// Same setup contract as cf_draw_elements (mesh + shader applied, pass live); only the
+	// arguments come from the GPU. Indexed vs non-indexed follows the applied mesh, exactly
+	// like cf_draw_elements -- the args buffer must hold the matching argument layout.
+	CF_MeshInternal* mesh = g_ctx.canvas->mesh;
+	CF_StorageBufferInternal* sb = (CF_StorageBufferInternal*)args.id;
+	CF_ASSERT(g_ctx.canvas->pass);
+	CF_ASSERT(sb && (sb->usage & SDL_GPU_BUFFERUSAGE_INDIRECT));
+	if (mesh->indices.buffer) {
+		SDL_DrawGPUIndexedPrimitivesIndirect(g_ctx.canvas->pass, sb->buffer, (Uint32)offset, (Uint32)draw_count);
+	} else {
+		SDL_DrawGPUPrimitivesIndirect(g_ctx.canvas->pass, sb->buffer, (Uint32)offset, (Uint32)draw_count);
+	}
+	app->draw_call_count++;
 }
 
 void cf_sdlgpu_draw_elements_instanced(int instance_count)

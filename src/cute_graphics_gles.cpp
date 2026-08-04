@@ -2209,6 +2209,15 @@ void cf_gles_dispatch_compute(CF_ComputeShader shader, CF_Material material, CF_
 	CF_UNUSED(dispatch);
 }
 
+void cf_gles_draw_elements_indirect(CF_StorageBuffer args, int offset, int draw_count)
+{
+	// No indirect draw on GLES3, same story as compute.
+	CF_UNUSED(args);
+	CF_UNUSED(offset);
+	CF_UNUSED(draw_count);
+	CF_ASSERT(!"cf_draw_elements_indirect is not supported on the GLES3 backend.");
+}
+
 // Pending emulated storage bindings, applied by cf_gles_draw_elements_instanced.
 static CF_GL_StorageBuffer* s_vs_storage[4];
 static int s_vs_storage_count = 0;
