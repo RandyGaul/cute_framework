@@ -1141,6 +1141,13 @@ TEST_CASE(test_draw3d_shapes)
 	cf_draw3d_box_wire(cf_v3(0, -0.5f, 0), cf_v3(0.1f, 0.1f, 0.1f), 0.02f);
 	cf_draw3d_arrow(cf_v3(-0.8f, -0.8f, 0), cf_v3(-0.6f, -0.8f, 0), 0.02f, 0.05f);
 	cf_draw3d_torus(cf_v3(0.8f, 0.8f, 0), cf_v3(0, 0, 1), 0.1f, 0.03f);
+	// A cyan cylinder upper-right and a white capsule upper-left, both axis-horizontal.
+	cf_draw3d_push_color(cf_make_color_rgb_f(0, 1, 1));
+	cf_draw3d_cylinder(cf_v3(0.7f, 0.4f, 0), cf_v3(0.9f, 0.4f, 0), 0.07f);
+	cf_draw3d_pop_color();
+	cf_draw3d_push_color(cf_make_color_rgb_f(1, 1, 1));
+	cf_draw3d_capsule(cf_v3(-0.8f, 0.4f, 0), cf_v3(-0.6f, 0.4f, 0), 0.07f);
+	cf_draw3d_pop_color();
 	// A magenta dashed line along the bottom: dash centers hit their pixels, gap centers don't.
 	cf_draw3d_push_color(cf_make_color_rgb_f(1, 0, 1));
 	cf_draw3d_push_dash(0.3f, 0.3f, 0);
@@ -1170,6 +1177,10 @@ TEST_CASE(test_draw3d_shapes)
 	// Solids are hemisphere-lit, so their channels dim but keep their hue.
 	REQUIRE(right.colors.b > 80 && right.colors.r < 60);
 	REQUIRE(top.colors.r > 80 && top.colors.g > 60 && top.colors.b < 60);
+	CF_Pixel cyl = s_pixel(px, 0.9f, 0.3f);      // Cylinder center: cyan hue.
+	CF_Pixel cap = s_pixel(px, 0.15f, 0.3f);     // Capsule center: white/grey.
+	REQUIRE(cyl.colors.g > 80 && cyl.colors.b > 80 && cyl.colors.r < 60);
+	REQUIRE(cap.colors.r > 80 && cap.colors.g > 80 && cap.colors.b > 80);
 	CF_Pixel dash_on = s_pixel(px, 0.275f, 0.875f);
 	CF_Pixel dash_off = s_pixel(px, 0.425f, 0.875f);
 	REQUIRE(dash_on.colors.r > 200 && dash_on.colors.b > 200);
@@ -1441,6 +1452,15 @@ TEST_CASE(test_draw3d_stats)
 	stats = cf_draw3d_stats();
 	REQUIRE(stats.commands == 1);
 	REQUIRE(stats.instances == 4);
+
+	// Cylinders and capsules live in the same arena; a capsule is three records (side + two
+	// hemisphere caps). These join the still-open solid command above: zero new commands.
+	cf_draw3d_cylinder(cf_v3(0, 0, 0), cf_v3(0, 0.2f, 0), 0.05f);
+	cf_draw3d_capsule(cf_v3(0.3f, 0, 0), cf_v3(0.3f, 0.2f, 0), 0.05f);
+	cf_draw3d_sphere(cf_v3(-0.3f, 0, 0), 0.05f);
+	stats = cf_draw3d_stats();
+	REQUIRE(stats.commands == 0);
+	REQUIRE(stats.instances == 5);
 
 	// Mesh attributes are the supported way to vary per-instance data: they must NOT split.
 	for (int i = 0; i < 4; ++i) {

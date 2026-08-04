@@ -219,8 +219,8 @@ struct CF_Draw3d
 	// The fixed built-in solids (cube/sphere/cone) pack into one arena mesh so interleaved
 	// solid submissions coalesce into one command via range records (see s_solids_init).
 	CF_Mesh solids_arena = { 0 };
-	int solid_first[3] = { };
-	int solid_count[3] = { };
+	int solid_first[6] = { };
+	int solid_count[6] = { };
 	Cute::Map<CF_Mesh> torus_meshes; // Ratio bakes into the vertices: keyed by quantized tube/major ratio.
 
 	// Sprite-texturing scratch, valid only inside cf_draw3d_process: the atlas report hook
@@ -1538,7 +1538,7 @@ static CF_Mesh s_make_solid(const Cute::Array<CF_SolidVertex>& verts)
 	return m;
 }
 
-enum { SOLID_CUBE, SOLID_SPHERE, SOLID_CONE };
+enum { SOLID_CUBE, SOLID_SPHERE, SOLID_CONE, SOLID_CYLINDER, SOLID_CYL_OPEN, SOLID_HEMISPHERE };
 
 // Builds the three fixed solids into one arena mesh on first solid use. Sharing one mesh is
 // what lets interleaved cube/sphere/cone submissions coalesce: each records its vertex range
@@ -1610,6 +1610,63 @@ static void s_solids_init()
 	}
 	s_draw3d->solid_count[SOLID_CONE] = v.count() - s_draw3d->solid_first[SOLID_CONE];
 
+	// Unit cylinder: radius 1, y in [0, 1]. The closed range appends caps onto the open
+	// side range, so cylinders draw one record and capsules borrow just the side.
+	s_draw3d->solid_first[SOLID_CYL_OPEN] = v.count();
+	{
+		const int SLICES = 32;
+		for (int j = 0; j < SLICES; ++j) {
+			float t0 = 2.0f * CF_PI * (float)j / SLICES;
+			float t1 = 2.0f * CF_PI * (float)(j + 1) / SLICES;
+			CF_V3 n0 = cf_v3(CF_COSF(t0), 0, CF_SINF(t0));
+			CF_V3 n1 = cf_v3(CF_COSF(t1), 0, CF_SINF(t1));
+			CF_V3 b0 = n0, b1 = n1;
+			CF_V3 u0 = cf_add_v3(n0, cf_v3(0, 1, 0));
+			CF_V3 u1 = cf_add_v3(n1, cf_v3(0, 1, 0));
+			v.add({ b0, n0 }); v.add({ u0, n0 }); v.add({ u1, n1 });
+			v.add({ b0, n0 }); v.add({ u1, n1 }); v.add({ b1, n1 });
+		}
+	}
+	s_draw3d->solid_count[SOLID_CYL_OPEN] = v.count() - s_draw3d->solid_first[SOLID_CYL_OPEN];
+	s_draw3d->solid_first[SOLID_CYLINDER] = s_draw3d->solid_first[SOLID_CYL_OPEN];
+	{
+		const int SLICES = 32;
+		for (int j = 0; j < SLICES; ++j) {
+			float t0 = 2.0f * CF_PI * (float)j / SLICES;
+			float t1 = 2.0f * CF_PI * (float)(j + 1) / SLICES;
+			CF_V3 b0 = cf_v3(CF_COSF(t0), 0, CF_SINF(t0));
+			CF_V3 b1 = cf_v3(CF_COSF(t1), 0, CF_SINF(t1));
+			CF_V3 u0 = cf_add_v3(b0, cf_v3(0, 1, 0));
+			CF_V3 u1 = cf_add_v3(b1, cf_v3(0, 1, 0));
+			CF_V3 dn = cf_v3(0, -1, 0), up = cf_v3(0, 1, 0);
+			v.add({ b0, dn }); v.add({ b1, dn }); v.add({ cf_v3(0, 0, 0), dn });
+			v.add({ u1, up }); v.add({ u0, up }); v.add({ cf_v3(0, 1, 0), up });
+		}
+	}
+	s_draw3d->solid_count[SOLID_CYLINDER] = v.count() - s_draw3d->solid_first[SOLID_CYLINDER];
+
+	// Unit hemisphere: radius 1, y >= 0, open at the equator (it seals against the
+	// cylinder side when composing capsules).
+	s_draw3d->solid_first[SOLID_HEMISPHERE] = v.count();
+	{
+		const int STACKS = 16, SLICES = 24;
+		for (int i = STACKS / 2; i < STACKS; ++i) {
+			float p0 = CF_PI * ((float)i / STACKS - 0.5f);
+			float p1 = CF_PI * ((float)(i + 1) / STACKS - 0.5f);
+			for (int j = 0; j < SLICES; ++j) {
+				float t0 = 2.0f * CF_PI * (float)j / SLICES;
+				float t1 = 2.0f * CF_PI * (float)(j + 1) / SLICES;
+				CF_V3 a = cf_v3(CF_COSF(p0) * CF_COSF(t0), CF_SINF(p0), CF_COSF(p0) * CF_SINF(t0));
+				CF_V3 b = cf_v3(CF_COSF(p0) * CF_COSF(t1), CF_SINF(p0), CF_COSF(p0) * CF_SINF(t1));
+				CF_V3 c = cf_v3(CF_COSF(p1) * CF_COSF(t1), CF_SINF(p1), CF_COSF(p1) * CF_SINF(t1));
+				CF_V3 d = cf_v3(CF_COSF(p1) * CF_COSF(t0), CF_SINF(p1), CF_COSF(p1) * CF_SINF(t0));
+				v.add({ a, a }); v.add({ c, c }); v.add({ b, b });
+				v.add({ a, a }); v.add({ d, d }); v.add({ c, c });
+			}
+		}
+	}
+	s_draw3d->solid_count[SOLID_HEMISPHERE] = v.count() - s_draw3d->solid_first[SOLID_HEMISPHERE];
+
 	s_draw3d->solids_arena = s_make_solid(v);
 }
 
@@ -1647,7 +1704,11 @@ static void s_submit_solid(CF_Mesh mesh, const CF_M4x4& local, int first = -1, i
 	inst.model0 = s_row(m, 0);
 	inst.model1 = s_row(m, 1);
 	inst.model2 = s_row(m, 2);
-	inst.uv_rect = s_draw3d->mesh_attributes.last(); // User attributes; color rides mesh_attributes.
+	// Lane note: solids carry the user's mesh attributes in uv_rect because the hemisphere
+	// light's color owns mesh_attributes; strokes do the reverse (color rides uv_rect/nmat0).
+	// Each kind's vertex stage routes its lane into v_attr, so ShapeParams.attributes is the
+	// pushed mesh attributes for BOTH kinds -- the contract test_draw3d_shape_shader pins.
+	inst.uv_rect = s_draw3d->mesh_attributes.last();
 	// Normal matrix: the rotation with each column re-normalized, correct under per-axis scale
 	// (which is all the shape placements below ever produce).
 	CF_V3 c0 = cf_safe_norm_v3(cf_v3(m.elements[0], m.elements[1], m.elements[2]));
@@ -1694,6 +1755,36 @@ void cf_draw3d_cone(CF_V3 base, CF_V3 tip, float radius)
 	s_perp_basis(cf_norm_v3(axis), &bx, &bz);
 	CF_M4x4 local = s_basis_m4(cf_mul_v3_f(bx, radius), axis, cf_mul_v3_f(bz, radius), base);
 	s_submit_arena_solid(SOLID_CONE, local);
+}
+
+void cf_draw3d_cylinder(CF_V3 a, CF_V3 b, float radius)
+{
+	CF_V3 axis = cf_sub_v3(b, a);
+	if (cf_len_v3(axis) < 0.00001f) return;
+	CF_V3 bx, bz;
+	s_perp_basis(cf_norm_v3(axis), &bx, &bz);
+	CF_M4x4 local = s_basis_m4(cf_mul_v3_f(bx, radius), axis, cf_mul_v3_f(bz, radius), a);
+	s_submit_arena_solid(SOLID_CYLINDER, local);
+}
+
+void cf_draw3d_capsule(CF_V3 a, CF_V3 b, float radius)
+{
+	CF_V3 axis = cf_sub_v3(b, a);
+	float len = cf_len_v3(axis);
+	if (len < 0.00001f) {
+		cf_draw3d_sphere(a, radius);
+		return;
+	}
+	CF_V3 n = cf_div_v3_f(axis, len);
+	CF_V3 bx, bz;
+	s_perp_basis(n, &bx, &bz);
+	// Three arena ranges -- open cylinder side plus a hemisphere per end -- so the caps stay
+	// perfectly spherical at any length, and all three records coalesce into the same command
+	// as every other interleaved solid. The bottom cap is the hemisphere rotated pi about bx
+	// (a proper rotation: mirroring would flip the winding under back-face culling).
+	s_submit_arena_solid(SOLID_CYL_OPEN, s_basis_m4(cf_mul_v3_f(bx, radius), axis, cf_mul_v3_f(bz, radius), a));
+	s_submit_arena_solid(SOLID_HEMISPHERE, s_basis_m4(cf_mul_v3_f(bx, radius), cf_mul_v3_f(n, radius), cf_mul_v3_f(bz, radius), b));
+	s_submit_arena_solid(SOLID_HEMISPHERE, s_basis_m4(cf_mul_v3_f(bx, radius), cf_mul_v3_f(n, -radius), cf_mul_v3_f(bz, -radius), a));
 }
 
 void cf_draw3d_torus(CF_V3 center, CF_V3 normal, float radius, float tube_radius)

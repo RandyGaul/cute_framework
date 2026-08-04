@@ -1162,6 +1162,32 @@ CF_API void CF_CALL cf_draw3d_sphere(CF_V3 center, float radius);
 CF_API void CF_CALL cf_draw3d_cone(CF_V3 base, CF_V3 tip, float radius);
 
 /**
+ * @function cf_draw3d_cylinder
+ * @category draw3d
+ * @brief    Draws a solid cylinder lit by a simple built-in hemisphere light.
+ * @param    a       The center of one end cap.
+ * @param    b       The center of the other end cap.
+ * @param    radius  The cylinder's radius.
+ * @related  cf_draw3d_capsule cf_draw3d_cube cf_draw3d_sphere cf_draw3d_cone cf_draw3d_push_color
+ */
+CF_API void CF_CALL cf_draw3d_cylinder(CF_V3 a, CF_V3 b, float radius);
+
+/**
+ * @function cf_draw3d_capsule
+ * @category draw3d
+ * @brief    Draws a solid capsule lit by a simple built-in hemisphere light.
+ * @param    a       The center of one hemispherical cap.
+ * @param    b       The center of the other cap.
+ * @param    radius  The capsule's radius.
+ * @remarks  The debug shape for character controllers and swept spheres. Degenerates to a
+ *           sphere when `a` equals `b`. Composed from three sub-mesh records (side + two
+ *           caps) that coalesce with every other interleaved solid, so drawing one costs
+ *           the same batch as any other shape.
+ * @related  cf_draw3d_cylinder cf_draw3d_sphere cf_draw3d_cube cf_draw3d_cone cf_draw3d_push_color
+ */
+CF_API void CF_CALL cf_draw3d_capsule(CF_V3 a, CF_V3 b, float radius);
+
+/**
  * @function cf_draw3d_torus
  * @category draw3d
  * @brief    Draws a solid torus lit by a simple built-in hemisphere light.
@@ -1307,6 +1333,8 @@ CF_INLINE void draw3d_axes(float length, float thickness) { cf_draw3d_axes(lengt
 CF_INLINE void draw3d_cube(CF_V3 center, CF_V3 half_extents) { cf_draw3d_cube(center, half_extents); }
 CF_INLINE void draw3d_sphere(CF_V3 center, float radius) { cf_draw3d_sphere(center, radius); }
 CF_INLINE void draw3d_cone(CF_V3 base, CF_V3 tip, float radius) { cf_draw3d_cone(base, tip, radius); }
+CF_INLINE void draw3d_cylinder(CF_V3 a, CF_V3 b, float radius) { cf_draw3d_cylinder(a, b, radius); }
+CF_INLINE void draw3d_capsule(CF_V3 a, CF_V3 b, float radius) { cf_draw3d_capsule(a, b, radius); }
 CF_INLINE void draw3d_torus(CF_V3 center, CF_V3 normal, float radius, float tube_radius) { cf_draw3d_torus(center, normal, radius, tube_radius); }
 CF_INLINE CF_V3 draw3d_project(CF_V3 world_position) { return cf_draw3d_project(world_position); }
 CF_INLINE void draw3d_unproject(CF_V2 point, CF_V3* origin_out, CF_V3* direction_out) { cf_draw3d_unproject(point, origin_out, direction_out); }
