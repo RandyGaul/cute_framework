@@ -1201,6 +1201,67 @@ void cf_sdlgpu_texture_update_mip(CF_Texture texture_handle, void* data, int siz
 	if (!g_ctx.cmd) SDL_SubmitGPUCommandBuffer(cmd);
 }
 
+void cf_sdlgpu_texture_update_region(CF_Texture texture_handle, int x, int y, int w, int h, void* pixels)
+{
+	s_end_active_pass();
+	CF_TextureInternal* tex = (CF_TextureInternal*)texture_handle.id;
+	int size = w * h * (int)SDL_GPUTextureFormatTexelBlockSize(tex->format);
+
+	// Region updates always use a throwaway transfer buffer -- the texture's cached one (if
+	// any) is sized for whole-texture updates.
+	SDL_GPUTransferBufferCreateInfo tbuf_info = {
+		.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD,
+		.size = (Uint32)size,
+		.props = 0,
+	};
+	SDL_GPUTransferBuffer* buf = SDL_CreateGPUTransferBuffer(g_ctx.device, &tbuf_info);
+	void* p = SDL_MapGPUTransferBuffer(g_ctx.device, buf, true);
+	CF_MEMCPY(p, pixels, size);
+	SDL_UnmapGPUTransferBuffer(g_ctx.device, buf);
+
+	SDL_GPUCommandBuffer* cmd = g_ctx.cmd ? g_ctx.cmd : SDL_AcquireGPUCommandBuffer(g_ctx.device);
+	SDL_GPUCopyPass* pass = SDL_BeginGPUCopyPass(cmd);
+	SDL_GPUTextureTransferInfo src;
+	src.transfer_buffer = buf;
+	src.offset = 0;
+	// SDL_GPU: 0 means tightly packed, inferred from the texture region dimensions.
+	src.pixels_per_row = 0;
+	src.rows_per_layer = 0;
+	SDL_GPUTextureRegion dst = SDL_GPUTextureRegionDefaults(tex, w, h);
+	dst.x = (Uint32)x;
+	dst.y = (Uint32)y;
+	// cycle = false: region updates compose one texture across several uploads/copies, and
+	// cycling would discard the regions written just before this one.
+	SDL_UploadToGPUTexture(pass, &src, &dst, false);
+	SDL_EndGPUCopyPass(pass);
+	SDL_ReleaseGPUTransferBuffer(g_ctx.device, buf);
+	if (!g_ctx.cmd) SDL_SubmitGPUCommandBuffer(cmd);
+}
+
+void cf_sdlgpu_texture_copy_region(CF_Texture dst_handle, int dst_x, int dst_y, CF_Texture src_handle, int src_x, int src_y, int w, int h)
+{
+	s_end_active_pass();
+	CF_TextureInternal* dst_tex = (CF_TextureInternal*)dst_handle.id;
+	CF_TextureInternal* src_tex = (CF_TextureInternal*)src_handle.id;
+
+	SDL_GPUCommandBuffer* cmd = g_ctx.cmd ? g_ctx.cmd : SDL_AcquireGPUCommandBuffer(g_ctx.device);
+	SDL_GPUCopyPass* pass = SDL_BeginGPUCopyPass(cmd);
+	SDL_GPUTextureLocation src;
+	CF_MEMSET(&src, 0, sizeof(src));
+	src.texture = src_tex->tex;
+	src.x = (Uint32)src_x;
+	src.y = (Uint32)src_y;
+	SDL_GPUTextureLocation dst;
+	CF_MEMSET(&dst, 0, sizeof(dst));
+	dst.texture = dst_tex->tex;
+	dst.x = (Uint32)dst_x;
+	dst.y = (Uint32)dst_y;
+	// cycle = false for the same reason as region uploads: many copies compose one texture.
+	SDL_CopyGPUTextureToTexture(pass, &src, &dst, (Uint32)w, (Uint32)h, 1, false);
+	SDL_EndGPUCopyPass(pass);
+	if (!g_ctx.cmd) SDL_SubmitGPUCommandBuffer(cmd);
+}
+
 void cf_sdlgpu_generate_mipmaps(CF_Texture texture_handle)
 {
 	s_end_active_pass();

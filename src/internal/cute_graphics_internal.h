@@ -58,16 +58,20 @@ CF_INLINE bool s_is_compatible(CF_ShaderInputFormat input_format, CF_VertexForma
 		return vertex_format == CF_VERTEX_FORMAT_FLOAT4 || vertex_format == CF_VERTEX_FORMAT_UBYTE4_NORM || vertex_format == CF_VERTEX_FORMAT_UBYTE4;
 
 	case CF_SHADER_INPUT_FORMAT_UVEC4:
-		return vertex_format == CF_VERTEX_FORMAT_UBYTE4_NORM || vertex_format == CF_VERTEX_FORMAT_UBYTE4;
+		return vertex_format == CF_VERTEX_FORMAT_UBYTE4_NORM || vertex_format == CF_VERTEX_FORMAT_UBYTE4
+			|| vertex_format == CF_VERTEX_FORMAT_USHORT4 || vertex_format == CF_VERTEX_FORMAT_UINT4;
 
 	case CF_SHADER_INPUT_FORMAT_IVEC4:
-		return vertex_format == CF_VERTEX_FORMAT_SHORT4 || vertex_format == CF_VERTEX_FORMAT_SHORT4_NORM;
+		return vertex_format == CF_VERTEX_FORMAT_SHORT4 || vertex_format == CF_VERTEX_FORMAT_SHORT4_NORM
+			|| vertex_format == CF_VERTEX_FORMAT_INT4;
 
 	case CF_SHADER_INPUT_FORMAT_IVEC2:
-		return vertex_format == CF_VERTEX_FORMAT_SHORT2 || vertex_format == CF_VERTEX_FORMAT_SHORT2_NORM;
+		return vertex_format == CF_VERTEX_FORMAT_SHORT2 || vertex_format == CF_VERTEX_FORMAT_SHORT2_NORM
+			|| vertex_format == CF_VERTEX_FORMAT_INT2;
 
 	case CF_SHADER_INPUT_FORMAT_UVEC2:
-		return vertex_format == CF_VERTEX_FORMAT_HALF2;
+		return vertex_format == CF_VERTEX_FORMAT_HALF2
+			|| vertex_format == CF_VERTEX_FORMAT_USHORT2 || vertex_format == CF_VERTEX_FORMAT_UINT2;
 
 	// Not supported.
 	case CF_SHADER_INPUT_FORMAT_UVEC3:
@@ -286,6 +290,13 @@ void cf_set_sampler_override(void* sampler);
 // cf_apply_vs/fs_storage_buffers, cf_push/pop_gpu_label, and cf_draw_elements_instanced
 // used to be declared here as internal-only; they are public in cute_graphics.h now.
 void cf_current_canvas_size(int* w, int* h);
+
+// Region-granular texture ops used by the draw layer's atlas cache to rebuild atlas pages
+// GPU-side (repacks become texture->texture copies instead of CPU pixel re-fetch + upload).
+// Dispatch shims live in cute_graphics.cpp, implemented in both backends. 2D textures only.
+// Coordinates are in pixels, row 0 being the first row of uploaded pixel data.
+void cf_texture_update_region(CF_Texture texture, int x, int y, int w, int h, void* pixels);
+void cf_texture_copy_region(CF_Texture dst, int dst_x, int dst_y, CF_Texture src, int src_x, int src_y, int w, int h);
 
 // Mesh introspection for the draw3d layer (cute_draw3d.cpp): whether an attribute with this
 // name exists (used to detect its reserved instance attributes), and the mesh's instance

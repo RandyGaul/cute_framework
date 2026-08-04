@@ -122,6 +122,43 @@ void cf_destroy_texture_handle(ATLAS_CACHE_U64 texture_id, void* udata)
 	cf_destroy_texture(tex);
 }
 
+// The three callbacks below enable atlas_cache's GPU repack path: atlas pages get rebuilt with
+// texture->texture region copies instead of re-fetching every resident image's pixels through
+// cf_get_pixels and assembling a CPU-side atlas buffer.
+
+ATLAS_CACHE_U64 cf_generate_empty_texture_handle(int w, int h, void* udata)
+{
+	CF_UNUSED(udata);
+	CF_TextureParams params = cf_texture_defaults(w, h);
+	params.filter = CF_FILTER_LINEAR;
+	CF_Texture texture = cf_make_texture(params);
+	// Clear to transparent-zero, matching the CPU path's memset of its atlas buffer: regions
+	// no image lands in are still sampled through the atlas border ring and must not contain
+	// garbage. One zeroed whole-texture upload -- still no per-image producer callbacks.
+	int size = w * h * (int)sizeof(CF_Pixel);
+	void* zeroes = CF_CALLOC(size);
+	cf_texture_update(texture, zeroes, size);
+	CF_FREE(zeroes);
+	return texture.id;
+}
+
+void cf_copy_texture_handle_region(ATLAS_CACHE_U64 dst, int dst_x, int dst_y, ATLAS_CACHE_U64 src, int src_x, int src_y, int w, int h, void* udata)
+{
+	CF_UNUSED(udata);
+	CF_Texture dst_tex, src_tex;
+	dst_tex.id = dst;
+	src_tex.id = src;
+	cf_texture_copy_region(dst_tex, dst_x, dst_y, src_tex, src_x, src_y, w, h);
+}
+
+void cf_upload_texture_handle_subimage(ATLAS_CACHE_U64 dst, int x, int y, int w, int h, const void* pixels, void* udata)
+{
+	CF_UNUSED(udata);
+	CF_Texture dst_tex;
+	dst_tex.id = dst;
+	cf_texture_update_region(dst_tex, x, y, w, h, (void*)pixels);
+}
+
 atlas_cache_t* cf_get_draw_atlas_cache()
 {
 	return &s_draw->atlas_cache;
@@ -902,6 +939,11 @@ static void s_init_atlas_cache(int w, int h)
 	config.get_pixels_callback = cf_get_pixels;
 	config.generate_texture_callback = cf_generate_texture_handle;
 	config.delete_texture_callback = cf_destroy_texture_handle;
+	// GPU repack path: atlas rebuilds copy still-resident images GPU->GPU instead of
+	// re-fetching all their pixels through cf_get_pixels.
+	config.generate_empty_texture_callback = cf_generate_empty_texture_handle;
+	config.copy_texture_callback = cf_copy_texture_handle_region;
+	config.upload_subimage_callback = cf_upload_texture_handle_subimage;
 	config.allocator_context = NULL;
 	config.lonely_buffer_count_till_flush = 0;
 	config.atlas_height_in_pixels = h;

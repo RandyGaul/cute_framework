@@ -1855,6 +1855,100 @@ TEST_CASE(test_draw_text_curves)
 	return true;
 }
 
+// -------------------------------------------------------------------------------------------------
+// Atlas repacks are GPU->GPU copies. Draw a few distinct-color sprites, then corrupt their
+// CPU-side pixel stores to a magenta sentinel: any later atlas rebuild that re-fetched pixels
+// through the producer (cf_get_pixels) would visibly render the sentinel, while GPU copies keep
+// rendering the original colors. Repacks are forced by flooding batches of new sprites (each
+// batch builds a new mostly-empty atlas page; two such pages merge on the following frame,
+// demoting + repacking everything). Non-vacuousness: the originals' texture id must change
+// across frames -- alias-free because old pages are destroyed only AFTER new pages exist.
+
+static CF_Sprite s_repack_originals[3];
+static CF_Sprite s_repack_extras[64];
+static int s_repack_extra_count;
+
+static void s_scene_repack()
+{
+	for (int i = 0; i < 3; ++i) {
+		s_repack_originals[i].transform.p = cf_v2(-200.0f + 40.0f * i, 0);
+		cf_draw_sprite(&s_repack_originals[i]);
+	}
+	for (int i = 0; i < s_repack_extra_count; ++i) {
+		s_repack_extras[i].transform.p = cf_v2(-280.0f + 24.0f * (i % 24), -150.0f + 100.0f * (i / 24));
+		cf_draw_sprite(&s_repack_extras[i]);
+	}
+}
+
+TEST_CASE(test_draw_atlas_repack_gpu_copies)
+{
+	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, 640, 480, s_app_options(), NULL))) return true; // Headless CI: no display/GPU.
+
+	const int w = 640, h = 480;
+	const int sw = 16, sh = 16;
+	CF_Pixel* px = (CF_Pixel*)cf_alloc(w * h * sizeof(CF_Pixel));
+	CF_Pixel solid[sw * sh];
+	const int colors[3][3] = { { 220, 40, 60 }, { 40, 220, 90 }, { 60, 90, 220 } };
+
+	for (int i = 0; i < 3; ++i) {
+		for (int p = 0; p < sw * sh; ++p) solid[p] = cf_make_pixel_rgba(colors[i][0], colors[i][1], colors[i][2], 255);
+		s_repack_originals[i] = cf_make_easy_sprite_from_pixels(solid, sw, sh);
+	}
+	s_repack_extra_count = 0;
+
+	atlas_cache_t* cache = cf_get_draw_atlas_cache();
+	auto verify_originals = [&](const CF_Pixel* p) {
+		bool ok = true;
+		for (int i = 0; i < 3; ++i) {
+			ok = ok && s_px_near(s_probe(p, w, h, -200 + 40 * i), colors[i][0], colors[i][1], colors[i][2], 255, 3);
+		}
+		return ok;
+	};
+
+	// Frame 1: originals upload (lonely textures) and render.
+	REQUIRE(s_readback(s_scene_repack, 0, w, h, px));
+	REQUIRE(verify_originals(px));
+
+	// Corrupt the originals' CPU pixel stores. Every atlas the originals land in from here on
+	// must be assembled from GPU copies -- a producer re-fetch would render magenta.
+	for (int i = 0; i < 3; ++i) {
+		CF_Image* img = app->easy_sprites.try_get(s_repack_originals[i].easy_sprite_id);
+		REQUIRE(img);
+		for (int p = 0; p < img->w * img->h; ++p) img->pix[p] = cf_make_pixel_rgba(255, 0, 255, 255);
+	}
+
+	// Flood batches of new sprites over several frames. Each batch frame packs a fresh atlas
+	// page; the following settle frame merges the two mostly-empty pages, repacking the
+	// originals into yet another page via GPU copies.
+	ATLAS_CACHE_U64 prev_tex = atlas_cache_fetch(cache, s_repack_originals[0].easy_sprite_id, sw, sh).texture_id;
+	int rebuilds = 0;
+	for (int batch = 0; batch < 4; ++batch) {
+		for (int i = 0; i < 12; ++i) {
+			int j = s_repack_extra_count;
+			for (int p = 0; p < sw * sh; ++p) solid[p] = cf_make_pixel_rgba(10 + j * 3, 250 - j * 2, 20 + j * 4, 255);
+			s_repack_extras[j] = cf_make_easy_sprite_from_pixels(solid, sw, sh);
+			s_repack_extra_count++;
+		}
+		for (int frame = 0; frame < 2; ++frame) { // Batch frame + settle (merge) frame.
+			REQUIRE(s_readback(s_scene_repack, 0, w, h, px));
+			REQUIRE(verify_originals(px));
+			ATLAS_CACHE_U64 tex = atlas_cache_fetch(cache, s_repack_originals[0].easy_sprite_id, sw, sh).texture_id;
+			if (tex != prev_tex) rebuilds++;
+			prev_tex = tex;
+		}
+	}
+
+	// The originals' page must have been rebuilt at least twice (lonely -> atlas, plus at
+	// least one atlas merge), all without touching the (corrupted) CPU pixels.
+	REQUIRE(rebuilds >= 2);
+	REQUIRE(s_readback(s_scene_repack, 0, w, h, px));
+	REQUIRE(verify_originals(px));
+
+	cf_free(px);
+	cf_destroy_app();
+	return true;
+}
+
 TEST_SUITE(test_draw_tiled)
 {
 	// CF_TEST_ONLY=<case name> runs a single case, useful when isolating one scene.
@@ -1883,6 +1977,7 @@ TEST_SUITE(test_draw_tiled)
 	RUN_TEST_CASE_IF(test_draw_paths);
 	RUN_TEST_CASE_IF(test_draw_path_bake_once_stability);
 	RUN_TEST_CASE_IF(test_draw_path_lonely_flood);
+	RUN_TEST_CASE_IF(test_draw_atlas_repack_gpu_copies);
 	RUN_TEST_CASE_IF(test_draw_canvas_blit_preserves_earlier_shapes);
 	RUN_TEST_CASE_IF(test_draw_lists);
 }

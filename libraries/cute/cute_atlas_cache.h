@@ -3,7 +3,7 @@
 		Licensing information can be found at the end of the file.
 	------------------------------------------------------------------------------
 
-	cute_atlas_cache.h - v1.11
+	cute_atlas_cache.h - v1.12
 
 	To create implementation (the function definitions)
 		#define ATLAS_CACHE_IMPLEMENTATION
@@ -178,6 +178,17 @@
 		                  storage; atlas creation then read the freed array and packed
 		                  garbage blocks (visible as corrupted entries once enough
 		                  distinct images accumulated to cross the map's capacity).
+		1.12 (08/03/2026) Added an optional GPU->GPU repack path via three new config
+		                  callbacks: `generate_empty_texture_callback`,
+		                  `copy_texture_callback` and `upload_subimage_callback`. When
+		                  all three are provided, atlas pages are built by copying
+		                  regions out of the old pages / lonely textures directly on
+		                  the GPU instead of re-fetching every resident image's pixels
+		                  through `get_pixels_fn` and assembling a CPU buffer. Old page
+		                  textures are destroyed at the *end* of `atlas_cache_defrag`
+		                  (after the new pages are assembled) so they can serve as copy
+		                  sources. When any callback is NULL the old CPU path runs,
+		                  byte-for-byte unchanged.
 */
 
 /*
@@ -321,6 +332,31 @@ typedef ATLAS_CACHE_U64 (generate_texture_handle_fn)(void* pixels, int w, int h,
 // or a particular atlas has not been used for a while, and is ready to be released.
 typedef void (destroy_texture_handle_fn)(ATLAS_CACHE_U64 texture_id, void* udata);
 
+// The following three callbacks are OPTIONAL, and enable the GPU->GPU repack path. When all three
+// are provided, atlas pages are assembled by copying pixel regions from wherever an image is already
+// resident on the GPU (an old atlas page, or a lonely texture) instead of re-fetching every image's
+// pixels through `get_pixels_fn` and assembling a CPU-side buffer. Only images with no GPU residency
+// at all (brand new content) still go through `get_pixels_fn`, and they upload just the region they
+// land in via `upload_subimage_fn`. If any of the three is NULL the CPU path runs, unchanged.
+//
+// Note on the 1-pixel border (`atlas_use_border_pixels`): the CPU path pads each image with a ring of
+// *zero* pixels (not edge replication). Lonely textures and old atlas slots already contain that zero
+// ring baked in, so whole-slot copies reproduce the CPU path's result exactly.
+
+// Create an atlas page texture of w by h pixels with no particular contents, *cleared to the same
+// empty color the CPU path uses* (see ATLAS_CACHE_ATLAS_EMPTY_COLOR, transparent-zero by default).
+// Regions of the page that no image lands in are never overwritten, so they must not contain garbage.
+typedef ATLAS_CACHE_U64 (generate_empty_texture_fn)(int w, int h, void* udata);
+
+// Copy a w by h pixel region from texture `src` at (src_x, src_y) to texture `dst` at (dst_x, dst_y).
+// Coordinates are in pixels with row 0 being the first row of the pixel data uploaded via
+// `generate_texture_handle_fn`/`upload_subimage_fn` (i.e. the same convention on both ends).
+typedef void (copy_texture_fn)(ATLAS_CACHE_U64 dst, int dst_x, int dst_y, ATLAS_CACHE_U64 src, int src_x, int src_y, int w, int h, void* udata);
+
+// Upload w by h pixels of CPU memory (tightly packed, `pixel_stride` bytes per pixel) into texture
+// `dst` at pixel offset (x, y).
+typedef void (upload_subimage_fn)(ATLAS_CACHE_U64 dst, int x, int y, int w, int h, const void* pixels, void* udata);
+
 // Initializes a set of good default paramaters. The users must still set
 // the four callbacks inside of `config`.
 void atlas_cache_set_default_config(atlas_cache_config_t* config);
@@ -344,6 +380,12 @@ struct atlas_cache_config_t
 	get_pixels_fn* get_pixels_callback;
 	generate_texture_handle_fn* generate_texture_callback;
 	destroy_texture_handle_fn* delete_texture_callback;
+	// Optional (default NULL) -- set all three to enable the GPU->GPU repack path, where atlas
+	// pages are rebuilt with texture->texture copies instead of CPU pixel re-fetch + assembly.
+	// See the typedef comments above for the exact contracts.
+	generate_empty_texture_fn* generate_empty_texture_callback;
+	copy_texture_fn* copy_texture_callback;
+	upload_subimage_fn* upload_subimage_callback;
 	void* allocator_context;
 };
 
@@ -389,6 +431,7 @@ typedef struct atlas_cache_internal_texture_t
 {
 	int timestamp;
 	int w, h;
+	int x, y; // Pixel coords of this image's slot in the atlas (top-left, including any border ring).
 	float minx, miny;
 	float maxx, maxy;
 	ATLAS_CACHE_U64 image_id;
@@ -409,6 +452,12 @@ typedef struct atlas_cache_internal_lonely_texture_t
 	int w, h;
 	ATLAS_CACHE_U64 image_id;
 	ATLAS_CACHE_U64 texture_id;
+	// GPU repack path only: prior residency of this image when it was demoted out of an atlas
+	// page whose destruction is deferred (see `deferred_textures`). ~0 when not resident.
+	// Valid only within the `atlas_cache_defrag` call that created it -- cleared when the
+	// deferred textures are destroyed.
+	ATLAS_CACHE_U64 prev_texture_id;
+	int prev_x, prev_y; // Pixel coords of the image's old slot (top-left, including border ring).
 } atlas_cache_internal_lonely_texture_t;
 
 typedef struct atlas_cache_internal_premade_t
@@ -434,6 +483,12 @@ struct atlas_cache_t
 	int key_buffer_capacity;
 	ATLAS_CACHE_U64* key_buffer;
 
+	// GPU repack path only: old page textures (and demoted lonely textures) that must outlive
+	// atlas creation so they can serve as copy sources. Destroyed at the end of `atlas_cache_defrag`.
+	int deferred_texture_count;
+	int deferred_texture_capacity;
+	ATLAS_CACHE_U64* deferred_textures;
+
 	int pixel_buffer_size; // number of pixels
 	void* pixel_buffer;
 
@@ -457,6 +512,9 @@ struct atlas_cache_t
 	get_pixels_fn* get_pixels_callback;
 	generate_texture_handle_fn* generate_texture_callback;
 	destroy_texture_handle_fn* delete_texture_callback;
+	generate_empty_texture_fn* generate_empty_texture_callback;
+	copy_texture_fn* copy_texture_callback;
+	upload_subimage_fn* upload_subimage_callback;
 	void* mem_ctx;
 	void* udata;
 };
@@ -783,6 +841,9 @@ int atlas_cache_init(atlas_cache_t* cache, atlas_cache_config_t* config, void* u
 	cache->get_pixels_callback = config->get_pixels_callback;
 	cache->generate_texture_callback = config->generate_texture_callback;
 	cache->delete_texture_callback = config->delete_texture_callback;
+	cache->generate_empty_texture_callback = config->generate_empty_texture_callback;
+	cache->copy_texture_callback = config->copy_texture_callback;
+	cache->upload_subimage_callback = config->upload_subimage_callback;
 	cache->mem_ctx = config->allocator_context;
 	cache->udata = udata;
 
@@ -814,6 +875,11 @@ int atlas_cache_init(atlas_cache_t* cache, atlas_cache_config_t* config, void* u
 	cache->key_buffer_capacity = 1024;
 	cache->key_buffer = (ATLAS_CACHE_U64*)ATLAS_CACHE_MALLOC(sizeof(ATLAS_CACHE_U64) * cache->key_buffer_capacity, cache->mem_ctx);
 
+	// initialize deferred texture destruction buffer (GPU repack path)
+	cache->deferred_texture_count = 0;
+	cache->deferred_texture_capacity = 64;
+	cache->deferred_textures = (ATLAS_CACHE_U64*)ATLAS_CACHE_MALLOC(sizeof(ATLAS_CACHE_U64) * cache->deferred_texture_capacity, cache->mem_ctx);
+
 	// initialize pixel buffer for grabbing pixel data from the user as needed
 	cache->pixel_buffer_size = 1024;
 	cache->pixel_buffer = ATLAS_CACHE_MALLOC(cache->pixel_buffer_size * cache->pixel_stride, cache->mem_ctx);
@@ -830,6 +896,12 @@ int atlas_cache_init(atlas_cache_t* cache, atlas_cache_config_t* config, void* u
 
 void atlas_cache_term(atlas_cache_t* cache)
 {
+	// Destroy any textures whose destruction was deferred by the GPU repack path (e.g. an
+	// `atlas_cache_invalidate` since the last `atlas_cache_defrag`).
+	for (int i = 0; i < cache->deferred_texture_count; ++i) {
+		cache->delete_texture_callback(cache->deferred_textures[i], cache->udata);
+	}
+	ATLAS_CACHE_FREE(cache->deferred_textures, cache->mem_ctx);
 	ATLAS_CACHE_FREE(cache->input_buffer, cache->mem_ctx);
 	ATLAS_CACHE_FREE(cache->entries, cache->mem_ctx);
 	ATLAS_CACHE_FREE(cache->entries_scratch, cache->mem_ctx);
@@ -879,6 +951,9 @@ void atlas_cache_set_default_config(atlas_cache_config_t* config)
 	config->get_pixels_callback = 0;
 	config->generate_texture_callback = 0;
 	config->delete_texture_callback = 0;
+	config->generate_empty_texture_callback = 0;
+	config->copy_texture_callback = 0;
+	config->upload_subimage_callback = 0;
 	config->allocator_context = 0;
 }
 
@@ -1082,6 +1157,13 @@ static inline void atlas_cache_internal_get_pixels(atlas_cache_t* cache, ATLAS_C
 	}
 }
 
+// Non-zero when all three optional GPU callbacks are provided -- atlas pages are then rebuilt
+// with texture->texture copies, and old page textures are destroyed at the end of defrag.
+static inline int atlas_cache_internal_use_gpu_copies(atlas_cache_t* cache)
+{
+	return cache->generate_empty_texture_callback && cache->copy_texture_callback && cache->upload_subimage_callback;
+}
+
 static inline ATLAS_CACHE_U64 atlas_cache_internal_generate_texture_handle(atlas_cache_t* cache, ATLAS_CACHE_U64 image_id, int w, int h)
 {
 	atlas_cache_internal_get_pixels(cache, image_id, w, h);
@@ -1101,6 +1183,9 @@ atlas_cache_internal_lonely_texture_t* atlas_cache_internal_lonelybuffer_push(at
 	texture.h = h;
 	texture.image_id = image_id;
 	texture.texture_id = make_tex ? atlas_cache_internal_generate_texture_handle(cache, image_id, w, h) : ~0;
+	texture.prev_texture_id = ~0;
+	texture.prev_x = 0;
+	texture.prev_y = 0;
 	return (atlas_cache_internal_lonely_texture_t*)atlas_cache_map_insert(&cache->lonely_buffer, image_id, &texture);
 }
 
@@ -1469,8 +1554,9 @@ typedef struct atlas_cache_internal_atlas_image_t
 void atlas_cache_make_atlas(atlas_cache_t* cache, atlas_cache_internal_atlas_t* atlas_out, const atlas_cache_internal_lonely_texture_t* imgs, int img_count)
 {
 	float iw, ih;
-	int atlas_image_size, atlas_stride, sp;
+	int atlas_image_size = 0, atlas_stride = 0, sp;
 	void* atlas_pixels = 0;
+	int use_gpu_copies = atlas_cache_internal_use_gpu_copies(cache);
 	int atlas_node_capacity = img_count * 2;
 	atlas_cache_internal_integer_image_t* images = 0;
 	atlas_cache_internal_integer_image_t* images_scratch = 0;
@@ -1575,38 +1661,86 @@ void atlas_cache_make_atlas(atlas_cache_t* cache, atlas_cache_internal_atlas_t* 
 		new_node->max = atlas_cache_add(new_node->min, new_node->size);
 	}
 
-	// Write the final atlas image, use ATLAS_CACHE_ATLAS_EMPTY_COLOR as base color
-	atlas_stride = atlas_width * pixel_stride;
-	atlas_image_size = atlas_width * atlas_height * pixel_stride;
-	atlas_pixels = ATLAS_CACHE_MALLOC(atlas_image_size, cache->mem_ctx);
-	ATLAS_CACHE_CHECK(atlas_pixels, "out of mem");
-	ATLAS_CACHE_MEMSET(atlas_pixels, ATLAS_CACHE_ATLAS_EMPTY_COLOR, atlas_image_size);
+	atlas_cache_map_init(&atlas_out->textures, sizeof(atlas_cache_internal_texture_t), img_count, cache->mem_ctx);
 
-	for (int i = 0; i < img_count; ++i)
+	if (use_gpu_copies)
 	{
-		atlas_cache_internal_integer_image_t* image = images + i;
+		// GPU repack path: build the page directly on the GPU. Each packed image is copied
+		// from wherever it's already resident -- its lonely texture, or its slot in an old
+		// (not-yet-destroyed, see `deferred_textures`) atlas page. Only images with no GPU
+		// residency go through `get_pixels_fn`, and upload just the region they land in.
+		//
+		// Border note: the CPU path pads each image with a ring of *zero* pixels (see
+		// `atlas_cache_internal_get_pixels`), and every copy source already contains that
+		// ring baked in (lonely textures are generated from bordered pixel buffers, old
+		// atlas slots were assembled from them). So whole-slot copies -- `image->size`
+		// includes the border -- replicate the CPU path's result exactly, no edge-strip
+		// work needed.
+		atlas_out->texture_id = cache->generate_empty_texture_callback(atlas_width, atlas_height, cache->udata);
 
-		if (image->fit)
+		for (int i = 0; i < img_count; ++i)
 		{
-			const atlas_cache_internal_lonely_texture_t* img = imgs + image->img_index;
-			atlas_cache_internal_get_pixels(cache, img->image_id, img->w, img->h);
-			char* pixels = (char*)cache->pixel_buffer;
+			atlas_cache_internal_integer_image_t* image = images + i;
 
-			atlas_cache_v2_t min = image->min;
-			atlas_cache_v2_t max = image->max;
-			int atlas_offset = min.x * pixel_stride;
-			int tex_stride = image->size.x * pixel_stride;
-
-			for (int row = min.y, y = 0; row < max.y; ++row, ++y)
+			if (image->fit)
 			{
-				void* row_ptr = (char*)atlas_pixels + (row * atlas_stride + atlas_offset);
-				ATLAS_CACHE_MEMCPY(row_ptr, pixels + y * tex_stride, tex_stride);
+				const atlas_cache_internal_lonely_texture_t* img = imgs + image->img_index;
+				atlas_cache_v2_t min = image->min;
+
+				if (img->texture_id != ~0)
+				{
+					// Resident as a lonely texture -- it is exactly one (bordered) slot big.
+					cache->copy_texture_callback(atlas_out->texture_id, min.x, min.y, img->texture_id, 0, 0, image->size.x, image->size.y, cache->udata);
+				}
+				else if (img->prev_texture_id != ~0)
+				{
+					// Resident in an old atlas page awaiting deferred destruction.
+					cache->copy_texture_callback(atlas_out->texture_id, min.x, min.y, img->prev_texture_id, img->prev_x, img->prev_y, image->size.x, image->size.y, cache->udata);
+				}
+				else
+				{
+					// Not resident anywhere -- fetch pixels (bordered by get_pixels) and
+					// upload just this slot.
+					atlas_cache_internal_get_pixels(cache, img->image_id, img->w, img->h);
+					cache->upload_subimage_callback(atlas_out->texture_id, min.x, min.y, image->size.x, image->size.y, cache->pixel_buffer, cache->udata);
+				}
 			}
 		}
 	}
+	else
+	{
+		// Write the final atlas image, use ATLAS_CACHE_ATLAS_EMPTY_COLOR as base color
+		atlas_stride = atlas_width * pixel_stride;
+		atlas_image_size = atlas_width * atlas_height * pixel_stride;
+		atlas_pixels = ATLAS_CACHE_MALLOC(atlas_image_size, cache->mem_ctx);
+		ATLAS_CACHE_CHECK(atlas_pixels, "out of mem");
+		ATLAS_CACHE_MEMSET(atlas_pixels, ATLAS_CACHE_ATLAS_EMPTY_COLOR, atlas_image_size);
 
-	atlas_cache_map_init(&atlas_out->textures, sizeof(atlas_cache_internal_texture_t), img_count, cache->mem_ctx);
-	atlas_out->texture_id = cache->generate_texture_callback(atlas_pixels, atlas_width, atlas_height, cache->udata);
+		for (int i = 0; i < img_count; ++i)
+		{
+			atlas_cache_internal_integer_image_t* image = images + i;
+
+			if (image->fit)
+			{
+				const atlas_cache_internal_lonely_texture_t* img = imgs + image->img_index;
+				atlas_cache_internal_get_pixels(cache, img->image_id, img->w, img->h);
+				char* pixels = (char*)cache->pixel_buffer;
+
+				atlas_cache_v2_t min = image->min;
+				atlas_cache_v2_t max = image->max;
+				int atlas_offset = min.x * pixel_stride;
+				int tex_stride = image->size.x * pixel_stride;
+
+				for (int row = min.y, y = 0; row < max.y; ++row, ++y)
+				{
+					void* row_ptr = (char*)atlas_pixels + (row * atlas_stride + atlas_offset);
+					ATLAS_CACHE_MEMCPY(row_ptr, pixels + y * tex_stride, tex_stride);
+				}
+			}
+		}
+
+		atlas_out->texture_id = cache->generate_texture_callback(atlas_pixels, atlas_width, atlas_height, cache->udata);
+	}
 
 	iw = 1.0f / (float)(atlas_width);
 	ih = 1.0f / (float)(atlas_height);
@@ -1637,6 +1771,8 @@ void atlas_cache_make_atlas(atlas_cache_t* cache, atlas_cache_internal_atlas_t* 
 			atlas_cache_internal_texture_t texture;
 			texture.w = img->size.x;
 			texture.h = img->size.y;
+			texture.x = min.x;
+			texture.y = min.y;
 			texture.timestamp = 0;
 			texture.minx = min_x;
 			texture.miny = min_y;
@@ -1708,9 +1844,35 @@ void atlas_cache_internal_remove_table_entries(atlas_cache_t* cache, atlas_cache
 	cache->key_buffer_count = 0;
 }
 
+// GPU repack path: queue a texture for destruction at the end of `atlas_cache_defrag`, so it
+// stays alive as a copy source while the new atlas pages are assembled.
+int atlas_cache_internal_defer_texture_destroy(atlas_cache_t* cache, ATLAS_CACHE_U64 texture_id)
+{
+	ATLAS_CACHE_CHECK_BUFFER_GROW(cache, deferred_texture_count, deferred_texture_capacity, deferred_textures, ATLAS_CACHE_U64);
+	cache->deferred_textures[cache->deferred_texture_count++] = texture_id;
+	return 0;
+}
+
+void atlas_cache_internal_destroy_deferred_textures(atlas_cache_t* cache)
+{
+	if (!cache->deferred_texture_count) return;
+	for (int i = 0; i < cache->deferred_texture_count; ++i) {
+		cache->delete_texture_callback(cache->deferred_textures[i], cache->udata);
+	}
+	cache->deferred_texture_count = 0;
+
+	// Any lonely texture still holding a prior-residency record now points at a destroyed
+	// texture -- clear them all. Residency records are only valid within the defrag pass
+	// that created them (unpacked leftovers get patched up via `get_pixels_fn` as before).
+	int count = atlas_cache_map_count(&cache->lonely_buffer);
+	atlas_cache_internal_lonely_texture_t* lonely = (atlas_cache_internal_lonely_texture_t*)atlas_cache_map_items(&cache->lonely_buffer);
+	for (int i = 0; i < count; ++i) lonely[i].prev_texture_id = ~0;
+}
+
 void atlas_cache_internal_flush_atlas(atlas_cache_t* cache, atlas_cache_internal_atlas_t* atlas, atlas_cache_internal_atlas_t** sentinel, atlas_cache_internal_atlas_t** next)
 {
 	int ticks_to_decay_texture = cache->ticks_to_decay_texture;
+	int use_gpu_copies = atlas_cache_internal_use_gpu_copies(cache);
 	int texture_count = atlas_cache_map_count(&atlas->textures);
 	atlas_cache_internal_texture_t* textures = (atlas_cache_internal_texture_t*)atlas_cache_map_items(&atlas->textures);
 
@@ -1728,6 +1890,15 @@ void atlas_cache_internal_flush_atlas(atlas_cache_t* cache, atlas_cache_internal
 			}
 			atlas_cache_internal_lonely_texture_t* lonely_texture = atlas_cache_internal_lonelybuffer_push(cache, atlas_texture->image_id, w, h, 0);
 			lonely_texture->timestamp = atlas_texture->timestamp;
+			if (use_gpu_copies)
+			{
+				// Remember where this image lived, so the next atlas build can copy its
+				// pixels GPU-side. This page's texture is deferred (not destroyed) below,
+				// keeping the source alive until the end of the next defrag pass.
+				lonely_texture->prev_texture_id = atlas->texture_id;
+				lonely_texture->prev_x = atlas_texture->x;
+				lonely_texture->prev_y = atlas_texture->y;
+			}
 		}
 		atlas_cache_map_remove(&cache->image_to_atlas, atlas_texture->image_id);
 	}
@@ -1759,7 +1930,8 @@ void atlas_cache_internal_flush_atlas(atlas_cache_t* cache, atlas_cache_internal
 	atlas->next->prev = atlas->prev;
 	atlas->prev->next = atlas->next;
 	atlas_cache_map_term(&atlas->textures);
-	cache->delete_texture_callback(atlas->texture_id, cache->udata);
+	if (use_gpu_copies) atlas_cache_internal_defer_texture_destroy(cache, atlas->texture_id);
+	else cache->delete_texture_callback(atlas->texture_id, cache->udata);
 	ATLAS_CACHE_FREE(atlas, cache->mem_ctx);
 }
 
@@ -1795,6 +1967,7 @@ int atlas_cache_defrag(atlas_cache_t* cache)
 {
 	// remove decayed atlases and flush them to the lonely buffer
 	// only flush textures that are not decayed
+	int use_gpu_copies = atlas_cache_internal_use_gpu_copies(cache);
 	int ticks_to_decay_texture = cache->ticks_to_decay_texture;
 	float ratio_to_decay_atlas = cache->ratio_to_decay_atlas;
 	atlas_cache_internal_atlas_t* atlas = cache->atlases;
@@ -1930,7 +2103,12 @@ int atlas_cache_defrag(atlas_cache_t* cache)
 				{
 					atlas_cache_internal_buffer_key(cache, key);
 					ATLAS_CACHE_U64 texture_id = lonely_textures[i].texture_id;
-					if (texture_id != ~0) cache->delete_texture_callback(texture_id, cache->udata);
+					if (texture_id != ~0) {
+						// GPU path: this lonely texture was just used as a copy source for
+						// the new page -- keep it alive until the copies are behind us.
+						if (use_gpu_copies) atlas_cache_internal_defer_texture_destroy(cache, texture_id);
+						else cache->delete_texture_callback(texture_id, cache->udata);
+					}
 					atlas_cache_map_insert(&cache->image_to_atlas, key, &atlas);
 					ATLAS_CACHE_LOG("removing lonely texture for atlas%s\n", texture_id != ~0 ? "" : " (tex was ~0)" );
 				}
@@ -1960,7 +2138,10 @@ int atlas_cache_defrag(atlas_cache_t* cache)
 			{
 				ATLAS_CACHE_U64 key = lonely_textures[i].image_id;
 				ATLAS_CACHE_U64 texture_id = lonely_textures[i].texture_id;
-				if (texture_id != ~0) cache->delete_texture_callback(texture_id, cache->udata);
+				if (texture_id != ~0) {
+					if (use_gpu_copies) atlas_cache_internal_defer_texture_destroy(cache, texture_id);
+					else cache->delete_texture_callback(texture_id, cache->udata);
+				}
 				atlas_cache_map_insert(&cache->image_to_atlas, key, &atlas);
 				ATLAS_CACHE_LOG("(fast path) removing lonely texture for atlas%s\n", texture_id != ~0 ? "" : " (tex was ~0)" );
 			}
@@ -1969,6 +2150,10 @@ int atlas_cache_defrag(atlas_cache_t* cache)
 			break;
 		}
 	}
+
+	// GPU repack path: all new pages are assembled, so the old pages (and consumed lonely
+	// textures) they were copied from can finally be destroyed.
+	atlas_cache_internal_destroy_deferred_textures(cache);
 
 	return 1;
 }

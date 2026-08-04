@@ -257,6 +257,11 @@ struct CF_GL_Shader
 {
 	GLuint program;
 
+	// Bit per attrib location (< 64): set when the shader-side input is an integer type
+	// (ivec/uvec), which must bind through glVertexAttribIPointer -- the float path would
+	// int-to-float convert and the shader would read garbage bits. Built once at link.
+	uint64_t integer_attrib_mask;
+
 	int num_texture_bindings;
 	CF_GL_TextureBinding* texture_bindings;
 	int num_vs_texture_bindings;
@@ -372,6 +377,9 @@ static struct
 	CF_GL_RenderState target_state;
 	CF_GL_RenderState current_state;
 	GLuint fbo;
+	// Lazily-created scratch framebuffer used as a read source for texture->texture
+	// region copies (cf_gles_texture_copy_region). Owned by the current GL context.
+	GLuint scratch_read_fbo;
 	CF_MaterialInternal* material;
 	CF_GL_Mesh* mesh;
 	CF_GL_Canvas* canvas;
@@ -666,6 +674,35 @@ static inline GLuint s_make_program(CF_ShaderBytecode vs_bytecode, CF_ShaderByte
 	return program;
 }
 
+// One bit per attrib location whose shader-side type is integer (ivec/uvec families). Those
+// locations must bind via glVertexAttribIPointer; see CF_GL_Shader::integer_attrib_mask.
+static uint64_t s_integer_attrib_mask(GLuint program)
+{
+	uint64_t mask = 0;
+	GLint count = 0;
+	glGetProgramiv(program, GL_ACTIVE_ATTRIBUTES, &count);
+	for (GLint i = 0; i < count; ++i) {
+		char name[256];
+		GLsizei len = 0;
+		GLint size = 0;
+		GLenum type = GL_NONE;
+		glGetActiveAttrib(program, (GLuint)i, sizeof(name), &len, &size, &type, name);
+		bool integer = false;
+		switch (type) {
+		case GL_INT: case GL_INT_VEC2: case GL_INT_VEC3: case GL_INT_VEC4:
+		case GL_UNSIGNED_INT: case GL_UNSIGNED_INT_VEC2: case GL_UNSIGNED_INT_VEC3: case GL_UNSIGNED_INT_VEC4:
+			integer = true;
+			break;
+		default:
+			break;
+		}
+		if (!integer) continue;
+		GLint loc = glGetAttribLocation(program, name);
+		if (loc >= 0 && loc < 64) mask |= 1ULL << loc;
+	}
+	return mask;
+}
+
 CF_Result cf_gles_init(bool debug)
 {
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
@@ -712,6 +749,7 @@ void cf_gles_attach(SDL_Window* window)
 	// A fresh context recycles GL object ids, so cached bindings from a previous
 	// app/context lifetime would wrongly elide binds. Reset all cached GL state.
 	g_ctx.fbo = 0;
+	g_ctx.scratch_read_fbo = 0;
 	g_ctx.mesh = NULL;
 	g_ctx.material = NULL;
 	g_ctx.canvas = NULL;
@@ -1085,6 +1123,39 @@ void cf_gles_texture_update_mip(CF_Texture tex, void* data, int /*size*/, int mi
 	glBindTexture(GL_TEXTURE_2D, t->id);
 	glTexSubImage2D(GL_TEXTURE_2D, mip, 0, 0, w, h, t->upload_fmt, t->upload_type, data);
 	glBindTexture(GL_TEXTURE_2D, 0);
+	CF_POLL_OPENGL_ERROR();
+}
+
+void cf_gles_texture_update_region(CF_Texture tex, int x, int y, int w, int h, void* pixels)
+{
+	CF_GL_Texture* t = (CF_GL_Texture*)(uintptr_t)tex.id;
+	CF_ASSERT(t->target == GL_TEXTURE_2D);
+	// Region updates write in place (no ring rotation): several region uploads/copies
+	// compose one texture, so rotating to a fresh slot would discard prior regions.
+	glBindTexture(GL_TEXTURE_2D, t->id);
+	glTexSubImage2D(GL_TEXTURE_2D, 0, x, y, w, h, t->upload_fmt, t->upload_type, pixels);
+	glBindTexture(GL_TEXTURE_2D, 0);
+	CF_POLL_OPENGL_ERROR();
+}
+
+void cf_gles_texture_copy_region(CF_Texture dst, int dst_x, int dst_y, CF_Texture src, int src_x, int src_y, int w, int h)
+{
+	CF_GL_Texture* s = (CF_GL_Texture*)(uintptr_t)src.id;
+	CF_GL_Texture* d = (CF_GL_Texture*)(uintptr_t)dst.id;
+	CF_ASSERT(s->target == GL_TEXTURE_2D && d->target == GL_TEXTURE_2D);
+	// Attach the source to a scratch read framebuffer and copy the region into the
+	// destination texture. Written in place (no ring rotation), see update_region.
+	if (!g_ctx.scratch_read_fbo) glGenFramebuffers(1, &g_ctx.scratch_read_fbo);
+	glBindFramebuffer(GL_READ_FRAMEBUFFER, g_ctx.scratch_read_fbo);
+	glFramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, s->id, 0);
+	glBindTexture(GL_TEXTURE_2D, d->id);
+	glCopyTexSubImage2D(GL_TEXTURE_2D, 0, dst_x, dst_y, src_x, src_y, w, h);
+	glBindTexture(GL_TEXTURE_2D, 0);
+	glFramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, 0, 0);
+	// Restore the read binding to the cached framebuffer -- s_bind_framebuffer binds
+	// GL_FRAMEBUFFER (read+draw) and elides rebinds of the same id, so leaving the read
+	// side pointing at the scratch fbo would go unnoticed.
+	glBindFramebuffer(GL_READ_FRAMEBUFFER, g_ctx.fbo);
 	CF_POLL_OPENGL_ERROR();
 }
 
@@ -1648,6 +1719,7 @@ CF_Shader cf_gles_make_shader_from_bytecode(CF_ShaderBytecode vertex_bytecode, C
 	// Copy refelection data
 	CF_GL_Shader* shader = (CF_GL_Shader*)CF_CALLOC(sizeof(CF_GL_Shader));
 	shader->program = program;
+	shader->integer_attrib_mask = s_integer_attrib_mask(program);
 
 	// FS texture bindings.
 	shader->texture_bindings = (CF_GL_TextureBinding*)CF_ALLOC(sizeof(CF_GL_TextureBinding) * fragment_bytecode.shader_info.num_images);
@@ -1832,7 +1904,9 @@ static inline void s_apply_vertex_attributes(CF_GL_Shader* shader, CF_GL_Mesh* m
 			case CF_VERTEX_FORMAT_UINT2:	type = GL_UNSIGNED_INT; comps = 2; break;
 			case CF_VERTEX_FORMAT_UINT3:	type = GL_UNSIGNED_INT; comps = 3; break;
 			case CF_VERTEX_FORMAT_UINT4:	type = GL_UNSIGNED_INT; comps = 4; break;
+			case CF_VERTEX_FORMAT_BYTE4:	type = GL_BYTE; comps = 4; break;
 			case CF_VERTEX_FORMAT_BYTE4_NORM:	type = GL_BYTE; comps = 4; norm = GL_TRUE; break;
+			case CF_VERTEX_FORMAT_UBYTE4:	type = GL_UNSIGNED_BYTE; comps = 4; break;
 			case CF_VERTEX_FORMAT_UBYTE4_NORM:	type = GL_UNSIGNED_BYTE; comps = 4; norm = GL_TRUE; break;
 			case CF_VERTEX_FORMAT_SHORT2:	type = GL_SHORT; comps = 2; break;
 			case CF_VERTEX_FORMAT_SHORT2_NORM:	type = GL_SHORT; comps = 2; norm = GL_TRUE; break;
@@ -1851,7 +1925,10 @@ static inline void s_apply_vertex_attributes(CF_GL_Shader* shader, CF_GL_Mesh* m
 			glEnableVertexAttribArray((GLuint)loc);
 		}
 		const void* pointer = (const void*)(intptr_t)(attrib->offset + base_offset);
-		if (type == GL_INT) {
+		// The shader-side input type decides the pointer flavor: integer inputs (ivec/uvec)
+		// must use IPointer regardless of the vertex format's width -- previously only GL_INT
+		// took this path, so uvec4 fed by ushort/ubyte joints read int-to-float garbage.
+		if (shader->integer_attrib_mask & (1ULL << loc)) {
 			glVertexAttribIPointer((GLuint)loc, comps, type, buf_stride, pointer);
 		} else {
 			glVertexAttribPointer((GLuint)loc, comps, type, norm, buf_stride, pointer);
