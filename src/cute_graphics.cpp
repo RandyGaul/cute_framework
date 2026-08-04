@@ -557,12 +557,13 @@ CF_Shader cf_make_draw_blit_shader_from_bytecode_internal(CF_ShaderBytecode byte
 	return cf_make_shader_from_bytecode(app->blit_vs_bytecode, bytecode);
 }
 
-static void s_material_set_texture(CF_MaterialInternal* material, CF_MaterialState* state, const char* name, CF_Texture texture)
+static void s_material_set_texture(CF_MaterialInternal* material, CF_MaterialState* state, const char* name, CF_Texture texture, CF_Sampler sampler)
 {
 	bool found = false;
 	for (int i = 0; i < state->textures.count(); ++i) {
 		if (state->textures[i].name == name) {
 			state->textures[i].handle = texture;
+			state->textures[i].sampler = sampler;
 			found = true;
 			break;
 		}
@@ -571,6 +572,7 @@ static void s_material_set_texture(CF_MaterialInternal* material, CF_MaterialSta
 		CF_MaterialTex tex;
 		tex.name = name;
 		tex.handle = texture;
+		tex.sampler = sampler;
 		state->textures.add(tex);
 		material->dirty = true;
 	}
@@ -729,21 +731,38 @@ void cf_material_set_texture_vs(CF_Material material_handle, const char* name, C
 {
 	CF_MaterialInternal* material = (CF_MaterialInternal*)material_handle.id;
 	name = sintern(name);
-	s_material_set_texture(material, &material->vs, name, texture);
+	CF_Sampler none = { 0 };
+	s_material_set_texture(material, &material->vs, name, texture, none);
 }
 
 void cf_material_set_texture_fs(CF_Material material_handle, const char* name, CF_Texture texture)
 {
 	CF_MaterialInternal* material = (CF_MaterialInternal*)material_handle.id;
 	name = sintern(name);
-	s_material_set_texture(material, &material->fs, name, texture);
+	CF_Sampler none = { 0 };
+	s_material_set_texture(material, &material->fs, name, texture, none);
 }
 
 void cf_material_set_texture_cs(CF_Material material_handle, const char* name, CF_Texture texture)
 {
 	CF_MaterialInternal* material = (CF_MaterialInternal*)material_handle.id;
 	name = sintern(name);
-	s_material_set_texture(material, &material->cs, name, texture);
+	CF_Sampler none = { 0 };
+	s_material_set_texture(material, &material->cs, name, texture, none);
+}
+
+void cf_material_set_texture_vs_sampler(CF_Material material_handle, const char* name, CF_Texture texture, CF_Sampler sampler)
+{
+	CF_MaterialInternal* material = (CF_MaterialInternal*)material_handle.id;
+	name = sintern(name);
+	s_material_set_texture(material, &material->vs, name, texture, sampler);
+}
+
+void cf_material_set_texture_fs_sampler(CF_Material material_handle, const char* name, CF_Texture texture, CF_Sampler sampler)
+{
+	CF_MaterialInternal* material = (CF_MaterialInternal*)material_handle.id;
+	name = sintern(name);
+	s_material_set_texture(material, &material->fs, name, texture, sampler);
 }
 
 void cf_material_clear_textures(CF_Material material_handle)
@@ -987,6 +1006,8 @@ CF_DISPATCH_SHIM_VOID(texture_update, (CF_Texture texture_handle, void* data, in
 CF_DISPATCH_SHIM_VOID(texture_update_mip, (CF_Texture texture_handle, void* data, int size, int mip_level), texture_handle, data, size, mip_level)
 CF_DISPATCH_SHIM_VOID(texture_update_layer, (CF_Texture texture_handle, void* data, int size, int layer), texture_handle, data, size, layer)
 CF_DISPATCH_SHIM_VOID(texture_update_layer_mip, (CF_Texture texture_handle, void* data, int size, int layer, int mip_level), texture_handle, data, size, layer, mip_level)
+CF_DISPATCH_SHIM(CF_Sampler, make_sampler, (CF_SamplerParams params), params)
+CF_DISPATCH_SHIM_VOID(destroy_sampler, (CF_Sampler sampler), sampler)
 CF_DISPATCH_SHIM_VOID(texture_update_region, (CF_Texture texture_handle, int x, int y, int w, int h, void* pixels), texture_handle, x, y, w, h, pixels)
 CF_DISPATCH_SHIM_VOID(texture_copy_region, (CF_Texture dst, int dst_x, int dst_y, CF_Texture src, int src_x, int src_y, int w, int h), dst, dst_x, dst_y, src, src_x, src_y, w, h)
 CF_DISPATCH_SHIM_VOID(generate_mipmaps, (CF_Texture texture_handle), texture_handle)

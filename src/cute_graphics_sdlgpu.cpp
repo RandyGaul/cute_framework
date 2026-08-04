@@ -1736,6 +1736,33 @@ void cf_sdlgpu_apply_instance_buffer_override(uint64_t handle, int count, int of
 	g_ctx.instance_override_offset = b ? offset_bytes : 0;
 }
 
+CF_Sampler cf_sdlgpu_make_sampler(CF_SamplerParams params)
+{
+	SDL_GPUSamplerCreateInfo info;
+	CF_MEMSET(&info, 0, sizeof(info));
+	info.min_filter = s_wrap(params.filter);
+	info.mag_filter = s_wrap(params.filter);
+	info.mipmap_mode = s_wrap(params.mip_filter);
+	info.address_mode_u = s_wrap(params.wrap_u);
+	info.address_mode_v = s_wrap(params.wrap_v);
+	info.address_mode_w = s_wrap(params.wrap_w);
+	info.mip_lod_bias = params.mip_lod_bias;
+	info.enable_anisotropy = params.max_anisotropy > 1;
+	info.max_anisotropy = (float)params.max_anisotropy;
+	info.enable_compare = params.compare_enable;
+	info.compare_op = s_wrap(params.compare_function);
+	info.min_lod = params.min_lod;
+	info.max_lod = params.max_lod;
+	CF_Sampler result;
+	result.id = (uint64_t)SDL_CreateGPUSampler(g_ctx.device, &info);
+	return result;
+}
+
+void cf_sdlgpu_destroy_sampler(CF_Sampler sampler)
+{
+	if (sampler.id) SDL_ReleaseGPUSampler(g_ctx.device, (SDL_GPUSampler*)sampler.id);
+}
+
 bool cf_sdlgpu_mesh_has_vertex_attribute(CF_Mesh mesh_handle, const char* name)
 {
 	CF_MeshInternal* mesh = (CF_MeshInternal*)mesh_handle.id;
@@ -2274,6 +2301,9 @@ void cf_sdlgpu_apply_shader(CF_Shader shader_handle, CF_Material material_handle
 				if (shader->vs_image_names[j] == image_name) {
 					if (g_ctx.sampler_override) {
 						vs_sampler_bindings[j].sampler = g_ctx.sampler_override;
+					} else if (material->vs.textures[i].sampler.id) {
+						// Per-binding standalone sampler (cf_material_set_texture_vs_sampler).
+						vs_sampler_bindings[j].sampler = (SDL_GPUSampler*)material->vs.textures[i].sampler.id;
 					} else {
 						vs_sampler_bindings[j].sampler = ((CF_TextureInternal*)material->vs.textures[i].handle.id)->sampler;
 					}
@@ -2297,6 +2327,9 @@ void cf_sdlgpu_apply_shader(CF_Shader shader_handle, CF_Material material_handle
 				if (shader->fs_image_names[j] == image_name) {
 					if (g_ctx.sampler_override) {
 						fs_sampler_bindings[j].sampler = g_ctx.sampler_override;
+					} else if (material->fs.textures[i].sampler.id) {
+						// Per-binding standalone sampler (cf_material_set_texture_fs_sampler).
+						fs_sampler_bindings[j].sampler = (SDL_GPUSampler*)material->fs.textures[i].sampler.id;
 					} else {
 						fs_sampler_bindings[j].sampler = ((CF_TextureInternal*)material->fs.textures[i].handle.id)->sampler;
 					}

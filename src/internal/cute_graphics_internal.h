@@ -139,6 +139,7 @@ struct CF_MaterialTex
 {
 	const char* name;
 	CF_Texture handle;
+	CF_Sampler sampler; // Zero id: sample through the texture's own baked sampler.
 };
 
 struct CF_MaterialState

@@ -479,6 +479,70 @@ TEST_CASE(test_depth_attach)
 	return true;
 }
 
+// Standalone samplers: one texture, two ways to filter it. A 2x1 red|blue texture baked with
+// NEAREST reads a pure texel at uv 0.5; overriding the binding with a LINEAR CF_Sampler must
+// yield the 50/50 blend instead, and rebinding without the sampler must restore pure NEAREST.
+TEST_CASE(test_standalone_sampler)
+{
+	if (!test_make_app(W, H)) return true; // Headless CI: no display/GPU.
+
+	CF_TextureParams tp = cf_texture_defaults(2, 1);
+	tp.filter = CF_FILTER_NEAREST;
+	tp.mip_filter = CF_MIP_FILTER_NEAREST;
+	tp.wrap_u = CF_WRAP_MODE_CLAMP_TO_EDGE;
+	tp.wrap_v = CF_WRAP_MODE_CLAMP_TO_EDGE;
+	CF_Texture tex = cf_make_texture(tp);
+	REQUIRE(tex.id);
+	CF_Pixel texels[2] = { cf_make_pixel_rgb(255, 0, 0), cf_make_pixel_rgb(0, 0, 255) };
+	cf_texture_update(tex, texels, (int)sizeof(texels));
+
+	const char* fs =
+		"layout (location = 0) out vec4 result;\n"
+		"layout (set = 2, binding = 0) uniform sampler2D u_tex;\n"
+		"void main() { result = texture(u_tex, vec2(0.5, 0.5)); }\n";
+	CF_Shader shader = cf_make_shader_from_source(s_vs, fs);
+	REQUIRE(shader.id);
+	CF_Mesh mesh = s_make_fullscreen_quad();
+	CF_Material material = cf_make_material();
+	CF_Canvas canvas = cf_make_canvas(cf_canvas_defaults(W, H));
+	CF_Pixel* px = (CF_Pixel*)cf_alloc(W * H * (int)sizeof(CF_Pixel));
+
+	// Baked NEAREST: uv 0.5 lands on a single texel -- a pure color, no blend.
+	cf_material_set_texture_fs(material, "u_tex", tex);
+	CF_Pixel c = s_draw_and_read(canvas, mesh, shader, material, px);
+	bool pure = (c.colors.r > 200 && c.colors.b < 60) || (c.colors.b > 200 && c.colors.r < 60);
+	REQUIRE(pure);
+	REQUIRE(c.colors.g < 60);
+
+	// LINEAR standalone sampler on the same texture: uv 0.5 sits exactly between
+	// texel centers, so red and blue blend about 50/50.
+	CF_SamplerParams sp = cf_sampler_defaults();
+	sp.wrap_u = CF_WRAP_MODE_CLAMP_TO_EDGE;
+	sp.wrap_v = CF_WRAP_MODE_CLAMP_TO_EDGE;
+	CF_Sampler linear = cf_make_sampler(sp);
+	REQUIRE(linear.id);
+	cf_material_set_texture_fs_sampler(material, "u_tex", tex, linear);
+	c = s_draw_and_read(canvas, mesh, shader, material, px);
+	REQUIRE(c.colors.r > 80 && c.colors.r < 180);
+	REQUIRE(c.colors.b > 80 && c.colors.b < 180);
+
+	// Rebind without the sampler: back to the texture's baked NEAREST state.
+	cf_material_set_texture_fs(material, "u_tex", tex);
+	c = s_draw_and_read(canvas, mesh, shader, material, px);
+	pure = (c.colors.r > 200 && c.colors.b < 60) || (c.colors.b > 200 && c.colors.r < 60);
+	REQUIRE(pure);
+
+	cf_destroy_sampler(linear);
+	cf_free(px);
+	cf_destroy_canvas(canvas);
+	cf_destroy_material(material);
+	cf_destroy_mesh(mesh);
+	cf_destroy_shader(shader);
+	cf_destroy_texture(tex);
+	test_destroy_app();
+	return true;
+}
+
 TEST_SUITE(test_texture_types)
 {
 	RUN_TEST_CASE(test_cube_map_sample);
@@ -486,4 +550,5 @@ TEST_SUITE(test_texture_types)
 	RUN_TEST_CASE(test_render_to_cube_face);
 	RUN_TEST_CASE(test_depth_attach);
 	RUN_TEST_CASE(test_attach_mip);
+	RUN_TEST_CASE(test_standalone_sampler);
 }

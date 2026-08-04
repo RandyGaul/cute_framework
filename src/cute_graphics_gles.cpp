@@ -885,6 +885,9 @@ static inline void s_apply_sampler_state_to_handle(const CF_GL_Texture* t, GLuin
 	glBindTexture(t->target, handle);
 	glTexParameteri(t->target, GL_TEXTURE_MIN_FILTER, t->min_filter);
 	glTexParameteri(t->target, GL_TEXTURE_MAG_FILTER, t->mag_filter);
+	// Without this, a standalone sampler using a mipmap min-filter would make
+	// a mipless texture incomplete (sampling black).
+	if (!t->has_mips) glTexParameteri(t->target, GL_TEXTURE_MAX_LEVEL, 0);
 	glTexParameteri(t->target, GL_TEXTURE_WRAP_S, t->wrap_u);
 	glTexParameteri(t->target, GL_TEXTURE_WRAP_T, t->wrap_v);
 	if (t->target == GL_TEXTURE_CUBE_MAP || t->target == GL_TEXTURE_3D) {
@@ -1536,6 +1539,39 @@ void cf_gles_apply_instance_buffer_override(uint64_t handle, int count, int offs
 	s_gl_instance_override_offset = b ? offset_bytes : 0;
 }
 
+CF_Sampler cf_gles_make_sampler(CF_SamplerParams params)
+{
+	GLuint id = 0;
+	glGenSamplers(1, &id);
+	GLenum min_filter;
+	if (params.filter == CF_FILTER_NEAREST) {
+		min_filter = params.mip_filter == CF_MIP_FILTER_LINEAR ? GL_NEAREST_MIPMAP_LINEAR : GL_NEAREST_MIPMAP_NEAREST;
+	} else {
+		min_filter = params.mip_filter == CF_MIP_FILTER_LINEAR ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR_MIPMAP_NEAREST;
+	}
+	glSamplerParameteri(id, GL_TEXTURE_MIN_FILTER, min_filter);
+	glSamplerParameteri(id, GL_TEXTURE_MAG_FILTER, s_wrap(params.filter));
+	glSamplerParameteri(id, GL_TEXTURE_WRAP_S, s_wrap(params.wrap_u));
+	glSamplerParameteri(id, GL_TEXTURE_WRAP_T, s_wrap(params.wrap_v));
+	glSamplerParameteri(id, GL_TEXTURE_WRAP_R, s_wrap(params.wrap_w));
+	glSamplerParameterf(id, GL_TEXTURE_MIN_LOD, params.min_lod);
+	glSamplerParameterf(id, GL_TEXTURE_MAX_LOD, params.max_lod);
+	if (params.compare_enable) {
+		glSamplerParameteri(id, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
+		glSamplerParameteri(id, GL_TEXTURE_COMPARE_FUNC, s_wrap(params.compare_function));
+	}
+	CF_POLL_OPENGL_ERROR();
+	CF_Sampler result;
+	result.id = (uint64_t)id;
+	return result;
+}
+
+void cf_gles_destroy_sampler(CF_Sampler sampler)
+{
+	GLuint id = (GLuint)sampler.id;
+	if (id) glDeleteSamplers(1, &id);
+}
+
 bool cf_gles_mesh_has_vertex_attribute(CF_Mesh mh, const char* name)
 {
 	auto* m = (CF_GL_Mesh*)(uintptr_t)mh.id;
@@ -2045,6 +2081,9 @@ void cf_gles_apply_shader(CF_Shader shader_handle, CF_Material material_handle)
 			if (binding->name == material_tex.name) {
 				glActiveTexture(GL_TEXTURE0 + texture_unit);
 				glBindTexture(texture->target, texture->id);
+				// Per-binding standalone sampler; zero rebinds sampler 0 so the texture's
+				// own parameters apply (and stale bindings from earlier draws reset).
+				glBindSampler((GLuint)texture_unit, (GLuint)material_tex.sampler.id);
 				if (g_ctx.has_filter_override) {
 					GLenum gl_filter = (g_ctx.filter_override == CF_FILTER_NEAREST) ? GL_NEAREST : GL_LINEAR;
 					glTexParameteri(texture->target, GL_TEXTURE_MIN_FILTER, gl_filter);
@@ -2066,6 +2105,9 @@ void cf_gles_apply_shader(CF_Shader shader_handle, CF_Material material_handle)
 			if (binding->name == material_tex.name) {
 				glActiveTexture(GL_TEXTURE0 + texture_unit);
 				glBindTexture(texture->target, texture->id);
+				// Per-binding standalone sampler; zero rebinds sampler 0 so the texture's
+				// own parameters apply (and stale bindings from earlier draws reset).
+				glBindSampler((GLuint)texture_unit, (GLuint)material_tex.sampler.id);
 				if (g_ctx.has_filter_override) {
 					GLenum gl_filter = (g_ctx.filter_override == CF_FILTER_NEAREST) ? GL_NEAREST : GL_LINEAR;
 					glTexParameteri(texture->target, GL_TEXTURE_MIN_FILTER, gl_filter);
@@ -2339,6 +2381,7 @@ static void s_apply_storage_textures()
 		if (loc < 0 || !s_vs_storage[i]) continue;
 		glActiveTexture(GL_TEXTURE0 + unit);
 		glBindTexture(GL_TEXTURE_2D, s_vs_storage[i]->tex);
+		glBindSampler(unit, 0); // Stale sampler objects (e.g. compare mode) break texelFetch on some drivers.
 		glUniform1i(loc, unit);
 		++unit;
 	}
@@ -2347,6 +2390,7 @@ static void s_apply_storage_textures()
 		if (loc < 0 || !s_fs_storage[i]) continue;
 		glActiveTexture(GL_TEXTURE0 + unit);
 		glBindTexture(GL_TEXTURE_2D, s_fs_storage[i]->tex);
+		glBindSampler(unit, 0); // Stale sampler objects (e.g. compare mode) break texelFetch on some drivers.
 		glUniform1i(loc, unit);
 		++unit;
 	}

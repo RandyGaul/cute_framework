@@ -59,6 +59,20 @@ typedef struct CF_Texture { uint64_t id; } CF_Texture;
 // @end
 
 /**
+ * @struct   CF_Sampler
+ * @category graphics
+ * @brief    A standalone sampler: how a texture is read, decoupled from the texture itself.
+ * @remarks  Every texture bakes one sampler from its `CF_TextureParams` -- fine until one
+ *           texture needs two read styles (a depth map read raw for a blocker search AND
+ *           through hardware compare for PCF; one image sampled NEAREST in one pass and
+ *           LINEAR in another). A standalone sampler overrides the baked one at binding
+ *           time via `cf_material_set_texture_vs_sampler` / `_fs_sampler`.
+ * @related  CF_SamplerParams cf_make_sampler cf_destroy_sampler cf_material_set_texture_fs_sampler
+ */
+typedef struct CF_Sampler { uint64_t id; } CF_Sampler;
+// @end
+
+/**
  * @struct   CF_Canvas
  * @category graphics
  * @brief    An opaque handle representing a canvas.
@@ -623,6 +637,90 @@ CF_INLINE const char* cf_compare_function_string(CF_CompareFunction compare) {
 	default: return NULL;
 	}
 }
+
+/**
+ * @struct   CF_SamplerParams
+ * @category graphics
+ * @brief    Parameters for creating a standalone `CF_Sampler`.
+ * @related  CF_Sampler cf_sampler_defaults cf_make_sampler
+ */
+typedef struct CF_SamplerParams
+{
+	/* @member Filtering for minification and magnification. See `CF_Filter`. */
+	CF_Filter filter;
+
+	/* @member Filtering between mip levels. See `CF_MipFilter`. */
+	CF_MipFilter mip_filter;
+
+	/* @member Addressing for u coordinates outside [0, 1). See `CF_WrapMode`. */
+	CF_WrapMode wrap_u;
+
+	/* @member Addressing for v coordinates. */
+	CF_WrapMode wrap_v;
+
+	/* @member Addressing for w coordinates (3d textures). */
+	CF_WrapMode wrap_w;
+
+	/* @member Bias added to the computed mip LOD. */
+	float mip_lod_bias;
+
+	/* @member Anisotropy clamp; values > 1 enable anisotropic filtering. */
+	int max_anisotropy;
+
+	/* @member Clamps the minimum computed LOD. */
+	float min_lod;
+
+	/* @member Clamps the maximum computed LOD. Defaults large (no clamp). */
+	float max_lod;
+
+	/* @member True to fetch through hardware comparison (shadow samplers). */
+	bool compare_enable;
+
+	/* @member The comparison used when `compare_enable` is true. */
+	CF_CompareFunction compare_function;
+} CF_SamplerParams;
+// @end
+
+/**
+ * @function cf_sampler_defaults
+ * @category graphics
+ * @brief    Returns sensible defaults for `CF_SamplerParams`: linear filtering, repeat wrap.
+ * @related  CF_Sampler CF_SamplerParams cf_make_sampler
+ */
+CF_INLINE CF_SamplerParams cf_sampler_defaults(void)
+{
+	CF_SamplerParams params;
+	params.filter = CF_FILTER_LINEAR;
+	params.mip_filter = CF_MIP_FILTER_LINEAR;
+	params.wrap_u = CF_WRAP_MODE_REPEAT;
+	params.wrap_v = CF_WRAP_MODE_REPEAT;
+	params.wrap_w = CF_WRAP_MODE_REPEAT;
+	params.mip_lod_bias = 0;
+	params.max_anisotropy = 1;
+	params.min_lod = 0;
+	params.max_lod = 1000.0f;
+	params.compare_enable = false;
+	params.compare_function = CF_COMPARE_FUNCTION_ALWAYS;
+	return params;
+}
+
+/**
+ * @function cf_make_sampler
+ * @category graphics
+ * @brief    Creates a standalone sampler.
+ * @related  CF_Sampler CF_SamplerParams cf_sampler_defaults cf_destroy_sampler cf_material_set_texture_fs_sampler
+ */
+CF_API CF_Sampler CF_CALL cf_make_sampler(CF_SamplerParams params);
+
+/**
+ * @function cf_destroy_sampler
+ * @category graphics
+ * @brief    Destroys a sampler made by `cf_make_sampler`.
+ * @remarks  Destroy only after the last frame that binds it has finished.
+ * @related  CF_Sampler cf_make_sampler
+ */
+CF_API void CF_CALL cf_destroy_sampler(CF_Sampler sampler);
+
 
 /**
  * @enum     CF_TextureType
@@ -2468,6 +2566,28 @@ CF_API void CF_CALL cf_material_set_texture_vs(CF_Material material, const char*
 CF_API void CF_CALL cf_material_set_texture_fs(CF_Material material, const char* name, CF_Texture texture);
 
 /**
+ * @function cf_material_set_texture_vs_sampler
+ * @category graphics
+ * @brief    Binds a texture to the vertex stage, read through a standalone sampler instead of
+ *           the texture's own.
+ * @remarks  The override lives on this material binding only -- other bindings of the same
+ *           texture keep its baked sampler. A zero'd sampler restores the baked one.
+ * @related  CF_Sampler cf_make_sampler cf_material_set_texture_vs cf_material_set_texture_fs_sampler
+ */
+CF_API void CF_CALL cf_material_set_texture_vs_sampler(CF_Material material, const char* name, CF_Texture texture, CF_Sampler sampler);
+
+/**
+ * @function cf_material_set_texture_fs_sampler
+ * @category graphics
+ * @brief    Binds a texture to the fragment stage, read through a standalone sampler.
+ * @remarks  The two-views-of-one-texture tool: bind a depth map once through a comparison
+ *           sampler for PCF and once raw for a blocker search (PCSS), or one image NEAREST
+ *           and LINEAR in different passes. See `cf_material_set_texture_vs_sampler`.
+ * @related  CF_Sampler cf_make_sampler cf_material_set_texture_fs cf_material_set_texture_vs_sampler
+ */
+CF_API void CF_CALL cf_material_set_texture_fs_sampler(CF_Material material, const char* name, CF_Texture texture, CF_Sampler sampler);
+
+/**
  * @function cf_material_clear_textures
  * @category graphics
  * @brief    Clears all textures previously set by `cf_material_set_texture_vs` or `cf_material_set_texture_fs`.
@@ -2777,6 +2897,11 @@ CF_INLINE CF_Texture make_texture(CF_TextureParams texture_params) { return cf_m
 CF_INLINE void destroy_texture(CF_Texture texture) { cf_destroy_texture(texture); }
 CF_INLINE void texture_update(CF_Texture texture, void* data, int size) { cf_texture_update(texture, data, size); }
 CF_INLINE void texture_update_layer_mip(CF_Texture texture, void* data, int size, int layer, int mip_level) { cf_texture_update_layer_mip(texture, data, size, layer, mip_level); }
+CF_INLINE CF_SamplerParams sampler_defaults() { return cf_sampler_defaults(); }
+CF_INLINE CF_Sampler make_sampler(CF_SamplerParams params) { return cf_make_sampler(params); }
+CF_INLINE void destroy_sampler(CF_Sampler sampler) { cf_destroy_sampler(sampler); }
+CF_INLINE void material_set_texture_vs_sampler(CF_Material material, const char* name, CF_Texture texture, CF_Sampler sampler) { cf_material_set_texture_vs_sampler(material, name, texture, sampler); }
+CF_INLINE void material_set_texture_fs_sampler(CF_Material material, const char* name, CF_Texture texture, CF_Sampler sampler) { cf_material_set_texture_fs_sampler(material, name, texture, sampler); }
 CF_INLINE CF_Shader make_shader(const char* vertex, const char* fragment) { return cf_make_shader(vertex, fragment); }
 CF_INLINE void shader_directory(const char* path) { cf_shader_directory(path); }
 CF_INLINE void shader_on_changed(void (*on_changed_fn)(const char* path, void* udata), void* udata) { cf_shader_on_changed(on_changed_fn, udata); }
