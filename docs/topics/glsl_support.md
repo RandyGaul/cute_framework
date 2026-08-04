@@ -21,7 +21,7 @@ Vertex, fragment, and compute.
 - Structs (declaration, constructors, field access, nesting in arrays, use as function parameters/returns)
 - Sized arrays of any of the above, including `T[](...)` and `T[N](...)` constructors and `.length()`; both `vec2[8] v` and `vec2 v[8]` declarator forms
 - Sized arrays inside uniform/buffer blocks (`mat4 u_bones[6];`) with dynamic indexing -- the skinning-palette case. Elements are restricted to `vec4`/`ivec4`/`uvec4`/`mat4`, the set where std140, std430, HLSL cbuffer, and MSL strides all coincide; widen a `float[]` to a `vec4[]` and index components
-- Opaque types: `sampler2D`, `usampler2D`, `samplerCube`, `sampler3D`, `sampler2DArray`, `sampler2DShadow`, `samplerCubeShadow` (comparison fetches are level-zero on every backend), formatted `image2D` (formats: `rgba32f`, `rgba16f`, `rg32f`, `rg16f`, `r32f`, `r16f`, `rgba8`, `rgba8ui`, `r32ui`)
+- Opaque types: `sampler2D`, `usampler2D`, `samplerCube`, `sampler3D`, `sampler2DArray`, `sampler2DShadow`, `samplerCubeShadow`, `sampler2DArrayShadow` (comparison fetches are level-zero on every backend), formatted `image2D` (formats: `rgba32f`, `rgba16f`, `rg32f`, `rg16f`, `r32f`, `r16f`, `rgba8`, `rgba8ui`, `r32ui`)
 - Precision qualifiers (`highp`/`mediump`/`lowp`) are accepted and ignored
 
 ### Declarations
@@ -47,7 +47,7 @@ Vertex, fragment, and compute.
 ### Builtins
 
 - `gl_Position`, `gl_VertexIndex`, `gl_InstanceIndex` (vertex); `gl_FragCoord` (fragment); `gl_GlobalInvocationID`, `gl_LocalInvocationID`, `gl_LocalInvocationIndex`, `gl_WorkGroupID`, `gl_NumWorkGroups` (compute)
-- ~90 intrinsics: the standard math set (`mix`, `clamp`, `pow`, `smoothstep`, trig, exp/log, ...) with int/uint variants where GLSL defines them, geometric functions (`dot`, `cross`, `normalize`, `length`, `distance`, `reflect`, `refract`), matrix functions (`transpose`, `inverse`, `determinant`), vector relationals (`lessThan`, `equal`, `all`, `any`, `not`, ...), derivatives (`dFdx`, `dFdy`, `fwidth`), bit casts (`floatBitsToUint` & co.), pack/unpack (`packUnorm4x8`, `packHalf2x16`, ...), texturing (`texture`, `textureOffset`, `textureLod`, `texelFetch`, `textureSize`), storage images (`imageLoad`, `imageStore`, `imageSize`), atomics (`atomicAdd`/`Min`/`Max`/`And`/`Or`/`Xor`/`Exchange`/`CompSwap` on buffer or shared memory), and barriers (`barrier()`, `memoryBarrier*`, `groupMemoryBarrier`)
+- ~90 intrinsics: the standard math set (`mix`, `clamp`, `pow`, `smoothstep`, trig, exp/log, ...) with int/uint variants where GLSL defines them, geometric functions (`dot`, `cross`, `normalize`, `length`, `distance`, `reflect`, `refract`), matrix functions (`transpose`, `inverse`, `determinant`), vector relationals (`lessThan`, `equal`, `all`, `any`, `not`, ...), derivatives (`dFdx`, `dFdy`, `fwidth`), bit casts (`floatBitsToUint` & co.), pack/unpack (`packUnorm4x8`, `packHalf2x16`, ...), texturing (`texture`, `textureOffset`, `textureLod`, `texelFetch`, `textureSize` — `textureSize` works on every sampler dim and returns `ivec3` for array/3D samplers, `texelFetch` on `sampler2D`/`sampler2DArray`/`sampler3D`, `textureOffset` on `sampler2D`/`sampler2DArray`; GLSL defines no `texelFetch` for `samplerCube` or shadow samplers), storage images (`imageLoad`, `imageStore`, `imageSize`), atomics (`atomicAdd`/`Min`/`Max`/`And`/`Or`/`Xor`/`Exchange`/`CompSwap` on buffer or shared memory), and barriers (`barrier()`, `memoryBarrier*`, `groupMemoryBarrier`)
 
 ## Not supported
 

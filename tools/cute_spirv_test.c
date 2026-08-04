@@ -1148,18 +1148,62 @@ static void test_sampler_dims(void)
 		"layout(set = 2, binding = 0) uniform samplerCubeShadow s;\n"
 		FS_MAIN("result = vec4(textureLod(s, vec4(0.0, 1.0, 0.0, 0.6), 0.0));"), "samplerCubeShadow");
 
+	// 2D array shadows take a vec4 (uv + layer + reference) and yield a scalar -- the
+	// hardware-PCF cascaded-shadow-map sampler. Vertex-stage use lowers to explicit
+	// lod 0 like the other shadow dims; textureLod has no GLSL overload.
+	expect_ok(CSPV_STAGE_FRAGMENT,
+		"layout(set = 2, binding = 0) uniform sampler2DArrayShadow s;\n"
+		FS_MAIN("float vis = texture(s, vec4(0.5, 0.5, 2.0, 0.7)); result = vec4(vis);"));
+	expect_ok(CSPV_STAGE_VERTEX,
+		"layout(set = 1, binding = 0) uniform sampler2DArrayShadow s;\n"
+		"void main() { gl_Position = vec4(texture(s, vec4(0.5, 0.5, 1.0, 0.6))); }");
+	expect_err(CSPV_STAGE_FRAGMENT,
+		"layout(set = 2, binding = 0) uniform sampler2DArrayShadow s;\n"
+		FS_MAIN("result = vec4(textureLod(s, vec4(0.5, 0.5, 1.0, 0.6), 0.0));"), "sampler2DArrayShadow");
+
 	// Coordinate types are enforced per dim.
 	expect_err(CSPV_STAGE_FRAGMENT,
 		"layout(set = 2, binding = 0) uniform samplerCube s;\n"
 		FS_MAIN("result = texture(s, vec2(0));"), "vec3");
 
-	// The image-op intrinsics stay 2D-only for now.
+	// textureSize works on every dim: ivec2 for 2D/cube, ivec3 for array/3D.
+	expect_ok(CSPV_STAGE_FRAGMENT,
+		"layout(set = 2, binding = 0) uniform sampler2DArray s;\n"
+		FS_MAIN("ivec3 sz = textureSize(s, 0); result = vec4(float(sz.x), float(sz.y), float(sz.z), 1.0);"));
+	expect_ok(CSPV_STAGE_FRAGMENT,
+		"layout(set = 2, binding = 0) uniform samplerCube s;\n"
+		FS_MAIN("ivec2 sz = textureSize(s, 0); result = vec4(float(sz.x));"));
+	expect_ok(CSPV_STAGE_FRAGMENT,
+		"layout(set = 2, binding = 0) uniform sampler3D s;\n"
+		FS_MAIN("ivec3 sz = textureSize(s, 0); result = vec4(float(sz.z));"));
+	expect_ok(CSPV_STAGE_FRAGMENT,
+		"layout(set = 2, binding = 0) uniform sampler2DArrayShadow s;\n"
+		FS_MAIN("ivec3 sz = textureSize(s, 0); result = vec4(float(sz.z));"));
+
+	// texelFetch takes ivec3 coords on array/3D samplers.
+	expect_ok(CSPV_STAGE_FRAGMENT,
+		"layout(set = 2, binding = 0) uniform sampler2DArray s;\n"
+		FS_MAIN("result = texelFetch(s, ivec3(1, 2, 0), 0);"));
+	expect_ok(CSPV_STAGE_FRAGMENT,
+		"layout(set = 2, binding = 0) uniform sampler3D s;\n"
+		FS_MAIN("result = texelFetch(s, ivec3(1, 2, 3), 0);"));
+
+	// textureOffset extends to arrays (the offset applies to uv, not the layer).
+	expect_ok(CSPV_STAGE_FRAGMENT,
+		"layout(set = 2, binding = 0) uniform sampler2DArray s;\n"
+		FS_MAIN("result = textureOffset(s, vec3(0.5, 0.5, 1.0), ivec2(1, -1));"));
+
+	// GLSL defines no texelFetch for samplerCube or shadow samplers, and no
+	// textureOffset for cubes.
 	expect_err(CSPV_STAGE_FRAGMENT,
 		"layout(set = 2, binding = 0) uniform samplerCube s;\n"
-		FS_MAIN("result = texelFetch(s, ivec2(0), 0);"), "sampler2D");
+		FS_MAIN("result = texelFetch(s, ivec2(0), 0);"), "no texelFetch for samplerCube");
 	expect_err(CSPV_STAGE_FRAGMENT,
-		"layout(set = 2, binding = 0) uniform sampler3D s;\n"
-		FS_MAIN("ivec2 sz = textureSize(s, 0); result = vec4(sz.x);"), "sampler2D");
+		"layout(set = 2, binding = 0) uniform sampler2DShadow s;\n"
+		FS_MAIN("result = texelFetch(s, ivec2(0), 0);"), "no texelFetch for sampler2DShadow");
+	expect_err(CSPV_STAGE_FRAGMENT,
+		"layout(set = 2, binding = 0) uniform samplerCube s;\n"
+		FS_MAIN("result = textureOffset(s, vec3(0, 1, 0), ivec2(1));"), "sampler2D or sampler2DArray");
 }
 
 static void test_errors_semantic(void)
@@ -1287,6 +1331,44 @@ static void test_sampler_dims_emitters(void)
 		cspv_free(&r);
 	}
 	{
+		// 2D array shadows: HLSL comparison-samples the Texture2DArray with the
+		// float3(uv, layer) location + reference; MSL splits the layer out of P.z
+		// for depth2d_array::sample_compare.
+		CSPV_Result r = s_emit_all(CSPV_STAGE_FRAGMENT,
+			"layout(set = 2, binding = 0) uniform sampler2DArrayShadow s;\n"
+			FS_MAIN("result = vec4(texture(s, vec4(0.5, 0.5, 2.0, 0.7)));"));
+		if (r.success) {
+			CHECK(strstr(r.hlsl, "Texture2DArray<float4>") != NULL);
+			CHECK(strstr(r.hlsl, "SamplerComparisonState") != NULL);
+			CHECK(strstr(r.hlsl, ".SampleCmpLevelZero(") != NULL);
+			CHECK(strstr(r.hlsl, ").xyz, (") != NULL); // vec4 splits as xyz + w.
+			CHECK(strstr(r.msl, "depth2d_array<float>") != NULL);
+			CHECK(strstr(r.msl, ".sample_compare(") != NULL);
+			CHECK(strstr(r.msl, "uint(rint(") != NULL); // Layer splits out in MSL.
+		}
+		cspv_free(&r);
+	}
+	{
+		// textureSize/texelFetch on array and cube dims lower per backend: HLSL
+		// GetDimensions helpers with the right arity, MSL read/get_* methods.
+		CSPV_Result r = s_emit_all(CSPV_STAGE_FRAGMENT,
+			"layout(set = 2, binding = 0) uniform sampler2DArray s_arr;\n"
+			"layout(set = 2, binding = 1) uniform samplerCube s_cube;\n"
+			FS_MAIN(
+			"ivec3 a = textureSize(s_arr, 0);\n"
+			"ivec2 c = textureSize(s_cube, 0);\n"
+			"vec4 t = texelFetch(s_arr, ivec3(1, 2, 0), 0);\n"
+			"result = t + vec4(float(a.z), float(c.x), 0.0, 1.0);"));
+		if (r.success) {
+			CHECK(strstr(r.hlsl, "cf_texsize(s_arr_tex, ") != NULL);
+			CHECK(strstr(r.hlsl, "cf_texsize(s_cube_tex, ") != NULL);
+			CHECK(strstr(r.hlsl, "s_arr_tex.Load(int4(") != NULL);
+			CHECK(strstr(r.msl, "get_array_size()") != NULL);
+			CHECK(strstr(r.msl, "s_arr_tex.read(uint2((") != NULL);
+		}
+		cspv_free(&r);
+	}
+	{
 		// ES 3.00 output keeps the native GLSL types and generic texture() calls.
 		CSPV_Options opts;
 		memset(&opts, 0, sizeof(opts));
@@ -1294,8 +1376,9 @@ static void test_sampler_dims_emitters(void)
 		CSPV_Result r = cspv_compile_ex(
 			"layout(set = 2, binding = 0) uniform samplerCube s;\n"
 			"layout(set = 2, binding = 1) uniform sampler2DShadow sh;\n"
+			"layout(set = 2, binding = 2) uniform sampler2DArrayShadow csm;\n"
 			"layout(set = 3, binding = 0) uniform uniform_block { vec4 u_dir; };\n"
-			FS_MAIN("result = texture(s, u_dir.xyz) + vec4(texture(sh, vec3(0.5, 0.5, 0.7)));"),
+			FS_MAIN("result = texture(s, u_dir.xyz) + vec4(texture(sh, vec3(0.5, 0.5, 0.7))) + vec4(texture(csm, vec4(0.5, 0.5, 1.0, 0.7)));"),
 			CSPV_STAGE_FRAGMENT, &opts);
 		CHECK_MSG(r.success, r.error_message);
 		if (r.success) {
@@ -1303,6 +1386,7 @@ static void test_sampler_dims_emitters(void)
 			if (r.glsl300) {
 				CHECK(strstr(r.glsl300, "samplerCube") != NULL);
 				CHECK(strstr(r.glsl300, "sampler2DShadow") != NULL);
+				CHECK(strstr(r.glsl300, "sampler2DArrayShadow") != NULL);
 				// ES block names carry the stage so vs and fs can both declare
 				// uniform_block in one linked program.
 				CHECK(strstr(r.glsl300, "cf_fs_uniform_block") != NULL);
