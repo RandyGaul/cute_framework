@@ -23,6 +23,13 @@ endif()
 # See the file header for usage.
 if (CMAKE_CURRENT_SOURCE_DIR STREQUAL "${CMAKE_SOURCE_DIR}/tools")
 	add_executable(cute-model-fuzz ${CMAKE_CURRENT_SOURCE_DIR}/cute_model_fuzz.c)
+
+	# cute-jpg-fuzz, the same mutation-fuzzer treatment for cute_jpg.h. Standalone.
+	add_executable(cute-jpg-fuzz ${CMAKE_CURRENT_SOURCE_DIR}/cute_jpg_fuzz.c)
+	set_source_files_properties(${CMAKE_CURRENT_SOURCE_DIR}/cute_jpg_fuzz.c PROPERTIES LANGUAGE CXX)
+	target_include_directories(cute-jpg-fuzz PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../libraries)
+	target_compile_definitions(cute-jpg-fuzz PRIVATE _CRT_SECURE_NO_WARNINGS)
+	set_target_properties(cute-jpg-fuzz PROPERTIES FOLDER "tools" RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 	set_source_files_properties(${CMAKE_CURRENT_SOURCE_DIR}/cute_model_fuzz.c PROPERTIES LANGUAGE CXX)
 	target_include_directories(cute-model-fuzz PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../libraries)
 	target_compile_definitions(cute-model-fuzz PRIVATE _CRT_SECURE_NO_WARNINGS)
