@@ -150,6 +150,7 @@ nav:
       - Fluid Sim: samples/fluid_sim.md
       - Font Debug: samples/font_debug.md
       - Glitch: samples/glitch.md
+      - GPU Particles: samples/gpu_particles.md
       - Hello Triangle: samples/hello_triangle.md
       - HiDPI: samples/hidpi.md
       - IME Text Input: samples/ime.md

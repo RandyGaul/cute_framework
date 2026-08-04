@@ -225,6 +225,15 @@ Interactive samples demonstrating Cute Framework features. Click any card to pla
     [:octicons-arrow-right-24: Play](glitch.md)
 
 
+- **[GPU Particles](gpu_particles.md)**
+
+    ---
+
+    65k embers simulated, counted, and drawn entirely on the GPU: compute writes a storage buffer and the indirect draw arguments, pull instancing reads them back -- zero CPU readback.
+
+    [:octicons-arrow-right-24: Read](gpu_particles.md)
+
+
 - **[Hello Triangle](hello_triangle.md)**
 
     ---
