@@ -52,12 +52,18 @@ struct CF_Uniform3d
 	int array_length;
 	int size;
 	void* data;
+	uint64_t hash;  // Content hash of (name, type, array_length, bytes).
+	// Set by the built-in shape pipeline (u_shape_*), not the user. Internal uniforms hash
+	// into their own bucket so a debug line's eye/effect churn never splits user mesh batches,
+	// and plain mesh submissions skip capturing them entirely.
+	bool internal;
 };
 
 struct CF_TextureBinding3d
 {
 	const char* name; // Interned.
 	CF_Texture texture;
+	uint64_t hash; // Content hash of (name, texture id).
 };
 
 // One instance's sprite image, captured at submission (cf_draw3d_push_texture). The entry is
@@ -78,7 +84,11 @@ struct CF_MeshCmd3d
 	CF_Mesh mesh = { 0 };
 	bool escape = false; // Mesh has its own instance buffer: drawn as-is, no reserved attributes.
 	CF_M4x4 vp;          // projection * view, captured at submission (or composed live at replay).
-	uint64_t state_version = 0; // s_draw3d->version at capture; cheap uniform/texture equality.
+	// Order-independent content hash of the visible uniform + texture state at capture (user
+	// bucket, plus the shape bucket for shape submissions). Content-based, so A->B->A uniform
+	// reverts coalesce, unlike a bump-on-change counter.
+	uint64_t state_hash = 0;
+	uint64_t vp_id = 0; // Camera change id at capture; equal ids mean identical vp bytes.
 	Cute::Array<CF_MeshInstance3d> instances;
 	// Draw list replay: instances borrowed from the baked list, exactly like CF_Command's
 	// geoms_ref -- replays never deep-copy instance data. NULL for ordinary commands.
@@ -127,12 +137,31 @@ struct CF_Draw3d
 	Cute::Array<CF_V4> mesh_attributes2; // Rides in_uv_rect when no sprite texture is pushed.
 	Cute::Array<const CF_Sprite*> sprites; // cf_draw3d_push_texture stack.
 
-	// Live uniform/texture state (cf_draw3d_set_uniform/set_texture). `version` bumps on every
-	// change that alters bytes or handles, so submissions compare one integer instead of
-	// re-hashing the whole set when deciding whether to coalesce.
+	// Live uniform/texture state (cf_draw3d_set_uniform/set_texture). Two rolling XOR content
+	// hashes stand in for the whole set: `user_hash` covers user uniforms + textures,
+	// `shape_hash` covers the built-in shape pipeline's u_shape_* uniforms. Submissions compare
+	// one integer to decide coalescing; XOR of per-entry content hashes makes the comparison
+	// order-independent and value-based (A->B->A reverts coalesce), and the split bucket keeps
+	// shape-uniform churn (camera eye, effects) from ever splitting user mesh batches.
 	Cute::Array<CF_Uniform3d> uniforms; // data individually owned.
 	Cute::Array<CF_TextureBinding3d> textures;
-	uint64_t version = 1;
+	uint64_t user_hash = 0;
+	uint64_t shape_hash = 0;
+
+	// The composed projection * view, cached so submissions don't pay a 4x4 multiply plus a
+	// 64-byte compare each: camera push/pop marks it dirty, and `vp_id` bumps only when the
+	// recomposed bytes actually differ (pop-then-push of the same camera stays coalescable).
+	CF_M4x4 vp_cached;
+	uint64_t vp_id = 1;
+	bool vp_dirty = true;
+
+	// Interned once at startup: the reserved-name assert and the shape pipeline's per-stroke
+	// uniform updates never re-hash their name strings.
+	const char* name_u_view_projection = NULL;
+	const char* name_u_shape_eye = NULL;
+	const char* name_u_shape_fx = NULL;
+	const char* name_u_shape_outline = NULL;
+	const char* name_u_shape_glow = NULL;
 
 	CF_Material material = { 0 };
 
@@ -201,6 +230,11 @@ void cf_make_draw3d()
 	s_draw3d->glows.add(cf_make_color_rgba_f(0, 0, 0, 0));
 	s_draw3d->glow_radii.add(0);
 	s_draw3d->material = cf_make_material();
+	s_draw3d->name_u_view_projection = sintern("u_view_projection");
+	s_draw3d->name_u_shape_eye = sintern("u_shape_eye");
+	s_draw3d->name_u_shape_fx = sintern("u_shape_fx");
+	s_draw3d->name_u_shape_outline = sintern("u_shape_outline");
+	s_draw3d->name_u_shape_glow = sintern("u_shape_glow");
 }
 
 void cf_draw3d_free_cmd(CF_Command* cmd)
@@ -251,11 +285,11 @@ void cf_destroy_draw3d()
 //--------------------------------------------------------------------------------------------------
 // Camera.
 
-void cf_draw3d_push_projection(CF_M4x4 projection) { s_draw3d->projections.add(projection); }
-CF_M4x4 cf_draw3d_pop_projection() { if (s_draw3d->projections.count() > 1) return s_draw3d->projections.pop(); return s_draw3d->projections.last(); }
+void cf_draw3d_push_projection(CF_M4x4 projection) { s_draw3d->projections.add(projection); s_draw3d->vp_dirty = true; }
+CF_M4x4 cf_draw3d_pop_projection() { s_draw3d->vp_dirty = true; if (s_draw3d->projections.count() > 1) return s_draw3d->projections.pop(); return s_draw3d->projections.last(); }
 CF_M4x4 cf_draw3d_peek_projection() { return s_draw3d->projections.last(); }
-void cf_draw3d_push_view(CF_M4x4 view) { s_draw3d->views.add(view); }
-CF_M4x4 cf_draw3d_pop_view() { if (s_draw3d->views.count() > 1) return s_draw3d->views.pop(); return s_draw3d->views.last(); }
+void cf_draw3d_push_view(CF_M4x4 view) { s_draw3d->views.add(view); s_draw3d->vp_dirty = true; }
+CF_M4x4 cf_draw3d_pop_view() { s_draw3d->vp_dirty = true; if (s_draw3d->views.count() > 1) return s_draw3d->views.pop(); return s_draw3d->views.last(); }
 CF_M4x4 cf_draw3d_peek_view() { return s_draw3d->views.last(); }
 
 //--------------------------------------------------------------------------------------------------
@@ -283,17 +317,26 @@ CF_RenderState cf_draw3d_peek_render_state() { return s_draw3d->render_states.la
 //--------------------------------------------------------------------------------------------------
 // Uniforms and textures.
 
-void cf_draw3d_set_uniform(const char* name, void* data, CF_UniformType type, int array_length)
+// Content hash of one binding: the interned name's pointer identity plus type/shape/bytes.
+static CF_INLINE uint64_t s_uniform_hash(const char* name, CF_UniformType type, int array_length, const void* data, int size)
 {
-	CF_ASSERT(array_length > 0);
-	name = sintern(name);
-	// u_view_projection is fed from the camera stacks and cannot be overridden.
-	CF_ASSERT(name != sintern("u_view_projection"));
+	uint64_t h = cf_fnv1a(&name, (int)sizeof(name));
+	int meta[2] = { (int)type, array_length };
+	h ^= cf_fnv1a(meta, (int)sizeof(meta));
+	return h ^ cf_fnv1a(data, size);
+}
+
+// The shared setter body. `name` is already interned. Each entry's content hash XORs into one
+// of two rolling buckets (user vs the shape pipeline's internal uniforms); an entry stays in
+// the bucket it was created under.
+static void s_set_uniform(const char* name, void* data, CF_UniformType type, int array_length, bool internal)
+{
 	int size = s_uniform_size(type) * array_length;
+	uint64_t hash = s_uniform_hash(name, type, array_length, data, size);
 	for (int i = 0; i < s_draw3d->uniforms.count(); ++i) {
 		CF_Uniform3d& u = s_draw3d->uniforms[i];
 		if (u.name == name) {
-			if (u.type == type && u.array_length == array_length && !CF_MEMCMP(u.data, data, size)) {
+			if (u.type == type && u.array_length == array_length && u.hash == hash && !CF_MEMCMP(u.data, data, size)) {
 				return; // Unchanged; keep coalescing alive.
 			}
 			if (u.size != size) {
@@ -304,7 +347,9 @@ void cf_draw3d_set_uniform(const char* name, void* data, CF_UniformType type, in
 			u.array_length = array_length;
 			u.size = size;
 			CF_MEMCPY(u.data, data, size);
-			s_draw3d->version++;
+			uint64_t& bucket = u.internal ? s_draw3d->shape_hash : s_draw3d->user_hash;
+			bucket ^= u.hash ^ hash;
+			u.hash = hash;
 			return;
 		}
 	}
@@ -315,8 +360,19 @@ void cf_draw3d_set_uniform(const char* name, void* data, CF_UniformType type, in
 	u.size = size;
 	u.data = CF_ALLOC(size);
 	CF_MEMCPY(u.data, data, size);
+	u.hash = hash;
+	u.internal = internal;
 	s_draw3d->uniforms.add(u);
-	s_draw3d->version++;
+	(internal ? s_draw3d->shape_hash : s_draw3d->user_hash) ^= hash;
+}
+
+void cf_draw3d_set_uniform(const char* name, void* data, CF_UniformType type, int array_length)
+{
+	CF_ASSERT(array_length > 0);
+	name = sintern(name);
+	// u_view_projection is fed from the camera stacks and cannot be overridden.
+	CF_ASSERT(name != s_draw3d->name_u_view_projection);
+	s_set_uniform(name, data, type, array_length, false);
 }
 
 void cf_draw3d_set_uniform_int(const char* name, int val) { cf_draw3d_set_uniform(name, &val, CF_UNIFORM_TYPE_INT, 1); }
@@ -329,20 +385,23 @@ void cf_draw3d_set_uniform_color(const char* name, CF_Color val) { cf_draw3d_set
 void cf_draw3d_set_texture(const char* name, CF_Texture texture)
 {
 	name = sintern(name);
+	uint64_t hash = cf_fnv1a(&name, (int)sizeof(name)) ^ cf_fnv1a(&texture.id, (int)sizeof(texture.id));
 	for (int i = 0; i < s_draw3d->textures.count(); ++i) {
 		CF_TextureBinding3d& t = s_draw3d->textures[i];
 		if (t.name == name) {
 			if (t.texture.id == texture.id) return;
 			t.texture = texture;
-			s_draw3d->version++;
+			s_draw3d->user_hash ^= t.hash ^ hash;
+			t.hash = hash;
 			return;
 		}
 	}
 	CF_TextureBinding3d t;
 	t.name = name;
 	t.texture = texture;
+	t.hash = hash;
 	s_draw3d->textures.add(t);
-	s_draw3d->version++;
+	s_draw3d->user_hash ^= hash;
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -476,14 +535,27 @@ static CF_Command* s_coalesce_candidate()
 
 // The shared submission tail behind cf_draw3d_mesh and the built-in shapes: coalesce or open
 // a new command carrying `inst` (already built -- from the transform stack for user meshes,
-// raw shape lanes for strokes).
-static void s_submit(CF_Mesh mesh, const CF_MeshInstance3d& inst, bool escape, const CF_Sprite* sprite)
+// raw shape lanes for strokes). `shape` marks submissions from the built-in shape pipeline,
+// whose u_shape_* uniforms then count toward the state hash and get captured; plain mesh
+// submissions ignore that bucket entirely, so a debug stroke's camera-eye or effect churn
+// never splits a user mesh batch.
+static void s_submit(CF_Mesh mesh, const CF_MeshInstance3d& inst, bool escape, const CF_Sprite* sprite, bool shape)
 {
 	CF_Shader shader = s_draw3d->shaders.last();
 	CF_ASSERT(shader.id); // No default 3d shader -- push one first (see the shader contract in cute_draw3d.h).
 	if (!shader.id) return;
 
-	CF_M4x4 vp = cf_mul_m4(s_draw3d->projections.last(), s_draw3d->views.last());
+	// Recompose the camera only when a camera stack actually moved, and bump the change id
+	// only when the recomposed bytes differ -- pop-then-push of the same camera coalesces.
+	if (s_draw3d->vp_dirty) {
+		CF_M4x4 vp = cf_mul_m4(s_draw3d->projections.last(), s_draw3d->views.last());
+		if (CF_MEMCMP(&vp, &s_draw3d->vp_cached, sizeof(vp))) {
+			s_draw3d->vp_cached = vp;
+			s_draw3d->vp_id++;
+		}
+		s_draw3d->vp_dirty = false;
+	}
+	uint64_t state_hash = s_draw3d->user_hash ^ (shape ? s_draw3d->shape_hash : 0);
 	CF_RenderState rs = s_draw3d->render_states.last();
 	bool sprite_textured = sprite && !escape;
 
@@ -500,8 +572,8 @@ static void s_submit(CF_Mesh mesh, const CF_MeshInstance3d& inst, bool escape, c
 			split = mc->mesh.id != mesh.id ? CF_DRAW_SPLIT_3D_MESH
 			      : (mc->escape || mc->instances_ref) ? CF_DRAW_SPLIT_3D_ESCAPE
 			      : mc->sprite_textured != sprite_textured ? CF_DRAW_SPLIT_3D_TEXTURE
-			      : mc->state_version != s_draw3d->version ? CF_DRAW_SPLIT_3D_UNIFORMS
-			      : CF_MEMCMP(&mc->vp, &vp, sizeof(vp)) ? CF_DRAW_SPLIT_3D_CAMERA
+			      : mc->state_hash != state_hash ? CF_DRAW_SPLIT_3D_UNIFORMS
+			      : mc->vp_id != s_draw3d->vp_id ? CF_DRAW_SPLIT_3D_CAMERA
 			      : under->shader.id != shader.id ? CF_DRAW_SPLIT_3D_SHADER
 			      : !(under->render_state == rs) ? CF_DRAW_SPLIT_3D_RENDER_STATE
 			      : under->layer != s_draw->layers.last() ? CF_DRAW_SPLIT_3D_LAYER
@@ -527,16 +599,23 @@ static void s_submit(CF_Mesh mesh, const CF_MeshInstance3d& inst, bool escape, c
 	cmd.mesh3d = mc;
 	mc->mesh = mesh;
 	mc->escape = escape;
-	mc->vp = vp;
-	mc->state_version = s_draw3d->version;
+	mc->vp = s_draw3d->vp_cached;
+	mc->vp_id = s_draw3d->vp_id;
+	mc->state_hash = state_hash;
 
-	// Capture the live uniform values into one command-owned block.
+	// Capture the live uniform values into one command-owned block. Plain mesh submissions
+	// skip the shape pipeline's internal uniforms -- their shaders can't consume them, and
+	// skipping keeps command blocks from growing 64 bytes forever after the first debug stroke.
 	int total = 0;
-	for (int i = 0; i < s_draw3d->uniforms.count(); ++i) total += s_draw3d->uniforms[i].size;
+	for (int i = 0; i < s_draw3d->uniforms.count(); ++i) {
+		if (!shape && s_draw3d->uniforms[i].internal) continue;
+		total += s_draw3d->uniforms[i].size;
+	}
 	if (total) {
 		mc->uniform_block = CF_ALLOC(total);
 		int offset = 0;
 		for (int i = 0; i < s_draw3d->uniforms.count(); ++i) {
+			if (!shape && s_draw3d->uniforms[i].internal) continue;
 			CF_Uniform3d u = s_draw3d->uniforms[i];
 			void* dst = (char*)mc->uniform_block + offset;
 			CF_MEMCPY(dst, u.data, u.size);
@@ -570,7 +649,7 @@ void cf_draw3d_mesh(CF_Mesh mesh)
 	CF_MeshInstance3d inst;
 	if (!escape) inst = s_instance();
 	else CF_MEMSET(&inst, 0, sizeof(inst));
-	s_submit(mesh, inst, escape, s_draw3d->sprites.last());
+	s_submit(mesh, inst, escape, s_draw3d->sprites.last(), false);
 }
 
 // The shared quad + submission tail behind cf_draw3d_sprite and cf_draw3d_billboard. The
@@ -1005,8 +1084,9 @@ static CF_RenderState s_stroke_render_state()
 	return rs;
 }
 
-// Camera info for the stroke vertex stage, refreshed whenever the view changes (set_uniform
-// dedups identical bytes, so this only bumps the coalescing version on real camera motion).
+// Camera info for the stroke vertex stage, refreshed whenever the view changes (the setter
+// dedups identical bytes, so this only perturbs the shape-uniform hash on real camera motion
+// -- and that hash never touches user mesh batching; see s_submit).
 static void s_shapes_set_eye()
 {
 	const CF_M4x4& v = s_draw3d->views.last();
@@ -1016,7 +1096,7 @@ static void s_shapes_set_eye()
 		-(v.elements[0] * t.x + v.elements[1] * t.y + v.elements[2] * t.z),
 		-(v.elements[4] * t.x + v.elements[5] * t.y + v.elements[6] * t.z),
 		-(v.elements[8] * t.x + v.elements[9] * t.y + v.elements[10] * t.z), 1.0f);
-	cf_draw3d_set_uniform("u_shape_eye", &eye, CF_UNIFORM_TYPE_FLOAT4, 1);
+	s_set_uniform(s_draw3d->name_u_shape_eye, &eye, CF_UNIFORM_TYPE_FLOAT4, 1, true);
 }
 
 // Shape effect uniforms for the stroke shader. Effects ride uniforms rather than instance lanes
@@ -1034,9 +1114,9 @@ static void s_shapes_set_fx()
 		depth_write ? 1.0f : 0.0f, (float)s_draw3d->stroke_pass);
 	CF_V4 outline = cf_v4(o.r * o.a, o.g * o.a, o.b * o.a, o.a); // Premultiplied.
 	CF_V4 glow = cf_v4(g.r * g.a, g.g * g.a, g.b * g.a, g.a);
-	cf_draw3d_set_uniform("u_shape_fx", &params, CF_UNIFORM_TYPE_FLOAT4, 1);
-	cf_draw3d_set_uniform("u_shape_outline", &outline, CF_UNIFORM_TYPE_FLOAT4, 1);
-	cf_draw3d_set_uniform("u_shape_glow", &glow, CF_UNIFORM_TYPE_FLOAT4, 1);
+	s_set_uniform(s_draw3d->name_u_shape_fx, &params, CF_UNIFORM_TYPE_FLOAT4, 1, true);
+	s_set_uniform(s_draw3d->name_u_shape_outline, &outline, CF_UNIFORM_TYPE_FLOAT4, 1, true);
+	s_set_uniform(s_draw3d->name_u_shape_glow, &glow, CF_UNIFORM_TYPE_FLOAT4, 1, true);
 }
 
 // Submits one stroke instance under the built-in stroke shader and render state. The current
@@ -1056,7 +1136,7 @@ static void s_submit_stroke(CF_MeshInstance3d inst)
 	CF_ShapeShaderBundle* bundle = top.id ? s_draw3d->shape_shaders.try_find(top.id) : NULL;
 	cf_draw3d_push_shader(bundle ? bundle->stroke : s_draw3d->stroke_shd);
 	cf_draw3d_push_render_state(s_stroke_render_state());
-	s_submit(s_draw3d->stroke_quad, inst, false, NULL);
+	s_submit(s_draw3d->stroke_quad, inst, false, NULL, true);
 	cf_draw3d_pop_render_state();
 	cf_draw3d_pop_shader();
 }
@@ -1417,7 +1497,7 @@ static void s_submit_solid(CF_Mesh mesh, const CF_M4x4& local)
 	if (bundle) cf_draw3d_push_shader(bundle->solid);
 	else if (!top.id) cf_draw3d_push_shader(s_draw3d->solid_shd);
 	else pushed = false; // Plain user shader: full replacement, already on the stack.
-	s_submit(mesh, inst, false, NULL);
+	s_submit(mesh, inst, false, NULL, true);
 	if (pushed) cf_draw3d_pop_shader();
 }
 
