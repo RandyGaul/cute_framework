@@ -52,6 +52,7 @@ add_sample(point_light point_light.c)
 add_sample(transparency3d transparency3d.c)
 add_sample(obj_loading obj_loading.c)
 add_sample(model3d model3d.c)
+add_sample(fireflies fireflies.c)
 target_include_directories(mandala PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../src) # internal/cute_draw_internal.h for renderer toggles/stats.
 add_sample(tile_perf tile_perf.cpp)
 target_include_directories(tile_perf PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../src) # internal/cute_draw_internal.h for the tiled toggle.
