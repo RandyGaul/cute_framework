@@ -130,6 +130,8 @@ typedef struct CM_Primitive
 	int material;       // Index into model->materials, or -1.
 	int target_count;   // Morph targets (blendshapes).
 	CM_MorphTarget* targets;
+	float aabb_min[3];  // Position bounds, computed from the stream at load (rest pose;
+	float aabb_max[3];  // morphs/skinning move vertices, so pad accordingly for culling).
 } CM_Primitive;
 
 typedef struct CM_Mesh
@@ -1029,6 +1031,23 @@ static int cm_load_primitive(CM_Loader* l, int prim, CM_Primitive* out)
 	if (pos_accessor < 0) CM_FAIL("primitive has no POSITION attribute");
 	out->positions = cm_read_floats(l, pos_accessor, 3, &out->vertex_count);
 	if (!out->positions) return 0;
+
+	// Position bounds, computed from the stream rather than trusted from the accessor's
+	// min/max json (files can lie; the loaded floats cannot). One pass over data already
+	// hot in cache -- this is what culling and auto-framing want from every model.
+	if (out->vertex_count > 0) {
+		for (int c = 0; c < 3; ++c) {
+			out->aabb_min[c] = out->positions[c];
+			out->aabb_max[c] = out->positions[c];
+		}
+		for (int i = 1; i < out->vertex_count; ++i) {
+			for (int c = 0; c < 3; ++c) {
+				float v = out->positions[i * 3 + c];
+				if (v < out->aabb_min[c]) out->aabb_min[c] = v;
+				if (v > out->aabb_max[c]) out->aabb_max[c] = v;
+			}
+		}
+	}
 
 	// Per spec every attribute accessor in a primitive has the same count. Enforcing it
 	// is what lets the generators and the interleaving loop below index all streams with

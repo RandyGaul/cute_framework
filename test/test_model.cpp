@@ -166,6 +166,11 @@ TEST_CASE(test_model_gltf_external)
 	REQUIRE(prim->colors[1] < 0.01f);
 	REQUIRE(cf_abs(prim->colors[3] - 1.0f) < 0.01f); // ...with alpha forced to 1 for VEC3.
 
+	// Bounds are computed from the position stream at load: the unit quad spans
+	// (0,0,0)..(1,1,0) regardless of what any accessor min/max json claims.
+	REQUIRE(prim->aabb_min[0] == 0 && prim->aabb_min[1] == 0 && prim->aabb_min[2] == 0);
+	REQUIRE(prim->aabb_max[0] == 1.0f && prim->aabb_max[1] == 1.0f && prim->aabb_max[2] == 0);
+
 	// Generated normals face +z (CCW quad in the xy plane); generated tangents align
 	// with +x (uv u runs along +x) with positive handedness.
 	REQUIRE(prim->normals && cf_abs(prim->normals[2] - 1.0f) < 0.001f);

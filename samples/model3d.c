@@ -36,7 +36,7 @@ typedef struct Vertex
 	CF_V3 pos;
 	CF_V3 n;
 	CF_V2 uv;
-	float joints[4];  // Bone indices as floats -- vertex attributes have no integer lanes.
+	uint16_t joints[4]; // Bone indices, straight from the loader: USHORT4 feeds a uvec4 input.
 	float weights[4];
 } Vertex;
 
@@ -46,7 +46,7 @@ static const char* s_vs_fmt =
 "layout (location = 0) in vec3 in_pos;\n"
 "layout (location = 1) in vec3 in_normal;\n"
 "layout (location = 2) in vec2 in_uv;\n"
-"layout (location = 3) in vec4 in_joints;\n"
+"layout (location = 3) in uvec4 in_joints;\n"
 "layout (location = 4) in vec4 in_weights;\n"
 "layout (location = 8)  in vec4 in_model0;\n"
 "layout (location = 9)  in vec4 in_model1;\n"
@@ -61,10 +61,10 @@ static const char* s_vs_fmt =
 "void main() {\n"
 "    vec4 p0 = vec4(in_pos, 1.0);\n"
 "    vec4 n0 = vec4(in_normal, 0.0);\n"
-"    vec3 pos = (u_bones[int(in_joints.x)] * p0 * in_weights.x + u_bones[int(in_joints.y)] * p0 * in_weights.y\n"
-"              + u_bones[int(in_joints.z)] * p0 * in_weights.z + u_bones[int(in_joints.w)] * p0 * in_weights.w).xyz;\n"
-"    vec3 nrm = normalize((u_bones[int(in_joints.x)] * n0 * in_weights.x + u_bones[int(in_joints.y)] * n0 * in_weights.y\n"
-"                        + u_bones[int(in_joints.z)] * n0 * in_weights.z + u_bones[int(in_joints.w)] * n0 * in_weights.w).xyz);\n"
+"    vec3 pos = (u_bones[in_joints.x] * p0 * in_weights.x + u_bones[in_joints.y] * p0 * in_weights.y\n"
+"              + u_bones[in_joints.z] * p0 * in_weights.z + u_bones[in_joints.w] * p0 * in_weights.w).xyz;\n"
+"    vec3 nrm = normalize((u_bones[in_joints.x] * n0 * in_weights.x + u_bones[in_joints.y] * n0 * in_weights.y\n"
+"                        + u_bones[in_joints.z] * n0 * in_weights.z + u_bones[in_joints.w] * n0 * in_weights.w).xyz);\n"
 "    vec4 p = vec4(pos, 1.0);\n"
 "    vec3 world = vec3(dot(in_model0, p), dot(in_model1, p), dot(in_model2, p));\n"
 "    v_normal = normalize(vec3(dot(in_model0.xyz, nrm), dot(in_model1.xyz, nrm), dot(in_model2.xyz, nrm)));\n"
@@ -86,43 +86,52 @@ static const char* s_fs =
 "    result = vec4(albedo * (0.28 + 0.22 * hemi + 0.6 * key), 1.0);\n"
 "}\n";
 
-// Interleaves the loader's separate streams into one draw3d mesh. De-indexes flat for
-// simplicity, exactly like the OBJ sample.
+// Interleaves the loader's separate streams into one indexed draw3d mesh. The loader hands
+// over ready-to-use u32 indices, so keep them: vertex_count interleaved vertices instead of
+// index_count de-indexed ones (3-4x less vertex memory on typical meshes), and joints ride
+// as USHORT4 into a uvec4 shader input with no widening.
 static CF_Mesh s_make_mesh(const CM_Primitive* prim, int* out_count)
 {
-	int n = prim->index_count;
+	int n = prim->vertex_count;
 	Vertex* verts = (Vertex*)cf_alloc(sizeof(Vertex) * (size_t)n);
-	for (int i = 0; i < n; ++i) {
-		uint32_t v = prim->indices[i];
-		Vertex* out = verts + i;
+	for (int v = 0; v < n; ++v) {
+		Vertex* out = verts + v;
 		out->pos = cf_v3(prim->positions[v * 3], prim->positions[v * 3 + 1], prim->positions[v * 3 + 2]);
 		out->n = cf_v3(prim->normals[v * 3], prim->normals[v * 3 + 1], prim->normals[v * 3 + 2]);
 		out->uv = prim->uvs ? cf_v2(prim->uvs[v * 2], prim->uvs[v * 2 + 1]) : cf_v2(0, 0);
 		for (int k = 0; k < 4; ++k) {
-			out->joints[k] = prim->joints ? (float)prim->joints[v * 4 + k] : 0.0f;
+			out->joints[k] = prim->joints ? prim->joints[v * 4 + k] : 0;
 			out->weights[k] = prim->weights ? prim->weights[v * 4 + k] : (k == 0 ? 1.0f : 0.0f);
 		}
 	}
 	CF_VertexAttribute attrs[5] = { 0 };
-	attrs[0].name = "in_pos";     attrs[0].format = CF_VERTEX_FORMAT_FLOAT3; attrs[0].offset = CF_OFFSET_OF(Vertex, pos);
-	attrs[1].name = "in_normal";  attrs[1].format = CF_VERTEX_FORMAT_FLOAT3; attrs[1].offset = CF_OFFSET_OF(Vertex, n);
-	attrs[2].name = "in_uv";      attrs[2].format = CF_VERTEX_FORMAT_FLOAT2; attrs[2].offset = CF_OFFSET_OF(Vertex, uv);
-	attrs[3].name = "in_joints";  attrs[3].format = CF_VERTEX_FORMAT_FLOAT4; attrs[3].offset = CF_OFFSET_OF(Vertex, joints);
-	attrs[4].name = "in_weights"; attrs[4].format = CF_VERTEX_FORMAT_FLOAT4; attrs[4].offset = CF_OFFSET_OF(Vertex, weights);
+	attrs[0].name = "in_pos";     attrs[0].format = CF_VERTEX_FORMAT_FLOAT3;  attrs[0].offset = CF_OFFSET_OF(Vertex, pos);
+	attrs[1].name = "in_normal";  attrs[1].format = CF_VERTEX_FORMAT_FLOAT3;  attrs[1].offset = CF_OFFSET_OF(Vertex, n);
+	attrs[2].name = "in_uv";      attrs[2].format = CF_VERTEX_FORMAT_FLOAT2;  attrs[2].offset = CF_OFFSET_OF(Vertex, uv);
+	attrs[3].name = "in_joints";  attrs[3].format = CF_VERTEX_FORMAT_USHORT4; attrs[3].offset = CF_OFFSET_OF(Vertex, joints);
+	attrs[4].name = "in_weights"; attrs[4].format = CF_VERTEX_FORMAT_FLOAT4;  attrs[4].offset = CF_OFFSET_OF(Vertex, weights);
 	CF_Mesh mesh = cf_make_mesh(n * (int)sizeof(Vertex), attrs, 5, (int)sizeof(Vertex));
 	cf_mesh_update_vertex_data(mesh, verts, n);
+	cf_mesh_set_index_buffer(mesh, prim->index_count * (int)sizeof(uint32_t), 32);
+	cf_mesh_update_index_data(mesh, prim->indices, prim->index_count);
 	cf_free(verts);
 	*out_count = n;
 	return mesh;
 }
 
-// The fox's base color texture ships inside the GLB as a PNG.
+// The base color texture ships inside the GLB as encoded bytes -- PNG or JPEG, sniffed by
+// magic number (glTF from Blender/Substance very commonly embeds JPEGs).
 static CF_Texture s_make_texture(const CM_Model* model)
 {
 	if (model->material_count && model->materials[0].base_color_texture.image >= 0) {
 		CM_Image* image = model->images + model->materials[0].base_color_texture.image;
+		const uint8_t* bytes = (const uint8_t*)image->data;
+		bool jpg = image->size > 2 && bytes[0] == 0xFF && bytes[1] == 0xD8;
 		CF_Image img;
-		if (!cf_is_error(cf_image_load_png_from_memory(image->data, image->size, &img))) {
+		CF_Result decoded = jpg
+			? cf_image_load_jpg_from_memory(image->data, image->size, &img)
+			: cf_image_load_png_from_memory(image->data, image->size, &img);
+		if (!cf_is_error(decoded)) {
 			CF_TextureParams params = cf_texture_defaults(img.w, img.h);
 			params.filter = CF_FILTER_LINEAR;
 			CF_Texture tex = cf_make_texture(params);
