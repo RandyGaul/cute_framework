@@ -103,6 +103,8 @@ struct CF_MeshCmd3d
 	void* uniform_block = NULL;         // One allocation holding every captured uniform's bytes.
 	                                    // NULL when the bytes are borrowed (replay payloads).
 	Cute::Array<CF_TextureBinding3d> textures;
+	CF_StorageBuffer vs_storage[4];     // Vertex-stage storage buffers, bound after the shader.
+	int vs_storage_count = 0;
 	// Baked lists: the instance data lives on the GPU permanently, uploaded once at bake, so
 	// replays skip the per-flush CPU upload entirely. Replay payloads borrow the handle.
 	uint64_t gpu_instances = 0;
@@ -149,6 +151,10 @@ struct CF_Draw3d
 	// shape-uniform churn (camera eye, effects) from ever splitting user mesh batches.
 	Cute::Array<CF_Uniform3d> uniforms; // data individually owned.
 	Cute::Array<CF_TextureBinding3d> textures;
+	// Vertex-stage storage buffers (cf_draw3d_set_vs_storage_buffers): the whole set
+	// replaces at once, captured per command like uniforms, hashed into user_hash.
+	CF_StorageBuffer vs_storage[4];
+	int vs_storage_count = 0;
 	uint64_t user_hash = 0;
 	uint64_t shape_hash = 0;
 
@@ -393,6 +399,21 @@ void cf_draw3d_set_uniform_v2(const char* name, CF_V2 val) { cf_draw3d_set_unifo
 void cf_draw3d_set_uniform_v3(const char* name, CF_V3 val) { cf_draw3d_set_uniform(name, &val, CF_UNIFORM_TYPE_FLOAT3, 1); }
 void cf_draw3d_set_uniform_m4(const char* name, CF_M4x4 val) { cf_draw3d_set_uniform(name, &val, CF_UNIFORM_TYPE_MAT4, 1); }
 void cf_draw3d_set_uniform_color(const char* name, CF_Color val) { cf_draw3d_set_uniform(name, &val, CF_UNIFORM_TYPE_FLOAT4, 1); }
+
+void cf_draw3d_set_vs_storage_buffers(CF_StorageBuffer* buffers, int count)
+{
+	CF_ASSERT(count >= 0 && count <= 4);
+	if (count > 4) count = 4;
+	// Replace the whole set; identical sets keep coalescing alive.
+	bool same = count == s_draw3d->vs_storage_count;
+	for (int i = 0; same && i < count; ++i) same = buffers[i].id == s_draw3d->vs_storage[i].id;
+	if (same) return;
+	uint64_t old_hash = cf_fnv1a(s_draw3d->vs_storage, (int)sizeof(CF_StorageBuffer) * s_draw3d->vs_storage_count);
+	for (int i = 0; i < count; ++i) s_draw3d->vs_storage[i] = buffers[i];
+	s_draw3d->vs_storage_count = count;
+	uint64_t new_hash = cf_fnv1a(s_draw3d->vs_storage, (int)sizeof(CF_StorageBuffer) * count);
+	s_draw3d->user_hash ^= old_hash ^ new_hash;
+}
 
 void cf_draw3d_set_texture(const char* name, CF_Texture texture)
 {
@@ -645,6 +666,8 @@ static void s_submit(CF_Mesh mesh, const CF_MeshInstance3d& inst, bool escape, c
 		}
 	}
 	mc->textures = s_draw3d->textures;
+	for (int i = 0; i < s_draw3d->vs_storage_count; ++i) mc->vs_storage[i] = s_draw3d->vs_storage[i];
+	mc->vs_storage_count = s_draw3d->vs_storage_count;
 	mc->sprite_textured = sprite_textured;
 
 	if (!escape) {
@@ -1832,6 +1855,7 @@ void cf_draw3d_process(CF_Command* cmd, CF_Canvas canvas, bool clear)
 			mc->staged_offset = -1;
 		}
 		cf_apply_shader(cmd->shader, material);
+		if (mc->vs_storage_count) cf_apply_vs_storage_buffers(mc->vs_storage, mc->vs_storage_count);
 		if (viewport.w >= 0 && viewport.h >= 0) cf_apply_viewport(viewport.x, viewport.y, viewport.w, viewport.h);
 		if (scissor.w >= 0 && scissor.h >= 0) cf_apply_scissor(scissor.x, scissor.y, scissor.w, scissor.h);
 		cf_draw_elements();
@@ -1862,6 +1886,7 @@ void cf_draw3d_process(CF_Command* cmd, CF_Canvas canvas, bool clear)
 		cf_material_set_texture_fs(material, "u_image", atlas);
 		cf_mesh_update_instance_data(mc->mesh, s_draw3d->page.data(), s_draw3d->page.count());
 		cf_apply_shader(cmd->shader, material);
+		if (mc->vs_storage_count) cf_apply_vs_storage_buffers(mc->vs_storage, mc->vs_storage_count);
 		if (viewport.w >= 0 && viewport.h >= 0) cf_apply_viewport(viewport.x, viewport.y, viewport.w, viewport.h);
 		if (scissor.w >= 0 && scissor.h >= 0) cf_apply_scissor(scissor.x, scissor.y, scissor.w, scissor.h);
 		cf_draw_elements();
@@ -2038,6 +2063,8 @@ void cf_draw3d_replay_cmd(CF_Command* dst, const CF_Command* src)
 	mc->image_refs_ref = smc->sprite_textured ? &smc->image_refs : NULL;
 	mc->uniforms = smc->uniforms; // Bytes stay in the list's uniform_block (borrowed).
 	mc->textures = smc->textures;
+	for (int i = 0; i < smc->vs_storage_count; ++i) mc->vs_storage[i] = smc->vs_storage[i];
+	mc->vs_storage_count = smc->vs_storage_count;
 	// Sort anchor for translucent replays: the first baked instance's position under the
 	// live view (baked groups share state, so one representative is as good as any).
 	if (smc->instances.count()) {

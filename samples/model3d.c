@@ -8,15 +8,19 @@
 // A skinned, animated glTF model through cute_model.h + cute_draw3d.h.
 //
 // cute_model.h (libraries/cute/) loads GLB/glTF into plain arrays: vertex streams,
-// a node hierarchy, skins with inverse-bind matrices, and keyframe clips. The runtime
-// contract is the one the skinning sample established: bone matrices arrive fully
-// composed (posed * inverse-bind) in a mat4 array uniform, and the vertex shader only
-// does the weighted blend. Everything downstream -- instancing, transforms, texturing,
-// the shape API's strokes for the skeleton overlay -- is ordinary draw3d.
+// a node hierarchy, skins with inverse-bind matrices, and keyframe clips. Skinning at
+// scale runs the pull pattern: every character's bone palette lives in ONE storage
+// buffer (cf_draw3d_set_vs_storage_buffers), each submission carries its palette's base
+// offset in a mesh-attribute lane, and the vertex shader does the weighted blend -- so a
+// whole pack of independently-animated foxes coalesces into a single instanced draw
+// (the HUD prints the receipts via cf_draw3d_stats). Everything downstream --
+// transforms, texturing, the shape API's strokes for the skeleton overlay -- is
+// ordinary draw3d.
 //
-// Every frame: rest pose -> cm_animate (sample the clip) -> cm_world_transforms ->
-// cm_skin_palette -> cf_draw3d_set_uniform("u_bones", ...). The fox cycles its three
-// clips (Survey, Walk, Run); thin strokes trace the posed skeleton.
+// Every frame, per fox: rest pose -> cm_animate (each fox its own clip + phase) ->
+// cm_world_transforms -> cm_skin_palette into that fox's region of the shared buffer,
+// then one cf_update_storage_buffer for the lot. Thin strokes trace the last fox's
+// posed skeleton.
 //
 // Drag to orbit, mouse wheel to zoom, space to toggle the skeleton overlay.
 //
@@ -41,8 +45,8 @@ typedef struct Vertex
 } Vertex;
 
 // The skinning blend happens upstream of the ordinary draw3d contract; u_bones holds
-// this frame's posed * inverse-bind palette. The bone count is stamped in at runtime.
-static const char* s_vs_fmt =
+// this frame's posed * inverse-bind palettes, one region per fox in a single SSBO.
+static const char* s_vs =
 "layout (location = 0) in vec3 in_pos;\n"
 "layout (location = 1) in vec3 in_normal;\n"
 "layout (location = 2) in vec2 in_uv;\n"
@@ -56,15 +60,22 @@ static const char* s_vs_fmt =
 "layout (location = 1) out vec2 v_uv;\n"
 "layout (set = 1, binding = 0) uniform uniform_block {\n"
 "    mat4 u_view_projection;\n"
-"    mat4 u_bones[%d];\n"
 "};\n"
+"// Every fox's palette lives in ONE storage buffer; in_mesh_attributes.x carries each\n"
+"// submission's base offset, so the whole pack coalesces into a single instanced draw.\n"
+"layout (std430, set = 0, binding = 0) readonly buffer bones_buffer {\n"
+"    vec4 u_bones[];\n"
+"};\n"
+"mat4 bone(uint j) {\n"
+"    uint i = j * 4u;\n"
+"    return mat4(u_bones[i], u_bones[i + 1u], u_bones[i + 2u], u_bones[i + 3u]);\n"
+"}\n"
 "void main() {\n"
-"    vec4 p0 = vec4(in_pos, 1.0);\n"
-"    vec4 n0 = vec4(in_normal, 0.0);\n"
-"    vec3 pos = (u_bones[in_joints.x] * p0 * in_weights.x + u_bones[in_joints.y] * p0 * in_weights.y\n"
-"              + u_bones[in_joints.z] * p0 * in_weights.z + u_bones[in_joints.w] * p0 * in_weights.w).xyz;\n"
-"    vec3 nrm = normalize((u_bones[in_joints.x] * n0 * in_weights.x + u_bones[in_joints.y] * n0 * in_weights.y\n"
-"                        + u_bones[in_joints.z] * n0 * in_weights.z + u_bones[in_joints.w] * n0 * in_weights.w).xyz);\n"
+"    uint base = uint(in_mesh_attributes.x);\n"
+"    mat4 skin = bone(base + in_joints.x) * in_weights.x + bone(base + in_joints.y) * in_weights.y\n"
+"              + bone(base + in_joints.z) * in_weights.z + bone(base + in_joints.w) * in_weights.w;\n"
+"    vec3 pos = (skin * vec4(in_pos, 1.0)).xyz;\n"
+"    vec3 nrm = normalize((skin * vec4(in_normal, 0.0)).xyz);\n"
 "    vec4 p = vec4(pos, 1.0);\n"
 "    vec3 world = vec3(dot(in_model0, p), dot(in_model1, p), dot(in_model2, p));\n"
 "    v_normal = normalize(vec3(dot(in_model0.xyz, nrm), dot(in_model1.xyz, nrm), dot(in_model2.xyz, nrm)));\n"
@@ -147,12 +158,47 @@ static CF_Texture s_make_texture(const CM_Model* model)
 	return tex;
 }
 
+// Screenshot/exit harness, same contract as the fireflies sample: --shot <t> saves a
+// numbered png of the app canvas, --exit-at <t> quits cleanly. Smoke-testable in CI.
+static int s_shot_count;
+static void s_screenshot(void)
+{
+	CF_Canvas canvas = cf_app_get_canvas();
+	int w = 0, h = 0;
+	cf_canvas_get_size(canvas, &w, &h);
+	CF_Pixel* px = (CF_Pixel*)cf_alloc((size_t)w * h * sizeof(CF_Pixel));
+	CF_Readback rb = cf_canvas_readback(canvas);
+	if (rb.id) {
+		while (!cf_readback_ready(rb)) {}
+		cf_readback_data(rb, px, w * h * (int)sizeof(CF_Pixel));
+		cf_destroy_readback(rb);
+		CF_Image img;
+		img.w = w;
+		img.h = h;
+		img.pix = px;
+		char path[256];
+		snprintf(path, sizeof(path), "/model3d_shot_%02d.png", s_shot_count++);
+		cf_image_save_png(path, &img);
+		printf("saved %s\n", path);
+	}
+	cf_free(px);
+}
+
 int main(int argc, char* argv[])
 {
+	float shot_times[16];
+	int shot_n = 0;
+	float exit_at = -1.0f;
+	for (int i = 1; i < argc; ++i) {
+		if (!CF_STRCMP(argv[i], "--shot") && i + 1 < argc) { if (shot_n < 16) shot_times[shot_n++] = (float)atof(argv[++i]); }
+		else if (!CF_STRCMP(argv[i], "--exit-at") && i + 1 < argc) exit_at = (float)atof(argv[++i]);
+	}
+
 	int options = CF_APP_OPTIONS_WINDOW_POS_CENTERED_BIT | CF_APP_OPTIONS_RESIZABLE_BIT;
 	CF_Result result = cf_make_app("cute_model -- skinned glTF", 0, 0, 0, 1280, 720, options, argv[0]);
 	if (cf_is_error(result)) return -1;
 	cf_app_set_present_mode(CF_PRESENT_MODE_VSYNC);
+	cf_fs_set_write_directory(cf_fs_get_base_directory());
 
 	// Mount this sample's data folder next to the executable.
 	char* base = cf_path_normalize(cf_fs_get_base_directory());
@@ -184,13 +230,18 @@ int main(int argc, char* argv[])
 	cf_draw3d_set_texture("u_image", texture);
 
 	const CM_Skin* skin = &model->skins[0];
-	char vs[4096];
-	snprintf(vs, sizeof(vs), s_vs_fmt, skin->joint_count);
-	CF_Shader shader = cf_make_shader_from_source(vs, s_fs);
+	CF_Shader shader = cf_make_shader_from_source(s_vs, s_fs);
 
+	// A little pack of foxes, each running its own clip at its own phase. All their
+	// palettes live in one storage buffer; each submission carries its palette's base
+	// offset in a mesh-attribute lane, so the whole pack renders as ONE instanced draw.
+	#define FOX_COUNT 5
 	CM_Transform* locals = (CM_Transform*)cf_alloc(sizeof(CM_Transform) * (size_t)model->node_count);
 	float* world = (float*)cf_alloc(sizeof(float) * 16 * (size_t)model->node_count);
-	float* palette = (float*)cf_alloc(sizeof(float) * 16 * (size_t)skin->joint_count);
+	float* palettes = (float*)cf_alloc(sizeof(float) * 16 * (size_t)skin->joint_count * FOX_COUNT);
+	CF_StorageBufferParams sb_params = cf_storage_buffer_defaults((int)(sizeof(float) * 16 * (size_t)skin->joint_count * FOX_COUNT));
+	sb_params.graphics_readable = true;
+	CF_StorageBuffer bones_buf = cf_make_storage_buffer(sb_params);
 
 	// Orbit camera state.
 	float azimuth = 0.7f, elevation = 0.35f, distance = 6.5f;
@@ -219,13 +270,18 @@ int main(int argc, char* argv[])
 		distance = cf_clamp(distance - cf_mouse_wheel_motion() * 0.6f, 3.0f, 16.0f);
 		if (cf_key_just_pressed(CF_KEY_SPACE)) show_skeleton = !show_skeleton;
 
-		// Cycle clips every few seconds, looping each with fmod.
-		int clip_index = ((int)(t / 4.0f)) % model->animation_count;
-		const CM_Animation* clip = model->animations + clip_index;
-		cm_rest_pose(model, locals);
-		cm_animate(model, clip, fmodf(t, clip->duration), locals);
-		cm_world_transforms(model, locals, world);
-		cm_skin_palette(model, 0, world, palette);
+		// Every fox samples its own clip at its own phase; all palettes land in one
+		// buffer with one upload. `world` keeps the LAST fox's pose for the skeleton
+		// overlay below.
+		for (int fox = 0; fox < FOX_COUNT; ++fox) {
+			const CM_Animation* clip = model->animations + (fox % model->animation_count);
+			float ft = t + fox * 0.7f;
+			cm_rest_pose(model, locals);
+			cm_animate(model, clip, fmodf(ft, clip->duration), locals);
+			cm_world_transforms(model, locals, world);
+			cm_skin_palette(model, 0, world, palettes + (size_t)fox * 16 * skin->joint_count);
+		}
+		cf_update_storage_buffer(bones_buf, palettes, (int)(sizeof(float) * 16 * (size_t)skin->joint_count * FOX_COUNT));
 
 		int w, h;
 		cf_app_get_size(&w, &h);
@@ -239,17 +295,27 @@ int main(int argc, char* argv[])
 		cf_draw3d_scale(cf_v3(0.025f));
 
 		cf_draw3d_push_shader(shader);
-		cf_draw3d_set_uniform("u_bones", palette, CF_UNIFORM_TYPE_MAT4, skin->joint_count);
-		cf_draw3d_mesh(mesh);
+		cf_draw3d_set_vs_storage_buffers(&bones_buf, 1);
+		for (int fox = 0; fox < FOX_COUNT; ++fox) {
+			cf_draw3d_push();
+			cf_draw3d_translate(cf_v3((fox - (FOX_COUNT - 1) * 0.5f) * 90.0f, 0, (fox & 1) ? -40.0f : 0));
+			cf_draw3d_push_mesh_attributes(cf_v4((float)(fox * skin->joint_count), 0, 0, 0));
+			cf_draw3d_mesh(mesh);
+			cf_draw3d_pop_mesh_attributes();
+			cf_draw3d_pop();
+		}
 		cf_draw3d_pop_shader();
 
 		// Posed skeleton overlay through the shape API: a stroke per bone, drawn under
 		// the same transform stack as the mesh. Strokes compose their render state on
-		// top of the pushed one, so an always-pass depth test makes them x-ray.
+		// top of the pushed one, so an always-pass depth test makes them x-ray. `world`
+		// holds the LAST fox's pose, so draw it where that fox stands.
 		if (show_skeleton) {
 			CF_RenderState xray = cf_render_state_3d_defaults();
 			xray.depth_compare = CF_COMPARE_FUNCTION_ALWAYS;
 			cf_draw3d_push_render_state(xray);
+			cf_draw3d_push();
+			cf_draw3d_translate(cf_v3(((FOX_COUNT - 1) - (FOX_COUNT - 1) * 0.5f) * 90.0f, 0, ((FOX_COUNT - 1) & 1) ? -40.0f : 0));
 			cf_draw3d_push_color(cf_make_color_rgba_f(1.0f, 1.0f, 1.0f, 0.6f));
 			for (int i = 0; i < skin->joint_count; ++i) {
 				int node = skin->joints[i];
@@ -262,6 +328,7 @@ int main(int argc, char* argv[])
 				cf_draw3d_line(a, b, 0.8f);
 			}
 			cf_draw3d_pop_color();
+			cf_draw3d_pop();
 			cf_draw3d_pop_render_state();
 		}
 		cf_draw3d_pop();
@@ -280,19 +347,33 @@ int main(int argc, char* argv[])
 		cf_draw3d_pop_view();
 		cf_draw3d_pop_projection();
 
-		// Clip name, through the ordinary 2d layer.
+		// The receipts, through the ordinary 2d layer: the pack coalesces into ONE skinned
+		// draw, so the whole frame is that plus the skeleton strokes and the ground grid.
+		CF_DrawStats3d stats = cf_draw3d_stats();
+		char hud[128];
+		snprintf(hud, sizeof(hud), "%d foxes -- %d instances in %d total 3d draws (SSBO palettes)",
+			FOX_COUNT, stats.instances, stats.commands);
 		cf_push_font_size(20);
 		cf_draw_push_color(cf_color_white());
-		cf_draw_text(clip->name, cf_v2(-(float)w * 0.5f + 20, (float)h * 0.5f - 20), -1);
+		cf_draw_text(hud, cf_v2(-(float)w * 0.5f + 20, (float)h * 0.5f - 20), -1);
 		cf_draw_pop_color();
 		cf_pop_font_size();
 
 		cf_app_draw_onto_screen(true);
+
+		for (int i = 0; i < shot_n; ++i) {
+			if (shot_times[i] >= 0 && t >= shot_times[i]) {
+				s_screenshot();
+				shot_times[i] = -1.0f;
+			}
+		}
+		if (exit_at > 0 && t >= exit_at) break;
 	}
 
 	cf_free(locals);
 	cf_free(world);
-	cf_free(palette);
+	cf_free(palettes);
+	cf_destroy_storage_buffer(bones_buf);
 	cm_free(model);
 	cf_destroy_mesh(mesh);
 	cf_destroy_texture(texture);

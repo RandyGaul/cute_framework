@@ -532,6 +532,39 @@ CF_API void CF_CALL cf_draw3d_set_uniform_color(const char* name, CF_Color val);
  */
 CF_API void CF_CALL cf_draw3d_set_texture(const char* name, CF_Texture texture);
 
+/**
+ * @function cf_draw3d_set_vs_storage_buffers
+ * @category draw3d
+ * @brief    Binds storage buffers to the vertex stage for subsequent mesh submissions.
+ * @param    buffers  The buffers, in shader binding order (see `cf_apply_vs_storage_buffers`
+ *                    for the declaration contract: `set = 0`, bindings after any vertex-stage
+ *                    samplers). Up to 4.
+ * @param    count    Number of buffers; 0 clears the set.
+ * @remarks  The whole set replaces at once and is captured per submission like uniforms;
+ *           identical sets keep coalescing alive. This is the skinning-at-scale tool: put
+ *           every character's bone palette in ONE buffer, put each submission's palette
+ *           base index in a spare `cf_draw3d_push_mesh_attributes` lane, and N animated
+ *           characters coalesce into a single instanced draw:
+ *
+ *           ```glsl
+ *           // Runtime array tails must be scalars or vectors, so a mat4 palette rides as
+ *           // vec4 columns (each matrix is 4 consecutive vec4s, column-major):
+ *           layout (std430, set = 0, binding = 0) readonly buffer bones_buffer { vec4 u_bones[]; };
+ *           mat4 bone(uint j) { uint i = j * 4u; return mat4(u_bones[i], u_bones[i + 1u], u_bones[i + 2u], u_bones[i + 3u]); }
+ *           // ...
+ *           uint base = uint(in_mesh_attributes.x);
+ *           mat4 skin = bone(base + in_joints.x) * in_weights.x + ...;
+ *           ```
+ *
+ *           Note baked draw lists freeze their captures at record time -- a skinned mesh
+ *           recorded into a `CF_DrawList` replays whatever palette buffer contents exist at
+ *           draw time (the buffer binding is captured, its CONTENTS are not), so animated
+ *           skinning composes with baked lists exactly when you keep updating the buffer.
+ *           SDL_GPU backends only, like all storage buffers; GLES3/web has none.
+ * @related  cf_apply_vs_storage_buffers CF_StorageBuffer cf_make_storage_buffer cf_draw3d_push_mesh_attributes
+ */
+CF_API void CF_CALL cf_draw3d_set_vs_storage_buffers(CF_StorageBuffer* buffers, int count);
+
 //--------------------------------------------------------------------------------------------------
 // Sprite-textured meshes. Meshes can be textured straight from CF's sprite/texture economy: the
 // image lives wherever the atlas compiler decides, the sub-rect rides the `in_uv_rect` instance
@@ -1205,6 +1238,7 @@ CF_INLINE void draw3d_set_uniform(const char* name, CF_V3 val) { cf_draw3d_set_u
 CF_INLINE void draw3d_set_uniform(const char* name, CF_M4x4 val) { cf_draw3d_set_uniform_m4(name, val); }
 CF_INLINE void draw3d_set_uniform(const char* name, CF_Color val) { cf_draw3d_set_uniform_color(name, val); }
 CF_INLINE void draw3d_set_texture(const char* name, CF_Texture texture) { cf_draw3d_set_texture(name, texture); }
+CF_INLINE void draw3d_set_vs_storage_buffers(CF_StorageBuffer* buffers, int count) { cf_draw3d_set_vs_storage_buffers(buffers, count); }
 
 CF_INLINE void draw3d_push_texture(const CF_Sprite* sprite) { cf_draw3d_push_texture(sprite); }
 CF_INLINE void draw3d_pop_texture() { cf_draw3d_pop_texture(); }
