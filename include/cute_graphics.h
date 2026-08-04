@@ -1342,14 +1342,19 @@ CF_API void CF_CALL cf_destroy_storage_buffer(CF_StorageBuffer buffer);
  *           vertex-stage samplers:
  *
  *           ```glsl
- *           layout (std430, set = 0, binding = 0) readonly buffer bones_buffer { mat4 u_bones[]; };
+ *           layout (std430, set = 0, binding = 0) readonly buffer bones_buffer { vec4 u_bones[]; };
  *           ```
+ *
+ *           Buffer-block tails must be scalars or vectors, so store mat4s as four vec4
+ *           columns and reassemble in the shader (see `cf_draw3d_set_vs_storage_buffers`
+ *           for the `bone()` helper idiom).
  *
  *           This is the tool for data too large or too dynamic for uniforms -- skinning
  *           palettes indexed by a per-instance bone offset, per-instance data pulled by
  *           `gl_InstanceIndex` (see `cf_draw_elements_instanced`), or buffers a compute
- *           shader just wrote (`compute_writable` + `graphics_readable` composes). Not
- *           supported by the GLES3/web shader transpiler, matching compute.
+ *           shader just wrote (`compute_writable` + `graphics_readable` composes). On
+ *           GLES3/web, read-only storage buffers are emulated through texture fetches
+ *           transparently; `compute_writable` buffers are not available there.
  * @related  CF_StorageBuffer cf_make_storage_buffer cf_apply_fs_storage_buffers cf_draw_elements_instanced cf_apply_shader
  */
 CF_API void CF_CALL cf_apply_vs_storage_buffers(CF_StorageBuffer* buffers, int count);

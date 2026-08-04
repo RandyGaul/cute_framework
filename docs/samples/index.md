@@ -189,6 +189,15 @@ Interactive samples demonstrating Cute Framework features. Click any card to pla
     [:octicons-arrow-right-24: Play](fetch_image.md)
 
 
+- **[Fireflies](fireflies.md)**
+
+    ---
+
+    A first-person blocky forest at dusk: catch fireflies in a jar, wake the shrine. The 3d API's integration sample -- cascaded EVSM shadows, HDR bloom through render-to-mip, frustum culling, and automatic instancing working as one system.
+
+    [:octicons-arrow-right-24: Read](fireflies.md)
+
+
 - **[Fluid Sim](fluid_sim.md)**
 
     ---
@@ -286,6 +295,15 @@ Interactive samples demonstrating Cute Framework features. Click any card to pla
     Interactive sample demonstrating metaballs features.
 
     [:octicons-arrow-right-24: Play](metaballs.md)
+
+
+- **[Model 3D](model3d.md)**
+
+    ---
+
+    A glTF fox pack skinned through one shared storage buffer: five characters on independent animation clips in three instanced draws.
+
+    [:octicons-arrow-right-24: Read](model3d.md)
 
 
 - **[Noise](noise.md)**

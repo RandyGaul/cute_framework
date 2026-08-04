@@ -246,6 +246,52 @@ dispatch.rw_texture_count = 1;
 cf_dispatch_compute(compute_shader, material, dispatch);
 ```
 
+## Storage Buffers and Pull Instancing
+
+[`CF_StorageBuffer`](../graphics/cf_storagebuffer.md) is raw GPU memory for data too large or too dynamic for uniforms: skinning palettes, particle pools, anything a compute shader writes. Create one with `cf_make_storage_buffer` (`cf_storage_buffer_defaults(size)` marks it `graphics_readable`), fill it with `cf_update_storage_buffer`, and bind after `cf_apply_shader`:
+
+```c
+cf_apply_shader(shader, material);
+cf_apply_vs_storage_buffers(&bones, 1); // Vertex stage; cf_apply_fs_storage_buffers for fragment.
+cf_draw_elements();
+```
+
+```glsl
+// Vertex stage: set = 0, bindings after any vertex-stage samplers.
+layout (std430, set = 0, binding = 0) readonly buffer bones_buffer { vec4 u_bones[]; };
+```
+
+Buffer-block tails must be scalars or vectors -- store mat4s as four `vec4` columns and reassemble in the shader.
+
+Storage buffers also unlock **pull instancing**: `cf_draw_elements_instanced(count)` draws the applied mesh `count` times with no per-instance vertex buffer at all, and the shader pulls its per-instance data by `gl_InstanceIndex`. This composes with compute -- a culling shader compacts visible instances into a buffer (`compute_writable` + `graphics_readable`), and the draw pulls from it with no CPU round trip.
+
+On GLES3/web, read-only storage buffers are emulated through texture fetches transparently; `compute_writable` is unavailable there, matching compute shaders.
+
+## Range Draws and Geometry Arenas
+
+`cf_draw_elements_range(first, count, instance_count)` draws a contiguous sub-range of the applied mesh. Pack many small meshes into one big `CF_Mesh` (a *geometry arena*) and draw each piece by range -- nothing rebinds between draws, which is the cheap way to render many distinct small meshes. Indexed arenas write indices absolute into the shared vertex buffer; there is deliberately no base-vertex parameter, which is what keeps ranges portable to GLES3. The [3D drawing layer](drawing_3d.md#geometry-arenas) builds automatic batching on top of this with `cf_draw3d_mesh_range`.
+
+## Indirect Draws
+
+`cf_draw_elements_indirect(args, offset, draw_count)` reads its draw arguments (`CF_DrawIndirectArgs` / `CF_DrawIndexedIndirectArgs`) from a storage buffer created with `indirect_drawable`, instead of from the CPU. Combined with a compute shader that writes those arguments, this closes the GPU-driven loop: cull, compact, and draw without a readback. SDL_GPU backends only -- not available on GLES3/web.
+
+## Standalone Samplers
+
+Textures bake their filter/wrap state at creation, which is the right default. When the same texture needs to be sampled two ways -- pixel-art NEAREST in world, LINEAR in a scaled UI, or a shadow map with and without hardware comparison -- make a [`CF_Sampler`](../graphics/cf_sampler.md) and bind the pair:
+
+```c
+CF_SamplerParams sp = cf_sampler_defaults();
+sp.filter = CF_FILTER_LINEAR;
+CF_Sampler linear = cf_make_sampler(sp);
+cf_material_set_texture_fs_sampler(material, "u_image", texture, linear);
+```
+
+The plain `cf_material_set_texture_fs` keeps sampling through the texture's own baked state, so existing code is unaffected.
+
+## Multiple Render Targets
+
+A canvas can carry up to `CF_MAX_CANVAS_TARGETS` color targets (`CF_CanvasParams::target_count`); the fragment shader writes `layout (location = N) out` per target -- the classic g-buffer setup. Each target can blend its own way: `CF_RenderState::blend` aliases `blends[0]`, and setting `blend_count` with `blends[1]`+ gives every target its own blend and write mask (accumulate HDR into target 0 while overwriting normals in target 1). Per-target blend is SDL_GPU-only -- the GLES backend applies `blends[0]` to every target. `cf_canvas_get_target(canvas, index)` fetches each result.
+
 ## Textures
 
 Textures hold image data, as in pixels. Though in graphics we call them texels, not pixels. Actually, a texel can hold arbitrary data, but usually we just store one `vec4` (in glsl) or `CF_Color` (in C++) per pixel. Texture data is fetched from a shader using what's called uv-coordinates.
@@ -259,6 +305,10 @@ UV-coordinates are two floats, each in the range from `[0,1]`. The coordinate (0
 <p align="center">
 <img src=https://github.com/RandyGaul/cute_framework/blob/master/assets/block_man_final.gif?raw=true>
 </p>
+
+### Rendering into Faces, Layers, and Mips
+
+A canvas can attach an *existing* texture as its render target (`CF_CanvasParams::attach_target`) and address one slice of it: `attach_layer` picks a cube face or array layer, `attach_mip` picks a mip level. This is how multi-view techniques stay allocation-free -- six passes into one cube texture for point-light shadows, one pass per cascade into a depth 2D-array, and bloom chains that ping-pong between the mip levels of two textures so no pass ever samples what it writes (mark the texture `allocate_mipmaps` and upload/attach per mip; `cf_canvas_get_size` reports the attached mip's dimensions). The `point_light` and `fireflies` samples show the face and mip recipes respectively.
 
 ### App's Default Render Canvas
 

@@ -15,9 +15,10 @@ isolation:
 - Thousands of blocks flow through `cf_draw3d_mesh` every frame and coalesce automatically
   into a handful of instanced draws. Block color and emissive strength ride
   `in_mesh_attributes`; leaf sway rides the free second lane (`in_uv_rect`).
-- Two shadow cascades render into the layers of one depth 2d-array texture
-  (`CF_CanvasParams::attach_target` + `attach_layer`) and are sampled with hardware PCF
-  through `sampler2DArrayShadow`.
+- Two shadow cascades render EVSM moments (`exp(c*z)` and its square) into the layers of
+  one RG32F 2d-array texture (`CF_CanvasParams::attach_target` + `attach_layer`), get a
+  separable gaussian blur, and resolve with a Chebyshev bound -- soft, acne-free shadows
+  with no depth bias to tune, and light bleeding clamped by one `linstep` remap.
 - HDR bloom runs through render-to-mip canvases (`CF_CanvasParams::attach_mip`): a bright
   pass, then a downsample chain that ping-pongs between the mip levels of two textures so
   no pass ever samples the texture it writes.

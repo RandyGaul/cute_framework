@@ -84,6 +84,31 @@ Per-submission variety that does *not* split the draw: the transform, and one `v
 
 A mesh that carries its own instance buffer (`cf_mesh_set_instance_buffer`) is the escape hatch: it draws as-is, no reserved attributes bound, instancing entirely yours.
 
+### Geometry Arenas
+
+The one thing automatic instancing can't fix on its own is *interleaving*: draw rock, tree, rock, tree and every submission splits the batch, because each needs a different mesh bound. The fix is to pack the small meshes into one `CF_Mesh` -- a geometry arena -- and submit sub-ranges:
+
+```cpp
+cf_draw3d_mesh_range(arena, rock_first_vertex, rock_vertex_count);
+cf_draw3d_mesh_range(arena, tree_first_vertex, tree_vertex_count);
+```
+
+Now every submission shares the same mesh, so the whole interleaved stream coalesces into one command that binds everything once and issues one tight range draw per contiguous record. In the Debug bench this is the difference between 18 ms and 1.9 ms a frame for 2000 interleaved objects. Indexed arenas write their indices absolute into the shared vertex buffer (there's no base-vertex parameter, which is what keeps ranges portable to GLES3/web). `cf_draw3d_stats` tells you when interleaving is splitting your batches in the first place -- watch `splits`.
+
+### Pull Instancing with Storage Buffers
+
+When per-instance data outgrows the reserved attribute lanes -- bone palettes being the classic case -- bind storage buffers to the vertex stage and index them per instance:
+
+```cpp
+cf_draw3d_set_vs_storage_buffers(&bones, 1); // Captured per submission, like uniforms.
+```
+
+```glsl
+layout (std430, set = 0, binding = 0) readonly buffer bones_buffer { vec4 u_bones[]; };
+```
+
+Buffer-block tails must be scalars or vectors, so a mat4 palette stores four `vec4` columns per bone and reassembles in the shader. A free `cf_draw3d_push_mesh_attributes` lane carries each submission's base offset into the shared buffer, so many characters on different animations still coalesce -- the `model3d` sample runs a five-fox pack on independent clips in three draws with this exact pattern.
+
 ## Uniforms and Textures
 
 `cf_draw3d_set_uniform*` and `cf_draw3d_set_texture` are plain named state, captured with each submission -- the same idiom as the 2D API. Bind a previous pass by binding its canvas targets:
@@ -174,7 +199,13 @@ Each common 3D need has a sample showing the pattern, because each one is a patt
 | `obj_loading` | A ~90 line OBJ parser into `cf_make_mesh`; model formats are user space, and this is the whole cost |
 | `shapes3d` | The shape catalog moving: gizmos, grids, arcs, tapered lines, solids -- zero setup |
 | `point_light` | Omnidirectional shadows: six face passes into one cube texture via `attach_target`, distance compare in the lit pass |
+| `model3d` | glTF loading via cute_model.h and the storage-buffer skinning pattern: a five-fox pack on independent animation clips in three instanced draws |
+| `fireflies` | The integration sample -- a first-person block forest with cascaded EVSM shadows, HDR bloom through render-to-mip canvases, frustum culling via cute_math3d.h, and a full gameplay loop |
+
+## 3D Math
+
+[cute_math3d.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_math3d.h) carries the vector/matrix/quaternion kit the camera stacks consume, plus the geometry that gameplay and culling want: `CF_Ray3` casts against spheres, AABBs, and planes (`cf_ray3_to_aabb3` for picking blocks, `cf_ray3_to_sphere` for picking things near a crosshair), `CF_Aabb3` transforms tightly through affine matrices (`cf_aabb3_transform`, the Arvo method), and `CF_Frustum3` extracts from any view-projection with `cf_frustum_from_m4` for `cf_frustum_test_aabb3` culling -- the fireflies sample culls its chunks with exactly that pair.
 
 ## Below This Layer
 
-The draw3d layer sits on the same [low level graphics API](low_level_graphics.md) everything else uses, and that layer grew the full 3D access inventory alongside it: multiple render targets, cube/3D/array textures with per-layer upload, depth-texture sampling and comparison samplers (`sampler2DShadow`), rendering into individual cube faces or array layers (`CF_CanvasParams.attach_target`), and sized `vec4`/`mat4` arrays in uniform blocks for bone palettes. When the draw3d layer doesn't fit, drop down -- both layers speak the same meshes, shaders, materials, and canvases.
+The draw3d layer sits on the same [low level graphics API](low_level_graphics.md) everything else uses, and that layer grew the full 3D access inventory alongside it: multiple render targets with [per-target blend states](low_level_graphics.md#multiple-render-targets), cube/3D/array textures with per-layer and per-mip upload, depth-texture sampling and comparison samplers (`sampler2DShadow`), rendering into individual cube faces, array layers, or mip levels (`CF_CanvasParams.attach_target` / `attach_layer` / `attach_mip`), [storage buffers](low_level_graphics.md#storage-buffers-and-pull-instancing) for skinning palettes and GPU-driven data, [indirect draws](low_level_graphics.md#indirect-draws) fed by compute, standalone [samplers](low_level_graphics.md#standalone-samplers), and sized `vec4`/`mat4` arrays in uniform blocks. When the draw3d layer doesn't fit, drop down -- both layers speak the same meshes, shaders, materials, and canvases.

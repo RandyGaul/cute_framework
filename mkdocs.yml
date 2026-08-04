@@ -146,6 +146,7 @@ nav:
       - Draw to Texture: samples/draw_to_texture.md
       - Easy Sprite: samples/easysprite.md
       - Fetch Image: samples/fetch_image.md
+      - Fireflies: samples/fireflies.md
       - Fluid Sim: samples/fluid_sim.md
       - Font Debug: samples/font_debug.md
       - Glitch: samples/glitch.md
@@ -157,6 +158,7 @@ nav:
       - Joypad: samples/joypad.md
       - Mandala: samples/mandala.md
       - Metaballs: samples/metaballs.md
+      - Model 3D: samples/model3d.md
       - Noise: samples/noise.md
       - OBJ Loading: samples/obj_loading.md
       - Outline (Stencil): samples/outline_stencil.md
