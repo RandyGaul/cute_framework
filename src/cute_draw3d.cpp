@@ -150,6 +150,8 @@ struct CF_Draw3d
 	// helpers split themselves into an effects pass then a core pass so a neighbor's outline can
 	// never land on top of (or depth-reject) an adjacent segment's core at a shared joint.
 	int stroke_pass = 0;
+
+	CF_DrawStats3d stats = { }; // Per-interval counters; cf_draw3d_stats reads and resets.
 	// Shape effects (cf_draw3d_push_outline / _glow), the 3d twin of the 2d effect stack.
 	Cute::Array<CF_Color> outlines;
 	Cute::Array<float> outline_widths;
@@ -485,25 +487,38 @@ static void s_submit(CF_Mesh mesh, const CF_MeshInstance3d& inst, bool escape, c
 	CF_RenderState rs = s_draw3d->render_states.last();
 	bool sprite_textured = sprite && !escape;
 
+	// Why a submission failed to join the previous one is the single most useful thing this
+	// layer knows and used to discard: automatic instancing is invisible when it works and
+	// silent when it doesn't. Each test below names the state that broke the batch, and
+	// cf_draw3d_stats reports the tally (see the DIAGNOSTICS section in cute_draw3d.h).
+	CF_DrawSplit3d split = CF_DRAW_SPLIT_3D_ESCAPE;
 	if (!escape) {
 		CF_Command* under = s_coalesce_candidate();
+		split = CF_DRAW_SPLIT_3D_FIRST;
 		if (under) {
 			CF_MeshCmd3d* mc = under->mesh3d;
-			if (mc->mesh.id == mesh.id && !mc->escape && !mc->instances_ref
-				&& mc->sprite_textured == sprite_textured
-				&& mc->state_version == s_draw3d->version
-				&& !CF_MEMCMP(&mc->vp, &vp, sizeof(vp))
-				&& under->shader.id == shader.id
-				&& under->render_state == rs
-				&& under->layer == s_draw->layers.last()
-				&& under->scissor == s_draw->scissors.last()
-				&& under->viewport == s_draw->viewports.last()) {
+			split = mc->mesh.id != mesh.id ? CF_DRAW_SPLIT_3D_MESH
+			      : (mc->escape || mc->instances_ref) ? CF_DRAW_SPLIT_3D_ESCAPE
+			      : mc->sprite_textured != sprite_textured ? CF_DRAW_SPLIT_3D_TEXTURE
+			      : mc->state_version != s_draw3d->version ? CF_DRAW_SPLIT_3D_UNIFORMS
+			      : CF_MEMCMP(&mc->vp, &vp, sizeof(vp)) ? CF_DRAW_SPLIT_3D_CAMERA
+			      : under->shader.id != shader.id ? CF_DRAW_SPLIT_3D_SHADER
+			      : !(under->render_state == rs) ? CF_DRAW_SPLIT_3D_RENDER_STATE
+			      : under->layer != s_draw->layers.last() ? CF_DRAW_SPLIT_3D_LAYER
+			      : !(under->scissor == s_draw->scissors.last()) ? CF_DRAW_SPLIT_3D_SCISSOR
+			      : !(under->viewport == s_draw->viewports.last()) ? CF_DRAW_SPLIT_3D_VIEWPORT
+			      : CF_DRAW_SPLIT_3D_NONE;
+			if (split == CF_DRAW_SPLIT_3D_NONE) {
 				mc->instances.add(inst);
 				if (sprite_textured) mc->image_refs.add(s_image_ref(sprite));
+				s_draw3d->stats.instances++;
 				return;
 			}
 		}
 	}
+	s_draw3d->stats.instances++;
+	s_draw3d->stats.commands++;
+	s_draw3d->stats.splits[split]++;
 
 	CF_Command& cmd = s_draw->add_cmd();
 	cmd.shader = shader;
@@ -1039,6 +1054,14 @@ static void s_submit_stroke(CF_MeshInstance3d inst)
 	s_submit(s_draw3d->stroke_quad, inst, false, NULL);
 	cf_draw3d_pop_render_state();
 	cf_draw3d_pop_shader();
+}
+
+CF_DrawStats3d cf_draw3d_stats()
+{
+	CF_DrawStats3d out = s_draw3d->stats;
+	CF_DrawStats3d zero = { };
+	s_draw3d->stats = zero;
+	return out;
 }
 
 void cf_draw3d_push_color(CF_Color c) { s_draw3d->colors.add(c); }

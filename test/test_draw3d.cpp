@@ -1223,6 +1223,83 @@ TEST_CASE(test_draw3d_attributes2)
 	return true;
 }
 
+// Diagnostics: submissions that coalesce report one command, and each state change that breaks
+// a batch must be named correctly -- the whole point is that the reason is trustworthy.
+TEST_CASE(test_draw3d_stats)
+{
+	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, W, H, s_options(), NULL))) return true; // Headless CI: no display/GPU.
+
+	CF_Mesh mesh = s_make_quad(0.4f);
+	CF_Mesh other = s_make_quad(0.2f);
+	CF_Shader shader = cf_make_shader_from_source(s_vs, s_fs);
+	CF_Shader shader2 = cf_make_shader_from_source(s_vs, s_fs);
+
+	cf_app_update(NULL);
+	cf_draw3d_push_projection(cf_ortho(-1, 1, -1, 1, 0.1f, 10.0f));
+	cf_draw3d_push_view(cf_look_at(cf_v3(0, 0, 2), cf_v3(0, 0, 0), cf_v3(0, 1, 0)));
+	cf_draw3d_push_shader(shader);
+	cf_draw3d_stats(); // Clear anything from setup.
+
+	// Five submissions of one mesh under identical state: one draw call, four coalesced.
+	for (int i = 0; i < 5; ++i) cf_draw3d_mesh(mesh);
+	CF_DrawStats3d stats = cf_draw3d_stats();
+	REQUIRE(stats.instances == 5);
+	REQUIRE(stats.commands == 1);
+	REQUIRE(stats.splits[CF_DRAW_SPLIT_3D_FIRST] == 1);
+
+	// A different mesh in the middle breaks the batch, twice, and the breaks are attributed to
+	// the mesh. Reading stats resets the counters but not the command stream, so the first
+	// submission here still joins the batch left over from above -- two new commands, not three.
+	cf_draw3d_mesh(mesh);
+	cf_draw3d_mesh(other);
+	cf_draw3d_mesh(mesh);
+	stats = cf_draw3d_stats();
+	REQUIRE(stats.instances == 3);
+	REQUIRE(stats.commands == 2);
+	REQUIRE(stats.splits[CF_DRAW_SPLIT_3D_MESH] == 2);
+	REQUIRE(cf_draw3d_worst_split(&stats) == CF_DRAW_SPLIT_3D_MESH);
+
+	// A shader change is reported as a shader break, not something else.
+	cf_draw3d_mesh(mesh);
+	cf_draw3d_push_shader(shader2);
+	cf_draw3d_mesh(mesh);
+	cf_draw3d_pop_shader();
+	stats = cf_draw3d_stats();
+	REQUIRE(stats.splits[CF_DRAW_SPLIT_3D_SHADER] == 1);
+
+	// Mesh attributes are the supported way to vary per-instance data: they must NOT split.
+	for (int i = 0; i < 4; ++i) {
+		cf_draw3d_push_mesh_attributes(cf_v4((float)i, 0, 0, 1));
+		cf_draw3d_mesh(mesh);
+		cf_draw3d_pop_mesh_attributes();
+	}
+	stats = cf_draw3d_stats();
+	REQUIRE(stats.instances == 4);
+	REQUIRE(stats.commands == 1);
+
+	// Uniforms, by contrast, do split -- and say so.
+	for (int i = 0; i < 3; ++i) {
+		float v = (float)i;
+		cf_draw3d_set_uniform("u_thing", &v, CF_UNIFORM_TYPE_FLOAT, 1);
+		cf_draw3d_mesh(mesh);
+	}
+	stats = cf_draw3d_stats();
+	REQUIRE(stats.instances == 3);
+	REQUIRE(stats.splits[CF_DRAW_SPLIT_3D_UNIFORMS] >= 2);
+
+	cf_draw3d_pop_shader();
+	cf_draw3d_pop_view();
+	cf_draw3d_pop_projection();
+	cf_render_to(cf_app_get_canvas(), true);
+	cf_app_draw_onto_screen(false);
+	cf_destroy_mesh(mesh);
+	cf_destroy_mesh(other);
+	cf_destroy_shader(shader);
+	cf_destroy_shader(shader2);
+	cf_destroy_app();
+	return true;
+}
+
 TEST_SUITE(test_draw3d)
 {
 	RUN_TEST_CASE(test_draw3d_transforms_and_coalescing);
@@ -1241,4 +1318,5 @@ TEST_SUITE(test_draw3d)
 	RUN_TEST_CASE(test_draw3d_shape_shader);
 	RUN_TEST_CASE(test_draw3d_stroke_sizing);
 	RUN_TEST_CASE(test_draw3d_attributes2);
+	RUN_TEST_CASE(test_draw3d_stats);
 }

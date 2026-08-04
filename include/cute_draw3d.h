@@ -126,6 +126,124 @@ extern "C" {
 #endif // __cplusplus
 
 //--------------------------------------------------------------------------------------------------
+// DIAGNOSTICS
+//
+// Instancing here is automatic, which means it is also invisible: submissions coalesce silently,
+// and so do the state changes that stop them from coalescing. `cf_draw3d_stats` makes that
+// legible -- how many draw calls your submissions actually became, and, for each one that failed
+// to join the batch before it, which piece of state broke it.
+//
+//     CF_DrawStats3d stats = cf_draw3d_stats();
+//     printf("%d instances -> %d draws (%s)\n", stats.instances, stats.commands,
+//         cf_draw_split_3d_to_string(cf_draw3d_worst_split(&stats)));
+
+/**
+ * @enum     CF_DrawSplit3d
+ * @category draw3d
+ * @brief    Why one mesh submission could not join the previous one's instanced draw.
+ * @related  CF_DrawStats3d cf_draw3d_stats cf_draw_split_3d_to_string
+ */
+#define CF_DRAW_SPLIT_3D_DEFS \
+	/* @entry Nothing broke -- the submission coalesced. Never counted. */ \
+	CF_ENUM(DRAW_SPLIT_3D_NONE,         0) \
+	/* @entry Nothing to join: the first submission, or 2d drawing came between. */ \
+	CF_ENUM(DRAW_SPLIT_3D_FIRST,        1) \
+	/* @entry A different mesh. Group submissions by mesh, or bake a draw list. */ \
+	CF_ENUM(DRAW_SPLIT_3D_MESH,         2) \
+	/* @entry A different shader was pushed. */ \
+	CF_ENUM(DRAW_SPLIT_3D_SHADER,       3) \
+	/* @entry A different render state was pushed. */ \
+	CF_ENUM(DRAW_SPLIT_3D_RENDER_STATE, 4) \
+	/* @entry Uniforms or textures changed. Prefer mesh attributes for per-object data. */ \
+	CF_ENUM(DRAW_SPLIT_3D_UNIFORMS,     5) \
+	/* @entry The camera changed (projection or view). */ \
+	CF_ENUM(DRAW_SPLIT_3D_CAMERA,       6) \
+	/* @entry A different layer. */ \
+	CF_ENUM(DRAW_SPLIT_3D_LAYER,        7) \
+	/* @entry A different scissor rect. */ \
+	CF_ENUM(DRAW_SPLIT_3D_SCISSOR,      8) \
+	/* @entry A different viewport. */ \
+	CF_ENUM(DRAW_SPLIT_3D_VIEWPORT,     9) \
+	/* @entry Sprite texturing was toggled on or off. */ \
+	CF_ENUM(DRAW_SPLIT_3D_TEXTURE,      10) \
+	/* @entry The escape hatch: a mesh with its own instance buffer never coalesces. */ \
+	CF_ENUM(DRAW_SPLIT_3D_ESCAPE,       11) \
+	/* @end */
+
+typedef enum CF_DrawSplit3d
+{
+	#define CF_ENUM(K, V) CF_##K = V,
+	CF_DRAW_SPLIT_3D_DEFS
+	#undef CF_ENUM
+} CF_DrawSplit3d;
+
+#define CF_DRAW_SPLIT_3D_COUNT 12
+
+/**
+ * @function cf_draw_split_3d_to_string
+ * @category draw3d
+ * @brief    Returns a `CF_DrawSplit3d` as a human-readable string.
+ * @related  CF_DrawSplit3d cf_draw3d_stats
+ */
+CF_INLINE const char* cf_draw_split_3d_to_string(CF_DrawSplit3d split)
+{
+	switch (split) {
+	#define CF_ENUM(K, V) case CF_##K: return CF_STRINGIZE(CF_##K);
+	CF_DRAW_SPLIT_3D_DEFS
+	#undef CF_ENUM
+	default: return NULL;
+	}
+}
+
+/**
+ * @struct   CF_DrawStats3d
+ * @category draw3d
+ * @brief    What your 3d submissions became, and why.
+ * @related  cf_draw3d_stats cf_draw3d_worst_split CF_DrawSplit3d
+ */
+typedef struct CF_DrawStats3d
+{
+	/* @member Mesh instances submitted. */
+	int instances;
+
+	/* @member Draw calls those instances became. Equal to `instances` means nothing batched. */
+	int commands;
+
+	/* @member Per-reason tally of batch breaks, indexed by `CF_DrawSplit3d`. Sums to `commands`. */
+	int splits[CF_DRAW_SPLIT_3D_COUNT];
+} CF_DrawStats3d;
+// @end
+
+/**
+ * @function cf_draw3d_stats
+ * @category draw3d
+ * @brief    Returns and resets the 3d submission counters.
+ * @remarks  Call once per frame, after `cf_app_draw_onto_screen`. Counters accumulate over
+ *           whatever interval you leave between calls.
+ * @related  CF_DrawStats3d cf_draw3d_worst_split cf_draw_split_3d_to_string
+ */
+CF_API CF_DrawStats3d CF_CALL cf_draw3d_stats(void);
+
+/**
+ * @function cf_draw3d_worst_split
+ * @category draw3d
+ * @brief    Returns the state change that broke the most batches.
+ * @param    stats  Stats from `cf_draw3d_stats`.
+ * @remarks  The one thing to fix first. `CF_DRAW_SPLIT_3D_FIRST` is not a problem -- it just
+ *           counts batches that had nothing to join.
+ * @related  CF_DrawStats3d cf_draw3d_stats cf_draw_split_3d_to_string
+ */
+CF_INLINE CF_DrawSplit3d cf_draw3d_worst_split(const CF_DrawStats3d* stats)
+{
+	int best = 0, best_count = -1;
+	for (int i = 0; i < CF_DRAW_SPLIT_3D_COUNT; ++i) {
+		if (i == CF_DRAW_SPLIT_3D_NONE || i == CF_DRAW_SPLIT_3D_FIRST) continue;
+		if (stats->splits[i] > best_count) { best_count = stats->splits[i]; best = i; }
+	}
+	return (CF_DrawSplit3d)best;
+}
+
+//--------------------------------------------------------------------------------------------------
 // Camera.
 
 /**
