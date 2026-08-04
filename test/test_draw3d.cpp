@@ -1432,6 +1432,16 @@ TEST_CASE(test_draw3d_stats)
 	stats = cf_draw3d_stats();
 	REQUIRE(stats.splits[CF_DRAW_SPLIT_3D_SHADER] == 1);
 
+	// Built-in solids share one arena mesh: interleaved cube/sphere/cone submissions
+	// coalesce into a single command via range records instead of splitting per shape.
+	cf_draw3d_cube(cf_v3(0, 0, 0), cf_v3(0.1f, 0.1f, 0.1f));
+	cf_draw3d_sphere(cf_v3(0.3f, 0, 0), 0.1f);
+	cf_draw3d_cone(cf_v3(-0.3f, 0, 0), cf_v3(-0.3f, 0.2f, 0), 0.1f);
+	cf_draw3d_cube(cf_v3(0, 0.3f, 0), cf_v3(0.1f, 0.1f, 0.1f));
+	stats = cf_draw3d_stats();
+	REQUIRE(stats.commands == 1);
+	REQUIRE(stats.instances == 4);
+
 	// Mesh attributes are the supported way to vary per-instance data: they must NOT split.
 	for (int i = 0; i < 4; ++i) {
 		cf_draw3d_push_mesh_attributes(cf_v4((float)i, 0, 0, 1));

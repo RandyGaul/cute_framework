@@ -216,10 +216,12 @@ struct CF_Draw3d
 	CF_Mesh stroke_quad = { 0 };
 	CF_Shader stroke_shd = { 0 };
 	CF_Shader solid_shd = { 0 };
-	CF_Mesh cube_mesh = { 0 };
-	CF_Mesh sphere_mesh = { 0 };
-	CF_Mesh cone_mesh = { 0 };
-	Cute::Map<CF_Mesh> torus_meshes; // Keyed by quantized tube/major ratio.
+	// The fixed built-in solids (cube/sphere/cone) pack into one arena mesh so interleaved
+	// solid submissions coalesce into one command via range records (see s_solids_init).
+	CF_Mesh solids_arena = { 0 };
+	int solid_first[3] = { };
+	int solid_count[3] = { };
+	Cute::Map<CF_Mesh> torus_meshes; // Ratio bakes into the vertices: keyed by quantized tube/major ratio.
 
 	// Sprite-texturing scratch, valid only inside cf_draw3d_process: the atlas report hook
 	// routes uv results here (parallel to the command's instances) while `resolving` is set,
@@ -292,9 +294,7 @@ void cf_destroy_draw3d()
 		cf_destroy_shader(s_draw3d->stroke_shd);
 		cf_destroy_shader(s_draw3d->solid_shd);
 	}
-	if (s_draw3d->cube_mesh.id) cf_destroy_mesh(s_draw3d->cube_mesh);
-	if (s_draw3d->sphere_mesh.id) cf_destroy_mesh(s_draw3d->sphere_mesh);
-	if (s_draw3d->cone_mesh.id) cf_destroy_mesh(s_draw3d->cone_mesh);
+	if (s_draw3d->solids_arena.id) cf_destroy_mesh(s_draw3d->solids_arena);
 	// User shape shaders still alive at shutdown: destroy both variants of each bundle
 	// directly (the map is cleared with the struct below, so no double-free via the
 	// cf_destroy_shader sibling hook).
@@ -1538,6 +1538,81 @@ static CF_Mesh s_make_solid(const Cute::Array<CF_SolidVertex>& verts)
 	return m;
 }
 
+enum { SOLID_CUBE, SOLID_SPHERE, SOLID_CONE };
+
+// Builds the three fixed solids into one arena mesh on first solid use. Sharing one mesh is
+// what lets interleaved cube/sphere/cone submissions coalesce: each records its vertex range
+// and the flush issues per-range draws with nothing rebound between. Torus meshes stay
+// per-ratio (the tube/major ratio bakes into the vertices), splitting as before.
+static void s_solids_init()
+{
+	if (s_draw3d->solids_arena.id) return;
+	Cute::Array<CF_SolidVertex> v;
+
+	// Unit cube, half-extent 1, CCW from outside.
+	s_draw3d->solid_first[SOLID_CUBE] = v.count();
+	for (int f = 0; f < 6; ++f) {
+		int axis = f >> 1;
+		float sign = (f & 1) ? -1.0f : 1.0f;
+		CF_V3 n = cf_v3(axis == 0 ? sign : 0, axis == 1 ? sign : 0, axis == 2 ? sign : 0);
+		CF_V3 u = cf_v3(n.y, n.z, n.x); // Perpendicular by rotation of components.
+		CF_V3 w = cf_cross_v3(n, u);
+		CF_V3 q[4] = {
+			cf_add_v3(n, cf_add_v3(cf_mul_v3_f(u, -1), cf_mul_v3_f(w, -1))),
+			cf_add_v3(n, cf_add_v3(cf_mul_v3_f(u,  1), cf_mul_v3_f(w, -1))),
+			cf_add_v3(n, cf_add_v3(cf_mul_v3_f(u,  1), cf_mul_v3_f(w,  1))),
+			cf_add_v3(n, cf_add_v3(cf_mul_v3_f(u, -1), cf_mul_v3_f(w,  1))),
+		};
+		int idx[6] = { 0, 1, 2, 0, 2, 3 };
+		for (int i = 0; i < 6; ++i) v.add({ q[idx[i]], n });
+	}
+	s_draw3d->solid_count[SOLID_CUBE] = v.count() - s_draw3d->solid_first[SOLID_CUBE];
+
+	// Unit sphere, radius 1.
+	s_draw3d->solid_first[SOLID_SPHERE] = v.count();
+	{
+		const int STACKS = 16, SLICES = 24;
+		for (int i = 0; i < STACKS; ++i) {
+			float p0 = CF_PI * ((float)i / STACKS - 0.5f);
+			float p1 = CF_PI * ((float)(i + 1) / STACKS - 0.5f);
+			for (int j = 0; j < SLICES; ++j) {
+				float t0 = 2.0f * CF_PI * (float)j / SLICES;
+				float t1 = 2.0f * CF_PI * (float)(j + 1) / SLICES;
+				CF_V3 a = cf_v3(CF_COSF(p0) * CF_COSF(t0), CF_SINF(p0), CF_COSF(p0) * CF_SINF(t0));
+				CF_V3 b = cf_v3(CF_COSF(p0) * CF_COSF(t1), CF_SINF(p0), CF_COSF(p0) * CF_SINF(t1));
+				CF_V3 c = cf_v3(CF_COSF(p1) * CF_COSF(t1), CF_SINF(p1), CF_COSF(p1) * CF_SINF(t1));
+				CF_V3 d = cf_v3(CF_COSF(p1) * CF_COSF(t0), CF_SINF(p1), CF_COSF(p1) * CF_SINF(t0));
+				v.add({ a, a }); v.add({ c, c }); v.add({ b, b });
+				v.add({ a, a }); v.add({ d, d }); v.add({ c, c });
+			}
+		}
+	}
+	s_draw3d->solid_count[SOLID_SPHERE] = v.count() - s_draw3d->solid_first[SOLID_SPHERE];
+
+	// Unit cone: base circle radius 1 at y = 0, tip at y = 1, smooth slant normals.
+	s_draw3d->solid_first[SOLID_CONE] = v.count();
+	{
+		const int SLICES = 32;
+		for (int j = 0; j < SLICES; ++j) {
+			float t0 = 2.0f * CF_PI * (float)j / SLICES;
+			float t1 = 2.0f * CF_PI * (float)(j + 1) / SLICES;
+			float tm = (t0 + t1) * 0.5f;
+			CF_V3 b0 = cf_v3(CF_COSF(t0), 0, CF_SINF(t0));
+			CF_V3 b1 = cf_v3(CF_COSF(t1), 0, CF_SINF(t1));
+			CF_V3 n0 = cf_norm_v3(cf_v3(CF_COSF(t0), 1, CF_SINF(t0)));
+			CF_V3 n1 = cf_norm_v3(cf_v3(CF_COSF(t1), 1, CF_SINF(t1)));
+			CF_V3 nm = cf_norm_v3(cf_v3(CF_COSF(tm), 1, CF_SINF(tm)));
+			v.add({ b0, n0 }); v.add({ cf_v3(0, 1, 0), nm }); v.add({ b1, n1 });
+			// Base cap.
+			CF_V3 dn = cf_v3(0, -1, 0);
+			v.add({ b0, dn }); v.add({ b1, dn }); v.add({ cf_v3(0, 0, 0), dn });
+		}
+	}
+	s_draw3d->solid_count[SOLID_CONE] = v.count() - s_draw3d->solid_first[SOLID_CONE];
+
+	s_draw3d->solids_arena = s_make_solid(v);
+}
+
 // Column-vector basis + translation as a CF_M4x4 (column-major storage).
 static CF_M4x4 s_basis_m4(CF_V3 x, CF_V3 y, CF_V3 z, CF_V3 t)
 {
@@ -1563,7 +1638,7 @@ static void s_perp_basis(CF_V3 n, CF_V3* bx, CF_V3* bz)
 // shader (cf_make_draw3d_shape_shader) swaps in its solid variant over the built-in hemisphere
 // light; a plain shader is a full replacement under the documented mesh contract; otherwise
 // the built-in hemisphere shader applies.
-static void s_submit_solid(CF_Mesh mesh, const CF_M4x4& local)
+static void s_submit_solid(CF_Mesh mesh, const CF_M4x4& local, int first = -1, int count = -1)
 {
 	s_shapes_init();
 	s_shapes_set_eye();
@@ -1588,92 +1663,37 @@ static void s_submit_solid(CF_Mesh mesh, const CF_M4x4& local)
 	if (bundle) cf_draw3d_push_shader(bundle->solid);
 	else if (!top.id) cf_draw3d_push_shader(s_draw3d->solid_shd);
 	else pushed = false; // Plain user shader: full replacement, already on the stack.
-	s_submit(mesh, inst, false, NULL, true, cf_v3(m.elements[12], m.elements[13], m.elements[14]));
+	s_submit(mesh, inst, false, NULL, true, cf_v3(m.elements[12], m.elements[13], m.elements[14]), first, count);
 	if (pushed) cf_draw3d_pop_shader();
+}
+
+// Submits one arena solid by its baked vertex range.
+static void s_submit_arena_solid(int kind, const CF_M4x4& local)
+{
+	s_solids_init();
+	s_submit_solid(s_draw3d->solids_arena, local, s_draw3d->solid_first[kind], s_draw3d->solid_count[kind]);
 }
 
 void cf_draw3d_cube(CF_V3 center, CF_V3 half_extents)
 {
-	s_shapes_init();
-	if (!s_draw3d->cube_mesh.id) {
-		Cute::Array<CF_SolidVertex> v;
-		// Unit cube, half-extent 1, CCW from outside.
-		for (int f = 0; f < 6; ++f) {
-			int axis = f >> 1;
-			float sign = (f & 1) ? -1.0f : 1.0f;
-			CF_V3 n = cf_v3(axis == 0 ? sign : 0, axis == 1 ? sign : 0, axis == 2 ? sign : 0);
-			CF_V3 u = cf_v3(n.y, n.z, n.x); // Perpendicular by rotation of components.
-			CF_V3 w = cf_cross_v3(n, u);
-			CF_V3 q[4] = {
-				cf_add_v3(n, cf_add_v3(cf_mul_v3_f(u, -1), cf_mul_v3_f(w, -1))),
-				cf_add_v3(n, cf_add_v3(cf_mul_v3_f(u,  1), cf_mul_v3_f(w, -1))),
-				cf_add_v3(n, cf_add_v3(cf_mul_v3_f(u,  1), cf_mul_v3_f(w,  1))),
-				cf_add_v3(n, cf_add_v3(cf_mul_v3_f(u, -1), cf_mul_v3_f(w,  1))),
-			};
-			int idx[6] = { 0, 1, 2, 0, 2, 3 };
-			for (int i = 0; i < 6; ++i) v.add({ q[idx[i]], n });
-		}
-		s_draw3d->cube_mesh = s_make_solid(v);
-	}
 	CF_M4x4 local = s_basis_m4(cf_v3(half_extents.x, 0, 0), cf_v3(0, half_extents.y, 0), cf_v3(0, 0, half_extents.z), center);
-	s_submit_solid(s_draw3d->cube_mesh, local);
+	s_submit_arena_solid(SOLID_CUBE, local);
 }
 
 void cf_draw3d_sphere(CF_V3 center, float radius)
 {
-	s_shapes_init();
-	if (!s_draw3d->sphere_mesh.id) {
-		Cute::Array<CF_SolidVertex> v;
-		const int STACKS = 16, SLICES = 24;
-		for (int i = 0; i < STACKS; ++i) {
-			float p0 = CF_PI * ((float)i / STACKS - 0.5f);
-			float p1 = CF_PI * ((float)(i + 1) / STACKS - 0.5f);
-			for (int j = 0; j < SLICES; ++j) {
-				float t0 = 2.0f * CF_PI * (float)j / SLICES;
-				float t1 = 2.0f * CF_PI * (float)(j + 1) / SLICES;
-				CF_V3 a = cf_v3(CF_COSF(p0) * CF_COSF(t0), CF_SINF(p0), CF_COSF(p0) * CF_SINF(t0));
-				CF_V3 b = cf_v3(CF_COSF(p0) * CF_COSF(t1), CF_SINF(p0), CF_COSF(p0) * CF_SINF(t1));
-				CF_V3 c = cf_v3(CF_COSF(p1) * CF_COSF(t1), CF_SINF(p1), CF_COSF(p1) * CF_SINF(t1));
-				CF_V3 d = cf_v3(CF_COSF(p1) * CF_COSF(t0), CF_SINF(p1), CF_COSF(p1) * CF_SINF(t0));
-				v.add({ a, a }); v.add({ c, c }); v.add({ b, b });
-				v.add({ a, a }); v.add({ d, d }); v.add({ c, c });
-			}
-		}
-		s_draw3d->sphere_mesh = s_make_solid(v);
-	}
 	CF_M4x4 local = s_basis_m4(cf_v3(radius, 0, 0), cf_v3(0, radius, 0), cf_v3(0, 0, radius), center);
-	s_submit_solid(s_draw3d->sphere_mesh, local);
+	s_submit_arena_solid(SOLID_SPHERE, local);
 }
 
 void cf_draw3d_cone(CF_V3 base, CF_V3 tip, float radius)
 {
-	s_shapes_init();
-	if (!s_draw3d->cone_mesh.id) {
-		Cute::Array<CF_SolidVertex> v;
-		// Unit cone: base circle radius 1 at y = 0, tip at y = 1, smooth slant normals.
-		const int SLICES = 32;
-		for (int j = 0; j < SLICES; ++j) {
-			float t0 = 2.0f * CF_PI * (float)j / SLICES;
-			float t1 = 2.0f * CF_PI * (float)(j + 1) / SLICES;
-			float tm = (t0 + t1) * 0.5f;
-			CF_V3 b0 = cf_v3(CF_COSF(t0), 0, CF_SINF(t0));
-			CF_V3 b1 = cf_v3(CF_COSF(t1), 0, CF_SINF(t1));
-			CF_V3 n0 = cf_norm_v3(cf_v3(CF_COSF(t0), 1, CF_SINF(t0)));
-			CF_V3 n1 = cf_norm_v3(cf_v3(CF_COSF(t1), 1, CF_SINF(t1)));
-			CF_V3 nm = cf_norm_v3(cf_v3(CF_COSF(tm), 1, CF_SINF(tm)));
-			v.add({ b0, n0 }); v.add({ cf_v3(0, 1, 0), nm }); v.add({ b1, n1 });
-			// Base cap.
-			CF_V3 dn = cf_v3(0, -1, 0);
-			v.add({ b0, dn }); v.add({ b1, dn }); v.add({ cf_v3(0, 0, 0), dn });
-		}
-		s_draw3d->cone_mesh = s_make_solid(v);
-	}
 	CF_V3 axis = cf_sub_v3(tip, base);
 	if (cf_len_v3(axis) < 0.00001f) return;
 	CF_V3 bx, bz;
 	s_perp_basis(cf_norm_v3(axis), &bx, &bz);
 	CF_M4x4 local = s_basis_m4(cf_mul_v3_f(bx, radius), axis, cf_mul_v3_f(bz, radius), base);
-	s_submit_solid(s_draw3d->cone_mesh, local);
+	s_submit_arena_solid(SOLID_CONE, local);
 }
 
 void cf_draw3d_torus(CF_V3 center, CF_V3 normal, float radius, float tube_radius)
