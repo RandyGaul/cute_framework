@@ -35,6 +35,7 @@ struct CF_CanvasInternal
 	// does not own its color texture, and passes address the given layer.
 	bool attached;
 	int attach_layer;
+	int attach_mip;
 	// Depth-format attach targets flip the meaning: the attach becomes the canvas's DEPTH
 	// target (shadow cubes), there is no color side at all, and the depth is borrowed.
 	bool attached_depth;
@@ -1114,7 +1115,7 @@ void cf_sdlgpu_texture_update(CF_Texture texture_handle, void* data, int size)
 	if (!g_ctx.cmd) SDL_SubmitGPUCommandBuffer(cmd);
 }
 
-void cf_sdlgpu_texture_update_layer(CF_Texture texture_handle, void* data, int size, int layer)
+void cf_sdlgpu_texture_update_layer_mip(CF_Texture texture_handle, void* data, int size, int layer, int mip_level)
 {
 	s_end_active_pass();
 	CF_TextureInternal* tex = (CF_TextureInternal*)texture_handle.id;
@@ -1137,17 +1138,25 @@ void cf_sdlgpu_texture_update_layer(CF_Texture texture_handle, void* data, int s
 	src.offset = 0;
 	src.pixels_per_row = 0;
 	src.rows_per_layer = 0;
-	SDL_GPUTextureRegion dst = SDL_GPUTextureRegionDefaults(tex, tex->w, tex->h);
+	int w = cf_max(tex->w >> mip_level, 1);
+	int h = cf_max(tex->h >> mip_level, 1);
+	SDL_GPUTextureRegion dst = SDL_GPUTextureRegionDefaults(tex, w, h);
 	// Cube faces and array layers address by layer; 3D slices address by z.
 	if (tex->type == CF_TEXTURE_TYPE_3D) dst.z = (Uint32)layer;
 	else dst.layer = (Uint32)layer;
 	dst.d = 1;
+	dst.mip_level = (Uint32)mip_level;
 	// cycle = false, unlike whole-texture updates: cycling swaps the texture's backing
-	// memory, which would discard the faces/layers uploaded just before this one.
+	// memory, which would discard the faces/layers/mips uploaded just before this one.
 	SDL_UploadToGPUTexture(pass, &src, &dst, false);
 	SDL_EndGPUCopyPass(pass);
 	SDL_ReleaseGPUTransferBuffer(g_ctx.device, buf);
 	if (!g_ctx.cmd) SDL_SubmitGPUCommandBuffer(cmd);
+}
+
+void cf_sdlgpu_texture_update_layer(CF_Texture texture_handle, void* data, int size, int layer)
+{
+	cf_sdlgpu_texture_update_layer_mip(texture_handle, data, size, layer, 0);
 }
 
 void cf_sdlgpu_texture_update_mip(CF_Texture texture_handle, void* data, int size, int mip_level)
@@ -1276,8 +1285,9 @@ CF_Canvas cf_sdlgpu_make_canvas(CF_CanvasParams params)
 			canvas->attached = true; // Owns nothing: color side absent, depth side borrowed.
 			canvas->attached_depth = true;
 			canvas->attach_layer = params.attach_layer;
-			canvas->w = attach->w;
-			canvas->h = attach->h;
+			canvas->attach_mip = params.attach_mip;
+			canvas->w = cf_max(attach->w >> params.attach_mip, 1);
+			canvas->h = cf_max(attach->h >> params.attach_mip, 1);
 			canvas->sample_count = CF_SAMPLE_COUNT_1;
 			canvas->cf_depth_stencil = params.attach_target;
 			canvas->depth_stencil = attach->tex;
@@ -1287,8 +1297,9 @@ CF_Canvas cf_sdlgpu_make_canvas(CF_CanvasParams params)
 		}
 		canvas->attached = true;
 		canvas->attach_layer = params.attach_layer;
-		canvas->w = attach->w;
-		canvas->h = attach->h;
+		canvas->attach_mip = params.attach_mip;
+		canvas->w = cf_max(attach->w >> params.attach_mip, 1);
+		canvas->h = cf_max(attach->h >> params.attach_mip, 1);
 		canvas->cf_texture = params.attach_target;
 		canvas->texture = attach->tex;
 		canvas->sampler = attach->sampler;
@@ -1373,7 +1384,10 @@ void cf_sdlgpu_clear_canvas(CF_Canvas canvas_handle)
 		color_infos[i].load_op = SDL_GPU_LOADOP_CLEAR;
 		color_infos[i].store_op = SDL_GPU_STOREOP_STORE;
 		color_infos[i].cycle = canvas->attached ? false : true; // Never cycle a shared texture.
-		if (canvas->attached) color_infos[i].layer_or_depth_plane = (Uint32)canvas->attach_layer;
+		if (canvas->attached) {
+			color_infos[i].layer_or_depth_plane = (Uint32)canvas->attach_layer;
+			color_infos[i].mip_level = (Uint32)canvas->attach_mip;
+		}
 	}
 	SDL_GPUDepthStencilTargetInfo depth_stencil_info = {
 		.texture = canvas->depth_stencil,
@@ -1384,6 +1398,7 @@ void cf_sdlgpu_clear_canvas(CF_Canvas canvas_handle)
 		.stencil_store_op = SDL_GPU_STOREOP_STORE,
 		.cycle = canvas->attached_depth ? false : true,
 		.clear_stencil = (Uint8)s_clear_stencil(canvas),
+		.mip_level = (Uint8)(canvas->attached_depth ? canvas->attach_mip : 0),
 		.layer = (Uint8)(canvas->attached_depth ? canvas->attach_layer : 0),
 	};
 	SDL_GPURenderPass* renderPass = SDL_BeginGPURenderPass(cmd, color_infos, (Uint32)target_count, canvas->depth_stencil ? &depth_stencil_info : NULL);
@@ -2116,7 +2131,10 @@ void cf_sdlgpu_apply_shader(CF_Shader shader_handle, CF_Material material_handle
 			pass_color_info.clear_color = { cc.r, cc.g, cc.b, cc.a };
 			pass_color_info.load_op = g_ctx.canvas->clear ? SDL_GPU_LOADOP_CLEAR : SDL_GPU_LOADOP_LOAD;
 			pass_color_info.cycle = (g_ctx.canvas->clear && !g_ctx.canvas->attached) ? true : false;
-			if (g_ctx.canvas->attached) pass_color_info.layer_or_depth_plane = (Uint32)g_ctx.canvas->attach_layer;
+			if (g_ctx.canvas->attached) {
+				pass_color_info.layer_or_depth_plane = (Uint32)g_ctx.canvas->attach_layer;
+				pass_color_info.mip_level = (Uint32)g_ctx.canvas->attach_mip;
+			}
 			if (g_ctx.canvas->sample_count == CF_SAMPLE_COUNT_1) {
 				pass_color_info.store_op = SDL_GPU_STOREOP_STORE;
 			} else {
@@ -2137,8 +2155,9 @@ void cf_sdlgpu_apply_shader(CF_Shader shader_handle, CF_Material material_handle
 			pass_depth_stencil_info.store_op = SDL_GPU_STOREOP_STORE;
 			pass_depth_stencil_info.stencil_load_op = g_ctx.canvas->clear ? SDL_GPU_LOADOP_CLEAR : SDL_GPU_LOADOP_LOAD;
 			pass_depth_stencil_info.stencil_store_op = SDL_GPU_STOREOP_STORE;
-			// Attached depth is a shared user texture: never cycle it, and address the face.
+			// Attached depth is a shared user texture: never cycle it, and address the face/mip.
 			pass_depth_stencil_info.cycle = g_ctx.canvas->attached_depth ? false : pass_color_infos[0].cycle;
+			pass_depth_stencil_info.mip_level = (Uint8)(g_ctx.canvas->attached_depth ? g_ctx.canvas->attach_mip : 0);
 			pass_depth_stencil_info.layer = (Uint8)(g_ctx.canvas->attached_depth ? g_ctx.canvas->attach_layer : 0);
 			depth_stencil_ptr = &pass_depth_stencil_info;
 		}

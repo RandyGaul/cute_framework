@@ -240,6 +240,114 @@ TEST_CASE(test_render_to_cube_face)
 	return true;
 }
 
+static const char* s_lod_fs =
+"layout (location = 0) out vec4 result;\n"
+"layout (set = 2, binding = 0) uniform sampler2D u_tex;\n"
+"layout (set = 3, binding = 0) uniform uniform_block {\n"
+"    vec4 u_lod;\n"
+"};\n"
+"void main() { result = textureLod(u_tex, vec2(0.5, 0.5), u_lod.x); }\n";
+
+static const char* s_cube_lod_fs =
+"layout (location = 0) out vec4 result;\n"
+"layout (set = 2, binding = 0) uniform samplerCube u_cube;\n"
+"layout (set = 3, binding = 0) uniform uniform_block {\n"
+"    vec4 u_dir;\n"
+"};\n"
+"void main() { result = textureLod(u_cube, u_dir.xyz, u_dir.w); }\n";
+
+// Rendering INTO a mip level: attach_mip picks which mip of attach_target a canvas renders to
+// (the downsample-chain / bloom primitive), and cf_texture_update_layer_mip uploads straight to
+// a (face, mip) pair (the baked-IBL-prefilter primitive). Mip 0 and mip 1 hold different colors
+// throughout, so a wrong mip target can't pass.
+TEST_CASE(test_attach_mip)
+{
+	int options = CF_APP_OPTIONS_HIDDEN_BIT | CF_APP_OPTIONS_NO_AUDIO_BIT;
+	const char* gles = getenv("CF_TEST_GLES");
+	if (gles && *gles == '1') options |= CF_APP_OPTIONS_GFX_OPENGL_BIT | CF_APP_OPTIONS_GFX_DEBUG_BIT;
+	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, W, H, options, NULL))) return true; // Headless CI: no display/GPU.
+
+	// A mipmapped 2D render target: clear mip 0 blue and mip 1 red through two canvases.
+	CF_TextureParams tp = cf_texture_defaults(64, 64);
+	tp.usage |= CF_TEXTURE_USAGE_COLOR_TARGET_BIT;
+	tp.allocate_mipmaps = true;
+	tp.mip_filter = CF_MIP_FILTER_NEAREST;
+	CF_Texture tex = cf_make_texture(tp);
+	REQUIRE(tex.id);
+
+	cf_app_update(NULL);
+	struct { int mip; CF_Color color; } mips[2] = {
+		{ 0, cf_make_color_rgb_f(0, 0, 1.0f) },
+		{ 1, cf_make_color_rgb_f(1.0f, 0, 0) },
+	};
+	for (int i = 0; i < 2; ++i) {
+		CF_CanvasParams params = cf_canvas_defaults(64, 64);
+		params.attach_target = tex;
+		params.attach_mip = mips[i].mip;
+		CF_Canvas canvas = cf_make_canvas(params);
+		REQUIRE(canvas.id);
+		int cw = 0, ch = 0;
+		cf_canvas_get_size(canvas, &cw, &ch);
+		REQUIRE(cw == (64 >> mips[i].mip) && ch == (64 >> mips[i].mip));
+		cf_canvas_set_clear_color(canvas, mips[i].color);
+		cf_clear_canvas(canvas);
+		cf_destroy_canvas(canvas);
+	}
+	cf_app_draw_onto_screen(false);
+
+	CF_Shader shader = cf_make_shader_from_source(s_vs, s_lod_fs);
+	REQUIRE(shader.id);
+	CF_Mesh mesh = s_make_fullscreen_quad();
+	CF_Material material = cf_make_material();
+	CF_Canvas out = cf_make_canvas(cf_canvas_defaults(W, H));
+	CF_Pixel* px = (CF_Pixel*)cf_alloc(W * H * (int)sizeof(CF_Pixel));
+	cf_material_set_texture_fs(material, "u_tex", tex);
+
+	float lod0[4] = { 0, 0, 0, 0 };
+	cf_material_set_uniform_fs(material, "u_lod", lod0, CF_UNIFORM_TYPE_FLOAT4, 1);
+	CF_Pixel c = s_draw_and_read(out, mesh, shader, material, px);
+	REQUIRE(c.colors.b > 200 && c.colors.r < 60);
+
+	float lod1[4] = { 1.0f, 0, 0, 0 };
+	cf_material_set_uniform_fs(material, "u_lod", lod1, CF_UNIFORM_TYPE_FLOAT4, 1);
+	c = s_draw_and_read(out, mesh, shader, material, px);
+	REQUIRE(c.colors.r > 200 && c.colors.b < 60);
+
+	// Upload to a (face, mip) pair of a mipmapped cube and fetch it back at that lod --
+	// exactly what uploading a baked prefiltered environment map does.
+	CF_TextureParams ctp = cf_texture_defaults(32, 32);
+	ctp.texture_type = CF_TEXTURE_TYPE_CUBE;
+	ctp.allocate_mipmaps = true;
+	ctp.mip_filter = CF_MIP_FILTER_NEAREST;
+	CF_Texture cube = cf_make_texture(ctp);
+	REQUIRE(cube.id);
+	CF_Pixel* face_px = (CF_Pixel*)cf_alloc(16 * 16 * (int)sizeof(CF_Pixel));
+	s_fill(face_px, 16 * 16, 0, 255, 0);
+	cf_texture_update_layer_mip(cube, face_px, 16 * 16 * (int)sizeof(CF_Pixel), 0, 1); // +X face, mip 1.
+
+	CF_Shader cube_shader = cf_make_shader_from_source(s_vs, s_cube_lod_fs);
+	REQUIRE(cube_shader.id);
+	CF_Material cube_material = cf_make_material();
+	cf_material_set_texture_fs(cube_material, "u_cube", cube);
+	float dir[4] = { 1.0f, 0, 0, 1.0f }; // +X at lod 1.
+	cf_material_set_uniform_fs(cube_material, "u_dir", dir, CF_UNIFORM_TYPE_FLOAT4, 1);
+	c = s_draw_and_read(out, mesh, cube_shader, cube_material, px);
+	REQUIRE(c.colors.g > 200 && c.colors.r < 60);
+
+	cf_free(face_px);
+	cf_free(px);
+	cf_destroy_canvas(out);
+	cf_destroy_material(material);
+	cf_destroy_material(cube_material);
+	cf_destroy_mesh(mesh);
+	cf_destroy_shader(shader);
+	cf_destroy_shader(cube_shader);
+	cf_destroy_texture(tex);
+	cf_destroy_texture(cube);
+	cf_destroy_app();
+	return true;
+}
+
 static const char* s_depth_vs =
 "layout (location = 0) in vec2 in_pos;\n"
 "layout (set = 1, binding = 0) uniform uniform_block {\n"
@@ -390,4 +498,5 @@ TEST_SUITE(test_texture_types)
 	RUN_TEST_CASE(test_texture_array_sample);
 	RUN_TEST_CASE(test_render_to_cube_face);
 	RUN_TEST_CASE(test_depth_attach);
+	RUN_TEST_CASE(test_attach_mip);
 }

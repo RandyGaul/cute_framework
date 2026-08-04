@@ -986,6 +986,7 @@ CF_DISPATCH_SHIM_VOID(destroy_texture, (CF_Texture texture_handle), texture_hand
 CF_DISPATCH_SHIM_VOID(texture_update, (CF_Texture texture_handle, void* data, int size), texture_handle, data, size)
 CF_DISPATCH_SHIM_VOID(texture_update_mip, (CF_Texture texture_handle, void* data, int size, int mip_level), texture_handle, data, size, mip_level)
 CF_DISPATCH_SHIM_VOID(texture_update_layer, (CF_Texture texture_handle, void* data, int size, int layer), texture_handle, data, size, layer)
+CF_DISPATCH_SHIM_VOID(texture_update_layer_mip, (CF_Texture texture_handle, void* data, int size, int layer, int mip_level), texture_handle, data, size, layer, mip_level)
 CF_DISPATCH_SHIM_VOID(generate_mipmaps, (CF_Texture texture_handle), texture_handle)
 CF_DISPATCH_SHIM(uint64_t, texture_handle, (CF_Texture texture), texture)
 CF_DISPATCH_SHIM(uint64_t, texture_binding_handle, (CF_Texture texture), texture)

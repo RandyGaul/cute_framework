@@ -796,10 +796,27 @@ CF_API void CF_CALL cf_texture_update_mip(CF_Texture texture, void* data, int si
  * @param    size     The size of `data` in bytes.
  * @param    layer    Cube face index 0-5 (+X, -X, +Y, -Y, +Z, -Z), array layer, or 3D z-slice.
  * @remarks  `cf_texture_update` uploads the whole image of a 2D texture; this is its per-layer
- *           counterpart for cube maps, texture arrays, and 3D textures (mip level 0).
- * @related  CF_Texture CF_TextureType cf_texture_update cf_texture_update_mip cf_make_texture
+ *           counterpart for cube maps, texture arrays, and 3D textures (mip level 0). For a
+ *           specific mip of a layer use `cf_texture_update_layer_mip`.
+ * @related  CF_Texture CF_TextureType cf_texture_update cf_texture_update_mip cf_texture_update_layer_mip cf_make_texture
  */
 CF_API void CF_CALL cf_texture_update_layer(CF_Texture texture, void* data, int size, int layer);
+
+/**
+ * @function cf_texture_update_layer_mip
+ * @category graphics
+ * @brief    Uploads pixels to one mip level of one face, layer, or slice of a texture.
+ * @param    texture    The texture.
+ * @param    data       The pixel data for that mip of that face/layer/slice.
+ * @param    size       The size of `data` in bytes.
+ * @param    layer      Cube face index 0-5 (+X, -X, +Y, -Y, +Z, -Z), array layer, or 3D z-slice.
+ * @param    mip_level  The mipmap level to update (0 = base level).
+ * @remarks  The (face, mip) upload primitive -- what a baked prefiltered environment cube needs:
+ *           one call per face per roughness mip. The texture needs `allocate_mipmaps` (see
+ *           `CF_TextureParams`).
+ * @related  CF_Texture cf_texture_update_layer cf_texture_update_mip cf_make_texture
+ */
+CF_API void CF_CALL cf_texture_update_layer_mip(CF_Texture texture, void* data, int size, int layer, int mip_level);
 
 /**
  * @function cf_generate_mipmaps
@@ -1420,6 +1437,14 @@ typedef struct CF_CanvasParams
 	   `attach_target` to render into. */
 	int attach_layer;
 
+	/* @member Which mip level of `attach_target` to render into (default 0). The canvas takes the
+	   mip's dimensions, so `cf_canvas_get_size` and the viewport shrink accordingly. This is the
+	   render-into-mip primitive behind downsample chains (bloom: one canvas per mip, sample mip
+	   N-1 while rendering mip N) and IBL prefiltering (combine with `attach_layer` for one canvas
+	   per cube face per roughness mip). Composes with `attach_layer`; the texture needs
+	   `allocate_mipmaps` (see `CF_TextureParams`). */
+	int attach_mip;
+
 	/* @member Defaults to false. If true enables a depth-stencil buffer attachment. Required for any
 	   depth or stencil testing: without it the depth fields of `CF_RenderState` are silently ignored,
 	   which for 3d looks like the far side of a model drawing over the near side. */
@@ -1456,6 +1481,18 @@ CF_API CF_Canvas CF_CALL cf_make_canvas(CF_CanvasParams canvas_params);
  * @related  CF_CanvasParams cf_canvas_defaults cf_make_canvas cf_destroy_canvas cf_apply_canvas cf_clear_color
  */
 CF_API void CF_CALL cf_destroy_canvas(CF_Canvas canvas);
+
+/**
+ * @function cf_canvas_get_size
+ * @category graphics
+ * @brief    Fetches the canvas's dimensions in pixels.
+ * @param    canvas  The canvas.
+ * @param    w       Receives the width; can be `NULL`.
+ * @param    h       Receives the height; can be `NULL`.
+ * @remarks  For a canvas attached to a mip level (`attach_mip`) this is the mip's size.
+ * @related  CF_Canvas cf_make_canvas CF_CanvasParams
+ */
+CF_API void CF_CALL cf_canvas_get_size(CF_Canvas canvas, int* w, int* h);
 
 /**
  * @function cf_canvas_get_target
@@ -2658,6 +2695,7 @@ CF_INLINE CF_TextureParams texture_defaults(int w, int h) { return cf_texture_de
 CF_INLINE CF_Texture make_texture(CF_TextureParams texture_params) { return cf_make_texture(texture_params); }
 CF_INLINE void destroy_texture(CF_Texture texture) { cf_destroy_texture(texture); }
 CF_INLINE void texture_update(CF_Texture texture, void* data, int size) { cf_texture_update(texture, data, size); }
+CF_INLINE void texture_update_layer_mip(CF_Texture texture, void* data, int size, int layer, int mip_level) { cf_texture_update_layer_mip(texture, data, size, layer, mip_level); }
 CF_INLINE CF_Shader make_shader(const char* vertex, const char* fragment) { return cf_make_shader(vertex, fragment); }
 CF_INLINE void shader_directory(const char* path) { cf_shader_directory(path); }
 CF_INLINE void shader_on_changed(void (*on_changed_fn)(const char* path, void* udata), void* udata) { cf_shader_on_changed(on_changed_fn, udata); }

@@ -1044,21 +1044,30 @@ void cf_gles_texture_update(CF_Texture tex, void* data, int /*size*/)
 	CF_POLL_OPENGL_ERROR();
 }
 
-void cf_gles_texture_update_layer(CF_Texture tex, void* data, int /*size*/, int layer)
+void cf_gles_texture_update_layer_mip(CF_Texture tex, void* data, int /*size*/, int layer, int mip)
 {
 	CF_GL_Texture* t = (CF_GL_Texture*)(uintptr_t)tex.id;
 	if (!t || layer < 0 || layer >= t->layers) return;
 	// Per-layer uploads update in place (no ring rotation): faces of one cube must all
 	// land in the same storage, and non-2D textures aren't the streaming case anyway.
+	int w = cf_max(t->w >> mip, 1);
+	int h = cf_max(t->h >> mip, 1);
 	glBindTexture(t->target, t->id);
 	if (t->target == GL_TEXTURE_CUBE_MAP) {
-		glTexSubImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + layer, 0, 0, 0, t->w, t->h, t->upload_fmt, t->upload_type, data);
+		glTexSubImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + layer, mip, 0, 0, w, h, t->upload_fmt, t->upload_type, data);
 	} else {
-		glTexSubImage3D(t->target, 0, 0, 0, layer, t->w, t->h, 1, t->upload_fmt, t->upload_type, data);
+		glTexSubImage3D(t->target, mip, 0, 0, layer, w, h, 1, t->upload_fmt, t->upload_type, data);
 	}
-	if (t->has_mips) glGenerateMipmap(t->target);
+	// Mip 0 refresh regenerates the chain like before; an explicit-mip upload IS the chain
+	// content, so leave it alone.
+	if (t->has_mips && mip == 0) glGenerateMipmap(t->target);
 	glBindTexture(t->target, 0);
 	CF_POLL_OPENGL_ERROR();
+}
+
+void cf_gles_texture_update_layer(CF_Texture tex, void* data, int size, int layer)
+{
+	cf_gles_texture_update_layer_mip(tex, data, size, layer, 0);
 }
 
 void cf_gles_texture_update_mip(CF_Texture tex, void* data, int /*size*/, int mip)
@@ -1125,8 +1134,8 @@ CF_Canvas cf_gles_make_canvas(CF_CanvasParams params)
 	if (params.attach_target.id) {
 		CF_GL_Texture* attach = (CF_GL_Texture*)(uintptr_t)params.attach_target.id;
 		c->attached = true;
-		c->w = attach->w;
-		c->h = attach->h;
+		c->w = attach->w >> params.attach_mip; if (c->w < 1) c->w = 1;
+		c->h = attach->h >> params.attach_mip; if (c->h < 1) c->h = 1;
 		switch (attach->internal_fmt) {
 		case GL_DEPTH_COMPONENT16:
 		case GL_DEPTH_COMPONENT24:
@@ -1200,11 +1209,11 @@ CF_Canvas cf_gles_make_canvas(CF_CanvasParams params)
 		GLenum attachment = c->has_stencil ? GL_DEPTH_STENCIL_ATTACHMENT : GL_DEPTH_ATTACHMENT;
 		if (attach->target == GL_TEXTURE_CUBE_MAP) {
 			glFramebufferTexture2D(GL_FRAMEBUFFER, attachment,
-				GL_TEXTURE_CUBE_MAP_POSITIVE_X + params.attach_layer, attach->id, 0);
+				GL_TEXTURE_CUBE_MAP_POSITIVE_X + params.attach_layer, attach->id, params.attach_mip);
 		} else if (attach->target == GL_TEXTURE_2D) {
-			glFramebufferTexture2D(GL_FRAMEBUFFER, attachment, GL_TEXTURE_2D, attach->id, 0);
+			glFramebufferTexture2D(GL_FRAMEBUFFER, attachment, GL_TEXTURE_2D, attach->id, params.attach_mip);
 		} else {
-			glFramebufferTextureLayer(GL_FRAMEBUFFER, attachment, attach->id, 0, params.attach_layer);
+			glFramebufferTextureLayer(GL_FRAMEBUFFER, attachment, attach->id, params.attach_mip, params.attach_layer);
 		}
 		// Depth-only: no color buffer to draw into or read from.
 		GLenum none = GL_NONE;
@@ -1214,12 +1223,12 @@ CF_Canvas cf_gles_make_canvas(CF_CanvasParams params)
 		CF_GL_Texture* attach = (CF_GL_Texture*)(uintptr_t)params.attach_target.id;
 		if (attach->target == GL_TEXTURE_CUBE_MAP) {
 			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-				GL_TEXTURE_CUBE_MAP_POSITIVE_X + params.attach_layer, c->color, 0);
+				GL_TEXTURE_CUBE_MAP_POSITIVE_X + params.attach_layer, c->color, params.attach_mip);
 		} else if (attach->target == GL_TEXTURE_2D) {
-			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, c->color, 0);
+			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, c->color, params.attach_mip);
 		} else {
 			// 2D arrays and 3D textures attach by layer/slice.
-			glFramebufferTextureLayer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, c->color, 0, params.attach_layer);
+			glFramebufferTextureLayer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, c->color, params.attach_mip, params.attach_layer);
 		}
 	} else {
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, c->color, 0);
