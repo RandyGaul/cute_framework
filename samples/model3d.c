@@ -189,12 +189,15 @@ int main(int argc, char* argv[])
 	float shot_times[16];
 	int shot_n = 0;
 	float exit_at = -1.0f;
+	bool gles = false;
 	for (int i = 1; i < argc; ++i) {
 		if (!CF_STRCMP(argv[i], "--shot") && i + 1 < argc) { if (shot_n < 16) shot_times[shot_n++] = (float)atof(argv[++i]); }
 		else if (!CF_STRCMP(argv[i], "--exit-at") && i + 1 < argc) exit_at = (float)atof(argv[++i]);
+		else if (!CF_STRCMP(argv[i], "--gles")) gles = true; // Exercises the emulated-storage skinning path.
 	}
 
 	int options = CF_APP_OPTIONS_WINDOW_POS_CENTERED_BIT | CF_APP_OPTIONS_RESIZABLE_BIT;
+	if (gles) options |= CF_APP_OPTIONS_GFX_OPENGL_BIT;
 	CF_Result result = cf_make_app("cute_model -- skinned glTF", 0, 0, 0, 1280, 720, options, argv[0]);
 	if (cf_is_error(result)) return -1;
 	cf_app_set_present_mode(CF_PRESENT_MODE_VSYNC);

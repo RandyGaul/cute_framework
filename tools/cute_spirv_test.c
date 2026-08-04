@@ -1537,6 +1537,51 @@ static void test_block_arrays_emitters(void)
 		CHECK(r.msl && strstr(r.msl, "u_tints[3]") != NULL);
 	}
 	cspv_free(&r);
+
+	// GLSL ES 3.00 emulates readonly SSBOs as RGBA32UI texture fetches: the block
+	// disappears, a stage-pooled usampler2D takes its place (names match the CF GLES
+	// backend's binding contract), float payloads bit-cast through uintBitsToFloat,
+	// and shapes outside CF's documented storage pattern get teaching errors.
+	{
+		CSPV_Options o;
+		memset(&o, 0, sizeof(o));
+		o.emit_glsl300 = true;
+		CSPV_Result rv = cspv_compile_ex(
+			"layout(location = 0) in vec3 in_pos;\n"
+			"layout(std430, set = 0, binding = 0) readonly buffer bones_buffer { vec4 u_bones[]; };\n"
+			"layout(set = 1, binding = 0) uniform uniform_block { mat4 u_vp; };\n"
+			"void main() { gl_Position = u_vp * vec4(in_pos, 1.0) + u_bones[gl_InstanceIndex]; }\n",
+			CSPV_STAGE_VERTEX, &o);
+		CHECK_MSG(rv.success, rv.error_message);
+		if (rv.success) {
+			CHECK(rv.glsl300 && strstr(rv.glsl300, "uniform highp usampler2D u_vs_storage_0;") != NULL);
+			CHECK(rv.glsl300 && strstr(rv.glsl300, "uintBitsToFloat(texelFetch(u_vs_storage_0, cf_storage_coord(int(gl_InstanceID)), 0))") != NULL);
+		}
+		cspv_free(&rv);
+		// Fragment stage names the fs pool; uvec4 tails fetch raw, no bit-cast.
+		CSPV_Result rf = cspv_compile_ex(
+			"layout(location = 0) out vec4 result;\n"
+			"layout(std430, set = 2, binding = 0) readonly buffer data_buffer { uvec4 u_data[]; };\n"
+			"void main() { result = vec4(u_data[0]); }\n",
+			CSPV_STAGE_FRAGMENT, &o);
+		CHECK_MSG(rf.success, rf.error_message);
+		if (rf.success) {
+			CHECK(rf.glsl300 && strstr(rf.glsl300, "u_fs_storage_0") != NULL);
+			CHECK(rf.glsl300 && strstr(rf.glsl300, "uintBitsToFloat") == NULL);
+		}
+		cspv_free(&rf);
+		// Outside the emulatable pattern: scalar tails and .length() get clear errors.
+		expect_err_ex(CSPV_STAGE_VERTEX,
+			"layout(location = 0) in vec3 in_pos;\n"
+			"layout(std430, set = 0, binding = 0) readonly buffer b { float u_f[]; };\n"
+			"void main() { gl_Position = vec4(u_f[0]); }\n",
+			"vec4 or uvec4", &o);
+		expect_err_ex(CSPV_STAGE_VERTEX,
+			"layout(location = 0) in vec3 in_pos;\n"
+			"layout(std430, set = 0, binding = 0) readonly buffer b { vec4 u_v[]; };\n"
+			"void main() { gl_Position = u_v.length() > 0 ? u_v[0] : vec4(0.0); }\n",
+			".length()", &o);
+	}
 }
 
 static void test_emitters(void)

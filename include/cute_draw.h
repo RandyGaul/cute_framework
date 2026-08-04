@@ -509,6 +509,12 @@ CF_API void CF_CALL cf_draw_list_begin(CF_DrawList list);
  * @function cf_draw_list_end
  * @category draw
  * @brief    Stops recording and bakes the recorded draw calls into the list.
+ * @remarks  The bake snapshots every captured UNIFORM's bytes -- replays rebind the frozen
+ *           values. The visible consequence: uniform-driven skinning recorded into a list
+ *           replays one frozen pose forever. Animated skinning inside lists uses the
+ *           storage-buffer pattern instead (`cf_draw3d_set_vs_storage_buffers`): the bake
+ *           captures the buffer HANDLE while its contents stay live, so updating the palette
+ *           each frame animates replayed characters normally.
  * @related  CF_DrawList cf_make_draw_list cf_draw_list_begin cf_draw_list_end cf_draw_list cf_destroy_draw_list
  */
 CF_API void CF_CALL cf_draw_list_end(void);

@@ -560,7 +560,8 @@ CF_API void CF_CALL cf_draw3d_set_texture(const char* name, CF_Texture texture);
  *           recorded into a `CF_DrawList` replays whatever palette buffer contents exist at
  *           draw time (the buffer binding is captured, its CONTENTS are not), so animated
  *           skinning composes with baked lists exactly when you keep updating the buffer.
- *           SDL_GPU backends only, like all storage buffers; GLES3/web has none.
+ *           Works on every backend: GLES3/web emulates read-only storage buffers through
+ *           texture fetches transparently.
  * @related  cf_apply_vs_storage_buffers CF_StorageBuffer cf_make_storage_buffer cf_draw3d_push_mesh_attributes
  */
 CF_API void CF_CALL cf_draw3d_set_vs_storage_buffers(CF_StorageBuffer* buffers, int count);

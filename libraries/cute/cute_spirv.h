@@ -104,6 +104,13 @@
 		                  backends, and the image-op intrinsics widened past 2D:
 		                  textureSize on every sampler dim, texelFetch on
 		                  sampler2DArray/sampler3D, textureOffset on sampler2DArray.
+		1.08 (08/04/2026) GLSL ES 3.00 output emulates readonly storage buffers as
+		                  RGBA32UI texture fetches (anonymous single runtime
+		                  vec4/uvec4 array blocks -- CF's documented storage
+		                  pattern): the block emits as a stage-pooled usampler2D
+		                  (u_{vs,fs}_storage_<slot>), index sites rewrite to
+		                  bit-exact texelFetch, and unsupported shapes (scalar
+		                  tails, .length(), bare references) error clearly.
 */
 #ifndef CUTE_SPIRV_H
 #define CUTE_SPIRV_H
@@ -5939,6 +5946,12 @@ typedef struct cspv_tp
 	CK_DYNA const char** rename_to;
 	CK_DYNA const char** shadows;     // Locals/params that suppress renames.
 	CK_DYNA int* shadow_marks;        // Scope boundaries into `shadows`.
+	// GLSL ES 3.00 SSBO emulation: each registered name is the single runtime-array
+	// member of an anonymous readonly buffer block, rewritten at its index sites into
+	// a texelFetch through u_{vs,fs}_storage_<slot> (see cspv_emit_glsl300).
+	CK_DYNA const char** es_ssbo_names; // Interned member names.
+	CK_DYNA int* es_ssbo_slots;
+	CK_DYNA cspv_type** es_ssbo_elems;  // vec4-family element type.
 } cspv_tp;
 
 // HLSL spellings of the CF-GLSL types (samplers/images are declared specially
@@ -5997,6 +6010,23 @@ static const char* cspv_tp_name(cspv_tp* g, const char* name)
 		if (g->rename_from[i] == name) return g->rename_to[i];
 	}
 	return name;
+}
+
+// True when `name` is an emulated storage member visible at this point (interned
+// compares; a shadowing local or param suppresses the rewrite like any rename).
+static bool cspv_tp_es_ssbo(cspv_tp* g, const char* name, int* slot, cspv_type** elem)
+{
+	for (int i = (int)asize(g->shadows) - 1; i >= 0; i--) {
+		if (g->shadows[i] == name) return false;
+	}
+	for (int i = 0; i < (int)asize(g->es_ssbo_names); i++) {
+		if (g->es_ssbo_names[i] == name) {
+			*slot = g->es_ssbo_slots[i];
+			*elem = g->es_ssbo_elems[i];
+			return true;
+		}
+	}
+	return false;
 }
 
 static void cspv_tp_indent(cspv_tp* g)
@@ -6194,6 +6224,21 @@ static void cspv_tp_expr_node(cspv_tp* g, cspv_expr* e, int prec)
 		break;
 
 	case CSPV_E_INDEX:
+		if (!g->hlsl && !g->msl && e->u.index.base->kind == CSPV_E_REF) {
+			int slot; cspv_type* elem;
+			if (cspv_tp_es_ssbo(g, e->u.index.base->u.name, &slot, &elem)) {
+				// Emulated SSBO fetch (see cspv_emit_glsl300): element i is texel i of
+				// a 1024-wide RGBA32UI texture; float payloads round-trip bit-exactly
+				// through uintBitsToFloat. cf_storage_coord evaluates the index once.
+				bool f = elem->elem->kind == CSPV_T_FLOAT;
+				sfmt_append(g->ctx->tp_out, "%stexelFetch(u_%s_storage_%d, cf_storage_coord(int(",
+					f ? "uintBitsToFloat(" : "", g->ctx->stage == CSPV_STAGE_VERTEX ? "vs" : "fs", slot);
+				cspv_tp_expr(g, e->u.index.index, 0);
+				sappend(g->ctx->tp_out, ")), 0)");
+				if (f) spush(g->ctx->tp_out, ')');
+				break;
+			}
+		}
 		cspv_tp_expr(g, e->u.index.base, 15);
 		spush(g->ctx->tp_out, '[');
 		cspv_tp_expr(g, e->u.index.index, 0);
@@ -6623,21 +6668,134 @@ static void cspv_tp_func(cspv_tp* g, cspv_decl* d)
 	cspv_tp_pop_shadows(g);
 }
 
+// The slot a buffer block's emulation texture binds to: its rank by binding number
+// among the stage's buffer blocks, matching the order the CF GLES backend binds
+// u_{vs,fs}_storage_<slot> uniforms (cf_apply_vs_storage_buffers' "binding order").
+static int cspv_es_ssbo_slot(cspv_ctx* ctx, cspv_decl* d)
+{
+	int slot = 0;
+	for (int i = 0; i < (int)asize(ctx->decls); i++) {
+		cspv_decl* o = ctx->decls + i;
+		if (o->kind == CSPV_D_BLOCK && o->is_buffer && o->binding < d->binding) slot++;
+	}
+	return slot;
+}
+
+// The buffer-block decl behind an emulated storage member name, or NULL.
+static cspv_decl* cspv_es_ssbo_member_decl(cspv_ctx* ctx, const char* name)
+{
+	for (int i = 0; i < (int)asize(ctx->decls); i++) {
+		cspv_decl* d = ctx->decls + i;
+		if (d->kind == CSPV_D_BLOCK && d->is_buffer && d->num_members == 1 && d->member_names[0] == name) return d;
+	}
+	return NULL;
+}
+
+// Emulated fetches only exist under an index: a bare reference (function argument,
+// .length()) has no texture-side spelling, so reject it with a real message instead
+// of letting the GL driver report an undeclared identifier.
+static void cspv_es_validate_expr(cspv_ctx* ctx, cspv_expr* e, bool index_base)
+{
+	if (e->kind == CSPV_E_REF && !index_base && cspv_es_ssbo_member_decl(ctx, e->u.name)) {
+		cspv_errorf(ctx, e->line, "storage buffer array '%s' must be indexed directly in GLSL ES 3.00 output (it is emulated as a texture fetch)", e->u.name);
+	}
+	switch (e->kind) {
+	case CSPV_E_BINARY: cspv_es_validate_expr(ctx, e->u.bin.l, false); cspv_es_validate_expr(ctx, e->u.bin.r, false); break;
+	case CSPV_E_UNARY: cspv_es_validate_expr(ctx, e->u.un.e, false); break;
+	case CSPV_E_COND:
+		cspv_es_validate_expr(ctx, e->u.cond.c, false);
+		cspv_es_validate_expr(ctx, e->u.cond.a, false);
+		cspv_es_validate_expr(ctx, e->u.cond.b, false);
+		break;
+	case CSPV_E_CALL:
+		for (int i = 0; i < (int)asize(e->u.call.args); i++) cspv_es_validate_expr(ctx, e->u.call.args[i], false);
+		break;
+	case CSPV_E_LENGTH:
+		if (e->u.member.base->kind == CSPV_E_REF && cspv_es_ssbo_member_decl(ctx, e->u.member.base->u.name)) {
+			cspv_errorf(ctx, e->line, "'.length()' is not supported on storage buffers in GLSL ES 3.00 output");
+		}
+		cspv_es_validate_expr(ctx, e->u.member.base, false);
+		break;
+	case CSPV_E_MEMBER: cspv_es_validate_expr(ctx, e->u.member.base, false); break;
+	case CSPV_E_INDEX:
+		cspv_es_validate_expr(ctx, e->u.index.base, e->u.index.base->kind == CSPV_E_REF);
+		cspv_es_validate_expr(ctx, e->u.index.index, false);
+		break;
+	default: break;
+	}
+}
+
+static void cspv_es_validate_stmt(cspv_ctx* ctx, cspv_stmt* s)
+{
+	switch (s->kind) {
+	case CSPV_S_BLOCK: for (int i = 0; i < (int)asize(s->u.block); i++) cspv_es_validate_stmt(ctx, s->u.block[i]); break;
+	case CSPV_S_DECL:
+		for (cspv_stmt* n = s; n; n = n->u.decl.next_decl) {
+			if (n->u.decl.init) cspv_es_validate_expr(ctx, n->u.decl.init, false);
+		}
+		break;
+	case CSPV_S_EXPR: cspv_es_validate_expr(ctx, s->u.expr, false); break;
+	case CSPV_S_IF:
+		cspv_es_validate_expr(ctx, s->u.if_s.cond, false);
+		cspv_es_validate_stmt(ctx, s->u.if_s.then_s);
+		if (s->u.if_s.else_s) cspv_es_validate_stmt(ctx, s->u.if_s.else_s);
+		break;
+	case CSPV_S_FOR:
+		if (s->u.for_s.init) cspv_es_validate_stmt(ctx, s->u.for_s.init);
+		if (s->u.for_s.cond) cspv_es_validate_expr(ctx, s->u.for_s.cond, false);
+		if (s->u.for_s.iter) cspv_es_validate_expr(ctx, s->u.for_s.iter, false);
+		cspv_es_validate_stmt(ctx, s->u.for_s.body);
+		break;
+	case CSPV_S_WHILE: case CSPV_S_DO:
+		cspv_es_validate_expr(ctx, s->u.while_s.cond, false);
+		cspv_es_validate_stmt(ctx, s->u.while_s.body);
+		break;
+	case CSPV_S_SWITCH: {
+		cspv_es_validate_expr(ctx, s->u.switch_s.sel, false);
+		cspv_switch_group* groups = s->u.switch_s.groups;
+		for (int i = 0; i < (int)asize(groups); i++) {
+			for (int j = 0; j < (int)asize(groups[i].stmts); j++) cspv_es_validate_stmt(ctx, groups[i].stmts[j]);
+		}
+		break;
+	}
+	case CSPV_S_RETURN: if (s->u.ret) cspv_es_validate_expr(ctx, s->u.ret, false); break;
+	default: break;
+	}
+}
+
 static void cspv_emit_glsl300(cspv_ctx* ctx)
 {
 	// Validate up front (before the emitter allocates anything, so an errorf
-	// longjmp cannot leak): GLES 3.0 has no compute, SSBOs, or storage images.
+	// longjmp cannot leak): GLES 3.0 has no compute or storage images, and
+	// storage buffers emulate as texture fetches within CF's documented shape.
 	if (ctx->stage == CSPV_STAGE_COMPUTE) {
 		cspv_errorf(ctx, 0, "GLSL ES 3.00 output does not support compute shaders");
 	}
 	for (int i = 0; i < (int)asize(ctx->decls); i++) {
 		cspv_decl* d = ctx->decls + i;
 		if (d->kind == CSPV_D_BLOCK && d->is_buffer) {
-			cspv_errorf(ctx, d->line, "buffer block '%s' is not supported in GLSL ES 3.00 output", d->name);
+			// The GLES backend mirrors each buffer into an RGBA32UI texture; the
+			// emulation covers exactly CF's documented storage pattern -- an
+			// anonymous readonly block holding one runtime array of 4-component
+			// vectors (the same shape the vec4-column mat4 idiom produces).
+			cspv_type* mt = d->num_members == 1 ? d->member_types[0] : NULL;
+			bool tail_ok = mt && mt->kind == CSPV_T_ARRAY && mt->cols == -1
+				&& mt->elem->kind == CSPV_T_VEC && mt->elem->cols == 4
+				&& (mt->elem->elem->kind == CSPV_T_FLOAT || mt->elem->elem->kind == CSPV_T_UINT);
+			if (!d->readonly || d->instance_name || !tail_ok) {
+				cspv_errorf(ctx, d->line, "GLSL ES 3.00 output emulates storage buffers as texture fetches: buffer block '%s' must be anonymous, readonly, and hold a single runtime array of vec4 or uvec4 (pack scalars and matrices into vec4 columns)", d->name);
+			}
+			if (cspv_es_ssbo_slot(ctx, d) >= 4) {
+				cspv_errorf(ctx, d->line, "GLSL ES 3.00 output supports at most 4 storage buffers per stage");
+			}
 		}
 		if (d->kind == CSPV_D_OPAQUE && d->type->kind == CSPV_T_IMAGE2D) {
 			cspv_errorf(ctx, d->line, "storage image '%s' is not supported in GLSL ES 3.00 output", d->name);
 		}
+	}
+	for (int i = 0; i < (int)asize(ctx->decls); i++) {
+		cspv_decl* d = ctx->decls + i;
+		if (d->kind == CSPV_D_FUNC && d->body) cspv_es_validate_stmt(ctx, d->body);
 	}
 
 	cspv_tp gg;
@@ -6678,10 +6836,24 @@ static void cspv_emit_glsl300(cspv_ctx* ctx)
 		}
 	}
 
+	// Register emulated storage members for index-site rewriting, and emit the
+	// shared coordinate helper (element i sits at texel i of a 1024-wide texture;
+	// the width must match the GLES backend's CF_GLES_STORAGE_WIDTH).
+	bool any_ssbo = false;
+	for (int i = 0; i < (int)asize(ctx->decls); i++) {
+		cspv_decl* d = ctx->decls + i;
+		if (d->kind != CSPV_D_BLOCK || !d->is_buffer) continue;
+		apush(g->es_ssbo_names, d->member_names[0]);
+		apush(g->es_ssbo_slots, cspv_es_ssbo_slot(ctx, d));
+		apush(g->es_ssbo_elems, d->member_types[0]->elem);
+		any_ssbo = true;
+	}
+
 	// (sappend rather than sfmake: variadic macros reject empty argument lists
 	// on gcc/clang, and these headers take no format arguments.)
 	ctx->tp_out = NULL;
 	sappend(ctx->tp_out, "#version 300 es\n\nprecision highp float;\nprecision highp int;\n");
+	if (any_ssbo) sappend(ctx->tp_out, "\nivec2 cf_storage_coord(int i) { return ivec2(i & 1023, i >> 10); }\n");
 
 	for (int i = 0; i < (int)asize(ctx->decls); i++) {
 		cspv_decl* d = ctx->decls + i;
@@ -6724,6 +6896,14 @@ static void cspv_emit_glsl300(cspv_ctx* ctx)
 		}
 
 		case CSPV_D_BLOCK:
+			if (d->is_buffer) {
+				// Emulated SSBO: the GLES backend mirrors the buffer into an RGBA32UI
+				// texture and binds it to this sampler by name at draw time (see
+				// s_apply_storage_textures in the CF GLES backend).
+				sfmt_append(ctx->tp_out, "uniform highp usampler2D u_%s_storage_%d;\n",
+					ctx->stage == CSPV_STAGE_VERTEX ? "vs" : "fs", cspv_es_ssbo_slot(ctx, d));
+				break;
+			}
 			// Stage-prefixed: GLES links vertex and fragment into one program with a
 			// single block namespace, and CF names both stages' blocks uniform_block.
 			// Reflection keeps the canonical name; the GL-side name carries the stage.
@@ -6771,6 +6951,9 @@ static void cspv_emit_glsl300(cspv_ctx* ctx)
 	afree(gg.rename_to);
 	afree(gg.shadows);
 	afree(gg.shadow_marks);
+	afree(gg.es_ssbo_names);
+	afree(gg.es_ssbo_slots);
+	afree(gg.es_ssbo_elems);
 }
 
 //--------------------------------------------------------------------------------------------------

@@ -750,6 +750,7 @@ SDL_GLContext cf_gles_get_gl_context()
 
 void cf_load_gles();
 static void s_reset_storage_bindings();
+static void s_apply_storage_textures();
 
 void cf_gles_attach(SDL_Window* window)
 {
@@ -893,6 +894,9 @@ bool cf_gles_query_pixel_format(CF_PixelFormat format, CF_PixelFormatOp op)
 
 static inline void s_apply_sampler_state_to_handle(const CF_GL_Texture* t, GLuint handle)
 {
+	// Unit 0 explicitly: parameter application must not disturb whichever unit a
+	// previous draw or storage upload left active.
+	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(t->target, handle);
 	glTexParameteri(t->target, GL_TEXTURE_MIN_FILTER, t->min_filter);
 	glTexParameteri(t->target, GL_TEXTURE_MAG_FILTER, t->mag_filter);
@@ -1442,6 +1446,9 @@ void cf_gles_apply_canvas(CF_Canvas canvas_handle, bool clear)
 	g_ctx.canvas = canvas;
 	if (clear) { s_clear_canvas(canvas); }
 
+	// Pass boundary: pending emulated storage bindings don't outlive it, mirroring
+	// SDL_GPU where storage binds are scoped to the render pass they were applied in.
+	s_reset_storage_bindings();
 	g_ctx.target_state = s_default_state(canvas);
 }
 
@@ -2159,6 +2166,7 @@ void cf_gles_draw_elements()
 	CF_ASSERT(material != NULL);
 
 	s_apply_state();
+	s_apply_storage_textures(); // Emulated storage binds for every draw kind, not just pull instancing.
 
 	GLenum prim = s_wrap(material->state.primitive_type);
 	int instance_count = (mesh->instance.id && mesh->instance.count > 0) ? mesh->instance.count : 0;
@@ -2221,6 +2229,7 @@ void cf_gles_draw_elements_range(int first_element, int element_count, int insta
 	CF_ASSERT(material != NULL);
 
 	s_apply_state();
+	s_apply_storage_textures(); // Emulated storage binds for every draw kind, not just pull instancing.
 
 	// Attribute pointers bind at apply-shader time; a pending override means this draw sources
 	// a different instance slice, so rebind against the last applied shader.
@@ -2370,6 +2379,9 @@ void cf_gles_update_storage_buffer(CF_StorageBuffer buffer, const void* data, in
 	CF_GL_StorageBuffer* b = (CF_GL_StorageBuffer*)(uintptr_t)buffer.id;
 	if (!b || size <= 0) return;
 	int texels = (size + 15) / 16; // All CF uploads are vec4-granular.
+	// Bind on unit 0 explicitly: binding on whatever unit happens to be active would
+	// silently clobber a unit the current program's samplers point at.
+	glActiveTexture(GL_TEXTURE0);
 	s_storage_realloc(b, texels);
 	glBindTexture(GL_TEXTURE_2D, b->tex);
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
@@ -2387,6 +2399,7 @@ void cf_gles_update_storage_buffer(CF_StorageBuffer buffer, const void* data, in
 		CF_MEMCPY(staging, src + full_rows * CF_GLES_STORAGE_WIDTH * 16, row_bytes);
 		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, full_rows, rem, 1, GL_RGBA_INTEGER, GL_UNSIGNED_INT, staging);
 	}
+	glBindTexture(GL_TEXTURE_2D, 0);
 	CF_POLL_OPENGL_ERROR();
 }
 

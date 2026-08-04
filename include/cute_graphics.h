@@ -1354,7 +1354,10 @@ CF_API void CF_CALL cf_destroy_storage_buffer(CF_StorageBuffer buffer);
  *           `gl_InstanceIndex` (see `cf_draw_elements_instanced`), or buffers a compute
  *           shader just wrote (`compute_writable` + `graphics_readable` composes). On
  *           GLES3/web, read-only storage buffers are emulated through texture fetches
- *           transparently; `compute_writable` buffers are not available there.
+ *           transparently; `compute_writable` buffers are not available there. The
+ *           emulation covers exactly the pattern above -- for web portability keep each
+ *           block anonymous, readonly, and a single runtime `vec4`/`uvec4` array (up to
+ *           4 per stage), packing scalars and matrices into vec4s.
  * @related  CF_StorageBuffer cf_make_storage_buffer cf_apply_fs_storage_buffers cf_draw_elements_instanced cf_apply_shader
  */
 CF_API void CF_CALL cf_apply_vs_storage_buffers(CF_StorageBuffer* buffers, int count);

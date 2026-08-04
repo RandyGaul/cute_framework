@@ -160,7 +160,7 @@ Cameras are live at replay: a recorded level renders under whatever projection/v
 Two things to know:
 
 - Recorded submissions capture their shader, so a multi-pass level records one list per pass (a shadow list and a lit list) -- see the city sample for the idiom.
-- Baked lists freeze their uniform captures at record time. Per-frame camera-dependent values don't need uniforms anyway: the camera stacks deliver them, and view depth for fog arrives free as `gl_Position.w`.
+- Baked lists freeze their uniform captures at record time. Per-frame camera-dependent values don't need uniforms anyway: the camera stacks deliver them, and view depth for fog arrives free as `gl_Position.w`. The one real trap: **uniform-driven skinning recorded into a list replays a single frozen pose** -- the bone bytes were snapshotted at the bake. Skinned characters inside lists use the storage-buffer pattern instead: the bake captures the buffer *handle* while its contents stay live, so updating the palette each frame animates replays normally (test-pinned in `test_draw3d_list_storage_buffer_live`).
 
 ## What Carries Over From the 2D API
 

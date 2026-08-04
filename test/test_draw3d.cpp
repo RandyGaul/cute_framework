@@ -510,6 +510,83 @@ TEST_CASE(test_draw3d_escape_hatch)
 // Draw lists: record interleaved submissions of two meshes, bake, and replay under two
 // different live cameras -- the recorded level renders where the replay-time view says, and
 // a transform pushed at replay time moves the whole list.
+// Baked lists freeze UNIFORM captures, but a storage buffer is captured by handle -- its
+// contents stay live across replays. This is the documented escape for animating skinned
+// characters inside baked lists: update the palette buffer per frame, replay, and the pose
+// moves. Pinned here by recording once and flipping the buffer between replays.
+TEST_CASE(test_draw3d_list_storage_buffer_live)
+{
+	if (!test_make_app(W, H)) return true; // Headless CI: no display/GPU.
+
+	static const char* storage_vs =
+	"layout (location = 0) in vec3 in_pos;\n"
+	"layout (location = 8) in vec4 in_model0;\n"
+	"layout (location = 9) in vec4 in_model1;\n"
+	"layout (location = 10) in vec4 in_model2;\n"
+	"layout (location = 0) out vec4 v_color;\n"
+	"layout (std430, set = 0, binding = 0) readonly buffer color_buf { vec4 u_colors[]; };\n"
+	"layout (set = 1, binding = 0) uniform uniform_block {\n"
+	"    mat4 u_view_projection;\n"
+	"};\n"
+	"void main() {\n"
+	"    vec4 p = vec4(in_pos, 1.0);\n"
+	"    vec3 world = vec3(dot(in_model0, p), dot(in_model1, p), dot(in_model2, p));\n"
+	"    v_color = u_colors[0];\n"
+	"    gl_Position = u_view_projection * vec4(world, 1.0);\n"
+	"}\n";
+
+	CF_Mesh mesh = s_make_quad(0.4f);
+	CF_Shader shader = cf_make_shader_from_source(storage_vs, s_fs);
+	REQUIRE(shader.id);
+	CF_CanvasParams params = cf_canvas_defaults(W, H);
+	params.depth_stencil_enable = true;
+	CF_Canvas canvas = cf_make_canvas(params);
+	CF_Pixel* px = (CF_Pixel*)cf_alloc(W * H * (int)sizeof(CF_Pixel));
+
+	CF_StorageBuffer colors = cf_make_storage_buffer(cf_storage_buffer_defaults((int)sizeof(CF_V4)));
+	CF_V4 red = cf_v4(1, 0, 0, 1);
+	cf_update_storage_buffer(colors, &red, (int)sizeof(red));
+
+	cf_draw3d_push_projection(cf_ortho(-1, 1, -1, 1, -1, 1));
+	cf_draw3d_push_shader(shader);
+	CF_DrawList list = cf_make_draw_list();
+	cf_draw_list_begin(list);
+	cf_draw3d_set_vs_storage_buffers(&colors, 1);
+	cf_draw3d_mesh(mesh);
+	cf_draw3d_set_vs_storage_buffers(NULL, 0);
+	cf_draw_list_end();
+
+	for (int round = 0; round < 2; ++round) {
+		if (round == 1) {
+			CF_V4 green = cf_v4(0, 1, 0, 1);
+			cf_update_storage_buffer(colors, &green, (int)sizeof(green));
+		}
+		cf_app_update(NULL);
+		cf_draw_list(list);
+		cf_render_to(canvas, true);
+		cf_app_draw_onto_screen(false);
+		CF_Readback rb = cf_canvas_readback(canvas);
+		REQUIRE(rb.id);
+		while (!cf_readback_ready(rb)) {}
+		cf_readback_data(rb, px, W * H * (int)sizeof(CF_Pixel));
+		cf_destroy_readback(rb);
+		CF_Pixel c = s_pixel(px, 0.5f, 0.5f);
+		if (round == 0) { REQUIRE(c.colors.r > 200 && c.colors.g < 60); }
+		else { REQUIRE(c.colors.g > 200 && c.colors.r < 60); }
+	}
+
+	cf_draw3d_pop_shader();
+	cf_draw3d_pop_projection();
+	cf_destroy_draw_list(list);
+	cf_destroy_storage_buffer(colors);
+	cf_free(px);
+	cf_destroy_canvas(canvas);
+	cf_destroy_shader(shader);
+	cf_destroy_mesh(mesh);
+	test_destroy_app();
+	return true;
+}
+
 TEST_CASE(test_draw3d_draw_list)
 {
 	if (!test_make_app(W, H)) return true; // Headless CI: no display/GPU.
@@ -1643,6 +1720,7 @@ TEST_SUITE(test_draw3d)
 	RUN_TEST_CASE(test_draw3d_uniform_capture);
 	RUN_TEST_CASE(test_draw3d_escape_hatch);
 	RUN_TEST_CASE(test_draw3d_draw_list);
+	RUN_TEST_CASE(test_draw3d_list_storage_buffer_live);
 	RUN_TEST_CASE(test_draw3d_baked_normal_matrices);
 	RUN_TEST_CASE(test_draw3d_sprite_textured);
 	RUN_TEST_CASE(test_draw3d_sprite_textured_baked);
