@@ -178,8 +178,87 @@ TEST_CASE(test_instancing_indexed)
 	return true;
 }
 
+// Pull-style instancing: no per-instance vertex buffer at all. Per-instance data lives in a
+// storage buffer bound to the vertex stage (cf_apply_vs_storage_buffers) and is pulled by
+// gl_InstanceIndex under cf_draw_elements_instanced -- the skinning-palette / GPU-driven
+// pattern. Desktop backends only: the GLES transpiler rejects buffer blocks, like compute.
+TEST_CASE(test_instancing_pull_storage)
+{
+	const char* gles = getenv("CF_TEST_GLES");
+	if (gles && *gles == '1') return true; // No SSBOs in GLES3 user shaders.
+	int options = CF_APP_OPTIONS_HIDDEN_BIT | CF_APP_OPTIONS_NO_AUDIO_BIT;
+	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, W, H, options, NULL))) return true; // Headless CI: no display/GPU.
+
+	static const char* pull_vs =
+	"layout (location = 0) in vec2 in_pos;\n"
+	"layout (location = 0) out vec4 v_tint;\n"
+	"struct Inst { vec4 offset; vec4 tint; };\n"
+	"layout (std430, set = 0, binding = 0) readonly buffer inst_buffer { Inst u_instances[]; };\n"
+	"void main() {\n"
+	"    Inst inst = u_instances[gl_InstanceIndex];\n"
+	"    v_tint = inst.tint;\n"
+	"    gl_Position = vec4(in_pos * 0.4 + inst.offset.xy, 0, 1);\n"
+	"}\n";
+
+	struct Vertex { float x, y; };
+	Vertex verts[6] = { { -1, -1 }, { 1, -1 }, { 1, 1 }, { -1, -1 }, { 1, 1 }, { -1, 1 } };
+	CF_VertexAttribute attrs[1] = { };
+	attrs[0].name = "in_pos";
+	attrs[0].format = CF_VERTEX_FORMAT_FLOAT2;
+	attrs[0].offset = 0;
+	CF_Mesh mesh = cf_make_mesh(sizeof(verts), attrs, 1, sizeof(Vertex));
+	cf_mesh_update_vertex_data(mesh, verts, 6);
+
+	struct Inst { float offset[4]; float tint[4]; };
+	Inst instances[2] = {
+		{ { -0.5f, 0, 0, 0 }, { 1.0f, 0, 0, 1.0f } }, // left, red
+		{ {  0.5f, 0, 0, 0 }, { 0, 1.0f, 0, 1.0f } }, // right, green
+	};
+	CF_StorageBufferParams sb_params = cf_storage_buffer_defaults(sizeof(instances));
+	sb_params.graphics_readable = true;
+	CF_StorageBuffer sb = cf_make_storage_buffer(sb_params);
+	cf_update_storage_buffer(sb, instances, sizeof(instances));
+
+	CF_Shader shader = cf_make_shader_from_source(pull_vs, s_fs);
+	REQUIRE(shader.id);
+	CF_Material material = cf_make_material();
+	CF_Canvas canvas = cf_make_canvas(cf_canvas_defaults(W, H));
+	CF_Pixel* px = (CF_Pixel*)cf_alloc(W * H * (int)sizeof(CF_Pixel));
+
+	cf_app_update(NULL);
+	cf_push_gpu_label("pull-instancing test");
+	cf_apply_canvas(canvas, true);
+	cf_apply_mesh(mesh);
+	cf_apply_shader(shader, material);
+	cf_apply_vs_storage_buffers(&sb, 1);
+	cf_draw_elements_instanced(2);
+	cf_pop_gpu_label();
+	cf_app_draw_onto_screen(false);
+
+	CF_Readback rb = cf_canvas_readback(canvas);
+	REQUIRE(rb.id);
+	while (!cf_readback_ready(rb)) {}
+	cf_readback_data(rb, px, W * H * (int)sizeof(CF_Pixel));
+	cf_destroy_readback(rb);
+
+	CF_Pixel left = px[(H / 2) * W + W / 4];
+	CF_Pixel right = px[(H / 2) * W + (3 * W) / 4];
+	REQUIRE(left.colors.r > 200 && left.colors.g < 60);
+	REQUIRE(right.colors.g > 200 && right.colors.r < 60);
+
+	cf_free(px);
+	cf_destroy_canvas(canvas);
+	cf_destroy_material(material);
+	cf_destroy_shader(shader);
+	cf_destroy_mesh(mesh);
+	cf_destroy_storage_buffer(sb);
+	cf_destroy_app();
+	return true;
+}
+
 TEST_SUITE(test_instancing)
 {
 	RUN_TEST_CASE(test_instancing_appended_attributes);
 	RUN_TEST_CASE(test_instancing_indexed);
+	RUN_TEST_CASE(test_instancing_pull_storage);
 }

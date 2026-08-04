@@ -284,21 +284,9 @@ void* cf_create_draw_sampler(CF_Filter filter);
 void cf_destroy_draw_sampler(void* sampler);
 void cf_set_sampler_override(void* sampler);
 
-// Tiled draw path support (see cute_draw.cpp).
-// Binds storage buffers to the fragment stage of the current graphics pipeline, slots
-// starting at 0 (SDL_GPU set = 2, bindings after sampled textures). Call after
-// cf_apply_shader and before cf_draw_elements. No-op on GLES3 (no SSBOs) -- the tiled
-// draw path never selects the GLES backend.
-void cf_apply_fs_storage_buffers(CF_StorageBuffer* buffers, int count);
-// Same, for the vertex stage (SDL_GPU set = 0, bindings after sampled textures).
-void cf_apply_vs_storage_buffers(CF_StorageBuffer* buffers, int count);
+// cf_apply_vs/fs_storage_buffers, cf_push/pop_gpu_label, and cf_draw_elements_instanced
+// used to be declared here as internal-only; they are public in cute_graphics.h now.
 void cf_current_canvas_size(int* w, int* h);
-// GPU timeline debug labels (visible in Nsight/PIX/RenderDoc). No-ops on GLES.
-void cf_push_gpu_label(const char* name);
-void cf_pop_gpu_label();
-// Instanced draw of the currently applied mesh with no per-instance vertex buffer;
-// instance data comes from storage buffers indexed by gl_InstanceIndex.
-void cf_draw_elements_instanced(int instance_count);
 
 // Mesh introspection for the draw3d layer (cute_draw3d.cpp): whether an attribute with this
 // name exists (used to detect its reserved instance attributes), and the mesh's instance

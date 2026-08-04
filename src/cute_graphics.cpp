@@ -618,7 +618,6 @@ CF_TextureParams cf_texture_defaults(int w, int h)
 	return params;
 }
 
-bool cf_texture_supports_format(CF_PixelFormat format, CF_TextureUsageBits usage);
 
 CF_CanvasParams cf_canvas_defaults(int w, int h)
 {

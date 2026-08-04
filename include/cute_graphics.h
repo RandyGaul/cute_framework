@@ -458,6 +458,19 @@ typedef enum CF_TextureUsageBits
 } CF_TextureUsageBits;
 
 /**
+ * @function cf_texture_supports_format
+ * @category graphics
+ * @brief    Checks whether the device supports a pixel format under specific texture usage.
+ * @param    format   The pixel format to check.
+ * @param    usage    The intended `CF_TextureUsageBits`.
+ * @remarks  The usage-precise sibling of `cf_query_pixel_format` -- e.g. probe
+ *           `CF_TEXTURE_USAGE_DEPTH_STENCIL_TARGET_BIT` support for a depth format, the same
+ *           check `cf_canvas_defaults` uses to negotiate its depth format.
+ * @related  CF_PixelFormat CF_TextureUsageBits cf_query_pixel_format
+ */
+CF_API bool CF_CALL cf_texture_supports_format(CF_PixelFormat format, CF_TextureUsageBits usage);
+
+/**
  * @enum     CF_Filter
  * @category graphics
  * @brief    Filtering options for how to access `CF_Texture` data on the GPU.
@@ -1195,6 +1208,43 @@ CF_API void CF_CALL cf_update_storage_buffer(CF_StorageBuffer buffer, const void
  * @related  CF_StorageBuffer cf_make_storage_buffer
  */
 CF_API void CF_CALL cf_destroy_storage_buffer(CF_StorageBuffer buffer);
+
+/**
+ * @function cf_apply_vs_storage_buffers
+ * @category graphics
+ * @brief    Binds storage buffers to the vertex stage of the current graphics pipeline.
+ * @param    buffers   The storage buffers to bind, in shader binding order.
+ * @param    count     Number of buffers.
+ * @remarks  Call after `cf_apply_shader` and before `cf_draw_elements`. The buffers must be
+ *           created with `graphics_readable` (see `CF_StorageBufferParams`). In the shader,
+ *           declare vertex-stage storage buffers at `set = 0` with bindings following any
+ *           vertex-stage samplers:
+ *
+ *           ```glsl
+ *           layout (std430, set = 0, binding = 0) readonly buffer bones_buffer { mat4 u_bones[]; };
+ *           ```
+ *
+ *           This is the tool for data too large or too dynamic for uniforms -- skinning
+ *           palettes indexed by a per-instance bone offset, per-instance data pulled by
+ *           `gl_InstanceIndex` (see `cf_draw_elements_instanced`), or buffers a compute
+ *           shader just wrote (`compute_writable` + `graphics_readable` composes). Not
+ *           supported by the GLES3/web shader transpiler, matching compute.
+ * @related  CF_StorageBuffer cf_make_storage_buffer cf_apply_fs_storage_buffers cf_draw_elements_instanced cf_apply_shader
+ */
+CF_API void CF_CALL cf_apply_vs_storage_buffers(CF_StorageBuffer* buffers, int count);
+
+/**
+ * @function cf_apply_fs_storage_buffers
+ * @category graphics
+ * @brief    Binds storage buffers to the fragment stage of the current graphics pipeline.
+ * @param    buffers   The storage buffers to bind, in shader binding order.
+ * @param    count     Number of buffers.
+ * @remarks  Call after `cf_apply_shader` and before `cf_draw_elements`. Declare fragment-stage
+ *           storage buffers at `set = 2` with bindings following any fragment-stage samplers.
+ *           See `cf_apply_vs_storage_buffers` for the rest of the contract.
+ * @related  CF_StorageBuffer cf_make_storage_buffer cf_apply_vs_storage_buffers cf_apply_shader
+ */
+CF_API void CF_CALL cf_apply_fs_storage_buffers(CF_StorageBuffer* buffers, int count);
 
 //--------------------------------------------------------------------------------------------------
 // Compute Dispatch.
@@ -2551,6 +2601,38 @@ CF_API void CF_CALL cf_apply_shader(CF_Shader shader, CF_Material material);
  */
 CF_API void CF_CALL cf_draw_elements(void);
 
+/**
+ * @function cf_draw_elements_instanced
+ * @category graphics
+ * @brief    Draws the last applied mesh `instance_count` times in one call, with no
+ *           per-instance vertex buffer.
+ * @param    instance_count   The number of instances to draw.
+ * @remarks  The shader distinguishes instances with `gl_InstanceIndex`, typically indexing
+ *           into a storage buffer bound via `cf_apply_vs_storage_buffers` -- the pull-style
+ *           alternative to `cf_mesh_set_instance_buffer`'s per-instance vertex attributes.
+ * @related  cf_draw_elements cf_apply_vs_storage_buffers cf_mesh_set_instance_buffer
+ */
+CF_API void CF_CALL cf_draw_elements_instanced(int instance_count);
+
+/**
+ * @function cf_push_gpu_label
+ * @category graphics
+ * @brief    Pushes a named region onto the GPU timeline, visible in RenderDoc/Nsight/PIX.
+ * @param    name   The region's display name in the capture.
+ * @remarks  Purely diagnostic -- no rendering effect. Pop with `cf_pop_gpu_label`. Regions
+ *           nest. No-op on the GLES backend.
+ * @related  cf_pop_gpu_label
+ */
+CF_API void CF_CALL cf_push_gpu_label(const char* name);
+
+/**
+ * @function cf_pop_gpu_label
+ * @category graphics
+ * @brief    Pops the last region pushed by `cf_push_gpu_label`.
+ * @related  cf_push_gpu_label
+ */
+CF_API void CF_CALL cf_pop_gpu_label(void);
+
 #ifdef __cplusplus
 }
 #endif // __cplusplus
@@ -2563,6 +2645,12 @@ CF_API void CF_CALL cf_draw_elements(void);
 namespace Cute
 {
 
+CF_INLINE void apply_vs_storage_buffers(CF_StorageBuffer* buffers, int count) { cf_apply_vs_storage_buffers(buffers, count); }
+CF_INLINE void apply_fs_storage_buffers(CF_StorageBuffer* buffers, int count) { cf_apply_fs_storage_buffers(buffers, count); }
+CF_INLINE void draw_elements_instanced(int instance_count) { cf_draw_elements_instanced(instance_count); }
+CF_INLINE void push_gpu_label(const char* name) { cf_push_gpu_label(name); }
+CF_INLINE void pop_gpu_label() { cf_pop_gpu_label(); }
+CF_INLINE bool texture_supports_format(CF_PixelFormat format, CF_TextureUsageBits usage) { return cf_texture_supports_format(format, usage); }
 CF_INLINE void clear_color(float r, float b, float g, float a) { cf_clear_color(r, g, b, a); }
 CF_INLINE void clear_color(CF_Color color) { cf_clear_color(color.r, color.g, color.b, color.a); }
 CF_INLINE CF_BackendType query_backend() { return cf_query_backend(); }
