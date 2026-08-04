@@ -242,6 +242,10 @@ struct CF_Command
 	// 3d mesh submission payload (cf_draw3d_mesh), owned by this command and freed via
 	// cf_draw3d_free_cmd when the command is destroyed. See cute_draw3d.cpp.
 	struct CF_MeshCmd3d* mesh3d = NULL;
+	// View-space depth of the farthest submission anchor in this mesh command, captured at
+	// submit time. The flush sorts non-depth-writing (translucent) mesh commands within a
+	// layer back-to-front on this key; opaque commands ignore it (the depth test owns them).
+	float depth3d = 0;
 };
 
 // True for a command that draws nothing and carries no state change -- notably the spacer

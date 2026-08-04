@@ -550,9 +550,13 @@ static CF_Command* s_coalesce_candidate()
 // raw shape lanes for strokes). `shape` marks submissions from the built-in shape pipeline,
 // whose u_shape_* uniforms then count toward the state hash and get captured; plain mesh
 // submissions ignore that bucket entirely, so a debug stroke's camera-eye or effect churn
-// never splits a user mesh batch.
-static void s_submit(CF_Mesh mesh, const CF_MeshInstance3d& inst, bool escape, const CF_Sprite* sprite, bool shape)
+// never splits a user mesh batch. `anchor` is the submission's world position, used only as
+// the translucency sort key (see CF_Command::depth3d).
+static void s_submit(CF_Mesh mesh, const CF_MeshInstance3d& inst, bool escape, const CF_Sprite* sprite, bool shape, CF_V3 anchor)
 {
+	// View-space depth of the anchor: the flush sorts translucent commands on this.
+	const CF_M4x4& vm = s_draw3d->views.last();
+	float view_depth = -(vm.elements[2] * anchor.x + vm.elements[6] * anchor.y + vm.elements[10] * anchor.z + vm.elements[14]);
 	CF_Shader shader = s_draw3d->shaders.last();
 	CF_ASSERT(shader.id); // No default 3d shader -- push one first (see the shader contract in cute_draw3d.h).
 	if (!shader.id) return;
@@ -595,6 +599,9 @@ static void s_submit(CF_Mesh mesh, const CF_MeshInstance3d& inst, bool escape, c
 			if (split == CF_DRAW_SPLIT_3D_NONE) {
 				mc->instances.add(inst);
 				if (sprite_textured) mc->image_refs.add(s_image_ref(sprite));
+				// Back-to-front sorting keys off the farthest member, so a group never
+				// sorts in front of a command it partially sits behind.
+				under->depth3d = cf_max(under->depth3d, view_depth);
 				s_draw3d->stats.instances++;
 				return;
 			}
@@ -607,6 +614,7 @@ static void s_submit(CF_Mesh mesh, const CF_MeshInstance3d& inst, bool escape, c
 	CF_Command& cmd = s_draw->add_cmd();
 	cmd.shader = shader;
 	cmd.render_state = rs;
+	cmd.depth3d = view_depth;
 	CF_MeshCmd3d* mc = CF_NEW(CF_MeshCmd3d);
 	cmd.mesh3d = mc;
 	mc->mesh = mesh;
@@ -661,7 +669,9 @@ void cf_draw3d_mesh(CF_Mesh mesh)
 	CF_MeshInstance3d inst;
 	if (!escape) inst = s_instance();
 	else CF_MEMSET(&inst, 0, sizeof(inst));
-	s_submit(mesh, inst, escape, s_draw3d->sprites.last(), false);
+	const CF_M4x4& model = s_draw3d->transforms.last();
+	CF_V3 anchor = cf_v3(model.elements[12], model.elements[13], model.elements[14]);
+	s_submit(mesh, inst, escape, s_draw3d->sprites.last(), false, anchor);
 }
 
 // The shared quad + submission tail behind cf_draw3d_sprite and cf_draw3d_billboard. The
@@ -1148,7 +1158,9 @@ static void s_submit_stroke(CF_MeshInstance3d inst)
 	CF_ShapeShaderBundle* bundle = top.id ? s_draw3d->shape_shaders.try_find(top.id) : NULL;
 	cf_draw3d_push_shader(bundle ? bundle->stroke : s_draw3d->stroke_shd);
 	cf_draw3d_push_render_state(s_stroke_render_state());
-	s_submit(s_draw3d->stroke_quad, inst, false, NULL, true);
+	// The stroke lanes carry world positions directly: model0.xyz is the segment start or
+	// the ring center -- a fine sort anchor either way.
+	s_submit(s_draw3d->stroke_quad, inst, false, NULL, true, cf_v3(inst.model0.x, inst.model0.y, inst.model0.z));
 	cf_draw3d_pop_render_state();
 	cf_draw3d_pop_shader();
 }
@@ -1509,7 +1521,7 @@ static void s_submit_solid(CF_Mesh mesh, const CF_M4x4& local)
 	if (bundle) cf_draw3d_push_shader(bundle->solid);
 	else if (!top.id) cf_draw3d_push_shader(s_draw3d->solid_shd);
 	else pushed = false; // Plain user shader: full replacement, already on the stack.
-	s_submit(mesh, inst, false, NULL, true);
+	s_submit(mesh, inst, false, NULL, true, cf_v3(m.elements[12], m.elements[13], m.elements[14]));
 	if (pushed) cf_draw3d_pop_shader();
 }
 
@@ -2026,6 +2038,15 @@ void cf_draw3d_replay_cmd(CF_Command* dst, const CF_Command* src)
 	mc->image_refs_ref = smc->sprite_textured ? &smc->image_refs : NULL;
 	mc->uniforms = smc->uniforms; // Bytes stay in the list's uniform_block (borrowed).
 	mc->textures = smc->textures;
+	// Sort anchor for translucent replays: the first baked instance's position under the
+	// live view (baked groups share state, so one representative is as good as any).
+	if (smc->instances.count()) {
+		const CF_MeshInstance3d* inst = &smc->instances[0];
+		CF_V3 p = cf_v3(inst->model0.w, inst->model1.w, inst->model2.w);
+		CF_V3 world = cf_m4_transform_point(s_draw3d->transforms.last(), p);
+		const CF_M4x4& vm = s_draw3d->views.last();
+		dst->depth3d = -(vm.elements[2] * world.x + vm.elements[6] * world.y + vm.elements[10] * world.z + vm.elements[14]);
+	}
 	dst->mesh3d = mc;
 }
 

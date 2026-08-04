@@ -1423,6 +1423,81 @@ TEST_CASE(test_draw3d_depth_writer_order)
 	return true;
 }
 
+// Within a layer, non-depth-writing (translucent) mesh commands sort back-to-front by their
+// submission anchors: a translucent quad submitted NEAR-first must still composite under the
+// over operator as near-over-far. Different meshes force separate commands, which is the
+// case the sort exists for (same-mesh translucents coalesce and keep submission order).
+TEST_CASE(test_draw3d_translucent_sort)
+{
+	if (!test_make_app(W, H)) return true; // Headless CI: no display/GPU.
+
+	CF_Mesh near_mesh = s_make_quad(0.4f);
+	CF_Mesh far_mesh = s_make_quad(0.4001f); // Distinct mesh, visually identical.
+	CF_Shader shader = cf_make_shader_from_source(s_vs, s_fs);
+	REQUIRE(shader.id);
+	CF_CanvasParams params = cf_canvas_defaults(W, H);
+	params.depth_stencil_enable = true;
+	CF_Canvas canvas = cf_make_canvas(params);
+	CF_Pixel* px = (CF_Pixel*)cf_alloc(W * H * (int)sizeof(CF_Pixel));
+
+	cf_app_update(NULL);
+	cf_draw3d_push_projection(cf_ortho(-1, 1, -1, 1, -1, 1));
+	cf_draw3d_push_shader(shader);
+
+	// Premultiplied over blend, no depth writes: the translucency configuration.
+	CF_RenderState rs = cf_render_state_3d_defaults();
+	rs.depth_write_enabled = false;
+	rs.blend.enabled = true;
+	rs.blend.rgb_src_blend_factor = CF_BLENDFACTOR_ONE;
+	rs.blend.rgb_dst_blend_factor = CF_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
+	rs.blend.rgb_op = CF_BLEND_OP_ADD;
+	rs.blend.alpha_src_blend_factor = CF_BLENDFACTOR_ONE;
+	rs.blend.alpha_dst_blend_factor = CF_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
+	rs.blend.alpha_op = CF_BLEND_OP_ADD;
+	cf_draw3d_push_render_state(rs);
+
+	// NEAR half-alpha red submitted FIRST (+z is toward the camera under cf_ortho),
+	// FAR opaque blue submitted second. Correct back-to-front: blue renders first, red
+	// blends over it -> center (0.5, 0, 0.5). Submission order would give pure blue.
+	cf_draw3d_push();
+	cf_draw3d_translate(cf_v3(0, 0, 0.5f));
+	cf_draw3d_push_mesh_attributes(cf_v4(0.5f, 0, 0, 0.5f)); // Premultiplied half red.
+	cf_draw3d_mesh(near_mesh);
+	cf_draw3d_pop_mesh_attributes();
+	cf_draw3d_pop();
+
+	cf_draw3d_push();
+	cf_draw3d_translate(cf_v3(0, 0, -0.5f));
+	cf_draw3d_push_mesh_attributes(cf_v4(0, 0, 1.0f, 1.0f)); // Opaque blue.
+	cf_draw3d_mesh(far_mesh);
+	cf_draw3d_pop_mesh_attributes();
+	cf_draw3d_pop();
+
+	cf_draw3d_pop_render_state();
+	cf_render_to(canvas, true);
+	cf_app_draw_onto_screen(false);
+
+	CF_Readback rb = cf_canvas_readback(canvas);
+	REQUIRE(rb.id);
+	while (!cf_readback_ready(rb)) {}
+	cf_readback_data(rb, px, W * H * (int)sizeof(CF_Pixel));
+	cf_destroy_readback(rb);
+
+	CF_Pixel center = s_pixel(px, 0.5f, 0.5f);
+	REQUIRE(center.colors.r > 100 && center.colors.r < 160); // Half red over...
+	REQUIRE(center.colors.b > 100 && center.colors.b < 160); // ...half-visible blue.
+
+	cf_draw3d_pop_shader();
+	cf_draw3d_pop_projection();
+	cf_free(px);
+	cf_destroy_canvas(canvas);
+	cf_destroy_shader(shader);
+	cf_destroy_mesh(near_mesh);
+	cf_destroy_mesh(far_mesh);
+	test_destroy_app();
+	return true;
+}
+
 TEST_SUITE(test_draw3d)
 {
 	RUN_TEST_CASE(test_draw3d_transforms_and_coalescing);
@@ -1443,5 +1518,6 @@ TEST_SUITE(test_draw3d)
 	RUN_TEST_CASE(test_draw3d_attributes2);
 	RUN_TEST_CASE(test_draw3d_stats);
 	RUN_TEST_CASE(test_draw3d_depth_writer_order);
+	RUN_TEST_CASE(test_draw3d_translucent_sort);
 	RUN_TEST_CASE(test_draw3d_bench);
 }

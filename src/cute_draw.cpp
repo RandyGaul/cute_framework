@@ -5255,8 +5255,15 @@ void cf_render_layers_to(CF_Canvas canvas, int layer_lo, int layer_hi, bool clea
 			if (!s_draw->cmds[i].mesh3d) { ++i; continue; }
 			int j = i + 1;
 			while (j < n && (s_draw->cmds[j].mesh3d || cf_cmd_is_empty(s_draw->cmds[j])) && s_draw->cmds[j].layer == s_draw->cmds[i].layer) ++j;
-			std::stable_partition(s_draw->cmds.begin() + i, s_draw->cmds.begin() + j, [](const CF_Command& c) {
+			auto mid = std::stable_partition(s_draw->cmds.begin() + i, s_draw->cmds.begin() + j, [](const CF_Command& c) {
 				return c.mesh3d && c.render_state.depth_write_enabled;
+			});
+			// The non-writing (translucent) tail sorts back-to-front on the submission
+			// anchors captured in depth3d, so overlapping translucents composite correctly
+			// regardless of submission order. Writers keep submission order; the depth
+			// test owns them. Empty spacers carry depth 0 and sort harmlessly.
+			std::stable_sort(mid, s_draw->cmds.begin() + j, [](const CF_Command& a, const CF_Command& b) {
+				return a.depth3d > b.depth3d;
 			});
 			i = j;
 		}

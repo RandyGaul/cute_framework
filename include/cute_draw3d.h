@@ -654,8 +654,18 @@ CF_API CF_V4 CF_CALL cf_draw3d_peek_mesh_attributes2(void);
  *           and mesh attributes coalesce into one instanced draw automatically -- group same-mesh
  *           submissions together (or record them into a `CF_DrawList`, which groups at bake
  *           regardless of order). Meshes interleave with 2d drawing in the shared command stream;
- *           `cf_draw_push_layer` orders them, and opaque meshes need no ordering at all beyond the
- *           depth test. Winding is counter-clockwise for front faces under the default render
+ *           `cf_draw_push_layer` orders them.
+ *
+ *           Within a layer, ordering is automatic: depth-writing (opaque) submissions render
+ *           first in submission order -- the depth test owns them -- and non-writing
+ *           (translucent) submissions render after, sorted back-to-front by each submission's
+ *           transform position, so overlapping glass, glows, and particles composite correctly
+ *           no matter the order you submit them in. One caveat: translucent submissions of the
+ *           SAME mesh under the same state coalesce into one draw and keep submission order
+ *           within it -- when exact ordering between many copies of one translucent mesh
+ *           matters, submit them roughly far-to-near or split them across layers.
+ *
+ *           Winding is counter-clockwise for front faces under the default render
  *           state. A mesh carrying its own instance buffer is drawn as-is with no reserved
  *           attributes bound -- see the escape hatch note at the top of this header.
  * @related  CF_Mesh cf_make_mesh cf_draw3d_push_shader cf_draw3d_transform cf_draw3d_push_mesh_attributes cf_render_to cf_make_draw_list
