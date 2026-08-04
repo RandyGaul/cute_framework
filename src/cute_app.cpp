@@ -170,6 +170,13 @@ void cf_app_recreate_default_canvas_if_needed()
 
 CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, int y, int w, int h, CF_AppOptionFlags options, const char* argv0)
 {
+	// A second app would silently clobber the global app state, and the first thing to
+	// actually fail is the file system init deep inside this function (PHYSFS refuses to
+	// double-init) -- fail loudly and recoverably up front instead.
+	if (app) {
+		return cf_result_error("cf_make_app called while an app already exists -- call cf_destroy_app first.");
+	}
+
 	bool use_dx11 = options & CF_APP_OPTIONS_GFX_D3D11_BIT;
 	bool use_dx12 = options & CF_APP_OPTIONS_GFX_D3D12_BIT;
 	bool use_metal = options & CF_APP_OPTIONS_GFX_METAL_BIT;
@@ -385,6 +392,10 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 
 	CF_Result err = cf_fs_init(argv0);
 	if (cf_is_error(err)) {
+		// Most commonly PHYSFS_ERR_IS_INITIALIZED: someone called cf_fs_init (or leaked a
+		// previous app's file system) before cf_make_app. Print the reason -- a bare assert
+		// here has historically been a miserable thing to root-cause.
+		fprintf(stderr, "cf_fs_init failed in cf_make_app: %s\n", err.details ? err.details : "unknown error");
 		CF_ASSERT(0);
 	} else if (!(options & CF_APP_OPTIONS_FILE_SYSTEM_DONT_DEFAULT_MOUNT_BIT)) {
 		// Put the base directory (the path to the exe) onto the file system search path.

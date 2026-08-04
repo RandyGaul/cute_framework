@@ -26,6 +26,10 @@ bool test_make_app(int w, int h, int extra_options)
 	if (gles && *gles == '1') options |= CF_APP_OPTIONS_GFX_OPENGL_BIT | CF_APP_OPTIONS_GFX_DEBUG_BIT;
 
 	if (s_fresh_mode()) {
+		// A failed REQUIRE returns out of a test before its trailing test_destroy_app, and
+		// the leaked app would make cf_make_app fail for every test after it. Destroying a
+		// nonexistent app is a safe no-op, so always sweep before creating.
+		cf_destroy_app();
 		return !cf_is_error(cf_make_app(NULL, 0, 0, 0, w, h, options, NULL));
 	}
 
@@ -40,10 +44,10 @@ bool test_make_app(int w, int h, int extra_options)
 		cf_app_update(NULL); // Each test starts at a clean frame boundary.
 		return true;
 	}
-	if (s_alive) {
-		cf_destroy_app();
-		s_alive = false;
-	}
+	// Destroys the options-mismatched shared app, or an app leaked by a failed test that
+	// manages its own app directly (cf_destroy_app with no app alive is a safe no-op).
+	cf_destroy_app();
+	s_alive = false;
 	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, w, h, options, NULL))) return false;
 	s_alive = true;
 	s_options = options;

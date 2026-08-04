@@ -6660,6 +6660,24 @@ static void cspv_emit_glsl300(cspv_ctx* ctx)
 		cspv_tp_rename(g, d->name, nm);
 	}
 
+	// GL links both stages into one program whose unnamed-block members share a
+	// single global namespace, so a vertex block and a fragment block that both
+	// declare a member (e.g. u_shape_eye in CF's 3d shape shaders) fail to link.
+	// An instance name scopes members to their block, restoring SPIR-V's
+	// per-stage semantics; references pick up the qualifier via the rename
+	// table. The GL-side block name (what glGetUniformBlockIndex sees) is
+	// unaffected -- only member spellings change, and CF uploads by std140
+	// offset, never by member name.
+	for (int i = 0; i < (int)asize(ctx->decls); i++) {
+		cspv_decl* d = ctx->decls + i;
+		if (d->kind != CSPV_D_BLOCK || d->instance_name) continue;
+		for (int j = 0; j < d->num_members; j++) {
+			char* nm = (char*)cspv_arena_alloc(&ctx->arena, 192);
+			snprintf(nm, 192, "cf_ubi_%s.%s", d->name, d->member_names[j]);
+			cspv_tp_rename(g, d->member_names[j], nm);
+		}
+	}
+
 	// (sappend rather than sfmake: variadic macros reject empty argument lists
 	// on gcc/clang, and these headers take no format arguments.)
 	ctx->tp_out = NULL;
@@ -6717,7 +6735,7 @@ static void cspv_emit_glsl300(cspv_ctx* ctx)
 				sappend(ctx->tp_out, ";\n");
 			}
 			if (d->instance_name) sfmt_append(ctx->tp_out, "} %s;\n", d->instance_name);
-			else sappend(ctx->tp_out, "};\n");
+			else sfmt_append(ctx->tp_out, "} cf_ubi_%s;\n", d->name); // See member rename above.
 			break;
 
 		case CSPV_D_OPAQUE:
