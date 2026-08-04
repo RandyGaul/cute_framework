@@ -50,7 +50,7 @@
 #define FIREFLY_LIGHTS 12   // Nearest lights that reach the shader (jar takes one slot).
 #define SHRINE_LANTERNS 5   // Fireflies needed to wake the shrine.
 #define EYE_HEIGHT 1.65f
-#define SHADOW_RES 2048
+#define SHADOW_RES 1024 // EVSM blurs, so 1024 out-resolves what raw 2048 PCF managed.
 #define BLOOM_LEVELS 5
 
 //--------------------------------------------------------------------------------------------------
@@ -451,23 +451,57 @@ static void s_gather_input(Input* in, CF_V3 player, float yaw, float dt)
 //--------------------------------------------------------------------------------------------------
 // Shaders.
 
-// Depth-only pass for the shadow cascades: contract lanes in, nothing out.
-static const char* s_depth_vs =
+// Shadow-moment pass for the EVSM cascades. Instead of raw depth + a comparison sampler
+// (which cannot be pre-filtered, hence shadow acne and bias-fighting), each cascade renders
+// exponentially-warped depth and its square into a color target. Those moments CAN be
+// blurred like any image, and the receiver tests against a Chebyshev bound -- no depth
+// bias anywhere, no acne by construction, and softness comes from an honest gaussian.
+#define EVSM_C "40.0"
+
+static const char* s_moment_vs =
 "layout (location = 0) in vec3 in_pos;\n"
 "layout (location = 8)  in vec4 in_model0;\n"
 "layout (location = 9)  in vec4 in_model1;\n"
 "layout (location = 10) in vec4 in_model2;\n"
+"layout (location = 0) out vec2 v_zw;\n"
 "layout (set = 1, binding = 0) uniform uniform_block {\n"
 "	mat4 u_view_projection;\n"
 "};\n"
 "void main() {\n"
 "	vec4 hp = vec4(in_pos, 1.0);\n"
 "	vec3 world = vec3(dot(in_model0, hp), dot(in_model1, hp), dot(in_model2, hp));\n"
-"	gl_Position = u_view_projection * vec4(world, 1.0);\n"
+"	vec4 clip = u_view_projection * vec4(world, 1.0);\n"
+"	v_zw = clip.zw;\n"
+"	gl_Position = clip;\n"
 "}\n";
 
-static const char* s_depth_fs =
-"void main() { }\n";
+static const char* s_moment_fs =
+"layout (location = 0) in vec2 v_zw;\n"
+"layout (location = 0) out vec4 result;\n"
+"void main() {\n"
+"	float z = v_zw.x / v_zw.y;\n"        // [0, 1] under CF's clip conventions (ortho: w = 1).
+"	float e = exp(" EVSM_C " * z);\n"
+"	result = vec4(e, e * e, 0.0, 1.0);\n"
+"}\n";
+
+// Separable gaussian over one cascade layer of the moment map.
+static const char* s_shadow_blur_fs =
+"layout (location = 0) in vec2 v_uv;\n"
+"layout (location = 0) out vec4 result;\n"
+"layout (set = 2, binding = 0) uniform sampler2DArray u_src;\n"
+"layout (set = 3, binding = 0) uniform uniform_block {\n"
+"	vec4 u_dir_layer;\n" // xy = texel step direction, z = layer.\n
+"};\n"
+"void main() {\n"
+"	vec2 s = u_dir_layer.xy;\n"
+"	float layer = u_dir_layer.z;\n"
+"	vec2 m = texture(u_src, vec3(v_uv, layer)).rg * 0.294;\n"
+"	m += texture(u_src, vec3(v_uv + s * 1.18, layer)).rg * 0.235;\n"
+"	m += texture(u_src, vec3(v_uv - s * 1.18, layer)).rg * 0.235;\n"
+"	m += texture(u_src, vec3(v_uv + s * 2.76, layer)).rg * 0.118;\n"
+"	m += texture(u_src, vec3(v_uv - s * 2.76, layer)).rg * 0.118;\n"
+"	result = vec4(m, 0.0, 1.0);\n"
+"}\n";
 
 // The one lit block shader that carries the whole world. HDR out; tonemap happens in post.
 static const char* s_block_vs =
@@ -504,7 +538,7 @@ static const char* s_block_fs =
 "layout (location = 1) in vec3 v_normal;\n"
 "layout (location = 2) in vec4 v_color;\n"
 "layout (location = 0) out vec4 result;\n"
-"layout (set = 2, binding = 0) uniform sampler2DArrayShadow u_shadow;\n"
+"layout (set = 2, binding = 0) uniform sampler2DArray u_shadow;\n"
 "layout (set = 3, binding = 0) uniform uniform_block {\n"
 "	vec4 u_eye;\n"
 "	vec4 u_sun_dir;\n"
@@ -518,6 +552,7 @@ static const char* s_block_fs =
 "	mat4 u_shadow_vp1;\n"
 "	vec4 u_cascade;\n"        // x = cascade 0 far distance.
 "};\n"
+"float linstep(float lo, float hi, float x) { return clamp((x - lo) / (hi - lo), 0.0, 1.0); }\n"
 "float shadow_sample(vec3 world, float ndl) {\n"
 "	float dist = length(world - u_eye.xyz);\n"
 "	float layer = dist < u_cascade.x ? 0.0 : 1.0;\n"
@@ -525,16 +560,15 @@ static const char* s_block_fs =
 "	vec3 ndc = clip.xyz / clip.w;\n"
 "	vec2 uv = vec2(ndc.x, -ndc.y) * 0.5 + 0.5;\n"
 "	if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) return 1.0;\n"
-"	float bias = clamp(0.0022 * (1.0 - ndl) + 0.0006, 0.0, 0.004) * (layer > 0.5 ? 2.5 : 1.0);\n"
-"	float z = ndc.z - bias;\n"
-"	// Hardware-PCF 2x2 from sampler2DArrayShadow, widened with 4 extra taps.\n"
-"	float texel = 1.6 / 2048.0;\n"
-"	float s = texture(u_shadow, vec4(uv, layer, z));\n"
-"	s += texture(u_shadow, vec4(uv + vec2( texel,  texel), layer, z));\n"
-"	s += texture(u_shadow, vec4(uv + vec2(-texel,  texel), layer, z));\n"
-"	s += texture(u_shadow, vec4(uv + vec2( texel, -texel), layer, z));\n"
-"	s += texture(u_shadow, vec4(uv + vec2(-texel, -texel), layer, z));\n"
-"	return s * 0.2;\n"
+"	// EVSM: Chebyshev upper bound over pre-blurred exponentially-warped moments.\n"
+"	vec2 m = texture(u_shadow, vec3(uv, layer)).rg;\n"
+"	float e = exp(" EVSM_C " * ndc.z);\n"
+"	if (e <= m.x) return 1.0;\n"
+"	float variance = max(m.y - m.x * m.x, 0.00005 * e * e);\n"
+"	float d = e - m.x;\n"
+"	float p = variance / (variance + d * d);\n"
+"	// Light-bleed reduction: crush the low tail, keep the top smooth.\n"
+"	return linstep(0.25, 1.0, p);\n"
 "}\n"
 "void main() {\n"
 "	vec3 n = normalize(v_normal);\n"
@@ -937,24 +971,44 @@ int main(int argc, char* argv[])
 	CF_Mesh cube = s_make_cube_mesh();
 	CF_Shader block_shd = cf_make_shader_from_source(s_block_vs, s_block_fs);
 	CF_Shader sky_shd = cf_make_shader_from_source(s_sky_vs, s_sky_fs);
-	CF_Shader depth_shd = cf_make_shader_from_source(s_depth_vs, s_depth_fs);
+	CF_Shader moment_shd = cf_make_shader_from_source(s_moment_vs, s_moment_fs);
+	CF_Shader shadow_blur_shd = cf_make_shader_from_source(s_fullscreen_vs, s_shadow_blur_fs);
+	CF_Material shadow_blur_mat = cf_make_material();
 
-	// Shadow cascades: one depth 2d-array texture, one canvas per layer.
-	CF_TextureParams sp = cf_texture_defaults(SHADOW_RES, SHADOW_RES);
-	sp.pixel_format = CF_PIXEL_FORMAT_D32_FLOAT;
-	sp.texture_type = CF_TEXTURE_TYPE_2D_ARRAY;
-	sp.layer_count = 2;
-	sp.usage = CF_TEXTURE_USAGE_SAMPLER_BIT | CF_TEXTURE_USAGE_DEPTH_STENCIL_TARGET_BIT;
-	sp.filter = CF_FILTER_LINEAR;
-	sp.compare_enable = true;
-	sp.compare_function = CF_COMPARE_FUNCTION_LESS_THAN_OR_EQUAL;
-	CF_Texture shadow_tex = cf_make_texture(sp);
-	CF_Canvas shadow_canvas[2];
-	for (int i = 0; i < 2; ++i) {
-		CF_CanvasParams cp = cf_canvas_defaults(0, 0);
-		cp.attach_target = shadow_tex;
-		cp.attach_layer = i;
-		shadow_canvas[i] = cf_make_canvas(cp);
+	// EVSM cascades: exponentially-warped depth moments in a color 2d-array (one layer per
+	// cascade), plus a scratch array for the separable blur. Each canvas targets one layer.
+	CF_Texture shadow_tex, shadow_scratch;
+	CF_Canvas shadow_canvas[2], shadow_blur_h[2], shadow_blur_v[2];
+	{
+		CF_TextureParams sp = cf_texture_defaults(SHADOW_RES, SHADOW_RES);
+		sp.pixel_format = CF_PIXEL_FORMAT_R32G32_FLOAT;
+		sp.texture_type = CF_TEXTURE_TYPE_2D_ARRAY;
+		sp.layer_count = 2;
+		sp.usage = CF_TEXTURE_USAGE_SAMPLER_BIT | CF_TEXTURE_USAGE_COLOR_TARGET_BIT;
+		sp.filter = CF_FILTER_LINEAR;
+		shadow_tex = cf_make_texture(sp);
+		shadow_scratch = cf_make_texture(sp);
+		float e = expf(40.0f); // Matches EVSM_C: an empty texel reads as "farthest possible".
+		for (int i = 0; i < 2; ++i) {
+			// Sized defaults so depth_stencil_target params are filled; the attach branch
+			// ignores the color target entirely and sizes depth to the attach mip.
+			CF_CanvasParams cp = cf_canvas_defaults(SHADOW_RES, SHADOW_RES);
+			cp.attach_target = shadow_tex;
+			cp.attach_layer = i;
+			cp.depth_stencil_enable = true; // The moment pass still depth-tests its own boxes.
+			shadow_canvas[i] = cf_make_canvas(cp);
+			cf_canvas_set_clear_color(shadow_canvas[i], cf_make_color_rgba_f(e, e * e, 0, 1.0f));
+
+			CF_CanvasParams hp2 = cf_canvas_defaults(0, 0);
+			hp2.attach_target = shadow_scratch;
+			hp2.attach_layer = i;
+			shadow_blur_h[i] = cf_make_canvas(hp2);
+
+			CF_CanvasParams vp2 = cf_canvas_defaults(0, 0);
+			vp2.attach_target = shadow_tex;
+			vp2.attach_layer = i;
+			shadow_blur_v[i] = cf_make_canvas(vp2);
+		}
 	}
 
 	Post post = { 0 };
@@ -1101,18 +1155,15 @@ int main(int argc, char* argv[])
 			shadow_vp[i] = cf_mul_m4(lproj, lview);
 		}
 
-		// Pass 1 + 2: render the world into each shadow cascade. Same submissions, depth
-		// shader pushed, light matrix as the camera -- multi-pass exactly as the draw3d
-		// header prescribes.
+		// Pass 1 + 2: render the world's shadow moments into each cascade. Same submissions,
+		// moment shader pushed, light matrix as the camera -- multi-pass exactly as the
+		// draw3d header prescribes. No depth bias anywhere: EVSM doesn't need one.
 		CF_RenderState shadow_rs = cf_render_state_3d_defaults();
 		shadow_rs.cull_mode = CF_CULL_MODE_NONE; // Leaf boxes are thin; keep their backs.
-		shadow_rs.enable_depth_bias = true;
-		shadow_rs.depth_bias_constant_factor = 2.0f;
-		shadow_rs.depth_bias_slope_factor = 2.5f;
 		for (int cascade = 0; cascade < 2; ++cascade) {
 			cf_draw3d_push_projection(shadow_vp[cascade]);
 			cf_draw3d_push_view(cf_m4_identity());
-			cf_draw3d_push_shader(depth_shd);
+			cf_draw3d_push_shader(moment_shd);
 			cf_draw3d_push_render_state(shadow_rs);
 			CF_V3 cc = cf_add_v3(player, cf_mul_v3_f(flat_fwd, cascade_r[cascade] * 0.55f));
 			CF_Sphere cull = cf_make_sphere(cc, cascade_r[cascade] * 1.75f);
@@ -1127,6 +1178,21 @@ int main(int argc, char* argv[])
 			cf_draw3d_pop_view();
 			cf_draw3d_pop_projection();
 			cf_render_to(shadow_canvas[cascade], true);
+
+			// Separable gaussian over the cascade's moments: horizontal into the scratch
+			// layer, vertical back into the moment map. This blur is what a comparison
+			// sampler could never allow -- and why the acne is gone.
+			for (int dir = 0; dir < 2; ++dir) {
+				CF_V4 dir_layer = dir == 0
+					? cf_v4(1.0f / SHADOW_RES, 0, (float)cascade, 0)
+					: cf_v4(0, 1.0f / SHADOW_RES, (float)cascade, 0);
+				cf_apply_canvas(dir == 0 ? shadow_blur_h[cascade] : shadow_blur_v[cascade], true);
+				cf_apply_mesh(post.fullscreen);
+				cf_material_set_texture_fs(shadow_blur_mat, "u_src", dir == 0 ? shadow_tex : shadow_scratch);
+				cf_material_set_uniform_fs(shadow_blur_mat, "u_dir_layer", &dir_layer, CF_UNIFORM_TYPE_FLOAT4, 1);
+				cf_apply_shader(shadow_blur_shd, shadow_blur_mat);
+				cf_draw_elements();
+			}
 		}
 
 		// Pass 3: the scene, in HDR.
@@ -1259,11 +1325,18 @@ int main(int argc, char* argv[])
 	cf_destroy_shader(post.down);
 	cf_destroy_shader(post.tonemap);
 	cf_destroy_mesh(post.fullscreen);
-	for (int i = 0; i < 2; ++i) cf_destroy_canvas(shadow_canvas[i]);
+	for (int i = 0; i < 2; ++i) {
+		cf_destroy_canvas(shadow_canvas[i]);
+		cf_destroy_canvas(shadow_blur_h[i]);
+		cf_destroy_canvas(shadow_blur_v[i]);
+	}
 	cf_destroy_texture(shadow_tex);
+	cf_destroy_texture(shadow_scratch);
+	cf_destroy_material(shadow_blur_mat);
+	cf_destroy_shader(shadow_blur_shd);
 	cf_destroy_shader(block_shd);
 	cf_destroy_shader(sky_shd);
-	cf_destroy_shader(depth_shd);
+	cf_destroy_shader(moment_shd);
 	cf_destroy_mesh(cube);
 	cf_destroy_app();
 	return 0;
