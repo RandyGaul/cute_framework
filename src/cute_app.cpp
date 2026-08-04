@@ -156,6 +156,7 @@ static void s_canvas(int w, int h)
 	app->offscreen_canvas = cf_make_canvas(params);
 	app->canvas_w = w;
 	app->canvas_h = h;
+	cf_draw_on_app_canvas_resized(w, h);
 }
 
 void cf_app_recreate_default_canvas_if_needed()
@@ -642,6 +643,10 @@ void cf_app_set_size(int w, int h)
 	app->w = w;
 	app->h = h;
 	app->sync_window = true;
+	// Recreate the app canvas now rather than waiting for the resize event: hidden windows
+	// don't reliably deliver one, and a caller who set the size expects the canvas (and the
+	// default 2d projection that tracks it) to match immediately.
+	cf_app_recreate_default_canvas_if_needed();
 }
 
 void cf_app_get_position(int* x, int* y)

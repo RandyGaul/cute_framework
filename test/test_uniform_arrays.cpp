@@ -11,6 +11,7 @@
 // tools/cute_spirv_test.c) -- offsets, strides, and the upload path on both backends.
 
 #include "test_harness.h"
+#include "test_app_shared.h"
 
 #include <cute.h>
 
@@ -38,10 +39,7 @@ static const char* s_fs =
 
 TEST_CASE(test_uniform_array_roundtrip)
 {
-	int options = CF_APP_OPTIONS_HIDDEN_BIT | CF_APP_OPTIONS_NO_AUDIO_BIT;
-	const char* gles = getenv("CF_TEST_GLES");
-	if (gles && *gles == '1') options |= CF_APP_OPTIONS_GFX_OPENGL_BIT | CF_APP_OPTIONS_GFX_DEBUG_BIT;
-	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, W, H, options, NULL))) return true; // Headless CI: no display/GPU.
+	if (!test_make_app(W, H)) return true; // Headless CI: no display/GPU.
 
 	struct Vertex { float x, y; };
 	Vertex verts[6] = { { -1, -1 }, { 1, -1 }, { 1, 1 }, { -1, -1 }, { 1, 1 }, { -1, 1 } };
@@ -92,7 +90,7 @@ TEST_CASE(test_uniform_array_roundtrip)
 	cf_destroy_material(material);
 	cf_destroy_shader(shader);
 	cf_destroy_mesh(mesh);
-	cf_destroy_app();
+	test_destroy_app();
 	return true;
 }
 
@@ -123,10 +121,7 @@ static const char* s_skin_fs =
 
 TEST_CASE(test_uniform_array_vertex_stage)
 {
-	int options = CF_APP_OPTIONS_HIDDEN_BIT | CF_APP_OPTIONS_NO_AUDIO_BIT;
-	const char* gles = getenv("CF_TEST_GLES");
-	if (gles && *gles == '1') options |= CF_APP_OPTIONS_GFX_OPENGL_BIT | CF_APP_OPTIONS_GFX_DEBUG_BIT;
-	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, W, H, options, NULL))) return true; // Headless CI: no display/GPU.
+	if (!test_make_app(W, H)) return true; // Headless CI: no display/GPU.
 
 	// A quad on the left half bound to bone 1, right half bone 2, hard weights.
 	struct Vertex { float x, y, j[2], w[2]; };
@@ -195,7 +190,7 @@ TEST_CASE(test_uniform_array_vertex_stage)
 	cf_destroy_material(material);
 	cf_destroy_shader(shader);
 	cf_destroy_mesh(mesh);
-	cf_destroy_app();
+	test_destroy_app();
 	return true;
 }
 

@@ -24,6 +24,9 @@
 #include <pico/pico_unit.h>
 
 #include <cute.h>
+#include <string.h>
+
+#include "test_app_shared.h"
 
 TEST_SUITE(test_alloc);
 TEST_SUITE(test_app);
@@ -60,6 +63,7 @@ TEST_SUITE(test_math_c);
 TEST_SUITE(test_math3d_c);
 TEST_SUITE(test_ckit);
 }
+TEST_SUITE(test_jpg);
 
 #include <SDL3/SDL.h>
 
@@ -83,7 +87,17 @@ int main(int argc, char* argv[])
 	setvbuf(stdout, NULL, _IONBF, 0);
 	setvbuf(stderr, NULL, _IONBF, 0);
 
-#define RUN_TRACED(suite_fp) fprintf(stderr, ">>> " #suite_fp "\n"); RUN_TEST_SUITE(suite_fp); fprintf(stderr, "<<< " #suite_fp "\n");
+	// Suite names on the command line select which suites run; no arguments runs everything.
+	//     tests.exe test_draw3d test_mrt
+	auto suite_enabled = [&](const char* name) {
+		if (argc <= 1) return true;
+		for (int i = 1; i < argc; ++i) {
+			if (!strcmp(argv[i], name)) return true;
+		}
+		return false;
+	};
+
+#define RUN_TRACED(suite_fp) if (suite_enabled(#suite_fp)) { fprintf(stderr, ">>> " #suite_fp "\n"); RUN_TEST_SUITE(suite_fp); fprintf(stderr, "<<< " #suite_fp "\n"); }
 	RUN_TRACED(test_alloc);
 	RUN_TRACED(test_app);
 	RUN_TRACED(test_array);
@@ -117,8 +131,10 @@ int main(int argc, char* argv[])
 	RUN_TRACED(test_math3d_c);
 	RUN_TRACED(test_model);
 	RUN_TRACED(test_ckit);
+	RUN_TRACED(test_jpg);
 #undef RUN_TRACED
 
+	test_shutdown_shared_app(); // The shared GPU app dies here so the leak checker sees a clean exit.
 	pu_print_stats();
 	return pu_test_failed();
 }

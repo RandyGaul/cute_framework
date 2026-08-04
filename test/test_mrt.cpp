@@ -10,6 +10,7 @@
 // readback, since a g-buffer is useless if you cannot verify what landed in attachment 1.
 
 #include "test_harness.h"
+#include "test_app_shared.h"
 
 #include <cute.h>
 
@@ -56,10 +57,7 @@ static CF_Pixel s_readback_center(CF_Canvas canvas, int index, CF_Pixel* px)
 
 TEST_CASE(test_mrt_draw_and_clear)
 {
-	int options = CF_APP_OPTIONS_HIDDEN_BIT | CF_APP_OPTIONS_NO_AUDIO_BIT;
-	const char* gles = getenv("CF_TEST_GLES");
-	if (gles && *gles == '1') options |= CF_APP_OPTIONS_GFX_OPENGL_BIT | CF_APP_OPTIONS_GFX_DEBUG_BIT;
-	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, W, H, options, NULL))) return true; // Headless CI: no display/GPU.
+	if (!test_make_app(W, H)) return true; // Headless CI: no display/GPU.
 
 	CF_CanvasParams params = cf_canvas_defaults(W, H);
 	params.target_count = 2;
@@ -108,7 +106,7 @@ TEST_CASE(test_mrt_draw_and_clear)
 	cf_destroy_mesh(mesh);
 	cf_destroy_shader(shader);
 	cf_destroy_canvas(canvas);
-	cf_destroy_app();
+	test_destroy_app();
 	return true;
 }
 
@@ -121,8 +119,7 @@ TEST_CASE(test_mrt_per_target_blend)
 {
 	const char* gles = getenv("CF_TEST_GLES");
 	if (gles && *gles == '1') return true; // No indexed blend on GLES3.
-	int options = CF_APP_OPTIONS_HIDDEN_BIT | CF_APP_OPTIONS_NO_AUDIO_BIT;
-	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, W, H, options, NULL))) return true; // Headless CI: no display/GPU.
+	if (!test_make_app(W, H)) return true; // Headless CI: no display/GPU.
 
 	static const char* white_fs =
 	"layout (location = 0) out vec4 out_a;\n"
@@ -170,7 +167,7 @@ TEST_CASE(test_mrt_per_target_blend)
 	cf_destroy_mesh(mesh);
 	cf_destroy_shader(shader);
 	cf_destroy_canvas(canvas);
-	cf_destroy_app();
+	test_destroy_app();
 	return true;
 }
 
@@ -178,10 +175,7 @@ TEST_CASE(test_mrt_per_target_blend)
 // this member existed -- the compatibility contract for every existing caller.
 TEST_CASE(test_mrt_single_target_compat)
 {
-	int options = CF_APP_OPTIONS_HIDDEN_BIT | CF_APP_OPTIONS_NO_AUDIO_BIT;
-	const char* gles = getenv("CF_TEST_GLES");
-	if (gles && *gles == '1') options |= CF_APP_OPTIONS_GFX_OPENGL_BIT | CF_APP_OPTIONS_GFX_DEBUG_BIT;
-	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, W, H, options, NULL))) return true; // Headless CI: no display/GPU.
+	if (!test_make_app(W, H)) return true; // Headless CI: no display/GPU.
 
 	CF_CanvasParams params = cf_canvas_defaults(W, H);
 	params.target_count = 0; // Zero means one.
@@ -199,7 +193,7 @@ TEST_CASE(test_mrt_single_target_compat)
 
 	cf_free(px);
 	cf_destroy_canvas(canvas);
-	cf_destroy_app();
+	test_destroy_app();
 	return true;
 }
 

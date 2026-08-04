@@ -6,6 +6,7 @@
 */
 
 #include "test_harness.h"
+#include "test_app_shared.h"
 
 #include <cute.h>
 
@@ -19,7 +20,7 @@ using namespace Cute;
 // A directory with a shader next to an extensionless file is the whole repro.
 TEST_CASE(test_shader_directory_survives_extensionless_files)
 {
-	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, 64, 64, CF_APP_OPTIONS_HIDDEN_BIT | CF_APP_OPTIONS_NO_AUDIO_BIT, NULL))) return true; // Headless CI: no display/GPU.
+	if (!test_make_app(64, 64)) return true; // Headless CI: no display/GPU.
 
 	// Build the directory under the write directory so the test owns it outright.
 	const char* base = cf_fs_get_base_directory();
@@ -39,7 +40,7 @@ TEST_CASE(test_shader_directory_survives_extensionless_files)
 	REQUIRE(shd.id);
 	cf_destroy_shader(shd);
 
-	cf_destroy_app();
+	test_destroy_app();
 	return true;
 }
 

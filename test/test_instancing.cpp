@@ -11,6 +11,7 @@
 // instance attributes (model rows, uv rect, mesh attributes) to arbitrary user meshes.
 
 #include "test_harness.h"
+#include "test_app_shared.h"
 
 #include <cute.h>
 
@@ -36,10 +37,7 @@ static const char* s_fs =
 
 TEST_CASE(test_instancing_appended_attributes)
 {
-	int options = CF_APP_OPTIONS_HIDDEN_BIT | CF_APP_OPTIONS_NO_AUDIO_BIT;
-	const char* gles = getenv("CF_TEST_GLES");
-	if (gles && *gles == '1') options |= CF_APP_OPTIONS_GFX_OPENGL_BIT | CF_APP_OPTIONS_GFX_DEBUG_BIT;
-	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, W, H, options, NULL))) return true; // Headless CI: no display/GPU.
+	if (!test_make_app(W, H)) return true; // Headless CI: no display/GPU.
 
 	// The mesh starts life knowing nothing about instancing.
 	struct Vertex { float x, y; };
@@ -101,7 +99,7 @@ TEST_CASE(test_instancing_appended_attributes)
 	cf_destroy_material(material);
 	cf_destroy_shader(shader);
 	cf_destroy_mesh(mesh);
-	cf_destroy_app();
+	test_destroy_app();
 	return true;
 }
 
@@ -110,10 +108,7 @@ TEST_CASE(test_instancing_appended_attributes)
 // two-instance draw as above, but through an index buffer.
 TEST_CASE(test_instancing_indexed)
 {
-	int options = CF_APP_OPTIONS_HIDDEN_BIT | CF_APP_OPTIONS_NO_AUDIO_BIT;
-	const char* gles = getenv("CF_TEST_GLES");
-	if (gles && *gles == '1') options |= CF_APP_OPTIONS_GFX_OPENGL_BIT | CF_APP_OPTIONS_GFX_DEBUG_BIT;
-	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, W, H, options, NULL))) return true; // Headless CI: no display/GPU.
+	if (!test_make_app(W, H)) return true; // Headless CI: no display/GPU.
 
 	struct Vertex { float x, y; };
 	Vertex verts[4] = { { -1, -1 }, { 1, -1 }, { 1, 1 }, { -1, 1 } };
@@ -174,7 +169,7 @@ TEST_CASE(test_instancing_indexed)
 	cf_destroy_material(material);
 	cf_destroy_shader(shader);
 	cf_destroy_mesh(mesh);
-	cf_destroy_app();
+	test_destroy_app();
 	return true;
 }
 
@@ -186,8 +181,7 @@ TEST_CASE(test_instancing_pull_storage)
 {
 	const char* gles = getenv("CF_TEST_GLES");
 	if (gles && *gles == '1') return true; // No SSBOs in GLES3 user shaders.
-	int options = CF_APP_OPTIONS_HIDDEN_BIT | CF_APP_OPTIONS_NO_AUDIO_BIT;
-	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, W, H, options, NULL))) return true; // Headless CI: no display/GPU.
+	if (!test_make_app(W, H)) return true; // Headless CI: no display/GPU.
 
 	static const char* pull_vs =
 	"layout (location = 0) in vec2 in_pos;\n"
@@ -252,7 +246,7 @@ TEST_CASE(test_instancing_pull_storage)
 	cf_destroy_shader(shader);
 	cf_destroy_mesh(mesh);
 	cf_destroy_storage_buffer(sb);
-	cf_destroy_app();
+	test_destroy_app();
 	return true;
 }
 
@@ -262,8 +256,7 @@ TEST_CASE(test_instancing_indirect)
 {
 	const char* gles = getenv("CF_TEST_GLES");
 	if (gles && *gles == '1') return true; // No indirect draw on GLES3.
-	int options = CF_APP_OPTIONS_HIDDEN_BIT | CF_APP_OPTIONS_NO_AUDIO_BIT;
-	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, W, H, options, NULL))) return true; // Headless CI: no display/GPU.
+	if (!test_make_app(W, H)) return true; // Headless CI: no display/GPU.
 
 	static const char* pull_vs =
 	"layout (location = 0) in vec2 in_pos;\n"
@@ -334,7 +327,7 @@ TEST_CASE(test_instancing_indirect)
 	cf_destroy_mesh(mesh);
 	cf_destroy_storage_buffer(sb);
 	cf_destroy_storage_buffer(args_buf);
-	cf_destroy_app();
+	test_destroy_app();
 	return true;
 }
 

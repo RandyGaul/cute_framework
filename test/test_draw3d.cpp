@@ -11,6 +11,7 @@
 // per-submission uniform capture, and the user-owned-instancing escape hatch.
 
 #include "test_harness.h"
+#include "test_app_shared.h"
 
 #include <cute.h>
 
@@ -51,14 +52,6 @@ static const char* s_tint_fs =
 "};\n"
 "void main() { result = v_color * u_tint; }\n";
 
-static int s_options()
-{
-	int options = CF_APP_OPTIONS_HIDDEN_BIT | CF_APP_OPTIONS_NO_AUDIO_BIT;
-	const char* gles = getenv("CF_TEST_GLES");
-	if (gles && *gles == '1') options |= CF_APP_OPTIONS_GFX_OPENGL_BIT | CF_APP_OPTIONS_GFX_DEBUG_BIT;
-	return options;
-}
-
 // A unit quad in the xy plane (CCW winding, front-facing under cf_render_state_3d_defaults).
 static CF_Mesh s_make_quad(float half)
 {
@@ -82,7 +75,7 @@ static CF_Pixel s_pixel(CF_Pixel* px, float fx, float fy) { return px[(int)(H * 
 // one instanced draw, and each instance lands where its captured transform says.
 TEST_CASE(test_draw3d_transforms_and_coalescing)
 {
-	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, W, H, s_options(), NULL))) return true; // Headless CI: no display/GPU.
+	if (!test_make_app(W, H)) return true; // Headless CI: no display/GPU.
 
 	CF_Mesh mesh = s_make_quad(0.2f);
 	CF_Shader shader = cf_make_shader_from_source(s_vs, s_fs);
@@ -134,7 +127,7 @@ TEST_CASE(test_draw3d_transforms_and_coalescing)
 	cf_destroy_canvas(canvas);
 	cf_destroy_shader(shader);
 	cf_destroy_mesh(mesh);
-	cf_destroy_app();
+	test_destroy_app();
 	return true;
 }
 
@@ -145,7 +138,10 @@ TEST_CASE(test_draw3d_transforms_and_coalescing)
 // upload). Prints milliseconds; always passes.
 TEST_CASE(test_draw3d_bench)
 {
-	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, 256, 256, s_options(), NULL))) return true; // Headless CI: no display/GPU.
+	// Costs tens of seconds by design; opt in when measuring flush-path changes.
+	const char* bench = getenv("CF_BENCH");
+	if (!bench || *bench != '1') return true;
+	if (!test_make_app(256, 256)) return true; // Headless CI: no display/GPU.
 
 	CF_Mesh meshes[6];
 	for (int i = 0; i < 6; ++i) meshes[i] = s_make_quad(0.01f + 0.002f * i);
@@ -196,7 +192,7 @@ TEST_CASE(test_draw3d_bench)
 	for (int i = 0; i < 6; ++i) cf_destroy_mesh(meshes[i]);
 	cf_destroy_canvas(canvas);
 	cf_destroy_shader(shader);
-	cf_destroy_app();
+	test_destroy_app();
 	return true;
 }
 
@@ -204,7 +200,7 @@ TEST_CASE(test_draw3d_bench)
 // in a single cf_render_to, in both directions.
 TEST_CASE(test_draw3d_layers_with_2d)
 {
-	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, W, H, s_options(), NULL))) return true; // Headless CI: no display/GPU.
+	if (!test_make_app(W, H)) return true; // Headless CI: no display/GPU.
 
 	CF_Mesh mesh = s_make_quad(0.5f);
 	CF_Shader shader = cf_make_shader_from_source(s_vs, s_fs);
@@ -258,7 +254,7 @@ TEST_CASE(test_draw3d_layers_with_2d)
 	cf_destroy_canvas(canvas);
 	cf_destroy_shader(shader);
 	cf_destroy_mesh(mesh);
-	cf_destroy_app();
+	test_destroy_app();
 	return true;
 }
 
@@ -266,7 +262,7 @@ TEST_CASE(test_draw3d_layers_with_2d)
 // coalescing group and each draw sees its own value.
 TEST_CASE(test_draw3d_uniform_capture)
 {
-	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, W, H, s_options(), NULL))) return true; // Headless CI: no display/GPU.
+	if (!test_make_app(W, H)) return true; // Headless CI: no display/GPU.
 
 	CF_Mesh mesh = s_make_quad(0.2f);
 	CF_Shader shader = cf_make_shader_from_source(s_vs, s_tint_fs);
@@ -314,7 +310,7 @@ TEST_CASE(test_draw3d_uniform_capture)
 	cf_destroy_canvas(canvas);
 	cf_destroy_shader(shader);
 	cf_destroy_mesh(mesh);
-	cf_destroy_app();
+	test_destroy_app();
 	return true;
 }
 
@@ -337,7 +333,7 @@ static const char* s_escape_fs =
 
 TEST_CASE(test_draw3d_escape_hatch)
 {
-	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, W, H, s_options(), NULL))) return true; // Headless CI: no display/GPU.
+	if (!test_make_app(W, H)) return true; // Headless CI: no display/GPU.
 
 	struct Vertex { float x, y; };
 	Vertex verts[6] = { { -1, -1 }, { 1, -1 }, { 1, 1 }, { -1, -1 }, { 1, 1 }, { -1, 1 } };
@@ -399,7 +395,7 @@ TEST_CASE(test_draw3d_escape_hatch)
 	cf_destroy_canvas(canvas);
 	cf_destroy_shader(shader);
 	cf_destroy_mesh(mesh);
-	cf_destroy_app();
+	test_destroy_app();
 	return true;
 }
 
@@ -408,7 +404,7 @@ TEST_CASE(test_draw3d_escape_hatch)
 // a transform pushed at replay time moves the whole list.
 TEST_CASE(test_draw3d_draw_list)
 {
-	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, W, H, s_options(), NULL))) return true; // Headless CI: no display/GPU.
+	if (!test_make_app(W, H)) return true; // Headless CI: no display/GPU.
 
 	CF_Mesh mesh_a = s_make_quad(0.2f);
 	CF_Mesh mesh_b = s_make_quad(0.1f);
@@ -488,7 +484,7 @@ TEST_CASE(test_draw3d_draw_list)
 	cf_destroy_shader(shader);
 	cf_destroy_mesh(mesh_a);
 	cf_destroy_mesh(mesh_b);
-	cf_destroy_app();
+	test_destroy_app();
 	return true;
 }
 
@@ -514,7 +510,7 @@ static const char* s_nmat_vs =
 
 TEST_CASE(test_draw3d_baked_normal_matrices)
 {
-	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, W, H, s_options(), NULL))) return true; // Headless CI: no display/GPU.
+	if (!test_make_app(W, H)) return true; // Headless CI: no display/GPU.
 
 	CF_Mesh mesh = s_make_quad(0.3f);
 	CF_Shader shader = cf_make_shader_from_source(s_nmat_vs, s_fs);
@@ -567,7 +563,7 @@ TEST_CASE(test_draw3d_baked_normal_matrices)
 	cf_destroy_canvas(canvas);
 	cf_destroy_shader(shader);
 	cf_destroy_mesh(mesh);
-	cf_destroy_app();
+	test_destroy_app();
 	return true;
 }
 
@@ -600,7 +596,7 @@ static const char* s_sprite_fs =
 
 TEST_CASE(test_draw3d_sprite_textured)
 {
-	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, W, H, s_options(), NULL))) return true; // Headless CI: no display/GPU.
+	if (!test_make_app(W, H)) return true; // Headless CI: no display/GPU.
 
 	// A quad with uvs; uv (0, 0) samples the image's top-left, like 2d sprites.
 	struct Vertex { float x, y, z, u, v; };
@@ -678,7 +674,7 @@ TEST_CASE(test_draw3d_sprite_textured)
 	cf_destroy_mesh(mesh);
 	cf_easy_sprite_unload(&sprite_red);
 	cf_easy_sprite_unload(&sprite_green);
-	cf_destroy_app();
+	test_destroy_app();
 	return true;
 }
 
@@ -688,7 +684,7 @@ TEST_CASE(test_draw3d_sprite_textured)
 // two frames of replay must both sample the right images.
 TEST_CASE(test_draw3d_sprite_textured_baked)
 {
-	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, W, H, s_options(), NULL))) return true; // Headless CI: no display/GPU.
+	if (!test_make_app(W, H)) return true; // Headless CI: no display/GPU.
 
 	struct Vertex { float x, y, z, u, v; };
 	Vertex verts[6] = {
@@ -768,7 +764,7 @@ TEST_CASE(test_draw3d_sprite_textured_baked)
 	cf_destroy_mesh(mesh);
 	cf_easy_sprite_unload(&sprite_red);
 	cf_easy_sprite_unload(&sprite_green);
-	cf_destroy_app();
+	test_destroy_app();
 	return true;
 }
 
@@ -785,7 +781,7 @@ static const char* s_mrt_fs =
 
 TEST_CASE(test_draw3d_mrt)
 {
-	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, W, H, s_options(), NULL))) return true; // Headless CI: no display/GPU.
+	if (!test_make_app(W, H)) return true; // Headless CI: no display/GPU.
 
 	CF_Mesh mesh = s_make_quad(0.5f);
 	CF_Shader shader = cf_make_shader_from_source(s_vs, s_mrt_fs);
@@ -823,7 +819,7 @@ TEST_CASE(test_draw3d_mrt)
 	cf_destroy_canvas(canvas);
 	cf_destroy_shader(shader);
 	cf_destroy_mesh(mesh);
-	cf_destroy_app();
+	test_destroy_app();
 	return true;
 }
 
@@ -832,8 +828,7 @@ TEST_CASE(test_draw3d_mrt)
 // perspective and orthographic projections alike.
 TEST_CASE(test_draw3d_project_unproject)
 {
-	int options = CF_APP_OPTIONS_HIDDEN_BIT | CF_APP_OPTIONS_NO_AUDIO_BIT;
-	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, W, H, options, NULL))) return true; // Headless CI: no display/GPU.
+	if (!test_make_app(W, H)) return true; // Headless CI: no display/GPU.
 
 	CF_M4x4 projections[2] = {
 		cf_perspective(CF_PI / 3.0f, 1.0f, 0.5f, 100.0f),
@@ -867,7 +862,7 @@ TEST_CASE(test_draw3d_project_unproject)
 		cf_draw3d_pop_projection();
 	}
 
-	cf_destroy_app();
+	test_destroy_app();
 	return true;
 }
 
@@ -876,7 +871,7 @@ TEST_CASE(test_draw3d_project_unproject)
 // plain sprite is edge-on and invisible.
 TEST_CASE(test_draw3d_sprite_and_billboard)
 {
-	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, W, H, s_options(), NULL))) return true; // Headless CI: no display/GPU.
+	if (!test_make_app(W, H)) return true; // Headless CI: no display/GPU.
 
 	CF_Pixel red[64], green[64];
 	for (int i = 0; i < 64; ++i) {
@@ -949,7 +944,7 @@ TEST_CASE(test_draw3d_sprite_and_billboard)
 	cf_destroy_shader(shader);
 	cf_easy_sprite_unload(&sprite_red);
 	cf_easy_sprite_unload(&sprite_green);
-	cf_destroy_app();
+	test_destroy_app();
 	return true;
 }
 
@@ -958,7 +953,7 @@ TEST_CASE(test_draw3d_sprite_and_billboard)
 // resolve happens on backends that multisample; GLES clamps to one sample and still passes).
 TEST_CASE(test_draw3d_msaa)
 {
-	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, W, H, s_options(), NULL))) return true; // Headless CI: no display/GPU.
+	if (!test_make_app(W, H)) return true; // Headless CI: no display/GPU.
 
 	CF_Mesh mesh = s_make_quad(0.5f);
 	CF_Shader shader = cf_make_shader_from_source(s_vs, s_fs);
@@ -1000,7 +995,7 @@ TEST_CASE(test_draw3d_msaa)
 	cf_destroy_canvas(plain);
 	cf_destroy_shader(shader);
 	cf_destroy_mesh(mesh);
-	cf_destroy_app();
+	test_destroy_app();
 	return true;
 }
 
@@ -1008,7 +1003,7 @@ TEST_CASE(test_draw3d_msaa)
 // under the built-in shaders, honoring the color stack, with no user shader pushed at all.
 TEST_CASE(test_draw3d_shapes)
 {
-	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, W, H, s_options(), NULL))) return true; // Headless CI: no display/GPU.
+	if (!test_make_app(W, H)) return true; // Headless CI: no display/GPU.
 
 	CF_CanvasParams params = cf_canvas_defaults(W, H);
 	params.depth_stencil_enable = true;
@@ -1076,7 +1071,7 @@ TEST_CASE(test_draw3d_shapes)
 	cf_draw3d_pop_projection();
 	cf_free(px);
 	cf_destroy_canvas(canvas);
-	cf_destroy_app();
+	test_destroy_app();
 	return true;
 }
 
@@ -1084,7 +1079,7 @@ TEST_CASE(test_draw3d_shapes)
 // built-in stroke and solid results, with per-shape attributes flowing through ShapeParams.
 TEST_CASE(test_draw3d_shape_shader)
 {
-	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, W, H, s_options(), NULL))) return true; // Headless CI: no display/GPU.
+	if (!test_make_app(W, H)) return true; // Headless CI: no display/GPU.
 
 	CF_CanvasParams params = cf_canvas_defaults(W, H);
 	params.depth_stencil_enable = true;
@@ -1131,7 +1126,7 @@ TEST_CASE(test_draw3d_shape_shader)
 	cf_destroy_shader(shd); // Also destroys the hidden solid-variant sibling.
 	cf_free(px);
 	cf_destroy_canvas(canvas);
-	cf_destroy_app();
+	test_destroy_app();
 	return true;
 }
 
@@ -1139,7 +1134,7 @@ TEST_CASE(test_draw3d_shape_shader)
 // on-screen width under perspective in pixel mode. Also covers the second attributes lane.
 TEST_CASE(test_draw3d_stroke_sizing)
 {
-	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, W, H, s_options(), NULL))) return true; // Headless CI: no display/GPU.
+	if (!test_make_app(W, H)) return true; // Headless CI: no display/GPU.
 
 	CF_CanvasParams params = cf_canvas_defaults(W, H);
 	params.depth_stencil_enable = true;
@@ -1210,14 +1205,14 @@ TEST_CASE(test_draw3d_stroke_sizing)
 
 	cf_free(px);
 	cf_destroy_canvas(canvas);
-	cf_destroy_app();
+	test_destroy_app();
 	return true;
 }
 
 // The second per-instance lane rides in_uv_rect when no sprite texture is pushed.
 TEST_CASE(test_draw3d_attributes2)
 {
-	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, W, H, s_options(), NULL))) return true; // Headless CI: no display/GPU.
+	if (!test_make_app(W, H)) return true; // Headless CI: no display/GPU.
 
 	CF_CanvasParams params = cf_canvas_defaults(W, H);
 	params.depth_stencil_enable = true;
@@ -1281,7 +1276,7 @@ TEST_CASE(test_draw3d_attributes2)
 	cf_destroy_mesh(mesh);
 	cf_destroy_shader(shader);
 	cf_destroy_canvas(canvas);
-	cf_destroy_app();
+	test_destroy_app();
 	return true;
 }
 
@@ -1289,7 +1284,7 @@ TEST_CASE(test_draw3d_attributes2)
 // a batch must be named correctly -- the whole point is that the reason is trustworthy.
 TEST_CASE(test_draw3d_stats)
 {
-	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, W, H, s_options(), NULL))) return true; // Headless CI: no display/GPU.
+	if (!test_make_app(W, H)) return true; // Headless CI: no display/GPU.
 
 	CF_Mesh mesh = s_make_quad(0.4f);
 	CF_Mesh other = s_make_quad(0.2f);
@@ -1358,7 +1353,7 @@ TEST_CASE(test_draw3d_stats)
 	cf_destroy_mesh(other);
 	cf_destroy_shader(shader);
 	cf_destroy_shader(shader2);
-	cf_destroy_app();
+	test_destroy_app();
 	return true;
 }
 
@@ -1370,7 +1365,7 @@ TEST_CASE(test_draw3d_stats)
 // spacer commands each mesh submission leaves on the stream.
 TEST_CASE(test_draw3d_depth_writer_order)
 {
-	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, W, H, s_options(), NULL))) return true; // Headless CI: no display/GPU.
+	if (!test_make_app(W, H)) return true; // Headless CI: no display/GPU.
 
 	CF_Mesh mesh = s_make_quad(0.4f);
 	CF_Shader shader = cf_make_shader_from_source(s_vs, s_fs);
@@ -1424,7 +1419,7 @@ TEST_CASE(test_draw3d_depth_writer_order)
 	cf_destroy_canvas(canvas);
 	cf_destroy_shader(shader);
 	cf_destroy_mesh(mesh);
-	cf_destroy_app();
+	test_destroy_app();
 	return true;
 }
 

@@ -454,6 +454,10 @@ void cf_draw3d_free_cmd(CF_Command* cmd);
 // Runs the atlas defrag at most once per frame (see CF_Draw::defragged_this_frame).
 void cf_atlas_defrag_once();
 
+// Called when the app's offscreen canvas is recreated (window resize / cf_app_set_size):
+// refreshes the default 2d projection, which tracks the app canvas 1:1.
+void cf_draw_on_app_canvas_resized(int w, int h);
+
 // Called by cf_render_layers_to before the canvas (and its render pass) is applied: stages
 // every in-range untextured mesh command's instance data into one shared GPU instance buffer
 // in a single upload, so cf_draw3d_process never tears down the live render pass to upload.

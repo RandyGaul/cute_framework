@@ -5193,6 +5193,15 @@ static void s_process_command(CF_Canvas canvas, CF_Command* cmd, CF_Command* nex
 // with N mesh/canvas fences into N full defrags. Images first seen after this frame's defrag
 // ride the lonely buffer (own texture, own batch) until the next frame's defrag packs them:
 // one frame of extra draw calls for brand-new content, instead of N defrags every frame.
+void cf_draw_on_app_canvas_resized(int w, int h)
+{
+	// The default 2d projection tracks the app canvas 1:1. It used to be computed once at
+	// startup and never again, so any resize (cf_app_set_size or a user dragging a resizable
+	// window) silently rescaled every world-space 2d draw. Refresh it with the canvas; a
+	// custom cf_draw_projection is per-frame state and simply overrides this as usual.
+	if (s_draw) s_draw->projection = ortho_2d(0, 0, (float)w, (float)h);
+}
+
 void cf_atlas_defrag_once()
 {
 	if (s_draw->delay_defrag || s_draw->defragged_this_frame) return;

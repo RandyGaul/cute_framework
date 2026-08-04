@@ -15,6 +15,7 @@
 // requests SAMPLER usage.
 
 #include "test_harness.h"
+#include "test_app_shared.h"
 
 #include <cute.h>
 
@@ -62,10 +63,7 @@ static CF_Mesh s_make_fullscreen_quad()
 
 TEST_CASE(test_shadow_compare_sampling)
 {
-	int options = CF_APP_OPTIONS_HIDDEN_BIT | CF_APP_OPTIONS_NO_AUDIO_BIT;
-	const char* gles = getenv("CF_TEST_GLES");
-	if (gles && *gles == '1') options |= CF_APP_OPTIONS_GFX_OPENGL_BIT | CF_APP_OPTIONS_GFX_DEBUG_BIT;
-	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, W, H, options, NULL))) return true; // Headless CI: no display/GPU.
+	if (!test_make_app(W, H)) return true; // Headless CI: no display/GPU.
 
 	// Depth canvas whose depth attachment carries a comparison sampler.
 	CF_CanvasParams params = cf_canvas_defaults(W, H);
@@ -136,7 +134,7 @@ TEST_CASE(test_shadow_compare_sampling)
 	cf_destroy_shader(depth_shader);
 	cf_destroy_mesh(mesh);
 	cf_destroy_canvas(depth_canvas);
-	cf_destroy_app();
+	test_destroy_app();
 	return true;
 }
 

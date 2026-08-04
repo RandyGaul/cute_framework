@@ -11,6 +11,7 @@
 // new sampler dims -- on whichever backend the suite runs.
 
 #include "test_harness.h"
+#include "test_app_shared.h"
 
 #include <cute.h>
 
@@ -76,10 +77,7 @@ static CF_Pixel s_draw_and_read(CF_Canvas canvas, CF_Mesh mesh, CF_Shader shader
 
 TEST_CASE(test_cube_map_sample)
 {
-	int options = CF_APP_OPTIONS_HIDDEN_BIT | CF_APP_OPTIONS_NO_AUDIO_BIT;
-	const char* gles = getenv("CF_TEST_GLES");
-	if (gles && *gles == '1') options |= CF_APP_OPTIONS_GFX_OPENGL_BIT | CF_APP_OPTIONS_GFX_DEBUG_BIT;
-	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, W, H, options, NULL))) return true; // Headless CI: no display/GPU.
+	if (!test_make_app(W, H)) return true; // Headless CI: no display/GPU.
 
 	CF_TextureParams tp = cf_texture_defaults(32, 32);
 	tp.texture_type = CF_TEXTURE_TYPE_CUBE;
@@ -123,16 +121,13 @@ TEST_CASE(test_cube_map_sample)
 	cf_destroy_mesh(mesh);
 	cf_destroy_shader(shader);
 	cf_destroy_texture(cube);
-	cf_destroy_app();
+	test_destroy_app();
 	return true;
 }
 
 TEST_CASE(test_texture_array_sample)
 {
-	int options = CF_APP_OPTIONS_HIDDEN_BIT | CF_APP_OPTIONS_NO_AUDIO_BIT;
-	const char* gles = getenv("CF_TEST_GLES");
-	if (gles && *gles == '1') options |= CF_APP_OPTIONS_GFX_OPENGL_BIT | CF_APP_OPTIONS_GFX_DEBUG_BIT;
-	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, W, H, options, NULL))) return true; // Headless CI: no display/GPU.
+	if (!test_make_app(W, H)) return true; // Headless CI: no display/GPU.
 
 	CF_TextureParams tp = cf_texture_defaults(32, 32);
 	tp.texture_type = CF_TEXTURE_TYPE_2D_ARRAY;
@@ -174,7 +169,7 @@ TEST_CASE(test_texture_array_sample)
 	cf_destroy_mesh(mesh);
 	cf_destroy_shader(shader);
 	cf_destroy_texture(layers);
-	cf_destroy_app();
+	test_destroy_app();
 	return true;
 }
 
@@ -182,10 +177,7 @@ TEST_CASE(test_texture_array_sample)
 // then sample the cube to verify each face took its clear color.
 TEST_CASE(test_render_to_cube_face)
 {
-	int options = CF_APP_OPTIONS_HIDDEN_BIT | CF_APP_OPTIONS_NO_AUDIO_BIT;
-	const char* gles = getenv("CF_TEST_GLES");
-	if (gles && *gles == '1') options |= CF_APP_OPTIONS_GFX_OPENGL_BIT | CF_APP_OPTIONS_GFX_DEBUG_BIT;
-	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, W, H, options, NULL))) return true; // Headless CI: no display/GPU.
+	if (!test_make_app(W, H)) return true; // Headless CI: no display/GPU.
 
 	CF_TextureParams tp = cf_texture_defaults(32, 32);
 	tp.texture_type = CF_TEXTURE_TYPE_CUBE;
@@ -236,7 +228,7 @@ TEST_CASE(test_render_to_cube_face)
 	cf_destroy_mesh(mesh);
 	cf_destroy_shader(shader);
 	cf_destroy_texture(cube);
-	cf_destroy_app();
+	test_destroy_app();
 	return true;
 }
 
@@ -262,10 +254,7 @@ static const char* s_cube_lod_fs =
 // throughout, so a wrong mip target can't pass.
 TEST_CASE(test_attach_mip)
 {
-	int options = CF_APP_OPTIONS_HIDDEN_BIT | CF_APP_OPTIONS_NO_AUDIO_BIT;
-	const char* gles = getenv("CF_TEST_GLES");
-	if (gles && *gles == '1') options |= CF_APP_OPTIONS_GFX_OPENGL_BIT | CF_APP_OPTIONS_GFX_DEBUG_BIT;
-	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, W, H, options, NULL))) return true; // Headless CI: no display/GPU.
+	if (!test_make_app(W, H)) return true; // Headless CI: no display/GPU.
 
 	// A mipmapped 2D render target: clear mip 0 blue and mip 1 red through two canvases.
 	CF_TextureParams tp = cf_texture_defaults(64, 64);
@@ -344,7 +333,7 @@ TEST_CASE(test_attach_mip)
 	cf_destroy_shader(cube_shader);
 	cf_destroy_texture(tex);
 	cf_destroy_texture(cube);
-	cf_destroy_app();
+	test_destroy_app();
 	return true;
 }
 
@@ -400,11 +389,9 @@ static void s_render_depth_face(CF_Texture target, int layer, float depth_value,
 // so cube-face depth rendering silently misses there (Vulkan/Metal are expected to work).
 TEST_CASE(test_depth_attach)
 {
-	int options = CF_APP_OPTIONS_HIDDEN_BIT | CF_APP_OPTIONS_NO_AUDIO_BIT;
 	const char* gles = getenv("CF_TEST_GLES");
 	bool is_gles = gles && *gles == '1';
-	if (is_gles) options |= CF_APP_OPTIONS_GFX_OPENGL_BIT | CF_APP_OPTIONS_GFX_DEBUG_BIT;
-	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, W, H, options, NULL))) return true; // Headless CI: no display/GPU.
+	if (!test_make_app(W, H)) return true; // Headless CI: no display/GPU.
 
 	CF_Shader depth_shd = cf_make_shader_from_source(s_depth_vs, s_depth_fs);
 	REQUIRE(depth_shd.id);
@@ -488,7 +475,7 @@ TEST_CASE(test_depth_attach)
 	cf_destroy_material(depth_mat);
 	cf_destroy_mesh(mesh);
 	cf_destroy_shader(depth_shd);
-	cf_destroy_app();
+	test_destroy_app();
 	return true;
 }
 

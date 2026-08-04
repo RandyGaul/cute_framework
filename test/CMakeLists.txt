@@ -33,8 +33,10 @@ set(CF_TEST_SRCS
 	test_math3d.c
 	test_ckit.c
 	test_model.cpp
+	test_jpg.cpp
+	test_app_shared.cpp
 )
-set(CF_TEST_HDRS test_harness.h)
+set(CF_TEST_HDRS test_harness.h test_app_shared.h jpg_test_vectors.h)
 
 add_executable(tests ${CF_TEST_SRCS} ${CF_TEST_HDRS})
 target_link_libraries(tests PRIVATE cute)

@@ -9,6 +9,7 @@
 // reload; the low-level path -- the only one a custom 3d vertex stage can use -- could not.
 
 #include "test_harness.h"
+#include "test_app_shared.h"
 
 #include <cute.h>
 
@@ -60,7 +61,7 @@ static CF_Pixel s_render_probe(CF_Mesh mesh, CF_Shader shader, CF_Material mater
 
 TEST_CASE(test_two_file_shader_reload)
 {
-	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, W, H, CF_APP_OPTIONS_HIDDEN_BIT | CF_APP_OPTIONS_NO_AUDIO_BIT, NULL))) return true; // Headless CI: no display/GPU.
+	if (!test_make_app(W, H)) return true; // Headless CI: no display/GPU.
 
 	const char* base = cf_fs_get_base_directory();
 	cf_fs_set_write_directory(base);
@@ -110,7 +111,7 @@ TEST_CASE(test_two_file_shader_reload)
 	cf_destroy_material(material);
 	cf_destroy_mesh(mesh);
 	cf_destroy_shader(shader);
-	cf_destroy_app();
+	test_destroy_app();
 	return true;
 }
 
@@ -118,13 +119,13 @@ TEST_CASE(test_two_file_shader_reload)
 // mid-write took the app down instead of keeping the last good shader.
 TEST_CASE(test_make_shader_missing_file_is_not_fatal)
 {
-	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, W, H, CF_APP_OPTIONS_HIDDEN_BIT | CF_APP_OPTIONS_NO_AUDIO_BIT, NULL))) return true; // Headless CI: no display/GPU.
+	if (!test_make_app(W, H)) return true; // Headless CI: no display/GPU.
 
 	CF_Shader shader = cf_make_shader("/definitely_not_here.vs", "/definitely_not_here.fs");
 	REQUIRE(shader.id == 0);
 	REQUIRE(cf_shader_compile_error() != NULL); // And it says why.
 
-	cf_destroy_app();
+	test_destroy_app();
 	return true;
 }
 
