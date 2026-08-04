@@ -213,6 +213,7 @@ struct CF_Draw3d
 	// and `staged` holds uv-filled instance copies for the per-page uploads.
 	bool resolving = false;
 	Cute::Array<CF_PendingUV> resolve_uvs;
+	Cute::Map<int> resolve_dedupe; // image id -> representative instance index, per command.
 	Cute::Array<CF_MeshInstance3d> staged;
 	Cute::Array<CF_MeshInstance3d> page;
 
@@ -1778,7 +1779,15 @@ void cf_draw3d_process(CF_Command* cmd, CF_Canvas canvas, bool clear)
 		CF_ASSERT(image_refs.count() == instances.count());
 		s_draw3d->resolve_uvs.clear();
 		s_draw3d->resolve_uvs.set_count(instances.count());
+		// Deduplicate by image: 10k instances of 5 sprites push 5 entries through the atlas
+		// (its sort and hashing are per entry), not 10k. One representative per image gets a
+		// resolved uv, fanned back out to every instance below. Pushing once per unique
+		// image per flush is still the atlas's usage signal.
+		s_draw3d->resolve_dedupe.clear();
 		for (int i = 0; i < instances.count(); ++i) {
+			uint64_t image_id = image_refs[i].entry.image_id;
+			if (s_draw3d->resolve_dedupe.try_find(image_id)) continue;
+			s_draw3d->resolve_dedupe.add(image_id, i);
 			atlas_cache_entry_t e = image_refs[i].entry;
 			e.udata = (ATLAS_CACHE_U64)i;
 			atlas_cache_push(&s_draw->atlas_cache, e);
@@ -1787,6 +1796,10 @@ void cf_draw3d_process(CF_Command* cmd, CF_Canvas canvas, bool clear)
 		cf_atlas_defrag_once();
 		atlas_cache_flush(&s_draw->atlas_cache);
 		s_draw3d->resolving = false;
+		for (int i = 0; i < instances.count(); ++i) {
+			int rep = s_draw3d->resolve_dedupe.find(image_refs[i].entry.image_id);
+			if (rep != i) s_draw3d->resolve_uvs[i] = s_draw3d->resolve_uvs[rep];
+		}
 
 		// Stage uv-filled instance copies. The rect packs as (minx, maxy, maxx, miny) so mesh
 		// uv (0, 0) samples the image's top-left, matching 2d sprites; atlased images inset
@@ -1932,7 +1945,39 @@ static bool s_bake_group_match(const CF_Command* a, const CF_Command* b)
 		if (ma->textures[i].name != mb->textures[i].name) return false;
 		if (ma->textures[i].texture.id != mb->textures[i].texture.id) return false;
 	}
+	if (ma->vs_storage_count != mb->vs_storage_count) return false;
+	for (int i = 0; i < ma->vs_storage_count; ++i) {
+		if (ma->vs_storage[i].id != mb->vs_storage[i].id) return false;
+	}
 	return true;
+}
+
+// Content hash matching s_bake_group_match's equality, so bake grouping buckets in O(n)
+// instead of comparing every command pair. Collisions are handled by verifying with the
+// full match before merging.
+static uint64_t s_bake_group_hash(const CF_Command* c)
+{
+	const CF_MeshCmd3d* mc = c->mesh3d;
+	uint64_t h = cf_fnv1a(&mc->mesh.id, (int)sizeof(mc->mesh.id));
+	int meta[2] = { mc->sprite_textured ? 1 : 0, c->layer };
+	h ^= cf_fnv1a(meta, (int)sizeof(meta));
+	h ^= cf_fnv1a(&c->shader.id, (int)sizeof(c->shader.id));
+	h ^= cf_fnv1a(&c->render_state, (int)sizeof(c->render_state));
+	h ^= cf_fnv1a(&c->scissor, (int)sizeof(c->scissor));
+	h ^= cf_fnv1a(&c->viewport, (int)sizeof(c->viewport));
+	for (int i = 0; i < mc->uniforms.count(); ++i) {
+		const CF_Uniform3d& u = mc->uniforms[i];
+		h ^= cf_fnv1a(&u.name, (int)sizeof(u.name));
+		h ^= cf_fnv1a(u.data, u.size);
+	}
+	for (int i = 0; i < mc->textures.count(); ++i) {
+		h ^= cf_fnv1a(&mc->textures[i].name, (int)sizeof(mc->textures[i].name));
+		h ^= cf_fnv1a(&mc->textures[i].texture.id, (int)sizeof(uint64_t));
+	}
+	for (int i = 0; i < mc->vs_storage_count; ++i) {
+		h ^= cf_fnv1a(&mc->vs_storage[i].id, (int)sizeof(uint64_t));
+	}
+	return h;
 }
 
 // Resolves a payload's borrowed data to owned copies -- a nested replay recorded into this
@@ -1993,20 +2038,34 @@ void cf_draw3d_list_end(CF_DrawListData* data)
 		if (!data->cmds[i].mesh3d) continue;
 		s_own_payload(data->cmds[i].mesh3d);
 	}
-	for (int i = 0; i < count; ++i) {
-		CF_MeshCmd3d* group = data->cmds[i].mesh3d;
-		if (!group || group->escape) continue;
-		for (int j = i + 1; j < count; ++j) {
-			CF_MeshCmd3d* mc = data->cmds[j].mesh3d;
+	// Group in O(n): bucket commands by a content hash of their full captured state, verify
+	// with the exact match before merging (hash collisions fall through to a new group).
+	// Merging into the FIRST match preserves the old pairwise loop's semantics.
+	{
+		Cute::Map<Cute::Array<int>> buckets;
+		for (int i = 0; i < count; ++i) {
+			CF_MeshCmd3d* mc = data->cmds[i].mesh3d;
 			if (!mc || mc->escape) continue;
-			if (!s_bake_group_match(&data->cmds[i], &data->cmds[j])) continue;
-			for (int k = 0; k < mc->instances.count(); ++k) {
-				group->instances.add(mc->instances[k]);
+			uint64_t h = s_bake_group_hash(&data->cmds[i]);
+			Cute::Array<int>* bucket = buckets.try_find(h);
+			if (!bucket) {
+				Cute::Array<int> fresh;
+				fresh.add(i);
+				buckets.add(h, fresh);
+				continue;
 			}
-			for (int k = 0; k < mc->image_refs.count(); ++k) {
-				group->image_refs.add(mc->image_refs[k]);
+			int merged_into = -1;
+			for (int b = 0; b < bucket->count(); ++b) {
+				int j = (*bucket)[b];
+				if (!s_bake_group_match(&data->cmds[j], &data->cmds[i])) continue;
+				CF_MeshCmd3d* group = data->cmds[j].mesh3d;
+				for (int k = 0; k < mc->instances.count(); ++k) group->instances.add(mc->instances[k]);
+				for (int k = 0; k < mc->image_refs.count(); ++k) group->image_refs.add(mc->image_refs[k]);
+				cf_draw3d_free_cmd(&data->cmds[i]);
+				merged_into = j;
+				break;
 			}
-			cf_draw3d_free_cmd(&data->cmds[j]);
+			if (merged_into < 0) bucket->add(i);
 		}
 	}
 	// Compact out the merged-away commands (their payloads are freed; order is preserved).
