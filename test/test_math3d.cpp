@@ -111,10 +111,113 @@ TEST_CASE(test_projection_cpp) {
 	return true;
 }
 
+// Rays against the three primitive shapes: impact distances, surface normals, misses, and
+// the documented inside-the-shape behaviors.
+TEST_CASE(test_geometry_raycasts_cpp) {
+	// Ray straight down +z into a unit box centered at origin: hits the -z face at t = 4.
+	CF_Ray3 ray = cf_ray3(V3(0, 0, -5), V3(0, 0, 5));
+	CF_Aabb3 box = cf_make_aabb3_center(V3(0, 0, 0), V3(1, 1, 1));
+	CF_Raycast3 hit = cf_ray3_to_aabb3(ray, box);
+	REQUIRE(hit.hit);
+	REQUIRE(near_f(hit.t, 4.0f));
+	REQUIRE(near_v3(hit.n, V3(0, 0, -1)));
+
+	// Same ray, box shifted out of the way: miss. Box behind the ray: miss.
+	REQUIRE(!cf_ray3_to_aabb3(ray, cf_make_aabb3_center(V3(3, 0, 0), V3(1, 1, 1))).hit);
+	REQUIRE(!cf_ray3_to_aabb3(ray, cf_make_aabb3_center(V3(0, 0, -10), V3(1, 1, 1))).hit);
+
+	// Starting inside reports t = 0.
+	CF_Raycast3 inside = cf_ray3_to_aabb3(cf_ray3(V3(0, 0, 0), V3(0, 0, 5)), box);
+	REQUIRE(inside.hit && near_f(inside.t, 0.0f));
+
+	// Sphere: hit distance and outward normal at the impact point.
+	CF_Sphere sphere = cf_make_sphere(V3(0, 0, 0), 1.0f);
+	hit = cf_ray3_to_sphere(cf_ray3(V3(0, 0, -5), V3(0, 0, 5)), sphere);
+	REQUIRE(hit.hit);
+	REQUIRE(near_f(hit.t, 4.0f));
+	REQUIRE(near_v3(hit.n, V3(0, 0, -1)));
+	REQUIRE(!cf_ray3_to_sphere(cf_ray3(V3(0, 3, -5), V3(0, 3, 5)), sphere).hit);
+	// From inside: the exit point at t = 1 through the far surface.
+	hit = cf_ray3_to_sphere(cf_ray3(V3(0, 0, 0), V3(0, 0, 5)), sphere);
+	REQUIRE(hit.hit && near_f(hit.t, 1.0f));
+
+	// Plane at y = 2: hit from above reports the up-facing normal; parallel rays miss.
+	CF_Plane3 plane = cf_plane3(V3(0, 1, 0), 2.0f);
+	hit = cf_ray3_to_plane3(cf_ray3(V3(0, 5, 0), V3(0, -1, 0)), plane);
+	REQUIRE(hit.hit);
+	REQUIRE(near_f(hit.t, 3.0f));
+	REQUIRE(near_v3(hit.n, V3(0, 1, 0)));
+	REQUIRE(!cf_ray3_to_plane3(cf_ray3(V3(0, 5, 0), V3(9, 5, 0)), plane).hit);
+	REQUIRE(near_f(cf_distance_plane3(plane, V3(0, 5, 0)), 3.0f));
+	REQUIRE(near_v3(cf_project_plane3(plane, V3(1, 5, 1)), V3(1, 2, 1)));
+	return true;
+}
+
+// Overlap tests, closest points, bounds combining, and Arvo AABB transforms.
+TEST_CASE(test_geometry_overlaps_cpp) {
+	CF_Aabb3 a = cf_make_aabb3(V3(0, 0, 0), V3(2, 2, 2));
+	CF_Aabb3 b = cf_make_aabb3(V3(1, 1, 1), V3(3, 3, 3));
+	CF_Aabb3 c = cf_make_aabb3(V3(5, 5, 5), V3(6, 6, 6));
+	REQUIRE(cf_aabb3_to_aabb3(a, b));
+	REQUIRE(!cf_aabb3_to_aabb3(a, c));
+	REQUIRE(cf_contains_point_aabb3(a, V3(1, 1, 1)));
+	REQUIRE(!cf_contains_point_aabb3(a, V3(1, 1, 3)));
+	CF_Aabb3 combined = cf_combine_aabb3(a, c);
+	REQUIRE(near_v3(combined.min, V3(0, 0, 0)) && near_v3(combined.max, V3(6, 6, 6)));
+
+	REQUIRE(cf_sphere_to_sphere(cf_make_sphere(V3(0, 0, 0), 1), cf_make_sphere(V3(1.5f, 0, 0), 1)));
+	REQUIRE(!cf_sphere_to_sphere(cf_make_sphere(V3(0, 0, 0), 1), cf_make_sphere(V3(3, 0, 0), 1)));
+	REQUIRE(cf_sphere_to_aabb3(cf_make_sphere(V3(3, 1, 1), 1.5f), a));
+	REQUIRE(!cf_sphere_to_aabb3(cf_make_sphere(V3(4, 1, 1), 1.5f), a));
+	REQUIRE(near_v3(cf_closest_point_on_aabb3(a, V3(5, 1, -1)), V3(2, 1, 0)));
+
+	// A unit box rotated 45 degrees about y must bound to sqrt(2) on x/z, and translation
+	// carries through.
+	m4 rot = cf_quat_to_m4(cf_quat_from_axis_angle(V3(0, 1, 0), CF_PI / 4.0f));
+	rot.elements[12] = 10.0f;
+	CF_Aabb3 rotated = cf_transform_aabb3(rot, cf_make_aabb3_center(V3(0, 0, 0), V3(1, 1, 1)));
+	float s = CF_SQRTF(2.0f);
+	REQUIRE(near_f(rotated.min.x, 10.0f - s) && near_f(rotated.max.x, 10.0f + s));
+	REQUIRE(near_f(rotated.min.y, -1.0f) && near_f(rotated.max.y, 1.0f));
+	return true;
+}
+
+// Frustum extraction from the same matrices the 3d camera stacks consume, verified from
+// first principles: points/boxes/spheres known to be inside or outside the camera's view.
+TEST_CASE(test_geometry_frustum_cpp) {
+	m4 proj = perspective(CF_PI / 2.0f, 1.0f, 1.0f, 100.0f); // 90 degree fov, square aspect.
+	m4 view = look_at(V3(0, 0, 0), V3(0, 0, -1), V3(0, 1, 0)); // At origin, looking down -z.
+	CF_Frustum f = cf_frustum_from_m4(proj * view);
+
+	// Sphere checks: straight ahead is visible; behind, too near, too far, and far off to
+	// the side are not. With a 90 degree fov the frustum boundary at depth 10 is |x| = 10.
+	REQUIRE(cf_frustum_test_sphere(&f, cf_make_sphere(V3(0, 0, -10), 1)));
+	REQUIRE(!cf_frustum_test_sphere(&f, cf_make_sphere(V3(0, 0, 10), 1)));    // Behind.
+	REQUIRE(!cf_frustum_test_sphere(&f, cf_make_sphere(V3(0, 0, -0.2f), 0.1f))); // Nearer than znear.
+	REQUIRE(!cf_frustum_test_sphere(&f, cf_make_sphere(V3(0, 0, -200), 1)));  // Past zfar.
+	REQUIRE(!cf_frustum_test_sphere(&f, cf_make_sphere(V3(30, 0, -10), 1)));  // Off to the right.
+	REQUIRE(cf_frustum_test_sphere(&f, cf_make_sphere(V3(9, 0, -10), 2)));    // Straddles the right plane.
+
+	// AABB checks, including one straddling a plane (must never cull) and the p-vertex edge
+	// case of a huge box surrounding the whole frustum.
+	REQUIRE(cf_frustum_test_aabb3(&f, cf_make_aabb3_center(V3(0, 0, -50), V3(5, 5, 5))));
+	REQUIRE(!cf_frustum_test_aabb3(&f, cf_make_aabb3_center(V3(0, 0, 50), V3(5, 5, 5))));
+	REQUIRE(!cf_frustum_test_aabb3(&f, cf_make_aabb3_center(V3(-40, 0, -10), V3(2, 2, 2))));
+	REQUIRE(cf_frustum_test_aabb3(&f, cf_make_aabb3_center(V3(10, 0, -10), V3(3, 3, 3))));
+	REQUIRE(cf_frustum_test_aabb3(&f, cf_make_aabb3_center(V3(0, 0, 0), V3(1000, 1000, 1000))));
+
+	// The camera position itself sits on the near-plane boundary side; nudge forward = inside.
+	REQUIRE(cf_frustum_test_sphere(&f, cf_make_sphere(V3(0, 0, -2), 0.5f)));
+	return true;
+}
+
 TEST_SUITE(test_math3d) {
 	RUN_TEST_CASE(test_v3_overloads_cpp);
 	RUN_TEST_CASE(test_v3_operators_cpp);
 	RUN_TEST_CASE(test_m4_operators_cpp);
 	RUN_TEST_CASE(test_quat_operators_cpp);
 	RUN_TEST_CASE(test_projection_cpp);
+	RUN_TEST_CASE(test_geometry_raycasts_cpp);
+	RUN_TEST_CASE(test_geometry_overlaps_cpp);
+	RUN_TEST_CASE(test_geometry_frustum_cpp);
 }
