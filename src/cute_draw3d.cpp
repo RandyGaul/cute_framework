@@ -469,7 +469,7 @@ static CF_Command* s_coalesce_candidate()
 	int n = s_draw->cmds.count();
 	if (n < 2) return NULL;
 	CF_Command& top = s_draw->cmds[n - 1];
-	if (top.mesh3d || top.is_canvas || top.geoms.count() || top.items.count() || top.geoms_ref || top.u.name || top.u.is_texture) return NULL;
+	if (!cf_cmd_is_empty(top)) return NULL;
 	CF_Command& under = s_draw->cmds[n - 2];
 	return under.mesh3d ? &under : NULL;
 }
@@ -560,8 +560,13 @@ static void s_submit(CF_Mesh mesh, const CF_MeshInstance3d& inst, bool escape, c
 void cf_draw3d_mesh(CF_Mesh mesh)
 {
 	CF_ASSERT(mesh.id);
-	bool ours = cf_mesh_has_vertex_attribute(mesh, "in_model0");
+	// A nonzero instance stride on a mesh we did not augment means user-owned instancing --
+	// the escape hatch -- even if the user's own attributes happen to reuse reserved names.
+	bool ours = cf_mesh_draw3d_augmented(mesh);
 	bool escape = !ours && cf_mesh_instance_stride(mesh) != 0;
+	// Declaring reserved lanes without an instance buffer is a contract violation: nothing
+	// would ever feed them, and the mesh would silently draw once with garbage lane data.
+	CF_ASSERT(ours || escape || !cf_mesh_has_vertex_attribute(mesh, "in_model0"));
 	CF_MeshInstance3d inst;
 	if (!escape) inst = s_instance();
 	else CF_MEMSET(&inst, 0, sizeof(inst));
@@ -1597,6 +1602,7 @@ static void s_augment_mesh(CF_Mesh mesh)
 	// cf_make_mesh); a mesh that dense would render garbage with no error, so say so here.
 	CF_ASSERT(cf_mesh_has_vertex_attribute(mesh, "in_mesh_attributes"));
 	cf_mesh_set_instance_buffer(mesh, (int)sizeof(CF_MeshInstance3d) * 16, (int)sizeof(CF_MeshInstance3d));
+	cf_mesh_set_draw3d_augmented(mesh);
 }
 
 void cf_draw3d_process(CF_Command* cmd, CF_Canvas canvas, bool clear)
@@ -1640,7 +1646,7 @@ void cf_draw3d_process(CF_Command* cmd, CF_Canvas canvas, bool clear)
 		}
 	}
 	if (!mc->escape && instances.count()) {
-		if (!cf_mesh_has_vertex_attribute(mc->mesh, "in_model0")) {
+		if (!cf_mesh_draw3d_augmented(mc->mesh)) {
 			s_augment_mesh(mc->mesh);
 		}
 		if (!textured && !mc->gpu_instances) {

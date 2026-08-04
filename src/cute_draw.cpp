@@ -5180,14 +5180,18 @@ void cf_render_layers_to(CF_Canvas canvas, int layer_lo, int layer_hi, bool clea
 	// solid in their run regardless of submission interleave (an arrow's shaft vs its cone
 	// head), while 2d commands and layer boundaries still fence exactly as before.
 	{
+		// Empty spacer commands are transparent to the run scan: every immediate-mode mesh
+		// submission leaves one on the stream (see s_submit in cute_draw3d.cpp), so requiring
+		// strictly consecutive mesh3d commands would cap every run at length 1 and turn the
+		// partition into a no-op. Empties draw nothing, so the partition may place them freely.
 		int n = s_draw->cmds.count();
 		int i = 0;
 		while (i < n) {
 			if (!s_draw->cmds[i].mesh3d) { ++i; continue; }
 			int j = i + 1;
-			while (j < n && s_draw->cmds[j].mesh3d && s_draw->cmds[j].layer == s_draw->cmds[i].layer) ++j;
+			while (j < n && (s_draw->cmds[j].mesh3d || cf_cmd_is_empty(s_draw->cmds[j])) && s_draw->cmds[j].layer == s_draw->cmds[i].layer) ++j;
 			std::stable_partition(s_draw->cmds.begin() + i, s_draw->cmds.begin() + j, [](const CF_Command& c) {
-				return c.render_state.depth_write_enabled;
+				return c.mesh3d && c.render_state.depth_write_enabled;
 			});
 			i = j;
 		}

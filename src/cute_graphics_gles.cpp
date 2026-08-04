@@ -227,6 +227,10 @@ struct CF_GL_Mesh
 
 	int attribute_count = 0;
 	CF_VertexAttribute attributes[CF_MESH_MAX_VERTEX_ATTRIBUTES];
+	// True once the draw3d layer has appended its reserved instance attributes and installed
+	// its own instance buffer. Lives on the mesh (not in the draw layer) so a destroyed handle
+	// reused for a new mesh can never inherit a stale classification.
+	bool draw3d_augmented = false;
 };
 
 struct CF_GL_ShaderUniformBlock
@@ -1463,6 +1467,18 @@ int cf_gles_mesh_instance_stride(CF_Mesh mh)
 {
 	auto* m = (CF_GL_Mesh*)(uintptr_t)mh.id;
 	return m->instance.stride;
+}
+
+bool cf_gles_mesh_draw3d_augmented(CF_Mesh mh)
+{
+	auto* m = (CF_GL_Mesh*)(uintptr_t)mh.id;
+	return m->draw3d_augmented;
+}
+
+void cf_gles_mesh_set_draw3d_augmented(CF_Mesh mh)
+{
+	auto* m = (CF_GL_Mesh*)(uintptr_t)mh.id;
+	m->draw3d_augmented = true;
 }
 
 void cf_gles_mesh_set_instance_buffer(CF_Mesh mh, int instance_buffer_size_in_bytes, int instance_stride)

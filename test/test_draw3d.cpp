@@ -1300,6 +1300,72 @@ TEST_CASE(test_draw3d_stats)
 	return true;
 }
 
+// Within one layer, depth-writing mesh commands render before non-writing ones regardless of
+// submission order -- the opaque-then-translucent default. A non-writer submitted FIRST but
+// sitting NEARER the camera must survive a writer submitted after it: the writer lays down
+// depth first, the non-writer then depth-tests nearer and draws on top. Without the reorder
+// the writer simply paints over the non-writer. This pins the run scan across the empty
+// spacer commands each mesh submission leaves on the stream.
+TEST_CASE(test_draw3d_depth_writer_order)
+{
+	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, W, H, s_options(), NULL))) return true; // Headless CI: no display/GPU.
+
+	CF_Mesh mesh = s_make_quad(0.4f);
+	CF_Shader shader = cf_make_shader_from_source(s_vs, s_fs);
+	REQUIRE(shader.id);
+	CF_CanvasParams params = cf_canvas_defaults(W, H);
+	params.depth_stencil_enable = true;
+	CF_Canvas canvas = cf_make_canvas(params);
+	CF_Pixel* px = (CF_Pixel*)cf_alloc(W * H * (int)sizeof(CF_Pixel));
+
+	cf_app_update(NULL);
+	cf_draw3d_push_projection(cf_ortho(-1, 1, -1, 1, -1, 1));
+	cf_draw3d_push_shader(shader);
+
+	// Red quad: nearer (cf_ortho looks down -z, so +z is toward the camera), does NOT write
+	// depth, submitted first.
+	CF_RenderState no_write = cf_render_state_3d_defaults();
+	no_write.depth_write_enabled = false;
+	cf_draw3d_push_render_state(no_write);
+	cf_draw3d_push();
+	cf_draw3d_translate(cf_v3(0, 0, 0.5f));
+	cf_draw3d_push_mesh_attributes(cf_v4(1, 0, 0, 1));
+	cf_draw3d_mesh(mesh);
+	cf_draw3d_pop_mesh_attributes();
+	cf_draw3d_pop();
+	cf_draw3d_pop_render_state();
+
+	// Blue quad: farther, writes depth, submitted second.
+	cf_draw3d_push();
+	cf_draw3d_translate(cf_v3(0, 0, -0.5f));
+	cf_draw3d_push_mesh_attributes(cf_v4(0, 0, 1, 1));
+	cf_draw3d_mesh(mesh);
+	cf_draw3d_pop_mesh_attributes();
+	cf_draw3d_pop();
+
+	cf_render_to(canvas, true);
+	cf_app_draw_onto_screen(false);
+
+	CF_Readback rb = cf_canvas_readback(canvas);
+	REQUIRE(rb.id);
+	while (!cf_readback_ready(rb)) {}
+	cf_readback_data(rb, px, W * H * (int)sizeof(CF_Pixel));
+	cf_destroy_readback(rb);
+
+	// The writer renders first, so the nearer non-writer depth-tests over it: red wins.
+	CF_Pixel center = s_pixel(px, 0.5f, 0.5f);
+	REQUIRE(center.colors.r > 200 && center.colors.b < 60);
+
+	cf_draw3d_pop_shader();
+	cf_draw3d_pop_projection();
+	cf_free(px);
+	cf_destroy_canvas(canvas);
+	cf_destroy_shader(shader);
+	cf_destroy_mesh(mesh);
+	cf_destroy_app();
+	return true;
+}
+
 TEST_SUITE(test_draw3d)
 {
 	RUN_TEST_CASE(test_draw3d_transforms_and_coalescing);
@@ -1319,4 +1385,5 @@ TEST_SUITE(test_draw3d)
 	RUN_TEST_CASE(test_draw3d_stroke_sizing);
 	RUN_TEST_CASE(test_draw3d_attributes2);
 	RUN_TEST_CASE(test_draw3d_stats);
+	RUN_TEST_CASE(test_draw3d_depth_writer_order);
 }

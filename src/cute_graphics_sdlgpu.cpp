@@ -183,6 +183,10 @@ struct CF_MeshInternal
 	CF_Buffer instances;
 	int attribute_count;
 	CF_VertexAttribute attributes[CF_MESH_MAX_VERTEX_ATTRIBUTES];
+	// True once the draw3d layer has appended its reserved instance attributes and installed
+	// its own instance buffer. Lives on the mesh (not in the draw layer) so a destroyed handle
+	// reused for a new mesh can never inherit a stale classification.
+	bool draw3d_augmented;
 };
 
 static struct
@@ -1669,6 +1673,18 @@ int cf_sdlgpu_mesh_instance_stride(CF_Mesh mesh_handle)
 	return mesh->instances.stride;
 }
 
+bool cf_sdlgpu_mesh_draw3d_augmented(CF_Mesh mesh_handle)
+{
+	CF_MeshInternal* mesh = (CF_MeshInternal*)mesh_handle.id;
+	return mesh->draw3d_augmented;
+}
+
+void cf_sdlgpu_mesh_set_draw3d_augmented(CF_Mesh mesh_handle)
+{
+	CF_MeshInternal* mesh = (CF_MeshInternal*)mesh_handle.id;
+	mesh->draw3d_augmented = true;
+}
+
 void cf_sdlgpu_mesh_set_instance_buffer(CF_Mesh mesh_handle, int instance_buffer_size_in_bytes, int instance_stride)
 {
 	CF_MeshInternal* mesh = (CF_MeshInternal*)mesh_handle.id;
@@ -2233,9 +2249,12 @@ void cf_sdlgpu_current_canvas_size(int* w, int* h)
 void cf_sdlgpu_draw_elements()
 {
 	CF_MeshInternal* mesh = g_ctx.canvas->mesh;
+	// One draw only -- cleared unconditionally, or a draw on a mesh with no instance buffer
+	// would leak the override into the next instanced draw.
+	SDL_GPUBuffer* instance_override = g_ctx.instance_override;
+	g_ctx.instance_override = NULL;
 	if (mesh->instances.buffer) {
-		int instance_count = g_ctx.instance_override ? g_ctx.instance_override_count : mesh->instances.element_count;
-		g_ctx.instance_override = NULL; // One draw only.
+		int instance_count = instance_override ? g_ctx.instance_override_count : mesh->instances.element_count;
 		if (mesh->indices.buffer) {
 			SDL_DrawGPUIndexedPrimitives(g_ctx.canvas->pass, mesh->indices.element_count, instance_count, 0, 0, 0);
 		} else {

@@ -244,6 +244,15 @@ struct CF_Command
 	struct CF_MeshCmd3d* mesh3d = NULL;
 };
 
+// True for a command that draws nothing and carries no state change -- notably the spacer
+// commands mesh submission leaves on top of the stream (see s_submit in cute_draw3d.cpp).
+// The one definition shared by coalescing and the flush's run scans.
+CF_INLINE bool cf_cmd_is_empty(const CF_Command& cmd)
+{
+	return !cmd.mesh3d && !cmd.is_canvas && !cmd.geoms.count() && !cmd.items.count()
+		&& !cmd.geoms_ref && !cmd.u.name && !cmd.u.is_texture;
+}
+
 // Pushes a sprite/text atlas entry whose geometry was just appended via s_push_geom().
 #define DRAW_PUSH_ITEM(s) \
 	do { \

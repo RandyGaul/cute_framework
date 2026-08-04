@@ -306,6 +306,13 @@ void cf_draw_elements_instanced(int instance_count);
 // attributes marks user-owned instancing, the draw3d escape hatch).
 bool cf_mesh_has_vertex_attribute(CF_Mesh mesh, const char* name);
 int cf_mesh_instance_stride(CF_Mesh mesh);
+// Whether the draw3d layer augmented this mesh (appended its reserved instance attributes and
+// installed its own instance buffer). Stored on the mesh itself so a destroyed handle reused
+// for a new mesh can never inherit a stale classification -- the escape-hatch test depends on
+// this: a mesh with an instance buffer that draw3d did NOT install is user-owned instancing
+// and must never be augmented or have its instance buffer overwritten.
+bool cf_mesh_draw3d_augmented(CF_Mesh mesh);
+void cf_mesh_set_draw3d_augmented(CF_Mesh mesh);
 
 // Standalone per-instance vertex buffers for the draw3d layer's baked draw lists: uploaded
 // once at bake, then bound in place of the applied mesh's own instance buffer for exactly one
