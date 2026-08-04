@@ -64,6 +64,7 @@ TEST_SUITE(test_math3d_c);
 TEST_SUITE(test_ckit);
 }
 TEST_SUITE(test_jpg);
+TEST_SUITE(test_dds);
 
 #include <SDL3/SDL.h>
 
@@ -130,8 +131,14 @@ int main(int argc, char* argv[])
 	RUN_TRACED(test_math3d);
 	RUN_TRACED(test_math3d_c);
 	RUN_TRACED(test_model);
+	// test_ckit calls sintern_nuke(), which invalidates every interned pointer a live
+	// engine holds as map keys (cf_sinuke's documented contract: not while an app
+	// exists). Kill the shared app first; the next GPU suite boots a fresh one whose
+	// interns are all post-nuke.
+	test_shutdown_shared_app();
 	RUN_TRACED(test_ckit);
 	RUN_TRACED(test_jpg);
+	RUN_TRACED(test_dds);
 #undef RUN_TRACED
 
 	test_shutdown_shared_app(); // The shared GPU app dies here so the leak checker sees a clean exit.

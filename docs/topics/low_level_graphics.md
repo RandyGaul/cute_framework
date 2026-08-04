@@ -292,6 +292,10 @@ The plain `cf_material_set_texture_fs` keeps sampling through the texture's own 
 
 A canvas can carry up to `CF_MAX_CANVAS_TARGETS` color targets (`CF_CanvasParams::target_count`); the fragment shader writes `layout (location = N) out` per target -- the classic g-buffer setup. Each target can blend its own way: `CF_RenderState::blend` aliases `blends[0]`, and setting `blend_count` with `blends[1]`+ gives every target its own blend and write mask (accumulate HDR into target 0 while overwriting normals in target 1). Per-target blend is SDL_GPU-only -- the GLES backend applies `blends[0]` to every target. `cf_canvas_get_target(canvas, index)` fetches each result.
 
+## Compressed Textures (DDS)
+
+PNG and JPG decode to raw RGBA8 -- fine for sprites, ruinous for texture-heavy 3D scenes, where block-compressed formats (BC1-BC7) are 4-8x smaller *on the GPU*, not just on disk. `cf_make_texture_from_dds` loads a DDS file -- the interchange format every texture tool exports -- and uploads its BC blocks and mip chain exactly as stored, no decode, no recompress. Cube maps and texture arrays load too, and sRGB variants map onto CF's sRGB pixel formats. Check `cf_texture_supports_format` when targeting GLES3/web (no BC support there; ship PNG fallbacks). The parser is [cute_dds.h](https://github.com/RandyGaul/cute_framework/blob/master/libraries/cute/cute_dds.h), a standalone single-file header like cute_png.h.
+
 ## Textures
 
 Textures hold image data, as in pixels. Though in graphics we call them texels, not pixels. Actually, a texel can hold arbitrary data, but usually we just store one `vec4` (in glsl) or `CF_Color` (in C++) per pixel. Texture data is fetched from a shader using what's called uv-coordinates.

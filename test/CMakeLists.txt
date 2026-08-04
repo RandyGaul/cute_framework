@@ -34,6 +34,7 @@ set(CF_TEST_SRCS
 	test_ckit.c
 	test_model.cpp
 	test_jpg.cpp
+	test_dds.cpp
 	test_app_shared.cpp
 )
 set(CF_TEST_HDRS test_harness.h test_app_shared.h jpg_test_vectors.h)

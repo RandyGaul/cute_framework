@@ -153,7 +153,10 @@ extern "C" {
  * @function cf_sinuke
  * @category string
  * @brief    Frees up all resources used by the global string table built by `cf_sintern`.
- * @remarks  All strings previously returned by `cf_sintern` are now invalid.
+ * @remarks  All strings previously returned by `cf_sintern` are now invalid. Do not call
+ *           while an app exists: the engine holds interned pointers as map keys (material
+ *           names, shader reflection, and more), and nuking the table out from under them
+ *           is undefined. Call it after `cf_destroy_app`, or never -- the table is tiny.
  * @related  cf_sintern cf_sintern_range cf_sivalid cf_silen cf_sinuke
  */
 #define cf_sinuke() sinuke()

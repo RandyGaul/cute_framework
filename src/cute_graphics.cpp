@@ -16,6 +16,7 @@
 
 #include "cute_shader.h"
 #include "builtin_shaders.h"
+#include <cute/cute_dds.h>
 
 #include <float.h>
 
@@ -1013,6 +1014,85 @@ CF_DISPATCH_SHIM_VOID(texture_copy_region, (CF_Texture dst, int dst_x, int dst_y
 CF_DISPATCH_SHIM_VOID(generate_mipmaps, (CF_Texture texture_handle), texture_handle)
 CF_DISPATCH_SHIM(uint64_t, texture_handle, (CF_Texture texture), texture)
 CF_DISPATCH_SHIM(uint64_t, texture_binding_handle, (CF_Texture texture), texture)
+
+//--------------------------------------------------------------------------------------------------
+// DDS loading (cute_dds.h): block-compressed textures with their mip chains, uploaded
+// exactly as the file stores them -- no decode, no recompress.
+
+static CF_PixelFormat s_dds_pixel_format(cd_format_t format)
+{
+	switch (format) {
+	case CD_FORMAT_RGBA8:      return CF_PIXEL_FORMAT_R8G8B8A8_UNORM;
+	case CD_FORMAT_RGBA8_SRGB: return CF_PIXEL_FORMAT_R8G8B8A8_UNORM_SRGB;
+	case CD_FORMAT_BGRA8:      return CF_PIXEL_FORMAT_B8G8R8A8_UNORM;
+	case CD_FORMAT_BGRA8_SRGB: return CF_PIXEL_FORMAT_B8G8R8A8_UNORM_SRGB;
+	case CD_FORMAT_BC1:        return CF_PIXEL_FORMAT_BC1_RGBA_UNORM;
+	case CD_FORMAT_BC1_SRGB:   return CF_PIXEL_FORMAT_BC1_RGBA_UNORM_SRGB;
+	case CD_FORMAT_BC2:        return CF_PIXEL_FORMAT_BC2_RGBA_UNORM;
+	case CD_FORMAT_BC2_SRGB:   return CF_PIXEL_FORMAT_BC2_RGBA_UNORM_SRGB;
+	case CD_FORMAT_BC3:        return CF_PIXEL_FORMAT_BC3_RGBA_UNORM;
+	case CD_FORMAT_BC3_SRGB:   return CF_PIXEL_FORMAT_BC3_RGBA_UNORM_SRGB;
+	case CD_FORMAT_BC4:        return CF_PIXEL_FORMAT_BC4_R_UNORM;
+	case CD_FORMAT_BC5:        return CF_PIXEL_FORMAT_BC5_RG_UNORM;
+	case CD_FORMAT_BC6H_UF16:  return CF_PIXEL_FORMAT_BC6H_RGB_UFLOAT;
+	case CD_FORMAT_BC6H_SF16:  return CF_PIXEL_FORMAT_BC6H_RGB_FLOAT;
+	case CD_FORMAT_BC7:        return CF_PIXEL_FORMAT_BC7_RGBA_UNORM;
+	case CD_FORMAT_BC7_SRGB:   return CF_PIXEL_FORMAT_BC7_RGBA_UNORM_SRGB;
+	default:                   return CF_PIXEL_FORMAT_INVALID;
+	}
+}
+
+CF_Texture cf_make_texture_from_dds_mem(const void* data, int size)
+{
+	CF_Texture none = { 0 };
+	cd_dds_t dds = cd_parse_dds_mem(data, size);
+	if (!dds.slice_count) return none;
+	CF_PixelFormat format = s_dds_pixel_format(dds.format);
+	// Cube arrays have no CF texture type; plain arrays load as 2D arrays below.
+	if (dds.is_cubemap && dds.face_count != 6) { cd_free_dds(&dds); return none; }
+	if (format == CF_PIXEL_FORMAT_INVALID || !cf_texture_supports_format(format, CF_TEXTURE_USAGE_SAMPLER_BIT)) {
+		cd_free_dds(&dds);
+		return none;
+	}
+	CF_TextureParams tp = cf_texture_defaults(dds.w, dds.h);
+	tp.pixel_format = format;
+	if (dds.mip_count > 1) {
+		// allocate_mipmaps gates level allocation on the SDL_GPU backend; the explicit
+		// count keeps the chain exactly as deep as the file's.
+		tp.allocate_mipmaps = true;
+		tp.mip_count = dds.mip_count;
+	}
+	if (dds.is_cubemap) {
+		tp.texture_type = CF_TEXTURE_TYPE_CUBE;
+	} else if (dds.face_count > 1) {
+		tp.texture_type = CF_TEXTURE_TYPE_2D_ARRAY;
+		tp.layer_count = dds.face_count;
+	}
+	CF_Texture texture = cf_make_texture(tp);
+	if (!texture.id) { cd_free_dds(&dds); return none; }
+	for (int face = 0; face < dds.face_count; ++face) {
+		for (int mip = 0; mip < dds.mip_count; ++mip) {
+			cd_slice_t* s = cd_slice(&dds, face, mip);
+			// Always the layer path: it uploads without cycling the texture's backing
+			// memory, so earlier faces/mips survive each later upload (cf_texture_update_mip
+			// cycles and would discard them).
+			cf_texture_update_layer_mip(texture, (void*)s->data, s->size, face, mip);
+		}
+	}
+	cd_free_dds(&dds);
+	return texture;
+}
+
+CF_Texture cf_make_texture_from_dds(const char* virtual_path)
+{
+	CF_Texture none = { 0 };
+	size_t size = 0;
+	void* data = cf_fs_read_entire_file_to_memory(virtual_path, &size);
+	if (!data) return none;
+	CF_Texture texture = cf_make_texture_from_dds_mem(data, (int)size);
+	cf_free(data);
+	return texture;
+}
 
 CF_DISPATCH_SHIM(CF_Canvas, make_canvas, (CF_CanvasParams params), params)
 CF_DISPATCH_SHIM_VOID(destroy_canvas, (CF_Canvas canvas_handle), canvas_handle)

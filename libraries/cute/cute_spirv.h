@@ -8879,6 +8879,19 @@ CSPV_Result cspv_compile_ex(const char* source, CSPV_Stage stage, const CSPV_Opt
 	CSPV_Result result;
 	memset(&result, 0, sizeof(result));
 
+	// The intrinsic and preprocessor tables key on interned pointers, which the host can
+	// invalidate wholesale (cf_sinuke / sintern_nuke bumps the generation). Rebuild them
+	// whenever the generation moves, or every later compile fails name lookups with
+	// "unknown function" on core intrinsics.
+	{
+		static int intern_gen = -1;
+		int gen = ck_sintern_gen();
+		if (gen != intern_gen) {
+			intern_gen = gen;
+			g_cspv_pp_kw.kw_include = 0;
+			map_free(g_cspv_intrins);
+		}
+	}
 	cspv_init_keywords();
 	cspv_init_intrins();
 

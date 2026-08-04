@@ -1111,6 +1111,10 @@ void cf_gles_texture_update_layer_mip(CF_Texture tex, void* data, int /*size*/, 
 	glBindTexture(t->target, t->id);
 	if (t->target == GL_TEXTURE_CUBE_MAP) {
 		glTexSubImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + layer, mip, 0, 0, w, h, t->upload_fmt, t->upload_type, data);
+	} else if (t->target == GL_TEXTURE_2D) {
+		// Plain 2D: layer 0 is the texture itself; explicit-mip uploads land in place
+		// (glTexSubImage3D would be an INVALID_ENUM on this target).
+		glTexSubImage2D(GL_TEXTURE_2D, mip, 0, 0, w, h, t->upload_fmt, t->upload_type, data);
 	} else {
 		glTexSubImage3D(t->target, mip, 0, 0, layer, w, h, 1, t->upload_fmt, t->upload_type, data);
 	}

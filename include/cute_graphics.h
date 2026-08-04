@@ -917,6 +917,36 @@ CF_API void CF_CALL cf_texture_update_layer(CF_Texture texture, void* data, int 
 CF_API void CF_CALL cf_texture_update_layer_mip(CF_Texture texture, void* data, int size, int layer, int mip_level);
 
 /**
+ * @function cf_make_texture_from_dds
+ * @category graphics
+ * @brief    Creates a texture from a DDS file: block-compressed pixels and their mip chain,
+ *           uploaded exactly as stored -- no decode, no recompress.
+ * @param    virtual_path  A path to the DDS file, in the virtual file system.
+ * @remarks  DDS is the interchange file for GPU-ready textures. Supported contents: BC1-BC7
+ *           (including sRGB variants and BC6H HDR), uncompressed RGBA8/BGRA8, full mip
+ *           chains, cube maps, and 2D texture arrays. Block compression is the difference
+ *           between shipping a texture-heavy 3d scene and running out of VRAM: BC formats
+ *           are 4-8x smaller than RGBA8 *on the GPU*, not just on disk. Returns a zero
+ *           handle when the file is malformed or the GPU lacks the format
+ *           (`cf_texture_supports_format`) -- notably the GLES3/web backend has no BC
+ *           support, so ship PNG/JPG fallbacks for web builds. See `cute_dds.h` for the
+ *           underlying parser.
+ * @related  cf_make_texture_from_dds_mem cf_make_texture cf_texture_supports_format cf_texture_update_layer_mip
+ */
+CF_API CF_Texture CF_CALL cf_make_texture_from_dds(const char* virtual_path);
+
+/**
+ * @function cf_make_texture_from_dds_mem
+ * @category graphics
+ * @brief    Creates a texture from DDS bytes already in memory.
+ * @param    data  The DDS file's bytes.
+ * @param    size  Number of bytes.
+ * @remarks  See `cf_make_texture_from_dds`.
+ * @related  cf_make_texture_from_dds cf_make_texture cf_texture_supports_format
+ */
+CF_API CF_Texture CF_CALL cf_make_texture_from_dds_mem(const void* data, int size);
+
+/**
  * @function cf_generate_mipmaps
  * @category graphics
  * @brief    Generates all remaining mip levels from the base level of the texture.
@@ -2923,6 +2953,8 @@ CF_INLINE CF_Texture make_texture(CF_TextureParams texture_params) { return cf_m
 CF_INLINE void destroy_texture(CF_Texture texture) { cf_destroy_texture(texture); }
 CF_INLINE void texture_update(CF_Texture texture, void* data, int size) { cf_texture_update(texture, data, size); }
 CF_INLINE void texture_update_layer_mip(CF_Texture texture, void* data, int size, int layer, int mip_level) { cf_texture_update_layer_mip(texture, data, size, layer, mip_level); }
+CF_INLINE CF_Texture make_texture_from_dds(const char* virtual_path) { return cf_make_texture_from_dds(virtual_path); }
+CF_INLINE CF_Texture make_texture_from_dds_mem(const void* data, int size) { return cf_make_texture_from_dds_mem(data, size); }
 CF_INLINE CF_SamplerParams sampler_defaults() { return cf_sampler_defaults(); }
 CF_INLINE CF_Sampler make_sampler(CF_SamplerParams params) { return cf_make_sampler(params); }
 CF_INLINE void destroy_sampler(CF_Sampler sampler) { cf_destroy_sampler(sampler); }

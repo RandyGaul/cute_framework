@@ -15,6 +15,14 @@
 #define CUTE_JPG_IMPLEMENTATION
 #include <cute/cute_jpg.h>
 
+// cute_dds hands out zero-copy views (no pixel allocations), but its slice arrays
+// should still flow through CF's allocator.
+#define CUTE_DDS_ALLOC(size) cf_alloc(size)
+#define CUTE_DDS_FREE(mem) cf_free(mem)
+#define CUTE_DDS_NO_STDIO // CF loads through its VFS.
+#define CUTE_DDS_IMPLEMENTATION
+#include <cute/cute_dds.h>
+
 #include <cute_image.h>
 #include <cute_file_system.h>
 #include <cute_c_runtime.h>
