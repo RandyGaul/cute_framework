@@ -232,6 +232,106 @@ TEST_CASE(test_render_to_cube_face)
 	return true;
 }
 
+static const char* s_quad_vs =
+"layout (location = 0) in vec3 in_pos;\n"
+"layout (set = 1, binding = 0) uniform uniform_block {\n"
+"    mat4 u_view_projection;\n"
+"};\n"
+"void main() { gl_Position = u_view_projection * vec4(in_pos, 1.0); }\n";
+
+static const char* s_red_fs =
+"layout (location = 0) out vec4 result;\n"
+"void main() { result = vec4(1.0, 0.0, 0.0, 1.0); }\n";
+
+// Pins the cube-face T-axis convention that samples/point_light.c relies on: a face camera
+// built with cf_look_at + a Y-mirrored cf_perspective (see that sample's face_projection
+// comment) must render geometry into the row a samplerCube fetch expects, not the row a
+// plain (unmirrored) right-handed camera would put it in.
+TEST_CASE(test_cube_face_orientation)
+{
+	if (!test_make_app(W, H)) return true; // Headless CI: no display/GPU.
+
+	CF_TextureParams tp = cf_texture_defaults(64, 64);
+	tp.texture_type = CF_TEXTURE_TYPE_CUBE;
+	tp.usage |= CF_TEXTURE_USAGE_COLOR_TARGET_BIT;
+	CF_Texture cube = cf_make_texture(tp);
+	REQUIRE(cube.id);
+
+	CF_CanvasParams cp = cf_canvas_defaults(64, 64);
+	cp.attach_target = cube;
+	cp.attach_layer = 0; // +X face.
+	CF_Canvas face = cf_make_canvas(cp);
+	REQUIRE(face.id);
+	cf_canvas_set_clear_color(face, cf_make_color_rgb_f(1, 1, 1)); // "Saw nothing" background.
+
+	// A small red quad above the eye, off to the +X side -- same face-camera construction as
+	// samples/point_light.c: cf_look_at down +X, up (0,-1,0), and a Y-mirrored 90 degree
+	// cf_perspective.
+	struct { float x, y, z; } verts[6] = {
+		{ 5, 1.5f, -0.5f }, { 5, 2.5f, -0.5f }, { 5, 2.5f,  0.5f },
+		{ 5, 1.5f, -0.5f }, { 5, 2.5f,  0.5f }, { 5, 1.5f,  0.5f },
+	};
+	CF_VertexAttribute attrs[1] = { };
+	attrs[0].name = "in_pos";
+	attrs[0].format = CF_VERTEX_FORMAT_FLOAT3;
+	attrs[0].offset = 0;
+	CF_Mesh quad = cf_make_mesh(sizeof(verts), attrs, 1, sizeof(verts[0]));
+	cf_mesh_update_vertex_data(quad, verts, 6);
+
+	CF_M4x4 projection = cf_mul_m4(cf_m4_scale(cf_v3(1, -1, 1)), cf_perspective(CF_PI * 0.5f, 1.0f, 0.1f, 10.0f));
+	CF_M4x4 view = cf_look_at(cf_v3(0, 0, 0), cf_v3(1, 0, 0), cf_v3(0, -1, 0));
+	CF_M4x4 vp = cf_mul_m4(projection, view);
+
+	CF_Shader quad_shader = cf_make_shader_from_source(s_quad_vs, s_red_fs);
+	REQUIRE(quad_shader.id);
+	CF_Material quad_material = cf_make_material();
+	CF_RenderState rs = cf_render_state_defaults();
+	rs.cull_mode = CF_CULL_MODE_NONE; // Winding depends on the mirror; don't cull either way.
+	cf_material_set_render_state(quad_material, rs);
+	cf_material_set_uniform_vs(quad_material, "u_view_projection", &vp, CF_UNIFORM_TYPE_MAT4, 1);
+
+	cf_app_update(NULL);
+	cf_apply_canvas(face, true);
+	cf_apply_mesh(quad);
+	cf_apply_shader(quad_shader, quad_material);
+	cf_draw_elements();
+	cf_app_draw_onto_screen(false);
+
+	// Sample the cube: a direction above the eye (matching the quad) must be red; a direction
+	// below (matching nothing) must stay the white background. Getting these swapped is
+	// exactly the bug the mirror in samples/point_light.c fixes.
+	CF_Shader cube_shader = cf_make_shader_from_source(s_vs, s_cube_fs);
+	REQUIRE(cube_shader.id);
+	CF_Mesh fullscreen = s_make_fullscreen_quad();
+	CF_Material material = cf_make_material();
+	CF_Canvas out = cf_make_canvas(cf_canvas_defaults(W, H));
+	CF_Pixel* px = (CF_Pixel*)cf_alloc(W * H * (int)sizeof(CF_Pixel));
+	cf_material_set_texture_fs(material, "u_cube", cube);
+
+	float dir_up[4] = { 1.0f, 0.4f, 0.0f, 0.0f };
+	cf_material_set_uniform_fs(material, "u_dir", dir_up, CF_UNIFORM_TYPE_FLOAT4, 1);
+	CF_Pixel c = s_draw_and_read(out, fullscreen, cube_shader, material, px);
+	REQUIRE(c.colors.r > 200 && c.colors.g < 60 && c.colors.b < 60);
+
+	float dir_down[4] = { 1.0f, -0.4f, 0.0f, 0.0f };
+	cf_material_set_uniform_fs(material, "u_dir", dir_down, CF_UNIFORM_TYPE_FLOAT4, 1);
+	c = s_draw_and_read(out, fullscreen, cube_shader, material, px);
+	REQUIRE(c.colors.r > 200 && c.colors.g > 200 && c.colors.b > 200);
+
+	cf_free(px);
+	cf_destroy_canvas(out);
+	cf_destroy_material(material);
+	cf_destroy_mesh(fullscreen);
+	cf_destroy_shader(cube_shader);
+	cf_destroy_material(quad_material);
+	cf_destroy_mesh(quad);
+	cf_destroy_shader(quad_shader);
+	cf_destroy_canvas(face);
+	cf_destroy_texture(cube);
+	test_destroy_app();
+	return true;
+}
+
 static const char* s_lod_fs =
 "layout (location = 0) out vec4 result;\n"
 "layout (set = 2, binding = 0) uniform sampler2D u_tex;\n"
@@ -548,6 +648,7 @@ TEST_SUITE(test_texture_types)
 	RUN_TEST_CASE(test_cube_map_sample);
 	RUN_TEST_CASE(test_texture_array_sample);
 	RUN_TEST_CASE(test_render_to_cube_face);
+	RUN_TEST_CASE(test_cube_face_orientation);
 	RUN_TEST_CASE(test_depth_attach);
 	RUN_TEST_CASE(test_attach_mip);
 	RUN_TEST_CASE(test_standalone_sampler);
