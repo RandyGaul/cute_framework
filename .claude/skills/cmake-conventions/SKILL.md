@@ -13,6 +13,15 @@ of these practices.
 
 ## Consumability rules
 
+> **Status: target-state rules.** These describe what any new or modified
+> CMake must move toward — the planned CMake-modernization project will
+> implement them wholesale. Several are NOT yet true of this repo: there is
+> no `cute::cute` alias, no `FILE_SET`/`install(EXPORT)`, no
+> `$<INSTALL_INTERFACE:...>`, and the top-level file still sets global
+> `CMAKE_CXX_STANDARD`/`CMAKE_C_STANDARD`. Do not assume this
+> infrastructure exists when writing build code today — in-tree consumers
+> (samples, tests) link the bare `cute` target.
+
 - **Namespaced targets.** Consumers link `cute::cute`, never bare `cute`.
   Any new library target gets `add_library(cute::<name> ALIAS <name>)`.
 - **Export sets.** Installed targets use
