@@ -624,31 +624,29 @@ CF_TextureParams cf_texture_defaults(int w, int h)
 
 CF_CanvasParams cf_canvas_defaults(int w, int h)
 {
+	// Formats and usages fill in regardless of size, so cf_canvas_defaults(0, 0) hands back
+	// fully-formed params for attach-mode canvases (`attach_target`), which take their size
+	// from the attached texture and mip. Standalone canvases still require a real size --
+	// cf_make_canvas rejects zero-sized targets.
 	CF_CanvasParams params = { 0 };
-	if (w == 0 || h == 0) {
-		params.name = NULL;
-		params.target = { };
-		params.depth_stencil_target = { };
-	} else {
-		params.name = NULL;
-		params.target = cf_texture_defaults(w, h);
-		params.target.usage |= CF_TEXTURE_USAGE_COLOR_TARGET_BIT;
-		// Pre-fill every color target slot identically, so a multi-target canvas only needs
-		// target_count set (and usually pixel formats tweaked) rather than full param setup.
-		for (int i = 1; i < CF_MAX_CANVAS_TARGETS; ++i) params.targets[i] = params.target;
-		params.target_count = 1;
-		params.depth_stencil_enable = false;
-		params.depth_stencil_target = cf_texture_defaults(w, h);
-		params.depth_stencil_target.pixel_format = CF_PIXEL_FORMAT_D16_UNORM;
-		if (cf_texture_supports_format(CF_PIXEL_FORMAT_D24_UNORM_S8_UINT, CF_TEXTURE_USAGE_DEPTH_STENCIL_TARGET_BIT)) {
-			params.depth_stencil_target.pixel_format = CF_PIXEL_FORMAT_D24_UNORM_S8_UINT;
-		} else if (cf_texture_supports_format(CF_PIXEL_FORMAT_D32_FLOAT_S8_UINT, CF_TEXTURE_USAGE_DEPTH_STENCIL_TARGET_BIT)) {
-			// Metal has no D24S8; without this fallback canvases silently lose their
-			// stencil entirely (D16), breaking stencil-based rendering on macOS.
-			params.depth_stencil_target.pixel_format = CF_PIXEL_FORMAT_D32_FLOAT_S8_UINT;
-		}
-		params.depth_stencil_target.usage = CF_TEXTURE_USAGE_DEPTH_STENCIL_TARGET_BIT;
+	params.name = NULL;
+	params.target = cf_texture_defaults(w, h);
+	params.target.usage |= CF_TEXTURE_USAGE_COLOR_TARGET_BIT;
+	// Pre-fill every color target slot identically, so a multi-target canvas only needs
+	// target_count set (and usually pixel formats tweaked) rather than full param setup.
+	for (int i = 1; i < CF_MAX_CANVAS_TARGETS; ++i) params.targets[i] = params.target;
+	params.target_count = 1;
+	params.depth_stencil_enable = false;
+	params.depth_stencil_target = cf_texture_defaults(w, h);
+	params.depth_stencil_target.pixel_format = CF_PIXEL_FORMAT_D16_UNORM;
+	if (cf_texture_supports_format(CF_PIXEL_FORMAT_D24_UNORM_S8_UINT, CF_TEXTURE_USAGE_DEPTH_STENCIL_TARGET_BIT)) {
+		params.depth_stencil_target.pixel_format = CF_PIXEL_FORMAT_D24_UNORM_S8_UINT;
+	} else if (cf_texture_supports_format(CF_PIXEL_FORMAT_D32_FLOAT_S8_UINT, CF_TEXTURE_USAGE_DEPTH_STENCIL_TARGET_BIT)) {
+		// Metal has no D24S8; without this fallback canvases silently lose their
+		// stencil entirely (D16), breaking stencil-based rendering on macOS.
+		params.depth_stencil_target.pixel_format = CF_PIXEL_FORMAT_D32_FLOAT_S8_UINT;
 	}
+	params.depth_stencil_target.usage = CF_TEXTURE_USAGE_DEPTH_STENCIL_TARGET_BIT;
 	return params;
 }
 

@@ -953,6 +953,10 @@ CF_API CF_Texture CF_CALL cf_make_texture_from_dds_mem(const void* data, int siz
  * @param    texture    The texture to generate mipmaps for.
  * @remarks  This is useful when the base level has been updated manually (e.g., for dynamic or render target textures)
  *           and you want to downsample to fill in the full mip chain.
+ *
+ *           The downsampling runs as GPU blits, so on the SDL_GPU backends the texture must carry
+ *           `CF_TEXTURE_USAGE_COLOR_TARGET_BIT` in addition to its sampler usage -- OR it into
+ *           `cf_texture_defaults`'s usage before `cf_make_texture`.
  * @related  CF_TextureParams CF_Texture cf_make_texture cf_destroy_texture cf_texture_update cf_texture_update_mip cf_generate_mipmaps
  */
 CF_API void CF_CALL cf_generate_mipmaps(CF_Texture texture);
@@ -1614,6 +1618,10 @@ typedef struct CF_CanvasParams
  * @function cf_canvas_defaults
  * @category graphics
  * @brief    Returns a good set of default values for a `CF_CanvasParams` to call `cf_make_canvas`.
+ * @remarks  Formats and usages (including the negotiated depth format) fill in regardless of size,
+ *           so `cf_canvas_defaults(0, 0)` is the right starting point for attach-mode canvases
+ *           (`attach_target`), which take their size from the attached texture and mip. Standalone
+ *           canvases need a real size -- `cf_make_canvas` rejects zero-sized targets.
  * @related  CF_CanvasParams cf_canvas_defaults cf_make_canvas cf_destroy_canvas cf_apply_canvas cf_clear_color
  */
 CF_API CF_CanvasParams CF_CALL cf_canvas_defaults(int w, int h);
