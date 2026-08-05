@@ -1374,7 +1374,7 @@ CF_INLINE float cf_cube_out(float x) { float f = (x - 1); return f * f * f + 1.0
  * @remarks  Here is a great link to [visualize each easing function](https://easings.net/).
  * @related  cf_cube_in cf_cube_out cf_cube_in_out
  */
-CF_INLINE float cf_cube_in_out(float x) { if (x < 0.5f) return 4.0f * x * x * x; else { return 4.0f * x * x * x - 3.0f * x * x + 1.0f; } }
+CF_INLINE float cf_cube_in_out(float x) { if (x < 0.5f) return 4.0f * x * x * x; else { float f = ((2.0f * x) - 2.0f); return 0.5f * f * f * f + 1.0f; } }
 
 /**
  * @function cf_quart_in
@@ -2129,13 +2129,13 @@ CF_INLINE CF_V2  cf_remap01_v2(CF_V2 t, CF_V2  lo, CF_V2  hi) { return cf_add(lo
 #undef cf_mod
 #ifdef __cplusplus
 } // extern "C"
-CF_INLINE float  cf_mod(float  x, float  m) { return x - (int)(x / m) * m; }
-CF_INLINE double cf_mod(double x, double m) { return x - (int64_t)(x / m) * m; }
+CF_INLINE float  cf_mod(float  x, float  m) { return x - CF_FLOORF(x / m) * m; }
+CF_INLINE double cf_mod(double x, double m) { return x - CF_FLOOR(x / m) * m; }
 CF_INLINE CF_V2  cf_mod(CF_V2  x, CF_V2  m) { return cf_sub(x, cf_mul(cf_floor(cf_div(x, m)), m)); }
 extern "C" {
 #else
-CF_INLINE float  cf_mod_f(float  x, float  m) { return x - (int)(x / m) * m; }
-CF_INLINE double cf_mod_d(double x, double m) { return x - (int64_t)(x / m) * m; }
+CF_INLINE float  cf_mod_f(float  x, float  m) { return x - CF_FLOORF(x / m) * m; }
+CF_INLINE double cf_mod_d(double x, double m) { return x - CF_FLOOR(x / m) * m; }
 CF_INLINE CF_V2  cf_mod_v2(CF_V2 x, CF_V2  m) { return cf_sub(x, cf_mul(cf_floor(cf_div(x, m)), m)); }
 #define cf_mod(x, m)        \
 	_Generic((x),           \
@@ -2380,12 +2380,7 @@ CF_INLINE float cf_shortest_arc(CF_V2 a, CF_V2 b)
 {
 	float c = cf_dot(a, b);
 	float s = cf_det2(a, b);
-	float theta = CF_ACOSF(c);
-	if (s > 0) {
-		return theta;
-	} else {
-		return -theta;
-	}
+	return CF_ATAN2F(s, c);
 }
 
 /**
@@ -2937,10 +2932,10 @@ CF_INLINE CF_V2 cf_endpoint(CF_Ray r) { return cf_add(r.p, cf_mul_v2_f(r.d, r.t)
 /**
  * @function cf_ray_to_halfspace
  * @category collision
- * @brief    Returns a raycast to a halfspace (plane)
+ * @brief    Returns a raycast to a halfspace (plane).
  * @param    A          The ray.
  * @param    B          The plane.
- * @param    Returns a `CF_Raycast` containing results about the raycast.
+ * @return   A `CF_Raycast` containing results about the raycast.
  * @related  CF_Ray
  */
 CF_INLINE CF_Raycast cf_ray_to_halfspace(CF_Ray A, CF_Halfspace B)
@@ -2948,9 +2943,15 @@ CF_INLINE CF_Raycast cf_ray_to_halfspace(CF_Ray A, CF_Halfspace B)
 	CF_Raycast result = { 0 };
 	float da = cf_distance_hs(B, A.p);
 	float db = cf_distance_hs(B, cf_impact(A, A.t));
+	if (da == 0 && db == 0) {
+		// The ray lies within the plane itself, so it's touching at t = 0.
+		result.n = B.n;
+		result.hit = true;
+		return result;
+	}
 	if (da * db > 0) return result;
 	result.n = cf_mul_v2_f(B.n, cf_sign(da));
-	result.t = cf_intersect(da, db);
+	result.t = cf_intersect(da, db) * A.t;
 	result.hit = true;
 	return result;
 }
