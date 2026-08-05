@@ -355,6 +355,125 @@ TEST_CASE(test_m4_decompose_c) {
 	return true;
 }
 
+// Reflect, project, and slide: reflect preserves length, and project + slide must
+// reassemble the original vector (they are complementary components).
+TEST_CASE(test_v3_reflect_project_slide_c) {
+	CF_V3 n = cf_v3(0, 1, 0);
+	CF_V3 v = cf_v3(1, -1, 0);
+	REQUIRE(near_v3(cf_reflect_v3(v, n), cf_v3(1, 1, 0)));
+	REQUIRE(near_f(cf_len_v3(cf_reflect_v3(cf_v3(0.3f, -0.7f, 1.1f), n)), cf_len_v3(cf_v3(0.3f, -0.7f, 1.1f))));
+
+	// Sliding along a flat floor keeps the horizontal motion and drops the vertical.
+	REQUIRE(near_v3(cf_slide_v3(v, n), cf_v3(1, 0, 0)));
+
+	// Project onto an unnormalized direction still lands on that direction.
+	CF_V3 p = cf_project_v3(cf_v3(2, 2, 0), cf_v3(10.0f, 0, 0));
+	REQUIRE(near_v3(p, cf_v3(2, 0, 0)));
+	REQUIRE(near_v3(cf_project_v3(v, cf_v3(0.0f)), cf_v3(0.0f)));
+
+	// project + slide = original.
+	CF_V3 arbitrary = cf_v3(0.3f, -0.7f, 1.1f);
+	CF_V3 axis = cf_norm(cf_v3(1, 2, -3));
+	REQUIRE(near_v3(cf_add(cf_project_v3(arbitrary, axis), cf_slide_v3(arbitrary, axis)), arbitrary));
+	return true;
+}
+
+// cf_orthonormal_basis: (x, y, n) must be right-handed and orthonormal for any unit n,
+// including the branch-hazard normals straight up and straight down.
+TEST_CASE(test_orthonormal_basis_c) {
+	CF_V3 normals[] = {
+		{ 0, 0, 1 }, { 0, 0, -1 }, { 1, 0, 0 }, { 0, -1, 0 },
+		{ 0.5345225f, 0.2672612f, -0.8017837f },
+	};
+	for (int i = 0; i < 5; ++i) {
+		CF_V3 n = normals[i];
+		CF_V3 x, y;
+		cf_orthonormal_basis(n, &x, &y);
+		REQUIRE(near_f(cf_len_v3(x), 1.0f));
+		REQUIRE(near_f(cf_len_v3(y), 1.0f));
+		REQUIRE(near_f(cf_dot(x, y), 0.0f));
+		REQUIRE(near_f(cf_dot(x, n), 0.0f));
+		REQUIRE(near_f(cf_dot(y, n), 0.0f));
+		REQUIRE(near_v3(cf_cross(x, y), n));
+	}
+	return true;
+}
+
+// cf_quat_inverse must undo a rotation even for non-unit quaternions, where the conjugate alone
+// is off by the squared length.
+TEST_CASE(test_quat_inverse_c) {
+	CF_Quat q = cf_quat_from_axis_angle(cf_norm(cf_v3(1, -2, 0.5f)), 0.9f);
+	CF_V3 p = cf_v3(0.3f, -0.7f, 1.1f);
+	REQUIRE(near_v3(cf_mul(cf_mul_q(q, cf_quat_inverse(q)), p), p));
+
+	// Scale the quaternion: rotation is unchanged, and the inverse must still cancel exactly.
+	CF_Quat big = cf_quat(q.x * 3.0f, q.y * 3.0f, q.z * 3.0f, q.w * 3.0f);
+	CF_Quat prod = cf_mul_q(big, cf_quat_inverse(big));
+	REQUIRE(near_f(prod.x, 0.0f) && near_f(prod.y, 0.0f) && near_f(prod.z, 0.0f) && near_f(prod.w, 1.0f));
+
+	// Zero quaternion has no inverse; identity beats NaNs.
+	CF_Quat zero_inv = cf_quat_inverse(cf_quat(0, 0, 0, 0));
+	REQUIRE(near_f(zero_inv.w, 1.0f));
+	return true;
+}
+
+// cf_quat_nlerp shares slerp's endpoints and its shortest-arc choice; only the pacing differs.
+TEST_CASE(test_quat_nlerp_c) {
+	CF_Quat a = cf_quat_identity();
+	CF_Quat b = cf_quat_from_axis_angle(cf_v3(0, 1, 0), CF_PI * 0.5f);
+	CF_V3 x = cf_v3(1, 0, 0);
+
+	REQUIRE(near_v3(cf_mul(cf_quat_nlerp(a, b, 0.0f), x), x));
+	REQUIRE(near_v3(cf_mul(cf_quat_nlerp(a, b, 1.0f), x), cf_mul(b, x)));
+
+	// Halfway between identity and a 90deg turn is exactly 45deg for nlerp too (symmetry).
+	REQUIRE(near_v3(cf_mul(cf_quat_nlerp(a, b, 0.5f), x), cf_v3(0.7071068f, 0.0f, -0.7071068f)));
+
+	// The double-cover: nlerp against -b must take the same short arc, not spin the long way.
+	CF_Quat neg_b = cf_quat(-b.x, -b.y, -b.z, -b.w);
+	REQUIRE(near_v3(cf_mul(cf_quat_nlerp(a, neg_b, 0.5f), x), cf_mul(cf_quat_nlerp(a, b, 0.5f), x)));
+	return true;
+}
+
+// cf_quat_to_axis_angle inverts cf_quat_from_axis_angle, and survives the identity.
+TEST_CASE(test_quat_to_axis_angle_c) {
+	CF_V3 axis_in = cf_norm(cf_v3(1, 2, -1));
+	float angle_in = 1.3f;
+	CF_V3 axis;
+	float angle;
+	cf_quat_to_axis_angle(cf_quat_from_axis_angle(axis_in, angle_in), &axis, &angle);
+	REQUIRE(near_v3(axis, axis_in));
+	REQUIRE(near_f(angle, angle_in));
+
+	cf_quat_to_axis_angle(cf_quat_identity(), &axis, &angle);
+	REQUIRE(near_f(angle, 0.0f));
+	REQUIRE(near_f(cf_len_v3(axis), 1.0f));
+
+	// NULL outputs are allowed.
+	cf_quat_to_axis_angle(cf_quat_from_axis_angle(axis_in, angle_in), NULL, NULL);
+	return true;
+}
+
+// cf_m4_from_trs must match composing the three matrices by hand, and round-trip
+// through cf_m4_decompose.
+TEST_CASE(test_m4_from_trs_c) {
+	CF_V3 t = cf_v3(3, -4, 5);
+	CF_Quat r = cf_quat_from_axis_angle(cf_norm(cf_v3(1, 2, 3)), 1.1f);
+	CF_V3 s = cf_v3(2, 3, 4);
+
+	CF_M4x4 direct = cf_m4_from_trs(t, r, s);
+	CF_M4x4 composed = cf_mul(cf_mul(cf_m4_translate(t), cf_quat_to_m4(r)), cf_m4_scale(s));
+	for (int k = 0; k < 16; ++k) REQUIRE(near_f(direct.elements[k], composed.elements[k]));
+
+	CF_V3 dt, ds;
+	CF_Quat dr;
+	cf_m4_decompose(direct, &dt, &dr, &ds);
+	REQUIRE(near_v3(dt, t));
+	REQUIRE(near_v3(ds, s));
+	REQUIRE(near_v3(cf_mul(dr, cf_v3(1, 0, 0)), cf_mul(r, cf_v3(1, 0, 0))));
+	return true;
+}
+
 // cf_quat_from_basis round-trips against cf_quat_to_m4's columns.
 TEST_CASE(test_quat_from_basis_c) {
 	CF_Quat r = cf_quat_from_axis_angle(cf_norm(cf_v3(-2, 1, 0.5f)), 2.3f);
@@ -388,5 +507,11 @@ TEST_SUITE(test_math3d_c) {
 	RUN_TEST_CASE(test_mul_macros_c);
 	RUN_TEST_CASE(test_quat_from_to_c);
 	RUN_TEST_CASE(test_m4_decompose_c);
+	RUN_TEST_CASE(test_v3_reflect_project_slide_c);
+	RUN_TEST_CASE(test_orthonormal_basis_c);
+	RUN_TEST_CASE(test_quat_inverse_c);
+	RUN_TEST_CASE(test_quat_nlerp_c);
+	RUN_TEST_CASE(test_quat_to_axis_angle_c);
+	RUN_TEST_CASE(test_m4_from_trs_c);
 	RUN_TEST_CASE(test_quat_from_basis_c);
 }

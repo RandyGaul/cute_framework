@@ -253,6 +253,43 @@ CF_INLINE CF_V3 cf_abs_v3(CF_V3 a) { return cf_v3(a.x < 0 ? -a.x : a.x, a.y < 0 
 CF_INLINE CF_V3 cf_lerp_v3(CF_V3 a, CF_V3 b, float t) { return cf_add_v3(a, cf_mul_v3_f(cf_sub_v3(b, a), t)); }
 CF_INLINE CF_V4 cf_lerp_v4(CF_V4 a, CF_V4 b, float t) { return cf_add_v4(a, cf_mul_v4_f(cf_sub_v4(b, a), t)); }
 
+/**
+ * @function cf_reflect_v3
+ * @category math
+ * @brief    Reflects a vector off a plane given the plane's normal.
+ * @param    a  The vector to reflect.
+ * @param    n  The plane's normal. Should be unit length.
+ * @remarks  The 3d analog of `cf_reflect` -- bounces, ricochets, mirrored cameras. The C++ API
+ *           overloads `cf_reflect` directly.
+ * @related  CF_V3 cf_slide_v3 cf_project_v3 cf_dot
+ */
+CF_INLINE CF_V3 cf_reflect_v3(CF_V3 a, CF_V3 n) { return cf_sub_v3(a, cf_mul_v3_f(n, 2.0f * cf_dot_v3(a, n))); }
+
+/**
+ * @function cf_project_v3
+ * @category math
+ * @brief    Projects vector `a` onto vector `b`.
+ * @param    a  The vector to project.
+ * @param    b  The vector to project onto. Need not be unit length.
+ * @return   Returns the component of `a` parallel to `b`, or zero when `b` is zero.
+ * @remarks  `cf_slide_v3` returns the complementary perpendicular component. For projecting a
+ *           point onto a plane see `cf_project_plane3`.
+ * @related  CF_V3 cf_slide_v3 cf_reflect_v3 cf_project_plane3 cf_dot
+ */
+CF_INLINE CF_V3 cf_project_v3(CF_V3 a, CF_V3 b) { float d = cf_dot_v3(b, b); return d != 0 ? cf_mul_v3_f(b, cf_dot_v3(a, b) / d) : cf_v3(0.0f); }
+
+/**
+ * @function cf_slide_v3
+ * @category math
+ * @brief    Removes from `a` its component along a surface normal, leaving motion along the surface.
+ * @param    a  The vector to slide, typically a velocity or movement delta.
+ * @param    n  The surface normal. Should be unit length.
+ * @remarks  The move-and-slide primitive: hit a wall, slide the remaining motion along it.
+ *           Equivalent to `a - n * dot(a, n)`.
+ * @related  CF_V3 cf_reflect_v3 cf_project_v3 cf_dot
+ */
+CF_INLINE CF_V3 cf_slide_v3(CF_V3 a, CF_V3 n) { return cf_sub_v3(a, cf_mul_v3_f(n, cf_dot_v3(a, n))); }
+
 #ifdef __cplusplus
 } // extern "C"
 CF_INLINE CF_V3 cf_min(CF_V3 a, CF_V3 b) { return cf_min_v3(a, b); }
@@ -278,6 +315,9 @@ CF_INLINE CF_V3 cf_safe_norm(CF_V3 a) { return cf_safe_norm_v3(a); }
 CF_INLINE CF_V4 cf_safe_norm(CF_V4 a) { return cf_safe_norm_v4(a); }
 CF_INLINE CF_V3 cf_lerp(CF_V3 a, CF_V3 b, float t) { return cf_lerp_v3(a, b, t); }
 CF_INLINE CF_V4 cf_lerp(CF_V4 a, CF_V4 b, float t) { return cf_lerp_v4(a, b, t); }
+CF_INLINE CF_V3 cf_reflect(CF_V3 a, CF_V3 n) { return cf_reflect_v3(a, n); }
+CF_INLINE CF_V3 cf_project(CF_V3 a, CF_V3 b) { return cf_project_v3(a, b); }
+CF_INLINE CF_V3 cf_slide(CF_V3 a, CF_V3 n) { return cf_slide_v3(a, n); }
 CF_INLINE CF_V3 cf_mul(CF_V3 a, CF_V3 b) { return cf_mul_v3(a, b); }
 CF_INLINE CF_V3 cf_mul(CF_V3 a, float b) { return cf_mul_v3_f(a, b); }
 CF_INLINE CF_V4 cf_mul(CF_V4 a, CF_V4 b) { return cf_mul_v4(a, b); }
@@ -334,6 +374,29 @@ extern "C" {
 #define cf_cross(a, b) _Generic((a), CF_CROSS_CASES((b)), CF_V3: cf_cross_v3, default: cf_cross_v2)((a), (b))
 #endif
 
+/**
+ * @function cf_orthonormal_basis
+ * @category math
+ * @brief    Builds two unit vectors perpendicular to `n` and to each other.
+ * @param    n      The third axis of the basis. Should be unit length.
+ * @param    x_out  Written with the first perpendicular axis.
+ * @param    y_out  Written with the second perpendicular axis.
+ * @remarks  `(x, y, n)` form a right-handed orthonormal basis: `cross(x, y) == n`. Branchless
+ *           and stable for every unit `n` (the Duff et al. method). The tangents are arbitrary
+ *           but deterministic -- right for sampling disks and cones around a normal, spawning
+ *           particles off a surface, or framing a camera ribbon; wrong for mesh tangent spaces,
+ *           which must come from UVs.
+ * @related  CF_V3 cf_cross cf_quat_from_basis cf_quat_from_to
+ */
+CF_INLINE void cf_orthonormal_basis(CF_V3 n, CF_V3* x_out, CF_V3* y_out)
+{
+	float sign = n.z >= 0 ? 1.0f : -1.0f;
+	float a = -1.0f / (sign + n.z);
+	float b = n.x * n.y * a;
+	*x_out = cf_v3(1.0f + sign * n.x * n.x * a, sign * b, -sign * n.x);
+	*y_out = cf_v3(b, sign + n.y * n.y * a, -n.y);
+}
+
 //--------------------------------------------------------------------------------------------------
 // Quaternions.
 
@@ -383,6 +446,50 @@ CF_INLINE CF_Quat cf_quat_norm(CF_Quat q)
  */
 CF_INLINE CF_Quat cf_quat_conjugate(CF_Quat q) { return cf_quat(-q.x, -q.y, -q.z, q.w); }
 
+/**
+ * @function cf_quat_inverse
+ * @category math
+ * @brief    Returns the inverse rotation.
+ * @remarks  Works for non-unit quaternions by dividing the conjugate by the squared length. A
+ *           unit quaternion's inverse IS its conjugate -- prefer `cf_quat_conjugate` when you
+ *           know the quaternion is normalized.
+ * @related  CF_Quat cf_quat_conjugate cf_quat_norm
+ */
+CF_INLINE CF_Quat cf_quat_inverse(CF_Quat q)
+{
+	float d = q.x * q.x + q.y * q.y + q.z * q.z + q.w * q.w;
+	if (d == 0.0f) return cf_quat_identity();
+	d = 1.0f / d;
+	return cf_quat(-q.x * d, -q.y * d, -q.z * d, q.w * d);
+}
+
+/**
+ * @function cf_quat_to_axis_angle
+ * @category math
+ * @brief    Extracts the rotation axis and angle from a unit quaternion.
+ * @param    q          The rotation. Should be unit length.
+ * @param    axis_out   Written with the unit rotation axis. May be NULL.
+ * @param    angle_out  Written with the angle in radians, in [0, 2pi]. May be NULL.
+ * @remarks  The inverse of `cf_quat_from_axis_angle`. A rotation at (or vanishingly near) the
+ *           identity has no meaningful axis, so `(1, 0, 0)` with angle 0 is returned. Note a
+ *           quaternion with negative `w` reports its angle as greater than pi -- the same
+ *           rotation, measured the long way around; negate the quaternion first if you want
+ *           the short form.
+ * @related  CF_Quat cf_quat_from_axis_angle cf_quat_norm
+ */
+CF_INLINE void cf_quat_to_axis_angle(CF_Quat q, CF_V3* axis_out, float* angle_out)
+{
+	float s2 = q.x * q.x + q.y * q.y + q.z * q.z;
+	if (s2 < 1e-12f) {
+		if (axis_out) *axis_out = cf_v3(1.0f, 0, 0);
+		if (angle_out) *angle_out = 0;
+		return;
+	}
+	float s = CF_SQRTF(s2);
+	if (axis_out) *axis_out = cf_v3(q.x / s, q.y / s, q.z / s);
+	if (angle_out) *angle_out = 2.0f * CF_ATAN2F(s, q.w);
+}
+
 CF_INLINE CF_Quat cf_mul_q(CF_Quat a, CF_Quat b)
 {
 	return cf_quat(
@@ -423,6 +530,26 @@ CF_INLINE CF_Quat cf_quat_slerp(CF_Quat a, CF_Quat b, float t)
 	float wa = CF_SINF((1.0f - t) * theta) / st;
 	float wb = CF_SINF(t * theta) / st;
 	return cf_quat(a.x * wa + b.x * wb, a.y * wa + b.y * wb, a.z * wa + b.z * wb, a.w * wa + b.w * wb);
+}
+
+/**
+ * @function cf_quat_nlerp
+ * @category math
+ * @brief    Normalized linear interpolation between two rotations -- slerp's cheap cousin.
+ * @param    a  The rotation at `t == 0`.
+ * @param    b  The rotation at `t == 1`.
+ * @param    t  The interpolant, from 0 to 1.
+ * @return   Returns a unit quaternion along the shortest arc from `a` to `b`.
+ * @remarks  Same endpoints and same arc as `cf_quat_slerp`, but the angular velocity is not
+ *           constant across `t`. For small differences -- animation keyframes, per-frame
+ *           smoothing -- the deviation is invisible and this is measurably cheaper.
+ * @related  CF_Quat cf_quat_slerp cf_quat_norm cf_lerp
+ */
+CF_INLINE CF_Quat cf_quat_nlerp(CF_Quat a, CF_Quat b, float t)
+{
+	float d = a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
+	if (d < 0) b = cf_quat(-b.x, -b.y, -b.z, -b.w);
+	return cf_quat_norm(cf_quat(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t, a.z + (b.z - a.z) * t, a.w + (b.w - a.w) * t));
 }
 
 /**
@@ -594,10 +721,10 @@ CF_INLINE CF_Quat cf_quat_from_m4(CF_M4x4 m)
  * @param    scale        Written with the per-axis scale. May be NULL.
  * @remarks  Assumes `m` is a translate-rotate-scale composition with no shear (skew silently
  *           folds into the rotation). A mirrored transform reports a negative x scale, since a
- *           flip cannot live in the quaternion. The inverse of building one with
- *           `cf_m4_translate * cf_quat_to_m4 * cf_m4_scale` -- useful for pulling a bone's pose
- *           out of a world matrix, or blending between authored transforms.
- * @related  CF_M4x4 CF_Quat cf_quat_from_m4 cf_quat_to_m4 cf_m4_translate cf_m4_scale
+ *           flip cannot live in the quaternion. The inverse of `cf_m4_from_trs` -- useful for
+ *           pulling a bone's pose out of a world matrix, or blending between authored
+ *           transforms.
+ * @related  CF_M4x4 CF_Quat cf_m4_from_trs cf_quat_from_m4 cf_quat_to_m4 cf_m4_translate cf_m4_scale
  */
 CF_INLINE void cf_m4_decompose(CF_M4x4 m, CF_V3* translation, CF_Quat* rotation, CF_V3* scale)
 {
@@ -688,6 +815,28 @@ CF_INLINE CF_M4x4 cf_quat_to_m4(CF_Quat q)
 	m.elements[8] = 2.0f * (xz + wy);
 	m.elements[9] = 2.0f * (yz - wx);
 	m.elements[10] = 1.0f - 2.0f * (xx + yy);
+	return m;
+}
+
+/**
+ * @function cf_m4_from_trs
+ * @category math
+ * @brief    Composes translation, rotation, and scale into a transform matrix.
+ * @param    translation  The translation.
+ * @param    rotation     The rotation. Should be unit length.
+ * @param    scale        The per-axis scale.
+ * @return   Returns the matrix `cf_m4_translate(t) * cf_quat_to_m4(r) * cf_m4_scale(s)`.
+ * @remarks  The inverse of `cf_m4_decompose`, computed directly with no matrix multiplies --
+ *           the usual way to build an object's or bone's world matrix from its pose.
+ * @related  CF_M4x4 CF_Quat cf_m4_decompose cf_quat_to_m4 cf_m4_translate cf_m4_scale
+ */
+CF_INLINE CF_M4x4 cf_m4_from_trs(CF_V3 translation, CF_Quat rotation, CF_V3 scale)
+{
+	CF_M4x4 m = cf_quat_to_m4(rotation);
+	m.elements[0] *= scale.x; m.elements[1] *= scale.x; m.elements[2] *= scale.x;
+	m.elements[4] *= scale.y; m.elements[5] *= scale.y; m.elements[6] *= scale.y;
+	m.elements[8] *= scale.z; m.elements[9] *= scale.z; m.elements[10] *= scale.z;
+	m.elements[12] = translation.x; m.elements[13] = translation.y; m.elements[14] = translation.z;
 	return m;
 }
 
@@ -1530,14 +1679,21 @@ CF_INLINE v3 safe_norm(v3 a) { return cf_safe_norm_v3(a); }
 CF_INLINE v4 safe_norm(v4 a) { return cf_safe_norm_v4(a); }
 CF_INLINE v3 lerp(v3 a, v3 b, float t) { return cf_lerp_v3(a, b, t); }
 CF_INLINE v4 lerp(v4 a, v4 b, float t) { return cf_lerp_v4(a, b, t); }
+CF_INLINE v3 reflect(v3 a, v3 n) { return cf_reflect_v3(a, n); }
+CF_INLINE v3 project(v3 a, v3 b) { return cf_project_v3(a, b); }
+CF_INLINE v3 slide(v3 a, v3 n) { return cf_slide_v3(a, n); }
+CF_INLINE void orthonormal_basis(v3 n, v3* x_out, v3* y_out) { cf_orthonormal_basis(n, x_out, y_out); }
 CF_INLINE v4 v4_from_v3(v3 a, float w) { return cf_v4_from_v3(a, w); }
 CF_INLINE v3 xyz(v4 a) { return cf_xyz(a); }
 
 CF_INLINE quat quat_identity() { return cf_quat_identity(); }
 CF_INLINE quat quat_from_axis_angle(v3 axis, float radians) { return cf_quat_from_axis_angle(axis, radians); }
+CF_INLINE void quat_to_axis_angle(quat q, v3* axis_out, float* angle_out) { cf_quat_to_axis_angle(q, axis_out, angle_out); }
 CF_INLINE quat norm(quat q) { return cf_quat_norm(q); }
 CF_INLINE quat conjugate(quat q) { return cf_quat_conjugate(q); }
+CF_INLINE quat inverse(quat q) { return cf_quat_inverse(q); }
 CF_INLINE quat slerp(quat a, quat b, float t) { return cf_quat_slerp(a, b, t); }
+CF_INLINE quat nlerp(quat a, quat b, float t) { return cf_quat_nlerp(a, b, t); }
 CF_INLINE quat quat_from_to(v3 from, v3 to) { return cf_quat_from_to(from, to); }
 CF_INLINE quat quat_from_basis(v3 x, v3 y, v3 z) { return cf_quat_from_basis(x, y, z); }
 CF_INLINE quat quat_from_m4(m4 m) { return cf_quat_from_m4(m); }
@@ -1553,6 +1709,7 @@ CF_INLINE m4 m4_rotate_z(float radians) { return cf_m4_rotate_z(radians); }
 CF_INLINE m4 transpose(m4 a) { return cf_m4_transpose(a); }
 CF_INLINE m4 invert(m4 a) { return cf_m4_invert(a); }
 CF_INLINE m4 normal_matrix(m4 model) { return cf_m4_normal_matrix(model); }
+CF_INLINE m4 m4_from_trs(v3 translation, quat rotation, v3 scale) { return cf_m4_from_trs(translation, rotation, scale); }
 CF_INLINE void m4_decompose(m4 m, v3* translation, quat* rotation, v3* scale) { cf_m4_decompose(m, translation, rotation, scale); }
 CF_INLINE v3 transform_point(m4 m, v3 p) { return cf_m4_transform_point(m, p); }
 CF_INLINE v3 transform_dir(m4 m, v3 d) { return cf_m4_transform_dir(m, d); }
