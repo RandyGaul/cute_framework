@@ -8,26 +8,27 @@
 // Fireflies: a first-person forest at dusk, built from blocks.
 //
 // Wander a Zelda-ish woodland vale rendered Minecraft-style -- every tree, hill, and stone
-// is a box -- until you find a glass jar resting on a stump. With the jar in hand, catch
-// the fireflies drifting through the glades; the jar doubles as your lantern, glowing
-// brighter with every catch, which matters in the deep thickets where the fireflies live.
-// Carry your light to the dormant shrine in the great clearing and set them free: each
-// release lights another lantern, and when all the lanterns wake, dawn comes early.
+// is a box -- with an empty lantern swinging in your hand. Catch the fireflies drifting
+// through the glades and the lantern glows brighter with every catch, which matters in the
+// deep thickets where the fireflies live. Carry your light to the dormant shrine in the
+// great clearing and set them free: each release lights another lantern, and when all the
+// lanterns wake, dawn comes early.
 //
 // Rendering showcase for the 3d API working as one system:
 //   - Thousands of blocks flow through cf_draw3d_mesh and coalesce into a handful of
 //     instanced draws (color + emissive ride in_mesh_attributes, sway rides the free
 //     second lane).
-//   - Two-cascade shadow maps rendered into the layers of one depth 2d-array texture
-//     (CF_CanvasParams attach_target + attach_layer) and sampled with hardware PCF
-//     through sampler2DArrayShadow.
+//   - Two EVSM shadow cascades: exponentially-warped depth moments rendered into the
+//     layers of one color 2d-array texture (CF_CanvasParams attach_target + attach_layer),
+//     gaussian-blurred, and resolved with a Chebyshev bound -- soft and acne-free with
+//     no depth bias to tune.
 //   - HDR bloom through render-to-mip canvases (CF_CanvasParams attach_mip): a bright
 //     pass, then a downsample chain ping-ponging between the mip levels of two textures.
 //   - Chunked frustum culling and all picking via cute_math3d (CF_Frustum, CF_Aabb3,
 //     cf_ray3_to_sphere).
 //
-// Controls: WASD move, mouse look, E interact (pick up the jar / release at the shrine),
-// left click to catch a firefly near the crosshair.
+// Controls: WASD move, mouse look, E to release your catch at the shrine, left click to
+// catch a firefly near the crosshair.
 //
 // Automated testing: every control flows through one Input struct, so `fireflies --auto`
 // plays a scripted tour of the whole loop with no human input, `--shot <seconds>`
@@ -342,7 +343,7 @@ static void s_update_fireflies(float t)
 //--------------------------------------------------------------------------------------------------
 // Game state.
 
-typedef enum GameStage { STAGE_FIND_JAR, STAGE_COLLECT, STAGE_AWAKENED } GameStage;
+typedef enum GameStage { STAGE_COLLECT, STAGE_AWAKENED } GameStage;
 
 typedef struct Game
 {
@@ -355,6 +356,7 @@ typedef struct Game
 } Game;
 
 static Game g_game;
+static float g_catch_t = -100.0f; // Last catch time; drives the lantern's scoop swing.
 
 //--------------------------------------------------------------------------------------------------
 // Input abstraction: everything the game reads lives here, filled either from the real
@@ -399,17 +401,9 @@ static void s_gather_input(Input* in, CF_V3 player, float yaw, float dt)
 		g_auto.t += dt;
 		g_auto.stage_t += dt;
 		switch (g_auto.stage) {
-		case 0: // Admire the glade with a slow turn.
+		case 0: // Admire the glade with a slow turn, lantern already in hand.
 			in->look_dx = 55.0f * dt;
-			if (g_auto.stage_t > 4.5f) { g_auto.stage = 1; g_auto.stage_t = 0; }
-			break;
-		case 1: // Walk to the jar and take it.
-			s_auto_seek(in, player, yaw, g_jar_pos, dt);
-			if (cf_distance(player, g_jar_pos) < 2.4f) {
-				in->interact = true;
-				if (g_game.stage != STAGE_FIND_JAR) { g_auto.stage = 2; g_auto.stage_t = 0; }
-			}
-			if (g_auto.stage_t > 30.0f) { g_auto.stage = 2; g_auto.stage_t = 0; } // Safety.
+			if (g_auto.stage_t > 4.5f) { g_auto.stage = 2; g_auto.stage_t = 0; }
 			break;
 		case 2: { // Hunt fireflies until the jar holds enough for the shrine.
 			int best = -1;
@@ -806,31 +800,34 @@ static void s_draw_lantern(CF_Mesh cube, CF_V3 center, float s, float yaw, float
 	cf_draw3d_translate(center);
 	cf_draw3d_rotate(cf_quat_from_axis_angle(cf_v3(0, 1, 0), yaw));
 	cf_draw3d_scale(cf_v3(s, s, s));
+	// The world cube spans [-0.5, 0.5]: block scales are FULL edge lengths. Every joint
+	// below overlaps its neighbor by a few hundredths so the frame reads as one welded
+	// piece -- posts sink into both plates, the peak sits into the cap.
 	CF_Color bronze = cf_make_color_rgb_f(0.15f, 0.11f, 0.08f);
 	// Base plate, cap, and peak.
-	s_submit_block_ex(cube, cf_v3(0, -0.62f, 0), cf_v3(0.46f, 0.08f, 0.46f), bronze, 0.02f, 0);
-	s_submit_block_ex(cube, cf_v3(0, 0.60f, 0), cf_v3(0.42f, 0.08f, 0.42f), bronze, 0.02f, 0);
-	s_submit_block_ex(cube, cf_v3(0, 0.73f, 0), cf_v3(0.13f, 0.08f, 0.13f), bronze, 0.02f, 0);
-	// Four corner posts.
+	s_submit_block_ex(cube, cf_v3(0, -0.64f, 0), cf_v3(0.92f, 0.12f, 0.92f), bronze, 0.02f, 0);
+	s_submit_block_ex(cube, cf_v3(0, 0.64f, 0), cf_v3(0.92f, 0.12f, 0.92f), bronze, 0.02f, 0);
+	s_submit_block_ex(cube, cf_v3(0, 0.76f, 0), cf_v3(0.28f, 0.14f, 0.28f), bronze, 0.02f, 0);
+	// Four corner posts, spanning plate to plate.
 	for (int i = 0; i < 4; ++i) {
-		float px = (i & 1) ? 0.36f : -0.36f;
-		float pz = (i & 2) ? 0.36f : -0.36f;
-		s_submit_block_ex(cube, cf_v3(px, 0, pz), cf_v3(0.08f, 0.60f, 0.08f), bronze, 0.02f, 0);
+		float px = (i & 1) ? 0.40f : -0.40f;
+		float pz = (i & 2) ? 0.40f : -0.40f;
+		s_submit_block_ex(cube, cf_v3(px, 0, pz), cf_v3(0.11f, 1.28f, 0.11f), bronze, 0.02f, 0);
 	}
-	// The core flame.
-	s_submit_block_ex(cube, cf_v3(0, -0.18f, 0), cf_v3(0.15f, 0.15f, 0.15f),
+	// The core flame, resting on the base.
+	s_submit_block_ex(cube, cf_v3(0, -0.42f, 0), cf_v3(0.26f, 0.26f, 0.26f),
 		cf_make_color_rgb_f(1.0f, 0.72f, 0.30f), core_glow, 0);
 	// The catch, drifting inside the glass. Kept dimmer than loose fireflies so each
 	// speck stays readable through the glass instead of fusing into one bloom blob.
 	for (int i = 0; i < specks; ++i) {
 		float a = t * 1.6f + (float)i * 2.4f;
-		CF_V3 off = cf_v3(cosf(a) * 0.19f, sinf(t * 2.3f + (float)i * 1.7f) * 0.24f + 0.06f, sinf(a) * 0.19f);
+		CF_V3 off = cf_v3(cosf(a) * 0.20f, sinf(t * 2.3f + (float)i * 1.7f) * 0.26f + 0.04f, sinf(a) * 0.20f);
 		float pulse = 2.8f + sinf(t * 3.1f + (float)i * 2.2f) * 1.2f;
-		s_submit_block_ex(cube, off, cf_v3(0.055f, 0.055f, 0.055f), cf_make_color_rgb_f(1.0f, 0.68f, 0.24f), pulse, 0);
+		s_submit_block_ex(cube, off, cf_v3(0.09f, 0.09f, 0.09f), cf_make_color_rgb_f(1.0f, 0.68f, 0.24f), pulse, 0);
 	}
-	// The glass body, lit faintly by its own core.
-	s_submit_glass_block(cube, cf_v3(0, 0, 0), cf_v3(0.34f, 0.56f, 0.34f),
-		cf_make_color_rgb_f(0.78f, 0.87f, 0.95f), 0.08f + core_glow * 0.05f, 0.30f);
+	// The glass body, filling the frame, lit faintly by its own core.
+	s_submit_glass_block(cube, cf_v3(0, 0, 0), cf_v3(0.72f, 1.16f, 0.72f),
+		cf_make_color_rgb_f(0.78f, 0.87f, 0.95f), 0.06f + core_glow * 0.05f, 0.30f);
 	cf_draw3d_pop();
 }
 
@@ -854,19 +851,48 @@ static void s_draw_dynamic(CF_Mesh cube, CF_V3 player, CF_V3 fwd, float t)
 
 	// The lantern: resting on its stump until taken, then held low in view, glowing
 	// brighter with every firefly inside -- which also drift around in the glass.
-	if (g_game.stage == STAGE_FIND_JAR) {
-		float bob = sinf(t * 1.7f) * 0.04f;
-		s_draw_lantern(cube, cf_add_v3(g_jar_pos, cf_v3(0, 0.28f + bob, 0)), 0.32f,
-			t * 0.35f, 0.55f + sinf(t * 2.4f) * 0.2f, 0, t);
-	} else {
+	{
+		// The lantern hangs from a pivot above its peak and swings like a pendulum:
+		// walking pumps it (roll at step rate, a gentler fore-aft at half rate), and
+		// each catch kicks a scoop swing through it.
+		static CF_V3 s_prev_player;
+		static float s_prev_t, s_speed, s_phase;
+		float ldt = cf_max(t - s_prev_t, 0.0001f);
+		CF_V3 moved = cf_sub_v3(player, s_prev_player);
+		moved.y = 0;
+		float speed = cf_min(cf_len(moved) / ldt, 6.0f);
+		s_prev_player = player;
+		s_prev_t = t;
+		s_speed += (speed - s_speed) * (1.0f - expf(-8.0f * ldt)); // Smooth stops and starts.
+		float spd01 = cf_clamp(s_speed / 4.2f, 0, 1);
+		s_phase += s_speed * ldt * 2.6f; // Step cycle advances with distance, not time.
+
+		float roll = sinf(s_phase) * 0.16f * spd01;
+		float pitch = sinf(s_phase * 0.5f) * 0.09f * spd01 + sinf(t * 1.3f) * 0.015f;
+		float lunge = 0;
+		float k = (t - g_catch_t) / 0.5f;
+		if (k >= 0 && k < 1.0f) {
+			// The catch: a quick forward-up scoop that eases back home.
+			float ease = sinf(k * CF_PI);
+			pitch -= ease * 0.85f;
+			lunge = ease * 0.12f;
+		}
+
 		CF_V3 right = cf_norm(cf_cross(cf_v3(fwd.x, 0, fwd.z), cf_v3(0, 1, 0)));
-		CF_V3 hold = cf_add_v3(player, cf_add_v3(cf_mul_v3_f(fwd, 0.85f),
-			cf_add_v3(cf_mul_v3_f(right, 0.30f), cf_v3(0, -0.30f + sinf(t * 2.1f) * 0.008f, 0))));
-		float glow = 0.8f + 0.7f * (float)g_game.in_jar;
-		// Face the camera, with a small lazy swing as you walk.
-		float yaw = atan2f(fwd.x, fwd.z) + sinf(t * 1.9f) * 0.07f;
+		CF_V3 hang = cf_add_v3(player, cf_add_v3(cf_mul_v3_f(fwd, 0.85f),
+			cf_add_v3(cf_mul_v3_f(right, 0.30f), cf_v3(0, -0.19f, 0))));
+		float yaw = atan2f(fwd.x, fwd.z);
+		// Empty glass until the first firefly: just a whisper of warmth in the core.
+		float glow = g_game.in_jar ? 0.8f + 0.7f * (float)g_game.in_jar : 0.06f;
 		int specks = g_game.in_jar < 4 ? g_game.in_jar : 4;
-		s_draw_lantern(cube, hold, 0.115f, yaw, glow, specks, t);
+
+		cf_draw3d_push();
+		cf_draw3d_translate(hang);
+		cf_draw3d_rotate(cf_quat_from_axis_angle(cf_v3(0, 1, 0), yaw));
+		cf_draw3d_rotate(cf_quat_from_axis_angle(cf_v3(1, 0, 0), pitch));
+		cf_draw3d_rotate(cf_quat_from_axis_angle(cf_v3(0, 0, 1), roll));
+		s_draw_lantern(cube, cf_v3(0, -0.115f, lunge), 0.115f, 0, glow, specks, t);
+		cf_draw3d_pop();
 	}
 
 	// Shrine lanterns: the same little lantern, big; lit ones burn warm, unlit ones
@@ -877,7 +903,7 @@ static void s_draw_dynamic(CF_Mesh cube, CF_V3 player, CF_V3 fwd, float t)
 		float pz = g_shrine_pos.z + sinf(ang) * 5.5f;
 		float pg = s_ground(px, pz);
 		bool lit = i < g_game.delivered;
-		float em = lit ? 3.0f + sinf(t * 1.9f + i) * 0.7f : 0.05f;
+		float em = lit ? 3.0f + sinf(t * 1.9f + i) * 0.7f : 0.0f;
 		s_draw_lantern(cube, cf_v3(px, pg + 3.1f, pz), 0.62f, ang, em, lit ? 2 : 0, t);
 	}
 
@@ -1063,7 +1089,7 @@ int main(int argc, char* argv[])
 
 	s_build_world();
 	s_spawn_fireflies();
-	g_game.stage = STAGE_FIND_JAR;
+	g_game.stage = STAGE_COLLECT; // You start with the lantern in hand.
 
 	CF_Mesh cube = s_make_cube_mesh();
 	CF_Shader block_shd = cf_make_shader_from_source(s_block_vs, s_block_fs);
@@ -1166,14 +1192,9 @@ int main(int argc, char* argv[])
 
 		// Gameplay.
 		g_game.prompt = NULL;
-		if (g_game.stage == STAGE_FIND_JAR) {
-			if (cf_distance(player, g_jar_pos) < 2.6f) {
-				g_game.prompt = "E -- take the jar";
-				if (in.interact) g_game.stage = STAGE_COLLECT;
-			}
-		} else {
+		{
 			// Catch: nearest loose firefly close to the crosshair ray.
-			if (in.catch_click && g_game.stage != STAGE_FIND_JAR) {
+			if (in.catch_click) {
 				CF_Ray3 ray;
 				ray.p = player;
 				ray.d = fwd;
@@ -1184,6 +1205,7 @@ int main(int argc, char* argv[])
 					if (cf_ray3_to_sphere(ray, cf_make_sphere(f->pos, 0.55f)).hit) {
 						f->caught = true;
 						g_game.in_jar++;
+						g_catch_t = t;
 						break;
 					}
 				}
@@ -1314,7 +1336,7 @@ int main(int argc, char* argv[])
 		// Firefly + jar lights.
 		CF_V4 lights[FIREFLY_LIGHTS];
 		int nl = 0;
-		if (g_game.stage != STAGE_FIND_JAR && g_game.in_jar > 0) {
+		if (g_game.in_jar > 0) {
 			CF_V3 lp = cf_add_v3(player, cf_mul_v3_f(fwd, 0.7f));
 			lights[nl++] = cf_v4(lp.x, lp.y - 0.3f, lp.z, 0.9f + 0.55f * g_game.in_jar);
 		}
@@ -1381,7 +1403,7 @@ int main(int argc, char* argv[])
 				cf_draw_text(g_game.prompt, cf_v2(-tw * 0.5f, -(float)h * 0.18f), -1);
 				cf_draw_pop_color();
 			}
-			if (g_game.stage != STAGE_FIND_JAR) {
+			{
 				char buf[64];
 				snprintf(buf, sizeof(buf), "fireflies %d   lanterns %d / %d", g_game.in_jar, g_game.delivered, SHRINE_LANTERNS);
 				cf_draw_push_color(cf_make_color_rgba_f(1, 1, 1, 0.4f));
