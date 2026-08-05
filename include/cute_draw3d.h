@@ -793,7 +793,7 @@ CF_API void CF_CALL cf_draw3d_billboard(const CF_Sprite* sprite, CF_V3 position)
  * @category draw3d
  * @brief    Pushes a color for subsequent 3d shape drawing.
  * @param    c  The color.
- * @remarks  Applies to all `cf_draw3d_` shape functions (lines, circles, solids). Defaults to white.
+ * @remarks  Applies to all `cf_draw3d_*` shape functions (lines, circles, solids). Defaults to white.
  * @related  cf_draw3d_pop_color cf_draw3d_peek_color cf_draw3d_line cf_draw3d_cube
  */
 CF_API void CF_CALL cf_draw3d_push_color(CF_Color c);
