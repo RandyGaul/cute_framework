@@ -1766,11 +1766,10 @@ void ck_map_clear_impl(CK_MapHeader* hdr)
 uint64_t ck_hash_fnv1a(const void* ptr, size_t sz)
 {
 	uint64_t x = 0xcbf29ce484222325ull;
-	const char* buf = (const char*)ptr;
+	const unsigned char* buf = (const unsigned char*)ptr;
 	for (size_t i = 0; i < sz; i++) {
-		x ^= (uint64_t)(unsigned char)buf[i];
+		x ^= (uint64_t)buf[i];
 		x *= 0x100000001b3ull;
-		x ^= x >> 32;
 	}
 	return x;
 }

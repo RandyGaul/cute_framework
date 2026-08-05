@@ -106,7 +106,7 @@ typedef struct CF_File CF_File;
 // @end
 
 /**
- * @enum     File Types
+ * @enum     CF_FileType
  * @category file
  * @brief    The various kinds of files that can be opened.
  * @related  CF_File CF_Stat cf_file_type_to_string

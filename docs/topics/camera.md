@@ -28,7 +28,7 @@ This is the coordinate system used by all drawing functions.
 
 ### Screen Space (Input)
 
-This is the coordinate system used by mouse and touch input functions like [`cf_mouse_x`](../input/cf_mouse_x.md) and [`cf_mouse_y`](../input/cf_mouse_y.md).
+This is the coordinate system used by mouse and touch input functions like [`cf_mouse_x`](../input/function/cf_mouse_x.md) and [`cf_mouse_y`](../input/function/cf_mouse_y.md).
 
 - **Origin**: Top-left corner of the screen `(0, 0)`
 - **X-axis**: Positive values go **right**
@@ -46,37 +46,37 @@ This is the coordinate system used by mouse and touch input functions like [`cf_
 
 ### Converting Between Coordinate Systems
 
-To convert mouse coordinates to world space for game logic, use [`cf_screen_to_world`](../draw/cf_screen_to_world.md):
+To convert mouse coordinates to world space for game logic, use [`cf_screen_to_world`](../draw/function/cf_screen_to_world.md):
 
 ```cpp
 CF_V2 mouse_world = cf_screen_to_world(cf_v2((float)cf_mouse_x(), (float)cf_mouse_y()));
 ```
 
-To convert world coordinates to screen space, use [`cf_world_to_screen`](../draw/cf_world_to_screen.md):
+To convert world coordinates to screen space, use [`cf_world_to_screen`](../draw/function/cf_world_to_screen.md):
 
 ```cpp
 CF_V2 screen_pos = cf_world_to_screen(world_position);
 ```
 
-You can also get the visible screen bounds in world space with [`cf_screen_bounds_to_world`](../draw/cf_screen_bounds_to_world.md).
+You can also get the visible screen bounds in world space with [`cf_screen_bounds_to_world`](../draw/function/cf_screen_bounds_to_world.md).
 
 ## Translating
 
-We can move coordinate system by calling [`cf_draw_translate`](../draw/cf_draw_translate.md), which will shift the location of anything drawn thereafter. By default the coordinate system starts out at the origin `(0, 0)`. For example, call `cf_draw_translate(100, 0)` everything drawn thereafter will shift to the right by `100` units.
+We can move coordinate system by calling [`cf_draw_translate`](../draw/function/cf_draw_translate.md), which will shift the location of anything drawn thereafter. By default the coordinate system starts out at the origin `(0, 0)`. For example, call `cf_draw_translate(100, 0)` everything drawn thereafter will shift to the right by `100` units.
 
 ## Rotating
 
-We can rotate the coordinate system by calling [`cf_draw_rotate`](../draw/cf_draw_rotate.md). A positive parameter will rotate everything drawn thereafter clockwise by a number of radians.
+We can rotate the coordinate system by calling [`cf_draw_rotate`](../draw/function/cf_draw_rotate.md). A positive parameter will rotate everything drawn thereafter clockwise by a number of radians.
 
 ## Scaling
 
-We can scale the coordinate system by calling [`cf_draw_scale`](../draw/cf_draw_scale.md). Numbers greater than 1 will zoom in, while numbers less than one will zoom out. Negative numbers will flip the screen on the x or y axis.
+We can scale the coordinate system by calling [`cf_draw_scale`](../draw/function/cf_draw_scale.md). Numbers greater than 1 will zoom in, while numbers less than one will zoom out. Negative numbers will flip the screen on the x or y axis.
 
 ## Transform State
 
 Whenever we adjust the coordinate system (by scaling, rotating, or translating) all subsequent draw commands will be drawn within the adjusted coordinate system. It's important to learn how to save coordinate systems restore them later. This allows you to draw something specific without affecting the coordinate system used by the rest of your code.
 
-By using [`cf_draw_push`](../draw/cf_draw_push.md) and [`cf_draw_pop`](../draw/cf_draw_pop.md) you can save and restore coordinate systems. This technique lets you draw things locally without affecting anything else. Here's an example:
+By using [`cf_draw_push`](../draw/function/cf_draw_push.md) and [`cf_draw_pop`](../draw/function/cf_draw_pop.md) you can save and restore coordinate systems. This technique lets you draw things locally without affecting anything else. Here's an example:
 
 ```cpp
 cf_draw_push(); // Save the prior transform (coordinate system).
@@ -118,3 +118,11 @@ cf_draw_box(cf_make_aabb(cf_v2(-5,-5),cf_v2(5,5)),1,0.5);
 ```
 
 The box will be drawn at `(50,0)` but will itself be rotated locally by 45 degrees.
+
+## 3D Cameras
+
+Everything on this page is the 2D camera, and it never affects 3D meshes. The
+[3D drawing layer](drawing_3d.md) has its own projection and view stacks
+(`cf_draw3d_push_projection` / `cf_draw3d_push_view`), fed by `cf_perspective`, `cf_ortho`,
+and `cf_look_at` from cute_math3d.h. The two camera systems are independent by design --
+your HUD's 2D camera can shake while the 3D world holds still, and vice versa.

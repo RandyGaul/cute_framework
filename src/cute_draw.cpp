@@ -122,6 +122,43 @@ void cf_destroy_texture_handle(ATLAS_CACHE_U64 texture_id, void* udata)
 	cf_destroy_texture(tex);
 }
 
+// The three callbacks below enable atlas_cache's GPU repack path: atlas pages get rebuilt with
+// texture->texture region copies instead of re-fetching every resident image's pixels through
+// cf_get_pixels and assembling a CPU-side atlas buffer.
+
+ATLAS_CACHE_U64 cf_generate_empty_texture_handle(int w, int h, void* udata)
+{
+	CF_UNUSED(udata);
+	CF_TextureParams params = cf_texture_defaults(w, h);
+	params.filter = CF_FILTER_LINEAR;
+	CF_Texture texture = cf_make_texture(params);
+	// Clear to transparent-zero, matching the CPU path's memset of its atlas buffer: regions
+	// no image lands in are still sampled through the atlas border ring and must not contain
+	// garbage. One zeroed whole-texture upload -- still no per-image producer callbacks.
+	int size = w * h * (int)sizeof(CF_Pixel);
+	void* zeroes = CF_CALLOC(size);
+	cf_texture_update(texture, zeroes, size);
+	CF_FREE(zeroes);
+	return texture.id;
+}
+
+void cf_copy_texture_handle_region(ATLAS_CACHE_U64 dst, int dst_x, int dst_y, ATLAS_CACHE_U64 src, int src_x, int src_y, int w, int h, void* udata)
+{
+	CF_UNUSED(udata);
+	CF_Texture dst_tex, src_tex;
+	dst_tex.id = dst;
+	src_tex.id = src;
+	cf_texture_copy_region(dst_tex, dst_x, dst_y, src_tex, src_x, src_y, w, h);
+}
+
+void cf_upload_texture_handle_subimage(ATLAS_CACHE_U64 dst, int x, int y, int w, int h, const void* pixels, void* udata)
+{
+	CF_UNUSED(udata);
+	CF_Texture dst_tex;
+	dst_tex.id = dst;
+	cf_texture_update_region(dst_tex, x, y, w, h, (void*)pixels);
+}
+
 atlas_cache_t* cf_get_draw_atlas_cache()
 {
 	return &s_draw->atlas_cache;
@@ -175,6 +212,13 @@ static CF_INLINE BatchGeometry& s_push_geom()
 	BatchGeometry& g = cmd.geoms.add();
 	g.mvp = s_draw->mvp;
 	g.blend = s_draw->blends.last();
+	// Stroke/effect state is captured for every geometry here rather than per emitter, so a
+	// shape type that never looks at it still has it well-defined.
+	g.dash = s_draw->dashes.last();
+	g.fx.outline = premultiply(s_draw->outlines.last());
+	g.fx.outline_width = s_draw->outline_widths.last();
+	g.fx.glow = premultiply(s_draw->glows.last());
+	g.fx.glow_radius = s_draw->glow_radii.last();
 	return g;
 }
 
@@ -404,6 +448,17 @@ static void s_draw_report_tiled(const BatchGeometry* geoms, const CF_PendingUV* 
 			axmax = cf_max(axmax, poly[j].x);
 			aymax = cf_max(aymax, poly[j].y);
 		}
+		// An outline or glow paints past the shape's own coverage box, so grow the pixel AABB
+		// the tile walk masks against by that reach (world units scaled into pixels by the mvp).
+		if (!instanced) {
+			float fx_extent = cf_max(geom.fx.outline_width, geom.fx.glow_radius);
+			if (fx_extent > 0) {
+				float sx = cf_len(cf_v2(geom.mvp.m.x.x, geom.mvp.m.x.y)) * w2;
+				float sy = cf_len(cf_v2(geom.mvp.m.y.x, geom.mvp.m.y.y)) * h2;
+				float pad = fx_extent * cf_max(sx, sy);
+				axmin -= pad; aymin -= pad; axmax += pad; aymax += pad;
+			}
+		}
 
 		CF_TileCmd tc;
 		CF_MEMSET(&tc, 0, sizeof(tc));
@@ -564,6 +619,11 @@ static void s_draw_report_tiled(const BatchGeometry* geoms, const CF_PendingUV* 
 				pay.add({ geom.shape[0].x, geom.shape[0].y, geom.shape[1].x, geom.shape[1].y });
 				pay.add({ geom.shape[2].x, geom.shape[2].y, geom.shape[3].x, geom.shape[3].y });
 				pay.add({ geom.shape[4].x, geom.shape[4].y, 0, 0 });
+				if (geom.dash.on > 0) {
+					// Dash flag bit + a trailing (on, off, phase) payload vec4.
+					tc.type |= 16u;
+					pay.add({ geom.dash.on, geom.dash.off, geom.dash.phase, 0 });
+				}
 			} else if (geom.type == BATCH_GEOMETRY_TYPE_CUSTOM) {
 				// P0..P3: the 16 user params. P4: pre-padded world bounds for the
 				// instanced VS coverage quad.
@@ -599,15 +659,38 @@ static void s_draw_report_tiled(const BatchGeometry* geoms, const CF_PendingUV* 
 			} else {
 				pay.add({ geom.shape[0].x, geom.shape[0].y, geom.shape[1].x, geom.shape[1].y });
 				pay.add({ geom.shape[2].x, geom.shape[2].y, 0, 0 });
+				// Dash a stroked circle or a line (filled capsule with distinct endpoints);
+				// a dashed *filled disc* makes no sense, so fills with coincident endpoints
+				// stay solid even under an active dash stack. Only segment-family shapes
+				// (type 3) dash -- boxes, triangles, and arrows have no arclength here.
+				bool degenerate = geom.shape[0].x == geom.shape[1].x && geom.shape[0].y == geom.shape[1].y;
+				if (tc.type == 3u && geom.dash.on > 0 && !(geom.fill && degenerate)) {
+					tc.type |= 16u;
+					pay.add({ geom.dash.on, geom.dash.off, geom.dash.phase, 0 });
+				}
 			}
 		}	break;
+		}
+
+		// Shape effects: a trailing payload block (outline rgba, glow rgba, widths) pointed at
+		// by tc.fx.x. tc.fx.y is how far past the shape the effects reach, so the coverage quad
+		// and the tile cull can pad for a glow rather than clipping it.
+		if (is_sdf && (geom.fx.outline_width > 0 || geom.fx.glow_radius > 0)) {
+			uint32_t fx_offset = (uint32_t)pay.count();
+			CF_MEMCPY(&tc.fx[0], &fx_offset, sizeof(fx_offset));
+			tc.fx[1] = cf_max(geom.fx.outline_width, geom.fx.glow_radius);
+			pay.add({ geom.fx.outline.r, geom.fx.outline.g, geom.fx.outline.b, geom.fx.outline.a });
+			pay.add({ geom.fx.glow.r, geom.fx.glow.g, geom.fx.glow.b, geom.fx.glow.a });
+			pay.add({ geom.fx.outline_width, geom.fx.glow_radius, 0, 0 });
 		}
 
 		// Opaque-cover cull candidate? Filled SDF shape at full alpha under normal
 		// blending (additive/multiply/screen shapes never hide what's beneath).
 		// Clipped segments are excluded: their planes can cut mid-tile, so "interior
 		// covers the tile" cannot be decided from the SDF alone.
-		if (is_sdf && tc.fill == 1.0f && geom.alpha >= 1.0f && geom.color.a >= 1.0f && geom.type != BATCH_GEOMETRY_TYPE_SEGMENT_CLIPPED && blend == CF_DRAW_BLEND_NORMAL) {
+		// Dashed strokes never claim opaque cover: their gaps don't hide what's beneath.
+		// Neither do effects: an outline or glow extends past the shape's own interior.
+		if (is_sdf && tc.fill == 1.0f && geom.alpha >= 1.0f && geom.color.a >= 1.0f && geom.type != BATCH_GEOMETRY_TYPE_SEGMENT_CLIPPED && blend == CF_DRAW_BLEND_NORMAL && !(tc.type & 16u) && tc.fx[1] == 0) {
 			tc.opaque = 1.0f;
 		}
 
@@ -795,6 +878,9 @@ static void s_draw_report_tiled(const BatchGeometry* geoms, const CF_PendingUV* 
 static void s_draw_report(atlas_cache_entry_t* entries, int count, int texture_w, int texture_h, void* udata)
 {
 	CF_UNUSED(udata);
+	// Sprite-textured mesh commands resolve their uvs through dedicated flushes; route those
+	// reports to the draw3d layer (see cf_draw3d_process).
+	if (cf_draw3d_atlas_report(entries, count, texture_w, texture_h)) return;
 	// Stash each entry's atlas uvs + texture into the per-flush uv table. Rendering
 	// happens after the flush (s_flush_pending_geoms): the stream renders in paint
 	// order, splitting into a new draw wherever the bound texture changes, so paint
@@ -853,6 +939,11 @@ static void s_init_atlas_cache(int w, int h)
 	config.get_pixels_callback = cf_get_pixels;
 	config.generate_texture_callback = cf_generate_texture_handle;
 	config.delete_texture_callback = cf_destroy_texture_handle;
+	// GPU repack path: atlas rebuilds copy still-resident images GPU->GPU instead of
+	// re-fetching all their pixels through cf_get_pixels.
+	config.generate_empty_texture_callback = cf_generate_empty_texture_handle;
+	config.copy_texture_callback = cf_copy_texture_handle_region;
+	config.upload_subimage_callback = cf_upload_texture_handle_subimage;
 	config.allocator_context = NULL;
 	config.lonely_buffer_count_till_flush = 0;
 	config.atlas_height_in_pixels = h;
@@ -913,6 +1004,9 @@ void cf_make_draw()
 	// AtlasCacheer.
 	s_init_atlas_cache(2048, 2048);
 
+	// 3d mesh submission layer.
+	cf_make_draw3d();
+
 	// Create samplers for filter mode switching.
 	s_draw->sampler_nearest = cf_create_draw_sampler(CF_FILTER_NEAREST);
 	s_draw->sampler_linear = cf_create_draw_sampler(CF_FILTER_LINEAR);
@@ -971,6 +1065,7 @@ void cf_make_draw()
 
 void cf_destroy_draw()
 {
+	cf_destroy_draw3d();
 	if (s_draw->blit_init) {
 		cf_destroy_mesh(s_draw->blit_mesh);
 	}
@@ -1716,6 +1811,7 @@ static void s_draw_circle(v2 position, float stroke, float radius, bool fill)
 	g.stroke = stroke;
 	g.fill = fill;
 	g.aa = aaf;
+	g.dash = s_draw->dashes.last();
 	g.user_params = s_draw->user_params.last();
 }
 
@@ -1761,6 +1857,7 @@ static void s_draw_capsule(v2 a, v2 b, float stroke, float radius, bool fill)
 	g.stroke = stroke;
 	g.fill = fill;
 	g.aa = s_draw->aaf;
+	g.dash = s_draw->dashes.last();
 	g.user_params = s_draw->user_params.last();
 }
 
@@ -1874,6 +1971,8 @@ void cf_draw_polyline(const CF_V2* pts, int count, float thickness, bool loop)
 	CF_Color color = premultiply(s_draw->colors.last());
 	CF_Color user_params = s_draw->user_params.last();
 	float aaf = s_draw->aaf;
+	CF_DrawDash dash = s_draw->dashes.last();
+	float dash_arclength = 0; // Accumulated so the pattern flows unbroken through joints.
 
 	// Bisector of two segment directions; perpendicular split for exact 180 folds.
 	auto bisect = [](v2 da, v2 db) {
@@ -1910,6 +2009,11 @@ void cf_draw_polyline(const CF_V2* pts, int count, float thickness, bool loop)
 		g.stroke = 0;
 		g.fill = true;
 		g.aa = aaf;
+		// The shader's pattern coordinate restarts at each segment's own `a`, so shifting
+		// the phase back by the arclength walked so far keeps dashes flowing through joints.
+		g.dash = dash;
+		g.dash.phase = dash.phase - dash_arclength;
+		dash_arclength += len(b - a);
 		g.user_params = user_params;
 
 		// Plane 0 (strict) keeps the far side of the start joint's bisector; plane 1
@@ -2915,6 +3019,7 @@ void cf_destroy_draw_list(CF_DrawList list)
 	if (!data) return;
 	CF_ASSERT(s_draw->recording_list != *data);
 	s_draw_list_free_uniforms(*data);
+	cf_draw3d_free_list_cmds(*data);
 	(*data)->~CF_DrawListData();
 	CF_FREE(*data);
 	s_draw->draw_lists.remove(list.id);
@@ -2959,6 +3064,7 @@ void cf_draw_list_begin(CF_DrawList list)
 	s_draw->projection = cf_make_identity();
 	s_draw->mvp = cf_make_identity();
 	s_draw->set_aaf();
+	cf_draw3d_list_begin();
 	s_draw->add_cmd();
 }
 
@@ -2969,14 +3075,16 @@ void cf_draw_list_end()
 	if (!data) return;
 	s_draw->recording_list = NULL;
 	s_draw_list_free_uniforms(data);
+	cf_draw3d_free_list_cmds(data);
 	data->cmds.clear();
 	for (int i = s_draw->recording_mark; i < s_draw->cmds.count(); ++i) {
 		CF_Command& c = s_draw->cmds[i];
 		CF_ASSERT(!c.is_canvas); // Canvas blits reference mutable textures; not retainable.
 		if (c.is_canvas) continue;
 		// Skip state-only churn (empty commands from stack pushes during recording).
-		if (c.geoms.count() == 0 && !c.geoms_ref && c.items.count() == 0 && !c.u.data && !c.u.is_texture) continue;
+		if (c.geoms.count() == 0 && !c.geoms_ref && c.items.count() == 0 && !c.u.data && !c.u.is_texture && !c.mesh3d) continue;
 		CF_Command copy = c;
+		c.mesh3d = NULL; // The list owns the payload now.
 		if (c.geoms_ref) {
 			// A nested replay recorded into this list: resolve the borrowed geometry to
 			// an owned copy so lists never reference each other's storage.
@@ -3000,6 +3108,7 @@ void cf_draw_list_end()
 		data->cmds.add(copy);
 	}
 	s_draw->cmds.set_count(s_draw->recording_mark);
+	cf_draw3d_list_end(data); // Restores the 3d transform stack and bakes mesh commands.
 	cf_draw_pop(); // Restores camera, projection, mvp, and aaf.
 }
 
@@ -3027,6 +3136,10 @@ void cf_draw_list(CF_DrawList list)
 		c.geoms_ref = &src.geoms;
 		c.replay_mvp = s_draw->mvp;
 		c.replay_aa_scale = inv_cam_scale;
+		if (src.mesh3d) {
+			c.geoms_ref = NULL;
+			cf_draw3d_replay_cmd(&c, &src);
+		}
 	}
 	// Reopen a command carrying the caller's current state for subsequent draws.
 	s_draw->add_cmd();
@@ -4384,6 +4497,46 @@ CF_Color cf_draw_peek_color()
 	return s_draw->colors.last();
 }
 
+void cf_draw_push_dash(float on_length, float off_length, float phase)
+{
+	s_draw->dashes.add({ on_length, off_length, phase });
+}
+
+void cf_draw_pop_dash()
+{
+	if (s_draw->dashes.count() > 1) {
+		s_draw->dashes.pop();
+	}
+}
+
+void cf_draw_push_outline(CF_Color color, float width)
+{
+	s_draw->outlines.add(color);
+	s_draw->outline_widths.add(width);
+}
+
+void cf_draw_pop_outline()
+{
+	if (s_draw->outlines.count() > 1) {
+		s_draw->outlines.pop();
+		s_draw->outline_widths.pop();
+	}
+}
+
+void cf_draw_push_glow(CF_Color color, float radius)
+{
+	s_draw->glows.add(color);
+	s_draw->glow_radii.add(radius);
+}
+
+void cf_draw_pop_glow()
+{
+	if (s_draw->glows.count() > 1) {
+		s_draw->glows.pop();
+		s_draw->glow_radii.pop();
+	}
+}
+
 void cf_draw_push_shape_aa(float aa)
 {
 	s_draw->antialias.add(aa);
@@ -4953,6 +5106,23 @@ static void s_process_command(CF_Canvas canvas, CF_Command* cmd, CF_Command* nex
 		return;
 	}
 
+	// Draw a 3d mesh command (cf_draw3d_mesh). Like canvas blits, meshes issue their own draw
+	// call: flush accumulated 2d geometry first so paint order holds across the boundary.
+	if (cmd->mesh3d) {
+		if (s_draw->need_flush) {
+			s_draw->need_flush = false;
+			if (!s_draw->delay_defrag) {
+				atlas_cache_defrag(&s_draw->atlas_cache);
+			}
+			atlas_cache_flush(&s_draw->atlas_cache);
+			s_flush_pending_geoms();
+		}
+		cf_draw3d_process(cmd, canvas, clear && !s_draw->has_drawn_something);
+		clear = false; // Only clear `canvas` once.
+		s_draw->has_drawn_something = true;
+		return;
+	}
+
 	// Collate the drawable items: all geometry appends to the flush-ordered stream;
 	// sprites/text additionally push a small atlas entry to the atlas_cache whose seq
 	// is rebased to index the stream (commands were layer-sorted, so the rebase
@@ -5012,16 +5182,39 @@ static void s_process_command(CF_Canvas canvas, CF_Command* cmd, CF_Command* nex
 		// Process the collated drawable items. Might get split up into multiple draw calls depending on
 		// the atlas compiler.
 		s_draw->need_flush = false;
-		if (!s_draw->delay_defrag) {
-			atlas_cache_defrag(&s_draw->atlas_cache);
-		}
+		cf_atlas_defrag_once();
 		atlas_cache_flush(&s_draw->atlas_cache);
 		s_flush_pending_geoms();
 	}
 }
 
+// Runs the atlas defrag at most once per frame. Defrag walks every atlas and can rebuild
+// pages (re-fetching every resident image's pixels), so per-flush invocation turns a frame
+// with N mesh/canvas fences into N full defrags. Images first seen after this frame's defrag
+// ride the lonely buffer (own texture, own batch) until the next frame's defrag packs them:
+// one frame of extra draw calls for brand-new content, instead of N defrags every frame.
+void cf_draw_on_app_canvas_resized(int w, int h)
+{
+	// The default 2d projection tracks the app canvas 1:1. It used to be computed once at
+	// startup and never again, so any resize (cf_app_set_size or a user dragging a resizable
+	// window) silently rescaled every world-space 2d draw. Refresh it with the canvas; a
+	// custom cf_draw_projection is per-frame state and simply overrides this as usual.
+	if (s_draw) s_draw->projection = ortho_2d(0, 0, (float)w, (float)h);
+}
+
+void cf_atlas_defrag_once()
+{
+	if (s_draw->delay_defrag || s_draw->defragged_this_frame) return;
+	s_draw->defragged_this_frame = true;
+	atlas_cache_defrag(&s_draw->atlas_cache);
+}
+
 void cf_render_layers_to(CF_Canvas canvas, int layer_lo, int layer_hi, bool clear)
 {
+	// Stage 3d instance uploads while no render pass is live -- must run before the canvas
+	// (and its pass) is applied. See cf_draw3d_prepare_uploads.
+	cf_draw3d_prepare_uploads(layer_lo, layer_hi);
+
 	// We will render to this canvas.
 	cf_apply_canvas(canvas, clear);
 
@@ -5032,7 +5225,7 @@ void cf_render_layers_to(CF_Canvas canvas, int layer_lo, int layer_hi, bool clea
 		int next_draw_layer = 0;
 		for (int i = s_draw->cmds.count() - 1; i >= 0; i--) {
 			CF_Command& cmd = s_draw->cmds[i];
-			if (cmd.geoms.count() || cmd.geoms_ref || cmd.is_canvas) {
+			if (cmd.geoms.count() || cmd.geoms_ref || cmd.is_canvas || cmd.mesh3d) {
 				next_draw_layer = cmd.layer;
 			} else {
 				cmd.layer = next_draw_layer;
@@ -5045,6 +5238,36 @@ void cf_render_layers_to(CF_Canvas canvas, int layer_lo, int layer_hi, bool clea
 		if (a.layer == b.layer) return a.id < b.id;
 		else return a.layer < b.layer;
 	});
+
+	// Within each maximal run of consecutive 3d commands in a layer, move depth-writing
+	// commands (opaque solids) ahead of non-writing ones (translucent strokes) -- the classic
+	// opaque-then-translucent split as the 3d default. Strokes then depth-test against every
+	// solid in their run regardless of submission interleave (an arrow's shaft vs its cone
+	// head), while 2d commands and layer boundaries still fence exactly as before.
+	{
+		// Empty spacer commands are transparent to the run scan: every immediate-mode mesh
+		// submission leaves one on the stream (see s_submit in cute_draw3d.cpp), so requiring
+		// strictly consecutive mesh3d commands would cap every run at length 1 and turn the
+		// partition into a no-op. Empties draw nothing, so the partition may place them freely.
+		int n = s_draw->cmds.count();
+		int i = 0;
+		while (i < n) {
+			if (!s_draw->cmds[i].mesh3d) { ++i; continue; }
+			int j = i + 1;
+			while (j < n && (s_draw->cmds[j].mesh3d || cf_cmd_is_empty(s_draw->cmds[j])) && s_draw->cmds[j].layer == s_draw->cmds[i].layer) ++j;
+			auto mid = std::stable_partition(s_draw->cmds.begin() + i, s_draw->cmds.begin() + j, [](const CF_Command& c) {
+				return c.mesh3d && c.render_state.depth_write_enabled;
+			});
+			// The non-writing (translucent) tail sorts back-to-front on the submission
+			// anchors captured in depth3d, so overlapping translucents composite correctly
+			// regardless of submission order. Writers keep submission order; the depth
+			// test owns them. Empty spacers carry depth 0 and sort harmlessly.
+			std::stable_sort(mid, s_draw->cmds.begin() + j, [](const CF_Command& a, const CF_Command& b) {
+				return a.depth3d > b.depth3d;
+			});
+			i = j;
+		}
+	}
 
 	// Process each rendering command.
 	int count = s_draw->cmds.count();
@@ -5065,9 +5288,7 @@ void cf_render_layers_to(CF_Canvas canvas, int layer_lo, int layer_hi, bool clea
 	}
 	if (s_draw->need_flush) {
 		s_draw->need_flush = false;
-		if (!s_draw->delay_defrag) {
-			atlas_cache_defrag(&s_draw->atlas_cache);
-		}
+		cf_atlas_defrag_once();
 		atlas_cache_flush(&s_draw->atlas_cache);
 		s_flush_pending_geoms();
 	}
@@ -5077,6 +5298,7 @@ void cf_render_layers_to(CF_Canvas canvas, int layer_lo, int layer_hi, bool clea
 	// Remove commands that were processed.
 	for (int i = 0; i < s_draw->cmds.size();) {
 		if (s_draw->cmds[i].processed) {
+			cf_draw3d_free_cmd(&s_draw->cmds[i]);
 			s_draw->cmds.unordered_remove(i);
 		} else {
 			++i;

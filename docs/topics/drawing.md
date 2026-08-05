@@ -25,7 +25,7 @@ The shape renderer in CF has a few extra features that nearly all shapes take ad
 - Border stroke vs fill style
 - Edge rounding (chubbiness)
 
-For circles, use [`cf_draw_circle`](../draw/cf_draw_circle.md), for boxes/rectangles use [`cf_draw_quad`](../draw/cf_draw_quad.md), for lines use [`cf_draw_line`](../draw/cf_draw_line.md) or [`cf_draw_polyline`](../draw/cf_draw_polyline.md), and so on.
+For circles, use [`cf_draw_circle`](../draw/function/cf_draw_circle.md), for boxes/rectangles use [`cf_draw_quad`](../draw/function/cf_draw_quad.md), for lines use [`cf_draw_line`](../draw/function/cf_draw_line.md) or [`cf_draw_polyline`](../draw/function/cf_draw_polyline.md), and so on.
 
 > Drawing some basic shapes, a pulsating circle and square.
 
@@ -73,7 +73,7 @@ int main(int argc, char* argv[])
 
 ## Custom SDF Shapes
 
-Every builtin shape is rendered as a signed distance function (SDF) on the GPU, and you can register your own shapes that plug into the exact same machinery with [`cf_make_custom_shape`](../draw/cf_make_custom_shape.md). You supply a small GLSL snippet defining a distance function, and get back a handle to draw with [`cf_draw_custom_shape`](../draw/cf_draw_custom_shape.md) (outline) or [`cf_draw_custom_shape_fill`](../draw/cf_draw_custom_shape_fill.md) (filled):
+Every builtin shape is rendered as a signed distance function (SDF) on the GPU, and you can register your own shapes that plug into the exact same machinery with [`cf_make_custom_shape`](../draw/function/cf_make_custom_shape.md). You supply a small GLSL snippet defining a distance function, and get back a handle to draw with [`cf_draw_custom_shape`](../draw/function/cf_draw_custom_shape.md) (outline) or [`cf_draw_custom_shape_fill`](../draw/function/cf_draw_custom_shape_fill.md) (filled):
 
 ```cpp
 // At init time.
@@ -90,19 +90,19 @@ float params[] = { x, y, 50.0f, 20.0f };
 cf_draw_custom_shape_fill(star, cf_make_aabb(cf_v2(x-50, y-50), cf_v2(x+50, y+50)), params, 4);
 ```
 
-The snippet must define `float sdf(vec2 p, ShapeParams s)` returning the distance in world units from point `p` to the shape's surface (negative inside). `ShapeParams` carries the up-to-16 floats you pass at draw time as eight `vec2`s named `a` through `h`, plus a `vec4 attributes` from [`cf_draw_push_vertex_attributes`](../draw/cf_draw_push_vertex_attributes.md). The builtin distance helpers are all callable from your snippet (`distance_box`, `distance_segment`, `distance_triangle`, `distance_polygon`, `distance_arrow`), so most shapes are just a few `min`/`max` combinators over them. Antialiasing, stroked outlines, colors, layers, and every other draw setting apply to custom shapes automatically, and all registered shapes render in the same batch as builtins — no extra draw calls or pipeline switches.
+The snippet must define `float sdf(vec2 p, ShapeParams s)` returning the distance in world units from point `p` to the shape's surface (negative inside). `ShapeParams` carries the up-to-16 floats you pass at draw time as eight `vec2`s named `a` through `h`, plus a `vec4 attributes` from [`cf_draw_push_vertex_attributes`](../draw/function/cf_draw_push_vertex_attributes.md). The builtin distance helpers are all callable from your snippet (`distance_box`, `distance_segment`, `distance_triangle`, `distance_polygon`, `distance_arrow`), so most shapes are just a few `min`/`max` combinators over them. Antialiasing, stroked outlines, colors, layers, and every other draw setting apply to custom shapes automatically, and all registered shapes render in the same batch as builtins — no extra draw calls or pipeline switches.
 
 There are a few important caveats:
 
 - **Your function must be a true signed distance function** (Lipschitz constant ≤ 1 — it may never underestimate distance). The renderer trusts it unconditionally for tile binning and occlusion culling, so an invalid "distance-ish" function (for example `abs(p.x) + abs(p.y) - r`, which overestimates by up to √2) will drop pixels. If you build your shape by combining the builtin helpers with `min`/`max`, translations, and rotations, it stays a valid SDF.
 - **Register shapes once at init time.** Each call to `cf_make_custom_shape` recompiles the renderer's internal shaders. That's fine during startup, but causes a hitch if done mid-game.
-- **Register shapes *before* creating any custom draw shaders.** Shaders made with [`cf_make_draw_shader`](../draw/cf_make_draw_shader.md) bake in the set of custom shapes that existed when they were compiled; shapes registered afterwards will render invisibly under an older custom draw shader.
+- **Register shapes *before* creating any custom draw shaders.** Shaders made with [`cf_make_draw_shader`](../draw/function/cf_make_draw_shader.md) bake in the set of custom shapes that existed when they were compiled; shapes registered afterwards will render invisibly under an older custom draw shader.
 - **Runtime shader compilation is required.** Custom shapes are unavailable when CF is built with `CF_RUNTIME_SHADER_COMPILATION=OFF` (precompiled-bytecode-only builds); `cf_make_custom_shape` returns a zero id in that case. All backends are supported, including GLES3/WebGL2.
 - **The bounds you pass at draw time must conservatively contain the shape** (the renderer pads them for stroke and antialias). Pixels outside the bounds are never evaluated.
 
 ## Shape Groups (Boolean Ops)
 
-Regular shape calls can be composed with boolean operators — union, subtract, intersect — into a *single* shape using [`cf_draw_shape_group_begin`](../draw/cf_draw_shape_group_begin.md). A crescent moon in three lines, no shader code required:
+Regular shape calls can be composed with boolean operators — union, subtract, intersect — into a *single* shape using [`cf_draw_shape_group_begin`](../draw/function/cf_draw_shape_group_begin.md). A crescent moon in three lines, no shader code required:
 
 ```cpp
 cf_draw_shape_group_begin();
@@ -112,11 +112,11 @@ cf_draw_circle_fill2(cf_v2(-32, 18), 62);
 cf_draw_shape_group_end();
 ```
 
-Because the composite renders as one command with one distance field, translucent composites blend exactly once (no double-blend where operands overlap), and [`cf_draw_shape_group_end_stroked`](../draw/cf_draw_shape_group_end_stroked.md) outlines the *result* of the boolean math as one continuous stroke — something stacked separate draws can never do. Passing a nonzero `smoothing` to [`cf_draw_shape_group_op`](../draw/cf_draw_shape_group_op.md) melts surfaces together for organic, metaball-style blends. All SDF shapes can join a group, including registered custom shapes; sprites, text, and polylines draw normally. See the [custom shapes sample](https://github.com/RandyGaul/cute_framework/blob/master/samples/custom_shapes.cpp) for an animated example.
+Because the composite renders as one command with one distance field, translucent composites blend exactly once (no double-blend where operands overlap), and [`cf_draw_shape_group_end_stroked`](../draw/function/cf_draw_shape_group_end_stroked.md) outlines the *result* of the boolean math as one continuous stroke — something stacked separate draws can never do. Passing a nonzero `smoothing` to [`cf_draw_shape_group_op`](../draw/function/cf_draw_shape_group_op.md) melts surfaces together for organic, metaball-style blends. All SDF shapes can join a group, including registered custom shapes; sprites, text, and polylines draw normally. See the [custom shapes sample](https://github.com/RandyGaul/cute_framework/blob/master/samples/custom_shapes.cpp) for an animated example.
 
 ## Vector Paths
 
-Arbitrary Bezier paths can be built once and drawn like any other shape. Use [`cf_draw_path_begin`](../draw/cf_draw_path_begin.md) with the canvas-style builder functions ([`cf_draw_path_move_to`](../draw/cf_draw_path_move_to.md), [`cf_draw_path_line_to`](../draw/cf_draw_path_line_to.md), [`cf_draw_path_quad_to`](../draw/cf_draw_path_quad_to.md), [`cf_draw_path_cubic_to`](../draw/cf_draw_path_cubic_to.md), [`cf_draw_path_close`](../draw/cf_draw_path_close.md)), then bake with [`cf_draw_path_end`](../draw/cf_draw_path_end.md):
+Arbitrary Bezier paths can be built once and drawn like any other shape. Use [`cf_draw_path_begin`](../draw/function/cf_draw_path_begin.md) with the canvas-style builder functions ([`cf_draw_path_move_to`](../draw/function/cf_draw_path_move_to.md), [`cf_draw_path_line_to`](../draw/function/cf_draw_path_line_to.md), [`cf_draw_path_quad_to`](../draw/function/cf_draw_path_quad_to.md), [`cf_draw_path_cubic_to`](../draw/function/cf_draw_path_cubic_to.md), [`cf_draw_path_close`](../draw/function/cf_draw_path_close.md)), then bake with [`cf_draw_path_end`](../draw/function/cf_draw_path_end.md):
 
 ```cpp
 // At init time.
@@ -132,7 +132,7 @@ draw_path_fill(heart);   // Filled (nonzero winding rule).
 draw_path(heart, 3.0f);  // Or a stroked outline of any thickness.
 ```
 
-Paths render per-pixel from their curves on the GPU (the same machinery behind CF's text rendering), so they stay perfectly crisp under any camera zoom or rotation — there's no tessellation step and no segment count to pick. Multiple contours are supported, and holes follow the nonzero winding rule: wind an inner contour opposite the outer one and the winding cancels. Free the path with [`cf_destroy_path`](../draw/cf_destroy_path.md) when done. Here's the [vector paths sample](https://github.com/RandyGaul/cute_framework/blob/master/samples/vector_paths.cpp) drawing a heart from cubics, a star with a pentagonal hole, and a stroked spline:
+Paths render per-pixel from their curves on the GPU (the same machinery behind CF's text rendering), so they stay perfectly crisp under any camera zoom or rotation — there's no tessellation step and no segment count to pick. Multiple contours are supported, and holes follow the nonzero winding rule: wind an inner contour opposite the outer one and the winding cancels. Free the path with [`cf_destroy_path`](../draw/function/cf_destroy_path.md) when done. Here's the [vector paths sample](https://github.com/RandyGaul/cute_framework/blob/master/samples/vector_paths.cpp) drawing a heart from cubics, a star with a pentagonal hole, and a stroked spline:
 
 <p align="center">
 <video src="../../assets/vector_paths.mp4" autoplay loop muted playsinline controls width="960" style="max-width:100%"></video>
@@ -150,15 +150,15 @@ The draw API has some settings that can be pushed and popped. Pushing and poppin
 - blend mode (normal/add/multiply/screen, per draw call — see [Blend Modes](#blend-modes))
 - render state (custom blending/stencil)
 
-Whenever a setting is pushed it will be used by subsequent drawing functions. For example, if we push a color with [`cf_draw_push_color`](../draw/cf_draw_push_color.md) it will get used until a new setting is pushed or popped. When we pop a setting the previously pushed state is restored. This is a great way to use your own settings locally, and then restore anything previous without messing up the settings for the rest of your code. You may nest push/pop pairs as many times as needed.
+Whenever a setting is pushed it will be used by subsequent drawing functions. For example, if we push a color with [`cf_draw_push_color`](../draw/function/cf_draw_push_color.md) it will get used until a new setting is pushed or popped. When we pop a setting the previously pushed state is restored. This is a great way to use your own settings locally, and then restore anything previous without messing up the settings for the rest of your code. You may nest push/pop pairs as many times as needed.
 
 ## Draw Layer
 
-The layer controls the order things are drawn. You can set what layer to draw upon with [`cf_draw_push_layer`](../draw/cf_draw_push_layer.md). When done, restore the previously used layer with [`cf_draw_pop_layer`](../draw/cf_draw_pop_layer.md).
+The layer controls the order things are drawn. You can set what layer to draw upon with [`cf_draw_push_layer`](../draw/function/cf_draw_push_layer.md). When done, restore the previously used layer with [`cf_draw_pop_layer`](../draw/function/cf_draw_pop_layer.md).
 
 ## Blend Modes
 
-Blend modes are recorded *per draw call* with [`cf_draw_push_blend`](../draw/cf_draw_push_blend.md) — no batching or render-state juggling required, and paint order is preserved across mode changes. Additive glow particles can interleave freely with alpha-blended sprites in one stream of draw calls:
+Blend modes are recorded *per draw call* with [`cf_draw_push_blend`](../draw/function/cf_draw_push_blend.md) — no batching or render-state juggling required, and paint order is preserved across mode changes. Additive glow particles can interleave freely with alpha-blended sprites in one stream of draw calls:
 
 ```cpp
 draw_push_blend(DRAW_BLEND_ADD);
@@ -166,11 +166,11 @@ draw_circle_fill(V2(x, y), r); // Brightens whatever is beneath -- glows, fire, 
 draw_pop_blend();
 ```
 
-Four modes are available: `NORMAL` (premultiplied alpha, the default), `ADD` (brightens — glows and particles), `MULTIPLY` (darkens — shadows and vignettes), and `SCREEN` (soft brightening). All modes apply to shapes, sprites, text, and paths alike, and composite exactly against prior canvas content on every renderer path. See the [blend modes sample](https://github.com/RandyGaul/cute_framework/blob/master/samples/blend_modes.cpp) for a side-by-side comparison of all four. For fully custom blend/stencil state use [`cf_draw_push_render_state`](../draw/cf_draw_push_render_state.md) instead (whole-batch pipeline state, rather than per draw call).
+Four modes are available: `NORMAL` (premultiplied alpha, the default), `ADD` (brightens — glows and particles), `MULTIPLY` (darkens — shadows and vignettes), and `SCREEN` (soft brightening). All modes apply to shapes, sprites, text, and paths alike, and composite exactly against prior canvas content on every renderer path. See the [blend modes sample](https://github.com/RandyGaul/cute_framework/blob/master/samples/blend_modes.cpp) for a side-by-side comparison of all four. For fully custom blend/stencil state use [`cf_draw_push_render_state`](../draw/function/cf_draw_push_render_state.md) instead (whole-batch pipeline state, rather than per draw call).
 
 ## Draw Lists
 
-CF's draw API is immediate-mode: you call the draw functions every frame. For big *static* content — tilemaps, level geometry, backgrounds, UI chrome — you can record the draw calls once into a [`CF_DrawList`](../draw/cf_make_draw_list.md) and replay it each frame for essentially zero CPU cost:
+CF's draw API is immediate-mode: you call the draw functions every frame. For big *static* content — tilemaps, level geometry, backgrounds, UI chrome — you can record the draw calls once into a [`CF_DrawList`](../draw/function/cf_make_draw_list.md) and replay it each frame for essentially zero CPU cost:
 
 ```cpp
 // Once, at load time.
@@ -196,11 +196,11 @@ Sprites can be loaded with either .ase/.aseprite files or .png files. The recomm
 Some particular pages of interest are:
 
 - [Sprite API Reference](../api_reference.md#sprite)
-- [CF_Sprite](../sprite/cf_sprite.md)
-- [cf_sprite_play](../sprite/cf_sprite_play.md)
+- [CF_Sprite](../sprite/struct/cf_sprite.md)
+- [cf_sprite_play](../sprite/function/cf_sprite_play.md)
 - [Custom Sprites](custom_sprites.md)
 
-CF comes with a convenience function called [`cf_make_demo_sprite`](../sprite/cf_make_demo_sprite.md). This sprite contains a small pixel art girl with a couple built-in animations. Here's a program to load her up and draw her on screen:
+CF comes with a convenience function called [`cf_make_demo_sprite`](../sprite/function/cf_make_demo_sprite.md). This sprite contains a small pixel art girl with a couple built-in animations. Here's a program to load her up and draw her on screen:
 
 ```cpp
 #include <cute.h>
@@ -246,24 +246,24 @@ Here's an example of drawing a more full looking scene with various sprites. Sim
 
 ### Sprite Origin
 
-The sprite may have a local origin to offset itself whenever drawn. Set the `offset` member of any [CF_Sprite](../sprite/cf_sprite.md) struct. If the sprite has a [slice](https://www.aseprite.org/docs/slices/) on a particular frame with the `pivot` checkbox marked, the pivot will be recorded for that frame applied, in addition to the sprite's `offset`, to draw relative to that frame's pivot.
+The sprite may have a local origin to offset itself whenever drawn. Set the `offset` member of any [CF_Sprite](../sprite/struct/cf_sprite.md) struct. If the sprite has a [slice](https://www.aseprite.org/docs/slices/) on a particular frame with the `pivot` checkbox marked, the pivot will be recorded for that frame applied, in addition to the sprite's `offset`, to draw relative to that frame's pivot.
 
 Be sure not to author your aseprite files with more than one slice on a given frame marked as pivot, otherwise the pivot data will overwrite one another when loading.
 
 ## Drawing Text
 
-Text has it's own [Text API Reference](../api_reference.md#text). Call [`cf_make_font`](../text/cf_make_font.md) to load up a font file, then call [`cf_draw_text`](../text/cf_draw_text.md) to draw text. Text has a whole bunch of settings, such as:
+Text has it's own [Text API Reference](../api_reference.md#text). Call [`cf_make_font`](../text/function/cf_make_font.md) to load up a font file, then call [`cf_draw_text`](../text/function/cf_draw_text.md) to draw text. Text has a whole bunch of settings, such as:
 
-- [`cf_push_text_wrap_width`](../text/cf_push_text_wrap_width.md)
-- [`cf_push_font_size`](../text/cf_push_font_size.md)
-- [`cf_push_font_blur`](../text/cf_push_font_blur.md)
-- [`cf_push_text_stroke`](../text/cf_push_text_stroke.md) — outlined text of any thickness
-- [`cf_push_text_curves`](../text/cf_push_text_curves.md) — curve vs rasterized glyph rendering
+- [`cf_push_text_wrap_width`](../text/function/cf_push_text_wrap_width.md)
+- [`cf_push_font_size`](../text/function/cf_push_font_size.md)
+- [`cf_push_font_blur`](../text/function/cf_push_font_blur.md)
+- [`cf_push_text_stroke`](../text/function/cf_push_text_stroke.md) — outlined text of any thickness
+- [`cf_push_text_curves`](../text/function/cf_push_text_curves.md) — curve vs rasterized glyph rendering
 
 > [!NOTE]
 > Recall that each push function has associated peek and pop APIs! See the [Text API Reference](../api_reference.md#text) for a full list of text related pages.
 
-By default glyphs render per-pixel from their Bezier outlines on the GPU: text stays perfectly crisp under any camera zoom or rotation, with no re-rasterization or atlas churn, and [`cf_push_text_stroke`](../text/cf_push_text_stroke.md) draws outlined text. Blurred text ([`cf_push_font_blur`](../text/cf_push_font_blur.md)) automatically uses the rasterized path instead, and [`cf_push_text_curves`](../text/cf_push_text_curves.md) with `false` opts out entirely if you want classic rasterized glyphs. Layout, kerning, wrapping, and text effects are identical either way. See the [vector text sample](https://github.com/RandyGaul/cute_framework/blob/master/samples/vector_text.cpp) for a side-by-side comparison under a zooming camera.
+By default glyphs render per-pixel from their Bezier outlines on the GPU: text stays perfectly crisp under any camera zoom or rotation, with no re-rasterization or atlas churn, and [`cf_push_text_stroke`](../text/function/cf_push_text_stroke.md) draws outlined text. Blurred text ([`cf_push_font_blur`](../text/function/cf_push_font_blur.md)) automatically uses the rasterized path instead, and [`cf_push_text_curves`](../text/function/cf_push_text_curves.md) with `false` opts out entirely if you want classic rasterized glyphs. Layout, kerning, wrapping, and text effects are identical either way. See the [vector text sample](https://github.com/RandyGaul/cute_framework/blob/master/samples/vector_text.cpp) for a side-by-side comparison under a zooming camera.
 
 Here's a [sample](https://github.com/RandyGaul/cute_framework/blob/master/samples/text_drawing.cpp) for drawing some text onto the screen.
 
@@ -271,15 +271,15 @@ Here's a [sample](https://github.com/RandyGaul/cute_framework/blob/master/sample
 <video src="../../assets/text_drawing.mp4" autoplay loop muted playsinline controls width="960" style="max-width:100%"></video>
 </p>
 
-You can see the [Text Effect](../text/cf_text_effect_register.md) system in work. Text codes that look sort of like xml are supported for a variety of built-in effects — including `<underline>` and `<strike>` for underlined and struck-through spans. Click the previous link to see some documentation about built-in text effects, and how to contruct + register your own custom text effect codes. The sample above also shows outlined text, crisp directional drop shadows (the same string drawn twice with an offset), and text laid along a curved baseline with per-glyph rotation.
+You can see the [Text Effect](../text/function/cf_text_effect_register.md) system in work. Text codes that look sort of like xml are supported for a variety of built-in effects — including `<underline>` and `<strike>` for underlined and struck-through spans. Click the previous link to see some documentation about built-in text effects, and how to contruct + register your own custom text effect codes. The sample above also shows outlined text, crisp directional drop shadows (the same string drawn twice with an offset), and text laid along a curved baseline with per-glyph rotation.
 
 > [!NOTE]
 > The position of rendering text is the top-left corner of the text.
 
 ## Shaders
 
-You can apply customizable shaders that work with the draw API by using functions like [cf_draw_push_shader](../draw/cf_draw_push_shader.md)
- and [cf_draw_pop_shader](../draw/cf_draw_pop_shader.md). These shaders are written in glsl version 450. By creating custom FX you can implement interesting visuals like the following wavelet example:
+You can apply customizable shaders that work with the draw API by using functions like [cf_draw_push_shader](../draw/function/cf_draw_push_shader.md)
+ and [cf_draw_pop_shader](../draw/function/cf_draw_pop_shader.md). These shaders are written in glsl version 450. By creating custom FX you can implement interesting visuals like the following wavelet example:
 
 <p align="center">
 <img src=https://github.com/RandyGaul/cute_framework/blob/master/assets/wavelets.gif?raw=true>
@@ -303,7 +303,7 @@ The `params` argument is a `ShaderParams` struct with the following fields:
 - `uv_min` (vec2) - UV bounds minimum of the sprite/glyph in the atlas (zero for shapes)
 - `uv_max` (vec2) - UV bounds maximum of the sprite/glyph in the atlas (zero for shapes)
 - `screen_uv` (vec2) - screen-space UV where (0,0) is top-left, (1,1) is bottom-right
-- `attributes` (vec4) - four custom floats from [cf_draw_push_vertex_attributes](../draw/cf_draw_push_vertex_attributes.md)
+- `attributes` (vec4) - four custom floats from [cf_draw_push_vertex_attributes](../draw/function/cf_draw_push_vertex_attributes.md)
 
 The `params.uv_min` and `params.uv_max` fields provide atlas UV bounds for sprite sub-regions, which can be useful for effects that need to know the boundaries of the current sprite within the texture atlas. CF internally pads every sprite with a 1-pixel transparent border in the atlas, so clamping modified UVs to these bounds works well as a clamp-to-edge strategy without bleeding from neighboring sprites:
 
@@ -313,13 +313,13 @@ uv = clamp(uv, params.uv_min, params.uv_max);
 
 For pixel art games it's important to sample using the function `smooth_uv`, something like so: `smooth_uv(v_uv, u_texture_size)` to generate a uv coordinate that will scale pixel art correctly.
 
-You may also add in uniforms and textures as-needed. The draw API has some functions for setting uniforms and textures via [cf_draw_set_uniform](../draw/cf_draw_set_uniform.md) and [cf_draw_set_texture](../draw/cf_draw_set_texture.md). These will get auto-magically hooked up and send values to your shader. When you add in your own uniforms just be sure to place them inside of a uniform block like in the below sample (see `shd_uniforms`, and don't change this name either! It must be called `shd_uniforms`).
+You may also add in uniforms and textures as-needed. The draw API has some functions for setting uniforms and textures via [cf_draw_set_uniform](../draw/function/cf_draw_set_uniform.md) and [cf_draw_set_texture](../draw/function/cf_draw_set_texture.md). These will get auto-magically hooked up and send values to your shader. When you add in your own uniforms just be sure to place them inside of a uniform block like in the below sample (see `shd_uniforms`, and don't change this name either! It must be called `shd_uniforms`).
 
 Shaders have access to some "hidden" environment variables. In particular you have access to:
 
-- `v_uv` a legacy alias for `params.uv`, containing the texture UV coordinate. Prefer using `params.uv` in new code. If you're drawing a canvas with [cf_draw_canvas](../draw/cf_draw_canvas.md) it's often very helpful to sample from the canvas. You may do this via: `texture(u_image, params.uv)`.
-- `u_image` if you're drawing a canvas with [cf_draw_canvas](../draw/cf_draw_canvas.md) can be quite useful if you need to, for any reason, sample the canvas. See the above point on `v_uv`.
-- `u_texture_size` if you're drawing a canvas with [cf_draw_canvas](../draw/cf_draw_canvas.md) is sometimes useful for certain algorithms that need to calcualte texel sizes, or know the size of the texture they are sampling from.
+- `v_uv` a legacy alias for `params.uv`, containing the texture UV coordinate. Prefer using `params.uv` in new code. If you're drawing a canvas with [cf_draw_canvas](../draw/function/cf_draw_canvas.md) it's often very helpful to sample from the canvas. You may do this via: `texture(u_image, params.uv)`.
+- `u_image` if you're drawing a canvas with [cf_draw_canvas](../draw/function/cf_draw_canvas.md) can be quite useful if you need to, for any reason, sample the canvas. See the above point on `v_uv`.
+- `u_texture_size` if you're drawing a canvas with [cf_draw_canvas](../draw/function/cf_draw_canvas.md) is sometimes useful for certain algorithms that need to calcualte texel sizes, or know the size of the texture they are sampling from.
 
 Here's a full example shader from the wavelets (called [shallow water on github](https://github.com/RandyGaul/cute_framework/blob/master/samples/shallow_water.cpp)) demo:
 
@@ -381,7 +381,7 @@ draw_push_shape_aa(0);
 draw_box(V2(0,0), (float)W, (float)H);
 ```
 
-The wavelets effects are drawn off-screen into render target textures. These are super easy to setup with either a `CF_Canvas`, or a more low-level option of creating the texture yourself with [cf_make_texture](../graphics/cf_make_texture.md).
+The wavelets effects are drawn off-screen into render target textures. These are super easy to setup with either a `CF_Canvas`, or a more low-level option of creating the texture yourself with [cf_make_texture](../graphics/function/cf_make_texture.md).
 
 Make a canvas like so:
 
@@ -395,15 +395,15 @@ Then render to it like so (after calling draw functions to queue up sprites/shap
 render_to(offscreen);
 ```
 
-The canvas's internal texture can be sent to a shader as a uniform with [canvas_get_target](../graphics/cf_canvas_get_target.md), just as in one of the code snippets above detailing uniforms/textures.
+The canvas's internal texture can be sent to a shader as a uniform with [canvas_get_target](../graphics/function/cf_canvas_get_target.md), just as in one of the code snippets above detailing uniforms/textures.
 
 ## Loading Shaders
 
-First you must call [cf_shader_directory](../graphics/cf_shader_directory.md) to tell the application where your shaders reside on disk. Then you may call [cf_make_draw_shader](../draw/cf_make_draw_shader.md) to create a shader compatible with [cf_draw_push_shader](../draw/cf_draw_push_shader.md).
+First you must call [cf_shader_directory](../graphics/function/cf_shader_directory.md) to tell the application where your shaders reside on disk. Then you may call [cf_make_draw_shader](../draw/function/cf_make_draw_shader.md) to create a shader compatible with [cf_draw_push_shader](../draw/function/cf_draw_push_shader.md).
 
-Shaders live-reload automatically during development: once a shader directory is set, CF watches it and recompiles + hot-swaps any shader whose file changes on disk -- no code required. If you want to handle reloads yourself instead (custom bookkeeping, logging, etc.), register a callback via [cf_shader_on_changed](../graphics/cf_shader_on_changed.md), which disables the automatic reload and hands the notifications to you.
+Shaders live-reload automatically during development: once a shader directory is set, CF watches it and recompiles + hot-swaps any shader whose file changes on disk -- no code required. If you want to handle reloads yourself instead (custom bookkeeping, logging, etc.), register a callback via [cf_shader_on_changed](../graphics/function/cf_shader_on_changed.md), which disables the automatic reload and hands the notifications to you.
 
-If a shader fails to compile (at load or during a live-reload), the error text is available from [cf_shader_compile_error](../graphics/cf_shader_compile_error.md), or you can register a callback with [cf_shader_on_error](../graphics/cf_shader_on_error.md) to display errors however you like -- handy for showing compile errors on-screen while iterating on shaders.
+If a shader fails to compile (at load or during a live-reload), the error text is available from [cf_shader_compile_error](../graphics/function/cf_shader_compile_error.md), or you can register a callback with [cf_shader_on_error](../graphics/function/cf_shader_on_error.md) to display errors however you like -- handy for showing compile errors on-screen while iterating on shaders.
 
 Once done your custom shader will be able to apply itself to anything drawn through CF's draw API! A good example is the [metaballs sample](https://github.com/RandyGaul/cute_framework/blob/master/samples/metaballs.cpp)).
 
@@ -414,3 +414,13 @@ Once done your custom shader will be able to apply itself to anything drawn thro
 ## Compiling Shaders
 
 While the above is all you need to get started with shaders, to learn more about shader compilation, refer to [Shader Compilation](../topics/shader_compilation.md).
+
+## Drawing in 3D
+
+Meshes have their own stack-based API in [cute_draw3d.h](drawing_3d.md), and it shares this
+command stream: `cf_draw_push_layer` orders meshes against sprites/shapes/text, draw lists
+record 3D submissions too, and `cf_render_to` flushes everything together. The rule for what
+carries over: state describing *where and when* a draw lands (layers, scissor, viewport, draw
+lists, render targets) is shared, while state describing *how pixels are produced* (colors,
+blends, shaders, uniforms, cameras) stays per-domain. See the [3D Drawing](drawing_3d.md)
+topic for the whole story.

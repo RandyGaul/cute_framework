@@ -7,6 +7,22 @@
 
 #include <cute/cute_png.h>
 
+// Match cute_png's allocator wiring (cute_draw.cpp): pixel buffers flow out through
+// CF_Image and get released by cf_image_free's CF_FREE, so they must come from cf_alloc.
+#include <cute_alloc.h>
+#define CUTE_JPG_ALLOC(size) cf_alloc(size)
+#define CUTE_JPG_FREE(mem) cf_free(mem)
+#define CUTE_JPG_IMPLEMENTATION
+#include <cute/cute_jpg.h>
+
+// cute_dds hands out zero-copy views (no pixel allocations), but its slice arrays
+// should still flow through CF's allocator.
+#define CUTE_DDS_ALLOC(size) cf_alloc(size)
+#define CUTE_DDS_FREE(mem) cf_free(mem)
+#define CUTE_DDS_NO_STDIO // CF loads through its VFS.
+#define CUTE_DDS_IMPLEMENTATION
+#include <cute/cute_dds.h>
+
 #include <cute_image.h>
 #include <cute_file_system.h>
 #include <cute_c_runtime.h>
@@ -15,6 +31,8 @@
 
 CF_STATIC_ASSERT(sizeof(CF_Pixel) == sizeof(cp_pixel_t), "Must be equal.");
 CF_STATIC_ASSERT(sizeof(CF_Image) == sizeof(cp_image_t), "Must be equal.");
+CF_STATIC_ASSERT(sizeof(CF_Pixel) == sizeof(cj_pixel_t), "Must be equal.");
+CF_STATIC_ASSERT(sizeof(CF_Image) == sizeof(cj_image_t), "Must be equal.");
 CF_STATIC_ASSERT(sizeof(CF_ImageIndexed) == sizeof(cp_indexed_image_t), "Must be equal.");
 
 CF_Result cf_image_load_png(const char* path, CF_Image* img)
@@ -35,6 +53,32 @@ CF_Result cf_image_load_png_from_memory(const void* data, int size, CF_Image* im
 	img->h = cp_img.h;
 	img->pix = (CF_Pixel*)cp_img.pix;
 	return cf_result_success();
+}
+
+CF_Result cf_image_load_jpg(const char* path, CF_Image* img)
+{
+	size_t sz;
+	void* data = cf_fs_read_entire_file_to_memory(path, &sz);
+	if (!data) return cf_result_error("Unable to open jpg file.");
+	CF_Result err = cf_image_load_jpg_from_memory(data, (int)sz, img);
+	CF_FREE(data);
+	return err;
+}
+
+CF_Result cf_image_load_jpg_from_memory(const void* data, int size, CF_Image* img)
+{
+	cj_image_t cj_img = cj_load_jpg_mem(data, size);
+	if (!cj_img.pix) return cf_result_error(cj_error_reason);
+	img->w = cj_img.w;
+	img->h = cj_img.h;
+	img->pix = (CF_Pixel*)cj_img.pix;
+	return cf_result_success();
+}
+
+CF_Result cf_image_load_jpg_wh(const void* data, int size, int* w, int* h)
+{
+	cj_load_jpg_wh(data, size, w, h);
+	return (w && *w) || (h && *h) ? cf_result_success() : cf_result_error(cj_error_reason);
 }
 
 CF_Result cf_image_load_png_wh(const void* data, int size, int* w, int* h)

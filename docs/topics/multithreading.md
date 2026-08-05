@@ -10,7 +10,7 @@ See also: [Atomics](atomics.md).
 
 ## Thread
 
-A thread is the thing that runs your code. By default the application starts up in the _main thread_. The application can spin up many different threads as-necessary. Threads are best used to perform isolated tasks that can be done completely independent from any other task. You may spawn another thread with [`cf_thread_create`](../multithreading/cf_thread_create.md). It will call your thread function. When your thread function returns, the thread can then be cleaned up with [`cf_thread_wait`](../multithreading/cf_thread_wait.md).
+A thread is the thing that runs your code. By default the application starts up in the _main thread_. The application can spin up many different threads as-necessary. Threads are best used to perform isolated tasks that can be done completely independent from any other task. You may spawn another thread with [`cf_thread_create`](../multithreading/function/cf_thread_create.md). It will call your thread function. When your thread function returns, the thread can then be cleaned up with [`cf_thread_wait`](../multithreading/function/cf_thread_wait.md).
 
 ```cpp
 int my_thread_fn(void udata)
@@ -50,21 +50,21 @@ A great use case for threads in games is asynchronous resource loading. For furt
 
 ## Condition Variable
 
-A [`CF_ConditionVariable`](../multithreading/cf_conditionvariable.md) is used to put threads to sleep. The condition variable can wake a single thread, or wake all the threads. Usually you must pair the condition variable with some extra state to make it really useful, such as an integer (e.g. to implement a semaphore, more on this later), or a boolean. For further reading you can try [this article by IBM](https://www.ibm.com/docs/en/aix/7.2?topic=programming-using-condition-variables) on condition variables.
+A [`CF_ConditionVariable`](../multithreading/struct/cf_conditionvariable.md) is used to put threads to sleep. The condition variable can wake a single thread, or wake all the threads. Usually you must pair the condition variable with some extra state to make it really useful, such as an integer (e.g. to implement a semaphore, more on this later), or a boolean. For further reading you can try [this article by IBM](https://www.ibm.com/docs/en/aix/7.2?topic=programming-using-condition-variables) on condition variables.
 
 Usually condition variables are not used on their own, and higher level primitives are instead used, such as thread pools or semaphores (more on these later).
 
 ## Mutex
 
-The mutex, aka lock ([`CF_Mutex`](../multithreading/cf_mutex.md)), stands for "mutual exclusion". It's used as a basic _synchronization primitive_ for two threads to communicate with one another. The idea is the mutex can be acquired by only a single thread at any given time. If any other thread attempts to aquire the mutex (lock it), the thread will sleep and wait until the lock can be acquired.
+The mutex, aka lock ([`CF_Mutex`](../multithreading/struct/cf_mutex.md)), stands for "mutual exclusion". It's used as a basic _synchronization primitive_ for two threads to communicate with one another. The idea is the mutex can be acquired by only a single thread at any given time. If any other thread attempts to acquire the mutex (lock it), the thread will sleep and wait until the lock can be acquired.
 
 Sometimes locks are used on their own, but generally locks are considered difficult to use, tedious, and a bit error-prone. It's recommended to instead use a thread pool if possible. But, if you really know what you're doing sometimes a simple mutex is preferable. For further reading Beej has an excellent article on [Threads and Mutexes](https://beej.us/guide/bgc/html/split/multithreading.html).
 
 ## Read/Write Lock
 
-Similar to mutex, a read write lock is a bit higher level ([`CF_ReadWriteLock`](../multithreading/cf_readwritelock.md)). It supports many simultaneous readers, but only a single writer at a time (the write excludes other readers as well). Usually the read write lock is used to implement other tools or data structures.
+Similar to mutex, a read write lock is a bit higher level ([`CF_ReadWriteLock`](../multithreading/struct/cf_readwritelock.md)). It supports many simultaneous readers, but only a single writer at a time (the write excludes other readers as well). Usually the read write lock is used to implement other tools or data structures.
 
-For example, a multi-threaded hash table can be constructed with a read write lock. Most of the time the hash table can operate in read-only mode. We can use a read write lock for the entire table. Many simultaneous readers can fetch or lookup keys freely from the table. If the table needs to insert an element we can then write lock the table and perform the insertion. This will wait for all readers to exitb before doing any writing. To take this a step further, if the hash table uses chained collision resolution another read write lock can be used for each collision chain. As chains are updated, only an individual chain needs to be write-locked at a given time. If the table becomes saturated it can expand it's memory size with a single global write-lock, of which would write-lock all of the chains before expansion. This would completely wait for all readers to exit before expansion.
+For example, a multi-threaded hash table can be constructed with a read write lock. Most of the time the hash table can operate in read-only mode. We can use a read write lock for the entire table. Many simultaneous readers can fetch or lookup keys freely from the table. If the table needs to insert an element we can then write lock the table and perform the insertion. This will wait for all readers to exit before doing any writing. To take this a step further, if the hash table uses chained collision resolution another read write lock can be used for each collision chain. As chains are updated, only an individual chain needs to be write-locked at a given time. If the table becomes saturated it can expand its memory size with a single global write-lock, of which would write-lock all of the chains before expansion. This would completely wait for all readers to exit before expansion.
 
 ## Semaphore
 
@@ -74,10 +74,10 @@ A common use of semaphores is to implement a thread pool (see below). CF actuall
 
 ## Thread Pool
 
-The thread pool is a great tool for games. For a CPU with N cores the thread pool is initialized with N-1 threads (N-1 to account for the main thread as well). The threads are initially asleep. The thread pool can then be loaded up with _tasks_ (each represented by a function pointer and `void*` pair [`CF_TaskFn`])(../multithreading/cf_taskfn.md)).
+The thread pool is a great tool for games. For a CPU with N cores the thread pool is initialized with N-1 threads (N-1 to account for the main thread as well). The threads are initially asleep. The thread pool can then be loaded up with _tasks_ (each represented by a function pointer and `void*` pair [`CF_TaskFn`](../multithreading/function/cf_taskfn.md)).
 
 After loading up the threadpool with tasks they can be kicked off. Once kicked, threads will wake and grab tasks from the pool and perform them until all tasks are complete, and the threads go back to sleep. The pool can be kicked off in two styles: _blocking_ and _non-blocking_.
 
-[`cf_threadpool_kick_and_wait`](../multithreading/cf_threadpool_kick_and_wait.md) will kick off all tasks and return only once all the tasks are completed. In this way it is a _blocking_ function, as it blocks the thread's execution until it finishes. If you'd like to continue on while the tasks are performed, use [`cf_threadpool_kick`](../multithreading/cf_threadpool_kick.md), as it's a _non-blocking_ function, meaning the function will immediately return after kicking, without waiting for any tasks to complete.
+[`cf_threadpool_kick_and_wait`](../multithreading/function/cf_threadpool_kick_and_wait.md) will kick off all tasks and return only once all the tasks are completed. In this way it is a _blocking_ function, as it blocks the thread's execution until it finishes. If you'd like to continue on while the tasks are performed, use [`cf_threadpool_kick`](../multithreading/function/cf_threadpool_kick.md), as it's a _non-blocking_ function, meaning the function will immediately return after kicking, without waiting for any tasks to complete.
 
 Great uses cases for threadpools in games include perform collision checks, as well as block-updating large chunks of independent entities/objects/systems.

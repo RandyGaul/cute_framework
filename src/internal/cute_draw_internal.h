@@ -18,6 +18,19 @@
 
 extern struct CF_Draw* s_draw;
 
+// Dash pattern for strokes (cf_draw_push_dash), all in world units. on == 0 means solid.
+struct CF_DrawDash { float on, off, phase; };
+
+// Shape effects (cf_draw_push_outline / cf_draw_push_glow). A zero width/radius disables that
+// effect; both zero means the command carries no effect block at all.
+struct CF_DrawEffects
+{
+	CF_Color outline;      // Premultiplied at capture.
+	float outline_width;
+	CF_Color glow;         // Premultiplied at capture.
+	float glow_radius;
+};
+
 enum BatchGeometryType : int
 {
 	BATCH_GEOMETRY_TYPE_TRI,
@@ -72,6 +85,8 @@ struct BatchGeometry
 	float radius;
 	float stroke;
 	float aa;
+	CF_DrawDash dash; // Captured from the dash stack; on == 0 means solid.
+	CF_DrawEffects fx; // Captured from the outline/glow stacks.
 	bool is_text;
 	bool is_sprite;
 	bool fill;
@@ -156,6 +171,10 @@ struct CF_TileCmd
 	float fill, n, opaque; // opaque: filled SDF shape at full alpha AND normal blend -- opaque-cover cull candidate.
 	uint32_t color_ba; // packHalf2x16(premultiplied ba); shader reads it via floatBitsToUint(misc.w).
 	float user[4]; // User params (ShaderParams.attributes for custom draw shaders).
+	// Shape effects (cf_draw_push_outline / _glow). x: payload offset of the effect block in
+	// vec4 units, as float bits; 0 means no effects. y: how far past the shape's own extent the
+	// effects reach, so coverage quads and tile culling can pad for a glow. zw reserved.
+	float fx[4];
 };
 
 struct CF_TileV4 { float x, y, z, w; };
@@ -220,7 +239,23 @@ struct CF_Command
 	const Cute::Array<BatchGeometry>* geoms_ref = NULL;
 	CF_M3x2 replay_mvp;
 	float replay_aa_scale = 1.0f;
+	// 3d mesh submission payload (cf_draw3d_mesh), owned by this command and freed via
+	// cf_draw3d_free_cmd when the command is destroyed. See cute_draw3d.cpp.
+	struct CF_MeshCmd3d* mesh3d = NULL;
+	// View-space depth of the farthest submission anchor in this mesh command, captured at
+	// submit time. The flush sorts non-depth-writing (translucent) mesh commands within a
+	// layer back-to-front on this key; opaque commands ignore it (the depth test owns them).
+	float depth3d = 0;
 };
+
+// True for a command that draws nothing and carries no state change -- notably the spacer
+// commands mesh submission leaves on top of the stream (see s_submit in cute_draw3d.cpp).
+// The one definition shared by coalescing and the flush's run scans.
+CF_INLINE bool cf_cmd_is_empty(const CF_Command& cmd)
+{
+	return !cmd.mesh3d && !cmd.is_canvas && !cmd.geoms.count() && !cmd.items.count()
+		&& !cmd.geoms_ref && !cmd.u.name && !cmd.u.is_texture;
+}
 
 // Pushes a sprite/text atlas entry whose geometry was just appended via s_push_geom().
 #define DRAW_PUSH_ITEM(s) \
@@ -284,6 +319,11 @@ struct CF_Draw
 	CF_V2 atlas_dims = cf_v2(2048, 2048);
 	CF_V2 texel_dims = cf_v2(1.0f/2048.0f, 1.0f/2048.0f);
 	bool delay_defrag = false;
+	// Latch for cf_atlas_defrag_once: defrag walks every atlas and can rebuild pages
+	// (re-fetching their pixels), so flush sites run it at most once per frame. Reset at
+	// cf_app_update; images first seen after this frame's defrag ride the lonely buffer
+	// until the next frame packs them.
+	bool defragged_this_frame = false;
 	atlas_cache_t atlas_cache;
 	CF_Material material;
 	CF_Arena uniform_arena;
@@ -291,6 +331,11 @@ struct CF_Draw
 	Cute::Array<CF_DrawFilterMode> filter_modes = { CF_DRAW_FILTER_SMOOTH };
 	Cute::Array<int> blends = { 0 }; // CF_DrawBlend stack (cf_draw_push_blend).
 	Cute::Array<CF_Color> colors = { cf_color_white() };
+	Cute::Array<CF_DrawDash> dashes = { { 0, 0, 0 } }; // cf_draw_push_dash stack; on = 0 means solid.
+	Cute::Array<CF_Color> outlines = { { 0, 0, 0, 0 } }; // cf_draw_push_outline stack.
+	Cute::Array<float> outline_widths = { 0 };
+	Cute::Array<CF_Color> glows = { { 0, 0, 0, 0 } };    // cf_draw_push_glow stack.
+	Cute::Array<float> glow_radii = { 0 };
 	Cute::Array<float> antialias = { 1.5f };
 	Cute::Array<CF_RenderState> render_states;
 	Cute::Array<CF_Rect> scissors = { { 0, 0, -1, -1 } };
@@ -401,6 +446,46 @@ struct CF_DrawListData
 
 void cf_make_draw();
 void cf_destroy_draw();
+
+// 3d mesh submission layer (cute_draw3d.cpp). Made/destroyed inside cf_make_draw and
+// cf_destroy_draw; cf_draw3d_process renders one mesh command from s_process_command after
+// pending 2d geometry has flushed; cf_draw3d_free_cmd releases a command's mesh payload.
+void cf_make_draw3d();
+void cf_destroy_draw3d();
+void cf_draw3d_process(CF_Command* cmd, CF_Canvas canvas, bool clear);
+void cf_draw3d_free_cmd(CF_Command* cmd);
+
+// Runs the atlas defrag at most once per frame (see CF_Draw::defragged_this_frame).
+void cf_atlas_defrag_once();
+
+// Called when the app's offscreen canvas is recreated (window resize / cf_app_set_size):
+// refreshes the default 2d projection, which tracks the app canvas 1:1.
+void cf_draw_on_app_canvas_resized(int w, int h);
+
+// Called by cf_render_layers_to before the canvas (and its render pass) is applied: stages
+// every in-range untextured mesh command's instance data into one shared GPU instance buffer
+// in a single upload, so cf_draw3d_process never tears down the live render pass to upload.
+// Commands bind their slice via the instance-buffer override's byte offset.
+void cf_draw3d_prepare_uploads(int layer_lo, int layer_hi);
+
+// Called by cf_destroy_shader: destroys the hidden solid-variant sibling of a 3d shape
+// shader's canonical handle (see cf_make_draw3d_shape_shader). Returns false if the id is
+// not a shape shader.
+bool cf_draw3d_destroy_shape_shader_sibling(uint64_t shader_id);
+
+// Called by the shader-directory watcher: hot-reloads every 3d shape shader made from
+// `changed_key`, swapping fresh guts into both variants of each affected bundle.
+void cf_draw3d_reload_shape_shaders(const char* changed_key);
+// Draw-list hooks: list-local 3d transforms while recording; bake (grouping + exact normal
+// matrices) at end; replay payloads borrowing the baked instances under a live camera; and
+// payload cleanup when a list's commands are cleared or destroyed.
+void cf_draw3d_list_begin();
+void cf_draw3d_list_end(struct CF_DrawListData* data);
+// Atlas uv routing for sprite-textured meshes: the 2d batch callback calls this first; it
+// consumes the report when a mesh command is mid-resolution in cf_draw3d_process.
+bool cf_draw3d_atlas_report(atlas_cache_entry_t* entries, int count, int texture_w, int texture_h);
+void cf_draw3d_replay_cmd(CF_Command* dst, const CF_Command* src);
+void cf_draw3d_free_list_cmds(struct CF_DrawListData* data);
 
 // We slice up a 64-bit int into lo + hi ranges to map where we can fetch pixels
 // from. This slices up the 64-bit range into 16 unique range. The ranges are inclusive.

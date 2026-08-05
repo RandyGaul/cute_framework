@@ -120,62 +120,239 @@ TEST_CASE(test_atan2_360_mixed_c) {
 	return true;
 }
 
-TEST_CASE(test_mul_T_m3x2_c) {
-	/* T(m) * v undoes m * v: transform a world point into m's local space. */
-	CF_M3x2 m = cf_make_translation(3.0f, 4.0f);
-	CF_V2 world = cf_v2(3.0f, 5.0f);
-	CF_V2 local = cf_mul_T(m, world);
-	REQUIRE(local.x == 0.0f);
-	REQUIRE(local.y == 1.0f);
+/* Fill the stack region reused by the next call's frame with non-zero
+   garbage, so stale values can't accidentally pass as zeros. */
+static float dirty_stack(void)
+{
+	volatile float garbage[128];
+	float sum = 0;
+	for (int i = 0; i < 128; ++i) garbage[i] = 123.456f + (float)i;
+	for (int i = 0; i < 128; ++i) sum += garbage[i];
+	return sum;
+}
 
-	/* T(a) * (a * b) == b for matrix-matrix. */
-	CF_M3x2 a = cf_make_translation(1.0f, 2.0f);
-	CF_M3x2 ab = cf_mul(a, m);
-	CF_M3x2 back = cf_mul_T(a, ab);
-	REQUIRE(back.p.x == 3.0f);
-	REQUIRE(back.p.y == 4.0f);
+
+TEST_CASE(test_cube_in_out_c) {
+	REQUIRE(cf_cube_in_out(0.0f) == 0.0f);
+	REQUIRE(cf_cube_in_out(0.5f) == 0.5f);
+	REQUIRE(cf_cube_in_out(1.0f) == 1.0f);
+	REQUIRE(cf_abs(cf_cube_in_out(0.75f) - 0.9375f) < 1e-6f);
+	/* Continuous across the midpoint. */
+	REQUIRE(cf_abs(cf_cube_in_out(0.5001f) - 0.5f) < 1e-3f);
+	return true;
+}
+
+TEST_CASE(test_shortest_arc_no_nan_c) {
+	/* Near-parallel normalized vectors: dot(a, b) can round above 1.0f,
+	   and acosf of that is NaN. */
+	for (int i = 0; i < 1000; ++i) {
+		float angle = (float)i * (CF_PI * 2.0f / 1000.0f);
+		CF_V2 u = cf_norm(cf_v2(CF_COSF(angle) * 3.7f, CF_SINF(angle) * 3.7f));
+		float arc = cf_shortest_arc(u, u);
+		REQUIRE(arc == arc); /* not NaN */
+		REQUIRE(cf_abs(arc) < 1e-3f);
+	}
+	/* Sanity: quarter turn CCW is +pi/2. */
+	float q = cf_shortest_arc(cf_v2(1.0f, 0.0f), cf_v2(0.0f, 1.0f));
+	REQUIRE(cf_abs(q - CF_PI / 2.0f) < 1e-5f);
+	return true;
+}
+
+TEST_CASE(test_mod_floored_c) {
+	/* Scalar overloads must match the CF_V2 overload's floored convention. */
+	CF_V2 mv = cf_mod(cf_v2(-1.0f, -1.0f), cf_v2(3.0f, 3.0f));
+	REQUIRE(mv.x == 2.0f);
+	REQUIRE(cf_mod(-1.0f, 3.0f) == 2.0f);
+	REQUIRE(cf_mod(-1.0, 3.0) == 2.0);
+	REQUIRE(cf_mod(7.0f, 3.0f) == 1.0f);
+	/* Guards against the old (int) cast, which is UB for x/m > INT_MAX and
+	   returned garbage here. (The floored formula still loses float precision
+	   for huge ratios with m != 1, matching the CF_V2 overload.) */
+	REQUIRE(cf_mod(1.0e10f, 1.0f) == 0.0f);
+	return true;
+}
+
+TEST_CASE(test_raycast_miss_zeroed_c) {
+	/* Documented contract (CF_Raycast): when hit is false, t and n are zero'd out. */
+	CF_Ray miss = cf_make_ray(cf_v2(-10.0f, 5.0f), cf_v2(1.0f, 0.0f), 1.0f);
+
+	CF_Circle circ;
+	circ.p = cf_v2(0, 0);
+	circ.r = 1.0f;
+	dirty_stack();
+	CF_Raycast rc = cf_ray_to_circle(miss, circ);
+	REQUIRE(!rc.hit);
+	REQUIRE(rc.t == 0.0f);
+	REQUIRE(rc.n.x == 0.0f && rc.n.y == 0.0f);
+
+	CF_Aabb box = cf_make_aabb(cf_v2(-1, -1), cf_v2(1, 1));
+	dirty_stack();
+	rc = cf_ray_to_aabb(miss, box);
+	REQUIRE(!rc.hit);
+	REQUIRE(rc.t == 0.0f);
+	REQUIRE(rc.n.x == 0.0f && rc.n.y == 0.0f);
+
+	CF_Capsule cap;
+	cap.a = cf_v2(0, -1);
+	cap.b = cf_v2(0, 1);
+	cap.r = 0.5f;
+	dirty_stack();
+	rc = cf_ray_to_capsule(miss, cap);
+	REQUIRE(!rc.hit);
+	REQUIRE(rc.t == 0.0f);
+	REQUIRE(rc.n.x == 0.0f && rc.n.y == 0.0f);
+
+	CF_Poly poly;
+	poly.count = 4;
+	poly.verts[0] = cf_v2(-1, -1);
+	poly.verts[1] = cf_v2(1, -1);
+	poly.verts[2] = cf_v2(1, 1);
+	poly.verts[3] = cf_v2(-1, 1);
+	cf_make_poly(&poly);
+	dirty_stack();
+	rc = cf_ray_to_poly(miss, &poly);
+	REQUIRE(!rc.hit);
+	REQUIRE(rc.t == 0.0f);
+	REQUIRE(rc.n.x == 0.0f && rc.n.y == 0.0f);
+
+	dirty_stack();
+	CF_Raycast out;
+	bool hit = cf_cast_ray(miss, &circ, CF_SHAPE_TYPE_CIRCLE, &out);
+	REQUIRE(!hit);
+	REQUIRE(out.t == 0.0f);
+	REQUIRE(out.n.x == 0.0f && out.n.y == 0.0f);
 
 	return true;
 }
 
-TEST_CASE(test_atan2_v2_one_arg_c) {
-	CF_V2 v = cf_v2(0.0f, 1.0f);
-	float angle = cf_atan2(v);
-	REQUIRE(cf_abs(angle - CF_PI / 2.0f) < 1e-6f);
+TEST_CASE(test_ray_to_halfspace_c) {
+	/* t must be a distance along the normalized ray direction, matching every
+	   other cf_ray_to_* cast, so cf_impact(ray, t) lands on the plane. */
+	CF_Halfspace plane = cf_plane(cf_v2(0.0f, 1.0f), 0.0f);
+	CF_Ray ray = cf_make_ray(cf_v2(0.0f, 10.0f), cf_v2(0.0f, -1.0f), 100.0f);
+	CF_Raycast rc = cf_ray_to_halfspace(ray, plane);
+	REQUIRE(rc.hit);
+	REQUIRE(cf_abs(rc.t - 10.0f) < 1e-3f);
+	CF_V2 hitp = cf_impact(ray, rc.t);
+	REQUIRE(cf_abs(hitp.y) < 1e-3f);
 
-	/* Two-arg forms must keep working through the same macro. */
-	float angle2 = cf_atan2(1.0f, 0.0f);
-	REQUIRE(cf_abs(angle2 - CF_PI / 2.0f) < 1e-6f);
-	double angle3 = cf_atan2(0.0, 1.0);
-	REQUIRE(angle3 == 0.0);
-
-	return true;
-}
-
-TEST_CASE(test_make_scale_translation_3arg_c) {
-	CF_V2 p = cf_v2(5.0f, 6.0f);
-	CF_M3x2 m = cf_make_scale_translation(2.0f, 3.0f, p);
-	REQUIRE(m.m.x.x == 2.0f);
-	REQUIRE(m.m.y.y == 3.0f);
-	REQUIRE(m.p.x == 5.0f);
-	REQUIRE(m.p.y == 6.0f);
-
-	/* Two-arg forms must keep working through the same macro. */
-	CF_M3x2 m2 = cf_make_scale_translation(cf_v2(2.0f, 3.0f), p);
-	REQUIRE(m2.m.x.x == 2.0f);
-	REQUIRE(m2.m.y.y == 3.0f);
-	CF_M3x2 m3 = cf_make_scale_translation(4.0f, p);
-	REQUIRE(m3.m.x.x == 4.0f);
-	REQUIRE(m3.m.y.y == 4.0f);
+	/* A ray lying exactly in the plane must hit at t == 0, not NaN. */
+	CF_Ray inplane = cf_make_ray(cf_v2(0.0f, 0.0f), cf_v2(1.0f, 0.0f), 10.0f);
+	CF_Raycast rc2 = cf_ray_to_halfspace(inplane, plane);
+	REQUIRE(rc2.t == rc2.t); /* not NaN */
+	REQUIRE(rc2.hit);
+	REQUIRE(rc2.t == 0.0f);
 
 	return true;
 }
 
-TEST_CASE(test_atan2_360_v2_literal_c) {
-	/* A cf_v2(...) literal used to mis-split inside the arity dispatcher
-	   before cf_v2's expansion was parenthesized. */
-	float angle = cf_atan2_360(cf_v2(1.0f, 0.0f));
-	REQUIRE(angle >= 0.0f && angle <= CF_PI * 2.0f);
+TEST_CASE(test_slice_on_plane_verts_c) {
+	CF_Halfspace plane = cf_plane(cf_v2(0.0f, 1.0f), 0.0f);
+
+	/* Convex hexagon with two vertices exactly on the slice plane. Both
+	   halves are trapezoids of area 3; front + back must tile the input. */
+	CF_Poly hex;
+	hex.count = 6;
+	hex.verts[0] = cf_v2(2, 0);
+	hex.verts[1] = cf_v2(1, 1);
+	hex.verts[2] = cf_v2(-1, 1);
+	hex.verts[3] = cf_v2(-2, 0);
+	hex.verts[4] = cf_v2(-1, -1);
+	hex.verts[5] = cf_v2(1, -1);
+	cf_norms(hex.verts, hex.norms, hex.count);
+	CF_SliceOutput out = cf_slice(plane, hex, 1e-4f);
+	REQUIRE(cf_abs(cf_calc_area(out.front) - 3.0f) < 1e-4f);
+	REQUIRE(cf_abs(cf_calc_area(out.back) - 3.0f) < 1e-4f);
+
+	/* Square whose top edge lies exactly in the plane: everything is
+	   behind-or-on, so back must be the entire square. */
+	CF_Poly sq;
+	sq.count = 4;
+	sq.verts[0] = cf_v2(-1, -1);
+	sq.verts[1] = cf_v2(1, -1);
+	sq.verts[2] = cf_v2(1, 0);
+	sq.verts[3] = cf_v2(-1, 0);
+	cf_norms(sq.verts, sq.norms, sq.count);
+	out = cf_slice(plane, sq, 1e-4f);
+	REQUIRE(cf_abs(cf_calc_area(out.back) - 2.0f) < 1e-4f);
+
+	return true;
+}
+
+TEST_CASE(test_slice_nonconvex_no_overflow_c) {
+	/* cf_slice documents convex input, but must stay memory-safe when handed
+	   a non-convex (CCW) polygon anyway. A zigzag "comb" whose every edge
+	   crosses the plane generates one intersection point per edge — more clip
+	   output than CF_POLY_MAX_VERTS+1 — and must not smash the stack. */
+	CF_Halfspace plane = cf_plane(cf_v2(0.0f, 1.0f), 0.0f);
+	CF_Poly zig;
+	zig.count = CF_POLY_MAX_VERTS;
+	for (int i = 0; i < CF_POLY_MAX_VERTS; ++i) {
+		zig.verts[i] = cf_v2((float)i, (i & 1) ? -0.5f : 0.5f);
+	}
+	cf_norms(zig.verts, zig.norms, zig.count);
+	CF_SliceOutput out = cf_slice(plane, zig, 1e-4f);
+	REQUIRE(out.front.count <= CF_POLY_MAX_VERTS);
+	REQUIRE(out.back.count <= CF_POLY_MAX_VERTS);
+	return true;
+}
+
+TEST_CASE(test_polygon_degenerate_c) {
+	/* Zero-area (collinear) polygon: results must be finite, falling back
+	   to the vertex average. */
+	CF_Poly line;
+	line.count = 3;
+	line.verts[0] = cf_v2(0, 0);
+	line.verts[1] = cf_v2(1, 0);
+	line.verts[2] = cf_v2(2, 0);
+	CF_V2 com = cf_center_of_mass(line);
+	REQUIRE(com.x == com.x && com.y == com.y); /* not NaN */
+	REQUIRE(cf_abs(com.x - 1.0f) < 1e-4f);
+
+	CF_V2 pts[3];
+	pts[0] = cf_v2(0, 0);
+	pts[1] = cf_v2(1, 0);
+	pts[2] = cf_v2(2, 0);
+	CF_V2 cen = cf_centroid(pts, 3);
+	REQUIRE(cen.x == cen.x && cen.y == cen.y); /* not NaN */
+	REQUIRE(cf_abs(cen.x - 1.0f) < 1e-4f);
+
+	/* count == 0 must not divide by zero (nor read verts[0]). */
+	CF_Poly empty;
+	empty.count = 0;
+	CF_V2 z = cf_center_of_mass(empty);
+	REQUIRE(z.x == 0.0f && z.y == 0.0f);
+
+	/* count == 1 and count == 2: the point and the segment midpoint. */
+	CF_Poly point;
+	point.count = 1;
+	point.verts[0] = cf_v2(3, 4);
+	CF_V2 one = cf_center_of_mass(point);
+	REQUIRE(one.x == 3.0f && one.y == 4.0f);
+
+	CF_Poly seg;
+	seg.count = 2;
+	seg.verts[0] = cf_v2(0, 0);
+	seg.verts[1] = cf_v2(2, 6);
+	CF_V2 mid = cf_center_of_mass(seg);
+	REQUIRE(mid.x == 1.0f && mid.y == 3.0f);
+
+	return true;
+}
+
+TEST_CASE(test_distance_sq_degenerate_c) {
+	/* Zero-length segment: squared distance to the point a == b. */
+	float d = cf_distance_sq(cf_v2(1, 1), cf_v2(1, 1), cf_v2(5, 5));
+	REQUIRE(d == d); /* not NaN */
+	REQUIRE(cf_abs(d - 32.0f) < 1e-4f);
+	return true;
+}
+
+TEST_CASE(test_make_aabb_verts_empty_c) {
+	/* count == 0 must not read verts[0]. */
+	CF_Aabb bb = cf_make_aabb_verts(NULL, 0);
+	REQUIRE(bb.min.x == 0.0f && bb.min.y == 0.0f);
+	REQUIRE(bb.max.x == 0.0f && bb.max.y == 0.0f);
 	return true;
 }
 
@@ -188,8 +365,14 @@ TEST_SUITE(test_math_c) {
 	RUN_TEST_CASE(test_atan2_360_v2_c);
 	RUN_TEST_CASE(test_atan2_360_sincos_c);
 	RUN_TEST_CASE(test_atan2_360_mixed_c);
-	RUN_TEST_CASE(test_mul_T_m3x2_c);
-	RUN_TEST_CASE(test_atan2_v2_one_arg_c);
-	RUN_TEST_CASE(test_make_scale_translation_3arg_c);
-	RUN_TEST_CASE(test_atan2_360_v2_literal_c);
+	RUN_TEST_CASE(test_cube_in_out_c);
+	RUN_TEST_CASE(test_shortest_arc_no_nan_c);
+	RUN_TEST_CASE(test_mod_floored_c);
+	RUN_TEST_CASE(test_raycast_miss_zeroed_c);
+	RUN_TEST_CASE(test_ray_to_halfspace_c);
+	RUN_TEST_CASE(test_slice_on_plane_verts_c);
+	RUN_TEST_CASE(test_slice_nonconvex_no_overflow_c);
+	RUN_TEST_CASE(test_polygon_degenerate_c);
+	RUN_TEST_CASE(test_distance_sq_degenerate_c);
+	RUN_TEST_CASE(test_make_aabb_verts_empty_c);
 }

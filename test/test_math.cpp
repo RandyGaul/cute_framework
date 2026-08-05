@@ -81,6 +81,17 @@ TEST_CASE(test_atan2_360_sincos) {
 	return true;
 }
 
+TEST_CASE(test_mod_floored_cpp) {
+	/* The C++ scalar overloads must match the CF_V2 overload's floored
+	   convention, same as the C _Generic versions. */
+	REQUIRE(cf_mod(-1.0f, 3.0f) == 2.0f);
+	REQUIRE(cf_mod(-1.0, 3.0) == 2.0);
+	REQUIRE(cf_mod(7.0f, 3.0f) == 1.0f);
+	REQUIRE(cf_mod(1.0e10f, 1.0f) == 0.0f);
+
+	return true;
+}
+
 TEST_SUITE(test_math) {
 	RUN_TEST_CASE(test_make_translation_v2);
 	RUN_TEST_CASE(test_make_translation_floats);
@@ -88,4 +99,5 @@ TEST_SUITE(test_math) {
 	RUN_TEST_CASE(test_atan2_360_floats);
 	RUN_TEST_CASE(test_atan2_360_v2);
 	RUN_TEST_CASE(test_atan2_360_sincos);
+	RUN_TEST_CASE(test_mod_floored_cpp);
 }

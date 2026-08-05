@@ -25,9 +25,9 @@ afree(a);
 ```
 
 > [!NOTE]
-> The [`dyna`](../array/dyna.md) keyword is an _optional_, but encouraged, macro that doesn't actually do anything. It's used to markup the type and make it clear this is a dynamic array, and not just an `int*`.
+> The [`dyna`](../array/macro/dyna.md) keyword is an _optional_, but encouraged, macro that doesn't actually do anything. It's used to markup the type and make it clear this is a dynamic array, and not just an `int*`.
 
-The array will automatically grow as elements are pushed. Whenever you want to fetch a particular element just use `a[i]` like any other pointer. When done, free up the array with [`cf_array_free`](../array/cf_array_free.md).
+The array will automatically grow as elements are pushed. Whenever you want to fetch a particular element just use `a[i]` like any other pointer. When done, free up the array with [`cf_array_free`](../array/macro/cf_array_free.md).
 
 You may store any kind of element you wish, including structs. However, since the array will grow as necessary elements cannot store pointers to themselves or any other element. Pointers into the array are _not stable_. A good workaround is to instead store indices into the array, and fetch pointers to elements only temporarily.
 
@@ -51,14 +51,14 @@ Since the C++ wrapper has a constructor and destructor there's no need to manual
 
 A map is used to map a unique key to a specific value. The value can be fetched later very efficiently (in constant time). This makes the map a very popular data structure for general purpose problem solving. Often times maps are used to store unique identifiers for game objects, assets, and provide an easy way to create associations between different sets of data.
 
-In C we use the [`CF_MAP`](../map/cf_map.md) type, while in C++ there's a `Map<T>` class that wraps the C functionality. It contains a very similar API including get/find, insert, remove, etc. We will cover both the C and C++ APIs in this page.
+In C we use the [`CF_MAP`](../map/macro/cf_map.md) type, while in C++ there's a `Map<T>` class that wraps the C functionality. It contains a very similar API including get/find, insert, remove, etc. We will cover both the C and C++ APIs in this page.
 
 > [!IMPORTANT]
 > Since the table itself grows dynamically, values _may not_ store pointers to themselves or other values. All values are stored as [plain old data (POD)](https://stackoverflow.com/questions/146452/what-are-pod-types-in-c), as their location in memory will get shuffled around internally as the map grows.
 
 ## CF_MAP in C
 
-[`CF_MAP(T)`](../map/cf_map.md) is a markup macro for a map type. All keys are `uint64_t`. You can store any POD value type. The map grows automatically as entries are added.
+[`CF_MAP(T)`](../map/macro/cf_map.md) is a markup macro for a map type. All keys are `uint64_t`. You can store any POD value type. The map grows automatically as entries are added.
 
 ```cpp
 CF_MAP(CF_V2) pts = NULL;
@@ -88,13 +88,13 @@ All keys for `CF_MAP` are `uint64_t`. You can use pointers, integers, chars, etc
 
 Since `CK_MAP` uses `uint64_t` keys internally we cannot use strings as keys directly. However there's a _highly recommended_ technique using _string interning_ to create stable, unique string references. The [Strings](../topics/strings.md) page has all the string related details. Here is the list of intern functions:
 
-* [`cf_sintern`](../string/cf_sintern.md)
-* [`cf_sintern_range`](../string/cf_sintern_range.md)
-* [`cf_sinuke`](../string/cf_sinuke.md)
+* [`cf_sintern`](../string/macro/cf_sintern.md)
+* [`cf_sintern_range`](../string/macro/cf_sintern_range.md)
+* [`cf_sinuke`](../string/macro/cf_sinuke.md)
 
-[`cf_sintern`](../string/cf_sintern.md) is the important one. Given a string it will return you a pointer to an identical string, but with a stable and unique pointer. The pointer is unique based on the contents of the string, ensuring only one copy of any string exists. The pointer will be completely immutable, and valid until [`cf_sinuke`](../string/cf_sinuke.md) is called, which cleans up all memory used by the string interning API up to that point.
+[`cf_sintern`](../string/macro/cf_sintern.md) is the important one. Given a string it will return you a pointer to an identical string, but with a stable and unique pointer. The pointer is unique based on the contents of the string, ensuring only one copy of any string exists. The pointer will be completely immutable, and valid until [`cf_sinuke`](../string/macro/cf_sinuke.md) is called, which cleans up all memory used by the string interning API up to that point.
 
-By interning a string the stable + unique pointer can be used as a globally unique identifier for the string contents itself. We can then cast the pointer to `uint64_t` and use it as a valid map key. The pattern is to take any dynamic string, pass it to [`cf_sintern`](../string/cf_sintern.md), then pass the stable pointer around from there on (but remember, its contents are immutable!).
+By interning a string the stable + unique pointer can be used as a globally unique identifier for the string contents itself. We can then cast the pointer to `uint64_t` and use it as a valid map key. The pattern is to take any dynamic string, pass it to [`cf_sintern`](../string/macro/cf_sintern.md), then pass the stable pointer around from there on (but remember, its contents are immutable!).
 
 ```cpp
 const char* special_name = cf_sintern("Something Special");
@@ -164,7 +164,7 @@ do_stuff(node);
 
 You can put multiple different nodes inside of a single struct, meaning the struct can be inserted into two independent lists simultaneously.
 
-The linked lists themselves are circular. This can be a bit confusing when traversing the list, so helper functions [`cf_list_begin`](../list/cf_list_begin.md) and [`cf_list_end`](../list/cf_list_end.md) are available to simplify traversals.
+The linked lists themselves are circular. This can be a bit confusing when traversing the list, so helper functions [`cf_list_begin`](../list/function/cf_list_begin.md) and [`cf_list_end`](../list/function/cf_list_end.md) are available to simplify traversals.
 
 ```cpp
 for (CF_Node* n = cf_list_begin(list); n != cf_list_end(list); n = n->next) {

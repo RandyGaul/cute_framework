@@ -58,6 +58,30 @@ Interactive samples demonstrating Cute Framework features. Click any card to pla
     [:octicons-arrow-right-24: Play](basicsprite.md)
 
 
+- **[Billboards 3D](billboards.md)**
+
+    ---
+
+    Sprite-textured camera-facing quads: cutout trees and additive fireflies through the texture atlas.
+
+    [:octicons-arrow-right-24: Play](billboards.md)
+
+- **[3D Shapes](shapes3d.md)**
+
+    ---
+
+    Anti-aliased SDF lines, circles, arcs, and solid primitives -- gizmos and debug drawing with zero setup.
+
+    [:octicons-arrow-right-24: Play](shapes3d.md)
+
+- **[Point Light Shadows](point_light.md)**
+
+    ---
+
+    Omnidirectional shadows: one cube texture, six attached face canvases, distance compare in the shader.
+
+    [:octicons-arrow-right-24: Play](point_light.md)
+
 - **[Blend Modes](blend_modes.md)**
 
     ---
@@ -66,6 +90,14 @@ Interactive samples demonstrating Cute Framework features. Click any card to pla
 
     [:octicons-arrow-right-24: Play](blend_modes.md)
 
+
+- **[City 3D](draw3d.md)**
+
+    ---
+
+    10,000 buildings in one baked draw list per pass, with a shadow-mapped sun, fog, and window lights.
+
+    [:octicons-arrow-right-24: Play](draw3d.md)
 
 - **[Clay UI](clay.md)**
 
@@ -157,6 +189,15 @@ Interactive samples demonstrating Cute Framework features. Click any card to pla
     [:octicons-arrow-right-24: Play](fetch_image.md)
 
 
+- **[Fireflies](fireflies.md)**
+
+    ---
+
+    A first-person blocky forest at dusk: catch fireflies in a jar, wake the shrine. The 3d API's integration sample -- cascaded EVSM shadows, HDR bloom through render-to-mip, frustum culling, and automatic instancing working as one system.
+
+    [:octicons-arrow-right-24: Read](fireflies.md)
+
+
 - **[Fluid Sim](fluid_sim.md)**
 
     ---
@@ -182,6 +223,15 @@ Interactive samples demonstrating Cute Framework features. Click any card to pla
     Interactive sample demonstrating glitch features.
 
     [:octicons-arrow-right-24: Play](glitch.md)
+
+
+- **[GPU Particles](gpu_particles.md)**
+
+    ---
+
+    65k embers simulated, counted, and drawn entirely on the GPU: compute writes a storage buffer and the indirect draw arguments, pull instancing reads them back -- zero CPU readback.
+
+    [:octicons-arrow-right-24: Read](gpu_particles.md)
 
 
 - **[Hello Triangle](hello_triangle.md)**
@@ -256,6 +306,15 @@ Interactive samples demonstrating Cute Framework features. Click any card to pla
     [:octicons-arrow-right-24: Play](metaballs.md)
 
 
+- **[Model 3D](model3d.md)**
+
+    ---
+
+    A glTF fox pack skinned through one shared storage buffer: five characters on independent animation clips in three instanced draws.
+
+    [:octicons-arrow-right-24: Read](model3d.md)
+
+
 - **[Noise](noise.md)**
 
     ---
@@ -264,6 +323,14 @@ Interactive samples demonstrating Cute Framework features. Click any card to pla
 
     [:octicons-arrow-right-24: Play](noise.md)
 
+
+- **[OBJ Loading](obj_loading.md)**
+
+    ---
+
+    A ~90 line OBJ parser feeding cf_make_mesh -- model formats are user space, and this is the whole cost.
+
+    [:octicons-arrow-right-24: Play](obj_loading.md)
 
 - **[Outline (Stencil)](outline_stencil.md)**
 
@@ -282,6 +349,14 @@ Interactive samples demonstrating Cute Framework features. Click any card to pla
 
     [:octicons-arrow-right-24: Play](pivot.md)
 
+
+- **[Pixel 3D](pixel_3d.md)**
+
+    ---
+
+    A multi-pass pixel-art 3D pipeline: shadow maps, a lit pass, a view-space g-buffer, and an edge-detect composite.
+
+    [:octicons-arrow-right-24: Play](pixel_3d.md)
 
 - **[Platformer](platformer.md)**
 
@@ -327,6 +402,14 @@ Interactive samples demonstrating Cute Framework features. Click any card to pla
 
     [:octicons-arrow-right-24: Play](shallow_water.md)
 
+
+- **[Skinning 3D](skinning.md)**
+
+    ---
+
+    GPU skinning with joint/weight attributes and a mat4 bone-palette uniform; sixty kelp strands in one instanced draw.
+
+    [:octicons-arrow-right-24: Play](skinning.md)
 
 - **[Sound Pan](sound_pan.md)**
 
@@ -381,6 +464,14 @@ Interactive samples demonstrating Cute Framework features. Click any card to pla
 
     [:octicons-arrow-right-24: Play](timestep.md)
 
+
+- **[Transparency 3D](transparency3d.md)**
+
+    ---
+
+    Sorted alpha blending done honestly -- opaque first, back-to-front translucents, and a toggle to watch it break.
+
+    [:octicons-arrow-right-24: Play](transparency3d.md)
 
 - **[Vector Paths](vector_paths.md)**
 
