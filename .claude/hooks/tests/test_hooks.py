@@ -122,5 +122,56 @@ class TestCheckDocsTags(unittest.TestCase):
             self.assertEqual(r.returncode, 0, msg=f"{h}: {r.stderr}")
 
 
+class TestCheckRegistration(unittest.TestCase):
+    SCRIPT = "check-registration.py"
+
+    def test_registered_source_is_silent(self):
+        r = run_hook(self.SCRIPT, "src/cute_draw.cpp")
+        self.assertEqual(r.returncode, 0)
+
+    def test_unregistered_source_warns(self):
+        r = run_hook(self.SCRIPT, "src/cute_notreal.cpp")
+        self.assertEqual(r.returncode, 2)
+        self.assertIn("CF_SRCS", r.stderr)
+
+    def test_registered_header_is_silent(self):
+        r = run_hook(self.SCRIPT, "include/cute_draw.h")
+        self.assertEqual(r.returncode, 0)
+
+    def test_unregistered_header_warns(self):
+        r = run_hook(self.SCRIPT, "include/cute_notreal.h")
+        self.assertEqual(r.returncode, 2)
+        self.assertIn("cute.h", r.stderr)
+
+    def test_whitelisted_header_is_silent(self):
+        r = run_hook(self.SCRIPT, "include/cute_defines.h")
+        self.assertEqual(r.returncode, 0)
+
+    def test_registered_test_is_silent(self):
+        r = run_hook(self.SCRIPT, "test/test_math.cpp")
+        self.assertEqual(r.returncode, 0)
+
+    def test_unregistered_test_warns_both_registries(self):
+        r = run_hook(self.SCRIPT, "test/test_notreal.cpp")
+        self.assertEqual(r.returncode, 2)
+        self.assertIn("CF_TEST_SRCS", r.stderr)
+        self.assertIn("main.cpp", r.stderr)
+
+    def test_registered_sample_is_silent(self):
+        r = run_hook(self.SCRIPT, "samples/easy_sprite.c")
+        self.assertEqual(r.returncode, 0)
+
+    def test_unregistered_sample_warns(self):
+        r = run_hook(self.SCRIPT, "samples/notreal.cpp")
+        self.assertEqual(r.returncode, 2)
+        self.assertIn("add_sample", r.stderr)
+
+    def test_non_registerable_paths_are_silent(self):
+        for p in ("docs/foo.md", "test/test_harness.h", "include/cute_version.h.in",
+                  ".claude/hooks/tests/fixtures/include/cute_goodfixture.h"):
+            r = run_hook(self.SCRIPT, p)
+            self.assertEqual(r.returncode, 0, msg=p)
+
+
 if __name__ == "__main__":
     unittest.main()
