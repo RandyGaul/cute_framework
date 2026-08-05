@@ -175,6 +175,11 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 		return cf_result_error("cf_make_app called while an app already exists -- call cf_destroy_app first.");
 	}
 
+	// Route Box2D's allocations and asserts through CF (see cute_physics.h). Box2D says
+	// to set these during application startup, before any world exists.
+	extern void cf_physics_wire_allocator();
+	cf_physics_wire_allocator();
+
 	bool use_dx11 = options & CF_APP_OPTIONS_GFX_D3D11_BIT;
 	bool use_dx12 = options & CF_APP_OPTIONS_GFX_D3D12_BIT;
 	bool use_metal = options & CF_APP_OPTIONS_GFX_METAL_BIT;

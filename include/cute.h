@@ -55,6 +55,7 @@
 #include "cute_model.h"
 #include "cute_networking.h"
 #include "cute_noise.h"
+#include "cute_physics.h"
 #include "cute_custom_sprite.h"
 #include "cute_rnd.h"
 #include "cute_sprite.h"
