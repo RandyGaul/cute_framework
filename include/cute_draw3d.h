@@ -114,6 +114,26 @@
 // immediate path derives normals from the model rows, which is exact for rigid transforms and
 // uniform scale.
 //
+// A recording behaves like a closure: state it sets INSIDE itself is part of the recording,
+// state it inherits from outside binds fresh each time the list is drawn. The transform stack
+// always worked this way (internal pushes compose onto the live ambient transform), and the
+// SHADER and UNIFORMS/TEXTURES follow the same rule:
+//
+//     - A shader pushed inside `begin`/`end` records frozen; one that was merely ambient
+//       (pushed outside, or not at all) stays a free variable -- `cf_draw_list` binds
+//       whatever `cf_draw3d_push_shader` has pushed then, record-time shader as fallback.
+//     - A uniform or texture set inside the recording records frozen; a name that was only
+//       ambient binds the live `cf_draw3d_set_uniform`/`set_texture` value at
+//       `cf_draw_list` time, record-time value as fallback. Set `u_time` each frame and a
+//       baked level animates; set nothing and it renders exactly as recorded.
+//
+// This is what makes multi-pass rendering one-recording cheap: record a scene shaderless,
+// then push the shadow shader and draw the list, push the lit shader and draw it again --
+// same bake, one instanced draw per pass (see the draw3d sample). Drawing a list under a
+// pass shader also FUSES: adjacent baked groups that differ only by frozen uniforms or
+// textures the bound shader never declares collapse into a single draw, so a ten-material
+// scene is one draw in a depth pass. Shapes always record their resolved shader.
+//
 // ESCAPE HATCH
 //
 // A submitted mesh that has its own instance buffer (`cf_mesh_set_instance_buffer`) is drawn
@@ -219,7 +239,9 @@ typedef struct CF_DrawStats3d
  * @category draw3d
  * @brief    Returns and resets the 3d submission counters.
  * @remarks  Call once per frame, after `cf_app_draw_onto_screen`. Counters accumulate over
- *           whatever interval you leave between calls.
+ *           whatever interval you leave between calls. Draw-list replays count like
+ *           everything else: each baked group drawn adds its instances and one command
+ *           (fewer when fusion folds adjacent groups -- see the DRAW LISTS section).
  * @related  CF_DrawStats3d cf_draw3d_worst_split cf_draw_split_3d_to_string
  */
 CF_API CF_DrawStats3d CF_CALL cf_draw3d_stats(void);
@@ -395,6 +417,13 @@ CF_API CF_V3 CF_CALL cf_draw3d_mul(CF_V3 p);
  *           error. This is deliberate: this layer makes no assumptions about how you shade.
  *           Shaders under `cf_shader_directory` hot-reload automatically while you edit.
  *
+ *           Draw-list recordings treat this stack with closure semantics: a shader pushed
+ *           INSIDE `cf_draw_list_begin`/`end` is part of the recording (frozen), while the
+ *           shader that was ambient at record time stays a free variable -- `cf_draw_list`
+ *           binds whatever is pushed here then, falling back to the record-time shader when
+ *           nothing is. Record a scene shaderless and draw it once per pass under each
+ *           pass's shader. See the DRAW LISTS section at the top of this header.
+ *
  *           Built-in shapes interpret the top of this stack by the shader's kind:
  *           a shape shader (`cf_make_draw3d_shape_shader`) post-processes the built-in
  *           stroke/solid result through its stub; a plain shader fully replaces the solid
@@ -452,7 +481,9 @@ CF_API CF_RenderState CF_CALL cf_draw3d_peek_render_state(void);
 //--------------------------------------------------------------------------------------------------
 // Shader plumbing, by name -- the same idiom as the 2d draw API. Values are captured per
 // submission; changing a uniform between two submissions of the same mesh splits their coalescing
-// group, which is the lever for material variety within one shader.
+// group, which is the lever for material variety within one shader. Draw-list recordings apply
+// closure semantics per name: set inside the recording = frozen; merely ambient = the draw list
+// binds the live value at `cf_draw_list` time (see the DRAW LISTS section above).
 
 /**
  * @function cf_draw3d_set_uniform

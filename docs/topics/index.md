@@ -31,6 +31,7 @@ After completing the above fundamental reading it's recommended to then select t
 * [Random Numbers](./random_numbers.md)
 * [A Tour of CF's Renderer](./renderer.md)
 * [Shader Compilation](./shader_compilation.md)
+* [Shipping 3D](./shipping_3d.md)
 * [Strings](./strings.md)
 * [Virtual File System](./virtual_file_system.md)
 * [HTTPS](./web.md)

@@ -97,24 +97,23 @@ static const char* s_fs =
 "    result = vec4(albedo * (0.28 + 0.22 * hemi + 0.6 * key), 1.0);\n"
 "}\n";
 
-// Interleaves the loader's separate streams into one indexed draw3d mesh. The loader hands
-// over ready-to-use u32 indices, so keep them: vertex_count interleaved vertices instead of
+// Interleaves the loader's separate streams into one indexed draw3d mesh via cm_interleave:
+// one CM_VertexAttribute per CF_VertexAttribute, same offsets. The loader hands over
+// ready-to-use u32 indices, so keep them: vertex_count interleaved vertices instead of
 // index_count de-indexed ones (3-4x less vertex memory on typical meshes), and joints ride
 // as USHORT4 into a uvec4 shader input with no widening.
 static CF_Mesh s_make_mesh(const CM_Primitive* prim, int* out_count)
 {
 	int n = prim->vertex_count;
 	Vertex* verts = (Vertex*)cf_alloc(sizeof(Vertex) * (size_t)n);
-	for (int v = 0; v < n; ++v) {
-		Vertex* out = verts + v;
-		out->pos = cf_v3(prim->positions[v * 3], prim->positions[v * 3 + 1], prim->positions[v * 3 + 2]);
-		out->n = cf_v3(prim->normals[v * 3], prim->normals[v * 3 + 1], prim->normals[v * 3 + 2]);
-		out->uv = prim->uvs ? cf_v2(prim->uvs[v * 2], prim->uvs[v * 2 + 1]) : cf_v2(0, 0);
-		for (int k = 0; k < 4; ++k) {
-			out->joints[k] = prim->joints ? prim->joints[v * 4 + k] : 0;
-			out->weights[k] = prim->weights ? prim->weights[v * 4 + k] : (k == 0 ? 1.0f : 0.0f);
-		}
-	}
+	CM_VertexAttribute streams[5] = {
+		{ CM_STREAM_POSITION, CF_OFFSET_OF(Vertex, pos) },
+		{ CM_STREAM_NORMAL,   CF_OFFSET_OF(Vertex, n) },
+		{ CM_STREAM_UV,       CF_OFFSET_OF(Vertex, uv) },
+		{ CM_STREAM_JOINTS,   CF_OFFSET_OF(Vertex, joints) },
+		{ CM_STREAM_WEIGHTS,  CF_OFFSET_OF(Vertex, weights) },
+	};
+	cm_interleave(prim, streams, 5, (int)sizeof(Vertex), verts);
 	CF_VertexAttribute attrs[5] = { 0 };
 	attrs[0].name = "in_pos";     attrs[0].format = CF_VERTEX_FORMAT_FLOAT3;  attrs[0].offset = CF_OFFSET_OF(Vertex, pos);
 	attrs[1].name = "in_normal";  attrs[1].format = CF_VERTEX_FORMAT_FLOAT3;  attrs[1].offset = CF_OFFSET_OF(Vertex, n);

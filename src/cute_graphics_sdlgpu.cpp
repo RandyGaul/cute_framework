@@ -1313,6 +1313,32 @@ void cf_sdlgpu_shader_swap_contents(CF_Shader a, CF_Shader b)
 	CF_MEMCPY(pb, tmp, sizeof(tmp));
 }
 
+bool cf_sdlgpu_shader_consumes_uniform(CF_Shader shader_handle, const char* interned_name)
+{
+	CF_ShaderInternal* shd = (CF_ShaderInternal*)shader_handle.id;
+	for (int b = 0; b < CF_MAX_UNIFORM_BLOCK_COUNT; ++b) {
+		for (int i = 0; i < shd->vs_uniform_block_members[b].count(); ++i) {
+			if (shd->vs_uniform_block_members[b][i].name == interned_name) return true;
+		}
+		for (int i = 0; i < shd->fs_uniform_block_members[b].count(); ++i) {
+			if (shd->fs_uniform_block_members[b][i].name == interned_name) return true;
+		}
+	}
+	return false;
+}
+
+bool cf_sdlgpu_shader_consumes_texture(CF_Shader shader_handle, const char* interned_name)
+{
+	CF_ShaderInternal* shd = (CF_ShaderInternal*)shader_handle.id;
+	for (int i = 0; i < shd->vs_image_names.count(); ++i) {
+		if (shd->vs_image_names[i] == interned_name) return true;
+	}
+	for (int i = 0; i < shd->fs_image_names.count(); ++i) {
+		if (shd->fs_image_names[i] == interned_name) return true;
+	}
+	return false;
+}
+
 void cf_sdlgpu_destroy_shader_internal(CF_Shader shader_handle)
 {
 	CF_ShaderInternal* shd = (CF_ShaderInternal*)shader_handle.id;
@@ -1347,6 +1373,15 @@ CF_Canvas cf_sdlgpu_make_canvas(CF_CanvasParams params)
 			// A depth-format attach becomes the canvas's DEPTH target: a depth-only pass with
 			// no color side at all -- the shadow-cube case (render each face of a depth cube,
 			// then sample it with samplerCubeShadow).
+			if (attach->type == CF_TEXTURE_TYPE_CUBE && s_query_backend() == CF_BACKEND_TYPE_D3D12) {
+				// SDL_GPU's D3D12 driver creates only 2D depth views, so these passes silently
+				// render nothing there -- and D3D12 is SDL_GPU's default driver on Windows.
+				fprintf(stderr,
+					"WARNING -- Rendering into a depth CUBE face is not supported on SDL_GPU's D3D12 driver;\n"
+					"           this pass will silently produce nothing. Use six 2D depth canvases (or a 2D\n"
+					"           depth atlas) instead of a depth cube, or run on Vulkan/Metal/GLES. See the\n"
+					"           `attach_target` docs in cute_graphics.h and the Shipping 3D topic page.\n");
+			}
 			canvas->attached = true; // Owns nothing: color side absent, depth side borrowed.
 			canvas->attached_depth = true;
 			canvas->attach_layer = params.attach_layer;
