@@ -85,5 +85,35 @@ class TestCheckIncludeGuard(unittest.TestCase):
         self.assertEqual(r.returncode, 0)
 
 
+class TestCheckDocsTags(unittest.TestCase):
+    SCRIPT = "check-docs-tags.py"
+
+    def test_silent_on_allowed_tags(self):
+        r = run_hook(self.SCRIPT, FIXTURES / "include" / "cute_goodfixture.h")
+        self.assertEqual(r.returncode, 0)
+        self.assertEqual(r.stderr, "")
+
+    def test_warns_on_unknown_tags_with_line_numbers(self):
+        r = run_hook(self.SCRIPT, FIXTURES / "include" / "cute_badtag.h")
+        self.assertEqual(r.returncode, 2)
+        self.assertIn("@deprecated", r.stderr)
+        self.assertIn("@todo", r.stderr)
+        self.assertIn("docs build", r.stderr)
+
+    def test_ignores_non_include_files(self):
+        r = run_hook(self.SCRIPT, "src/cute_draw.cpp")
+        self.assertEqual(r.returncode, 0)
+
+    def test_all_real_headers_are_clean(self):
+        # Regression guard: every current public header must pass, or the
+        # hook would nag on every edit. (docs CI is green, so they must.)
+        import glob
+        for h in glob.glob(str(REPO_ROOT / "include" / "cute_*.h")):
+            if h.endswith("_shd.h"):
+                continue  # generated shader headers, not doc-parsed prose
+            r = run_hook(self.SCRIPT, h)
+            self.assertEqual(r.returncode, 0, msg=f"{h}: {r.stderr}")
+
+
 if __name__ == "__main__":
     unittest.main()
