@@ -71,6 +71,14 @@ static CF_Mesh s_make_quad(float half)
 
 static CF_Pixel s_pixel(CF_Pixel* px, float fx, float fy) { return px[(int)(H * fy) * W + (int)(W * fx)]; }
 
+static void test_readback(CF_Canvas canvas, CF_Pixel* px)
+{
+	CF_Readback rb = cf_canvas_readback(canvas);
+	while (!cf_readback_ready(rb)) {}
+	cf_readback_data(rb, px, W * H * (int)sizeof(CF_Pixel));
+	cf_destroy_readback(rb);
+}
+
 // Three submissions of one quad, different transforms and mesh attributes: all coalesce into
 // one instanced draw, and each instance lands where its captured transform says.
 TEST_CASE(test_draw3d_transforms_and_coalescing)
@@ -1713,6 +1721,178 @@ TEST_CASE(test_draw3d_translucent_sort)
 	return true;
 }
 
+// A fragment stage that ignores its varyings and paints solid green -- the "pass shader"
+// for the closure-semantics tests below.
+static const char* s_green_fs =
+"layout (location = 0) in vec4 v_color;\n"
+"layout (location = 0) out vec4 result;\n"
+"void main() { result = vec4(0.0, 1.0, 0.0, 1.0); }\n";
+
+// Closure semantics: a shader pushed OUTSIDE cf_draw_list_begin is ambient -- a free
+// variable the replay binds. Pushed at replay it wins; nothing pushed falls back to the
+// record-time default. A shader pushed INSIDE the recording is frozen and ignores replay
+// pushes entirely.
+TEST_CASE(test_draw3d_list_ambient_shader)
+{
+	if (!test_make_app(W, H)) return true;
+
+	CF_Mesh mesh = s_make_quad(0.4f);
+	CF_Shader attr_shd = cf_make_shader_from_source(s_vs, s_fs);        // Paints mesh attributes.
+	CF_Shader green_shd = cf_make_shader_from_source(s_vs, s_green_fs); // Paints green, always.
+	REQUIRE(attr_shd.id && green_shd.id);
+	CF_CanvasParams params = cf_canvas_defaults(W, H);
+	params.depth_stencil_enable = true;
+	CF_Canvas canvas = cf_make_canvas(params);
+	CF_Pixel* px = (CF_Pixel*)cf_alloc(W * H * (int)sizeof(CF_Pixel));
+	cf_app_update(NULL);
+
+	// Ambient recording: attr_shd is pushed outside the recording, so it records only as
+	// the default.
+	CF_DrawList ambient_list = cf_make_draw_list();
+	cf_draw3d_push_shader(attr_shd);
+	cf_draw_list_begin(ambient_list);
+	cf_draw3d_push_mesh_attributes(cf_v4(1, 0, 0, 1)); // Red under attr_shd.
+	cf_draw3d_mesh(mesh);
+	cf_draw3d_pop_mesh_attributes();
+	cf_draw_list_end();
+	cf_draw3d_pop_shader();
+
+	// Frozen recording: the shader is pushed INSIDE begin/end, so it is part of the recording.
+	CF_DrawList frozen_list = cf_make_draw_list();
+	cf_draw_list_begin(frozen_list);
+	cf_draw3d_push_shader(attr_shd);
+	cf_draw3d_push_mesh_attributes(cf_v4(1, 0, 0, 1));
+	cf_draw3d_mesh(mesh);
+	cf_draw3d_pop_mesh_attributes();
+	cf_draw3d_pop_shader();
+	cf_draw_list_end();
+
+	CF_Pixel center;
+	cf_draw3d_push_projection(cf_ortho(-1, 1, -1, 1, -1, 1));
+
+	// 1. Nothing pushed at replay: the ambient default (attr_shd) carries -- red.
+	cf_draw_list(ambient_list);
+	cf_render_to(canvas, true);
+	cf_app_draw_onto_screen(false);
+	test_readback(canvas, px);
+	center = s_pixel(px, 0.5f, 0.5f);
+	REQUIRE(center.colors.r > 200 && center.colors.g < 60);
+
+	// 2. green_shd pushed at replay: the free variable binds to it -- green.
+	cf_app_update(NULL);
+	cf_draw3d_push_shader(green_shd);
+	cf_draw_list(ambient_list);
+	cf_draw3d_pop_shader();
+	cf_render_to(canvas, true);
+	cf_app_draw_onto_screen(false);
+	test_readback(canvas, px);
+	center = s_pixel(px, 0.5f, 0.5f);
+	REQUIRE(center.colors.g > 200 && center.colors.r < 60);
+
+	// 3. Frozen recording ignores the replay push -- still red.
+	cf_app_update(NULL);
+	cf_draw3d_push_shader(green_shd);
+	cf_draw_list(frozen_list);
+	cf_draw3d_pop_shader();
+	cf_render_to(canvas, true);
+	cf_app_draw_onto_screen(false);
+	test_readback(canvas, px);
+	center = s_pixel(px, 0.5f, 0.5f);
+	REQUIRE(center.colors.r > 200 && center.colors.g < 60);
+
+	cf_draw3d_pop_projection();
+	cf_free(px);
+	cf_destroy_draw_list(ambient_list);
+	cf_destroy_draw_list(frozen_list);
+	cf_destroy_canvas(canvas);
+	cf_destroy_shader(attr_shd);
+	cf_destroy_shader(green_shd);
+	cf_destroy_mesh(mesh);
+	test_destroy_app();
+	return true;
+}
+
+// Replay fusion: two baked groups split only by a captured uniform fuse into ONE draw when
+// the replay-bound shader never declares that uniform, and stay two draws under a shader
+// that consumes it. cf_draw3d_stats counts replayed draws, so the receipts pin it.
+TEST_CASE(test_draw3d_list_replay_fusion)
+{
+	if (!test_make_app(W, H)) return true;
+
+	CF_Mesh mesh = s_make_quad(0.2f);
+	CF_Shader tint_shd = cf_make_shader_from_source(s_vs, s_tint_fs); // Consumes u_tint.
+	CF_Shader pass_shd = cf_make_shader_from_source(s_vs, s_fs);     // Does not.
+	REQUIRE(tint_shd.id && pass_shd.id);
+	CF_CanvasParams params = cf_canvas_defaults(W, H);
+	params.depth_stencil_enable = true;
+	CF_Canvas canvas = cf_make_canvas(params);
+	CF_Pixel* px = (CF_Pixel*)cf_alloc(W * H * (int)sizeof(CF_Pixel));
+	cf_app_update(NULL);
+
+	// Two quads, split into two baked groups by differing u_tint captures.
+	CF_DrawList list = cf_make_draw_list();
+	cf_draw3d_push_shader(tint_shd); // Ambient: outside the recording.
+	cf_draw_list_begin(list);
+	cf_draw3d_push_mesh_attributes(cf_v4(1, 1, 1, 1));
+	cf_draw3d_push();
+	cf_draw3d_translate(cf_v3(-0.5f, 0, 0));
+	cf_draw3d_set_uniform_color("u_tint", cf_color_red());
+	cf_draw3d_mesh(mesh);
+	cf_draw3d_pop();
+	cf_draw3d_push();
+	cf_draw3d_translate(cf_v3(0.5f, 0, 0));
+	cf_draw3d_set_uniform_color("u_tint", cf_color_green());
+	cf_draw3d_mesh(mesh);
+	cf_draw3d_pop();
+	cf_draw3d_pop_mesh_attributes();
+	cf_draw_list_end();
+	cf_draw3d_pop_shader();
+
+	cf_draw3d_push_projection(cf_ortho(-1, 1, -1, 1, -1, 1));
+
+	// Replay under tint_shd: u_tint differs and is consumed -- two draws, tinted quads.
+	cf_draw3d_stats();
+	cf_draw3d_push_shader(tint_shd);
+	cf_draw_list(list);
+	cf_draw3d_pop_shader();
+	CF_DrawStats3d stats = cf_draw3d_stats();
+	REQUIRE(stats.instances == 2 && stats.commands == 2);
+	cf_render_to(canvas, true);
+	cf_app_draw_onto_screen(false);
+	test_readback(canvas, px);
+	CF_Pixel left = s_pixel(px, 0.25f, 0.5f);
+	CF_Pixel right = s_pixel(px, 0.75f, 0.5f);
+	REQUIRE(left.colors.r > 200 && left.colors.g < 60);
+	REQUIRE(right.colors.g > 200 && right.colors.r < 60);
+
+	// Replay under pass_shd: u_tint is never declared there -- the groups fuse into ONE
+	// draw, and both quads paint the plain mesh-attribute white.
+	cf_app_update(NULL);
+	cf_draw3d_stats();
+	cf_draw3d_push_shader(pass_shd);
+	cf_draw_list(list);
+	cf_draw3d_pop_shader();
+	stats = cf_draw3d_stats();
+	REQUIRE(stats.instances == 2 && stats.commands == 1);
+	cf_render_to(canvas, true);
+	cf_app_draw_onto_screen(false);
+	test_readback(canvas, px);
+	left = s_pixel(px, 0.25f, 0.5f);
+	right = s_pixel(px, 0.75f, 0.5f);
+	REQUIRE(left.colors.r > 200 && left.colors.g > 200 && left.colors.b > 200);
+	REQUIRE(right.colors.r > 200 && right.colors.g > 200 && right.colors.b > 200);
+
+	cf_draw3d_pop_projection();
+	cf_free(px);
+	cf_destroy_draw_list(list);
+	cf_destroy_canvas(canvas);
+	cf_destroy_shader(tint_shd);
+	cf_destroy_shader(pass_shd);
+	cf_destroy_mesh(mesh);
+	test_destroy_app();
+	return true;
+}
+
 TEST_SUITE(test_draw3d)
 {
 	RUN_TEST_CASE(test_draw3d_transforms_and_coalescing);
@@ -1720,6 +1900,8 @@ TEST_SUITE(test_draw3d)
 	RUN_TEST_CASE(test_draw3d_uniform_capture);
 	RUN_TEST_CASE(test_draw3d_escape_hatch);
 	RUN_TEST_CASE(test_draw3d_draw_list);
+	RUN_TEST_CASE(test_draw3d_list_ambient_shader);
+	RUN_TEST_CASE(test_draw3d_list_replay_fusion);
 	RUN_TEST_CASE(test_draw3d_list_storage_buffer_live);
 	RUN_TEST_CASE(test_draw3d_baked_normal_matrices);
 	RUN_TEST_CASE(test_draw3d_sprite_textured);

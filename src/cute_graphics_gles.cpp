@@ -1856,6 +1856,33 @@ void cf_gles_compute_shader_swap_contents(CF_ComputeShader a, CF_ComputeShader b
 	CF_UNUSED(b);
 }
 
+bool cf_gles_shader_consumes_uniform(CF_Shader shader_handle, const char* interned_name)
+{
+	CF_GL_Shader* shader = (CF_GL_Shader*)(uintptr_t)shader_handle.id;
+	const CF_GL_ShaderInfo* stages[2] = { &shader->vs, &shader->fs };
+	for (int s = 0; s < 2; ++s) {
+		for (int b = 0; b < stages[s]->num_uniform_blocks; ++b) {
+			const CF_GL_ShaderUniformBlock* block = &stages[s]->uniform_blocks[b];
+			for (int i = 0; i < block->info.num_members; ++i) {
+				if (block->members[i].name == interned_name) return true;
+			}
+		}
+	}
+	return false;
+}
+
+bool cf_gles_shader_consumes_texture(CF_Shader shader_handle, const char* interned_name)
+{
+	CF_GL_Shader* shader = (CF_GL_Shader*)(uintptr_t)shader_handle.id;
+	for (int i = 0; i < shader->num_texture_bindings; ++i) {
+		if (shader->texture_bindings[i].name == interned_name) return true;
+	}
+	for (int i = 0; i < shader->num_vs_texture_bindings; ++i) {
+		if (shader->vs_texture_bindings[i].name == interned_name) return true;
+	}
+	return false;
+}
+
 void cf_gles_destroy_shader_internal(CF_Shader shader_handle)
 {
 	if (!shader_handle.id) return;

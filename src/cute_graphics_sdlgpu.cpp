@@ -1313,6 +1313,32 @@ void cf_sdlgpu_shader_swap_contents(CF_Shader a, CF_Shader b)
 	CF_MEMCPY(pb, tmp, sizeof(tmp));
 }
 
+bool cf_sdlgpu_shader_consumes_uniform(CF_Shader shader_handle, const char* interned_name)
+{
+	CF_ShaderInternal* shd = (CF_ShaderInternal*)shader_handle.id;
+	for (int b = 0; b < CF_MAX_UNIFORM_BLOCK_COUNT; ++b) {
+		for (int i = 0; i < shd->vs_uniform_block_members[b].count(); ++i) {
+			if (shd->vs_uniform_block_members[b][i].name == interned_name) return true;
+		}
+		for (int i = 0; i < shd->fs_uniform_block_members[b].count(); ++i) {
+			if (shd->fs_uniform_block_members[b][i].name == interned_name) return true;
+		}
+	}
+	return false;
+}
+
+bool cf_sdlgpu_shader_consumes_texture(CF_Shader shader_handle, const char* interned_name)
+{
+	CF_ShaderInternal* shd = (CF_ShaderInternal*)shader_handle.id;
+	for (int i = 0; i < shd->vs_image_names.count(); ++i) {
+		if (shd->vs_image_names[i] == interned_name) return true;
+	}
+	for (int i = 0; i < shd->fs_image_names.count(); ++i) {
+		if (shd->fs_image_names[i] == interned_name) return true;
+	}
+	return false;
+}
+
 void cf_sdlgpu_destroy_shader_internal(CF_Shader shader_handle)
 {
 	CF_ShaderInternal* shd = (CF_ShaderInternal*)shader_handle.id;

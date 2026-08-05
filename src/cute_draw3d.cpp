@@ -118,9 +118,19 @@ struct CF_MeshCmd3d
 	Cute::Array<CF_TextureBinding3d> textures;
 	CF_StorageBuffer vs_storage[4];     // Vertex-stage storage buffers, bound after the shader.
 	int vs_storage_count = 0;
-	// Baked lists: the instance data lives on the GPU permanently, uploaded once at bake, so
-	// replays skip the per-flush CPU upload entirely. Replay payloads borrow the handle.
+	// Closure semantics for recordings: true when the shader was AMBIENT at record time --
+	// pushed outside the recording (or not at all), not within it. The command's shader
+	// field then holds only a default; replay binds whatever shader is pushed at replay
+	// time instead. A shader pushed inside the recording records frozen (false), exactly
+	// like the transform stack: internal pushes are part of the recording, ambient state
+	// binds at replay. See the DRAW LISTS section in cute_draw3d.h.
+	bool ambient_shader = false;
+	// Baked lists: the instance data lives on the GPU permanently, uploaded once at bake
+	// into the list's ONE shared buffer (each group a slice at gpu_instance_offset), so
+	// replays skip the per-flush CPU upload entirely and adjacent groups can fuse into a
+	// single draw at replay. Replay payloads borrow the handle.
 	uint64_t gpu_instances = 0;
+	int gpu_instance_offset = 0; // Byte offset of this group's slice in the shared buffer.
 	bool owns_gpu_instances = false;
 	// Byte offset of this command's slice in the shared staging buffer, set by
 	// cf_draw3d_prepare_uploads before the render pass opens and consumed once at process
@@ -151,6 +161,13 @@ struct CF_Draw3d
 
 	// Pipeline state stacks.
 	Cute::Array<CF_Shader> shaders;
+	// Shader stack depth at cf_draw_list_begin: submissions whose shader sits at or below
+	// this depth recorded it as AMBIENT (see CF_MeshCmd3d::ambient_shader).
+	int recording_shader_base = 0;
+	// Index into s_draw->cmds of the last command emitted by cf_draw3d_replay_cmd, or -1.
+	// Valid only while it is still the second-to-newest command -- the fusion adjacency
+	// check self-validates against the live count, so no invalidation hooks are needed.
+	int last_replay_index = -1;
 	Cute::Array<CF_RenderState> render_states;
 	Cute::Array<CF_V4> mesh_attributes;
 	Cute::Array<CF_V4> mesh_attributes2; // Rides in_uv_rect when no sprite texture is pushed.
@@ -593,8 +610,15 @@ static void s_submit(CF_Mesh mesh, const CF_MeshInstance3d& inst, bool escape, c
 	const CF_M4x4& vm = s_draw3d->views.last();
 	float view_depth = -(vm.elements[2] * anchor.x + vm.elements[6] * anchor.y + vm.elements[10] * anchor.z + vm.elements[14]);
 	CF_Shader shader = s_draw3d->shaders.last();
-	CF_ASSERT(shader.id); // No default 3d shader -- push one first (see the shader contract in cute_draw3d.h).
-	if (!shader.id) return;
+	// Closure semantics for recordings: a shader pushed OUTSIDE the recording is ambient --
+	// a free variable. The submission records it only as a default, and replay binds
+	// whatever shader is pushed then. A shader pushed INSIDE the recording is part of it
+	// and records frozen. Shapes push their resolved shader right before submitting, so
+	// they always freeze. Mirrors how the transform stack already replays.
+	bool ambient = s_draw->recording_list && s_draw3d->shaders.count() <= s_draw3d->recording_shader_base;
+	CF_ASSERT(shader.id || ambient); // No default 3d shader -- push one first (see the shader contract
+	                                 // in cute_draw3d.h). Recordings may defer the push to replay time.
+	if (!shader.id && !ambient) return;
 
 	// Recompose the camera only when a camera stack actually moved, and bump the change id
 	// only when the recomposed bytes differ -- pop-then-push of the same camera coalesces.
@@ -625,7 +649,7 @@ static void s_submit(CF_Mesh mesh, const CF_MeshInstance3d& inst, bool escape, c
 			      : mc->sprite_textured != sprite_textured ? CF_DRAW_SPLIT_3D_TEXTURE
 			      : mc->state_hash != state_hash ? CF_DRAW_SPLIT_3D_UNIFORMS
 			      : mc->vp_id != s_draw3d->vp_id ? CF_DRAW_SPLIT_3D_CAMERA
-			      : under->shader.id != shader.id ? CF_DRAW_SPLIT_3D_SHADER
+			      : (under->shader.id != shader.id || mc->ambient_shader != ambient) ? CF_DRAW_SPLIT_3D_SHADER
 			      : !(under->render_state == rs) ? CF_DRAW_SPLIT_3D_RENDER_STATE
 			      : under->layer != s_draw->layers.last() ? CF_DRAW_SPLIT_3D_LAYER
 			      : !(under->scissor == s_draw->scissors.last()) ? CF_DRAW_SPLIT_3D_SCISSOR
@@ -664,6 +688,7 @@ static void s_submit(CF_Mesh mesh, const CF_MeshInstance3d& inst, bool escape, c
 	cmd.mesh3d = mc;
 	mc->mesh = mesh;
 	mc->escape = escape;
+	mc->ambient_shader = ambient;
 	mc->vp = s_draw3d->vp_cached;
 	mc->vp_id = s_draw3d->vp_id;
 	mc->state_hash = state_hash;
@@ -2021,7 +2046,12 @@ void cf_draw3d_process(CF_Command* cmd, CF_Canvas canvas, bool clear)
 			// Baked groups draw straight from their persistent buffer -- no upload happened.
 			// Staged commands bind their slice of the shared staging buffer the same way.
 			if (mc->gpu_instances) {
-				cf_apply_instance_buffer_override(mc->gpu_instances, instances.count(), 0);
+				// The runs carry the true instance count: replay fusion can widen this
+				// command past its borrowed instance array (which is the first group's).
+				int ninst = 0;
+				for (int r = 0; r < nruns; ++r) ninst += mc->runs[r].ninst;
+				if (!ninst) ninst = instances.count();
+				cf_apply_instance_buffer_override(mc->gpu_instances, ninst, mc->gpu_instance_offset);
 			} else if (mc->staged_offset >= 0) {
 				cf_apply_instance_buffer_override(s_draw3d->staging_instances, instances.count(), mc->staged_offset);
 				mc->staged_offset = -1;
@@ -2038,7 +2068,7 @@ void cf_draw3d_process(CF_Command* cmd, CF_Canvas canvas, bool clear)
 		// material, and camera -- the coalescing win -- and geometry varies per record.
 		const int stride = (int)sizeof(CF_MeshInstance3d);
 		uint64_t src = mc->gpu_instances;
-		int src_base = 0;
+		int src_base = src ? mc->gpu_instance_offset : 0;
 		if (!src && mc->staged_offset >= 0) {
 			src = s_draw3d->staging_instances;
 			src_base = mc->staged_offset;
@@ -2119,6 +2149,8 @@ void cf_draw3d_list_begin()
 {
 	// Record in list-local space: replay composes the then-current transform stack on top.
 	s_draw3d->transforms.add(cf_m4_identity());
+	// Shaders at or below this depth are ambient -- free variables the replay binds later.
+	s_draw3d->recording_shader_base = s_draw3d->shaders.count();
 }
 
 // True when two mesh commands render identically except for their per-instance data -- the
@@ -2131,6 +2163,7 @@ static bool s_bake_group_match(const CF_Command* a, const CF_Command* b)
 	if (ma->mesh.id != mb->mesh.id) return false;
 	if (ma->escape || mb->escape) return false;
 	if (ma->sprite_textured != mb->sprite_textured) return false;
+	if (ma->ambient_shader != mb->ambient_shader) return false;
 	if (a->shader.id != b->shader.id) return false;
 	if (!(a->render_state == b->render_state)) return false;
 	if (a->layer != b->layer) return false;
@@ -2162,7 +2195,7 @@ static uint64_t s_bake_group_hash(const CF_Command* c)
 {
 	const CF_MeshCmd3d* mc = c->mesh3d;
 	uint64_t h = cf_fnv1a(&mc->mesh.id, (int)sizeof(mc->mesh.id));
-	int meta[2] = { mc->sprite_textured ? 1 : 0, c->layer };
+	int meta[3] = { mc->sprite_textured ? 1 : 0, c->layer, mc->ambient_shader ? 1 : 0 };
 	h ^= cf_fnv1a(meta, (int)sizeof(meta));
 	h ^= cf_fnv1a(&c->shader.id, (int)sizeof(c->shader.id));
 	h ^= cf_fnv1a(&c->render_state, (int)sizeof(c->render_state));
@@ -2193,6 +2226,7 @@ static void s_own_payload(CF_MeshCmd3d* mc)
 		mc->instances_ref = NULL;
 	}
 	mc->gpu_instances = 0; // Borrowed from another list, if set; this list bakes its own.
+	mc->gpu_instance_offset = 0;
 	mc->owns_gpu_instances = false;
 	if (mc->image_refs_ref) {
 		mc->image_refs = *mc->image_refs_ref;
@@ -2311,29 +2345,132 @@ void cf_draw3d_list_end(CF_DrawListData* data)
 	}
 
 	// The instance data is final now (sprite-textured groups excepted -- their uv lanes
-	// refresh against the atlas every flush): upload each group once to a persistent GPU
-	// buffer, so replays cost zero instance bandwidth.
-	for (int i = 0; i < data->cmds.count(); ++i) {
-		CF_MeshCmd3d* mc = data->cmds[i].mesh3d;
-		if (!mc || mc->escape || mc->sprite_textured || !mc->instances.count()) continue;
-		int bytes = mc->instances.count() * (int)sizeof(CF_MeshInstance3d);
-		mc->gpu_instances = cf_make_instance_buffer(bytes, (int)sizeof(CF_MeshInstance3d));
-		cf_update_instance_buffer(mc->gpu_instances, mc->instances.data(), mc->instances.count());
-		mc->owns_gpu_instances = true;
+	// refresh against the atlas every flush): upload every group once into ONE shared
+	// persistent GPU buffer, each group a slice at its own byte offset, so replays cost
+	// zero instance bandwidth -- and adjacent groups sit contiguously, which is what lets
+	// replay fuse them into single draws (see cf_draw3d_replay_cmd).
+	{
+		Cute::Array<CF_MeshInstance3d> all;
+		for (int i = 0; i < data->cmds.count(); ++i) {
+			CF_MeshCmd3d* mc = data->cmds[i].mesh3d;
+			if (!mc || mc->escape || mc->sprite_textured || !mc->instances.count()) continue;
+			for (int k = 0; k < mc->instances.count(); ++k) all.add(mc->instances[k]);
+		}
+		if (all.count()) {
+			const int stride = (int)sizeof(CF_MeshInstance3d);
+			uint64_t shared = cf_make_instance_buffer(all.count() * stride, stride);
+			cf_update_instance_buffer(shared, all.data(), all.count());
+			int offset = 0;
+			bool first = true;
+			for (int i = 0; i < data->cmds.count(); ++i) {
+				CF_MeshCmd3d* mc = data->cmds[i].mesh3d;
+				if (!mc || mc->escape || mc->sprite_textured || !mc->instances.count()) continue;
+				mc->gpu_instances = shared;
+				mc->gpu_instance_offset = offset;
+				mc->owns_gpu_instances = first; // One owner frees the shared buffer.
+				first = false;
+				offset += mc->instances.count() * stride;
+			}
+		}
 	}
 }
 
-void cf_draw3d_replay_cmd(CF_Command* dst, const CF_Command* src)
+// Fusion state check: every uniform or texture that differs between the two groups (by
+// presence or by bytes) must be one the bound shader never declares -- then the two draws
+// are indistinguishable under that shader and can fold into one.
+static bool s_replay_state_fusable(const CF_MeshCmd3d* a, const CF_MeshCmd3d* b, CF_Shader bound)
+{
+	for (int pass = 0; pass < 2; ++pass) {
+		const CF_MeshCmd3d* x = pass ? b : a;
+		const CF_MeshCmd3d* y = pass ? a : b;
+		for (int i = 0; i < x->uniforms.count(); ++i) {
+			const CF_Uniform3d& u = x->uniforms[i];
+			bool same = false;
+			for (int j = 0; j < y->uniforms.count(); ++j) {
+				const CF_Uniform3d& v = y->uniforms[j];
+				if (v.name != u.name) continue;
+				same = v.type == u.type && v.size == u.size && !CF_MEMCMP(v.data, u.data, u.size);
+				break;
+			}
+			if (!same && cf_shader_consumes_uniform(bound, u.name)) return false;
+		}
+		for (int i = 0; i < x->textures.count(); ++i) {
+			const CF_TextureBinding3d& t = x->textures[i];
+			bool same = false;
+			for (int j = 0; j < y->textures.count(); ++j) {
+				if (y->textures[j].name != t.name) continue;
+				same = y->textures[j].texture.id == t.texture.id;
+				break;
+			}
+			if (!same && cf_shader_consumes_texture(bound, t.name)) return false;
+		}
+	}
+	return true;
+}
+
+bool cf_draw3d_replay_cmd(CF_Command* dst, const CF_Command* src)
 {
 	const CF_MeshCmd3d* smc = src->mesh3d;
-	CF_MeshCmd3d* mc = CF_NEW(CF_MeshCmd3d);
-	mc->mesh = smc->mesh;
-	mc->escape = smc->escape;
+	// Ambient shader slots bind now: the recording left the shader a free variable, so
+	// whatever the caller has pushed wins; with nothing pushed at replay the record-time
+	// default carries (see the DRAW LISTS section in cute_draw3d.h).
+	if (smc->ambient_shader) {
+		CF_Shader live = s_draw3d->shaders.last();
+		if (live.id) dst->shader = live;
+	}
+	CF_ASSERT(dst->shader.id); // Recorded with no shader anywhere: push one before replaying.
+
 	// Cameras are live at replay, and the current 3d transform stack moves the whole list:
 	// final position = P * V * T_now * M_baked. Note a rotation in T_now does not reach the
 	// baked in_nmat lanes -- lighting under whole-list rotation is the shader's business.
 	CF_M4x4 vp = cf_mul_m4(s_draw3d->projections.last(), s_draw3d->views.last());
-	mc->vp = cf_mul_m4(vp, s_draw3d->transforms.last());
+	CF_M4x4 composed = cf_mul_m4(vp, s_draw3d->transforms.last());
+
+	// Fusion: when the previous replayed command is still adjacent (nothing emitted in
+	// between) and this baked group sits right after it in the list's shared instance
+	// buffer, draws the same mesh under the same bound shader and render state, and
+	// differs only by captured state that shader never consumes -- fold this group into
+	// the previous draw. This is how a ten-material scene replays as ONE draw in a pass
+	// whose shader (a shadow shader, say) reads none of the material state.
+	int prev_i = s_draw3d->last_replay_index;
+	if (prev_i >= 0 && prev_i == s_draw->cmds.count() - 2 && smc->gpu_instances && !smc->sprite_textured && !smc->escape) {
+		CF_Command* prev = &s_draw->cmds[prev_i];
+		CF_MeshCmd3d* pc = prev->mesh3d;
+		bool candidate = pc && pc->gpu_instances == smc->gpu_instances && pc->mesh.id == smc->mesh.id
+			&& prev->shader.id == dst->shader.id
+			&& prev->render_state == src->render_state
+			&& src->render_state.depth_write_enabled // Translucents sort per command; never fuse them.
+			&& prev->layer == src->layer && prev->scissor == src->scissor && prev->viewport == src->viewport
+			&& !CF_MEMCMP(&pc->vp, &composed, sizeof(composed))
+			&& pc->vs_storage_count == smc->vs_storage_count;
+		if (candidate) {
+			for (int i = 0; i < pc->vs_storage_count; ++i) candidate &= pc->vs_storage[i].id == smc->vs_storage[i].id;
+		}
+		if (candidate) {
+			int prev_ninst = 0;
+			for (int r = 0; r < pc->runs.count(); ++r) prev_ninst += pc->runs[r].ninst;
+			candidate = smc->gpu_instance_offset == pc->gpu_instance_offset + prev_ninst * (int)sizeof(CF_MeshInstance3d);
+		}
+		if (candidate && s_replay_state_fusable(pc, smc, dst->shader)) {
+			for (int r = 0; r < smc->runs.count(); ++r) {
+				const CF_MeshRun3d& run = smc->runs[r];
+				if (pc->runs.count() && pc->runs.last().first == run.first && pc->runs.last().count == run.count) {
+					pc->runs.last().ninst += run.ninst;
+				} else {
+					pc->runs.add(run);
+				}
+			}
+			s_draw3d->stats.instances += smc->instances.count();
+			return true;
+		}
+	}
+
+	CF_MeshCmd3d* mc = CF_NEW(CF_MeshCmd3d);
+	mc->mesh = smc->mesh;
+	mc->escape = smc->escape;
+	mc->ambient_shader = smc->ambient_shader;
+	mc->gpu_instance_offset = smc->gpu_instance_offset;
+	mc->vp = composed;
 	mc->instances_ref = &smc->instances;
 	mc->runs = smc->runs; // Small; copied so replay commands stay self-contained.
 	mc->gpu_instances = smc->gpu_instances; // Borrowed; the list's payload owns it.
@@ -2353,6 +2490,12 @@ void cf_draw3d_replay_cmd(CF_Command* dst, const CF_Command* src)
 		dst->depth3d = -(vm.elements[2] * world.x + vm.elements[6] * world.y + vm.elements[10] * world.z + vm.elements[14]);
 	}
 	dst->mesh3d = mc;
+	// Replayed draws count in the stats like everything else -- the receipts stay honest.
+	s_draw3d->stats.instances += smc->instances.count();
+	s_draw3d->stats.commands++;
+	s_draw3d->stats.splits[CF_DRAW_SPLIT_3D_FIRST]++;
+	s_draw3d->last_replay_index = s_draw->cmds.count() - 1;
+	return false;
 }
 
 void cf_draw3d_free_list_cmds(CF_DrawListData* data)
