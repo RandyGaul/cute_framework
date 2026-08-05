@@ -27,6 +27,8 @@
 		hierarchy with rest-pose transforms, skins with inverse-bind matrices,
 		keyframe animation clips, and embedded images -- everything needed to feed
 		a GPU skinning pipeline, with zero opinions about how you render.
+		cm_interleave packs the separate streams into your vertex struct, ready
+		for one GPU vertex-buffer upload.
 
 		The runtime half samples clips and composes matrix palettes:
 
@@ -352,6 +354,44 @@ void cm_blend(const CM_Model* model, const CM_Transform* a, const CM_Transform* 
 // the animation has no weights channel for the node, so prefill with the mesh's default
 // weights (CM_Mesh::weights) or zeros. Apply as: vertex += sum(weights[i] * delta[i]).
 void cm_animate_weights(const CM_Model* model, const CM_Animation* animation, float time, int node, float* weights, int weight_count);
+
+//--------------------------------------------------------------------------------------------------
+// Interleaving. The loader hands back separate tightly-packed streams; GPUs want one
+// interleaved vertex buffer. This is that glue -- declare your vertex struct, list which
+// stream lands at which byte offset, and get ready-to-upload vertices (pair each entry
+// with a matching CF_VertexAttribute when feeding Cute Framework's cf_make_mesh).
+
+// Which loader stream a CM_VertexAttribute copies, and the bytes it writes per vertex:
+//   POSITION  3 floats            (never missing)
+//   NORMAL    3 floats            (never missing; generated smooth when the file has none)
+//   TANGENT   4 floats, xyz + w handedness; (1,0,0,1) when missing
+//   UV, UV1   2 floats; (0,0) when missing
+//   COLOR     4 floats; opaque white when missing
+//   JOINTS    4 uint16_t; all zero when missing (matches WEIGHTS' rigid default)
+//   WEIGHTS   4 floats; (1,0,0,0) when missing, so unskinned vertices follow bone 0
+typedef enum CM_Stream
+{
+	CM_STREAM_POSITION,
+	CM_STREAM_NORMAL,
+	CM_STREAM_TANGENT,
+	CM_STREAM_UV,
+	CM_STREAM_UV1,
+	CM_STREAM_COLOR,
+	CM_STREAM_JOINTS,
+	CM_STREAM_WEIGHTS,
+} CM_Stream;
+
+typedef struct CM_VertexAttribute
+{
+	CM_Stream stream; // Which loader stream to copy.
+	int offset;       // Byte offset of this attribute within one output vertex.
+} CM_VertexAttribute;
+
+// Interleaves a primitive's streams into caller-allocated `out`, which must hold
+// prim->vertex_count * stride bytes. Streams the primitive lacks write the defaults
+// listed on CM_Stream, so one attribute list serves skinned and unskinned meshes alike.
+// Keep the loader's indices (CM_Primitive::indices) for the index buffer.
+void cm_interleave(const CM_Primitive* prim, const CM_VertexAttribute* attributes, int attribute_count, int stride, void* out);
 
 #endif // CUTE_MODEL_H
 
@@ -1855,6 +1895,43 @@ void cm_skin_palette(const CM_Model* model, int skin_index, const float* world, 
 	const CM_Skin* skin = model->skins + skin_index;
 	for (int i = 0; i < skin->joint_count; ++i) {
 		cm_mat4_mul(world + (size_t)skin->joints[i] * 16, skin->inverse_binds + (size_t)i * 16, palette + (size_t)i * 16);
+	}
+}
+
+void cm_interleave(const CM_Primitive* prim, const CM_VertexAttribute* attributes, int attribute_count, int stride, void* out)
+{
+	static const float cm_default_tangent[4] = { 1, 0, 0, 1 };
+	static const float cm_default_uv[2] = { 0, 0 };
+	static const float cm_default_color[4] = { 1, 1, 1, 1 };
+	static const uint16_t cm_default_joints[4] = { 0, 0, 0, 0 };
+	static const float cm_default_weights[4] = { 1, 0, 0, 0 };
+	for (int v = 0; v < prim->vertex_count; ++v) {
+		char* vert = (char*)out + (size_t)v * (size_t)stride;
+		for (int a = 0; a < attribute_count; ++a) {
+			void* dst = vert + attributes[a].offset;
+			switch (attributes[a].stream) {
+			case CM_STREAM_POSITION: memcpy(dst, prim->positions + (size_t)v * 3, sizeof(float) * 3); break;
+			case CM_STREAM_NORMAL:   memcpy(dst, prim->normals + (size_t)v * 3, sizeof(float) * 3); break;
+			case CM_STREAM_TANGENT:
+				memcpy(dst, prim->tangents ? prim->tangents + (size_t)v * 4 : cm_default_tangent, sizeof(float) * 4);
+				break;
+			case CM_STREAM_UV:
+				memcpy(dst, prim->uvs ? prim->uvs + (size_t)v * 2 : cm_default_uv, sizeof(float) * 2);
+				break;
+			case CM_STREAM_UV1:
+				memcpy(dst, prim->uvs1 ? prim->uvs1 + (size_t)v * 2 : cm_default_uv, sizeof(float) * 2);
+				break;
+			case CM_STREAM_COLOR:
+				memcpy(dst, prim->colors ? prim->colors + (size_t)v * 4 : cm_default_color, sizeof(float) * 4);
+				break;
+			case CM_STREAM_JOINTS:
+				memcpy(dst, prim->joints ? prim->joints + (size_t)v * 4 : cm_default_joints, sizeof(uint16_t) * 4);
+				break;
+			case CM_STREAM_WEIGHTS:
+				memcpy(dst, prim->weights ? prim->weights + (size_t)v * 4 : cm_default_weights, sizeof(float) * 4);
+				break;
+			}
+		}
 	}
 }
 

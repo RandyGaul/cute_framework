@@ -133,10 +133,12 @@ typedef struct CF_M4x4
 } CF_M4x4;
 // @end
 
-// cf_v3 is documented in the CF_V3 struct's remarks rather than as its own documented symbol: the
-// docs parser lowercases titles into filenames, so a `cf_v3` page would collide with `CF_V3`'s.
-// cute_math.h leaves cf_v2 undocumented for the same reason. Note that tools/docs_parser.c scans
-// every token in the file, so a doc tag written in an ordinary comment aborts the docs build.
+/**
+ * @function cf_v3
+ * @category math
+ * @brief    Constructs a `CF_V3` from `x`, `y` and `z`, or splats a single value to all three components.
+ * @related  CF_V3 cf_v4 cf_dot cf_cross
+ */
 #define cf_v3(...)
 #undef cf_v3
 // Implemented this way (rather than as a function) to force-inline the initializer even in
@@ -154,7 +156,12 @@ typedef struct CF_M4x4
 #	define cf_v3(...) CF_EXPAND(_CF_V3_SELECT(__VA_ARGS__, _CF_V3_3, _CF_V3_E2, _CF_V3_1)(__VA_ARGS__))
 #endif
 
-// See the note on cf_v3 above -- documented in the CF_V4 struct to avoid a page-name collision.
+/**
+ * @function cf_v4
+ * @category math
+ * @brief    Constructs a `CF_V4` from `x`, `y`, `z` and `w`, or splats a single value to all four components.
+ * @related  CF_V4 cf_v3 cf_v4_from_v3 cf_xyz
+ */
 #define cf_v4(...)
 #undef cf_v4
 #define _CF_V4_SELECT(_1, _2, _3, _4, NAME, ...) NAME
@@ -190,7 +197,19 @@ CF_INLINE CF_V4 cf_v4_from_v3(CF_V3 a, float w) { return cf_v4(a.x, a.y, a.z, w)
  */
 CF_INLINE CF_V3 cf_xyz(CF_V4 a) { return cf_v3(a.x, a.y, a.z); }
 
-// Documented in the CF_Quat struct -- see the note on cf_v3 above about page-name collisions.
+/**
+ * @function cf_quat
+ * @category math
+ * @brief    Constructs a `CF_Quat` component-wise.
+ * @param    x  The x component of the vector part.
+ * @param    y  The y component of the vector part.
+ * @param    z  The z component of the vector part.
+ * @param    w  The scalar part.
+ * @return   Returns the quaternion `{ x, y, z, w }`.
+ * @remarks  The components are not normalized for you. To construct a rotation, prefer
+ *           `cf_quat_from_axis_angle`.
+ * @related  CF_Quat cf_quat_identity cf_quat_from_axis_angle cf_quat_norm
+ */
 CF_INLINE CF_Quat cf_quat(float x, float y, float z, float w) { CF_Quat q; q.x = x; q.y = y; q.z = z; q.w = w; return q; }
 
 //--------------------------------------------------------------------------------------------------
@@ -983,7 +1002,7 @@ extern "C" {
  * @struct   CF_Ray3
  * @category math
  * @brief    A 3d ray: a directional line segment from `p` along unit direction `d` for distance `t`.
- * @related  CF_Ray3 CF_Raycast3 cf_ray3 cf_ray3_to_aabb3 cf_ray3_to_sphere cf_ray3_to_plane3 cf_draw3d_unproject
+ * @related  CF_Ray3 CF_Raycast3 cf_make_ray3 cf_ray3_to_aabb3 cf_ray3_to_sphere cf_ray3_to_plane3 cf_draw3d_unproject
  */
 typedef struct CF_Ray3
 {
@@ -1055,7 +1074,7 @@ typedef struct CF_Sphere
  * @brief    A 3d plane in normal-distance form: points x on the plane satisfy `dot(n, x) == d`.
  * @remarks  The 3d analog of `CF_Halfspace`. The halfspace `dot(n, x) >= d` is the "inside" for
  *           frustum planes.
- * @related  CF_Plane3 cf_plane3 cf_plane3_at cf_distance_plane3 cf_project_plane3 cf_ray3_to_plane3 CF_Frustum
+ * @related  CF_Plane3 cf_make_plane3 cf_plane3_at cf_distance_plane3 cf_project_plane3 cf_ray3_to_plane3 CF_Frustum
  */
 typedef struct CF_Plane3
 {
@@ -1086,8 +1105,7 @@ typedef struct CF_Frustum
  * @function cf_make_ray3
  * @category math
  * @brief    Returns a ray from `p` toward `q`, spanning exactly the distance between them.
- * @remarks  Named like `cf_make_sphere`/`cf_make_aabb3` -- and distinctly from the
- *           `CF_Ray3` type, which shares a docs page slug case-insensitively.
+ * @remarks  Named like `cf_make_sphere`/`cf_make_aabb3`, the other 3d shape constructors.
  * @related  CF_Ray3 cf_ray3_to_aabb3 cf_ray3_to_sphere cf_ray3_to_plane3
  */
 CF_INLINE CF_Ray3 cf_make_ray3(CF_V3 p, CF_V3 q)
@@ -1129,8 +1147,7 @@ CF_INLINE CF_Sphere cf_make_sphere(CF_V3 p, float r) { CF_Sphere s; s.p = p; s.r
  * @function cf_make_plane3
  * @category math
  * @brief    Returns a plane with normal `n` (normalized for you) at distance `d` along `n`.
- * @remarks  Named `cf_make_*` like `cf_make_sphere` -- and distinctly from the `CF_Plane3` type,
- *           which shares a docs page slug case-insensitively.
+ * @remarks  Named `cf_make_*` like `cf_make_sphere`, the other 3d shape constructors.
  * @related  CF_Plane3 cf_plane3_at cf_distance_plane3
  */
 CF_INLINE CF_Plane3 cf_make_plane3(CF_V3 n, float d)
@@ -1145,7 +1162,7 @@ CF_INLINE CF_Plane3 cf_make_plane3(CF_V3 n, float d)
  * @function cf_plane3_at
  * @category math
  * @brief    Returns the plane with normal `n` (normalized for you) passing through point `p`.
- * @related  CF_Plane3 cf_plane3 cf_distance_plane3
+ * @related  CF_Plane3 cf_make_plane3 cf_distance_plane3
  */
 CF_INLINE CF_Plane3 cf_plane3_at(CF_V3 n, CF_V3 p)
 {

@@ -74,7 +74,7 @@ A common use of semaphores is to implement a thread pool (see below). CF actuall
 
 ## Thread Pool
 
-The thread pool is a great tool for games. For a CPU with N cores the thread pool is initialized with N-1 threads (N-1 to account for the main thread as well). The threads are initially asleep. The thread pool can then be loaded up with _tasks_ (each represented by a function pointer and `void*` pair [`CF_TaskFn`])(../multithreading/cf_taskfn.md)).
+The thread pool is a great tool for games. For a CPU with N cores the thread pool is initialized with N-1 threads (N-1 to account for the main thread as well). The threads are initially asleep. The thread pool can then be loaded up with _tasks_ (each represented by a function pointer and `void*` pair [`CF_TaskFn`](../multithreading/function/cf_taskfn.md)).
 
 After loading up the threadpool with tasks they can be kicked off. Once kicked, threads will wake and grab tasks from the pool and perform them until all tasks are complete, and the threads go back to sleep. The pool can be kicked off in two styles: _blocking_ and _non-blocking_.
 

@@ -320,6 +320,12 @@ void cf_mesh_set_draw3d_augmented(CF_Mesh mesh);
 // only swaps which buffer feeds them, so strides must match the mesh's instance stride.
 uint64_t cf_make_instance_buffer(int size_in_bytes, int stride);
 void cf_update_instance_buffer(uint64_t handle, void* data, int count);
+
+// Reflection queries for the draw layer's replay fusion: does `shader` declare a uniform
+// member / sampler with this name, in either stage? `interned_name` must come from
+// cf_sintern -- comparisons are by pointer.
+bool cf_shader_consumes_uniform(CF_Shader shader, const char* interned_name);
+bool cf_shader_consumes_texture(CF_Shader shader, const char* interned_name);
 void cf_destroy_instance_buffer(uint64_t handle);
 // `offset_bytes` positions the binding within the buffer, so many commands can share one
 // per-flush staging buffer (each binds its own slice). Must be a multiple of the stride.

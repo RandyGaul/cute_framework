@@ -3,7 +3,7 @@ site_name: Cute Framework
 site_url: https://RandyGaul.github.io/cute_framework/
 site_author: Randy Gaul
 site_description: >-
-  The cutest framework available for making 2D games in C/C++
+  The cutest framework available for making 2D and 3D games in C/C++
 
 # Repository information
 repo_url: https://github.com/RandyGaul/cute_framework
@@ -98,6 +98,7 @@ nav:
       - File I/O: topics/file_io.md
       - Drawing: topics/drawing.md
       - 3D Drawing: topics/drawing_3d.md
+      - Shipping 3D: topics/shipping_3d.md
       - Debug/Tools UI: topics/dear_imgui.md
       - Allocators: topics/allocator.md
       - Android Builds: topics/android.md
