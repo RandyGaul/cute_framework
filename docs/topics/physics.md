@@ -1,6 +1,6 @@
 # Physics
 
-CF's physics is [Box2D v3](https://box2d.org), exposed directly. The library (v3.1.1, MIT) is pinned and fetched by CF's CMake, compiled into `cute.lib`, and wired to CF's allocator at app startup -- one `#include <cute.h>` and the entire `b2*` API is yours: worlds, bodies, shapes, joints, contact events, and world queries. There is deliberately no `CF_Body` wrapper layer. Box2D v3 is already a C API of id-handles and `b2Default*Def()` initializers -- the same idiom as CF's own `cf_*_defaults()` -- and [Box2D's documentation](https://box2d.org/documentation/) teaches it better than any renamed veneer could.
+CF's physics is [Box2D v3](https://box2d.org) in 2d and [Box3D](https://github.com/erincatto/box3d) in 3d, exposed directly. The libraries (Box2D v3.1.1, Box3D v0.1.0, both MIT) are pinned and fetched by CF's CMake, compiled into `cute.lib`, and wired to CF's allocator at app startup -- one `#include <cute.h>` and the entire `b2*` API is yours: worlds, bodies, shapes, joints, contact events, and world queries. There is deliberately no `CF_Body` wrapper layer. Box2D v3 is already a C API of id-handles and `b2Default*Def()` initializers -- the same idiom as CF's own `cf_*_defaults()` -- and [Box2D's documentation](https://box2d.org/documentation/) teaches it better than any renamed veneer could.
 
 What CF adds is the seam, in [cute_physics.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_physics.h):
 
@@ -83,6 +83,20 @@ for (int i = 0; i < events.beginCount; ++i) {
 ```
 
 Note contact events are opt-in per shape (`b2ShapeDef.enableContactEvents`), as are sensor and hit events. See Box2D's [world](https://box2d.org/documentation/group__world.html) and [events documentation](https://box2d.org/documentation/md_simulation.html) for the full menu: sensors, hit events with approach speeds, joint break thresholds, `b2World_CastRay`, overlap queries, and the character mover (`b2World_CastMover` / `b2SolvePlanes`).
+
+## 3D: Box3D
+
+Everything above has a 3d twin. CF vendors [Box3D](https://github.com/erincatto/box3d) (v0.1.0, MIT) -- Erin Catto's 3d engine, which deliberately mirrors Box2D v3's design: `b3*` id handles, `b3Default*Def()` initializers, polled event buffers, joints, and world queries. The same include exposes it all, and the seam repeats:
+
+- `cf_physics_step3(world, substeps)` -- the same fixed-clock wiring as 2d.
+- `cf_physics_draw3(world, thickness)` -- debug draw through draw3d's shader-free built-ins: spheres and capsules as hemisphere-lit solids, hulls and meshes as anti-aliased wireframes. One requirement: Box3D bakes shapes into drawables via world-creation callbacks, so **create your world from `cf_physics_world_def3()`** for shape drawing to work.
+- Interop is friendlier than 2d: `CF_V3`/`b3Vec3` and `CF_Quat`/`b3Quat` are bit-identical (no swizzle trap), and `cf_b3_to_m4` turns a body's `b3Body_GetTransform` straight into a `cf_draw3d_transform`-ready matrix.
+
+The [physics3d sample](https://github.com/RandyGaul/cute_framework/blob/master/samples/physics3d.c) is the whole pattern: a box tower on a ground slab, orbit camera, camera-ray spawning, explosions.
+
+Box3D also powers the new **3d stateless collision kit** in cute_math3d.h -- `CF_Capsule3`, `CF_Triangle3`, pairwise manifolds (including shapes-vs-triangle for colliding against your own level geometry), `cf_ray3_to_capsule3`/`cf_ray3_to_triangle3`, and the generic `cf_gjk3`/`cf_toi3`/`cf_collide3` family mirroring the 2d kit. And the freestanding character-mover solver (`b3SolvePlanes`, `b3ClipVector`, `b3World_CastMover`) is available directly for move-and-slide controllers.
+
+One caveat worth knowing: Box3D is younger than Box2D (its author calls v0.1 alpha), so expect API movement upstream; CF pins the vendored copy and will bump deliberately.
 
 ## Build Notes
 

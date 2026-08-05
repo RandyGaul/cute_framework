@@ -10,9 +10,11 @@
 
 #include "cute_defines.h"
 #include "cute_math.h"
+#include "cute_math3d.h"
 #include "cute_time.h"
 
 #include <box2d/box2d.h>
+#include <box3d/box3d.h>
 
 //--------------------------------------------------------------------------------------------------
 // C API
@@ -179,6 +181,158 @@ CF_API b2DebugDraw CF_CALL cf_physics_debug_draw_defaults(float thickness);
  */
 CF_API void CF_CALL cf_physics_draw(b2WorldId world, float thickness);
 
+//--------------------------------------------------------------------------------------------------
+// 3d: Box3D, exposed the same way Box2D is above. The b3* API mirrors b2's design (id
+// handles, b3Default*Def() initializers, polled event buffers), and CF supplies the same
+// seam: interop, a draw3d-powered debug draw, and stepping on CF's clock. Unlike the 2d
+// rotation types, CF_V3/b3Vec3 and CF_Quat/b3Quat are bit-identical -- no swizzle traps.
+
+/**
+ * @function cf_v3_to_b3
+ * @category physics
+ * @brief    Converts a `CF_V3` to a `b3Vec3` (bit-identical; exists for call-site clarity).
+ * @related  cf_b3_to_v3 cf_quat_to_b3 cf_m4_to_b3
+ */
+CF_INLINE b3Vec3 cf_v3_to_b3(CF_V3 v) { b3Vec3 out; out.x = v.x; out.y = v.y; out.z = v.z; return out; }
+
+/**
+ * @function cf_b3_to_v3
+ * @category physics
+ * @brief    Converts a `b3Vec3` to a `CF_V3`.
+ * @related  cf_v3_to_b3 cf_b3_to_quat cf_b3_to_m4
+ */
+CF_INLINE CF_V3 cf_b3_to_v3(b3Vec3 v) { return cf_v3(v.x, v.y, v.z); }
+
+/**
+ * @function cf_quat_to_b3
+ * @category physics
+ * @brief    Converts a `CF_Quat` to a `b3Quat`.
+ * @remarks  The layouts agree -- `b3Quat` stores the vector part first and calls the scalar
+ *           `s` where CF calls it `w` -- so this is a plain repack.
+ * @related  cf_b3_to_quat cf_v3_to_b3 cf_m4_to_b3
+ */
+CF_INLINE b3Quat cf_quat_to_b3(CF_Quat q) { b3Quat out; out.v.x = q.x; out.v.y = q.y; out.v.z = q.z; out.s = q.w; return out; }
+
+/**
+ * @function cf_b3_to_quat
+ * @category physics
+ * @brief    Converts a `b3Quat` to a `CF_Quat`.
+ * @related  cf_quat_to_b3 cf_b3_to_v3 cf_b3_to_m4
+ */
+CF_INLINE CF_Quat cf_b3_to_quat(b3Quat q) { return cf_quat(q.v.x, q.v.y, q.v.z, q.s); }
+
+/**
+ * @function cf_m4_to_b3
+ * @category physics
+ * @brief    Converts a rigid `CF_M4x4` transform to a `b3Transform`.
+ * @remarks  Physics transforms carry no scale: the matrix's upper 3x3 must be a rotation
+ *           (scale is silently normalized away). The typical direction is the other way --
+ *           see `cf_b3_to_m4`.
+ * @related  cf_b3_to_m4 cf_quat_to_b3 cf_v3_to_b3
+ */
+CF_INLINE b3Transform cf_m4_to_b3(CF_M4x4 m)
+{
+	b3Transform out;
+	out.p = cf_v3_to_b3(cf_v3(m.elements[12], m.elements[13], m.elements[14]));
+	out.q = cf_quat_to_b3(cf_quat_from_m4(m));
+	return out;
+}
+
+/**
+ * @function cf_b3_to_m4
+ * @category physics
+ * @brief    Converts a `b3Transform` to a `CF_M4x4`, e.g. a body's transform for rendering.
+ * @remarks  Pull a body's pose with `b3Body_GetTransform` and hand the result to
+ *           `cf_draw3d_transform` (or compose scale on top with `cf_m4_from_trs`).
+ * @related  cf_m4_to_b3 cf_b3_to_quat cf_b3_to_v3
+ */
+CF_INLINE CF_M4x4 cf_b3_to_m4(b3Transform tf) { return cf_m4_from_trs(cf_b3_to_v3(tf.p), cf_b3_to_quat(tf.q), cf_v3(1.0f, 1.0f, 1.0f)); }
+
+/**
+ * @function cf_capsule3_to_b3
+ * @category physics
+ * @brief    Converts a `CF_Capsule3` to a `b3Capsule` (bit-identical).
+ * @related  cf_sphere_to_b3 cf_aabb3_to_b3
+ */
+CF_INLINE b3Capsule cf_capsule3_to_b3(CF_Capsule3 capsule) { b3Capsule out; out.center1 = cf_v3_to_b3(capsule.a); out.center2 = cf_v3_to_b3(capsule.b); out.radius = capsule.r; return out; }
+
+/**
+ * @function cf_sphere_to_b3
+ * @category physics
+ * @brief    Converts a `CF_Sphere` to a `b3Sphere` (bit-identical).
+ * @related  cf_capsule3_to_b3 cf_aabb3_to_b3
+ */
+CF_INLINE b3Sphere cf_sphere_to_b3(CF_Sphere sphere) { b3Sphere out; out.center = cf_v3_to_b3(sphere.p); out.radius = sphere.r; return out; }
+
+/**
+ * @function cf_aabb3_to_b3
+ * @category physics
+ * @brief    Converts a `CF_Aabb3` to a `b3AABB` (bit-identical).
+ * @remarks  Box3D has no AABB *shape*; box colliders come from `b3MakeBoxHull`. This
+ *           converts the bounds type used by queries like `b3World_OverlapAABB`.
+ * @related  cf_b3_to_aabb3 cf_sphere_to_b3 cf_capsule3_to_b3
+ */
+CF_INLINE b3AABB cf_aabb3_to_b3(CF_Aabb3 bb) { b3AABB out; out.lowerBound = cf_v3_to_b3(bb.min); out.upperBound = cf_v3_to_b3(bb.max); return out; }
+
+/**
+ * @function cf_b3_to_aabb3
+ * @category physics
+ * @brief    Converts a `b3AABB` to a `CF_Aabb3`.
+ * @related  cf_aabb3_to_b3 cf_b3_to_v3
+ */
+CF_INLINE CF_Aabb3 cf_b3_to_aabb3(b3AABB bb) { return cf_make_aabb3(cf_b3_to_v3(bb.lowerBound), cf_b3_to_v3(bb.upperBound)); }
+
+/**
+ * @function cf_physics_world_def3
+ * @category physics
+ * @brief    Returns a `b3WorldDef` wired for CF's debug drawing.
+ * @remarks  Same as `b3DefaultWorldDef` plus CF's debug-shape callbacks: Box3D bakes each
+ *           shape into a drawable once via world-creation-time callbacks, so a world you
+ *           want `cf_physics_draw3` to render shapes for must be created from this def.
+ *           Everything else about the def is untouched -- set gravity and friends as usual.
+ * @related  cf_physics_draw3 cf_physics_debug_draw3_defaults cf_physics_step3
+ */
+CF_API b3WorldDef CF_CALL cf_physics_world_def3(void);
+
+/**
+ * @function cf_physics_debug_draw3_defaults
+ * @category physics
+ * @brief    Returns a `b3DebugDraw` whose callbacks render through CF's 3d draw API.
+ * @param    thickness  Stroke width for wireframes/segments, in world units.
+ * @remarks  Spheres and capsules render as draw3d's built-in solids (hemisphere-lit, no
+ *           shader required); hulls and meshes render as wireframes; height fields and
+ *           compounds draw their bounds. `drawShapes` is enabled; toggle any other option
+ *           before `b3World_Draw`. Create the world from `cf_physics_world_def3` so the
+ *           shape bake callbacks are wired.
+ * @related  cf_physics_draw3 cf_physics_world_def3 cf_physics_step3
+ */
+CF_API b3DebugDraw CF_CALL cf_physics_debug_draw3_defaults(float thickness);
+
+/**
+ * @function cf_physics_draw3
+ * @category physics
+ * @brief    Draws a Box3D world's shapes and joints through CF's 3d draw API.
+ * @param    world      The world, created from `cf_physics_world_def3`.
+ * @param    thickness  Stroke width for wireframes/segments, in world units.
+ * @remarks  Sugar over `cf_physics_debug_draw3_defaults` + `b3World_Draw` with shapes and
+ *           joints on. Call it under your 3d camera stacks like any `cf_draw3d_*` call.
+ * @related  cf_physics_debug_draw3_defaults cf_physics_world_def3 cf_physics_step3
+ */
+CF_API void CF_CALL cf_physics_draw3(b3WorldId world, float thickness);
+
+/**
+ * @function cf_physics_step3
+ * @category physics
+ * @brief    Steps a Box3D world using CF's clock.
+ * @param    world          The world to step.
+ * @param    substep_count  Box3D solver sub-steps, typically 4.
+ * @remarks  Identical wiring to the 2d `cf_physics_step`: call from your fixed-update
+ *           callback with `cf_set_fixed_timestep` enabled; falls back to the variable
+ *           frame dt otherwise.
+ * @related  cf_physics_step cf_physics_draw3 cf_set_fixed_timestep
+ */
+CF_API void CF_CALL cf_physics_step3(b3WorldId world, int substep_count);
+
 /**
  * @function cf_physics_step
  * @category physics
@@ -231,6 +385,22 @@ CF_INLINE CF_Aabb from_b2(b2AABB bb) { return cf_b2_to_aabb(bb); }
 CF_INLINE b2DebugDraw physics_debug_draw_defaults(float thickness) { return cf_physics_debug_draw_defaults(thickness); }
 CF_INLINE void physics_draw(b2WorldId world, float thickness) { cf_physics_draw(world, thickness); }
 CF_INLINE void physics_step(b2WorldId world, int substep_count) { cf_physics_step(world, substep_count); }
+
+CF_INLINE b3Vec3 to_b3(CF_V3 v) { return cf_v3_to_b3(v); }
+CF_INLINE b3Quat to_b3(CF_Quat q) { return cf_quat_to_b3(q); }
+CF_INLINE b3Transform to_b3(CF_M4x4 m) { return cf_m4_to_b3(m); }
+CF_INLINE b3Sphere to_b3(CF_Sphere sphere) { return cf_sphere_to_b3(sphere); }
+CF_INLINE b3Capsule to_b3(CF_Capsule3 capsule) { return cf_capsule3_to_b3(capsule); }
+CF_INLINE b3AABB to_b3(CF_Aabb3 bb) { return cf_aabb3_to_b3(bb); }
+CF_INLINE CF_V3 from_b3(b3Vec3 v) { return cf_b3_to_v3(v); }
+CF_INLINE CF_Quat from_b3(b3Quat q) { return cf_b3_to_quat(q); }
+CF_INLINE CF_M4x4 from_b3(b3Transform tf) { return cf_b3_to_m4(tf); }
+CF_INLINE CF_Aabb3 from_b3(b3AABB bb) { return cf_b3_to_aabb3(bb); }
+
+CF_INLINE b3WorldDef physics_world_def3() { return cf_physics_world_def3(); }
+CF_INLINE b3DebugDraw physics_debug_draw3_defaults(float thickness) { return cf_physics_debug_draw3_defaults(thickness); }
+CF_INLINE void physics_draw3(b3WorldId world, float thickness) { cf_physics_draw3(world, thickness); }
+CF_INLINE void physics_step3(b3WorldId world, int substep_count) { cf_physics_step3(world, substep_count); }
 
 }
 

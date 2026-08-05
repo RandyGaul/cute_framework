@@ -31,6 +31,7 @@ set(CF_TEST_SRCS
 	test_math.c
 	test_math3d.cpp
 	test_math3d.c
+	test_physics.cpp
 	test_ckit.c
 	test_model.cpp
 	test_jpg.cpp
