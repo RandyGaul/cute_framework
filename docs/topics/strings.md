@@ -7,7 +7,7 @@ CF has a [dynamic string API](../api_reference.md#string) where strings are 100%
 
 ## Dynamic Strings
 
-In CF's C API we can create a new string with [`cf_string_make`](../string/cf_string_make.md) or [`cf_string_dup`](../string/cf_string_dup.md).
+In CF's C API we can create a new string with [`cf_string_make`](../string/macro/cf_string_make.md) or [`cf_string_dup`](../string/macro/cf_string_dup.md).
 
 ```cpp
 char* s = smake("Hello world!");
@@ -21,7 +21,7 @@ Which outputs:
 Hello world!
 ```
 
-To overwrite an existing string use [`cf_string_set`](../string/cf_string_set.md). The first argument must be an l-value (a variable), not a literal like NULL. Use `cf_string_make` to create a string from scratch.
+To overwrite an existing string use [`cf_string_set`](../string/macro/cf_string_set.md). The first argument must be an l-value (a variable), not a literal like NULL. Use `cf_string_make` to create a string from scratch.
 
 ```cpp
 char* s = smake("Hello world!");
@@ -30,9 +30,9 @@ printf("%s", s);
 sfree(s);
 ```
 
-All dynamic strings must be free'd up with [`cf_string_free`](../string/cf_string_free.md) when done.
+All dynamic strings must be free'd up with [`cf_string_free`](../string/macro/cf_string_free.md) when done.
 
-To push some more characters onto the end of the string use [`cf_string_push`](../string/cf_string_push.md).
+To push some more characters onto the end of the string use [`cf_string_push`](../string/macro/cf_string_push.md).
 
 ```cpp
 char* s = smake("Hello world!");
@@ -50,7 +50,7 @@ Which outputs:
 Hello world!!!
 ```
 
-You can append a string onto the end of a dynamic string with [`cf_string_append`](../string/cf_string_append.md).
+You can append a string onto the end of a dynamic string with [`cf_string_append`](../string/macro/cf_string_append.md).
 
 ```cpp
 char* s = smake("Hello world!");
@@ -69,14 +69,14 @@ Hello world! What a nice string we have.
 
 ## String Conversions
 
-To convert an integer to a string call [`cf_string_int`](../string/cf_string_int.md).
+To convert an integer to a string call [`cf_string_int`](../string/macro/cf_string_int.md).
 
 ```cpp
 char* s = sint(NULL, 10);
 printf("%s", s); // s is now "10".
 ```
 
-To convert from a string to an integer call [`cf_string_toint`](../string/cf_string_toint.md).
+To convert from a string to an integer call [`cf_string_toint`](../string/macro/cf_string_toint.md).
 
 ```cpp
 int x = stoint("100");
@@ -86,7 +86,7 @@ There are similar functions available for float, double, boolean, and hex number
 
 ## String Formatting
 
-String formatting is done with a printf-style function called [`cf_string_fmt`](../string/cf_string_fmt.md). To create a new formatted string from scratch use [`cf_string_fmt_make`](../string/cf_string_fmt_make.md).
+String formatting is done with a printf-style function called [`cf_string_fmt`](../string/macro/cf_string_fmt.md). To create a new formatted string from scratch use [`cf_string_fmt_make`](../string/macro/cf_string_fmt_make.md).
 
 ```cpp
 char* s = sfmake("%s said hello to %s.\n", "Bob", "Sally");
@@ -94,11 +94,11 @@ printf("%s", s); // Prints: "Bob said hello to Sally."
 sfree(s);
 ```
 
-To overwrite an existing string with formatted text use `cf_string_fmt`. To append formatted text use [`cf_string_fmt_append`](../string/cf_string_fmt_append.md).
+To overwrite an existing string with formatted text use `cf_string_fmt`. To append formatted text use [`cf_string_fmt_append`](../string/macro/cf_string_fmt_append.md).
 
 ## String Manipulation
 
-There are a variety of manipulation functions available for strings. Be sure to check out the [String API Reference](../api_reference.md#string) for a full list and for more examples. Some really popular ones include [`cf_string_replace`](../string/cf_string_replace.md), [`cf_string_split`](../string/cf_string_split.md), and [`cf_string_trim`](../string/cf_string_trim.md).
+There are a variety of manipulation functions available for strings. Be sure to check out the [String API Reference](../api_reference.md#string) for a full list and for more examples. Some really popular ones include [`cf_string_replace`](../string/macro/cf_string_replace.md), [`cf_string_split`](../string/macro/cf_string_split.md), and [`cf_string_trim`](../string/macro/cf_string_trim.md).
 
 ## String in C++
 
@@ -118,15 +118,15 @@ Well hello there! Today is red day, meaning everything is the color red.
 
 ## String Hashing
 
-To get a hash of a string call [`cf_string_hash`](../string/cf_string_hash.md).
+To get a hash of a string call [`cf_string_hash`](../string/macro/cf_string_hash.md).
 
-Be sure to check out this section on [String Interning](../topics/data_structures.md#strings-as-keys), which covers the [String Intern API](../string/cf_sintern.md). You may use `cf_sintern` to construct immutable strings that work super efficiently for comparisons and maps.
+Be sure to check out this section on [String Interning](../topics/data_structures.md#strings-as-keys), which covers the [String Intern API](../string/macro/cf_sintern.md). You may use `cf_sintern` to construct immutable strings that work super efficiently for comparisons and maps.
 
 ## UTF8
 
 It's highly recommended to store strings for your game in text files and load them up from disk. This makes it easy for a localizer to make different versions of text in different languages without editing anything other than simple text files. The format of your strings should be in the [UTF8 format](https://en.wikipedia.org/wiki/UTF-8), which is 100% backwards compatible with typical C-strings you're already used to.
 
-The UTF8 format encodes a large number of characters by making certain characters take up more than a single byte. To encode or decode UTF8 characters you may call [`cf_string_append_UTF8`](../string/cf_string_append_utf8.md) or [`cf_string_decode_UTF8`](../string/cf_string_decode_utf8.md).
+The UTF8 format encodes a large number of characters by making certain characters take up more than a single byte. To encode or decode UTF8 characters you may call [`cf_string_append_UTF8`](../string/macro/cf_string_append_utf8.md) or [`cf_string_decode_UTF8`](../string/macro/cf_string_decode_utf8.md).
 
 In C++ we have access to the `UTF8` helper class. Simply load it up with a string and call `.next()` to get each decoded character with `.codepoint`.
 

@@ -240,7 +240,7 @@
  * @param    ignore_case  If true, sorts case-insensitively.
  * @remarks  Normally you can't store strings as keys since keys are `uint64_t`. However, if you use `sintern`,
  *           each unique string gets a unique stable pointer, making them valid map keys. This is _not_ a stable sort.
- * @related  CF_MAP cf_map_sort cf_map_swap cf_map_keys cf_map_items cf_map_size sintern
+ * @related  CF_MAP cf_map_sort cf_map_swap cf_map_keys cf_map_items cf_map_size
  */
 #define cf_map_ssort(m, ignore_case) map_ssort(m, ignore_case)
 

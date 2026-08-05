@@ -300,7 +300,7 @@ typedef struct CF_Stopwatch
  * @return   Returns an initialize `CF_Stopwatch` to the time of _right now_ (e.g. with `cf_get_ticks` internally).
  * @remarks  Once created with `cf_make_stopwatch` the time elapsed can be fetched. To reset the stopwatch, simply call
  *           `cf_make_stopwatch` again and overwrite your old stopwatch. To fetch the time elapsed, call `cf_stopwatch_seconds`,
- *           `cf_stopwatch_milliseconds`, or `cf_microseconds`.
+ *           `cf_stopwatch_milliseconds`, or `cf_stopwatch_microseconds`.
  * @related  CF_Stopwatch cf_make_stopwatch cf_stopwatch_seconds cf_stopwatch_milliseconds cf_stopwatch_microseconds
  */
 CF_API CF_Stopwatch CF_CALL cf_make_stopwatch(void);
