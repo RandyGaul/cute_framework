@@ -2,6 +2,26 @@
 
 Cute Framework supports web builds with a GLES3 backend renderer. Getting started with Emscripten is a bit challenging, so hopefully this page can help get you started. Once you get your game building for the web it's usually quite a breeze after the initial setup.
 
+## GLES3 Backend Capabilities
+
+The GLES3 backend (web builds, and `CF_APP_OPTIONS_GFX_OPENGL_BIT` on desktop for debugging it) tracks the SDL_GPU backends closely. The differences that matter:
+
+| Feature | SDL_GPU (Vulkan/D3D/Metal) | GLES3 / Web |
+| --- | --- | --- |
+| Draw API (2D + 3D), meshes, canvases, MRT | ✔ | ✔ |
+| Depth/comparison samplers, cube/3D/array textures | ✔ | ✔ |
+| Render into faces/layers/mips (`attach_target`) | ✔ | ✔ |
+| Per-target blend states | ✔ | ✘ (all targets share `blends[0]`) |
+| Standalone samplers (`CF_Sampler`) | ✔ | ✔ |
+| Range draws / geometry arenas | ✔ | ✔ |
+| Storage buffers (read-only, vertex/fragment) | ✔ | ✔ (emulated via texture fetches, within the documented pattern: anonymous readonly single runtime `vec4`/`uvec4` array blocks) |
+| Compute shaders | ✔ | ✘ |
+| GPU-writable storage (`compute_writable`) | ✔ | ✘ |
+| Indirect draws | ✔ | ✘ |
+| `cf_push_gpu_label` capture regions | ✔ | no-op |
+
+Everything in the ✔ column is exercised by the test suite on both backends. Shaders following the documented contracts need no changes -- [cute_spirv](glsl_support.md) emits GLSL ES 300 with the emulations baked in (storage blocks outside the emulatable shape get clear compile errors).
+
 > [!NOTE]
 > Emscripten builds automatically disable CF's [HTTPS support](../api_reference.md#web), since web builds suffer from very poor support of this feature.
 

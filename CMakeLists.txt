@@ -100,6 +100,7 @@ set(CF_SRCS
 	src/cute_base64.cpp
 	src/cute_math.cpp
 	src/cute_draw.cpp
+	src/cute_draw3d.cpp
 	src/cute_image.cpp
 	src/cute_graphics.cpp
 	src/cute_graphics_sdlgpu.cpp
@@ -164,6 +165,7 @@ set(CF_PUBLIC_HDRS
 	include/cute_defer.h
 	include/cute_math.h
 	include/cute_math3d.h
+	include/cute_draw3d.h
 	include/cute_draw.h
 	include/cute_debug_printf.h
 	include/cute_image.h

@@ -406,6 +406,68 @@ CF_INLINE CF_Quat cf_quat_slerp(CF_Quat a, CF_Quat b, float t)
 	return cf_quat(a.x * wa + b.x * wb, a.y * wa + b.y * wb, a.z * wa + b.z * wb, a.w * wa + b.w * wb);
 }
 
+/**
+ * @function cf_quat_from_to
+ * @category math
+ * @brief    Returns the shortest rotation taking direction `from` onto direction `to`.
+ * @param    from  The starting direction. Need not be unit length.
+ * @param    to    The ending direction. Need not be unit length.
+ * @remarks  The workhorse of aiming: point a turret at a target, align a decal to a surface
+ *           normal, tilt a character to a slope. Exactly-opposed directions have no unique
+ *           answer, so a perpendicular axis is chosen arbitrarily.
+ * @related  CF_Quat cf_quat_from_axis_angle cf_quat_slerp cf_quat_from_basis
+ */
+CF_INLINE CF_Quat cf_quat_from_to(CF_V3 from, CF_V3 to)
+{
+	CF_V3 a = cf_safe_norm_v3(from);
+	CF_V3 b = cf_safe_norm_v3(to);
+	float d = cf_dot_v3(a, b);
+	if (d >= 1.0f - 1e-6f) return cf_quat_identity();
+	if (d <= -1.0f + 1e-6f) {
+		// Opposed: any perpendicular axis is a valid 180-degree turn. Cross with whichever
+		// cardinal axis `a` leans on least, so the cross never degenerates.
+		CF_V3 axis = CF_FABSF(a.x) < 0.9f ? cf_v3(1, 0, 0) : cf_v3(0, 1, 0);
+		return cf_quat_from_axis_angle(cf_norm_v3(cf_cross_v3(a, axis)), CF_PI);
+	}
+	CF_V3 c = cf_cross_v3(a, b);
+	// The half-angle form: (cross, 1 + dot) normalized is the half-way rotation.
+	return cf_quat_norm(cf_quat(c.x, c.y, c.z, 1.0f + d));
+}
+
+/**
+ * @function cf_quat_from_basis
+ * @category math
+ * @brief    Builds a rotation from three orthonormal basis vectors (the rotation's columns).
+ * @param    x  The direction the +x axis maps to.
+ * @param    y  The direction the +y axis maps to.
+ * @param    z  The direction the +z axis maps to.
+ * @remarks  Assumes a right-handed orthonormal basis; a mirrored (negative determinant) basis
+ *           has no quaternion and produces garbage. Use `cf_quat_from_m4` to pull the rotation
+ *           out of a full transform instead.
+ * @related  CF_Quat cf_quat_from_m4 cf_quat_from_to cf_quat_to_m4
+ */
+CF_INLINE CF_Quat cf_quat_from_basis(CF_V3 x, CF_V3 y, CF_V3 z)
+{
+	// Shepperd's method: pick the largest of the four possible divisors so the square root
+	// never lands near zero.
+	float trace = x.x + y.y + z.z;
+	CF_Quat q;
+	if (trace > 0) {
+		float s = CF_SQRTF(trace + 1.0f) * 2.0f;
+		q = cf_quat((y.z - z.y) / s, (z.x - x.z) / s, (x.y - y.x) / s, 0.25f * s);
+	} else if (x.x > y.y && x.x > z.z) {
+		float s = CF_SQRTF(1.0f + x.x - y.y - z.z) * 2.0f;
+		q = cf_quat(0.25f * s, (y.x + x.y) / s, (z.x + x.z) / s, (y.z - z.y) / s);
+	} else if (y.y > z.z) {
+		float s = CF_SQRTF(1.0f + y.y - x.x - z.z) * 2.0f;
+		q = cf_quat((y.x + x.y) / s, 0.25f * s, (z.y + y.z) / s, (z.x - x.z) / s);
+	} else {
+		float s = CF_SQRTF(1.0f + z.z - x.x - y.y) * 2.0f;
+		q = cf_quat((z.x + x.z) / s, (z.y + y.z) / s, 0.25f * s, (x.y - y.x) / s);
+	}
+	return cf_quat_norm(q);
+}
+
 //--------------------------------------------------------------------------------------------------
 // 4x4 matrices.
 
@@ -482,6 +544,59 @@ CF_INLINE CF_M4x4 cf_m4_scale(CF_V3 s)
 	m.elements[5] = s.y;
 	m.elements[10] = s.z;
 	return m;
+}
+
+/**
+ * @function cf_quat_from_m4
+ * @category math
+ * @brief    Extracts the rotation from a transform matrix.
+ * @param    m  A transform whose upper 3x3 is a rotation, optionally with positive scale.
+ * @remarks  Scale is divided out per column, so this reads the rotation off a composed
+ *           translate-rotate-scale transform. A mirrored (negative determinant) transform has no
+ *           rotation to extract and produces garbage -- see `cf_m4_decompose`, which reports the
+ *           flip in its scale.
+ * @related  CF_Quat CF_M4x4 cf_quat_to_m4 cf_quat_from_basis cf_m4_decompose
+ */
+CF_INLINE CF_Quat cf_quat_from_m4(CF_M4x4 m)
+{
+	CF_V3 x = cf_safe_norm_v3(cf_v3(m.elements[0], m.elements[1], m.elements[2]));
+	CF_V3 y = cf_safe_norm_v3(cf_v3(m.elements[4], m.elements[5], m.elements[6]));
+	CF_V3 z = cf_safe_norm_v3(cf_v3(m.elements[8], m.elements[9], m.elements[10]));
+	return cf_quat_from_basis(x, y, z);
+}
+
+/**
+ * @function cf_m4_decompose
+ * @category math
+ * @brief    Splits a transform matrix into translation, rotation, and scale.
+ * @param    m            The transform to decompose.
+ * @param    translation  Written with the translation. May be NULL.
+ * @param    rotation     Written with the rotation. May be NULL.
+ * @param    scale        Written with the per-axis scale. May be NULL.
+ * @remarks  Assumes `m` is a translate-rotate-scale composition with no shear (skew silently
+ *           folds into the rotation). A mirrored transform reports a negative x scale, since a
+ *           flip cannot live in the quaternion. The inverse of building one with
+ *           `cf_m4_translate * cf_quat_to_m4 * cf_m4_scale` -- useful for pulling a bone's pose
+ *           out of a world matrix, or blending between authored transforms.
+ * @related  CF_M4x4 CF_Quat cf_quat_from_m4 cf_quat_to_m4 cf_m4_translate cf_m4_scale
+ */
+CF_INLINE void cf_m4_decompose(CF_M4x4 m, CF_V3* translation, CF_Quat* rotation, CF_V3* scale)
+{
+	if (translation) *translation = cf_v3(m.elements[12], m.elements[13], m.elements[14]);
+	CF_V3 x = cf_v3(m.elements[0], m.elements[1], m.elements[2]);
+	CF_V3 y = cf_v3(m.elements[4], m.elements[5], m.elements[6]);
+	CF_V3 z = cf_v3(m.elements[8], m.elements[9], m.elements[10]);
+	float sx = cf_len_v3(x), sy = cf_len_v3(y), sz = cf_len_v3(z);
+	// A negative determinant means one axis is mirrored. Which one is unknowable, so fold
+	// the flip into x by convention -- the same choice glTF importers make.
+	if (cf_dot_v3(cf_cross_v3(x, y), z) < 0) sx = -sx;
+	if (scale) *scale = cf_v3(sx, sy, sz);
+	if (rotation) {
+		*rotation = cf_quat_from_basis(
+			sx != 0 ? cf_div_v3_f(x, sx) : cf_v3(1, 0, 0),
+			sy != 0 ? cf_div_v3_f(y, sy) : cf_v3(0, 1, 0),
+			sz != 0 ? cf_div_v3_f(z, sz) : cf_v3(0, 0, 1));
+	}
 }
 
 /**
@@ -855,6 +970,514 @@ extern "C" {
 #endif // __cplusplus
 
 //--------------------------------------------------------------------------------------------------
+// Geometry: rays, boxes, spheres, planes, and the frustum, with the queries a 3d game
+// actually asks -- "what did the mouse hit" (cf_draw3d_unproject's back half) and "is this
+// on screen" (frustum culling). Mirrors cute_math.h's 2d shapes: CF_Ray3/CF_Raycast3 follow
+// CF_Ray/CF_Raycast, CF_Aabb3 follows CF_Aabb, CF_Sphere follows CF_Circle.
+
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
+
+/**
+ * @struct   CF_Ray3
+ * @category math
+ * @brief    A 3d ray: a directional line segment from `p` along unit direction `d` for distance `t`.
+ * @related  CF_Ray3 CF_Raycast3 cf_ray3 cf_ray3_to_aabb3 cf_ray3_to_sphere cf_ray3_to_plane3 cf_draw3d_unproject
+ */
+typedef struct CF_Ray3
+{
+	/* @member Position. */
+	CF_V3 p;
+
+	/* @member Direction (normalized). */
+	CF_V3 d;
+
+	/* @member Distance along d from position p to find endpoint of ray. */
+	float t;
+} CF_Ray3;
+// @end
+
+/**
+ * @struct   CF_Raycast3
+ * @category math
+ * @brief    The results for a 3d raycast query.
+ * @related  CF_Ray3 cf_ray3_to_aabb3 cf_ray3_to_sphere cf_ray3_to_plane3
+ */
+typedef struct CF_Raycast3
+{
+	/* @member True if the ray hit. When this is false then members t and n are zero'd out. */
+	bool hit;
+
+	/* @member Time of impact, as a distance along the ray's direction. */
+	float t;
+
+	/* @member Normal of surface at impact (unit length). */
+	CF_V3 n;
+} CF_Raycast3;
+// @end
+
+/**
+ * @struct   CF_Aabb3
+ * @category math
+ * @brief    A 3d axis-aligned bounding box.
+ * @related  CF_Aabb3 cf_make_aabb3 cf_make_aabb3_center cf_aabb3_to_aabb3 cf_ray3_to_aabb3 cf_frustum_test_aabb3 cf_transform_aabb3
+ */
+typedef struct CF_Aabb3
+{
+	/* @member The minimum corner. */
+	CF_V3 min;
+
+	/* @member The maximum corner. */
+	CF_V3 max;
+} CF_Aabb3;
+// @end
+
+/**
+ * @struct   CF_Sphere
+ * @category math
+ * @brief    A sphere.
+ * @related  CF_Sphere cf_make_sphere cf_sphere_to_sphere cf_sphere_to_aabb3 cf_ray3_to_sphere cf_frustum_test_sphere
+ */
+typedef struct CF_Sphere
+{
+	/* @member Position. */
+	CF_V3 p;
+
+	/* @member Radius. */
+	float r;
+} CF_Sphere;
+// @end
+
+/**
+ * @struct   CF_Plane3
+ * @category math
+ * @brief    A 3d plane in normal-distance form: points x on the plane satisfy `dot(n, x) == d`.
+ * @remarks  The 3d analog of `CF_Halfspace`. The halfspace `dot(n, x) >= d` is the "inside" for
+ *           frustum planes.
+ * @related  CF_Plane3 cf_plane3 cf_plane3_at cf_distance_plane3 cf_project_plane3 cf_ray3_to_plane3 CF_Frustum
+ */
+typedef struct CF_Plane3
+{
+	/* @member The plane's normal vector (unit length). */
+	CF_V3 n;
+
+	/* @member Distance to origin along n; d = dot(n, p) for any point p on the plane. */
+	float d;
+} CF_Plane3;
+// @end
+
+/**
+ * @struct   CF_Frustum
+ * @category math
+ * @brief    Six planes bounding a camera's visible volume, normals pointing inward.
+ * @remarks  Extract one from a combined view-projection with `cf_frustum_from_m4`, then cull
+ *           with `cf_frustum_test_aabb3` / `cf_frustum_test_sphere`.
+ * @related  CF_Frustum cf_frustum_from_m4 cf_frustum_test_aabb3 cf_frustum_test_sphere CF_Plane3
+ */
+typedef struct CF_Frustum
+{
+	/* @member The bounding planes: left, right, bottom, top, near, far. */
+	CF_Plane3 planes[6];
+} CF_Frustum;
+// @end
+
+/**
+ * @function cf_make_ray3
+ * @category math
+ * @brief    Returns a ray from `p` toward `q`, spanning exactly the distance between them.
+ * @remarks  Named like `cf_make_sphere`/`cf_make_aabb3` -- and distinctly from the
+ *           `CF_Ray3` type, which shares a docs page slug case-insensitively.
+ * @related  CF_Ray3 cf_ray3_to_aabb3 cf_ray3_to_sphere cf_ray3_to_plane3
+ */
+CF_INLINE CF_Ray3 cf_make_ray3(CF_V3 p, CF_V3 q)
+{
+	CF_Ray3 ray;
+	CF_V3 delta = cf_sub_v3(q, p);
+	float len = cf_len_v3(delta);
+	ray.p = p;
+	ray.d = len > 1.0e-8f ? cf_div_v3_f(delta, len) : cf_v3(0, 0, 1.0f);
+	ray.t = len;
+	return ray;
+}
+
+/**
+ * @function cf_make_aabb3
+ * @category math
+ * @brief    Returns an AABB from min/max corners.
+ * @related  CF_Aabb3 cf_make_aabb3_center cf_center_aabb3 cf_extents_aabb3
+ */
+CF_INLINE CF_Aabb3 cf_make_aabb3(CF_V3 min, CF_V3 max) { CF_Aabb3 bb; bb.min = min; bb.max = max; return bb; }
+
+/**
+ * @function cf_make_aabb3_center
+ * @category math
+ * @brief    Returns an AABB from a center and half-extents.
+ * @related  CF_Aabb3 cf_make_aabb3 cf_center_aabb3 cf_extents_aabb3
+ */
+CF_INLINE CF_Aabb3 cf_make_aabb3_center(CF_V3 center, CF_V3 half_extents) { return cf_make_aabb3(cf_sub_v3(center, half_extents), cf_add_v3(center, half_extents)); }
+
+/**
+ * @function cf_make_sphere
+ * @category math
+ * @brief    Returns a sphere at `p` with radius `r`.
+ * @related  CF_Sphere cf_sphere_to_sphere cf_ray3_to_sphere
+ */
+CF_INLINE CF_Sphere cf_make_sphere(CF_V3 p, float r) { CF_Sphere s; s.p = p; s.r = r; return s; }
+
+/**
+ * @function cf_make_plane3
+ * @category math
+ * @brief    Returns a plane with normal `n` (normalized for you) at distance `d` along `n`.
+ * @remarks  Named `cf_make_*` like `cf_make_sphere` -- and distinctly from the `CF_Plane3` type,
+ *           which shares a docs page slug case-insensitively.
+ * @related  CF_Plane3 cf_plane3_at cf_distance_plane3
+ */
+CF_INLINE CF_Plane3 cf_make_plane3(CF_V3 n, float d)
+{
+	CF_Plane3 plane;
+	plane.n = cf_norm_v3(n);
+	plane.d = d;
+	return plane;
+}
+
+/**
+ * @function cf_plane3_at
+ * @category math
+ * @brief    Returns the plane with normal `n` (normalized for you) passing through point `p`.
+ * @related  CF_Plane3 cf_plane3 cf_distance_plane3
+ */
+CF_INLINE CF_Plane3 cf_plane3_at(CF_V3 n, CF_V3 p)
+{
+	CF_Plane3 plane;
+	plane.n = cf_norm_v3(n);
+	plane.d = cf_dot_v3(plane.n, p);
+	return plane;
+}
+
+/**
+ * @function cf_center_aabb3
+ * @category math
+ * @brief    Returns the center of an AABB.
+ * @related  CF_Aabb3 cf_extents_aabb3 cf_half_extents_aabb3
+ */
+CF_INLINE CF_V3 cf_center_aabb3(CF_Aabb3 bb) { return cf_mul_v3_f(cf_add_v3(bb.min, bb.max), 0.5f); }
+
+/**
+ * @function cf_extents_aabb3
+ * @category math
+ * @brief    Returns the dimensions (full width/height/depth) of an AABB.
+ * @related  CF_Aabb3 cf_center_aabb3 cf_half_extents_aabb3
+ */
+CF_INLINE CF_V3 cf_extents_aabb3(CF_Aabb3 bb) { return cf_sub_v3(bb.max, bb.min); }
+
+/**
+ * @function cf_half_extents_aabb3
+ * @category math
+ * @brief    Returns the half-dimensions of an AABB.
+ * @related  CF_Aabb3 cf_center_aabb3 cf_extents_aabb3
+ */
+CF_INLINE CF_V3 cf_half_extents_aabb3(CF_Aabb3 bb) { return cf_mul_v3_f(cf_sub_v3(bb.max, bb.min), 0.5f); }
+
+/**
+ * @function cf_combine_aabb3
+ * @category math
+ * @brief    Returns the smallest AABB containing both inputs.
+ * @remarks  The workhorse for building chunk/scene bounds out of member bounds.
+ * @related  CF_Aabb3 cf_expand_aabb3 cf_contains_point_aabb3
+ */
+CF_INLINE CF_Aabb3 cf_combine_aabb3(CF_Aabb3 a, CF_Aabb3 b)
+{
+	return cf_make_aabb3(
+		cf_v3(cf_min(a.min.x, b.min.x), cf_min(a.min.y, b.min.y), cf_min(a.min.z, b.min.z)),
+		cf_v3(cf_max(a.max.x, b.max.x), cf_max(a.max.y, b.max.y), cf_max(a.max.z, b.max.z)));
+}
+
+/**
+ * @function cf_expand_aabb3
+ * @category math
+ * @brief    Returns the AABB grown by `radius` on every side.
+ * @related  CF_Aabb3 cf_combine_aabb3
+ */
+CF_INLINE CF_Aabb3 cf_expand_aabb3(CF_Aabb3 bb, float radius)
+{
+	CF_V3 r = cf_v3(radius, radius, radius);
+	return cf_make_aabb3(cf_sub_v3(bb.min, r), cf_add_v3(bb.max, r));
+}
+
+/**
+ * @function cf_contains_point_aabb3
+ * @category math
+ * @brief    Returns true if `p` lies inside the AABB (inclusive).
+ * @related  CF_Aabb3 cf_aabb3_to_aabb3 cf_closest_point_on_aabb3
+ */
+CF_INLINE bool cf_contains_point_aabb3(CF_Aabb3 bb, CF_V3 p)
+{
+	return p.x >= bb.min.x && p.x <= bb.max.x
+	    && p.y >= bb.min.y && p.y <= bb.max.y
+	    && p.z >= bb.min.z && p.z <= bb.max.z;
+}
+
+/**
+ * @function cf_closest_point_on_aabb3
+ * @category math
+ * @brief    Returns the point on (or in) the AABB closest to `p`.
+ * @related  CF_Aabb3 cf_contains_point_aabb3 cf_sphere_to_aabb3
+ */
+CF_INLINE CF_V3 cf_closest_point_on_aabb3(CF_Aabb3 bb, CF_V3 p)
+{
+	return cf_v3(
+		cf_clamp(p.x, bb.min.x, bb.max.x),
+		cf_clamp(p.y, bb.min.y, bb.max.y),
+		cf_clamp(p.z, bb.min.z, bb.max.z));
+}
+
+/**
+ * @function cf_distance_plane3
+ * @category math
+ * @brief    Returns the signed distance from `p` to the plane; positive on the normal's side.
+ * @related  CF_Plane3 cf_project_plane3 cf_ray3_to_plane3
+ */
+CF_INLINE float cf_distance_plane3(CF_Plane3 plane, CF_V3 p) { return cf_dot_v3(plane.n, p) - plane.d; }
+
+/**
+ * @function cf_project_plane3
+ * @category math
+ * @brief    Projects `p` onto the plane (the closest point on the plane).
+ * @related  CF_Plane3 cf_distance_plane3
+ */
+CF_INLINE CF_V3 cf_project_plane3(CF_Plane3 plane, CF_V3 p) { return cf_sub_v3(p, cf_mul_v3_f(plane.n, cf_distance_plane3(plane, p))); }
+
+/**
+ * @function cf_aabb3_to_aabb3
+ * @category math
+ * @brief    Returns true if two AABBs overlap.
+ * @related  CF_Aabb3 cf_sphere_to_aabb3 cf_contains_point_aabb3
+ */
+CF_INLINE bool cf_aabb3_to_aabb3(CF_Aabb3 a, CF_Aabb3 b)
+{
+	return a.min.x <= b.max.x && a.max.x >= b.min.x
+	    && a.min.y <= b.max.y && a.max.y >= b.min.y
+	    && a.min.z <= b.max.z && a.max.z >= b.min.z;
+}
+
+/**
+ * @function cf_sphere_to_sphere
+ * @category math
+ * @brief    Returns true if two spheres overlap.
+ * @related  CF_Sphere cf_sphere_to_aabb3
+ */
+CF_INLINE bool cf_sphere_to_sphere(CF_Sphere a, CF_Sphere b)
+{
+	CF_V3 delta = cf_sub_v3(b.p, a.p);
+	float r = a.r + b.r;
+	return cf_dot_v3(delta, delta) <= r * r;
+}
+
+/**
+ * @function cf_sphere_to_aabb3
+ * @category math
+ * @brief    Returns true if a sphere and an AABB overlap.
+ * @related  CF_Sphere CF_Aabb3 cf_closest_point_on_aabb3
+ */
+CF_INLINE bool cf_sphere_to_aabb3(CF_Sphere s, CF_Aabb3 bb)
+{
+	CF_V3 closest = cf_closest_point_on_aabb3(bb, s.p);
+	CF_V3 delta = cf_sub_v3(closest, s.p);
+	return cf_dot_v3(delta, delta) <= s.r * s.r;
+}
+
+/**
+ * @function cf_ray3_to_plane3
+ * @category math
+ * @brief    Raycasts against a plane.
+ * @remarks  Hits from either side; the reported normal faces back along the ray.
+ * @related  CF_Ray3 CF_Raycast3 CF_Plane3 cf_ray3_to_aabb3 cf_ray3_to_sphere
+ */
+CF_INLINE CF_Raycast3 cf_ray3_to_plane3(CF_Ray3 ray, CF_Plane3 plane)
+{
+	CF_Raycast3 result = { 0 };
+	float denom = cf_dot_v3(plane.n, ray.d);
+	if (cf_abs(denom) < 1.0e-8f) return result; // Parallel.
+	float t = (plane.d - cf_dot_v3(plane.n, ray.p)) / denom;
+	if (t < 0 || t > ray.t) return result;
+	result.hit = true;
+	result.t = t;
+	result.n = denom < 0 ? plane.n : cf_neg_v3(plane.n);
+	return result;
+}
+
+/**
+ * @function cf_ray3_to_sphere
+ * @category math
+ * @brief    Raycasts against a sphere.
+ * @remarks  A ray starting inside the sphere reports the exit point.
+ * @related  CF_Ray3 CF_Raycast3 CF_Sphere cf_ray3_to_aabb3 cf_ray3_to_plane3
+ */
+CF_INLINE CF_Raycast3 cf_ray3_to_sphere(CF_Ray3 ray, CF_Sphere sphere)
+{
+	CF_Raycast3 result = { 0 };
+	CF_V3 m = cf_sub_v3(ray.p, sphere.p);
+	float b = cf_dot_v3(m, ray.d);
+	float c = cf_dot_v3(m, m) - sphere.r * sphere.r;
+	if (c > 0 && b > 0) return result;      // Outside, pointing away.
+	float disc = b * b - c;
+	if (disc < 0) return result;            // Misses.
+	float root = CF_SQRTF(disc);
+	float t = -b - root;
+	if (t < 0) t = -b + root;               // Started inside: exit point.
+	if (t < 0 || t > ray.t) return result;
+	result.hit = true;
+	result.t = t;
+	result.n = cf_norm_v3(cf_sub_v3(cf_add_v3(ray.p, cf_mul_v3_f(ray.d, t)), sphere.p));
+	return result;
+}
+
+/**
+ * @function cf_ray3_to_aabb3
+ * @category math
+ * @brief    Raycasts against an AABB (the classic slab method).
+ * @remarks  A ray starting inside the box hits at t = 0 with a zero normal.
+ * @related  CF_Ray3 CF_Raycast3 CF_Aabb3 cf_ray3_to_sphere cf_ray3_to_plane3
+ */
+CF_INLINE CF_Raycast3 cf_ray3_to_aabb3(CF_Ray3 ray, CF_Aabb3 bb)
+{
+	CF_Raycast3 result = { 0 };
+	float tmin = 0;
+	float tmax = ray.t;
+	int axis = 0;
+	float sign = 0;
+	const float* p = &ray.p.x;
+	const float* d = &ray.d.x;
+	const float* lo = &bb.min.x;
+	const float* hi = &bb.max.x;
+	for (int i = 0; i < 3; ++i) {
+		if (cf_abs(d[i]) < 1.0e-8f) {
+			if (p[i] < lo[i] || p[i] > hi[i]) return result; // Parallel and outside the slab.
+		} else {
+			float inv = 1.0f / d[i];
+			float t0 = (lo[i] - p[i]) * inv;
+			float t1 = (hi[i] - p[i]) * inv;
+			float s = -1.0f;
+			if (t0 > t1) { float tmp = t0; t0 = t1; t1 = tmp; s = 1.0f; }
+			if (t0 > tmin) { tmin = t0; axis = i; sign = s; }
+			if (t1 < tmax) tmax = t1;
+			if (tmin > tmax) return result;
+		}
+	}
+	result.hit = true;
+	result.t = tmin;
+	if (sign != 0) {
+		float* n = &result.n.x;
+		n[axis] = sign;
+	}
+	return result;
+}
+
+/**
+ * @function cf_transform_aabb3
+ * @category math
+ * @brief    Returns the AABB of a box transformed by an affine matrix (Arvo's method).
+ * @remarks  The result bounds the transformed box, so repeated transforms accumulate slop --
+ *           transform the original local-space AABB by the full matrix each time instead of
+ *           chaining.
+ * @related  CF_Aabb3 CF_M4x4 cf_frustum_test_aabb3
+ */
+CF_INLINE CF_Aabb3 cf_transform_aabb3(CF_M4x4 m, CF_Aabb3 bb)
+{
+	CF_V3 t = cf_v3(m.elements[12], m.elements[13], m.elements[14]);
+	CF_Aabb3 out = cf_make_aabb3(t, t);
+	float* omin = &out.min.x;
+	float* omax = &out.max.x;
+	const float* bmin = &bb.min.x;
+	const float* bmax = &bb.max.x;
+	for (int r = 0; r < 3; ++r) {
+		for (int c = 0; c < 3; ++c) {
+			float e = m.elements[c * 4 + r] * bmin[c];
+			float f = m.elements[c * 4 + r] * bmax[c];
+			omin[r] += cf_min(e, f);
+			omax[r] += cf_max(e, f);
+		}
+	}
+	return out;
+}
+
+/**
+ * @function cf_frustum_from_m4
+ * @category math
+ * @brief    Extracts the six frustum planes from a combined view-projection matrix.
+ * @param    m  Typically `projection * view` from the same matrices handed to the 3d camera
+ *              stacks (`cf_perspective`/`cf_ortho` times `cf_look_at`).
+ * @remarks  Plane normals point inward and are normalized. Uses CF's clip conventions
+ *           (clip-space z in [0, 1], matching SDL_GPU and everything `cf_perspective` emits).
+ * @related  CF_Frustum cf_frustum_test_aabb3 cf_frustum_test_sphere
+ */
+CF_INLINE CF_Frustum cf_frustum_from_m4(CF_M4x4 m)
+{
+	// Gribb-Hartmann: each plane is a combination of matrix rows, adapted for z in [0, 1].
+	// Row i of the column-major matrix is (elements[i], elements[4+i], elements[8+i], elements[12+i]).
+	CF_V4 rows[4];
+	for (int i = 0; i < 4; ++i) {
+		rows[i] = cf_v4(m.elements[i], m.elements[4 + i], m.elements[8 + i], m.elements[12 + i]);
+	}
+	CF_V4 combos[6];
+	combos[0] = cf_add_v4(rows[3], rows[0]); // Left:   w + x >= 0
+	combos[1] = cf_sub_v4(rows[3], rows[0]); // Right:  w - x >= 0
+	combos[2] = cf_add_v4(rows[3], rows[1]); // Bottom: w + y >= 0
+	combos[3] = cf_sub_v4(rows[3], rows[1]); // Top:    w - y >= 0
+	combos[4] = rows[2];                     // Near:   z >= 0 (CF clips z to [0, 1]).
+	combos[5] = cf_sub_v4(rows[3], rows[2]); // Far:    w - z >= 0
+	CF_Frustum f;
+	for (int i = 0; i < 6; ++i) {
+		CF_V3 n = cf_v3(combos[i].x, combos[i].y, combos[i].z);
+		float inv_len = 1.0f / cf_len_v3(n);
+		f.planes[i].n = cf_mul_v3_f(n, inv_len);
+		f.planes[i].d = -combos[i].w * inv_len; // ax+by+cz+w >= 0 becomes dot(n, x) >= d.
+	}
+	return f;
+}
+
+/**
+ * @function cf_frustum_test_aabb3
+ * @category math
+ * @brief    Returns false only when the AABB is fully outside the frustum -- the culling test.
+ * @remarks  Conservative: a box outside the frustum but not fully behind any single plane can
+ *           still return true (the standard, cheap p-vertex test). Never culls a visible box.
+ * @related  CF_Frustum cf_frustum_from_m4 cf_frustum_test_sphere cf_transform_aabb3
+ */
+CF_INLINE bool cf_frustum_test_aabb3(const CF_Frustum* f, CF_Aabb3 bb)
+{
+	for (int i = 0; i < 6; ++i) {
+		CF_V3 n = f->planes[i].n;
+		// The p-vertex: the box corner farthest along the plane normal.
+		CF_V3 p = cf_v3(
+			n.x >= 0 ? bb.max.x : bb.min.x,
+			n.y >= 0 ? bb.max.y : bb.min.y,
+			n.z >= 0 ? bb.max.z : bb.min.z);
+		if (cf_dot_v3(n, p) < f->planes[i].d) return false;
+	}
+	return true;
+}
+
+/**
+ * @function cf_frustum_test_sphere
+ * @category math
+ * @brief    Returns false only when the sphere is fully outside the frustum.
+ * @related  CF_Frustum cf_frustum_from_m4 cf_frustum_test_aabb3
+ */
+CF_INLINE bool cf_frustum_test_sphere(const CF_Frustum* f, CF_Sphere s)
+{
+	for (int i = 0; i < 6; ++i) {
+		if (cf_distance_plane3(f->planes[i], s.p) < -s.r) return false;
+	}
+	return true;
+}
+
+#ifdef __cplusplus
+}
+#endif // __cplusplus
+
+//--------------------------------------------------------------------------------------------------
 // C++ API
 
 #ifdef CF_CPP
@@ -866,6 +1489,12 @@ using v3 = CF_V3;
 using v4 = CF_V4;
 using quat = CF_Quat;
 using m4 = CF_M4x4;
+using Ray3 = CF_Ray3;
+using Raycast3 = CF_Raycast3;
+using Aabb3 = CF_Aabb3;
+using Sphere = CF_Sphere;
+using Plane3 = CF_Plane3;
+using Frustum = CF_Frustum;
 
 CF_INLINE v3 min(v3 a, v3 b) { return cf_min_v3(a, b); }
 CF_INLINE v3 max(v3 a, v3 b) { return cf_max_v3(a, b); }
@@ -892,6 +1521,9 @@ CF_INLINE quat quat_from_axis_angle(v3 axis, float radians) { return cf_quat_fro
 CF_INLINE quat norm(quat q) { return cf_quat_norm(q); }
 CF_INLINE quat conjugate(quat q) { return cf_quat_conjugate(q); }
 CF_INLINE quat slerp(quat a, quat b, float t) { return cf_quat_slerp(a, b, t); }
+CF_INLINE quat quat_from_to(v3 from, v3 to) { return cf_quat_from_to(from, to); }
+CF_INLINE quat quat_from_basis(v3 x, v3 y, v3 z) { return cf_quat_from_basis(x, y, z); }
+CF_INLINE quat quat_from_m4(m4 m) { return cf_quat_from_m4(m); }
 CF_INLINE m4 to_m4(quat q) { return cf_quat_to_m4(q); }
 
 CF_INLINE m4 m4_identity() { return cf_m4_identity(); }
@@ -904,6 +1536,7 @@ CF_INLINE m4 m4_rotate_z(float radians) { return cf_m4_rotate_z(radians); }
 CF_INLINE m4 transpose(m4 a) { return cf_m4_transpose(a); }
 CF_INLINE m4 invert(m4 a) { return cf_m4_invert(a); }
 CF_INLINE m4 normal_matrix(m4 model) { return cf_m4_normal_matrix(model); }
+CF_INLINE void m4_decompose(m4 m, v3* translation, quat* rotation, v3* scale) { cf_m4_decompose(m, translation, rotation, scale); }
 CF_INLINE v3 transform_point(m4 m, v3 p) { return cf_m4_transform_point(m, p); }
 CF_INLINE v3 transform_dir(m4 m, v3 d) { return cf_m4_transform_dir(m, d); }
 

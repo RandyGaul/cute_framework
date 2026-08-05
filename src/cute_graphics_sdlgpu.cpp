@@ -31,12 +31,27 @@ struct CF_CanvasInternal
 	SDL_GPUSampler* sampler;
 	SDL_GPUTexture* depth_stencil;
 
+	// Rendering into a face/layer of a user-owned texture (params.attach_target): the canvas
+	// does not own its color texture, and passes address the given layer.
+	bool attached;
+	int attach_layer;
+	int attach_mip;
+	// Depth-format attach targets flip the meaning: the attach becomes the canvas's DEPTH
+	// target (shadow cubes), there is no color side at all, and the depth is borrowed.
+	bool attached_depth;
+
+	// Additional color targets for MRT ([0] unused -- the members above are target 0, kept
+	// singular so the single-target hot paths read naturally).
+	int target_count;
+	CF_Texture cf_textures_mrt[CF_MAX_CANVAS_TARGETS];
+	SDL_GPUTexture* textures_mrt[CF_MAX_CANVAS_TARGETS];
+
 	bool clear;
 
 	// Per-canvas clear overrides. Unset means "use the global cf_clear_color /
-	// cf_clear_depth_stencil", so existing code is unaffected.
-	bool has_clear_color;
-	CF_Color clear_color;
+	// cf_clear_depth_stencil", so existing code is unaffected. Indexed per color target.
+	bool has_clear_color[CF_MAX_CANVAS_TARGETS];
+	CF_Color clear_color[CF_MAX_CANVAS_TARGETS];
 	bool has_clear_depth_stencil;
 	float clear_depth;
 	uint32_t clear_stencil;
@@ -47,7 +62,8 @@ struct CF_CanvasInternal
 };
 
 // Per-canvas clear values, falling back to the globals when the canvas has no override.
-static CF_Color s_clear_color(const CF_CanvasInternal* c) { return (c && c->has_clear_color) ? c->clear_color : app->clear_color; }
+static CF_Color s_clear_color2(const CF_CanvasInternal* c, int i) { return (c && c->has_clear_color[i]) ? c->clear_color[i] : app->clear_color; }
+static CF_Color s_clear_color(const CF_CanvasInternal* c) { return s_clear_color2(c, 0); }
 static float s_clear_depth(const CF_CanvasInternal* c) { return (c && c->has_clear_depth_stencil) ? c->clear_depth : app->clear_depth; }
 static uint32_t s_clear_stencil(const CF_CanvasInternal* c) { return (c && c->has_clear_depth_stencil) ? c->clear_stencil : app->clear_stencil; }
 
@@ -61,6 +77,8 @@ struct CF_TextureInternal
 	CF_PixelFormat pixel_format;
 	SDL_GPUTextureFormat format;
 	SDL_GPUTextureSamplerBinding binding;
+	CF_TextureType type;
+	int layers; // Array layers, 3D depth, or 6 for cube maps.
 };
 
 struct CF_ReadbackInternal
@@ -77,7 +95,8 @@ struct CF_ReadbackInternal
 struct CF_PipelineKey
 {
 	// Canvas state.
-	SDL_GPUTextureFormat color_format;
+	SDL_GPUTextureFormat color_formats[CF_MAX_CANVAS_TARGETS];
+	int color_target_count;
 	SDL_GPUTextureFormat depth_format;
 	bool has_depth_stencil;
 	int sample_count;
@@ -165,6 +184,10 @@ struct CF_MeshInternal
 	CF_Buffer instances;
 	int attribute_count;
 	CF_VertexAttribute attributes[CF_MESH_MAX_VERTEX_ATTRIBUTES];
+	// True once the draw3d layer has appended its reserved instance attributes and installed
+	// its own instance buffer. Lives on the mesh (not in the draw layer) so a destroyed handle
+	// reused for a new mesh can never inherit a stale classification.
+	bool draw3d_augmented;
 };
 
 static struct
@@ -178,6 +201,9 @@ static struct
 	int msaa_sample_count;
 	CF_CanvasInternal* canvas;
 	SDL_GPUSampler* sampler_override;
+	SDL_GPUBuffer* instance_override;   // Draw3d baked lists / staged uploads: replaces the
+	int instance_override_count;        // applied mesh's instance buffer for exactly one draw,
+	int instance_override_offset;       // bound at this byte offset (a slice of a shared buffer).
 	SDL_GPURenderPass* active_pass;
 } g_ctx = { };
 
@@ -544,6 +570,14 @@ static inline CF_Texture s_make_texture(CF_TextureParams params, CF_SampleCount 
 	tex_info.width = (Uint32)params.width;
 	tex_info.height = (Uint32)params.height;
 	tex_info.format = s_wrap(params.pixel_format);
+	int layers = 1;
+	switch (params.texture_type) {
+	case CF_TEXTURE_TYPE_CUBE:     tex_info.type = SDL_GPU_TEXTURETYPE_CUBE;     layers = 6; break;
+	case CF_TEXTURE_TYPE_3D:       tex_info.type = SDL_GPU_TEXTURETYPE_3D;       layers = cf_max(params.layer_count, 1); break;
+	case CF_TEXTURE_TYPE_2D_ARRAY: tex_info.type = SDL_GPU_TEXTURETYPE_2D_ARRAY; layers = cf_max(params.layer_count, 1); break;
+	default: break;
+	}
+	tex_info.layer_count_or_depth = (Uint32)layers;
 
 	// Not allowed to sample from MSAA textures.
 	tex_info.usage = sample_count == CF_SAMPLE_COUNT_1 ? params.usage : (params.usage & ~(SDL_GPU_TEXTUREUSAGE_SAMPLER));
@@ -561,8 +595,9 @@ static inline CF_Texture s_make_texture(CF_TextureParams params, CF_SampleCount 
 
 	SDL_GPUSampler* sampler = NULL;
 	// Depth/stencil textures don't need their own sampler, as the associated color
-	// texture in the owning canvas already has a sampler attached.
-	if (!s_is_depth(params.pixel_format)) {
+	// texture in the owning canvas already has a sampler attached -- except comparison
+	// (shadow) samplers, which exist precisely to sample a depth texture.
+	if (!s_is_depth(params.pixel_format) || params.compare_enable) {
 		SDL_GPUSamplerCreateInfo sampler_info = SDL_GPUSamplerCreateInfoDefaults();
 		sampler_info.mip_lod_bias = params.mip_lod_bias;
 		sampler_info.max_anisotropy = params.max_anisotropy;
@@ -571,6 +606,12 @@ static inline CF_Texture s_make_texture(CF_TextureParams params, CF_SampleCount 
 		sampler_info.mipmap_mode = s_wrap(params.mip_filter);
 		sampler_info.address_mode_u = s_wrap(params.wrap_u);
 		sampler_info.address_mode_v = s_wrap(params.wrap_v);
+		if (params.compare_enable) {
+			// Comparison (shadow) sampling: each fetch compares the reference against the
+			// texel, pairing with sampler2DShadow in the shader.
+			sampler_info.enable_compare = true;
+			sampler_info.compare_op = s_wrap(params.compare_function);
+		}
 		sampler = SDL_CreateGPUSampler(g_ctx.device, &sampler_info);
 		CF_ASSERT(sampler);
 		if (!sampler) {
@@ -598,6 +639,8 @@ static inline CF_Texture s_make_texture(CF_TextureParams params, CF_SampleCount 
 	tex_internal->buf = buf;
 	tex_internal->sampler = sampler;
 	tex_internal->pixel_format = params.pixel_format;
+	tex_internal->type = params.texture_type;
+	tex_internal->layers = layers;
 	tex_internal->format = tex_info.format;
 	tex_internal->binding.texture = tex;
 	tex_internal->binding.sampler = sampler;
@@ -1072,6 +1115,52 @@ void cf_sdlgpu_texture_update(CF_Texture texture_handle, void* data, int size)
 	if (!g_ctx.cmd) SDL_SubmitGPUCommandBuffer(cmd);
 }
 
+void cf_sdlgpu_texture_update_layer_mip(CF_Texture texture_handle, void* data, int size, int layer, int mip_level)
+{
+	s_end_active_pass();
+	CF_TextureInternal* tex = (CF_TextureInternal*)texture_handle.id;
+	// 3D textures shrink in depth per mip; cube/array layer counts stay constant.
+	int layers_at_mip = tex && tex->type == CF_TEXTURE_TYPE_3D ? cf_max(tex->layers >> mip_level, 1) : (tex ? tex->layers : 0);
+	if (!tex || layer < 0 || layer >= layers_at_mip) return;
+
+	SDL_GPUTransferBufferCreateInfo tbuf_info = {
+		.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD,
+		.size = (Uint32)size,
+		.props = 0,
+	};
+	SDL_GPUTransferBuffer* buf = SDL_CreateGPUTransferBuffer(g_ctx.device, &tbuf_info);
+	void* p = SDL_MapGPUTransferBuffer(g_ctx.device, buf, true);
+	CF_MEMCPY(p, data, size);
+	SDL_UnmapGPUTransferBuffer(g_ctx.device, buf);
+
+	SDL_GPUCommandBuffer* cmd = g_ctx.cmd ? g_ctx.cmd : SDL_AcquireGPUCommandBuffer(g_ctx.device);
+	SDL_GPUCopyPass* pass = SDL_BeginGPUCopyPass(cmd);
+	SDL_GPUTextureTransferInfo src;
+	src.transfer_buffer = buf;
+	src.offset = 0;
+	src.pixels_per_row = 0;
+	src.rows_per_layer = 0;
+	int w = cf_max(tex->w >> mip_level, 1);
+	int h = cf_max(tex->h >> mip_level, 1);
+	SDL_GPUTextureRegion dst = SDL_GPUTextureRegionDefaults(tex, w, h);
+	// Cube faces and array layers address by layer; 3D slices address by z.
+	if (tex->type == CF_TEXTURE_TYPE_3D) dst.z = (Uint32)layer;
+	else dst.layer = (Uint32)layer;
+	dst.d = 1;
+	dst.mip_level = (Uint32)mip_level;
+	// cycle = false, unlike whole-texture updates: cycling swaps the texture's backing
+	// memory, which would discard the faces/layers/mips uploaded just before this one.
+	SDL_UploadToGPUTexture(pass, &src, &dst, false);
+	SDL_EndGPUCopyPass(pass);
+	SDL_ReleaseGPUTransferBuffer(g_ctx.device, buf);
+	if (!g_ctx.cmd) SDL_SubmitGPUCommandBuffer(cmd);
+}
+
+void cf_sdlgpu_texture_update_layer(CF_Texture texture_handle, void* data, int size, int layer)
+{
+	cf_sdlgpu_texture_update_layer_mip(texture_handle, data, size, layer, 0);
+}
+
 void cf_sdlgpu_texture_update_mip(CF_Texture texture_handle, void* data, int size, int mip_level)
 {
 	s_end_active_pass();
@@ -1108,9 +1197,72 @@ void cf_sdlgpu_texture_update_mip(CF_Texture texture_handle, void* data, int siz
 	src.rows_per_layer = 0;
 	SDL_GPUTextureRegion dst = SDL_GPUTextureRegionDefaults(tex, w, h);
 	dst.mip_level = (Uint32)mip_level;
-	SDL_UploadToGPUTexture(pass, &src, &dst, true);
+	// cycle = false: cycling swaps the texture's whole backing store, which would discard
+	// every OTHER mip level (same reasoning as cf_texture_update_layer_mip above).
+	SDL_UploadToGPUTexture(pass, &src, &dst, false);
 	SDL_EndGPUCopyPass(pass);
 	if (!tex->buf) SDL_ReleaseGPUTransferBuffer(g_ctx.device, buf);
+	if (!g_ctx.cmd) SDL_SubmitGPUCommandBuffer(cmd);
+}
+
+void cf_sdlgpu_texture_update_region(CF_Texture texture_handle, int x, int y, int w, int h, void* pixels)
+{
+	s_end_active_pass();
+	CF_TextureInternal* tex = (CF_TextureInternal*)texture_handle.id;
+	int size = w * h * (int)SDL_GPUTextureFormatTexelBlockSize(tex->format);
+
+	// Region updates always use a throwaway transfer buffer -- the texture's cached one (if
+	// any) is sized for whole-texture updates.
+	SDL_GPUTransferBufferCreateInfo tbuf_info = {
+		.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD,
+		.size = (Uint32)size,
+		.props = 0,
+	};
+	SDL_GPUTransferBuffer* buf = SDL_CreateGPUTransferBuffer(g_ctx.device, &tbuf_info);
+	void* p = SDL_MapGPUTransferBuffer(g_ctx.device, buf, true);
+	CF_MEMCPY(p, pixels, size);
+	SDL_UnmapGPUTransferBuffer(g_ctx.device, buf);
+
+	SDL_GPUCommandBuffer* cmd = g_ctx.cmd ? g_ctx.cmd : SDL_AcquireGPUCommandBuffer(g_ctx.device);
+	SDL_GPUCopyPass* pass = SDL_BeginGPUCopyPass(cmd);
+	SDL_GPUTextureTransferInfo src;
+	src.transfer_buffer = buf;
+	src.offset = 0;
+	// SDL_GPU: 0 means tightly packed, inferred from the texture region dimensions.
+	src.pixels_per_row = 0;
+	src.rows_per_layer = 0;
+	SDL_GPUTextureRegion dst = SDL_GPUTextureRegionDefaults(tex, w, h);
+	dst.x = (Uint32)x;
+	dst.y = (Uint32)y;
+	// cycle = false: region updates compose one texture across several uploads/copies, and
+	// cycling would discard the regions written just before this one.
+	SDL_UploadToGPUTexture(pass, &src, &dst, false);
+	SDL_EndGPUCopyPass(pass);
+	SDL_ReleaseGPUTransferBuffer(g_ctx.device, buf);
+	if (!g_ctx.cmd) SDL_SubmitGPUCommandBuffer(cmd);
+}
+
+void cf_sdlgpu_texture_copy_region(CF_Texture dst_handle, int dst_x, int dst_y, CF_Texture src_handle, int src_x, int src_y, int w, int h)
+{
+	s_end_active_pass();
+	CF_TextureInternal* dst_tex = (CF_TextureInternal*)dst_handle.id;
+	CF_TextureInternal* src_tex = (CF_TextureInternal*)src_handle.id;
+
+	SDL_GPUCommandBuffer* cmd = g_ctx.cmd ? g_ctx.cmd : SDL_AcquireGPUCommandBuffer(g_ctx.device);
+	SDL_GPUCopyPass* pass = SDL_BeginGPUCopyPass(cmd);
+	SDL_GPUTextureLocation src;
+	CF_MEMSET(&src, 0, sizeof(src));
+	src.texture = src_tex->tex;
+	src.x = (Uint32)src_x;
+	src.y = (Uint32)src_y;
+	SDL_GPUTextureLocation dst;
+	CF_MEMSET(&dst, 0, sizeof(dst));
+	dst.texture = dst_tex->tex;
+	dst.x = (Uint32)dst_x;
+	dst.y = (Uint32)dst_y;
+	// cycle = false for the same reason as region uploads: many copies compose one texture.
+	SDL_CopyGPUTextureToTexture(pass, &src, &dst, (Uint32)w, (Uint32)h, 1, false);
+	SDL_EndGPUCopyPass(pass);
 	if (!g_ctx.cmd) SDL_SubmitGPUCommandBuffer(cmd);
 }
 
@@ -1173,9 +1325,63 @@ void cf_sdlgpu_destroy_shader_internal(CF_Shader shader_handle)
 	CF_FREE(shd);
 }
 
+static bool s_sdl_format_is_depth(SDL_GPUTextureFormat format)
+{
+	switch (format) {
+	case SDL_GPU_TEXTUREFORMAT_D16_UNORM:
+	case SDL_GPU_TEXTUREFORMAT_D24_UNORM:
+	case SDL_GPU_TEXTUREFORMAT_D32_FLOAT:
+	case SDL_GPU_TEXTUREFORMAT_D24_UNORM_S8_UINT:
+	case SDL_GPU_TEXTUREFORMAT_D32_FLOAT_S8_UINT: return true;
+	default: return false;
+	}
+}
+
 CF_Canvas cf_sdlgpu_make_canvas(CF_CanvasParams params)
 {
 	CF_CanvasInternal* canvas = (CF_CanvasInternal*)CF_CALLOC(sizeof(CF_CanvasInternal));
+	if (params.attach_target.id) {
+		// Render into one face/layer of an existing texture; the canvas owns nothing color-side.
+		CF_TextureInternal* attach = (CF_TextureInternal*)params.attach_target.id;
+		if (s_sdl_format_is_depth(attach->format)) {
+			// A depth-format attach becomes the canvas's DEPTH target: a depth-only pass with
+			// no color side at all -- the shadow-cube case (render each face of a depth cube,
+			// then sample it with samplerCubeShadow).
+			canvas->attached = true; // Owns nothing: color side absent, depth side borrowed.
+			canvas->attached_depth = true;
+			canvas->attach_layer = params.attach_layer;
+			canvas->attach_mip = params.attach_mip;
+			canvas->w = cf_max(attach->w >> params.attach_mip, 1);
+			canvas->h = cf_max(attach->h >> params.attach_mip, 1);
+			canvas->sample_count = CF_SAMPLE_COUNT_1;
+			canvas->cf_depth_stencil = params.attach_target;
+			canvas->depth_stencil = attach->tex;
+			CF_Canvas result;
+			result.id = (uint64_t)canvas;
+			return result;
+		}
+		canvas->attached = true;
+		canvas->attach_layer = params.attach_layer;
+		canvas->attach_mip = params.attach_mip;
+		canvas->w = cf_max(attach->w >> params.attach_mip, 1);
+		canvas->h = cf_max(attach->h >> params.attach_mip, 1);
+		canvas->cf_texture = params.attach_target;
+		canvas->texture = attach->tex;
+		canvas->sampler = attach->sampler;
+		canvas->sample_count = CF_SAMPLE_COUNT_1;
+		if (params.depth_stencil_enable) {
+			CF_TextureParams dsp = params.depth_stencil_target;
+			dsp.width = canvas->w;
+			dsp.height = canvas->h;
+			canvas->cf_depth_stencil = s_make_texture(dsp, CF_SAMPLE_COUNT_1);
+			if (canvas->cf_depth_stencil.id) {
+				canvas->depth_stencil = ((CF_TextureInternal*)canvas->cf_depth_stencil.id)->tex;
+			}
+		}
+		CF_Canvas result;
+		result.id = (uint64_t)canvas;
+		return result;
+	}
 	if (params.target.width > 0 && params.target.height > 0) {
 		canvas->w = params.target.width;
 		canvas->h = params.target.height;
@@ -1184,6 +1390,17 @@ CF_Canvas cf_sdlgpu_make_canvas(CF_CanvasParams params)
 		if (canvas->cf_texture.id) {
 			canvas->texture = ((CF_TextureInternal*)canvas->cf_texture.id)->tex;
 			canvas->sampler = ((CF_TextureInternal*)canvas->cf_texture.id)->sampler;
+		}
+		// Additional MRT color targets. MSAA is restricted to single-target canvases for now
+		// (per-target resolve plumbing isn't worth it until someone needs it).
+		canvas->target_count = params.target_count > 1 ? params.target_count : 1;
+		if (canvas->target_count > CF_MAX_CANVAS_TARGETS) canvas->target_count = CF_MAX_CANVAS_TARGETS;
+		CF_ASSERT(canvas->target_count == 1 || params.sample_count == CF_SAMPLE_COUNT_1);
+		for (int i = 1; i < canvas->target_count; ++i) {
+			canvas->cf_textures_mrt[i] = s_make_texture(params.targets[i], params.sample_count);
+			if (canvas->cf_textures_mrt[i].id) {
+				canvas->textures_mrt[i] = ((CF_TextureInternal*)canvas->cf_textures_mrt[i].id)->tex;
+			}
 		}
 		if (params.depth_stencil_enable) {
 			canvas->cf_depth_stencil = s_make_texture(params.depth_stencil_target, params.sample_count);
@@ -1223,13 +1440,20 @@ void cf_sdlgpu_clear_canvas(CF_Canvas canvas_handle)
 	CF_CanvasInternal* canvas = (CF_CanvasInternal*)canvas_handle.id;
 	SDL_GPUCommandBuffer* cmd = g_ctx.cmd ? g_ctx.cmd : SDL_AcquireGPUCommandBuffer(g_ctx.device);
 
-	SDL_GPUColorTargetInfo color_info = {
-		.texture = canvas->texture,
-		.clear_color = { s_clear_color(canvas).r, s_clear_color(canvas).g, s_clear_color(canvas).b, s_clear_color(canvas).a },
-		.load_op = SDL_GPU_LOADOP_CLEAR,
-		.store_op = SDL_GPU_STOREOP_STORE,
-		.cycle = true,
-	};
+	SDL_GPUColorTargetInfo color_infos[CF_MAX_CANVAS_TARGETS] = { };
+	int target_count = canvas->attached_depth ? 0 : (canvas->target_count > 1 ? canvas->target_count : 1);
+	for (int i = 0; i < target_count; ++i) {
+		CF_Color cc = s_clear_color2(canvas, i);
+		color_infos[i].texture = i == 0 ? canvas->texture : canvas->textures_mrt[i];
+		color_infos[i].clear_color = { cc.r, cc.g, cc.b, cc.a };
+		color_infos[i].load_op = SDL_GPU_LOADOP_CLEAR;
+		color_infos[i].store_op = SDL_GPU_STOREOP_STORE;
+		color_infos[i].cycle = canvas->attached ? false : true; // Never cycle a shared texture.
+		if (canvas->attached) {
+			color_infos[i].layer_or_depth_plane = (Uint32)canvas->attach_layer;
+			color_infos[i].mip_level = (Uint32)canvas->attach_mip;
+		}
+	}
 	SDL_GPUDepthStencilTargetInfo depth_stencil_info = {
 		.texture = canvas->depth_stencil,
 		.clear_depth = s_clear_depth(canvas),
@@ -1237,10 +1461,12 @@ void cf_sdlgpu_clear_canvas(CF_Canvas canvas_handle)
 		.store_op = SDL_GPU_STOREOP_STORE,
 		.stencil_load_op = SDL_GPU_LOADOP_CLEAR,
 		.stencil_store_op = SDL_GPU_STOREOP_STORE,
-		.cycle = true,
+		.cycle = canvas->attached_depth ? false : true,
 		.clear_stencil = (Uint8)s_clear_stencil(canvas),
+		.mip_level = (Uint8)(canvas->attached_depth ? canvas->attach_mip : 0),
+		.layer = (Uint8)(canvas->attached_depth ? canvas->attach_layer : 0),
 	};
-	SDL_GPURenderPass* renderPass = SDL_BeginGPURenderPass(cmd, &color_info, 1, canvas->depth_stencil ? &depth_stencil_info : NULL);
+	SDL_GPURenderPass* renderPass = SDL_BeginGPURenderPass(cmd, color_infos, (Uint32)target_count, canvas->depth_stencil ? &depth_stencil_info : NULL);
 	SDL_EndGPURenderPass(renderPass);
 	canvas->clear = false;
 
@@ -1250,9 +1476,12 @@ void cf_sdlgpu_clear_canvas(CF_Canvas canvas_handle)
 void cf_sdlgpu_destroy_canvas(CF_Canvas canvas_handle)
 {
 	CF_CanvasInternal* canvas = (CF_CanvasInternal*)canvas_handle.id;
-		cf_sdlgpu_destroy_texture(canvas->cf_texture);
+		if (!canvas->attached) cf_sdlgpu_destroy_texture(canvas->cf_texture);
+		for (int i = 1; i < canvas->target_count; ++i) {
+			if (canvas->cf_textures_mrt[i].id) cf_sdlgpu_destroy_texture(canvas->cf_textures_mrt[i]);
+		}
 		if (canvas->resolve_texture) cf_sdlgpu_destroy_texture(canvas->cf_resolve_texture);
-		if (canvas->depth_stencil) cf_sdlgpu_destroy_texture(canvas->cf_depth_stencil);
+		if (canvas->depth_stencil && !canvas->attached_depth) cf_sdlgpu_destroy_texture(canvas->cf_depth_stencil);
 	CF_FREE(canvas);
 }
 
@@ -1262,24 +1491,40 @@ CF_Texture cf_sdlgpu_canvas_get_target(CF_Canvas canvas_handle)
 	return canvas->resolve_texture ? canvas->cf_resolve_texture : canvas->cf_texture;
 }
 
+CF_Texture cf_sdlgpu_canvas_get_target2(CF_Canvas canvas_handle, int index)
+{
+	CF_CanvasInternal* canvas = (CF_CanvasInternal*)canvas_handle.id;
+	if (!canvas || index < 0 || index >= (canvas->target_count > 1 ? canvas->target_count : 1)) return { 0 };
+	if (index == 0) return cf_sdlgpu_canvas_get_target(canvas_handle);
+	return canvas->cf_textures_mrt[index];
+}
+
 CF_Texture cf_sdlgpu_canvas_get_depth_stencil_target(CF_Canvas canvas_handle)
 {
 	CF_CanvasInternal* canvas = (CF_CanvasInternal*)canvas_handle.id;
 	return canvas->cf_depth_stencil;
 }
 
-CF_Readback cf_sdlgpu_canvas_readback(CF_Canvas canvas_handle)
+CF_Readback cf_sdlgpu_canvas_readback2(CF_Canvas canvas_handle, int index)
 {
 	CF_CanvasInternal* canvas = (CF_CanvasInternal*)canvas_handle.id;
 	if (!canvas) return { 0 };
+	if (index < 0 || index >= (canvas->target_count > 1 ? canvas->target_count : 1)) return { 0 };
 
 	s_end_active_pass();
 
 	// Pick source texture: resolve_texture for MSAA canvases, texture for non-MSAA.
-	SDL_GPUTexture* src_texture = canvas->resolve_texture ? canvas->resolve_texture : canvas->texture;
-	CF_TextureInternal* tex_internal = canvas->resolve_texture
-		? (CF_TextureInternal*)canvas->cf_resolve_texture.id
-		: (CF_TextureInternal*)canvas->cf_texture.id;
+	SDL_GPUTexture* src_texture = index == 0
+		? (canvas->resolve_texture ? canvas->resolve_texture : canvas->texture)
+		: canvas->textures_mrt[index];
+	CF_TextureInternal* tex_internal = index == 0
+		? (canvas->resolve_texture
+			? (CF_TextureInternal*)canvas->cf_resolve_texture.id
+			: (CF_TextureInternal*)canvas->cf_texture.id)
+		: (CF_TextureInternal*)canvas->cf_textures_mrt[index].id;
+	// Depth-only attach canvases (a shadow cube face, say) have no color texture at all;
+	// reading them back through the color path would dereference NULL.
+	if (!src_texture || !tex_internal) return { 0 };
 
 	int texel_size = (int)SDL_GPUTextureFormatTexelBlockSize(tex_internal->format);
 	int total_size = canvas->w * canvas->h * texel_size;
@@ -1435,6 +1680,121 @@ void cf_sdlgpu_mesh_set_index_buffer(CF_Mesh mesh_handle, int index_buffer_size_
 		.props = 0,
 	};
 	mesh->indices.transfer_buffer = SDL_CreateGPUTransferBuffer(g_ctx.device, &tbuf_info);
+}
+
+void cf_sdlgpu_mesh_append_attributes(CF_Mesh mesh_handle, const CF_VertexAttribute* attributes, int attribute_count)
+{
+	CF_MeshInternal* mesh = (CF_MeshInternal*)mesh_handle.id;
+	for (int i = 0; i < attribute_count && mesh->attribute_count < CF_MESH_MAX_VERTEX_ATTRIBUTES; ++i) {
+		CF_VertexAttribute attr = attributes[i];
+		attr.name = sintern(attr.name);
+		mesh->attributes[mesh->attribute_count++] = attr;
+	}
+}
+
+static inline void s_update_buffer(CF_Buffer* buffer, int element_count, void* data, int size, SDL_GPUBufferUsageFlags flags);
+
+// Standalone instance buffers (draw3d baked lists). Just a CF_Buffer without a mesh.
+struct CF_InstanceBufferInternal
+{
+	CF_Buffer buf;
+};
+
+uint64_t cf_sdlgpu_make_instance_buffer(int size_in_bytes, int stride)
+{
+	CF_InstanceBufferInternal* b = (CF_InstanceBufferInternal*)CF_CALLOC(sizeof(CF_InstanceBufferInternal));
+	b->buf.size = size_in_bytes;
+	b->buf.stride = stride;
+	SDL_GPUBufferCreateInfo buf_info = {
+		.usage = SDL_GPU_BUFFERUSAGE_VERTEX,
+		.size = (Uint32)size_in_bytes,
+		.props = 0,
+	};
+	b->buf.buffer = SDL_CreateGPUBuffer(g_ctx.device, &buf_info);
+	SDL_GPUTransferBufferCreateInfo tbuf_info = {
+		.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD,
+		.size = (Uint32)size_in_bytes,
+		.props = 0,
+	};
+	b->buf.transfer_buffer = SDL_CreateGPUTransferBuffer(g_ctx.device, &tbuf_info);
+	return (uint64_t)(uintptr_t)b;
+}
+
+void cf_sdlgpu_update_instance_buffer(uint64_t handle, void* data, int count)
+{
+	CF_InstanceBufferInternal* b = (CF_InstanceBufferInternal*)(uintptr_t)handle;
+	s_update_buffer(&b->buf, count, data, count * b->buf.stride, SDL_GPU_BUFFERUSAGE_VERTEX);
+}
+
+void cf_sdlgpu_destroy_instance_buffer(uint64_t handle)
+{
+	CF_InstanceBufferInternal* b = (CF_InstanceBufferInternal*)(uintptr_t)handle;
+	if (!b) return;
+	if (b->buf.buffer) SDL_ReleaseGPUBuffer(g_ctx.device, b->buf.buffer);
+	if (b->buf.transfer_buffer) SDL_ReleaseGPUTransferBuffer(g_ctx.device, b->buf.transfer_buffer);
+	CF_FREE(b);
+}
+
+void cf_sdlgpu_apply_instance_buffer_override(uint64_t handle, int count, int offset_bytes)
+{
+	CF_InstanceBufferInternal* b = (CF_InstanceBufferInternal*)(uintptr_t)handle;
+	g_ctx.instance_override = b ? b->buf.buffer : NULL;
+	g_ctx.instance_override_count = b ? count : 0;
+	g_ctx.instance_override_offset = b ? offset_bytes : 0;
+}
+
+CF_Sampler cf_sdlgpu_make_sampler(CF_SamplerParams params)
+{
+	SDL_GPUSamplerCreateInfo info;
+	CF_MEMSET(&info, 0, sizeof(info));
+	info.min_filter = s_wrap(params.filter);
+	info.mag_filter = s_wrap(params.filter);
+	info.mipmap_mode = s_wrap(params.mip_filter);
+	info.address_mode_u = s_wrap(params.wrap_u);
+	info.address_mode_v = s_wrap(params.wrap_v);
+	info.address_mode_w = s_wrap(params.wrap_w);
+	info.mip_lod_bias = params.mip_lod_bias;
+	info.enable_anisotropy = params.max_anisotropy > 1;
+	info.max_anisotropy = (float)params.max_anisotropy;
+	info.enable_compare = params.compare_enable;
+	info.compare_op = s_wrap(params.compare_function);
+	info.min_lod = params.min_lod;
+	info.max_lod = params.max_lod;
+	CF_Sampler result;
+	result.id = (uint64_t)SDL_CreateGPUSampler(g_ctx.device, &info);
+	return result;
+}
+
+void cf_sdlgpu_destroy_sampler(CF_Sampler sampler)
+{
+	if (sampler.id) SDL_ReleaseGPUSampler(g_ctx.device, (SDL_GPUSampler*)sampler.id);
+}
+
+bool cf_sdlgpu_mesh_has_vertex_attribute(CF_Mesh mesh_handle, const char* name)
+{
+	CF_MeshInternal* mesh = (CF_MeshInternal*)mesh_handle.id;
+	for (int i = 0; i < mesh->attribute_count; ++i) {
+		if (!CF_STRCMP(mesh->attributes[i].name, name)) return true;
+	}
+	return false;
+}
+
+int cf_sdlgpu_mesh_instance_stride(CF_Mesh mesh_handle)
+{
+	CF_MeshInternal* mesh = (CF_MeshInternal*)mesh_handle.id;
+	return mesh->instances.stride;
+}
+
+bool cf_sdlgpu_mesh_draw3d_augmented(CF_Mesh mesh_handle)
+{
+	CF_MeshInternal* mesh = (CF_MeshInternal*)mesh_handle.id;
+	return mesh->draw3d_augmented;
+}
+
+void cf_sdlgpu_mesh_set_draw3d_augmented(CF_Mesh mesh_handle)
+{
+	CF_MeshInternal* mesh = (CF_MeshInternal*)mesh_handle.id;
+	mesh->draw3d_augmented = true;
 }
 
 void cf_sdlgpu_mesh_set_instance_buffer(CF_Mesh mesh_handle, int instance_buffer_size_in_bytes, int instance_stride)
@@ -1653,28 +2013,46 @@ static inline void s_copy_uniforms(SDL_GPUCommandBuffer* cmd, CF_Arena* arena, C
 static inline SDL_GPUGraphicsPipeline* s_build_pipeline(CF_ShaderInternal* shader, CF_RenderState* state, CF_MeshInternal* mesh)
 {
 	CF_TextureInternal* tex = (CF_TextureInternal*)g_ctx.canvas->cf_texture.id;
-	SDL_GPUColorTargetDescription color_info;
-	CF_MEMSET(&color_info, 0, sizeof(color_info));
-	CF_ASSERT(g_ctx.canvas->texture);
-	color_info.format = tex->format;
-	color_info.blend_state.enable_blend = state->blend.enabled;
-	color_info.blend_state.alpha_blend_op = s_wrap(state->blend.alpha_op);
-	color_info.blend_state.color_blend_op = s_wrap(state->blend.rgb_op);
-	color_info.blend_state.src_color_blendfactor = s_wrap(state->blend.rgb_src_blend_factor);
-	color_info.blend_state.src_alpha_blendfactor = s_wrap(state->blend.alpha_src_blend_factor);
-	color_info.blend_state.dst_color_blendfactor = s_wrap(state->blend.rgb_dst_blend_factor);
-	color_info.blend_state.dst_alpha_blendfactor = s_wrap(state->blend.alpha_dst_blend_factor);
-	int mask_r = (int)state->blend.write_R_enabled << 0;
-	int mask_g = (int)state->blend.write_G_enabled << 1;
-	int mask_b = (int)state->blend.write_B_enabled << 2;
-	int mask_a = (int)state->blend.write_A_enabled << 3;
-	color_info.blend_state.color_write_mask = (uint32_t)(mask_r | mask_g | mask_b | mask_a);
+	int color_target_count = g_ctx.canvas->attached_depth ? 0 : (g_ctx.canvas->target_count > 1 ? g_ctx.canvas->target_count : 1);
+	SDL_GPUColorTargetDescription color_infos[CF_MAX_CANVAS_TARGETS];
+	CF_MEMSET(color_infos, 0, sizeof(color_infos));
+	SDL_GPUColorTargetDescription& color_info = color_infos[0];
+	if (color_target_count) {
+		CF_ASSERT(g_ctx.canvas->texture);
+		color_info.format = tex->format;
+	}
+	auto fill_blend = [](SDL_GPUColorTargetDescription* info, const CF_BlendState* blend) {
+		info->blend_state.enable_blend = blend->enabled;
+		info->blend_state.alpha_blend_op = s_wrap(blend->alpha_op);
+		info->blend_state.color_blend_op = s_wrap(blend->rgb_op);
+		info->blend_state.src_color_blendfactor = s_wrap(blend->rgb_src_blend_factor);
+		info->blend_state.src_alpha_blendfactor = s_wrap(blend->alpha_src_blend_factor);
+		info->blend_state.dst_color_blendfactor = s_wrap(blend->rgb_dst_blend_factor);
+		info->blend_state.dst_alpha_blendfactor = s_wrap(blend->alpha_dst_blend_factor);
+		int mask_r = (int)blend->write_R_enabled << 0;
+		int mask_g = (int)blend->write_G_enabled << 1;
+		int mask_b = (int)blend->write_B_enabled << 2;
+		int mask_a = (int)blend->write_A_enabled << 3;
+		info->blend_state.color_write_mask = (uint32_t)(mask_r | mask_g | mask_b | mask_a);
+		// SDL_GPU ignores color_write_mask (writes all channels) unless this is set -- without
+		// it CF's write_*_enabled flags silently did nothing on this backend.
+		info->blend_state.enable_color_write_mask = info->blend_state.color_write_mask != 0xF;
+	};
+	fill_blend(&color_info, &state->blend);
+
+	// Later targets take their own blend when the render state carries one (blend_count > i);
+	// otherwise they share target 0's, the pre-per-target behavior. Formats come from each
+	// target's texture.
+	for (int i = 1; i < color_target_count; ++i) {
+		fill_blend(&color_infos[i], state->blend_count > i ? &state->blends[i] : &state->blend);
+		color_infos[i].format = ((CF_TextureInternal*)g_ctx.canvas->cf_textures_mrt[i].id)->format;
+	}
 
 	SDL_GPUGraphicsPipelineCreateInfo pip_info;
 	CF_MEMSET(&pip_info, 0, sizeof(pip_info));
 	pip_info.primitive_type = s_wrap(state->primitive_type);
-	pip_info.target_info.num_color_targets = 1;
-	pip_info.target_info.color_target_descriptions = &color_info;
+	pip_info.target_info.num_color_targets = (Uint32)color_target_count;
+	pip_info.target_info.color_target_descriptions = color_infos;
 	pip_info.vertex_shader = shader->vs;
 	pip_info.fragment_shader = shader->fs;
 	// Always declare depth-stencil target if the canvas has one, regardless of whether
@@ -1776,8 +2154,11 @@ static CF_PipelineKey s_make_pipeline_key(CF_RenderState* state, CF_MeshInternal
 	CF_MEMSET(&key, 0, sizeof(key));
 
 	// Canvas state.
-	CF_TextureInternal* tex = (CF_TextureInternal*)g_ctx.canvas->cf_texture.id;
-	key.color_format = tex->format;
+	key.color_target_count = g_ctx.canvas->attached_depth ? 0 : (g_ctx.canvas->target_count > 1 ? g_ctx.canvas->target_count : 1);
+	for (int i = 0; i < key.color_target_count; ++i) {
+		CF_TextureInternal* tex_i = (CF_TextureInternal*)(i == 0 ? g_ctx.canvas->cf_texture.id : g_ctx.canvas->cf_textures_mrt[i].id);
+		key.color_formats[i] = tex_i->format;
+	}
 	key.sample_count = (int)g_ctx.canvas->sample_count;
 	CF_TextureInternal* depth_texture = g_ctx.canvas->depth_stencil ? (CF_TextureInternal*)g_ctx.canvas->cf_depth_stencil.id : NULL;
 	if (depth_texture) {
@@ -1842,18 +2223,26 @@ void cf_sdlgpu_apply_shader(CF_Shader shader_handle, CF_Material material_handle
 	// Begin a new render pass if needed, or reuse the active one.
 	SDL_GPURenderPass* pass = g_ctx.active_pass;
 	if (!pass) {
-		SDL_GPUColorTargetInfo pass_color_info;
-		CF_MEMSET(&pass_color_info, 0, sizeof(pass_color_info));
-		pass_color_info.texture = g_ctx.canvas->texture;
-		CF_Color cc = s_clear_color(g_ctx.canvas);
-		pass_color_info.clear_color = { cc.r, cc.g, cc.b, cc.a };
-		pass_color_info.load_op = g_ctx.canvas->clear ? SDL_GPU_LOADOP_CLEAR : SDL_GPU_LOADOP_LOAD;
-		pass_color_info.cycle = g_ctx.canvas->clear ? true : false;
-		if (g_ctx.canvas->sample_count == CF_SAMPLE_COUNT_1) {
-			pass_color_info.store_op = SDL_GPU_STOREOP_STORE;
-		} else {
-			pass_color_info.store_op = SDL_GPU_STOREOP_RESOLVE_AND_STORE;
-			pass_color_info.resolve_texture = g_ctx.canvas->resolve_texture;
+		int pass_target_count = g_ctx.canvas->attached_depth ? 0 : (g_ctx.canvas->target_count > 1 ? g_ctx.canvas->target_count : 1);
+		SDL_GPUColorTargetInfo pass_color_infos[CF_MAX_CANVAS_TARGETS];
+		CF_MEMSET(pass_color_infos, 0, sizeof(pass_color_infos));
+		for (int i = 0; i < pass_target_count; ++i) {
+			SDL_GPUColorTargetInfo& pass_color_info = pass_color_infos[i];
+			pass_color_info.texture = i == 0 ? g_ctx.canvas->texture : g_ctx.canvas->textures_mrt[i];
+			CF_Color cc = s_clear_color2(g_ctx.canvas, i);
+			pass_color_info.clear_color = { cc.r, cc.g, cc.b, cc.a };
+			pass_color_info.load_op = g_ctx.canvas->clear ? SDL_GPU_LOADOP_CLEAR : SDL_GPU_LOADOP_LOAD;
+			pass_color_info.cycle = (g_ctx.canvas->clear && !g_ctx.canvas->attached) ? true : false;
+			if (g_ctx.canvas->attached) {
+				pass_color_info.layer_or_depth_plane = (Uint32)g_ctx.canvas->attach_layer;
+				pass_color_info.mip_level = (Uint32)g_ctx.canvas->attach_mip;
+			}
+			if (g_ctx.canvas->sample_count == CF_SAMPLE_COUNT_1) {
+				pass_color_info.store_op = SDL_GPU_STOREOP_STORE;
+			} else {
+				pass_color_info.store_op = SDL_GPU_STOREOP_RESOLVE_AND_STORE;
+				pass_color_info.resolve_texture = g_ctx.canvas->resolve_texture;
+			}
 		}
 
 		// Always include depth-stencil if the canvas has one.
@@ -1868,11 +2257,14 @@ void cf_sdlgpu_apply_shader(CF_Shader shader_handle, CF_Material material_handle
 			pass_depth_stencil_info.store_op = SDL_GPU_STOREOP_STORE;
 			pass_depth_stencil_info.stencil_load_op = g_ctx.canvas->clear ? SDL_GPU_LOADOP_CLEAR : SDL_GPU_LOADOP_LOAD;
 			pass_depth_stencil_info.stencil_store_op = SDL_GPU_STOREOP_STORE;
-			pass_depth_stencil_info.cycle = pass_color_info.cycle;
+			// Attached depth is a shared user texture: never cycle it, and address the face/mip.
+			pass_depth_stencil_info.cycle = g_ctx.canvas->attached_depth ? false : pass_color_infos[0].cycle;
+			pass_depth_stencil_info.mip_level = (Uint8)(g_ctx.canvas->attached_depth ? g_ctx.canvas->attach_mip : 0);
+			pass_depth_stencil_info.layer = (Uint8)(g_ctx.canvas->attached_depth ? g_ctx.canvas->attach_layer : 0);
 			depth_stencil_ptr = &pass_depth_stencil_info;
 		}
 
-		pass = SDL_BeginGPURenderPass(cmd, &pass_color_info, 1, depth_stencil_ptr);
+		pass = SDL_BeginGPURenderPass(cmd, pass_color_infos, (Uint32)pass_target_count, depth_stencil_ptr);
 		CF_ASSERT(pass);
 		g_ctx.active_pass = pass;
 		g_ctx.canvas->pass = pass;
@@ -1883,12 +2275,14 @@ void cf_sdlgpu_apply_shader(CF_Shader shader_handle, CF_Material material_handle
 	SDL_GPUBufferBinding bind[2];
 	bool has_vertex_data = mesh->vertices.buffer != NULL;
 	bool has_instance_data = mesh->instances.buffer != NULL;
+	SDL_GPUBuffer* instance_buffer = g_ctx.instance_override ? g_ctx.instance_override : mesh->instances.buffer;
+	Uint32 instance_offset = g_ctx.instance_override ? (Uint32)g_ctx.instance_override_offset : 0;
 	if (has_vertex_data && has_instance_data) {
 		bind[0].buffer = mesh->vertices.buffer; bind[0].offset = 0;
-		bind[1].buffer = mesh->instances.buffer; bind[1].offset = 0;
+		bind[1].buffer = instance_buffer; bind[1].offset = instance_offset;
 		SDL_BindGPUVertexBuffers(pass, 0, bind, 2);
 	} else if (has_instance_data) {
-		bind[0].buffer = mesh->instances.buffer; bind[0].offset = 0;
+		bind[0].buffer = instance_buffer; bind[0].offset = instance_offset;
 		SDL_BindGPUVertexBuffers(pass, 0, bind, 1);
 	} else {
 		bind[0].buffer = mesh->vertices.buffer; bind[0].offset = 0;
@@ -1914,6 +2308,9 @@ void cf_sdlgpu_apply_shader(CF_Shader shader_handle, CF_Material material_handle
 				if (shader->vs_image_names[j] == image_name) {
 					if (g_ctx.sampler_override) {
 						vs_sampler_bindings[j].sampler = g_ctx.sampler_override;
+					} else if (material->vs.textures[i].sampler.id) {
+						// Per-binding standalone sampler (cf_material_set_texture_vs_sampler).
+						vs_sampler_bindings[j].sampler = (SDL_GPUSampler*)material->vs.textures[i].sampler.id;
 					} else {
 						vs_sampler_bindings[j].sampler = ((CF_TextureInternal*)material->vs.textures[i].handle.id)->sampler;
 					}
@@ -1937,6 +2334,9 @@ void cf_sdlgpu_apply_shader(CF_Shader shader_handle, CF_Material material_handle
 				if (shader->fs_image_names[j] == image_name) {
 					if (g_ctx.sampler_override) {
 						fs_sampler_bindings[j].sampler = g_ctx.sampler_override;
+					} else if (material->fs.textures[i].sampler.id) {
+						// Per-binding standalone sampler (cf_material_set_texture_fs_sampler).
+						fs_sampler_bindings[j].sampler = (SDL_GPUSampler*)material->fs.textures[i].sampler.id;
 					} else {
 						fs_sampler_bindings[j].sampler = ((CF_TextureInternal*)material->fs.textures[i].handle.id)->sampler;
 					}
@@ -1979,11 +2379,16 @@ void cf_sdlgpu_current_canvas_size(int* w, int* h)
 void cf_sdlgpu_draw_elements()
 {
 	CF_MeshInternal* mesh = g_ctx.canvas->mesh;
+	// One draw only -- cleared unconditionally, or a draw on a mesh with no instance buffer
+	// would leak the override into the next instanced draw.
+	SDL_GPUBuffer* instance_override = g_ctx.instance_override;
+	g_ctx.instance_override = NULL;
 	if (mesh->instances.buffer) {
+		int instance_count = instance_override ? g_ctx.instance_override_count : mesh->instances.element_count;
 		if (mesh->indices.buffer) {
-			SDL_DrawGPUIndexedPrimitives(g_ctx.canvas->pass, mesh->indices.element_count, mesh->instances.element_count, 0, 0, 0);
+			SDL_DrawGPUIndexedPrimitives(g_ctx.canvas->pass, mesh->indices.element_count, instance_count, 0, 0, 0);
 		} else {
-			SDL_DrawGPUPrimitives(g_ctx.canvas->pass, mesh->vertices.element_count, mesh->instances.element_count, 0, 0);
+			SDL_DrawGPUPrimitives(g_ctx.canvas->pass, mesh->vertices.element_count, instance_count, 0, 0);
 		}
 	} else {
 		if (mesh->indices.buffer) {
@@ -1991,6 +2396,34 @@ void cf_sdlgpu_draw_elements()
 		} else {
 			SDL_DrawGPUPrimitives(g_ctx.canvas->pass, mesh->vertices.element_count, 1, 0, 0);
 		}
+	}
+	app->draw_call_count++;
+}
+
+void cf_sdlgpu_draw_elements_range(int first_element, int element_count, int instance_count)
+{
+	CF_MeshInternal* mesh = g_ctx.canvas->mesh;
+	SDL_GPURenderPass* pass = g_ctx.canvas->pass;
+	SDL_GPUBuffer* instance_override = g_ctx.instance_override;
+	g_ctx.instance_override = NULL;
+	if (instance_override) {
+		// Rebind just the instance slot: cf_apply_shader bound the previous slice, and range
+		// draws cycle overrides between draws without re-applying the whole shader.
+		SDL_GPUBufferBinding bind = { instance_override, (Uint32)g_ctx.instance_override_offset };
+		SDL_BindGPUVertexBuffers(pass, mesh->vertices.buffer ? 1 : 0, &bind, 1);
+	}
+	int ninst = instance_count;
+	if (ninst <= 0) {
+		if (instance_override) ninst = g_ctx.instance_override_count;
+		else if (mesh->instances.buffer) ninst = mesh->instances.element_count;
+		else ninst = 1;
+	}
+	if (mesh->indices.buffer) {
+		int count = element_count >= 0 ? element_count : mesh->indices.element_count;
+		SDL_DrawGPUIndexedPrimitives(pass, (Uint32)count, (Uint32)ninst, (Uint32)first_element, 0, 0);
+	} else {
+		int count = element_count >= 0 ? element_count : mesh->vertices.element_count;
+		SDL_DrawGPUPrimitives(pass, (Uint32)count, (Uint32)ninst, (Uint32)first_element, 0);
 	}
 	app->draw_call_count++;
 }
@@ -2190,6 +2623,7 @@ CF_StorageBuffer cf_sdlgpu_make_storage_buffer(CF_StorageBufferParams params)
 	if (params.compute_readable) usage |= SDL_GPU_BUFFERUSAGE_COMPUTE_STORAGE_READ;
 	if (params.compute_writable) usage |= SDL_GPU_BUFFERUSAGE_COMPUTE_STORAGE_WRITE;
 	if (params.graphics_readable) usage |= SDL_GPU_BUFFERUSAGE_GRAPHICS_STORAGE_READ;
+	if (params.indirect_drawable) usage |= SDL_GPU_BUFFERUSAGE_INDIRECT;
 	sb->usage = usage;
 
 	SDL_GPUBufferCreateInfo buf_info = {};
@@ -2228,6 +2662,23 @@ void cf_sdlgpu_apply_vs_storage_buffers(CF_StorageBuffer* buffers, int count)
 		bufs[i] = ((CF_StorageBufferInternal*)buffers[i].id)->buffer;
 	}
 	SDL_BindGPUVertexStorageBuffers(g_ctx.active_pass, 0, bufs, (Uint32)count);
+}
+
+void cf_sdlgpu_draw_elements_indirect(CF_StorageBuffer args, int offset, int draw_count)
+{
+	// Same setup contract as cf_draw_elements (mesh + shader applied, pass live); only the
+	// arguments come from the GPU. Indexed vs non-indexed follows the applied mesh, exactly
+	// like cf_draw_elements -- the args buffer must hold the matching argument layout.
+	CF_MeshInternal* mesh = g_ctx.canvas->mesh;
+	CF_StorageBufferInternal* sb = (CF_StorageBufferInternal*)args.id;
+	CF_ASSERT(g_ctx.canvas->pass);
+	CF_ASSERT(sb && (sb->usage & SDL_GPU_BUFFERUSAGE_INDIRECT));
+	if (mesh->indices.buffer) {
+		SDL_DrawGPUIndexedPrimitivesIndirect(g_ctx.canvas->pass, sb->buffer, (Uint32)offset, (Uint32)draw_count);
+	} else {
+		SDL_DrawGPUPrimitivesIndirect(g_ctx.canvas->pass, sb->buffer, (Uint32)offset, (Uint32)draw_count);
+	}
+	app->draw_call_count++;
 }
 
 void cf_sdlgpu_draw_elements_instanced(int instance_count)
@@ -2411,12 +2862,27 @@ void cf_sdlgpu_dispatch_compute(CF_ComputeShader shader, CF_Material material_ha
 	SDL_EndGPUComputePass(pass);
 }
 
+CF_Readback cf_sdlgpu_canvas_readback(CF_Canvas canvas_handle)
+{
+	return cf_sdlgpu_canvas_readback2(canvas_handle, 0);
+}
+
 void cf_sdlgpu_canvas_set_clear_color(CF_Canvas canvas_handle, CF_Color color)
 {
 	CF_CanvasInternal* canvas = (CF_CanvasInternal*)canvas_handle.id;
 	if (!canvas) return;
-	canvas->has_clear_color = true;
-	canvas->clear_color = color;
+	for (int i = 0; i < CF_MAX_CANVAS_TARGETS; ++i) {
+		canvas->has_clear_color[i] = true;
+		canvas->clear_color[i] = color;
+	}
+}
+
+void cf_sdlgpu_canvas_set_clear_color2(CF_Canvas canvas_handle, int index, CF_Color color)
+{
+	CF_CanvasInternal* canvas = (CF_CanvasInternal*)canvas_handle.id;
+	if (!canvas || index < 0 || index >= CF_MAX_CANVAS_TARGETS) return;
+	canvas->has_clear_color[index] = true;
+	canvas->clear_color[index] = color;
 }
 
 void cf_sdlgpu_canvas_set_clear_depth_stencil(CF_Canvas canvas_handle, float depth, uint32_t stencil)

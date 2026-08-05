@@ -11,6 +11,7 @@
 // against a real backend.
 
 #include "test_harness.h"
+#include "test_app_shared.h"
 
 #include <cute.h>
 #include <stdlib.h>
@@ -19,14 +20,6 @@ using namespace Cute;
 
 #define W 256
 #define H 256
-
-static int s_app_options()
-{
-	int options = CF_APP_OPTIONS_HIDDEN_BIT | CF_APP_OPTIONS_NO_AUDIO_BIT;
-	const char* gles = getenv("CF_TEST_GLES");
-	if (gles && *gles == '1') options |= CF_APP_OPTIONS_GFX_OPENGL_BIT | CF_APP_OPTIONS_GFX_DEBUG_BIT;
-	return options;
-}
 
 // Samples the canvas at a normalized-device coordinate. CF renders row 0 at the top, so +y in
 // NDC is a low row index.
@@ -111,7 +104,7 @@ static void s_readback(CF_Canvas canvas, CF_Pixel* px)
 // its inverse and the quad lands on the opposite side. A symmetric matrix would prove nothing.
 TEST_CASE(test_mat4_uniform_is_column_major)
 {
-	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, W, H, s_app_options(), NULL))) return true; // Headless CI: no display/GPU.
+	if (!test_make_app(W, H)) return true; // Headless CI: no display/GPU.
 
 	CF_Mesh mesh = s_make_quad(0.3f, -0.2f, 0.7f, 0.2f); // Centered on +x.
 	CF_Material material = cf_make_material();
@@ -158,7 +151,7 @@ TEST_CASE(test_mat4_uniform_is_column_major)
 	cf_destroy_shader(shader);
 	cf_destroy_material(material);
 	cf_destroy_mesh(mesh);
-	cf_destroy_app();
+	test_destroy_app();
 	return true;
 }
 
@@ -167,7 +160,7 @@ TEST_CASE(test_mat4_uniform_is_column_major)
 // the difference, so a passing depth-on result is not just "the second draw never happened".
 TEST_CASE(test_render_state_3d_defaults_depth_tests)
 {
-	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, W, H, s_app_options(), NULL))) return true; // Headless CI: no display/GPU.
+	if (!test_make_app(W, H)) return true; // Headless CI: no display/GPU.
 
 	CF_RenderState rs3d = cf_render_state_3d_defaults();
 	REQUIRE(rs3d.depth_write_enabled);
@@ -234,7 +227,7 @@ TEST_CASE(test_render_state_3d_defaults_depth_tests)
 	cf_destroy_material(near_mat);
 	cf_destroy_material(far_mat);
 	cf_destroy_mesh(mesh);
-	cf_destroy_app();
+	test_destroy_app();
 	return true;
 }
 

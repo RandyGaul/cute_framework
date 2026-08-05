@@ -1111,6 +1111,101 @@ static void test_errors_syntax(void)
 	expect_err(CSPV_STAGE_FRAGMENT, "void main() { float x = 1.0 }", "expected ';'");
 }
 
+static void test_sampler_dims(void)
+{
+	// Cube, 3D, and array samplers take vec3 coords and yield vec4.
+	expect_ok(CSPV_STAGE_FRAGMENT,
+		"layout(set = 2, binding = 0) uniform samplerCube s;\n"
+		FS_MAIN("result = texture(s, vec3(0, 1, 0)) + textureLod(s, vec3(1, 0, 0), 2.0);"));
+	expect_ok(CSPV_STAGE_FRAGMENT,
+		"layout(set = 2, binding = 0) uniform sampler3D s;\n"
+		FS_MAIN("result = texture(s, vec3(0.5));"));
+	expect_ok(CSPV_STAGE_FRAGMENT,
+		"layout(set = 2, binding = 0) uniform sampler2DArray s;\n"
+		FS_MAIN("result = texture(s, vec3(0.5, 0.5, 3.0));"));
+
+	// Shadow sampling yields a scalar visibility factor, in fragment (implicit lod)
+	// and vertex (lowered to explicit lod 0) stages alike.
+	expect_ok(CSPV_STAGE_FRAGMENT,
+		"layout(set = 2, binding = 0) uniform sampler2DShadow s;\n"
+		FS_MAIN("float vis = texture(s, vec3(0.5, 0.5, 0.7)); result = vec4(vis);"));
+	expect_ok(CSPV_STAGE_VERTEX,
+		"layout(set = 1, binding = 0) uniform sampler2DShadow s;\n"
+		"void main() { float vis = texture(s, vec3(0.5, 0.5, 0.7)); gl_Position = vec4(vis); }");
+	expect_ok(CSPV_STAGE_FRAGMENT,
+		"layout(set = 2, binding = 0) uniform sampler2DShadow s;\n"
+		FS_MAIN("result = vec4(textureLod(s, vec3(0.5, 0.5, 0.7), 0.0));"));
+
+	// Cube shadows take a vec4 (direction + reference) and yield a scalar; textureLod has
+	// no such GLSL overload and stays rejected.
+	expect_ok(CSPV_STAGE_FRAGMENT,
+		"layout(set = 2, binding = 0) uniform samplerCubeShadow s;\n"
+		FS_MAIN("float vis = texture(s, vec4(0.0, 1.0, 0.0, 0.6)); result = vec4(vis);"));
+	expect_ok(CSPV_STAGE_VERTEX,
+		"layout(set = 1, binding = 0) uniform samplerCubeShadow s;\n"
+		"void main() { gl_Position = vec4(texture(s, vec4(1.0, 0.0, 0.0, 0.5))); }");
+	expect_err(CSPV_STAGE_FRAGMENT,
+		"layout(set = 2, binding = 0) uniform samplerCubeShadow s;\n"
+		FS_MAIN("result = vec4(textureLod(s, vec4(0.0, 1.0, 0.0, 0.6), 0.0));"), "samplerCubeShadow");
+
+	// 2D array shadows take a vec4 (uv + layer + reference) and yield a scalar -- the
+	// hardware-PCF cascaded-shadow-map sampler. Vertex-stage use lowers to explicit
+	// lod 0 like the other shadow dims; textureLod has no GLSL overload.
+	expect_ok(CSPV_STAGE_FRAGMENT,
+		"layout(set = 2, binding = 0) uniform sampler2DArrayShadow s;\n"
+		FS_MAIN("float vis = texture(s, vec4(0.5, 0.5, 2.0, 0.7)); result = vec4(vis);"));
+	expect_ok(CSPV_STAGE_VERTEX,
+		"layout(set = 1, binding = 0) uniform sampler2DArrayShadow s;\n"
+		"void main() { gl_Position = vec4(texture(s, vec4(0.5, 0.5, 1.0, 0.6))); }");
+	expect_err(CSPV_STAGE_FRAGMENT,
+		"layout(set = 2, binding = 0) uniform sampler2DArrayShadow s;\n"
+		FS_MAIN("result = vec4(textureLod(s, vec4(0.5, 0.5, 1.0, 0.6), 0.0));"), "sampler2DArrayShadow");
+
+	// Coordinate types are enforced per dim.
+	expect_err(CSPV_STAGE_FRAGMENT,
+		"layout(set = 2, binding = 0) uniform samplerCube s;\n"
+		FS_MAIN("result = texture(s, vec2(0));"), "vec3");
+
+	// textureSize works on every dim: ivec2 for 2D/cube, ivec3 for array/3D.
+	expect_ok(CSPV_STAGE_FRAGMENT,
+		"layout(set = 2, binding = 0) uniform sampler2DArray s;\n"
+		FS_MAIN("ivec3 sz = textureSize(s, 0); result = vec4(float(sz.x), float(sz.y), float(sz.z), 1.0);"));
+	expect_ok(CSPV_STAGE_FRAGMENT,
+		"layout(set = 2, binding = 0) uniform samplerCube s;\n"
+		FS_MAIN("ivec2 sz = textureSize(s, 0); result = vec4(float(sz.x));"));
+	expect_ok(CSPV_STAGE_FRAGMENT,
+		"layout(set = 2, binding = 0) uniform sampler3D s;\n"
+		FS_MAIN("ivec3 sz = textureSize(s, 0); result = vec4(float(sz.z));"));
+	expect_ok(CSPV_STAGE_FRAGMENT,
+		"layout(set = 2, binding = 0) uniform sampler2DArrayShadow s;\n"
+		FS_MAIN("ivec3 sz = textureSize(s, 0); result = vec4(float(sz.z));"));
+
+	// texelFetch takes ivec3 coords on array/3D samplers.
+	expect_ok(CSPV_STAGE_FRAGMENT,
+		"layout(set = 2, binding = 0) uniform sampler2DArray s;\n"
+		FS_MAIN("result = texelFetch(s, ivec3(1, 2, 0), 0);"));
+	expect_ok(CSPV_STAGE_FRAGMENT,
+		"layout(set = 2, binding = 0) uniform sampler3D s;\n"
+		FS_MAIN("result = texelFetch(s, ivec3(1, 2, 3), 0);"));
+
+	// textureOffset extends to arrays (the offset applies to uv, not the layer).
+	expect_ok(CSPV_STAGE_FRAGMENT,
+		"layout(set = 2, binding = 0) uniform sampler2DArray s;\n"
+		FS_MAIN("result = textureOffset(s, vec3(0.5, 0.5, 1.0), ivec2(1, -1));"));
+
+	// GLSL defines no texelFetch for samplerCube or shadow samplers, and no
+	// textureOffset for cubes.
+	expect_err(CSPV_STAGE_FRAGMENT,
+		"layout(set = 2, binding = 0) uniform samplerCube s;\n"
+		FS_MAIN("result = texelFetch(s, ivec2(0), 0);"), "no texelFetch for samplerCube");
+	expect_err(CSPV_STAGE_FRAGMENT,
+		"layout(set = 2, binding = 0) uniform sampler2DShadow s;\n"
+		FS_MAIN("result = texelFetch(s, ivec2(0), 0);"), "no texelFetch for sampler2DShadow");
+	expect_err(CSPV_STAGE_FRAGMENT,
+		"layout(set = 2, binding = 0) uniform samplerCube s;\n"
+		FS_MAIN("result = textureOffset(s, vec3(0, 1, 0), ivec2(1));"), "sampler2D or sampler2DArray");
+}
+
 static void test_errors_semantic(void)
 {
 	expect_err(CSPV_STAGE_FRAGMENT, FS_MAIN("x = 1.0;"), "undeclared identifier 'x'");
@@ -1124,7 +1219,7 @@ static void test_errors_semantic(void)
 	expect_err(CSPV_STAGE_FRAGMENT, FS_MAIN("vec2 a = vec2(1); vec2 b = vec2(2); bool c = a < b;"), "scalar operands");
 	expect_err(CSPV_STAGE_FRAGMENT, FS_MAIN("float x = 1.0 & 2.0;"), "integer operands");
 	expect_err(CSPV_STAGE_FRAGMENT, FS_MAIN("result = bad(1.0);"), "unknown function 'bad'");
-	expect_err(CSPV_STAGE_FRAGMENT, FS_MAIN("result = vec4(texture(1.0, vec2(0)));"), "sampler2D");
+	expect_err(CSPV_STAGE_FRAGMENT, FS_MAIN("result = vec4(texture(1.0, vec2(0)));"), "sampler type");
 	expect_err(CSPV_STAGE_FRAGMENT, FS_MAIN("float x = clamp(1.0);"), "expects 3 argument");
 	expect_err(CSPV_STAGE_FRAGMENT, FS_MAIN("result = vec4(1, 2, 3, 4, 5);"), "components");
 	expect_err(CSPV_STAGE_FRAGMENT, FS_MAIN("result = vec4(vec2(1));"), "cannot construct");
@@ -1152,7 +1247,9 @@ static void test_errors_stage_and_globals(void)
 	expect_err(CSPV_STAGE_FRAGMENT,
 		"float f(float x) { }\nvoid main() { }", "missing a return");
 	expect_err(CSPV_STAGE_COMPUTE, "void main() { }", "must declare layout(local_size");
-	expect_err(CSPV_STAGE_FRAGMENT, FS_MAIN("mat2 m = mat2(1); mat2 n = m + m;"), "only '*' is supported");
+	// Matrix + and - decompose into per-column vector ops; anything else stays an error.
+	expect_ok(CSPV_STAGE_FRAGMENT, FS_MAIN("mat2 m = mat2(1); mat2 n = m + m; mat4 o = mat4(2) - mat4(1); result = vec4(n[0], o[0].xy);"));
+	expect_err(CSPV_STAGE_FRAGMENT, FS_MAIN("mat2 m = mat2(1); mat2 n = m / m;"), "matrix operands");
 	expect_err(CSPV_STAGE_FRAGMENT, "layout(location = 0) out vec4 result;\nvoid main() { result.x = gl_Position.x; }", "undeclared identifier 'gl_Position'");
 }
 
@@ -1180,6 +1277,333 @@ static CSPV_Result s_emit_all(CSPV_Stage stage, const char* src)
 		CHECK(r.msl != NULL);
 	}
 	return r;
+}
+
+static void test_sampler_dims_emitters(void)
+{
+	// Every emitter must speak the new sampler dims: correct texture object types in
+	// HLSL/MSL, comparison sampling for shadow, and native GLSL types for ES.
+	{
+		CSPV_Result r = s_emit_all(CSPV_STAGE_FRAGMENT,
+			"layout(set = 2, binding = 0) uniform samplerCube s;\n"
+			FS_MAIN("result = texture(s, vec3(0, 1, 0));"));
+		if (r.success) {
+			CHECK(strstr(r.hlsl, "TextureCube<float4>") != NULL);
+			CHECK(strstr(r.msl, "texturecube<float>") != NULL);
+		}
+		cspv_free(&r);
+	}
+	{
+		CSPV_Result r = s_emit_all(CSPV_STAGE_FRAGMENT,
+			"layout(set = 2, binding = 0) uniform samplerCubeShadow s;\n"
+			FS_MAIN("result = vec4(texture(s, vec4(0.0, 1.0, 0.0, 0.6)));"));
+		if (r.success) {
+			CHECK(strstr(r.hlsl, "TextureCube<float4>") != NULL);
+			CHECK(strstr(r.hlsl, "SamplerComparisonState") != NULL);
+			CHECK(strstr(r.hlsl, "SampleCmpLevelZero") != NULL);
+			CHECK(strstr(r.hlsl, ").xyz, (") != NULL); // vec4 splits as xyz + w.
+			CHECK(strstr(r.msl, "depthcube<float>") != NULL);
+			CHECK(strstr(r.msl, "sample_compare") != NULL);
+		}
+		cspv_free(&r);
+	}
+	{
+		CSPV_Result r = s_emit_all(CSPV_STAGE_FRAGMENT,
+			"layout(set = 2, binding = 0) uniform sampler2DArray s;\n"
+			FS_MAIN("result = texture(s, vec3(0.5, 0.5, 3.0));"));
+		if (r.success) {
+			CHECK(strstr(r.hlsl, "Texture2DArray<float4>") != NULL);
+			CHECK(strstr(r.msl, "texture2d_array<float>") != NULL);
+			CHECK(strstr(r.msl, "uint(rint(") != NULL); // Layer index splits out in MSL.
+		}
+		cspv_free(&r);
+	}
+	{
+		CSPV_Result r = s_emit_all(CSPV_STAGE_FRAGMENT,
+			"layout(set = 2, binding = 0) uniform sampler2DShadow s;\n"
+			FS_MAIN("result = vec4(texture(s, vec3(0.5, 0.5, 0.7)));"));
+		if (r.success) {
+			CHECK(strstr(r.hlsl, "SamplerComparisonState") != NULL);
+			CHECK(strstr(r.hlsl, ".SampleCmpLevelZero(") != NULL);
+			CHECK(strstr(r.msl, "depth2d<float>") != NULL);
+			CHECK(strstr(r.msl, ".sample_compare(") != NULL);
+		}
+		cspv_free(&r);
+	}
+	{
+		// 2D array shadows: HLSL comparison-samples the Texture2DArray with the
+		// float3(uv, layer) location + reference; MSL splits the layer out of P.z
+		// for depth2d_array::sample_compare.
+		CSPV_Result r = s_emit_all(CSPV_STAGE_FRAGMENT,
+			"layout(set = 2, binding = 0) uniform sampler2DArrayShadow s;\n"
+			FS_MAIN("result = vec4(texture(s, vec4(0.5, 0.5, 2.0, 0.7)));"));
+		if (r.success) {
+			CHECK(strstr(r.hlsl, "Texture2DArray<float4>") != NULL);
+			CHECK(strstr(r.hlsl, "SamplerComparisonState") != NULL);
+			CHECK(strstr(r.hlsl, ".SampleCmpLevelZero(") != NULL);
+			CHECK(strstr(r.hlsl, ").xyz, (") != NULL); // vec4 splits as xyz + w.
+			CHECK(strstr(r.msl, "depth2d_array<float>") != NULL);
+			CHECK(strstr(r.msl, ".sample_compare(") != NULL);
+			CHECK(strstr(r.msl, "uint(rint(") != NULL); // Layer splits out in MSL.
+		}
+		cspv_free(&r);
+	}
+	{
+		// textureSize/texelFetch on array and cube dims lower per backend: HLSL
+		// GetDimensions helpers with the right arity, MSL read/get_* methods.
+		CSPV_Result r = s_emit_all(CSPV_STAGE_FRAGMENT,
+			"layout(set = 2, binding = 0) uniform sampler2DArray s_arr;\n"
+			"layout(set = 2, binding = 1) uniform samplerCube s_cube;\n"
+			FS_MAIN(
+			"ivec3 a = textureSize(s_arr, 0);\n"
+			"ivec2 c = textureSize(s_cube, 0);\n"
+			"vec4 t = texelFetch(s_arr, ivec3(1, 2, 0), 0);\n"
+			"result = t + vec4(float(a.z), float(c.x), 0.0, 1.0);"));
+		if (r.success) {
+			CHECK(strstr(r.hlsl, "cf_texsize(s_arr_tex, ") != NULL);
+			CHECK(strstr(r.hlsl, "cf_texsize(s_cube_tex, ") != NULL);
+			CHECK(strstr(r.hlsl, "s_arr_tex.Load(int4(") != NULL);
+			CHECK(strstr(r.msl, "get_array_size()") != NULL);
+			CHECK(strstr(r.msl, "s_arr_tex.read(uint2((") != NULL);
+		}
+		cspv_free(&r);
+	}
+	{
+		// ES 3.00 output keeps the native GLSL types and generic texture() calls.
+		CSPV_Options opts;
+		memset(&opts, 0, sizeof(opts));
+		opts.emit_glsl300 = true;
+		CSPV_Result r = cspv_compile_ex(
+			"layout(set = 2, binding = 0) uniform samplerCube s;\n"
+			"layout(set = 2, binding = 1) uniform sampler2DShadow sh;\n"
+			"layout(set = 2, binding = 2) uniform sampler2DArrayShadow csm;\n"
+			"layout(set = 3, binding = 0) uniform uniform_block { vec4 u_dir; };\n"
+			FS_MAIN("result = texture(s, u_dir.xyz) + vec4(texture(sh, vec3(0.5, 0.5, 0.7))) + vec4(texture(csm, vec4(0.5, 0.5, 1.0, 0.7)));"),
+			CSPV_STAGE_FRAGMENT, &opts);
+		CHECK_MSG(r.success, r.error_message);
+		if (r.success) {
+			CHECK(r.glsl300 != NULL);
+			if (r.glsl300) {
+				CHECK(strstr(r.glsl300, "samplerCube") != NULL);
+				CHECK(strstr(r.glsl300, "sampler2DShadow") != NULL);
+				CHECK(strstr(r.glsl300, "sampler2DArrayShadow") != NULL);
+				// ES block names carry the stage so vs and fs can both declare
+				// uniform_block in one linked program.
+				CHECK(strstr(r.glsl300, "cf_fs_uniform_block") != NULL);
+			}
+		}
+		cspv_free(&r);
+	}
+	{
+		// Vertex-stage shadow sampling must still lower to an explicit level.
+		CSPV_Result r = s_emit_all(CSPV_STAGE_VERTEX,
+			"layout(set = 1, binding = 0) uniform sampler2DShadow s;\n"
+			"void main() { gl_Position = vec4(texture(s, vec3(0.5, 0.5, 0.7))); }\n");
+		if (r.success) {
+			CHECK(strstr(r.hlsl, ".SampleCmpLevelZero(") != NULL);
+			CHECK(strstr(r.msl, ".sample_compare(") != NULL);
+			CHECK(strstr(r.msl, "level(0)") != NULL);
+		}
+		cspv_free(&r);
+	}
+}
+
+
+
+// Sized arrays in uniform blocks: the skinning-palette case. mat4/vec4 elements, std140
+// strides, dynamic indexing, correct reflection, and native declarations from every emitter.
+static void test_block_arrays(void)
+{
+	// Dynamic indexing of a mat4 palette, plus a vec4 table -- the SPIR-V must validate.
+	// Skinning blends transformed positions rather than matrices (matrix addition is not
+	// in the language, and the blended-position form is cheaper anyway).
+	expect_ok(CSPV_STAGE_VERTEX,
+		"layout(location = 0) in vec3 in_pos;\n"
+		"layout(location = 1) in vec2 in_joints;\n"
+		"layout(location = 2) in vec2 in_weights;\n"
+		"layout(set = 1, binding = 0) uniform uniform_block {\n"
+		"	mat4 u_vp;\n"
+		"	mat4 u_bones[6];\n"
+		"	vec4 u_tints[3];\n"
+		"};\n"
+		"void main() {\n"
+		"	vec4 p = vec4(in_pos, 1.0);\n"
+		"	vec4 skinned = u_bones[int(in_joints.x)] * p * in_weights.x + u_bones[int(in_joints.y)] * p * in_weights.y;\n"
+		"	gl_Position = u_vp * skinned + u_tints[2] + u_tints[int(in_joints.x)];\n"
+		"}\n");
+
+	// Reflection: array members report their element type, array_length, and std140
+	// offsets (mat4[6] strides 64; vec4[3] strides 16), and the block size includes them.
+	{
+		CSPV_Result r = cspv_compile(
+			"layout(set = 1, binding = 0) uniform uniform_block {\n"
+			"	mat4 u_vp;\n"
+			"	mat4 u_bones[6];\n"
+			"	vec4 u_tints[3];\n"
+			"	float u_tail;\n"
+			"};\n"
+			"void main() { gl_Position = u_vp * u_bones[1] * (u_tints[0] + vec4(u_tail)); }\n",
+			CSPV_STAGE_VERTEX);
+		CHECK_MSG(r.success, r.error_message);
+		if (r.success) {
+			CSPV_Reflection* rf = &r.reflection;
+			CHECK(asize(rf->uniform_blocks) == 1);
+			CSPV_ReflectionMember* m = rf->uniform_members;
+			CHECK(sequ(m[0].name, "u_vp") && m[0].type == CSPV_TYPE_MAT4 && m[0].offset == 0 && m[0].array_length == 1);
+			CHECK(sequ(m[1].name, "u_bones") && m[1].type == CSPV_TYPE_MAT4 && m[1].offset == 64 && m[1].array_length == 6);
+			CHECK(sequ(m[2].name, "u_tints") && m[2].type == CSPV_TYPE_FLOAT4 && m[2].offset == 448 && m[2].array_length == 3);
+			CHECK(sequ(m[3].name, "u_tail") && m[3].offset == 496);
+			CHECK(rf->uniform_blocks[0].size == 512); // 496 + 4 rounded up to 16.
+		}
+		cspv_free(&r);
+	}
+
+	// The element restriction is enforced: everything std140 would pad gets rejected
+	// with a pointer at the fix.
+	expect_err(CSPV_STAGE_VERTEX,
+		"layout(set = 1, binding = 0) uniform uniform_block { float u_w[4]; };\n"
+		"void main() { gl_Position = vec4(u_w[0]); }\n", "vec4");
+	expect_err(CSPV_STAGE_VERTEX,
+		"layout(set = 1, binding = 0) uniform uniform_block { vec3 u_v[4]; };\n"
+		"void main() { gl_Position = vec4(u_v[0], 1.0); }\n", "vec4");
+}
+
+static void test_block_arrays_emitters(void)
+{
+	// TEMP: dump the kelp VS transpiled to ES300.
+	{
+		CSPV_Options od; memset(&od, 0, sizeof(od));
+		od.emit_glsl300 = true;
+		CSPV_Result rd = cspv_compile_ex(
+		"layout (location = 0) in vec3 in_pos;\n"
+		"layout (location = 1) in vec3 in_normal;\n"
+		"layout (location = 2) in vec2 in_joints;\n"
+		"layout (location = 3) in vec2 in_weights;\n"
+		"layout (location = 8)  in vec4 in_model0;\n"
+		"layout (location = 9)  in vec4 in_model1;\n"
+		"layout (location = 10) in vec4 in_model2;\n"
+		"layout (location = 15) in vec4 in_mesh_attributes;\n"
+		"layout (location = 0) out vec3 v_normal;\n"
+		"layout (location = 1) out vec4 v_attrs;\n"
+		"layout (location = 2) out float v_height;\n"
+		"layout (set = 1, binding = 0) uniform uniform_block {\n"
+		"    mat4 u_view_projection;\n"
+		"    mat4 u_bones[6];\n"
+		"};\n"
+		"void main() {\n"
+		"    vec4 p0 = vec4(in_pos, 1.0);\n"
+		"    vec4 n0 = vec4(in_normal, 0.0);\n"
+		"    vec3 pos = (u_bones[int(in_joints.x)] * p0 * in_weights.x + u_bones[int(in_joints.y)] * p0 * in_weights.y).xyz;\n"
+		"    vec3 nrm = normalize((u_bones[int(in_joints.x)] * n0 * in_weights.x + u_bones[int(in_joints.y)] * n0 * in_weights.y).xyz);\n"
+		"    vec4 p = vec4(pos, 1.0);\n"
+		"    vec3 world = vec3(dot(in_model0, p), dot(in_model1, p), dot(in_model2, p));\n"
+		"    v_normal = normalize(vec3(dot(in_model0.xyz, nrm), dot(in_model1.xyz, nrm), dot(in_model2.xyz, nrm)));\n"
+		"    v_attrs = in_mesh_attributes;\n"
+		"    v_height = in_pos.y / 2.6;\n"
+		"    gl_Position = u_view_projection * vec4(world, 1.0);\n"
+		"}\n"
+		, CSPV_STAGE_VERTEX, &od);
+		if (rd.success) { puts("==== ES300 ===="); puts(rd.glsl300); puts("==== END ===="); }
+		else puts(rd.error_message);
+		cspv_free(&rd);
+	}
+	// Every backend declares the array natively and indexes it dynamically. ES output is
+	// requested explicitly -- s_emit_all covers HLSL/MSL only.
+	CSPV_Options opts;
+	memset(&opts, 0, sizeof(opts));
+	opts.emit_glsl300 = true;
+	opts.emit_hlsl = true;
+	opts.emit_msl = true;
+	CSPV_Result r = cspv_compile_ex(
+		"layout(location = 0) in vec3 in_pos;\n"
+		"layout(location = 1) in vec2 in_joints;\n"
+		"layout(set = 1, binding = 0) uniform uniform_block {\n"
+		"	mat4 u_vp;\n"
+		"	mat4 u_bones[6];\n"
+		"	vec4 u_tints[3];\n"
+		"};\n"
+		"void main() { gl_Position = u_vp * u_bones[int(in_joints.x)] * vec4(in_pos, 1.0) + u_tints[1]; }\n",
+		CSPV_STAGE_VERTEX, &opts);
+	CHECK_MSG(r.success, r.error_message);
+	if (r.success) {
+		CHECK(r.glsl300 && strstr(r.glsl300, "u_bones[6]") != NULL);
+		CHECK(r.glsl300 && strstr(r.glsl300, "u_tints[3]") != NULL);
+		CHECK(r.hlsl && strstr(r.hlsl, "u_bones[6]") != NULL);
+		CHECK(r.hlsl && strstr(r.hlsl, "column_major") != NULL);
+		// mat4[6] lands at std140 offset 64 = register c4; vec4[3] at 448 = c28.
+		CHECK(r.hlsl && strstr(r.hlsl, "packoffset(c4)") != NULL);
+		CHECK(r.hlsl && strstr(r.hlsl, "packoffset(c28)") != NULL);
+		CHECK(r.msl && strstr(r.msl, "u_bones[6]") != NULL);
+		CHECK(r.msl && strstr(r.msl, "u_tints[3]") != NULL);
+	}
+	cspv_free(&r);
+
+	// GLSL ES 3.00 emulates readonly SSBOs as RGBA32UI texture fetches: the block
+	// disappears, a stage-pooled usampler2D takes its place (names match the CF GLES
+	// backend's binding contract), float payloads bit-cast through uintBitsToFloat,
+	// and shapes outside CF's documented storage pattern get teaching errors.
+	{
+		CSPV_Options o;
+		memset(&o, 0, sizeof(o));
+		o.emit_glsl300 = true;
+		CSPV_Result rv = cspv_compile_ex(
+			"layout(location = 0) in vec3 in_pos;\n"
+			"layout(std430, set = 0, binding = 0) readonly buffer bones_buffer { vec4 u_bones[]; };\n"
+			"layout(set = 1, binding = 0) uniform uniform_block { mat4 u_vp; };\n"
+			"void main() { gl_Position = u_vp * vec4(in_pos, 1.0) + u_bones[gl_InstanceIndex]; }\n",
+			CSPV_STAGE_VERTEX, &o);
+		CHECK_MSG(rv.success, rv.error_message);
+		if (rv.success) {
+			CHECK(rv.glsl300 && strstr(rv.glsl300, "uniform highp usampler2D u_vs_storage_0;") != NULL);
+			CHECK(rv.glsl300 && strstr(rv.glsl300, "uintBitsToFloat(texelFetch(u_vs_storage_0, cf_storage_coord(int(gl_InstanceID)), 0))") != NULL);
+		}
+		cspv_free(&rv);
+		// Fragment stage names the fs pool; uvec4 tails fetch raw, no bit-cast.
+		CSPV_Result rf = cspv_compile_ex(
+			"layout(location = 0) out vec4 result;\n"
+			"layout(std430, set = 2, binding = 0) readonly buffer data_buffer { uvec4 u_data[]; };\n"
+			"void main() { result = vec4(u_data[0]); }\n",
+			CSPV_STAGE_FRAGMENT, &o);
+		CHECK_MSG(rf.success, rf.error_message);
+		if (rf.success) {
+			CHECK(rf.glsl300 && strstr(rf.glsl300, "u_fs_storage_0") != NULL);
+			CHECK(rf.glsl300 && strstr(rf.glsl300, "uintBitsToFloat") == NULL);
+		}
+		cspv_free(&rf);
+		// Outside the emulatable pattern: scalar tails and .length() get clear errors.
+		expect_err_ex(CSPV_STAGE_VERTEX,
+			"layout(location = 0) in vec3 in_pos;\n"
+			"layout(std430, set = 0, binding = 0) readonly buffer b { float u_f[]; };\n"
+			"void main() { gl_Position = vec4(u_f[0]); }\n",
+			"vec4 or uvec4", &o);
+		// A local or parameter shadowing the member name is NOT a storage access;
+		// the validation walk must not reject its bare (un-indexed) uses.
+		{
+			CSPV_Result rs = cspv_compile_ex(
+				"layout(location = 0) in vec3 in_pos;\n"
+				"layout(std430, set = 0, binding = 0) readonly buffer bones_buffer { vec4 u_bones[]; };\n"
+				"float scale(float u_bones) { return u_bones * 2.0; }\n"
+				"void main() {\n"
+				"	float u_local = scale(0.5);\n"
+				"	gl_Position = u_bones[0] * u_local;\n"
+				"}\n",
+				CSPV_STAGE_VERTEX, &o);
+			CHECK_MSG(rs.success, rs.error_message);
+			cspv_free(&rs);
+		}
+		// Writes through the emulation get a clear readonly error, not a baffling
+		// driver complaint about assigning to a texelFetch.
+		expect_err_ex(CSPV_STAGE_VERTEX,
+			"layout(location = 0) in vec3 in_pos;\n"
+			"layout(std430, set = 0, binding = 0) readonly buffer b { vec4 u_v[]; };\n"
+			"void main() { u_v[0] = vec4(1.0); gl_Position = vec4(0.0); }\n",
+			"readonly in GLSL ES", &o);
+		expect_err_ex(CSPV_STAGE_VERTEX,
+			"layout(location = 0) in vec3 in_pos;\n"
+			"layout(std430, set = 0, binding = 0) readonly buffer b { vec4 u_v[]; };\n"
+			"void main() { gl_Position = u_v.length() > 0 ? u_v[0] : vec4(0.0); }\n",
+			".length()", &o);
+	}
 }
 
 static void test_emitters(void)
@@ -1313,6 +1737,10 @@ int main(void)
 	TEST(test_io_and_uniforms);
 	TEST(test_errors_syntax);
 	TEST(test_errors_semantic);
+	TEST(test_sampler_dims);
+	TEST(test_sampler_dims_emitters);
+	TEST(test_block_arrays);
+	TEST(test_block_arrays_emitters);
 	TEST(test_errors_stage_and_globals);
 	TEST(test_errors_recursion);
 	TEST(test_emitters);

@@ -6,6 +6,7 @@
 */
 
 #include "test_harness.h"
+#include "test_app_shared.h"
 
 #include <cute.h>
 #include <internal/cute_draw_internal.h>
@@ -195,23 +196,13 @@ static bool s_px_near(CF_Pixel p, int r, int g, int b, int a, int tol)
 	return ok;
 }
 
-// Set CF_TEST_GLES=1 to run the draw tests against the GLES3 backend (instanced-only:
-// forcing tiled on falls back per-batch, so both "modes" render instanced there).
-static int s_app_options()
-{
-	int options = CF_APP_OPTIONS_HIDDEN_BIT | CF_APP_OPTIONS_NO_AUDIO_BIT;
-	const char* gles = getenv("CF_TEST_GLES");
-	if (gles && *gles == '1') options |= CF_APP_OPTIONS_GFX_OPENGL_BIT | CF_APP_OPTIONS_GFX_DEBUG_BIT;
-	return options;
-}
-
 TEST_CASE(test_tiled_matches_mesh)
 {
-	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, 640, 480, s_app_options(), NULL))) return true; // Headless CI: no display/GPU.
+	if (!test_make_app(640, 480)) return true; // Headless CI: no display/GPU.
 
 	if (cf_query_backend() == CF_BACKEND_TYPE_GLES3) {
 		// No SSBOs on GLES -- the tiled path never exists there.
-		cf_destroy_app();
+		test_destroy_app();
 		return true;
 	}
 	// On SDL_GPU backends the tiled path must be available; a tile-shader compile
@@ -228,7 +219,7 @@ TEST_CASE(test_tiled_matches_mesh)
 
 	cf_free(mesh_px);
 	cf_free(tile_px);
-	cf_destroy_app();
+	test_destroy_app();
 	return true;
 }
 
@@ -265,7 +256,7 @@ static void s_scene_custom_shader()
 
 TEST_CASE(test_draw_custom_shader)
 {
-	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, 640, 480, s_app_options(), NULL))) return true; // Headless CI: no display/GPU.
+	if (!test_make_app(640, 480)) return true; // Headless CI: no display/GPU.
 
 	s_attr_shd = cf_make_draw_shader_from_source(s_attr_shd_src);
 	REQUIRE(s_attr_shd.id);
@@ -283,7 +274,7 @@ TEST_CASE(test_draw_custom_shader)
 
 	cf_free(px);
 	cf_destroy_shader(s_attr_shd);
-	cf_destroy_app();
+	test_destroy_app();
 	return true;
 }
 
@@ -333,7 +324,7 @@ static void s_scene_multi_atlas()
 
 TEST_CASE(test_draw_multi_atlas_interleave)
 {
-	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, 640, 480, s_app_options(), NULL))) return true; // Headless CI: no display/GPU.
+	if (!test_make_app(640, 480)) return true; // Headless CI: no display/GPU.
 
 	// Bake a solid 8x8 png on the fly and register it as a premade atlas.
 	CF_Pixel solid[64];
@@ -366,7 +357,7 @@ TEST_CASE(test_draw_multi_atlas_interleave)
 	cf_free(a);
 	cf_free(b);
 	cf_destroy_texture(premade_tex);
-	cf_destroy_app();
+	test_destroy_app();
 	return true;
 }
 
@@ -394,7 +385,7 @@ static void s_scene_additive()
 
 TEST_CASE(test_draw_render_states)
 {
-	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, 640, 480, s_app_options(), NULL))) return true; // Headless CI: no display/GPU.
+	if (!test_make_app(640, 480)) return true; // Headless CI: no display/GPU.
 
 	int w = 640, h = 480;
 	CF_Pixel* px = (CF_Pixel*)cf_alloc(w * h * sizeof(CF_Pixel));
@@ -459,7 +450,7 @@ TEST_CASE(test_draw_render_states)
 	REQUIRE(s_px_near(s_probe(px, w, h, 40), 0, 0, 0, 0, 0));      // Stencil==0: blue clipped, untouched.
 
 	cf_free(px);
-	cf_destroy_app();
+	test_destroy_app();
 	return true;
 }
 
@@ -485,7 +476,7 @@ static void s_scene_layers()
 
 TEST_CASE(test_draw_layers)
 {
-	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, 640, 480, s_app_options(), NULL))) return true; // Headless CI: no display/GPU.
+	if (!test_make_app(640, 480)) return true; // Headless CI: no display/GPU.
 
 	int w = 640, h = 480;
 	CF_Pixel* a = (CF_Pixel*)cf_alloc(w * h * sizeof(CF_Pixel));
@@ -501,7 +492,7 @@ TEST_CASE(test_draw_layers)
 
 	cf_free(a);
 	cf_free(b);
-	cf_destroy_app();
+	test_destroy_app();
 	return true;
 }
 
@@ -521,7 +512,7 @@ static void s_scene_polyline_segments()
 
 TEST_CASE(test_draw_polyline_segments)
 {
-	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, 640, 480, s_app_options(), NULL))) return true; // Headless CI: no display/GPU.
+	if (!test_make_app(640, 480)) return true; // Headless CI: no display/GPU.
 
 	int w = 640, h = 480;
 	CF_Pixel* a = (CF_Pixel*)cf_alloc(w * h * sizeof(CF_Pixel));
@@ -538,7 +529,143 @@ TEST_CASE(test_draw_polyline_segments)
 
 	cf_free(a);
 	cf_free(b);
-	cf_destroy_app();
+	test_destroy_app();
+	return true;
+}
+
+// -------------------------------------------------------------------------------------------------
+// Shape effects (cf_draw_push_outline / cf_draw_push_glow): an outline band hugs the shape's
+// edge, a glow falls off past it, and both come from the shape's own signed distance -- so they
+// must land identically on the instanced and tiled paths.
+
+static void s_scene_effects()
+{
+	// A green disc of radius 60 at x = -150, with a 20-wide red outline.
+	cf_draw_push_color(cf_make_color_rgb_f(0, 1, 0));
+	cf_draw_push_outline(cf_make_color_rgb_f(1, 0, 0), 20.0f);
+	cf_draw_circle_fill2(cf_v2(-150, 0), 60);
+	cf_draw_pop_outline();
+	cf_draw_pop_color();
+
+	// A blue disc of radius 40 at x = 150 with a 60-unit magenta glow.
+	cf_draw_push_color(cf_make_color_rgb_f(0, 0, 1));
+	cf_draw_push_glow(cf_make_color_rgb_f(1, 0, 1), 60.0f);
+	cf_draw_circle_fill2(cf_v2(150, 0), 40);
+	cf_draw_pop_glow();
+	cf_draw_pop_color();
+}
+
+TEST_CASE(test_draw_shape_effects)
+{
+	if (!test_make_app(640, 480)) return true; // Headless CI: no display/GPU.
+
+	int w = 640, h = 480;
+	CF_Pixel* a = (CF_Pixel*)cf_alloc(w * h * sizeof(CF_Pixel));
+	CF_Pixel* b = (CF_Pixel*)cf_alloc(w * h * sizeof(CF_Pixel));
+	CF_Pixel* px[2] = { a, b };
+	for (int mode = 0; mode <= 1; ++mode) {
+		REQUIRE(s_readback(s_scene_effects, mode, w, h, px[mode]));
+		// Disc interior is green; the band just past its edge is the red outline; past that,
+		// nothing. Radius 60, outline 20 -> outline covers 60..80 from center.
+		REQUIRE(s_px_near(s_probe(px[mode], w, h, -150), 0, 255, 0, 255, 3));  // Center: fill.
+		REQUIRE(s_px_near(s_probe(px[mode], w, h, -80), 255, 0, 0, 255, 3));   // 70 out: outline.
+		REQUIRE(s_px_near(s_probe(px[mode], w, h, -60), 0, 0, 0, 0, 0));       // 90 out: clear.
+
+		// Glow: blue at the center, magenta fading outward, gone past the radius. The falloff
+		// is squared, so at half the glow radius coverage is 25%.
+		REQUIRE(s_px_near(s_probe(px[mode], w, h, 150), 0, 0, 255, 255, 3));   // Center: fill.
+		CF_Pixel mid = s_probe(px[mode], w, h, 220);                            // 70 out (30 into a 60 glow).
+		REQUIRE(mid.colors.r > 20 && mid.colors.b > 20 && mid.colors.g < 40);   // Magenta-ish, partial.
+		REQUIRE(mid.colors.a > 20 && mid.colors.a < 240);                       // Genuinely a falloff.
+		REQUIRE(s_px_near(s_probe(px[mode], w, h, 265), 0, 0, 0, 0, 2));        // Past the glow: clear.
+	}
+	REQUIRE(s_diff_ok(a, b, w * h, "shape-effects tiled-vs-mesh"));
+
+	cf_free(a);
+	cf_free(b);
+	test_destroy_app();
+	return true;
+}
+
+// -------------------------------------------------------------------------------------------------
+// Dashed strokes (cf_draw_push_dash): dash-center pixels ink, gap-center pixels stay
+// empty, on both the instanced and tiled paths.
+
+static void s_scene_dashed_strokes()
+{
+	cf_draw_push_color(cf_make_color_rgb_f(1.0f, 0, 0));
+	// Line from x=-250 to -50: on=50/off=50 lays dashes [-250,-200], [-150,-100] and
+	// gaps between.
+	cf_draw_push_dash(50, 50, 0);
+	cf_draw_line(cf_v2(-250, 0), cf_v2(-50, 0), 12.0f);
+	cf_draw_pop_dash();
+	// Circle outline at (150, 0) r=100: phase centers a dash on the ring's right
+	// crossing (arclength 0) and lands both left crossings (arclength +-pi*r) mid-gap.
+	cf_draw_push_dash(100, 100, -50);
+	cf_draw_circle2(cf_v2(150, 0), 100, 10);
+	cf_draw_pop_dash();
+	cf_draw_pop_color();
+}
+
+TEST_CASE(test_draw_dashed_strokes)
+{
+	if (!test_make_app(640, 480)) return true; // Headless CI: no display/GPU.
+
+	int w = 640, h = 480;
+	CF_Pixel* a = (CF_Pixel*)cf_alloc(w * h * sizeof(CF_Pixel));
+	CF_Pixel* b = (CF_Pixel*)cf_alloc(w * h * sizeof(CF_Pixel));
+	CF_Pixel* px[2] = { a, b };
+	for (int mode = 0; mode <= 1; ++mode) {
+		REQUIRE(s_readback(s_scene_dashed_strokes, mode, w, h, px[mode]));
+		REQUIRE(s_px_near(s_probe(px[mode], w, h, -225), 255, 0, 0, 255, 3)); // Line: first dash.
+		REQUIRE(s_px_near(s_probe(px[mode], w, h, -175), 0, 0, 0, 0, 0));     // Line: first gap.
+		REQUIRE(s_px_near(s_probe(px[mode], w, h, -125), 255, 0, 0, 255, 3)); // Line: second dash.
+		REQUIRE(s_px_near(s_probe(px[mode], w, h, -75), 0, 0, 0, 0, 0));      // Line: second gap.
+		REQUIRE(s_px_near(s_probe(px[mode], w, h, 250), 255, 0, 0, 255, 3));  // Ring: dash at right crossing.
+		REQUIRE(s_px_near(s_probe(px[mode], w, h, 50), 0, 0, 0, 0, 0));       // Ring: gap at left crossing.
+	}
+	REQUIRE(s_diff_ok(a, b, w * h, "dashed-strokes tiled-vs-mesh"));
+
+	cf_free(a);
+	cf_free(b);
+	test_destroy_app();
+	return true;
+}
+
+// A dashed polyline's pattern flows unbroken through joints: with segment lengths 150
+// and a 200-long dash, the first dash must cross the joint at x=0 and the first gap must
+// start mid-second-segment -- a per-segment phase reset would ink the whole second
+// segment instead.
+
+static void s_scene_dashed_polyline()
+{
+	CF_V2 pts[3] = { cf_v2(-150, 0), cf_v2(0, 0), cf_v2(150, 0) };
+	cf_draw_push_color(cf_make_color_rgb_f(1.0f, 0, 0));
+	cf_draw_push_dash(200, 100, 0);
+	cf_draw_polyline(pts, 3, 12.0f, false);
+	cf_draw_pop_dash();
+	cf_draw_pop_color();
+}
+
+TEST_CASE(test_draw_dashed_polyline_flow)
+{
+	if (!test_make_app(640, 480)) return true; // Headless CI: no display/GPU.
+
+	int w = 640, h = 480;
+	CF_Pixel* a = (CF_Pixel*)cf_alloc(w * h * sizeof(CF_Pixel));
+	CF_Pixel* b = (CF_Pixel*)cf_alloc(w * h * sizeof(CF_Pixel));
+	CF_Pixel* px[2] = { a, b };
+	for (int mode = 0; mode <= 1; ++mode) {
+		REQUIRE(s_readback(s_scene_dashed_polyline, mode, w, h, px[mode]));
+		REQUIRE(s_px_near(s_probe(px[mode], w, h, -100), 255, 0, 0, 255, 3)); // First segment: mid-dash.
+		REQUIRE(s_px_near(s_probe(px[mode], w, h, 25), 255, 0, 0, 255, 3));   // Second segment: dash continues past the joint.
+		REQUIRE(s_px_near(s_probe(px[mode], w, h, 100), 0, 0, 0, 0, 0));      // Second segment: gap (fails if phase resets per segment).
+	}
+	REQUIRE(s_diff_ok(a, b, w * h, "dashed-polyline tiled-vs-mesh"));
+
+	cf_free(a);
+	cf_free(b);
+	test_destroy_app();
 	return true;
 }
 
@@ -556,7 +683,7 @@ static void s_scene_arrow()
 
 TEST_CASE(test_draw_arrow_no_overdraw)
 {
-	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, 640, 480, s_app_options(), NULL))) return true; // Headless CI: no display/GPU.
+	if (!test_make_app(640, 480)) return true; // Headless CI: no display/GPU.
 
 	int w = 640, h = 480;
 	CF_Pixel* a = (CF_Pixel*)cf_alloc(w * h * sizeof(CF_Pixel));
@@ -579,7 +706,7 @@ TEST_CASE(test_draw_arrow_no_overdraw)
 
 	cf_free(a);
 	cf_free(b);
-	cf_destroy_app();
+	test_destroy_app();
 	return true;
 }
 
@@ -646,7 +773,7 @@ static void s_scene_custom_circle_only()
 
 TEST_CASE(test_draw_custom_shapes)
 {
-	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, 640, 480, s_app_options(), NULL))) return true; // Headless CI: no display/GPU.
+	if (!test_make_app(640, 480)) return true; // Headless CI: no display/GPU.
 
 	s_circle_shape = cf_make_custom_shape(s_circle_sdf_src);
 	REQUIRE(s_circle_shape.id);
@@ -677,7 +804,7 @@ TEST_CASE(test_draw_custom_shapes)
 
 	cf_free(a);
 	cf_free(b);
-	cf_destroy_app();
+	test_destroy_app();
 	return true;
 }
 
@@ -768,7 +895,7 @@ static void s_scene_invalid_handles()
 
 TEST_CASE(test_draw_custom_shapes_advanced)
 {
-	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, 640, 480, s_app_options(), NULL))) return true; // Headless CI: no display/GPU.
+	if (!test_make_app(640, 480)) return true; // Headless CI: no display/GPU.
 
 	s_attr_circle_shape = cf_make_custom_shape(s_attr_circle_sdf_src);
 	REQUIRE(s_attr_circle_shape.id);
@@ -820,7 +947,7 @@ TEST_CASE(test_draw_custom_shapes_advanced)
 
 	cf_free(a);
 	cf_free(b);
-	cf_destroy_app();
+	test_destroy_app();
 	return true;
 }
 
@@ -915,8 +1042,8 @@ static void s_scene_over_budget()
 
 TEST_CASE(test_draw_tiled_budget_fallback)
 {
-	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, 640, 480, s_app_options(), NULL))) return true; // Headless CI: no display/GPU.
-	if (cf_query_backend() == CF_BACKEND_TYPE_GLES3) { cf_destroy_app(); return true; }
+	if (!test_make_app(640, 480)) return true; // Headless CI: no display/GPU.
+	if (cf_query_backend() == CF_BACKEND_TYPE_GLES3) { test_destroy_app(); return true; }
 
 	int w = 640, h = 480;
 	CF_Pixel* a = (CF_Pixel*)cf_alloc(w * h * sizeof(CF_Pixel));
@@ -942,13 +1069,13 @@ TEST_CASE(test_draw_tiled_budget_fallback)
 
 	cf_free(a);
 	cf_free(b);
-	cf_destroy_app();
+	test_destroy_app();
 	return true;
 }
 
 TEST_CASE(test_draw_shape_groups)
 {
-	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, 640, 480, s_app_options(), NULL))) return true; // Headless CI: no display/GPU.
+	if (!test_make_app(640, 480)) return true; // Headless CI: no display/GPU.
 
 	int w = 640, h = 480;
 	CF_Pixel* a = (CF_Pixel*)cf_alloc(w * h * sizeof(CF_Pixel));
@@ -984,7 +1111,7 @@ TEST_CASE(test_draw_shape_groups)
 
 	cf_free(a);
 	cf_free(b);
-	cf_destroy_app();
+	test_destroy_app();
 	return true;
 }
 
@@ -1165,7 +1292,7 @@ static void s_scene_path_mixed()
 
 TEST_CASE(test_draw_paths)
 {
-	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, 640, 480, s_app_options(), NULL))) return true; // Headless CI: no display/GPU.
+	if (!test_make_app(640, 480)) return true; // Headless CI: no display/GPU.
 
 	// Donut: outer CCW square, inner CW square -- nonzero winding leaves the hole empty.
 	cf_draw_path_begin();
@@ -1221,7 +1348,7 @@ TEST_CASE(test_draw_paths)
 	cf_destroy_path(s_blob_path);
 	cf_free(a);
 	cf_free(b);
-	cf_destroy_app();
+	test_destroy_app();
 	return true;
 }
 
@@ -1231,7 +1358,7 @@ TEST_CASE(test_draw_paths)
 // the strip (the per-pixel winding evaluation then reads garbage curves).
 TEST_CASE(test_draw_path_bake_once_stability)
 {
-	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, 640, 480, s_app_options(), NULL))) return true; // Headless CI: no display/GPU.
+	if (!test_make_app(640, 480)) return true; // Headless CI: no display/GPU.
 
 	// Donut baked exactly once, before any frame renders.
 	cf_draw_path_begin();
@@ -1368,7 +1495,7 @@ TEST_CASE(test_draw_path_bake_once_stability)
 	cf_destroy_canvas(canvas);
 	cf_free(a);
 	cf_free(b);
-	cf_destroy_app();
+	test_destroy_app();
 	return true;
 }
 
@@ -1379,7 +1506,7 @@ TEST_CASE(test_draw_path_bake_once_stability)
 // block (including long-lived ones) packed into the rebuilt atlas.
 TEST_CASE(test_draw_path_lonely_flood)
 {
-	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, 640, 480, s_app_options(), NULL))) return true; // Headless CI: no display/GPU.
+	if (!test_make_app(640, 480)) return true; // Headless CI: no display/GPU.
 
 	// A visible donut probe...
 	cf_draw_path_begin();
@@ -1459,7 +1586,7 @@ TEST_CASE(test_draw_path_lonely_flood)
 	cf_destroy_canvas(canvas);
 	cf_free(a);
 	cf_free(b);
-	cf_destroy_app();
+	test_destroy_app();
 	return true;
 }
 
@@ -1469,7 +1596,7 @@ TEST_CASE(test_draw_path_lonely_flood)
 // shape flush had already rendered, wiping everything batched before the blit.
 TEST_CASE(test_draw_canvas_blit_preserves_earlier_shapes)
 {
-	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, 640, 480, s_app_options(), NULL))) return true; // Headless CI: no display/GPU.
+	if (!test_make_app(640, 480)) return true; // Headless CI: no display/GPU.
 
 	int w = 640, h = 480;
 	CF_Pixel* px = (CF_Pixel*)cf_alloc(w * h * sizeof(CF_Pixel));
@@ -1507,13 +1634,13 @@ TEST_CASE(test_draw_canvas_blit_preserves_earlier_shapes)
 	cf_destroy_canvas(small);
 	cf_destroy_canvas(target);
 	cf_free(px);
-	cf_destroy_app();
+	test_destroy_app();
 	return true;
 }
 
 TEST_CASE(test_draw_blend_modes)
 {
-	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, 640, 480, s_app_options(), NULL))) return true; // Headless CI: no display/GPU.
+	if (!test_make_app(640, 480)) return true; // Headless CI: no display/GPU.
 
 	int w = 640, h = 480;
 	CF_Pixel* a = (CF_Pixel*)cf_alloc(w * h * sizeof(CF_Pixel));
@@ -1536,7 +1663,7 @@ TEST_CASE(test_draw_blend_modes)
 
 	cf_free(a);
 	cf_free(b);
-	cf_destroy_app();
+	test_destroy_app();
 	return true;
 }
 
@@ -1624,7 +1751,7 @@ static void s_scene_list_replay_multi()
 
 TEST_CASE(test_draw_lists)
 {
-	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, 640, 480, s_app_options(), NULL))) return true; // Headless CI: no display/GPU.
+	if (!test_make_app(640, 480)) return true; // Headless CI: no display/GPU.
 
 	s_test_list = cf_make_draw_list();
 	cf_draw_list_begin(s_test_list);
@@ -1670,13 +1797,13 @@ TEST_CASE(test_draw_lists)
 	cf_destroy_draw_list(s_test_list);
 	cf_free(a);
 	cf_free(b);
-	cf_destroy_app();
+	test_destroy_app();
 	return true;
 }
 
 TEST_CASE(test_draw_text_curves)
 {
-	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, 640, 480, s_app_options(), NULL))) return true; // Headless CI: no display/GPU.
+	if (!test_make_app(640, 480)) return true; // Headless CI: no display/GPU.
 
 	int w = 640, h = 480;
 	CF_Pixel* a = (CF_Pixel*)cf_alloc(w * h * sizeof(CF_Pixel));
@@ -1715,8 +1842,108 @@ TEST_CASE(test_draw_text_curves)
 
 	cf_free(a);
 	cf_free(b);
-	cf_destroy_app();
+	test_destroy_app();
 	return true;
+}
+
+// -------------------------------------------------------------------------------------------------
+// Atlas repacks are GPU->GPU copies. Draw a few distinct-color sprites, then corrupt their
+// CPU-side pixel stores to a magenta sentinel: any later atlas rebuild that re-fetched pixels
+// through the producer (cf_get_pixels) would visibly render the sentinel, while GPU copies keep
+// rendering the original colors. Repacks are forced by flooding batches of new sprites (each
+// batch builds a new mostly-empty atlas page; two such pages merge on the following frame,
+// demoting + repacking everything). Non-vacuousness: the originals' texture id must change
+// across frames -- alias-free because old pages are destroyed only AFTER new pages exist.
+
+static CF_Sprite s_repack_originals[3];
+static CF_Sprite s_repack_extras[64];
+static int s_repack_extra_count;
+
+static void s_scene_repack()
+{
+	for (int i = 0; i < 3; ++i) {
+		s_repack_originals[i].transform.p = cf_v2(-200.0f + 40.0f * i, 0);
+		cf_draw_sprite(&s_repack_originals[i]);
+	}
+	for (int i = 0; i < s_repack_extra_count; ++i) {
+		s_repack_extras[i].transform.p = cf_v2(-280.0f + 24.0f * (i % 24), -150.0f + 100.0f * (i / 24));
+		cf_draw_sprite(&s_repack_extras[i]);
+	}
+}
+
+TEST_CASE(test_draw_atlas_repack_gpu_copies)
+{
+#if !defined(CF_STATIC)
+	// Peeks at engine-internal atlas state (cf_get_draw_atlas_cache / atlas_cache_fetch),
+	// which shared (DLL) builds don't export -- and shouldn't. Static builds cover it.
+	return true;
+#else
+	if (!test_make_app(640, 480)) return true; // Headless CI: no display/GPU.
+
+	const int w = 640, h = 480;
+	const int sw = 16, sh = 16;
+	CF_Pixel* px = (CF_Pixel*)cf_alloc(w * h * sizeof(CF_Pixel));
+	CF_Pixel solid[sw * sh];
+	const int colors[3][3] = { { 220, 40, 60 }, { 40, 220, 90 }, { 60, 90, 220 } };
+
+	for (int i = 0; i < 3; ++i) {
+		for (int p = 0; p < sw * sh; ++p) solid[p] = cf_make_pixel_rgba(colors[i][0], colors[i][1], colors[i][2], 255);
+		s_repack_originals[i] = cf_make_easy_sprite_from_pixels(solid, sw, sh);
+	}
+	s_repack_extra_count = 0;
+
+	atlas_cache_t* cache = cf_get_draw_atlas_cache();
+	auto verify_originals = [&](const CF_Pixel* p) {
+		bool ok = true;
+		for (int i = 0; i < 3; ++i) {
+			ok = ok && s_px_near(s_probe(p, w, h, -200 + 40 * i), colors[i][0], colors[i][1], colors[i][2], 255, 3);
+		}
+		return ok;
+	};
+
+	// Frame 1: originals upload (lonely textures) and render.
+	REQUIRE(s_readback(s_scene_repack, 0, w, h, px));
+	REQUIRE(verify_originals(px));
+
+	// Corrupt the originals' CPU pixel stores. Every atlas the originals land in from here on
+	// must be assembled from GPU copies -- a producer re-fetch would render magenta.
+	for (int i = 0; i < 3; ++i) {
+		CF_Image* img = app->easy_sprites.try_get(s_repack_originals[i].easy_sprite_id);
+		REQUIRE(img);
+		for (int p = 0; p < img->w * img->h; ++p) img->pix[p] = cf_make_pixel_rgba(255, 0, 255, 255);
+	}
+
+	// Flood batches of new sprites over several frames. Each batch frame packs a fresh atlas
+	// page; the following settle frame merges the two mostly-empty pages, repacking the
+	// originals into yet another page via GPU copies.
+	ATLAS_CACHE_U64 prev_tex = atlas_cache_fetch(cache, s_repack_originals[0].easy_sprite_id, sw, sh).texture_id;
+	int rebuilds = 0;
+	for (int batch = 0; batch < 4; ++batch) {
+		for (int i = 0; i < 12; ++i) {
+			int j = s_repack_extra_count;
+			for (int p = 0; p < sw * sh; ++p) solid[p] = cf_make_pixel_rgba(10 + j * 3, 250 - j * 2, 20 + j * 4, 255);
+			s_repack_extras[j] = cf_make_easy_sprite_from_pixels(solid, sw, sh);
+			s_repack_extra_count++;
+		}
+		for (int frame = 0; frame < 2; ++frame) { // Batch frame + settle (merge) frame.
+			REQUIRE(s_readback(s_scene_repack, 0, w, h, px));
+			REQUIRE(verify_originals(px));
+			ATLAS_CACHE_U64 tex = atlas_cache_fetch(cache, s_repack_originals[0].easy_sprite_id, sw, sh).texture_id;
+			if (tex != prev_tex) rebuilds++;
+			prev_tex = tex;
+		}
+	}
+
+	// The originals' page must have been rebuilt at least twice (lonely -> atlas, plus at
+	// least one atlas merge), all without touching the (corrupted) CPU pixels.
+	REQUIRE(rebuilds >= 2);
+	REQUIRE(s_readback(s_scene_repack, 0, w, h, px));
+	REQUIRE(verify_originals(px));
+
+	cf_free(px);
+	test_destroy_app();
+	return true;
+#endif // CF_STATIC
 }
 
 TEST_SUITE(test_draw_tiled)
@@ -1734,6 +1961,9 @@ TEST_SUITE(test_draw_tiled)
 	RUN_TEST_CASE_IF(test_draw_render_states);
 	RUN_TEST_CASE_IF(test_draw_layers);
 	RUN_TEST_CASE_IF(test_draw_polyline_segments);
+	RUN_TEST_CASE_IF(test_draw_shape_effects);
+	RUN_TEST_CASE_IF(test_draw_dashed_strokes);
+	RUN_TEST_CASE_IF(test_draw_dashed_polyline_flow);
 	RUN_TEST_CASE_IF(test_draw_arrow_no_overdraw);
 	RUN_TEST_CASE_IF(test_draw_custom_shapes);
 	RUN_TEST_CASE_IF(test_draw_custom_shapes_advanced);
@@ -1744,6 +1974,7 @@ TEST_SUITE(test_draw_tiled)
 	RUN_TEST_CASE_IF(test_draw_paths);
 	RUN_TEST_CASE_IF(test_draw_path_bake_once_stability);
 	RUN_TEST_CASE_IF(test_draw_path_lonely_flood);
+	RUN_TEST_CASE_IF(test_draw_atlas_repack_gpu_copies);
 	RUN_TEST_CASE_IF(test_draw_canvas_blit_preserves_earlier_shapes);
 	RUN_TEST_CASE_IF(test_draw_lists);
 }

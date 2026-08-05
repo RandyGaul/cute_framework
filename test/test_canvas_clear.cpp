@@ -6,6 +6,7 @@
 */
 
 #include "test_harness.h"
+#include "test_app_shared.h"
 
 #include <cute.h>
 #include <stdlib.h>
@@ -15,14 +16,6 @@ using namespace Cute;
 #define W 32
 #define H 32
 
-static int s_app_options()
-{
-	int options = CF_APP_OPTIONS_HIDDEN_BIT | CF_APP_OPTIONS_NO_AUDIO_BIT;
-	const char* gles = getenv("CF_TEST_GLES");
-	if (gles && *gles == '1') options |= CF_APP_OPTIONS_GFX_OPENGL_BIT | CF_APP_OPTIONS_GFX_DEBUG_BIT;
-	return options;
-}
-
 static bool s_near(int a, int b) { int d = a - b; return (d < 0 ? -d : d) < 24; }
 
 // A failed REQUIRE below returns out of the test case early, so destroying the app must
@@ -30,7 +23,7 @@ static bool s_near(int a, int b) { int d = a - b; return (d < 0 ? -d : d) < 24; 
 // file system init) breaks cf_make_app in whichever test case runs next.
 struct AppDestroyGuard
 {
-	~AppDestroyGuard() { cf_destroy_app(); }
+	~AppDestroyGuard() { test_destroy_app(); }
 };
 
 static CF_Pixel s_clear_and_read(CF_Canvas canvas, CF_Pixel* px)
@@ -62,7 +55,7 @@ static CF_Pixel s_clear_and_read(CF_Canvas canvas, CF_Pixel* px)
 // canvases must be able to hold their own clear colors at the same time.
 TEST_CASE(test_per_canvas_clear_color)
 {
-	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, W, H, s_app_options(), NULL))) return true; // Headless CI: no display/GPU.
+	if (!test_make_app(W, H)) return true; // Headless CI: no display/GPU.
 	AppDestroyGuard app_guard;
 
 	CF_Canvas red_canvas = cf_make_canvas(cf_canvas_defaults(W, H));
@@ -101,7 +94,7 @@ TEST_CASE(test_per_canvas_clear_color)
 // two disagreed. Clearing depth to 0 with a LESS_THAN test must reject everything drawn after.
 TEST_CASE(test_canvas_clear_depth_is_honored)
 {
-	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, W, H, s_app_options(), NULL))) return true; // Headless CI: no display/GPU.
+	if (!test_make_app(W, H)) return true; // Headless CI: no display/GPU.
 	AppDestroyGuard app_guard;
 
 	const char* vs =

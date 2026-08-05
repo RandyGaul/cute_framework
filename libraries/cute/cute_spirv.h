@@ -52,9 +52,16 @@
 		barriers, shared memory, and a full preprocessor with #include).
 
 		Not supported: doubles, non-square matrices, geometry/tessellation
-		stages, sampler3D/samplerCube/shadow samplers, multi-dimensional arrays,
-		out/inout function parameters, # and ## preprocessor operators. The
-		subset is documented precisely in CF's docs and grows on request.
+		stages, multi-dimensional arrays, out/inout function parameters, # and
+		## preprocessor operators. The subset is documented precisely in CF's
+		docs and grows on request.
+
+		samplerCube, sampler3D, sampler2DArray and the shadow samplers
+		(sampler2DShadow, samplerCubeShadow, sampler2DArrayShadow) are
+		supported through texture()/textureLod on every backend. textureSize
+		works on every sampler dim (ivec3 for array/3D dims), texelFetch on
+		sampler2D/sampler2DArray/sampler3D (GLSL defines none for samplerCube
+		or shadow samplers), and textureOffset on sampler2D/sampler2DArray.
 
 	Revision history:
 		1.00 (07/21/2026) initial release: preprocessor, full CF-GLSL subset,
@@ -80,10 +87,33 @@
 		                  struct whose methods are the user's functions, so no
 		                  state threading is needed. Compute reflection now
 		                  carries local_size so Metal pipelines can dispatch.
+		1.04 (08/02/2026) samplerCube/sampler3D/sampler2DArray/sampler2DShadow across
+		                  SPIR-V, ES 3.00, HLSL and MSL backends (texture/textureLod;
+		                  comparison fetches are level-zero everywhere).
+		1.05 (08/02/2026) Sized arrays in uniform/buffer blocks (`mat4 u_bones[6];`),
+		                  vec4/ivec4/uvec4/mat4 elements, dynamic indexing, across
+		                  all four backends -- the skinning palette case. Element
+		                  set chosen so std140, std430, HLSL cbuffer, and MSL
+		                  natural strides all coincide.
+		1.06 (08/03/2026) samplerCubeShadow (vec4 direction + reference coordinate,
+		                  comparison fetches level-zero like the other shadow dims)
+		                  and matrix addition/subtraction (decomposed per column
+		                  for SPIR-V; native in every transpiler).
+		1.07 (08/03/2026) sampler2DArrayShadow (vec4 uv + layer + reference, the
+		                  hardware-PCF cascaded-shadow-map sampler) across all four
+		                  backends, and the image-op intrinsics widened past 2D:
+		                  textureSize on every sampler dim, texelFetch on
+		                  sampler2DArray/sampler3D, textureOffset on sampler2DArray.
+		1.08 (08/04/2026) GLSL ES 3.00 output emulates readonly storage buffers as
+		                  RGBA32UI texture fetches (anonymous single runtime
+		                  vec4/uvec4 array blocks -- CF's documented storage
+		                  pattern): the block emits as a stage-pooled usampler2D
+		                  (u_{vs,fs}_storage_<slot>), index sites rewrite to
+		                  bit-exact texelFetch, and unsupported shapes (scalar
+		                  tails, .length(), bare references) error clearly.
 */
 #ifndef CUTE_SPIRV_H
 #define CUTE_SPIRV_H
-
 #ifndef CKIT_H
 #error "cute_spirv.h requires cute/ckit.h -- include it first"
 #endif
@@ -317,6 +347,8 @@ enum
 	CSpvOpTranspose            = 84,
 	CSpvOpImageSampleImplicitLod = 87,
 	CSpvOpImageSampleExplicitLod = 88,
+	CSpvOpImageSampleDrefImplicitLod = 89,
+	CSpvOpImageSampleDrefExplicitLod = 90,
 	CSpvOpImageFetch           = 95,
 	CSpvOpImageRead            = 98,
 	CSpvOpImageWrite           = 99,
@@ -611,6 +643,20 @@ typedef enum cspv_type_kind
 	CSPV_T_IMAGE2D,   // Storage image; cols = SPIR-V image format (-1 = formatless placeholder).
 } cspv_type_kind;
 
+// Sampler dimensionality, stored in cspv_type.cols for kind CSPV_T_SAMPLER2D. The 2D
+// value is zero so every pre-existing construction site (and zeroed type) stays a plain
+// sampler2D without edits.
+enum
+{
+	CSPV_SDIM_2D = 0,
+	CSPV_SDIM_CUBE = 1,
+	CSPV_SDIM_3D = 2,
+	CSPV_SDIM_2D_ARRAY = 3,
+	CSPV_SDIM_2D_SHADOW = 4,
+	CSPV_SDIM_CUBE_SHADOW = 5,
+	CSPV_SDIM_2D_ARRAY_SHADOW = 6,
+};
+
 typedef struct cspv_type
 {
 	cspv_type_kind kind;
@@ -834,6 +880,14 @@ typedef struct cspv_ctx
 	cspv_type* t_mat[3];   // mat2..mat4
 	cspv_type* t_sampler2d;
 	cspv_type* t_usampler2d; // elem = uint (texelFetch yields uvec4).
+	// Non-2D sampler dims share kind CSPV_T_SAMPLER2D; cols carries the dim tag
+	// (see CSPV_SDIM_*). Float-sampled only -- the u-variants grow on request.
+	cspv_type* t_samplercube;
+	cspv_type* t_sampler3d;
+	cspv_type* t_sampler2darray;
+	cspv_type* t_sampler2dshadow;
+	cspv_type* t_samplercubeshadow;
+	cspv_type* t_sampler2darrayshadow;
 	CK_MAP(cspv_type*) type_names;  // interned name -> type
 	CK_MAP(cspv_type*) array_types; // (elem ptr, len) -> canonical array type
 	CK_MAP(cspv_type*) image_types; // format -> canonical image2D type
@@ -861,8 +915,9 @@ typedef struct cspv_ctx
 	CK_MAP(uint32_t) laid_array_tids;
 	// laid-out array tid -> its element's laid-out struct tid.
 	CK_MAP(uint32_t) laid_elem_tids;
-	uint32_t sampler2d_image_tid;  // OpTypeImage id behind sampler2D (for texelFetch).
-	uint32_t usampler2d_image_tid; // Same for usampler2D.
+	// OpTypeImage id behind each sampler type, keyed by cspv_type* (texelFetch and
+	// textureSize's OpImage result type must match the sampled image's image type).
+	CK_MAP(uint32_t) sampler_image_tids;
 	bool needs_image_query;        // Emit OpCapability ImageQuery (textureSize).
 	bool needs_extended_formats;   // Emit OpCapability StorageImageExtendedFormats.
 
@@ -887,6 +942,9 @@ typedef struct cspv_ctx
 	// during validation cannot leak it; each emitter's result moves to
 	// CSPV_Result right after it runs).
 	CK_SDYNA char* tp_out;
+	// Scratch shadow-name list for the ES validation walk -- on the context for the
+	// same longjmp-cannot-leak reason as tp_out.
+	CK_DYNA const char** es_shadows;
 } cspv_ctx;
 
 //--------------------------------------------------------------------------------------------------
@@ -1918,12 +1976,21 @@ static uint32_t cspv_type_id(cspv_ctx* ctx, cspv_type* type)
 		// Sampled type is float (sampler2D) or uint (usampler2D).
 		uint32_t sampled_tid = cspv_type_id(ctx, type->elem ? type->elem : ctx->t_float);
 		uint32_t img = cspv_new_id(ctx);
-		// Sampled type, dim 2D (=1), depth 0, arrayed 0, ms 0, sampled 1, format Unknown (=0).
-		uint32_t w[8] = { img, sampled_tid, 1, 0, 0, 0, 1, 0 };
+		// SPIR-V Dim: 2D = 1, 3D = 2, Cube = 3. Arrays set Arrayed, shadow sets Depth.
+		uint32_t dim = 1, depth = 0, arrayed = 0;
+		switch (type->cols) {
+		case CSPV_SDIM_CUBE: dim = 3; break;
+		case CSPV_SDIM_3D: dim = 2; break;
+		case CSPV_SDIM_2D_ARRAY: arrayed = 1; break;
+		case CSPV_SDIM_2D_SHADOW: depth = 1; break;
+		case CSPV_SDIM_CUBE_SHADOW: dim = 3; depth = 1; break;
+		case CSPV_SDIM_2D_ARRAY_SHADOW: arrayed = 1; depth = 1; break;
+		}
+		// Sampled type, dim, depth, arrayed, ms 0, sampled 1, format Unknown (=0).
+		uint32_t w[8] = { img, sampled_tid, dim, depth, arrayed, 0, 1, 0 };
 		cspv_emit(&ctx->globals, CSpvOpTypeImage, w, 8);
 		cspv_emit2(&ctx->globals, CSpvOpTypeSampledImage, id, img);
-		if (type->elem && type->elem->kind == CSPV_T_UINT) ctx->usampler2d_image_tid = img;
-		else ctx->sampler2d_image_tid = img;
+		map_set(ctx->sampler_image_tids, (uint64_t)(uintptr_t)type, img);
 	}
 
 	map_set(ctx->type_ids, (uint64_t)(uintptr_t)type, id);
@@ -2907,7 +2974,16 @@ static const char* cspv_type_name(cspv_type* t)
 	case CSPV_T_INT: return "int";
 	case CSPV_T_UINT: return "uint";
 	case CSPV_T_FLOAT: return "float";
-	case CSPV_T_SAMPLER2D: return t->elem && t->elem->kind == CSPV_T_UINT ? "usampler2D" : "sampler2D";
+	case CSPV_T_SAMPLER2D:
+		switch (t->cols) {
+		case CSPV_SDIM_CUBE: return "samplerCube";
+		case CSPV_SDIM_3D: return "sampler3D";
+		case CSPV_SDIM_2D_ARRAY: return "sampler2DArray";
+		case CSPV_SDIM_2D_SHADOW: return "sampler2DShadow";
+		case CSPV_SDIM_CUBE_SHADOW: return "samplerCubeShadow";
+		case CSPV_SDIM_2D_ARRAY_SHADOW: return "sampler2DArrayShadow";
+		default: return t->elem && t->elem->kind == CSPV_T_UINT ? "usampler2D" : "sampler2D";
+		}
 	case CSPV_T_ARRAY: return "array";
 	case CSPV_T_STRUCT: return t->name;
 	case CSPV_T_IMAGE2D: return "image2D";
@@ -3114,10 +3190,32 @@ static cspv_type* cspv_unify_types(cspv_ctx* ctx, cspv_type* at, cspv_type* bt, 
 // Emit an arithmetic/bitwise/comparison binary op on balanced operands.
 static cspv_value cspv_gen_binop(cspv_ctx* ctx, int op, int line, uint32_t a, cspv_type* at, uint32_t b, cspv_type* bt)
 {
-	// Matrix operations (square matrices only; '*' is the only supported operator).
+	// Matrix operations (square matrices only).
 	if (at->kind == CSPV_T_MAT || bt->kind == CSPV_T_MAT) {
+		// Addition/subtraction: SPIR-V has no matrix OpFAdd/OpFSub, so decompose into
+		// per-column vector ops and reassemble. The transpilers print `m + m` natively.
+		if ((op == '+' || op == '-') && at->kind == CSPV_T_MAT && bt->kind == CSPV_T_MAT) {
+			if (at != bt) cspv_errorf(ctx, line, "matrix size mismatch");
+			cspv_type* col_t = ctx->t_vec[at->rows - 2];
+			uint32_t col_tid = cspv_type_id(ctx, col_t);
+			uint32_t cols[4];
+			for (int c = 0; c < at->cols; ++c) {
+				uint32_t ca = cspv_new_id(ctx);
+				cspv_emit4(&ctx->body, CSpvOpCompositeExtract, col_tid, ca, a, (uint32_t)c);
+				uint32_t cb = cspv_new_id(ctx);
+				cspv_emit4(&ctx->body, CSpvOpCompositeExtract, col_tid, cb, b, (uint32_t)c);
+				uint32_t cr = cspv_new_id(ctx);
+				cspv_emit4(&ctx->body, op == '+' ? CSpvOpFAdd : CSpvOpFSub, col_tid, cr, ca, cb);
+				cols[c] = cr;
+			}
+			uint32_t result = cspv_new_id(ctx);
+			uint32_t w[2 + 4] = { cspv_type_id(ctx, at), result };
+			for (int c = 0; c < at->cols; ++c) w[2 + c] = cols[c];
+			cspv_emit(&ctx->body, CSpvOpCompositeConstruct, w, 2 + at->cols);
+			return cspv_rvalue(at, result);
+		}
 		if (op != '*') {
-			cspv_errorf(ctx, line, "only '*' is supported with matrix operands");
+			cspv_errorf(ctx, line, "only '*', '+', and '-' are supported with matrix operands");
 		}
 		uint32_t result = cspv_new_id(ctx);
 		if (at->kind == CSPV_T_MAT && bt->kind == CSPV_T_MAT) {
@@ -3745,13 +3843,52 @@ static cspv_value cspv_gen_intrin(cspv_ctx* ctx, cspv_expr* e, cspv_intrin* in)
 	    in->kind == CSPV_INTRIN_TEXEL_FETCH || in->kind == CSPV_INTRIN_TEXTURE_SIZE) {
 		cspv_type* st = NULL;
 		uint32_t sampler = cspv_gen_rvalue(ctx, e->u.call.args[0], &st);
-		if (st->kind != CSPV_T_SAMPLER2D) cspv_errorf(ctx, e->line, "'%s' requires a sampler2D", e->u.call.name);
+		if (st->kind != CSPV_T_SAMPLER2D) cspv_errorf(ctx, e->line, "'%s' requires a sampler type", e->u.call.name);
+		int sdim = st->cols;
+		bool shadow = sdim == CSPV_SDIM_2D_SHADOW || sdim == CSPV_SDIM_CUBE_SHADOW ||
+		              sdim == CSPV_SDIM_2D_ARRAY_SHADOW;
+		// texelFetch/textureOffset cover the dims GLSL defines them for (textureSize
+		// works on every dim); the sampled-image ops below handle every dim.
+		if (in->kind == CSPV_INTRIN_TEXEL_FETCH &&
+		    sdim != CSPV_SDIM_2D && sdim != CSPV_SDIM_2D_ARRAY && sdim != CSPV_SDIM_3D) {
+			cspv_errorf(ctx, e->line, "texelFetch requires a sampler2D, sampler2DArray, or sampler3D (GLSL defines no texelFetch for %s)", cspv_type_name(st));
+		}
+		if (in->kind == CSPV_INTRIN_TEXTURE_OFFSET && sdim != CSPV_SDIM_2D && sdim != CSPV_SDIM_2D_ARRAY) {
+			cspv_errorf(ctx, e->line, "textureOffset requires a sampler2D or sampler2DArray");
+		}
 		bool uint_sampler = st->elem && st->elem->kind == CSPV_T_UINT;
 		cspv_type* vec4_t = uint_sampler ? ctx->t_uvec[2] : ctx->t_vec[2];
+		// Coordinate: vec2 for 2D, vec3 for cube/3D/array, vec3 for 2D shadow (xy + z
+		// reference), and vec4 for cube shadow (xyz direction + w reference) and 2D array
+		// shadow (xy + z layer + w reference); shadow references split below for SPIR-V's
+		// separate Dref operand.
+		cspv_type* coord_t = sdim == CSPV_SDIM_2D ? ctx->t_vec[0] :
+		                     (sdim == CSPV_SDIM_CUBE_SHADOW || sdim == CSPV_SDIM_2D_ARRAY_SHADOW) ? ctx->t_vec[2] : ctx->t_vec[1];
 
 		if (in->kind == CSPV_INTRIN_TEXTURE) {
-			uint32_t coord = cspv_gen_rvalue_as(ctx, e->u.call.args[1], ctx->t_vec[0]);
+			uint32_t coord = cspv_gen_rvalue_as(ctx, e->u.call.args[1], coord_t);
 			uint32_t result = cspv_new_id(ctx);
+			if (shadow) {
+				// texture(sampler2DShadow, vec3(uv, ref)) / texture(samplerCubeShadow,
+				// vec4(dir, ref)) / texture(sampler2DArrayShadow, vec4(uv, layer, ref))
+				// yield a float visibility factor. Split the reference off the trailing
+				// coordinate component.
+				bool wide = sdim == CSPV_SDIM_CUBE_SHADOW || sdim == CSPV_SDIM_2D_ARRAY_SHADOW;
+				uint32_t xy = cspv_new_id(ctx);
+				uint32_t sw[8] = { cspv_type_id(ctx, wide ? ctx->t_vec[1] : ctx->t_vec[0]), xy, coord, coord, 0, 1, 2 };
+				cspv_emit(&ctx->body, CSpvOpVectorShuffle, sw, wide ? 7 : 6);
+				uint32_t dref = cspv_new_id(ctx);
+				cspv_emit4(&ctx->body, CSpvOpCompositeExtract, cspv_type_id(ctx, ctx->t_float), dref, coord, wide ? 3u : 2u);
+				if (ctx->stage == CSPV_STAGE_FRAGMENT) {
+					uint32_t w[5] = { cspv_type_id(ctx, ctx->t_float), result, sampler, xy, dref };
+					cspv_emit(&ctx->body, CSpvOpImageSampleDrefImplicitLod, w, 5);
+				} else {
+					uint32_t lod = cspv_const_float(ctx, 0.0f);
+					uint32_t w[7] = { cspv_type_id(ctx, ctx->t_float), result, sampler, xy, dref, 0x2 /* Lod */, lod };
+					cspv_emit(&ctx->body, CSpvOpImageSampleDrefExplicitLod, w, 7);
+				}
+				return cspv_rvalue(ctx->t_float, result);
+			}
 			if (ctx->stage == CSPV_STAGE_FRAGMENT) {
 				cspv_emit4(&ctx->body, CSpvOpImageSampleImplicitLod, cspv_type_id(ctx, vec4_t), result, sampler, coord);
 			} else {
@@ -3764,8 +3901,9 @@ static cspv_value cspv_gen_intrin(cspv_ctx* ctx, cspv_expr* e, cspv_intrin* in)
 		}
 
 		if (in->kind == CSPV_INTRIN_TEXTURE_OFFSET) {
-			// The offset must be a constant expression (SPIR-V ConstOffset operand).
-			uint32_t coord = cspv_gen_rvalue_as(ctx, e->u.call.args[1], ctx->t_vec[0]);
+			// The offset must be a constant expression (SPIR-V ConstOffset operand). It
+			// stays ivec2 for array textures too: ConstOffset excludes the layer component.
+			uint32_t coord = cspv_gen_rvalue_as(ctx, e->u.call.args[1], coord_t);
 			uint32_t offset = cspv_const_expr(ctx, e->u.call.args[2], ctx->t_ivec[0]);
 			uint32_t result = cspv_new_id(ctx);
 			if (ctx->stage == CSPV_STAGE_FRAGMENT) {
@@ -3780,20 +3918,40 @@ static cspv_value cspv_gen_intrin(cspv_ctx* ctx, cspv_expr* e, cspv_intrin* in)
 		}
 
 		if (in->kind == CSPV_INTRIN_TEXTURE_LOD) {
-			uint32_t coord = cspv_gen_rvalue_as(ctx, e->u.call.args[1], ctx->t_vec[0]);
+			if (sdim == CSPV_SDIM_CUBE_SHADOW || sdim == CSPV_SDIM_2D_ARRAY_SHADOW) {
+				cspv_errorf(ctx, e->line, "textureLod is not supported with %s (GLSL has no such overload)", cspv_type_name(st));
+			}
+			uint32_t coord = cspv_gen_rvalue_as(ctx, e->u.call.args[1], coord_t);
 			uint32_t lod = cspv_gen_rvalue_as(ctx, e->u.call.args[2], ctx->t_float);
 			uint32_t result = cspv_new_id(ctx);
+			if (shadow) {
+				uint32_t xy = cspv_new_id(ctx);
+				uint32_t sw[7] = { cspv_type_id(ctx, ctx->t_vec[0]), xy, coord, coord, 0, 1 };
+				cspv_emit(&ctx->body, CSpvOpVectorShuffle, sw, 6);
+				uint32_t dref = cspv_new_id(ctx);
+				cspv_emit4(&ctx->body, CSpvOpCompositeExtract, cspv_type_id(ctx, ctx->t_float), dref, coord, 2);
+				uint32_t w[7] = { cspv_type_id(ctx, ctx->t_float), result, sampler, xy, dref, 0x2 /* Lod */, lod };
+				cspv_emit(&ctx->body, CSpvOpImageSampleDrefExplicitLod, w, 7);
+				return cspv_rvalue(ctx->t_float, result);
+			}
 			uint32_t w[6] = { cspv_type_id(ctx, vec4_t), result, sampler, coord, 0x2 /* Lod */, lod };
 			cspv_emit(&ctx->body, CSpvOpImageSampleExplicitLod, w, 6);
 			return cspv_rvalue(vec4_t, result);
 		}
 
-		// texelFetch/textureSize operate on the image, not the sampled image.
+		// texelFetch/textureSize operate on the image, not the sampled image. The
+		// OpImage result type is the sampler's OpTypeImage, recorded per sampler
+		// type when cspv_type_id emitted it (loading the sampler emitted it).
+		cspv_type_id(ctx, st); // Ensures the image tid exists in the map below.
+		uint32_t img_tid = *map_get_ptr(ctx->sampler_image_tids, (uint64_t)(uintptr_t)st);
 		uint32_t image = cspv_new_id(ctx);
-		cspv_emit3(&ctx->body, CSpvOpImage, uint_sampler ? ctx->usampler2d_image_tid : ctx->sampler2d_image_tid, image, sampler);
+		cspv_emit3(&ctx->body, CSpvOpImage, img_tid, image, sampler);
+
+		// Array and 3D dims carry three integer coordinate/size components.
+		bool three = sdim == CSPV_SDIM_2D_ARRAY || sdim == CSPV_SDIM_3D || sdim == CSPV_SDIM_2D_ARRAY_SHADOW;
 
 		if (in->kind == CSPV_INTRIN_TEXEL_FETCH) {
-			uint32_t coord = cspv_gen_rvalue_as(ctx, e->u.call.args[1], ctx->t_ivec[0]);
+			uint32_t coord = cspv_gen_rvalue_as(ctx, e->u.call.args[1], three ? ctx->t_ivec[1] : ctx->t_ivec[0]);
 			uint32_t lod = cspv_gen_rvalue_as(ctx, e->u.call.args[2], ctx->t_int);
 			uint32_t result = cspv_new_id(ctx);
 			uint32_t w[6] = { cspv_type_id(ctx, vec4_t), result, image, coord, 0x2 /* Lod */, lod };
@@ -3801,12 +3959,14 @@ static cspv_value cspv_gen_intrin(cspv_ctx* ctx, cspv_expr* e, cspv_intrin* in)
 			return cspv_rvalue(vec4_t, result);
 		}
 
-		// textureSize.
+		// textureSize: ivec2 for 2D/cube dims (a cube face's extent), ivec3 for
+		// array (width, height, layers) and 3D (width, height, depth).
 		ctx->needs_image_query = true;
+		cspv_type* size_t_ = three ? ctx->t_ivec[1] : ctx->t_ivec[0];
 		uint32_t lod = cspv_gen_rvalue_as(ctx, e->u.call.args[1], ctx->t_int);
 		uint32_t result = cspv_new_id(ctx);
-		cspv_emit4(&ctx->body, CSpvOpImageQuerySizeLod, cspv_type_id(ctx, ctx->t_ivec[0]), result, image, lod);
-		return cspv_rvalue(ctx->t_ivec[0], result);
+		cspv_emit4(&ctx->body, CSpvOpImageQuerySizeLod, cspv_type_id(ctx, size_t_), result, image, lod);
+		return cspv_rvalue(size_t_, result);
 	}
 
 	if (in->kind == CSPV_INTRIN_BARRIER) {
@@ -4897,6 +5057,13 @@ static void cspv_std140_layout(cspv_ctx* ctx, cspv_type* t, int line, int* align
 		*align = 16;
 		*size = t->cols * 16;
 		return;
+	case CSPV_T_ARRAY:
+		// Sized block arrays (vec4/mat4 elements, enforced at parse): the stride is
+		// the element's own size, so std140 and std430 agree and match every backend.
+		cspv_std140_layout(ctx, t->elem, line, align, size);
+		*align = 16;
+		*size = *size * t->cols;
+		return;
 	default:
 		cspv_errorf(ctx, line, "type '%s' is not supported in uniform blocks yet", cspv_type_name(t));
 	}
@@ -4928,6 +5095,13 @@ static void cspv_std430_layout(cspv_ctx* ctx, cspv_type* t, int line, int* align
 		*size = (offset + max_align - 1) / max_align * max_align;
 		return;
 	}
+	case CSPV_T_ARRAY:
+		// Sized block arrays: vec4/mat4 elements only (see the uniform-block parser),
+		// where std430 and std140 strides coincide.
+		cspv_std430_layout(ctx, t->elem, line, align, size);
+		*align = 16;
+		*size = *size * t->cols;
+		return;
 	default:
 		cspv_errorf(ctx, line, "type '%s' is not supported in buffer blocks", cspv_type_name(t));
 	}
@@ -4983,6 +5157,27 @@ static uint32_t cspv_laid_runtime_array_tid(cspv_ctx* ctx, cspv_type* elem, int 
 	cspv_emit2(&ctx->globals, CSpvOpTypeRuntimeArray, id, elem_tid);
 	cspv_emit3(&ctx->decos, CSpvOpDecorate, id, CSpvDecorationArrayStride, (uint32_t)stride);
 	map_set(ctx->laid_array_tids, (uint64_t)(uintptr_t)elem, id);
+	map_set(ctx->laid_elem_tids, id, elem_tid);
+	return id;
+}
+
+// Sized array block member (vec4/mat4 elements), with its ArrayStride decoration. A
+// distinct id from the canonical array type: the same (elem, len) can also appear as a
+// function-local array, where stride decorations are forbidden. Cached in laid_array_tids
+// keyed by the array type itself -- runtime arrays key by element type, so the two key
+// spaces never collide.
+static uint32_t cspv_laid_sized_array_tid(cspv_ctx* ctx, cspv_type* arr, int line)
+{
+	uint32_t* found = map_get_ptr(ctx->laid_array_tids, (uint64_t)(uintptr_t)arr);
+	if (found) return *found;
+	uint32_t elem_tid = cspv_type_id(ctx, arr->elem);
+	int align = 0, stride = 0;
+	cspv_std140_layout(ctx, arr->elem, line, &align, &stride);
+	uint32_t len = cspv_const_scalar(ctx, ctx->t_uint, (uint32_t)arr->cols);
+	uint32_t id = cspv_new_id(ctx);
+	cspv_emit3(&ctx->globals, CSpvOpTypeArray, id, elem_tid, len);
+	cspv_emit3(&ctx->decos, CSpvOpDecorate, id, CSpvDecorationArrayStride, (uint32_t)stride);
+	map_set(ctx->laid_array_tids, (uint64_t)(uintptr_t)arr, id);
 	map_set(ctx->laid_elem_tids, id, elem_tid);
 	return id;
 }
@@ -5054,7 +5249,27 @@ static void cspv_gen_uniform_block(cspv_ctx* ctx, cspv_layout* layout, const cha
 				}
 				mtype = cspv_array_type(ctx, mtype, -1);
 			} else {
-				cspv_errorf(ctx, mline, "sized arrays in blocks are not supported yet");
+				// `type name[N];` -- a sized array member (bone palettes and friends).
+				// Elements are vec4s or mat4s only: std140 pads every element out to 16
+				// bytes anyway, and this exact set keeps the native array stride identical
+				// across all four backends (SPIR-V, GLSL-ES, HLSL cbuffers, MSL) with no
+				// padding games. Widen a float[] to a vec4[] and index .x/.y/.z/.w.
+				cspv_expr* size_expr = cspv_parse_assign(ctx);
+				cspv_type* st = NULL;
+				uint32_t bits = 0;
+				cspv_const_fold_scalar(ctx, size_expr, &st, &bits);
+				if (st->kind != CSPV_T_INT && st->kind != CSPV_T_UINT) {
+					cspv_errorf(ctx, mline, "array size must be an integer constant expression");
+				}
+				int alen = (int)(int32_t)bits;
+				if (alen <= 0) cspv_errorf(ctx, mline, "array size must be positive");
+				cspv_expect_punct(ctx, ']');
+				bool vec4ish = mtype->kind == CSPV_T_VEC && mtype->cols == 4;
+				bool mat4ish = mtype->kind == CSPV_T_MAT && mtype->cols == 4 && mtype->rows == 4;
+				if (!vec4ish && !mat4ish) {
+					cspv_errorf(ctx, mline, "sized array block members must have vec4, ivec4, uvec4, or mat4 elements");
+				}
+				mtype = cspv_array_type(ctx, mtype, alen);
 			}
 		}
 		if (mtype->kind == CSPV_T_STRUCT && !is_buffer) {
@@ -5090,6 +5305,8 @@ static void cspv_gen_uniform_block(cspv_ctx* ctx, cspv_layout* layout, const cha
 			apush(member_tids, cspv_laid_struct_tid(ctx, mt, member_lines[i]));
 		} else if (mt->kind == CSPV_T_ARRAY && mt->cols == -1 && mt->elem->kind == CSPV_T_STRUCT) {
 			apush(member_tids, cspv_laid_runtime_array_tid(ctx, mt->elem, member_lines[i]));
+		} else if (mt->kind == CSPV_T_ARRAY && mt->cols >= 0) {
+			apush(member_tids, cspv_laid_sized_array_tid(ctx, mt, member_lines[i]));
 		} else {
 			apush(member_tids, cspv_type_id(ctx, mt));
 		}
@@ -5122,14 +5339,22 @@ static void cspv_gen_uniform_block(cspv_ctx* ctx, cspv_layout* layout, const cha
 		if (!is_buffer) {
 			CSPV_ReflectionMember rm;
 			rm.name = member_names[i];
-			rm.type = cspv_reflect_type(member_types[i]);
+			if (member_types[i]->kind == CSPV_T_ARRAY && member_types[i]->cols >= 0) {
+				rm.type = cspv_reflect_type(member_types[i]->elem);
+				rm.array_length = member_types[i]->cols;
+			} else {
+				rm.type = cspv_reflect_type(member_types[i]);
+				rm.array_length = 1;
+			}
 			rm.offset = offset;
-			rm.array_length = 1;
 			apush(ctx->reflection.uniform_members, rm);
 		}
 		uint32_t deco[4] = { struct_id, (uint32_t)i, CSpvDecorationOffset, (uint32_t)offset };
 		cspv_emit(&ctx->decos, CSpvOpMemberDecorate, deco, 4);
-		if (member_types[i]->kind == CSPV_T_MAT) {
+		// Matrix layout decorations sit on the struct member and reach through arrays.
+		cspv_type* deco_mt = member_types[i]->kind == CSPV_T_ARRAY && member_types[i]->cols >= 0
+			? member_types[i]->elem : member_types[i];
+		if (deco_mt->kind == CSPV_T_MAT) {
 			uint32_t cm[3] = { struct_id, (uint32_t)i, CSpvDecorationColMajor };
 			cspv_emit(&ctx->decos, CSpvOpMemberDecorate, cm, 3);
 			uint32_t ms[4] = { struct_id, (uint32_t)i, CSpvDecorationMatrixStride, 16 };
@@ -5159,7 +5384,13 @@ static void cspv_gen_uniform_block(cspv_ctx* ctx, cspv_layout* layout, const cha
 
 	if (instance_name) {
 		// Named instance: register one symbol whose type is a struct view of the
-		// block; field access reuses the regular struct AccessChain path.
+		// block; field access reuses the regular struct AccessChain path. Sized array
+		// members would need laid types threaded through that path -- defer until asked.
+		for (int i = 0; i < (int)asize(member_types); i++) {
+			if (member_types[i]->kind == CSPV_T_ARRAY && member_types[i]->cols >= 0) {
+				cspv_errorf(ctx, member_lines[i], "sized array members are not supported in named block instances yet");
+			}
+		}
 		cspv_type* view = (cspv_type*)cspv_arena_alloc(&ctx->arena, sizeof(cspv_type));
 		memset(view, 0, sizeof(*view));
 		view->kind = CSPV_T_STRUCT;
@@ -5178,7 +5409,8 @@ static void cspv_gen_uniform_block(cspv_ctx* ctx, cspv_layout* layout, const cha
 			cspv_symbol* sym = cspv_add_symbol(ctx, member_names[i], CSPV_SYM_BLOCK_MEMBER, member_types[i], var, storage, member_lines[i]);
 			sym->member_index = i;
 			cspv_type* mt = member_types[i];
-			bool laid = mt->kind == CSPV_T_STRUCT || (mt->kind == CSPV_T_ARRAY && mt->cols == -1 && mt->elem->kind == CSPV_T_STRUCT);
+			bool laid = mt->kind == CSPV_T_STRUCT || (mt->kind == CSPV_T_ARRAY && mt->cols == -1 && mt->elem->kind == CSPV_T_STRUCT)
+				|| (mt->kind == CSPV_T_ARRAY && mt->cols >= 0);
 			sym->laid_tid = laid ? member_tids[i] : 0;
 		}
 	}
@@ -5717,6 +5949,12 @@ typedef struct cspv_tp
 	CK_DYNA const char** rename_to;
 	CK_DYNA const char** shadows;     // Locals/params that suppress renames.
 	CK_DYNA int* shadow_marks;        // Scope boundaries into `shadows`.
+	// GLSL ES 3.00 SSBO emulation: each registered name is the single runtime-array
+	// member of an anonymous readonly buffer block, rewritten at its index sites into
+	// a texelFetch through u_{vs,fs}_storage_<slot> (see cspv_emit_glsl300).
+	CK_DYNA const char** es_ssbo_names; // Interned member names.
+	CK_DYNA int* es_ssbo_slots;
+	CK_DYNA cspv_type** es_ssbo_elems;  // vec4-family element type.
 } cspv_tp;
 
 // HLSL spellings of the CF-GLSL types (samplers/images are declared specially
@@ -5775,6 +6013,23 @@ static const char* cspv_tp_name(cspv_tp* g, const char* name)
 		if (g->rename_from[i] == name) return g->rename_to[i];
 	}
 	return name;
+}
+
+// True when `name` is an emulated storage member visible at this point (interned
+// compares; a shadowing local or param suppresses the rewrite like any rename).
+static bool cspv_tp_es_ssbo(cspv_tp* g, const char* name, int* slot, cspv_type** elem)
+{
+	for (int i = (int)asize(g->shadows) - 1; i >= 0; i--) {
+		if (g->shadows[i] == name) return false;
+	}
+	for (int i = 0; i < (int)asize(g->es_ssbo_names); i++) {
+		if (g->es_ssbo_names[i] == name) {
+			*slot = g->es_ssbo_slots[i];
+			*elem = g->es_ssbo_elems[i];
+			return true;
+		}
+	}
+	return false;
 }
 
 static void cspv_tp_indent(cspv_tp* g)
@@ -5972,6 +6227,21 @@ static void cspv_tp_expr_node(cspv_tp* g, cspv_expr* e, int prec)
 		break;
 
 	case CSPV_E_INDEX:
+		if (!g->hlsl && !g->msl && e->u.index.base->kind == CSPV_E_REF) {
+			int slot; cspv_type* elem;
+			if (cspv_tp_es_ssbo(g, e->u.index.base->u.name, &slot, &elem)) {
+				// Emulated SSBO fetch (see cspv_emit_glsl300): element i is texel i of
+				// a 1024-wide RGBA32UI texture; float payloads round-trip bit-exactly
+				// through uintBitsToFloat. cf_storage_coord evaluates the index once.
+				bool f = elem->elem->kind == CSPV_T_FLOAT;
+				sfmt_append(g->ctx->tp_out, "%stexelFetch(u_%s_storage_%d, cf_storage_coord(int(",
+					f ? "uintBitsToFloat(" : "", g->ctx->stage == CSPV_STAGE_VERTEX ? "vs" : "fs", slot);
+				cspv_tp_expr(g, e->u.index.index, 0);
+				sappend(g->ctx->tp_out, ")), 0)");
+				if (f) spush(g->ctx->tp_out, ')');
+				break;
+			}
+		}
 		cspv_tp_expr(g, e->u.index.base, 15);
 		spush(g->ctx->tp_out, '[');
 		cspv_tp_expr(g, e->u.index.index, 0);
@@ -6401,21 +6671,170 @@ static void cspv_tp_func(cspv_tp* g, cspv_decl* d)
 	cspv_tp_pop_shadows(g);
 }
 
+// The slot a buffer block's emulation texture binds to: its rank by binding number
+// among the stage's buffer blocks, matching the order the CF GLES backend binds
+// u_{vs,fs}_storage_<slot> uniforms (cf_apply_vs_storage_buffers' "binding order").
+static int cspv_es_ssbo_slot(cspv_ctx* ctx, cspv_decl* d)
+{
+	int slot = 0;
+	for (int i = 0; i < (int)asize(ctx->decls); i++) {
+		cspv_decl* o = ctx->decls + i;
+		if (o->kind == CSPV_D_BLOCK && o->is_buffer && o->binding < d->binding) slot++;
+	}
+	return slot;
+}
+
+// The buffer-block decl behind an emulated storage member name, or NULL.
+static cspv_decl* cspv_es_ssbo_member_decl(cspv_ctx* ctx, const char* name)
+{
+	for (int i = 0; i < (int)asize(ctx->decls); i++) {
+		cspv_decl* d = ctx->decls + i;
+		if (d->kind == CSPV_D_BLOCK && d->is_buffer && d->num_members == 1 && d->member_names[0] == name) return d;
+	}
+	return NULL;
+}
+
+// Names that hide an emulated storage member within the current function: parameters and
+// locals collected as the walk descends. Append-only per function -- over-shadowing can
+// only SUPPRESS a validation error (the GL compile then reports it), never invent one.
+static bool cspv_es_shadowed(cspv_ctx* ctx, const char* name)
+{
+	for (int i = 0; i < (int)asize(ctx->es_shadows); i++) {
+		if (ctx->es_shadows[i] == name) return true;
+	}
+	return false;
+}
+
+// True when `e` is an index into an emulated storage member (and not shadowed).
+static bool cspv_es_is_ssbo_index(cspv_ctx* ctx, cspv_expr* e)
+{
+	return e->kind == CSPV_E_INDEX && e->u.index.base->kind == CSPV_E_REF
+		&& !cspv_es_shadowed(ctx, e->u.index.base->u.name)
+		&& cspv_es_ssbo_member_decl(ctx, e->u.index.base->u.name) != 0;
+}
+
+// Emulated fetches only exist under an index: a bare reference (function argument,
+// .length()) has no texture-side spelling, so reject it with a real message instead
+// of letting the GL driver report an undeclared identifier. Writes get their own
+// message too -- a texelFetch is not an lvalue, and the driver's complaint about the
+// rewritten expression would be baffling.
+static void cspv_es_validate_expr(cspv_ctx* ctx, cspv_expr* e, bool index_base)
+{
+	if (e->kind == CSPV_E_REF && !index_base && !cspv_es_shadowed(ctx, e->u.name) && cspv_es_ssbo_member_decl(ctx, e->u.name)) {
+		cspv_errorf(ctx, e->line, "storage buffer array '%s' must be indexed directly in GLSL ES 3.00 output (it is emulated as a texture fetch)", e->u.name);
+	}
+	switch (e->kind) {
+	case CSPV_E_BINARY:
+		if ((e->u.bin.op == '=' || cspv_is_assign_op(e->u.bin.op)) && cspv_es_is_ssbo_index(ctx, e->u.bin.l)) {
+			cspv_errorf(ctx, e->line, "storage buffers are readonly in GLSL ES 3.00 output (emulated as texture fetches)");
+		}
+		cspv_es_validate_expr(ctx, e->u.bin.l, false);
+		cspv_es_validate_expr(ctx, e->u.bin.r, false);
+		break;
+	case CSPV_E_UNARY:
+		if ((e->u.un.op == CSPV_P_INC || e->u.un.op == CSPV_P_DEC) && cspv_es_is_ssbo_index(ctx, e->u.un.e)) {
+			cspv_errorf(ctx, e->line, "storage buffers are readonly in GLSL ES 3.00 output (emulated as texture fetches)");
+		}
+		cspv_es_validate_expr(ctx, e->u.un.e, false);
+		break;
+	case CSPV_E_COND:
+		cspv_es_validate_expr(ctx, e->u.cond.c, false);
+		cspv_es_validate_expr(ctx, e->u.cond.a, false);
+		cspv_es_validate_expr(ctx, e->u.cond.b, false);
+		break;
+	case CSPV_E_CALL:
+		for (int i = 0; i < (int)asize(e->u.call.args); i++) cspv_es_validate_expr(ctx, e->u.call.args[i], false);
+		break;
+	case CSPV_E_LENGTH:
+		if (e->u.member.base->kind == CSPV_E_REF && !cspv_es_shadowed(ctx, e->u.member.base->u.name) && cspv_es_ssbo_member_decl(ctx, e->u.member.base->u.name)) {
+			cspv_errorf(ctx, e->line, "'.length()' is not supported on storage buffers in GLSL ES 3.00 output");
+		}
+		cspv_es_validate_expr(ctx, e->u.member.base, false);
+		break;
+	case CSPV_E_MEMBER: cspv_es_validate_expr(ctx, e->u.member.base, false); break;
+	case CSPV_E_INDEX:
+		cspv_es_validate_expr(ctx, e->u.index.base, e->u.index.base->kind == CSPV_E_REF);
+		cspv_es_validate_expr(ctx, e->u.index.index, false);
+		break;
+	default: break;
+	}
+}
+
+static void cspv_es_validate_stmt(cspv_ctx* ctx, cspv_stmt* s)
+{
+	switch (s->kind) {
+	case CSPV_S_BLOCK: for (int i = 0; i < (int)asize(s->u.block); i++) cspv_es_validate_stmt(ctx, s->u.block[i]); break;
+	case CSPV_S_DECL:
+		for (cspv_stmt* n = s; n; n = n->u.decl.next_decl) {
+			if (n->u.decl.init) cspv_es_validate_expr(ctx, n->u.decl.init, false);
+			apush(ctx->es_shadows, n->u.decl.name);
+		}
+		break;
+	case CSPV_S_EXPR: cspv_es_validate_expr(ctx, s->u.expr, false); break;
+	case CSPV_S_IF:
+		cspv_es_validate_expr(ctx, s->u.if_s.cond, false);
+		cspv_es_validate_stmt(ctx, s->u.if_s.then_s);
+		if (s->u.if_s.else_s) cspv_es_validate_stmt(ctx, s->u.if_s.else_s);
+		break;
+	case CSPV_S_FOR:
+		if (s->u.for_s.init) cspv_es_validate_stmt(ctx, s->u.for_s.init);
+		if (s->u.for_s.cond) cspv_es_validate_expr(ctx, s->u.for_s.cond, false);
+		if (s->u.for_s.iter) cspv_es_validate_expr(ctx, s->u.for_s.iter, false);
+		cspv_es_validate_stmt(ctx, s->u.for_s.body);
+		break;
+	case CSPV_S_WHILE: case CSPV_S_DO:
+		cspv_es_validate_expr(ctx, s->u.while_s.cond, false);
+		cspv_es_validate_stmt(ctx, s->u.while_s.body);
+		break;
+	case CSPV_S_SWITCH: {
+		cspv_es_validate_expr(ctx, s->u.switch_s.sel, false);
+		cspv_switch_group* groups = s->u.switch_s.groups;
+		for (int i = 0; i < (int)asize(groups); i++) {
+			for (int j = 0; j < (int)asize(groups[i].stmts); j++) cspv_es_validate_stmt(ctx, groups[i].stmts[j]);
+		}
+		break;
+	}
+	case CSPV_S_RETURN: if (s->u.ret) cspv_es_validate_expr(ctx, s->u.ret, false); break;
+	default: break;
+	}
+}
+
 static void cspv_emit_glsl300(cspv_ctx* ctx)
 {
 	// Validate up front (before the emitter allocates anything, so an errorf
-	// longjmp cannot leak): GLES 3.0 has no compute, SSBOs, or storage images.
+	// longjmp cannot leak): GLES 3.0 has no compute or storage images, and
+	// storage buffers emulate as texture fetches within CF's documented shape.
 	if (ctx->stage == CSPV_STAGE_COMPUTE) {
 		cspv_errorf(ctx, 0, "GLSL ES 3.00 output does not support compute shaders");
 	}
 	for (int i = 0; i < (int)asize(ctx->decls); i++) {
 		cspv_decl* d = ctx->decls + i;
 		if (d->kind == CSPV_D_BLOCK && d->is_buffer) {
-			cspv_errorf(ctx, d->line, "buffer block '%s' is not supported in GLSL ES 3.00 output", d->name);
+			// The GLES backend mirrors each buffer into an RGBA32UI texture; the
+			// emulation covers exactly CF's documented storage pattern -- an
+			// anonymous readonly block holding one runtime array of 4-component
+			// vectors (the same shape the vec4-column mat4 idiom produces).
+			cspv_type* mt = d->num_members == 1 ? d->member_types[0] : NULL;
+			bool tail_ok = mt && mt->kind == CSPV_T_ARRAY && mt->cols == -1
+				&& mt->elem->kind == CSPV_T_VEC && mt->elem->cols == 4
+				&& (mt->elem->elem->kind == CSPV_T_FLOAT || mt->elem->elem->kind == CSPV_T_UINT);
+			if (!d->readonly || d->instance_name || !tail_ok) {
+				cspv_errorf(ctx, d->line, "GLSL ES 3.00 output emulates storage buffers as texture fetches: buffer block '%s' must be anonymous, readonly, and hold a single runtime array of vec4 or uvec4 (pack scalars and matrices into vec4 columns)", d->name);
+			}
+			if (cspv_es_ssbo_slot(ctx, d) >= 4) {
+				cspv_errorf(ctx, d->line, "GLSL ES 3.00 output supports at most 4 storage buffers per stage");
+			}
 		}
 		if (d->kind == CSPV_D_OPAQUE && d->type->kind == CSPV_T_IMAGE2D) {
 			cspv_errorf(ctx, d->line, "storage image '%s' is not supported in GLSL ES 3.00 output", d->name);
 		}
+	}
+	for (int i = 0; i < (int)asize(ctx->decls); i++) {
+		cspv_decl* d = ctx->decls + i;
+		if (d->kind != CSPV_D_FUNC || !d->body) continue;
+		aclear(ctx->es_shadows);
+		for (int p = 0; p < d->num_params; p++) apush(ctx->es_shadows, d->params[p].name);
+		cspv_es_validate_stmt(ctx, d->body);
 	}
 
 	cspv_tp gg;
@@ -6438,10 +6857,42 @@ static void cspv_emit_glsl300(cspv_ctx* ctx)
 		cspv_tp_rename(g, d->name, nm);
 	}
 
+	// GL links both stages into one program whose unnamed-block members share a
+	// single global namespace, so a vertex block and a fragment block that both
+	// declare a member (e.g. u_shape_eye in CF's 3d shape shaders) fail to link.
+	// An instance name scopes members to their block, restoring SPIR-V's
+	// per-stage semantics; references pick up the qualifier via the rename
+	// table. The GL-side block name (what glGetUniformBlockIndex sees) is
+	// unaffected -- only member spellings change, and CF uploads by std140
+	// offset, never by member name.
+	for (int i = 0; i < (int)asize(ctx->decls); i++) {
+		cspv_decl* d = ctx->decls + i;
+		if (d->kind != CSPV_D_BLOCK || d->instance_name) continue;
+		for (int j = 0; j < d->num_members; j++) {
+			char* nm = (char*)cspv_arena_alloc(&ctx->arena, 192);
+			snprintf(nm, 192, "cf_ubi_%s.%s", d->name, d->member_names[j]);
+			cspv_tp_rename(g, d->member_names[j], nm);
+		}
+	}
+
+	// Register emulated storage members for index-site rewriting, and emit the
+	// shared coordinate helper (element i sits at texel i of a 1024-wide texture;
+	// the width must match the GLES backend's CF_GLES_STORAGE_WIDTH).
+	bool any_ssbo = false;
+	for (int i = 0; i < (int)asize(ctx->decls); i++) {
+		cspv_decl* d = ctx->decls + i;
+		if (d->kind != CSPV_D_BLOCK || !d->is_buffer) continue;
+		apush(g->es_ssbo_names, d->member_names[0]);
+		apush(g->es_ssbo_slots, cspv_es_ssbo_slot(ctx, d));
+		apush(g->es_ssbo_elems, d->member_types[0]->elem);
+		any_ssbo = true;
+	}
+
 	// (sappend rather than sfmake: variadic macros reject empty argument lists
 	// on gcc/clang, and these headers take no format arguments.)
 	ctx->tp_out = NULL;
 	sappend(ctx->tp_out, "#version 300 es\n\nprecision highp float;\nprecision highp int;\n");
+	if (any_ssbo) sappend(ctx->tp_out, "\nivec2 cf_storage_coord(int i) { return ivec2(i & 1023, i >> 10); }\n");
 
 	for (int i = 0; i < (int)asize(ctx->decls); i++) {
 		cspv_decl* d = ctx->decls + i;
@@ -6484,14 +6935,26 @@ static void cspv_emit_glsl300(cspv_ctx* ctx)
 		}
 
 		case CSPV_D_BLOCK:
-			sfmt_append(ctx->tp_out, "\nlayout(std140) uniform %s\n{\n", d->name);
+			if (d->is_buffer) {
+				// Emulated SSBO: the GLES backend mirrors the buffer into an RGBA32UI
+				// texture and binds it to this sampler by name at draw time (see
+				// s_apply_storage_textures in the CF GLES backend).
+				sfmt_append(ctx->tp_out, "uniform highp usampler2D u_%s_storage_%d;\n",
+					ctx->stage == CSPV_STAGE_VERTEX ? "vs" : "fs", cspv_es_ssbo_slot(ctx, d));
+				break;
+			}
+			// Stage-prefixed: GLES links vertex and fragment into one program with a
+			// single block namespace, and CF names both stages' blocks uniform_block.
+			// Reflection keeps the canonical name; the GL-side name carries the stage.
+			sfmt_append(ctx->tp_out, "\nlayout(std140) uniform %s%s\n{\n",
+				ctx->stage == CSPV_STAGE_VERTEX ? "cf_vs_" : "cf_fs_", d->name);
 			for (int j = 0; j < d->num_members; j++) {
 				spush(ctx->tp_out, '\t');
 				cspv_tp_var(g, d->member_types[j], d->member_names[j]);
 				sappend(ctx->tp_out, ";\n");
 			}
 			if (d->instance_name) sfmt_append(ctx->tp_out, "} %s;\n", d->instance_name);
-			else sappend(ctx->tp_out, "};\n");
+			else sfmt_append(ctx->tp_out, "} cf_ubi_%s;\n", d->name); // See member rename above.
 			break;
 
 		case CSPV_D_OPAQUE:
@@ -6527,6 +6990,9 @@ static void cspv_emit_glsl300(cspv_ctx* ctx)
 	afree(gg.rename_to);
 	afree(gg.shadows);
 	afree(gg.shadow_marks);
+	afree(gg.es_ssbo_names);
+	afree(gg.es_ssbo_slots);
+	afree(gg.es_ssbo_elems);
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -6611,6 +7077,40 @@ static const char* cspv_hlsl_atomic(const char* name)
 	return NULL;
 }
 
+// HLSL/MSL texture object types per sampler dim. Shadow samplers pair a plain 2D texture
+// with a comparison sampler state; the dim only changes the texture object for the rest.
+static const char* cspv_hlsl_sampler_tex(const cspv_type* t)
+{
+	switch (t->cols) {
+	case CSPV_SDIM_CUBE: return "TextureCube<float4>";
+	case CSPV_SDIM_3D: return "Texture3D<float4>";
+	case CSPV_SDIM_2D_ARRAY: return "Texture2DArray<float4>";
+	case CSPV_SDIM_2D_SHADOW: return "Texture2D<float4>";
+	case CSPV_SDIM_CUBE_SHADOW: return "TextureCube<float4>";
+	case CSPV_SDIM_2D_ARRAY_SHADOW: return "Texture2DArray<float4>";
+	default: return t->elem && t->elem->kind == CSPV_T_UINT ? "Texture2D<uint4>" : "Texture2D<float4>";
+	}
+}
+
+static const char* cspv_hlsl_sampler_smp(const cspv_type* t)
+{
+	return t->cols == CSPV_SDIM_2D_SHADOW || t->cols == CSPV_SDIM_CUBE_SHADOW || t->cols == CSPV_SDIM_2D_ARRAY_SHADOW
+		? "SamplerComparisonState" : "SamplerState";
+}
+
+static const char* cspv_msl_sampler_tex(const cspv_type* t)
+{
+	switch (t->cols) {
+	case CSPV_SDIM_CUBE: return "texturecube<float>";
+	case CSPV_SDIM_3D: return "texture3d<float>";
+	case CSPV_SDIM_2D_ARRAY: return "texture2d_array<float>";
+	case CSPV_SDIM_2D_SHADOW: return "depth2d<float>";
+	case CSPV_SDIM_CUBE_SHADOW: return "depthcube<float>";
+	case CSPV_SDIM_2D_ARRAY_SHADOW: return "depth2d_array<float>";
+	default: return t->elem && t->elem->kind == CSPV_T_UINT ? "texture2d<uint>" : "texture2d<float>";
+	}
+}
+
 static void cspv_hlsl_call(cspv_tp* g, cspv_expr* e)
 {
 	CK_SDYNA char** out = &g->ctx->tp_out;
@@ -6683,6 +7183,26 @@ static void cspv_hlsl_call(cspv_tp* g, cspv_expr* e)
 	if (argc >= 1 && args[0]->kind == CSPV_E_REF && args[0]->rtype && args[0]->rtype->kind == CSPV_T_SAMPLER2D) {
 		const char* s = args[0]->u.name;
 		bool no_gradients = g->ctx->stage != CSPV_STAGE_FRAGMENT; // Vertex and compute have no derivatives.
+		int hdim = args[0]->rtype->cols;
+		bool shadow = hdim == CSPV_SDIM_2D_SHADOW || hdim == CSPV_SDIM_CUBE_SHADOW ||
+		              hdim == CSPV_SDIM_2D_ARRAY_SHADOW;
+		if (shadow && (!strcmp(name, "texture") || !strcmp(name, "textureLod"))) {
+			// Comparison sampling: split the coords + reference (vec3 -> xy/z for 2D,
+			// vec4 -> xyz/w for cube and 2D array -- for Texture2DArray the location's z
+			// is the array layer, exactly GLSL's P.z). The coordinate expression is
+			// emitted twice, so it must be side-effect free -- true of every shader in
+			// practice, and of everything the checker accepts today. Level-zero on
+			// purpose: shadow maps are single-mip, and SampleCmp needs gradients that
+			// vertex/compute stages lack (textureLod's lod argument is ignored, as level
+			// zero is the only mip a comparison fetch supports across our targets).
+			bool hwide = hdim == CSPV_SDIM_CUBE_SHADOW || hdim == CSPV_SDIM_2D_ARRAY_SHADOW;
+			sfmt_append(*out, "%s_tex.SampleCmpLevelZero(%s_smp, (", s, s);
+			cspv_tp_expr(g, args[1], 2);
+			sappend(*out, hwide ? ").xyz, (" : ").xy, (");
+			cspv_tp_expr(g, args[1], 2);
+			sappend(*out, hwide ? ").w)" : ").z)");
+			return;
+		}
 		if (!strcmp(name, "texture")) {
 			if (no_gradients) sfmt_append(*out, "%s_tex.SampleLevel(%s_smp, ", s, s);
 			else sfmt_append(*out, "%s_tex.Sample(%s_smp, ", s, s);
@@ -6710,7 +7230,10 @@ static void cspv_hlsl_call(cspv_tp* g, cspv_expr* e)
 			return;
 		}
 		if (!strcmp(name, "texelFetch")) {
-			sfmt_append(*out, "%s_tex.Load(int3(", s);
+			// Load's coordinate carries the mip as its last component: int3(xy, mip)
+			// for Texture2D, int4(xy + layer or xyz, mip) for Texture2DArray/Texture3D.
+			bool hload4 = hdim == CSPV_SDIM_2D_ARRAY || hdim == CSPV_SDIM_3D;
+			sfmt_append(*out, "%s_tex.Load(%s(", s, hload4 ? "int4" : "int3");
 			cspv_tp_expr(g, args[1], 2);
 			sappend(*out, ", ");
 			cspv_tp_expr(g, args[2], 2);
@@ -6996,9 +7519,9 @@ static void cspv_hlsl_func(cspv_tp* g, cspv_decl* d)
 		first = false;
 		if (d->params[i].type->kind == CSPV_T_SAMPLER2D) {
 			// Samplers expand into a texture + sampler-state pair.
-			bool is_uint = d->params[i].type->elem && d->params[i].type->elem->kind == CSPV_T_UINT;
-			sfmt_append(ctx->tp_out, "Texture2D%s %s_tex, SamplerState %s_smp",
-				is_uint ? "<uint4>" : "<float4>", d->params[i].name, d->params[i].name);
+			sfmt_append(ctx->tp_out, "%s %s_tex, %s %s_smp",
+				cspv_hlsl_sampler_tex(d->params[i].type), d->params[i].name,
+				cspv_hlsl_sampler_smp(d->params[i].type), d->params[i].name);
 			apush(g->shadows, d->params[i].name);
 			continue;
 		}
@@ -7071,6 +7594,9 @@ static void cspv_emit_hlsl(cspv_ctx* ctx)
 		"float4 cf_mod(float4 x, float y) { return x - y * floor(x / y); }\n"
 		"int2 cf_texsize(Texture2D<float4> t, int lod) { uint w, h, l; t.GetDimensions((uint)lod, w, h, l); return int2(w, h); }\n"
 		"int2 cf_texsize(Texture2D<uint4> t, int lod) { uint w, h, l; t.GetDimensions((uint)lod, w, h, l); return int2(w, h); }\n"
+		"int2 cf_texsize(TextureCube<float4> t, int lod) { uint w, h, l; t.GetDimensions((uint)lod, w, h, l); return int2(w, h); }\n"
+		"int3 cf_texsize(Texture2DArray<float4> t, int lod) { uint w, h, e, l; t.GetDimensions((uint)lod, w, h, e, l); return int3(w, h, e); }\n"
+		"int3 cf_texsize(Texture3D<float4> t, int lod) { uint w, h, d, l; t.GetDimensions((uint)lod, w, h, d, l); return int3(w, h, d); }\n"
 		"float2x2 cf_diag2(float s) { return float2x2(s, 0, 0, s); }\n"
 		"float3x3 cf_diag3(float s) { return float3x3(s, 0, 0, 0, s, 0, 0, 0, s); }\n"
 		"float4x4 cf_diag4(float s) { return float4x4(s, 0, 0, 0, 0, s, 0, 0, 0, 0, s, 0, 0, 0, 0, s); }\n"
@@ -7174,7 +7700,8 @@ static void cspv_emit_hlsl(cspv_ctx* ctx)
 					cspv_std140_layout(ctx, d->member_types[j], d->line, &align, &size);
 					offset = (offset + align - 1) / align * align;
 					spush(ctx->tp_out, '\t');
-					if (d->member_types[j]->kind == CSPV_T_MAT) sappend(ctx->tp_out, "column_major ");
+					cspv_type* cm_mt = d->member_types[j]->kind == CSPV_T_ARRAY ? d->member_types[j]->elem : d->member_types[j];
+					if (cm_mt->kind == CSPV_T_MAT) sappend(ctx->tp_out, "column_major ");
 					cspv_tp_var(g, d->member_types[j], d->member_names[j]);
 					static const char* swz[4] = { "", ".y", ".z", ".w" };
 					int comp = (offset % 16) / 4;
@@ -7189,11 +7716,10 @@ static void cspv_emit_hlsl(cspv_ctx* ctx)
 
 		case CSPV_D_OPAQUE:
 			if (d->type->kind == CSPV_T_SAMPLER2D) {
-				bool is_uint = d->type->elem && d->type->elem->kind == CSPV_T_UINT;
-				sfmt_append(ctx->tp_out, "Texture2D%s %s_tex : register(t%d, space%d);\n",
-					is_uint ? "<uint4>" : "<float4>", d->name, d->binding, d->set);
-				sfmt_append(ctx->tp_out, "SamplerState %s_smp : register(s%d, space%d);\n",
-					d->name, d->binding, d->set);
+				sfmt_append(ctx->tp_out, "%s %s_tex : register(t%d, space%d);\n",
+					cspv_hlsl_sampler_tex(d->type), d->name, d->binding, d->set);
+				sfmt_append(ctx->tp_out, "%s %s_smp : register(s%d, space%d);\n",
+					cspv_hlsl_sampler_smp(d->type), d->name, d->binding, d->set);
 			} else {
 				const char* elem = cspv_hlsl_image_elem(d->type->cols);
 				sfmt_append(ctx->tp_out, "%sTexture2D<%s> %s : register(%c%d, space%d);\n",
@@ -7350,6 +7876,13 @@ static void cspv_msl_natural_layout(cspv_type* t, int* align, int* size)
 		*align = 16; *size = 16; return;
 	}
 	if (t->kind == CSPV_T_MAT) { *align = 16; *size = t->cols * 16; return; } // float4x4 only (validated).
+	if (t->kind == CSPV_T_ARRAY) {
+		// Sized block arrays have vec4/mat4 elements, whose natural MSL stride equals
+		// their std140 stride -- arrays never introduce padding.
+		cspv_msl_natural_layout(t->elem, align, size);
+		*size = *size * t->cols;
+		return;
+	}
 	*align = 4; *size = 4;
 }
 
@@ -7376,7 +7909,11 @@ static void cspv_msl_offset_struct(cspv_tp* g, const char* name, int num_members
 			sfmt_append(ctx->tp_out, "\tfloat cf_pad%d;\n", pad_index++);
 			natural += 4;
 		}
-		sfmt_append(ctx->tp_out, "\t%s %s;\n", cspv_msl_member_type_name(mt), member_names[i]);
+		if (mt->kind == CSPV_T_ARRAY) {
+			sfmt_append(ctx->tp_out, "\t%s %s[%d];\n", cspv_msl_member_type_name(mt->elem), member_names[i], mt->cols);
+		} else {
+			sfmt_append(ctx->tp_out, "\t%s %s;\n", cspv_msl_member_type_name(mt), member_names[i]);
+		}
 		natural += nat_size;
 		offset += size;
 	}
@@ -7429,6 +7966,60 @@ static void cspv_msl_call(cspv_tp* g, cspv_expr* e)
 	if (argc >= 1 && args[0]->kind == CSPV_E_REF && args[0]->rtype && args[0]->rtype->kind == CSPV_T_SAMPLER2D) {
 		const char* s = args[0]->u.name;
 		bool no_gradients = g->ctx->stage != CSPV_STAGE_FRAGMENT; // Vertex and compute have no derivatives.
+		int sdim = args[0]->rtype->cols;
+		bool shadow = sdim == CSPV_SDIM_2D_SHADOW || sdim == CSPV_SDIM_CUBE_SHADOW ||
+		              sdim == CSPV_SDIM_2D_ARRAY_SHADOW;
+		bool arrayed = sdim == CSPV_SDIM_2D_ARRAY;
+		if (sdim == CSPV_SDIM_2D_ARRAY_SHADOW && !strcmp(name, "texture")) {
+			// depth2d_array comparison fetch: sample_compare(sampler, float2 uv,
+			// uint layer, float ref). The layer splits out of P.z like the plain
+			// array-texture path; the reference is P.w. Level zero for the same
+			// reasons as the other shadow dims. (textureLod has no GLSL overload
+			// for sampler2DArrayShadow -- the checker already rejected it.)
+			sfmt_append(*out, "%s_tex.sample_compare(%s_smp, (", s, s);
+			cspv_tp_expr(g, args[1], 2);
+			sappend(*out, ").xy, uint(rint((");
+			cspv_tp_expr(g, args[1], 2);
+			sappend(*out, ").z)), (");
+			cspv_tp_expr(g, args[1], 2);
+			sappend(*out, ").w");
+			if (no_gradients) sappend(*out, ", level(0)");
+			spush(*out, ')');
+			return;
+		}
+		if (shadow && (!strcmp(name, "texture") || !strcmp(name, "textureLod"))) {
+			// depth2d/depthcube comparison fetch; coords + reference split from the
+			// coordinate vector (vec3 -> xy/z for 2D, vec4 -> xyz/w for cube). The
+			// coordinate is emitted twice, so it must be side-effect free. Level zero for
+			// the same reasons as the HLSL emitter (single-mip shadow maps, no gradients
+			// outside fragment stages).
+			bool mcube = sdim == CSPV_SDIM_CUBE_SHADOW;
+			sfmt_append(*out, "%s_tex.sample_compare(%s_smp, (", s, s);
+			cspv_tp_expr(g, args[1], 2);
+			sappend(*out, mcube ? ").xyz, (" : ").xy, (");
+			cspv_tp_expr(g, args[1], 2);
+			sappend(*out, mcube ? ").w" : ").z");
+			if (no_gradients) sappend(*out, ", level(0)");
+			spush(*out, ')');
+			return;
+		}
+		if (arrayed && (!strcmp(name, "texture") || !strcmp(name, "textureLod"))) {
+			// MSL array textures take the layer as a separate integer argument.
+			sfmt_append(*out, "%s_tex.sample(%s_smp, (", s, s);
+			cspv_tp_expr(g, args[1], 2);
+			sappend(*out, ").xy, uint(rint((");
+			cspv_tp_expr(g, args[1], 2);
+			sappend(*out, ").z))");
+			if (!strcmp(name, "textureLod")) {
+				sappend(*out, ", level(");
+				cspv_tp_expr(g, args[2], 2);
+				spush(*out, ')');
+			} else if (no_gradients) {
+				sappend(*out, ", level(0)");
+			}
+			spush(*out, ')');
+			return;
+		}
 		if (!strcmp(name, "texture")) {
 			sfmt_append(*out, "%s_tex.sample(%s_smp, ", s, s);
 			cspv_tp_expr(g, args[1], 2);
@@ -7445,6 +8036,19 @@ static void cspv_msl_call(cspv_tp* g, cspv_expr* e)
 			return;
 		}
 		if (!strcmp(name, "textureOffset")) {
+			if (arrayed) {
+				// Layer splits out; the int2 offset stays the trailing argument.
+				sfmt_append(*out, "%s_tex.sample(%s_smp, (", s, s);
+				cspv_tp_expr(g, args[1], 2);
+				sappend(*out, ").xy, uint(rint((");
+				cspv_tp_expr(g, args[1], 2);
+				sappend(*out, ").z))");
+				if (no_gradients) sappend(*out, ", level(0)");
+				sappend(*out, ", ");
+				cspv_tp_expr(g, args[2], 2);
+				spush(*out, ')');
+				return;
+			}
 			sfmt_append(*out, "%s_tex.sample(%s_smp, ", s, s);
 			cspv_tp_expr(g, args[1], 2);
 			if (no_gradients) sappend(*out, ", level(0)");
@@ -7454,6 +8058,25 @@ static void cspv_msl_call(cspv_tp* g, cspv_expr* e)
 			return;
 		}
 		if (!strcmp(name, "texelFetch")) {
+			if (arrayed) {
+				// texture2d_array::read(uint2 coord, uint array, uint lod).
+				sfmt_append(*out, "%s_tex.read(uint2((", s);
+				cspv_tp_expr(g, args[1], 2);
+				sappend(*out, ").xy), uint((");
+				cspv_tp_expr(g, args[1], 2);
+				sappend(*out, ").z), uint(");
+				cspv_tp_expr(g, args[2], 2);
+				sappend(*out, "))");
+				return;
+			}
+			if (sdim == CSPV_SDIM_3D) {
+				sfmt_append(*out, "%s_tex.read(uint3(", s);
+				cspv_tp_expr(g, args[1], 2);
+				sappend(*out, "), uint(");
+				cspv_tp_expr(g, args[2], 2);
+				sappend(*out, "))");
+				return;
+			}
 			sfmt_append(*out, "%s_tex.read(uint2(", s);
 			cspv_tp_expr(g, args[1], 2);
 			sappend(*out, "), uint(");
@@ -7462,6 +8085,25 @@ static void cspv_msl_call(cspv_tp* g, cspv_expr* e)
 			return;
 		}
 		if (!strcmp(name, "textureSize")) {
+			if (arrayed || sdim == CSPV_SDIM_2D_ARRAY_SHADOW) {
+				// ivec3(width, height, layers); get_array_size takes no lod.
+				sfmt_append(*out, "int3(%s_tex.get_width(uint(", s);
+				cspv_tp_expr(g, args[1], 2);
+				sfmt_append(*out, ")), %s_tex.get_height(uint(", s);
+				cspv_tp_expr(g, args[1], 2);
+				sfmt_append(*out, ")), %s_tex.get_array_size())", s);
+				return;
+			}
+			if (sdim == CSPV_SDIM_3D) {
+				sfmt_append(*out, "int3(%s_tex.get_width(uint(", s);
+				cspv_tp_expr(g, args[1], 2);
+				sfmt_append(*out, ")), %s_tex.get_height(uint(", s);
+				cspv_tp_expr(g, args[1], 2);
+				sfmt_append(*out, ")), %s_tex.get_depth(uint(", s);
+				cspv_tp_expr(g, args[1], 2);
+				sappend(*out, ")))");
+				return;
+			}
 			sfmt_append(*out, "int2(%s_tex.get_width(uint(", s);
 			cspv_tp_expr(g, args[1], 2);
 			sfmt_append(*out, ")), %s_tex.get_height(uint(", s);
@@ -7658,8 +8300,7 @@ static void cspv_msl_func(cspv_tp* g, cspv_decl* d)
 		cspv_type* pt = d->params[i].type;
 		const char* pn = d->params[i].name;
 		if (pt->kind == CSPV_T_SAMPLER2D) {
-			bool is_uint = pt->elem && pt->elem->kind == CSPV_T_UINT;
-			sfmt_append(ctx->tp_out, "texture2d<%s> %s_tex, sampler %s_smp", is_uint ? "uint" : "float", pn, pn);
+			sfmt_append(ctx->tp_out, "%s %s_tex, sampler %s_smp", cspv_msl_sampler_tex(pt), pn, pn);
 		} else if (pt->kind == CSPV_T_ARRAY) {
 			sfmt_append(ctx->tp_out, "thread %s* %s", cspv_hlsl_type_name(pt->elem), pn);
 		} else if (d->params[i].qual) {
@@ -7841,9 +8482,8 @@ static void cspv_emit_msl(cspv_ctx* ctx)
 			}
 		} else if (d->kind == CSPV_D_OPAQUE) {
 			if (d->type->kind == CSPV_T_SAMPLER2D) {
-				bool is_uint = d->type->elem && d->type->elem->kind == CSPV_T_UINT;
-				sfmt_append(ctx->tp_out, "\ttexture2d<%s> %s_tex;\n\tsampler %s_smp;\n",
-					is_uint ? "uint" : "float", d->name, d->name);
+				sfmt_append(ctx->tp_out, "\t%s %s_tex;\n\tsampler %s_smp;\n",
+					cspv_msl_sampler_tex(d->type), d->name, d->name);
 			} else {
 				sfmt_append(ctx->tp_out, "\t%s %s;\n", cspv_msl_image_type(d->type->cols, d->readonly), d->name);
 			}
@@ -7942,9 +8582,8 @@ static void cspv_emit_msl(cspv_ctx* ctx)
 			bool rw_image = d->type->kind == CSPV_T_IMAGE2D && !d->readonly;
 			int idx = (compute && rw_image) ? texture_count + d->binding : d->binding;
 			if (d->type->kind == CSPV_T_SAMPLER2D) {
-				bool is_uint = d->type->elem && d->type->elem->kind == CSPV_T_UINT;
-				sfmt_append(ctx->tp_out, ", texture2d<%s> %s_tex [[texture(%d)]], sampler %s_smp [[sampler(%d)]]",
-					is_uint ? "uint" : "float", d->name, idx, d->name, idx);
+				sfmt_append(ctx->tp_out, ", %s %s_tex [[texture(%d)]], sampler %s_smp [[sampler(%d)]]",
+					cspv_msl_sampler_tex(d->type), d->name, idx, d->name, idx);
 			} else {
 				sfmt_append(ctx->tp_out, ", %s %s [[texture(%d)]]", cspv_msl_image_type(d->type->cols, d->readonly), d->name, idx);
 			}
@@ -8074,8 +8713,14 @@ static void cspv_init_types(cspv_ctx* ctx)
 		ctx->t_bvec[i] = cspv_make_type(ctx, CSPV_T_VEC, ctx->t_bool, i + 2, 0);
 		ctx->t_mat[i] = cspv_make_type(ctx, CSPV_T_MAT, ctx->t_float, i + 2, i + 2);
 	}
-	ctx->t_sampler2d = cspv_make_type(ctx, CSPV_T_SAMPLER2D, ctx->t_float, 0, 0);
-	ctx->t_usampler2d = cspv_make_type(ctx, CSPV_T_SAMPLER2D, ctx->t_uint, 0, 0);
+	ctx->t_sampler2d = cspv_make_type(ctx, CSPV_T_SAMPLER2D, ctx->t_float, CSPV_SDIM_2D, 0);
+	ctx->t_usampler2d = cspv_make_type(ctx, CSPV_T_SAMPLER2D, ctx->t_uint, CSPV_SDIM_2D, 0);
+	ctx->t_samplercube = cspv_make_type(ctx, CSPV_T_SAMPLER2D, ctx->t_float, CSPV_SDIM_CUBE, 0);
+	ctx->t_sampler3d = cspv_make_type(ctx, CSPV_T_SAMPLER2D, ctx->t_float, CSPV_SDIM_3D, 0);
+	ctx->t_sampler2darray = cspv_make_type(ctx, CSPV_T_SAMPLER2D, ctx->t_float, CSPV_SDIM_2D_ARRAY, 0);
+	ctx->t_sampler2dshadow = cspv_make_type(ctx, CSPV_T_SAMPLER2D, ctx->t_float, CSPV_SDIM_2D_SHADOW, 0);
+	ctx->t_samplercubeshadow = cspv_make_type(ctx, CSPV_T_SAMPLER2D, ctx->t_float, CSPV_SDIM_CUBE_SHADOW, 0);
+	ctx->t_sampler2darrayshadow = cspv_make_type(ctx, CSPV_T_SAMPLER2D, ctx->t_float, CSPV_SDIM_2D_ARRAY_SHADOW, 0);
 
 	cspv_register_type(ctx, "bool", ctx->t_bool);
 	cspv_register_type(ctx, "int", ctx->t_int);
@@ -8095,6 +8740,12 @@ static void cspv_init_types(cspv_ctx* ctx)
 	cspv_register_type(ctx, "bvec4", ctx->t_bvec[2]);
 	cspv_register_type(ctx, "sampler2D", ctx->t_sampler2d);
 	cspv_register_type(ctx, "usampler2D", ctx->t_usampler2d);
+	cspv_register_type(ctx, "samplerCube", ctx->t_samplercube);
+	cspv_register_type(ctx, "sampler3D", ctx->t_sampler3d);
+	cspv_register_type(ctx, "sampler2DArray", ctx->t_sampler2darray);
+	cspv_register_type(ctx, "sampler2DShadow", ctx->t_sampler2dshadow);
+	cspv_register_type(ctx, "samplerCubeShadow", ctx->t_samplercubeshadow);
+	cspv_register_type(ctx, "sampler2DArrayShadow", ctx->t_sampler2darrayshadow);
 	cspv_register_type(ctx, "mat2", ctx->t_mat[0]);
 	cspv_register_type(ctx, "mat3", ctx->t_mat[1]);
 	cspv_register_type(ctx, "mat4", ctx->t_mat[2]);
@@ -8224,6 +8875,7 @@ static uint32_t* cspv_assemble(cspv_ctx* ctx, size_t* out_word_count)
 
 static void cspv_cleanup(cspv_ctx* ctx)
 {
+	afree(ctx->es_shadows);
 	afree(ctx->names);
 	afree(ctx->decos);
 	afree(ctx->globals);
@@ -8233,6 +8885,7 @@ static void cspv_cleanup(cspv_ctx* ctx)
 	afree(ctx->interface_ids);
 	map_free(ctx->type_ids);
 	map_free(ctx->ptr_type_ids);
+	map_free(ctx->sampler_image_tids);
 	map_free(ctx->const_ids);
 	map_free(ctx->fn_type_ids);
 	map_free(ctx->type_names);
@@ -8266,6 +8919,19 @@ CSPV_Result cspv_compile_ex(const char* source, CSPV_Stage stage, const CSPV_Opt
 	CSPV_Result result;
 	memset(&result, 0, sizeof(result));
 
+	// The intrinsic and preprocessor tables key on interned pointers, which the host can
+	// invalidate wholesale (cf_sinuke / sintern_nuke bumps the generation). Rebuild them
+	// whenever the generation moves, or every later compile fails name lookups with
+	// "unknown function" on core intrinsics.
+	{
+		static int intern_gen = -1;
+		int gen = ck_sintern_gen();
+		if (gen != intern_gen) {
+			intern_gen = gen;
+			g_cspv_pp_kw.kw_include = 0;
+			map_free(g_cspv_intrins);
+		}
+	}
 	cspv_init_keywords();
 	cspv_init_intrins();
 

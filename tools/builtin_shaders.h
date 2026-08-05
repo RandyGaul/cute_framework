@@ -326,6 +326,38 @@ float distance_arrow(vec2 p, vec2 a, vec2 b, float r, float w)
 	float dt = distance_triangle(p, b, base + t, base - t);
 	return min(ds, dt);
 }
+
+// Longitudinal dash distance: 0 inside a dash, growing across each gap. s is the
+// arclength along the stroke and dash holds (on length, off length, phase), all in
+// world units. Combining it with the lateral distance via length() rounds dash caps.
+float dash_dl(float s, vec3 dash)
+{
+	float p = dash.x + dash.y;
+	float m = mod(s - dash.z, p);
+	return max(abs(m - dash.x * 0.5) - dash.x * 0.5, 0.0);
+}
+
+// Dashed segment/circle distance, shared by both draw fragment paths. a/b are the
+// segment endpoints (equal for a circle of radius r around a), d is the shape's
+// undashed skeleton distance at p. Returns a distance that still behaves under the
+// uniform `d - radius` the caller applies: dashed lines stay filled capsules per
+// dash, dashed circle outlines dash along the ring's arclength.
+float dash_segment(vec2 p, vec2 a, vec2 b, float d, float r, vec3 dash)
+{
+	vec2 ab = b - a;
+	float l2 = dot(ab, ab);
+	if (l2 > 1.0e-12) {
+		// Segment: dash along the spine projection.
+		float s = clamp(dot(p - a, ab) / l2, 0.0, 1.0) * sqrt(l2);
+		return length(vec2(dash_dl(s, dash), d));
+	} else {
+		// Circle outline: dash along the ring at radius r; +r cancels the caller's -r
+		// so the result lands on the ring skeleton, not the disc boundary.
+		vec2 q = p - a;
+		float s = atan(q.y, q.x) * r;
+		return length(vec2(dash_dl(s, dash), d - r)) + r;
+	}
+}
 )";
 
 // Default custom-shape include: no shapes registered. cf_make_custom_shape() swaps in a
@@ -412,6 +444,34 @@ float sdf_stroke(float d)
 	return abs(d) - v_stroke;
 }
 
+// Shape effects (cf_draw_push_outline / cf_draw_push_glow), applied to a shape's premultiplied
+// result using the signed distance it already produced -- an outline is a band just outside the
+// surface, a glow a falloff past it. Both are exact and cost one smoothstep each: no second
+// pass, no blur kernel, no extra geometry. Globals are set per command by the tile walk and from
+// varyings in the instanced path; a zero width/radius disables that effect.
+vec4 sdf_effects(vec4 shape_color, float d)
+{
+	if (v_outline_width <= 0.0 && v_glow_radius <= 0.0) return shape_color;
+	float aa = max(v_aa, 1.0e-6);
+	vec4 under = vec4(0.0);
+	// Glow first (furthest back): a falloff from the surface outward, squared so it reads like
+	// light rather than a flat halo.
+	if (v_glow_radius > 0.0) {
+		float t = clamp(1.0 - max(d, 0.0) / v_glow_radius, 0.0, 1.0);
+		under = v_glow * (t * t);
+	}
+	// Outline over glow: everything within `width` of the surface, inside included, so it stays
+	// solid under a translucent fill.
+	if (v_outline_width > 0.0) {
+		// `edge`, not `line` -- the latter is a reserved word in HLSL.
+		float cov = 1.0 - smoothstep(v_outline_width - aa, v_outline_width, d);
+		vec4 edge = v_outline * cov;
+		under = edge + under * (1.0 - edge.a);
+	}
+	// Finally the shape itself over both.
+	return shape_color + under * (1.0 - shape_color.a);
+}
+
 float dd(float d)
 {
 	return length(vec2(dFdx(d), dFdy(d)));
@@ -432,6 +492,7 @@ vec4 sdf(vec4 a, vec4 b, float d)
 	vec4 fill = mix(fill_no_aa, fill_aa, v_aa > 0.0 ? 1.0 : 0.0);
 
 	result = mix(stroke, fill, v_fill);
+	result = sdf_effects(result, d);
 	return result;
 }
 )";
@@ -603,6 +664,9 @@ layout (location = 8) in vec4 v_blend_posH;
 layout (location = 9) in vec4 v_user;
 layout (location = 10) in vec4 v_uv_bounds;
 layout (location = 11) in flat int v_po;
+layout (location = 12) in vec4 v_fx_outline;
+layout (location = 13) in vec4 v_fx_glow;
+layout (location = 14) in vec4 v_fx_params;
 
 layout(location = 0) out vec4 result;
 
@@ -649,6 +713,12 @@ float v_fill;
 vec2 pos;
 vec2 screen_uv;
 
+// Shape effect state, consumed by sdf_effects in distance.shd.
+vec4 v_outline;
+float v_outline_width;
+vec4 v_glow;
+float v_glow_radius;
+
 #include "blend.shd"
 #include "gamma.shd"
 #include "smooth_uv.shd"
@@ -681,6 +751,10 @@ void main()
 	v_alpha  = v_blend_posH.x;
 	v_fill   = v_blend_posH.y;
 	v_posH   = v_blend_posH.zw;
+	v_outline = v_fx_outline;
+	v_glow = v_fx_glow;
+	v_outline_width = v_fx_params.x;
+	v_glow_radius = v_fx_params.y;
 
 	bool is_sprite  = v_type >= 0.0 && v_type < 0.5;
 	bool is_text    = v_type >  0.5 && v_type < 1.5;
@@ -710,6 +784,7 @@ void main()
 	} else if (is_seg) {
 		d = distance_segment(v_pos, v_ab.xy, v_ab.zw);
 		d = min(d, distance_segment(v_pos, v_ab.zw, v_cd.xy));
+		if (v_gh.w > 0.5) d = dash_segment(v_pos, v_ab.xy, v_ab.zw, d, v_radius, v_gh.xyz);
 	} else if (is_tri_sdf) {
 		d = distance_triangle(v_pos, v_ab.xy, v_ab.zw, v_cd.xy);
 	} else if (is_poly) {
@@ -724,6 +799,7 @@ void main()
 		d = distance_polygon(v_pos, pts, v_n);
 	} else if (is_seg_clip) {
 		d = distance_segment(v_pos, v_ab.xy, v_ab.zw);
+		if (v_gh.w > 0.5) d = dash_segment(v_pos, v_ab.xy, v_ab.zw, d, v_radius, v_gh.xyz);
 	} else if (is_arrow) {
 		d = distance_arrow(v_pos, v_ab.xy, v_ab.zw, v_cd.x, v_cd.y);
 	} else if (is_custom) {
@@ -783,7 +859,7 @@ void main()
 	// assignment and fail pipeline creation. Keep every varying live unconditionally
 	// (the uniform can never hold this value, and the compiler cannot prove that).
 	if (u_alpha_discard == -2147483647) {
-		c += v_pos_uv + v_ab + v_cd + v_ef + v_gh + v_col + v_shape + v_blend_posH + v_user + v_uv_bounds + vec4(float(v_n), float(v_po), 0, 0);
+		c += v_pos_uv + v_ab + v_cd + v_ef + v_gh + v_col + v_shape + v_blend_posH + v_user + v_uv_bounds + v_fx_outline + v_fx_glow + v_fx_params + vec4(float(v_n), float(v_po), 0, 0);
 	}
 	result = c;
 }
@@ -835,6 +911,7 @@ struct Cmd
 	vec4 shape;   // radius, stroke (pre-halved), aa, alpha.
 	vec4 misc;    // x: fill (0 or 1), y: polygon vert count, z: opaque, w: packHalf2x16(color.ba) bits.
 	vec4 user;    // User params (ShaderParams.attributes).
+	vec4 fx;      // x: effect-block payload offset (float bits, 0 = none). y: extra extent. zw reserved.
 };
 
 layout (std430, set = 2, binding = 1) readonly buffer cmd_buffer { Cmd cmds[]; };
@@ -856,6 +933,10 @@ layout (set = 3, binding = 0) uniform uniform_block {
 float v_stroke;
 float v_aa;
 float v_fill;
+vec4 v_outline;
+float v_outline_width;
+vec4 v_glow;
+float v_glow_radius;
 
 vec4 cf_payload(uint i) { return payload[i]; }
 
@@ -901,7 +982,8 @@ void main()
 	for (uint i = range.y; i > 0u;) {
 		--i;
 		Cmd cmd = cmds[tile_list[range.x + i]];
-		uint type = cmd.meta.x;
+		uint type = cmd.meta.x & 15u;         // Low bits: shape type.
+		bool dashed = (cmd.meta.x & 16u) != 0u; // Dash flag: a dash vec4 trails the payload.
 		vec4 col = cf_unpack_half4(cmd.meta.y, floatBitsToUint(cmd.misc.w));
 		uint po = cmd.meta.z;
 
@@ -925,6 +1007,19 @@ void main()
 		v_stroke = cmd.shape.y;
 		v_aa = cmd.shape.z;
 		v_fill = cmd.misc.x;
+		// Shape effects ride a trailing payload block, flagged by a non-zero offset.
+		v_outline = vec4(0.0);
+		v_outline_width = 0.0;
+		v_glow = vec4(0.0);
+		v_glow_radius = 0.0;
+		uint fx_off = floatBitsToUint(cmd.fx.x);
+		if (fx_off != 0u) {
+			v_outline = payload[fx_off];
+			v_glow = payload[fx_off + 1u];
+			vec4 fxp = payload[fx_off + 2u];
+			v_outline_width = fxp.x;
+			v_glow_radius = fxp.y;
+		}
 
 		vec4 c = vec4(0);
 		if (type <= CMD_TYPE_TEXT) {
@@ -1033,6 +1128,7 @@ void main()
 			} else if (type == CMD_TYPE_SEGMENT) {
 				d = distance_segment(p, P0.xy, P0.zw);
 				d = min(d, distance_segment(p, P0.zw, P1.xy));
+				if (dashed) d = dash_segment(p, P0.xy, P0.zw, d, cmd.shape.x, payload[po + 2u].xyz);
 			} else if (type == CMD_TYPE_TRI_SDF) {
 				d = distance_triangle(p, P0.xy, P0.zw, P1.xy);
 			} else if (type == CMD_TYPE_SEG_CLIP) {
@@ -1042,6 +1138,7 @@ void main()
 				vec4 P2 = payload[po + 2u];
 				bool keep = dot(P1.xy, p) - P2.x < 0.0 && dot(P1.zw, p) - P2.y <= 0.0;
 				clip = keep ? 1.0 : 0.0;
+				if (dashed) d = dash_segment(p, P0.xy, P0.zw, d, cmd.shape.x, payload[po + 3u].xyz);
 			} else if (type == CMD_TYPE_ARROW) {
 				d = distance_arrow(p, P0.xy, P0.zw, P1.x, P1.y);
 			} else if (type == CMD_TYPE_CUSTOM) {
@@ -1116,6 +1213,7 @@ struct Cmd
 	vec4 shape;
 	vec4 misc;
 	vec4 user;
+	vec4 fx;
 };
 
 // Storage access: real SSBOs by default; on GLES3/WebGL2 (define CF_GLES) storage
@@ -1128,13 +1226,14 @@ uvec4 cf_fetch1(uint i) { return texelFetch(u_vs_storage_1, ivec2(int(i) & 1023,
 vec4 cf_bits4(uvec4 u) { return vec4(uintBitsToFloat(u.x), uintBitsToFloat(u.y), uintBitsToFloat(u.z), uintBitsToFloat(u.w)); }
 Cmd cf_cmd(uint i)
 {
-	uint base = i * 5u;
+	uint base = i * 6u;
 	Cmd c;
 	c.aabb = cf_bits4(cf_fetch0(base));
 	c.meta = cf_fetch0(base + 1u);
 	c.shape = cf_bits4(cf_fetch0(base + 2u));
 	c.misc = cf_bits4(cf_fetch0(base + 3u));
 	c.user = cf_bits4(cf_fetch0(base + 4u));
+	c.fx = cf_bits4(cf_fetch0(base + 5u));
 	return c;
 }
 vec4 cf_payload(uint i) { return cf_bits4(cf_fetch1(i)); }
@@ -1157,6 +1256,9 @@ layout (location = 8) out vec4 v_blend_posH;
 layout (location = 9) out vec4 v_user;
 layout (location = 10) out vec4 v_uv_bounds;
 layout (location = 11) out flat int v_po;
+layout (location = 12) out vec4 v_fx_outline;
+layout (location = 13) out vec4 v_fx_glow;
+layout (location = 14) out vec4 v_fx_params;
 
 #include "sdf_core.shd"
 
@@ -1164,15 +1266,27 @@ void main()
 {
 	Cmd cmd = cf_cmd(uint(gl_InstanceIndex));
 	vec4 user_out = cmd.user;
-	uint type = cmd.meta.x;
+	uint type = cmd.meta.x & 15u;         // Low bits: shape type.
+	bool dashed = (cmd.meta.x & 16u) != 0u; // Dash flag: a dash vec4 trails the payload.
 	uint po = cmd.meta.z;
 	int corner = int(in_corner + 0.5);
 	vec4 P0 = cf_payload(po);
 	vec4 P1 = cf_payload(po + 1u);
 
 	// Conservative coverage inflation: radius + full stroke + aa (shape.y is the
-	// pre-halved stroke).
-	float pad = cmd.shape.x + cmd.shape.y * 2.0 + cmd.shape.z;
+	// pre-halved stroke), plus however far an outline or glow reaches past the shape.
+	float pad = cmd.shape.x + cmd.shape.y * 2.0 + cmd.shape.z + cmd.fx.y;
+
+	// Shape effects ride a trailing payload block, flagged by a non-zero offset.
+	vec4 fx_outline = vec4(0.0);
+	vec4 fx_glow = vec4(0.0);
+	vec4 fx_params = vec4(0.0);
+	uint fx_off = floatBitsToUint(cmd.fx.x);
+	if (fx_off != 0u) {
+		fx_outline = cf_payload(fx_off);
+		fx_glow = cf_payload(fx_off + 1u);
+		fx_params = cf_payload(fx_off + 2u);
+	}
 
 	vec2 pos = vec2(0);
 	vec2 uv = vec2(0);
@@ -1229,6 +1343,8 @@ void main()
 		vec2 t = skew(n0);
 		pos = corner == 0 ? a - n0 + t : (corner == 1 ? b + n0 + t : (corner == 2 ? b + n0 - t : a - n0 - t));
 		if (type == 7u) ef = cf_payload(po + 2u);
+		// Dash params (on, off, phase) ride the otherwise-unused gh varying; w flags it on.
+		if (dashed) gh = vec4(cf_payload(po + (type == 7u ? 3u : 2u)).xyz, 1.0);
 	} else if (type == 5u) {
 		// SDF triangle: padded AABB of the three verts.
 		vec2 mn = min(P0.xy, min(P0.zw, P1.xy)) - vec2(pad);
@@ -1299,6 +1415,9 @@ void main()
 	v_user = user_out;
 	v_uv_bounds = uvb;
 	v_po = int(po);
+	v_fx_outline = fx_outline;
+	v_fx_glow = fx_glow;
+	v_fx_params = fx_params;
 	gl_Position = vec4(posH, 0, 1);
 }
 )";
@@ -1329,6 +1448,7 @@ void main()
 "	vec4 shape;\n" \
 "	vec4 misc;\n" \
 "	vec4 user;\n" \
+"	vec4 fx;\n" \
 "};\n" \
 "layout (std430, set = 0, binding = 0) readonly buffer cmd_buffer { Cmd cmds[]; };\n" \
 "layout (std430, set = 0, binding = 1) readonly buffer payload_buffer { vec4 payload[]; };\n" \
@@ -1357,7 +1477,7 @@ void main()
 "	uint po = cmd.meta.z;\n" \
 "	vec4 P0 = payload[po];\n" \
 "	vec4 P1 = payload[po + 1u];\n" \
-"	uint type = cmd.meta.x;\n" \
+"	uint type = cmd.meta.x & 15u; /* Low bits: shape type. Dashes only remove ink, so culling on the undashed SDF stays conservative. */\n" \
 "	float d;\n" \
 "	if (type == 2u) {\n" \
 "		d = distance_box(p, P0.xy, P0.zw, P1.xy);\n" \
@@ -1389,11 +1509,12 @@ void main()
 "}\n" \
 "bool tile_touched(Cmd cmd, int tx, int ty)\n" \
 "{\n" \
-"	uint type = cmd.meta.x;\n" \
+"	uint type = cmd.meta.x & 15u;\n" \
 "	if (type <= 1u || type == 4u || type == 11u) return true; /* Sprites/text/tris/glyphs: AABB only. */\n" \
 "	float r_tile;\n" \
 "	float d = cmd_distance_at(cmd, tx, ty, r_tile);\n" \
-"	return d - cmd.shape.x - cmd.shape.y - cmd.shape.z - r_tile <= 0.0;\n" \
+"	/* cmd.fx.y is how far an outline or glow reaches past the shape itself. */\n" \
+"	return d - cmd.shape.x - cmd.shape.y - cmd.shape.z - cmd.fx.y - r_tile <= 0.0;\n" \
 "}\n"
 
 static const char* s_tile_zero_cs = R"(

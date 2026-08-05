@@ -109,6 +109,45 @@ CF_API CF_Result CF_CALL cf_image_load_png_from_memory(const void* data, int siz
 CF_API CF_Result CF_CALL cf_image_load_png_wh(const void* data, int size, int* w, int* h);
 
 /**
+ * @function cf_image_load_jpg
+ * @category image
+ * @brief    Loads a jpeg image.
+ * @param    virtual_path  A virtual path to the image file. See [Virtual File System](https://randygaul.github.io/cute_framework/topics/virtual_file_system).
+ * @param    img           Out parameter for the image.
+ * @return   Check the `CF_Result` for errors.
+ * @remarks  Decoded by CF's own cute_jpg.h: baseline and progressive huffman JPEGs (which is
+ *           what cameras, exporters, and the web produce). Arithmetic-coded, lossless, and
+ *           12-bit files are rejected with a descriptive error. Free with `cf_image_free`.
+ * @related  CF_Image cf_image_load_jpg cf_image_load_jpg_from_memory cf_image_load_jpg_wh cf_image_load_png cf_image_free
+ */
+CF_API CF_Result CF_CALL cf_image_load_jpg(const char* virtual_path, CF_Image* img);
+
+/**
+ * @function cf_image_load_jpg_from_memory
+ * @category image
+ * @brief    Loads a jpeg image from memory.
+ * @param    data          Pointer to the jpeg file in memory.
+ * @param    size          The number of bytes in the `data` pointer.
+ * @param    img           Out parameter for the image.
+ * @return   Check the `CF_Result` for errors.
+ * @related  CF_Image cf_image_load_jpg cf_image_load_jpg_from_memory cf_image_load_jpg_wh cf_image_free
+ */
+CF_API CF_Result CF_CALL cf_image_load_jpg_from_memory(const void* data, int size, CF_Image* img);
+
+/**
+ * @function cf_image_load_jpg_wh
+ * @category image
+ * @brief    Loads just the width/height out of a jpeg image, without decoding the pixels.
+ * @param    data          Pointer to the jpeg file in memory.
+ * @param    size          The number of bytes in the `data` pointer.
+ * @param    w             Out parameter for the width of the image.
+ * @param    h             Out parameter for the height of the image.
+ * @return   Check the `CF_Result` for errors.
+ * @related  CF_Image cf_image_load_jpg cf_image_load_jpg_from_memory cf_image_load_jpg_wh
+ */
+CF_API CF_Result CF_CALL cf_image_load_jpg_wh(const void* data, int size, int* w, int* h);
+
+/**
  * @function cf_image_free
  * @category image
  * @brief    Frees a png image.

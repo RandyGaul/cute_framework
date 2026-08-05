@@ -156,6 +156,7 @@ static void s_canvas(int w, int h)
 	app->offscreen_canvas = cf_make_canvas(params);
 	app->canvas_w = w;
 	app->canvas_h = h;
+	cf_draw_on_app_canvas_resized(w, h);
 }
 
 void cf_app_recreate_default_canvas_if_needed()
@@ -169,6 +170,13 @@ void cf_app_recreate_default_canvas_if_needed()
 
 CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, int y, int w, int h, CF_AppOptionFlags options, const char* argv0)
 {
+	// A second app would silently clobber the global app state, and the first thing to
+	// actually fail is the file system init deep inside this function (PHYSFS refuses to
+	// double-init) -- fail loudly and recoverably up front instead.
+	if (app) {
+		return cf_result_error("cf_make_app called while an app already exists -- call cf_destroy_app first.");
+	}
+
 	bool use_dx11 = options & CF_APP_OPTIONS_GFX_D3D11_BIT;
 	bool use_dx12 = options & CF_APP_OPTIONS_GFX_D3D12_BIT;
 	bool use_metal = options & CF_APP_OPTIONS_GFX_METAL_BIT;
@@ -384,6 +392,10 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 
 	CF_Result err = cf_fs_init(argv0);
 	if (cf_is_error(err)) {
+		// Most commonly PHYSFS_ERR_IS_INITIALIZED: someone called cf_fs_init (or leaked a
+		// previous app's file system) before cf_make_app. Print the reason -- a bare assert
+		// here has historically been a miserable thing to root-cause.
+		fprintf(stderr, "cf_fs_init failed in cf_make_app: %s\n", err.details ? err.details : "unknown error");
 		CF_ASSERT(0);
 	} else if (!(options & CF_APP_OPTIONS_FILE_SYSTEM_DONT_DEFAULT_MOUNT_BIT)) {
 		// Put the base directory (the path to the exe) onto the file system search path.
@@ -464,6 +476,7 @@ static void s_on_update(void* udata)
 
 void cf_app_update(CF_OnUpdateFn* on_update)
 {
+	if (s_draw) s_draw->defragged_this_frame = false; // New frame: the defrag latch re-arms.
 	if (app->gfx_enabled) {
 		if (app->using_imgui) {
 			if (app->gfx_backend_type == CF_BACKEND_TYPE_GLES3) {
@@ -529,7 +542,11 @@ int cf_app_draw_onto_screen(bool clear)
 	// All references to backend texture id's are now invalid (fetch_image or cf_texture_handle).
 	if (!s_draw->delay_defrag) {
 		atlas_cache_tick(&s_draw->atlas_cache);
+		// The authoritative once-per-frame defrag, placed before the final render below so
+		// everything packs ahead of it. Flush sites earlier in the frame use the same latch
+		// (cf_atlas_defrag_once), so a frame sees at most this defrag plus one mid-frame one.
 		atlas_cache_defrag(&s_draw->atlas_cache);
+		s_draw->defragged_this_frame = true;
 	}
 
 	// Render any remaining geometry in the draw API.
@@ -637,6 +654,10 @@ void cf_app_set_size(int w, int h)
 	app->w = w;
 	app->h = h;
 	app->sync_window = true;
+	// Recreate the app canvas now rather than waiting for the resize event: hidden windows
+	// don't reliably deliver one, and a caller who set the size expects the canvas (and the
+	// default 2d projection that tracks it) to match immediately.
+	cf_app_recreate_default_canvas_if_needed();
 }
 
 void cf_app_get_position(int* x, int* y)

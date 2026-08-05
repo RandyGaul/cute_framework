@@ -21,13 +21,23 @@ set(CF_TEST_SRCS
 	test_shader_reload.cpp
 	test_shader_directory.cpp
 	test_canvas_clear.cpp
+	test_mrt.cpp
+	test_texture_types.cpp
+	test_shadow_sampling.cpp
+	test_instancing.cpp
+	test_draw3d.cpp
+	test_uniform_arrays.cpp
 	test_math.cpp
 	test_math.c
 	test_math3d.cpp
 	test_math3d.c
 	test_ckit.c
+	test_model.cpp
+	test_jpg.cpp
+	test_dds.cpp
+	test_app_shared.cpp
 )
-set(CF_TEST_HDRS test_harness.h)
+set(CF_TEST_HDRS test_harness.h test_app_shared.h jpg_test_vectors.h)
 
 add_executable(tests ${CF_TEST_SRCS} ${CF_TEST_HDRS})
 target_link_libraries(tests PRIVATE cute)

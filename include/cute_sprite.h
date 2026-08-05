@@ -195,7 +195,15 @@ CF_API CF_Sprite CF_CALL cf_make_easy_sprite_from_pixels(const CF_Pixel* pixels,
  * @function cf_easy_sprite_update_pixels
  * @category sprite
  * @brief    Updates the pixels of a sprite created from `cf_make_easy_sprite_from_pixels`.
- * @remarks  This is not a particularly fast function - you've been warned.
+ * @remarks  The real cost hides in the atlas: if this image was packed into a shared atlas
+ *           page, invalidating it rebuilds that entire page, re-fetching every image on it.
+ *           Fine for occasional updates; pathological every frame or in a loop over many
+ *           sprites. Frequently-updated images eventually migrate to their own standalone
+ *           texture (the atlas's lonely buffer), where updates only re-upload that one image
+ *           -- so a per-frame video-style sprite settles into acceptable cost, but the first
+ *           updates after it packs are page rebuilds. For genuinely dynamic content prefer a
+ *           `CF_Texture` you own plus `cf_texture_update`, drawn through
+ *           `cf_draw3d_set_texture` or a custom shader, which bypasses the atlas entirely.
  * @related  CF_Sprite cf_make_easy_sprite_from_png cf_make_easy_sprite_from_pixels cf_easy_sprite_update_pixels cf_easy_sprite_unload
  */
 CF_API void CF_CALL cf_easy_sprite_update_pixels(CF_Sprite* sprite, const CF_Pixel* pixels);

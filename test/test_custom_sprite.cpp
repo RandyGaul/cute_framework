@@ -12,6 +12,7 @@ using namespace Cute;
 
 #include <internal/cute_custom_sprite_internal.h>
 #include <internal/cute_aseprite_cache_internal.h>
+#include <internal/cute_app_internal.h>
 
 #include "white_pixel.h"
 #include "black_pixel.h"
@@ -19,11 +20,17 @@ using namespace Cute;
 /* Test all functions of the custom sprite API. */
 TEST_CASE(test_custom_sprite_all)
 {
-	cf_fs_init(NULL);
-	cf_fs_mount(cf_fs_get_base_directory(), "", true);
-
-	cf_make_aseprite_cache();
-	cf_make_custom_sprite_cache();
+	// When an app is alive (e.g. the shared test app, if suite ordering ever puts one before
+	// this test) it already owns the file system and both caches -- initializing our own would
+	// fail as a double-init, and the cf_fs_destroy below would tear the app's file system down
+	// out from under it. Only manage what we created.
+	bool own_fs = app == NULL;
+	if (own_fs) {
+		cf_fs_init(NULL);
+		cf_fs_mount(cf_fs_get_base_directory(), "", true);
+		cf_make_aseprite_cache();
+		cf_make_custom_sprite_cache();
+	}
 
 	CF_Png white;
 	CF_Png black;
@@ -58,10 +65,11 @@ TEST_CASE(test_custom_sprite_all)
 	cf_sprite_update(&sprite);
 	REQUIRE(sprite.frame_index == 1);
 
-	cf_destroy_custom_sprite_cache();
-	cf_destroy_aseprite_cache();
-
-	cf_fs_destroy();
+	if (own_fs) {
+		cf_destroy_custom_sprite_cache();
+		cf_destroy_aseprite_cache();
+		cf_fs_destroy();
+	}
 
 	return true;
 }
