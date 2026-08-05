@@ -28,8 +28,15 @@ isolation:
 - The world renders in HDR (`CF_PIXEL_FORMAT_R16G16B16A16_FLOAT`), and one fullscreen pass
   composites bloom, tonemaps (ACES), and vignettes into the app canvas.
 
+The jar is a proper little lantern: a bronze frame around a translucent glass body (glass
+opacity rides a free instance lane and composites through draw3d's automatic translucent
+sort), with a warm core that burns brighter for every carried firefly -- and the catch
+itself drifting around inside the glass. The same assembly draws the stump pickup, the
+held lantern, and the shrine's six lanterns.
+
 The sample can also play itself: every control flows through one `Input` struct, so
 `fireflies --auto` runs a scripted tour of the entire loop -- find the jar, hunt fireflies,
 wake the shrine -- with no human input. `--shot <seconds>` (repeatable) saves numbered
-screenshots and `--exit-at <seconds>` quits cleanly, which together make the sample its own
-smoke test and its own screenshot rig.
+screenshots, `--record <seconds>` dumps fixed-timestep frames for ffmpeg, and
+`--exit-at <seconds>` quits cleanly, which together make the sample its own smoke test,
+screenshot rig, and trailer camera.
