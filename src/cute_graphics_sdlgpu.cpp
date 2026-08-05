@@ -1119,7 +1119,9 @@ void cf_sdlgpu_texture_update_layer_mip(CF_Texture texture_handle, void* data, i
 {
 	s_end_active_pass();
 	CF_TextureInternal* tex = (CF_TextureInternal*)texture_handle.id;
-	if (!tex || layer < 0 || layer >= tex->layers) return;
+	// 3D textures shrink in depth per mip; cube/array layer counts stay constant.
+	int layers_at_mip = tex && tex->type == CF_TEXTURE_TYPE_3D ? cf_max(tex->layers >> mip_level, 1) : (tex ? tex->layers : 0);
+	if (!tex || layer < 0 || layer >= layers_at_mip) return;
 
 	SDL_GPUTransferBufferCreateInfo tbuf_info = {
 		.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD,
@@ -1195,7 +1197,9 @@ void cf_sdlgpu_texture_update_mip(CF_Texture texture_handle, void* data, int siz
 	src.rows_per_layer = 0;
 	SDL_GPUTextureRegion dst = SDL_GPUTextureRegionDefaults(tex, w, h);
 	dst.mip_level = (Uint32)mip_level;
-	SDL_UploadToGPUTexture(pass, &src, &dst, true);
+	// cycle = false: cycling swaps the texture's whole backing store, which would discard
+	// every OTHER mip level (same reasoning as cf_texture_update_layer_mip above).
+	SDL_UploadToGPUTexture(pass, &src, &dst, false);
 	SDL_EndGPUCopyPass(pass);
 	if (!tex->buf) SDL_ReleaseGPUTransferBuffer(g_ctx.device, buf);
 	if (!g_ctx.cmd) SDL_SubmitGPUCommandBuffer(cmd);
@@ -1518,6 +1522,9 @@ CF_Readback cf_sdlgpu_canvas_readback2(CF_Canvas canvas_handle, int index)
 			? (CF_TextureInternal*)canvas->cf_resolve_texture.id
 			: (CF_TextureInternal*)canvas->cf_texture.id)
 		: (CF_TextureInternal*)canvas->cf_textures_mrt[index].id;
+	// Depth-only attach canvases (a shadow cube face, say) have no color texture at all;
+	// reading them back through the color path would dereference NULL.
+	if (!src_texture || !tex_internal) return { 0 };
 
 	int texel_size = (int)SDL_GPUTextureFormatTexelBlockSize(tex_internal->format);
 	int total_size = canvas->w * canvas->h * texel_size;

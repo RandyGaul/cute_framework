@@ -204,7 +204,7 @@ Each common 3D need has a sample showing the pattern, because each one is a patt
 
 ## 3D Math
 
-[cute_math3d.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_math3d.h) carries the vector/matrix/quaternion kit the camera stacks consume, plus the geometry that gameplay and culling want: `CF_Ray3` casts against spheres, AABBs, and planes (`cf_ray3_to_aabb3` for picking blocks, `cf_ray3_to_sphere` for picking things near a crosshair), `CF_Aabb3` transforms tightly through affine matrices (`cf_aabb3_transform`, the Arvo method), and `CF_Frustum3` extracts from any view-projection with `cf_frustum_from_m4` for `cf_frustum_test_aabb3` culling -- the fireflies sample culls its chunks with exactly that pair.
+[cute_math3d.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_math3d.h) carries the vector/matrix/quaternion kit the camera stacks consume, plus the geometry that gameplay and culling want: `CF_Ray3` casts against spheres, AABBs, and planes (`cf_ray3_to_aabb3` for picking blocks, `cf_ray3_to_sphere` for picking things near a crosshair), `CF_Aabb3` transforms tightly through affine matrices (`cf_transform_aabb3`, the Arvo method), and `CF_Frustum` extracts from any view-projection with `cf_frustum_from_m4` for `cf_frustum_test_aabb3` culling -- the fireflies sample culls its chunks with exactly that pair.
 
 ## Below This Layer
 

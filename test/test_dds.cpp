@@ -262,6 +262,22 @@ TEST_CASE(test_dds_parse)
 		cd_dds_t dds = cd_parse_dds_mem(b.bytes.data(), b.bytes.count());
 		REQUIRE(dds.slice_count == 0);
 	}
+	{
+		DDSBuilder b; // Mip chain deeper than the dimensions allow (8x8 supports 4).
+		s_header(&b, 8, 8, 5, FOURCC('D', 'X', 'T', '1'), 0);
+		for (int i = 0; i < 8; ++i) s_bc1_block(&b, 0);
+		cd_dds_t dds = cd_parse_dds_mem(b.bytes.data(), b.bytes.count());
+		REQUIRE(dds.slice_count == 0);
+	}
+	{
+		DDSBuilder b; // X8R8G8B8-style: 32-bit RGB with no alpha mask must be rejected,
+		              // or the undefined X byte would load as (typically zero) alpha.
+		s_header(&b, 4, 4, 1, 0, 0);
+		for (int i = 0; i < 16; ++i) b.u32(0xffffffff);
+		for (int i = 0; i < 4; ++i) b.bytes[104 + i] = 0; // Zero the amask field.
+		cd_dds_t dds = cd_parse_dds_mem(b.bytes.data(), b.bytes.count());
+		REQUIRE(dds.slice_count == 0);
+	}
 	return true;
 }
 

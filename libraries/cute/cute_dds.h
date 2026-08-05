@@ -59,6 +59,12 @@
 			                 private copy inside one translation unit, e.g. a test that
 			                 must not collide with an engine's copy)
 
+		NOTE for Cute Framework users: the engine compiles its copy with
+		CUTE_DDS_NO_STDIO, so cd_load_dds has no definition inside the engine library.
+		To call the cd_* parser directly alongside CF, define CUTE_DDS_STATIC +
+		CUTE_DDS_IMPLEMENTATION in your own translation unit (a private copy); or just
+		use cf_make_texture_from_dds, which covers the common path.
+
 	Revision history:
 		1.00 (08/04/2026) initial release
 */
@@ -254,7 +260,14 @@ CUTE_DDS_DEF cd_dds_t cd_parse_dds_mem(const void* data, int size)
 	if (width == 0 || height == 0) CD_FAIL("zero width or height");
 	if (width > 65536 || height > 65536) CD_FAIL("unreasonable dimensions");
 	if (mip_count == 0) mip_count = 1;
-	if (mip_count > 17) CD_FAIL("mip count exceeds any possible chain"); // log2(65536) + 1.
+	{
+		// A chain deeper than the dimensions allow is a malformed file, and GPU APIs
+		// reject (or worse, UB) textures created with more levels than fit.
+		uint32_t max_dim = width > height ? width : height;
+		uint32_t max_mips = 1;
+		while (max_dim > 1) { max_dim >>= 1; max_mips++; }
+		if (mip_count > max_mips) CD_FAIL("mip count deeper than the dimensions allow");
+	}
 	if (caps2 & CD_DDSCAPS2_VOLUME) CD_FAIL("volume textures are not supported");
 
 	// Pixel format: DX10 extension header, legacy FourCC, or raw RGB masks.
@@ -298,10 +311,13 @@ CUTE_DDS_DEF cd_dds_t cd_parse_dds_mem(const void* data, int size)
 		else CD_FAIL("unsupported FourCC (BC6H/BC7 files must use the DX10 header)");
 	} else if (pf_flags & CD_DDPF_RGB) {
 		if (rgb_bits != 32) CD_FAIL("only 32-bit uncompressed DDS is supported");
+		// X8 variants (no alpha mask) would load their undefined X byte as alpha --
+		// commonly zero-filled, which renders invisible under alpha blending. Reject
+		// with a message rather than produce silent wrong renders.
+		if (amask != 0xff000000u) CD_FAIL("32-bit DDS without a full alpha mask (X8R8G8B8-style) is not supported -- re-export with an alpha channel");
 		if (rmask == 0x000000ff && gmask == 0x0000ff00 && bmask == 0x00ff0000) format = CD_FORMAT_RGBA8;
 		else if (rmask == 0x00ff0000 && gmask == 0x0000ff00 && bmask == 0x000000ff) format = CD_FORMAT_BGRA8;
 		else CD_FAIL("unsupported uncompressed channel masks");
-		(void)amask; // With or without alpha bits, the memory layout reads the same.
 	} else {
 		CD_FAIL("unsupported pixel format (no FourCC and no RGB masks)");
 	}

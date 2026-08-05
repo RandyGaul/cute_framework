@@ -2297,6 +2297,10 @@ void cf_draw3d_list_end(CF_DrawListData* data)
 	for (int i = 0; i < data->cmds.count(); ++i) {
 		CF_MeshCmd3d* mc = data->cmds[i].mesh3d;
 		if (!mc) continue;
+		// Strokes repurpose every instance lane as raw shape data (endpoints, thickness,
+		// arc angles, dash) -- "recomputing" normal matrices from those bytes would
+		// corrupt the shape parameters. Only real mesh instances carry model rows.
+		if (mc->mesh.id == s_draw3d->stroke_quad.id) continue;
 		for (int k = 0; k < mc->instances.count(); ++k) {
 			CF_MeshInstance3d& inst = mc->instances[k];
 			CF_M4x4 n = cf_m4_normal_matrix(s_model_from_rows(&inst));

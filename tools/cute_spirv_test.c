@@ -1576,6 +1576,28 @@ static void test_block_arrays_emitters(void)
 			"layout(std430, set = 0, binding = 0) readonly buffer b { float u_f[]; };\n"
 			"void main() { gl_Position = vec4(u_f[0]); }\n",
 			"vec4 or uvec4", &o);
+		// A local or parameter shadowing the member name is NOT a storage access;
+		// the validation walk must not reject its bare (un-indexed) uses.
+		{
+			CSPV_Result rs = cspv_compile_ex(
+				"layout(location = 0) in vec3 in_pos;\n"
+				"layout(std430, set = 0, binding = 0) readonly buffer bones_buffer { vec4 u_bones[]; };\n"
+				"float scale(float u_bones) { return u_bones * 2.0; }\n"
+				"void main() {\n"
+				"	float u_local = scale(0.5);\n"
+				"	gl_Position = u_bones[0] * u_local;\n"
+				"}\n",
+				CSPV_STAGE_VERTEX, &o);
+			CHECK_MSG(rs.success, rs.error_message);
+			cspv_free(&rs);
+		}
+		// Writes through the emulation get a clear readonly error, not a baffling
+		// driver complaint about assigning to a texelFetch.
+		expect_err_ex(CSPV_STAGE_VERTEX,
+			"layout(location = 0) in vec3 in_pos;\n"
+			"layout(std430, set = 0, binding = 0) readonly buffer b { vec4 u_v[]; };\n"
+			"void main() { u_v[0] = vec4(1.0); gl_Position = vec4(0.0); }\n",
+			"readonly in GLSL ES", &o);
 		expect_err_ex(CSPV_STAGE_VERTEX,
 			"layout(location = 0) in vec3 in_pos;\n"
 			"layout(std430, set = 0, binding = 0) readonly buffer b { vec4 u_v[]; };\n"

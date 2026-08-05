@@ -942,6 +942,9 @@ typedef struct cspv_ctx
 	// during validation cannot leak it; each emitter's result moves to
 	// CSPV_Result right after it runs).
 	CK_SDYNA char* tp_out;
+	// Scratch shadow-name list for the ES validation walk -- on the context for the
+	// same longjmp-cannot-leak reason as tp_out.
+	CK_DYNA const char** es_shadows;
 } cspv_ctx;
 
 //--------------------------------------------------------------------------------------------------
@@ -6691,17 +6694,49 @@ static cspv_decl* cspv_es_ssbo_member_decl(cspv_ctx* ctx, const char* name)
 	return NULL;
 }
 
+// Names that hide an emulated storage member within the current function: parameters and
+// locals collected as the walk descends. Append-only per function -- over-shadowing can
+// only SUPPRESS a validation error (the GL compile then reports it), never invent one.
+static bool cspv_es_shadowed(cspv_ctx* ctx, const char* name)
+{
+	for (int i = 0; i < (int)asize(ctx->es_shadows); i++) {
+		if (ctx->es_shadows[i] == name) return true;
+	}
+	return false;
+}
+
+// True when `e` is an index into an emulated storage member (and not shadowed).
+static bool cspv_es_is_ssbo_index(cspv_ctx* ctx, cspv_expr* e)
+{
+	return e->kind == CSPV_E_INDEX && e->u.index.base->kind == CSPV_E_REF
+		&& !cspv_es_shadowed(ctx, e->u.index.base->u.name)
+		&& cspv_es_ssbo_member_decl(ctx, e->u.index.base->u.name) != 0;
+}
+
 // Emulated fetches only exist under an index: a bare reference (function argument,
 // .length()) has no texture-side spelling, so reject it with a real message instead
-// of letting the GL driver report an undeclared identifier.
+// of letting the GL driver report an undeclared identifier. Writes get their own
+// message too -- a texelFetch is not an lvalue, and the driver's complaint about the
+// rewritten expression would be baffling.
 static void cspv_es_validate_expr(cspv_ctx* ctx, cspv_expr* e, bool index_base)
 {
-	if (e->kind == CSPV_E_REF && !index_base && cspv_es_ssbo_member_decl(ctx, e->u.name)) {
+	if (e->kind == CSPV_E_REF && !index_base && !cspv_es_shadowed(ctx, e->u.name) && cspv_es_ssbo_member_decl(ctx, e->u.name)) {
 		cspv_errorf(ctx, e->line, "storage buffer array '%s' must be indexed directly in GLSL ES 3.00 output (it is emulated as a texture fetch)", e->u.name);
 	}
 	switch (e->kind) {
-	case CSPV_E_BINARY: cspv_es_validate_expr(ctx, e->u.bin.l, false); cspv_es_validate_expr(ctx, e->u.bin.r, false); break;
-	case CSPV_E_UNARY: cspv_es_validate_expr(ctx, e->u.un.e, false); break;
+	case CSPV_E_BINARY:
+		if ((e->u.bin.op == '=' || cspv_is_assign_op(e->u.bin.op)) && cspv_es_is_ssbo_index(ctx, e->u.bin.l)) {
+			cspv_errorf(ctx, e->line, "storage buffers are readonly in GLSL ES 3.00 output (emulated as texture fetches)");
+		}
+		cspv_es_validate_expr(ctx, e->u.bin.l, false);
+		cspv_es_validate_expr(ctx, e->u.bin.r, false);
+		break;
+	case CSPV_E_UNARY:
+		if ((e->u.un.op == CSPV_P_INC || e->u.un.op == CSPV_P_DEC) && cspv_es_is_ssbo_index(ctx, e->u.un.e)) {
+			cspv_errorf(ctx, e->line, "storage buffers are readonly in GLSL ES 3.00 output (emulated as texture fetches)");
+		}
+		cspv_es_validate_expr(ctx, e->u.un.e, false);
+		break;
 	case CSPV_E_COND:
 		cspv_es_validate_expr(ctx, e->u.cond.c, false);
 		cspv_es_validate_expr(ctx, e->u.cond.a, false);
@@ -6711,7 +6746,7 @@ static void cspv_es_validate_expr(cspv_ctx* ctx, cspv_expr* e, bool index_base)
 		for (int i = 0; i < (int)asize(e->u.call.args); i++) cspv_es_validate_expr(ctx, e->u.call.args[i], false);
 		break;
 	case CSPV_E_LENGTH:
-		if (e->u.member.base->kind == CSPV_E_REF && cspv_es_ssbo_member_decl(ctx, e->u.member.base->u.name)) {
+		if (e->u.member.base->kind == CSPV_E_REF && !cspv_es_shadowed(ctx, e->u.member.base->u.name) && cspv_es_ssbo_member_decl(ctx, e->u.member.base->u.name)) {
 			cspv_errorf(ctx, e->line, "'.length()' is not supported on storage buffers in GLSL ES 3.00 output");
 		}
 		cspv_es_validate_expr(ctx, e->u.member.base, false);
@@ -6732,6 +6767,7 @@ static void cspv_es_validate_stmt(cspv_ctx* ctx, cspv_stmt* s)
 	case CSPV_S_DECL:
 		for (cspv_stmt* n = s; n; n = n->u.decl.next_decl) {
 			if (n->u.decl.init) cspv_es_validate_expr(ctx, n->u.decl.init, false);
+			apush(ctx->es_shadows, n->u.decl.name);
 		}
 		break;
 	case CSPV_S_EXPR: cspv_es_validate_expr(ctx, s->u.expr, false); break;
@@ -6795,7 +6831,10 @@ static void cspv_emit_glsl300(cspv_ctx* ctx)
 	}
 	for (int i = 0; i < (int)asize(ctx->decls); i++) {
 		cspv_decl* d = ctx->decls + i;
-		if (d->kind == CSPV_D_FUNC && d->body) cspv_es_validate_stmt(ctx, d->body);
+		if (d->kind != CSPV_D_FUNC || !d->body) continue;
+		aclear(ctx->es_shadows);
+		for (int p = 0; p < d->num_params; p++) apush(ctx->es_shadows, d->params[p].name);
+		cspv_es_validate_stmt(ctx, d->body);
 	}
 
 	cspv_tp gg;
@@ -8836,6 +8875,7 @@ static uint32_t* cspv_assemble(cspv_ctx* ctx, size_t* out_word_count)
 
 static void cspv_cleanup(cspv_ctx* ctx)
 {
+	afree(ctx->es_shadows);
 	afree(ctx->names);
 	afree(ctx->decos);
 	afree(ctx->globals);

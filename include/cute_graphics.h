@@ -1304,7 +1304,8 @@ typedef struct CF_StorageBufferParams
 	/* @member GPU can write in compute stage (default false). */
 	bool compute_writable;
 
-	/* @member GPU can read in graphics vertex/fragment stage (default false). */
+	/* @member GPU can read in graphics vertex/fragment stage (default true -- the common
+	   case is binding via `cf_apply_vs_storage_buffers`, which requires it). */
 	bool graphics_readable;
 
 	/* @member Buffer can source indirect draws via `cf_draw_elements_indirect` (default false).
@@ -1326,7 +1327,7 @@ CF_INLINE CF_StorageBufferParams cf_storage_buffer_defaults(int size) {
 	params.size = size;
 	params.compute_readable = true;
 	params.compute_writable = false;
-	params.graphics_readable = false;
+	params.graphics_readable = true;
 	params.indirect_drawable = false;
 	return params;
 }
@@ -2978,8 +2979,11 @@ CF_INLINE CF_Texture canvas_get_target2(CF_Canvas canvas, int index) { return cf
 CF_INLINE CF_Texture canvas_get_depth_stencil_target(CF_Canvas canvas) { return cf_canvas_get_depth_stencil_target(canvas); }
 CF_INLINE void clear_canvas(CF_Canvas canvas) { cf_clear_canvas(canvas); }
 CF_INLINE void canvas_set_clear_color(CF_Canvas canvas, CF_Color color) { cf_canvas_set_clear_color(canvas, color); }
+CF_INLINE void canvas_set_clear_color2(CF_Canvas canvas, int index, CF_Color color) { cf_canvas_set_clear_color2(canvas, index, color); }
+CF_INLINE void canvas_get_size(CF_Canvas canvas, int* w, int* h) { cf_canvas_get_size(canvas, w, h); }
 CF_INLINE void canvas_set_clear_depth_stencil(CF_Canvas canvas, float depth, uint32_t stencil) { cf_canvas_set_clear_depth_stencil(canvas, depth, stencil); }
 CF_INLINE CF_Readback canvas_readback(CF_Canvas canvas) { return cf_canvas_readback(canvas); }
+CF_INLINE CF_Readback canvas_readback2(CF_Canvas canvas, int index) { return cf_canvas_readback2(canvas, index); }
 CF_INLINE bool readback_ready(CF_Readback readback) { return cf_readback_ready(readback); }
 CF_INLINE int readback_data(CF_Readback readback, void* data, int size) { return cf_readback_data(readback, data, size); }
 CF_INLINE int readback_size(CF_Readback readback) { return cf_readback_size(readback); }

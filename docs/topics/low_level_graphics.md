@@ -290,7 +290,7 @@ The plain `cf_material_set_texture_fs` keeps sampling through the texture's own 
 
 ## Multiple Render Targets
 
-A canvas can carry up to `CF_MAX_CANVAS_TARGETS` color targets (`CF_CanvasParams::target_count`); the fragment shader writes `layout (location = N) out` per target -- the classic g-buffer setup. Each target can blend its own way: `CF_RenderState::blend` aliases `blends[0]`, and setting `blend_count` with `blends[1]`+ gives every target its own blend and write mask (accumulate HDR into target 0 while overwriting normals in target 1). Per-target blend is SDL_GPU-only -- the GLES backend applies `blends[0]` to every target. `cf_canvas_get_target(canvas, index)` fetches each result.
+A canvas can carry up to `CF_MAX_CANVAS_TARGETS` color targets (`CF_CanvasParams::target_count`); the fragment shader writes `layout (location = N) out` per target -- the classic g-buffer setup. Each target can blend its own way: `CF_RenderState::blend` aliases `blends[0]`, and setting `blend_count` with `blends[1]`+ gives every target its own blend and write mask (accumulate HDR into target 0 while overwriting normals in target 1). Per-target blend is SDL_GPU-only -- the GLES backend applies `blends[0]` to every target. `cf_canvas_get_target2(canvas, index)` fetches each result.
 
 ## Compressed Textures (DDS)
 

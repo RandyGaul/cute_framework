@@ -951,6 +951,26 @@ static inline bool s_texture_allocate_storage(CF_GL_Texture* t, CF_GL_Slot* slot
 	} else {
 		glTexImage2D(GL_TEXTURE_2D, 0, t->internal_fmt, t->w, t->h, 0, t->upload_fmt, t->upload_type, NULL);
 	}
+	if (t->has_mips) {
+		// Allocate the whole chain up front: explicit-mip uploads (cf_texture_update_mip /
+		// _layer_mip) glTexSubImage into levels that must already have storage, and
+		// glGenerateMipmap isn't guaranteed to have run first.
+		int lw = t->w, lh = t->h, ld = t->layers;
+		for (int level = 1; lw > 1 || lh > 1; ++level) {
+			lw = cf_max(lw >> 1, 1);
+			lh = cf_max(lh >> 1, 1);
+			if (t->target == GL_TEXTURE_CUBE_MAP) {
+				for (int face = 0; face < 6; ++face) {
+					glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, level, t->internal_fmt, lw, lh, 0, t->upload_fmt, t->upload_type, NULL);
+				}
+			} else if (t->target == GL_TEXTURE_3D || t->target == GL_TEXTURE_2D_ARRAY) {
+				if (t->target == GL_TEXTURE_3D) ld = cf_max(ld >> 1, 1);
+				glTexImage3D(t->target, level, t->internal_fmt, lw, lh, ld, 0, t->upload_fmt, t->upload_type, NULL);
+			} else {
+				glTexImage2D(GL_TEXTURE_2D, level, t->internal_fmt, lw, lh, 0, t->upload_fmt, t->upload_type, NULL);
+			}
+		}
+	}
 	glBindTexture(t->target, 0);
 	CF_POLL_OPENGL_ERROR();
 	return true;
@@ -1108,6 +1128,7 @@ void cf_gles_texture_update_layer_mip(CF_Texture tex, void* data, int /*size*/, 
 	// land in the same storage, and non-2D textures aren't the streaming case anyway.
 	int w = cf_max(t->w >> mip, 1);
 	int h = cf_max(t->h >> mip, 1);
+	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(t->target, t->id);
 	if (t->target == GL_TEXTURE_CUBE_MAP) {
 		glTexSubImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + layer, mip, 0, 0, w, h, t->upload_fmt, t->upload_type, data);
@@ -1118,9 +1139,11 @@ void cf_gles_texture_update_layer_mip(CF_Texture tex, void* data, int /*size*/, 
 	} else {
 		glTexSubImage3D(t->target, mip, 0, 0, layer, w, h, 1, t->upload_fmt, t->upload_type, data);
 	}
-	// Mip 0 refresh regenerates the chain like before; an explicit-mip upload IS the chain
-	// content, so leave it alone.
-	if (t->has_mips && mip == 0) glGenerateMipmap(t->target);
+	// Auto-regen only for plain 2D mip-0 refreshes: on cube/array targets glGenerateMipmap
+	// rebuilds EVERY face/layer, which would clobber explicit mips already uploaded to the
+	// other faces (the DDS loader walks face-major). Per-layer users who want an auto chain
+	// call cf_generate_mipmaps once, after all faces are in.
+	if (t->has_mips && mip == 0 && t->target == GL_TEXTURE_2D) glGenerateMipmap(t->target);
 	glBindTexture(t->target, 0);
 	CF_POLL_OPENGL_ERROR();
 }
@@ -1132,16 +1155,13 @@ void cf_gles_texture_update_layer(CF_Texture tex, void* data, int size, int laye
 
 void cf_gles_texture_update_mip(CF_Texture tex, void* data, int /*size*/, int mip)
 {
+	// In place, no ring rotation: an explicit-mip upload is one level of a texture whose
+	// other levels must survive (rotating to a fresh slot would leave every other level
+	// unallocated garbage and discard the base image).
 	CF_GL_Texture* t = (CF_GL_Texture*)(uintptr_t)tex.id;
-	int slot_index = -1;
-	CF_GL_Slot* slot = s_acquire_or_wait(&t->ring, g_ctx.frame_index, &slot_index);
-	if (!slot) return;
-	if (!s_texture_allocate_storage(t, slot)) return;
-	t->id = slot->handle;
-	t->active_slot = slot_index;
-	s_apply_sampler_state_to_handle(t, t->id);
 	int w = cf_max(t->w >> mip, 1);
 	int h = cf_max(t->h >> mip, 1);
+	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, t->id);
 	glTexSubImage2D(GL_TEXTURE_2D, mip, 0, 0, w, h, t->upload_fmt, t->upload_type, data);
 	glBindTexture(GL_TEXTURE_2D, 0);
@@ -1154,6 +1174,7 @@ void cf_gles_texture_update_region(CF_Texture tex, int x, int y, int w, int h, v
 	CF_ASSERT(t->target == GL_TEXTURE_2D);
 	// Region updates write in place (no ring rotation): several region uploads/copies
 	// compose one texture, so rotating to a fresh slot would discard prior regions.
+	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, t->id);
 	glTexSubImage2D(GL_TEXTURE_2D, 0, x, y, w, h, t->upload_fmt, t->upload_type, pixels);
 	glBindTexture(GL_TEXTURE_2D, 0);
@@ -1170,6 +1191,7 @@ void cf_gles_texture_copy_region(CF_Texture dst, int dst_x, int dst_y, CF_Textur
 	if (!g_ctx.scratch_read_fbo) glGenFramebuffers(1, &g_ctx.scratch_read_fbo);
 	glBindFramebuffer(GL_READ_FRAMEBUFFER, g_ctx.scratch_read_fbo);
 	glFramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, s->id, 0);
+	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, d->id);
 	glCopyTexSubImage2D(GL_TEXTURE_2D, 0, dst_x, dst_y, src_x, src_y, w, h);
 	glBindTexture(GL_TEXTURE_2D, 0);
@@ -1184,9 +1206,10 @@ void cf_gles_texture_copy_region(CF_Texture dst, int dst_x, int dst_y, CF_Textur
 void cf_gles_generate_mipmaps(CF_Texture tex)
 {
 	CF_GL_Texture* t = (CF_GL_Texture*)(uintptr_t)tex.id;
-	glBindTexture(GL_TEXTURE_2D, t->id);
-	glGenerateMipmap(GL_TEXTURE_2D);
-	glBindTexture(GL_TEXTURE_2D, 0);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(t->target, t->id);
+	glGenerateMipmap(t->target);
+	glBindTexture(t->target, 0);
 	CF_POLL_OPENGL_ERROR();
 }
 
@@ -2032,17 +2055,18 @@ void cf_gles_apply_shader(CF_Shader shader_handle, CF_Material material_handle)
 	// Render state.
 	CF_RenderState render_state = material->state;
 
-	// Cull.
+	// Cull. The GLSL ES transpiler emits `gl_Position.y = -gl_Position.y` so canvases come
+	// out with row 0 at the top, matching the other backends. That negation mirrors every
+	// triangle, so geometry CF considers front-facing reaches the rasterizer wound
+	// clockwise -- leaving GL at its GL_CCW default would cull exactly the wrong faces and
+	// turn solids inside out. Set unconditionally: gl_FrontFacing in shaders must be right
+	// even when culling is off.
+	glFrontFace(GL_CW);
 	if (render_state.cull_mode == CF_CULL_MODE_NONE) {
 		glDisable(GL_CULL_FACE);
 	} else {
 		glEnable(GL_CULL_FACE);
 		glCullFace(s_wrap(render_state.cull_mode));
-		// The GLSL ES transpiler emits `gl_Position.y = -gl_Position.y` so canvases come out with
-		// row 0 at the top, matching the other backends. That negation mirrors every triangle, so
-		// geometry CF considers front-facing reaches the rasterizer wound clockwise -- leaving GL
-		// at its GL_CCW default would cull exactly the wrong faces and turn solids inside out.
-		glFrontFace(GL_CW);
 	}
 
 	// Depth.
