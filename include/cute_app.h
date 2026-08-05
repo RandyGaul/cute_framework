@@ -937,7 +937,7 @@ CF_API struct SDL_Window* CF_CALL cf_app_get_window(void);
 /**
  * @function cf_app_get_options
  * @category app
- * @brief    Returns the `CF_AppOptionFlags` bitmask the app was created with.
+ * @brief    Returns the bitmask of `CF_AppOptionFlagBits` the app was created with.
  * @return   Returns the `options` value passed to `cf_make_app`, or 0 if no app exists.
  * @remarks  Returns 0 before `cf_make_app` and after `cf_destroy_app`, so it is always safe to call.
  * @related  cf_make_app CF_AppOptionFlagBits cf_app_process_event

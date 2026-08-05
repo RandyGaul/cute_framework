@@ -80,30 +80,42 @@
 #	include <SDL3/SDL_main.h>
 #endif
 
-// Optional support for letting the host drive your main loop instead of writing your own `while`
-// loop. Define `CF_MAIN_USE_CALLBACKS` before including cute.h in exactly one source file, don't
-// define `main`, and implement `cf_main_init`, `cf_main_update` and `cf_main_quit` (documented
-// below). Pass `CF_APP_OPTIONS_MAIN_CALLBACKS_BIT` to `cf_make_app` -- CF refuses to start
-// without it, since it is what stops CF from polling an event queue it no longer owns.
-//
-// The entry point and all three functions must live in this one file. In C++ the three are only
-// declared when `CF_MAIN_USE_CALLBACKS` is defined, so defining one in a file that lacks the
-// define gives it C++ linkage and you get an undefined-symbol error at link time.
-//
-// The exact same code then runs on desktop, web, and mobile -- no `#ifdef CF_EMSCRIPTEN`
-// main-loop forks needed. The app quits once `cf_app_is_running` returns false (window close, or
-// call `cf_app_signal_shutdown`). The platform decides the frame rate, so drive animation off
-// `CF_DELTA_TIME` rather than assuming 60hz.
-//
-// Note for fixed-timestep games (`cf_set_fixed_timestep`): events are delivered between frames,
-// so all sub-steps of one frame share the same input snapshot (the classic loop re-polls the OS
-// queue per sub-step).
-//
-// Implemented on SDL's main callbacks (https://wiki.libsdl.org/SDL3/README-main-functions): CF
-// defines `SDL_AppInit`/`SDL_AppIterate`/`SDL_AppEvent`/`SDL_AppQuit` for you. If you want those
-// four yourself, skip this layer entirely: define `SDL_MAIN_USE_CALLBACKS`, write them, pass
-// `CF_APP_OPTIONS_MAIN_CALLBACKS_BIT` to `cf_make_app`, and forward every event to
-// `cf_app_process_event` (see cute_app.h).
+// The #ifndef guard keeps the dummy documentation define below from clobbering a user-supplied
+// CF_MAIN_USE_CALLBACKS (defined before including cute.h, so the guard skips the define/undef).
+#ifndef CF_MAIN_USE_CALLBACKS
+/**
+ * @function CF_MAIN_USE_CALLBACKS
+ * @category app
+ * @brief    Define this in exactly one source file before including `cute.h` to let the host drive your main
+ *           loop instead of writing your own `while` loop.
+ * @remarks  Don't define `main` -- implement `cf_main_init`, `cf_main_update` and `cf_main_quit` instead, and
+ *           pass `CF_APP_OPTIONS_MAIN_CALLBACKS_BIT` to `cf_make_app`. CF refuses to start without it, since
+ *           it is what stops CF from polling an event queue it no longer owns.
+ *
+ *           The entry point and all three functions must live in this one file. In C++ the three are only
+ *           declared when `CF_MAIN_USE_CALLBACKS` is defined, so defining one in a file that lacks the
+ *           define gives it C++ linkage and you get an undefined-symbol error at link time.
+ *
+ *           The exact same code then runs on desktop, web, and mobile -- no platform-specific main-loop
+ *           forks needed. The app quits once `cf_app_is_running` returns false (window close, or call
+ *           `cf_app_signal_shutdown`). The platform decides the frame rate, so drive animation off
+ *           `CF_DELTA_TIME` rather than assuming 60hz.
+ *
+ *           Note for fixed-timestep games (`cf_set_fixed_timestep`): events are delivered between frames,
+ *           so all sub-steps of one frame share the same input snapshot (the classic loop re-polls the OS
+ *           queue per sub-step).
+ *
+ *           Implemented on [SDL's main callbacks](https://wiki.libsdl.org/SDL3/README-main-functions): CF
+ *           defines `SDL_AppInit`/`SDL_AppIterate`/`SDL_AppEvent`/`SDL_AppQuit` for you. If you want those
+ *           four yourself, skip this layer entirely: define `SDL_MAIN_USE_CALLBACKS`, write them, pass
+ *           `CF_APP_OPTIONS_MAIN_CALLBACKS_BIT` to `cf_make_app`, and forward every event to
+ *           `cf_app_process_event` (see cute_app.h).
+ * @related  cf_main_init cf_main_update cf_main_quit cf_make_app cf_app_process_event CF_AppOptionFlagBits
+ */
+#define CF_MAIN_USE_CALLBACKS
+#undef CF_MAIN_USE_CALLBACKS
+#endif
+
 #ifdef CF_MAIN_USE_CALLBACKS
 #	define SDL_MAIN_USE_CALLBACKS
 #	include <SDL3/SDL_main.h>
