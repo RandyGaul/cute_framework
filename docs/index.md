@@ -3,9 +3,9 @@
   ![Cute Framework Logo](assets/CF_Logo_Hifi.svg){ width="256" }
 </figure>
 
-> The _cutest_ framework available for making 2D games in C/C++
+> The _cutest_ framework available for making 2D and 3D games in C/C++
 
-- Foundational layer for almost any 2D game
+- Foundational layer for almost any 2D or 3D game
 - 100% free and open source
 - Works nearly everwhere (Desktops, Mobile, Web, and more...)
 

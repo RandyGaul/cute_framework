@@ -209,3 +209,7 @@ Each common 3D need has a sample showing the pattern, because each one is a patt
 ## Below This Layer
 
 The draw3d layer sits on the same [low level graphics API](low_level_graphics.md) everything else uses, and that layer grew the full 3D access inventory alongside it: multiple render targets with [per-target blend states](low_level_graphics.md#multiple-render-targets), cube/3D/array textures with per-layer and per-mip upload, depth-texture sampling and comparison samplers (`sampler2DShadow`), rendering into individual cube faces, array layers, or mip levels (`CF_CanvasParams.attach_target` / `attach_layer` / `attach_mip`), [storage buffers](low_level_graphics.md#storage-buffers-and-pull-instancing) for skinning palettes and GPU-driven data, [indirect draws](low_level_graphics.md#indirect-draws) fed by compute, standalone [samplers](low_level_graphics.md#standalone-samplers), and sized `vec4`/`mat4` arrays in uniform blocks. When the draw3d layer doesn't fit, drop down -- both layers speak the same meshes, shaders, materials, and canvases.
+
+## Toward a Release
+
+Headed for shipping? [Shipping 3D](shipping_3d.md) consolidates every per-backend caveat and pre-flight recipe -- compressed textures with mips, draw-list frustum culling, the web tier's capability list, the anti-aliasing options -- into one checklist.
