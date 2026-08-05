@@ -1,6 +1,6 @@
 # Physics
 
-CF's physics is [Box2D v3](https://box2d.org), exposed directly. The library is vendored inside CF (v3.1.1, MIT), compiled into `cute.lib`, and wired to CF's allocator at app startup -- one `#include <cute.h>` and the entire `b2*` API is yours: worlds, bodies, shapes, joints, contact events, and world queries. There is deliberately no `CF_Body` wrapper layer. Box2D v3 is already a C API of id-handles and `b2Default*Def()` initializers -- the same idiom as CF's own `cf_*_defaults()` -- and [Box2D's documentation](https://box2d.org/documentation/) teaches it better than any renamed veneer could.
+CF's physics is [Box2D v3](https://box2d.org), exposed directly. The library (v3.1.1, MIT) is pinned and fetched by CF's CMake, compiled into `cute.lib`, and wired to CF's allocator at app startup -- one `#include <cute.h>` and the entire `b2*` API is yours: worlds, bodies, shapes, joints, contact events, and world queries. There is deliberately no `CF_Body` wrapper layer. Box2D v3 is already a C API of id-handles and `b2Default*Def()` initializers -- the same idiom as CF's own `cf_*_defaults()` -- and [Box2D's documentation](https://box2d.org/documentation/) teaches it better than any renamed veneer could.
 
 What CF adds is the seam, in [cute_physics.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_physics.h):
 
@@ -86,7 +86,7 @@ Note contact events are opt-in per shape (`b2ShapeDef.enableContactEvents`), as 
 
 ## Build Notes
 
-- Box2D compiles into CF itself -- nothing extra to link, and `b2*` symbols export from shared builds.
+- Box2D compiles into CF itself -- nothing extra to link, and `b2*` symbols export from shared builds. CMake fetches the pinned release with a shallow clone on first configure.
 - SIMD: SSE2/NEON everywhere, wasm SIMD on web; AVX2 stays off for compatibility.
 - Allocations route through `cf_aligned_alloc` (wired at `cf_make_app`).
-- Vendored at v3.1.1; the upstream `main` branch has breaking API changes queued for 3.2, so consult v3.1 documentation.
+- Pinned at v3.1.1 (fetched shallow at configure time); the upstream `main` branch has breaking API changes queued for 3.2, so consult v3.1 documentation.

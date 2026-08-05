@@ -224,14 +224,28 @@ else()
 endif()
 target_compile_definitions(cute PRIVATE CF_EXPORT)
 
-# Box2D v3.1.1, vendored under libraries/box2d (MIT). Compiled as an object library folded
-# into cute itself: the C sources need C17 (the rest of CF compiles as C++), and shared
-# builds define box2d_EXPORTS so b2* symbols export from the DLL for direct user calls.
-file(GLOB CF_BOX2D_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/libraries/box2d/src/*.c)
+# Box2D v3.1.1 (MIT), fetched shallow at configure time -- the release tag is the pin
+# (GIT_SHALLOW only composes with branch/tag names, not commit hashes, and a tag keeps the
+# download at a single commit's worth of history). SOURCE_SUBDIR points at a directory with
+# no CMakeLists on purpose: Box2D's own build is skipped entirely, because CF compiles the
+# sources itself as an object library folded into cute -- the C sources need C17 (the rest
+# of CF compiles as C++), and shared builds define box2d_EXPORTS so b2* symbols export from
+# the DLL for direct user calls.
+FetchContent_Declare(
+	box2d
+	GIT_REPOSITORY https://github.com/erincatto/box2d.git
+	GIT_TAG        v3.1.1
+	GIT_SHALLOW    TRUE
+	GIT_PROGRESS   TRUE
+	UPDATE_DISCONNECTED TRUE
+	SOURCE_SUBDIR  cmake_is_unused
+)
+FetchContent_MakeAvailable(box2d)
+file(GLOB CF_BOX2D_SRCS ${box2d_SOURCE_DIR}/src/*.c)
 add_library(cute-box2d OBJECT ${CF_BOX2D_SRCS})
 target_include_directories(cute-box2d PRIVATE
-	${CMAKE_CURRENT_SOURCE_DIR}/libraries/box2d/include
-	${CMAKE_CURRENT_SOURCE_DIR}/libraries/box2d/src
+	${box2d_SOURCE_DIR}/include
+	${box2d_SOURCE_DIR}/src
 )
 set_target_properties(cute-box2d PROPERTIES
 	C_STANDARD 17
@@ -462,7 +476,7 @@ endif()
 target_include_directories(cute PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
 target_include_directories(cute PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/libraries>)
 target_include_directories(cute PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/libraries/imgui>)
-target_include_directories(cute PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/libraries/box2d/include>)
+target_include_directories(cute PUBLIC $<BUILD_INTERFACE:${box2d_SOURCE_DIR}/include>)
 target_include_directories(cute PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/tools)
 
 # Install target

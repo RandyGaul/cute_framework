@@ -11,8 +11,7 @@
 #include <cute_math.h>
 
 // The stateless collision queries route to Box2D's freestanding geometry layer
-// (libraries/box2d/include/box2d/collision.h) -- no b2World or simulation state is
-// involved anywhere in this file. CF shapes stay the API currency; where layouts are not
+// (box2d/collision.h) -- no b2World or simulation state is involved anywhere in this file. CF shapes stay the API currency; where layouts are not
 // bit-identical (polygons, manifolds, cast results) real conversions happen here.
 #include <box2d/collision.h>
 #include <box2d/math_functions.h>

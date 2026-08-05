@@ -18,8 +18,8 @@
 // C API
 //
 // CF's physics is Box2D v3, exposed directly -- the full b2* API is available from this
-// one include (the library is vendored under libraries/box2d, compiled into CF, and wired
-// to CF's allocator at app startup). There is deliberately no CF_Body wrapper layer:
+// one include (the library is pinned and fetched by CF's CMake, compiled into CF itself,
+// and wired to CF's allocator at app startup). There is deliberately no CF_Body wrapper layer:
 // Box2D v3 is already a C API of id-handles and `b2Default*Def()` initializers, the same
 // idiom as CF's own `cf_*_defaults()`. Anything a wrapper could rename, Box2D's docs
 // already teach better.
