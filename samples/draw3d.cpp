@@ -10,10 +10,12 @@
 // streets -- with a 2d HUD riding the same command stream.
 //
 // The point of this sample is the draw list. The whole city -- 10,000 buildings plus the
-// ground -- records once at init and bakes into a single instanced draw per pass: one for the
-// sun's shadow map, one for the lit scene. Every frame the camera moves and the replay simply
-// happens under the new view; no per-building CPU work, ever. Per-building variety (size,
-// tint, window pattern) rides the per-instance mesh attributes, which never split the draw.
+// ground -- records ONCE at init, with no shader pushed: the shader stays a free variable,
+// bound per pass at replay (push the shadow shader, replay; push the lit shader, replay),
+// and the bake is a single instanced draw either way. Every frame the camera moves and the
+// replay simply happens under the new view; no per-building CPU work, ever. Per-building
+// variety (size, tint, window pattern) rides the per-instance mesh attributes, which never
+// split the draw.
 //
 // Everything atmospheric is user shader code, not framework policy: the lambert + shadow
 // lighting, the exponential fog, and the windows (a world-space grid hashed per building)
@@ -25,6 +27,7 @@
 
 #include <cute.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 using namespace Cute;
 
@@ -84,9 +87,9 @@ void main()
 	v_world = world;
 	v_attrs = in_mesh_attributes;
 	gl_Position = u_view_projection * vec4(world, 1.0);
-	// Baked lists freeze their uniform captures at record time, so a per-frame camera
-	// position uniform would never reach a replay. It is also unnecessary: the camera stacks
-	// already deliver everything camera-dependent, and view depth for fog is just w.
+	// A per-frame camera uniform set outside the recording would stay live (ambient
+	// uniforms bind at cf_draw_list time), but none is needed: the camera stacks already
+	// deliver everything camera-dependent, and view depth for fog is just w.
 	v_depth = gl_Position.w;
 }
 )";
@@ -194,10 +197,10 @@ static CF_Mesh s_make_cube()
 
 //--------------------------------------------------------------------------------------------------
 
-// Records the whole city under whatever shader is pushed. Called twice at init: recorded
-// submissions capture their shader, so the shadow and lit passes each replay their own list.
-// Every submission here is the same cube under the same state -- the bake folds all of it
-// into ONE instanced draw, and the per-building variety rides the instance lanes.
+// Records the whole city, shaderless: with nothing pushed the shader records as a free
+// variable, and each pass binds its own at replay. Every submission here is the same cube
+// under the same state -- the bake folds all of it into ONE instanced draw, and the
+// per-building variety rides the instance lanes.
 static void s_record_city(CF_Mesh cube)
 {
 	// The ground. Seed 0 tells the shader to skip window lights.
@@ -256,11 +259,46 @@ static CF_V3 s_fly_path(float t)
 	return cf_v3(x, y, z);
 }
 
+// Screenshot/exit harness, same contract as the fireflies and model3d samples:
+// --shot <t> saves a numbered png of the app canvas, --exit-at <t> quits cleanly.
+static int s_shot_count;
+static void s_screenshot()
+{
+	CF_Canvas canvas = cf_app_get_canvas();
+	int w = 0, h = 0;
+	cf_canvas_get_size(canvas, &w, &h);
+	CF_Pixel* px = (CF_Pixel*)cf_alloc((size_t)w * h * sizeof(CF_Pixel));
+	CF_Readback rb = cf_canvas_readback(canvas);
+	if (rb.id) {
+		while (!cf_readback_ready(rb)) {}
+		cf_readback_data(rb, px, w * h * (int)sizeof(CF_Pixel));
+		cf_destroy_readback(rb);
+		CF_Image img;
+		img.w = w;
+		img.h = h;
+		img.pix = px;
+		char path[256];
+		snprintf(path, sizeof(path), "/draw3d_shot_%02d.png", s_shot_count++);
+		cf_image_save_png(path, &img);
+		printf("saved %s\n", path);
+	}
+	cf_free(px);
+}
+
 int main(int argc, char* argv[])
 {
+	float shot_times[16];
+	int shot_n = 0;
+	float exit_at = -1.0f;
+	for (int i = 1; i < argc; ++i) {
+		if (!CF_STRCMP(argv[i], "--shot") && i + 1 < argc) { if (shot_n < 16) shot_times[shot_n++] = (float)atof(argv[++i]); }
+		else if (!CF_STRCMP(argv[i], "--exit-at") && i + 1 < argc) exit_at = (float)atof(argv[++i]);
+	}
+
 	int options = CF_APP_OPTIONS_WINDOW_POS_CENTERED_BIT | CF_APP_OPTIONS_RESIZABLE_BIT;
 	CF_Result result = cf_make_app("cute_draw3d -- city", 0, 0, 0, 1280, 720, options, argv[0]);
 	if (cf_is_error(result)) return -1;
+	cf_fs_set_write_directory(cf_fs_get_base_directory());
 
 	CF_Color fog_color = cf_make_color_rgb_f(0.15f, 0.13f, 0.19f); // Dusk haze.
 	cf_canvas_set_clear_color(cf_app_get_canvas(), fog_color);
@@ -293,20 +331,15 @@ int main(int argc, char* argv[])
 	cf_draw3d_set_uniform("u_fog_color", &fog4, CF_UNIFORM_TYPE_FLOAT4, 1);
 	cf_draw3d_set_texture("u_shadow", cf_canvas_get_depth_stencil_target(shadow_canvas));
 
-	// Record the city once per pass. ~10,000 submissions bake into ONE instanced draw each.
-	CF_DrawList city_shadow = cf_make_draw_list();
-	cf_draw3d_push_shader(shadow_shd);
-	cf_draw_list_begin(city_shadow);
+	// Record the city ONCE, with no shader pushed: the shader slot stays a free variable
+	// (like the camera), and each pass below binds its own at replay -- one recording,
+	// ~10,000 submissions, ONE instanced draw per pass. A shader pushed inside the
+	// recording would freeze instead; ambient state binds at replay, exactly like the
+	// transform stack.
+	CF_DrawList city = cf_make_draw_list();
+	cf_draw_list_begin(city);
 	s_record_city(cube);
 	cf_draw_list_end();
-	cf_draw3d_pop_shader();
-
-	CF_DrawList city_lit = cf_make_draw_list();
-	cf_draw3d_push_shader(lit_shd);
-	cf_draw_list_begin(city_lit);
-	s_record_city(cube);
-	cf_draw_list_end();
-	cf_draw3d_pop_shader();
 
 	// The sun never moves, so its shadow map could even render once and be kept -- but
 	// re-rendering per frame keeps the sample honest about the cost of a dynamic light,
@@ -316,10 +349,12 @@ int main(int argc, char* argv[])
 		cf_app_update(NULL);
 		t += CF_DELTA_TIME;
 
-		// Pass 1: the city's depth from the sun.
+		// Pass 1: the city's depth from the sun -- the same recording under the shadow shader.
 		cf_draw3d_push_projection(light_proj);
 		cf_draw3d_push_view(light_view);
-		cf_draw_list(city_shadow);
+		cf_draw3d_push_shader(shadow_shd);
+		cf_draw_list(city);
+		cf_draw3d_pop_shader();
 		cf_draw3d_pop_view();
 		cf_draw3d_pop_projection();
 		cf_render_to(shadow_canvas, true);
@@ -332,7 +367,9 @@ int main(int argc, char* argv[])
 		CF_V3 look = cf_v3(ahead.x, ahead.y - 6.0f, ahead.z);
 		cf_draw3d_push_projection(cf_perspective(CF_PI / 3.2f, (float)w / (float)h, 1.0f, 900.0f));
 		cf_draw3d_push_view(cf_look_at(eye, look, cf_v3(0, 1, 0)));
-		cf_draw_list(city_lit);
+		cf_draw3d_push_shader(lit_shd);
+		cf_draw_list(city);
+		cf_draw3d_pop_shader();
 		cf_draw3d_pop_view();
 		cf_draw3d_pop_projection();
 
@@ -347,10 +384,17 @@ int main(int argc, char* argv[])
 		cf_draw_pop_color();
 
 		cf_app_draw_onto_screen(true);
+
+		for (int i = 0; i < shot_n; ++i) {
+			if (shot_times[i] >= 0 && t >= shot_times[i]) {
+				s_screenshot();
+				shot_times[i] = -1.0f;
+			}
+		}
+		if (exit_at > 0 && t >= exit_at) break;
 	}
 
-	cf_destroy_draw_list(city_shadow);
-	cf_destroy_draw_list(city_lit);
+	cf_destroy_draw_list(city);
 	cf_destroy_canvas(shadow_canvas);
 	cf_destroy_shader(shadow_shd);
 	cf_destroy_shader(lit_shd);

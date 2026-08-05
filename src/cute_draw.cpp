@@ -3138,7 +3138,10 @@ void cf_draw_list(CF_DrawList list)
 		c.replay_aa_scale = inv_cam_scale;
 		if (src.mesh3d) {
 			c.geoms_ref = NULL;
-			cf_draw3d_replay_cmd(&c, &src);
+			if (cf_draw3d_replay_cmd(&c, &src)) {
+				// Fused into the previous replayed command: discard the one just added.
+				s_draw->cmds.pop();
+			}
 		}
 	}
 	// Reopen a command carrying the caller's current state for subsequent draws.
