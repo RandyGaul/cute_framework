@@ -897,26 +897,32 @@ static void s_draw_dynamic(CF_Mesh cube, CF_V3 player, CF_V3 fwd, float t)
 		float spd01 = cf_clamp(s_speed / 4.2f, 0, 1);
 		s_phase += s_speed * ldt * 2.6f; // Step cycle advances with distance, not time.
 
-		CF_V3 right = cf_norm(cf_cross(cf_v3(fwd.x, 0, fwd.z), cf_v3(0, 1, 0)));
+		// Simple procedural sway: roll at step rate, a gentler fore-aft at half rate, a
+		// touch of idle breathing, and a lean when the camera turns.
+		float yaw = atan2f(fwd.x, fwd.z);
+		static float s_prev_yaw;
+		static float s_turn;
+		float dyaw = yaw - s_prev_yaw;
+		if (dyaw > CF_PI) dyaw -= 2.0f * CF_PI;
+		if (dyaw < -CF_PI) dyaw += 2.0f * CF_PI;
+		s_prev_yaw = yaw;
+		s_turn += (cf_clamp(dyaw / cf_max(ldt, 0.0001f) * 0.05f, -0.22f, 0.22f) - s_turn) * (1.0f - expf(-6.0f * ldt));
 
-		// Catch swing: the whole ARM sweeps the lantern through an arc -- a quick wind-up
-		// back and low, a swoop forward-up-across where the firefly was, then settle back
-		// to the carry. It moves the hang PIVOT along a path; the chain sim below turns
-		// that path into the whip you actually see.
-		CF_V3 swing_off = cf_v3(0, 0, 0);
-		float k = (t - g_catch_t) / 0.6f;
+		float roll = sinf(s_phase) * 0.16f * spd01 + s_turn;
+		float pitch = sinf(s_phase * 0.5f) * 0.09f * spd01 + sinf(t * 1.3f) * 0.015f;
+		float lunge = 0;
+		float k = (t - g_catch_t) / 0.5f;
 		if (k >= 0 && k < 1.0f) {
-			float wind = k < 0.28f ? sinf(k / 0.28f * CF_PI) : 0.0f;
-			float sweep = k > 0.18f ? sinf(cf_clamp((k - 0.18f) / 0.72f, 0, 1) * CF_PI) : 0.0f;
-			swing_off = cf_add_v3(
-				cf_mul_v3_f(fwd, -0.16f * wind + 0.55f * sweep),
-				cf_add_v3(cf_mul_v3_f(right, 0.05f * wind - 0.33f * sweep),
-				          cf_v3(0, -0.07f * wind + 0.34f * sweep, 0)));
+			// The catch: a quick forward-up scoop that eases back home.
+			float ease = sinf(k * CF_PI);
+			pitch -= ease * 0.85f;
+			lunge = ease * 0.12f;
 		}
 
 		// Lantern collision: if the relaxed carry pose would clip a tree, the arm swings
 		// it in across the chest. Probe along the swing arc, take the first clear spot,
 		// and chase it with a spring -- quick to pull in, lazy to swing back out.
+		CF_V3 right = cf_norm(cf_cross(cf_v3(fwd.x, 0, fwd.z), cf_v3(0, 1, 0)));
 		static float s_pull;
 		float pull_target = 1.0f; // Fully tucked if even the chest spot is blocked.
 		for (int i = 0; i < 5; ++i) {
@@ -927,47 +933,20 @@ static void s_draw_dynamic(CF_Mesh cube, CF_V3 player, CF_V3 fwd, float t)
 			}
 		}
 		s_pull += (pull_target - s_pull) * (1.0f - expf((pull_target > s_pull ? -16.0f : -5.0f) * ldt));
-
-		// The hand: carry pose, plus the catch arc, plus a step-cycle pump so walking
-		// actually feeds energy into the chain below.
-		CF_V3 pivot = cf_add_v3(s_lantern_pose(player, fwd, right, s_pull), swing_off);
-		pivot.y += sinf(s_phase) * 0.016f * spd01;
-
-		// The chain: one verlet particle on a distance constraint (Jakobsen-style). The
-		// hand moves, the bob lags, and every walk step, camera turn, tuck, and catch arc
-		// becomes real swing -- damping brings it home when you stand still.
-		#define LANTERN_CHAIN 0.14f
-		static CF_V3 s_bob, s_bob_prev;
-		static bool s_bob_init;
-		if (!s_bob_init) { s_bob = cf_sub_v3(pivot, cf_v3(0, LANTERN_CHAIN, 0)); s_bob_prev = s_bob; s_bob_init = true; }
-		float sdt = cf_min(ldt, 1.0f / 20.0f);
-		CF_V3 vel = cf_mul_v3_f(cf_sub_v3(s_bob, s_bob_prev), expf(-2.4f * sdt));
-		s_bob_prev = s_bob;
-		s_bob = cf_add_v3(s_bob, cf_add_v3(vel, cf_v3(0, -10.0f * sdt * sdt, 0)));
-		CF_V3 chain = cf_sub_v3(s_bob, pivot);
-		float clen = cf_len(chain);
-		chain = clen > 1.0e-6f ? cf_div_v3_f(chain, clen) : cf_v3(0, -1, 0);
-		if (chain.y > -0.26f) {
-			// Cap the swing near 75 degrees from vertical: a wild whip flattens out
-			// instead of orbiting over the hand.
-			chain.y = -0.26f;
-			chain = cf_norm(chain);
-		}
-		s_bob = cf_add_v3(pivot, cf_mul_v3_f(chain, LANTERN_CHAIN));
-
-		// Hang the lantern along its chain, yawed with the camera; the tuck tips it a
-		// touch more, like a turning wrist.
-		float yaw = atan2f(fwd.x, fwd.z);
+		CF_V3 hang = s_lantern_pose(player, fwd, right, s_pull);
+		// The tuck tips the lantern like a turning wrist and lifts its nose slightly.
+		roll += s_pull * 0.38f;
+		pitch += s_pull * 0.10f;
 		// Empty glass until the first firefly: just a whisper of warmth in the core.
 		float glow = g_game.in_jar ? 0.8f + 0.7f * (float)g_game.in_jar : 0.06f;
 		int specks = g_game.in_jar < 4 ? g_game.in_jar : 4;
 
 		cf_draw3d_push();
-		cf_draw3d_translate(pivot);
-		cf_draw3d_rotate(cf_quat_from_to(cf_v3(0, -1, 0), chain));
+		cf_draw3d_translate(hang);
 		cf_draw3d_rotate(cf_quat_from_axis_angle(cf_v3(0, 1, 0), yaw));
-		cf_draw3d_rotate(cf_quat_from_axis_angle(cf_v3(0, 0, 1), s_pull * 0.30f));
-		s_draw_lantern(cube, cf_v3(0, -(LANTERN_CHAIN + 0.115f), 0), 0.115f, 0, glow, specks, t);
+		cf_draw3d_rotate(cf_quat_from_axis_angle(cf_v3(1, 0, 0), pitch));
+		cf_draw3d_rotate(cf_quat_from_axis_angle(cf_v3(0, 0, 1), roll));
+		s_draw_lantern(cube, cf_v3(0, -0.115f, lunge), 0.115f, 0, glow, specks, t);
 		cf_draw3d_pop();
 	}
 
