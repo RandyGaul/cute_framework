@@ -18,6 +18,14 @@
           {
             "type": "command",
             "command": "python3 .claude/hooks/check-include-guard.py"
+          },
+          {
+            "type": "command",
+            "command": "python3 .claude/hooks/check-docs-tags.py"
+          },
+          {
+            "type": "command",
+            "command": "python3 .claude/hooks/check-registration.py"
           }
         ]
       }
