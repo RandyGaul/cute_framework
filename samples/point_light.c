@@ -22,8 +22,15 @@
 #include <stdio.h>
 
 #define PILLARS 8
+// The light's reach: far plane of the six face frustums AND the attenuation radius, on
+// purpose. Anything the face passes clip away is past dist 1 in the lit pass, where atten
+// is already 0 -- so the "saw nothing" white it reads back can never show.
 #define LIGHT_RADIUS 14.0f
 #define FACE_SIZE 512
+// How far the lit pass nudges its shadow query off the surface, in units of distance-to-light.
+// A 90 degree face spans 2 units at unit distance, so one texel is 2/FACE_SIZE; two texels of
+// slop covers the diagonal.
+#define SHADOW_NUDGE "(4.0 / " CF_STRINGIZE(FACE_SIZE) ".0)"
 
 static const char* s_dist_vs =
 "layout (location = 0) in vec3 in_pos;\n"
@@ -84,12 +91,22 @@ static const char* s_lit_fs =
 "void main() {\n"
 "    vec3 n = normalize(v_normal);\n"
 "    vec3 to_light = u_light.xyz - v_world;\n"
-"    float dist = length(to_light) / u_light.w;\n"
-"    vec3 l = normalize(to_light);\n"
+"    float r = length(to_light);\n"
+"    vec3 l = to_light / r;\n"
+"    float ndl = max(dot(n, l), 0.0);\n"
+"    // Normal offset. The cube holds ONE distance per texel, so on a slanted surface the\n"
+"    // stored value can be a texel's worth of slope nearer than the pixel being lit: the\n"
+"    // surface shadows itself, in texel-sized rectangles (acne). Lift the query point off\n"
+"    // the surface by about two texels' world size (r * SHADOW_NUDGE), scaled by how edge-on\n"
+"    // the light is. Unlike a depth bias this cannot detach a shadow from its caster -- the ray\n"
+"    // to the lifted point still runs through the same occluder.\n"
+"    vec3 q = v_world + n * (r * " SHADOW_NUDGE " * sqrt(max(1.0 - ndl * ndl, 0.0)));\n"
+"    vec3 from_light = q - u_light.xyz;\n"
 "    // The light's stored view along this direction; farther than it saw means shadow.\n"
-"    float seen = texture(u_shadow, -l).x;\n"
-"    float lit = dist - 0.01 <= seen ? 1.0 : 0.0;\n"
-"    float diffuse = max(dot(n, l), 0.0) * lit;\n"
+"    float seen = texture(u_shadow, from_light).x;\n"
+"    float lit = length(from_light) / u_light.w - 0.001 <= seen ? 1.0 : 0.0;\n"
+"    float diffuse = ndl * lit;\n"
+"    float dist = r / u_light.w;\n"
 "    float atten = clamp(1.0 - dist, 0.0, 1.0);\n"
 "    atten *= atten;\n"
 "    vec3 warm = vec3(1.0, 0.85, 0.6);\n"
@@ -166,9 +183,14 @@ int main(int argc, char* argv[])
 	CF_Shader lit_shd = cf_make_shader_from_source(s_lit_vs, s_lit_fs);
 
 	// The shadow cube: float color faces holding distance-to-light, six canvases attached.
+	// NEAREST is load-bearing, not taste. These texels are distances feeding a binary
+	// compare; blending two of them invents a distance no surface is at, so every occluder
+	// silhouette grows a one-texel halo of wrong shadow that crawls as the light moves.
+	// Filter comparison *results* (PCF) if you want soft edges -- never the distances.
 	CF_TextureParams tp = cf_texture_defaults(FACE_SIZE, FACE_SIZE);
 	tp.texture_type = CF_TEXTURE_TYPE_CUBE;
 	tp.pixel_format = CF_PIXEL_FORMAT_R16G16B16A16_FLOAT;
+	tp.filter = CF_FILTER_NEAREST;
 	tp.usage = CF_TEXTURE_USAGE_COLOR_TARGET_BIT | CF_TEXTURE_USAGE_SAMPLER_BIT;
 	CF_Texture shadow_cube = cf_make_texture(tp);
 	CF_Canvas faces[6];
@@ -185,6 +207,15 @@ int main(int argc, char* argv[])
 	CF_V3 face_dir[6] = { { 1, 0, 0 }, { -1, 0, 0 }, { 0, 1, 0 }, { 0, -1, 0 }, { 0, 0, 1 }, { 0, 0, -1 } };
 	CF_V3 face_up[6]  = { { 0, -1, 0 }, { 0, -1, 0 }, { 0, 0, 1 }, { 0, 0, -1 }, { 0, -1, 0 }, { 0, -1, 0 } };
 
+	// SDL_GPU renders top-row-first (row 0 at ndc y = +1), but a cube face's T axis runs the
+	// other way relative to the right-handed bases above -- rendered as-is every face lands
+	// upside down, and the lit pass reads its shadows from the mirrored elevation. Mirroring
+	// clip-space y lines them up. That reverses triangle winding, hence `CF_CULL_MODE_FRONT`.
+	CF_M4x4 face_projection = cf_mul_m4(cf_m4_scale(cf_v3(1, -1, 1)),
+		cf_perspective(CF_PI * 0.5f, 1.0f, 0.1f, LIGHT_RADIUS));
+	CF_RenderState face_state = cf_render_state_3d_defaults();
+	face_state.cull_mode = CF_CULL_MODE_FRONT;
+
 	float t = 0;
 	while (cf_app_is_running()) {
 		cf_app_update(NULL);
@@ -197,14 +228,16 @@ int main(int argc, char* argv[])
 
 		// Six face passes: same scene, 90 degree frustums from the light.
 		cf_draw3d_push_shader(dist_shd);
+		cf_draw3d_push_render_state(face_state);
 		for (int i = 0; i < 6; ++i) {
-			cf_draw3d_push_projection(cf_perspective(CF_PI * 0.5f, 1.0f, 0.1f, LIGHT_RADIUS));
+			cf_draw3d_push_projection(face_projection);
 			cf_draw3d_push_view(cf_look_at(light, cf_add_v3(light, face_dir[i]), face_up[i]));
 			s_scene(cube);
 			cf_draw3d_pop_view();
 			cf_draw3d_pop_projection();
 			cf_render_to(faces[i], true);
 		}
+		cf_draw3d_pop_render_state();
 		cf_draw3d_pop_shader();
 
 		// Lit pass under the orbiting main camera.

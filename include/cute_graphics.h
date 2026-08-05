@@ -1578,7 +1578,15 @@ typedef struct CF_CanvasParams
 	CF_Texture attach_target;
 
 	/* @member Which face (0-5: +X, -X, +Y, -Y, +Z, -Z), array layer, or 3D slice of
-	   `attach_target` to render into. */
+	   `attach_target` to render into.
+
+	   For a cube face rendered through a right-handed camera (`cf_look_at`/`cf_perspective`,
+	   e.g. via `cute_draw3d.h`), mind the T axis: CF renders top-row-first (row 0 at clip
+	   y = +1), which is the opposite of the row a right-handed face camera's `up` vector
+	   would put there. Rendering as-is stores every face upside down; a `samplerCube` fetch
+	   then reads shadows/reflections from the mirrored elevation. Mirror clip-space y in the
+	   face projection to fix it (which reverses triangle winding, so flip cull mode too). See
+	   `samples/point_light.c`'s `face_projection`/`face_state` for the exact fix. */
 	int attach_layer;
 
 	/* @member Which mip level of `attach_target` to render into (default 0). The canvas takes the
@@ -2033,9 +2041,9 @@ CF_API void CF_CALL cf_mesh_update_instance_data(CF_Mesh mesh, void* data, int c
 #define CF_CULL_MODE_DEFS \
 	/* @entry No culling at all. */                        \
 	CF_ENUM(CULL_MODE_NONE,  0)                            \
-	/* @entry Cull triangles ordered clockwise. */         \
-	CF_ENUM(CULL_MODE_FRONT, 1)                            \
 	/* @entry Cull triangles ordered counter-clockwise. */ \
+	CF_ENUM(CULL_MODE_FRONT, 1)                            \
+	/* @entry Cull triangles ordered clockwise. */         \
 	CF_ENUM(CULL_MODE_BACK,  2)                            \
 	/* @end */
 
