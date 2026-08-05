@@ -173,7 +173,7 @@ cf_draw3d_push_shader(lit_shd);     cf_draw_list(city);  cf_draw3d_pop_shader();
 
 Drawing a list under a pass shader also **fuses**: adjacent baked groups that differ only by frozen uniforms or textures the bound shader never declares collapse into a single draw -- a ten-material scene is one draw in a depth pass, because the depth shader reads none of the material state. `cf_draw3d_stats` counts draw-list draws, so the receipts show it.
 
-And the same closure rule covers uniforms: a name set only *outside* the recording stays live -- set `u_time` each frame and a baked level animates; a name set *inside* the recording freezes with it.
+And the same closure rule covers uniforms: a name set only *outside* the recording stays live -- set `u_time` each frame and a baked level animates; a name set *inside* the recording freezes with it. One rule to respect: ambient capture is by **name at record time** -- only names live when the recording's submissions were made participate, so set every per-frame uniform once *before* recording (bake at startup, before any uniform exists, and the replays bind no uniforms at all; the `fireflies` sample bakes on its first frame for exactly this reason).
 
 Two things to know:
 
@@ -216,8 +216,8 @@ Each common 3D need has a sample showing the pattern, because each one is a patt
 | `obj_loading` | A ~90 line OBJ parser into `cf_make_mesh`; model formats are user space, and this is the whole cost |
 | `shapes3d` | The shape catalog moving: gizmos, grids, arcs, tapered lines, solids -- zero setup |
 | `point_light` | Omnidirectional shadows: six face passes into one cube texture via `attach_target`, distance compare in the lit pass |
-| `model3d` | glTF loading via cute_model.h and the storage-buffer skinning pattern: a five-fox pack on independent animation clips in three instanced draws |
-| `fireflies` | The integration sample -- a first-person block forest with cascaded EVSM shadows, HDR bloom through render-to-mip canvases, frustum culling via cute_math3d.h, and a full gameplay loop |
+| `model3d` | glTF loading via `cf_make_model` (VFS-wired cute_model.h) and the storage-buffer skinning pattern: a five-fox pack on independent animation clips in three instanced draws |
+| `fireflies` | The integration sample -- a first-person block forest with cascaded EVSM shadows, HDR bloom through render-to-mip canvases, and a full gameplay loop; the world bakes into per-chunk draw lists that are frustum-culled and replayed once per pass |
 
 ## 3D Math
 

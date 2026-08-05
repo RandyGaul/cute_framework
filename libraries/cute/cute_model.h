@@ -91,7 +91,19 @@
 #	error "cute_model.h requires cute/ckit.h to be included beforehand."
 #endif
 
+// Linkage attribute for the public functions, exactly like ckit's CK_API: defaults to
+// nothing, overridable for shared-library builds (Cute Framework wires it to CF_API).
+#ifndef CM_API
+#define CM_API
+#endif
+
 #include <stdint.h>
+
+// C linkage, so the implementation may live in a C++ TU (Cute Framework compiles it in
+// src/cute_model.cpp) while C consumers link the same symbols.
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 //--------------------------------------------------------------------------------------------------
 // Data types.
@@ -304,22 +316,22 @@ typedef struct CM_LoadParams
 // Loads a GLB or .gltf model from memory. Returns NULL on failure -- call cm_error()
 // for a human-readable reason. The returned model owns all of its arrays; free the
 // whole thing with cm_free.
-CM_Model* cm_load(const void* data, int size);
+CM_API CM_Model* cm_load(const void* data, int size);
 
 // cm_load with external-file resolution (see CM_LoadParams).
-CM_Model* cm_load_ex(const void* data, int size, CM_LoadParams params);
+CM_API CM_Model* cm_load_ex(const void* data, int size, CM_LoadParams params);
 
 // The reason the last cm_load returned NULL. Static storage, valid until the next call.
-const char* cm_error(void);
+CM_API const char* cm_error(void);
 
-void cm_free(CM_Model* model);
+CM_API void cm_free(CM_Model* model);
 
 // Finds an animation by (case-sensitive) name, or NULL.
-CM_Animation* cm_find_animation(const CM_Model* model, const char* name);
+CM_API CM_Animation* cm_find_animation(const CM_Model* model, const char* name);
 
 // Finds a node by (case-sensitive) name -- attach props to bones, look up authored
 // markers, etc. Returns the node index, or -1.
-int cm_find_node(const CM_Model* model, const char* name);
+CM_API int cm_find_node(const CM_Model* model, const char* name);
 
 //--------------------------------------------------------------------------------------------------
 // Runtime. All output arrays are caller-allocated:
@@ -328,32 +340,32 @@ int cm_find_node(const CM_Model* model, const char* name);
 //   palette -- skin->joint_count mat4s, column-major.
 
 // Fills `locals` with every node's rest-pose transform.
-void cm_rest_pose(const CM_Model* model, CM_Transform* locals);
+CM_API void cm_rest_pose(const CM_Model* model, CM_Transform* locals);
 
 // Samples `animation` at `time` (seconds, clamped to the clip; loop with fmodf yourself)
 // on top of `locals`: only animated paths are overwritten, so un-animated nodes keep
 // whatever `locals` already holds (typically the rest pose). Call multiple times with
 // different clips to layer partial animations.
-void cm_animate(const CM_Model* model, const CM_Animation* animation, float time, CM_Transform* locals);
+CM_API void cm_animate(const CM_Model* model, const CM_Animation* animation, float time, CM_Transform* locals);
 
 // Composes local transforms down the hierarchy into world-space matrices.
-void cm_world_transforms(const CM_Model* model, const CM_Transform* locals, float* world);
+CM_API void cm_world_transforms(const CM_Model* model, const CM_Transform* locals, float* world);
 
 // Writes skin_index's matrix palette: palette[j] = world[joint j] * inverse_bind[j].
 // Upload straight into a mat4 array uniform; the vertex shader does the weighted blend.
 // Per the glTF spec the skinned mesh's node transform is NOT included -- render the
 // mesh under any model transform you like.
-void cm_skin_palette(const CM_Model* model, int skin_index, const float* world, float* palette);
+CM_API void cm_skin_palette(const CM_Model* model, int skin_index, const float* world, float* palette);
 
 // Blends two whole poses: out = lerp(a, b, t) per node, with shortest-path slerp for
 // rotations. Sample two clips into separate local arrays and blend for crossfades.
-void cm_blend(const CM_Model* model, const CM_Transform* a, const CM_Transform* b, float t, CM_Transform* out);
+CM_API void cm_blend(const CM_Model* model, const CM_Transform* a, const CM_Transform* b, float t, CM_Transform* out);
 
 // Samples `animation`'s morph-weight channels targeting `node` into weights (up to
 // weight_count entries, matching the mesh's target_count). Entries stay untouched when
 // the animation has no weights channel for the node, so prefill with the mesh's default
 // weights (CM_Mesh::weights) or zeros. Apply as: vertex += sum(weights[i] * delta[i]).
-void cm_animate_weights(const CM_Model* model, const CM_Animation* animation, float time, int node, float* weights, int weight_count);
+CM_API void cm_animate_weights(const CM_Model* model, const CM_Animation* animation, float time, int node, float* weights, int weight_count);
 
 //--------------------------------------------------------------------------------------------------
 // Interleaving. The loader hands back separate tightly-packed streams; GPUs want one
@@ -391,7 +403,11 @@ typedef struct CM_VertexAttribute
 // prim->vertex_count * stride bytes. Streams the primitive lacks write the defaults
 // listed on CM_Stream, so one attribute list serves skinned and unskinned meshes alike.
 // Keep the loader's indices (CM_Primitive::indices) for the index buffer.
-void cm_interleave(const CM_Primitive* prim, const CM_VertexAttribute* attributes, int attribute_count, int stride, void* out);
+CM_API void cm_interleave(const CM_Primitive* prim, const CM_VertexAttribute* attributes, int attribute_count, int stride, void* out);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // CUTE_MODEL_H
 

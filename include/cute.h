@@ -52,6 +52,7 @@
 #include "cute_math.h"
 #include "cute_math3d.h"
 #include "cute_draw3d.h"
+#include "cute_model.h"
 #include "cute_networking.h"
 #include "cute_noise.h"
 #include "cute_custom_sprite.h"
