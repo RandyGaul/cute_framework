@@ -19,10 +19,10 @@ static void* cf_fxc_compile(const char* hlsl, size_t hlsl_size, const char* targ
 
 using namespace Cute;
 
-// s_make_texture, cf_sdlgpu_supports_msaa, and the pipeline's multisample_state all cast a
-// CF_SampleCount straight to SDL_GPUSampleCount -- that's only correct because both enums
-// index 1x/2x/4x/8x as 0/1/2/3 in the same order. Catch it at compile time if SDL ever
-// renumbers its enum, rather than silently mis-sampling MSAA targets again.
+// s_make_texture and the pipeline's multisample_state both cast a CF_SampleCount straight to
+// SDL_GPUSampleCount -- that's only correct because both enums index 1x/2x/4x/8x as 0/1/2/3
+// in the same order. Catch it at compile time if SDL ever renumbers its enum, rather than
+// silently mis-sampling MSAA targets again.
 static_assert(
 	(int)CF_SAMPLE_COUNT_1 == (int)SDL_GPU_SAMPLECOUNT_1 &&
 	(int)CF_SAMPLE_COUNT_2 == (int)SDL_GPU_SAMPLECOUNT_2 &&
