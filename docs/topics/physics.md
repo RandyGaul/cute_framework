@@ -86,7 +86,7 @@ Note contact events are opt-in per shape (`b2ShapeDef.enableContactEvents`), as 
 
 ## 3D: Box3D
 
-Everything above has a 3d twin. CF vendors [Box3D](https://github.com/erincatto/box3d) (v0.1.0, MIT) -- Erin Catto's 3d engine, which deliberately mirrors Box2D v3's design: `b3*` id handles, `b3Default*Def()` initializers, polled event buffers, joints, and world queries. The same include exposes it all, and the seam repeats:
+Everything above has a 3d twin. CF pins [Box3D](https://github.com/erincatto/box3d) (v0.1.0, MIT) -- Erin Catto's 3d engine, which deliberately mirrors Box2D v3's design: `b3*` id handles, `b3Default*Def()` initializers, polled event buffers, joints, and world queries. The same include exposes it all, and the seam repeats:
 
 - `cf_physics_step3(world, substeps)` -- the same fixed-clock wiring as 2d.
 - `cf_physics_draw3(world, thickness)` -- debug draw through draw3d's shader-free built-ins: spheres, capsules, and box-shaped hulls as hemisphere-lit solids, general hulls and meshes as anti-aliased wireframes. One requirement: Box3D bakes shapes into drawables via world-creation callbacks, so **create your world from `cf_physics_world_def3()`** for shape drawing to work.
@@ -96,7 +96,7 @@ The [physics3d sample](https://github.com/RandyGaul/cute_framework/blob/master/s
 
 Box3D also powers the new **3d stateless collision kit** in cute_math3d.h -- `CF_Capsule3`, `CF_Triangle3`, pairwise manifolds (including shapes-vs-triangle for colliding against your own level geometry), `cf_ray3_to_capsule3`/`cf_ray3_to_triangle3`, and the generic `cf_gjk3`/`cf_toi3`/`cf_collide3` family mirroring the 2d kit. And the freestanding character-mover solver (`b3SolvePlanes`, `b3ClipVector`, `b3World_CastMover`) is available directly for move-and-slide controllers.
 
-One caveat worth knowing: Box3D is younger than Box2D (its author calls v0.1 alpha), so expect API movement upstream; CF pins the vendored copy and will bump deliberately.
+One caveat worth knowing: Box3D is younger than Box2D (its author calls v0.1 alpha), so expect API movement upstream; CF pins the fetched release and will bump deliberately.
 
 ## Build Notes
 

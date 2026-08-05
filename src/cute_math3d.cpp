@@ -11,7 +11,7 @@
 #include <cute_math3d.h>
 
 // The 3d stateless collision queries route to Box3D's freestanding geometry layer
-// (libraries/box3d/include/box3d/collision.h) -- no b3World or simulation state anywhere in
+// (box3d/collision.h) -- no b3World or simulation state anywhere in
 // this file, mirroring how cute_math.cpp rides Box2D's geometry layer in 2d. CF shapes are
 // world-space, so every relative transform below is the identity and Box3D's frame-A local
 // results are already world-space.
