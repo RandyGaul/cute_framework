@@ -332,7 +332,7 @@ CF_API CF_Result CF_CALL cf_fs_close(CF_File* file);
  * @param    virtual_path  The virtual path to the file or directory.
  * @return   Returns any errors as a `CF_Result`.
  * @remarks  [Virtual File System](https://randygaul.github.io/cute_framework/topics/virtual_file_system).
- * @related  cf_fs_remove_directory cf_fs_create_directory cf_fs_enumerate_directory cf_fs_free_enumerated_directory
+ * @related  cf_fs_remove cf_fs_create_directory cf_fs_enumerate_directory cf_fs_free_enumerated_directory
  */
 CF_API CF_Result CF_CALL cf_fs_remove(const char* virtual_path);
 
@@ -343,7 +343,7 @@ CF_API CF_Result CF_CALL cf_fs_remove(const char* virtual_path);
  * @param    virtual_path  The virtual path to the directory.
  * @return   Returns any errors as a `CF_Result`.
  * @remarks  All missing directories are also created. [Virtual File System](https://randygaul.github.io/cute_framework/topics/virtual_file_system).
- * @related  cf_fs_remove_directory cf_fs_create_directory cf_fs_enumerate_directory cf_fs_free_enumerated_directory
+ * @related  cf_fs_remove cf_fs_create_directory cf_fs_enumerate_directory cf_fs_free_enumerated_directory
  */
 CF_API CF_Result CF_CALL cf_fs_create_directory(const char* virtual_path);
 
@@ -362,7 +362,7 @@ CF_API CF_Result CF_CALL cf_fs_create_directory(const char* virtual_path);
  * @remarks  Results are collected by visiting the search path for all real directories mounted on `virtual_path`. No duplicate file
  *           names will be reported. The list itself is sorted alphabetically, though you can further sort it however you like. Free
  *           the list up with `cf_fs_free_enumerated_directory` when done. The final element of the list is NULL. [Virtual File System](https://randygaul.github.io/cute_framework/topics/virtual_file_system).
- * @related  cf_fs_remove_directory cf_fs_create_directory cf_fs_enumerate_directory cf_fs_free_enumerated_directory
+ * @related  cf_fs_remove cf_fs_create_directory cf_fs_enumerate_directory cf_fs_free_enumerated_directory
  */
 CF_API const char** CF_CALL cf_fs_enumerate_directory(const char* virtual_path);
 
@@ -371,7 +371,7 @@ CF_API const char** CF_CALL cf_fs_enumerate_directory(const char* virtual_path);
  * @category file
  * @brief    Frees a file list from `cf_fs_create_directory`.
  * @param    directory_list  The directory list returned from `cf_fs_create_directory`.
- * @related  cf_fs_remove_directory cf_fs_create_directory cf_fs_enumerate_directory cf_fs_free_enumerated_directory
+ * @related  cf_fs_remove cf_fs_create_directory cf_fs_enumerate_directory cf_fs_free_enumerated_directory
  */
 CF_API void CF_CALL cf_fs_free_enumerated_directory(const char** directory_list);
 
@@ -460,7 +460,7 @@ CF_API size_t CF_CALL cf_fs_size(CF_File* file);
  * @param    virtual_path  A path to the file.
  * @param    size          If the file exists the size of the file is stored here.
  * @remarks  Call `cf_free` on it when done. [Virtual File System](https://randygaul.github.io/cute_framework/topics/virtual_file_system).
- * @related  cf_fs_read_entire_file_to_memory cf_fs_read_entire_file_to_memory_and_nul_terminate cf_fs_write_entire_buffer_to_file cf_fs_write_string_file
+ * @related  cf_fs_read_entire_file_to_memory cf_fs_read_entire_file_to_memory_and_nul_terminate cf_fs_write_entire_buffer_to_file cf_fs_write_string_to_file
  */
 CF_API void* CF_CALL cf_fs_read_entire_file_to_memory(const char* virtual_path, size_t* size);
 
@@ -471,7 +471,7 @@ CF_API void* CF_CALL cf_fs_read_entire_file_to_memory(const char* virtual_path, 
  * @param    virtual_path  A path to the file.
  * @param    size          If the file exists the size of the file is stored here.
  * @remarks  Call `cf_free` on it when done. [Virtual File System](https://randygaul.github.io/cute_framework/topics/virtual_file_system).
- * @related  cf_fs_read_entire_file_to_memory cf_fs_read_entire_file_to_memory_and_nul_terminate cf_fs_write_entire_buffer_to_file cf_fs_write_string_file
+ * @related  cf_fs_read_entire_file_to_memory cf_fs_read_entire_file_to_memory_and_nul_terminate cf_fs_write_entire_buffer_to_file cf_fs_write_string_to_file
  */
 CF_API char* CF_CALL cf_fs_read_entire_file_to_memory_and_nul_terminate(const char* virtual_path, size_t* size);
 
@@ -482,7 +482,7 @@ CF_API char* CF_CALL cf_fs_read_entire_file_to_memory_and_nul_terminate(const ch
  * @param    virtual_path  A path to the file.
  * @param    data          A pointer to the data to write to the file.
  * @param    size          The size in bytes of `data`.
- * @related  cf_fs_read_entire_file_to_memory cf_fs_read_entire_file_to_memory_and_nul_terminate cf_fs_write_entire_buffer_to_file cf_fs_write_string_file cf_fs_write_string_range_to_file
+ * @related  cf_fs_read_entire_file_to_memory cf_fs_read_entire_file_to_memory_and_nul_terminate cf_fs_write_entire_buffer_to_file cf_fs_write_string_to_file cf_fs_write_string_range_to_file
  */
 CF_API CF_Result CF_CALL cf_fs_write_entire_buffer_to_file(const char* virtual_path, const void* data, size_t size);
 
@@ -492,7 +492,7 @@ CF_API CF_Result CF_CALL cf_fs_write_entire_buffer_to_file(const char* virtual_p
  * @brief    Writes a string to a file.
  * @param    virtual_path  A path to the file.
  * @param    string        A string to write.
- * @related  cf_fs_read_entire_file_to_memory cf_fs_read_entire_file_to_memory_and_nul_terminate cf_fs_write_entire_buffer_to_file cf_fs_write_string_file cf_fs_write_string_range_to_file
+ * @related  cf_fs_read_entire_file_to_memory cf_fs_read_entire_file_to_memory_and_nul_terminate cf_fs_write_entire_buffer_to_file cf_fs_write_string_to_file cf_fs_write_string_range_to_file
  */
 CF_API CF_Result CF_CALL cf_fs_write_string_to_file(const char* virtual_path, const char* string);
 
@@ -503,7 +503,7 @@ CF_API CF_Result CF_CALL cf_fs_write_string_to_file(const char* virtual_path, co
  * @param    virtual_path  A path to the file.
  * @param    begin         Beginning of the string.
  * @param    end           Pointer to one passed the end of the string's contents.
- * @related  cf_fs_read_entire_file_to_memory cf_fs_read_entire_file_to_memory_and_nul_terminate cf_fs_write_entire_buffer_to_file cf_fs_write_string_file cf_fs_write_string_range_to_file
+ * @related  cf_fs_read_entire_file_to_memory cf_fs_read_entire_file_to_memory_and_nul_terminate cf_fs_write_entire_buffer_to_file cf_fs_write_string_to_file cf_fs_write_string_range_to_file
  */
 CF_API CF_Result CF_CALL cf_fs_write_string_range_to_file(const char* virtual_path, const char* begin, const char* end);
 
@@ -534,7 +534,7 @@ CF_API const char* CF_CALL cf_fs_get_actual_path(const char* virtual_path);
  * @category file
  * @brief    Initializes the [Virtual File System](https://randygaul.github.io/cute_framework/topics/virtual_file_system).
  * @param    argv0       The first command-line argument passed into your `main` function.
- * @remarks  This function is automatically called by `cf_app_make`; for most use cases you do not
+ * @remarks  This function is automatically called by `cf_make_app`; for most use cases you do not
  *           need to call this function. However, sometimes it's convenient to make tools that crawl
  *           over files without the need for a full application window. In this case simply call this
  *           function to enable all the `cf_fs_***` functions.
@@ -548,7 +548,7 @@ CF_API CF_Result CF_CALL cf_fs_init(const char* argv0);
  * @brief    Destroys the [Virtual File System](https://randygaul.github.io/cute_framework/topics/virtual_file_system).
  * @param    argv0       The first command-line argument passed into your `main` function.
  * @remarks  Cleans up all static memory used by `cf_fs_init`. You probably don't need to call this function,
- *           as `cf_app_destroy` already does this for you.
+ *           as `cf_destroy_app` already does this for you.
  * @related  cf_fs_init cf_fs_destroy
  */
 CF_API void CF_CALL cf_fs_destroy(void);

@@ -144,7 +144,7 @@ extern "C" {
  * @brief    Returns the length of an intern'd string.
  * @param    s            The string.
  * @remarks  This is *not* a secure method -- do not use it on any potentially dangerous strings. It's designed to be very simple and fast, nothing more.
- *           The return value is calculated in constant time, as opposed to calling `CF_STRLEN` (`strlen`).
+ *           The return value is calculated in constant time, as opposed to calling CF_STRLEN (`strlen`).
  * @related  cf_sintern cf_sintern_range cf_sivalid cf_silen cf_sinuke
  */
 #define cf_silen(s) silen(s)

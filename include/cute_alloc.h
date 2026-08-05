@@ -102,7 +102,7 @@ CF_API void* CF_CALL cf_calloc(size_t size, size_t count);
  * @category allocator
  * @brief    Reallocates a block of memory to a new size.
  * @remarks  You must reassign your old pointer! Generally this is more efficient than calling `cf_alloc`, `cf_free`, and
- *           `CF_MEMCPY` yourself. Though, this is not a concern for most games.
+ *           CF_MEMCPY yourself. Though, this is not a concern for most games.
  * @related  CF_Allocator cf_allocator_override cf_allocator_restore_default cf_alloc cf_free cf_calloc cf_realloc
  */
 CF_API void* CF_CALL cf_realloc(void* ptr, size_t size);

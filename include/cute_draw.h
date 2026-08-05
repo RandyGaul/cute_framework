@@ -26,7 +26,7 @@ extern "C" {
  * @category draw
  * @brief    Draws a sprite.
  * @param    sprite     The sprite.
- * @related  cf_draw_sprite cf_draw_quad cf_draw_to cf_app_draw_onto_screen
+ * @related  cf_draw_sprite cf_draw_quad cf_render_to cf_app_draw_onto_screen
  */
 CF_API void CF_CALL cf_draw_sprite(const CF_Sprite* sprite);
 
@@ -37,7 +37,7 @@ CF_API void CF_CALL cf_draw_sprite(const CF_Sprite* sprite);
  * @brief    Draws a sprite using 9-slice; the top, left, right and bottom sides are stretched.
  * @param    sprite  The sprite. Works with aseprite sprites (center from .ase slices), easy sprites, and premade sprites.
  * @remarks  If no center patch is defined this falls back to `cf_draw_sprite`. For easy sprites set the center patch with `cf_sprite_set_center_patch`.
- * @related  cf_draw_sprite cf_draw_sprite_9_slice cf_draw_sprite_9_slice_tiled cf_sprite_set_center_patch cf_draw_quad cf_draw_to cf_app_draw_onto_screen
+ * @related  cf_draw_sprite cf_draw_sprite_9_slice cf_draw_sprite_9_slice_tiled cf_sprite_set_center_patch cf_draw_quad cf_render_to cf_app_draw_onto_screen
  */
 CF_API void CF_CALL cf_draw_sprite_9_slice(const CF_Sprite* sprite);
 
@@ -47,7 +47,7 @@ CF_API void CF_CALL cf_draw_sprite_9_slice(const CF_Sprite* sprite);
  * @brief    Draws a sprite using 9-slice; the top, left, right and bottom sides are tiled.
  * @param    sprite  The sprite. Works with aseprite sprites (center from .ase slices), easy sprites, and premade sprites.
  * @remarks  If no center patch is defined this falls back to `cf_draw_sprite`. For easy sprites set the center patch with `cf_sprite_set_center_patch`.
- * @related  cf_draw_sprite cf_draw_sprite_9_slice cf_draw_sprite_9_slice_tiled cf_sprite_set_center_patch cf_draw_quad cf_draw_to cf_app_draw_onto_screen
+ * @related  cf_draw_sprite cf_draw_sprite_9_slice cf_draw_sprite_9_slice_tiled cf_sprite_set_center_patch cf_draw_quad cf_render_to cf_app_draw_onto_screen
  */
 CF_API void CF_CALL cf_draw_sprite_9_slice_tiled(const CF_Sprite* sprite);
 
@@ -58,7 +58,7 @@ CF_API void CF_CALL cf_draw_sprite_9_slice_tiled(const CF_Sprite* sprite);
  * @param    sprite     The sprite.
  * @remarks  This function ensures the sprite is fully loaded into memory without actually rendering anything.
  *           This is a good way to avoid disk io at inconvenient times.
- * @related  cf_draw_sprite cf_draw_quad cf_draw_to cf_app_draw_onto_screen
+ * @related  cf_draw_sprite cf_draw_quad cf_render_to cf_app_draw_onto_screen
  */
 CF_API void CF_CALL cf_draw_prefetch(const CF_Sprite* sprite);
 
@@ -1097,7 +1097,7 @@ CF_API int CF_CALL cf_peek_font_blur(void);
  * @category text
  * @brief    Pushes a text wrap width to use for text drawing.
  * @param    width      The text wrap width to use for text drawing.
- * @related  cf_make_font cf_push_font cf_push_text_wrap_width cf_pop_text_wrap_width cf_peek_text_wrap_width cf_push_text_clip_box cf_draw_text
+ * @related  cf_make_font cf_push_font cf_push_text_wrap_width cf_pop_text_wrap_width cf_peek_text_wrap_width cf_draw_text
  */
 CF_API void CF_CALL cf_push_text_wrap_width(float width);
 
@@ -1105,7 +1105,7 @@ CF_API void CF_CALL cf_push_text_wrap_width(float width);
  * @function cf_pop_text_wrap_width
  * @category text
  * @brief    Pops and returns the last text wrap width.
- * @related  cf_make_font cf_push_font cf_push_text_wrap_width cf_pop_text_wrap_width cf_peek_text_wrap_width cf_push_text_clip_box cf_draw_text
+ * @related  cf_make_font cf_push_font cf_push_text_wrap_width cf_pop_text_wrap_width cf_peek_text_wrap_width cf_draw_text
  */
 CF_API float CF_CALL cf_pop_text_wrap_width(void);
 
@@ -1113,7 +1113,7 @@ CF_API float CF_CALL cf_pop_text_wrap_width(void);
  * @function cf_peek_text_wrap_width
  * @category text
  * @brief    Returns the last text wrap width.
- * @related  cf_make_font cf_push_font cf_push_text_wrap_width cf_pop_text_wrap_width cf_peek_text_wrap_width cf_push_text_clip_box cf_draw_text
+ * @related  cf_make_font cf_push_font cf_push_text_wrap_width cf_pop_text_wrap_width cf_peek_text_wrap_width cf_draw_text
  */
 CF_API float CF_CALL cf_peek_text_wrap_width(void);
 
@@ -1323,7 +1323,7 @@ typedef struct CF_TextEffect
  *           the text just before it gets rendered. You have the chance to modify things such as the text color, size, scale,
  *           position, visibility, etc. You should use `cf_text_effect_get_number`, `cf_text_effect_get_color`, or
  *           `cf_text_effect_get_string` to fetch values from your codes. As a convenience, you can see if the current
- *           character is the first or last to render using `cf_text_effect_on_start` or `cf_text_effect_on_finish` respectively.
+ *           character is the first or last to render using `fx->on_begin` or `fx->on_end` respectively.
  * @related  CF_TextEffect CF_TextEffectFn cf_text_effect_register cf_text_effect_get_number cf_text_effect_get_color cf_text_effect_get_string
  */
 typedef bool (CF_TextEffectFn)(CF_TextEffect* fx);
@@ -2281,7 +2281,7 @@ typedef struct CF_AtlasSubImage
  *           for convenience.
  *
  *           Call `cf_destroy_texture` on the return value when done.
- * @related  CF_AtlasSubImage cf_register_premade_atlas cf_make_premade_sprite cf_destroy_premade_atlas
+ * @related  CF_AtlasSubImage cf_register_premade_atlas cf_make_premade_sprite cf_destroy_texture
  */
 CF_API CF_Texture CF_CALL cf_register_premade_atlas(const char* png_path, int sub_image_count, CF_AtlasSubImage* sub_images);
 
@@ -2290,7 +2290,7 @@ CF_API CF_Texture CF_CALL cf_register_premade_atlas(const char* png_path, int su
  * @category draw
  * @brief    Initializes a single-frame drawable sprite from a premade atlas `image_id`.
  * @param    image_id   The id from `cf_register_premade_atlas`.
- * @related  CF_AtlasSubImage cf_register_premade_atlas cf_make_premade_sprite cf_destroy_premade_atlas
+ * @related  CF_AtlasSubImage cf_register_premade_atlas cf_make_premade_sprite cf_destroy_texture
  */
 CF_API CF_Sprite CF_CALL cf_make_premade_sprite(uint64_t image_id);
 

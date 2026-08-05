@@ -88,7 +88,7 @@ typedef struct CF_SpriteSlice
  * @brief    A sprite represents a drawable entity, made of 2D animations/images.
  * @remarks  Sprites can be drawn by `cf_draw_sprite`. Since sprites are [plain old data POD](https://stackoverflow.com/questions/146452/what-are-pod-types-in-c) you may create one on the stack anywhere
  *           and freely copy it around. In C++ you may simply draw via `sprite.draw()`.
- * @related  CF_Frame CF_Animation CF_Sprite cf_make_easy_sprite cf_make_sprite
+ * @related  CF_Frame CF_Animation CF_Sprite cf_make_easy_sprite_from_png cf_make_sprite
  */
 typedef struct CF_Sprite
 {
@@ -165,8 +165,8 @@ typedef struct CF_Sprite
  * @category sprite
  * @brief    Returns an empty sprite.
  * @remarks  Empty sprites can not be drawn. You probably don't want this function unless you know what you're doing, instead,
- *           you may be looking for `cf_make_sprite` or `cf_make_easy_sprite`.
- * @related  CF_Sprite cf_sprite_defaults cf_make_easy_sprite cf_make_sprite
+ *           you may be looking for `cf_make_sprite` or `cf_make_easy_sprite_from_png`.
+ * @related  CF_Sprite cf_sprite_defaults cf_make_easy_sprite_from_png cf_make_sprite
  */
 CF_API CF_Sprite CF_CALL cf_sprite_defaults();
 

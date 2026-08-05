@@ -611,7 +611,6 @@ CF_API bool CF_CALL cf_app_mouse_inside(void);
  * @brief    Initializes Dear ImGui.
  * @remarks  [Dear ImGui](https://github.com/ocornut/imgui) is an excellent UI library for debugging, great for making tools and editors.
  *           After calling this init function you can call into Dear ImGui's functions. Typecast the result to `ImGuiContext*` (after including dcimgui.h).
- * @related  cf_app_get_sokol_imgui
  */
 CF_API void* CF_CALL cf_app_init_imgui(void);
 
@@ -705,7 +704,7 @@ CF_INLINE const char* cf_present_mode_string(CF_PresentMode mode) {
  *           The value should match a supported sample count for the current GPU.
  *           Note: If this is enabled you can not sample from the app's canvas, i.e. `cf_app_get_canvas` is then
  *           effectively write-only.
- * @related  CF_MSAA cf_app_get_msaa CF_Canvas
+ * @related  CF_MSAA CF_Canvas
  */
 CF_API bool CF_CALL cf_app_set_msaa(int sample_count);
 
@@ -843,7 +842,7 @@ CF_API float CF_CALL cf_app_get_framerate(void);
 /**
  * @function cf_app_get_smoothed_framerate
  * @category app
- * @brief    Returns the smoothed framerate of the application. Uses an exponential moving average whose smoothing factor is controlled by `CF_FRAMERATE_SMOOTHING` (default 60).
+ * @brief    Returns the smoothed framerate of the application. Uses an exponential moving average whose smoothing factor is controlled by CF_FRAMERATE_SMOOTHING (default 60).
  * @related  cf_app_get_framerate cf_app_get_smoothed_framerate
  */
 CF_API float CF_CALL cf_app_get_smoothed_framerate(void);

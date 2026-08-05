@@ -33,7 +33,7 @@ enum
  * @category utility
  * @brief    Information about the result of a function, containing any potential error details.
  * @remarks  Check if a result is an error or not with `cf_is_error`.
- * @related  CF_Result cf_is_error cf_result_make cf_result_error cf_result_success
+ * @related  CF_Result cf_is_error cf_result_error cf_result_success
  */
 typedef struct CF_Result
 {
@@ -50,7 +50,7 @@ typedef struct CF_Result
  * @category utility
  * @brief    Returns true if a `CF_Result` contains an error.
  * @param    result       The result.
- * @related  CF_Result cf_is_error cf_result_make cf_result_error cf_result_success
+ * @related  CF_Result cf_is_error cf_result_error cf_result_success
  */
 CF_INLINE bool cf_is_error(CF_Result result) { return result.code == CF_RESULT_ERROR; }
 
@@ -59,7 +59,7 @@ CF_INLINE bool cf_is_error(CF_Result result) { return result.code == CF_RESULT_E
  * @category utility
  * @brief    Returns a `CF_Result` containing an error.
  * @param    details      Details about the error.
- * @related  CF_Result cf_is_error cf_result_make cf_result_error cf_result_success
+ * @related  CF_Result cf_is_error cf_result_error cf_result_success
  */
 CF_INLINE CF_Result cf_result_error(const char* details) { CF_Result result; result.code = CF_RESULT_ERROR; result.details = details; return result; }
 
@@ -67,7 +67,7 @@ CF_INLINE CF_Result cf_result_error(const char* details) { CF_Result result; res
  * @function cf_result_success
  * @category utility
  * @brief    Returns a `CF_Result` as a success, containing no error information.
- * @related  CF_Result cf_is_error cf_result_make cf_result_error cf_result_success
+ * @related  CF_Result cf_is_error cf_result_error cf_result_success
  */
 CF_INLINE CF_Result cf_result_success(void) { CF_Result result; result.code = CF_RESULT_SUCCESS; result.details = NULL; return result; }
 

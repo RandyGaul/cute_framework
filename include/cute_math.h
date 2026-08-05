@@ -360,7 +360,7 @@ typedef struct CF_Aabb
  * @category math
  * @brief    Box that cannot rotate defined with integers instead of floats.
  * @remarks  Not used for collision detection, but still sometimes useful.
- * @related  CF_Rect cf_render_settings_push_viewport cf_render_settings_push_scissor
+ * @related  CF_Rect cf_draw_push_viewport cf_draw_push_scissor
  */
 typedef struct CF_Rect
 {
@@ -819,7 +819,7 @@ CF_INLINE float cf_intersect(float da, float db) { return da / (da - db); }
  * @function cf_add
  * @category math
  * @brief    Adds two 2D vectors component-wise.
- * @related  cf_sub cf_mul cf_div cf_dot cf_length
+ * @related  cf_sub cf_mul cf_div cf_dot cf_len
  */
 #define cf_add(a, b)
 #undef cf_add
@@ -843,7 +843,7 @@ CF_INLINE CF_V2 cf_add_v2(CF_V2 a, CF_V2 b) { return cf_v2(a.x + b.x, a.y + b.y)
  * @function cf_sub
  * @category math
  * @brief    Subtracts two 2D vectors component-wise.
- * @related  cf_add cf_mul cf_div cf_dot cf_length
+ * @related  cf_add cf_mul cf_div cf_dot cf_len
  */
 #define cf_sub(a, b)
 #undef cf_sub
@@ -906,7 +906,7 @@ CF_INLINE CF_V2 cf_div_v2_f(CF_V2 a, float b) { return cf_v2(a.x / b, a.y / b); 
  * @function cf_lesser
  * @category math
  * @brief    Returns true if `a.x < b.x` and `a.y < b.y`.
- * @related  CF_V2 cf_round cf_lesser cf_greater cf_lesser_equal cf_greater_equal cf_parallel
+ * @related  CF_V2 cf_round cf_lesser cf_greater cf_lesser_equal cf_greater_equal
  */
 CF_INLINE int cf_lesser(CF_V2 a, CF_V2 b) { return a.x < b.x && a.y < b.y; }
 
@@ -914,7 +914,7 @@ CF_INLINE int cf_lesser(CF_V2 a, CF_V2 b) { return a.x < b.x && a.y < b.y; }
  * @function cf_greater
  * @category math
  * @brief    Returns true if `a.x > b.x` and `a.y > b.y`.
- * @related  CF_V2 cf_round cf_lesser cf_greater cf_lesser_equal cf_greater_equal cf_parallel
+ * @related  CF_V2 cf_round cf_lesser cf_greater cf_lesser_equal cf_greater_equal
  */
 CF_INLINE int cf_greater(CF_V2 a, CF_V2 b) { return a.x > b.x && a.y > b.y; }
 
@@ -922,7 +922,7 @@ CF_INLINE int cf_greater(CF_V2 a, CF_V2 b) { return a.x > b.x && a.y > b.y; }
  * @function cf_lesser_equal
  * @category math
  * @brief    Returns true if `a.x <= b.x` and `a.y <= b.y`.
- * @related  CF_V2 cf_round cf_lesser cf_greater cf_lesser_equal cf_greater_equal cf_parallel
+ * @related  CF_V2 cf_round cf_lesser cf_greater cf_lesser_equal cf_greater_equal
  */
 CF_INLINE int cf_lesser_equal(CF_V2 a, CF_V2 b) { return a.x <= b.x && a.y <= b.y; }
 
@@ -930,7 +930,7 @@ CF_INLINE int cf_lesser_equal(CF_V2 a, CF_V2 b) { return a.x <= b.x && a.y <= b.
  * @function cf_greater_equal
  * @category math
  * @brief    Returns true if `a.x >= b.x` and `a.y >= b.y`.
- * @related  CF_V2 cf_round cf_lesser cf_greater cf_lesser_equal cf_greater_equal cf_parallel
+ * @related  CF_V2 cf_round cf_lesser cf_greater cf_lesser_equal cf_greater_equal
  */
 CF_INLINE int cf_greater_equal(CF_V2 a, CF_V2 b) { return a.x >= b.x && a.y >= b.y; }
 
@@ -938,7 +938,7 @@ CF_INLINE int cf_greater_equal(CF_V2 a, CF_V2 b) { return a.x >= b.x && a.y >= b
  * @function cf_equal
  * @category math
  * @brief    Returns true if two vectors are exactly equal.
- * @related  cf_equal cf_not_equal cf_less cf_greater cf_less_equal cf_greater_equal
+ * @related  cf_equal cf_lesser cf_greater cf_lesser_equal cf_greater_equal
  */
 CF_INLINE int cf_equal(CF_V2 a, CF_V2 b) { return a.x == b.x && a.y == b.y; }
 
@@ -946,7 +946,7 @@ CF_INLINE int cf_equal(CF_V2 a, CF_V2 b) { return a.x == b.x && a.y == b.y; }
  * @function cf_equals
  * @category math
  * @brief    Returns true if two vectors are exactly equal (alias for `cf_equal`).
- * @related  cf_equal cf_not_equal cf_less cf_greater cf_less_equal cf_greater_equal
+ * @related  cf_equal cf_lesser cf_greater cf_lesser_equal cf_greater_equal
  */
 CF_INLINE int cf_equals(CF_V2 a, CF_V2 b) { return a.x == b.x && a.y == b.y; }
 
@@ -954,7 +954,7 @@ CF_INLINE int cf_equals(CF_V2 a, CF_V2 b) { return a.x == b.x && a.y == b.y; }
  * @function cf_round
  * @category math
  * @brief    Rounds each component of `x` to the nearest integer.
- * @related  cf_floor cf_ceil cf_trunc cf_abs
+ * @related  cf_floor cf_ceil cf_abs
  */
 #define cf_round(x)
 #undef cf_round
@@ -1087,7 +1087,7 @@ CF_INLINE CF_V2  cf_ceil_v2(CF_V2 x) { return cf_v2(CF_CEILF(x.x), CF_CEILF(x.y)
  * @function cf_is_even
  * @category math
  * @brief    Returns true if an int is even.
- * @related  cf_sign_int cf_abs_int cf_clamp_int cf_clamp01_int cf_is_even cf_is_odd
+ * @related  cf_sign cf_abs cf_clamp cf_clamp01 cf_is_even cf_is_odd
  */
 CF_INLINE bool cf_is_even(int x) { return (x % 2) == 0; }
 
@@ -1095,7 +1095,7 @@ CF_INLINE bool cf_is_even(int x) { return (x % 2) == 0; }
  * @function cf_is_odd
  * @category math
  * @brief    Returns true if an int is odd.
- * @related  cf_sign_int cf_abs_int cf_clamp_int cf_clamp01_int cf_is_even cf_is_odd
+ * @related  cf_sign cf_abs cf_clamp cf_clamp01 cf_is_even cf_is_odd
  */
 CF_INLINE bool cf_is_odd(int x) { return !cf_is_even(x); }
 
@@ -1106,7 +1106,7 @@ CF_INLINE bool cf_is_odd(int x) { return !cf_is_even(x); }
  * @function cf_sin
  * @category math
  * @brief    Returns the sine of `x` (angle in radians).
- * @related  cf_cos cf_tan cf_asin cf_acos cf_atan2
+ * @related  cf_cos cf_asin cf_acos cf_atan2
  */
 #define cf_sin(x)
 #undef cf_sin
@@ -1133,7 +1133,7 @@ CF_INLINE CF_V2  cf_sin_v2(CF_V2 x) { return cf_v2(CF_SINF(x.x), CF_SINF(x.y)); 
  * @function cf_cos
  * @category math
  * @brief    Returns the cosine of `x` (angle in radians).
- * @related  cf_sin cf_tan cf_asin cf_acos cf_atan2
+ * @related  cf_sin cf_asin cf_acos cf_atan2
  */
 #define cf_cos(x)
 #undef cf_cos
@@ -1243,7 +1243,7 @@ CF_INLINE float  cf_atan2_v2(CF_V2  v)           { return CF_ATAN2F(v.y, v.x); }
  * @function cf_sqrt
  * @category math
  * @brief    Returns the square root of `x`.
- * @related  cf_abs cf_pow cf_square cf_length cf_normalize
+ * @related  cf_abs cf_pow cf_len cf_norm
  */
 #define cf_sqrt(x)
 #undef cf_sqrt
@@ -1267,7 +1267,7 @@ CF_INLINE double cf_sqrt_d(double x) { return CF_SQRT(x); }
  * @function cf_pow
  * @category math
  * @brief    Returns `base` raised to the power of `exp`.
- * @related  cf_abs cf_sqrt cf_square cf_exp
+ * @related  cf_abs cf_sqrt cf_exp
  */
 #define cf_pow(base, exp)
 #undef cf_pow
@@ -1291,7 +1291,7 @@ CF_INLINE double cf_pow_d(double base, double exp) { return CF_POW(base, exp); }
  * @function cf_exp
  * @category math
  * @brief    Returns e raised to the power of `x`.
- * @related  cf_abs cf_sqrt cf_pow cf_log2
+ * @related  cf_abs cf_sqrt cf_pow
  */
 #define cf_exp(x)
 #undef cf_exp
@@ -1630,6 +1630,12 @@ CF_INLINE CF_V2 cf_cross_f_v2(float a, CF_V2 b) { return cf_v2(-a * b.y, a * b.x
 #endif
 
 
+/**
+ * @function cf_neg
+ * @category math
+ * @brief    Returns `a` with each component's sign flipped.
+ * @related  CF_V2 cf_reflect cf_sub
+ */
 #define cf_neg(a)
 #undef cf_neg
 #ifdef __cplusplus
@@ -1652,7 +1658,7 @@ CF_INLINE CF_V2 cf_neg_v2(CF_V2 a) { return cf_v2(-a.x, -a.y); }
  * @function cf_safe_invert
  * @category math
  * @brief    Safely inverts `a`, returning `0` when components are zero to avoid division-by-zero.
- * @related  cf_div cf_mul cf_safe_invert cf_normalize
+ * @related  cf_div cf_mul cf_safe_invert cf_norm
  */
 #define cf_safe_invert(a)
 #undef cf_safe_invert
@@ -2329,7 +2335,7 @@ CF_INLINE CF_V2 cf_safe_norm_v2(CF_V2 a) { float sq = cf_dot_v2(a, a); return sq
  * @brief    Returns a vector of equal length to `a` but with its direction reflected
  * @param    a        The vector being reflected
  * @param    n        The normal of the plane that is being reflected off of
- * @related  CF_V2 cf_neg_v2 cf_norm cf_safe_norm
+ * @related  CF_V2 cf_neg cf_norm cf_safe_norm
  */
 CF_INLINE CF_V2 cf_reflect(CF_V2 a, CF_V2 n) { return cf_sub(a, cf_mul_v2_f(n, (2.f * cf_dot(a, n)))); }
 
