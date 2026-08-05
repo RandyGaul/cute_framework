@@ -1,4 +1,4 @@
-/*
+﻿/*
     Cute Framework
     Copyright (C) 2025 Randy Gaul https://randygaul.github.io/
 
@@ -488,6 +488,152 @@ TEST_CASE(test_quat_from_basis_c) {
 	return true;
 }
 
+/* The 3d stateless collision kit (routed through Box3D's geometry layer): booleans,
+   manifold direction/depth, raycasts, gjk closest points, and toi. */
+TEST_CASE(test_collision3_booleans_c) {
+	CF_Sphere s = cf_make_sphere(cf_v3(0.0f), 1.0f);
+	CF_Capsule3 cap = cf_make_capsule3(cf_v3(2.0f, -1.0f, 0.0f), cf_v3(2.0f, 1.0f, 0.0f), 0.5f);
+	REQUIRE(!cf_sphere_to_capsule3(s, cap));
+	REQUIRE(cf_sphere_to_capsule3(cf_make_sphere(cf_v3(1.2f, 0.0f, 0.0f), 1.0f), cap));
+
+	REQUIRE(cf_capsule3_to_capsule3(cap, cf_make_capsule3(cf_v3(2.8f, -1.0f, 0.0f), cf_v3(2.8f, 1.0f, 0.0f), 0.5f)));
+	REQUIRE(!cf_capsule3_to_capsule3(cap, cf_make_capsule3(cf_v3(4.0f, -1.0f, 0.0f), cf_v3(4.0f, 1.0f, 0.0f), 0.5f)));
+
+	CF_Aabb3 box = cf_make_aabb3_center(cf_v3(0.0f), cf_v3(1.0f, 1.0f, 1.0f));
+	REQUIRE(cf_aabb3_to_capsule3(box, cf_make_capsule3(cf_v3(1.2f, -1.0f, 0.0f), cf_v3(1.2f, 1.0f, 0.0f), 0.5f)));
+	REQUIRE(!cf_aabb3_to_capsule3(box, cf_make_capsule3(cf_v3(3.0f, -1.0f, 0.0f), cf_v3(3.0f, 1.0f, 0.0f), 0.5f)));
+
+	/* Triangle in the xz plane, counter-clockwise from +y (face normal +y). */
+	CF_Triangle3 tri = cf_make_triangle3(cf_v3(-2, 0, -2), cf_v3(-2, 0, 2), cf_v3(2, 0, 0));
+	REQUIRE(cf_sphere_to_triangle3(cf_make_sphere(cf_v3(-1.0f, 0.8f, 0.0f), 1.0f), tri));
+	REQUIRE(!cf_sphere_to_triangle3(cf_make_sphere(cf_v3(-1.0f, 3.0f, 0.0f), 1.0f), tri));
+	REQUIRE(cf_capsule3_to_triangle3(cf_make_capsule3(cf_v3(-1, 0.8f, 0), cf_v3(-1, 2.8f, 0), 1.0f), tri));
+	REQUIRE(cf_aabb3_to_triangle3(cf_make_aabb3_center(cf_v3(-1, 0.5f, 0), cf_v3(1, 1, 1)), tri));
+	REQUIRE(!cf_aabb3_to_triangle3(cf_make_aabb3_center(cf_v3(-1, 5, 0), cf_v3(1, 1, 1)), tri));
+	return true;
+}
+
+TEST_CASE(test_collision3_manifolds_c) {
+	/* Two overlapping spheres: one point, normal A to B, depth = overlap. */
+	CF_Sphere a = cf_make_sphere(cf_v3(0.0f), 1.0f);
+	CF_Sphere b = cf_make_sphere(cf_v3(1.5f, 0, 0), 1.0f);
+	CF_Manifold3 m = cf_sphere_to_sphere_manifold(a, b);
+	REQUIRE(m.count == 1);
+	REQUIRE(cf_abs(m.n.x - 1.0f) < 1e-3f && cf_abs(m.n.y) < 1e-3f && cf_abs(m.n.z) < 1e-3f);
+	REQUIRE(cf_abs(m.depths[0] - 0.5f) < 1e-3f);
+
+	/* Swapped order flips the normal: still A to B. */
+	m = cf_sphere_to_sphere_manifold(b, a);
+	REQUIRE(m.count == 1);
+	REQUIRE(cf_abs(m.n.x + 1.0f) < 1e-3f);
+
+	/* Separated spheres: empty manifold (speculative points must not leak through). */
+	m = cf_sphere_to_sphere_manifold(a, cf_make_sphere(cf_v3(2.5f, 0, 0), 1.0f));
+	REQUIRE(m.count == 0);
+
+	/* Boxes overlapping along +x: contact points with depth = overlap. */
+	CF_Aabb3 box_a = cf_make_aabb3_center(cf_v3(0.0f), cf_v3(1, 1, 1));
+	CF_Aabb3 box_b = cf_make_aabb3_center(cf_v3(1.5f, 0, 0), cf_v3(1, 1, 1));
+	m = cf_aabb3_to_aabb3_manifold(box_a, box_b);
+	REQUIRE(m.count > 0);
+	REQUIRE(cf_abs(m.n.x - 1.0f) < 1e-2f);
+	for (int i = 0; i < m.count; ++i) REQUIRE(m.depths[i] >= 0);
+	REQUIRE(cf_abs(m.depths[0] - 0.5f) < 1e-2f);
+
+	/* Sphere resting into a +y-facing triangle: normal from the sphere toward the
+	   triangle (A to B) is -y, depth is the penetration. */
+	CF_Triangle3 tri = cf_make_triangle3(cf_v3(-2, 0, -2), cf_v3(-2, 0, 2), cf_v3(2, 0, 0));
+	CF_Sphere s = cf_make_sphere(cf_v3(-1.0f, 0.8f, 0.0f), 1.0f);
+	m = cf_sphere_to_triangle3_manifold(s, tri);
+	REQUIRE(m.count == 1);
+	REQUIRE(cf_abs(m.n.y + 1.0f) < 1e-2f);
+	REQUIRE(cf_abs(m.depths[0] - 0.2f) < 1e-2f);
+
+	/* Generic dispatch agrees with the typed pair. */
+	CF_Manifold3 generic;
+	cf_collide3(&s, CF_SHAPE3_TYPE_SPHERE, &tri, CF_SHAPE3_TYPE_TRIANGLE, &generic);
+	REQUIRE(generic.count == m.count);
+	REQUIRE(cf_abs(generic.n.y - m.n.y) < 1e-4f);
+	REQUIRE(cf_collided3(&s, CF_SHAPE3_TYPE_SPHERE, &tri, CF_SHAPE3_TYPE_TRIANGLE));
+	return true;
+}
+
+TEST_CASE(test_collision3_raycasts_c) {
+	/* Vertical capsule at x=5: a +x ray hits its side at t = 5 - r, normal -x. */
+	CF_Capsule3 cap = cf_make_capsule3(cf_v3(5, -1, 0), cf_v3(5, 1, 0), 0.5f);
+	CF_Ray3 ray = cf_make_ray3(cf_v3(0.0f), cf_v3(100, 0, 0));
+	CF_Raycast3 rc = cf_ray3_to_capsule3(ray, cap);
+	REQUIRE(rc.hit);
+	REQUIRE(cf_abs(rc.t - 4.5f) < 1e-3f);
+	REQUIRE(cf_abs(rc.n.x + 1.0f) < 1e-3f);
+
+	/* Miss cases stay zeroed, like every other cf_ray3_* cast. */
+	rc = cf_ray3_to_capsule3(cf_make_ray3(cf_v3(0, 5, 0), cf_v3(100, 5, 0)), cap);
+	REQUIRE(!rc.hit && rc.t == 0 && rc.n.x == 0);
+
+	/* Ray straight down onto a triangle: t is the distance, normal faces the ray. */
+	CF_Triangle3 tri = cf_make_triangle3(cf_v3(-2, 0, -2), cf_v3(-2, 0, 2), cf_v3(2, 0, 0));
+	rc = cf_ray3_to_triangle3(cf_make_ray3(cf_v3(-1, 5, 0), cf_v3(-1, -95, 0)), tri);
+	REQUIRE(rc.hit);
+	REQUIRE(cf_abs(rc.t - 5.0f) < 1e-3f);
+	REQUIRE(cf_abs(rc.n.y - 1.0f) < 1e-3f);
+
+	/* Two-sided: from below it also hits, normal flipped to face the ray. */
+	rc = cf_ray3_to_triangle3(cf_make_ray3(cf_v3(-1, -5, 0), cf_v3(-1, 95, 0)), tri);
+	REQUIRE(rc.hit);
+	REQUIRE(cf_abs(rc.n.y + 1.0f) < 1e-3f);
+
+	/* Outside the triangle: miss. A short ray: miss. */
+	REQUIRE(!cf_ray3_to_triangle3(cf_make_ray3(cf_v3(5, 5, 5), cf_v3(5, -95, 5)), tri).hit);
+	REQUIRE(!cf_ray3_to_triangle3(cf_make_ray3(cf_v3(-1, 5, 0), cf_v3(-1, 2, 0)), tri).hit);
+
+	/* Generic entry point. */
+	CF_Raycast3 out;
+	REQUIRE(cf_cast_ray3(ray, &cap, CF_SHAPE3_TYPE_CAPSULE, &out));
+	REQUIRE(cf_abs(out.t - 4.5f) < 1e-3f);
+	return true;
+}
+
+TEST_CASE(test_collision3_gjk_toi_c) {
+	/* Distance between two spheres with radii on: the surface gap, closest points on the
+	   line between centers. */
+	CF_Sphere a = cf_make_sphere(cf_v3(0.0f), 1.0f);
+	CF_Sphere b = cf_make_sphere(cf_v3(5, 0, 0), 1.0f);
+	CF_V3 pa, pb;
+	float d = cf_gjk3(&a, CF_SHAPE3_TYPE_SPHERE, &b, CF_SHAPE3_TYPE_SPHERE, &pa, &pb, true, NULL, NULL);
+	REQUIRE(cf_abs(d - 3.0f) < 1e-3f);
+	REQUIRE(cf_abs(pa.x - 1.0f) < 1e-3f);
+	REQUIRE(cf_abs(pb.x - 4.0f) < 1e-3f);
+
+	/* Radii off: center-to-center. */
+	d = cf_gjk3(&a, CF_SHAPE3_TYPE_SPHERE, &b, CF_SHAPE3_TYPE_SPHERE, NULL, NULL, false, NULL, NULL);
+	REQUIRE(cf_abs(d - 5.0f) < 1e-3f);
+
+	/* Warm cache accepted, same answer both calls. */
+	CF_GjkCache3 cache = { 0 };
+	d = cf_gjk3(&a, CF_SHAPE3_TYPE_SPHERE, &b, CF_SHAPE3_TYPE_SPHERE, &pa, &pb, true, NULL, &cache);
+	REQUIRE(cf_abs(d - 3.0f) < 1e-3f);
+	d = cf_gjk3(&a, CF_SHAPE3_TYPE_SPHERE, &b, CF_SHAPE3_TYPE_SPHERE, &pa, &pb, true, NULL, &cache);
+	REQUIRE(cf_abs(d - 3.0f) < 1e-3f);
+
+	/* Sphere-vs-aabb distance: gap from surface to face. */
+	CF_Aabb3 box = cf_make_aabb3_center(cf_v3(5, 0, 0), cf_v3(1, 1, 1));
+	d = cf_gjk3(&a, CF_SHAPE3_TYPE_SPHERE, &box, CF_SHAPE3_TYPE_AABB, &pa, &pb, true, NULL, NULL);
+	REQUIRE(cf_abs(d - 3.0f) < 1e-3f);
+
+	/* Time of impact: b closes the 3-unit gap moving 6 left -> toi 0.5, normal A to B. */
+	CF_ToiResult3 toi = cf_toi3(&a, CF_SHAPE3_TYPE_SPHERE, cf_v3(0.0f), &b, CF_SHAPE3_TYPE_SPHERE, cf_v3(-6, 0, 0), true);
+	REQUIRE(toi.hit);
+	REQUIRE(cf_abs(toi.toi - 0.5f) < 1e-2f);
+	REQUIRE(cf_abs(toi.n.x - 1.0f) < 1e-2f);
+
+	/* Moving apart: miss, toi 1. */
+	toi = cf_toi3(&a, CF_SHAPE3_TYPE_SPHERE, cf_v3(0.0f), &b, CF_SHAPE3_TYPE_SPHERE, cf_v3(6, 0, 0), true);
+	REQUIRE(!toi.hit);
+	REQUIRE(toi.toi == 1.0f);
+	return true;
+}
+
 TEST_SUITE(test_math3d_c) {
 	RUN_TEST_CASE(test_v3_construct_c);
 	RUN_TEST_CASE(test_m4_is_column_major_c);
@@ -514,4 +660,8 @@ TEST_SUITE(test_math3d_c) {
 	RUN_TEST_CASE(test_quat_to_axis_angle_c);
 	RUN_TEST_CASE(test_m4_from_trs_c);
 	RUN_TEST_CASE(test_quat_from_basis_c);
+	RUN_TEST_CASE(test_collision3_booleans_c);
+	RUN_TEST_CASE(test_collision3_manifolds_c);
+	RUN_TEST_CASE(test_collision3_raycasts_c);
+	RUN_TEST_CASE(test_collision3_gjk_toi_c);
 }

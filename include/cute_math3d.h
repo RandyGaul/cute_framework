@@ -1639,6 +1639,399 @@ CF_INLINE bool cf_frustum_test_sphere(const CF_Frustum* f, CF_Sphere s)
 	return true;
 }
 
+//--------------------------------------------------------------------------------------------------
+// Stateless collision queries -- the 3d mirror of cute_math.h's 2d kit, powered by Box3D's
+// freestanding geometry layer (no physics world involved). Shapes are world-space; manifolds
+// carry the depth + normal a character controller resolves with, and the triangle receivers
+// are how you collide against your own level geometry one triangle at a time.
+
+/**
+ * @struct   CF_Capsule3
+ * @category collision
+ * @brief    A 3d capsule: two sphere caps connected by a cylinder.
+ * @remarks  The classic character-controller shape.
+ * @related  CF_Capsule3 cf_make_capsule3 cf_capsule3_to_capsule3_manifold cf_ray3_to_capsule3 cf_sphere_to_capsule3
+ */
+typedef struct CF_Capsule3
+{
+	/* @member The center of one cap. */
+	CF_V3 a;
+
+	/* @member The center of the other cap. */
+	CF_V3 b;
+
+	/* @member The radius about the rod from `a` to `b`. */
+	float r;
+} CF_Capsule3;
+// @end
+
+/**
+ * @function cf_make_capsule3
+ * @category collision
+ * @brief    Returns a `CF_Capsule3`.
+ * @related  CF_Capsule3 cf_make_sphere cf_make_aabb3
+ */
+CF_INLINE CF_Capsule3 cf_make_capsule3(CF_V3 a, CF_V3 b, float r) { CF_Capsule3 c; c.a = a; c.b = b; c.r = r; return c; }
+
+/**
+ * @struct   CF_Triangle3
+ * @category collision
+ * @brief    A single 3d triangle, counter-clockwise winding.
+ * @remarks  The triangle queries treat the triangle as one-sided level geometry: the face
+ *           normal follows the counter-clockwise winding of `a`, `b`, `c`. Collide gameplay
+ *           shapes against your level mesh one (nearby) triangle at a time.
+ * @related  CF_Triangle3 cf_make_triangle3 cf_sphere_to_triangle3_manifold cf_capsule3_to_triangle3_manifold cf_ray3_to_triangle3
+ */
+typedef struct CF_Triangle3
+{
+	/* @member The first vertex. */
+	CF_V3 a;
+
+	/* @member The second vertex. */
+	CF_V3 b;
+
+	/* @member The third vertex. */
+	CF_V3 c;
+} CF_Triangle3;
+// @end
+
+/**
+ * @function cf_make_triangle3
+ * @category collision
+ * @brief    Returns a `CF_Triangle3`.
+ * @related  CF_Triangle3 cf_make_capsule3
+ */
+CF_INLINE CF_Triangle3 cf_make_triangle3(CF_V3 a, CF_V3 b, CF_V3 c) { CF_Triangle3 t; t.a = a; t.b = b; t.c = c; return t; }
+
+/**
+ * @function CF_MANIFOLD3_MAX_POINTS
+ * @category collision
+ * @brief    The maximum number of contact points in a `CF_Manifold3`.
+ * @related  CF_Manifold3
+ */
+#define CF_MANIFOLD3_MAX_POINTS 4
+
+/**
+ * @struct   CF_Manifold3
+ * @category collision
+ * @brief    Contains all information necessary to resolve a 3d collision.
+ * @remarks  The 3d analog of `CF_Manifold`. A manifold only ever describes shapes that
+ *           actually touch: `count` is zero for separated shapes, and every reported point
+ *           has a non-negative depth. To separate the shapes, move them apart along `n` by
+ *           the largest depth.
+ * @related  CF_Manifold3 cf_sphere_to_sphere_manifold cf_aabb3_to_aabb3_manifold cf_capsule3_to_capsule3_manifold cf_collide3
+ */
+typedef struct CF_Manifold3
+{
+	/* @member The number of points in the manifold (0 to `CF_MANIFOLD3_MAX_POINTS`). */
+	int count;
+
+	/* @member The collision depth of each point in the manifold. */
+	float depths[CF_MANIFOLD3_MAX_POINTS];
+
+	/* @member Contact points, on the contact plane between the shapes. */
+	CF_V3 contact_points[CF_MANIFOLD3_MAX_POINTS];
+
+	/* @member Always points from shape A to shape B. */
+	CF_V3 n;
+} CF_Manifold3;
+// @end
+
+/**
+ * @enum     CF_ShapeType3
+ * @category collision
+ * @brief    The types of 3d shapes the generic collision functions accept.
+ * @related  CF_ShapeType3 cf_collide3 cf_collided3 cf_cast_ray3 cf_gjk3 cf_toi3
+ */
+#define CF_SHAPE3_TYPE_DEFS \
+	/* @entry Unknown shape type. */      \
+	CF_ENUM(SHAPE3_TYPE_NONE,     0) \
+	/* @entry `CF_Sphere` shape type. */  \
+	CF_ENUM(SHAPE3_TYPE_SPHERE,   1) \
+	/* @entry `CF_Aabb3` shape type. */   \
+	CF_ENUM(SHAPE3_TYPE_AABB,     2) \
+	/* @entry `CF_Capsule3` shape type. */\
+	CF_ENUM(SHAPE3_TYPE_CAPSULE,  3) \
+	/* @entry `CF_Triangle3` shape type. */\
+	CF_ENUM(SHAPE3_TYPE_TRIANGLE, 4) \
+	/* @end */
+
+typedef enum CF_ShapeType3
+{
+	#define CF_ENUM(K, V) CF_##K = V,
+	CF_SHAPE3_TYPE_DEFS
+	#undef CF_ENUM
+} CF_ShapeType3;
+
+/**
+ * @function cf_shape_type3_to_string
+ * @category collision
+ * @brief    Returns a `CF_ShapeType3` as a string.
+ * @related  CF_ShapeType3
+ */
+CF_INLINE const char* cf_shape_type3_to_string(CF_ShapeType3 type)
+{
+	switch (type) {
+	#define CF_ENUM(K, V) case CF_##K: return CF_STRINGIZE(CF_##K);
+	CF_SHAPE3_TYPE_DEFS
+	#undef CF_ENUM
+	default: return NULL;
+	}
+}
+
+/**
+ * @struct   CF_GjkCache3
+ * @category collision
+ * @brief    An opaque warm-start cache for successive `cf_gjk3` calls on the same shape pair.
+ * @remarks  Zero-initialize before the first call, then reuse across calls while the shapes
+ *           move only a little relative to each other.
+ * @related  CF_GjkCache3 cf_gjk3
+ */
+typedef struct CF_GjkCache3
+{
+	/* @member A metric used to judge whether the cached simplex is still usable. */
+	float metric;
+
+	/* @member The number of cached simplex vertices. Zero-initialize before the first call. */
+	uint16_t count;
+
+	/* @member Cached simplex indices on shape A. */
+	uint8_t iA[4];
+
+	/* @member Cached simplex indices on shape B. */
+	uint8_t iB[4];
+} CF_GjkCache3;
+// @end
+
+/**
+ * @struct   CF_ToiResult3
+ * @category collision
+ * @brief    Results of a 3d time of impact calculation from `cf_toi3`.
+ * @related  CF_ToiResult3 cf_toi3
+ */
+typedef struct CF_ToiResult3
+{
+	/* @member 1 if the shapes hit during the sweep, 0 if they never hit. */
+	int hit;
+
+	/* @member The time of impact, from 0 to 1. 1 when no hit occurred. */
+	float toi;
+
+	/* @member Surface normal from shape A to B at the time of impact. */
+	CF_V3 n;
+
+	/* @member Point of contact at the time of impact. */
+	CF_V3 p;
+
+	/*  @member Number of iterations the solver underwent. */
+	int iterations;
+} CF_ToiResult3;
+// @end
+
+/**
+ * @function cf_sphere_to_capsule3
+ * @category collision
+ * @brief    Returns true if a sphere and a capsule intersect.
+ * @related  CF_Sphere CF_Capsule3 cf_sphere_to_capsule3_manifold cf_sphere_to_sphere cf_sphere_to_aabb3
+ */
+CF_API bool CF_CALL cf_sphere_to_capsule3(CF_Sphere A, CF_Capsule3 B);
+
+/**
+ * @function cf_aabb3_to_capsule3
+ * @category collision
+ * @brief    Returns true if an AABB and a capsule intersect.
+ * @related  CF_Aabb3 CF_Capsule3 cf_aabb3_to_capsule3_manifold cf_aabb3_to_aabb3
+ */
+CF_API bool CF_CALL cf_aabb3_to_capsule3(CF_Aabb3 A, CF_Capsule3 B);
+
+/**
+ * @function cf_capsule3_to_capsule3
+ * @category collision
+ * @brief    Returns true if two capsules intersect.
+ * @related  CF_Capsule3 cf_capsule3_to_capsule3_manifold
+ */
+CF_API bool CF_CALL cf_capsule3_to_capsule3(CF_Capsule3 A, CF_Capsule3 B);
+
+/**
+ * @function cf_sphere_to_triangle3
+ * @category collision
+ * @brief    Returns true if a sphere touches a triangle.
+ * @related  CF_Sphere CF_Triangle3 cf_sphere_to_triangle3_manifold
+ */
+CF_API bool CF_CALL cf_sphere_to_triangle3(CF_Sphere A, CF_Triangle3 B);
+
+/**
+ * @function cf_aabb3_to_triangle3
+ * @category collision
+ * @brief    Returns true if an AABB touches a triangle.
+ * @related  CF_Aabb3 CF_Triangle3 cf_aabb3_to_triangle3_manifold
+ */
+CF_API bool CF_CALL cf_aabb3_to_triangle3(CF_Aabb3 A, CF_Triangle3 B);
+
+/**
+ * @function cf_capsule3_to_triangle3
+ * @category collision
+ * @brief    Returns true if a capsule touches a triangle.
+ * @related  CF_Capsule3 CF_Triangle3 cf_capsule3_to_triangle3_manifold
+ */
+CF_API bool CF_CALL cf_capsule3_to_triangle3(CF_Capsule3 A, CF_Triangle3 B);
+
+/**
+ * @function cf_sphere_to_sphere_manifold
+ * @category collision
+ * @brief    Computes contact information for two spheres.
+ * @related  CF_Manifold3 CF_Sphere cf_sphere_to_sphere
+ */
+CF_API CF_Manifold3 CF_CALL cf_sphere_to_sphere_manifold(CF_Sphere A, CF_Sphere B);
+
+/**
+ * @function cf_sphere_to_aabb3_manifold
+ * @category collision
+ * @brief    Computes contact information for a sphere and an AABB.
+ * @related  CF_Manifold3 CF_Sphere CF_Aabb3 cf_sphere_to_aabb3
+ */
+CF_API CF_Manifold3 CF_CALL cf_sphere_to_aabb3_manifold(CF_Sphere A, CF_Aabb3 B);
+
+/**
+ * @function cf_sphere_to_capsule3_manifold
+ * @category collision
+ * @brief    Computes contact information for a sphere and a capsule.
+ * @related  CF_Manifold3 CF_Sphere CF_Capsule3 cf_sphere_to_capsule3
+ */
+CF_API CF_Manifold3 CF_CALL cf_sphere_to_capsule3_manifold(CF_Sphere A, CF_Capsule3 B);
+
+/**
+ * @function cf_aabb3_to_aabb3_manifold
+ * @category collision
+ * @brief    Computes contact information for two AABBs.
+ * @related  CF_Manifold3 CF_Aabb3 cf_aabb3_to_aabb3
+ */
+CF_API CF_Manifold3 CF_CALL cf_aabb3_to_aabb3_manifold(CF_Aabb3 A, CF_Aabb3 B);
+
+/**
+ * @function cf_aabb3_to_capsule3_manifold
+ * @category collision
+ * @brief    Computes contact information for an AABB and a capsule.
+ * @related  CF_Manifold3 CF_Aabb3 CF_Capsule3 cf_aabb3_to_capsule3
+ */
+CF_API CF_Manifold3 CF_CALL cf_aabb3_to_capsule3_manifold(CF_Aabb3 A, CF_Capsule3 B);
+
+/**
+ * @function cf_capsule3_to_capsule3_manifold
+ * @category collision
+ * @brief    Computes contact information for two capsules.
+ * @related  CF_Manifold3 CF_Capsule3 cf_capsule3_to_capsule3
+ */
+CF_API CF_Manifold3 CF_CALL cf_capsule3_to_capsule3_manifold(CF_Capsule3 A, CF_Capsule3 B);
+
+/**
+ * @function cf_sphere_to_triangle3_manifold
+ * @category collision
+ * @brief    Computes contact information for a sphere against a one-sided triangle.
+ * @remarks  The workhorse of "collide my character against the level mesh": gather nearby
+ *           triangles, manifold each, resolve along the deepest normals (or feed the planes
+ *           to Box3D's `b3SolvePlanes` mover -- see the Physics topic).
+ * @related  CF_Manifold3 CF_Sphere CF_Triangle3 cf_capsule3_to_triangle3_manifold cf_aabb3_to_triangle3_manifold
+ */
+CF_API CF_Manifold3 CF_CALL cf_sphere_to_triangle3_manifold(CF_Sphere A, CF_Triangle3 B);
+
+/**
+ * @function cf_aabb3_to_triangle3_manifold
+ * @category collision
+ * @brief    Computes contact information for an AABB against a one-sided triangle.
+ * @related  CF_Manifold3 CF_Aabb3 CF_Triangle3 cf_sphere_to_triangle3_manifold
+ */
+CF_API CF_Manifold3 CF_CALL cf_aabb3_to_triangle3_manifold(CF_Aabb3 A, CF_Triangle3 B);
+
+/**
+ * @function cf_capsule3_to_triangle3_manifold
+ * @category collision
+ * @brief    Computes contact information for a capsule against a one-sided triangle.
+ * @related  CF_Manifold3 CF_Capsule3 CF_Triangle3 cf_sphere_to_triangle3_manifold
+ */
+CF_API CF_Manifold3 CF_CALL cf_capsule3_to_triangle3_manifold(CF_Capsule3 A, CF_Triangle3 B);
+
+/**
+ * @function cf_ray3_to_capsule3
+ * @category collision
+ * @brief    Casts a ray against a capsule.
+ * @related  CF_Ray3 CF_Capsule3 CF_Raycast3 cf_ray3_to_sphere cf_ray3_to_aabb3 cf_ray3_to_triangle3
+ */
+CF_API CF_Raycast3 CF_CALL cf_ray3_to_capsule3(CF_Ray3 A, CF_Capsule3 B);
+
+/**
+ * @function cf_ray3_to_triangle3
+ * @category collision
+ * @brief    Casts a ray against a (two-sided) triangle.
+ * @remarks  The missing half of mouse picking against meshes: unproject a ray with
+ *           `cf_draw3d_unproject`, then cast it against your triangles. The reported normal
+ *           faces back along the ray.
+ * @related  CF_Ray3 CF_Triangle3 CF_Raycast3 cf_ray3_to_aabb3 cf_draw3d_unproject
+ */
+CF_API CF_Raycast3 CF_CALL cf_ray3_to_triangle3(CF_Ray3 A, CF_Triangle3 B);
+
+/**
+ * @function cf_gjk3
+ * @category collision
+ * @brief    Returns the distance between two 3d shapes, and their closest points.
+ * @param    A           The first shape.
+ * @param    typeA       The `CF_ShapeType3` of the first shape `A`.
+ * @param    B           The second shape.
+ * @param    typeB       The `CF_ShapeType3` of the second shape `B`.
+ * @param    outA        The closest point on `A` to `B`. Not well defined when intersecting. May be `NULL`.
+ * @param    outB        The closest point on `B` to `A`. Not well defined when intersecting. May be `NULL`.
+ * @param    use_radius  True to use the radius of any `CF_Sphere`/`CF_Capsule3` inputs, false to treat them as a point/segment.
+ * @param    iterations  Can be `NULL`. The number of internal GJK iterations, for debugging.
+ * @param    cache       Can be `NULL`. An optional warm-start cache, see `CF_GjkCache3`.
+ * @return   Returns the distance between the two shapes; zero when overlapped.
+ * @related  CF_GjkCache3 CF_ShapeType3 cf_toi3 cf_gjk
+ */
+CF_API float CF_CALL cf_gjk3(const void* A, CF_ShapeType3 typeA, const void* B, CF_ShapeType3 typeB, CF_V3* outA, CF_V3* outB, bool use_radius, int* iterations, CF_GjkCache3* cache);
+
+/**
+ * @function cf_toi3
+ * @category collision
+ * @brief    Computes the time of impact of two linearly moving 3d shapes.
+ * @param    A           The first shape.
+ * @param    typeA       The `CF_ShapeType3` of the first shape `A`.
+ * @param    vA          The velocity of `A` over the sweep.
+ * @param    B           The second shape.
+ * @param    typeB       The `CF_ShapeType3` of the second shape `B`.
+ * @param    vB          The velocity of `B` over the sweep.
+ * @param    use_radius  True to use the radius of any `CF_Sphere`/`CF_Capsule3` inputs, false to treat them as a point/segment.
+ * @return   Returns a `CF_ToiResult3`; multiply the velocities by `toi` to move to the impact configuration.
+ * @remarks  Same contract as the 2d `cf_toi`: no rotation over the sweep, and shapes that
+ *           start out already touching report a miss with `toi` 1 -- sweep from a
+ *           non-overlapping configuration (inflate radii slightly, resolve, then sweep).
+ * @related  CF_ToiResult3 CF_ShapeType3 cf_gjk3 cf_toi
+ */
+CF_API CF_ToiResult3 CF_CALL cf_toi3(const void* A, CF_ShapeType3 typeA, CF_V3 vA, const void* B, CF_ShapeType3 typeB, CF_V3 vB, bool use_radius);
+
+/**
+ * @function cf_collided3
+ * @category collision
+ * @brief    Returns true if two 3d shapes collided, using `void*` + `CF_ShapeType3` polymorphism.
+ * @related  CF_ShapeType3 cf_collide3 cf_collided
+ */
+CF_API int CF_CALL cf_collided3(const void* A, CF_ShapeType3 typeA, const void* B, CF_ShapeType3 typeB);
+
+/**
+ * @function cf_collide3
+ * @category collision
+ * @brief    Computes a `CF_Manifold3` for two 3d shapes, using `void*` + `CF_ShapeType3` polymorphism.
+ * @remarks  Triangle-vs-triangle pairs are not supported and yield an empty manifold.
+ * @related  CF_ShapeType3 CF_Manifold3 cf_collided3 cf_collide
+ */
+CF_API void CF_CALL cf_collide3(const void* A, CF_ShapeType3 typeA, const void* B, CF_ShapeType3 typeB, CF_Manifold3* m);
+
+/**
+ * @function cf_cast_ray3
+ * @category collision
+ * @brief    Casts a ray against a generic 3d shape, using `void*` + `CF_ShapeType3` polymorphism.
+ * @related  CF_ShapeType3 CF_Ray3 CF_Raycast3 cf_ray3_to_capsule3 cf_ray3_to_triangle3
+ */
+CF_API bool CF_CALL cf_cast_ray3(CF_Ray3 A, const void* B, CF_ShapeType3 typeB, CF_Raycast3* out);
+
 #ifdef __cplusplus
 }
 #endif // __cplusplus
@@ -1661,6 +2054,12 @@ using Aabb3 = CF_Aabb3;
 using Sphere = CF_Sphere;
 using Plane3 = CF_Plane3;
 using Frustum = CF_Frustum;
+using Capsule3 = CF_Capsule3;
+using Triangle3 = CF_Triangle3;
+using Manifold3 = CF_Manifold3;
+using ToiResult3 = CF_ToiResult3;
+using GjkCache3 = CF_GjkCache3;
+using ShapeType3 = CF_ShapeType3;
 
 CF_INLINE v3 min(v3 a, v3 b) { return cf_min_v3(a, b); }
 CF_INLINE v3 max(v3 a, v3 b) { return cf_max_v3(a, b); }
@@ -1717,6 +2116,31 @@ CF_INLINE v3 transform_dir(m4 m, v3 d) { return cf_m4_transform_dir(m, d); }
 CF_INLINE m4 ortho(float left, float right, float bottom, float top, float znear, float zfar) { return cf_ortho(left, right, bottom, top, znear, zfar); }
 CF_INLINE m4 perspective(float fov_radians, float aspect, float znear, float zfar) { return cf_perspective(fov_radians, aspect, znear, zfar); }
 CF_INLINE m4 look_at(v3 eye, v3 target, v3 up) { return cf_look_at(eye, target, up); }
+
+CF_INLINE Capsule3 make_capsule3(v3 a, v3 b, float r) { return cf_make_capsule3(a, b, r); }
+CF_INLINE Triangle3 make_triangle3(v3 a, v3 b, v3 c) { return cf_make_triangle3(a, b, c); }
+CF_INLINE bool sphere_to_capsule3(Sphere A, Capsule3 B) { return cf_sphere_to_capsule3(A, B); }
+CF_INLINE bool aabb3_to_capsule3(Aabb3 A, Capsule3 B) { return cf_aabb3_to_capsule3(A, B); }
+CF_INLINE bool capsule3_to_capsule3(Capsule3 A, Capsule3 B) { return cf_capsule3_to_capsule3(A, B); }
+CF_INLINE bool sphere_to_triangle3(Sphere A, Triangle3 B) { return cf_sphere_to_triangle3(A, B); }
+CF_INLINE bool aabb3_to_triangle3(Aabb3 A, Triangle3 B) { return cf_aabb3_to_triangle3(A, B); }
+CF_INLINE bool capsule3_to_triangle3(Capsule3 A, Triangle3 B) { return cf_capsule3_to_triangle3(A, B); }
+CF_INLINE Manifold3 sphere_to_sphere_manifold(Sphere A, Sphere B) { return cf_sphere_to_sphere_manifold(A, B); }
+CF_INLINE Manifold3 sphere_to_aabb3_manifold(Sphere A, Aabb3 B) { return cf_sphere_to_aabb3_manifold(A, B); }
+CF_INLINE Manifold3 sphere_to_capsule3_manifold(Sphere A, Capsule3 B) { return cf_sphere_to_capsule3_manifold(A, B); }
+CF_INLINE Manifold3 aabb3_to_aabb3_manifold(Aabb3 A, Aabb3 B) { return cf_aabb3_to_aabb3_manifold(A, B); }
+CF_INLINE Manifold3 aabb3_to_capsule3_manifold(Aabb3 A, Capsule3 B) { return cf_aabb3_to_capsule3_manifold(A, B); }
+CF_INLINE Manifold3 capsule3_to_capsule3_manifold(Capsule3 A, Capsule3 B) { return cf_capsule3_to_capsule3_manifold(A, B); }
+CF_INLINE Manifold3 sphere_to_triangle3_manifold(Sphere A, Triangle3 B) { return cf_sphere_to_triangle3_manifold(A, B); }
+CF_INLINE Manifold3 aabb3_to_triangle3_manifold(Aabb3 A, Triangle3 B) { return cf_aabb3_to_triangle3_manifold(A, B); }
+CF_INLINE Manifold3 capsule3_to_triangle3_manifold(Capsule3 A, Triangle3 B) { return cf_capsule3_to_triangle3_manifold(A, B); }
+CF_INLINE Raycast3 ray3_to_capsule3(Ray3 A, Capsule3 B) { return cf_ray3_to_capsule3(A, B); }
+CF_INLINE Raycast3 ray3_to_triangle3(Ray3 A, Triangle3 B) { return cf_ray3_to_triangle3(A, B); }
+CF_INLINE float gjk3(const void* A, ShapeType3 typeA, const void* B, ShapeType3 typeB, v3* outA, v3* outB, bool use_radius, int* iterations, GjkCache3* cache) { return cf_gjk3(A, typeA, B, typeB, outA, outB, use_radius, iterations, cache); }
+CF_INLINE ToiResult3 toi3(const void* A, ShapeType3 typeA, v3 vA, const void* B, ShapeType3 typeB, v3 vB, bool use_radius) { return cf_toi3(A, typeA, vA, B, typeB, vB, use_radius); }
+CF_INLINE int collided3(const void* A, ShapeType3 typeA, const void* B, ShapeType3 typeB) { return cf_collided3(A, typeA, B, typeB); }
+CF_INLINE void collide3(const void* A, ShapeType3 typeA, const void* B, ShapeType3 typeB, Manifold3* m) { cf_collide3(A, typeA, B, typeB, m); }
+CF_INLINE bool cast_ray3(Ray3 A, const void* B, ShapeType3 typeB, Raycast3* out) { return cf_cast_ray3(A, B, typeB, out); }
 
 }
 
