@@ -114,6 +114,19 @@
 // immediate path derives normals from the model rows, which is exact for rigid transforms and
 // uniform scale.
 //
+// A recording behaves like a closure: state it sets INSIDE itself is part of the recording,
+// state it inherits from outside binds at replay time. The transform stack always worked this
+// way (internal pushes compose onto the live ambient transform), and the SHADER follows the
+// same rule -- a shader pushed inside `begin`/`end` records frozen, while a shader that was
+// merely ambient (pushed outside the recording, or not at all) stays a free variable: replay
+// binds whatever `cf_draw3d_push_shader` has pushed then, falling back to the record-time
+// shader when nothing is pushed. This is what makes multi-pass rendering one-recording cheap:
+// record a scene shaderless, then push the shadow shader and replay, push the lit shader and
+// replay -- same bake, one instanced draw per pass (see the draw3d sample). Replays under a
+// pass shader also FUSE: adjacent baked groups that differ only by captured uniforms or
+// textures the bound shader never declares collapse into a single draw, so a ten-material
+// scene replays as one draw in a depth pass. Shapes always record their resolved shader.
+//
 // ESCAPE HATCH
 //
 // A submitted mesh that has its own instance buffer (`cf_mesh_set_instance_buffer`) is drawn
@@ -219,7 +232,9 @@ typedef struct CF_DrawStats3d
  * @category draw3d
  * @brief    Returns and resets the 3d submission counters.
  * @remarks  Call once per frame, after `cf_app_draw_onto_screen`. Counters accumulate over
- *           whatever interval you leave between calls.
+ *           whatever interval you leave between calls. Draw-list replays count like
+ *           everything else: each replayed baked group adds its instances and one command
+ *           (fewer when replay fusion folds adjacent groups -- see the DRAW LISTS section).
  * @related  CF_DrawStats3d cf_draw3d_worst_split cf_draw_split_3d_to_string
  */
 CF_API CF_DrawStats3d CF_CALL cf_draw3d_stats(void);
@@ -394,6 +409,13 @@ CF_API CF_V3 CF_CALL cf_draw3d_mul(CF_V3 p);
  * @remarks  There is no default 3d shader -- submitting a mesh without a shader pushed is an
  *           error. This is deliberate: this layer makes no assumptions about how you shade.
  *           Shaders under `cf_shader_directory` hot-reload automatically while you edit.
+ *
+ *           Draw-list recordings treat this stack with closure semantics: a shader pushed
+ *           INSIDE `cf_draw_list_begin`/`end` is part of the recording (frozen), while the
+ *           shader that was ambient at record time stays a free variable -- replay binds
+ *           whatever is pushed here then, falling back to the record-time shader when
+ *           nothing is. Record a scene shaderless and replay it once per pass under each
+ *           pass's shader. See the DRAW LISTS section at the top of this header.
  *
  *           Built-in shapes interpret the top of this stack by the shader's kind:
  *           a shape shader (`cf_make_draw3d_shape_shader`) post-processes the built-in
