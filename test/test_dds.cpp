@@ -15,6 +15,13 @@
 #include "test_app_shared.h"
 
 #include <cute.h>
+
+// The engine carries its own copy of cute_dds inside cute_image.cpp, but shared (DLL)
+// builds don't export the cd_* symbols -- and shouldn't. The test compiles a private
+// copy with internal linkage instead, which doubles as proof the header stands alone.
+#define CUTE_DDS_STATIC
+#define CUTE_DDS_NO_STDIO
+#define CUTE_DDS_IMPLEMENTATION
 #include <cute/cute_dds.h>
 
 using namespace Cute;
@@ -158,6 +165,10 @@ static CF_Pixel s_sample(CF_Canvas canvas, CF_Mesh mesh, CF_Shader shader, CF_Ma
 // Parser-only coverage: formats, layout arithmetic, and every rejection path.
 TEST_CASE(test_dds_parse)
 {
+	REQUIRE(cd_block_size(CD_FORMAT_BC1) == 8);
+	REQUIRE(cd_block_size(CD_FORMAT_BC7) == 16);
+	REQUIRE(cd_block_size(CD_FORMAT_RGBA8) == 0);
+
 	// BC1, 8x8, 2 mips: 4 blocks then 1 block, zero-copy views at the right offsets.
 	{
 		DDSBuilder b;

@@ -1873,6 +1873,11 @@ static void s_scene_repack()
 
 TEST_CASE(test_draw_atlas_repack_gpu_copies)
 {
+#if !defined(CF_STATIC)
+	// Peeks at engine-internal atlas state (cf_get_draw_atlas_cache / atlas_cache_fetch),
+	// which shared (DLL) builds don't export -- and shouldn't. Static builds cover it.
+	return true;
+#else
 	if (!test_make_app(640, 480)) return true; // Headless CI: no display/GPU.
 
 	const int w = 640, h = 480;
@@ -1938,6 +1943,7 @@ TEST_CASE(test_draw_atlas_repack_gpu_copies)
 	cf_free(px);
 	test_destroy_app();
 	return true;
+#endif // CF_STATIC
 }
 
 TEST_SUITE(test_draw_tiled)

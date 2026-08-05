@@ -1083,12 +1083,14 @@ typedef struct CF_Frustum
 // @end
 
 /**
- * @function cf_ray3
+ * @function cf_make_ray3
  * @category math
  * @brief    Returns a ray from `p` toward `q`, spanning exactly the distance between them.
+ * @remarks  Named like `cf_make_sphere`/`cf_make_aabb3` -- and distinctly from the
+ *           `CF_Ray3` type, which shares a docs page slug case-insensitively.
  * @related  CF_Ray3 cf_ray3_to_aabb3 cf_ray3_to_sphere cf_ray3_to_plane3
  */
-CF_INLINE CF_Ray3 cf_ray3(CF_V3 p, CF_V3 q)
+CF_INLINE CF_Ray3 cf_make_ray3(CF_V3 p, CF_V3 q)
 {
 	CF_Ray3 ray;
 	CF_V3 delta = cf_sub_v3(q, p);

@@ -55,6 +55,9 @@
 			CUTE_DDS_FREE
 			CUTE_DDS_MEMCPY
 			CUTE_DDS_NO_STDIO
+			CUTE_DDS_STATIC (gives all functions internal linkage -- for compiling a
+			                 private copy inside one translation unit, e.g. a test that
+			                 must not collide with an engine's copy)
 
 	Revision history:
 		1.00 (08/04/2026) initial release
@@ -64,8 +67,14 @@
 
 #include <stdint.h>
 
+#if defined(CUTE_DDS_STATIC)
+#	define CUTE_DDS_DEF static
+#else
+#	define CUTE_DDS_DEF extern
+#endif
+
 // Read this after a parse returns a zero slice_count.
-extern const char* cd_error_reason;
+CUTE_DDS_DEF const char* cd_error_reason;
 
 typedef enum cd_format_t
 {
@@ -111,20 +120,20 @@ typedef struct cd_dds_t
 
 // Parses DDS bytes into zero-copy surface views. On failure returns a zeroed
 // struct (slice_count == 0) and sets `cd_error_reason`.
-cd_dds_t cd_parse_dds_mem(const void* data, int size);
+CUTE_DDS_DEF cd_dds_t cd_parse_dds_mem(const void* data, int size);
 
 #if !defined(CUTE_DDS_NO_STDIO)
 // Reads the whole file and parses it; the bytes free together with the parse.
-cd_dds_t cd_load_dds(const char* path);
+CUTE_DDS_DEF cd_dds_t cd_load_dds(const char* path);
 #endif
 
 // The slice for (face, mip), or NULL if out of range.
-cd_slice_t* cd_slice(cd_dds_t* dds, int face, int mip);
+CUTE_DDS_DEF cd_slice_t* cd_slice(cd_dds_t* dds, int face, int mip);
 
-void cd_free_dds(cd_dds_t* dds);
+CUTE_DDS_DEF void cd_free_dds(cd_dds_t* dds);
 
 // Bytes per 4x4 block for compressed formats, or 0 for uncompressed ones.
-int cd_block_size(cd_format_t format);
+CUTE_DDS_DEF int cd_block_size(cd_format_t format);
 
 #define CUTE_DDS_H
 #endif
@@ -144,7 +153,9 @@ int cd_block_size(cd_format_t format);
 	#define CUTE_DDS_MEMCPY memcpy
 #endif
 
-const char* cd_error_reason;
+#if !defined(CUTE_DDS_STATIC)
+const char* cd_error_reason; // With CUTE_DDS_STATIC the declaration above IS the definition.
+#endif
 
 #define CD_FAIL(reason) do { cd_error_reason = reason; goto cd_err; } while (0)
 
@@ -180,7 +191,7 @@ const char* cd_error_reason;
 
 static uint32_t cd_u32(const uint8_t* p) { return (uint32_t)p[0] | ((uint32_t)p[1] << 8) | ((uint32_t)p[2] << 16) | ((uint32_t)p[3] << 24); }
 
-int cd_block_size(cd_format_t format)
+CUTE_DDS_DEF int cd_block_size(cd_format_t format)
 {
 	switch (format) {
 	case CD_FORMAT_BC1: case CD_FORMAT_BC1_SRGB:
@@ -202,7 +213,7 @@ static uint64_t cd_surface_size(cd_format_t format, uint64_t w, uint64_t h)
 	return w * h * 4;
 }
 
-cd_dds_t cd_parse_dds_mem(const void* data, int size)
+CUTE_DDS_DEF cd_dds_t cd_parse_dds_mem(const void* data, int size)
 {
 	// All locals up front: the CD_FAIL goto must not jump over an initialization
 	// (this header compiles as C++ inside engines).
@@ -343,7 +354,7 @@ cd_err:
 	return zero;
 }
 
-cd_slice_t* cd_slice(cd_dds_t* dds, int face, int mip)
+CUTE_DDS_DEF cd_slice_t* cd_slice(cd_dds_t* dds, int face, int mip)
 {
 	if (!dds || !dds->slices) return 0;
 	if (face < 0 || face >= dds->face_count) return 0;
@@ -351,7 +362,7 @@ cd_slice_t* cd_slice(cd_dds_t* dds, int face, int mip)
 	return dds->slices + face * dds->mip_count + mip;
 }
 
-void cd_free_dds(cd_dds_t* dds)
+CUTE_DDS_DEF void cd_free_dds(cd_dds_t* dds)
 {
 	if (!dds) return;
 	if (dds->slices) CUTE_DDS_FREE(dds->slices);
@@ -363,7 +374,7 @@ void cd_free_dds(cd_dds_t* dds)
 #if !defined(CUTE_DDS_NO_STDIO)
 #include <stdio.h>
 
-cd_dds_t cd_load_dds(const char* path)
+CUTE_DDS_DEF cd_dds_t cd_load_dds(const char* path)
 {
 	cd_dds_t zero = { CD_FORMAT_UNKNOWN };
 	FILE* fp = fopen(path, "rb");

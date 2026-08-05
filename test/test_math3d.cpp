@@ -115,7 +115,7 @@ TEST_CASE(test_projection_cpp) {
 // the documented inside-the-shape behaviors.
 TEST_CASE(test_geometry_raycasts_cpp) {
 	// Ray straight down +z into a unit box centered at origin: hits the -z face at t = 4.
-	CF_Ray3 ray = cf_ray3(V3(0, 0, -5), V3(0, 0, 5));
+	CF_Ray3 ray = cf_make_ray3(V3(0, 0, -5), V3(0, 0, 5));
 	CF_Aabb3 box = cf_make_aabb3_center(V3(0, 0, 0), V3(1, 1, 1));
 	CF_Raycast3 hit = cf_ray3_to_aabb3(ray, box);
 	REQUIRE(hit.hit);
@@ -127,27 +127,27 @@ TEST_CASE(test_geometry_raycasts_cpp) {
 	REQUIRE(!cf_ray3_to_aabb3(ray, cf_make_aabb3_center(V3(0, 0, -10), V3(1, 1, 1))).hit);
 
 	// Starting inside reports t = 0.
-	CF_Raycast3 inside = cf_ray3_to_aabb3(cf_ray3(V3(0, 0, 0), V3(0, 0, 5)), box);
+	CF_Raycast3 inside = cf_ray3_to_aabb3(cf_make_ray3(V3(0, 0, 0), V3(0, 0, 5)), box);
 	REQUIRE(inside.hit && near_f(inside.t, 0.0f));
 
 	// Sphere: hit distance and outward normal at the impact point.
 	CF_Sphere sphere = cf_make_sphere(V3(0, 0, 0), 1.0f);
-	hit = cf_ray3_to_sphere(cf_ray3(V3(0, 0, -5), V3(0, 0, 5)), sphere);
+	hit = cf_ray3_to_sphere(cf_make_ray3(V3(0, 0, -5), V3(0, 0, 5)), sphere);
 	REQUIRE(hit.hit);
 	REQUIRE(near_f(hit.t, 4.0f));
 	REQUIRE(near_v3(hit.n, V3(0, 0, -1)));
-	REQUIRE(!cf_ray3_to_sphere(cf_ray3(V3(0, 3, -5), V3(0, 3, 5)), sphere).hit);
+	REQUIRE(!cf_ray3_to_sphere(cf_make_ray3(V3(0, 3, -5), V3(0, 3, 5)), sphere).hit);
 	// From inside: the exit point at t = 1 through the far surface.
-	hit = cf_ray3_to_sphere(cf_ray3(V3(0, 0, 0), V3(0, 0, 5)), sphere);
+	hit = cf_ray3_to_sphere(cf_make_ray3(V3(0, 0, 0), V3(0, 0, 5)), sphere);
 	REQUIRE(hit.hit && near_f(hit.t, 1.0f));
 
 	// Plane at y = 2: hit from above reports the up-facing normal; parallel rays miss.
 	CF_Plane3 plane = cf_plane3(V3(0, 1, 0), 2.0f);
-	hit = cf_ray3_to_plane3(cf_ray3(V3(0, 5, 0), V3(0, -1, 0)), plane);
+	hit = cf_ray3_to_plane3(cf_make_ray3(V3(0, 5, 0), V3(0, -1, 0)), plane);
 	REQUIRE(hit.hit);
 	REQUIRE(near_f(hit.t, 3.0f));
 	REQUIRE(near_v3(hit.n, V3(0, 1, 0)));
-	REQUIRE(!cf_ray3_to_plane3(cf_ray3(V3(0, 5, 0), V3(9, 5, 0)), plane).hit);
+	REQUIRE(!cf_ray3_to_plane3(cf_make_ray3(V3(0, 5, 0), V3(9, 5, 0)), plane).hit);
 	REQUIRE(near_f(cf_distance_plane3(plane, V3(0, 5, 0)), 3.0f));
 	REQUIRE(near_v3(cf_project_plane3(plane, V3(1, 5, 1)), V3(1, 2, 1)));
 	return true;
