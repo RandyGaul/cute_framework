@@ -136,9 +136,10 @@ TEST_CASE(test_app_present_mode_mailbox_failure_does_not_corrupt_state)
 // SDL_GPUSampleCount instead of converting it to the enum's index (1/2/4/8 -> 0/1/2/3), so
 // cf_app_set_msaa(4) could never succeed on Metal/Vulkan/D3D12 (SDL_GPUSampleCount only goes
 // up to 3) while cf_app_set_msaa(2) accidentally worked (raw value 2 happens to equal the
-// enum index for 4x). Every backend CF targets that supports 2x MSAA is required to support
-// 4x too (Vulkan/D3D12/Metal all guarantee 4x sample-count support on standard color
-// formats), so a backend where 2x succeeds but 4x fails means the query itself is broken.
+// enum index for 4x). This asserts 4x support whenever 2x is reported: red on this exact
+// case pre-fix (2x yes, 4x no) on real Metal hardware, green after. 4x-given-2x isn't a
+// documented guarantee on every backend (Vulkan's spec, for one, only mandates 1x), so this
+// is an empirically-motivated regression check, not a proven cross-backend invariant.
 TEST_CASE(test_app_msaa_4x_supported_when_2x_is)
 {
 	REQUIRE(!is_error(make_app(NULL, 0, 0, 0, 0, CF_APP_OPTIONS_HIDDEN_BIT | CF_APP_OPTIONS_NO_AUDIO_BIT, NULL)));
