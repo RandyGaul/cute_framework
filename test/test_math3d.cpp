@@ -142,7 +142,7 @@ TEST_CASE(test_geometry_raycasts_cpp) {
 	REQUIRE(hit.hit && near_f(hit.t, 1.0f));
 
 	// Plane at y = 2: hit from above reports the up-facing normal; parallel rays miss.
-	CF_Plane3 plane = cf_plane3(V3(0, 1, 0), 2.0f);
+	CF_Plane3 plane = cf_make_plane3(V3(0, 1, 0), 2.0f);
 	hit = cf_ray3_to_plane3(cf_make_ray3(V3(0, 5, 0), V3(0, -1, 0)), plane);
 	REQUIRE(hit.hit);
 	REQUIRE(near_f(hit.t, 3.0f));

@@ -1126,12 +1126,14 @@ CF_INLINE CF_Aabb3 cf_make_aabb3_center(CF_V3 center, CF_V3 half_extents) { retu
 CF_INLINE CF_Sphere cf_make_sphere(CF_V3 p, float r) { CF_Sphere s; s.p = p; s.r = r; return s; }
 
 /**
- * @function cf_plane3
+ * @function cf_make_plane3
  * @category math
  * @brief    Returns a plane with normal `n` (normalized for you) at distance `d` along `n`.
+ * @remarks  Named `cf_make_*` like `cf_make_sphere` -- and distinctly from the `CF_Plane3` type,
+ *           which shares a docs page slug case-insensitively.
  * @related  CF_Plane3 cf_plane3_at cf_distance_plane3
  */
-CF_INLINE CF_Plane3 cf_plane3(CF_V3 n, float d)
+CF_INLINE CF_Plane3 cf_make_plane3(CF_V3 n, float d)
 {
 	CF_Plane3 plane;
 	plane.n = cf_norm_v3(n);
