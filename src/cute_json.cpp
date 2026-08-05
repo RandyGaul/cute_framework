@@ -230,18 +230,18 @@ CF_JVal cf_json_array_get(CF_JVal val_handle, int index)
 }
 
 // Make sure memory layout is identical.
-static_assert(sizeof(CF_JIter) == sizeof(yyjson_mut_arr_iter));
-static_assert(offsetof(CF_JIter, index) == offsetof(yyjson_mut_arr_iter, idx));
-static_assert(offsetof(CF_JIter, count) == offsetof(yyjson_mut_arr_iter, max));
-static_assert(offsetof(CF_JIter, val) == offsetof(yyjson_mut_arr_iter, cur));
-static_assert(offsetof(CF_JIter, prev) == offsetof(yyjson_mut_arr_iter, pre));
-static_assert(offsetof(CF_JIter, parent) == offsetof(yyjson_mut_arr_iter, arr));
-static_assert(sizeof(CF_JIter) == sizeof(yyjson_mut_obj_iter));
-static_assert(offsetof(CF_JIter, index) == offsetof(yyjson_mut_obj_iter, idx));
-static_assert(offsetof(CF_JIter, count) == offsetof(yyjson_mut_obj_iter, max));
-static_assert(offsetof(CF_JIter, val) == offsetof(yyjson_mut_obj_iter, cur));
-static_assert(offsetof(CF_JIter, prev) == offsetof(yyjson_mut_obj_iter, pre));
-static_assert(offsetof(CF_JIter, parent) == offsetof(yyjson_mut_obj_iter, obj));
+CF_STATIC_ASSERT(sizeof(CF_JIter) == sizeof(yyjson_mut_arr_iter), "CF_JIter must match yyjson_mut_arr_iter's layout");
+CF_STATIC_ASSERT(offsetof(CF_JIter, index) == offsetof(yyjson_mut_arr_iter, idx), "CF_JIter must match yyjson_mut_arr_iter's layout");
+CF_STATIC_ASSERT(offsetof(CF_JIter, count) == offsetof(yyjson_mut_arr_iter, max), "CF_JIter must match yyjson_mut_arr_iter's layout");
+CF_STATIC_ASSERT(offsetof(CF_JIter, val) == offsetof(yyjson_mut_arr_iter, cur), "CF_JIter must match yyjson_mut_arr_iter's layout");
+CF_STATIC_ASSERT(offsetof(CF_JIter, prev) == offsetof(yyjson_mut_arr_iter, pre), "CF_JIter must match yyjson_mut_arr_iter's layout");
+CF_STATIC_ASSERT(offsetof(CF_JIter, parent) == offsetof(yyjson_mut_arr_iter, arr), "CF_JIter must match yyjson_mut_arr_iter's layout");
+CF_STATIC_ASSERT(sizeof(CF_JIter) == sizeof(yyjson_mut_obj_iter), "CF_JIter must match yyjson_mut_obj_iter's layout");
+CF_STATIC_ASSERT(offsetof(CF_JIter, index) == offsetof(yyjson_mut_obj_iter, idx), "CF_JIter must match yyjson_mut_obj_iter's layout");
+CF_STATIC_ASSERT(offsetof(CF_JIter, count) == offsetof(yyjson_mut_obj_iter, max), "CF_JIter must match yyjson_mut_obj_iter's layout");
+CF_STATIC_ASSERT(offsetof(CF_JIter, val) == offsetof(yyjson_mut_obj_iter, cur), "CF_JIter must match yyjson_mut_obj_iter's layout");
+CF_STATIC_ASSERT(offsetof(CF_JIter, prev) == offsetof(yyjson_mut_obj_iter, pre), "CF_JIter must match yyjson_mut_obj_iter's layout");
+CF_STATIC_ASSERT(offsetof(CF_JIter, parent) == offsetof(yyjson_mut_obj_iter, obj), "CF_JIter must match yyjson_mut_obj_iter's layout");
 
 CF_JIter cf_json_iter(CF_JVal val_handle)
 {
