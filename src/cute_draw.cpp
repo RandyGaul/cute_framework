@@ -1001,8 +1001,21 @@ static void s_init_atlas_cache(int w, int h)
 	}
 }
 
+// The default 2d projection spans the window's LOGICAL size (points, never canvas pixels --
+// on a 2x display the canvas is twice as large, and a pixel-sized ortho would halve every
+// draw in point space).
+static CF_M3x2 s_default_projection()
+{
+	return ortho_2d(0, 0, (float)app->w, (float)app->h);
+}
+
 void CF_Draw::reset_cam()
 {
+	// Apply a refresh parked by cf_draw_on_app_canvas_resized.
+	if (pending_projection && !recording_list && projection_stack.count() == 0) {
+		projection = s_default_projection();
+		pending_projection = false;
+	}
 	cam_stack.clear();
 	cam_stack.add(cf_make_identity());
 	mvp = projection;
@@ -1025,7 +1038,7 @@ void cf_make_draw()
 {
 	s_draw = CF_NEW(CF_Draw);
 	s_draw->path_image_id_gen = CF_PATH_ID_RANGE_LO;
-	s_draw->projection = ortho_2d(0, 0, (float)app->w, (float)app->h);
+	s_draw->projection = s_default_projection();
 	s_draw->reset_cam();
 	s_draw->uniform_arena = cf_make_arena(32, CF_MB);
 
@@ -5317,13 +5330,22 @@ static void s_process_command(CF_Canvas canvas, CF_Command* cmd, CF_Command* nex
 // with N mesh/canvas fences into N full defrags. Images first seen after this frame's defrag
 // ride the lonely buffer (own texture, own batch) until the next frame's defrag packs them:
 // one frame of extra draw calls for brand-new content, instead of N defrags every frame.
-void cf_draw_on_app_canvas_resized(int w, int h)
+void cf_draw_on_app_canvas_resized()
 {
-	// The default 2d projection tracks the app canvas 1:1. It used to be computed once at
-	// startup and never again, so any resize (cf_app_set_size or a user dragging a resizable
-	// window) silently rescaled every world-space 2d draw. Refresh it with the canvas; a
-	// custom cf_draw_projection is per-frame state and simply overrides this as usual.
-	if (s_draw) s_draw->projection = ortho_2d(0, 0, (float)w, (float)h);
+	if (!s_draw) return;
+	// Applying mid draw-list-recording would stomp the recording's identity space, and
+	// inside a cf_draw_push/pop pair the pop would just clobber it. Park the refresh;
+	// reset_cam applies it at the frame boundary.
+	if (s_draw->recording_list || s_draw->projection_stack.count() > 0) {
+		s_draw->pending_projection = true;
+		return;
+	}
+	s_draw->pending_projection = false;
+	// cf_draw_projection refreshes mvp too: reset_cam only re-latches it at end of frame,
+	// so the rest of the resize frame would otherwise draw with the stale matrix. Ditto
+	// the AA factor, which divides by pixel_scale.
+	cf_draw_projection(s_default_projection());
+	s_draw->set_aaf();
 }
 
 void cf_atlas_defrag_once()

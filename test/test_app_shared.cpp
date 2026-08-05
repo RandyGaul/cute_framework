@@ -8,6 +8,7 @@
 #include "test_app_shared.h"
 
 #include <cute.h>
+#include <internal/cute_app_internal.h>
 #include <stdlib.h>
 
 static bool s_alive = false;
@@ -34,6 +35,7 @@ bool test_make_app(int w, int h, int extra_options)
 	}
 
 	if (s_alive && options == s_options) {
+		cf_app_force_pixel_scale(0); // Sweep a forced density leaked by a failed HiDPI test.
 		cf_app_set_size(w, h); // Recreates the app canvas + default 2d projection immediately.
 		// Well-known process globals a test legitimately mutates and rarely thinks to restore
 		// -- with one app per test their reset came free from cf_destroy_app. Everything else

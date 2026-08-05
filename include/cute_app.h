@@ -433,10 +433,11 @@ CF_API float CF_CALL cf_app_get_pixel_scale(void);
 /**
  * @function cf_app_set_size
  * @category app
- * @brief    Sets the size of the window in pixels.
- * @param    w          The width of the window in pixels.
- * @param    h          The height of the window in pixels.
- * @related  cf_app_get_size cf_app_get_position cf_app_set_position
+ * @brief    Sets the size of the window in logical points (use `cf_app_get_pixel_scale` to convert to physical pixels).
+ * @param    w          The width of the window in logical points.
+ * @param    h          The height of the window in logical points.
+ * @remarks  The app's default canvas is recreated immediately at the new size times the display's pixel density.
+ * @related  cf_app_get_size cf_app_get_position cf_app_set_position cf_app_get_pixel_scale
  */
 CF_API void CF_CALL cf_app_set_size(int w, int h);
 

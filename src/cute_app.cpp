@@ -156,14 +156,42 @@ static void s_canvas(int w, int h)
 	app->offscreen_canvas = cf_make_canvas(params);
 	app->canvas_w = w;
 	app->canvas_h = h;
-	cf_draw_on_app_canvas_resized(w, h);
+	cf_draw_on_app_canvas_resized();
 }
 
 void cf_app_recreate_default_canvas_if_needed()
 {
-	int w = (int)CF_ROUNDF(app->w * app->pixel_scale);
-	int h = (int)CF_ROUNDF(app->h * app->pixel_scale);
+	// Backends reject a 0x0 canvas (degenerate pixel_scale, or a zero-sized window mid-minimize).
+	int w = cf_max((int)CF_ROUNDF(app->w * app->pixel_scale), 1);
+	int h = cf_max((int)CF_ROUNDF(app->h * app->pixel_scale), 1);
 	s_canvas(w, h);
+}
+
+// Resolution order: NO_HIGH_DPI pins to 1.0, then a cf_app_force_pixel_scale override,
+// then the window's SDL-reported density.
+static float s_resolve_pixel_scale()
+{
+	if (app->options & CF_APP_OPTIONS_NO_HIGH_DPI_BIT) return 1.0f;
+	if (app->pixel_scale_override > 0) return app->pixel_scale_override;
+	float scale = app->window ? SDL_GetWindowPixelDensity(app->window) : 1.0f;
+	return scale > 0 ? scale : 1.0f;
+}
+
+void cf_app_refresh_pixel_scale()
+{
+	float scale = s_resolve_pixel_scale();
+	if (scale == app->pixel_scale) return;
+	app->pixel_scale = scale;
+	// NO_GFX apps have no canvas to recreate (cf_make_app only sizes one under use_gfx).
+	if (app->gfx_enabled) cf_app_recreate_default_canvas_if_needed();
+}
+
+void cf_app_force_pixel_scale(float scale)
+{
+	if (!app) return;
+	// Inverted test: NaN fails every ordered comparison, so it clears the override too.
+	app->pixel_scale_override = scale > 0 ? scale : 0;
+	cf_app_refresh_pixel_scale();
 }
 
 CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, int y, int w, int h, CF_AppOptionFlags options, const char* argv0)
@@ -338,15 +366,13 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 	app->window = window;
 	app->w = w;
 	app->h = h;
+	::app = app;
 	if (window) {
 		SDL_GetWindowPosition(app->window, &app->x, &app->y);
 		app->dpi_scale = SDL_GetWindowDisplayScale(app->window);
 		app->dpi_scale_prev = app->dpi_scale;
-		app->pixel_scale = window ? SDL_GetWindowPixelDensity(app->window) : 1.0f;
-		if (app->pixel_scale <= 0.0f) app->pixel_scale = 1.0f;
-		if (options & CF_APP_OPTIONS_NO_HIGH_DPI_BIT) app->pixel_scale = 1.0f;
+		app->pixel_scale = s_resolve_pixel_scale();
 	}
-	::app = app;
 	cf_make_aseprite_cache();
 	cf_make_custom_sprite_cache();
 
