@@ -1,6 +1,6 @@
 # Collision
 
-CF comes with a full-featured [`Collision API`](../api_reference.md#collision). Here's a quick list of the features available:
+CF comes with a full-featured [`Collision API`](../api_reference.md#collision), powered under the hood by [Box2D v3's](https://box2d.org) freestanding geometry layer -- no physics world involved, just immediate shape-vs-shape answers. When you want actual simulation (bodies, joints, contact events), see the [Physics](physics.md) topic. Here's a quick list of the features available:
 
 - Shapes (circle, capsule, Aabb, ray, poly)
 - Boolean collision functions (simply yes/no hit tests)
@@ -50,9 +50,9 @@ In the [Collision API](../api_reference.md#collision) we can see a whole bunch o
 
 ## Generic Collision Function
 
-You may call [`cf_collide`](../collision/function/cf_collide.md) to perform a generic boolean hit-test on any two shapes using `void*`'s. Simply pass in pointers to each shape along with the associated [`cf_shapetype`](../collision/enum/cf_shapetype.md) for each shape. Internally this just runs some switch statements on each shape type and calls the correct `cf_***_to_***`.
+You may call [`cf_collided`](../collision/function/cf_collided.md) to perform a generic boolean hit-test on any two shapes using `void*`'s. Simply pass in pointers to each shape along with the associated [`cf_shapetype`](../collision/enum/cf_shapetype.md) for each shape. Internally this just runs some switch statements on each shape type and calls the correct `cf_***_to_***`.
 
-Similarly you can call [`cf_collided`](../collision/function/cf_collided.md) for a generic manifold function.
+Similarly you can call [`cf_collide`](../collision/function/cf_collide.md) for a generic manifold function.
 
 You can of course create your own versions of these "generic" functions if you wish -- they are here merely for convenience.
 
@@ -102,8 +102,9 @@ Each of these functions will return true if the ray hits the given shape, and al
 ```cpp
 struct CF_Raycast
 {
-	float t; // Time of impact.
-	CF_V2 n; // Normal of surface at impact (unit length).
+	bool hit; // True if the ray hit. When false, t and n are zero'd out.
+	float t;  // Time of impact.
+	CF_V2 n;  // Normal of surface at impact (unit length).
 };
 ```
 

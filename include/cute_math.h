@@ -3421,20 +3421,14 @@ CF_API CF_Manifold CF_CALL cf_poly_to_poly_manifold(const CF_Poly* A, const CF_P
  */
 typedef struct CF_GjkCache
 {
-	/* A metric used to determine if the cache is good enough to be used again. */
-	float metric;
+	/* The number of vertices in the simplex cached. Zero-initialize before the first call. */
+	uint16_t count;
 
-	/* The number of vertices in the simplex cached. */
-	int count;
+	/* Cached simplex indices on shape A. */
+	uint8_t iA[3];
 
-	/* An index into shape A. */
-	int iA[3];
-
-	/* An index into shape B. */
-	int iB[3];
-
-	/* The divisor (used in barycentric coordinates internally) for the vertex B - A. */
-	float div;
+	/* Cached simplex indices on shape B. */
+	uint8_t iB[3];
 } CF_GjkCache;
 // @end
 
@@ -3505,6 +3499,9 @@ typedef struct CF_ToiResult
  *           Computes the time of impact from shape A and shape B. The velocity of each shape is provided by `vA` and `vB` respectively. The shapes are
  *           _not_ allowed to rotate over time. The velocity is assumed to represent the change in motion from time 0 to time 1, and so the return value
  *           will be a number from 0 to 1. To move each shape to the colliding configuration, multiply `vA` and `vB` each by the return value.
+ *
+ *           Shapes that start out already touching report a miss (`hit` 0 with `toi` 1) -- always sweep from a non-overlapping
+ *           configuration, which the recommended algorithm below guarantees by construction.
  *
  *           IMPORTANT NOTE
  *

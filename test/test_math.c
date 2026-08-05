@@ -356,6 +356,204 @@ TEST_CASE(test_make_aabb_verts_empty_c) {
 	return true;
 }
 
+/* Hit-path semantics of the collision queries (now routed through Box2D's geometry
+   layer): boolean overlaps, manifold direction and depth, raycast t/n, gjk closest
+   points, and toi -- pinned so the routing preserves cute_c2-era contracts. */
+TEST_CASE(test_collision_booleans_c) {
+	CF_Circle a = cf_make_circle(cf_v2(0, 0), 1.0f);
+	CF_Circle b = cf_make_circle(cf_v2(1.5f, 0), 1.0f);
+	CF_Circle c = cf_make_circle(cf_v2(3.0f, 0), 1.0f);
+	REQUIRE(cf_circle_to_circle(a, b));
+	REQUIRE(!cf_circle_to_circle(a, c));
+
+	CF_Aabb box = cf_make_aabb(cf_v2(-1, -1), cf_v2(1, 1));
+	REQUIRE(cf_circle_to_aabb(cf_make_circle(cf_v2(1.5f, 0), 1.0f), box));
+	REQUIRE(!cf_circle_to_aabb(cf_make_circle(cf_v2(3.0f, 0), 1.0f), box));
+	REQUIRE(cf_aabb_to_aabb(box, cf_make_aabb(cf_v2(0, 0), cf_v2(2, 2))));
+	REQUIRE(!cf_aabb_to_aabb(box, cf_make_aabb(cf_v2(2, 2), cf_v2(3, 3))));
+
+	CF_Capsule cap = cf_make_capsule(cf_v2(0, -1), cf_v2(0, 1), 0.5f);
+	REQUIRE(cf_circle_to_capsule(cf_make_circle(cf_v2(1.0f, 0), 0.6f), cap));
+	REQUIRE(!cf_circle_to_capsule(cf_make_circle(cf_v2(3.0f, 0), 0.6f), cap));
+	REQUIRE(cf_capsule_to_capsule(cap, cf_make_capsule(cf_v2(0.8f, -1), cf_v2(0.8f, 1), 0.5f)));
+	REQUIRE(!cf_capsule_to_capsule(cap, cf_make_capsule(cf_v2(3, -1), cf_v2(3, 1), 0.5f)));
+	REQUIRE(cf_aabb_to_capsule(box, cf_make_capsule(cf_v2(1.2f, -1), cf_v2(1.2f, 1), 0.5f)));
+
+	CF_Poly poly;
+	poly.count = 4;
+	poly.verts[0] = cf_v2(2, -1);
+	poly.verts[1] = cf_v2(4, -1);
+	poly.verts[2] = cf_v2(4, 1);
+	poly.verts[3] = cf_v2(2, 1);
+	cf_make_poly(&poly);
+	REQUIRE(cf_circle_to_poly(cf_make_circle(cf_v2(1.5f, 0), 1.0f), &poly));
+	REQUIRE(!cf_circle_to_poly(cf_make_circle(cf_v2(0, 0), 1.0f), &poly));
+	REQUIRE(cf_aabb_to_poly(cf_make_aabb(cf_v2(1, -1), cf_v2(3, 1)), &poly));
+	REQUIRE(!cf_aabb_to_poly(cf_make_aabb(cf_v2(-1, -1), cf_v2(1, 1)), &poly));
+	REQUIRE(cf_capsule_to_poly(cf_make_capsule(cf_v2(1.7f, -1), cf_v2(1.7f, 1), 0.5f), &poly));
+	REQUIRE(cf_poly_to_poly(&poly, &poly));
+
+	/* Generic dispatch agrees with the typed pair. */
+	REQUIRE(cf_collided(&box, CF_SHAPE_TYPE_AABB, &poly, CF_SHAPE_TYPE_POLY) == 0);
+	CF_Aabb touching = cf_make_aabb(cf_v2(1, -1), cf_v2(3, 1));
+	REQUIRE(cf_collided(&touching, CF_SHAPE_TYPE_AABB, &poly, CF_SHAPE_TYPE_POLY) != 0);
+	return true;
+}
+
+TEST_CASE(test_collision_manifolds_c) {
+	/* Two overlapping circles: one contact point, normal from A to B, positive depth
+	   equal to the overlap amount. */
+	CF_Circle a = cf_make_circle(cf_v2(0, 0), 1.0f);
+	CF_Circle b = cf_make_circle(cf_v2(1.5f, 0), 1.0f);
+	CF_Manifold m = cf_circle_to_circle_manifold(a, b);
+	REQUIRE(m.count == 1);
+	REQUIRE(cf_abs(m.n.x - 1.0f) < 1e-3f && cf_abs(m.n.y) < 1e-3f);
+	REQUIRE(cf_abs(m.depths[0] - 0.5f) < 1e-3f);
+
+	/* Swapped order flips the normal: still A to B. */
+	m = cf_circle_to_circle_manifold(b, a);
+	REQUIRE(m.count == 1);
+	REQUIRE(cf_abs(m.n.x + 1.0f) < 1e-3f);
+
+	/* Separated shapes yield an empty manifold -- Box2D's speculative points must
+	   never leak through. */
+	m = cf_circle_to_circle_manifold(a, cf_make_circle(cf_v2(2.01f, 0), 1.0f));
+	REQUIRE(m.count == 0);
+
+	/* Overlapping boxes: two contact points along the +x face, depth = overlap. */
+	CF_Aabb box_a = cf_make_aabb(cf_v2(-1, -1), cf_v2(1, 1));
+	CF_Aabb box_b = cf_make_aabb(cf_v2(0.5f, -1), cf_v2(2.5f, 1));
+	m = cf_aabb_to_aabb_manifold(box_a, box_b);
+	REQUIRE(m.count == 2);
+	REQUIRE(cf_abs(m.n.x - 1.0f) < 1e-3f && cf_abs(m.n.y) < 1e-3f);
+	REQUIRE(cf_abs(m.depths[0] - 0.5f) < 1e-2f);
+	REQUIRE(cf_abs(m.depths[1] - 0.5f) < 1e-2f);
+
+	/* Circle vs poly through the generic entry point: same result either path. */
+	CF_Poly poly;
+	poly.count = 4;
+	poly.verts[0] = cf_v2(2, -1);
+	poly.verts[1] = cf_v2(4, -1);
+	poly.verts[2] = cf_v2(4, 1);
+	poly.verts[3] = cf_v2(2, 1);
+	cf_make_poly(&poly);
+	CF_Circle probe = cf_make_circle(cf_v2(1.5f, 0), 1.0f);
+	CF_Manifold via_pair = cf_circle_to_poly_manifold(probe, &poly);
+	CF_Manifold via_generic;
+	cf_collide(&probe, CF_SHAPE_TYPE_CIRCLE, &poly, CF_SHAPE_TYPE_POLY, &via_generic);
+	REQUIRE(via_pair.count == 1);
+	REQUIRE(via_generic.count == 1);
+	REQUIRE(cf_abs(via_pair.n.x - via_generic.n.x) < 1e-4f);
+	REQUIRE(cf_abs(via_pair.depths[0] - via_generic.depths[0]) < 1e-4f);
+	REQUIRE(cf_abs(via_pair.n.x - 1.0f) < 1e-3f); /* From the circle toward the poly. */
+	return true;
+}
+
+TEST_CASE(test_raycast_hit_c) {
+	/* Ray marching +x into a unit box 5 units away: t is a world-space distance along
+	   the (normalized) direction, and the normal faces back at the ray. */
+	CF_Ray ray = cf_make_ray(cf_v2(-6.0f, 0), cf_v2(1, 0), 100.0f);
+	CF_Aabb box = cf_make_aabb(cf_v2(-1, -1), cf_v2(1, 1));
+	CF_Raycast rc = cf_ray_to_aabb(ray, box);
+	REQUIRE(rc.hit);
+	REQUIRE(cf_abs(rc.t - 5.0f) < 1e-3f);
+	REQUIRE(cf_abs(rc.n.x + 1.0f) < 1e-3f && cf_abs(rc.n.y) < 1e-3f);
+	CF_V2 impact = cf_impact(ray, rc.t);
+	REQUIRE(cf_abs(impact.x + 1.0f) < 1e-3f);
+
+	CF_Circle circ = cf_make_circle(cf_v2(0, 0), 1.0f);
+	rc = cf_ray_to_circle(ray, circ);
+	REQUIRE(rc.hit);
+	REQUIRE(cf_abs(rc.t - 5.0f) < 1e-3f);
+	REQUIRE(cf_abs(rc.n.x + 1.0f) < 1e-3f);
+
+	CF_Capsule cap = cf_make_capsule(cf_v2(0, -1), cf_v2(0, 1), 1.0f);
+	rc = cf_ray_to_capsule(ray, cap);
+	REQUIRE(rc.hit);
+	REQUIRE(cf_abs(rc.t - 5.0f) < 1e-3f);
+
+	/* A ray too short to reach must miss. */
+	CF_Ray shorty = cf_make_ray(cf_v2(-6.0f, 0), cf_v2(1, 0), 3.0f);
+	REQUIRE(!cf_ray_to_aabb(shorty, box).hit);
+	return true;
+}
+
+TEST_CASE(test_gjk_toi_c) {
+	/* Distance between two circles with radii on: the surface gap. Closest points sit
+	   on the line between centers. */
+	CF_Circle a = cf_make_circle(cf_v2(0, 0), 1.0f);
+	CF_Circle b = cf_make_circle(cf_v2(5, 0), 1.0f);
+	CF_V2 pa, pb;
+	int iterations = 0;
+	float d = cf_gjk(&a, CF_SHAPE_TYPE_CIRCLE, &b, CF_SHAPE_TYPE_CIRCLE, &pa, &pb, true, &iterations, NULL);
+	REQUIRE(cf_abs(d - 3.0f) < 1e-3f);
+	REQUIRE(cf_abs(pa.x - 1.0f) < 1e-3f);
+	REQUIRE(cf_abs(pb.x - 4.0f) < 1e-3f);
+
+	/* Radii off: center-to-center distance for point clouds. */
+	d = cf_gjk(&a, CF_SHAPE_TYPE_CIRCLE, &b, CF_SHAPE_TYPE_CIRCLE, &pa, &pb, false, NULL, NULL);
+	REQUIRE(cf_abs(d - 5.0f) < 1e-3f);
+
+	/* A warm-started cache is accepted and gives the same answer. */
+	CF_GjkCache cache = { 0 };
+	d = cf_gjk(&a, CF_SHAPE_TYPE_CIRCLE, &b, CF_SHAPE_TYPE_CIRCLE, &pa, &pb, true, NULL, &cache);
+	REQUIRE(cf_abs(d - 3.0f) < 1e-3f);
+	d = cf_gjk(&a, CF_SHAPE_TYPE_CIRCLE, &b, CF_SHAPE_TYPE_CIRCLE, &pa, &pb, true, NULL, &cache);
+	REQUIRE(cf_abs(d - 3.0f) < 1e-3f);
+
+	/* Time of impact: b closes the 3-unit surface gap moving 6 units left, so impact
+	   lands at toi 0.5 with the normal from A toward B. */
+	CF_ToiResult toi = cf_toi(&a, CF_SHAPE_TYPE_CIRCLE, cf_v2(0, 0), &b, CF_SHAPE_TYPE_CIRCLE, cf_v2(-6.0f, 0), true);
+	REQUIRE(toi.hit);
+	REQUIRE(cf_abs(toi.toi - 0.5f) < 1e-2f);
+	REQUIRE(cf_abs(toi.n.x - 1.0f) < 1e-2f);
+
+	/* Moving apart: no hit, toi 1. */
+	toi = cf_toi(&a, CF_SHAPE_TYPE_CIRCLE, cf_v2(0, 0), &b, CF_SHAPE_TYPE_CIRCLE, cf_v2(6.0f, 0), true);
+	REQUIRE(!toi.hit);
+	REQUIRE(toi.toi == 1.0f);
+	return true;
+}
+
+TEST_CASE(test_hull_inflate_c) {
+	/* Hull of a square plus an interior point: four verts survive, CCW winding with
+	   outward normals from cf_make_poly. */
+	CF_Poly poly;
+	poly.count = 5;
+	poly.verts[0] = cf_v2(-1, -1);
+	poly.verts[1] = cf_v2(1, -1);
+	poly.verts[2] = cf_v2(1, 1);
+	poly.verts[3] = cf_v2(-1, 1);
+	poly.verts[4] = cf_v2(0, 0); /* Interior; the hull must drop it. */
+	cf_make_poly(&poly);
+	REQUIRE(poly.count == 4);
+	REQUIRE(cf_calc_area(poly) > 0); /* Positive area == CCW winding. */
+	for (int i = 0; i < poly.count; ++i) {
+		/* Every normal points away from the centroid. */
+		CF_V2 to_vert = cf_sub_v2(poly.verts[i], cf_v2(0, 0));
+		REQUIRE(cf_dot(poly.norms[i], to_vert) > 0);
+	}
+
+	/* Inflation grows every shape type; negative inflation shrinks the poly back. */
+	CF_Circle circle = cf_make_circle(cf_v2(0, 0), 1.0f);
+	cf_inflate(&circle, CF_SHAPE_TYPE_CIRCLE, 0.5f);
+	REQUIRE(circle.r == 1.5f);
+
+	CF_Aabb box = cf_make_aabb(cf_v2(-1, -1), cf_v2(1, 1));
+	cf_inflate(&box, CF_SHAPE_TYPE_AABB, 0.5f);
+	REQUIRE(box.min.x == -1.5f && box.max.y == 1.5f);
+
+	float area = cf_calc_area(poly);
+	cf_inflate(&poly, CF_SHAPE_TYPE_POLY, 0.1f);
+	float grown = cf_calc_area(poly);
+	REQUIRE(grown > area);
+	cf_inflate(&poly, CF_SHAPE_TYPE_POLY, -0.1f);
+	float shrunk = cf_calc_area(poly);
+	REQUIRE(shrunk < grown);
+	REQUIRE(cf_abs(shrunk - area) < 0.05f);
+	return true;
+}
+
 TEST_SUITE(test_math_c) {
 	RUN_TEST_CASE(test_make_translation_v2_c);
 	RUN_TEST_CASE(test_make_translation_floats_c);
@@ -370,6 +568,11 @@ TEST_SUITE(test_math_c) {
 	RUN_TEST_CASE(test_mod_floored_c);
 	RUN_TEST_CASE(test_raycast_miss_zeroed_c);
 	RUN_TEST_CASE(test_ray_to_halfspace_c);
+	RUN_TEST_CASE(test_collision_booleans_c);
+	RUN_TEST_CASE(test_collision_manifolds_c);
+	RUN_TEST_CASE(test_raycast_hit_c);
+	RUN_TEST_CASE(test_gjk_toi_c);
+	RUN_TEST_CASE(test_hull_inflate_c);
 	RUN_TEST_CASE(test_slice_on_plane_verts_c);
 	RUN_TEST_CASE(test_slice_nonconvex_no_overflow_c);
 	RUN_TEST_CASE(test_polygon_degenerate_c);
