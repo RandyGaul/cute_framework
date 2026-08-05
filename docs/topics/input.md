@@ -39,7 +39,7 @@ if (cf_key_ctrl() && cf_key_just_pressed(KEY_Z)) {
 
 ## Mouse
 
-Much like the keyboard, the mouse also has down/just pressed behavior with [`cf_mouse_down`](../input/function/cf_mouse_down.md) and [`cf_mouse_just_pressed)`](../input/function/cf_mouse_just_pressed.md).
+Much like the keyboard, the mouse also has down/just pressed behavior with [`cf_mouse_down`](../input/function/cf_mouse_down.md) and [`cf_mouse_just_pressed`](../input/function/cf_mouse_just_pressed.md).
 
 ```cpp
 // Check if right click is currently down.
