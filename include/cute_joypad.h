@@ -18,6 +18,12 @@
 extern "C" {
 #endif // __cplusplus
 
+/**
+ * @function CF_MAX_JOYPADS
+ * @category input
+ * @brief    Maximum number of simultaneously connected joypads.
+ * @related  cf_joypad_count cf_joypad_is_connected
+ */
 #define CF_MAX_JOYPADS 8
 
 /**

@@ -2,19 +2,19 @@
 
 The [Custom Sprite API](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_custom_sprite.h) lets you build sprites from individual .png files with your own frame timings. This is useful when you have your own animation format or art pipeline and don't want to use .ase/.aseprite files.
 
-If you just want to load sprites from Aseprite files, see [`cf_make_sprite`](../sprite/cf_make_sprite.md) instead.
+If you just want to load sprites from Aseprite files, see [`cf_make_sprite`](../sprite/function/cf_make_sprite.md) instead.
 
 ## Overview
 
 Building a custom sprite is a three-step process:
 
-1. **Load PNGs** -- Load individual .png images into [`CF_Png`](../custom_sprite/cf_png.md) structs.
-2. **Create Animations** -- Group PNGs into named [`CF_Animation`](../custom_sprite/cf_make_custom_sprite_animation.md) sequences with per-frame delays.
-3. **Build the Sprite** -- Combine animations into an animation table and create a [`CF_Sprite`](../sprite/cf_sprite.md).
+1. **Load PNGs** -- Load individual .png images into [`CF_Png`](../custom_sprite/struct/cf_png.md) structs.
+2. **Create Animations** -- Group PNGs into named [`CF_Animation`](../custom_sprite/function/cf_make_custom_sprite_animation.md) sequences with per-frame delays.
+3. **Build the Sprite** -- Combine animations into an animation table and create a [`CF_Sprite`](../sprite/struct/cf_sprite.md).
 
 ## Step 1: Load PNGs
 
-Each frame of your animation is a separate .png file. Load them with [`cf_custom_sprite_load_png`](../custom_sprite/cf_custom_sprite_load_png.md):
+Each frame of your animation is a separate .png file. Load them with [`cf_custom_sprite_load_png`](../custom_sprite/function/cf_custom_sprite_load_png.md):
 
 ```c
 CF_Png frames[3];
@@ -29,7 +29,7 @@ Images are cached internally, so loading the same path twice is fast.
 
 ## Step 2: Create Animations
 
-Group your PNGs into a named animation with per-frame delays (in seconds) using [`cf_make_custom_sprite_animation`](../custom_sprite/cf_make_custom_sprite_animation.md):
+Group your PNGs into a named animation with per-frame delays (in seconds) using [`cf_make_custom_sprite_animation`](../custom_sprite/function/cf_make_custom_sprite_animation.md):
 
 ```c
 float delays[] = { 0.1f, 0.1f, 0.1f };
@@ -41,7 +41,7 @@ You can create as many animations as you need (walk, idle, attack, etc.), each f
 
 ## Step 3: Build the Sprite
 
-Combine your animations into an animation table using [`cf_make_custom_sprite_animation_table`](../custom_sprite/cf_make_custom_sprite_animation_table.md), then create the sprite with [`cf_make_custom_sprite`](../custom_sprite/cf_make_custom_sprite.md):
+Combine your animations into an animation table using [`cf_make_custom_sprite_animation_table`](../custom_sprite/function/cf_make_custom_sprite_animation_table.md), then create the sprite with [`cf_make_custom_sprite`](../custom_sprite/function/cf_make_custom_sprite.md):
 
 ```c
 const CF_Animation* anims[] = { walk, idle, attack };
@@ -136,11 +136,11 @@ int main(int argc, char* argv[])
 
 ## API Reference
 
-- [`CF_Png`](../custom_sprite/cf_png.md) -- A loaded PNG image.
-- [`cf_png_defaults`](../custom_sprite/cf_png_defaults.md) -- Initialize an empty `CF_Png`.
-- [`cf_custom_sprite_load_png`](../custom_sprite/cf_custom_sprite_load_png.md) -- Load a PNG from disk.
-- [`cf_custom_sprite_load_png_from_memory`](../custom_sprite/cf_custom_sprite_load_png_from_memory.md) -- Load a PNG from memory.
-- [`cf_custom_sprite_unload_png`](../custom_sprite/cf_custom_sprite_unload_png.md) -- Unload a PNG.
-- [`cf_make_custom_sprite_animation`](../custom_sprite/cf_make_custom_sprite_animation.md) -- Create a named animation from PNGs.
-- [`cf_make_custom_sprite_animation_table`](../custom_sprite/cf_make_custom_sprite_animation_table.md) -- Combine animations into a table.
-- [`cf_make_custom_sprite`](../custom_sprite/cf_make_custom_sprite.md) -- Create a sprite from an animation table.
+- [`CF_Png`](../custom_sprite/struct/cf_png.md) -- A loaded PNG image.
+- [`cf_png_defaults`](../custom_sprite/function/cf_png_defaults.md) -- Initialize an empty `CF_Png`.
+- [`cf_custom_sprite_load_png`](../custom_sprite/function/cf_custom_sprite_load_png.md) -- Load a PNG from disk.
+- [`cf_custom_sprite_load_png_from_memory`](../custom_sprite/function/cf_custom_sprite_load_png_from_memory.md) -- Load a PNG from memory.
+- [`cf_custom_sprite_unload_png`](../custom_sprite/function/cf_custom_sprite_unload_png.md) -- Unload a PNG.
+- [`cf_make_custom_sprite_animation`](../custom_sprite/function/cf_make_custom_sprite_animation.md) -- Create a named animation from PNGs.
+- [`cf_make_custom_sprite_animation_table`](../custom_sprite/function/cf_make_custom_sprite_animation_table.md) -- Combine animations into a table.
+- [`cf_make_custom_sprite`](../custom_sprite/function/cf_make_custom_sprite.md) -- Create a sprite from an animation table.

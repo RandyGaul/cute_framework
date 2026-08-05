@@ -32,17 +32,17 @@ if (hit) {
 
 Here are the various shapes available:
 
-- [`CF_Circle`](../math/cf_circle.md)
-- [`CF_Capsule`](../collision/cf_capsule.md)
-- [`CF_Aabb`](../math/cf_aabb.md)
-- [`CF_Ray`](../math/cf_ray.md)
-- [`CF_Poly`](../collision/cf_poly.md)
+- [`CF_Circle`](../math/struct/cf_circle.md)
+- [`CF_Capsule`](../collision/struct/cf_capsule.md)
+- [`CF_Aabb`](../math/struct/cf_aabb.md)
+- [`CF_Ray`](../math/struct/cf_ray.md)
+- [`CF_Poly`](../collision/struct/cf_poly.md)
 
 ## Polygons
 
-The [`CF_Poly`](../collision/cf_poly.md) shape is a bit unique -- it must be a proper [convex hull](https://en.wikipedia.org/wiki/Convex_hull) with the vertices ordered in counter-clockwise format. Luckily you may call [`cf_hull`](../collision/cf_hull.md) to calculate a convex hull from a given set of un-ordered points for you.
+The [`CF_Poly`](../collision/struct/cf_poly.md) shape is a bit unique -- it must be a proper [convex hull](https://en.wikipedia.org/wiki/Convex_hull) with the vertices ordered in counter-clockwise format. Luckily you may call [`cf_hull`](../collision/function/cf_hull.md) to calculate a convex hull from a given set of un-ordered points for you.
 
-One last gotcha: polygons may only have up to [`CF_POLY_MAX_VERTS`](../collision/cf_poly_max_verts.md). It’s quite common for games to limit the number of verts on polygons to a low number. Higher than 8 and shapes generally start to look more like circles/ovals; it becomes pointless beyond a certain point (haha, shape joke).
+One last gotcha: polygons may only have up to [`CF_POLY_MAX_VERTS`](../collision/macro/cf_poly_max_verts.md). It’s quite common for games to limit the number of verts on polygons to a low number. Higher than 8 and shapes generally start to look more like circles/ovals; it becomes pointless beyond a certain point (haha, shape joke).
 
 ## Boolean Hit Testing
 
@@ -50,15 +50,15 @@ In the [Collision API](../api_reference.md#collision) we can see a whole bunch o
 
 ## Generic Collision Function
 
-You may call [`cf_collide`](../collision/cf_collide.md) to perform a generic boolean hit-test on any two shapes using `void*`'s. Simply pass in pointers to each shape along with the associated [`cf_shapetype`](../collision/cf_shapetype.md) for each shape. Internally this just runs some switch statements on each shape type and calls the correct `cf_***_to_***`.
+You may call [`cf_collide`](../collision/function/cf_collide.md) to perform a generic boolean hit-test on any two shapes using `void*`'s. Simply pass in pointers to each shape along with the associated [`cf_shapetype`](../collision/enum/cf_shapetype.md) for each shape. Internally this just runs some switch statements on each shape type and calls the correct `cf_***_to_***`.
 
-Similarly you can call [`cf_collided`](../collision/cf_collided.md) for a generic manifold function.
+Similarly you can call [`cf_collided`](../collision/function/cf_collided.md) for a generic manifold function.
 
 You can of course create your own versions of these "generic" functions if you wish -- they are here merely for convenience.
 
 ## Manifold Testing
 
-[`CF_Manifold`](../collision/cf_manifold.md) is a special struct containing all the information necessary to separate shapes that are touching. To generate a manifold call one fo the functions `cf_***_to_***_manifold`. The manifold will contain 1 or 2 vertices if the shapes intersected, and 0 if the shapes do not intersect.
+[`CF_Manifold`](../collision/struct/cf_manifold.md) is a special struct containing all the information necessary to separate shapes that are touching. To generate a manifold call one fo the functions `cf_***_to_***_manifold`. The manifold will contain 1 or 2 vertices if the shapes intersected, and 0 if the shapes do not intersect.
 
 ```cpp
 struct CF_Manifold
@@ -84,20 +84,20 @@ struct CF_Ray
 };
 ```
 
-Rays are stored in parametric form. A start position defines the initial point the ray is cast from. A normalized direction vector and distance along that vector define the end point: `endpoint = ray.p + ray.d * t`. If needed, a helper function called [`cf_endpoint`](../collision/cf_endpoint.md) can be used to calculate this point.
+Rays are stored in parametric form. A start position defines the initial point the ray is cast from. A normalized direction vector and distance along that vector define the end point: `endpoint = ray.p + ray.d * t`. If needed, a helper function called [`cf_endpoint`](../collision/function/cf_endpoint.md) can be used to calculate this point.
 
 > [!NOTE]
 > It's extremely important to **normalize** your ray direction. If you fail to normalize your ray direction the internal math algorithms can numerically fail due to sensitivity to large vectors in certain cases.
 
 To cast a ray simply call one of the `cf_ray_to_***` functions:
 
-- [`cf_ray_to_aabb`](../collision/cf_ray_to_aabb.md)
-- [`cf_ray_to_capsule`](../collision/cf_ray_to_capsule.md)
-- [`cf_ray_to_circle`](../collision/cf_ray_to_circle.md)
-- [`cf_ray_to_halfpsace`](../collision/cf_ray_to_halfspace.md)
-- [`cf_ray_to_poly`](../collision/cf_ray_to_poly.md)
+- [`cf_ray_to_aabb`](../collision/function/cf_ray_to_aabb.md)
+- [`cf_ray_to_capsule`](../collision/function/cf_ray_to_capsule.md)
+- [`cf_ray_to_circle`](../collision/function/cf_ray_to_circle.md)
+- [`cf_ray_to_halfpsace`](../collision/function/cf_ray_to_halfspace.md)
+- [`cf_ray_to_poly`](../collision/function/cf_ray_to_poly.md)
 
-Each of these functions will return true if the ray hits the given shape, and also fill in the `out` parameter, a [`CF_Raycast`](../math/cf_raycast.md) struct. The raycast contains the results for a raycast.
+Each of these functions will return true if the ray hits the given shape, and also fill in the `out` parameter, a [`CF_Raycast`](../math/struct/cf_raycast.md) struct. The raycast contains the results for a raycast.
 
 ```cpp
 struct CF_Raycast
@@ -107,25 +107,25 @@ struct CF_Raycast
 };
 ```
 
-We can easily calculate the position at the point of impact by using the parametric equation for the ray, and plugging in `t` from the raycast result: `impact = ray.p + ray.d * raycast.t`. If needed, a helper function called [`cf_impact`](../collision/cf_impact.md) can calculate the hit-spot for us.
+We can easily calculate the position at the point of impact by using the parametric equation for the ray, and plugging in `t` from the raycast result: `impact = ray.p + ray.d * raycast.t`. If needed, a helper function called [`cf_impact`](../collision/function/cf_impact.md) can calculate the hit-spot for us.
 
 The `n` member of the raycast represents the normal vector at point of impact. It points perfectly perpendicular to the surface of the shape. For example, this can be useful for knowing what sort of slope a player is standing on, or how to reflect bullets off of a surface.
 
-A "generic" raycast function [`cf_cast_ray`](../collision/cf_cast_ray.md) can be used to cast a ray against a generic shape using an enum and `void*` style polymorphism. Simply pass in a pointer to your shape and the according [`cf_shapetype`](../collision/cf_shapetype.md). Internally it's just a small function with a switch statement to call the proper `cf_ray_to_***` function.
+A "generic" raycast function [`cf_cast_ray`](../collision/function/cf_cast_ray.md) can be used to cast a ray against a generic shape using an enum and `void*` style polymorphism. Simply pass in a pointer to your shape and the according [`cf_shapetype`](../collision/enum/cf_shapetype.md). Internally it's just a small function with a switch statement to call the proper `cf_ray_to_***` function.
 
 ## Closest Points
 
 Sometimes it's quite useful to calculate the closest points between two shapes. Sometimes this is needed to implement other algorithms that require a good distance or direction check.
 
-Two calculate the closest points between two _non-intersecting_ shapes you may call [`cf_gjk`](../collision/cf_gjk.md), which stands for the algorithm creators Gilbert-Johnson-Keerthi. The algorithm only works on _non-intersecting_ shapes, if the two shapes are already touching you will get a false result, and the closest points will not be well defined.
+Two calculate the closest points between two _non-intersecting_ shapes you may call [`cf_gjk`](../collision/function/cf_gjk.md), which stands for the algorithm creators Gilbert-Johnson-Keerthi. The algorithm only works on _non-intersecting_ shapes, if the two shapes are already touching you will get a false result, and the closest points will not be well defined.
 
-This function is generic and requires the use of `void*` + [`cf_shapetype`](../collision/cf_shapetype.md) calling, much like the previously mentioned generic functions.
+This function is generic and requires the use of `void*` + [`cf_shapetype`](../collision/enum/cf_shapetype.md) calling, much like the previously mentioned generic functions.
 
 > [!NOTE]
-> Large shapes will degrade the performance of [`cf_gjk`](../collision/cf_gjk.md) and can cause bugs. It's highly recommended to use smaller shapes (with a volume preferably < 1000 units. If you need big shapes you should instead store all of your physics shapes in small form and simply render them at a much larger size.
+> Large shapes will degrade the performance of [`cf_gjk`](../collision/function/cf_gjk.md) and can cause bugs. It's highly recommended to use smaller shapes (with a volume preferably < 1000 units. If you need big shapes you should instead store all of your physics shapes in small form and simply render them at a much larger size.
 
 ## Swept Collision
 
 The purpose of swept collision is to prevent tunneling. Tunneling is when a shape moves so fast the collision check from one frame to another completely misses, and shapes can fly through each other as a result. One solution to tunneling is to use swept collision checks. All the other collision functions mentioned in this article (besides gjk) are called _discrete collision_.
 
-You may calculate the time of impact between two _linearly moving_ shapes (as in, no rotation allowed) with [`cf_toi`](../collision/cf_toi.md). This is a pretty advanced function, so be careful about reading the documentation page on it ([same as last link](../collision/cf_toi.md))! By calculating the time of impact you can implement a swept collision algorithm, perhaps like the one described in the previous links.
+You may calculate the time of impact between two _linearly moving_ shapes (as in, no rotation allowed) with [`cf_toi`](../collision/function/cf_toi.md). This is a pretty advanced function, so be careful about reading the documentation page on it ([same as last link](../collision/function/cf_toi.md))! By calculating the time of impact you can implement a swept collision algorithm, perhaps like the one described in the previous links.

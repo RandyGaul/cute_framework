@@ -27,13 +27,13 @@ int main(int argc, char* argv[])
 }
 ```
 
-Now is a good time to check out the [App Options](../app/cf_appoptionflagbits.md) page to see what kind of windows are available. This covers things like letting the window resize, what kind of graphics context to initialize, whether or not audio is enabled, etc.
+Now is a good time to check out the [App Options](../app/enum/cf_appoptionflagbits.md) page to see what kind of windows are available. This covers things like letting the window resize, what kind of graphics context to initialize, whether or not audio is enabled, etc.
 
 ## Gathering Input
 
 You have access to inputs from the keyboard, mouse, joypad, touch, and [IME inputs](https://learn.microsoft.com/en-us/windows/apps/design/input/input-method-editors). For more in-depth reading about input, see the [Input](../topics/input.md) page.
 
-Gather keyboard inputs by calling [`cf_key_down`](../input/cf_key_down.md) or [`cf_mouse_down`](../input/cf_mouse_down.md). These will return true for as long as the corresponding key is down. You may gather input after calling [`cf_app_update`](../app/cf_app_update.md).
+Gather keyboard inputs by calling [`cf_key_down`](../input/function/cf_key_down.md) or [`cf_mouse_down`](../input/function/cf_mouse_down.md). These will return true for as long as the corresponding key is down. You may gather input after calling [`cf_app_update`](../app/function/cf_app_update.md).
 
 Here is a basic demonstration of capturing keyboard and mouse inputs.
 
