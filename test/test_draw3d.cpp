@@ -1326,6 +1326,124 @@ TEST_CASE(test_draw3d_shape_shader)
 	return true;
 }
 
+// A shape shader's own uniform block (set = 3, binding = 1, named `shd_uniforms`) must reach
+// the fragment stage on every backend -- this is the shapes3d sample's fog uniform, reduced to
+// a single vec4 tint so a wrong or missing block shows up as the untinted built-in color.
+TEST_CASE(test_draw3d_shape_shader_user_uniform)
+{
+	if (!test_make_app(W, H)) return true; // Headless CI: no display/GPU.
+	const char* gles = getenv("CF_TEST_GLES");
+	if (gles && *gles == '1') REQUIRE(cf_query_backend() == CF_BACKEND_TYPE_GLES3);
+
+	CF_CanvasParams params = cf_canvas_defaults(W, H);
+	params.depth_stencil_enable = true;
+	CF_Canvas canvas = cf_make_canvas(params);
+	CF_Pixel* px = (CF_Pixel*)cf_alloc(W * H * (int)sizeof(CF_Pixel));
+
+	CF_Shader shd = cf_make_draw3d_shape_shader_from_source(
+		"layout (set = 3, binding = 1) uniform shd_uniforms {\n"
+		"    vec4 u_tint;\n"
+		"};\n"
+		"vec4 shader(vec4 color, ShapeParams params)\n"
+		"{\n"
+		"    return u_tint * color.a;\n"
+		"}\n");
+	REQUIRE(shd.id);
+
+	cf_app_update(NULL);
+	cf_draw3d_push_projection(cf_ortho(-1, 1, -1, 1, 0.1f, 10.0f));
+	cf_draw3d_push_view(cf_look_at(cf_v3(0, 0, 2), cf_v3(0, 0, 0), cf_v3(0, 1, 0)));
+
+	CF_V4 tint = cf_v4(1, 1, 0, 1); // Yellow -- distinct from the green built-in result below.
+	cf_draw3d_set_uniform("u_tint", &tint, CF_UNIFORM_TYPE_FLOAT4, 1);
+	cf_draw3d_push_shader(shd);
+	cf_draw3d_push_color(cf_make_color_rgb_f(0, 1, 0)); // Built-in green, replaced by the tint.
+	cf_draw3d_line(cf_v3(-0.5f, 0, 0), cf_v3(0.5f, 0, 0), 0.2f); // Stroke pipeline.
+	cf_draw3d_sphere(cf_v3(0, 0.5f, 0), 0.2f);                   // Solid pipeline.
+	cf_draw3d_pop_color();
+	cf_draw3d_pop_shader();
+
+	cf_render_to(canvas, true);
+	cf_app_draw_onto_screen(false);
+
+	CF_Readback rb = cf_canvas_readback(canvas);
+	REQUIRE(rb.id);
+	while (!cf_readback_ready(rb)) {}
+	cf_readback_data(rb, px, W * H * (int)sizeof(CF_Pixel));
+	cf_destroy_readback(rb);
+
+	CF_Pixel center = s_pixel(px, 0.5f, 0.5f); // Stroke, tinted by shd_uniforms.
+	CF_Pixel top = s_pixel(px, 0.5f, 0.25f);   // Solid, tinted by shd_uniforms.
+	REQUIRE(center.colors.r > 200 && center.colors.g > 200 && center.colors.b < 60);
+	REQUIRE(top.colors.r > 200 && top.colors.g > 200 && top.colors.b < 60);
+
+	cf_draw3d_pop_view();
+	cf_draw3d_pop_projection();
+	cf_destroy_shader(shd);
+	cf_free(px);
+	cf_destroy_canvas(canvas);
+	test_destroy_app();
+	return true;
+}
+
+// The built-in `u_shape_eye` (part of the shape pipeline's own FS block) must reach every shape
+// shader, including the default identity stub -- not just user-declared blocks. Encodes the
+// known camera position into color so a zeroed/unbound block shows up as black instead of white.
+TEST_CASE(test_draw3d_shape_params_eye)
+{
+	if (!test_make_app(W, H)) return true; // Headless CI: no display/GPU.
+	const char* gles = getenv("CF_TEST_GLES");
+	if (gles && *gles == '1') REQUIRE(cf_query_backend() == CF_BACKEND_TYPE_GLES3);
+
+	CF_CanvasParams params = cf_canvas_defaults(W, H);
+	params.depth_stencil_enable = true;
+	CF_Canvas canvas = cf_make_canvas(params);
+	CF_Pixel* px = (CF_Pixel*)cf_alloc(W * H * (int)sizeof(CF_Pixel));
+
+	CF_V3 eye = cf_v3(0, 0, 2);
+
+	// White wherever the eye lands exactly on the known camera position, black otherwise --
+	// a stub that must actually read params.eye, or the block gets dead-code eliminated.
+	CF_Shader shd = cf_make_draw3d_shape_shader_from_source(
+		"vec4 shader(vec4 color, ShapeParams params)\n"
+		"{\n"
+		"    float hit = step(distance(params.eye, vec3(0.0, 0.0, 2.0)), 0.001);\n"
+		"    return vec4(hit, hit, hit, color.a);\n"
+		"}\n");
+	REQUIRE(shd.id);
+
+	cf_app_update(NULL);
+	cf_draw3d_push_projection(cf_ortho(-1, 1, -1, 1, 0.1f, 10.0f));
+	cf_draw3d_push_view(cf_look_at(eye, cf_v3(0, 0, 0), cf_v3(0, 1, 0)));
+
+	cf_draw3d_push_shader(shd);
+	cf_draw3d_line(cf_v3(-0.5f, 0, 0), cf_v3(0.5f, 0, 0), 0.2f); // Stroke pipeline.
+	cf_draw3d_sphere(cf_v3(0, 0.5f, 0), 0.2f);                   // Solid pipeline.
+	cf_draw3d_pop_shader();
+
+	cf_render_to(canvas, true);
+	cf_app_draw_onto_screen(false);
+
+	CF_Readback rb = cf_canvas_readback(canvas);
+	REQUIRE(rb.id);
+	while (!cf_readback_ready(rb)) {}
+	cf_readback_data(rb, px, W * H * (int)sizeof(CF_Pixel));
+	cf_destroy_readback(rb);
+
+	CF_Pixel center = s_pixel(px, 0.5f, 0.5f); // Stroke.
+	CF_Pixel top = s_pixel(px, 0.5f, 0.25f);   // Solid.
+	REQUIRE(center.colors.r > 200 && center.colors.g > 200 && center.colors.b > 200);
+	REQUIRE(top.colors.r > 200 && top.colors.g > 200 && top.colors.b > 200);
+
+	cf_draw3d_pop_view();
+	cf_draw3d_pop_projection();
+	cf_destroy_shader(shd);
+	cf_free(px);
+	cf_destroy_canvas(canvas);
+	test_destroy_app();
+	return true;
+}
+
 // Stroke sizing: thickness scales with the transform stack in world mode, and holds a constant
 // on-screen width under perspective in pixel mode. Also covers the second attributes lane.
 TEST_CASE(test_draw3d_stroke_sizing)
@@ -1730,6 +1848,8 @@ TEST_SUITE(test_draw3d)
 	RUN_TEST_CASE(test_draw3d_msaa);
 	RUN_TEST_CASE(test_draw3d_shapes);
 	RUN_TEST_CASE(test_draw3d_shape_shader);
+	RUN_TEST_CASE(test_draw3d_shape_shader_user_uniform);
+	RUN_TEST_CASE(test_draw3d_shape_params_eye);
 	RUN_TEST_CASE(test_draw3d_stroke_sizing);
 	RUN_TEST_CASE(test_draw3d_attributes2);
 	RUN_TEST_CASE(test_draw3d_stats);

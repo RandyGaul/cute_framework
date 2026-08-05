@@ -997,11 +997,12 @@ CF_API bool CF_CALL cf_draw3d_peek_stroke_depth_write(void);
  *           };
  *           ```
  *
- *           Declare samplers at `set = 2` and uniform blocks at `set = 3, binding = 1` (binding 0
- *           belongs to the built-ins), exactly like 2d draw shaders; values flow through
- *           `cf_draw3d_set_uniform` and `cf_draw3d_set_texture` as usual. Destroy the returned
- *           shader with `cf_destroy_shader`. Snippets under `cf_shader_directory` hot-reload
- *           in place while you edit, exactly like 2d draw shaders.
+ *           Declare samplers at `set = 2` and your uniform block at `set = 3, binding = 1`
+ *           (binding 0 belongs to the built-ins), named `shd_uniforms` -- exactly like 2d draw
+ *           shaders. Values flow through `cf_draw3d_set_uniform` and `cf_draw3d_set_texture` as
+ *           usual. Destroy the returned shader with `cf_destroy_shader`. Snippets under
+ *           `cf_shader_directory` hot-reload in place while you edit, exactly like 2d draw
+ *           shaders.
  * @related  cf_make_draw3d_shape_shader_from_source cf_draw3d_push_shader cf_draw3d_set_uniform cf_draw3d_push_mesh_attributes
  */
 CF_API CF_Shader CF_CALL cf_make_draw3d_shape_shader(const char* virtual_path);

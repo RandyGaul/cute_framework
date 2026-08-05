@@ -934,7 +934,11 @@ static const char* s_stroke_fs_prefix =
 "layout (location = 7) in vec3 v_world;\n"
 "layout (location = 8) in vec4 v_attr;\n"
 "layout (location = 0) out vec4 result;\n"
-"layout (set = 3, binding = 0) uniform shape_fs_block {\n"
+// Named uniform_block, not shape_fs_block: cf_material_set_uniform_vs/_fs (used by both the
+// built-in setters below and plain cf_make_shader mesh shaders) stamp that exact block name, and
+// the GLES backend matches on block name before member name -- a different name here means this
+// block is declared but never bound on GLES/WebGL2.
+"layout (set = 3, binding = 0) uniform uniform_block {\n"
 "    vec4 u_shape_eye;\n"
 "    vec4 u_shape_fx;\n"        // x: outline width, y: glow radius (world units).
 "    vec4 u_shape_outline;\n"   // Premultiplied outline color.
@@ -1092,7 +1096,8 @@ static const char* s_solid_fs_prefix =
 "layout (location = 2) in vec3 v_world;\n"
 "layout (location = 3) in vec4 v_attr;\n"
 "layout (location = 0) out vec4 result;\n"
-"layout (set = 3, binding = 0) uniform shape_fs_block {\n"
+// See the stroke FS block above for why this must be named uniform_block.
+"layout (set = 3, binding = 0) uniform uniform_block {\n"
 "    vec4 u_shape_eye;\n"
 "};\n";
 
@@ -1918,6 +1923,9 @@ void cf_draw3d_prepare_uploads(int layer_lo, int layer_hi)
 	cf_update_instance_buffer(s_draw3d->staging_instances, s_draw3d->staging_scratch.data(), s_draw3d->staging_scratch.count());
 }
 
+// In cute_graphics.cpp.
+void cf_material_set_uniform_fs_internal(CF_Material material_handle, const char* block_name, const char* name, void* data, CF_UniformType type, int array_length);
+
 void cf_draw3d_process(CF_Command* cmd, CF_Canvas canvas, bool clear)
 {
 	CF_MeshCmd3d* mc = cmd->mesh3d;
@@ -1983,6 +1991,12 @@ void cf_draw3d_process(CF_Command* cmd, CF_Canvas canvas, bool clear)
 	cf_apply_mesh(mc->mesh);
 
 	CF_Material material = s_draw3d->material;
+	// This material is shared and never destroyed between flushes -- without clearing, uniform
+	// entries from every shape shader ever used pile up under both "uniform_block" and
+	// "shd_uniforms" below, and a same-named-but-differently-typed member in a later shader
+	// would corrupt that block's upload. The set calls below re-populate everything this flush
+	// needs, so clearing first is free.
+	cf_material_clear_uniforms(material);
 	cf_material_set_render_state(material, cmd->render_state);
 	// u_image is always bound: the atlas page for sprite-textured draws (below), and the 1x1
 	// white texture otherwise -- shaders sampling u_image degrade gracefully with no sprite
@@ -1999,6 +2013,14 @@ void cf_draw3d_process(CF_Command* cmd, CF_Canvas canvas, bool clear)
 		CF_Uniform3d& u = mc->uniforms[i];
 		cf_material_set_uniform_vs(material, u.name, u.data, u.type, u.array_length);
 		cf_material_set_uniform_fs(material, u.name, u.data, u.type, u.array_length);
+		// Shape shaders stitch the user's stub into the fragment stage at set = 3, binding = 1,
+		// named `shd_uniforms` -- exactly like 2d draw shaders (cf_draw.cpp's equivalent flush).
+		// Plain mesh shaders (cf_make_shader) keep only the `uniform_block` entry above; unmatched
+		// block/member names are ignored at bind time, so this is free for every other shader.
+		// Internal shape uniforms (u_shape_*) are excluded -- they belong to `uniform_block` only.
+		if (!u.internal) {
+			cf_material_set_uniform_fs_internal(material, "shd_uniforms", u.name, u.data, u.type, u.array_length);
+		}
 	}
 	cf_material_set_uniform_vs(material, "u_view_projection", &mc->vp, CF_UNIFORM_TYPE_MAT4, 1);
 	// Canvas dimensions for the built-in stroke shader's pixel-density math; unmatched
