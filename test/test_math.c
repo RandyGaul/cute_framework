@@ -294,6 +294,9 @@ TEST_CASE(test_slice_nonconvex_no_overflow_c) {
 	CF_SliceOutput out = cf_slice(plane, zig, 1e-4f);
 	REQUIRE(out.front.count <= CF_POLY_MAX_VERTS);
 	REQUIRE(out.back.count <= CF_POLY_MAX_VERTS);
+	return true;
+}
+
 TEST_CASE(test_polygon_degenerate_c) {
 	/* Zero-area (collinear) polygon: results must be finite, falling back
 	   to the vertex average. */
