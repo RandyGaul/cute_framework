@@ -262,7 +262,7 @@ typedef struct CF_HapticData
  * @param    player_index     An index representing the joypad for a particular player, starting at 0.
  * @return   Returns a new `CF_Haptic`.
  * @remarks  Returns `NULL` upon any errors, including missing support from the underlying device.
- * @related  CF_Haptic CF_Joypad cf_haptic_open cf_haptic_close cf_haptic_create_effect cf_haptic_run_effect cf_haptic_rumble_play
+ * @related  CF_Haptic cf_haptic_open cf_haptic_close cf_haptic_create_effect cf_haptic_run_effect cf_haptic_rumble_play
  */
 CF_API CF_Haptic CF_CALL cf_haptic_open(int player_index);
 

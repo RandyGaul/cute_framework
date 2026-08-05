@@ -254,7 +254,7 @@ CF_API void CF_CALL cf_unpause(void);
  * @function cf_get_ticks
  * @category time
  * @brief    Returns the number of ticks elapsed _right now_ since program start.
- * @remarks  `CF_TICK` and `CF_SECONDS` are only recorded once at the beginning of an update (see `cf_update_time`). This function instead
+ * @remarks  `CF_TICKS` and `CF_SECONDS` are only recorded once at the beginning of an update (see `cf_update_time`). This function instead
  *           queries the application for the number of ticks _right now_. Mostly useful for performance measuring.
  * @related  cf_get_ticks cf_get_tick_frequency
  */

@@ -209,10 +209,10 @@ CF_API CF_HttpsResult CF_CALL cf_https_process(CF_HttpsRequest request);
  * @function cf_https_response
  * @category web
  * @brief    Returns a `CF_HttpsResponse` from a request.
- * @remarks  A response can be retrieved from the `https` object after `cf_https_state` returns `CF_HTTPS_STATE_COMPLETED`.
+ * @remarks  A response can be retrieved from the `https` object after `cf_https_process` returns `CF_HTTPS_RESULT_OK`.
  *           Calling this function otherwise will get you a NULL pointer returned. This will get cleaned up automatically
  *           when `cf_https_destroy` is called.
- * @related  CF_Https cf_https_get cf_https_post cf_https_destroy cf_https_process cf_https_response cf_https_state
+ * @related  CF_HttpsRequest cf_https_get cf_https_post cf_https_destroy cf_https_process cf_https_response
  */
 CF_API CF_HttpsResponse CF_CALL cf_https_response(CF_HttpsRequest request);
 

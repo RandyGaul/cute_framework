@@ -445,7 +445,7 @@ CF_API bool CF_CALL cf_query_pixel_format(CF_PixelFormat format, CF_PixelFormatO
  * @brief    Bitmask flags that indicate the intended usage of a texture.
  * @remarks  These flags define how a texture will be utilized in graphics and compute pipelines.
  *           Multiple flags can be combined using a bitwise OR operation.
- * @related  CF_TextureUsageBits CF_TextureUsageFlags
+ * @related  CF_TextureUsageBits
  */
 #define CF_TEXTURE_USAGE_DEFS \
 	/* @entry The texture will be used as a sampler in shaders. */                    \
@@ -1485,7 +1485,7 @@ CF_API void CF_CALL cf_dispatch_compute(CF_ComputeShader shader, CF_Material mat
  * @brief    Multisample count used for MSAA render targets.
  * @remarks  Turning this on will attempt to use hardware to blur everything you render.
  *           You may not sample from canvas textures with sample counts greater than 1.
- * @related  CF_SampleCount cf_sample_count_string CF_TextureParams
+ * @related  CF_SampleCount cf_samplecount_string CF_TextureParams
  */
 #define CF_SAMPLE_COUNT_DEFS \
 	/* @entry No multisampling. */                          \
@@ -1807,7 +1807,7 @@ CF_API void CF_CALL cf_destroy_readback(CF_Readback readback);
  * @category graphics
  * @brief    The various supported vertex formats.
  * @remarks  Vertex formats define the type and size of vertex attributes in a vertex buffer.
- * @related  CF_VertexFormat cf_vertex_format_to_string CF_VertexFormatOp cf_query_vertex_format
+ * @related  CF_VertexFormat cf_vertex_format_string
  */
 #define CF_VERTEX_FORMAT_DEFS \
 	/* @entry 32-bit signed integer. */                     \
@@ -1884,7 +1884,7 @@ typedef enum CF_VertexFormat
  * @function cf_vertex_format_string
  * @category graphics
  * @brief    Returns a `CF_VertexFormat` converted to a C string.
- * @related  CF_VertexFormat cf_vertex_format_string CF_VertexAttribute cf_mesh_set_attributes
+ * @related  CF_VertexFormat cf_vertex_format_string CF_VertexAttribute cf_mesh_append_attributes
  */
 CF_INLINE const char* cf_vertex_format_string(CF_VertexFormat format) {
 	switch (format) {
@@ -1901,7 +1901,7 @@ CF_INLINE const char* cf_vertex_format_string(CF_VertexFormat format) {
  * @brief    Describes the memory layout of vertex attributes.
  * @remarks  An attribute is a component of a vertex, usually one, two, three or four floats/integers. A vertex is an input
  *           to a vertex shader. A `CF_Mesh` is a collection of vertices and attribute layout definitions.
- * @related  CF_VertexAttribute cf_mesh_set_attributes
+ * @related  CF_VertexAttribute cf_mesh_append_attributes
  */
 typedef struct CF_VertexAttribute
 {
@@ -2722,7 +2722,7 @@ CF_API void CF_CALL cf_material_clear_uniforms(CF_Material material);
  * @function cf_clear_color
  * @category graphics
  * @brief    Sets the color the app will use to clear the screen/canvases.
- * @related  cf_clear_screen cf_clear_depth_stencil
+ * @related  cf_clear_depth_stencil
  */
 CF_API void CF_CALL cf_clear_color(float red, float green, float blue, float alpha);
 
@@ -2731,7 +2731,7 @@ CF_API void CF_CALL cf_clear_color(float red, float green, float blue, float alp
  * @category graphics
  * @brief    Sets the depth/stencil values used when clearing a canvas, if depth/stencil are enabled (see `CF_RenderState`).
  * @remarks  This will get used when `cf_apply_canvas` or when `cf_app_draw_onto_screen` is called and `clear` parameter is true.
- * @related  cf_clear_screen cf_clear_depth_stencil
+ * @related  cf_clear_color
  */
 CF_API void CF_CALL cf_clear_depth_stencil(float depth, uint32_t stencil);
 
@@ -2801,7 +2801,7 @@ CF_API void CF_CALL cf_apply_blend_constants(float r, float g, float b, float a)
  * @brief    Uses a specific mesh for rendering.
  * @remarks  The mesh contains vertex data, defining the geometry to be rendered. The mesh vertices are sent to the GPU as inputs to
  *           the vertex shader. See `CF_Mesh` for an overview.
- * @related  CF_Mesh cf_create_mesh cf_apply_shader cf_draw_elements
+ * @related  CF_Mesh cf_make_mesh cf_apply_shader cf_draw_elements
  */
 CF_API void CF_CALL cf_apply_mesh(CF_Mesh mesh);
 
@@ -2811,7 +2811,7 @@ CF_API void CF_CALL cf_apply_mesh(CF_Mesh mesh);
  * @brief    Uses a specific shader + material combo for rendering.
  * @remarks  The `CF_Shader` defines how to render a mesh's geometry, set by `cf_apply_mesh`. The `CF_Mesh` holds input geometry to the
  *           vertex shader. A `CF_Material` defines uniform and texture inputs to the shader.
- * @related  CF_Mesh cf_create_mesh cf_apply_shader cf_draw_elements
+ * @related  CF_Mesh cf_make_mesh cf_apply_shader cf_draw_elements
  */
 CF_API void CF_CALL cf_apply_shader(CF_Shader shader, CF_Material material);
 
@@ -2819,7 +2819,7 @@ CF_API void CF_CALL cf_apply_shader(CF_Shader shader, CF_Material material);
  * @function cf_draw_elements
  * @category graphics
  * @brief    Draws all elements within the last applied mesh.
- * @related  CF_Mesh cf_create_mesh cf_apply_shader cf_apply_canvas
+ * @related  CF_Mesh cf_make_mesh cf_apply_shader cf_apply_canvas
  */
 CF_API void CF_CALL cf_draw_elements(void);
 

@@ -29,8 +29,8 @@ extern "C" {
 /**
  * @enum     CF_JoypadPowerLevel
  * @category input
- * @brief    The states of power for a `CF_Joypad`.
- * @related  CF_JoypadPowerLevel cf_joypad_power_level_to_string cf_joypad_power_level CF_Joypad
+ * @brief    The states of power for a joypad.
+ * @related  CF_JoypadPowerLevel cf_joypad_power_level_to_string cf_joypad_power_level
  */
 #define CF_JOYPAD_POWER_LEVEL_DEFS \
 	/* @entry */ \
@@ -61,7 +61,7 @@ typedef enum CF_JoypadPowerLevel
  * @category input
  * @brief    Convert an enum `CF_JoypadPowerLevel` to a c-style string.
  * @param    state        The state to convert to a string.
- * @related  CF_JoypadPowerLevel cf_joypad_power_level_to_string cf_joypad_power_level CF_Joypad
+ * @related  CF_JoypadPowerLevel cf_joypad_power_level_to_string cf_joypad_power_level
  */
 CF_INLINE const char* cf_joypad_power_level_to_string(CF_JoypadPowerLevel level)
 {
@@ -76,8 +76,8 @@ CF_INLINE const char* cf_joypad_power_level_to_string(CF_JoypadPowerLevel level)
 /**
  * @enum     CF_JoypadButton
  * @category input
- * @brief    Various buttons on a `CF_Joypad`.
- * @related  CF_JoypadButton cf_joypad_button_to_string CF_Joypad cf_joypad_button_down
+ * @brief    Various buttons on a joypad.
+ * @related  CF_JoypadButton cf_joypad_button_to_string cf_joypad_button_down
  */
 #define CF_JOYPAD_BUTTON_DEFS \
 	/* @entry */ \
@@ -128,7 +128,7 @@ typedef enum CF_JoypadButton
  * @category input
  * @brief    Convert an enum `CF_JoypadButton` to a c-style string.
  * @param    state        The state to convert to a string.
- * @related  CF_JoypadButton cf_joypad_button_to_string CF_Joypad cf_joypad_button_down
+ * @related  CF_JoypadButton cf_joypad_button_to_string cf_joypad_button_down
  */
 CF_INLINE const char* cf_joypad_button_to_string(CF_JoypadButton button)
 {
@@ -143,8 +143,8 @@ CF_INLINE const char* cf_joypad_button_to_string(CF_JoypadButton button)
 /**
  * @enum     CF_JoypadAxis
  * @category input
- * @brief    Various axis actions on a `CF_Joypad`.
- * @related  CF_JoypadAxis cf_joypad_axis_to_string CF_Joypad cf_joypad_axis CF_JoypadType
+ * @brief    Various axis actions on a joypad.
+ * @related  CF_JoypadAxis cf_joypad_axis_to_string cf_joypad_axis CF_JoypadType
  */
 #define CF_JOYPAD_AXIS_DEFS \
 	/* @entry */ \
@@ -177,7 +177,7 @@ typedef enum CF_JoypadAxis
  * @category input
  * @brief    Convert an enum `CF_JoypadAxis` to a c-style string.
  * @param    state        The state to convert to a string.
- * @related  CF_JoypadAxis cf_joypad_axis_to_string CF_Joypad cf_joypad_axis CF_JoypadType
+ * @related  CF_JoypadAxis cf_joypad_axis_to_string cf_joypad_axis CF_JoypadType
  */
 CF_INLINE const char* cf_joypad_axis_to_string(CF_JoypadAxis axis)
 {
@@ -193,7 +193,7 @@ CF_INLINE const char* cf_joypad_axis_to_string(CF_JoypadAxis axis)
  * @enum     CF_JoypadType
  * @category input
  * @brief    Various types of joypads by enum name.
- * @related  CF_Joypad CF_JoypadType cf_joypad_type_to_string cf_joypad_type
+ * @related  CF_JoypadType cf_joypad_type_to_string cf_joypad_type
  */
 #define CF_JOYPAD_TYPE_DEFS \
 	/* @entry */ \
@@ -240,7 +240,7 @@ typedef enum CF_JoypadType
  * @category input
  * @brief    Convert an enum `CF_JoypadType` to a c-style string.
  * @param    state        The state to convert to a string.
- * @related  CF_Joypad CF_JoypadType cf_joypad_type_to_string cf_joypad_type
+ * @related  CF_JoypadType cf_joypad_type_to_string cf_joypad_type
  */
 CF_INLINE const char* cf_joypad_type_to_string(CF_JoypadType type)
 {
@@ -260,7 +260,7 @@ CF_INLINE const char* cf_joypad_type_to_string(CF_JoypadType type)
  *           Cute Framework automatically initializes many mappings from the community organized mapping
  *           database on GitHub (https://github.com/gabomdq/SDL_GameControllerDB), so you probably don't need
  *           to ever call this function.
- * @related  CF_Joypad
+ * @related  cf_joypad_count
  */
 CF_API CF_Result CF_CALL cf_joypad_add_mapping(const char* mapping);
 
@@ -270,7 +270,7 @@ CF_API CF_Result CF_CALL cf_joypad_add_mapping(const char* mapping);
  * @brief    Returns the number of joypads currently connected to the system.
  * @remarks  This may return a number larger than `CF_MAX_JOYPADS` (8), though, only up to 8 will
  *           be seen by Cute Framework.
- * @related  CF_Joypad cf_joypad_count cf_joypad_open cf_joypad_close
+ * @related  cf_joypad_count
  */
 CF_API int CF_CALL cf_joypad_count(void);
 
@@ -279,7 +279,7 @@ CF_API int CF_CALL cf_joypad_count(void);
  * @category input
  * @brief    Returns true if a joypad is connected.
  * @param    player_index     An index represeting the joypad for a particular player, starting at 0.
- * @related  CF_Joypad cf_joypad_count cf_joypad_open cf_joypad_close
+ * @related  cf_joypad_count
  */
 CF_API bool CF_CALL cf_joypad_is_connected(int player_index);
 
@@ -288,7 +288,7 @@ CF_API bool CF_CALL cf_joypad_is_connected(int player_index);
  * @category input
  * @brief    Returns the power level of the joypad.
  * @param    player_index     An index represeting the joypad for a particular player, starting at 0.
- * @related  CF_JoypadPowerLevel cf_joypad_power_level_to_string cf_joypad_power_level CF_Joypad
+ * @related  CF_JoypadPowerLevel cf_joypad_power_level_to_string cf_joypad_power_level
  */
 CF_API CF_JoypadPowerLevel CF_CALL cf_joypad_power_level(int player_index);
 
@@ -297,7 +297,7 @@ CF_API CF_JoypadPowerLevel CF_CALL cf_joypad_power_level(int player_index);
  * @category input
  * @brief    Returns the name of the joypad.
  * @param    player_index     An index represeting the joypad for a particular player, starting at 0.
- * @related  CF_Joypad cf_joypad_count cf_joypad_open cf_joypad_close
+ * @related  cf_joypad_count
  */
 CF_API const char* CF_CALL cf_joypad_name(int player_index);
 
@@ -306,7 +306,7 @@ CF_API const char* CF_CALL cf_joypad_name(int player_index);
  * @category input
  * @brief    Returns the type of the joypad.
  * @param    player_index     An index represeting the joypad for a particular player, starting at 0.
- * @related  CF_Joypad CF_JoypadType
+ * @related  CF_JoypadType
  */
 CF_API CF_JoypadType CF_CALL cf_joypad_type(int player_index);
 
@@ -316,7 +316,7 @@ CF_API CF_JoypadType CF_CALL cf_joypad_type(int player_index);
  * @brief    Returns the USB vendor ID.
  * @param    player_index     An index represeting the joypad for a particular player, starting at 0.
  * @remarks  Returns 0 if not available.
- * @related  CF_Joypad CF_JoypadType
+ * @related  CF_JoypadType
  */
 CF_API uint16_t CF_CALL cf_joypad_vendor(int player_index);
 
@@ -326,7 +326,7 @@ CF_API uint16_t CF_CALL cf_joypad_vendor(int player_index);
  * @brief    Returns the USB product ID.
  * @param    player_index     An index represeting the joypad for a particular player, starting at 0.
  * @remarks  Returns 0 if not available.
- * @related  CF_Joypad CF_JoypadType
+ * @related  CF_JoypadType
  */
 CF_API uint16_t CF_CALL cf_joypad_product_id(int player_index);
 
@@ -336,7 +336,7 @@ CF_API uint16_t CF_CALL cf_joypad_product_id(int player_index);
  * @brief    Returns the serial number.
  * @param    player_index     An index represeting the joypad for a particular player, starting at 0.
  * @remarks  Returns 0 if not available.
- * @related  CF_Joypad CF_JoypadType
+ * @related  CF_JoypadType
  */
 CF_API const char* CF_CALL cf_joypad_serial_number(int player_index);
 
@@ -346,7 +346,7 @@ CF_API const char* CF_CALL cf_joypad_serial_number(int player_index);
  * @brief    Returns the firmware version.
  * @param    player_index     An index represeting the joypad for a particular player, starting at 0.
  * @remarks  Returns 0 if not available.
- * @related  CF_Joypad CF_JoypadType
+ * @related  CF_JoypadType
  */
 CF_API uint16_t CF_CALL cf_joypad_firmware_version(int player_index);
 
@@ -356,7 +356,7 @@ CF_API uint16_t CF_CALL cf_joypad_firmware_version(int player_index);
  * @brief    Returns the product version.
  * @param    player_index     An index represeting the joypad for a particular player, starting at 0.
  * @remarks  Returns 0 if not available.
- * @related  CF_Joypad CF_JoypadType
+ * @related  CF_JoypadType
  */
 CF_API uint16_t CF_CALL cf_joypad_product_version(int player_index);
 
@@ -366,7 +366,7 @@ CF_API uint16_t CF_CALL cf_joypad_product_version(int player_index);
  * @brief    Returns true if the button is currently down.
  * @param    player_index     An index represeting the joypad for a particular player, starting at 0.
  * @param    button     The button.
- * @related  CF_Joypad CF_JoypadButton cf_joypad_button_down cf_joypad_button_just_pressed cf_joypad_button_just_released cf_joypad_axis
+ * @related  CF_JoypadButton cf_joypad_button_down cf_joypad_button_just_pressed cf_joypad_button_just_released cf_joypad_axis
  */
 CF_API bool CF_CALL cf_joypad_button_down(int player_index, CF_JoypadButton button);
 
@@ -376,7 +376,7 @@ CF_API bool CF_CALL cf_joypad_button_down(int player_index, CF_JoypadButton butt
  * @brief    Returns true if the button was just pressed.
  * @param    player_index     An index represeting the joypad for a particular player, starting at 0.
  * @param    button     The button.
- * @related  CF_Joypad CF_JoypadButton cf_joypad_button_down cf_joypad_button_just_pressed cf_joypad_button_just_released cf_joypad_axis
+ * @related  CF_JoypadButton cf_joypad_button_down cf_joypad_button_just_pressed cf_joypad_button_just_released cf_joypad_axis
  */
 CF_API bool CF_CALL cf_joypad_button_just_pressed(int player_index, CF_JoypadButton button);
 
@@ -386,7 +386,7 @@ CF_API bool CF_CALL cf_joypad_button_just_pressed(int player_index, CF_JoypadBut
  * @brief    Returns true if the button was just released.
  * @param    player_index     An index represeting the joypad for a particular player, starting at 0.
  * @param    button     The button.
- * @related  CF_Joypad CF_JoypadButton cf_joypad_button_down cf_joypad_button_just_pressed cf_joypad_button_just_released cf_joypad_axis
+ * @related  CF_JoypadButton cf_joypad_button_down cf_joypad_button_just_pressed cf_joypad_button_just_released cf_joypad_axis
  */
 CF_API bool CF_CALL cf_joypad_button_just_released(int player_index, CF_JoypadButton button);
 
@@ -396,7 +396,7 @@ CF_API bool CF_CALL cf_joypad_button_just_released(int player_index, CF_JoypadBu
  * @brief    Returns a signed 16-bit integer representing how much a joypad axis is activated by.
  * @param    player_index     An index represeting the joypad for a particular player, starting at 0.
  * @param    axis       The axis.
- * @related  CF_Joypad CF_JoypadButton cf_joypad_button_down cf_joypad_button_just_pressed cf_joypad_button_just_released cf_joypad_axis
+ * @related  CF_JoypadButton cf_joypad_button_down cf_joypad_button_just_pressed cf_joypad_button_just_released cf_joypad_axis
  */
 CF_API int16_t CF_CALL cf_joypad_axis(int player_index, CF_JoypadAxis axis);
 
@@ -406,7 +406,7 @@ CF_API int16_t CF_CALL cf_joypad_axis(int player_index, CF_JoypadAxis axis);
  * @brief    Returns the previous axis value from the last frame.
  * @param    player_index     An index represeting the joypad for a particular player, starting at 0.
  * @param    axis       The axis.
- * @related  CF_Joypad CF_JoypadButton cf_joypad_button_down cf_joypad_button_just_pressed cf_joypad_button_just_released cf_joypad_axis
+ * @related  CF_JoypadButton cf_joypad_button_down cf_joypad_button_just_pressed cf_joypad_button_just_released cf_joypad_axis
  */
 CF_API int16_t CF_CALL cf_joypad_axis_prev(int player_index, CF_JoypadAxis axis);
 
@@ -418,7 +418,7 @@ CF_API int16_t CF_CALL cf_joypad_axis_prev(int player_index, CF_JoypadAxis axis)
  * @param    lo_frequency_rumble       Rumble intensity from 0 to 65535. Represents the low frequency motor (or left motor).
  * @param    hi_frequency_rumble       Rumble intensity from 0 to 65535. Represents the high frequency motor (or right motor).
  * @remarks  Calling this function cancels any previous rumbles. Sending in 0 for either low/high frequency parameters cancels the rumble.
- * @related  CF_Joypad CF_JoypadButton cf_joypad_button_down cf_joypad_button_just_pressed cf_joypad_button_just_released cf_joypad_axis
+ * @related  CF_JoypadButton cf_joypad_button_down cf_joypad_button_just_pressed cf_joypad_button_just_released cf_joypad_axis
  */
 CF_API void CF_CALL cf_joypad_rumble(int player_index, uint16_t lo_frequency_rumble, uint16_t hi_frequency_rumble, int duration_ms);
 

@@ -83,7 +83,7 @@ typedef struct cn_endpoint_t CF_Address;
 typedef enum cn_address_type_t CF_AddressType;
 
 /**
- * @enum     Address Type
+ * @enum     CF_AddressType
  * @category net
  * @brief    Available types of endpoints.
  * @related  CF_Address
@@ -190,7 +190,7 @@ CF_API void CF_CALL cf_crypto_sign_keygen(CF_CryptoSignPublic* public_key, CF_Cr
  * @param    address_count         Must be from 1 to 32 (inclusive). The number of addresses in `address_list`.
  * @param    address_list          A list of game servers the client can try connecting to, of length `address_count`.
  * @param    client_id             The unique client identifier (you pick this).
- * @param    user_data             Can be `NULL`. Optional buffer of data of `CF_PROTOCOL_CONNECT_TOKEN_USER_DATA_SIZE` (256) bytes.
+ * @param    user_data             Can be `NULL`. Optional buffer of data of `CF_CONNECT_TOKEN_USER_DATA_SIZE` (256) bytes.
  * @param    shared_secret_key     Only your webservice and game servers know this key.
  * @param    token_ptr_out         Pointer to your buffer, should be `CF_CONNECT_TOKEN_SIZE` bytes large.
  * @return   Returns any errors as `CF_Result`.
@@ -204,7 +204,7 @@ CF_API void CF_CALL cf_crypto_sign_keygen(CF_CryptoSignPublic* public_key, CF_Cr
  *           handshake completes successfully, the client will connect to the server.
  *           
  *           The connect token is protected by an AEAD primitive (https://en.wikipedia.org/wiki/Authenticated_encryption),
- *           which means the token cannot be modified or forged as long as the `cf_shared_secret_key` is
+ *           which means the token cannot be modified or forged as long as the `shared_secret_key` is
  *           not leaked. In the event your secret key is accidentally leaked, you can always roll a
  *           new one and distribute it to your webservice and game servers.
  * @related  CF_CryptoKey cf_crypto_generate_key cf_generate_connect_token cf_client_connect
@@ -219,7 +219,7 @@ CF_API CF_Result CF_CALL cf_generate_connect_token(uint64_t application_id, uint
  * @category net
  * @brief    Returns a new client.
  * @param    port            Port for opening a UDP socket.
- * @param    application_id  A unique number to identify your game, can be whatever value you like. This must be the same number as in `cf_server_create`.
+ * @param    application_id  A unique number to identify your game, can be whatever value you like. This must be the same number as in `cf_make_server`.
  * @param    use_ipv6        Whether or not the socket should turn on ipv6. Some users will not have ipv6 enabled, so consider setting to `false`.
  * @related  CF_Client cf_make_client cf_destroy_client cf_client_connect cf_generate_connect_token
  */
