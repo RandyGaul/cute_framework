@@ -1959,12 +1959,25 @@ static inline void s_upload_uniforms(CF_GL_ShaderInfo* shader_info, const CF_Mat
 
 	// Upload to GPU.
 	for (int block_index = 0; block_index < shader_info->num_uniform_blocks; ++block_index) {
-		void* block_data = uniform_data_ptrs[block_index];
-		if (block_data == NULL) { continue; }
-
 		const CF_GL_ShaderUniformBlock* block = &shader_info->uniform_blocks[block_index];
+		// Optimized out at link time -- the program doesn't use it, so it has no binding point.
+		if (block->info.block_index < 0) { continue; }
+
+		void* block_data = uniform_data_ptrs[block_index];
+		if (block_data == NULL) {
+			// No material uniform matched any member of this block, so phase 1 above never
+			// allocated it. glBufferData(..., NULL, ...) in s_build_uniforms left this ubo's
+			// contents unspecified (not guaranteed zero) -- upload zeros explicitly so a shader
+			// that reads an unset member gets deterministic values instead of driver-dependent
+			// garbage.
+			block_data = cf_arena_alloc(arena, block->info.block_size);
+			CF_MEMSET(block_data, 0, block->info.block_size);
+		}
 		glBindBuffer(GL_UNIFORM_BUFFER, shader_info->ubo[block_index]);
 		glBufferSubData(GL_UNIFORM_BUFFER, 0, block->info.block_size, block_data);
+		// A block the program actually uses must always have a buffer bound at its binding
+		// point, even when the material set none of its members -- WebGL2 rejects the draw
+		// otherwise ("used but unbound uniform buffer").
 		glBindBufferBase(GL_UNIFORM_BUFFER, block->info.block_index, shader_info->ubo[block_index]);
 	}
 	CF_POLL_OPENGL_ERROR();

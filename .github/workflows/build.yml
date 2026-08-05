@@ -214,3 +214,67 @@ jobs:
 
       - name: Build
         run: cmake --build build -j
+
+  gles-tests:
+    name: "linux / gles3"
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    # Emscripten always renders through the GLES3 backend (src/cute_app.cpp), but the `build` and
+    # `emscripten` jobs above never exercise it: `build` configures SDL with GL/GLES off entirely,
+    # and `emscripten` only compiles, it doesn't run the test suite. That gap is exactly how the
+    # shapes3d web sample shipped broken -- its uniforms never reached WebGL2 -- while every native
+    # backend stayed green. This job runs the real test suite through Mesa's GLES3 software
+    # rasterizer so a GLES-only regression like that one fails CI instead of only a user's browser.
+    steps:
+      - name: Install Linux Dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+          libgl1-mesa-dev libgles2-mesa-dev libegl1-mesa-dev libudev-dev \
+          libx11-dev libxext-dev libxrandr-dev libxi-dev libxcursor-dev libxfixes-dev libxinerama-dev \
+          xvfb mesa-vulkan-drivers libvulkan1
+
+      - uses: actions/checkout@master
+
+      - uses: ./.github/actions/setup-cmake
+
+      - name: Setup CCache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: linux-gles3
+
+      - name: Configure
+        run: >
+          cmake -B build -G Ninja
+          -DCMAKE_C_COMPILER_LAUNCHER=ccache
+          -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+          -DSDL_ALSA=OFF
+          -DSDL_CCACHE=ON
+          -DSDL_JACK=OFF
+          -DSDL_KMSDRM=OFF
+          -DSDL_OPENGL=ON
+          -DSDL_OPENGLES=ON
+          -DSDL_PIPEWIRE=OFF
+          -DSDL_PULSEAUDIO=OFF
+          -DSDL_RENDER=OFF
+          -DSDL_SNDIO=OFF
+          -DSDL_WAYLAND=OFF
+          -DSDL_X11=ON
+          -DSDL_X11_XSCRNSAVER=OFF
+          -DSDL_X11_XTEST=OFF
+          -DCF_FRAMEWORK_STATIC=ON
+
+      - name: Build
+        run: cmake --build build --target tests
+
+      # Scoped to test_draw3d rather than the full suite: this is the GLES backend's first-ever
+      # CI run, and other suites were never written with GLES in mind (unlike test_draw3d, which
+      # already asserts cf_query_backend() for its GLES-specific cases here). Broadening this once
+      # the lane is proven stable is tracked separately -- see the PR this job landed with.
+      - name: Tests (GLES3, headless GPU)
+        run: xvfb-run -a -s "-screen 0 1280x720x24" ./build/tests test_draw3d
+        env:
+          CF_TEST_GLES: "1"
+          SDL_AUDIODRIVER: dummy
+          LIBGL_ALWAYS_SOFTWARE: "1"
