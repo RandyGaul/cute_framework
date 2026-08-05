@@ -190,6 +190,27 @@ TEST_CASE(test_app_present_mode_mailbox_failure_does_not_corrupt_state)
 	return true;
 }
 
+// Regression test: cf_sdlgpu_supports_msaa used to cast the raw sample count straight to
+// SDL_GPUSampleCount instead of converting it to the enum's index (1/2/4/8 -> 0/1/2/3), so
+// cf_app_set_msaa(4) could never succeed on Metal/Vulkan/D3D12 (SDL_GPUSampleCount only goes
+// up to 3) while cf_app_set_msaa(2) accidentally worked (raw value 2 happens to equal the
+// enum index for 4x). This asserts 4x support whenever 2x is reported: red on this exact
+// case pre-fix (2x yes, 4x no) on real Metal hardware, green after. 4x-given-2x isn't a
+// documented guarantee on every backend (Vulkan's spec, for one, only mandates 1x), so this
+// is an empirically-motivated regression check, not a proven cross-backend invariant.
+TEST_CASE(test_app_msaa_4x_supported_when_2x_is)
+{
+	REQUIRE(!is_error(make_app(NULL, 0, 0, 0, 0, CF_APP_OPTIONS_HIDDEN_BIT | CF_APP_OPTIONS_NO_AUDIO_BIT, NULL)));
+
+	if (cf_app_set_msaa(2)) {
+		REQUIRE(cf_app_set_msaa(4));
+	}
+
+	destroy_app();
+
+	return true;
+}
+
 TEST_SUITE(test_app)
 {
 	RUN_TEST_CASE(test_app_destroy_safety);
@@ -205,4 +226,5 @@ TEST_SUITE(test_app)
 	RUN_TEST_CASE(test_app_present_mode_vsync_always_supported);
 	RUN_TEST_CASE(test_app_present_mode_off_round_trip);
 	RUN_TEST_CASE(test_app_present_mode_mailbox_failure_does_not_corrupt_state);
+	RUN_TEST_CASE(test_app_msaa_4x_supported_when_2x_is);
 }

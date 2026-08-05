@@ -19,6 +19,17 @@ static void* cf_fxc_compile(const char* hlsl, size_t hlsl_size, const char* targ
 
 using namespace Cute;
 
+// s_make_texture and the pipeline's multisample_state both cast a CF_SampleCount straight to
+// SDL_GPUSampleCount -- that's only correct because both enums index 1x/2x/4x/8x as 0/1/2/3
+// in the same order. Catch it at compile time if SDL ever renumbers its enum, rather than
+// silently mis-sampling MSAA targets again.
+static_assert(
+	(int)CF_SAMPLE_COUNT_1 == (int)SDL_GPU_SAMPLECOUNT_1 &&
+	(int)CF_SAMPLE_COUNT_2 == (int)SDL_GPU_SAMPLECOUNT_2 &&
+	(int)CF_SAMPLE_COUNT_4 == (int)SDL_GPU_SAMPLECOUNT_4 &&
+	(int)CF_SAMPLE_COUNT_8 == (int)SDL_GPU_SAMPLECOUNT_8,
+	"CF_SampleCount must share SDL_GPUSampleCount's index ordering");
+
 struct CF_CanvasInternal
 {
 	int w, h;
@@ -931,7 +942,9 @@ void cf_sdlgpu_attach(SDL_Window* window)
 bool cf_sdlgpu_supports_msaa(int sample_count)
 {
 	SDL_GPUTextureFormat fmt = SDL_GetGPUSwapchainTextureFormat(g_ctx.device, g_ctx.window);
-	return SDL_GPUTextureSupportsSampleCount(g_ctx.device, fmt, (SDL_GPUSampleCount)sample_count);
+	// sample_count is the raw MSAA multiplier (1/2/4/8); SDL_GPUSampleCount is indexed (0/1/2/3).
+	SDL_GPUSampleCount count = (SDL_GPUSampleCount)cf_clamp(sample_count >> 1, 0, 3);
+	return SDL_GPUTextureSupportsSampleCount(g_ctx.device, fmt, count);
 }
 
 void cf_sdlgpu_flush()
