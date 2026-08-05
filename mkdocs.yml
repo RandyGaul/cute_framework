@@ -79,6 +79,7 @@ not_in_nav: |
   /net/**
   /noise/**
   /path/**
+  /physics/**
   /png_cache/**
   /custom_sprite/**
   /random/**
@@ -118,6 +119,7 @@ nav:
       - Low Level Graphics: topics/low_level_graphics.md
       - Multithreading: topics/multithreading.md
       - Networking: topics/networking.md
+      - Physics: topics/physics.md
       - Cute Protocol Standard: topics/protocol.md
       - Random Numbers: topics/random_numbers.md
       - A Tour of CF Renderer: topics/renderer.md
@@ -166,6 +168,7 @@ nav:
       - Noise: samples/noise.md
       - OBJ Loading: samples/obj_loading.md
       - Outline (Stencil): samples/outline_stencil.md
+      - Physics: samples/physics.md
       - Pivot: samples/pivot.md
       - Pixel 3D: samples/pixel_3d.md
       - Platformer: samples/platformer.md
