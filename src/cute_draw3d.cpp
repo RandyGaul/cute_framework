@@ -57,6 +57,12 @@ struct CF_Uniform3d
 	// into their own bucket so a debug line's eye/effect churn never splits user mesh batches,
 	// and plain mesh submissions skip capturing them entirely.
 	bool internal;
+	// Closure semantics for recordings: true on a LIVE entry when it was set during the
+	// current recording (making it part of the recording); true on a CAPTURED entry when the
+	// name was ambient at record time -- untouched inside the recording -- so a draw list
+	// binds the live value for it at cf_draw_list time, record-time bytes as the fallback.
+	bool set_in_recording;
+	bool ambient;
 };
 
 struct CF_TextureBinding3d
@@ -64,6 +70,8 @@ struct CF_TextureBinding3d
 	const char* name; // Interned.
 	CF_Texture texture;
 	uint64_t hash; // Content hash of (name, texture id).
+	bool set_in_recording; // Same closure-tracking pair as CF_Uniform3d.
+	bool ambient;
 };
 
 // One instance's sprite image, captured at submission (cf_draw3d_push_texture). The entry is
@@ -385,6 +393,9 @@ static void s_set_uniform(const char* name, void* data, CF_UniformType type, int
 	for (int i = 0; i < s_draw3d->uniforms.count(); ++i) {
 		CF_Uniform3d& u = s_draw3d->uniforms[i];
 		if (u.name == name) {
+			// Setting a name during a recording makes it part of the recording -- even a
+			// same-value set, which is the idiom to deliberately freeze an ambient name.
+			if (s_draw->recording_list) u.set_in_recording = true;
 			if (u.type == type && u.array_length == array_length && u.hash == hash && !CF_MEMCMP(u.data, data, size)) {
 				return; // Unchanged; keep coalescing alive.
 			}
@@ -411,6 +422,8 @@ static void s_set_uniform(const char* name, void* data, CF_UniformType type, int
 	CF_MEMCPY(u.data, data, size);
 	u.hash = hash;
 	u.internal = internal;
+	u.set_in_recording = s_draw->recording_list != NULL;
+	u.ambient = false;
 	s_draw3d->uniforms.add(u);
 	(internal ? s_draw3d->shape_hash : s_draw3d->user_hash) ^= hash;
 }
@@ -453,6 +466,7 @@ void cf_draw3d_set_texture(const char* name, CF_Texture texture)
 	for (int i = 0; i < s_draw3d->textures.count(); ++i) {
 		CF_TextureBinding3d& t = s_draw3d->textures[i];
 		if (t.name == name) {
+			if (s_draw->recording_list) t.set_in_recording = true;
 			if (t.texture.id == texture.id) return;
 			t.texture = texture;
 			s_draw3d->user_hash ^= t.hash ^ hash;
@@ -464,6 +478,8 @@ void cf_draw3d_set_texture(const char* name, CF_Texture texture)
 	t.name = name;
 	t.texture = texture;
 	t.hash = hash;
+	t.set_in_recording = s_draw->recording_list != NULL;
+	t.ambient = false;
 	s_draw3d->textures.add(t);
 	s_draw3d->user_hash ^= hash;
 }
@@ -710,11 +726,17 @@ static void s_submit(CF_Mesh mesh, const CF_MeshInstance3d& inst, bool escape, c
 			void* dst = (char*)mc->uniform_block + offset;
 			CF_MEMCPY(dst, u.data, u.size);
 			u.data = dst;
+			// Ambient names (untouched inside the recording) stay free variables: the draw
+			// list binds the live value at cf_draw_list time, these bytes as the fallback.
+			u.ambient = s_draw->recording_list && !u.internal && !u.set_in_recording;
 			mc->uniforms.add(u);
 			offset += u.size;
 		}
 	}
 	mc->textures = s_draw3d->textures;
+	for (int i = 0; i < mc->textures.count(); ++i) {
+		mc->textures[i].ambient = s_draw->recording_list && !mc->textures[i].set_in_recording;
+	}
 	for (int i = 0; i < s_draw3d->vs_storage_count; ++i) mc->vs_storage[i] = s_draw3d->vs_storage[i];
 	mc->vs_storage_count = s_draw3d->vs_storage_count;
 	mc->sprite_textured = sprite_textured;
@@ -2149,8 +2171,11 @@ void cf_draw3d_list_begin()
 {
 	// Record in list-local space: replay composes the then-current transform stack on top.
 	s_draw3d->transforms.add(cf_m4_identity());
-	// Shaders at or below this depth are ambient -- free variables the replay binds later.
+	// Shaders at or below this depth are ambient -- free variables the draw list binds later.
 	s_draw3d->recording_shader_base = s_draw3d->shaders.count();
+	// Uniform/texture names untouched during the recording stay ambient the same way.
+	for (int i = 0; i < s_draw3d->uniforms.count(); ++i) s_draw3d->uniforms[i].set_in_recording = false;
+	for (int i = 0; i < s_draw3d->textures.count(); ++i) s_draw3d->textures[i].set_in_recording = false;
 }
 
 // True when two mesh commands render identically except for their per-instance data -- the
@@ -2173,13 +2198,14 @@ static bool s_bake_group_match(const CF_Command* a, const CF_Command* b)
 	for (int i = 0; i < ma->uniforms.count(); ++i) {
 		const CF_Uniform3d& ua = ma->uniforms[i];
 		const CF_Uniform3d& ub = mb->uniforms[i];
-		if (ua.name != ub.name || ua.type != ub.type || ua.array_length != ub.array_length || ua.size != ub.size) return false;
+		if (ua.name != ub.name || ua.type != ub.type || ua.array_length != ub.array_length || ua.size != ub.size || ua.ambient != ub.ambient) return false;
 		if (CF_MEMCMP(ua.data, ub.data, ua.size)) return false;
 	}
 	if (ma->textures.count() != mb->textures.count()) return false;
 	for (int i = 0; i < ma->textures.count(); ++i) {
 		if (ma->textures[i].name != mb->textures[i].name) return false;
 		if (ma->textures[i].texture.id != mb->textures[i].texture.id) return false;
+		if (ma->textures[i].ambient != mb->textures[i].ambient) return false;
 	}
 	if (ma->vs_storage_count != mb->vs_storage_count) return false;
 	for (int i = 0; i < ma->vs_storage_count; ++i) {
@@ -2385,6 +2411,7 @@ static bool s_replay_state_fusable(const CF_MeshCmd3d* a, const CF_MeshCmd3d* b,
 		const CF_MeshCmd3d* y = pass ? a : b;
 		for (int i = 0; i < x->uniforms.count(); ++i) {
 			const CF_Uniform3d& u = x->uniforms[i];
+			if (u.ambient) continue; // Both groups bind the same live value at draw-list time.
 			bool same = false;
 			for (int j = 0; j < y->uniforms.count(); ++j) {
 				const CF_Uniform3d& v = y->uniforms[j];
@@ -2396,6 +2423,7 @@ static bool s_replay_state_fusable(const CF_MeshCmd3d* a, const CF_MeshCmd3d* b,
 		}
 		for (int i = 0; i < x->textures.count(); ++i) {
 			const CF_TextureBinding3d& t = x->textures[i];
+			if (t.ambient) continue;
 			bool same = false;
 			for (int j = 0; j < y->textures.count(); ++j) {
 				if (y->textures[j].name != t.name) continue;
@@ -2476,8 +2504,49 @@ bool cf_draw3d_replay_cmd(CF_Command* dst, const CF_Command* src)
 	mc->gpu_instances = smc->gpu_instances; // Borrowed; the list's payload owns it.
 	mc->sprite_textured = smc->sprite_textured;
 	mc->image_refs_ref = smc->sprite_textured ? &smc->image_refs : NULL;
-	mc->uniforms = smc->uniforms; // Bytes stay in the list's uniform_block (borrowed).
+	mc->uniforms = smc->uniforms; // Bytes stay in the list's uniform_block (borrowed)...
 	mc->textures = smc->textures;
+	// ...unless ambient captures need binding: names untouched inside the recording resolve
+	// against the live set state now, record-time bytes as the fallback. Substituted values
+	// copy into a command-owned block so later set_uniform calls can't reach inside this draw.
+	bool any_ambient = false;
+	for (int i = 0; i < mc->uniforms.count(); ++i) any_ambient |= mc->uniforms[i].ambient;
+	if (any_ambient) {
+		int total = 0;
+		for (int i = 0; i < mc->uniforms.count(); ++i) {
+			CF_Uniform3d& u = mc->uniforms[i];
+			if (u.ambient) {
+				for (int j = 0; j < s_draw3d->uniforms.count(); ++j) {
+					const CF_Uniform3d& live = s_draw3d->uniforms[j];
+					if (live.internal || live.name != u.name) continue;
+					u.type = live.type;
+					u.array_length = live.array_length;
+					u.size = live.size;
+					u.data = live.data; // Copied below.
+					break;
+				}
+			}
+			total += u.size;
+		}
+		mc->uniform_block = CF_ALLOC(total);
+		int offset = 0;
+		for (int i = 0; i < mc->uniforms.count(); ++i) {
+			CF_Uniform3d& u = mc->uniforms[i];
+			void* dst = (char*)mc->uniform_block + offset;
+			CF_MEMCPY(dst, u.data, u.size);
+			u.data = dst;
+			offset += u.size;
+		}
+	}
+	for (int i = 0; i < mc->textures.count(); ++i) {
+		CF_TextureBinding3d& t = mc->textures[i];
+		if (!t.ambient) continue;
+		for (int j = 0; j < s_draw3d->textures.count(); ++j) {
+			if (s_draw3d->textures[j].name != t.name) continue;
+			t.texture = s_draw3d->textures[j].texture;
+			break;
+		}
+	}
 	for (int i = 0; i < smc->vs_storage_count; ++i) mc->vs_storage[i] = smc->vs_storage[i];
 	mc->vs_storage_count = smc->vs_storage_count;
 	// Sort anchor for translucent replays: the first baked instance's position under the

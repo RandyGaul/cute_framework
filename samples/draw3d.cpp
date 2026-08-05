@@ -87,9 +87,9 @@ void main()
 	v_world = world;
 	v_attrs = in_mesh_attributes;
 	gl_Position = u_view_projection * vec4(world, 1.0);
-	// Baked lists freeze their uniform captures at record time, so a per-frame camera
-	// position uniform would never reach a replay. It is also unnecessary: the camera stacks
-	// already deliver everything camera-dependent, and view depth for fog is just w.
+	// A per-frame camera uniform set outside the recording would stay live (ambient
+	// uniforms bind at cf_draw_list time), but none is needed: the camera stacks already
+	// deliver everything camera-dependent, and view depth for fog is just w.
 	v_depth = gl_Position.w;
 }
 )";

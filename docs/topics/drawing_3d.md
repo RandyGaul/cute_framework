@@ -157,7 +157,7 @@ The image lives wherever the texture atlas compiler decides, the sub-rect arrive
 
 Cameras are live at replay: a recorded level renders under whatever projection/view is current, and the current 3D transform stack moves the whole list for free. Baked instances also get exact inverse-transpose normal matrices (the immediate path reuses the model rows, exact for rigid transforms and uniform scale).
 
-A recording behaves like a **closure**: state set *inside* it is part of the recording; state inherited from outside binds at replay time. The transform stack always worked this way, and the shader follows the same rule -- pushed inside `begin`/`end` it records frozen, but a shader that was merely ambient stays a *free variable*: replay binds whatever is pushed then (falling back to the record-time shader when nothing is). That makes multi-pass rendering one-recording cheap:
+A recording behaves like a **closure**: state set *inside* it is part of the recording; state inherited from outside binds fresh each time the list draws. The transform stack always worked this way, and the shader and uniforms follow the same rule -- set inside `begin`/`end` they record frozen, but ambient state stays a *free variable*: `cf_draw_list` binds whatever is pushed or set then (record-time values as the fallback). That makes multi-pass rendering one-recording cheap:
 
 ```cpp
 CF_DrawList city = cf_make_draw_list();
@@ -171,11 +171,13 @@ cf_render_to(shadow_canvas, true);
 cf_draw3d_push_shader(lit_shd);     cf_draw_list(city);  cf_draw3d_pop_shader();
 ```
 
-Replays under a pass shader also **fuse**: adjacent baked groups that differ only by captured uniforms or textures the bound shader never declares collapse into a single draw -- a ten-material scene is one draw in a depth pass, because the depth shader reads none of the material state. `cf_draw3d_stats` counts replayed draws, so the receipts show it.
+Drawing a list under a pass shader also **fuses**: adjacent baked groups that differ only by frozen uniforms or textures the bound shader never declares collapse into a single draw -- a ten-material scene is one draw in a depth pass, because the depth shader reads none of the material state. `cf_draw3d_stats` counts draw-list draws, so the receipts show it.
+
+And the same closure rule covers uniforms: a name set only *outside* the recording stays live -- set `u_time` each frame and a baked level animates; a name set *inside* the recording freezes with it.
 
 Two things to know:
 
-- Baked lists freeze their uniform captures at record time. Per-frame camera-dependent values don't need uniforms anyway: the camera stacks deliver them, and view depth for fog arrives free as `gl_Position.w`. The one real trap: **uniform-driven skinning recorded into a list replays a single frozen pose** -- the bone bytes were snapshotted at the bake. Skinned characters inside lists use the storage-buffer pattern instead: the bake captures the buffer *handle* while its contents stay live, so updating the palette each frame animates replays normally (test-pinned in `test_draw3d_list_storage_buffer_live`).
+- Uniforms set inside a recording freeze their captures at record time. Per-frame camera-dependent values don't need uniforms anyway: the camera stacks deliver them, and view depth for fog arrives free as `gl_Position.w`. The one real trap: **uniform-driven skinning recorded into a list replays a single frozen pose** -- the bone bytes were snapshotted at the bake. Skinned characters inside lists use the storage-buffer pattern instead: the bake captures the buffer *handle* while its contents stay live, so updating the palette each frame animates replays normally (test-pinned in `test_draw3d_list_storage_buffer_live`).
 
 ## What Carries Over From the 2D API
 
@@ -206,7 +208,7 @@ Each common 3D need has a sample showing the pattern, because each one is a patt
 
 | Sample | What it proves |
 | --- | --- |
-| `draw3d` | A 10,000-building city recorded ONCE, replayed per pass under each pass's shader (ambient-shader closure semantics); shadow-mapped sun via a comparison sampler (hardware PCF); fog; procedural window lights |
+| `draw3d` | A 10,000-building city recorded ONCE, replayed per pass under each pass's shader (closure semantics: ambient shader + uniforms bind per pass); shadow-mapped sun via a comparison sampler (hardware PCF); fog; procedural window lights |
 | `pixel_3d` | Multi-pass pixel-art pipeline: two shadow maps (color-encoded depth + hand-rolled PCF), lit pass, view-space g-buffer, 2D post-process composite |
 | `skinning` | GPU skinning: joint/weight vertex attributes + a `mat4` array uniform; sixty strands, one shared skeleton, one instanced draw |
 | `billboards` | Sprite-textured camera-facing quads: cutout trees (depth-ordered, no sorting) and additive fireflies (order-independent) |

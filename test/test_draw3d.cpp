@@ -1893,6 +1893,83 @@ TEST_CASE(test_draw3d_list_replay_fusion)
 	return true;
 }
 
+// Uniform closure semantics: a uniform set OUTSIDE a recording stays a free variable -- the
+// draw list binds the live value at cf_draw_list time, record-time bytes as the fallback. A
+// uniform set INSIDE the recording is part of it and ignores later live changes.
+TEST_CASE(test_draw3d_list_ambient_uniforms)
+{
+	if (!test_make_app(W, H)) return true;
+
+	CF_Mesh mesh = s_make_quad(0.4f);
+	CF_Shader tint_shd = cf_make_shader_from_source(s_vs, s_tint_fs);
+	REQUIRE(tint_shd.id);
+	CF_CanvasParams params = cf_canvas_defaults(W, H);
+	params.depth_stencil_enable = true;
+	CF_Canvas canvas = cf_make_canvas(params);
+	CF_Pixel* px = (CF_Pixel*)cf_alloc(W * H * (int)sizeof(CF_Pixel));
+	cf_app_update(NULL);
+
+	// Ambient: u_tint set before the recording.
+	CF_DrawList ambient_list = cf_make_draw_list();
+	cf_draw3d_push_shader(tint_shd);
+	cf_draw3d_set_uniform_color("u_tint", cf_color_red());
+	cf_draw_list_begin(ambient_list);
+	cf_draw3d_push_mesh_attributes(cf_v4(1, 1, 1, 1));
+	cf_draw3d_mesh(mesh);
+	cf_draw3d_pop_mesh_attributes();
+	cf_draw_list_end();
+
+	// Frozen: u_tint set inside the recording.
+	CF_DrawList frozen_list = cf_make_draw_list();
+	cf_draw_list_begin(frozen_list);
+	cf_draw3d_set_uniform_color("u_tint", cf_color_red());
+	cf_draw3d_push_mesh_attributes(cf_v4(1, 1, 1, 1));
+	cf_draw3d_mesh(mesh);
+	cf_draw3d_pop_mesh_attributes();
+	cf_draw_list_end();
+
+	CF_Pixel center;
+	cf_draw3d_push_projection(cf_ortho(-1, 1, -1, 1, -1, 1));
+
+	// 1. No live change: the record-time fallback carries -- red.
+	cf_draw_list(ambient_list);
+	cf_render_to(canvas, true);
+	cf_app_draw_onto_screen(false);
+	test_readback(canvas, px);
+	center = s_pixel(px, 0.5f, 0.5f);
+	REQUIRE(center.colors.r > 200 && center.colors.g < 60);
+
+	// 2. Live u_tint green: the ambient capture binds it -- green.
+	cf_app_update(NULL);
+	cf_draw3d_set_uniform_color("u_tint", cf_color_green());
+	cf_draw_list(ambient_list);
+	cf_render_to(canvas, true);
+	cf_app_draw_onto_screen(false);
+	test_readback(canvas, px);
+	center = s_pixel(px, 0.5f, 0.5f);
+	REQUIRE(center.colors.g > 200 && center.colors.r < 60);
+
+	// 3. The frozen recording ignores the live green -- still red.
+	cf_app_update(NULL);
+	cf_draw_list(frozen_list);
+	cf_render_to(canvas, true);
+	cf_app_draw_onto_screen(false);
+	test_readback(canvas, px);
+	center = s_pixel(px, 0.5f, 0.5f);
+	REQUIRE(center.colors.r > 200 && center.colors.g < 60);
+
+	cf_draw3d_pop_shader();
+	cf_draw3d_pop_projection();
+	cf_free(px);
+	cf_destroy_draw_list(ambient_list);
+	cf_destroy_draw_list(frozen_list);
+	cf_destroy_canvas(canvas);
+	cf_destroy_shader(tint_shd);
+	cf_destroy_mesh(mesh);
+	test_destroy_app();
+	return true;
+}
+
 TEST_SUITE(test_draw3d)
 {
 	RUN_TEST_CASE(test_draw3d_transforms_and_coalescing);
@@ -1901,6 +1978,7 @@ TEST_SUITE(test_draw3d)
 	RUN_TEST_CASE(test_draw3d_escape_hatch);
 	RUN_TEST_CASE(test_draw3d_draw_list);
 	RUN_TEST_CASE(test_draw3d_list_ambient_shader);
+	RUN_TEST_CASE(test_draw3d_list_ambient_uniforms);
 	RUN_TEST_CASE(test_draw3d_list_replay_fusion);
 	RUN_TEST_CASE(test_draw3d_list_storage_buffer_live);
 	RUN_TEST_CASE(test_draw3d_baked_normal_matrices);
