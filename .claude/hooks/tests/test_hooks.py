@@ -172,6 +172,12 @@ class TestCheckRegistration(unittest.TestCase):
             r = run_hook(self.SCRIPT, p)
             self.assertEqual(r.returncode, 0, msg=p)
 
+    def test_path_prefixed_lookalike_does_not_register(self):
+        # libraries/imgui/imgui.cpp is in CMakeLists.txt, but src/imgui.cpp is NOT registered.
+        r = run_hook(self.SCRIPT, "src/imgui.cpp")
+        self.assertEqual(r.returncode, 2)
+        self.assertIn("CF_SRCS", r.stderr)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -13,6 +13,7 @@ Warn-only (exit 2 so the message reaches Claude). Runs from the repo root.
 """
 import json
 import os
+import re
 import sys
 
 # Headers deliberately not in the cute.h umbrella.
@@ -31,6 +32,11 @@ def read(path):
         return ""
 
 
+def registered(needle, text):
+    """True when needle appears as a path/token-bounded occurrence in text."""
+    return re.search(r"(?<![\w./-])" + re.escape(needle) + r"(?!\w)", text) is not None
+
+
 data = json.load(sys.stdin)
 file_path = data.get("tool_input", {}).get("file_path", "")
 if not file_path:
@@ -42,22 +48,22 @@ name = os.path.basename(rel)
 problems = []
 
 if rel.startswith("src/") and rel.endswith(".cpp") and rel.count("/") == 1:
-    if name not in read("CMakeLists.txt"):
+    if not registered("src/" + name, read("CMakeLists.txt")):
         problems.append(f"{name} is not listed in CF_SRCS in CMakeLists.txt.")
 
 elif (rel.startswith("include/") and rel.endswith(".h")
       and rel.count("/") == 1 and name.startswith("cute_")
       and not name.endswith("_shd.h") and name not in UMBRELLA_WHITELIST):
-    if name not in read("include/cute.h"):
+    if ('"' + name + '"') not in read("include/cute.h"):
         problems.append(f"{name} is not included by the umbrella header include/cute.h.")
 
 elif (rel.startswith("test/") and rel.endswith(".cpp")
       and rel.count("/") == 1 and name.startswith("test_")):
     stem = name[:-len(".cpp")]
-    if name not in read("test/CMakeLists.txt"):
+    if not registered(name, read("test/CMakeLists.txt")):
         problems.append(f"{name} is not listed in CF_TEST_SRCS in test/CMakeLists.txt.")
     main_cpp = read("test/main.cpp")
-    if stem not in main_cpp:
+    if not registered(stem, main_cpp):
         problems.append(
             f"suite '{stem}' is not registered in test/main.cpp "
             f"(needs TEST_SUITE({stem}); and RUN_TRACED({stem});)."
@@ -65,7 +71,7 @@ elif (rel.startswith("test/") and rel.endswith(".cpp")
 
 elif (rel.startswith("samples/") and rel.count("/") == 1
       and (rel.endswith(".c") or rel.endswith(".cpp"))):
-    if name not in read("samples/CMakeLists.txt"):
+    if not registered(name, read("samples/CMakeLists.txt")):
         problems.append(
             f"{name} has no add_sample(...) entry in samples/CMakeLists.txt."
         )
