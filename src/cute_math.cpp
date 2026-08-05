@@ -87,8 +87,12 @@ CF_SliceOutput cf_slice(CF_Halfspace slice_plane, CF_Poly slice_me, const float 
 	CF_ASSERT(slice_me.count);
 	int front_count = 0;
 	int back_count = 0;
-	v2 front[CF_POLY_MAX_VERTS+1];
-	v2 back[CF_POLY_MAX_VERTS+1];
+	// Each iteration pushes at most 2 verts per buffer (intersection + vertex).
+	// The documented contract is a convex polygon (at most CF_POLY_MAX_VERTS+1
+	// pushes), but out-of-contract non-convex input can cross the plane on every
+	// edge, so size for the true worst case rather than smashing the stack.
+	v2 front[CF_POLY_MAX_VERTS*2];
+	v2 back[CF_POLY_MAX_VERTS*2];
 	v2 a = slice_me.verts[slice_me.count - 1];
 	float da = distance(slice_plane, a);
 
@@ -98,32 +102,29 @@ CF_SliceOutput cf_slice(CF_Halfspace slice_plane, CF_Poly slice_me, const float 
 
 		if (in_front(db, k_epsilon)) {
 			if(behind(da, k_epsilon)) {
-				v2 i = intersect(b, a, db, da);
-				front[front_count++] = i;
-				back[back_count++] = i;
+				v2 p = intersect(b, a, db, da);
+				front[front_count++] = p;
+				back[back_count++] = p;
 			}
 			front[front_count++] = b;
 		} else if (behind(db, k_epsilon)) {
 			if (in_front(da, k_epsilon)) {
-				v2 i = intersect(a, b, da, db);
-				front[front_count++] = i;
-				back[back_count++] = i;
-			} else if (on(da, k_epsilon)) {
-				back[back_count++] = a;
+				v2 p = intersect(a, b, da, db);
+				front[front_count++] = p;
+				back[back_count++] = p;
 			}
 			back[back_count++] = b;
 		} else {
+			// On-plane vertices lie on the boundary of both halves.
 			front[front_count++] = b;
-			if (on(da, k_epsilon)) {
-				back[back_count++] = b;
-			}
+			back[back_count++] = b;
 		}
 
 		a = b;
 		da = db;
 	}
 
-	// CF_POLY_MAX_VERTS+1 verts potentially generated in a single polygon, truncate to CF_POLY_MAX_VERTS.
+	// More than CF_POLY_MAX_VERTS verts can be generated in a single polygon, truncate to CF_POLY_MAX_VERTS.
 	CF_SliceOutput out = { };
 	out.front.count = min(CF_POLY_MAX_VERTS, front_count);
 	out.back.count = min(CF_POLY_MAX_VERTS, back_count);
@@ -234,41 +235,49 @@ bool cf_poly_to_poly(const CF_Poly* A, const CF_Poly* B)
 
 CF_Raycast cf_ray_to_circle(CF_Ray A, CF_Circle B)
 {
-	CF_Raycast result;
+	CF_Raycast result = { };
 	c2Raycast cast;
-	result.hit = !!c2RaytoCircle(*(c2Ray*)&A, *(c2Circle*)&B, (c2Raycast*)&cast);
-	result.n = *(v2*)&cast.n;
-	result.t = cast.t;
+	if (c2RaytoCircle(*(c2Ray*)&A, *(c2Circle*)&B, &cast)) {
+		result.hit = true;
+		result.n = *(v2*)&cast.n;
+		result.t = cast.t;
+	}
 	return result;
 }
 
 CF_Raycast cf_ray_to_aabb(CF_Ray A, CF_Aabb B)
 {
-	CF_Raycast result;
+	CF_Raycast result = { };
 	c2Raycast cast;
-	result.hit = !!c2RaytoAABB(*(c2Ray*)&A, *(c2AABB*)&B, (c2Raycast*)&cast);
-	result.n = *(v2*)&cast.n;
-	result.t = cast.t;
+	if (c2RaytoAABB(*(c2Ray*)&A, *(c2AABB*)&B, &cast)) {
+		result.hit = true;
+		result.n = *(v2*)&cast.n;
+		result.t = cast.t;
+	}
 	return result;
 }
 
 CF_Raycast cf_ray_to_capsule(CF_Ray A, CF_Capsule B)
 {
-	CF_Raycast result;
+	CF_Raycast result = { };
 	c2Raycast cast;
-	result.hit = !!c2RaytoCapsule(*(c2Ray*)&A, *(c2Capsule*)&B, (c2Raycast*)&cast);
-	result.n = *(v2*)&cast.n;
-	result.t = cast.t;
+	if (c2RaytoCapsule(*(c2Ray*)&A, *(c2Capsule*)&B, &cast)) {
+		result.hit = true;
+		result.n = *(v2*)&cast.n;
+		result.t = cast.t;
+	}
 	return result;
 }
 
 CF_Raycast cf_ray_to_poly(CF_Ray A, const CF_Poly* B)
 {
-	CF_Raycast result;
+	CF_Raycast result = { };
 	c2Raycast cast;
-	result.hit = !!c2RaytoPoly(*(c2Ray*)&A, (c2Poly*)B, (c2Raycast*)&cast);
-	result.n = *(v2*)&cast.n;
-	result.t = cast.t;
+	if (c2RaytoPoly(*(c2Ray*)&A, (c2Poly*)B, &cast)) {
+		result.hit = true;
+		result.n = *(v2*)&cast.n;
+		result.t = cast.t;
+	}
 	return result;
 }
 CF_Manifold cf_circle_to_circle_manifold(CF_Circle A, CF_Circle B)
@@ -367,8 +376,11 @@ void cf_collide(const void* A, CF_ShapeType typeA, const void* B, CF_ShapeType t
 bool cf_cast_ray(CF_Ray A, const void* B, CF_ShapeType typeB, CF_Raycast* out)
 {
 	c2Raycast cast;
-	out->hit = !!c2CastRay(*(c2Ray*)&A, B, (C2_TYPE)typeB, (c2Raycast*)&cast);
-	out->n = *(v2*)&cast.n;
-	out->t = cast.t;
+	*out = { };
+	if (c2CastRay(*(c2Ray*)&A, B, (C2_TYPE)typeB, &cast)) {
+		out->hit = true;
+		out->n = *(v2*)&cast.n;
+		out->t = cast.t;
+	}
 	return out->hit;
 }

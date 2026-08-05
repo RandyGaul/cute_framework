@@ -265,6 +265,56 @@ TEST_CASE(test_model_gltf_external)
 	return true;
 }
 
+// cm_interleave: real streams land at their offsets, missing streams (this quad has no
+// joints/weights) write their documented defaults, so one attribute list serves skinned
+// and unskinned meshes alike.
+TEST_CASE(test_model_interleave)
+{
+	CM_LoadParams params = { 0 };
+	params.read_fn = s_read;
+	CM_Model* model = cm_load_ex(s_gltf, (int)CF_STRLEN(s_gltf), params);
+	REQUIRE(model);
+	CM_Primitive* prim = model->meshes[0].primitives;
+
+	typedef struct Vertex
+	{
+		float pos[3];
+		float n[3];
+		float t[4];
+		float uv[2];
+		float color[4];
+		uint16_t joints[4];
+		float weights[4];
+	} Vertex;
+	CM_VertexAttribute streams[7] = {
+		{ CM_STREAM_POSITION, CF_OFFSET_OF(Vertex, pos) },
+		{ CM_STREAM_NORMAL,   CF_OFFSET_OF(Vertex, n) },
+		{ CM_STREAM_TANGENT,  CF_OFFSET_OF(Vertex, t) },
+		{ CM_STREAM_UV,       CF_OFFSET_OF(Vertex, uv) },
+		{ CM_STREAM_COLOR,    CF_OFFSET_OF(Vertex, color) },
+		{ CM_STREAM_JOINTS,   CF_OFFSET_OF(Vertex, joints) },
+		{ CM_STREAM_WEIGHTS,  CF_OFFSET_OF(Vertex, weights) },
+	};
+	Vertex verts[4];
+	cm_interleave(prim, streams, 7, (int)sizeof(Vertex), verts);
+
+	// Vertex 1 of the unit quad: position (1,0,0), uv (1,0), COLOR_0 green.
+	REQUIRE(verts[1].pos[0] == 1.0f && verts[1].pos[1] == 0 && verts[1].pos[2] == 0);
+	REQUIRE(cf_abs(verts[1].uv[0] - 1.0f) < 0.001f && cf_abs(verts[1].uv[1]) < 0.001f);
+	REQUIRE(verts[1].color[0] < 0.01f && cf_abs(verts[1].color[1] - 1.0f) < 0.01f);
+
+	// Generated streams interleave like authored ones: +z normal, +x tangent.
+	REQUIRE(cf_abs(verts[0].n[2] - 1.0f) < 0.001f);
+	REQUIRE(cf_abs(verts[0].t[0] - 1.0f) < 0.001f && cf_abs(verts[0].t[3] - 1.0f) < 0.001f);
+
+	// Missing joints/weights write the rigid defaults: all bone 0, weights (1,0,0,0).
+	REQUIRE(verts[2].joints[0] == 0 && verts[2].joints[3] == 0);
+	REQUIRE(verts[2].weights[0] == 1.0f && verts[2].weights[1] == 0);
+
+	cm_free(model);
+	return true;
+}
+
 // Hostile-input regressions, all found by tools/cute_model_fuzz.c. Every case here
 // crashed or read out of bounds before the hardening pass; they must now be rejected
 // cleanly (NULL + an error string), never accepted with a dangling index.
@@ -337,5 +387,6 @@ TEST_CASE(test_model_malformed_rejected)
 TEST_SUITE(test_model)
 {
 	RUN_TEST_CASE(test_model_gltf_external);
+	RUN_TEST_CASE(test_model_interleave);
 	RUN_TEST_CASE(test_model_malformed_rejected);
 }
