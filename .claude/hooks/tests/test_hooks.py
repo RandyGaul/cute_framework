@@ -62,5 +62,28 @@ class TestBlockGeneratedFiles(unittest.TestCase):
         self.assertEqual(r.returncode, 0)
 
 
+class TestCheckIncludeGuard(unittest.TestCase):
+    SCRIPT = "check-include-guard.py"
+
+    def test_silent_on_clean_header(self):
+        r = run_hook(self.SCRIPT, FIXTURES / "include" / "cute_goodfixture.h")
+        self.assertEqual(r.returncode, 0)
+        self.assertEqual(r.stderr, "")
+
+    def test_warns_on_wrong_guard(self):
+        r = run_hook(self.SCRIPT, FIXTURES / "include" / "cute_wrongguard.h")
+        self.assertEqual(r.returncode, 2)
+        self.assertIn("CF_WRONGGUARD_H", r.stderr)
+
+    def test_warns_on_missing_copyright(self):
+        r = run_hook(self.SCRIPT, FIXTURES / "include" / "cute_nocopyright.h")
+        self.assertEqual(r.returncode, 2)
+        self.assertIn("copyright", r.stderr.lower())
+
+    def test_ignores_non_include_paths(self):
+        r = run_hook(self.SCRIPT, "src/cute_draw.cpp")
+        self.assertEqual(r.returncode, 0)
+
+
 if __name__ == "__main__":
     unittest.main()
