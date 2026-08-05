@@ -2704,10 +2704,12 @@ CF_INLINE int cf_collide_aabb(CF_Aabb a, CF_Aabb b) { return cf_overlaps(a, b); 
  * @function cf_make_aabb_verts
  * @category math
  * @brief    Returns a `CF_Aabb` that tightly contains all input verts.
+ * @remarks  If `count <= 0` a zero'd out `CF_Aabb` is returned and `verts` is not read (it may be `NULL`).
  * @related  CF_Aabb cf_make_aabb_verts cf_aabb_verts
  */
 CF_INLINE CF_Aabb cf_make_aabb_verts(const CF_V2* verts, int count)
 {
+	if (count <= 0) return cf_make_aabb(cf_v2(0, 0), cf_v2(0, 0));
 	CF_V2 vmin = verts[0];
 	CF_V2 vmax = vmin;
 	for (int i = 0; i < count; ++i) {
@@ -2817,12 +2819,18 @@ CF_INLINE CF_Raycast cf_ray_to_halfspace(CF_Ray A, CF_Halfspace B)
  * @param    b          The end point of a line segment.
  * @param    p          The query point.
  * @remarks  See [this article](https://randygaul.github.io/math/collision-detection/2014/07/01/Distance-Point-to-Line-Segment.html) for implementation details.
+ *           If `a == b` the segment is a point and the squared distance from `p` to `a` is returned.
  * @related  CF_V2 CF_Ray
  */
 CF_INLINE float cf_distance_sq(CF_V2 a, CF_V2 b, CF_V2 p)
 {
 	CF_V2 n = cf_sub(b, a);
 	CF_V2 pa = cf_sub(a, p);
+	float nn = cf_dot(n, n);
+
+	// Degenerate segment where a == b
+	if (nn == 0.0f) return cf_dot(pa, pa);
+
 	float c = cf_dot(n, pa);
 
 	// Closest point is a
@@ -2833,7 +2841,7 @@ CF_INLINE float cf_distance_sq(CF_V2 a, CF_V2 b, CF_V2 p)
 	if (cf_dot(n, bp) > 0.0f) return cf_dot(bp, bp);
 
 	// Closest point is between a and b
-	CF_V2 e = cf_sub(pa, cf_mul_v2_f(n, (c / cf_dot(n, n))));
+	CF_V2 e = cf_sub(pa, cf_mul_v2_f(n, (c / nn)));
 	return cf_dot(e, e);
 }
 

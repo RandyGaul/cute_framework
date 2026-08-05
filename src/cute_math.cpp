@@ -30,6 +30,9 @@ using namespace Cute;
 
 CF_V2 cf_center_of_mass(CF_Poly poly)
 {
+	if (poly.count <= 0) return V2(0,0);
+	if (poly.count == 1) return poly.verts[0];
+	if (poly.count == 2) return (poly.verts[0] + poly.verts[1]) * 0.5f;
 	v2 p0 = poly.verts[0];
 	float area_sum = 0;
 	const float inv3 = 1.0f / 3.0f;
@@ -47,6 +50,13 @@ CF_V2 cf_center_of_mass(CF_Poly poly)
 		// Center of mass is the area-weighted centroid.
 		// Centroid is the average of all vertices.
 		center_of_mass += (p0 + p1 + p2) * (area_of_triangle * inv3);
+	}
+
+	// Degenerate (zero-area) polygon -- fall back to the vertex average.
+	if (area_sum == 0) {
+		v2 average = V2(0,0);
+		for (int i = 0; i < poly.count; ++i) average += poly.verts[i];
+		return average * (1.0f / poly.count);
 	}
 
 	center_of_mass *= 1.0f / area_sum;
@@ -162,6 +172,12 @@ CF_V2 cf_centroid(const CF_V2* cf_verts, int count)
 		float area = 0.5f * cf_cross(e1, e2);
 		area_sum += area;
 		c = c + (p1 + p2 + p3) * area * (1.0f/3.0f);
+	}
+	// Degenerate (zero-area) polygon -- fall back to the vertex average.
+	if (area_sum == 0) {
+		CF_V2 average = cf_v2(0, 0);
+		for (int i = 0; i < count; ++i) average = average + verts[i];
+		return average * (1.0f / count);
 	}
 	return c * (1.0f / area_sum) + p0;
 }
