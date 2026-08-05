@@ -515,6 +515,7 @@ static const char* s_block_vs =
 "layout (location = 0) out vec3 v_world;\n"
 "layout (location = 1) out vec3 v_normal;\n"
 "layout (location = 2) out vec4 v_color;\n"
+"layout (location = 3) out float v_glass;\n"
 "layout (set = 1, binding = 0) uniform uniform_block {\n"
 "	mat4 u_view_projection;\n"
 "	vec4 u_time;\n"
@@ -530,6 +531,7 @@ static const char* s_block_vs =
 "	v_world = world;\n"
 "	v_normal = n;\n"
 "	v_color = in_mesh_attributes;\n"
+"	v_glass = in_uv_rect.y;\n" // Glass opacity; 0 for the (opaque) rest of the world.\n
 "	gl_Position = u_view_projection * vec4(world, 1.0);\n"
 "}\n";
 
@@ -537,6 +539,7 @@ static const char* s_block_fs =
 "layout (location = 0) in vec3 v_world;\n"
 "layout (location = 1) in vec3 v_normal;\n"
 "layout (location = 2) in vec4 v_color;\n"
+"layout (location = 3) in float v_glass;\n"
 "layout (location = 0) out vec4 result;\n"
 "layout (set = 2, binding = 0) uniform sampler2DArray u_shadow;\n"
 "layout (set = 3, binding = 0) uniform uniform_block {\n"
@@ -589,7 +592,8 @@ static const char* s_block_fs =
 "	float fog = 1.0 - exp(-u_fog_color.w * dist);\n"
 "	fog = min(fog + 0.16 * exp(-max(v_world.y - 1.0, 0.0) * 0.30) * min(dist * 0.02, 1.0), 1.0);\n"
 "	vec3 col = mix(lit, u_fog_color.rgb, fog);\n"
-"	result = vec4(col, 1.0);\n"
+"	// Glass submissions blend with their lane opacity; everything else stays opaque.\n"
+"	result = vec4(col, v_glass > 0.0 ? v_glass : 1.0);\n"
 "}\n";
 
 // The sky: vertical gradient with a warm horizon band and a soft moon. HDR out.
@@ -767,6 +771,69 @@ static void s_submit_block(CF_Mesh cube, const Block* b)
 	s_submit_block_ex(cube, b->center, b->scale, b->color, b->emissive, b->sway);
 }
 
+// One translucent glass block: opacity rides the second user lane, classic alpha blend,
+// no depth write -- draw3d's translucent sort orders it against the world automatically.
+static void s_submit_glass_block(CF_Mesh cube, CF_V3 center, CF_V3 scale, CF_Color color, float emissive, float alpha)
+{
+	CF_RenderState rs = cf_render_state_3d_defaults();
+	rs.depth_write_enabled = false;
+	rs.blend.enabled = true;
+	rs.blend.rgb_op = CF_BLEND_OP_ADD;
+	rs.blend.rgb_src_blend_factor = CF_BLENDFACTOR_SRC_ALPHA;
+	rs.blend.rgb_dst_blend_factor = CF_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
+	rs.blend.alpha_op = CF_BLEND_OP_ADD;
+	rs.blend.alpha_src_blend_factor = CF_BLENDFACTOR_ONE;
+	rs.blend.alpha_dst_blend_factor = CF_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
+	cf_draw3d_push_render_state(rs);
+	cf_draw3d_push();
+	cf_draw3d_translate(center);
+	cf_draw3d_scale(scale);
+	cf_draw3d_push_mesh_attributes(cf_v4(color.r, color.g, color.b, emissive));
+	cf_draw3d_push_mesh_attributes2(cf_v4(0, alpha, 1, 1));
+	cf_draw3d_mesh(cube);
+	cf_draw3d_pop_mesh_attributes2();
+	cf_draw3d_pop_mesh_attributes();
+	cf_draw3d_pop();
+	cf_draw3d_pop_render_state();
+}
+
+// A little blocky lantern in the world's own visual language: bronze frame, translucent
+// glass body, a warm core that burns brighter with every carried firefly -- and the catch
+// itself drifting around inside the glass. Local space: roughly unit height, scaled by `s`.
+static void s_draw_lantern(CF_Mesh cube, CF_V3 center, float s, float yaw, float core_glow, int specks, float t)
+{
+	cf_draw3d_push();
+	cf_draw3d_translate(center);
+	cf_draw3d_rotate(cf_quat_from_axis_angle(cf_v3(0, 1, 0), yaw));
+	cf_draw3d_scale(cf_v3(s, s, s));
+	CF_Color bronze = cf_make_color_rgb_f(0.15f, 0.11f, 0.08f);
+	// Base plate, cap, and peak.
+	s_submit_block_ex(cube, cf_v3(0, -0.62f, 0), cf_v3(0.46f, 0.08f, 0.46f), bronze, 0.02f, 0);
+	s_submit_block_ex(cube, cf_v3(0, 0.60f, 0), cf_v3(0.42f, 0.08f, 0.42f), bronze, 0.02f, 0);
+	s_submit_block_ex(cube, cf_v3(0, 0.73f, 0), cf_v3(0.13f, 0.08f, 0.13f), bronze, 0.02f, 0);
+	// Four corner posts.
+	for (int i = 0; i < 4; ++i) {
+		float px = (i & 1) ? 0.36f : -0.36f;
+		float pz = (i & 2) ? 0.36f : -0.36f;
+		s_submit_block_ex(cube, cf_v3(px, 0, pz), cf_v3(0.08f, 0.60f, 0.08f), bronze, 0.02f, 0);
+	}
+	// The core flame.
+	s_submit_block_ex(cube, cf_v3(0, -0.18f, 0), cf_v3(0.15f, 0.15f, 0.15f),
+		cf_make_color_rgb_f(1.0f, 0.72f, 0.30f), core_glow, 0);
+	// The catch, drifting inside the glass. Kept dimmer than loose fireflies so each
+	// speck stays readable through the glass instead of fusing into one bloom blob.
+	for (int i = 0; i < specks; ++i) {
+		float a = t * 1.6f + (float)i * 2.4f;
+		CF_V3 off = cf_v3(cosf(a) * 0.19f, sinf(t * 2.3f + (float)i * 1.7f) * 0.24f + 0.06f, sinf(a) * 0.19f);
+		float pulse = 2.8f + sinf(t * 3.1f + (float)i * 2.2f) * 1.2f;
+		s_submit_block_ex(cube, off, cf_v3(0.055f, 0.055f, 0.055f), cf_make_color_rgb_f(1.0f, 0.68f, 0.24f), pulse, 0);
+	}
+	// The glass body, lit faintly by its own core.
+	s_submit_glass_block(cube, cf_v3(0, 0, 0), cf_v3(0.34f, 0.56f, 0.34f),
+		cf_make_color_rgb_f(0.78f, 0.87f, 0.95f), 0.08f + core_glow * 0.05f, 0.30f);
+	cf_draw3d_pop();
+}
+
 // Everything that moves or glows dynamically: fireflies, the jar, the shrine lanterns.
 static void s_draw_dynamic(CF_Mesh cube, CF_V3 player, CF_V3 fwd, float t)
 {
@@ -785,22 +852,25 @@ static void s_draw_dynamic(CF_Mesh cube, CF_V3 player, CF_V3 fwd, float t)
 			cf_make_color_rgb_f(1.0f, 0.68f, 0.24f), cf_max(pulse, 1.2f) * fade, 0);
 	}
 
-	// The jar: a pale glass block on its stump until taken, then held low in view,
-	// glowing with its catch.
+	// The lantern: resting on its stump until taken, then held low in view, glowing
+	// brighter with every firefly inside -- which also drift around in the glass.
 	if (g_game.stage == STAGE_FIND_JAR) {
 		float bob = sinf(t * 1.7f) * 0.04f;
-		s_submit_block_ex(cube, cf_add_v3(g_jar_pos, cf_v3(0, 0.18f + bob, 0)), cf_v3(0.34f, 0.42f, 0.34f),
-			cf_make_color_rgb_f(0.75f, 0.85f, 0.92f), 0.55f + sinf(t * 2.4f) * 0.2f, 0);
+		s_draw_lantern(cube, cf_add_v3(g_jar_pos, cf_v3(0, 0.28f + bob, 0)), 0.32f,
+			t * 0.35f, 0.55f + sinf(t * 2.4f) * 0.2f, 0, t);
 	} else {
 		CF_V3 right = cf_norm(cf_cross(cf_v3(fwd.x, 0, fwd.z), cf_v3(0, 1, 0)));
 		CF_V3 hold = cf_add_v3(player, cf_add_v3(cf_mul_v3_f(fwd, 0.85f),
 			cf_add_v3(cf_mul_v3_f(right, 0.30f), cf_v3(0, -0.30f + sinf(t * 2.1f) * 0.008f, 0))));
-		float glow = 1.1f + 1.5f * (float)g_game.in_jar;
-		s_submit_block_ex(cube, hold, cf_v3(0.055f, 0.07f, 0.055f),
-			cf_make_color_rgb_f(1.0f, 0.72f, 0.30f), glow, 0);
+		float glow = 0.8f + 0.7f * (float)g_game.in_jar;
+		// Face the camera, with a small lazy swing as you walk.
+		float yaw = atan2f(fwd.x, fwd.z) + sinf(t * 1.9f) * 0.07f;
+		int specks = g_game.in_jar < 4 ? g_game.in_jar : 4;
+		s_draw_lantern(cube, hold, 0.115f, yaw, glow, specks, t);
 	}
 
-	// Shrine lanterns: lit ones burn warm; unlit ones are dark glass.
+	// Shrine lanterns: the same little lantern, big; lit ones burn warm, unlit ones
+	// hang dark until a delivery wakes them.
 	for (int i = 0; i < SHRINE_LANTERNS; ++i) {
 		float ang = (float)i / SHRINE_LANTERNS * CF_TAU;
 		float px = g_shrine_pos.x + cosf(ang) * 5.5f;
@@ -808,8 +878,7 @@ static void s_draw_dynamic(CF_Mesh cube, CF_V3 player, CF_V3 fwd, float t)
 		float pg = s_ground(px, pz);
 		bool lit = i < g_game.delivered;
 		float em = lit ? 3.0f + sinf(t * 1.9f + i) * 0.7f : 0.05f;
-		CF_Color c = lit ? cf_make_color_rgb_f(1.0f, 0.72f, 0.30f) : cf_make_color_rgb_f(0.5f, 0.62f, 0.72f);
-		s_submit_block_ex(cube, cf_v3(px, pg + 3.1f, pz), cf_v3(0.55f, 0.55f, 0.55f), c, em, 0);
+		s_draw_lantern(cube, cf_v3(px, pg + 3.1f, pz), 0.62f, ang, em, lit ? 2 : 0, t);
 	}
 
 	// The altar heart: dark until awakened, then a rising sunstone.
@@ -825,6 +894,33 @@ static void s_draw_dynamic(CF_Mesh cube, CF_V3 player, CF_V3 fwd, float t)
 // Screenshots.
 
 static int s_shot_count;
+// --record <seconds>: dump every frame as a numbered png while forcing dt to exactly
+// 1/30s, so the sim advances one video frame per rendered frame no matter how long the
+// readbacks stall. Assemble with: ffmpeg -framerate 30 -i fireflies_rec_%05d.png out.mp4
+static float g_record_until;
+static int s_rec_count;
+static void s_record_frame(void)
+{
+	CF_Canvas canvas = cf_app_get_canvas();
+	int w = 0, h = 0;
+	cf_canvas_get_size(canvas, &w, &h);
+	CF_Pixel* px = (CF_Pixel*)cf_alloc((size_t)w * h * sizeof(CF_Pixel));
+	CF_Readback rb = cf_canvas_readback(canvas);
+	if (rb.id) {
+		while (!cf_readback_ready(rb)) {}
+		cf_readback_data(rb, px, w * h * (int)sizeof(CF_Pixel));
+		cf_destroy_readback(rb);
+		CF_Image img;
+		img.w = w;
+		img.h = h;
+		img.pix = px;
+		char path[256];
+		snprintf(path, sizeof(path), "/fireflies_rec_%05d.png", s_rec_count++);
+		cf_image_save_png(path, &img);
+	}
+	cf_free(px);
+}
+
 static void s_screenshot(void)
 {
 	CF_Canvas canvas = cf_app_get_canvas();
@@ -952,6 +1048,7 @@ int main(int argc, char* argv[])
 		if (!strcmp(argv[i], "--auto")) g_auto.enabled = true;
 		else if (!strcmp(argv[i], "--shot") && i + 1 < argc) { if (shot_n < 16) shot_times[shot_n++] = (float)atof(argv[++i]); }
 		else if (!strcmp(argv[i], "--exit-at") && i + 1 < argc) exit_at = (float)atof(argv[++i]);
+		else if (!strcmp(argv[i], "--record") && i + 1 < argc) g_record_until = (float)atof(argv[++i]);
 	}
 
 	int options = CF_APP_OPTIONS_WINDOW_POS_CENTERED_BIT | CF_APP_OPTIONS_RESIZABLE_BIT;
@@ -1032,7 +1129,7 @@ int main(int argc, char* argv[])
 
 	while (cf_app_is_running()) {
 		cf_app_update(NULL);
-		float dt = CF_DELTA_TIME;
+		float dt = g_record_until > 0 ? (1.0f / 30.0f) : CF_DELTA_TIME;
 		t += dt;
 
 		Input in;
@@ -1314,6 +1411,7 @@ int main(int argc, char* argv[])
 				shot_times[i] = -1.0f;
 			}
 		}
+		if (g_record_until > 0 && t <= g_record_until) s_record_frame();
 		if (exit_at > 0 && t >= exit_at) break;
 	}
 
