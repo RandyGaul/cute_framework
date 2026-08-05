@@ -33,7 +33,7 @@ except OSError:
 
 bad = []
 for lineno, line in enumerate(lines, 1):
-    for m in re.finditer(r"@([A-Za-z_]\w*)", line):
+    for m in re.finditer(r"(?:^|\s)@([A-Za-z_]\w*)", line):
         if m.group(1) not in ALLOWED:
             bad.append((lineno, "@" + m.group(1)))
 

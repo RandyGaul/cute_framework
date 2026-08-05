@@ -104,6 +104,13 @@ class TestCheckDocsTags(unittest.TestCase):
         r = run_hook(self.SCRIPT, "src/cute_draw.cpp")
         self.assertEqual(r.returncode, 0)
 
+    def test_ignores_at_symbols_mid_token(self):
+        # The real docs parser only reacts to whitespace-delimited @tokens,
+        # so @ symbols in URLs or other mid-token positions should not trigger.
+        r = run_hook(self.SCRIPT, FIXTURES / "include" / "cute_midtoken.h")
+        self.assertEqual(r.returncode, 0)
+        self.assertEqual(r.stderr, "")
+
     def test_all_real_headers_are_clean(self):
         # Regression guard: every current public header must pass, or the
         # hook would nag on every edit. (docs CI is green, so they must.)
