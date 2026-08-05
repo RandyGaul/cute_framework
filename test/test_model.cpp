@@ -6,11 +6,11 @@
 */
 
 #include "test_harness.h"
+#include "test_app_shared.h"
 
 #include <cute.h>
 #include <cute/ckit.h>
-#define CUTE_MODEL_IMPLEMENTATION
-#include <cute/cute_model.h>
+#include <cute/cute_model.h> // Implementation compiled into CF (src/cute_model.cpp).
 
 // cute_model loader tests: pure CPU, no app or GPU. A handcrafted .gltf with an external
 // binary buffer and image exercises the read callback (with percent-decoded URIs), the
@@ -384,9 +384,62 @@ TEST_CASE(test_model_malformed_rejected)
 	return true;
 }
 
+// The CF-side glue (include/cute_model.h): cf_make_model resolves a .gltf's external
+// references through the virtual file system -- including the percent-encoded URI, which
+// must land on the on-disk file with the literal space -- and
+// cf_make_texture_from_model_image turns an embedded image into a ready-to-sample texture.
+TEST_CASE(test_model_vfs_load)
+{
+	if (!test_make_app(64, 64)) return true; // Headless CI: no display/GPU.
+
+	// Build the model + its sidecar files under the write directory.
+	cf_fs_set_write_directory(cf_fs_get_base_directory());
+	cf_fs_create_directory("/model_vfs_test");
+	REQUIRE(!cf_is_error(cf_fs_write_string_to_file("/model_vfs_test/model.gltf", s_gltf)));
+
+	int bin_size = 0;
+	void* bin = s_read("test data.bin", &bin_size, NULL);
+	REQUIRE(!cf_is_error(cf_fs_write_entire_buffer_to_file("/model_vfs_test/test data.bin", bin, (size_t)bin_size)));
+
+	// A real png in the image slot, so the texture path exercises an actual decode.
+	CF_Pixel px[16];
+	for (int i = 0; i < 16; ++i) px[i] = cf_make_pixel_rgb(255, 0, 0);
+	CF_Image img;
+	img.w = 4;
+	img.h = 4;
+	img.pix = px;
+	REQUIRE(!cf_is_error(cf_image_save_png("/model_vfs_test/tex.png", &img)));
+
+	CM_Model* model = cf_make_model("/model_vfs_test/model.gltf");
+	REQUIRE(model);
+	REQUIRE(model->mesh_count == 1);
+	REQUIRE(model->meshes[0].primitives[0].vertex_count == 4);
+	REQUIRE(model->image_count == 1);
+	REQUIRE(model->images[0].size > 8); // The real png bytes round-tripped through the VFS.
+
+	CF_Texture tex = cf_make_texture_from_model_image(model, 0);
+	REQUIRE(tex.id);
+	cf_destroy_texture(tex);
+
+	// An unused slot (-1) falls back to 1x1 white instead of failing.
+	CF_Texture white = cf_make_texture_from_model_image(model, -1);
+	REQUIRE(white.id);
+	cf_destroy_texture(white);
+
+	cf_destroy_model(model);
+
+	// A missing file reports through cf_model_error.
+	REQUIRE(!cf_make_model("/model_vfs_test/nope.glb"));
+	REQUIRE(cf_model_error()[0]);
+
+	test_destroy_app();
+	return true;
+}
+
 TEST_SUITE(test_model)
 {
 	RUN_TEST_CASE(test_model_gltf_external);
 	RUN_TEST_CASE(test_model_interleave);
 	RUN_TEST_CASE(test_model_malformed_rejected);
+	RUN_TEST_CASE(test_model_vfs_load);
 }

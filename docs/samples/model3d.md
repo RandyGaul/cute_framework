@@ -1,8 +1,11 @@
 # Model 3D
 
-Loads a glTF fox with [cute_model.h](https://github.com/RandyGaul/cute_framework/blob/master/libraries/cute/cute_model.h)
-and runs a pack of five of them through GPU skinning -- each fox on its own animation clip
-and phase, yet the whole pack lands in a handful of instanced draws.
+Loads a glTF fox with `cf_make_model` -- one call covering the VFS read, the
+[cute_model.h](https://github.com/RandyGaul/cute_framework/blob/master/libraries/cute/cute_model.h)
+parse, and external URI resolution -- decodes its embedded texture with
+`cf_make_texture_from_model_image`, and runs a pack of five foxes through GPU skinning:
+each fox on its own animation clip and phase, yet the whole pack lands in a handful of
+instanced draws.
 
 The trick is the storage-buffer skinning pattern:
 

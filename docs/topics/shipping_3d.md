@@ -53,7 +53,7 @@ CF takes no AA position for you, but the pieces line up like this:
 
 ## Recipe: Shipping Textures
 
-The `model3d` sample decodes PNGs at load and samples them mipless, which is honest for a sample and wrong for a shipping game -- unmipped textures shimmer at 3D viewing distances and burn bandwidth.
+`cf_make_texture_from_model_image` decodes a model's embedded PNG/JPEG at load and generates a full mip chain -- the right development default, and fine to ship for small games. Past that, runtime decode burns load time and uncompressed pixels burn memory and bandwidth.
 
 **Native targets: convert offline to DDS.** glTF embeds PNG/JPEG; a shipping build converts those to block-compressed DDS in the asset pipeline (BC7 for color, BC5 for normal maps, BC4 for single-channel masks -- any standard tool: NVTT, Compressonator, ktx/toktx piped through DDS). Then:
 
@@ -69,6 +69,7 @@ One call uploads the compressed pixels and the full mip chain exactly as authore
 CF_TextureParams tp = cf_texture_defaults(w, h);
 tp.allocate_mipmaps = true;   // mip_count 0 = full chain
 tp.filter = CF_FILTER_LINEAR;
+tp.usage |= CF_TEXTURE_USAGE_COLOR_TARGET_BIT; // cf_generate_mipmaps downsamples via GPU blits.
 CF_Texture tex = cf_make_texture(tp);
 cf_texture_update(tex, pixels, size);
 cf_generate_mipmaps(tex);

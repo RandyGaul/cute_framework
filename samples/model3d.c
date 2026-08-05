@@ -31,8 +31,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+// CF's library compiles the loader's implementation (src/cute_model.cpp); consumers just
+// include the headers for the CM_* data and animation API.
 #include <cute/ckit.h>
-#define CUTE_MODEL_IMPLEMENTATION
 #include <cute/cute_model.h>
 
 typedef struct Vertex
@@ -129,34 +130,6 @@ static CF_Mesh s_make_mesh(const CM_Primitive* prim, int* out_count)
 	return mesh;
 }
 
-// The base color texture ships inside the GLB as encoded bytes -- PNG or JPEG, sniffed by
-// magic number (glTF from Blender/Substance very commonly embeds JPEGs).
-static CF_Texture s_make_texture(const CM_Model* model)
-{
-	if (model->material_count && model->materials[0].base_color_texture.image >= 0) {
-		CM_Image* image = model->images + model->materials[0].base_color_texture.image;
-		const uint8_t* bytes = (const uint8_t*)image->data;
-		bool jpg = image->size > 2 && bytes[0] == 0xFF && bytes[1] == 0xD8;
-		CF_Image img;
-		CF_Result decoded = jpg
-			? cf_image_load_jpg_from_memory(image->data, image->size, &img)
-			: cf_image_load_png_from_memory(image->data, image->size, &img);
-		if (!cf_is_error(decoded)) {
-			CF_TextureParams params = cf_texture_defaults(img.w, img.h);
-			params.filter = CF_FILTER_LINEAR;
-			CF_Texture tex = cf_make_texture(params);
-			cf_texture_update(tex, img.pix, img.w * img.h * (int)sizeof(CF_Pixel));
-			cf_image_free(&img);
-			return tex;
-		}
-	}
-	// Fallback: 1x1 white.
-	CF_Pixel white = cf_make_pixel_rgb(255, 255, 255);
-	CF_Texture tex = cf_make_texture(cf_texture_defaults(1, 1));
-	cf_texture_update(tex, &white, (int)sizeof(white));
-	return tex;
-}
-
 // Screenshot/exit harness, same contract as the fireflies sample: --shot <t> saves a
 // numbered png of the app canvas, --exit-at <t> quits cleanly. Smoke-testable in CI.
 static int s_shot_count;
@@ -210,25 +183,22 @@ int main(int argc, char* argv[])
 
 	cf_canvas_set_clear_color(cf_app_get_canvas(), cf_make_color_rgb_f(0.10f, 0.11f, 0.13f));
 
-	size_t size = 0;
-	void* data = cf_fs_read_entire_file_to_memory("/model3d_data/Fox.glb", &size);
-	if (!data) {
-		printf("Failed to read /model3d_data/Fox.glb\n");
-		cf_destroy_app();
-		return -1;
-	}
-	CM_Model* model = cm_load(data, (int)size);
-	cf_free(data);
+	// One call: VFS read, GLB parse, and external URI resolution (had this been a .gltf
+	// with sidecar files) all happen inside CF.
+	CM_Model* model = cf_make_model("/model3d_data/Fox.glb");
 	if (!model) {
-		printf("cm_load failed: %s\n", cm_error());
+		printf("cf_make_model failed: %s\n", cf_model_error());
 		cf_destroy_app();
 		return -1;
 	}
 
-	// The fox is one mesh, one primitive, one skin.
+	// The fox is one mesh, one primitive, one skin. The base color texture ships inside
+	// the GLB as encoded PNG or JPEG bytes; CF decodes, mips, and uploads it (a -1 or
+	// absent slot would yield a 1x1 white texture).
 	int vertex_count = 0;
 	CF_Mesh mesh = s_make_mesh(&model->meshes[0].primitives[0], &vertex_count);
-	CF_Texture texture = s_make_texture(model);
+	CF_Texture texture = cf_make_texture_from_model_image(model,
+		model->material_count ? model->materials[0].base_color_texture.image : -1);
 	cf_draw3d_set_texture("u_image", texture);
 
 	const CM_Skin* skin = &model->skins[0];
@@ -376,7 +346,7 @@ int main(int argc, char* argv[])
 	cf_free(world);
 	cf_free(palettes);
 	cf_destroy_storage_buffer(bones_buf);
-	cm_free(model);
+	cf_destroy_model(model);
 	cf_destroy_mesh(mesh);
 	cf_destroy_texture(texture);
 	cf_destroy_shader(shader);

@@ -94,6 +94,7 @@
 #endif
 
 #define CK_API CF_API
+#define CM_API CF_API
 
 #ifdef CF_WINDOWS
 #	define CF_CALL __cdecl

@@ -1298,6 +1298,12 @@ CF_Canvas cf_gles_make_canvas(CF_CanvasParams params)
 	// depth target requests SAMPLER usage (the shadow-map case). Depth-attached canvases
 	// already have their depth: the attach target itself.
 	if (params.depth_stencil_enable && !c->attached_depth) {
+	// Attach-mode canvases size their depth to the attached face/mip, not to whatever the
+	// caller's params happen to hold (cf_canvas_defaults(0, 0) holds zero).
+	if (c->attached) {
+		params.depth_stencil_target.width = c->w;
+		params.depth_stencil_target.height = c->h;
+	}
 	CF_GL_PixelFormatInfo* depth_info = s_find_pixel_format_info(params.depth_stencil_target.pixel_format);
 	c->has_depth = depth_info && (depth_info->caps & CF_GL_FMT_CAP_DEPTH);
 	c->has_stencil = depth_info && depth_info->has_stencil && (depth_info->caps & CF_GL_FMT_CAP_STENCIL);

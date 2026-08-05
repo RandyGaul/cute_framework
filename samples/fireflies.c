@@ -107,7 +107,12 @@ static float s_terrain_height(float x, float z)
 }
 
 //--------------------------------------------------------------------------------------------------
-// The world: static blocks baked into chunks at startup, culled per frame by chunk AABB.
+// The world: static blocks baked into chunks at startup. Each chunk records its blocks into
+// a CF_DrawList ONCE (see s_bake_chunks), so every pass -- both shadow cascades and the lit
+// pass -- replays a visible chunk as a single instanced draw instead of re-submitting its
+// blocks. The chunk is also the culling granularity: frustum-test (or shadow-sphere-test)
+// the bounds, then cf_draw_list the survivors. This is the pattern from the Shipping 3D
+// topic's "Culling Baked Draw Lists" recipe.
 
 typedef struct Block
 {
@@ -123,6 +128,7 @@ typedef struct Chunk
 	Block blocks[MAX_BLOCKS_PER_CHUNK];
 	int count;
 	CF_Aabb3 bounds;
+	CF_DrawList list; // The chunk's blocks, baked. Replays as one instanced draw per pass.
 } Chunk;
 
 typedef struct World
@@ -388,7 +394,6 @@ static void s_auto_seek(Input* in, CF_V3 player, float yaw, CF_V3 target, float 
 	float diff = want - yaw;
 	while (diff > CF_PI) diff -= CF_TAU;
 	while (diff < -CF_PI) diff += CF_TAU;
-	in->look_dx = cf_clamp(-diff * 3.0f, -2.4f, 2.4f) / 0.02f * dt * -1.0f;
 	// The look_dx sign convention: yaw -= look_dx * 0.02, so negative diff steers correctly.
 	in->look_dx = -diff * 2.0f / 0.02f * dt;
 	if (cf_abs(diff) < 0.6f) in->move_z = 1.0f;
@@ -450,7 +455,13 @@ static void s_gather_input(Input* in, CF_V3 player, float yaw, float dt)
 // exponentially-warped depth and its square into a color target. Those moments CAN be
 // blurred like any image, and the receiver tests against a Chebyshev bound -- no depth
 // bias anywhere, no acne by construction, and softness comes from an honest gaussian.
-#define EVSM_C "40.0"
+// One numeric constant serves both languages: C code uses EVSM_C directly, GLSL strings
+// paste EVSM_C_STR -- they cannot drift apart. (Plain 40.0, no f suffix: the token must
+// read as a literal in GLSL too.)
+#define EVSM_C 40.0
+#define EVSM_STR_(x) #x
+#define EVSM_STR(x) EVSM_STR_(x)
+#define EVSM_C_STR EVSM_STR(EVSM_C)
 
 static const char* s_moment_vs =
 "layout (location = 0) in vec3 in_pos;\n"
@@ -474,7 +485,7 @@ static const char* s_moment_fs =
 "layout (location = 0) out vec4 result;\n"
 "void main() {\n"
 "	float z = v_zw.x / v_zw.y;\n"        // [0, 1] under CF's clip conventions (ortho: w = 1).
-"	float e = exp(" EVSM_C " * z);\n"
+"	float e = exp(" EVSM_C_STR " * z);\n"
 "	result = vec4(e, e * e, 0.0, 1.0);\n"
 "}\n";
 
@@ -559,7 +570,7 @@ static const char* s_block_fs =
 "	if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) return 1.0;\n"
 "	// EVSM: Chebyshev upper bound over pre-blurred exponentially-warped moments.\n"
 "	vec2 m = texture(u_shadow, vec3(uv, layer)).rg;\n"
-"	float e = exp(" EVSM_C " * ndc.z);\n"
+"	float e = exp(" EVSM_C_STR " * ndc.z);\n"
 "	if (e <= m.x) return 1.0;\n"
 "	float variance = max(m.y - m.x * m.x, 0.00005 * e * e);\n"
 "	float d = e - m.x;\n"
@@ -734,7 +745,7 @@ static CF_Mesh s_make_cube_mesh(void)
 
 static CF_Mesh s_make_fullscreen_mesh(void)
 {
-	float verts[12] = { -1, -1, 3, -1, -1, 3, 0, 0, 0, 0, 0, 0 }; // One big triangle.
+	float verts[6] = { -1, -1, 3, -1, -1, 3 }; // One big triangle.
 	CF_VertexAttribute attrs[1] = { 0 };
 	attrs[0].name = "in_pos";
 	attrs[0].format = CF_VERTEX_FORMAT_FLOAT2;
@@ -763,6 +774,37 @@ static void s_submit_block_ex(CF_Mesh cube, CF_V3 center, CF_V3 scale, CF_Color 
 static void s_submit_block(CF_Mesh cube, const Block* b)
 {
 	s_submit_block_ex(cube, b->center, b->scale, b->color, b->emissive, b->sway);
+}
+
+// Record each chunk's blocks into a draw list, once. The recordings are shaderless and
+// set no uniforms of their own, so both stay FREE VARIABLES (closure semantics): each
+// pass pushes its own shader before cf_draw_list, and the per-frame ambient uniforms
+// (u_time, the sun, the fog) bind live at replay -- one bake serves the moment passes and
+// the lit pass alike, and the leaves keep swaying. Two rules of the recording contract
+// shape the call site:
+//
+//   - Ambient capture is by NAME: a uniform participates as a free variable only if it
+//     was live when the recording's submissions were made. So the bake runs on the first
+//     frame, after every u_* the block shader reads has been set -- bake at startup and
+//     the replays would bind no uniforms at all.
+//   - Render state is NOT a free variable -- a baked submission replays the state
+//     captured at record time -- so the one state every pass agrees on goes inside the
+//     recording: culling off, which the moment pass needs for thin leaf boxes and which
+//     costs the lit pass nothing visible (the blocks are closed).
+static void s_bake_chunks(CF_Mesh cube)
+{
+	CF_RenderState rs = cf_render_state_3d_defaults();
+	rs.cull_mode = CF_CULL_MODE_NONE;
+	for (int i = 0; i < CHUNKS * CHUNKS; ++i) {
+		Chunk* c = &g_world.chunks[i];
+		if (!c->count) continue;
+		c->list = cf_make_draw_list();
+		cf_draw_list_begin(c->list);
+		cf_draw3d_push_render_state(rs);
+		for (int k = 0; k < c->count; ++k) s_submit_block(cube, &c->blocks[k]);
+		cf_draw3d_pop_render_state();
+		cf_draw_list_end();
+	}
 }
 
 // True when a sphere at `p` touches any world block -- the lantern's "would it clip a
@@ -980,7 +1022,10 @@ static int s_shot_count;
 // readbacks stall. Assemble with: ffmpeg -framerate 30 -i fireflies_rec_%05d.png out.mp4
 static float g_record_until;
 static int s_rec_count;
-static void s_record_frame(void)
+
+// Reads the app canvas back and saves it as a png. The spin on cf_readback_ready is fine
+// for this offline harness -- a game loop would poll it across frames instead.
+static void s_save_canvas_png(const char* path, bool verbose)
 {
 	CF_Canvas canvas = cf_app_get_canvas();
 	int w = 0, h = 0;
@@ -995,34 +1040,24 @@ static void s_record_frame(void)
 		img.w = w;
 		img.h = h;
 		img.pix = px;
-		char path[256];
-		snprintf(path, sizeof(path), "/fireflies_rec_%05d.png", s_rec_count++);
 		cf_image_save_png(path, &img);
+		if (verbose) printf("saved %s (%dx%d)\n", path, w, h);
 	}
 	cf_free(px);
 }
 
+static void s_record_frame(void)
+{
+	char path[256];
+	snprintf(path, sizeof(path), "/fireflies_rec_%05d.png", s_rec_count++);
+	s_save_canvas_png(path, false);
+}
+
 static void s_screenshot(void)
 {
-	CF_Canvas canvas = cf_app_get_canvas();
-	int w = 0, h = 0;
-	cf_canvas_get_size(canvas, &w, &h);
-	CF_Pixel* px = (CF_Pixel*)cf_alloc((size_t)w * h * sizeof(CF_Pixel));
-	CF_Readback rb = cf_canvas_readback(canvas);
-	if (rb.id) {
-		while (!cf_readback_ready(rb)) {}
-		cf_readback_data(rb, px, w * h * (int)sizeof(CF_Pixel));
-		cf_destroy_readback(rb);
-		CF_Image img;
-		img.w = w;
-		img.h = h;
-		img.pix = px;
-		char path[256];
-		snprintf(path, sizeof(path), "/fireflies_shot_%02d.png", s_shot_count++);
-		cf_image_save_png(path, &img);
-		printf("saved %s (%dx%d)\n", path, w, h);
-	}
-	cf_free(px);
+	char path[256];
+	snprintf(path, sizeof(path), "/fireflies_shot_%02d.png", s_shot_count++);
+	s_save_canvas_png(path, true);
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -1147,6 +1182,7 @@ int main(int argc, char* argv[])
 	g_game.stage = STAGE_COLLECT; // You start with the lantern in hand.
 
 	CF_Mesh cube = s_make_cube_mesh();
+	bool world_baked = false; // Chunks bake on the first frame -- see s_bake_chunks' remarks.
 	CF_Shader block_shd = cf_make_shader_from_source(s_block_vs, s_block_fs);
 	CF_Shader sky_shd = cf_make_shader_from_source(s_sky_vs, s_sky_fs);
 	CF_Shader moment_shd = cf_make_shader_from_source(s_moment_vs, s_moment_fs);
@@ -1166,11 +1202,11 @@ int main(int argc, char* argv[])
 		sp.filter = CF_FILTER_LINEAR;
 		shadow_tex = cf_make_texture(sp);
 		shadow_scratch = cf_make_texture(sp);
-		float e = expf(40.0f); // Matches EVSM_C: an empty texel reads as "farthest possible".
+		float e = expf((float)EVSM_C); // An empty texel reads as "farthest possible".
 		for (int i = 0; i < 2; ++i) {
-			// Sized defaults so depth_stencil_target params are filled; the attach branch
-			// ignores the color target entirely and sizes depth to the attach mip.
-			CF_CanvasParams cp = cf_canvas_defaults(SHADOW_RES, SHADOW_RES);
+			// Attach-mode canvases size themselves (and their depth) from the attached
+			// texture and mip, so zero-size defaults are all they need.
+			CF_CanvasParams cp = cf_canvas_defaults(0, 0);
 			cp.attach_target = shadow_tex;
 			cp.attach_layer = i;
 			cp.depth_stencil_enable = true; // The moment pass still depth-tests its own boxes.
@@ -1329,50 +1365,10 @@ int main(int argc, char* argv[])
 			shadow_vp[i] = cf_mul_m4(lproj, lview);
 		}
 
-		// Pass 1 + 2: render the world's shadow moments into each cascade. Same submissions,
-		// moment shader pushed, light matrix as the camera -- multi-pass exactly as the
-		// draw3d header prescribes. No depth bias anywhere: EVSM doesn't need one.
-		CF_RenderState shadow_rs = cf_render_state_3d_defaults();
-		shadow_rs.cull_mode = CF_CULL_MODE_NONE; // Leaf boxes are thin; keep their backs.
-		for (int cascade = 0; cascade < 2; ++cascade) {
-			cf_draw3d_push_projection(shadow_vp[cascade]);
-			cf_draw3d_push_view(cf_m4_identity());
-			cf_draw3d_push_shader(moment_shd);
-			cf_draw3d_push_render_state(shadow_rs);
-			CF_V3 cc = cf_add_v3(player, cf_mul_v3_f(flat_fwd, cascade_r[cascade] * 0.55f));
-			CF_Sphere cull = cf_make_sphere(cc, cascade_r[cascade] * 1.75f);
-			for (int i = 0; i < CHUNKS * CHUNKS; ++i) {
-				Chunk* c = &g_world.chunks[i];
-				if (!c->count) continue;
-				if (!cf_sphere_to_aabb3(cull, c->bounds)) continue;
-				for (int k = 0; k < c->count; ++k) s_submit_block(cube, &c->blocks[k]);
-			}
-			cf_draw3d_pop_render_state();
-			cf_draw3d_pop_shader();
-			cf_draw3d_pop_view();
-			cf_draw3d_pop_projection();
-			cf_render_to(shadow_canvas[cascade], true);
-
-			// Separable gaussian over the cascade's moments: horizontal into the scratch
-			// layer, vertical back into the moment map. This blur is what a comparison
-			// sampler could never allow -- and why the acne is gone.
-			for (int dir = 0; dir < 2; ++dir) {
-				CF_V4 dir_layer = dir == 0
-					? cf_v4(1.0f / SHADOW_RES, 0, (float)cascade, 0)
-					: cf_v4(0, 1.0f / SHADOW_RES, (float)cascade, 0);
-				cf_apply_canvas(dir == 0 ? shadow_blur_h[cascade] : shadow_blur_v[cascade], true);
-				cf_apply_mesh(post.fullscreen);
-				cf_material_set_texture_fs(shadow_blur_mat, "u_src", dir == 0 ? shadow_tex : shadow_scratch);
-				cf_material_set_uniform_fs(shadow_blur_mat, "u_dir_layer", &dir_layer, CF_UNIFORM_TYPE_FLOAT4, 1);
-				cf_apply_shader(shadow_blur_shd, shadow_blur_mat);
-				cf_draw_elements();
-			}
-		}
-
-		// Pass 3: the scene, in HDR.
-		cf_draw3d_push_projection(proj);
-		cf_draw3d_push_view(view);
-
+		// The frame's shading state, set once up front. Uniforms and textures are captured
+		// per submission, so setting them before ANY pass serves them all -- and their names
+		// being live is what lets the chunk bake below capture them as ambient free
+		// variables that rebind here every frame.
 		cf_draw3d_set_uniform_v3("u_eye", player);
 		cf_draw3d_set_uniform_v3("u_sun_dir", sun_dir);
 		cf_draw3d_set_uniform_color("u_sun_color", sun_color);
@@ -1406,6 +1402,54 @@ int main(int argc, char* argv[])
 		for (int i = nl; i < FIREFLY_LIGHTS; ++i) lights[i] = cf_v4(0, -1000.0f, 0, 0);
 		cf_draw3d_set_uniform("u_lights", lights, CF_UNIFORM_TYPE_FLOAT4, FIREFLY_LIGHTS);
 
+		// First frame only: bake the chunks, now that every ambient uniform name is live.
+		if (!world_baked) {
+			s_bake_chunks(cube);
+			world_baked = true;
+		}
+
+		// Pass 1 + 2: render the world's shadow moments into each cascade. Same baked chunk
+		// lists as the lit pass, moment shader pushed, light matrix as the camera --
+		// multi-pass exactly as the draw3d header prescribes: one recording, one instanced
+		// draw per visible chunk per pass. No depth bias anywhere: EVSM doesn't need one.
+		// (The cull-off state the moment pass wants is frozen inside the bakes.)
+		for (int cascade = 0; cascade < 2; ++cascade) {
+			cf_draw3d_push_projection(shadow_vp[cascade]);
+			cf_draw3d_push_view(cf_m4_identity());
+			cf_draw3d_push_shader(moment_shd);
+			CF_V3 cc = cf_add_v3(player, cf_mul_v3_f(flat_fwd, cascade_r[cascade] * 0.55f));
+			CF_Sphere cull = cf_make_sphere(cc, cascade_r[cascade] * 1.75f);
+			for (int i = 0; i < CHUNKS * CHUNKS; ++i) {
+				Chunk* c = &g_world.chunks[i];
+				if (!c->count) continue;
+				if (!cf_sphere_to_aabb3(cull, c->bounds)) continue;
+				cf_draw_list(c->list);
+			}
+			cf_draw3d_pop_shader();
+			cf_draw3d_pop_view();
+			cf_draw3d_pop_projection();
+			cf_render_to(shadow_canvas[cascade], true);
+
+			// Separable gaussian over the cascade's moments: horizontal into the scratch
+			// layer, vertical back into the moment map. This blur is what a comparison
+			// sampler could never allow -- and why the acne is gone.
+			for (int dir = 0; dir < 2; ++dir) {
+				CF_V4 dir_layer = dir == 0
+					? cf_v4(1.0f / SHADOW_RES, 0, (float)cascade, 0)
+					: cf_v4(0, 1.0f / SHADOW_RES, (float)cascade, 0);
+				cf_apply_canvas(dir == 0 ? shadow_blur_h[cascade] : shadow_blur_v[cascade], true);
+				cf_apply_mesh(post.fullscreen);
+				cf_material_set_texture_fs(shadow_blur_mat, "u_src", dir == 0 ? shadow_tex : shadow_scratch);
+				cf_material_set_uniform_fs(shadow_blur_mat, "u_dir_layer", &dir_layer, CF_UNIFORM_TYPE_FLOAT4, 1);
+				cf_apply_shader(shadow_blur_shd, shadow_blur_mat);
+				cf_draw_elements();
+			}
+		}
+
+		// Pass 3: the scene, in HDR.
+		cf_draw3d_push_projection(proj);
+		cf_draw3d_push_view(view);
+
 		// Sky beneath the world.
 		cf_draw_push_layer(-1);
 		cf_draw3d_push_shader(sky_shd);
@@ -1429,7 +1473,9 @@ int main(int argc, char* argv[])
 		cf_draw3d_pop_shader();
 		cf_draw_pop_layer();
 
-		// The world.
+		// The world: frustum-cull chunk bounds, replay the survivors' bakes -- one
+		// instanced draw per visible chunk, zero per-block CPU cost. Dynamic pieces
+		// (lantern, shrine, glass) stay immediate on top.
 		cf_draw3d_push_shader(block_shd);
 		int visible_chunks = 0;
 		for (int i = 0; i < CHUNKS * CHUNKS; ++i) {
@@ -1437,7 +1483,7 @@ int main(int argc, char* argv[])
 			if (!c->count) continue;
 			if (!cf_frustum_test_aabb3(&frustum, c->bounds)) continue;
 			visible_chunks++;
-			for (int k = 0; k < c->count; ++k) s_submit_block(cube, &c->blocks[k]);
+			cf_draw_list(c->list);
 		}
 		s_draw_dynamic(cube, player, fwd, t);
 		cf_draw3d_pop_shader();
@@ -1492,6 +1538,9 @@ int main(int argc, char* argv[])
 		if (exit_at > 0 && t >= exit_at) break;
 	}
 
+	for (int i = 0; i < CHUNKS * CHUNKS; ++i) {
+		if (g_world.chunks[i].count) cf_destroy_draw_list(g_world.chunks[i].list);
+	}
 	s_post_destroy_targets(&post);
 	cf_destroy_material(post.mat_bright);
 	cf_destroy_material(post.mat_down);

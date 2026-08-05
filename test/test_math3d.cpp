@@ -92,6 +92,41 @@ TEST_CASE(test_quat_operators_cpp) {
 	return true;
 }
 
+// The new helper overloads: each unsuffixed C++ name must reach its 3d backend, without
+// disturbing the 2d overloads that share the name (reflect, project).
+TEST_CASE(test_helper_overloads_cpp) {
+	// 3d reflect resolves alongside 2d reflect.
+	REQUIRE(near_v3(cf_reflect(V3(1, -1, 0), V3(0, 1, 0)), V3(1, 1, 0)));
+	v2 r2 = cf_reflect(V2(1, -1), V2(0, 1));
+	REQUIRE(near_f(r2.x, 1.0f) && near_f(r2.y, 1.0f));
+	REQUIRE(near_v3(reflect(V3(1, -1, 0), V3(0, 1, 0)), V3(1, 1, 0)));
+
+	// project(v3, v3) overloads next to project(Halfspace, v2).
+	REQUIRE(near_v3(cf_project(V3(2, 2, 0), V3(10, 0, 0)), V3(2, 0, 0)));
+	REQUIRE(near_v3(project(V3(2, 2, 0), V3(10, 0, 0)), V3(2, 0, 0)));
+	REQUIRE(near_v3(cf_slide(V3(1, -1, 0), V3(0, 1, 0)), V3(1, 0, 0)));
+	REQUIRE(near_v3(slide(V3(1, -1, 0), V3(0, 1, 0)), V3(1, 0, 0)));
+
+	v3 x, y;
+	orthonormal_basis(V3(0, 1, 0), &x, &y);
+	REQUIRE(near_v3(cross(x, y), V3(0, 1, 0)));
+
+	quat q = quat_from_axis_angle(norm(V3(1, -2, 0.5f)), 0.9f);
+	v3 p = V3(0.3f, -0.7f, 1.1f);
+	REQUIRE(near_v3((q * inverse(q)) * p, p));
+	REQUIRE(near_v3(nlerp(quat_identity(), q, 1.0f) * p, q * p));
+
+	v3 axis;
+	float angle;
+	quat_to_axis_angle(q, &axis, &angle);
+	REQUIRE(near_f(angle, 0.9f));
+
+	m4 direct = m4_from_trs(V3(3, -4, 5), q, V3(2, 3, 4));
+	m4 composed = m4_translate(V3(3, -4, 5)) * to_m4(q) * m4_scale(V3(2, 3, 4));
+	for (int i = 0; i < 16; ++i) REQUIRE(near_f(direct.elements[i], composed.elements[i]));
+	return true;
+}
+
 // Same convention checks as the C suite, through the C++ names -- these are what a C++ user
 // actually calls, and a wrapper could plausibly be wired to the wrong function.
 TEST_CASE(test_projection_cpp) {
@@ -216,6 +251,7 @@ TEST_SUITE(test_math3d) {
 	RUN_TEST_CASE(test_v3_operators_cpp);
 	RUN_TEST_CASE(test_m4_operators_cpp);
 	RUN_TEST_CASE(test_quat_operators_cpp);
+	RUN_TEST_CASE(test_helper_overloads_cpp);
 	RUN_TEST_CASE(test_projection_cpp);
 	RUN_TEST_CASE(test_geometry_raycasts_cpp);
 	RUN_TEST_CASE(test_geometry_overlaps_cpp);
