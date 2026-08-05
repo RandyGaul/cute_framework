@@ -189,13 +189,13 @@ typedef struct CF_V2
 #define CF_EXPAND(x) x
 #define _CF_V2_SELECT(_1, _2, NAME, ...) NAME
 #ifdef __cplusplus
-#	define _CF_V2_1(a) CF_V2{ (a), (a) }
-#	define _CF_V2_2(a, b) CF_V2{ (a), (b) }
+#	define _CF_V2_1(a) (CF_V2{ (a), (a) })
+#	define _CF_V2_2(a, b) (CF_V2{ (a), (b) })
 #	define cf_v2(...) CF_EXPAND(_CF_V2_SELECT(__VA_ARGS__, _CF_V2_2, _CF_V2_1)(__VA_ARGS__))
 #	define V2 cf_v2
 #else
-#	define _CF_V2_1(a) (CF_V2){ .x = (a), .y = (a) }
-#	define _CF_V2_2(a, b) (CF_V2){ .x = (a), .y = (b) }
+#	define _CF_V2_1(a) ((CF_V2){ .x = (a), .y = (a) })
+#	define _CF_V2_2(a, b) ((CF_V2){ .x = (a), .y = (b) })
 #	define cf_v2(...) CF_EXPAND(_CF_V2_SELECT(__VA_ARGS__, _CF_V2_2, _CF_V2_1)(__VA_ARGS__))
 #endif
 
@@ -1228,13 +1228,15 @@ extern "C" {
 CF_INLINE float  cf_atan2_f (float  y, float  x) { return CF_ATAN2F(y, x); }
 CF_INLINE double cf_atan2_d (double y, double x) { return CF_ATAN2(y, x); }
 CF_INLINE float  cf_atan2_v2(CF_V2  v)           { return CF_ATAN2F(v.y, v.x); }
-#define cf_atan2(y, ...)      \
+#define _CF_ATAN2_2ARG(y, x)  \
 	_Generic((y),             \
 		float:   cf_atan2_f,  \
 		double:  cf_atan2_d,  \
-		CF_V2:   cf_atan2_v2, \
 		default: cf_atan2_f   \
-	)((y), (__VA_ARGS__))
+	)((y), (x))
+#define _CF_ATAN2_SELECT(_1, _2, NAME, ...) NAME
+#define cf_atan2(...) \
+	CF_EXPAND(_CF_ATAN2_SELECT(__VA_ARGS__, _CF_ATAN2_2ARG, cf_atan2_v2)(__VA_ARGS__))
 #endif
 
 /**
@@ -1762,12 +1764,15 @@ CF_INLINE CF_M3x2 cf_make_scale_translation_v2_v2(CF_V2 s, CF_V2 p) { CF_M3x2 m;
 CF_INLINE CF_M3x2 cf_make_scale_translation_f_v2(float s, CF_V2 p) { return cf_make_scale_translation_v2_v2(cf_v2(s,s), p); }
 CF_INLINE CF_M3x2 cf_make_scale_translation_f_f_v2(float sx, float sy, CF_V2 p) { return cf_make_scale_translation_v2_v2(cf_v2(sx,sy), p); }
 
-#define cf_make_scale_translation(a, b)           \
+#define _CF_MAKE_SCALE_TRANSLATION_2ARG(a, b)     \
 	_Generic((a),                                 \
 		CF_V2:   cf_make_scale_translation_v2_v2, \
 		float:   cf_make_scale_translation_f_v2,  \
 		default: cf_make_scale_translation_f_v2   \
 	)((a), (b))
+#define _CF_MAKE_SCALE_TRANSLATION_SELECT(_1, _2, _3, NAME, ...) NAME
+#define cf_make_scale_translation(...) \
+	CF_EXPAND(_CF_MAKE_SCALE_TRANSLATION_SELECT(__VA_ARGS__, cf_make_scale_translation_f_f_v2, _CF_MAKE_SCALE_TRANSLATION_2ARG)(__VA_ARGS__))
 #endif
 
 /**
@@ -1897,6 +1902,8 @@ CF_INLINE CF_V2 cf_mul_m32_v2(CF_M3x2 a, CF_V2 b) { return cf_add(cf_mul_m2_v2(a
  * @related  cf_mul CF_M3x2 cf_mul_m32_v2
  */
 CF_INLINE CF_M3x2 cf_mul_m32(CF_M3x2 a, CF_M3x2 b) { CF_M3x2 c; c.m = cf_mul_m2(a.m, b.m); c.p = cf_add(cf_mul_m2_v2(a.m, b.p), a.p); return c; }
+CF_INLINE CF_V2 cf_mul_T_m32_v2(CF_M3x2 a, CF_V2 b) { return cf_mul_T_m2_v2(a.m, cf_sub(b, a.p)); }
+CF_INLINE CF_M3x2 cf_mul_T_m32(CF_M3x2 a, CF_M3x2 b) { CF_M3x2 c; c.m = cf_mul_T_m2(a.m, b.m); c.p = cf_mul_T_m2_v2(a.m, cf_sub(b.p, a.p)); return c; }
 
 // Macro alternatives -- flat expansion, guaranteed inline in debug builds.
 // MSVC /Od ignores __forceinline, so the above functions become real calls.
