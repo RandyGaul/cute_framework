@@ -169,6 +169,7 @@ nav:
       - OBJ Loading: samples/obj_loading.md
       - Outline (Stencil): samples/outline_stencil.md
       - Physics: samples/physics.md
+      - Physics 3D: samples/physics3d.md
       - Pivot: samples/pivot.md
       - Pixel 3D: samples/pixel_3d.md
       - Platformer: samples/platformer.md

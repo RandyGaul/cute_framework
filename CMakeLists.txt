@@ -99,6 +99,7 @@ set(CF_SRCS
 	src/cute_json.cpp
 	src/cute_base64.cpp
 	src/cute_math.cpp
+	src/cute_math3d.cpp
 	src/cute_physics.cpp
 	src/cute_draw.cpp
 	src/cute_draw3d.cpp
@@ -261,6 +262,40 @@ if(EMSCRIPTEN)
 	target_compile_options(cute-box2d PRIVATE -msimd128 -msse2)
 endif()
 target_sources(cute PRIVATE $<TARGET_OBJECTS:cute-box2d>)
+
+# Box3D v0.1.0 (MIT), fetched shallow at configure time -- identical treatment to Box2D
+# above: the release tag is the pin, Box3D's own CMake is skipped via the unused
+# SOURCE_SUBDIR, and CF compiles the sources itself as a C17 object library folded into
+# cute with b3* symbols exported on shared builds.
+FetchContent_Declare(
+	box3d
+	GIT_REPOSITORY https://github.com/erincatto/box3d.git
+	GIT_TAG        v0.1.0
+	GIT_SHALLOW    TRUE
+	GIT_PROGRESS   TRUE
+	UPDATE_DISCONNECTED TRUE
+	SOURCE_SUBDIR  cmake_is_unused
+)
+FetchContent_MakeAvailable(box3d)
+file(GLOB CF_BOX3D_SRCS ${box3d_SOURCE_DIR}/src/*.c)
+add_library(cute-box3d OBJECT ${CF_BOX3D_SRCS})
+target_include_directories(cute-box3d PRIVATE
+	${box3d_SOURCE_DIR}/include
+	${box3d_SOURCE_DIR}/src
+)
+set_target_properties(cute-box3d PROPERTIES
+	C_STANDARD 17
+	C_STANDARD_REQUIRED YES
+	C_EXTENSIONS YES
+	POSITION_INDEPENDENT_CODE ON
+)
+if(NOT CF_FRAMEWORK_STATIC)
+	target_compile_definitions(cute-box3d PRIVATE box3d_EXPORTS)
+endif()
+if(EMSCRIPTEN)
+	target_compile_options(cute-box3d PRIVATE -msimd128 -msse2)
+endif()
+target_sources(cute PRIVATE $<TARGET_OBJECTS:cute-box3d>)
 
 if(EMSCRIPTEN)
 	message(STATUS "Configuring CF for Web (Emscripten)")
@@ -477,6 +512,7 @@ target_include_directories(cute PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_
 target_include_directories(cute PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/libraries>)
 target_include_directories(cute PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/libraries/imgui>)
 target_include_directories(cute PUBLIC $<BUILD_INTERFACE:${box2d_SOURCE_DIR}/include>)
+target_include_directories(cute PUBLIC $<BUILD_INTERFACE:${box3d_SOURCE_DIR}/include>)
 target_include_directories(cute PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/tools)
 
 # Install target
