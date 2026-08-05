@@ -23,7 +23,7 @@ using namespace Cute;
 // SDL_GPUSampleCount -- that's only correct because both enums index 1x/2x/4x/8x as 0/1/2/3
 // in the same order. Catch it at compile time if SDL ever renumbers its enum, rather than
 // silently mis-sampling MSAA targets again.
-static_assert(
+CF_STATIC_ASSERT(
 	(int)CF_SAMPLE_COUNT_1 == (int)SDL_GPU_SAMPLECOUNT_1 &&
 	(int)CF_SAMPLE_COUNT_2 == (int)SDL_GPU_SAMPLECOUNT_2 &&
 	(int)CF_SAMPLE_COUNT_4 == (int)SDL_GPU_SAMPLECOUNT_4 &&
