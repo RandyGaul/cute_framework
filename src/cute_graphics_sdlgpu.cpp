@@ -1347,6 +1347,15 @@ CF_Canvas cf_sdlgpu_make_canvas(CF_CanvasParams params)
 			// A depth-format attach becomes the canvas's DEPTH target: a depth-only pass with
 			// no color side at all -- the shadow-cube case (render each face of a depth cube,
 			// then sample it with samplerCubeShadow).
+			if (attach->type == CF_TEXTURE_TYPE_CUBE && s_query_backend() == CF_BACKEND_TYPE_D3D12) {
+				// SDL_GPU's D3D12 driver creates only 2D depth views, so these passes silently
+				// render nothing there -- and D3D12 is SDL_GPU's default driver on Windows.
+				fprintf(stderr,
+					"WARNING -- Rendering into a depth CUBE face is not supported on SDL_GPU's D3D12 driver;\n"
+					"           this pass will silently produce nothing. Use six 2D depth canvases (or a 2D\n"
+					"           depth atlas) instead of a depth cube, or run on Vulkan/Metal/GLES. See the\n"
+					"           `attach_target` docs in cute_graphics.h and the Shipping 3D topic page.\n");
+			}
 			canvas->attached = true; // Owns nothing: color side absent, depth side borrowed.
 			canvas->attached_depth = true;
 			canvas->attach_layer = params.attach_layer;
