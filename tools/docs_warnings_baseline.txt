@@ -36,7 +36,6 @@ cute_graphics.h: cf_apply_shader has an unresolved @related entry to `cf_create_
 cute_graphics.h: cf_clear_color has an unresolved @related entry to `cf_clear_screen`.
 cute_graphics.h: cf_clear_depth_stencil has an unresolved @related entry to `cf_clear_screen`.
 cute_graphics.h: cf_draw_elements has an unresolved @related entry to `cf_create_mesh`.
-cute_graphics.h: cf_query_pixel_format has an unresolved @related entry to `cf_texture_supports_format`.
 cute_graphics.h: cf_vertex_format_string has an unresolved @related entry to `cf_mesh_set_attributes`.
 cute_haptics.h: cf_haptic_open has an unresolved @related entry to `CF_Joypad`.
 cute_https.h: cf_https_response has an unresolved @related entry to `CF_Https`.

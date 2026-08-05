@@ -248,7 +248,7 @@ cf_dispatch_compute(compute_shader, material, dispatch);
 
 ## Storage Buffers and Pull Instancing
 
-[`CF_StorageBuffer`](../graphics/cf_storagebuffer.md) is raw GPU memory for data too large or too dynamic for uniforms: skinning palettes, particle pools, anything a compute shader writes. Create one with `cf_make_storage_buffer` (`cf_storage_buffer_defaults(size)` marks it `graphics_readable`), fill it with `cf_update_storage_buffer`, and bind after `cf_apply_shader`:
+[`CF_StorageBuffer`](../graphics/struct/cf_storagebuffer.md) is raw GPU memory for data too large or too dynamic for uniforms: skinning palettes, particle pools, anything a compute shader writes. Create one with `cf_make_storage_buffer` (`cf_storage_buffer_defaults(size)` marks it `graphics_readable`), fill it with `cf_update_storage_buffer`, and bind after `cf_apply_shader`:
 
 ```c
 cf_apply_shader(shader, material);
@@ -277,7 +277,7 @@ On GLES3/web, read-only storage buffers are emulated through texture fetches tra
 
 ## Standalone Samplers
 
-Textures bake their filter/wrap state at creation, which is the right default. When the same texture needs to be sampled two ways -- pixel-art NEAREST in world, LINEAR in a scaled UI, or a shadow map with and without hardware comparison -- make a [`CF_Sampler`](../graphics/cf_sampler.md) and bind the pair:
+Textures bake their filter/wrap state at creation, which is the right default. When the same texture needs to be sampled two ways -- pixel-art NEAREST in world, LINEAR in a scaled UI, or a shadow map with and without hardware comparison -- make a [`CF_Sampler`](../graphics/struct/cf_sampler.md) and bind the pair:
 
 ```c
 CF_SamplerParams sp = cf_sampler_defaults();
