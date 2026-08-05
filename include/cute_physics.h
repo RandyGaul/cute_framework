@@ -299,11 +299,11 @@ CF_API b3WorldDef CF_CALL cf_physics_world_def3(void);
  * @category physics
  * @brief    Returns a `b3DebugDraw` whose callbacks render through CF's 3d draw API.
  * @param    thickness  Stroke width for wireframes/segments, in world units.
- * @remarks  Spheres and capsules render as draw3d's built-in solids (hemisphere-lit, no
- *           shader required); hulls and meshes render as wireframes; height fields and
- *           compounds draw their bounds. `drawShapes` is enabled; toggle any other option
- *           before `b3World_Draw`. Create the world from `cf_physics_world_def3` so the
- *           shape bake callbacks are wired.
+ * @remarks  Spheres, capsules, and box-shaped hulls render as draw3d's built-in solids
+ *           (hemisphere-lit, no shader required); general hulls and meshes render as
+ *           wireframes; height fields and compounds draw their bounds. `drawShapes` is
+ *           enabled; toggle any other option before `b3World_Draw`. Create the world from
+ *           `cf_physics_world_def3` so the shape bake callbacks are wired.
  * @related  cf_physics_draw3 cf_physics_world_def3 cf_physics_step3
  */
 CF_API b3DebugDraw CF_CALL cf_physics_debug_draw3_defaults(float thickness);

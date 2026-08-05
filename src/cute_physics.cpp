@@ -239,6 +239,9 @@ struct CF_B3DebugShape
 	b3ShapeType type;
 	b3Sphere sphere;
 	b3Capsule capsule;
+	bool solid_box; // A box-shaped hull, drawn as a solid cube instead of a wireframe.
+	CF_V3 box_center;
+	CF_V3 box_half_extents;
 	CF_V3* segments; // Wireframe segment pairs for hulls/meshes/bounds; NULL for primitives.
 	int segment_vert_count;
 };
@@ -285,11 +288,39 @@ static void* s_create_debug_shape(const b3DebugShape* debug_shape, void* udata)
 
 	case b3_hullShape:
 	{
-		// Emit each hull edge once: a half-edge and its twin describe the same segment,
-		// so keep only the half of each pair with the smaller index.
 		const b3HullData* hull = debug_shape->hull;
 		const b3Vec3* points = b3GetHullPoints(hull);
 		const b3HullHalfEdge* edges = b3GetHullEdges(hull);
+
+		// The b3MakeBoxHull family is by far the most common hull: 8 points that are
+		// exactly the corners of their own local bounds. Those get draw3d's solid cube;
+		// general hulls fall back to wireframe below (draw3d's shader-free solids are a
+		// fixed set of built-ins, and an arbitrary hull is not one of them).
+		if (hull->vertexCount == 8) {
+			CF_V3 lo = cf_b3_to_v3(points[0]), hi = lo;
+			for (int i = 1; i < 8; ++i) {
+				lo = cf_min_v3(lo, cf_b3_to_v3(points[i]));
+				hi = cf_max_v3(hi, cf_b3_to_v3(points[i]));
+			}
+			CF_V3 extent = cf_sub_v3(hi, lo);
+			float epsilon = 1e-4f * (extent.x + extent.y + extent.z + 1.0f);
+			bool is_box = true;
+			for (int i = 0; i < 8 && is_box; ++i) {
+				CF_V3 p = cf_b3_to_v3(points[i]);
+				is_box = (cf_abs(p.x - lo.x) < epsilon || cf_abs(p.x - hi.x) < epsilon)
+					&& (cf_abs(p.y - lo.y) < epsilon || cf_abs(p.y - hi.y) < epsilon)
+					&& (cf_abs(p.z - lo.z) < epsilon || cf_abs(p.z - hi.z) < epsilon);
+			}
+			if (is_box) {
+				shape->solid_box = true;
+				shape->box_center = cf_mul_v3_f(cf_add_v3(lo, hi), 0.5f);
+				shape->box_half_extents = cf_mul_v3_f(extent, 0.5f);
+				break;
+			}
+		}
+
+		// Emit each hull edge once: a half-edge and its twin describe the same segment,
+		// so keep only the half of each pair with the smaller index.
 		shape->segments = (CF_V3*)cf_alloc(sizeof(CF_V3) * (size_t)hull->edgeCount);
 		int n = 0;
 		for (int i = 0; i < hull->edgeCount; ++i) {
@@ -361,8 +392,12 @@ static bool s_draw3_shape(void* user_shape, b3WorldTransform transform, b3HexCol
 		break;
 
 	default:
-		for (int i = 0; i < shape->segment_vert_count; i += 2) {
-			cf_draw3d_line(shape->segments[i], shape->segments[i + 1], s_thickness3);
+		if (shape->solid_box) {
+			cf_draw3d_cube(shape->box_center, shape->box_half_extents);
+		} else {
+			for (int i = 0; i < shape->segment_vert_count; i += 2) {
+				cf_draw3d_line(shape->segments[i], shape->segments[i + 1], s_thickness3);
+			}
 		}
 		break;
 	}

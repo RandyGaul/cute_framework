@@ -89,7 +89,7 @@ Note contact events are opt-in per shape (`b2ShapeDef.enableContactEvents`), as 
 Everything above has a 3d twin. CF vendors [Box3D](https://github.com/erincatto/box3d) (v0.1.0, MIT) -- Erin Catto's 3d engine, which deliberately mirrors Box2D v3's design: `b3*` id handles, `b3Default*Def()` initializers, polled event buffers, joints, and world queries. The same include exposes it all, and the seam repeats:
 
 - `cf_physics_step3(world, substeps)` -- the same fixed-clock wiring as 2d.
-- `cf_physics_draw3(world, thickness)` -- debug draw through draw3d's shader-free built-ins: spheres and capsules as hemisphere-lit solids, hulls and meshes as anti-aliased wireframes. One requirement: Box3D bakes shapes into drawables via world-creation callbacks, so **create your world from `cf_physics_world_def3()`** for shape drawing to work.
+- `cf_physics_draw3(world, thickness)` -- debug draw through draw3d's shader-free built-ins: spheres, capsules, and box-shaped hulls as hemisphere-lit solids, general hulls and meshes as anti-aliased wireframes. One requirement: Box3D bakes shapes into drawables via world-creation callbacks, so **create your world from `cf_physics_world_def3()`** for shape drawing to work.
 - Interop is friendlier than 2d: `CF_V3`/`b3Vec3` and `CF_Quat`/`b3Quat` are bit-identical (no swizzle trap), and `cf_b3_to_m4` turns a body's `b3Body_GetTransform` straight into a `cf_draw3d_transform`-ready matrix.
 
 The [physics3d sample](https://github.com/RandyGaul/cute_framework/blob/master/samples/physics3d.c) is the whole pattern: a box tower on a ground slab, orbit camera, camera-ray spawning, explosions.
