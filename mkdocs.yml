@@ -136,6 +136,7 @@ nav:
       - Basic Sprite: samples/basicsprite.md
       - Billboards 3D: samples/billboards.md
       - Blend Modes: samples/blend_modes.md
+      - Canvas Modes: samples/canvas_modes.md
       - City 3D: samples/draw3d.md
       - Clay UI: samples/clay.md
       - Clay UI Animations: samples/clay_ui_animations.md

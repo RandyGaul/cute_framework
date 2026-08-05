@@ -76,6 +76,64 @@ TEST_CASE(test_display_invalid_id_is_safe)
 	return true;
 }
 
+// A failed REQUIRE returns out of the test case early, so destroying the app must happen
+// via RAII rather than a trailing call -- otherwise the leaked app breaks cf_make_app in
+// whichever test case runs next. Deliberately NOT named AppDestroyGuard: that name is taken
+// by test_canvas_clear.cpp's shared-fixture guard (whose destructor is a no-op while apps
+// are shared), and a same-named struct with a different inline destructor is an ODR
+// violation -- the linker silently picks one destructor for both, destroying the shared
+// app behind the fixture's back.
+//
+// Gfx-app test cases must run after the display query cases: cf_destroy_app calls
+// SDL_Quit, after which cf_display_count reports 0.
+struct OwnedAppGuard
+{
+	~OwnedAppGuard() { cf_destroy_app(); }
+};
+
+TEST_CASE(test_app_set_canvas_size_is_one_shot)
+{
+	REQUIRE(!cf_is_error(cf_make_app(NULL, 0, 0, 0, 200, 100, CF_APP_OPTIONS_HIDDEN_BIT | CF_APP_OPTIONS_NO_AUDIO_BIT, NULL)));
+	OwnedAppGuard guard;
+
+	// The default canvas tracks the window at window_points * pixel_scale.
+	float scale = cf_app_get_pixel_scale();
+	REQUIRE(cf_app_get_canvas_width() == (int)CF_ROUNDF(200 * scale));
+	REQUIRE(cf_app_get_canvas_height() == (int)CF_ROUNDF(100 * scale));
+
+	// An explicit resize takes effect immediately...
+	cf_app_set_canvas_size(320, 180);
+	REQUIRE(cf_app_get_canvas_width() == 320);
+	REQUIRE(cf_app_get_canvas_height() == 180);
+
+	// ...but is one-shot: the next recreation event snaps back to window * pixel_scale.
+	cf_app_set_size(256, 128);
+	scale = cf_app_get_pixel_scale();
+	REQUIRE(cf_app_get_canvas_width() == (int)CF_ROUNDF(256 * scale));
+	REQUIRE(cf_app_get_canvas_height() == (int)CF_ROUNDF(128 * scale));
+
+	return true;
+}
+
+TEST_CASE(test_app_msaa_change_resets_canvas_size)
+{
+	REQUIRE(!cf_is_error(cf_make_app(NULL, 0, 0, 0, 200, 100, CF_APP_OPTIONS_HIDDEN_BIT | CF_APP_OPTIONS_NO_AUDIO_BIT, NULL)));
+	OwnedAppGuard guard;
+
+	cf_app_set_canvas_size(320, 180);
+	REQUIRE(cf_app_get_canvas_width() == 320);
+	REQUIRE(cf_app_get_canvas_height() == 180);
+
+	if (cf_app_set_msaa(2)) { // MSAA support varies by backend/driver.
+		// An MSAA change is a recreation event like any other -- the one-shot size does not persist.
+		float scale = cf_app_get_pixel_scale();
+		REQUIRE(cf_app_get_canvas_width() == (int)CF_ROUNDF(200 * scale));
+		REQUIRE(cf_app_get_canvas_height() == (int)CF_ROUNDF(100 * scale));
+	}
+
+	return true;
+}
+
 TEST_CASE(test_app_present_mode_vsync_always_supported)
 {
 	REQUIRE(!is_error(make_app(NULL, 0, 0, 0, 0, CF_APP_OPTIONS_HIDDEN_BIT | CF_APP_OPTIONS_NO_AUDIO_BIT, NULL)));
@@ -142,6 +200,8 @@ TEST_SUITE(test_app)
 
 	// Requires headless GPU context support in CI -- see
 	// https://github.com/RandyGaul/cute_framework/pull/517
+	RUN_TEST_CASE(test_app_set_canvas_size_is_one_shot);
+	RUN_TEST_CASE(test_app_msaa_change_resets_canvas_size);
 	RUN_TEST_CASE(test_app_present_mode_vsync_always_supported);
 	RUN_TEST_CASE(test_app_present_mode_off_round_trip);
 	RUN_TEST_CASE(test_app_present_mode_mailbox_failure_does_not_corrupt_state);

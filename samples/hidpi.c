@@ -7,8 +7,9 @@
 	is a quick visual check of that: run it on a HiDPI display and glyph edges
 	and shape antialiasing should look sharp, not soft/blurry.
 
-	See docs/topics/hidpi.md for the full point/pixel model and the retro
-	pixel-art escape hatch (`cf_app_set_canvas_size`).
+	See docs/topics/hidpi.md for the full point/pixel model, and
+	samples/canvas_modes.c for an interactive tour of app-canvas sizing
+	(custom scale, forced 1x, and fixed-resolution retro canvases).
 
 	What it draws:
 	  - Text at three sizes (12px / 24px / 48px) to eyeball glyph

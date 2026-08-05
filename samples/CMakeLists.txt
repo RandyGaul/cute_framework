@@ -57,6 +57,7 @@ target_include_directories(mandala PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../src) #
 add_sample(tile_perf tile_perf.cpp)
 target_include_directories(tile_perf PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../src) # internal/cute_draw_internal.h for the tiled toggle.
 add_sample(windowresizing window_resizing.cpp)
+add_sample(canvas_modes canvas_modes.c)
 add_sample(basicinput basic_input.c)
 add_sample(windowevents window_events.c)
 add_sample(window window.cpp)

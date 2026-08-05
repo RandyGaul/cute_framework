@@ -19,16 +19,35 @@ Two functions report display density, and they're easy to confuse:
 
 When you need to convert between points and physical pixels — for example, sizing an offscreen canvas to match the swapchain — use `cf_app_get_pixel_scale`.
 
-## Retro / pixel-art canvas
+## How the default canvas resizes
 
-Sometimes a low resolution is the whole point. For an intentional retro or pixel-art look, call [`cf_app_set_canvas_size`](../app/function/cf_app_set_canvas_size.md) to pin the app's default canvas to an exact device-pixel size:
+CF recreates the app's default canvas at `window_size * pixel_scale` physical pixels on every *canvas recreation event*: a window resize, moving to a display with a different pixel density, [`cf_app_set_size`](../app/function/cf_app_set_size.md), or [`cf_app_set_msaa`](../app/function/cf_app_set_msaa.md).
+
+[`cf_app_set_canvas_size`](../app/function/cf_app_set_canvas_size.md) resizes the canvas to an exact pixel size as a **one-shot override** — the custom size lasts only until the next recreation event snaps the canvas back to `window_size * pixel_scale`. To hold a custom size (say, rendering at half resolution to save fill-rate), just re-apply it whenever the canvas no longer matches your intended size, as demonstrated in the [Canvas Modes](../samples/canvas_modes.md) sample.
+
+## Retro / pixel-art rendering
+
+Sometimes a low resolution is the whole point. For a persistent fixed-resolution target, make your own canvas and scale it up onto the screen each frame:
 
 ```cpp
-// Render at a fixed 320x180, then scale up to fill the window.
-cf_app_set_canvas_size(320, 180);
+// Startup: a 320x180 canvas, nearest-filtered so the upscale stays blocky.
+CF_CanvasParams params = cf_canvas_defaults(320, 180);
+params.target.filter = CF_FILTER_NEAREST;
+CF_Canvas canvas = cf_make_canvas(params);
+
+// Each frame: draw the scene at 320x180, then letterbox it up to the window.
+cf_draw_projection(cf_ortho_2d(0, 0, 320, 180));
+draw_game();
+cf_render_to(canvas, true);
+
+int window_w, window_h;
+cf_app_get_size(&window_w, &window_h);
+cf_draw_projection(cf_ortho_2d(0, 0, (float)window_w, (float)window_h));
+float scale = fminf(window_w / 320.0f, window_h / 180.0f);
+cf_draw_canvas(canvas, cf_v2(0, 0), cf_v2(320 * scale, 180 * scale));
 ```
 
-Pinning opts that canvas out of CF's automatic pixel-scale sizing, so it won't auto-resize when the window moves to a display with a different density. The upscale to fill the window becomes a deliberate stylistic choice rather than accidental blur.
+Unlike the app's canvas, a canvas you make yourself never resizes behind your back, and the upscale is a deliberate stylistic choice rather than accidental blur. See [Canvas Modes](../samples/canvas_modes.md) for a live comparison of all of these setups, and [Window Resizing](../samples/window_resizing.md) for letterbox/crop/stretch scaling variants.
 
 ## Opting out entirely
 
@@ -40,4 +59,4 @@ cf_make_app("My Game", 0, 0, 0, 640, 480, CF_APP_OPTIONS_NO_HIGH_DPI_BIT, argv[0
 
 ## Sample
 
-See [samples/hidpi.c](https://github.com/RandyGaul/cute_framework/blob/master/samples/hidpi.c) for a runnable demonstration: text at several sizes, a row of SDF shapes, and a live [`cf_app_get_pixel_scale`](../app/function/cf_app_get_pixel_scale.md) readout to eyeball crispness on your own display.
+See [samples/hidpi.c](https://github.com/RandyGaul/cute_framework/blob/master/samples/hidpi.c) for a runnable demonstration: text at several sizes, a row of SDF shapes, and a live [`cf_app_get_pixel_scale`](../app/function/cf_app_get_pixel_scale.md) readout to eyeball crispness on your own display. For an interactive comparison of canvas sizing setups (default, custom scale, forced 1x, fixed-resolution retro canvas) see [samples/canvas_modes.c](https://github.com/RandyGaul/cute_framework/blob/master/samples/canvas_modes.c).
