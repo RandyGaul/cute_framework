@@ -500,7 +500,7 @@ void cf_begin_frame_input()
 }
 
 // Re-queries the window's physical pixel density and, if it changed, updates
-// app->pixel_scale and recreates the default canvas to match (unless pinned).
+// app->pixel_scale and recreates the default canvas to match.
 // No-ops entirely when CF_APP_OPTIONS_NO_HIGH_DPI_BIT is set, since pixel_scale
 // must stay pinned at 1.0f in that mode.
 // Called from both SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED and

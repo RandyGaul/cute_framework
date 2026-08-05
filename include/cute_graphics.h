@@ -1535,9 +1535,10 @@ CF_INLINE const char* cf_samplecount_string(CF_SampleCount count) {
  * @category graphics
  * @brief    A texture the GPU can draw upon (with an optional depth/stencil texture).
  * @remarks  The clear color settings are used when `cf_apply_canvas` is called. You can change the clear color
- *           by calling `cf_clear_color`. Usually you will not need to create a canvas at all, as it's an advanced feature for
- *           users who want to draw to an off-screen buffer. Use cases can include rendering reflections, advanced lighting
- *           techniques, or other kinds of multi-pass effects.
+ *           by calling `cf_clear_color`. Make your own canvas whenever you want to draw to an off-screen buffer. Use
+ *           cases include rendering at a fixed low resolution for a retro/pixel-art look (draw at e.g. 320x180, then
+ *           scale up to the window with `cf_draw_canvas`), rendering reflections, advanced lighting techniques, or
+ *           other kinds of multi-pass effects.
  * @related  CF_CanvasParams cf_canvas_defaults cf_make_canvas cf_destroy_canvas cf_apply_canvas cf_clear_color
  */
 typedef struct CF_CanvasParams

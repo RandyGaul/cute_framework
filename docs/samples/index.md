@@ -91,6 +91,14 @@ Interactive samples demonstrating Cute Framework features. Click any card to pla
     [:octicons-arrow-right-24: Play](blend_modes.md)
 
 
+- **[Canvas Modes](canvas_modes.md)**
+
+    ---
+
+    Interactive sample demonstrating canvas modes features.
+
+    [:octicons-arrow-right-24: Play](canvas_modes.md)
+
 - **[City 3D](draw3d.md)**
 
     ---

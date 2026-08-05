@@ -161,11 +161,9 @@ static void s_canvas(int w, int h)
 
 void cf_app_recreate_default_canvas_if_needed()
 {
-	if (!app->canvas_pinned) {
-		int w = (int)CF_ROUNDF(app->w * app->pixel_scale);
-		int h = (int)CF_ROUNDF(app->h * app->pixel_scale);
-		s_canvas(w, h);
-	}
+	int w = (int)CF_ROUNDF(app->w * app->pixel_scale);
+	int h = (int)CF_ROUNDF(app->h * app->pixel_scale);
+	s_canvas(w, h);
 }
 
 CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, int y, int w, int h, CF_AppOptionFlags options, const char* argv0)
@@ -771,11 +769,7 @@ bool cf_app_set_msaa(int sample_count)
 
 	if (supported && app->sample_count != sample_count) {
 		app->sample_count = sample_count;
-		if (app->canvas_pinned) {
-			s_canvas(app->canvas_w, app->canvas_h);
-		} else {
-			cf_app_recreate_default_canvas_if_needed();
-		}
+		cf_app_recreate_default_canvas_if_needed();
 	}
 
 	return supported;
@@ -788,7 +782,6 @@ CF_Canvas cf_app_get_canvas()
 
 void cf_app_set_canvas_size(int w, int h)
 {
-	app->canvas_pinned = true;
 	s_canvas(w, h);
 }
 

@@ -728,10 +728,13 @@ CF_API CF_Canvas CF_CALL cf_app_get_canvas(void);
  * @param    w          The width in pixels to resize the canvas to.
  * @param    h          The height in pixels to resize the canvas to.
  * @remarks  Be careful about calling this function, as it will invalidate any old references from `cf_app_get_canvas`.
- *           Calling this pins the canvas to an exact device-pixel size and opts out of CF's automatic pixel-density-based
- *           canvas scaling -- the canvas will no longer auto-resize if the window moves to a display with a different
- *           pixel density.
- * @related  cf_app_get_canvas cf_app_get_canvas_width cf_app_get_canvas_height cf_app_set_present_mode cf_app_get_present_mode
+ *
+ *           This is a one-shot override. The app's canvas is automatically recreated at window size (in points) times
+ *           `cf_app_get_pixel_scale` on every canvas recreation event -- a window resize, moving to a display with a
+ *           different pixel density, `cf_app_set_size`, or `cf_app_set_msaa` -- so a custom size lasts only until the
+ *           next such event. For a persistent fixed-resolution render target (e.g. a retro/pixel-art look) make your
+ *           own canvas with `cf_make_canvas` and draw it scaled-up with `cf_draw_canvas`; see the canvas_modes sample.
+ * @related  cf_app_get_canvas cf_app_get_canvas_width cf_app_get_canvas_height cf_app_get_pixel_scale cf_app_set_canvas_blit_filter cf_make_canvas cf_draw_canvas
  */
 CF_API void CF_CALL cf_app_set_canvas_size(int w, int h);
 
@@ -756,8 +759,8 @@ CF_API int CF_CALL cf_app_get_canvas_height(void);
  * @category app
  * @brief    Sets the filter used when the app's canvas is blitted onto the screen, if their sizes differ.
  * @param    filter     The filter to use: `CF_FILTER_NEAREST` (default; crisp/blocky, good for pixel art) or `CF_FILTER_LINEAR` (smooth).
- * @remarks  This only matters when the app's canvas size (see `cf_app_set_canvas_size`) doesn't match the window's physical
- *           pixel size -- for example a pinned low-resolution retro canvas. When the canvas already matches the physical size
+ * @remarks  This only matters when the app's canvas size doesn't match the window's physical pixel size -- for example
+ *           after resizing the canvas with `cf_app_set_canvas_size`. When the canvas already matches the physical size
  *           (the default), this setting has no visible effect since no stretching occurs.
  * @related  cf_app_set_canvas_size cf_app_get_canvas_width cf_app_get_canvas_height CF_Filter
  */
