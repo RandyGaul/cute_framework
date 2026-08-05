@@ -125,7 +125,12 @@
 //     - A uniform or texture set inside the recording records frozen; a name that was only
 //       ambient binds the live `cf_draw3d_set_uniform`/`set_texture` value at
 //       `cf_draw_list` time, record-time value as fallback. Set `u_time` each frame and a
-//       baked level animates; set nothing and it renders exactly as recorded.
+//       baked level animates; set nothing and it renders exactly as recorded. Ambient
+//       capture is by NAME at record time: only names live when the recording's
+//       submissions were made participate, so set every per-frame uniform once BEFORE
+//       recording -- a level baked at startup, before any uniform exists, replays with no
+//       uniforms bound at all (the fireflies sample bakes on its first frame for exactly
+//       this reason).
 //
 // This is what makes multi-pass rendering one-recording cheap: record a scene shaderless,
 // then push the shadow shader and draw the list, push the lit shader and draw it again --
@@ -483,7 +488,8 @@ CF_API CF_RenderState CF_CALL cf_draw3d_peek_render_state(void);
 // submission; changing a uniform between two submissions of the same mesh splits their coalescing
 // group, which is the lever for material variety within one shader. Draw-list recordings apply
 // closure semantics per name: set inside the recording = frozen; merely ambient = the draw list
-// binds the live value at `cf_draw_list` time (see the DRAW LISTS section above).
+// binds the live value at `cf_draw_list` time. A name participates only if it was live at record
+// time, so set per-frame uniforms once before recording (see the DRAW LISTS section above).
 
 /**
  * @function cf_draw3d_set_uniform
