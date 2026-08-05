@@ -74,6 +74,7 @@ not_in_nav: |
   /list/**
   /map/**
   /math/**
+  /model/**
   /multithreading/**
   /net/**
   /noise/**

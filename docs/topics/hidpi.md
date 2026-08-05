@@ -47,7 +47,7 @@ float scale = fminf(window_w / 320.0f, window_h / 180.0f);
 cf_draw_canvas(canvas, cf_v2(0, 0), cf_v2(320 * scale, 180 * scale));
 ```
 
-Unlike the app's canvas, a canvas you make yourself never resizes behind your back, and the upscale is a deliberate stylistic choice rather than accidental blur. See [Canvas Modes](../samples/canvas_modes.md) for a live comparison of all of these setups, and [Window Resizing](../samples/window_resizing.md) for letterbox/crop/stretch scaling variants.
+Unlike the app's canvas, a canvas you make yourself never resizes behind your back, and the upscale is a deliberate stylistic choice rather than accidental blur. See [Canvas Modes](../samples/canvas_modes.md) for a live comparison of all of these setups, and [Window Resizing](../samples/windowresizing.md) for letterbox/crop/stretch scaling variants.
 
 ## Opting out entirely
 
