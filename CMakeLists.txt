@@ -99,6 +99,7 @@ set(CF_SRCS
 	src/cute_json.cpp
 	src/cute_base64.cpp
 	src/cute_math.cpp
+	src/cute_physics.cpp
 	src/cute_draw.cpp
 	src/cute_draw3d.cpp
 	src/cute_image.cpp
@@ -222,6 +223,30 @@ else()
 	add_library(cute SHARED ${CF_SRCS} ${CF_HDRS})
 endif()
 target_compile_definitions(cute PRIVATE CF_EXPORT)
+
+# Box2D v3.1.1, vendored under libraries/box2d (MIT). Compiled as an object library folded
+# into cute itself: the C sources need C17 (the rest of CF compiles as C++), and shared
+# builds define box2d_EXPORTS so b2* symbols export from the DLL for direct user calls.
+file(GLOB CF_BOX2D_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/libraries/box2d/src/*.c)
+add_library(cute-box2d OBJECT ${CF_BOX2D_SRCS})
+target_include_directories(cute-box2d PRIVATE
+	${CMAKE_CURRENT_SOURCE_DIR}/libraries/box2d/include
+	${CMAKE_CURRENT_SOURCE_DIR}/libraries/box2d/src
+)
+set_target_properties(cute-box2d PROPERTIES
+	C_STANDARD 17
+	C_STANDARD_REQUIRED YES
+	C_EXTENSIONS YES
+	POSITION_INDEPENDENT_CODE ON
+)
+if(NOT CF_FRAMEWORK_STATIC)
+	target_compile_definitions(cute-box2d PRIVATE box2d_EXPORTS)
+endif()
+if(EMSCRIPTEN)
+	# Matches upstream: wasm SIMD via the SSE2 emulation path.
+	target_compile_options(cute-box2d PRIVATE -msimd128 -msse2)
+endif()
+target_sources(cute PRIVATE $<TARGET_OBJECTS:cute-box2d>)
 
 if(EMSCRIPTEN)
 	message(STATUS "Configuring CF for Web (Emscripten)")
@@ -437,6 +462,7 @@ endif()
 target_include_directories(cute PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
 target_include_directories(cute PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/libraries>)
 target_include_directories(cute PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/libraries/imgui>)
+target_include_directories(cute PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/libraries/box2d/include>)
 target_include_directories(cute PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/tools)
 
 # Install target
