@@ -765,6 +765,36 @@ static void s_submit_block(CF_Mesh cube, const Block* b)
 	s_submit_block_ex(cube, b->center, b->scale, b->color, b->emissive, b->sway);
 }
 
+// True when a sphere at `p` touches any world block -- the lantern's "would it clip a
+// tree" probe. Checks the 3x3 chunk neighborhood around p (no block spans further).
+static bool s_world_blocked(CF_V3 p, float r)
+{
+	CF_Sphere s = cf_make_sphere(p, r);
+	int cx = clampi((int)(p.x / CHUNK_N), 0, CHUNKS - 1);
+	int cz = clampi((int)(p.z / CHUNK_N), 0, CHUNKS - 1);
+	for (int dz = -1; dz <= 1; ++dz) {
+		for (int dx = -1; dx <= 1; ++dx) {
+			int x = cx + dx, z = cz + dz;
+			if (x < 0 || z < 0 || x >= CHUNKS || z >= CHUNKS) continue;
+			Chunk* c = &g_world.chunks[z * CHUNKS + x];
+			if (!c->count || !cf_sphere_to_aabb3(s, c->bounds)) continue;
+			for (int k = 0; k < c->count; ++k) {
+				Block* b = &c->blocks[k];
+				if (cf_sphere_to_aabb3(s, cf_make_aabb3_center(b->center, cf_mul_v3_f(b->scale, 0.5f)))) return true;
+			}
+		}
+	}
+	return false;
+}
+
+// The held lantern's hang point along the arm's swing arc: pull 0 is the relaxed
+// side-forward carry, pull 1 is tucked in across the chest.
+static CF_V3 s_lantern_pose(CF_V3 player, CF_V3 fwd, CF_V3 right, float pull)
+{
+	return cf_add_v3(player, cf_add_v3(cf_mul_v3_f(fwd, 0.85f - 0.52f * pull),
+		cf_add_v3(cf_mul_v3_f(right, 0.30f - 0.24f * pull), cf_v3(0, -0.19f - 0.04f * pull, 0))));
+}
+
 // One translucent glass block: opacity rides the second user lane, classic alpha blend,
 // no depth write -- draw3d's translucent sort orders it against the world automatically.
 static void s_submit_glass_block(CF_Mesh cube, CF_V3 center, CF_V3 scale, CF_Color color, float emissive, float alpha)
@@ -867,31 +897,77 @@ static void s_draw_dynamic(CF_Mesh cube, CF_V3 player, CF_V3 fwd, float t)
 		float spd01 = cf_clamp(s_speed / 4.2f, 0, 1);
 		s_phase += s_speed * ldt * 2.6f; // Step cycle advances with distance, not time.
 
-		float roll = sinf(s_phase) * 0.16f * spd01;
-		float pitch = sinf(s_phase * 0.5f) * 0.09f * spd01 + sinf(t * 1.3f) * 0.015f;
-		float lunge = 0;
-		float k = (t - g_catch_t) / 0.5f;
+		CF_V3 right = cf_norm(cf_cross(cf_v3(fwd.x, 0, fwd.z), cf_v3(0, 1, 0)));
+
+		// Catch swing: the whole ARM sweeps the lantern through an arc -- a quick wind-up
+		// back and low, a swoop forward-up-across where the firefly was, then settle back
+		// to the carry. It moves the hang PIVOT along a path; the chain sim below turns
+		// that path into the whip you actually see.
+		CF_V3 swing_off = cf_v3(0, 0, 0);
+		float k = (t - g_catch_t) / 0.6f;
 		if (k >= 0 && k < 1.0f) {
-			// The catch: a quick forward-up scoop that eases back home.
-			float ease = sinf(k * CF_PI);
-			pitch -= ease * 0.85f;
-			lunge = ease * 0.12f;
+			float wind = k < 0.28f ? sinf(k / 0.28f * CF_PI) : 0.0f;
+			float sweep = k > 0.18f ? sinf(cf_clamp((k - 0.18f) / 0.72f, 0, 1) * CF_PI) : 0.0f;
+			swing_off = cf_add_v3(
+				cf_mul_v3_f(fwd, -0.16f * wind + 0.55f * sweep),
+				cf_add_v3(cf_mul_v3_f(right, 0.05f * wind - 0.33f * sweep),
+				          cf_v3(0, -0.07f * wind + 0.34f * sweep, 0)));
 		}
 
-		CF_V3 right = cf_norm(cf_cross(cf_v3(fwd.x, 0, fwd.z), cf_v3(0, 1, 0)));
-		CF_V3 hang = cf_add_v3(player, cf_add_v3(cf_mul_v3_f(fwd, 0.85f),
-			cf_add_v3(cf_mul_v3_f(right, 0.30f), cf_v3(0, -0.19f, 0))));
+		// Lantern collision: if the relaxed carry pose would clip a tree, the arm swings
+		// it in across the chest. Probe along the swing arc, take the first clear spot,
+		// and chase it with a spring -- quick to pull in, lazy to swing back out.
+		static float s_pull;
+		float pull_target = 1.0f; // Fully tucked if even the chest spot is blocked.
+		for (int i = 0; i < 5; ++i) {
+			float cand = (float)i * 0.25f;
+			if (!s_world_blocked(s_lantern_pose(player, fwd, right, cand), 0.15f)) {
+				pull_target = cand;
+				break;
+			}
+		}
+		s_pull += (pull_target - s_pull) * (1.0f - expf((pull_target > s_pull ? -16.0f : -5.0f) * ldt));
+
+		// The hand: carry pose, plus the catch arc, plus a step-cycle pump so walking
+		// actually feeds energy into the chain below.
+		CF_V3 pivot = cf_add_v3(s_lantern_pose(player, fwd, right, s_pull), swing_off);
+		pivot.y += sinf(s_phase) * 0.016f * spd01;
+
+		// The chain: one verlet particle on a distance constraint (Jakobsen-style). The
+		// hand moves, the bob lags, and every walk step, camera turn, tuck, and catch arc
+		// becomes real swing -- damping brings it home when you stand still.
+		#define LANTERN_CHAIN 0.14f
+		static CF_V3 s_bob, s_bob_prev;
+		static bool s_bob_init;
+		if (!s_bob_init) { s_bob = cf_sub_v3(pivot, cf_v3(0, LANTERN_CHAIN, 0)); s_bob_prev = s_bob; s_bob_init = true; }
+		float sdt = cf_min(ldt, 1.0f / 20.0f);
+		CF_V3 vel = cf_mul_v3_f(cf_sub_v3(s_bob, s_bob_prev), expf(-2.4f * sdt));
+		s_bob_prev = s_bob;
+		s_bob = cf_add_v3(s_bob, cf_add_v3(vel, cf_v3(0, -10.0f * sdt * sdt, 0)));
+		CF_V3 chain = cf_sub_v3(s_bob, pivot);
+		float clen = cf_len(chain);
+		chain = clen > 1.0e-6f ? cf_div_v3_f(chain, clen) : cf_v3(0, -1, 0);
+		if (chain.y > -0.26f) {
+			// Cap the swing near 75 degrees from vertical: a wild whip flattens out
+			// instead of orbiting over the hand.
+			chain.y = -0.26f;
+			chain = cf_norm(chain);
+		}
+		s_bob = cf_add_v3(pivot, cf_mul_v3_f(chain, LANTERN_CHAIN));
+
+		// Hang the lantern along its chain, yawed with the camera; the tuck tips it a
+		// touch more, like a turning wrist.
 		float yaw = atan2f(fwd.x, fwd.z);
 		// Empty glass until the first firefly: just a whisper of warmth in the core.
 		float glow = g_game.in_jar ? 0.8f + 0.7f * (float)g_game.in_jar : 0.06f;
 		int specks = g_game.in_jar < 4 ? g_game.in_jar : 4;
 
 		cf_draw3d_push();
-		cf_draw3d_translate(hang);
+		cf_draw3d_translate(pivot);
+		cf_draw3d_rotate(cf_quat_from_to(cf_v3(0, -1, 0), chain));
 		cf_draw3d_rotate(cf_quat_from_axis_angle(cf_v3(0, 1, 0), yaw));
-		cf_draw3d_rotate(cf_quat_from_axis_angle(cf_v3(1, 0, 0), pitch));
-		cf_draw3d_rotate(cf_quat_from_axis_angle(cf_v3(0, 0, 1), roll));
-		s_draw_lantern(cube, cf_v3(0, -0.115f, lunge), 0.115f, 0, glow, specks, t);
+		cf_draw3d_rotate(cf_quat_from_axis_angle(cf_v3(0, 0, 1), s_pull * 0.30f));
+		s_draw_lantern(cube, cf_v3(0, -(LANTERN_CHAIN + 0.115f), 0), 0.115f, 0, glow, specks, t);
 		cf_draw3d_pop();
 	}
 
