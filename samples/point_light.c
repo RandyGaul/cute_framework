@@ -210,7 +210,7 @@ int main(int argc, char* argv[])
 	// SDL_GPU renders top-row-first (row 0 at ndc y = +1), but a cube face's T axis runs the
 	// other way relative to the right-handed bases above -- rendered as-is every face lands
 	// upside down, and the lit pass reads its shadows from the mirrored elevation. Mirroring
-	// clip-space y lines them up. That reverses triangle winding, hence CULL_MODE_FRONT.
+	// clip-space y lines them up. That reverses triangle winding, hence `CF_CULL_MODE_FRONT`.
 	CF_M4x4 face_projection = cf_mul_m4(cf_m4_scale(cf_v3(1, -1, 1)),
 		cf_perspective(CF_PI * 0.5f, 1.0f, 0.1f, LIGHT_RADIUS));
 	CF_RenderState face_state = cf_render_state_3d_defaults();

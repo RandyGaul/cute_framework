@@ -1582,7 +1582,7 @@ typedef struct CF_CanvasParams
 	   For a cube face rendered through a right-handed camera (`cf_look_at`/`cf_perspective`,
 	   e.g. via `cute_draw3d.h`), mind the T axis: CF renders top-row-first (row 0 at clip
 	   y = +1), which is the opposite of the row a right-handed face camera's `up` vector
-	   would put there. Rendering as-is stores every face upside down; a samplerCube fetch
+	   would put there. Rendering as-is stores every face upside down; a `samplerCube` fetch
 	   then reads shadows/reflections from the mirrored elevation. Mirror clip-space y in the
 	   face projection to fix it (which reverses triangle winding, so flip cull mode too). See
 	   `samples/point_light.c`'s `face_projection`/`face_state` for the exact fix. */
