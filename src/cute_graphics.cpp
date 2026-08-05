@@ -16,12 +16,18 @@
 
 #include "cute_shader.h"
 #include "builtin_shaders.h"
+#include <cute/cute_dds.h>
 
 #include <float.h>
 
 using namespace Cute;
 
 static Map<const char*> s_compute_shader_paths;
+
+// Source paths for shaders made by cf_make_shader, so they can hot-reload like draw and compute
+// shaders already do. Draw and compute shaders each need only one path, hence the separate map.
+struct CF_GraphicsShaderPaths { const char* vertex_path; const char* fragment_path; };
+static Map<CF_GraphicsShaderPaths> s_graphics_shader_paths;
 
 static void s_shader_directory_recursive(CF_Path path)
 {
@@ -104,6 +110,33 @@ static void s_shader_auto_reload(const char* changed_key)
 					cf_destroy_shader_internal(fresh_blit);
 				}
 			}
+		}
+	}
+
+	// 3d shape shaders (stroke + solid variant pairs). Reload logic lives with their
+	// stitching code in cute_draw3d.cpp.
+	cf_draw3d_reload_shape_shaders(changed_key);
+
+	// Two-file graphics shaders. The stored paths are whatever the user passed to cf_make_shader,
+	// which is a full VFS path, while `changed_key` is relative to the shader directory -- so
+	// resolve the key to its full path and compare interned pointers.
+	{
+		const char* changed_full = NULL;
+		CF_ShaderFileInfo* info = app->shader_file_infos.try_find(sintern(changed_key));
+		if (info) changed_full = info->path;
+
+		Array<uint64_t> gs_ids;
+		int gn = s_graphics_shader_paths.count();
+		for (int i = 0; i < gn; ++i) {
+			CF_GraphicsShaderPaths p = s_graphics_shader_paths.items()[i];
+			bool hit = (changed_full && (p.vertex_path == changed_full || p.fragment_path == changed_full)) ||
+			           matches(p.vertex_path) || matches(p.fragment_path);
+			if (hit) gs_ids.add(s_graphics_shader_paths.keys()[i]);
+		}
+		// cf_make_shader mutates s_graphics_shader_paths, so reload only after collecting.
+		for (int i = 0; i < gs_ids.count(); ++i) {
+			CF_Shader old = { gs_ids[i] };
+			cf_shader_reload_from_files(&old);
 		}
 	}
 
@@ -458,6 +491,7 @@ void cf_unload_internal_shaders()
 void cf_destroy_shader(CF_Shader shader_handle)
 {
 	s_draw->shader_paths.remove(shader_handle.id);
+	s_graphics_shader_paths.remove(shader_handle.id);
 
 	// Draw shaders automatically have blit shaders generated, so clean that up as well,
 	// if it exists. See `cf_make_draw_shader`.
@@ -466,6 +500,10 @@ void cf_destroy_shader(CF_Shader shader_handle)
 		cf_destroy_shader(*blit);
 		s_draw->draw_shd_to_blit_shd.remove(shader_handle.id);
 	}
+
+	// 3d shape shaders pair a hidden solid-variant sibling with the canonical handle. See
+	// `cf_make_draw3d_shape_shader`.
+	cf_draw3d_destroy_shape_shader_sibling(shader_handle.id);
 
 	cf_destroy_shader_internal(shader_handle);
 }
@@ -520,12 +558,13 @@ CF_Shader cf_make_draw_blit_shader_from_bytecode_internal(CF_ShaderBytecode byte
 	return cf_make_shader_from_bytecode(app->blit_vs_bytecode, bytecode);
 }
 
-static void s_material_set_texture(CF_MaterialInternal* material, CF_MaterialState* state, const char* name, CF_Texture texture)
+static void s_material_set_texture(CF_MaterialInternal* material, CF_MaterialState* state, const char* name, CF_Texture texture, CF_Sampler sampler)
 {
 	bool found = false;
 	for (int i = 0; i < state->textures.count(); ++i) {
 		if (state->textures[i].name == name) {
 			state->textures[i].handle = texture;
+			state->textures[i].sampler = sampler;
 			found = true;
 			break;
 		}
@@ -534,6 +573,7 @@ static void s_material_set_texture(CF_MaterialInternal* material, CF_MaterialSta
 		CF_MaterialTex tex;
 		tex.name = name;
 		tex.handle = texture;
+		tex.sampler = sampler;
 		state->textures.add(tex);
 		material->dirty = true;
 	}
@@ -581,7 +621,6 @@ CF_TextureParams cf_texture_defaults(int w, int h)
 	return params;
 }
 
-bool cf_texture_supports_format(CF_PixelFormat format, CF_TextureUsageBits usage);
 
 CF_CanvasParams cf_canvas_defaults(int w, int h)
 {
@@ -594,6 +633,10 @@ CF_CanvasParams cf_canvas_defaults(int w, int h)
 		params.name = NULL;
 		params.target = cf_texture_defaults(w, h);
 		params.target.usage |= CF_TEXTURE_USAGE_COLOR_TARGET_BIT;
+		// Pre-fill every color target slot identically, so a multi-target canvas only needs
+		// target_count set (and usually pixel formats tweaked) rather than full param setup.
+		for (int i = 1; i < CF_MAX_CANVAS_TARGETS; ++i) params.targets[i] = params.target;
+		params.target_count = 1;
 		params.depth_stencil_enable = false;
 		params.depth_stencil_target = cf_texture_defaults(w, h);
 		params.depth_stencil_target.pixel_format = CF_PIXEL_FORMAT_D16_UNORM;
@@ -648,6 +691,15 @@ CF_RenderState cf_render_state_defaults()
 	return state;
 }
 
+CF_RenderState cf_render_state_3d_defaults()
+{
+	CF_RenderState state = cf_render_state_defaults();
+	state.depth_write_enabled = true;
+	state.depth_compare = CF_COMPARE_FUNCTION_LESS_THAN;
+	state.cull_mode = CF_CULL_MODE_BACK;
+	return state;
+}
+
 CF_Material cf_make_material()
 {
 	CF_MaterialInternal* material = CF_NEW(CF_MaterialInternal);
@@ -680,21 +732,38 @@ void cf_material_set_texture_vs(CF_Material material_handle, const char* name, C
 {
 	CF_MaterialInternal* material = (CF_MaterialInternal*)material_handle.id;
 	name = sintern(name);
-	s_material_set_texture(material, &material->vs, name, texture);
+	CF_Sampler none = { 0 };
+	s_material_set_texture(material, &material->vs, name, texture, none);
 }
 
 void cf_material_set_texture_fs(CF_Material material_handle, const char* name, CF_Texture texture)
 {
 	CF_MaterialInternal* material = (CF_MaterialInternal*)material_handle.id;
 	name = sintern(name);
-	s_material_set_texture(material, &material->fs, name, texture);
+	CF_Sampler none = { 0 };
+	s_material_set_texture(material, &material->fs, name, texture, none);
 }
 
 void cf_material_set_texture_cs(CF_Material material_handle, const char* name, CF_Texture texture)
 {
 	CF_MaterialInternal* material = (CF_MaterialInternal*)material_handle.id;
 	name = sintern(name);
-	s_material_set_texture(material, &material->cs, name, texture);
+	CF_Sampler none = { 0 };
+	s_material_set_texture(material, &material->cs, name, texture, none);
+}
+
+void cf_material_set_texture_vs_sampler(CF_Material material_handle, const char* name, CF_Texture texture, CF_Sampler sampler)
+{
+	CF_MaterialInternal* material = (CF_MaterialInternal*)material_handle.id;
+	name = sintern(name);
+	s_material_set_texture(material, &material->vs, name, texture, sampler);
+}
+
+void cf_material_set_texture_fs_sampler(CF_Material material_handle, const char* name, CF_Texture texture, CF_Sampler sampler)
+{
+	CF_MaterialInternal* material = (CF_MaterialInternal*)material_handle.id;
+	name = sintern(name);
+	s_material_set_texture(material, &material->fs, name, texture, sampler);
 }
 
 void cf_material_clear_textures(CF_Material material_handle)
@@ -795,15 +864,50 @@ void cf_clear_depth_stencil(float depth, uint32_t stencil)
 
 CF_Shader cf_make_shader(const char* vertex_path, const char* fragment_path)
 {
-	// Make sure each file can be found.
 	char* vs = fs_read_entire_file_to_memory_and_nul_terminate(vertex_path);
 	char* fs = fs_read_entire_file_to_memory_and_nul_terminate(fragment_path);
-	CF_ASSERT(vs);
-	CF_ASSERT(fs);
+
+	// Report a missing file the same way a compile error is reported, rather than asserting.
+	// Hot reload fires on filesystem timestamps and will happily catch a file mid-write, and the
+	// whole point of reloading is that a bad edit leaves the old shader running instead of
+	// taking the app down.
+	if (!vs || !fs) {
+		s_shader_compile_error = String("Unable to read shader file: ") + (vs ? fragment_path : vertex_path);
+		fprintf(stderr, "%s\n", s_shader_compile_error.c_str());
+		if (s_shader_error_fn) s_shader_error_fn(s_shader_compile_error.c_str(), s_shader_error_udata);
+		if (vs) CF_FREE(vs);
+		if (fs) CF_FREE(fs);
+		CF_Shader result = { 0 };
+		return result;
+	}
+
 	CF_Shader shader = cf_make_shader_from_source(vs, fs);
 	CF_FREE(vs);
 	CF_FREE(fs);
+
+	if (shader.id) {
+		CF_GraphicsShaderPaths paths;
+		paths.vertex_path = sintern(vertex_path);
+		paths.fragment_path = sintern(fragment_path);
+		s_graphics_shader_paths.add(shader.id, paths);
+	}
 	return shader;
+}
+
+bool cf_shader_reload_from_files(CF_Shader* shader)
+{
+	if (!shader) return false;
+	CF_GraphicsShaderPaths* paths = s_graphics_shader_paths.try_find(shader->id);
+	if (!paths) return false;
+
+	CF_Shader fresh = cf_make_shader(paths->vertex_path, paths->fragment_path);
+	if (!fresh.id) return false; // Compile or read error; the caller's shader keeps working.
+
+	// Swap guts rather than handles, so every copy of this handle -- including ones already
+	// handed to a CF_Material -- keeps working.
+	cf_shader_swap_contents(*shader, fresh);
+	cf_destroy_shader(fresh);
+	return true;
 }
 
 CF_Shader cf_make_shader_from_source(const char* vertex_src, const char* fragment_src)
@@ -901,17 +1005,107 @@ CF_DISPATCH_SHIM(CF_Texture, make_texture, (CF_TextureParams params), params)
 CF_DISPATCH_SHIM_VOID(destroy_texture, (CF_Texture texture_handle), texture_handle)
 CF_DISPATCH_SHIM_VOID(texture_update, (CF_Texture texture_handle, void* data, int size), texture_handle, data, size)
 CF_DISPATCH_SHIM_VOID(texture_update_mip, (CF_Texture texture_handle, void* data, int size, int mip_level), texture_handle, data, size, mip_level)
+CF_DISPATCH_SHIM_VOID(texture_update_layer, (CF_Texture texture_handle, void* data, int size, int layer), texture_handle, data, size, layer)
+CF_DISPATCH_SHIM_VOID(texture_update_layer_mip, (CF_Texture texture_handle, void* data, int size, int layer, int mip_level), texture_handle, data, size, layer, mip_level)
+CF_DISPATCH_SHIM(CF_Sampler, make_sampler, (CF_SamplerParams params), params)
+CF_DISPATCH_SHIM_VOID(destroy_sampler, (CF_Sampler sampler), sampler)
+CF_DISPATCH_SHIM_VOID(texture_update_region, (CF_Texture texture_handle, int x, int y, int w, int h, void* pixels), texture_handle, x, y, w, h, pixels)
+CF_DISPATCH_SHIM_VOID(texture_copy_region, (CF_Texture dst, int dst_x, int dst_y, CF_Texture src, int src_x, int src_y, int w, int h), dst, dst_x, dst_y, src, src_x, src_y, w, h)
 CF_DISPATCH_SHIM_VOID(generate_mipmaps, (CF_Texture texture_handle), texture_handle)
 CF_DISPATCH_SHIM(uint64_t, texture_handle, (CF_Texture texture), texture)
 CF_DISPATCH_SHIM(uint64_t, texture_binding_handle, (CF_Texture texture), texture)
 
+//--------------------------------------------------------------------------------------------------
+// DDS loading (cute_dds.h): block-compressed textures with their mip chains, uploaded
+// exactly as the file stores them -- no decode, no recompress.
+
+static CF_PixelFormat s_dds_pixel_format(cd_format_t format)
+{
+	switch (format) {
+	case CD_FORMAT_RGBA8:      return CF_PIXEL_FORMAT_R8G8B8A8_UNORM;
+	case CD_FORMAT_RGBA8_SRGB: return CF_PIXEL_FORMAT_R8G8B8A8_UNORM_SRGB;
+	case CD_FORMAT_BGRA8:      return CF_PIXEL_FORMAT_B8G8R8A8_UNORM;
+	case CD_FORMAT_BGRA8_SRGB: return CF_PIXEL_FORMAT_B8G8R8A8_UNORM_SRGB;
+	case CD_FORMAT_BC1:        return CF_PIXEL_FORMAT_BC1_RGBA_UNORM;
+	case CD_FORMAT_BC1_SRGB:   return CF_PIXEL_FORMAT_BC1_RGBA_UNORM_SRGB;
+	case CD_FORMAT_BC2:        return CF_PIXEL_FORMAT_BC2_RGBA_UNORM;
+	case CD_FORMAT_BC2_SRGB:   return CF_PIXEL_FORMAT_BC2_RGBA_UNORM_SRGB;
+	case CD_FORMAT_BC3:        return CF_PIXEL_FORMAT_BC3_RGBA_UNORM;
+	case CD_FORMAT_BC3_SRGB:   return CF_PIXEL_FORMAT_BC3_RGBA_UNORM_SRGB;
+	case CD_FORMAT_BC4:        return CF_PIXEL_FORMAT_BC4_R_UNORM;
+	case CD_FORMAT_BC5:        return CF_PIXEL_FORMAT_BC5_RG_UNORM;
+	case CD_FORMAT_BC6H_UF16:  return CF_PIXEL_FORMAT_BC6H_RGB_UFLOAT;
+	case CD_FORMAT_BC6H_SF16:  return CF_PIXEL_FORMAT_BC6H_RGB_FLOAT;
+	case CD_FORMAT_BC7:        return CF_PIXEL_FORMAT_BC7_RGBA_UNORM;
+	case CD_FORMAT_BC7_SRGB:   return CF_PIXEL_FORMAT_BC7_RGBA_UNORM_SRGB;
+	default:                   return CF_PIXEL_FORMAT_INVALID;
+	}
+}
+
+CF_Texture cf_make_texture_from_dds_mem(const void* data, int size)
+{
+	CF_Texture none = { 0 };
+	cd_dds_t dds = cd_parse_dds_mem(data, size);
+	if (!dds.slice_count) return none;
+	CF_PixelFormat format = s_dds_pixel_format(dds.format);
+	// Cube arrays have no CF texture type; plain arrays load as 2D arrays below.
+	if (dds.is_cubemap && dds.face_count != 6) { cd_free_dds(&dds); return none; }
+	if (format == CF_PIXEL_FORMAT_INVALID || !cf_texture_supports_format(format, CF_TEXTURE_USAGE_SAMPLER_BIT)) {
+		cd_free_dds(&dds);
+		return none;
+	}
+	CF_TextureParams tp = cf_texture_defaults(dds.w, dds.h);
+	tp.pixel_format = format;
+	if (dds.mip_count > 1) {
+		// allocate_mipmaps gates level allocation on the SDL_GPU backend; the explicit
+		// count keeps the chain exactly as deep as the file's.
+		tp.allocate_mipmaps = true;
+		tp.mip_count = dds.mip_count;
+	}
+	if (dds.is_cubemap) {
+		tp.texture_type = CF_TEXTURE_TYPE_CUBE;
+	} else if (dds.face_count > 1) {
+		tp.texture_type = CF_TEXTURE_TYPE_2D_ARRAY;
+		tp.layer_count = dds.face_count;
+	}
+	CF_Texture texture = cf_make_texture(tp);
+	if (!texture.id) { cd_free_dds(&dds); return none; }
+	for (int face = 0; face < dds.face_count; ++face) {
+		for (int mip = 0; mip < dds.mip_count; ++mip) {
+			cd_slice_t* s = cd_slice(&dds, face, mip);
+			// Always the layer path: it uploads without cycling the texture's backing
+			// memory, so earlier faces/mips survive each later upload (cf_texture_update_mip
+			// cycles and would discard them).
+			cf_texture_update_layer_mip(texture, (void*)s->data, s->size, face, mip);
+		}
+	}
+	cd_free_dds(&dds);
+	return texture;
+}
+
+CF_Texture cf_make_texture_from_dds(const char* virtual_path)
+{
+	CF_Texture none = { 0 };
+	size_t size = 0;
+	void* data = cf_fs_read_entire_file_to_memory(virtual_path, &size);
+	if (!data) return none;
+	CF_Texture texture = cf_make_texture_from_dds_mem(data, (int)size);
+	cf_free(data);
+	return texture;
+}
+
 CF_DISPATCH_SHIM(CF_Canvas, make_canvas, (CF_CanvasParams params), params)
 CF_DISPATCH_SHIM_VOID(destroy_canvas, (CF_Canvas canvas_handle), canvas_handle)
 CF_DISPATCH_SHIM(CF_Texture, canvas_get_target, (CF_Canvas canvas_handle), canvas_handle)
+CF_DISPATCH_SHIM(CF_Texture, canvas_get_target2, (CF_Canvas canvas_handle, int index), canvas_handle, index)
 CF_DISPATCH_SHIM(CF_Texture, canvas_get_depth_stencil_target, (CF_Canvas canvas_handle), canvas_handle)
 CF_DISPATCH_SHIM_VOID(canvas_get_size, (CF_Canvas canvas_handle, int* w, int* h), canvas_handle, w, h)
 CF_DISPATCH_SHIM_VOID(clear_canvas, (CF_Canvas canvas_handle), canvas_handle)
+CF_DISPATCH_SHIM_VOID(canvas_set_clear_color, (CF_Canvas canvas_handle, CF_Color color), canvas_handle, color)
+CF_DISPATCH_SHIM_VOID(canvas_set_clear_color2, (CF_Canvas canvas_handle, int index, CF_Color color), canvas_handle, index, color)
+CF_DISPATCH_SHIM_VOID(canvas_set_clear_depth_stencil, (CF_Canvas canvas_handle, float depth, uint32_t stencil), canvas_handle, depth, stencil)
 CF_DISPATCH_SHIM(CF_Readback, canvas_readback, (CF_Canvas canvas), canvas)
+CF_DISPATCH_SHIM(CF_Readback, canvas_readback2, (CF_Canvas canvas, int index), canvas, index)
 CF_DISPATCH_SHIM(bool, readback_ready, (CF_Readback readback), readback)
 CF_DISPATCH_SHIM(int, readback_data, (CF_Readback readback, void* data, int size), readback, data, size)
 CF_DISPATCH_SHIM(int, readback_size, (CF_Readback readback), readback)
@@ -926,6 +1120,15 @@ CF_DISPATCH_SHIM_VOID(apply_blend_constants, (float r, float g, float b, float a
 CF_DISPATCH_SHIM(CF_Mesh, make_mesh, (int vertex_buffer_size, const CF_VertexAttribute* attributes, int attribute_count, int vertex_stride), vertex_buffer_size, attributes, attribute_count, vertex_stride)
 CF_DISPATCH_SHIM_VOID(mesh_set_index_buffer, (CF_Mesh mesh_handle, int index_buffer_size_in_bytes, int index_bit_count), mesh_handle, index_buffer_size_in_bytes, index_bit_count)
 CF_DISPATCH_SHIM_VOID(mesh_set_instance_buffer, (CF_Mesh mesh_handle, int instance_buffer_size_in_bytes, int instance_stride), mesh_handle, instance_buffer_size_in_bytes, instance_stride)
+CF_DISPATCH_SHIM_VOID(mesh_append_attributes, (CF_Mesh mesh_handle, const CF_VertexAttribute* attributes, int attribute_count), mesh_handle, attributes, attribute_count)
+CF_DISPATCH_SHIM(bool, mesh_has_vertex_attribute, (CF_Mesh mesh_handle, const char* name), mesh_handle, name)
+CF_DISPATCH_SHIM(int, mesh_instance_stride, (CF_Mesh mesh_handle), mesh_handle)
+CF_DISPATCH_SHIM(bool, mesh_draw3d_augmented, (CF_Mesh mesh_handle), mesh_handle)
+CF_DISPATCH_SHIM_VOID(mesh_set_draw3d_augmented, (CF_Mesh mesh_handle), mesh_handle)
+CF_DISPATCH_SHIM(uint64_t, make_instance_buffer, (int size_in_bytes, int stride), size_in_bytes, stride)
+CF_DISPATCH_SHIM_VOID(update_instance_buffer, (uint64_t handle, void* data, int count), handle, data, count)
+CF_DISPATCH_SHIM_VOID(destroy_instance_buffer, (uint64_t handle), handle)
+CF_DISPATCH_SHIM_VOID(apply_instance_buffer_override, (uint64_t handle, int count, int offset_bytes), handle, count, offset_bytes)
 CF_DISPATCH_SHIM_VOID(destroy_mesh, (CF_Mesh mesh_handle), mesh_handle)
 CF_DISPATCH_SHIM_VOID(mesh_update_vertex_data, (CF_Mesh mesh_handle, void* data, int count), mesh_handle, data, count)
 CF_DISPATCH_SHIM_VOID(mesh_update_index_data, (CF_Mesh mesh_handle, void* data, int count), mesh_handle, data, count)
@@ -983,4 +1186,6 @@ CF_DISPATCH_SHIM_VOID(current_canvas_size, (int* w, int* h), w, h)
 CF_DISPATCH_SHIM_VOID(push_gpu_label, (const char* name), name)
 CF_DISPATCH_SHIM_VOID(pop_gpu_label, (), )
 CF_DISPATCH_SHIM_VOID(draw_elements_instanced, (int instance_count), instance_count)
+CF_DISPATCH_SHIM_VOID(draw_elements_range, (int first_element, int element_count, int instance_count), first_element, element_count, instance_count)
+CF_DISPATCH_SHIM_VOID(draw_elements_indirect, (CF_StorageBuffer args, int offset, int draw_count), args, offset, draw_count)
 CF_DISPATCH_SHIM_VOID(gpu_sync, (), )

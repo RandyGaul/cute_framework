@@ -4,7 +4,7 @@
 
 ## Setup Dear ImGui
 
-Call [`cf_app_init_imgui`](../app/cf_app_init_imgui.md) once before your main loop. Then you can draw Dear ImGui windows:
+Call [`cf_app_init_imgui`](../app/function/cf_app_init_imgui.md) once before your main loop. Then you can draw Dear ImGui windows:
 
 ```cpp
 static bool hello = true;

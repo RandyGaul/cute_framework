@@ -488,7 +488,8 @@ typedef struct CF_DrawList { uint64_t id; } CF_DrawList;
  * @function cf_make_draw_list
  * @category draw
  * @brief    Creates an empty draw list. Fill it with `cf_draw_list_begin`/`cf_draw_list_end`.
- * @related  CF_DrawList cf_make_draw_list cf_draw_list_begin cf_draw_list_end cf_draw_list cf_destroy_draw_list
+ * @remarks  Draw lists record 3d mesh submissions (`cf_draw3d_mesh`) alongside 2d drawing; mesh recordings additionally bake into instanced draws -- see the DRAW LISTS section of cute_draw3d.h.
+ * @related  CF_DrawList cf_make_draw_list cf_draw_list_begin cf_draw_list_end cf_draw_list cf_destroy_draw_list cf_draw3d_mesh
  */
 CF_API CF_DrawList CF_CALL cf_make_draw_list(void);
 
@@ -508,6 +509,12 @@ CF_API void CF_CALL cf_draw_list_begin(CF_DrawList list);
  * @function cf_draw_list_end
  * @category draw
  * @brief    Stops recording and bakes the recorded draw calls into the list.
+ * @remarks  The bake snapshots every captured UNIFORM's bytes -- replays rebind the frozen
+ *           values. The visible consequence: uniform-driven skinning recorded into a list
+ *           replays one frozen pose forever. Animated skinning inside lists uses the
+ *           storage-buffer pattern instead (`cf_draw3d_set_vs_storage_buffers`): the bake
+ *           captures the buffer HANDLE while its contents stay live, so updating the palette
+ *           each frame animates replayed characters normally.
  * @related  CF_DrawList cf_make_draw_list cf_draw_list_begin cf_draw_list_end cf_draw_list cf_destroy_draw_list
  */
 CF_API void CF_CALL cf_draw_list_end(void);
@@ -518,7 +525,11 @@ CF_API void CF_CALL cf_draw_list_end(void);
  * @brief    Replays a recorded draw list under the current draw transform.
  * @remarks  May be called any number of times per frame (each replay is independent), and lists
  *           may replay inside another list's recording to compose them. Do not destroy a list
- *           before the frame that replays it finishes rendering.
+ *           before the frame that replays it finishes rendering. Known limitation: a 3d mesh
+ *           replay recorded INSIDE another list keeps its own baked instance data but folds the
+ *           recording-time transform into the captured camera rather than the instances, so the
+ *           outer list's bake grouping sees the inner meshes in their original local space --
+ *           compose nested 3d lists with the same transform they were recorded under.
  * @related  CF_DrawList cf_make_draw_list cf_draw_list_begin cf_draw_list_end cf_draw_list cf_destroy_draw_list
  */
 CF_API void CF_CALL cf_draw_list(CF_DrawList list);
@@ -705,7 +716,8 @@ CF_API void CF_CALL cf_draw_shape_group_end_stroked(float thickness);
  * @param    layer      The layer.
  * @remarks  Draw layers are sorted before rendering. Lower numbers are rendered first, while larger numbers are rendered last.
  *           This can be used to pick which sprites/shapes should draw on top of each other.
- * @related  cf_draw_push_layer cf_draw_pop_layer cf_draw_peek_layer
+ *           Layers are stream-structural state, so they also order 3d mesh submissions (`cf_draw3d_mesh`) against 2d drawing and each other.
+ * @related  cf_draw_push_layer cf_draw_pop_layer cf_draw_peek_layer cf_draw3d_mesh
  */
 CF_API void CF_CALL cf_draw_push_layer(int layer);
 
@@ -756,6 +768,79 @@ CF_API CF_Color CF_CALL cf_draw_pop_color(void);
  * @related  cf_draw_push_color cf_draw_pop_color cf_draw_peek_color
  */
 CF_API CF_Color CF_CALL cf_draw_peek_color(void);
+
+/**
+ * @function cf_draw_push_dash
+ * @category draw
+ * @brief    Pushes a dash pattern for subsequent stroke drawing.
+ * @param    on_length   Length of each dash in world units.
+ * @param    off_length  Length of each gap in world units.
+ * @param    phase       Offset into the pattern in world units -- animate for marching ants.
+ * @remarks  Applies to lines (`cf_draw_line`), polylines (dashes flow unbroken through the
+ *           joints), and circle outlines (`cf_draw_circle`, dashed along the ring; the pattern
+ *           wraps at the seam unless `on_length + off_length` divides the circumference evenly).
+ *           Each dash gets round caps and the usual anti-aliasing. An `on_length` of zero (the
+ *           default) draws solid strokes. Filled shapes ignore the dash stack. This is the 2d
+ *           analog of `cf_draw3d_push_dash`.
+ * @related  cf_draw_pop_dash cf_draw_line cf_draw_polyline cf_draw_circle
+ */
+CF_API void CF_CALL cf_draw_push_dash(float on_length, float off_length, float phase);
+
+/**
+ * @function cf_draw_pop_dash
+ * @category draw
+ * @brief    Pops the last dash pattern pushed by `cf_draw_push_dash`.
+ * @related  cf_draw_push_dash cf_draw_line cf_draw_polyline cf_draw_circle
+ */
+CF_API void CF_CALL cf_draw_pop_dash(void);
+
+/**
+ * @function cf_draw_push_outline
+ * @category draw
+ * @brief    Draws an outline around subsequent shapes.
+ * @param    color  The outline color.
+ * @param    width  Outline width in world units. Zero (the default) disables it.
+ * @remarks  The outline is a band hugging the shape's edge, drawn *under* the shape itself, so a
+ *           translucent fill shows the solid outline through it rather than doubling up. It comes
+ *           straight out of the signed distance the shape already computes -- no second draw, no
+ *           extra geometry, and it anti-aliases exactly like the shape does. Works on every SDF
+ *           shape (circles, boxes, capsules, triangles, polygons, arrows, custom shapes, shape
+ *           groups) and composes with `cf_draw_push_glow`. Sprites and text ignore it.
+ * @related  cf_draw_pop_outline cf_draw_push_glow cf_draw_push_color
+ */
+CF_API void CF_CALL cf_draw_push_outline(CF_Color color, float width);
+
+/**
+ * @function cf_draw_pop_outline
+ * @category draw
+ * @brief    Pops the last outline pushed by `cf_draw_push_outline`.
+ * @related  cf_draw_push_outline cf_draw_push_glow
+ */
+CF_API void CF_CALL cf_draw_pop_outline(void);
+
+/**
+ * @function cf_draw_push_glow
+ * @category draw
+ * @brief    Draws a glow around subsequent shapes.
+ * @param    color   The glow color. Its alpha scales the effect's strength.
+ * @param    radius  How far the glow reaches past the shape, in world units. Zero (the default)
+ *                   disables it.
+ * @remarks  A smooth falloff radiating from the shape's edge, evaluated from the shape's own
+ *           signed distance -- exact at any zoom, with no blur pass, no render target, and no
+ *           blurry-sprite fakery. Drawn under both the outline and the shape. Coverage and tile
+ *           binning grow to fit the radius automatically. Works on every SDF shape; sprites and
+ *           text ignore it. For an additive neon look, pair it with `cf_draw_push_blend`.
+ * @related  cf_draw_pop_glow cf_draw_push_outline cf_draw_push_blend
+ */
+CF_API void CF_CALL cf_draw_push_glow(CF_Color color, float radius);
+
+/**
+ * @function cf_draw_pop_glow
+ * @category draw
+ * @brief    Pops the last glow pushed by `cf_draw_push_glow`.
+ * @related  cf_draw_push_glow cf_draw_push_outline
+ */
+CF_API void CF_CALL cf_draw_pop_glow(void);
 
 /**
  * @function cf_draw_push_shape_aa
@@ -1533,7 +1618,8 @@ CF_API float CF_CALL cf_peek_text_stroke(void);
  * @category draw
  * @brief    Pushes a `CF_Rect` for the viewport to render within.
  * @param    viewport     The viewport.
- * @related  cf_draw_push_viewport cf_draw_pop_viewport cf_draw_peek_viewport
+ * @remarks  Applies to 3d mesh submissions (`cf_draw3d_mesh`) as well as 2d drawing.
+ * @related  cf_draw_push_viewport cf_draw_pop_viewport cf_draw_peek_viewport cf_draw3d_mesh
  */
 CF_API void CF_CALL cf_draw_push_viewport(CF_Rect viewport);
 
@@ -1558,7 +1644,8 @@ CF_API CF_Rect CF_CALL cf_draw_peek_viewport(void);
  * @category draw
  * @brief    Pushes a `CF_Rect` for the scissor to render within.
  * @param    scissor      The scissor box.
- * @related  cf_draw_push_scissor cf_draw_pop_scissor cf_draw_peek_scissor
+ * @remarks  Applies to 3d mesh submissions (`cf_draw3d_mesh`) as well as 2d drawing.
+ * @related  cf_draw_push_scissor cf_draw_pop_scissor cf_draw_peek_scissor cf_draw3d_mesh
  */
 CF_API void CF_CALL cf_draw_push_scissor(CF_Rect scissor);
 
@@ -1583,6 +1670,7 @@ CF_API CF_Rect CF_CALL cf_draw_peek_scissor(void);
  * @category draw
  * @brief    Pushes a `CF_RenderState` for controlling various rendering settings.
  * @param    render_state  Various types of rendering states.
+ * @remarks  Applies to 2d drawing only -- meshes use `cf_draw3d_push_render_state`.
  * @related  CF_RenderState cf_draw_push_render_state cf_draw_pop_render_state cf_draw_peek_render_state
  */
 CF_API void CF_CALL cf_draw_push_render_state(CF_RenderState render_state);
@@ -1694,6 +1782,7 @@ CF_API bool CF_CALL cf_shader_reload(CF_Shader* shader);
  * @function cf_draw_push_shader
  * @category draw
  * @brief    Pushes a custom shader.
+ * @remarks  This shader stack applies to 2d drawing only -- meshes use `cf_draw3d_push_shader`.
  * @related  CF_Shader cf_draw_push_shader cf_draw_pop_shader cf_draw_peek_shader
  */
 CF_API void CF_CALL cf_draw_push_shader(CF_Shader shader);
@@ -1869,6 +1958,7 @@ CF_API CF_DrawBlend CF_CALL cf_draw_peek_blend(void);
  * @param    name     The name of the uniform this texture will bind to.
  * @param    texture  The texture to bind.
  * @remarks  This is useful for custom shaders. See `cf_draw_push_shader`.
+ *           Applies to 2d drawing only -- meshes use `cf_draw3d_set_texture`.
  * @related  cf_draw_set_texture cf_draw_set_uniform cf_draw_set_uniform_int cf_draw_set_uniform_float cf_draw_set_uniform_v2 cf_draw_set_uniform_color
  */
 CF_API void CF_CALL cf_draw_set_texture(const char* name, CF_Texture texture);
@@ -1881,6 +1971,7 @@ CF_API void CF_CALL cf_draw_set_texture(const char* name, CF_Texture texture);
  * @param    data          A pointer to the data to send to the shader.
  * @param    type          The `CF_UniformType` of data to send.
  * @param    array_length  The number of elements of `CF_UniformType` to send.
+ * @remarks  Applies to 2d drawing only -- meshes use `cf_draw3d_set_uniform`.
  * @related  cf_draw_set_texture cf_draw_set_uniform cf_draw_set_uniform_int cf_draw_set_uniform_float cf_draw_set_uniform_v2 cf_draw_set_uniform_color
  */
 CF_API void CF_CALL cf_draw_set_uniform(const char* name, void* data, CF_UniformType type, int array_length);
@@ -2311,6 +2402,12 @@ CF_INLINE int draw_peek_layer() { return cf_draw_peek_layer(); }
 CF_INLINE void draw_push_color(CF_Color c) { cf_draw_push_color(c); }
 CF_INLINE CF_Color draw_pop_color() { return cf_draw_pop_color(); }
 CF_INLINE CF_Color draw_peek_color() { return cf_draw_peek_color(); }
+CF_INLINE void draw_push_dash(float on_length, float off_length, float phase) { cf_draw_push_dash(on_length, off_length, phase); }
+CF_INLINE void draw_pop_dash() { cf_draw_pop_dash(); }
+CF_INLINE void draw_push_outline(CF_Color color, float width) { cf_draw_push_outline(color, width); }
+CF_INLINE void draw_pop_outline() { cf_draw_pop_outline(); }
+CF_INLINE void draw_push_glow(CF_Color color, float radius) { cf_draw_push_glow(color, radius); }
+CF_INLINE void draw_pop_glow() { cf_draw_pop_glow(); }
 CF_INLINE void draw_push_shape_aa(float aa) { cf_draw_push_shape_aa(aa); }
 CF_INLINE float draw_pop_shape_aa() { return cf_draw_pop_shape_aa(); }
 CF_INLINE float draw_peek_shape_aa() { return cf_draw_peek_shape_aa(); }

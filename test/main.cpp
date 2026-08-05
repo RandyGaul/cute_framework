@@ -24,6 +24,9 @@
 #include <pico/pico_unit.h>
 
 #include <cute.h>
+#include <string.h>
+
+#include "test_app_shared.h"
 
 TEST_SUITE(test_alloc);
 TEST_SUITE(test_app);
@@ -42,12 +45,26 @@ TEST_SUITE(test_string);
 TEST_SUITE(test_json);
 TEST_SUITE(test_markups);
 TEST_SUITE(test_draw_tiled);
+TEST_SUITE(test_graphics_3d);
+TEST_SUITE(test_shader_reload);
 TEST_SUITE(test_shader_directory);
+TEST_SUITE(test_canvas_clear);
+TEST_SUITE(test_mrt);
+TEST_SUITE(test_texture_types);
+TEST_SUITE(test_shadow_sampling);
+TEST_SUITE(test_instancing);
+TEST_SUITE(test_draw3d);
+TEST_SUITE(test_uniform_arrays);
 TEST_SUITE(test_math);
+TEST_SUITE(test_math3d);
+TEST_SUITE(test_model);
 extern "C" {
 TEST_SUITE(test_math_c);
+TEST_SUITE(test_math3d_c);
 TEST_SUITE(test_ckit);
 }
+TEST_SUITE(test_jpg);
+TEST_SUITE(test_dds);
 
 #include <SDL3/SDL.h>
 
@@ -71,7 +88,17 @@ int main(int argc, char* argv[])
 	setvbuf(stdout, NULL, _IONBF, 0);
 	setvbuf(stderr, NULL, _IONBF, 0);
 
-#define RUN_TRACED(suite_fp) fprintf(stderr, ">>> " #suite_fp "\n"); RUN_TEST_SUITE(suite_fp); fprintf(stderr, "<<< " #suite_fp "\n");
+	// Suite names on the command line select which suites run; no arguments runs everything.
+	//     tests.exe test_draw3d test_mrt
+	auto suite_enabled = [&](const char* name) {
+		if (argc <= 1) return true;
+		for (int i = 1; i < argc; ++i) {
+			if (!strcmp(argv[i], name)) return true;
+		}
+		return false;
+	};
+
+#define RUN_TRACED(suite_fp) if (suite_enabled(#suite_fp)) { fprintf(stderr, ">>> " #suite_fp "\n"); RUN_TEST_SUITE(suite_fp); fprintf(stderr, "<<< " #suite_fp "\n"); }
 	RUN_TRACED(test_alloc);
 	RUN_TRACED(test_app);
 	RUN_TRACED(test_array);
@@ -89,12 +116,32 @@ int main(int argc, char* argv[])
 	RUN_TRACED(test_json);
 	RUN_TRACED(test_markups);
 	RUN_TRACED(test_draw_tiled);
+	RUN_TRACED(test_graphics_3d);
+	RUN_TRACED(test_shader_reload);
 	RUN_TRACED(test_shader_directory);
+	RUN_TRACED(test_canvas_clear);
+	RUN_TRACED(test_mrt);
+	RUN_TRACED(test_texture_types);
+	RUN_TRACED(test_shadow_sampling);
+	RUN_TRACED(test_instancing);
+	RUN_TRACED(test_draw3d);
+	RUN_TRACED(test_uniform_arrays);
 	RUN_TRACED(test_math);
 	RUN_TRACED(test_math_c);
+	RUN_TRACED(test_math3d);
+	RUN_TRACED(test_math3d_c);
+	RUN_TRACED(test_model);
+	// test_ckit calls sintern_nuke(), which invalidates every interned pointer a live
+	// engine holds as map keys (cf_sinuke's documented contract: not while an app
+	// exists). Kill the shared app first; the next GPU suite boots a fresh one whose
+	// interns are all post-nuke.
+	test_shutdown_shared_app();
 	RUN_TRACED(test_ckit);
+	RUN_TRACED(test_jpg);
+	RUN_TRACED(test_dds);
 #undef RUN_TRACED
 
+	test_shutdown_shared_app(); // The shared GPU app dies here so the leak checker sees a clean exit.
 	pu_print_stats();
 	return pu_test_failed();
 }

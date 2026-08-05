@@ -58,9 +58,9 @@ void mount_content_directory_as(const char* dir)
 }
 ```
 
-Simply call this function from `main` before your main loop. [`cf_fs_get_base_directory`](../file/cf_fs_get_base_directory.md) returns the full path to the folder the game was run from. If you are already familiar with the _working directory_ this is not quite the same -- it's merely where the game's executable resides.
+Simply call this function from `main` before your main loop. [`cf_fs_get_base_directory`](../file/function/cf_fs_get_base_directory.md) returns the full path to the folder the game was run from. If you are already familiar with the _working directory_ this is not quite the same -- it's merely where the game's executable resides.
 
-This renames the content folder to `"/"`, an empty path. To load up a music file, the virtual path the game will use now becomes `"/music/song1.ogg"`, which could be passed to [`cf_audio_load_ogg`](../audio/cf_audio_load_ogg.md). To load up a sprite call [`cf_make_sprite`](../sprite/cf_make_sprite.md) with a path like `"/sprites/player.ase"` or `"/sprites/bomb.ase"`.
+This renames the content folder to `"/"`, an empty path. To load up a music file, the virtual path the game will use now becomes `"/music/song1.ogg"`, which could be passed to [`cf_audio_load_ogg`](../audio/function/cf_audio_load_ogg.md). To load up a sprite call [`cf_make_sprite`](../sprite/function/cf_make_sprite.md) with a path like `"/sprites/player.ase"` or `"/sprites/bomb.ase"`.
 
 ## Benefits
 
@@ -76,9 +76,9 @@ You may also mount archive files, and not just folders. The VFS will auto-magica
 
 ## Write Directory
 
-The application gets a single directory to write files to (along with its subdirectories). This grants extra security. You must set up a write directory before opening any files with the VFS for writing (e.g. [`cf_fs_open_file_for_write`](../file/cf_fs_open_file_for_write.md)). To setup your write directory, call [`cf_fs_set_write_directory`](../file/cf_fs_set_write_directory.md).
+The application gets a single directory to write files to (along with its subdirectories). This grants extra security. You must set up a write directory before opening any files with the VFS for writing (e.g. [`cf_fs_open_file_for_write`](../file/function/cf_fs_open_file_for_write.md)). To setup your write directory, call [`cf_fs_set_write_directory`](../file/function/cf_fs_set_write_directory.md).
 
-It's highly recommended to call [`cf_fs_set_write_directory`](../file/cf_fs_set_write_directory.md) by passing in [`cf_fs_get_user_directory`](../file/cf_fs_get_user_directory.md), like so:
+It's highly recommended to call [`cf_fs_set_write_directory`](../file/function/cf_fs_set_write_directory.md) by passing in [`cf_fs_get_user_directory`](../file/function/cf_fs_get_user_directory.md), like so:
 
 ```cpp
 const char* write_directory = cf_fs_get_user_directory("my_game_company_name", "my_game_name");
