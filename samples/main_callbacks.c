@@ -3,8 +3,11 @@
 //
 // Try dragging the window edge and holding it: the orbiting dot keeps moving and the clock keeps
 // ticking, where a classic `while (cf_app_is_running())` loop freezes until you let go.
-#define CF_MAIN_USE_CALLBACKS
+//
+// Including cute_main.h is itself the opt-in -- do it in exactly one source file, the one that
+// owns your app's entry point.
 #include <cute.h>
+#include <cute_main.h>
 
 #include <stdio.h>
 

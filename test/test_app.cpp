@@ -20,7 +20,7 @@ TEST_CASE(test_app_destroy_safety)
 	CHECK(cf_is_error(cf_make_app(NULL, 0, 0, 0, 0, 0, CF_APP_OPTIONS_HIDDEN_BIT | CF_APP_OPTIONS_NO_GFX_BIT | CF_APP_OPTIONS_NO_AUDIO_BIT, NULL)));
 	cf_destroy_app();
 	cf_destroy_app();
-	// Queries must be safe (not crash) after destruction -- the CF_MAIN_USE_CALLBACKS glue
+	// Queries must be safe (not crash) after destruction -- the cute_main.h glue
 	// calls cf_app_is_running right after a user's cf_main_update, which may have destroyed
 	// the app.
 	REQUIRE(!cf_app_is_running());
