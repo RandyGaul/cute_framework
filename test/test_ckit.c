@@ -1088,6 +1088,32 @@ TEST_CASE(test_ckit_intern_as_map_key)
 	return true;
 }
 
+TEST_CASE(test_ckit_intern_valid)
+{
+	// Cold-start: no intern table has been allocated yet (sintern_nuke resets it
+	// to NULL). sivalid must not allocate one as a side effect of a validity
+	// check, and must safely report false -- including for a NULL pointer.
+	sintern_nuke();
+	REQUIRE(!sivalid(NULL));
+	REQUIRE(!sivalid("never interned"));
+
+	const char* a = sintern("hello");
+	REQUIRE(sivalid(a));
+
+	// Same contents as an interned string, but a different pointer: sivalid
+	// decides by pointer identity, not by matching contents.
+	char buf[64];
+	strcpy(buf, "hello");
+	REQUIRE(!sivalid(buf));
+
+	// Contents that were never interned at all (as opposed to a copy of
+	// contents that were).
+	REQUIRE(!sivalid("goodbye"));
+
+	sintern_nuke();
+	return true;
+}
+
 //--------------------------------------------------------------------------------------------------
 // String edge cases and bug coverage.
 
@@ -1622,6 +1648,7 @@ TEST_SUITE(test_ckit)
 	RUN_TEST_CASE(test_ckit_intern_range);
 	RUN_TEST_CASE(test_ckit_intern_constructed);
 	RUN_TEST_CASE(test_ckit_intern_as_map_key);
+	RUN_TEST_CASE(test_ckit_intern_valid);
 	RUN_TEST_CASE(test_ckit_intern_empty_string);
 	RUN_TEST_CASE(test_ckit_intern_many_strings);
 
