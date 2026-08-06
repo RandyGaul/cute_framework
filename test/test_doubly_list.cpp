@@ -11,6 +11,36 @@
 
 using namespace Cute;
 
+/* CF_OFFSET_OF must be a compile-time constant expression -- CF_LIST_NODE/CF_LIST_HOST
+ * are used inside CF_STATIC_ASSERT-able contexts, and the intrusive-list pattern from
+ * cute_doubly_list.h's own docs relies on offsets being computed correctly at compile time. */
+struct CF_OffsetOfTestStruct
+{
+	int a;
+	float b;
+	CF_ListNode node;
+};
+CF_STATIC_ASSERT(CF_OFFSET_OF(CF_OffsetOfTestStruct, node) == offsetof(CF_OffsetOfTestStruct, node), "CF_OFFSET_OF must match the standard offsetof.");
+CF_STATIC_ASSERT(CF_OFFSET_OF(CF_OffsetOfTestStruct, a) == 0, "CF_OFFSET_OF must report the first member at offset 0.");
+
+/* Round-trip a host struct through CF_LIST_NODE/CF_LIST_HOST, per the documented example. */
+TEST_CASE(test_doubly_list_offset_of_node_host_roundtrip)
+{
+	CF_OffsetOfTestStruct s;
+	s.a = 42;
+	s.b = 3.14f;
+	cf_list_init_node(&s.node);
+
+	CF_ListNode* node = CF_LIST_NODE(CF_OffsetOfTestStruct, node, &s);
+	REQUIRE(node == &s.node);
+
+	CF_OffsetOfTestStruct* host = CF_LIST_HOST(CF_OffsetOfTestStruct, node, node);
+	REQUIRE(host == &s);
+	REQUIRE(host->a == 42);
+
+	return true;
+}
+
 /* Make list of three elements, perform all operations on it, assert correctness. */
 TEST_CASE(test_doubly_list_operations)
 {
@@ -66,5 +96,6 @@ TEST_CASE(test_doubly_list_operations)
 
 TEST_SUITE(test_doubly_list)
 {
+	RUN_TEST_CASE(test_doubly_list_offset_of_node_host_roundtrip);
 	RUN_TEST_CASE(test_doubly_list_operations);
 }

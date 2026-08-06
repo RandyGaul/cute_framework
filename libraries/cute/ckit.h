@@ -505,7 +505,7 @@
 #define sintern_range(start, end) ck_sintern_range(start, end)
 
 // sivalid: True if s is an interned string (from sintern).
-#define sivalid(s) (((CK_UniqueString*)(s) - 1)->cookie.val == CK_INTERN_COOKIE)
+#define sivalid(s) ck_sivalid(s)
 
 // silen: Length of an interned string (constant-time).
 #define silen(s)   (((CK_UniqueString*)(s) - 1)->len)
@@ -688,6 +688,7 @@ CK_API const uint16_t* ck_decode_UTF16(const uint16_t* s, int* codepoint);
 // Intern implementation.
 CK_API const char* ck_sintern(const char* s);
 CK_API const char* ck_sintern_range(const char* start, const char* end);
+CK_API int ck_sivalid(const char* s);
 CK_API uint64_t ck_hash_fnv1a(const void* ptr, size_t sz);
 
 #ifdef __cplusplus
@@ -1891,6 +1892,34 @@ const char* ck_sintern_range(const char* start, const char* end)
 
 	ck_sintern_unlock(table);
 	return node->str;
+}
+
+// ck_sivalid: unlike the old backward-pointer-arithmetic macro this replaces, this
+// looks `s` up in the intern table by content instead of assuming `s` is the `str`
+// field of a CK_UniqueString header. Pointer identity (not content match) decides
+// validity, so a non-interned string with identical contents still returns false.
+// Does not call ck_sintern_get_table() -- that allocates a table on first use, and
+// a validity check must not have that side effect. Precondition: `s` is a valid,
+// NUL-terminated string (same as any other sivalid caller already assumed); a truly
+// wild pointer is still out of scope, same as the "not a secure method" doc note.
+int ck_sivalid(const char* s)
+{
+	if (!s) return 0;
+	CK_InternTable* table = ck_atomic_load(&g_intern_table);
+	if (!table) return 0;
+	size_t len = strlen(s);
+	uint64_t key = ck_hash_fnv1a((void*)s, len);
+
+	ck_sintern_lock(table);
+	int found = 0;
+	for (CK_UniqueString* it = map_get(table->interns, key); it; it = it->next) {
+		if (it->str == s) {
+			found = 1;
+			break;
+		}
+	}
+	ck_sintern_unlock(table);
+	return found;
 }
 
 void sintern_nuke()

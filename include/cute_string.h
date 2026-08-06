@@ -133,7 +133,10 @@ extern "C" {
  * @category string
  * @brief    Returns true if the string is a static, stable, unique pointer from `cf_sintern`.
  * @param    s            The string.
- * @remarks  This is *not* a secure method -- do not use it on any potentially dangerous strings. It's designed to be very simple and fast, nothing more.
+ * @remarks  Safe to call on any valid, NUL-terminated string, including one that was never
+ *           passed through `cf_sintern` -- it correctly returns false in that case. This is
+ *           *not* a secure method -- do not use it on a dangling or otherwise invalid pointer.
+ *           It's designed to be very simple and fast, nothing more.
  * @related  cf_sintern cf_sintern_range cf_sivalid cf_silen cf_sinuke
  */
 #define cf_sivalid(s) sivalid(s)

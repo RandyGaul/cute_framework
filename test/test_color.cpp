@@ -152,6 +152,17 @@ TEST_CASE(test_make_pixel_rgb_f)
 	REQUIRE(p.colors.b == 0);
 	REQUIRE(p.colors.a == 255);
 
+	// Out-of-[0,1]-range inputs must clamp, not overflow the float->uint8 cast (UB otherwise).
+	CF_Pixel clamped_hi = cf_make_pixel_rgb_f(2.0f, 100.0f, 1.0f);
+	REQUIRE(clamped_hi.colors.r == 255);
+	REQUIRE(clamped_hi.colors.g == 255);
+	REQUIRE(clamped_hi.colors.b == 255);
+
+	CF_Pixel clamped_lo = cf_make_pixel_rgb_f(-1.0f, -100.0f, 0.0f);
+	REQUIRE(clamped_lo.colors.r == 0);
+	REQUIRE(clamped_lo.colors.g == 0);
+	REQUIRE(clamped_lo.colors.b == 0);
+
 	return true;
 }
 
@@ -162,6 +173,19 @@ TEST_CASE(test_make_pixel_rgba_f)
 	REQUIRE(p.colors.g == 127);
 	REQUIRE(p.colors.b == 0);
 	REQUIRE(p.colors.a == 63);
+
+	// Out-of-[0,1]-range inputs must clamp, not overflow the float->uint8 cast (UB otherwise).
+	CF_Pixel clamped_hi = cf_make_pixel_rgba_f(2.0f, 100.0f, 1.0f, 5.0f);
+	REQUIRE(clamped_hi.colors.r == 255);
+	REQUIRE(clamped_hi.colors.g == 255);
+	REQUIRE(clamped_hi.colors.b == 255);
+	REQUIRE(clamped_hi.colors.a == 255);
+
+	CF_Pixel clamped_lo = cf_make_pixel_rgba_f(-1.0f, -100.0f, 0.0f, -5.0f);
+	REQUIRE(clamped_lo.colors.r == 0);
+	REQUIRE(clamped_lo.colors.g == 0);
+	REQUIRE(clamped_lo.colors.b == 0);
+	REQUIRE(clamped_lo.colors.a == 0);
 
 	return true;
 }
@@ -661,6 +685,16 @@ TEST_CASE(test_color_to_pixel)
 	REQUIRE(p.colors.g == 127);
 	REQUIRE(p.colors.b == 0);
 	REQUIRE(p.colors.a == 63);
+
+	// cf_make_color_rgba_f does not clamp, so a color built out-of-[0,1]-range
+	// (e.g. from HDR math or an unclamped blend) must still clamp on conversion,
+	// not overflow the float->uint8 cast (UB otherwise).
+	CF_Color out_of_range = cf_make_color_rgba_f(4.0f, -2.0f, 1.0f, 10.0f);
+	CF_Pixel clamped = cf_color_to_pixel(out_of_range);
+	REQUIRE(clamped.colors.r == 255);
+	REQUIRE(clamped.colors.g == 0);
+	REQUIRE(clamped.colors.b == 255);
+	REQUIRE(clamped.colors.a == 255);
 
 	return true;
 }
