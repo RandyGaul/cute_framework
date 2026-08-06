@@ -84,6 +84,16 @@ class TestCheckIncludeGuard(unittest.TestCase):
         r = run_hook(self.SCRIPT, "src/cute_draw.cpp")
         self.assertEqual(r.returncode, 0)
 
+    def test_all_real_headers_are_clean(self):
+        # Every real public header must pass silently, or the hook nags on
+        # every edit. Catches legacy guards and deliberate no-guard headers.
+        import glob
+        headers = glob.glob(str(REPO_ROOT / "include" / "*.h"))
+        self.assertGreater(len(headers), 40)
+        for h in headers:
+            r = run_hook(self.SCRIPT, h)
+            self.assertEqual(r.returncode, 0, msg=f"{h}: {r.stderr}")
+
 
 class TestCheckDocsTags(unittest.TestCase):
     SCRIPT = "check-docs-tags.py"
@@ -115,7 +125,7 @@ class TestCheckDocsTags(unittest.TestCase):
         # Regression guard: every current public header must pass, or the
         # hook would nag on every edit. (docs CI is green, so they must.)
         import glob
-        for h in glob.glob(str(REPO_ROOT / "include" / "cute_*.h")):
+        for h in glob.glob(str(REPO_ROOT / "include" / "*.h")):
             if h.endswith("_shd.h"):
                 continue  # generated shader headers, not doc-parsed prose
             r = run_hook(self.SCRIPT, h)

@@ -59,6 +59,6 @@ const results = await pipeline(headers, h =>
     `Echo the header path in the 'header' field. Cite src/ file:line in details.`,
     { label: `audit:${h}`, phase: 'Audit', agentType: 'doc-writer', schema: ISSUES }))
 
-const issues = results.filter(Boolean).flatMap(r => r.issues.map(i => ({ header: r.header, ...i })))
+const issues = results.filter(Boolean).flatMap(r => (r.issues || []).map(i => ({ header: r.header, ...i })))
 log(`${issues.length} issue(s) across ${headers.length} header(s)`)
 return { audited: headers, issues }

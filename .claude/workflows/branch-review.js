@@ -54,7 +54,7 @@ const rounds = await parallel(DIMENSIONS.map(([key, focus]) => () =>
 
 // Barrier justified: dedupe across ALL finders before paying for verification.
 const seen = new Set()
-const candidates = rounds.filter(Boolean).flatMap(r => r.findings).filter(f => {
+const candidates = rounds.filter(Boolean).flatMap(r => r.findings || []).filter(f => {
   const k = `${f.file}:${f.line}`
   if (seen.has(k)) return false
   seen.add(k)
