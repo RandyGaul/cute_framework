@@ -21,6 +21,7 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 option(CF_FRAMEWORK_STATIC "Build static library for Cute Framework." ON)
 option(CF_CUTE_SHADERC "Build cute-shaderc, an offline shader compiler." ON)
 option(CF_FRAMEWORK_APPLE_FRAMEWORK "Build CF libraries as Apple Framework" OFF)
+option(CF_SANITIZE "Build with AddressSanitizer + UndefinedBehaviorSanitizer (Clang/GCC)." OFF)
 
 # Make sure all libraries are placed into the same output folder.
 if (CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
@@ -296,6 +297,17 @@ if(EMSCRIPTEN)
 	target_compile_options(cute-box3d PRIVATE -msimd128 -msse2)
 endif()
 target_sources(cute PRIVATE $<TARGET_OBJECTS:cute-box3d>)
+
+if(CF_SANITIZE)
+	if(MSVC OR EMSCRIPTEN)
+		message(WARNING "CF_SANITIZE is not supported with MSVC or Emscripten; ignoring.")
+	else()
+		# PUBLIC so the flags propagate to executables linking against cute (tests,
+		# samples) without instrumenting vendored SDL3, which is built separately.
+		target_compile_options(cute PUBLIC -fsanitize=address,undefined -fno-omit-frame-pointer)
+		target_link_options(cute PUBLIC -fsanitize=address,undefined)
+	endif()
+endif()
 
 if(EMSCRIPTEN)
 	message(STATUS "Configuring CF for Web (Emscripten)")
