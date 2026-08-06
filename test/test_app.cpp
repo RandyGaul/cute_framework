@@ -204,7 +204,7 @@ TEST_CASE(test_app_main_callbacks_quit_event)
 TEST_CASE(test_app_main_callbacks_option_bit)
 {
 	// The bit is what turns the internal pump off, and cf_app_get_options reports it back --
-	// the CF_MAIN_USE_CALLBACKS glue reads it to catch an app that forgot to pass it.
+	// the cute_main.h glue reads it to catch an app that forgot to pass it.
 	CHECK(cf_is_error(cf_make_app(NULL, 0, 0, 0, 0, 0, CF_APP_OPTIONS_HIDDEN_BIT | CF_APP_OPTIONS_NO_GFX_BIT | CF_APP_OPTIONS_NO_AUDIO_BIT | CF_APP_OPTIONS_MAIN_CALLBACKS_BIT, NULL)));
 	REQUIRE(cf_app_get_options() & CF_APP_OPTIONS_MAIN_CALLBACKS_BIT);
 	cf_destroy_app();

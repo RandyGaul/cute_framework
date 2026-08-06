@@ -449,14 +449,14 @@ void cf_destroy_app()
 
 bool cf_app_is_running()
 {
-	// Null-safe so the CF_MAIN_USE_CALLBACKS glue (and classic loops) behave when the
+	// Null-safe so the cute_main.h glue (and classic loops) behave when the
 	// user already destroyed the app, e.g. from within their own update function.
 	return app ? app->running : false;
 }
 
 CF_AppOptionFlags cf_app_get_options()
 {
-	// Null-safe, matching cf_app_is_running. The CF_MAIN_USE_CALLBACKS glue reads this to
+	// Null-safe, matching cf_app_is_running. The cute_main.h glue reads this to
 	// check the app actually opted into callback mode, and must not fault when cf_main_init
 	// returned success without ever calling cf_make_app.
 	return app ? app->options : 0;
