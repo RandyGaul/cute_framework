@@ -41,7 +41,7 @@ extern "C" {
 
 **6. Lifecycle verbs** — Creation uses `cf_make_<name>`, destruction uses `cf_destroy_<name>`. Flag other patterns.
 
-**7. Deprecation pattern** — Deprecated symbols must have `@deprecated` in their doc comment. The deprecated name must be a `CF_INLINE` forwarder to the new name (or vice versa).
+**7. Deprecation pattern** — Deprecated symbols must have a prose deprecation note ("Deprecated — use `cf_new_name` instead.") in `@brief` or `@remarks` (never an `@deprecated` tag — the docs parser panics on unknown tags). The deprecated name must be a `CF_INLINE` forwarder to the new name (or vice versa).
 
 **8. Documentation** — All public declarations must have `/** ... */` block comments (never `///`). Each interior line starts with ` * `. Required tags and order:
 1. `@function` / `@struct` / `@enum` — declaration kind, value is the symbol name

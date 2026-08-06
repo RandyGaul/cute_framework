@@ -122,7 +122,7 @@ When contributing to Cute Framework, follow these established coding conventions
 When renaming public API functions:
 - The old name remains the real implementation/declaration
 - The new name is a `CF_INLINE` forwarding function
-- The old name gets `@deprecated` in its doc comment
+- The old name's deprecation is noted in prose in its doc comment ("Deprecated — use `cf_new_name` instead.") inside `@brief` or `@remarks`. Never write an `@deprecated` tag — the docs parser panics on unknown tags.
 - C++ wrappers in `namespace Cute` are updated in tandem
 
 ## Build Commands
@@ -298,3 +298,27 @@ Full documentation is available at https://randygaul.github.io/cute_framework/ap
 # Tests are automatically built with the project
 # Test results are printed to console with pass/fail status
 ```
+
+## AI Automation (.claude/)
+
+The repo ships Claude Code automation. Other AI tools can read these for
+context; the conventions they encode apply to ALL contributors.
+
+**Agents** (`.claude/agents/`): `software-architect` (planning),
+`code-writer` (implementation), `code-reviewer` (bug hunting),
+`cf-api-reviewer` (public-header conventions), `doc-writer` (doc comments),
+`sample-writer` (samples/), `researcher` (external technical research),
+`performance-engineer` (measured optimization work).
+
+**Skills** (`.claude/skills/`): `header-api-review` (header conventions),
+`cmake-conventions` (SDL-style consumable-framework CMake),
+`test-writing` (test harness + registration + traps),
+`perf-benchmarking` (benchmark methodology).
+
+**Hooks** (`.claude/hooks/`, wired in `.claude/settings.json`): block edits
+to generated files (`*_shd.h`, `cute_version.h/.cpp`); warn on missing
+include guards/copyright, docs-parser-breaking `@tags`, and unregistered
+source/header/test/sample files. Tests: `python3 .claude/hooks/tests/test_hooks.py`.
+
+**Workflows** (`.claude/workflows/`): `branch-review` (multi-agent pre-PR
+review), `docs-audit` (doc comments vs implementation).

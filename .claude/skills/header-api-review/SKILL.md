@@ -77,13 +77,12 @@ Avoid other lifecycle verbs unless strongly motivated.
 
 ## Deprecation Pattern
 Old name stays as the real implementation; new name is a `CF_INLINE` forwarder (or vice versa).
-The deprecated symbol's doc comment must include `@deprecated Use cf_new_name instead.`
+The deprecated symbol's deprecation is noted in prose in its doc comment ("Deprecated — use `cf_new_name` instead.") inside `@brief` or `@remarks`. Never write an `@deprecated` tag — the docs parser panics on unknown tags.
 ```c
 /**
  * @function cf_old_function
  * @category example
- * @brief    Does the thing.
- * @deprecated Use cf_new_function instead.
+ * @brief    Deprecated — use `cf_new_function` instead. Does the thing.
  * @related  cf_new_function
  */
 CF_INLINE void cf_old_function(int x) { cf_new_function(x); }
