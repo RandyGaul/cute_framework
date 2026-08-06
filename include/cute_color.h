@@ -169,7 +169,7 @@ CF_INLINE CF_Color cf_make_color_hex_string(const char* hex) {
  * @remarks  The alpha component is set to 255.
  * @related  CF_Pixel cf_make_pixel_rgb_f cf_make_pixel_rgba_f cf_make_pixel_rgb cf_make_pixel_rgba cf_make_pixel_hex cf_make_pixel_hex_string
  */
-CF_INLINE CF_Pixel cf_make_pixel_rgb_f(float r, float g, float b) { CF_Pixel p; p.colors.r = (uint8_t)(r * 255.0f); p.colors.g = (uint8_t)(g * 255.0f); p.colors.b = (uint8_t)(b * 255.0f); p.colors.a = 255; return p; }
+CF_INLINE CF_Pixel cf_make_pixel_rgb_f(float r, float g, float b) { CF_Pixel p; p.colors.r = (uint8_t)(cf_clamp01(r) * 255.0f); p.colors.g = (uint8_t)(cf_clamp01(g) * 255.0f); p.colors.b = (uint8_t)(cf_clamp01(b) * 255.0f); p.colors.a = 255; return p; }
 
 /**
  * @function cf_make_pixel_rgba_f
@@ -181,7 +181,7 @@ CF_INLINE CF_Pixel cf_make_pixel_rgb_f(float r, float g, float b) { CF_Pixel p; 
  * @param    a          The alpha component from 0.0f to 1.0f.
  * @related  CF_Pixel cf_make_pixel_rgb_f cf_make_pixel_rgba_f cf_make_pixel_rgb cf_make_pixel_rgba cf_make_pixel_hex cf_make_pixel_hex_string
  */
-CF_INLINE CF_Pixel cf_make_pixel_rgba_f(float r, float g, float b, float a) { CF_Pixel p; p.colors.r = (uint8_t)(r * 255.0f); p.colors.g = (uint8_t)(g * 255.0f); p.colors.b = (uint8_t)(b * 255.0f); p.colors.a = (uint8_t)(a * 255.0f); return p; }
+CF_INLINE CF_Pixel cf_make_pixel_rgba_f(float r, float g, float b, float a) { CF_Pixel p; p.colors.r = (uint8_t)(cf_clamp01(r) * 255.0f); p.colors.g = (uint8_t)(cf_clamp01(g) * 255.0f); p.colors.b = (uint8_t)(cf_clamp01(b) * 255.0f); p.colors.a = (uint8_t)(cf_clamp01(a) * 255.0f); return p; }
 
 /**
  * @function cf_make_pixel_rgb
@@ -640,7 +640,7 @@ CF_INLINE char* cf_pixel_to_string(CF_Pixel p) { char* s = NULL; return shex(s, 
  * @param    c          The color.
  * @related  cf_color_to_pixel cf_color_to_int_rgb cf_color_to_int_rgba cf_color_to_string
  */
-CF_INLINE CF_Pixel cf_color_to_pixel(CF_Color c) { CF_Pixel p; p.colors.r = (uint8_t)(c.r * 255.0f); p.colors.g = (uint8_t)(c.g * 255.0f); p.colors.b = (uint8_t)(c.b * 255.0f); p.colors.a = (uint8_t)(c.a * 255.0f); return p; }
+CF_INLINE CF_Pixel cf_color_to_pixel(CF_Color c) { CF_Pixel p; p.colors.r = (uint8_t)(cf_clamp01(c.r) * 255.0f); p.colors.g = (uint8_t)(cf_clamp01(c.g) * 255.0f); p.colors.b = (uint8_t)(cf_clamp01(c.b) * 255.0f); p.colors.a = (uint8_t)(cf_clamp01(c.a) * 255.0f); return p; }
 
 /**
  * @function cf_color_to_int_rgb

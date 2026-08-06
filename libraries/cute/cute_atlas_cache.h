@@ -609,6 +609,20 @@ static unsigned atlas_cache_map_hash(ATLAS_CACHE_U64 key)
 	return (unsigned)key;
 }
 
+// The map's keys/item_slots/items arrays live in one malloc, packed back-to-back
+// as [keys: ATLAS_CACHE_U64 * cap][item_slots: int * cap][items: item_size * cap].
+// `items` can hold any item type, several of which need 8-byte alignment (e.g.
+// atlas_cache_internal_texture_t ends in an ATLAS_CACHE_U64), so its byte offset
+// -- cap * (sizeof(keys[0]) + sizeof(item_slots[0])) -- must be rounded up to
+// ATLAS_CACHE_ITEM_ALIGN. Without rounding, cap == 1 lands `items` at offset 12
+// (only 4-byte aligned): a misaligned-address UB on every single-item map.
+#define ATLAS_CACHE_ITEM_ALIGN 16
+static size_t atlas_cache_map_items_offset(int cap)
+{
+	size_t off = (size_t)cap * (sizeof(ATLAS_CACHE_U64) + sizeof(int));
+	return (off + (ATLAS_CACHE_ITEM_ALIGN - 1)) & ~(size_t)(ATLAS_CACHE_ITEM_ALIGN - 1);
+}
+
 static void atlas_cache_map_init(atlas_cache_map_t* map, int item_size, int initial_capacity, void* mem_ctx)
 {
 	initial_capacity = (int)atlas_cache_map_pow2ceil(initial_capacity >= 0 ? (unsigned)initial_capacity : 32U);
@@ -621,10 +635,12 @@ static void atlas_cache_map_init(atlas_cache_map_t* map, int item_size, int init
 	ATLAS_CACHE_ASSERT(map->slots);
 	ATLAS_CACHE_MEMSET(map->slots, 0, slots_size);
 	map->item_capacity = (int)atlas_cache_map_pow2ceil((unsigned)initial_capacity);
-	map->keys = (ATLAS_CACHE_U64*)ATLAS_CACHE_MALLOC(map->item_capacity * (sizeof(*map->keys) + sizeof(*map->item_slots) + map->item_size), mem_ctx);
+	size_t items_offset = atlas_cache_map_items_offset(map->item_capacity);
+	size_t bytes = items_offset + (size_t)map->item_capacity * (size_t)map->item_size;
+	map->keys = (ATLAS_CACHE_U64*)ATLAS_CACHE_MALLOC(bytes, mem_ctx);
 	ATLAS_CACHE_ASSERT(map->keys);
 	map->item_slots = (int*)(map->keys + map->item_capacity);
-	map->items = (void*)(map->item_slots + map->item_capacity);
+	map->items = (void*)((char*)map->keys + items_offset);
 }
 
 
@@ -689,12 +705,13 @@ static void atlas_cache_map_expand_slots(atlas_cache_map_t* map)
 static void atlas_cache_map_expand_items(atlas_cache_map_t* map)
 {
 	map->item_capacity *= 2;
-	ATLAS_CACHE_U64* new_keys = (ATLAS_CACHE_U64*)ATLAS_CACHE_MALLOC(
-		map->item_capacity * (sizeof(*map->keys) + sizeof(*map->item_slots) + map->item_size), map->mem_ctx);
+	size_t items_offset = atlas_cache_map_items_offset(map->item_capacity);
+	size_t bytes = items_offset + (size_t)map->item_capacity * (size_t)map->item_size;
+	ATLAS_CACHE_U64* new_keys = (ATLAS_CACHE_U64*)ATLAS_CACHE_MALLOC(bytes, map->mem_ctx);
 	ATLAS_CACHE_ASSERT(new_keys);
 
 	int* new_item_slots = (int*)(new_keys + map->item_capacity);
-	void* new_items = (void*)(new_item_slots + map->item_capacity);
+	void* new_items = (void*)((char*)new_keys + items_offset);
 
 	ATLAS_CACHE_MEMCPY(new_keys, map->keys, map->count * sizeof(*map->keys));
 	ATLAS_CACHE_MEMCPY(new_item_slots, map->item_slots, map->count * sizeof(*map->item_slots));
