@@ -1314,15 +1314,11 @@ CF_Shader cf_sdlgpu_make_shader_from_bytecode(CF_ShaderBytecode vertex_bytecode,
 
 void cf_sdlgpu_shader_swap_contents(CF_Shader a, CF_Shader b)
 {
-	// Raw byte swap transfers ownership wholesale (plain data + Cute::Arrays, no
-	// self-references). Used by shader hot-reload so user-held handles stay valid
-	// while the guts are refreshed.
+	// Swaps the guts wholesale so user-held handles stay valid while shader
+	// hot-reload refreshes what they point to.
 	CF_ShaderInternal* pa = (CF_ShaderInternal*)a.id;
 	CF_ShaderInternal* pb = (CF_ShaderInternal*)b.id;
-	uint8_t tmp[sizeof(CF_ShaderInternal)];
-	CF_MEMCPY(tmp, pa, sizeof(tmp));
-	CF_MEMCPY((void*)pa, pb, sizeof(tmp));
-	CF_MEMCPY((void*)pb, tmp, sizeof(tmp));
+	swap(*pa, *pb);
 }
 
 bool cf_sdlgpu_shader_consumes_uniform(CF_Shader shader_handle, const char* interned_name)
@@ -2645,10 +2641,7 @@ void cf_sdlgpu_compute_shader_swap_contents(CF_ComputeShader a, CF_ComputeShader
 	// See cf_sdlgpu_shader_swap_contents: hot-reload guts swap, handles stay valid.
 	CF_ComputeShaderInternal* pa = (CF_ComputeShaderInternal*)a.id;
 	CF_ComputeShaderInternal* pb = (CF_ComputeShaderInternal*)b.id;
-	uint8_t tmp[sizeof(CF_ComputeShaderInternal)];
-	CF_MEMCPY(tmp, pa, sizeof(tmp));
-	CF_MEMCPY((void*)pa, pb, sizeof(tmp));
-	CF_MEMCPY((void*)pb, tmp, sizeof(tmp));
+	swap(*pa, *pb);
 }
 
 void cf_sdlgpu_destroy_compute_shader(CF_ComputeShader shader)
