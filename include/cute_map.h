@@ -410,9 +410,9 @@ template <typename T>
 T* Map<T>::insert(uint64_t key)
 {
 	// Reserve space first, then placement new.
-	T dummy;
-	CF_MEMSET(&dummy, 0, sizeof(T));
-	ck_map_set_stretchy((void**)&m_map, key, &dummy, (int)sizeof(T));
+	alignas(T) unsigned char dummy[sizeof(T)];
+	CF_MEMSET(dummy, 0, sizeof(T));
+	ck_map_set_stretchy((void**)&m_map, key, dummy, (int)sizeof(T));
 	T* result = (T*)ck_map_get_ptr_impl(CK_MHDR(m_map), key);
 	CF_ASSERT(result);
 	CF_PLACEMENT_NEW(result) T();
@@ -422,9 +422,9 @@ T* Map<T>::insert(uint64_t key)
 template <typename T>
 T* Map<T>::insert(uint64_t key, const T& val)
 {
-	T dummy;
-	CF_MEMSET(&dummy, 0, sizeof(T));
-	ck_map_set_stretchy((void**)&m_map, key, &dummy, (int)sizeof(T));
+	alignas(T) unsigned char dummy[sizeof(T)];
+	CF_MEMSET(dummy, 0, sizeof(T));
+	ck_map_set_stretchy((void**)&m_map, key, dummy, (int)sizeof(T));
 	T* result = (T*)ck_map_get_ptr_impl(CK_MHDR(m_map), key);
 	CF_ASSERT(result);
 	CF_PLACEMENT_NEW(result) T(val);
@@ -434,9 +434,9 @@ T* Map<T>::insert(uint64_t key, const T& val)
 template <typename T>
 T* Map<T>::insert(uint64_t key, T&& val)
 {
-	T dummy;
-	CF_MEMSET(&dummy, 0, sizeof(T));
-	ck_map_set_stretchy((void**)&m_map, key, &dummy, (int)sizeof(T));
+	alignas(T) unsigned char dummy[sizeof(T)];
+	CF_MEMSET(dummy, 0, sizeof(T));
+	ck_map_set_stretchy((void**)&m_map, key, dummy, (int)sizeof(T));
 	T* result = (T*)ck_map_get_ptr_impl(CK_MHDR(m_map), key);
 	CF_ASSERT(result);
 	CF_PLACEMENT_NEW(result) T(cf_move(val));
