@@ -1300,8 +1300,7 @@ uint64_t cf_sdlgpu_texture_binding_handle(CF_Texture texture)
 
 CF_Shader cf_sdlgpu_make_shader_from_bytecode(CF_ShaderBytecode vertex_bytecode, CF_ShaderBytecode fragment_bytecode)
 {
-	CF_ShaderInternal* shader_internal = CF_NEW(CF_ShaderInternal);
-	CF_MEMSET(shader_internal, 0, sizeof(*shader_internal));
+	CF_ShaderInternal* shader_internal = CF_PLACEMENT_NEW(cf_alloc(sizeof(CF_ShaderInternal))) CF_ShaderInternal();
 
 	shader_internal->vs = s_load_shader_bytecode(shader_internal, vertex_bytecode, CF_SHADER_STAGE_VERTEX);
 	shader_internal->fs = s_load_shader_bytecode(shader_internal, fragment_bytecode, CF_SHADER_STAGE_FRAGMENT);
@@ -1322,8 +1321,8 @@ void cf_sdlgpu_shader_swap_contents(CF_Shader a, CF_Shader b)
 	CF_ShaderInternal* pb = (CF_ShaderInternal*)b.id;
 	uint8_t tmp[sizeof(CF_ShaderInternal)];
 	CF_MEMCPY(tmp, pa, sizeof(tmp));
-	CF_MEMCPY(pa, pb, sizeof(tmp));
-	CF_MEMCPY(pb, tmp, sizeof(tmp));
+	CF_MEMCPY((void*)pa, pb, sizeof(tmp));
+	CF_MEMCPY((void*)pb, tmp, sizeof(tmp));
 }
 
 bool cf_sdlgpu_shader_consumes_uniform(CF_Shader shader_handle, const char* interned_name)
@@ -2543,8 +2542,7 @@ struct CF_StorageBufferInternal
 
 CF_ComputeShader cf_sdlgpu_make_compute_shader_from_bytecode(CF_ShaderBytecode bytecode)
 {
-	CF_ComputeShaderInternal* cs = CF_NEW(CF_ComputeShaderInternal);
-	CF_MEMSET(cs, 0, sizeof(*cs));
+	CF_ComputeShaderInternal* cs = CF_PLACEMENT_NEW(cf_alloc(sizeof(CF_ComputeShaderInternal))) CF_ComputeShaderInternal();
 
 	const CF_ShaderInfo* info = &bytecode.shader_info;
 
@@ -2649,8 +2647,8 @@ void cf_sdlgpu_compute_shader_swap_contents(CF_ComputeShader a, CF_ComputeShader
 	CF_ComputeShaderInternal* pb = (CF_ComputeShaderInternal*)b.id;
 	uint8_t tmp[sizeof(CF_ComputeShaderInternal)];
 	CF_MEMCPY(tmp, pa, sizeof(tmp));
-	CF_MEMCPY(pa, pb, sizeof(tmp));
-	CF_MEMCPY(pb, tmp, sizeof(tmp));
+	CF_MEMCPY((void*)pa, pb, sizeof(tmp));
+	CF_MEMCPY((void*)pb, tmp, sizeof(tmp));
 }
 
 void cf_sdlgpu_destroy_compute_shader(CF_ComputeShader shader)
