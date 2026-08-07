@@ -93,8 +93,12 @@
 #	define CF_API
 #endif
 
-#define CK_API CF_API
-#define CM_API CF_API
+#ifndef CK_API
+#	define CK_API CF_API
+#endif
+#ifndef CM_API
+#	define CM_API CF_API
+#endif
 
 #ifdef CF_WINDOWS
 #	define CF_CALL __cdecl
