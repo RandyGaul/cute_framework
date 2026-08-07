@@ -409,6 +409,15 @@ const T* Map<T>::try_get(uint64_t key) const
 template <typename T>
 T* Map<T>::insert(uint64_t key)
 {
+	// ck_map_set_stretchy updates an existing key's bytes in place, so a fresh
+	// placement new over it would skip the old value's destructor. Destroy and
+	// reconstruct directly instead of going through the zero-byte reserve path.
+	T* existing = try_get(key);
+	if (existing) {
+		existing->~T();
+		return CF_PLACEMENT_NEW(existing) T();
+	}
+
 	// Reserve space first, then placement new.
 	alignas(T) unsigned char dummy[sizeof(T)];
 	CF_MEMSET(dummy, 0, sizeof(T));
@@ -422,6 +431,12 @@ T* Map<T>::insert(uint64_t key)
 template <typename T>
 T* Map<T>::insert(uint64_t key, const T& val)
 {
+	T* existing = try_get(key);
+	if (existing) {
+		existing->~T();
+		return CF_PLACEMENT_NEW(existing) T(val);
+	}
+
 	alignas(T) unsigned char dummy[sizeof(T)];
 	CF_MEMSET(dummy, 0, sizeof(T));
 	ck_map_set_stretchy((void**)&m_map, key, dummy, (int)sizeof(T));
@@ -434,6 +449,12 @@ T* Map<T>::insert(uint64_t key, const T& val)
 template <typename T>
 T* Map<T>::insert(uint64_t key, T&& val)
 {
+	T* existing = try_get(key);
+	if (existing) {
+		existing->~T();
+		return CF_PLACEMENT_NEW(existing) T(cf_move(val));
+	}
+
 	alignas(T) unsigned char dummy[sizeof(T)];
 	CF_MEMSET(dummy, 0, sizeof(T));
 	ck_map_set_stretchy((void**)&m_map, key, dummy, (int)sizeof(T));
