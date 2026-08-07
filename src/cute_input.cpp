@@ -759,11 +759,10 @@ static void s_free_event(SDL_Event* event)
 	}
 }
 
-void cf_app_process_event(void* event)
+void cf_app_process_event(SDL_Event* event)
 {
 	if (!app || !event) return;
-	// void* keeps SDL out of cute_app.h -- callers must hand us the SDL_Event* from SDL_AppEvent.
-	SDL_Event copy = *(SDL_Event*)event;
+	SDL_Event copy = *event;
 	s_deep_copy_event(&copy);
 	// The mutex matters because SDL can invoke SDL_AppEvent from other threads for some
 	// events (e.g. mobile lifecycle events are dispatched from the pushing thread).
