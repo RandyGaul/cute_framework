@@ -31,6 +31,10 @@ struct cs_context_t;
 
 CF_API extern struct CF_App* app;
 
+// Upper bound on events buffered by cf_app_process_event between updates. Oldest events are
+// dropped first once full, so an app that stops updating can't grow the buffer forever.
+#define CF_MAX_BUFFERED_EVENTS 4096
+
 // Recreates the default offscreen canvas at logical_size * pixel_scale. Called on init and on
 // every canvas recreation event (window resize, display density change, cf_app_set_size,
 // cf_app_set_msaa) -- this is what makes cf_app_set_canvas_size a one-shot override.
@@ -89,6 +93,8 @@ struct CF_App
 {
 	// App stuff.
 	bool running = true;
+	Cute::Array<SDL_Event> buffered_events; // Events fed by cf_app_process_event, applied at the top of the next update so input transitions survive the begin-frame prev-state copy. Guarded by buffered_events_mutex -- SDL can dispatch SDL_AppEvent from other threads (e.g. Android lifecycle events).
+	CF_Mutex buffered_events_mutex = cf_make_mutex();
 	int options = 0;
 	void* platform_handle = NULL;
 	CF_OnUpdateFn* user_on_update = NULL;

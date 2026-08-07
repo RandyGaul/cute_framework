@@ -519,211 +519,285 @@ static void s_refresh_pixel_scale()
 	}
 }
 
+static void s_handle_event(SDL_Event* event)
+{
+	if (app->using_imgui) {
+		ImGui_ImplSDL3_ProcessEvent(event);
+	}
+
+	switch (event->type)
+	{
+	case SDL_EVENT_QUIT:
+		app->running = false;
+		break;
+
+	case SDL_EVENT_WINDOW_RESIZED:
+		app->window_state.resized = true;
+		app->w = event->window.data1;
+		app->h = event->window.data2;
+		cf_app_recreate_default_canvas_if_needed();
+		break;
+
+	case SDL_EVENT_WINDOW_MOVED:
+		app->window_state.moved = true;
+		app->x = event->window.data1;
+		app->y = event->window.data2;
+		break;
+
+	case SDL_EVENT_WINDOW_MINIMIZED:
+		app->window_state.minimized = true;
+		break;
+
+	case SDL_EVENT_WINDOW_MAXIMIZED:
+		app->window_state.maximized = true;
+		break;
+
+	case SDL_EVENT_WINDOW_RESTORED:
+		app->window_state.restored = true;
+		break;
+
+	case SDL_EVENT_WINDOW_MOUSE_ENTER:
+		app->window_state.mouse_inside_window = true;
+		break;
+
+	case SDL_EVENT_WINDOW_MOUSE_LEAVE:
+		app->window_state.mouse_inside_window = false;
+		break;
+
+	case SDL_EVENT_WINDOW_FOCUS_GAINED:
+		app->window_state.has_keyboard_focus = true;
+		break;
+
+	case SDL_EVENT_WINDOW_FOCUS_LOST:
+		app->window_state.has_keyboard_focus = false;
+		break;
+
+	case SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED:
+		app->dpi_scale = SDL_GetWindowDisplayScale(app->window);
+		app->dpi_scale_was_changed = true;
+		s_refresh_pixel_scale();
+		break;
+
+	case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED:
+		s_refresh_pixel_scale();
+		break;
+
+	case SDL_EVENT_KEY_DOWN:
+	{
+		if (event->key.repeat) return;
+		int key = SDL_GetKeyFromScancode(event->key.scancode, event->key.mod, true);
+		key = s_map_SDL_keys(key);
+		CF_ASSERT(key >= 0 && key < 512);
+		app->keys[key] = 1;
+		app->keys[CF_KEY_ANY] = 1;
+		app->keys_timestamp[key] = app->keys_timestamp[CF_KEY_ANY] = CF_SECONDS;
+		if (app->key_callback) app->key_callback((CF_KeyButton)key, true);
+	}	break;
+
+	case SDL_EVENT_KEY_UP:
+	{
+		if (event->key.repeat) return;
+		int key = SDL_GetKeyFromScancode(event->key.scancode, event->key.mod, true);
+		key = s_map_SDL_keys(key);
+		CF_ASSERT(key >= 0 && key < 512);
+		app->keys[key] = 0;
+		if (app->key_callback) app->key_callback((CF_KeyButton)key, false);
+	}	break;
+
+	case SDL_EVENT_TEXT_INPUT:
+	{
+		// text.text can be NULL if s_deep_copy_event's SDL_strdup failed under OOM.
+		if (event->text.text) cf_input_text_add_utf8(event->text.text);
+		app->ime_composition.clear();
+		app->ime_composition_cursor = 0;
+		app->ime_composition_selection_len = 0;
+	}	break;
+
+	case SDL_EVENT_TEXT_EDITING:
+	{
+		// edit.text can be NULL if s_deep_copy_event's SDL_strdup failed under OOM.
+		app->ime_composition.clear();
+		const char* text = event->edit.text;
+		if (text) while (*text) app->ime_composition.add(*text++);
+		app->ime_composition.add(0);
+		app->ime_composition_cursor = text ? event->edit.start : 0;
+		app->ime_composition_selection_len = text ? event->edit.length : 0;
+	}	break;
+
+	case SDL_EVENT_MOUSE_MOTION:
+		app->mouse.x = event->motion.x;
+		app->mouse.y = event->motion.y;
+		app->mouse.xrel = event->motion.xrel;
+		app->mouse.yrel = -event->motion.yrel;
+		break;
+
+	case SDL_EVENT_MOUSE_BUTTON_DOWN:
+		switch (event->button.button)
+		{
+		case SDL_BUTTON_LEFT: app->mouse.left_button = 1; break;
+		case SDL_BUTTON_RIGHT: app->mouse.right_button = 1; break;
+		case SDL_BUTTON_MIDDLE: app->mouse.middle_button = 1; break;
+		case SDL_BUTTON_X1: app->mouse.x1_button = 1; break;
+		case SDL_BUTTON_X2: app->mouse.x2_button = 1; break;
+		}
+		app->mouse.x = event->button.x;
+		app->mouse.y = event->button.y;
+		if (event->button.clicks == 1) {
+			app->mouse.click_type = CF_MOUSE_CLICK_SINGLE;
+		} else if (event->button.clicks == 2) {
+			app->mouse.click_type = CF_MOUSE_CLICK_DOUBLE;
+		}
+		break;
+
+	case SDL_EVENT_MOUSE_BUTTON_UP:
+		switch (event->button.button)
+		{
+		case SDL_BUTTON_LEFT: app->mouse.left_button = 0; break;
+		case SDL_BUTTON_RIGHT: app->mouse.right_button = 0; break;
+		case SDL_BUTTON_MIDDLE: app->mouse.middle_button = 0; break;
+		case SDL_BUTTON_X1: app->mouse.x1_button = 0; break;
+		case SDL_BUTTON_X2: app->mouse.x2_button = 0; break;
+		}
+		app->mouse.x = event->button.x;
+		app->mouse.y = event->button.y;
+		if (event->button.clicks == 1) {
+			app->mouse.click_type = CF_MOUSE_CLICK_SINGLE;
+		} else if (event->button.clicks == 2) {
+			app->mouse.click_type = CF_MOUSE_CLICK_DOUBLE;
+		}
+		break;
+
+	case SDL_EVENT_MOUSE_WHEEL:
+		app->mouse.wheel_motion = event->wheel.y;
+		break;
+
+	case SDL_EVENT_GAMEPAD_BUTTON_UP:
+	{
+		SDL_JoystickID id = event->gbutton.which;
+		cf_joypad_on_button_up(id, (int)event->gbutton.button);
+	}	break;
+
+	case SDL_EVENT_GAMEPAD_BUTTON_DOWN:
+	{
+		SDL_JoystickID id = event->gbutton.which;
+		cf_joypad_on_button_down(id, (int)event->gbutton.button);
+	}	break;
+
+	case SDL_EVENT_GAMEPAD_AXIS_MOTION:
+	{
+		SDL_JoystickID id = event->gaxis.which;
+		cf_joypad_on_axis_motion(id, (int)event->gaxis.axis, (int)event->gaxis.value);
+	}	break;
+
+	case SDL_EVENT_FINGER_DOWN:
+	{
+		uint64_t id = (uint64_t)event->tfinger.fingerID;
+		s_touch_remove(id);
+		CF_Touch& touch = app->touches.add();
+		touch.id = id;
+		touch.pressure = event->tfinger.pressure;
+		touch.x = event->tfinger.x * app->w;
+		touch.y = event->tfinger.y * app->h;
+	}	break;
+
+	case SDL_EVENT_FINGER_MOTION:
+	{
+		uint64_t id = (uint64_t)event->tfinger.fingerID;
+		bool found = false;
+		for (int i = 0; i < app->touches.size(); ++i) {
+			if (app->touches[i].id == id) {
+				app->touches[i].pressure = event->tfinger.pressure;
+				app->touches[i].x = event->tfinger.x * app->w;
+				app->touches[i].y = event->tfinger.y * app->h;
+				found = true;
+				break;
+			}
+		}
+		if (!found) {
+			CF_Touch& touch = app->touches.add();
+			touch.id = id;
+			touch.pressure = event->tfinger.pressure;
+			touch.x = event->tfinger.x * app->w;
+			touch.y = event->tfinger.y * app->h;
+		}
+	}	break;
+
+	case SDL_EVENT_FINGER_UP:
+	{
+		uint64_t id = (uint64_t)event->tfinger.fingerID;
+		s_touch_remove(id);
+	}	break;
+	}
+}
+
 void cf_pump_input_msgs()
 {
 	// Handle SDL messages.
 	SDL_Event event;
 	while (SDL_PollEvent(&event)) {
-		if (app->using_imgui) {
-			ImGui_ImplSDL3_ProcessEvent(&event);
-		}
+		s_handle_event(&event);
+	}
+}
 
-		switch (event.type)
-		{
-		case SDL_EVENT_QUIT:
-			app->running = false;
-			break;
+// SDL text events carry pointers into SDL "temporary memory" that SDL frees before the next
+// update can drain the buffer -- deep-copy the strings on buffer, free them after handling.
+static void s_deep_copy_event(SDL_Event* event)
+{
+	if (event->type == SDL_EVENT_TEXT_INPUT && event->text.text) {
+		event->text.text = SDL_strdup(event->text.text);
+	} else if (event->type == SDL_EVENT_TEXT_EDITING && event->edit.text) {
+		event->edit.text = SDL_strdup(event->edit.text);
+	}
+}
 
-		case SDL_EVENT_WINDOW_RESIZED:
-			app->window_state.resized = true;
-			app->w = event.window.data1;
-			app->h = event.window.data2;
-			cf_app_recreate_default_canvas_if_needed();
-			break;
+static void s_free_event(SDL_Event* event)
+{
+	if (event->type == SDL_EVENT_TEXT_INPUT) {
+		SDL_free((void*)event->text.text);
+	} else if (event->type == SDL_EVENT_TEXT_EDITING) {
+		SDL_free((void*)event->edit.text);
+	}
+}
 
-		case SDL_EVENT_WINDOW_MOVED:
-			app->window_state.moved = true;
-			app->x = event.window.data1;
-			app->y = event.window.data2;
-			break;
+void cf_app_process_event(SDL_Event* event)
+{
+	if (!app || !event) return;
+	SDL_Event copy = *event;
+	s_deep_copy_event(&copy);
+	// The mutex matters because SDL can invoke SDL_AppEvent from other threads for some
+	// events (e.g. mobile lifecycle events are dispatched from the pushing thread).
+	cf_mutex_lock(&app->buffered_events_mutex);
+	if (app->buffered_events.count() == CF_MAX_BUFFERED_EVENTS) {
+		// Full: drop the oldest event, preserving the order of the rest.
+		s_free_event(&app->buffered_events[0]);
+		CF_MEMMOVE(app->buffered_events.data(), app->buffered_events.data() + 1, sizeof(SDL_Event) * (CF_MAX_BUFFERED_EVENTS - 1));
+		app->buffered_events.pop();
+	}
+	app->buffered_events.add(copy);
+	cf_mutex_unlock(&app->buffered_events_mutex);
+}
 
-		case SDL_EVENT_WINDOW_MINIMIZED:
-			app->window_state.minimized = true;
-			break;
+void cf_drain_buffered_events()
+{
+	// Move the array out under the lock so event handlers run unlocked.
+	cf_mutex_lock(&app->buffered_events_mutex);
+	Cute::Array<SDL_Event> events = cf_move(app->buffered_events);
+	cf_mutex_unlock(&app->buffered_events_mutex);
+	for (int i = 0; i < events.count(); ++i) {
+		s_handle_event(&events[i]);
+		s_free_event(&events[i]);
+	}
+}
 
-		case SDL_EVENT_WINDOW_MAXIMIZED:
-			app->window_state.maximized = true;
-			break;
-
-		case SDL_EVENT_WINDOW_RESTORED:
-			app->window_state.restored = true;
-			break;
-
-		case SDL_EVENT_WINDOW_MOUSE_ENTER:
-			app->window_state.mouse_inside_window = true;
-			break;
-
-		case SDL_EVENT_WINDOW_MOUSE_LEAVE:
-			app->window_state.mouse_inside_window = false;
-			break;
-
-		case SDL_EVENT_WINDOW_FOCUS_GAINED:
-			app->window_state.has_keyboard_focus = true;
-			break;
-
-		case SDL_EVENT_WINDOW_FOCUS_LOST:
-			app->window_state.has_keyboard_focus = false;
-			break;
-
-		case SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED:
-			app->dpi_scale = SDL_GetWindowDisplayScale(app->window);
-			app->dpi_scale_was_changed = true;
-			s_refresh_pixel_scale();
-			break;
-
-		case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED:
-			s_refresh_pixel_scale();
-			break;
-
-		case SDL_EVENT_KEY_DOWN:
-		{
-			if (event.key.repeat) continue;
-			int key = SDL_GetKeyFromScancode(event.key.scancode, event.key.mod, true);
-			key = s_map_SDL_keys(key);
-			CF_ASSERT(key >= 0 && key < 512);
-			app->keys[key] = 1;
-			app->keys[CF_KEY_ANY] = 1;
-			app->keys_timestamp[key] = app->keys_timestamp[CF_KEY_ANY] = CF_SECONDS;
-			if (app->key_callback) app->key_callback((CF_KeyButton)key, true);
-		}	break;
-
-		case SDL_EVENT_KEY_UP:
-		{
-			if (event.key.repeat) continue;
-			int key = SDL_GetKeyFromScancode(event.key.scancode, event.key.mod, true);
-			key = s_map_SDL_keys(key);
-			CF_ASSERT(key >= 0 && key < 512);
-			app->keys[key] = 0;
-			if (app->key_callback) app->key_callback((CF_KeyButton)key, false);
-		}	break;
-
-		case SDL_EVENT_TEXT_INPUT:
-		{
-			cf_input_text_add_utf8(event.text.text);
-			app->ime_composition.clear();
-			app->ime_composition_cursor = 0;
-			app->ime_composition_selection_len = 0;
-		}	break;
-
-		case SDL_EVENT_TEXT_EDITING:
-		{
-			app->ime_composition.clear();
-			const char* text = event.edit.text;
-			while (*text) app->ime_composition.add(*text++);
-			app->ime_composition.add(0);
-			app->ime_composition_cursor = event.edit.start;
-			app->ime_composition_selection_len = event.edit.length;
-		}	break;
-
-		case SDL_EVENT_MOUSE_MOTION:
-			app->mouse.x = event.motion.x;
-			app->mouse.y = event.motion.y;
-			app->mouse.xrel = event.motion.xrel;
-			app->mouse.yrel = -event.motion.yrel;
-			break;
-
-		case SDL_EVENT_MOUSE_BUTTON_DOWN:
-			switch (event.button.button)
-			{
-			case SDL_BUTTON_LEFT: app->mouse.left_button = 1; break;
-			case SDL_BUTTON_RIGHT: app->mouse.right_button = 1; break;
-			case SDL_BUTTON_MIDDLE: app->mouse.middle_button = 1; break;
-			case SDL_BUTTON_X1: app->mouse.x1_button = 1; break;
-			case SDL_BUTTON_X2: app->mouse.x2_button = 1; break;
-			}
-			app->mouse.x = event.button.x;
-			app->mouse.y = event.button.y;
-			if (event.button.clicks == 1) {
-				app->mouse.click_type = CF_MOUSE_CLICK_SINGLE;
-			} else if (event.button.clicks == 2) {
-				app->mouse.click_type = CF_MOUSE_CLICK_DOUBLE;
-			}
-			break;
-
-		case SDL_EVENT_MOUSE_BUTTON_UP:
-			switch (event.button.button)
-			{
-			case SDL_BUTTON_LEFT: app->mouse.left_button = 0; break;
-			case SDL_BUTTON_RIGHT: app->mouse.right_button = 0; break;
-			case SDL_BUTTON_MIDDLE: app->mouse.middle_button = 0; break;
-			case SDL_BUTTON_X1: app->mouse.x1_button = 0; break;
-			case SDL_BUTTON_X2: app->mouse.x2_button = 0; break;
-			}
-			app->mouse.x = event.button.x;
-			app->mouse.y = event.button.y;
-			if (event.button.clicks == 1) {
-				app->mouse.click_type = CF_MOUSE_CLICK_SINGLE;
-			} else if (event.button.clicks == 2) {
-				app->mouse.click_type = CF_MOUSE_CLICK_DOUBLE;
-			}
-			break;
-
-		case SDL_EVENT_MOUSE_WHEEL:
-			app->mouse.wheel_motion = event.wheel.y;
-			break;
-
-		case SDL_EVENT_GAMEPAD_BUTTON_UP:
-		{
-			SDL_JoystickID id = event.gbutton.which;
-			cf_joypad_on_button_up(id, (int)event.gbutton.button);
-		}	break;
-
-		case SDL_EVENT_GAMEPAD_BUTTON_DOWN:
-		{
-			SDL_JoystickID id = event.gbutton.which;
-			cf_joypad_on_button_down(id, (int)event.gbutton.button);
-		}	break;
-
-		case SDL_EVENT_GAMEPAD_AXIS_MOTION:
-		{
-			SDL_JoystickID id = event.gaxis.which;
-			cf_joypad_on_axis_motion(id, (int)event.gaxis.axis, (int)event.gaxis.value);
-		}	break;
-
-		case SDL_EVENT_FINGER_DOWN:
-		{
-			uint64_t id = (uint64_t)event.tfinger.fingerID;
-			s_touch_remove(id);
-			CF_Touch& touch = app->touches.add();
-			touch.id = id;
-			touch.pressure = event.tfinger.pressure;
-			touch.x = event.tfinger.x * app->w;
-			touch.y = event.tfinger.y * app->h;
-		}	break;
-
-		case SDL_EVENT_FINGER_MOTION:
-		{
-			uint64_t id = (uint64_t)event.tfinger.fingerID;
-			CF_Touch touch;
-			if (cf_touch_get(id, &touch)) {
-				touch.pressure = event.tfinger.pressure;
-				touch.x = event.tfinger.x * app->w;
-				touch.y = event.tfinger.y * app->h;
-			} else {
-				CF_Touch& touch = app->touches.add();
-				touch.id = id;
-				touch.pressure = event.tfinger.pressure;
-				touch.x = event.tfinger.x * app->w;
-				touch.y = event.tfinger.y * app->h;
-			}
-		}	break;
-
-		case SDL_EVENT_FINGER_UP:
-		{
-			uint64_t id = (uint64_t)event.tfinger.fingerID;
-			s_touch_remove(id);
-		}	break;
-		}
+void cf_free_buffered_events()
+{
+	// Same move-out-then-free-unlocked pattern as cf_drain_buffered_events, so a concurrent
+	// cf_app_process_event call can't iterate/mutate the array at the same time as this loop.
+	cf_mutex_lock(&app->buffered_events_mutex);
+	Cute::Array<SDL_Event> events = cf_move(app->buffered_events);
+	cf_mutex_unlock(&app->buffered_events_mutex);
+	for (int i = 0; i < events.count(); ++i) {
+		s_free_event(&events[i]);
 	}
 }
 

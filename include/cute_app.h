@@ -202,6 +202,8 @@ CF_API CF_DisplayOrientation CF_CALL cf_display_orientation(CF_DisplayID display
 	CF_ENUM(APP_OPTIONS_GFX_DEBUG_BIT,                          1 << 12) \
 	/* @entry Disables the OS's high-pixel-density (Retina/HiDPI) backbuffer, forcing 1:1 logical-to-physical rendering. `cf_app_get_pixel_scale` will always return 1.0f. */ \
 	CF_ENUM(APP_OPTIONS_NO_HIGH_DPI_BIT,                        1 << 13) \
+	/* @entry The host drives the main loop and owns the event queue, so CF will not poll for events itself -- forward each one to `cf_app_process_event` instead. Set this when you include `cute_main.h`. Not sticky: pass it to every `cf_make_app` call, including after a `cf_destroy_app`. */ \
+	CF_ENUM(APP_OPTIONS_MAIN_CALLBACKS_BIT,                     1 << 14) \
 	/* @end */
 
 typedef int CF_AppOptionFlags;
@@ -932,6 +934,40 @@ struct SDL_Window;
  */
 CF_API struct SDL_Window* CF_CALL cf_app_get_window(void);
 
+/**
+ * @function cf_app_get_options
+ * @category app
+ * @brief    Returns the bitmask of `CF_AppOptionFlagBits` the app was created with.
+ * @return   Returns the `options` value passed to `cf_make_app`, or 0 if no app exists.
+ * @remarks  Returns 0 before `cf_make_app` and after `cf_destroy_app`, so it is always safe to call.
+ * @related  cf_make_app CF_AppOptionFlagBits cf_app_process_event
+ */
+CF_API CF_AppOptionFlags CF_CALL cf_app_get_options(void);
+
+union SDL_Event;
+
+/**
+ * @function cf_app_process_event
+ * @category app
+ * @brief    Feeds one platform event to CF's input system.
+ * @param    event  Pointer to the `SDL_Event` to process. Under `cute_main.h` this is handed to you already.
+ * @remarks  Only needed when the host drives the main loop -- pass `CF_APP_OPTIONS_MAIN_CALLBACKS_BIT` to
+ *           `cf_make_app` to enable that mode. Feeding events alone does not enable it, and in a classic loop a
+ *           stray call is harmless: the event is applied at the next update alongside the normal pump. Safe to
+ *           call before `cf_make_app` (the event is ignored).
+ *
+ *           Events are deep-copied and buffered, then applied at the start of the next `cf_app_update`, preserving
+ *           the exact input timing of a classic `cf_app_is_running` loop. Thread-safe, since some events (e.g.
+ *           mobile lifecycle events) can be delivered from other threads. If more than 4096 events pile up between
+ *           updates the oldest are dropped -- note that dropping a key-down while keeping its key-up leaves that
+ *           key reading as stuck.
+ *
+ *           `SDL_Event` is only forward-declared here, so this header does not pull in SDL3's headers; the
+ *           `cute_main.h` glue is the only caller inside CF and passes the right type by construction.
+ * @related  cf_app_update cf_make_app CF_AppOptionFlagBits
+ */
+CF_API void CF_CALL cf_app_process_event(union SDL_Event* event);
+
 #ifdef __cplusplus
 }
 #endif // __cplusplus
@@ -1009,6 +1045,8 @@ CF_INLINE void app_set_canvas_size(int w, int h) { cf_app_set_canvas_size(w, h);
 CF_INLINE void app_set_canvas_blit_filter(CF_Filter filter) { cf_app_set_canvas_blit_filter(filter); }
 CF_INLINE CF_PowerInfo app_power_info() { return cf_app_power_info(); }
 CF_INLINE struct SDL_Window* app_get_window() { return cf_app_get_window(); }
+CF_INLINE CF_AppOptionFlags app_get_options() { return cf_app_get_options(); }
+CF_INLINE void app_process_event(union SDL_Event* event) { cf_app_process_event(event); }
 
 }
 
