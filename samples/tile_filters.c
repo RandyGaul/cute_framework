@@ -13,9 +13,13 @@
 	  UP/DOWN  zoom in/out
 	  S        save one png per filter mode (current camera offset)
 
-	Run `tilefilters screenshot <prefix> [offset_px] [zoom]` to save deterministic pngs of
-	every filter mode at the given subpixel camera offset (default 0.5, worst case for
-	seams) plus a zero-offset control, then exit.
+	A 5x3 tile block slowly rotates in the sky: the pixel art filters should keep its
+	interior pixels stable (no shimmering crawl like NEAREST) and its seams closed even
+	though the shared tile edges are not axis-aligned.
+
+	Run `tilefilters screenshot <prefix> [offset_px] [zoom] [angle_deg]` to save
+	deterministic pngs of every filter mode at the given subpixel camera offset (default
+	0.5, worst case for seams) plus a zero-offset control, then exit.
 */
 
 #include <cute.h>
@@ -78,7 +82,30 @@ static void s_build_map(void)
 	s_map[1][13] = TILE_GRASS_R;
 }
 
-static void s_draw_scene(CF_DrawFilterMode mode, float zoom, float offx, float offy)
+// A 5x3 tile block rotating about its center. Verifies two things under rotation: the
+// interior stays pixel-stable (the point of the pixel art filters), and adjacent tiles
+// stay seam-free even when the shared edges are not axis-aligned.
+static void s_draw_rotated_block(float angle)
+{
+	static const TileKind block[3][5] = {
+		{ TILE_GRASS_L, TILE_GRASS_M, TILE_GRASS_M, TILE_GRASS_M, TILE_GRASS_R },
+		{ TILE_DIRT, TILE_DIRT, TILE_DIRT, TILE_DIRT, TILE_DIRT },
+		{ TILE_DIRT, TILE_DIRT, TILE_DIRT, TILE_DIRT, TILE_DIRT },
+	};
+	CF_V2 center = cf_v2(120, 56);
+	CF_SinCos r = cf_sincos(angle);
+	for (int y = 0; y < 3; ++y) {
+		for (int x = 0; x < 5; ++x) {
+			CF_Sprite s = s_tiles[block[y][x]];
+			CF_V2 local = cf_v2((x - 2) * (float)TILE, (1 - y) * (float)TILE);
+			s.transform.r = r;
+			s.transform.p = cf_add_v2(center, cf_mul_sc_v2(r, local));
+			cf_draw_sprite(&s);
+		}
+	}
+}
+
+static void s_draw_scene(CF_DrawFilterMode mode, float zoom, float offx, float offy, float angle)
 {
 	cf_draw_push();
 	cf_draw_scale(zoom, zoom);
@@ -93,6 +120,7 @@ static void s_draw_scene(CF_DrawFilterMode mode, float zoom, float offx, float o
 			cf_draw_sprite(&s);
 		}
 	}
+	s_draw_rotated_block(angle);
 	cf_draw_pop_filter();
 	cf_draw_pop();
 }
@@ -134,6 +162,7 @@ int main(int argc, char* argv[])
 	const char* prefix = argc > 2 ? argv[2] : "tile_filters";
 	float shot_off_px = argc > 3 ? (float)atof(argv[3]) : 0.5f;
 	float shot_zoom = argc > 4 ? (float)atof(argv[4]) : 3.0f;
+	float shot_angle = (argc > 5 ? (float)atof(argv[5]) : 22.5f) * (CF_PI / 180.0f);
 	// Screenshot mode disables HiDPI so one draw unit is exactly one canvas pixel,
 	// making the half-pixel camera offset land on true half-pixel screen positions.
 	int options = CF_APP_OPTIONS_WINDOW_POS_CENTERED_BIT | (screenshot ? CF_APP_OPTIONS_HIDDEN_BIT | CF_APP_OPTIONS_NO_HIGH_DPI_BIT : CF_APP_OPTIONS_RESIZABLE_BIT);
@@ -184,7 +213,7 @@ int main(int argc, char* argv[])
 				int m = idx / 2;
 				bool half = (idx % 2) == 0;
 				float off = half ? shot_off_px / shot_zoom : 0;
-				s_draw_scene(modes[m], shot_zoom, off, off);
+				s_draw_scene(modes[m], shot_zoom, off, off, shot_angle);
 				char path[256];
 				snprintf(path, sizeof(path), "%s_%s_%s.png", prefix, s_mode_name(modes[m]), half ? "half" : "zero");
 				for (char* c = path; *c; ++c) if (*c == ' ' || *c == '(' || *c == ')') *c = '-';
@@ -200,7 +229,7 @@ int main(int argc, char* argv[])
 		// One capture per frame while an S-key screenshot burst is in flight.
 		if (interactive_shot >= 0) {
 			if (interactive_shot < mode_count) {
-				s_draw_scene(modes[interactive_shot], zoom, shot_offx, shot_offy);
+				s_draw_scene(modes[interactive_shot], zoom, shot_offx, shot_offy, t * 0.25f);
 				char path[256];
 				snprintf(path, sizeof(path), "%s_%s.png", prefix, s_mode_name(modes[interactive_shot]));
 				for (char* c = path; *c; ++c) if (*c == ' ' || *c == '(' || *c == ')') *c = '-';
@@ -227,7 +256,7 @@ int main(int argc, char* argv[])
 			shot_offy = offy;
 		}
 
-		s_draw_scene(modes[mode], zoom, offx, offy);
+		s_draw_scene(modes[mode], zoom, offx, offy, t * 0.25f);
 
 		cf_draw_push_color(cf_color_white());
 		cf_push_font_size(20);
