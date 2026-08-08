@@ -1176,8 +1176,10 @@ void cf_draw_sprite(const CF_Sprite* sprite)
 	g.shape[3] = quad[3];
 	g.is_sprite = true;
 	// Sprites don't use the SDF aa lane; it carries the bordered-atlas flag instead so the
-	// fragment stage can apply seam-safe sampling (clamp away from the transparent border
-	// ring + geometric edge coverage). Premade atlas sprites have no border ring.
+	// fragment stage can apply PIXELART's seam-safe sampling (clamp away from the
+	// transparent border ring + binary edge coverage). Any positive value reads as the
+	// flag, since draw list replays rescale this lane. Premade atlas sprites have no
+	// border ring.
 	g.aa = apply_border_scale ? 1.0f : 0.0f;
 	g.color = premultiply(color_white());
 	g.alpha = sprite->opacity;
