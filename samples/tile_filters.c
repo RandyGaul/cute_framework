@@ -44,10 +44,11 @@ typedef enum TileKind
 
 void mount_content_directory_as(const char* dir)
 {
+	// cf_string_append reassigns the dynamic string in place: one allocation, one free.
 	char* path = cf_path_normalize(cf_fs_get_base_directory());
-	char* mounted = cf_string_append(path, "/import_spritesheet_data");
-	cf_fs_mount(mounted, dir, false);
-	cf_string_free(mounted);
+	cf_string_append(path, "/import_spritesheet_data");
+	cf_fs_mount(path, dir, false);
+	cf_string_free(path);
 }
 
 // Cut one 16x16 tile out of the sheet as its own easy sprite. Each tile becomes a separate
