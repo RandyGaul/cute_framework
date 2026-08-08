@@ -789,21 +789,16 @@ void main()
 	// Traditional sprite/text/tri cases.
 	vec4 c = vec4(0);
 	vec2 uv = u_use_smooth_uv == 0 ? smooth_uv(v_uv, u_texture_size) : (u_use_smooth_uv == 2 ? pixelart_uv(v_uv, u_texture_size) : v_uv);
-	// Seam-safe sprite sampling for SMOOTH/PIXELART on bordered atlas sprites (flagged by
-	// the CPU through the otherwise-unused aa lane): never blend into the transparent 1px
-	// border ring -- clamp the sample point half a texel inside the content rect (clamp-to-
-	// edge semantics, like SDL), and rebuild the edge fade geometrically as a one-pixel
-	// coverage falloff at the content edge. Adjacent tiles stay seamless under subpixel
-	// motion (a neighbor's opaque interior covers the fade) while silhouettes still fade.
-	// The branch is quad-uniform (per-command data), so fwidth inside is well-defined.
+	// PIXELART seam-safe sprite sampling, on bordered atlas sprites only. The CPU flags
+	// those through the otherwise-unused aa lane; any positive value is the flag, since
+	// draw list replays rescale the lane. Sample clamped half a texel inside the content
+	// rect so the transparent 1px border ring is never blended (clamp-to-edge, like SDL),
+	// and make edge coverage binary -- a pixel is claimed fully by whichever sprite's
+	// content rect contains its center. Soft edges cannot tile seamlessly (two 50% covers
+	// composite to 75% and background bleeds), so PIXELART trades edge AA for gap-free
+	// tilemaps, exactly like SDL_SCALEMODE_PIXELART on exact-size quads.
 	float sprite_cov = 1.0;
-	if (is_sprite && v_aa > 0.5 && u_use_smooth_uv == 2) {
-		// PIXELART seam-safe sprites: sample clamped half a texel inside the content
-		// rect (clamp-to-edge, like SDL), and make edge coverage binary -- a pixel is
-		// claimed fully by whichever sprite's content rect contains its center. Soft
-		// edges cannot tile seamlessly (two 50% covers composite to 75%, background
-		// bleeds), so PIXELART trades edge AA for gap-free tilemaps, exactly like
-		// SDL_SCALEMODE_PIXELART on exact-size quads.
+	if (is_sprite && v_aa > 0.0 && u_use_smooth_uv == 2) {
 		vec2 texel = 1.0 / u_texture_size;
 		vec2 uv_lo = min(v_uv_bounds.xy, v_uv_bounds.zw) + texel;
 		vec2 uv_hi = max(v_uv_bounds.xy, v_uv_bounds.zw) - texel;
@@ -1077,9 +1072,10 @@ void main()
 			float t = dot(p - q0, e2) * P1.w;
 			vec2 uv = vec2(mix(uvb.x, uvb.z, s), mix(uvb.y, uvb.w, t));
 			// PIXELART seam-safe sprites (see s_draw_fs): sample clamped half a texel
-			// inside the content rect, binary edge coverage by pixel center. pt is the
-			// pre-clamp texel position (affine in screen space).
-			bool seam_safe = type == CMD_TYPE_SPRITE && cmd.shape.z > 0.5 && u_use_smooth_uv == 2;
+			// inside the content rect, binary edge coverage by pixel center. Any positive
+			// aa lane value is the bordered-sprite flag (replays rescale the lane). pt is
+			// the pre-clamp texel position (affine in screen space).
+			bool seam_safe = type == CMD_TYPE_SPRITE && cmd.shape.z > 0.0 && u_use_smooth_uv == 2;
 			vec2 texel = 1.0 / u_texture_size;
 			vec2 uv_lo = min(uvb.xy, uvb.zw) + texel;
 			vec2 uv_hi = max(uvb.xy, uvb.zw) - texel;
