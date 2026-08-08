@@ -732,7 +732,7 @@ static void s_draw_report_tiled(const BatchGeometry* geoms, const CF_PendingUV* 
 		cf_material_set_uniform_fs(s_draw->material, "u_texture_size", &u_texture_size, CF_UNIFORM_TYPE_FLOAT2, 1);
 		int alpha_discard = cmd.alpha_discard == 0.0f ? 0 : 1;
 		cf_material_set_uniform_fs(s_draw->material, "u_alpha_discard", &alpha_discard, CF_UNIFORM_TYPE_INT, 1);
-		int use_smooth_uv = cmd.filter_mode == CF_DRAW_FILTER_SMOOTH ? 0 : 1;
+		int use_smooth_uv = cmd.filter_mode == CF_DRAW_FILTER_SMOOTH ? 0 : (cmd.filter_mode == CF_DRAW_FILTER_PIXELART ? 2 : 1);
 		cf_material_set_uniform_fs(s_draw->material, "u_use_smooth_uv", &use_smooth_uv, CF_UNIFORM_TYPE_INT, 1);
 		cf_material_set_render_state(s_draw->material, s_blend_run_state(cmd.render_state, blend, false));
 		void* sampler_override = (cmd.filter_mode == CF_DRAW_FILTER_NEAREST) ? s_draw->sampler_nearest : s_draw->sampler_linear;
@@ -832,7 +832,7 @@ static void s_draw_report_tiled(const BatchGeometry* geoms, const CF_PendingUV* 
 	cf_material_set_uniform_fs(s_draw->material, "u_canvas_wh", &u_canvas_wh, CF_UNIFORM_TYPE_FLOAT2, 1);
 	int alpha_discard = cmd.alpha_discard == 0.0f ? 0 : 1;
 	cf_material_set_uniform_fs(s_draw->material, "u_alpha_discard", &alpha_discard, CF_UNIFORM_TYPE_INT, 1);
-	int use_smooth_uv = cmd.filter_mode == CF_DRAW_FILTER_SMOOTH ? 0 : 1;
+	int use_smooth_uv = cmd.filter_mode == CF_DRAW_FILTER_SMOOTH ? 0 : (cmd.filter_mode == CF_DRAW_FILTER_PIXELART ? 2 : 1);
 	cf_material_set_uniform_fs(s_draw->material, "u_use_smooth_uv", &use_smooth_uv, CF_UNIFORM_TYPE_INT, 1);
 	cf_material_set_uniform_fs(s_draw->material, "u_tiles_x", &tiles_x, CF_UNIFORM_TYPE_INT, 1);
 	int tile_px = CF_TILE_PX;
@@ -1175,6 +1175,12 @@ void cf_draw_sprite(const CF_Sprite* sprite)
 	g.shape[2] = quad[2];
 	g.shape[3] = quad[3];
 	g.is_sprite = true;
+	// Sprites don't use the SDF aa lane; it carries the bordered-atlas flag instead so the
+	// fragment stage can apply PIXELART's seam-safe sampling (clamp away from the
+	// transparent border ring + binary edge coverage). Any positive value reads as the
+	// flag, since draw list replays rescale this lane. Premade atlas sprites have no
+	// border ring.
+	g.aa = apply_border_scale ? 1.0f : 0.0f;
 	g.color = premultiply(color_white());
 	g.alpha = sprite->opacity;
 	g.user_params = s_draw->user_params.last();
@@ -4999,8 +5005,8 @@ void static s_blit(CF_Command* cmd, CF_Canvas src, CF_Canvas dst, bool clear_dst
 	cf_material_set_uniform_fs(s_draw->material, "u_texture_size", &canvas_dims, CF_UNIFORM_TYPE_FLOAT2, 1);
 	int alpha_discard = cmd->alpha_discard == 0.0f ? 0 : 1;
 	cf_material_set_uniform_fs(s_draw->material, "u_alpha_discard", &alpha_discard, CF_UNIFORM_TYPE_INT, 1);
-	// u_use_smooth_uv: 0 = apply shader smooth_uv function, 1 = use plain v_uv (hardware filtering only)
-	int use_smooth_uv = cmd->filter_mode == CF_DRAW_FILTER_SMOOTH ? 0 : 1;
+	// u_use_smooth_uv: 0 = apply shader smooth_uv function, 1 = plain v_uv (hardware filtering only), 2 = pixelart_uv
+	int use_smooth_uv = cmd->filter_mode == CF_DRAW_FILTER_SMOOTH ? 0 : (cmd->filter_mode == CF_DRAW_FILTER_PIXELART ? 2 : 1);
 	cf_material_set_uniform_fs(s_draw->material, "u_use_smooth_uv", &use_smooth_uv, CF_UNIFORM_TYPE_INT, 1);
 
 	// Apply render state.
