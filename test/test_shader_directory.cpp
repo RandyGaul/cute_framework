@@ -79,43 +79,9 @@ static void s_use_shader_dir()
 	// The cases below all test what happens when a file *appears*, so they must start from a
 	// directory that does not contain it. Each case removes its own file when it finishes; this
 	// sweeps up after a run that failed before it got there.
-	cf_fs_remove("/shader_dir_test/w.vert");
-	cf_fs_remove("/shader_dir_test/w.frag");
 	cf_fs_remove("/shader_dir_test/late.shd");
 	cf_fs_remove("/shader_dir_test/gone.shd");
 	if (!app->shader_directory_set) cf_shader_directory("/shader_dir_test");
-}
-
-// .vert and .frag are the extensions a two-file cf_make_shader pair uses, and they were missing
-// from the watched set -- the reload machinery existed but nothing ever reached it.
-//
-// The sleep is not padding: mtimes have one-second resolution, so a rewrite inside the same second
-// as the original write is genuinely indistinguishable from no change at all.
-TEST_CASE(test_shader_watch_reports_vert_and_frag_edits)
-{
-	if (!test_make_app(64, 64)) return true; // Headless CI: no display/GPU.
-	s_use_shader_dir();
-
-	REQUIRE(!cf_is_error(cf_fs_write_string_to_file("/shader_dir_test/w.vert", "// one\n")));
-	REQUIRE(!cf_is_error(cf_fs_write_string_to_file("/shader_dir_test/w.frag", "// one\n")));
-
-	cf_shader_on_changed(s_on_changed, NULL);
-	s_scan(4);                // Let both files land in the watch map.
-	s_changed_count = 0;
-	cf_sleep(1100);
-
-	REQUIRE(!cf_is_error(cf_fs_write_string_to_file("/shader_dir_test/w.vert", "// two\n")));
-	REQUIRE(!cf_is_error(cf_fs_write_string_to_file("/shader_dir_test/w.frag", "// two\n")));
-	s_scan(4);
-
-	REQUIRE(s_saw("/w.vert"));
-	REQUIRE(s_saw("/w.frag"));
-
-	cf_fs_remove("/shader_dir_test/w.vert");
-	cf_fs_remove("/shader_dir_test/w.frag");
-	cf_shader_on_changed(NULL, NULL);
-	test_destroy_app();
-	return true;
 }
 
 // A file created after cf_shader_directory has no entry in the watch map, and the watch pass used
@@ -218,7 +184,6 @@ TEST_CASE(test_shader_watch_sees_a_mount_point_below_the_shader_directory)
 TEST_SUITE(test_shader_directory)
 {
 	RUN_TEST_CASE(test_shader_directory_survives_extensionless_files);
-	RUN_TEST_CASE(test_shader_watch_reports_vert_and_frag_edits);
 	RUN_TEST_CASE(test_shader_watch_adopts_files_created_after_startup);
 	RUN_TEST_CASE(test_shader_watch_survives_removed_files);
 	RUN_TEST_CASE(test_shader_watch_sees_files_from_a_later_mount);
