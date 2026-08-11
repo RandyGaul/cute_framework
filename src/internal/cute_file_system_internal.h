@@ -56,30 +56,30 @@ bool cf_fs_scan_native_directory(const char* platform_directory, Cute::Map<CF_Di
 
 struct CF_DirSignature
 {
-	uint64_t hash = 0;
+	uint64_t name_xor = 0;
+	uint64_t name_sum = 0;
 	int count = -1;  // -1: the directory could not be walked.
 };
 
 CF_INLINE bool cf_fs_dir_signature_equal(CF_DirSignature a, CF_DirSignature b)
 {
-	return a.hash == b.hash && a.count == b.count;
+	return a.name_xor == b.name_xor && a.name_sum == b.name_sum && a.count == b.count;
 }
 
-// Reduces a walk to a value two scans can compare. Interned keys are stable unique pointers, so
-// the set of them identifies the listing without hashing any characters; XOR and sum accumulate
-// separately so the result does not depend on the order the walk returned entries in.
+// Reduces a walk to a value two scans can compare. Interned names are already stable unique
+// pointers, so there is nothing to hash: accumulating them is enough to identify the set. XOR and
+// sum are both commutative, so the result does not depend on the order the walk returned entries
+// in, and keeping them apart rather than folding them together is what makes the pair strong --
+// for any two entries, an XOR and a sum together pin down the pair exactly.
 CF_INLINE CF_DirSignature cf_fs_dir_signature(Cute::Map<CF_DirEntry>* entries)
 {
-	uint64_t x = 0, sum = 0;
-	int n = entries->count();
-	const uint64_t* keys = entries->keys();
-	for (int i = 0; i < n; ++i) {
-		x ^= keys[i];
-		sum += keys[i];
-	}
 	CF_DirSignature sig;
-	sig.hash = x ^ (sum * 1099511628211ULL);
-	sig.count = n;
+	sig.count = entries->count();
+	const uint64_t* keys = entries->keys();
+	for (int i = 0; i < sig.count; ++i) {
+		sig.name_xor ^= keys[i];
+		sig.name_sum += keys[i];
+	}
 	return sig;
 }
 
