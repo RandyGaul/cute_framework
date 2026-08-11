@@ -2019,7 +2019,7 @@ void cf_draw3d_process(CF_Command* cmd, CF_Canvas canvas, bool clear)
 			CF_MeshInstance3d inst = instances[i];
 			float du = image_refs[i].bordered && uv.tex_w ? 1.0f / (float)uv.tex_w : 0;
 			float dv = image_refs[i].bordered && uv.tex_h ? 1.0f / (float)uv.tex_h : 0;
-			inst.uv_rect = cf_v4(uv.minx + du, uv.maxy - dv, uv.maxx - du, uv.miny + dv);
+			inst.uv_rect = cf_v4(uv.minx + du, uv.maxy + dv, uv.maxx - du, uv.miny - dv);
 			s_draw3d->staged.add(inst);
 		}
 	}
