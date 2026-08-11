@@ -81,10 +81,7 @@ struct CF_WindowState
 
 struct CF_ShaderFileInfo
 {
-	// The only piece of stat the watcher ever compares -- see s_shader_watch_recursive. Keeping
-	// a whole CF_Stat here would force the bulk directory scanner to synthesize fields nobody
-	// reads, and leave them zeroed as a trap for the next reader.
-	uint64_t last_modified_time;
+	uint64_t last_modified_time;  // The only piece of stat the watcher compares.
 	const char* path;
 };
 

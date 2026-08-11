@@ -13,41 +13,50 @@
 #include <cute_map.h>
 #include <cute_string.h>
 
-// One entry from a native (non-PhysFS) directory walk. See cf_fs_scan_native_directory.
+// Fast directory polling, for code that must notice a file changing without paying for it every
+// frame. cf_shader_watch is why this exists.
 //
-// `modified_time` and `size` are only meaningful when `is_directory` is false. The POSIX walk
-// types directories straight from `d_type` and never stats them, so a directory's mtime is
-// whatever the platform happened to hand back -- possibly zero. Nothing reads it: the shader
-// watcher only recurses into directories.
+// The expensive operation is a per-file metadata query. PHYSFS_stat is one, and so is every entry
+// of PHYSFS_enumerateFiles -- it stats each entry internally to filter out symlinks it will not
+// report. A bulk directory walk (FindFirstFileW, readdir) hands back the same metadata for a whole
+// directory for roughly the cost of one query, so polling is built out of walks, and PhysFS is
+// asked as rarely as it can be.
+//
+// PhysFS still decides *what exists*. Several mounts can serve one directory at once and only
+// PhysFS knows the merged result, at any depth and after any later cf_fs_mount; a walk sees a
+// single real directory. So a walk is a metadata lookup table, never the file list. Take the list
+// from a walk instead and a file shadowed by a lower mount silently stops being watched.
+//
+// What is left is knowing when PhysFS's answer went stale, which is decided without asking it:
+//
+//   - the merged list changes only if the mount table changes, or if some contributing real
+//     directory gains, loses or renames an entry;
+//   - cf_fs_generation() tracks the first; one walk per contributing mount tracks the second,
+//     reduced to a CF_DirSignature a scan compares against the previous one;
+//   - writing to a file does neither, so editing a watched file never re-asks PhysFS.
+//
+// Anything derived from a mount's real path is a candidate to be proven rather than a fact. See
+// cf_fs_mount_candidates.
+
+// One entry of a bulk directory walk.
 struct CF_DirEntry
 {
-	// Interned, so it is a stable unique pointer for the life of the process: comparing two names
-	// is a pointer compare, and an entry owns no allocation. A walk runs per directory per scan,
-	// so a heap string per entry here was most of what the walk cost.
-	const char* name = NULL;
-	uint64_t modified_time = 0;  // UNIX seconds, matching PHYSFS_Stat::modtime.
+	const char* name = NULL;  // Interned, so comparing two names is a pointer compare.
+	uint64_t modified_time = 0;
 	uint64_t size = 0;
 	bool is_directory = false;
 	bool stat_ok = false;
 };
 
-// Reads one real (platform) directory in a single walk and fills `out` with its entries, keyed
-// by `sintern`'d name. Returns false if the directory could not be walked, in which case `out`
-// is left as-is and the caller must fall back to per-file stats.
-//
-// This is a metadata accelerator, not a replacement for PhysFS enumeration: it knows nothing
-// about mounts, so it sees only whichever real directory it is pointed at. The metadata it
-// reports is deliberately bug-compatible with `PHYSFS_stat` -- see the notes on the Windows
-// time conversion and on symlink typing in the implementation.
+// Walks one real (platform) directory, keying `out` by interned name. False if it could not be
+// walked at all. The metadata is deliberately bug-compatible with PHYSFS_stat, so a caller may mix
+// entries from here with entries it stat'd itself.
 bool cf_fs_scan_native_directory(const char* platform_directory, Cute::Map<CF_DirEntry>* out);
 
-// A directory's entry set reduced to something cheap to compare from one scan to the next.
-// Adding, removing or renaming an entry changes it; writing to a file does not -- which is exactly
-// the distinction a cached directory *listing* needs.
 struct CF_DirSignature
 {
 	uint64_t hash = 0;
-	int count = -1;  // -1 means the directory could not be walked at all.
+	int count = -1;  // -1: the directory could not be walked.
 };
 
 CF_INLINE bool cf_fs_dir_signature_equal(CF_DirSignature a, CF_DirSignature b)
@@ -55,10 +64,9 @@ CF_INLINE bool cf_fs_dir_signature_equal(CF_DirSignature a, CF_DirSignature b)
 	return a.hash == b.hash && a.count == b.count;
 }
 
-// Entries are keyed by `sintern`'d name, and an interned string is a stable unique pointer for the
-// life of the process -- so the set of keys identifies the listing without hashing any characters.
-// XOR and sum accumulate separately so the result does not depend on the order the walk happened to
-// return entries in.
+// Interned keys are stable unique pointers, so the set of them identifies the listing without
+// hashing any characters. XOR and sum accumulate separately so the result does not depend on the
+// order the walk returned entries in.
 CF_INLINE CF_DirSignature cf_fs_dir_signature(Cute::Map<CF_DirEntry>* entries)
 {
 	uint64_t x = 0, sum = 0;
@@ -74,22 +82,15 @@ CF_INLINE CF_DirSignature cf_fs_dir_signature(Cute::Map<CF_DirEntry>* entries)
 	return sig;
 }
 
-// Monotonic counter bumped by every call that can change the PhysFS search path -- cf_fs_mount and
-// cf_fs_dismount are the only two. Anything caching a view derived from the virtual filesystem
-// compares against this instead of trying to notice a mount change after the fact.
+// Bumped by cf_fs_mount and cf_fs_dismount, the only calls that change the search path.
 uint64_t cf_fs_generation();
 
-// The real directory each mounted archive would serve `virtual_directory` from, in search-path
-// order, for every mount that could contribute entries to it. Derived from the mount table alone --
-// no filesystem calls -- by subtracting each archive's mount point from the virtual path.
+// The real directory each mount would serve `virtual_directory` from, in search-path order, for
+// every mount that could contribute to it. Candidates, not facts: PHYSFS_setRoot's prefix has no
+// getter, so a mount using it resolves somewhere other than this arithmetic suggests.
 //
-// These are *candidates*, not facts. PHYSFS_setRoot's prefix has no getter, so a mount using it
-// resolves elsewhere than the arithmetic here suggests; such a candidate normally just fails to
-// walk. Callers must prove what they take from a candidate rather than trusting it.
-//
-// `out_virtual_names` collects the entries in this directory that exist only because a mount point
-// passes through it, and so have no real directory anywhere to walk. They come from the mount table
-// alone, which cf_fs_generation already tracks.
+// `out_virtual_names` receives entries that exist only because a mount point passes through the
+// directory, which therefore have no real directory anywhere to walk.
 void cf_fs_mount_candidates(const char* virtual_directory, Cute::Array<Cute::String>* out,
                             Cute::Array<Cute::String>* out_virtual_names);
 

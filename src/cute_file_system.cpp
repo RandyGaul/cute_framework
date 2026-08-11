@@ -201,22 +201,14 @@ void cf_fs_free_enumerated_directory(const char** directory_list)
 }
 
 //--------------------------------------------------------------------------------------------------
-// Native (non-PhysFS) bulk directory walk.
-//
-// PHYSFS_stat costs a syscall per file, which makes anything that polls a directory scale with
-// the file count. Every platform's directory walk already carries the metadata that stat would
-// return, so read it once for the whole directory instead.
-//
-// Callers must treat this as an accelerator only. It has no idea what is mounted where, so the
-// authority on which files exist stays with PhysFS -- see cf_fs_scan_native_directory's comment.
+// Native (non-PhysFS) bulk directory walk. See internal/cute_file_system_internal.h.
 
 #ifdef CF_WINDOWS
 
-// Mirrors PhysFS's FileTimeToPhysfsTime (physfs_platform_windows.c), which round-trips through
-// local time rather than subtracting the epoch. Timestamps produced here are compared against
-// ones PHYSFS_stat produced, so agreeing with PhysFS matters more than being right: the two
-// disagree in the ambiguous DST fall-back hour, under a TZ override, and across historical rule
-// changes, and a divergence makes a file look permanently changed or permanently unchanged.
+// Mirrors PhysFS's FileTimeToPhysfsTime, which round-trips through local time rather than
+// subtracting the epoch. Agreeing with PhysFS matters more than being right: the two disagree in
+// the ambiguous DST fall-back hour, under a TZ override, and across historical rule changes, and a
+// timestamp from here gets compared against one PHYSFS_stat produced.
 static bool s_filetime_to_physfs_time(const FILETIME* ft, const TIME_ZONE_INFORMATION* tzi, uint64_t* out)
 {
 	SYSTEMTIME st_utc, st_local;
@@ -242,12 +234,10 @@ static bool s_filetime_to_physfs_time(const FILETIME* ft, const TIME_ZONE_INFORM
 
 bool cf_fs_scan_native_directory(const char* platform_directory, Cute::Map<CF_DirEntry>* out)
 {
-	// One call for the whole walk. PhysFS fetches this per stat, but it cannot change midway
-	// through a single directory in any way that matters.
 	TIME_ZONE_INFORMATION tzi;
 	if (GetTimeZoneInformation(&tzi) == TIME_ZONE_ID_INVALID) return false;
 
-	// Trailing separators would leave an empty path component ahead of the wildcard.
+	// A trailing separator would leave an empty path component ahead of the wildcard.
 	Cute::String pattern = platform_directory;
 	while (pattern.len() > 0 && (pattern.last() == '/' || pattern.last() == '\\')) {
 		pattern.pop();
@@ -267,14 +257,11 @@ bool cf_fs_scan_native_directory(const char* platform_directory, Cute::Map<CF_Di
 	do {
 		if (!wcscmp(fd.cFileName, L".") || !wcscmp(fd.cFileName, L"..")) continue;
 
-		// PhysFS types these with isSymlink() over a followed GetFileAttributesExW, which
-		// FindFirstFileW cannot reproduce -- it reports the link, not the target. Leave them out
-		// so the caller stats them the ordinary way.
+		// PhysFS types these through a *followed* GetFileAttributesExW, which FindFirstFileW cannot
+		// reproduce: it reports the link, not the target. Omit them so the caller stats them.
 		if (fd.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) continue;
 
-		// One path component, so at most 255 wchars and 1020 UTF-8 bytes. Only the full pattern
-		// above needs dynamic sizing.
-		char utf8[1024];
+		char utf8[1024];  // One path component: at most 255 wchars, 1020 UTF-8 bytes.
 		if (!WideCharToMultiByte(CP_UTF8, 0, fd.cFileName, -1, utf8, sizeof(utf8), NULL, NULL)) continue;
 
 		CF_DirEntry e;
@@ -305,19 +292,10 @@ bool cf_fs_scan_native_directory(const char* platform_directory, Cute::Map<CF_Di
 		CF_DirEntry e;
 		e.name = sintern(de->d_name);
 		e.stat_ok = true;
-#ifdef _DIRENT_HAVE_D_TYPE
-		// Recursion needs the type, never the mtime. DT_DIR does not follow symlinks, so a
-		// symlink to a directory lands as DT_LNK and takes the fstatat path below -- which is
-		// what keeps the typing identical to PhysFS's.
-		if (de->d_type == DT_DIR) {
-			e.is_directory = true;
-			out->add(e.name, e);
-			continue;
-		}
-#endif
+
 		struct stat st;
-		// AT_SYMLINK_NOFOLLOW is lstat, matching DIR_stat's follow=0. Following would give a
-		// symlink the target's type and mtime where PhysFS reports the link's.
+		// AT_SYMLINK_NOFOLLOW is lstat, matching PhysFS's DIR_stat. Following would give a symlink
+		// the target's type and mtime where PhysFS reports the link's.
 		if (fstatat(dirfd(d), de->d_name, &st, AT_SYMLINK_NOFOLLOW) != 0) continue;
 		e.is_directory = S_ISDIR(st.st_mode);
 		e.size = (uint64_t)st.st_size;
@@ -330,10 +308,9 @@ bool cf_fs_scan_native_directory(const char* platform_directory, Cute::Map<CF_Di
 
 #endif // CF_WINDOWS
 
-// PhysFS stores a mount point as the sanitized path plus a trailing slash and no leading slash
-// ("shaders/extra/"), and reports "/" for a root mount. Virtual paths reach us in any shape.
-// Reduce both to the same bare form -- no leading or trailing slash -- so that subtracting one from
-// the other is a plain string compare, matching what verifyPath does internally.
+// PhysFS reports a mount point with a trailing slash and no leading one ("shaders/extra/"), or "/"
+// for a root mount, while virtual paths arrive in any shape. Reducing both to a bare form makes
+// subtracting one from the other a plain string compare, which is what verifyPath does internally.
 static Cute::String s_bare_virtual_path(const char* path)
 {
 	int begin = 0;
@@ -357,13 +334,13 @@ void cf_fs_mount_candidates(const char* virtual_directory, Cute::Array<Cute::Str
 		Cute::String candidate = *it;
 
 		if (mount_point.len() == 0) {
-			// Mounted at the root, so the whole virtual path is the path inside the archive.
+			// Root mount: the whole virtual path is the path inside the archive.
 			if (vdir.len() > 0) {
 				candidate.append("/");
 				candidate.append(vdir.c_str());
 			}
 		} else if (CF_STRCMP(mount_point.c_str(), vdir.c_str()) == 0) {
-			// The mount point *is* this directory, so the archive's root is the directory.
+			// The mount point is this directory, so the archive root is the directory.
 		} else if (vdir.len() > mount_point.len() &&
 		           CF_STRNCMP(vdir.c_str(), mount_point.c_str(), (size_t)mount_point.len()) == 0 &&
 		           vdir.c_str()[mount_point.len()] == '/') {
@@ -373,15 +350,12 @@ void cf_fs_mount_candidates(const char* virtual_directory, Cute::Array<Cute::Str
 		           (vdir.len() == 0 ||
 		            (CF_STRNCMP(mount_point.c_str(), vdir.c_str(), (size_t)vdir.len()) == 0 &&
 		             mount_point.c_str()[vdir.len()] == '/'))) {
-			// The mount point sits *below* this directory. The mount serves no real directory here,
-			// it only makes the next component of its mount point appear as a virtual subdirectory.
-			// That name follows from the mount table alone, so cf_fs_generation already covers any
-			// change to it -- but a caller proving it can see everything PhysFS reports still has
-			// to be told the name exists, since no walk will ever produce it.
+			// The mount point sits below this directory, so the mount serves no real directory here
+			// -- it only makes the next component of its mount point appear as a subdirectory.
 			const char* rest = mount_point.c_str() + (vdir.len() ? vdir.len() + 1 : 0);
-			// Pushed a character at a time rather than built with String(start, end): that
-			// constructor strncpy's exactly `length` bytes and then claims a length of one more,
-			// so it leaves the string unterminated whenever the source runs past `end`.
+			// A character at a time, not String(start, end): that constructor strncpy's exactly
+			// `length` bytes and then claims a length one longer, leaving the string unterminated
+			// whenever the source runs past `end`.
 			Cute::String name;
 			for (int k = 0; rest[k] && rest[k] != '/'; ++k) {
 				name.add(rest[k]);
@@ -389,8 +363,7 @@ void cf_fs_mount_candidates(const char* virtual_directory, Cute::Array<Cute::Str
 			out_virtual_names->add(cf_move(name));
 			continue;
 		} else {
-			// This mount cannot reach the path at all.
-			continue;
+			continue;  // This mount cannot reach the path at all.
 		}
 
 		out->add(cf_move(candidate));

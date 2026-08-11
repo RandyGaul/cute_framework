@@ -30,15 +30,10 @@ static Map<const char*> s_compute_shader_paths;
 struct CF_GraphicsShaderPaths { const char* vertex_path; const char* fragment_path; };
 static Map<CF_GraphicsShaderPaths> s_graphics_shader_paths;
 
-// Enable to run the PhysFS path alongside the native one and assert they agree. This costs
-// strictly more than the code it checks, so it is off unless explicitly defined. Every failure
-// mode the native walk can have is a silently wrong mtime, which from outside the app looks
-// exactly like a file that did not change -- comparing the two paths is the only way to see it.
-//
-// Run it against a quiescent shader tree. The two reads happen at different instants, so a file
-// written *between* them trips the mtime assert by exactly one second, with the walk reading the
-// older value. That is read skew in the checker, not a divergence in the code being checked --
-// and the walk lagging is the harmless direction, since the next scan sees the newer mtime.
+// Runs the PhysFS path alongside the native one and asserts they agree. Every way the native walk
+// can be wrong looks, from outside, exactly like a file that did not change, so comparing the two
+// is the only way to see it. Costs more than the code it checks, and wants a quiescent shader tree:
+// a file written between the two reads trips the mtime assert by a second.
 //#define CF_SHADER_WATCH_VERIFY
 
 #ifdef CF_SHADER_WATCH_VERIFY
@@ -47,33 +42,25 @@ static void s_dir_meta_verify(CF_Path vdir, const CF_DirEntry& e)
 	CF_Stat st = { };
 	if (cf_is_error(fs_stat(vdir + e.name, &st))) { CF_ASSERT(!e.stat_ok); return; }
 	CF_ASSERT(e.stat_ok);
-	// Catches symlink and junction typing, where a native walk and PhysFS disagree by default.
 	CF_ASSERT(e.is_directory == (st.type == CF_FILE_TYPE_DIRECTORY));
-	// mtime catches a time-conversion divergence or a wrong real directory; size catches a wrong
-	// real directory whose mtimes happen to collide. Directories carry neither -- see CF_DirEntry.
-	if (!e.is_directory) {
-		CF_ASSERT(e.modified_time == st.last_modified_time);
-		CF_ASSERT(e.size == (uint64_t)st.size);
-	}
+	CF_ASSERT(e.modified_time == st.last_modified_time);
+	CF_ASSERT(e.size == (uint64_t)st.size);
 }
 #endif
 
-// A directory listing PhysFS gave us once, plus everything needed to know it is still current.
-// See s_dir_meta for why this is worth caching at all.
 struct CF_ShaderDirCache
 {
-	Array<const char*> names;           // The union listing PhysFS reported, interned.
+	Array<const char*> names;           // The merged listing PhysFS reported, interned.
 	Array<CF_DirSignature> signatures;  // One per mount candidate, in search-path order.
 	uint64_t fs_generation = 0;
-	// False when some mount contributes entries none of our walks can see, so a change there would
-	// go unnoticed. Such a directory is never cached -- it re-enumerates every scan.
+	// False when a mount contributes entries no walk of ours can see, so a change there would go
+	// unnoticed. Those directories re-enumerate every scan instead.
 	bool cacheable = false;
-	// The §3.2 metadata proof, held across scans. It establishes which real directory the walk is
-	// reading, and that is a property of the mount table and of the directory's own existence --
-	// neither of which a file being written changes. Both are already revalidated every scan, so
-	// re-proving it every scan would be paying a stat to learn nothing. Only a success is cached:
-	// a probe can fail transiently when a file is written between the walk and the stat, and a
-	// cached failure would stick until the file *set* changed, which might be never.
+	// Which real directory the walk is reading is a property of the mount table and of the
+	// directory's own existence, both already revalidated every scan -- so a proof of it holds
+	// until the listing is refreshed. Only successes are held: a probe fails transiently when a
+	// file is written between the walk and the stat, and a held failure would last until the file
+	// set changed, which may be never.
 	bool probe_ok = false;
 };
 static Map<CF_ShaderDirCache> s_shader_dir_cache;
@@ -87,38 +74,19 @@ static bool s_signatures_equal(const Array<CF_DirSignature>& a, const Array<CF_D
 	return true;
 }
 
-// Gathers (name, mtime, is_directory) for one directory under the shader directory, taking the
-// metadata from a single native walk where it can and from fs_stat where it cannot.
-//
-// The native walk is an accelerator for metadata, never the authority on what exists. Only
-// PhysFS knows the merged file set, at any depth and after a later cf_fs_mount: a subdirectory
-// can be provided by a different mount than its parent, so a check at the root proves nothing
-// about what is below it. Take the file list from the walk instead and a shader shadowed by a
-// lower mount silently stops hot-reloading.
-//
-// But asking PhysFS is expensive out of all proportion: PHYSFS_enumerateFiles stats every entry
-// internally (enumCallbackFilterSymLinks, to drop symlinks it will not report), so it costs a
-// per-file metadata query where a bulk walk costs a shared one -- ~73us against ~1us per entry
-// here. So the listing is cached, and revalidated every scan against things that are cheap to
-// check: the mount generation, and one bulk walk per mount that could contribute to the directory.
-// A file's contents and mtime affect neither, so editing a shader -- the whole point of the
-// watcher, and the common case by far -- never costs an enumerate.
+// Name, mtime and type for every entry of one directory under the shader directory. Built from
+// bulk walks wherever possible; see internal/cute_file_system_internal.h for the strategy.
 static void s_dir_meta(CF_Path path, Array<CF_DirEntry>* out)
 {
 	CF_Path vdir = app->shader_directory + path;
 	const char* vkey = sintern(vdir.c_str());
 
-	// Where each mount that could contribute here would serve this directory from, in search order.
-	// Subtracting the mount point is what makes this the *right* real directory rather than a guess
-	// at it, but PHYSFS_setRoot's prefix still has no getter, so these stay candidates -- proven
-	// below, never trusted.
 	Array<String> candidates;
 	Array<String> mount_point_names;
 	cf_fs_mount_candidates(vdir.c_str(), &candidates, &mount_point_names);
 
-	// One bulk walk per candidate. The first that walks supplies the metadata; the rest exist only
-	// to notice a file appearing or disappearing in a lower mount, which is precisely what a walk
-	// of the topmost directory alone cannot see.
+	// The first candidate that walks supplies the metadata; the rest are walked only to notice a
+	// file appearing or disappearing in a lower mount, which a walk of the topmost cannot see.
 	Array<Map<CF_DirEntry>> walks;
 	Array<CF_DirSignature> signatures;
 	int native_index = -1;
@@ -139,8 +107,6 @@ static void s_dir_meta(CF_Path path, Array<CF_DirEntry>* out)
 
 	if (!reuse) {
 		if (!cache) cache = s_shader_dir_cache.add(vkey);
-		// Interned once here rather than per scan: the listing is compared and looked up by name
-		// several times every scan, and an interned name makes each of those a pointer compare.
 		Array<CF_Path> enumerated = CF_Directory::enumerate(vdir);
 		cache->names.clear();
 		for (int i = 0; i < enumerated.size(); ++i) {
@@ -148,13 +114,11 @@ static void s_dir_meta(CF_Path path, Array<CF_DirEntry>* out)
 		}
 		cache->signatures = signatures;
 		cache->fs_generation = cf_fs_generation();
-		cache->probe_ok = false;  // Different directory contents, so prove the metadata again.
+		cache->probe_ok = false;
 
-		// The proof that the cache is allowed to exist: every name PhysFS reports must be visible
-		// in at least one walk. A name we cannot see is a name whose comings and goings we cannot
-		// detect, and caching past that is how a shader silently stops hot-reloading. Extra names
-		// in a walk are harmless -- PhysFS hides symlinks and shadowed duplicates -- it is a
-		// missing one that blinds the detector.
+		// Caching is only allowed while every name PhysFS reports is visible in at least one walk.
+		// A name no walk can see is one whose comings and goings we cannot detect. Extra names in a
+		// walk are harmless -- PhysFS hides symlinks and shadowed duplicates.
 		cache->cacheable = true;
 		for (int i = 0; i < cache->names.count() && cache->cacheable; ++i) {
 			const char* name = cache->names[i];
@@ -162,9 +126,6 @@ static void s_dir_meta(CF_Path path, Array<CF_DirEntry>* out)
 			for (int k = 0; k < walks.count() && !seen; ++k) {
 				seen = walks[k].try_find(name) != NULL;
 			}
-			// A directory that exists only because a mount point passes through it has no real
-			// counterpart to walk, so it can never appear above. It comes from the mount table,
-			// which cf_fs_generation tracks, so it is just as watched as anything else.
 			for (int k = 0; k < mount_point_names.count() && !seen; ++k) {
 				seen = sintern(mount_point_names[k].c_str()) == name;
 			}
@@ -173,17 +134,14 @@ static void s_dir_meta(CF_Path path, Array<CF_DirEntry>* out)
 	}
 
 	Array<const char*>& names = cache->names;
-	Map<CF_DirEntry> empty_walk;
-	Map<CF_DirEntry>& native = native_index >= 0 ? walks[native_index] : empty_walk;
+	Map<CF_DirEntry>* native = native_index >= 0 ? &walks[native_index] : NULL;
 
-	// The metadata proof: one fs_stat against the first regular entry the walk claims. A wrong real
-	// directory fails on mtime or size and the whole table is dropped. Held across scans once it
-	// succeeds -- see CF_ShaderDirCache::probe_ok for why that is sound, and why only successes
-	// are held. A directory of nothing but subdirectories can never be proven and simply keeps the
-	// fs_stat path, at no cost: it does no stats to find that out.
-	if (native_index >= 0 && !cache->probe_ok) {
+	// Prove the walk is reading the directory PhysFS resolves files from: one fs_stat against the
+	// first regular entry it claims, which a wrong directory fails on mtime or size. A directory of
+	// nothing but subdirectories can never be proven, and costs nothing to discover that.
+	if (native && !cache->probe_ok) {
 		for (int i = 0; i < names.count(); ++i) {
-			CF_DirEntry* e = native.try_find(names[i]);
+			CF_DirEntry* e = native->try_find(names[i]);
 			if (!e || e->is_directory) continue;
 			CF_Stat st = { };
 			if (cf_is_error(fs_stat(vdir + names[i], &st))) break;
@@ -193,25 +151,23 @@ static void s_dir_meta(CF_Path path, Array<CF_DirEntry>* out)
 			break;
 		}
 	}
-	bool have_native = native_index >= 0 && cache->probe_ok;
+	bool have_native = native && cache->probe_ok;
 
 	for (int i = 0; i < names.count(); ++i) {
-		CF_DirEntry* hit = have_native ? native.try_find(names[i]) : NULL;
+		// PhysFS resolves first-match in search-path order, and every mount holding /shaders/x.vs
+		// also holds /shaders -- so a name present in the walked directory is the same file
+		// PHYSFS_stat would have resolved.
+		CF_DirEntry* hit = have_native ? native->try_find(names[i]) : NULL;
 		if (hit) {
-			// PhysFS resolves first-match in search-path order, and every mount holding
-			// /shaders/x.vs also holds /shaders -- so a name found in the real directory PhysFS
-			// named for the *directory* is the same file PHYSFS_stat would resolve for the file.
 			out->add(*hit);
 			continue;
 		}
-		// Shadowed by a lower mount, inside an archive mount, a reparse point, or no native walk
-		// at all: the ordinary PhysFS path.
+		// Shadowed by a lower mount, inside an archive, a reparse point, or no walk at all.
 		CF_DirEntry e;
 		e.name = names[i];
 		CF_Stat st = { };
-		// fs_stat leaves `st` untouched on failure. Emit the entry anyway with stat_ok clear:
-		// populate has to create the map key either way, or the watch pass asserts on a lookup
-		// for a file it can still see. See s_shader_watch_recursive.
+		// Emitted even when the stat fails, with stat_ok clear: the key has to exist either way or
+		// the watch pass asserts on a lookup for a file it can still see.
 		e.stat_ok = !cf_is_error(fs_stat(vdir + names[i], &st));
 		e.modified_time = e.stat_ok ? st.last_modified_time : 0;
 		e.size = e.stat_ok ? (uint64_t)st.size : 0;
@@ -242,12 +198,8 @@ static void s_shader_directory_recursive(CF_Path path)
 		const CF_DirEntry& e = entries[i];
 		if (e.is_directory) { s_shader_directory_recursive(path + e.name); continue; }
 		if (!s_is_watched_shader_ext(e.name)) continue;
-		// Exclude app->shader_directory for easier lookups.
-		// e.g. app->shader_directory is "/shaders" and contains
-		// "/shaders/my_shader.shd", the user needs to only reference it by:
-		// "my_shader.shd".
+		// Keyed without app->shader_directory, so "/shaders/my_shader.shd" is "my_shader.shd".
 		CF_ShaderFileInfo info;
-		// Zero when the stat failed. The key has to exist either way; see s_shader_watch_recursive.
 		info.last_modified_time = e.modified_time;
 		info.path = sintern(app->shader_directory + path + e.name);
 		const char* key = sintern(path + e.name);
@@ -365,15 +317,13 @@ static void s_shader_watch_recursive(CF_Path path)
 	for (int i = 0; i < entries.count(); ++i) {
 		const CF_DirEntry& e = entries[i];
 		if (e.is_directory) { s_shader_watch_recursive(path + e.name); continue; }
-		if (!e.stat_ok) continue; // Unreadable this scan; leave the stored value alone.
-		// A plain string compare now, rather than something reached only after two syscalls.
+		if (!e.stat_ok) continue;  // Unreadable this scan; leave the stored value alone.
 		if (!s_is_watched_shader_ext(e.name)) continue;
 
 		const char* key = sintern(path + e.name);
 		CF_ShaderFileInfo* info = app->shader_file_infos.try_find(key);
 		if (!info) {
-			// Created after cf_shader_directory ran, so populate never saw it. Adopt it rather
-			// than assert; the next write to it hot-reloads like any other file.
+			// Created after cf_shader_directory ran. Adopt it rather than assert on the lookup.
 			CF_ShaderFileInfo fresh;
 			fresh.last_modified_time = e.modified_time;
 			fresh.path = sintern(app->shader_directory + path + e.name);
@@ -385,7 +335,6 @@ static void s_shader_watch_recursive(CF_Path path)
 			if (app->on_shader_changed_fn) {
 				app->on_shader_changed_fn(key, app->on_shader_changed_udata);
 			} else {
-				// No user callback: hot-reload affected shaders in place.
 				s_shader_auto_reload(key);
 			}
 		}
@@ -394,10 +343,8 @@ static void s_shader_watch_recursive(CF_Path path)
 
 void cf_shader_watch()
 {
-	// Watching runs whenever a shader directory is set. With a user callback the
-	// user owns reloading; without one, changed shaders hot-reload automatically
-	// (see s_shader_auto_reload). Auto mode is throttled -- it stats the whole
-	// shader directory, which nobody needs at frame rate.
+	// With a user callback the user owns reloading; without one, changed shaders hot-reload in
+	// place, and that path is throttled since nobody needs it at frame rate.
 	if (!app->shader_directory_set) return;
 	if (!app->on_shader_changed_fn) {
 		static int s_throttle = 0;
