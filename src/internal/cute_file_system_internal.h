@@ -21,7 +21,10 @@
 // watcher only recurses into directories.
 struct CF_DirEntry
 {
-	Cute::String name;
+	// Interned, so it is a stable unique pointer for the life of the process: comparing two names
+	// is a pointer compare, and an entry owns no allocation. A walk runs per directory per scan,
+	// so a heap string per entry here was most of what the walk cost.
+	const char* name = NULL;
 	uint64_t modified_time = 0;  // UNIX seconds, matching PHYSFS_Stat::modtime.
 	uint64_t size = 0;
 	bool is_directory = false;

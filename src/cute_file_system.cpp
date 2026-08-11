@@ -278,12 +278,12 @@ bool cf_fs_scan_native_directory(const char* platform_directory, Cute::Map<CF_Di
 		if (!WideCharToMultiByte(CP_UTF8, 0, fd.cFileName, -1, utf8, sizeof(utf8), NULL, NULL)) continue;
 
 		CF_DirEntry e;
-		e.name = utf8;
+		e.name = sintern(utf8);
 		e.is_directory = (fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
 		e.size = e.is_directory ? 0 : ((((uint64_t)fd.nFileSizeHigh) << 32) | fd.nFileSizeLow);
 		if (!s_filetime_to_physfs_time(&fd.ftLastWriteTime, &tzi, &e.modified_time)) continue;
 		e.stat_ok = true;
-		out->add(sintern(e.name.c_str()), e);
+		out->add(e.name, e);
 	} while (FindNextFileW(h, &fd));
 	FindClose(h);
 	return true;
@@ -303,7 +303,7 @@ bool cf_fs_scan_native_directory(const char* platform_directory, Cute::Map<CF_Di
 		if (!CF_STRCMP(de->d_name, ".") || !CF_STRCMP(de->d_name, "..")) continue;
 
 		CF_DirEntry e;
-		e.name = de->d_name;
+		e.name = sintern(de->d_name);
 		e.stat_ok = true;
 #ifdef _DIRENT_HAVE_D_TYPE
 		// Recursion needs the type, never the mtime. DT_DIR does not follow symlinks, so a
@@ -311,7 +311,7 @@ bool cf_fs_scan_native_directory(const char* platform_directory, Cute::Map<CF_Di
 		// what keeps the typing identical to PhysFS's.
 		if (de->d_type == DT_DIR) {
 			e.is_directory = true;
-			out->add(sintern(e.name.c_str()), e);
+			out->add(e.name, e);
 			continue;
 		}
 #endif
@@ -322,7 +322,7 @@ bool cf_fs_scan_native_directory(const char* platform_directory, Cute::Map<CF_Di
 		e.is_directory = S_ISDIR(st.st_mode);
 		e.size = (uint64_t)st.st_size;
 		e.modified_time = (uint64_t)st.st_mtime;
-		out->add(sintern(e.name.c_str()), e);
+		out->add(e.name, e);
 	}
 	closedir(d);
 	return true;
