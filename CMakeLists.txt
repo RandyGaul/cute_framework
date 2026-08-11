@@ -214,6 +214,7 @@ set(CF_HDRS
 	src/internal/cute_graphics_internal.h
 	src/internal/cute_aseprite_cache_internal.h
 	src/internal/cute_alloc_internal.h
+	src/internal/cute_file_system_internal.h
 	src/internal/yyjson.h
 )
 
