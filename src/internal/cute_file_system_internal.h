@@ -48,9 +48,10 @@ struct CF_DirEntry
 	bool stat_ok = false;
 };
 
-// Walks one real (platform) directory, keying `out` by interned name. False if it could not be
-// walked at all. The metadata is deliberately bug-compatible with PHYSFS_stat, so a caller may mix
-// entries from here with entries it stat'd itself.
+// Walks one real (platform) directory in a single pass, filling `out` with its entries keyed by
+// interned name; returns false, leaving `out` alone, if the directory could not be walked at all.
+// The metadata matches what PHYSFS_stat would report, quirks included, so a caller can mix these
+// entries with ones it stat'd itself.
 bool cf_fs_scan_native_directory(const char* platform_directory, Cute::Map<CF_DirEntry>* out);
 
 struct CF_DirSignature
@@ -64,9 +65,9 @@ CF_INLINE bool cf_fs_dir_signature_equal(CF_DirSignature a, CF_DirSignature b)
 	return a.hash == b.hash && a.count == b.count;
 }
 
-// Interned keys are stable unique pointers, so the set of them identifies the listing without
-// hashing any characters. XOR and sum accumulate separately so the result does not depend on the
-// order the walk returned entries in.
+// Reduces a walk to a value two scans can compare. Interned keys are stable unique pointers, so
+// the set of them identifies the listing without hashing any characters; XOR and sum accumulate
+// separately so the result does not depend on the order the walk returned entries in.
 CF_INLINE CF_DirSignature cf_fs_dir_signature(Cute::Map<CF_DirEntry>* entries)
 {
 	uint64_t x = 0, sum = 0;
@@ -82,15 +83,18 @@ CF_INLINE CF_DirSignature cf_fs_dir_signature(Cute::Map<CF_DirEntry>* entries)
 	return sig;
 }
 
-// Bumped by cf_fs_mount and cf_fs_dismount, the only calls that change the search path.
+// Returns a counter bumped by cf_fs_mount and cf_fs_dismount, the only calls that change the
+// search path. Anything caching a view derived from the virtual filesystem compares against it
+// instead of trying to notice a mount change after the fact.
 uint64_t cf_fs_generation();
 
-// The real directory each mount would serve `virtual_directory` from, in search-path order, for
-// every mount that could contribute to it. Candidates, not facts: PHYSFS_setRoot's prefix has no
-// getter, so a mount using it resolves somewhere other than this arithmetic suggests.
+// Fills `out` with the real directory each mount would serve `virtual_directory` from, in
+// search-path order, for every mount that could contribute to it. These are candidates, not facts:
+// PHYSFS_setRoot's prefix has no getter, so a mount using it resolves somewhere other than this
+// arithmetic suggests, and a caller must prove whatever it takes from one.
 //
-// `out_virtual_names` receives entries that exist only because a mount point passes through the
-// directory, which therefore have no real directory anywhere to walk.
+// Fills `out_virtual_names` with the entries that exist only because a mount point passes through
+// the directory, and so have no real directory anywhere to walk.
 void cf_fs_mount_candidates(const char* virtual_directory, Cute::Array<Cute::String>* out,
                             Cute::Array<Cute::String>* out_virtual_names);
 

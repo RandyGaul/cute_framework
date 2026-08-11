@@ -74,8 +74,8 @@ static bool s_signatures_equal(const Array<CF_DirSignature>& a, const Array<CF_D
 	return true;
 }
 
-// Name, mtime and type for every entry of one directory under the shader directory. Built from
-// bulk walks wherever possible; see internal/cute_file_system_internal.h for the strategy.
+// Gathers name, mtime and type for every entry of one directory under the shader directory, from
+// bulk walks wherever it can; see internal/cute_file_system_internal.h for the strategy.
 static void s_dir_meta(CF_Path path, Array<CF_DirEntry>* out)
 {
 	CF_Path vdir = app->shader_directory + path;
