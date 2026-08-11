@@ -12,6 +12,7 @@
 
 #include <internal/cute_alloc_internal.h>
 #include <internal/cute_app_internal.h>
+#include <internal/cute_file_system_internal.h>
 #include <internal/cute_graphics_internal.h>
 
 #include "cute_shader.h"
@@ -29,31 +30,180 @@ static Map<const char*> s_compute_shader_paths;
 struct CF_GraphicsShaderPaths { const char* vertex_path; const char* fragment_path; };
 static Map<CF_GraphicsShaderPaths> s_graphics_shader_paths;
 
+// Runs the PhysFS path alongside the native one and asserts they agree. Every way the native walk
+// can be wrong looks, from outside, exactly like a file that did not change, so comparing the two
+// is the only way to see it. Costs more than the code it checks, and wants a quiescent shader tree:
+// a file written between the two reads trips the mtime assert by a second.
+//#define CF_SHADER_WATCH_VERIFY
+
+#ifdef CF_SHADER_WATCH_VERIFY
+static void s_dir_meta_verify(CF_Path vdir, const CF_DirEntry& e)
+{
+	CF_Stat st = { };
+	if (cf_is_error(fs_stat(vdir + e.name, &st))) { CF_ASSERT(!e.stat_ok); return; }
+	CF_ASSERT(e.stat_ok);
+	CF_ASSERT(e.is_directory == (st.type == CF_FILE_TYPE_DIRECTORY));
+	CF_ASSERT(e.modified_time == st.last_modified_time);
+	CF_ASSERT(e.size == (uint64_t)st.size);
+}
+#endif
+
+struct CF_ShaderDirCache
+{
+	Array<const char*> names;           // The merged listing PhysFS reported, interned.
+	Array<CF_DirSignature> signatures;  // One per mount candidate, in search-path order.
+	uint64_t fs_generation = 0;
+	// False when a mount contributes entries no walk of ours can see, so a change there would go
+	// unnoticed. Those directories re-enumerate every scan instead.
+	bool cacheable = false;
+	// Which real directory the walk is reading is a property of the mount table and of the
+	// directory's own existence, both already revalidated every scan -- so a proof of it holds
+	// until the listing is refreshed. Only successes are held: a probe fails transiently when a
+	// file is written between the walk and the stat, and a held failure would last until the file
+	// set changed, which may be never.
+	bool probe_ok = false;
+};
+static Map<CF_ShaderDirCache> s_shader_dir_cache;
+
+static bool s_signatures_equal(const Array<CF_DirSignature>& a, const Array<CF_DirSignature>& b)
+{
+	if (a.count() != b.count()) return false;
+	for (int i = 0; i < a.count(); ++i) {
+		if (!cf_fs_dir_signature_equal(a[i], b[i])) return false;
+	}
+	return true;
+}
+
+// Gathers name, mtime and type for every entry of one directory under the shader directory, from
+// bulk walks wherever it can; see internal/cute_file_system_internal.h for the strategy.
+static void s_dir_meta(CF_Path path, Array<CF_DirEntry>* out)
+{
+	CF_Path vdir = app->shader_directory + path;
+	const char* vkey = sintern(vdir.c_str());
+
+	Array<String> candidates;
+	Array<String> mount_point_names;
+	cf_fs_mount_candidates(vdir.c_str(), &candidates, &mount_point_names);
+
+	// The first candidate that walks supplies the metadata; the rest are walked only to notice a
+	// file appearing or disappearing in a lower mount, which a walk of the topmost cannot see.
+	Array<Map<CF_DirEntry>> walks;
+	Array<CF_DirSignature> signatures;
+	int native_index = -1;
+	for (int i = 0; i < candidates.count(); ++i) {
+		walks.add();
+		CF_DirSignature sig;  // count -1: this mount has no such directory, or it is an archive.
+		if (cf_fs_scan_native_directory(candidates[i].c_str(), &walks[i])) {
+			sig = cf_fs_dir_signature(&walks[i]);
+			if (native_index < 0) native_index = i;
+		}
+		signatures.add(sig);
+	}
+
+	CF_ShaderDirCache* cache = s_shader_dir_cache.try_find(vkey);
+	bool reuse = cache && cache->cacheable &&
+	             cache->fs_generation == cf_fs_generation() &&
+	             s_signatures_equal(cache->signatures, signatures);
+
+	if (!reuse) {
+		if (!cache) cache = s_shader_dir_cache.add(vkey);
+		Array<CF_Path> enumerated = CF_Directory::enumerate(vdir);
+		cache->names.clear();
+		for (int i = 0; i < enumerated.size(); ++i) {
+			cache->names.add(sintern(enumerated[i].c_str()));
+		}
+		cache->signatures = signatures;
+		cache->fs_generation = cf_fs_generation();
+		cache->probe_ok = false;
+
+		// Caching is only allowed while every name PhysFS reports is visible in at least one walk.
+		// A name no walk can see is one whose comings and goings we cannot detect. Extra names in a
+		// walk are harmless -- PhysFS hides symlinks and shadowed duplicates.
+		cache->cacheable = true;
+		for (int i = 0; i < cache->names.count() && cache->cacheable; ++i) {
+			const char* name = cache->names[i];
+			bool seen = false;
+			for (int k = 0; k < walks.count() && !seen; ++k) {
+				seen = walks[k].try_find(name) != NULL;
+			}
+			for (int k = 0; k < mount_point_names.count() && !seen; ++k) {
+				seen = sintern(mount_point_names[k].c_str()) == name;
+			}
+			if (!seen) cache->cacheable = false;
+		}
+	}
+
+	Array<const char*>& names = cache->names;
+	Map<CF_DirEntry>* native = native_index >= 0 ? &walks[native_index] : NULL;
+
+	// Prove the walk is reading the directory PhysFS resolves files from: one fs_stat against the
+	// first regular entry it claims, which a wrong directory fails on mtime or size. A directory of
+	// nothing but subdirectories can never be proven, and costs nothing to discover that.
+	if (native && !cache->probe_ok) {
+		for (int i = 0; i < names.count(); ++i) {
+			CF_DirEntry* e = native->try_find(names[i]);
+			if (!e || e->is_directory) continue;
+			CF_Stat st = { };
+			if (cf_is_error(fs_stat(vdir + names[i], &st))) break;
+			cache->probe_ok = st.type == CF_FILE_TYPE_REGULAR &&
+			                  st.last_modified_time == e->modified_time &&
+			                  (uint64_t)st.size == e->size;
+			break;
+		}
+	}
+	bool have_native = native && cache->probe_ok;
+
+	for (int i = 0; i < names.count(); ++i) {
+		// PhysFS resolves first-match in search-path order, and every mount holding /shaders/x.vs
+		// also holds /shaders -- so a name present in the walked directory is the same file
+		// PHYSFS_stat would have resolved.
+		CF_DirEntry* hit = have_native ? native->try_find(names[i]) : NULL;
+		if (hit) {
+			out->add(*hit);
+			continue;
+		}
+		// Shadowed by a lower mount, inside an archive, a reparse point, or no walk at all.
+		CF_DirEntry e;
+		e.name = names[i];
+		CF_Stat st = { };
+		// Emitted even when the stat fails, with stat_ok clear: the key has to exist either way or
+		// the watch pass asserts on a lookup for a file it can still see.
+		e.stat_ok = !cf_is_error(fs_stat(vdir + names[i], &st));
+		e.modified_time = e.stat_ok ? st.last_modified_time : 0;
+		e.size = e.stat_ok ? (uint64_t)st.size : 0;
+		e.is_directory = e.stat_ok && st.type == CF_FILE_TYPE_DIRECTORY;
+		out->add(e);
+	}
+
+#ifdef CF_SHADER_WATCH_VERIFY
+	for (int i = 0; i < out->count(); ++i) {
+		s_dir_meta_verify(vdir, (*out)[i]);
+	}
+#endif
+}
+
+// spext_equ rather than comparing a CF_Path's ext(): cf_path_get_ext returns NULL for a file with
+// no extension, and String::operator== would strcmp that null pointer.
+static bool s_is_watched_shader_ext(const char* p)
+{
+	return spext_equ(p, ".vs") || spext_equ(p, ".fs") || spext_equ(p, ".shd") ||
+	       spext_equ(p, ".c_shd") || spext_equ(p, ".vert") || spext_equ(p, ".frag");
+}
+
 static void s_shader_directory_recursive(CF_Path path)
 {
-	Array<CF_Path> dir = CF_Directory::enumerate(app->shader_directory + path);
-	for (int i = 0; i < dir.size(); ++i) {
-		CF_Path p = app->shader_directory + path + dir[i];
-		if (p.is_directory()) {
-			s_shader_directory_recursive(path + dir[i]);
-		} else {
-			CF_Stat stat;
-			fs_stat(p, &stat);
-			// spext_equ rather than comparing p.ext(): cf_path_get_ext returns NULL for a file with
-			// no extension, and String::operator== would strcmp that null pointer.
-			if (spext_equ(p.c_str(), ".vs") || spext_equ(p.c_str(), ".fs") ||
-			    spext_equ(p.c_str(), ".shd") || spext_equ(p.c_str(), ".c_shd")) {
-				// Exclude app->shader_directory for easier lookups.
-				// e.g. app->shader_directory is "/shaders" and contains
-				// "/shaders/my_shader.shd", the user needs to only reference it by:
-				// "my_shader.shd".
-				CF_ShaderFileInfo info;
-				info.stat = stat;
-				info.path = sintern(p);
-				const char* key = sintern(path + dir[i]);
-				app->shader_file_infos.add(key, info);
-			}
-		}
+	Array<CF_DirEntry> entries;
+	s_dir_meta(path, &entries);
+	for (int i = 0; i < entries.count(); ++i) {
+		const CF_DirEntry& e = entries[i];
+		if (e.is_directory) { s_shader_directory_recursive(path + e.name); continue; }
+		if (!s_is_watched_shader_ext(e.name)) continue;
+		// Keyed without app->shader_directory, so "/shaders/my_shader.shd" is "my_shader.shd".
+		CF_ShaderFileInfo info;
+		info.last_modified_time = e.modified_time;
+		info.path = sintern(app->shader_directory + path + e.name);
+		const char* key = sintern(path + e.name);
+		app->shader_file_infos.add(key, info);
 	}
 }
 
@@ -162,29 +312,30 @@ static void s_shader_auto_reload(const char* changed_key)
 
 static void s_shader_watch_recursive(CF_Path path)
 {
-	Array<CF_Path> dir = CF_Directory::enumerate(app->shader_directory + path);
-	for (int i = 0; i < dir.size(); ++i) {
-		CF_Path p = app->shader_directory + path + dir[i];
-		if (p.is_directory()) {
-			s_shader_watch_recursive(path + dir[i]);
-		} else {
-			CF_Stat stat;
-			fs_stat(p, &stat);
-			// spext_equ rather than comparing p.ext(): cf_path_get_ext returns NULL for a file with
-			// no extension, and String::operator== would strcmp that null pointer.
-			if (spext_equ(p.c_str(), ".vs") || spext_equ(p.c_str(), ".fs") ||
-			    spext_equ(p.c_str(), ".shd") || spext_equ(p.c_str(), ".c_shd")) {
-				const char* key = sintern(path + dir[i]);
-				CF_ShaderFileInfo& info = app->shader_file_infos.find(key);
-				if (info.stat.last_modified_time < stat.last_modified_time) {
-					info.stat.last_modified_time = stat.last_modified_time;
-					if (app->on_shader_changed_fn) {
-						app->on_shader_changed_fn(key, app->on_shader_changed_udata);
-					} else {
-						// No user callback: hot-reload affected shaders in place.
-						s_shader_auto_reload(key);
-					}
-				}
+	Array<CF_DirEntry> entries;
+	s_dir_meta(path, &entries);
+	for (int i = 0; i < entries.count(); ++i) {
+		const CF_DirEntry& e = entries[i];
+		if (e.is_directory) { s_shader_watch_recursive(path + e.name); continue; }
+		if (!e.stat_ok) continue;  // Unreadable this scan; leave the stored value alone.
+		if (!s_is_watched_shader_ext(e.name)) continue;
+
+		const char* key = sintern(path + e.name);
+		CF_ShaderFileInfo* info = app->shader_file_infos.try_find(key);
+		if (!info) {
+			// Created after cf_shader_directory ran. Adopt it rather than assert on the lookup.
+			CF_ShaderFileInfo fresh;
+			fresh.last_modified_time = e.modified_time;
+			fresh.path = sintern(app->shader_directory + path + e.name);
+			app->shader_file_infos.add(key, fresh);
+			continue;
+		}
+		if (info->last_modified_time < e.modified_time) {
+			info->last_modified_time = e.modified_time;
+			if (app->on_shader_changed_fn) {
+				app->on_shader_changed_fn(key, app->on_shader_changed_udata);
+			} else {
+				s_shader_auto_reload(key);
 			}
 		}
 	}
@@ -192,10 +343,8 @@ static void s_shader_watch_recursive(CF_Path path)
 
 void cf_shader_watch()
 {
-	// Watching runs whenever a shader directory is set. With a user callback the
-	// user owns reloading; without one, changed shaders hot-reload automatically
-	// (see s_shader_auto_reload). Auto mode is throttled -- it stats the whole
-	// shader directory, which nobody needs at frame rate.
+	// With a user callback the user owns reloading; without one, changed shaders hot-reload in
+	// place, and that path is throttled since nobody needs it at frame rate.
 	if (!app->shader_directory_set) return;
 	if (!app->on_shader_changed_fn) {
 		static int s_throttle = 0;

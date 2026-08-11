@@ -81,7 +81,7 @@ struct CF_WindowState
 
 struct CF_ShaderFileInfo
 {
-	CF_Stat stat;
+	uint64_t last_modified_time;  // The only piece of stat the watcher compares.
 	const char* path;
 };
 
