@@ -10,6 +10,7 @@
 
 #include <cute.h>
 #include <internal/cute_app_internal.h>
+#include <SDL3/SDL.h>
 
 using namespace Cute;
 
@@ -252,6 +253,32 @@ TEST_CASE(test_hidpi_one_shot_canvas_keeps_points_projection)
 	return true;
 }
 
+// A redundant SDL_EVENT_WINDOW_RESIZED reporting the window's CURRENT size (e.g. an
+// X11/Xvfb ConfigureNotify fired on window map) is not a recreation event and must not
+// stomp a one-shot cf_app_set_canvas_size override.
+TEST_CASE(test_hidpi_noop_resize_event_does_not_recreate_canvas)
+{
+	if (!test_make_app(LOGICAL_W, LOGICAL_H)) return true; // Headless CI: no display/GPU.
+	HidpiGuard guard;
+
+	cf_app_force_pixel_scale(2.0f);
+	cf_app_set_canvas_size(300, 200);
+	REQUIRE(cf_app_get_canvas_width() == 300);
+	REQUIRE(cf_app_get_canvas_height() == 200);
+
+	SDL_Event e = { };
+	e.type = SDL_EVENT_WINDOW_RESIZED;
+	e.window.windowID = SDL_GetWindowID(app->window);
+	e.window.data1 = LOGICAL_W; // Same size app->w/h already report -- nothing changed.
+	e.window.data2 = LOGICAL_H;
+	SDL_PushEvent(&e);
+	cf_app_update(NULL);
+
+	REQUIRE(cf_app_get_canvas_width() == 300);
+	REQUIRE(cf_app_get_canvas_height() == 200);
+	return true;
+}
+
 // A canvas recreation landing mid-recording must not corrupt the retained draw list:
 // recording runs in identity space and replay composes the live projection on top, so a
 // refresh stomped into the recording would bake the ortho in twice. Deferring it also
@@ -303,5 +330,6 @@ TEST_SUITE(test_hidpi)
 	RUN_TEST_CASE(test_hidpi_full_extent_covers_app_canvas);
 	RUN_TEST_CASE(test_hidpi_first_frame_after_resize);
 	RUN_TEST_CASE(test_hidpi_one_shot_canvas_keeps_points_projection);
+	RUN_TEST_CASE(test_hidpi_noop_resize_event_does_not_recreate_canvas);
 	RUN_TEST_CASE(test_hidpi_draw_list_recorded_across_resize);
 }

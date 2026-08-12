@@ -516,9 +516,14 @@ void cf_pump_input_msgs()
 
 		case SDL_EVENT_WINDOW_RESIZED:
 			app->window_state.resized = true;
-			app->w = event.window.data1;
-			app->h = event.window.data2;
-			cf_app_recreate_default_canvas_if_needed();
+			// A redundant notify reporting the size app->w/h already have (e.g. an X11
+			// ConfigureNotify on window map) must not count as a recreation event -- it
+			// would silently discard an active cf_app_set_canvas_size one-shot override.
+			if (event.window.data1 != app->w || event.window.data2 != app->h) {
+				app->w = event.window.data1;
+				app->h = event.window.data2;
+				cf_app_recreate_default_canvas_if_needed();
+			}
 			break;
 
 		case SDL_EVENT_WINDOW_MOVED:
