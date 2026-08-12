@@ -50,6 +50,12 @@ static bool s_readback_canvas(CF_Canvas canvas, int w, int h, CF_Pixel* out)
 	REQUIRE(rb.id);
 	while (!cf_readback_ready(rb)) {}
 	int size = w * h * (int)sizeof(CF_Pixel);
+	if (cf_readback_size(rb) != size) {
+		printf("readback size mismatch: got %d expected %d (w=%d h=%d) app_canvas=%dx%d app_window=%dx%d pixel_scale=%f\n",
+			cf_readback_size(rb), size, w, h,
+			cf_app_get_canvas_width(), cf_app_get_canvas_height(),
+			cf_app_get_width(), cf_app_get_height(), (double)cf_app_get_pixel_scale());
+	}
 	REQUIRE(cf_readback_size(rb) == size);
 	cf_readback_data(rb, out, size);
 	cf_destroy_readback(rb);
