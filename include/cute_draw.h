@@ -1843,6 +1843,8 @@ CF_API bool CF_CALL cf_draw_peek_alpha_discard(void);
 	CF_ENUM(DRAW_FILTER_LINEAR,  1)                                                                                 \
 	/* @entry Smooth filtering. Uses hardware linear combined with a shader-based smooth UV interpolation. */       \
 	CF_ENUM(DRAW_FILTER_SMOOTH,  2)                                                                                 \
+	/* @entry Pixel art filtering, a port of SDL's `SDL_SCALEMODE_PIXELART` box-filter. Like SMOOTH but with hard sprite edges, so adjacent tiles stay gap-free under subpixel camera motion. */ \
+	CF_ENUM(DRAW_FILTER_PIXELART, 3)                                                                                \
 	/* @end */
 
 typedef enum CF_DrawFilterMode
@@ -1874,6 +1876,11 @@ CF_INLINE const char* cf_draw_filter_mode_to_string(CF_DrawFilterMode mode) {
  * @param    mode       The filter mode to use. See `CF_DrawFilterMode`.
  * @remarks  NEAREST uses hardware nearest-neighbor filtering, good for pixel art. LINEAR uses hardware bilinear filtering.
  *           SMOOTH uses hardware linear combined with shader-based smooth UV interpolation for high quality upscaling.
+ *           PIXELART uses hardware linear combined with a shader-based box-filter approximation, ported from SDL's
+ *           `SDL_SCALEMODE_PIXELART`. Unlike SMOOTH, sprite edges are hard (a pixel belongs to exactly one sprite),
+ *           which keeps adjacent tiles seam-free when the camera moves by subpixel amounts -- use it for tilemaps.
+ *           SMOOTH's antialiased sprite edges cannot tile seamlessly: two half-covered edges blend to 75% coverage,
+ *           so the background bleeds through at tile seams under subpixel motion.
  * @related  CF_DrawFilterMode cf_draw_push_filter cf_draw_pop_filter cf_draw_peek_filter
  */
 CF_API void CF_CALL cf_draw_push_filter(CF_DrawFilterMode mode);

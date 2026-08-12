@@ -637,6 +637,23 @@ vec2 smooth_uv(vec2 uv, vec2 texture_size)
 	pixel = seam + clamp((pixel - seam) / fwidth(pixel), -0.5, 0.5);
 	return pixel / texture_size;
 }
+
+// Port of SDL's SDL_SCALEMODE_PIXELART (GetPixelArtUV in SDL_shaders_gl.c): nudges the
+// bilinear sample point so each texel blends with its neighbor only across the
+// screen-space footprint of the seam, approximating a pixel-wide box filter.
+// fw is the screen-space texel footprint, fwidth(uv * texture_size).
+vec2 pixelart_uv_fw(vec2 uv, vec2 texture_size, vec2 fw)
+{
+	vec2 box_size = clamp(fw, 1e-5, 1.0);
+	vec2 tx = uv * texture_size - 0.5 * box_size;
+	vec2 tx_offset = smoothstep(vec2(1.0) - box_size, vec2(1.0), fract(tx));
+	return (floor(tx) + 0.5 + tx_offset) / texture_size;
+}
+
+vec2 pixelart_uv(vec2 uv, vec2 texture_size)
+{
+	return pixelart_uv_fw(uv, texture_size, fwidth(uv * texture_size));
+}
 )";
 
 // Stub function. This gets replaced by injected user-shader code via #include.
@@ -771,9 +788,29 @@ void main()
 
 	// Traditional sprite/text/tri cases.
 	vec4 c = vec4(0);
-	vec2 uv = u_use_smooth_uv == 0 ? smooth_uv(v_uv, u_texture_size) : v_uv;
+	vec2 uv = u_use_smooth_uv == 0 ? smooth_uv(v_uv, u_texture_size) : (u_use_smooth_uv == 2 ? pixelart_uv(v_uv, u_texture_size) : v_uv);
+	// PIXELART seam-safe sprite sampling, on bordered atlas sprites only. The CPU flags
+	// those through the otherwise-unused aa lane; any positive value is the flag, since
+	// draw list replays rescale the lane. Sample clamped half a texel inside the content
+	// rect so the transparent 1px border ring is never blended (clamp-to-edge, like SDL),
+	// and make edge coverage binary -- a pixel is claimed fully by whichever sprite's
+	// content rect contains its center. Soft edges cannot tile seamlessly (two 50% covers
+	// composite to 75% and background bleeds), so PIXELART trades edge AA for gap-free
+	// tilemaps, exactly like SDL_SCALEMODE_PIXELART on exact-size quads.
+	float sprite_cov = 1.0;
+	if (is_sprite && v_aa > 0.0 && u_use_smooth_uv == 2) {
+		vec2 texel = 1.0 / u_texture_size;
+		vec2 uv_lo = min(v_uv_bounds.xy, v_uv_bounds.zw) + texel;
+		vec2 uv_hi = max(v_uv_bounds.xy, v_uv_bounds.zw) - texel;
+		vec2 pt = v_uv * u_texture_size;
+		uv = clamp(uv, uv_lo + 0.5 * texel, uv_hi - 0.5 * texel);
+		// Small tolerance so both neighbors claim an exactly-shared edge pixel rather
+		// than neither (float error could otherwise open a one-pixel gap).
+		vec2 covv = step(vec2(-1e-4), min(pt - uv_lo * u_texture_size, uv_hi * u_texture_size - pt));
+		sprite_cov = covv.x * covv.y;
+	}
 	vec4 tex_c = de_gamma(texture(u_image, uv));
-	c = is_sprite ? gamma(tex_c) : c;
+	c = is_sprite ? gamma(tex_c) * sprite_cov : c;
 	c = is_text ? v_col * tex_c.a : c;
 	c = is_tri ? v_col : c;
 
@@ -1034,6 +1071,15 @@ void main()
 			float s = dot(p - q0, e1) * P1.z;
 			float t = dot(p - q0, e2) * P1.w;
 			vec2 uv = vec2(mix(uvb.x, uvb.z, s), mix(uvb.y, uvb.w, t));
+			// PIXELART seam-safe sprites (see s_draw_fs): sample clamped half a texel
+			// inside the content rect, binary edge coverage by pixel center. Any positive
+			// aa lane value is the bordered-sprite flag (replays rescale the lane). pt is
+			// the pre-clamp texel position (affine in screen space).
+			bool seam_safe = type == CMD_TYPE_SPRITE && cmd.shape.z > 0.0 && u_use_smooth_uv == 2;
+			vec2 texel = 1.0 / u_texture_size;
+			vec2 uv_lo = min(uvb.xy, uvb.zw) + texel;
+			vec2 uv_hi = max(uvb.xy, uvb.zw) - texel;
+			vec2 pt = uv * u_texture_size;
 			// Sample unconditionally (quad-uniform), clamp into the glyph's uv rect to
 			// avoid bleeding neighboring atlas entries, mask outside the quad after.
 			uv = clamp(uv, min(uvb.xy, uvb.zw), max(uvb.xy, uvb.zw));
@@ -1050,15 +1096,22 @@ void main()
 			float gds = (abs(dot(gdx, e1)) + abs(dot(gdy, e1))) * P1.z;
 			float gdt = (abs(dot(gdx, e2)) + abs(dot(gdy, e2))) * P1.w;
 			vec2 fw = vec2(gds * abs(uvb.z - uvb.x), gdt * abs(uvb.w - uvb.y)) * u_texture_size;
-			vec2 uv_final = u_use_smooth_uv == 0 ? smooth_uv_fw(uv, u_texture_size, fw) : uv;
+			vec2 uv_final = u_use_smooth_uv == 0 ? smooth_uv_fw(uv, u_texture_size, fw) : (u_use_smooth_uv == 2 ? pixelart_uv_fw(uv, u_texture_size, fw) : uv);
+			if (seam_safe) uv_final = clamp(uv_final, uv_lo + 0.5 * texel, uv_hi - 0.5 * texel);
 			vec4 tex_c = textureLod(u_image, uv_final, 0.0);
 #else
-			vec2 uv_final = u_use_smooth_uv == 0 ? smooth_uv(uv, u_texture_size) : uv;
+			vec2 uv_final = u_use_smooth_uv == 0 ? smooth_uv(uv, u_texture_size) : (u_use_smooth_uv == 2 ? pixelart_uv(uv, u_texture_size) : uv);
+			if (seam_safe) uv_final = clamp(uv_final, uv_lo + 0.5 * texel, uv_hi - 0.5 * texel);
 			vec4 tex_c = texture(u_image, uv_final);
 #endif
+			float sprite_cov = 1.0;
+			if (seam_safe) {
+				vec2 covv = step(vec2(-1e-4), min(pt - uv_lo * u_texture_size, uv_hi * u_texture_size - pt));
+				sprite_cov = covv.x * covv.y;
+			}
 			float quad_cov = step(0.0, s) * step(s, 1.0) * step(0.0, t) * step(t, 1.0);
 			if (type == CMD_TYPE_SPRITE) {
-				c = tex_c;
+				c = tex_c * sprite_cov;
 			} else {
 				vec4 T0 = payload[po + 3u]; // TL, TR as half4 pairs.
 				vec4 T1 = payload[po + 4u]; // BR, BL as half4 pairs.
