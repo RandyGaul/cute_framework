@@ -228,6 +228,12 @@ TEST_CASE(test_hidpi_one_shot_canvas_keeps_points_projection)
 	if (!test_make_app(LOGICAL_W, LOGICAL_H)) return true; // Headless CI: no display/GPU.
 	HidpiGuard guard;
 
+	// test_make_app's cf_app_set_size may still have an SDL_SetWindowSize in flight (on X11
+	// the ConfigureNotify confirmation can arrive late, as a stale-then-fresh burst). Settle
+	// it now so it can't recreate the canvas out from under the one-shot override below.
+	cf_app_draw_onto_screen(false);
+	cf_app_update(NULL);
+
 	cf_app_force_pixel_scale(2.0f);
 	// Exactly 300x200 pixels: distinct from the logical size, 2x of it, and the window's
 	// aspect, so the probes can tell them apart.
