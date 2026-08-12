@@ -1003,10 +1003,11 @@ static void s_init_atlas_cache(int w, int h)
 
 // The default 2d projection spans the window's LOGICAL size (points, never canvas pixels --
 // on a 2x display the canvas is twice as large, and a pixel-sized ortho would halve every
-// draw in point space).
+// draw in point space). Clamped because some platforms report a 0x0 window mid-minimize and
+// ortho_2d divides by the extents.
 static CF_M3x2 s_default_projection()
 {
-	return ortho_2d(0, 0, (float)app->w, (float)app->h);
+	return ortho_2d(0, 0, (float)cf_max(app->w, 1), (float)cf_max(app->h, 1));
 }
 
 void CF_Draw::reset_cam()
