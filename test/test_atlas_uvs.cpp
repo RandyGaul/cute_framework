@@ -5,10 +5,18 @@
 	This software is dual-licensed with zlib or Unlicense, check LICENSE.txt for more info
 */
 
+// libcute compiles the atlas cache into cute_draw.cpp, where its symbols carry no CF_API
+// export decoration -- invisible to anything linking against the DLL on Windows, even though
+// they resolve fine against an ELF shared object. Compile a private copy into this test with
+// internal linkage instead. The cache keeps all of its state in the atlas_cache_t the caller
+// owns, so a second copy shares nothing with libcute's and cannot interfere with it.
+#define ATLAS_CACHE_API static inline
+#define ATLAS_CACHE_IMPLEMENTATION
+#include <cute/cute_atlas_cache.h>
+
 #include "test_harness.h"
 
 #include <cute.h>
-#include <internal/cute_draw_internal.h>
 
 #include <math.h>
 #include <string.h>

@@ -3,7 +3,7 @@
 		Licensing information can be found at the end of the file.
 	------------------------------------------------------------------------------
 
-	cute_atlas_cache.h - v1.13
+	cute_atlas_cache.h - v1.14
 
 	To create implementation (the function definitions)
 		#define ATLAS_CACHE_IMPLEMENTATION
@@ -125,6 +125,7 @@
 		defined and used. Note that MALLOC/FREE functions can optionally take a context
 		parameter for custom allocation.
 
+		ATLAS_CACHE_API
 		ATLAS_CACHE_MALLOC
 		ATLAS_CACHE_MEMCPY
 		ATLAS_CACHE_MEMSET
@@ -201,6 +202,9 @@
 		                  they were passed through and then y-flipped wholesale, so a sub-
 		                  rect picked the mirrored part of the image until the image landed
 		                  in an atlas page. Both residencies now remap identically.
+		1.14 (08/13/2026) Added ATLAS_CACHE_API to control the linkage of the public API.
+		                  Define it as `static inline` to compile a private copy into one
+		                  translation unit.
 */
 
 /*
@@ -214,6 +218,12 @@
 #ifndef ATLAS_CACHE_U64
 	#define ATLAS_CACHE_U64 unsigned long long
 #endif // ATLAS_CACHE_U64
+
+// Linkage/visibility for this header's public API. Defaults to plain external linkage. Define
+// it as `static inline` to compile a private copy into one translation unit.
+#ifndef ATLAS_CACHE_API
+	#define ATLAS_CACHE_API
+#endif // ATLAS_CACHE_API
 
 typedef struct atlas_cache_t atlas_cache_t;
 typedef struct atlas_cache_config_t atlas_cache_config_t;
@@ -255,14 +265,14 @@ struct atlas_cache_entry_t
 };
 
 // Pushes an entry onto an internal buffer. Does no other logic.
-void atlas_cache_push(atlas_cache_t* cache, atlas_cache_entry_t entry);
+ATLAS_CACHE_API void atlas_cache_push(atlas_cache_t* cache, atlas_cache_entry_t entry);
 
 // Ensures the image associated with your unique `image_id` is loaded up into the cache. This
 // function pretends to draw an entry referencing `image_id` but doesn't actually do any
 // drawing at all. Use this function as an optimization to pre-load images you know will be
 // drawn very soon, e.g. prefetch all ten images within a single animation just as it starts
 // playing.
-void atlas_cache_prefetch(atlas_cache_t* cache, ATLAS_CACHE_U64 image_id, int w, int h);
+ATLAS_CACHE_API void atlas_cache_prefetch(atlas_cache_t* cache, ATLAS_CACHE_U64 image_id, int w, int h);
 
 // Useful for re-uploading pixels to the GPU.
 // Invalidates the internal cache for a specific image. If this image resides in a texture atlas
@@ -271,22 +281,22 @@ void atlas_cache_prefetch(atlas_cache_t* cache, ATLAS_CACHE_U64 image_id, int w,
 // `atlas_cache_config_t` if you want to invalidate images often -- this can help prevent constantly
 // invalidating internal atlases and recompiling them, and instead get your dynamic textures into the
 // lonely buffer.
-void atlas_cache_invalidate(atlas_cache_t* cache, ATLAS_CACHE_U64 image_id);
+ATLAS_CACHE_API void atlas_cache_invalidate(atlas_cache_t* cache, ATLAS_CACHE_U64 image_id);
 
 // If a match for `image_id` is found, the texture id and uv coordinates are looked up and returned
 // as an entry. This is sometimes useful to render images through an external mechanism, such as
 // Dear ImGui. The return result will be valid until the next call to `atlas_cache_defrag`.
-atlas_cache_entry_t atlas_cache_fetch(atlas_cache_t* cache, ATLAS_CACHE_U64 image_id, int w, int h);
+ATLAS_CACHE_API atlas_cache_entry_t atlas_cache_fetch(atlas_cache_t* cache, ATLAS_CACHE_U64 image_id, int w, int h);
 
 // Increments internal timestamps on all textures, for use in `atlas_cache_defrag`.
-void atlas_cache_tick(atlas_cache_t* cache);
+ATLAS_CACHE_API void atlas_cache_tick(atlas_cache_t* cache);
 
 // Sorts the internal entries and flushes the buffer built by `atlas_cache_push`. Will call
 // the `submit_batch_fn` function for each batch of entries and return them as an array. Any `image_id`
 // within the `atlas_cache_push` buffer that do not yet have a texture handle will request pixels
 // from the image via `get_pixels_fn` and request a texture handle via `generate_texture_handle_fn`.
 // Returns the number of batches created and submitted.
-int atlas_cache_flush(atlas_cache_t* cache);
+ATLAS_CACHE_API int atlas_cache_flush(atlas_cache_t* cache);
 
 // All textures created so far by `atlas_cache_flush` will be considered as candidates for creating
 // new internal texture atlases. Internal texture atlases compress images together inside of one
@@ -295,10 +305,10 @@ int atlas_cache_flush(atlas_cache_t* cache);
 // As some textures cease to draw on screen, they "decay" over time. Once enough images in an atlas
 // decay, the atlas is removed, and any "live" images in the atlas are used to create new atlases.
 // Can be called every 1/N times `atlas_cache_flush` is called.
-int atlas_cache_defrag(atlas_cache_t* cache);
+ATLAS_CACHE_API int atlas_cache_defrag(atlas_cache_t* cache);
 
-int atlas_cache_init(atlas_cache_t* cache, atlas_cache_config_t* config, void* udata);
-void atlas_cache_term(atlas_cache_t* cache);
+ATLAS_CACHE_API int atlas_cache_init(atlas_cache_t* cache, atlas_cache_config_t* config, void* udata);
+ATLAS_CACHE_API void atlas_cache_term(atlas_cache_t* cache);
 
 typedef struct atlas_cache_premade_entry_t
 {
@@ -319,7 +329,7 @@ typedef struct atlas_cache_premade_entry_t
 // using `atlas_cache_push`, this can be a good option. For example, this makes sense for text
 // rendering systems that create their own font texture atlas. Understanding the performance impact
 // can become a lot simpler than flooding `atlas_cache_push` with a lot of unique glyphs used briefly.
-void atlas_cache_register_premade_atlas(atlas_cache_t* cache, ATLAS_CACHE_U64 texture_id, int w, int h, int entry_count, atlas_cache_premade_entry_t* entries);
+ATLAS_CACHE_API void atlas_cache_register_premade_atlas(atlas_cache_t* cache, ATLAS_CACHE_U64 texture_id, int w, int h, int entry_count, atlas_cache_premade_entry_t* entries);
 
 // Batches are submit via synchronous callback back to the user. This function is called
 // from inside `atlas_cache_flush`. Each time `submit_batch_fn` is called an array of entries
@@ -376,7 +386,7 @@ typedef void (upload_subimage_fn)(ATLAS_CACHE_U64 dst, int x, int y, int w, int 
 
 // Initializes a set of good default paramaters. The users must still set
 // the four callbacks inside of `config`.
-void atlas_cache_set_default_config(atlas_cache_config_t* config);
+ATLAS_CACHE_API void atlas_cache_set_default_config(atlas_cache_config_t* config);
 
 struct atlas_cache_config_t
 {
@@ -598,6 +608,9 @@ struct atlas_cache_t
 #ifdef ATLAS_CACHE_IMPLEMENTATION
 #ifndef ATLAS_CACHE_IMPLEMENTATION_ONCE
 #define ATLAS_CACHE_IMPLEMENTATION_ONCE
+
+#include <stdint.h> // uintptr_t
+#include <limits.h> // INT_MAX
 
 // atlas_cache_map implementation
 
@@ -989,7 +1002,7 @@ void atlas_cache_set_default_config(atlas_cache_config_t* config)
 	} while (0)
 
 
-int atlas_cache_internal_fill_entry(atlas_cache_t* cache, atlas_cache_entry_t entry, atlas_cache_internal_entry_t* out)
+static int atlas_cache_internal_fill_entry(atlas_cache_t* cache, atlas_cache_entry_t entry, atlas_cache_internal_entry_t* out)
 {
 	ATLAS_CACHE_ASSERT(entry.w <= cache->atlas_width_in_pixels);
 	ATLAS_CACHE_ASSERT(entry.h <= cache->atlas_height_in_pixels);
@@ -1036,8 +1049,8 @@ void atlas_cache_register_premade_atlas(atlas_cache_t* cache, ATLAS_CACHE_U64 te
 	}
 }
 
-int atlas_cache_internal_lonely_entry(atlas_cache_t* cache, ATLAS_CACHE_U64 image_id, int w, int h, atlas_cache_entry_t* entry_out, int skip_missing_textures);
-atlas_cache_internal_premade_t* atlas_cache_internal_get_premade(atlas_cache_t* cache, ATLAS_CACHE_U64 image_id, atlas_cache_entry_t* entry_out);
+static int atlas_cache_internal_lonely_entry(atlas_cache_t* cache, ATLAS_CACHE_U64 image_id, int w, int h, atlas_cache_entry_t* entry_out, int skip_missing_textures);
+static atlas_cache_internal_premade_t* atlas_cache_internal_get_premade(atlas_cache_t* cache, ATLAS_CACHE_U64 image_id, atlas_cache_entry_t* entry_out);
 
 void atlas_cache_prefetch(atlas_cache_t* cache, ATLAS_CACHE_U64 image_id, int w, int h)
 {
@@ -1096,7 +1109,7 @@ static int atlas_cache_internal_entry_less_than_or_equal(atlas_cache_entry_t* a,
 	return a->texture_id <= b->texture_id;
 }
 
-void atlas_cache_internal_merge_sort_iteration(atlas_cache_entry_t* a, int lo, int split, int hi, atlas_cache_entry_t* b)
+static void atlas_cache_internal_merge_sort_iteration(atlas_cache_entry_t* a, int lo, int split, int hi, atlas_cache_entry_t* b)
 {
 	int i = lo, j = split;
 	for (int k = lo; k < hi; k++) {
@@ -1110,7 +1123,7 @@ void atlas_cache_internal_merge_sort_iteration(atlas_cache_entry_t* a, int lo, i
 	}
 }
 
-void atlas_cache_internal_merge_sort_recurse(atlas_cache_entry_t* b, int lo, int hi, atlas_cache_entry_t* a)
+static void atlas_cache_internal_merge_sort_recurse(atlas_cache_entry_t* b, int lo, int hi, atlas_cache_entry_t* a)
 {
 	if (hi - lo <= 1) return;
 	int split = (lo + hi) / 2;
@@ -1119,13 +1132,13 @@ void atlas_cache_internal_merge_sort_recurse(atlas_cache_entry_t* b, int lo, int
 	atlas_cache_internal_merge_sort_iteration(b, lo, split, hi, a);
 }
 
-void atlas_cache_internal_merge_sort(atlas_cache_entry_t* a, atlas_cache_entry_t* b, int n)
+static void atlas_cache_internal_merge_sort(atlas_cache_entry_t* a, atlas_cache_entry_t* b, int n)
 {
 	ATLAS_CACHE_MEMCPY(b, a, sizeof(atlas_cache_entry_t) * n);
 	atlas_cache_internal_merge_sort_recurse(b, 0, n, a);
 }
 
-void atlas_cache_internal_sort_entries(atlas_cache_t* cache)
+static void atlas_cache_internal_sort_entries(atlas_cache_t* cache)
 {
 	atlas_cache_internal_merge_sort(cache->entries, cache->entries_scratch, cache->entry_count);
 }
@@ -1192,7 +1205,7 @@ static inline ATLAS_CACHE_U64 atlas_cache_internal_generate_texture_handle(atlas
 	return cache->generate_texture_callback(cache->pixel_buffer, w, h, cache->udata);
 }
 
-atlas_cache_internal_lonely_texture_t* atlas_cache_internal_lonelybuffer_push(atlas_cache_t* cache, ATLAS_CACHE_U64 image_id, int w, int h, int make_tex)
+static atlas_cache_internal_lonely_texture_t* atlas_cache_internal_lonelybuffer_push(atlas_cache_t* cache, ATLAS_CACHE_U64 image_id, int w, int h, int make_tex)
 {
 	atlas_cache_internal_lonely_texture_t texture;
 	texture.timestamp = 0;
@@ -1206,7 +1219,7 @@ atlas_cache_internal_lonely_texture_t* atlas_cache_internal_lonelybuffer_push(at
 	return (atlas_cache_internal_lonely_texture_t*)atlas_cache_map_insert(&cache->lonely_buffer, image_id, &texture);
 }
 
-int atlas_cache_internal_lonely_entry(atlas_cache_t* cache, ATLAS_CACHE_U64 image_id, int w, int h, atlas_cache_entry_t* entry_out, int skip_missing_textures)
+static int atlas_cache_internal_lonely_entry(atlas_cache_t* cache, ATLAS_CACHE_U64 image_id, int w, int h, atlas_cache_entry_t* entry_out, int skip_missing_textures)
 {
 	atlas_cache_internal_lonely_texture_t* tex = (atlas_cache_internal_lonely_texture_t*)atlas_cache_map_find(&cache->lonely_buffer, image_id);
 
@@ -1261,7 +1274,7 @@ int atlas_cache_internal_lonely_entry(atlas_cache_t* cache, ATLAS_CACHE_U64 imag
 	}
 }
 
-atlas_cache_internal_premade_t* atlas_cache_internal_get_premade(atlas_cache_t* cache, ATLAS_CACHE_U64 image_id, atlas_cache_entry_t* entry_out)
+static atlas_cache_internal_premade_t* atlas_cache_internal_get_premade(atlas_cache_t* cache, ATLAS_CACHE_U64 image_id, atlas_cache_entry_t* entry_out)
 {
 	atlas_cache_internal_premade_t* tex = (atlas_cache_internal_premade_t*)atlas_cache_map_find(&cache->premades, image_id);
 	if (!tex) return NULL;
@@ -1272,7 +1285,7 @@ atlas_cache_internal_premade_t* atlas_cache_internal_get_premade(atlas_cache_t* 
 	return tex;
 }
 
-int atlas_cache_internal_push_entry(atlas_cache_t* cache, atlas_cache_internal_entry_t* s, int skip_missing_textures)
+static int atlas_cache_internal_push_entry(atlas_cache_t* cache, atlas_cache_internal_entry_t* s, int skip_missing_textures)
 {
 	int skipped_tex = 0;
 	atlas_cache_entry_t entry;
@@ -1344,7 +1357,7 @@ int atlas_cache_internal_push_entry(atlas_cache_t* cache, atlas_cache_internal_e
 	return skipped_tex;
 }
 
-void atlas_cache_internal_process_input(atlas_cache_t* cache, int skip_missing_textures)
+static void atlas_cache_internal_process_input(atlas_cache_t* cache, int skip_missing_textures)
 {
 	int skipped_index = 0;
 	for (int i = 0; i < cache->input_count; ++i)
@@ -1551,7 +1564,7 @@ static int atlas_cache_internal_image_less_than_or_equal(atlas_cache_internal_in
 	return perimeterB <= perimeterA;
 }
 
-void atlas_cache_internal_image_merge_sort_iteration(atlas_cache_internal_integer_image_t* a, int lo, int split, int hi, atlas_cache_internal_integer_image_t* b)
+static void atlas_cache_internal_image_merge_sort_iteration(atlas_cache_internal_integer_image_t* a, int lo, int split, int hi, atlas_cache_internal_integer_image_t* b)
 {
 	int i = lo, j = split;
 	for (int k = lo; k < hi; k++) {
@@ -1565,7 +1578,7 @@ void atlas_cache_internal_image_merge_sort_iteration(atlas_cache_internal_intege
 	}
 }
 
-void atlas_cache_internal_image_merge_sort_recurse(atlas_cache_internal_integer_image_t* b, int lo, int hi, atlas_cache_internal_integer_image_t* a)
+static void atlas_cache_internal_image_merge_sort_recurse(atlas_cache_internal_integer_image_t* b, int lo, int hi, atlas_cache_internal_integer_image_t* a)
 {
 	if (hi - lo <= 1) return;
 	int split = (lo + hi) / 2;
@@ -1574,7 +1587,7 @@ void atlas_cache_internal_image_merge_sort_recurse(atlas_cache_internal_integer_
 	atlas_cache_internal_image_merge_sort_iteration(b, lo, split, hi, a);
 }
 
-void atlas_cache_internal_image_merge_sort(atlas_cache_internal_integer_image_t* a, atlas_cache_internal_integer_image_t* b, int n)
+static void atlas_cache_internal_image_merge_sort(atlas_cache_internal_integer_image_t* a, atlas_cache_internal_integer_image_t* b, int n)
 {
 	ATLAS_CACHE_MEMCPY(b, a, sizeof(atlas_cache_internal_integer_image_t) * n);
 	atlas_cache_internal_image_merge_sort_recurse(b, 0, n, a);
@@ -1591,7 +1604,7 @@ typedef struct atlas_cache_internal_atlas_image_t
 
 #define ATLAS_CACHE_CHECK( X, Y ) do { if ( !(X) ) { ATLAS_CACHE_LOG(Y); goto cache_err; } } while ( 0 )
 
-void atlas_cache_make_atlas(atlas_cache_t* cache, atlas_cache_internal_atlas_t* atlas_out, const atlas_cache_internal_lonely_texture_t* imgs, int img_count)
+static void atlas_cache_make_atlas(atlas_cache_t* cache, atlas_cache_internal_atlas_t* atlas_out, const atlas_cache_internal_lonely_texture_t* imgs, int img_count)
 {
 	float iw, ih;
 	int atlas_image_size = 0, atlas_stride = 0, sp;
@@ -1876,14 +1889,14 @@ static void atlas_cache_internal_qsort_lonely(atlas_cache_map_t* lonely_table, a
 	atlas_cache_internal_qsort_lonely(lonely_table, items + low + 1, count - 1 - low);
 }
 
-int atlas_cache_internal_buffer_key(atlas_cache_t* cache, ATLAS_CACHE_U64 key)
+static int atlas_cache_internal_buffer_key(atlas_cache_t* cache, ATLAS_CACHE_U64 key)
 {
 	ATLAS_CACHE_CHECK_BUFFER_GROW(cache, key_buffer_count, key_buffer_capacity, key_buffer, ATLAS_CACHE_U64);
 	cache->key_buffer[cache->key_buffer_count++] = key;
 	return 0;
 }
 
-void atlas_cache_internal_remove_table_entries(atlas_cache_t* cache, atlas_cache_map_t* table)
+static void atlas_cache_internal_remove_table_entries(atlas_cache_t* cache, atlas_cache_map_t* table)
 {
 	for (int i = 0; i < cache->key_buffer_count; ++i) atlas_cache_map_remove(table, cache->key_buffer[i]);
 	cache->key_buffer_count = 0;
@@ -1891,14 +1904,14 @@ void atlas_cache_internal_remove_table_entries(atlas_cache_t* cache, atlas_cache
 
 // GPU repack path: queue a texture for destruction at the end of `atlas_cache_defrag`, so it
 // stays alive as a copy source while the new atlas pages are assembled.
-int atlas_cache_internal_defer_texture_destroy(atlas_cache_t* cache, ATLAS_CACHE_U64 texture_id)
+static int atlas_cache_internal_defer_texture_destroy(atlas_cache_t* cache, ATLAS_CACHE_U64 texture_id)
 {
 	ATLAS_CACHE_CHECK_BUFFER_GROW(cache, deferred_texture_count, deferred_texture_capacity, deferred_textures, ATLAS_CACHE_U64);
 	cache->deferred_textures[cache->deferred_texture_count++] = texture_id;
 	return 0;
 }
 
-void atlas_cache_internal_destroy_deferred_textures(atlas_cache_t* cache)
+static void atlas_cache_internal_destroy_deferred_textures(atlas_cache_t* cache)
 {
 	if (!cache->deferred_texture_count) return;
 	for (int i = 0; i < cache->deferred_texture_count; ++i) {
@@ -1914,7 +1927,7 @@ void atlas_cache_internal_destroy_deferred_textures(atlas_cache_t* cache)
 	for (int i = 0; i < count; ++i) lonely[i].prev_texture_id = ~0;
 }
 
-void atlas_cache_internal_flush_atlas(atlas_cache_t* cache, atlas_cache_internal_atlas_t* atlas, atlas_cache_internal_atlas_t** sentinel, atlas_cache_internal_atlas_t** next)
+static void atlas_cache_internal_flush_atlas(atlas_cache_t* cache, atlas_cache_internal_atlas_t* atlas, atlas_cache_internal_atlas_t** sentinel, atlas_cache_internal_atlas_t** next)
 {
 	int ticks_to_decay_texture = cache->ticks_to_decay_texture;
 	int use_gpu_copies = atlas_cache_internal_use_gpu_copies(cache);
@@ -1992,7 +2005,7 @@ void atlas_cache_invalidate(atlas_cache_t* cache, ATLAS_CACHE_U64 image_id)
 	}
 }
 
-void atlas_cache_internal_log_chain(atlas_cache_internal_atlas_t* atlas)
+static void atlas_cache_internal_log_chain(atlas_cache_internal_atlas_t* atlas)
 {
 	if (atlas)
 	{
