@@ -329,6 +329,7 @@ struct CF_Draw
 	CF_Arena uniform_arena;
 	Cute::Array<float> alpha_discards = { 1.0f };
 	Cute::Array<CF_DrawFilterMode> filter_modes = { CF_DRAW_FILTER_SMOOTH };
+	Cute::Array<CF_SpriteEdge> sprite_edges = { CF_SPRITE_EDGE_SOFT };
 	Cute::Array<int> blends = { 0 }; // CF_DrawBlend stack (cf_draw_push_blend).
 	Cute::Array<CF_Color> colors = { cf_color_white() };
 	Cute::Array<CF_DrawDash> dashes = { { 0, 0, 0 } }; // cf_draw_push_dash stack; on = 0 means solid.

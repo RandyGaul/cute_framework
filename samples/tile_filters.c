@@ -1,37 +1,46 @@
 /*
-	Demonstrates CF's draw filter modes on a tilemap under subpixel camera motion.
+	Demonstrates CF's sprite edge modes and draw filter modes on a tilemap under subpixel
+	camera motion.
 
 	Adjacent 16x16 tiles are drawn as individual sprites while the camera slowly pans by
 	fractions of a pixel. Each tile is its own atlas entry, and the atlas pads every entry
-	with a 1px transparent ring to keep neighboring images from bleeding into each other.
-	A sprite's quad covers exactly its own 16x16 pixels, so quads meet edge to edge -- but
-	any filter that samples past the sprite's uv rect reaches that ring, pulls in
-	transparency, and opens a seam the background shows through:
+	with a 1px transparent ring so neighboring images can't bleed into each other. Seams
+	open up when a tile's rendering reaches into that ring and pulls in transparency, which
+	two independent settings control:
 
-	  NEAREST  Takes the texel the sample lands in, which is always one of the sprite's
-	           own: no seams, but interiors shimmer as texel rows pop in and out while the
-	           camera slides across subpixel positions.
-	  LINEAR   Samples raw uvs, so any tap within half a texel of a tile edge blends with
-	           the ring. Tile edges go semi-transparent and seams open at subpixel offsets.
-	  SMOOTH   Snaps to texel centers with a sub-pixel ramp at texel seams, then clamps the
-	           uv into the sprite's own rect so the ring is unreachable. Stable interiors
-	           and closed seams at any camera offset or zoom. The tradeoff: silhouettes no
-	           longer fade out through the ring, so a rotated sprite's outline is a hard
-	           quad edge rather than an antialiased one.
+	  Sprite edge -- cf_draw_push_sprite_edge
+	    SOFT     The quad extends over the ring, so the sprite fades out across it. Rotated
+	             outlines turn smooth, but adjacent tiles overlap and the background shows
+	             through their shared edge.
+	    HARD     The quad covers exactly the tile, so neighbors meet edge to edge with
+	             nothing to blend. Rotated outlines are hard and aliased.
+
+	  Filter -- cf_draw_push_filter
+	    NEAREST  Lands on whole texels, so it never produces a partial alpha to leak
+	             through; interiors shimmer instead, as texel rows pop in and out while the
+	             camera slides across subpixel positions.
+	    LINEAR   Samples raw uvs, so any tap within half a texel of a tile edge blends with
+	             whatever is beyond it -- the widest, softest seams of the three.
+	    SMOOTH   Snaps to texel centers with a sub-pixel ramp at texel seams, then clamps
+	             the uv into the sprite's own rect. Crisp interiors, and the transition at
+	             an edge is about a screen pixel wide instead of a whole texel.
+
+	SMOOTH + HARD is the combination that stays seamless at any camera offset or zoom.
 
 	Controls:
 	  SPACE    cycle filter mode
+	  E        toggle sprite edge mode
 	  P        pause/resume the camera pan
 	  UP/DOWN  zoom in/out
-	  S        save one png per filter mode (current camera offset)
+	  S        save one png per filter mode (current camera offset and edge mode)
 
-	A 5x3 tile block slowly rotates in the sky: under SMOOTH its interior pixels should
-	stay stable (no shimmering crawl like NEAREST) and its seams stay closed even though
-	the shared tile edges are not axis-aligned.
+	A 5x3 tile block slowly rotates in the sky. Under HARD its shared tile edges should
+	stay closed even though they are not axis-aligned, while its outer silhouette goes
+	hard; SOFT is where that silhouette turns smooth, at the cost of those seams.
 
 	Run `tilefilters screenshot <prefix> [offset_px] [zoom] [angle_deg]` to save
-	deterministic pngs of every filter mode at the given subpixel camera offset (default
-	0.5, worst case for seams) plus a zero-offset control, then exit.
+	deterministic pngs of every edge/filter combination at the given subpixel camera offset
+	(default 0.5, worst case for seams) plus a zero-offset control, then exit.
 */
 
 #include <cute.h>
@@ -119,12 +128,13 @@ static void s_draw_rotated_block(float angle)
 	}
 }
 
-static void s_draw_scene(CF_DrawFilterMode mode, float zoom, float offx, float offy, float angle)
+static void s_draw_scene(CF_DrawFilterMode mode, CF_SpriteEdge edge, float zoom, float offx, float offy, float angle)
 {
 	cf_draw_push();
 	cf_draw_scale(zoom, zoom);
 	cf_draw_translate(offx, offy);
 	cf_draw_push_filter(mode);
+	cf_draw_push_sprite_edge(edge);
 	for (int y = 0; y < MAP_H; ++y) {
 		for (int x = 0; x < MAP_W; ++x) {
 			TileKind kind = s_map[y][x];
@@ -135,6 +145,7 @@ static void s_draw_scene(CF_DrawFilterMode mode, float zoom, float offx, float o
 		}
 	}
 	s_draw_rotated_block(angle);
+	cf_draw_pop_sprite_edge();
 	cf_draw_pop_filter();
 	cf_draw_pop();
 }
@@ -145,6 +156,15 @@ static const char* s_mode_name(CF_DrawFilterMode mode)
 	case CF_DRAW_FILTER_NEAREST: return "NEAREST";
 	case CF_DRAW_FILTER_LINEAR: return "LINEAR";
 	case CF_DRAW_FILTER_SMOOTH: return "SMOOTH";
+	default: return "???";
+	}
+}
+
+static const char* s_edge_name(CF_SpriteEdge edge)
+{
+	switch (edge) {
+	case CF_SPRITE_EDGE_SOFT: return "SOFT";
+	case CF_SPRITE_EDGE_HARD: return "HARD";
 	default: return "???";
 	}
 }
@@ -203,7 +223,13 @@ int main(int argc, char* argv[])
 		CF_DRAW_FILTER_SMOOTH,
 	};
 	int mode_count = CF_ARRAY_SIZE(modes);
-	int mode = 0;
+	CF_SpriteEdge edges[] = {
+		CF_SPRITE_EDGE_SOFT,
+		CF_SPRITE_EDGE_HARD,
+	};
+	int edge_count = CF_ARRAY_SIZE(edges);
+	int mode = CF_DRAW_FILTER_SMOOTH;
+	int edge = CF_SPRITE_EDGE_HARD;
 	float zoom = 3.0f;
 	float t = 0;
 	bool paused = false;
@@ -217,17 +243,19 @@ int main(int argc, char* argv[])
 		cf_app_update(NULL);
 
 		if (screenshot) {
-			// One frame per capture: every mode at a half-pixel offset (worst case for
-			// seams) plus a zero-offset control. Skip frame 0 so the window settles.
+			// One frame per capture: every edge/filter combination at a half-pixel offset
+			// (worst case for seams) plus a zero-offset control. Skip frame 0 so the
+			// window settles.
 			if (shot_frame > 0) {
 				int idx = shot_frame - 1;
-				if (idx >= mode_count * 2) break;
-				int m = idx / 2;
+				if (idx >= edge_count * mode_count * 2) break;
 				bool half = (idx % 2) == 0;
+				int m = (idx / 2) % mode_count;
+				int e = idx / (2 * mode_count);
 				float off = half ? shot_off_px / shot_zoom : 0;
-				s_draw_scene(modes[m], shot_zoom, off, off, shot_angle);
+				s_draw_scene(modes[m], edges[e], shot_zoom, off, off, shot_angle);
 				char path[256];
-				snprintf(path, sizeof(path), "%s_%s_%s.png", prefix, s_mode_name(modes[m]), half ? "half" : "zero");
+				snprintf(path, sizeof(path), "%s_%s_%s_%s.png", prefix, s_edge_name(edges[e]), s_mode_name(modes[m]), half ? "half" : "zero");
 				for (char* c = path; *c; ++c) if (*c == ' ' || *c == '(' || *c == ')') *c = '-';
 				s_save_png(path);
 				shot_frame++;
@@ -241,9 +269,9 @@ int main(int argc, char* argv[])
 		// One capture per frame while an S-key screenshot burst is in flight.
 		if (interactive_shot >= 0) {
 			if (interactive_shot < mode_count) {
-				s_draw_scene(modes[interactive_shot], zoom, shot_offx, shot_offy, t * 0.25f);
+				s_draw_scene(modes[interactive_shot], edges[edge], zoom, shot_offx, shot_offy, t * 0.25f);
 				char path[256];
-				snprintf(path, sizeof(path), "%s_%s.png", prefix, s_mode_name(modes[interactive_shot]));
+				snprintf(path, sizeof(path), "%s_%s_%s.png", prefix, s_edge_name(edges[edge]), s_mode_name(modes[interactive_shot]));
 				for (char* c = path; *c; ++c) if (*c == ' ' || *c == '(' || *c == ')') *c = '-';
 				s_save_png(path);
 				interactive_shot++;
@@ -253,6 +281,7 @@ int main(int argc, char* argv[])
 		}
 
 		if (cf_key_just_pressed(CF_KEY_SPACE)) mode = (mode + 1) % mode_count;
+		if (cf_key_just_pressed(CF_KEY_E)) edge = (edge + 1) % edge_count;
 		if (cf_key_just_pressed(CF_KEY_P)) paused = !paused;
 		if (cf_key_just_pressed(CF_KEY_UP)) zoom += 0.25f;
 		if (cf_key_just_pressed(CF_KEY_DOWN)) zoom = cf_max(0.5f, zoom - 0.25f);
@@ -268,12 +297,12 @@ int main(int argc, char* argv[])
 			shot_offy = offy;
 		}
 
-		s_draw_scene(modes[mode], zoom, offx, offy, t * 0.25f);
+		s_draw_scene(modes[mode], edges[edge], zoom, offx, offy, t * 0.25f);
 
 		cf_draw_push_color(cf_color_white());
 		cf_push_font_size(20);
 		char label[256];
-		snprintf(label, sizeof(label), "Filter: %s  --  SPACE cycle, P pause, UP/DOWN zoom (%.2fx), S screenshots", s_mode_name(modes[mode]), zoom);
+		snprintf(label, sizeof(label), "Filter: %s  Edge: %s  --  SPACE filter, E edge, P pause, UP/DOWN zoom (%.2fx), S screenshots", s_mode_name(modes[mode]), s_edge_name(edges[edge]), zoom);
 		cf_draw_text(label, cf_v2(-CANVAS_W * 0.5f + 10, CANVAS_H * 0.5f - 10), -1);
 		cf_pop_font_size();
 		cf_draw_pop_color();
