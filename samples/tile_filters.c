@@ -2,10 +2,22 @@
 	Demonstrates CF's draw filter modes on a tilemap under subpixel camera motion.
 
 	Adjacent 16x16 tiles are drawn as individual sprites while the camera slowly pans by
-	fractions of a pixel. This exposes seam artifacts between tiles: with SMOOTH/LINEAR the
-	tile edges go semi-transparent at subpixel offsets and the background bleeds through.
-	PIXELART (a port of SDL's SDL_SCALEMODE_PIXELART box-filter) uses hard sprite edges and
-	clamp-to-edge sampling instead, so tiles stay gap-free at any camera offset or zoom.
+	fractions of a pixel. Each tile is its own atlas entry, and the atlas pads every entry
+	with a 1px transparent ring to keep neighboring images from bleeding into each other.
+	A sprite's quad covers exactly its own 16x16 pixels, so quads meet edge to edge -- but
+	any filter that samples past the sprite's uv rect reaches that ring, pulls in
+	transparency, and opens a seam the background shows through:
+
+	  NEAREST  Takes the texel the sample lands in, which is always one of the sprite's
+	           own: no seams, but interiors shimmer as texel rows pop in and out while the
+	           camera slides across subpixel positions.
+	  LINEAR   Samples raw uvs, so any tap within half a texel of a tile edge blends with
+	           the ring. Tile edges go semi-transparent and seams open at subpixel offsets.
+	  SMOOTH   Snaps to texel centers with a sub-pixel ramp at texel seams, then clamps the
+	           uv into the sprite's own rect so the ring is unreachable. Stable interiors
+	           and closed seams at any camera offset or zoom. The tradeoff: silhouettes no
+	           longer fade out through the ring, so a rotated sprite's outline is a hard
+	           quad edge rather than an antialiased one.
 
 	Controls:
 	  SPACE    cycle filter mode
@@ -13,9 +25,9 @@
 	  UP/DOWN  zoom in/out
 	  S        save one png per filter mode (current camera offset)
 
-	A 5x3 tile block slowly rotates in the sky: the pixel art filters should keep its
-	interior pixels stable (no shimmering crawl like NEAREST) and its seams closed even
-	though the shared tile edges are not axis-aligned.
+	A 5x3 tile block slowly rotates in the sky: under SMOOTH its interior pixels should
+	stay stable (no shimmering crawl like NEAREST) and its seams stay closed even though
+	the shared tile edges are not axis-aligned.
 
 	Run `tilefilters screenshot <prefix> [offset_px] [zoom] [angle_deg]` to save
 	deterministic pngs of every filter mode at the given subpixel camera offset (default
@@ -52,7 +64,8 @@ void mount_content_directory_as(const char* dir)
 }
 
 // Cut one 16x16 tile out of the sheet as its own easy sprite. Each tile becomes a separate
-// atlas entry, which is how a real tilemap hits the atlas border-pixel behavior.
+// atlas entry, with its own transparent ring around it -- which is how a real tilemap runs
+// into the seam behavior described above.
 static CF_Sprite s_cut_tile(const CF_Image* sheet, int col, int row)
 {
 	CF_Pixel px[TILE * TILE];
@@ -84,8 +97,8 @@ static void s_build_map(void)
 }
 
 // A 5x3 tile block rotating about its center. Verifies two things under rotation: the
-// interior stays pixel-stable (the point of the pixel art filters), and adjacent tiles
-// stay seam-free even when the shared edges are not axis-aligned.
+// interior stays pixel-stable (the point of SMOOTH), and adjacent tiles stay seam-free
+// even when the shared edges are not axis-aligned.
 static void s_draw_rotated_block(float angle)
 {
 	static const TileKind block[3][5] = {
