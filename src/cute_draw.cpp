@@ -564,13 +564,13 @@ static void s_draw_report_tiled(const BatchGeometry* geoms, const CF_PendingUV* 
 			tc.payload = (uint32_t)pay.count();
 			pay.add({ q0.x, q0.y, e1.x, e1.y });
 			pay.add({ e2.x, e2.y, 1.0f / dot(e1, e1), 1.0f / dot(e2, e2) });
-			// The reported uv rect spans the entry's padded rect (atlas_use_border_pixels);
-			// +1 steps past the 1px border onto the block's first content texel, and the
-			// content width (padded minus borders) drives row wrapping for multi-row
-			// path blocks (glyph strips are single-row and never wrap).
-			float bx = CF_ROUNDF(cf_min(s->minx, s->maxx) * (float)texture_w) + 1.0f;
-			float by = CF_ROUNDF(cf_min(s->miny, s->maxy) * (float)texture_h) + 1.0f;
-			float bw = CF_ROUNDF(fabsf(s->maxx - s->minx) * (float)texture_w) - 2.0f;
+			// The reported uv rect spans the block's content (any atlas border ring is
+			// already excluded), so it lands directly on the first content texel, and its
+			// width drives row wrapping for multi-row path blocks (glyph strips are
+			// single-row and never wrap).
+			float bx = CF_ROUNDF(cf_min(s->minx, s->maxx) * (float)texture_w);
+			float by = CF_ROUNDF(cf_min(s->miny, s->maxy) * (float)texture_h);
+			float bw = CF_ROUNDF(fabsf(s->maxx - s->minx) * (float)texture_w);
 			pay.add({ bx, by, cf_max(bw, 1.0f), 0 });
 			// Per-corner colors (TL,TR,BR,BL), bilerped in the shader by box fraction so
 			// text-effect color gradients carry over to the curve path.
@@ -1105,7 +1105,7 @@ void cf_draw_sprite(const CF_Sprite* sprite)
 	s.maxx = 1;
 	s.maxy = 1;
 
-	bool apply_border_scale = true;
+	bool is_premade = false;
 	if (sprite->id != CF_SPRITE_ID_INVALID) {
 		if (sprite->blend_index > 0) {
 			CF_SpriteAsset* asset = cf_sprite_get_asset(sprite->id);
@@ -1124,7 +1124,7 @@ void cf_draw_sprite(const CF_Sprite* sprite)
 		s.maxy = sub_image.maxy;
 		s.image_id = sprite->easy_sprite_id;
 		s.texture_id = sub_image.image_id; // @JANK - Hijacked to store texture_id and avoid an extra hashtable lookup.
-		apply_border_scale = false;
+		is_premade = true;
 	} else {
 		s.image_id = sprite->easy_sprite_id;
 	}
@@ -1132,15 +1132,22 @@ void cf_draw_sprite(const CF_Sprite* sprite)
 	s.h = sprite->h;
 	g.type = BATCH_GEOMETRY_TYPE_SPRITE;
 
+	// CF_SPRITE_EDGE_SOFT: grow the quad one pixel past the image on every side, and run the uvs
+	// one texel past it to match, so that extra ring of geometry samples the atlas's transparent
+	// border, creating a soft edge.
+	bool soft_edge = !is_premade && s_draw->sprite_edges.last() == CF_SPRITE_EDGE_SOFT;
+	float border = soft_edge ? 1.0f : 0.0f;
+	if (soft_edge) {
+		float du = border / (float)s.w;
+		float dv = border / (float)s.h;
+		s.minx -= du; s.maxx += du;
+		s.miny -= dv; s.maxy += dv;
+	}
+
 	v2 offset = sprite->offset - (sprite->id != CF_SPRITE_ID_INVALID ? sprite->_pivot : V2(0,0));
 	v2 p = cf_add(sprite->transform.p, cf_mul(offset, sprite->scale));
 
-	v2 scale = V2(sprite->scale.x * s.w, sprite->scale.y * s.h);
-	if (apply_border_scale) {
-		// Expand sprite's scale to account for border pixels in the atlas.
-		scale.x = scale.x + (scale.x / (float)sprite->w) * 2.0f;
-		scale.y = scale.y + (scale.y / (float)sprite->h) * 2.0f;
-	}
+	v2 scale = V2(sprite->scale.x * (s.w + border * 2.0f), sprite->scale.y * (s.h + border * 2.0f));
 
 	CF_V2 quad[] = {
 		{ -0.5f,  0.5f },
@@ -1247,36 +1254,46 @@ void cf_draw_sprite_9_slice(const CF_Sprite* sprite)
 	float strip_from_max_y = sprite->h - max_y;
 	float strip_from_min_y = min_y;
 
+	// CF_SPRITE_EDGE_SOFT: grow the quad's outer edges one texel past the image, over the
+	// atlas's transparent border, so the silhouette fades out across it.
+	bool soft_edge = !is_premade && s_draw->sprite_edges.last() == CF_SPRITE_EDGE_SOFT;
+	float du = soft_edge ? 1.0f / (float)sprite->w : 0;
+	float dv = soft_edge ? 1.0f / (float)sprite->h : 0;
+	float uv_left   = 0.0f - du;
+	float uv_right  = 1.0f + du;
+	float uv_bottom = 0.0f - dv;
+	float uv_top    = 1.0f + dv;
+
 	CF_V2 uvs0[] = {
 		// top row
-		cf_v2(0           , center_uv1.y),
-		cf_v2(center_uv0.x, center_uv1.y),
-		cf_v2(center_uv1.x, center_uv1.y),
+		cf_v2(uv_left      , center_uv1.y),
+		cf_v2(center_uv0.x , center_uv1.y),
+		cf_v2(center_uv1.x , center_uv1.y),
 		// middle row
-		cf_v2(0           , center_uv0.y),
-		cf_v2(center_uv0.x, center_uv0.y),
-		cf_v2(center_uv1.x, center_uv0.y),
+		cf_v2(uv_left      , center_uv0.y),
+		cf_v2(center_uv0.x , center_uv0.y),
+		cf_v2(center_uv1.x , center_uv0.y),
 		// bottom row
-		cf_v2(0           , 0.0f),
-		cf_v2(center_uv0.x, 0.0f),
-		cf_v2(center_uv1.x, 0.0f),
+		cf_v2(uv_left      , uv_bottom),
+		cf_v2(center_uv0.x , uv_bottom),
+		cf_v2(center_uv1.x , uv_bottom),
 	};
 
 	CF_V2 uvs1[] = {
 		// top row
-		cf_v2(center_uv0.x, 1.0f),
-		cf_v2(center_uv1.x, 1.0f),
-		cf_v2(1.0f        , 1.0f),
+		cf_v2(center_uv0.x , uv_top),
+		cf_v2(center_uv1.x , uv_top),
+		cf_v2(uv_right     , uv_top),
 
 		// middle row
-		cf_v2(center_uv0.x, center_uv1.y),
-		cf_v2(center_uv1.x, center_uv1.y),
-		cf_v2(1.0f        , center_uv1.y),
+		cf_v2(center_uv0.x , center_uv1.y),
+		cf_v2(center_uv1.x , center_uv1.y),
+		cf_v2(uv_right     , center_uv1.y),
 
 		// bottom row
-		cf_v2(center_uv0.x, center_uv0.y),
-		cf_v2(center_uv1.x, center_uv0.y),
-		cf_v2(1.0f        , center_uv0.y),
+		cf_v2(center_uv0.x , center_uv0.y),
+		cf_v2(center_uv1.x , center_uv0.y),
+		cf_v2(uv_right     , center_uv0.y),
 	};
 
 	if (is_premade) {
@@ -1292,63 +1309,71 @@ void cf_draw_sprite_9_slice(const CF_Sprite* sprite)
 	float inner_top    = strip_from_max_y / full_height;
 	float inner_bottom = strip_from_min_y / full_height;
 
+	// CF_SPRITE_EDGE_SOFT: grow the outer edge of the quads to match the inflated UV
+	float pixel_x = (soft_edge && full_width  > 0) ? 1.0f / full_width : 0;
+	float pixel_y = (soft_edge && full_height > 0) ? 1.0f / full_height : 0;
+	float outer_left   = -0.5f - pixel_x;
+	float outer_right  =  0.5f + pixel_x;
+	float outer_bottom = -0.5f - pixel_y;
+	float outer_top    =  0.5f + pixel_y;
+
 	CF_V2 quads[9][4] = {
 		// top row
 		{
-			{ -0.5f             ,  0.5f                },
-			{ -0.5f + inner_left,  0.5f                },
-			{ -0.5f + inner_left,  0.5f - inner_top    },
-			{ -0.5f             ,  0.5f - inner_top    },
+			{ outer_left           , outer_top             },
+			{ -0.5f + inner_left   , outer_top             },
+			{ -0.5f + inner_left   , 0.5f - inner_top      },
+			{ outer_left           , 0.5f - inner_top      },
 		},
 		{
-			{ -0.5f + inner_left ,  0.5f               },
-			{  0.5f - inner_right,  0.5f               },
-			{  0.5f - inner_right,  0.5f - inner_top   },
-			{ -0.5f + inner_left ,  0.5f - inner_top   },
+			{ -0.5f + inner_left   , outer_top             },
+			{  0.5f - inner_right  , outer_top             },
+			{  0.5f - inner_right  , 0.5f - inner_top      },
+			{ -0.5f + inner_left   , 0.5f - inner_top      },
 		},
 		{
-			{  0.5f - inner_right,  0.5f               },
-			{  0.5f              ,  0.5f               },
-			{  0.5f              ,  0.5f - inner_top   },
-			{  0.5f - inner_right,  0.5f - inner_top   },
+			{ 0.5f - inner_right   , outer_top             },
+			{ outer_right          , outer_top             },
+			{ outer_right          , 0.5f - inner_top      },
+			{ 0.5f - inner_right   , 0.5f - inner_top      },
 		},
 		// middle row
 		{
-			{ -0.5f              ,  0.5f - inner_top    },
-			{ -0.5f + inner_left ,  0.5f - inner_top    },
-			{ -0.5f + inner_left , -0.5f + inner_bottom },
-			{ -0.5f              , -0.5f + inner_bottom },
+			{ outer_left           ,  0.5f - inner_top     },
+			{ -0.5f + inner_left   ,  0.5f - inner_top     },
+			{ -0.5f + inner_left   , -0.5f + inner_bottom  },
+			{ outer_left           , -0.5f + inner_bottom  },
 		},
 		{
-			{ -0.5f + inner_left ,  0.5f - inner_top    },
-			{  0.5f - inner_right,  0.5f - inner_top    },
-			{  0.5f - inner_right, -0.5f + inner_bottom },
-			{ -0.5f + inner_left , -0.5f + inner_bottom },
+			{ -0.5f + inner_left   ,  0.5f - inner_top     },
+			{  0.5f - inner_right  ,  0.5f - inner_top     },
+			{  0.5f - inner_right  , -0.5f + inner_bottom  },
+			{ -0.5f + inner_left   , -0.5f + inner_bottom  },
 		},
 		{
-			{  0.5f - inner_right,  0.5f - inner_top    },
-			{  0.5f              ,  0.5f - inner_top    },
-			{  0.5f              , -0.5f + inner_bottom },
-			{  0.5f - inner_right, -0.5f + inner_bottom },
+			{ 0.5f - inner_right   ,  0.5f - inner_top     },
+			{ outer_right          ,  0.5f - inner_top     },
+			{ outer_right          , -0.5f + inner_bottom  },
+			{ 0.5f - inner_right   , -0.5f + inner_bottom  },
 		},
 		// bottom row
 		{
-			{ -0.5f              , -0.5f + inner_bottom },
-			{ -0.5f + inner_left , -0.5f + inner_bottom },
-			{ -0.5f + inner_left , -0.5f                },
-			{ -0.5f              , -0.5f                },
+			{ outer_left           , -0.5f + inner_bottom  },
+			{ -0.5f + inner_left   , -0.5f + inner_bottom  },
+			{ -0.5f + inner_left   , outer_bottom          },
+			{ outer_left           , outer_bottom          },
 		},
 		{
-			{ -0.5f + inner_left , -0.5f + inner_bottom },
-			{  0.5f - inner_right, -0.5f + inner_bottom },
-			{  0.5f - inner_right, -0.5f                },
-			{ -0.5f + inner_left , -0.5f                },
+			{ -0.5f + inner_left   , -0.5f + inner_bottom  },
+			{  0.5f - inner_right  , -0.5f + inner_bottom  },
+			{  0.5f - inner_right  , outer_bottom          },
+			{ -0.5f + inner_left   , outer_bottom          },
 		},
 		{
-			{  0.5f - inner_right, -0.5f + inner_bottom },
-			{  0.5f              , -0.5f + inner_bottom },
-			{  0.5f              , -0.5f                },
-			{  0.5f - inner_right, -0.5f                },
+			{ 0.5f - inner_right   , -0.5f + inner_bottom  },
+			{ outer_right          , -0.5f + inner_bottom  },
+			{ outer_right          , outer_bottom          },
+			{ 0.5f - inner_right   , outer_bottom          },
 		},
 	};
 
@@ -1445,34 +1470,44 @@ void cf_draw_sprite_9_slice_tiled(const CF_Sprite* sprite)
 	float strip_from_max_y = sprite->h - max_y;
 	float strip_from_min_y = min_y;
 
+	// CF_SPRITE_EDGE_SOFT: grow the quad's outer edges one texel past the image, over the
+	// atlas's transparent border, so the silhouette fades out across it.
+	bool soft_edge = !is_premade && s_draw->sprite_edges.last() == CF_SPRITE_EDGE_SOFT;
+	float du = soft_edge ? 1.0f / (float)sprite->w : 0;
+	float dv = soft_edge ? 1.0f / (float)sprite->h : 0;
+	float uv_left   = 0.0f - du;
+	float uv_right  = 1.0f + du;
+	float uv_bottom = 0.0f - dv;
+	float uv_top    = 1.0f + dv;
+
 	CF_V2 uvs0[] = {
 		// top row
-		cf_v2(0           , center_uv1.y),
-		cf_v2(center_uv0.x, center_uv1.y),
-		cf_v2(center_uv1.x, center_uv1.y),
+		cf_v2(uv_left      , center_uv1.y),
+		cf_v2(center_uv0.x , center_uv1.y),
+		cf_v2(center_uv1.x , center_uv1.y),
 		// middle row
-		cf_v2(0           , center_uv0.y),
-		cf_v2(center_uv0.x, center_uv0.y),
-		cf_v2(center_uv1.x, center_uv0.y),
+		cf_v2(uv_left      , center_uv0.y),
+		cf_v2(center_uv0.x , center_uv0.y),
+		cf_v2(center_uv1.x , center_uv0.y),
 		// bottom row
-		cf_v2(0           , 0.0f),
-		cf_v2(center_uv0.x, 0.0f),
-		cf_v2(center_uv1.x, 0.0f),
+		cf_v2(uv_left      , uv_bottom),
+		cf_v2(center_uv0.x , uv_bottom),
+		cf_v2(center_uv1.x , uv_bottom),
 	};
 
 	CF_V2 uvs1[] = {
 		// top row
-		cf_v2(center_uv0.x, 1.0f),
-		cf_v2(center_uv1.x, 1.0f),
-		cf_v2(1.0f        , 1.0f),
+		cf_v2(center_uv0.x , uv_top),
+		cf_v2(center_uv1.x , uv_top),
+		cf_v2(uv_right     , uv_top),
 		// middle row
-		cf_v2(center_uv0.x, center_uv1.y),
-		cf_v2(center_uv1.x, center_uv1.y),
-		cf_v2(1.0f        , center_uv1.y),
+		cf_v2(center_uv0.x , center_uv1.y),
+		cf_v2(center_uv1.x , center_uv1.y),
+		cf_v2(uv_right     , center_uv1.y),
 		// bottom row
-		cf_v2(center_uv0.x, center_uv0.y),
-		cf_v2(center_uv1.x, center_uv0.y),
-		cf_v2(1.0f        , center_uv0.y),
+		cf_v2(center_uv0.x , center_uv0.y),
+		cf_v2(center_uv1.x , center_uv0.y),
+		cf_v2(uv_right     , center_uv0.y),
 	};
 
 	if (is_premade) {
@@ -1492,63 +1527,71 @@ void cf_draw_sprite_9_slice_tiled(const CF_Sprite* sprite)
 	CF_V2 side_tiled_size = V2(	(center_patch.max.x - center_patch.min.x) / full_width,
 								(center_patch.max.y - center_patch.min.y) / full_height);
 
+	// CF_SPRITE_EDGE_SOFT: grow the outer edge of the quads to match the inflated UV
+	float pixel_x = soft_edge ? 1.0f / full_width : 0;
+	float pixel_y = soft_edge ? 1.0f / full_height : 0;
+	float outer_left   = -0.5f - pixel_x;
+	float outer_right  =  0.5f + pixel_x;
+	float outer_bottom = -0.5f - pixel_y;
+	float outer_top    =  0.5f + pixel_y;
+
 	CF_V2 quads[9][4] = {
 		// top row
 		{
-			{ -0.5f             ,  0.5f               },
-			{ -0.5f + inner_left,  0.5f               },
-			{ -0.5f + inner_left,  0.5f - inner_top   },
-			{ -0.5f             ,  0.5f - inner_top   },
+			{ outer_left           , outer_top             },
+			{ -0.5f + inner_left   , outer_top             },
+			{ -0.5f + inner_left   , 0.5f - inner_top      },
+			{ outer_left           , 0.5f - inner_top      },
 		},
 		{
-			{ -0.5f + inner_left ,  0.5f              },
-			{  0.5f - inner_right,  0.5f              },
-			{  0.5f - inner_right,  0.5f - inner_top  },
-			{ -0.5f + inner_left ,  0.5f - inner_top  },
+			{ -0.5f + inner_left   , outer_top             },
+			{  0.5f - inner_right  , outer_top             },
+			{  0.5f - inner_right  , 0.5f - inner_top      },
+			{ -0.5f + inner_left   , 0.5f - inner_top      },
 		},
 		{
-			{  0.5f - inner_right,  0.5f              },
-			{  0.5f              ,  0.5f              },
-			{  0.5f              ,  0.5f - inner_top  },
-			{  0.5f - inner_right,  0.5f - inner_top  },
+			{ 0.5f - inner_right   , outer_top             },
+			{ outer_right          , outer_top             },
+			{ outer_right          , 0.5f - inner_top      },
+			{ 0.5f - inner_right   , 0.5f - inner_top      },
 		},
 		// middle row
 		{
-			{ -0.5f              ,  0.5f - inner_top   },
-			{ -0.5f + inner_left ,  0.5f - inner_top   },
-			{ -0.5f + inner_left , -0.5f + inner_bottom},
-			{ -0.5f              , -0.5f + inner_bottom},
+			{ outer_left           ,  0.5f - inner_top     },
+			{ -0.5f + inner_left   ,  0.5f - inner_top     },
+			{ -0.5f + inner_left   , -0.5f + inner_bottom  },
+			{ outer_left           , -0.5f + inner_bottom  },
 		},
 		{
-			{ -0.5f + inner_left ,  0.5f - inner_top   },
-			{  0.5f - inner_right,  0.5f - inner_top   },
-			{  0.5f - inner_right, -0.5f + inner_bottom},
-			{ -0.5f + inner_left , -0.5f + inner_bottom},
+			{ -0.5f + inner_left   ,  0.5f - inner_top     },
+			{  0.5f - inner_right  ,  0.5f - inner_top     },
+			{  0.5f - inner_right  , -0.5f + inner_bottom  },
+			{ -0.5f + inner_left   , -0.5f + inner_bottom  },
 		},
 		{
-			{  0.5f - inner_right,  0.5f - inner_top   },
-			{  0.5f              ,  0.5f - inner_top   },
-			{  0.5f              , -0.5f + inner_bottom},
-			{  0.5f - inner_right, -0.5f + inner_bottom},
+			{ 0.5f - inner_right   ,  0.5f - inner_top     },
+			{ outer_right          ,  0.5f - inner_top     },
+			{ outer_right          , -0.5f + inner_bottom  },
+			{ 0.5f - inner_right   , -0.5f + inner_bottom  },
 		},
 		// bottom row
 		{
-			{ -0.5f              , -0.5f + inner_bottom},
-			{ -0.5f + inner_left , -0.5f + inner_bottom},
-			{ -0.5f + inner_left , -0.5f               },
-			{ -0.5f              , -0.5f               },
+			{ outer_left           , -0.5f + inner_bottom  },
+			{ -0.5f + inner_left   , -0.5f + inner_bottom  },
+			{ -0.5f + inner_left   , outer_bottom          },
+			{ outer_left           , outer_bottom          },
 		},
 		{
-			{ -0.5f + inner_left , -0.5f + inner_bottom},
-			{  0.5f - inner_right, -0.5f + inner_bottom},
-			{  0.5f - inner_right, -0.5f               },
-			{ -0.5f + inner_left , -0.5f               },
+			{ -0.5f + inner_left   , -0.5f + inner_bottom  },
+			{  0.5f - inner_right  , -0.5f + inner_bottom  },
+			{  0.5f - inner_right  , outer_bottom          },
+			{ -0.5f + inner_left   , outer_bottom          },
 		},
 		{
-			{  0.5f - inner_right, -0.5f + inner_bottom},
-			{  0.5f              , -0.5f + inner_bottom},
-			{  0.5f              , -0.5f               },
-			{  0.5f - inner_right, -0.5f               },
+			{ 0.5f - inner_right   , -0.5f + inner_bottom  },
+			{ outer_right          , -0.5f + inner_bottom  },
+			{ outer_right          , outer_bottom          },
+			{ 0.5f - inner_right   , outer_bottom          },
 		},
 	};
 
@@ -4215,13 +4258,8 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 			g.alpha = 1.0f;
 			CF_Color color = s_draw->colors.last();
 
-			// Account for atlas_cache's 1-pixel atlas border. The border is 1 *device*
-			// pixel (glyph bitmaps are rasterized at pixel_scale resolution), but q0/q1
-			// are in logical units, so the pad must shrink by pixel_scale to match --
-			// otherwise on HiDPI the quad is stretched past the glyph's actual coverage.
-			v2 pad = V2(1,1) / app->pixel_scale;
-			v2 q0 = glyph->q0 + V2(x,baseline_y) - pad;
-			v2 q1 = glyph->q1 + V2(x,baseline_y) + pad;
+			v2 q0 = glyph->q0 + V2(x,baseline_y);
+			v2 q1 = glyph->q1 + V2(x,baseline_y);
 
 			// Curve text path (the default; a pushed stroke also forces it): fetch the
 			// outline strip up front so layout stays identical (metrics still come from
@@ -4785,6 +4823,21 @@ CF_DrawFilterMode cf_draw_pop_filter()
 CF_DrawFilterMode cf_draw_peek_filter()
 {
 	return s_draw->filter_modes.last();
+}
+
+void cf_draw_push_sprite_edge(CF_SpriteEdge sprite_edge)
+{
+	PUSH_DRAW_VAR(sprite_edge);
+}
+
+CF_SpriteEdge cf_draw_pop_sprite_edge()
+{
+	POP_DRAW_VAR(sprite_edge);
+}
+
+CF_SpriteEdge cf_draw_peek_sprite_edge()
+{
+	return s_draw->sprite_edges.last();
 }
 
 // Blend modes are recorded per drawable (no command split at record time); the flush
@@ -5463,11 +5516,6 @@ CF_TemporaryImage cf_fetch_image(const CF_Sprite* sprite)
 		image.tex = { s.texture_id };
 		image.w = sprite->w;
 		image.h = sprite->h;
-		v2 inv_dims = V2(1.0f / s_draw->atlas_dims.x, 1.0f / s_draw->atlas_dims.y);
-		s.minx += inv_dims.x;
-		s.maxx -= inv_dims.x;
-		s.miny -= inv_dims.y;
-		s.maxy += inv_dims.y;
 		image.u = cf_v2(s.minx, s.miny);
 		image.v = cf_v2(s.maxx, s.maxy);
 		return image;

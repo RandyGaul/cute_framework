@@ -1897,6 +1897,88 @@ CF_API CF_DrawFilterMode CF_CALL cf_draw_pop_filter(void);
 CF_API CF_DrawFilterMode CF_CALL cf_draw_peek_filter(void);
 
 /**
+ * @enum     CF_SpriteEdge
+ * @category draw
+ * @brief    Control the appearance of a sprite's edge at the border.
+ * @remarks  Sprites are packed into an atlas with a 1 pixel ring of transparent pixels, so that
+ *           filtering along an image's edge can't bleed into a neighboring image.
+ *
+ *           `CF_SPRITE_EDGE_SOFT` draw a sprite with that ring included.
+ *           This gives the sprite a nice soft edge when rotated.
+ *           However, sprites put adjacent to each other (e.g: in a tilemap) will show a transparent seam.
+ *           This is the default.
+ *
+ *           `CF_SPRITE_EDGE_HARD` covers only the image, so neighbors meet seamlessly at any camera offset
+ *           or zoom, at the cost of hard, aliased silhouettes when rotated.
+ *           This should be used for tilemaps, and for sprites used as panels placed next to each other.
+ *
+ *           Sprites from a premade atlas (see `cf_register_premade_atlas`) have no ring to sample,
+ *           and are always drawn as if `CF_SPRITE_EDGE_HARD`.
+ * @related  CF_SpriteEdge cf_sprite_edge_to_string cf_draw_push_sprite_edge cf_draw_pop_sprite_edge cf_draw_peek_sprite_edge
+ */
+#define CF_SPRITE_EDGE_DEFS \
+	/* @entry The quad extends one pixel past the image on all sides, softening silhouettes. The default. */ \
+	CF_ENUM(SPRITE_EDGE_SOFT,  0)                                                                            \
+	/* @entry The quad covers exactly the image, so neighboring sprites meet without overlapping. */         \
+	CF_ENUM(SPRITE_EDGE_HARD,  1)                                                                            \
+	/* @end */
+
+typedef enum CF_SpriteEdge
+{
+#define CF_ENUM(K, V) CF_##K = V,
+	CF_SPRITE_EDGE_DEFS
+#undef CF_ENUM
+} CF_SpriteEdge;
+
+/**
+ * @function cf_sprite_edge_to_string
+ * @category draw
+ * @brief    Returns a `CF_SpriteEdge` converted to a C string.
+ * @param    edge       The sprite edge mode.
+ * @return   Returns the enum name as a string.
+ * @related  CF_SpriteEdge cf_sprite_edge_to_string cf_draw_push_sprite_edge cf_draw_pop_sprite_edge cf_draw_peek_sprite_edge
+ */
+CF_INLINE const char* cf_sprite_edge_to_string(CF_SpriteEdge edge) {
+	switch (edge) {
+#define CF_ENUM(K, V) case CF_##K: return CF_STRINGIZE(CF_##K);
+		CF_SPRITE_EDGE_DEFS
+#undef CF_ENUM
+	default: return NULL;
+	}
+}
+
+/**
+ * @function cf_draw_push_sprite_edge
+ * @category draw
+ * @brief    Pushes the sprite edge mode used by subsequent sprite draws.
+ * @param    edge       The edge mode to use. See `CF_SpriteEdge`. Default is `CF_SPRITE_EDGE_SOFT`.
+ * @remarks  This is a CPU-side property of each sprite's geometry, so mixing modes within a frame costs
+ *           nothing extra -- it won't split batches the way `cf_draw_push_filter` does. Applies to
+ *           `cf_draw_sprite` and the 9-slice draws; text is unaffected, since glyphs carry their own
+ *           padding from the font rasterizer.
+ * @related  CF_SpriteEdge cf_sprite_edge_to_string cf_draw_push_sprite_edge cf_draw_pop_sprite_edge cf_draw_peek_sprite_edge
+ */
+CF_API void CF_CALL cf_draw_push_sprite_edge(CF_SpriteEdge edge);
+
+/**
+ * @function cf_draw_pop_sprite_edge
+ * @category draw
+ * @brief    Pops the sprite edge mode stack.
+ * @return   Returns the popped edge mode.
+ * @related  CF_SpriteEdge cf_sprite_edge_to_string cf_draw_push_sprite_edge cf_draw_pop_sprite_edge cf_draw_peek_sprite_edge
+ */
+CF_API CF_SpriteEdge CF_CALL cf_draw_pop_sprite_edge(void);
+
+/**
+ * @function cf_draw_peek_sprite_edge
+ * @category draw
+ * @brief    Returns the current sprite edge mode without popping the stack.
+ * @return   Returns the current edge mode.
+ * @related  CF_SpriteEdge cf_sprite_edge_to_string cf_draw_push_sprite_edge cf_draw_pop_sprite_edge cf_draw_peek_sprite_edge
+ */
+CF_API CF_SpriteEdge CF_CALL cf_draw_peek_sprite_edge(void);
+
+/**
  * @enum     CF_DrawBlend
  * @category draw
  * @brief    Per-drawable blend modes for the draw system.
@@ -2492,6 +2574,9 @@ CF_INLINE bool draw_peek_alpha_discard() { return cf_draw_peek_alpha_discard(); 
 CF_INLINE void draw_push_filter(CF_DrawFilterMode mode) { cf_draw_push_filter(mode); }
 CF_INLINE CF_DrawFilterMode draw_pop_filter() { return cf_draw_pop_filter(); }
 CF_INLINE CF_DrawFilterMode draw_peek_filter() { return cf_draw_peek_filter(); }
+CF_INLINE void draw_push_sprite_edge(CF_SpriteEdge edge) { cf_draw_push_sprite_edge(edge); }
+CF_INLINE CF_SpriteEdge draw_pop_sprite_edge() { return cf_draw_pop_sprite_edge(); }
+CF_INLINE CF_SpriteEdge draw_peek_sprite_edge() { return cf_draw_peek_sprite_edge(); }
 CF_INLINE void draw_set_texture(const char* name, CF_Texture texture) { cf_draw_set_texture(name, texture); }
 CF_INLINE void draw_set_uniform(const char* name, void* data, CF_UniformType type, int array_length) { cf_draw_set_uniform(name, data, type, array_length); }
 CF_INLINE void draw_set_uniform(const char* name, int val) { cf_draw_set_uniform_int(name, val); }
