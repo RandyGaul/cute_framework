@@ -110,6 +110,7 @@ add_sample(canvas_readback canvas_readback.c)
 add_sample(glitch glitch.cpp)
 add_sample(customsprite custom_sprite.c)
 add_sample(sound_pan sound_pan.c)
+add_sample(tilefilters tile_filters.c)
 
 # Ensure that sample data is included in web build
 if (EMSCRIPTEN)
@@ -146,3 +147,4 @@ add_custom_command(TARGET pixel_3d PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_di
 add_custom_command(TARGET obj_loading PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/obj_loading_data $<TARGET_FILE_DIR:obj_loading>/obj_loading_data)
 add_custom_command(TARGET model3d PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/model3d_data $<TARGET_FILE_DIR:model3d>/model3d_data)
 add_custom_command(TARGET customsprite PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/custom_sprite_data $<TARGET_FILE_DIR:customsprite>/custom_sprite_data)
+add_custom_command(TARGET tilefilters PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/import_spritesheet_data $<TARGET_FILE_DIR:tilefilters>/import_spritesheet_data)

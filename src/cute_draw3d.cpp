@@ -74,16 +74,6 @@ struct CF_TextureBinding3d
 	bool ambient;
 };
 
-// One instance's sprite image, captured at submission (cf_draw3d_push_texture). The entry is
-// the atlas-cache template (image id, dimensions, local uv sub-rect); resolution to a page
-// texture + atlas uv rect happens per flush in cf_draw3d_process, which is also the usage
-// signal the atlas compiler packs by.
-struct CF_ImageRef3d
-{
-	atlas_cache_entry_t entry;
-	bool bordered; // Atlased images carry a 1px border (inset one texel); premade rects don't.
-};
-
 // One sub-mesh draw record within a coalesced command (see CF_MeshCmd3d::runs).
 struct CF_MeshRun3d
 {
@@ -118,8 +108,8 @@ struct CF_MeshCmd3d
 	// `instances`. Presence splits coalescing (it changes what the shader samples); the
 	// images themselves vary freely across instances.
 	bool sprite_textured = false;
-	Cute::Array<CF_ImageRef3d> image_refs;
-	const Cute::Array<CF_ImageRef3d>* image_refs_ref = NULL;
+	Cute::Array<atlas_cache_entry_t> image_refs;
+	const Cute::Array<atlas_cache_entry_t>* image_refs_ref = NULL;
 	Cute::Array<CF_Uniform3d> uniforms; // data points into uniform_block.
 	void* uniform_block = NULL;         // One allocation holding every captured uniform's bytes.
 	                                    // NULL when the bytes are borrowed (replay payloads).
@@ -545,15 +535,13 @@ static CF_MeshInstance3d s_instance()
 
 // Captures a sprite's current frame as an atlas entry template, mirroring cf_draw_sprite's
 // image-id resolution (asset sprites, blend layers, easy sprites, premade sub-images).
-static CF_ImageRef3d s_image_ref(const CF_Sprite* sprite)
+static atlas_cache_entry_t s_image_ref(const CF_Sprite* sprite)
 {
-	CF_ImageRef3d ref = { };
-	atlas_cache_entry_t& s = ref.entry;
+	atlas_cache_entry_t s = { };
 	s.minx = 0;
 	s.miny = 0;
 	s.maxx = 1;
 	s.maxy = 1;
-	ref.bordered = true;
 	if (sprite->id != CF_SPRITE_ID_INVALID) {
 		if (sprite->blend_index > 0) {
 			CF_SpriteAsset* asset = cf_sprite_get_asset(sprite->id);
@@ -572,13 +560,12 @@ static CF_ImageRef3d s_image_ref(const CF_Sprite* sprite)
 		s.maxy = sub_image.maxy;
 		s.image_id = sprite->easy_sprite_id;
 		s.texture_id = sub_image.image_id; // @JANK - Hijacked to store texture_id, matching cf_draw_sprite.
-		ref.bordered = false;
 	} else {
 		s.image_id = sprite->easy_sprite_id;
 	}
 	s.w = sprite->w;
 	s.h = sprite->h;
-	return ref;
+	return s;
 }
 
 // Routes atlas uv results to the mesh command being resolved in cf_draw3d_process (the 2d
@@ -1984,7 +1971,7 @@ void cf_draw3d_process(CF_Command* cmd, CF_Canvas canvas, bool clear)
 		// Resolve every instance's image through the atlas. Pushing entries per flush is both
 		// the uv lookup and the usage signal: images drawn together pack into shared pages,
 		// so page splits (extra draws below) converge away as the atlas learns the scene.
-		const Cute::Array<CF_ImageRef3d>& image_refs = mc->image_refs_ref ? *mc->image_refs_ref : mc->image_refs;
+		const Cute::Array<atlas_cache_entry_t>& image_refs = mc->image_refs_ref ? *mc->image_refs_ref : mc->image_refs;
 		CF_ASSERT(image_refs.count() == instances.count());
 		s_draw3d->resolve_uvs.clear();
 		s_draw3d->resolve_uvs.set_count(instances.count());
@@ -1994,10 +1981,10 @@ void cf_draw3d_process(CF_Command* cmd, CF_Canvas canvas, bool clear)
 		// image per flush is still the atlas's usage signal.
 		s_draw3d->resolve_dedupe.clear();
 		for (int i = 0; i < instances.count(); ++i) {
-			uint64_t image_id = image_refs[i].entry.image_id;
+			uint64_t image_id = image_refs[i].image_id;
 			if (s_draw3d->resolve_dedupe.try_find(image_id)) continue;
 			s_draw3d->resolve_dedupe.add(image_id, i);
-			atlas_cache_entry_t e = image_refs[i].entry;
+			atlas_cache_entry_t e = image_refs[i];
 			e.udata = (ATLAS_CACHE_U64)i;
 			atlas_cache_push(&s_draw->atlas_cache, e);
 		}
@@ -2006,20 +1993,18 @@ void cf_draw3d_process(CF_Command* cmd, CF_Canvas canvas, bool clear)
 		atlas_cache_flush(&s_draw->atlas_cache);
 		s_draw3d->resolving = false;
 		for (int i = 0; i < instances.count(); ++i) {
-			int rep = s_draw3d->resolve_dedupe.find(image_refs[i].entry.image_id);
+			int rep = s_draw3d->resolve_dedupe.find(image_refs[i].image_id);
 			if (rep != i) s_draw3d->resolve_uvs[i] = s_draw3d->resolve_uvs[rep];
 		}
 
 		// Stage uv-filled instance copies. The rect packs as (minx, maxy, maxx, miny) so mesh
-		// uv (0, 0) samples the image's top-left, matching 2d sprites; atlased images inset
-		// one texel to skip the 1px border ring.
+		// uv (0, 0) samples the image's top-left, matching 2d sprites. Reported uvs already
+		// exclude the atlas border ring, so they map straight onto the mesh.
 		s_draw3d->staged.clear();
 		for (int i = 0; i < instances.count(); ++i) {
 			const CF_PendingUV& uv = s_draw3d->resolve_uvs[i];
 			CF_MeshInstance3d inst = instances[i];
-			float du = image_refs[i].bordered && uv.tex_w ? 1.0f / (float)uv.tex_w : 0;
-			float dv = image_refs[i].bordered && uv.tex_h ? 1.0f / (float)uv.tex_h : 0;
-			inst.uv_rect = cf_v4(uv.minx + du, uv.maxy + dv, uv.maxx - du, uv.miny - dv);
+			inst.uv_rect = cf_v4(uv.minx, uv.maxy, uv.maxx, uv.miny);
 			s_draw3d->staged.add(inst);
 		}
 	}

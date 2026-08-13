@@ -3,7 +3,7 @@
 		Licensing information can be found at the end of the file.
 	------------------------------------------------------------------------------
 
-	cute_atlas_cache.h - v1.12
+	cute_atlas_cache.h - v1.13
 
 	To create implementation (the function definitions)
 		#define ATLAS_CACHE_IMPLEMENTATION
@@ -189,6 +189,18 @@
 		                  (after the new pages are assembled) so they can serve as copy
 		                  sources. When any callback is NULL the old CPU path runs,
 		                  byte-for-byte unchanged.
+		1.13 (08/13/2026) Reported uvs now span an image's *content* instead of its
+		                  padded slot when `atlas_use_border_pixels` is set, making the
+		                  border ring an implementation detail callers never see. Local
+		                  uvs pushed on an entry are likewise fractions of the image, so
+		                  partial-uv draws (9-slice) land where they say they do. Renderers
+		                  that compensated by inflating their geometry by one texel per
+		                  edge, or by insetting the reported uvs themselves, should drop
+		                  that compensation. `entry.w/h` report image dims, not slot dims.
+		                  Also fixed partial local uvs on a lonely (not yet atlased) image:
+		                  they were passed through and then y-flipped wholesale, so a sub-
+		                  rect picked the mirrored part of the image until the image landed
+		                  in an atlas page. Both residencies now remap identically.
 */
 
 /*
@@ -234,8 +246,12 @@ struct atlas_cache_entry_t
 	ATLAS_CACHE_U64 udata;
 
 	int w, h;         // width and height of this entry's image in pixels
-	float minx, miny; // u coordinate - this will be overwritten, except for premade entries
-	float maxx, maxy; // v coordinate - this will be overwritten, except for premade entries
+	// On the way in these are *local* uvs: 0 to 1 spans the image, and a sub-rect draws a
+	// portion of it (e.g. one patch of a 9-slice). On the way out they are overwritten with
+	// absolute uvs into `texture_id` (except for premade entries, which are already absolute).
+	// Any border ring the cache adds internally is excluded from the reported rect.
+	float minx, miny; // u coordinate
+	float maxx, maxy; // v coordinate
 };
 
 // Pushes an entry onto an internal buffer. Does no other logic.
@@ -341,7 +357,8 @@ typedef void (destroy_texture_handle_fn)(ATLAS_CACHE_U64 texture_id, void* udata
 //
 // Note on the 1-pixel border (`atlas_use_border_pixels`): the CPU path pads each image with a ring of
 // *zero* pixels (not edge replication). Lonely textures and old atlas slots already contain that zero
-// ring baked in, so whole-slot copies reproduce the CPU path's result exactly.
+// ring baked in, so whole-slot copies reproduce the CPU path's result exactly. The ring is invisible
+// to callers: reported uvs span the image's content, never the ring.
 
 // Create an atlas page texture of w by h pixels with no particular contents, *cleared to the same
 // empty color the CPU path uses* (see ATLAS_CACHE_ATLAS_EMPTY_COLOR, transparent-zero by default).
@@ -1207,16 +1224,37 @@ int atlas_cache_internal_lonely_entry(atlas_cache_t* cache, ATLAS_CACHE_U64 imag
 
 		if (entry_out) {
 			entry_out->texture_id = tex->texture_id;
-			// Preserve local UVs already set by the caller (0..1 texture space for lonely
-			// textures). 9-slice and other partial-UV draws depend on this. Callers that
-			// want the full texture (e.g. atlas_cache_fetch) should set 0..1 first.
+			// Local uvs already set by the caller are preserved -- 9-slice and other
+			// partial-uv draws depend on it. Callers that want the whole image (e.g.
+			// atlas_cache_fetch) should set 0..1 first.
+			//
+			// A lonely texture is exactly one padded slot, so the image's content rect is
+			// the whole texture minus the border ring. Remap the local uvs onto it exactly
+			// the way the atlas path does, so a partial rect picks the same part of the
+			// image whether or not the image happens to be atlased yet.
+			float u0 = 0, u1 = 1;
+			float v0 = 0, v1 = 1;
+			if (cache->atlas_use_border_pixels)
+			{
+				float iw = 1.0f / (float)(tex->w + 2);
+				float ih = 1.0f / (float)(tex->h + 2);
+				u0 = iw; u1 = 1.0f - iw;
+				v0 = ih; v1 = 1.0f - ih;
+			}
 
 			if (ATLAS_CACHE_LONELY_FLIP_Y_AXIS_FOR_UV)
 			{
-				float tmp = entry_out->miny;
-				entry_out->miny = entry_out->maxy;
-				entry_out->maxy = tmp;
+				float tmp = v0;
+				v0 = v1;
+				v1 = tmp;
 			}
+
+			float dx = u1 - u0;
+			float dy = v1 - v0;
+			entry_out->minx = dx * entry_out->minx + u0;
+			entry_out->maxx = dx * entry_out->maxx + u0;
+			entry_out->miny = dy * entry_out->miny + v0;
+			entry_out->maxy = dy * entry_out->maxy + v0;
 		}
 
 		return 0;
@@ -1262,13 +1300,15 @@ int atlas_cache_internal_push_entry(atlas_cache_t* cache, atlas_cache_internal_e
 			atlas_cache_internal_texture_t* tex = (atlas_cache_internal_texture_t*)atlas_cache_map_find(&atlas->textures, s->image_id);
 			ATLAS_CACHE_ASSERT(tex);
 			tex->timestamp = 0;
-			entry.w = tex->w;
-			entry.h = tex->h;
+			// Slot dims are padded by the border ring; report the image's own dims.
+			entry.w = cache->atlas_use_border_pixels ? tex->w - 2 : tex->w;
+			entry.h = cache->atlas_use_border_pixels ? tex->h - 2 : tex->h;
 
-			// Entries are pushed with *local* uvs, remapped here onto the image's slot in
-			// the atlas. Pass minx/miny as 0 and maxx/maxy as 1 to draw the full image;
-			// values between 0-1 draw a portion (e.g. 9-slice), while values outside 0-1
-			// will creep into neighboring images of the atlas.
+			// Entries are pushed with *local* uvs, remapped here onto the image's content
+			// rect within the atlas (the border ring is excluded -- see the uv math in
+			// atlas_cache_internal_make_atlas). Pass minx/miny as 0 and maxx/maxy as 1 to
+			// draw the full image; values between 0-1 draw a portion (e.g. 9-slice), while
+			// values outside 0-1 creep into the border ring and its neighbors.
 			float dx = tex->maxx - tex->minx;
 			float dy = tex->maxy - tex->miny;
 			entry.minx = dx * entry.minx + tex->minx;
@@ -1755,10 +1795,15 @@ void atlas_cache_make_atlas(atlas_cache_t* cache, atlas_cache_internal_atlas_t* 
 			atlas_cache_v2_t max = img->max;
 			volume_used += img->size.x * img->size.y;
 
-			float min_x = (float)min.x * iw;
-			float min_y = (float)min.y * ih;
-			float max_x = (float)max.x * iw;
-			float max_y = (float)max.y * ih;
+			// Reported uvs span the image's *content*, not its slot: the border ring is an
+			// internal detail (it keeps a bilinear tap at an image's edge from reaching into
+			// the neighboring image), so callers never have to know it is there. The slot
+			// coords below stay padded -- the GPU copy path moves whole slots, ring included.
+			int border = cache->atlas_use_border_pixels ? 1 : 0;
+			float min_x = (float)(min.x + border) * iw;
+			float min_y = (float)(min.y + border) * ih;
+			float max_x = (float)(max.x - border) * iw;
+			float max_y = (float)(max.y - border) * ih;
 
 			// flip image on y axis
 			if (ATLAS_CACHE_ATLAS_FLIP_Y_AXIS_FOR_UV)

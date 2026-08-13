@@ -637,6 +637,28 @@ vec2 smooth_uv(vec2 uv, vec2 texture_size)
 	pixel = seam + clamp((pixel - seam) / fwidth(pixel), -0.5, 0.5);
 	return pixel / texture_size;
 }
+
+vec2 smooth_uv_fw(vec2 uv, vec4 uv_bounds, vec2 texture_size, vec2 fw)
+{
+	vec2 pixel = uv * texture_size;
+	vec2 seam  = floor(pixel + 0.5);
+	pixel = seam + clamp((pixel - seam) / fw, -0.5, 0.5);
+	uv = pixel / texture_size;
+
+	vec2 half_texel = 0.5 / texture_size;
+	return clamp(uv, uv_bounds.xy + half_texel, uv_bounds.zw - half_texel);
+}
+
+vec2 smooth_uv(vec2 uv, vec4 uv_bounds, vec2 texture_size)
+{
+	vec2 pixel = uv * texture_size;
+	vec2 seam  = floor(pixel + 0.5);
+	pixel = seam + clamp((pixel - seam) / fwidth(pixel), -0.5, 0.5);
+	uv = pixel / texture_size;
+
+	vec2 half_texel = 0.5 / texture_size;
+	return clamp(uv, uv_bounds.xy + half_texel, uv_bounds.zw - half_texel);
+}
 )";
 
 // Stub function. This gets replaced by injected user-shader code via #include.
@@ -771,7 +793,7 @@ void main()
 
 	// Traditional sprite/text/tri cases.
 	vec4 c = vec4(0);
-	vec2 uv = u_use_smooth_uv == 0 ? smooth_uv(v_uv, u_texture_size) : v_uv;
+	vec2 uv = u_use_smooth_uv == 0 ? smooth_uv(v_uv, v_uv_bounds, u_texture_size) : v_uv;
 	vec4 tex_c = de_gamma(texture(u_image, uv));
 	c = is_sprite ? gamma(tex_c) : c;
 	c = is_text ? v_col * tex_c.a : c;
@@ -1050,10 +1072,10 @@ void main()
 			float gds = (abs(dot(gdx, e1)) + abs(dot(gdy, e1))) * P1.z;
 			float gdt = (abs(dot(gdx, e2)) + abs(dot(gdy, e2))) * P1.w;
 			vec2 fw = vec2(gds * abs(uvb.z - uvb.x), gdt * abs(uvb.w - uvb.y)) * u_texture_size;
-			vec2 uv_final = u_use_smooth_uv == 0 ? smooth_uv_fw(uv, u_texture_size, fw) : uv;
+			vec2 uv_final = u_use_smooth_uv == 0 ? smooth_uv_fw(uv, uvb, u_texture_size, fw) : uv;
 			vec4 tex_c = textureLod(u_image, uv_final, 0.0);
 #else
-			vec2 uv_final = u_use_smooth_uv == 0 ? smooth_uv(uv, u_texture_size) : uv;
+			vec2 uv_final = u_use_smooth_uv == 0 ? smooth_uv(uv, uvb, u_texture_size) : uv;
 			vec4 tex_c = texture(u_image, uv_final);
 #endif
 			float quad_cov = step(0.0, s) * step(s, 1.0) * step(0.0, t) * step(t, 1.0);

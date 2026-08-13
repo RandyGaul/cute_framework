@@ -564,13 +564,13 @@ static void s_draw_report_tiled(const BatchGeometry* geoms, const CF_PendingUV* 
 			tc.payload = (uint32_t)pay.count();
 			pay.add({ q0.x, q0.y, e1.x, e1.y });
 			pay.add({ e2.x, e2.y, 1.0f / dot(e1, e1), 1.0f / dot(e2, e2) });
-			// The reported uv rect spans the entry's padded rect (atlas_use_border_pixels);
-			// +1 steps past the 1px border onto the block's first content texel, and the
-			// content width (padded minus borders) drives row wrapping for multi-row
-			// path blocks (glyph strips are single-row and never wrap).
-			float bx = CF_ROUNDF(cf_min(s->minx, s->maxx) * (float)texture_w) + 1.0f;
-			float by = CF_ROUNDF(cf_min(s->miny, s->maxy) * (float)texture_h) + 1.0f;
-			float bw = CF_ROUNDF(fabsf(s->maxx - s->minx) * (float)texture_w) - 2.0f;
+			// The reported uv rect spans the block's content (any atlas border ring is
+			// already excluded), so it lands directly on the first content texel, and its
+			// width drives row wrapping for multi-row path blocks (glyph strips are
+			// single-row and never wrap).
+			float bx = CF_ROUNDF(cf_min(s->minx, s->maxx) * (float)texture_w);
+			float by = CF_ROUNDF(cf_min(s->miny, s->maxy) * (float)texture_h);
+			float bw = CF_ROUNDF(fabsf(s->maxx - s->minx) * (float)texture_w);
 			pay.add({ bx, by, cf_max(bw, 1.0f), 0 });
 			// Per-corner colors (TL,TR,BR,BL), bilerped in the shader by box fraction so
 			// text-effect color gradients carry over to the curve path.
@@ -1105,7 +1105,6 @@ void cf_draw_sprite(const CF_Sprite* sprite)
 	s.maxx = 1;
 	s.maxy = 1;
 
-	bool apply_border_scale = true;
 	if (sprite->id != CF_SPRITE_ID_INVALID) {
 		if (sprite->blend_index > 0) {
 			CF_SpriteAsset* asset = cf_sprite_get_asset(sprite->id);
@@ -1124,7 +1123,6 @@ void cf_draw_sprite(const CF_Sprite* sprite)
 		s.maxy = sub_image.maxy;
 		s.image_id = sprite->easy_sprite_id;
 		s.texture_id = sub_image.image_id; // @JANK - Hijacked to store texture_id and avoid an extra hashtable lookup.
-		apply_border_scale = false;
 	} else {
 		s.image_id = sprite->easy_sprite_id;
 	}
@@ -1136,11 +1134,6 @@ void cf_draw_sprite(const CF_Sprite* sprite)
 	v2 p = cf_add(sprite->transform.p, cf_mul(offset, sprite->scale));
 
 	v2 scale = V2(sprite->scale.x * s.w, sprite->scale.y * s.h);
-	if (apply_border_scale) {
-		// Expand sprite's scale to account for border pixels in the atlas.
-		scale.x = scale.x + (scale.x / (float)sprite->w) * 2.0f;
-		scale.y = scale.y + (scale.y / (float)sprite->h) * 2.0f;
-	}
 
 	CF_V2 quad[] = {
 		{ -0.5f,  0.5f },
@@ -4215,13 +4208,8 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 			g.alpha = 1.0f;
 			CF_Color color = s_draw->colors.last();
 
-			// Account for atlas_cache's 1-pixel atlas border. The border is 1 *device*
-			// pixel (glyph bitmaps are rasterized at pixel_scale resolution), but q0/q1
-			// are in logical units, so the pad must shrink by pixel_scale to match --
-			// otherwise on HiDPI the quad is stretched past the glyph's actual coverage.
-			v2 pad = V2(1,1) / app->pixel_scale;
-			v2 q0 = glyph->q0 + V2(x,baseline_y) - pad;
-			v2 q1 = glyph->q1 + V2(x,baseline_y) + pad;
+			v2 q0 = glyph->q0 + V2(x,baseline_y);
+			v2 q1 = glyph->q1 + V2(x,baseline_y);
 
 			// Curve text path (the default; a pushed stroke also forces it): fetch the
 			// outline strip up front so layout stays identical (metrics still come from
@@ -5463,11 +5451,6 @@ CF_TemporaryImage cf_fetch_image(const CF_Sprite* sprite)
 		image.tex = { s.texture_id };
 		image.w = sprite->w;
 		image.h = sprite->h;
-		v2 inv_dims = V2(1.0f / s_draw->atlas_dims.x, 1.0f / s_draw->atlas_dims.y);
-		s.minx += inv_dims.x;
-		s.maxx -= inv_dims.x;
-		s.miny -= inv_dims.y;
-		s.maxy += inv_dims.y;
 		image.u = cf_v2(s.minx, s.miny);
 		image.v = cf_v2(s.maxx, s.maxy);
 		return image;
