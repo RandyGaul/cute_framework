@@ -467,6 +467,21 @@ CF_API bool CF_CALL cf_app_pixel_scale_was_changed(void);
 CF_API float CF_CALL cf_app_get_natural_pixel_scale(void);
 
 /**
+ * @function cf_app_apply_pixel_scale
+ * @category app
+ * @brief    Applies a pixel scale in one call: sets the scale, resizes the app canvas to window size times scale, and rebuilds the default 2d projection from the logical window size.
+ * @param    scale      The pixel scale to apply. Must be greater than zero; other values are ignored.
+ * @remarks  This is the standard reaction to a window resize or a display density change, packaged up -- equivalent
+ *           to `cf_app_set_pixel_scale`, then `cf_app_set_canvas_size(window_w * scale, window_h * scale)`, then
+ *           `cf_draw_projection` spanning the logical window size. Call it when `cf_app_was_resized` fires (passing
+ *           `cf_app_get_pixel_scale` to keep the current scale), when `cf_app_dpi_scale_was_changed` fires (passing
+ *           `cf_app_get_natural_pixel_scale` to track the display), or any time with an arbitrary scale for testing.
+ *           It overwrites a custom `cf_draw_projection` -- re-apply yours after, if you use one. See the hidpi sample.
+ * @related  cf_app_set_pixel_scale cf_app_get_pixel_scale cf_app_get_natural_pixel_scale cf_app_set_canvas_size cf_app_dpi_scale_was_changed
+ */
+CF_API void CF_CALL cf_app_apply_pixel_scale(float scale);
+
+/**
  * @function cf_app_set_size
  * @category app
  * @brief    Sets the size of the window in logical points.
@@ -1015,6 +1030,7 @@ CF_INLINE float app_get_pixel_scale() { return cf_app_get_pixel_scale(); }
 CF_INLINE void app_set_pixel_scale(float scale) { cf_app_set_pixel_scale(scale); }
 CF_INLINE bool app_pixel_scale_was_changed() { return cf_app_pixel_scale_was_changed(); }
 CF_INLINE float app_get_natural_pixel_scale() { return cf_app_get_natural_pixel_scale(); }
+CF_INLINE void app_apply_pixel_scale(float scale) { cf_app_apply_pixel_scale(scale); }
 CF_INLINE void app_center_window() { cf_app_center_window(); }
 CF_INLINE bool app_was_resized() { return cf_app_was_resized(); }
 CF_INLINE bool app_was_moved() { return cf_app_was_moved(); }

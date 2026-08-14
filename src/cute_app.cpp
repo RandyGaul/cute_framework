@@ -668,6 +668,17 @@ float cf_app_get_natural_pixel_scale()
 	return app->natural_pixel_scale;
 }
 
+void cf_app_apply_pixel_scale(float scale)
+{
+	if (!(scale > 0)) return;
+	cf_app_set_pixel_scale(scale);
+	// NO_GFX apps have no canvas or draw state -- the scale value is all there is to apply.
+	if (app->gfx_enabled) {
+		cf_app_set_canvas_size((int)CF_ROUNDF(app->w * scale), (int)CF_ROUNDF(app->h * scale));
+		cf_draw_projection(cf_ortho_2d(0, 0, (float)app->w, (float)app->h));
+	}
+}
+
 void cf_app_set_size(int w, int h)
 {
 	SDL_SetWindowSize(app->window, w, h);
