@@ -5,24 +5,13 @@
 	value, like the window or canvas size. At startup CF creates the app canvas
 	once at window_points * the display's natural density and sets the default 2d
 	projection once from the logical window size -- and never touches either again.
-	Reacting to window resizes and display-density changes is YOUR code, and this
-	sample is the copy-paste recipe:
+	Reacting to window resizes and display-density changes is YOUR code, and
+	cf_app_apply_pixel_scale (= set the scale, resize the canvas to match the
+	window, rebuild the projection) is the whole recipe:
 
-	    // React to a window resize (and/or a density change while tracking the
-	    // display): re-apply scale, canvas, and projection in one place.
-	    static void apply_pixel_scale(float scale)
-	    {
-	        int w = cf_app_get_width();
-	        int h = cf_app_get_height();
-	        cf_app_set_pixel_scale(scale);
-	        cf_app_set_canvas_size((int)(w * scale + 0.5f), (int)(h * scale + 0.5f));
-	        cf_draw_projection(cf_ortho_2d(0, 0, (float)w, (float)h));
-	    }
-
-	    // In the main loop:
-	    if (cf_app_was_resized()) apply_pixel_scale(cf_app_get_pixel_scale());
+	    if (cf_app_was_resized()) cf_app_apply_pixel_scale(cf_app_get_pixel_scale());
 	    if (cf_app_dpi_scale_was_changed() && tracking_the_display) {
-	        apply_pixel_scale(cf_app_get_natural_pixel_scale());
+	        cf_app_apply_pixel_scale(cf_app_get_natural_pixel_scale());
 	    }
 
 	A fixed-size, non-resizable window on one display needs NONE of this -- the
@@ -45,17 +34,6 @@
 
 #include <cute.h>
 #include <stdio.h>
-
-// The whole "automatic HiDPI" replacement, in one function: apply a pixel scale and
-// rebuild the canvas and projection to match the current window size.
-static void apply_pixel_scale(float scale)
-{
-	int w = cf_app_get_width();
-	int h = cf_app_get_height();
-	cf_app_set_pixel_scale(scale);
-	cf_app_set_canvas_size((int)(w * scale + 0.5f), (int)(h * scale + 0.5f));
-	cf_draw_projection(cf_ortho_2d(0, 0, (float)w, (float)h));
-}
 
 // Draws `text` such that it's horizontally centered underneath/at `top_center`,
 // with `top_center.y` acting as the top of the text (matches cf_draw_text's
@@ -92,19 +70,19 @@ int main(int argc, char* argv[])
 
 		// Scale mode switching. Forcing a scale on purpose is exactly the same call the
 		// engine-side recipe uses -- there is no separate "override" concept.
-		if (cf_key_just_pressed(CF_KEY_N)) { track_natural = true;  apply_pixel_scale(cf_app_get_natural_pixel_scale()); }
-		if (cf_key_just_pressed(CF_KEY_1)) { track_natural = false; apply_pixel_scale(1.0f); }
-		if (cf_key_just_pressed(CF_KEY_2)) { track_natural = false; apply_pixel_scale(2.0f); }
-		if (cf_key_just_pressed(CF_KEY_4)) { track_natural = false; apply_pixel_scale(4.0f); }
+		if (cf_key_just_pressed(CF_KEY_N)) { track_natural = true;  cf_app_apply_pixel_scale(cf_app_get_natural_pixel_scale()); }
+		if (cf_key_just_pressed(CF_KEY_1)) { track_natural = false; cf_app_apply_pixel_scale(1.0f); }
+		if (cf_key_just_pressed(CF_KEY_2)) { track_natural = false; cf_app_apply_pixel_scale(2.0f); }
+		if (cf_key_just_pressed(CF_KEY_4)) { track_natural = false; cf_app_apply_pixel_scale(4.0f); }
 
 		// The manual-model recipe: window resized -> rebuild canvas + projection at the
 		// current scale. Density changed (moved to another monitor) -> re-apply the new
 		// natural scale, but only when tracking it.
 		if (cf_app_was_resized()) {
-			apply_pixel_scale(cf_app_get_pixel_scale());
+			cf_app_apply_pixel_scale(cf_app_get_pixel_scale());
 		}
 		if (cf_app_dpi_scale_was_changed() && track_natural) {
-			apply_pixel_scale(cf_app_get_natural_pixel_scale());
+			cf_app_apply_pixel_scale(cf_app_get_natural_pixel_scale());
 		}
 
 		cf_push_font("Calibri");

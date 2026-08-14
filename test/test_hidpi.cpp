@@ -59,12 +59,11 @@ static bool s_readback_canvas(CF_Canvas canvas, int w, int h, CF_Pixel* out)
 	return true;
 }
 
-// The manual 2x recipe: scale for AA/glyph density, canvas for resolution, projection stays
-// in logical points (untouched -- it was set once at startup from the logical window size).
+// The manual 2x recipe in its packaged form: scale for AA/glyph density, canvas for
+// resolution, projection rebuilt in logical points (the same value startup chose).
 static void s_apply_2x()
 {
-	cf_app_set_pixel_scale(2.0f);
-	cf_app_set_canvas_size(LOGICAL_W * 2, LOGICAL_H * 2);
+	cf_app_apply_pixel_scale(2.0f);
 }
 
 // cf_app_set_pixel_scale changes only the scale value -- the canvas and window keep their
@@ -143,6 +142,10 @@ TEST_CASE(test_hidpi_set_scale_safe_without_gfx)
 
 	cf_app_set_pixel_scale(2.0f);
 	REQUIRE(cf_app_get_pixel_scale() == 2.0f);
+
+	// The packaged helper skips its canvas/projection half without gfx.
+	cf_app_apply_pixel_scale(3.0f);
+	REQUIRE(cf_app_get_pixel_scale() == 3.0f);
 	return true;
 }
 
@@ -158,6 +161,28 @@ TEST_CASE(test_hidpi_startup_defaults)
 	REQUIRE(cf_app_get_pixel_scale() == natural);
 	REQUIRE(cf_app_get_canvas_width() == (int)CF_ROUNDF(LOGICAL_W * natural));
 	REQUIRE(cf_app_get_canvas_height() == (int)CF_ROUNDF(LOGICAL_H * natural));
+	return true;
+}
+
+// cf_app_apply_pixel_scale is the packaged recipe: one call sets the scale AND resizes the
+// canvas to window * scale (the projection half of its contract is readback-verified by the
+// tests below, which all go through s_apply_2x). Invalid scales are ignored wholesale.
+TEST_CASE(test_hidpi_apply_pixel_scale_helper)
+{
+	if (!test_make_app(LOGICAL_W, LOGICAL_H)) return true; // Headless CI: no display/GPU.
+	HidpiGuard guard;
+
+	cf_app_apply_pixel_scale(2.0f);
+	REQUIRE(cf_app_get_pixel_scale() == 2.0f);
+	REQUIRE(cf_app_get_canvas_width() == LOGICAL_W * 2);
+	REQUIRE(cf_app_get_canvas_height() == LOGICAL_H * 2);
+	REQUIRE(cf_app_get_width() == LOGICAL_W);
+	REQUIRE(cf_app_get_height() == LOGICAL_H);
+
+	// An invalid scale must not half-apply (no canvas resize either).
+	cf_app_apply_pixel_scale(0);
+	REQUIRE(cf_app_get_pixel_scale() == 2.0f);
+	REQUIRE(cf_app_get_canvas_width() == LOGICAL_W * 2);
 	return true;
 }
 
@@ -371,6 +396,7 @@ TEST_SUITE(test_hidpi)
 	RUN_TEST_CASE(test_hidpi_no_high_dpi_initial_scale);
 	RUN_TEST_CASE(test_hidpi_set_scale_safe_without_gfx);
 	RUN_TEST_CASE(test_hidpi_startup_defaults);
+	RUN_TEST_CASE(test_hidpi_apply_pixel_scale_helper);
 	RUN_TEST_CASE(test_hidpi_default_projection_is_points);
 	RUN_TEST_CASE(test_hidpi_full_extent_covers_app_canvas);
 	RUN_TEST_CASE(test_hidpi_projection_sticky_across_canvas_recreate);
