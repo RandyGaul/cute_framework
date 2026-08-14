@@ -477,6 +477,10 @@ void cf_begin_frame_input()
 	app->window_state.restored = false;
 	app->window_state.resized = false;
 	app->display_scale_was_changed = false;
+	// cf_app_set_pixel_scale runs from user code mid-frame; latching here makes the flag
+	// visible for exactly the following frame, mirroring display_scale_was_changed.
+	app->pixel_scale_was_changed = app->pixel_scale_changed_pending;
+	app->pixel_scale_changed_pending = false;
 	cf_joypad_update();
 
 	// Update key durations to simulate "press and hold" style for `key_repeating`.
@@ -499,23 +503,22 @@ void cf_begin_frame_input()
 	}
 }
 
-// Re-queries the window's physical pixel density and, if it changed, updates
-// app->pixel_scale and recreates the default canvas to match.
-// No-ops entirely when CF_APP_OPTIONS_NO_HIGH_DPI_BIT is set, since pixel_scale
-// must stay pinned at 1.0f in that mode.
+// Re-queries the window's physical pixel density and records it. Nothing is applied
+// automatically -- the applied scale (app->pixel_scale) only changes when the user calls
+// cf_app_set_pixel_scale. A density change raises display_scale_was_changed so scale-tracking
+// user code has a single event to watch.
 // Called from both SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED and
 // SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED -- the former is the OS's content-scale
 // signal and the latter is the authoritative physical-pixel-size signal;
 // either can fire without the other depending on platform/monitor setup, so
 // both are handled the same way and this is idempotent when both fire together.
-static void s_refresh_pixel_scale()
+static void s_refresh_natural_pixel_scale()
 {
-	if (app->options & CF_APP_OPTIONS_NO_HIGH_DPI_BIT) return;
-	float pixel_scale = SDL_GetWindowPixelDensity(app->window);
-	if (pixel_scale <= 0.0f) pixel_scale = 1.0f;
-	if (pixel_scale != app->pixel_scale) {
-		app->pixel_scale = pixel_scale;
-		cf_app_recreate_default_canvas_if_needed();
+	float density = SDL_GetWindowPixelDensity(app->window);
+	if (density <= 0.0f) density = 1.0f;
+	if (density != app->natural_pixel_scale) {
+		app->natural_pixel_scale = density;
+		app->display_scale_was_changed = true;
 	}
 }
 
@@ -535,10 +538,11 @@ void cf_pump_input_msgs()
 			break;
 
 		case SDL_EVENT_WINDOW_RESIZED:
+			// Bookkeeping only: the canvas and projection are the user's to update in
+			// response (see cf_app_was_resized and the hidpi sample for the recipe).
 			app->window_state.resized = true;
 			app->w = event.window.data1;
 			app->h = event.window.data2;
-			cf_app_recreate_default_canvas_if_needed();
 			break;
 
 		case SDL_EVENT_WINDOW_MOVED:
@@ -578,11 +582,11 @@ void cf_pump_input_msgs()
 		case SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED:
 			app->display_scale = SDL_GetWindowDisplayScale(app->window);
 			app->display_scale_was_changed = true;
-			s_refresh_pixel_scale();
+			s_refresh_natural_pixel_scale();
 			break;
 
 		case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED:
-			s_refresh_pixel_scale();
+			s_refresh_natural_pixel_scale();
 			break;
 
 		case SDL_EVENT_KEY_DOWN:

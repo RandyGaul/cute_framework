@@ -156,14 +156,6 @@ static void s_canvas(int w, int h)
 	app->offscreen_canvas = cf_make_canvas(params);
 	app->canvas_w = w;
 	app->canvas_h = h;
-	cf_draw_on_app_canvas_resized(w, h);
-}
-
-void cf_app_recreate_default_canvas_if_needed()
-{
-	int w = (int)CF_ROUNDF(app->w * app->pixel_scale);
-	int h = (int)CF_ROUNDF(app->h * app->pixel_scale);
-	s_canvas(w, h);
 }
 
 CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, int y, int w, int h, CF_AppOptionFlags options, const char* argv0)
@@ -344,6 +336,10 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 		app->pixel_scale = window ? SDL_GetWindowPixelDensity(app->window) : 1.0f;
 		if (app->pixel_scale <= 0.0f) app->pixel_scale = 1.0f;
 		if (options & CF_APP_OPTIONS_NO_HIGH_DPI_BIT) app->pixel_scale = 1.0f;
+		// The initial pixel scale IS the natural density (with NO_HIGH_DPI the window has a
+		// 1x backbuffer, so SDL reports 1.0 and both values agree). After init, pixel_scale
+		// only ever changes via cf_app_set_pixel_scale.
+		app->natural_pixel_scale = app->pixel_scale;
 	}
 	::app = app;
 	cf_make_aseprite_cache();
@@ -361,7 +357,10 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 		cf_load_internal_shaders();
 		cf_make_draw();
 
-		cf_app_recreate_default_canvas_if_needed();
+		// The one and only automatic canvas/projection setup: canvas at the window's natural
+		// pixel size, default 2d projection (set by cf_make_draw) spanning the logical size.
+		// From here on, canvas size, pixel scale, and projection change only by user calls.
+		s_canvas((int)CF_ROUNDF(app->w * app->pixel_scale), (int)CF_ROUNDF(app->h * app->pixel_scale));
 
 		// Create the default font.
 		make_font_from_memory(calibri_data, calibri_sz, "Calibri");
@@ -650,16 +649,31 @@ float cf_app_get_pixel_scale()
 	return app->pixel_scale;
 }
 
+void cf_app_set_pixel_scale(float scale)
+{
+	if (!(scale > 0)) return;
+	if (scale == app->pixel_scale) return;
+	app->pixel_scale = scale;
+	app->pixel_scale_changed_pending = true;
+	cf_draw_on_pixel_scale_changed();
+}
+
+bool cf_app_pixel_scale_was_changed()
+{
+	return app->pixel_scale_was_changed;
+}
+
+float cf_app_get_natural_pixel_scale()
+{
+	return app->natural_pixel_scale;
+}
+
 void cf_app_set_size(int w, int h)
 {
 	SDL_SetWindowSize(app->window, w, h);
 	app->w = w;
 	app->h = h;
 	app->sync_window = true;
-	// Recreate the app canvas now rather than waiting for the resize event: hidden windows
-	// don't reliably deliver one, and a caller who set the size expects the canvas (and the
-	// default 2d projection that tracks it) to match immediately.
-	cf_app_recreate_default_canvas_if_needed();
 }
 
 void cf_app_get_position(int* x, int* y)
@@ -773,7 +787,9 @@ bool cf_app_set_msaa(int sample_count)
 
 	if (supported && app->sample_count != sample_count) {
 		app->sample_count = sample_count;
-		cf_app_recreate_default_canvas_if_needed();
+		// Rebuild the canvas with the new sample count at its current size -- an MSAA
+		// change must not stomp a user-chosen canvas size.
+		s_canvas(app->canvas_w, app->canvas_h);
 	}
 
 	return supported;

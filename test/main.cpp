@@ -39,6 +39,7 @@ TEST_SUITE(test_color);
 TEST_SUITE(test_coroutine);
 TEST_SUITE(test_doubly_list);
 TEST_SUITE(test_hashtable);
+TEST_SUITE(test_hidpi);
 TEST_SUITE(test_path);
 TEST_SUITE(test_custom_sprite);
 TEST_SUITE(test_sprite);
@@ -126,6 +127,7 @@ int main(int argc, char* argv[])
 	RUN_TRACED(test_shader_reload);
 	RUN_TRACED(test_shader_directory);
 	RUN_TRACED(test_canvas_clear);
+	RUN_TRACED(test_hidpi);
 	RUN_TRACED(test_mrt);
 	RUN_TRACED(test_texture_types);
 	RUN_TRACED(test_shadow_sampling);
