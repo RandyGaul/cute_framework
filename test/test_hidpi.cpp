@@ -330,6 +330,13 @@ TEST_CASE(test_hidpi_resize_event_does_not_recreate_canvas)
 	if (!test_make_app(LOGICAL_W, LOGICAL_H)) return true; // Headless CI: no display/GPU.
 	HidpiGuard guard;
 
+	// test_make_app's cf_app_set_size may still have an SDL_SetWindowSize confirmation in
+	// flight (on X11 the ConfigureNotify can arrive late, as a stale-then-fresh burst).
+	// Settle it now so a late real resize event can't land in the same pump as the
+	// synthetic one below and stomp app->w after it.
+	cf_app_draw_onto_screen(false);
+	cf_app_update(NULL);
+
 	cf_app_set_canvas_size(300, 200);
 	REQUIRE(cf_app_get_canvas_width() == 300);
 	REQUIRE(cf_app_get_canvas_height() == 200);
