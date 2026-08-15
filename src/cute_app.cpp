@@ -286,6 +286,10 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 	}
 
 	SDL_Window* window = NULL;
+	// The app isn't constructed yet, so resolve the creation display's content scale
+	// directly: w/h are logical points, SDL_CreateWindow wants raw window coordinates.
+	float creation_content_scale = SDL_GetDisplayContentScale(display_id ? display_id : SDL_GetPrimaryDisplay());
+	if (creation_content_scale <= 0) creation_content_scale = 1.0f;
 	if (use_gfx) {
 		Uint32 flags = 0;
 		if (!(options & CF_APP_OPTIONS_NO_HIGH_DPI_BIT)) {
@@ -299,8 +303,8 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 
 		SDL_PropertiesID props = SDL_CreateProperties();
 		SDL_SetStringProperty(props, SDL_PROP_WINDOW_CREATE_TITLE_STRING, window_title);
-		SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER, w);
-		SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER, h);
+		SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER, (int)CF_ROUNDF(w * creation_content_scale));
+		SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER, (int)CF_ROUNDF(h * creation_content_scale));
 		SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_FLAGS_NUMBER, flags);
 		if (options & CF_APP_OPTIONS_WINDOW_POS_CENTERED_BIT) {
 			SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_X_NUMBER, SDL_WINDOWPOS_CENTERED_DISPLAY(display_id));
@@ -333,13 +337,12 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 	if (window) {
 		SDL_GetWindowPosition(app->window, &app->x, &app->y);
 		app->display_scale = SDL_GetWindowDisplayScale(app->window);
-		app->pixel_scale = window ? SDL_GetWindowPixelDensity(app->window) : 1.0f;
-		if (app->pixel_scale <= 0.0f) app->pixel_scale = 1.0f;
+		if (app->display_scale <= 0.0f) app->display_scale = 1.0f;
+		// The initial pixel scale follows what the OS wants (with NO_HIGH_DPI the window
+		// has a 1x backbuffer, so pin to 1.0 to match it). After init, pixel_scale only
+		// ever changes via cf_app_set_pixel_scale / cf_app_update_display.
+		app->pixel_scale = app->display_scale;
 		if (options & CF_APP_OPTIONS_NO_HIGH_DPI_BIT) app->pixel_scale = 1.0f;
-		// The initial pixel scale IS the natural density (with NO_HIGH_DPI the window has a
-		// 1x backbuffer, so SDL reports 1.0 and both values agree). After init, pixel_scale
-		// only ever changes via cf_app_set_pixel_scale.
-		app->natural_pixel_scale = app->pixel_scale;
 	}
 	::app = app;
 	cf_make_aseprite_cache();
@@ -634,6 +637,12 @@ void cf_app_show_window()
 	SDL_ShowWindow(app->window);
 }
 
+float cf_app_content_scale()
+{
+	float scale = app->window ? SDL_GetDisplayContentScale(SDL_GetDisplayForWindow(app->window)) : 1.0f;
+	return scale > 0 ? scale : 1.0f;
+}
+
 float cf_app_get_display_scale()
 {
 	return app->display_scale;
@@ -663,12 +672,7 @@ bool cf_app_pixel_scale_was_changed()
 	return app->pixel_scale_was_changed;
 }
 
-float cf_app_get_natural_pixel_scale()
-{
-	return app->natural_pixel_scale;
-}
-
-void cf_app_apply_pixel_scale(float scale)
+void cf_app_update_display(float scale)
 {
 	if (!(scale > 0)) return;
 	cf_app_set_pixel_scale(scale);
@@ -681,7 +685,10 @@ void cf_app_apply_pixel_scale(float scale)
 
 void cf_app_set_size(int w, int h)
 {
-	SDL_SetWindowSize(app->window, w, h);
+	// Public sizes are logical points; SDL_SetWindowSize wants raw window coordinates
+	// (identical on macOS, points * content scale on Windows/X11).
+	float cs = cf_app_content_scale();
+	SDL_SetWindowSize(app->window, (int)CF_ROUNDF(w * cs), (int)CF_ROUNDF(h * cs));
 	app->w = w;
 	app->h = h;
 	app->sync_window = true;

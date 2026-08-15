@@ -15,7 +15,7 @@
 using namespace Cute;
 
 // The pixel scale (physical pixels per logical point) is a user-controlled value: it starts
-// at the display's natural density and afterwards changes only via cf_app_set_pixel_scale.
+// at the display scale the OS wants and afterwards changes only via cf_app_set_pixel_scale.
 // Nothing -- not window resizes, not display density changes -- resizes the app canvas or
 // touches the default 2d projection behind the user's back. CI and most dev machines run at
 // density 1.0 where points and pixels agree, so these tests set a non-unity scale explicitly
@@ -63,7 +63,7 @@ static bool s_readback_canvas(CF_Canvas canvas, int w, int h, CF_Pixel* out)
 // resolution, projection rebuilt in logical points (the same value startup chose).
 static void s_apply_2x()
 {
-	cf_app_apply_pixel_scale(2.0f);
+	cf_app_update_display(2.0f);
 }
 
 // cf_app_set_pixel_scale changes only the scale value -- the canvas and window keep their
@@ -74,7 +74,7 @@ TEST_CASE(test_hidpi_set_pixel_scale_is_value_only)
 	HidpiGuard guard;
 
 	// 3.0f can't collide with any real display density, so this is a guaranteed change
-	// even on a machine whose natural scale is already 2.0.
+	// even on a machine whose display scale is already 2.0.
 	int canvas_w = cf_app_get_canvas_width();
 	int canvas_h = cf_app_get_canvas_height();
 	cf_app_set_pixel_scale(3.0f);
@@ -93,7 +93,7 @@ TEST_CASE(test_hidpi_set_pixel_scale_is_value_only)
 }
 
 // The change flag latches at the next cf_app_update and reads true for exactly one frame,
-// mirroring cf_app_dpi_scale_was_changed.
+// mirroring cf_app_display_scale_was_changed.
 TEST_CASE(test_hidpi_pixel_scale_was_changed_flag)
 {
 	if (!test_make_app(LOGICAL_W, LOGICAL_H)) return true; // Headless CI: no display/GPU.
@@ -103,7 +103,7 @@ TEST_CASE(test_hidpi_pixel_scale_was_changed_flag)
 	// honestly flagged); settle its one visible frame before observing.
 	cf_app_update(NULL);
 
-	// 3.0f can't collide with the natural density this machine started at.
+	// 3.0f can't collide with the display scale this machine started at.
 	REQUIRE(!cf_app_pixel_scale_was_changed());
 	cf_app_set_pixel_scale(3.0f);
 	REQUIRE(!cf_app_pixel_scale_was_changed()); // Not visible until the next update.
@@ -120,14 +120,14 @@ TEST_CASE(test_hidpi_pixel_scale_was_changed_flag)
 }
 
 // NO_HIGH_DPI only pins the INITIAL scale at 1.0 (the window gets a 1x backbuffer, so the
-// natural density is 1.0 too). The value stays user-controllable afterwards.
+// display scale is 1.0 too). The value stays user-controllable afterwards.
 TEST_CASE(test_hidpi_no_high_dpi_initial_scale)
 {
 	if (!test_make_app(LOGICAL_W, LOGICAL_H, CF_APP_OPTIONS_NO_HIGH_DPI_BIT)) return true; // Headless CI: no display/GPU.
 	HidpiGuard guard;
 
 	REQUIRE(cf_app_get_pixel_scale() == 1.0f);
-	REQUIRE(cf_app_get_natural_pixel_scale() == 1.0f);
+	REQUIRE(cf_app_get_display_scale() == 1.0f);
 	REQUIRE(cf_app_get_canvas_width() == LOGICAL_W);
 	REQUIRE(cf_app_get_canvas_height() == LOGICAL_H);
 	return true;
@@ -144,35 +144,35 @@ TEST_CASE(test_hidpi_set_scale_safe_without_gfx)
 	REQUIRE(cf_app_get_pixel_scale() == 2.0f);
 
 	// The packaged helper skips its canvas/projection half without gfx.
-	cf_app_apply_pixel_scale(3.0f);
+	cf_app_update_display(3.0f);
 	REQUIRE(cf_app_get_pixel_scale() == 3.0f);
 	return true;
 }
 
-// Startup is the one automatic step: canvas at logical size times the natural density, and
-// the applied scale starts equal to the natural one.
+// Startup is the one automatic step: canvas at logical size times the display scale, and
+// the applied pixel scale starts equal to it.
 TEST_CASE(test_hidpi_startup_defaults)
 {
 	if (!test_make_app(LOGICAL_W, LOGICAL_H)) return true; // Headless CI: no display/GPU.
 	HidpiGuard guard;
 
-	float natural = cf_app_get_natural_pixel_scale();
-	REQUIRE(natural > 0);
-	REQUIRE(cf_app_get_pixel_scale() == natural);
-	REQUIRE(cf_app_get_canvas_width() == (int)CF_ROUNDF(LOGICAL_W * natural));
-	REQUIRE(cf_app_get_canvas_height() == (int)CF_ROUNDF(LOGICAL_H * natural));
+	float display_scale = cf_app_get_display_scale();
+	REQUIRE(display_scale > 0);
+	REQUIRE(cf_app_get_pixel_scale() == display_scale);
+	REQUIRE(cf_app_get_canvas_width() == (int)CF_ROUNDF(LOGICAL_W * display_scale));
+	REQUIRE(cf_app_get_canvas_height() == (int)CF_ROUNDF(LOGICAL_H * display_scale));
 	return true;
 }
 
-// cf_app_apply_pixel_scale is the packaged recipe: one call sets the scale AND resizes the
+// cf_app_update_display is the packaged recipe: one call sets the scale AND resizes the
 // canvas to window * scale (the projection half of its contract is readback-verified by the
 // tests below, which all go through s_apply_2x). Invalid scales are ignored wholesale.
-TEST_CASE(test_hidpi_apply_pixel_scale_helper)
+TEST_CASE(test_hidpi_update_display_helper)
 {
 	if (!test_make_app(LOGICAL_W, LOGICAL_H)) return true; // Headless CI: no display/GPU.
 	HidpiGuard guard;
 
-	cf_app_apply_pixel_scale(2.0f);
+	cf_app_update_display(2.0f);
 	REQUIRE(cf_app_get_pixel_scale() == 2.0f);
 	REQUIRE(cf_app_get_canvas_width() == LOGICAL_W * 2);
 	REQUIRE(cf_app_get_canvas_height() == LOGICAL_H * 2);
@@ -180,7 +180,7 @@ TEST_CASE(test_hidpi_apply_pixel_scale_helper)
 	REQUIRE(cf_app_get_height() == LOGICAL_H);
 
 	// An invalid scale must not half-apply (no canvas resize either).
-	cf_app_apply_pixel_scale(0);
+	cf_app_update_display(0);
 	REQUIRE(cf_app_get_pixel_scale() == 2.0f);
 	REQUIRE(cf_app_get_canvas_width() == LOGICAL_W * 2);
 	return true;
@@ -396,7 +396,7 @@ TEST_SUITE(test_hidpi)
 	RUN_TEST_CASE(test_hidpi_no_high_dpi_initial_scale);
 	RUN_TEST_CASE(test_hidpi_set_scale_safe_without_gfx);
 	RUN_TEST_CASE(test_hidpi_startup_defaults);
-	RUN_TEST_CASE(test_hidpi_apply_pixel_scale_helper);
+	RUN_TEST_CASE(test_hidpi_update_display_helper);
 	RUN_TEST_CASE(test_hidpi_default_projection_is_points);
 	RUN_TEST_CASE(test_hidpi_full_extent_covers_app_canvas);
 	RUN_TEST_CASE(test_hidpi_projection_sticky_across_canvas_recreate);
