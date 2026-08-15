@@ -334,17 +334,24 @@ TEST_CASE(test_hidpi_resize_event_does_not_recreate_canvas)
 	REQUIRE(cf_app_get_canvas_width() == 300);
 	REQUIRE(cf_app_get_canvas_height() == 200);
 
+	// SDL resize events carry raw window coordinates, which CF converts to logical points
+	// by the display's content scale (1.0 on macOS, but e.g. X11 can report otherwise) --
+	// the synthetic event must speak raw coordinates like a real one.
+	float cs = SDL_GetDisplayContentScale(SDL_GetDisplayForWindow(app->window));
+	if (cs <= 0) cs = 1.0f;
 	SDL_Event e = { };
 	e.type = SDL_EVENT_WINDOW_RESIZED;
 	e.window.windowID = SDL_GetWindowID(app->window);
-	e.window.data1 = 500;
-	e.window.data2 = 400;
+	e.window.data1 = (int)CF_ROUNDF(500 * cs);
+	e.window.data2 = (int)CF_ROUNDF(400 * cs);
 	SDL_PushEvent(&e);
 	cf_app_update(NULL);
 
 	REQUIRE(cf_app_was_resized());
-	REQUIRE(cf_app_get_width() == 500);
-	REQUIRE(cf_app_get_height() == 400);
+	// Compare against the exact raw->points round-trip the handler computes: for content
+	// scales that don't divide integers cleanly the result can differ from 500 by one.
+	REQUIRE(cf_app_get_width() == (int)CF_ROUNDF(e.window.data1 / cs));
+	REQUIRE(cf_app_get_height() == (int)CF_ROUNDF(e.window.data2 / cs));
 	REQUIRE(cf_app_get_canvas_width() == 300);
 	REQUIRE(cf_app_get_canvas_height() == 200);
 	return true;
