@@ -503,21 +503,21 @@ void cf_begin_frame_input()
 	}
 }
 
-// Re-queries the window's physical pixel density and records it. Nothing is applied
-// automatically -- the applied scale (app->pixel_scale) only changes when the user calls
-// cf_app_set_pixel_scale. A density change raises display_scale_was_changed so scale-tracking
-// user code has a single event to watch.
+// Re-queries what the OS wants (SDL_GetWindowDisplayScale: the point-to-pixel conversion
+// for the window's display) and records it. Nothing is applied automatically -- the applied
+// scale (app->pixel_scale) only changes when the user calls cf_app_set_pixel_scale or
+// cf_app_update_display. A change raises display_scale_was_changed so scale-tracking user
+// code has a single event to watch.
 // Called from both SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED and
-// SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED -- the former is the OS's content-scale
-// signal and the latter is the authoritative physical-pixel-size signal;
-// either can fire without the other depending on platform/monitor setup, so
-// both are handled the same way and this is idempotent when both fire together.
-static void s_refresh_natural_pixel_scale()
+// SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED -- either can fire without the other
+// depending on platform/monitor setup, so both are handled the same way and
+// this is idempotent when both fire together.
+static void s_refresh_display_scale()
 {
-	float density = SDL_GetWindowPixelDensity(app->window);
-	if (density <= 0.0f) density = 1.0f;
-	if (density != app->natural_pixel_scale) {
-		app->natural_pixel_scale = density;
+	float scale = SDL_GetWindowDisplayScale(app->window);
+	if (scale <= 0.0f) scale = 1.0f;
+	if (scale != app->display_scale) {
+		app->display_scale = scale;
 		app->display_scale_was_changed = true;
 	}
 }
@@ -537,13 +537,16 @@ void cf_pump_input_msgs()
 			app->running = false;
 			break;
 
-		case SDL_EVENT_WINDOW_RESIZED:
+		case SDL_EVENT_WINDOW_RESIZED: {
 			// Bookkeeping only: the canvas and projection are the user's to update in
 			// response (see cf_app_was_resized and the hidpi sample for the recipe).
+			// SDL reports raw window coordinates; CF stores logical points (identical on
+			// macOS, divided by the OS content scale on Windows/X11).
+			float cs = cf_app_content_scale();
 			app->window_state.resized = true;
-			app->w = event.window.data1;
-			app->h = event.window.data2;
-			break;
+			app->w = (int)CF_ROUNDF(event.window.data1 / cs);
+			app->h = (int)CF_ROUNDF(event.window.data2 / cs);
+		}	break;
 
 		case SDL_EVENT_WINDOW_MOVED:
 			app->window_state.moved = true;
@@ -580,13 +583,8 @@ void cf_pump_input_msgs()
 			break;
 
 		case SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED:
-			app->display_scale = SDL_GetWindowDisplayScale(app->window);
-			app->display_scale_was_changed = true;
-			s_refresh_natural_pixel_scale();
-			break;
-
 		case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED:
-			s_refresh_natural_pixel_scale();
+			s_refresh_display_scale();
 			break;
 
 		case SDL_EVENT_KEY_DOWN:
@@ -629,12 +627,15 @@ void cf_pump_input_msgs()
 			app->ime_composition_selection_len = event.edit.length;
 		}	break;
 
-		case SDL_EVENT_MOUSE_MOTION:
-			app->mouse.x = event.motion.x;
-			app->mouse.y = event.motion.y;
-			app->mouse.xrel = event.motion.xrel;
-			app->mouse.yrel = -event.motion.yrel;
-			break;
+		case SDL_EVENT_MOUSE_MOTION: {
+			// SDL reports raw window coordinates; CF works in logical points (identical on
+			// macOS, divided by the OS content scale on Windows/X11).
+			float cs = cf_app_content_scale();
+			app->mouse.x = event.motion.x / cs;
+			app->mouse.y = event.motion.y / cs;
+			app->mouse.xrel = event.motion.xrel / cs;
+			app->mouse.yrel = -event.motion.yrel / cs;
+		}	break;
 
 		case SDL_EVENT_MOUSE_BUTTON_DOWN:
 			switch (event.button.button)
@@ -645,8 +646,8 @@ void cf_pump_input_msgs()
 			case SDL_BUTTON_X1: app->mouse.x1_button = 1; break;
 			case SDL_BUTTON_X2: app->mouse.x2_button = 1; break;
 			}
-			app->mouse.x = event.button.x;
-			app->mouse.y = event.button.y;
+			app->mouse.x = event.button.x / cf_app_content_scale();
+			app->mouse.y = event.button.y / cf_app_content_scale();
 			if (event.button.clicks == 1) {
 				app->mouse.click_type = CF_MOUSE_CLICK_SINGLE;
 			} else if (event.button.clicks == 2) {
@@ -663,8 +664,8 @@ void cf_pump_input_msgs()
 			case SDL_BUTTON_X1: app->mouse.x1_button = 0; break;
 			case SDL_BUTTON_X2: app->mouse.x2_button = 0; break;
 			}
-			app->mouse.x = event.button.x;
-			app->mouse.y = event.button.y;
+			app->mouse.x = event.button.x / cf_app_content_scale();
+			app->mouse.y = event.button.y / cf_app_content_scale();
 			if (event.button.clicks == 1) {
 				app->mouse.click_type = CF_MOUSE_CLICK_SINGLE;
 			} else if (event.button.clicks == 2) {

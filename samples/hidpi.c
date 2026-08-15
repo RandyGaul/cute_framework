@@ -3,21 +3,21 @@
 
 	The pixel scale (physical pixels per logical point) is a plain user-controlled
 	value, like the window or canvas size. At startup CF creates the app canvas
-	once at window_points * the display's natural density and sets the default 2d
+	once at window_points * the display scale the OS wants and sets the default 2d
 	projection once from the logical window size -- and never touches either again.
 	Reacting to window resizes and display-density changes is YOUR code, and
-	cf_app_apply_pixel_scale (= set the scale, resize the canvas to match the
+	cf_app_update_display (= set the scale, resize the canvas to match the
 	window, rebuild the projection) is the whole recipe:
 
-	    if (cf_app_was_resized()) cf_app_apply_pixel_scale(cf_app_get_pixel_scale());
-	    if (cf_app_dpi_scale_was_changed() && tracking_the_display) {
-	        cf_app_apply_pixel_scale(cf_app_get_natural_pixel_scale());
+	    if (cf_app_was_resized()) cf_app_update_display(cf_app_get_pixel_scale());
+	    if (cf_app_display_scale_was_changed() && tracking_the_display) {
+	        cf_app_update_display(cf_app_get_display_scale());
 	    }
 
 	A fixed-size, non-resizable window on one display needs NONE of this -- the
 	startup defaults are already correct.
 
-	Interactivity: press N to track the display's natural density (the default),
+	Interactivity: press N to follow the OS display scale (the default),
 	or 1 / 2 / 4 to force a 1x / 2x / 4x pixel scale -- forcing a value is also
 	how you test HiDPI behavior on a non-HiDPI monitor. Resize the window to
 	watch the recipe keep everything crisp.
@@ -28,7 +28,7 @@
 	  - A row of basic SDF shapes (filled circle, outlined circle, lines
 	    of varying thickness including a thin ~1px line, a filled rounded
 	    box, and an outlined triangle) to eyeball shape edge antialiasing.
-	  - A live readout of the applied and natural pixel scales alongside
+	  - A live readout of the applied pixel scale and the OS display scale alongside
 	    the physical canvas size.
 */
 
@@ -62,27 +62,27 @@ int main(int argc, char* argv[])
 	cf_sprite_play(&sprite, "idle");
 	sprite.scale = cf_v2(3.0f, 3.0f);
 
-	// true = follow the display's natural density; false = a forced 1x/2x/4x scale.
-	bool track_natural = true;
+	// true = follow the OS display scale; false = a forced 1x/2x/4x scale.
+	bool track_display = true;
 
 	while (cf_app_is_running()) {
 		cf_app_update(NULL);
 
 		// Scale mode switching. Forcing a scale on purpose is exactly the same call the
 		// engine-side recipe uses -- there is no separate "override" concept.
-		if (cf_key_just_pressed(CF_KEY_N)) { track_natural = true;  cf_app_apply_pixel_scale(cf_app_get_natural_pixel_scale()); }
-		if (cf_key_just_pressed(CF_KEY_1)) { track_natural = false; cf_app_apply_pixel_scale(1.0f); }
-		if (cf_key_just_pressed(CF_KEY_2)) { track_natural = false; cf_app_apply_pixel_scale(2.0f); }
-		if (cf_key_just_pressed(CF_KEY_4)) { track_natural = false; cf_app_apply_pixel_scale(4.0f); }
+		if (cf_key_just_pressed(CF_KEY_N)) { track_display = true;  cf_app_update_display(cf_app_get_display_scale()); }
+		if (cf_key_just_pressed(CF_KEY_1)) { track_display = false; cf_app_update_display(1.0f); }
+		if (cf_key_just_pressed(CF_KEY_2)) { track_display = false; cf_app_update_display(2.0f); }
+		if (cf_key_just_pressed(CF_KEY_4)) { track_display = false; cf_app_update_display(4.0f); }
 
 		// The manual-model recipe: window resized -> rebuild canvas + projection at the
-		// current scale. Density changed (moved to another monitor) -> re-apply the new
-		// natural scale, but only when tracking it.
+		// current scale. Display scale changed (moved to another monitor) -> update to
+		// the new scale, but only in follow mode.
 		if (cf_app_was_resized()) {
-			cf_app_apply_pixel_scale(cf_app_get_pixel_scale());
+			cf_app_update_display(cf_app_get_pixel_scale());
 		}
-		if (cf_app_dpi_scale_was_changed() && track_natural) {
-			cf_app_apply_pixel_scale(cf_app_get_natural_pixel_scale());
+		if (cf_app_display_scale_was_changed() && track_display) {
+			cf_app_update_display(cf_app_get_display_scale());
 		}
 
 		cf_push_font("Calibri");
@@ -107,9 +107,9 @@ int main(int argc, char* argv[])
 		int physical_h = cf_app_get_canvas_height();
 		snprintf(
 			pixel_scale_buf, sizeof(pixel_scale_buf),
-			"pixel_scale: %.2fx %s (natural: %.2fx, physical canvas: %dx%d) -- press N/1/2/4",
-			pixel_scale, track_natural ? "[natural]" : "[forced]",
-			cf_app_get_natural_pixel_scale(), physical_w, physical_h
+			"pixel_scale: %.2fx %s (display: %.2fx, physical canvas: %dx%d) -- press N/1/2/4",
+			pixel_scale, track_display ? "[display]" : "[forced]",
+			cf_app_get_display_scale(), physical_w, physical_h
 		);
 		cf_push_font_size(12);
 		draw_text_centered(pixel_scale_buf, cf_v2(0, 300));
