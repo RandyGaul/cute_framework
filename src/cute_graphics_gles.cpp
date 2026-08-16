@@ -159,6 +159,7 @@ struct CF_GL_Texture
 	GLenum upload_fmt   = GL_NONE;
 	GLenum upload_type  = GL_NONE;
 	bool has_mips = false;
+	int mip_count = 0; // 0 = full chain; otherwise an explicit partial chain length (CF_TextureParams::mip_count).
 	GLint min_filter = GL_LINEAR;
 	GLint mag_filter = GL_LINEAR;
 	GLint wrap_u = GL_REPEAT;
@@ -901,8 +902,11 @@ static inline void s_apply_sampler_state_to_handle(const CF_GL_Texture* t, GLuin
 	glTexParameteri(t->target, GL_TEXTURE_MIN_FILTER, t->min_filter);
 	glTexParameteri(t->target, GL_TEXTURE_MAG_FILTER, t->mag_filter);
 	// Without this, a standalone sampler using a mipmap min-filter would make
-	// a mipless texture incomplete (sampling black).
+	// a mipless texture incomplete (sampling black). Partial chains clamp for the same
+	// completeness reason, and so glGenerateMipmap stops at the last allocated level
+	// (it derives levels base+1 through q, where q honors GL_TEXTURE_MAX_LEVEL).
 	if (!t->has_mips) glTexParameteri(t->target, GL_TEXTURE_MAX_LEVEL, 0);
+	else if (t->mip_count > 0) glTexParameteri(t->target, GL_TEXTURE_MAX_LEVEL, t->mip_count - 1);
 	glTexParameteri(t->target, GL_TEXTURE_WRAP_S, t->wrap_u);
 	glTexParameteri(t->target, GL_TEXTURE_WRAP_T, t->wrap_v);
 	if (t->target == GL_TEXTURE_CUBE_MAP || t->target == GL_TEXTURE_3D) {
@@ -921,6 +925,7 @@ static inline void s_apply_sampler_params(CF_GL_Texture* t, const CF_TexturePara
 	CF_GL_PixelFormatInfo* info = s_find_pixel_format_info(p.pixel_format);
 	uint32_t caps = info ? info->caps : 0;
 	t->has_mips = p.allocate_mipmaps || p.mip_count > 1;
+	t->mip_count = t->has_mips ? p.mip_count : 0;
 	GLenum min_filter = s_wrap(p.mip_filter, t->has_mips);
 	GLenum mag_filter = s_wrap(p.filter);
 	if (!(caps & CF_GL_FMT_CAP_LINEAR)) {
@@ -952,11 +957,12 @@ static inline bool s_texture_allocate_storage(CF_GL_Texture* t, CF_GL_Slot* slot
 		glTexImage2D(GL_TEXTURE_2D, 0, t->internal_fmt, t->w, t->h, 0, t->upload_fmt, t->upload_type, NULL);
 	}
 	if (t->has_mips) {
-		// Allocate the whole chain up front: explicit-mip uploads (cf_texture_update_mip /
+		// Allocate the chain up front: explicit-mip uploads (cf_texture_update_mip /
 		// _layer_mip) glTexSubImage into levels that must already have storage, and
-		// glGenerateMipmap isn't guaranteed to have run first.
+		// glGenerateMipmap isn't guaranteed to have run first. An explicit mip_count
+		// stops the chain early (GL_TEXTURE_MAX_LEVEL clamps sampling to match).
 		int lw = t->w, lh = t->h, ld = t->layers;
-		for (int level = 1; lw > 1 || lh > 1; ++level) {
+		for (int level = 1; (lw > 1 || lh > 1) && !(t->mip_count > 0 && level >= t->mip_count); ++level) {
 			lw = cf_max(lw >> 1, 1);
 			lh = cf_max(lh >> 1, 1);
 			if (t->target == GL_TEXTURE_CUBE_MAP) {

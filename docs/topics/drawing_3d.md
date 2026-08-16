@@ -151,6 +151,8 @@ cf_draw3d_pop_texture();
 
 The image lives wherever the texture atlas compiler decides, the sub-rect arrives on the `in_uv_rect` instance lane, and the shader samples `texture(u_image, mix(in_uv_rect.xy, in_uv_rect.zw, in_uv))`. There is no atlas API to hold correctly -- and because drawing meshes together is itself the packing signal, many meshes with many different images still converge toward a single instanced draw. Mesh uvs must lie in [0, 1] (hardware wrap can't tile inside an atlas sub-rect); meshes with tiling uvs bind a standalone `CF_Texture` via `cf_draw3d_set_texture` instead. Mesh uv (0,0) samples the image's top-left, matching 2D sprites.
 
+Sprites viewed at a distance or a steep angle in 3D shimmer with swimming pixels unless the atlas carries mipmaps -- flip them on once at init with `cf_draw3d_mips(4)`, and pair it with `cf_draw3d_anisotropy(4)` so oblique views (floor decals, tilted standees) keep their sharpness. Every atlased sprite benefits, and the atlas compiler handles the rest: pages pack with wide enough gutters that coarse mip levels never blend neighboring images, and every page rebuild regenerates its chain automatically.
+
 ## Draw Lists and Baking
 
 `CF_DrawList` records 3D submissions just like 2D drawing, and adds a bake: at `cf_draw_list_end`, submissions group by their full state *regardless of submission order*, each group's instances write out once, and replay issues one instanced draw per group. The city sample records 10,000 buildings plus ground into one list -- that's **one instanced draw per pass**, at four-digit framerates in a Debug build, with zero per-building CPU cost at replay.

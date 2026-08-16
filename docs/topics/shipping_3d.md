@@ -77,6 +77,13 @@ cf_generate_mipmaps(tex);
 
 Anisotropic filtering (`max_anisotropy` on `CF_TextureParams`) is the difference between smeared and readable ground textures at grazing angles; it's cheap on everything modern.
 
+**Sprites go through the atlas, and the atlas has its own switch.** Everything above covers textures you create yourself; sprites drawn through `cf_draw3d_sprite`, `cf_draw3d_billboard`, or `cf_draw3d_push_texture` sample atlas pages the compiler owns. One call each at init mips and aniso-filters every one of them:
+
+```cpp
+cf_draw3d_mips(4);        // Pages carry a 4-level chain; gutters widen so levels never bleed.
+cf_draw3d_anisotropy(4);  // Oblique sprites (decals, standees) stay sharp.
+```
+
 ## Recipe: Culling Baked Draw Lists
 
 A baked `CF_DrawList` replays as one instanced draw -- which also makes it all-or-nothing: there is no per-instance culling inside a bake. The pattern is to make the *list* the culling granularity:
@@ -104,6 +111,7 @@ When frustum granularity isn't enough -- dense cities, per-instance occlusion --
 - [ ] Windows/D3D12 run tested -- especially anything shadow-cube shaped
 - [ ] Web build tested early if browsers are a target (compute/indirect/MSAA/BC gaps designed out, not ported out)
 - [ ] Textures block-compressed with mips on native; mipped PNG fallback on web; anisotropy on
+- [ ] Sprite atlas mipped if sprites render in 3D (`cf_draw3d_mips` + `cf_draw3d_anisotropy`)
 - [ ] MSAA only on single-target canvases, or post AA
 - [ ] Draw lists chunked for frustum culling
 - [ ] `cf_draw3d_stats` near zero avoidable splits; `cf_push_gpu_label` regions in place for GPU captures

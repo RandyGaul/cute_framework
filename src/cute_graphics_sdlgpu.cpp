@@ -611,6 +611,9 @@ static inline CF_Texture s_make_texture(CF_TextureParams params, CF_SampleCount 
 	if (!s_is_depth(params.pixel_format) || params.compare_enable) {
 		SDL_GPUSamplerCreateInfo sampler_info = SDL_GPUSamplerCreateInfoDefaults();
 		sampler_info.mip_lod_bias = params.mip_lod_bias;
+		// Without the enable flag max_anisotropy is ignored wholesale (it also overrides
+		// mipmap_mode filtering per the SDL_GPU/Vulkan rules, so only enable when asked).
+		sampler_info.enable_anisotropy = params.max_anisotropy > 1;
 		sampler_info.max_anisotropy = params.max_anisotropy;
 		sampler_info.min_filter = s_wrap(params.filter);
 		sampler_info.mag_filter = s_wrap(params.filter);

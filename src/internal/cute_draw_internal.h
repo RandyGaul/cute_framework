@@ -325,6 +325,16 @@ struct CF_Draw
 	// until the next frame packs them.
 	bool defragged_this_frame = false;
 	atlas_cache_t atlas_cache;
+	// Sprite-atlas mip settings (cf_draw3d_mips / cf_draw3d_anisotropy). A count of 1 means
+	// no mip chain. Changing either rebuilds the atlas cache.
+	int atlas_mip_count = 1;
+	int atlas_anisotropy = 1;
+	// Premade atlas registrations (cf_register_premade_atlas), flattened so atlas cache
+	// rebuilds (atlas dims or mip settings changing) can re-register them: one record per
+	// premade atlas, its entries concatenated in registration order.
+	struct PremadeRecord { uint64_t texture_id; int w, h, entry_count; };
+	Cute::Array<PremadeRecord> premade_atlas_records;
+	Cute::Array<atlas_cache_premade_entry_t> premade_atlas_entries;
 	CF_Material material;
 	CF_Arena uniform_arena;
 	Cute::Array<float> alpha_discards = { 1.0f };

@@ -221,6 +221,11 @@ int main(int argc, char* argv[])
 
 	cf_canvas_set_clear_color(cf_app_get_canvas(), cf_make_color_rgb_f(0.05f, 0.06f, 0.12f));
 
+	// Sprites at 3d distances swim without mips; one call gives every atlased sprite a mip
+	// chain, and anisotropy keeps the cylindrical trees sharp when viewed edge-on.
+	cf_draw3d_mips(4);
+	cf_draw3d_anisotropy(4);
+
 	CF_Mesh quad = s_make_quad();
 	CF_Mesh ground = s_make_floor();
 	CF_Shader cutout_shd = cf_make_shader_from_source(s_bill_vs, s_cutout_fs);
