@@ -6,6 +6,7 @@
 */
 
 #include <cute_draw.h>
+#include <cute_draw3d.h> // cf_draw3d_mips / cf_draw3d_anisotropy live here (the atlas cache is this file's).
 #include <cute_alloc.h>
 #include <cute_array.h>
 #include <cute_file_system.h>
@@ -104,12 +105,35 @@ static CF_INLINE uint32_t s_pack_half2(float a, float b)
 static CF_INLINE uint32_t s_pack_half_rg(CF_Color c) { return s_pack_half2(c.r, c.g); }
 static CF_INLINE uint32_t s_pack_half_ba(CF_Color c) { return s_pack_half2(c.b, c.a); }
 
+// Texture params shared by atlas pages, lonely textures, and premade atlas textures. When mips
+// are enabled (cf_draw3d_mips) they carry a partial mip chain plus COLOR_TARGET usage, since
+// cf_generate_mipmaps fills the chain with GPU blits.
+static CF_TextureParams s_atlas_texture_params(int w, int h)
+{
+	CF_TextureParams params = cf_texture_defaults(w, h);
+	params.filter = CF_FILTER_LINEAR;
+	params.max_anisotropy = (float)s_draw->atlas_anisotropy;
+	if (s_draw->atlas_mip_count > 1) {
+		params.allocate_mipmaps = true;
+		params.mip_count = s_draw->atlas_mip_count;
+		params.usage |= CF_TEXTURE_USAGE_COLOR_TARGET_BIT;
+	}
+	return params;
+}
+
+// Ring width that keeps the whole mip chain free of neighbor bleed: a mip-level-k texel spans
+// 2^k base pixels, and adjacent images sit 2*ring apart, so ring = 2^(mip_count - 2) covers the
+// chain's last level. Always at least the 1px ring bilinear filtering needs at mip 0.
+static int s_atlas_border_pixels()
+{
+	int mips = s_draw->atlas_mip_count;
+	return mips > 1 ? cf_max(1, 1 << (mips - 2)) : 1;
+}
+
 ATLAS_CACHE_U64 cf_generate_texture_handle(void* pixels, int w, int h, void* udata)
 {
 	CF_UNUSED(udata);
-	CF_TextureParams params = cf_texture_defaults(w, h);
-	params.filter = CF_FILTER_LINEAR;
-	CF_Texture texture = cf_make_texture(params);
+	CF_Texture texture = cf_make_texture(s_atlas_texture_params(w, h));
 	cf_texture_update(texture, pixels, w * h * sizeof(CF_Pixel));
 	return texture.id;
 }
@@ -129,9 +153,7 @@ void cf_destroy_texture_handle(ATLAS_CACHE_U64 texture_id, void* udata)
 ATLAS_CACHE_U64 cf_generate_empty_texture_handle(int w, int h, void* udata)
 {
 	CF_UNUSED(udata);
-	CF_TextureParams params = cf_texture_defaults(w, h);
-	params.filter = CF_FILTER_LINEAR;
-	CF_Texture texture = cf_make_texture(params);
+	CF_Texture texture = cf_make_texture(s_atlas_texture_params(w, h));
 	// Clear to transparent-zero, matching the CPU path's memset of its atlas buffer: regions
 	// no image lands in are still sampled through the atlas border ring and must not contain
 	// garbage. One zeroed whole-texture upload -- still no per-image producer callbacks.
@@ -157,6 +179,17 @@ void cf_upload_texture_handle_subimage(ATLAS_CACHE_U64 dst, int x, int y, int w,
 	CF_Texture dst_tex;
 	dst_tex.id = dst;
 	cf_texture_update_region(dst_tex, x, y, w, h, (void*)pixels);
+}
+
+// Fires whenever the atlas cache finishes assembling a texture's contents (a new page or lonely
+// texture, on either the CPU or GPU repack path). Assembly writes mip 0; derive the rest.
+void cf_texture_handle_assembled(ATLAS_CACHE_U64 texture_id, void* udata)
+{
+	CF_UNUSED(udata);
+	if (s_draw->atlas_mip_count <= 1) return;
+	CF_Texture tex;
+	tex.id = texture_id;
+	cf_generate_mipmaps(tex);
 }
 
 atlas_cache_t* cf_get_draw_atlas_cache()
@@ -933,7 +966,7 @@ static void s_init_atlas_cache(int w, int h)
 {
 	atlas_cache_config_t config;
 	atlas_cache_set_default_config(&config);
-	config.atlas_use_border_pixels = 1;
+	config.atlas_use_border_pixels = s_atlas_border_pixels();
 	config.ticks_to_decay_texture = 100000;
 	config.batch_callback = s_draw_report;
 	config.get_pixels_callback = cf_get_pixels;
@@ -944,6 +977,7 @@ static void s_init_atlas_cache(int w, int h)
 	config.generate_empty_texture_callback = cf_generate_empty_texture_handle;
 	config.copy_texture_callback = cf_copy_texture_handle_region;
 	config.upload_subimage_callback = cf_upload_texture_handle_subimage;
+	config.texture_assembled_callback = cf_texture_handle_assembled;
 	config.allocator_context = NULL;
 	config.lonely_buffer_count_till_flush = 0;
 	config.atlas_height_in_pixels = h;
@@ -954,6 +988,16 @@ static void s_init_atlas_cache(int w, int h)
 		CF_FREE(s_draw);
 		s_draw = NULL;
 		CF_ASSERT(false);
+		return;
+	}
+
+	// Premade atlas registrations live inside the cache, so a rebuild (atlas dims or mip
+	// settings changing) just dropped them -- re-register from the flattened records.
+	int offset = 0;
+	for (int i = 0; i < s_draw->premade_atlas_records.count(); ++i) {
+		CF_Draw::PremadeRecord r = s_draw->premade_atlas_records[i];
+		atlas_cache_register_premade_atlas(&s_draw->atlas_cache, r.texture_id, r.w, r.h, r.entry_count, s_draw->premade_atlas_entries.data() + offset);
+		offset += r.entry_count;
 	}
 }
 
@@ -4722,6 +4766,30 @@ void cf_draw_set_atlas_dimensions(int width_in_pixels, int height_in_pixels)
 	s_draw->texel_dims.y = 1.0f / s_draw->atlas_dims.y;
 }
 
+void cf_draw3d_mips(int mip_count)
+{
+	if (mip_count < 1) mip_count = 1;
+	// Each extra level doubles the border ring (see s_atlas_border_pixels); past six levels
+	// (16px rings) the padding cost outweighs any anti-aliasing left to gain.
+	if (mip_count > 6) mip_count = 6;
+	if (mip_count == s_draw->atlas_mip_count) return;
+	s_draw->atlas_mip_count = mip_count;
+	// Existing pages carry neither the mip chain nor the wider ring; rebuild from scratch.
+	atlas_cache_term(&s_draw->atlas_cache);
+	s_init_atlas_cache((int)s_draw->atlas_dims.x, (int)s_draw->atlas_dims.y);
+}
+
+void cf_draw3d_anisotropy(int max_anisotropy)
+{
+	if (max_anisotropy < 1) max_anisotropy = 1;
+	if (max_anisotropy > 16) max_anisotropy = 16;
+	if (max_anisotropy == s_draw->atlas_anisotropy) return;
+	s_draw->atlas_anisotropy = max_anisotropy;
+	// Samplers are baked into each page texture at creation; rebuild to apply.
+	atlas_cache_term(&s_draw->atlas_cache);
+	s_init_atlas_cache((int)s_draw->atlas_dims.x, (int)s_draw->atlas_dims.y);
+}
+
 CF_Shader cf_make_draw_shader(const char* path)
 {
 	// Also make an attached blit shader to apply when drawing canvases.
@@ -5527,10 +5595,11 @@ CF_Texture cf_register_premade_atlas(const char* png_path, int sub_image_count, 
 	CF_Image img = { 0 };
 	image_load_png(png_path, &img);
 	CF_ASSERT(img.pix);
-	CF_TextureParams params = cf_texture_defaults(img.w, img.h);
-	params.filter = CF_FILTER_LINEAR;
-	CF_Texture texture = cf_make_texture(params);
+	// Premades share the pages' mip settings (see cf_draw3d_mips), though they carry no border
+	// rings -- a premade atlas drawn with mips should bake its own gutters between sub-images.
+	CF_Texture texture = cf_make_texture(s_atlas_texture_params(img.w, img.h));
 	cf_texture_update(texture, img.pix, img.w * img.h * sizeof(CF_Pixel));
+	if (s_draw->atlas_mip_count > 1) cf_generate_mipmaps(texture);
 	Array<atlas_cache_premade_entry_t> premades;
 	for (int i = 0; i < sub_image_count; ++i) {
 		atlas_cache_premade_entry_t s = { 0 };
@@ -5544,7 +5613,11 @@ CF_Texture cf_register_premade_atlas(const char* png_path, int sub_image_count, 
 		s.maxy = sub_images[i].maxy;
 		premades.add(s);
 		s_draw->premade_sub_image_id_to_sub_image.add(s.image_id, sub_images[i]);
+		s_draw->premade_atlas_entries.add(s);
 	}
+	// Record the registration so atlas cache rebuilds can replay it (see s_init_atlas_cache).
+	CF_Draw::PremadeRecord record = { texture.id, img.w, img.h, sub_image_count };
+	s_draw->premade_atlas_records.add(record);
 	atlas_cache_register_premade_atlas(&s_draw->atlas_cache, texture.id, img.w, img.h, sub_image_count, premades.data());
 	image_free(&img);
 	return texture;

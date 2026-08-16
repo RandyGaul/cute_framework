@@ -2088,6 +2088,110 @@ TEST_CASE(test_draw3d_list_ambient_uniforms)
 	return true;
 }
 
+// Fullscreen probe sampling one uv at one explicit lod -- proof the atlas textures carry a
+// real, filled-in mip chain rather than just claiming one.
+static const char* s_mip_probe_vs =
+"layout (location = 0) in vec2 in_pos;\n"
+"void main() { gl_Position = vec4(in_pos, 0, 1); }\n";
+
+static const char* s_mip_probe_fs =
+"layout (location = 0) out vec4 result;\n"
+"layout (set = 2, binding = 0) uniform sampler2D u_tex;\n"
+"layout (set = 3, binding = 0) uniform uniform_block {\n"
+"    vec4 u_probe; // uv.xy, lod, unused\n"
+"};\n"
+"void main() { result = textureLod(u_tex, u_probe.xy, u_probe.z); }\n";
+
+static CF_Mesh s_make_fullscreen_probe_quad()
+{
+	CF_V2 verts[6] = { { -1, -1 }, { 1, -1 }, { 1, 1 }, { -1, -1 }, { 1, 1 }, { -1, 1 } };
+	CF_VertexAttribute attr = { };
+	attr.name = "in_pos";
+	attr.format = CF_VERTEX_FORMAT_FLOAT2;
+	attr.offset = 0;
+	CF_Mesh mesh = cf_make_mesh(sizeof(verts), &attr, 1, sizeof(CF_V2));
+	cf_mesh_update_vertex_data(mesh, verts, 6);
+	return mesh;
+}
+
+// Fetches the sprite's image fresh each call: a CF_TemporaryImage is only valid until the next
+// present, and the frame boundary between probes is exactly when the atlas cache repacks the
+// image from its lonely texture into a page (destroying the lonely texture). uv_frac is a
+// fraction of the image's content rect.
+static CF_Pixel s_mip_probe(CF_Canvas canvas, CF_Mesh quad, CF_Shader shader, CF_Material material, const CF_Sprite* sprite, CF_V2 uv_frac, float lod, CF_Pixel* px)
+{
+	cf_app_update(NULL);
+	CF_TemporaryImage img = cf_fetch_image(sprite);
+	if (!img.tex.id) return cf_make_pixel_rgba(0, 0, 0, 0);
+	CF_V2 uv = cf_v2(
+		img.u.x + (img.v.x - img.u.x) * uv_frac.x,
+		img.u.y + (img.v.y - img.u.y) * uv_frac.y);
+	cf_material_set_texture_fs(material, "u_tex", img.tex);
+	CF_V4 probe = cf_v4(uv.x, uv.y, lod, 0);
+	cf_material_set_uniform_fs(material, "u_probe", &probe, CF_UNIFORM_TYPE_FLOAT4, 1);
+	cf_apply_canvas(canvas, true);
+	cf_apply_mesh(quad);
+	cf_apply_shader(shader, material);
+	cf_draw_elements();
+	cf_app_draw_onto_screen(false);
+	test_readback(canvas, px);
+	return px[(H / 2) * W + (W / 2)];
+}
+
+// cf_draw3d_mips end to end: with mips on, atlas textures carry a generated chain -- coarse
+// levels return pre-filtered pixels instead of clamping to the base image.
+TEST_CASE(test_draw3d_atlas_mips)
+{
+	if (!test_make_app(W, H)) return true; // Headless CI: no display/GPU.
+
+	cf_draw3d_mips(4);
+	cf_draw3d_anisotropy(4);
+
+	// A 16x16 per-pixel red/blue checkerboard: every base texel is pure, and every texel of
+	// every coarser mip averages to half red half blue.
+	CF_Pixel checker[16 * 16];
+	for (int y = 0; y < 16; ++y) {
+		for (int x = 0; x < 16; ++x) {
+			checker[y * 16 + x] = ((x + y) & 1) ? cf_make_pixel_rgba(255, 0, 0, 255) : cf_make_pixel_rgba(0, 0, 255, 255);
+		}
+	}
+	CF_Sprite sprite = cf_make_easy_sprite_from_pixels(checker, 16, 16);
+
+	CF_Mesh quad = s_make_fullscreen_probe_quad();
+	CF_Shader shader = cf_make_shader_from_source(s_mip_probe_vs, s_mip_probe_fs);
+	REQUIRE(shader.id);
+	CF_Material material = cf_make_material();
+	CF_Canvas canvas = cf_make_canvas(cf_canvas_defaults(W, H));
+	CF_Pixel* px = (CF_Pixel*)cf_alloc(W * H * (int)sizeof(CF_Pixel));
+
+	// Level 0 at a texel center: the base image, one pure texel.
+	CF_Pixel base = s_mip_probe(canvas, quad, shader, material, &sprite, cf_v2(0.5f / 16.0f, 0.5f / 16.0f), 0, px);
+	bool pure_red = base.colors.r > 200 && base.colors.b < 60;
+	bool pure_blue = base.colors.b > 200 && base.colors.r < 60;
+	REQUIRE(pure_red || pure_blue);
+
+	// Level 2 at the image's center: each texel there averages a 4x4 checker block. Without a
+	// generated chain the fetch clamps to the pure-texel base image and this fails. By this
+	// frame the image has usually graduated from its lonely texture into an atlas page, so
+	// this also proves pages (not just lonely textures) carry a generated chain.
+	CF_Pixel coarse = s_mip_probe(canvas, quad, shader, material, &sprite, cf_v2(0.5f, 0.5f), 2, px);
+	REQUIRE(coarse.colors.r > 90 && coarse.colors.r < 165);
+	REQUIRE(coarse.colors.b > 90 && coarse.colors.b < 165);
+	REQUIRE(coarse.colors.g < 30);
+
+	// Restore the shared app's defaults for the suites that follow.
+	cf_easy_sprite_unload(&sprite);
+	cf_draw3d_mips(1);
+	cf_draw3d_anisotropy(1);
+	cf_free(px);
+	cf_destroy_canvas(canvas);
+	cf_destroy_material(material);
+	cf_destroy_shader(shader);
+	cf_destroy_mesh(quad);
+	test_destroy_app();
+	return true;
+}
+
 TEST_SUITE(test_draw3d)
 {
 	RUN_TEST_CASE(test_draw3d_transforms_and_coalescing);
@@ -2116,5 +2220,6 @@ TEST_SUITE(test_draw3d)
 	RUN_TEST_CASE(test_draw3d_depth_writer_order);
 	RUN_TEST_CASE(test_draw3d_translucent_sort);
 	RUN_TEST_CASE(test_draw3d_mesh_range);
+	RUN_TEST_CASE(test_draw3d_atlas_mips);
 	RUN_TEST_CASE(test_draw3d_bench);
 }

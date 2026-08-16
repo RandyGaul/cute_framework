@@ -803,6 +803,53 @@ CF_API void CF_CALL cf_draw3d_sprite(const CF_Sprite* sprite, CF_V3 position);
  */
 CF_API void CF_CALL cf_draw3d_billboard(const CF_Sprite* sprite, CF_V3 position);
 
+/**
+ * @function cf_draw3d_mips
+ * @category draw3d
+ * @brief    Gives the sprite atlas a mipmap chain, killing the pixel swimming of minified sprites.
+ * @param    mip_count  Total mip levels including the base image. 1 (the default) disables mips;
+ *                      4 is the recommended chain. Clamped to [1, 6].
+ * @remarks  Without mips a sprite drawn smaller than its image -- at distance or at a steep angle
+ *           in 3d -- point-samples a texel lattice denser than the screen grid, and every camera
+ *           move re-rolls which texels win: the classic swimming-pixels shimmer. A mip chain gives
+ *           the GPU pre-filtered smaller versions to sample instead. Flip it on once at init
+ *           (`cf_draw3d_mips(4)`) and every atlased sprite benefits, in 3d and in zoomed-out 2d
+ *           alike; pair it with `cf_draw3d_anisotropy` so oblique viewing angles keep their
+ *           sharpness. Sprites at 1:1 scale are untouched -- mip level 0 is the original image.
+ *
+ *           Each level `k` is half the resolution of level `k - 1`, so `mip_count` of 4 covers
+ *           minification cleanly down to 1/8 scale; past the chain's end the last level is reused
+ *           (slight aliasing returns on far-off sprites, which are tiny by then). Deeper chains
+ *           cost atlas space: images pack with a ring of `2^(mip_count - 2)` transparent pixels so
+ *           coarse mip texels never blend neighboring images together -- 4 pixels at the
+ *           recommended 4 levels, doubling per extra level, which is why the count clamps at 6.
+ *
+ *           Calling this rebuilds the atlas from scratch, so call it at init (or at least between
+ *           frames, never mid-draw). Premade atlases (`cf_register_premade_atlas`) registered
+ *           while mips are on get a chain too, but pack no rings -- bake your own gutters between
+ *           sub-images or their mips bleed into one another.
+ * @related  cf_draw3d_anisotropy cf_draw3d_sprite cf_draw3d_billboard cf_draw3d_push_texture cf_draw_set_atlas_dimensions
+ */
+CF_API void CF_CALL cf_draw3d_mips(int mip_count);
+
+/**
+ * @function cf_draw3d_anisotropy
+ * @category draw3d
+ * @brief    Sets anisotropic filtering for sprite atlas textures.
+ * @param    max_anisotropy  Maximum anisotropy ratio. 1 (the default) disables it; 4 is a good
+ *                           choice. Clamped to [1, 16].
+ * @remarks  Mip selection alone is isotropic: it picks the level for the *steepest* screen-space
+ *           uv derivative, so a sprite viewed edge-on in 3d -- a floor decal, a tilted standee --
+ *           blurs along the axis that never needed the coarser level. Anisotropic filtering takes
+ *           several samples along the squashed axis instead, keeping oblique views sharp. It only
+ *           has levels to choose from when `cf_draw3d_mips` is on -- enable both for sprites
+ *           viewed at an angle. Costs proportionally more texture bandwidth; 4 captures most of
+ *           the win. Calling this rebuilds the atlas, so call it at init alongside
+ *           `cf_draw3d_mips`.
+ * @related  cf_draw3d_mips cf_draw3d_sprite cf_draw3d_billboard cf_draw3d_push_texture
+ */
+CF_API void CF_CALL cf_draw3d_anisotropy(int max_anisotropy);
+
 //--------------------------------------------------------------------------------------------------
 // Shapes. The 3d analog of `cute_draw.h`'s shape drawing: debug lines, gizmos, and simple solid
 // primitives with no shader or mesh setup required. Strokes (lines, circles, arcs) render as
@@ -1339,6 +1386,8 @@ CF_INLINE void draw3d_mesh(CF_Mesh mesh) { cf_draw3d_mesh(mesh); }
 CF_INLINE void draw3d_mesh_range(CF_Mesh mesh, int first_element, int element_count) { cf_draw3d_mesh_range(mesh, first_element, element_count); }
 CF_INLINE void draw3d_sprite(const CF_Sprite* sprite, CF_V3 position) { cf_draw3d_sprite(sprite, position); }
 CF_INLINE void draw3d_billboard(const CF_Sprite* sprite, CF_V3 position) { cf_draw3d_billboard(sprite, position); }
+CF_INLINE void draw3d_mips(int mip_count) { cf_draw3d_mips(mip_count); }
+CF_INLINE void draw3d_anisotropy(int max_anisotropy) { cf_draw3d_anisotropy(max_anisotropy); }
 CF_INLINE void draw3d_push_color(CF_Color c) { cf_draw3d_push_color(c); }
 CF_INLINE CF_Color draw3d_pop_color() { return cf_draw3d_pop_color(); }
 CF_INLINE CF_Color draw3d_peek_color() { return cf_draw3d_peek_color(); }
