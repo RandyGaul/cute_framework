@@ -369,7 +369,7 @@ CF_API int CF_CALL cf_app_draw_onto_screen(bool clear);
  * @brief    Gets the size of the window in logical points (called "points" on Retina/HiDPI displays; use `cf_app_get_pixel_scale` to convert to physical pixels).
  * @param    w          The width of the window in logical points.
  * @param    h          The height of the window in logical points.
- * @related  cf_app_set_size cf_app_get_position cf_app_set_position cf_app_get_width cf_app_get_height cf_app_get_dpi_scale cf_app_get_pixel_scale
+ * @related  cf_app_set_size cf_app_get_position cf_app_set_position cf_app_get_width cf_app_get_height cf_app_get_display_scale cf_app_get_pixel_scale
  */
 CF_API void CF_CALL cf_app_get_size(int* w, int* h);
 
@@ -377,7 +377,7 @@ CF_API void CF_CALL cf_app_get_size(int* w, int* h);
  * @function cf_app_get_width
  * @category app
  * @brief    Returns the size of the window width in logical points (use `cf_app_get_pixel_scale` to convert to physical pixels).
- * @related  cf_app_set_size cf_app_get_position cf_app_set_position cf_app_get_width cf_app_get_height cf_app_get_dpi_scale cf_app_get_pixel_scale
+ * @related  cf_app_set_size cf_app_get_position cf_app_set_position cf_app_get_width cf_app_get_height cf_app_get_display_scale cf_app_get_pixel_scale
  */
 CF_API int CF_CALL cf_app_get_width(void);
 
@@ -385,7 +385,7 @@ CF_API int CF_CALL cf_app_get_width(void);
  * @function cf_app_get_height
  * @category app
  * @brief    Returns the size of the window height in logical points (use `cf_app_get_pixel_scale` to convert to physical pixels).
- * @related  cf_app_set_size cf_app_get_position cf_app_set_position cf_app_get_width cf_app_get_height cf_app_get_dpi_scale cf_app_get_pixel_scale
+ * @related  cf_app_set_size cf_app_get_position cf_app_set_position cf_app_get_width cf_app_get_height cf_app_get_display_scale cf_app_get_pixel_scale
  */
 CF_API int CF_CALL cf_app_get_height(void);
 
@@ -393,40 +393,40 @@ CF_API int CF_CALL cf_app_get_height(void);
  * @function cf_app_show_window
  * @category app
  * @brief    Brings the app out of a minimized/hidden state.
- * @related  cf_app_set_size cf_app_get_position cf_app_set_position cf_app_get_width cf_app_get_height cf_app_get_dpi_scale
+ * @related  cf_app_set_size cf_app_get_position cf_app_set_position cf_app_get_width cf_app_get_height cf_app_get_display_scale
  */
 CF_API void CF_CALL cf_app_show_window(void);
 
 /**
- * @function cf_app_get_dpi_scale
+ * @function cf_app_get_display_scale
  * @category app
- * @brief    Returns the scaling factor for the device's intended DPI setting.
+ * @brief    Returns the OS's display scale for the window's current display.
  * @remarks  On some devices (e.g. Apple Retina or iOS) pixels are clustered in 4x4 packs and abstracted as a single pixel
  *           called a "point". The intent is for applications to work in points, and scale their UI elements by a factor of 2x
  *           to aid in readability. These devices have very small pixels. Most of the time you should ignore dpi and let the OS
  *           handle this. CF enables DPI settings by default, but, you can see if this function returns 2.0f to let you know if
  *           pixels are clustered for you under the hood.
- * @related  cf_app_set_size cf_app_get_position cf_app_set_position cf_app_get_width cf_app_get_height cf_app_get_dpi_scale cf_app_dpi_scale_was_changed
+ * @related  cf_app_set_size cf_app_get_position cf_app_set_position cf_app_get_width cf_app_get_height cf_app_get_display_scale cf_app_display_scale_was_changed
  */
-CF_API float CF_CALL cf_app_get_dpi_scale(void);
+CF_API float CF_CALL cf_app_get_display_scale(void);
 
 /**
- * @function cf_app_dpi_scale_was_changed
+ * @function cf_app_display_scale_was_changed
  * @category app
- * @brief    Returns true if the DPI scaling changed, such as moving from one screen to another.
- * @related  cf_app_get_dpi_scale cf_app_dpi_scale_was_changed
+ * @brief    Returns true if the display scale changed, such as moving from one screen to another.
+ * @related  cf_app_get_display_scale cf_app_display_scale_was_changed
  */
-CF_API bool CF_CALL cf_app_dpi_scale_was_changed(void);
+CF_API bool CF_CALL cf_app_display_scale_was_changed(void);
 
 /**
  * @function cf_app_get_pixel_scale
  * @category app
  * @brief    Returns the number of physical pixels per logical point for the app's window.
  * @remarks  This is the ratio CF actually renders at internally -- e.g. 2.0f on a 2x Retina display. Unlike
- *           `cf_app_get_dpi_scale` (the OS's suggested UI content scale, which is informational only), this value
+ *           `cf_app_get_display_scale` (the OS's suggested UI content scale, which is informational only), this value
  *           directly reflects the backbuffer/canvas pixel density and is what you'd multiply a logical size by to
  *           get physical pixels. Returns 1.0f if `CF_APP_OPTIONS_NO_HIGH_DPI_BIT` was passed to `cf_make_app`.
- * @related  cf_app_get_dpi_scale cf_app_get_size cf_app_get_canvas_width cf_app_get_canvas_height
+ * @related  cf_app_get_display_scale cf_app_get_size cf_app_get_canvas_width cf_app_get_canvas_height
  */
 CF_API float CF_CALL cf_app_get_pixel_scale(void);
 
@@ -970,8 +970,8 @@ CF_INLINE void app_set_position(int x, int y) { return cf_app_set_position(x, y)
 CF_INLINE void app_show_window() { return cf_app_show_window(); }
 CF_INLINE int app_get_width() { return cf_app_get_width(); }
 CF_INLINE int app_get_height() { return cf_app_get_height(); }
-CF_INLINE float app_get_dpi_scale() { return cf_app_get_dpi_scale(); }
-CF_INLINE bool app_dpi_scale_was_changed() { return cf_app_dpi_scale_was_changed(); }
+CF_INLINE float app_get_display_scale() { return cf_app_get_display_scale(); }
+CF_INLINE bool app_display_scale_was_changed() { return cf_app_display_scale_was_changed(); }
 CF_INLINE float app_get_pixel_scale() { return cf_app_get_pixel_scale(); }
 CF_INLINE void app_center_window() { cf_app_center_window(); }
 CF_INLINE bool app_was_resized() { return cf_app_was_resized(); }
