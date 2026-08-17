@@ -427,7 +427,7 @@ CF_API bool CF_CALL cf_app_display_scale_was_changed(void);
  *           user-controlled value, like the window or canvas size: it starts at the display scale the OS wants
  *           (e.g. 2.0f on a 2x Retina display, or 1.0f if `CF_APP_OPTIONS_NO_HIGH_DPI_BIT` was passed to
  *           `cf_make_app`) and afterwards changes only through `cf_app_set_pixel_scale` or `cf_app_update_display`.
- * @related  cf_app_set_pixel_scale cf_app_update_display cf_app_pixel_scale_was_changed cf_app_get_display_scale cf_app_get_size cf_app_get_canvas_width cf_app_get_canvas_height
+ * @related  cf_app_set_pixel_scale cf_app_update_display cf_app_get_display_scale cf_app_get_size cf_app_get_canvas_width cf_app_get_canvas_height
  */
 CF_API float CF_CALL cf_app_get_pixel_scale(void);
 
@@ -440,20 +440,9 @@ CF_API float CF_CALL cf_app_get_pixel_scale(void);
  *           the new density, but the app canvas keeps its current size -- `cf_app_set_canvas_size` is a separate
  *           call (or use `cf_app_update_display` to do both plus the projection). The scale can be arbitrary, or
  *           follow the reported `cf_app_get_display_scale`. The draw API stays in logical points throughout.
- *           `cf_app_pixel_scale_was_changed` reports true for one frame after a change.
- * @related  cf_app_get_pixel_scale cf_app_update_display cf_app_pixel_scale_was_changed cf_app_set_canvas_size cf_app_get_display_scale
+ * @related  cf_app_get_pixel_scale cf_app_update_display cf_app_set_canvas_size cf_app_get_display_scale
  */
 CF_API void CF_CALL cf_app_set_pixel_scale(float scale);
-
-/**
- * @function cf_app_pixel_scale_was_changed
- * @category app
- * @brief    Returns true for one frame after the pixel scale was changed by `cf_app_set_pixel_scale`.
- * @remarks  Latched at the next `cf_app_update` after the change, mirroring `cf_app_display_scale_was_changed` --
- *           code that reads it sees the flag for exactly one full frame.
- * @related  cf_app_set_pixel_scale cf_app_get_pixel_scale cf_app_display_scale_was_changed
- */
-CF_API bool CF_CALL cf_app_pixel_scale_was_changed(void);
 
 /**
  * @function cf_app_update_display
@@ -1017,7 +1006,6 @@ CF_INLINE float app_get_display_scale() { return cf_app_get_display_scale(); }
 CF_INLINE bool app_display_scale_was_changed() { return cf_app_display_scale_was_changed(); }
 CF_INLINE float app_get_pixel_scale() { return cf_app_get_pixel_scale(); }
 CF_INLINE void app_set_pixel_scale(float scale) { cf_app_set_pixel_scale(scale); }
-CF_INLINE bool app_pixel_scale_was_changed() { return cf_app_pixel_scale_was_changed(); }
 CF_INLINE void app_update_display(float scale) { cf_app_update_display(scale); }
 CF_INLINE void app_center_window() { cf_app_center_window(); }
 CF_INLINE bool app_was_resized() { return cf_app_was_resized(); }

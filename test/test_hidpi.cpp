@@ -92,33 +92,6 @@ TEST_CASE(test_hidpi_set_pixel_scale_is_value_only)
 	return true;
 }
 
-// The change flag latches at the next cf_app_update and reads true for exactly one frame,
-// mirroring cf_app_display_scale_was_changed.
-TEST_CASE(test_hidpi_pixel_scale_was_changed_flag)
-{
-	if (!test_make_app(LOGICAL_W, LOGICAL_H)) return true; // Headless CI: no display/GPU.
-	HidpiGuard guard;
-
-	// test_make_app's shared-app sweep may itself have changed the scale (an honest change,
-	// honestly flagged); settle its one visible frame before observing.
-	cf_app_update(NULL);
-
-	// 3.0f can't collide with the display scale this machine started at.
-	REQUIRE(!cf_app_pixel_scale_was_changed());
-	cf_app_set_pixel_scale(3.0f);
-	REQUIRE(!cf_app_pixel_scale_was_changed()); // Not visible until the next update.
-	cf_app_update(NULL);
-	REQUIRE(cf_app_pixel_scale_was_changed());  // Visible for this one frame.
-	cf_app_update(NULL);
-	REQUIRE(!cf_app_pixel_scale_was_changed()); // Cleared again.
-
-	// Setting the same value is not a change.
-	cf_app_set_pixel_scale(3.0f);
-	cf_app_update(NULL);
-	REQUIRE(!cf_app_pixel_scale_was_changed());
-	return true;
-}
-
 // NO_HIGH_DPI only pins the INITIAL scale at 1.0 (the window gets a 1x backbuffer, so the
 // display scale is 1.0 too). The value stays user-controllable afterwards.
 TEST_CASE(test_hidpi_no_high_dpi_initial_scale)
@@ -406,7 +379,6 @@ TEST_CASE(test_hidpi_draw_list_recorded_across_scale_change)
 TEST_SUITE(test_hidpi)
 {
 	RUN_TEST_CASE(test_hidpi_set_pixel_scale_is_value_only);
-	RUN_TEST_CASE(test_hidpi_pixel_scale_was_changed_flag);
 	RUN_TEST_CASE(test_hidpi_no_high_dpi_initial_scale);
 	RUN_TEST_CASE(test_hidpi_set_scale_safe_without_gfx);
 	RUN_TEST_CASE(test_hidpi_startup_defaults);

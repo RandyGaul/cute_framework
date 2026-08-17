@@ -477,10 +477,6 @@ void cf_begin_frame_input()
 	app->window_state.restored = false;
 	app->window_state.resized = false;
 	app->display_scale_was_changed = false;
-	// cf_app_set_pixel_scale runs from user code mid-frame; latching here makes the flag
-	// visible for exactly the following frame, mirroring display_scale_was_changed.
-	app->pixel_scale_was_changed = app->pixel_scale_changed_pending;
-	app->pixel_scale_changed_pending = false;
 	cf_joypad_update();
 
 	// Update key durations to simulate "press and hold" style for `key_repeating`.

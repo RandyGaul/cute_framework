@@ -663,13 +663,7 @@ void cf_app_set_pixel_scale(float scale)
 	if (!(scale > 0)) return;
 	if (scale == app->pixel_scale) return;
 	app->pixel_scale = scale;
-	app->pixel_scale_changed_pending = true;
 	cf_draw_on_pixel_scale_changed();
-}
-
-bool cf_app_pixel_scale_was_changed()
-{
-	return app->pixel_scale_was_changed;
 }
 
 void cf_app_update_display(float scale)
