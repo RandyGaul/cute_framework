@@ -355,6 +355,9 @@ struct CF_Draw
 	Cute::Array<CF_M3x2> cam_stack = { cf_make_identity() };
 	Cute::Array<CF_M3x2> projection_stack;
 	float aaf = 0;
+	// A default-projection refresh that arrived mid draw-list recording or inside a
+	// cf_draw_push/pop pair; reset_cam applies it at the frame boundary.
+	bool pending_projection = false;
 	CF_M3x2 projection;
 	CF_M3x2 mvp;
 	void reset_cam();
@@ -469,9 +472,10 @@ void cf_draw3d_free_cmd(CF_Command* cmd);
 // Runs the atlas defrag at most once per frame (see CF_Draw::defragged_this_frame).
 void cf_atlas_defrag_once();
 
-// Called when the app's offscreen canvas is recreated (window resize / cf_app_set_size):
-// refreshes the default 2d projection, which tracks the app canvas 1:1.
-void cf_draw_on_app_canvas_resized(int w, int h);
+// Called when the app's offscreen canvas is recreated (window resize / cf_app_set_size /
+// density change / cf_app_set_canvas_size): refreshes the default 2d projection from the
+// window's logical size.
+void cf_draw_on_app_canvas_resized();
 
 // Called by cf_render_layers_to before the canvas (and its render pass) is applied: stages
 // every in-range untextured mesh command's instance data into one shared GPU instance buffer

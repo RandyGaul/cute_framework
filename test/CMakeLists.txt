@@ -22,6 +22,7 @@ set(CF_TEST_SRCS
 	test_shader_reload.cpp
 	test_shader_directory.cpp
 	test_canvas_clear.cpp
+	test_hidpi.cpp
 	test_mrt.cpp
 	test_texture_types.cpp
 	test_shadow_sampling.cpp

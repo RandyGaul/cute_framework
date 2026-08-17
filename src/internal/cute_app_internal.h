@@ -36,6 +36,18 @@ CF_API extern struct CF_App* app;
 // cf_app_set_msaa) -- this is what makes cf_app_set_canvas_size a one-shot override.
 void cf_app_recreate_default_canvas_if_needed();
 
+// Re-resolves app->pixel_scale (NO_HIGH_DPI pin wins, then any forced override, then SDL's
+// reported density) and recreates the default canvas when it changed. Called from either
+// display-density event -- they can fire alone or together, so this is idempotent.
+void cf_app_refresh_pixel_scale();
+
+// Test/debug hook: pins app->pixel_scale to `scale` and recreates the default canvas, exactly as
+// a real display-density change would. Pass 0 (NaN/negatives coerce to it) to clear the override
+// and re-query SDL; CF_APP_OPTIONS_NO_HIGH_DPI_BIT still wins. This exists because CI and most
+// dev machines run at pixel_scale 1.0, where points-vs-pixels mixups are invisible; see
+// test/test_hidpi.cpp. CF_API so the separately-linked tests executable can call it.
+CF_API void cf_app_force_pixel_scale(float scale);
+
 // Maps an SDL_PowerState to the corresponding CF_PowerState. Header-inline (rather than
 // CF_API) so it stays testable from test/test_app.cpp without crossing the shared-library
 // export boundary.
@@ -106,14 +118,15 @@ struct CF_App
 	float dpi_scale_prev = 1.0f;
 	bool dpi_scale_was_changed = false;
 	float pixel_scale = 1.0f;   // Physical pixels per logical point (from SDL_GetWindowPixelDensity). Drives default-canvas sizing, AA, and glyph rasterization.
+	float pixel_scale_override = 0; // Nonzero overrides SDL's reported density (cf_app_force_pixel_scale test/debug hook).
 	CF_Filter canvas_blit_filter = CF_FILTER_NEAREST; // Filter used when blitting the app canvas onto the screen, if their sizes differ (e.g. after cf_app_set_canvas_size). Defaults to nearest for a crisp/blocky pixel-art look.
 	bool sync_window = false;
 	int draw_call_count = 0;
-	int w = 0;
+	int w = 0; // Window size in LOGICAL points (what the public API speaks); multiply by pixel_scale for physical pixels.
 	int h = 0;
 	int x = 0;
 	int y = 0;
-	int canvas_w = 0;
+	int canvas_w = 0; // Default canvas size in PHYSICAL pixels: w/h * pixel_scale, or an exact one-shot size from cf_app_set_canvas_size until the next recreation event.
 	int canvas_h = 0;
 	CF_Color clear_color = { 0, 0, 0, 0 };
 	float clear_depth = 1.0f;

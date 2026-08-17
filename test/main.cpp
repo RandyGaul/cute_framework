@@ -50,6 +50,7 @@ TEST_SUITE(test_graphics_3d);
 TEST_SUITE(test_shader_reload);
 TEST_SUITE(test_shader_directory);
 TEST_SUITE(test_canvas_clear);
+TEST_SUITE(test_hidpi);
 TEST_SUITE(test_mrt);
 TEST_SUITE(test_texture_types);
 TEST_SUITE(test_shadow_sampling);
@@ -123,6 +124,7 @@ int main(int argc, char* argv[])
 	RUN_TRACED(test_shader_reload);
 	RUN_TRACED(test_shader_directory);
 	RUN_TRACED(test_canvas_clear);
+	RUN_TRACED(test_hidpi);
 	RUN_TRACED(test_mrt);
 	RUN_TRACED(test_texture_types);
 	RUN_TRACED(test_shadow_sampling);
