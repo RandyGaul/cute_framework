@@ -107,8 +107,6 @@ struct CF_App
 	float display_scale = 1.0f; // What the OS wants: points-to-pixels for the window's display (SDL_GetWindowDisplayScale). Only the OS changes it; refreshed on scale events, never applied automatically.
 	bool display_scale_was_changed = false;
 	float pixel_scale = 1.0f;   // How CF scales fonts and shapes: physical pixels per logical point. User-controlled via cf_app_set_pixel_scale; initialized to display_scale (or 1.0 with NO_HIGH_DPI).
-	bool pixel_scale_was_changed = false;         // Visible flag: true for the one frame following a pixel_scale change.
-	bool pixel_scale_changed_pending = false;     // Set by cf_app_set_pixel_scale mid-frame; transferred to the visible flag at the next input pump.
 	CF_Filter canvas_blit_filter = CF_FILTER_NEAREST; // Filter used when blitting the app canvas onto the screen, if their sizes differ (e.g. after cf_app_set_canvas_size). Defaults to nearest for a crisp/blocky pixel-art look.
 	bool sync_window = false;
 	int draw_call_count = 0;
