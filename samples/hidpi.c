@@ -115,6 +115,23 @@ int main(int argc, char* argv[])
 		draw_text_centered(pixel_scale_buf, cf_v2(0, 300));
 		cf_pop_font_size();
 
+		// -- Live mouse-coordinate readout -- screen space is raw, top-left-origin,
+		// y-down input; world space is what cf_screen_to_world hands back, matching
+		// the space cf_draw_text etc. draw into. If HiDPI translation is correct, the
+		// world coordinate should track the cursor 1:1 over the canvas regardless of
+		// pixel_scale.
+		char mouse_buf[128];
+		CF_V2 mouse_screen = cf_v2(cf_mouse_x(), cf_mouse_y());
+		CF_V2 mouse_world = cf_screen_to_world(mouse_screen);
+		snprintf(
+			mouse_buf, sizeof(mouse_buf),
+			"mouse: screen (%.0f, %.0f) -> world (%.0f, %.0f)",
+			mouse_screen.x, mouse_screen.y, mouse_world.x, mouse_world.y
+		);
+		cf_push_font_size(12);
+		draw_text_centered(mouse_buf, cf_v2(0, 300 - 18));
+		cf_pop_font_size();
+
 		cf_draw_pop_color();
 
 		cf_draw_push_color(cf_make_color_rgb(120, 130, 150));
