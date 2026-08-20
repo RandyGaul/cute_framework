@@ -476,7 +476,7 @@ void cf_begin_frame_input()
 	app->window_state.moved = false;
 	app->window_state.restored = false;
 	app->window_state.resized = false;
-	app->dpi_scale_was_changed = false;
+	app->display_scale_was_changed = false;
 	cf_joypad_update();
 
 	// Update key durations to simulate "press and hold" style for `key_repeating`.
@@ -576,8 +576,8 @@ void cf_pump_input_msgs()
 			break;
 
 		case SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED:
-			app->dpi_scale = SDL_GetWindowDisplayScale(app->window);
-			app->dpi_scale_was_changed = true;
+			app->display_scale = SDL_GetWindowDisplayScale(app->window);
+			app->display_scale_was_changed = true;
 			s_refresh_pixel_scale();
 			break;
 

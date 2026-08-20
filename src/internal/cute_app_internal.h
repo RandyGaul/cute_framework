@@ -102,9 +102,8 @@ struct CF_App
 	Cute::CF_Path shader_directory;
 	Cute::Map<CF_ShaderFileInfo> shader_file_infos;
 	bool gfx_enabled = false;
-	float dpi_scale = 1.0f;
-	float dpi_scale_prev = 1.0f;
-	bool dpi_scale_was_changed = false;
+	float display_scale = 1.0f;
+	bool display_scale_was_changed = false;
 	float pixel_scale = 1.0f;   // Physical pixels per logical point (from SDL_GetWindowPixelDensity). Drives default-canvas sizing, AA, and glyph rasterization.
 	CF_Filter canvas_blit_filter = CF_FILTER_NEAREST; // Filter used when blitting the app canvas onto the screen, if their sizes differ (e.g. after cf_app_set_canvas_size). Defaults to nearest for a crisp/blocky pixel-art look.
 	bool sync_window = false;

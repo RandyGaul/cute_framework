@@ -340,8 +340,7 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 	app->h = h;
 	if (window) {
 		SDL_GetWindowPosition(app->window, &app->x, &app->y);
-		app->dpi_scale = SDL_GetWindowDisplayScale(app->window);
-		app->dpi_scale_prev = app->dpi_scale;
+		app->display_scale = SDL_GetWindowDisplayScale(app->window);
 		app->pixel_scale = window ? SDL_GetWindowPixelDensity(app->window) : 1.0f;
 		if (app->pixel_scale <= 0.0f) app->pixel_scale = 1.0f;
 		if (options & CF_APP_OPTIONS_NO_HIGH_DPI_BIT) app->pixel_scale = 1.0f;
@@ -636,14 +635,14 @@ void cf_app_show_window()
 	SDL_ShowWindow(app->window);
 }
 
-float cf_app_get_dpi_scale()
+float cf_app_get_display_scale()
 {
-	return app->dpi_scale;
+	return app->display_scale;
 }
 
-bool cf_app_dpi_scale_was_changed()
+bool cf_app_display_scale_was_changed()
 {
-	return app->dpi_scale_was_changed;
+	return app->display_scale_was_changed;
 }
 
 float cf_app_get_pixel_scale()

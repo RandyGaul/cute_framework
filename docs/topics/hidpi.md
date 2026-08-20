@@ -10,12 +10,12 @@ Under the hood CF sizes its default canvas in *physical* pixels: `logical_size *
 
 Because of this you generally don't need to think about DPI at all. Draw in points; CF renders at native resolution.
 
-## `pixel_scale` vs. `dpi_scale`
+## `pixel_scale` vs. `display_scale`
 
 Two functions report display density, and they're easy to confuse:
 
 - [`cf_app_get_pixel_scale`](../app/function/cf_app_get_pixel_scale.md) — the number of physical pixels per logical point, e.g. `2.0f` on a 2x Retina display. This is the ratio CF actually renders at, and the one to multiply a logical size by to get physical pixels.
-- [`cf_app_get_dpi_scale`](../app/function/cf_app_get_dpi_scale.md) — the OS's *suggested* UI content scale. It is informational only and does **not** describe the rendering ratio. Most games can ignore it.
+- [`cf_app_get_display_scale`](../app/function/cf_app_get_display_scale.md) — the OS's *suggested* UI content scale. It is informational only and does **not** describe the rendering ratio. Most games can ignore it.
 
 When you need to convert between points and physical pixels — for example, sizing an offscreen canvas to match the swapchain — use `cf_app_get_pixel_scale`.
 
