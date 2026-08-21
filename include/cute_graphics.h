@@ -1563,7 +1563,9 @@ typedef struct CF_CanvasParams
 
 	/* @member How many color targets this canvas has, from 1 to `CF_MAX_CANVAS_TARGETS`. Zero means
 	   one, so zero-initialized params behave exactly as before this member existed. Multiple render
-	   targets currently require `sample_count` of `CF_SAMPLE_COUNT_1`. */
+	   targets may be multisampled: each target resolves into its own texture in its own format, and
+	   `cf_canvas_get_target`/`cf_canvas_get_target2`/readback all return the resolved side. The GLES
+	   backend still restricts MSAA to single-target canvases. */
 	int target_count;
 
 	/* @member Optional: render into one face/layer/slice of an existing cube, array, or 3D texture
@@ -2449,6 +2451,13 @@ typedef struct CF_RenderState
 	   Per-target blend is SDL_GPU-only: the GLES backend has no indexed blend (ES 3.0) and
 	   applies `blends[0]` to every target. */
 	int blend_count;
+
+	/* @member Converts the fragment shader's output alpha into MSAA sample coverage instead of
+	   blending with it. Requires a multisampled canvas. This is how to draw dense thin
+	   geometry -- grass, hair, foliage -- with antialiased edges while still writing depth:
+	   coverage resolves through the samples, so it is order-independent and needs no sorting
+	   and no separate blended pass. Ignored on single-sample canvases and by the GLES backend. */
+	bool alpha_to_coverage;
 
 	/* @member Defines how to perform depth-testing. Depth testing runs when this is anything other
 	   than `CF_COMPARE_FUNCTION_ALWAYS` (the default) or when `depth_write_enabled` is true -- but

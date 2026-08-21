@@ -56,6 +56,11 @@ struct CF_CanvasInternal
 	int target_count;
 	CF_Texture cf_textures_mrt[CF_MAX_CANVAS_TARGETS];
 	SDL_GPUTexture* textures_mrt[CF_MAX_CANVAS_TARGETS];
+	// MSAA resolve destinations, one per color target ([0] mirrors cf_resolve_texture).
+	// Every target of a multisampled canvas resolves: the multisampled texture itself
+	// cannot be sampled, so these are what get_target/get_target2 hand back.
+	CF_Texture cf_resolve_textures_mrt[CF_MAX_CANVAS_TARGETS];
+	SDL_GPUTexture* resolve_textures_mrt[CF_MAX_CANVAS_TARGETS];
 
 	bool clear;
 
@@ -1436,17 +1441,49 @@ CF_Canvas cf_sdlgpu_make_canvas(CF_CanvasParams params)
 	if (params.target.width > 0 && params.target.height > 0) {
 		canvas->w = params.target.width;
 		canvas->h = params.target.height;
-		canvas->cf_texture = s_make_texture(params.target, params.sample_count);
+		// Clamp MSAA to what this device actually supports. Color targets and the DEPTH target
+		// have independent sample-count support, and the usual default depth format is exactly
+		// the one that tends to lack it -- so try MSAA-capable depth formats before giving up
+		// the samples, and only step the count down if nothing works.
+		{
+			CF_PixelFormat depth_candidates[] = {
+				params.depth_stencil_target.pixel_format,
+				CF_PIXEL_FORMAT_D32_FLOAT_S8_UINT, CF_PIXEL_FORMAT_D24_UNORM_S8_UINT,
+				CF_PIXEL_FORMAT_D32_FLOAT, CF_PIXEL_FORMAT_D24_UNORM, CF_PIXEL_FORMAT_D16_UNORM,
+			};
+			CF_SampleCount sc = params.sample_count;
+			int tc = params.target_count > 1 ? params.target_count : 1;
+			while (sc != CF_SAMPLE_COUNT_1) {
+				bool ok = SDL_GPUTextureSupportsSampleCount(g_ctx.device, s_wrap(params.target.pixel_format), (SDL_GPUSampleCount)sc);
+				for (int t = 1; t < tc && ok; ++t) {
+					ok = SDL_GPUTextureSupportsSampleCount(g_ctx.device, s_wrap(params.targets[t].pixel_format), (SDL_GPUSampleCount)sc);
+				}
+				if (ok && params.depth_stencil_enable) {
+					bool depth_ok = false;
+					for (int d = 0; d < (int)(sizeof(depth_candidates) / sizeof(depth_candidates[0])); ++d) {
+						if (SDL_GPUTextureSupportsSampleCount(g_ctx.device, s_wrap(depth_candidates[d]), (SDL_GPUSampleCount)sc)) {
+							params.depth_stencil_target.pixel_format = depth_candidates[d];
+							depth_ok = true;
+							break;
+						}
+					}
+					ok = depth_ok;
+				}
+				if (ok) break;
+				sc = (CF_SampleCount)((int)sc - 1);
+			}
+			params.sample_count = sc;
+		}
 		canvas->sample_count = params.sample_count;
+		canvas->cf_texture = s_make_texture(params.target, params.sample_count);
 		if (canvas->cf_texture.id) {
 			canvas->texture = ((CF_TextureInternal*)canvas->cf_texture.id)->tex;
 			canvas->sampler = ((CF_TextureInternal*)canvas->cf_texture.id)->sampler;
 		}
-		// Additional MRT color targets. MSAA is restricted to single-target canvases for now
-		// (per-target resolve plumbing isn't worth it until someone needs it).
+		// Additional MRT color targets. These may be multisampled like target 0; each one
+		// gets its own resolve destination below.
 		canvas->target_count = params.target_count > 1 ? params.target_count : 1;
 		if (canvas->target_count > CF_MAX_CANVAS_TARGETS) canvas->target_count = CF_MAX_CANVAS_TARGETS;
-		CF_ASSERT(canvas->target_count == 1 || params.sample_count == CF_SAMPLE_COUNT_1);
 		for (int i = 1; i < canvas->target_count; ++i) {
 			canvas->cf_textures_mrt[i] = s_make_texture(params.targets[i], params.sample_count);
 			if (canvas->cf_textures_mrt[i].id) {
@@ -1466,6 +1503,20 @@ CF_Canvas cf_sdlgpu_make_canvas(CF_CanvasParams params)
 						canvas->cf_resolve_texture = cf_sdlgpu_make_texture(params.target);
 			if (canvas->cf_resolve_texture.id) {
 				canvas->resolve_texture = ((CF_TextureInternal*)canvas->cf_resolve_texture.id)->tex;
+			}
+			canvas->cf_resolve_textures_mrt[0] = canvas->cf_resolve_texture;
+			canvas->resolve_textures_mrt[0] = canvas->resolve_texture;
+			// One resolve per extra target, in that target's OWN format -- a data target
+			// (R32F view distance, normals, ids) must not resolve into target 0's format.
+			for (int i = 1; i < canvas->target_count; ++i) {
+				CF_TextureParams rp = params.targets[i];
+				rp.width = params.target.width;
+				rp.height = params.target.height;
+				rp.usage = CF_TEXTURE_USAGE_COLOR_TARGET_BIT | CF_TEXTURE_USAGE_SAMPLER_BIT;
+				canvas->cf_resolve_textures_mrt[i] = cf_sdlgpu_make_texture(rp);
+				if (canvas->cf_resolve_textures_mrt[i].id) {
+					canvas->resolve_textures_mrt[i] = ((CF_TextureInternal*)canvas->cf_resolve_textures_mrt[i].id)->tex;
+				}
 			}
 		}
 	} else {
@@ -1532,6 +1583,9 @@ void cf_sdlgpu_destroy_canvas(CF_Canvas canvas_handle)
 			if (canvas->cf_textures_mrt[i].id) cf_sdlgpu_destroy_texture(canvas->cf_textures_mrt[i]);
 		}
 		if (canvas->resolve_texture) cf_sdlgpu_destroy_texture(canvas->cf_resolve_texture);
+		for (int i = 1; i < canvas->target_count; ++i) {
+			if (canvas->resolve_textures_mrt[i]) cf_sdlgpu_destroy_texture(canvas->cf_resolve_textures_mrt[i]);
+		}
 		if (canvas->depth_stencil && !canvas->attached_depth) cf_sdlgpu_destroy_texture(canvas->cf_depth_stencil);
 	CF_FREE(canvas);
 }
@@ -1547,7 +1601,7 @@ CF_Texture cf_sdlgpu_canvas_get_target2(CF_Canvas canvas_handle, int index)
 	CF_CanvasInternal* canvas = (CF_CanvasInternal*)canvas_handle.id;
 	if (!canvas || index < 0 || index >= (canvas->target_count > 1 ? canvas->target_count : 1)) return { 0 };
 	if (index == 0) return cf_sdlgpu_canvas_get_target(canvas_handle);
-	return canvas->cf_textures_mrt[index];
+	return canvas->resolve_textures_mrt[index] ? canvas->cf_resolve_textures_mrt[index] : canvas->cf_textures_mrt[index];
 }
 
 CF_Texture cf_sdlgpu_canvas_get_depth_stencil_target(CF_Canvas canvas_handle)
@@ -1567,12 +1621,12 @@ CF_Readback cf_sdlgpu_canvas_readback2(CF_Canvas canvas_handle, int index)
 	// Pick source texture: resolve_texture for MSAA canvases, texture for non-MSAA.
 	SDL_GPUTexture* src_texture = index == 0
 		? (canvas->resolve_texture ? canvas->resolve_texture : canvas->texture)
-		: canvas->textures_mrt[index];
+		: (canvas->resolve_textures_mrt[index] ? canvas->resolve_textures_mrt[index] : canvas->textures_mrt[index]);
 	CF_TextureInternal* tex_internal = index == 0
 		? (canvas->resolve_texture
 			? (CF_TextureInternal*)canvas->cf_resolve_texture.id
 			: (CF_TextureInternal*)canvas->cf_texture.id)
-		: (CF_TextureInternal*)canvas->cf_textures_mrt[index].id;
+		: (CF_TextureInternal*)(canvas->resolve_textures_mrt[index] ? canvas->cf_resolve_textures_mrt[index].id : canvas->cf_textures_mrt[index].id);
 	// Depth-only attach canvases (a shadow cube face, say) have no color texture at all;
 	// reading them back through the color path would dereference NULL.
 	if (!src_texture || !tex_internal) return { 0 };
@@ -2171,6 +2225,7 @@ static inline SDL_GPUGraphicsPipeline* s_build_pipeline(CF_ShaderInternal* shade
 	pip_info.rasterizer_state.enable_depth_clip = state->enable_depth_clip;
 	pip_info.multisample_state.sample_count = (SDL_GPUSampleCount)g_ctx.canvas->sample_count;
 	pip_info.multisample_state.sample_mask = 0;
+	pip_info.multisample_state.enable_alpha_to_coverage = state->alpha_to_coverage && g_ctx.canvas->sample_count != CF_SAMPLE_COUNT_1;
 
 	bool depth_test_requested = state->depth_write_enabled || state->depth_compare != CF_COMPARE_FUNCTION_ALWAYS;
 	bool depth_test_enabled = (depth_texture != NULL) && depth_test_requested;
@@ -2292,7 +2347,7 @@ void cf_sdlgpu_apply_shader(CF_Shader shader_handle, CF_Material material_handle
 				pass_color_info.store_op = SDL_GPU_STOREOP_STORE;
 			} else {
 				pass_color_info.store_op = SDL_GPU_STOREOP_RESOLVE_AND_STORE;
-				pass_color_info.resolve_texture = g_ctx.canvas->resolve_texture;
+				pass_color_info.resolve_texture = i == 0 ? g_ctx.canvas->resolve_texture : g_ctx.canvas->resolve_textures_mrt[i];
 			}
 		}
 
