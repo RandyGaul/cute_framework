@@ -91,12 +91,13 @@ struct OwnedAppGuard
 	~OwnedAppGuard() { cf_destroy_app(); }
 };
 
-TEST_CASE(test_app_set_canvas_size_is_one_shot)
+TEST_CASE(test_app_set_canvas_size_is_persistent)
 {
 	REQUIRE(!cf_is_error(cf_make_app(NULL, 0, 0, 0, 200, 100, CF_APP_OPTIONS_HIDDEN_BIT | CF_APP_OPTIONS_NO_AUDIO_BIT, NULL)));
 	OwnedAppGuard guard;
 
-	// The default canvas tracks the window at window_points * pixel_scale.
+	// Startup creates the default canvas at window_points * natural density -- the one and
+	// only automatic sizing.
 	float scale = cf_app_get_pixel_scale();
 	REQUIRE(cf_app_get_canvas_width() == (int)CF_ROUNDF(200 * scale));
 	REQUIRE(cf_app_get_canvas_height() == (int)CF_ROUNDF(100 * scale));
@@ -106,16 +107,16 @@ TEST_CASE(test_app_set_canvas_size_is_one_shot)
 	REQUIRE(cf_app_get_canvas_width() == 320);
 	REQUIRE(cf_app_get_canvas_height() == 180);
 
-	// ...but is one-shot: the next recreation event snaps back to window * pixel_scale.
+	// ...and persists: a window resize is bookkeeping only, nothing resizes the canvas
+	// behind the user's back.
 	cf_app_set_size(256, 128);
-	scale = cf_app_get_pixel_scale();
-	REQUIRE(cf_app_get_canvas_width() == (int)CF_ROUNDF(256 * scale));
-	REQUIRE(cf_app_get_canvas_height() == (int)CF_ROUNDF(128 * scale));
+	REQUIRE(cf_app_get_canvas_width() == 320);
+	REQUIRE(cf_app_get_canvas_height() == 180);
 
 	return true;
 }
 
-TEST_CASE(test_app_msaa_change_resets_canvas_size)
+TEST_CASE(test_app_msaa_change_preserves_canvas_size)
 {
 	REQUIRE(!cf_is_error(cf_make_app(NULL, 0, 0, 0, 200, 100, CF_APP_OPTIONS_HIDDEN_BIT | CF_APP_OPTIONS_NO_AUDIO_BIT, NULL)));
 	OwnedAppGuard guard;
@@ -125,10 +126,10 @@ TEST_CASE(test_app_msaa_change_resets_canvas_size)
 	REQUIRE(cf_app_get_canvas_height() == 180);
 
 	if (cf_app_set_msaa(2)) { // MSAA support varies by backend/driver.
-		// An MSAA change is a recreation event like any other -- the one-shot size does not persist.
-		float scale = cf_app_get_pixel_scale();
-		REQUIRE(cf_app_get_canvas_width() == (int)CF_ROUNDF(200 * scale));
-		REQUIRE(cf_app_get_canvas_height() == (int)CF_ROUNDF(100 * scale));
+		// The canvas is rebuilt for the new sample count at its CURRENT size -- an MSAA
+		// change must not stomp a user-chosen canvas size.
+		REQUIRE(cf_app_get_canvas_width() == 320);
+		REQUIRE(cf_app_get_canvas_height() == 180);
 	}
 
 	return true;
@@ -221,8 +222,8 @@ TEST_SUITE(test_app)
 
 	// Requires headless GPU context support in CI -- see
 	// https://github.com/RandyGaul/cute_framework/pull/517
-	RUN_TEST_CASE(test_app_set_canvas_size_is_one_shot);
-	RUN_TEST_CASE(test_app_msaa_change_resets_canvas_size);
+	RUN_TEST_CASE(test_app_set_canvas_size_is_persistent);
+	RUN_TEST_CASE(test_app_msaa_change_preserves_canvas_size);
 	RUN_TEST_CASE(test_app_present_mode_vsync_always_supported);
 	RUN_TEST_CASE(test_app_present_mode_off_round_trip);
 	RUN_TEST_CASE(test_app_present_mode_mailbox_failure_does_not_corrupt_state);

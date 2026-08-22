@@ -200,7 +200,7 @@ CF_API CF_DisplayOrientation CF_CALL cf_display_orientation(CF_DisplayID display
 	CF_ENUM(APP_OPTIONS_GFX_OPENGL_BIT,                       1 << 11) \
 	/* @entry Starts the application with a debug mode graphics context. */ \
 	CF_ENUM(APP_OPTIONS_GFX_DEBUG_BIT,                          1 << 12) \
-	/* @entry Disables the OS's high-pixel-density (Retina/HiDPI) backbuffer, forcing 1:1 logical-to-physical rendering. `cf_app_get_pixel_scale` will always return 1.0f. */ \
+	/* @entry Disables the OS's high-pixel-density (Retina/HiDPI) backbuffer, so the window starts with a 1:1 logical-to-physical backbuffer and an initial pixel scale of 1.0f. */ \
 	CF_ENUM(APP_OPTIONS_NO_HIGH_DPI_BIT,                        1 << 13) \
 	/* @end */
 
@@ -400,43 +400,75 @@ CF_API void CF_CALL cf_app_show_window(void);
 /**
  * @function cf_app_get_display_scale
  * @category app
- * @brief    Returns the OS's display scale for the window's current display.
- * @remarks  On some devices (e.g. Apple Retina or iOS) pixels are clustered in 4x4 packs and abstracted as a single pixel
- *           called a "point". The intent is for applications to work in points, and scale their UI elements by a factor of 2x
- *           to aid in readability. These devices have very small pixels. Most of the time you should ignore dpi and let the OS
- *           handle this. CF enables DPI settings by default, but, you can see if this function returns 2.0f to let you know if
- *           pixels are clustered for you under the hood.
- * @related  cf_app_set_size cf_app_get_position cf_app_set_position cf_app_get_width cf_app_get_height cf_app_get_display_scale cf_app_display_scale_was_changed
+ * @brief    Returns the display scale the OS wants for the app's window: the factor converting logical points to physical pixels.
+ * @remarks  E.g. 2.0f on a 2x Retina display, or 1.5f on a Windows desktop at 150% scaling -- consistent across platforms.
+ *           Only the OS changes this value (moving the window to a different display, or the user changing display settings),
+ *           and a change raises `cf_app_display_scale_was_changed`. It is informational: CF never applies it for you. Pass it
+ *           to `cf_app_update_display` to render at the display's native crispness, or ignore it to keep a fixed scale.
+ * @related  cf_app_display_scale_was_changed cf_app_update_display cf_app_get_pixel_scale cf_app_get_size
  */
 CF_API float CF_CALL cf_app_get_display_scale(void);
 
 /**
  * @function cf_app_display_scale_was_changed
  * @category app
- * @brief    Returns true if the display scale changed, such as moving from one screen to another.
- * @related  cf_app_get_display_scale cf_app_display_scale_was_changed
+ * @brief    Returns true if the display scale changed, such as the window moving to a screen with a different scale.
+ * @remarks  The standard reaction is `cf_app_update_display(cf_app_get_display_scale())`; see the hidpi sample.
+ * @related  cf_app_get_display_scale cf_app_update_display
  */
 CF_API bool CF_CALL cf_app_display_scale_was_changed(void);
 
 /**
  * @function cf_app_get_pixel_scale
  * @category app
- * @brief    Returns the number of physical pixels per logical point for the app's window.
- * @remarks  This is the ratio CF actually renders at internally -- e.g. 2.0f on a 2x Retina display. Unlike
- *           `cf_app_get_display_scale` (the OS's suggested UI content scale, which is informational only), this value
- *           directly reflects the backbuffer/canvas pixel density and is what you'd multiply a logical size by to
- *           get physical pixels. Returns 1.0f if `CF_APP_OPTIONS_NO_HIGH_DPI_BIT` was passed to `cf_make_app`.
- * @related  cf_app_get_display_scale cf_app_get_size cf_app_get_canvas_width cf_app_get_canvas_height
+ * @brief    Returns the pixel scale used for rendering: physical pixels per logical point.
+ * @remarks  This is how CF scales fonts and shapes: it drives antialiasing width and glyph rasterization density,
+ *           and is what you'd multiply a logical size by to size a pixel-perfect render target. It is a
+ *           user-controlled value, like the window or canvas size: it starts at the display scale the OS wants
+ *           (e.g. 2.0f on a 2x Retina display, or 1.0f if `CF_APP_OPTIONS_NO_HIGH_DPI_BIT` was passed to
+ *           `cf_make_app`) and afterwards changes only through `cf_app_set_pixel_scale` or `cf_app_update_display`.
+ * @related  cf_app_set_pixel_scale cf_app_update_display cf_app_get_display_scale cf_app_get_size cf_app_get_canvas_width cf_app_get_canvas_height
  */
 CF_API float CF_CALL cf_app_get_pixel_scale(void);
 
 /**
+ * @function cf_app_set_pixel_scale
+ * @category app
+ * @brief    Sets the pixel scale (physical pixels per logical point) used for rendering.
+ * @param    scale      The new pixel scale. Must be greater than zero; other values are ignored.
+ * @remarks  Only the scale value itself changes: antialiasing width adjusts immediately and text re-rasterizes at
+ *           the new density, but the app canvas keeps its current size -- `cf_app_set_canvas_size` is a separate
+ *           call (or use `cf_app_update_display` to do both plus the projection). The scale can be arbitrary, or
+ *           follow the reported `cf_app_get_display_scale`. The draw API stays in logical points throughout.
+ * @related  cf_app_get_pixel_scale cf_app_update_display cf_app_set_canvas_size cf_app_get_display_scale
+ */
+CF_API void CF_CALL cf_app_set_pixel_scale(float scale);
+
+/**
+ * @function cf_app_update_display
+ * @category app
+ * @brief    The all-in-one display update: sets the pixel scale, resizes the app canvas to window size times scale, and rebuilds the default 2d projection from the logical window size.
+ * @param    scale      The pixel scale to apply. Must be greater than zero; other values are ignored.
+ * @remarks  Just a helper bringing `cf_app_set_pixel_scale`, `cf_app_set_canvas_size(window_w * scale, window_h * scale)`,
+ *           and `cf_draw_projection` (spanning the logical window size) together. Use it on both resize and scale change:
+ *           when `cf_app_was_resized` fires pass `cf_app_get_pixel_scale` to keep the current scale, and when
+ *           `cf_app_display_scale_was_changed` fires pass `cf_app_get_display_scale` to follow the display. The scale can
+ *           also be arbitrary -- e.g. a forced 2.0f to test HiDPI rendering on a normal monitor. It overwrites a custom
+ *           `cf_draw_projection` -- re-apply yours after, if you use one. See the hidpi sample.
+ * @related  cf_app_set_pixel_scale cf_app_get_pixel_scale cf_app_get_display_scale cf_app_set_canvas_size cf_app_display_scale_was_changed
+ */
+CF_API void CF_CALL cf_app_update_display(float scale);
+
+/**
  * @function cf_app_set_size
  * @category app
- * @brief    Sets the size of the window in pixels.
- * @param    w          The width of the window in pixels.
- * @param    h          The height of the window in pixels.
- * @related  cf_app_get_size cf_app_get_position cf_app_set_position
+ * @brief    Sets the size of the window in logical points.
+ * @param    w          The width of the window in logical points.
+ * @param    h          The height of the window in logical points.
+ * @remarks  Only the window changes. The app canvas and the default 2d projection keep their current size --
+ *           update them alongside if desired, e.g. `cf_app_set_canvas_size` and `cf_draw_projection`; see the
+ *           hidpi sample for the recipe.
+ * @related  cf_app_get_size cf_app_get_position cf_app_set_position cf_app_set_canvas_size
  */
 CF_API void CF_CALL cf_app_set_size(int w, int h);
 
@@ -729,11 +761,11 @@ CF_API CF_Canvas CF_CALL cf_app_get_canvas(void);
  * @param    h          The height in pixels to resize the canvas to.
  * @remarks  Be careful about calling this function, as it will invalidate any old references from `cf_app_get_canvas`.
  *
- *           This is a one-shot override. The app's canvas is automatically recreated at window size (in points) times
- *           `cf_app_get_pixel_scale` on every canvas recreation event -- a window resize, moving to a display with a
- *           different pixel density, `cf_app_set_size`, or `cf_app_set_msaa` -- so a custom size lasts only until the
- *           next such event. For a persistent fixed-resolution render target (e.g. a retro/pixel-art look) make your
- *           own canvas with `cf_make_canvas` and draw it scaled-up with `cf_draw_canvas`; see the canvas_modes sample.
+ *           The canvas keeps this size until the next `cf_app_set_canvas_size` call -- nothing resizes it behind
+ *           your back. It is created once at startup at window size (in points) times the display's pixel density;
+ *           after that, window resizes and display density changes only raise `cf_app_was_resized` /
+ *           `cf_app_display_scale_was_changed`, and resizing the canvas in response is up to you (see the hidpi sample
+ *           for the recipe).
  * @related  cf_app_get_canvas cf_app_get_canvas_width cf_app_get_canvas_height cf_app_get_pixel_scale cf_app_set_canvas_blit_filter cf_make_canvas cf_draw_canvas
  */
 CF_API void CF_CALL cf_app_set_canvas_size(int w, int h);
@@ -973,6 +1005,8 @@ CF_INLINE int app_get_height() { return cf_app_get_height(); }
 CF_INLINE float app_get_display_scale() { return cf_app_get_display_scale(); }
 CF_INLINE bool app_display_scale_was_changed() { return cf_app_display_scale_was_changed(); }
 CF_INLINE float app_get_pixel_scale() { return cf_app_get_pixel_scale(); }
+CF_INLINE void app_set_pixel_scale(float scale) { cf_app_set_pixel_scale(scale); }
+CF_INLINE void app_update_display(float scale) { cf_app_update_display(scale); }
 CF_INLINE void app_center_window() { cf_app_center_window(); }
 CF_INLINE bool app_was_resized() { return cf_app_was_resized(); }
 CF_INLINE bool app_was_moved() { return cf_app_was_moved(); }

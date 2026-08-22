@@ -10,6 +10,7 @@ set(CF_TEST_SRCS
 	test_coroutine.cpp
 	test_doubly_list.cpp
 	test_hashtable.cpp
+	test_hidpi.cpp
 	test_path.cpp
 	test_custom_sprite.cpp
 	test_sprite.cpp
