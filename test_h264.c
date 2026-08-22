@@ -13,9 +13,12 @@ int main(int argc, char** argv)
 	int w = argc > 1 ? atoi(argv[1]) : 320;
 	int h = argc > 2 ? atoi(argv[2]) : 176;
 	int frames = argc > 3 ? atoi(argv[3]) : 6;
+	int qp = argc > 4 ? atoi(argv[4]) : 26;
+	int flat = argc > 5 ? atoi(argv[5]) : 0;
 
 	unsigned char* rgba = (unsigned char*)malloc((size_t)w * h * 4);
 	ch_encoder_t* e = ch_encoder_make(w, h, 30);
+	if (e) ch_encoder_qp(e, qp);
 	if (!e) { printf("make failed: %s\n", ch_error_reason); return 1; }
 
 	FILE* raw = fopen("ref.rgba", "wb");
@@ -30,6 +33,7 @@ int main(int argc, char** argv)
 				int cx = (x * 8 / w), cy = (y * 8 / h);
 				int checker = (cx + cy) & 1;
 				int bar = (x + f * 7) % w < w / 8;
+				if (flat) { p[0] = 90; p[1] = 140; p[2] = 60; p[3] = 255; continue; }
 				p[0] = (unsigned char)(checker ? 255 : (x * 255 / (w - 1)));
 				p[1] = (unsigned char)(bar ? 255 : (y * 255 / (h - 1)));
 				p[2] = (unsigned char)(checker ? (f * 37) & 255 : 24);
