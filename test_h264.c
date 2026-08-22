@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <string.h>
 
 int main(int argc, char** argv)
 {
@@ -45,9 +46,17 @@ int main(int argc, char** argv)
 		// Dump the encoder's OWN yuv420p, cropped, in ffmpeg's plane order. I_PCM is lossless in
 		// YUV but not in RGB -- 4:2:0 throws chroma away before the codec ever sees it -- so this
 		// is the buffer a conformant decoder has to reproduce exactly.
-		for (int y = 0; y < h; ++y) fwrite(e->y + (size_t)y * e->luma_stride, 1, (size_t)w, yuv);
-		for (int y = 0; y < h / 2; ++y) fwrite(e->cb + (size_t)y * e->chroma_stride, 1, (size_t)(w / 2), yuv);
-		for (int y = 0; y < h / 2; ++y) fwrite(e->cr + (size_t)y * e->chroma_stride, 1, (size_t)(w / 2), yuv);
+		// For I_PCM the source planes ARE the reconstruction. For a compressed frame the decoder must
+		// reproduce the encoder's own reconstruction exactly -- encoder and decoder run the same
+		// inverse transform and the same intra prediction, so any difference at all is a bug in one
+		// of them, and this is what makes the round trip a real conformance test rather than a PSNR
+		// eyeball.
+		const uint8_t* py = qp < 0 ? e->y : e->rec_y;
+		const uint8_t* pb = qp < 0 ? e->cb : e->rec_cb;
+		const uint8_t* pr = qp < 0 ? e->cr : e->rec_cr;
+		for (int y = 0; y < h; ++y) fwrite(py + (size_t)y * e->luma_stride, 1, (size_t)w, yuv);
+		for (int y = 0; y < h / 2; ++y) fwrite(pb + (size_t)y * e->chroma_stride, 1, (size_t)(w / 2), yuv);
+		for (int y = 0; y < h / 2; ++y) fwrite(pr + (size_t)y * e->chroma_stride, 1, (size_t)(w / 2), yuv);
 	}
 	fclose(raw);
 	fclose(yuv);

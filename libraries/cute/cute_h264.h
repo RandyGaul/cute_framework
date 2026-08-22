@@ -30,13 +30,16 @@
 			        CAVLC. Around 65x smaller than lossless at QP 26, and the
 			        QP sweep is monotonic in both size and quality (55 dB at
 			        QP 18 down to 40 dB at QP 42 on the test pattern).
-			        KNOWN BUG: one CAVLC table entry is still wrong somewhere.
-			        Most sizes and quantizers decode clean, but a particular
-			        coefficient pattern desynchronises the bitstream -- 300x170
-			        and 304x170 of the test pattern reproduce it at QP <= 26,
-			        while 128x128, 320x170, 854x480 and 1920x1080 are clean at
-			        every QP. Do not ship compressed output until it is found.
 			decode: not yet.
+
+			Both paths are verified the strict way rather than by eye: ffmpeg's
+			decode is compared byte for byte against the encoder's OWN
+			reconstruction, over 35 frame sizes x every quantizer 0..51 x flat
+			and detailed content. Encoder and decoder run the same inverse
+			transform and the same intra prediction, so any difference at all
+			is a bug in one of them, and a PSNR number would have hidden every
+			table error this found. tools/h264_table_check.py additionally
+			checks each CAVLC table against the codewords in the spec.
 
 		I_PCM first is deliberate, not a shortcut that got left in. It exercises
 		every part of the bitstream that the compressed paths also depend on --
@@ -422,6 +425,14 @@ static const int ch_zigzag[16] = { 0,1,4,8, 5,2,3,6, 9,12,13,10, 7,11,14,15 };
 // chosen by how many coefficients the NEIGHBOURING blocks had, which is the "context adaptive"
 // part and the reason a per-block total_coeff map has to be carried across the whole picture.
 
+// Do not hand-edit the tables below, and do not trust a reading of them. Run
+// tools/h264_table_check.py, which compares every entry against the codewords printed in the
+// spec. A wrong entry here is nearly undetectable by inspection: one of these rows had a length
+// that was too long by one, which shifted the rest of the row into codewords that happened to be
+// unused, so the table stayed prefix-free, kept the correct Kraft sum, and still looked perfectly
+// regular. Most pictures decoded fine and a few desynchronised several macroblocks past the
+// actual mistake.
+//
 // coeff_token, Table 9-5. Indexed [trailing_ones][total_coeff].
 static const uint8_t ch_ct_len0[4][17] = {
 	{ 1,6,8,9,10,11,13,13,13,14,14,15,15,16,16,16,16 },
@@ -449,13 +460,13 @@ static const uint8_t ch_ct_code1[4][17] = {
 };
 static const uint8_t ch_ct_len2[4][17] = {
 	{ 4,6,6,6,7,7,7,7,8,8,9,9,9,10,10,10,10 },
-	{ 0,4,5,5,5,5,6,6,7,8,8,9,9,10,10,10,10 },
+	{ 0,4,5,5,5,5,6,6,7,8,8,9,9, 9,10,10,10 },
 	{ 0,0,4,5,5,5,6,6,7,7,8,8,9, 9,10,10,10 },
 	{ 0,0,0,4,4,4,4,4,5,6,7,8,8, 9,10,10,10 },
 };
 static const uint8_t ch_ct_code2[4][17] = {
 	{ 15,15,11,8,15,11,9,8,15,11,15,11,8,13,9,5,1 },
-	{  0,14,15,12,10,8,14,10,14,14,10,14,10,12,8,4,0 },
+	{  0,14,15,12,10,8,14,10,14,14,10,14,10, 7,12,8,4 },
 	{  0, 0,13,14,11,9,13, 9,13,10,13, 9,13, 9,11,7,3 },
 	{  0, 0, 0,12,11,10,9,8,13,12,12,12,8,12,10,6,2 },
 };
@@ -525,6 +536,19 @@ static const uint8_t ch_rb_code[7][16] = {
 
 // Writes one residual block. `coeffs` is already in zig-zag order. `nC` selects the coeff_token
 // table; -1 means chroma DC. Returns total_coeff so the caller can record it for its neighbours.
+// The tail of the level code, once the value is too large for a plain prefix. level_prefix 15
+// carries a 12-bit suffix; every prefix beyond that widens the suffix by a bit and doubles the
+// reach. Nothing but QP 0 gets near it -- a DC level there runs to several thousand, where a
+// fixed 12-bit field would silently wrap and encode a completely different coefficient.
+static void ch_put_level_escape(ch_bits_t* w, int x)
+{
+	int prefix = 15;
+	while (x >= (1 << (prefix - 3))) { x -= (1 << (prefix - 3)); ++prefix; }
+	ch_put_bits(w, 0, prefix);
+	ch_put_bit(w, 1);
+	ch_put_bits(w, (uint32_t)x, prefix - 3);
+}
+
 static int ch_write_residual(ch_bits_t* w, const int* coeffs, int count, int nC)
 {
 	int levels[16], runs[16];
@@ -569,15 +593,14 @@ static int ch_write_residual(ch_bits_t* w, const int* coeffs, int count, int nC)
 		if (suffix_len == 0) {
 			if (code < 14) { ch_put_bits(w, 0, code); ch_put_bit(w, 1); }
 			else if (code < 30) { ch_put_bits(w, 0, 14); ch_put_bit(w, 1); ch_put_bits(w, (uint32_t)(code - 14), 4); }
-			else { ch_put_bits(w, 0, 15); ch_put_bit(w, 1); ch_put_bits(w, (uint32_t)(code - 30), 12); }
+			else ch_put_level_escape(w, code - 30);
 		} else {
 			int prefix = code >> suffix_len;
 			if (prefix < 15) {
 				ch_put_bits(w, 0, prefix); ch_put_bit(w, 1);
 				ch_put_bits(w, (uint32_t)(code & ((1 << suffix_len) - 1)), suffix_len);
 			} else {
-				ch_put_bits(w, 0, 15); ch_put_bit(w, 1);
-				ch_put_bits(w, (uint32_t)(code - (15 << suffix_len)), 12);
+				ch_put_level_escape(w, code - (15 << suffix_len));
 			}
 		}
 		if (suffix_len == 0) suffix_len = 1;
