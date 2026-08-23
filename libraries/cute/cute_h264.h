@@ -41,6 +41,12 @@
 			        bits at matched quality on hard-edged content that moves by
 			        whole pixels and 50% on smooth content that does not; a
 			        still picture costs about ten bytes a frame.
+			deblocking: on, except for the lossless path. Bitrate is unchanged
+			        within about 1%, for 0.4 to 0.5 dB at mid-to-high quality.
+			        At very high QP it costs a little PSNR on synthetic
+			        hard-edged content -- which is the region where its real
+			        job, not showing block boundaries, is something PSNR does
+			        not measure either way.
 			decode: not yet.
 
 			Every path is verified the strict way rather than by eye: ffmpeg's
@@ -69,11 +75,10 @@
 		container that is already known-good. It also leaves a genuinely useful
 		lossless capture mode behind once the compressed paths land.
 
-		Planned, in order: the deblocking filter, which is where the remaining
-		visible quality is at low bitrates; then the decoder, validated against
-		both this encoder and ffmpeg's output. Sub-macroblock partitions and
-		multiple reference frames are worth having eventually but are refinements
-		of something that already works, not gaps.
+		Planned next: the decoder, validated against both this encoder and
+		ffmpeg's output. Sub-macroblock partitions and multiple reference frames
+		are worth having eventually but are refinements of something that already
+		works, not gaps.
 
 	EXAMPLES:
 
@@ -1901,6 +1906,164 @@ static int ch_encode_mb(ch_encoder_t* e, int mbx, int mby, int* skip_run)
 }
 
 
+//--------------------------------------------------------------------------------------------------
+// Deblocking. Block-based coding leaves visible seams on block boundaries at low bitrates, and the
+// filter smooths them -- but only where the step across the edge looks like a coding artifact
+// rather than a real edge in the picture, which is what the alpha and beta thresholds decide.
+//
+// This is in the decoding loop, not a post-process. The filtered picture is what the next frame
+// predicts from, so encoder and decoder have to produce identical output here or they drift apart
+// frame by frame. Intra prediction is the exception and deliberately reads the UNFILTERED
+// reconstruction, which is why both pictures are kept.
+
+// Spec Tables 8-16 and 8-17, indexed by the quantizer. Both thresholds are zero below QP 16: at
+// high quality there is no blocking to remove and filtering would only lose detail.
+static const uint8_t ch_alpha_tab[52] = {
+	0,0,0,0,0,0,0,0,0,0,0,0,0,
+	0,0,0,4,4,5,6,7,8,9,10,12,13,
+	15,17,20,22,25,28,32,36,40,45,50,56,63,
+	71,80,90,101,113,127,144,162,182,203,226,255,255,
+};
+static const uint8_t ch_beta_tab[52] = {
+	0,0,0,0,0,0,0,0,0,0,0,0,0,
+	0,0,0,2,2,2,3,3,3,3,4,4,4,
+	6,6,7,7,8,8,9,9,10,10,11,11,12,
+	12,13,13,14,14,15,15,16,16,17,17,18,18,
+};
+static const uint8_t ch_tc0_tab[3][52] = {
+	{ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,
+	  1,1,1,1,1,1,1,2,2,2,2,3,3,3,4,4,4,5,6,6,7,8,9,10,11,13 },
+	{ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,
+	  1,1,1,1,1,2,2,2,2,3,3,3,4,4,5,5,6,7,8,8,10,11,12,13,15,17 },
+	{ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,
+	  1,2,2,2,2,3,3,3,4,4,4,5,6,6,7,8,9,10,11,13,14,16,18,20,23,25 },
+};
+
+static int ch_abs(int v) { return v < 0 ? -v : v; }
+
+// The boundary strength for one edge, spec clause 8.7.2.1. It is how hard to filter, and it rises
+// with how likely the edge is to be an artifact: an intra macroblock boundary is the worst case,
+// while two blocks that moved together and coded nothing cannot have gained a seam at all.
+static int ch_bs(ch_encoder_t* e, int pbx, int pby, int qbx, int qby, int mb_edge)
+{
+	int stride = e->mb_w * 4;
+	int ip = pby * stride + pbx, iq = qby * stride + qbx;
+	if (e->ref_idx[ip] < 0 || e->ref_idx[iq] < 0) return mb_edge ? 4 : 3;
+	if (e->nz_luma[ip] || e->nz_luma[iq]) return 2;
+	// With a single reference picture the vectors are the only thing left that can differ. A whole
+	// sample of disagreement is the threshold, and vectors are in quarter samples.
+	int dx = ch_abs(e->mv[ip * 2] - e->mv[iq * 2]);
+	int dy = ch_abs(e->mv[ip * 2 + 1] - e->mv[iq * 2 + 1]);
+	return (dx >= 4 || dy >= 4) ? 1 : 0;
+}
+
+// Filters one line of samples across an edge, spec clauses 8.7.2.3 and 8.7.2.4. `s` points at q0
+// and `step` is the distance to the next sample across the edge, so the same code serves vertical
+// and horizontal edges. chroma_style suppresses the outer taps: chroma has half the resolution and
+// filtering three samples deep into an 8-sample block would reach most of the way across it.
+static void ch_filter_line(uint8_t* s, int step, int bS, int alpha, int beta, int tc0, int chroma_style)
+{
+	int p0 = s[-step], p1 = s[-2 * step], p2 = s[-3 * step], p3 = s[-4 * step];
+	int q0 = s[0], q1 = s[step], q2 = s[2 * step], q3 = s[3 * step];
+	// The thresholds are the whole point: a step this large is a real edge in the picture, and
+	// smoothing it would be destroying detail rather than removing an artifact.
+	if (!(ch_abs(p0 - q0) < alpha && ch_abs(p1 - p0) < beta && ch_abs(q1 - q0) < beta)) return;
+	int ap = ch_abs(p2 - p0), aq = ch_abs(q2 - q0);
+	if (bS < 4) {
+		int tc = chroma_style ? tc0 + 1 : tc0 + (ap < beta) + (aq < beta);
+		int d = ch_clamp((((q0 - p0) << 2) + (p1 - q1) + 4) >> 3, -tc, tc);
+		s[-step] = (uint8_t)ch_clip255(p0 + d);
+		s[0] = (uint8_t)ch_clip255(q0 - d);
+		if (!chroma_style && ap < beta)
+			s[-2 * step] = (uint8_t)(p1 + ch_clamp((p2 + ((p0 + q0 + 1) >> 1) - (p1 << 1)) >> 1, -tc0, tc0));
+		if (!chroma_style && aq < beta)
+			s[step] = (uint8_t)(q1 + ch_clamp((q2 + ((p0 + q0 + 1) >> 1) - (q1 << 1)) >> 1, -tc0, tc0));
+	} else {
+		// bS 4 only happens on an intra macroblock edge, where the seam is worst and a much
+		// wider filter is allowed -- but only if the surroundings are flat enough to justify it.
+		int flat = ch_abs(p0 - q0) < ((alpha >> 2) + 2);
+		if (!chroma_style && ap < beta && flat) {
+			s[-step]     = (uint8_t)((p2 + 2 * p1 + 2 * p0 + 2 * q0 + q1 + 4) >> 3);
+			s[-2 * step] = (uint8_t)((p2 + p1 + p0 + q0 + 2) >> 2);
+			s[-3 * step] = (uint8_t)((2 * p3 + 3 * p2 + p1 + p0 + q0 + 4) >> 3);
+		} else {
+			s[-step] = (uint8_t)((2 * p1 + p0 + q1 + 2) >> 2);
+		}
+		if (!chroma_style && aq < beta && flat) {
+			s[0]        = (uint8_t)((p1 + 2 * p0 + 2 * q0 + 2 * q1 + q2 + 4) >> 3);
+			s[step]     = (uint8_t)((p0 + q0 + q1 + q2 + 2) >> 2);
+			s[2 * step] = (uint8_t)((2 * q3 + 3 * q2 + q1 + q0 + p0 + 4) >> 3);
+		} else {
+			s[0] = (uint8_t)((2 * q1 + q0 + p1 + 2) >> 2);
+		}
+	}
+}
+
+// Filters the whole picture in place. Macroblocks are walked in raster order, and within each one
+// every vertical edge is filtered left to right before any horizontal edge is filtered top to
+// bottom. The order is not incidental: each edge reads samples the previous edge already changed,
+// so a decoder that ran them in a different order would get different pixels.
+static void ch_deblock(ch_encoder_t* e)
+{
+	int ia_y = ch_clamp(e->qp, 0, 51);
+	int ia_c = ch_clamp(ch_chroma_qp(e->qp), 0, 51);
+	int alpha_y = ch_alpha_tab[ia_y], beta_y = ch_beta_tab[ia_y];
+	int alpha_c = ch_alpha_tab[ia_c], beta_c = ch_beta_tab[ia_c];
+	for (int mby = 0; mby < e->mb_h; ++mby) {
+		for (int mbx = 0; mbx < e->mb_w; ++mbx) {
+			for (int dir = 0; dir < 2; ++dir) {
+				int vertical = dir == 0;
+				for (int edge = 0; edge < 16; edge += 4) {
+					// Picture boundaries have nothing on the other side to filter against.
+					if (edge == 0 && (vertical ? mbx == 0 : mby == 0)) continue;
+					int mb_edge = edge == 0;
+					for (int g = 0; g < 16; g += 4) {
+						int qbx = mbx * 4 + (vertical ? edge / 4 : g / 4);
+						int qby = mby * 4 + (vertical ? g / 4 : edge / 4);
+						int bs = ch_bs(e, qbx - (vertical ? 1 : 0), qby - (vertical ? 0 : 1),
+						               qbx, qby, mb_edge);
+						if (!bs) continue;
+						int tc0 = bs < 4 ? ch_tc0_tab[bs - 1][ia_y] : 0;
+						for (int k = 0; k < 4; ++k) {
+							int x = mbx * 16 + (vertical ? edge : g + k);
+							int y = mby * 16 + (vertical ? g + k : edge);
+							uint8_t* s = e->ref_y + (size_t)y * e->luma_stride + x;
+							ch_filter_line(s, vertical ? 1 : e->luma_stride,
+								bs, alpha_y, beta_y, tc0, 0);
+						}
+					}
+					// In 4:2:0 only every other luma edge has a chroma edge on it, and the
+					// strength is the one already worked out for the luma edge it sits on.
+					if (edge != 0 && edge != 8) continue;
+					// Two chroma samples per luma block, not four: chroma is half resolution, so a
+					// run of four chroma samples along the edge spans TWO luma blocks and can
+					// straddle a change in strength. Filtering four at a time reads the wrong
+					// block for half of them, which an all-intra picture hides completely because
+					// its strength is uniform.
+					for (int g = 0; g < 8; g += 2) {
+						int qbx = mbx * 4 + (vertical ? edge / 4 : g / 2);
+						int qby = mby * 4 + (vertical ? g / 2 : edge / 4);
+						int bs = ch_bs(e, qbx - (vertical ? 1 : 0), qby - (vertical ? 0 : 1),
+						               qbx, qby, mb_edge);
+						if (!bs) continue;
+						int tc0 = bs < 4 ? ch_tc0_tab[bs - 1][ia_c] : 0;
+						for (int c = 0; c < 2; ++c) {
+							uint8_t* plane = c ? e->ref_cr : e->ref_cb;
+							for (int k = 0; k < 2; ++k) {
+								int x = mbx * 8 + (vertical ? edge / 2 : g + k);
+								int y = mby * 8 + (vertical ? g + k : edge / 2);
+								uint8_t* s = plane + (size_t)y * e->chroma_stride + x;
+								ch_filter_line(s, vertical ? 1 : e->chroma_stride,
+									bs, alpha_c, beta_c, tc0, 1);
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
 static void ch_write_slice(ch_encoder_t* e, int idr)
 {
 	ch_bits_t* w = &e->bits;
@@ -1923,12 +2086,16 @@ static void ch_write_slice(ch_encoder_t* e, int idr)
 		ch_put_bit(w, 0);             // adaptive_ref_pic_marking_mode_flag: sliding window
 	}
 	ch_se(w, e->qp < 0 ? 0 : e->qp - 26); // slice_qp_delta, against the PPS's QP 26
-	// Deblocking stays off. For I_PCM it has to be, or the filter smears samples the encoder
-	// never touched and the round trip stops being bit-exact. For I_16x16 it is simply not
-	// implemented yet -- turning it on without implementing it in the reconstruction loop would
-	// desynchronise the encoder's prediction from the decoder's, which is far worse than
-	// slightly blockier output.
-	ch_ue(w, 1);                      // disable_deblocking_filter_idc: 1 = off
+	// The lossless path leaves the filter off, and has to: I_PCM samples are exact by definition
+	// and a filter running across their edges would smear samples the encoder never touched,
+	// costing the round trip its bit-exactness for no benefit.
+	if (e->qp < 0) {
+		ch_ue(w, 1);                  // disable_deblocking_filter_idc: 1 = off
+	} else {
+		ch_ue(w, 0);                  // disable_deblocking_filter_idc: 0 = on
+		ch_se(w, 0);                  // slice_alpha_c0_offset_div2
+		ch_se(w, 0);                  // slice_beta_offset_div2
+	}
 
 	int skip_run = 0;
 	for (int mby = 0; mby < e->mb_h; ++mby) {
@@ -1939,6 +2106,18 @@ static void ch_write_slice(ch_encoder_t* e, int idr)
 			if (e->qp >= 0) { ch_encode_mb(e, mbx, mby, &skip_run); continue; }
 			ch_ue(w, 25);             // mb_type 25 in an I slice is I_PCM
 			ch_align_zero(w);         // pcm_alignment_zero_bit
+			// I_PCM samples ARE their own reconstruction. Writing them through keeps one rule for
+			// where a decoded picture lives instead of a special case for the lossless path.
+			for (int y = 0; y < 16; ++y)
+				CUTE_H264_MEMCPY(e->rec_y + (size_t)(mby * 16 + y) * e->luma_stride + mbx * 16,
+					e->y + (size_t)(mby * 16 + y) * e->luma_stride + mbx * 16, 16);
+			for (int c = 0; c < 2; ++c) {
+				const uint8_t* sp = c ? e->cr : e->cb;
+				uint8_t* rp = c ? e->rec_cr : e->rec_cb;
+				for (int y = 0; y < 8; ++y)
+					CUTE_H264_MEMCPY(rp + (size_t)(mby * 8 + y) * e->chroma_stride + mbx * 8,
+						sp + (size_t)(mby * 8 + y) * e->chroma_stride + mbx * 8, 8);
+			}
 			const uint8_t* src = e->y + (size_t)(mby * 16) * e->luma_stride + mbx * 16;
 			for (int y = 0; y < 16; ++y) {
 				for (int x = 0; x < 16; ++x) ch_put_bits(w, src[y * (size_t)e->luma_stride + x], 8);
@@ -2042,19 +2221,20 @@ int ch_encoder_frame(ch_encoder_t* e, const void* rgba)
 		ch_write_sps(e);
 		ch_write_pps(e);
 	}
-	// The previous frame's reconstruction becomes this frame's reference, and this frame is
-	// reconstructed into the buffer from two frames back. Swapping here rather than after encoding
-	// keeps the useful property that rec_ holds the frame just encoded once this call returns.
-	// Overwriting a stale buffer is safe: intra prediction only ever reads parts of the current
-	// picture that have already been written.
-	{
-		uint8_t* t0 = e->rec_y; e->rec_y = e->ref_y; e->ref_y = t0;
-		uint8_t* t1 = e->rec_cb; e->rec_cb = e->ref_cb; e->ref_cb = t1;
-		uint8_t* t2 = e->rec_cr; e->rec_cr = e->ref_cr; e->ref_cr = t2;
-	}
 	e->mb_type_offset = idr ? 0 : 5;
 	ch_write_slice(e, idr);
 	if (idr) e->idr_pic_id ^= 1;
+	// The reference planes hold the DEBLOCKED picture, which is both what a decoder outputs and
+	// what the next frame predicts from. The unfiltered reconstruction stays where it is, because
+	// intra prediction within a picture is specified to read it rather than the filtered one.
+	{
+		size_t luma = (size_t)e->luma_stride * (e->mb_h * 16);
+		size_t chroma = (size_t)e->chroma_stride * (e->mb_h * 8);
+		CUTE_H264_MEMCPY(e->ref_y, e->rec_y, luma);
+		CUTE_H264_MEMCPY(e->ref_cb, e->rec_cb, chroma);
+		CUTE_H264_MEMCPY(e->ref_cr, e->rec_cr, chroma);
+	}
+	if (e->qp >= 0) ch_deblock(e);
 	e->frame_num = (e->frame_num + 1) & 15;
 	++e->frame_count;
 	if (e->out.oom || e->bits.bytes.oom) { ch_error_reason = "Out of memory."; return 0; }
