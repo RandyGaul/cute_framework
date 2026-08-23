@@ -63,9 +63,9 @@ int main(int argc, char** argv)
 		// inverse transform and the same intra prediction, so any difference at all is a bug in one
 		// of them, and this is what makes the round trip a real conformance test rather than a PSNR
 		// eyeball.
-		const uint8_t* py = e->ref_y;
-		const uint8_t* pb = e->ref_cb;
-		const uint8_t* pr = e->ref_cr;
+		const uint8_t* py = e->pic.ref_y[0];
+		const uint8_t* pb = e->pic.ref_cb[0];
+		const uint8_t* pr = e->pic.ref_cr[0];
 		for (int y = 0; y < h; ++y) fwrite(py + (size_t)y * e->luma_stride, 1, (size_t)w, yuv);
 		for (int y = 0; y < h / 2; ++y) fwrite(pb + (size_t)y * e->chroma_stride, 1, (size_t)(w / 2), yuv);
 		for (int y = 0; y < h / 2; ++y) fwrite(pr + (size_t)y * e->chroma_stride, 1, (size_t)(w / 2), yuv);
