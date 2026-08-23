@@ -34,7 +34,19 @@ int main(int argc, char** argv)
 				int cx = (x * 8 / w), cy = (y * 8 / h);
 				int checker = (cx + cy) & 1;
 				int bar = (x + f * 7) % w < w / 8;
-				if (flat) { p[0] = 90; p[1] = 140; p[2] = 60; p[3] = 255; continue; }
+				if (flat == 1) { p[0] = 90; p[1] = 140; p[2] = 60; p[3] = 255; continue; }
+				if (flat == 2) {
+					// A smooth field translated by a NON-integer amount each frame. The pattern
+					// above shifts by whole pixels, which a broken sub-sample interpolator would
+					// survive untouched because the motion search would never ask it for one.
+					double sx = x - f * 1.4, sy = y - f * 0.7;
+					int v = (int)(127.5 + 100.0 * sin(sx * 0.11) * cos(sy * 0.09));
+					p[0] = (unsigned char)v;
+					p[1] = (unsigned char)(255 - v);
+					p[2] = (unsigned char)((v * 3) & 255);
+					p[3] = 255;
+					continue;
+				}
 				p[0] = (unsigned char)(checker ? 255 : (x * 255 / (w - 1)));
 				p[1] = (unsigned char)(bar ? 255 : (y * 255 / (h - 1)));
 				p[2] = (unsigned char)(checker ? (f * 37) & 255 : 24);
