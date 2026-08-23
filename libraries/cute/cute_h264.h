@@ -36,7 +36,8 @@
 			        against the I_16x16-only encoder on a rate/quality curve
 			        rather than at matched QP, which flatters it.
 			encode, inter: P macroblocks predicted from the previous frame at
-			        quarter-sample precision, plus P_Skip. A keyframe every two
+			        quarter-sample precision, split into 16x16, 16x8, 8x16 or
+			        four 8x8 pieces as the motion warrants, plus P_Skip. A keyframe every two
 			        seconds so a capture can still be seeked. Worth 32% fewer
 			        bits at matched quality on hard-edged content that moves by
 			        whole pixels and 50% on smooth content that does not; a
@@ -52,9 +53,10 @@
 			        macroblocks and deblocking. It reads streams from other
 			        encoders, not just this one -- x264 output decodes bit-
 			        exactly against ffmpeg. What is not supported is rejected
-			        by name rather than decoded approximately: CABAC,
-			        sub-macroblock partitions, more than one reference frame,
-			        interlacing.
+			        by name rather than decoded approximately: CABAC, more
+			        than one reference frame, interlacing. Every partition and
+			        sub-partition shape decodes, including the ones this
+			        encoder never produces.
 			container: MP4, so the output opens in players, editors and
 			        browsers rather than only in ffmpeg. The picture data goes
 			        in unchanged -- this is packaging, not re-encoding -- and
@@ -104,9 +106,15 @@
 		Measured against x264 at matched quality on three clips: restricted to
 		the same tools this encoder has, it is within about 10% either way, so
 		the coding decisions are sound. Against x264 with everything switched on
-		it is 36-57% larger, and that gap is the features below rather than the
-		decisions. In order of what they buy: sub-macroblock partitions and
-		multiple reference frames; CABAC; B frames.
+		it is 32-55% larger, and that gap is the features below rather than the
+		decisions. In order of what they buy: CABAC; B frames; multiple
+		reference frames.
+
+		Encoding runs at roughly 17 frames a second at 640x360 on one core with
+		no SIMD anywhere. Searching every partition shape exhaustively costs
+		four times that for a few percent, so the search abandons a shape once
+		it cannot win and does not split a macroblock the single vector already
+		predicts well.
 
 	EXAMPLES:
 
@@ -1643,42 +1651,56 @@ static int ch_median(int a, int b, int c)
 	return c;
 }
 
-// The motion vector predictor for a 16x16 partition, spec clause 8.4.1.3. The vector actually sent
-// is the difference from this, so encoder and decoder have to agree on it exactly; getting it
-// wrong shifts every later macroblock rather than just this one.
-static void ch_mv_predict(const ch_pic_t* p, int mbx, int mby, int* out_x, int* out_y)
+// Whether a 4x4 block has been reconstructed yet, which is what decides if its motion vector can
+// be used to predict another. Blocks in earlier macroblocks always have been; blocks inside this
+// one depend on how it is partitioned, so the caller tracks those in a bitmask.
+static int ch_blk_avail(const ch_pic_t* p, int mbx, int mby, int bx, int by, unsigned done)
+{
+	int mx0 = mbx * 4, my0 = mby * 4;
+	if (bx < 0 || by < 0 || bx >= p->mb_w * 4 || by >= p->mb_h * 4) return 0;
+	if (by < my0) {
+		if (bx < mx0) return mbx > 0;            // above-left macroblock
+		if (bx < mx0 + 4) return 1;              // directly above
+		return mbx + 1 < p->mb_w;                // above-right
+	}
+	if (by >= my0 + 4) return 0;                 // below: not reconstructed yet
+	if (bx < mx0) return mbx > 0;                // left macroblock
+	if (bx >= mx0 + 4) return 0;                 // right macroblock: not reconstructed yet
+	return (done >> ((by - my0) * 4 + (bx - mx0))) & 1u;
+}
+
+// The motion vector predictor for one partition, spec clause 8.4.1.3. `dir` carries the shape
+// shortcut: a tall partition next to a tall neighbour, or a wide one under a wide neighbour,
+// predicts better from that neighbour alone than from the median of three.
+static void ch_mv_predict_part(const ch_pic_t* p, int mbx, int mby, int bx, int by, int bw,
+                               unsigned done, int dir, int* out_x, int* out_y)
 {
 	int stride = p->mb_w * 4;
-	int bx = mbx * 4, by = mby * 4;
 	int ax = 0, ay = 0, ar = -1;
 	int tx = 0, ty = 0, tr = -1;
 	int cx = 0, cy = 0, cr = -1;
-	int has_a = mbx > 0, has_b = mby > 0;
-	int has_c = mby > 0 && mbx + 1 < p->mb_w;
-	if (has_a) {
-		int i = by * stride + bx - 1;
-		ax = p->mv[i * 2]; ay = p->mv[i * 2 + 1]; ar = p->ref_idx[i];
+	int has_a = ch_blk_avail(p, mbx, mby, bx - 1, by, done);
+	int has_b = ch_blk_avail(p, mbx, mby, bx, by - 1, done);
+	int has_c = ch_blk_avail(p, mbx, mby, bx + bw, by - 1, done);
+	int cbx = bx + bw, cby = by - 1;
+	if (!has_c) {
+		// Where there is nothing above-right the spec substitutes above-left rather than dropping
+		// to two candidates.
+		cbx = bx - 1;
+		has_c = ch_blk_avail(p, mbx, mby, cbx, cby, done);
 	}
-	if (has_b) {
-		int i = (by - 1) * stride + bx;
-		tx = p->mv[i * 2]; ty = p->mv[i * 2 + 1]; tr = p->ref_idx[i];
-	}
-	if (has_c) {
-		int i = (by - 1) * stride + bx + 4;
-		cx = p->mv[i * 2]; cy = p->mv[i * 2 + 1]; cr = p->ref_idx[i];
-	} else if (mbx > 0 && mby > 0) {
-		// C is the block above-right. Where that does not exist the spec substitutes D, the block
-		// above-left, rather than dropping to two candidates.
-		int i = (by - 1) * stride + bx - 1;
-		cx = p->mv[i * 2]; cy = p->mv[i * 2 + 1]; cr = p->ref_idx[i];
-		has_c = 1;
-	}
+	if (has_a) { int i = by * stride + bx - 1; ax = p->mv[i * 2]; ay = p->mv[i * 2 + 1]; ar = p->ref_idx[i]; }
+	if (has_b) { int i = (by - 1) * stride + bx; tx = p->mv[i * 2]; ty = p->mv[i * 2 + 1]; tr = p->ref_idx[i]; }
+	if (has_c) { int i = cby * stride + cbx; cx = p->mv[i * 2]; cy = p->mv[i * 2 + 1]; cr = p->ref_idx[i]; }
+
+	if (dir == 1 && tr == 0) { *out_x = tx; *out_y = ty; return; }
+	if (dir == 2 && ar == 0) { *out_x = ax; *out_y = ay; return; }
+	if (dir == 3 && cr == 0) { *out_x = cx; *out_y = cy; return; }
+
 	if (!has_b && !has_c && has_a) {
 		tx = ax; ty = ay; tr = ar;
 		cx = ax; cy = ay; cr = ar;
 	}
-	// Only one neighbour pointing at the frame we are pointing at is a much better predictor than
-	// the median of three, one of which is looking somewhere else entirely.
 	int n = (ar == 0) + (tr == 0) + (cr == 0);
 	if (n == 1) {
 		if (ar == 0)      { *out_x = ax; *out_y = ay; }
@@ -1690,28 +1712,26 @@ static void ch_mv_predict(const ch_pic_t* p, int mbx, int mby, int* out_x, int* 
 	}
 }
 
-// Records that this macroblock has no motion, so a later neighbour asking for its vector is told
-// "intra" rather than reading whatever the previous picture left there.
-static void ch_mark_intra_motion(ch_pic_t* p, int mbx, int mby)
+static void ch_mv_predict(const ch_pic_t* p, int mbx, int mby, int* out_x, int* out_y)
+{
+	ch_mv_predict_part(p, mbx, mby, mbx * 4, mby * 4, 4, 0, 0, out_x, out_y);
+}
+
+// Records a partition's vector over the 4x4 blocks it covers.
+static void ch_set_motion_part(ch_pic_t* p, int bx, int by, int bw, int bh, int mvx, int mvy)
 {
 	int stride = p->mb_w * 4;
-	for (int y = 0; y < 4; ++y) {
-		for (int x = 0; x < 4; ++x) {
-			int i = (mby * 4 + y) * stride + mbx * 4 + x;
-			p->mv[i * 2] = 0; p->mv[i * 2 + 1] = 0; p->ref_idx[i] = -1;
+	for (int y = 0; y < bh; ++y) {
+		for (int x = 0; x < bw; ++x) {
+			int i = (by + y) * stride + bx + x;
+			p->mv[i * 2] = (int16_t)mvx; p->mv[i * 2 + 1] = (int16_t)mvy; p->ref_idx[i] = 0;
 		}
 	}
 }
 
 static void ch_set_motion(ch_pic_t* p, int mbx, int mby, int mvx, int mvy)
 {
-	int stride = p->mb_w * 4;
-	for (int y = 0; y < 4; ++y) {
-		for (int x = 0; x < 4; ++x) {
-			int i = (mby * 4 + y) * stride + mbx * 4 + x;
-			p->mv[i * 2] = (int16_t)mvx; p->mv[i * 2 + 1] = (int16_t)mvy; p->ref_idx[i] = 0;
-		}
-	}
+	ch_set_motion_part(p, mbx * 4, mby * 4, 4, 4, mvx, mvy);
 }
 
 // The six-tap half-sample filter, spec equations 8-241 and 8-242. Applied twice, once per axis,
@@ -1730,33 +1750,35 @@ static int ch_ref_px(const ch_pic_t* p, int x, int y)
 	return p->ref_y[(size_t)ch_clamp(y, 0, H - 1) * p->luma_stride + ch_clamp(x, 0, W - 1)];
 }
 
-// The 16x16 luma prediction at quarter-sample precision, spec clause 8.4.2.2.1. Half samples come
-// from the six-tap filter and quarter samples from averaging a half sample with its neighbour,
-// which is why the centre position j has to be filtered twice and rounded only at the end.
+// Luma prediction for one partition at quarter-sample precision, spec clause 8.4.2.2.1. Half
+// samples come from the six-tap filter and quarter samples from averaging a half sample with its
+// neighbour, which is why the centre position j is filtered twice and rounded only at the end.
 //
 // The intermediates are computed for the whole block rather than per pixel. Done per pixel the
 // centre position alone re-runs the horizontal filter six times for every output sample, and the
 // motion search calls this often enough for that to dominate the encode.
-static void ch_mc_luma(const ch_pic_t* p, int mbx, int mby, int mvx, int mvy, uint8_t* out)
+static void ch_mc_luma_block(const ch_pic_t* p, int ox, int oy, int bw, int bh,
+                             int mvx, int mvy, uint8_t* out, int out_stride)
 {
 	int fx = mvx & 3, fy = mvy & 3;
-	int ox = mbx * 16 + (mvx >> 2), oy = mby * 16 + (mvy >> 2);
+	ox += mvx >> 2;
+	oy += mvy >> 2;
 	if (!fx && !fy) {
 		int W = p->mb_w * 16, H = p->mb_h * 16;
-		for (int y = 0; y < 16; ++y) {
+		for (int y = 0; y < bh; ++y) {
 			const uint8_t* row = p->ref_y + (size_t)ch_clamp(oy + y, 0, H - 1) * p->luma_stride;
-			for (int x = 0; x < 16; ++x) out[y * 16 + x] = row[ch_clamp(ox + x, 0, W - 1)];
+			for (int x = 0; x < bw; ++x) out[y * out_stride + x] = row[ch_clamp(ox + x, 0, W - 1)];
 		}
 		return;
 	}
 
-	// b1: the horizontal filter, over the 21 rows the vertical pass will need.
-	// h1: the vertical filter, over 17 columns because position m sits one column right.
+	// b1: the horizontal filter, over the rows the vertical pass will need.
+	// h1: the vertical filter, over one extra column because position m sits one column right.
 	int b1[21][16], h1[16][17], j1[16][16];
 	if (fx) {
-		for (int r = 0; r < 21; ++r) {
+		for (int r = 0; r < bh + 5; ++r) {
 			int Y = oy + r - 2;
-			for (int x = 0; x < 16; ++x) {
+			for (int x = 0; x < bw; ++x) {
 				int X = ox + x;
 				b1[r][x] = ch_tap6(ch_ref_px(p, X - 2, Y), ch_ref_px(p, X - 1, Y), ch_ref_px(p, X, Y),
 				                   ch_ref_px(p, X + 1, Y), ch_ref_px(p, X + 2, Y), ch_ref_px(p, X + 3, Y));
@@ -1764,9 +1786,9 @@ static void ch_mc_luma(const ch_pic_t* p, int mbx, int mby, int mvx, int mvy, ui
 		}
 	}
 	if (fy) {
-		for (int y = 0; y < 16; ++y) {
+		for (int y = 0; y < bh; ++y) {
 			int Y = oy + y;
-			for (int x = 0; x < 17; ++x) {
+			for (int x = 0; x < bw + 1; ++x) {
 				int X = ox + x;
 				h1[y][x] = ch_tap6(ch_ref_px(p, X, Y - 2), ch_ref_px(p, X, Y - 1), ch_ref_px(p, X, Y),
 				                   ch_ref_px(p, X, Y + 1), ch_ref_px(p, X, Y + 2), ch_ref_px(p, X, Y + 3));
@@ -1776,14 +1798,14 @@ static void ch_mc_luma(const ch_pic_t* p, int mbx, int mby, int mvx, int mvy, ui
 	if (fx && fy) {
 		// The centre is the vertical filter applied to the horizontal intermediates, kept at full
 		// precision until the single rounding at the end.
-		for (int y = 0; y < 16; ++y)
-			for (int x = 0; x < 16; ++x)
+		for (int y = 0; y < bh; ++y)
+			for (int x = 0; x < bw; ++x)
 				j1[y][x] = ch_tap6(b1[y][x], b1[y + 1][x], b1[y + 2][x],
 				                   b1[y + 3][x], b1[y + 4][x], b1[y + 5][x]);
 	}
 
-	for (int y = 0; y < 16; ++y) {
-		for (int x = 0; x < 16; ++x) {
+	for (int y = 0; y < bh; ++y) {
+		for (int x = 0; x < bw; ++x) {
 			int X = ox + x, Y = oy + y;
 			int b = fx ? ch_clip255((b1[y + 2][x] + 16) >> 5) : 0;
 			int s = fx ? ch_clip255((b1[y + 3][x] + 16) >> 5) : 0;
@@ -1810,44 +1832,135 @@ static void ch_mc_luma(const ch_pic_t* p, int mbx, int mby, int mvx, int mvy, ui
 			case 14: v = (j + m + 1) >> 1; break;                           // k
 			default: v = (m + s + 1) >> 1; break;                           // r
 			}
-			out[y * 16 + x] = (uint8_t)v;
+			out[y * out_stride + x] = (uint8_t)v;
 		}
 	}
 }
 
 // Chroma prediction, spec clause 8.4.2.2.2. In 4:2:0 the chroma vector is the luma vector read at
 // eighth-sample precision, so even a whole-sample luma move lands on a half sample in chroma and
-// always needs the bilinear filter. `out` is two 8x8 planes, Cb then Cr.
-static void ch_mc_chroma(const ch_pic_t* p, int mbx, int mby, int mvx, int mvy, uint8_t* out)
+// always needs the bilinear filter. Sizes and offsets here are in chroma samples.
+static void ch_mc_chroma_block(const ch_pic_t* p, int ox, int oy, int bw, int bh,
+                               int mvx, int mvy, uint8_t* out, int out_stride)
 {
 	int W = p->mb_w * 8, H = p->mb_h * 8;
 	int fx = mvx & 7, fy = mvy & 7;
-	int ox = mbx * 8 + (mvx >> 3), oy = mby * 8 + (mvy >> 3);
+	ox += mvx >> 3;
+	oy += mvy >> 3;
 	for (int c = 0; c < 2; ++c) {
 		const uint8_t* ref = c ? p->ref_cr : p->ref_cb;
-		for (int y = 0; y < 8; ++y) {
+		uint8_t* dst = out + c * 64;
+		for (int y = 0; y < bh; ++y) {
 			const uint8_t* r0 = ref + (size_t)ch_clamp(oy + y, 0, H - 1) * p->chroma_stride;
 			const uint8_t* r1 = ref + (size_t)ch_clamp(oy + y + 1, 0, H - 1) * p->chroma_stride;
-			for (int x = 0; x < 8; ++x) {
+			for (int x = 0; x < bw; ++x) {
 				int x0 = ch_clamp(ox + x, 0, W - 1), x1 = ch_clamp(ox + x + 1, 0, W - 1);
 				int v = (8 - fx) * (8 - fy) * r0[x0] + fx * (8 - fy) * r0[x1]
 				      + (8 - fx) * fy * r1[x0] + fx * fy * r1[x1];
-				out[c * 64 + y * 8 + x] = (uint8_t)((v + 32) >> 6);
+				dst[y * out_stride + x] = (uint8_t)((v + 32) >> 6);
 			}
 		}
 	}
 }
 
-static int ch_sad16(const uint8_t* a, int as, const uint8_t* b, int bs)
+static void ch_mc_luma(const ch_pic_t* p, int mbx, int mby, int mvx, int mvy, uint8_t* out)
+{
+	ch_mc_luma_block(p, mbx * 16, mby * 16, 16, 16, mvx, mvy, out, 16);
+}
+
+static void ch_mc_chroma(const ch_pic_t* p, int mbx, int mby, int mvx, int mvy, uint8_t* out)
+{
+	ch_mc_chroma_block(p, mbx * 8, mby * 8, 8, 8, mvx, mvy, out, 8);
+}
+
+// Records that this macroblock has no motion, so a later neighbour asking for its vector is told
+// "intra" rather than reading whatever the previous picture left there.
+static void ch_mark_intra_motion(ch_pic_t* p, int mbx, int mby)
+{
+	int stride = p->mb_w * 4;
+	for (int y = 0; y < 4; ++y) {
+		for (int x = 0; x < 4; ++x) {
+			int i = (mby * 4 + y) * stride + mbx * 4 + x;
+			p->mv[i * 2] = 0; p->mv[i * 2 + 1] = 0; p->ref_idx[i] = -1;
+		}
+	}
+}
+
+// The four ways a P macroblock can be split, in 4x4 units: one 16x16, two 16x8, two 8x16, or four
+// 8x8. Smaller pieces track motion that does not move as one block, at the cost of a vector each.
+static const int8_t ch_part_shape[4][4][4] = {
+	{ { 0,0,4,4 } },
+	{ { 0,0,4,2 }, { 0,2,4,2 } },
+	{ { 0,0,2,4 }, { 2,0,2,4 } },
+	{ { 0,0,2,2 }, { 2,0,2,2 }, { 0,2,2,2 }, { 2,2,2,2 } },
+};
+static const int ch_part_count[4] = { 1, 2, 2, 4 };
+// Which neighbour each partition prefers over the median, per spec equations 8-203 to 8-206.
+static const int ch_part_dir[4][4] = { { 0 }, { 1, 2 }, { 2, 3 }, { 0, 0, 0, 0 } };
+// Roughly what the shape costs to signal: mb_type, plus four sub_mb_types for the 8x8 case.
+static const int ch_part_bits[4] = { 1, 3, 3, 9 };
+
+static unsigned ch_rect_bits(int bx, int by, int bw, int bh)
+{
+	unsigned m = 0;
+	for (int y = 0; y < bh; ++y)
+		for (int x = 0; x < bw; ++x) m |= 1u << ((by + y) * 4 + bx + x);
+	return m;
+}
+
+static int ch_sad(const uint8_t* a, int as, const uint8_t* b, int bs, int w, int h)
 {
 	int sad = 0;
-	for (int y = 0; y < 16; ++y) {
-		for (int x = 0; x < 16; ++x) {
+	for (int y = 0; y < h; ++y) {
+		for (int x = 0; x < w; ++x) {
 			int d = a[(size_t)y * as + x] - b[(size_t)y * bs + x];
 			sad += d < 0 ? -d : d;
 		}
 	}
 	return sad;
+}
+
+// Finds a vector for one partition. Starts from the predicted vector, which is both the better
+// guess and the one that costs nothing to send, then walks downhill with a halving step -- the
+// last two rounds landing on half and then quarter samples, where most of the gain is.
+static int ch_search_part(ch_encoder_t* e, int mbx, int mby, int bx4, int by4, int bw4, int bh4,
+                          unsigned done, int dir, int* best_x, int* best_y)
+{
+	int px = mbx * 16 + bx4 * 4, py = mby * 16 + by4 * 4;
+	int bw = bw4 * 4, bh = bh4 * 4;
+	const uint8_t* sy = e->y + (size_t)py * e->luma_stride + px;
+	int pmvx, pmvy;
+	ch_mv_predict_part(&e->pic, mbx, mby, mbx * 4 + bx4, mby * 4 + by4, bw4, done, dir, &pmvx, &pmvy);
+	int lm = ch_lambda_mv[e->qp];
+	uint8_t pred[256];
+	int bx = pmvx & ~3, by = pmvy & ~3, bc = 0x7fffffff;
+	int cand[2][2] = { { pmvx & ~3, pmvy & ~3 }, { 0, 0 } };
+	for (int i = 0; i < 2; ++i) {
+		ch_mc_luma_block(&e->pic, px, py, bw, bh, cand[i][0], cand[i][1], pred, 16);
+		int cost = ch_sad(sy, e->luma_stride, pred, 16, bw, bh)
+		         + lm * (ch_se_bits(cand[i][0] - pmvx) + ch_se_bits(cand[i][1] - pmvy));
+		if (cost < bc) { bc = cost; bx = cand[i][0]; by = cand[i][1]; }
+	}
+	// A whole-macroblock search has to find the ballpark; a sub-partition inherits a predictor
+	// from the partitions beside it and only needs refining, so it skips the coarse steps.
+	for (int step = (bw4 == 4 && bh4 == 4) ? 16 : 4; step >= 1; step >>= 1) {
+		int improved = 1;
+		while (improved) {
+			improved = 0;
+			static const int dx[8] = { -1,1,0,0,-1,-1,1,1 }, dy[8] = { 0,0,-1,1,-1,1,-1,1 };
+			for (int k = 0; k < 8; ++k) {
+				int mx = bx + dx[k] * step, my = by + dy[k] * step;
+				if (mx < -2048 || mx > 2047 || my < -512 || my > 511) continue;
+				ch_mc_luma_block(&e->pic, px, py, bw, bh, mx, my, pred, 16);
+				int cost = ch_sad(sy, e->luma_stride, pred, 16, bw, bh)
+				         + lm * (ch_se_bits(mx - pmvx) + ch_se_bits(my - pmvy));
+				if (cost < bc) { bc = cost; bx = mx; by = my; improved = 1; }
+			}
+		}
+	}
+	*best_x = bx;
+	*best_y = by;
+	return bc;
 }
 
 // Encodes one I_16x16 macroblock: predict from the reconstructed neighbours, transform and
@@ -2108,9 +2221,9 @@ static void ch_commit_skip(ch_encoder_t* e, int mbx, int mby, int mvx, int mvy,
 	ch_set_motion(&e->pic, mbx, mby, mvx, mvy);
 }
 
-// Encodes one P macroblock as a single 16x16 partition against the previous frame. Returns the
-// squared error so the caller can weigh it against coding the macroblock intra instead, which is
-// what has to happen wherever the picture is new rather than moved.
+// Encodes one P macroblock. Returns the squared error so the caller can weigh it against coding
+// the macroblock intra instead, which is what has to happen wherever the picture is new rather
+// than moved.
 static int64_t ch_encode_mb_p(ch_encoder_t* e, int mbx, int mby)
 {
 	ch_bits_t* w = &e->bits;
@@ -2120,43 +2233,81 @@ static int64_t ch_encode_mb_p(ch_encoder_t* e, int mbx, int mby)
 	const uint8_t* sy = e->y + (size_t)(mby * 16) * e->luma_stride + mbx * 16;
 	uint8_t* ry = e->rec_y + (size_t)(mby * 16) * e->luma_stride + mbx * 16;
 
-	int pmvx, pmvy;
-	ch_mv_predict(&e->pic, mbx, mby, &pmvx, &pmvy);
-	int lm = ch_lambda_mv[e->qp];
-
-	// Starting from the predicted vector rather than from zero matters twice over: it is the
-	// better starting guess, and it is the vector that costs the fewest bits to send.
-	uint8_t pred[256];
-	int best_x = pmvx & ~3, best_y = pmvy & ~3, best_cost = 0x7fffffff;
-	int cand[2][2] = { { pmvx & ~3, pmvy & ~3 }, { 0, 0 } };
-	for (int i = 0; i < 2; ++i) {
-		ch_mc_luma(&e->pic, mbx, mby, cand[i][0], cand[i][1], pred);
-		int cost = ch_sad16(sy, e->luma_stride, pred, 16)
-		         + lm * (ch_se_bits(cand[i][0] - pmvx) + ch_se_bits(cand[i][1] - pmvy));
-		if (cost < best_cost) { best_cost = cost; best_x = cand[i][0]; best_y = cand[i][1]; }
-	}
-	// Then walk downhill, halving the step each time. The last two rounds land on half and then
-	// quarter samples, which is where most of the gain is: real motion is rarely a whole number of
-	// pixels, and a vector that is half a pixel off leaves an edge in the residual.
-	for (int step = 16; step >= 1; step >>= 1) {
-		int improved = 1;
-		while (improved) {
-			improved = 0;
-			static const int dx[8] = { -1,1,0,0,-1,-1,1,1 }, dy[8] = { 0,0,-1,1,-1,1,-1,1 };
-			for (int k = 0; k < 8; ++k) {
-				int mx = best_x + dx[k] * step, my = best_y + dy[k] * step;
-				if (mx < -2048 || mx > 2047 || my < -512 || my > 511) continue;
-				ch_mc_luma(&e->pic, mbx, mby, mx, my, pred);
-				int cost = ch_sad16(sy, e->luma_stride, pred, 16)
-				         + lm * (ch_se_bits(mx - pmvx) + ch_se_bits(my - pmvy));
-				if (cost < best_cost) { best_cost = cost; best_x = mx; best_y = my; improved = 1; }
-			}
+	// Each shape is searched against a clean motion field, because a partition's predictor reads
+	// the partitions decided before it and a leftover from another shape would poison it.
+	int16_t saved_mv[32];
+	int8_t saved_ref[16];
+	for (int y = 0; y < 4; ++y) {
+		for (int x = 0; x < 4; ++x) {
+			int i = (mby * 4 + y) * lstride + mbx * 4 + x;
+			saved_mv[(y * 4 + x) * 2] = e->pic.mv[i * 2];
+			saved_mv[(y * 4 + x) * 2 + 1] = e->pic.mv[i * 2 + 1];
+			saved_ref[y * 4 + x] = e->pic.ref_idx[i];
 		}
 	}
 
-	ch_mc_luma(&e->pic, mbx, mby, best_x, best_y, pred);
-	uint8_t cpred[128];
-	ch_mc_chroma(&e->pic, mbx, mby, best_x, best_y, cpred);
+	int mv[4][2], best_mv[4][2];
+	int best_shape = 0, best_cost = 0x7fffffff;
+	int lm = ch_lambda_mv[e->qp];
+	// Splitting costs a search per partition, and a block the single vector already predicts
+	// well has nothing to gain from it. The threshold rises with the quantizer because a coarse
+	// quantizer throws away the small residual a finer split would have saved.
+	int split_worth_it = 256 * (e->qp / 6 + 2);
+	for (int shape = 0; shape < 4; ++shape) {
+		if (shape == 1 && best_cost < split_worth_it) break;
+		for (int y = 0; y < 4; ++y) {
+			for (int x = 0; x < 4; ++x) {
+				int i = (mby * 4 + y) * lstride + mbx * 4 + x;
+				e->pic.mv[i * 2] = saved_mv[(y * 4 + x) * 2];
+				e->pic.mv[i * 2 + 1] = saved_mv[(y * 4 + x) * 2 + 1];
+				e->pic.ref_idx[i] = saved_ref[y * 4 + x];
+			}
+		}
+		unsigned done = 0;
+		int cost = lm * ch_part_bits[shape];
+		for (int k = 0; k < ch_part_count[shape]; ++k) {
+			// The cost only grows as partitions are added, so a shape that is already behind
+			// cannot come back. Abandoning it here changes no decision, only the time to reach it.
+			if (cost >= best_cost) { cost = 0x7fffffff; break; }
+			const int8_t* s = ch_part_shape[shape][k];
+			cost += ch_search_part(e, mbx, mby, s[0], s[1], s[2], s[3], done,
+			                       ch_part_dir[shape][k], &mv[k][0], &mv[k][1]);
+			ch_set_motion_part(&e->pic, mbx * 4 + s[0], mby * 4 + s[1], s[2], s[3], mv[k][0], mv[k][1]);
+			done |= ch_rect_bits(s[0], s[1], s[2], s[3]);
+		}
+		if (cost < best_cost) {
+			best_cost = cost;
+			best_shape = shape;
+			for (int k = 0; k < 4; ++k) { best_mv[k][0] = mv[k][0]; best_mv[k][1] = mv[k][1]; }
+		}
+	}
+
+	for (int y = 0; y < 4; ++y) {
+		for (int x = 0; x < 4; ++x) {
+			int i = (mby * 4 + y) * lstride + mbx * 4 + x;
+			e->pic.mv[i * 2] = saved_mv[(y * 4 + x) * 2];
+			e->pic.mv[i * 2 + 1] = saved_mv[(y * 4 + x) * 2 + 1];
+			e->pic.ref_idx[i] = saved_ref[y * 4 + x];
+		}
+	}
+
+	// Build the prediction with the chosen shape, recording each partition's vector as it goes so
+	// the next partition predicts from it exactly as a decoder will.
+	uint8_t pred[256], cpred[128];
+	int pmv[4][2];
+	unsigned done = 0;
+	int nparts = ch_part_count[best_shape];
+	for (int k = 0; k < nparts; ++k) {
+		const int8_t* s = ch_part_shape[best_shape][k];
+		ch_mv_predict_part(&e->pic, mbx, mby, mbx * 4 + s[0], mby * 4 + s[1], s[2], done,
+		                   ch_part_dir[best_shape][k], &pmv[k][0], &pmv[k][1]);
+		ch_mc_luma_block(&e->pic, mbx * 16 + s[0] * 4, mby * 16 + s[1] * 4, s[2] * 4, s[3] * 4,
+		                 best_mv[k][0], best_mv[k][1], pred + (s[1] * 4) * 16 + s[0] * 4, 16);
+		ch_mc_chroma_block(&e->pic, mbx * 8 + s[0] * 2, mby * 8 + s[1] * 2, s[2] * 2, s[3] * 2,
+		                   best_mv[k][0], best_mv[k][1], cpred + (s[1] * 2) * 8 + s[0] * 2, 8);
+		ch_set_motion_part(&e->pic, mbx * 4 + s[0], mby * 4 + s[1], s[2], s[3], best_mv[k][0], best_mv[k][1]);
+		done |= ch_rect_bits(s[0], s[1], s[2], s[3]);
+	}
 
 	// Residual. Inter macroblocks have no separate DC block, so each 4x4 carries all sixteen of
 	// its coefficients, exactly as in I_4x4.
@@ -2181,10 +2332,16 @@ static int64_t ch_encode_mb_p(ch_encoder_t* e, int mbx, int mby)
 	ch_encode_chroma(e, mbx, mby, cpred, &chroma);
 	int cbp = cbp_luma | (chroma.cbp << 4);
 
-	ch_ue(w, 0);                      // mb_type 0 in a P slice is P_L0_16x16
+	ch_ue(w, (uint32_t)best_shape);   // mb_type: 0 is 16x16, 1 is 16x8, 2 is 8x16, 3 is 8x8
+	if (best_shape == 3) {
+		// Each 8x8 could itself be split further; this encoder does not, so all four say so.
+		for (int k = 0; k < 4; ++k) ch_ue(w, 0);   // sub_mb_type P_L0_8x8
+	}
 	// ref_idx_l0 is absent: there is exactly one reference frame, so there is nothing to choose.
-	ch_se(w, best_x - pmvx);
-	ch_se(w, best_y - pmvy);
+	for (int k = 0; k < nparts; ++k) {
+		ch_se(w, best_mv[k][0] - pmv[k][0]);
+		ch_se(w, best_mv[k][1] - pmv[k][1]);
+	}
 	ch_ue(w, ch_cbp_inter_codenum[cbp]);
 	if (cbp) ch_se(w, 0);             // mb_qp_delta
 
@@ -2199,7 +2356,6 @@ static int64_t ch_encode_mb_p(ch_encoder_t* e, int mbx, int mby)
 	}
 	ch_write_chroma(e, mbx, mby, have_l, have_t, &chroma);
 
-	ch_set_motion(&e->pic, mbx, mby, best_x, best_y);
 	// An inter macroblock still has to leave an intra prediction mode behind for its neighbours.
 	uint8_t* mmap = e->i4_mode + (size_t)(mby * 4) * lstride + mbx * 4;
 	for (int by = 0; by < 4; ++by)
@@ -2899,7 +3055,10 @@ static void ch_decode_mb(ch_decoder_t* d, ch_rbits_t* r, int mbx, int mby)
 	int is_inter = 0;
 	if (d->slice_is_p) {
 		if (mb_type < 5) {
-			if (mb_type != 0) { ch_decoder_error = "Only 16x16 inter partitions are supported."; r->error = 1; return; }
+			// P_8x8ref0 differs from P_8x8 only in that ref_idx is inferred rather than sent,
+			// and with a single reference frame it is never sent either way -- so the two parse
+			// identically here.
+			if (mb_type == 4) mb_type = 3;
 			is_inter = 1;
 		} else {
 			mb_type -= 5;
@@ -2934,14 +3093,48 @@ static void ch_decode_mb(ch_decoder_t* d, ch_rbits_t* r, int mbx, int mby)
 	}
 
 	int modes[16];
-	int mvx = 0, mvy = 0;
 	if (is_inter) {
-		int pmvx, pmvy;
-		ch_mv_predict(&d->pic, mbx, mby, &pmvx, &pmvy);
-		mvx = pmvx + ch_get_se(r);
-		mvy = pmvy + ch_get_se(r);
-		ch_mc_luma(&d->pic, mbx, mby, mvx, mvy, pred);
-		ch_mc_chroma(&d->pic, mbx, mby, mvx, mvy, cpred);
+		// mb_type says how the macroblock is split; an 8x8 can then be split again, so the
+		// sub types are read up front and the vectors after them.
+		int nparts = ch_part_count[mb_type];
+		int sub[4] = { 0, 0, 0, 0 };
+		if (mb_type == 3) {
+			for (int k = 0; k < 4; ++k) {
+				sub[k] = (int)ch_get_ue(r);
+				if (sub[k] > 3) { ch_decoder_error = "Invalid sub_mb_type."; r->error = 1; return; }
+			}
+		}
+		unsigned done = 0;
+		for (int k = 0; k < nparts; ++k) {
+			const int8_t* s = ch_part_shape[mb_type][k];
+			// An 8x8 splits into one 8x8, two 8x4, two 4x8 or four 4x4.
+			static const int8_t sub_shape[4][4][4] = {
+				{ { 0,0,2,2 } },
+				{ { 0,0,2,1 }, { 0,1,2,1 } },
+				{ { 0,0,1,2 }, { 1,0,1,2 } },
+				{ { 0,0,1,1 }, { 1,0,1,1 }, { 0,1,1,1 }, { 1,1,1,1 } },
+			};
+			static const int sub_count[4] = { 1, 2, 2, 4 };
+			int nsub = mb_type == 3 ? sub_count[sub[k]] : 1;
+			for (int j = 0; j < nsub; ++j) {
+				int bx4 = s[0], by4 = s[1], bw4 = s[2], bh4 = s[3];
+				if (mb_type == 3) {
+					const int8_t* q = sub_shape[sub[k]][j];
+					bx4 = s[0] + q[0]; by4 = s[1] + q[1]; bw4 = q[2]; bh4 = q[3];
+				}
+				int pmvx, pmvy;
+				ch_mv_predict_part(&d->pic, mbx, mby, mbx * 4 + bx4, mby * 4 + by4, bw4, done,
+				                   mb_type == 3 ? 0 : ch_part_dir[mb_type][k], &pmvx, &pmvy);
+				int px = pmvx + (int)ch_get_se(r);
+				int py = pmvy + (int)ch_get_se(r);
+				ch_mc_luma_block(&d->pic, mbx * 16 + bx4 * 4, mby * 16 + by4 * 4, bw4 * 4, bh4 * 4,
+				                 px, py, pred + (by4 * 4) * 16 + bx4 * 4, 16);
+				ch_mc_chroma_block(&d->pic, mbx * 8 + bx4 * 2, mby * 8 + by4 * 2, bw4 * 2, bh4 * 2,
+				                   px, py, cpred + (by4 * 2) * 8 + bx4 * 2, 8);
+				ch_set_motion_part(&d->pic, mbx * 4 + bx4, mby * 4 + by4, bw4, bh4, px, py);
+				done |= ch_rect_bits(bx4, by4, bw4, bh4);
+			}
+		}
 		cbp_luma = 0;
 	} else if (mb_type == 0) {
 		// I_NxN: sixteen prediction modes, each coded against a prediction of its own.
@@ -3105,8 +3298,7 @@ static void ch_decode_mb(ch_decoder_t* d, ch_rbits_t* r, int mbx, int mby)
 	}
 
 	ch_decode_chroma(d, r, mbx, mby, cpred, cbp_chroma);
-	if (is_inter) ch_set_motion(&d->pic, mbx, mby, mvx, mvy);
-	else ch_mark_intra_motion(&d->pic, mbx, mby);
+	if (!is_inter) ch_mark_intra_motion(&d->pic, mbx, mby);
 }
 
 // A skipped macroblock: no data at all, so it is entirely the prediction at a vector the decoder
