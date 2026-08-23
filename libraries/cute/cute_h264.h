@@ -97,6 +97,12 @@
 		container that is already known-good. It also leaves a genuinely useful
 		lossless capture mode behind once the compressed paths land.
 
+			container: MP4. The picture data goes in unchanged -- this is
+			        packaging, not re-encoding -- and costs about 0.2%. Without
+			        it the output is a bare stream of pictures that most
+			        software will not open at all: no duration, no frame rate,
+			        no seek index, nowhere for audio to go.
+
 		Encode and decode are both here now. What would come next, roughly in
 		order of what it buys: an MP4 muxer, so the output drops into players and
 		editors that will not open a raw Annex-B stream; sub-macroblock partitions
@@ -111,7 +117,7 @@
 			for (int i = 0; i < frame_count; ++i) {
 				ch_encoder_frame(e, rgba_pixels[i]);
 			}
-			ch_encoder_save(e, "capture.264");
+			ch_encoder_save_mp4(e, "capture.mp4");   // or ch_encoder_save for raw Annex-B
 			ch_encoder_destroy(e);
 
 		Encoding to memory instead
@@ -167,6 +173,17 @@ void ch_encoder_destroy(ch_encoder_t* e);
 int ch_encoder_frame(ch_encoder_t* e, const void* rgba);
 
 //--------------------------------------------------------------------------------------------------
+// MP4 container. A raw H.264 stream is a stream of pictures and nothing else -- no duration, no
+// frame rate, no seek index, nowhere for audio. Most software will not open one. These wrap the
+// same picture data, unchanged, in the file format everything expects.
+
+// Writes the stream as an .mp4. This is the one to use unless you specifically want Annex-B.
+int ch_encoder_save_mp4(ch_encoder_t* e, const char* file_name);
+
+// The same, from a stream you already have, returning bytes you must free with CUTE_H264_FREE.
+const void* ch_mp4_wrap(const void* annexb, int size, int w, int h, int fps, int* out_size);
+
+//--------------------------------------------------------------------------------------------------
 // Decoding.
 
 // Wraps an Annex-B stream. The bytes are NOT copied and must outlive the decoder.
@@ -194,6 +211,11 @@ const void* ch_decoder_yuv(ch_decoder_t* d, int* luma_stride, int* chroma_stride
 extern const char* ch_decoder_error;
 
 //--------------------------------------------------------------------------------------------------
+
+// The same, for callers that already have planar 4:2:0 and would otherwise convert to RGB and
+// back for nothing. Chroma planes are half size in both directions.
+int ch_encoder_frame_yuv(ch_encoder_t* e, const void* y, const void* cb, const void* cr,
+                         int y_stride, int chroma_stride);
 
 // Quality. 0 is nearly lossless and 51 is unwatchable; 26 is the default and a sane middle.
 // Pass -1 to select the lossless I_PCM path instead, which ignores QP entirely.
@@ -2567,10 +2589,49 @@ void ch_encoder_destroy(ch_encoder_t* e)
 	CUTE_H264_FREE(e);
 }
 
+// Copies planar 4:2:0 straight in, replicating the edges into the macroblock padding the same way
+// the RGBA path does. Anything that already has YUV -- a camera, a hardware capture, a decoder --
+// would otherwise pay for a conversion to RGB and back for nothing.
+static void ch_copy_yuv420(ch_encoder_t* e, const uint8_t* y, const uint8_t* cb, const uint8_t* cr,
+                           int y_stride, int c_stride)
+{
+	int pw = e->mb_w * 16, ph = e->mb_h * 16;
+	for (int j = 0; j < ph; ++j) {
+		int sj = j < e->h ? j : e->h - 1;
+		for (int i = 0; i < pw; ++i) {
+			int si = i < e->w ? i : e->w - 1;
+			e->y[(size_t)j * e->luma_stride + i] = y[(size_t)sj * y_stride + si];
+		}
+	}
+	for (int j = 0; j < ph / 2; ++j) {
+		int sj = j < e->h / 2 ? j : e->h / 2 - 1;
+		for (int i = 0; i < pw / 2; ++i) {
+			int si = i < e->w / 2 ? i : e->w / 2 - 1;
+			e->cb[(size_t)j * e->chroma_stride + i] = cb[(size_t)sj * c_stride + si];
+			e->cr[(size_t)j * e->chroma_stride + i] = cr[(size_t)sj * c_stride + si];
+		}
+	}
+}
+
+static int ch_encoder_picture(ch_encoder_t* e);
+
+int ch_encoder_frame_yuv(ch_encoder_t* e, const void* y, const void* cb, const void* cr,
+                         int y_stride, int chroma_stride)
+{
+	if (!e || !y || !cb || !cr) { ch_error_reason = "Null encoder or planes."; return 0; }
+	ch_copy_yuv420(e, (const uint8_t*)y, (const uint8_t*)cb, (const uint8_t*)cr, y_stride, chroma_stride);
+	return ch_encoder_picture(e);
+}
+
 int ch_encoder_frame(ch_encoder_t* e, const void* rgba)
 {
 	if (!e || !rgba) { ch_error_reason = "Null encoder or pixels."; return 0; }
 	ch_rgba_to_yuv420(e, (const uint8_t*)rgba);
+	return ch_encoder_picture(e);
+}
+
+static int ch_encoder_picture(ch_encoder_t* e)
+{
 	// A keyframe every couple of seconds, so that a capture can be seeked and can be joined late,
 	// rather than one at the start and never again. The lossless path stays all-keyframe: I_PCM
 	// has nothing to gain from a reference frame it is not allowed to be approximate about.
@@ -3244,6 +3305,341 @@ const void* ch_decoder_yuv(ch_decoder_t* d, int* luma_stride, int* chroma_stride
 	if (cb) *cb = d->pic.ref_cb;
 	if (cr) *cr = d->pic.ref_cr;
 	return d->pic.ref_y;
+}
+
+//--------------------------------------------------------------------------------------------------
+// MP4. The codec produces a bare stream of pictures; almost nothing outside a media player will
+// open one of those. An MP4 wraps the same bytes with what everything else needs to know -- how
+// long it is, what frame rate, which frames can be seeked to, and where a sound track would go.
+// Nothing is re-encoded: the picture data goes in unchanged, and this is packaging.
+
+static void ch_be16(ch_bytes_t* b, unsigned v)
+{
+	ch_bytes_push(b, (uint8_t)(v >> 8)); ch_bytes_push(b, (uint8_t)v);
+}
+
+static void ch_be32(ch_bytes_t* b, uint32_t v)
+{
+	ch_bytes_push(b, (uint8_t)(v >> 24)); ch_bytes_push(b, (uint8_t)(v >> 16));
+	ch_bytes_push(b, (uint8_t)(v >> 8));  ch_bytes_push(b, (uint8_t)v);
+}
+
+static void ch_tag(ch_bytes_t* b, const char* t)
+{
+	for (int i = 0; i < 4; ++i) ch_bytes_push(b, (uint8_t)t[i]);
+}
+
+// Every box is a size followed by a four character type. The size is not known until the contents
+// have been written, so it goes in as a placeholder and is patched afterwards.
+static int ch_box(ch_bytes_t* b, const char* type)
+{
+	int at = b->len;
+	ch_be32(b, 0);
+	ch_tag(b, type);
+	return at;
+}
+
+static void ch_box_end(ch_bytes_t* b, int at)
+{
+	if (b->oom) return;
+	uint32_t size = (uint32_t)(b->len - at);
+	b->data[at] = (uint8_t)(size >> 24); b->data[at + 1] = (uint8_t)(size >> 16);
+	b->data[at + 2] = (uint8_t)(size >> 8); b->data[at + 3] = (uint8_t)size;
+}
+
+static void ch_full_box(ch_bytes_t* b, uint32_t version_flags)
+{
+	ch_be32(b, version_flags);
+}
+
+typedef struct ch_mp4_sample_t { int offset, size, key; } ch_mp4_sample_t;
+
+// Walks the Annex-B stream, copying each picture into the media data as a length-prefixed unit --
+// which is how MP4 stores them, instead of the start codes a raw stream uses. The parameter sets
+// are pulled out rather than copied, because in MP4 they belong in the sample description.
+static int ch_mp4_collect(const uint8_t* s, int n, ch_bytes_t* mdat, ch_mp4_sample_t* samples,
+                          int max_samples, int* out_count, const uint8_t** sps, int* sps_len,
+                          const uint8_t** pps, int* pps_len)
+{
+	int i = 0, count = 0;
+	*sps = *pps = NULL;
+	*sps_len = *pps_len = 0;
+	while (i + 2 < n) {
+		while (i + 2 < n && !(s[i] == 0 && s[i + 1] == 0 && s[i + 2] == 1)) ++i;
+		if (i + 2 >= n) break;
+		i += 3;
+		int start = i;
+		while (i + 2 < n && !(s[i] == 0 && s[i + 1] == 0 && s[i + 2] == 1)) ++i;
+		int end = (i + 2 >= n) ? n : i;
+		while (end > start && s[end - 1] == 0) --end;
+		if (end <= start) continue;
+		int type = s[start] & 0x1f;
+		if (type == CH_NAL_SPS) { *sps = s + start; *sps_len = end - start; continue; }
+		if (type == CH_NAL_PPS) { *pps = s + start; *pps_len = end - start; continue; }
+		if (type != CH_NAL_SLICE && type != CH_NAL_SLICE_IDR) continue;
+		if (count >= max_samples) return 0;
+		samples[count].offset = mdat->len;
+		samples[count].size = (end - start) + 4;
+		samples[count].key = type == CH_NAL_SLICE_IDR;
+		ch_be32(mdat, (uint32_t)(end - start));
+		for (int k = start; k < end; ++k) ch_bytes_push(mdat, s[k]);
+		++count;
+	}
+	*out_count = count;
+	return count > 0;
+}
+
+static void ch_mp4_stbl(ch_bytes_t* b, const ch_mp4_sample_t* samples, int count, int mdat_base,
+                        int w, int h, int delta, const uint8_t* sps, int sps_len,
+                        const uint8_t* pps, int pps_len)
+{
+	int stbl = ch_box(b, "stbl");
+	{
+		int stsd = ch_box(b, "stsd");
+		ch_full_box(b, 0);
+		ch_be32(b, 1);                       // one sample description
+		int avc1 = ch_box(b, "avc1");
+		for (int i = 0; i < 6; ++i) ch_bytes_push(b, 0);
+		ch_be16(b, 1);                       // data_reference_index
+		ch_be16(b, 0); ch_be16(b, 0);        // pre_defined, reserved
+		for (int i = 0; i < 12; ++i) ch_bytes_push(b, 0);
+		ch_be16(b, (unsigned)w);
+		ch_be16(b, (unsigned)h);
+		ch_be32(b, 0x00480000);              // 72 dpi horizontal
+		ch_be32(b, 0x00480000);              // 72 dpi vertical
+		ch_be32(b, 0);
+		ch_be16(b, 1);                       // frame_count
+		for (int i = 0; i < 32; ++i) ch_bytes_push(b, 0);   // compressor name
+		ch_be16(b, 0x0018);                  // depth
+		ch_be16(b, 0xffff);                  // pre_defined
+		{
+			// The decoder configuration: the parameter sets, plus a note that each picture is
+			// prefixed by a four byte length.
+			int avcc = ch_box(b, "avcC");
+			ch_bytes_push(b, 1);
+			ch_bytes_push(b, sps_len > 1 ? sps[1] : 66);   // profile
+			ch_bytes_push(b, sps_len > 2 ? sps[2] : 0);    // profile compatibility
+			ch_bytes_push(b, sps_len > 3 ? sps[3] : 51);   // level
+			ch_bytes_push(b, 0xff);          // 6 bits set, then lengthSizeMinusOne = 3
+			ch_bytes_push(b, 0xe1);          // 3 bits set, then one sequence parameter set
+			ch_be16(b, (unsigned)sps_len);
+			for (int i = 0; i < sps_len; ++i) ch_bytes_push(b, sps[i]);
+			ch_bytes_push(b, 1);
+			ch_be16(b, (unsigned)pps_len);
+			for (int i = 0; i < pps_len; ++i) ch_bytes_push(b, pps[i]);
+			ch_box_end(b, avcc);
+		}
+		ch_box_end(b, avc1);
+		ch_box_end(b, stsd);
+	}
+	{
+		int stts = ch_box(b, "stts");        // every picture lasts the same time
+		ch_full_box(b, 0);
+		ch_be32(b, 1);
+		ch_be32(b, (uint32_t)count);
+		ch_be32(b, (uint32_t)delta);
+		ch_box_end(b, stts);
+	}
+	{
+		// Which pictures can be jumped to. Without this a player has to decode from the start,
+		// which is what makes a raw stream feel unseekable.
+		int keys = 0;
+		for (int i = 0; i < count; ++i) keys += samples[i].key;
+		int stss = ch_box(b, "stss");
+		ch_full_box(b, 0);
+		ch_be32(b, (uint32_t)keys);
+		for (int i = 0; i < count; ++i) if (samples[i].key) ch_be32(b, (uint32_t)(i + 1));
+		ch_box_end(b, stss);
+	}
+	{
+		int stsc = ch_box(b, "stsc");        // one chunk holding everything
+		ch_full_box(b, 0);
+		ch_be32(b, 1);
+		ch_be32(b, 1);
+		ch_be32(b, (uint32_t)count);
+		ch_be32(b, 1);
+		ch_box_end(b, stsc);
+	}
+	{
+		int stsz = ch_box(b, "stsz");
+		ch_full_box(b, 0);
+		ch_be32(b, 0);                       // sizes vary, so they are listed
+		ch_be32(b, (uint32_t)count);
+		for (int i = 0; i < count; ++i) ch_be32(b, (uint32_t)samples[i].size);
+		ch_box_end(b, stsz);
+	}
+	{
+		int stco = ch_box(b, "stco");
+		ch_full_box(b, 0);
+		ch_be32(b, 1);
+		ch_be32(b, (uint32_t)mdat_base);
+		ch_box_end(b, stco);
+	}
+	ch_box_end(b, stbl);
+}
+
+const void* ch_mp4_wrap(const void* annexb, int size, int w, int h, int fps, int* out_size)
+{
+	ch_error_reason = NULL;
+	if (out_size) *out_size = 0;
+	if (!annexb || size <= 0 || w <= 0 || h <= 0 || fps <= 0) {
+		ch_error_reason = "Bad arguments."; return NULL;
+	}
+	const uint8_t* s = (const uint8_t*)annexb;
+	// One sample per coded picture; count the start codes to bound it.
+	int max_samples = 1;
+	for (int i = 0; i + 2 < size; ++i) if (s[i] == 0 && s[i + 1] == 0 && s[i + 2] == 1) ++max_samples;
+	ch_mp4_sample_t* samples = (ch_mp4_sample_t*)CUTE_H264_ALLOC(sizeof(ch_mp4_sample_t) * (size_t)max_samples);
+	if (!samples) { ch_error_reason = "Out of memory."; return NULL; }
+
+	ch_bytes_t mdat; CUTE_H264_MEMSET(&mdat, 0, sizeof(mdat));
+	const uint8_t* sps; const uint8_t* pps;
+	int sps_len, pps_len, count = 0;
+	if (!ch_mp4_collect(s, size, &mdat, samples, max_samples, &count, &sps, &sps_len, &pps, &pps_len)
+	    || !sps || !pps) {
+		CUTE_H264_FREE(samples); CUTE_H264_FREE(mdat.data);
+		ch_error_reason = "The stream carries no complete picture."; return NULL;
+	}
+
+	// Timescale is a thousand ticks per frame so that any whole frame rate is exact rather than
+	// rounded, which is what makes long recordings drift out of sync with audio.
+	int timescale = fps * 1000, delta = 1000;
+	uint32_t duration = (uint32_t)count * (uint32_t)delta;
+
+	ch_bytes_t out; CUTE_H264_MEMSET(&out, 0, sizeof(out));
+	int ftyp = ch_box(&out, "ftyp");
+	ch_tag(&out, "isom");
+	ch_be32(&out, 512);
+	ch_tag(&out, "isom"); ch_tag(&out, "iso2"); ch_tag(&out, "avc1"); ch_tag(&out, "mp41");
+	ch_box_end(&out, ftyp);
+
+	// Media data first, so the sample offsets are known before the index that points at them.
+	int mdat_at = ch_box(&out, "mdat");
+	int mdat_base = out.len;
+	ch_bytes_reserve(&out, mdat.len);
+	if (!out.oom) { CUTE_H264_MEMCPY(out.data + out.len, mdat.data, (size_t)mdat.len); out.len += mdat.len; }
+	ch_box_end(&out, mdat_at);
+	CUTE_H264_FREE(mdat.data);
+
+	int moov = ch_box(&out, "moov");
+	{
+		int mvhd = ch_box(&out, "mvhd");
+		ch_full_box(&out, 0);
+		ch_be32(&out, 0); ch_be32(&out, 0);          // creation, modification time
+		ch_be32(&out, (uint32_t)timescale);
+		ch_be32(&out, duration);
+		ch_be32(&out, 0x00010000);                   // rate 1.0
+		ch_be16(&out, 0x0100);                       // volume 1.0
+		ch_be16(&out, 0);
+		ch_be32(&out, 0); ch_be32(&out, 0);
+		// The unity transformation matrix. Players apply it, so zeros here would collapse the
+		// picture to nothing.
+		ch_be32(&out, 0x00010000); ch_be32(&out, 0); ch_be32(&out, 0);
+		ch_be32(&out, 0); ch_be32(&out, 0x00010000); ch_be32(&out, 0);
+		ch_be32(&out, 0); ch_be32(&out, 0); ch_be32(&out, 0x40000000);
+		for (int i = 0; i < 6; ++i) ch_be32(&out, 0);
+		ch_be32(&out, 2);                            // next track id
+		ch_box_end(&out, mvhd);
+	}
+	{
+		int trak = ch_box(&out, "trak");
+		{
+			int tkhd = ch_box(&out, "tkhd");
+			ch_full_box(&out, 7);                    // enabled, in movie, in preview
+			ch_be32(&out, 0); ch_be32(&out, 0);
+			ch_be32(&out, 1);                        // track id
+			ch_be32(&out, 0);
+			ch_be32(&out, duration);
+			ch_be32(&out, 0); ch_be32(&out, 0);
+			ch_be16(&out, 0);                        // layer
+			ch_be16(&out, 0);                        // alternate group
+			ch_be16(&out, 0);                        // volume, zero for video
+			ch_be16(&out, 0);
+			ch_be32(&out, 0x00010000); ch_be32(&out, 0); ch_be32(&out, 0);
+			ch_be32(&out, 0); ch_be32(&out, 0x00010000); ch_be32(&out, 0);
+			ch_be32(&out, 0); ch_be32(&out, 0); ch_be32(&out, 0x40000000);
+			ch_be32(&out, (uint32_t)w << 16);        // display size, 16.16 fixed point
+			ch_be32(&out, (uint32_t)h << 16);
+			ch_box_end(&out, tkhd);
+		}
+		{
+			int mdia = ch_box(&out, "mdia");
+			{
+				int mdhd = ch_box(&out, "mdhd");
+				ch_full_box(&out, 0);
+				ch_be32(&out, 0); ch_be32(&out, 0);
+				ch_be32(&out, (uint32_t)timescale);
+				ch_be32(&out, duration);
+				ch_be16(&out, 0x55c4);               // language "und"
+				ch_be16(&out, 0);
+				ch_box_end(&out, mdhd);
+			}
+			{
+				int hdlr = ch_box(&out, "hdlr");
+				ch_full_box(&out, 0);
+				ch_be32(&out, 0);
+				ch_tag(&out, "vide");
+				ch_be32(&out, 0); ch_be32(&out, 0); ch_be32(&out, 0);
+				const char* name = "cute_h264";
+				for (const char* c = name; *c; ++c) ch_bytes_push(&out, (uint8_t)*c);
+				ch_bytes_push(&out, 0);
+				ch_box_end(&out, hdlr);
+			}
+			{
+				int minf = ch_box(&out, "minf");
+				{
+					int vmhd = ch_box(&out, "vmhd");
+					ch_full_box(&out, 1);
+					ch_be16(&out, 0);
+					ch_be16(&out, 0); ch_be16(&out, 0); ch_be16(&out, 0);
+					ch_box_end(&out, vmhd);
+				}
+				{
+					int dinf = ch_box(&out, "dinf");
+					int dref = ch_box(&out, "dref");
+					ch_full_box(&out, 0);
+					ch_be32(&out, 1);
+					int url = ch_box(&out, "url ");
+					ch_full_box(&out, 1);            // the data is in this same file
+					ch_box_end(&out, url);
+					ch_box_end(&out, dref);
+					ch_box_end(&out, dinf);
+				}
+				ch_mp4_stbl(&out, samples, count, mdat_base, w, h, delta, sps, sps_len, pps, pps_len);
+				ch_box_end(&out, minf);
+			}
+			ch_box_end(&out, mdia);
+		}
+		ch_box_end(&out, trak);
+	}
+	ch_box_end(&out, moov);
+	CUTE_H264_FREE(samples);
+
+	if (out.oom) { CUTE_H264_FREE(out.data); ch_error_reason = "Out of memory."; return NULL; }
+	if (out_size) *out_size = out.len;
+	return out.data;
+}
+
+int ch_encoder_save_mp4(ch_encoder_t* e, const char* file_name)
+{
+	if (!e) { ch_error_reason = "Null encoder."; return 0; }
+	int size = 0;
+	const void* mp4 = ch_mp4_wrap(e->out.data, e->out.len, e->w, e->h, e->fps, &size);
+	if (!mp4) return 0;
+#if !defined(CUTE_H264_NO_STDIO)
+	FILE* fp = fopen(file_name, "wb");
+	if (!fp) { CUTE_H264_FREE((void*)mp4); ch_error_reason = "Unable to open the output file."; return 0; }
+	int ok = fwrite(mp4, 1, (size_t)size, fp) == (size_t)size;
+	fclose(fp);
+	CUTE_H264_FREE((void*)mp4);
+	if (!ok) { ch_error_reason = "Unable to write the output file."; return 0; }
+	return 1;
+#else
+	(void)file_name;
+	CUTE_H264_FREE((void*)mp4);
+	ch_error_reason = "Compiled without stdio.";
+	return 0;
+#endif
 }
 
 #endif // CUTE_H264_IMPLEMENTATION_ONCE
