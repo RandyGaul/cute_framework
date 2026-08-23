@@ -53,17 +53,20 @@
 			        macroblocks and deblocking. It reads streams from other
 			        encoders, not just this one -- x264 output decodes bit-
 			        exactly against ffmpeg. What is not supported is rejected
-			        by name rather than decoded approximately: CABAC, more
-			        than one reference frame, interlacing. Every partition and
-			        sub-partition shape decodes, including the ones this
-			        encoder never produces.
+			        by name rather than decoded approximately: more than one
+			        reference frame, interlacing, and I_PCM combined with
+			        CABAC. Every partition and sub-partition shape decodes,
+			        including the ones this encoder never produces, and both
+			        entropy coders are read.
 			entropy coding: CAVLC, or CABAC with ch_encoder_cabac(). CABAC
 			        models how likely each decision is from what the
 			        neighbouring macroblocks did, instead of looking codewords
 			        up in a fixed table, and so can spend well under a bit on
 			        a decision it expects. Worth about 9% fewer bits at matched
-			        quality. Off by default, since the decoder here does not
-			        read it yet.
+			        quality, and read by the decoder here as well. Off by
+			        default: it is slower on both sides, and a stream using it
+			        is Main profile rather than Baseline, which the SPS then
+			        has to say.
 			container: MP4, so the output opens in players, editors and
 			        browsers rather than only in ffmpeg. The picture data goes
 			        in unchanged -- this is packaging, not re-encoding -- and
@@ -85,6 +88,18 @@
 			have hidden every table error this found.
 			tools/h264_table_check.py additionally checks each CAVLC table
 			against the codewords in the spec.
+
+			A decoder also has to survive input nobody intended it to see.
+			fuzz.c feeds it truncated, bit-flipped and block-corrupted streams
+			and requires that every one either decodes or is refused by name --
+			never a crash, never a read outside its own buffers. Run under
+			AddressSanitizer that found three real ones, all of the same shape:
+			a value taken from the bitstream and trusted because a CONFORMING
+			stream could never make it wrong. An intra 16x16 mode needing
+			neighbours that do not exist at the picture edge; a trailing-ones
+			count larger than the coefficient count, which only the flat
+			high-density code can express; and a zero-run longer than the zeros
+			remaining, which drove a write index negative.
 
 			The decoder is held to the same standard, twice over: it reproduces
 			the encoder's reconstruction exactly across that same sweep, and it
@@ -417,7 +432,37 @@ static void ch_emit_nal(ch_bytes_t* out, int nal_ref_idc, int nal_unit_type, con
 // written twice and drifting apart.
 // Defined further down, alongside the entropy coder that uses them.
 typedef struct ch_cabac_t ch_cabac_t;
-typedef struct ch_mbinfo_t ch_mbinfo_t;
+typedef struct ch_cabac_dec_t ch_cabac_dec_t;
+
+// What a later macroblock needs to know about this one to pick its contexts. Kept per macroblock
+// for the whole picture, because the neighbours a context depends on are the ones above and to
+// the left, which cross macroblock rows.
+typedef struct ch_mbinfo_t
+{
+	uint8_t coded;        // a macroblock has been written here in this slice
+	uint8_t intra;
+	uint8_t i_nxn;
+	uint8_t ipcm;
+	uint8_t skip;
+	uint8_t cbp_luma;     // one bit per 8x8
+	uint8_t cbp_chroma;   // 0, 1 or 2
+	uint8_t qpd;          // mb_qp_delta was not zero
+	uint8_t cpm;          // intra_chroma_pred_mode was not zero
+	uint8_t dc_cbf;       // bit 0 luma DC, bit 1 Cb DC, bit 2 Cr DC
+} ch_mbinfo_t;
+
+
+// Everything the neighbour-derived CABAC contexts read. Both the encoder and the decoder keep
+// one, so the rules live in one place instead of being written twice and drifting.
+typedef struct ch_ctxstate_t
+{
+	int mb_w;
+	const ch_mbinfo_t* mbinfo;
+	const uint8_t* nz_luma;
+	const uint8_t* nz_cb;
+	const uint8_t* nz_cr;
+	const uint8_t* absmvd;
+} ch_ctxstate_t;
 
 typedef struct ch_pic_t
 {
@@ -488,6 +533,7 @@ struct ch_encoder_t
 	ch_cabac_t* cab;       // allocated, because its definition comes later in this file
 	ch_mbinfo_t* mbinfo;   // per macroblock, for the neighbour-derived contexts
 	uint8_t* absmvd;       // two per 4x4 block, for the motion vector contexts
+	ch_ctxstate_t cs;      // a view of the above, for the shared context rules
 
 	int frame_num;         // as the slice header carries it, reset by each IDR
 	int mb_type_offset;    // intra mb_type is biased by 5 inside a P slice
@@ -769,13 +815,13 @@ struct ch_cabac_t
 	uint8_t ctx[CH_CTX_COUNT];
 };
 
-typedef struct ch_cabac_dec_t
+struct ch_cabac_dec_t
 {
 	ch_rbits_t* r;
 	uint32_t offset;
 	uint32_t range;
 	uint8_t ctx[CH_CTX_COUNT];
-} ch_cabac_dec_t;
+};
 
 // Each context starts on a line through the quantizer rather than at even odds, so a slice begins
 // with the model already biased the way that quality usually behaves.
@@ -955,6 +1001,12 @@ struct ch_decoder_t
 	int deblock_control;   // deblocking_filter_control_present_flag
 	int num_ref_idx_l0;
 
+	int cabac;             // entropy_coding_mode_flag from the picture parameter set
+	ch_cabac_dec_t* cab;
+	ch_mbinfo_t* mbinfo;
+	uint8_t* absmvd;
+	ch_ctxstate_t cs;
+
 	ch_pic_t pic;
 	uint8_t* mem;          // one allocation behind every plane and map in pic
 	uint8_t* i4_mode;
@@ -1031,9 +1083,11 @@ static int ch_parse_sps(ch_decoder_t* d, ch_rbits_t* r)
 		if (ch_get_bit(r)) ch_skip_scaling_lists(r, 8);
 	}
 	d->log2_max_frame_num = (int)ch_get_ue(r) + 4;
+	if (d->log2_max_frame_num > 16) { ch_decoder_error = "Bad log2_max_frame_num."; return 0; }
 	d->pic_order_cnt_type = (int)ch_get_ue(r);
 	if (d->pic_order_cnt_type == 0) {
 		d->log2_max_poc_lsb = (int)ch_get_ue(r) + 4;
+		if (d->log2_max_poc_lsb > 16) { ch_decoder_error = "Bad log2_max_pic_order_cnt_lsb."; return 0; }
 	} else if (d->pic_order_cnt_type == 1) {
 		ch_get_bit(r);                     // delta_pic_order_always_zero_flag
 		ch_get_se(r); ch_get_se(r);
@@ -1044,6 +1098,11 @@ static int ch_parse_sps(ch_decoder_t* d, ch_rbits_t* r)
 	ch_get_bit(r);                         // gaps_in_frame_num_value_allowed_flag
 	d->mb_w = (int)ch_get_ue(r) + 1;
 	d->mb_h = (int)ch_get_ue(r) + 1;
+	// 4096 macroblocks a side is past any real level, and bounding it here is what keeps the
+	// allocation below from being told to reserve an implausible amount by a corrupt file.
+	if (d->mb_w > 4096 || d->mb_h > 4096 || d->mb_w * (int64_t)d->mb_h > 139264) {
+		ch_decoder_error = "Picture size is out of range."; return 0;
+	}
 	if (!ch_get_bit(r)) { ch_decoder_error = "Interlaced streams are not supported."; return 0; }
 	ch_get_bit(r);                         // direct_8x8_inference_flag
 	int crop_l = 0, crop_r = 0, crop_t = 0, crop_b = 0;
@@ -1054,6 +1113,9 @@ static int ch_parse_sps(ch_decoder_t* d, ch_rbits_t* r)
 	// Crop units are chroma samples in 4:2:0, so two luma samples each.
 	d->w = d->mb_w * 16 - (crop_l + crop_r) * 2;
 	d->h = d->mb_h * 16 - (crop_t + crop_b) * 2;
+	if (d->w <= 0 || d->h <= 0 || (d->w & 1) || (d->h & 1)) {
+		ch_decoder_error = "Crop rectangle is not a usable picture."; return 0;
+	}
 	if (r->error) { ch_decoder_error = "Truncated sequence parameter set."; return 0; }
 	d->have_sps = 1;
 	return 1;
@@ -1063,7 +1125,7 @@ static int ch_parse_pps(ch_decoder_t* d, ch_rbits_t* r)
 {
 	ch_get_ue(r);                          // pic_parameter_set_id
 	ch_get_ue(r);                          // seq_parameter_set_id
-	if (ch_get_bit(r)) { ch_decoder_error = "CABAC is not supported."; return 0; }
+	d->cabac = ch_get_bit(r);              // entropy_coding_mode_flag
 	ch_get_bit(r);                         // bottom_field_pic_order_in_frame_present_flag
 	if (ch_get_ue(r) != 0) { ch_decoder_error = "Slice groups are not supported."; return 0; }
 	d->num_ref_idx_l0 = (int)ch_get_ue(r) + 1;
@@ -1112,6 +1174,16 @@ static int ch_decoder_alloc(ch_decoder_t* d)
 	d->nz_cr = d->nz_cb + nzc;
 	d->pic.mv = mv;
 	d->pic.ref_idx = (int8_t*)(mv + nzl * 2);
+	d->cab = (ch_cabac_dec_t*)CUTE_H264_ALLOC(sizeof(ch_cabac_dec_t));
+	d->mbinfo = (ch_mbinfo_t*)CUTE_H264_ALLOC(sizeof(ch_mbinfo_t) * (size_t)(d->mb_w * d->mb_h));
+	d->absmvd = (uint8_t*)CUTE_H264_ALLOC(nzl * 2);
+	if (!d->cab || !d->mbinfo || !d->absmvd) { ch_decoder_error = "Out of memory."; return 0; }
+	d->cs.mb_w = d->mb_w;
+	d->cs.mbinfo = d->mbinfo;
+	d->cs.nz_luma = d->pic.nz_luma;
+	d->cs.nz_cb = d->nz_cb;
+	d->cs.nz_cr = d->nz_cr;
+	d->cs.absmvd = d->absmvd;
 	return 1;
 }
 
@@ -1629,8 +1701,11 @@ static void ch_write_sps(ch_encoder_t* e)
 {
 	ch_bits_t* w = &e->bits;
 	ch_bits_reset(w);
-	ch_put_bits(w, 66, 8);            // profile_idc: baseline
-	ch_put_bit(w, 1);                 // constraint_set0_flag: really is baseline
+	// Baseline does not permit CABAC, so a stream using it has to say Main instead. Claiming
+	// Baseline anyway would produce something most decoders happen to read and a conformance
+	// checker correctly rejects.
+	ch_put_bits(w, ch_cabac_on(e) ? 77 : 66, 8);  // profile_idc: main or baseline
+	ch_put_bit(w, ch_cabac_on(e) ? 0 : 1);        // constraint_set0_flag: conforms to baseline
 	ch_put_bit(w, 1);                 // constraint_set1_flag: also main-conformant
 	ch_put_bit(w, 0);                 // constraint_set2_flag
 	ch_put_bits(w, 0, 5);             // constraint_set3..5 + reserved_zero_2bits
@@ -1989,22 +2064,6 @@ static const uint8_t ch_cat_count[5]    = { 16, 15, 16, 4, 15 };
 #define CH_CTX_LEVEL       227
 #define CH_CTX_TERMINATE   276
 
-// What a later macroblock needs to know about this one to pick its contexts. Kept per macroblock
-// for the whole picture, because the neighbours a context depends on are the ones above and to
-// the left, which cross macroblock rows.
-struct ch_mbinfo_t
-{
-	uint8_t coded;        // a macroblock has been written here in this slice
-	uint8_t intra;
-	uint8_t i_nxn;
-	uint8_t ipcm;
-	uint8_t skip;
-	uint8_t cbp_luma;     // one bit per 8x8
-	uint8_t cbp_chroma;   // 0, 1 or 2
-	uint8_t qpd;          // mb_qp_delta was not zero
-	uint8_t cpm;          // intra_chroma_pred_mode was not zero
-	uint8_t dc_cbf;       // bit 0 luma DC, bit 1 Cb DC, bit 2 Cr DC
-};
 
 // Unary, with every bin sharing one context after the first few.
 static void ch_cabac_unary(ch_cabac_t* c, int v, int cmax, int base, const uint8_t* inc, int ninc)
@@ -2145,37 +2204,47 @@ static void ch_cabac_mb_skip(ch_cabac_t* c, const ch_mbinfo_t* info, int mb_w, i
 	ch_cabac_encode(c, CH_CTX_MB_SKIP + inc, skip);
 }
 
+// The context for one luma coded_block_pattern bin. `so_far` holds the bins already coded, which
+// is what the two halves inside this macroblock read; the other two come from the neighbours.
+// Note the inverted sense -- a neighbour that DID code coefficients contributes zero.
+static int ch_cbp_luma_ctx(const ch_mbinfo_t* a, const ch_mbinfo_t* b, int i, int so_far)
+{
+	int va, vb;
+	if (i & 1) va = (so_far >> (i - 1)) & 1;
+	else if (!a || !a->coded) va = -1;
+	else if (a->ipcm) va = 1;
+	else va = a->skip ? 0 : ((a->cbp_luma >> (i + 1)) & 1);
+	if (i & 2) vb = (so_far >> (i - 2)) & 1;
+	else if (!b || !b->coded) vb = -1;
+	else if (b->ipcm) vb = 1;
+	else vb = b->skip ? 0 : ((b->cbp_luma >> (i + 2)) & 1);
+	int ca = va < 0 ? 0 : (va ? 0 : 1);
+	int cb = vb < 0 ? 0 : (vb ? 0 : 1);
+	return ca + 2 * cb;
+}
+
+static int ch_cbp_chroma_ctx(const ch_mbinfo_t* a, const ch_mbinfo_t* b, int bin)
+{
+	int ca, cb;
+	if (!a || !a->coded || a->skip) ca = 0;
+	else if (a->ipcm) ca = 1;
+	else ca = bin == 0 ? (a->cbp_chroma != 0) : (a->cbp_chroma == 2);
+	if (!b || !b->coded || b->skip) cb = 0;
+	else if (b->ipcm) cb = 1;
+	else cb = bin == 0 ? (b->cbp_chroma != 0) : (b->cbp_chroma == 2);
+	return ca + 2 * cb + (bin == 1 ? 4 : 0);
+}
+
 static void ch_cabac_cbp(ch_cabac_t* c, const ch_mbinfo_t* info, int mb_w, int mbx, int mby,
                          int cbp_luma, int cbp_chroma)
 {
 	const ch_mbinfo_t* a = ch_nb(info, mb_w, mbx, mby, 1);
 	const ch_mbinfo_t* b = ch_nb(info, mb_w, mbx, mby, 0);
-	for (int i = 0; i < 4; ++i) {
-		// The neighbouring 8x8 is inside this macroblock for the right and bottom halves, and in
-		// the macroblock next door for the left and top ones.
-		int la, lb, va, vb;
-		if (i & 1) { la = 1; va = (cbp_luma >> (i - 1)) & 1; }
-		else { la = 0; va = a && a->coded && !a->skip ? (a->cbp_luma >> (i + 1)) & 1 : (a && a->coded ? 0 : -1); if (a && a->coded && a->ipcm) va = 1; }
-		if (i & 2) { lb = 1; vb = (cbp_luma >> (i - 2)) & 1; }
-		else { lb = 0; vb = b && b->coded && !b->skip ? (b->cbp_luma >> (i + 2)) & 1 : (b && b->coded ? 0 : -1); if (b && b->coded && b->ipcm) vb = 1; }
-		(void)la; (void)lb;
-		// The sense is inverted: a neighbour that DID code coefficients contributes zero.
-		int ca = va < 0 ? 0 : (va ? 0 : 1);
-		int cb = vb < 0 ? 0 : (vb ? 0 : 1);
-		ch_cabac_encode(c, CH_CTX_CBP_LUMA + ca + 2 * cb, (cbp_luma >> i) & 1);
-	}
-	for (int bin = 0; bin < 2; ++bin) {
-		if (bin == 1 && cbp_chroma == 0) break;
-		int ca, cb;
-		if (!a || !a->coded || a->skip) ca = 0;
-		else if (a->ipcm) ca = 1;
-		else ca = bin == 0 ? (a->cbp_chroma != 0) : (a->cbp_chroma == 2);
-		if (!b || !b->coded || b->skip) cb = 0;
-		else if (b->ipcm) cb = 1;
-		else cb = bin == 0 ? (b->cbp_chroma != 0) : (b->cbp_chroma == 2);
-		int inc = ca + 2 * cb + (bin == 1 ? 4 : 0);
-		ch_cabac_encode(c, CH_CTX_CBP_CHROMA + inc, bin == 0 ? (cbp_chroma != 0) : (cbp_chroma == 2));
-	}
+	for (int i = 0; i < 4; ++i)
+		ch_cabac_encode(c, CH_CTX_CBP_LUMA + ch_cbp_luma_ctx(a, b, i, cbp_luma), (cbp_luma >> i) & 1);
+	ch_cabac_encode(c, CH_CTX_CBP_CHROMA + ch_cbp_chroma_ctx(a, b, 0), cbp_chroma != 0);
+	if (cbp_chroma)
+		ch_cabac_encode(c, CH_CTX_CBP_CHROMA + ch_cbp_chroma_ctx(a, b, 1), cbp_chroma == 2);
 }
 
 static void ch_cabac_qp_delta(ch_cabac_t* c, const ch_mbinfo_t* prev, int delta)
@@ -2225,7 +2294,7 @@ static void ch_cabac_mvd(ch_cabac_t* c, int base, int sum_neighbours, int v)
 // coefficients. Which block is the neighbour depends on the category, and what to assume when it
 // is missing depends on whether the current macroblock is intra -- an intra macroblock treats an
 // absent neighbour as busy, an inter one as empty.
-static int ch_cbf_inc(ch_encoder_t* e, int mbx, int mby, int cat, int blk, int comp, int cur_intra)
+static int ch_cbf_inc(const ch_ctxstate_t* e, int mbx, int mby, int cat, int blk, int comp, int cur_intra)
 {
 	int lstride = e->mb_w * 4, cstride = e->mb_w * 2;
 	int flags[2];
@@ -2273,7 +2342,7 @@ static int ch_cbf_inc(ch_encoder_t* e, int mbx, int mby, int cat, int blk, int c
 
 // The sum of the neighbouring partitions' vector magnitudes, which is what decides how large this
 // macroblock's own vector is likely to be.
-static int ch_absmvd_sum(ch_encoder_t* e, int bx, int by, int comp)
+static int ch_absmvd_sum(const ch_ctxstate_t* e, int bx, int by, int comp)
 {
 	int stride = e->mb_w * 4, s = 0;
 	if (bx > 0) s += e->absmvd[((by * stride) + bx - 1) * 2 + comp];
@@ -2281,17 +2350,17 @@ static int ch_absmvd_sum(ch_encoder_t* e, int bx, int by, int comp)
 	return s;
 }
 
-static void ch_set_absmvd(ch_encoder_t* e, int bx, int by, int bw, int bh, int mx, int my)
+static void ch_set_absmvd(uint8_t* absmvd, int mb_w, int bx, int by, int bw, int bh, int mx, int my)
 {
-	int stride = e->mb_w * 4;
+	int stride = mb_w * 4;
 	int ax = mx < 0 ? -mx : mx, ay = my < 0 ? -my : my;
 	if (ax > 127) ax = 127;
 	if (ay > 127) ay = 127;
 	for (int y = 0; y < bh; ++y) {
 		for (int x = 0; x < bw; ++x) {
 			int i = ((by + y) * stride + bx + x) * 2;
-			e->absmvd[i] = (uint8_t)ax;
-			e->absmvd[i + 1] = (uint8_t)ay;
+			absmvd[i] = (uint8_t)ax;
+			absmvd[i + 1] = (uint8_t)ay;
 		}
 	}
 }
@@ -2481,7 +2550,7 @@ static void ch_write_chroma(ch_encoder_t* e, int mbx, int mby, int have_l, int h
 	if (c->cbp & 3) {
 		for (int i = 0; i < 2; ++i)
 			ch_emit_residual(e, c->dc[i], 4, -1, CH_CAT_CHROMA_DC,
-				ch_cabac_on(e) ? ch_cbf_inc(e, mbx, mby, CH_CAT_CHROMA_DC, 0, i, intra) : 0);
+				ch_cabac_on(e) ? ch_cbf_inc(&e->cs, mbx, mby, CH_CAT_CHROMA_DC, 0, i, intra) : 0);
 	}
 	for (int i = 0; i < 2; ++i) {
 		uint8_t* cmap = (i ? e->nz_cr : e->nz_cb) + (size_t)(mby * 2) * cstride + mbx * 2;
@@ -2491,7 +2560,7 @@ static void ch_write_chroma(ch_encoder_t* e, int mbx, int mby, int have_l, int h
 			if (c->cbp & 2) {
 				int nc = ch_nc(cmap, cstride, bx, by, have_l, have_t);
 				n = ch_emit_residual(e, c->ac[i][b] + 1, 15, nc, CH_CAT_CHROMA_AC,
-					ch_cabac_on(e) ? ch_cbf_inc(e, mbx, mby, CH_CAT_CHROMA_AC, b, i, intra) : 0);
+					ch_cabac_on(e) ? ch_cbf_inc(&e->cs, mbx, mby, CH_CAT_CHROMA_AC, b, i, intra) : 0);
 			}
 			cmap[by * cstride + bx] = (uint8_t)n;
 		}
@@ -2931,7 +3000,7 @@ static int64_t ch_encode_mb_i16(ch_encoder_t* e, int mbx, int mby)
 
 	int nc0 = ch_nc(lmap, lstride, 0, 0, have_l, have_t);
 	ch_emit_residual(e, dc_zz, 16, nc0, CH_CAT_LUMA_DC,
-		ch_cabac_on(e) ? ch_cbf_inc(e, mbx, mby, CH_CAT_LUMA_DC, 0, 0, 1) : 0);
+		ch_cabac_on(e) ? ch_cbf_inc(&e->cs, mbx, mby, CH_CAT_LUMA_DC, 0, 0, 1) : 0);
 
 	for (int b = 0; b < 16; ++b) {
 		int bx = ch_blk_x[b], by = ch_blk_y[b];
@@ -2939,7 +3008,7 @@ static int64_t ch_encode_mb_i16(ch_encoder_t* e, int mbx, int mby)
 		if (cbp_luma) {
 			int nc = ch_nc(lmap, lstride, bx, by, have_l, have_t);
 			n = ch_emit_residual(e, ac_zz[b] + 1, 15, nc, CH_CAT_LUMA_AC,
-				ch_cabac_on(e) ? ch_cbf_inc(e, mbx, mby, CH_CAT_LUMA_AC, b, 0, 1) : 0);
+				ch_cabac_on(e) ? ch_cbf_inc(&e->cs, mbx, mby, CH_CAT_LUMA_AC, b, 0, 1) : 0);
 		}
 		lmap[by * lstride + bx] = (uint8_t)n;
 	}
@@ -3050,7 +3119,7 @@ static int64_t ch_encode_mb_i4(ch_encoder_t* e, int mbx, int mby)
 		if (cbp_luma & (1 << (b >> 2))) {
 			int nc = ch_nc(lmap, lstride, bx, by, have_l, have_t);
 			n = ch_emit_residual(e, zz[b], 16, nc, CH_CAT_LUMA_4x4,
-				ch_cabac_on(e) ? ch_cbf_inc(e, mbx, mby, CH_CAT_LUMA_4x4, b, 0, 1) : 0);
+				ch_cabac_on(e) ? ch_cbf_inc(&e->cs, mbx, mby, CH_CAT_LUMA_4x4, b, 0, 1) : 0);
 		}
 		lmap[by * lstride + bx] = (uint8_t)n;
 	}
@@ -3229,10 +3298,10 @@ static int64_t ch_encode_mb_p(ch_encoder_t* e, int mbx, int mby)
 		if (!ch_cabac_on(e)) { ch_se(w, dx); ch_se(w, dy); }
 		else {
 			int bx = mbx * 4 + s[0], by = mby * 4 + s[1];
-			ch_cabac_mvd(e->cab, CH_CTX_MVD_X, ch_absmvd_sum(e, bx, by, 0), dx);
-			ch_cabac_mvd(e->cab, CH_CTX_MVD_Y, ch_absmvd_sum(e, bx, by, 1), dy);
+			ch_cabac_mvd(e->cab, CH_CTX_MVD_X, ch_absmvd_sum(&e->cs, bx, by, 0), dx);
+			ch_cabac_mvd(e->cab, CH_CTX_MVD_Y, ch_absmvd_sum(&e->cs, bx, by, 1), dy);
 		}
-		ch_set_absmvd(e, mbx * 4 + s[0], mby * 4 + s[1], s[2], s[3], dx, dy);
+		ch_set_absmvd(e->absmvd, e->mb_w, mbx * 4 + s[0], mby * 4 + s[1], s[2], s[3], dx, dy);
 	}
 	ch_note_mb(e, mbx, mby, 0, 0, 0, cbp_luma, chroma.cbp, 0, ch_dc_cbf_bits(NULL, &chroma));
 	ch_emit_cbp(e, mbx, mby, cbp_luma, chroma.cbp, 1);
@@ -3244,7 +3313,7 @@ static int64_t ch_encode_mb_p(ch_encoder_t* e, int mbx, int mby)
 		if (cbp_luma & (1 << (b >> 2))) {
 			int nc = ch_nc(lmap, lstride, bx, by, have_l, have_t);
 			n = ch_emit_residual(e, zz[b], 16, nc, CH_CAT_LUMA_4x4,
-				ch_cabac_on(e) ? ch_cbf_inc(e, mbx, mby, CH_CAT_LUMA_4x4, b, 0, 0) : 0);
+				ch_cabac_on(e) ? ch_cbf_inc(&e->cs, mbx, mby, CH_CAT_LUMA_4x4, b, 0, 0) : 0);
 		}
 		lmap[by * lstride + bx] = (uint8_t)n;
 	}
@@ -3613,7 +3682,11 @@ ch_encoder_t* ch_encoder_make(int w, int h, int fps)
 	// simply not representable, and an encoder that accepts one has to silently hand back a
 	// different resolution than it was asked for. Refuse instead of surprising the caller.
 	if ((w & 1) || (h & 1)) { ch_error_reason = "Width and height must be even (4:2:0 chroma)."; return NULL; }
-	if (fps <= 0) { ch_error_reason = "Frame rate must be positive."; return NULL; }
+	// The MP4 timescale is a thousand ticks per frame, so an absurd rate would overflow it.
+	if (fps <= 0 || fps > 1000) { ch_error_reason = "Frame rate must be between 1 and 1000."; return NULL; }
+	// Past any real use, and it keeps every size calculation below inside an int -- a width near
+	// INT_MAX would otherwise overflow while being rounded up to whole macroblocks.
+	if (w > 16384 || h > 16384) { ch_error_reason = "Width and height must be 16384 or less."; return NULL; }
 	ch_encoder_t* e = (ch_encoder_t*)CUTE_H264_ALLOC(sizeof(ch_encoder_t));
 	if (!e) { ch_error_reason = "Out of memory."; return NULL; }
 	CUTE_H264_MEMSET(e, 0, sizeof(*e));
@@ -3665,6 +3738,12 @@ ch_encoder_t* ch_encoder_make(int w, int h, int fps)
 	e->pic.nz_luma = e->nz_luma;
 	e->pic.mv = e->mv;
 	e->pic.ref_idx = e->ref_idx;
+	e->cs.mb_w = e->mb_w;
+	e->cs.mbinfo = e->mbinfo;
+	e->cs.nz_luma = e->nz_luma;
+	e->cs.nz_cb = e->nz_cb;
+	e->cs.nz_cr = e->nz_cr;
+	e->cs.absmvd = e->absmvd;
 	return e;
 }
 
@@ -3895,7 +3974,14 @@ static int ch_read_residual(ch_rbits_t* r, int* coeffs, int count, int nC)
 	for (int i = 0; i < count; ++i) coeffs[i] = 0;
 	int t1 = 0;
 	int total = ch_read_coeff_token(r, nC, &t1);
-	if (!total || total > count) { if (total > count) r->error = 1; return 0; }
+	// The VLC tables only contain combinations where the trailing-one count is at most the total,
+	// but the flat six-bit code used at high density has no such structure -- it can decode to
+	// more trailing ones than there are coefficients, and the loop below would then index before
+	// the array. A conforming stream never produces it; a damaged one does.
+	if (!total || total > count || t1 > total) {
+		if (total > count || t1 > total) r->error = 1;
+		return 0;
+	}
 
 	int levels[16], runs[16];
 	for (int i = 0; i < 16; ++i) runs[i] = 0;
@@ -3914,6 +4000,10 @@ static int ch_read_residual(ch_rbits_t* r, int* coeffs, int count, int nC)
 	int zeros_left = total_zeros;
 	for (int i = total - 1; i > 0 && zeros_left > 0; --i) {
 		runs[i] = ch_read_run_before(r, zeros_left);
+		// Above six remaining zeros the table can express a run of up to fourteen, so a damaged
+		// stream can claim more zeros than are left. Left alone that makes the leftover negative
+		// and the write index below negative with it.
+		if (runs[i] > zeros_left) { r->error = 1; return 0; }
 		zeros_left -= runs[i];
 	}
 	runs[0] = zeros_left;
@@ -3921,7 +4011,7 @@ static int ch_read_residual(ch_rbits_t* r, int* coeffs, int count, int nC)
 	int pos = 0;
 	for (int k = 0; k < total; ++k) {
 		pos += runs[k];
-		if (pos >= count) { r->error = 1; return 0; }
+		if (pos < 0 || pos >= count) { r->error = 1; return 0; }
 		coeffs[pos] = levels[k];
 		++pos;
 	}
@@ -3945,17 +4035,228 @@ static void ch_dequant_block(const int* zz, int qp, int skip_dc, int32_t* deq)
 
 // Reads and reconstructs the chroma of one macroblock. cpred is the prediction, which the caller
 // supplies because intra and inter arrive at it completely differently.
-static void ch_decode_chroma(ch_decoder_t* d, ch_rbits_t* r, int mbx, int mby,
-                             const uint8_t* cpred, int cbp_chroma)
+
+//--------------------------------------------------------------------------------------------------
+// CABAC reading. Each of these mirrors the writer exactly; where the writer chose a context from
+// the neighbours and emitted bins, this picks the same context and reads them back. There is no
+// resynchronisation in an arithmetic coder, so "exactly" is not a stylistic preference.
+
+static int ch_dec_residual(ch_decoder_t* d, int* zz, int count, int cat, int cbf_inc)
+{
+	ch_cabac_dec_t* c = d->cab;
+	for (int i = 0; i < count; ++i) zz[i] = 0;
+	if (!ch_cabac_decode(c, CH_CTX_CBF + ch_cat_off_cbf[cat] + cbf_inc)) return 0;
+
+	int so = CH_CTX_SIG + ch_cat_off_sig[cat];
+	int lo = CH_CTX_LAST + ch_cat_off_sig[cat];
+	int sig[16], last = count - 1;
+	for (int i = 0; i < count; ++i) sig[i] = 0;
+	for (int i = 0; i < count - 1; ++i) {
+		int inc = cat == CH_CAT_CHROMA_DC ? (i < 2 ? i : 2) : i;
+		sig[i] = ch_cabac_decode(c, so + inc);
+		if (sig[i] && ch_cabac_decode(c, lo + inc)) { last = i; break; }
+	}
+	sig[last] = 1;
+
+	int n_eq1 = 0, n_gt1 = 0, total = 0;
+	int base = CH_CTX_LEVEL + ch_cat_off_lev[cat];
+	for (int i = last; i >= 0; --i) {
+		if (!sig[i]) continue;
+		int inc0 = n_gt1 ? 0 : (1 + n_eq1 < 4 ? 1 + n_eq1 : 4);
+		int cap = 4 - (cat == CH_CAT_CHROMA_DC ? 1 : 0);
+		int inc = 5 + (n_gt1 < cap ? n_gt1 : cap);
+		int m = 0;
+		if (ch_cabac_decode(c, base + inc0)) {
+			m = 1;
+			while (m < 14 && ch_cabac_decode(c, base + inc)) ++m;
+			if (m == 14) {
+				// Past fourteen the magnitude continues as plain exp-golomb through bypass.
+				int k = 0, v = 0;
+				while (ch_cabac_dec_bypass(c)) { v += 1 << k; ++k; if (k > 20) { d->cab->r->error = 1; return 0; } }
+				while (k--) v += ch_cabac_dec_bypass(c) << k;
+				m += v;
+			}
+		}
+		if (m) ++n_gt1; else ++n_eq1;
+		int mag = m + 1;
+		zz[i] = ch_cabac_dec_bypass(c) ? -mag : mag;
+		++total;
+	}
+	return total;
+}
+
+static int ch_dec_mb_type_i(ch_decoder_t* d, int mbx, int mby, int base, int in_p)
+{
+	ch_cabac_dec_t* c = d->cab;
+	int inc = 0;
+	if (!in_p) {
+		const ch_mbinfo_t* a = ch_nb(d->mbinfo, d->mb_w, mbx, mby, 1);
+		const ch_mbinfo_t* b = ch_nb(d->mbinfo, d->mb_w, mbx, mby, 0);
+		inc = (a && a->coded && !a->i_nxn ? 1 : 0) + (b && b->coded && !b->i_nxn ? 1 : 0);
+	}
+	if (!ch_cabac_decode(c, base + inc)) return 0;                 // I_NxN
+	if (ch_cabac_dec_terminate(c)) return 25;                      // I_PCM
+	int i2 = in_p ? 1 : 3, i3 = in_p ? 2 : 4;
+	int i4a = in_p ? 2 : 5, i4b = in_p ? 3 : 6;
+	int i5a = in_p ? 3 : 6, i5b = in_p ? 3 : 7;
+	int i6 = in_p ? 3 : 7;
+	int cbpl = ch_cabac_decode(c, base + i2);
+	int cbpc = 0, pred;
+	if (ch_cabac_decode(c, base + i3)) cbpc = ch_cabac_decode(c, base + i4a) ? 2 : 1;
+	if (cbpc) {
+		pred = ch_cabac_decode(c, base + i5a) << 1;
+		pred |= ch_cabac_decode(c, base + i6);
+	} else {
+		pred = ch_cabac_decode(c, base + i4b) << 1;
+		pred |= ch_cabac_decode(c, base + i5b);
+	}
+	return 1 + pred + 4 * cbpc + 12 * cbpl;
+}
+
+static int ch_dec_mb_type_p(ch_decoder_t* d)
+{
+	ch_cabac_dec_t* c = d->cab;
+	int b0 = ch_cabac_decode(c, CH_CTX_MB_TYPE_P + 0);
+	if (b0) return -1;                                             // intra, suffix follows
+	int b1 = ch_cabac_decode(c, CH_CTX_MB_TYPE_P + 1);
+	int b2 = ch_cabac_decode(c, CH_CTX_MB_TYPE_P + (b1 != 1 ? 2 : 3));
+	if (!b1) return b2 ? 3 : 0;
+	return b2 ? 1 : 2;
+}
+
+// sub_mb_type, spec Table 9-38: one bin for the common "not split further" case.
+static int ch_dec_sub_mb_type(ch_decoder_t* d)
+{
+	if (ch_cabac_decode(d->cab, CH_CTX_SUB_TYPE_P + 0)) return 0;
+	if (!ch_cabac_decode(d->cab, CH_CTX_SUB_TYPE_P + 1)) return 1;
+	return ch_cabac_decode(d->cab, CH_CTX_SUB_TYPE_P + 2) ? 2 : 3;
+}
+
+static int ch_dec_mb_skip(ch_decoder_t* d, int mbx, int mby)
+{
+	const ch_mbinfo_t* a = ch_nb(d->mbinfo, d->mb_w, mbx, mby, 1);
+	const ch_mbinfo_t* b = ch_nb(d->mbinfo, d->mb_w, mbx, mby, 0);
+	int inc = (a && a->coded && !a->skip ? 1 : 0) + (b && b->coded && !b->skip ? 1 : 0);
+	return ch_cabac_decode(d->cab, CH_CTX_MB_SKIP + inc);
+}
+
+static int ch_dec_chroma_pred(ch_decoder_t* d, int mbx, int mby)
+{
+	ch_cabac_dec_t* c = d->cab;
+	const ch_mbinfo_t* a = ch_nb(d->mbinfo, d->mb_w, mbx, mby, 1);
+	const ch_mbinfo_t* b = ch_nb(d->mbinfo, d->mb_w, mbx, mby, 0);
+	int inc = (a && a->coded && a->intra && !a->ipcm && a->cpm ? 1 : 0)
+	        + (b && b->coded && b->intra && !b->ipcm && b->cpm ? 1 : 0);
+	if (!ch_cabac_decode(c, CH_CTX_CHROMA_PRED + inc)) return 0;
+	if (!ch_cabac_decode(c, CH_CTX_CHROMA_PRED + 3)) return 1;
+	return ch_cabac_decode(c, CH_CTX_CHROMA_PRED + 3) ? 3 : 2;
+}
+
+static int ch_dec_qp_delta(ch_decoder_t* d, int mbx, int mby)
+{
+	ch_cabac_dec_t* c = d->cab;
+	int prev = mby * d->mb_w + mbx - 1;
+	const ch_mbinfo_t* p = prev >= 0 ? &d->mbinfo[prev] : NULL;
+	int inc = (p && p->coded && !p->skip && !p->ipcm && p->qpd) ? 1 : 0;
+	if (!ch_cabac_decode(c, CH_CTX_QP_DELTA + inc)) return 0;
+	int v = 1;
+	if (ch_cabac_decode(c, CH_CTX_QP_DELTA + 2)) {
+		v = 2;
+		while (v < 88 && ch_cabac_decode(c, CH_CTX_QP_DELTA + 3)) ++v;
+	}
+	return (v & 1) ? (v + 1) / 2 : -(v / 2);
+}
+
+static int ch_dec_mvd(ch_decoder_t* d, int base, int sum_neighbours)
+{
+	ch_cabac_dec_t* c = d->cab;
+	int inc = sum_neighbours < 3 ? 0 : (sum_neighbours > 32 ? 2 : 1);
+	if (!ch_cabac_decode(c, base + inc)) return 0;
+	static const uint8_t more[4] = { 3, 4, 5, 6 };
+	int a = 1;
+	while (a < 9 && ch_cabac_decode(c, base + more[a - 1 < 3 ? a - 1 : 3])) ++a;
+	if (a == 9) {
+		int k = 3, v = 0;
+		while (ch_cabac_dec_bypass(c)) { v += 1 << k; ++k; if (k > 24) { c->r->error = 1; return 0; } }
+		while (k--) v += ch_cabac_dec_bypass(c) << k;
+		a += v;
+	}
+	return ch_cabac_dec_bypass(c) ? -a : a;
+}
+
+static int ch_dec_intra4x4_mode(ch_decoder_t* d, int pred)
+{
+	ch_cabac_dec_t* c = d->cab;
+	if (ch_cabac_decode(c, CH_CTX_PREV_INTRA)) return pred;
+	int rem = 0;
+	for (int i = 0; i < 3; ++i) rem |= ch_cabac_decode(c, CH_CTX_REM_INTRA) << i;
+	return rem < pred ? rem : rem + 1;
+}
+
+// One dispatch point per syntax element, mirroring the encoder's, so the two entropy coders are
+// called the same way from the macroblock reader below.
+
+static int ch_dec_resid(ch_decoder_t* d, ch_rbits_t* r, int* zz, int count, int nC, int cat,
+                        int blk, int comp, int mbx, int mby, int cur_intra)
+{
+	if (!d->cabac) return ch_read_residual(r, zz, count, nC);
+	return ch_dec_residual(d, zz, count, cat, ch_cbf_inc(&d->cs, mbx, mby, cat, blk, comp, cur_intra));
+}
+
+static int ch_dec_cbp(ch_decoder_t* d, ch_rbits_t* r, int mbx, int mby, int inter, int* luma, int* chroma)
+{
+	if (!d->cabac) {
+		uint32_t code = ch_get_ue(r);
+		if (code > 47) return 0;
+		const uint8_t* map = inter ? ch_cbp_inter_codenum : ch_cbp_intra_codenum;
+		for (int i = 0; i < 48; ++i) if (map[i] == (uint8_t)code) { *luma = i & 15; *chroma = i >> 4; return 1; }
+		return 0;
+	}
+	const ch_mbinfo_t* a = ch_nb(d->mbinfo, d->mb_w, mbx, mby, 1);
+	const ch_mbinfo_t* b = ch_nb(d->mbinfo, d->mb_w, mbx, mby, 0);
+	int cl = 0;
+	for (int i = 0; i < 4; ++i)
+		cl |= ch_cabac_decode(d->cab, CH_CTX_CBP_LUMA + ch_cbp_luma_ctx(a, b, i, cl)) << i;
+	int cc = 0;
+	if (ch_cabac_decode(d->cab, CH_CTX_CBP_CHROMA + ch_cbp_chroma_ctx(a, b, 0)))
+		cc = ch_cabac_decode(d->cab, CH_CTX_CBP_CHROMA + ch_cbp_chroma_ctx(a, b, 1)) ? 2 : 1;
+	*luma = cl; *chroma = cc;
+	return 1;
+}
+
+// The decoder keeps the same per-macroblock record the encoder does, for the same reason: the
+// contexts of the macroblocks after this one are derived from it.
+static void ch_dec_note_mb(ch_decoder_t* d, int mbx, int mby, int intra, int i_nxn, int ipcm,
+                           int skip, int cbp_luma, int cbp_chroma, int cpm, int dc_cbf, int qpd)
+{
+	ch_mbinfo_t* m = &d->mbinfo[mby * d->mb_w + mbx];
+	if (intra || skip || ipcm) {
+		int stride = d->mb_w * 4;
+		for (int y = 0; y < 4; ++y)
+			for (int x = 0; x < 4; ++x) {
+				int i = ((mby * 4 + y) * stride + mbx * 4 + x) * 2;
+				d->absmvd[i] = 0; d->absmvd[i + 1] = 0;
+			}
+	}
+	m->coded = 1; m->intra = (uint8_t)intra; m->i_nxn = (uint8_t)i_nxn; m->ipcm = (uint8_t)ipcm;
+	m->skip = (uint8_t)skip; m->cbp_luma = (uint8_t)cbp_luma; m->cbp_chroma = (uint8_t)cbp_chroma;
+	m->qpd = (uint8_t)qpd; m->cpm = (uint8_t)cpm; m->dc_cbf = (uint8_t)dc_cbf;
+}
+
+static int ch_decode_chroma(ch_decoder_t* d, ch_rbits_t* r, int mbx, int mby,
+                            const uint8_t* cpred, int cbp_chroma, int intra)
 {
 	int have_l = mbx > 0, have_t = mby > 0;
 	int qpc = ch_chroma_qp(d->qp);
 	int cqp_per = qpc / 6, cqp_rem = qpc % 6;
 	int cstride = d->mb_w * 2;
-	int dc[2][4];
+	int dc[2][4], dcbits = 0;
 	for (int c = 0; c < 2; ++c) for (int i = 0; i < 4; ++i) dc[c][i] = 0;
 	if (cbp_chroma & 3) {
-		for (int c = 0; c < 2; ++c) ch_read_residual(r, dc[c], 4, -1);
+		for (int c = 0; c < 2; ++c) {
+			ch_dec_resid(d, r, dc[c], 4, -1, CH_CAT_CHROMA_DC, 0, c, mbx, mby, intra);
+			for (int i = 0; i < 4; ++i) if (dc[c][i]) { dcbits |= c ? 4 : 2; break; }
+		}
 	}
 	for (int c = 0; c < 2; ++c) {
 		uint8_t* rc = (c ? d->pic.rec_cr : d->pic.rec_cb)
@@ -3974,7 +4275,7 @@ static void ch_decode_chroma(ch_decoder_t* d, ch_rbits_t* r, int mbx, int mby,
 			for (int i = 0; i < 16; ++i) ac[i] = 0;
 			if (cbp_chroma & 2) {
 				int nc = ch_nc(cmap, cstride, bx, by, have_l, have_t);
-				n = ch_read_residual(r, ac + 1, 15, nc);
+				n = ch_dec_resid(d, r, ac + 1, 15, nc, CH_CAT_CHROMA_AC, b, c, mbx, mby, intra);
 			}
 			cmap[by * cstride + bx] = (uint8_t)n;
 			ch_dequant_block(ac, qpc, 1, deq);
@@ -3983,6 +4284,7 @@ static void ch_decode_chroma(ch_decoder_t* d, ch_rbits_t* r, int mbx, int mby,
 				rc + (size_t)(by * 4) * d->pic.chroma_stride + bx * 4, d->pic.chroma_stride);
 		}
 	}
+	return dcbits;
 }
 
 static void ch_decode_mb(ch_decoder_t* d, ch_rbits_t* r, int mbx, int mby)
@@ -3993,19 +4295,38 @@ static void ch_decode_mb(ch_decoder_t* d, ch_rbits_t* r, int mbx, int mby)
 	uint8_t* mmap = d->i4_mode + (size_t)(mby * 4) * lstride + mbx * 4;
 	uint8_t* ry = d->pic.rec_y + (size_t)(mby * 16) * d->pic.luma_stride + mbx * 16;
 
-	int mb_type = (int)ch_get_ue(r);
-	if (r->error) return;
-	int is_inter = 0;
-	if (d->slice_is_p) {
-		if (mb_type < 5) {
-			// P_8x8ref0 differs from P_8x8 only in that ref_idx is inferred rather than sent,
-			// and with a single reference frame it is never sent either way -- so the two parse
-			// identically here.
-			if (mb_type == 4) mb_type = 3;
-			is_inter = 1;
-		} else {
-			mb_type -= 5;
+	int mb_type = 0, is_inter = 0;
+	if (!d->cabac) {
+		mb_type = (int)ch_get_ue(r);
+		if (r->error) return;
+		if (d->slice_is_p) {
+			if (mb_type < 5) {
+				// P_8x8ref0 differs from P_8x8 only in that ref_idx is inferred rather than
+				// sent, and with a single reference frame it is never sent either way -- so the
+				// two parse identically here.
+				if (mb_type == 4) mb_type = 3;
+				is_inter = 1;
+			} else {
+				mb_type -= 5;
+			}
 		}
+	} else if (d->slice_is_p) {
+		int p = ch_dec_mb_type_p(d);
+		if (p >= 0) { mb_type = p; is_inter = 1; }
+		else mb_type = ch_dec_mb_type_i(d, mbx, mby, 17, 1);
+	} else {
+		mb_type = ch_dec_mb_type_i(d, mbx, mby, CH_CTX_MB_TYPE_I, 0);
+	}
+	if (r->error) return;
+	if (!is_inter && (mb_type < 0 || mb_type > 25)) {
+		ch_decoder_error = "Invalid macroblock type."; r->error = 1; return;
+	}
+	if (d->cabac && !is_inter && mb_type == 25) {
+		// I_PCM under CABAC restarts the arithmetic decoder after the raw bytes. This encoder
+		// never produces that combination, so rejecting it beats getting it subtly wrong.
+		ch_decoder_error = "I_PCM with CABAC is not supported.";
+		r->error = 1;
+		return;
 	}
 
 	uint8_t pred[256], cpred[128];
@@ -4043,7 +4364,7 @@ static void ch_decode_mb(ch_decoder_t* d, ch_rbits_t* r, int mbx, int mby)
 		int sub[4] = { 0, 0, 0, 0 };
 		if (mb_type == 3) {
 			for (int k = 0; k < 4; ++k) {
-				sub[k] = (int)ch_get_ue(r);
+				sub[k] = d->cabac ? ch_dec_sub_mb_type(d) : (int)ch_get_ue(r);
 				if (sub[k] > 3) { ch_decoder_error = "Invalid sub_mb_type."; r->error = 1; return; }
 			}
 		}
@@ -4068,8 +4389,18 @@ static void ch_decode_mb(ch_decoder_t* d, ch_rbits_t* r, int mbx, int mby)
 				int pmvx, pmvy;
 				ch_mv_predict_part(&d->pic, mbx, mby, mbx * 4 + bx4, mby * 4 + by4, bw4, done,
 				                   mb_type == 3 ? 0 : ch_part_dir[mb_type][k], &pmvx, &pmvy);
-				int px = pmvx + (int)ch_get_se(r);
-				int py = pmvy + (int)ch_get_se(r);
+				int dx, dy;
+				if (d->cabac) {
+					int bx = mbx * 4 + bx4, by = mby * 4 + by4;
+					dx = ch_dec_mvd(d, CH_CTX_MVD_X, ch_absmvd_sum(&d->cs, bx, by, 0));
+					dy = ch_dec_mvd(d, CH_CTX_MVD_Y, ch_absmvd_sum(&d->cs, bx, by, 1));
+				} else {
+					dx = (int)ch_get_se(r);
+					dy = (int)ch_get_se(r);
+				}
+				ch_set_absmvd(d->absmvd, d->mb_w, mbx * 4 + bx4, mby * 4 + by4, bw4, bh4, dx, dy);
+				int px = pmvx + dx;
+				int py = pmvy + dy;
 				ch_mc_luma_block(&d->pic, mbx * 16 + bx4 * 4, mby * 16 + by4 * 4, bw4 * 4, bh4 * 4,
 				                 px, py, pred + (by4 * 4) * 16 + bx4 * 4, 16);
 				ch_mc_chroma_block(&d->pic, mbx * 8 + bx4 * 2, mby * 8 + by4 * 2, bw4 * 2, bh4 * 2,
@@ -4090,7 +4421,8 @@ static void ch_decode_mb(ch_decoder_t* d, ch_rbits_t* r, int mbx, int mby)
 				int mb2 = mmap[(by - 1) * lstride + bx];
 				pm = ma < mb2 ? ma : mb2;
 			}
-			if (ch_get_bit(r)) modes[b] = pm;
+			if (d->cabac) modes[b] = ch_dec_intra4x4_mode(d, pm);
+			else if (ch_get_bit(r)) modes[b] = pm;
 			else {
 				int rem = (int)ch_get_bits(r, 3);
 				modes[b] = rem < pm ? rem : rem + 1;
@@ -4107,12 +4439,21 @@ static void ch_decode_mb(ch_decoder_t* d, ch_rbits_t* r, int mbx, int mby)
 
 	int chroma_mode = 0;
 	if (!is_inter) {
-		chroma_mode = (int)ch_get_ue(r);      // intra_chroma_pred_mode
+		chroma_mode = d->cabac ? ch_dec_chroma_pred(d, mbx, mby) : (int)ch_get_ue(r);
 		if (chroma_mode > 3) { ch_decoder_error = "Invalid intra_chroma_pred_mode."; r->error = 1; return; }
 	}
 
 	if (i16) {
-		// The prediction mode came out of mb_type, so it is applied rather than searched for.
+		// The prediction mode came out of mb_type, so it is applied rather than searched for --
+		// which means a corrupt stream can ask for one whose neighbours do not exist. A
+		// conforming stream never does, but "never happens in valid input" is exactly the
+		// assumption that turns a damaged file into a read outside the picture buffer.
+		if ((i16_mode == 0 && !have_t) || (i16_mode == 1 && !have_l)
+		 || (i16_mode == 3 && (!have_t || !have_l))) {
+			ch_decoder_error = "Intra 16x16 mode needs neighbours that are not there.";
+			r->error = 1;
+			return;
+		}
 		// Plane is here even though this encoder never picks it, because a stream from any other
 		// encoder will, and a decoder that only handles what its own encoder emits is not one.
 		int stride = d->pic.luma_stride;
@@ -4144,21 +4485,20 @@ static void ch_decode_mb(ch_decoder_t* d, ch_rbits_t* r, int mbx, int mby)
 	}
 
 	if (!i16) {
-		uint32_t code = ch_get_ue(r);
-		if (code > 47) { ch_decoder_error = "Invalid coded_block_pattern."; r->error = 1; return; }
-		const uint8_t* map = is_inter ? ch_cbp_inter_codenum : ch_cbp_intra_codenum;
-		int cbp = -1;
-		for (int i = 0; i < 48; ++i) if (map[i] == (uint8_t)code) { cbp = i; break; }
-		if (cbp < 0) { ch_decoder_error = "Invalid coded_block_pattern."; r->error = 1; return; }
-		cbp_luma = cbp & 15;
-		cbp_chroma = cbp >> 4;
+		if (!ch_dec_cbp(d, r, mbx, mby, is_inter, &cbp_luma, &cbp_chroma)) {
+			ch_decoder_error = "Invalid coded_block_pattern.";
+			r->error = 1;
+			return;
+		}
 	}
 
 	// mb_qp_delta is cumulative across the slice, not absolute, and it wraps rather than clamps.
 	// This encoder always sends zero, but a stream from anywhere else will vary the quantizer per
 	// macroblock and every residual after the first would be scaled wrongly without this.
+	int qpd = 0;
 	if (i16 || cbp_luma || cbp_chroma) {
-		int delta = (int)ch_get_se(r);
+		int delta = d->cabac ? ch_dec_qp_delta(d, mbx, mby) : (int)ch_get_se(r);
+		qpd = delta != 0;
 		if (delta < -26 || delta > 25) { ch_decoder_error = "Invalid mb_qp_delta."; r->error = 1; return; }
 		d->qp = (d->qp + delta + 52) % 52;
 	}
@@ -4173,10 +4513,19 @@ static void ch_decode_mb(ch_decoder_t* d, ch_rbits_t* r, int mbx, int mby)
 		}
 	}
 
+	// The record has to exist before the residual is read: a block's coded_block_flag context
+	// asks about the block beside it, and for the right and bottom halves of a macroblock that
+	// neighbour is inside this same macroblock. The DC flags are the exception -- only a LATER
+	// macroblock reads those -- so they are filled in once they are known.
+	ch_dec_note_mb(d, mbx, mby, !is_inter, !is_inter && mb_type == 0, 0, 0,
+		i16 ? (cbp_luma ? 15 : 0) : cbp_luma, cbp_chroma, chroma_mode != 0, 0, qpd);
+
 	if (i16) {
 		int dc_zz[16];
 		int nc0 = ch_nc(lmap, lstride, 0, 0, have_l, have_t);
-		ch_read_residual(r, dc_zz, 16, nc0);
+		ch_dec_resid(d, r, dc_zz, 16, nc0, CH_CAT_LUMA_DC, 0, 0, mbx, mby, 1);
+		for (int i = 0; i < 16; ++i)
+			if (dc_zz[i]) { d->mbinfo[mby * d->mb_w + mbx].dc_cbf |= 1; break; }
 		int32_t dc_lev[16], dc_deq[16];
 		for (int i = 0; i < 16; ++i) dc_lev[ch_zigzag[i]] = dc_zz[i];
 		ch_ihadamard4x4(dc_lev, dc_deq);
@@ -4193,7 +4542,7 @@ static void ch_decode_mb(ch_decoder_t* d, ch_rbits_t* r, int mbx, int mby)
 			for (int i = 0; i < 16; ++i) ac[i] = 0;
 			if (cbp_luma) {
 				int nc = ch_nc(lmap, lstride, bx, by, have_l, have_t);
-				n = ch_read_residual(r, ac + 1, 15, nc);
+				n = ch_dec_resid(d, r, ac + 1, 15, nc, CH_CAT_LUMA_AC, b, 0, mbx, mby, 1);
 			}
 			lmap[by * lstride + bx] = (uint8_t)n;
 			ch_dequant_block(ac, d->qp, 1, deq);
@@ -4229,7 +4578,7 @@ static void ch_decode_mb(ch_decoder_t* d, ch_rbits_t* r, int mbx, int mby)
 			for (int i = 0; i < 16; ++i) zz[i] = 0;
 			if (cbp_luma & (1 << (b >> 2))) {
 				int nc = ch_nc(lmap, lstride, bx, by, have_l, have_t);
-				n = ch_read_residual(r, zz, 16, nc);
+				n = ch_dec_resid(d, r, zz, 16, nc, CH_CAT_LUMA_4x4, b, 0, mbx, mby, !is_inter);
 			}
 			lmap[by * lstride + bx] = (uint8_t)n;
 			ch_dequant_block(zz, d->qp, 0, deq);
@@ -4240,7 +4589,8 @@ static void ch_decode_mb(ch_decoder_t* d, ch_rbits_t* r, int mbx, int mby)
 				for (int x = 0; x < 4; ++x) mmap[y * lstride + x] = 2;
 	}
 
-	ch_decode_chroma(d, r, mbx, mby, cpred, cbp_chroma);
+	d->mbinfo[mby * d->mb_w + mbx].dc_cbf |=
+		(uint8_t)ch_decode_chroma(d, r, mbx, mby, cpred, cbp_chroma, !is_inter);
 	if (!is_inter) ch_mark_intra_motion(&d->pic, mbx, mby);
 }
 
@@ -4272,6 +4622,7 @@ static void ch_decode_skip(ch_decoder_t* d, int mbx, int mby)
 		for (int y = 0; y < 2; ++y) for (int x = 0; x < 2; ++x) cmap[y * cstride + x] = 0;
 	}
 	ch_set_motion(&d->pic, mbx, mby, mvx, mvy);
+	ch_dec_note_mb(d, mbx, mby, 0, 0, 0, 1, 0, 0, 0, 0, 0);
 }
 
 static int ch_decode_slice(ch_decoder_t* d, ch_rbits_t* r, int idr)
@@ -4296,6 +4647,13 @@ static int ch_decode_slice(ch_decoder_t* d, ch_rbits_t* r, int idr)
 	}
 	if (idr) { ch_get_bit(r); ch_get_bit(r); }
 	else ch_get_bit(r);                            // adaptive_ref_pic_marking_mode_flag
+	// Which of the three initialisation tables a P slice starts its contexts from. An encoder
+	// picks whichever suits the picture, so all three have to be here.
+	int init_idc = 0;
+	if (d->cabac && d->slice_is_p) {
+		init_idc = (int)ch_get_ue(r);
+		if (init_idc > 2) { ch_decoder_error = "Invalid cabac_init_idc."; return 0; }
+	}
 	d->qp = d->pps_qp + ch_get_se(r);
 	int deblock = 1;
 	if (d->deblock_control) {
@@ -4309,6 +4667,13 @@ static int ch_decode_slice(ch_decoder_t* d, ch_rbits_t* r, int idr)
 	CUTE_H264_MEMSET(d->nz_cb, 0, (size_t)(d->mb_w * 2) * (d->mb_h * 2));
 	CUTE_H264_MEMSET(d->nz_cr, 0, (size_t)(d->mb_w * 2) * (d->mb_h * 2));
 	CUTE_H264_MEMSET(d->i4_mode, 2, (size_t)(d->mb_w * 4) * (d->mb_h * 4));
+	CUTE_H264_MEMSET(d->mbinfo, 0, sizeof(ch_mbinfo_t) * (size_t)(d->mb_w * d->mb_h));
+	CUTE_H264_MEMSET(d->absmvd, 0, (size_t)(d->mb_w * 4) * (d->mb_h * 4) * 2);
+	if (d->cabac) {
+		// Slice data starts on a byte boundary for CABAC, padded with ones.
+		while (r->pos & 7) if (!ch_get_bit(r)) { ch_decoder_error = "Bad CABAC alignment."; return 0; }
+		ch_cabac_dec_start(d->cab, r, d->qp, d->slice_is_p ? 1 + init_idc : 0);
+	}
 	if (idr) {
 		CUTE_H264_MEMSET(d->pic.ref_idx, -1, (size_t)(d->mb_w * 4) * (d->mb_h * 4));
 		CUTE_H264_MEMSET(d->pic.mv, 0, (size_t)(d->mb_w * 4) * (d->mb_h * 4) * sizeof(int16_t) * 2);
@@ -4319,6 +4684,17 @@ static int ch_decode_slice(ch_decoder_t* d, ch_rbits_t* r, int idr)
 	int total = d->mb_w * d->mb_h;
 	int mb = 0, more = 1;
 	while (mb < total && more) {
+		if (d->cabac) {
+			// CABAC gives every macroblock its own skip flag, and follows each one with a flag
+			// saying whether another comes after it -- there is no run counter to read.
+			int skipped = d->slice_is_p ? ch_dec_mb_skip(d, mb % d->mb_w, mb / d->mb_w) : 0;
+			if (skipped) ch_decode_skip(d, mb % d->mb_w, mb / d->mb_w);
+			else ch_decode_mb(d, r, mb % d->mb_w, mb / d->mb_w);
+			if (r->error) { if (!ch_decoder_error) ch_decoder_error = "Corrupt macroblock data."; return 0; }
+			++mb;
+			more = !ch_cabac_dec_terminate(d->cab);
+			continue;
+		}
 		if (d->slice_is_p) {
 			int run = (int)ch_get_ue(r);
 			for (int i = 0; i < run && mb < total; ++i, ++mb)
@@ -4361,6 +4737,9 @@ void ch_decoder_destroy(ch_decoder_t* d)
 {
 	if (!d) return;
 	CUTE_H264_FREE(d->mem);
+	CUTE_H264_FREE(d->cab);
+	CUTE_H264_FREE(d->mbinfo);
+	CUTE_H264_FREE(d->absmvd);
 	CUTE_H264_FREE(d->pic.mv);
 	CUTE_H264_FREE(d->rbsp.data);
 	CUTE_H264_FREE(d->rgba.data);
@@ -4615,7 +4994,7 @@ const void* ch_mp4_wrap(const void* annexb, int size, int w, int h, int fps, int
 {
 	ch_error_reason = NULL;
 	if (out_size) *out_size = 0;
-	if (!annexb || size <= 0 || w <= 0 || h <= 0 || fps <= 0) {
+	if (!annexb || size <= 0 || w <= 0 || h <= 0 || w > 16384 || h > 16384 || fps <= 0 || fps > 1000) {
 		ch_error_reason = "Bad arguments."; return NULL;
 	}
 	const uint8_t* s = (const uint8_t*)annexb;
