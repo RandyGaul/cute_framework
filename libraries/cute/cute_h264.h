@@ -52,6 +52,11 @@
 			        hard-edged content -- which is the region where its real
 			        job, not showing block boundaries, is something PSNR does
 			        not measure either way.
+			reordering: pictures may be coded in a different order than they
+			        are shown, which is what a B picture needs. Order counts
+			        are signalled, the encoder holds a frame back, and the
+			        decoder queues and re-sorts. Verified bit-exact against
+			        ffmpeg on a reordered stream.
 			decode: I and P slices, every intra mode including the two this
 			        encoder never chooses, inter prediction, skipped
 			        macroblocks and deblocking. It reads streams from other
@@ -242,6 +247,20 @@ const void* ch_decoder_yuv(ch_decoder_t* d, int* luma_stride, int* chroma_stride
 extern const char* ch_decoder_error;
 
 //--------------------------------------------------------------------------------------------------
+
+// INCOMPLETE -- leave this at 0 for now. The reordering underneath it works and is verified, but
+// the pictures it holds back are still coded with one prediction rather than averaging one from
+// each side, which is where the gain would come from. Until that lands this makes files about 3%
+// LARGER, because the anchors are now two frames apart instead of one.
+//
+// When it is finished: how many pictures to place between anchors, each predicting from both the
+// picture before it and the one after. Note what it costs besides encode time -- a frame is not
+// encoded when you hand it over but when the NEXT anchor arrives, so output lags input, which
+// matters for live capture. ch_encoder_flush forces out whatever is still held.
+void ch_encoder_bframes(ch_encoder_t* e, int count);
+
+// Encodes any picture being held back. Called for you by ch_encoder_data and ch_encoder_save.
+int ch_encoder_flush(ch_encoder_t* e);
 
 // How many previous pictures a frame may predict from, 1 to 4. More lets a block that is briefly
 // occluded, or lit differently for one frame, match something further back -- at the cost of a
@@ -442,6 +461,10 @@ static void ch_emit_nal(ch_bytes_t* out, int nal_ref_idc, int nal_unit_type, con
 // bounds what a corrupt stream can ask a decoder to allocate.
 #define CH_MAX_REFS 4
 
+// One more than the deepest reordering this encoder produces, which is one B picture between
+// anchors. A stream that reorders more deeply than this is rejected rather than shown wrongly.
+#define CH_REORDER 3
+
 // Defined further down, alongside the entropy coder that uses them.
 typedef struct ch_cabac_t ch_cabac_t;
 typedef struct ch_cabac_dec_t ch_cabac_dec_t;
@@ -551,6 +574,15 @@ struct ch_encoder_t
 	ch_mbinfo_t* mbinfo;   // per macroblock, for the neighbour-derived contexts
 	uint8_t* absmvd;       // two per 4x4 block, for the motion vector contexts
 	ch_ctxstate_t cs;      // a view of the above, for the shared context rules
+
+	int bframes;           // how many B pictures sit between anchors, 0 for none
+	int poc;               // display position of the picture being written, in half frames
+	int next_poc;          // display position the next submitted frame will take
+	uint8_t* held;         // a frame held back, waiting for the anchor that follows it
+	int held_poc;
+	int have_held;
+	int slice_is_b;        // the picture being written is a B picture
+	int ref_poc[CH_MAX_REFS];
 
 	int frame_num;         // as the slice header carries it, reset by each IDR
 	int mb_type_offset;    // intra mb_type is biased by 5 inside a P slice
@@ -1018,6 +1050,21 @@ struct ch_decoder_t
 	int deblock_control;   // deblocking_filter_control_present_flag
 	int num_ref_idx_l0;
 
+	// Pictures come out of the decoder in the order they were coded, which is not the order they
+	// are meant to be shown in once anything is reordered. They queue here until the picture that
+	// belongs next on screen is known to have arrived.
+	uint8_t* outmem;
+	uint8_t* out_y[CH_REORDER];
+	uint8_t* out_cb[CH_REORDER];
+	uint8_t* out_cr[CH_REORDER];
+	int out_poc[CH_REORDER];
+	int out_seq[CH_REORDER];
+	int out_used[CH_REORDER];
+	int idr_seq;           // bumped by each keyframe, so ordering survives the count resetting
+	int shown;             // index of the picture ch_decoder_rgba and ch_decoder_yuv return
+	int poc;               // of the picture just decoded
+	int prev_poc_lsb, prev_poc_msb;
+
 	int ref_slots;         // max_num_ref_frames from the sequence parameter set, clamped
 	int active_refs;       // how many of them this slice may point at
 	uint8_t* refmem;       // one allocation behind every reference picture
@@ -1217,6 +1264,16 @@ static int ch_decoder_alloc(ch_decoder_t* d)
 	d->cs.nz_cr = d->nz_cr;
 	d->cs.absmvd = d->absmvd;
 	d->cs.ref_idx = d->pic.ref_idx;
+	d->outmem = (uint8_t*)CUTE_H264_ALLOC((luma + chroma * 2) * (size_t)CH_REORDER);
+	if (!d->outmem) { ch_decoder_error = "Out of memory."; return 0; }
+	for (int i = 0; i < CH_REORDER; ++i) {
+		uint8_t* base = d->outmem + (luma + chroma * 2) * (size_t)i;
+		d->out_y[i] = base;
+		d->out_cb[i] = base + luma;
+		d->out_cr[i] = base + luma + chroma;
+		d->out_used[i] = 0;
+	}
+	d->shown = -1;
 	return 1;
 }
 
@@ -1745,9 +1802,15 @@ static void ch_write_sps(ch_encoder_t* e)
 	ch_put_bits(w, 51, 8);            // level_idc 5.1: high enough that size never violates it
 	ch_ue(w, 0);                      // seq_parameter_set_id
 	ch_ue(w, 0);                      // log2_max_frame_num_minus4
-	// pic_order_cnt_type 2 means display order IS decode order. Legal only when no frame is
-	// reordered, which holds here and will keep holding: baseline has no B frames.
-	ch_ue(w, 2);                      // pic_order_cnt_type
+	// pic_order_cnt_type 2 says display order IS decode order, which is the cheapest thing to
+	// signal and is legal only while nothing is reordered. B frames are decoded before the
+	// picture they come after is displayed, so they need the explicit ordering of type 0.
+	if (e->bframes) {
+		ch_ue(w, 0);                  // pic_order_cnt_type
+		ch_ue(w, 4);                  // log2_max_pic_order_cnt_lsb_minus4: 8 bits of order
+	} else {
+		ch_ue(w, 2);                  // pic_order_cnt_type
+	}
 	ch_ue(w, (uint32_t)e->pic.ref_slots); // max_num_ref_frames
 	ch_put_bit(w, 0);                 // gaps_in_frame_num_value_allowed_flag
 	ch_ue(w, (uint32_t)(e->mb_w - 1));// pic_width_in_mbs_minus1
@@ -3711,7 +3774,11 @@ static void ch_write_slice(ch_encoder_t* e, int idr)
 	ch_put_bits(w, (uint32_t)(e->frame_num & 15), 4); // frame_num, log2_max_frame_num = 4 bits
 	if (idr) {
 		ch_ue(w, (uint32_t)e->idr_pic_id);
-	} else {
+	}
+	// Where in the display order this picture belongs, in units of half a frame -- the spec counts
+	// fields, so a progressive frame advances it by two.
+	if (e->bframes) ch_put_bits(w, (uint32_t)(e->poc & 255), 8);
+	if (!idr) {
 		// Early in a sequence fewer pictures are held than the parameter set allows, so the
 		// count is overridden per slice rather than referring to pictures that do not exist.
 		if (e->pic.ref_count != e->pic.ref_slots) {
@@ -3838,11 +3905,13 @@ ch_encoder_t* ch_encoder_make(int w, int h, int fps)
 	e->mv = (int16_t*)CUTE_H264_ALLOC(nzl * (sizeof(int16_t) * 2 + 1));
 	if (!e->mv) { CUTE_H264_FREE(e->y); CUTE_H264_FREE(e); ch_error_reason = "Out of memory."; return NULL; }
 	e->ref_idx = (int8_t*)(e->mv + nzl * 2);
+	e->held = (uint8_t*)CUTE_H264_ALLOC(luma + chroma * 2);
 	e->cab = (ch_cabac_t*)CUTE_H264_ALLOC(sizeof(ch_cabac_t));
 	e->mbinfo = (ch_mbinfo_t*)CUTE_H264_ALLOC(sizeof(ch_mbinfo_t) * (size_t)(e->mb_w * e->mb_h));
 	e->absmvd = (uint8_t*)CUTE_H264_ALLOC(nzl * 2);
-	if (!e->cab || !e->mbinfo || !e->absmvd) {
+	if (!e->held || !e->cab || !e->mbinfo || !e->absmvd) {
 		CUTE_H264_FREE(e->y); CUTE_H264_FREE(e->mv);
+		CUTE_H264_FREE(e->held);
 		CUTE_H264_FREE(e->cab); CUTE_H264_FREE(e->mbinfo); CUTE_H264_FREE(e->absmvd);
 		CUTE_H264_FREE(e); ch_error_reason = "Out of memory."; return NULL;
 	}
@@ -3888,6 +3957,7 @@ void ch_encoder_destroy(ch_encoder_t* e)
 	CUTE_H264_FREE(e->y);
 	CUTE_H264_FREE(e->refmem);
 	CUTE_H264_FREE(e->mv);
+	CUTE_H264_FREE(e->held);
 	CUTE_H264_FREE(e->cab);
 	CUTE_H264_FREE(e->mbinfo);
 	CUTE_H264_FREE(e->absmvd);
@@ -3922,21 +3992,79 @@ static void ch_copy_yuv420(ch_encoder_t* e, const uint8_t* y, const uint8_t* cb,
 
 static int ch_encoder_picture(ch_encoder_t* e);
 
+// With B pictures switched on, a frame is not encoded when it is handed over. It is held until
+// the following anchor arrives, then that anchor is encoded first and the held frame after it --
+// which is what lets the held frame predict from a picture that comes AFTER it on screen. The
+// cost is latency: nothing comes out for a frame until the next one has been submitted.
+static int ch_encoder_submit(ch_encoder_t* e)
+{
+	if (!e->bframes) { e->poc = e->next_poc; e->next_poc += 2; return ch_encoder_picture(e); }
+
+	int poc = e->next_poc;
+	e->next_poc += 2;
+	int anchor = e->frame_count == 0 || (poc / 2) % (e->bframes + 1) == 0;
+	size_t luma = (size_t)e->luma_stride * (e->mb_h * 16);
+	size_t chroma = (size_t)e->chroma_stride * (e->mb_h * 8);
+
+	if (!anchor) {
+		// Hold it. Only one picture is ever held, so a second arriving before the anchor would
+		// be a bug in the pattern above rather than something to handle.
+		CUTE_H264_MEMCPY(e->held, e->y, luma);
+		CUTE_H264_MEMCPY(e->held + luma, e->cb, chroma);
+		CUTE_H264_MEMCPY(e->held + luma + chroma, e->cr, chroma);
+		e->held_poc = poc;
+		e->have_held = 1;
+		return 1;
+	}
+
+	e->poc = poc;
+	if (!ch_encoder_picture(e)) return 0;
+	if (e->have_held) {
+		CUTE_H264_MEMCPY(e->y, e->held, luma);
+		CUTE_H264_MEMCPY(e->cb, e->held + luma, chroma);
+		CUTE_H264_MEMCPY(e->cr, e->held + luma + chroma, chroma);
+		e->poc = e->held_poc;
+		e->have_held = 0;
+		e->slice_is_b = 1;
+		int ok = ch_encoder_picture(e);
+		e->slice_is_b = 0;
+		if (!ok) return 0;
+	}
+	return 1;
+}
+
+// Encodes anything still held. A held picture has no anchor after it, so it goes out predicting
+// only from the past.
+int ch_encoder_flush(ch_encoder_t* e)
+{
+	if (!e || !e->have_held) return 1;
+	size_t luma = (size_t)e->luma_stride * (e->mb_h * 16);
+	size_t chroma = (size_t)e->chroma_stride * (e->mb_h * 8);
+	CUTE_H264_MEMCPY(e->y, e->held, luma);
+	CUTE_H264_MEMCPY(e->cb, e->held + luma, chroma);
+	CUTE_H264_MEMCPY(e->cr, e->held + luma + chroma, chroma);
+	e->poc = e->held_poc;
+	e->have_held = 0;
+	return ch_encoder_picture(e);
+}
+
 int ch_encoder_frame_yuv(ch_encoder_t* e, const void* y, const void* cb, const void* cr,
                          int y_stride, int chroma_stride)
 {
 	if (!e || !y || !cb || !cr) { ch_error_reason = "Null encoder or planes."; return 0; }
 	ch_copy_yuv420(e, (const uint8_t*)y, (const uint8_t*)cb, (const uint8_t*)cr, y_stride, chroma_stride);
-	return ch_encoder_picture(e);
+	return ch_encoder_submit(e);
 }
 
 int ch_encoder_frame(ch_encoder_t* e, const void* rgba)
 {
 	if (!e || !rgba) { ch_error_reason = "Null encoder or pixels."; return 0; }
 	ch_rgba_to_yuv420(e, (const uint8_t*)rgba);
-	return ch_encoder_picture(e);
+	return ch_encoder_submit(e);
 }
 
+// Encodes whatever is currently in the source planes. Split out so that a held picture can be
+// encoded later, out of the order it arrived in.
 static int ch_encoder_picture(ch_encoder_t* e)
 {
 	// A keyframe every couple of seconds, so that a capture can be seeked and can be joined late,
@@ -3980,6 +4108,12 @@ static int ch_encoder_picture(ch_encoder_t* e)
 	return 1;
 }
 
+void ch_encoder_bframes(ch_encoder_t* e, int count)
+{
+	if (!e) return;
+	e->bframes = count < 0 ? 0 : (count > 1 ? 1 : count);
+}
+
 void ch_encoder_ref_frames(ch_encoder_t* e, int count)
 {
 	if (!e) return;
@@ -4002,6 +4136,7 @@ void ch_encoder_qp(ch_encoder_t* e, int qp)
 
 const void* ch_encoder_data(ch_encoder_t* e, int* size)
 {
+	ch_encoder_flush(e);
 	if (size) *size = e ? e->out.len : 0;
 	return e ? e->out.data : NULL;
 }
@@ -4010,6 +4145,7 @@ const void* ch_encoder_data(ch_encoder_t* e, int* size)
 int ch_encoder_save(ch_encoder_t* e, const char* file_name)
 {
 	if (!e) { ch_error_reason = "Null encoder."; return 0; }
+	ch_encoder_flush(e);
 	FILE* fp = fopen(file_name, "wb");
 	if (!fp) { ch_error_reason = "Unable to open the output file."; return 0; }
 	int ok = e->out.len == 0 || fwrite(e->out.data, 1, (size_t)e->out.len, fp) == (size_t)e->out.len;
@@ -4813,7 +4949,23 @@ static int ch_decode_slice(ch_decoder_t* d, ch_rbits_t* r, int idr)
 	ch_get_ue(r);                                  // pic_parameter_set_id
 	ch_get_bits(r, d->log2_max_frame_num);         // frame_num
 	if (idr) ch_get_ue(r);                         // idr_pic_id
-	if (d->pic_order_cnt_type == 0) ch_get_bits(r, d->log2_max_poc_lsb); // pic_order_cnt_lsb
+	// Where this picture belongs on screen. The low bits are all that is sent, so the high bits
+	// are carried forward and stepped when the low ones wrap.
+	if (d->pic_order_cnt_type == 0) {
+		int max_lsb = 1 << d->log2_max_poc_lsb;
+		int lsb = (int)ch_get_bits(r, d->log2_max_poc_lsb);
+		int msb;
+		if (idr) { msb = 0; d->prev_poc_lsb = 0; d->prev_poc_msb = 0; }
+		else if (lsb < d->prev_poc_lsb && d->prev_poc_lsb - lsb >= max_lsb / 2) msb = d->prev_poc_msb + max_lsb;
+		else if (lsb > d->prev_poc_lsb && lsb - d->prev_poc_lsb > max_lsb / 2) msb = d->prev_poc_msb - max_lsb;
+		else msb = d->prev_poc_msb;
+		d->poc = msb + lsb;
+		d->prev_poc_lsb = lsb;
+		d->prev_poc_msb = msb;
+	} else {
+		// Nothing is reordered, so decode order is display order and a running count will do.
+		d->poc = idr ? 0 : d->poc + 2;
+	}
 	if (d->slice_is_p) {
 		int refs = d->num_ref_idx_l0;
 		if (ch_get_bit(r)) refs = (int)ch_get_ue(r) + 1;   // num_ref_idx_active_override_flag
@@ -4894,6 +5046,22 @@ static int ch_decode_slice(ch_decoder_t* d, ch_rbits_t* r, int idr)
 	CUTE_H264_MEMCPY(d->pic.ref_cb[0], d->pic.rec_cb, chroma);
 	CUTE_H264_MEMCPY(d->pic.ref_cr[0], d->pic.rec_cr, chroma);
 	if (deblock) ch_deblock(&d->pic, d->qp);
+	// A keyframe resets the order count to zero, so order count alone no longer says which
+	// picture comes first -- everything queued from before it would sort after it. Pairing the
+	// count with a keyframe sequence number keeps the ordering total. Queued pictures are still
+	// shown; a keyframe stops them being REFERENCED, not displayed.
+	if (idr && d->shown >= 0) ++d->idr_seq;
+	int slot = -1;
+	for (int i = 0; i < CH_REORDER; ++i) if (!d->out_used[i]) { slot = i; break; }
+	if (slot < 0) { ch_decoder_error = "Stream reorders more deeply than this decoder buffers."; return 0; }
+	for (int y = 0; y < d->mb_h * 16; ++y)
+		CUTE_H264_MEMCPY(d->out_y[slot] + (size_t)y * d->pic.luma_stride,
+			d->pic.ref_y[0] + (size_t)y * d->pic.luma_stride, (size_t)d->pic.luma_stride);
+	CUTE_H264_MEMCPY(d->out_cb[slot], d->pic.ref_cb[0], chroma);
+	CUTE_H264_MEMCPY(d->out_cr[slot], d->pic.ref_cr[0], chroma);
+	d->out_poc[slot] = d->poc;
+	d->out_seq[slot] = d->idr_seq;
+	d->out_used[slot] = 1;
 	d->has_picture = 1;
 	return 1;
 }
@@ -4918,6 +5086,7 @@ void ch_decoder_destroy(ch_decoder_t* d)
 	if (!d) return;
 	CUTE_H264_FREE(d->mem);
 	CUTE_H264_FREE(d->refmem);
+	CUTE_H264_FREE(d->outmem);
 	CUTE_H264_FREE(d->cab);
 	CUTE_H264_FREE(d->mbinfo);
 	CUTE_H264_FREE(d->absmvd);
@@ -4925,6 +5094,28 @@ void ch_decoder_destroy(ch_decoder_t* d)
 	CUTE_H264_FREE(d->rbsp.data);
 	CUTE_H264_FREE(d->rgba.data);
 	CUTE_H264_FREE(d);
+}
+
+static int ch_out_ready(ch_decoder_t* d)
+{
+	int n = 0;
+	for (int i = 0; i < CH_REORDER; ++i) n += d->out_used[i];
+	return n;
+}
+
+// Hands over the queued picture with the lowest order count, which is the one that belongs next.
+static int ch_out_pop(ch_decoder_t* d)
+{
+	int best = -1;
+	for (int i = 0; i < CH_REORDER; ++i) {
+		if (!d->out_used[i]) continue;
+		if (best < 0 || d->out_seq[i] < d->out_seq[best]
+		 || (d->out_seq[i] == d->out_seq[best] && d->out_poc[i] < d->out_poc[best])) best = i;
+	}
+	if (best < 0) return 0;
+	d->out_used[best] = 0;
+	d->shown = best;
+	return 1;
 }
 
 int ch_decoder_next(ch_decoder_t* d)
@@ -4949,12 +5140,16 @@ int ch_decoder_next(ch_decoder_t* d)
 			if (!d->have_sps || !d->have_pps) { ch_decoder_error = "Slice before its parameter sets."; return 0; }
 			if (!ch_decoder_alloc(d)) return 0;
 			if (!ch_decode_slice(d, &r, nal_type == CH_NAL_SLICE_IDR)) return 0;
-			return 1;
+			// Hold one picture back before showing anything. A picture that comes later in coding
+			// order can belong earlier on screen, and it has to be in hand before the choice of
+			// what to show next can be made.
+			if (ch_out_ready(d) > 1) return ch_out_pop(d);
 		}
 		// Anything else -- SEI, access unit delimiters, filler -- carries nothing this decoder
 		// needs, and skipping it is what lets a stream from another encoder come in unedited.
 	}
-	return 0;
+	// The stream is finished, so whatever is still queued can be shown.
+	return ch_out_ready(d) ? ch_out_pop(d) : 0;
 }
 
 int ch_decoder_size(ch_decoder_t* d, int* w, int* h)
@@ -4966,15 +5161,15 @@ int ch_decoder_size(ch_decoder_t* d, int* w, int* h)
 
 const void* ch_decoder_rgba(ch_decoder_t* d)
 {
-	if (!d || !d->has_picture) { ch_decoder_error = "No picture has been decoded."; return NULL; }
+	if (!d || d->shown < 0) { ch_decoder_error = "No picture has been decoded."; return NULL; }
 	d->rgba.len = 0;
 	ch_bytes_reserve(&d->rgba, d->w * d->h * 4);
 	if (d->rgba.oom) { ch_decoder_error = "Out of memory."; return NULL; }
 	uint8_t* out = d->rgba.data;
 	for (int y = 0; y < d->h; ++y) {
-		const uint8_t* py = d->pic.ref_y[0] + (size_t)y * d->pic.luma_stride;
-		const uint8_t* pb = d->pic.ref_cb[0] + (size_t)(y / 2) * d->pic.chroma_stride;
-		const uint8_t* pr = d->pic.ref_cr[0] + (size_t)(y / 2) * d->pic.chroma_stride;
+		const uint8_t* py = d->out_y[d->shown] + (size_t)y * d->pic.luma_stride;
+		const uint8_t* pb = d->out_cb[d->shown] + (size_t)(y / 2) * d->pic.chroma_stride;
+		const uint8_t* pr = d->out_cr[d->shown] + (size_t)(y / 2) * d->pic.chroma_stride;
 		for (int x = 0; x < d->w; ++x) {
 			// BT.601 studio swing, the inverse of what the encoder applied. Chroma is repeated
 			// rather than interpolated, which is the plain reading of 4:2:0 and matches the box
@@ -4992,12 +5187,12 @@ const void* ch_decoder_rgba(ch_decoder_t* d)
 
 const void* ch_decoder_yuv(ch_decoder_t* d, int* luma_stride, int* chroma_stride, const void** cb, const void** cr)
 {
-	if (!d || !d->has_picture) { ch_decoder_error = "No picture has been decoded."; return NULL; }
+	if (!d || d->shown < 0) { ch_decoder_error = "No picture has been decoded."; return NULL; }
 	if (luma_stride) *luma_stride = d->pic.luma_stride;
 	if (chroma_stride) *chroma_stride = d->pic.chroma_stride;
-	if (cb) *cb = d->pic.ref_cb[0];
-	if (cr) *cr = d->pic.ref_cr[0];
-	return d->pic.ref_y[0];
+	if (cb) *cb = d->out_cb[d->shown];
+	if (cr) *cr = d->out_cr[d->shown];
+	return d->out_y[d->shown];
 }
 
 //--------------------------------------------------------------------------------------------------
