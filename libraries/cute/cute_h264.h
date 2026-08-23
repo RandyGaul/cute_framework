@@ -262,6 +262,14 @@ void ch_encoder_bframes(ch_encoder_t* e, int count);
 // Encodes any picture being held back. Called for you by ch_encoder_data and ch_encoder_save.
 int ch_encoder_flush(ch_encoder_t* e);
 
+// Handed the encoder's own reconstruction of each picture as it is coded, with the position that
+// picture belongs at on screen. Coded order is not display order once B pictures are on, so a
+// caller that wants them in order has to sort on `poc`. This exists to check a decoder against
+// what the encoder actually reconstructed; nothing in ordinary use needs it.
+typedef void (ch_recon_fn)(void* udata, const void* y, const void* cb, const void* cr,
+                           int luma_stride, int chroma_stride, int poc);
+void ch_encoder_recon_callback(ch_encoder_t* e, ch_recon_fn* fn, void* udata);
+
 // How many previous pictures a frame may predict from, 1 to 4. More lets a block that is briefly
 // occluded, or lit differently for one frame, match something further back -- at the cost of a
 // motion search per picture and a buffer per picture. Default 1.
@@ -520,6 +528,29 @@ typedef struct ch_pic_t
 	int ref_slots;         // how many are allocated
 	int ref_count;         // how many hold a picture yet
 
+	// A picture that is not a reference -- a B picture is shown and then dropped -- is built here
+	// instead of in a slot, so that finishing it does not push a reference out of the list.
+	uint8_t* nonref_y;
+	uint8_t* nonref_cb;
+	uint8_t* nonref_cr;
+
+	// The picture being built: the slot it will occupy, or the buffer above when it will occupy
+	// none. This is what the deblocking filter runs over and what is handed out.
+	uint8_t* cur_y;
+	uint8_t* cur_cb;
+	uint8_t* cur_cr;
+
+	// Where each picture belongs on screen, so a B picture can tell which references are behind
+	// it and which are ahead.
+	int poc;
+	int ref_poc[CH_MAX_REFS];
+
+	// Reference index to slot, one list per prediction direction. List 0 runs from the nearest
+	// picture behind outwards, list 1 from the nearest ahead; a P picture lists the pictures it
+	// holds in decode order, which for it is the same thing.
+	int list[2][CH_MAX_REFS];
+	int list_count[2];
+
 	uint8_t* nz_luma;      // per 4x4 block: CAVLC context, and deblocking strength
 
 	// Motion per 4x4 block, one set per prediction list. A P picture uses list 0 only; a B
@@ -586,6 +617,9 @@ struct ch_encoder_t
 	int held_poc;
 	int have_held;
 	int slice_is_b;        // the picture being written is a B picture
+	int poc_base;          // display index of the most recent keyframe; order counts start there
+	ch_recon_fn* recon_fn;
+	void* recon_udata;
 	int ref_poc[CH_MAX_REFS];
 
 	int frame_num;         // as the slice header carries it, reset by each IDR
@@ -1095,7 +1129,7 @@ const char* ch_decoder_error;
 // Strips the start code and the emulation prevention bytes from one NAL unit. The 00 00 03 escape
 // exists so a payload can never contain a start code; it has to come back out before the payload
 // can be parsed, and it cannot be done while parsing because it straddles syntax elements.
-static int ch_next_nal(ch_decoder_t* d, int* nal_type)
+static int ch_next_nal(ch_decoder_t* d, int* nal_type, int* nal_ref_idc)
 {
 	const uint8_t* s = d->stream;
 	int n = d->stream_len, i = d->stream_pos;
@@ -1114,6 +1148,8 @@ static int ch_next_nal(ch_decoder_t* d, int* nal_type)
 	if (end <= start) return 0;
 
 	*nal_type = s[start] & 0x1f;
+	// Zero here says the picture is not a reference: nothing after it may predict from it.
+	*nal_ref_idc = (s[start] >> 5) & 3;
 	d->rbsp.len = 0;
 	int zeros = 0;
 	for (int k = start + 1; k < end; ++k) {
@@ -1231,9 +1267,9 @@ static int ch_decoder_alloc(ch_decoder_t* d)
 	CUTE_H264_MEMSET(d->mem, 0, bytes);
 	// One buffer per reference slot the sequence asked for, plus nothing else: the decoder does
 	// not get to choose this, the stream does, which is why it is bounded when parsed.
-	d->refmem = (uint8_t*)CUTE_H264_ALLOC((luma + chroma * 2) * (size_t)d->ref_slots);
+	d->refmem = (uint8_t*)CUTE_H264_ALLOC((luma + chroma * 2) * (size_t)(d->ref_slots + 1));
 	if (!d->refmem) { ch_decoder_error = "Out of memory."; return 0; }
-	CUTE_H264_MEMSET(d->refmem, 0, (luma + chroma * 2) * (size_t)d->ref_slots);
+	CUTE_H264_MEMSET(d->refmem, 0, (luma + chroma * 2) * (size_t)(d->ref_slots + 1));
 	d->pic.ref_slots = d->ref_slots;
 	for (int i = 0; i < d->ref_slots; ++i) {
 		uint8_t* base = d->refmem + (luma + chroma * 2) * (size_t)i;
@@ -1241,6 +1277,15 @@ static int ch_decoder_alloc(ch_decoder_t* d)
 		d->pic.ref_cb[i] = base + luma;
 		d->pic.ref_cr[i] = base + luma + chroma;
 	}
+	{
+		uint8_t* base = d->refmem + (luma + chroma * 2) * (size_t)d->ref_slots;
+		d->pic.nonref_y = base;
+		d->pic.nonref_cb = base + luma;
+		d->pic.nonref_cr = base + luma + chroma;
+	}
+	d->pic.cur_y = d->pic.ref_y[0];
+	d->pic.cur_cb = d->pic.ref_cb[0];
+	d->pic.cur_cr = d->pic.ref_cr[0];
 	int16_t* mv = (int16_t*)CUTE_H264_ALLOC(nzl * (sizeof(int16_t) * 2 + 1) * 2);
 	if (!mv) { ch_decoder_error = "Out of memory."; return 0; }
 	CUTE_H264_MEMSET(mv, 0, nzl * sizeof(int16_t) * 4);
@@ -2114,8 +2159,49 @@ static void ch_pic_rotate(ch_pic_t* p)
 		p->ref_cb[i] = p->ref_cb[i - 1];
 		p->ref_cr[i] = p->ref_cr[i - 1];
 	}
+	for (int i = p->ref_slots - 1; i > 0; --i) p->ref_poc[i] = p->ref_poc[i - 1];
 	p->ref_y[0] = y; p->ref_cb[0] = cb; p->ref_cr[0] = cr;
+	p->ref_poc[0] = p->poc;
 	if (p->ref_count < p->ref_slots) ++p->ref_count;
+}
+
+// Builds the reference lists, spec clause 8.2.4.2. A P picture predicts only from the past, so
+// its list is the pictures it holds in decode order, most recent first. A B picture sorts them
+// into the ones behind it and the ones ahead: list 0 runs backwards from itself and list 1
+// forwards, so index 0 in each is the nearest picture on that side and costs the fewest bits.
+static void ch_pic_lists(ch_pic_t* p, int is_b)
+{
+	if (!is_b) {
+		for (int i = 0; i < p->ref_count; ++i) p->list[0][i] = i;
+		p->list_count[0] = p->ref_count;
+		p->list_count[1] = 0;
+		return;
+	}
+	int back[CH_MAX_REFS], nb = 0, fwd[CH_MAX_REFS], nf = 0;
+	for (int i = 0; i < p->ref_count; ++i) {
+		if (p->ref_poc[i] < p->poc) back[nb++] = i; else fwd[nf++] = i;
+	}
+	for (int i = 0; i < nb; ++i)
+		for (int j = i + 1; j < nb; ++j)
+			if (p->ref_poc[back[j]] > p->ref_poc[back[i]]) { int s = back[i]; back[i] = back[j]; back[j] = s; }
+	for (int i = 0; i < nf; ++i)
+		for (int j = i + 1; j < nf; ++j)
+			if (p->ref_poc[fwd[j]] < p->ref_poc[fwd[i]]) { int s = fwd[i]; fwd[i] = fwd[j]; fwd[j] = s; }
+	int n = 0;
+	for (int i = 0; i < nb; ++i) p->list[0][n++] = back[i];
+	for (int i = 0; i < nf; ++i) p->list[0][n++] = fwd[i];
+	p->list_count[0] = n;
+	n = 0;
+	for (int i = 0; i < nf; ++i) p->list[1][n++] = fwd[i];
+	for (int i = 0; i < nb; ++i) p->list[1][n++] = back[i];
+	p->list_count[1] = n;
+	// Two lists in the same order would make one of them pointless, so the spec swaps the first
+	// pair of the second one.
+	if (n > 1) {
+		int same = 1;
+		for (int i = 0; i < n; ++i) if (p->list[0][i] != p->list[1][i]) { same = 0; break; }
+		if (same) { int s = p->list[1][0]; p->list[1][0] = p->list[1][1]; p->list[1][1] = s; }
+	}
 }
 
 // Squared error of the macroblock as reconstructed, against the source. This is the distortion
@@ -2846,10 +2932,10 @@ static int ch_tap6(int a, int b, int c, int d, int f, int g)
 // Fetches one reference sample. A vector is allowed to point outside the picture, and the spec's
 // answer is to clamp the coordinate, extending the edge pixels outwards -- so even a whole-sample
 // vector cannot be a plain memcpy.
-static int ch_ref_px(const ch_pic_t* p, int ref, int x, int y)
+static int ch_ref_px(const ch_pic_t* p, int slot, int x, int y)
 {
 	int W = p->mb_w * 16, H = p->mb_h * 16;
-	return p->ref_y[ref][(size_t)ch_clamp(y, 0, H - 1) * p->luma_stride + ch_clamp(x, 0, W - 1)];
+	return p->ref_y[slot][(size_t)ch_clamp(y, 0, H - 1) * p->luma_stride + ch_clamp(x, 0, W - 1)];
 }
 
 // Luma prediction for one partition at quarter-sample precision, spec clause 8.4.2.2.1. Half
@@ -2859,16 +2945,17 @@ static int ch_ref_px(const ch_pic_t* p, int ref, int x, int y)
 // The intermediates are computed for the whole block rather than per pixel. Done per pixel the
 // centre position alone re-runs the horizontal filter six times for every output sample, and the
 // motion search calls this often enough for that to dominate the encode.
-static void ch_mc_luma_block(const ch_pic_t* p, int ref, int ox, int oy, int bw, int bh,
+static void ch_mc_luma_block(const ch_pic_t* p, int list, int ref, int ox, int oy, int bw, int bh,
                              int mvx, int mvy, uint8_t* out, int out_stride)
 {
+	int slot = p->list[list][ref];
 	int fx = mvx & 3, fy = mvy & 3;
 	ox += mvx >> 2;
 	oy += mvy >> 2;
 	if (!fx && !fy) {
 		int W = p->mb_w * 16, H = p->mb_h * 16;
 		for (int y = 0; y < bh; ++y) {
-			const uint8_t* row = p->ref_y[ref] + (size_t)ch_clamp(oy + y, 0, H - 1) * p->luma_stride;
+			const uint8_t* row = p->ref_y[slot] + (size_t)ch_clamp(oy + y, 0, H - 1) * p->luma_stride;
 			for (int x = 0; x < bw; ++x) out[y * out_stride + x] = row[ch_clamp(ox + x, 0, W - 1)];
 		}
 		return;
@@ -2882,8 +2969,8 @@ static void ch_mc_luma_block(const ch_pic_t* p, int ref, int ox, int oy, int bw,
 			int Y = oy + r - 2;
 			for (int x = 0; x < bw; ++x) {
 				int X = ox + x;
-				b1[r][x] = ch_tap6(ch_ref_px(p, ref, X - 2, Y), ch_ref_px(p, ref, X - 1, Y), ch_ref_px(p, ref, X, Y),
-				                   ch_ref_px(p, ref, X + 1, Y), ch_ref_px(p, ref, X + 2, Y), ch_ref_px(p, ref, X + 3, Y));
+				b1[r][x] = ch_tap6(ch_ref_px(p, slot, X - 2, Y), ch_ref_px(p, slot, X - 1, Y), ch_ref_px(p, slot, X, Y),
+				                   ch_ref_px(p, slot, X + 1, Y), ch_ref_px(p, slot, X + 2, Y), ch_ref_px(p, slot, X + 3, Y));
 			}
 		}
 	}
@@ -2892,8 +2979,8 @@ static void ch_mc_luma_block(const ch_pic_t* p, int ref, int ox, int oy, int bw,
 			int Y = oy + y;
 			for (int x = 0; x < bw + 1; ++x) {
 				int X = ox + x;
-				h1[y][x] = ch_tap6(ch_ref_px(p, ref, X, Y - 2), ch_ref_px(p, ref, X, Y - 1), ch_ref_px(p, ref, X, Y),
-				                   ch_ref_px(p, ref, X, Y + 1), ch_ref_px(p, ref, X, Y + 2), ch_ref_px(p, ref, X, Y + 3));
+				h1[y][x] = ch_tap6(ch_ref_px(p, slot, X, Y - 2), ch_ref_px(p, slot, X, Y - 1), ch_ref_px(p, slot, X, Y),
+				                   ch_ref_px(p, slot, X, Y + 1), ch_ref_px(p, slot, X, Y + 2), ch_ref_px(p, slot, X, Y + 3));
 			}
 		}
 	}
@@ -2917,11 +3004,11 @@ static void ch_mc_luma_block(const ch_pic_t* p, int ref, int ox, int oy, int bw,
 			int v;
 			// Table 8-12, laid out as the spec prints it: G d h n / a e i p / b f j q / c g k r.
 			switch (fx * 4 + fy) {
-			case 0:  v = ch_ref_px(p, ref, X, Y); break;
-			case 1:  v = (ch_ref_px(p, ref, X, Y) + h + 1) >> 1; break;          // d
+			case 0:  v = ch_ref_px(p, slot, X, Y); break;
+			case 1:  v = (ch_ref_px(p, slot, X, Y) + h + 1) >> 1; break;          // d
 			case 2:  v = h; break;
-			case 3:  v = (ch_ref_px(p, ref, X, Y + 1) + h + 1) >> 1; break;      // n
-			case 4:  v = (ch_ref_px(p, ref, X, Y) + b + 1) >> 1; break;          // a
+			case 3:  v = (ch_ref_px(p, slot, X, Y + 1) + h + 1) >> 1; break;      // n
+			case 4:  v = (ch_ref_px(p, slot, X, Y) + b + 1) >> 1; break;          // a
 			case 5:  v = (b + h + 1) >> 1; break;                           // e
 			case 6:  v = (h + j + 1) >> 1; break;                           // i
 			case 7:  v = (h + s + 1) >> 1; break;                           // p
@@ -2929,7 +3016,7 @@ static void ch_mc_luma_block(const ch_pic_t* p, int ref, int ox, int oy, int bw,
 			case 9:  v = (b + j + 1) >> 1; break;                           // f
 			case 10: v = j; break;
 			case 11: v = (j + s + 1) >> 1; break;                           // q
-			case 12: v = (ch_ref_px(p, ref, X + 1, Y) + b + 1) >> 1; break;      // c
+			case 12: v = (ch_ref_px(p, slot, X + 1, Y) + b + 1) >> 1; break;      // c
 			case 13: v = (b + m + 1) >> 1; break;                           // g
 			case 14: v = (j + m + 1) >> 1; break;                           // k
 			default: v = (m + s + 1) >> 1; break;                           // r
@@ -2942,15 +3029,16 @@ static void ch_mc_luma_block(const ch_pic_t* p, int ref, int ox, int oy, int bw,
 // Chroma prediction, spec clause 8.4.2.2.2. In 4:2:0 the chroma vector is the luma vector read at
 // eighth-sample precision, so even a whole-sample luma move lands on a half sample in chroma and
 // always needs the bilinear filter. Sizes and offsets here are in chroma samples.
-static void ch_mc_chroma_block(const ch_pic_t* p, int ref, int ox, int oy, int bw, int bh,
+static void ch_mc_chroma_block(const ch_pic_t* p, int list, int ref, int ox, int oy, int bw, int bh,
                                int mvx, int mvy, uint8_t* out, int out_stride)
 {
+	int slot = p->list[list][ref];
 	int W = p->mb_w * 8, H = p->mb_h * 8;
 	int fx = mvx & 7, fy = mvy & 7;
 	ox += mvx >> 3;
 	oy += mvy >> 3;
 	for (int c = 0; c < 2; ++c) {
-		const uint8_t* plane = c ? p->ref_cr[ref] : p->ref_cb[ref];
+		const uint8_t* plane = c ? p->ref_cr[slot] : p->ref_cb[slot];
 		uint8_t* dst = out + c * 64;
 		for (int y = 0; y < bh; ++y) {
 			const uint8_t* r0 = plane + (size_t)ch_clamp(oy + y, 0, H - 1) * p->chroma_stride;
@@ -2965,14 +3053,14 @@ static void ch_mc_chroma_block(const ch_pic_t* p, int ref, int ox, int oy, int b
 	}
 }
 
-static void ch_mc_luma(const ch_pic_t* p, int ref, int mbx, int mby, int mvx, int mvy, uint8_t* out)
+static void ch_mc_luma(const ch_pic_t* p, int list, int ref, int mbx, int mby, int mvx, int mvy, uint8_t* out)
 {
-	ch_mc_luma_block(p, ref, mbx * 16, mby * 16, 16, 16, mvx, mvy, out, 16);
+	ch_mc_luma_block(p, list, ref, mbx * 16, mby * 16, 16, 16, mvx, mvy, out, 16);
 }
 
-static void ch_mc_chroma(const ch_pic_t* p, int ref, int mbx, int mby, int mvx, int mvy, uint8_t* out)
+static void ch_mc_chroma(const ch_pic_t* p, int list, int ref, int mbx, int mby, int mvx, int mvy, uint8_t* out)
 {
-	ch_mc_chroma_block(p, ref, mbx * 8, mby * 8, 8, 8, mvx, mvy, out, 8);
+	ch_mc_chroma_block(p, list, ref, mbx * 8, mby * 8, 8, 8, mvx, mvy, out, 8);
 }
 
 // Records that this macroblock has no motion, so a later neighbour asking for its vector is told
@@ -3027,21 +3115,21 @@ static int ch_sad(const uint8_t* a, int as, const uint8_t* b, int bs, int w, int
 // Finds a vector for one partition. Starts from the predicted vector, which is both the better
 // guess and the one that costs nothing to send, then walks downhill with a halving step -- the
 // last two rounds landing on half and then quarter samples, where most of the gain is.
-static int ch_search_part(ch_encoder_t* e, int ref, int mbx, int mby, int bx4, int by4, int bw4,
-                          int bh4, unsigned done, int dir, int* best_x, int* best_y)
+static int ch_search_part(ch_encoder_t* e, int list, int ref, int mbx, int mby, int bx4, int by4,
+                          int bw4, int bh4, unsigned done, int dir, int* best_x, int* best_y)
 {
 	int px = mbx * 16 + bx4 * 4, py = mby * 16 + by4 * 4;
 	int bw = bw4 * 4, bh = bh4 * 4;
 	const uint8_t* sy = e->y + (size_t)py * e->luma_stride + px;
 	int pmvx, pmvy;
-	ch_mv_predict_part(&e->pic, 0, mbx, mby, mbx * 4 + bx4, mby * 4 + by4, bw4, done, dir, ref,
+	ch_mv_predict_part(&e->pic, list, mbx, mby, mbx * 4 + bx4, mby * 4 + by4, bw4, done, dir, ref,
 		&pmvx, &pmvy);
 	int lm = ch_lambda_mv[e->qp];
 	uint8_t pred[256];
 	int bx = pmvx & ~3, by = pmvy & ~3, bc = 0x7fffffff;
 	int cand[2][2] = { { pmvx & ~3, pmvy & ~3 }, { 0, 0 } };
 	for (int i = 0; i < 2; ++i) {
-		ch_mc_luma_block(&e->pic, ref, px, py, bw, bh, cand[i][0], cand[i][1], pred, 16);
+		ch_mc_luma_block(&e->pic, list, ref, px, py, bw, bh, cand[i][0], cand[i][1], pred, 16);
 		int cost = ch_sad(sy, e->luma_stride, pred, 16, bw, bh)
 		         + lm * (ch_se_bits(cand[i][0] - pmvx) + ch_se_bits(cand[i][1] - pmvy));
 		if (cost < bc) { bc = cost; bx = cand[i][0]; by = cand[i][1]; }
@@ -3056,7 +3144,7 @@ static int ch_search_part(ch_encoder_t* e, int ref, int mbx, int mby, int bx4, i
 			for (int k = 0; k < 8; ++k) {
 				int mx = bx + dx[k] * step, my = by + dy[k] * step;
 				if (mx < -2048 || mx > 2047 || my < -512 || my > 511) continue;
-				ch_mc_luma_block(&e->pic, ref, px, py, bw, bh, mx, my, pred, 16);
+				ch_mc_luma_block(&e->pic, list, ref, px, py, bw, bh, mx, my, pred, 16);
 				int cost = ch_sad(sy, e->luma_stride, pred, 16, bw, bh)
 				         + lm * (ch_se_bits(mx - pmvx) + ch_se_bits(my - pmvy));
 				if (cost < bc) { bc = cost; bx = mx; by = my; improved = 1; }
@@ -3389,7 +3477,7 @@ static int64_t ch_encode_mb_p(ch_encoder_t* e, int mbx, int mby)
 			int bestc = 0x7fffffff;
 			for (int rf = first; rf <= last_rf; ++rf) {
 				int mx, my;
-				int c = ch_search_part(e, rf, mbx, mby, s[0], s[1], s[2], s[3], done,
+				int c = ch_search_part(e, 0, rf, mbx, mby, s[0], s[1], s[2], s[3], done,
 				                       ch_part_dir[shape][k], &mx, &my);
 				c += lm * (rf ? 2 * rf + 1 : 1);   // a further reference costs more to name
 				if (c < bestc) { bestc = c; mv[k][0] = mx; mv[k][1] = my; rfs[k] = rf; }
@@ -3437,9 +3525,9 @@ static int64_t ch_encode_mb_p(ch_encoder_t* e, int mbx, int mby)
 		int ref = best_rfs[k];
 		ch_mv_predict_part(&e->pic, 0, mbx, mby, mbx * 4 + s[0], mby * 4 + s[1], s[2], done,
 		                   ch_part_dir[best_shape][k], ref, &pmv[k][0], &pmv[k][1]);
-		ch_mc_luma_block(&e->pic, ref, mbx * 16 + s[0] * 4, mby * 16 + s[1] * 4, s[2] * 4, s[3] * 4,
+		ch_mc_luma_block(&e->pic, 0, ref, mbx * 16 + s[0] * 4, mby * 16 + s[1] * 4, s[2] * 4, s[3] * 4,
 		                 best_mv[k][0], best_mv[k][1], pred + (s[1] * 4) * 16 + s[0] * 4, 16);
-		ch_mc_chroma_block(&e->pic, ref, mbx * 8 + s[0] * 2, mby * 8 + s[1] * 2, s[2] * 2, s[3] * 2,
+		ch_mc_chroma_block(&e->pic, 0, ref, mbx * 8 + s[0] * 2, mby * 8 + s[1] * 2, s[2] * 2, s[3] * 2,
 		                   best_mv[k][0], best_mv[k][1], cpred + (s[1] * 2) * 8 + s[0] * 2, 8);
 		ch_set_motion_part(&e->pic, 0, mbx * 4 + s[0], mby * 4 + s[1], s[2], s[3],
 			best_mv[k][0], best_mv[k][1], ref);
@@ -3541,8 +3629,8 @@ static int ch_encode_mb(ch_encoder_t* e, int mbx, int mby, int* skip_run)
 	uint8_t spred[256], scpred[128];
 	if (e->mb_type_offset) {
 		ch_skip_mv(&e->pic, mbx, mby, &smvx, &smvy);
-		ch_mc_luma(&e->pic, 0, mbx, mby, smvx, smvy, spred);
-		ch_mc_chroma(&e->pic, 0, mbx, mby, smvx, smvy, scpred);
+		ch_mc_luma(&e->pic, 0, 0, mbx, mby, smvx, smvy, spred);
+		ch_mc_chroma(&e->pic, 0, 0, mbx, mby, smvx, smvy, scpred);
 		const uint8_t* sy = e->y + (size_t)(mby * 16) * e->luma_stride + mbx * 16;
 		int64_t ssd = 0;
 		for (int y = 0; y < 16; ++y) {
@@ -3748,7 +3836,7 @@ static void ch_deblock(ch_pic_t* p, int qp)
 						for (int k = 0; k < 4; ++k) {
 							int x = mbx * 16 + (vertical ? edge : g + k);
 							int y = mby * 16 + (vertical ? g + k : edge);
-							uint8_t* s = p->ref_y[0] + (size_t)y * p->luma_stride + x;
+							uint8_t* s = p->cur_y + (size_t)y * p->luma_stride + x;
 							ch_filter_line(s, vertical ? 1 : p->luma_stride,
 								bs, alpha_y, beta_y, tc0, 0);
 						}
@@ -3769,7 +3857,7 @@ static void ch_deblock(ch_pic_t* p, int qp)
 						if (!bs) continue;
 						int tc0 = bs < 4 ? ch_tc0_tab[bs - 1][ia_c] : 0;
 						for (int c = 0; c < 2; ++c) {
-							uint8_t* plane = c ? p->ref_cr[0] : p->ref_cb[0];
+							uint8_t* plane = c ? p->cur_cr : p->cur_cb;
 							for (int k = 0; k < 2; ++k) {
 								int x = mbx * 8 + (vertical ? edge / 2 : g + k);
 								int y = mby * 8 + (vertical ? g + k : edge / 2);
@@ -3953,7 +4041,7 @@ ch_encoder_t* ch_encoder_make(int w, int h, int fps)
 	e->pic.chroma_stride = e->chroma_stride;
 	e->pic.rec_y = e->rec_y;   e->pic.rec_cb = e->rec_cb;  e->pic.rec_cr = e->rec_cr;
 	e->pic.ref_slots = 1;
-	e->refmem = (uint8_t*)CUTE_H264_ALLOC((luma + chroma * 2) * (size_t)CH_MAX_REFS);
+	e->refmem = (uint8_t*)CUTE_H264_ALLOC((luma + chroma * 2) * (size_t)(CH_MAX_REFS + 1));
 	if (!e->refmem) { CUTE_H264_FREE(e->y); CUTE_H264_FREE(e); ch_error_reason = "Out of memory."; return NULL; }
 	for (int i = 0; i < CH_MAX_REFS; ++i) {
 		uint8_t* base = e->refmem + (luma + chroma * 2) * (size_t)i;
@@ -3961,6 +4049,15 @@ ch_encoder_t* ch_encoder_make(int w, int h, int fps)
 		e->pic.ref_cb[i] = base + luma;
 		e->pic.ref_cr[i] = base + luma + chroma;
 	}
+	{
+		uint8_t* base = e->refmem + (luma + chroma * 2) * (size_t)CH_MAX_REFS;
+		e->pic.nonref_y = base;
+		e->pic.nonref_cb = base + luma;
+		e->pic.nonref_cr = base + luma + chroma;
+	}
+	e->pic.cur_y = e->pic.ref_y[0];
+	e->pic.cur_cb = e->pic.ref_cb[0];
+	e->pic.cur_cr = e->pic.ref_cr[0];
 	e->pic.nz_luma = e->nz_luma;
 	e->pic.mv[0] = e->mv;
 	e->pic.mv[1] = e->mv + nzl * 2;
@@ -4015,7 +4112,7 @@ static void ch_copy_yuv420(ch_encoder_t* e, const uint8_t* y, const uint8_t* cb,
 	}
 }
 
-static int ch_encoder_picture(ch_encoder_t* e);
+static int ch_encoder_picture(ch_encoder_t* e, int idr, int is_b);
 
 // With B pictures switched on, a frame is not encoded when it is handed over. It is held until
 // the following anchor arrives, then that anchor is encoded first and the held frame after it --
@@ -4023,11 +4120,24 @@ static int ch_encoder_picture(ch_encoder_t* e);
 // cost is latency: nothing comes out for a frame until the next one has been submitted.
 static int ch_encoder_submit(ch_encoder_t* e)
 {
-	if (!e->bframes) { e->poc = e->next_poc; e->next_poc += 2; return ch_encoder_picture(e); }
-
-	int poc = e->next_poc;
+	// A keyframe every couple of seconds, so that a capture can be seeked and can be joined late,
+	// rather than one at the start and never again. The lossless path stays all-keyframe: I_PCM
+	// has nothing to gain from a reference frame it is not allowed to be approximate about.
+	int index = e->next_poc / 2;
 	e->next_poc += 2;
-	int anchor = e->frame_count == 0 || (poc / 2) % (e->bframes + 1) == 0;
+	int gop = e->fps * 2 < 1 ? 1 : e->fps * 2;
+	int key = e->qp < 0 || index % gop == 0;
+	// A picture still held belongs BEFORE the keyframe on screen, and nothing before a keyframe
+	// may be shown after it, so it goes out first -- predicting only from the past, as a B
+	// picture with no anchor ahead of it must.
+	if (key && e->have_held && !ch_encoder_flush(e)) return 0;
+	// Order counts restart at each keyframe, because an IDR picture is defined to sit at zero.
+	if (key) e->poc_base = index;
+	int poc = (index - e->poc_base) * 2;
+
+	if (!e->bframes) { e->poc = poc; return ch_encoder_picture(e, key, 0); }
+
+	int anchor = key || (index - e->poc_base) % (e->bframes + 1) == 0;
 	size_t luma = (size_t)e->luma_stride * (e->mb_h * 16);
 	size_t chroma = (size_t)e->chroma_stride * (e->mb_h * 8);
 
@@ -4043,17 +4153,14 @@ static int ch_encoder_submit(ch_encoder_t* e)
 	}
 
 	e->poc = poc;
-	if (!ch_encoder_picture(e)) return 0;
+	if (!ch_encoder_picture(e, key, 0)) return 0;
 	if (e->have_held) {
 		CUTE_H264_MEMCPY(e->y, e->held, luma);
 		CUTE_H264_MEMCPY(e->cb, e->held + luma, chroma);
 		CUTE_H264_MEMCPY(e->cr, e->held + luma + chroma, chroma);
 		e->poc = e->held_poc;
 		e->have_held = 0;
-		e->slice_is_b = 1;
-		int ok = ch_encoder_picture(e);
-		e->slice_is_b = 0;
-		if (!ok) return 0;
+		if (!ch_encoder_picture(e, 0, 1)) return 0;
 	}
 	return 1;
 }
@@ -4070,7 +4177,7 @@ int ch_encoder_flush(ch_encoder_t* e)
 	CUTE_H264_MEMCPY(e->cr, e->held + luma + chroma, chroma);
 	e->poc = e->held_poc;
 	e->have_held = 0;
-	return ch_encoder_picture(e);
+	return ch_encoder_picture(e, 0, 0);
 }
 
 int ch_encoder_frame_yuv(ch_encoder_t* e, const void* y, const void* cb, const void* cr,
@@ -4090,12 +4197,9 @@ int ch_encoder_frame(ch_encoder_t* e, const void* rgba)
 
 // Encodes whatever is currently in the source planes. Split out so that a held picture can be
 // encoded later, out of the order it arrived in.
-static int ch_encoder_picture(ch_encoder_t* e)
+static int ch_encoder_picture(ch_encoder_t* e, int idr, int is_b)
 {
-	// A keyframe every couple of seconds, so that a capture can be seeked and can be joined late,
-	// rather than one at the start and never again. The lossless path stays all-keyframe: I_PCM
-	// has nothing to gain from a reference frame it is not allowed to be approximate about.
-	int idr = e->frame_count == 0 || e->qp < 0 || e->frame_count % (e->fps * 2) == 0;
+	e->slice_is_b = is_b;
 	// Contexts do not survive a picture boundary: start them clean or the first macroblock row
 	// inherits contexts from the previous picture and decodes as noise.
 	CUTE_H264_MEMSET(e->nz_luma, 0, (size_t)(e->mb_w * 4) * (e->mb_h * 4));
@@ -4113,7 +4217,11 @@ static int ch_encoder_picture(ch_encoder_t* e)
 		ch_write_sps(e);
 		ch_write_pps(e);
 	}
-	e->mb_type_offset = idr ? 0 : 5;
+	// Intra macroblock types are numbered after the inter ones, and a B slice has more of those
+	// than a P slice does.
+	e->mb_type_offset = idr ? 0 : (is_b ? 23 : 5);
+	e->pic.poc = e->poc;
+	ch_pic_lists(&e->pic, is_b);
 	ch_write_slice(e, idr);
 	if (idr) e->idr_pic_id ^= 1;
 	// The reference planes hold the DEBLOCKED picture, which is both what a decoder outputs and
@@ -4122,16 +4230,40 @@ static int ch_encoder_picture(ch_encoder_t* e)
 	{
 		size_t luma = (size_t)e->luma_stride * (e->mb_h * 16);
 		size_t chroma = (size_t)e->chroma_stride * (e->mb_h * 8);
-		ch_pic_rotate(&e->pic);
-		CUTE_H264_MEMCPY(e->pic.ref_y[0], e->rec_y, luma);
-		CUTE_H264_MEMCPY(e->pic.ref_cb[0], e->rec_cb, chroma);
-		CUTE_H264_MEMCPY(e->pic.ref_cr[0], e->rec_cr, chroma);
+		// A reference picture takes a slot, pushing the oldest one out. A B picture takes none:
+		// it is shown once and dropped, and nothing is allowed to predict from it.
+		if (is_b) {
+			e->pic.cur_y = e->pic.nonref_y;
+			e->pic.cur_cb = e->pic.nonref_cb;
+			e->pic.cur_cr = e->pic.nonref_cr;
+		} else {
+			ch_pic_rotate(&e->pic);
+			e->pic.cur_y = e->pic.ref_y[0];
+			e->pic.cur_cb = e->pic.ref_cb[0];
+			e->pic.cur_cr = e->pic.ref_cr[0];
+		}
+		CUTE_H264_MEMCPY(e->pic.cur_y, e->rec_y, luma);
+		CUTE_H264_MEMCPY(e->pic.cur_cb, e->rec_cb, chroma);
+		CUTE_H264_MEMCPY(e->pic.cur_cr, e->rec_cr, chroma);
 	}
 	if (e->qp >= 0) ch_deblock(&e->pic, e->qp);
-	e->frame_num = (e->frame_num + 1) & 15;
+	// frame_num counts reference pictures. A picture that is not one carries the number the next
+	// reference picture will take, and does not advance it.
+	if (!is_b) e->frame_num = (e->frame_num + 1) & 15;
 	++e->frame_count;
+	if (e->recon_fn) {
+		e->recon_fn(e->recon_udata, e->pic.cur_y, e->pic.cur_cb, e->pic.cur_cr,
+			e->luma_stride, e->chroma_stride, e->poc);
+	}
 	if (e->out.oom || e->bits.bytes.oom) { ch_error_reason = "Out of memory."; return 0; }
 	return 1;
+}
+
+void ch_encoder_recon_callback(ch_encoder_t* e, ch_recon_fn* fn, void* udata)
+{
+	if (!e) return;
+	e->recon_fn = fn;
+	e->recon_udata = udata;
 }
 
 void ch_encoder_bframes(ch_encoder_t* e, int count)
@@ -4741,9 +4873,9 @@ static void ch_decode_mb(ch_decoder_t* d, ch_rbits_t* r, int mbx, int mby)
 				ch_set_absmvd(d->absmvd, d->mb_w, mbx * 4 + bx4, mby * 4 + by4, bw4, bh4, dx, dy);
 				int px = pmvx + dx;
 				int py = pmvy + dy;
-				ch_mc_luma_block(&d->pic, ref, mbx * 16 + bx4 * 4, mby * 16 + by4 * 4, bw4 * 4, bh4 * 4,
+				ch_mc_luma_block(&d->pic, 0, ref, mbx * 16 + bx4 * 4, mby * 16 + by4 * 4, bw4 * 4, bh4 * 4,
 				                 px, py, pred + (by4 * 4) * 16 + bx4 * 4, 16);
-				ch_mc_chroma_block(&d->pic, ref, mbx * 8 + bx4 * 2, mby * 8 + by4 * 2, bw4 * 2, bh4 * 2,
+				ch_mc_chroma_block(&d->pic, 0, ref, mbx * 8 + bx4 * 2, mby * 8 + by4 * 2, bw4 * 2, bh4 * 2,
 				                   px, py, cpred + (by4 * 2) * 8 + bx4 * 2, 8);
 				ch_set_motion_part(&d->pic, 0, mbx * 4 + bx4, mby * 4 + by4, bw4, bh4, px, py, ref);
 				done |= ch_rect_bits(bx4, by4, bw4, bh4);
@@ -4942,8 +5074,8 @@ static void ch_decode_skip(ch_decoder_t* d, int mbx, int mby)
 	int mvx, mvy;
 	uint8_t pred[256], cpred[128];
 	ch_skip_mv(&d->pic, mbx, mby, &mvx, &mvy);
-	ch_mc_luma(&d->pic, 0, mbx, mby, mvx, mvy, pred);
-	ch_mc_chroma(&d->pic, 0, mbx, mby, mvx, mvy, cpred);
+	ch_mc_luma(&d->pic, 0, 0, mbx, mby, mvx, mvy, pred);
+	ch_mc_chroma(&d->pic, 0, 0, mbx, mby, mvx, mvy, cpred);
 	uint8_t* ry = d->pic.rec_y + (size_t)(mby * 16) * d->pic.luma_stride + mbx * 16;
 	for (int y = 0; y < 16; ++y)
 		CUTE_H264_MEMCPY(ry + (size_t)y * d->pic.luma_stride, pred + y * 16, 16);
@@ -4965,7 +5097,7 @@ static void ch_decode_skip(ch_decoder_t* d, int mbx, int mby)
 	ch_dec_note_mb(d, mbx, mby, 0, 0, 0, 1, 0, 0, 0, 0, 0);
 }
 
-static int ch_decode_slice(ch_decoder_t* d, ch_rbits_t* r, int idr)
+static int ch_decode_slice(ch_decoder_t* d, ch_rbits_t* r, int idr, int is_ref)
 {
 	ch_get_ue(r);                                  // first_mb_in_slice
 	int slice_type = (int)ch_get_ue(r);
@@ -5012,6 +5144,8 @@ static int ch_decode_slice(ch_decoder_t* d, ch_rbits_t* r, int idr)
 		init_idc = (int)ch_get_ue(r);
 		if (init_idc > 2) { ch_decoder_error = "Invalid cabac_init_idc."; return 0; }
 	}
+	d->pic.poc = d->poc;
+	ch_pic_lists(&d->pic, 0);
 	d->qp = d->pps_qp + ch_get_se(r);
 	int deblock = 1;
 	if (d->deblock_control) {
@@ -5070,10 +5204,19 @@ static int ch_decode_slice(ch_decoder_t* d, ch_rbits_t* r, int idr)
 
 	size_t luma = (size_t)d->pic.luma_stride * (d->mb_h * 16);
 	size_t chroma = (size_t)d->pic.chroma_stride * (d->mb_h * 8);
-	ch_pic_rotate(&d->pic);
-	CUTE_H264_MEMCPY(d->pic.ref_y[0], d->pic.rec_y, luma);
-	CUTE_H264_MEMCPY(d->pic.ref_cb[0], d->pic.rec_cb, chroma);
-	CUTE_H264_MEMCPY(d->pic.ref_cr[0], d->pic.rec_cr, chroma);
+	if (is_ref) {
+		ch_pic_rotate(&d->pic);
+		d->pic.cur_y = d->pic.ref_y[0];
+		d->pic.cur_cb = d->pic.ref_cb[0];
+		d->pic.cur_cr = d->pic.ref_cr[0];
+	} else {
+		d->pic.cur_y = d->pic.nonref_y;
+		d->pic.cur_cb = d->pic.nonref_cb;
+		d->pic.cur_cr = d->pic.nonref_cr;
+	}
+	CUTE_H264_MEMCPY(d->pic.cur_y, d->pic.rec_y, luma);
+	CUTE_H264_MEMCPY(d->pic.cur_cb, d->pic.rec_cb, chroma);
+	CUTE_H264_MEMCPY(d->pic.cur_cr, d->pic.rec_cr, chroma);
 	if (deblock) ch_deblock(&d->pic, d->qp);
 	// A keyframe resets the order count to zero, so order count alone no longer says which
 	// picture comes first -- everything queued from before it would sort after it. Pairing the
@@ -5085,9 +5228,9 @@ static int ch_decode_slice(ch_decoder_t* d, ch_rbits_t* r, int idr)
 	if (slot < 0) { ch_decoder_error = "Stream reorders more deeply than this decoder buffers."; return 0; }
 	for (int y = 0; y < d->mb_h * 16; ++y)
 		CUTE_H264_MEMCPY(d->out_y[slot] + (size_t)y * d->pic.luma_stride,
-			d->pic.ref_y[0] + (size_t)y * d->pic.luma_stride, (size_t)d->pic.luma_stride);
-	CUTE_H264_MEMCPY(d->out_cb[slot], d->pic.ref_cb[0], chroma);
-	CUTE_H264_MEMCPY(d->out_cr[slot], d->pic.ref_cr[0], chroma);
+			d->pic.cur_y + (size_t)y * d->pic.luma_stride, (size_t)d->pic.luma_stride);
+	CUTE_H264_MEMCPY(d->out_cb[slot], d->pic.cur_cb, chroma);
+	CUTE_H264_MEMCPY(d->out_cr[slot], d->pic.cur_cr, chroma);
 	d->out_poc[slot] = d->poc;
 	d->out_seq[slot] = d->idr_seq;
 	d->out_used[slot] = 1;
@@ -5153,8 +5296,8 @@ int ch_decoder_next(ch_decoder_t* d)
 	// Cleared per call so that a zero return can be told apart from a failure by testing it.
 	ch_decoder_error = NULL;
 	d->has_picture = 0;
-	int nal_type = 0;
-	while (ch_next_nal(d, &nal_type)) {
+	int nal_type = 0, nal_ref_idc = 0;
+	while (ch_next_nal(d, &nal_type, &nal_ref_idc)) {
 		if (d->rbsp.oom) { ch_decoder_error = "Out of memory."; return 0; }
 		ch_rbits_t r;
 		r.data = d->rbsp.data;
@@ -5168,7 +5311,7 @@ int ch_decoder_next(ch_decoder_t* d)
 		} else if (nal_type == CH_NAL_SLICE || nal_type == CH_NAL_SLICE_IDR) {
 			if (!d->have_sps || !d->have_pps) { ch_decoder_error = "Slice before its parameter sets."; return 0; }
 			if (!ch_decoder_alloc(d)) return 0;
-			if (!ch_decode_slice(d, &r, nal_type == CH_NAL_SLICE_IDR)) return 0;
+			if (!ch_decode_slice(d, &r, nal_type == CH_NAL_SLICE_IDR, nal_ref_idc != 0)) return 0;
 			// Hold one picture back before showing anything. A picture that comes later in coding
 			// order can belong earlier on screen, and it has to be in hand before the choice of
 			// what to show next can be made.
