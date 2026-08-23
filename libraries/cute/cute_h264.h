@@ -521,8 +521,12 @@ typedef struct ch_pic_t
 	int ref_count;         // how many hold a picture yet
 
 	uint8_t* nz_luma;      // per 4x4 block: CAVLC context, and deblocking strength
-	int16_t* mv;           // two per 4x4 block, quarter samples
-	int8_t* ref_idx;       // -1 marks a block coded intra
+
+	// Motion per 4x4 block, one set per prediction list. A P picture uses list 0 only; a B
+	// picture uses list 0 for the picture before it and list 1 for the one after, and may use
+	// both at once, averaging the two predictions.
+	int16_t* mv[2];        // two entries per block, quarter samples
+	int8_t* ref_idx[2];    // -1 marks a block not predicted from that list
 } ch_pic_t;
 
 struct ch_encoder_t
@@ -1237,9 +1241,10 @@ static int ch_decoder_alloc(ch_decoder_t* d)
 		d->pic.ref_cb[i] = base + luma;
 		d->pic.ref_cr[i] = base + luma + chroma;
 	}
-	int16_t* mv = (int16_t*)CUTE_H264_ALLOC(nzl * (sizeof(int16_t) * 2 + 1));
+	int16_t* mv = (int16_t*)CUTE_H264_ALLOC(nzl * (sizeof(int16_t) * 2 + 1) * 2);
 	if (!mv) { ch_decoder_error = "Out of memory."; return 0; }
-	CUTE_H264_MEMSET(mv, 0, nzl * (sizeof(int16_t) * 2 + 1));
+	CUTE_H264_MEMSET(mv, 0, nzl * sizeof(int16_t) * 4);
+	CUTE_H264_MEMSET(mv + nzl * 4, -1, nzl * 2);   // no block predicts from anything yet
 	d->pic.mb_w = d->mb_w;
 	d->pic.mb_h = d->mb_h;
 	d->pic.luma_stride = d->mb_w * 16;
@@ -1251,8 +1256,10 @@ static int ch_decoder_alloc(ch_decoder_t* d)
 	d->i4_mode = d->pic.nz_luma + nzl;
 	d->nz_cb = d->i4_mode + nzl;
 	d->nz_cr = d->nz_cb + nzc;
-	d->pic.mv = mv;
-	d->pic.ref_idx = (int8_t*)(mv + nzl * 2);
+	d->pic.mv[0] = mv;
+	d->pic.mv[1] = mv + nzl * 2;
+	d->pic.ref_idx[0] = (int8_t*)(mv + nzl * 4);
+	d->pic.ref_idx[1] = d->pic.ref_idx[0] + nzl;
 	d->cab = (ch_cabac_dec_t*)CUTE_H264_ALLOC(sizeof(ch_cabac_dec_t));
 	d->mbinfo = (ch_mbinfo_t*)CUTE_H264_ALLOC(sizeof(ch_mbinfo_t) * (size_t)(d->mb_w * d->mb_h));
 	d->absmvd = (uint8_t*)CUTE_H264_ALLOC(nzl * 2);
@@ -1263,7 +1270,7 @@ static int ch_decoder_alloc(ch_decoder_t* d)
 	d->cs.nz_cb = d->nz_cb;
 	d->cs.nz_cr = d->nz_cr;
 	d->cs.absmvd = d->absmvd;
-	d->cs.ref_idx = d->pic.ref_idx;
+	d->cs.ref_idx = d->pic.ref_idx[0];
 	d->outmem = (uint8_t*)CUTE_H264_ALLOC((luma + chroma * 2) * (size_t)CH_REORDER);
 	if (!d->outmem) { ch_decoder_error = "Out of memory."; return 0; }
 	for (int i = 0; i < CH_REORDER; ++i) {
@@ -2753,8 +2760,8 @@ static int ch_blk_avail(const ch_pic_t* p, int mbx, int mby, int bx, int by, uns
 // The motion vector predictor for one partition, spec clause 8.4.1.3. `dir` carries the shape
 // shortcut: a tall partition next to a tall neighbour, or a wide one under a wide neighbour,
 // predicts better from that neighbour alone than from the median of three.
-static void ch_mv_predict_part(const ch_pic_t* p, int mbx, int mby, int bx, int by, int bw,
-                               unsigned done, int dir, int refidx, int* out_x, int* out_y)
+static void ch_mv_predict_part(const ch_pic_t* p, int list, int mbx, int mby, int bx, int by,
+                               int bw, unsigned done, int dir, int refidx, int* out_x, int* out_y)
 {
 	int stride = p->mb_w * 4;
 	int ax = 0, ay = 0, ar = -1;
@@ -2770,9 +2777,9 @@ static void ch_mv_predict_part(const ch_pic_t* p, int mbx, int mby, int bx, int 
 		cbx = bx - 1;
 		has_c = ch_blk_avail(p, mbx, mby, cbx, cby, done);
 	}
-	if (has_a) { int i = by * stride + bx - 1; ax = p->mv[i * 2]; ay = p->mv[i * 2 + 1]; ar = p->ref_idx[i]; }
-	if (has_b) { int i = (by - 1) * stride + bx; tx = p->mv[i * 2]; ty = p->mv[i * 2 + 1]; tr = p->ref_idx[i]; }
-	if (has_c) { int i = cby * stride + cbx; cx = p->mv[i * 2]; cy = p->mv[i * 2 + 1]; cr = p->ref_idx[i]; }
+	if (has_a) { int i = by * stride + bx - 1; ax = p->mv[list][i * 2]; ay = p->mv[list][i * 2 + 1]; ar = p->ref_idx[list][i]; }
+	if (has_b) { int i = (by - 1) * stride + bx; tx = p->mv[list][i * 2]; ty = p->mv[list][i * 2 + 1]; tr = p->ref_idx[list][i]; }
+	if (has_c) { int i = cby * stride + cbx; cx = p->mv[list][i * 2]; cy = p->mv[list][i * 2 + 1]; cr = p->ref_idx[list][i]; }
 
 	if (dir == 1 && tr == refidx) { *out_x = tx; *out_y = ty; return; }
 	if (dir == 2 && ar == refidx) { *out_x = ax; *out_y = ay; return; }
@@ -2797,18 +2804,18 @@ static void ch_mv_predict_part(const ch_pic_t* p, int mbx, int mby, int bx, int 
 
 static void ch_mv_predict(const ch_pic_t* p, int mbx, int mby, int* out_x, int* out_y)
 {
-	ch_mv_predict_part(p, mbx, mby, mbx * 4, mby * 4, 4, 0, 0, 0, out_x, out_y);
+	ch_mv_predict_part(p, 0, mbx, mby, mbx * 4, mby * 4, 4, 0, 0, 0, out_x, out_y);
 }
 
 // Records a partition's vector over the 4x4 blocks it covers.
-static void ch_set_motion_part(ch_pic_t* p, int bx, int by, int bw, int bh, int mvx, int mvy, int ref)
+static void ch_set_motion_part(ch_pic_t* p, int list, int bx, int by, int bw, int bh, int mvx, int mvy, int ref)
 {
 	int stride = p->mb_w * 4;
 	for (int y = 0; y < bh; ++y) {
 		for (int x = 0; x < bw; ++x) {
 			int i = (by + y) * stride + bx + x;
-			p->mv[i * 2] = (int16_t)mvx; p->mv[i * 2 + 1] = (int16_t)mvy;
-			p->ref_idx[i] = (int8_t)ref;
+			p->mv[list][i * 2] = (int16_t)mvx; p->mv[list][i * 2 + 1] = (int16_t)mvy;
+			p->ref_idx[list][i] = (int8_t)ref;
 		}
 	}
 }
@@ -2816,16 +2823,17 @@ static void ch_set_motion_part(ch_pic_t* p, int bx, int by, int bw, int bh, int 
 // Records only which picture a partition points at, before its vector is known. The reference
 // indices of a macroblock are all sent before any of its vectors, and each one's context is taken
 // from the partitions beside it -- so they have to be visible as they arrive, not afterwards.
-static void ch_set_ref_part(ch_pic_t* p, int bx, int by, int bw, int bh, int ref)
+static void ch_set_ref_part(ch_pic_t* p, int list, int bx, int by, int bw, int bh, int ref)
 {
 	int stride = p->mb_w * 4;
 	for (int y = 0; y < bh; ++y)
-		for (int x = 0; x < bw; ++x) p->ref_idx[(by + y) * stride + bx + x] = (int8_t)ref;
+		for (int x = 0; x < bw; ++x) p->ref_idx[list][(by + y) * stride + bx + x] = (int8_t)ref;
 }
 
 static void ch_set_motion(ch_pic_t* p, int mbx, int mby, int mvx, int mvy)
 {
-	ch_set_motion_part(p, mbx * 4, mby * 4, 4, 4, mvx, mvy, 0);
+	ch_set_motion_part(p, 0, mbx * 4, mby * 4, 4, 4, mvx, mvy, 0);
+	ch_set_motion_part(p, 1, mbx * 4, mby * 4, 4, 4, 0, 0, -1);
 }
 
 // The six-tap half-sample filter, spec equations 8-241 and 8-242. Applied twice, once per axis,
@@ -2975,7 +2983,9 @@ static void ch_mark_intra_motion(ch_pic_t* p, int mbx, int mby)
 	for (int y = 0; y < 4; ++y) {
 		for (int x = 0; x < 4; ++x) {
 			int i = (mby * 4 + y) * stride + mbx * 4 + x;
-			p->mv[i * 2] = 0; p->mv[i * 2 + 1] = 0; p->ref_idx[i] = -1;
+			for (int l = 0; l < 2; ++l) {
+				p->mv[l][i * 2] = 0; p->mv[l][i * 2 + 1] = 0; p->ref_idx[l][i] = -1;
+			}
 		}
 	}
 }
@@ -3024,7 +3034,7 @@ static int ch_search_part(ch_encoder_t* e, int ref, int mbx, int mby, int bx4, i
 	int bw = bw4 * 4, bh = bh4 * 4;
 	const uint8_t* sy = e->y + (size_t)py * e->luma_stride + px;
 	int pmvx, pmvy;
-	ch_mv_predict_part(&e->pic, mbx, mby, mbx * 4 + bx4, mby * 4 + by4, bw4, done, dir, ref,
+	ch_mv_predict_part(&e->pic, 0, mbx, mby, mbx * 4 + bx4, mby * 4 + by4, bw4, done, dir, ref,
 		&pmvx, &pmvy);
 	int lm = ch_lambda_mv[e->qp];
 	uint8_t pred[256];
@@ -3283,8 +3293,8 @@ static void ch_skip_mv(const ch_pic_t* p, int mbx, int mby, int* mx, int* my)
 	if (mbx == 0 || mby == 0) return;
 	int ia = by * stride + bx - 1;
 	int ib = (by - 1) * stride + bx;
-	if (p->ref_idx[ia] == 0 && p->mv[ia * 2] == 0 && p->mv[ia * 2 + 1] == 0) return;
-	if (p->ref_idx[ib] == 0 && p->mv[ib * 2] == 0 && p->mv[ib * 2 + 1] == 0) return;
+	if (p->ref_idx[0][ia] == 0 && p->mv[0][ia * 2] == 0 && p->mv[0][ia * 2 + 1] == 0) return;
+	if (p->ref_idx[0][ib] == 0 && p->mv[0][ib * 2] == 0 && p->mv[0][ib * 2 + 1] == 0) return;
 	ch_mv_predict(p, mbx, mby, mx, my);
 }
 
@@ -3335,9 +3345,9 @@ static int64_t ch_encode_mb_p(ch_encoder_t* e, int mbx, int mby)
 	for (int y = 0; y < 4; ++y) {
 		for (int x = 0; x < 4; ++x) {
 			int i = (mby * 4 + y) * lstride + mbx * 4 + x;
-			saved_mv[(y * 4 + x) * 2] = e->pic.mv[i * 2];
-			saved_mv[(y * 4 + x) * 2 + 1] = e->pic.mv[i * 2 + 1];
-			saved_ref[y * 4 + x] = e->pic.ref_idx[i];
+			saved_mv[(y * 4 + x) * 2] = e->pic.mv[0][i * 2];
+			saved_mv[(y * 4 + x) * 2 + 1] = e->pic.mv[0][i * 2 + 1];
+			saved_ref[y * 4 + x] = e->pic.ref_idx[0][i];
 		}
 	}
 
@@ -3355,9 +3365,9 @@ static int64_t ch_encode_mb_p(ch_encoder_t* e, int mbx, int mby)
 		for (int y = 0; y < 4; ++y) {
 			for (int x = 0; x < 4; ++x) {
 				int i = (mby * 4 + y) * lstride + mbx * 4 + x;
-				e->pic.mv[i * 2] = saved_mv[(y * 4 + x) * 2];
-				e->pic.mv[i * 2 + 1] = saved_mv[(y * 4 + x) * 2 + 1];
-				e->pic.ref_idx[i] = saved_ref[y * 4 + x];
+				e->pic.mv[0][i * 2] = saved_mv[(y * 4 + x) * 2];
+				e->pic.mv[0][i * 2 + 1] = saved_mv[(y * 4 + x) * 2 + 1];
+				e->pic.ref_idx[0][i] = saved_ref[y * 4 + x];
 			}
 		}
 		unsigned done = 0;
@@ -3392,7 +3402,7 @@ static int64_t ch_encode_mb_p(ch_encoder_t* e, int mbx, int mby)
 			}
 			cost += bestc;
 			if (shape == 0) whole_ref = rfs[k];
-			ch_set_motion_part(&e->pic, mbx * 4 + s[0], mby * 4 + s[1], s[2], s[3],
+			ch_set_motion_part(&e->pic, 0, mbx * 4 + s[0], mby * 4 + s[1], s[2], s[3],
 				mv[k][0], mv[k][1], rfs[k]);
 			done |= ch_rect_bits(s[0], s[1], s[2], s[3]);
 		}
@@ -3408,9 +3418,9 @@ static int64_t ch_encode_mb_p(ch_encoder_t* e, int mbx, int mby)
 	for (int y = 0; y < 4; ++y) {
 		for (int x = 0; x < 4; ++x) {
 			int i = (mby * 4 + y) * lstride + mbx * 4 + x;
-			e->pic.mv[i * 2] = saved_mv[(y * 4 + x) * 2];
-			e->pic.mv[i * 2 + 1] = saved_mv[(y * 4 + x) * 2 + 1];
-			e->pic.ref_idx[i] = saved_ref[y * 4 + x];
+			e->pic.mv[0][i * 2] = saved_mv[(y * 4 + x) * 2];
+			e->pic.mv[0][i * 2 + 1] = saved_mv[(y * 4 + x) * 2 + 1];
+			e->pic.ref_idx[0][i] = saved_ref[y * 4 + x];
 		}
 	}
 
@@ -3420,16 +3430,18 @@ static int64_t ch_encode_mb_p(ch_encoder_t* e, int mbx, int mby)
 	int pmv[4][2];
 	unsigned done = 0;
 	int nparts = ch_part_count[best_shape];
+	// Nothing here predicts from the future, so list 1 is unused across the whole macroblock.
+	ch_set_motion_part(&e->pic, 1, mbx * 4, mby * 4, 4, 4, 0, 0, -1);
 	for (int k = 0; k < nparts; ++k) {
 		const int8_t* s = ch_part_shape[best_shape][k];
 		int ref = best_rfs[k];
-		ch_mv_predict_part(&e->pic, mbx, mby, mbx * 4 + s[0], mby * 4 + s[1], s[2], done,
+		ch_mv_predict_part(&e->pic, 0, mbx, mby, mbx * 4 + s[0], mby * 4 + s[1], s[2], done,
 		                   ch_part_dir[best_shape][k], ref, &pmv[k][0], &pmv[k][1]);
 		ch_mc_luma_block(&e->pic, ref, mbx * 16 + s[0] * 4, mby * 16 + s[1] * 4, s[2] * 4, s[3] * 4,
 		                 best_mv[k][0], best_mv[k][1], pred + (s[1] * 4) * 16 + s[0] * 4, 16);
 		ch_mc_chroma_block(&e->pic, ref, mbx * 8 + s[0] * 2, mby * 8 + s[1] * 2, s[2] * 2, s[3] * 2,
 		                   best_mv[k][0], best_mv[k][1], cpred + (s[1] * 2) * 8 + s[0] * 2, 8);
-		ch_set_motion_part(&e->pic, mbx * 4 + s[0], mby * 4 + s[1], s[2], s[3],
+		ch_set_motion_part(&e->pic, 0, mbx * 4 + s[0], mby * 4 + s[1], s[2], s[3],
 			best_mv[k][0], best_mv[k][1], ref);
 		done |= ch_rect_bits(s[0], s[1], s[2], s[3]);
 	}
@@ -3646,15 +3658,24 @@ static int ch_bs(const ch_pic_t* p, int pbx, int pby, int qbx, int qby, int mb_e
 {
 	int stride = p->mb_w * 4;
 	int ip = pby * stride + pbx, iq = qby * stride + qbx;
-	if (p->ref_idx[ip] < 0 || p->ref_idx[iq] < 0) return mb_edge ? 4 : 3;
+	// A block with no prediction from either list was coded intra.
+	int p_intra = p->ref_idx[0][ip] < 0 && p->ref_idx[1][ip] < 0;
+	int q_intra = p->ref_idx[0][iq] < 0 && p->ref_idx[1][iq] < 0;
+	if (p_intra || q_intra) return mb_edge ? 4 : 3;
 	if (p->nz_luma[ip] || p->nz_luma[iq]) return 2;
-	// Pointing at different pictures is a discontinuity even when the vectors happen to match.
-	if (p->ref_idx[ip] != p->ref_idx[iq]) return 1;
-	// Otherwise the vectors are the only thing left that can differ. A whole sample of
-	// disagreement is the threshold, and vectors are in quarter samples.
-	int dx = ch_abs(p->mv[ip * 2] - p->mv[iq * 2]);
-	int dy = ch_abs(p->mv[ip * 2 + 1] - p->mv[iq * 2 + 1]);
-	return (dx >= 4 || dy >= 4) ? 1 : 0;
+	// Predicting from a different number of pictures, or from different ones, is a discontinuity
+	// even when the vectors happen to match.
+	int pn = (p->ref_idx[0][ip] >= 0) + (p->ref_idx[1][ip] >= 0);
+	int qn = (p->ref_idx[0][iq] >= 0) + (p->ref_idx[1][iq] >= 0);
+	if (pn != qn) return 1;
+	for (int l = 0; l < 2; ++l) {
+		if (p->ref_idx[l][ip] != p->ref_idx[l][iq]) return 1;
+		if (p->ref_idx[l][ip] < 0) continue;
+		int dx = ch_abs(p->mv[l][ip * 2] - p->mv[l][iq * 2]);
+		int dy = ch_abs(p->mv[l][ip * 2 + 1] - p->mv[l][iq * 2 + 1]);
+		if (dx >= 4 || dy >= 4) return 1;
+	}
+	return 0;
 }
 
 // Filters one line of samples across an edge, spec clauses 8.7.2.3 and 8.7.2.4. `s` points at q0
@@ -3902,9 +3923,11 @@ ch_encoder_t* ch_encoder_make(int w, int h, int fps)
 	if (!e->y) { CUTE_H264_FREE(e); ch_error_reason = "Out of memory."; return NULL; }
 	// The motion field is allocated on its own only because it is not bytes, and folding a short
 	// array into the middle of a byte block is a needless alignment question to have to answer.
-	e->mv = (int16_t*)CUTE_H264_ALLOC(nzl * (sizeof(int16_t) * 2 + 1));
+	e->mv = (int16_t*)CUTE_H264_ALLOC(nzl * (sizeof(int16_t) * 2 + 1) * 2);
 	if (!e->mv) { CUTE_H264_FREE(e->y); CUTE_H264_FREE(e); ch_error_reason = "Out of memory."; return NULL; }
-	e->ref_idx = (int8_t*)(e->mv + nzl * 2);
+	e->ref_idx = (int8_t*)(e->mv + nzl * 4);
+	CUTE_H264_MEMSET(e->mv, 0, nzl * sizeof(int16_t) * 4);
+	CUTE_H264_MEMSET(e->ref_idx, -1, nzl * 2);     // no block predicts from anything yet
 	e->held = (uint8_t*)CUTE_H264_ALLOC(luma + chroma * 2);
 	e->cab = (ch_cabac_t*)CUTE_H264_ALLOC(sizeof(ch_cabac_t));
 	e->mbinfo = (ch_mbinfo_t*)CUTE_H264_ALLOC(sizeof(ch_mbinfo_t) * (size_t)(e->mb_w * e->mb_h));
@@ -3939,8 +3962,10 @@ ch_encoder_t* ch_encoder_make(int w, int h, int fps)
 		e->pic.ref_cr[i] = base + luma + chroma;
 	}
 	e->pic.nz_luma = e->nz_luma;
-	e->pic.mv = e->mv;
-	e->pic.ref_idx = e->ref_idx;
+	e->pic.mv[0] = e->mv;
+	e->pic.mv[1] = e->mv + nzl * 2;
+	e->pic.ref_idx[0] = e->ref_idx;
+	e->pic.ref_idx[1] = e->ref_idx + nzl;
 	e->cs.mb_w = e->mb_w;
 	e->cs.mbinfo = e->mbinfo;
 	e->cs.nz_luma = e->nz_luma;
@@ -4080,8 +4105,9 @@ static int ch_encoder_picture(ch_encoder_t* e)
 	if (idr) {
 		e->frame_num = 0;
 		e->pic.ref_count = 0;   // nothing before a keyframe may be referenced
-		CUTE_H264_MEMSET(e->ref_idx, -1, (size_t)(e->mb_w * 4) * (e->mb_h * 4));
-		CUTE_H264_MEMSET(e->mv, 0, (size_t)(e->mb_w * 4) * (e->mb_h * 4) * sizeof(int16_t) * 2);
+		size_t nzl = (size_t)(e->mb_w * 4) * (e->mb_h * 4);
+		CUTE_H264_MEMSET(e->ref_idx, -1, nzl * 2);
+		CUTE_H264_MEMSET(e->mv, 0, nzl * sizeof(int16_t) * 4);
 		// Parameter sets are repeated on every keyframe rather than written once. A capture that
 		// gets cut, or that a player joins late, is then still decodable from any keyframe in it.
 		ch_write_sps(e);
@@ -4417,8 +4443,8 @@ static int ch_dec_ref_idx(ch_decoder_t* d, ch_rbits_t* r, int bx, int by, int ac
 	int stride = d->mb_w * 4;
 	int ia = bx > 0 ? by * stride + bx - 1 : -1;
 	int ib = by > 0 ? (by - 1) * stride + bx : -1;
-	int ca = (ia >= 0 && d->pic.ref_idx[ia] > 0) ? 1 : 0;
-	int cb = (ib >= 0 && d->pic.ref_idx[ib] > 0) ? 1 : 0;
+	int ca = (ia >= 0 && d->pic.ref_idx[0][ia] > 0) ? 1 : 0;
+	int cb = (ib >= 0 && d->pic.ref_idx[0][ib] > 0) ? 1 : 0;
 	if (!ch_cabac_decode(d->cab, CH_CTX_REF_IDX + ca + 2 * cb)) return 0;
 	int v = 1;
 	while (v < active && ch_cabac_decode(d->cab, CH_CTX_REF_IDX + (v == 1 ? 4 : 5))) ++v;
@@ -4677,9 +4703,11 @@ static void ch_decode_mb(ch_decoder_t* d, ch_rbits_t* r, int mbx, int mby)
 				if (refs[k] >= d->active_refs || refs[k] >= d->pic.ref_count) {
 					ch_decoder_error = "Reference index points past the list."; r->error = 1; return;
 				}
-				ch_set_ref_part(&d->pic, mbx * 4 + s[0], mby * 4 + s[1], s[2], s[3], refs[k]);
+				ch_set_ref_part(&d->pic, 0, mbx * 4 + s[0], mby * 4 + s[1], s[2], s[3], refs[k]);
 			}
 		}
+		// Nothing here predicts from the future, so list 1 is unused across the whole macroblock.
+		ch_set_motion_part(&d->pic, 1, mbx * 4, mby * 4, 4, 4, 0, 0, -1);
 		for (int k = 0; k < nparts; ++k) {
 			const int8_t* s = ch_part_shape[mb_type][k];
 			// An 8x8 splits into one 8x8, two 8x4, two 4x8 or four 4x4.
@@ -4699,7 +4727,7 @@ static void ch_decode_mb(ch_decoder_t* d, ch_rbits_t* r, int mbx, int mby)
 					bx4 = s[0] + q[0]; by4 = s[1] + q[1]; bw4 = q[2]; bh4 = q[3];
 				}
 				int pmvx, pmvy;
-				ch_mv_predict_part(&d->pic, mbx, mby, mbx * 4 + bx4, mby * 4 + by4, bw4, done,
+				ch_mv_predict_part(&d->pic, 0, mbx, mby, mbx * 4 + bx4, mby * 4 + by4, bw4, done,
 				                   mb_type == 3 ? 0 : ch_part_dir[mb_type][k], ref, &pmvx, &pmvy);
 				int dx, dy;
 				if (d->cabac) {
@@ -4717,7 +4745,7 @@ static void ch_decode_mb(ch_decoder_t* d, ch_rbits_t* r, int mbx, int mby)
 				                 px, py, pred + (by4 * 4) * 16 + bx4 * 4, 16);
 				ch_mc_chroma_block(&d->pic, ref, mbx * 8 + bx4 * 2, mby * 8 + by4 * 2, bw4 * 2, bh4 * 2,
 				                   px, py, cpred + (by4 * 2) * 8 + bx4 * 2, 8);
-				ch_set_motion_part(&d->pic, mbx * 4 + bx4, mby * 4 + by4, bw4, bh4, px, py, ref);
+				ch_set_motion_part(&d->pic, 0, mbx * 4 + bx4, mby * 4 + by4, bw4, bh4, px, py, ref);
 				done |= ch_rect_bits(bx4, by4, bw4, bh4);
 			}
 		}
@@ -5006,8 +5034,9 @@ static int ch_decode_slice(ch_decoder_t* d, ch_rbits_t* r, int idr)
 	}
 	if (idr) {
 		d->pic.ref_count = 0;   // nothing before a keyframe may be referenced
-		CUTE_H264_MEMSET(d->pic.ref_idx, -1, (size_t)(d->mb_w * 4) * (d->mb_h * 4));
-		CUTE_H264_MEMSET(d->pic.mv, 0, (size_t)(d->mb_w * 4) * (d->mb_h * 4) * sizeof(int16_t) * 2);
+		size_t nzl = (size_t)(d->mb_w * 4) * (d->mb_h * 4);
+		CUTE_H264_MEMSET(d->pic.ref_idx[0], -1, nzl * 2);
+		CUTE_H264_MEMSET(d->pic.mv[0], 0, nzl * sizeof(int16_t) * 4);
 	}
 
 	// The slice ends when the data runs out, not at a macroblock count -- which is what lets a
@@ -5090,7 +5119,7 @@ void ch_decoder_destroy(ch_decoder_t* d)
 	CUTE_H264_FREE(d->cab);
 	CUTE_H264_FREE(d->mbinfo);
 	CUTE_H264_FREE(d->absmvd);
-	CUTE_H264_FREE(d->pic.mv);
+	CUTE_H264_FREE(d->pic.mv[0]);
 	CUTE_H264_FREE(d->rbsp.data);
 	CUTE_H264_FREE(d->rgba.data);
 	CUTE_H264_FREE(d);
