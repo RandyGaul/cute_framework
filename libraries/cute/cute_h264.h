@@ -55,6 +55,10 @@
 			        by name rather than decoded approximately: CABAC,
 			        sub-macroblock partitions, more than one reference frame,
 			        interlacing.
+			container: MP4, so the output opens in players, editors and
+			        browsers rather than only in ffmpeg. The picture data goes
+			        in unchanged -- this is packaging, not re-encoding -- and
+			        costs about 0.2%. Raw Annex-B is still available.
 
 			The decoder shares the reconstruction code rather than
 			reimplementing it. That is not a shortcut: the encoder already had
@@ -97,18 +101,12 @@
 		container that is already known-good. It also leaves a genuinely useful
 		lossless capture mode behind once the compressed paths land.
 
-			container: MP4. The picture data goes in unchanged -- this is
-			        packaging, not re-encoding -- and costs about 0.2%. Without
-			        it the output is a bare stream of pictures that most
-			        software will not open at all: no duration, no frame rate,
-			        no seek index, nowhere for audio to go.
-
-		Encode and decode are both here now. What would come next, roughly in
-		order of what it buys: an MP4 muxer, so the output drops into players and
-		editors that will not open a raw Annex-B stream; sub-macroblock partitions
-		and multiple reference frames on both sides; CABAC, which is worth around
-		10% on its own and is the largest single thing still missing. None of
-		those are gaps in what is here -- they are more of it.
+		Measured against x264 at matched quality on three clips: restricted to
+		the same tools this encoder has, it is within about 10% either way, so
+		the coding decisions are sound. Against x264 with everything switched on
+		it is 36-57% larger, and that gap is the features below rather than the
+		decisions. In order of what they buy: sub-macroblock partitions and
+		multiple reference frames; CABAC; B frames.
 
 	EXAMPLES:
 
