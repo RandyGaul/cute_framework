@@ -3,7 +3,7 @@
 		Licensing information can be found at the end of the file.
 	------------------------------------------------------------------------------
 
-	cute_h264.h - v0.02
+	cute_h264.h - v0.03
 
 	To create implementation (the function definitions)
 		#define CUTE_H264_IMPLEMENTATION
@@ -57,13 +57,15 @@
 			        are signalled, the encoder holds a frame back, and the
 			        decoder queues and re-sorts. Verified bit-exact against
 			        ffmpeg on a reordered stream.
-			decode: I and P slices, every intra mode including the two this
+			decode: I, P and B slices, every intra mode including the two this
 			        encoder never chooses, inter prediction, skipped
 			        macroblocks and deblocking. It reads streams from other
 			        encoders, not just this one -- x264 output decodes bit-
 			        exactly against ffmpeg. What is not supported is rejected
-			        by name rather than decoded approximately: interlacing, and
-			        I_PCM combined with CABAC. Every partition and sub-partition shape decodes,
+			        by name rather than decoded approximately: interlacing,
+			        I_PCM combined with CABAC, reference list reordering, and
+			        B slices carrying more than one reference per list. Every
+			        partition and sub-partition shape a P slice can hold decodes,
 			        including the ones this encoder never produces, and both
 			        entropy coders are read.
 			entropy coding: CAVLC, or CABAC with ch_encoder_cabac(). CABAC
@@ -136,9 +138,10 @@
 		Measured against x264 at matched quality: restricted to the same tools
 		this encoder has, it is within about 10% either way, so the coding
 		decisions are sound. Against x264 with everything switched on it is
-		34-40% larger with CABAC and 47-55% larger without. What remains of that
-		gap, in order of what it would buy: B frames; a rate-distortion search
-		that considers more than one quantizer.
+		34-40% larger with CABAC and 47-55% larger without, measured before B
+		pictures landed here. What remains of that gap, in order of what it
+		would buy: a rate-distortion search that considers more than one
+		quantizer; 8x8 transforms and the High profile tools around them.
 
 		Encoding runs at roughly 17 frames a second at 640x360 on one core with
 		no SIMD anywhere. Searching every partition shape exhaustively costs
@@ -184,6 +187,8 @@
 			CUTE_H264_NO_STDIO
 
 	Revision history:
+		0.03 (08/24/2026) CABAC, multiple reference frames, B pictures, MP4 container,
+		                  decoder hardened against damaged input
 		0.02 (08/22/2026) intra, inter and deblocking encode; decode
 		0.01 (08/22/2026) bitstream layer + lossless I_PCM encode
 */
@@ -368,13 +373,18 @@ typedef struct ch_bytes_t
 static void ch_bytes_reserve(ch_bytes_t* b, int need)
 {
 	if (b->oom) return;
-	if (b->len + need <= b->cap) return;
-	int cap = b->cap ? b->cap * 2 : 65536;
-	while (cap < b->len + need) cap *= 2;
+	if (need <= b->cap - b->len) return;
+	// Sizes are ints throughout, so the buffer tops out under 2GB -- reached by a long enough
+	// recording, since everything encoded accumulates here. Trip the oom flag rather than let
+	// the doubling overflow.
+	if (need > 0x7fffffff - b->len) { b->oom = 1; return; }
+	int64_t cap = b->cap ? (int64_t)b->cap * 2 : 65536;
+	while (cap < (int64_t)b->len + need) cap *= 2;
+	if (cap > 0x7fffffff) cap = 0x7fffffff;
 	uint8_t* mem = (uint8_t*)CUTE_H264_REALLOC(b->data, (size_t)cap);
 	if (!mem) { b->oom = 1; return; }
 	b->data = mem;
-	b->cap = cap;
+	b->cap = (int)cap;
 }
 
 static void ch_bytes_push(ch_bytes_t* b, uint8_t v)
@@ -1149,7 +1159,6 @@ struct ch_decoder_t
 
 	int ref_slots;         // max_num_ref_frames from the sequence parameter set, clamped
 	int active_refs;       // how many of them this slice may point at
-	int active_refs_l1;    // the same for the list pointing forwards, in a B slice
 	uint8_t* refmem;       // one allocation behind every reference picture
 	int16_t* colmv;        // and one behind their motion fields
 	int cabac;             // entropy_coding_mode_flag from the picture parameter set
@@ -5868,8 +5877,13 @@ static int ch_decode_slice(ch_decoder_t* d, ch_rbits_t* r, int idr, int is_ref)
 		if (d->slice_is_b && (refs1 < 1 || refs1 > d->ref_slots)) {
 			ch_decoder_error = "Bad reference list length."; return 0;
 		}
+		// The B macroblock reader sends no ref_idx, on the grounds that a list of one leaves
+		// nothing to choose -- so a B slice free to choose would desync it, and has to be refused
+		// here rather than misread there.
+		if (d->slice_is_b && (refs > 1 || refs1 > 1)) {
+			ch_decoder_error = "B slices with more than one reference per list are not supported."; return 0;
+		}
 		d->active_refs = refs;
-		d->active_refs_l1 = refs1;
 		if (ch_get_bit(r)) { ch_decoder_error = "Reference list reordering is not supported."; return 0; }
 		if (d->slice_is_b && ch_get_bit(r)) {
 			ch_decoder_error = "Reference list reordering is not supported."; return 0;
