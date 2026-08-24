@@ -44,6 +44,10 @@ struct CF_Video
 	CF_Sprite sprite;
 	bool has_sprite;
 	int sprite_frame;
+	int total_frames;      // counted from the stream when the video is opened
+	int* key_offsets;      // byte offsets decoding can start cold at: the SPS ahead of a keyframe
+	int* key_bases;        // the display index of each such keyframe
+	int key_count;
 };
 
 // How many canvas captures may be crossing back from the GPU at once. Harvested every update, so
@@ -62,6 +66,47 @@ struct CF_VideoEncoder
 	float clock;           // seconds of recording owed but not yet captured
 	uint8_t* grab_pixels;  // scratch a capture is read back into, w*h*4
 };
+
+// Walks the stream once, counting pictures and remembering every keyframe that can be decoded
+// cold -- one with its parameter sets right in front of it, which is how the CF encoder writes
+// them. cf_video_seek starts at the nearest of these; a stream carrying none still seeks, it just
+// decodes forward from the beginning. A picture is a slice NAL whose first_mb_in_slice is 0, and
+// ue(0) is the single bit 1, so the top bit of the first payload byte is the whole test. Nothing
+// coded after a keyframe shows before it -- the encoder flushes any held picture first -- so a
+// keyframe's display index is simply how many pictures precede it.
+static void s_scan(CF_Video* video)
+{
+	const uint8_t* s = video->annexb;
+	int n = video->annexb_size;
+	int sps_at = -1;       // start code of an SPS seen since the last picture
+	bool pps_after = false;
+	int cap = 0;
+	for (int i = 0; i + 4 < n; ++i) {
+		if (!(s[i] == 0 && s[i + 1] == 0 && s[i + 2] == 1)) continue;
+		int sc = (i > 0 && s[i - 1] == 0) ? i - 1 : i;
+		int type = s[i + 3] & 0x1f;
+		if (type == 7) {                             // sequence parameter set
+			sps_at = sc;
+			pps_after = false;
+		} else if (type == 8) {                      // picture parameter set
+			if (sps_at >= 0) pps_after = true;
+		} else if ((type == 1 || type == 5) && (s[i + 4] & 0x80)) {
+			if (type == 5 && sps_at >= 0 && pps_after) {
+				if (video->key_count == cap) {
+					cap = cap ? cap * 2 : 16;
+					video->key_offsets = (int*)CF_REALLOC(video->key_offsets, sizeof(int) * (size_t)cap);
+					video->key_bases = (int*)CF_REALLOC(video->key_bases, sizeof(int) * (size_t)cap);
+				}
+				video->key_offsets[video->key_count] = sps_at;
+				video->key_bases[video->key_count] = video->total_frames;
+				++video->key_count;
+			}
+			++video->total_frames;
+			sps_at = -1;
+			pps_after = false;
+		}
+	}
+}
 
 // A file is either an elementary stream, which starts with a NAL start code, or a container, which
 // starts with a box. Nothing else gets this far.
@@ -124,6 +169,7 @@ CF_Video* cf_make_video_from_memory(const void* data, int size)
 	video->frame = 1;
 	video->texture_frame = -1;
 	video->sprite_frame = -1;
+	s_scan(video);
 	return video;
 }
 
@@ -152,6 +198,8 @@ void cf_destroy_video(CF_Video* video)
 	if (video->has_sprite) cf_easy_sprite_unload(&video->sprite);
 	if (video->has_texture) cf_destroy_texture(video->texture);
 	if (video->decoder) ch_decoder_destroy(video->decoder);
+	CF_FREE(video->key_offsets);
+	CF_FREE(video->key_bases);
 	CF_FREE(video->annexb);
 	CF_FREE(video);
 }
@@ -161,6 +209,44 @@ int cf_video_height(CF_Video* video) { return video ? video->h : 0; }
 int cf_video_fps(CF_Video* video) { return video ? video->fps : 0; }
 bool cf_video_is_finished(CF_Video* video) { return video ? video->finished : true; }
 void cf_video_set_looped(CF_Video* video, bool looped) { if (video) video->looped = looped; }
+int cf_video_frame_count(CF_Video* video) { return video ? video->total_frames : 0; }
+int cf_video_frame_index(CF_Video* video) { return video && video->has_frame ? video->frame - 1 : 0; }
+float cf_video_duration(CF_Video* video) { return video && video->fps > 0 ? (float)video->total_frames / (float)video->fps : 0; }
+
+bool cf_video_seek(CF_Video* video, int frame)
+{
+	if (!video) return false;
+	if (frame < 0 || frame >= video->total_frames) {
+		s_video_error = "No such frame.";
+		return false;
+	}
+	// The nearest cold-start keyframe at or before the target; a stream without any decodes
+	// forward from the top.
+	int base = 0, offset = 0;
+	for (int i = 0; i < video->key_count && video->key_bases[i] <= frame; ++i) {
+		base = video->key_bases[i];
+		offset = video->key_offsets[i];
+	}
+	ch_decoder_error = NULL;
+	ch_decoder_t* decoder = ch_decoder_make(video->annexb + offset, video->annexb_size - offset);
+	for (int i = frame - base + 1; decoder && i > 0; --i) {
+		if (!ch_decoder_next(decoder)) {
+			ch_decoder_destroy(decoder);
+			decoder = NULL;
+		}
+	}
+	if (!decoder) {
+		s_video_error = ch_decoder_error ? ch_decoder_error : "Unable to seek.";
+		return false;   // the old decoder was never touched, so playback stands where it was
+	}
+	if (video->decoder) ch_decoder_destroy(video->decoder);
+	video->decoder = decoder;
+	video->frame = frame + 1;
+	video->has_frame = true;
+	video->finished = false;
+	video->clock = 0;
+	return true;
+}
 
 void cf_video_restart(CF_Video* video)
 {

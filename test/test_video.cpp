@@ -50,13 +50,13 @@ static int s_worst_difference(const CF_Pixel* a, const CF_Pixel* b, int count)
 	return worst;
 }
 
-static CF_VideoEncoder* s_record(int quality)
+static CF_VideoEncoder* s_record_n(int quality, int frames)
 {
 	CF_VideoEncoder* encoder = cf_make_video_encoder(VIDEO_W, VIDEO_H, 30);
 	if (!encoder) return NULL;
 	cf_video_encoder_set_quality(encoder, quality);
 	CF_Pixel* pix = (CF_Pixel*)cf_alloc(sizeof(CF_Pixel) * VIDEO_W * VIDEO_H);
-	for (int i = 0; i < VIDEO_FRAMES; ++i) {
+	for (int i = 0; i < frames; ++i) {
 		s_fill(pix, i);
 		CF_Image image = { VIDEO_W, VIDEO_H, pix };
 		if (cf_is_error(cf_video_encoder_add_frame(encoder, image))) {
@@ -68,6 +68,8 @@ static CF_VideoEncoder* s_record(int quality)
 	cf_free(pix);
 	return encoder;
 }
+
+static CF_VideoEncoder* s_record(int quality) { return s_record_n(quality, VIDEO_FRAMES); }
 
 /* Encode a short sequence, decode it back, and check every frame arrives in order. */
 TEST_CASE(test_video_round_trip)
@@ -191,6 +193,57 @@ TEST_CASE(test_video_update_and_loop)
 	cf_video_set_looped(video, true);
 	for (int i = 0; i < 120; ++i) cf_video_update(video, 1.0f / 30.0f);
 	REQUIRE(!cf_video_is_finished(video));
+
+	cf_destroy_video(video);
+	cf_destroy_video_encoder(encoder);
+	return true;
+}
+
+/* Seeking: land on any frame, forwards or backwards, and get that frame's pixels. The stream is
+   long enough to span several keyframes, so seeks start mid-file rather than always at the top. */
+TEST_CASE(test_video_seek)
+{
+	// 150 frames at 30fps is five seconds, and the encoder writes a keyframe every two.
+	const int FRAMES = 150;
+	CF_VideoEncoder* encoder = s_record_n(50, FRAMES);
+	CHECK_POINTER(encoder);
+	int size = 0;
+	const void* mp4 = cf_video_encoder_data(encoder, &size);
+	CF_Video* video = cf_make_video_from_memory(mp4, size);
+	CHECK_POINTER(video);
+
+	REQUIRE(cf_video_frame_count(video) == FRAMES);
+	REQUIRE(cf_video_frame_index(video) == 0);
+	float duration = cf_video_duration(video);
+	REQUIRE(duration > 4.99f && duration < 5.01f);
+
+	// Forward past a keyframe, backward, dead on a keyframe boundary, and the very ends. Each
+	// landing is checked against the pattern that frame was encoded from.
+	CF_Pixel* expected = (CF_Pixel*)cf_alloc(sizeof(CF_Pixel) * VIDEO_W * VIDEO_H);
+	int targets[] = { 120, 61, 45, 60, 0, FRAMES - 1 };
+	for (int k = 0; k < (int)(sizeof(targets) / sizeof(targets[0])); ++k) {
+		REQUIRE(cf_video_seek(video, targets[k]));
+		REQUIRE(cf_video_frame_index(video) == targets[k]);
+		CF_Image got = cf_video_frame(video);
+		CHECK_POINTER(got.pix);
+		s_fill(expected, targets[k]);
+		// This check is what surfaced the keyframe-flush encoder bug: it compares against the
+		// SOURCE pattern, which conformance sweeps -- output vs its own decode -- cannot see.
+		REQUIRE(s_worst_difference(expected, got.pix, VIDEO_W * VIDEO_H) < 90);
+	}
+	cf_free(expected);
+
+	// Out of range refuses and moves nothing.
+	REQUIRE(!cf_video_seek(video, FRAMES));
+	REQUIRE(!cf_video_seek(video, -1));
+	REQUIRE(cf_video_frame_index(video) == FRAMES - 1);
+
+	// Playback carries on from wherever the seek landed.
+	REQUIRE(cf_video_seek(video, FRAMES - 2));
+	REQUIRE(cf_video_next_frame(video));
+	REQUIRE(cf_video_frame_index(video) == FRAMES - 1);
+	REQUIRE(!cf_video_next_frame(video));
+	REQUIRE(cf_video_is_finished(video));
 
 	cf_destroy_video(video);
 	cf_destroy_video_encoder(encoder);
@@ -424,6 +477,7 @@ TEST_SUITE(test_video)
 	RUN_TEST_CASE(test_video_quality);
 	RUN_TEST_CASE(test_video_save_and_load);
 	RUN_TEST_CASE(test_video_update_and_loop);
+	RUN_TEST_CASE(test_video_seek);
 	RUN_TEST_CASE(test_video_rejects_rubbish);
 	RUN_TEST_CASE(test_video_record_canvas);
 	RUN_TEST_CASE(test_video_sprite_and_texture);

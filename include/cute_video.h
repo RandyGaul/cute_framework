@@ -297,9 +297,57 @@ CF_API bool CF_CALL cf_video_is_finished(CF_Video* video);
  * @param    video  The video.
  * @remarks  The file is already in memory, so this is cheap -- it throws away the decoder's state
  *           and builds it again.
- * @related  CF_Video cf_video_update cf_video_set_looped cf_video_is_finished
+ * @related  CF_Video cf_video_update cf_video_set_looped cf_video_is_finished cf_video_seek
  */
 CF_API void CF_CALL cf_video_restart(CF_Video* video);
+
+/**
+ * @function cf_video_frame_count
+ * @category video
+ * @brief    How many frames the video holds in total.
+ * @param    video  The video.
+ * @remarks  Counted from the file when it is opened, so this costs nothing to ask. With
+ *           `cf_video_frame_index` and `cf_video_seek` this is what a scrubber is made of.
+ * @related  CF_Video cf_video_frame_index cf_video_seek cf_video_duration
+ */
+CF_API int CF_CALL cf_video_frame_count(CF_Video* video);
+
+/**
+ * @function cf_video_frame_index
+ * @category video
+ * @brief    The index of the picture currently shown, starting at 0.
+ * @param    video  The video.
+ * @remarks  0 as soon as the video is opened, since opening decodes the first frame.
+ * @related  CF_Video cf_video_frame_count cf_video_seek cf_video_next_frame
+ */
+CF_API int CF_CALL cf_video_frame_index(CF_Video* video);
+
+/**
+ * @function cf_video_duration
+ * @category video
+ * @brief    How long the video runs, in seconds.
+ * @param    video  The video.
+ * @return   Returns the length, or 0 if the file does not state a frame rate -- the frame count
+ *           is always known, but seconds need a rate to divide by.
+ * @related  CF_Video cf_video_frame_count cf_video_fps
+ */
+CF_API float CF_CALL cf_video_duration(CF_Video* video);
+
+/**
+ * @function cf_video_seek
+ * @category video
+ * @brief    Jumps so the given frame becomes the picture currently shown.
+ * @param    video  The video.
+ * @param    frame  The frame to land on, from 0 to `cf_video_frame_count` minus one.
+ * @return   Returns true once the frame is decoded and current. On a frame out of range, or a
+ *           stream that fails mid-seek, returns false and playback stays exactly where it was.
+ * @remarks  Decoding starts at the nearest keyframe at or before the target and rolls forward, so
+ *           the cost is proportional to the distance past that keyframe -- files from
+ *           `cf_video_encoder_save` carry one every two seconds. The playback clock resets, so
+ *           the frame landed on shows for its full step before `cf_video_update` moves on.
+ * @related  CF_Video cf_video_frame_count cf_video_frame_index cf_video_restart cf_video_update
+ */
+CF_API bool CF_CALL cf_video_seek(CF_Video* video, int frame);
 
 // -------------------------------------------------------------------------------------------------
 // Recording.
@@ -437,6 +485,10 @@ CF_INLINE CF_Texture video_texture(CF_Video* video) { return cf_video_texture(vi
 CF_INLINE void video_set_looped(CF_Video* video, bool looped) { cf_video_set_looped(video, looped); }
 CF_INLINE bool video_is_finished(CF_Video* video) { return cf_video_is_finished(video); }
 CF_INLINE void video_restart(CF_Video* video) { cf_video_restart(video); }
+CF_INLINE int video_frame_count(CF_Video* video) { return cf_video_frame_count(video); }
+CF_INLINE int video_frame_index(CF_Video* video) { return cf_video_frame_index(video); }
+CF_INLINE float video_duration(CF_Video* video) { return cf_video_duration(video); }
+CF_INLINE bool video_seek(CF_Video* video, int frame) { return cf_video_seek(video, frame); }
 
 CF_INLINE CF_VideoEncoder* make_video_encoder(int w, int h, int fps) { return cf_make_video_encoder(w, h, fps); }
 CF_INLINE void destroy_video_encoder(CF_VideoEncoder* encoder) { cf_destroy_video_encoder(encoder); }
