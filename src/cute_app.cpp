@@ -336,9 +336,6 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 		SDL_GetWindowPosition(app->window, &app->x, &app->y);
 		app->display_scale = SDL_GetWindowDisplayScale(app->window);
 		if (app->display_scale <= 0.0f) app->display_scale = 1.0f;
-		// The initial pixel scale follows what the OS wants (with NO_HIGH_DPI the window
-		// has a 1x backbuffer, so pin to 1.0 to match it). After init, pixel_scale only
-		// ever changes via cf_app_set_pixel_scale / cf_app_update_display.
 		app->pixel_scale = app->display_scale;
 		if (options & CF_APP_OPTIONS_NO_HIGH_DPI_BIT) app->pixel_scale = 1.0f;
 	}
@@ -358,9 +355,6 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 		cf_load_internal_shaders();
 		cf_make_draw();
 
-		// The one and only automatic canvas/projection setup: canvas at the window's natural
-		// pixel size, default 2d projection (set by cf_make_draw) spanning the logical size.
-		// From here on, canvas size, pixel scale, and projection change only by user calls.
 		s_canvas((int)CF_ROUNDF(app->w * app->pixel_scale), (int)CF_ROUNDF(app->h * app->pixel_scale));
 
 		// Create the default font.
@@ -668,7 +662,6 @@ void cf_app_update_display(float scale)
 {
 	if (!(scale > 0)) return;
 	cf_app_set_pixel_scale(scale);
-	// NO_GFX apps have no canvas or draw state -- the scale value is all there is to apply.
 	if (app->gfx_enabled) {
 		cf_app_set_canvas_size((int)CF_ROUNDF(app->w * scale), (int)CF_ROUNDF(app->h * scale));
 		cf_draw_projection(cf_ortho_2d(0, 0, (float)app->w, (float)app->h));
@@ -797,8 +790,6 @@ bool cf_app_set_msaa(int sample_count)
 
 	if (supported && app->sample_count != sample_count) {
 		app->sample_count = sample_count;
-		// Rebuild the canvas with the new sample count at its current size -- an MSAA
-		// change must not stomp a user-chosen canvas size.
 		s_canvas(app->canvas_w, app->canvas_h);
 	}
 

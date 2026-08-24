@@ -1131,9 +1131,6 @@ void cf_destroy_draw()
 	cf_destroy_material(s_draw->material);
 	s_draw->~CF_Draw();
 	CF_FREE(s_draw);
-	// cf_draw_on_pixel_scale_changed guards on s_draw, which can be reached with no draw
-	// context alive (cf_app_set_pixel_scale on a NO_GFX app after a gfx app was destroyed)
-	// -- a dangling pointer here passes the guard and derefs freed memory.
 	s_draw = NULL;
 }
 
