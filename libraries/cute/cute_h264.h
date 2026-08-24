@@ -6114,7 +6114,106 @@ static void ch_full_box(ch_bytes_t* b, uint32_t version_flags)
 	ch_be32(b, version_flags);
 }
 
-typedef struct ch_mp4_sample_t { int offset, size, key; } ch_mp4_sample_t;
+typedef struct ch_mp4_sample_t { int offset, size, key, shown; } ch_mp4_sample_t;
+
+// MP4 stores the order pictures are decoded in and the order they are shown in separately, which
+// is the whole reason B pictures can exist in a file at all. Working out the second one means
+// reading each slice header far enough to find its order count, and that in turn means reading
+// the sequence parameter set far enough to know how wide the field is.
+typedef struct ch_mp4_order_t
+{
+	int ok;                // the parameter set said enough to place pictures
+	int log2_frame_num;
+	int log2_poc_lsb;
+	int prev_lsb, prev_msb;
+	int base;              // display position of the first picture of the current keyframe group
+	int span;              // how far that group reaches
+} ch_mp4_order_t;
+
+// A NAL payload with the emulation prevention bytes taken out, up to a bounded length -- the
+// headers this reads are the first few bytes of a slice, so there is no need to unpick all of it.
+static int ch_mp4_rbsp(const uint8_t* s, int len, uint8_t* out, int max)
+{
+	int n = 0, zeros = 0;
+	for (int i = 1; i < len && n < max; ++i) {
+		if (zeros == 2 && s[i] == 3) { zeros = 0; continue; }
+		zeros = s[i] == 0 ? zeros + 1 : 0;
+		out[n++] = s[i];
+	}
+	return n;
+}
+
+static void ch_mp4_read_sps(ch_mp4_order_t* o, const uint8_t* sps, int len)
+{
+	uint8_t buf[64];
+	ch_rbits_t r;
+	r.data = buf;
+	r.len = ch_mp4_rbsp(sps, len, buf, (int)sizeof(buf));
+	r.pos = 0;
+	r.error = 0;
+	o->ok = 0;
+	int profile = (int)ch_get_bits(&r, 8);
+	ch_get_bits(&r, 8);                        // constraint flags and reserved bits
+	ch_get_bits(&r, 8);                        // level_idc
+	ch_get_ue(&r);                             // seq_parameter_set_id
+	if (profile == 100 || profile == 110 || profile == 122 || profile == 244 || profile == 44 ||
+	    profile == 83 || profile == 86 || profile == 118 || profile == 128 || profile == 138 ||
+	    profile == 139 || profile == 134 || profile == 135) {
+		int chroma = (int)ch_get_ue(&r);
+		if (chroma == 3) ch_get_bit(&r);       // separate_colour_plane_flag
+		ch_get_ue(&r); ch_get_ue(&r);          // bit depths
+		ch_get_bit(&r);                        // qpprime_y_zero_transform_bypass_flag
+		if (ch_get_bit(&r)) ch_skip_scaling_lists(&r, chroma != 3 ? 8 : 12);
+	}
+	o->log2_frame_num = (int)ch_get_ue(&r) + 4;
+	int poc_type = (int)ch_get_ue(&r);
+	if (poc_type != 0) return;                 // decode order is display order, nothing to do
+	o->log2_poc_lsb = (int)ch_get_ue(&r) + 4;
+	if (r.error || o->log2_frame_num > 16 || o->log2_poc_lsb > 16) return;
+	o->ok = 1;
+	o->prev_lsb = o->prev_msb = 0;
+	o->base = o->span = 0;
+}
+
+// Where one picture belongs on screen, counted from the start of the file. Order counts restart at
+// every keyframe, so each group is placed after the one before it rather than on top of it.
+static int ch_mp4_place(ch_mp4_order_t* o, const uint8_t* nal, int len, int idr)
+{
+	uint8_t buf[32];
+	ch_rbits_t r;
+	r.data = buf;
+	r.len = ch_mp4_rbsp(nal, len, buf, (int)sizeof(buf));
+	r.pos = 0;
+	r.error = 0;
+	ch_get_ue(&r);                             // first_mb_in_slice
+	ch_get_ue(&r);                             // slice_type
+	ch_get_ue(&r);                             // pic_parameter_set_id
+	ch_get_bits(&r, o->log2_frame_num);
+	if (idr) ch_get_ue(&r);                    // idr_pic_id
+	int max_lsb = 1 << o->log2_poc_lsb;
+	int lsb = (int)ch_get_bits(&r, o->log2_poc_lsb);
+	if (r.error) { o->ok = 0; return 0; }
+	int msb;
+	if (idr) {
+		o->base += o->span;
+		o->span = 0;
+		msb = 0;
+		o->prev_lsb = 0;
+		o->prev_msb = 0;
+	} else if (lsb < o->prev_lsb && o->prev_lsb - lsb >= max_lsb / 2) {
+		msb = o->prev_msb + max_lsb;
+	} else if (lsb > o->prev_lsb && lsb - o->prev_lsb > max_lsb / 2) {
+		msb = o->prev_msb - max_lsb;
+	} else {
+		msb = o->prev_msb;
+	}
+	o->prev_lsb = lsb;
+	o->prev_msb = msb;
+	// The count runs in half frames, because the specification counts fields.
+	int within = (msb + lsb) / 2;
+	if (within + 1 > o->span) o->span = within + 1;
+	return o->base + within;
+}
 
 // Walks the Annex-B stream, copying each picture into the media data as a length-prefixed unit --
 // which is how MP4 stores them, instead of the start codes a raw stream uses. The parameter sets
@@ -6123,6 +6222,8 @@ static int ch_mp4_collect(const uint8_t* s, int n, ch_bytes_t* mdat, ch_mp4_samp
                           int max_samples, int* out_count, const uint8_t** sps, int* sps_len,
                           const uint8_t** pps, int* pps_len)
 {
+	ch_mp4_order_t order;
+	CUTE_H264_MEMSET(&order, 0, sizeof(order));
 	int i = 0, count = 0;
 	*sps = *pps = NULL;
 	*sps_len = *pps_len = 0;
@@ -6136,23 +6237,32 @@ static int ch_mp4_collect(const uint8_t* s, int n, ch_bytes_t* mdat, ch_mp4_samp
 		while (end > start && s[end - 1] == 0) --end;
 		if (end <= start) continue;
 		int type = s[start] & 0x1f;
-		if (type == CH_NAL_SPS) { *sps = s + start; *sps_len = end - start; continue; }
+		if (type == CH_NAL_SPS) {
+			*sps = s + start; *sps_len = end - start;
+			if (!count) ch_mp4_read_sps(&order, s + start, end - start);
+			continue;
+		}
 		if (type == CH_NAL_PPS) { *pps = s + start; *pps_len = end - start; continue; }
 		if (type != CH_NAL_SLICE && type != CH_NAL_SLICE_IDR) continue;
 		if (count >= max_samples) return 0;
 		samples[count].offset = mdat->len;
 		samples[count].size = (end - start) + 4;
 		samples[count].key = type == CH_NAL_SLICE_IDR;
+		samples[count].shown = order.ok
+			? ch_mp4_place(&order, s + start, end - start, type == CH_NAL_SLICE_IDR) : count;
 		ch_be32(mdat, (uint32_t)(end - start));
 		for (int k = start; k < end; ++k) ch_bytes_push(mdat, s[k]);
 		++count;
 	}
+	// A parameter set that could not be read, or a stream that changes one mid-file, leaves the
+	// pictures where they were decoded -- which is right for everything that does not reorder.
+	if (!order.ok) for (int k = 0; k < count; ++k) samples[k].shown = k;
 	*out_count = count;
 	return count > 0;
 }
 
 static void ch_mp4_stbl(ch_bytes_t* b, const ch_mp4_sample_t* samples, int count, int mdat_base,
-                        int w, int h, int delta, const uint8_t* sps, int sps_len,
+                        int w, int h, int delta, int lead, const uint8_t* sps, int sps_len,
                         const uint8_t* pps, int pps_len)
 {
 	int stbl = ch_box(b, "stbl");
@@ -6201,6 +6311,18 @@ static void ch_mp4_stbl(ch_bytes_t* b, const ch_mp4_sample_t* samples, int count
 		ch_be32(b, (uint32_t)count);
 		ch_be32(b, (uint32_t)delta);
 		ch_box_end(b, stts);
+	}
+	if (lead) {
+		// Decode order is not display order, which is what B pictures buy and what this records:
+		// how much later than its decode time each picture is meant to appear.
+		int ctts = ch_box(b, "ctts");
+		ch_full_box(b, 0);
+		ch_be32(b, (uint32_t)count);
+		for (int i = 0; i < count; ++i) {
+			ch_be32(b, 1);                   // one sample
+			ch_be32(b, (uint32_t)((samples[i].shown + lead - i) * delta));
+		}
+		ch_box_end(b, ctts);
 	}
 	{
 		// Which pictures can be jumped to. Without this a player has to decode from the start,
@@ -6266,6 +6388,10 @@ const void* ch_mp4_wrap(const void* annexb, int size, int w, int h, int fps, int
 	// Timescale is a thousand ticks per frame so that any whole frame rate is exact rather than
 	// rounded, which is what makes long recordings drift out of sync with audio.
 	int timescale = fps * 1000, delta = 1000;
+	// How far ahead of decode order the display can run. Nothing is shown before it is decoded, so
+	// every picture is held back by this much and the composition offsets are never negative.
+	int lead = 0;
+	for (int i = 0; i < count; ++i) if (i - samples[i].shown > lead) lead = i - samples[i].shown;
 	uint32_t duration = (uint32_t)count * (uint32_t)delta;
 
 	ch_bytes_t out; CUTE_H264_MEMSET(&out, 0, sizeof(out));
@@ -6325,6 +6451,20 @@ const void* ch_mp4_wrap(const void* annexb, int size, int w, int h, int fps, int
 			ch_box_end(&out, tkhd);
 		}
 		{
+			if (lead) {
+				// Holding pictures back to reorder them means the first of them is composed a
+				// little after zero. This says to start the presentation there instead, so the
+				// file does not open on a gap.
+				int edts = ch_box(&out, "edts");
+				int elst = ch_box(&out, "elst");
+				ch_full_box(&out, 0);
+				ch_be32(&out, 1);                    // one segment
+				ch_be32(&out, duration);
+				ch_be32(&out, (uint32_t)(lead * delta));
+				ch_be16(&out, 1); ch_be16(&out, 0);  // rate 1.0
+				ch_box_end(&out, elst);
+				ch_box_end(&out, edts);
+			}
 			int mdia = ch_box(&out, "mdia");
 			{
 				int mdhd = ch_box(&out, "mdhd");
@@ -6367,7 +6507,7 @@ const void* ch_mp4_wrap(const void* annexb, int size, int w, int h, int fps, int
 					ch_box_end(&out, dref);
 					ch_box_end(&out, dinf);
 				}
-				ch_mp4_stbl(&out, samples, count, mdat_base, w, h, delta, sps, sps_len, pps, pps_len);
+				ch_mp4_stbl(&out, samples, count, mdat_base, w, h, delta, lead, sps, sps_len, pps, pps_len);
 				ch_box_end(&out, minf);
 			}
 			ch_box_end(&out, mdia);
