@@ -45,6 +45,9 @@ if (CMAKE_CURRENT_SOURCE_DIR STREQUAL "${CMAKE_SOURCE_DIR}/tools")
 		target_include_directories(cute-h264-${H264_TOOL} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../libraries)
 		target_compile_definitions(cute-h264-${H264_TOOL} PRIVATE _CRT_SECURE_NO_WARNINGS)
 		set_target_properties(cute-h264-${H264_TOOL} PROPERTIES FOLDER "tools" RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+		if (UNIX)
+			target_link_libraries(cute-h264-${H264_TOOL} PRIVATE m) # sin/cos in the test pattern
+		endif()
 	endforeach()
 endif()
 
