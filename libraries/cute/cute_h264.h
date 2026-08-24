@@ -4691,8 +4691,23 @@ static int ch_encoder_submit(ch_encoder_t* e)
 	int key = e->qp < 0 || index % gop == 0;
 	// A picture still held belongs BEFORE the keyframe on screen, and nothing before a keyframe
 	// may be shown after it, so it goes out first -- predicting only from the past, as a B
-	// picture with no anchor ahead of it must.
-	if (key && e->have_held && !ch_encoder_flush(e)) return 0;
+	// picture with no anchor ahead of it must. The keyframe itself already sits in the source
+	// planes, and coding the held picture runs through those same planes -- so the two swap
+	// places rather than the held one being copied over. Copying (which is what
+	// ch_encoder_flush does, correctly, when nothing else has arrived) would code the held
+	// picture twice and silently drop the real keyframe: a frame lost at every keyframe of a
+	// B stream, invisible to any test that only checks the output against its own decode.
+	if (key && e->have_held) {
+		size_t left = (size_t)e->luma_stride * (e->mb_h * 16) * 3 / 2;   // y, cb, cr are contiguous
+		uint8_t* a = e->y;
+		uint8_t* b = e->held;
+		while (left--) { uint8_t t = *a; *a++ = *b; *b++ = t; }
+		e->poc = e->held_poc;
+		e->have_held = 0;
+		if (!ch_encoder_picture(e, 0, 0)) return 0;
+		size_t luma_sz = (size_t)e->luma_stride * (e->mb_h * 16);
+		CUTE_H264_MEMCPY(e->y, e->held, luma_sz * 3 / 2);
+	}
 	// Order counts restart at each keyframe, because an IDR picture is defined to sit at zero.
 	if (key) e->poc_base = index;
 	int poc = (index - e->poc_base) * 2;
