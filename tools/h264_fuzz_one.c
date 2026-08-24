@@ -1,5 +1,5 @@
 #define CUTE_H264_IMPLEMENTATION
-#include "libraries/cute/cute_h264.h"
+#include "cute/cute_h264.h"
 #include <stdio.h>
 #include <stdlib.h>
 int main(int argc, char** argv)

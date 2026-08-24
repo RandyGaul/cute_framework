@@ -3,7 +3,7 @@
 // comparison is EXACT -- any difference at all is a bug, which is exactly the property worth
 // having while the bitstream layer is being built.
 #define CUTE_H264_IMPLEMENTATION
-#include "libraries/cute/cute_h264.h"
+#include "cute/cute_h264.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -118,6 +118,8 @@ int main(int argc, char** argv)
 	fclose(raw);
 
 	if (!ch_encoder_save(e, "out.264")) { printf("save failed: %s\n", ch_error_reason); return 1; }
+	// The same stream wrapped as an MP4, which is what cute-h264-mp4-test compares against.
+	if (!ch_encoder_save_mp4(e, "out.mp4")) { printf("mp4 save failed: %s\n", ch_error_reason); return 1; }
 	// Dump the encoder's OWN yuv420p, cropped, in ffmpeg's plane order. I_PCM is lossless in YUV
 	// but not in RGB -- 4:2:0 throws chroma away before the codec ever sees it -- so this is the
 	// buffer a conformant decoder has to reproduce exactly. Encoder and decoder run the same

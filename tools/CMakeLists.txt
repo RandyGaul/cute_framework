@@ -34,6 +34,18 @@ if (CMAKE_CURRENT_SOURCE_DIR STREQUAL "${CMAKE_SOURCE_DIR}/tools")
 	target_include_directories(cute-model-fuzz PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../libraries)
 	target_compile_definitions(cute-model-fuzz PRIVATE _CRT_SECURE_NO_WARNINGS)
 	set_target_properties(cute-model-fuzz PROPERTIES FOLDER "tools" RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+
+	# The cute_h264.h harness. Standalone like the fuzzers above. cute-h264-test encodes synthetic
+	# patterns and cute-h264-decode decodes them back, which h264_bconf.py and h264_refconf.py
+	# drive against ffmpeg for bit-exact conformance sweeps; the fuzz targets feed damaged streams
+	# and containers (seed corpus: h264_fuzz_seed.264) and are meant to run under a sanitizer.
+	foreach(H264_TOOL test decode cabac-test mp4-test fuzz fuzz-one mp4-fuzz)
+		string(REPLACE "-" "_" H264_SRC ${H264_TOOL})
+		add_executable(cute-h264-${H264_TOOL} ${CMAKE_CURRENT_SOURCE_DIR}/h264_${H264_SRC}.c)
+		target_include_directories(cute-h264-${H264_TOOL} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../libraries)
+		target_compile_definitions(cute-h264-${H264_TOOL} PRIVATE _CRT_SECURE_NO_WARNINGS)
+		set_target_properties(cute-h264-${H264_TOOL} PROPERTIES FOLDER "tools" RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+	endforeach()
 endif()
 
 # cute-shaderc, an offline shader compiler

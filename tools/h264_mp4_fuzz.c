@@ -1,7 +1,7 @@
 // Feeds ch_mp4_unwrap damaged containers. A file picked off disk is untrusted input like any
 // other, and the box sizes inside it are exactly the sort of thing that gets corrupted.
 #define CUTE_H264_IMPLEMENTATION
-#include "libraries/cute/cute_h264.h"
+#include "cute/cute_h264.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

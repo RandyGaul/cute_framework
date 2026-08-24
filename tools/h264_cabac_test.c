@@ -2,7 +2,7 @@
 // and decoder walk adaptive state in lockstep with no resynchronisation, so if the engine is even
 // slightly wrong every higher-level bug will look like a syntax bug instead.
 #define CUTE_H264_IMPLEMENTATION
-#include "libraries/cute/cute_h264.h"
+#include "cute/cute_h264.h"
 #include <stdio.h>
 #include <stdlib.h>
 

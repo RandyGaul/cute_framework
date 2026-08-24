@@ -2,7 +2,7 @@
 // so they can be compared byte for byte against what the encoder reconstructed and against what
 // ffmpeg decodes from the same bytes.
 #define CUTE_H264_IMPLEMENTATION
-#include "libraries/cute/cute_h264.h"
+#include "cute/cute_h264.h"
 #include <stdio.h>
 #include <stdlib.h>
 

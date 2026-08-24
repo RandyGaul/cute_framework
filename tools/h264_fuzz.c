@@ -2,7 +2,7 @@
 // truncated download or a deliberately malformed file, and the only acceptable outcomes are a
 // picture or a refusal -- never a crash, and never a read outside its own buffers.
 #define CUTE_H264_IMPLEMENTATION
-#include "libraries/cute/cute_h264.h"
+#include "cute/cute_h264.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

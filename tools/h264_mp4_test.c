@@ -1,7 +1,7 @@
 // Round trip: an .mp4 written by the encoder, read back, and decoded -- the pictures must match
 // what the same stream produces in its raw Annex-B framing.
 #define CUTE_H264_IMPLEMENTATION
-#include "libraries/cute/cute_h264.h"
+#include "cute/cute_h264.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
