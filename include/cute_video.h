@@ -25,19 +25,29 @@
 // same dual zlib/Unlicense terms as the rest of the framework. That is the reason this exists: a
 // game can ship a cutscene, or record one, without dragging in something it cannot redistribute.
 //
-// Playing a file is three lines:
+// Playing a file is four lines:
 //
 //     CF_Video* video = cf_make_video("/intro.mp4");
 //     ...
 //     cf_video_update(video, CF_DELTA_TIME);
-//     cf_draw_box... / cf_material_set_texture_fs(material, "tex", cf_video_texture(video));
+//     CF_Sprite frame = cf_video_sprite(video);
+//     cf_draw_sprite(&frame);
+//
+// For anything past drawing it as a sprite -- a mesh in a 3d scene, a custom shader in either
+// API -- `cf_video_texture` is the same picture as a texture, bound by name with
+// `cf_draw_set_texture` or `cf_draw3d_set_texture`.
 //
 // Recording is four:
 //
 //     CF_VideoEncoder* encoder = cf_make_video_encoder(w, h, 30);
-//     for (each frame) cf_video_encoder_add_frame(encoder, image);
+//     for (each frame) cf_video_encoder_update(encoder, canvas, CF_DELTA_TIME);
 //     cf_video_encoder_save(encoder, "/replay.mp4");
 //     cf_destroy_video_encoder(encoder);
+//
+// `cf_video_encoder_update` records whatever was just rendered to a canvas, pacing itself by dt
+// exactly as `cf_video_update` does for playback. To build a video out of pixels instead --
+// procedurally generated frames, images off disk -- hand them over one at a time with
+// `cf_video_encoder_add_frame`.
 //
 // Decoding is a few milliseconds of CPU per frame at 720p and there is no hardware path, so this
 // suits cutscenes, replays and title screens rather than a dozen videos at once.
@@ -78,9 +88,10 @@ typedef struct CF_VideoEncoder CF_VideoEncoder;
  * @param    virtual_path  A virtual path to an .mp4 or raw .h264 file. See [Virtual File System](https://randygaul.github.io/cute_framework/topics/virtual_file_system).
  * @return   Returns the video, or `NULL` on failure -- call `cf_video_error` for the reason.
  * @remarks  Both container forms are accepted and told apart by their contents, so a file saved by
- *           `cf_video_encoder_save` reopens whichever extension it was given. Nothing is decoded
- *           yet; call `cf_video_update` or `cf_video_next_frame` to advance. Free it with
- *           `cf_destroy_video`.
+ *           `cf_video_encoder_save` reopens whichever extension it was given. The first frame is
+ *           decoded on open -- it is what answers the size and rate -- so `cf_video_frame` and
+ *           `cf_video_texture` work immediately; call `cf_video_update` or `cf_video_next_frame`
+ *           to advance past it. Free it with `cf_destroy_video`.
  * @related  CF_Video cf_make_video_from_memory cf_destroy_video cf_video_update cf_video_error
  */
 CF_API CF_Video* CF_CALL cf_make_video(const char* virtual_path);
@@ -121,7 +132,7 @@ CF_API const char* CF_CALL cf_video_error(void);
  * @category video
  * @brief    The width of the video in pixels.
  * @param    video  The video.
- * @remarks  Known as soon as the video is opened, before any frame is decoded.
+ * @remarks  Known as soon as the video is opened.
  * @related  CF_Video cf_video_height cf_video_fps
  */
 CF_API int CF_CALL cf_video_width(CF_Video* video);
@@ -184,8 +195,9 @@ CF_API bool CF_CALL cf_video_next_frame(CF_Video* video);
  * @param    video  The video.
  * @return   Returns a `CF_Image` whose pixels belong to the video.
  * @remarks  Do NOT call `cf_image_free` on it, and do not keep the pointer: it is overwritten by
- *           the next decode. Before the first frame is decoded the image is zero sized. To get it
- *           onto the screen use `cf_video_texture` instead, which does the upload for you.
+ *           the next decode. The first frame is decoded when the video is opened, so this is
+ *           never empty on a valid video. To get it onto the screen use `cf_video_texture`
+ *           instead, which does the upload for you.
  * @related  CF_Video cf_video_texture cf_video_next_frame
  */
 CF_API CF_Image CF_CALL cf_video_frame(CF_Video* video);
@@ -227,6 +239,15 @@ CF_API CF_Sprite CF_CALL cf_video_sprite(CF_Video* video);
  *
  *           This is the one to feed a custom shader or a 3D draw. To simply put the video on
  *           screen with the 2D draw API, `cf_video_sprite` is fewer steps.
+ *
+ *           A custom 2D draw shader samples it the same way the 3D API does -- bind it by name:
+ *
+ *           ```c
+ *           cf_draw_push_shader(my_draw_shader);
+ *           cf_draw_set_texture("u_video", cf_video_texture(video));
+ *           cf_draw_box(box, 0, 0);   // or any other draw call the shader covers
+ *           cf_draw_pop_shader();
+ *           ```
  *
  *           Onto geometry with the [3D Draw API](https://randygaul.github.io/cute_framework/topics/drawing_3d),
  *           bind it by the name its shader samples:
@@ -287,13 +308,15 @@ CF_API void CF_CALL cf_video_restart(CF_Video* video);
  * @function cf_make_video_encoder
  * @category video
  * @brief    Creates an encoder that turns images into an H.264 video.
- * @param    w    Width in pixels. Any size works; odd sizes are padded internally and cropped back.
- * @param    h    Height in pixels.
+ * @param    w    Width in pixels. Must be even -- 4:2:0 video cannot express an odd dimension.
+ *                Sizes that are not multiples of 16 are fine; they are padded internally and
+ *                cropped back by the stream itself.
+ * @param    h    Height in pixels. Must be even.
  * @param    fps  Frames per second the result should play at.
  * @return   Returns the encoder, or `NULL` on failure -- call `cf_video_error` for the reason.
  * @remarks  Every frame handed over must be exactly `w` by `h`. Free it with
  *           `cf_destroy_video_encoder`.
- * @related  CF_VideoEncoder cf_video_encoder_add_frame cf_video_encoder_save cf_video_encoder_quality
+ * @related  CF_VideoEncoder cf_video_encoder_update cf_video_encoder_add_frame cf_video_encoder_save cf_video_encoder_set_quality
  */
 CF_API CF_VideoEncoder* CF_CALL cf_make_video_encoder(int w, int h, int fps);
 
@@ -307,7 +330,7 @@ CF_API CF_VideoEncoder* CF_CALL cf_make_video_encoder(int w, int h, int fps);
 CF_API void CF_CALL cf_destroy_video_encoder(CF_VideoEncoder* encoder);
 
 /**
- * @function cf_video_encoder_quality
+ * @function cf_video_encoder_set_quality
  * @category video
  * @brief    Trades file size against picture quality.
  * @param    encoder  The encoder.
@@ -318,7 +341,32 @@ CF_API void CF_CALL cf_destroy_video_encoder(CF_VideoEncoder* encoder);
  *           for intermediate files that will be re-encoded, not for shipping.
  * @related  CF_VideoEncoder cf_make_video_encoder cf_video_encoder_add_frame
  */
-CF_API void CF_CALL cf_video_encoder_quality(CF_VideoEncoder* encoder, int quality);
+CF_API void CF_CALL cf_video_encoder_set_quality(CF_VideoEncoder* encoder, int quality);
+
+/**
+ * @function cf_video_encoder_update
+ * @category video
+ * @brief    Records what was just rendered to a canvas, advancing the recording by an elapsed time.
+ * @param    encoder  The encoder.
+ * @param    canvas   The canvas to capture, sized exactly as the encoder was created with.
+ * @param    dt       Seconds elapsed, usually `CF_DELTA_TIME`.
+ * @return   Returns how many frames were compressed on this call, often 0 -- captures land a beat
+ *           late because the pixels cross back from the GPU asynchronously.
+ * @remarks  The recording twin of `cf_video_update`: call it once a frame, after
+ *           `cf_app_draw_onto_screen` -- captures read whatever work the GPU has been handed, so
+ *           the frame must be submitted first or the capture sees the canvas as it was a frame
+ *           ago. From there it does the rest -- paces captures against dt so the
+ *           file plays at the rate the encoder was created with no matter what the display is
+ *           doing, keeps the GPU readback asynchronous so nothing stalls, and holds the recording
+ *           to wall-clock time when the game runs slower than the recording rate by repeating
+ *           frames, which P_Skip makes nearly free. A long stall drops frames rather than
+ *           ballooning the catch-up, same as playback. `cf_video_encoder_save` collects any
+ *           captures still in flight, so stopping is just save. The compression itself runs on
+ *           this thread and is the expensive part; see `cf_video_encoder_add_frame`, which is
+ *           also the way in for frames that are pixels rather than a canvas.
+ * @related  CF_VideoEncoder cf_make_video_encoder cf_video_encoder_add_frame cf_video_encoder_save cf_video_update
+ */
+CF_API int CF_CALL cf_video_encoder_update(CF_VideoEncoder* encoder, CF_Canvas canvas, float dt);
 
 /**
  * @function cf_video_encoder_add_frame
@@ -329,8 +377,9 @@ CF_API void CF_CALL cf_video_encoder_quality(CF_VideoEncoder* encoder, int quali
  * @return   Returns any error that stopped the frame being added.
  * @remarks  Frames go in the order they should play. The alpha channel is discarded -- H.264 has
  *           nowhere to put it. This is the expensive call in this API: it runs a motion search over
- *           the whole picture, so it is not something to do inside a frame budget.
- * @related  CF_VideoEncoder cf_video_encoder_save cf_video_encoder_quality
+ *           the whole picture, so it is not something to do inside a frame budget. To record what
+ *           the game itself draws, `cf_video_encoder_update` is the short way.
+ * @related  CF_VideoEncoder cf_video_encoder_update cf_video_encoder_save cf_video_encoder_set_quality
  */
 CF_API CF_Result CF_CALL cf_video_encoder_add_frame(CF_VideoEncoder* encoder, CF_Image frame);
 
@@ -391,7 +440,8 @@ CF_INLINE void video_restart(CF_Video* video) { cf_video_restart(video); }
 
 CF_INLINE CF_VideoEncoder* make_video_encoder(int w, int h, int fps) { return cf_make_video_encoder(w, h, fps); }
 CF_INLINE void destroy_video_encoder(CF_VideoEncoder* encoder) { cf_destroy_video_encoder(encoder); }
-CF_INLINE void video_encoder_quality(CF_VideoEncoder* encoder, int quality) { cf_video_encoder_quality(encoder, quality); }
+CF_INLINE void video_encoder_set_quality(CF_VideoEncoder* encoder, int quality) { cf_video_encoder_set_quality(encoder, quality); }
+CF_INLINE int video_encoder_update(CF_VideoEncoder* encoder, CF_Canvas canvas, float dt) { return cf_video_encoder_update(encoder, canvas, dt); }
 CF_INLINE CF_Result video_encoder_add_frame(CF_VideoEncoder* encoder, CF_Image frame) { return cf_video_encoder_add_frame(encoder, frame); }
 CF_INLINE CF_Result video_encoder_save(CF_VideoEncoder* encoder, const char* virtual_path) { return cf_video_encoder_save(encoder, virtual_path); }
 CF_INLINE const void* video_encoder_data(CF_VideoEncoder* encoder, int* size) { return cf_video_encoder_data(encoder, size); }

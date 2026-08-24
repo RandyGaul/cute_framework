@@ -54,7 +54,7 @@ static CF_VideoEncoder* s_record(int quality)
 {
 	CF_VideoEncoder* encoder = cf_make_video_encoder(VIDEO_W, VIDEO_H, 30);
 	if (!encoder) return NULL;
-	cf_video_encoder_quality(encoder, quality);
+	cf_video_encoder_set_quality(encoder, quality);
 	CF_Pixel* pix = (CF_Pixel*)cf_alloc(sizeof(CF_Pixel) * VIDEO_W * VIDEO_H);
 	for (int i = 0; i < VIDEO_FRAMES; ++i) {
 		s_fill(pix, i);
@@ -212,8 +212,74 @@ TEST_CASE(test_video_rejects_rubbish)
 	REQUIRE(cf_video_height(NULL) == 0);
 	REQUIRE(cf_video_is_finished(NULL));
 	REQUIRE(!cf_video_next_frame(NULL));
+	CF_Canvas no_canvas = { 0 };
+	REQUIRE(cf_video_encoder_update(NULL, no_canvas, 1.0f / 30.0f) == 0);
 	cf_destroy_video(NULL);
 	cf_destroy_video_encoder(NULL);
+	return true;
+}
+
+/* Recording a canvas with cf_video_encoder_update: captures pace against dt, cross back from the
+   GPU asynchronously, and the file must still carry every owed frame, in order. */
+TEST_CASE(test_video_record_canvas)
+{
+	if (!test_make_app(VIDEO_W, VIDEO_H)) return true;
+
+	CF_Canvas canvas = cf_make_canvas(cf_canvas_defaults(VIDEO_W, VIDEO_H));
+	CF_VideoEncoder* encoder = cf_make_video_encoder(VIDEO_W, VIDEO_H, 30);
+	CHECK_POINTER(encoder);
+
+	// Twelve frames at exactly the recording rate, each a flat shade climbing with i so the
+	// decode below can check the frames arrived in order. Flat is fine here: this test is about
+	// the capture plumbing, not the codec, which test_video_round_trip already covers.
+	for (int i = 0; i < 12; ++i) {
+		cf_app_update(NULL);
+		cf_draw_push_color(cf_make_color_rgb_f((float)i / 15.0f, 0.25f, 0.5f));
+		cf_draw_circle_fill(cf_make_circle(cf_v2(0, 0), (float)(VIDEO_W + VIDEO_H)));
+		cf_draw_pop_color();
+		cf_render_to(canvas, true);
+		// Captures come after submission, or they would race the render and see stale pixels.
+		cf_app_draw_onto_screen(false);
+		cf_video_encoder_update(encoder, canvas, 1.0f / 30.0f);
+	}
+	// One more canvas handed over with three and a half frames of time owed: the capture must be
+	// encoded three times over to keep the recording true to the clock.
+	cf_app_update(NULL);
+	cf_draw_push_color(cf_make_color_rgb_f(12.0f / 15.0f, 0.25f, 0.5f));
+	cf_draw_circle_fill(cf_make_circle(cf_v2(0, 0), (float)(VIDEO_W + VIDEO_H)));
+	cf_draw_pop_color();
+	cf_render_to(canvas, true);
+	cf_app_draw_onto_screen(false);
+	cf_video_encoder_update(encoder, canvas, 3.5f / 30.0f);
+
+	// Data drains the captures still in flight, so nothing above is lost.
+	int size = 0;
+	const void* mp4 = cf_video_encoder_data(encoder, &size);
+	CHECK_POINTER((void*)mp4);
+
+	CF_Video* video = cf_make_video_from_memory(mp4, size);
+	CHECK_POINTER(video);
+	REQUIRE(cf_video_width(video) == VIDEO_W);
+	int frames = 0;
+	do {
+		CF_Image got = cf_video_frame(video);
+		CHECK_POINTER(got.pix);
+		// The shade this frame should carry, remembering the last capture plays three times.
+		int expect = (int)((frames < 12 ? frames : 12) / 15.0f * 255.0f);
+		int center = (VIDEO_H / 2) * VIDEO_W + VIDEO_W / 2;
+		int dr = (int)got.pix[center].colors.r - expect;
+		if (dr < 0) dr = -dr;
+		if (dr >= 32) printf("frame %d: expect r=%d got r=%d g=%d b=%d a=%d\n", frames, expect,
+			got.pix[center].colors.r, got.pix[center].colors.g, got.pix[center].colors.b, got.pix[center].colors.a);
+		REQUIRE(dr < 32);
+		++frames;
+	} while (cf_video_next_frame(video));
+	REQUIRE(frames == 15);
+
+	cf_destroy_video(video);
+	cf_destroy_video_encoder(encoder);
+	cf_destroy_canvas(canvas);
+	test_destroy_app();
 	return true;
 }
 
@@ -359,6 +425,7 @@ TEST_SUITE(test_video)
 	RUN_TEST_CASE(test_video_save_and_load);
 	RUN_TEST_CASE(test_video_update_and_loop);
 	RUN_TEST_CASE(test_video_rejects_rubbish);
+	RUN_TEST_CASE(test_video_record_canvas);
 	RUN_TEST_CASE(test_video_sprite_and_texture);
 	RUN_TEST_CASE(test_video_draw3d);
 }

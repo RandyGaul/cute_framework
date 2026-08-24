@@ -46,11 +46,21 @@ struct CF_Video
 	int sprite_frame;
 };
 
+// How many canvas captures may be crossing back from the GPU at once. Harvested every update, so
+// reaching the cap means the GPU is a full 8 frames behind -- at that point skipping a capture is
+// the right call anyway.
+#define CF_VIDEO_GRABS 8
+
 struct CF_VideoEncoder
 {
 	ch_encoder_t* encoder;
 	int w, h, fps;
 	const void* mp4;       // owned by this, handed out by cf_video_encoder_data
+	CF_Readback grabs[CF_VIDEO_GRABS];   // captures in flight, oldest at grab_first
+	int grab_repeats[CF_VIDEO_GRABS];    // how many encoded frames each capture becomes
+	int grab_first, grab_num;
+	float clock;           // seconds of recording owed but not yet captured
+	uint8_t* grab_pixels;  // scratch a capture is read back into, w*h*4
 };
 
 // A file is either an elementary stream, which starts with a NAL start code, or a container, which
@@ -124,6 +134,11 @@ CF_Video* cf_make_video(const char* virtual_path)
 	void* data = cf_fs_read_entire_file_to_memory(virtual_path, &size);
 	if (!data) {
 		s_video_error = "Unable to read the video file from the virtual file system.";
+		return NULL;
+	}
+	if (size > 0x7fffffff) {
+		CF_FREE(data);
+		s_video_error = "Video files over 2GB are not supported.";
 		return NULL;
 	}
 	CF_Video* video = cf_make_video_from_memory(data, (int)size);
@@ -269,19 +284,24 @@ CF_VideoEncoder* cf_make_video_encoder(int w, int h, int fps)
 	// both sides. Both cost encode time and neither costs compatibility with anything modern.
 	ch_encoder_cabac(encoder->encoder, 1);
 	ch_encoder_bframes(encoder->encoder, 1);
-	cf_video_encoder_quality(encoder, 50);
+	cf_video_encoder_set_quality(encoder, 50);
 	return encoder;
 }
 
 void cf_destroy_video_encoder(CF_VideoEncoder* encoder)
 {
 	if (!encoder) return;
+	// Captures still in flight are simply dropped -- their pixels have nowhere to go.
+	for (int i = 0; i < encoder->grab_num; ++i) {
+		cf_destroy_readback(encoder->grabs[(encoder->grab_first + i) % CF_VIDEO_GRABS]);
+	}
+	CF_FREE(encoder->grab_pixels);
 	if (encoder->encoder) ch_encoder_destroy(encoder->encoder);
 	CF_FREE((void*)encoder->mp4);
 	CF_FREE(encoder);
 }
 
-void cf_video_encoder_quality(CF_VideoEncoder* encoder, int quality)
+void cf_video_encoder_set_quality(CF_VideoEncoder* encoder, int quality)
 {
 	if (!encoder) return;
 	if (quality < 0) quality = 0;
@@ -296,7 +316,104 @@ void cf_video_encoder_quality(CF_VideoEncoder* encoder, int quality)
 		ch_encoder_bframes(encoder->encoder, 0);
 	} else {
 		ch_encoder_qp(encoder->encoder, 51 - quality * 51 / 100);
+		// Coming back from lossless has to undo the line above, or a dip to 100 and back would
+		// leave B pictures off for the rest of the recording.
+		ch_encoder_bframes(encoder->encoder, 1);
 	}
+}
+
+// Compresses one finished capture, feeding it in `repeats` times when the recording owes more
+// than one frame of time -- the pictures are identical so the copies land as P_Skip and cost a
+// few bytes each, which is what keeps the file true to the wall clock.
+static int s_feed(CF_VideoEncoder* encoder, CF_Readback readback, int repeats)
+{
+	int size = encoder->w * encoder->h * (int)sizeof(CF_Pixel);
+	if (cf_readback_size(readback) != size) {
+		s_video_error = "The canvas does not match the size the encoder was created with.";
+		return 0;
+	}
+	if (!encoder->grab_pixels) encoder->grab_pixels = (uint8_t*)CF_ALLOC((size_t)size);
+	if (!encoder->grab_pixels) { s_video_error = "Out of memory."; return 0; }
+	if (cf_readback_data(readback, encoder->grab_pixels, size) != size) {
+		s_video_error = "Unable to read the capture back.";
+		return 0;
+	}
+	int added = 0;
+	for (int i = 0; i < repeats; ++i) {
+		ch_error_reason = NULL;
+		if (!ch_encoder_frame(encoder->encoder, encoder->grab_pixels)) {
+			s_video_error = ch_error_reason ? ch_error_reason : "Unable to encode the frame.";
+			break;
+		}
+		++added;
+	}
+	return added;
+}
+
+// Compresses every capture the GPU has finished with, in the order they were asked for. Stops at
+// the first one still in flight -- order is part of what is being recorded.
+static int s_harvest(CF_VideoEncoder* encoder)
+{
+	int added = 0;
+	while (encoder->grab_num) {
+		CF_Readback readback = encoder->grabs[encoder->grab_first];
+		if (!cf_readback_ready(readback)) break;
+		added += s_feed(encoder, readback, encoder->grab_repeats[encoder->grab_first]);
+		cf_destroy_readback(readback);
+		encoder->grab_first = (encoder->grab_first + 1) % CF_VIDEO_GRABS;
+		--encoder->grab_num;
+	}
+	return added;
+}
+
+// The blocking version, for save: everything in flight is waited for, so the file carries every
+// frame the recording owes. The wait is bounded -- a readback whose fence never signals (a lost
+// device, a driver fault) drops the remaining captures rather than hanging the save.
+static int s_drain(CF_VideoEncoder* encoder)
+{
+	int added = 0;
+	while (encoder->grab_num) {
+		CF_Readback readback = encoder->grabs[encoder->grab_first];
+		for (int64_t spin = 0; !cf_readback_ready(readback) && spin < ((int64_t)1 << 28); ++spin) {}
+		if (!cf_readback_ready(readback)) {
+			for (int i = 0; i < encoder->grab_num; ++i) {
+				cf_destroy_readback(encoder->grabs[(encoder->grab_first + i) % CF_VIDEO_GRABS]);
+			}
+			encoder->grab_num = 0;
+			s_video_error = "A capture never came back from the GPU.";
+			break;
+		}
+		added += s_feed(encoder, readback, encoder->grab_repeats[encoder->grab_first]);
+		cf_destroy_readback(readback);
+		encoder->grab_first = (encoder->grab_first + 1) % CF_VIDEO_GRABS;
+		--encoder->grab_num;
+	}
+	return added;
+}
+
+int cf_video_encoder_update(CF_VideoEncoder* encoder, CF_Canvas canvas, float dt)
+{
+	if (!encoder) { s_video_error = "Null encoder."; return 0; }
+	int added = s_harvest(encoder);
+	float step = 1.0f / (float)encoder->fps;
+	encoder->clock += dt;
+	// A stall must not turn into a burst of catch-up frames, so the recording drops behind
+	// instead -- the mirror of the clamp in cf_video_update.
+	if (encoder->clock > step * 4) encoder->clock = step * 4;
+	int owed = (int)(encoder->clock / step);
+	if (owed > 0 && encoder->grab_num < CF_VIDEO_GRABS) {
+		CF_Readback readback = cf_canvas_readback(canvas);
+		if (!readback.id) {
+			s_video_error = "Canvas readback failed, or is unsupported on this platform.";
+			return added;
+		}
+		int at = (encoder->grab_first + encoder->grab_num) % CF_VIDEO_GRABS;
+		encoder->grabs[at] = readback;
+		encoder->grab_repeats[at] = owed;
+		++encoder->grab_num;
+		encoder->clock -= step * (float)owed;
+	}
+	return added;
 }
 
 CF_Result cf_video_encoder_add_frame(CF_VideoEncoder* encoder, CF_Image frame)
@@ -317,6 +434,7 @@ const void* cf_video_encoder_data(CF_VideoEncoder* encoder, int* size)
 {
 	if (size) *size = 0;
 	if (!encoder) { s_video_error = "Null encoder."; return NULL; }
+	s_drain(encoder);
 	ch_error_reason = NULL;
 	int raw_size = 0;
 	const void* raw = ch_encoder_data(encoder->encoder, &raw_size);
@@ -338,6 +456,7 @@ CF_Result cf_video_encoder_save(CF_VideoEncoder* encoder, const char* virtual_pa
 	bool raw_stream = (len > 5 && !CF_STRCMP(virtual_path + len - 5, ".h264"))
 	               || (len > 4 && !CF_STRCMP(virtual_path + len - 4, ".264"));
 	if (raw_stream) {
+		s_drain(encoder);
 		ch_error_reason = NULL;
 		int size = 0;
 		const void* data = ch_encoder_data(encoder->encoder, &size);

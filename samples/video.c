@@ -1,13 +1,12 @@
 // Records what the app draws into an .mp4, then plays that file back -- both halves of the video
 // API in one program, with nothing but Cute Framework behind them.
 //
-// Space starts and stops recording. While recording, each finished frame is read back off the GPU
-// and handed to the encoder. Stopping writes video_sample.mp4 next to the executable and opens it
-// for playback; space again goes back to recording over it. D toggles playback between a 2d sprite
-// and a quad in a 3d scene, which are the two ways a decoded frame reaches the screen.
-//
-// Readback is asynchronous, so the frame handed to the encoder is a frame or two behind what is on
-// screen. That is fine for a recording, and it is why the request and the result are handled apart.
+// Space starts and stops recording. While recording, one call to cf_video_encoder_update per
+// frame captures the offscreen canvas -- it paces itself against the clock and keeps the GPU
+// readback asynchronous, the same shape as cf_video_update on the playback side. Stopping writes
+// video_sample.mp4 next to the executable and opens it for playback; space again goes back to
+// recording over it. D toggles playback between a 2d sprite and a quad in a 3d scene, which are
+// the two ways a decoded frame reaches the screen.
 
 #include <cute.h>
 #include <math.h>
@@ -95,11 +94,6 @@ int main(int argc, char* argv[])
 	Mode mode = MODE_IDLE;
 	bool in_3d = false;
 
-	// One readback in flight at a time. Asking for another before the first arrives would only
-	// queue up work the encoder cannot keep up with anyway.
-	CF_Readback readback = { 0 };
-	bool readback_pending = false;
-
 	float t = 0;
 	const char* message = "space to record";
 
@@ -116,7 +110,9 @@ int main(int argc, char* argv[])
 				// re-uploaded when the frame changes.
 				int w, h;
 				cf_app_get_size(&w, &h);
-				float a = t * 0.6f;
+				// The camera swings across the front of the quad rather than orbiting it: draw3d
+				// culls back faces by default, so from behind the screen simply is not there.
+				float a = sinf(t * 0.8f) * 0.9f;
 				CF_V3 eye = cf_v3(sinf(a) * 2.6f, 0.9f, cosf(a) * 2.6f);
 				cf_draw3d_push_projection(cf_perspective(CF_PI / 3.2f, (float)w / (float)h, 0.1f, 100.0f));
 				cf_draw3d_push_view(cf_look_at(eye, cf_v3(0, 0, 0), cf_v3(0, 1, 0)));
@@ -147,31 +143,11 @@ int main(int argc, char* argv[])
 			cf_draw_canvas(offscreen, cf_v2(0, 0), cf_v2((float)W, (float)H));
 		}
 
-		if (mode == MODE_RECORDING) {
-			if (!readback_pending) {
-				readback = cf_canvas_readback(offscreen);
-				readback_pending = true;
-			} else if (cf_readback_ready(readback)) {
-				int size = cf_readback_size(readback);
-				void* pixels = cf_alloc(size);
-				cf_readback_data(readback, pixels, size);
-				cf_destroy_readback(readback);
-				readback_pending = false;
-
-				CF_Image frame;
-				frame.w = W;
-				frame.h = H;
-				frame.pix = (CF_Pixel*)pixels;
-				cf_video_encoder_add_frame(encoder, frame);
-				cf_free(pixels);
-			}
-		}
-
 		if (cf_key_just_pressed(CF_KEY_D) && mode == MODE_PLAYING) in_3d = !in_3d;
 
 		if (cf_key_just_pressed(CF_KEY_SPACE)) {
 			if (mode == MODE_RECORDING) {
-				if (readback_pending) { cf_destroy_readback(readback); readback_pending = false; }
+				// Save collects any captures still crossing back from the GPU on its own.
 				CF_Result saved = cf_video_encoder_save(encoder, FILENAME);
 				cf_destroy_video_encoder(encoder);
 				encoder = NULL;
@@ -198,9 +174,13 @@ int main(int argc, char* argv[])
 		}
 
 		cf_app_draw_onto_screen(true);
+		// After the frame is submitted, so the capture sees what was just drawn -- a capture
+		// requested earlier would read the canvas as the GPU last left it, a frame behind.
+		if (mode == MODE_RECORDING) {
+			cf_video_encoder_update(encoder, offscreen, CF_DELTA_TIME);
+		}
 	}
 
-	if (readback_pending) cf_destroy_readback(readback);
 	if (encoder) cf_destroy_video_encoder(encoder);
 	if (video) cf_destroy_video(video);
 	cf_destroy_mesh(screen);
