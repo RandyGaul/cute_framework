@@ -35,7 +35,7 @@ CF_API extern struct CF_App* app;
 // window coordinates (window size, mouse position) and CF's logical points. 1.0 on macOS,
 // the OS UI scale (e.g. 1.5 at 150%) on Windows/X11. Purely internal -- the public API is
 // points everywhere, so this concept is never exposed to the user.
-float cf_app_content_scale();
+float cf_app_get_content_scale();
 
 
 // Maps an SDL_PowerState to the corresponding CF_PowerState. Header-inline (rather than

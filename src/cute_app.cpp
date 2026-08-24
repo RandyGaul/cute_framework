@@ -637,7 +637,7 @@ void cf_app_show_window()
 	SDL_ShowWindow(app->window);
 }
 
-float cf_app_content_scale()
+float cf_app_get_content_scale()
 {
 	float scale = app->window ? SDL_GetDisplayContentScale(SDL_GetDisplayForWindow(app->window)) : 1.0f;
 	return scale > 0 ? scale : 1.0f;
@@ -681,7 +681,7 @@ void cf_app_set_size(int w, int h)
 {
 	// Public sizes are logical points; SDL_SetWindowSize wants raw window coordinates
 	// (identical on macOS, points * content scale on Windows/X11).
-	float cs = cf_app_content_scale();
+	float cs = cf_app_get_content_scale();
 	SDL_SetWindowSize(app->window, (int)CF_ROUNDF(w * cs), (int)CF_ROUNDF(h * cs));
 	app->w = w;
 	app->h = h;

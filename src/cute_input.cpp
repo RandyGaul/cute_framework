@@ -538,7 +538,7 @@ void cf_pump_input_msgs()
 			// response (see cf_app_was_resized and the hidpi sample for the recipe).
 			// SDL reports raw window coordinates; CF stores logical points (identical on
 			// macOS, divided by the OS content scale on Windows/X11).
-			float cs = cf_app_content_scale();
+			float cs = cf_app_get_content_scale();
 			app->window_state.resized = true;
 			app->w = (int)CF_ROUNDF(event.window.data1 / cs);
 			app->h = (int)CF_ROUNDF(event.window.data2 / cs);
@@ -626,7 +626,7 @@ void cf_pump_input_msgs()
 		case SDL_EVENT_MOUSE_MOTION: {
 			// SDL reports raw window coordinates; CF works in logical points (identical on
 			// macOS, divided by the OS content scale on Windows/X11).
-			float cs = cf_app_content_scale();
+			float cs = cf_app_get_content_scale();
 			app->mouse.x = event.motion.x / cs;
 			app->mouse.y = event.motion.y / cs;
 			app->mouse.xrel = event.motion.xrel / cs;
@@ -642,8 +642,8 @@ void cf_pump_input_msgs()
 			case SDL_BUTTON_X1: app->mouse.x1_button = 1; break;
 			case SDL_BUTTON_X2: app->mouse.x2_button = 1; break;
 			}
-			app->mouse.x = event.button.x / cf_app_content_scale();
-			app->mouse.y = event.button.y / cf_app_content_scale();
+			app->mouse.x = event.button.x / cf_app_get_content_scale();
+			app->mouse.y = event.button.y / cf_app_get_content_scale();
 			if (event.button.clicks == 1) {
 				app->mouse.click_type = CF_MOUSE_CLICK_SINGLE;
 			} else if (event.button.clicks == 2) {
@@ -660,8 +660,8 @@ void cf_pump_input_msgs()
 			case SDL_BUTTON_X1: app->mouse.x1_button = 0; break;
 			case SDL_BUTTON_X2: app->mouse.x2_button = 0; break;
 			}
-			app->mouse.x = event.button.x / cf_app_content_scale();
-			app->mouse.y = event.button.y / cf_app_content_scale();
+			app->mouse.x = event.button.x / cf_app_get_content_scale();
+			app->mouse.y = event.button.y / cf_app_get_content_scale();
 			if (event.button.clicks == 1) {
 				app->mouse.click_type = CF_MOUSE_CLICK_SINGLE;
 			} else if (event.button.clicks == 2) {
