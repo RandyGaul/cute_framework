@@ -9,6 +9,60 @@
 #include <math.h>
 #include <string.h>
 
+// The encoder's own reconstruction of each picture, collected as it is coded. Coded order is not
+// display order once B pictures are on, so these are sorted before being written: a decoder is
+// only obliged to reproduce them in the order they are meant to be SHOWN.
+#define MAX_PICS 4096
+static unsigned char* g_buf[MAX_PICS];
+static int g_poc[MAX_PICS];
+static int g_n;
+static int g_w, g_h;
+static FILE* g_yuv;
+
+static void plane_copy(unsigned char* dst, const unsigned char* src, int stride, int w, int h)
+{
+	for (int y = 0; y < h; ++y) memcpy(dst + (size_t)y * w, src + (size_t)y * stride, (size_t)w);
+}
+
+static void on_recon(void* udata, const void* y, const void* cb, const void* cr,
+                     int luma_stride, int chroma_stride, int poc)
+{
+	(void)udata;
+	if (g_n >= MAX_PICS) return;
+	size_t n = (size_t)g_w * g_h + (size_t)(g_w / 2) * (g_h / 2) * 2;
+	unsigned char* p = (unsigned char*)malloc(n);
+	plane_copy(p, (const unsigned char*)y, luma_stride, g_w, g_h);
+	plane_copy(p + (size_t)g_w * g_h, (const unsigned char*)cb, chroma_stride, g_w / 2, g_h / 2);
+	plane_copy(p + (size_t)g_w * g_h + (size_t)(g_w / 2) * (g_h / 2), (const unsigned char*)cr,
+		chroma_stride, g_w / 2, g_h / 2);
+	g_buf[g_n] = p;
+	g_poc[g_n] = poc;
+	++g_n;
+}
+
+// A keyframe restarts the order count, so a count of zero starts a new group rather than sorting
+// before everything that came before it.
+static void flush_group(int first, int last)
+{
+	size_t n = (size_t)g_w * g_h + (size_t)(g_w / 2) * (g_h / 2) * 2;
+	for (int a = first; a < last; ++a) {
+		int best = a;
+		for (int b = a + 1; b < last; ++b) if (g_poc[b] < g_poc[best]) best = b;
+		unsigned char* t = g_buf[a]; g_buf[a] = g_buf[best]; g_buf[best] = t;
+		int s = g_poc[a]; g_poc[a] = g_poc[best]; g_poc[best] = s;
+		fwrite(g_buf[a], 1, n, g_yuv);
+	}
+}
+
+static void write_all(void)
+{
+	int first = 0;
+	for (int i = 1; i <= g_n; ++i) {
+		if (i == g_n || g_poc[i] == 0) { flush_group(first, i); first = i; }
+	}
+	for (int i = 0; i < g_n; ++i) free(g_buf[i]);
+}
+
 int main(int argc, char** argv)
 {
 	int w = argc > 1 ? atoi(argv[1]) : 320;
@@ -19,11 +73,16 @@ int main(int argc, char** argv)
 
 	unsigned char* rgba = (unsigned char*)malloc((size_t)w * h * 4);
 	ch_encoder_t* e = ch_encoder_make(w, h, 30);
-	if (e) ch_encoder_qp(e, qp);
 	if (!e) { printf("make failed: %s\n", ch_error_reason); return 1; }
+	ch_encoder_qp(e, qp);
+	{ const char* s = getenv("CABAC"); if (s && atoi(s)) ch_encoder_cabac(e, 1); }
+	{ const char* s = getenv("REFS"); if (s) ch_encoder_ref_frames(e, atoi(s)); }
+	{ const char* s = getenv("BFRAMES"); if (s) ch_encoder_bframes(e, atoi(s)); }
+	g_w = w; g_h = h;
+	ch_encoder_recon_callback(e, on_recon, NULL);
 
 	FILE* raw = fopen("ref.rgba", "wb");
-	FILE* yuv = fopen("ref.yuv", "wb");
+	g_yuv = fopen("ref.yuv", "wb");
 	for (int f = 0; f < frames; ++f) {
 		for (int y = 0; y < h; ++y) {
 			for (int x = 0; x < w; ++x) {
@@ -55,25 +114,17 @@ int main(int argc, char** argv)
 		}
 		fwrite(rgba, 1, (size_t)w * h * 4, raw);
 		if (!ch_encoder_frame(e, rgba)) { printf("frame failed: %s\n", ch_error_reason); return 1; }
-		// Dump the encoder's OWN yuv420p, cropped, in ffmpeg's plane order. I_PCM is lossless in
-		// YUV but not in RGB -- 4:2:0 throws chroma away before the codec ever sees it -- so this
-		// is the buffer a conformant decoder has to reproduce exactly.
-		// For I_PCM the source planes ARE the reconstruction. For a compressed frame the decoder must
-		// reproduce the encoder's own reconstruction exactly -- encoder and decoder run the same
-		// inverse transform and the same intra prediction, so any difference at all is a bug in one
-		// of them, and this is what makes the round trip a real conformance test rather than a PSNR
-		// eyeball.
-		const uint8_t* py = e->pic.ref_y[0];
-		const uint8_t* pb = e->pic.ref_cb[0];
-		const uint8_t* pr = e->pic.ref_cr[0];
-		for (int y = 0; y < h; ++y) fwrite(py + (size_t)y * e->luma_stride, 1, (size_t)w, yuv);
-		for (int y = 0; y < h / 2; ++y) fwrite(pb + (size_t)y * e->chroma_stride, 1, (size_t)(w / 2), yuv);
-		for (int y = 0; y < h / 2; ++y) fwrite(pr + (size_t)y * e->chroma_stride, 1, (size_t)(w / 2), yuv);
 	}
 	fclose(raw);
-	fclose(yuv);
 
 	if (!ch_encoder_save(e, "out.264")) { printf("save failed: %s\n", ch_error_reason); return 1; }
+	// Dump the encoder's OWN yuv420p, cropped, in ffmpeg's plane order. I_PCM is lossless in YUV
+	// but not in RGB -- 4:2:0 throws chroma away before the codec ever sees it -- so this is the
+	// buffer a conformant decoder has to reproduce exactly. Encoder and decoder run the same
+	// inverse transform and the same prediction, so any difference at all is a bug in one of
+	// them, and that is what makes the round trip a conformance test rather than a PSNR eyeball.
+	write_all();
+	fclose(g_yuv);
 	int size = 0;
 	ch_encoder_data(e, &size);
 	printf("wrote out.264: %d bytes, %d frames, %dx%d (%.2f bytes/pixel)\n",
