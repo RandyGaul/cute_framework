@@ -196,6 +196,7 @@
 #if !defined(CUTE_H264_H)
 
 #include <stdint.h>
+#include <stddef.h> // ptrdiff_t, which the negative-stride indexing in prediction leans on
 
 typedef struct ch_encoder_t ch_encoder_t;
 
