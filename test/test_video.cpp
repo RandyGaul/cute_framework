@@ -247,6 +247,111 @@ TEST_CASE(test_video_sprite_and_texture)
 	return true;
 }
 
+// The draw3d path: a frame reaching a mesh through cf_draw3d_set_texture. The shader remaps uvs by
+// in_uv_rect exactly as a sprite-textured mesh would; with no sprite pushed that lane is the full
+// rect, so one shader serves both ways of supplying the image.
+static const char* s_video3d_vs =
+"layout (location = 0) in vec3 in_pos;\n"
+"layout (location = 1) in vec2 in_uv;\n"
+"layout (location = 8)  in vec4 in_model0;\n"
+"layout (location = 9)  in vec4 in_model1;\n"
+"layout (location = 10) in vec4 in_model2;\n"
+"layout (location = 11) in vec4 in_uv_rect;\n"
+"layout (location = 0) out vec2 v_uv;\n"
+"layout (set = 1, binding = 0) uniform uniform_block {\n"
+"    mat4 u_view_projection;\n"
+"};\n"
+"void main() {\n"
+"    vec4 p = vec4(in_pos, 1.0);\n"
+"    vec3 world = vec3(dot(in_model0, p), dot(in_model1, p), dot(in_model2, p));\n"
+"    v_uv = mix(in_uv_rect.xy, in_uv_rect.zw, in_uv);\n"
+"    gl_Position = u_view_projection * vec4(world, 1.0);\n"
+"}\n";
+
+static const char* s_video3d_fs =
+"layout (location = 0) in vec2 v_uv;\n"
+"layout (location = 0) out vec4 result;\n"
+"layout (set = 2, binding = 0) uniform sampler2D u_image;\n"
+"void main() {\n"
+"    result = vec4(texture(u_image, v_uv).rgb, 1.0);\n"
+"}\n";
+
+typedef struct VideoVertex
+{
+	CF_V3 pos;
+	CF_V2 uv;
+} VideoVertex;
+
+/* A decoded frame drawn onto a mesh with the draw3d API must land on the canvas, right way up. */
+TEST_CASE(test_video_draw3d)
+{
+	if (!test_make_app(VIDEO_W, VIDEO_H)) return true;
+
+	CF_VideoEncoder* encoder = s_record(90);
+	CHECK_POINTER(encoder);
+	int size = 0;
+	const void* mp4 = cf_video_encoder_data(encoder, &size);
+	CF_Video* video = cf_make_video_from_memory(mp4, size);
+	CHECK_POINTER(video);
+
+	// A quad filling clip space exactly, so a canvas pixel maps to the frame pixel under it and
+	// the comparison below does not depend on any filtering.
+	VideoVertex verts[6] = {
+		{ { -1, -1, 0 }, { 0, 1 } }, { { 1, -1, 0 }, { 1, 1 } }, { { 1, 1, 0 }, { 1, 0 } },
+		{ { -1, -1, 0 }, { 0, 1 } }, { { 1,  1, 0 }, { 1, 0 } }, { { -1, 1, 0 }, { 0, 0 } },
+	};
+	CF_VertexAttribute attrs[2] = { 0 };
+	attrs[0].name = "in_pos";
+	attrs[0].format = CF_VERTEX_FORMAT_FLOAT3;
+	attrs[0].offset = CF_OFFSET_OF(VideoVertex, pos);
+	attrs[1].name = "in_uv";
+	attrs[1].format = CF_VERTEX_FORMAT_FLOAT2;
+	attrs[1].offset = CF_OFFSET_OF(VideoVertex, uv);
+	CF_Mesh mesh = cf_make_mesh((int)sizeof(verts), attrs, 2, (int)sizeof(VideoVertex));
+	cf_mesh_update_vertex_data(mesh, verts, 6);
+
+	CF_Shader shader = cf_make_shader_from_source(s_video3d_vs, s_video3d_fs);
+	REQUIRE(shader.id);
+	// draw3d's default render state tests depth, so the canvas it draws into needs somewhere to
+	// put it.
+	CF_CanvasParams params = cf_canvas_defaults(VIDEO_W, VIDEO_H);
+	params.depth_stencil_enable = true;
+	CF_Canvas canvas = cf_make_canvas(params);
+
+	cf_app_update(NULL);
+	cf_draw3d_push_projection(cf_ortho(-1, 1, -1, 1, -1, 1));
+	cf_draw3d_push_shader(shader);
+	cf_draw3d_set_texture("u_image", cf_video_texture(video));
+	cf_draw3d_mesh(mesh);
+	cf_render_to(canvas, true);
+	// The frame has to be submitted before anything can be read back off it.
+	cf_app_draw_onto_screen(false);
+	cf_draw3d_pop_shader();
+	cf_draw3d_pop_projection();
+
+	CF_Pixel* px = (CF_Pixel*)cf_alloc(VIDEO_W * VIDEO_H * (int)sizeof(CF_Pixel));
+	CF_Readback rb = cf_canvas_readback(canvas);
+	while (!cf_readback_ready(rb)) {}
+	cf_readback_data(rb, px, VIDEO_W * VIDEO_H * (int)sizeof(CF_Pixel));
+	cf_destroy_readback(rb);
+
+	// What was drawn has to be the frame -- a blank canvas, or the picture upside down, is far
+	// outside this. The first frame's green channel climbs with y, which is what catches a flip.
+	CF_Image frame = cf_video_frame(video);
+	// It came back bit-identical in practice; the tolerance is there for a backend that filters
+	// or converts on the way through, not to paper over a wrong picture.
+	REQUIRE(s_worst_difference(frame.pix, px, VIDEO_W * VIDEO_H) < 24);
+
+	cf_free(px);
+	cf_destroy_canvas(canvas);
+	cf_destroy_shader(shader);
+	cf_destroy_mesh(mesh);
+	cf_destroy_video(video);
+	cf_destroy_video_encoder(encoder);
+	test_destroy_app();
+	return true;
+}
+
 TEST_SUITE(test_video)
 {
 	RUN_TEST_CASE(test_video_round_trip);
@@ -255,4 +360,5 @@ TEST_SUITE(test_video)
 	RUN_TEST_CASE(test_video_update_and_loop);
 	RUN_TEST_CASE(test_video_rejects_rubbish);
 	RUN_TEST_CASE(test_video_sprite_and_texture);
+	RUN_TEST_CASE(test_video_draw3d);
 }

@@ -227,7 +227,25 @@ CF_API CF_Sprite CF_CALL cf_video_sprite(CF_Video* video);
  *
  *           This is the one to feed a custom shader or a 3D draw. To simply put the video on
  *           screen with the 2D draw API, `cf_video_sprite` is fewer steps.
- * @related  CF_Video cf_video_sprite cf_video_update cf_video_frame CF_Texture
+ *
+ *           Onto geometry with the [3D Draw API](https://randygaul.github.io/cute_framework/topics/drawing_3d),
+ *           bind it by the name its shader samples:
+ *
+ *           ```c
+ *           cf_video_update(video, CF_DELTA_TIME);
+ *           cf_draw3d_push_shader(my_shader);
+ *           cf_draw3d_set_texture("u_image", cf_video_texture(video));
+ *           cf_draw3d_mesh(screen_quad);
+ *           cf_draw3d_pop_shader();
+ *           ```
+ *
+ *           A shader written for sprite-textured meshes works unchanged. `in_uv_rect` is the full
+ *           rect when no sprite is pushed, so `mix(in_uv_rect.xy, in_uv_rect.zw, in_uv)` reduces
+ *           to `in_uv` and the same code serves both. Which means `cf_draw3d_push_texture` with
+ *           `cf_video_sprite` also works -- it just sends the frames through the atlas, which is
+ *           the wrong place for something that changes every frame. Mesh v runs top-down: the top
+ *           edge of the quad takes v = 0. See `samples/video.c`.
+ * @related  CF_Video cf_video_sprite cf_video_update cf_video_frame CF_Texture cf_draw3d_set_texture
  */
 CF_API CF_Texture CF_CALL cf_video_texture(CF_Video* video);
 
