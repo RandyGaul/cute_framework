@@ -469,10 +469,9 @@ void cf_draw3d_free_cmd(CF_Command* cmd);
 // Runs the atlas defrag at most once per frame (see CF_Draw::defragged_this_frame).
 void cf_atlas_defrag_once();
 
-// Called by cf_app_set_pixel_scale: the AA band width divides by pixel_scale, so a scale
-// change must refresh it immediately (glyphs re-rasterize lazily -- pixel_scale is part of
-// the glyph cache key). The projection is deliberately NOT touched: it is set once at init
-// and only ever changed by the user via cf_draw_projection.
+// Called by cf_app_set_pixel_scale to refresh the AA band width (depends on pixel_scale).
+// Glyphs re-rasterize lazily, so they're skipped here. Projection is untouched -- it's
+// set once at init and only changed via cf_draw_projection.
 void cf_draw_on_pixel_scale_changed();
 
 // Called by cf_render_layers_to before the canvas (and its render pass) is applied: stages
