@@ -288,8 +288,6 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 	SDL_Window* window = NULL;
 	// The app isn't constructed yet, so resolve the creation display's content scale
 	// directly: w/h are logical points, SDL_CreateWindow wants raw window coordinates.
-	float creation_content_scale = SDL_GetDisplayContentScale(display_id ? display_id : SDL_GetPrimaryDisplay());
-	if (creation_content_scale <= 0) creation_content_scale = 1.0f;
 	if (use_gfx) {
 		Uint32 flags = 0;
 		if (!(options & CF_APP_OPTIONS_NO_HIGH_DPI_BIT)) {
@@ -301,6 +299,8 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 		if (options & CF_APP_OPTIONS_RESIZABLE_BIT) flags |= SDL_WINDOW_RESIZABLE;
 		if (options & CF_APP_OPTIONS_HIDDEN_BIT) flags |= (SDL_WINDOW_HIDDEN | SDL_WINDOW_MINIMIZED);
 
+		float creation_content_scale = SDL_GetDisplayContentScale(display_id ? display_id : SDL_GetPrimaryDisplay());
+		if (creation_content_scale <= 0) creation_content_scale = 1.0f;
 		SDL_PropertiesID props = SDL_CreateProperties();
 		SDL_SetStringProperty(props, SDL_PROP_WINDOW_CREATE_TITLE_STRING, window_title);
 		SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER, (int)CF_ROUNDF(w * creation_content_scale));
