@@ -219,6 +219,11 @@ int ch_encoder_save_mp4(ch_encoder_t* e, const char* file_name);
 // The same, from a stream you already have, returning bytes you must free with CUTE_H264_FREE.
 const void* ch_mp4_wrap(const void* annexb, int size, int w, int h, int fps, int* out_size);
 
+// The other direction: pulls the video track out of an MP4 and hands back the Annex-B stream that
+// was put in, ready for ch_decoder_make. Free the result with CUTE_H264_FREE. Returns null and
+// sets ch_error_reason if the file carries no H.264 video track this can read.
+const void* ch_mp4_unwrap(const void* mp4, int size, int* out_size);
+
 //--------------------------------------------------------------------------------------------------
 // Decoding.
 
@@ -233,6 +238,10 @@ int ch_decoder_next(ch_decoder_t* d);
 
 // The coded size, available once the first parameter set has been read.
 int ch_decoder_size(ch_decoder_t* d, int* w, int* h);
+
+// Frames per second, if the stream says. Returns 0 if it does not -- the rate is optional, and
+// plenty of encoders leave it out.
+int ch_decoder_fps(ch_decoder_t* d);
 
 // The picture just decoded, as w*h*4 RGBA bytes owned by the decoder. Valid until the next call.
 const void* ch_decoder_rgba(ch_decoder_t* d);
@@ -1104,6 +1113,7 @@ struct ch_decoder_t
 	// Sequence and picture parameters, as far as this decoder cares about them.
 	int have_sps, have_pps;
 	int w, h;              // cropped, as the caller sees it
+	int fps;               // from the parameter set, or 0 if it did not say
 	int mb_w, mb_h;
 	int log2_max_frame_num;
 	int pic_order_cnt_type;
@@ -1252,6 +1262,28 @@ static int ch_parse_sps(ch_decoder_t* d, ch_rbits_t* r)
 	d->h = d->mb_h * 16 - (crop_t + crop_b) * 2;
 	if (d->w <= 0 || d->h <= 0 || (d->w & 1) || (d->h & 1)) {
 		ch_decoder_error = "Crop rectangle is not a usable picture."; return 0;
+	}
+	// The frame rate is optional and lives at the end of the parameter set, behind everything a
+	// decoder is free to ignore. It is read on a best effort basis: a stream that does not carry
+	// it simply does not have one, and playback has to be timed some other way.
+	d->fps = 0;
+	if (ch_get_bit(r)) {                   // vui_parameters_present_flag
+		if (ch_get_bit(r)) {               // aspect_ratio_info_present_flag
+			if (ch_get_bits(r, 8) == 255) ch_get_bits(r, 32);   // extended sample aspect ratio
+		}
+		if (ch_get_bit(r)) ch_get_bit(r);  // overscan
+		if (ch_get_bit(r)) {               // video_signal_type_present_flag
+			ch_get_bits(r, 3);
+			ch_get_bit(r);
+			if (ch_get_bit(r)) ch_get_bits(r, 24);   // colour description
+		}
+		if (ch_get_bit(r)) { ch_get_ue(r); ch_get_ue(r); }   // chroma sample location
+		if (ch_get_bit(r)) {               // timing_info_present_flag
+			uint32_t units = ch_get_bits(r, 32);
+			uint32_t scale = ch_get_bits(r, 32);
+			// Ticks count fields, so a progressive frame is two of them.
+			if (!r->error && units && scale / units / 2 < 1000) d->fps = (int)(scale / units / 2);
+		}
 	}
 	if (r->error) { ch_decoder_error = "Truncated sequence parameter set."; return 0; }
 	d->have_sps = 1;
@@ -6033,6 +6065,11 @@ int ch_decoder_size(ch_decoder_t* d, int* w, int* h)
 	return d && d->have_sps;
 }
 
+int ch_decoder_fps(ch_decoder_t* d)
+{
+	return d && d->have_sps ? d->fps : 0;
+}
+
 const void* ch_decoder_rgba(ch_decoder_t* d)
 {
 	if (!d || d->shown < 0) { ch_decoder_error = "No picture has been decoded."; return NULL; }
@@ -6360,6 +6397,200 @@ static void ch_mp4_stbl(ch_bytes_t* b, const ch_mp4_sample_t* samples, int count
 		ch_box_end(b, stco);
 	}
 	ch_box_end(b, stbl);
+}
+
+
+//--------------------------------------------------------------------------------------------------
+// Reading an MP4 back. Only what is needed to find the video samples: the boxes that say where the
+// parameter sets are and where each picture starts. Everything else in the file is stepped over.
+
+static uint32_t ch_rd32(const uint8_t* p) { return ((uint32_t)p[0] << 24) | ((uint32_t)p[1] << 16) | ((uint32_t)p[2] << 8) | p[3]; }
+static uint32_t ch_rd16(const uint8_t* p) { return ((uint32_t)p[0] << 8) | p[1]; }
+
+// Finds a box by name inside the span given, returning its payload. Boxes are a size and a
+// four character name followed by their contents, so this is a walk rather than a search.
+static const uint8_t* ch_mp4_find(const uint8_t* s, int n, const char* name, int* out_len)
+{
+	int i = 0;
+	while (i + 8 <= n) {
+		uint32_t sz = ch_rd32(s + i);
+		if (sz == 1) return NULL;                 // 64 bit sizes are not produced by this writer
+		if (sz == 0) sz = (uint32_t)(n - i);      // "to the end of the file"
+		// Compared unsigned: a size with the top bit set would come out negative and pass.
+		if (sz < 8 || sz > (uint32_t)(n - i)) return NULL;
+		if (s[i + 4] == (uint8_t)name[0] && s[i + 5] == (uint8_t)name[1] &&
+		    s[i + 6] == (uint8_t)name[2] && s[i + 7] == (uint8_t)name[3]) {
+			*out_len = (int)sz - 8;
+			return s + i + 8;
+		}
+		i += (int)sz;
+	}
+	return NULL;
+}
+
+// The same, but descending a path of names: "moov/trak/mdia" and so on.
+static const uint8_t* ch_mp4_path(const uint8_t* s, int n, const char* const* path, int depth, int* out_len)
+{
+	for (int i = 0; i < depth; ++i) {
+		s = ch_mp4_find(s, n, path[i], &n);
+		if (!s) return NULL;
+	}
+	*out_len = n;
+	return s;
+}
+
+// Start codes back in front of each parameter set and each picture. MP4 stores them with a length
+// prefix instead, which is the only difference between the two framings.
+static void ch_mp4_emit(ch_bytes_t* out, const uint8_t* nal, int len)
+{
+	ch_bytes_push(out, 0); ch_bytes_push(out, 0); ch_bytes_push(out, 0); ch_bytes_push(out, 1);
+	for (int i = 0; i < len; ++i) ch_bytes_push(out, nal[i]);
+}
+
+const void* ch_mp4_unwrap(const void* mp4, int size, int* out_size)
+{
+	ch_error_reason = NULL;
+	if (out_size) *out_size = 0;
+	if (!mp4 || size <= 8) { ch_error_reason = "Bad arguments."; return NULL; }
+	const uint8_t* s = (const uint8_t*)mp4;
+
+	int moov_len = 0;
+	const uint8_t* moov = ch_mp4_find(s, size, "moov", &moov_len);
+	if (!moov) { ch_error_reason = "Not an MP4 file."; return NULL; }
+
+	// The first track holding an avcC is the one wanted. A file with audio in it has more than
+	// one, and only this one can be decoded here.
+	const uint8_t* stbl = NULL;
+	int stbl_len = 0;
+	{
+		const uint8_t* p = moov;
+		int left = moov_len;
+		while (left > 8) {
+			uint32_t sz = ch_rd32(p);
+			if (sz < 8 || sz > (uint32_t)left) break;
+			if (p[4] == 't' && p[5] == 'r' && p[6] == 'a' && p[7] == 'k') {
+				static const char* const path[] = { "mdia", "minf", "stbl" };
+				int len = 0;
+				const uint8_t* cand = ch_mp4_path(p + 8, (int)sz - 8, path, 3, &len);
+				if (cand) {
+					static const char* const avc[] = { "stsd" };
+					int slen = 0;
+					const uint8_t* stsd = ch_mp4_path(cand, len, avc, 1, &slen);
+					// stsd is a full box with an entry count, then the sample entries.
+					if (stsd && slen > 8 && ch_mp4_find(stsd + 8, slen - 8, "avc1", &slen)) {
+						stbl = cand; stbl_len = len; break;
+					}
+				}
+			}
+			p += sz;
+			left -= (int)sz;
+		}
+	}
+	if (!stbl) { ch_error_reason = "The file has no H.264 video track."; return NULL; }
+
+	// The parameter sets live in the sample description rather than in the samples.
+	const uint8_t* avcc = NULL;
+	int avcc_len = 0;
+	{
+		int slen = 0;
+		const uint8_t* stsd = ch_mp4_find(stbl, stbl_len, "stsd", &slen);
+		if (stsd && slen > 8) {
+			int elen = 0;
+			const uint8_t* avc1 = ch_mp4_find(stsd + 8, slen - 8, "avc1", &elen);
+			// A visual sample entry is 78 bytes of fixed fields before its child boxes.
+			if (avc1 && elen > 78) avcc = ch_mp4_find(avc1 + 78, elen - 78, "avcC", &avcc_len);
+		}
+	}
+	if (!avcc || avcc_len < 7) { ch_error_reason = "The video track has no decoder configuration."; return NULL; }
+
+	int nal_bytes = (avcc[4] & 3) + 1;
+	ch_bytes_t out;
+	CUTE_H264_MEMSET(&out, 0, sizeof(out));
+	{
+		int i = 5;
+		int count = avcc[i++] & 31;
+		for (int k = 0; k < count && i + 2 <= avcc_len; ++k) {
+			int len = (int)ch_rd16(avcc + i);
+			i += 2;
+			if (len < 0 || i + len > avcc_len) { i = avcc_len; break; }
+			ch_mp4_emit(&out, avcc + i, len);
+			i += len;
+		}
+		if (i < avcc_len) {
+			count = avcc[i++];
+			for (int k = 0; k < count && i + 2 <= avcc_len; ++k) {
+				int len = (int)ch_rd16(avcc + i);
+				i += 2;
+				if (len < 0 || i + len > avcc_len) break;
+				ch_mp4_emit(&out, avcc + i, len);
+				i += len;
+			}
+		}
+	}
+
+	// Where the samples are: their sizes, which chunk each belongs to, and where the chunks are.
+	int stsz_len = 0, stsc_len = 0, stco_len = 0, co64_len = 0;
+	const uint8_t* stsz = ch_mp4_find(stbl, stbl_len, "stsz", &stsz_len);
+	const uint8_t* stsc = ch_mp4_find(stbl, stbl_len, "stsc", &stsc_len);
+	const uint8_t* stco = ch_mp4_find(stbl, stbl_len, "stco", &stco_len);
+	const uint8_t* co64 = stco ? NULL : ch_mp4_find(stbl, stbl_len, "co64", &co64_len);
+	if (!stsz || !stsc || (!stco && !co64) || stsz_len < 12 || stsc_len < 8) {
+		CUTE_H264_FREE(out.data);
+		ch_error_reason = "The video track has no sample table."; return NULL;
+	}
+	uint32_t uniform = ch_rd32(stsz + 4);
+	uint32_t samples = ch_rd32(stsz + 8);
+	uint32_t chunks = ch_rd32((stco ? stco : co64) + 4);
+	uint32_t runs = ch_rd32(stsc + 4);
+	if (!samples || !chunks || !runs) {
+		CUTE_H264_FREE(out.data);
+		ch_error_reason = "The video track has no samples."; return NULL;
+	}
+	if ((!uniform && (uint64_t)stsz_len < 12 + (uint64_t)samples * 4) ||
+	    (uint64_t)stsc_len < 8 + (uint64_t)runs * 12 ||
+	    (stco && (uint64_t)stco_len < 8 + (uint64_t)chunks * 4) ||
+	    (co64 && (uint64_t)co64_len < 8 + (uint64_t)chunks * 8)) {
+		CUTE_H264_FREE(out.data);
+		ch_error_reason = "The sample table is truncated."; return NULL;
+	}
+
+	uint32_t sample = 0, run = 0;
+	for (uint32_t c = 0; c < chunks && sample < samples; ++c) {
+		// Each run of the chunk table says "from this chunk onwards, this many samples each",
+		// until the next run takes over.
+		while (run + 1 < runs && ch_rd32(stsc + 8 + (run + 1) * 12) <= c + 1) ++run;
+		uint32_t per_chunk = ch_rd32(stsc + 8 + run * 12 + 4);
+		uint64_t at = stco ? ch_rd32(stco + 8 + c * 4)
+		                   : (((uint64_t)ch_rd32(co64 + 8 + c * 8) << 32) | ch_rd32(co64 + 8 + c * 8 + 4));
+		for (uint32_t k = 0; k < per_chunk && sample < samples; ++k, ++sample) {
+			uint32_t len = uniform ? uniform : ch_rd32(stsz + 12 + sample * 4);
+			if (at + len > (uint64_t)size) {
+				CUTE_H264_FREE(out.data);
+				ch_error_reason = "A sample points outside the file."; return NULL;
+			}
+			// One sample is one picture, stored as a run of length prefixed units.
+			const uint8_t* p = s + at;
+			uint32_t left = len;
+			while (left > (uint32_t)nal_bytes) {
+				uint32_t nl = 0;
+				for (int b = 0; b < nal_bytes; ++b) nl = (nl << 8) | p[b];
+				p += nal_bytes;
+				left -= (uint32_t)nal_bytes;
+				if (nl > left) break;
+				ch_mp4_emit(&out, p, (int)nl);
+				p += nl;
+				left -= nl;
+			}
+			at += len;
+		}
+	}
+	if (out.oom || !out.len) {
+		CUTE_H264_FREE(out.data);
+		ch_error_reason = out.oom ? "Out of memory." : "The video track has no pictures.";
+		return NULL;
+	}
+	if (out_size) *out_size = out.len;
+	return out.data;
 }
 
 const void* ch_mp4_wrap(const void* annexb, int size, int w, int h, int fps, int* out_size)
