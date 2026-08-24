@@ -286,8 +286,6 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 	}
 
 	SDL_Window* window = NULL;
-	// The app isn't constructed yet, so resolve the creation display's content scale
-	// directly: w/h are logical points, SDL_CreateWindow wants raw window coordinates.
 	if (use_gfx) {
 		Uint32 flags = 0;
 		if (!(options & CF_APP_OPTIONS_NO_HIGH_DPI_BIT)) {
