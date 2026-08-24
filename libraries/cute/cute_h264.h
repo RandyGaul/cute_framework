@@ -315,10 +315,16 @@ int ch_encoder_save(ch_encoder_t* e, const char* file_name);
 #if !defined(CUTE_H264_IMPLEMENTATION_ONCE)
 #define CUTE_H264_IMPLEMENTATION_ONCE
 
-#if !defined(CUTE_H264_ALLOC)
+#if !defined(CUTE_H264_ALLOC) || !defined(CUTE_H264_FREE) || !defined(CUTE_H264_REALLOC)
 	#include <stdlib.h>
+#endif
+#if !defined(CUTE_H264_ALLOC)
 	#define CUTE_H264_ALLOC(size) malloc(size)
+#endif
+#if !defined(CUTE_H264_FREE)
 	#define CUTE_H264_FREE(mem) free(mem)
+#endif
+#if !defined(CUTE_H264_REALLOC)
 	#define CUTE_H264_REALLOC(mem, size) realloc(mem, size)
 #endif
 
@@ -331,6 +337,10 @@ int ch_encoder_save(ch_encoder_t* e, const char* file_name);
 	#include <string.h>
 	#define CUTE_H264_MEMSET memset
 #endif
+
+// Used before they are defined, which C forgives and C++ does not.
+static int ch_clamp(int v, int lo, int hi);
+static int ch_cabac_on(const ch_encoder_t* e);
 
 #if !defined(CUTE_H264_ASSERT)
 	#include <assert.h>

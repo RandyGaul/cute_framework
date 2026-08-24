@@ -104,6 +104,7 @@ set(CF_SRCS
 	src/cute_draw.cpp
 	src/cute_draw3d.cpp
 	src/cute_image.cpp
+	src/cute_video.cpp
 	src/cute_model.cpp
 	src/cute_graphics.cpp
 	src/cute_graphics_sdlgpu.cpp
@@ -172,6 +173,7 @@ set(CF_PUBLIC_HDRS
 	include/cute_draw.h
 	include/cute_debug_printf.h
 	include/cute_image.h
+	include/cute_video.h
 	include/cute_color.h
 	include/cute.h
 	include/cute_graphics.h
