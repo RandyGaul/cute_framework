@@ -9224,6 +9224,23 @@ static cn_result_t s_send_packet_fn(int client_index, void* packet, int size, vo
 	return cn_protocol_server_send_to_client(server->p_server, packet, size, client_index);
 }
 
+// Destroy and recreate a client slot's transport, giving it fresh reliability state. Called on both
+// connect and disconnect so a slot never inherits the previous occupant's sequences or in-flight
+// fragments -- even if that occupant's DISCONNECTED event was dropped under event-queue pressure.
+static void s_server_reset_transport(cn_server_t* server, int client_index)
+{
+	if (server->client_transports[client_index]) {
+		cn_transport_destroy(server->client_transports[client_index]);
+	}
+	cn_transport_config_t transport_config = cn_transport_config_defaults();
+	transport_config.resend_rate = (float)server->config.resend_rate;
+	transport_config.index = client_index;
+	transport_config.send_packet_fn = s_send_packet_fn;
+	transport_config.udata = server;
+	transport_config.user_allocator_context = server->mem_ctx;
+	server->client_transports[client_index] = cn_transport_create(transport_config);
+}
+
 cn_server_t* cn_server_create(cn_server_config_t config)
 {
 	cn_result_t result = s_cn_init_check();
@@ -9306,6 +9323,9 @@ void cn_server_update(cn_server_t* server, double dt, uint64_t current_time)
 		switch (p_event.type) {
 		case CN_PROTOCOL_SERVER_EVENT_NEW_CONNECTION:
 		{
+			// Start the new client's transport clean, even if the previous occupant's DISCONNECTED
+			// event never made it through the queue.
+			s_server_reset_transport(server, p_event.u.new_connection.client_index);
 			cn_server_event_t e;
 			e.type = CN_SERVER_EVENT_TYPE_NEW_CONNECTION;
 			e.u.new_connection.client_index = p_event.u.new_connection.client_index;
@@ -9320,14 +9340,7 @@ void cn_server_update(cn_server_t* server, double dt, uint64_t current_time)
 			e.type = CN_SERVER_EVENT_TYPE_DISCONNECTED;
 			e.u.disconnected.client_index = p_event.u.disconnected.client_index;
 			s_server_event_push(server, &e);
-			cn_transport_destroy(server->client_transports[e.u.disconnected.client_index]);
-			cn_transport_config_t transport_config = cn_transport_config_defaults();
-			transport_config.resend_rate = (float)server->config.resend_rate;
-			transport_config.index = e.u.disconnected.client_index;
-			transport_config.send_packet_fn = s_send_packet_fn;
-			transport_config.udata = server;
-			transport_config.user_allocator_context = server->mem_ctx;
-			server->client_transports[e.u.disconnected.client_index] = cn_transport_create(transport_config);
+			s_server_reset_transport(server, e.u.disconnected.client_index);
 		}	break;
 
 		// Protocol packets are processed by the reliability transport layer before they

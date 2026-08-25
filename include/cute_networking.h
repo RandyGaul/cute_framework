@@ -811,6 +811,56 @@ CF_API int CF_CALL cf_snapshot_compress(const void* baseline, const void* curren
  */
 CF_API int CF_CALL cf_snapshot_decompress(const void* baseline, int size, const void* compressed, int compressed_size, void* out);
 
+//--------------------------------------------------------------------------------------------------
+// DEV CONVENIENCES
+//
+// Shortcuts for local development, singleplayer/listen-server, and tests. The "insecure" pair use a
+// fixed keypair compiled into CF, so they need no key exchange -- and provide no security. Never run
+// a real, exposed server with them; use cf_crypto_sign_keygen + the full flow for production.
+
+/**
+ * @function cf_make_server_insecure
+ * @category net
+ * @brief    Creates a server using CF's built-in development keypair. INSECURE -- local/testing only.
+ * @param    application_id  Your game id; must match the client.
+ * @remarks  Pairs with `cf_client_connect_insecure`. Anyone can forge tokens for this server, so it
+ *           is only appropriate for a machine you control (local dev, singleplayer, unit tests).
+ * @related  cf_client_connect_insecure cf_make_server cf_server_start
+ */
+CF_API CF_Server* CF_CALL cf_make_server_insecure(uint64_t application_id);
+
+/**
+ * @function cf_client_connect_insecure
+ * @category net
+ * @brief    Connects to a `cf_make_server_insecure` server in one call. INSECURE -- local/testing only.
+ * @param    address_and_port  The server to connect to, e.g. "127.0.0.1:5000".
+ * @param    application_id    Your game id; must match the server.
+ * @return   Returns any errors as a `CF_Result`.
+ * @remarks  Generates a connect token from CF's built-in development keypair (with a random client id
+ *           so many clients can connect) and connects -- no web service or key handling required.
+ * @related  cf_make_server_insecure cf_client_connect cf_make_client
+ */
+CF_API CF_Result CF_CALL cf_client_connect_insecure(CF_Client* client, const char* address_and_port, uint64_t application_id);
+
+/**
+ * @function cf_client_tick
+ * @category net
+ * @brief    Updates the client using CF's own clock (`CF_DELTA_TIME` and the system time).
+ * @remarks  A convenience over `cf_client_update` for games that just run on the app clock, so you
+ *           don't have to plumb `dt` and a unix timestamp by hand. Call once per frame.
+ * @related  cf_client_update cf_client_pop_packet
+ */
+CF_API void CF_CALL cf_client_tick(CF_Client* client);
+
+/**
+ * @function cf_server_tick
+ * @category net
+ * @brief    Updates the server using CF's own clock (`CF_DELTA_TIME` and the system time).
+ * @remarks  A convenience over `cf_server_update`. Call once per frame.
+ * @related  cf_server_update cf_server_pop_event
+ */
+CF_API void CF_CALL cf_server_tick(CF_Server* server);
+
 #ifdef __cplusplus
 }
 #endif // __cplusplus
@@ -959,6 +1009,14 @@ CF_INLINE void server_enable_network_simulator(Server* server, double latency, d
 
 CF_INLINE int snapshot_compress(const void* baseline, const void* current, int size, void* out, int out_capacity) { return cf_snapshot_compress(baseline,current,size,out,out_capacity); }
 CF_INLINE int snapshot_decompress(const void* baseline, int size, const void* compressed, int compressed_size, void* out) { return cf_snapshot_decompress(baseline,size,compressed,compressed_size,out); }
+
+//--------------------------------------------------------------------------------------------------
+// DEV CONVENIENCES
+
+CF_INLINE Server* make_server_insecure(uint64_t application_id) { return cf_make_server_insecure(application_id); }
+CF_INLINE CF_Result client_connect_insecure(Client* client, const char* address_and_port, uint64_t application_id) { return cf_client_connect_insecure(client,address_and_port,application_id); }
+CF_INLINE void client_tick(Client* client) { cf_client_tick(client); }
+CF_INLINE void server_tick(Server* server) { cf_server_tick(server); }
 
 }
 
