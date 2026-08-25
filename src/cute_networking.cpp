@@ -8,6 +8,8 @@
 #include <cute_networking.h>
 #include <cute_alloc.h>
 #include <cute_c_runtime.h>
+#include <cute_time.h>
+#include <time.h>
 
 // This entire file makes no sense for web builds, since web doesn't allow UDP.
 #ifndef CF_EMSCRIPTEN
@@ -291,6 +293,73 @@ int cf_snapshot_compress(const void* baseline, const void* current, int size, vo
 int cf_snapshot_decompress(const void* baseline, int size, const void* compressed, int compressed_size, void* out)
 {
 	return cf_arith_delta_decompress((const uint8_t*)baseline, size, (const uint8_t*)compressed, compressed_size, (uint8_t*)out);
+}
+
+//--------------------------------------------------------------------------------------------------
+// DEV CONVENIENCES
+
+// A fixed, well-known keypair so an insecure client and server interoperate with no key exchange.
+// INSECURE BY DESIGN: the secret is compiled into every build, so anyone can forge connect tokens.
+// For local development, singleplayer/listen-server, and tests only -- never ship a real server with
+// these keys. Generate real keys with cf_crypto_sign_keygen for production.
+static const uint8_t CF_DEV_SIGN_PUBLIC[32] = {
+	0x3b,0x88,0x0b,0x22,0xb6,0xe7,0x1a,0xee,0x77,0x73,0x90,0xb7,
+	0xf6,0xb3,0x03,0x07,0x65,0x34,0x62,0xc9,0x01,0x2c,0x45,0x18,
+	0xf4,0xce,0x45,0x08,0xfc,0xa8,0xd7,0x05,
+};
+static const uint8_t CF_DEV_SIGN_SECRET[64] = {
+	0x91,0xa2,0xfa,0xcf,0x3c,0x84,0x13,0x3b,0xa2,0x80,0x2b,0x6b,
+	0xd7,0xbf,0x3a,0xc8,0xa2,0xaa,0xbc,0xfe,0xb9,0xdf,0xbf,0x8b,
+	0x2f,0x14,0xd4,0x35,0xa3,0xdd,0x81,0x20,0x3b,0x88,0x0b,0x22,
+	0xb6,0xe7,0x1a,0xee,0x77,0x73,0x90,0xb7,0xf6,0xb3,0x03,0x07,
+	0x65,0x34,0x62,0xc9,0x01,0x2c,0x45,0x18,0xf4,0xce,0x45,0x08,
+	0xfc,0xa8,0xd7,0x05,
+};
+static const uint8_t CF_DEV_C2S_KEY[32] = {
+	0x87,0xdc,0xd5,0xbd,0x47,0x51,0x55,0xf2,0xe2,0x8d,0x3e,0x37,
+	0x97,0x36,0xef,0x36,0x5b,0xc6,0x90,0x1d,0x4c,0x10,0x3d,0x2f,
+	0xb6,0xec,0x34,0x90,0xc4,0x60,0xae,0xed,
+};
+static const uint8_t CF_DEV_S2C_KEY[32] = {
+	0x9f,0x33,0xde,0x4c,0x0d,0x05,0x57,0x0f,0x45,0xe0,0x42,0x41,
+	0x20,0x48,0x5f,0x2a,0x3c,0xd0,0x5a,0x36,0x31,0xfb,0x57,0x11,
+	0x6c,0xd1,0xcd,0x86,0xce,0xbd,0x8c,0x19,
+};
+
+CF_Server* cf_make_server_insecure(uint64_t application_id)
+{
+	CF_ServerConfig config = cf_server_config_defaults();
+	config.application_id = application_id;
+	CF_MEMCPY(&config.public_key, CF_DEV_SIGN_PUBLIC, sizeof(CF_DEV_SIGN_PUBLIC));
+	CF_MEMCPY(&config.secret_key, CF_DEV_SIGN_SECRET, sizeof(CF_DEV_SIGN_SECRET));
+	return cf_make_server(config);
+}
+
+CF_Result cf_client_connect_insecure(CF_Client* client, const char* address_and_port, uint64_t application_id)
+{
+	CF_CryptoKey c2s, s2c;
+	CF_CryptoSignSecret sk;
+	CF_MEMCPY(&c2s, CF_DEV_C2S_KEY, sizeof(CF_DEV_C2S_KEY));
+	CF_MEMCPY(&s2c, CF_DEV_S2C_KEY, sizeof(CF_DEV_S2C_KEY));
+	CF_MEMCPY(&sk, CF_DEV_SIGN_SECRET, sizeof(CF_DEV_SIGN_SECRET));
+	uint64_t now = (uint64_t)time(NULL);
+	uint64_t client_id = 0;
+	cf_crypto_random_bytes(&client_id, sizeof(client_id)); // Distinct per client so many can connect.
+	const char* addrs[1] = { address_and_port };
+	uint8_t token[CF_CONNECT_TOKEN_SIZE];
+	CF_Result r = cf_generate_connect_token(application_id, now, &c2s, &s2c, now + 31536000ull, 10, 1, addrs, client_id, NULL, &sk, token);
+	if (cf_is_error(r)) return r;
+	return cf_client_connect(client, token);
+}
+
+void cf_client_tick(CF_Client* client)
+{
+	cf_client_update(client, CF_DELTA_TIME, (uint64_t)time(NULL));
+}
+
+void cf_server_tick(CF_Server* server)
+{
+	cf_server_update(server, CF_DELTA_TIME, (uint64_t)time(NULL));
 }
 
 #endif // CF_EMSCRIPTEN
