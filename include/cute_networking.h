@@ -14,7 +14,12 @@
 #ifndef CF_EMSCRIPTEN
 
 #include "cute_result.h"
-#include <cute/cute_net.h>
+
+// CF owns its networking API surface outright: the underlying cute_net library is an
+// implementation detail hidden inside cute_networking.cpp, never exposed here. The types below are
+// CF-defined with layouts that match cute_net's, and the source file static-asserts that match so
+// the two never drift. Keeping cute_net behind this wall is what lets CF add conveniences (stats,
+// broadcast) and, later, a packet compression / delta-encoding layer without leaking a second API.
 
 //--------------------------------------------------------------------------------------------------
 // C API
@@ -29,7 +34,7 @@ extern "C" {
  * @brief    An opaque pointer representing a single networked client.
  * @related  CF_Client CF_Server cf_make_client
  */
-typedef struct cn_client_t CF_Client;
+typedef struct CF_Client CF_Client;
 // @end
 
 /**
@@ -38,7 +43,7 @@ typedef struct cn_client_t CF_Client;
  * @brief    An opaque pointer representing a single networked server.
  * @related  CF_Client CF_Server cf_make_client
  */
-typedef struct cn_server_t CF_Server;
+typedef struct CF_Server CF_Server;
 // @end
 
 /**
@@ -47,7 +52,7 @@ typedef struct cn_server_t CF_Server;
  * @brief    A chunk of bytes representing a cryptographically secure key.
  * @related  CF_CryptoKey cf_crypto_generate_key cf_generate_connect_token
  */
-typedef struct cn_crypto_key_t CF_CryptoKey;
+typedef struct CF_CryptoKey { uint8_t bytes[32]; } CF_CryptoKey;
 // @end
 
 /**
@@ -56,7 +61,7 @@ typedef struct cn_crypto_key_t CF_CryptoKey;
  * @brief    One-half of a cryptographically secure keypair. This key can be freely shared to the public.
  * @related  CF_CryptoKey CF_CryptoSignPublic CF_CryptoSignSecret cf_crypto_sign_keygen CF_ServerConfig
  */
-typedef struct cn_crypto_sign_public_t CF_CryptoSignPublic;
+typedef struct CF_CryptoSignPublic { uint8_t bytes[32]; } CF_CryptoSignPublic;
 // @end
 
 /**
@@ -65,22 +70,11 @@ typedef struct cn_crypto_sign_public_t CF_CryptoSignPublic;
  * @brief    One-half of a cryptographically secure keypair. This key must be kept secret and hidden with your servers.
  * @related  CF_CryptoKey CF_CryptoSignPublic CF_CryptoSignSecret cf_crypto_sign_keygen CF_ServerConfig
  */
-typedef struct cn_crypto_sign_secret_t CF_CryptoSignSecret;
+typedef struct CF_CryptoSignSecret { uint8_t bytes[64]; } CF_CryptoSignSecret;
 // @end
 
 //--------------------------------------------------------------------------------------------------
 // ENDPOINT
-
-/**
- * @struct   CF_Address
- * @category net
- * @brief    A network address.
- * @related  CF_Address CF_AddressType cf_address_init
- */
-typedef struct cn_endpoint_t CF_Address;
-// @end
-
-typedef enum cn_address_type_t CF_AddressType;
 
 /**
  * @enum     CF_AddressType
@@ -97,12 +91,56 @@ typedef enum cn_address_type_t CF_AddressType;
 	CF_ENUM(ADDRESS_TYPE_IPV6, 2)          \
 	/* @end */
 
-enum
+typedef enum CF_AddressType
 {
 	#define CF_ENUM(K, V) CF_##K = V,
 	CF_ADDRESS_TYPE_DEFS
 	#undef CF_ENUM
-};
+} CF_AddressType;
+
+/**
+ * @function cf_address_type_to_string
+ * @category net
+ * @brief    Convert an enum `CF_AddressType` to a C string.
+ * @related  CF_Address CF_AddressType
+ */
+CF_INLINE const char* cf_address_type_to_string(CF_AddressType type)
+{
+	switch (type) {
+	#define CF_ENUM(K, V) case CF_##K: return CF_STRINGIZE(CF_##K);
+	CF_ADDRESS_TYPE_DEFS
+	#undef CF_ENUM
+	default: return NULL;
+	}
+}
+
+/**
+ * @struct   CF_Address
+ * @category net
+ * @brief    A network address.
+ * @remarks  Layout matches the underlying transport's endpoint type; treat it as a value you obtain
+ *           from `cf_address_init` or a `CF_ServerEvent`, compare with `cf_address_equals`, and print
+ *           with `cf_address_to_string`.
+ * @related  CF_Address CF_AddressType cf_address_init cf_address_to_string cf_address_equals
+ */
+typedef struct CF_Address
+{
+	/* @member The address family. See `CF_AddressType`. */
+	CF_AddressType type;
+
+	/* @member The port number. */
+	uint16_t port;
+
+	union
+	{
+		/* @member The four octets of an IPv4 address. */
+		uint8_t ipv4[4];
+
+		/* @member The eight groups of an IPv6 address. */
+		uint16_t ipv6[8];
+	} u;
+} CF_Address;
+// @end
 
 /**
  * @function cf_address_init
@@ -111,7 +149,7 @@ enum
  * @return   Returns 0 on success, -1 on failure.
  * @related  CF_Address cf_address_init cf_address_to_string cf_address_equals
  */
-CF_API int CF_CALL cf_address_init(CF_Address* endpoint, const char* address_and_port_string);
+CF_API int CF_CALL cf_address_init(CF_Address* address, const char* address_and_port_string);
 
 /**
  * @function cf_address_to_string
@@ -119,15 +157,16 @@ CF_API int CF_CALL cf_address_init(CF_Address* endpoint, const char* address_and
  * @brief    Converts a `CF_Address` to a C string.
  * @related  CF_Address cf_address_init cf_address_to_string cf_address_equals
  */
-CF_API void CF_CALL cf_address_to_string(CF_Address endpoint, char* buffer, int buffer_size);
+CF_API void CF_CALL cf_address_to_string(CF_Address address, char* buffer, int buffer_size);
 
 /**
  * @function cf_address_equals
  * @category net
- * @brief    Tests two endpoints for equality.
+ * @brief    Tests two addresses for equality.
+ * @return   Returns true if the two addresses are equal.
  * @related  CF_Address cf_address_init cf_address_to_string cf_address_equals
  */
-CF_API int CF_CALL cf_address_equals(CF_Address a, CF_Address b);
+CF_API bool CF_CALL cf_address_equals(CF_Address a, CF_Address b);
 
 //--------------------------------------------------------------------------------------------------
 // CONNECT TOKEN
@@ -195,14 +234,14 @@ CF_API void CF_CALL cf_crypto_sign_keygen(CF_CryptoSignPublic* public_key, CF_Cr
  * @param    token_ptr_out         Pointer to your buffer, should be `CF_CONNECT_TOKEN_SIZE` bytes large.
  * @return   Returns any errors as `CF_Result`.
  * @remarks  You can use this function whenever a validated client wants to join your game servers.
- *           
+ *
  *           It's recommended to setup a web service specifically for allowing players to authenticate
  *           themselves (login). Once authenticated, the webservice can call this function and hand
  *           the connect token to the client. The client can then read the public section of the
  *           connect token and see the `address_list` of servers to try and connect to. The client then
  *           sends the connect token to one of these servers to start the connection handshake. If the
  *           handshake completes successfully, the client will connect to the server.
- *           
+ *
  *           The connect token is protected by an AEAD primitive (https://en.wikipedia.org/wiki/Authenticated_encryption),
  *           which means the token cannot be modified or forged as long as the `shared_secret_key` is
  *           not leaked. In the event your secret key is accidentally leaked, you can always roll a
@@ -241,7 +280,7 @@ CF_API void CF_CALL cf_destroy_client(CF_Client* client);
  * @return   Returns any errors as a `CF_Result`.
  * @remarks  The client will make an attempt to connect to all servers listed in the connect token, one after
  *           another. If no server can be connected to the client's state will be set to an error state. Call
- *           `cf_client_state_get` to get the client's state. Once `cf_client_connect` is called then successive calls to
+ *           `cf_client_state` to get the client's state. Once `cf_client_connect` is called then successive calls to
  *           `cf_client_update` is expected, where `cf_client_update` will perform the connection handshake and make
  *           connection attempts to your servers.
  * @related  CF_Client cf_make_client cf_destroy_client cf_client_connect cf_client_disconnect cf_client_update
@@ -298,12 +337,12 @@ CF_API void CF_CALL cf_client_free_packet(CF_Client* client, void* packet);
  *                              may arrive out of order, or not at all.
  * @return   Returns any errors as a `CF_Result`.
  * @remarks  If the packet size is too large (over 1k bytes) it will be split up and sent in smaller chunks.
- *           
+ *
  *           `send_reliably` as true means the packet will be sent reliably an in-order relative to other
  *           reliable packets. Under packet loss the packet will continually be sent until an acknowledgement
  *           from the server is received. False means to send a typical UDP packet, with no special mechanisms
  *           regarding packet loss.
- *           
+ *
  *           Reliable packets are significantly more expensive than unreliable packets, so try to send any data
  *           that can be lost due to packet loss as an unreliable packet. Of course, some packets are required
  *           to be sent, and so reliable is appropriate. As an optimization some kinds of data, such as frequent
@@ -317,7 +356,7 @@ CF_API CF_Result CF_CALL cf_client_send(CF_Client* client, const void* packet, i
  * @category net
  * @brief    The various states of a `CF_Client`.
  * @remarks  Anything less than or equal to 0 is an error.
- * @related  CF_ClientState cf_client_state_to_string cf_client_state_get
+ * @related  CF_ClientState cf_client_state_to_string cf_client_state
  */
 #define CF_CLIENT_STATE_DEFS \
 	/* @entry The connect token has expired. */ \
@@ -354,7 +393,7 @@ typedef enum CF_ClientState
  * @category net
  * @brief    Convert an enum `CF_ClientState` to a c-style string.
  * @param    state        The state to convert to a string.
- * @related  CF_ClientState cf_client_state_to_string cf_client_state_get
+ * @related  CF_ClientState cf_client_state_to_string cf_client_state
  */
 CF_INLINE const char* cf_client_state_to_string(CF_ClientState state)
 {
@@ -367,12 +406,53 @@ CF_INLINE const char* cf_client_state_to_string(CF_ClientState state)
 }
 
 /**
+ * @function cf_client_state
+ * @category net
+ * @brief    Returns the `CF_ClientState` of a `CF_Client`.
+ * @related  CF_ClientState cf_client_state_to_string cf_client_state
+ */
+CF_API CF_ClientState CF_CALL cf_client_state(const CF_Client* client);
+
+/**
  * @function cf_client_state_get
  * @category net
  * @brief    Returns the `CF_ClientState` of a `CF_Client`.
- * @related  CF_ClientState cf_client_state_to_string cf_client_state_get
+ * @deprecated Use cf_client_state instead.
+ * @related  CF_ClientState cf_client_state_to_string cf_client_state
  */
-CF_API CF_ClientState CF_CALL cf_client_state_get(const CF_Client* client);
+CF_INLINE CF_ClientState cf_client_state_get(const CF_Client* client) { return cf_client_state(client); }
+
+/**
+ * @function cf_client_rtt
+ * @category net
+ * @brief    Returns the client's estimated round-trip time to the server, in milliseconds.
+ * @related  CF_Client cf_client_rtt cf_client_packet_loss cf_client_incoming_kbps cf_client_outgoing_kbps
+ */
+CF_API float CF_CALL cf_client_rtt(CF_Client* client);
+
+/**
+ * @function cf_client_packet_loss
+ * @category net
+ * @brief    Returns the client's estimated packet loss, from 0 (none) to 1 (all).
+ * @related  CF_Client cf_client_rtt cf_client_packet_loss cf_client_incoming_kbps cf_client_outgoing_kbps
+ */
+CF_API float CF_CALL cf_client_packet_loss(CF_Client* client);
+
+/**
+ * @function cf_client_incoming_kbps
+ * @category net
+ * @brief    Returns the client's estimated incoming bandwidth in kilobits per second.
+ * @related  CF_Client cf_client_rtt cf_client_packet_loss cf_client_incoming_kbps cf_client_outgoing_kbps
+ */
+CF_API float CF_CALL cf_client_incoming_kbps(CF_Client* client);
+
+/**
+ * @function cf_client_outgoing_kbps
+ * @category net
+ * @brief    Returns the client's estimated outgoing bandwidth in kilobits per second.
+ * @related  CF_Client cf_client_rtt cf_client_packet_loss cf_client_incoming_kbps cf_client_outgoing_kbps
+ */
+CF_API float CF_CALL cf_client_outgoing_kbps(CF_Client* client);
 
 /**
  * @function cf_client_enable_network_simulator
@@ -390,7 +470,14 @@ CF_API void CF_CALL cf_client_enable_network_simulator(CF_Client* client, double
 //--------------------------------------------------------------------------------------------------
 // SERVER
 
-// Modify this value as seen fit.
+/**
+ * @function CF_SERVER_MAX_CLIENTS
+ * @category net
+ * @brief    The maximum number of clients a single `CF_Server` supports.
+ * @remarks  This is fixed at compile time. Raising it requires rebuilding CF (it also sizes the
+ *           underlying transport's per-client state), so it is not a value you can tune per-server.
+ * @related  CF_Server cf_make_server
+ */
 #define CF_SERVER_MAX_CLIENTS 32
 
 /**
@@ -404,12 +491,6 @@ typedef struct CF_ServerConfig
 {
 	/* @member A unique number to identify your game, can be whatever value you like. This must be the same number as in `client_make`. */
 	uint64_t application_id;
-
-	/* @member Not implemented yet. */
-	int max_incoming_bytes_per_second;
-
-	/* @member Not implemented yet. */
-	int max_outgoing_bytes_per_second;
 
 	/* @member The number of seconds before consider a connection as timed out when not receiving any packets on the connection. */
 	int connection_timeout;
@@ -429,14 +510,13 @@ typedef struct CF_ServerConfig
  * @function cf_server_config_defaults
  * @category net
  * @brief    Returns a good set of default parameters for `cf_make_server`.
+ * @remarks  The keypair is zeroed; fill in `public_key`/`secret_key` (see `cf_crypto_sign_keygen`)
+ *           and `application_id` before calling `cf_make_server`.
  * @related  CF_ServerConfig cf_server_config_defaults cf_make_server
  */
 CF_INLINE CF_ServerConfig CF_CALL cf_server_config_defaults(void)
 {
-	CF_ServerConfig config;
-	config.application_id = 0;
-	config.max_incoming_bytes_per_second = 0;
-	config.max_outgoing_bytes_per_second = 0;
+	CF_ServerConfig config = { 0 };
 	config.connection_timeout = 10;
 	config.resend_rate = 0.1f;
 	return config;
@@ -464,10 +544,11 @@ CF_API void CF_CALL cf_destroy_server(CF_Server* server);
  * @category net
  * @brief    Starts up the server connection, ready to receive new client connections.
  * @param    address_and_port  The address and port combo to start the server upon.
+ * @return   Returns any errors as a `CF_Result`.
  * @remarks  Please note that not all users will be able to access an ipv6 server address, so it might be good to also provide a way to connect through ipv4.
  * @related  CF_ServerConfig cf_server_config_defaults cf_make_server cf_destroy_server cf_server_start cf_server_update
  */
-CF_API CF_Result cf_server_start(CF_Server* server, const char* address_and_port);
+CF_API CF_Result CF_CALL cf_server_start(CF_Server* server, const char* address_and_port);
 
 /**
  * @function cf_server_stop
@@ -475,7 +556,19 @@ CF_API CF_Result cf_server_start(CF_Server* server, const char* address_and_port
  * @brief    Stops the server.
  * @related  CF_ServerConfig cf_server_config_defaults cf_make_server cf_destroy_server cf_server_start cf_server_update
  */
-CF_API void cf_server_stop(CF_Server* server);
+CF_API void CF_CALL cf_server_stop(CF_Server* server);
+
+/**
+ * @function cf_server_set_public_ip
+ * @category net
+ * @brief    Overrides the public address clients are told to connect to (for NAT / port-forwarding).
+ * @param    server            The server.
+ * @param    address_and_port  The publicly reachable address and port clients should use.
+ * @remarks  Only needed for local development behind a router, or any setup where the address the
+ *           server binds differs from the address clients must reach. Leave unset in production.
+ * @related  CF_Server cf_server_start
+ */
+CF_API void CF_CALL cf_server_set_public_ip(CF_Server* server, const char* address_and_port);
 
 /**
  * @enum     CF_ServerEventType
@@ -503,7 +596,7 @@ typedef enum CF_ServerEventType
  * @function cf_server_event_type_to_string
  * @category net
  * @brief    Convert an enum `CF_ServerEventType` to a c-style string.
- * @param    state        The state to convert to a string.
+ * @param    type        The type to convert to a string.
  * @related  CF_ServerEventType cf_server_event_type_to_string CF_ServerEvent cf_server_pop_event
  */
 CF_INLINE const char* cf_server_event_type_to_string(CF_ServerEventType type)
@@ -607,9 +700,23 @@ CF_API void CF_CALL cf_server_disconnect_client(CF_Server* server, int client_in
  * @param    client_index   An index representing a particular client, from `CF_ServerEvent`.
  * @param    send_reliably  If `true` the packet will be sent reliably and in order. If false the packet will be sent just once, and may
  *                          arrive out of order or not at all.
- * @related  cf_server_update CF_ServerEvent cf_server_pop_event cf_server_send
+ * @return   Returns any errors as a `CF_Result` (e.g. the send queue being full).
+ * @related  cf_server_update cf_server_send cf_server_send_to_all CF_ServerEvent cf_server_pop_event
  */
-CF_API void CF_CALL cf_server_send(CF_Server* server, const void* packet, int size, int client_index, bool send_reliably);
+CF_API CF_Result CF_CALL cf_server_send(CF_Server* server, const void* packet, int size, int client_index, bool send_reliably);
+
+/**
+ * @function cf_server_send_to_all
+ * @category net
+ * @brief    Sends a packet to every connected client.
+ * @param    server         The server.
+ * @param    packet         Data to send.
+ * @param    size           Size of `data` in bytes.
+ * @param    send_reliably  If `true` the packet is sent reliably and in order to each client.
+ * @remarks  A convenience over looping every client index and checking `cf_server_is_client_connected`.
+ * @related  cf_server_send cf_server_send_to_all cf_server_is_client_connected
+ */
+CF_API void CF_CALL cf_server_send_to_all(CF_Server* server, const void* packet, int size, bool send_reliably);
 
 /**
  * @function cf_server_is_client_connected
@@ -620,9 +727,41 @@ CF_API void CF_CALL cf_server_send(CF_Server* server, const void* packet, int si
 CF_API bool CF_CALL cf_server_is_client_connected(CF_Server* server, int client_index);
 
 /**
+ * @function cf_server_rtt
+ * @category net
+ * @brief    Returns the estimated round-trip time to a client, in milliseconds.
+ * @related  CF_Server cf_server_rtt cf_server_packet_loss cf_server_incoming_kbps cf_server_outgoing_kbps
+ */
+CF_API float CF_CALL cf_server_rtt(CF_Server* server, int client_index);
+
+/**
+ * @function cf_server_packet_loss
+ * @category net
+ * @brief    Returns the estimated packet loss to a client, from 0 (none) to 1 (all).
+ * @related  CF_Server cf_server_rtt cf_server_packet_loss cf_server_incoming_kbps cf_server_outgoing_kbps
+ */
+CF_API float CF_CALL cf_server_packet_loss(CF_Server* server, int client_index);
+
+/**
+ * @function cf_server_incoming_kbps
+ * @category net
+ * @brief    Returns the estimated incoming bandwidth from a client in kilobits per second.
+ * @related  CF_Server cf_server_rtt cf_server_packet_loss cf_server_incoming_kbps cf_server_outgoing_kbps
+ */
+CF_API float CF_CALL cf_server_incoming_kbps(CF_Server* server, int client_index);
+
+/**
+ * @function cf_server_outgoing_kbps
+ * @category net
+ * @brief    Returns the estimated outgoing bandwidth to a client in kilobits per second.
+ * @related  CF_Server cf_server_rtt cf_server_packet_loss cf_server_incoming_kbps cf_server_outgoing_kbps
+ */
+CF_API float CF_CALL cf_server_outgoing_kbps(CF_Server* server, int client_index);
+
+/**
  * @function cf_server_enable_network_simulator
  * @category net
- * @brief    Turns on the network simulator for a client.
+ * @brief    Turns on the network simulator for a server.
  * @param    server           The server.
  * @param    latency          A number of seconds of latency to add to the connection.
  * @param    jitter           The variability of latency.
@@ -631,6 +770,46 @@ CF_API bool CF_CALL cf_server_is_client_connected(CF_Server* server, int client_
  * @related  CF_Server
  */
 CF_API void CF_CALL cf_server_enable_network_simulator(CF_Server* server, double latency, double jitter, double drop_chance, double duplicate_chance);
+
+//--------------------------------------------------------------------------------------------------
+// COMPRESSION
+//
+// Delta + entropy compression for game snapshots, built on CF's adaptive range coder (cute_arith.h).
+// The intended flow for server-authoritative state: keep the last snapshot each client has
+// acknowledged as a baseline, `cf_snapshot_compress` the new snapshot against it, and send the
+// (usually tiny) result with `cf_server_send`. The client decompresses against the same baseline.
+// Unchanged fields cost almost nothing, so bandwidth scales with what actually moved, not with
+// world size. Baselines and which one a peer holds are the caller's to track for now.
+
+/**
+ * @function cf_snapshot_compress
+ * @category net
+ * @brief    Delta-compresses a snapshot against a baseline of the same size.
+ * @param    baseline        The previous snapshot to delta against, or `NULL` to compress against all-zero.
+ * @param    current         The new snapshot to compress. Must be `size` bytes.
+ * @param    size            The size of both snapshots in bytes.
+ * @param    out             Destination buffer for the compressed bytes.
+ * @param    out_capacity    Capacity of `out` in bytes.
+ * @return   Returns the compressed size in bytes, or -1 if it did not fit in `out_capacity`.
+ * @remarks  `baseline` and `current` must have identical layout and size; only their differences
+ *           are encoded. Decompress with `cf_snapshot_decompress` and the same baseline.
+ * @related  cf_snapshot_decompress cf_client_send cf_server_send
+ */
+CF_API int CF_CALL cf_snapshot_compress(const void* baseline, const void* current, int size, void* out, int out_capacity);
+
+/**
+ * @function cf_snapshot_decompress
+ * @category net
+ * @brief    Reconstructs a snapshot from a baseline and a compressed delta.
+ * @param    baseline        The same baseline passed to `cf_snapshot_compress` (or `NULL`).
+ * @param    size            The snapshot size in bytes (known to both sides).
+ * @param    compressed      The compressed delta bytes.
+ * @param    compressed_size The number of compressed bytes.
+ * @param    out             Destination buffer for the reconstructed snapshot, `size` bytes.
+ * @return   Returns 0 on success.
+ * @related  cf_snapshot_compress cf_client_pop_packet cf_server_pop_event
+ */
+CF_API int CF_CALL cf_snapshot_decompress(const void* baseline, int size, const void* compressed, int compressed_size, void* out);
 
 #ifdef __cplusplus
 }
@@ -663,9 +842,9 @@ enum : int
 	#undef CF_ENUM
 };
 
-CF_INLINE int address_init(Address* endpoint, const char* address_and_port_string) { return cf_address_init(endpoint,address_and_port_string); }
-CF_INLINE void address_to_string(Address endpoint, char* buffer, int buffer_size) { cf_address_to_string(endpoint,buffer,buffer_size); }
-CF_INLINE int address_equals(Address a, Address b) { return cf_address_equals(a,b); }
+CF_INLINE int address_init(Address* address, const char* address_and_port_string) { return cf_address_init(address,address_and_port_string); }
+CF_INLINE void address_to_string(Address address, char* buffer, int buffer_size) { cf_address_to_string(address,buffer,buffer_size); }
+CF_INLINE bool address_equals(Address a, Address b) { return cf_address_equals(a,b); }
 
 //--------------------------------------------------------------------------------------------------
 // CONNECT TOKEN
@@ -728,7 +907,11 @@ CF_INLINE void client_update(Client* client, double dt, uint64_t current_time) {
 CF_INLINE bool client_pop_packet(Client* client, void** packet, int* size, bool* was_sent_reliably = NULL) { return cf_client_pop_packet(client,packet,size,was_sent_reliably); }
 CF_INLINE void client_free_packet(Client* client, void* packet) { cf_client_free_packet(client,packet); }
 CF_INLINE CF_Result client_send(Client* client, const void* packet, int size, bool send_reliably) { return cf_client_send(client,packet,size,send_reliably); }
-CF_INLINE ClientState client_state_get(const Client* client) { return cf_client_state_get(client); }
+CF_INLINE ClientState client_state(const Client* client) { return cf_client_state(client); }
+CF_INLINE float client_rtt(Client* client) { return cf_client_rtt(client); }
+CF_INLINE float client_packet_loss(Client* client) { return cf_client_packet_loss(client); }
+CF_INLINE float client_incoming_kbps(Client* client) { return cf_client_incoming_kbps(client); }
+CF_INLINE float client_outgoing_kbps(Client* client) { return cf_client_outgoing_kbps(client); }
 CF_INLINE void client_enable_network_simulator(Client* client, double latency, double jitter, double drop_chance, double duplicate_chance) { cf_client_enable_network_simulator(client,latency,jitter,drop_chance,duplicate_chance); }
 
 //--------------------------------------------------------------------------------------------------
@@ -757,13 +940,25 @@ CF_INLINE Server* make_server(ServerConfig config) { return cf_make_server(confi
 CF_INLINE void destroy_server(Server* server) { cf_destroy_server(server); }
 CF_INLINE CF_Result server_start(Server* server, const char* address_and_port) { return cf_server_start(server,address_and_port); }
 CF_INLINE void server_stop(Server* server) { cf_server_stop(server); }
+CF_INLINE void server_set_public_ip(Server* server, const char* address_and_port) { cf_server_set_public_ip(server,address_and_port); }
 CF_INLINE bool server_pop_event(Server* server, ServerEvent* event) { return cf_server_pop_event(server,event); }
 CF_INLINE void server_free_packet(Server* server, int client_index, void* data) { cf_server_free_packet(server,client_index,data); }
 CF_INLINE void server_update(Server* server, double dt, uint64_t current_time) { cf_server_update(server,dt,current_time); }
 CF_INLINE void server_disconnect_client(Server* server, int client_index, bool notify_client = true) { cf_server_disconnect_client(server, client_index, notify_client); }
-CF_INLINE void server_send(Server* server, const void* packet, int size, int client_index, bool send_reliably) { cf_server_send(server,packet,size,client_index,send_reliably); }
+CF_INLINE CF_Result server_send(Server* server, const void* packet, int size, int client_index, bool send_reliably) { return cf_server_send(server,packet,size,client_index,send_reliably); }
+CF_INLINE void server_send_to_all(Server* server, const void* packet, int size, bool send_reliably) { cf_server_send_to_all(server,packet,size,send_reliably); }
 CF_INLINE bool server_is_client_connected(Server* server, int client_index) { return cf_server_is_client_connected(server,client_index); }
+CF_INLINE float server_rtt(Server* server, int client_index) { return cf_server_rtt(server,client_index); }
+CF_INLINE float server_packet_loss(Server* server, int client_index) { return cf_server_packet_loss(server,client_index); }
+CF_INLINE float server_incoming_kbps(Server* server, int client_index) { return cf_server_incoming_kbps(server,client_index); }
+CF_INLINE float server_outgoing_kbps(Server* server, int client_index) { return cf_server_outgoing_kbps(server,client_index); }
 CF_INLINE void server_enable_network_simulator(Server* server, double latency, double jitter, double drop_chance, double duplicate_chance) { cf_server_enable_network_simulator(server,latency,jitter,drop_chance,duplicate_chance); }
+
+//--------------------------------------------------------------------------------------------------
+// COMPRESSION
+
+CF_INLINE int snapshot_compress(const void* baseline, const void* current, int size, void* out, int out_capacity) { return cf_snapshot_compress(baseline,current,size,out,out_capacity); }
+CF_INLINE int snapshot_decompress(const void* baseline, int size, const void* compressed, int compressed_size, void* out) { return cf_snapshot_decompress(baseline,size,compressed,compressed_size,out); }
 
 }
 

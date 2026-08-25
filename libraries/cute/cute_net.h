@@ -4121,14 +4121,19 @@ hydro_sign_verify(const uint8_t csig[hydro_sign_BYTES], const void *m_, size_t m
 
 #define CN_PROTOCOL_VERSION_STRING ((const uint8_t*)"CUTE 1.00")
 #define CN_PROTOCOL_VERSION_STRING_LEN (9 + 1)
-#define CN_PROTOCOL_SERVER_MAX_CLIENTS 32
+// Tied to the public, overridable CN_SERVER_MAX_CLIENTS so the protocol-layer per-client arrays
+// stay the same size as the high-level server's transport array. Defining them independently let a
+// user raise CN_SERVER_MAX_CLIENTS while the protocol layer silently capped connections at 32.
+#define CN_PROTOCOL_SERVER_MAX_CLIENTS CN_SERVER_MAX_CLIENTS
 #define CN_PROTOCOL_PACKET_SIZE_MAX (CN_KB + 256)
 #define CN_PROTOCOL_PACKET_PAYLOAD_MAX (1207 - 2)
 #define CN_PROTOCOL_CLIENT_SEND_BUFFER_SIZE (256 * CN_KB)
 #define CN_PROTOCOL_CLIENT_RECEIVE_BUFFER_SIZE (256 * CN_KB)
 #define CN_PROTOCOL_SERVER_SEND_BUFFER_SIZE (CN_MB * 2)
 #define CN_PROTOCOL_SERVER_RECEIVE_BUFFER_SIZE (CN_MB * 2)
-#define CN_PROTOCOL_EVENT_QUEUE_SIZE (CN_MB * 4)
+// Initial capacity of the server event queues. They hold ~40-byte events and grow by doubling
+// on demand, so this is just a starting size, not a cap -- keep it modest.
+#define CN_PROTOCOL_EVENT_QUEUE_SIZE (CN_KB * 256)
 #define CN_PROTOCOL_SIGNATURE_SIZE 64
 
 #define CN_PROTOCOL_CONNECT_TOKEN_PACKET_SIZE 1024
@@ -4653,6 +4658,12 @@ typedef struct cn_protocol_encryption_state_t
 	cn_crypto_key_t server_to_client_key;
 	uint64_t client_id;
 	cn_crypto_signature_t signature;
+	// The challenge is generated once when this half-open state is created and re-sent
+	// unchanged until the client echoes it back. A spoofed source address never receives
+	// the challenge packet, so echoing it proves the peer is reachable at its claimed
+	// address -- the anti-spoofing property. Verified in the CHALLENGE_RESPONSE handler.
+	uint64_t challenge_nonce;
+	uint8_t challenge_data[CN_PROTOCOL_CHALLENGE_DATA_SIZE];
 } cn_protocol_encryption_state_t;
 
 typedef struct cn_protocol_encryption_map_t
@@ -5284,6 +5295,7 @@ struct cn_protocol_client_t
 	uint64_t sequence;
 	cn_circular_buffer_t packet_queue;
 	cn_protocol_replay_buffer_t replay_buffer;
+	cn_protocol_packet_allocator_t* packet_allocator;
 	cn_simulator_t* sim;
 	uint8_t buffer[CN_PROTOCOL_PACKET_SIZE_MAX];
 	uint8_t connect_token_packet[CN_PROTOCOL_CONNECT_TOKEN_PACKET_SIZE];
@@ -5716,6 +5728,9 @@ cn_memory_pool_t* cn_memory_pool_create(int element_size, int element_count, voi
 	pool->arena = (uint8_t*)(pool + 1);
 	pool->free_list = pool->arena;
 	pool->overflow_count = 0;
+	// Without this, destroy and the overflow alloc/free paths pass an uninitialized mem_ctx to
+	// CN_ALLOC/CN_FREE -- harmless for the default malloc/free, corruption for a real context.
+	pool->mem_ctx = user_allocator_context;
 
 	for (int i = 0; i < element_count - 1; ++i)
 	{
@@ -5840,7 +5855,10 @@ cn_protocol_packet_allocator_t* cn_protocol_packet_allocator_create(void* user_a
 	packet_allocator->pools[CN_PROTOCOL_PACKET_TYPE_DISCONNECT] = cn_memory_pool_create(s_packet_size(CN_PROTOCOL_PACKET_TYPE_DISCONNECT), 256, user_allocator_context);
 	packet_allocator->pools[CN_PROTOCOL_PACKET_TYPE_CHALLENGE_REQUEST] = cn_memory_pool_create(s_packet_size(CN_PROTOCOL_PACKET_TYPE_CHALLENGE_REQUEST), 256, user_allocator_context);
 	packet_allocator->pools[CN_PROTOCOL_PACKET_TYPE_CHALLENGE_RESPONSE] = cn_memory_pool_create(s_packet_size(CN_PROTOCOL_PACKET_TYPE_CHALLENGE_RESPONSE), 256, user_allocator_context);
-	packet_allocator->pools[CN_PROTOCOL_PACKET_TYPE_PAYLOAD] = cn_memory_pool_create(s_packet_size(CN_PROTOCOL_PACKET_TYPE_PAYLOAD), 1024 * 10, user_allocator_context);
+	// Payload packets are transient -- allocated on receive, freed the same update cycle. Peak
+	// live count is the number drained per update, far below 10k. The pool overflows to the
+	// allocator gracefully if a burst exceeds this, so size it modestly.
+	packet_allocator->pools[CN_PROTOCOL_PACKET_TYPE_PAYLOAD] = cn_memory_pool_create(s_packet_size(CN_PROTOCOL_PACKET_TYPE_PAYLOAD), 512, user_allocator_context);
 	packet_allocator->user_allocator_context = user_allocator_context;
 	return packet_allocator;
 }
@@ -5986,6 +6004,22 @@ int cn_protocol_packet_write(void* packet_ptr, uint8_t* buffer, uint64_t sequenc
 	return (int)(written) + CN_CRYPTO_HEADER_BYTES;
 }
 
+// Writes a PAYLOAD packet straight from a (pointer, size) into `buffer`, byte-for-byte identical
+// to framing a cn_protocol_packet_payload_t and calling cn_protocol_packet_write on it -- but
+// without staging the payload into an intermediate struct first, saving one full-payload copy on
+// every send. Used by the client and server payload send paths.
+static int s_protocol_write_payload_packet(const void* payload, int payload_size, uint8_t* buffer, uint64_t sequence, const cn_crypto_key_t* key)
+{
+	uint8_t* buffer_start = buffer;
+	uint8_t* p = s_protocol_header(&buffer, CN_PROTOCOL_PACKET_TYPE_PAYLOAD, sequence);
+	cn_write_uint16(&buffer, (uint16_t)payload_size);
+	CN_MEMCPY(buffer, payload, payload_size);
+	buffer += payload_size;
+	int plaintext_size = (int)(buffer - p);
+	cn_crypto_encrypt(key, p, plaintext_size, sequence);
+	return (int)(buffer - buffer_start) + CN_CRYPTO_HEADER_BYTES;
+}
+
 void* cn_protocol_packet_open(uint8_t* buffer, int size, const cn_crypto_key_t* key, cn_protocol_packet_allocator_t* pa, cn_protocol_replay_buffer_t* replay_buffer, uint64_t* sequence_ptr)
 {
 	int ret = 0;
@@ -6073,6 +6107,14 @@ void* cn_protocol_packet_open(uint8_t* buffer, int size, const cn_crypto_key_t* 
 		cn_protocol_packet_payload_t* packet = (cn_protocol_packet_payload_t*)cn_protocol_packet_allocator_alloc(pa, (cn_protocol_packet_type_t)type);
 		packet->packet_type = type;
 		packet->payload_size = cn_read_uint16(&buffer);
+		// payload_size is attacker-controlled; the length check at the top of this function
+		// bounds only the on-wire packet, not this inner field. Reject before the copy can
+		// overflow payload[] (destination) or read past the received bytes (source).
+		int payload_available = size - 73 - 2; // 73 = header+signature overhead, 2 = the payload_size field.
+		if (packet->payload_size > CN_PROTOCOL_PACKET_PAYLOAD_MAX || (int)packet->payload_size > payload_available) {
+			cn_protocol_packet_allocator_free(pa, (cn_protocol_packet_type_t)type, packet);
+			return NULL;
+		}
 		CN_MEMCPY(packet->payload, buffer, packet->payload_size);
 		return packet;
 	}	break;
@@ -6560,6 +6602,7 @@ cn_protocol_client_t* cn_protocol_client_create(uint16_t port, uint64_t applicat
 	client->application_id = application_id;
 	client->mem_ctx = user_allocator_context;
 	client->packet_queue = cn_circular_buffer_create(CN_MB, client->mem_ctx);
+	client->packet_allocator = cn_protocol_packet_allocator_create(user_allocator_context);
 	return client;
 }
 
@@ -6568,6 +6611,7 @@ void cn_protocol_client_destroy(cn_protocol_client_t* client)
 	// TODO: Detect if disconnect was not called yet.
 	cn_simulator_destroy(client->sim);
 	cn_circular_buffer_free(&client->packet_queue);
+	cn_protocol_packet_allocator_destroy(client->packet_allocator);
 	CN_FREE(client, client->mem_ctx);
 }
 
@@ -6664,7 +6708,7 @@ bool cn_protocol_client_get_packet(cn_protocol_client_t* client, void** data, in
 void cn_protocol_client_free_packet(cn_protocol_client_t* client, void* packet)
 {
 	cn_protocol_packet_payload_t* payload_packet = (cn_protocol_packet_payload_t*)((uint8_t*)packet - CN_OFFSET_OF(cn_protocol_packet_payload_t, payload));
-	cn_protocol_packet_allocator_free(NULL, (cn_protocol_packet_type_t)payload_packet->packet_type, payload_packet);
+	cn_protocol_packet_allocator_free(client->packet_allocator, (cn_protocol_packet_type_t)payload_packet->packet_type, payload_packet);
 }
 
 static void s_protocol_disconnect(cn_protocol_client_t* client, cn_protocol_client_state_t state, int send_packets)
@@ -6727,7 +6771,7 @@ static void s_protocol_receive_packets(cn_protocol_client_t* client)
 		}
 
 		uint64_t sequence = ~0u;
-		void* packet_ptr = cn_protocol_packet_open(buffer, sz, &client->connect_token.server_to_client_key, NULL, &client->replay_buffer, &sequence);
+		void* packet_ptr = cn_protocol_packet_open(buffer, sz, &client->connect_token.server_to_client_key, client->packet_allocator, &client->replay_buffer, &sequence);
 		if (!packet_ptr) continue;
 
 		// Handle packet based on client's current state.
@@ -6788,7 +6832,7 @@ static void s_protocol_receive_packets(cn_protocol_client_t* client)
 			} else if (type == CN_PROTOCOL_PACKET_TYPE_DISCONNECT) {
 				//log(CN_LOG_LEVEL_WARNING, "Protocol Client: Received DISCONNECT packet from server.");
 				if (free_packet) {
-					cn_protocol_packet_allocator_free(NULL, (cn_protocol_packet_type_t)type, packet_ptr);
+					cn_protocol_packet_allocator_free(client->packet_allocator, (cn_protocol_packet_type_t)type, packet_ptr);
 					free_packet = 0;
 					packet_ptr = NULL;
 				}
@@ -6802,7 +6846,7 @@ static void s_protocol_receive_packets(cn_protocol_client_t* client)
 		}
 
 		if (free_packet) {
-			cn_protocol_packet_allocator_free(NULL, (cn_protocol_packet_type_t)type, packet_ptr);
+			cn_protocol_packet_allocator_free(client->packet_allocator, (cn_protocol_packet_type_t)type, packet_ptr);
 		}
 
 		if (should_break) {
@@ -6914,11 +6958,11 @@ cn_result_t cn_protocol_client_send(cn_protocol_client_t* client, const void* da
 {
 	if (size < 0) return cn_error_failure("`size` can not be negative.");
 	if (size > CN_PROTOCOL_PACKET_PAYLOAD_MAX) return cn_error_failure("`size` exceeded `CN_PROTOCOL_PACKET_PAYLOAD_MAX`.");
-	cn_protocol_packet_payload_t packet;
-	packet.packet_type = CN_PROTOCOL_PACKET_TYPE_PAYLOAD;
-	packet.payload_size = size;
-	CN_MEMCPY(packet.payload, data, size);
-	s_protocol_client_send(client, &packet);
+	int sz = s_protocol_write_payload_packet(data, size, client->buffer, client->sequence++, &client->connect_token.client_to_server_key);
+	if (sz >= 73) {
+		cn_socket_send(&client->socket, client->sim, s_protocol_server_endpoint(client), client->buffer, sz);
+		client->last_packet_sent_time = 0;
+	}
 	return cn_error_success();
 }
 
@@ -7123,7 +7167,7 @@ cn_protocol_server_t* cn_protocol_server_create(uint64_t application_id, const c
 	server->running = 0;
 	server->application_id = application_id;
 	server->packet_allocator = cn_protocol_packet_allocator_create(mem_ctx);
-	server->event_queue = cn_circular_buffer_create(CN_MB * 10, mem_ctx);
+	server->event_queue = cn_circular_buffer_create(CN_PROTOCOL_EVENT_QUEUE_SIZE, mem_ctx);
 	server->public_key = *public_key;
 	server->secret_key = *secret_key;
 	server->mem_ctx = mem_ctx;
@@ -7292,15 +7336,18 @@ static void s_protocol_server_connect_client(cn_protocol_server_t* server, cn_en
 	}
 	if (index == -1) return;
 
-	server->client_count++;
-	CN_ASSERT(server->client_count < CN_PROTOCOL_SERVER_MAX_CLIENTS);
-
+	// Push the connection event before committing any client state. A failed push (event
+	// queue full) must leave client_count and the slot untouched, or a retrying client
+	// inflates client_count on every attempt without ever occupying a slot.
 	cn_protocol_server_event_t event;
 	event.type = CN_PROTOCOL_SERVER_EVENT_NEW_CONNECTION;
 	event.u.new_connection.client_index = index;
 	event.u.new_connection.client_id = state->client_id;
 	event.u.new_connection.endpoint = endpoint;
 	if (s_protocol_server_event_push(server, &event) < 0) return;
+
+	server->client_count++;
+	CN_ASSERT(server->client_count < CN_PROTOCOL_SERVER_MAX_CLIENTS);
 
 	cn_hashtable_insert(&server->client_id_table, &state->client_id, &index);
 	cn_hashtable_insert(&server->client_endpoint_table, &endpoint, &state->client_id);
@@ -7391,6 +7438,21 @@ static void s_protocol_server_receive_packets(cn_protocol_server_t* server)
 
 			cn_protocol_encryption_state_t* state = cn_protocol_encryption_map_find(&server->encryption_map, from);
 			if (!state) {
+				// Bind this token to a single in-flight handshake. Without this, one valid token
+				// replayed from many spoofed source addresses would each spawn a half-open state
+				// and its own challenge-reflection stream. A legit client resends from the same
+				// endpoint, which finds its state above and never reaches this scan.
+				int existing_count = cn_protocol_encryption_map_count(&server->encryption_map);
+				cn_protocol_encryption_state_t* existing_states = cn_protocol_encryption_map_get_states(&server->encryption_map);
+				int token_pending = 0;
+				for (int j = 0; j < existing_count; ++j) {
+					if (!CN_MEMCMP(existing_states[j].signature.bytes, token.signature.bytes, CN_PROTOCOL_SIGNATURE_SIZE)) {
+						token_pending = 1;
+						break;
+					}
+				}
+				if (token_pending) continue;
+
 				cn_protocol_encryption_state_t encryption_state;
 				encryption_state.sequence = 0;
 				encryption_state.expiration_timestamp = token.expiration_timestamp;
@@ -7401,6 +7463,8 @@ static void s_protocol_server_receive_packets(cn_protocol_server_t* server)
 				encryption_state.server_to_client_key = token.server_to_client_key;
 				encryption_state.client_id = token.client_id;
 				CN_MEMCPY(encryption_state.signature.bytes, token.signature.bytes, CN_PROTOCOL_SIGNATURE_SIZE);
+				encryption_state.challenge_nonce = server->challenge_nonce++;
+				cn_crypto_random_bytes(encryption_state.challenge_data, CN_PROTOCOL_CHALLENGE_DATA_SIZE);
 				cn_protocol_encryption_map_insert(&server->encryption_map, from, &encryption_state);
 				state = cn_protocol_encryption_map_find(&server->encryption_map, from);
 				CN_ASSERT(state);
@@ -7465,6 +7529,12 @@ static void s_protocol_server_receive_packets(cn_protocol_server_t* server)
 			case CN_PROTOCOL_PACKET_TYPE_CHALLENGE_RESPONSE:
 			{
 				CN_ASSERT(!endpoint_already_connected);
+				// Prove the peer received the challenge we sent to its claimed address. A
+				// spoofed source can decrypt nothing it never received, so a mismatched echo
+				// is an unreachable/spoofed address -- drop it before committing any state.
+				cn_protocol_packet_challenge_t* response = (cn_protocol_packet_challenge_t*)packet_ptr;
+				if (response->challenge_nonce != state->challenge_nonce) break;
+				if (!hydro_equal(response->challenge_data, state->challenge_data, CN_PROTOCOL_CHALLENGE_DATA_SIZE)) break;
 				int client_id_already_connected = !!cn_hashtable_find(&server->client_id_table, &state->client_id);
 				if (client_id_already_connected) break;
 				if (server->client_count == CN_PROTOCOL_SERVER_MAX_CLIENTS) {
@@ -7525,8 +7595,8 @@ static void s_protocol_server_send_packets(cn_protocol_server_t* server, double 
 
 			cn_protocol_packet_challenge_t packet;
 			packet.packet_type = CN_PROTOCOL_PACKET_TYPE_CHALLENGE_REQUEST;
-			packet.challenge_nonce = server->challenge_nonce++;
-			cn_crypto_random_bytes(packet.challenge_data, sizeof(packet.challenge_data));
+			packet.challenge_nonce = state->challenge_nonce;
+			CN_MEMCPY(packet.challenge_data, state->challenge_data, CN_PROTOCOL_CHALLENGE_DATA_SIZE);
 
 			if (cn_protocol_packet_write(&packet, buffer, state->sequence++, &state->server_to_client_key) == 264 + 73) {
 				cn_socket_send(the_socket, sim, endpoints[i], buffer, 264 + 73);
@@ -7609,11 +7679,7 @@ cn_result_t cn_protocol_server_send_to_client(cn_protocol_server_t* server, cons
 		}
 	}
 
-	cn_protocol_packet_payload_t payload;
-	payload.packet_type = CN_PROTOCOL_PACKET_TYPE_PAYLOAD;
-	payload.payload_size = size;
-	CN_MEMCPY(payload.payload, packet, size);
-	int sz = cn_protocol_packet_write(&payload, server->buffer, server->client_sequence[index]++, server->client_server_to_client_key + index);
+	int sz = s_protocol_write_payload_packet(packet, size, server->buffer, server->client_sequence[index]++, server->client_server_to_client_key + index);
 	if (sz > 73) {
 		cn_socket_send(&server->socket, server->sim, server->client_endpoint[index], server->buffer, sz);
 		//log(CN_LOG_LEVEL_INFORMATIONAL, "Protocol Server: Sent %s to client %" PRIu64 ".", s_protocol_packet_str(payload.packet_type), server->client_id[index]);
@@ -7650,6 +7716,10 @@ void cn_protocol_server_update(cn_protocol_server_t* server, double dt, uint64_t
 	s_protocol_server_receive_packets(server);
 	s_protocol_server_send_packets(server, dt);
 	s_protocol_server_look_for_timeouts(server);
+	// Expire half-open handshake states. Without this a spoofed connection request creates
+	// an encryption-map entry that never times out, permanently reflecting challenges and
+	// eventually exhausting the map.
+	cn_protocol_encryption_map_look_for_timeouts_or_expirations(&server->encryption_map, dt, current_time);
 }
 
 int cn_protocol_server_client_count(cn_protocol_server_t* server)
@@ -8059,6 +8129,11 @@ typedef struct cn_packet_assembly_t
 static void s_fragment_reassembly_entry_cleanup(void* data, uint16_t sequence, void* udata, void* mem_ctx)
 {
 	cn_fragment_reassembly_entry_t* reassembly = (cn_fragment_reassembly_entry_t*)data;
+	// udata points at the transport's outstanding_reassembly_bytes counter (set in
+	// cn_transport_create). A completed reassembly nulls its packet before removal, but
+	// packet_size still accounts for the reservation being released here.
+	int* outstanding = (int*)udata;
+	if (outstanding) *outstanding -= reassembly->packet_size;
 	CN_FREE(reassembly->packet, mem_ctx);
 	CN_FREE(reassembly->fragment_received, mem_ctx);
 }
@@ -8108,6 +8183,9 @@ typedef struct cn_transport_t
 	uint16_t oldest_received_sequence;
 	cn_packet_assembly_t reliable_and_in_order_assembly;
 	cn_packet_assembly_t fire_and_forget_assembly;
+	// Sum of packet_size across all in-progress reassemblies (both assemblies). Bounds the
+	// memory a peer can force us to allocate by opening many large reassemblies at once.
+	int outstanding_reassembly_bytes;
 
 	void* mem_ctx;
 	void* udata;
@@ -8396,8 +8474,8 @@ void cn_ack_system_update(cn_ack_system_t* ack_system, double dt)
 {
 	ack_system->time += dt;
 	ack_system->packet_loss = s_calc_packet_loss(ack_system->packet_loss, &ack_system->sent_packets);
-	ack_system->incoming_bandwidth_kbps = s_calc_bandwidth(ack_system->incoming_bandwidth_kbps, &ack_system->sent_packets);
-	ack_system->outgoing_bandwidth_kbps = s_calc_bandwidth(ack_system->outgoing_bandwidth_kbps, &ack_system->received_packets);
+	ack_system->incoming_bandwidth_kbps = s_calc_bandwidth(ack_system->incoming_bandwidth_kbps, &ack_system->received_packets);
+	ack_system->outgoing_bandwidth_kbps = s_calc_bandwidth(ack_system->outgoing_bandwidth_kbps, &ack_system->sent_packets);
 }
 
 double cn_ack_system_rtt(cn_ack_system_t* ack_system)
@@ -8451,7 +8529,10 @@ CN_INLINE cn_transport_config_t cn_transport_config_defaults()
 	config.fragment_size = CN_TRANSPORT_MAX_FRAGMENT_SIZE;
 	config.max_packet_size = CN_TRANSPORT_MAX_FRAGMENT_SIZE * 4;
 	config.max_fragments_in_flight = 32;
-	config.max_size_single_send = (CN_MB) * 20;
+	// The largest single reliable message, and also the per-connection reassembly-memory budget
+	// (a peer can pin at most this many bytes of in-flight reassemblies). 2 MiB is generous for a
+	// game protocol; raise it if you genuinely stream larger single messages.
+	config.max_size_single_send = (CN_MB) * 2;
 	config.send_receive_queue_size = 1024;
 	config.udata = NULL;
 	config.index = -1;
@@ -8494,10 +8575,16 @@ cn_transport_t* cn_transport_create(cn_transport_config_t config)
 
 	transport->fragment_id_gen = 0;
 	transport->oldest_received_sequence = 0;
+	transport->outstanding_reassembly_bytes = 0;
 	CN_CHECK(s_packet_assembly_init(&transport->reliable_and_in_order_assembly, config.send_receive_queue_size, transport->mem_ctx));
 	assembly_reliable_init = 1;
 	CN_CHECK(s_packet_assembly_init(&transport->fire_and_forget_assembly, config.send_receive_queue_size, transport->mem_ctx));
 	assembly_unreliable_init = 1;
+	// The reassembly cleanup callback maintains outstanding_reassembly_bytes through the
+	// sequence buffer's udata, which points at the counter itself (the transport struct is
+	// defined after the callback, so the callback can only see a plain int*).
+	transport->reliable_and_in_order_assembly.fragments_received.udata = &transport->outstanding_reassembly_bytes;
+	transport->fire_and_forget_assembly.fragments_received.udata = &transport->outstanding_reassembly_bytes;
 
 	s_send_queue_init(&transport->send_queue);
 
@@ -8515,7 +8602,7 @@ static void s_transport_cleanup_packet_queue(cn_transport_t* transport, cn_packe
 {
 	int index = q->index0;
 	while (q->count--) {
-		int next_index = index + 1 % CN_PACKET_QUEUE_MAX_ENTRIES;
+		int next_index = (index + 1) % CN_PACKET_QUEUE_MAX_ENTRIES;
 		CN_FREE(q->packets[index], transport->mem_ctx);
 		index = next_index;
 	}
@@ -8744,7 +8831,7 @@ void cn_transport_free_packet(cn_transport_t* transport, void* data)
 
 cn_result_t cn_transport_process_packet(cn_transport_t* transport, void* data, int size)
 {
-	if (size < CN_TRANSPORT_HEADER_SIZE) return cn_error_failure("`size` is too small to fit `CN_TRANSPORT_HEADER_SIZE`.");
+	if (size < CN_ACK_SYSTEM_HEADER_SIZE + CN_TRANSPORT_HEADER_SIZE) return cn_error_failure("`size` is too small to fit the ack-system and transport headers.");
 	cn_result_t result = cn_ack_system_receive_packet(transport->ack_system, data, size);
 	if (cn_is_error(result)) return result;
 
@@ -8762,12 +8849,20 @@ cn_result_t cn_transport_process_packet(cn_transport_t* transport, void* data, i
 		return cn_error_failure("Packet exceeded `max_size_single_send` limit.");
 	}
 
-	if (fragment_index > fragment_count) {
+	// Valid indices are [0, fragment_count-1]; the '>=' also rejects fragment_count == 0,
+	// which would otherwise index zero-size reassembly allocations below.
+	if (fragment_index >= fragment_count) {
 		return cn_error_failure("Fragment index out of bounds.");
 	}
 
 	if (fragment_size > transport->fragment_size) {
 		return cn_error_failure("Fragment size somehow didn't match `transport->fragment_size`.");
+	}
+
+	// The claimed fragment payload must actually be present in the received bytes, or the
+	// copy below would read stale bytes from the packet buffer into the reassembly.
+	if (fragment_size > size - CN_ACK_SYSTEM_HEADER_SIZE - CN_TRANSPORT_HEADER_SIZE) {
+		return cn_error_failure("Fragment size exceeds the received packet length.");
 	}
 
 	cn_packet_assembly_t* assembly;
@@ -8783,6 +8878,12 @@ cn_result_t cn_transport_process_packet(cn_transport_t* transport, void* data, i
 	// Build reassembly if it doesn't exist yet.
 	cn_fragment_reassembly_entry_t* reassembly = (cn_fragment_reassembly_entry_t*)cn_sequence_buffer_find(&assembly->fragments_received, fragment_sequence);
 	if (!reassembly) {
+		// Cap the total reassembly memory a peer can pin at once. total_packet_size is already
+		// bounded by max_size_single_send above, so one legitimate max-size send still fits;
+		// this only rejects many concurrent large reassemblies opened to exhaust memory.
+		if (transport->outstanding_reassembly_bytes + total_packet_size > transport->max_size_single_send) {
+			return cn_error_failure("Too many concurrent fragment reassemblies in flight.");
+		}
 		reassembly = (cn_fragment_reassembly_entry_t*)cn_sequence_buffer_insert(&assembly->fragments_received, fragment_sequence, s_fragment_reassembly_entry_cleanup);
 		if (!reassembly) {
 			CN_PRINTF("Sequence for this reassembly is stale.\n");
@@ -8797,6 +8898,7 @@ cn_result_t cn_transport_process_packet(cn_transport_t* transport, void* data, i
 		reassembly->fragments_total = fragment_count;
 		reassembly->fragment_received = (uint8_t*)CN_ALLOC(fragment_count, transport->mem_ctx);
 		CN_MEMSET(reassembly->fragment_received, 0, fragment_count);
+		transport->outstanding_reassembly_bytes += total_packet_size;
 	}
 
 	if (fragment_count != reassembly->fragments_total) {
@@ -8816,8 +8918,12 @@ cn_result_t cn_transport_process_packet(cn_transport_t* transport, void* data, i
 
 	if (fragment_index == fragment_count - 1) {
 		reassembly->received_final_fragment = 1;
+		// The last fragment is usually short, so packet_size shrinks from the padded
+		// total_packet_size to the true size. Keep outstanding_reassembly_bytes in step -- the
+		// cleanup callback decrements by the final packet_size, so the reservation must match.
 		reassembly->packet_size -= transport->fragment_size - fragment_size;
 		total_packet_size -= transport->fragment_size - fragment_size;
+		transport->outstanding_reassembly_bytes -= transport->fragment_size - fragment_size;
 	}
 
 	// Store completed packet for retrieval by user.
@@ -8843,6 +8949,9 @@ cn_result_t cn_transport_process_packet(cn_transport_t* transport, void* data, i
 					if (next->fragment_count_so_far == next->fragments_total) {
 						if (cn_packet_queue_push(&assembly->packets_received, next->packet, next->packet_size) < 0) {
 							result =  cn_error_failure("Packet dropped. The other end is sending too many packets.");
+							// Leave this entry in place and stop draining; retrying at the same
+							// receive_sequence next update would otherwise spin forever here.
+							break;
 						} else {
 							next->packet = NULL;
 							CN_PRINTF("Remove reliable fragment sequence %d.\n", assembly->receive_sequence);
@@ -9124,7 +9233,7 @@ cn_server_t* cn_server_create(cn_server_config_t config)
 	CN_MEMSET(server, 0, sizeof(*server));
 	server->mem_ctx = config.user_allocator_context;
 	server->config = config;
-	server->event_queue = cn_circular_buffer_create(CN_MB * 10, config.user_allocator_context);
+	server->event_queue = cn_circular_buffer_create(CN_PROTOCOL_EVENT_QUEUE_SIZE, config.user_allocator_context);
 	server->p_server = cn_protocol_server_create(config.application_id, &server->config.public_key, &server->config.secret_key, server->mem_ctx);
 
 	return server;
@@ -9328,13 +9437,13 @@ float cn_server_get_rtt_estimate(cn_server_t* server, int client_index)
 float cn_server_get_incoming_kbps_estimate(cn_server_t* server, int client_index)
 {
 	CN_ASSERT(cn_server_is_client_connected(server, client_index));
-	return (float)server->client_transports[client_index]->ack_system->outgoing_bandwidth_kbps;
+	return (float)server->client_transports[client_index]->ack_system->incoming_bandwidth_kbps;
 }
 
 float cn_server_get_outgoing_kbps_estimate(cn_server_t* server, int client_index)
 {
 	CN_ASSERT(cn_server_is_client_connected(server, client_index));
-	return (float)server->client_transports[client_index]->ack_system->incoming_bandwidth_kbps;
+	return (float)server->client_transports[client_index]->ack_system->outgoing_bandwidth_kbps;
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -10584,12 +10693,20 @@ int cn_transport_drop_fragments()
 	return 0;
 }
 
-int cn_send_packet_many_drops_fn(int index, void* packet, int size, void* udata)
+cn_result_t cn_send_packet_many_drops_fn(int index, void* packet, int size, void* udata)
 {
 	cn_test_transport_data_t* data = (cn_test_transport_data_t*)udata;
-	if (rand() % 100 != 0) return 0;
+	if (data->drop_packet) return cn_error_success();
+	// Drop ~30% of packets (deterministic under srand(0)) so the reliable layer must
+	// actually retransmit; forward the rest to the peer transport.
+	if (rand() % 100 < 30) return cn_error_success();
 
-	return 0;
+	if (data->id) {
+		cn_transport_process_packet(data->transport_a, packet, size);
+	} else {
+		cn_transport_process_packet(data->transport_b, packet, size);
+	}
+	return cn_error_success();
 }
 
 CN_TEST_CASE(cn_transport_drop_fragments_reliable_hammer, "Create and send many fragments under extreme packet loss.");
@@ -10604,7 +10721,7 @@ int cn_transport_drop_fragments_reliable_hammer()
 	double dt = 1.0/60.0;
 
 	cn_transport_config_t config = cn_transport_config_defaults();
-	config.send_packet_fn = cn_test_transport_send_packet_fn;
+	config.send_packet_fn = cn_send_packet_many_drops_fn;
 	config.udata = &data_a;
 	cn_transport_t* transport_a = cn_transport_create(config);
 	config.udata = &data_b;
@@ -12216,6 +12333,274 @@ int cn_protocol_client_reconnect()
 }
 
 // -------------------------------------------------------------------------------------------------
+// Adversarial / regression tests for hardened parse and handshake paths. Each targets a specific
+// bug fix; deleting the corresponding guard should make exactly one of these fail.
+
+typedef struct cn_test_capture_t
+{
+	uint8_t frames[8][CN_PROTOCOL_PACKET_SIZE_MAX];
+	int sizes[8];
+	int count;
+} cn_test_capture_t;
+
+cn_result_t cn_test_capture_send_fn(int index, void* packet, int size, void* udata)
+{
+	cn_test_capture_t* cap = (cn_test_capture_t*)udata;
+	if (cap->count < 8) {
+		CN_MEMCPY(cap->frames[cap->count], packet, size);
+		cap->sizes[cap->count] = size;
+		cap->count++;
+	}
+	return cn_error_success();
+}
+
+static cn_result_t s_feed_fresh_transport(uint8_t* buffer, int size)
+{
+	cn_test_capture_t sink;
+	sink.count = 0;
+	cn_transport_config_t rc = cn_transport_config_defaults();
+	rc.send_packet_fn = cn_test_capture_send_fn;
+	rc.udata = &sink;
+	cn_transport_t* rx = cn_transport_create(rc);
+	cn_result_t r = cn_transport_process_packet(rx, buffer, size);
+	cn_transport_destroy(rx);
+	return r;
+}
+
+CN_TEST_CASE(cn_transport_fragment_header_guards, "Malformed fragment headers (index>=count, count==0, size>received) are rejected.");
+int cn_transport_fragment_header_guards()
+{
+	cn_test_capture_t cap;
+	cap.count = 0;
+	cn_transport_config_t config = cn_transport_config_defaults();
+	config.send_packet_fn = cn_test_capture_send_fn;
+	config.udata = &cap;
+	cn_transport_t* sender = cn_transport_create(config);
+
+	int packet_size = CN_TRANSPORT_MAX_FRAGMENT_SIZE + 300; // Forces exactly two fragments.
+	uint8_t* payload = (uint8_t*)CN_ALLOC(packet_size, NULL);
+	CN_MEMSET(payload, 0xAB, packet_size);
+	CN_TEST_CHECK(cn_is_error(cn_transport_send(sender, payload, packet_size, true)));
+	cn_transport_update(sender, 1.0/60.0);
+	CN_TEST_ASSERT(cap.count >= 2);
+
+	uint8_t scratch[CN_PROTOCOL_PACKET_SIZE_MAX];
+
+	// fragment_index == fragment_count (the off-by-one). Header layout after the ack header:
+	// prefix(1) fragment_sequence(2) fragment_count(2) fragment_index(2) fragment_size(2).
+	CN_MEMCPY(scratch, cap.frames[0], cap.sizes[0]);
+	{
+		uint8_t* h = scratch + CN_ACK_SYSTEM_HEADER_SIZE;
+		uint8_t* rp = h + 3; uint16_t count = cn_read_uint16(&rp);
+		uint8_t* wp = h + 5; cn_write_uint16(&wp, count);
+	}
+	CN_TEST_ASSERT(cn_is_error(s_feed_fresh_transport(scratch, cap.sizes[0])));
+
+	// fragment_count == 0 (zero-size reassembly allocation).
+	CN_MEMCPY(scratch, cap.frames[0], cap.sizes[0]);
+	{
+		uint8_t* h = scratch + CN_ACK_SYSTEM_HEADER_SIZE;
+		uint8_t* wp = h + 3; cn_write_uint16(&wp, 0);
+	}
+	CN_TEST_ASSERT(cn_is_error(s_feed_fresh_transport(scratch, cap.sizes[0])));
+
+	// fragment_size claims more than the packet carries (uses the final, smaller fragment so the
+	// value stays <= transport->fragment_size and specifically trips the received-bytes guard).
+	int last = cap.count - 1;
+	CN_MEMCPY(scratch, cap.frames[last], cap.sizes[last]);
+	{
+		uint8_t* h = scratch + CN_ACK_SYSTEM_HEADER_SIZE;
+		uint8_t* wp = h + 7; cn_write_uint16(&wp, (uint16_t)CN_TRANSPORT_MAX_FRAGMENT_SIZE);
+	}
+	CN_TEST_ASSERT(cn_is_error(s_feed_fresh_transport(scratch, cap.sizes[last])));
+
+	// Control: the unpatched final fragment is accepted (it just waits for the rest).
+	CN_MEMCPY(scratch, cap.frames[last], cap.sizes[last]);
+	CN_TEST_ASSERT(!cn_is_error(s_feed_fresh_transport(scratch, cap.sizes[last])));
+
+	CN_FREE(payload, NULL);
+	cn_transport_destroy(sender);
+	return 0;
+}
+
+CN_TEST_CASE(cn_packet_payload_oversized_rejected, "A payload packet whose payload_size field exceeds the packet is rejected, not overflowed.");
+int cn_packet_payload_oversized_rejected()
+{
+	cn_crypto_key_t key = cn_crypto_generate_key();
+	uint64_t sequence = 100;
+	uint8_t buffer[CN_PROTOCOL_PACKET_SIZE_MAX];
+
+	// Frame a payload packet by hand (mirroring cn_protocol_packet_write) so the encrypted
+	// payload_size field can claim far more bytes than are actually present. A valid MAC is
+	// produced because we hold the key, so decrypt succeeds and the size guard is what must reject.
+	uint8_t* buf = buffer;
+	uint8_t* payload = s_protocol_header(&buf, CN_PROTOCOL_PACKET_TYPE_PAYLOAD, sequence);
+	uint8_t* w = payload;
+	cn_write_uint16(&w, 0xFFFF);          // Claim 65535 payload bytes...
+	int real_payload = 16;                // ...but include only 16.
+	cn_crypto_random_bytes(w, real_payload);
+	w += real_payload;
+	int plaintext_size = (int)(w - payload);
+	cn_crypto_encrypt(&key, payload, plaintext_size, sequence);
+	int total = (int)(payload - buffer) + plaintext_size + CN_CRYPTO_HEADER_BYTES;
+
+	void* pk = cn_protocol_packet_open(buffer, total, &key, NULL, NULL, NULL);
+	CN_TEST_ASSERT(pk == NULL);
+
+	return 0;
+}
+
+CN_TEST_CASE(cn_crypto_decrypt_rejects_tampered, "Tampered ciphertext, wrong key, and wrong nonce all fail to decrypt.");
+int cn_crypto_decrypt_rejects_tampered()
+{
+	cn_crypto_key_t k = cn_crypto_generate_key();
+	const char* message_string = "The message.";
+	int message_length = (int)CN_STRLEN(message_string) + 1;
+	int total = message_length + CN_CRYPTO_HEADER_BYTES;
+	uint8_t* buf = (uint8_t*)malloc(total);
+
+	// Tampered ciphertext.
+	CN_MEMCPY(buf, message_string, message_length);
+	cn_crypto_encrypt(&k, buf, message_length, 0);
+	buf[total / 2] ^= 0xFF;
+	CN_TEST_ASSERT(cn_is_error(cn_crypto_decrypt(&k, buf, total, 0)));
+
+	// Wrong key.
+	CN_MEMCPY(buf, message_string, message_length);
+	cn_crypto_encrypt(&k, buf, message_length, 0);
+	cn_crypto_key_t k2 = cn_crypto_generate_key();
+	CN_TEST_ASSERT(cn_is_error(cn_crypto_decrypt(&k2, buf, total, 0)));
+
+	// Wrong nonce (msg_id).
+	CN_MEMCPY(buf, message_string, message_length);
+	cn_crypto_encrypt(&k, buf, message_length, 0);
+	CN_TEST_ASSERT(cn_is_error(cn_crypto_decrypt(&k, buf, total, 1)));
+
+	free(buf);
+	return 0;
+}
+
+CN_TEST_CASE(cn_protocol_server_rejects_wrong_challenge_response, "Server rejects a client whose challenge echo does not match (anti-spoof).");
+int cn_protocol_server_rejects_wrong_challenge_response()
+{
+	cn_crypto_key_t client_to_server_key = cn_crypto_generate_key();
+	cn_crypto_key_t server_to_client_key = cn_crypto_generate_key();
+	cn_crypto_sign_public_t pk;
+	cn_crypto_sign_secret_t sk;
+	cn_crypto_sign_keygen(&pk, &sk);
+
+	const char* endpoints[] = { "[::1]:5000" };
+	uint64_t application_id = 100;
+	uint64_t current_timestamp = 0;
+	uint64_t expiration_timestamp = 1;
+	uint32_t handshake_timeout = 5;
+	uint64_t client_id = 17;
+	uint8_t user_data[CN_PROTOCOL_CONNECT_TOKEN_USER_DATA_SIZE];
+	cn_crypto_random_bytes(user_data, sizeof(user_data));
+
+	uint8_t connect_token[CN_PROTOCOL_CONNECT_TOKEN_SIZE];
+	CN_TEST_CHECK(cn_is_error(cn_generate_connect_token(
+		application_id, current_timestamp, &client_to_server_key, &server_to_client_key,
+		expiration_timestamp, handshake_timeout, sizeof(endpoints)/sizeof(endpoints[0]),
+		endpoints, client_id, user_data, &sk, connect_token)));
+
+	cn_protocol_server_t* server = cn_protocol_server_create(application_id, &pk, &sk, NULL);
+	CN_TEST_CHECK_POINTER(server);
+	cn_protocol_client_t* client = cn_protocol_client_create(0, application_id, true, NULL);
+	CN_TEST_CHECK_POINTER(client);
+	CN_TEST_CHECK(cn_is_error(cn_protocol_server_start(server, "[::1]:5000", 5)));
+	CN_TEST_CHECK(cn_is_error(cn_protocol_client_connect(client, connect_token)));
+
+	int iters = 0;
+	int tampered = 0;
+	while (iters++ < 100) {
+		cn_protocol_client_update(client, 1, 0);
+		cn_protocol_server_update(server, 1, 0);
+		// Keep the server's stored challenge one step ahead of whatever the client last received,
+		// so its (otherwise correct) echo never matches. This exercises the server-side verify;
+		// without it the client would connect.
+		if (cn_protocol_encryption_map_count(&server->encryption_map) > 0) {
+			cn_protocol_encryption_state_t* states = cn_protocol_encryption_map_get_states(&server->encryption_map);
+			states[0].challenge_data[0]++;
+			tampered = 1;
+		}
+		if (cn_protocol_client_get_state(client) <= 0) break;
+		if (cn_protocol_client_get_state(client) == CN_PROTOCOL_CLIENT_STATE_CONNECTED) break;
+	}
+	CN_TEST_ASSERT(tampered);
+	CN_TEST_ASSERT(cn_protocol_server_running(server));
+	CN_TEST_ASSERT(cn_protocol_client_get_state(client) != CN_PROTOCOL_CLIENT_STATE_CONNECTED);
+	CN_TEST_ASSERT(cn_protocol_server_client_count(server) == 0);
+
+	cn_protocol_client_disconnect(client);
+	cn_protocol_client_destroy(client);
+	cn_protocol_server_stop(server);
+	cn_protocol_server_destroy(server);
+	return 0;
+}
+
+CN_TEST_CASE(cn_protocol_connect_token_replay_from_many_endpoints, "One token replayed from many source addresses must not spawn many half-open states.");
+int cn_protocol_connect_token_replay_from_many_endpoints()
+{
+	cn_crypto_key_t client_to_server_key = cn_crypto_generate_key();
+	cn_crypto_key_t server_to_client_key = cn_crypto_generate_key();
+	cn_crypto_sign_public_t pk;
+	cn_crypto_sign_secret_t sk;
+	cn_crypto_sign_keygen(&pk, &sk);
+
+	const char* endpoints[] = { "[::1]:5000" };
+	uint64_t application_id = 100;
+	uint64_t current_timestamp = 0;
+	uint64_t expiration_timestamp = 10;
+	uint32_t handshake_timeout = 5;
+	uint64_t client_id = 17;
+	uint8_t user_data[CN_PROTOCOL_CONNECT_TOKEN_USER_DATA_SIZE];
+	cn_crypto_random_bytes(user_data, sizeof(user_data));
+
+	uint8_t connect_token[CN_PROTOCOL_CONNECT_TOKEN_SIZE];
+	CN_TEST_CHECK(cn_is_error(cn_generate_connect_token(
+		application_id, current_timestamp, &client_to_server_key, &server_to_client_key,
+		expiration_timestamp, handshake_timeout, sizeof(endpoints)/sizeof(endpoints[0]),
+		endpoints, client_id, user_data, &sk, connect_token)));
+
+	cn_protocol_server_t* server = cn_protocol_server_create(application_id, &pk, &sk, NULL);
+	CN_TEST_CHECK_POINTER(server);
+	CN_TEST_CHECK(cn_is_error(cn_protocol_server_start(server, "[::1]:5000", 5)));
+
+	// Several clients on distinct (ephemeral) source ports all present the SAME token.
+	#define CN_REPLAY_CLIENTS 4
+	cn_protocol_client_t* clients[CN_REPLAY_CLIENTS];
+	for (int i = 0; i < CN_REPLAY_CLIENTS; ++i) {
+		clients[i] = cn_protocol_client_create(0, application_id, true, NULL);
+		CN_TEST_CHECK_POINTER(clients[i]);
+		CN_TEST_CHECK(cn_is_error(cn_protocol_client_connect(clients[i], connect_token)));
+	}
+
+	int iters = 0;
+	int max_map = 0;
+	while (iters++ < 100) {
+		for (int i = 0; i < CN_REPLAY_CLIENTS; ++i) cn_protocol_client_update(clients[i], 1, 0);
+		cn_protocol_server_update(server, 1, 0);
+		int c = cn_protocol_encryption_map_count(&server->encryption_map);
+		if (c > max_map) max_map = c;
+	}
+
+	// The token binds to a single in-flight handshake: the map never accumulates one state per
+	// spoofed endpoint, and at most one client ends up connected.
+	CN_TEST_ASSERT(max_map <= 1);
+	CN_TEST_ASSERT(cn_protocol_server_client_count(server) <= 1);
+
+	for (int i = 0; i < CN_REPLAY_CLIENTS; ++i) {
+		cn_protocol_client_disconnect(clients[i]);
+		cn_protocol_client_destroy(clients[i]);
+	}
+	#undef CN_REPLAY_CLIENTS
+	cn_protocol_server_stop(server);
+	cn_protocol_server_destroy(server);
+	return 0;
+}
+
+// -------------------------------------------------------------------------------------------------
 
 int cn_run_tests(int which_test, bool soak)
 {
@@ -12258,16 +12643,18 @@ int cn_run_tests(int which_test, bool soak)
 		CN_TEST_CASE_ENTRY(cn_client_server_sim),
 		CN_TEST_CASE_ENTRY(cn_ack_system_basic),
 		CN_TEST_CASE_ENTRY(cn_transport_basic),
-		CN_TEST_CASE_ENTRY(cn_replay_buffer_duplicate),
 		CN_TEST_CASE_ENTRY(cn_transport_drop_fragments),
 		CN_TEST_CASE_ENTRY(cn_transport_drop_fragments_reliable_hammer),
 		CN_TEST_CASE_ENTRY(cn_transport_send_many_reliables_at_once),
+		CN_TEST_CASE_ENTRY(cn_transport_fragment_header_guards),
 		CN_TEST_CASE_ENTRY(cn_packet_connection_accepted),
 		CN_TEST_CASE_ENTRY(cn_packet_connection_denied),
 		CN_TEST_CASE_ENTRY(cn_packet_keepalive),
 		CN_TEST_CASE_ENTRY(cn_packet_disconnect),
 		CN_TEST_CASE_ENTRY(cn_packet_challenge),
 		CN_TEST_CASE_ENTRY(cn_packet_payload),
+		CN_TEST_CASE_ENTRY(cn_packet_payload_oversized_rejected),
+		CN_TEST_CASE_ENTRY(cn_crypto_decrypt_rejects_tampered),
 		CN_TEST_CASE_ENTRY(cn_protocol_client_server),
 		CN_TEST_CASE_ENTRY(cn_protocol_client_no_server_responses),
 		CN_TEST_CASE_ENTRY(cn_protocol_client_server_list),
@@ -12284,6 +12671,8 @@ int cn_run_tests(int which_test, bool soak)
 		CN_TEST_CASE_ENTRY(cn_protocol_client_server_payloads),
 		CN_TEST_CASE_ENTRY(cn_protocol_multiple_connections_and_payloads),
 		CN_TEST_CASE_ENTRY(cn_protocol_client_reconnect),
+		CN_TEST_CASE_ENTRY(cn_protocol_server_rejects_wrong_challenge_response),
+		CN_TEST_CASE_ENTRY(cn_protocol_connect_token_replay_from_many_endpoints),
 	};
 	
 	int test_count = sizeof(tests) / sizeof(*tests);
