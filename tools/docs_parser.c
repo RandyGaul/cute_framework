@@ -156,6 +156,7 @@ typedef struct Doc
 	char* example_brief;  // sdyna
 	char* example;        // sdyna
 	char* remarks;        // sdyna
+	char* deprecated;     // sdyna
 	char** related;       // dyna of sdyna
 } Doc;
 
@@ -394,6 +395,9 @@ static void emit_title(FILE* fp, Doc* doc)
 static void emit_brief(FILE* fp, Doc* doc)
 {
 	fprintf(fp, "%s\n\n", doc->brief);
+	if (doc->deprecated && slen(doc->deprecated)) {
+		fprintf(fp, "> **Deprecated**: %s\n\n", doc->deprecated);
+	}
 }
 
 static void emit_signature(FILE* fp, Doc* doc)
@@ -587,6 +591,9 @@ static void parse_command()
 	} else if (sequ(s->token, "@remarks")) {
 		sfree(s->doc.remarks);
 		s->doc.remarks = parse_paragraph(0);
+	} else if (sequ(s->token, "@deprecated")) {
+		sfree(s->doc.deprecated);
+		s->doc.deprecated = parse_paragraph(0);
 	} else if (sequ(s->token, "@related")) {
 		char* text = parse_paragraph(0);
 		// Split by space.
@@ -1043,6 +1050,7 @@ int main(int argc, char* argv[])
 		doc->example_brief = auto_generate_links(doc, doc->example_brief);
 		doc->example = auto_generate_links(doc, doc->example);
 		doc->remarks = auto_generate_links(doc, doc->remarks);
+		doc->deprecated = auto_generate_links(doc, doc->deprecated);
 		for (int j = 0; j < asize(doc->related);) {
 			const char* rel = doc->related[j];
 			if (sequ(rel, doc->title)) {
