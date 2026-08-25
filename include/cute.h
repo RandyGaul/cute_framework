@@ -63,6 +63,7 @@
 #include "cute_symbol.h"
 #include "cute_time.h"
 #include "cute_version.h"
+#include "cute_video.h"
 #include "cute_routine.h"
 
 #ifdef CF_MAIN

@@ -4,6 +4,7 @@ set(CF_TEST_SRCS
 	test_app.cpp
 	test_array.cpp
 	test_aseprite.cpp
+	test_video.cpp
 	test_audio.cpp
 	test_base64.cpp
 	test_color.cpp

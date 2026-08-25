@@ -104,6 +104,7 @@ set(CF_SRCS
 	src/cute_draw.cpp
 	src/cute_draw3d.cpp
 	src/cute_image.cpp
+	src/cute_video.cpp
 	src/cute_model.cpp
 	src/cute_graphics.cpp
 	src/cute_graphics_sdlgpu.cpp
@@ -172,6 +173,7 @@ set(CF_PUBLIC_HDRS
 	include/cute_draw.h
 	include/cute_debug_printf.h
 	include/cute_image.h
+	include/cute_video.h
 	include/cute_color.h
 	include/cute.h
 	include/cute_graphics.h
@@ -370,7 +372,12 @@ if(APPLE)
 	find_library(METAL Metal)
 	find_library(METALKIT MetalKit)
 	find_library(NETWORK Network)
-	set(CF_LINK_LIBS ${CF_LINK_LIBS} ${IOKIT} ${FOUNDATION} ${SECURITY} ${QUARTZCORE} ${METAL} ${METALKIT} ${NETWORK})
+	# For the VideoToolbox hardware video-encode backend in cute_video.cpp.
+	find_library(VIDEOTOOLBOX VideoToolbox)
+	find_library(COREMEDIA CoreMedia)
+	find_library(COREVIDEO CoreVideo)
+	find_library(COREFOUNDATION CoreFoundation)
+	set(CF_LINK_LIBS ${CF_LINK_LIBS} ${IOKIT} ${FOUNDATION} ${SECURITY} ${QUARTZCORE} ${METAL} ${METALKIT} ${NETWORK} ${VIDEOTOOLBOX} ${COREMEDIA} ${COREVIDEO} ${COREFOUNDATION})
 endif()
 
 if(LINUX)
@@ -466,9 +473,9 @@ add_subdirectory(tools)
 
 # Some platform specific settings.
 if(MINGW)
-	set(CF_LINK_LIBS ${CF_LINK_LIBS} d3d11 crypt32)
+	set(CF_LINK_LIBS ${CF_LINK_LIBS} d3d11 crypt32 mfplat mfreadwrite mfuuid ole32)
 elseif(WINDOWS)
-	set(CF_LINK_LIBS ${CF_LINK_LIBS} crypt32)
+	set(CF_LINK_LIBS ${CF_LINK_LIBS} crypt32 mfplat mfreadwrite mfuuid ole32)
 elseif(LINUX)
 	target_compile_options(cute PRIVATE -msse4.1)
 elseif(APPLE)

@@ -32,6 +32,7 @@ TEST_SUITE(test_alloc);
 TEST_SUITE(test_app);
 TEST_SUITE(test_array);
 TEST_SUITE(test_aseprite);
+TEST_SUITE(test_video);
 TEST_SUITE(test_audio);
 TEST_SUITE(test_base64);
 TEST_SUITE(test_color);
@@ -143,6 +144,7 @@ int main(int argc, char* argv[])
 	RUN_TRACED(test_ckit);
 	RUN_TRACED(test_jpg);
 	RUN_TRACED(test_dds);
+	RUN_TRACED(test_video);
 #undef RUN_TRACED
 
 	test_shutdown_shared_app(); // The shared GPU app dies here so the leak checker sees a clean exit.
