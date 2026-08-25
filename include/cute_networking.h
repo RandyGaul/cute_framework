@@ -772,6 +772,176 @@ CF_API float CF_CALL cf_server_outgoing_kbps(CF_Server* server, int client_index
 CF_API void CF_CALL cf_server_enable_network_simulator(CF_Server* server, double latency, double jitter, double drop_chance, double duplicate_chance);
 
 //--------------------------------------------------------------------------------------------------
+// MESSAGES + CHANNELS
+//
+// Small user messages routed over prioritized channels, layered above raw packets. Each message
+// carries a user id (a type tag, e.g. "chat" or "jump") and is queued on one of a handful of
+// channels. Every update the queues are pumped into the transport highest-priority channel first,
+// under an optional bytes-per-second budget -- so bulk low-priority traffic (asset blobs, big state
+// dumps) waits its turn locally instead of flooding the send queue and delaying urgent messages.
+// Reliability is per channel: a reliable channel delivers every message in order (per channel,
+// FIFO); an unreliable one may drop messages entirely under loss, but never corrupts or reorders
+// what arrives. Small messages queued together on a channel are coalesced into a single packet.
+//
+// Note the budget only orders and throttles LOCAL queueing. Everything still crosses the wire on
+// the one underlying connection, so a reliable retransmit storm can still delay unreliable packets
+// at the socket -- channels keep your own bulk sends from being the cause of that.
+
+/**
+ * @function CF_NET_MAX_CHANNELS
+ * @category net
+ * @brief    The number of message channels available, indexed 0 to `CF_NET_MAX_CHANNELS - 1`.
+ * @related  cf_client_channel_options cf_client_send_msg cf_server_send_msg
+ */
+#define CF_NET_MAX_CHANNELS 8
+
+/**
+ * @function CF_NET_MAX_MSG_SIZE
+ * @category net
+ * @brief    The largest single message that may be sent on a channel, in bytes.
+ * @remarks  Large messages are fragmented and reassembled by the transport automatically. For bulk
+ *           data, prefer a low-priority channel with a send rate set, so the fragments trickle out
+ *           without starving urgent traffic.
+ * @related  cf_client_send_msg cf_server_send_msg cf_client_set_send_rate
+ */
+#define CF_NET_MAX_MSG_SIZE (1024 * 1024)
+
+/**
+ * @function cf_client_channel_options
+ * @category net
+ * @brief    Configures one of the client's outgoing message channels.
+ * @param    client       The client.
+ * @param    channel      Which channel, from 0 to `CF_NET_MAX_CHANNELS - 1`.
+ * @param    priority     Channels with higher priority are pumped over the wire first each update. Default 0.
+ * @param    reliable     If `true` every message on this channel arrives, in order. If `false` messages
+ *                        may be lost under packet loss (but never corrupted or reordered). Default `false`.
+ * @remarks  Configure channels once, right after creating the client. Changing reliability while
+ *           messages are queued applies to messages not yet sent.
+ * @related  cf_client_send_msg cf_client_set_send_rate cf_server_channel_options
+ */
+CF_API void CF_CALL cf_client_channel_options(CF_Client* client, int channel, int priority, bool reliable);
+
+/**
+ * @function cf_client_set_send_rate
+ * @category net
+ * @brief    Caps how many queued message bytes the client pumps into the transport per second.
+ * @param    client            The client.
+ * @param    bytes_per_second  The budget. 0 (the default) means unlimited.
+ * @remarks  The budget is what makes priorities matter: when messages are queued faster than the
+ *           budget drains them, high-priority channels keep flowing while bulk waits locally. A
+ *           message larger than one second's budget still sends, going into "debt" that throttles
+ *           later sends. Raw `cf_client_send` packets bypass the budget entirely.
+ * @related  cf_client_channel_options cf_client_send_msg cf_server_set_send_rate
+ */
+CF_API void CF_CALL cf_client_set_send_rate(CF_Client* client, int bytes_per_second);
+
+/**
+ * @function cf_client_send_msg
+ * @category net
+ * @brief    Queues a message to the server on a channel.
+ * @param    client   The client.
+ * @param    channel  Which channel carries it, from 0 to `CF_NET_MAX_CHANNELS - 1`.
+ * @param    id       A user-defined type tag delivered along with the bytes (e.g. an enum of your game's message kinds).
+ * @param    data     The message bytes. May be `NULL` when `size` is 0 -- an id alone is a fine message.
+ * @param    size     Size of `data` in bytes, up to `CF_NET_MAX_MSG_SIZE`.
+ * @return   Returns an error if the message is oversized or the channel's local queue is full (the
+ *           queue drains each `cf_client_update`, paced by `cf_client_set_send_rate`).
+ * @remarks  The bytes are copied; `data` may be reused immediately. Messages go over the wire during
+ *           `cf_client_update`, highest-priority channel first. The server receives them with
+ *           `cf_server_pop_msg`.
+ * @related  cf_client_pop_msg cf_client_channel_options cf_client_set_send_rate cf_server_pop_msg
+ */
+CF_API CF_Result CF_CALL cf_client_send_msg(CF_Client* client, int channel, uint32_t id, const void* data, int size);
+
+/**
+ * @function cf_client_pop_msg
+ * @category net
+ * @brief    Pops the next message received from the server, if any.
+ * @param    client   The client.
+ * @param    id       The message's user id.
+ * @param    data     Pointer to the message bytes. Free it with `cf_client_free_msg`.
+ * @param    size     Size of `data` in bytes.
+ * @return   Returns `true` when a message was popped.
+ * @remarks  Incoming messages surface here as `cf_client_pop_packet` drains arriving packets, so
+ *           keep popping packets each update like normal (even if you only ever use messages).
+ * @related  cf_client_free_msg cf_server_send_msg cf_client_send_msg
+ */
+CF_API bool CF_CALL cf_client_pop_msg(CF_Client* client, uint32_t* id, void** data, int* size);
+
+/**
+ * @function cf_client_free_msg
+ * @category net
+ * @brief    Frees a message from `cf_client_pop_msg`.
+ * @related  cf_client_pop_msg cf_server_free_msg
+ */
+CF_API void CF_CALL cf_client_free_msg(CF_Client* client, void* data);
+
+/**
+ * @function cf_server_channel_options
+ * @category net
+ * @brief    Configures one of the server's outgoing message channels (applies to every client).
+ * @param    server       The server.
+ * @param    channel      Which channel, from 0 to `CF_NET_MAX_CHANNELS - 1`.
+ * @param    priority     Channels with higher priority are pumped over the wire first each update. Default 0.
+ * @param    reliable     If `true` every message on this channel arrives, in order. If `false` messages
+ *                        may be lost under packet loss (but never corrupted or reordered). Default `false`.
+ * @related  cf_server_send_msg cf_server_set_send_rate cf_client_channel_options
+ */
+CF_API void CF_CALL cf_server_channel_options(CF_Server* server, int channel, int priority, bool reliable);
+
+/**
+ * @function cf_server_set_send_rate
+ * @category net
+ * @brief    Caps how many queued message bytes the server pumps per second, per client.
+ * @param    server            The server.
+ * @param    bytes_per_second  The budget, applied to each client's queues independently. 0 (the default) means unlimited.
+ * @related  cf_server_channel_options cf_server_send_msg cf_client_set_send_rate
+ */
+CF_API void CF_CALL cf_server_set_send_rate(CF_Server* server, int bytes_per_second);
+
+/**
+ * @function cf_server_send_msg
+ * @category net
+ * @brief    Queues a message to one client on a channel.
+ * @param    server        The server.
+ * @param    client_index  An index representing a particular client, from `CF_ServerEvent`.
+ * @param    channel       Which channel carries it, from 0 to `CF_NET_MAX_CHANNELS - 1`.
+ * @param    id            A user-defined type tag delivered along with the bytes.
+ * @param    data          The message bytes. May be `NULL` when `size` is 0.
+ * @param    size          Size of `data` in bytes, up to `CF_NET_MAX_MSG_SIZE`.
+ * @return   Returns an error if the message is oversized, the client is not connected, or that
+ *           client's channel queue is full (queues drain each `cf_server_update`).
+ * @remarks  The bytes are copied; `data` may be reused immediately. The client receives them with
+ *           `cf_client_pop_msg`.
+ * @related  cf_server_pop_msg cf_server_channel_options cf_server_set_send_rate cf_client_pop_msg
+ */
+CF_API CF_Result CF_CALL cf_server_send_msg(CF_Server* server, int client_index, int channel, uint32_t id, const void* data, int size);
+
+/**
+ * @function cf_server_pop_msg
+ * @category net
+ * @brief    Pops the next message received from any client, if any.
+ * @param    server        The server.
+ * @param    client_index  Which client sent it.
+ * @param    id            The message's user id.
+ * @param    data          Pointer to the message bytes. Free it with `cf_server_free_msg`.
+ * @param    size          Size of `data` in bytes.
+ * @return   Returns `true` when a message was popped.
+ * @remarks  Incoming messages surface here only after `cf_server_pop_event` has drained the events
+ *           carrying them, so keep popping events each update like normal.
+ * @related  cf_server_free_msg cf_client_send_msg cf_server_pop_event
+ */
+CF_API bool CF_CALL cf_server_pop_msg(CF_Server* server, int* client_index, uint32_t* id, void** data, int* size);
+
+/**
+ * @function cf_server_free_msg
+ * @category net
+ * @brief    Frees a message from `cf_server_pop_msg`.
+ * @related  cf_server_pop_msg cf_client_free_msg
+ */
+CF_API void CF_CALL cf_server_free_msg(CF_Server* server, void* data);
+
+//--------------------------------------------------------------------------------------------------
 // COMPRESSION
 //
 // Delta + entropy compression for game snapshots, built on CF's adaptive range coder (cute_arith.h).
@@ -1003,6 +1173,20 @@ CF_INLINE float server_packet_loss(Server* server, int client_index) { return cf
 CF_INLINE float server_incoming_kbps(Server* server, int client_index) { return cf_server_incoming_kbps(server,client_index); }
 CF_INLINE float server_outgoing_kbps(Server* server, int client_index) { return cf_server_outgoing_kbps(server,client_index); }
 CF_INLINE void server_enable_network_simulator(Server* server, double latency, double jitter, double drop_chance, double duplicate_chance) { cf_server_enable_network_simulator(server,latency,jitter,drop_chance,duplicate_chance); }
+
+//--------------------------------------------------------------------------------------------------
+// MESSAGES + CHANNELS
+
+CF_INLINE void client_channel_options(Client* client, int channel, int priority, bool reliable) { cf_client_channel_options(client,channel,priority,reliable); }
+CF_INLINE void client_set_send_rate(Client* client, int bytes_per_second) { cf_client_set_send_rate(client,bytes_per_second); }
+CF_INLINE CF_Result client_send_msg(Client* client, int channel, uint32_t id, const void* data, int size) { return cf_client_send_msg(client,channel,id,data,size); }
+CF_INLINE bool client_pop_msg(Client* client, uint32_t* id, void** data, int* size) { return cf_client_pop_msg(client,id,data,size); }
+CF_INLINE void client_free_msg(Client* client, void* data) { cf_client_free_msg(client,data); }
+CF_INLINE void server_channel_options(Server* server, int channel, int priority, bool reliable) { cf_server_channel_options(server,channel,priority,reliable); }
+CF_INLINE void server_set_send_rate(Server* server, int bytes_per_second) { cf_server_set_send_rate(server,bytes_per_second); }
+CF_INLINE CF_Result server_send_msg(Server* server, int client_index, int channel, uint32_t id, const void* data, int size) { return cf_server_send_msg(server,client_index,channel,id,data,size); }
+CF_INLINE bool server_pop_msg(Server* server, int* client_index, uint32_t* id, void** data, int* size) { return cf_server_pop_msg(server,client_index,id,data,size); }
+CF_INLINE void server_free_msg(Server* server, void* data) { cf_server_free_msg(server,data); }
 
 //--------------------------------------------------------------------------------------------------
 // COMPRESSION

@@ -7820,6 +7820,7 @@ typedef struct cn_ack_system_t
 	int acks_count;
 	int acks_capacity;
 	uint16_t* acks;
+	int dirty_acks; // Packets received since we last SENT anything carrying ack bits back.
 	cn_sequence_buffer_t sent_packets;
 	cn_sequence_buffer_t received_packets;
 
@@ -7837,6 +7838,13 @@ typedef struct cn_ack_system_t
 // -------------------------------------------------------------------------------------------------
 
 #define CN_TRANSPORT_HEADER_SIZE (1 + 2 + 2 + 2 + 2)
+
+// The transport header's prefix byte: 0 = fire-and-forget fragment, 1 = reliable fragment, 2 = a
+// standalone ack packet carrying no fragment at all (sent when acks are pending but no outgoing
+// traffic exists to piggyback them on -- without it, a one-directional reliable transfer larger
+// than `max_fragments_in_flight` fragments deadlocks, the sender resending its full window forever
+// while waiting on acks that have no packet to ride).
+#define CN_TRANSPORT_PREFIX_ACKS_ONLY 2
 #define CN_TRANSPORT_MAX_FRAGMENT_SIZE 1100
 #define CN_TRANSPORT_SEND_QUEUE_MAX_ENTRIES (1024)
 #define CN_TRANSPORT_PACKET_PAYLOAD_MAX (1200)
@@ -8230,6 +8238,7 @@ cn_ack_system_t* cn_ack_system_create(cn_ack_system_config_t config)
 
 	ack_system->sequence = 0;
 	ack_system->acks_count = 0;
+	ack_system->dirty_acks = 0;
 	ack_system->acks_capacity = config.initial_ack_capacity;
 	ack_system->acks = (uint16_t*)CN_ALLOC(sizeof(uint16_t) * ack_system->acks_capacity, mem_ctx);
 	CN_CHECK(cn_sequence_buffer_init(&ack_system->sent_packets, config.sent_packets_sequence_buffer_size, sizeof(cn_sent_packet_t), NULL, mem_ctx));
@@ -8325,9 +8334,35 @@ cn_result_t cn_ack_system_send_packet(cn_ack_system_t* ack_system, void* data, i
 		return result;
 	}
 
+	ack_system->dirty_acks = 0; // This packet's header just carried our latest ack bits.
 	ack_system->counters[CN_ACK_SYSTEM_COUNTERS_PACKETS_SENT]++;
 
 	return cn_error_success();
+}
+
+// Sends `data` with a current ack header but WITHOUT consuming a sequence slot or expecting an ack
+// back -- for standalone ack packets, which must not themselves generate more acks (two quiet peers
+// would ack each other's acks forever).
+cn_result_t cn_ack_system_send_acks(cn_ack_system_t* ack_system, void* data, int size)
+{
+	if (size > ack_system->max_packet_size || size > CN_ACK_SYSTEM_MAX_PACKET_SIZE) {
+		return cn_error_failure("Exceeded max packet size in ack system.");
+	}
+
+	uint16_t ack;
+	uint32_t ack_bits;
+	cn_sequence_buffer_generate_ack_bits(&ack_system->received_packets, &ack, &ack_bits);
+
+	uint8_t buffer[CN_TRANSPORT_PACKET_PAYLOAD_MAX];
+	// The sequence field is filler here (not incremented, not tracked); receivers of ack-only
+	// packets never read it.
+	int header_size = s_write_ack_system_header(buffer, ack_system->sequence, ack, ack_bits);
+	CN_ASSERT(header_size == CN_ACK_SYSTEM_HEADER_SIZE);
+	CN_ASSERT(size + header_size < CN_TRANSPORT_PACKET_PAYLOAD_MAX);
+	CN_MEMCPY(buffer + header_size, data, size);
+	cn_result_t result = ack_system->send_packet_fn(ack_system->index, buffer, size + header_size, ack_system->udata);
+	if (!cn_is_error(result)) ack_system->dirty_acks = 0;
+	return result;
 }
 
 uint16_t cn_ack_system_get_sequence(cn_ack_system_t* ack_system)
@@ -8343,6 +8378,45 @@ static int s_read_ack_system_header(uint8_t* buffer, int size, uint16_t* sequenc
 	*ack = cn_read_uint16(&buffer);
 	*ack_bits = cn_read_uint32(&buffer);
 	return (int)(buffer - buffer_start);
+}
+
+// Marks our previously sent packets as acked per the peer's (ack, ack_bits) report.
+static void s_ack_system_process_ack_bits(cn_ack_system_t* ack_system, uint16_t ack, uint32_t ack_bits)
+{
+	for (int i = 0; i < 32; ++i) {
+		int bit_was_set = ack_bits & 1;
+		ack_bits >>= 1;
+
+		if (bit_was_set) {
+			uint16_t ack_sequence = ack - ((uint16_t)i);
+			cn_sent_packet_t* sent_packet = (cn_sent_packet_t*)cn_sequence_buffer_find(&ack_system->sent_packets, ack_sequence);
+
+			if (sent_packet && !sent_packet->acked) {
+				CN_CHECK_BUFFER_GROW(ack_system, acks_count, acks_capacity, acks, uint16_t);
+				ack_system->acks[ack_system->acks_count++] = ack_sequence;
+				ack_system->counters[CN_ACK_SYSTEM_COUNTERS_PACKETS_ACKED]++;
+				sent_packet->acked = 1;
+
+				float rtt = (float)(ack_system->time - sent_packet->timestamp) * 1000.0f;
+				if (ack_system->rtt == 0.0f && rtt > 0.0f) ack_system->rtt = rtt;
+				else ack_system->rtt += (rtt - ack_system->rtt) * 0.001f;
+				CN_ASSERT(ack_system->rtt >= 0);
+			}
+		}
+	}
+}
+
+// Processes ONLY the ack fields of a packet's header -- for standalone ack packets, which are not
+// themselves ack-worthy traffic (no sequence insert, no dirty_acks, no counters).
+cn_result_t cn_ack_system_receive_acks(cn_ack_system_t* ack_system, void* data, int size)
+{
+	uint16_t sequence;
+	uint16_t ack;
+	uint32_t ack_bits;
+	int header_size = s_read_ack_system_header((uint8_t*)data, size, &sequence, &ack, &ack_bits);
+	if (header_size < 0) return cn_error_failure("Failed to read ack header.");
+	s_ack_system_process_ack_bits(ack_system, ack, ack_bits);
+	return cn_error_success();
 }
 
 cn_result_t cn_ack_system_receive_packet(cn_ack_system_t* ack_system, void* data, int size)
@@ -8375,28 +8449,9 @@ cn_result_t cn_ack_system_receive_packet(cn_ack_system_t* ack_system, void* data
 	CN_ASSERT(packet);
 	packet->timestamp = ack_system->time;
 	packet->size = size;
+	ack_system->dirty_acks++; // The peer now needs to hear this packet was received.
 
-	for (int i = 0; i < 32; ++i) {
-		int bit_was_set = ack_bits & 1;
-		ack_bits >>= 1;
-
-		if (bit_was_set) {
-			uint16_t ack_sequence = ack - ((uint16_t)i);
-			cn_sent_packet_t* sent_packet = (cn_sent_packet_t*)cn_sequence_buffer_find(&ack_system->sent_packets, ack_sequence);
-
-			if (sent_packet && !sent_packet->acked) {
-				CN_CHECK_BUFFER_GROW(ack_system, acks_count, acks_capacity, acks, uint16_t);
-				ack_system->acks[ack_system->acks_count++] = ack_sequence;
-				ack_system->counters[CN_ACK_SYSTEM_COUNTERS_PACKETS_ACKED]++;
-				sent_packet->acked = 1;
-
-				float rtt = (float)(ack_system->time - sent_packet->timestamp) * 1000.0f;
-				if (ack_system->rtt == 0.0f && rtt > 0.0f) ack_system->rtt = rtt;
-				else ack_system->rtt += (rtt - ack_system->rtt) * 0.001f;
-				CN_ASSERT(ack_system->rtt >= 0);
-			}
-		}
-	}
+	s_ack_system_process_ack_bits(ack_system, ack, ack_bits);
 
 	return cn_error_success();
 }
@@ -8832,6 +8887,14 @@ void cn_transport_free_packet(cn_transport_t* transport, void* data)
 cn_result_t cn_transport_process_packet(cn_transport_t* transport, void* data, int size)
 {
 	if (size < CN_ACK_SYSTEM_HEADER_SIZE + CN_TRANSPORT_HEADER_SIZE) return cn_error_failure("`size` is too small to fit the ack-system and transport headers.");
+
+	// A standalone ack packet (see s_transport_send_ack_only) carries no fragment. Process its ack
+	// fields only -- it must not count as ack-worthy traffic itself, or two otherwise-quiet peers
+	// would ack each other's acks forever.
+	if (((uint8_t*)data)[CN_ACK_SYSTEM_HEADER_SIZE] == CN_TRANSPORT_PREFIX_ACKS_ONLY) {
+		return cn_ack_system_receive_acks(transport->ack_system, data, size);
+	}
+
 	cn_result_t result = cn_ack_system_receive_packet(transport->ack_system, data, size);
 	if (cn_is_error(result)) return result;
 
@@ -9040,11 +9103,22 @@ int cn_transport_unacked_fragment_count(cn_transport_t* transport)
 	return transport->fragments_count;
 }
 
+// Flush pending acks in a standalone packet when nothing else this update carried them (see
+// CN_TRANSPORT_PREFIX_ACKS_ONLY). Normal bidirectional traffic piggybacks acks for free and never
+// reaches this.
+static void s_transport_send_ack_only(cn_transport_t* transport)
+{
+	uint8_t buffer[CN_TRANSPORT_HEADER_SIZE];
+	s_transport_write_header(buffer, CN_TRANSPORT_HEADER_SIZE, CN_TRANSPORT_PREFIX_ACKS_ONLY, 0, 0, 0, 0);
+	cn_ack_system_send_acks(transport->ack_system, buffer, CN_TRANSPORT_HEADER_SIZE);
+}
+
 void cn_transport_update(cn_transport_t* transport, double dt)
 {
 	cn_ack_system_update(transport->ack_system, dt);
 	cn_transport_process_acks(transport);
 	cn_transport_send_fragments(transport);
+	if (transport->ack_system->dirty_acks > 0) s_transport_send_ack_only(transport);
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -10795,6 +10869,69 @@ int cn_transport_drop_fragments_reliable_hammer()
 	}
 
 	CN_TEST_ASSERT(received);
+	CN_FREE(packet, NULL);
+
+	cn_transport_destroy(transport_a);
+	cn_transport_destroy(transport_b);
+
+	return 0;
+}
+
+CN_TEST_CASE(cn_transport_one_directional_reliable, "A reliable send larger than the in-flight fragment window completes with ZERO reverse traffic (acks ride standalone ack packets).");
+int cn_transport_one_directional_reliable()
+{
+	cn_test_transport_data_t data_a = cn_test_transport_data_defaults();
+	cn_test_transport_data_t data_b = cn_test_transport_data_defaults();
+	data_a.id = 0;
+	data_b.id = 1;
+	double dt = 1.0/60.0;
+
+	cn_transport_config_t config = cn_transport_config_defaults();
+	config.send_packet_fn = cn_test_transport_send_packet_fn;
+	config.udata = &data_a;
+	cn_transport_t* transport_a = cn_transport_create(config);
+	config.udata = &data_b;
+	cn_transport_t* transport_b = cn_transport_create(config);
+	data_a.transport_a = transport_a;
+	data_a.transport_b = transport_b;
+	data_b.transport_a = transport_a;
+	data_b.transport_b = transport_b;
+
+	// Way more fragments than max_fragments_in_flight, and b NEVER sends anything of its own: the
+	// sender can only advance its flight window if acks flow back on standalone ack packets.
+	// Before those existed, this deadlocked -- a resending its full window forever.
+	int packet_size = CN_KB * 100;
+	uint8_t* packet = (uint8_t*)CN_ALLOC(packet_size, NULL);
+	for (int i = 0; i < packet_size; ++i) {
+		packet[i] = (uint8_t)(i * 7);
+	}
+	CN_TEST_CHECK(cn_is_error(cn_transport_send(transport_a, packet, packet_size, true)));
+
+	int received = 0;
+	int iters = 0;
+	while (1) {
+		cn_transport_update(transport_a, dt);
+		cn_transport_update(transport_b, dt);
+
+		void* packet_received;
+		int packet_received_size;
+		if (!cn_is_error(cn_transport_receive_reliably_and_in_order(transport_b, &packet_received, &packet_received_size))) {
+			CN_TEST_ASSERT(packet_received_size == packet_size);
+			CN_TEST_ASSERT(!CN_MEMCMP(packet, packet_received, packet_size));
+			cn_transport_free_packet(transport_b, packet_received);
+			received = 1;
+		}
+
+		if (received && cn_transport_unacked_fragment_count(transport_a) == 0) {
+			break;
+		}
+
+		if (++iters == 1000) {
+			break;
+		}
+	}
+	CN_TEST_ASSERT(received);
+	CN_TEST_ASSERT(iters < 1000);
 	CN_FREE(packet, NULL);
 
 	cn_transport_destroy(transport_a);
@@ -12658,6 +12795,7 @@ int cn_run_tests(int which_test, bool soak)
 		CN_TEST_CASE_ENTRY(cn_transport_basic),
 		CN_TEST_CASE_ENTRY(cn_transport_drop_fragments),
 		CN_TEST_CASE_ENTRY(cn_transport_drop_fragments_reliable_hammer),
+		CN_TEST_CASE_ENTRY(cn_transport_one_directional_reliable),
 		CN_TEST_CASE_ENTRY(cn_transport_send_many_reliables_at_once),
 		CN_TEST_CASE_ENTRY(cn_transport_fragment_header_guards),
 		CN_TEST_CASE_ENTRY(cn_packet_connection_accepted),
