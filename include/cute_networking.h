@@ -1036,12 +1036,31 @@ CF_API void CF_CALL cf_server_free_msg(CF_Server* server, void* data);
  * @param    size            The size of both snapshots in bytes.
  * @param    out             Destination buffer for the compressed bytes.
  * @param    out_capacity    Capacity of `out` in bytes.
- * @return   Returns the compressed size in bytes, or -1 if it did not fit in `out_capacity`.
+ * @return   Returns the compressed size in bytes. When `out_capacity` is too small, returns the
+ *           NEGATIVE of the exact capacity required -- `if (result >= 0)` still means success,
+ *           and a retry with `-result` bytes succeeds. A buffer of
+ *           `cf_snapshot_compress_bound(size)` bytes can never fail.
  * @remarks  `baseline` and `current` must have identical layout and size; only their differences
- *           are encoded. Decompress with `cf_snapshot_decompress` and the same baseline.
- * @related  cf_snapshot_decompress cf_client_send cf_server_send
+ *           are encoded. Decompress with `cf_snapshot_decompress` and the same baseline. Output
+ *           never exceeds `cf_snapshot_compress_bound(size)`: when the entropy coder cannot beat
+ *           raw storage (adversarial or incompressible input), the snapshot is stored raw behind
+ *           a one-byte flag, so pathological input costs one byte of expansion, not a blowup.
+ *           Compressed streams are not stable across CF versions -- both ends of a connection
+ *           must run the same build, which the connect handshake already implies.
+ * @related  cf_snapshot_compress_bound cf_snapshot_decompress cf_client_send cf_server_send
  */
 CF_API int CF_CALL cf_snapshot_compress(const void* baseline, const void* current, int size, void* out, int out_capacity);
+
+/**
+ * @function cf_snapshot_compress_bound
+ * @category net
+ * @brief    Returns the worst-case output size of `cf_snapshot_compress` for a `size`-byte snapshot.
+ * @remarks  Exactly `size + 1`: one flag byte plus, at worst, the raw snapshot (the compressor
+ *           falls back to raw storage whenever entropy coding cannot beat it). Allocate this much
+ *           and `cf_snapshot_compress` cannot fail.
+ * @related  cf_snapshot_compress cf_snapshot_decompress
+ */
+CF_API int CF_CALL cf_snapshot_compress_bound(int size);
 
 /**
  * @function cf_snapshot_decompress
@@ -1052,8 +1071,9 @@ CF_API int CF_CALL cf_snapshot_compress(const void* baseline, const void* curren
  * @param    compressed      The compressed delta bytes.
  * @param    compressed_size The number of compressed bytes.
  * @param    out             Destination buffer for the reconstructed snapshot, `size` bytes.
- * @return   Returns 0 on success.
- * @related  cf_snapshot_compress cf_client_pop_packet cf_server_pop_event
+ * @return   Returns 0 on success, or -1 for malformed input (no flag byte, or a truncated raw
+ *           payload).
+ * @related  cf_snapshot_compress cf_snapshot_compress_bound cf_client_pop_packet cf_server_pop_event
  */
 CF_API int CF_CALL cf_snapshot_decompress(const void* baseline, int size, const void* compressed, int compressed_size, void* out);
 
@@ -1268,6 +1288,7 @@ CF_INLINE void server_free_msg(Server* server, void* data) { cf_server_free_msg(
 // COMPRESSION
 
 CF_INLINE int snapshot_compress(const void* baseline, const void* current, int size, void* out, int out_capacity) { return cf_snapshot_compress(baseline,current,size,out,out_capacity); }
+CF_INLINE int snapshot_compress_bound(int size) { return cf_snapshot_compress_bound(size); }
 CF_INLINE int snapshot_decompress(const void* baseline, int size, const void* compressed, int compressed_size, void* out) { return cf_snapshot_decompress(baseline,size,compressed,compressed_size,out); }
 
 //--------------------------------------------------------------------------------------------------

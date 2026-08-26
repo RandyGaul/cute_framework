@@ -25,7 +25,7 @@
 			cf_arith_encoder e; cf_arith_encoder_init(&e, out_buffer, out_cap);
 			cf_arith_encode_byte(&e, model, some_byte);
 			...
-			int bytes = cf_arith_encoder_flush(&e);   // -1 if it overflowed out_cap
+			int bytes = cf_arith_encoder_flush(&e);   // Negative of the required size if out_cap was too small.
 
 		Decode (mirror the exact same model updates and call sequence):
 			uint16_t model[256]; cf_arith_probs_clear(model, 256);
@@ -184,11 +184,13 @@ static inline void cf_arith_encode_uint(cf_arith_encoder* e, uint16_t* probs, ui
 	}
 }
 
-// Finish the stream. Returns the number of bytes written, or -1 if the output buffer overflowed.
+// Finish the stream. Returns the number of bytes written, or, if the output buffer overflowed,
+// the NEGATIVE of the total bytes the stream needed (the encoder keeps counting past the cap,
+// so a failed call still reports the exact required capacity: retry with -return_value).
 static inline int cf_arith_encoder_flush(cf_arith_encoder* e)
 {
 	for (int i = 0; i < 5; ++i) cf_arith_s_shift_low(e);
-	return e->overflow ? -1 : e->count;
+	return e->overflow ? -e->count : e->count;
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -285,31 +287,62 @@ static inline uint64_t cf_arith_decode_uint(cf_arith_decoder* d, uint16_t* probs
 // so the long runs of unchanged fields typical of frame-to-frame game state cost almost nothing.
 // The decode side reproduces `cur` exactly given the identical `prev`.
 
-// Returns the compressed size in bytes, or -1 if it overflowed out_cap.
+// Upper bound on cf_arith_delta_compress output for n input bytes: the arithmetic stream is
+// kept only when it beats storing raw, so one flag byte plus the raw bytes is the ceiling.
+// A buffer of at least this size can never overflow.
+#define cf_arith_delta_bound(n) ((n) + 1)
+
+// Compresses into a one-byte flag plus either the arithmetic-coded delta (flag 0) or the raw
+// bytes of `cur` (flag 1) -- raw wins whenever arithmetic coding fails to beat it, so
+// adversarial input costs at most one byte of expansion. Returns the compressed size, or the
+// NEGATIVE of the exact required capacity when out_cap is too small; a
+// cf_arith_delta_bound(n)-sized buffer never fails.
 static inline int cf_arith_delta_compress(const uint8_t* prev, const uint8_t* cur, int n, uint8_t* out, int out_cap)
 {
 	uint16_t changed = CF_ARITH_PROB_INIT;
 	uint16_t value[256];
 	cf_arith_probs_clear(value, 256);
 	cf_arith_encoder e;
-	cf_arith_encoder_init(&e, out, out_cap);
+	int arith_cap = out_cap - 1 < n ? out_cap - 1 : n; // Past n, raw wins anyway.
+	if (arith_cap < 0) arith_cap = 0;
+	cf_arith_encoder_init(&e, out_cap >= 1 ? out + 1 : 0, arith_cap);
 	for (int i = 0; i < n; ++i) {
 		uint8_t d = (uint8_t)(cur[i] ^ (prev ? prev[i] : 0));
 		int is_changed = d != 0;
 		cf_arith_encode_bit(&e, &changed, is_changed);
 		if (is_changed) cf_arith_encode_byte(&e, value, d);
 	}
-	return cf_arith_encoder_flush(&e);
+	int size = cf_arith_encoder_flush(&e);
+	if (size >= 0 && size < n) {
+		out[0] = 0;
+		return size + 1;
+	}
+	if (out_cap >= n + 1) {
+		// Raw escape: arithmetic lost to (or tied with) raw storage.
+		out[0] = 1;
+		for (int i = 0; i < n; ++i) out[1 + i] = cur[i];
+		return n + 1;
+	}
+	int required = (size < 0 ? -size : size) + 1; // Exact: the encoder counts past overflow.
+	if (required > n + 1) required = n + 1;
+	return -required;
 }
 
-// Reconstructs `cur` (n bytes) from `prev` and the compressed delta. Returns 0 on success.
+// Reconstructs `cur` (n bytes) from `prev` and the compressed delta. Returns 0 on success, or
+// -1 for malformed input (no flag byte, or a truncated raw payload).
 static inline int cf_arith_delta_decompress(const uint8_t* prev, int n, const uint8_t* in, int in_size, uint8_t* cur)
 {
+	if (in_size < 1) return -1;
+	if (in[0]) {
+		if (in_size < n + 1) return -1;
+		for (int i = 0; i < n; ++i) cur[i] = in[1 + i];
+		return 0;
+	}
 	uint16_t changed = CF_ARITH_PROB_INIT;
 	uint16_t value[256];
 	cf_arith_probs_clear(value, 256);
 	cf_arith_decoder d;
-	cf_arith_decoder_init(&d, in, in_size);
+	cf_arith_decoder_init(&d, in + 1, in_size - 1);
 	for (int i = 0; i < n; ++i) {
 		uint8_t delta = 0;
 		if (cf_arith_decode_bit(&d, &changed)) delta = cf_arith_decode_byte(&d, value);
