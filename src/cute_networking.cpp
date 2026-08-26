@@ -11,8 +11,94 @@
 #include <cute_time.h>
 #include <time.h>
 
-// This entire file makes no sense for web builds, since web doesn't allow UDP.
-#ifndef CF_EMSCRIPTEN
+// Web builds compile all of this too: a client rides a CF_ClientWire (see cf_client_web_wire at
+// the bottom of this file) since browsers have no UDP, while servers -- whose sockets cannot open
+// in a browser -- fail cleanly at cf_server_start.
+// The JS half of the web wire (used by cf_client_web_wire at the bottom of this file):
+// WebTransport datagrams with a WebSocket fallback, one datagram per message either way,
+// all connection state living in JS while C polls a per-wire receive queue.
+#ifdef CF_EMSCRIPTEN
+#include <emscripten/emscripten.h>
+
+// clang-format off
+EM_JS(void, s_js_wire_open, (int h, const char* url_cstr), {
+	var url = UTF8ToString(url_cstr);
+	if (!Module.cfWires) Module.cfWires = {};
+	var w = { q: [], open: false, dead: false, wt: null, ws: null, writer: null };
+	Module.cfWires[h] = w;
+	var push = function(bytes) {
+		if (w.q.length >= 256) w.q.shift(); // Datagram semantics: drop oldest under pressure.
+		w.q.push(bytes);
+	};
+	var fallback = function() {
+		if (w.dead || w.ws) return;
+		try {
+			var ws = new WebSocket(url.replace(/^http/, "ws"));
+			ws.binaryType = "arraybuffer";
+			ws.onmessage = function(e) { push(new Uint8Array(e.data)); };
+			ws.onopen = function() { w.open = true; };
+			ws.onclose = function() { if (w.open || !w.wt) w.dead = true; };
+			ws.onerror = function() { if (!w.open) w.dead = true; };
+			w.ws = ws;
+		} catch (e) { w.dead = true; }
+	};
+	if (typeof WebTransport !== "undefined") {
+		try {
+			var wt = new WebTransport(url);
+			w.wt = wt;
+			wt.ready.then(function() {
+				w.open = true;
+				w.writer = wt.datagrams.writable.getWriter();
+				var reader = wt.datagrams.readable.getReader();
+				var pump = function() {
+					reader.read().then(function(r) {
+						if (r.done || w.dead) return;
+						push(r.value);
+						pump();
+					}).catch(function() { w.dead = true; });
+				};
+				pump();
+				wt.closed.then(function() { w.dead = true; }).catch(function() { w.dead = true; });
+			}).catch(function() { w.wt = null; fallback(); });
+		} catch (e) { w.wt = null; fallback(); }
+	} else {
+		fallback();
+	}
+});
+
+EM_JS(int, s_js_wire_send, (int h, const void* data, int size), {
+	var w = Module.cfWires && Module.cfWires[h];
+	if (!w || w.dead) return -1;
+	if (!w.open) return 0; // Still connecting: drop, the handshake retries.
+	var bytes = HEAPU8.slice(data, data + size);
+	try {
+		if (w.writer) w.writer.write(bytes);
+		else if (w.ws && w.ws.readyState === 1) w.ws.send(bytes);
+		else return 0;
+	} catch (e) { return -1; }
+	return size;
+});
+
+EM_JS(int, s_js_wire_recv, (int h, void* data, int size), {
+	var w = Module.cfWires && Module.cfWires[h];
+	if (!w) return -1;
+	if (!w.q.length) return w.dead ? -1 : 0;
+	var bytes = w.q.shift();
+	var n = Math.min(bytes.length, size);
+	HEAPU8.set(bytes.subarray(0, n), data);
+	return n;
+});
+
+EM_JS(void, s_js_wire_close, (int h), {
+	var w = Module.cfWires && Module.cfWires[h];
+	if (!w) return;
+	w.dead = true;
+	try { if (w.wt) w.wt.close(); } catch (e) {}
+	try { if (w.ws) w.ws.close(); } catch (e) {}
+	delete Module.cfWires[h];
+});
+// clang-format on
+#endif // CF_EMSCRIPTEN
 
 #define CUTE_NET_IMPLEMENTATION
 #define CN_ALLOC(size, ctx) cf_alloc(size)
@@ -352,7 +438,31 @@ struct CF_Client
 	int rate; // Bytes per second budget for the pump; 0 = unlimited.
 	uint8_t* scratch;
 	int scratch_cap;
+	CF_ClientWire wire;      // Optional datagram transport (see cf_client_set_wire); cn_wire installed when wire.send is set.
+	cn_wire_t cn_wire;
+	int web_wire_handle;     // Nonzero when cf_client_web_wire owns a JS-side connection.
 };
+
+static int s_wire_send_thunk(void* udata, const void* data, int size)
+{
+	CF_Client* client = (CF_Client*)udata;
+	return client->wire.send(client->wire.udata, data, size);
+}
+
+static int s_wire_recv_thunk(void* udata, void* data, int size)
+{
+	CF_Client* client = (CF_Client*)udata;
+	return client->wire.recv(client->wire.udata, data, size);
+}
+
+void cf_client_set_wire(CF_Client* client, CF_ClientWire wire)
+{
+	client->wire = wire;
+	client->cn_wire.udata = client;
+	client->cn_wire.send = s_wire_send_thunk;
+	client->cn_wire.recv = s_wire_recv_thunk;
+	cn_client_set_wire(client->cn, &client->cn_wire);
+}
 
 CF_Client* cf_make_client(
 	uint16_t port,
@@ -369,6 +479,9 @@ CF_Client* cf_make_client(
 
 void cf_destroy_client(CF_Client* client)
 {
+#ifdef CF_EMSCRIPTEN
+	if (client->web_wire_handle) s_js_wire_close(client->web_wire_handle);
+#endif
 	cn_client_destroy(client->cn);
 	s_peer_reset(&client->send);
 	s_msg_clear(&client->rx);
@@ -790,6 +903,45 @@ void cf_client_tick(CF_Client* client)
 void cf_server_tick(CF_Server* server)
 {
 	cf_server_update(server, CF_DELTA_TIME, (uint64_t)time(NULL));
+}
+
+//--------------------------------------------------------------------------------------------------
+// The web wire: WebTransport datagrams with a WebSocket fallback, one datagram per message either
+// way. All connection state lives in JS; C polls a per-wire receive queue. Opening is async and
+// sends before the pipe is up are dropped -- the protocol's redundant handshake absorbs that.
+
+#ifdef CF_EMSCRIPTEN
+
+
+
+static int s_web_wire_send(void* udata, const void* data, int size) { return s_js_wire_send((int)(uintptr_t)udata, data, size); }
+static int s_web_wire_recv(void* udata, void* data, int size) { return s_js_wire_recv((int)(uintptr_t)udata, data, size); }
+
+CF_Result cf_client_web_wire(CF_Client* client, const char* url)
+{
+	if (!url || (CF_STRNCMP(url, "https://", 8) && CF_STRNCMP(url, "http://", 7))) {
+		return cf_result_error("cf_client_web_wire wants an http(s):// relay URL.");
+	}
+	static int next_handle = 1;
+	int h = next_handle++;
+	if (client->web_wire_handle) s_js_wire_close(client->web_wire_handle);
+	client->web_wire_handle = h;
+	s_js_wire_open(h, url);
+	CF_ClientWire wire;
+	wire.udata = (void*)(uintptr_t)h;
+	wire.send = s_web_wire_send;
+	wire.recv = s_web_wire_recv;
+	cf_client_set_wire(client, wire);
+	return cf_result_success();
+}
+
+#else // CF_EMSCRIPTEN
+
+CF_Result cf_client_web_wire(CF_Client* client, const char* url)
+{
+	CF_UNUSED(client);
+	CF_UNUSED(url);
+	return cf_result_error("cf_client_web_wire is web (emscripten) machinery; on native builds connect over UDP as usual, or install your own CF_ClientWire.");
 }
 
 #endif // CF_EMSCRIPTEN

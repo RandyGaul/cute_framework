@@ -25,6 +25,19 @@ Everything in the ✔ column is exercised by the test suite on both backends. Sh
 > [!NOTE]
 > Emscripten builds automatically disable CF's [HTTPS support](../api_reference.md#web), since web builds suffer from very poor support of this feature.
 
+## Networking on Web
+
+Browsers cannot open UDP sockets, so a web build's [client](networking.md) sends its datagrams through a *wire* instead of a socket: call [`cf_client_web_wire`](../net/function/cf_client_web_wire.md) after `cf_make_client` and before `cf_client_connect`, and every packet rides a browser transport to a tiny relay next to your game server, which forwards them to the server's normal UDP port -- the server cannot tell the difference. See the [Web Clients](networking.md#web-clients) section of the networking topic for the full architecture, including what the relay has to do (very little). Servers do not run in browsers; `cf_server_start` fails cleanly on web.
+
+```c
+CF_Client* client = cf_make_client(0, APP_ID, false);
+#ifdef CF_EMSCRIPTEN
+	// Usually derived from location.origin: the host that served the page runs the relay.
+	cf_client_web_wire(client, "https://mygame.example/wire/5601");
+#endif
+cf_client_connect(client, token);
+```
+
 ## Install Emscripten
 
 Make sure [emscripten is installed](https://emscripten.org/docs/getting_started/downloads.html) on your machine, along with [Perl](https://strawberryperl.com/).
