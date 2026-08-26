@@ -30,13 +30,18 @@
 		* State of the art connect tokens for security.
 		* Support for large packets (fragmentation and reassembly).
 		* Bandwidth stats (incoming/outgoing kbps, packet loss).
+		* Pluggable client transport (`cn_client_set_wire`): route a client's datagrams
+		  through anything that can carry opaque bytes -- browser transports on web builds,
+		  untrusted relays, in-memory queues for tests. See the cn_wire_t docs for the
+		  use cases this unlocks.
 
 
 	TODO FEATURES
 
 		* Bandwidth throttling
 		* Channel support (for reliable packet stalling mitigation)
-		* Loopback clients for server
+		* Server-side wire, completing in-process loopback clients (the client half ships
+		  via cn_client_set_wire; the server still receives only on its UDP socket)
 		* Memory stats query for server
 
 
@@ -364,12 +369,36 @@ void cn_client_disconnect(cn_client_t* client);
  * `data` with one pending datagram (up to `size` bytes) and returns its length, 0 when nothing
  * is pending, or negative on transport failure. Datagram semantics are assumed -- packets may
  * arrive dropped, duplicated, or reordered, and cute net's protocol handles all of that as
- * usual; the wire only moves bytes. The wire is how web builds (emscripten) connect: browsers
- * have no UDP, so a wire backed by a WebTransport or WebSocket bridge relays datagrams to the
- * server, which keeps its normal UDP socket and cannot tell the difference (each datagram is
- * already encrypted, so the relay is an untrusted dumb pipe). A wire also makes loopback or
- * in-memory transports possible for tests. Set it after `cn_client_create` and before
+ * usual; the wire only moves bytes. Set it after `cn_client_create` and before
  * `cn_client_connect`. The wire must outlive the client; cute net never frees it.
+ *
+ * The wire is deliberately contentless: addressing lives outside it, security and delivery
+ * guarantees live above it (every datagram is independently encrypted and authenticated, and
+ * loss/duplication/reordering are already the protocol's job). That makes wires compose, and
+ * unlocks more than the obvious:
+ *
+ *    * Web builds -- browsers have no UDP, so datagrams ride a WebTransport or WebSocket
+ *      bridge to a relay beside the server, which keeps its normal UDP socket and cannot
+ *      tell the difference.
+ *    * Untrusted relays / NAT traversal -- a relay only ever sees ciphertext, so bouncing
+ *      through ANY box you can rent is safe; the worst a hostile relay can do is drop
+ *      packets, which is just weather.
+ *    * Multi-path racing -- send every datagram down two routes (say direct UDP and a
+ *      relay) and merge receives: per-packet latency becomes the minimum of the paths,
+ *      and replay protection already dedupes the copies.
+ *    * In-memory loopback -- a queue-pair wire runs a client with no sockets at all,
+ *      for deterministic tests.
+ *    * Network-condition simulation -- wrap any wire in a latency/jitter/loss wire; unlike
+ *      the built-in simulator (which wraps the UDP socket), this composes on every platform,
+ *      web included.
+ *    * Fuzzing and metrics -- the wire is a natural interception point: flip bits to
+ *      exercise the crypto reject path, or meter bandwidth. (Note a wire tee captures
+ *      ciphertext under ephemeral session keys, so offline replay of a capture needs the
+ *      keys saved alongside; payload-level capture above the protocol is usually the
+ *      better forensics tool.)
+ *    * Exotic transports -- anything that moves an opaque datagram (platform relay
+ *      services, console transport layers, P2P sessions) can carry a connection without
+ *      touching cute net again.
  */
 typedef struct cn_wire_t
 {
