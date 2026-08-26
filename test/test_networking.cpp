@@ -46,7 +46,7 @@ static void s_drain_events(NetPair* np)
 	}
 }
 
-static bool s_net_start(NetPair* np, const char* addr)
+static bool s_net_start_wired(NetPair* np, const char* addr, CF_ClientWire* wire)
 {
 	memset(np, 0, sizeof(*np));
 	np->client_index = -1;
@@ -55,6 +55,7 @@ static bool s_net_start(NetPair* np, const char* addr)
 	if (cf_is_error(cf_server_start(np->server, addr))) return false;
 	np->client = cf_make_client(0, TEST_NET_APP_ID, false);
 	if (!np->client) return false;
+	if (wire) cf_client_set_wire(np->client, *wire);
 	if (cf_is_error(cf_client_connect_insecure(np->client, addr, TEST_NET_APP_ID))) return false;
 	for (int i = 0; i < 5000; ++i) {
 		uint64_t now = (uint64_t)time(NULL);
@@ -65,6 +66,11 @@ static bool s_net_start(NetPair* np, const char* addr)
 		cf_sleep(1);
 	}
 	return false;
+}
+
+static bool s_net_start(NetPair* np, const char* addr)
+{
+	return s_net_start_wired(np, addr, NULL);
 }
 
 static void s_net_update(NetPair* np)
@@ -309,12 +315,140 @@ TEST_CASE(test_net_msg_errors)
 	return true;
 }
 
+// A UDP socket dressed as a CF_ClientWire: in-process, this is exactly what a web build's
+// relay does from the server's point of view -- datagrams arrive on its normal UDP socket
+// while the client rides the wire.
+#ifdef _WIN32
+#	include <winsock2.h>
+#	pragma comment(lib, "ws2_32.lib")
+	typedef SOCKET WireSocketHandle;
+#else
+#	include <sys/socket.h>
+#	include <netinet/in.h>
+#	include <arpa/inet.h>
+#	include <fcntl.h>
+#	include <unistd.h>
+	typedef int WireSocketHandle;
+#endif
+
+struct WireSocket
+{
+	WireSocketHandle s;
+	sockaddr_in to;
+};
+
+static bool s_wire_socket_open(WireSocket* w, uint16_t port)
+{
+#ifdef _WIN32
+	WSADATA wsa; // Refcounted; harmless alongside cn's own WSAStartup.
+	if (WSAStartup(MAKEWORD(2, 2), &wsa)) return false;
+#endif
+	w->s = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+	memset(&w->to, 0, sizeof(w->to));
+	w->to.sin_family = AF_INET;
+	w->to.sin_port = htons(port);
+	w->to.sin_addr.s_addr = htonl(0x7F000001); // 127.0.0.1
+#ifdef _WIN32
+	if (w->s == INVALID_SOCKET) return false;
+	u_long yes = 1;
+	ioctlsocket(w->s, FIONBIO, &yes);
+#else
+	if (w->s < 0) return false;
+	fcntl(w->s, F_SETFL, fcntl(w->s, F_GETFL, 0) | O_NONBLOCK);
+#endif
+	return true;
+}
+
+static void s_wire_socket_close(WireSocket* w)
+{
+#ifdef _WIN32
+	closesocket(w->s);
+#else
+	close(w->s);
+#endif
+}
+
+static int s_wire_send(void* udata, const void* data, int size)
+{
+	WireSocket* w = (WireSocket*)udata;
+	return (int)sendto(w->s, (const char*)data, size, 0, (sockaddr*)&w->to, sizeof(w->to));
+}
+
+static int s_wire_recv(void* udata, void* data, int size)
+{
+	WireSocket* w = (WireSocket*)udata;
+	int n = (int)recvfrom(w->s, (char*)data, size, 0, NULL, NULL);
+	return n < 0 ? 0 : n; // Nonblocking: a would-block error means nothing pending.
+}
+
+/* The whole protocol -- crypto handshake, raw packets, reliable channel messages -- flows
+ * through a CF_ClientWire while the server keeps its ordinary UDP socket, never able to tell
+ * the difference. This is the seam web builds ride (cf_client_web_wire). */
+TEST_CASE(test_net_client_wire)
+{
+	WireSocket w;
+	REQUIRE(s_wire_socket_open(&w, 5805));
+	CF_ClientWire wire;
+	wire.udata = &w;
+	wire.send = s_wire_send;
+	wire.recv = s_wire_recv;
+
+	NetPair np;
+	REQUIRE(s_net_start_wired(&np, "127.0.0.1:5805", &wire));
+
+	// Raw client -> server through the wire.
+	const char raw[] = "datagrams in disguise";
+	REQUIRE(!cf_is_error(cf_client_send(np.client, raw, sizeof(raw), true)));
+	bool got_raw = false;
+	for (int i = 0; i < 5000 && !got_raw; ++i) {
+		s_net_update(&np);
+		CF_ServerEvent e;
+		while (cf_server_pop_event(np.server, &e)) {
+			if (e.type == CF_SERVER_EVENT_TYPE_PAYLOAD_PACKET) {
+				REQUIRE(e.u.payload_packet.size == (int)sizeof(raw));
+				REQUIRE(!memcmp(e.u.payload_packet.data, raw, sizeof(raw)));
+				cf_server_free_packet(np.server, e.u.payload_packet.client_index, e.u.payload_packet.data);
+				got_raw = true;
+			}
+		}
+		cf_sleep(1);
+	}
+	REQUIRE(got_raw);
+
+	// A reliable message server -> client through the wire.
+	cf_server_channel_options(np.server, 0, 0, true);
+	REQUIRE(!cf_is_error(cf_server_send_msg(np.server, np.client_index, 0, 42, "wired", 6)));
+	bool got_msg = false;
+	for (int i = 0; i < 5000 && !got_msg; ++i) {
+		s_net_update(&np);
+		s_drain_events(&np);
+		void* pkt;
+		int size;
+		while (cf_client_pop_packet(np.client, &pkt, &size, NULL)) cf_client_free_packet(np.client, pkt);
+		uint32_t id;
+		void* data;
+		while (cf_client_pop_msg(np.client, &id, &data, &size)) {
+			REQUIRE(id == 42);
+			REQUIRE(!CF_STRCMP((const char*)data, "wired"));
+			cf_client_free_msg(np.client, data);
+			got_msg = true;
+		}
+		cf_sleep(1);
+	}
+	REQUIRE(got_msg);
+
+	s_net_free(&np);
+	s_wire_socket_close(&w);
+	return true;
+}
+
 TEST_SUITE(test_networking)
 {
 	RUN_TEST_CASE(test_net_raw_and_msgs);
 	RUN_TEST_CASE(test_net_channel_priority);
 	RUN_TEST_CASE(test_net_channel_reliable_loss);
 	RUN_TEST_CASE(test_net_msg_errors);
+	RUN_TEST_CASE(test_net_client_wire);
 }
 
 #else // CF_EMSCRIPTEN

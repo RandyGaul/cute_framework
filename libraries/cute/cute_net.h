@@ -35,7 +35,6 @@
 	TODO FEATURES
 
 		* Bandwidth throttling
-		* TCP-only mode (for web builds via emscripten)
 		* Channel support (for reliable packet stalling mitigation)
 		* Loopback clients for server
 		* Memory stats query for server
@@ -60,8 +59,10 @@
 			* ESP
 			* AVR
 
-		Please note emscripten (and browsers) are not supported, as Cute Net uses
-		the UDP transport layer, not TCP.
+		Emscripten (browser) builds are supported for the CLIENT only, via `cn_client_set_wire`:
+		browsers have no UDP, so the client's datagrams ride a user-provided wire (WebTransport
+		or WebSocket) to a relay that speaks plain UDP to the server. Servers are not supported
+		in browsers.
 
 
 	LIMITATIONS
@@ -358,6 +359,28 @@ cn_result_t cn_client_connect(cn_client_t* client, const uint8_t* connect_token)
 void cn_client_disconnect(cn_client_t* client);
 
 /**
+ * An optional datagram transport for the client, replacing the internal UDP socket. Each call
+ * moves one whole packet: `send` ships `size` bytes to the server as one datagram, `recv` fills
+ * `data` with one pending datagram (up to `size` bytes) and returns its length, 0 when nothing
+ * is pending, or negative on transport failure. Datagram semantics are assumed -- packets may
+ * arrive dropped, duplicated, or reordered, and cute net's protocol handles all of that as
+ * usual; the wire only moves bytes. The wire is how web builds (emscripten) connect: browsers
+ * have no UDP, so a wire backed by a WebTransport or WebSocket bridge relays datagrams to the
+ * server, which keeps its normal UDP socket and cannot tell the difference (each datagram is
+ * already encrypted, so the relay is an untrusted dumb pipe). A wire also makes loopback or
+ * in-memory transports possible for tests. Set it after `cn_client_create` and before
+ * `cn_client_connect`. The wire must outlive the client; cute net never frees it.
+ */
+typedef struct cn_wire_t
+{
+	void* udata;
+	int (*send)(void* udata, const void* data, int size);
+	int (*recv)(void* udata, void* data, int size);
+} cn_wire_t;
+
+void cn_client_set_wire(cn_client_t* client, cn_wire_t* wire);
+
+/**
  * You should call this one per game loop after calling `cn_client_connect`.
  */
 void cn_client_update(cn_client_t* client, double dt, uint64_t current_time);
@@ -608,7 +631,7 @@ CN_INLINE cn_result_t cn_error_success(void) { cn_result_t result; result.code =
 #elif defined(__ANDROID__)
 #	define CN_ANDROID 1
 #elif defined(__EMSCRIPTEN__)
-#	error Emscripten is not supported, as Cute Net uses the UDP transport layer.
+#	define CN_EMSCRIPTEN 1
 #endif
 
 #if !defined(CN_ALLOC)
@@ -2007,7 +2030,7 @@ static TLS struct {
 		return 0;
 	}
 
-#elif defined(__wasi__)
+#elif defined(__wasi__) || defined(__EMSCRIPTEN__)
 
 	#include <unistd.h>
 
@@ -5292,6 +5315,7 @@ struct cn_protocol_client_t
 	int server_endpoint_index;
 	cn_endpoint_t web_service_endpoint;
 	cn_socket_t socket;
+	cn_wire_t* wire; // When set, replaces the socket entirely (see cn_client_set_wire).
 	uint64_t sequence;
 	cn_circular_buffer_t packet_queue;
 	cn_protocol_replay_buffer_t replay_buffer;
@@ -6645,7 +6669,7 @@ cn_result_t cn_protocol_client_connect(cn_protocol_client_t* client, const uint8
 	}
 	cn_address_type_t sock_addr_type = CN_ADDRESS_TYPE_IPV4;
 #endif
-	if (cn_socket_init1(&client->socket, sock_addr_type, client->port, CN_PROTOCOL_CLIENT_SEND_BUFFER_SIZE, CN_PROTOCOL_CLIENT_RECEIVE_BUFFER_SIZE)) {
+	if (!client->wire && cn_socket_init1(&client->socket, sock_addr_type, client->port, CN_PROTOCOL_CLIENT_SEND_BUFFER_SIZE, CN_PROTOCOL_CLIENT_RECEIVE_BUFFER_SIZE)) {
 		return cn_error_failure("Unable to open socket.");
 	}
 
@@ -6680,12 +6704,18 @@ CN_INLINE const char* s_protocol_packet_str(uint8_t type)
 	return NULL;
 }
 
+static CN_INLINE void s_protocol_client_send_raw(cn_protocol_client_t* client, int sz)
+{
+	if (client->wire) client->wire->send(client->wire->udata, client->buffer, sz);
+	else cn_socket_send(&client->socket, client->sim, s_protocol_server_endpoint(client), client->buffer, sz);
+}
+
 static void s_protocol_client_send(cn_protocol_client_t* client, void* packet)
 {
 	int sz = cn_protocol_packet_write(packet, client->buffer, client->sequence++, &client->connect_token.client_to_server_key);
 
 	if (sz >= 73) {
-		cn_socket_send(&client->socket, client->sim, s_protocol_server_endpoint(client), client->buffer, sz);
+		s_protocol_client_send_raw(client, sz);
 		client->last_packet_sent_time = 0;
 		//log(CN_LOG_LEVEL_INFORMATIONAL, "Protocol Client: Sent %s packet to server.", s_protocol_packet_str(*(uint8_t*)packet));
 	}
@@ -6745,13 +6775,19 @@ static void s_protocol_receive_packets(cn_protocol_client_t* client)
 
 	while (1)
 	{
-		// Read packet from UDP stack, and open it.
-		cn_endpoint_t from;
-		int sz = cn_socket_receive(&client->socket, &from, buffer, CN_PROTOCOL_PACKET_SIZE_MAX);
-		if (!sz) break;
-
-		if (!cn_endpoint_equals(s_protocol_server_endpoint(client), from)) {
-			continue;
+		// Read packet from the UDP stack (or the wire, which is point-to-point with the
+		// server, so its packets need no source-address check), and open it.
+		int sz;
+		if (client->wire) {
+			sz = client->wire->recv(client->wire->udata, buffer, CN_PROTOCOL_PACKET_SIZE_MAX);
+			if (sz <= 0) break;
+		} else {
+			cn_endpoint_t from;
+			sz = cn_socket_receive(&client->socket, &from, buffer, CN_PROTOCOL_PACKET_SIZE_MAX);
+			if (!sz) break;
+			if (!cn_endpoint_equals(s_protocol_server_endpoint(client), from)) {
+				continue;
+			}
 		}
 
 		if (sz < 73) {
@@ -6960,7 +6996,7 @@ cn_result_t cn_protocol_client_send(cn_protocol_client_t* client, const void* da
 	if (size > CN_PROTOCOL_PACKET_PAYLOAD_MAX) return cn_error_failure("`size` exceeded `CN_PROTOCOL_PACKET_PAYLOAD_MAX`.");
 	int sz = s_protocol_write_payload_packet(data, size, client->buffer, client->sequence++, &client->connect_token.client_to_server_key);
 	if (sz >= 73) {
-		cn_socket_send(&client->socket, client->sim, s_protocol_server_endpoint(client), client->buffer, sz);
+		s_protocol_client_send_raw(client, sz);
 		client->last_packet_sent_time = 0;
 	}
 	return cn_error_success();
@@ -9159,6 +9195,11 @@ cn_client_t* cn_client_create(uint16_t port, uint64_t application_id, bool use_i
 	return client;
 }
 
+void cn_client_set_wire(cn_client_t* client, cn_wire_t* wire)
+{
+	client->p_client->wire = wire;
+}
+
 void cn_client_destroy(cn_client_t* client)
 {
 	if (!client) return;
@@ -9251,6 +9292,7 @@ const char* cn_client_state_string(cn_client_state_t state)
 
 void cn_client_enable_network_simulator(cn_client_t* client, double latency, double jitter, double drop_chance, double duplicate_chance)
 {
+	if (client->p_client->wire) return; // The simulator wraps the UDP socket; a wire has none.
 	cn_protocol_client_enable_network_simulator(client->p_client, latency, jitter, drop_chance, duplicate_chance);
 }
 

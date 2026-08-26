@@ -10,8 +10,9 @@
 
 #include "cute_defines.h"
 
-// This entire file makes no sense for web builds, since web doesn't allow UDP.
-#ifndef CF_EMSCRIPTEN
+// Web builds get this whole API too. Browsers have no UDP, so a web client's traffic rides a
+// CF_ClientWire (see cf_client_web_wire) to a relay; servers, whose sockets cannot open in a
+// browser, fail cleanly at cf_server_start.
 
 #include "cute_result.h"
 
@@ -294,6 +295,63 @@ CF_API CF_Result CF_CALL cf_client_connect(CF_Client* client, const uint8_t* con
  * @related  CF_Client cf_make_client cf_destroy_client cf_client_connect cf_client_disconnect cf_client_update
  */
 CF_API void CF_CALL cf_client_disconnect(CF_Client* client);
+
+/**
+ * @struct   CF_ClientWire
+ * @category net
+ * @brief    An optional datagram transport for a client, replacing its internal UDP socket.
+ * @remarks  Each call moves one whole packet: `send` ships `size` bytes to the server as one
+ *           datagram, and `recv` fills `data` with one pending datagram (up to `size` bytes),
+ *           returning its length, 0 when nothing is pending, or negative on transport failure.
+ *           Datagram semantics are assumed -- packets may arrive dropped, duplicated, or
+ *           reordered, and the protocol handles all of that as usual; the wire only moves bytes.
+ *           This is how web builds connect (see `cf_client_web_wire` and the Web topic page):
+ *           browsers have no UDP, so datagrams ride a WebTransport or WebSocket bridge to a
+ *           relay, and the server keeps its normal UDP socket. A wire also makes loopback or
+ *           in-memory transports possible for tests.
+ * @related  CF_Client cf_client_set_wire cf_client_web_wire cf_client_connect
+ */
+typedef struct CF_ClientWire
+{
+	/* @member Passed back to `send` and `recv`. */
+	void* udata;
+
+	/* @member Sends one whole datagram to the server. Returns bytes sent, or negative on failure. */
+	int (CF_CALL* send)(void* udata, const void* data, int size);
+
+	/* @member Receives one whole pending datagram into `data`, up to `size` bytes. Returns its
+	   length, 0 when nothing is pending, or negative on transport failure. */
+	int (CF_CALL* recv)(void* udata, void* data, int size);
+} CF_ClientWire;
+// @end
+
+/**
+ * @function cf_client_set_wire
+ * @category net
+ * @brief    Routes all of a client's traffic through a `CF_ClientWire` instead of a UDP socket.
+ * @remarks  Call after `cf_make_client` and before `cf_client_connect`. The wire struct is copied;
+ *           whatever `udata` points at must outlive the client.
+ * @related  CF_ClientWire cf_client_web_wire cf_client_connect
+ */
+CF_API void CF_CALL cf_client_set_wire(CF_Client* client, CF_ClientWire wire);
+
+/**
+ * @function cf_client_web_wire
+ * @category net
+ * @brief    On web builds, wires a client to a datagram relay by URL -- the browser's road to a UDP server.
+ * @param    url  The relay endpoint, e.g. `"https://mygame.example/wire/5601"`. WebTransport is tried
+ *                at this URL first; on failure the same URL is retried as a WebSocket (`https` ->
+ *                `wss`). Both carry one datagram per message.
+ * @return   Returns an error on native builds (this is web machinery), or when the URL is malformed.
+ * @remarks  Call after `cf_make_client` and before `cf_client_connect`, in place of `cf_client_set_wire`.
+ *           The connection opens in the background; packets sent before it opens are dropped, which the
+ *           protocol's redundant handshake absorbs. The relay is an untrusted dumb pipe (every datagram
+ *           is already encrypted), typically a tiny daemon on the game server's host that forwards
+ *           WebTransport/WebSocket messages to the server's UDP port 1:1. See the Web topic page for
+ *           the full picture, including a reference relay.
+ * @related  CF_ClientWire cf_client_set_wire cf_client_connect
+ */
+CF_API CF_Result CF_CALL cf_client_web_wire(CF_Client* client, const char* url);
 
 /**
  * @function cf_client_update
@@ -1205,7 +1263,5 @@ CF_INLINE void server_tick(Server* server) { cf_server_tick(server); }
 }
 
 #endif // CF_CPP
-
-#endif // CF_EMSCRIPTEN
 
 #endif // CF_NETWORKING_H
