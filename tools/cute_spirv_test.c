@@ -196,6 +196,84 @@ static void test_preprocessor(void)
 		"	((x) + 1.0)\n"
 		"layout(location = 0) out vec4 result;\n"
 		"void main() { result = vec4(LONG(2.0)); }\n");
+
+	// Multi-line function-like macro invocations, matching the C preprocessor: an
+	// argument list may span lines with no backslashes.
+	expect_ok(CSPV_STAGE_FRAGMENT,
+		"#define MAKE_STRUCT(X) struct Data { X };\n"
+		"MAKE_STRUCT(\n"
+		"	float a;\n"
+		"	float b;\n"
+		")\n"
+		"layout(location = 0) out vec4 result;\n"
+		"void main() { Data d; d.a = 1.0; d.b = 2.0; result = vec4(d.a + d.b); }\n");
+	// Arguments split on top-level commas across lines, nested invocations included.
+	expect_ok(CSPV_STAGE_FRAGMENT,
+		"#define ADD(a, b) ((a) + (b))\n"
+		"#define MUL(a, b) ((a) * (b))\n"
+		"layout(location = 0) out vec4 result;\n"
+		"void main() {\n"
+		"	result = vec4(ADD(\n"
+		"		1.0,\n"
+		"		MUL(2.0,\n"
+		"		    3.0)\n"
+		"	));\n"
+		"}\n");
+	// The '(' itself may open on a later line, blank lines in between included.
+	expect_ok(CSPV_STAGE_FRAGMENT,
+		"#define ONE(x) (x)\n"
+		"layout(location = 0) out vec4 result;\n"
+		"void main() { result = vec4(ONE\n"
+		"\n"
+		"	(1.0)); }\n");
+	// But a bare macro name never drags an unrelated next line up with it.
+	expect_ok(CSPV_STAGE_FRAGMENT,
+		"#define F(x) (x)\n"
+		"layout(location = 0) out vec4 result;\n"
+		"void main() {\n"
+		"	float F\n"
+		"	= 1.0;\n"
+		"	result = vec4(F);\n"
+		"}\n");
+	// Backslash continuations inside a multi-line argument list still splice.
+	expect_ok(CSPV_STAGE_FRAGMENT,
+		"#define ADD(a, b) ((a) + (b))\n"
+		"layout(location = 0) out vec4 result;\n"
+		"void main() { result = vec4(ADD(\n"
+		"	1.0, \\\n"
+		"	2.0)); }\n");
+	// An invocation in a skipped conditional region absorbs nothing.
+	expect_ok(CSPV_STAGE_FRAGMENT,
+		"#define M(x) x\n"
+		"layout(location = 0) out vec4 result;\n"
+		"#ifdef MISSING\n"
+		"M(\n"
+		"	this is not even glsl\n"
+		")\n"
+		"#endif\n"
+		"void main() { result = vec4(1); }\n");
+	// Lines after a multi-line invocation keep their own numbers in errors.
+	expect_err(CSPV_STAGE_FRAGMENT,
+		"#define ADD(a, b) ((a) + (b))\n"
+		"layout(location = 0) out vec4 result;\n"
+		"void main() {\n"
+		"	float x = ADD(\n"
+		"		1.0,\n"
+		"		2.0);\n"
+		"	result = vec4(nope);\n"
+		"}\n", ":7:");
+	// An argument list left open at end-of-file errors instead of truncating.
+	expect_err(CSPV_STAGE_FRAGMENT,
+		"#define ADD(a, b) ((a) + (b))\n"
+		"void main() { float x = ADD(1.0, 2.0; }\n", "unterminated argument list");
+	// A directive never becomes argument text.
+	expect_err(CSPV_STAGE_FRAGMENT,
+		"#define ADD(a, b) ((a) + (b))\n"
+		"float x = ADD(1.0,\n"
+		"#define OOPS 1\n"
+		"2.0);\n"
+		"void main() { }\n", "unterminated argument list");
+
 	// #version/#extension/#pragma ignored.
 	expect_ok(CSPV_STAGE_FRAGMENT,
 		"#version 450\n"

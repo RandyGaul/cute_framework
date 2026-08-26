@@ -122,6 +122,10 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#ifndef CSPV_API
+#define CSPV_API
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -274,9 +278,9 @@ typedef struct CSPV_Options
 	bool emit_msl;
 } CSPV_Options;
 
-CSPV_Result cspv_compile(const char* source, CSPV_Stage stage);
-CSPV_Result cspv_compile_ex(const char* source, CSPV_Stage stage, const CSPV_Options* opts);
-void cspv_free(CSPV_Result* result);
+CSPV_API CSPV_Result cspv_compile(const char* source, CSPV_Stage stage);
+CSPV_API CSPV_Result cspv_compile_ex(const char* source, CSPV_Stage stage, const CSPV_Options* opts);
+CSPV_API void cspv_free(CSPV_Result* result);
 
 #ifdef __cplusplus
 }
@@ -1192,6 +1196,7 @@ static const char* cspv_expect_any_ident(cspv_ctx* ctx)
 // include guards, matching CF's shader system), object- and function-like #define,
 // #undef, #ifdef/#ifndef/#if/#elif/#else/#endif with a constant-expression
 // evaluator, and defined(). #version/#extension/#pragma are accepted and ignored.
+// A function-like macro's argument list may span lines without backslashes, as in C.
 // Stringize (#) and paste (##) are not supported.
 //
 // Output text contains `#l <line> <file_index>` markers which the lexer consumes to
@@ -1397,14 +1402,17 @@ static char* cspv_pp_expand_range(cspv_pp* pp, const char* start, const char* en
 			q++; // '('
 
 			// Collect raw arguments at paren depth 0, splitting on top-level commas.
+			// The caller has already gathered any following lines the argument list
+			// needs, so running out of text here means the list is truly unclosed.
 			CK_DYNA char** args = NULL;
 			char* cur = smake("");
 			int depth = 0;
+			bool closed = false;
 			while (q < end) {
 				char a = *q;
 				if (a == '(') { depth++; spush(cur, a); q++; }
 				else if (a == ')') {
-					if (depth == 0) { q++; break; }
+					if (depth == 0) { q++; closed = true; break; }
 					depth--;
 					spush(cur, a);
 					q++;
@@ -1419,6 +1427,7 @@ static char* cspv_pp_expand_range(cspv_pp* pp, const char* start, const char* en
 			}
 			apush(args, cur);
 			p = q;
+			if (!closed) cspv_pp_error(pp, "unterminated argument list invoking macro '%s'", name);
 
 			if ((int)asize(args) != (int)asize(m->params) && !(asize(m->params) == 0 && asize(args) == 1 && slen(args[0]) == 0)) {
 				cspv_pp_error(pp, "macro '%s' expects %d argument(s), got %d", name, (int)asize(m->params), (int)asize(args));
@@ -1471,6 +1480,66 @@ static char* cspv_pp_expand_range(cspv_pp* pp, const char* start, const char* en
 		p++;
 	}
 	return out;
+}
+
+// Does this text end in the middle of a function-like macro invocation? Source lines
+// that do absorb the lines that follow, so an argument list may span lines exactly as
+// it does in C. Scanning mirrors cspv_pp_expand_range's tokenization but has no side
+// effects: it never expands, and never reports an error.
+typedef enum cspv_pp_pending
+{
+	CSPV_PP_COMPLETE,   // Nothing is waiting on more text.
+	CSPV_PP_OPEN_ARGS,  // An argument list was opened and never closed.
+	CSPV_PP_WANT_PAREN, // A function-like macro name is waiting to see its '('.
+} cspv_pp_pending;
+
+static cspv_pp_pending cspv_pp_scan_pending(cspv_pp* pp, const char* start, const char* end)
+{
+	const char* p = start;
+	while (p < end) {
+		char c = *p;
+		if (cspv_is_ident_start(c)) {
+			const char* id_start = p;
+			while (p < end && cspv_is_ident_char(*p)) p++;
+			const char* name = sintern_range(id_start, p);
+			cspv_macro* m = map_get(pp->macros, (uint64_t)(uintptr_t)name);
+			if (!m || !m->is_function || cspv_pp_is_expanding(pp, name)) continue;
+
+			const char* q = p;
+			while (q < end && (*q == ' ' || *q == '\t')) q++;
+			if (q >= end) return CSPV_PP_WANT_PAREN;
+			if (*q != '(') continue; // Not an invocation; the name stands on its own.
+
+			// Skip past the matching ')'.
+			p = q + 1;
+			int depth = 0;
+			bool closed = false;
+			while (p < end) {
+				char a = *p++;
+				if (a == '(') depth++;
+				else if (a == ')') {
+					if (depth == 0) { closed = true; break; }
+					depth--;
+				}
+			}
+			if (!closed) return CSPV_PP_OPEN_ARGS;
+			continue;
+		}
+
+		// Numbers pass through as a unit, so a suffix like the `f` in `1.0f` is never
+		// mistaken for a macro name.
+		if ((c >= '0' && c <= '9') || (c == '.' && p + 1 < end && p[1] >= '0' && p[1] <= '9')) {
+			p++;
+			while (p < end && (cspv_is_ident_char(*p) || *p == '.' ||
+			       ((*p == '+' || *p == '-') && (p[-1] == 'e' || p[-1] == 'E')))) {
+				p++;
+			}
+			continue;
+		}
+
+		p++;
+	}
+	return CSPV_PP_COMPLETE;
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -1731,7 +1800,49 @@ static void cspv_pp_process_file(cspv_pp* pp, const char* raw_source, int file_i
 		// Directive?
 		const char* q = ls;
 		while (q < le && (*q == ' ' || *q == '\t')) q++;
-		if (q < le && *q == '#') {
+		bool is_directive = q < le && *q == '#';
+
+		// A function-like macro invocation may span lines: absorb the following lines
+		// until its argument list closes, then treat the whole thing as one logical
+		// line (as with backslash continuations). Directives are line-based and keep
+		// requiring a backslash.
+		if (!is_directive && cspv_pp_active(pp)) {
+			while (*line_end) {
+				cspv_pp_pending pending = cspv_pp_scan_pending(pp, ls, le);
+				if (pending == CSPV_PP_COMPLETE) break;
+				const char* next = line_end + 1;
+				const char* peek = next;
+				while (*peek == ' ' || *peek == '\t' || *peek == '\n') peek++;
+				// Only join a pending macro name when the next line really does open
+				// the argument list, so a bare name never drags an unrelated line up
+				// with it. And a directive never becomes argument text: stop, and let
+				// the expander report the unterminated invocation.
+				if (pending == CSPV_PP_WANT_PAREN && *peek != '(') break;
+				if (*peek == '#') break;
+				if (!joined) {
+					joined = smake("");
+					sappend_range(joined, ls, le);
+				}
+				spush(joined, ' '); // Argument whitespace, standing in for the newline.
+				// Absorb one more physical line — plus any backslash continuations it
+				// carries, spliced with nothing just as the join loop above does.
+				for (;;) {
+					const char* next_end = next;
+					while (*next_end && *next_end != '\n') next_end++;
+					bool continued = next_end > next && next_end[-1] == '\\';
+					sappend_range(joined, next, continued ? next_end - 1 : next_end);
+					line_end = next_end;
+					if (!continued || !*line_end) break;
+					pp->line++;
+					next = line_end + 1;
+				}
+				ls = joined;
+				le = joined + slen(joined);
+				pp->line++;
+			}
+		}
+
+		if (is_directive) {
 			q++;
 			while (q < le && (*q == ' ' || *q == '\t')) q++;
 			const char* ds = q;
@@ -1797,7 +1908,12 @@ static void cspv_pp_process_file(cspv_pp* pp, const char* raw_source, int file_i
 			// The restore marker after a spliced include already terminates the line.
 			if (!spliced_include) sappend(pp->out, "\n");
 		} else if (cspv_pp_active(pp)) {
+			// Expansion errors name the line the logical line began on, matching the
+			// marker the lexer sees for this text.
+			int resume_line = pp->line;
+			pp->line = start_line;
 			cspv_pp_expand_into(pp, &pp->out, ls, le, false);
+			pp->line = resume_line;
 			sappend(pp->out, "\n");
 		} else {
 			sappend(pp->out, "\n");
