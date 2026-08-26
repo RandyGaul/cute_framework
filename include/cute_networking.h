@@ -305,10 +305,28 @@ CF_API void CF_CALL cf_client_disconnect(CF_Client* client);
  *           returning its length, 0 when nothing is pending, or negative on transport failure.
  *           Datagram semantics are assumed -- packets may arrive dropped, duplicated, or
  *           reordered, and the protocol handles all of that as usual; the wire only moves bytes.
- *           This is how web builds connect (see `cf_client_web_wire` and the Web topic page):
- *           browsers have no UDP, so datagrams ride a WebTransport or WebSocket bridge to a
- *           relay, and the server keeps its normal UDP socket. A wire also makes loopback or
- *           in-memory transports possible for tests.
+ *
+ *           The wire is deliberately contentless -- addressing lives outside it, and security
+ *           and delivery guarantees live above it (every datagram is independently encrypted
+ *           and authenticated) -- so wires compose, and unlock more than the obvious:
+ *
+ *           - Web builds (`cf_client_web_wire`, and the Web Clients section of the networking
+ *             topic page): browsers have no UDP, so datagrams ride a WebTransport or WebSocket
+ *             bridge to a relay beside the server, which keeps its normal UDP socket.
+ *           - Untrusted relays / NAT traversal: a relay only ever sees ciphertext, so bouncing
+ *             through any rented box is safe -- a hostile relay can only drop packets.
+ *           - Multi-path racing: send each datagram down two routes and merge receives;
+ *             per-packet latency becomes the minimum of the paths, and replay protection
+ *             already dedupes the copies.
+ *           - In-memory loopback: a queue-pair wire runs a client with no sockets at all, for
+ *             deterministic tests.
+ *           - Network-condition simulation: wrap any wire in a latency/jitter/loss wire --
+ *             composes on every platform, web included.
+ *           - Fuzzing and metrics: a natural interception point to flip bits (exercising the
+ *             crypto reject path) or meter bandwidth. Note a wire tee sees ciphertext under
+ *             ephemeral session keys; payload-level capture is the better forensics tool.
+ *           - Exotic transports: anything that moves an opaque datagram (platform relay
+ *             services, console transport layers, P2P sessions) can carry a connection.
  * @related  CF_Client cf_client_set_wire cf_client_web_wire cf_client_connect
  */
 typedef struct CF_ClientWire
