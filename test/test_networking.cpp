@@ -442,6 +442,73 @@ TEST_CASE(test_net_client_wire)
 	return true;
 }
 
+/* Reliable messages deliver both ways on a SECOND connection of the same client object. The
+ * transport's reliability state (sequence windows, acks, fragment reassembly) must start over
+ * with every connect: carried over, the client silently discards the new server's reliable
+ * stream (and the server stashes the client's) while unreliable traffic still flows -- a
+ * half-alive session on every instance switch or server bounce. */
+TEST_CASE(test_net_reconnect_reliable)
+{
+	NetPair np;
+	REQUIRE(s_net_start(&np, "127.0.0.1:5806"));
+	cf_server_channel_options(np.server, 0, 0, true);
+	cf_client_channel_options(np.client, 0, 0, true);
+
+	auto exchange = [&](uint32_t id_down, uint32_t id_up) -> bool {
+		int payload = 7;
+		if (cf_is_error(cf_server_send_msg(np.server, np.client_index, 0, id_down, &payload, sizeof(payload)))) return false;
+		if (cf_is_error(cf_client_send_msg(np.client, 0, id_up, &payload, sizeof(payload)))) return false;
+		bool down = false, up = false;
+		for (int i = 0; i < 5000 && !(down && up); ++i) {
+			s_net_update(&np);
+			s_drain_events(&np);
+			void* pkt;
+			int size;
+			while (cf_client_pop_packet(np.client, &pkt, &size, NULL)) cf_client_free_packet(np.client, pkt);
+			uint32_t id;
+			void* data;
+			while (cf_client_pop_msg(np.client, &id, &data, &size)) {
+				if (id == id_down) down = true;
+				cf_client_free_msg(np.client, data);
+			}
+			int ci;
+			while (cf_server_pop_msg(np.server, &ci, &id, &data, &size)) {
+				if (id == id_up) up = true;
+				cf_server_free_msg(np.server, data);
+			}
+			cf_sleep(1);
+		}
+		return down && up;
+	};
+
+	// First connection: a welcome down, an action up.
+	REQUIRE(exchange(100, 101));
+
+	// Drop the connection and reconnect the SAME client object (an instance switch, a bounce).
+	cf_client_disconnect(np.client);
+	for (int i = 0; i < 100; ++i) {
+		s_net_update(&np);
+		s_drain_events(&np);
+		cf_sleep(1);
+	}
+	np.client_index = -1;
+	REQUIRE(!cf_is_error(cf_client_connect_insecure(np.client, "127.0.0.1:5806", TEST_NET_APP_ID)));
+	bool reconnected = false;
+	for (int i = 0; i < 5000 && !reconnected; ++i) {
+		s_net_update(&np);
+		s_drain_events(&np);
+		reconnected = cf_client_state(np.client) == CF_CLIENT_STATE_CONNECTED && np.client_index >= 0;
+		cf_sleep(1);
+	}
+	REQUIRE(reconnected);
+
+	// The same exchange on the new conversation.
+	REQUIRE(exchange(200, 201));
+
+	s_net_free(&np);
+	return true;
+}
+
 TEST_SUITE(test_networking)
 {
 	RUN_TEST_CASE(test_net_raw_and_msgs);
@@ -449,6 +516,7 @@ TEST_SUITE(test_networking)
 	RUN_TEST_CASE(test_net_channel_reliable_loss);
 	RUN_TEST_CASE(test_net_msg_errors);
 	RUN_TEST_CASE(test_net_client_wire);
+	RUN_TEST_CASE(test_net_reconnect_reliable);
 }
 
 #else // CF_EMSCRIPTEN

@@ -9202,6 +9202,23 @@ static cn_result_t s_send(int client_index, void* packet, int size, void* udata)
 	return cn_protocol_client_send(client->p_client, packet, size);
 }
 
+// Destroy and recreate the client's transport, giving it fresh reliability state -- the client
+// half of the server's s_server_reset_transport. Called on every connect: a transport carrying
+// the old session's sequences silently discards the new server's reliable stream (and the new
+// server stashes ours awaiting fragments it never saw) while unreliable traffic still flows --
+// a half-alive session.
+static void s_client_reset_transport(cn_client_t* client)
+{
+	if (client->transport) {
+		cn_transport_destroy(client->transport);
+	}
+	cn_transport_config_t config = cn_transport_config_defaults();
+	config.send_packet_fn = s_send;
+	config.user_allocator_context = client->mem_ctx;
+	config.udata = client;
+	client->transport = cn_transport_create(config);
+}
+
 cn_client_t* cn_client_create(uint16_t port, uint64_t application_id, bool use_ipv6, void* user_allocator_context)
 {
 	cn_result_t result = s_cn_init_check();
@@ -9214,12 +9231,7 @@ cn_client_t* cn_client_create(uint16_t port, uint64_t application_id, bool use_i
 	CN_MEMSET(client, 0, sizeof(*client));
 	client->p_client = p_client;
 	client->mem_ctx = user_allocator_context;
-
-	cn_transport_config_t config = cn_transport_config_defaults();
-	config.send_packet_fn = s_send;
-	config.user_allocator_context = user_allocator_context;
-	config.udata = client;
-	client->transport = cn_transport_create(config);
+	s_client_reset_transport(client);
 
 	return client;
 }
@@ -9240,6 +9252,9 @@ void cn_client_destroy(cn_client_t* client)
 
 cn_result_t cn_client_connect(cn_client_t* client, const uint8_t* connect_token)
 {
+	// A (re)connect is a fresh conversation: the reliability state must start over with it, the
+	// way the server resets a slot's transport on every new connection.
+	s_client_reset_transport(client);
 	return cn_protocol_client_connect(client->p_client, connect_token);
 }
 
