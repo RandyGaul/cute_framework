@@ -833,6 +833,11 @@ int cf_snapshot_compress(const void* baseline, const void* current, int size, vo
 	return cf_arith_delta_compress((const uint8_t*)baseline, (const uint8_t*)current, size, (uint8_t*)out, out_capacity);
 }
 
+int cf_snapshot_compress_bound(int size)
+{
+	return cf_arith_delta_bound(size);
+}
+
 int cf_snapshot_decompress(const void* baseline, int size, const void* compressed, int compressed_size, void* out)
 {
 	return cf_arith_delta_decompress((const uint8_t*)baseline, size, (const uint8_t*)compressed, compressed_size, (uint8_t*)out);
