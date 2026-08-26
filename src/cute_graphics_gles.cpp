@@ -449,7 +449,13 @@ static inline void s_forget_buffer(GLuint id)
 	if (g_ctx.bound_array_buffer == id) g_ctx.bound_array_buffer = 0;
 	if (g_ctx.bound_element_buffer == id) g_ctx.bound_element_buffer = 0;
 	for (int i = 0; i < 64; ++i) {
-		if (g_ctx.attrib_shadow[i].buf == id) g_ctx.attrib_shadow[i] = { };
+		if (g_ctx.attrib_shadow[i].buf != id) continue;
+		// The divisor is per-index context state, untouched by buffer deletion -- clearing
+		// its shadow here would desync it (a skipped divisor call on stale-but-correct
+		// shadow state is how instanced garbage sneaks into per-vertex draws).
+		uint8_t divisor = g_ctx.attrib_shadow[i].divisor;
+		g_ctx.attrib_shadow[i] = { };
+		g_ctx.attrib_shadow[i].divisor = divisor;
 	}
 }
 
