@@ -138,7 +138,8 @@ struct CF_GL_PixelFormatInfo
 struct CF_GL_Slot
 {
 	GLuint handle = 0;
-	GLsync fence = 0;
+	GLsync fence = 0;           // Emergency mid-frame fence only (ring exhausted within one frame).
+	uint32_t in_flight_frame = 0; // Last frame this slot was drawn from; covered by the frame fence ring.
 	uint32_t last_use_frame = 0;
 	GLsizeiptr offset = 0;
 	GLsizeiptr size = 0;
@@ -398,7 +399,59 @@ static struct
 	uint64_t enabled_vertex_attrib_mask;
 	CF_Filter filter_override;
 	bool has_filter_override;
+
+	// One fence per FRAME covers every streaming slot used that frame (GL completes in order,
+	// so any signaled fence from frame >= N proves frame N's reads finished). This replaces the
+	// old fence-per-draw scheme, which drowned WebGL in fenceSync/glFlush calls.
+	GLsync frame_fences[4];
+	uint32_t frame_fence_frames[4];
+	bool frame_fence_done[4];
+
+	// Shadowed GL state, to skip redundant per-draw calls: on WebGL every GL call crosses to
+	// the GPU process, and re-specifying identical vertex attributes per draw dominated whole
+	// frames. Entries are forgotten when their buffer id is deleted (ids recycle).
+	struct
+	{
+		GLuint buf;
+		GLintptr ptr;
+		GLsizei stride;
+		GLenum type;
+		uint8_t comps;
+		uint8_t norm;
+		uint8_t integer;
+		uint8_t divisor;
+	} attrib_shadow[64];
+	GLuint bound_array_buffer;
+	GLuint bound_element_buffer;
 } g_ctx = { };
+
+static inline void s_bind_array_buffer(GLuint id)
+{
+	if (g_ctx.bound_array_buffer != id) {
+		glBindBuffer(GL_ARRAY_BUFFER, id);
+		g_ctx.bound_array_buffer = id;
+	}
+}
+
+static inline void s_bind_element_buffer(GLuint id)
+{
+	if (g_ctx.bound_element_buffer != id) {
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, id);
+		g_ctx.bound_element_buffer = id;
+	}
+}
+
+// Call before glDeleteBuffers: GL detaches deleted buffers from context state and recycles ids,
+// so any shadow entry naming this id is a lie afterward.
+static inline void s_forget_buffer(GLuint id)
+{
+	if (!id) return;
+	if (g_ctx.bound_array_buffer == id) g_ctx.bound_array_buffer = 0;
+	if (g_ctx.bound_element_buffer == id) g_ctx.bound_element_buffer = 0;
+	for (int i = 0; i < 64; ++i) {
+		if (g_ctx.attrib_shadow[i].buf == id) g_ctx.attrib_shadow[i] = { };
+	}
+}
 
 static inline void s_poll_error(const char* file, int line)
 {
@@ -420,18 +473,39 @@ static inline GLenum s_poll_fence(GLsync fence)
 	return glClientWaitSync(fence, GL_SYNC_FLUSH_COMMANDS_BIT, 0);
 }
 
+// True once the GPU can no longer be reading the slot: its emergency fence (if any) signaled,
+// or any frame fence at or past its in-flight frame signaled.
+static inline bool s_slot_ready(CF_GL_Slot& slot)
+{
+	if (slot.fence) {
+		GLenum status = s_poll_fence(slot.fence);
+		if (status != GL_ALREADY_SIGNALED && status != GL_CONDITION_SATISFIED) return false;
+		glDeleteSync(slot.fence);
+		slot.fence = 0;
+	}
+	if (slot.in_flight_frame == 0 || slot.in_flight_frame == g_ctx.frame_index) {
+		// Never used, or used THIS frame (no covering fence exists yet).
+		return slot.in_flight_frame == 0;
+	}
+	for (int i = 0; i < 4; ++i) {
+		if (!g_ctx.frame_fences[i] || g_ctx.frame_fence_frames[i] < slot.in_flight_frame) continue;
+		if (!g_ctx.frame_fence_done[i]) {
+			GLenum status = s_poll_fence(g_ctx.frame_fences[i]);
+			if (status != GL_ALREADY_SIGNALED && status != GL_CONDITION_SATISFIED) continue;
+			g_ctx.frame_fence_done[i] = true;
+		}
+		return true;
+	}
+	return false;
+}
+
 static inline CF_GL_Slot* s_acquire_slot(CF_GL_Ring* ring, uint32_t frame, int* out_index)
 {
 	int count = ring->count;
 	for (int tries = 0; tries < count; ++tries) {
 		int index = (ring->head + tries) % count;
 		CF_GL_Slot& slot = ring->slots[index];
-		GLenum status = s_poll_fence(slot.fence);
-		if (status == GL_ALREADY_SIGNALED || status == GL_CONDITION_SATISFIED) {
-			if (slot.fence) {
-				glDeleteSync(slot.fence);
-				slot.fence = 0;
-			}
+		if (s_slot_ready(slot)) {
 			ring->head = (index + 1) % count;
 			slot.last_use_frame = frame;
 			if (out_index) *out_index = index;
@@ -456,30 +530,26 @@ static inline CF_GL_Slot* s_force_slot(CF_GL_Ring* ring, uint32_t frame, int* ou
 	if (!ring->count) return NULL;
 	int index = ring->head;
 	CF_GL_Slot& slot = ring->slots[index];
-	if (slot.fence) {
+	if (!s_slot_ready(slot)) {
 		// Block the CPU until the GPU is done with this slot.
 		// If you're seeing this on the hot-path of a profile or flame-graph it means you're GPU bound.
+		if (slot.in_flight_frame == g_ctx.frame_index && !slot.fence) {
+			// Reused within one frame: no covering frame fence exists yet, so raise one now.
+			slot.fence = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
+			glFlush();
+		}
 #ifdef CF_EMSCRIPTEN
-		while (slot.fence) {
-			GLenum status = s_poll_fence(slot.fence);
-			if (status == GL_ALREADY_SIGNALED || status == GL_CONDITION_SATISFIED) {
-				glDeleteSync(slot.fence);
-				slot.fence = 0;
-				break;
-			}
-			if (status == GL_WAIT_FAILED) {
-				glDeleteSync(slot.fence);
-				slot.fence = 0;
-				break;
-			}
-			// We can't call glClientWaitSync on WebGL, so we'll try and block to simulate sort what it
-			// would otherwise achieve.
+		while (!s_slot_ready(slot)) {
+			// We can't block in glClientWaitSync on WebGL, so poll and yield to simulate it.
 			cf_sleep(0);
 		}
 #else
-		glClientWaitSync(slot.fence, GL_SYNC_FLUSH_COMMANDS_BIT, GL_TIMEOUT_IGNORED);
-		glDeleteSync(slot.fence);
-		slot.fence = 0;
+		if (slot.fence) {
+			glClientWaitSync(slot.fence, GL_SYNC_FLUSH_COMMANDS_BIT, GL_TIMEOUT_IGNORED);
+			glDeleteSync(slot.fence);
+			slot.fence = 0;
+		}
+		while (!s_slot_ready(slot)) cf_sleep(0);
 #endif
 	}
 	slot.last_use_frame = frame;
@@ -497,13 +567,7 @@ static inline CF_GL_Slot* s_acquire_or_wait(CF_GL_Ring* ring, uint32_t frame, in
 
 static inline void s_set_slot_fence(CF_GL_Slot& slot)
 {
-	if (slot.fence) {
-		glDeleteSync(slot.fence);
-	}
-	slot.fence = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
-#ifdef CF_EMSCRIPTEN
-	glFlush();
-#endif
+	slot.in_flight_frame = g_ctx.frame_index;
 }
 
 static inline CF_GL_RenderState s_default_state(CF_GL_Canvas* canvas)
@@ -811,6 +875,12 @@ void cf_gles_begin_frame()
 
 void cf_gles_end_frame()
 {
+	int i = (int)(g_ctx.frame_index % 4);
+	if (g_ctx.frame_fences[i]) glDeleteSync(g_ctx.frame_fences[i]);
+	g_ctx.frame_fences[i] = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
+	g_ctx.frame_fence_frames[i] = g_ctx.frame_index;
+	g_ctx.frame_fence_done[i] = false;
+	glFlush();
 	SDL_GL_SwapWindow(g_ctx.window);
 }
 
@@ -992,7 +1062,9 @@ static inline CF_GL_Slot* s_prepare_buffer_slot(CF_GL_Buffer* buffer, GLsizeiptr
 		slot->offset = 0;
 	}
 	GLsizeiptr capacity = cf_max((int64_t)buffer->capacity, (int64_t)required_bytes);
-	glBindBuffer(buffer->target, slot->handle);
+	if (buffer->target == GL_ARRAY_BUFFER) s_bind_array_buffer(slot->handle);
+	else if (buffer->target == GL_ELEMENT_ARRAY_BUFFER) s_bind_element_buffer(slot->handle);
+	else glBindBuffer(buffer->target, slot->handle);
 	if (slot->size < capacity) {
 		glBufferData(buffer->target, capacity, NULL, GL_DYNAMIC_DRAW);
 		slot->size = capacity;
@@ -1014,6 +1086,7 @@ static inline void s_destroy_buffer(CF_GL_Buffer* buffer)
 			slot.fence = 0;
 		}
 		if (slot.handle) {
+			s_forget_buffer(slot.handle);
 			glDeleteBuffers(1, &slot.handle);
 			slot.handle = 0;
 		}
@@ -1502,7 +1575,7 @@ CF_Mesh cf_gles_make_mesh(int vertex_buffer_size, const CF_VertexAttribute* attr
 	if (slot) {
 		m->vbo.id = slot->handle;
 		m->vbo.active_slot = slot_index;
-		glBindBuffer(GL_ARRAY_BUFFER, 0);
+		s_bind_array_buffer(0);
 	}
 	m->attribute_count = cf_min(attribute_count, CF_MESH_MAX_VERTEX_ATTRIBUTES);
 	for (int i = 0; i < m->attribute_count; ++i) {
@@ -1525,7 +1598,7 @@ void cf_gles_mesh_set_index_buffer(CF_Mesh mh, int index_buffer_size_in_bytes, i
 	if (slot) {
 		m->ibo.id = slot->handle;
 		m->ibo.active_slot = slot_index;
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+		s_bind_element_buffer(0);
 	}
 	CF_POLL_OPENGL_ERROR();
 }
@@ -1561,9 +1634,9 @@ uint64_t cf_gles_make_instance_buffer(int size_in_bytes, int stride)
 	b->size = size_in_bytes;
 	b->stride = stride;
 	glGenBuffers(1, &b->id);
-	glBindBuffer(GL_ARRAY_BUFFER, b->id);
+	s_bind_array_buffer(b->id);
 	glBufferData(GL_ARRAY_BUFFER, size_in_bytes, NULL, GL_STATIC_DRAW);
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	s_bind_array_buffer(0);
 	CF_POLL_OPENGL_ERROR();
 	return (uint64_t)(uintptr_t)b;
 }
@@ -1572,11 +1645,11 @@ void cf_gles_update_instance_buffer(uint64_t handle, void* data, int count)
 {
 	CF_GL_InstanceBuffer* b = (CF_GL_InstanceBuffer*)(uintptr_t)handle;
 	int bytes = count * b->stride;
-	glBindBuffer(GL_ARRAY_BUFFER, b->id);
+	s_bind_array_buffer(b->id);
 	if (bytes > b->size) b->size = bytes;
 	glBufferData(GL_ARRAY_BUFFER, b->size, NULL, GL_STATIC_DRAW); // Orphan: updates are rare.
 	glBufferSubData(GL_ARRAY_BUFFER, 0, bytes, data);
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	s_bind_array_buffer(0);
 	CF_POLL_OPENGL_ERROR();
 }
 
@@ -1584,7 +1657,10 @@ void cf_gles_destroy_instance_buffer(uint64_t handle)
 {
 	CF_GL_InstanceBuffer* b = (CF_GL_InstanceBuffer*)(uintptr_t)handle;
 	if (!b) return;
-	if (b->id) glDeleteBuffers(1, &b->id);
+	if (b->id) {
+		s_forget_buffer(b->id);
+		glDeleteBuffers(1, &b->id);
+	}
 	CF_FREE(b);
 }
 
@@ -1668,7 +1744,7 @@ void cf_gles_mesh_set_instance_buffer(CF_Mesh mh, int instance_buffer_size_in_by
 	if (slot) {
 		m->instance.id = slot->handle;
 		m->instance.active_slot = slot_index;
-		glBindBuffer(GL_ARRAY_BUFFER, 0);
+		s_bind_array_buffer(0);
 	}
 	CF_POLL_OPENGL_ERROR();
 }
@@ -1688,7 +1764,7 @@ void cf_gles_mesh_update_vertex_data(CF_Mesh mh, void* verts, int vertex_count)
 	} else {
 		slot->offset = 0;
 	}
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	s_bind_array_buffer(0);
 	m->vbo.id = slot->handle;
 	m->vbo.active_slot = slot_index;
 	m->vbo.active_offset = upload_offset;
@@ -1712,7 +1788,7 @@ void cf_gles_mesh_update_index_data(CF_Mesh mh, void* indices, int index_count)
 	} else {
 		slot->offset = 0;
 	}
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+	s_bind_element_buffer(0);
 	m->ibo.id = slot->handle;
 	m->ibo.active_slot = slot_index;
 	m->ibo.active_offset = upload_offset;
@@ -1736,7 +1812,7 @@ void cf_gles_mesh_update_instance_data(CF_Mesh mh, void* instances, int instance
 	} else {
 		slot->offset = 0;
 	}
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	s_bind_array_buffer(0);
 	m->instance.id = slot->handle;
 	m->instance.active_slot = slot_index;
 	m->instance.active_offset = upload_offset;
@@ -1901,6 +1977,8 @@ void cf_gles_destroy_shader_internal(CF_Shader shader_handle)
 
 	CF_GL_Shader* shader = (CF_GL_Shader*)(uintptr_t)shader_handle.id;
 
+	for (int i = 0; i < shader->vs.num_uniform_blocks; ++i) s_forget_buffer(shader->vs.ubo[i]);
+	for (int i = 0; i < shader->fs.num_uniform_blocks; ++i) s_forget_buffer(shader->fs.ubo[i]);
 	glDeleteBuffers(shader->vs.num_uniform_blocks, shader->vs.ubo);
 	glDeleteBuffers(shader->fs.num_uniform_blocks, shader->fs.ubo);
 
@@ -1999,11 +2077,7 @@ static inline void s_upload_uniforms(CF_GL_ShaderInfo* shader_info, const CF_Mat
 
 static inline void s_apply_vertex_attributes(CF_GL_Shader* shader, CF_GL_Mesh* mesh)
 {
-	if (mesh->ibo.id) {
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh->ibo.id);
-	} else {
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-	}
+	s_bind_element_buffer(mesh->ibo.id ? mesh->ibo.id : 0);
 
 	uint64_t attribute_mask = 0;
 
@@ -2063,20 +2137,39 @@ static inline void s_apply_vertex_attributes(CF_GL_Shader* shader, CF_GL_Mesh* m
 			case CF_VERTEX_FORMAT_HALF4:	type = GL_HALF_FLOAT; comps = 4; break;
 			default: break;
 		}
-		glBindBuffer(GL_ARRAY_BUFFER, buf_id);
 		if (!(g_ctx.enabled_vertex_attrib_mask & (1ULL << loc))) {
 			glEnableVertexAttribArray((GLuint)loc);
 		}
-		const void* pointer = (const void*)(intptr_t)(attrib->offset + base_offset);
-		// The shader-side input type decides the pointer flavor: integer inputs (ivec/uvec)
-		// must use IPointer regardless of the vertex format's width -- previously only GL_INT
-		// took this path, so uvec4 fed by ushort/ubyte joints read int-to-float garbage.
-		if (shader->integer_attrib_mask & (1ULL << loc)) {
-			glVertexAttribIPointer((GLuint)loc, comps, type, buf_stride, pointer);
-		} else {
-			glVertexAttribPointer((GLuint)loc, comps, type, norm, buf_stride, pointer);
+		// Pointer and divisor are persistent per-index context state, so identical
+		// re-specification is skipped via the shadow (WebGL calls are expensive).
+		uint8_t integer = (shader->integer_attrib_mask >> loc) & 1 ? 1 : 0;
+		GLintptr ptr = (GLintptr)(attrib->offset + base_offset);
+		auto& shadow = g_ctx.attrib_shadow[loc];
+		if (shadow.buf != buf_id || shadow.ptr != ptr || shadow.stride != buf_stride || shadow.type != type
+			|| shadow.comps != (uint8_t)comps || shadow.norm != (uint8_t)norm || shadow.integer != integer) {
+			s_bind_array_buffer(buf_id);
+			const void* pointer = (const void*)(intptr_t)ptr;
+			// The shader-side input type decides the pointer flavor: integer inputs (ivec/uvec)
+			// must use IPointer regardless of the vertex format's width -- previously only GL_INT
+			// took this path, so uvec4 fed by ushort/ubyte joints read int-to-float garbage.
+			if (integer) {
+				glVertexAttribIPointer((GLuint)loc, comps, type, buf_stride, pointer);
+			} else {
+				glVertexAttribPointer((GLuint)loc, comps, type, norm, buf_stride, pointer);
+			}
+			shadow.buf = buf_id;
+			shadow.ptr = ptr;
+			shadow.stride = buf_stride;
+			shadow.type = type;
+			shadow.comps = (uint8_t)comps;
+			shadow.norm = (uint8_t)norm;
+			shadow.integer = integer;
 		}
-		glVertexAttribDivisor((GLuint)loc, per_instance ? 1 : 0);
+		uint8_t divisor = per_instance ? 1 : 0;
+		if (shadow.divisor != divisor) {
+			glVertexAttribDivisor((GLuint)loc, divisor);
+			shadow.divisor = divisor;
+		}
 
 
 		attribute_mask |= 1ULL << loc;
