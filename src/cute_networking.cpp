@@ -24,29 +24,48 @@
 EM_JS(void, s_js_wire_open, (int h, const char* url_cstr), {
 	var url = UTF8ToString(url_cstr);
 	if (!Module.cfWires) Module.cfWires = {};
-	var w = { q: [], open: false, dead: false, wt: null, ws: null, writer: null };
+	// WebTransport and a WebSocket RACE for the pipe: WT starts at once, WS after a short beat
+	// (or immediately once WT has failed), and the first to open becomes w.active while the loser
+	// is closed. Waiting for wt.ready to reject before falling back stranded networks that
+	// silently drop UDP 443, where it stays pending for tens of seconds -- longer than any
+	// caller keeps retrying the handshake. Only the active transport ever carries a send, so the
+	// relay's UDP leg (and the address the server admits the connect token from) never changes.
+	var w = { q: [], open: false, dead: false, wt: null, ws: null, writer: null, active: null, wt_done: false, ws_done: false };
 	Module.cfWires[h] = w;
 	var push = function(bytes) {
 		if (w.q.length >= 256) w.q.shift(); // Datagram semantics: drop oldest under pressure.
 		w.q.push(bytes);
 	};
-	var fallback = function() {
-		if (w.dead || w.ws) return;
+	var both_failed = function() { if (w.wt_done && w.ws_done && !w.active) w.dead = true; };
+	var start_ws = function() {
+		if (w.dead || w.ws || w.active) return;
 		try {
 			var ws = new WebSocket(url.replace(/^http/, "ws"));
 			ws.binaryType = "arraybuffer";
-			ws.onmessage = function(e) { push(new Uint8Array(e.data)); };
-			ws.onopen = function() { w.open = true; };
-			ws.onclose = function() { if (w.open || !w.wt) w.dead = true; };
-			ws.onerror = function() { if (!w.open) w.dead = true; };
+			ws.onmessage = function(e) { if (w.active === "ws") push(new Uint8Array(e.data)); };
+			ws.onopen = function() {
+				if (w.active) { try { ws.close(); } catch (e) {} return; } // WebTransport won.
+				w.active = "ws";
+				w.open = true;
+			};
+			ws.onclose = function() {
+				if (w.active === "ws") w.dead = true;
+				else if (!w.active) { w.ws_done = true; both_failed(); }
+			};
+			ws.onerror = function() {
+				if (w.active === "ws") w.dead = true;
+				else if (!w.active) { w.ws_done = true; both_failed(); }
+			};
 			w.ws = ws;
-		} catch (e) { w.dead = true; }
+		} catch (e) { w.ws_done = true; both_failed(); }
 	};
 	if (typeof WebTransport !== "undefined") {
 		try {
 			var wt = new WebTransport(url);
 			w.wt = wt;
 			wt.ready.then(function() {
+				if (w.dead || w.active) { try { wt.close(); } catch (e) {} return; } // The WebSocket won.
+				w.active = "wt";
 				w.open = true;
 				w.writer = wt.datagrams.writable.getWriter();
 				var reader = wt.datagrams.readable.getReader();
@@ -59,10 +78,12 @@ EM_JS(void, s_js_wire_open, (int h, const char* url_cstr), {
 				};
 				pump();
 				wt.closed.then(function() { w.dead = true; }).catch(function() { w.dead = true; });
-			}).catch(function() { w.wt = null; fallback(); });
-		} catch (e) { w.wt = null; fallback(); }
+			}).catch(function() { w.wt = null; w.wt_done = true; both_failed(); start_ws(); });
+			setTimeout(start_ws, 1200);
+		} catch (e) { w.wt = null; w.wt_done = true; start_ws(); }
 	} else {
-		fallback();
+		w.wt_done = true;
+		start_ws();
 	}
 });
 
@@ -72,8 +93,8 @@ EM_JS(int, s_js_wire_send, (int h, const void* data, int size), {
 	if (!w.open) return 0; // Still connecting: drop, the handshake retries.
 	var bytes = HEAPU8.slice(data, data + size);
 	try {
-		if (w.writer) w.writer.write(bytes);
-		else if (w.ws && w.ws.readyState === 1) w.ws.send(bytes);
+		if (w.active === "wt" && w.writer) w.writer.write(bytes);
+		else if (w.active === "ws" && w.ws && w.ws.readyState === 1) w.ws.send(bytes);
 		else return 0;
 	} catch (e) { return -1; }
 	return size;
