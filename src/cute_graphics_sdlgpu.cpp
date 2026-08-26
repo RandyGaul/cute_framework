@@ -612,8 +612,10 @@ static inline CF_Texture s_make_texture(CF_TextureParams params, CF_SampleCount 
 	SDL_GPUSampler* sampler = NULL;
 	// Depth/stencil textures don't need their own sampler, as the associated color
 	// texture in the owning canvas already has a sampler attached -- except comparison
-	// (shadow) samplers, which exist precisely to sample a depth texture.
-	if (!s_is_depth(params.pixel_format) || params.compare_enable) {
+	// (shadow) samplers, which exist precisely to sample a depth texture, and depth
+	// textures that explicitly ask for SAMPLER usage: those are bound as a plain
+	// sampler2D for non-comparison reads (soft particles, SSAO, depth-aware fog).
+	if (!s_is_depth(params.pixel_format) || params.compare_enable || (params.usage & CF_TEXTURE_USAGE_SAMPLER_BIT)) {
 		SDL_GPUSamplerCreateInfo sampler_info = SDL_GPUSamplerCreateInfoDefaults();
 		sampler_info.mip_lod_bias = params.mip_lod_bias;
 		// Without the enable flag max_anisotropy is ignored wholesale (it also overrides
