@@ -14,6 +14,92 @@
 // Web builds compile all of this too: a client rides a CF_ClientWire (see cf_client_web_wire at
 // the bottom of this file) since browsers have no UDP, while servers -- whose sockets cannot open
 // in a browser -- fail cleanly at cf_server_start.
+// The JS half of the web wire (used by cf_client_web_wire at the bottom of this file):
+// WebTransport datagrams with a WebSocket fallback, one datagram per message either way,
+// all connection state living in JS while C polls a per-wire receive queue.
+#ifdef CF_EMSCRIPTEN
+#include <emscripten/emscripten.h>
+
+// clang-format off
+EM_JS(void, s_js_wire_open, (int h, const char* url_cstr), {
+	var url = UTF8ToString(url_cstr);
+	if (!Module.cfWires) Module.cfWires = {};
+	var w = { q: [], open: false, dead: false, wt: null, ws: null, writer: null };
+	Module.cfWires[h] = w;
+	var push = function(bytes) {
+		if (w.q.length >= 256) w.q.shift(); // Datagram semantics: drop oldest under pressure.
+		w.q.push(bytes);
+	};
+	var fallback = function() {
+		if (w.dead || w.ws) return;
+		try {
+			var ws = new WebSocket(url.replace(/^http/, "ws"));
+			ws.binaryType = "arraybuffer";
+			ws.onmessage = function(e) { push(new Uint8Array(e.data)); };
+			ws.onopen = function() { w.open = true; };
+			ws.onclose = function() { if (w.open || !w.wt) w.dead = true; };
+			ws.onerror = function() { if (!w.open) w.dead = true; };
+			w.ws = ws;
+		} catch (e) { w.dead = true; }
+	};
+	if (typeof WebTransport !== "undefined") {
+		try {
+			var wt = new WebTransport(url);
+			w.wt = wt;
+			wt.ready.then(function() {
+				w.open = true;
+				w.writer = wt.datagrams.writable.getWriter();
+				var reader = wt.datagrams.readable.getReader();
+				var pump = function() {
+					reader.read().then(function(r) {
+						if (r.done || w.dead) return;
+						push(r.value);
+						pump();
+					}).catch(function() { w.dead = true; });
+				};
+				pump();
+				wt.closed.then(function() { w.dead = true; }).catch(function() { w.dead = true; });
+			}).catch(function() { w.wt = null; fallback(); });
+		} catch (e) { w.wt = null; fallback(); }
+	} else {
+		fallback();
+	}
+});
+
+EM_JS(int, s_js_wire_send, (int h, const void* data, int size), {
+	var w = Module.cfWires && Module.cfWires[h];
+	if (!w || w.dead) return -1;
+	if (!w.open) return 0; // Still connecting: drop, the handshake retries.
+	var bytes = HEAPU8.slice(data, data + size);
+	try {
+		if (w.writer) w.writer.write(bytes);
+		else if (w.ws && w.ws.readyState === 1) w.ws.send(bytes);
+		else return 0;
+	} catch (e) { return -1; }
+	return size;
+});
+
+EM_JS(int, s_js_wire_recv, (int h, void* data, int size), {
+	var w = Module.cfWires && Module.cfWires[h];
+	if (!w) return -1;
+	if (!w.q.length) return w.dead ? -1 : 0;
+	var bytes = w.q.shift();
+	var n = Math.min(bytes.length, size);
+	HEAPU8.set(bytes.subarray(0, n), data);
+	return n;
+});
+
+EM_JS(void, s_js_wire_close, (int h), {
+	var w = Module.cfWires && Module.cfWires[h];
+	if (!w) return;
+	w.dead = true;
+	try { if (w.wt) w.wt.close(); } catch (e) {}
+	try { if (w.ws) w.ws.close(); } catch (e) {}
+	delete Module.cfWires[h];
+});
+// clang-format on
+#endif // CF_EMSCRIPTEN
+
 #define CUTE_NET_IMPLEMENTATION
 #define CN_ALLOC(size, ctx) cf_alloc(size)
 #define CN_FREE(mem, ctx) cf_free(mem)
@@ -390,10 +476,6 @@ CF_Client* cf_make_client(
 	client->cn = cn;
 	return client;
 }
-
-#ifdef CF_EMSCRIPTEN
-extern "C" void s_js_wire_close(int h); // Defined via EM_JS at the bottom of this file.
-#endif
 
 void cf_destroy_client(CF_Client* client)
 {
@@ -830,86 +912,7 @@ void cf_server_tick(CF_Server* server)
 
 #ifdef CF_EMSCRIPTEN
 
-#include <emscripten/emscripten.h>
 
-// clang-format off
-EM_JS(void, s_js_wire_open, (int h, const char* url_cstr), {
-	var url = UTF8ToString(url_cstr);
-	if (!Module.cfWires) Module.cfWires = {};
-	var w = { q: [], open: false, dead: false, wt: null, ws: null, writer: null };
-	Module.cfWires[h] = w;
-	var push = function(bytes) {
-		if (w.q.length >= 256) w.q.shift(); // Datagram semantics: drop oldest under pressure.
-		w.q.push(bytes);
-	};
-	var fallback = function() {
-		if (w.dead || w.ws) return;
-		try {
-			var ws = new WebSocket(url.replace(/^http/, "ws"));
-			ws.binaryType = "arraybuffer";
-			ws.onmessage = function(e) { push(new Uint8Array(e.data)); };
-			ws.onopen = function() { w.open = true; };
-			ws.onclose = function() { if (w.open || !w.wt) w.dead = true; };
-			ws.onerror = function() { if (!w.open) w.dead = true; };
-			w.ws = ws;
-		} catch (e) { w.dead = true; }
-	};
-	if (typeof WebTransport !== "undefined") {
-		try {
-			var wt = new WebTransport(url);
-			w.wt = wt;
-			wt.ready.then(function() {
-				w.open = true;
-				w.writer = wt.datagrams.writable.getWriter();
-				var reader = wt.datagrams.readable.getReader();
-				var pump = function() {
-					reader.read().then(function(r) {
-						if (r.done || w.dead) return;
-						push(r.value);
-						pump();
-					}).catch(function() { w.dead = true; });
-				};
-				pump();
-				wt.closed.then(function() { w.dead = true; }).catch(function() { w.dead = true; });
-			}).catch(function() { w.wt = null; fallback(); });
-		} catch (e) { w.wt = null; fallback(); }
-	} else {
-		fallback();
-	}
-});
-
-EM_JS(int, s_js_wire_send, (int h, const void* data, int size), {
-	var w = Module.cfWires && Module.cfWires[h];
-	if (!w || w.dead) return -1;
-	if (!w.open) return 0; // Still connecting: drop, the handshake retries.
-	var bytes = HEAPU8.slice(data, data + size);
-	try {
-		if (w.writer) w.writer.write(bytes);
-		else if (w.ws && w.ws.readyState === 1) w.ws.send(bytes);
-		else return 0;
-	} catch (e) { return -1; }
-	return size;
-});
-
-EM_JS(int, s_js_wire_recv, (int h, void* data, int size), {
-	var w = Module.cfWires && Module.cfWires[h];
-	if (!w) return -1;
-	if (!w.q.length) return w.dead ? -1 : 0;
-	var bytes = w.q.shift();
-	var n = Math.min(bytes.length, size);
-	HEAPU8.set(bytes.subarray(0, n), data);
-	return n;
-});
-
-EM_JS(void, s_js_wire_close, (int h), {
-	var w = Module.cfWires && Module.cfWires[h];
-	if (!w) return;
-	w.dead = true;
-	try { if (w.wt) w.wt.close(); } catch (e) {}
-	try { if (w.ws) w.ws.close(); } catch (e) {}
-	delete Module.cfWires[h];
-});
-// clang-format on
 
 static int s_web_wire_send(void* udata, const void* data, int size) { return s_js_wire_send((int)(uintptr_t)udata, data, size); }
 static int s_web_wire_recv(void* udata, void* data, int size) { return s_js_wire_recv((int)(uintptr_t)udata, data, size); }
