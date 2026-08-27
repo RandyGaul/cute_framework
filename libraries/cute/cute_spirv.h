@@ -6358,6 +6358,23 @@ static void cspv_tp_expr_node(cspv_tp* g, cspv_expr* e, int prec)
 				break;
 			}
 		}
+		// HLSL: `m[i]` subscripts ROWS, GLSL subscripts COLUMNS -- printed verbatim, every
+		// indexed matrix read comes back transposed (mul() was fine, so a shader that only
+		// ever multiplied never noticed; one that indexed read garbage). transpose() flips
+		// the access back to columns, and `m[i][j]` rides through the same wrap. Reads only:
+		// storing through transpose() is not an lvalue in HLSL, but no output of ours writes
+		// into a matrix column either.
+		if (g->hlsl) {
+			cspv_type* bt = cspv_tp_rtype(g, e->u.index.base);
+			if (bt && bt->kind == CSPV_T_MAT) {
+				sappend(g->ctx->tp_out, "transpose(");
+				cspv_tp_expr(g, e->u.index.base, 0);
+				sappend(g->ctx->tp_out, ")[");
+				cspv_tp_expr(g, e->u.index.index, 0);
+				spush(g->ctx->tp_out, ']');
+				break;
+			}
+		}
 		cspv_tp_expr(g, e->u.index.base, 15);
 		spush(g->ctx->tp_out, '[');
 		cspv_tp_expr(g, e->u.index.index, 0);
