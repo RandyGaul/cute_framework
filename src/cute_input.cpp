@@ -697,24 +697,32 @@ void cf_pump_input_msgs()
 			CF_Touch& touch = app->touches.add();
 			touch.id = id;
 			touch.pressure = event.tfinger.pressure;
-			touch.x = event.tfinger.x * app->w;
-			touch.y = event.tfinger.y * app->h;
+			// Normalized [0,1], exactly as the header documents (SDL's tfinger is already so).
+			touch.x = event.tfinger.x;
+			touch.y = event.tfinger.y;
 		}	break;
 
 		case SDL_EVENT_FINGER_MOTION:
 		{
+			// Update the STORED touch: fetching a copy and writing to it left every held
+			// finger frozen at the position it landed on, so drags never produced motion.
 			uint64_t id = (uint64_t)event.tfinger.fingerID;
-			CF_Touch touch;
-			if (cf_touch_get(id, &touch)) {
-				touch.pressure = event.tfinger.pressure;
-				touch.x = event.tfinger.x * app->w;
-				touch.y = event.tfinger.y * app->h;
-			} else {
+			bool found = false;
+			for (int i = 0; i < app->touches.size(); ++i) {
+				if (app->touches[i].id == id) {
+					app->touches[i].pressure = event.tfinger.pressure;
+					app->touches[i].x = event.tfinger.x;
+					app->touches[i].y = event.tfinger.y;
+					found = true;
+					break;
+				}
+			}
+			if (!found) {
 				CF_Touch& touch = app->touches.add();
 				touch.id = id;
 				touch.pressure = event.tfinger.pressure;
-				touch.x = event.tfinger.x * app->w;
-				touch.y = event.tfinger.y * app->h;
+				touch.x = event.tfinger.x;
+				touch.y = event.tfinger.y;
 			}
 		}	break;
 
