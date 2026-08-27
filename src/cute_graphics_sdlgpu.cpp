@@ -2409,6 +2409,7 @@ void cf_sdlgpu_apply_shader(CF_Shader shader_handle, CF_Material material_handle
 	int vs_sampler_count = shader->vs_image_names.count();
 	if (vs_sampler_count > 0) {
 		SDL_GPUTextureSamplerBinding* vs_sampler_bindings = SDL_stack_alloc(SDL_GPUTextureSamplerBinding, vs_sampler_count);
+		CF_MEMSET(vs_sampler_bindings, 0, sizeof(SDL_GPUTextureSamplerBinding) * (size_t)vs_sampler_count); // Zeroed: the hole-filling below tells matched slots by .texture.
 		int found_vs_image_count = 0;
 		for (int i = 0; found_vs_image_count < vs_sampler_count && i < material->vs.textures.count(); ++i) {
 			const char* image_name = material->vs.textures[i].name;
@@ -2427,14 +2428,27 @@ void cf_sdlgpu_apply_shader(CF_Shader shader_handle, CF_Material material_handle
 				}
 			}
 		}
+		// A shader image name the material never set must not bind stack garbage (the old
+		// behavior past this assert in release): fill the hole from any matched slot so the
+		// draw stays defined -- visibly wrong beats undefined -- and skip binding entirely
+		// when nothing matched at all.
 		CF_ASSERT(found_vs_image_count == vs_sampler_count);
-		SDL_BindGPUVertexSamplers(pass, 0, vs_sampler_bindings, (Uint32)found_vs_image_count);
+		if (found_vs_image_count < vs_sampler_count) {
+			int donor = -1;
+			for (int j = 0; j < vs_sampler_count; ++j) if (vs_sampler_bindings[j].texture) { donor = j; break; }
+			if (donor >= 0) {
+				for (int j = 0; j < vs_sampler_count; ++j) if (!vs_sampler_bindings[j].texture) vs_sampler_bindings[j] = vs_sampler_bindings[donor];
+				found_vs_image_count = vs_sampler_count;
+			}
+		}
+		if (found_vs_image_count == vs_sampler_count) SDL_BindGPUVertexSamplers(pass, 0, vs_sampler_bindings, (Uint32)vs_sampler_count);
 	}
 
 	// Bind FS images to their respective slots.
 	int fs_sampler_count = shader->fs_image_names.count();
 	if (fs_sampler_count > 0) {
 		SDL_GPUTextureSamplerBinding* fs_sampler_bindings = SDL_stack_alloc(SDL_GPUTextureSamplerBinding, fs_sampler_count);
+		CF_MEMSET(fs_sampler_bindings, 0, sizeof(SDL_GPUTextureSamplerBinding) * (size_t)fs_sampler_count); // Zeroed: the hole-filling below tells matched slots by .texture.
 		int found_fs_image_count = 0;
 		for (int i = 0; found_fs_image_count < fs_sampler_count && i < material->fs.textures.count(); ++i) {
 			const char* image_name = material->fs.textures[i].name;
@@ -2453,8 +2467,18 @@ void cf_sdlgpu_apply_shader(CF_Shader shader_handle, CF_Material material_handle
 				}
 			}
 		}
+		// Same hole-filling as the VS block above: never bind uninitialized stack memory for
+		// a name the material never set.
 		CF_ASSERT(found_fs_image_count == fs_sampler_count);
-		SDL_BindGPUFragmentSamplers(pass, 0, fs_sampler_bindings, (Uint32)found_fs_image_count);
+		if (found_fs_image_count < fs_sampler_count) {
+			int donor = -1;
+			for (int j = 0; j < fs_sampler_count; ++j) if (fs_sampler_bindings[j].texture) { donor = j; break; }
+			if (donor >= 0) {
+				for (int j = 0; j < fs_sampler_count; ++j) if (!fs_sampler_bindings[j].texture) fs_sampler_bindings[j] = fs_sampler_bindings[donor];
+				found_fs_image_count = fs_sampler_count;
+			}
+		}
+		if (found_fs_image_count == fs_sampler_count) SDL_BindGPUFragmentSamplers(pass, 0, fs_sampler_bindings, (Uint32)fs_sampler_count);
 	}
 
 	// Clear sampler override after use.
