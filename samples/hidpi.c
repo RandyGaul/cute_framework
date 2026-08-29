@@ -1,15 +1,26 @@
 /*
-	hidpi.c -- HiDPI / Retina rendering visual verification.
+	hidpi.c -- HiDPI / Retina rendering, the manual way.
 
-	Cute Framework renders its default canvas at physical resolution (logical
-	size scaled by `cf_app_get_pixel_scale()`), so text and shapes stay crisp
-	on Retina/HiDPI displays without any extra work from the user. This sample
-	is a quick visual check of that: run it on a HiDPI display and glyph edges
-	and shape antialiasing should look sharp, not soft/blurry.
+	The pixel scale (physical pixels per logical point) is a plain user-controlled
+	value, like the window or canvas size. At startup CF creates the app canvas
+	once at window_points * the display scale the OS wants and sets the default 2d
+	projection once from the logical window size -- and never touches either again.
+	Reacting to window resizes and display-density changes is YOUR code, and
+	cf_app_update_display (= set the scale, resize the canvas to match the
+	window, rebuild the projection) is the whole recipe:
 
-	See docs/topics/hidpi.md for the full point/pixel model, and
-	samples/canvas_modes.c for an interactive tour of app-canvas sizing
-	(custom scale, forced 1x, and fixed-resolution retro canvases).
+	    if (cf_app_was_resized()) cf_app_update_display(cf_app_get_pixel_scale());
+	    if (cf_app_display_scale_was_changed() && tracking_the_display) {
+	        cf_app_update_display(cf_app_get_display_scale());
+	    }
+
+	A fixed-size, non-resizable window on one display needs NONE of this -- the
+	startup defaults are already correct.
+
+	Interactivity: press N to follow the OS display scale (the default),
+	or 1 / 2 / 4 to force a 1x / 2x / 4x pixel scale -- forcing a value is also
+	how you test HiDPI behavior on a non-HiDPI monitor. Resize the window to
+	watch the recipe keep everything crisp.
 
 	What it draws:
 	  - Text at three sizes (12px / 24px / 48px) to eyeball glyph
@@ -17,11 +28,8 @@
 	  - A row of basic SDF shapes (filled circle, outlined circle, lines
 	    of varying thickness including a thin ~1px line, a filled rounded
 	    box, and an outlined triangle) to eyeball shape edge antialiasing.
-	  - A live readout of `cf_app_get_pixel_scale()` alongside the physical
-	    canvas size, so the current display's HiDPI scale factor is visible
-	    at a glance.
-
-	No interactivity beyond closing the window; no external assets needed.
+	  - A live readout of the applied pixel scale and the OS display scale alongside
+	    the physical canvas size.
 */
 
 #include <cute.h>
@@ -54,13 +62,27 @@ int main(int argc, char* argv[])
 	cf_sprite_play(&sprite, "idle");
 	sprite.scale = cf_v2(3.0f, 3.0f);
 
+	// true = follow the OS display scale; false = a forced 1x/2x/4x scale.
+	bool track_display = true;
+
 	while (cf_app_is_running()) {
 		cf_app_update(NULL);
 
+		// Scale mode switching. Forcing a scale on purpose is exactly the same call the
+		// engine-side recipe uses -- there is no separate "override" concept.
+		if (cf_key_just_pressed(CF_KEY_N)) { track_display = true;  cf_app_update_display(cf_app_get_display_scale()); }
+		if (cf_key_just_pressed(CF_KEY_1)) { track_display = false; cf_app_update_display(1.0f); }
+		if (cf_key_just_pressed(CF_KEY_2)) { track_display = false; cf_app_update_display(2.0f); }
+		if (cf_key_just_pressed(CF_KEY_4)) { track_display = false; cf_app_update_display(4.0f); }
+
+		// The manual-model recipe: window resized -> rebuild canvas + projection at the
+		// current scale. Display scale changed (moved to another monitor) -> update to
+		// the new scale, but only in follow mode.
 		if (cf_app_was_resized()) {
-			// Nothing special to handle here -- part of the point of this
-			// sample is to observe how resizing/HiDPI scaling affects
-			// rendering crispness.
+			cf_app_update_display(cf_app_get_pixel_scale());
+		}
+		if (cf_app_display_scale_was_changed() && track_display) {
+			cf_app_update_display(cf_app_get_display_scale());
 		}
 
 		cf_push_font("Calibri");
@@ -79,17 +101,35 @@ int main(int argc, char* argv[])
 		cf_pop_font_size();
 
 		// -- Live pixel-scale readout --
-		char pixel_scale_buf[128];
+		char pixel_scale_buf[192];
 		float pixel_scale = cf_app_get_pixel_scale();
 		int physical_w = cf_app_get_canvas_width();
 		int physical_h = cf_app_get_canvas_height();
 		snprintf(
 			pixel_scale_buf, sizeof(pixel_scale_buf),
-			"pixel_scale: %.2fx (physical canvas: %dx%d)",
-			pixel_scale, physical_w, physical_h
+			"pixel_scale: %.2fx %s (display: %.2fx, physical canvas: %dx%d) -- press N/1/2/4",
+			pixel_scale, track_display ? "[display]" : "[forced]",
+			cf_app_get_display_scale(), physical_w, physical_h
 		);
 		cf_push_font_size(12);
 		draw_text_centered(pixel_scale_buf, cf_v2(0, 300));
+		cf_pop_font_size();
+
+		// -- Live mouse-coordinate readout -- screen space is raw, top-left-origin,
+		// y-down input; world space is what cf_screen_to_world hands back, matching
+		// the space cf_draw_text etc. draw into. If HiDPI translation is correct, the
+		// world coordinate should track the cursor 1:1 over the canvas regardless of
+		// pixel_scale.
+		char mouse_buf[128];
+		CF_V2 mouse_screen = cf_v2(cf_mouse_x(), cf_mouse_y());
+		CF_V2 mouse_world = cf_screen_to_world(mouse_screen);
+		snprintf(
+			mouse_buf, sizeof(mouse_buf),
+			"mouse: screen (%.0f, %.0f) -> world (%.0f, %.0f)",
+			mouse_screen.x, mouse_screen.y, mouse_world.x, mouse_world.y
+		);
+		cf_push_font_size(12);
+		draw_text_centered(mouse_buf, cf_v2(0, 300 - 18));
 		cf_pop_font_size();
 
 		cf_draw_pop_color();

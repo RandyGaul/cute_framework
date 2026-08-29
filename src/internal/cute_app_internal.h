@@ -31,10 +31,12 @@ struct cs_context_t;
 
 CF_API extern struct CF_App* app;
 
-// Recreates the default offscreen canvas at logical_size * pixel_scale. Called on init and on
-// every canvas recreation event (window resize, display density change, cf_app_set_size,
-// cf_app_set_msaa) -- this is what makes cf_app_set_canvas_size a one-shot override.
-void cf_app_recreate_default_canvas_if_needed();
+// SDL's content scale for the window's display: the conversion factor between SDL's raw
+// window coordinates (window size, mouse position) and CF's logical points. 1.0 on macOS,
+// the OS UI scale (e.g. 1.5 at 150%) on Windows/X11. Purely internal -- the public API is
+// points everywhere, so this concept is never exposed to the user.
+float cf_app_get_content_scale();
+
 
 // Maps an SDL_PowerState to the corresponding CF_PowerState. Header-inline (rather than
 // CF_API) so it stays testable from test/test_app.cpp without crossing the shared-library
@@ -102,9 +104,9 @@ struct CF_App
 	Cute::CF_Path shader_directory;
 	Cute::Map<CF_ShaderFileInfo> shader_file_infos;
 	bool gfx_enabled = false;
-	float display_scale = 1.0f;
+	float display_scale = 1.0f; // What the OS wants: points-to-pixels for the window's display (SDL_GetWindowDisplayScale). Only the OS changes it; refreshed on scale events, never applied automatically.
 	bool display_scale_was_changed = false;
-	float pixel_scale = 1.0f;   // Physical pixels per logical point (from SDL_GetWindowPixelDensity). Drives default-canvas sizing, AA, and glyph rasterization.
+	float pixel_scale = 1.0f;   // How CF scales fonts and shapes: physical pixels per logical point. User-controlled via cf_app_set_pixel_scale; initialized to display_scale (or 1.0 with NO_HIGH_DPI).
 	CF_Filter canvas_blit_filter = CF_FILTER_NEAREST; // Filter used when blitting the app canvas onto the screen, if their sizes differ (e.g. after cf_app_set_canvas_size). Defaults to nearest for a crisp/blocky pixel-art look.
 	bool sync_window = false;
 	int draw_call_count = 0;

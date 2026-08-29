@@ -34,7 +34,12 @@ bool test_make_app(int w, int h, int extra_options)
 	}
 
 	if (s_alive && options == s_options) {
-		cf_app_set_size(w, h); // Recreates the app canvas + default 2d projection immediately.
+		cf_app_set_size(w, h);
+		// Nothing tracks the window automatically anymore: restore the startup-equivalent
+		// pixel scale, canvas size, and default 2d projection a previous test may have
+		// changed. (This is the same call an app with a resizable window makes -- see the
+		// hidpi sample.)
+		cf_app_update_display(cf_app_get_display_scale());
 		// Well-known process globals a test legitimately mutates and rarely thinks to restore
 		// -- with one app per test their reset came free from cf_destroy_app. Everything else
 		// (push/pop stacks, canvases, shaders) is the test's own balance to keep; run with

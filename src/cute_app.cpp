@@ -156,14 +156,6 @@ static void s_canvas(int w, int h)
 	app->offscreen_canvas = cf_make_canvas(params);
 	app->canvas_w = w;
 	app->canvas_h = h;
-	cf_draw_on_app_canvas_resized(w, h);
-}
-
-void cf_app_recreate_default_canvas_if_needed()
-{
-	int w = (int)CF_ROUNDF(app->w * app->pixel_scale);
-	int h = (int)CF_ROUNDF(app->h * app->pixel_scale);
-	s_canvas(w, h);
 }
 
 CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, int y, int w, int h, CF_AppOptionFlags options, const char* argv0)
@@ -305,10 +297,12 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 		if (options & CF_APP_OPTIONS_RESIZABLE_BIT) flags |= SDL_WINDOW_RESIZABLE;
 		if (options & CF_APP_OPTIONS_HIDDEN_BIT) flags |= (SDL_WINDOW_HIDDEN | SDL_WINDOW_MINIMIZED);
 
+		float creation_content_scale = SDL_GetDisplayContentScale(display_id ? display_id : SDL_GetPrimaryDisplay());
+		if (creation_content_scale <= 0) creation_content_scale = 1.0f;
 		SDL_PropertiesID props = SDL_CreateProperties();
 		SDL_SetStringProperty(props, SDL_PROP_WINDOW_CREATE_TITLE_STRING, window_title);
-		SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER, w);
-		SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER, h);
+		SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER, (int)CF_ROUNDF(w * creation_content_scale));
+		SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER, (int)CF_ROUNDF(h * creation_content_scale));
 		SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_FLAGS_NUMBER, flags);
 		if (options & CF_APP_OPTIONS_WINDOW_POS_CENTERED_BIT) {
 			SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_X_NUMBER, SDL_WINDOWPOS_CENTERED_DISPLAY(display_id));
@@ -341,8 +335,8 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 	if (window) {
 		SDL_GetWindowPosition(app->window, &app->x, &app->y);
 		app->display_scale = SDL_GetWindowDisplayScale(app->window);
-		app->pixel_scale = window ? SDL_GetWindowPixelDensity(app->window) : 1.0f;
-		if (app->pixel_scale <= 0.0f) app->pixel_scale = 1.0f;
+		if (app->display_scale <= 0.0f) app->display_scale = 1.0f;
+		app->pixel_scale = app->display_scale;
 		if (options & CF_APP_OPTIONS_NO_HIGH_DPI_BIT) app->pixel_scale = 1.0f;
 	}
 	::app = app;
@@ -361,7 +355,7 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 		cf_load_internal_shaders();
 		cf_make_draw();
 
-		cf_app_recreate_default_canvas_if_needed();
+		s_canvas((int)CF_ROUNDF(app->w * app->pixel_scale), (int)CF_ROUNDF(app->h * app->pixel_scale));
 
 		// Create the default font.
 		make_font_from_memory(calibri_data, calibri_sz, "Calibri");
@@ -635,6 +629,12 @@ void cf_app_show_window()
 	SDL_ShowWindow(app->window);
 }
 
+float cf_app_get_content_scale()
+{
+	float scale = app->window ? SDL_GetDisplayContentScale(SDL_GetDisplayForWindow(app->window)) : 1.0f;
+	return scale > 0 ? scale : 1.0f;
+}
+
 float cf_app_get_display_scale()
 {
 	return app->display_scale;
@@ -650,16 +650,33 @@ float cf_app_get_pixel_scale()
 	return app->pixel_scale;
 }
 
+void cf_app_set_pixel_scale(float scale)
+{
+	if (!(scale > 0)) return;
+	if (scale == app->pixel_scale) return;
+	app->pixel_scale = scale;
+	cf_draw_on_pixel_scale_changed();
+}
+
+void cf_app_update_display(float scale)
+{
+	if (!(scale > 0)) return;
+	cf_app_set_pixel_scale(scale);
+	if (app->gfx_enabled) {
+		cf_app_set_canvas_size((int)CF_ROUNDF(app->w * scale), (int)CF_ROUNDF(app->h * scale));
+		cf_draw_projection(cf_ortho_2d(0, 0, (float)app->w, (float)app->h));
+	}
+}
+
 void cf_app_set_size(int w, int h)
 {
-	SDL_SetWindowSize(app->window, w, h);
+	// Public sizes are logical points; SDL_SetWindowSize wants raw window coordinates
+	// (identical on macOS, points * content scale on Windows/X11).
+	float cs = cf_app_get_content_scale();
+	SDL_SetWindowSize(app->window, (int)CF_ROUNDF(w * cs), (int)CF_ROUNDF(h * cs));
 	app->w = w;
 	app->h = h;
 	app->sync_window = true;
-	// Recreate the app canvas now rather than waiting for the resize event: hidden windows
-	// don't reliably deliver one, and a caller who set the size expects the canvas (and the
-	// default 2d projection that tracks it) to match immediately.
-	cf_app_recreate_default_canvas_if_needed();
 }
 
 void cf_app_get_position(int* x, int* y)
@@ -773,7 +790,7 @@ bool cf_app_set_msaa(int sample_count)
 
 	if (supported && app->sample_count != sample_count) {
 		app->sample_count = sample_count;
-		cf_app_recreate_default_canvas_if_needed();
+		s_canvas(app->canvas_w, app->canvas_h);
 	}
 
 	return supported;
