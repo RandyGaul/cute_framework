@@ -92,15 +92,15 @@ TEST_CASE(test_hidpi_set_pixel_scale_is_value_only)
 	return true;
 }
 
-// NO_HIGH_DPI only pins the INITIAL scale at 1.0 (the window gets a 1x backbuffer, so the
-// display scale is 1.0 too). The value stays user-controllable afterwards.
+// NO_HIGH_DPI only pins the INITIAL pixel scale at 1.0 (a 1x backbuffer). The display scale
+// stays whatever the OS reports (1.5 on a Windows desktop at 150%), and the pixel scale stays
+// user-controllable afterwards.
 TEST_CASE(test_hidpi_no_high_dpi_initial_scale)
 {
 	if (!test_make_app(LOGICAL_W, LOGICAL_H, CF_APP_OPTIONS_NO_HIGH_DPI_BIT)) return true; // Headless CI: no display/GPU.
 	HidpiGuard guard;
 
 	REQUIRE(cf_app_get_pixel_scale() == 1.0f);
-	REQUIRE(cf_app_get_display_scale() == 1.0f);
 	REQUIRE(cf_app_get_canvas_width() == LOGICAL_W);
 	REQUIRE(cf_app_get_canvas_height() == LOGICAL_H);
 	return true;
