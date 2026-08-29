@@ -2211,11 +2211,11 @@ CF_API CF_M3x2 CF_CALL cf_draw_peek(void);
  * @function cf_draw_projection
  * @category draw
  * @brief    Sets the projection matrix used by the draw API.
- * @remarks  You should not use this function unless you know what you're doing. You will need to call this
- *           again whenever the app is resized, as CF automatically sets the projection matrix upon resizing.
- *           See `cf_app_was_resized`. If you want to learn more you can try searching online for "model view
- *           projection" matrices, aka MVP matrices.
- * @related  cf_app_was_resized
+ * @remarks  You should not use this function unless you know what you're doing. The projection is sticky: CF sets
+ *           it once at startup from the logical window size, and afterwards only `cf_app_update_display` writes it
+ *           on your behalf -- re-apply yours after that helper (e.g. in your `cf_app_was_resized` handling). If you
+ *           want to learn more you can try searching online for "model view projection" matrices, aka MVP matrices.
+ * @related  cf_app_was_resized cf_app_update_display
  */
 CF_API void CF_CALL cf_draw_projection(CF_M3x2 projection);
 
