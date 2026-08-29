@@ -221,8 +221,8 @@ typedef enum CF_AppOptionFlagBits
  * @param    display_index The index of the display to spawn upon. Set this to zero for the primary display. See `cf_get_display_list`.
  * @param    x             The x position of the window.
  * @param    y             The y position of the window.
- * @param    w             The width of the window in pixels.
- * @param    h             The height of the window in pixels.
+ * @param    w             The width of the window in logical points.
+ * @param    h             The height of the window in logical points.
  * @param    options       0 by default; a bitmask of `app_options` flags.
  * @param    argv0         The first argument passed to your main function in the `argv` parameter.
  * @return   Returns any errors on failure as a `CF_Result`.
@@ -248,6 +248,8 @@ typedef enum CF_AppOptionFlagBits
  *     }
  * @remarks  The options parameter is an enum from `app_options`. Different options can be OR'd together.
  *           Parameters `w` and `h` are ignored if the window is initialized to fullscreen mode with `CF_APP_OPTIONS_FULLSCREEN_BIT`.
+ *           Like `cf_app_set_size`, `w` and `h` are logical points: on a display scaled above 100% (e.g. Windows at 150%)
+ *           the physical window is correspondingly larger; see the hidpi sample.
  * @related  CF_AppOptionFlagBits cf_app_is_running cf_app_signal_shutdown cf_destroy_app
  */
 CF_API CF_Result CF_CALL cf_make_app(const char* window_title, CF_DisplayID display_id, int x, int y, int w, int h, CF_AppOptionFlags options, const char* argv0);
