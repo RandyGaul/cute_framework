@@ -641,7 +641,7 @@ void cf_pump_input_msgs()
 			case SDL_BUTTON_MIDDLE: app->mouse.middle_button = 1; break;
 			case SDL_BUTTON_X1: app->mouse.x1_button = 1; break;
 			case SDL_BUTTON_X2: app->mouse.x2_button = 1; break;
-			};
+			}
 			float cs = cf_app_get_content_scale();
 			app->mouse.x = event.button.x / cs;
 			app->mouse.y = event.button.y / cs;
@@ -650,7 +650,7 @@ void cf_pump_input_msgs()
 			} else if (event.button.clicks == 2) {
 				app->mouse.click_type = CF_MOUSE_CLICK_DOUBLE;
 			}
-                }	break;
+		}	break;
 
 		case SDL_EVENT_MOUSE_BUTTON_UP: {
 			switch (event.button.button)
@@ -668,8 +668,8 @@ void cf_pump_input_msgs()
 				app->mouse.click_type = CF_MOUSE_CLICK_SINGLE;
 			} else if (event.button.clicks == 2) {
 				app->mouse.click_type = CF_MOUSE_CLICK_DOUBLE;
-                        }
-                }	break;
+			}
+		}	break;
 
 		case SDL_EVENT_MOUSE_WHEEL:
 			app->mouse.wheel_motion = event.wheel.y;
