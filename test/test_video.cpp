@@ -507,7 +507,7 @@ static const uint8_t* s_find_box(const uint8_t* p, const uint8_t* end, const cha
 	return NULL;
 }
 
-static int s_int_cmp(const void* a, const void* b) { return *(const int*)a - *(const int*)b; }
+static int s_int_cmp(const void* a, const void* b) { int x = *(const int*)a, y = *(const int*)b; return (x > y) - (x < y); }
 
 // Reads the timeline back out of the container: when each picture is shown, from its decode time
 // (stts), its composition offset (ctts) and the edit that trims off the reorder lead (elst). Every
