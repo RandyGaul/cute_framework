@@ -14,9 +14,15 @@
 
 #pragma once
 
+// dcimgui.h includes this file from inside an extern "C" block, and cute_math.h carries
+// C++-only declarations, so restore C++ linkage around it.
+#ifdef __cplusplus
+extern "C++" {
+#endif
 #include <cute_math.h>
-
-#define IMGUI_STB_NAMESPACE ImStb
+#ifdef __cplusplus
+}
+#endif
 
 //---- Define assertion handler. Defaults to calling assert().
 // - If your macro uses multiple statements, make sure is enclosed in a 'do { .. } while (0)' block so it can be used as a single statement.
