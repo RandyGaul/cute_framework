@@ -37,6 +37,8 @@ set(CF_TEST_SRCS
 	test_physics.cpp
 	test_networking.cpp
 	test_ckit.c
+	test_dcimgui.cpp
+	test_dcimgui.c
 	test_model.cpp
 	test_jpg.cpp
 	test_dds.cpp
