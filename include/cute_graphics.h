@@ -111,6 +111,11 @@ typedef struct CF_Canvas { uint64_t id; } CF_Canvas;
  * @remarks  A readback initiates an async GPU-to-CPU copy of pixel data from a canvas.
  *           Poll with `cf_readback_ready` and retrieve data with `cf_readback_data`.
  *           The pixel format matches the canvas target format (typically RGBA8, 4 bytes per pixel).
+ *           The GLES backend can only read what `glReadPixels` accepts: four-channel 8-bit
+ *           normalized, float and integer targets on every driver, other layouts (single-channel,
+ *           half-float, ...) only where the driver's implementation-defined read pair matches
+ *           the target. A target it cannot read returns a zero'd handle; BGRA targets come back
+ *           in RGBA byte order.
  *           The GLES backend (which is what web/Emscripten builds use) implements readback
  *           synchronously: the copy has already happened by the time `cf_canvas_readback` returns and
  *           `cf_readback_ready` is immediately true. The API shape is the same either way, so polling

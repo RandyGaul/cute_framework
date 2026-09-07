@@ -2719,19 +2719,65 @@ struct CF_GL_Readback
 	int size;
 };
 
+// Bytes per texel of a target's own (format, type) layout; 0 for pairs the readback
+// does not handle (packed and compressed types).
+static int s_readback_texel_size(GLenum format, GLenum type)
+{
+	int channels = 0;
+	switch (format) {
+	case GL_RED: case GL_RED_INTEGER:   channels = 1; break;
+	case GL_RG: case GL_RG_INTEGER:     channels = 2; break;
+	case GL_RGB: case GL_RGB_INTEGER:   channels = 3; break;
+	case GL_RGBA: case GL_RGBA_INTEGER: channels = 4; break;
+	default: return 0;
+	}
+	switch (type) {
+	case GL_UNSIGNED_BYTE: case GL_BYTE:                     return channels;
+	case GL_UNSIGNED_SHORT: case GL_SHORT: case GL_HALF_FLOAT: return channels * 2;
+	case GL_UNSIGNED_INT: case GL_INT: case GL_FLOAT:          return channels * 4;
+	default: return 0;
+	}
+}
+
 CF_Readback cf_gles_canvas_readback2(CF_Canvas canvas, int index)
 {
 	CF_GL_Canvas* c = (CF_GL_Canvas*)(uintptr_t)canvas.id;
 	if (!c || index < 0 || index >= (c->target_count > 1 ? c->target_count : 1)) return { 0 };
+	CF_GL_Texture* tex = (CF_GL_Texture*)(uintptr_t)(index == 0 ? c->cf_color.id : c->cf_colors_mrt[index].id);
+	if (!tex) return { 0 };
 	int w = c->w, h = c->h;
-	CF_GL_Readback* rb = (CF_GL_Readback*)CF_ALLOC(sizeof(CF_GL_Readback));
-	rb->size = w * h * 4;
-	rb->data = CF_ALLOC(rb->size);
+
+	// The target's own layout, as the readback contract promises. BGRA targets read
+	// as RGBA: the bytes come back in RGBA order.
+	GLenum format = tex->upload_fmt == GL_BGRA ? GL_RGBA : tex->upload_fmt;
+	GLenum type = tex->upload_type;
+	int texel_size = s_readback_texel_size(format, type);
+	if (texel_size == 0) return { 0 };
+
 	GLuint prev_fbo = g_ctx.fbo;
 	s_bind_framebuffer(c->fbo);
+	// Only errors from the read sequence below are of interest, the read buffer
+	// selection included (a failed one silently reads target 0): drain whatever was
+	// pending first. Bounded, since a lost context reports itself on every call.
+	for (int i = 0; i < 8 && glGetError() != GL_NO_ERROR; ++i) { }
 	if (index != 0) glReadBuffer(GL_COLOR_ATTACHMENT0 + (GLenum)index);
-	glPixelStorei(GL_PACK_ALIGNMENT, 4);
-	glReadPixels(0, 0, w, h, GL_RGBA, GL_UNSIGNED_BYTE, rb->data);
+
+	// GLES only accepts a few (format, type) pairs per framebuffer: the guaranteed one
+	// of its buffer class -- RGBA/UNSIGNED_BYTE, RGBA/FLOAT, RGBA_INTEGER with
+	// (UNSIGNED_)INT -- plus one the implementation picks, usually the target's own
+	// layout. Anything else is an INVALID_OPERATION that leaves the buffer untouched,
+	// which the error check below turns into a failed readback.
+	CF_GL_Readback* rb = (CF_GL_Readback*)CF_ALLOC(sizeof(CF_GL_Readback));
+	rb->size = w * h * texel_size;
+	rb->data = CF_ALLOC(rb->size);
+	glPixelStorei(GL_PACK_ALIGNMENT, 1);
+	glReadPixels(0, 0, w, h, format, type, rb->data);
+	if (glGetError() != GL_NO_ERROR) {
+		CF_FREE(rb->data);
+		CF_FREE(rb);
+		rb = NULL;
+	}
+
 	if (index != 0) glReadBuffer(GL_COLOR_ATTACHMENT0);
 	s_bind_framebuffer(prev_fbo);
 	CF_POLL_OPENGL_ERROR();
