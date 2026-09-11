@@ -717,6 +717,8 @@ CF_API void CF_CALL cf_draw_shape_group_end_stroked(float thickness);
  * @remarks  Draw layers are sorted before rendering. Lower numbers are rendered first, while larger numbers are rendered last.
  *           This can be used to pick which sprites/shapes should draw on top of each other.
  *           Layers are stream-structural state, so they also order 3d mesh submissions (`cf_draw3d_mesh`) against 2d drawing and each other.
+ *           Each layer keeps its own command queue, so switching layers is cheap: draws recorded on the same layer batch
+ *           together no matter how many times other layers were visited in between.
  * @related  cf_draw_push_layer cf_draw_pop_layer cf_draw_peek_layer cf_draw3d_mesh
  */
 CF_API void CF_CALL cf_draw_push_layer(int layer);

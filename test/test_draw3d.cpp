@@ -2192,10 +2192,59 @@ TEST_CASE(test_draw3d_atlas_mips)
 	return true;
 }
 
+// Layers own their command queues, so hopping away from a layer and back lands the next
+// submission right behind that layer's last mesh command: it coalesces instead of splitting
+// on the spacer a flat stream would have left in between.
+TEST_CASE(test_draw3d_layers_interleaved_coalesce)
+{
+	if (!test_make_app(W, H)) return true; // Headless CI: no display/GPU.
+
+	CF_Mesh mesh = s_make_quad(0.5f);
+	CF_Shader shader = cf_make_shader_from_source(s_vs, s_fs);
+	REQUIRE(shader.id);
+	CF_CanvasParams params = cf_canvas_defaults(W, H);
+	params.depth_stencil_enable = true;
+	CF_Canvas canvas = cf_make_canvas(params);
+	CF_Pixel* px = (CF_Pixel*)cf_alloc(W * H * (int)sizeof(CF_Pixel));
+
+	cf_app_update(NULL);
+	cf_draw3d_push_projection(cf_ortho(-1, 1, -1, 1, -1, 1));
+	cf_draw3d_push_shader(shader);
+	cf_draw3d_push_mesh_attributes(cf_v4(0, 1, 0, 1)); // Green mesh.
+	cf_draw3d_stats(); // Clear anything from setup.
+
+	// Layer 1, layer 2, layer 1 again: two commands (one per layer), three instances.
+	for (int i = 0; i < 3; ++i) {
+		cf_draw_push_layer(i == 1 ? 2 : 1);
+		cf_draw3d_mesh(mesh);
+		cf_draw_pop_layer();
+	}
+	CF_DrawStats3d stats = cf_draw3d_stats();
+	REQUIRE(stats.instances == 3);
+	REQUIRE(stats.commands == 2);
+
+	cf_render_to(canvas, true);
+	cf_app_draw_onto_screen(false);
+	test_readback(canvas, px);
+	CF_Pixel center = s_pixel(px, 0.5f, 0.5f);
+	REQUIRE(center.colors.g > 200 && center.colors.r < 60);
+
+	cf_draw3d_pop_mesh_attributes();
+	cf_draw3d_pop_shader();
+	cf_draw3d_pop_projection();
+	cf_free(px);
+	cf_destroy_canvas(canvas);
+	cf_destroy_shader(shader);
+	cf_destroy_mesh(mesh);
+	test_destroy_app();
+	return true;
+}
+
 TEST_SUITE(test_draw3d)
 {
 	RUN_TEST_CASE(test_draw3d_transforms_and_coalescing);
 	RUN_TEST_CASE(test_draw3d_layers_with_2d);
+	RUN_TEST_CASE(test_draw3d_layers_interleaved_coalesce);
 	RUN_TEST_CASE(test_draw3d_uniform_capture);
 	RUN_TEST_CASE(test_draw3d_escape_hatch);
 	RUN_TEST_CASE(test_draw3d_draw_list);
