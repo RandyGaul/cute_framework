@@ -165,6 +165,7 @@ struct CF_GL_Texture
 	GLint mag_filter = GL_LINEAR;
 	GLint wrap_u = GL_REPEAT;
 	GLint wrap_v = GL_REPEAT;
+	GLuint draw_samplers[2] = {};
 	GLenum target = GL_TEXTURE_2D; // GL_TEXTURE_CUBE_MAP / GL_TEXTURE_3D / GL_TEXTURE_2D_ARRAY.
 	int layers = 1;                // Array layers, 3D depth, or 6 for cube maps.
 	bool compare = false;          // Comparison (shadow) sampling.
@@ -1176,6 +1177,7 @@ void cf_gles_destroy_texture(CF_Texture tex)
 {
 	if (!tex.id) return;
 	CF_GL_Texture* t = (CF_GL_Texture*)(uintptr_t)tex.id;
+	glDeleteSamplers(2, t->draw_samplers);
 	for (int i = 0; i < t->ring.count; ++i) {
 		CF_GL_Slot& slot = t->ring.slots[i];
 		if (slot.fence) {
@@ -2200,6 +2202,35 @@ static inline void s_apply_vertex_attributes(CF_GL_Shader* shader, CF_GL_Mesh* m
 	CF_POLL_OPENGL_ERROR();
 }
 
+// Keep custom texture bindings independent of Cute's dynamic atlas/canvas filter.
+// Sampler objects avoid mutating a texture that another binding samples differently.
+static GLuint s_draw_sampler(const CF_MaterialTex& binding, CF_GL_Texture* texture)
+{
+	if (binding.sampler.id) return (GLuint)binding.sampler.id;
+	if (!g_ctx.has_filter_override || binding.name != cf_sintern("u_image")) return 0;
+	int index = g_ctx.filter_override == CF_FILTER_LINEAR;
+	GLuint& sampler = texture->draw_samplers[index];
+	if (sampler) return sampler;
+	glGenSamplers(1, &sampler);
+	CF_ASSERT(sampler);
+	GLenum filter = s_wrap(g_ctx.filter_override), min_filter = filter;
+	if (texture->has_mips) {
+		bool linear_mips = texture->min_filter == GL_LINEAR_MIPMAP_LINEAR || texture->min_filter == GL_NEAREST_MIPMAP_LINEAR;
+		min_filter = index ? (linear_mips ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR_MIPMAP_NEAREST)
+		                   : (linear_mips ? GL_NEAREST_MIPMAP_LINEAR : GL_NEAREST_MIPMAP_NEAREST);
+	}
+	glSamplerParameteri(sampler, GL_TEXTURE_MIN_FILTER, min_filter);
+	glSamplerParameteri(sampler, GL_TEXTURE_MAG_FILTER, filter);
+	glSamplerParameteri(sampler, GL_TEXTURE_WRAP_S, texture->wrap_u);
+	glSamplerParameteri(sampler, GL_TEXTURE_WRAP_T, texture->wrap_v);
+	glSamplerParameteri(sampler, GL_TEXTURE_WRAP_R, texture->wrap_u);
+	if (texture->compare) {
+		glSamplerParameteri(sampler, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
+		glSamplerParameteri(sampler, GL_TEXTURE_COMPARE_FUNC, texture->compare_func);
+	}
+	return sampler;
+}
+
 void cf_gles_apply_shader(CF_Shader shader_handle, CF_Material material_handle)
 {
 	CF_GL_Shader* shader = (CF_GL_Shader*)(uintptr_t)shader_handle.id;
@@ -2293,14 +2324,7 @@ void cf_gles_apply_shader(CF_Shader shader_handle, CF_Material material_handle)
 			if (binding->name == material_tex.name) {
 				glActiveTexture(GL_TEXTURE0 + texture_unit);
 				glBindTexture(texture->target, texture->id);
-				// Per-binding standalone sampler; zero rebinds sampler 0 so the texture's
-				// own parameters apply (and stale bindings from earlier draws reset).
-				glBindSampler((GLuint)texture_unit, (GLuint)material_tex.sampler.id);
-				if (g_ctx.has_filter_override) {
-					GLenum gl_filter = (g_ctx.filter_override == CF_FILTER_NEAREST) ? GL_NEAREST : GL_LINEAR;
-					glTexParameteri(texture->target, GL_TEXTURE_MIN_FILTER, gl_filter);
-					glTexParameteri(texture->target, GL_TEXTURE_MAG_FILTER, gl_filter);
-				}
+				glBindSampler((GLuint)texture_unit, s_draw_sampler(material_tex, texture));
 				glUniform1i(binding->location, texture_unit);
 				++texture_unit;
 				break;
@@ -2317,14 +2341,7 @@ void cf_gles_apply_shader(CF_Shader shader_handle, CF_Material material_handle)
 			if (binding->name == material_tex.name) {
 				glActiveTexture(GL_TEXTURE0 + texture_unit);
 				glBindTexture(texture->target, texture->id);
-				// Per-binding standalone sampler; zero rebinds sampler 0 so the texture's
-				// own parameters apply (and stale bindings from earlier draws reset).
-				glBindSampler((GLuint)texture_unit, (GLuint)material_tex.sampler.id);
-				if (g_ctx.has_filter_override) {
-					GLenum gl_filter = (g_ctx.filter_override == CF_FILTER_NEAREST) ? GL_NEAREST : GL_LINEAR;
-					glTexParameteri(texture->target, GL_TEXTURE_MIN_FILTER, gl_filter);
-					glTexParameteri(texture->target, GL_TEXTURE_MAG_FILTER, gl_filter);
-				}
+				glBindSampler((GLuint)texture_unit, s_draw_sampler(material_tex, texture));
 				glUniform1i(binding->location, texture_unit);
 				++texture_unit;
 				break;
@@ -2481,27 +2498,21 @@ void cf_gles_apply_blend_constants(float r, float g, float b, float a)
 	g_ctx.target_state.blend_constants = { r, g, b, a };
 }
 
-// For GLES, samplers are just stored filter values since GLES sets filter mode directly on textures.
 void* cf_gles_create_draw_sampler(CF_Filter filter)
 {
-	// Store the filter value as a pointer (we only need NEAREST=0 or LINEAR=1).
-	return (void*)(uintptr_t)filter;
+	// Zero means no override, so encode NEAREST as one.
+	return (void*)((uintptr_t)filter + 1);
 }
 
 void cf_gles_destroy_draw_sampler(void* sampler)
 {
-	// Nothing to do for GLES - filter values don't need cleanup.
-	CF_UNUSED(sampler);
+	CF_UNUSED(sampler); // Filtered sampler variants belong to their textures.
 }
 
 void cf_gles_set_sampler_override(void* sampler)
 {
-	if (sampler) {
-		g_ctx.filter_override = (CF_Filter)(uintptr_t)sampler;
-		g_ctx.has_filter_override = true;
-	} else {
-		g_ctx.has_filter_override = false;
-	}
+	g_ctx.has_filter_override = sampler != NULL;
+	if (sampler) g_ctx.filter_override = (CF_Filter)((uintptr_t)sampler - 1);
 }
 
 //--------------------------------------------------------------------------------------------------
