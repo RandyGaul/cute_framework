@@ -730,11 +730,15 @@ CF_API CF_Canvas CF_CALL cf_app_get_canvas(void);
  * @param    h          The height in pixels to resize the canvas to.
  * @remarks  Be careful about calling this function, as it will invalidate any old references from `cf_app_get_canvas`.
  *
+ *           The default 2d projection is rebuilt to span `w` by `h`, so the draw API works in the canvas's own pixels:
+ *           a 320x180 retro target draws as a 320x180 world and is blitted up to the window (see `cf_app_set_canvas_blit_filter`).
+ *
  *           This is a one-shot override. The app's canvas is automatically recreated at window size (in points) times
  *           `cf_app_get_pixel_scale` on every canvas recreation event -- a window resize, moving to a display with a
- *           different pixel density, `cf_app_set_size`, or `cf_app_set_msaa` -- so a custom size lasts only until the
- *           next such event. For a persistent fixed-resolution render target (e.g. a retro/pixel-art look) make your
- *           own canvas with `cf_make_canvas` and draw it scaled-up with `cf_draw_canvas`; see the canvas_modes sample.
+ *           different pixel density, `cf_app_set_size`, or `cf_app_set_msaa` -- and the projection goes back to spanning
+ *           the window in points, so a custom size lasts only until the next such event. For a persistent fixed-resolution
+ *           render target (e.g. a retro/pixel-art look) make your own canvas with `cf_make_canvas` and draw it scaled-up
+ *           with `cf_draw_canvas`, or re-apply the size when `cf_app_was_resized`; see the canvas_modes sample.
  * @related  cf_app_get_canvas cf_app_get_canvas_width cf_app_get_canvas_height cf_app_get_pixel_scale cf_app_set_canvas_blit_filter cf_make_canvas cf_draw_canvas
  */
 CF_API void CF_CALL cf_app_set_canvas_size(int w, int h);
