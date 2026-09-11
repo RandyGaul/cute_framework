@@ -1241,6 +1241,7 @@ void cf_destroy_draw()
 	cf_destroy_material(s_draw->material);
 	s_draw->~CF_Draw();
 	CF_FREE(s_draw);
+	s_draw = NULL;
 }
 
 //--------------------------------------------------------------------------------------------------
