@@ -90,6 +90,8 @@ struct CF_TextureInternal
 	SDL_GPUTexture* tex;
 	SDL_GPUTransferBuffer* buf;
 	SDL_GPUSampler* sampler;
+	SDL_GPUSamplerCreateInfo sampler_info = {};
+	SDL_GPUSampler* draw_samplers[2] = {};
 	CF_PixelFormat pixel_format;
 	SDL_GPUTextureFormat format;
 	SDL_GPUTextureSamplerBinding binding;
@@ -216,7 +218,8 @@ static struct
 	bool skip_drawing;
 	int msaa_sample_count;
 	CF_CanvasInternal* canvas;
-	SDL_GPUSampler* sampler_override;
+	CF_Filter filter_override;
+	bool has_filter_override;
 	SDL_GPUBuffer* instance_override;   // Draw3d baked lists / staged uploads: replaces the
 	int instance_override_count;        // applied mesh's instance buffer for exactly one draw,
 	int instance_override_offset;       // bound at this byte offset (a slice of a shared buffer).
@@ -610,13 +613,13 @@ static inline CF_Texture s_make_texture(CF_TextureParams params, CF_SampleCount 
 	if (!tex) return { 0 };
 
 	SDL_GPUSampler* sampler = NULL;
+	SDL_GPUSamplerCreateInfo sampler_info = SDL_GPUSamplerCreateInfoDefaults();
 	// Depth/stencil textures don't need their own sampler, as the associated color
 	// texture in the owning canvas already has a sampler attached -- except comparison
 	// (shadow) samplers, which exist precisely to sample a depth texture, and depth
 	// textures that explicitly ask for SAMPLER usage: those are bound as a plain
 	// sampler2D for non-comparison reads (soft particles, SSAO, depth-aware fog).
 	if (!s_is_depth(params.pixel_format) || params.compare_enable || (params.usage & CF_TEXTURE_USAGE_SAMPLER_BIT)) {
-		SDL_GPUSamplerCreateInfo sampler_info = SDL_GPUSamplerCreateInfoDefaults();
 		sampler_info.mip_lod_bias = params.mip_lod_bias;
 		// Without the enable flag max_anisotropy is ignored wholesale (it also overrides
 		// mipmap_mode filtering per the SDL_GPU/Vulkan rules, so only enable when asked).
@@ -659,6 +662,7 @@ static inline CF_Texture s_make_texture(CF_TextureParams params, CF_SampleCount 
 	tex_internal->tex = tex;
 	tex_internal->buf = buf;
 	tex_internal->sampler = sampler;
+	tex_internal->sampler_info = sampler_info;
 	tex_internal->pixel_format = params.pixel_format;
 	tex_internal->type = params.texture_type;
 	tex_internal->layers = layers;
@@ -1099,6 +1103,9 @@ void cf_sdlgpu_destroy_texture(CF_Texture texture_handle)
 	CF_TextureInternal* tex = (CF_TextureInternal*)texture_handle.id;
 	SDL_ReleaseGPUTexture(g_ctx.device, tex->tex);
 	if (tex->sampler) SDL_ReleaseGPUSampler(g_ctx.device, tex->sampler);
+	for (SDL_GPUSampler* sampler : tex->draw_samplers) {
+		if (sampler) SDL_ReleaseGPUSampler(g_ctx.device, sampler);
+	}
 	if (tex->buf) SDL_ReleaseGPUTransferBuffer(g_ctx.device, tex->buf);
 	CF_FREE(tex);
 }
@@ -2298,6 +2305,23 @@ static CF_PipelineKey s_make_pipeline_key(CF_RenderState* state, CF_MeshInternal
 	return key;
 }
 
+// Draw filtering belongs to Cute's atlas/canvas input. Custom bindings retain
+// their authored samplers; changing u_image filtering retains its wrap and mip modes.
+static SDL_GPUSampler* s_draw_sampler(const CF_MaterialTex& binding)
+{
+	if (binding.sampler.id) return (SDL_GPUSampler*)binding.sampler.id;
+	CF_TextureInternal* texture = (CF_TextureInternal*)binding.handle.id;
+	if (!g_ctx.has_filter_override || binding.name != sintern("u_image")) return texture->sampler;
+	int index = g_ctx.filter_override == CF_FILTER_LINEAR;
+	if (!texture->draw_samplers[index]) {
+		SDL_GPUSamplerCreateInfo info = texture->sampler_info;
+		info.min_filter = info.mag_filter = s_wrap(g_ctx.filter_override);
+		texture->draw_samplers[index] = SDL_CreateGPUSampler(g_ctx.device, &info);
+		CF_ASSERT(texture->draw_samplers[index]);
+	}
+	return texture->draw_samplers[index];
+}
+
 void cf_sdlgpu_apply_shader(CF_Shader shader_handle, CF_Material material_handle)
 {
 	CF_ASSERT(g_ctx.canvas);
@@ -2415,14 +2439,7 @@ void cf_sdlgpu_apply_shader(CF_Shader shader_handle, CF_Material material_handle
 			const char* image_name = material->vs.textures[i].name;
 			for (int j = 0; j < shader->vs_image_names.size(); ++j) {
 				if (shader->vs_image_names[j] == image_name) {
-					if (g_ctx.sampler_override) {
-						vs_sampler_bindings[j].sampler = g_ctx.sampler_override;
-					} else if (material->vs.textures[i].sampler.id) {
-						// Per-binding standalone sampler (cf_material_set_texture_vs_sampler).
-						vs_sampler_bindings[j].sampler = (SDL_GPUSampler*)material->vs.textures[i].sampler.id;
-					} else {
-						vs_sampler_bindings[j].sampler = ((CF_TextureInternal*)material->vs.textures[i].handle.id)->sampler;
-					}
+					vs_sampler_bindings[j].sampler = s_draw_sampler(material->vs.textures[i]);
 					vs_sampler_bindings[j].texture = ((CF_TextureInternal*)material->vs.textures[i].handle.id)->tex;
 					found_vs_image_count++;
 				}
@@ -2454,14 +2471,7 @@ void cf_sdlgpu_apply_shader(CF_Shader shader_handle, CF_Material material_handle
 			const char* image_name = material->fs.textures[i].name;
 			for (int j = 0; j < shader->fs_image_names.size(); ++j) {
 				if (shader->fs_image_names[j] == image_name) {
-					if (g_ctx.sampler_override) {
-						fs_sampler_bindings[j].sampler = g_ctx.sampler_override;
-					} else if (material->fs.textures[i].sampler.id) {
-						// Per-binding standalone sampler (cf_material_set_texture_fs_sampler).
-						fs_sampler_bindings[j].sampler = (SDL_GPUSampler*)material->fs.textures[i].sampler.id;
-					} else {
-						fs_sampler_bindings[j].sampler = ((CF_TextureInternal*)material->fs.textures[i].handle.id)->sampler;
-					}
+					fs_sampler_bindings[j].sampler = s_draw_sampler(material->fs.textures[i]);
 					fs_sampler_bindings[j].texture = ((CF_TextureInternal*)material->fs.textures[i].handle.id)->tex;
 					found_fs_image_count++;
 				}
@@ -2482,7 +2492,7 @@ void cf_sdlgpu_apply_shader(CF_Shader shader_handle, CF_Material material_handle
 	}
 
 	// Clear sampler override after use.
-	g_ctx.sampler_override = NULL;
+	g_ctx.has_filter_override = false;
 
 	// Copy over uniform data.
 	s_copy_uniforms(cmd, &material->block_arena, shader, &material->vs, true);
@@ -2562,23 +2572,19 @@ void cf_sdlgpu_draw_elements_range(int first_element, int element_count, int ins
 
 void* cf_sdlgpu_create_draw_sampler(CF_Filter filter)
 {
-	SDL_GPUSamplerCreateInfo sampler_info = SDL_GPUSamplerCreateInfoDefaults();
-	sampler_info.min_filter = s_wrap(filter);
-	sampler_info.mag_filter = s_wrap(filter);
-	SDL_GPUSampler* sampler = SDL_CreateGPUSampler(g_ctx.device, &sampler_info);
-	return (void*)sampler;
+	// Zero means no override, so encode NEAREST as one.
+	return (void*)((uintptr_t)filter + 1);
 }
 
 void cf_sdlgpu_destroy_draw_sampler(void* sampler)
 {
-	if (sampler) {
-		SDL_ReleaseGPUSampler(g_ctx.device, (SDL_GPUSampler*)sampler);
-	}
+	CF_UNUSED(sampler); // Filtered sampler variants belong to their textures.
 }
 
 void cf_sdlgpu_set_sampler_override(void* sampler)
 {
-	g_ctx.sampler_override = (SDL_GPUSampler*)sampler;
+	g_ctx.has_filter_override = sampler != NULL;
+	if (sampler) g_ctx.filter_override = (CF_Filter)((uintptr_t)sampler - 1);
 }
 
 //--------------------------------------------------------------------------------------------------
