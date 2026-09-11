@@ -115,6 +115,43 @@ TEST_CASE(test_app_set_canvas_size_is_one_shot)
 	return true;
 }
 
+TEST_CASE(test_app_default_projection_is_logical_points_at_2x)
+{
+	REQUIRE(!cf_is_error(cf_make_app(NULL, 0, 0, 0, 200, 100, CF_APP_OPTIONS_HIDDEN_BIT | CF_APP_OPTIONS_NO_AUDIO_BIT, NULL)));
+	OwnedAppGuard guard;
+
+	// Pretend this is a 2x (Retina-class) display: the OS clusters 2x2 pixels into one point.
+	// Forcing it here means a 1x CI machine exercises the same path a real 2x display takes.
+	app->pixel_scale = 2.0f;
+
+	// A recreation event rebuilds the canvas at window * pixel_scale...
+	cf_app_set_size(256, 128);
+	REQUIRE(cf_app_get_canvas_width() == 512);
+	REQUIRE(cf_app_get_canvas_height() == 256);
+
+	// ...but the default 2d projection must keep spanning the window in POINTS, not canvas
+	// pixels. The regression: it was rebuilt from the canvas size, so on a 2x display the
+	// top-left of the screen mapped to (-256, 128) and every draw rendered at half size.
+	CF_V2 top_left = cf_screen_to_world(cf_v2(0, 0));
+	REQUIRE(CF_FABSF(top_left.x - -128.0f) < 0.01f);
+	REQUIRE(CF_FABSF(top_left.y - 64.0f) < 0.01f);
+	CF_V2 bottom_right = cf_screen_to_world(cf_v2(256, 128));
+	REQUIRE(CF_FABSF(bottom_right.x - 128.0f) < 0.01f);
+	REQUIRE(CF_FABSF(bottom_right.y - -64.0f) < 0.01f);
+
+	// And it takes effect immediately, mid-frame, under a pushed camera: the mvp is refreshed
+	// like cf_draw_projection does, so a translate still composes on top of the new projection.
+	cf_draw_push();
+	cf_draw_translate(10, 0);
+	cf_app_set_size(300, 150);
+	CF_V2 origin = cf_world_to_screen(cf_v2(0, 0));
+	REQUIRE(CF_FABSF(origin.x - 160.0f) < 0.01f);
+	REQUIRE(CF_FABSF(origin.y - 75.0f) < 0.01f);
+	cf_draw_pop();
+
+	return true;
+}
+
 TEST_CASE(test_app_msaa_change_resets_canvas_size)
 {
 	REQUIRE(!cf_is_error(cf_make_app(NULL, 0, 0, 0, 200, 100, CF_APP_OPTIONS_HIDDEN_BIT | CF_APP_OPTIONS_NO_AUDIO_BIT, NULL)));
@@ -223,6 +260,7 @@ TEST_SUITE(test_app)
 	// https://github.com/RandyGaul/cute_framework/pull/517
 	RUN_TEST_CASE(test_app_set_canvas_size_is_one_shot);
 	RUN_TEST_CASE(test_app_msaa_change_resets_canvas_size);
+	RUN_TEST_CASE(test_app_default_projection_is_logical_points_at_2x);
 	RUN_TEST_CASE(test_app_present_mode_vsync_always_supported);
 	RUN_TEST_CASE(test_app_present_mode_off_round_trip);
 	RUN_TEST_CASE(test_app_present_mode_mailbox_failure_does_not_corrupt_state);

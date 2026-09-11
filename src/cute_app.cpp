@@ -156,7 +156,7 @@ static void s_canvas(int w, int h)
 	app->offscreen_canvas = cf_make_canvas(params);
 	app->canvas_w = w;
 	app->canvas_h = h;
-	cf_draw_on_app_canvas_resized(w, h);
+	cf_draw_on_app_canvas_resized();
 }
 
 void cf_app_recreate_default_canvas_if_needed()
