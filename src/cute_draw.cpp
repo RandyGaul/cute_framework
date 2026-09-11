@@ -1025,7 +1025,7 @@ void cf_make_draw()
 {
 	s_draw = CF_NEW(CF_Draw);
 	s_draw->path_image_id_gen = CF_PATH_ID_RANGE_LO;
-	s_draw->projection = ortho_2d(0, 0, (float)app->w, (float)app->h);
+	s_draw->projection = s_draw->default_projection = ortho_2d(0, 0, (float)app->w, (float)app->h);
 	s_draw->reset_cam();
 	s_draw->uniform_arena = cf_make_arena(32, CF_MB);
 
@@ -5319,11 +5319,21 @@ static void s_process_command(CF_Canvas canvas, CF_Command* cmd, CF_Command* nex
 // one frame of extra draw calls for brand-new content, instead of N defrags every frame.
 void cf_draw_on_app_canvas_resized(int w, int h)
 {
-	// The default 2d projection tracks the app canvas 1:1. It used to be computed once at
-	// startup and never again, so any resize (cf_app_set_size or a user dragging a resizable
-	// window) silently rescaled every world-space 2d draw. Refresh it with the canvas; a
-	// custom cf_draw_projection is per-frame state and simply overrides this as usual.
-	if (s_draw) s_draw->projection = ortho_2d(0, 0, (float)w, (float)h);
+	if (!s_draw) return;
+	CF_M3x2 old = s_draw->default_projection;
+	CF_M3x2 next = ortho_2d(0, 0, (float)w, (float)h);
+	s_draw->default_projection = next;
+	s_draw->projection = next;
+	// A resize from inside a cf_draw_push scope (a settings menu applying a resolution) must
+	// survive the matching pop: the saved copies of the old default become the new one, while
+	// a user's own saved projection is left alone.
+	for (int i = 0; i < s_draw->projection_stack.size(); ++i) {
+		if (!CF_MEMCMP(&s_draw->projection_stack[i], &old, sizeof(old))) s_draw->projection_stack[i] = next;
+	}
+	// Mirrors cf_draw_projection so a mid-frame cf_app_set_size takes effect immediately, and
+	// re-derives the AA factor since pixel_scale may be what changed.
+	CF_MUL_M32_M32(s_draw->mvp, next, s_draw->cam_stack.last());
+	s_draw->set_aaf();
 }
 
 void cf_atlas_defrag_once()

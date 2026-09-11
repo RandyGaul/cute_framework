@@ -221,8 +221,8 @@ typedef enum CF_AppOptionFlagBits
  * @param    display_index The index of the display to spawn upon. Set this to zero for the primary display. See `cf_get_display_list`.
  * @param    x             The x position of the window.
  * @param    y             The y position of the window.
- * @param    w             The width of the window in pixels.
- * @param    h             The height of the window in pixels.
+ * @param    w             The width of the window in points (see `cf_app_get_pixel_scale`; a point is a pixel unless the OS clusters pixels).
+ * @param    h             The height of the window in points.
  * @param    options       0 by default; a bitmask of `app_options` flags.
  * @param    argv0         The first argument passed to your main function in the `argv` parameter.
  * @return   Returns any errors on failure as a `CF_Result`.
@@ -400,12 +400,11 @@ CF_API void CF_CALL cf_app_show_window(void);
 /**
  * @function cf_app_get_display_scale
  * @category app
- * @brief    Returns the OS's display scale for the window's current display.
- * @remarks  On some devices (e.g. Apple Retina or iOS) pixels are clustered in 4x4 packs and abstracted as a single pixel
- *           called a "point". The intent is for applications to work in points, and scale their UI elements by a factor of 2x
- *           to aid in readability. These devices have very small pixels. Most of the time you should ignore dpi and let the OS
- *           handle this. CF enables DPI settings by default, but, you can see if this function returns 2.0f to let you know if
- *           pixels are clustered for you under the hood.
+ * @brief    Returns the OS's suggested UI scale for the window's current display, e.g. 1.5f on a Windows desktop at 150%.
+ * @remarks  This is a hint about how large the user would like UI to appear. It is informational only: CF never applies it.
+ *           On devices that cluster pixels into points (Apple Retina, iOS) it equals `cf_app_get_pixel_scale`, which CF
+ *           does honor automatically. On Windows/Linux desktops a pixel stays a pixel regardless of this value; honor it
+ *           yourself (e.g. by picking a larger window size or UI scale at startup) if your app should follow the OS setting.
  * @related  cf_app_set_size cf_app_get_position cf_app_set_position cf_app_get_width cf_app_get_height cf_app_get_display_scale cf_app_display_scale_was_changed
  */
 CF_API float CF_CALL cf_app_get_display_scale(void);
@@ -433,9 +432,11 @@ CF_API float CF_CALL cf_app_get_pixel_scale(void);
 /**
  * @function cf_app_set_size
  * @category app
- * @brief    Sets the size of the window in pixels.
- * @param    w          The width of the window in pixels.
- * @param    h          The height of the window in pixels.
+ * @brief    Sets the size of the window in points.
+ * @param    w          The width of the window in points (a point is a pixel unless the OS clusters pixels; see `cf_app_get_pixel_scale`).
+ * @param    h          The height of the window in points.
+ * @remarks  The app canvas and the default 2d projection follow automatically: the canvas is recreated at
+ *           `w * cf_app_get_pixel_scale()` by `h * cf_app_get_pixel_scale()` pixels and the projection spans `w` by `h` points.
  * @related  cf_app_get_size cf_app_get_position cf_app_set_position
  */
 CF_API void CF_CALL cf_app_set_size(int w, int h);
@@ -729,11 +730,15 @@ CF_API CF_Canvas CF_CALL cf_app_get_canvas(void);
  * @param    h          The height in pixels to resize the canvas to.
  * @remarks  Be careful about calling this function, as it will invalidate any old references from `cf_app_get_canvas`.
  *
+ *           The default 2d projection is rebuilt to span `w` by `h`, so the draw API works in the canvas's own pixels:
+ *           a 320x180 retro target draws as a 320x180 world and is blitted up to the window (see `cf_app_set_canvas_blit_filter`).
+ *
  *           This is a one-shot override. The app's canvas is automatically recreated at window size (in points) times
  *           `cf_app_get_pixel_scale` on every canvas recreation event -- a window resize, moving to a display with a
- *           different pixel density, `cf_app_set_size`, or `cf_app_set_msaa` -- so a custom size lasts only until the
- *           next such event. For a persistent fixed-resolution render target (e.g. a retro/pixel-art look) make your
- *           own canvas with `cf_make_canvas` and draw it scaled-up with `cf_draw_canvas`; see the canvas_modes sample.
+ *           different pixel density, `cf_app_set_size`, or `cf_app_set_msaa` -- and the projection goes back to spanning
+ *           the window in points, so a custom size lasts only until the next such event. For a persistent fixed-resolution
+ *           render target (e.g. a retro/pixel-art look) make your own canvas with `cf_make_canvas` and draw it scaled-up
+ *           with `cf_draw_canvas`, or re-apply the size when `cf_app_was_resized`; see the canvas_modes sample.
  * @related  cf_app_get_canvas cf_app_get_canvas_width cf_app_get_canvas_height cf_app_get_pixel_scale cf_app_set_canvas_blit_filter cf_make_canvas cf_draw_canvas
  */
 CF_API void CF_CALL cf_app_set_canvas_size(int w, int h);

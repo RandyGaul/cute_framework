@@ -156,7 +156,6 @@ static void s_canvas(int w, int h)
 	app->offscreen_canvas = cf_make_canvas(params);
 	app->canvas_w = w;
 	app->canvas_h = h;
-	cf_draw_on_app_canvas_resized(w, h);
 }
 
 void cf_app_recreate_default_canvas_if_needed()
@@ -164,6 +163,7 @@ void cf_app_recreate_default_canvas_if_needed()
 	int w = (int)CF_ROUNDF(app->w * app->pixel_scale);
 	int h = (int)CF_ROUNDF(app->h * app->pixel_scale);
 	s_canvas(w, h);
+	cf_draw_on_app_canvas_resized(app->w, app->h); // The draw API stays in window points.
 }
 
 CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, int y, int w, int h, CF_AppOptionFlags options, const char* argv0)
@@ -787,6 +787,7 @@ CF_Canvas cf_app_get_canvas()
 void cf_app_set_canvas_size(int w, int h)
 {
 	s_canvas(w, h);
+	cf_draw_on_app_canvas_resized(w, h); // An explicit canvas size is drawn in its own pixels (a 320x180 retro target).
 }
 
 int cf_app_get_canvas_width()

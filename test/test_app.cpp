@@ -115,6 +115,80 @@ TEST_CASE(test_app_set_canvas_size_is_one_shot)
 	return true;
 }
 
+TEST_CASE(test_app_default_projection_is_logical_points_at_2x)
+{
+	REQUIRE(!cf_is_error(cf_make_app(NULL, 0, 0, 0, 200, 100, CF_APP_OPTIONS_HIDDEN_BIT | CF_APP_OPTIONS_NO_AUDIO_BIT, NULL)));
+	OwnedAppGuard guard;
+
+	// Pretend this is a 2x (Retina-class) display: the OS clusters 2x2 pixels into one point.
+	// Forcing it here means a 1x CI machine exercises the same path a real 2x display takes.
+	app->pixel_scale = 2.0f;
+
+	// A recreation event rebuilds the canvas at window * pixel_scale...
+	cf_app_set_size(256, 128);
+	REQUIRE(cf_app_get_canvas_width() == 512);
+	REQUIRE(cf_app_get_canvas_height() == 256);
+
+	// ...but the default 2d projection must keep spanning the window in POINTS, not canvas
+	// pixels. The regression: it was rebuilt from the canvas size, so on a 2x display the
+	// top-left of the screen mapped to (-256, 128) and every draw rendered at half size.
+	CF_V2 top_left = cf_screen_to_world(cf_v2(0, 0));
+	REQUIRE(CF_FABSF(top_left.x - -128.0f) < 0.01f);
+	REQUIRE(CF_FABSF(top_left.y - 64.0f) < 0.01f);
+	CF_V2 bottom_right = cf_screen_to_world(cf_v2(256, 128));
+	REQUIRE(CF_FABSF(bottom_right.x - 128.0f) < 0.01f);
+	REQUIRE(CF_FABSF(bottom_right.y - -64.0f) < 0.01f);
+
+	// And it takes effect immediately, mid-frame, under a pushed camera: the mvp is refreshed
+	// like cf_draw_projection does, so a translate still composes on top of the new projection.
+	cf_draw_push();
+	cf_draw_translate(10, 0);
+	cf_app_set_size(300, 150);
+	CF_V2 origin = cf_world_to_screen(cf_v2(0, 0));
+	REQUIRE(CF_FABSF(origin.x - 160.0f) < 0.01f);
+	REQUIRE(CF_FABSF(origin.y - 75.0f) < 0.01f);
+	cf_draw_pop();
+
+	// The pop restores the projection saved at push time -- which must be the NEW default, not
+	// the stale pre-resize one (a settings menu applying a resolution from inside a push scope).
+	top_left = cf_screen_to_world(cf_v2(0, 0));
+	REQUIRE(CF_FABSF(top_left.x - -150.0f) < 0.01f);
+	REQUIRE(CF_FABSF(top_left.y - 75.0f) < 0.01f);
+
+	// A user's own saved projection is not touched by a resize.
+	cf_draw_projection(cf_ortho_2d(0, 0, 40, 20));
+	cf_draw_push();
+	cf_app_set_size(400, 200);
+	cf_draw_pop();
+	top_left = cf_screen_to_world(cf_v2(0, 0));
+	REQUIRE(CF_FABSF(top_left.x - -20.0f) < 0.01f);
+	REQUIRE(CF_FABSF(top_left.y - 10.0f) < 0.01f);
+
+	return true;
+}
+
+TEST_CASE(test_app_set_canvas_size_projection_spans_the_canvas)
+{
+	REQUIRE(!cf_is_error(cf_make_app(NULL, 0, 0, 0, 1280, 720, CF_APP_OPTIONS_HIDDEN_BIT | CF_APP_OPTIONS_NO_AUDIO_BIT, NULL)));
+	OwnedAppGuard guard;
+
+	// A retro target: the game draws in 320x180 canvas pixels and the canvas is blitted up. The
+	// default projection follows the explicit canvas size, so the top-left of the screen is the
+	// top-left of the 320x180 world -- no cf_draw_projection call needed.
+	cf_app_set_canvas_size(320, 180);
+	CF_V2 top_left = cf_screen_to_world(cf_v2(0, 0));
+	REQUIRE(CF_FABSF(top_left.x - -160.0f) < 0.01f);
+	REQUIRE(CF_FABSF(top_left.y - 90.0f) < 0.01f);
+
+	// The next recreation event snaps the canvas back to the window, and the projection with it.
+	cf_app_set_size(640, 360);
+	top_left = cf_screen_to_world(cf_v2(0, 0));
+	REQUIRE(CF_FABSF(top_left.x - -320.0f) < 0.01f);
+	REQUIRE(CF_FABSF(top_left.y - 180.0f) < 0.01f);
+
+	return true;
+}
+
 TEST_CASE(test_app_msaa_change_resets_canvas_size)
 {
 	REQUIRE(!cf_is_error(cf_make_app(NULL, 0, 0, 0, 200, 100, CF_APP_OPTIONS_HIDDEN_BIT | CF_APP_OPTIONS_NO_AUDIO_BIT, NULL)));
@@ -223,6 +297,8 @@ TEST_SUITE(test_app)
 	// https://github.com/RandyGaul/cute_framework/pull/517
 	RUN_TEST_CASE(test_app_set_canvas_size_is_one_shot);
 	RUN_TEST_CASE(test_app_msaa_change_resets_canvas_size);
+	RUN_TEST_CASE(test_app_default_projection_is_logical_points_at_2x);
+	RUN_TEST_CASE(test_app_set_canvas_size_projection_spans_the_canvas);
 	RUN_TEST_CASE(test_app_present_mode_vsync_always_supported);
 	RUN_TEST_CASE(test_app_present_mode_off_round_trip);
 	RUN_TEST_CASE(test_app_present_mode_mailbox_failure_does_not_corrupt_state);
