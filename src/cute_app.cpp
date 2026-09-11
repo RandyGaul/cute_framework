@@ -604,9 +604,10 @@ int cf_app_draw_onto_screen(bool clear)
 	s_draw->text_ids.set_count(1);
 	s_draw->user_params.set_count(1);
 	s_draw->shaders.set_count(1);
-	s_draw->draw_item_order = 0;
-	s_draw->cmds.clear();
-	s_draw->add_cmd();
+	s_draw->clear_layers();
+	s_draw->prune_idle_layers();
+	cf_arena_reset(&s_draw->uniform_arena);
+	s_draw->switch_layer(s_draw->layers.last());
 
 	// Report the number of draw calls.
 	int draw_call_count = app->draw_call_count;

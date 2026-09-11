@@ -162,10 +162,6 @@ struct CF_Draw3d
 	// Shader stack depth at cf_draw_list_begin: submissions whose shader sits at or below
 	// this depth recorded it as AMBIENT (see CF_MeshCmd3d::ambient_shader).
 	int recording_shader_base = 0;
-	// Index into s_draw->cmds of the last command emitted by cf_draw3d_replay_cmd, or -1.
-	// Valid only while it is still the second-to-newest command -- the fusion adjacency
-	// check self-validates against the live count, so no invalidation hooks are needed.
-	int last_replay_index = -1;
 	Cute::Array<CF_RenderState> render_states;
 	Cute::Array<CF_V4> mesh_attributes;
 	Cute::Array<CF_V4> mesh_attributes2; // Rides in_uv_rect when no sprite texture is pushed.
@@ -296,10 +292,8 @@ void cf_draw3d_free_cmd(CF_Command* cmd)
 
 void cf_destroy_draw3d()
 {
-	// Mesh commands still sitting in the stream (recorded but never rendered) own their payloads.
-	for (int i = 0; i < s_draw->cmds.count(); ++i) {
-		cf_draw3d_free_cmd(&s_draw->cmds[i]);
-	}
+	// Mesh commands still sitting in a layer's queue (recorded but never rendered) own their payloads.
+	s_draw->clear_layers();
 	for (int i = 0; i < s_draw3d->uniforms.count(); ++i) {
 		CF_FREE(s_draw3d->uniforms[i].data);
 	}
@@ -587,16 +581,17 @@ bool cf_draw3d_atlas_report(atlas_cache_entry_t* entries, int count, int texture
 	return true;
 }
 
-// A mesh submission leaves a fresh empty command on top of the stream so subsequent 2d drawing
-// never lands on the mesh command (mirroring cf_draw_canvas). Coalescing therefore looks at the
-// command *under* the top, provided the top is still untouched.
+// A mesh submission leaves a fresh empty command on top of the current layer's queue so
+// subsequent 2d drawing never lands on the mesh command (mirroring cf_draw_canvas). Coalescing
+// therefore looks at the command *under* the top, provided the top is still untouched.
 static CF_Command* s_coalesce_candidate()
 {
-	int n = s_draw->cmds.count();
+	Cute::Array<CF_Command>& cmds = s_draw->current_cmds();
+	int n = cmds.count();
 	if (n < 2) return NULL;
-	CF_Command& top = s_draw->cmds[n - 1];
+	CF_Command& top = cmds[n - 1];
 	if (!cf_cmd_is_empty(top)) return NULL;
-	CF_Command& under = s_draw->cmds[n - 2];
+	CF_Command& under = cmds[n - 2];
 	return under.mesh3d ? &under : NULL;
 }
 
@@ -1935,17 +1930,21 @@ void cf_draw3d_prepare_uploads(int layer_lo, int layer_hi)
 	// -- their uv lanes resolve against the atlas at process time -- and baked/escape
 	// commands carry their own buffers.
 	s_draw3d->staging_scratch.clear();
-	for (int i = 0; i < s_draw->cmds.count(); ++i) {
-		CF_MeshCmd3d* mc = s_draw->cmds[i].mesh3d;
-		if (!mc) continue;
-		if (s_draw->cmds[i].layer < layer_lo || s_draw->cmds[i].layer > layer_hi) continue;
-		if (mc->escape) continue;
-		const Cute::Array<CF_MeshInstance3d>& instances = mc->instances_ref ? *mc->instances_ref : mc->instances;
-		if (!instances.count()) continue;
-		if (!cf_mesh_draw3d_augmented(mc->mesh)) s_augment_mesh(mc->mesh);
-		if (mc->sprite_textured || mc->gpu_instances) continue;
-		mc->staged_offset = s_draw3d->staging_scratch.count() * (int)sizeof(CF_MeshInstance3d);
-		for (int k = 0; k < instances.count(); ++k) s_draw3d->staging_scratch.add(instances[k]);
+	for (int q = 0; q < s_draw->sorted_layers.count(); ++q) {
+		CF_DrawLayer* dl = s_draw->sorted_layers[q];
+		if (dl->layer < layer_lo) continue;
+		if (dl->layer > layer_hi) break; // sorted_layers is in layer order.
+		for (int i = 0; i < dl->cmds.count(); ++i) {
+			CF_MeshCmd3d* mc = dl->cmds[i].mesh3d;
+			if (!mc) continue;
+			if (mc->escape) continue;
+			const Cute::Array<CF_MeshInstance3d>& instances = mc->instances_ref ? *mc->instances_ref : mc->instances;
+			if (!instances.count()) continue;
+			if (!cf_mesh_draw3d_augmented(mc->mesh)) s_augment_mesh(mc->mesh);
+			if (mc->sprite_textured || mc->gpu_instances) continue;
+			mc->staged_offset = s_draw3d->staging_scratch.count() * (int)sizeof(CF_MeshInstance3d);
+			for (int k = 0; k < instances.count(); ++k) s_draw3d->staging_scratch.add(instances[k]);
+		}
 	}
 	if (!s_draw3d->staging_scratch.count()) return;
 	if (!s_draw3d->staging_instances) {
@@ -2169,8 +2168,8 @@ void cf_draw3d_process(CF_Command* cmd, CF_Canvas canvas, bool clear)
 }
 
 //--------------------------------------------------------------------------------------------------
-// Draw lists. Recording runs through the ordinary submission path (commands accumulate past
-// recording_mark and move into the list at cf_draw_list_end); the hooks below add the 3d
+// Draw lists. Recording runs through the ordinary submission path (commands accumulate in a
+// private set of layers and move into the list at cf_draw_list_end); the hooks below add the 3d
 // semantics: list-local transforms while recording, the bake (grouping + exact normal
 // matrices), and replay payloads that borrow the baked list's instances under a live camera.
 
@@ -2443,7 +2442,7 @@ static bool s_replay_state_fusable(const CF_MeshCmd3d* a, const CF_MeshCmd3d* b,
 	return true;
 }
 
-bool cf_draw3d_replay_cmd(CF_Command* dst, const CF_Command* src)
+bool cf_draw3d_replay_cmd(CF_Command* dst, CF_Command* prev, const CF_Command* src)
 {
 	const CF_MeshCmd3d* smc = src->mesh3d;
 	// Ambient shader slots bind now: the recording left the shader a free variable, so
@@ -2463,13 +2462,11 @@ bool cf_draw3d_replay_cmd(CF_Command* dst, const CF_Command* src)
 
 	// Fusion: when the previous replayed command is still adjacent (nothing emitted in
 	// between) and this baked group sits right after it in the list's shared instance
-	// buffer, draws the same mesh under the same bound shader and render state, and
+	// buffer, draws the same mesh under the same/ bound shader and render state, and
 	// differs only by captured state that shader never consumes -- fold this group into
 	// the previous draw. This is how a ten-material scene replays as ONE draw in a pass
 	// whose shader (a shadow shader, say) reads none of the material state.
-	int prev_i = s_draw3d->last_replay_index;
-	if (prev_i >= 0 && prev_i == s_draw->cmds.count() - 2 && smc->gpu_instances && !smc->sprite_textured && !smc->escape) {
-		CF_Command* prev = &s_draw->cmds[prev_i];
+	if (prev && smc->gpu_instances && !smc->sprite_textured && !smc->escape) {
 		CF_MeshCmd3d* pc = prev->mesh3d;
 		bool candidate = pc && pc->gpu_instances == smc->gpu_instances && pc->mesh.id == smc->mesh.id
 			&& prev->shader.id == dst->shader.id
@@ -2570,7 +2567,6 @@ bool cf_draw3d_replay_cmd(CF_Command* dst, const CF_Command* src)
 	s_draw3d->stats.instances += smc->instances.count();
 	s_draw3d->stats.commands++;
 	s_draw3d->stats.splits[CF_DRAW_SPLIT_3D_FIRST]++;
-	s_draw3d->last_replay_index = s_draw->cmds.count() - 1;
 	return false;
 }
 
