@@ -11,6 +11,7 @@
 using namespace Cute;
 
 #include <internal/cute_app_internal.h>
+#include <internal/cute_draw_internal.h>
 
 TEST_CASE(test_app_destroy_safety)
 {
@@ -112,6 +113,16 @@ TEST_CASE(test_app_set_canvas_size_is_one_shot)
 	REQUIRE(cf_app_get_canvas_width() == (int)CF_ROUNDF(256 * scale));
 	REQUIRE(cf_app_get_canvas_height() == (int)CF_ROUNDF(128 * scale));
 
+	return true;
+}
+
+// A dangling s_draw would slip past `if (!s_draw) return;` guards, e.g. cf_draw_on_app_canvas_resized.
+TEST_CASE(test_app_destroy_nulls_draw_state)
+{
+	REQUIRE(!cf_is_error(cf_make_app(NULL, 0, 0, 0, 200, 100, CF_APP_OPTIONS_HIDDEN_BIT | CF_APP_OPTIONS_NO_AUDIO_BIT, NULL)));
+	REQUIRE(s_draw != NULL);
+	cf_destroy_app();
+	REQUIRE(s_draw == NULL);
 	return true;
 }
 
@@ -296,6 +307,7 @@ TEST_SUITE(test_app)
 	// Requires headless GPU context support in CI -- see
 	// https://github.com/RandyGaul/cute_framework/pull/517
 	RUN_TEST_CASE(test_app_set_canvas_size_is_one_shot);
+	RUN_TEST_CASE(test_app_destroy_nulls_draw_state);
 	RUN_TEST_CASE(test_app_msaa_change_resets_canvas_size);
 	RUN_TEST_CASE(test_app_default_projection_is_logical_points_at_2x);
 	RUN_TEST_CASE(test_app_set_canvas_size_projection_spans_the_canvas);
