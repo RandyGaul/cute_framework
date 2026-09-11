@@ -333,6 +333,7 @@ int ch_encoder_save(ch_encoder_t* e, const char* file_name);
 #if !defined(CUTE_H264_REALLOC)
 	#define CUTE_H264_REALLOC(mem, size) realloc(mem, size)
 #endif
+#include <stdlib.h> // qsort, which the MP4 muxer orders pictures with
 
 #if !defined(CUTE_H264_MEMCPY)
 	#include <string.h>
@@ -6203,8 +6204,6 @@ typedef struct ch_mp4_order_t
 	int log2_frame_num;
 	int log2_poc_lsb;
 	int prev_lsb, prev_msb;
-	int base;              // display position of the first picture of the current keyframe group
-	int span;              // how far that group reaches
 } ch_mp4_order_t;
 
 // A NAL payload with the emulation prevention bytes taken out, up to a bounded length -- the
@@ -6249,12 +6248,12 @@ static void ch_mp4_read_sps(ch_mp4_order_t* o, const uint8_t* sps, int len)
 	if (r.error || o->log2_frame_num > 16 || o->log2_poc_lsb > 16) return;
 	o->ok = 1;
 	o->prev_lsb = o->prev_msb = 0;
-	o->base = o->span = 0;
 }
 
-// Where one picture belongs on screen, counted from the start of the file. Order counts restart at
-// every keyframe, so each group is placed after the one before it rather than on top of it.
-static int ch_mp4_place(ch_mp4_order_t* o, const uint8_t* nal, int len, int idr)
+// One picture's order count: the low bits from its slice header, the high bits from watching the
+// low bits wrap. It says where the picture stands among those of its keyframe group -- the counts
+// restart at every keyframe -- and it is only ever compared, never counted with; see ch_mp4_rank.
+static int ch_mp4_order_count(ch_mp4_order_t* o, const uint8_t* nal, int len, int idr)
 {
 	uint8_t buf[32];
 	ch_rbits_t r;
@@ -6272,8 +6271,6 @@ static int ch_mp4_place(ch_mp4_order_t* o, const uint8_t* nal, int len, int idr)
 	if (r.error) { o->ok = 0; return 0; }
 	int msb;
 	if (idr) {
-		o->base += o->span;
-		o->span = 0;
 		msb = 0;
 		o->prev_lsb = 0;
 		o->prev_msb = 0;
@@ -6286,10 +6283,45 @@ static int ch_mp4_place(ch_mp4_order_t* o, const uint8_t* nal, int len, int idr)
 	}
 	o->prev_lsb = lsb;
 	o->prev_msb = msb;
-	// The count runs in half frames, because the specification counts fields.
-	int within = (msb + lsb) / 2;
-	if (within + 1 > o->span) o->span = within + 1;
-	return o->base + within;
+	return msb + lsb;
+}
+
+typedef struct ch_mp4_ranked_t { int order, index; } ch_mp4_ranked_t;
+
+static int ch_mp4_rank_cmp(const void* a, const void* b)
+{
+	const ch_mp4_ranked_t* x = (const ch_mp4_ranked_t*)a;
+	const ch_mp4_ranked_t* y = (const ch_mp4_ranked_t*)b;
+	if (x->order != y->order) return x->order < y->order ? -1 : 1;
+	return (x->index > y->index) - (x->index < y->index);
+}
+
+// Turns order counts into display positions, exactly one per picture. An order count only says
+// which picture comes before which, not how far apart they are: the specification numbers fields,
+// so most encoders step it by two per frame, VideoToolbox steps it by one, and either may leave a
+// gap. Taking the count for a position -- halving it, as this once did -- put every two
+// VideoToolbox frames on one slot and played the clip at twice speed. So a picture's position is
+// its rank within its keyframe group, and the groups follow one another in decode order, which
+// is also the order they are shown in.
+static int ch_mp4_rank(ch_mp4_sample_t* samples, int count)
+{
+	if (count <= 0) return 1;
+	ch_mp4_ranked_t* ranked = (ch_mp4_ranked_t*)CUTE_H264_ALLOC(sizeof(ch_mp4_ranked_t) * (size_t)count);
+	if (!ranked) { ch_error_reason = "Out of memory."; return 0; }
+	int start = 0;
+	while (start < count) {
+		int end = start + 1;
+		while (end < count && !samples[end].key) ++end;
+		for (int i = start; i < end; ++i) {
+			ranked[i - start].order = samples[i].shown;
+			ranked[i - start].index = i;
+		}
+		qsort(ranked, (size_t)(end - start), sizeof(ch_mp4_ranked_t), ch_mp4_rank_cmp);
+		for (int r = 0; r < end - start; ++r) samples[ranked[r].index].shown = start + r;
+		start = end;
+	}
+	CUTE_H264_FREE(ranked);
+	return 1;
 }
 
 // Walks the Annex-B stream, copying each picture into the media data as a length-prefixed unit --
@@ -6325,8 +6357,9 @@ static int ch_mp4_collect(const uint8_t* s, int n, ch_bytes_t* mdat, ch_mp4_samp
 		samples[count].offset = mdat->len;
 		samples[count].size = (end - start) + 4;
 		samples[count].key = type == CH_NAL_SLICE_IDR;
+		// The order count for now; it becomes a position once every picture is in.
 		samples[count].shown = order.ok
-			? ch_mp4_place(&order, s + start, end - start, type == CH_NAL_SLICE_IDR) : count;
+			? ch_mp4_order_count(&order, s + start, end - start, type == CH_NAL_SLICE_IDR) : count;
 		ch_be32(mdat, (uint32_t)(end - start));
 		for (int k = start; k < end; ++k) ch_bytes_push(mdat, s[k]);
 		++count;
@@ -6334,6 +6367,7 @@ static int ch_mp4_collect(const uint8_t* s, int n, ch_bytes_t* mdat, ch_mp4_samp
 	// A parameter set that could not be read, or a stream that changes one mid-file, leaves the
 	// pictures where they were decoded -- which is right for everything that does not reorder.
 	if (!order.ok) for (int k = 0; k < count; ++k) samples[k].shown = k;
+	else if (!ch_mp4_rank(samples, count)) return 0;
 	*out_count = count;
 	return count > 0;
 }
@@ -6653,7 +6687,8 @@ const void* ch_mp4_wrap(const void* annexb, int size, int w, int h, int fps, int
 	if (!ch_mp4_collect(s, size, &mdat, samples, max_samples, &count, &sps, &sps_len, &pps, &pps_len)
 	    || !sps || !pps) {
 		CUTE_H264_FREE(samples); CUTE_H264_FREE(mdat.data);
-		ch_error_reason = "The stream carries no complete picture."; return NULL;
+		if (!ch_error_reason) ch_error_reason = "The stream carries no complete picture.";
+		return NULL;
 	}
 
 	// Timescale is a thousand ticks per frame so that any whole frame rate is exact rather than

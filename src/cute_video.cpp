@@ -272,9 +272,11 @@ static uint8_t* s_win_read_file(const wchar_t* path, int* out_size)
 // H.264 stream, so we accumulate Annex B and hand it to ch_mp4_wrap (the same muxer the software
 // backend uses).
 //
-// NOTE: written against the VideoToolbox/CoreMedia C API but UNTESTED on this machine (no Mac in
-// the loop). It compiles only under __APPLE__, so it cannot affect the Windows/Linux builds; treat
-// it as a reviewed starting point to verify on macOS.
+// Verified on Apple silicon: the hardware encoder engages and the stream decodes. It reorders
+// frames and steps the picture order count by one per frame rather than two, which the muxer
+// copes with by ranking the counts instead of counting with them (ch_mp4_rank, issue #602).
+// test_video_mp4_timeline exercises this path on any Mac that runs the tests. It compiles only
+// under __APPLE__, so it cannot affect the Windows/Linux builds.
 
 #if defined(__APPLE__)
 typedef struct CF_VT

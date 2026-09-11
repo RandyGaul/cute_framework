@@ -9,6 +9,9 @@
 #include "test_app_shared.h"
 
 #include <cute.h>
+#include <cute/cute_h264.h>
+#include <stdlib.h>
+#include <string.h>
 using namespace Cute;
 
 #define VIDEO_W 96
@@ -17,18 +20,20 @@ using namespace Cute;
 
 // A moving pattern rather than a flat colour: a codec asked to compress nothing compresses it
 // perfectly and proves nothing about whether it works.
-static void s_fill(CF_Pixel* pix, int frame)
+static void s_fill_size(CF_Pixel* pix, int w, int h, int frame)
 {
-	for (int y = 0; y < VIDEO_H; ++y) {
-		for (int x = 0; x < VIDEO_W; ++x) {
-			int bar = ((x + frame * 5) % VIDEO_W) < VIDEO_W / 4;
-			pix[y * VIDEO_W + x] = cf_make_pixel_rgb(
-				(uint8_t)(bar ? 240 : x * 255 / (VIDEO_W - 1)),
-				(uint8_t)(y * 255 / (VIDEO_H - 1)),
+	for (int y = 0; y < h; ++y) {
+		for (int x = 0; x < w; ++x) {
+			int bar = ((x + frame * 5) % w) < w / 4;
+			pix[y * w + x] = cf_make_pixel_rgb(
+				(uint8_t)(bar ? 240 : x * 255 / (w - 1)),
+				(uint8_t)(y * 255 / (h - 1)),
 				(uint8_t)((frame * 20) & 255));
 		}
 	}
 }
+
+static void s_fill(CF_Pixel* pix, int frame) { s_fill_size(pix, VIDEO_W, VIDEO_H, frame); }
 
 // Lossy compression means "close", not "equal", so the check is on how far off the worst channel
 // is rather than on equality. Anything wired up wrongly -- a plane swapped, a stride wrong, frames
@@ -471,6 +476,260 @@ TEST_CASE(test_video_draw3d)
 	return true;
 }
 
+//--------------------------------------------------------------------------------------------------
+// The presentation timeline. An MP4 carries two orders: the one pictures are decoded in, and the
+// one they are shown in. Players follow the second, so it is the second that has to be right --
+// and none of the round trips above can see it, because the decoder here orders pictures by the
+// counts inside the stream and never reads the container's table. These tests read the table.
+
+static uint32_t s_be32(const uint8_t* p)
+{
+	return ((uint32_t)p[0] << 24) | ((uint32_t)p[1] << 16) | ((uint32_t)p[2] << 8) | (uint32_t)p[3];
+}
+
+// Finds a box by walking the tree rather than scanning for its tag, so that picture data which
+// happens to spell one cannot be mistaken for it. Returns the payload, or null.
+static const uint8_t* s_find_box(const uint8_t* p, const uint8_t* end, const char* tag, int* out_len)
+{
+	static const char* containers[] = { "moov", "trak", "mdia", "minf", "stbl", "edts" };
+	while (p + 8 <= end) {
+		uint32_t size = s_be32(p);
+		if (size < 8 || size > (uint32_t)(end - p)) return NULL;
+		if (!memcmp(p + 4, tag, 4)) { *out_len = (int)size - 8; return p + 8; }
+		for (int i = 0; i < (int)(sizeof(containers) / sizeof(containers[0])); ++i) {
+			if (!memcmp(p + 4, containers[i], 4)) {
+				const uint8_t* found = s_find_box(p + 8, p + size, tag, out_len);
+				if (found) return found;
+			}
+		}
+		p += size;
+	}
+	return NULL;
+}
+
+static int s_int_cmp(const void* a, const void* b) { int x = *(const int*)a, y = *(const int*)b; return (x > y) - (x < y); }
+
+// Reads the timeline back out of the container: when each picture is shown, from its decode time
+// (stts), its composition offset (ctts) and the edit that trims off the reorder lead (elst). Every
+// picture must land on its own slot and the slots must run 0, 1, 2 ... with no gaps: a shared slot
+// plays the clip fast, a skipped one plays it slow. Returns the picture count, or -1 with the
+// reason printed. *out_lead is how far display runs ahead of decode, in frames.
+static int s_check_timeline(const void* mp4, int size, int* out_lead)
+{
+	const uint8_t* p = (const uint8_t*)mp4;
+	const uint8_t* end = p + size;
+	int len = 0;
+	const uint8_t* stts = s_find_box(p, end, "stts", &len);
+	if (!stts || len < 16 || s_be32(stts + 4) != 1) { printf("stts missing, or not a single run\n"); return -1; }
+	int count = (int)s_be32(stts + 8);
+	int delta = (int)s_be32(stts + 12);
+	if (count <= 0 || delta <= 0) { printf("stts is empty\n"); return -1; }
+
+	// A version 0 edit list: entry count, then segment duration, media time, rate.
+	int lead = 0;
+	const uint8_t* elst = s_find_box(p, end, "elst", &len);
+	if (elst && len >= 20) lead = (int)s_be32(elst + 12) / delta;
+
+	int* pts = (int*)cf_alloc(sizeof(int) * (size_t)count);
+	for (int i = 0; i < count; ++i) pts[i] = (i - lead) * delta;
+	const uint8_t* ctts = s_find_box(p, end, "ctts", &len);
+	if (ctts && len >= 8) {
+		int entries = (int)s_be32(ctts + 4);
+		for (int e = 0, i = 0; e < entries && i < count; ++e) {
+			int run = (int)s_be32(ctts + 8 + e * 8);
+			int offset = (int)s_be32(ctts + 12 + e * 8);
+			for (int k = 0; k < run && i < count; ++k) pts[i++] += offset;
+		}
+	}
+	qsort(pts, (size_t)count, sizeof(int), s_int_cmp);
+	int ok = 1;
+	for (int i = 0; i < count && ok; ++i) {
+		if (pts[i] != i * delta) {
+			printf("slot %d holds pts %d, expected %d (%d pictures, lead %d)\n", i, pts[i], i * delta, count, lead);
+			ok = 0;
+		}
+	}
+	cf_free(pts);
+	if (out_lead) *out_lead = lead;
+	return ok ? count : -1;
+}
+
+#if defined(CF_STATIC)
+// A hand-made Annex-B stream whose slice headers carry exactly what the muxer reads -- the frame
+// number and the picture order count -- and nothing a decoder could use. That is the point: the
+// order counts can be whatever the test says, which no encoder here would write.
+typedef struct s_annexb_t { uint8_t data[2048]; int len; uint8_t bits[32]; int nbits; } s_annexb_t;
+
+static void s_put(s_annexb_t* s, uint32_t v, int n)
+{
+	while (n--) {
+		if ((v >> n) & 1) s->bits[s->nbits >> 3] |= (uint8_t)(0x80 >> (s->nbits & 7));
+		++s->nbits;
+	}
+}
+
+// Unsigned exp-golomb: v+1 in binary, led in by one zero for every bit of it past the first.
+static void s_put_ue(s_annexb_t* s, uint32_t v)
+{
+	int n = 0;
+	while (((v + 1) >> n) > 1) ++n;
+	s_put(s, 0, n);
+	s_put(s, v + 1, n + 1);
+}
+
+// Closes the bits written so far into one unit with the given header byte, after a start code.
+static void s_nal(s_annexb_t* s, uint8_t header, int pad)
+{
+	s_put(s, 1, 1);                                  // rbsp stop bit
+	const uint8_t start[4] = { 0, 0, 0, 1 };
+	memcpy(s->data + s->len, start, 4); s->len += 4;
+	s->data[s->len++] = header;
+	int bytes = (s->nbits + 7) / 8;
+	memcpy(s->data + s->len, s->bits, (size_t)bytes); s->len += bytes;
+	// Something to stand in for the picture, on bytes the start code scanner cannot mistake.
+	for (int i = 0; i < pad; ++i) s->data[s->len++] = 0xAA;
+	memset(s->bits, 0, sizeof(s->bits)); s->nbits = 0;
+}
+
+static void s_parameter_sets(s_annexb_t* s)
+{
+	s_put(s, 77, 8);   // profile_idc: main, so nothing about chroma comes before the order count fields
+	s_put(s, 0, 8);    // constraint flags
+	s_put(s, 30, 8);   // level_idc
+	s_put_ue(s, 0);    // seq_parameter_set_id
+	s_put_ue(s, 0);    // log2_max_frame_num_minus4: four bits of frame number
+	s_put_ue(s, 0);    // pic_order_cnt_type: the count rides in every slice header
+	s_put_ue(s, 2);    // log2_max_pic_order_cnt_lsb_minus4: six bits, as VideoToolbox writes
+	s_nal(s, 0x67, 0);
+	s_put_ue(s, 0);    // pic_parameter_set_id
+	s_put_ue(s, 0);    // seq_parameter_set_id
+	s_nal(s, 0x68, 0);
+}
+
+// One slice: 'I' opens a keyframe group, 'P' and 'B' follow it.
+static void s_slice(s_annexb_t* s, char type, int frame_num, int poc)
+{
+	int idr = type == 'I';
+	s_put_ue(s, 0);                                     // first_mb_in_slice
+	s_put_ue(s, type == 'I' ? 7 : type == 'P' ? 5 : 6); // slice_type
+	s_put_ue(s, 0);                                     // pic_parameter_set_id
+	s_put(s, (uint32_t)frame_num & 15, 4);
+	if (idr) s_put_ue(s, 0);                            // idr_pic_id
+	s_put(s, (uint32_t)poc & 63, 6);                    // pic_order_cnt_lsb
+	s_nal(s, idr ? 0x65 : type == 'P' ? 0x41 : 0x01, 8);
+}
+
+typedef struct s_picture_t { char type; int frame_num, poc; } s_picture_t;
+#endif // CF_STATIC
+
+/* The muxer must place pictures by the ORDER of their order counts, never by their value. The
+   specification counts fields, so most encoders step the count by two per frame, but VideoToolbox
+   steps it by one, and either may leave gaps. Halving the count put every two VideoToolbox frames
+   on one slot, and the clip played at twice speed (issue #602). */
+TEST_CASE(test_video_mp4_order_counts)
+{
+#if !defined(CF_STATIC)
+	// Feeds the muxer directly (ch_mp4_wrap), which is internal to the library and which shared
+	// (DLL) builds don't export -- and shouldn't. Static builds cover it.
+	return true;
+#else
+	// VideoToolbox: a step of one, B pictures, and a second keyframe group that has to follow the
+	// first rather than land on top of it. The first five are the head of the clip in the issue.
+	static const s_picture_t step_one[] = {
+		{ 'I', 0, 0 }, { 'P', 1, 4 }, { 'B', 2, 2 }, { 'B', 3, 1 }, { 'B', 3, 3 },
+		{ 'I', 0, 0 }, { 'P', 1, 2 }, { 'B', 2, 1 },
+	};
+	// The software encoder here: the same pictures with a step of two.
+	static const s_picture_t step_two[] = {
+		{ 'I', 0, 0 }, { 'P', 1, 8 }, { 'B', 2, 4 }, { 'B', 3, 2 }, { 'B', 3, 6 },
+	};
+	// Gaps in the count, as an encoder that dropped a frame would leave. Every picture still
+	// lasts exactly one frame in the file.
+	static const s_picture_t gaps[] = {
+		{ 'I', 0, 0 }, { 'P', 1, 10 }, { 'B', 2, 4 }, { 'B', 3, 2 }, { 'B', 3, 8 },
+	};
+	// No reordering at all: decode order is display order, and the file needs no offsets.
+	static const s_picture_t in_order[] = {
+		{ 'I', 0, 0 }, { 'P', 1, 1 }, { 'P', 2, 2 }, { 'P', 3, 3 },
+	};
+	struct { const char* name; const s_picture_t* pictures; int count, lead; } cases[] = {
+		{ "step of one", step_one, 8, 2 },
+		{ "step of two", step_two, 5, 2 },
+		{ "gaps", gaps, 5, 2 },
+		{ "in order", in_order, 4, 0 },
+	};
+	for (int c = 0; c < (int)(sizeof(cases) / sizeof(cases[0])); ++c) {
+		s_annexb_t s; memset(&s, 0, sizeof(s));
+		s_parameter_sets(&s);
+		for (int i = 0; i < cases[c].count; ++i) {
+			s_slice(&s, cases[c].pictures[i].type, cases[c].pictures[i].frame_num, cases[c].pictures[i].poc);
+		}
+		int size = 0;
+		const void* mp4 = ch_mp4_wrap(s.data, s.len, 64, 64, 60, &size);
+		CHECK_POINTER((void*)mp4);
+		int lead = -1;
+		int count = s_check_timeline(mp4, size, &lead);
+		cf_free((void*)mp4);
+		if (count != cases[c].count || lead != cases[c].lead) {
+			printf("%s: %d pictures placed, expected %d; lead %d, expected %d\n",
+				cases[c].name, count, cases[c].count, lead, cases[c].lead);
+		}
+		REQUIRE(count == cases[c].count);
+		REQUIRE(lead == cases[c].lead);
+	}
+
+	// A run long enough for the six-bit count to wrap around, which has to be carried across
+	// rather than started over.
+	s_annexb_t s; memset(&s, 0, sizeof(s));
+	s_parameter_sets(&s);
+	for (int k = 0; k < 40; ++k) s_slice(&s, k ? 'P' : 'I', k, 2 * k);
+	int size = 0;
+	const void* mp4 = ch_mp4_wrap(s.data, s.len, 64, 64, 60, &size);
+	CHECK_POINTER((void*)mp4);
+	int lead = -1;
+	int count = s_check_timeline(mp4, size, &lead);
+	cf_free((void*)mp4);
+	REQUIRE(count == 40);
+	REQUIRE(lead == 0);
+	return true;
+#endif // CF_STATIC
+}
+
+/* The same check on what the encoders here actually write: the software one at the size the other
+   tests use, and whichever backend the platform picks at a size the hardware encoders accept --
+   VideoToolbox on macOS, which is where issue #602 was found. */
+TEST_CASE(test_video_mp4_timeline)
+{
+	CF_VideoEncoder* encoder = s_record(50);
+	CHECK_POINTER(encoder);
+	int size = 0;
+	const void* mp4 = cf_video_encoder_data(encoder, &size);
+	CHECK_POINTER((void*)mp4);
+	REQUIRE(s_check_timeline(mp4, size, NULL) == VIDEO_FRAMES);
+	cf_destroy_video_encoder(encoder);
+
+#if !defined(CF_WINDOWS)
+	// Hardware encoders are only tried from 128 pixels up, and a second of frames gives one that
+	// writes B pictures room to reorder them. Not on Windows: Media Foundation writes its own
+	// container rather than going through the muxer here, so there is nothing of ours to check.
+	const int W = 128, H = 128, FRAMES = 30;
+	encoder = cf_make_video_encoder(W, H, 30);
+	CHECK_POINTER(encoder);
+	CF_Pixel* pix = (CF_Pixel*)cf_alloc(sizeof(CF_Pixel) * W * H);
+	for (int i = 0; i < FRAMES; ++i) {
+		s_fill_size(pix, W, H, i);
+		CF_Image image = { W, H, pix };
+		REQUIRE(!cf_is_error(cf_video_encoder_add_frame(encoder, image)));
+	}
+	cf_free(pix);
+	mp4 = cf_video_encoder_data(encoder, &size);
+	CHECK_POINTER((void*)mp4);
+	REQUIRE(s_check_timeline(mp4, size, NULL) == FRAMES);
+	cf_destroy_video_encoder(encoder);
+#endif // CF_WINDOWS
+	return true;
+}
+
 TEST_SUITE(test_video)
 {
 	RUN_TEST_CASE(test_video_round_trip);
@@ -482,4 +741,6 @@ TEST_SUITE(test_video)
 	RUN_TEST_CASE(test_video_record_canvas);
 	RUN_TEST_CASE(test_video_sprite_and_texture);
 	RUN_TEST_CASE(test_video_draw3d);
+	RUN_TEST_CASE(test_video_mp4_order_counts);
+	RUN_TEST_CASE(test_video_mp4_timeline);
 }
