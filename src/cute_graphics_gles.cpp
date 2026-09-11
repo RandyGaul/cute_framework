@@ -488,6 +488,9 @@ static inline bool s_slot_ready(CF_GL_Slot& slot)
 		if (status != GL_ALREADY_SIGNALED && status != GL_CONDITION_SATISFIED) return false;
 		glDeleteSync(slot.fence);
 		slot.fence = 0;
+		// This fence covers the slot's current-frame use. Waiting for the
+		// frame-end fence after it signals would deadlock same-frame reuse.
+		slot.in_flight_frame = 0;
 	}
 	if (slot.in_flight_frame == 0 || slot.in_flight_frame == g_ctx.frame_index) {
 		// Never used, or used THIS frame (no covering fence exists yet).
@@ -554,6 +557,7 @@ static inline CF_GL_Slot* s_force_slot(CF_GL_Ring* ring, uint32_t frame, int* ou
 			glClientWaitSync(slot.fence, GL_SYNC_FLUSH_COMMANDS_BIT, GL_TIMEOUT_IGNORED);
 			glDeleteSync(slot.fence);
 			slot.fence = 0;
+			slot.in_flight_frame = 0;
 		}
 		while (!s_slot_ready(slot)) cf_sleep(0);
 #endif
