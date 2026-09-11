@@ -241,7 +241,7 @@ void cf_get_pixels(ATLAS_CACHE_U64 image_id, void* buffer, int bytes_to_fill, vo
 // (fill-in-place: no stack struct, no copy; unset fields stay zero).
 static CF_INLINE BatchGeometry& s_push_geom()
 {
-	CF_Command& cmd = s_draw->cmds.last();
+	CF_Command& cmd = s_draw->current_cmd();
 	BatchGeometry& g = cmd.geoms.add();
 	g.mvp = s_draw->mvp;
 	g.blend = s_draw->blends.last();
@@ -381,7 +381,7 @@ static bool s_tiled_batch_eligible(int count)
 {
 	if (!s_draw->tiled_available || s_draw->tiled_mode == 1) return false;
 	if (count < s_draw->tiled_threshold) return false;
-	CF_Command& cmd = s_draw->cmds[s_draw->cmd_index];
+	CF_Command& cmd = *s_draw->processing_cmd;
 	// Custom draw shaders need a tile-walk variant (not yet implemented) -- mesh path.
 	if (cmd.shader.id != app->draw_shader.id) return false;
 	// Viewports remap NDC; the tile walk derives NDC from gl_FragCoord -- mesh path.
@@ -423,7 +423,7 @@ static CF_RenderState s_blend_run_state(CF_RenderState rs, int blend, bool tiled
 
 static void s_draw_report_tiled(const BatchGeometry* geoms, const CF_PendingUV* uvs, int start, int end, uint64_t texture_id, int texture_w, int texture_h, int blend, bool instanced)
 {
-	CF_Command& cmd = s_draw->cmds[s_draw->cmd_index];
+	CF_Command& cmd = *s_draw->processing_cmd;
 	int canvas_w, canvas_h;
 	cf_current_canvas_size(&canvas_w, &canvas_h);
 	if (canvas_w <= 0 || canvas_h <= 0) return;
@@ -1103,13 +1103,123 @@ void cf_make_draw()
 		s_draw->tile_material_cs = cf_make_material();
 	}
 
-	// Create an initial draw command.
-	s_draw->add_cmd();
+	// Open the default layer's queue with an initial draw command.
+	s_draw->switch_layer(s_draw->layers.last());
+}
+
+CF_DrawLayer* CF_Draw::ensure_layer(int layer)
+{
+	int lo = 0;
+	int hi = layer_queues.count();
+	while (lo < hi) {
+		int mid = (lo + hi) >> 1;
+		if (layer_queues[mid]->layer < layer) lo = mid + 1;
+		else hi = mid;
+	}
+	if (lo < layer_queues.count() && layer_queues[lo]->layer == layer) return layer_queues[lo];
+	// Sorted insert of a fresh heap queue: pointers already handed out (notably `current_layer`) stay
+	// valid, only this array of pointers shifts.
+	CF_DrawLayer* q = CF_NEW(CF_DrawLayer);
+	q->layer = layer;
+	layer_queues.add(NULL);
+	for (int i = layer_queues.count() - 1; i > lo; --i) {
+		layer_queues[i] = layer_queues[i - 1];
+	}
+	layer_queues[lo] = q;
+	return q;
+}
+
+void CF_Draw::switch_layer(int layer)
+{
+	if (current_layer) {
+		// Detach the non-drawing tail of the queue being left. Empty commands
+		// are simply dropped.
+		Cute::Array<CF_Command>& old = current_layer->cmds;
+		int keep = old.count();
+		while (keep > 0 && !cf_cmd_is_drawing(old[keep - 1])) --keep;
+		for (int i = keep; i < old.count(); ++i) {
+			if (!cf_cmd_is_empty(old[i])) carry_scratch.add(cf_move(old[i]));
+		}
+		old.set_count(keep);
+	}
+	current_layer = ensure_layer(layer);
+	for (int i = 0; i < carry_scratch.count(); ++i) {
+		CF_Command& moved = current_layer->cmds.add(cf_move(carry_scratch[i]));
+		moved.layer = layer; // It belongs to this queue now (draw lists re-queue by this field).
+		current_layer->touched = true;
+	}
+	carry_scratch.clear();
+	sync_current_cmd();
+}
+
+void CF_Draw::sync_current_cmd()
+{
+	Cute::Array<CF_Command>& cmds = current_layer->cmds;
+	if (cmds.count()) {
+		CF_Command& last = cmds.last();
+		// Geometry appended to a canvas blit, a mesh command, or a draw list replay is lost at
+		// flush: s_process_command returns right after the blit or mesh draw without
+		// collating, and a replay collates its borrowed geoms_ref instead of its own geoms
+		// (an atlas item's index would then rebase against the wrong array). Each of those
+		// opens a fresh command after itself for this reason; do the same here.
+		bool accepts_geometry = !last.is_canvas && !last.mesh3d && !last.geoms_ref;
+		if (accepts_geometry) {
+			if (state_matches(last)) return;
+			// A non-drawing command has no state of its own to protect: restamp it rather
+			// than opening another (a uniform it carries applies regardless).
+			if (!cf_cmd_is_drawing(last)) {
+				stamp_state(last);
+				return;
+			}
+		}
+	}
+	add_cmd();
+}
+
+void CF_Draw::clear_queues()
+{
+	for (int q = 0; q < layer_queues.count(); ++q) {
+		Cute::Array<CF_Command>& cmds = layer_queues[q]->cmds;
+		for (int i = 0; i < cmds.count(); ++i) {
+			cf_draw3d_free_cmd(&cmds[i]);
+		}
+		cmds.clear();
+	}
+}
+
+void CF_Draw::prune_idle_queues()
+{
+	int w = 0;
+	for (int q = 0; q < layer_queues.count(); ++q) {
+		CF_DrawLayer* lq = layer_queues[q];
+		if (!lq->touched) {
+			CF_ASSERT(lq->cmds.count() == 0);
+			lq->~CF_DrawLayer();
+			CF_FREE(lq);
+			continue;
+		}
+		lq->touched = false;
+		layer_queues[w++] = lq;
+	}
+	layer_queues.set_count(w);
+	current_layer = NULL;
+}
+
+void CF_Draw::free_queues(Cute::Array<CF_DrawLayer*>& queues)
+{
+	for (int q = 0; q < queues.count(); ++q) {
+		queues[q]->~CF_DrawLayer();
+		CF_FREE(queues[q]);
+	}
+	queues.clear();
 }
 
 void cf_destroy_draw()
 {
-	cf_destroy_draw3d();
+	cf_destroy_draw3d(); // Releases mesh payloads still queued.
+	CF_ASSERT(s_draw->recording_saved_queues.count() == 0);
+	CF_Draw::free_queues(s_draw->layer_queues);
+	s_draw->current_layer = NULL;
 	if (s_draw->blit_init) {
 		cf_destroy_mesh(s_draw->blit_mesh);
 	}
@@ -2358,8 +2468,11 @@ CF_CustomShape cf_make_custom_shape(const char* sdf_src)
 	for (int i = 0; i < s_draw->shaders.count(); ++i) {
 		if (s_draw->shaders[i].id == old_draw.id) s_draw->shaders[i] = app->draw_shader;
 	}
-	for (int i = 0; i < s_draw->cmds.count(); ++i) {
-		if (s_draw->cmds[i].shader.id == old_draw.id) s_draw->cmds[i].shader = app->draw_shader;
+	for (int q = 0; q < s_draw->layer_queues.count(); ++q) {
+		Cute::Array<CF_Command>& cmds = s_draw->layer_queues[q]->cmds;
+		for (int i = 0; i < cmds.count(); ++i) {
+			if (cmds[i].shader.id == old_draw.id) cmds[i].shader = app->draw_shader;
+		}
 	}
 
 	result.id = (uint32_t)s_draw->custom_shape_srcs.count();
@@ -2466,7 +2579,7 @@ static void s_draw_shape_group_end(float stroke, bool fill)
 
 	// Operands trail the head in the same geometry stream so they inherit the command's
 	// lifetime (layered rendering can hold commands across flushes).
-	CF_Command& cmd = s_draw->cmds.last();
+	CF_Command& cmd = s_draw->current_cmd();
 	for (int i = 0; i < count; ++i) {
 		cmd.geoms.add(s_draw->group_geoms[i]);
 	}
@@ -3144,7 +3257,12 @@ void cf_draw_list_begin(CF_DrawList list)
 	CF_ASSERT(!s_draw->recording_list);
 	if (!data) return;
 	s_draw->recording_list = *data;
-	s_draw->recording_mark = s_draw->cmds.count();
+	// Park the live scene's layer queues and record into a private, empty set: the recording
+	// moves into the list wholesale at cf_draw_list_end and the live queues come back untouched.
+	CF_ASSERT(s_draw->recording_saved_queues.count() == 0);
+	swap(s_draw->layer_queues, s_draw->recording_saved_queues);
+	s_draw->recording_saved_current_layer = s_draw->current_layer;
+	s_draw->current_layer = NULL;
 	// Record in list-local space so replay can compose any camera on top.
 	cf_draw_push();
 	s_draw->cam_stack.last() = cf_make_identity();
@@ -3152,7 +3270,7 @@ void cf_draw_list_begin(CF_DrawList list)
 	s_draw->mvp = cf_make_identity();
 	s_draw->set_aaf();
 	cf_draw3d_list_begin();
-	s_draw->add_cmd();
+	s_draw->switch_layer(s_draw->layers.last());
 }
 
 void cf_draw_list_end()
@@ -3164,37 +3282,52 @@ void cf_draw_list_end()
 	s_draw_list_free_uniforms(data);
 	cf_draw3d_free_list_cmds(data);
 	data->cmds.clear();
-	for (int i = s_draw->recording_mark; i < s_draw->cmds.count(); ++i) {
-		CF_Command& c = s_draw->cmds[i];
-		CF_ASSERT(!c.is_canvas); // Canvas blits reference mutable textures; not retainable.
-		if (c.is_canvas) continue;
-		// Skip state-only churn (empty commands from stack pushes during recording).
-		if (c.geoms.count() == 0 && !c.geoms_ref && c.items.count() == 0 && !c.u.data && !c.u.is_texture && !c.mesh3d) continue;
-		CF_Command copy = c;
-		c.mesh3d = NULL; // The list owns the payload now.
-		if (c.geoms_ref) {
-			// A nested replay recorded into this list: resolve the borrowed geometry to
-			// an owned copy so lists never reference each other's storage.
-			copy.geoms = *c.geoms_ref;
-			copy.geoms_ref = NULL;
-			for (int j = 0; j < copy.geoms.count(); ++j) {
-				BatchGeometry& g = copy.geoms[j];
-				CF_MUL_M32_M32(g.mvp, c.replay_mvp, g.mvp);
-				float extra = g.aa * (c.replay_aa_scale - 1.0f);
-				g.aa *= c.replay_aa_scale;
-				if (extra > 0) s_replay_inflate_quad(&g, extra);
+	// Walk the recording's queues in layer order: the list keeps its commands grouped by
+	// layer, in record order within each, which is exactly how cf_draw_list re-queues them.
+	for (int q = 0; q < s_draw->layer_queues.count(); ++q) {
+		Cute::Array<CF_Command>& recorded = s_draw->layer_queues[q]->cmds;
+		for (int i = 0; i < recorded.count(); ++i) {
+			CF_Command& c = recorded[i];
+			CF_ASSERT(!c.is_canvas); // Canvas blits reference mutable textures; not retainable.
+			if (c.is_canvas) continue;
+			// Skip state-only churn (empty commands from stack pushes during recording).
+			if (c.geoms.count() == 0 && !c.geoms_ref && c.items.count() == 0 && !c.u.data && !c.u.is_texture && !c.mesh3d) continue;
+			CF_Command copy = c;
+			c.mesh3d = NULL; // The list owns the payload now.
+			if (c.geoms_ref) {
+				// A nested replay recorded into this list: resolve the borrowed geometry to
+				// an owned copy so lists never reference each other's storage.
+				copy.geoms = *c.geoms_ref;
+				copy.geoms_ref = NULL;
+				for (int j = 0; j < copy.geoms.count(); ++j) {
+					BatchGeometry& g = copy.geoms[j];
+					CF_MUL_M32_M32(g.mvp, c.replay_mvp, g.mvp);
+					float extra = g.aa * (c.replay_aa_scale - 1.0f);
+					g.aa *= c.replay_aa_scale;
+					if (extra > 0) s_replay_inflate_quad(&g, extra);
+				}
 			}
+			if (copy.u.data) {
+				// Uniform data lives in the per-frame arena; the list owns its own copy.
+				void* block = CF_ALLOC(copy.u.size);
+				CF_MEMCPY(block, copy.u.data, copy.u.size);
+				copy.u.data = block;
+				data->uniform_blocks.add(block);
+			}
+			data->cmds.add(copy);
 		}
-		if (copy.u.data) {
-			// Uniform data lives in the per-frame arena; the list owns its own copy.
-			void* block = CF_ALLOC(copy.u.size);
-			CF_MEMCPY(block, copy.u.data, copy.u.size);
-			copy.u.data = block;
-			data->uniform_blocks.add(block);
-		}
-		data->cmds.add(copy);
 	}
-	s_draw->cmds.set_count(s_draw->recording_mark);
+	// Drop the recording's queues and restore the live scene's.
+	CF_Draw::free_queues(s_draw->layer_queues);
+	swap(s_draw->layer_queues, s_draw->recording_saved_queues);
+	s_draw->current_layer = s_draw->recording_saved_current_layer;
+	s_draw->recording_saved_current_layer = NULL;
+	// Switch back to the original layer if needed or just sync
+	if (s_draw->current_layer->layer != s_draw->layers.last()) {
+		s_draw->switch_layer(s_draw->layers.last());
+	} else {
+		s_draw->sync_current_cmd();
+	}
 	cf_draw3d_list_end(data); // Restores the 3d transform stack and bakes mesh commands.
 	cf_draw_pop(); // Restores camera, projection, mvp, and aaf.
 }
@@ -3208,10 +3341,18 @@ void cf_draw_list(CF_DrawList list)
 	// geoms_ref into the pending stream, composing the replay transform and rescaling
 	// the AA band (recorded under an identity camera) during its one copy.
 	float inv_cam_scale = 1.0f / len(s_draw->cam_stack.last().m.y);
+	// Each recorded command re-queues on the layer it was recorded on. The list is grouped by
+	// layer, so one queue serves a whole group and mesh fusion can track its previous
+	// command by index within it.
+	CF_DrawLayer* q = NULL;
+	int prev_mesh_index = -1; // Index in q->cmds of the last replayed mesh command.
 	for (int i = 0; i < data->cmds.count(); ++i) {
 		const CF_Command& src = data->cmds[i];
-		CF_Command& c = s_draw->add_cmd();
-		c.layer = src.layer;
+		if (!q || q->layer != src.layer) {
+			q = s_draw->ensure_layer(src.layer);
+			prev_mesh_index = -1;
+		}
+		CF_Command& c = s_draw->add_cmd_to(q);
 		c.scissor = src.scissor;
 		c.viewport = src.viewport;
 		c.alpha_discard = src.alpha_discard;
@@ -3225,14 +3366,20 @@ void cf_draw_list(CF_DrawList list)
 		c.replay_aa_scale = inv_cam_scale;
 		if (src.mesh3d) {
 			c.geoms_ref = NULL;
-			if (cf_draw3d_replay_cmd(&c, &src)) {
+			// Fusion needs the previous replayed mesh command still directly underneath:
+			// anything replayed in between (2d geometry) fences it off.
+			bool adjacent = prev_mesh_index >= 0 && prev_mesh_index == q->cmds.count() - 2;
+			CF_Command* prev = adjacent ? &q->cmds[prev_mesh_index] : NULL;
+			if (cf_draw3d_replay_cmd(&c, prev, &src)) {
 				// Fused into the previous replayed command: discard the one just added.
-				s_draw->cmds.pop();
+				q->cmds.pop();
+			} else {
+				prev_mesh_index = q->cmds.count() - 1;
 			}
 		}
 	}
-	// Reopen a command carrying the caller's current state for subsequent draws.
-	s_draw->add_cmd();
+	// Make sure the caller's current layer still ends in a command carrying its state.
+	s_draw->sync_current_cmd();
 }
 
 float cf_font_get_kern(CF_Font* font, float font_size, int code0, int code1)
@@ -4550,12 +4697,19 @@ const char* cf_text_without_markups(const char* text)
 
 void cf_draw_push_layer(int layer)
 {
-	PUSH_DRAW_VAR_AND_ADD_CMD_IF_NEEDED(layer);
+	if (s_draw->layers.last() != layer) s_draw->switch_layer(layer);
+	PUSH_DRAW_VAR(layer);
 }
 
 int cf_draw_pop_layer()
 {
-	POP_DRAW_VAR_AND_ADD_CMD_IF_NEEDED(layer);
+	if (s_draw->layers.count() > 1) {
+		int result = s_draw->layers.pop();
+		if (s_draw->layers.last() != result) s_draw->switch_layer(s_draw->layers.last());
+		return result;
+	} else {
+		return s_draw->layers.last();
+	}
 }
 
 int cf_draw_peek_layer()
@@ -5198,9 +5352,6 @@ static void s_flush_pending_geoms()
 
 static void s_process_command(CF_Canvas canvas, CF_Command* cmd, CF_Command* next, bool& clear)
 {
-	if (cmd->processed) return;
-	cmd->processed = true;
-
 	// Apply uniforms.
 	CF_DrawUniform* u = &cmd->u;
 	if (u->is_texture) {
@@ -5333,6 +5484,19 @@ void cf_atlas_defrag_once()
 	atlas_cache_defrag(&s_draw->atlas_cache);
 }
 
+// First command of the next non-empty queue after index `q` whose layer is still within
+// `layer_hi`, or NULL. The flush hands it to s_process_command as `next` so identical state
+// across a layer boundary keeps batching into one draw.
+static CF_Command* s_next_layer_head(int q, int layer_hi)
+{
+	for (int i = q + 1; i < s_draw->layer_queues.count(); ++i) {
+		CF_DrawLayer* lq = s_draw->layer_queues[i];
+		if (lq->layer > layer_hi) return NULL;
+		if (lq->cmds.count()) return &lq->cmds[0];
+	}
+	return NULL;
+}
+
 void cf_render_layers_to(CF_Canvas canvas, int layer_lo, int layer_hi, bool clear)
 {
 	// Stage 3d instance uploads while no render pass is live -- must run before the canvas
@@ -5342,67 +5506,55 @@ void cf_render_layers_to(CF_Canvas canvas, int layer_lo, int layer_hi, bool clea
 	// We will render to this canvas.
 	cf_apply_canvas(canvas, clear);
 
-	// Uniform-only commands (no geometry, not canvas blits) inherit the layer of their
-	// next draw command. This keeps set_texture/set_uniform grouped with the draw_sprite
-	// calls that depend on them through the layer sort.
-	{
-		int next_draw_layer = 0;
-		for (int i = s_draw->cmds.count() - 1; i >= 0; i--) {
-			CF_Command& cmd = s_draw->cmds[i];
-			if (cmd.geoms.count() || cmd.geoms_ref || cmd.is_canvas || cmd.mesh3d) {
-				next_draw_layer = cmd.layer;
-			} else {
-				cmd.layer = next_draw_layer;
-			}
-		}
-	}
-
-	// Sort the commands by layer first, then by age (to maintain relative ordering).
-	std::stable_sort(s_draw->cmds.begin(), s_draw->cmds.end(), [](const CF_Command& a, const CF_Command& b) {
-		if (a.layer == b.layer) return a.id < b.id;
-		else return a.layer < b.layer;
-	});
+	// Layers own their queues, kept in layer order, and each queue is already in submission
+	// order, so there is no need to sort: the flush walks the in-range queues low to high.
+	// State change commands are moved to the head of the target queue on layer
+	// switch.
+	int first = 0;
+	while (first < s_draw->layer_queues.count() && s_draw->layer_queues[first]->layer < layer_lo) ++first;
+	int last = first;
+	while (last < s_draw->layer_queues.count() && s_draw->layer_queues[last]->layer <= layer_hi) ++last;
 
 	// Within each maximal run of consecutive 3d commands in a layer, move depth-writing
 	// commands (opaque solids) ahead of non-writing ones (translucent strokes) -- the classic
 	// opaque-then-translucent split as the 3d default. Strokes then depth-test against every
 	// solid in their run regardless of submission interleave (an arrow's shaft vs its cone
 	// head), while 2d commands and layer boundaries still fence exactly as before.
-	{
+	for (int q = first; q < last; ++q) {
+		Cute::Array<CF_Command>& cmds = s_draw->layer_queues[q]->cmds;
 		// Empty spacer commands are transparent to the run scan: every immediate-mode mesh
 		// submission leaves one on the stream (see s_submit in cute_draw3d.cpp), so requiring
 		// strictly consecutive mesh3d commands would cap every run at length 1 and turn the
 		// partition into a no-op. Empties draw nothing, so the partition may place them freely.
-		int n = s_draw->cmds.count();
+		int n = cmds.count();
 		int i = 0;
 		while (i < n) {
-			if (!s_draw->cmds[i].mesh3d) { ++i; continue; }
+			if (!cmds[i].mesh3d) { ++i; continue; }
 			int j = i + 1;
-			while (j < n && (s_draw->cmds[j].mesh3d || cf_cmd_is_empty(s_draw->cmds[j])) && s_draw->cmds[j].layer == s_draw->cmds[i].layer) ++j;
-			auto mid = std::stable_partition(s_draw->cmds.begin() + i, s_draw->cmds.begin() + j, [](const CF_Command& c) {
+			while (j < n && (cmds[j].mesh3d || cf_cmd_is_empty(cmds[j]))) ++j;
+			auto mid = std::stable_partition(cmds.begin() + i, cmds.begin() + j, [](const CF_Command& c) {
 				return c.mesh3d && c.render_state.depth_write_enabled;
 			});
 			// The non-writing (translucent) tail sorts back-to-front on the submission
 			// anchors captured in depth3d, so overlapping translucents composite correctly
 			// regardless of submission order. Writers keep submission order; the depth
 			// test owns them. Empty spacers carry depth 0 and sort harmlessly.
-			std::stable_sort(mid, s_draw->cmds.begin() + j, [](const CF_Command& a, const CF_Command& b) {
+			std::stable_sort(mid, cmds.begin() + j, [](const CF_Command& a, const CF_Command& b) {
 				return a.depth3d > b.depth3d;
 			});
 			i = j;
 		}
 	}
 
-	// Process each rendering command.
-	int count = s_draw->cmds.count();
-	for (int i = 0; i < count; ++i) {
-		s_draw->cmd_index = i;
-		CF_Command* cmd = &s_draw->cmds[i];
-		CF_Command* next = i + 1 == count ? NULL : s_draw->cmds + (i + 1);
-		if (cmd->layer >= layer_lo && cmd->layer <= layer_hi) {
+	// Process each rendering command, queue by queue.
+	for (int q = first; q < last; ++q) {
+		Cute::Array<CF_Command>& cmds = s_draw->layer_queues[q]->cmds;
+		int count = cmds.count();
+		for (int i = 0; i < count; ++i) {
+			CF_Command* cmd = &cmds[i];
+			CF_Command* next = i + 1 < count ? &cmds[i + 1] : s_next_layer_head(q, layer_hi);
+			s_draw->processing_cmd = cmd;
 			s_process_command(canvas, cmd, next, clear);
-		} else if (cmd->layer > layer_hi) {
-			break;
 		}
 	}
 
@@ -5416,21 +5568,20 @@ void cf_render_layers_to(CF_Canvas canvas, int layer_lo, int layer_hi, bool clea
 		atlas_cache_flush(&s_draw->atlas_cache);
 		s_flush_pending_geoms();
 	}
+	s_draw->processing_cmd = NULL;
 	s_draw->has_drawn_something = false;
-	cf_arena_reset(&s_draw->uniform_arena);
 
-	// Remove commands that were processed.
-	for (int i = 0; i < s_draw->cmds.size();) {
-		if (s_draw->cmds[i].processed) {
-			cf_draw3d_free_cmd(&s_draw->cmds[i]);
-			s_draw->cmds.unordered_remove(i);
-		} else {
-			++i;
+	// Release the processed commands. Out-of-range queues keep theirs for a later flush.
+	for (int q = first; q < last; ++q) {
+		Cute::Array<CF_Command>& cmds = s_draw->layer_queues[q]->cmds;
+		for (int i = 0; i < cmds.count(); ++i) {
+			cf_draw3d_free_cmd(&cmds[i]);
 		}
+		cmds.clear();
 	}
 
-	// Ensure there's at least one "default" command for convenience use-cases.
-	s_draw->add_cmd();
+	// Ensure the current layer still ends in a command to draw into.
+	s_draw->sync_current_cmd();
 }
 
 void cf_render_to(CF_Canvas canvas, bool clear)

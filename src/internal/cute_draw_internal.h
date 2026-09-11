@@ -214,9 +214,7 @@ struct CF_DrawUniform
 
 struct CF_Command
 {
-	bool processed = false;
-	int id = 0; // Simply increments for each command, used for sort ordering within a layer.
-	int layer = 0;
+	int layer = 0; // The layer whose queue this command lives in (see CF_DrawLayer).
 	CF_Rect scissor = { 0, 0, -1, -1 };
 	CF_Rect viewport = { 0, 0, -1, -1 };
 	float alpha_discard = 1.0f;
@@ -248,6 +246,33 @@ struct CF_Command
 	float depth3d = 0;
 };
 
+// One layer's command queue.
+//
+// Layers are first class: every command lives in the queue of the layer it was
+// submitted on, in submission order. Switching layers simply moves command
+// submission to a different queue. When the queues are flushed with
+// `cf_render_layers_to`, queues are visited in layer orders instead of being
+// sorted.
+// At the end of a frame, unused command queues are pruned.
+//
+// Commands are classified into:
+//
+// * Drawing: 2d geometry, a draw list replay, a canvas blits, or a mesh submission.
+// * Non-drawing: empty command (cf_cmd_is_empty) or a state-change command
+//   carrying only a uniform / texture set.
+//
+// To keep render state correct when commands can be submitted into multiple queues,
+// we maintain "the tail invariant": Only the current queue may end in non-drawing
+// commands. On a layer switch, the tail run of non-drawing commands from the old
+// layer is moved into the new layer. Thus, they will set the render states for
+// the draws on the new layer.
+struct CF_DrawLayer
+{
+	int layer = 0;
+	bool touched = false; // A command was appended this frame.
+	Cute::Array<CF_Command> cmds;
+};
+
 // True for a command that draws nothing and carries no state change -- notably the spacer
 // commands mesh submission leaves on top of the stream (see s_submit in cute_draw3d.cpp).
 // The one definition shared by coalescing and the flush's run scans.
@@ -257,10 +282,17 @@ CF_INLINE bool cf_cmd_is_empty(const CF_Command& cmd)
 		&& !cmd.geoms_ref && !cmd.u.name && !cmd.u.is_texture;
 }
 
+// True for a command that draws something: 2d geometry, a draw list replay, a
+// canvas blits, or a mesh submission.
+CF_INLINE bool cf_cmd_is_drawing(const CF_Command& cmd)
+{
+	return cmd.mesh3d || cmd.is_canvas || cmd.geoms.count() || cmd.geoms_ref;
+}
+
 // Pushes a sprite/text atlas entry whose geometry was just appended via s_push_geom().
 #define DRAW_PUSH_ITEM(s) \
 	do { \
-		CF_Command& cmd__ = s_draw->cmds.last(); \
+		CF_Command& cmd__ = s_draw->current_cmd(); \
 		(s).udata = (ATLAS_CACHE_U64)(cmd__.geoms.count() - 1); \
 		cmd__.items.add(s); \
 	} while (0)
@@ -296,26 +328,81 @@ CF_INLINE bool cf_cmd_is_empty(const CF_Command& cmd)
 	}
 
 #define ADD_UNIFORM(u) \
-	s_draw->add_cmd(); \
-	s_draw->cmds.last().u = u
+	s_draw->add_cmd().u = u
 
 struct CF_Draw
 {
-	CF_INLINE CF_Command& add_cmd() {
-		CF_Command& cmd = cmds.add();
-		cmd.id = draw_item_order++;
-		cmd.layer = layers.last();
+	// Stamps the tops of the pipeline/state stacks onto a command.
+	CF_INLINE void stamp_state(CF_Command& cmd) {
 		cmd.scissor = scissors.last();
 		cmd.viewport = viewports.last();
 		cmd.alpha_discard = alpha_discards.last();
 		cmd.filter_mode = filter_modes.last();
 		cmd.render_state = render_states.last();
 		cmd.shader = shaders.last();
+	}
+	CF_INLINE bool state_matches(const CF_Command& cmd) const {
+		return cmd.scissor == scissors.last()
+			&& cmd.viewport == viewports.last()
+			&& cmd.alpha_discard == alpha_discards.last()
+			&& cmd.filter_mode == filter_modes.last()
+			&& cmd.render_state == render_states.last()
+			&& cmd.shader == shaders.last();
+	}
+	// Appends a command carrying the current state to `q`, stamped with that queue's layer.
+	// The queue is the truth, not the `layers` stack: cf_draw_push_layer switches queues
+	// before it pushes the stack.
+	CF_INLINE CF_Command& add_cmd_to(CF_DrawLayer* q) {
+		CF_Command& cmd = q->cmds.add();
+		cmd.layer = q->layer;
+		q->touched = true;
+		stamp_state(cmd);
 		return cmd;
 	}
-	int cmd_index = 0;
-	int draw_item_order = 0;
-	Cute::Array<CF_Command> cmds;
+	// Appends a command carrying the current state to the current layer's queue.
+	CF_INLINE CF_Command& add_cmd() { return add_cmd_to(current_layer); }
+	// The current layer's queue and its last command -- the one drawing appends to.
+	CF_INLINE Cute::Array<CF_Command>& current_cmds() { return current_layer->cmds; }
+	CF_INLINE CF_Command& current_cmd() { return current_layer->cmds.last(); }
+	// The queue for `layer`, inserting an empty one when absent. Queues are heap objects so
+	// the pointer stays valid across later inserts.
+	CF_DrawLayer* ensure_layer(int layer);
+	// Moves the cursor to `layer`'s queue (creating it), carrying along the non-drawing tail
+	// of the queue being left, then re-establishes the tail invariant via sync_current_cmd.
+	void switch_layer(int layer);
+	// Re-establishes the tail invariant (see `current_layer`): reuses the queue's last
+	// command when it can, restamps it when it draws nothing yet, appends otherwise.
+	void sync_current_cmd();
+	// Frees every queued command's payload and clears every queue (frame end / destroy).
+	void clear_queues();
+	// Frame-end housekeeping for the queue set: deletes queues no command touched this frame
+	// (a game y-sorting via one layer int per object would otherwise accumulate them forever)
+	// and clears `touched` on the rest. Leaves `current_layer` NULL; call switch_layer afterwards.
+	void prune_idle_queues();
+	// Deletes the CF_DrawLayer objects in `queues` (payloads must already be released) and
+	// empties the array.
+	static void free_queues(Cute::Array<CF_DrawLayer*>& queues);
+
+	// Per-layer command queues, sorted ascending by layer. `current_layer` is the queue of the
+	// top of the `layers` stack (NULL only transiently, while no queue is current).
+	//
+	// The tail invariant: Only the current queue may end in non-drawing commands.
+	//
+	// Every drawable appended to current_cmd() trusts this without checking. Any operation
+	// that can break it must call sync_current_cmd before returning to the caller:
+	//   - the flush (cf_render_layers_to) drains the current queue;
+	//   - cf_draw_list replay appends borrowed-geometry commands to it;
+	//   - draw list recording parks and restores the queue set;
+	//   - the frame-end reset clears every queue;
+	//   - a layer switch lands on a queue last stamped under some earlier state.
+	// The state-push macros keep it by construction: a state change opens a new command
+	// carrying the new state, so the stamp never lags the stacks. Other queues are free to
+	// violate all of this -- nothing appends to a queue that is not current.
+	Cute::Array<CF_DrawLayer*> layer_queues;
+	CF_DrawLayer* current_layer = NULL;
+	Cute::Array<CF_Command> carry_scratch; // switch_layer's carry buffer for the non-drawing tail (keeps its capacity).
+	// The command the flush is currently processing; the tiled path reads its state.
+	CF_Command* processing_cmd = NULL;
 	CF_V2 atlas_dims = cf_v2(2048, 2048);
 	CF_V2 texel_dims = cf_v2(1.0f/2048.0f, 1.0f/2048.0f);
 	bool delay_defrag = false;
@@ -383,12 +470,14 @@ struct CF_Draw
 	// Baked vector paths (cf_draw_path_end), keyed by image id in the path id range.
 	Cute::Map<CF_DrawPathData> draw_paths;
 	uint64_t path_image_id_gen = 0; // Seeded to CF_PATH_ID_RANGE_LO in cf_make_draw.
-	// Retained draw lists (cf_make_draw_list). While recording, commands append to
-	// `cmds` past recording_mark and move into the list at cf_draw_list_end.
+	// Retained draw lists (cf_make_draw_list). While recording, the live layer queues are
+	// parked in recording_saved_queues and commands accumulate in a private set of queues
+	// that moves into the list at cf_draw_list_end.
 	Cute::Map<struct CF_DrawListData*> draw_lists;
 	uint64_t draw_list_id_gen = 1;
 	struct CF_DrawListData* recording_list = NULL;
-	int recording_mark = 0;
+	Cute::Array<CF_DrawLayer*> recording_saved_queues;
+	CF_DrawLayer* recording_saved_current_layer = NULL;
 	// User SDF snippets registered via cf_make_custom_shape, in dispatch-index order.
 	// Stitched into custom_shapes.shd and compiled into every SDF command pipeline.
 	Cute::Array<Cute::String> custom_shape_srcs;
@@ -447,8 +536,9 @@ struct CF_Draw
 };
 
 // Retained draw list contents: deep copies of recorded commands (list-local
-// transforms; replay composes the current camera on top) plus owned copies of any
-// recorded uniform data (the live path arena resets every frame).
+// transforms; replay composes the current camera on top), grouped by layer in layer
+// order and in record order within a layer, plus owned copies of any recorded uniform
+// data (the live path arena resets every frame).
 struct CF_DrawListData
 {
 	Cute::Array<CF_Command> cmds;
@@ -495,9 +585,10 @@ void cf_draw3d_list_end(struct CF_DrawListData* data);
 // Atlas uv routing for sprite-textured meshes: the 2d batch callback calls this first; it
 // consumes the report when a mesh command is mid-resolution in cf_draw3d_process.
 bool cf_draw3d_atlas_report(atlas_cache_entry_t* entries, int count, int texture_w, int texture_h);
-// Returns true when the source command fused into the previously replayed command instead
-// of populating `dst` -- the caller then discards `dst`.
-bool cf_draw3d_replay_cmd(CF_Command* dst, const CF_Command* src);
+// `prev` is the command directly under `dst` in its layer queue when that command was
+// replayed from the same list during this replay, else NULL. Returns true when the source
+// command fused into `prev` instead of populating `dst` -- the caller then discards `dst`.
+bool cf_draw3d_replay_cmd(CF_Command* dst, CF_Command* prev, const CF_Command* src);
 void cf_draw3d_free_list_cmds(struct CF_DrawListData* data);
 
 // We slice up a 64-bit int into lo + hi ranges to map where we can fetch pixels

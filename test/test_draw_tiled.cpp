@@ -497,6 +497,393 @@ TEST_CASE(test_draw_layers)
 }
 
 // -------------------------------------------------------------------------------------------------
+// Read-only lookup of a layer's queue for the tests below: NULL when the layer has no queue.
+// The renderer's own lookup (CF_Draw::ensure_layer) always creates, which would perturb the very
+// state these tests inspect.
+
+static CF_DrawLayer* s_find_layer(int layer)
+{
+	for (int i = 0; i < s_draw->layer_queues.count(); ++i) {
+		if (s_draw->layer_queues[i]->layer == layer) return s_draw->layer_queues[i];
+	}
+	return NULL;
+}
+
+// -------------------------------------------------------------------------------------------------
+// Layers are first class: each keeps its own command queue, so hopping between layers around
+// every draw neither grows any queue nor splits batches -- every quad drawn on a layer lands
+// in that layer's one open command -- and the result still renders in layer order.
+
+#define LAYER_HOPS 32
+
+static void s_scene_layers_interleaved()
+{
+	for (int i = 0; i < LAYER_HOPS; ++i) {
+		// Red on layer 2, submitted first each hop.
+		cf_draw_push_layer(2);
+		cf_draw_push_color(cf_make_color_rgba_f(1, 0, 0, 1));
+		cf_draw_quad_fill(cf_make_aabb(cf_v2(-60, -40), cf_v2(20, 40)), 0);
+		cf_draw_pop_color();
+		cf_draw_pop_layer();
+
+		// Green on layer 1, submitted later: must still render underneath.
+		cf_draw_push_layer(1);
+		cf_draw_push_color(cf_make_color_rgba_f(0, 1, 0, 1));
+		cf_draw_quad_fill(cf_make_aabb(cf_v2(-20, -40), cf_v2(60, 40)), 0);
+		cf_draw_pop_color();
+		cf_draw_pop_layer();
+	}
+}
+
+TEST_CASE(test_draw_layers_interleaved)
+{
+	if (!test_make_app(640, 480)) return true; // Headless CI: no display/GPU.
+
+	int w = 640, h = 480;
+	CF_Pixel* a = (CF_Pixel*)cf_alloc(w * h * sizeof(CF_Pixel));
+	CF_Pixel* b = (CF_Pixel*)cf_alloc(w * h * sizeof(CF_Pixel));
+	CF_Pixel* px[2] = { a, b };
+	for (int mode = 0; mode <= 1; ++mode) {
+		cf_app_update(NULL);
+		cf_draw_set_tiled_enabled(mode == 1);
+		CF_Canvas canvas = cf_make_canvas(cf_canvas_defaults(w, h));
+		s_scene_layers_interleaved();
+
+		// One batched command per drawn layer holding every hop's quad, and the default
+		// layer (hopped through 2 * LAYER_HOPS times) holding nothing but its open command.
+		CF_DrawLayer* l0 = s_find_layer(0);
+		CF_DrawLayer* l1 = s_find_layer(1);
+		CF_DrawLayer* l2 = s_find_layer(2);
+		REQUIRE(l0 && l1 && l2);
+		REQUIRE(l1->cmds.count() == 1);
+		REQUIRE(l1->cmds[0].geoms.count() == LAYER_HOPS);
+		REQUIRE(l2->cmds.count() == 1);
+		REQUIRE(l2->cmds[0].geoms.count() == LAYER_HOPS);
+		REQUIRE(l0->cmds.count() == 1);
+		REQUIRE(l0->cmds[0].geoms.count() == 0);
+		REQUIRE(s_draw->current_layer == l0);
+
+		cf_render_to(canvas, true);
+		cf_app_draw_onto_screen(false);
+		CF_Readback rb = cf_canvas_readback(canvas);
+		REQUIRE(rb.id);
+		while (!cf_readback_ready(rb)) {}
+		REQUIRE(cf_readback_size(rb) == w * h * (int)sizeof(CF_Pixel));
+		cf_readback_data(rb, px[mode], w * h * (int)sizeof(CF_Pixel));
+		cf_destroy_readback(rb);
+		cf_destroy_canvas(canvas);
+
+		REQUIRE(s_px_near(s_probe(px[mode], w, h, -40), 255, 0, 0, 255, 3)); // Red only.
+		REQUIRE(s_px_near(s_probe(px[mode], w, h, 0), 255, 0, 0, 255, 3));   // Overlap: layer 2 beats layer 1.
+		REQUIRE(s_px_near(s_probe(px[mode], w, h, 40), 0, 255, 0, 255, 3));  // Green only.
+
+		// The flush emptied the rendered layers and reopened the current one.
+		REQUIRE(l1->cmds.count() == 0);
+		REQUIRE(l2->cmds.count() == 0);
+		REQUIRE(s_draw->current_cmds().count() == 1);
+	}
+	REQUIRE(s_diff_ok(a, b, w * h, "layers interleaved tiled-vs-mesh"));
+
+	cf_free(a);
+	cf_free(b);
+	test_destroy_app();
+	return true;
+}
+
+// -------------------------------------------------------------------------------------------------
+// A uniform/texture set binds for the NEXT draw wherever that draw lands: set on one layer,
+// then push another layer and draw -- the draw sees the uniform. Uniform-only commands ride
+// along with the layer cursor at record time (the flat stream used to backfill their layer
+// at flush time).
+
+static bool s_uniform_l3_clean;
+
+static void s_scene_uniform_follows_draw()
+{
+	cf_draw_push_shader(s_attr_shd);
+	cf_draw_push_vertex_attributes(1.0f, 1.0f, 1.0f, 1.0f);
+
+	// Set on layer 0, drawn on layer 3: the layer-3 quad is red.
+	cf_draw_set_uniform_color("u_tint", cf_make_color_rgba_f(1.0f, 0.0f, 0.0f, 1.0f));
+	cf_draw_push_layer(3);
+	cf_draw_quad_fill(cf_make_aabb(cf_v2(-100, -40), cf_v2(-20, 40)), 0);
+	cf_draw_pop_layer();
+
+	// Set on layer 3 with nothing drawn there, popped, drawn on layer 0: the layer-0 quad is
+	// blue, and layer 3's queue did not keep the set (it followed the cursor back out) --
+	// the queue holds exactly what it held before, ending in the red quad's command.
+	CF_DrawLayer* l3 = s_find_layer(3);
+	int l3_count = l3 ? l3->cmds.count() : 0;
+	cf_draw_push_layer(3);
+	cf_draw_set_uniform_color("u_tint", cf_make_color_rgba_f(0.0f, 0.0f, 1.0f, 1.0f));
+	cf_draw_pop_layer();
+	s_uniform_l3_clean = l3 && l3->cmds.count() == l3_count && cf_cmd_is_drawing(l3->cmds.last());
+	cf_draw_quad_fill(cf_make_aabb(cf_v2(20, -40), cf_v2(100, 40)), 0);
+
+	cf_draw_pop_vertex_attributes();
+	cf_draw_pop_shader();
+}
+
+TEST_CASE(test_draw_layers_uniform_follows_draw)
+{
+	if (!test_make_app(640, 480)) return true; // Headless CI: no display/GPU.
+
+	s_attr_shd = cf_make_draw_shader_from_source(s_attr_shd_src);
+	REQUIRE(s_attr_shd.id);
+
+	int w = 640, h = 480;
+	CF_Pixel* px = (CF_Pixel*)cf_alloc(w * h * sizeof(CF_Pixel));
+	for (int mode = 0; mode <= 1; ++mode) {
+		REQUIRE(s_readback(s_scene_uniform_follows_draw, mode, w, h, px));
+		REQUIRE(s_uniform_l3_clean);
+		REQUIRE(s_px_near(s_probe(px, w, h, -60), 255, 0, 0, 255, 3)); // Tint set below, bound on layer 3.
+		REQUIRE(s_px_near(s_probe(px, w, h, 60), 0, 0, 255, 255, 3));  // Tint set above, bound on layer 0.
+	}
+
+	cf_free(px);
+	cf_destroy_shader(s_attr_shd);
+	test_destroy_app();
+	return true;
+}
+
+// -------------------------------------------------------------------------------------------------
+// cf_render_layers_to drains only the in-range layers; the rest stay queued -- uniform data
+// included -- for a later call. The tint set between the two calls lands where the first
+// call's arena reset would have put the layer-2 tint had it reset, so a stale reset shows up
+// as the wrong color rather than as luck.
+
+TEST_CASE(test_draw_render_layers_partial)
+{
+	if (!test_make_app(640, 480)) return true; // Headless CI: no display/GPU.
+
+	s_attr_shd = cf_make_draw_shader_from_source(s_attr_shd_src);
+	REQUIRE(s_attr_shd.id);
+
+	int w = 640, h = 480;
+	int size = w * h * (int)sizeof(CF_Pixel);
+	CF_Pixel* pa = (CF_Pixel*)cf_alloc(size);
+	CF_Pixel* pb = (CF_Pixel*)cf_alloc(size);
+	for (int mode = 0; mode <= 1; ++mode) {
+		cf_app_update(NULL);
+		cf_draw_set_tiled_enabled(mode == 1);
+		CF_Canvas canvas_a = cf_make_canvas(cf_canvas_defaults(w, h));
+		CF_Canvas canvas_b = cf_make_canvas(cf_canvas_defaults(w, h));
+
+		// Layer 0 red, layer 1 green, layer 2 a custom-shader quad tinted blue.
+		cf_draw_push_color(cf_make_color_rgba_f(1, 0, 0, 1));
+		cf_draw_quad_fill(cf_make_aabb(cf_v2(-100, -40), cf_v2(-40, 40)), 0);
+		cf_draw_pop_color();
+		cf_draw_push_layer(1);
+		cf_draw_push_color(cf_make_color_rgba_f(0, 1, 0, 1));
+		cf_draw_quad_fill(cf_make_aabb(cf_v2(-30, -40), cf_v2(30, 40)), 0);
+		cf_draw_pop_color();
+		cf_draw_pop_layer();
+		cf_draw_push_layer(2);
+		cf_draw_push_shader(s_attr_shd);
+		cf_draw_push_vertex_attributes(1.0f, 1.0f, 1.0f, 1.0f);
+		cf_draw_set_uniform_color("u_tint", cf_make_color_rgba_f(0.0f, 0.0f, 1.0f, 1.0f));
+		cf_draw_quad_fill(cf_make_aabb(cf_v2(40, -40), cf_v2(100, 40)), 0);
+		cf_draw_pop_vertex_attributes();
+		cf_draw_pop_shader();
+		cf_draw_pop_layer();
+
+		// First pass: layers 0..1 only. Layer 2 keeps its commands.
+		cf_render_layers_to(canvas_a, 0, 1, true);
+		CF_DrawLayer* l2 = s_find_layer(2);
+		REQUIRE(l2 && l2->cmds.count() > 0);
+		bool l2_has_geometry = false;
+		for (int i = 0; i < l2->cmds.count(); ++i) l2_has_geometry |= l2->cmds[i].geoms.count() > 0;
+		REQUIRE(l2_has_geometry);
+		REQUIRE(s_find_layer(0)->cmds.count() == 1); // Just the reopened command.
+		REQUIRE(s_find_layer(1)->cmds.count() == 0);
+
+		// A fresh uniform set on the current layer: allocates from the arena. Had the first
+		// pass reset it, these bytes would overwrite layer 2's queued tint.
+		cf_draw_set_uniform_color("u_tint", cf_make_color_rgba_f(1.0f, 0.0f, 0.0f, 1.0f));
+
+		// Second pass: layer 2 only.
+		cf_render_layers_to(canvas_b, 2, 2, true);
+		REQUIRE(l2->cmds.count() == 0);
+
+		cf_app_draw_onto_screen(false);
+
+		CF_Readback rb = cf_canvas_readback(canvas_a);
+		REQUIRE(rb.id);
+		while (!cf_readback_ready(rb)) {}
+		cf_readback_data(rb, pa, size);
+		cf_destroy_readback(rb);
+		rb = cf_canvas_readback(canvas_b);
+		REQUIRE(rb.id);
+		while (!cf_readback_ready(rb)) {}
+		cf_readback_data(rb, pb, size);
+		cf_destroy_readback(rb);
+		cf_destroy_canvas(canvas_a);
+		cf_destroy_canvas(canvas_b);
+
+		REQUIRE(s_px_near(s_probe(pa, w, h, -70), 255, 0, 0, 255, 3)); // Layer 0 in pass one.
+		REQUIRE(s_px_near(s_probe(pa, w, h, 0), 0, 255, 0, 255, 3));    // Layer 1 in pass one.
+		REQUIRE(s_px_near(s_probe(pa, w, h, 70), 0, 0, 0, 0, 0));       // Layer 2 NOT in pass one.
+		REQUIRE(s_px_near(s_probe(pb, w, h, -70), 0, 0, 0, 0, 0));      // Layers 0..1 NOT in pass two.
+		REQUIRE(s_px_near(s_probe(pb, w, h, 0), 0, 0, 0, 0, 0));
+		REQUIRE(s_px_near(s_probe(pb, w, h, 70), 0, 0, 255, 255, 3));   // Layer 2 with its own tint intact.
+	}
+
+	cf_free(pa);
+	cf_free(pb);
+	cf_destroy_shader(s_attr_shd);
+	test_destroy_app();
+	return true;
+}
+
+// -------------------------------------------------------------------------------------------------
+// Per-layer queues change how commands are recorded, not how they are submitted: identical
+// state across a layer boundary still batches, so eight layers of plain quads are one draw.
+
+#define BATCH_LAYERS 8
+
+TEST_CASE(test_draw_layers_cross_layer_batch)
+{
+	if (!test_make_app(640, 480)) return true; // Headless CI: no display/GPU.
+
+	int w = 640, h = 480;
+	CF_Pixel* px = (CF_Pixel*)cf_alloc(w * h * sizeof(CF_Pixel));
+	cf_app_update(NULL);
+	cf_draw_set_tiled_enabled(false); // Instanced path: one draw call per batch, no binning dispatches.
+	CF_Canvas canvas = cf_make_canvas(cf_canvas_defaults(w, h));
+	for (int i = 0; i < BATCH_LAYERS; ++i) {
+		cf_draw_push_layer(i + 1);
+		cf_draw_push_color(cf_make_color_rgba_f(1, (float)i / BATCH_LAYERS, 0, 1));
+		float x0 = -120.0f + 30.0f * i;
+		cf_draw_quad_fill(cf_make_aabb(cf_v2(x0, -40), cf_v2(x0 + 25, 40)), 0);
+		cf_draw_pop_color();
+		cf_draw_pop_layer();
+	}
+	app->draw_call_count = 0;
+	cf_render_to(canvas, true);
+	int calls = app->draw_call_count;
+	cf_app_draw_onto_screen(false);
+	REQUIRE(calls == 1);
+
+	CF_Readback rb = cf_canvas_readback(canvas);
+	REQUIRE(rb.id);
+	while (!cf_readback_ready(rb)) {}
+	cf_readback_data(rb, px, w * h * (int)sizeof(CF_Pixel));
+	cf_destroy_readback(rb);
+	cf_destroy_canvas(canvas);
+	for (int i = 0; i < BATCH_LAYERS; ++i) {
+		CF_Pixel p = s_probe(px, w, h, -120 + 30 * i + 12);
+		REQUIRE(p.colors.r > 250 && p.colors.a > 250); // Every layer's quad landed.
+	}
+
+	cf_free(px);
+	test_destroy_app();
+	return true;
+}
+
+// -------------------------------------------------------------------------------------------------
+// Replaying a draw list re-queues its commands on the layers they were recorded on (a command
+// opened right after cf_draw_push_layer belongs to the pushed layer), creating queues as
+// needed -- below and above every existing one -- without disturbing the caller's cursor.
+
+#define LOWER_LIST_LAYER -7
+#define UPPER_LIST_LAYER 9
+
+static CF_DrawList s_layered_list;
+static bool s_layered_list_requeued_ok;
+static bool s_layered_list_cursor_ok;
+
+static void s_scene_list_replay_layers()
+{
+	cf_draw_list(s_layered_list);
+	CF_DrawLayer* lower = s_find_layer(LOWER_LIST_LAYER);
+	CF_DrawLayer* upper = s_find_layer(UPPER_LIST_LAYER);
+	s_layered_list_requeued_ok = lower && lower->cmds.count() && lower->cmds[0].geoms_ref
+		&& upper && upper->cmds.count() && upper->cmds[0].geoms_ref;
+	s_layered_list_cursor_ok = s_draw->current_layer && s_draw->current_layer->layer == cf_draw_peek_layer();
+	// Green on the current (default) layer paints over the list's red ...
+	cf_draw_push_color(cf_make_color_rgba_f(0, 1, 0, 1));
+	cf_draw_quad_fill(cf_make_aabb(cf_v2(-40, -40), cf_v2(40, 40)), 0);
+	cf_draw_pop_color();
+	// ... blue drawn later on the list's lower layer paints over the list's red but under
+	// the green ...
+	cf_draw_push_layer(LOWER_LIST_LAYER);
+	cf_draw_push_color(cf_make_color_rgba_f(0, 0, 1, 1));
+	cf_draw_quad_fill(cf_make_aabb(cf_v2(-40, -40), cf_v2(55, 40)), 0);
+	cf_draw_pop_color();
+	cf_draw_pop_layer();
+	// ... and the list's magenta on its upper layer paints over the green.
+}
+
+TEST_CASE(test_draw_list_replay_layers)
+{
+	if (!test_make_app(640, 480)) return true; // Headless CI: no display/GPU.
+
+	s_layered_list = cf_make_draw_list();
+	cf_draw_list_begin(s_layered_list);
+	cf_draw_push_layer(LOWER_LIST_LAYER);
+	cf_draw_push_color(cf_make_color_rgba_f(1, 0, 0, 1));
+	cf_draw_quad_fill(cf_make_aabb(cf_v2(-60, -60), cf_v2(60, 60)), 0);
+	cf_draw_pop_color();
+	cf_draw_pop_layer();
+	cf_draw_push_layer(UPPER_LIST_LAYER);
+	cf_draw_push_color(cf_make_color_rgba_f(1, 0, 1, 1));
+	cf_draw_quad_fill(cf_make_aabb(cf_v2(30, -40), cf_v2(45, 40)), 0);
+	cf_draw_pop_color();
+	cf_draw_pop_layer();
+	cf_draw_list_end();
+	// Recording left the live queues alone: the cursor is back on the default layer.
+	REQUIRE(s_draw->current_layer && s_draw->current_layer->layer == 0);
+
+	int w = 640, h = 480;
+	CF_Pixel* px = (CF_Pixel*)cf_alloc(w * h * sizeof(CF_Pixel));
+	for (int mode = 0; mode <= 1; ++mode) {
+		REQUIRE(s_readback(s_scene_list_replay_layers, mode, w, h, px));
+		REQUIRE(s_layered_list_requeued_ok);
+		REQUIRE(s_layered_list_cursor_ok);
+		REQUIRE(s_px_near(s_probe(px, w, h, 0), 0, 255, 0, 255, 3));   // Green over the list's red.
+		REQUIRE(s_px_near(s_probe(px, w, h, 38), 255, 0, 255, 255, 3)); // List's upper layer over green.
+		REQUIRE(s_px_near(s_probe(px, w, h, 50), 0, 0, 255, 255, 3));  // Blue over the list's red.
+		REQUIRE(s_px_near(s_probe(px, w, h, 58), 255, 0, 0, 255, 3));  // Red only: list content rendered.
+	}
+
+	cf_destroy_draw_list(s_layered_list);
+	cf_free(px);
+	test_destroy_app();
+	return true;
+}
+
+// -------------------------------------------------------------------------------------------------
+// Queues persist empty across frames while in use and are pruned once a whole frame passes
+// without a command on them, so one-layer-per-object schemes don't accumulate queues forever.
+
+TEST_CASE(test_draw_layers_frame_end_prune)
+{
+	if (!test_make_app(640, 480)) return true; // Headless CI: no display/GPU.
+
+	cf_app_update(NULL);
+	cf_draw_push_layer(50);
+	cf_draw_quad_fill(cf_make_aabb(cf_v2(-10, -10), cf_v2(10, 10)), 0);
+	cf_draw_pop_layer();
+	REQUIRE(s_find_layer(50) != NULL);
+	cf_app_draw_onto_screen(false);
+	// Touched this frame: survives the frame end, emptied.
+	CF_DrawLayer* l50 = s_find_layer(50);
+	REQUIRE(l50 != NULL);
+	REQUIRE(l50->cmds.count() == 0);
+
+	// A frame without a command on layer 50 prunes it; the default layer always survives.
+	cf_app_update(NULL);
+	cf_app_draw_onto_screen(false);
+	REQUIRE(s_find_layer(50) == NULL);
+	REQUIRE(s_find_layer(0) != NULL);
+	REQUIRE(s_draw->current_layer && s_draw->current_layer->layer == 0);
+	REQUIRE(s_draw->current_cmds().count() == 1);
+
+	test_destroy_app();
+	return true;
+}
+
+// -------------------------------------------------------------------------------------------------
 // Polylines record one clipped-capsule command PER SEGMENT; probe every segment (a
 // regression here dropped all but the last segment, which path-vs-path diffs cannot
 // catch since both paths render the same wrong thing).
@@ -1960,6 +2347,12 @@ TEST_SUITE(test_draw_tiled)
 	RUN_TEST_CASE_IF(test_draw_multi_atlas_interleave);
 	RUN_TEST_CASE_IF(test_draw_render_states);
 	RUN_TEST_CASE_IF(test_draw_layers);
+	RUN_TEST_CASE_IF(test_draw_layers_interleaved);
+	RUN_TEST_CASE_IF(test_draw_layers_uniform_follows_draw);
+	RUN_TEST_CASE_IF(test_draw_render_layers_partial);
+	RUN_TEST_CASE_IF(test_draw_layers_cross_layer_batch);
+	RUN_TEST_CASE_IF(test_draw_list_replay_layers);
+	RUN_TEST_CASE_IF(test_draw_layers_frame_end_prune);
 	RUN_TEST_CASE_IF(test_draw_polyline_segments);
 	RUN_TEST_CASE_IF(test_draw_shape_effects);
 	RUN_TEST_CASE_IF(test_draw_dashed_strokes);
