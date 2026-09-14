@@ -339,6 +339,10 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 	app->w = w;
 	app->h = h;
 	if (window) {
+		// The backend may have adopted a different size than requested (a CSS-sized canvas
+		// on Emscripten, a window manager clamping to the display) without sending a resize
+		// event, so read the created size back rather than trusting the requested one.
+		SDL_GetWindowSize(app->window, &app->w, &app->h);
 		SDL_GetWindowPosition(app->window, &app->x, &app->y);
 		app->display_scale = SDL_GetWindowDisplayScale(app->window);
 		app->pixel_scale = window ? SDL_GetWindowPixelDensity(app->window) : 1.0f;
