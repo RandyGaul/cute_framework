@@ -58,7 +58,8 @@
 
 		samplerCube, sampler3D, sampler2DArray and the shadow samplers
 		(sampler2DShadow, samplerCubeShadow, sampler2DArrayShadow) are
-		supported through texture()/textureLod on every backend. textureSize
+		supported through texture()/textureLod on every backend, and textureGrad
+		(explicit gradients, any stage) on all but the wide shadow dims. textureSize
 		works on every sampler dim (ivec3 for array/3D dims), texelFetch on
 		sampler2D/sampler2DArray/sampler3D (GLSL defines none for samplerCube
 		or shadow samplers), and textureOffset on sampler2D/sampler2DArray.
@@ -111,6 +112,10 @@
 		                  (u_{vs,fs}_storage_<slot>), index sites rewrite to
 		                  bit-exact texelFetch, and unsupported shapes (scalar
 		                  tails, .length(), bare references) error clearly.
+		1.09 (09/15/2026) textureGrad across all four backends: explicit-gradient
+		                  sampling (SPIR-V Grad operands, HLSL SampleGrad, MSL
+		                  gradient2d/gradientcube/gradient3d, native in ES 3.00) on
+		                  sampler2D/Cube/3D/2DArray/2DShadow, legal in every stage.
 */
 #ifndef CUTE_SPIRV_H
 #define CUTE_SPIRV_H
@@ -3780,6 +3785,7 @@ typedef enum cspv_intrin_kind
 	CSPV_INTRIN_TEXTURE,        // texture(sampler, uv)
 	CSPV_INTRIN_TEXTURE_OFFSET, // textureOffset(sampler, uv, const ivec2)
 	CSPV_INTRIN_TEXTURE_LOD,  // textureLod(sampler, uv, lod)
+	CSPV_INTRIN_TEXTURE_GRAD, // textureGrad(sampler, uv, dPdx, dPdy)
 	CSPV_INTRIN_TEXEL_FETCH,  // texelFetch(sampler, ivec2, lod)
 	CSPV_INTRIN_TEXTURE_SIZE, // textureSize(sampler, lod) -> ivec2
 	CSPV_INTRIN_RELATIONAL,   // lessThan & friends: (vecN, vecN) -> bvecN.
@@ -3876,6 +3882,7 @@ static void cspv_init_intrins(void)
 	cspv_add_intrin("texture", CSPV_INTRIN_TEXTURE, 0, 2);
 	cspv_add_intrin("textureOffset", CSPV_INTRIN_TEXTURE_OFFSET, 0, 3);
 	cspv_add_intrin("textureLod", CSPV_INTRIN_TEXTURE_LOD, 0, 3);
+	cspv_add_intrin("textureGrad", CSPV_INTRIN_TEXTURE_GRAD, 0, 4);
 	cspv_add_intrin("texelFetch", CSPV_INTRIN_TEXEL_FETCH, 0, 3);
 	cspv_add_intrin("textureSize", CSPV_INTRIN_TEXTURE_SIZE, 0, 2);
 	cspv_add_intrin_full("lessThan", CSPV_INTRIN_RELATIONAL, CSpvOpFOrdLessThan, CSpvOpSLessThan, CSpvOpULessThan, 2, 0);
@@ -3955,7 +3962,7 @@ static cspv_value cspv_gen_intrin(cspv_ctx* ctx, cspv_expr* e, cspv_intrin* in)
 
 	// Sampler-based intrinsics.
 	if (in->kind == CSPV_INTRIN_TEXTURE || in->kind == CSPV_INTRIN_TEXTURE_OFFSET ||
-	    in->kind == CSPV_INTRIN_TEXTURE_LOD ||
+	    in->kind == CSPV_INTRIN_TEXTURE_LOD || in->kind == CSPV_INTRIN_TEXTURE_GRAD ||
 	    in->kind == CSPV_INTRIN_TEXEL_FETCH || in->kind == CSPV_INTRIN_TEXTURE_SIZE) {
 		cspv_type* st = NULL;
 		uint32_t sampler = cspv_gen_rvalue(ctx, e->u.call.args[0], &st);
@@ -4052,6 +4059,38 @@ static cspv_value cspv_gen_intrin(cspv_ctx* ctx, cspv_expr* e, cspv_intrin* in)
 			}
 			uint32_t w[6] = { cspv_type_id(ctx, vec4_t), result, sampler, coord, 0x2 /* Lod */, lod };
 			cspv_emit(&ctx->body, CSpvOpImageSampleExplicitLod, w, 6);
+			return cspv_rvalue(vec4_t, result);
+		}
+
+		if (in->kind == CSPV_INTRIN_TEXTURE_GRAD) {
+			// textureGrad(sampler, P, dPdx, dPdy): sampling with caller-supplied screen-space
+			// gradients. The hardware derives the mip level and the anisotropic footprint
+			// from them instead of from implicit derivatives, which makes it the way to
+			// sample through a uv the shader has warped (pixel-art snapping, atlas wrapping)
+			// without breaking mip selection, and legal in every stage. Gradients span the
+			// sampled dims: vec3 for cube/3D, vec2 otherwise (an array layer takes no
+			// derivative). The wide shadow dims are rejected like textureLod: comparison
+			// fetches are level-zero on every backend.
+			if (sdim == CSPV_SDIM_CUBE_SHADOW || sdim == CSPV_SDIM_2D_ARRAY_SHADOW) {
+				cspv_errorf(ctx, e->line, "textureGrad is not supported with %s (comparison fetches are level-zero on every backend; use texture())", cspv_type_name(st));
+			}
+			cspv_type* grad_t = (sdim == CSPV_SDIM_CUBE || sdim == CSPV_SDIM_3D) ? ctx->t_vec[1] : ctx->t_vec[0];
+			uint32_t coord = cspv_gen_rvalue_as(ctx, e->u.call.args[1], coord_t);
+			uint32_t dx = cspv_gen_rvalue_as(ctx, e->u.call.args[2], grad_t);
+			uint32_t dy = cspv_gen_rvalue_as(ctx, e->u.call.args[3], grad_t);
+			uint32_t result = cspv_new_id(ctx);
+			if (shadow) {
+				uint32_t xy = cspv_new_id(ctx);
+				uint32_t sw[7] = { cspv_type_id(ctx, ctx->t_vec[0]), xy, coord, coord, 0, 1 };
+				cspv_emit(&ctx->body, CSpvOpVectorShuffle, sw, 6);
+				uint32_t dref = cspv_new_id(ctx);
+				cspv_emit4(&ctx->body, CSpvOpCompositeExtract, cspv_type_id(ctx, ctx->t_float), dref, coord, 2);
+				uint32_t w[8] = { cspv_type_id(ctx, ctx->t_float), result, sampler, xy, dref, 0x4 /* Grad */, dx, dy };
+				cspv_emit(&ctx->body, CSpvOpImageSampleDrefExplicitLod, w, 8);
+				return cspv_rvalue(ctx->t_float, result);
+			}
+			uint32_t w[7] = { cspv_type_id(ctx, vec4_t), result, sampler, coord, 0x4 /* Grad */, dx, dy };
+			cspv_emit(&ctx->body, CSpvOpImageSampleExplicitLod, w, 7);
 			return cspv_rvalue(vec4_t, result);
 		}
 
@@ -7319,15 +7358,16 @@ static void cspv_hlsl_call(cspv_tp* g, cspv_expr* e)
 		int hdim = args[0]->rtype->cols;
 		bool shadow = hdim == CSPV_SDIM_2D_SHADOW || hdim == CSPV_SDIM_CUBE_SHADOW ||
 		              hdim == CSPV_SDIM_2D_ARRAY_SHADOW;
-		if (shadow && (!strcmp(name, "texture") || !strcmp(name, "textureLod"))) {
+		if (shadow && (!strcmp(name, "texture") || !strcmp(name, "textureLod") || !strcmp(name, "textureGrad"))) {
 			// Comparison sampling: split the coords + reference (vec3 -> xy/z for 2D,
 			// vec4 -> xyz/w for cube and 2D array -- for Texture2DArray the location's z
 			// is the array layer, exactly GLSL's P.z). The coordinate expression is
 			// emitted twice, so it must be side-effect free -- true of every shader in
 			// practice, and of everything the checker accepts today. Level-zero on
 			// purpose: shadow maps are single-mip, and SampleCmp needs gradients that
-			// vertex/compute stages lack (textureLod's lod argument is ignored, as level
-			// zero is the only mip a comparison fetch supports across our targets).
+			// vertex/compute stages lack (textureLod's lod and textureGrad's gradients are
+			// ignored, as level zero is the only mip a comparison fetch supports across
+			// our targets).
 			bool hwide = hdim == CSPV_SDIM_CUBE_SHADOW || hdim == CSPV_SDIM_2D_ARRAY_SHADOW;
 			sfmt_append(*out, "%s_tex.SampleCmpLevelZero(%s_smp, (", s, s);
 			cspv_tp_expr(g, args[1], 2);
@@ -7349,6 +7389,20 @@ static void cspv_hlsl_call(cspv_tp* g, cspv_expr* e)
 			cspv_tp_expr(g, args[1], 2);
 			sappend(*out, ", ");
 			cspv_tp_expr(g, args[2], 2);
+			spush(*out, ')');
+			return;
+		}
+		if (!strcmp(name, "textureGrad")) {
+			// SampleGrad takes the gradients explicitly, so it needs no derivatives from
+			// the stage and works in vertex and compute profiles as-is. Argument shapes
+			// match GLSL's: float3 location + float2 gradients for Texture2DArray,
+			// float3 gradients for TextureCube/Texture3D.
+			sfmt_append(*out, "%s_tex.SampleGrad(%s_smp, ", s, s);
+			cspv_tp_expr(g, args[1], 2);
+			sappend(*out, ", ");
+			cspv_tp_expr(g, args[2], 2);
+			sappend(*out, ", ");
+			cspv_tp_expr(g, args[3], 2);
 			spush(*out, ')');
 			return;
 		}
@@ -8120,12 +8174,13 @@ static void cspv_msl_call(cspv_tp* g, cspv_expr* e)
 			spush(*out, ')');
 			return;
 		}
-		if (shadow && (!strcmp(name, "texture") || !strcmp(name, "textureLod"))) {
+		if (shadow && (!strcmp(name, "texture") || !strcmp(name, "textureLod") || !strcmp(name, "textureGrad"))) {
 			// depth2d/depthcube comparison fetch; coords + reference split from the
 			// coordinate vector (vec3 -> xy/z for 2D, vec4 -> xyz/w for cube). The
 			// coordinate is emitted twice, so it must be side-effect free. Level zero for
 			// the same reasons as the HLSL emitter (single-mip shadow maps, no gradients
-			// outside fragment stages).
+			// outside fragment stages); textureLod's lod and textureGrad's gradients are
+			// dropped accordingly.
 			bool mcube = sdim == CSPV_SDIM_CUBE_SHADOW;
 			sfmt_append(*out, "%s_tex.sample_compare(%s_smp, (", s, s);
 			cspv_tp_expr(g, args[1], 2);
@@ -8136,7 +8191,7 @@ static void cspv_msl_call(cspv_tp* g, cspv_expr* e)
 			spush(*out, ')');
 			return;
 		}
-		if (arrayed && (!strcmp(name, "texture") || !strcmp(name, "textureLod"))) {
+		if (arrayed && (!strcmp(name, "texture") || !strcmp(name, "textureLod") || !strcmp(name, "textureGrad"))) {
 			// MSL array textures take the layer as a separate integer argument.
 			sfmt_append(*out, "%s_tex.sample(%s_smp, (", s, s);
 			cspv_tp_expr(g, args[1], 2);
@@ -8146,6 +8201,12 @@ static void cspv_msl_call(cspv_tp* g, cspv_expr* e)
 			if (!strcmp(name, "textureLod")) {
 				sappend(*out, ", level(");
 				cspv_tp_expr(g, args[2], 2);
+				spush(*out, ')');
+			} else if (!strcmp(name, "textureGrad")) {
+				sappend(*out, ", gradient2d(");
+				cspv_tp_expr(g, args[2], 2);
+				sappend(*out, ", ");
+				cspv_tp_expr(g, args[3], 2);
 				spush(*out, ')');
 			} else if (no_gradients) {
 				sappend(*out, ", level(0)");
@@ -8165,6 +8226,19 @@ static void cspv_msl_call(cspv_tp* g, cspv_expr* e)
 			cspv_tp_expr(g, args[1], 2);
 			sappend(*out, ", level(");
 			cspv_tp_expr(g, args[2], 2);
+			sappend(*out, "))");
+			return;
+		}
+		if (!strcmp(name, "textureGrad")) {
+			// MSL spells the gradient option per texture shape: gradient2d for
+			// texture2d, gradientcube for texturecube, gradient3d for texture3d.
+			const char* grad = sdim == CSPV_SDIM_CUBE ? "gradientcube" : sdim == CSPV_SDIM_3D ? "gradient3d" : "gradient2d";
+			sfmt_append(*out, "%s_tex.sample(%s_smp, ", s, s);
+			cspv_tp_expr(g, args[1], 2);
+			sfmt_append(*out, ", %s(", grad);
+			cspv_tp_expr(g, args[2], 2);
+			sappend(*out, ", ");
+			cspv_tp_expr(g, args[3], 2);
 			sappend(*out, "))");
 			return;
 		}
