@@ -67,9 +67,11 @@ extern "C" {
 TEST_SUITE(test_math_c);
 TEST_SUITE(test_math3d_c);
 TEST_SUITE(test_ckit);
+TEST_SUITE(test_dcimgui_c);
 }
 TEST_SUITE(test_jpg);
 TEST_SUITE(test_dds);
+TEST_SUITE(test_dcimgui);
 
 #include <SDL3/SDL.h>
 
@@ -148,6 +150,8 @@ int main(int argc, char* argv[])
 	RUN_TRACED(test_ckit);
 	RUN_TRACED(test_jpg);
 	RUN_TRACED(test_dds);
+	RUN_TRACED(test_dcimgui);
+	RUN_TRACED(test_dcimgui_c);
 	RUN_TRACED(test_video);
 #undef RUN_TRACED
 

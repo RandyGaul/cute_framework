@@ -4105,8 +4105,8 @@ typedef IMGUI_STB_NAMESPACE::stbrp_node stbrp_node_im;
 #else
 typedef struct stbrp_node_t stbrp_node;
 typedef stbrp_node stbrp_node_im;
+struct ImVector_stbrp_node_im_t { int Size; int Capacity; stbrp_node_im* Data; };  // Instantiation of ImVector<stbrp_node_im>
 #endif // #ifdef IMGUI_STB_NAMESPACE
-struct ImVector_stbrp_node_im_t { int Size; int Capacity; stbrp_node_im* Data; };  // Instantiation of ImVector<stbrp_node_im>  // CF: emitted unconditionally (Dear Bindings v0.19 omits this in the IMGUI_STB_NAMESPACE branch)
 struct stbrp_context_opaque_t
 {
     char data[80];

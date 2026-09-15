@@ -103,6 +103,8 @@ The [Dear ImGui](https://github.com/ocornut/imgui) GitHub has extensive learning
 These examples use the C API (`dcimgui.h` with ImGui prefix). For C++, use `imgui.h` with ImGui:: prefix instead.
 C++ is recommended - it provides default parameters that make the API easier to use. Use the C API only if you're working in plain C.
 
+Both `dcimgui.h` and `imgui.h` work from C++ and can be included before or after `cute.h`. For Dear ImGui's internal API (the DockBuilder, `ImGui_FindWindowByName`, and friends) include `dcimgui_internal.h` after `dcimgui.h`. It compiles as plain C too, with no extra defines.
+
 ## Making Tools
 
 Dear ImGui lets you build development tools directly in your game: level editors, tile editors, debug inspectors, entity editors, and value tweakers. Use it to visualize and modify your game data while it's running. CF includes Dear ImGui by default.

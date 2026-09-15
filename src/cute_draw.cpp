@@ -52,10 +52,6 @@ static const char* s_text_without_markups = NULL;
 #define STBTT_free(x, u) cf_free(x)
 #include <stb/stb_truetype.h>
 
-#define IM_ASSERT CF_ASSERT
-#include <imgui.h>
-#include <imgui_internal.h>
-
 #include <algorithm>
 
 // Initial design of this API comes from Noel Berry's Blah framework here:
