@@ -519,11 +519,64 @@ static void s_refresh_pixel_scale()
 	}
 }
 
+void cf_app_push_event(const SDL_Event* event)
+{
+	CF_PendingEvent pending = { *event, -1 };
+	const char* text = NULL;
+	switch (event->type)
+	{
+	// SDL's main callbacks dispatch these immediately, possibly from another thread.
+	// Nothing in `cf_pump_input_msgs` handles them, so drop them instead of racing the queue.
+	case SDL_EVENT_TERMINATING:
+	case SDL_EVENT_LOW_MEMORY:
+	case SDL_EVENT_WILL_ENTER_BACKGROUND:
+	case SDL_EVENT_DID_ENTER_BACKGROUND:
+	case SDL_EVENT_WILL_ENTER_FOREGROUND:
+	case SDL_EVENT_DID_ENTER_FOREGROUND:
+		return;
+
+	// SDL frees event strings on the next event pump, which can run before this event is handled.
+	case SDL_EVENT_TEXT_INPUT: text = event->text.text; break;
+	case SDL_EVENT_TEXT_EDITING: text = event->edit.text; break;
+	}
+
+	if (text) {
+		pending.text_offset = app->pending_event_text.count();
+		while (*text) app->pending_event_text.add(*text++);
+		app->pending_event_text.add(0);
+	}
+	app->pending_events.add(pending);
+	app->using_main_callbacks = true;
+}
+
+static bool s_poll_event(SDL_Event* event, int* poll_index)
+{
+	if (app->using_main_callbacks) {
+		if (*poll_index < app->pending_events.count()) {
+			const CF_PendingEvent& pending = app->pending_events[(*poll_index)++];
+			*event = pending.event;
+			if (pending.text_offset >= 0) {
+				const char* text = app->pending_event_text.data() + pending.text_offset;
+				if (event->type == SDL_EVENT_TEXT_INPUT) event->text.text = text;
+				else event->edit.text = text;
+			}
+			return true;
+		}
+		app->pending_events.clear();
+		app->pending_event_text.clear();
+		*poll_index = 0;
+		return false;
+	} else {
+		return SDL_PollEvent(event);
+	}
+}
+
 void cf_pump_input_msgs()
 {
 	// Handle SDL messages.
 	SDL_Event event;
-	while (SDL_PollEvent(&event)) {
+	int poll_index = 0;
+	while (s_poll_event(&event, &poll_index)) {
 		if (app->using_imgui) {
 			ImGui_ImplSDL3_ProcessEvent(&event);
 		}

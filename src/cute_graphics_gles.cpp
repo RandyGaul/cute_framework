@@ -931,7 +931,13 @@ void cf_gles_end_frame()
 	g_ctx.frame_fence_frames[i] = g_ctx.frame_index;
 	g_ctx.frame_fence_done[i] = false;
 	glFlush();
+#ifdef CF_EMSCRIPTEN
+	// WebGL presents once control returns to the browser, and SDL's swap does nothing on the web except yield
+	// for that.
+	if (!app->using_main_callbacks) SDL_GL_SwapWindow(g_ctx.window);
+#else
 	SDL_GL_SwapWindow(g_ctx.window);
+#endif
 }
 
 void cf_gles_blit_canvas(CF_Canvas canvas_handle)

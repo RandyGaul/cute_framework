@@ -333,6 +333,22 @@ CF_API void CF_CALL cf_app_signal_shutdown(void);
  */
 CF_API void CF_CALL cf_app_update(CF_OnUpdateFn* on_update);
 
+union SDL_Event;
+
+/**
+ * @function cf_app_push_event
+ * @category app
+ * @brief    Queues an SDL event for the app to process on the next update tick.
+ * @param    sdl_event  Pointer to an `SDL_Event`.
+ *           The event is copied into an internal queue.
+ * @remarks  This is only needed when using SDL's main callbacks ([`SDL_MAIN_USE_CALLBACKS`](https://wiki.libsdl.org/SDL3/SDL_MAIN_USE_CALLBACKS)).
+ *
+ *           Every event received in `SDL_AppEvent` should be forwarded here.
+ *           Queued events are still handled the same way as a traditional main loop: at `cf_app_update`.
+ * @related  cf_app_update
+ */
+CF_API void CF_CALL cf_app_push_event(const union SDL_Event* sdl_event);
+
 /**
  * @function cf_app_draw_onto_screen
  * @category app
@@ -967,6 +983,7 @@ CF_INLINE void destroy_app() { cf_destroy_app(); }
 CF_INLINE bool app_is_running() { return cf_app_is_running(); }
 CF_INLINE void app_signal_shutdown() { cf_app_signal_shutdown(); }
 CF_INLINE void app_update(CF_OnUpdateFn* on_update = NULL) { cf_app_update(on_update); }
+CF_INLINE void app_push_event(const union SDL_Event* sdl_event) { cf_app_push_event(sdl_event); }
 CF_INLINE int app_draw_onto_screen(bool clear = false) { return cf_app_draw_onto_screen(clear); }
 CF_INLINE void app_get_size(int* w, int* h) { return cf_app_get_size(w, h); }
 CF_INLINE void app_set_size(int w, int h) { return cf_app_set_size(w, h); }
