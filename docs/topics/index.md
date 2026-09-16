@@ -21,6 +21,7 @@ After completing the above fundamental reading it's recommended to then select t
 * [Coroutines](./coroutines.md)
 * [Custom Sprites](./custom_sprites.md)
 * [Data Structures](./data_structures.md)
+* [Applicaiton Callbacks](./app_callbacks.md)
 * [Web Builds with Emscripten](./emscripten.md)
 * [Input](./input.md)
 * [Input Bindings](./input_bindings.md)
