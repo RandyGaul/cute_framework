@@ -12,6 +12,15 @@
 #	include <glad/glad.h>
 #endif
 
+// GLES 3.0 has anisotropic filtering only as GL_EXT_texture_filter_anisotropic. Neither
+// glad's ES loader nor every GLES3 header set defines its enums, so spell them out.
+#ifndef GL_TEXTURE_MAX_ANISOTROPY_EXT
+#	define GL_TEXTURE_MAX_ANISOTROPY_EXT 0x84FE
+#endif
+#ifndef GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT
+#	define GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT 0x84FF
+#endif
+
 #define CF_POLL_OPENGL_ERROR() \
 	do { \
 		if (g_ctx.debug) { s_poll_error(__FILE__, __LINE__); } \
@@ -166,6 +175,7 @@ struct CF_GL_Texture
 	GLint mag_filter = GL_LINEAR;
 	GLint wrap_u = GL_REPEAT;
 	GLint wrap_v = GL_REPEAT;
+	float max_anisotropy = 1.0f;
 	GLuint draw_samplers[2] = {};
 	GLenum target = GL_TEXTURE_2D; // GL_TEXTURE_CUBE_MAP / GL_TEXTURE_3D / GL_TEXTURE_2D_ARRAY.
 	int layers = 1;                // Array layers, 3D depth, or 6 for cube maps.
@@ -387,6 +397,9 @@ static struct
 	SDL_GLContext gl_ctx;
 	SDL_Window* window;
 	uint32_t frame_index;
+
+	// Cached query result
+	float anisotropy_limit;  // > 1.0 when anisotropic filtering is supported
 
 	CF_GL_RenderState target_state;
 	CF_GL_RenderState current_state;
@@ -684,6 +697,27 @@ static inline bool s_has_extension(const char* name)
 	return false;
 }
 
+static inline float s_anisotropy_limit()
+{
+	GLfloat v = 1.0f;
+	if (s_has_extension("GL_EXT_texture_filter_anisotropic")) {
+		glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &v);
+	}
+	return v;
+}
+
+// Clamps a requested ratio into [1, limit]. 1 disables anisotropic filtering.
+static inline float s_clamp_anisotropy(float requested)
+{
+	if (requested < 1.f) {
+		return 1.f;
+	} else if (requested > g_ctx.anisotropy_limit){
+		return g_ctx.anisotropy_limit;
+	} else {
+		return requested;
+	}
+}
+
 static inline CF_GL_PixelFormatInfo* s_find_pixel_format_info(CF_PixelFormat format)
 {
 	for (size_t i = 0; i < CF_ARRAY_SIZE(g_gl_pixel_formats); ++i) {
@@ -836,6 +870,8 @@ void cf_gles_attach(SDL_Window* window)
 	SDL_GL_MakeCurrent(window, g_ctx.gl_ctx);
 	cf_load_gles();
 	g_ctx.window = window;
+	// Query driver limits once
+	g_ctx.anisotropy_limit = s_anisotropy_limit();
 	// A fresh context recycles GL object ids, so cached bindings from a previous
 	// app/context lifetime would wrongly elide binds. Reset all cached GL state.
 	g_ctx.fbo = 0;
@@ -1000,6 +1036,9 @@ static inline void s_apply_sampler_state_to_handle(const CF_GL_Texture* t, GLuin
 		glTexParameteri(t->target, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
 		glTexParameteri(t->target, GL_TEXTURE_COMPARE_FUNC, t->compare_func);
 	}
+	if (g_ctx.anisotropy_limit > 1.0f) {
+		glTexParameterf(t->target, GL_TEXTURE_MAX_ANISOTROPY_EXT, t->max_anisotropy);
+	}
 	glBindTexture(t->target, 0);
 }
 
@@ -1020,6 +1059,7 @@ static inline void s_apply_sampler_params(CF_GL_Texture* t, const CF_TexturePara
 	t->mag_filter = mag_filter;
 	t->wrap_u = s_wrap(p.wrap_u);
 	t->wrap_v = s_wrap(p.wrap_v);
+	t->max_anisotropy = s_clamp_anisotropy(p.max_anisotropy);
 
 	s_apply_sampler_state_to_handle(t, t->id);
 }
@@ -1705,6 +1745,9 @@ CF_Sampler cf_gles_make_sampler(CF_SamplerParams params)
 	glSamplerParameteri(id, GL_TEXTURE_WRAP_R, s_wrap(params.wrap_w));
 	glSamplerParameterf(id, GL_TEXTURE_MIN_LOD, params.min_lod);
 	glSamplerParameterf(id, GL_TEXTURE_MAX_LOD, params.max_lod);
+	if (g_ctx.anisotropy_limit > 1.0f) {
+		glSamplerParameterf(id, GL_TEXTURE_MAX_ANISOTROPY_EXT, s_clamp_anisotropy((float)params.max_anisotropy));
+	}
 	if (params.compare_enable) {
 		glSamplerParameteri(id, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
 		glSamplerParameteri(id, GL_TEXTURE_COMPARE_FUNC, s_wrap(params.compare_function));
@@ -2227,6 +2270,9 @@ static GLuint s_draw_sampler(const CF_MaterialTex& binding, CF_GL_Texture* textu
 	glSamplerParameteri(sampler, GL_TEXTURE_WRAP_S, texture->wrap_u);
 	glSamplerParameteri(sampler, GL_TEXTURE_WRAP_T, texture->wrap_v);
 	glSamplerParameteri(sampler, GL_TEXTURE_WRAP_R, texture->wrap_u);
+	if (g_ctx.anisotropy_limit > 1.0f) {
+		glSamplerParameterf(sampler, GL_TEXTURE_MAX_ANISOTROPY_EXT, texture->max_anisotropy);
+	}
 	if (texture->compare) {
 		glSamplerParameteri(sampler, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
 		glSamplerParameteri(sampler, GL_TEXTURE_COMPARE_FUNC, texture->compare_func);
