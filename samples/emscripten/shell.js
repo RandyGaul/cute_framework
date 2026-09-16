@@ -23,14 +23,19 @@ function hideOverlay() {
 	overlayElement.style.visibility = 'hidden';
 }
 
-function quantizeDevicePixelRatio() {
-	// A non-quantized ratio makes everything ugly
-	window._emscripten_get_device_pixel_ratio = () => {
-		var dpr = window.devicePixelRatio;
-		var quantizedDpr = Math.round(dpr * 2) / 2;
-		return quantizedDpr;
-	};
+// SDL only re-reads devicePixelRatio inside the browser's resize handler. Most browsers
+// fire a resize when the page is zoomed or moved to a display with a different ratio,
+// but not all do, so forward ratio changes as a synthetic resize to keep the canvas
+// backing store at native resolution.
+function watchDevicePixelRatio() {
+	const query = window.matchMedia(`(resolution: ${window.devicePixelRatio}dppx)`);
+	query.addEventListener('change', () => {
+		window.dispatchEvent(new Event('resize'));
+		watchDevicePixelRatio();
+	}, { once: true });
 }
+watchDevicePixelRatio();
+
 
 /**
  * Fetch a WASM file with progress tracking and instantiate it.
@@ -75,9 +80,6 @@ async function fetchAndInstantiateWasm(wasmUrl, onProgress = () => {}, imports =
 }
 
 window.Module = {
-	preInit: [
-		quantizeDevicePixelRatio,
-	],
 	print(...args) {
 		console.log(...args);
 	},

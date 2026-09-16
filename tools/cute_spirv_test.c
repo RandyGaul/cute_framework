@@ -1244,6 +1244,44 @@ static void test_sampler_dims(void)
 		"layout(set = 2, binding = 0) uniform samplerCube s;\n"
 		FS_MAIN("result = texture(s, vec2(0));"), "vec3");
 
+	// textureGrad: caller-supplied gradients drive mip selection, so it is legal in every
+	// stage. Gradients are vec2 for 2D/array/2D-shadow (the layer takes no derivative) and
+	// vec3 for cube/3D; the wide shadow dims stay rejected like textureLod.
+	expect_ok(CSPV_STAGE_FRAGMENT,
+		"layout(location = 0) in vec2 uv;\n"
+		"layout(set = 2, binding = 0) uniform sampler2D s;\n"
+		FS_MAIN("result = textureGrad(s, uv, dFdx(uv), dFdy(uv));"));
+	expect_ok(CSPV_STAGE_VERTEX,
+		"layout(set = 1, binding = 0) uniform sampler2D s;\n"
+		"void main() { gl_Position = textureGrad(s, vec2(0.5), vec2(0.01, 0.0), vec2(0.0, 0.01)); }");
+	expect_ok(CSPV_STAGE_FRAGMENT,
+		"layout(set = 2, binding = 0) uniform samplerCube s;\n"
+		FS_MAIN("result = textureGrad(s, vec3(0, 1, 0), vec3(0.01), vec3(0.01));"));
+	expect_ok(CSPV_STAGE_FRAGMENT,
+		"layout(set = 2, binding = 0) uniform sampler3D s;\n"
+		FS_MAIN("result = textureGrad(s, vec3(0.5), vec3(0.01), vec3(0.01));"));
+	expect_ok(CSPV_STAGE_FRAGMENT,
+		"layout(set = 2, binding = 0) uniform sampler2DArray s;\n"
+		FS_MAIN("result = textureGrad(s, vec3(0.5, 0.5, 3.0), vec2(0.01), vec2(0.01));"));
+	expect_ok(CSPV_STAGE_FRAGMENT,
+		"layout(set = 2, binding = 0) uniform sampler2DShadow s;\n"
+		FS_MAIN("result = vec4(textureGrad(s, vec3(0.5, 0.5, 0.7), vec2(0.01), vec2(0.01)));"));
+	expect_ok(CSPV_STAGE_VERTEX,
+		"layout(set = 1, binding = 0) uniform sampler2DShadow s;\n"
+		"void main() { gl_Position = vec4(textureGrad(s, vec3(0.5, 0.5, 0.7), vec2(0.01), vec2(0.01))); }");
+	expect_err(CSPV_STAGE_FRAGMENT,
+		"layout(set = 2, binding = 0) uniform samplerCube s;\n"
+		FS_MAIN("result = textureGrad(s, vec3(0, 1, 0), vec2(0.01), vec2(0.01));"), "vec3");
+	expect_err(CSPV_STAGE_FRAGMENT,
+		"layout(set = 2, binding = 0) uniform sampler2D s;\n"
+		FS_MAIN("result = textureGrad(s, vec2(0.5), vec2(0.01));"), "expects 4 argument");
+	expect_err(CSPV_STAGE_FRAGMENT,
+		"layout(set = 2, binding = 0) uniform samplerCubeShadow s;\n"
+		FS_MAIN("result = vec4(textureGrad(s, vec4(0.0, 1.0, 0.0, 0.6), vec3(0.01), vec3(0.01)));"), "samplerCubeShadow");
+	expect_err(CSPV_STAGE_FRAGMENT,
+		"layout(set = 2, binding = 0) uniform sampler2DArrayShadow s;\n"
+		FS_MAIN("result = vec4(textureGrad(s, vec4(0.5, 0.5, 1.0, 0.6), vec2(0.01), vec2(0.01)));"), "sampler2DArrayShadow");
+
 	// textureSize works on every dim: ivec2 for 2D/cube, ivec3 for array/3D.
 	expect_ok(CSPV_STAGE_FRAGMENT,
 		"layout(set = 2, binding = 0) uniform sampler2DArray s;\n"
@@ -1482,6 +1520,63 @@ static void test_sampler_dims_emitters(void)
 			CHECK(strstr(r.msl, ".sample_compare(") != NULL);
 			CHECK(strstr(r.msl, "level(0)") != NULL);
 		}
+		cspv_free(&r);
+	}
+	{
+		// textureGrad: HLSL SampleGrad everywhere; MSL spells the gradient option per
+		// texture shape and splits the array layer out; ES 3.00 keeps the native call.
+		CSPV_Result r = s_emit_all(CSPV_STAGE_FRAGMENT,
+			"layout(location = 0) in vec2 uv;\n"
+			"layout(set = 2, binding = 0) uniform sampler2D s2;\n"
+			"layout(set = 2, binding = 1) uniform samplerCube sc;\n"
+			"layout(set = 2, binding = 2) uniform sampler3D s3;\n"
+			"layout(set = 2, binding = 3) uniform sampler2DArray sa;\n"
+			"layout(set = 2, binding = 4) uniform sampler2DShadow sh;\n"
+			FS_MAIN("result = textureGrad(s2, uv, dFdx(uv), dFdy(uv))"
+			        " + textureGrad(sc, vec3(0, 1, 0), vec3(0.01), vec3(0.01))"
+			        " + textureGrad(s3, vec3(0.5), vec3(0.01), vec3(0.01))"
+			        " + textureGrad(sa, vec3(uv, 2.0), vec2(0.01), vec2(0.01))"
+			        " + vec4(textureGrad(sh, vec3(uv, 0.7), vec2(0.01), vec2(0.01)));"));
+		if (r.success) {
+			CHECK(strstr(r.hlsl, "s2_tex.SampleGrad(s2_smp, ") != NULL);
+			CHECK(strstr(r.hlsl, "sc_tex.SampleGrad(sc_smp, ") != NULL);
+			CHECK(strstr(r.hlsl, "s3_tex.SampleGrad(s3_smp, ") != NULL);
+			CHECK(strstr(r.hlsl, "sa_tex.SampleGrad(sa_smp, ") != NULL);
+			CHECK(strstr(r.hlsl, "sh_tex.SampleCmpLevelZero(") != NULL);
+			CHECK(strstr(r.msl, "s2_tex.sample(s2_smp, uv, gradient2d(") != NULL);
+			CHECK(strstr(r.msl, "gradientcube(") != NULL);
+			CHECK(strstr(r.msl, "gradient3d(") != NULL);
+			CHECK(strstr(r.msl, "sa_tex.sample(sa_smp, (") != NULL);
+			CHECK(strstr(r.msl, ").z)), gradient2d(") != NULL);
+			CHECK(strstr(r.msl, "sh_tex.sample_compare(") != NULL);
+		}
+		cspv_free(&r);
+	}
+	{
+		// Explicit gradients need nothing from the stage: vertex output uses them as-is
+		// rather than lowering to level 0.
+		CSPV_Result r = s_emit_all(CSPV_STAGE_VERTEX,
+			"layout(set = 1, binding = 0) uniform sampler2D s;\n"
+			"void main() { gl_Position = textureGrad(s, vec2(0.5), vec2(0.01, 0.0), vec2(0.0, 0.01)); }\n");
+		if (r.success) {
+			CHECK(strstr(r.hlsl, "s_tex.SampleGrad(s_smp, ") != NULL);
+			CHECK(strstr(r.hlsl, "SampleLevel") == NULL);
+			CHECK(strstr(r.msl, "gradient2d(") != NULL);
+			CHECK(strstr(r.msl, "level(0)") == NULL);
+		}
+		cspv_free(&r);
+	}
+	{
+		CSPV_Options opts;
+		memset(&opts, 0, sizeof(opts));
+		opts.emit_glsl300 = true;
+		CSPV_Result r = cspv_compile_ex(
+			"layout(location = 0) in vec2 uv;\n"
+			"layout(set = 2, binding = 0) uniform sampler2D s;\n"
+			FS_MAIN("result = textureGrad(s, uv, dFdx(uv), dFdy(uv));"),
+			CSPV_STAGE_FRAGMENT, &opts);
+		CHECK_MSG(r.success, r.error_message);
+		if (r.success && r.glsl300) CHECK(strstr(r.glsl300, "textureGrad(") != NULL);
 		cspv_free(&r);
 	}
 }
