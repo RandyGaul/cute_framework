@@ -112,6 +112,7 @@ add_sample(glitch glitch.cpp)
 add_sample(customsprite custom_sprite.c)
 add_sample(sound_pan sound_pan.c)
 add_sample(tilefilters tile_filters.c)
+add_sample(nine_textures nine_textures.cpp)
 
 # Ensure that sample data is included in web build
 if (EMSCRIPTEN)
