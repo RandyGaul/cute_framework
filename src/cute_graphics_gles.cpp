@@ -843,8 +843,6 @@ CF_Result cf_gles_init(bool debug)
 	}
 	g_ctx.debug = debug;
 
-	g_ctx.anisotropy_limit = s_anisotropy_limit();
-
 	return cf_result_success();
 }
 
@@ -870,6 +868,8 @@ void cf_gles_attach(SDL_Window* window)
 	SDL_GL_MakeCurrent(window, g_ctx.gl_ctx);
 	cf_load_gles();
 	g_ctx.window = window;
+	// Query driver limits once
+	g_ctx.anisotropy_limit = s_anisotropy_limit();
 	// A fresh context recycles GL object ids, so cached bindings from a previous
 	// app/context lifetime would wrongly elide binds. Reset all cached GL state.
 	g_ctx.fbo = 0;
