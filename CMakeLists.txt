@@ -304,7 +304,6 @@ if(EMSCRIPTEN)
 	message(STATUS "Configuring CF for Web (Emscripten)")
 
 	# Emscripten forces off a couple options that don't make sense for web builds.
-	set(CF_CUTE_SHADERC OFF CACHE BOOL "" FORCE)
 	set(CF_FRAMEWORK_APPLE_FRAMEWORK OFF CACHE BOOL "" FORCE)
 	set(PHYSFS_BUILD_SHARED OFF CACHE BOOL "" FORCE)
 	set(PHYSFS_BUILD_STATIC ON  CACHE BOOL "" FORCE)
