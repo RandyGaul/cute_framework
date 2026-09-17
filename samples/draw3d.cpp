@@ -378,7 +378,7 @@ int main(int argc, char* argv[])
 		snprintf(hud, sizeof(hud),
 			"%d buildings + ground, baked into one draw list --\n"
 			"one instanced draw for the shadow pass, one for the lit pass.\n"
-			"%.0f fps", CITY_N * CITY_N, cf_app_get_smoothed_framerate());
+			"%.0f fps", CITY_N * CITY_N, cf_app_get_framerate());
 		cf_draw_push_color(cf_make_color_rgb_f(0.85f, 0.87f, 0.95f));
 		cf_draw_text(hud, cf_v2(-(float)w * 0.5f + 20.0f, (float)h * 0.5f - 20.0f), -1);
 		cf_draw_pop_color();
