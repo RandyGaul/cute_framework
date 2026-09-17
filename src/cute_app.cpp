@@ -350,6 +350,17 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 		if (options & CF_APP_OPTIONS_NO_HIGH_DPI_BIT) app->pixel_scale = 1.0f;
 	}
 	::app = app;
+
+	// Queue a dummy event.
+	// Under the main callback path, after `SDL_AppInit` has returned, this will
+	// trigger `SDL_AppEvent` and switch CF off the polling path.
+	// Usually, window creation will push a "window shown" event and achieve the same effect.
+	// However, this is not the case if the app was created with CF_APP_OPTIONS_HIDDEN_BIT.
+	// Pushing an event during startup guarantees that the correct path is chosen.
+	// In both cases, this event is ignored.
+	SDL_Event probe = { .type = SDL_RegisterEvents(1) };
+	SDL_PushEvent(&probe);
+
 	cf_make_aseprite_cache();
 	cf_make_custom_sprite_cache();
 
