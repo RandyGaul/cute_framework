@@ -68,6 +68,19 @@ if (CF_CUTE_SHADERC)
 	add_executable(cute-shaderc ${CUTE_SHADERC_SRCS})
 	target_include_directories(cute-shaderc PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../include)
 	set_target_properties(cute-shaderc PROPERTIES FOLDER "tools")
+	if (EMSCRIPTEN)
+		# The tool is a build step, not a web page: it runs through node (the
+		# Emscripten toolchain's CMAKE_CROSSCOMPILING_EMULATOR, which CMake
+		# prepends when a custom command invokes this target). NODERAWFS maps
+		# the host filesystem so the input GLSL and output header paths work
+		# as-is, and EXIT_RUNTIME turns main's return into the process exit code.
+		target_link_options(cute-shaderc PRIVATE
+			-sENVIRONMENT=node
+			-sNODERAWFS=1
+			-sEXIT_RUNTIME=1
+			-sALLOW_MEMORY_GROWTH=1
+		)
+	endif()
 	install(TARGETS cute-shaderc
 	BUNDLE DESTINATION .
 	RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
