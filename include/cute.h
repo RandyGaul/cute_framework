@@ -68,6 +68,7 @@
 
 #ifdef CF_MAIN
 #	include <SDL3/SDL_main.h>
+#	include "cute_main_callbacks.h"
 #endif
 
 #endif // CF_H

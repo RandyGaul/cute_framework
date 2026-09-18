@@ -85,6 +85,14 @@ struct CF_ShaderFileInfo
 	const char* path;
 };
 
+struct CF_PendingEvent
+{
+	SDL_Event event;
+	// Offset of the event's text in `CF_App::pending_event_text`, or -1. SDL frees event strings
+	// on the next event pump, which can run before a queued event is handled.
+	int text_offset;
+};
+
 struct CF_App
 {
 	// App stuff.
@@ -157,6 +165,11 @@ struct CF_App
 	void (*key_callback)(CF_KeyButton key, bool true_down_false_up) = NULL;
 	CF_MouseState mouse, mouse_prev;
 	Cute::Array<CF_Touch> touches;
+
+	// SDL callback stuff
+	Cute::Array<CF_PendingEvent> pending_events;
+	Cute::Array<char> pending_event_text;
+	bool using_main_callbacks = false;
 
 	// Dear ImGui stuff.
 	bool using_imgui = false;

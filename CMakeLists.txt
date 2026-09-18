@@ -176,6 +176,7 @@ set(CF_PUBLIC_HDRS
 	include/cute_video.h
 	include/cute_color.h
 	include/cute.h
+	include/cute_main_callbacks.h
 	include/cute_graphics.h
 	include/cute_rnd.h
 	include/cute_sprite.h
