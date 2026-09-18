@@ -311,6 +311,9 @@ if(EMSCRIPTEN)
 
 	target_compile_options(cute PUBLIC -sUSE_SDL=3)
 	target_compile_options(cute PRIVATE -gsplit-dwarf)
+	# CF requires WebGL 2, but imgui_impl_opengl3 auto-selects its ES2 path on Emscripten, which
+	# compiles out glBindSampler: CF's sampler objects then stay bound to unit 0 during ImGui draws.
+	target_compile_definitions(cute PRIVATE IMGUI_IMPL_OPENGL_ES3)
 
 	target_link_options(cute INTERFACE
 		-sUSE_SDL=3
