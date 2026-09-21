@@ -141,6 +141,7 @@ jobs:
           name: test-dumps-${{ matrix.os }}-${{ matrix.compiler }}-${{ matrix.framework_static }}
           path: build/dump_*.png
           if-no-files-found: ignore
+          retention-days: 1
 
       - name: Shader Compiler Tests
         run: ./build/cute-spirv-tests
@@ -176,6 +177,7 @@ jobs:
         with:
           name: ${{ matrix.os }}-${{ matrix.compiler }}-${{ matrix.framework_static == 'ON' && 'static' || 'shared' }}
           if-no-files-found: error
+          retention-days: 1
           path: |
             artifact.zip
             artifact.tar.gz
