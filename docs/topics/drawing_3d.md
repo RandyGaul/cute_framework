@@ -159,7 +159,7 @@ Sprites viewed at a distance or a steep angle in 3D shimmer with swimming pixels
 
 Cameras are live at replay: a recorded level renders under whatever projection/view is current, and the current 3D transform stack moves the whole list for free. Baked instances also get exact inverse-transpose normal matrices (the immediate path reuses the model rows, exact for rigid transforms and uniform scale).
 
-A recording behaves like a **closure**: state set *inside* it is part of the recording; state inherited from outside binds fresh each time the list draws. The transform stack always worked this way, and the shader and uniforms follow the same rule -- set inside `begin`/`end` they record frozen, but ambient state stays a *free variable*: `cf_draw_list` binds whatever is pushed or set then (record-time values as the fallback). That makes multi-pass rendering one-recording cheap:
+A recording behaves like a **closure**: state set *inside* it is part of the recording; state inherited from outside binds fresh each time the list draws. The transform stack always worked this way, and the shader, render state and uniforms follow the same rule -- set inside `begin`/`end` they record frozen, but ambient state stays a *free variable*: `cf_draw_list` binds whatever is pushed or set then (record-time values as the fallback). That makes multi-pass rendering one-recording cheap:
 
 ```cpp
 CF_DrawList city = cf_make_draw_list();

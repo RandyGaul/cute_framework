@@ -117,11 +117,17 @@
 // A recording behaves like a closure: state it sets INSIDE itself is part of the recording,
 // state it inherits from outside binds fresh each time the list is drawn. The transform stack
 // always worked this way (internal pushes compose onto the live ambient transform), and the
-// SHADER and UNIFORMS/TEXTURES follow the same rule:
+// SHADER, RENDER STATE and UNIFORMS/TEXTURES follow the same rule:
 //
 //     - A shader pushed inside `begin`/`end` records frozen; one that was merely ambient
 //       (pushed outside, or not at all) stays a free variable -- `cf_draw_list` binds
 //       whatever `cf_draw3d_push_shader` has pushed then, record-time shader as fallback.
+//     - A render state pushed inside `begin`/`end` records frozen -- even one equal to the
+//       ambient state, which is the idiom to pin it. Otherwise it stays a free variable and
+//       `cf_draw_list` binds the top of the `cf_draw3d_push_render_state` stack then (the
+//       stack always holds a default, so there is no fallback case). Strokes derive and
+//       push their own state, so they always record frozen. 2d drawing inside a list follows
+//       the same rule against `cf_draw_push_render_state`.
 //     - A uniform or texture set inside the recording records frozen; a name that was only
 //       ambient binds the live `cf_draw3d_set_uniform`/`set_texture` value at
 //       `cf_draw_list` time, record-time value as fallback. Set `u_time` each frame and a
@@ -137,7 +143,9 @@
 // same bake, one instanced draw per pass (see the draw3d sample). Drawing a list under a
 // pass shader also FUSES: adjacent baked groups that differ only by frozen uniforms or
 // textures the bound shader never declares collapse into a single draw, so a ten-material
-// scene is one draw in a depth pass. Shapes always record their resolved shader.
+// scene is one draw in a depth pass. Shapes always record their resolved shader. The ambient
+// render state is what lets those passes differ in fixed-function state too (culling and
+// depth bias for a shadow pass, blending for a translucent one) from the same recording.
 //
 // ESCAPE HATCH
 //
@@ -463,6 +471,9 @@ CF_API CF_Shader CF_CALL cf_draw3d_peek_shader(void);
  * @remarks  Defaults to `cf_render_state_3d_defaults` -- depth writes on, `LESS_THAN` depth test,
  *           back-face culling of clockwise faces (submit meshes with counter-clockwise winding).
  *           Remember depth state only functions on a canvas created with `depth_stencil_enable`.
+ *           Inside a draw list recording a pushed render state records frozen; meshes recorded
+ *           without one bind the render state pushed when `cf_draw_list` replays them (see the
+ *           DRAW LISTS section above).
  * @related  CF_RenderState cf_render_state_3d_defaults cf_draw3d_push_render_state cf_draw3d_pop_render_state cf_draw3d_peek_render_state
  */
 CF_API void CF_CALL cf_draw3d_push_render_state(CF_RenderState render_state);

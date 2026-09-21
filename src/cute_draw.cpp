@@ -3528,6 +3528,9 @@ void cf_draw_list_begin(CF_DrawList list)
 	// onto whichever layer is current then.
 	(*data)->base_layer = s_draw->layers.last();
 	(*data)->base_z = s_draw->zs.last(); // Z is list-local the same way.
+	// Render states pushed from here on are part of the recording; anything already on the
+	// stack is ambient and binds at replay.
+	s_draw->recording_render_state_base = s_draw->render_states.count();
 	// Park the live scene's layers and record into a private, empty set: the recording
 	// moves into the list wholesale at cf_draw_list_end and the live layers come back untouched.
 	CF_ASSERT(s_draw->recording_saved_layers.count() == 0);
@@ -3640,7 +3643,13 @@ void cf_draw_list(CF_DrawList list)
 		c.viewport = src.viewport;
 		c.alpha_discard = src.alpha_discard;
 		c.filter_mode = src.filter_mode;
-		c.render_state = src.render_state;
+		// An ambient render state binds live: add_cmd_to already stamped the current 2d
+		// state (and whether it is still ambient, when replaying inside another recording);
+		// mesh commands resolve against the 3d stack in cf_draw3d_replay_cmd.
+		if (!src.ambient_render_state) {
+			c.render_state = src.render_state;
+			c.ambient_render_state = false;
+		}
 		c.shader = src.shader;
 		c.u = src.u;
 		c.items = src.items;
@@ -5257,11 +5266,25 @@ CF_RenderState CF_CmdRenderState::expand() const
 void cf_draw_push_render_state(CF_RenderState render_state)
 {
 	PUSH_DRAW_VAR_AND_ADD_CMD_IF_NEEDED(render_state);
+	// While recording a draw list, a push freezes the state into the recording even when
+	// the value matches the ambient one, so the stamp can change without the value changing.
+	if (s_draw->recording_list) s_draw->sync_current_cmd();
 }
 
 CF_RenderState cf_draw_pop_render_state()
 {
-	POP_DRAW_VAR_AND_ADD_CMD_IF_NEEDED(render_state);
+	if (s_draw->render_states.count() > 1) {
+		CF_RenderState result = s_draw->render_states.pop();
+		if (s_draw->render_states.last() != result) {
+			CF_Command& cmd = s_draw->add_cmd();
+			cmd.render_state = s_draw->render_states.last();
+		}
+		// See cf_draw_push_render_state.
+		if (s_draw->recording_list) s_draw->sync_current_cmd();
+		return result;
+	} else {
+		return s_draw->render_states.last();
+	}
 }
 
 CF_RenderState cf_draw_peek_render_state()

@@ -267,6 +267,10 @@ struct CF_Command
 	float alpha_discard = 1.0f;
 	CF_DrawFilterMode filter_mode = CF_DRAW_FILTER_SMOOTH;
 	CF_CmdRenderState render_state;
+	// Draw list closure semantics: the render state was pushed OUTSIDE the recording, so it
+	// stays a free variable -- cf_draw_list binds whatever is pushed then (the 2d stack for
+	// 2d commands, the 3d stack for mesh commands). Always false outside a recording.
+	bool ambient_render_state = false;
 	CF_Shader shader;
 	Cute::Array<atlas_cache_entry_t> items; // Sprite/text atlas entries; udata indexes `geoms`.
 	CF_DrawUniform u;
@@ -391,7 +395,12 @@ struct CF_Draw
 		cmd.alpha_discard = alpha_discards.last();
 		cmd.filter_mode = filter_modes.last();
 		cmd.render_state = render_states.last();
+		cmd.ambient_render_state = render_state_is_ambient();
 		cmd.shader = shaders.last();
+	}
+	// True while recording a draw list with no render state pushed inside the recording.
+	CF_INLINE bool render_state_is_ambient() const {
+		return recording_list && render_states.count() <= recording_render_state_base;
 	}
 	CF_INLINE bool state_matches(const CF_Command& cmd) const {
 		return cmd.scissor == scissors.last()
@@ -399,6 +408,7 @@ struct CF_Draw
 			&& cmd.alpha_discard == alpha_discards.last()
 			&& cmd.filter_mode == filter_modes.last()
 			&& cmd.render_state == render_states.last()
+			&& cmd.ambient_render_state == render_state_is_ambient()
 			&& cmd.shader == shaders.last();
 	}
 	// Appends a command carrying the current state to `dl`, stamped with that layer's id.
@@ -539,6 +549,9 @@ struct CF_Draw
 	Cute::Map<struct CF_DrawListData*> draw_lists;
 	uint64_t draw_list_id_gen = 1;
 	struct CF_DrawListData* recording_list = NULL;
+	// Render states at or below this depth are ambient to the recording (see
+	// CF_Command::ambient_render_state).
+	int recording_render_state_base = 0;
 	Cute::Array<CF_DrawLayer*> recording_saved_layers;
 	CF_DrawLayer* recording_saved_current_layer = NULL;
 	// User SDF snippets registered via cf_make_custom_shape, in dispatch-index order.

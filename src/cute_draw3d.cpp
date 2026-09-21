@@ -162,6 +162,8 @@ struct CF_Draw3d
 	// Shader stack depth at cf_draw_list_begin: submissions whose shader sits at or below
 	// this depth recorded it as AMBIENT (see CF_MeshCmd3d::ambient_shader).
 	int recording_shader_base = 0;
+	// Same for the render state stack (see CF_Command::ambient_render_state).
+	int recording_render_state_base = 0;
 	Cute::Array<CF_RenderState> render_states;
 	Cute::Array<CF_V4> mesh_attributes;
 	Cute::Array<CF_V4> mesh_attributes2; // Rides in_uv_rect when no sprite texture is pushed.
@@ -642,6 +644,9 @@ static void s_submit(CF_Mesh mesh, const CF_MeshInstance3d& inst, bool escape, c
 	s_refresh_vp();
 	uint64_t state_hash = s_draw3d->user_hash ^ (shape ? s_draw3d->shape_hash : 0);
 	CF_CmdRenderState rs = s_draw3d->render_states.last();
+	// Same closure rule as the shader. Strokes push their derived state right before
+	// submitting, so they always freeze.
+	bool ambient_rs = s_draw->recording_list && s_draw3d->render_states.count() <= s_draw3d->recording_render_state_base;
 	bool sprite_textured = sprite && !escape;
 
 	// Why a submission failed to join the previous one is the single most useful thing this
@@ -660,7 +665,7 @@ static void s_submit(CF_Mesh mesh, const CF_MeshInstance3d& inst, bool escape, c
 			      : mc->state_hash != state_hash ? CF_DRAW_SPLIT_3D_UNIFORMS
 			      : mc->vp_id != s_draw3d->vp_id ? CF_DRAW_SPLIT_3D_CAMERA
 			      : (under->shader.id != shader.id || mc->ambient_shader != ambient) ? CF_DRAW_SPLIT_3D_SHADER
-			      : !(under->render_state == rs) ? CF_DRAW_SPLIT_3D_RENDER_STATE
+			      : (!(under->render_state == rs) || under->ambient_render_state != ambient_rs) ? CF_DRAW_SPLIT_3D_RENDER_STATE
 			      : under->layer != s_draw->layers.last() ? CF_DRAW_SPLIT_3D_LAYER
 			      : !(under->scissor == s_draw->scissors.last()) ? CF_DRAW_SPLIT_3D_SCISSOR
 			      : !(under->viewport == s_draw->viewports.last()) ? CF_DRAW_SPLIT_3D_VIEWPORT
@@ -693,6 +698,7 @@ static void s_submit(CF_Mesh mesh, const CF_MeshInstance3d& inst, bool escape, c
 	CF_Command& cmd = s_draw->add_cmd();
 	cmd.shader = shader;
 	cmd.render_state = rs;
+	cmd.ambient_render_state = ambient_rs;
 	cmd.depth3d = view_depth;
 	CF_MeshCmd3d* mc = CF_NEW(CF_MeshCmd3d);
 	cmd.mesh3d = mc;
@@ -2191,6 +2197,7 @@ void cf_draw3d_list_begin()
 	s_draw3d->transforms.add(cf_m4_identity());
 	// Shaders at or below this depth are ambient -- free variables the draw list binds later.
 	s_draw3d->recording_shader_base = s_draw3d->shaders.count();
+	s_draw3d->recording_render_state_base = s_draw3d->render_states.count();
 	// Uniform/texture names untouched during the recording stay ambient the same way.
 	for (int i = 0; i < s_draw3d->uniforms.count(); ++i) s_draw3d->uniforms[i].set_in_recording = false;
 	for (int i = 0; i < s_draw3d->textures.count(); ++i) s_draw3d->textures[i].set_in_recording = false;
@@ -2209,6 +2216,7 @@ static bool s_bake_group_match(const CF_Command* a, const CF_Command* b)
 	if (ma->ambient_shader != mb->ambient_shader) return false;
 	if (a->shader.id != b->shader.id) return false;
 	if (!(a->render_state == b->render_state)) return false;
+	if (a->ambient_render_state != b->ambient_render_state) return false;
 	if (a->layer != b->layer) return false;
 	if (!(a->scissor == b->scissor)) return false;
 	if (!(a->viewport == b->viewport)) return false;
@@ -2239,7 +2247,7 @@ static uint64_t s_bake_group_hash(const CF_Command* c)
 {
 	const CF_MeshCmd3d* mc = c->mesh3d;
 	uint64_t h = cf_fnv1a(&mc->mesh.id, (int)sizeof(mc->mesh.id));
-	int meta[3] = { mc->sprite_textured ? 1 : 0, c->layer, mc->ambient_shader ? 1 : 0 };
+	int meta[4] = { mc->sprite_textured ? 1 : 0, c->layer, mc->ambient_shader ? 1 : 0, c->ambient_render_state ? 1 : 0 };
 	h ^= cf_fnv1a(meta, (int)sizeof(meta));
 	h ^= cf_fnv1a(&c->shader.id, (int)sizeof(c->shader.id));
 	h ^= cf_fnv1a(&c->render_state, (int)sizeof(c->render_state));
@@ -2465,6 +2473,13 @@ bool cf_draw3d_replay_cmd(CF_Command* dst, CF_Command* prev, const CF_Command* s
 		if (live.id) dst->shader = live;
 	}
 	CF_ASSERT(dst->shader.id); // Recorded with no shader anywhere: push one before replaying.
+	// An ambient render state binds the same way, against the 3d stack (which always has
+	// a default, so there is no fallback case). Replayed inside another recording it stays
+	// ambient only while that recording has pushed no render state of its own.
+	if (src->ambient_render_state) {
+		dst->render_state = s_draw3d->render_states.last();
+		dst->ambient_render_state = s_draw->recording_list && s_draw3d->render_states.count() <= s_draw3d->recording_render_state_base;
+	}
 
 	// Cameras are live at replay, and the current 3d transform stack moves the whole list:
 	// final position = P * V * T_now * M_baked. Note a rotation in T_now does not reach the
@@ -2482,8 +2497,8 @@ bool cf_draw3d_replay_cmd(CF_Command* dst, CF_Command* prev, const CF_Command* s
 		CF_MeshCmd3d* pc = prev->mesh3d;
 		bool candidate = pc && pc->gpu_instances == smc->gpu_instances && pc->mesh.id == smc->mesh.id
 			&& prev->shader.id == dst->shader.id
-			&& prev->render_state == src->render_state
-			&& src->render_state.depth_write_enabled // Translucents sort per command; never fuse them.
+			&& prev->render_state == dst->render_state && prev->ambient_render_state == dst->ambient_render_state
+			&& dst->render_state.depth_write_enabled // Translucents sort per command; never fuse them.
 			&& prev->layer == dst->layer && prev->scissor == src->scissor && prev->viewport == src->viewport
 			&& !CF_MEMCMP(&pc->vp, &composed, sizeof(composed))
 			&& pc->vs_storage_count == smc->vs_storage_count;
