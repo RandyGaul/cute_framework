@@ -3258,6 +3258,9 @@ void cf_draw_list_begin(CF_DrawList list)
 	CF_ASSERT(!s_draw->recording_list);
 	if (!data) return;
 	s_draw->recording_list = *data;
+	// Layers are list-local, like transforms: replay offsets the recording from this layer
+	// onto whichever layer is current then.
+	(*data)->base_layer = s_draw->layers.last();
 	// Park the live scene's layers and record into a private, empty set: the recording
 	// moves into the list wholesale at cf_draw_list_end and the live layers come back untouched.
 	CF_ASSERT(s_draw->recording_saved_layers.count() == 0);
@@ -3342,15 +3345,18 @@ void cf_draw_list(CF_DrawList list)
 	// geoms_ref into the pending stream, composing the replay transform and rescaling
 	// the AA band (recorded under an identity camera) during its one copy.
 	float inv_cam_scale = 1.0f / len(s_draw->cam_stack.last().m.y);
-	// Each recorded command lands on the layer it was recorded on. The list is grouped by
-	// layer, so one layer serves a whole group and mesh fusion can track its previous
-	// command by index within it.
+	// Each recorded command lands on the layer it was recorded on, shifted so the layer
+	// recording began on maps to the current layer. The list is grouped by layer, so one
+	// layer serves a whole group and mesh fusion can track its previous command by index
+	// within it.
+	int layer_offset = s_draw->layers.last() - data->base_layer;
 	CF_DrawLayer* dl = NULL;
 	int prev_mesh_index = -1; // Index in dl->cmds of the last replayed mesh command.
 	for (int i = 0; i < data->cmds.count(); ++i) {
 		const CF_Command& src = data->cmds[i];
-		if (!dl || dl->layer != src.layer) {
-			dl = s_draw->ensure_layer(src.layer);
+		int layer = src.layer + layer_offset;
+		if (!dl || dl->layer != layer) {
+			dl = s_draw->ensure_layer(layer);
 			prev_mesh_index = -1;
 		}
 		CF_Command& c = s_draw->add_cmd_to(dl);

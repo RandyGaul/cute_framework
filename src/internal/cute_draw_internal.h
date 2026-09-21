@@ -542,6 +542,9 @@ struct CF_DrawListData
 {
 	Cute::Array<CF_Command> cmds;
 	Cute::Array<void*> uniform_blocks;
+	// The layer that was current at cf_draw_list_begin. Recorded layers are relative to it:
+	// replay shifts every command by (current layer - base_layer).
+	int base_layer = 0;
 };
 
 void cf_make_draw();
