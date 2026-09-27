@@ -489,7 +489,8 @@ CF_INLINE bool cf_sprite_get_loop(CF_Sprite* sprite) { CF_ASSERT(sprite); return
  * @function cf_sprite_get_slice
  * @category sprite
  * @brief    Searches for and returns a particular slice. A zero'd out `CF_Aabb` is returned if no match was found.
- * @remarks  Only fetches for slices within the current frame of the current animation.
+ * @remarks  Returns the slice as it is on the current frame of the current animation: its latest key at or before that frame,
+ *           the way Aseprite shows it. A slice whose first key comes after the current frame is not found.
  * @related  CF_Sprite CF_SpriteSlice cf_sprite_get_slice
  */
 CF_API CF_Aabb CF_CALL cf_sprite_get_slice(CF_Sprite* sprite, const char* name);

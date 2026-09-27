@@ -12,6 +12,7 @@
 using namespace Cute;
 
 #include <internal/cute_girl.h>
+#include "slice_keys.h"
 
 /* Load a sprite destroy it. */
 TEST_CASE(test_make_sprite)
@@ -74,9 +75,45 @@ TEST_CASE(test_easy_sprite_center_patch)
 	return true;
 }
 
+static bool s_aabb_equal(CF_Aabb a, CF_Aabb b)
+{
+	return a.min.x == b.min.x && a.min.y == b.min.y && a.max.x == b.max.x && a.max.y == b.max.y;
+}
+
+/* A slice key holds from its frame until the slice's next key, as in Aseprite. */
+TEST_CASE(test_sprite_slice_keys)
+{
+	CHECK(cf_is_error(cf_make_app(NULL, 0, 0, 0, 0, 0, CF_APP_OPTIONS_HIDDEN_BIT | CF_APP_OPTIONS_NO_AUDIO_BIT | CF_APP_OPTIONS_NO_GFX_BIT, NULL)));
+	CF_Sprite s = cf_make_sprite_from_memory("slice_keys.ase", slice_keys_data, slice_keys_sz);
+	REQUIRE(s.name);
+
+	// Aseprite's boxes in CF's space: y up, (0, 0) at the centre of the 2x2 canvas.
+	CF_Aabb a0 = cf_make_aabb(cf_v2(-1, 0), cf_v2(0, 1));
+	CF_Aabb a2 = cf_make_aabb(cf_v2(0, -1), cf_v2(1, 0));
+	CF_Aabb b1 = cf_make_aabb(cf_v2(-1, -1), cf_v2(1, 0));
+	CF_Aabb none = { 0 };
+	CF_Aabb a_by_frame[] = { a0, a0, a2, a2 };
+	CF_Aabb b_by_frame[] = { none, b1, b1, b1 };
+
+	cf_sprite_play(&s, "all");
+	for (int i = 0; i < 4; ++i) {
+		s.frame_index = i;
+		REQUIRE(s_aabb_equal(cf_sprite_get_slice(&s, "a"), a_by_frame[i]));
+		REQUIRE(s_aabb_equal(cf_sprite_get_slice(&s, "b"), b_by_frame[i]));
+	}
+
+	// Keys count frames from the start of the file, not of the animation.
+	cf_sprite_play(&s, "late");
+	REQUIRE(s_aabb_equal(cf_sprite_get_slice(&s, "a"), a2));
+
+	cf_destroy_app();
+	return true;
+}
+
 TEST_SUITE(test_sprite)
 {
 	RUN_TEST_CASE(test_make_sprite);
 	RUN_TEST_CASE(test_easy_sprite_unload);
 	RUN_TEST_CASE(test_easy_sprite_center_patch);
+	RUN_TEST_CASE(test_sprite_slice_keys);
 }

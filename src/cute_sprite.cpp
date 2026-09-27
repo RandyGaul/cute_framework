@@ -372,12 +372,17 @@ CF_Aabb cf_sprite_get_slice(CF_Sprite* sprite, const char* name)
 	CF_SpriteAsset* asset = cf_sprite_get_asset(sprite->id);
 	const CF_Animation* anim = s_get_animation(sprite);
 	int frame = sprite->frame_index + (anim ? anim->frame_offset : 0);
+
+	// A key holds from its frame until the slice's next key, as in Aseprite.
+	const CF_SpriteSlice* in_force = NULL;
 	for (int i = 0; i < asize(asset->slices); ++i) {
-		if (asset->slices[i].name == name && asset->slices[i].frame_index >= frame) {
-			return asset->slices[i].box;
+		const CF_SpriteSlice* key = asset->slices + i;
+		if (key->name != name || key->frame_index > frame) continue;
+		if (!in_force || key->frame_index > in_force->frame_index) {
+			in_force = key;
 		}
 	}
-	return not_found;
+	return in_force ? in_force->box : not_found;
 }
 
 void cf_sprite_update(CF_Sprite* sprite)
