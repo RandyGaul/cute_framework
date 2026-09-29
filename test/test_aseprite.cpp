@@ -40,6 +40,9 @@ TEST_CASE(test_aseprite_create_save_load)
 		}
 	}
 	ase->frames[1].duration_milliseconds = 250;
+	ase->color_profile.use_fixed_gamma = 1;
+	ase->color_profile.gamma.a = 0x1234;
+	ase->color_profile.gamma.b = 0x5678;
 	int size = 0;
 	void* data = cute_aseprite_save_to_memory(ase, &size, NULL);
 	REQUIRE(data && size > 128);
@@ -47,6 +50,8 @@ TEST_CASE(test_aseprite_create_save_load)
 	REQUIRE(back && back->w == 5 && back->h == 3 && back->frame_count == 2 && back->layer_count == 1);
 	REQUIRE(!strcmp(back->layers[0].name, "Layer 1"));
 	REQUIRE(back->frames[1].duration_milliseconds == 250);
+	REQUIRE(back->has_color_profile && back->color_profile.use_fixed_gamma);
+	REQUIRE(back->color_profile.gamma.a == 0x1234 && back->color_profile.gamma.b == 0x5678);
 	for (int f = 0; f < 2; ++f) {
 		const ase_color_t* a = (const ase_color_t*)ase->frames[f].cels[0].pixels;
 		const ase_color_t* b = (const ase_color_t*)back->frames[f].cels[0].pixels;

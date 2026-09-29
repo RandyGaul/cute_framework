@@ -600,9 +600,10 @@ static int s_stored(deflate_t* s)
 	uint16_t NLEN = (uint16_t)s_read_bits(s, 16);
 	uint16_t TILDE_NLEN = ~NLEN;
 	CUTE_ASEPRITE_CHECK(LEN == TILDE_NLEN, "Failed to find LEN and NLEN as complements within stored (uncompressed) stream.");
-	// The bytes still unread are the ones in the accumulator plus the ones not yet loaded; the
-	// block must fit in them (the zlib trailer may follow, so more is fine, less is not).
-	CUTE_ASEPRITE_CHECK((int)LEN * 8 <= s->bits_left + s->count, "Stored block extends beyond end of input stream.");
+	// bits_left counts every bit not yet consumed, the accumulator's included (s_consume_bits
+	// is what decrements it); the block must fit in what is left. The zlib trailer may
+	// follow, so more is fine, less is not.
+	CUTE_ASEPRITE_CHECK((int)LEN * 8 <= s->bits_left, "Stored block extends beyond end of input stream.");
 	CUTE_ASEPRITE_CHECK(s->out + LEN <= s->out_end, "Stored block overflows the output.");
 	p = s_ptr(s);
 	CUTE_ASEPRITE_MEMCPY(s->out, p, LEN);
@@ -1813,8 +1814,8 @@ void* cute_aseprite_save_to_memory(const ase_t* ase, int* size_out, void* mem_ct
 			int type = ase->has_color_profile && ase->color_profile.type == ASE_COLOR_PROFILE_TYPE_NONE ? 0 : 1;
 			s_w_u16(&w, (uint16_t)type);
 			s_w_u16(&w, (uint16_t)(ase->has_color_profile && ase->color_profile.use_fixed_gamma ? 1 : 0));
+			s_w_u16(&w, ase->has_color_profile ? ase->color_profile.gamma.a : 0); // The reader's order: a, then b.
 			s_w_u16(&w, ase->has_color_profile ? ase->color_profile.gamma.b : 0);
-			s_w_u16(&w, ase->has_color_profile ? ase->color_profile.gamma.a : 0);
 			s_w_zero(&w, 8);
 			s_w_chunk_end(&w, at);
 
