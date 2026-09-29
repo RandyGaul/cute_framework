@@ -921,6 +921,46 @@ TEST_CASE(test_draw_polyline_segments)
 }
 
 // -------------------------------------------------------------------------------------------------
+// Degenerate shapes (zero-length edges) must record finite geometry: normalizing a zero vector
+// yields NaN, which would poison the coverage box and every SDF input of the recorded shape.
+
+static bool s_finite(CF_V2 p)
+{
+	return isfinite(p.x) && isfinite(p.y);
+}
+
+static bool s_geoms_finite(const Array<BatchGeometry>& geoms, int first)
+{
+	for (int i = first; i < geoms.count(); ++i) {
+		const BatchGeometry& g = geoms[i];
+		for (int k = 0; k < 4; ++k) if (!s_finite(g.box[k])) return false;
+		for (int k = 0; k < 8; ++k) if (!s_finite(g.shape[k])) return false;
+	}
+	return true;
+}
+
+TEST_CASE(test_draw_degenerate_quad_finite)
+{
+	if (!test_make_app(640, 480)) return true; // Headless CI: no display/GPU.
+
+	Array<BatchGeometry>& geoms = s_draw->current_cmd().geoms;
+	int first = geoms.count();
+
+	// Zero width (p1 == p0), zero height, and a single point.
+	cf_draw_quad(cf_make_aabb(cf_v2(10, 10), cf_v2(10, 50)), 1.0f, 0.0f);
+	cf_draw_quad_fill(cf_make_aabb(cf_v2(10, 10), cf_v2(10, 50)), 0.0f);
+	cf_draw_quad(cf_make_aabb(cf_v2(10, 10), cf_v2(50, 10)), 1.0f, 0.0f);
+	cf_draw_quad_fill(cf_make_aabb(cf_v2(10, 10), cf_v2(10, 10)), 0.0f);
+	cf_draw_quad_fill2(cf_v2(5, 5), cf_v2(5, 5), cf_v2(5, 9), cf_v2(5, 9), 0.0f);
+
+	REQUIRE(geoms.count() == first + 5);
+	REQUIRE(s_geoms_finite(geoms, first));
+
+	test_destroy_app();
+	return true;
+}
+
+// -------------------------------------------------------------------------------------------------
 // Shape effects (cf_draw_push_outline / cf_draw_push_glow): an outline band hugs the shape's
 // edge, a glow falls off past it, and both come from the shape's own signed distance -- so they
 // must land identically on the instanced and tiled paths.
@@ -2354,6 +2394,7 @@ TEST_SUITE(test_draw_tiled)
 	RUN_TEST_CASE_IF(test_draw_list_replay_layers);
 	RUN_TEST_CASE_IF(test_draw_layers_frame_end_prune);
 	RUN_TEST_CASE_IF(test_draw_polyline_segments);
+	RUN_TEST_CASE_IF(test_draw_degenerate_quad_finite);
 	RUN_TEST_CASE_IF(test_draw_shape_effects);
 	RUN_TEST_CASE_IF(test_draw_dashed_strokes);
 	RUN_TEST_CASE_IF(test_draw_dashed_polyline_flow);
