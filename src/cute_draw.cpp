@@ -1918,7 +1918,7 @@ static void s_draw_quad(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float stroke, fl
 	BatchGeometry& g = s_push_shape_geom();
 	g.type = BATCH_GEOMETRY_TYPE_QUAD;
 
-	v2 u = norm(p1 - p0);
+	v2 u = safe_norm(p1 - p0);
 	v2 v = skew(u);
 	v2 he = V2(distance(p1, p0), distance(p3, p0)) * 0.5f;
 	v2 c = ((p0 + p1) * 0.5f + (p2 + p3) * 0.5f) * 0.5f;
