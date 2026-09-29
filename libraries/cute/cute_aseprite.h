@@ -102,6 +102,17 @@ ase_t* cute_aseprite_load_from_file(const char* path, void* mem_ctx);
 ase_t* cute_aseprite_load_from_memory(const void* memory, int size, void* mem_ctx);
 void cute_aseprite_free(ase_t* aseprite);
 void cute_aseprite_blend_layers(ase_t* ase, uint64_t layer_mask, ase_color_t** out_pixels);
+// Writing. cute_aseprite_create builds an empty RGBA sprite -- one visible layer, one
+// full-canvas cel per frame, pixels zeroed -- to paint into (cel pixels are what gets
+// saved; frame->pixels is the loader's composite and is ignored on save). The savers write
+// any ase_t back out as a .aseprite file Aseprite opens: header, an sRGB color profile,
+// the palette when it has entries, the layers, the tags, and every cel (image cels as zlib
+// stored blocks, linked cels as links). Udata, slices, and cel extra data are not written.
+// The memory saver's buffer is freed with CUTE_ASEPRITE_FREE; the file saver returns 1 on
+// success.
+ase_t* cute_aseprite_create(int w, int h, int frame_count, void* mem_ctx);
+void* cute_aseprite_save_to_memory(const ase_t* ase, int* size_out, void* mem_ctx);
+int cute_aseprite_save_to_file(const ase_t* ase, const char* path);
 
 #define CUTE_ASEPRITE_MAX_LAYERS (64)
 #define CUTE_ASEPRITE_MAX_SLICES (128)
@@ -412,6 +423,11 @@ struct ase_t
 	#include <stdio.h> // fclose
 	#define CUTE_ASEPRITE_FCLOSE fclose
 #endif
+#if !defined(CUTE_ASEPRITE_FWRITE)
+	#include <stdio.h> // fwrite
+	#define CUTE_ASEPRITE_FWRITE fwrite
+#endif
+
 
 static const char* s_error_file = NULL; // The filepath of the file being parsed. NULL if from memory.
 static const char* s_error_reason;      // Used to capture errors during DEFLATE parsing.
@@ -584,10 +600,15 @@ static int s_stored(deflate_t* s)
 	uint16_t NLEN = (uint16_t)s_read_bits(s, 16);
 	uint16_t TILDE_NLEN = ~NLEN;
 	CUTE_ASEPRITE_CHECK(LEN == TILDE_NLEN, "Failed to find LEN and NLEN as complements within stored (uncompressed) stream.");
-	CUTE_ASEPRITE_CHECK(s->bits_left / 8 <= (int)LEN, "Stored block extends beyond end of input stream.");
+	// The bytes still unread are the ones in the accumulator plus the ones not yet loaded; the
+	// block must fit in them (the zlib trailer may follow, so more is fine, less is not).
+	CUTE_ASEPRITE_CHECK((int)LEN * 8 <= s->bits_left + s->count, "Stored block extends beyond end of input stream.");
+	CUTE_ASEPRITE_CHECK(s->out + LEN <= s->out_end, "Stored block overflows the output.");
 	p = s_ptr(s);
 	CUTE_ASEPRITE_MEMCPY(s->out, p, LEN);
 	s->out += LEN;
+	// Consume what was copied, so a following block (or the trailer) is read from the right place.
+	for (uint32_t i = 0; i < LEN; ++i) s_read_bits(s, 8);
 	return 1;
 
 ase_err:
@@ -1643,6 +1664,302 @@ void cute_aseprite_blend_layers(ase_t* ase, uint64_t layer_mask, ase_color_t** o
 			}
 		}
 	}
+}
+
+// --- Writing ------------------------------------------------------------------------------
+
+typedef struct ase_writer_t
+{
+	uint8_t* buf;
+	int len, cap;
+	int failed;
+	void* mem_ctx;
+} ase_writer_t;
+
+static void s_w_bytes(ase_writer_t* w, const void* p, int n)
+{
+	if (w->failed || n <= 0) return;
+	if (w->len + n > w->cap) {
+		int cap = w->cap ? w->cap * 2 : 4096;
+		while (cap < w->len + n) cap *= 2;
+		uint8_t* nb = (uint8_t*)CUTE_ASEPRITE_ALLOC(cap, w->mem_ctx);
+		if (!nb) { w->failed = 1; return; }
+		if (w->buf) {
+			CUTE_ASEPRITE_MEMCPY(nb, w->buf, (size_t)w->len);
+			CUTE_ASEPRITE_FREE(w->buf, w->mem_ctx);
+		}
+		w->buf = nb;
+		w->cap = cap;
+	}
+	CUTE_ASEPRITE_MEMCPY(w->buf + w->len, p, (size_t)n);
+	w->len += n;
+}
+
+static void s_w_u8(ase_writer_t* w, uint8_t v) { s_w_bytes(w, &v, 1); }
+static void s_w_u16(ase_writer_t* w, uint16_t v) { uint8_t b[2] = { (uint8_t)v, (uint8_t)(v >> 8) }; s_w_bytes(w, b, 2); }
+static void s_w_u32(ase_writer_t* w, uint32_t v) { uint8_t b[4] = { (uint8_t)v, (uint8_t)(v >> 8), (uint8_t)(v >> 16), (uint8_t)(v >> 24) }; s_w_bytes(w, b, 4); }
+static void s_w_i16(ase_writer_t* w, int v) { s_w_u16(w, (uint16_t)(int16_t)v); }
+
+static void s_w_zero(ase_writer_t* w, int n)
+{
+	uint8_t z[16] = { 0 };
+	while (n > 0) { int k = n < 16 ? n : 16; s_w_bytes(w, z, k); n -= k; }
+}
+
+static void s_w_string(ase_writer_t* w, const char* s)
+{
+	int n = 0;
+	if (s) while (s[n]) n++;
+	s_w_u16(w, (uint16_t)n);
+	s_w_bytes(w, s, n);
+}
+
+// Patch a 32-bit little-endian value written earlier (a size known only at the end).
+static void s_w_patch_u32(ase_writer_t* w, int at, uint32_t v)
+{
+	if (w->failed) return;
+	w->buf[at] = (uint8_t)v; w->buf[at + 1] = (uint8_t)(v >> 8); w->buf[at + 2] = (uint8_t)(v >> 16); w->buf[at + 3] = (uint8_t)(v >> 24);
+}
+
+static uint32_t s_adler32(const uint8_t* d, int n)
+{
+	uint32_t a = 1, b = 0;
+	for (int i = 0; i < n; ++i) { a = (a + d[i]) % 65521u; b = (b + a) % 65521u; }
+	return (b << 16) | a;
+}
+
+// A zlib stream (RFC 1950) of stored deflate blocks (RFC 1951, BTYPE 00): valid, readable by
+// any inflater including the one above, and needing no compressor here. Files are larger
+// than Aseprite would save them; Aseprite recompresses on its next save.
+static void s_w_zlib_stored(ase_writer_t* w, const void* data, int n)
+{
+	const uint8_t* d = (const uint8_t*)data;
+	s_w_u8(w, 0x78);
+	s_w_u8(w, 0x01);
+	int at = 0;
+	do {
+		int k = n - at < 65535 ? n - at : 65535;
+		int final = at + k >= n;
+		s_w_u8(w, (uint8_t)(final ? 1 : 0));
+		s_w_u16(w, (uint16_t)k);
+		s_w_u16(w, (uint16_t)~k);
+		s_w_bytes(w, d + at, k);
+		at += k;
+	} while (at < n);
+	uint32_t adler = s_adler32(d, n);
+	s_w_u8(w, (uint8_t)(adler >> 24)); s_w_u8(w, (uint8_t)(adler >> 16)); s_w_u8(w, (uint8_t)(adler >> 8)); s_w_u8(w, (uint8_t)adler);
+}
+
+static int s_w_chunk_begin(ase_writer_t* w, uint16_t type)
+{
+	int at = w->len;
+	s_w_u32(w, 0); // Chunk size, patched by s_w_chunk_end.
+	s_w_u16(w, type);
+	return at;
+}
+
+static void s_w_chunk_end(ase_writer_t* w, int at) { s_w_patch_u32(w, at, (uint32_t)(w->len - at)); }
+
+static int s_layer_child_level(const ase_layer_t* layer)
+{
+	int level = 0;
+	for (const ase_layer_t* p = layer->parent; p; p = p->parent) level++;
+	return level;
+}
+
+void* cute_aseprite_save_to_memory(const ase_t* ase, int* size_out, void* mem_ctx)
+{
+	ase_writer_t w = { 0, 0, 0, 0, mem_ctx };
+	int bpp = ase->mode == ASE_MODE_RGBA ? 4 : ase->mode == ASE_MODE_GRAYSCALE ? 2 : 1;
+
+	// Header, 128 bytes.
+	s_w_u32(&w, 0); // File size, patched at the end.
+	s_w_u16(&w, 0xA5E0);
+	s_w_u16(&w, (uint16_t)ase->frame_count);
+	s_w_u16(&w, (uint16_t)ase->w);
+	s_w_u16(&w, (uint16_t)ase->h);
+	s_w_u16(&w, (uint16_t)(bpp * 8));
+	s_w_u32(&w, 1u | (ase->valid_group_blend ? 2u : 0u)); // Layer opacity is valid; group blend when the source said so.
+	s_w_u16(&w, (uint16_t)(ase->frame_count > 0 && ase->frames[0].duration_milliseconds > 0 ? ase->frames[0].duration_milliseconds : 100)); // Deprecated speed.
+	s_w_u32(&w, 0);
+	s_w_u32(&w, 0);
+	s_w_u8(&w, (uint8_t)ase->transparent_palette_entry_index);
+	s_w_zero(&w, 3);
+	s_w_u16(&w, (uint16_t)(ase->number_of_colors ? ase->number_of_colors : ase->palette.entry_count));
+	s_w_u8(&w, (uint8_t)(ase->pixel_w ? ase->pixel_w : 1));
+	s_w_u8(&w, (uint8_t)(ase->pixel_h ? ase->pixel_h : 1));
+	s_w_i16(&w, ase->grid_x);
+	s_w_i16(&w, ase->grid_y);
+	s_w_u16(&w, (uint16_t)ase->grid_w);
+	s_w_u16(&w, (uint16_t)ase->grid_h);
+	s_w_zero(&w, 84);
+
+	for (int i = 0; i < ase->frame_count; ++i) {
+		const ase_frame_t* frame = ase->frames + i;
+		int chunks = frame->cel_count;
+		if (i == 0) chunks += 1 + (ase->palette.entry_count > 0 ? 1 : 0) + ase->layer_count + (ase->tag_count > 0 ? 1 : 0);
+		int frame_at = w.len;
+		s_w_u32(&w, 0); // Frame size, patched below.
+		s_w_u16(&w, 0xF1FA);
+		s_w_u16(&w, (uint16_t)(chunks < 0xFFFF ? chunks : 0xFFFF));
+		s_w_u16(&w, (uint16_t)frame->duration_milliseconds);
+		s_w_zero(&w, 2);
+		s_w_u32(&w, (uint32_t)chunks);
+
+		if (i == 0) {
+			// Color profile: sRGB, or a fixed gamma when the source carried one. An embedded ICC
+			// profile is not carried over; sRGB stands in for it.
+			int at = s_w_chunk_begin(&w, 0x2007);
+			int type = ase->has_color_profile && ase->color_profile.type == ASE_COLOR_PROFILE_TYPE_NONE ? 0 : 1;
+			s_w_u16(&w, (uint16_t)type);
+			s_w_u16(&w, (uint16_t)(ase->has_color_profile && ase->color_profile.use_fixed_gamma ? 1 : 0));
+			s_w_u16(&w, ase->has_color_profile ? ase->color_profile.gamma.b : 0);
+			s_w_u16(&w, ase->has_color_profile ? ase->color_profile.gamma.a : 0);
+			s_w_zero(&w, 8);
+			s_w_chunk_end(&w, at);
+
+			if (ase->palette.entry_count > 0) {
+				at = s_w_chunk_begin(&w, 0x2019);
+				s_w_u32(&w, (uint32_t)ase->palette.entry_count);
+				s_w_u32(&w, 0);
+				s_w_u32(&w, (uint32_t)(ase->palette.entry_count - 1));
+				s_w_zero(&w, 8);
+				for (int k = 0; k < ase->palette.entry_count; ++k) {
+					const ase_palette_entry_t* e = ase->palette.entries + k;
+					s_w_u16(&w, (uint16_t)(e->color_name ? 1 : 0));
+					s_w_u8(&w, e->color.r); s_w_u8(&w, e->color.g); s_w_u8(&w, e->color.b); s_w_u8(&w, e->color.a);
+					if (e->color_name) s_w_string(&w, e->color_name);
+				}
+				s_w_chunk_end(&w, at);
+			}
+
+			for (int k = 0; k < ase->layer_count; ++k) {
+				const ase_layer_t* layer = ase->layers + k;
+				at = s_w_chunk_begin(&w, 0x2004);
+				s_w_u16(&w, (uint16_t)layer->flags);
+				s_w_u16(&w, (uint16_t)layer->type);
+				s_w_u16(&w, (uint16_t)s_layer_child_level(layer));
+				s_w_u16(&w, 0); // Default width, unused.
+				s_w_u16(&w, 0); // Default height, unused.
+				s_w_u16(&w, (uint16_t)layer->blend_mode);
+				s_w_u8(&w, (uint8_t)(layer->opacity * 255.0f + 0.5f));
+				s_w_zero(&w, 3);
+				s_w_string(&w, layer->name);
+				s_w_chunk_end(&w, at);
+			}
+
+			if (ase->tag_count > 0) {
+				at = s_w_chunk_begin(&w, 0x2018);
+				s_w_u16(&w, (uint16_t)ase->tag_count);
+				s_w_zero(&w, 8);
+				for (int k = 0; k < ase->tag_count; ++k) {
+					const ase_tag_t* tag = ase->tags + k;
+					s_w_u16(&w, (uint16_t)tag->from_frame);
+					s_w_u16(&w, (uint16_t)tag->to_frame);
+					s_w_u8(&w, (uint8_t)tag->loop_animation_direction);
+					s_w_u16(&w, (uint16_t)tag->repeat);
+					s_w_zero(&w, 6);
+					s_w_u8(&w, tag->r); s_w_u8(&w, tag->g); s_w_u8(&w, tag->b);
+					s_w_u8(&w, 0);
+					s_w_string(&w, tag->name);
+				}
+				s_w_chunk_end(&w, at);
+			}
+		}
+
+		for (int k = 0; k < frame->cel_count; ++k) {
+			const ase_cel_t* cel = frame->cels + k;
+			int at = s_w_chunk_begin(&w, 0x2005);
+			s_w_u16(&w, (uint16_t)(cel->layer - ase->layers));
+			s_w_i16(&w, cel->x);
+			s_w_i16(&w, cel->y);
+			s_w_u8(&w, (uint8_t)(cel->opacity * 255.0f + 0.5f));
+			s_w_u16(&w, (uint16_t)(cel->is_linked ? 1 : 2));
+			s_w_zero(&w, 7); // z-index and reserved.
+			if (cel->is_linked) {
+				s_w_u16(&w, cel->linked_frame_index);
+			} else {
+				s_w_u16(&w, (uint16_t)cel->w);
+				s_w_u16(&w, (uint16_t)cel->h);
+				s_w_zlib_stored(&w, cel->pixels, cel->w * cel->h * bpp);
+			}
+			s_w_chunk_end(&w, at);
+		}
+
+		s_w_patch_u32(&w, frame_at, (uint32_t)(w.len - frame_at));
+	}
+
+	s_w_patch_u32(&w, 0, (uint32_t)w.len);
+	if (w.failed) {
+		if (w.buf) CUTE_ASEPRITE_FREE(w.buf, mem_ctx);
+		*size_out = 0;
+		return NULL;
+	}
+	*size_out = w.len;
+	return w.buf;
+}
+
+int cute_aseprite_save_to_file(const ase_t* ase, const char* path)
+{
+	int size = 0;
+	void* data = cute_aseprite_save_to_memory(ase, &size, ase->mem_ctx);
+	if (!data) return 0;
+	CUTE_ASEPRITE_FILE* fp = CUTE_ASEPRITE_FOPEN(path, "wb");
+	if (!fp) { CUTE_ASEPRITE_FREE(data, ase->mem_ctx); return 0; }
+	int ok = (int)CUTE_ASEPRITE_FWRITE(data, 1, (size_t)size, fp) == size;
+	CUTE_ASEPRITE_FCLOSE(fp);
+	CUTE_ASEPRITE_FREE(data, ase->mem_ctx);
+	return ok;
+}
+
+static char* s_dup_string(const char* s, void* mem_ctx)
+{
+	int n = 0;
+	while (s[n]) n++;
+	char* d = (char*)CUTE_ASEPRITE_ALLOC(n + 1, mem_ctx);
+	CUTE_ASEPRITE_MEMCPY(d, s, (size_t)(n + 1));
+	return d;
+}
+
+ase_t* cute_aseprite_create(int w, int h, int frame_count, void* mem_ctx)
+{
+	ase_t* ase = (ase_t*)CUTE_ASEPRITE_ALLOC(sizeof(ase_t), mem_ctx);
+	CUTE_ASEPRITE_MEMSET(ase, 0, sizeof(*ase));
+	ase->mem_ctx = mem_ctx;
+	ase->mode = ASE_MODE_RGBA;
+	ase->w = w;
+	ase->h = h;
+	ase->pixel_w = ase->pixel_h = 1;
+	ase->grid_w = ase->grid_h = 16;
+	ase->has_color_profile = 1;
+	ase->color_profile.type = ASE_COLOR_PROFILE_TYPE_SRGB;
+	ase->layer_count = 1;
+	ase_layer_t* layer = ase->layers;
+	layer->flags = (ase_layer_flags_t)(ASE_LAYER_FLAGS_VISIBLE | ASE_LAYER_FLAGS_EDITABLE);
+	layer->type = ASE_LAYER_TYPE_NORMAL;
+	layer->blend_mode = ASE_BLEND_MODE_NORMAL;
+	layer->opacity = 1.0f;
+	layer->name = s_dup_string("Layer 1", mem_ctx);
+	ase->frame_count = frame_count;
+	ase->frames = (ase_frame_t*)CUTE_ASEPRITE_ALLOC(sizeof(ase_frame_t) * (size_t)frame_count, mem_ctx);
+	CUTE_ASEPRITE_MEMSET(ase->frames, 0, sizeof(ase_frame_t) * (size_t)frame_count);
+	int bytes = w * h * (int)sizeof(ase_color_t);
+	for (int i = 0; i < frame_count; ++i) {
+		ase_frame_t* frame = ase->frames + i;
+		frame->ase = ase;
+		frame->duration_milliseconds = 100;
+		frame->pixels = (ase_color_t*)CUTE_ASEPRITE_ALLOC(bytes, mem_ctx);
+		CUTE_ASEPRITE_MEMSET(frame->pixels, 0, (size_t)bytes);
+		frame->cel_count = 1;
+		ase_cel_t* cel = frame->cels;
+		cel->layer = layer;
+		cel->w = w;
+		cel->h = h;
+		cel->opacity = 1.0f;
+		cel->pixels = CUTE_ASEPRITE_ALLOC(bytes, mem_ctx);
+		CUTE_ASEPRITE_MEMSET(cel->pixels, 0, (size_t)bytes);
+	}
+	return ase;
 }
 
 void cute_aseprite_free(ase_t* ase)
