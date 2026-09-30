@@ -814,6 +814,48 @@ static void s_scene_list_replay_layers()
 	// ... and the list's magenta on its upper layer paints over the green.
 }
 
+// Layers are list-local: replaying under a pushed layer shifts the whole recording by the
+// distance from the layer recording began on (0 here) to the current layer.
+#define LIST_LAYER_SHIFT 20
+#define NESTED_LIST_LAYER_SHIFT 5
+
+static CF_DrawList s_nested_layered_list;
+static bool s_shifted_list_replayed_ok;
+static bool s_shifted_list_cursor_ok;
+
+static bool s_layer_has_replay(int layer)
+{
+	CF_DrawLayer* dl = s_find_layer(layer);
+	if (!dl) return false;
+	for (int i = 0; i < dl->cmds.count(); ++i) {
+		if (dl->cmds[i].geoms_ref) return true;
+	}
+	return false;
+}
+
+static void s_scene_list_replay_shifted_layers()
+{
+	cf_draw_push_layer(LIST_LAYER_SHIFT);
+	cf_draw_list(s_layered_list);
+	s_shifted_list_replayed_ok = s_layer_has_replay(LOWER_LIST_LAYER + LIST_LAYER_SHIFT)
+		&& s_layer_has_replay(UPPER_LIST_LAYER + LIST_LAYER_SHIFT)
+		&& !s_layer_has_replay(LOWER_LIST_LAYER) && !s_layer_has_replay(UPPER_LIST_LAYER);
+	// The nested list baked the inner replay at its own shift; this replay adds another.
+	cf_draw_list(s_nested_layered_list);
+	s_shifted_list_replayed_ok = s_shifted_list_replayed_ok
+		&& s_layer_has_replay(LOWER_LIST_LAYER + NESTED_LIST_LAYER_SHIFT + LIST_LAYER_SHIFT)
+		&& s_layer_has_replay(UPPER_LIST_LAYER + NESTED_LIST_LAYER_SHIFT + LIST_LAYER_SHIFT);
+	cf_draw_pop_layer();
+	s_shifted_list_cursor_ok = s_draw->current_layer && s_draw->current_layer->layer == cf_draw_peek_layer();
+	// Green sits above both of the list's recorded layers but below both shifted ones, so
+	// the list paints over it only if the shift took.
+	cf_draw_push_layer(UPPER_LIST_LAYER + 1);
+	cf_draw_push_color(cf_make_color_rgba_f(0, 1, 0, 1));
+	cf_draw_quad_fill(cf_make_aabb(cf_v2(-40, -40), cf_v2(40, 40)), 0);
+	cf_draw_pop_color();
+	cf_draw_pop_layer();
+}
+
 TEST_CASE(test_draw_list_replay_layers)
 {
 	if (!test_make_app(640, 480)) return true; // Headless CI: no display/GPU.
@@ -846,6 +888,24 @@ TEST_CASE(test_draw_list_replay_layers)
 		REQUIRE(s_px_near(s_probe(px, w, h, 58), 255, 0, 0, 255, 3));  // Red only: list content rendered.
 	}
 
+	// A list replayed inside another recording bakes in at that replay's shift.
+	s_nested_layered_list = cf_make_draw_list();
+	cf_draw_list_begin(s_nested_layered_list);
+	cf_draw_push_layer(NESTED_LIST_LAYER_SHIFT);
+	cf_draw_list(s_layered_list);
+	cf_draw_pop_layer();
+	cf_draw_list_end();
+
+	for (int mode = 0; mode <= 1; ++mode) {
+		REQUIRE(s_readback(s_scene_list_replay_shifted_layers, mode, w, h, px));
+		REQUIRE(s_shifted_list_replayed_ok);
+		REQUIRE(s_shifted_list_cursor_ok);
+		REQUIRE(s_px_near(s_probe(px, w, h, 0), 255, 0, 0, 255, 3));    // Shifted red over the green.
+		REQUIRE(s_px_near(s_probe(px, w, h, 38), 255, 0, 255, 255, 3)); // Shifted magenta over both.
+		REQUIRE(s_px_near(s_probe(px, w, h, -50), 255, 0, 0, 255, 3));  // Red only, outside the green.
+	}
+
+	cf_destroy_draw_list(s_nested_layered_list);
 	cf_destroy_draw_list(s_layered_list);
 	cf_free(px);
 	test_destroy_app();

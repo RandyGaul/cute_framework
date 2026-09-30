@@ -499,6 +499,8 @@ CF_API CF_DrawList CF_CALL cf_make_draw_list(void);
  * @brief    Starts recording draw calls into a list, replacing its previous contents.
  * @remarks  Recording happens in list-local space: the camera resets to identity for the duration,
  *           and `cf_draw_list` composes the then-current transform onto the recording at replay.
+ *           Layers are list-local too: they record relative to the layer that is current when
+ *           recording begins, and replay offsets them onto the then-current layer.
  *           Text records a static snapshot (animated text effects freeze at record time). Canvas
  *           blits (`cf_draw_canvas`) cannot be recorded. End with `cf_draw_list_end`.
  * @related  CF_DrawList cf_make_draw_list cf_draw_list_begin cf_draw_list_end cf_draw_list cf_destroy_draw_list
@@ -524,13 +526,15 @@ CF_API void CF_CALL cf_draw_list_end(void);
  * @category draw
  * @brief    Replays a recorded draw list under the current draw transform.
  * @remarks  May be called any number of times per frame (each replay is independent), and lists
- *           may replay inside another list's recording to compose them. Do not destroy a list
+ *           may replay inside another list's recording to compose them. The recording replays
+ *           relative to the current layer. Wrap `cf_draw_list` in `cf_draw_push_layer`/`cf_draw_pop_layer`
+ *           to send the same recording to different layers. Do not destroy a list
  *           before the frame that replays it finishes rendering. Known limitation: a 3d mesh
  *           replay recorded INSIDE another list keeps its own baked instance data but folds the
  *           recording-time transform into the captured camera rather than the instances, so the
  *           outer list's bake grouping sees the inner meshes in their original local space --
  *           compose nested 3d lists with the same transform they were recorded under.
- * @related  CF_DrawList cf_make_draw_list cf_draw_list_begin cf_draw_list_end cf_draw_list cf_destroy_draw_list
+ * @related  CF_DrawList cf_make_draw_list cf_draw_list_begin cf_draw_list_end cf_draw_list cf_destroy_draw_list cf_draw_push_layer cf_render_layers_to
  */
 CF_API void CF_CALL cf_draw_list(CF_DrawList list);
 

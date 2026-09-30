@@ -2472,7 +2472,7 @@ bool cf_draw3d_replay_cmd(CF_Command* dst, CF_Command* prev, const CF_Command* s
 			&& prev->shader.id == dst->shader.id
 			&& prev->render_state == src->render_state
 			&& src->render_state.depth_write_enabled // Translucents sort per command; never fuse them.
-			&& prev->layer == src->layer && prev->scissor == src->scissor && prev->viewport == src->viewport
+			&& prev->layer == dst->layer && prev->scissor == src->scissor && prev->viewport == src->viewport
 			&& !CF_MEMCMP(&pc->vp, &composed, sizeof(composed))
 			&& pc->vs_storage_count == smc->vs_storage_count;
 		if (candidate) {
