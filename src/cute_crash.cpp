@@ -134,7 +134,7 @@ static cc_consent s_ask(void* udata, int pending_count)
 	SDL_MessageBoxData data = { SDL_MESSAGEBOX_INFORMATION, NULL, "Crash report", text.c_str(), 3, buttons, NULL };
 	int id = 2;
 	if (!SDL_ShowMessageBox(&data, &id)) return CC_CONSENT_ASK;
-	return id == 0 ? CC_CONSENT_ASK : id == 1 ? CC_CONSENT_SEND : CC_CONSENT_NEVER;
+	return id == 0 ? CC_CONSENT_ONCE : id == 1 ? CC_CONSENT_SEND : CC_CONSENT_NEVER;
 }
 
 // A failed assert is the message the crash is about: into the report, then on to whatever the

@@ -19,7 +19,7 @@ set(CF_SYM_SLOT_IN "${CMAKE_CURRENT_LIST_DIR}/cute_crash_slot.c.in")
 # library was built with debug info (cf_symbols on any target turns that on); otherwise the step is a
 # no-op, not an error.
 function(cf_symbols_cute)
-	if (NOT TARGET cute-sym OR EMSCRIPTEN)
+	if (NOT TARGET cute-sym OR EMSCRIPTEN OR CMAKE_CROSSCOMPILING)
 		return()
 	endif()
 	get_target_property(CUTE_TYPE cute TYPE)
@@ -38,8 +38,22 @@ function(cf_symbols TARGET)
 		return() # No native binary to read and no reporter on the web: nothing to do.
 	endif()
 	cmake_parse_arguments(ARG "EMBED;FILE" "RESERVE" "" ${ARGN})
-	if (NOT TARGET cute-sym)
-		message(FATAL_ERROR "cf_symbols(${TARGET}): the cute-sym target is missing; set CF_CUTE_SYM ON.")
+	# The tool must run on the build host. Cross-compiling (Android, iOS) builds it for the target,
+	# so a host-built cute-sym is named in CF_CUTE_SYM_HOST or the step is skipped; with the tool off
+	# (CF_CUTE_SYM=OFF) the step is skipped too. Either way the reporter works and reports stay raw.
+	if (CMAKE_CROSSCOMPILING)
+		if (NOT CF_CUTE_SYM_HOST)
+			message(STATUS "cf_symbols(${TARGET}): cross-compiling and CF_CUTE_SYM_HOST is not set; no symbol table")
+			return()
+		endif()
+		set(CUTE_SYM_COMMAND "${CF_CUTE_SYM_HOST}")
+		set(CUTE_SYM_DEPENDS)
+	elseif (NOT TARGET cute-sym)
+		message(STATUS "cf_symbols(${TARGET}): CF_CUTE_SYM is off; no symbol table")
+		return()
+	else()
+		set(CUTE_SYM_COMMAND cute-sym)
+		set(CUTE_SYM_DEPENDS cute-sym)
 	endif()
 	if (NOT ARG_RESERVE)
 		set(ARG_RESERVE 8388608)
@@ -66,7 +80,9 @@ function(cf_symbols TARGET)
 	if (TARGET cute AND MSVC)
 		target_link_options(cute PRIVATE /DEBUG:FULL)
 	endif()
-	add_dependencies(${TARGET} cute-sym)
+	if (CUTE_SYM_DEPENDS)
+		add_dependencies(${TARGET} ${CUTE_SYM_DEPENDS})
+	endif()
 
 	if (ARG_EMBED)
 		set(CF_SYM_RESERVE ${ARG_RESERVE})
@@ -74,12 +90,12 @@ function(cf_symbols TARGET)
 		configure_file("${CF_SYM_SLOT_IN}" "${SLOT_SRC}" @ONLY)
 		target_sources(${TARGET} PRIVATE "${SLOT_SRC}")
 		add_custom_command(TARGET ${TARGET} POST_BUILD
-			COMMAND cute-sym "$<TARGET_FILE:${TARGET}>" --embed
+			COMMAND ${CUTE_SYM_COMMAND} "$<TARGET_FILE:${TARGET}>" --embed
 			COMMENT "cute-sym: embedding the symbol table in ${TARGET}"
 			VERBATIM)
 	else()
 		add_custom_command(TARGET ${TARGET} POST_BUILD
-			COMMAND cute-sym "$<TARGET_FILE:${TARGET}>" -o "$<TARGET_FILE:${TARGET}>.sym"
+			COMMAND ${CUTE_SYM_COMMAND} "$<TARGET_FILE:${TARGET}>" -o "$<TARGET_FILE:${TARGET}>.sym"
 			COMMENT "cute-sym: writing the symbol table beside ${TARGET}"
 			VERBATIM)
 	endif()

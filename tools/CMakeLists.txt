@@ -55,7 +55,7 @@ endif()
 # debug info (PDB, dSYM or debug map, ELF DWARF) into one `.sym` table, writes it beside the
 # binary or embeds it in the reserved slot, and resolves or prints reports. Plain C, no
 # dependencies; cf_symbols() in cmake/CuteSym.cmake runs it as a post-build step.
-if (CF_CUTE_SYM AND NOT EMSCRIPTEN)
+if (CF_CUTE_SYM AND NOT EMSCRIPTEN AND NOT CMAKE_CROSSCOMPILING)
 	add_executable(cute-sym ${CMAKE_CURRENT_SOURCE_DIR}/cute_sym.c)
 	target_include_directories(cute-sym PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../libraries)
 	target_compile_definitions(cute-sym PRIVATE _CRT_SECURE_NO_WARNINGS)

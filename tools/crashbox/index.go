@@ -203,6 +203,20 @@ type group struct {
 	Last     time.Time
 }
 
+// What a page renders: a copy taken under the lock, so an ingest or a delete racing the render
+// touches nothing the template reads.
+type groupView struct {
+	Key, Title, Kind, App string
+	Count, Users          int
+	VersionList           string
+	First, Last           time.Time
+	Reports               []*entry
+}
+
+func (g *group) view() groupView {
+	return groupView{Key: g.Key, Title: g.Title, Kind: g.Kind, App: g.App, Count: g.Count(), Users: g.Users(), VersionList: g.VersionList(), First: g.First, Last: g.Last, Reports: append([]*entry(nil), g.Reports...)}
+}
+
 func (g *group) Count() int { return len(g.Reports) }
 func (g *group) Users() int { return len(g.Installs) }
 func (g *group) VersionList() string {

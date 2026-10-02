@@ -49,11 +49,14 @@ set(CF_TEST_HDRS test_harness.h test_app_shared.h jpg_test_vectors.h)
 add_executable(tests ${CF_TEST_SRCS} ${CF_TEST_HDRS})
 target_link_libraries(tests PRIVATE cute)
 # test_crash drives the crashme sample as a child process; test_sym reads the tests binary's own debug info.
-if (CF_FRAMEWORK_BUILD_SAMPLES AND NOT EMSCRIPTEN)
-	add_dependencies(tests crashme)
-	target_compile_definitions(tests PRIVATE CF_TEST_HAVE_CRASHME)
+if (CF_CUTE_SYM AND NOT EMSCRIPTEN AND NOT CMAKE_CROSSCOMPILING)
+	cf_symbols(tests FILE)
+	target_compile_definitions(tests PRIVATE CF_TEST_HAVE_SYMBOLS)
+	if (CF_FRAMEWORK_BUILD_SAMPLES)
+		add_dependencies(tests crashme)
+		target_compile_definitions(tests PRIVATE CF_TEST_HAVE_CRASHME)
+	endif()
 endif()
-cf_symbols(tests FILE)
 target_include_directories(tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../src)
 set_target_properties(tests PROPERTIES
 	RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}

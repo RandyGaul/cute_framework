@@ -47,7 +47,10 @@ func (s *server) render(w http.ResponseWriter, tmpl string, data any) {
 func (s *server) groupsPage(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	s.mu.Lock()
-	groups := s.idx.groupList(q.Get("sort"), q.Get("q"), q.Get("app"))
+	var groups []groupView
+	for _, g := range s.idx.groupList(q.Get("sort"), q.Get("q"), q.Get("app")) {
+		groups = append(groups, g.view())
+	}
 	total := len(s.idx.reports)
 	s.mu.Unlock()
 	s.render(w, groupsPage, map[string]any{
@@ -58,21 +61,21 @@ func (s *server) groupsPage(w http.ResponseWriter, r *http.Request) {
 func (s *server) groupPage(w http.ResponseWriter, r *http.Request) {
 	key := r.PathValue("key")
 	s.mu.Lock()
-	g := s.idx.groups[key]
-	var reports []*entry
-	if g != nil {
-		reports = append(reports, g.Reports...)
+	live := s.idx.groups[key]
+	var g groupView
+	if live != nil {
+		g = live.view()
 	}
 	s.mu.Unlock()
-	if g == nil {
+	if live == nil || len(g.Reports) == 0 {
 		http.NotFound(w, r)
 		return
 	}
 	var stack []string
-	if rep := s.readReport(reports[0].ID); rep != nil {
+	if rep := s.readReport(g.Reports[0].ID); rep != nil {
 		stack = stackLines(rep)
 	}
-	s.render(w, groupPage, map[string]any{"G": g, "Reports": reports, "Stack": stack})
+	s.render(w, groupPage, map[string]any{"G": g, "Reports": g.Reports, "Stack": stack})
 }
 
 func (s *server) groupDelete(w http.ResponseWriter, r *http.Request) {

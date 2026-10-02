@@ -104,7 +104,8 @@ typedef enum cc_mode
 
 typedef enum cc_consent
 {
-	CC_CONSENT_ASK,    // No decision stored: ask again next time.
+	CC_CONSENT_ASK,    // No decision: nothing is sent now and the question comes back next time.
+	CC_CONSENT_ONCE,   // Send what is pending now; ask again for later reports. Never stored.
 	CC_CONSENT_SEND,   // Send, now and from now on.
 	CC_CONSENT_NEVER,  // Delete everything pending, write nothing more.
 } cc_consent;
@@ -125,7 +126,8 @@ typedef struct cc_config
 	// Post one report. ANY reply from the server is the ack: return true. Return false only when nothing answered.
 	// NULL: reports stay on disk, never sent.
 	bool (*send)(void* udata, const char* report_path, const char* attachment_path);
-	// Ask the player once when no decision is stored. NULL: send without asking.
+	// Ask the player when no decision is stored: ONCE sends what is pending and asks again later, SEND and
+	// NEVER are remembered, ASK sends nothing now. NULL: send without asking.
 	cc_consent (*ask)(void* udata, int pending_count);
 	void (*on_crash)(void* udata); // Inside the handler, before the report is written: the last chance for cc_set. No heap, no locks.
 	void (*on_hang)(void* udata);  // On the watchdog thread after a hang report is written. Default: nothing; the game keeps waiting.
@@ -345,7 +347,8 @@ static void s_atomic_store64(volatile int64_t* p, int64_t v) { __atomic_store_n(
 // In CC_MODE_INPROCESS this is a static; in CC_MODE_WATCHER it is a file mapping both processes see.
 
 typedef struct cc_crumb { double t; char msg[CC_BREADCRUMB_BYTES]; } cc_crumb;
-typedef struct cc_thread_name { uint32_t tid; char name[32]; } cc_thread_name;
+typedef struct cc_thread_name { volatile uint32_t tid; char name[32]; } cc_thread_name; // tid 0: free; CC_TID_CLAIMED: being written.
+#define CC_TID_CLAIMED 0xffffffffu
 typedef struct cc_slot { volatile uint32_t seq; char key[CC_STATE_KEY]; char value[CC_STATE_VALUE]; } cc_slot;
 
 #define CC_CRASH_IDLE 0
@@ -368,7 +371,6 @@ typedef struct cc_shared
 	cc_crumb crumbs[CC_BREADCRUMBS];
 	cc_slot state[CC_STATE_SLOTS];
 	cc_thread_name threads[CC_MAX_THREADS];
-	volatile uint32_t thread_count;
 	volatile uint32_t crash_state;
 	uint32_t crash_tid;
 	uint32_t crash_kind;     // 1 exception, 2 abort-like (name in crash_name)
@@ -463,6 +465,7 @@ static struct
 	HANDLE main_thread;
 	HANDLE watchdog_thread;
 	HANDLE upload_thread;
+	DWORD fls_index;            // Per-thread exit callback (registry slot release). FLS_OUT_OF_INDEXES: none.
 	HMODULE dbghelp;
 	BOOL (WINAPI *MiniDumpWriteDump)(HANDLE, DWORD, HANDLE, MINIDUMP_TYPE, PMINIDUMP_EXCEPTION_INFORMATION, PMINIDUMP_USER_STREAM_INFORMATION, PMINIDUMP_CALLBACK_INFORMATION);
 	LPTOP_LEVEL_EXCEPTION_FILTER filter;
@@ -480,6 +483,8 @@ static struct
 	pthread_t watchdog_thread;
 	pthread_t upload_thread;
 	bool upload_thread_live;
+	pthread_key_t thread_key;   // Per-thread exit destructor (alternate stack and registry slot release).
+	bool thread_key_ok;
 	unsigned char* stack_copy;
 	size_t stack_copy_len;
 	int watch_pipe[2];
@@ -1083,24 +1088,39 @@ void cc_hang_resume(void)
 	s_atomic_store64(&s_cc.sh->heartbeat_ns, s_now_ns());
 }
 
+// The thread registry: CC_MAX_THREADS slots, reused. A slot is claimed by CAS (0 -> CLAIMED), named,
+// then published under its tid; a thread's exit clears it back to 0. Readers match on the tid
+// alone, so a slot cleared or claimed under them is simply a miss.
 static const char* s_thread_name(uint32_t tid)
 {
-	uint32_t n = s_atomic_load32(&s_cc.sh->thread_count);
-	for (uint32_t i = 0; i < n && i < CC_MAX_THREADS; ++i) if (s_cc.sh->threads[i].tid == tid) return s_cc.sh->threads[i].name;
+	for (uint32_t i = 0; i < CC_MAX_THREADS; ++i) {
+		if (s_atomic_load32(&s_cc.sh->threads[i].tid) == tid) return s_cc.sh->threads[i].name;
+	}
 	return "";
 }
 
 static void s_thread_register(const char* name)
 {
 	uint32_t tid = s_current_tid();
-	uint32_t n = s_atomic_load32(&s_cc.sh->thread_count);
-	for (uint32_t i = 0; i < n && i < CC_MAX_THREADS; ++i) {
-		if (s_cc.sh->threads[i].tid == tid) { s_strcpy(s_cc.sh->threads[i].name, 32, name ? name : ""); return; }
+	for (uint32_t i = 0; i < CC_MAX_THREADS; ++i) {
+		if (s_atomic_load32(&s_cc.sh->threads[i].tid) == tid) { s_strcpy(s_cc.sh->threads[i].name, 32, name ? name : ""); return; }
 	}
-	uint32_t i = s_atomic_inc32(&s_cc.sh->thread_count);
-	if (i >= CC_MAX_THREADS) return;
-	s_strcpy(s_cc.sh->threads[i].name, 32, name ? name : "");
-	s_cc.sh->threads[i].tid = tid;
+	for (uint32_t i = 0; i < CC_MAX_THREADS; ++i) {
+		if (!s_atomic_cas32(&s_cc.sh->threads[i].tid, 0, CC_TID_CLAIMED)) continue;
+		s_strcpy(s_cc.sh->threads[i].name, 32, name ? name : "");
+		s_atomic_store32(&s_cc.sh->threads[i].tid, tid);
+		return;
+	}
+}
+
+static void s_thread_unregister(uint32_t tid)
+{
+	for (uint32_t i = 0; i < CC_MAX_THREADS; ++i) {
+		if (s_atomic_load32(&s_cc.sh->threads[i].tid) != tid) continue;
+		s_cc.sh->threads[i].name[0] = 0;
+		s_atomic_store32(&s_cc.sh->threads[i].tid, 0);
+		return;
+	}
 }
 
 // --- modules -------------------------------------------------------------------------------------
@@ -1692,6 +1712,9 @@ static void s_marker_write(void)
 static void s_spawn_uploader(void);
 static void s_exit_process(int code);
 static void s_sleep_ms(int ms);
+#if defined(_WIN32)
+static void WINAPI s_thread_exit_cb(PVOID p);
+#endif
 
 // A reporter flag the child must not inherit: the count of arguments that follow it, or -1.
 static int s_own_flag_args(const char* arg)
@@ -1953,12 +1976,21 @@ static void s_install_handlers(void)
 	_set_purecall_handler(s_on_purecall);
 	_set_invalid_parameter_handler(s_on_invalid_parameter);
 	DuplicateHandle(GetCurrentProcess(), GetCurrentThread(), GetCurrentProcess(), &s_cc.main_thread, THREAD_SUSPEND_RESUME | THREAD_GET_CONTEXT | THREAD_QUERY_INFORMATION, FALSE, 0);
+	s_cc.fls_index = FlsAlloc(s_thread_exit_cb); // Declared above the handlers, defined with the attach below.
+}
+
+// Thread exit, through fiber-local storage: the registry slot goes back. The guarantee needs nothing.
+static void WINAPI s_thread_exit_cb(PVOID p)
+{
+	(void)p;
+	if (s_cc.sh) s_thread_unregister(s_current_tid());
 }
 
 static void s_attach_thread_platform(void)
 {
 	ULONG size = 64 * 1024;
 	SetThreadStackGuarantee(&size);
+	if (s_cc.fls_index != FLS_OUT_OF_INDEXES) FlsSetValue(s_cc.fls_index, (PVOID)1);
 }
 
 // The report directory, quoted for a command line: without its trailing separator, which a
@@ -2140,9 +2172,10 @@ static void s_install_terminate(void) { std::set_terminate(s_on_terminate); }
 #endif
 extern char** environ;
 
-typedef struct cc_thread_stack { uint32_t tid; uintptr_t lo, hi; } cc_thread_stack;
+// Per attached thread: its stack bounds for the raw copy and its alternate signal stack, which its
+// exit gives back. Slots reuse the registry's rule: tid 0 free, CLAIMED while written.
+typedef struct cc_thread_stack { volatile uint32_t tid; uintptr_t lo, hi; void* alt; } cc_thread_stack;
 static cc_thread_stack s_thread_stacks[CC_MAX_THREADS];
-static volatile uint32_t s_thread_stack_count;
 static int64_t s_modules_refreshed_ns;
 
 static const char* s_signal_name(int sig)
@@ -2225,10 +2258,9 @@ static size_t s_copy_stack(uintptr_t sp)
 {
 	if (!s_cc.stack_copy || !sp) return 0;
 	uint32_t tid = s_current_tid();
-	uint32_t n = s_atomic_load32(&s_thread_stack_count);
-	for (uint32_t i = 0; i < n && i < CC_MAX_THREADS; ++i) {
+	for (uint32_t i = 0; i < CC_MAX_THREADS; ++i) {
 		const cc_thread_stack* t = &s_thread_stacks[i];
-		if (t->tid != tid || sp < t->lo || sp >= t->hi) continue;
+		if (s_atomic_load32(&t->tid) != tid || sp < t->lo || sp >= t->hi) continue;
 		size_t len = (size_t)(t->hi - sp);
 		if (len > CC_STACK_BYTES) len = CC_STACK_BYTES;
 		memcpy(s_cc.stack_copy, (const void*)sp, len);
@@ -2342,7 +2374,32 @@ static void s_install_handlers(void)
 		backtrace(warm, 8);
 	}
 	s_cc.main_pthread = pthread_self();
+	s_cc.thread_key_ok = pthread_key_create(&s_cc.thread_key, s_thread_exit_cb) == 0;
 	s_cc.stack_copy = (unsigned char*)malloc(CC_STACK_BYTES);
+}
+
+// Unverified on this host: thread exit, through the key's destructor. The alternate stack is
+// disabled and freed, the slots go back. The main thread keeps its own for the process.
+static void s_thread_exit_cb(void* p)
+{
+	(void)p;
+	uint32_t tid = s_current_tid();
+	if (!s_cc.sh || tid == s_cc.sh->main_tid) return;
+	for (uint32_t i = 0; i < CC_MAX_THREADS; ++i) {
+		cc_thread_stack* t = &s_thread_stacks[i];
+		if (s_atomic_load32(&t->tid) != tid) continue;
+		stack_t off;
+		memset(&off, 0, sizeof(off));
+		off.ss_flags = SS_DISABLE;
+		sigaltstack(&off, NULL);
+		void* alt = t->alt;
+		t->alt = NULL;
+		t->lo = t->hi = 0;
+		s_atomic_store32(&t->tid, 0);
+		free(alt);
+		break;
+	}
+	s_thread_unregister(tid);
 }
 
 // Unverified on this host: an alternate stack, so a stack overflow still reports, and the thread's
@@ -2354,6 +2411,7 @@ static void s_attach_thread_platform(void)
 	ss.ss_size = 64 * 1024;
 	ss.ss_flags = 0;
 	if (ss.ss_sp) sigaltstack(&ss, NULL);
+	if (s_cc.thread_key_ok) pthread_setspecific(s_cc.thread_key, (void*)1);
 	uintptr_t lo = 0, hi = 0;
 #if defined(__APPLE__)
 	pthread_t self = pthread_self();
@@ -2368,8 +2426,16 @@ static void s_attach_thread_platform(void)
 		pthread_attr_destroy(&attr);
 	}
 #endif
-	uint32_t i = s_atomic_inc32(&s_thread_stack_count);
-	if (i < CC_MAX_THREADS) { s_thread_stacks[i].tid = s_current_tid(); s_thread_stacks[i].lo = lo; s_thread_stacks[i].hi = hi; }
+	for (uint32_t i = 0; i < CC_MAX_THREADS; ++i) {
+		if (!s_atomic_cas32(&s_thread_stacks[i].tid, 0, CC_TID_CLAIMED)) continue;
+		s_thread_stacks[i].lo = lo;
+		s_thread_stacks[i].hi = hi;
+		s_thread_stacks[i].alt = ss.ss_sp;
+		s_atomic_store32(&s_thread_stacks[i].tid, s_current_tid());
+		return;
+	}
+	free(ss.ss_sp); // No slot: the stack stays disabled for this thread, nothing leaks.
+	{ stack_t off; memset(&off, 0, sizeof(off)); off.ss_flags = SS_DISABLE; sigaltstack(&off, NULL); }
 }
 
 // <exe> <the game's own arguments> --cc-upload <dir>: the game's main builds the same config in
@@ -3045,7 +3111,7 @@ static void s_upload_flow(const char* dir, bool may_ask)
 		bool has_dump = s_file_exists(dump);
 		if (consent == CC_CONSENT_NEVER) { s_file_delete(path); if (has_dump) s_file_delete(dump); continue; }
 		s_resolve_report(path);
-		if (consent != CC_CONSENT_SEND || !s_cc.cfg.send) continue;
+		if ((consent != CC_CONSENT_SEND && consent != CC_CONSENT_ONCE) || !s_cc.cfg.send) continue;
 		if (s_cc.cfg.send(s_cc.cfg.udata, path, has_dump ? dump : NULL)) {
 			s_file_delete(path);
 			if (has_dump) s_file_delete(dump);

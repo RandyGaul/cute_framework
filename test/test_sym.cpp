@@ -126,7 +126,7 @@ TEST_CASE(test_sym_format_lookup)
 	return true;
 }
 
-#ifndef __EMSCRIPTEN__ // The web has no executable of its own to read; the format test above is the whole suite there.
+#ifdef CF_TEST_HAVE_SYMBOLS // Only with the tool on and debug info in this build; the format test above is the whole suite otherwise.
 // The function the self test looks up: a call inside it captures its own return address, which
 // is an address inside the body (a function pointer may be a linker thunk under incremental
 // linking), and the line it carries is the call's.
@@ -208,12 +208,12 @@ TEST_CASE(test_sym_self)
 	return true;
 }
 
-#endif // __EMSCRIPTEN__
+#endif // CF_TEST_HAVE_SYMBOLS
 
 TEST_SUITE(test_sym)
 {
 	RUN_TEST_CASE(test_sym_format_lookup);
-#ifndef __EMSCRIPTEN__
+#ifdef CF_TEST_HAVE_SYMBOLS
 	RUN_TEST_CASE(test_sym_self);
 #endif
 }
