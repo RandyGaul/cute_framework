@@ -2259,7 +2259,7 @@ static size_t s_copy_stack(uintptr_t sp)
 	if (!s_cc.stack_copy || !sp) return 0;
 	uint32_t tid = s_current_tid();
 	for (uint32_t i = 0; i < CC_MAX_THREADS; ++i) {
-		const cc_thread_stack* t = &s_thread_stacks[i];
+		cc_thread_stack* t = &s_thread_stacks[i];
 		if (s_atomic_load32(&t->tid) != tid || sp < t->lo || sp >= t->hi) continue;
 		size_t len = (size_t)(t->hi - sp);
 		if (len > CC_STACK_BYTES) len = CC_STACK_BYTES;
@@ -2355,6 +2355,7 @@ static bool s_debugger_present(void)
 #endif
 }
 
+static void s_thread_exit_cb(void* p); // The pthread key destructor, defined with the attach below.
 static void s_install_handlers(void)
 {
 	static const int sigs[] = { SIGSEGV, SIGBUS, SIGILL, SIGFPE, SIGABRT, SIGTRAP, SIGSYS };
