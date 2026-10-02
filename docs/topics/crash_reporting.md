@@ -51,6 +51,8 @@ Reports are POSTed as `multipart/form-data` with two parts: `report`, the JSON d
 
 The player is asked once before the first upload, with Send, Always send and Don't send, and the answer is remembered.
 
+[`tools/crashbox`](https://github.com/RandyGaul/cute_framework/tree/master/tools/crashbox) is such a server, the minimal one: a few hundred lines of Go with no dependencies, files on disk, a page of groups sorted by count, and size, rate and disk limits on by default. Its `tools/setup.sh` and `tools/deploy.sh` put it on a Linux box as a systemd service.
+
 ## Trying it
 
 The `crashme` sample crashes on request, by key or with `--cc-test null|overflow|abort|throw|thread|hang`, and prints the report it left at the next launch. `cute-sym print report.json` renders any report as text.
