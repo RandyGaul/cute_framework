@@ -3,6 +3,9 @@
 	Copyright (C) 2024 Randy Gaul https://randygaul.github.io/
 
 	This software is dual-licensed with zlib or Unlicense, check LICENSE.txt for more info
+
+	Crash reporting: the framework's face of cute_crash.h and cute_sym.h, which were originally
+	written by bullno1 as crash-where (https://github.com/bullno1/crash-where).
 */
 
 #ifndef CF_CRASH_H

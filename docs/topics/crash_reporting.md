@@ -2,7 +2,7 @@
 
 When a shipped game crashes, hangs, or quits without saying goodbye, CF can write a report of what happened and send it to you. A report holds the crashing thread's stack, every loaded module's build id, the fault, the machine, the game's own breadcrumbs and state, and on Windows a minidump that shows local variables in a debugger. It is a JSON file on disk first, uploaded later, so nothing fragile runs inside the crash.
 
-The reporter is [`cute_crash.h`](https://github.com/RandyGaul/cute_framework/blob/master/libraries/cute/cute_crash.h), a self-contained single-file library with no dependencies, and [`cute_sym.h`](https://github.com/RandyGaul/cute_framework/blob/master/libraries/cute/cute_sym.h), its symbol tool. CF wraps them as the `cf_crash_*` API. The design is bullno1's, from [crash-where](https://github.com/bullno1/crash-where).
+The reporter is [`cute_crash.h`](https://github.com/RandyGaul/cute_framework/blob/master/libraries/cute/cute_crash.h), a self-contained single-file library with no dependencies, and [`cute_sym.h`](https://github.com/RandyGaul/cute_framework/blob/master/libraries/cute/cute_sym.h), its symbol tool. CF wraps them as the `cf_crash_*` API. Both were originally written by bullno1 as [crash-where](https://github.com/bullno1/crash-where); CF's copies are that design carried into self-contained single headers.
 
 ## Turning it on
 

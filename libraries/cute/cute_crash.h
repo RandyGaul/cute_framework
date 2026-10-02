@@ -5,6 +5,9 @@
 
 	cute_crash.h - v0.01
 
+	Originally written by bullno1 as crash-where (https://github.com/bullno1/crash-where).
+	This is that design carried into a self-contained single header for Cute Framework.
+
 	To create implementation (the function definitions)
 		#define CUTE_CRASH_IMPLEMENTATION
 	in *one* C/CPP file (translation unit) that includes this file

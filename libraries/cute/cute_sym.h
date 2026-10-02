@@ -5,6 +5,10 @@
 
 	cute_sym.h - v0.01
 
+	Originally written by bullno1 as cwsym, the symbol tool of crash-where
+	(https://github.com/bullno1/crash-where). This is that design carried into a self-contained
+	single header for Cute Framework, with its own readers for PDB, DWARF and Mach-O.
+
 	To create implementation (the function definitions)
 		#define CUTE_SYM_IMPLEMENTATION
 	in *one* C/CPP file (translation unit) that includes this file

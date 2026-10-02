@@ -1,6 +1,7 @@
 # crashbox
 
-A crash report inbox for games built on Cute Framework's `cute_crash.h`. Reports arrive as the one
+A crash report inbox for games built on Cute Framework's `cute_crash.h` (originally written by bullno1 as
+[crash-where](https://github.com/bullno1/crash-where); crashbox is the smallest server that speaks its report). Reports arrive as the one
 POST the client already makes, land as files, and show up on a page grouped by signature with
 counts, users and versions. Standard library Go, one binary, no database.
 
