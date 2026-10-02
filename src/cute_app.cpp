@@ -23,6 +23,7 @@
 #include <internal/cute_aseprite_cache_internal.h>
 #include <internal/cute_imgui_internal.h>
 #include <internal/cute_binding_internal.h>
+#include <internal/cute_crash_internal.h>
 
 #include <scottt/debugbreak.h>
 
@@ -419,6 +420,7 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 		cf_fs_mount(cf_fs_get_base_directory(), "", true);
 	}
 
+	cf_crash_app_made_internal();
 	return cf_result_success();
 }
 
@@ -493,6 +495,7 @@ static void s_on_update(void* udata)
 
 void cf_app_update(CF_OnUpdateFn* on_update)
 {
+	cf_crash_app_update_internal();
 	if (s_draw) s_draw->defragged_this_frame = false; // New frame: the defrag latch re-arms.
 	if (app->gfx_enabled) {
 		if (app->using_imgui) {

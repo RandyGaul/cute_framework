@@ -70,6 +70,8 @@ TEST_SUITE(test_ckit);
 }
 TEST_SUITE(test_jpg);
 TEST_SUITE(test_dds);
+TEST_SUITE(test_sym);
+TEST_SUITE(test_crash);
 
 #include <SDL3/SDL.h>
 
@@ -148,6 +150,8 @@ int main(int argc, char* argv[])
 	RUN_TRACED(test_ckit);
 	RUN_TRACED(test_jpg);
 	RUN_TRACED(test_dds);
+	RUN_TRACED(test_sym);
+	RUN_TRACED(test_crash);
 	RUN_TRACED(test_video);
 #undef RUN_TRACED
 

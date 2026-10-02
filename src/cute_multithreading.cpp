@@ -7,6 +7,8 @@
 
 #include <cute_multithreading.h>
 #include <cute_alloc.h>
+#include <internal/cute_crash_internal.h>
+#include <stdio.h>
 
 #include <SDL3/SDL.h>
 
@@ -117,8 +119,32 @@ CF_Result cf_sem_value(CF_Semaphore* semaphore)
 	return result;
 }
 
+// A thread the crash reporter knows: attached on itself before the user's function runs, so a
+// stack overflow there is reported and the report names it.
+struct CF_CrashThreadWrap
+{
+	CF_ThreadFn* fn;
+	void* udata;
+	char name[64];
+};
+
+static int s_crash_thread_wrap(void* p)
+{
+	CF_CrashThreadWrap w = *(CF_CrashThreadWrap*)p;
+	cf_free(p);
+	cf_crash_thread_attach_internal(w.name);
+	return w.fn(w.udata);
+}
+
 CF_Thread* cf_thread_create(CF_ThreadFn func, const char* name, void* udata)
 {
+	if (cf_crash_active_internal()) {
+		CF_CrashThreadWrap* w = (CF_CrashThreadWrap*)cf_alloc(sizeof(CF_CrashThreadWrap));
+		w->fn = func;
+		w->udata = udata;
+		snprintf(w->name, sizeof(w->name), "%s", name ? name : "");
+		return cute_thread_create(s_crash_thread_wrap, name, w);
+	}
 	return cute_thread_create(func, name, udata);
 }
 
