@@ -13,64 +13,114 @@
 	in *one* C/CPP file (translation unit) that includes this file
 
 
-	SUMMARY:
+	SUMMARY
 
-		A crash reporter in a single header, for games. When the process crashes, hangs,
-		or vanishes without a clean exit, a report is written to disk: the stack of the
-		thread that died as module-relative addresses, every loaded module with its build
-		id, what the game said it was doing (breadcrumbs), what it said was true (state),
-		the machine, and on Windows a minidump holding every thread's stack and the
-		locals in it. At the next launch, or at once from a child process, the report is
-		symbolicated against a table beside or inside the executable (cute_sym.h makes
-		those) and handed to a callback to send wherever it should go. Any reply is the
-		ack.
-
-		Original author: bullno1 -- the design is crash-where's
-		(https://github.com/bullno1/crash-where): module-relative frames keyed by build
-		id, a symbol table made at build time, a watcher process that unwinds from
-		outside. This is a self-contained rewrite for Cute Framework by Randy Gaul, with
-		in-process capture as the default and the watcher as an option.
-
-		Platforms: Windows (x64, arm64, x86), macOS, Linux. Nothing is required of the
-		build: no frame pointers, no flags. No dependencies beyond libc and the OS.
-
-		What happens inside the crash: no heap, no locks, no stdio. Everything the
-		handler writes into was allocated by cc_init. The report is bytes in a buffer
-		written with one system call, and the process then ends. Symbolication, the
-		consent question, and the upload never run in the crashed process: they run at
-		the next cc_init, or in a child spawned from the handler with upload_on_crash,
-		or in the watcher.
-
-		A clean exit is the atexit hook (or cc_shutdown). A run that ends any other way
-		leaves the `running` marker behind, and the next cc_init reports it as
-		"abnormal_exit" with whatever state the marker held.
+		cute_crash.h is a crash reporter for games in a single header. When the game
+		crashes, hangs, or quits without a clean exit, a small report is written to disk:
+		the stack of the thread that died, what the game said it was doing, the machine
+		it ran on, and on Windows a minidump you can open in Visual Studio to see local
+		variables. On the next launch (or right away, if you like) the report is handed
+		to a callback of yours that sends it to your server.
 
 
-	USAGE:
+	WHY YOU WANT THIS
 
-		int main(int argc, char** argv)
-		{
-			cc_config cfg = cc_defaults();
-			cfg.version = "0.3.1";
-			cfg.send = my_post;        // bool (void* udata, const char* report_path, const char* dump_path)
-			cfg.hang_seconds = 20;
-			cc_init(cfg, argc, argv);  // Before anything that can crash. Handles --cc-upload and --cc-test itself.
+		Launch a game on Steam and a few thousand people run it on machines you have
+		never seen. Some of them crash. Almost none will tell you, and the ones who do
+		write "it crashed when I opened the map." A crash reporter turns that into a
+		stack trace with file and line numbers, the GPU and driver, the last things the
+		game logged, and a count: this crash, 312 times, 40 players, only on version
+		1.0.2. You fix the top of the list first, ship a patch, and watch the count stop.
 
-			while (running) {
-				cc_heartbeat();
-				cc_set("level", level_name);
-				cc_breadcrumb("turn %d", turn);
-				...
+
+	EXAMPLE
+
+		Call cc_init first thing in main, give it a version, and give it a way to send.
+
+			#define CUTE_CRASH_IMPLEMENTATION
+			#include "cute_crash.h"
+
+			// Send one report to your server. The dump is optional (NULL when absent).
+			// Return true if the server answered at all; false keeps the file for next time.
+			bool my_send(void* udata, const char* report_path, const char* dump_path)
+			{
+				return my_http_post_files("https://crash.example.com/v1/crash", report_path, dump_path);
 			}
-			return 0;                  // atexit marks the clean exit.
-		}
 
-		Reports live in cc_config.report_dir (default: the platform's per-user app data
-		under the app's name) as crash-<time>-<pid>.json plus crash-<time>-<pid>.dmp on
-		Windows. `cute_sym print report.json` renders one for a human.
+			int main(int argc, char** argv)
+			{
+				cc_config cfg = cc_defaults();
+				cfg.version = "1.0.2";
+				cfg.send = my_send;
+				cc_init(cfg, argc, argv);   // Before anything that can crash.
+
+				while (game_is_running()) {
+					cc_heartbeat();                     // Only needed for hang detection.
+					cc_set("level", level_name);        // What is true right now.
+					cc_breadcrumb("loaded %s", level);  // What just happened.
+					...
+				}
+				return 0;   // A normal return is a clean exit; nothing is reported.
+			}
+
+		That is all. Under a debugger, or with CC_DISABLE=1 set, cc_init does nothing so
+		your crashes still stop in the debugger.
+
+		Try it without writing a crash: run the game with `--cc-test null` (also
+		overflow, abort, throw, thread, hang). It crashes on purpose and leaves a report.
 
 
-	CUSTOMIZATION:
+	WHAT THE SERVER RECEIVES
+
+		One multipart/form-data POST per report with two parts: "report" (a JSON file)
+		and "crash.dmp" (the Windows minidump, when there is one). Your send callback
+		decides how to post it; any HTTP library will do. Cute Framework's cf_crash_init
+		already does this with cf_https, and tools/crashbox in Cute Framework is a
+		ready-made server that receives, groups and lists reports.
+
+
+	NAMES AND LINE NUMBERS
+
+		A report always has raw addresses. To turn them into function names and line
+		numbers, build a symbol table with cute_sym.h (the `cute_sym` tool) after you
+		link, from the build's debug info:
+
+			cute_sym game.exe --embed     put the table inside the exe (needs CUTE_CRASH_SYM_RESERVE)
+			cute_sym game.exe             or write game.exe.sym beside it
+
+		With a table present, reports are named and numbered before they are sent. With
+		none, keep a copy of each build's debug files and run `cute_sym resolve` on the
+		reports yourself. Keep the PDB of every build you ship either way: the minidump
+		needs it.
+
+
+	HOW IT WORKS
+
+		Inside a crash nothing is safe, so the crash handler does almost nothing: no
+		heap, no locks, no stdio, just bytes written into a buffer cc_init allocated, one
+		system call to save it, and exit. Everything else -- naming frames, asking the
+		player, uploading -- happens later in a healthy process: the next cc_init, a
+		child process spawned from the handler (upload_on_crash), or the optional
+		watcher process (CC_MODE_WATCHER).
+
+		A run that ends without reaching exit leaves a marker file behind, and the next
+		launch reports it as "abnormal_exit". A main thread that stops calling
+		cc_heartbeat for hang_seconds is reported as a "hang". cc_report writes a report
+		that is not a crash and returns.
+
+		Platforms: Windows (x64, arm64, x86), macOS, Linux. No build flags required. No
+		dependencies beyond libc and the OS. On the web every call is a no-op.
+
+
+	SPECIAL THANKS
+
+		Originally written by bullno1 as crash-where (https://github.com/bullno1/crash-where).
+		The design is his: module-relative frames keyed by build id, a symbol table made
+		at build time, a watcher process that unwinds from outside. This header carries
+		it into a self-contained single file, with in-process capture as the default.
+
+
+	CUSTOMIZATION
 
 		Define before including, in the implementation translation unit:
 

@@ -47,3 +47,23 @@ GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o build/crashbox-linux-amd64 .
 Cleaning up: once a bug is fixed, open its group and press **fixed: delete all N reports**. A crash at the
 same callstack afterwards starts a fresh group, so a regression is visible as a new row. Single reports
 have a delete link on the group page and a button on the report page. `max_age_days` handles the rest.
+
+## Keeping it running (systemd)
+
+Save as `/etc/systemd/system/crashbox.service`, with the paths where you put it:
+
+```
+[Unit]
+Description=crashbox
+After=network.target
+
+[Service]
+WorkingDirectory=/home/you/crashbox
+ExecStart=/home/you/crashbox/crashbox -config crashbox.conf
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Then `sudo systemctl enable --now crashbox`. Logs: `journalctl -u crashbox`.

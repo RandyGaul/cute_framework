@@ -1,58 +1,124 @@
 # Crash Reporting
 
-When a shipped game crashes, hangs, or quits without saying goodbye, CF can write a report of what happened and send it to you. A report holds the crashing thread's stack, every loaded module's build id, the fault, the machine, the game's own breadcrumbs and state, and on Windows a minidump that shows local variables in a debugger. It is a JSON file on disk first, uploaded later, so nothing fragile runs inside the crash.
+When your game crashes on a player's machine, CF can write down what happened and send it to you: the stack trace with file and line numbers, what the game was doing, and the player's OS, GPU and driver.
 
-The reporter is [`cute_crash.h`](https://github.com/RandyGaul/cute_framework/blob/master/libraries/cute/cute_crash.h), a self-contained single-file library with no dependencies, and [`cute_sym.h`](https://github.com/RandyGaul/cute_framework/blob/master/libraries/cute/cute_sym.h), its symbol tool. CF wraps them as the `cf_crash_*` API. Both were originally written by bullno1 as [crash-where](https://github.com/bullno1/crash-where); CF's copies are that design carried into self-contained single headers.
+## Why bother
 
-## Turning it on
+Ship a game on Steam and thousands of people run it on hardware you have never seen. Some of them will crash. Almost none will tell you, and the ones who do will say "it crashed when I opened the map."
 
-Two lines before the app exists:
+A crash reporter turns that into something you can fix. Every crash arrives with the exact line it happened on, and identical crashes are grouped and counted, so you see "this crash, 312 times, 40 players, only on version 1.0.2." You fix the biggest one first, ship a patch, and watch it stop coming in. The first week after launch is when this matters most.
+
+## Step 1: turn it on
+
+Add three lines at the top of `main`, before `cf_make_app`:
 
 ```cpp
 int main(int argc, char* argv[])
 {
 	CF_CrashConfig cc = cf_crash_defaults();
-	cc.version = "1.0.3";
-	cc.upload_url = "https://crash.example.com/v1/crash";
+	cc.version = "1.0.2";                                   // Your game's version.
+	cc.upload_url = "https://crash.example.com/v1/crash";   // Your server (step 4).
 	cf_crash_init(cc, argc, argv);
 
-	// ... cf_make_app and the game ...
+	cf_make_app(...);
+	// The rest of your game, unchanged.
 }
 ```
 
-That is a working reporter. Everything else is optional:
+From now on a crash writes a report to disk. The next time the player starts the game, they are asked once whether to send crash reports, and the report is uploaded.
 
-- [`cf_crash_breadcrumb`](../crash/function/cf_crash_breadcrumb.md) records a line of what the game is doing into a ring the report carries: a scene loaded, a player joined, a turn advanced. Cheap enough to call wherever you log.
-- [`cf_crash_set`](../crash/function/cf_crash_set.md) sets a key to a value: what is true right now, such as the map or the player count.
-- `hang_seconds` in [`CF_CrashConfig`](../crash/struct/cf_crashconfig.md) turns on a watchdog thread that samples the main thread when frames stop coming and writes a hang report. CF sends the heartbeat from `cf_app_update`; wrap long loads with [`cf_crash_hang_pause`](../crash/function/cf_crash_hang_pause.md).
-- `mode` chooses between catching the crash in-process (the default) and a watcher process that reports from outside. The watcher exits with the game and never respawns.
-- [`cf_crash_report`](../crash/function/cf_crash_report.md) writes a report that is not a crash: a message and the calling thread's stack, for a condition the game survived but wants to know about. A failed `CF_ASSERT` does this on its own: its expression, file and line go into the report, and if the assert handler returns instead of stopping, the assert becomes a report of its own.
+While you run the game under a debugger, the reporter stays off so crashes still stop in the debugger.
 
-Under a debugger, or with `CC_DISABLE=1` in the environment, the reporter installs nothing and your crashes break into the debugger as usual.
+## Step 2: get file and line numbers
 
-## Names and line numbers
-
-A report is written with raw addresses, relative to each module, plus the module's build id. Turning those into function names, files and lines needs a symbol table made from the build's debug info. CMake makes one for you:
+In your `CMakeLists.txt`, after `add_executable`:
 
 ```cmake
-cf_symbols(mygame EMBED)   # The table is patched into the executable itself. Nothing ships beside it.
-cf_symbols(mygame FILE)    # The table is written beside the executable as mygame.exe.sym.
+cf_symbols(mygame EMBED)
 ```
 
-`cf_symbols` turns on debug info for the target and for CF itself (a PDB on MSVC, `-g` elsewhere; the shipped code is unchanged) and runs `cute-sym` after every link. With a table present, reports are symbolicated on the player's machine before upload and arrive readable. A table holds names and lines only, not types or locals.
+This stores a small table of function names and line numbers inside your executable when it is built. Without it, reports still arrive, but show addresses like `mygame.exe+0x3b9d5` instead of `player.cpp:118`.
 
-If you would rather ship no symbols at all, skip `cf_symbols` and keep the tables and debug files from each build. Reports then arrive raw, and `cute-sym resolve report.json --symbols <dir>` decodes them on your machine with the same code. The minidump needs the full PDB either way; open it in Visual Studio with the symbol path pointing at the PDBs you kept.
+Also keep a copy of the `.pdb` file (Windows) or `.dSYM` folder (macOS) from every build you ship. You need it later to open a crash dump in a debugger.
 
-The tool reads PDBs, Mach-O debug maps and dSYMs, and ELF DWARF itself, with no dependency on the toolchain that made the binary.
+## Step 3: try it
 
-## The endpoint
+Run your game with `--cc-test null` on the command line. It crashes on purpose. Reports land in a folder per game:
 
-Reports are POSTed as `multipart/form-data` with two parts: `report`, the JSON document, and `crash.dmp`, the minidump when there is one. Any reply at all is the acknowledgment; the client deletes the report when the server answered and keeps it for the next launch when the connection failed. The simplest possible server is a script that writes the parts to disk. A fuller one symbolicates against tables by build id, stores the documents, and groups them by the `signature` field the report carries.
+| OS | Folder |
+|---|---|
+| Windows | `%LOCALAPPDATA%\mygame\crash\` |
+| macOS | `~/Library/Application Support/mygame/crash/` |
+| Linux | `~/.local/share/mygame/crash/` |
 
-The player is asked once before the first upload, with Send, Always send and Don't send, and the answer is remembered.
+Each report is a `.json` file, plus a `.dmp` on Windows. To read one as plain text:
 
-[`tools/crashbox`](https://github.com/RandyGaul/cute_framework/tree/master/tools/crashbox) is such a server, the minimal one: a few hundred lines of Go with no dependencies, files on disk, a page of groups sorted by count, and size, rate and disk limits on by default. Its `tools/setup.sh` and `tools/deploy.sh` put it on a Linux box as a systemd service.
+```
+cute-sym print crash-20261002-101500-1234.json
+```
 
-## Trying it
+`cute-sym` is built with CF. The `crashme` sample does the same thing with a menu of different crashes to try.
 
-The `crashme` sample crashes on request, by key or with `--cc-test null|overflow|abort|throw|thread|hang`, and prints the report it left at the next launch. `cute-sym print report.json` renders any report as text.
+## Step 4: a server to collect reports
+
+Reports need somewhere to go. CF comes with a small one, `tools/crashbox`, that receives reports and shows them on a web page, biggest crash at the top.
+
+You need a Linux server with a domain name pointing at it (any small VPS is enough). On that server:
+
+1. Install [Go](https://go.dev/doc/install) and [Caddy](https://caddyserver.com/docs/install). Caddy gives you HTTPS for free, which the game requires.
+2. Copy `tools/crashbox` from CF to the server and build it:
+   ```
+   cd crashbox
+   go build -o crashbox .
+   ```
+3. Create `crashbox.conf` next to it:
+   ```
+   addr = 127.0.0.1:8445
+   tls =
+   data = ./data
+   token = pick-a-long-random-string
+   user = admin
+   password = pick-a-password
+   max_age_days = 90
+   ```
+4. Create `/etc/caddy/Caddyfile` with your domain:
+   ```
+   crash.example.com {
+   	reverse_proxy 127.0.0.1:8445
+   }
+   ```
+   Then run `sudo systemctl reload caddy`.
+5. Start crashbox: `./crashbox -config crashbox.conf`. To keep it running after you log out, see the crashbox README.
+6. In your game, set the URL and the token from the config:
+   ```cpp
+   cc.upload_url = "https://crash.example.com/v1/crash";
+   cc.upload_token = "pick-a-long-random-string";
+   ```
+
+Open `https://crash.example.com/` in a browser and log in with the user and password from the config.
+
+Any other server works too, as long as it accepts a `multipart/form-data` POST with a `report` part (the JSON) and an optional `crash.dmp` part. Any reply counts as received.
+
+## Step 5: fix crashes
+
+On the crashbox page:
+
+- Each row is one crash location, with how many times it happened, to how many players, and on which versions.
+- Click a row to see the stack trace, and click a report for everything it holds.
+- On Windows, download the `.dmp`, open it in Visual Studio, and point Visual Studio at the `.pdb` you kept in step 2. You see the local variables at the moment of the crash.
+- When the fix has shipped, press **fixed: delete all reports**. If the crash comes back, it shows up as a new row.
+
+## Optional extras
+
+```cpp
+cf_crash_breadcrumb("loaded level %s", name);   // A log line carried in the report.
+cf_crash_set("level", name);                     // A value that is true right now.
+cc.hang_seconds = 20;                            // Report a game frozen for 20 seconds.
+cf_crash_report("inventory out of sync");        // Send a report without crashing.
+```
+
+A failed `CF_ASSERT` puts the assert's text into the report automatically.
+
+## Under the hood
+
+The reporter is two single-file libraries: [`cute_crash.h`](https://github.com/RandyGaul/cute_framework/blob/master/libraries/cute/cute_crash.h) catches crashes, and [`cute_sym.h`](https://github.com/RandyGaul/cute_framework/blob/master/libraries/cute/cute_sym.h) builds the symbol tables. Both work without the rest of CF. They were originally written by bullno1 as [crash-where](https://github.com/bullno1/crash-where).

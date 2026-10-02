@@ -17,7 +17,7 @@
 	defines main() as `return sym_main(argc, argv)`.
 
 
-	SUMMARY:
+	SUMMARY
 
 		The symbol side of crash reporting, the sibling of cute_crash.h. A game ships
 		with no debug information; its crash reports carry raw addresses as module +
@@ -40,11 +40,11 @@
 		No dependencies beyond libc. Valid C99 and C++.
 
 
-	USAGE:
+	USAGE
 
 		Build a table from a binary and its debug info, beside the binary:
 
-			cute_sym game.exe                     writes game.sym (reads game.pdb)
+			cute_sym game.exe                     writes game.exe.sym (reads game.pdb)
 			cute_sym game.exe --embed             patches the table into game.exe's slot
 			cute_sym game --debug game.dSYM/Contents/Resources/DWARF/game -o store/game.sym
 
