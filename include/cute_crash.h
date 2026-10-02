@@ -95,6 +95,9 @@ typedef struct CF_CrashConfig
 	/* @member Ask the player before sending, once, and remember the answer. Default true. */
 	bool ask_consent;
 
+	/* @member A failed `CF_ASSERT` records its expression, file and line (`state.assert`, and the last breadcrumb) before the assert handler runs; if the handler returns, the assert is written as a report of its own, with a stack. Default true. */
+	bool assert_reports;
+
 	/* @member Called inside the crash handler before the report is written: the last chance to call `cf_crash_set`. No allocation, no locks. */
 	void (*on_crash)(void* udata);
 
@@ -139,6 +142,17 @@ CF_API bool CF_CALL cf_crash_init(CF_CrashConfig config, int argc, char** argv);
  * @related  cf_crash_set cf_crash_init
  */
 CF_API void CF_CALL cf_crash_breadcrumb(const char* fmt, ...);
+
+/**
+ * @function cf_crash_report
+ * @category crash
+ * @brief    Writes a report now, with a message and the calling thread's stack, and returns: a report that is not a crash.
+ * @param    fmt        printf-style format of the message.
+ * @remarks  For a condition the game survived but wants a stack for: a failed assert in a build that does not stop on them, a state
+ *           that should not happen. Uploaded like any report. At most a handful per run, so a loop cannot flood the directory.
+ * @related  cf_crash_breadcrumb cf_crash_set cf_crash_init
+ */
+CF_API void CF_CALL cf_crash_report(const char* fmt, ...);
 
 /**
  * @function cf_crash_set

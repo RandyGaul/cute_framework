@@ -4574,7 +4574,7 @@ int sym_main(int argc, char** argv)
 	const char* cmd = argc > 1 ? argv[1] : NULL;
 	if (!cmd || strcmp(cmd, "-h") == 0 || strcmp(cmd, "--help") == 0) {
 		fprintf(stderr,
-			"cute_sym <binary> [--debug <path>] [-o <out.sym>] [--embed]   build a table (default: <binary>.sym beside it)\n"
+			"cute_sym <binary> [--debug <path>] [-o <out.sym>] [--embed] [--optional]   build a table (default: <binary>.sym beside it; --optional: no debug info is not an error)\n"
 			"cute_sym resolve <report.json> [--symbols <dir>]              symbolicate a report in place\n"
 			"cute_sym print <report.json>                                  render a report\n"
 			"cute_sym dump <table.sym | binary with a slot>                list a table\n");
@@ -4607,7 +4607,7 @@ int sym_main(int argc, char** argv)
 		const char* binary = cmd;
 		const char* debug = NULL;
 		const char* out = NULL;
-		bool embed = false;
+		bool embed = false, optional = false;
 		char path[2048];
 		sym_table t;
 		int i, rc = 0;
@@ -4615,9 +4615,10 @@ int sym_main(int argc, char** argv)
 			if (strcmp(argv[i], "--debug") == 0 && i + 1 < argc) debug = argv[++i];
 			else if (strcmp(argv[i], "-o") == 0 && i + 1 < argc) out = argv[++i];
 			else if (strcmp(argv[i], "--embed") == 0) embed = true;
+			else if (strcmp(argv[i], "--optional") == 0) optional = true; // No debug info is not a failure: a build step on a library that may lack it.
 			else { fprintf(stderr, "cute_sym: unknown argument %s\n", argv[i]); return 1; }
 		}
-		if (!sym_build(binary, debug, &t, s_cli_log, NULL)) return 1;
+		if (!sym_build(binary, debug, &t, s_cli_log, NULL)) return optional ? 0 : 1;
 		if (!out && !embed) { snprintf(path, sizeof(path), "%s.sym", binary); out = path; }
 		if (out && !sym_write(&t, out)) { fprintf(stderr, "cute_sym: cannot write %s\n", out); rc = 1; }
 		else if (out) fprintf(stderr, "cute_sym: wrote %s (%u functions, %u line rows, %u inline sites, %u bytes)\n", out, (unsigned)t.func_count, (unsigned)t.line_count, (unsigned)t.inline_count, (unsigned)t.len);

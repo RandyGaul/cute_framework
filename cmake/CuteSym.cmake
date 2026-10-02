@@ -14,6 +14,25 @@
 # resolves them later with `cute-sym resolve` and tables kept from the build.
 set(CF_SYM_SLOT_IN "${CMAKE_CURRENT_LIST_DIR}/cute_crash_slot.c.in")
 
+# For CF's own CMakeLists, where the cute target is made: a SHARED cute library gets a table beside it
+# after every link, so a frame inside CF resolves in shared builds too. The table only exists when the
+# library was built with debug info (cf_symbols on any target turns that on); otherwise the step is a
+# no-op, not an error.
+function(cf_symbols_cute)
+	if (NOT TARGET cute-sym OR EMSCRIPTEN)
+		return()
+	endif()
+	get_target_property(CUTE_TYPE cute TYPE)
+	if (NOT CUTE_TYPE STREQUAL "SHARED_LIBRARY")
+		return()
+	endif()
+	add_dependencies(cute cute-sym)
+	add_custom_command(TARGET cute POST_BUILD
+		COMMAND cute-sym "$<TARGET_FILE:cute>" -o "$<TARGET_FILE:cute>.sym" --optional
+		COMMENT "cute-sym: the cute library's symbol table, when it has debug info"
+		VERBATIM)
+endfunction()
+
 function(cf_symbols TARGET)
 	cmake_parse_arguments(ARG "EMBED;FILE" "RESERVE" "" ${ARGN})
 	if (NOT TARGET cute-sym)
@@ -40,6 +59,9 @@ function(cf_symbols TARGET)
 	endforeach()
 	if (MSVC)
 		target_link_options(${TARGET} PRIVATE /DEBUG:FULL)
+	endif()
+	if (TARGET cute AND MSVC)
+		target_link_options(cute PRIVATE /DEBUG:FULL)
 	endif()
 	add_dependencies(${TARGET} cute-sym)
 

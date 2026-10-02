@@ -477,6 +477,9 @@ if(NOT EMSCRIPTEN) # Emscripten provides it's own SDL3.
 endif()
 
 add_subdirectory(tools)
+if (CF_CUTE_SYM)
+	cf_symbols_cute()
+endif()
 
 # Some platform specific settings.
 if(MINGW)

@@ -26,6 +26,7 @@ That is a working reporter. Everything else is optional:
 - [`cf_crash_set`](../crash/function/cf_crash_set.md) sets a key to a value: what is true right now, such as the map or the player count.
 - `hang_seconds` in [`CF_CrashConfig`](../crash/struct/cf_crashconfig.md) turns on a watchdog thread that samples the main thread when frames stop coming and writes a hang report. CF sends the heartbeat from `cf_app_update`; wrap long loads with [`cf_crash_hang_pause`](../crash/function/cf_crash_hang_pause.md).
 - `mode` chooses between catching the crash in-process (the default) and a watcher process that reports from outside. The watcher exits with the game and never respawns.
+- [`cf_crash_report`](../crash/function/cf_crash_report.md) writes a report that is not a crash: a message and the calling thread's stack, for a condition the game survived but wants to know about. A failed `CF_ASSERT` does this on its own: its expression, file and line go into the report, and if the assert handler returns instead of stopping, the assert becomes a report of its own.
 
 Under a debugger, or with `CC_DISABLE=1` in the environment, the reporter installs nothing and your crashes break into the debugger as usual.
 

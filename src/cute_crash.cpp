@@ -39,6 +39,7 @@ static char s_host[256];
 static char s_uri[1024];
 static int s_port = 443;
 static char s_app_name[128] = "The game";
+static cf_assert_fn* s_prev_assert;
 
 // "https://host[:port]/path" into host, port, uri. Only https; a report never travels in the clear.
 static bool s_parse_url(const char* url)
@@ -82,6 +83,7 @@ static const char* s_file_name(const char* path)
 	return s ? s + 1 : path;
 }
 
+#ifndef CF_EMSCRIPTEN
 // One multipart POST: the report as "report", the attachment as "crash.dmp" when there is one.
 // Any reply at all is the ack; only a dead connection is a failure.
 static bool s_send(void* udata, const char* report_path, const char* attachment_path)
@@ -116,6 +118,9 @@ static bool s_send(void* udata, const char* report_path, const char* attachment_
 	cf_https_destroy(request);
 	return state == CF_HTTPS_RESULT_OK;
 }
+#else
+static bool s_send(void* udata, const char* report_path, const char* attachment_path) { (void)udata; (void)report_path; (void)attachment_path; return false; }
+#endif
 
 static cc_consent s_ask(void* udata, int pending_count)
 {
@@ -132,6 +137,22 @@ static cc_consent s_ask(void* udata, int pending_count)
 	return id == 0 ? CC_CONSENT_ASK : id == 1 ? CC_CONSENT_SEND : CC_CONSENT_NEVER;
 }
 
+// A failed assert is the message the crash is about: into the report, then on to whatever the
+// assert handler does (CF's default breaks, which the reporter catches like any crash).
+static void s_assert(bool expr, const char* message, const char* file, int line)
+{
+	if (!expr) {
+		char text[256];
+		snprintf(text, sizeof(text), "%s (%s:%d)", message, s_file_name(file), line);
+		cc_set("assert", text);
+		cc_breadcrumb("assert: %s", text);
+		if (s_prev_assert) s_prev_assert(expr, message, file, line);
+		cc_report(text); // The handler came back: the assert is a report of its own.
+		return;
+	}
+	if (s_prev_assert) s_prev_assert(expr, message, file, line);
+}
+
 CF_CrashConfig cf_crash_defaults()
 {
 	CF_CrashConfig c = { 0 };
@@ -140,6 +161,7 @@ CF_CrashConfig cf_crash_defaults()
 	c.minidump = d.minidump;
 	c.install_id = d.install_id;
 	c.ask_consent = true;
+	c.assert_reports = true;
 	return c;
 }
 
@@ -168,6 +190,10 @@ bool cf_crash_init(CF_CrashConfig config, int argc, char** argv)
 	c.on_hang = config.on_hang;
 	c.udata = config.udata;
 	s_active = cc_init(c, argc, argv);
+	if (s_active && config.assert_reports && g_assert_fn != s_assert) {
+		s_prev_assert = g_assert_fn;
+		cf_set_assert_handler(s_assert);
+	}
 	return s_active;
 }
 
@@ -180,6 +206,17 @@ void cf_crash_breadcrumb(const char* fmt, ...)
 	vsnprintf(buf, sizeof(buf), fmt, args);
 	va_end(args);
 	cc_breadcrumb("%s", buf);
+}
+
+void cf_crash_report(const char* fmt, ...)
+{
+	if (!s_active) return;
+	char buf[512];
+	va_list args;
+	va_start(args, fmt);
+	vsnprintf(buf, sizeof(buf), fmt, args);
+	va_end(args);
+	cc_report(buf);
 }
 
 void cf_crash_set(const char* key, const char* value)
@@ -221,6 +258,7 @@ void cf_crash_thread_attach_internal(const char* name)
 void cf_crash_app_made_internal()
 {
 	if (!s_active || !app) return;
+#ifndef CF_EMSCRIPTEN
 	if (app->gfx_enabled) {
 		cc_set("backend", cf_backend_type_to_string(app->gfx_backend_type));
 		SDL_GPUDevice* device = cf_sdlgpu_get_device();
@@ -232,6 +270,7 @@ void cf_crash_app_made_internal()
 			if (driver) cc_set("gpu_driver", driver);
 		}
 	}
+#endif
 	if (app->window) {
 		int w, h;
 		cf_app_get_size(&w, &h);

@@ -156,6 +156,9 @@ void cc_hang_resume(void);
 // The last CC_BREADCRUMBS lines, in the report. Any thread. Cheap: a formatted copy into a ring.
 void cc_breadcrumb(const char* fmt, ...);
 
+// A report that is not a crash: a failed assert the program survived, a condition worth a stack. Returns.
+void cc_report(const char* message);
+
 // What is true now, in the report. CC_STATE_SLOTS keys; a repeated key overwrites; NULL clears. Keys
 // "gpu", "gpu_driver", "backend", "display", "window", "fullscreen" also appear under "machine".
 void cc_set(const char* key, const char* value);
@@ -194,10 +197,28 @@ void cc_test_null_site(void);
 #if !defined(CUTE_CRASH_IMPLEMENTATION_ONCE)
 #define CUTE_CRASH_IMPLEMENTATION_ONCE
 
+// The sizes a user may set before including the implementation; the web stub needs them too.
+#if !defined(CC_REPORT_BYTES)
+#	define CC_REPORT_BYTES (256 * 1024)
+#endif
+#if !defined(CC_BREADCRUMBS)
+#	define CC_BREADCRUMBS 256
+#endif
+#if !defined(CC_BREADCRUMB_BYTES)
+#	define CC_BREADCRUMB_BYTES 160
+#endif
+#if !defined(CC_STATE_SLOTS)
+#	define CC_STATE_SLOTS 32
+#endif
+#if !defined(CC_STACK_BYTES)
+#	define CC_STACK_BYTES (64 * 1024)
+#endif
+
 #if defined(__EMSCRIPTEN__)
 // The web: no signals to catch, no process to spawn, no file to leave. Every call is a no-op and
 // cc_init says so by returning false; the browser's console is the crash report there.
 #include <stdarg.h>
+#include <string.h>
 cc_config cc_defaults(void) { cc_config c; memset(&c, 0, sizeof(c)); c.minidump = true; c.install_id = true; return c; }
 bool cc_init(cc_config config, int argc, char** argv) { (void)config; (void)argc; (void)argv; return false; }
 void cc_shutdown(void) {}
@@ -206,6 +227,7 @@ void cc_attach_thread(const char* name) { (void)name; }
 void cc_hang_pause(void) {}
 void cc_hang_resume(void) {}
 void cc_breadcrumb(const char* fmt, ...) { (void)fmt; }
+void cc_report(const char* message) { (void)message; }
 void cc_set(const char* key, const char* value) { (void)key; (void)value; }
 #else
 
@@ -383,6 +405,7 @@ typedef struct cc_fault
 	bool has_address;
 	uint32_t tid;
 	double hang_seconds;
+	const char* message;     // "report": what the program had to say.
 } cc_fault;
 
 static struct
@@ -1485,6 +1508,7 @@ static size_t s_write_report_json(const cc_fault* f, const uint64_t* pcs, int co
 	s_report_id(buf);
 	s_jw_kv_str(&w, "id", buf);
 	s_jw_kv_str(&w, "kind", f->kind);
+	if (f->message) s_jw_kv_str(&w, "message", f->message);
 	s_jw_kv_str(&w, "app", s_cc.app);
 	if (s_cc.version[0]) s_jw_kv_str(&w, "version", s_cc.version);
 	if (s_cc.build[0]) s_jw_kv_str(&w, "build", s_cc.build);
@@ -1512,7 +1536,7 @@ static size_t s_write_report_json(const cc_fault* f, const uint64_t* pcs, int co
 	}
 	s_jw_end_obj(&w);
 
-	if (!s_streq(f->kind, "abnormal_exit")) {
+	if (!s_streq(f->kind, "abnormal_exit") && !s_streq(f->kind, "report")) {
 		s_jw_key(&w, "fault");
 		s_jw_begin_obj(&w);
 		if (s_streq(f->kind, "hang")) {
@@ -1562,7 +1586,7 @@ static size_t s_write_report_json(const cc_fault* f, const uint64_t* pcs, int co
 	s_jw_begin_obj(&w);
 	{
 		char sig[41];
-		s_signature_raw(f->kind, f->name, pcs, pcs ? count : 0, sig);
+		s_signature_raw(f->kind, f->name ? f->name : f->message, pcs, pcs ? count : 0, sig);
 		s_jw_kv_str(&w, "raw", sig);
 	}
 	s_jw_end_obj(&w);
@@ -3124,6 +3148,69 @@ static void s_write_hang_report(const uint64_t* pcs, int count, double since)
 	if (s_cc.cfg.on_hang) s_cc.cfg.on_hang(s_cc.cfg.udata);
 	if (s_cc.cfg.upload_on_crash) s_spawn_uploader(); // A healthy process: the hang can go out now.
 	if (s_cc.exit_after_hang) { cc_shutdown(); s_exit_process(0); } // The test kind: a clean exit, marker and all.
+}
+
+// --- cc_report: a report from a healthy thread, which continues ---------------------------------
+
+#if !defined(CC_REPORTS_PER_RUN)
+#	define CC_REPORTS_PER_RUN 8
+#endif
+static volatile uint32_t s_reports_made;
+static volatile uint32_t s_report_guard; // Serializes the shared buffers; apart from the crash handlers' state word.
+
+// The caller's stack: this function and cc_report are the two frames on top, dropped.
+static CC_NOINLINE int s_self_frames(uint64_t* pcs, int cap)
+{
+	uint64_t raw[CC_MAX_FRAMES];
+	int n;
+#if defined(_WIN32)
+	CONTEXT ctx;
+	memset(&ctx, 0, sizeof(ctx));
+	RtlCaptureContext(&ctx);
+	n = s_walk_context(&ctx, raw, CC_MAX_FRAMES);
+#else
+	void* bt[CC_MAX_FRAMES];
+	n = backtrace(bt, CC_MAX_FRAMES);
+	for (int i = 0; i < n; ++i) raw[i] = (uint64_t)(uintptr_t)bt[i];
+#endif
+	int skip = n > 2 ? 2 : 0;
+	int out = 0;
+	for (int i = skip; i < n && out < cap; ++i) pcs[out++] = raw[i];
+	return out;
+}
+
+void cc_report(const char* message)
+{
+	if (!s_cc.enabled || s_cc.in_child || !message) return;
+	if (s_atomic_inc32(&s_reports_made) >= CC_REPORTS_PER_RUN) return;
+	if (s_atomic_load32(&s_cc.sh->crash_state) != CC_CRASH_IDLE) return;
+	if (!s_atomic_cas32(&s_report_guard, 0, 1)) return;
+	cc_fault f;
+	memset(&f, 0, sizeof(f));
+	f.kind = "report";
+	f.message = message;
+	f.tid = s_current_tid();
+	s_report_paths();
+	// Its own file per call: report-<stamp>-<n>-<pid>.json, the pid last as every report name has it.
+	{
+		char seq[24];
+		size_t n = s_strlen(s_cc.report_dir);
+		s_strcpy(s_cc.report_path + n, CC_PATH - n, "report-");
+		s_stamp_time(s_now_unix(), s_cc.report_path + n + 7);
+		s_strcat(s_cc.report_path, CC_PATH, "-");
+		s_utoa(s_atomic_load32(&s_reports_made), seq);
+		s_strcat(s_cc.report_path, CC_PATH, seq);
+		s_strcat(s_cc.report_path, CC_PATH, "-");
+		s_utoa(s_current_pid(), seq);
+		s_strcat(s_cc.report_path, CC_PATH, seq);
+		s_strcat(s_cc.report_path, CC_PATH, ".json");
+	}
+	s_modules_enumerate();
+	s_cc.has_dump = false;
+	int count = s_self_frames(s_cc.pcs, CC_MAX_FRAMES);
+	s_write_report(&f, s_cc.pcs, count, NULL, 0);
+	s_atomic_store32(&s_report_guard, 0);
+	if (s_cc.cfg.upload_on_crash) s_spawn_uploader();
 }
 
 static void s_watchdog_tick(void)

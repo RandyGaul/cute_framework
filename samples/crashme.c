@@ -36,6 +36,8 @@ static void s_crash(int kind)
 	case 3: abort(); break;
 	case 4: cf_thread_detach(cf_thread_create(s_worker, "worker", NULL)); break;
 	case 5: for (;;) cf_sleep(100); // No heartbeat: the watchdog reports a hang after hang_seconds.
+	case 6: { volatile int players = 9; CF_ASSERT(players <= 8); } break; // The assert's text rides in the report.
+	case 7: cf_crash_report("a report that is not a crash: key %d", kind); break; // A stack and a message; the game goes on.
 	default: break;
 	}
 }
@@ -73,7 +75,7 @@ int main(int argc, char* argv[])
 		++frame;
 		if (crash_on_frame && frame == 3) s_crash(crash_on_frame);
 		if (frames && frame >= frames) cf_app_signal_shutdown();
-		for (int k = 1; k <= 5; ++k) {
+		for (int k = 1; k <= 7; ++k) {
 			if (cf_key_just_pressed((CF_KeyButton)(CF_KEY_0 + k))) s_crash(k);
 		}
 		cf_push_font_size(18);
@@ -83,7 +85,9 @@ int main(int argc, char* argv[])
 		cf_draw_text("3  abort", cf_v2(-300, 10), -1);
 		cf_draw_text("4  crash on a worker thread", cf_v2(-300, -20), -1);
 		cf_draw_text("5  hang (reported after 5 s, the window stays dead)", cf_v2(-300, -50), -1);
-		cf_draw_text(active ? "reporter active" : "reporter inactive", cf_v2(-300, -100), -1);
+		cf_draw_text("6  failed CF_ASSERT", cf_v2(-300, -80), -1);
+		cf_draw_text("7  a report without a crash", cf_v2(-300, -110), -1);
+		cf_draw_text(active ? "reporter active" : "reporter inactive", cf_v2(-300, -140), -1);
 		cf_pop_font_size();
 		cf_app_draw_onto_screen(true);
 	}
