@@ -34,6 +34,9 @@ function(cf_symbols_cute)
 endfunction()
 
 function(cf_symbols TARGET)
+	if (EMSCRIPTEN)
+		return() # No native binary to read and no reporter on the web: nothing to do.
+	endif()
 	cmake_parse_arguments(ARG "EMBED;FILE" "RESERVE" "" ${ARGN})
 	if (NOT TARGET cute-sym)
 		message(FATAL_ERROR "cf_symbols(${TARGET}): the cute-sym target is missing; set CF_CUTE_SYM ON.")
