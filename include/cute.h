@@ -45,6 +45,7 @@
 #include "cute_map.h"
 #include "cute_haptics.h"
 #include "cute_https.h"
+#include "cute_crash.h"
 #include "cute_image.h"
 #include "cute_input.h"
 #include "cute_joypad.h"

@@ -130,6 +130,7 @@ nav:
       - Strings: topics/strings.md
       - Virtual File System: topics/virtual_file_system.md
       - HTTPS: topics/web.md
+      - Crash Reporting: topics/crash_reporting.md
   - Samples:
       - samples/index.md
       # Sample pages are generated with tools/generate_sample_pages.rb by reading this file
