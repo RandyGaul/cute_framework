@@ -95,7 +95,7 @@ typedef struct CF_CrashConfig
 	/* @member Ask the player before sending, once, and remember the answer. Default true. */
 	bool ask_consent;
 
-	/* @member A failed `CF_ASSERT` records its expression, file and line (`state.assert`, and the last breadcrumb) before the assert handler runs; if the handler returns, the assert is written as a report of its own, with a stack. Default true. */
+	/* @member A failed assert (the CF_ASSERT macro) records its expression, file and line (`state.assert`, and the last breadcrumb) before the assert handler runs; if the handler returns, the assert is written as a report of its own, with a stack. Default true. */
 	bool assert_reports;
 
 	/* @member Called inside the crash handler before the report is written: the last chance to call `cf_crash_set`. No allocation, no locks. */

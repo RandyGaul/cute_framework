@@ -1251,11 +1251,12 @@ static void s_cv_parse_c13(s_pdb* p, s_cv_module* m)
 					uint32_t next = code_size, last_v = v;
 					size_t j, last = i;
 					s_cv_row* r;
-					if (!(v & 0x80000000u)) continue; // Not a statement row.
+					// The statement bit is not a filter: clang-cl clears it on every row, dbghelp
+					// reads them all the same.
 					for (j = i + 1; j < nlines; ++j) {
 						uint32_t o = s_rd32(body + bpos + 12 + j * 8), vj = s_rd32(body + bpos + 12 + j * 8 + 4);
 						if (o > off) { next = o; break; }
-						if (vj & 0x80000000u) { last = j; last_v = vj; }
+						last = j; last_v = vj;
 					}
 					if (next < off) next = off;
 					m->rows = (s_cv_row*)s_grow(m->rows, &m->row_cap, m->row_count + 1, sizeof(s_cv_row));
@@ -2613,11 +2614,13 @@ static int s_dw_die_ranges(s_dw_ctx* ctx, const s_dw_cu* cu, const s_dw_val* low
 		if (!sec->data || at + cu->offset_size > sec->len) return 1;
 		s_dw_cur c = s_dw_cur_make(sec->data + at, cu->offset_size);
 		uint64_t rel = s_dw_sized(&c, cu->offset_size);
-		return s_dw_read_rnglist(ctx, cu, base + rel, out) || 1;
+		s_dw_read_rnglist(ctx, cu, base + rel, out); /* a damaged list leaves what was read; the DIE is still emitted */
+		return 1;
 	}
 	if (ranges->cls == S_DW_CLS_SEC_OFFSET || ranges->cls == S_DW_CLS_CONST) {
-		if (cu->version >= 5) return s_dw_read_rnglist(ctx, cu, ranges->u, out) || 1;
-		return s_dw_read_ranges_v4(ctx, cu, ranges->u, out) || 1;
+		if (cu->version >= 5) s_dw_read_rnglist(ctx, cu, ranges->u, out);
+		else s_dw_read_ranges_v4(ctx, cu, ranges->u, out);
+		return 1;
 	}
 	return 1;
 }
@@ -3117,7 +3120,7 @@ static int s_elf_parse(s_elf* e, const unsigned char* file, size_t len, sym_log_
 	}
 	if (shstrndx < shnum && e->sh[shstrndx].offset < len) {
 		const s_elf_shdr* st = &e->sh[shstrndx];
-		s_dw_sec strs = { file + st->offset, st->size > len - st->offset ? len - st->offset : (size_t)st->size };
+		s_dw_sec strs = { file + st->offset, st->size > len - st->offset ? (size_t)(len - st->offset) : (size_t)st->size };
 		for (int i = 0; i < shnum; ++i) {
 			const char* n = s_dw_str_at(&strs, (uint64_t)(uintptr_t)e->sh[i].name);
 			e->sh[i].name = n ? n : "";
