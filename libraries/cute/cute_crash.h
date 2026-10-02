@@ -194,6 +194,21 @@ void cc_test_null_site(void);
 #if !defined(CUTE_CRASH_IMPLEMENTATION_ONCE)
 #define CUTE_CRASH_IMPLEMENTATION_ONCE
 
+#if defined(__EMSCRIPTEN__)
+// The web: no signals to catch, no process to spawn, no file to leave. Every call is a no-op and
+// cc_init says so by returning false; the browser's console is the crash report there.
+#include <stdarg.h>
+cc_config cc_defaults(void) { cc_config c; memset(&c, 0, sizeof(c)); c.minidump = true; c.install_id = true; return c; }
+bool cc_init(cc_config config, int argc, char** argv) { (void)config; (void)argc; (void)argv; return false; }
+void cc_shutdown(void) {}
+void cc_heartbeat(void) {}
+void cc_attach_thread(const char* name) { (void)name; }
+void cc_hang_pause(void) {}
+void cc_hang_resume(void) {}
+void cc_breadcrumb(const char* fmt, ...) { (void)fmt; }
+void cc_set(const char* key, const char* value) { (void)key; (void)value; }
+#else
+
 #if !defined(CC_REPORT_BYTES)
 #	define CC_REPORT_BYTES (256 * 1024)
 #endif
@@ -1408,12 +1423,22 @@ static void s_report_id(char out[40])
 	out[o] = 0;
 }
 
-static void s_signature_raw(const char* name, const uint64_t* pcs, int count, char out[41])
+// Every report carries one: the kind, the fault's name, and the top frames as (build id, offset);
+// a report with no stack (abnormal_exit) is keyed by the main module's build id instead, so a
+// server can still group it by build.
+static void s_signature_raw(const char* kind, const char* name, const uint64_t* pcs, int count, char out[41])
 {
 	cc_sha1 h;
 	unsigned char d[20];
 	s_sha1_init(&h);
-	s_sha1_str(&h, name ? name : "");
+	s_sha1_str(&h, kind ? kind : "");
+	s_sha1_str(&h, "|");
+	if (name) { s_sha1_str(&h, name); s_sha1_str(&h, "|"); }
+	if (count == 0 && s_cc.module_count > 0) {
+		char hex[48];
+		s_hex_bytes(s_cc.modules[0].build_id, s_cc.modules[0].build_id_len, hex);
+		s_sha1_str(&h, hex);
+	}
 	int used = 0;
 	for (int i = 0; i < count && used < CC_SIGNATURE_FRAMES; ++i) {
 		int mi = s_module_of(pcs[i]);
@@ -1535,9 +1560,9 @@ static size_t s_write_report_json(const cc_fault* f, const uint64_t* pcs, int co
 
 	s_jw_key(&w, "signature");
 	s_jw_begin_obj(&w);
-	if (pcs) {
+	{
 		char sig[41];
-		s_signature_raw(f->name ? f->name : f->kind, pcs, count, sig);
+		s_signature_raw(f->kind, f->name, pcs, pcs ? count : 0, sig);
 		s_jw_kv_str(&w, "raw", sig);
 	}
 	s_jw_end_obj(&w);
@@ -3062,7 +3087,7 @@ static void s_report_abnormal_exit(void)
 	memset(&f, 0, sizeof(f));
 	f.kind = "abnormal_exit";
 	s_report_paths();
-	s_cc.module_count = 0;
+	s_modules_enumerate(); // This process is the same executable: its build ids key the report.
 	s_write_report(&f, NULL, 0, NULL, 0);
 	memset(s_cc.sh->state, 0, sizeof(s_cc.sh->state));
 	memset(s_cc.sh->crumbs, 0, sizeof(s_cc.sh->crumbs));
@@ -3097,6 +3122,7 @@ static void s_write_hang_report(const uint64_t* pcs, int count, double since)
 	s_atomic_store32(&s_cc.sh->crash_state, CC_CRASH_IDLE);
 	s_atomic_store32(&s_cc.hang_reported, 1);
 	if (s_cc.cfg.on_hang) s_cc.cfg.on_hang(s_cc.cfg.udata);
+	if (s_cc.cfg.upload_on_crash) s_spawn_uploader(); // A healthy process: the hang can go out now.
 	if (s_cc.exit_after_hang) { cc_shutdown(); s_exit_process(0); } // The test kind: a clean exit, marker and all.
 }
 
@@ -3712,7 +3738,7 @@ static void s_watcher_main(int argc, char** argv)
 				memset(&f, 0, sizeof(f));
 				f.kind = "abnormal_exit";
 				s_report_paths();
-				s_cc.module_count = 0;
+				s_modules_enumerate(); // The watcher is the same executable: its build ids key the report.
 				s_cc.has_dump = false;
 				s_write_report(&f, NULL, 0, NULL, 0);
 			}
@@ -3782,6 +3808,7 @@ static void s_watcher_main(int argc, char** argv)
 
 #endif
 
+#endif // __EMSCRIPTEN__
 #endif // CUTE_CRASH_IMPLEMENTATION_ONCE
 #endif // CUTE_CRASH_IMPLEMENTATION
 

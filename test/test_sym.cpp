@@ -8,7 +8,7 @@
 #include "test_harness.h"
 
 #include <cute_c_runtime.h>
-#include <cute_file_system.h>
+#include <SDL3/SDL.h>
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -169,8 +169,7 @@ static void s_log(void* udata, const char* msg) { (void)udata; printf("cute_sym:
 // function we can point at.
 TEST_CASE(test_sym_self)
 {
-	cf_fs_init(NULL);
-	const char* base = cf_fs_get_base_directory();
+	const char* base = SDL_GetBasePath(); // Not cf_fs: the suites share one app and its file system.
 	char path[1024];
 #ifdef _WIN32
 	snprintf(path, sizeof(path), "%s%s", base, "tests.exe");
@@ -179,7 +178,6 @@ TEST_CASE(test_sym_self)
 #endif
 	sym_table t;
 	bool built = sym_build(path, NULL, &t, s_log, NULL);
-	cf_fs_destroy();
 	REQUIRE(built);
 	REQUIRE(t.func_count > 100);
 	REQUIRE(t.line_count > 100);

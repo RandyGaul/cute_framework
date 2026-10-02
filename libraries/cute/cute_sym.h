@@ -3535,7 +3535,7 @@ static void s_macho_symtab_functions(const s_macho* m, sym_sink* sink)
 
 /* The debug map: per object file, the functions it holds with their linked addresses. */
 typedef struct s_macho_map_fn { const char* name; uint64_t linked, size; } s_macho_map_fn;
-typedef struct s_macho_map_obj { const char* path; s_macho_map_fn* fns; int fn_count, fn_cap; } s_macho_map_obj;
+typedef struct s_macho_map_obj { const char* path; uint64_t mtime; s_macho_map_fn* fns; int fn_count, fn_cap; } s_macho_map_obj;
 typedef struct s_macho_map { s_macho_map_obj* objs; int obj_count, obj_cap; } s_macho_map;
 
 #define S_MACHO_N_STAB 0xe0
@@ -3555,6 +3555,7 @@ static int s_macho_debug_map(const s_macho* m, s_macho_map* map)
 			cur = &map->objs[map->obj_count++];
 			memset(cur, 0, sizeof(*cur));
 			cur->path = s_macho_symname(m, s);
+			cur->mtime = s->value;
 		} else if (s->type == S_MACHO_N_SO) {
 			if (!s_macho_symname(m, s)[0]) cur = NULL;
 		} else if (s->type == S_MACHO_N_FUN && cur) {
@@ -3611,11 +3612,82 @@ static int s_macho_span_less(const void* a, const void* b)
 }
 
 /* Reads one object file of the debug map into the sink, rebased. */
+/* An archive member's bytes, by name, out of a `!<arch>` file: BSD long names (`#1/<len>`, the
+   name leading the data) and GNU ones (`/<offset>` into the `//` table); `/`, `//` and `__.SYMDEF`
+   members are tables, never objects. A member whose mtime disagrees with the debug map's is used
+   anyway, logged: the map is the authority on which member was linked. */
+static unsigned char* s_macho_archive_member(const char* archive, const char* member, uint64_t mtime, size_t* out_len, sym_log_fn log, void* udata)
+{
+	size_t len = 0;
+	unsigned char* ar = s_dw_read_file(archive, &len);
+	unsigned char* out = NULL;
+	if (!ar) { sym_logf(log, udata, "macho: archive %s not found", archive); return NULL; }
+	if (len < 8 || memcmp(ar, "!<arch>\n", 8) != 0) { sym_logf(log, udata, "macho: %s is not an archive", archive); free(ar); return NULL; }
+	const char* longnames = NULL; size_t longnames_len = 0;
+	size_t off = 8;
+	while (off + 60 <= len) {
+		const char* h = (const char*)ar + off;
+		char name[17], sizebuf[11], mtimebuf[13];
+		memcpy(name, h, 16); name[16] = 0;
+		memcpy(mtimebuf, h + 16, 12); mtimebuf[12] = 0;
+		memcpy(sizebuf, h + 48, 10); sizebuf[10] = 0;
+		if (h[58] != '`' || h[59] != '\n') break;
+		uint64_t size = strtoull(sizebuf, NULL, 10);
+		uint64_t member_mtime = strtoull(mtimebuf, NULL, 10);
+		size_t data = off + 60;
+		if (size > len - data) break;
+		const unsigned char* bytes = ar + data;
+		size_t bytes_len = (size_t)size;
+		char resolved[1024];
+		resolved[0] = 0;
+		int n = 15;
+		while (n >= 0 && name[n] == ' ') name[n--] = 0;
+		if (strncmp(name, "#1/", 3) == 0) {
+			size_t nl = (size_t)strtoull(name + 3, NULL, 10);
+			if (nl > bytes_len || nl >= sizeof(resolved)) break;
+			memcpy(resolved, bytes, nl); resolved[nl] = 0;
+			for (size_t k = nl; k > 0 && resolved[k - 1] == 0; --k) resolved[k - 1] = 0; /* NUL padding */
+			bytes += nl; bytes_len -= nl;
+		} else if (strcmp(name, "//") == 0) {
+			longnames = (const char*)bytes; longnames_len = bytes_len;
+		} else if (name[0] == '/' && name[1] >= '0' && name[1] <= '9' && longnames) {
+			size_t so = (size_t)strtoull(name + 1, NULL, 10);
+			size_t k = 0;
+			while (so + k < longnames_len && longnames[so + k] != '/' && longnames[so + k] != '\n' && k + 1 < sizeof(resolved)) { resolved[k] = longnames[so + k]; ++k; }
+			resolved[k] = 0;
+		} else {
+			size_t nl = strlen(name);
+			if (nl > 0 && name[nl - 1] == '/' && nl > 1) name[nl - 1] = 0; /* GNU short names end in `/` */
+			strcpy(resolved, name);
+		}
+		if (resolved[0] && strcmp(resolved, member) == 0 && strcmp(resolved, "/") != 0 && strncmp(resolved, "__.SYMDEF", 9) != 0) {
+			if (mtime && member_mtime && mtime != member_mtime) sym_logf(log, udata, "macho: %s(%s): the archive member's timestamp differs from the debug map's; used anyway", archive, member);
+			out = (unsigned char*)malloc(bytes_len + 1);
+			if (out) { memcpy(out, bytes, bytes_len); out[bytes_len] = 0; *out_len = bytes_len; }
+			break;
+		}
+		off = data + (size_t)size + ((size_t)size & 1);
+	}
+	if (!out) sym_logf(log, udata, "macho: %s has no member %s", archive, member);
+	free(ar);
+	return out;
+}
+
 static int s_macho_read_object(const s_macho_map_obj* obj, sym_sink* sink, sym_log_fn log, void* udata)
 {
-	if (strchr(obj->path, '(')) { sym_logf(log, udata, "macho: archive member %s is not supported; its functions are raw", obj->path); return 0; }
 	size_t len = 0;
-	unsigned char* file = s_dw_read_file(obj->path, &len);
+	unsigned char* file = NULL;
+	const char* paren = strchr(obj->path, '(');
+	if (paren && obj->path[strlen(obj->path) - 1] == ')') {
+		char archive[1024], member[256];
+		size_t al = (size_t)(paren - obj->path), ml = strlen(paren) - 2;
+		if (al >= sizeof(archive) || ml >= sizeof(member)) { sym_logf(log, udata, "macho: %s: path too long", obj->path); return 0; }
+		memcpy(archive, obj->path, al); archive[al] = 0;
+		memcpy(member, paren + 1, ml); member[ml] = 0;
+		file = s_macho_archive_member(archive, member, obj->mtime, &len, log, udata);
+	} else {
+		file = s_dw_read_file(obj->path, &len);
+	}
 	if (!file) { sym_logf(log, udata, "macho: object %s not found; its functions are raw", obj->path); return 0; }
 	s_macho m;
 	int ok = 0;

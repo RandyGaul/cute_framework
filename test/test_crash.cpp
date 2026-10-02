@@ -8,7 +8,6 @@
 #include "test_harness.h"
 
 #include <cute_c_runtime.h>
-#include <cute_file_system.h>
 #include <cute/cute_sym.h>
 #include <SDL3/SDL.h>
 #include <string.h>
@@ -24,17 +23,17 @@
 static char s_crashme[1024];
 static char s_dir[1024];
 
+// SDL's base path, not cf_fs: the suites share one app, and tearing the file system down here
+// would pull it out from under the tests that follow.
 static bool s_paths(const char* kind)
 {
-	cf_fs_init(NULL);
-	const char* base = cf_fs_get_base_directory();
+	const char* base = SDL_GetBasePath();
 #ifdef _WIN32
 	snprintf(s_crashme, sizeof(s_crashme), "%scrashme.exe", base);
 #else
 	snprintf(s_crashme, sizeof(s_crashme), "%scrashme", base);
 #endif
 	snprintf(s_dir, sizeof(s_dir), "%scrash_test_%s", base, kind);
-	cf_fs_destroy();
 	return true;
 }
 
