@@ -25,6 +25,7 @@ password =
 max_report_kb = 512       # a larger report is refused (413)
 max_dump_mb = 8           # a larger dump is refused (413)
 disk_mb = 2048            # total for data/; past it old dumps go first, then old reports; the newest of every group stays
+max_age_days = 0          # delete reports older than this, checked at start and hourly; 0 keeps them
 rate_ip_per_min = 10      # over the limit the server answers 200 and keeps nothing
 rate_install_per_day = 60
 ```
@@ -42,3 +43,7 @@ rate_install_per_day = 60
 go test ./...
 GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o build/crashbox-linux-amd64 .
 ```
+
+Cleaning up: once a bug is fixed, open its group and press **fixed: delete all N reports**. A crash at the
+same callstack afterwards starts a fresh group, so a regression is visible as a new row. Single reports
+have a delete link on the group page and a button on the report page. `max_age_days` handles the rest.

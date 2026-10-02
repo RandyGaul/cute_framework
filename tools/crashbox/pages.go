@@ -86,6 +86,22 @@ func (s *server) groupDelete(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
+// One report: back to its group if the group still has others, else to the list.
+func (s *server) reportDelete(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	back := "/"
+	s.mu.Lock()
+	if e := s.idx.get(id); e != nil {
+		key := e.Key
+		s.idx.remove(s.reportsDir(), e)
+		if s.idx.groups[key] != nil {
+			back = "/group/" + key
+		}
+	}
+	s.mu.Unlock()
+	http.Redirect(w, r, back, http.StatusSeeOther)
+}
+
 func (s *server) readReport(id string) *report {
 	b, err := os.ReadFile(filepath.Join(s.reportsDir(), id+".json"))
 	if err != nil {

@@ -16,6 +16,7 @@ form.inline { display: inline; }
 input[type=text] { background: #0f1115; color: #d6d6d6; border: 1px solid #2a2e36; padding: 4px 8px; font: inherit; }
 button { background: #2a2e36; color: #d6d6d6; border: 1px solid #3a3f4a; padding: 4px 10px; font: inherit; cursor: pointer; }
 h1 { font-size: 16px; margin: 0 0 16px; } h1 a { color: inherit; }
+form.inline{display:inline}button.link{background:none;border:none;color:inherit;opacity:.6;cursor:pointer;padding:0;font:inherit;text-decoration:underline}
 </style></head><body>
 <h1><a href="/">crashbox</a></h1>
 {{end}}
@@ -47,13 +48,15 @@ const groupPage = `{{template "head" .}}
 {{range .Reports}}<tr>
 <td class="dim">{{ago .Received}}</td><td>{{.Version}}</td><td>{{.OS}}</td><td class="dim">{{short .Install}}</td>
 <td class="title">{{.Where}}</td>
-<td><a href="/report/{{.ID}}">report</a> {{if .HasDump}}<a href="/report/{{.ID}}.dmp">dump</a>{{end}}</td>
+<td><a href="/report/{{.ID}}">report</a> {{if .HasDump}}<a href="/report/{{.ID}}.dmp">dump</a>{{end}}
+<form class="inline" method="post" action="/report/{{.ID}}/delete" onsubmit="return confirm('Delete this report?')"><button class="link">delete</button></form></td>
 </tr>{{end}}
 </table>
-<p><form method="post" action="/group/{{.G.Key}}/delete" onsubmit="return confirm('Delete this group and its {{.G.Count}} reports?')"><button>delete group</button></form></p>
+<p><form method="post" action="/group/{{.G.Key}}/delete" onsubmit="return confirm('Fixed? This deletes all {{.G.Count}} reports of this callstack. A new crash here starts a fresh group.')"><button>fixed: delete all {{.G.Count}} reports</button></form></p>
 {{template "foot" .}}`
 
 const reportPage = `{{template "head" .}}
 <p><b>{{.E.Title}}</b> <span class="dim">· {{.E.Kind}} · {{ago .E.Received}} · <a href="/group/{{.E.Key}}">group</a> · <a href="/report/{{.E.ID}}.json">json</a>{{if .E.HasDump}} · <a href="/report/{{.E.ID}}.dmp">dump</a>{{end}}</span></p>
 <pre>{{.Text}}</pre>
+<p><form method="post" action="/report/{{.E.ID}}/delete" onsubmit="return confirm('Delete this report?')"><button>delete this report</button></form></p>
 {{template "foot" .}}`

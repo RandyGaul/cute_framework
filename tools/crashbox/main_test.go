@@ -327,6 +327,56 @@ func TestDeleteAndRestart(t *testing.T) {
 	}
 }
 
+func TestDeleteReport(t *testing.T) {
+	s, ts := newTest(t, nil)
+	post(t, ts, "", fmt.Sprintf(resolvedReport, "a", "i"), []byte("d"))
+	post(t, ts, "", fmt.Sprintf(resolvedReport, "b", "k"), nil)
+	resp, err := http.Post(ts.URL+"/report/a/delete", "application/x-www-form-urlencoded", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if s.idx.get("a") != nil || s.idx.groups["b77c"].Count() != 1 || s.idx.groups["b77c"].Users() != 1 {
+		t.Fatal("report not removed from its group")
+	}
+	if _, err := os.Stat(filepath.Join(s.reportsDir(), "a.dmp")); err == nil {
+		t.Error("dump not deleted")
+	}
+	if !strings.HasSuffix(resp.Request.URL.Path, "/group/b77c") {
+		t.Errorf("redirect to %s, want the group", resp.Request.URL.Path)
+	}
+	resp, _ = http.Post(ts.URL+"/report/b/delete", "application/x-www-form-urlencoded", nil)
+	resp.Body.Close()
+	if len(s.idx.groups) != 0 || resp.Request.URL.Path != "/" {
+		t.Error("last report should take the group with it and land on the list")
+	}
+}
+
+func TestExpire(t *testing.T) {
+	s, ts := newTest(t, func(c *config) { c.MaxAgeDays = 30 })
+	post(t, ts, "", fmt.Sprintf(resolvedReport, "old", "i"), []byte("d"))
+	post(t, ts, "", fmt.Sprintf(resolvedReport, "new", "k"), nil)
+	s.mu.Lock()
+	s.idx.reports["old"].Received = time.Now().Add(-31 * 24 * time.Hour)
+	s.mu.Unlock()
+	if n := s.expire(); n != 1 {
+		t.Fatalf("expired %d, want 1", n)
+	}
+	if s.idx.get("old") != nil || s.idx.get("new") == nil {
+		t.Fatal("wrong report expired")
+	}
+	if _, err := os.Stat(filepath.Join(s.reportsDir(), "old.json")); err == nil {
+		t.Error("expired file still on disk")
+	}
+	s.cfg.MaxAgeDays = 0
+	s.mu.Lock()
+	s.idx.reports["new"].Received = time.Now().Add(-1000 * 24 * time.Hour)
+	s.mu.Unlock()
+	if s.expire() != 0 {
+		t.Error("max_age_days 0 must keep everything")
+	}
+}
+
 func TestConfig(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "c.conf")
 	os.WriteFile(path, []byte("addr = :1\n# comment\ntoken = abc # trailing\nmax_dump_mb = 3\n"), 0o644)

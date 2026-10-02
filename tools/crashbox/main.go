@@ -38,6 +38,7 @@ type config struct {
 	DiskMB            int64
 	RateIPPerMin      int
 	RateInstallPerDay int
+	MaxAgeDays        int64 // Reports older than this are deleted; 0 keeps them until the disk budget needs the room.
 }
 
 func defaultConfig() config {
@@ -110,6 +111,8 @@ func (c *config) set(k, v string) error {
 		return num(&c.MaxDumpMB)
 	case "disk_mb":
 		return num(&c.DiskMB)
+	case "max_age_days":
+		return num(&c.MaxAgeDays)
 	case "rate_ip_per_min":
 		var n int64
 		if err := num(&n); err != nil {
@@ -159,6 +162,7 @@ func (s *server) handler() http.Handler {
 	mux.HandleFunc("GET /{$}", s.auth(s.groupsPage))
 	mux.HandleFunc("GET /group/{key}", s.auth(s.groupPage))
 	mux.HandleFunc("POST /group/{key}/delete", s.auth(s.groupDelete))
+	mux.HandleFunc("POST /report/{id}/delete", s.auth(s.reportDelete))
 	mux.HandleFunc("GET /report/{id}", s.auth(s.reportPage))
 	return mux
 }
@@ -305,6 +309,29 @@ func (s *server) ingest(w http.ResponseWriter, r *http.Request) {
 
 func (s *server) reportsDir() string { return filepath.Join(s.cfg.Data, "reports") }
 
+// Deletes every report received more than max_age_days ago. Run at startup and hourly.
+func (s *server) expire() int {
+	if s.cfg.MaxAgeDays <= 0 {
+		return 0
+	}
+	cutoff := s.now().Add(-time.Duration(s.cfg.MaxAgeDays) * 24 * time.Hour)
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	var old []*entry
+	for _, e := range s.idx.reports {
+		if e.Received.Before(cutoff) {
+			old = append(old, e)
+		}
+	}
+	for _, e := range old {
+		s.idx.remove(s.reportsDir(), e)
+	}
+	if len(old) > 0 {
+		log.Printf("expire: %d reports older than %d days", len(old), s.cfg.MaxAgeDays)
+	}
+	return len(old)
+}
+
 // Evicts until `need` more bytes fit under the budget: dumps first, oldest first, then the oldest
 // reports of the largest groups. The newest report of every group stays, dump included.
 // Returns false when even that leaves no room.
@@ -392,6 +419,12 @@ func main() {
 		ReadTimeout:       60 * time.Second,
 		WriteTimeout:      60 * time.Second,
 	}
+	s.expire()
+	go func() {
+		for range time.Tick(time.Hour) {
+			s.expire()
+		}
+	}()
 	log.Printf("crashbox: %d reports in %d groups, data %s, listening %s", len(s.idx.reports), len(s.idx.groups), cfg.Data, cfg.Addr)
 	if cfg.TLS != "" {
 		tc, err := tlsConfig(cfg.TLS)
