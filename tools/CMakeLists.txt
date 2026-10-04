@@ -51,6 +51,17 @@ if (CMAKE_CURRENT_SOURCE_DIR STREQUAL "${CMAKE_SOURCE_DIR}/tools")
 	endforeach()
 endif()
 
+# cute-sym, the crash reporter's symbol table tool (libraries/cute/cute_sym.h): reads a binary's
+# debug info (PDB, dSYM or debug map, ELF DWARF) into one `.sym` table, writes it beside the
+# binary or embeds it in the reserved slot, and resolves or prints reports. Plain C, no
+# dependencies; cf_symbols() in cmake/CuteSym.cmake runs it as a post-build step.
+if (CF_CUTE_SYM AND NOT EMSCRIPTEN AND NOT CMAKE_CROSSCOMPILING)
+	add_executable(cute-sym ${CMAKE_CURRENT_SOURCE_DIR}/cute_sym.c)
+	target_include_directories(cute-sym PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../libraries)
+	target_compile_definitions(cute-sym PRIVATE _CRT_SECURE_NO_WARNINGS)
+	set_target_properties(cute-sym PROPERTIES FOLDER "tools" RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+endif()
+
 # cute-shaderc, an offline shader compiler
 if (CF_CUTE_SHADERC)
 	set(CUTE_SHADERC_SRCS
