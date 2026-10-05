@@ -10,16 +10,129 @@
 
 #include <cute.h>
 #include <internal/cute_graphics_internal.h>
+#include <stdlib.h>
 
 using namespace Cute;
+
+#define W 64
+#define H 64
+
+static void s_draw_red(CF_Canvas canvas)
+{
+	cf_app_update(NULL);
+	cf_draw_push_color(cf_color_red());
+	cf_draw_box_fill(cf_make_aabb(cf_v2(-W, -H), cf_v2(W, H)), 0);
+	cf_draw_pop_color();
+	cf_render_to(canvas, true);
+	cf_app_draw_onto_screen(false);
+}
+
+static bool s_reads_red(CF_Canvas canvas)
+{
+	CF_Readback rb = cf_canvas_readback(canvas);
+	bool ready = false;
+	for (int i = 0; i < 100000 && !ready; ++i) ready = cf_readback_ready(rb);
+	CF_Pixel* px = (CF_Pixel*)cf_calloc(W * H * (int)sizeof(CF_Pixel), 1);
+	bool red = false;
+	if (ready && cf_readback_data(rb, px, W * H * (int)sizeof(CF_Pixel))) {
+		CF_Pixel c = px[(H / 2) * W + W / 2];
+		red = c.colors.r > 200 && c.colors.g < 60 && c.colors.b < 60;
+	}
+	cf_free(px);
+	cf_destroy_readback(rb);
+	return red;
+}
+
+// Readbacks the caller gives up on while their copy is still in flight. Private apps: the second
+// case tears its app down mid-readback.
+TEST_CASE(test_readback_destroyed_in_flight)
+{
+	if (!test_make_private_app(W, H)) return true;
+	TestPrivateAppGuard app_guard;
+
+	CF_Canvas canvas = cf_make_canvas(cf_canvas_defaults(W, H));
+	s_draw_red(canvas);
+	for (int i = 0; i < 8; ++i) cf_destroy_readback(cf_canvas_readback(canvas));
+	REQUIRE(s_reads_red(canvas));
+	cf_destroy_canvas(canvas);
+	return true;
+}
+
+// Tracks the allocations made while tracking is on, dropping each one as it is freed.
+static bool s_tracking;
+static void* s_tracked[1024];
+static int s_tracked_count;
+static bool s_tracked_overflow;
+
+static void s_track(void* p)
+{
+	if (!s_tracking || !p) return;
+	if (s_tracked_count < 1024) s_tracked[s_tracked_count++] = p;
+	else s_tracked_overflow = true;
+}
+
+static void s_untrack(void* p)
+{
+	for (int i = 0; i < s_tracked_count; ++i) {
+		if (s_tracked[i] == p) { s_tracked[i] = s_tracked[--s_tracked_count]; return; }
+	}
+}
+
+static void* s_track_alloc(size_t size, void* udata) { CF_UNUSED(udata); void* p = malloc(size); s_track(p); return p; }
+static void s_track_free(void* p, void* udata) { CF_UNUSED(udata); s_untrack(p); free(p); }
+static void* s_track_calloc(size_t size, size_t count, void* udata) { CF_UNUSED(udata); void* p = calloc(size, count); s_track(p); return p; }
+
+static void* s_track_realloc(void* p, size_t size, void* udata)
+{
+	CF_UNUSED(udata);
+	bool tracked = false;
+	for (int i = 0; i < s_tracked_count && p; ++i) tracked |= s_tracked[i] == p;
+	void* q = realloc(p, size);
+	if (q) {
+		s_untrack(p);
+		if (tracked) { bool on = s_tracking; s_tracking = true; s_track(q); s_tracking = on; }
+		else if (!p) s_track(q);
+	}
+	return q;
+}
+
+struct AllocatorRestoreGuard
+{
+	~AllocatorRestoreGuard() { s_tracking = false; cf_allocator_restore_default(); }
+};
+
+TEST_CASE(test_app_destroyed_with_readback_in_flight)
+{
+	CF_Allocator tracker = { NULL, s_track_alloc, s_track_free, s_track_calloc, s_track_realloc };
+	cf_allocator_override(tracker);
+	AllocatorRestoreGuard allocator_guard;
+	for (int round = 0; round < 2; ++round) {
+		bool webgpu = false;
+		{
+			if (!test_make_private_app(W, H)) return true;
+			TestPrivateAppGuard app_guard;
+			webgpu = cf_query_backend() == CF_BACKEND_TYPE_WEBGPU;
+			CF_Canvas canvas = cf_make_canvas(cf_canvas_defaults(W, H));
+			s_draw_red(canvas);
+			REQUIRE(round == 0 || s_reads_red(canvas));
+			s_tracked_count = 0;
+			s_tracked_overflow = false;
+			s_tracking = true;
+			// Never destroyed: the app's teardown owns readbacks still alive.
+			for (int i = 0; i < 4; ++i) cf_canvas_readback(canvas);
+			s_tracking = false;
+			cf_destroy_canvas(canvas);
+		}
+		REQUIRE(!s_tracked_overflow);
+		if (webgpu) REQUIRE(s_tracked_count == 0);
+	}
+	return true;
+}
 
 // A lost device stays lost and every frame after it is a no-op. The loss kills the app's
 // device for good, so this runs on a private app.
 
 #ifdef CF_WEBGPU
-
-#define W 64
-#define H 64
 
 static const char* s_vs =
 "layout (location = 0) in vec2 in_pos;\n"
@@ -214,6 +327,8 @@ TEST_CASE(test_device_loss_first_call_is_shader)
 
 TEST_SUITE(test_device_loss)
 {
+	RUN_TEST_CASE(test_readback_destroyed_in_flight);
+	RUN_TEST_CASE(test_app_destroyed_with_readback_in_flight);
 #ifdef CF_WEBGPU
 	RUN_TEST_CASE(test_device_loss_frames_are_no_ops);
 	RUN_TEST_CASE(test_device_loss_before_submit_bare_pass);

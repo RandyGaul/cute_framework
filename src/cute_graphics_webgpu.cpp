@@ -64,6 +64,7 @@ static const char* s_wgsl_src(const CF_ShaderBytecode& bc) { return bc.wgsl_src;
 #define CF_WGPU_MAX_BINDINGS (64)
 #define CF_WGPU_UNIFORM_ALIGN (256)
 #define CF_WGPU_STAGING_CHUNK (4 * 1024 * 1024)
+#define CF_WGPU_STAGING_MAX_PENDING 4 // Submitted chunks still remapping before an upload waits on one.
 
 // Anonymous: the other backends define structs of the same names, and their inline members
 // would otherwise collide across translation units.
@@ -467,6 +468,7 @@ static struct
 	Cute::Array<CF_WStagingChunk*> staging;         // Mapped, recording uploads this submission.
 	Cute::Array<CF_WStagingChunk*> staging_pending; // Submitted, remapping.
 	Cute::Array<CF_WStagingChunk*> staging_free;    // Mapped and ready for reuse.
+	Cute::Array<CF_ReadbackInternal*> readbacks;    // Alive until cf_destroy_readback or cleanup.
 	Cute::Array<CF_WSampler*> samplers; // Every sampler made, deduplicated by descriptor.
 	Cute::Array<CF_WBlitPipeline> blit_pipelines;
 	Cute::Array<CF_WDummyTexture> dummy_textures;
@@ -1222,7 +1224,7 @@ static void s_make_ring(int size)
 
 static void s_free_staging_chunk(CF_WStagingChunk* c)
 {
-	wgpuBufferRelease(c->buffer);
+	if (c->buffer) wgpuBufferRelease(c->buffer);
 	CF_FREE(c->cpu);
 	CF_FREE(c);
 }
@@ -1256,7 +1258,7 @@ static void s_submit()
 {
 	s_end_active_pass();
 	for (int i = 0; i < g.staging.count(); ++i) {
-		wgpuBufferUnmap(g.staging[i]->buffer);
+		if (g.staging[i]->buffer) wgpuBufferUnmap(g.staging[i]->buffer);
 	}
 	if (g.device_lost) {
 		// Nothing reaches a lost device; the recorded work is dropped.
@@ -1312,6 +1314,12 @@ static uint8_t* s_stage(int size, WGPUBuffer* buffer, uint64_t* offset)
 				s_process_events();
 				s_collect_staging();
 			}
+			// While the GPU is busy (browsers compiling startup pipelines), maps return late; making
+			// a fresh 4 MiB mapped chunk per upload instead exhausted the browser's GPU process.
+			if (!g.staging_free.count() && g.staging_pending.count() >= CF_WGPU_STAGING_MAX_PENDING && !g.device_lost) {
+				s_wait(&g.staging_pending[0]->map_done);
+				s_collect_staging();
+			}
 			if (g.staging_free.count()) chunk = g.staging_free.pop();
 		}
 		if (!chunk) {
@@ -1323,6 +1331,9 @@ static uint8_t* s_stage(int size, WGPUBuffer* buffer, uint64_t* offset)
 			chunk = (CF_WStagingChunk*)CF_CALLOC(sizeof(CF_WStagingChunk));
 			chunk->buffer = wgpuDeviceCreateBuffer(g.device, &desc);
 			chunk->size = chunk_size;
+			// The browser throws instead of mapping once its GPU process is gone, before the lost
+			// callback has run.
+			if (!chunk->buffer) s_mark_device_lost(s_sv("a mapped staging buffer could not be created"));
 			if (g.device_lost) {
 				// Mapping a buffer the lost device failed to make aborts the process in wgpu-native.
 				chunk->cpu = (uint8_t*)CF_ALLOC((size_t)chunk_size);
@@ -1395,6 +1406,7 @@ static void s_upload_buffer(WGPUBuffer dst, uint64_t dst_offset, const void* dat
 	CF_MEMCPY(p, data, size);
 	int padded = s_align(size, 4);
 	if (padded != size) CF_MEMSET(p + size, 0, padded - size);
+	if (!src) return;
 	wgpuCommandEncoderCopyBufferToBuffer(s_encoder(), src, src_offset, dst, dst_offset, (uint64_t)padded);
 }
 
@@ -2128,6 +2140,7 @@ static void s_upload_texture(CF_TextureInternal* t, const void* data, int size, 
 	for (int r = 0; r < bh; ++r) {
 		CF_MEMCPY(p + (size_t)r * pitch, (const uint8_t*)data + (size_t)r * row, row);
 	}
+	if (!src) return;
 	WGPUTexelCopyBufferInfo bi = WGPU_TEXEL_COPY_BUFFER_INFO_INIT;
 	bi.buffer = src;
 	bi.layout.offset = offset;
@@ -2531,6 +2544,7 @@ CF_Readback cf_webgpu_canvas_readback2(CF_Canvas canvas_handle, int index)
 	s_end_active_pass();
 	CF_WFormatInfo fi = s_format_info(t->format);
 	CF_ReadbackInternal* rb = (CF_ReadbackInternal*)CF_CALLOC(sizeof(CF_ReadbackInternal));
+	g.readbacks.add(rb);
 	rb->w = c->w;
 	rb->h = c->h;
 	rb->row_bytes = c->w * fi.block_bytes;
@@ -2607,14 +2621,23 @@ int cf_webgpu_readback_size(CF_Readback readback)
 	return rb ? rb->size : 0;
 }
 
-void cf_webgpu_destroy_readback(CF_Readback readback)
+// The map callback holds rb, so the map has to land before the free.
+static void s_free_readback(CF_ReadbackInternal* rb)
 {
-	CF_ReadbackInternal* rb = (CF_ReadbackInternal*)readback.id;
-	if (!rb) return;
 	s_wait(&rb->ready);
 	if (rb->mapped) wgpuBufferUnmap(rb->buffer);
 	if (rb->buffer) wgpuBufferRelease(rb->buffer);
 	CF_FREE(rb);
+}
+
+void cf_webgpu_destroy_readback(CF_Readback readback)
+{
+	CF_ReadbackInternal* rb = (CF_ReadbackInternal*)readback.id;
+	if (!rb) return;
+	for (int i = 0; i < g.readbacks.count(); ++i) {
+		if (g.readbacks[i] == rb) { g.readbacks.unordered_remove(i); break; }
+	}
+	s_free_readback(rb);
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -4019,7 +4042,10 @@ void cf_webgpu_cleanup()
 #ifndef CF_EMSCRIPTEN
 	if (g.device) wgpuDevicePoll(g.device, true, NULL);
 #endif
-	// Map callbacks hold chunk pointers, so every pending map has to land before the free.
+	// Map callbacks hold readback and chunk pointers, so every pending map has to land before the
+	// free, and before the instance goes: releasing it fires them with a cancel.
+	for (int i = 0; i < g.readbacks.count(); ++i) s_free_readback(g.readbacks[i]);
+	g.readbacks.clear();
 	for (int i = 0; i < g.staging_pending.count(); ++i) s_wait(&g.staging_pending[i]->map_done);
 	for (int i = 0; i < g.staging_pending.count(); ++i) s_free_staging_chunk(g.staging_pending[i]);
 	for (int i = 0; i < g.staging_free.count(); ++i) s_free_staging_chunk(g.staging_free[i]);
@@ -4060,6 +4086,7 @@ void cf_webgpu_cleanup()
 	g.staging.~Array();
 	g.staging_pending.~Array();
 	g.staging_free.~Array();
+	g.readbacks.~Array();
 	g.samplers.~Array();
 	g.blit_pipelines.~Array();
 	g.dummy_textures.~Array();

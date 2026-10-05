@@ -90,7 +90,9 @@ TEST_CASE(test_imgui_frame)
 	cf_gpu_sync();
 
 	REQUIRE(ImGui::GetDrawData()->TotalVtxCount > 0);
-	REQUIRE(s_imgui_textures_made());
+	// SDL_GPU skips ImGui while the window is minimized or has no swapchain image (hidden windows
+	// under xvfb), so only WebGPU, which this test exists for, must have rendered.
+	if (cf_query_backend() == CF_BACKEND_TYPE_WEBGPU) REQUIRE(s_imgui_textures_made());
 	REQUIRE(s_error_count() == errors_before);
 
 	cf_destroy_canvas(canvas);
