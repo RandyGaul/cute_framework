@@ -1,7 +1,17 @@
 name: Build
 
-# This workflow will work for pushes, pull requests, or a manual trigger (workflow_dispatch).
-on: [push, pull_request, workflow_dispatch]
+# Pushes to master, pull requests, or a manual trigger. Branch pushes run through their PR, so a
+# PR commit builds once instead of twice.
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+# A newer push to the same PR cancels the older run; master runs always finish.
+concurrency:
+  group: build-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   build:
