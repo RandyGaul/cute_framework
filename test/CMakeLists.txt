@@ -43,6 +43,8 @@ set(CF_TEST_SRCS
 	test_dds.cpp
 	test_sym.cpp
 	test_crash.cpp
+	test_imgui.cpp
+	test_device_loss.cpp
 	test_app_shared.cpp
 )
 set(CF_TEST_HDRS test_harness.h test_app_shared.h jpg_test_vectors.h)

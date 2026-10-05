@@ -286,6 +286,11 @@ void cf_webgpu_imgui_new_frame();
 void cf_webgpu_imgui_draw();
 void cf_webgpu_imgui_shutdown();
 
+// Test hooks. cf_webgpu_lose_device simulates a device loss; the app never recovers from it.
+bool cf_webgpu_device_is_lost();
+int cf_webgpu_error_count();
+void cf_webgpu_lose_device();
+
 #endif
 
 CF_Result cf_gles_init(bool debug);

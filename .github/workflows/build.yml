@@ -287,7 +287,9 @@ jobs:
     timeout-minutes: 20
 
     # The web build with CF_WEBGPU=ON carries both backends and picks WebGPU at runtime when the
-    # browser offers an adapter. This compiles that configuration (emdawnwebgpu port included).
+    # browser offers an adapter. This compiles that configuration (emdawnwebgpu port included),
+    # then loads samples/webgpu_smoke.c's page in headless Chrome twice: once with WebGPU, once
+    # without, where it must fall back to WebGL 2.
     steps:
       - uses: actions/checkout@master
 
@@ -315,6 +317,20 @@ jobs:
 
       - name: Build
         run: cmake --build build -j
+
+      # The runner has no GPU: WebGPU comes from Dawn's SwiftShader adapter over Vulkan, WebGL 2
+      # from ANGLE's SwiftShader. The page reports its backend, a readback pixel of the red box it
+      # draws, and every console error; tools/web_smoke.py fails on any mismatch or after 60s.
+      - name: Smoke test (WebGPU, headless Chrome)
+        run: >
+          python3 tools/web_smoke.py --browser google-chrome --dir build --expect CF_BACKEND_TYPE_WEBGPU --
+          --no-sandbox --enable-unsafe-webgpu --enable-features=Vulkan --use-vulkan=swiftshader --use-webgpu-adapter=swiftshader
+
+      # The only console error tolerated is CF's own note that it found no adapter.
+      - name: Smoke test (WebGPU disabled, WebGL 2 fallback)
+        run: >
+          python3 tools/web_smoke.py --browser google-chrome --dir build --expect CF_BACKEND_TYPE_GLES3 --allow "WebGPU: no adapter" --
+          --no-sandbox --disable-blink-features=WebGPU --use-angle=swiftshader --enable-unsafe-swiftshader
 
   webgpu-tests:
     name: "linux / webgpu (wgpu-native)"
@@ -372,3 +388,58 @@ jobs:
         env:
           CF_TEST_WEBGPU: "1"
           SDL_AUDIODRIVER: dummy
+
+  macos-webgpu-tests:
+    name: "macos / webgpu (wgpu-native, Metal)"
+    runs-on: macos-latest
+    timeout-minutes: 25
+    # macOS runners are scarce: manual runs only (Actions tab, Run workflow).
+    if: github.event_name == 'workflow_dispatch'
+
+    # wgpu-native over Metal through the SDL_Metal_CreateView surface path. Two suites are enough
+    # to create the surface, draw, present, and read back; the full suite runs on Linux.
+    steps:
+      - uses: actions/checkout@master
+
+      - uses: ./.github/actions/setup-cmake
+
+      - name: Setup CCache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: macos-webgpu
+
+      - name: Configure
+        run: >
+          cmake -B build -G Ninja
+          -DCMAKE_C_COMPILER_LAUNCHER=ccache
+          -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+          -DSDL_CCACHE=ON
+          -DCF_FRAMEWORK_STATIC=ON
+          -DCF_WEBGPU=ON
+
+      - name: Build
+        run: cmake --build build --target tests
+
+      # The release dylib's install name is @rpath/libwgpu_native.dylib, so the executable needs
+      # an LC_RPATH that reaches it; a missing one is a load failure, not a test failure.
+      - name: Check wgpu-native linkage
+        run: |
+          otool -L build/tests | grep -F "@rpath/libwgpu_native.dylib"
+          otool -l build/tests | grep -A2 LC_RPATH
+
+      - name: Tests (WebGPU over Metal)
+        run: |
+          status=0
+          ./build/tests test_canvas_clear test_draw3d > tests.log 2>&1 || status=$?
+          cat tests.log
+          if grep -q "WebGPU: no adapter" tests.log; then
+            echo "::error::wgpu-native found no Metal adapter on this runner image; this is the runner, not CF."
+            exit 1
+          fi
+          if ! grep -q "CF: WebGPU backend on" tests.log; then
+            echo "::error::The WebGPU backend never initialized; see the log above."
+            exit 1
+          fi
+          exit $status
+        env:
+          CF_TEST_WEBGPU: "1"

@@ -19,13 +19,31 @@ static bool s_fresh_mode()
 	return fresh && *fresh == '1';
 }
 
-bool test_make_app(int w, int h, int extra_options)
+int test_app_options(int extra_options)
 {
 	int options = CF_APP_OPTIONS_HIDDEN_BIT | CF_APP_OPTIONS_NO_AUDIO_BIT | extra_options;
 	const char* gles = getenv("CF_TEST_GLES");
 	if (gles && *gles == '1') options |= CF_APP_OPTIONS_GFX_OPENGL_BIT | CF_APP_OPTIONS_GFX_DEBUG_BIT;
 	const char* webgpu = getenv("CF_TEST_WEBGPU");
 	if (webgpu && *webgpu == '1') options |= CF_APP_OPTIONS_GFX_WEBGPU_BIT;
+	return options;
+}
+
+bool test_make_private_app(int w, int h, int extra_options)
+{
+	test_shutdown_shared_app();
+	cf_destroy_app();
+	return !cf_is_error(cf_make_app(NULL, 0, 0, 0, w, h, test_app_options(extra_options), NULL));
+}
+
+void test_destroy_private_app()
+{
+	cf_destroy_app();
+}
+
+bool test_make_app(int w, int h, int extra_options)
+{
+	int options = test_app_options(extra_options);
 
 	if (s_fresh_mode()) {
 		// A failed REQUIRE returns out of a test before its trailing test_destroy_app, and

@@ -73,6 +73,8 @@ TEST_SUITE(test_jpg);
 TEST_SUITE(test_dds);
 TEST_SUITE(test_sym);
 TEST_SUITE(test_crash);
+TEST_SUITE(test_imgui);
+TEST_SUITE(test_device_loss);
 
 #include <SDL3/SDL.h>
 
@@ -155,6 +157,9 @@ int main(int argc, char* argv[])
 	RUN_TRACED(test_sym);
 	RUN_TRACED(test_crash);
 	RUN_TRACED(test_video);
+	// Private apps from here on: each suite below leaves its app unfit to share.
+	RUN_TRACED(test_imgui);
+	RUN_TRACED(test_device_loss);
 #undef RUN_TRACED
 
 	test_shutdown_shared_app(); // The shared GPU app dies here so the leak checker sees a clean exit.

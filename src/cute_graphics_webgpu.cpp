@@ -352,6 +352,7 @@ struct CF_WStagingChunk
 {
 	WGPUBuffer buffer;
 	uint8_t* mapped;
+	uint8_t* cpu; // Stands in for the mapping once the device is lost.
 	uint64_t size;
 	uint64_t used;
 	volatile bool map_done;
@@ -412,6 +413,8 @@ static struct
 	bool adapter_formats;
 	bool bgra8_storage;
 	volatile bool device_lost;
+	bool lose_on_destroy; // Set by cf_webgpu_lose_device: Dawn's Destroyed is then a loss, not shutdown.
+	int error_count; // Uncaptured errors while the device is alive.
 
 	// Sample counts beyond the core 1 and 4 need the adapter-specific feature and a per-format
 	// probe, cached here.
@@ -515,6 +518,30 @@ static void s_print_sv(const char* prefix, WGPUStringView v)
 	}
 }
 
+// A lost device stays lost: CF stops issuing GPU work and frames become no-ops. Recovering would
+// mean recreating every resource, and switching to WebGL mid-run is out of scope.
+static void s_mark_device_lost(WGPUStringView message)
+{
+	if (g.device_lost) return;
+	g.device_lost = true;
+	s_print_sv("CF: the WebGPU device was lost; rendering stops for the rest of the run. Reason: ", message);
+}
+
+// wgpu-native reports most calls on a lost device as validation errors, never reaching the lost
+// callback. Missing the loss is fatal: wgpu-native aborts the process on a failed submit or map.
+static bool s_error_means_lost(WGPUStringView message)
+{
+#ifdef CF_EMSCRIPTEN
+	CF_UNUSED(message);
+	return false;
+#else
+	if (!message.data) return false;
+	String text;
+	text.append(message.data, message.data + (message.length == WGPU_STRLEN ? strlen(message.data) : message.length));
+	return text.contains("Parent device is lost");
+#endif
+}
+
 #ifndef CF_EMSCRIPTEN
 struct CF_WScope
 {
@@ -528,7 +555,8 @@ static void s_on_pop_scope(WGPUPopErrorScopeStatus status, WGPUErrorType type, W
 	CF_UNUSED(ud2);
 	CF_WScope* s = (CF_WScope*)ud1;
 	if (status == WGPUPopErrorScopeStatus_Success && type != WGPUErrorType_NoError) {
-		if (s->prefix) s_print_sv(s->prefix, message);
+		if (s_error_means_lost(message)) s_mark_device_lost(message);
+		else if (s->prefix && !g.device_lost) s_print_sv(s->prefix, message);
 		s->failed = true;
 	}
 	s->done = true;
@@ -1195,6 +1223,7 @@ static void s_make_ring(int size)
 static void s_free_staging_chunk(CF_WStagingChunk* c)
 {
 	wgpuBufferRelease(c->buffer);
+	CF_FREE(c->cpu);
 	CF_FREE(c);
 }
 
@@ -1294,7 +1323,13 @@ static uint8_t* s_stage(int size, WGPUBuffer* buffer, uint64_t* offset)
 			chunk = (CF_WStagingChunk*)CF_CALLOC(sizeof(CF_WStagingChunk));
 			chunk->buffer = wgpuDeviceCreateBuffer(g.device, &desc);
 			chunk->size = chunk_size;
-			chunk->mapped = (uint8_t*)wgpuBufferGetMappedRange(chunk->buffer, 0, (size_t)chunk_size);
+			if (g.device_lost) {
+				// Mapping a buffer the lost device failed to make aborts the process in wgpu-native.
+				chunk->cpu = (uint8_t*)CF_ALLOC((size_t)chunk_size);
+				chunk->mapped = chunk->cpu;
+			} else {
+				chunk->mapped = (uint8_t*)wgpuBufferGetMappedRange(chunk->buffer, 0, (size_t)chunk_size);
+			}
 		}
 		g.staging.add(chunk);
 	}
@@ -1398,20 +1433,26 @@ static void s_on_uncaptured_error(WGPUDevice const* device, WGPUErrorType type, 
 {
 	CF_UNUSED(device); CF_UNUSED(ud1); CF_UNUSED(ud2);
 	if (g.device_lost) return;
+	if (s_error_means_lost(message)) {
+		s_mark_device_lost(message);
+		return;
+	}
+	g.error_count++;
 	char prefix[64];
 	snprintf(prefix, sizeof(prefix), "WebGPU error (type %d): ", (int)type);
 	s_print_sv(prefix, message);
 }
 
-// A lost device stays lost: CF stops issuing GPU work and frames become no-ops. Recovering would
-// mean recreating every resource, and switching to WebGL mid-run is out of scope.
 static void s_on_device_lost(WGPUDevice const* device, WGPUDeviceLostReason reason, WGPUStringView message, void* ud1, void* ud2)
 {
 	CF_UNUSED(device); CF_UNUSED(ud1); CF_UNUSED(ud2);
-	if (reason == WGPUDeviceLostReason_Destroyed || reason == WGPUDeviceLostReason_CallbackCancelled) return;
-	if (g.device_lost) return;
-	g.device_lost = true;
-	s_print_sv("CF: the WebGPU device was lost; rendering stops for the rest of the run. Reason: ", message);
+	if (reason == WGPUDeviceLostReason_CallbackCancelled) return;
+	// wgpu-native reports every loss it does deliver as Destroyed. Dawn means it: CF dropping the
+	// device at shutdown.
+#ifdef CF_EMSCRIPTEN
+	if (reason == WGPUDeviceLostReason_Destroyed && !g.lose_on_destroy) return;
+#endif
+	s_mark_device_lost(message);
 }
 
 #ifndef CF_EMSCRIPTEN
@@ -2472,7 +2513,7 @@ static void s_on_map(WGPUMapAsyncStatus status, WGPUStringView message, void* ud
 	CF_UNUSED(ud2);
 	CF_ReadbackInternal* rb = (CF_ReadbackInternal*)ud1;
 	if (status != WGPUMapAsyncStatus_Success) {
-		s_print_sv("WebGPU: readback map failed: ", message);
+		if (!g.device_lost) s_print_sv("WebGPU: readback map failed: ", message);
 		rb->failed = true;
 	} else {
 		rb->mapped = true;
@@ -2483,7 +2524,7 @@ static void s_on_map(WGPUMapAsyncStatus status, WGPUStringView message, void* ud
 CF_Readback cf_webgpu_canvas_readback2(CF_Canvas canvas_handle, int index)
 {
 	CF_CanvasInternal* c = (CF_CanvasInternal*)canvas_handle.id;
-	if (!c || index < 0 || index >= (c->target_count > 1 ? c->target_count : 1) || g.device_lost) return { 0 };
+	if (!c || index < 0 || index >= (c->target_count > 1 ? c->target_count : 1)) return { 0 };
 	CF_Texture th = cf_webgpu_canvas_get_target2(canvas_handle, index);
 	CF_TextureInternal* t = (CF_TextureInternal*)th.id;
 	if (!t || c->attached_depth) return { 0 };
@@ -2495,6 +2536,14 @@ CF_Readback cf_webgpu_canvas_readback2(CF_Canvas canvas_handle, int index)
 	rb->row_bytes = c->w * fi.block_bytes;
 	rb->padded_row = s_align(rb->row_bytes, 256);
 	rb->size = rb->row_bytes * c->h;
+	if (g.device_lost) {
+		// Ready at once with no data, so a loop waiting on cf_readback_ready still ends.
+		rb->failed = true;
+		rb->ready = true;
+		CF_Readback result;
+		result.id = (uint64_t)(uintptr_t)rb;
+		return result;
+	}
 	WGPUBufferDescriptor bd = WGPU_BUFFER_DESCRIPTOR_INIT;
 	bd.usage = WGPUBufferUsage_MapRead | WGPUBufferUsage_CopyDst;
 	bd.size = (uint64_t)rb->padded_row * (uint64_t)c->h;
@@ -2564,7 +2613,7 @@ void cf_webgpu_destroy_readback(CF_Readback readback)
 	if (!rb) return;
 	s_wait(&rb->ready);
 	if (rb->mapped) wgpuBufferUnmap(rb->buffer);
-	wgpuBufferRelease(rb->buffer);
+	if (rb->buffer) wgpuBufferRelease(rb->buffer);
 	CF_FREE(rb);
 }
 
@@ -2788,7 +2837,7 @@ static WGPUShaderModule s_make_user_module(const char* wgsl, const char* kind)
 	WGPUShaderModule m = s_make_module(wgsl, kind);
 #ifndef CF_EMSCRIPTEN
 	if (!s_pop_validation_scope("WebGPU shader error: ")) {
-		fprintf(stderr, "---- WGSL (%s) ----\n%s\n----\n", kind, wgsl);
+		if (!g.device_lost) fprintf(stderr, "---- WGSL (%s) ----\n%s\n----\n", kind, wgsl);
 		if (m) wgpuShaderModuleRelease(m);
 		return NULL;
 	}
@@ -3894,6 +3943,25 @@ void cf_webgpu_gpu_sync()
 	cb.userdata1 = (void*)&done;
 	wgpuQueueOnSubmittedWorkDone(g.queue, cb);
 	s_wait(&done);
+}
+
+bool cf_webgpu_device_is_lost()
+{
+	return g.device_lost;
+}
+
+int cf_webgpu_error_count()
+{
+	return g.error_count;
+}
+
+// Loses the device the way a driver reset does: wgpu-native reports it to the lost callback
+// from the next call that fails on the device, not from here.
+void cf_webgpu_lose_device()
+{
+	if (!g.device || g.device_lost) return;
+	g.lose_on_destroy = true;
+	wgpuDeviceDestroy(g.device);
 }
 
 //--------------------------------------------------------------------------------------------------

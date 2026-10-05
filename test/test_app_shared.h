@@ -30,4 +30,19 @@ void test_destroy_app();
 
 void test_shutdown_shared_app();
 
+// The options every test app gets: hidden, no audio, plus the backend the environment picks.
+int test_app_options(int extra_options = 0);
+
+// For a test that leaves its app unfit to share (ImGui initialized, device lost): tears the
+// shared app down and makes a private one with the same effective options. The next
+// test_make_app boots a fresh shared app.
+bool test_make_private_app(int w, int h, int extra_options = 0);
+void test_destroy_private_app();
+
+// A failed REQUIRE returns early; this still destroys the private app.
+struct TestPrivateAppGuard
+{
+	~TestPrivateAppGuard() { test_destroy_private_app(); }
+};
+
 #endif // TEST_APP_SHARED_H
