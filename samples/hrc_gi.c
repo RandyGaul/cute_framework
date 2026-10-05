@@ -35,6 +35,7 @@
 //   HRC_BLUR=0|1        the paper's 1px cross blur over the fluence (default 1);
 //                       C toggles it at runtime
 //   HRC_SHOT=1          headless: render the starting scene, dump it, exit
+//   HRC_GLES=1          run on the GLES3 backend (compute emulated with draws)
 //   HRC_PERF=N          headless: time N frames (vsync off), print ms/frame, exit
 //   HRC_ZOOM_T=u        bloom only: pin the zoom phase to u in [0,1]
 //   HRC_TRACE_LEVELS=n  direct-trace levels before extend takes over (default 3)
@@ -1485,7 +1486,9 @@ int main(int argc, char* argv[])
 	world_h = view_h + 2 * g_pad;
 
 
-	cf_make_app("HRC GI", 0, 0, 0, view_w, view_h, CF_APP_OPTIONS_WINDOW_POS_CENTERED_BIT, argv[0]);
+	int app_options = CF_APP_OPTIONS_WINDOW_POS_CENTERED_BIT;
+	if (getenv("HRC_GLES")) app_options |= CF_APP_OPTIONS_GFX_OPENGL_BIT;
+	cf_make_app("HRC GI", 0, 0, 0, view_w, view_h, app_options, argv[0]);
 	cf_clear_color(0, 0, 0, 1);
 
 	{ const char* hs = getenv("HRC_SCALE"); if (hs) { int v = atoi(hs);

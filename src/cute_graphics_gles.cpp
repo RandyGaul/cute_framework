@@ -973,9 +973,10 @@ bool cf_gles_texture_supports_format(CF_PixelFormat format, CF_TextureUsageBits 
 	if (!info || info->internal_fmt == GL_NONE) return false;
 		uint32_t caps = info->caps;
 		if (!caps) return false;
-		if (usage & (CF_TEXTURE_USAGE_GRAPHICS_STORAGE_READ_BIT | CF_TEXTURE_USAGE_COMPUTE_STORAGE_READ_BIT | CF_TEXTURE_USAGE_COMPUTE_STORAGE_WRITE_BIT)) return false;
-		if ((usage & CF_TEXTURE_USAGE_SAMPLER_BIT) && !(caps & CF_GL_FMT_CAP_SAMPLE)) return false;
-		if ((usage & CF_TEXTURE_USAGE_COLOR_TARGET_BIT) && !(caps & CF_GL_FMT_CAP_COLOR)) return false;
+		if (usage & CF_TEXTURE_USAGE_GRAPHICS_STORAGE_READ_BIT) return false;
+		// Emulated compute reads storage images with texelFetch and writes them as render targets.
+		if ((usage & (CF_TEXTURE_USAGE_SAMPLER_BIT | CF_TEXTURE_USAGE_COMPUTE_STORAGE_READ_BIT)) && !(caps & CF_GL_FMT_CAP_SAMPLE)) return false;
+		if ((usage & (CF_TEXTURE_USAGE_COLOR_TARGET_BIT | CF_TEXTURE_USAGE_COMPUTE_STORAGE_WRITE_BIT)) && !(caps & CF_GL_FMT_CAP_COLOR)) return false;
 		if (usage & CF_TEXTURE_USAGE_DEPTH_STENCIL_TARGET_BIT) {
 		if (!info->is_depth) return false;
 		if (!(caps & CF_GL_FMT_CAP_DEPTH)) return false;
@@ -2001,13 +2002,6 @@ void cf_gles_shader_swap_contents(CF_Shader a, CF_Shader b)
 	CF_MEMCPY(pb, tmp, sizeof(tmp));
 }
 
-void cf_gles_compute_shader_swap_contents(CF_ComputeShader a, CF_ComputeShader b)
-{
-	// Compute shaders do not exist on the GLES backend.
-	CF_UNUSED(a);
-	CF_UNUSED(b);
-}
-
 bool cf_gles_shader_consumes_uniform(CF_Shader shader_handle, const char* interned_name)
 {
 	CF_GL_Shader* shader = (CF_GL_Shader*)(uintptr_t)shader_handle.id;
@@ -2572,21 +2566,6 @@ void cf_gles_set_sampler_override(void* sampler)
 	if (sampler) g_ctx.filter_override = (CF_Filter)((uintptr_t)sampler - 1);
 }
 
-//--------------------------------------------------------------------------------------------------
-// Compute stubs (not supported on GLES3).
-
-CF_ComputeShader cf_gles_make_compute_shader_from_bytecode(CF_ShaderBytecode bytecode)
-{
-	CF_UNUSED(bytecode);
-	CF_ComputeShader result = { 0 };
-	return result;
-}
-
-void cf_gles_destroy_compute_shader(CF_ComputeShader shader)
-{
-	CF_UNUSED(shader);
-}
-
 // GLES3 has no SSBOs, so CF_StorageBuffer is emulated as a 1024-wide RGBA32UI texture:
 // one texel per vec4, row-major (shader side indexes ivec2(i & 1023, i >> 10) -- see
 // s_inst_vs_access_gles in builtin_shaders.h). Slower than real storage buffers, which
@@ -2662,16 +2641,580 @@ void cf_gles_destroy_storage_buffer(CF_StorageBuffer buffer)
 	CF_FREE(b);
 }
 
-void cf_gles_dispatch_compute(CF_ComputeShader shader, CF_Material material, CF_ComputeDispatch dispatch)
+//--------------------------------------------------------------------------------------------------
+// Compute, emulated. GLES3/WebGL2 has no compute stage, so a dispatch of T invocations runs as
+// draws (see the compute paragraphs in cute_graphics.h for the user-facing limits):
+//
+//   CAPTURE: the compute shader, transpiled by cute_spirv into a fragment shader, runs one
+//   fragment per invocation over a W x H "invocation grid". Each write site of the source
+//   (an imageStore, an assignment into a storage buffer element) is numbered; a uniform picks
+//   the active site, whose write is captured into two outputs -- the value as raw words, and
+//   (x, y, first component, valid) of its destination texel -- instead of performed. One
+//   capture draw per site, each into its own scratch pair.
+//   SCATTER: per site, T points drawn into the destination texture (a storage image, or the
+//   RGBA32UI texture backing an emulated storage buffer); each point reads its invocation's
+//   captured target and lands on that texel, or clips away. A partial-texel buffer write
+//   (1 or 2 words) is drawn once per first-component class under a color mask.
+//
+// Every capture runs before any scatter, so all reads see the pre-dispatch contents, as with
+// real compute: no site sees another site's writes from the same dispatch.
+
+struct CF_GL_ComputeSite
 {
-	CF_UNUSED(shader);
-	CF_UNUSED(material);
-	CF_UNUSED(dispatch);
+	CF_ShaderWriteKind kind;
+	int words;
+	int dest_index; // Into the dispatch's rw_textures or rw_buffers.
+};
+
+struct CF_GL_ComputeResource
+{
+	GLint loc;      // The capture program's sampler for it, or -1 when the program never reads it.
+	bool readonly;
+	int index;      // Into the dispatch's ro_* or rw_* array.
+};
+
+struct CF_GL_ComputeShader
+{
+	GLuint program;
+	int local_size[3];
+	int num_sites;
+	CF_GL_ComputeSite* sites;
+	int num_buffers;                    // Rank order: readonly (set 0) then read-write (set 1), by binding.
+	CF_GL_ComputeResource* buffers;
+	int num_images;
+	CF_GL_ComputeResource* images;
+	int num_texture_bindings;
+	CF_GL_TextureBinding* texture_bindings;
+	CF_GL_ShaderInfo cs;
+	GLint loc_site, loc_groups, loc_grid_w;
+};
+
+struct CF_GL_ComputeScratch
+{
+	GLuint fbo = 0;
+	GLuint values = 0;  // RGBA32UI: the captured value, as raw 32-bit words.
+	GLuint targets = 0; // RGBA32I: (x, y, first component, valid).
+	int w = 0, h = 0;
+};
+
+static struct
+{
+	bool ready;
+	GLuint vao;            // Compute's own, empty: draws without attributes, the draw path's default VAO untouched.
+	GLuint dest_fbo;
+	GLuint nearest;        // A sampler object: texelFetch on integer textures wants a complete, unfiltered texture.
+	GLuint scatter[3];     // Destination type: 0 float, 1 uint, 2 int.
+	GLint scatter_loc_values[3], scatter_loc_targets[3], scatter_loc_grid_w[3], scatter_loc_component[3], scatter_loc_dest_size[3];
+	GLuint capture_vs;     // The full-screen triangle every capture program links.
+	int max_grid;
+	Cute::Array<CF_GL_ComputeScratch> scratch;
+} s_cs;
+
+static const char* s_cs_capture_vs =
+	"#version 300 es\n"
+	"void main() {\n"
+	"	vec2 p = vec2(float((gl_VertexID << 1) & 2), float(gl_VertexID & 2));\n"
+	"	gl_Position = vec4(p * 2.0 - 1.0, 0.0, 1.0);\n"
+	"}\n";
+
+static const char* s_cs_scatter_vs =
+	"#version 300 es\n"
+	"precision highp float; precision highp int; precision highp usampler2D; precision highp isampler2D;\n"
+	"uniform highp usampler2D u_cspv_values;\n"
+	"uniform highp isampler2D u_cspv_targets;\n"
+	"uniform int u_cspv_grid_w;\n"
+	"uniform int u_cspv_component;\n"
+	"uniform ivec2 u_cspv_dest_size;\n"
+	"flat out highp uvec4 v_value;\n"
+	"void main() {\n"
+	"	ivec2 p = ivec2(gl_VertexID % u_cspv_grid_w, gl_VertexID / u_cspv_grid_w);\n"
+	"	ivec4 t = texelFetch(u_cspv_targets, p, 0);\n"
+	"	v_value = texelFetch(u_cspv_values, p, 0);\n"
+	"	gl_PointSize = 1.0;\n"
+	"	if (t.w == 0 || t.z != u_cspv_component || t.x < 0 || t.y < 0 || t.x >= u_cspv_dest_size.x || t.y >= u_cspv_dest_size.y) {\n"
+	"		gl_Position = vec4(2.0, 2.0, 2.0, 1.0);\n"
+	"		return;\n"
+	"	}\n"
+	"	vec2 ndc = (vec2(t.xy) + 0.5) / vec2(u_cspv_dest_size) * 2.0 - 1.0;\n"
+	"	gl_Position = vec4(ndc, 0.0, 1.0);\n"
+	"}\n";
+
+static const char* s_cs_scatter_fs[3] = {
+	"#version 300 es\n"
+	"precision highp float; precision highp int;\n"
+	"flat in highp uvec4 v_value;\n"
+	"layout(location = 0) out highp vec4 o;\n"
+	"void main() { o = uintBitsToFloat(v_value); }\n",
+
+	"#version 300 es\n"
+	"precision highp float; precision highp int;\n"
+	"flat in highp uvec4 v_value;\n"
+	"layout(location = 0) out highp uvec4 o;\n"
+	"void main() { o = v_value; }\n",
+
+	"#version 300 es\n"
+	"precision highp float; precision highp int;\n"
+	"flat in highp uvec4 v_value;\n"
+	"layout(location = 0) out highp ivec4 o;\n"
+	"void main() { o = ivec4(v_value); }\n",
+};
+
+static GLuint s_cs_link(GLuint vs, const char* fs_src, int fs_len)
+{
+	GLuint fs = s_compile_shader(GL_FRAGMENT_SHADER, fs_src, fs_len);
+	GLint compiled = GL_FALSE;
+	glGetShaderiv(fs, GL_COMPILE_STATUS, &compiled);
+	if (!compiled) { glDeleteShader(fs); return 0; }
+	GLuint program = glCreateProgram();
+	glAttachShader(program, vs);
+	glAttachShader(program, fs);
+	glLinkProgram(program);
+	glDetachShader(program, vs);
+	glDetachShader(program, fs);
+	glDeleteShader(fs);
+	GLint ok = GL_FALSE;
+	glGetProgramiv(program, GL_LINK_STATUS, &ok);
+	if (!ok) {
+		char log[4096]; GLsizei len = 0;
+		glGetProgramInfoLog(program, sizeof(log), &len, log);
+		fprintf(stderr, "GLSL link error (compute):\n%.*s\n", (int)len, log);
+		glDeleteProgram(program);
+		return 0;
+	}
+	return program;
+}
+
+static bool s_cs_init()
+{
+	if (s_cs.ready) return true;
+	glGenVertexArrays(1, &s_cs.vao);
+	glGenFramebuffers(1, &s_cs.dest_fbo);
+	glGenSamplers(1, &s_cs.nearest);
+	glSamplerParameteri(s_cs.nearest, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glSamplerParameteri(s_cs.nearest, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glSamplerParameteri(s_cs.nearest, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glSamplerParameteri(s_cs.nearest, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	s_cs.capture_vs = s_compile_shader(GL_VERTEX_SHADER, s_cs_capture_vs, (int)CF_STRLEN(s_cs_capture_vs));
+	GLuint scatter_vs = s_compile_shader(GL_VERTEX_SHADER, s_cs_scatter_vs, (int)CF_STRLEN(s_cs_scatter_vs));
+	for (int i = 0; i < 3; ++i) {
+		s_cs.scatter[i] = s_cs_link(scatter_vs, s_cs_scatter_fs[i], (int)CF_STRLEN(s_cs_scatter_fs[i]));
+		if (!s_cs.scatter[i]) { glDeleteShader(scatter_vs); return false; }
+		s_cs.scatter_loc_values[i] = glGetUniformLocation(s_cs.scatter[i], "u_cspv_values");
+		s_cs.scatter_loc_targets[i] = glGetUniformLocation(s_cs.scatter[i], "u_cspv_targets");
+		s_cs.scatter_loc_grid_w[i] = glGetUniformLocation(s_cs.scatter[i], "u_cspv_grid_w");
+		s_cs.scatter_loc_component[i] = glGetUniformLocation(s_cs.scatter[i], "u_cspv_component");
+		s_cs.scatter_loc_dest_size[i] = glGetUniformLocation(s_cs.scatter[i], "u_cspv_dest_size");
+	}
+	glDeleteShader(scatter_vs);
+	GLint max_tex = 0, max_vp[2] = { 0, 0 };
+	glGetIntegerv(GL_MAX_TEXTURE_SIZE, &max_tex);
+	glGetIntegerv(GL_MAX_VIEWPORT_DIMS, max_vp);
+	int m = max_tex;
+	if (max_vp[0] < m) m = max_vp[0];
+	if (max_vp[1] < m) m = max_vp[1];
+	s_cs.max_grid = 1;
+	while (s_cs.max_grid * 2 <= m && s_cs.max_grid < 4096) s_cs.max_grid *= 2;
+	s_cs.ready = true;
+	CF_POLL_OPENGL_ERROR();
+	return true;
+}
+
+static GLuint s_cs_int_texture(GLenum internal_fmt, GLenum fmt, GLenum type, int w, int h)
+{
+	GLuint t = 0;
+	glGenTextures(1, &t);
+	glBindTexture(GL_TEXTURE_2D, t);
+	glTexImage2D(GL_TEXTURE_2D, 0, internal_fmt, w, h, 0, fmt, type, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	return t;
+}
+
+// Site k's scratch pair, at least w x h.
+static CF_GL_ComputeScratch* s_cs_scratch(int k, int w, int h)
+{
+	while (s_cs.scratch.count() <= k) s_cs.scratch.add(CF_GL_ComputeScratch());
+	CF_GL_ComputeScratch* s = &s_cs.scratch[k];
+	if (s->fbo && s->w >= w && s->h >= h) return s;
+	if (s->fbo) {
+		glDeleteFramebuffers(1, &s->fbo);
+		glDeleteTextures(1, &s->values);
+		glDeleteTextures(1, &s->targets);
+	}
+	int nw = s->w > w ? s->w : w, nh = s->h > h ? s->h : h;
+	glActiveTexture(GL_TEXTURE0);
+	s->values = s_cs_int_texture(GL_RGBA32UI, GL_RGBA_INTEGER, GL_UNSIGNED_INT, nw, nh);
+	s->targets = s_cs_int_texture(GL_RGBA32I, GL_RGBA_INTEGER, GL_INT, nw, nh);
+	glBindTexture(GL_TEXTURE_2D, 0);
+	glGenFramebuffers(1, &s->fbo);
+	glBindFramebuffer(GL_FRAMEBUFFER, s->fbo);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, s->values, 0);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, s->targets, 0);
+	GLenum bufs[2] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 };
+	glDrawBuffers(2, bufs);
+	s->w = nw;
+	s->h = nh;
+	return s;
+}
+
+static int s_cs_resource_cmp_key(const CF_ShaderResourceInfo* r) { return r->set * 4096 + r->binding; }
+
+// Resources of one class ordered as CF_ComputeDispatch's arrays order them: readonly (set 0)
+// before read-write (set 1), each by binding. `order` receives indices into `items`.
+static void s_cs_order(const CF_ShaderResourceInfo* items, int count, int* order)
+{
+	for (int i = 0; i < count; ++i) order[i] = i;
+	for (int i = 0; i < count; ++i) {
+		for (int j = i + 1; j < count; ++j) {
+			if (s_cs_resource_cmp_key(&items[order[j]]) < s_cs_resource_cmp_key(&items[order[i]])) {
+				int t = order[i]; order[i] = order[j]; order[j] = t;
+			}
+		}
+	}
+}
+
+CF_ComputeShader cf_gles_make_compute_shader_from_bytecode(CF_ShaderBytecode bytecode)
+{
+	CF_ComputeShader result = { 0 };
+	const CF_ShaderInfo* info = &bytecode.shader_info;
+	if (!bytecode.glsl300_src) {
+		fprintf(stderr, "Compute shader has no GLSL ES output; it cannot run on GLES3.\n");
+		return result;
+	}
+	if (!s_cs_init()) return result;
+	GLuint program = s_cs_link(s_cs.capture_vs, bytecode.glsl300_src, (int)bytecode.glsl300_src_size);
+	if (!program) return result;
+
+	CF_GL_ComputeShader* cs = (CF_GL_ComputeShader*)CF_CALLOC(sizeof(CF_GL_ComputeShader));
+	cs->program = program;
+	for (int i = 0; i < 3; ++i) cs->local_size[i] = info->local_size[i] > 0 ? info->local_size[i] : 1;
+	cs->loc_site = glGetUniformLocation(program, "u_cspv_site");
+	cs->loc_groups = glGetUniformLocation(program, "u_cspv_groups");
+	cs->loc_grid_w = glGetUniformLocation(program, "u_cspv_grid_w");
+
+	// Storage buffers, in rank order: the capture shader reads buffer r through u_cs_storage_<r>.
+	int nb = info->num_storage_buffer_infos;
+	int* border = (int*)CF_ALLOC(sizeof(int) * (nb > 0 ? nb : 1));
+	s_cs_order(info->storage_buffer_infos, nb, border);
+	cs->num_buffers = nb;
+	cs->buffers = (CF_GL_ComputeResource*)CF_CALLOC(sizeof(CF_GL_ComputeResource) * (nb > 0 ? nb : 1));
+	int ro_count = 0, rw_count = 0;
+	for (int r = 0; r < nb; ++r) {
+		const CF_ShaderResourceInfo* it = &info->storage_buffer_infos[border[r]];
+		char name[32];
+		snprintf(name, sizeof(name), "u_cs_storage_%d", r);
+		cs->buffers[r].loc = glGetUniformLocation(program, name);
+		cs->buffers[r].readonly = it->readonly;
+		cs->buffers[r].index = it->readonly ? ro_count++ : rw_count++;
+	}
+
+	// Storage images: read (imageLoad) through a sampler of the same name, when the program does.
+	int ni = info->num_storage_image_infos;
+	int* iorder = (int*)CF_ALLOC(sizeof(int) * (ni > 0 ? ni : 1));
+	s_cs_order(info->storage_image_infos, ni, iorder);
+	cs->num_images = ni;
+	cs->images = (CF_GL_ComputeResource*)CF_CALLOC(sizeof(CF_GL_ComputeResource) * (ni > 0 ? ni : 1));
+	int ro_img = 0, rw_img = 0;
+	for (int r = 0; r < ni; ++r) {
+		const CF_ShaderResourceInfo* it = &info->storage_image_infos[iorder[r]];
+		cs->images[r].loc = glGetUniformLocation(program, it->name);
+		cs->images[r].readonly = it->readonly;
+		cs->images[r].index = it->readonly ? ro_img++ : rw_img++;
+	}
+
+	// Write sites: each one's destination in the dispatch's read-write arrays.
+	cs->num_sites = info->num_write_sites;
+	cs->sites = (CF_GL_ComputeSite*)CF_CALLOC(sizeof(CF_GL_ComputeSite) * (cs->num_sites > 0 ? cs->num_sites : 1));
+	for (int k = 0; k < cs->num_sites; ++k) {
+		const CF_ShaderWriteSite* w = &info->write_sites[k];
+		CF_GL_ComputeSite* site = &cs->sites[k];
+		site->kind = w->kind;
+		site->words = w->kind == CF_SHADER_WRITE_KIND_IMAGE ? 4 : w->words;
+		site->dest_index = -1;
+		const CF_ShaderResourceInfo* list = w->kind == CF_SHADER_WRITE_KIND_IMAGE ? info->storage_image_infos : info->storage_buffer_infos;
+		int* order = w->kind == CF_SHADER_WRITE_KIND_IMAGE ? iorder : border;
+		int n = w->kind == CF_SHADER_WRITE_KIND_IMAGE ? ni : nb;
+		CF_GL_ComputeResource* res = w->kind == CF_SHADER_WRITE_KIND_IMAGE ? cs->images : cs->buffers;
+		for (int r = 0; r < n; ++r) {
+			const CF_ShaderResourceInfo* it = &list[order[r]];
+			if (it->set == w->set && it->binding == w->binding) { site->dest_index = res[r].index; break; }
+		}
+		if (site->dest_index < 0) fprintf(stderr, "Compute shader write site %d (%s) names no read-write resource.\n", k, w->name);
+	}
+	CF_FREE(border);
+	CF_FREE(iorder);
+
+	// Sampled textures, bound like a fragment shader's.
+	cs->texture_bindings = (CF_GL_TextureBinding*)CF_ALLOC(sizeof(CF_GL_TextureBinding) * (info->num_images > 0 ? info->num_images : 1));
+	for (int i = 0; i < info->num_images; ++i) {
+		GLint loc = glGetUniformLocation(program, info->image_names[i]);
+		if (loc < 0) continue;
+		cs->texture_bindings[cs->num_texture_bindings].location = loc;
+		cs->texture_bindings[cs->num_texture_bindings].name = cf_sintern(info->image_names[i]);
+		++cs->num_texture_bindings;
+	}
+
+	// Uniform blocks carry the fragment stage's prefix: the capture pass is a fragment shader.
+	GLuint binding_point = 0;
+	s_build_uniforms(program, &cs->cs, info, &binding_point, false);
+	CF_POLL_OPENGL_ERROR();
+	result.id = (uint64_t)(uintptr_t)cs;
+	return result;
+}
+
+void cf_gles_destroy_compute_shader(CF_ComputeShader shader)
+{
+	CF_GL_ComputeShader* cs = (CF_GL_ComputeShader*)(uintptr_t)shader.id;
+	if (!cs) return;
+	for (int i = 0; i < cs->cs.num_uniform_blocks; ++i) s_forget_buffer(cs->cs.ubo[i]);
+	glDeleteBuffers(cs->cs.num_uniform_blocks, cs->cs.ubo);
+	CF_FREE(cs->cs.uniform_members);
+	CF_FREE(cs->sites);
+	CF_FREE(cs->buffers);
+	CF_FREE(cs->images);
+	CF_FREE(cs->texture_bindings);
+	glDeleteProgram(cs->program);
+	CF_FREE(cs);
+}
+
+void cf_gles_compute_shader_swap_contents(CF_ComputeShader a, CF_ComputeShader b)
+{
+	// Hot reload: the guts swap, the handles stay valid.
+	CF_GL_ComputeShader* pa = (CF_GL_ComputeShader*)(uintptr_t)a.id;
+	CF_GL_ComputeShader* pb = (CF_GL_ComputeShader*)(uintptr_t)b.id;
+	if (!pa || !pb) return;
+	CF_GL_ComputeShader tmp = *pa;
+	*pa = *pb;
+	*pb = tmp;
+}
+
+// Compute uniforms match by member name across every block, as on SDL_GPU: the material files
+// them all under the default block name, while a compute shader names its blocks freely.
+static void s_cs_upload_uniforms(CF_GL_ShaderInfo* shader_info, const CF_MaterialState* material, CF_Arena* arena)
+{
+	void* data[CF_MAX_UNIFORM_BLOCK_COUNT] = { };
+	for (int block_index = 0; block_index < shader_info->num_uniform_blocks; ++block_index) {
+		const CF_GL_ShaderUniformBlock* block = &shader_info->uniform_blocks[block_index];
+		if (block->info.block_index < 0) continue;
+		data[block_index] = cf_arena_alloc(arena, block->info.block_size);
+		CF_MEMSET(data[block_index], 0, block->info.block_size);
+		for (int i = 0; i < material->uniforms.count(); ++i) {
+			const CF_Uniform* uniform = &material->uniforms[i];
+			const CF_ShaderUniformMemberInfo* member = s_find_member_info(block, uniform->name);
+			if (!member) continue;
+			CF_ASSERT(s_uniform_type(member->type) == uniform->type);
+			CF_ASSERT(s_uniform_size(uniform->type) * member->array_length == uniform->size);
+			CF_MEMCPY((void*)((uintptr_t)data[block_index] + member->offset), uniform->data, uniform->size);
+		}
+		glBindBuffer(GL_UNIFORM_BUFFER, shader_info->ubo[block_index]);
+		glBufferSubData(GL_UNIFORM_BUFFER, 0, block->info.block_size, data[block_index]);
+		glBindBufferBase(GL_UNIFORM_BUFFER, block->info.block_index, shader_info->ubo[block_index]);
+	}
+	CF_POLL_OPENGL_ERROR();
+	cf_arena_reset(arena);
+}
+
+// How a destination texture stores what the scatter writes: 0 float (incl. normalized), 1 uint, 2 int.
+static int s_cs_dest_type(GLenum internal_fmt)
+{
+	switch (internal_fmt) {
+	case GL_R8UI: case GL_RG8UI: case GL_RGBA8UI: case GL_R16UI: case GL_RG16UI: case GL_RGBA16UI:
+	case GL_R32UI: case GL_RG32UI: case GL_RGBA32UI: case GL_RGB10_A2UI:
+		return 1;
+	case GL_R8I: case GL_RG8I: case GL_RGBA8I: case GL_R16I: case GL_RG16I: case GL_RGBA16I:
+	case GL_R32I: case GL_RG32I: case GL_RGBA32I:
+		return 2;
+	default:
+		return 0;
+	}
+}
+
+void cf_gles_dispatch_compute(CF_ComputeShader shader, CF_Material material_handle, CF_ComputeDispatch dispatch)
+{
+	CF_GL_ComputeShader* cs = (CF_GL_ComputeShader*)(uintptr_t)shader.id;
+	CF_MaterialInternal* material = (CF_MaterialInternal*)(uintptr_t)material_handle.id;
+	if (!cs || !cs->program || !s_cs.ready) return;
+	int gx = dispatch.group_count_x, gy = dispatch.group_count_y, gz = dispatch.group_count_z;
+	if (gx <= 0 || gy <= 0 || gz <= 0) return;
+	int64_t total = (int64_t)gx * cs->local_size[0] * gy * cs->local_size[1] * gz * cs->local_size[2];
+	if (total <= 0) return;
+	int grid_w = 1;
+	while (grid_w < total && grid_w < s_cs.max_grid) grid_w *= 2;
+	int64_t grid_h = (total + grid_w - 1) / grid_w;
+	if (grid_h > s_cs.max_grid || total > 0x7fffffff) {
+		fprintf(stderr, "Compute dispatch of %lld invocations exceeds the GLES grid (%d x %d); skipped.\n", (long long)total, s_cs.max_grid, s_cs.max_grid);
+		return;
+	}
+	int T = (int)total;
+
+	// Everything below is restored on the way out: the draw path caches some of it.
+	GLint prev_program = 0, prev_vao = 0;
+	glGetIntegerv(GL_CURRENT_PROGRAM, &prev_program);
+	glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &prev_vao);
+	GLboolean prev_mask[4];
+	glGetBooleanv(GL_COLOR_WRITEMASK, prev_mask);
+	GLboolean prev_blend = glIsEnabled(GL_BLEND), prev_depth = glIsEnabled(GL_DEPTH_TEST);
+	GLboolean prev_stencil = glIsEnabled(GL_STENCIL_TEST), prev_cull = glIsEnabled(GL_CULL_FACE);
+	GLboolean prev_scissor = glIsEnabled(GL_SCISSOR_TEST);
+	glDisable(GL_BLEND);
+	glDisable(GL_DEPTH_TEST);
+	glDisable(GL_STENCIL_TEST);
+	glDisable(GL_CULL_FACE);
+	glDisable(GL_SCISSOR_TEST);
+	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+	glBindVertexArray(s_cs.vao);
+
+	// Scratch pairs first: growing the list moves them.
+	for (int k = cs->num_sites - 1; k >= 0; --k) s_cs_scratch(k, grid_w, (int)grid_h);
+
+	// CAPTURE.
+	glUseProgram(cs->program);
+	s_cs_upload_uniforms(&cs->cs, &material->cs, &material->block_arena);
+	GLuint unit = 0;
+	for (int i = 0; i < material->cs.textures.count(); ++i) {
+		CF_MaterialTex material_tex = material->cs.textures[i];
+		CF_GL_Texture* texture = (CF_GL_Texture*)(uintptr_t)material_tex.handle.id;
+		if (!texture) continue;
+		for (int b = 0; b < cs->num_texture_bindings; ++b) {
+			if (cs->texture_bindings[b].name != material_tex.name) continue;
+			glActiveTexture(GL_TEXTURE0 + unit);
+			glBindTexture(texture->target, texture->id);
+			glBindSampler(unit, s_draw_sampler(material_tex, texture));
+			glUniform1i(cs->texture_bindings[b].location, (GLint)unit);
+			++unit;
+			break;
+		}
+	}
+	GLuint top = (GLuint)(g_ctx.max_combined_texture_units - 1);
+	GLuint lowest_top = top + 1;
+	for (int r = 0; r < cs->num_buffers; ++r) {
+		CF_GL_ComputeResource* res = &cs->buffers[r];
+		if (res->loc < 0) continue;
+		CF_StorageBuffer* list = res->readonly ? dispatch.ro_buffers : dispatch.rw_buffers;
+		int count = res->readonly ? dispatch.ro_buffer_count : dispatch.rw_buffer_count;
+		if (res->index >= count) continue;
+		CF_GL_StorageBuffer* b = (CF_GL_StorageBuffer*)(uintptr_t)list[res->index].id;
+		if (!b || top < unit) continue;
+		glActiveTexture(GL_TEXTURE0 + top);
+		glBindTexture(GL_TEXTURE_2D, b->tex);
+		glBindSampler(top, 0);
+		glUniform1i(res->loc, (GLint)top);
+		lowest_top = top--;
+	}
+	for (int r = 0; r < cs->num_images; ++r) {
+		CF_GL_ComputeResource* res = &cs->images[r];
+		if (res->loc < 0) continue;
+		CF_Texture* list = res->readonly ? dispatch.ro_textures : dispatch.rw_textures;
+		int count = res->readonly ? dispatch.ro_texture_count : dispatch.rw_texture_count;
+		if (res->index >= count) continue;
+		CF_GL_Texture* t = (CF_GL_Texture*)(uintptr_t)list[res->index].id;
+		if (!t || top < unit) continue;
+		glActiveTexture(GL_TEXTURE0 + top);
+		glBindTexture(t->target, t->id);
+		glBindSampler(top, s_cs.nearest);
+		glUniform1i(res->loc, (GLint)top);
+		lowest_top = top--;
+	}
+	if (cs->loc_groups >= 0) glUniform3i(cs->loc_groups, gx, gy, gz);
+	if (cs->loc_grid_w >= 0) glUniform1i(cs->loc_grid_w, grid_w);
+	glViewport(0, 0, grid_w, (GLsizei)grid_h);
+	for (int k = 0; k < cs->num_sites; ++k) {
+		glBindFramebuffer(GL_FRAMEBUFFER, s_cs.scratch[k].fbo);
+		if (cs->loc_site >= 0) glUniform1i(cs->loc_site, k);
+		glDrawArrays(GL_TRIANGLES, 0, 3);
+	}
+	CF_POLL_OPENGL_ERROR();
+
+	// SCATTER. The capture samplers' units are released first: a destination still bound for
+	// reading while rendered into is a feedback loop.
+	for (GLuint u = lowest_top; u < (GLuint)g_ctx.max_combined_texture_units; ++u) {
+		glActiveTexture(GL_TEXTURE0 + u);
+		glBindTexture(GL_TEXTURE_2D, 0);
+		glBindSampler(u, 0);
+	}
+	for (GLuint u = 0; u < unit; ++u) {
+		glActiveTexture(GL_TEXTURE0 + u);
+		glBindTexture(GL_TEXTURE_2D, 0);
+		glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
+		glBindTexture(GL_TEXTURE_3D, 0);
+		glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+		glBindSampler(u, 0);
+	}
+	glBindFramebuffer(GL_FRAMEBUFFER, s_cs.dest_fbo);
+	GLenum buf0 = GL_COLOR_ATTACHMENT0;
+	glDrawBuffers(1, &buf0);
+	for (int k = 0; k < cs->num_sites; ++k) {
+		const CF_GL_ComputeSite* site = &cs->sites[k];
+		if (site->dest_index < 0) continue;
+		GLuint dest = 0;
+		int dw = 0, dh = 0, type = 1;
+		if (site->kind == CF_SHADER_WRITE_KIND_IMAGE) {
+			if (site->dest_index >= dispatch.rw_texture_count) continue;
+			CF_GL_Texture* t = (CF_GL_Texture*)(uintptr_t)dispatch.rw_textures[site->dest_index].id;
+			if (!t) continue;
+			dest = t->id; dw = t->w; dh = t->h;
+			type = s_cs_dest_type(t->internal_fmt);
+		} else {
+			if (site->dest_index >= dispatch.rw_buffer_count) continue;
+			CF_GL_StorageBuffer* b = (CF_GL_StorageBuffer*)(uintptr_t)dispatch.rw_buffers[site->dest_index].id;
+			if (!b) continue;
+			dest = b->tex; dw = CF_GLES_STORAGE_WIDTH; dh = b->height;
+			type = 1;
+		}
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, dest, 0);
+		if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+			static bool s_warned;
+			if (!s_warned) {
+				fprintf(stderr, "Compute write site %d: its destination cannot be rendered to on this GLES device (float targets need EXT_color_buffer_float); the write is dropped.\n", k);
+				s_warned = true;
+			}
+			continue;
+		}
+		glViewport(0, 0, dw, dh);
+		glUseProgram(s_cs.scatter[type]);
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, s_cs.scratch[k].values);
+		glBindSampler(0, 0);
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, s_cs.scratch[k].targets);
+		glBindSampler(1, 0);
+		glUniform1i(s_cs.scatter_loc_values[type], 0);
+		glUniform1i(s_cs.scatter_loc_targets[type], 1);
+		glUniform1i(s_cs.scatter_loc_grid_w[type], grid_w);
+		glUniform2i(s_cs.scatter_loc_dest_size[type], dw, dh);
+		int n = site->words == 1 || site->words == 2 ? site->words : 4;
+		for (int c = 0; c + n <= 4; c += n) {
+			glColorMask(c <= 0 && 0 < c + n, c <= 1 && 1 < c + n, c <= 2 && 2 < c + n, c <= 3 && 3 < c + n);
+			glUniform1i(s_cs.scatter_loc_component[type], c);
+			glDrawArrays(GL_POINTS, 0, T);
+		}
+	}
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, 0, 0);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, 0);
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, 0);
+	glActiveTexture(GL_TEXTURE0);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, g_ctx.fbo);
+	CF_GL_Rect vp = g_ctx.current_state.viewport;
+	glViewport(vp.x, vp.y, vp.w, vp.h);
+	glColorMask(prev_mask[0], prev_mask[1], prev_mask[2], prev_mask[3]);
+	if (prev_blend) glEnable(GL_BLEND);
+	if (prev_depth) glEnable(GL_DEPTH_TEST);
+	if (prev_stencil) glEnable(GL_STENCIL_TEST);
+	if (prev_cull) glEnable(GL_CULL_FACE);
+	if (prev_scissor) glEnable(GL_SCISSOR_TEST);
+	glBindVertexArray((GLuint)prev_vao);
+	glUseProgram((GLuint)prev_program);
+	CF_POLL_OPENGL_ERROR();
 }
 
 void cf_gles_draw_elements_indirect(CF_StorageBuffer args, int offset, int draw_count)
 {
-	// No indirect draw on GLES3, same story as compute.
+	// No indirect draw on GLES3.
 	CF_UNUSED(args);
 	CF_UNUSED(offset);
 	CF_UNUSED(draw_count);

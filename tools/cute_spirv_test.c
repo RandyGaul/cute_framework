@@ -1886,6 +1886,385 @@ static void test_emitters(void)
 
 //--------------------------------------------------------------------------------------------------
 
+//--------------------------------------------------------------------------------------------------
+// Compute shaders on GLES3: the capture-pass fragment shader. Every produced ES source is checked
+// with glslangValidator when it is available (CSPV_GLSLANG, else $VULKAN_SDK/Bin, else PATH).
+// CSPV_ES_DUMP=<dir> writes each compute capture shader there as <name>.frag; CSPV_EXTRA_HRC_DIR
+// names another directory of hrc_*.c_shd copies (a game's) to hold to the same expectations.
+
+static bool g_has_glslang = false;
+static char* g_glslang_path; // ckit strings.
+static char* g_temp_frag;
+
+static void detect_glslang(void)
+{
+	const char* env = getenv("CSPV_GLSLANG");
+	const char* sdk = getenv("VULKAN_SDK");
+	if (env) g_glslang_path = smake(env);
+	else if (sdk) g_glslang_path = sfmake("%s\\Bin\\glslangValidator.exe", sdk);
+	else g_glslang_path = smake("glslangValidator");
+	char* cmd = sfmake("\"\"%s\" --version > nul 2>&1\"", g_glslang_path);
+	g_has_glslang = system(cmd) == 0;
+	sfree(cmd);
+	if (!g_has_glslang) printf("WARNING: glslangValidator not found (set CSPV_GLSLANG); skipping ES validation.\n");
+	const char* tmp = getenv("TEMP");
+	g_temp_frag = sfmake("%s\\cute_spirv_test_es.frag", tmp ? tmp : ".");
+}
+
+static bool validate_es_frag(const char* src)
+{
+	if (!g_has_glslang) return true;
+	FILE* f = fopen(g_temp_frag, "wb");
+	if (!f) return false;
+	fwrite(src, 1, strlen(src), f);
+	fclose(f);
+	char* cmd = sfmake("\"\"%s\" -S frag \"%s\"\"", g_glslang_path, g_temp_frag);
+	bool ok = system(cmd) == 0;
+	sfree(cmd);
+	if (!ok) printf("--- glslangValidator rejected: ---\n%s\n", src);
+	return ok;
+}
+
+static char* read_text_file(const char* path)
+{
+	FILE* f = fopen(path, "rb");
+	if (!f) return NULL;
+	fseek(f, 0, SEEK_END);
+	long n = ftell(f);
+	fseek(f, 0, SEEK_SET);
+	char* s = (char*)malloc((size_t)n + 1);
+	size_t got = fread(s, 1, (size_t)n, f);
+	s[got] = 0;
+	fclose(f);
+	return s;
+}
+
+static CSPV_Result s_compile_es(CSPV_Stage stage, const char* src)
+{
+	CSPV_Options o;
+	memset(&o, 0, sizeof(o));
+	o.emit_glsl300 = true;
+	CSPV_Result r = cspv_compile_ex(src, stage, &o);
+	CHECK_MSG(r.success, r.error_message);
+	if (r.success) {
+		CHECK(r.glsl300 != NULL);
+		if (r.glsl300) CHECK(validate_es_frag(r.glsl300));
+	}
+	return r;
+}
+
+static void expect_es_err(const char* src, const char* expect_substr)
+{
+	CSPV_Options o;
+	memset(&o, 0, sizeof(o));
+	o.emit_glsl300 = true;
+	expect_err_ex(CSPV_STAGE_COMPUTE, src, expect_substr, &o);
+}
+
+typedef struct cs_site_expect
+{
+	CSPV_WriteKind kind;
+	const char* name;
+	int rank;
+	int words;
+	CSPV_WriteType type;
+} cs_site_expect;
+
+typedef struct cs_shader_expect
+{
+	const char* file;
+	int k;
+	cs_site_expect sites[3];
+	const char* loaded[3];
+} cs_shader_expect;
+
+// Each HRC shader, with its write sites in source order.
+static const cs_shader_expect s_hrc_expect[] = {
+	{ "hrc_display.c_shd", 2, { { CSPV_WRITE_IMAGE, "u_fluence_lin", 1, 4, CSPV_WRITE_FLOAT }, { CSPV_WRITE_IMAGE, "u_fluence", 0, 4, CSPV_WRITE_FLOAT } }, { 0 } },
+	{ "hrc_extend.c_shd", 1, { { CSPV_WRITE_BUFFER, "u_out_t", 1, 4, CSPV_WRITE_UINT } }, { 0 } },
+	{ "hrc_feedback.c_shd", 1, { { CSPV_WRITE_IMAGE, "u_emissivity", 0, 4, CSPV_WRITE_FLOAT } }, { "u_diffuse", "u_fluence_lin", "u_emissivity" } },
+	{ "hrc_finish.c_shd", 3, { { CSPV_WRITE_IMAGE, "u_a0", 0, 4, CSPV_WRITE_FLOAT }, { CSPV_WRITE_IMAGE, "u_a1", 1, 4, CSPV_WRITE_FLOAT }, { CSPV_WRITE_IMAGE, "u_b1", 2, 4, CSPV_WRITE_FLOAT } }, { "u_a0", "u_a1", "u_b1" } },
+	{ "hrc_merge.c_shd", 1, { { CSPV_WRITE_BUFFER, "u_rc_rad", 3, 2, CSPV_WRITE_UINT } }, { 0 } },
+	{ "hrc_trace.c_shd", 1, { { CSPV_WRITE_BUFFER, "u_out_t", 0, 4, CSPV_WRITE_UINT } }, { 0 } },
+	{ "hrc_far.c_shd", 2, { { CSPV_WRITE_IMAGE, "u_ring", 0, 4, CSPV_WRITE_FLOAT }, { CSPV_WRITE_IMAGE, "u_ring", 0, 4, CSPV_WRITE_FLOAT } }, { 0 } },
+};
+
+static void dump_es(const char* file, const char* src)
+{
+	const char* dir = getenv("CSPV_ES_DUMP");
+	if (!dir) return;
+	char* path = sfmake("%s\\%s", dir, file);
+	char* dot = strstr(path, ".c_shd");
+	if (dot) strcpy(dot, ".frag");
+	FILE* f = fopen(path, "wb");
+	if (f) {
+		fwrite(src, 1, strlen(src), f);
+		fclose(f);
+	}
+	sfree(path);
+}
+
+static void check_hrc_dir(const char* dir, bool required)
+{
+	for (int i = 0; i < (int)(sizeof(s_hrc_expect) / sizeof(s_hrc_expect[0])); i++) {
+		const cs_shader_expect* x = s_hrc_expect + i;
+		char* path = sfmake("%s/%s", dir, x->file);
+		char* src = read_text_file(path);
+		if (!src) {
+			// hrc_far exists only in the game's copy.
+			if (required && strcmp(x->file, "hrc_far.c_shd")) CHECK_MSG(false, path);
+			sfree(path);
+			continue;
+		}
+		CSPV_Result r = s_compile_es(CSPV_STAGE_COMPUTE, src);
+		if (r.success) {
+			dump_es(x->file, r.glsl300);
+			CSPV_WriteSite* ws = r.reflection.write_sites;
+			CHECK_MSG((int)asize(ws) == x->k, path);
+			for (int k = 0; k < x->k && k < (int)asize(ws); k++) {
+				CHECK_MSG(ws[k].kind == x->sites[k].kind, path);
+				CHECK_MSG(!strcmp(ws[k].name, x->sites[k].name), path);
+				CHECK_MSG(ws[k].rank == x->sites[k].rank, path);
+				CHECK_MSG(ws[k].words == x->sites[k].words, path);
+				CHECK_MSG(ws[k].type == x->sites[k].type, path);
+				if (ws[k].kind == CSPV_WRITE_IMAGE) CHECK_MSG(ws[k].set == 1, path);
+				char* gate = sfmake("if (u_cspv_site == %d)", k);
+				CHECK_MSG(strstr(r.glsl300, gate) != NULL, path);
+				sfree(gate);
+			}
+			for (int j = 0; j < 3 && x->loaded[j]; j++) {
+				bool found = false;
+				for (int m = 0; m < (int)asize(r.reflection.loaded_images); m++) {
+					if (!strcmp(r.reflection.loaded_images[m], x->loaded[j])) found = true;
+				}
+				CHECK_MSG(found, x->loaded[j]);
+				char* decl = sfmake("uniform highp sampler2D %s;", x->loaded[j]);
+				CHECK_MSG(strstr(r.glsl300, decl) != NULL, path);
+				sfree(decl);
+			}
+			// Write-only images are never declared.
+			if (!x->loaded[0]) CHECK_MSG(asize(r.reflection.loaded_images) == 0, path);
+			CHECK(strstr(r.glsl300, "void cspv_main_()") != NULL);
+			CHECK(strstr(r.glsl300, "imageStore") == NULL);
+			CHECK(strstr(r.glsl300, "image2D") == NULL);
+		}
+		cspv_free(&r);
+		free(src);
+		sfree(path);
+	}
+}
+
+static void test_compute_es(void)
+{
+	detect_glslang();
+
+	// The HRC shaders: CF's sample copies always, a game's copies when named.
+	{
+		char* dir = smake(__FILE__);
+		char* cut = strstr(dir, "cute_spirv_test.c");
+		if (cut) *cut = 0;
+		char* hrc = sfmake("%s../samples/hrc_gi_data", dir);
+		check_hrc_dir(hrc, true);
+		sfree(hrc);
+		const char* extra = getenv("CSPV_EXTRA_HRC_DIR");
+		if (extra) check_hrc_dir(extra, false);
+		// The old HRC's composite tiles through shared memory: outside the class.
+		char* comp_path = sfmake("%s../samples/hrc_data/hrc_composite.c_shd", dir);
+		char* comp = read_text_file(comp_path);
+		CHECK_MSG(comp != NULL, comp_path);
+		if (comp) expect_es_err(comp, "compute shaders using 'shared' cannot run on GLES3 (line ");
+		free(comp);
+		sfree(comp_path);
+		sfree(dir);
+	}
+
+	// Prologue conventions and builtins.
+	{
+		CSPV_Result r = s_compile_es(CSPV_STAGE_COMPUTE,
+			"layout(local_size_x = 8, local_size_y = 4) in;\n"
+			"layout(std430, set = 1, binding = 0) buffer Out { uvec4 data[]; };\n"
+			"void main() {\n"
+			"	uint i = gl_GlobalInvocationID.x + gl_GlobalInvocationID.y * 64u;\n"
+			"	data[i] = uvec4(gl_WorkGroupID.x, gl_LocalInvocationID.y, gl_LocalInvocationIndex, gl_NumWorkGroups.z);\n"
+			"}\n");
+		if (r.success) {
+			const char* s = r.glsl300;
+			CHECK(strstr(s, "#version 300 es\n") == s);
+			CHECK(strstr(s, "uniform int u_cspv_site;") != NULL);
+			CHECK(strstr(s, "uniform ivec3 u_cspv_groups;") != NULL);
+			CHECK(strstr(s, "uniform int u_cspv_grid_w;") != NULL);
+			CHECK(strstr(s, "layout(location = 0) out highp uvec4 cspv_value;") != NULL);
+			CHECK(strstr(s, "layout(location = 1) out highp ivec4 cspv_target;") != NULL);
+			CHECK(strstr(s, "ivec3 cspv_ls = ivec3(8, 4, 1);") != NULL);
+			CHECK(strstr(s, "uniform highp usampler2D u_cs_storage_0;") != NULL);
+			CHECK(strstr(s, "gl_GlobalInvocationID") == NULL);
+			CHECK(strstr(s, "cspv_value = cspv_b;") != NULL);
+			CHECK(asize(r.reflection.write_sites) == 1);
+			CHECK(r.reflection.local_size[0] == 8 && r.reflection.local_size[1] == 4);
+		}
+		cspv_free(&r);
+	}
+
+	// Struct reads, member writes at static offsets, compound assignment, ++, uint images.
+	{
+		CSPV_Result r = s_compile_es(CSPV_STAGE_COMPUTE,
+			"layout(local_size_x = 64) in;\n"
+			"struct Prim { vec4 p; vec2 q; float s; int t; vec3 n; };\n"
+			"struct Pair { vec2 a; uvec2 b; };\n"
+			"layout(std430, set = 0, binding = 3) readonly buffer Prims { Prim data[]; } u_prims;\n"
+			"layout(std430, set = 1, binding = 0) buffer Pairs { Pair data[]; } u_pairs;\n"
+			"layout(std430, set = 1, binding = 1) buffer Floats { float data[]; } u_f;\n"
+			"layout(set = 1, binding = 2, r32ui) uniform image2D u_flags;\n"
+			"void main() {\n"
+			"	int i = int(gl_GlobalInvocationID.x);\n"
+			"	Prim p = u_prims.data[i];\n"
+			"	u_pairs.data[i].a = p.q;\n"
+			"	u_pairs.data[i].b.y = uint(p.t);\n"
+			"	u_f.data[i] += p.s + p.n.z;\n"
+			"	u_f.data[i + 1]++;\n"
+			"	u_pairs.data[i + 2] = Pair(vec2(1.0), uvec2(2u));\n"
+			"	uvec4 f = imageLoad(u_flags, ivec2(i, 0));\n"
+			"	imageStore(u_flags, ivec2(i, 0), f + uvec4(1u));\n"
+			"}\n");
+		if (r.success) {
+			const char* s = r.glsl300;
+			CSPV_WriteSite* ws = r.reflection.write_sites;
+			CHECK(asize(ws) == 6);
+			if (asize(ws) == 6) {
+				CHECK(ws[0].kind == CSPV_WRITE_BUFFER && ws[0].words == 2 && ws[0].rank == 1 && ws[0].set == 1 && ws[0].binding == 0);
+				CHECK(ws[1].words == 1 && ws[1].rank == 1);
+				CHECK(ws[2].words == 1 && ws[2].rank == 2 && !strcmp(ws[2].name, "u_f"));
+				CHECK(ws[3].words == 1);
+				CHECK(ws[4].words == 4);
+				CHECK(ws[5].kind == CSPV_WRITE_IMAGE && ws[5].type == CSPV_WRITE_UINT && ws[5].image_format == 33);
+			}
+			// Prim: p@0 q@4 s@6 t@7 n@8 (vec3 aligned to 16 bytes), stride 12 words.
+			CHECK(strstr(s, "Prim cspv_ld_0(int i) { int w = i * 12; return Prim(") != NULL);
+			CHECK(strstr(s, "cspv_texel(u_cs_storage_0, (w + 8) >> 2).xyz") != NULL);
+			CHECK(strstr(s, "int(cspv_word(u_cs_storage_0, w + 7))") != NULL);
+			CHECK(strstr(s, "int cspv_w = int(i) * 4 + 3;") != NULL);
+			CHECK(strstr(s, "uniform highp usampler2D u_flags;") != NULL);
+			CHECK(strstr(s, "texelFetch(u_flags, ivec2(i, 0), 0)") != NULL);
+		}
+		cspv_free(&r);
+	}
+
+	// An early-return write (the hrc_far shape) and a write under a switch are fine.
+	{
+		CSPV_Result r = s_compile_es(CSPV_STAGE_COMPUTE,
+			"layout(local_size_x = 64) in;\n"
+			"layout(std430, set = 1, binding = 0) buffer Out { vec2 data[]; };\n"
+			"layout(set = 2, binding = 0) uniform Params { int u_mode; };\n"
+			"void main() {\n"
+			"	int i = int(gl_GlobalInvocationID.x);\n"
+			"	if (i == 0) { data[0] = vec2(0.0); return; }\n"
+			"	switch (u_mode) { case 1: data[i].y = 1.0; break; default: break; }\n"
+			"}\n");
+		if (r.success) {
+			CHECK(asize(r.reflection.write_sites) == 2);
+			CHECK(strstr(r.glsl300, "uniform cf_fs_Params") != NULL);
+		}
+		cspv_free(&r);
+	}
+
+	// Outside the class: each feature named, with its line.
+	expect_es_err(
+		"layout(local_size_x = 64) in;\n"
+		"shared vec4 tile[64];\n"
+		"void main() { }\n",
+		"compute shaders using 'shared' cannot run on GLES3 (line 2)");
+	expect_es_err(
+		"layout(local_size_x = 64) in;\n"
+		"layout(std430, set = 1, binding = 0) buffer Out { uint data[]; };\n"
+		"void main() {\n"
+		"	barrier();\n"
+		"}\n",
+		"compute shaders using 'barrier' cannot run on GLES3 (line 4)");
+	expect_es_err(
+		"layout(local_size_x = 64) in;\n"
+		"layout(std430, set = 1, binding = 0) buffer Out { uint data[]; };\n"
+		"void main() { memoryBarrierBuffer(); }\n",
+		"'memoryBarrierBuffer' cannot run on GLES3");
+	expect_es_err(
+		"layout(local_size_x = 64) in;\n"
+		"layout(std430, set = 1, binding = 0) buffer Out { uint data[]; };\n"
+		"void main() {\n"
+		"	atomicAdd(data[0], 1u);\n"
+		"}\n",
+		"compute shaders using 'atomicAdd' cannot run on GLES3 (line 4)");
+	expect_es_err(
+		"layout(local_size_x = 64) in;\n"
+		"layout(std430, set = 1, binding = 0) buffer Out { uint data[]; };\n"
+		"void main() {\n"
+		"	for (int j = 0; j < 4; j++) {\n"
+		"		data[j] = 1u;\n"
+		"	}\n"
+		"}\n",
+		"a storage write inside a loop cannot run on GLES3 (line 5)");
+	expect_es_err(
+		"layout(local_size_x = 8, local_size_y = 8) in;\n"
+		"layout(set = 1, binding = 0, rgba16f) uniform image2D u_img;\n"
+		"void main() {\n"
+		"	int j = 0;\n"
+		"	while (j < 2) { imageStore(u_img, ivec2(j, 0), vec4(1.0)); j++; }\n"
+		"}\n",
+		"inside a loop cannot run on GLES3 (line 5)");
+	expect_es_err(
+		"layout(local_size_x = 64) in;\n"
+		"struct S { vec3 n; float w; };\n"
+		"layout(std430, set = 1, binding = 0) buffer Out { S data[]; };\n"
+		"void main() {\n"
+		"	data[0].n = vec3(1.0);\n"
+		"}\n",
+		"writing a vec3 to a storage buffer cannot run on GLES3 (line 5)");
+	expect_es_err(
+		"layout(local_size_x = 64) in;\n"
+		"struct Big { vec4 a; vec4 b; };\n"
+		"layout(std430, set = 1, binding = 0) buffer Out { Big data[]; };\n"
+		"void main() {\n"
+		"	data[0] = Big(vec4(0.0), vec4(1.0));\n"
+		"}\n",
+		"write the struct's members one by one");
+	expect_es_err(
+		"layout(local_size_x = 64) in;\n"
+		"layout(std430, set = 1, binding = 0) buffer Out { vec4 data[]; };\n"
+		"void main() { data[0].xy = vec2(1.0); }\n",
+		"multi-component swizzle");
+	expect_es_err(
+		"layout(local_size_x = 64) in;\n"
+		"layout(std430, set = 1, binding = 0) buffer Out { uint data[]; };\n"
+		"void put(uint i) { data[i] = i; }\n"
+		"void main() { put(0u); }\n",
+		"outside main() cannot run on GLES3 (line 3)");
+	expect_es_err(
+		"layout(local_size_x = 64) in;\n"
+		"layout(std430, set = 1, binding = 0) buffer Out { uint data[]; };\n"
+		"void main() { uint x = (data[0] = 1u); }\n",
+		"inside an expression cannot run on GLES3");
+	expect_es_err(
+		"layout(local_size_x = 64) in;\n"
+		"layout(std430, set = 1, binding = 0) buffer Out { uint data[]; };\n"
+		"void main() { data[0] = uint(data.length()); }\n",
+		"'.length()' on a storage buffer cannot run on GLES3");
+
+	// Vertex/fragment storage emulation is unchanged by the compute path.
+	{
+		CSPV_Result r = s_compile_es(CSPV_STAGE_FRAGMENT,
+			"layout(location = 0) out vec4 result;\n"
+			"layout(std430, set = 2, binding = 0) readonly buffer data_buffer { vec4 u_data[]; };\n"
+			"void main() { result = u_data[1]; }\n");
+		if (r.success) {
+			CHECK(strstr(r.glsl300, "u_fs_storage_0") != NULL);
+			CHECK(strstr(r.glsl300, "cspv_") == NULL);
+			CHECK(asize(r.reflection.write_sites) == 0);
+		}
+		cspv_free(&r);
+	}
+
+	sfree(g_glslang_path);
+	sfree(g_temp_frag);
+}
+
 int main(void)
 {
 	detect_spirv_val();
@@ -1917,6 +2296,7 @@ int main(void)
 	TEST(test_errors_stage_and_globals);
 	TEST(test_errors_recursion);
 	TEST(test_emitters);
+	TEST(test_compute_es);
 
 	printf("\n%d checks, %d failures.\n", g_checks, g_fails);
 	return g_fails ? 1 : 0;

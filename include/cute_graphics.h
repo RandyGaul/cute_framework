@@ -165,7 +165,8 @@ typedef struct CF_Shader { uint64_t id; } CF_Shader;
  * @category graphics
  * @brief    An opaque handle representing a compute shader.
  * @remarks  A compute shader is a program that runs on the GPU outside the graphics pipeline.
- *           Compute shaders are only available on SDL_GPU backends (not GLES3).
+ *           On GLES3/WebGL2 compute is emulated with draws, for a restricted class of shaders. See
+ *           `cf_make_compute_shader`.
  * @related  CF_ComputeShader cf_make_compute_shader cf_destroy_compute_shader cf_dispatch_compute
  */
 typedef struct CF_ComputeShader { uint64_t id; } CF_ComputeShader;
@@ -176,7 +177,7 @@ typedef struct CF_ComputeShader { uint64_t id; } CF_ComputeShader;
  * @category graphics
  * @brief    An opaque handle representing a GPU storage buffer.
  * @remarks  Storage buffers are GPU-accessible buffers used with compute and graphics shaders.
- *           They are only available on SDL_GPU backends (not GLES3).
+ *           On GLES3/WebGL2 they live in textures, readable and writable by emulated compute shaders.
  * @related  CF_StorageBuffer CF_StorageBufferParams cf_make_storage_buffer cf_destroy_storage_buffer cf_update_storage_buffer
  */
 typedef struct CF_StorageBuffer { uint64_t id; } CF_StorageBuffer;
@@ -1207,8 +1208,9 @@ CF_API void CF_CALL cf_destroy_shader(CF_Shader shader);
 //--------------------------------------------------------------------------------------------------
 // Compute Shaders.
 //
-// Compute shaders run on the GPU outside the graphics pipeline. They are only available on
-// SDL_GPU backends (Vulkan, D3D12, Metal). GLES3 stubs return null handles / no-op.
+// Compute shaders run on the GPU outside the graphics pipeline. SDL_GPU backends (Vulkan, D3D12,
+// Metal) run them natively. GLES3/WebGL2 emulates them with draws, for a restricted class of
+// shaders; see `cf_make_compute_shader`.
 //
 // Uniforms and sampled textures are supplied via a CF_Material's compute stage (cs).
 // Storage buffers and storage textures are bound directly via the dispatch struct.
@@ -1249,6 +1251,20 @@ CF_API void CF_CALL cf_destroy_shader(CF_Shader shader);
  *           - Do NOT use `return` to exit threads before a `barrier()` call. All threads in a workgroup
  *             must reach `barrier()` uniformly, or the pipeline will fail to compile on some backends.
  *             Instead, guard `imageStore` and other side-effects behind a bounds check.
+ *
+ *           GLES3/WebGL2 has no compute stage, so CF emulates one. Each dispatch renders the shader
+ *           body once per write site as a fragment pass, one fragment per invocation, recording what
+ *           each invocation writes and where; a second draw per site then scatters the records as
+ *           points into the destination textures and storage buffers. Every read sees memory as it was
+ *           before the dispatch, never a write from the same dispatch. A shader runs on GLES3 only when it has:
+ *           - No `shared` variables, `barrier()`/`memoryBarrier*()`, or atomics.
+ *           - No storage write inside a loop: each `imageStore` or buffer assignment runs at most
+ *             once per invocation.
+ *           - No `vec3`/`uvec3`/`ivec3` buffer element writes (1, 2 or 4 components only).
+ *           Shaders outside this class fail to compile with an error naming the construct. The cost
+ *           is two passes per write site: one full-screen draw sized to the invocation count plus one
+ *           point per invocation. Float destinations need `EXT_color_buffer_float`; without it the
+ *           write is dropped with a one-time warning.
  * @related  CF_ComputeShader cf_make_compute_shader cf_make_compute_shader_from_source cf_make_compute_shader_from_bytecode cf_destroy_compute_shader cf_dispatch_compute
  */
 CF_API CF_ComputeShader CF_CALL cf_make_compute_shader(const char* path);
