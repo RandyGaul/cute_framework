@@ -23,6 +23,7 @@ After completing the above fundamental reading it's recommended to then select t
 * [Data Structures](./data_structures.md)
 * [Application Callbacks](./app_callbacks.md)
 * [Web Builds with Emscripten](./emscripten.md)
+* [WebGPU](./webgpu.md)
 * [Input](./input.md)
 * [Input Bindings](./input_bindings.md)
 * [MacOS + iOS Builds](./ios.md)

@@ -331,10 +331,134 @@ TEST_CASE(test_instancing_indirect)
 	return true;
 }
 
+static const char* s_quad_vs =
+"layout (location = 0) in vec2 in_pos;\n"
+"void main() { gl_Position = vec4(in_pos, 0, 1); }\n";
+
+static CF_Mesh s_make_quad()
+{
+	struct Vertex { float x, y; };
+	Vertex verts[6] = { { -1, -1 }, { 1, -1 }, { 1, 1 }, { -1, -1 }, { 1, 1 }, { -1, 1 } };
+	CF_VertexAttribute attrs[1] = { };
+	attrs[0].name = "in_pos";
+	attrs[0].format = CF_VERTEX_FORMAT_FLOAT2;
+	attrs[0].offset = 0;
+	CF_Mesh mesh = cf_make_mesh(sizeof(verts), attrs, 1, sizeof(Vertex));
+	cf_mesh_update_vertex_data(mesh, verts, 6);
+	return mesh;
+}
+
+static CF_Pixel s_read_center(CF_Canvas canvas, CF_Pixel* px)
+{
+	CF_Readback rb = cf_canvas_readback(canvas);
+	if (!rb.id) return cf_make_pixel_rgba(1, 2, 3, 4);
+	while (!cf_readback_ready(rb)) {}
+	cf_readback_data(rb, px, W * H * (int)sizeof(CF_Pixel));
+	cf_destroy_readback(rb);
+	return px[(H / 2) * W + W / 2];
+}
+
+// A mesh update between cf_apply_shader and the draw ends the render pass. The draw is then
+// invalid: SDL_GPU logs and skips it, and so must WebGPU instead of crashing.
+TEST_CASE(test_draw_after_pass_ended)
+{
+	if (!test_make_app(W, H)) return true; // Headless CI: no display/GPU.
+
+	static const char* fs =
+	"layout (location = 0) out vec4 result;\n"
+	"void main() { result = vec4(1, 0, 0, 1); }\n";
+	CF_Mesh mesh = s_make_quad();
+	CF_Shader shader = cf_make_shader_from_source(s_quad_vs, fs);
+	REQUIRE(shader.id);
+	CF_Material material = cf_make_material();
+	CF_Canvas canvas = cf_make_canvas(cf_canvas_defaults(W, H));
+	CF_Pixel* px = (CF_Pixel*)cf_alloc(W * H * (int)sizeof(CF_Pixel));
+
+	struct Vertex { float x, y; };
+	Vertex verts[6] = { { -1, -1 }, { 1, -1 }, { 1, 1 }, { -1, -1 }, { 1, 1 }, { -1, 1 } };
+	cf_app_update(NULL);
+	cf_apply_canvas(canvas, true);
+	cf_apply_mesh(mesh);
+	cf_apply_shader(shader, material);
+	cf_mesh_update_vertex_data(mesh, verts, 6);
+	cf_draw_elements();
+	cf_draw_elements_range(0, 6, 1);
+	cf_draw_elements_instanced(1);
+	cf_app_draw_onto_screen(false);
+	CF_Pixel c = s_read_center(canvas, px);
+
+	// GLES has no render passes, so its draw lands.
+	if (cf_query_backend() != CF_BACKEND_TYPE_GLES3) {
+		REQUIRE(c.colors.r < 8 && c.colors.g < 8 && c.colors.b < 8);
+	}
+
+	cf_free(px);
+	cf_destroy_canvas(canvas);
+	cf_destroy_material(material);
+	cf_destroy_shader(shader);
+	cf_destroy_mesh(mesh);
+	test_destroy_app();
+	return true;
+}
+
+// Storage-buffer bindings last one render pass, as in SDL_GPU. A later pass that applies none
+// must not read the buffer bound in an earlier one (WebGPU binds an all-zero dummy).
+TEST_CASE(test_storage_buffers_reset_per_pass)
+{
+	if (!test_make_app(W, H)) return true; // Headless CI: no display/GPU.
+	if (cf_query_backend() != CF_BACKEND_TYPE_WEBGPU) { test_destroy_app(); return true; }
+
+	static const char* fs =
+	"layout (location = 0) out vec4 result;\n"
+	"layout (std430, set = 2, binding = 0) readonly buffer tint_buffer { vec4 u_tint[]; };\n"
+	"void main() { result = vec4(u_tint[0].rgb, 1); }\n";
+	CF_Mesh mesh = s_make_quad();
+	CF_Shader shader = cf_make_shader_from_source(s_quad_vs, fs);
+	REQUIRE(shader.id);
+	CF_Material material = cf_make_material();
+	CF_Canvas a = cf_make_canvas(cf_canvas_defaults(W, H));
+	CF_Canvas b = cf_make_canvas(cf_canvas_defaults(W, H));
+	CF_Pixel* px = (CF_Pixel*)cf_alloc(W * H * (int)sizeof(CF_Pixel));
+	float red[4] = { 1, 0, 0, 1 };
+	CF_StorageBufferParams sp = cf_storage_buffer_defaults(sizeof(red));
+	sp.graphics_readable = true;
+	CF_StorageBuffer sb = cf_make_storage_buffer(sp);
+	cf_update_storage_buffer(sb, red, sizeof(red));
+
+	cf_app_update(NULL);
+	cf_apply_canvas(a, true);
+	cf_apply_mesh(mesh);
+	cf_apply_shader(shader, material);
+	cf_apply_fs_storage_buffers(&sb, 1);
+	cf_draw_elements();
+	cf_apply_canvas(b, true);
+	cf_apply_mesh(mesh);
+	cf_apply_shader(shader, material);
+	cf_draw_elements();
+	cf_app_draw_onto_screen(false);
+
+	CF_Pixel ca = s_read_center(a, px);
+	REQUIRE(ca.colors.r > 240 && ca.colors.g < 8);
+	CF_Pixel cb = s_read_center(b, px);
+	REQUIRE(cb.colors.r < 8 && cb.colors.g < 8 && cb.colors.b < 8);
+
+	cf_free(px);
+	cf_destroy_storage_buffer(sb);
+	cf_destroy_canvas(a);
+	cf_destroy_canvas(b);
+	cf_destroy_material(material);
+	cf_destroy_shader(shader);
+	cf_destroy_mesh(mesh);
+	test_destroy_app();
+	return true;
+}
+
 TEST_SUITE(test_instancing)
 {
 	RUN_TEST_CASE(test_instancing_appended_attributes);
 	RUN_TEST_CASE(test_instancing_indexed);
 	RUN_TEST_CASE(test_instancing_pull_storage);
 	RUN_TEST_CASE(test_instancing_indirect);
+	RUN_TEST_CASE(test_draw_after_pass_ended);
+	RUN_TEST_CASE(test_storage_buffers_reset_per_pass);
 }

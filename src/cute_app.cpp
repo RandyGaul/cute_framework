@@ -282,7 +282,8 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 				gfx_backend_type = CF_BACKEND_TYPE_WEBGPU;
 			} else {
 #	ifdef CF_EMSCRIPTEN
-				// No adapter: the browser lacks WebGPU or blocks it, so WebGL 2 it is.
+				// No adapter, device, or canvas context: the browser lacks WebGPU or blocks it, so
+				// WebGL 2 it is. The canvas is still free, since getContext("webgpu") failed.
 				use_webgpu = false;
 				use_opengl = true;
 #	endif

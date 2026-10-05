@@ -2780,12 +2780,116 @@ static void test_wgsl_contract(void)
 	}
 }
 
+static int count_substr(const char* s, const char* sub)
+{
+	int n = 0;
+	size_t len = strlen(sub);
+	for (const char* p = strstr(s, sub); p; p = strstr(p + len, sub)) n++;
+	return n;
+}
+
+static void test_wgsl_semantics(void)
+{
+	CSPV_Options o;
+	memset(&o, 0, sizeof(o));
+	o.emit_wgsl = true;
+
+	// ?: arms that write (directly, through a transitive user call, an atomic, or imageStore)
+	// must run only when taken: if/else into a temporary, never select(). Pure arms keep select().
+	{
+		CSPV_Result r = cspv_compile_ex(
+			"layout(local_size_x = 4) in;\n"
+			"layout(std430, set = 1, binding = 0) buffer Hits { uint hits[]; };\n"
+			"layout(std430, set = 1, binding = 1) buffer Out { uint data[]; };\n"
+			"layout(set = 1, binding = 2, r32ui) uniform writeonly image2D u_mark;\n"
+			"uint g_count;\n"
+			"uint bump() { g_count += 1u; return g_count; }\n"
+			"uint bump_twice() { return bump() + bump(); }\n"
+			"uint mark(ivec2 p) { imageStore(u_mark, p, uvec4(1u)); return 1u; }\n"
+			"uint pure_sq(uint x) { uint y = x; y *= x; return y; }\n"
+			"void main() {\n"
+			"	uint k = gl_GlobalInvocationID.x;\n"
+			"	uint a = k > 0u ? bump_twice() : 0u;\n"
+			"	uint b = k > 1u ? atomicAdd(hits[0], 1u) : 0u;\n"
+			"	uint c = k > 2u ? mark(ivec2(k, 0)) : 0u;\n"
+			"	uint d = k > 3u ? pure_sq(k) : 1u;\n"
+			"	data[k] = a + b + c + d;\n"
+			"}\n", CSPV_STAGE_COMPUTE, &o);
+		CHECK_MSG(r.success, r.error_message);
+		if (r.success) {
+			const char* s = r.wgsl;
+			CHECK(validate_wgsl(s));
+			CHECK(strstr(s, "select(0u, bump_twice()") == NULL);
+			CHECK(strstr(s, "select(0u, atomicAdd(") == NULL);
+			CHECK(strstr(s, "select(0u, mark(") == NULL);
+			CHECK(strstr(s, "select(1u, pure_sq(k), (k > 3u))") != NULL);
+			CHECK(count_substr(s, "\tif ((k > ") == 3);
+			CHECK(strstr(s, "cspv_t0 = bump_twice();") != NULL);
+		}
+		cspv_free(&r);
+	}
+
+	// out/inout l-values are fixed at the call: an index the callee (or a later argument)
+	// changes must not move the copy-back.
+	{
+		CSPV_Result r = cspv_compile_ex(
+			"layout(local_size_x = 1) in;\n"
+			"layout(std430, set = 1, binding = 0) buffer Out { uint data[]; };\n"
+			"uint g_i;\n"
+			"void put(out uint v) { v = 7u; g_i += 1u; }\n"
+			"void put_idx(inout uint v, inout uint i) { v += 1u; i += 1u; }\n"
+			"void main() {\n"
+			"	g_i = 0u;\n"
+			"	put(data[g_i]);\n"
+			"	uint i = 1u;\n"
+			"	put_idx(data[i], i);\n"
+			"}\n", CSPV_STAGE_COMPUTE, &o);
+		CHECK_MSG(r.success, r.error_message);
+		if (r.success) {
+			const char* s = r.wgsl;
+			CHECK(validate_wgsl(s));
+			CHECK(strstr(s, ".data[g_i] = cspv_o") == NULL);
+			CHECK(strstr(s, ".data[i] = cspv_o") == NULL);
+			CHECK(strstr(s, "let cspv_i") != NULL);
+		}
+		cspv_free(&r);
+	}
+
+	// atomicCompSwap is strong: atomicCompareExchangeWeak retried until it exchanges or the
+	// value it saw differs from the comparator.
+	{
+		CSPV_Result r = cspv_compile_ex(
+			"layout(local_size_x = 1) in;\n"
+			"layout(std430, set = 1, binding = 0) buffer Lock { uint lock[]; };\n"
+			"layout(std430, set = 1, binding = 1) buffer Out { uint data[]; };\n"
+			"shared int s_flag;\n"
+			"void main() {\n"
+			"	uint k = gl_GlobalInvocationID.x;\n"
+			"	uint old = atomicCompSwap(lock[k & 3u], 0u, k + 1u);\n"
+			"	int f = atomicCompSwap(s_flag, 0, 1) + 1;\n"
+			"	atomicCompSwap(lock[0], 1u, 2u);\n"
+			"	data[k] = old + uint(f);\n"
+			"}\n", CSPV_STAGE_COMPUTE, &o);
+		CHECK_MSG(r.success, r.error_message);
+		if (r.success) {
+			const char* s = r.wgsl;
+			CHECK(validate_wgsl(s));
+			CHECK(count_substr(s, "atomicCompareExchangeWeak(") == 3);
+			CHECK(count_substr(s, ".exchanged || ") == 3);
+			CHECK(strstr(s, ".old_value != ") != NULL);
+			CHECK(strstr(s, "loop\n") != NULL);
+		}
+		cspv_free(&r);
+	}
+}
+
 int main(void)
 {
 	detect_spirv_val();
 	detect_naga();
 	TEST(test_wgsl_corpus);
 	TEST(test_wgsl_contract);
+	TEST(test_wgsl_semantics);
 
 	TEST(test_preprocessor);
 	TEST(test_corpus_basic);

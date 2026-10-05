@@ -194,8 +194,147 @@ TEST_CASE(test_uniform_array_vertex_stage)
 	return true;
 }
 
+// WebGPU packs every draw's uniform blocks into a per-submission ring; a full ring submits,
+// starts a new render pass, and grows. A 12 KiB block (materials pack blocks in a 16 KiB arena)
+// fills the 4 MiB starting ring in about 340 draws.
+#define RING_BLOCK_BYTES (12 * 1024)
+
+static const char* s_ring_fs =
+"layout (location = 0) out vec4 result;\n"
+"layout (set = 3, binding = 0) uniform uniform_block {\n"
+"    vec4 u_color;\n"
+"    vec4 u_pad[767];\n"
+"};\n"
+"void main() { result = u_color + u_pad[766] * 0.0; }\n";
+
+// Covers NDC x in [-1, 0]: the left half of whatever viewport is applied.
+static CF_Mesh s_make_left_half_quad()
+{
+	struct Vertex { float x, y; };
+	Vertex verts[6] = { { -1, -1 }, { 0, -1 }, { 0, 1 }, { -1, -1 }, { 0, 1 }, { -1, 1 } };
+	CF_VertexAttribute attrs[1] = { };
+	attrs[0].name = "in_pos";
+	attrs[0].format = CF_VERTEX_FORMAT_FLOAT2;
+	attrs[0].offset = 0;
+	CF_Mesh mesh = cf_make_mesh(sizeof(verts), attrs, 1, sizeof(Vertex));
+	cf_mesh_update_vertex_data(mesh, verts, 6);
+	return mesh;
+}
+
+static void s_read_canvas(CF_Canvas canvas, CF_Pixel* px)
+{
+	CF_Readback rb = cf_canvas_readback(canvas);
+	if (!rb.id) return;
+	while (!cf_readback_ready(rb)) {}
+	cf_readback_data(rb, px, W * H * (int)sizeof(CF_Pixel));
+	cf_destroy_readback(rb);
+}
+
+static bool s_is(CF_Pixel p, int r, int g, int b)
+{
+	return cf_abs(p.colors.r - r) < 8 && cf_abs(p.colors.g - g) < 8 && cf_abs(p.colors.b - b) < 8;
+}
+
+// A regrown ring may reuse the released ring's handle address. A shader whose uniform bind
+// group was cached against the old ring must not keep reading it: each phase overflows the
+// ring once, so its final draw runs right after a regrowth.
+TEST_CASE(test_uniform_ring_regrow)
+{
+	if (!test_make_app(W, H)) return true; // Headless CI: no display/GPU.
+	if (cf_query_backend() != CF_BACKEND_TYPE_WEBGPU) { test_destroy_app(); return true; }
+
+	CF_Mesh mesh = s_make_left_half_quad();
+	CF_Shader shader = cf_make_shader_from_source(s_vs, s_ring_fs);
+	REQUIRE(shader.id);
+	CF_Material material = cf_make_material();
+	CF_Canvas canvas = cf_make_canvas(cf_canvas_defaults(W, H));
+	CF_Pixel* px = (CF_Pixel*)cf_alloc(W * H * (int)sizeof(CF_Pixel));
+
+	float filler[4] = { 0.5f, 0.5f, 0.5f, 1 };
+	float finals[3][4] = { { 1, 0, 0, 1 }, { 0, 1, 0, 1 }, { 0, 0, 1, 1 } };
+	int ring_mib = 4;
+	for (int phase = 0; phase < 3; ++phase) {
+		cf_app_update(NULL);
+		cf_apply_canvas(canvas, true);
+		cf_apply_mesh(mesh);
+		int draws = ring_mib * 1024 * 1024 / RING_BLOCK_BYTES + 8;
+		cf_material_set_uniform_fs(material, "u_color", filler, CF_UNIFORM_TYPE_FLOAT4, 1);
+		for (int i = 0; i < draws; ++i) {
+			cf_apply_shader(shader, material);
+			cf_draw_elements();
+		}
+		cf_material_set_uniform_fs(material, "u_color", finals[phase], CF_UNIFORM_TYPE_FLOAT4, 1);
+		cf_apply_shader(shader, material);
+		cf_draw_elements();
+		cf_app_draw_onto_screen(false);
+		s_read_canvas(canvas, px);
+		CF_Pixel c = px[(H / 2) * W + W / 8];
+		REQUIRE(s_is(c, (int)(finals[phase][0] * 255), (int)(finals[phase][1] * 255), (int)(finals[phase][2] * 255)));
+		ring_mib *= 2;
+	}
+
+	cf_free(px);
+	cf_destroy_canvas(canvas);
+	cf_destroy_material(material);
+	cf_destroy_shader(shader);
+	cf_destroy_mesh(mesh);
+	test_destroy_app();
+	return true;
+}
+
+// A ring overflow inside cf_apply_shader splits the render pass, which CF never sees: the
+// viewport and scissor set earlier in the pass must carry over to the new one.
+TEST_CASE(test_uniform_ring_overflow_keeps_pass_state)
+{
+	if (!test_make_app(W, H)) return true; // Headless CI: no display/GPU.
+	if (cf_query_backend() != CF_BACKEND_TYPE_WEBGPU) { test_destroy_app(); return true; }
+
+	CF_Mesh mesh = s_make_left_half_quad();
+	CF_Shader shader = cf_make_shader_from_source(s_vs, s_ring_fs);
+	REQUIRE(shader.id);
+	CF_Material material = cf_make_material();
+	CF_Canvas canvas = cf_make_canvas(cf_canvas_defaults(W, H));
+	CF_Pixel* px = (CF_Pixel*)cf_alloc(W * H * (int)sizeof(CF_Pixel));
+	float red[4] = { 1, 0, 0, 1 };
+	cf_material_set_uniform_fs(material, "u_color", red, CF_UNIFORM_TYPE_FLOAT4, 1);
+
+	// The viewport puts the quad on x in [0, W/4]; the scissor cuts x below W/8. Losing the
+	// viewport widens coverage to W/2, losing the scissor reaches back to 0.
+	cf_app_update(NULL);
+	cf_apply_canvas(canvas, true);
+	cf_apply_mesh(mesh);
+	cf_apply_shader(shader, material);
+	cf_apply_viewport(0, 0, W / 2, H);
+	cf_apply_scissor(W / 8, 0, W - W / 8, H);
+	cf_draw_elements();
+	// Past the ring the earlier ring tests leave behind (32 MiB when this suite runs alone).
+	int draws = 48 * 1024 * 1024 / RING_BLOCK_BYTES;
+	for (int i = 0; i < draws; ++i) {
+		cf_apply_shader(shader, material);
+		cf_draw_elements();
+	}
+	cf_app_draw_onto_screen(false);
+	s_read_canvas(canvas, px);
+
+	int row = (H / 2) * W;
+	REQUIRE(s_is(px[row + W / 16], 0, 0, 0));
+	REQUIRE(s_is(px[row + 3 * W / 16], 255, 0, 0));
+	REQUIRE(s_is(px[row + 3 * W / 8], 0, 0, 0));
+	REQUIRE(s_is(px[row + 3 * W / 4], 0, 0, 0));
+
+	cf_free(px);
+	cf_destroy_canvas(canvas);
+	cf_destroy_material(material);
+	cf_destroy_shader(shader);
+	cf_destroy_mesh(mesh);
+	test_destroy_app();
+	return true;
+}
+
 TEST_SUITE(test_uniform_arrays)
 {
 	RUN_TEST_CASE(test_uniform_array_roundtrip);
 	RUN_TEST_CASE(test_uniform_array_vertex_stage);
+	RUN_TEST_CASE(test_uniform_ring_regrow);
+	RUN_TEST_CASE(test_uniform_ring_overflow_keeps_pass_state);
 }

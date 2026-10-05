@@ -207,7 +207,7 @@ typedef struct CF_StorageBuffer { uint64_t id; } CF_StorageBuffer;
 	CF_ENUM(BACKEND_TYPE_PRIVATE,  4)                                              \
 	/* @entry OpenGL ES 3 backend. */                                              \
 	CF_ENUM(BACKEND_TYPE_GLES3,  5)                                                \
-	/* @entry WebGPU backend, opt-in with the CF_WEBGPU CMake option. The web build selects it when the browser offers WebGPU. */ \
+	/* @entry WebGPU backend. */                                                   \
 	CF_ENUM(BACKEND_TYPE_WEBGPU, 6)                                                \
 	/* @end */
 

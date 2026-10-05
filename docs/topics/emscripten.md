@@ -1,6 +1,6 @@
 # Web Builds with Emscripten
 
-Cute Framework supports web builds with a GLES3 backend renderer. Getting started with Emscripten is a bit challenging, so hopefully this page can help get you started. Once you get your game building for the web it's usually quite a breeze after the initial setup.
+Cute Framework supports web builds with a GLES3 (WebGL 2) backend renderer. Web builds can also carry the optional [WebGPU backend](webgpu.md), which CF picks at startup when the browser supports WebGPU and falls back to WebGL 2 otherwise. Getting started with Emscripten is a bit challenging, so hopefully this page can help get you started. Once you get your game building for the web it's usually quite a breeze after the initial setup.
 
 ## GLES3 Backend Capabilities
 
@@ -15,12 +15,22 @@ The GLES3 backend (web builds, and `CF_APP_OPTIONS_GFX_OPENGL_BIT` on desktop fo
 | Standalone samplers (`CF_Sampler`) | ✔ | ✔ |
 | Range draws / geometry arenas | ✔ | ✔ |
 | Storage buffers (read-only, vertex/fragment) | ✔ | ✔ (emulated via texture fetches, within the documented pattern: anonymous readonly single runtime `vec4`/`uvec4` array blocks) |
-| Compute shaders | ✔ | ✘ |
-| GPU-writable storage (`compute_writable`) | ✔ | ✘ |
+| Compute shaders | ✔ | ✔ (emulated with draws, see below) |
+| GPU-writable storage (`compute_writable`) | ✔ | ✔ (written by emulated compute shaders) |
 | Indirect draws | ✔ | ✘ |
 | `cf_push_gpu_label` capture regions | ✔ | no-op |
 
 Everything in the ✔ column is exercised by the test suite on both backends. Shaders following the documented contracts need no changes -- [cute_spirv](glsl_support.md) emits GLSL ES 300 with the emulations baked in (storage blocks outside the emulatable shape get clear compile errors).
+
+GLES3 has no compute shaders, so CF runs each dispatch as a couple of draws instead. This covers the common cases, but a compute shader for GLES3 can't use:
+
+- Shared memory (`shared` variables)
+- Barriers
+- Atomics
+- Writes to images or storage buffers inside a loop, or outside `main()`
+- `vec3` writes to storage buffers (write a `vec4`, or one component at a time)
+
+Breaking one of these rules is a compile error on GLES3 that names the problem and the line. The [WebGPU backend](webgpu.md) has none of these limits, and its own capability table compares all three backends.
 
 > [!NOTE]
 > Emscripten builds automatically disable CF's [HTTPS support](../api_reference.md#web), since web builds suffer from very poor support of this feature.
@@ -56,7 +66,9 @@ You will likely need to call `source ./emsdk_env.sh` on Linux/MacOS to setup env
 
 ## Build CF
 
-If on Windows go ahead and run the `emscripten.cmd` file. This will build libcute.a. If you're using something like Ninja the commands will be slightly different; consult the [emscripten docs](https://emscripten.org/docs/compiling/Building-Projects.html#integrating-with-a-build-system) if you need help.
+If on Windows go ahead and run the `web.cmd` file. This configures a Ninja build of CF in the `build_web` folder; then run `cmake --build build_web` to build it. On other platforms run the same `emcmake cmake` command from `web.cmd` yourself. Consult the [emscripten docs](https://emscripten.org/docs/compiling/Building-Projects.html#integrating-with-a-build-system) if you need help.
+
+To include the optional WebGPU backend, add `-DCF_WEBGPU=ON` to the configure command. See [WebGPU](webgpu.md) for details.
 
 ## Build your Game
 

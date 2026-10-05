@@ -246,23 +246,88 @@ if(CF_WEBGPU)
 		target_compile_options(cute PUBLIC --use-port=emdawnwebgpu)
 		target_link_options(cute INTERFACE --use-port=emdawnwebgpu)
 	else()
+		# wgpu-native v29.0.1.1, the release zip for this platform, fetched unless
+		# CF_WGPU_NATIVE_DIR points at an unpacked release (include/webgpu/webgpu.h, lib/).
 		if(NOT CF_WGPU_NATIVE_DIR)
-			message(FATAL_ERROR "CF_WEBGPU on desktop needs CF_WGPU_NATIVE_DIR pointing at a wgpu-native release.")
-		endif()
-		target_include_directories(cute PUBLIC ${CF_WGPU_NATIVE_DIR}/include)
-		target_compile_definitions(cute PRIVATE IMGUI_IMPL_WEBGPU_BACKEND_DAWN) # wgpu-native v25+ speaks the standard header, which is the path imgui calls Dawn.
-		if(WIN32)
-			set(CF_WGPU_NATIVE_LIB ${CF_WGPU_NATIVE_DIR}/lib/wgpu_native.dll.lib)
-			set(CF_WGPU_NATIVE_RUNTIME ${CF_WGPU_NATIVE_DIR}/lib/wgpu_native.dll)
-		elseif(APPLE)
-			set(CF_WGPU_NATIVE_LIB ${CF_WGPU_NATIVE_DIR}/lib/libwgpu_native.dylib)
-			set(CF_WGPU_NATIVE_RUNTIME ${CF_WGPU_NATIVE_LIB})
+			set(CF_WGPU_NATIVE_URL https://github.com/gfx-rs/wgpu-native/releases/download/v29.0.1.1)
+			string(TOLOWER "${CMAKE_SYSTEM_PROCESSOR}" CF_WGPU_ARCH)
+			if(CMAKE_OSX_ARCHITECTURES)
+				string(TOLOWER "${CMAKE_OSX_ARCHITECTURES}" CF_WGPU_ARCH)
+			endif()
+			if(WIN32 AND MSVC AND CF_WGPU_ARCH MATCHES "^(amd64|x86_64|x64)$")
+				set(CF_WGPU_ZIP wgpu-windows-x86_64-msvc-release.zip)
+				set(CF_WGPU_SHA256 7e67d7445c42aeb85e30f88930fd8d7d83ee769e3390aeb1ada75ebf3cf78132)
+			elseif(WIN32 AND MSVC AND CF_WGPU_ARCH MATCHES "^(arm64|aarch64)$")
+				set(CF_WGPU_ZIP wgpu-windows-aarch64-msvc-release.zip)
+				set(CF_WGPU_SHA256 4a876421a8c1e5fe72f849b3722214280fe485cb1c56f77f8b0c82414be5b29f)
+			elseif(MACOSX AND CF_WGPU_ARCH MATCHES "^(arm64|aarch64)$")
+				set(CF_WGPU_ZIP wgpu-macos-aarch64-release.zip)
+				set(CF_WGPU_SHA256 a5797a37b1adf720bcd5dcffb291edbbd5b7b14be0a3874c28e6393a655a7a3e)
+			elseif(MACOSX AND CF_WGPU_ARCH STREQUAL "x86_64")
+				set(CF_WGPU_ZIP wgpu-macos-x86_64-release.zip)
+				set(CF_WGPU_SHA256 8e2f7378548ddd0e2cf21e7d864dda46e953f0af724855a33778b85ead206d41)
+			elseif(LINUX AND CF_WGPU_ARCH MATCHES "^(x86_64|amd64)$")
+				set(CF_WGPU_ZIP wgpu-linux-x86_64-release.zip)
+				set(CF_WGPU_SHA256 95a4d90c071005a98d03eab348beaa6b07e16eb00d1dcdb9f8348f75eb97ec5a)
+			elseif(LINUX AND CF_WGPU_ARCH MATCHES "^(aarch64|arm64)$")
+				set(CF_WGPU_ZIP wgpu-linux-aarch64-release.zip)
+				set(CF_WGPU_SHA256 015fcdf1dbae82e614a783cc38017e5399ae0927a889fe9b69c9b664bc61b47a)
+			else()
+				message(FATAL_ERROR "CF_WEBGPU: no wgpu-native release is fetched for this platform (${CMAKE_SYSTEM_NAME}, ${CF_WGPU_ARCH}). Set CF_WGPU_NATIVE_DIR to an unpacked wgpu-native release.")
+			endif()
+			FetchContent_Declare(
+				wgpu_native
+				URL      ${CF_WGPU_NATIVE_URL}/${CF_WGPU_ZIP}
+				URL_HASH SHA256=${CF_WGPU_SHA256}
+				DOWNLOAD_EXTRACT_TIMESTAMP ON
+				UPDATE_DISCONNECTED TRUE
+				SOURCE_SUBDIR  cmake_is_unused
+			)
+			FetchContent_MakeAvailable(wgpu_native)
+			set(CF_WGPU_NATIVE_ROOT ${wgpu_native_SOURCE_DIR})
 		else()
-			set(CF_WGPU_NATIVE_LIB ${CF_WGPU_NATIVE_DIR}/lib/libwgpu_native.so)
-			set(CF_WGPU_NATIVE_RUNTIME ${CF_WGPU_NATIVE_LIB})
+			set(CF_WGPU_NATIVE_ROOT ${CF_WGPU_NATIVE_DIR})
 		endif()
-		target_link_libraries(cute PUBLIC ${CF_WGPU_NATIVE_LIB})
-		# The shared library has to sit beside every executable that links CF.
+
+		if(WIN32)
+			set(CF_WGPU_NATIVE_IMPLIB ${CF_WGPU_NATIVE_ROOT}/lib/wgpu_native.dll.lib)
+			set(CF_WGPU_NATIVE_RUNTIME ${CF_WGPU_NATIVE_ROOT}/lib/wgpu_native.dll)
+		elseif(APPLE)
+			set(CF_WGPU_NATIVE_RUNTIME ${CF_WGPU_NATIVE_ROOT}/lib/libwgpu_native.dylib)
+		else()
+			set(CF_WGPU_NATIVE_RUNTIME ${CF_WGPU_NATIVE_ROOT}/lib/libwgpu_native.so)
+		endif()
+		if(NOT EXISTS ${CF_WGPU_NATIVE_ROOT}/include/webgpu/webgpu.h OR NOT EXISTS ${CF_WGPU_NATIVE_ROOT}/include/webgpu/wgpu.h)
+			message(FATAL_ERROR "CF_WEBGPU: ${CF_WGPU_NATIVE_ROOT} is not a wgpu-native release: include/webgpu/webgpu.h and wgpu.h are missing.")
+		endif()
+		foreach(CF_WGPU_FILE ${CF_WGPU_NATIVE_RUNTIME} ${CF_WGPU_NATIVE_IMPLIB})
+			if(NOT EXISTS ${CF_WGPU_FILE})
+				message(FATAL_ERROR "CF_WEBGPU: ${CF_WGPU_FILE} is missing from the wgpu-native release at ${CF_WGPU_NATIVE_ROOT}.")
+			endif()
+		endforeach()
+
+		# An imported target, so `$<TARGET_RUNTIME_DLLS:your_game>` lists the shared library for
+		# programs outside CF's build. Copy it beside your executable with:
+		#   add_custom_command(TARGET your_game POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_if_different
+		#     $<TARGET_RUNTIME_DLLS:your_game> $<TARGET_FILE_DIR:your_game> COMMAND_EXPAND_LISTS)
+		# A project that already defines wgpu_native keeps its own target.
+		if(NOT TARGET wgpu_native)
+			add_library(wgpu_native SHARED IMPORTED GLOBAL)
+			set_target_properties(wgpu_native PROPERTIES IMPORTED_LOCATION ${CF_WGPU_NATIVE_RUNTIME})
+			if(WIN32)
+				set_target_properties(wgpu_native PROPERTIES IMPORTED_IMPLIB ${CF_WGPU_NATIVE_IMPLIB})
+			endif()
+			install(IMPORTED_RUNTIME_ARTIFACTS wgpu_native RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
+			if(WIN32)
+				install(FILES ${CF_WGPU_NATIVE_IMPLIB} DESTINATION ${CMAKE_INSTALL_LIBDIR})
+			endif()
+		endif()
+		target_link_libraries(cute PUBLIC wgpu_native)
+		# No public CF header includes webgpu.h.
+		target_include_directories(cute PRIVATE $<BUILD_INTERFACE:${CF_WGPU_NATIVE_ROOT}/include>)
+		target_compile_definitions(cute PRIVATE IMGUI_IMPL_WEBGPU_BACKEND_DAWN) # wgpu-native v25+ speaks the standard header, which is the path imgui calls Dawn.
+
+		# CF's own executables all land in CMAKE_RUNTIME_OUTPUT_DIRECTORY, so one copy serves them.
 		if(CMAKE_RUNTIME_OUTPUT_DIRECTORY)
 			get_property(CF_MULTI_CONFIG GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
 			if(CF_MULTI_CONFIG)
@@ -272,7 +337,7 @@ if(CF_WEBGPU)
 			endif()
 			add_custom_command(TARGET cute POST_BUILD
 				COMMAND ${CMAKE_COMMAND} -E make_directory "${CF_WGPU_RUNTIME_DIR}"
-				COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CF_WGPU_NATIVE_RUNTIME}" "${CF_WGPU_RUNTIME_DIR}"
+				COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:wgpu_native>" "${CF_WGPU_RUNTIME_DIR}"
 			)
 		endif()
 	endif()

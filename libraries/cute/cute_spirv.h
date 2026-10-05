@@ -9872,7 +9872,9 @@ static void cspv_emit_msl(cspv_ctx* ctx)
 // shared/storage integers become atomic<u32|i32> (vector elements flatten into scalar
 // atomics); their plain reads and writes become atomicLoad/atomicStore. out/inout parameters
 // are ptr<function, T>; an argument that is not a whole local variable goes through a
-// temporary copied back after the statement. Overloaded functions get _cspv<k> suffixes.
+// temporary copied back after the statement, its subscripts evaluated once before the call.
+// atomicCompSwap is a retry loop over atomicCompareExchangeWeak. Overloaded functions get
+// _cspv<k> suffixes.
 
 typedef struct cspv_wg_atom
 {
@@ -9917,6 +9919,7 @@ typedef struct cspv_wg
 	CK_DYNA cspv_wg_hoist* hoists;    // Out-argument temporaries of the statement being printed.
 	CK_DYNA cspv_decl** written;      // Buffer blocks the module writes.
 	CK_MAP(const char*) lowered;      // Expression node -> interned text of the temporary computing it.
+	CK_MAP(int) func_effects;         // Function decl -> 1 visiting, 2 no outside writes, 3 writes outside its locals.
 	CK_SDYNA char* saved_out;         // tp_out while an expression prints into a scratch string.
 	int temp_counter;
 	int load_counter;
@@ -9946,6 +9949,7 @@ static void cspv_wg_free(cspv_ctx* ctx)
 	afree(g->hoists);
 	afree(g->written);
 	map_free(g->lowered);
+	map_free(g->func_effects);
 	sfree(g->saved_out);
 	ctx->wg = NULL;
 }
@@ -10270,6 +10274,11 @@ static bool cspv_wg_is_atomic_call(const char* name)
 	return !strcmp(name, "atomicAdd") || !strcmp(name, "atomicMin") || !strcmp(name, "atomicMax") ||
 		!strcmp(name, "atomicAnd") || !strcmp(name, "atomicOr") || !strcmp(name, "atomicXor") ||
 		!strcmp(name, "atomicExchange") || !strcmp(name, "atomicCompSwap");
+}
+
+static bool cspv_wg_is_cas(cspv_expr* e)
+{
+	return e->kind == CSPV_E_CALL && e->u.call.array_size == -1 && !strcmp(e->u.call.name, "atomicCompSwap");
 }
 
 // The user function a call resolves to (overloads matched on argument types), or NULL for
@@ -11415,15 +11424,14 @@ static void cspv_wg_call(cspv_wg* g, cspv_expr* e)
 		if (p.ncomps > 1 || (p.ncomps == 0 && p.atom->cols > 1)) {
 			cspv_errorf(ctx, e->line, "atomic destinations must be scalars in WGSL output");
 		}
-		bool cas = !strcmp(name, "atomicCompSwap");
-		sfmt_append(*out, "%s(&", cas ? "atomicCompareExchangeWeak" : name);
+		if (cspv_wg_is_cas(e)) cspv_errorf(ctx, e->line, "atomicCompSwap was not lowered to a statement in WGSL output");
+		sfmt_append(*out, "%s(&", name);
 		cspv_wg_atom_lv(g, &p, p.ncomps ? p.comps[0] : 0);
 		for (int i = 1; i < argc; i++) {
 			sappend(*out, ", ");
 			cspv_wg_expr_to(g, args[i], p.atom->scalar, 0);
 		}
 		spush(*out, ')');
-		if (cas) sappend(*out, ".old_value");
 		return;
 	}
 
@@ -11531,6 +11539,30 @@ static void cspv_wg_scope_end(cspv_wg* g)
 	}
 }
 
+// GLSL fixes an out/inout l-value at the call: its subscripts evaluate once, before the call,
+// so the copy-back lands where the copy-in read even if the call changes the index.
+static void cspv_wg_pin_subscripts(cspv_wg* g, cspv_expr* e)
+{
+	while (e->kind == CSPV_E_MEMBER || e->kind == CSPV_E_INDEX) {
+		if (e->kind == CSPV_E_MEMBER) {
+			e = e->u.member.base;
+			continue;
+		}
+		cspv_expr* x = e->u.index.index;
+		if (x->kind != CSPV_E_INT_LIT && x->kind != CSPV_E_UINT_LIT) {
+			char buf[32];
+			snprintf(buf, sizeof(buf), "cspv_i%d", g->temp_counter++);
+			const char* t = sintern(buf);
+			cspv_wg_indent(g);
+			sfmt_append(g->ctx->tp_out, "let %s = ", t);
+			cspv_wg_node(g, x, 0);
+			sappend(g->ctx->tp_out, ";\n");
+			map_set(g->lowered, (uint64_t)(uintptr_t)x, t);
+		}
+		e = e->u.index.base;
+	}
+}
+
 static void cspv_wg_hoist_visit(cspv_wg* g, cspv_expr* e, void* user)
 {
 	(void)user;
@@ -11542,6 +11574,7 @@ static void cspv_wg_hoist_visit(cspv_wg* g, cspv_expr* e, void* user)
 		cspv_expr* a = e->u.call.args[i];
 		bool is_ptr = false;
 		if (cspv_wg_out_arg_direct(g, a, &is_ptr) || cspv_wg_hoist_temp(g, a) >= 0) continue;
+		cspv_wg_pin_subscripts(g, a);
 		int t = g->temp_counter++;
 		cspv_wg_indent(g);
 		sfmt_append(g->ctx->tp_out, "var cspv_o%d: %s", t, cspv_wg_type(g, f->params[i].type));
@@ -11798,7 +11831,109 @@ static void cspv_wg_expr_stmt(cspv_wg* g, cspv_expr* e, bool inline_form)
 	if (!inline_form) sappend(*out, ";\n");
 }
 
-// Whether evaluating `e` writes anything: assignments, ++/--, out/inout arguments.
+static void cspv_wg_collect_locals(cspv_stmt* s, CK_DYNA const char*** names)
+{
+	if (!s) return;
+	switch (s->kind) {
+	case CSPV_S_BLOCK: for (int i = 0; i < (int)asize(s->u.block); i++) cspv_wg_collect_locals(s->u.block[i], names); break;
+	case CSPV_S_DECL: for (cspv_stmt* n = s; n; n = n->u.decl.next_decl) apush(*names, n->u.decl.name); break;
+	case CSPV_S_IF: cspv_wg_collect_locals(s->u.if_s.then_s, names); cspv_wg_collect_locals(s->u.if_s.else_s, names); break;
+	case CSPV_S_FOR: cspv_wg_collect_locals(s->u.for_s.init, names); cspv_wg_collect_locals(s->u.for_s.body, names); break;
+	case CSPV_S_WHILE: case CSPV_S_DO: cspv_wg_collect_locals(s->u.while_s.body, names); break;
+	case CSPV_S_SWITCH: {
+		cspv_switch_group* groups = s->u.switch_s.groups;
+		for (int i = 0; i < (int)asize(groups); i++) {
+			for (int j = 0; j < (int)asize(groups[i].stmts); j++) cspv_wg_collect_locals(groups[i].stmts[j], names);
+		}
+		break;
+	}
+	default: break;
+	}
+}
+
+static bool cspv_wg_module_name(cspv_wg* g, const char* name)
+{
+	cspv_ctx* ctx = g->ctx;
+	for (int i = 0; i < (int)asize(ctx->decls); i++) {
+		cspv_decl* d = ctx->decls + i;
+		if (d->kind == CSPV_D_FUNC) continue;
+		if (d->name == name || d->instance_name == name) return true;
+		if (d->kind == CSPV_D_BLOCK && !d->instance_name) {
+			for (int j = 0; j < d->num_members; j++) {
+				if (d->member_names[j] == name) return true;
+			}
+		}
+	}
+	return false;
+}
+
+typedef struct cspv_wg_fx_scan
+{
+	cspv_decl* f;
+	CK_DYNA const char** locals;
+	bool effects;
+} cspv_wg_fx_scan;
+
+static bool cspv_wg_func_effects(cspv_wg* g, cspv_decl* f);
+
+// Names match by scope-free comparison, so a local shadowing a module name counts as the
+// module name (conservative).
+static bool cspv_wg_fx_local(cspv_wg* g, cspv_wg_fx_scan* scan, const char* root)
+{
+	if (!root || cspv_wg_module_name(g, root)) return false;
+	for (int i = 0; i < scan->f->num_params; i++) {
+		if (scan->f->params[i].name == root) return true;
+	}
+	for (int i = 0; i < (int)asize(scan->locals); i++) {
+		if (scan->locals[i] == root) return true;
+	}
+	return false;
+}
+
+static void cspv_wg_fx_visit(cspv_wg* g, cspv_expr* e, void* user)
+{
+	cspv_wg_fx_scan* scan = (cspv_wg_fx_scan*)user;
+	if (scan->effects) return;
+	if (e->kind == CSPV_E_BINARY && cspv_tp_is_assign_op(e->u.bin.op)) {
+		if (!cspv_wg_fx_local(g, scan, cspv_wg_lvalue_root(e->u.bin.l))) scan->effects = true;
+	} else if (e->kind == CSPV_E_UNARY && (e->u.un.op == CSPV_P_INC || e->u.un.op == CSPV_P_DEC)) {
+		if (!cspv_wg_fx_local(g, scan, cspv_wg_lvalue_root(e->u.un.e))) scan->effects = true;
+	} else if (e->kind == CSPV_E_CALL) {
+		const char* name = e->u.call.name;
+		if (e->u.call.array_size == -1 && (cspv_wg_is_atomic_call(name) || !strcmp(name, "imageStore"))) {
+			scan->effects = true;
+			return;
+		}
+		cspv_decl* f = cspv_wg_resolve(g, e);
+		if (!f) return;
+		if (cspv_wg_func_effects(g, f)) scan->effects = true;
+		for (int i = 0; i < f->num_params; i++) {
+			if (f->params[i].qual && !cspv_wg_fx_local(g, scan, cspv_wg_lvalue_root(e->u.call.args[i]))) scan->effects = true;
+		}
+	}
+}
+
+// Whether calling `f` writes anything outside its own locals and parameters: module
+// variables, stage outputs, buffers, shared memory, images, atomics, transitively.
+static bool cspv_wg_func_effects(cspv_wg* g, cspv_decl* f)
+{
+	uint64_t key = (uint64_t)(uintptr_t)f;
+	int state = map_get(g->func_effects, key);
+	if (state) return state == 3;
+	map_set(g->func_effects, key, 1);
+	cspv_wg_fx_scan scan;
+	scan.f = f;
+	scan.locals = NULL;
+	scan.effects = false;
+	cspv_wg_collect_locals(f->body, &scan.locals);
+	cspv_wg_walk_stmt(g, f->body, cspv_wg_fx_visit, &scan);
+	afree(scan.locals);
+	map_set(g->func_effects, key, scan.effects ? 3 : 2);
+	return scan.effects;
+}
+
+// Whether evaluating `e` writes anything: assignments, ++/--, out/inout arguments, atomics,
+// imageStore, and calls to functions that write outside their locals.
 static bool cspv_wg_effects(cspv_wg* g, cspv_expr* e)
 {
 	if (!e) return false;
@@ -11812,7 +11947,10 @@ static bool cspv_wg_effects(cspv_wg* g, cspv_expr* e)
 	case CSPV_E_COND:
 		return cspv_wg_effects(g, e->u.cond.c) || cspv_wg_effects(g, e->u.cond.a) || cspv_wg_effects(g, e->u.cond.b);
 	case CSPV_E_CALL: {
+		const char* name = e->u.call.name;
+		if (e->u.call.array_size == -1 && (cspv_wg_is_atomic_call(name) || !strcmp(name, "imageStore"))) return true;
 		cspv_decl* f = cspv_wg_resolve(g, e);
+		if (f && cspv_wg_func_effects(g, f)) return true;
 		for (int i = 0; f && i < f->num_params; i++) {
 			if (f->params[i].qual) return true;
 		}
@@ -11845,6 +11983,7 @@ static bool cspv_wg_needs_lowering(cspv_wg* g, cspv_expr* e, bool root)
 		return cspv_wg_needs_lowering(g, e->u.cond.c, false);
 	}
 	case CSPV_E_CALL:
+		if (cspv_wg_is_cas(e)) return true;
 		for (int i = 0; i < (int)asize(e->u.call.args); i++) {
 			if (cspv_wg_needs_lowering(g, e->u.call.args[i], false)) return true;
 		}
@@ -11889,10 +12028,56 @@ static void cspv_wg_store_value(cspv_wg* g, const char* target, cspv_expr* e, cs
 	cspv_wg_hoist_end(g, base);
 }
 
+// atomicCompSwap is strong; atomicCompareExchangeWeak may fail spuriously, so it retries until
+// it exchanges or observes a value other than the comparator. Operands evaluate once.
+static void cspv_wg_cas(cspv_wg* g, cspv_expr* e)
+{
+	cspv_ctx* ctx = g->ctx;
+	CK_SDYNA char** out = &ctx->tp_out;
+	CK_DYNA cspv_expr** args = e->u.call.args;
+	cspv_wg_apath p;
+	if (!cspv_wg_atom_path(g, args[0], &p)) cspv_errorf(ctx, e->line, "unsupported atomic destination in WGSL output");
+	cspv_wg_atom_check_element(g, &p, e->line);
+	if (p.ncomps > 1 || (p.ncomps == 0 && p.atom->cols > 1)) {
+		cspv_errorf(ctx, e->line, "atomic destinations must be scalars in WGSL output");
+	}
+	cspv_wg_pin_subscripts(g, args[0]);
+	const char* st = cspv_wg_type(g, p.atom->scalar);
+	int t = g->temp_counter++;
+	for (int i = 1; i < 3; i++) {
+		int base = cspv_wg_hoist_begin(g, args[i]);
+		cspv_wg_indent(g);
+		sfmt_append(*out, "let cspv_%c%d: %s = ", i == 1 ? 'c' : 'v', t, st);
+		cspv_wg_expr_to(g, args[i], p.atom->scalar, 0);
+		sappend(*out, ";\n");
+		cspv_wg_hoist_end(g, base);
+	}
+	cspv_wg_indent(g);
+	sfmt_append(*out, "var cspv_t%d: %s;\n", t, st);
+	cspv_wg_indent(g);
+	sappend(*out, "loop\n");
+	cspv_wg_indent(g);
+	sappend(*out, "{\n");
+	g->indent++;
+	cspv_wg_indent(g);
+	sfmt_append(*out, "let cspv_r%d = atomicCompareExchangeWeak(&", t);
+	cspv_wg_atom_lv(g, &p, p.ncomps ? p.comps[0] : 0);
+	sfmt_append(*out, ", cspv_c%d, cspv_v%d);\n", t, t);
+	cspv_wg_indent(g);
+	sfmt_append(*out, "cspv_t%d = cspv_r%d.old_value;\n", t, t);
+	cspv_wg_indent(g);
+	sfmt_append(*out, "if (cspv_r%d.exchanged || cspv_r%d.old_value != cspv_c%d) { break; }\n", t, t, t);
+	g->indent--;
+	cspv_wg_indent(g);
+	sappend(*out, "}\n");
+	map_set(g->lowered, (uint64_t)(uintptr_t)e, cspv_wg_temp_name(g, t));
+}
+
 // GLSL expressions WGSL can only state as statements, emitted ahead of the statement using
 // them, each node then printing as its temporary: assignments and ++/-- used as values, ?:
-// on non-scalar/vector values or with side-effecting arms (only the taken arm may run), and
-// && / || with a side-effecting right side. `root`: e is the statement's own expression.
+// on non-scalar/vector values or with side-effecting arms (only the taken arm may run),
+// && / || with a side-effecting right side, and atomicCompSwap (a retry loop). `root`: e is
+// the statement's own expression.
 static void cspv_wg_lower(cspv_wg* g, cspv_expr* e, bool root)
 {
 	if (!e || !cspv_wg_needs_lowering(g, e, root)) return;
@@ -12003,6 +12188,7 @@ static void cspv_wg_lower(cspv_wg* g, cspv_expr* e, bool root)
 	}
 	case CSPV_E_CALL:
 		for (int i = 0; i < (int)asize(e->u.call.args); i++) cspv_wg_lower(g, e->u.call.args[i], false);
+		if (cspv_wg_is_cas(e)) cspv_wg_cas(g, e);
 		return;
 	case CSPV_E_MEMBER: case CSPV_E_LENGTH:
 		cspv_wg_lower(g, e->u.member.base, false);

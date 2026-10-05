@@ -20,6 +20,7 @@
 #define FLAG_VARNAME "-varname="
 #define FLAG_TYPE "-type="
 #define FLAG_NOGLES "-nogles"
+#define FLAG_NOWGSL "-nowgsl"
 #define FLAG_VERBOSE "-verbose"
 #define FLAG_INVALID "-"
 #define MAX_INCLUDES 64
@@ -484,6 +485,7 @@ int main(int argc, const char* argv[])
 	int num_includes = 0;
 	bool type_set = false;
 	bool nogles = false;
+	bool nowgsl = false;
 	bool verbose = false;
 	shader_type_t type = SHADER_TYPE_DRAW;
 	const char* include_dirs[MAX_INCLUDES];
@@ -506,6 +508,8 @@ int main(int argc, const char* argv[])
 				"                   Also requires -varname.\n"
 				"-varname=<file>    The variable name inside the C header.\n"
 				"-obytecode=<file>  (Optional) Where to write the raw SPIRV blob.\n"
+				"-nogles            Skip GLSL 300 output (the bytecode will not run on GLES3/WebGL2).\n"
+				"-nowgsl            Skip WGSL output (the bytecode will not run on WebGPU).\n"
 			);
 			return 0;
 		} else if ((flag_value = parse_flag(arg, FLAG_INCLUDE)) != NULL) {
@@ -517,6 +521,8 @@ int main(int argc, const char* argv[])
 			}
 		} else if (strcmp(arg, FLAG_NOGLES) == 0) {
 			nogles = true;
+		} else if (strcmp(arg, FLAG_NOWGSL) == 0) {
+			nowgsl = true;
 		} else if (strcmp(arg, FLAG_VERBOSE) == 0) {
 			verbose = true;
 		} else if ((flag_value = parse_flag(arg, FLAG_TYPE)) != NULL) {
@@ -639,6 +645,7 @@ int main(int argc, const char* argv[])
 			// The SSBO draw flavor cannot transpile to GLSL 300 es; the GLES flavor's
 			// transpile is grafted in below.
 			.skip_glsl300 = true,
+			.skip_wgsl = nowgsl,
 		};
 
 		// The payload storage buffer binds right after the stub's last sampler.
@@ -696,7 +703,7 @@ int main(int argc, const char* argv[])
 			config.num_builtin_defines = --num_defines;
 			config.skip_hlsl = false;
 			config.skip_msl = false;
-			config.skip_wgsl = false;
+			config.skip_wgsl = nowgsl;
 		} else {
 			config.skip_glsl300 = true;
 		}
@@ -747,6 +754,7 @@ int main(int argc, const char* argv[])
 			.automatic_include_guard = true,
 			.return_preprocessed_source = verbose,
 			.skip_glsl300 = nogles,
+			.skip_wgsl = nowgsl,
 		};
 
 		CF_ShaderCompilerStage compile_stage = CUTE_SHADER_STAGE_FRAGMENT;

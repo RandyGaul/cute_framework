@@ -322,9 +322,8 @@ jobs:
     timeout-minutes: 25
 
     # Runs the test suite on the WebGPU backend natively: wgpu-native over Mesa's lavapipe Vulkan
-    # rasterizer, the same backend code the web build runs through emdawnwebgpu.
-    env:
-      WGPU_NATIVE_VERSION: v29.0.1.1
+    # rasterizer, the same backend code the web build runs through emdawnwebgpu. CMake fetches the
+    # pinned wgpu-native release (CF_WGPU_NATIVE_DIR left empty).
     steps:
       - name: Install Linux Dependencies
         run: |
@@ -342,11 +341,6 @@ jobs:
         uses: hendrikmuhs/ccache-action@v1.2
         with:
           key: linux-webgpu
-
-      - name: Fetch wgpu-native
-        run: |
-          curl -sSfL -o wgpu.zip "https://github.com/gfx-rs/wgpu-native/releases/download/${WGPU_NATIVE_VERSION}/wgpu-linux-x86_64-release.zip"
-          mkdir -p "$HOME/wgpu-native" && unzip -q wgpu.zip -d "$HOME/wgpu-native"
 
       - name: Configure
         run: >
@@ -369,7 +363,6 @@ jobs:
           -DSDL_X11_XTEST=OFF
           -DCF_FRAMEWORK_STATIC=ON
           -DCF_WEBGPU=ON
-          -DCF_WGPU_NATIVE_DIR=$HOME/wgpu-native
 
       - name: Build
         run: cmake --build build --target tests
