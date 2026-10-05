@@ -10,6 +10,7 @@ ap.add_argument("--dir", required=True, help="directory holding webgpu_smoke.htm
 ap.add_argument("--expect", required=True, help="backend name cf_backend_type_to_string reports")
 ap.add_argument("--allow", action="append", default=[], help="substring of a console error to tolerate")
 ap.add_argument("--timeout", type=float, default=60)
+ap.add_argument("--headful", action="store_true", help="run a windowed browser (needs a display, e.g. xvfb-run)")
 ap.add_argument("flags", nargs="*", help="extra browser flags")
 args = ap.parse_args()
 
@@ -34,7 +35,7 @@ threading.Thread(target=server.serve_forever, daemon=True).start()
 url = "http://127.0.0.1:%d/webgpu_smoke.html" % server.server_address[1]
 
 profile = tempfile.mkdtemp(prefix="cf-smoke-")
-cmd = [args.browser, "--headless=new", "--no-first-run", "--no-default-browser-check",
+cmd = [args.browser] + ([] if args.headful else ["--headless=new"]) + ["--no-first-run", "--no-default-browser-check",
 	"--user-data-dir=" + profile, "--enable-logging=stderr", "--v=0"] + args.flags + [url]
 print("$ " + " ".join(cmd), flush=True)
 browser = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True, errors="replace")

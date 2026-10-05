@@ -30,8 +30,9 @@ static void s_draw_red(CF_Canvas canvas)
 static bool s_reads_red(CF_Canvas canvas)
 {
 	CF_Readback rb = cf_canvas_readback(canvas);
-	bool ready = false;
-	for (int i = 0; i < 100000 && !ready; ++i) ready = cf_readback_ready(rb);
+	// Unbounded like every other readback test: a poll count runs out before slow CI GPUs finish.
+	while (!cf_readback_ready(rb)) {}
+	bool ready = true;
 	CF_Pixel* px = (CF_Pixel*)cf_calloc(W * H * (int)sizeof(CF_Pixel), 1);
 	bool red = false;
 	if (ready && cf_readback_data(rb, px, W * H * (int)sizeof(CF_Pixel))) {

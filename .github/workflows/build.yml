@@ -298,7 +298,7 @@ jobs:
 
     # The web build with CF_WEBGPU=ON carries both backends and picks WebGPU at runtime when the
     # browser offers an adapter. This compiles that configuration (emdawnwebgpu port included),
-    # then loads samples/webgpu_smoke.c's page in headless Chrome twice: once with WebGPU, once
+    # then loads samples/webgpu_smoke.c's page in Chrome twice: once with WebGPU, once
     # without, where it must fall back to WebGL 2.
     steps:
       - uses: actions/checkout@master
@@ -328,13 +328,19 @@ jobs:
       - name: Build
         run: cmake --build build -j
 
-      # The runner has no GPU: WebGPU comes from Dawn's SwiftShader adapter over Vulkan, WebGL 2
-      # from ANGLE's SwiftShader. The page reports its backend, a readback pixel of the red box it
-      # draws, and every console error; tools/web_smoke.py fails on any mismatch or after 60s.
-      - name: Smoke test (WebGPU, headless Chrome)
+      # Chrome on a GPU-less Linux runner can only present a WebGPU canvas windowed (xvfb) over a
+      # real Vulkan driver: with SwiftShader, headless or not, the GPU process dies creating the
+      # canvas swapchain (no SharedImage backing), even for a plain JS page. Mesa's lavapipe works.
+      - name: Install Mesa Vulkan
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq mesa-vulkan-drivers xvfb
+
+      # The page reports its backend, a readback pixel of the red box it draws, and every console
+      # error; tools/web_smoke.py fails on any mismatch or after 60s.
+      - name: Smoke test (WebGPU, Chrome)
         run: >
-          python3 tools/web_smoke.py --browser google-chrome --dir build --expect CF_BACKEND_TYPE_WEBGPU --
-          --no-sandbox --enable-unsafe-webgpu --enable-features=Vulkan --use-vulkan=swiftshader --use-webgpu-adapter=swiftshader
+          xvfb-run -a -s "-screen 0 1280x720x24"
+          python3 tools/web_smoke.py --headful --browser google-chrome --dir build --expect CF_BACKEND_TYPE_WEBGPU --
+          --no-sandbox --enable-unsafe-webgpu --enable-features=Vulkan --use-vulkan=native
 
       # The only console error tolerated is CF's own note that it found no adapter.
       - name: Smoke test (WebGPU disabled, WebGL 2 fallback)
