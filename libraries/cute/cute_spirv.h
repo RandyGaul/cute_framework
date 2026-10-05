@@ -3,7 +3,7 @@
 		Licensing information can be found at the end of the file.
 	------------------------------------------------------------------------------
 
-	cute_spirv.h - v1.00
+	cute_spirv.h - v1.10
 
 	To create implementation (the function definitions)
 		#define CUTE_SPIRV_IMPLEMENTATION
@@ -116,6 +116,14 @@
 		                  sampling (SPIR-V Grad operands, HLSL SampleGrad, MSL
 		                  gradient2d/gradientcube/gradient3d, native in ES 3.00) on
 		                  sampler2D/Cube/3D/2DArray/2DShadow, legal in every stage.
+		1.10 (10/04/2026) GLSL ES 3.00 output for compute shaders: a capture-pass
+		                  fragment shader (one fragment per invocation; each storage
+		                  write site captured into cspv_value/cspv_target, gated on
+		                  u_cspv_site) with reflection.write_sites/loaded_images for
+		                  the runtime's scatter. Storage buffers read as std430 words
+		                  through u_cs_storage_<rank>; imageLoad reads a same-named
+		                  sampler. Shared memory, barriers, atomics, writes in loops
+		                  or outside main, and vec3 writes are compile errors.
 */
 #ifndef CUTE_SPIRV_H
 #define CUTE_SPIRV_H
@@ -195,6 +203,25 @@ typedef struct CSPV_ReflectionInput
 	CSPV_DataType type;
 } CSPV_ReflectionInput;
 
+// A compute shader transpiled to GLSL ES 3.00 runs as a fragment "capture" pass, one fragment
+// per invocation, that records each storage write instead of performing it; the host then
+// scatters the records into their destinations (see cspv_emit_glsl300). Each textual write --
+// an imageStore, or an assignment into a storage-buffer element or member -- is one site.
+typedef enum CSPV_WriteKind { CSPV_WRITE_IMAGE, CSPV_WRITE_BUFFER } CSPV_WriteKind;
+typedef enum CSPV_WriteType { CSPV_WRITE_FLOAT, CSPV_WRITE_UINT, CSPV_WRITE_INT } CSPV_WriteType;
+
+typedef struct CSPV_WriteSite
+{
+	CSPV_WriteKind kind;
+	const char* name;    // Interned: the image variable, or the buffer block's instance name (anonymous: its array member).
+	int set;
+	int binding;
+	int rank;            // Buffers: the N of u_cs_storage_N. Images: rank among set-1 images by binding.
+	int words;           // 32-bit words written: 1, 2 or 4 (images: 4).
+	CSPV_WriteType type; // How the destination stores the bits (images by format; buffers UINT).
+	int image_format;    // Images: the SPIR-V ImageFormat of the layout qualifier. Buffers: 0.
+} CSPV_WriteSite;
+
 typedef struct CSPV_Reflection
 {
 	CK_DYNA CSPV_ReflectionResource* samplers;        // Combined image samplers.
@@ -204,6 +231,9 @@ typedef struct CSPV_Reflection
 	CK_DYNA CSPV_ReflectionMember* uniform_members;   // All blocks, tightly packed.
 	CK_DYNA CSPV_ReflectionInput* inputs;             // Vertex stage attribute inputs.
 	int local_size[3];                                // Compute workgroup size (zero for non-compute).
+	// Compute + emit_glsl300 only:
+	CK_DYNA CSPV_WriteSite* write_sites;              // Site k is selected by u_cspv_site == k.
+	CK_DYNA const char** loaded_images;               // Interned names of images read (imageLoad/imageSize): bind as samplers.
 } CSPV_Reflection;
 
 typedef struct CSPV_Result
@@ -270,8 +300,9 @@ typedef struct CSPV_Options
 	const char* (*display_name)(const char* path, void* user);
 
 	// When set, CSPV_Result.glsl300 carries the shader transpiled to GLSL ES 3.00
-	// (vertex/fragment only; compute and SSBOs/storage images are rejected since
-	// GLES 3.0 has no support for them).
+	// (readonly storage buffers emulate as texture fetches). A compute shader becomes
+	// the capture-pass fragment shader described at CSPV_WriteSite; shared memory,
+	// barriers and atomics are rejected, as GLES 3.0 cannot run them.
 	bool emit_glsl300;
 
 	// When set, CSPV_Result.hlsl carries the shader transpiled to HLSL SM 5.1
@@ -6110,6 +6141,11 @@ typedef struct cspv_tp
 	CK_DYNA const char** es_ssbo_names; // Interned member names.
 	CK_DYNA int* es_ssbo_slots;
 	CK_DYNA cspv_type** es_ssbo_elems;  // vec4-family element type.
+	// GLSL ES 3.00 compute (the capture pass, see cspv_emit_glsl300): storage-buffer reads
+	// print as cspv_ld_<rank>(i), and each write-site statement (index = position here)
+	// prints as a capture gated on u_cspv_site.
+	bool es_cs;
+	CK_DYNA cspv_stmt** cs_sites;
 } cspv_tp;
 
 // HLSL spellings of the CF-GLSL types (samplers/images are declared specially
@@ -6360,6 +6396,459 @@ static cspv_decl* cspv_tp_named_buffer_member(cspv_tp* g, cspv_expr* e)
 	return NULL;
 }
 
+//--------------------------------------------------------------------------------------------------
+// GLSL ES 3.00 compute: the capture pass (see cspv_emit_glsl300 for the whole scheme). These
+// helpers serve both the up-front validation (tp NULL) and the printer.
+
+static bool cspv_es_name_in(const char** names, const char* name)
+{
+	for (int i = (int)asize(names) - 1; i >= 0; i--) {
+		if (names[i] == name) return true;
+	}
+	return false;
+}
+
+// The buffer block whose runtime array `e` names -- an anonymous block's array member (`data`)
+// or a named instance's (`inst.data`) -- or NULL. A local or parameter in `shadows` hides it.
+static cspv_decl* cspv_es_buffer_array(cspv_ctx* ctx, cspv_expr* e, const char** shadows)
+{
+	const char* inst = NULL;
+	const char* member = NULL;
+	if (e->kind == CSPV_E_REF) {
+		member = e->u.name;
+	} else if (e->kind == CSPV_E_MEMBER && e->u.member.base->kind == CSPV_E_REF) {
+		inst = e->u.member.base->u.name;
+		member = e->u.member.member;
+	} else {
+		return NULL;
+	}
+	if (cspv_es_name_in(shadows, inst ? inst : member)) return NULL;
+	for (int i = 0; i < (int)asize(ctx->decls); i++) {
+		cspv_decl* d = ctx->decls + i;
+		if (d->kind != CSPV_D_BLOCK || !d->is_buffer || d->instance_name != inst) continue;
+		for (int j = 0; j < d->num_members; j++) {
+			if (d->member_names[j] == member) return d;
+		}
+	}
+	return NULL;
+}
+
+// Rank of a buffer block among the shader's buffer blocks by (set, binding): the N of u_cs_storage_N.
+static int cspv_es_buffer_rank(cspv_ctx* ctx, cspv_decl* d)
+{
+	int rank = 0;
+	for (int i = 0; i < (int)asize(ctx->decls); i++) {
+		cspv_decl* o = ctx->decls + i;
+		if (o->kind != CSPV_D_BLOCK || !o->is_buffer) continue;
+		if (o->set < d->set || (o->set == d->set && o->binding < d->binding)) rank++;
+	}
+	return rank;
+}
+
+// Rank of a set-1 (read-write) image among the set-1 images by binding.
+static int cspv_es_image_rank(cspv_ctx* ctx, cspv_decl* d)
+{
+	int rank = 0;
+	for (int i = 0; i < (int)asize(ctx->decls); i++) {
+		cspv_decl* o = ctx->decls + i;
+		if (o->kind == CSPV_D_OPAQUE && o->type->kind == CSPV_T_IMAGE2D && o->set == d->set && o->binding < d->binding) rank++;
+	}
+	return rank;
+}
+
+static cspv_decl* cspv_es_image_decl(cspv_ctx* ctx, cspv_expr* e)
+{
+	if (e->kind != CSPV_E_REF) return NULL;
+	for (int i = 0; i < (int)asize(ctx->decls); i++) {
+		cspv_decl* d = ctx->decls + i;
+		if (d->kind == CSPV_D_OPAQUE && d->type->kind == CSPV_T_IMAGE2D && d->name == e->u.name) return d;
+	}
+	return NULL;
+}
+
+static int cspv_es_gcd(int a, int b)
+{
+	while (b) { int t = a % b; a = b; b = t; }
+	return a < 0 ? -a : a;
+}
+
+// std430 size of `t` in 32-bit words (and its alignment in words, if asked).
+static int cspv_es_words(cspv_ctx* ctx, cspv_type* t, int line, int* align_words)
+{
+	int a = 0, s = 0;
+	cspv_std430_layout(ctx, t, line, &a, &s);
+	if (align_words) *align_words = a / 4;
+	return s / 4;
+}
+
+// std430 word offset of struct field `fi`.
+static int cspv_es_field_offset(cspv_ctx* ctx, cspv_type* st, int fi, int line)
+{
+	int off = 0;
+	for (int i = 0; i <= fi; i++) {
+		int a = 0, s = 0;
+		cspv_std430_layout(ctx, st->field_types[i], line, &a, &s);
+		off = (off + a - 1) / a * a;
+		if (i == fi) break;
+		off += s;
+	}
+	return off / 4;
+}
+
+static int cspv_es_field_index(cspv_type* st, const char* name)
+{
+	for (int i = 0; i < (int)asize(st->field_names); i++) {
+		if (st->field_names[i] == name) return i;
+	}
+	return -1;
+}
+
+static bool cspv_es_has_bool(cspv_type* t)
+{
+	switch (t->kind) {
+	case CSPV_T_BOOL: return true;
+	case CSPV_T_VEC: case CSPV_T_ARRAY: return cspv_es_has_bool(t->elem);
+	case CSPV_T_STRUCT:
+		for (int i = 0; i < (int)asize(t->field_types); i++) {
+			if (cspv_es_has_bool(t->field_types[i])) return true;
+		}
+		return false;
+	default: return false;
+	}
+}
+
+static int cspv_es_swizzle_index(char c)
+{
+	switch (c) {
+	case 'x': case 'r': case 's': return 0;
+	case 'y': case 'g': case 't': return 1;
+	case 'z': case 'b': case 'p': return 2;
+	default: return 3;
+	}
+}
+
+// The element access a buffer write's lvalue is rooted at (`data[i]` within `data[i].m.x`),
+// with its block, or NULL when the lvalue is not in a storage buffer.
+static cspv_expr* cspv_es_buffer_root(cspv_ctx* ctx, cspv_expr* e, const char** shadows, cspv_decl** out)
+{
+	while (e->kind == CSPV_E_MEMBER || e->kind == CSPV_E_INDEX) {
+		if (e->kind == CSPV_E_INDEX) {
+			cspv_decl* d = cspv_es_buffer_array(ctx, e->u.index.base, shadows);
+			if (d) { *out = d; return e; }
+			e = e->u.index.base;
+		} else {
+			e = e->u.member.base;
+		}
+	}
+	return NULL;
+}
+
+// What kind of storage write expression `e` is at its top: 1 an imageStore call, 2 an
+// assignment (plain, compound, ++/--) into a storage buffer (lvalue and block returned), 0 none.
+static int cspv_es_cs_write(cspv_ctx* ctx, cspv_expr* e, const char** shadows, cspv_expr** lval, cspv_decl** d)
+{
+	if (e->kind == CSPV_E_CALL && e->u.call.array_size == -1 && !strcmp(e->u.call.name, "imageStore")) return 1;
+	cspv_expr* l = NULL;
+	if (e->kind == CSPV_E_BINARY && cspv_tp_is_assign_op(e->u.bin.op)) l = e->u.bin.l;
+	else if (e->kind == CSPV_E_UNARY && (e->u.un.op == CSPV_P_INC || e->u.un.op == CSPV_P_DEC)) l = e->u.un.e;
+	if (l && cspv_es_buffer_root(ctx, l, shadows, d)) {
+		*lval = l;
+		return 2;
+	}
+	return 0;
+}
+
+// Walks a buffer write's lvalue from the root element outward. Validates the shape (always) and,
+// with `g`, prints the dynamic word-offset terms (`int(i) * S + int(j) * K ...`). Accumulates the
+// static word offset into *off and the gcd of every stride into *gran (alignment of the result).
+// Returns the type at `e`.
+static cspv_type* cspv_es_cs_path(cspv_ctx* ctx, cspv_tp* g, cspv_expr* e, cspv_expr* root, cspv_decl* d, int* off, int* gran)
+{
+	if (e == root) {
+		cspv_type* et = d->member_types[0]->elem;
+		int stride = cspv_es_words(ctx, et, e->line, NULL);
+		*gran = cspv_es_gcd(*gran, stride);
+		if (g) {
+			sappend(ctx->tp_out, "int(");
+			cspv_tp_expr(g, e->u.index.index, 0);
+			sfmt_append(ctx->tp_out, ") * %d", stride);
+		}
+		return et;
+	}
+	if (e->kind == CSPV_E_MEMBER) {
+		cspv_type* t = cspv_es_cs_path(ctx, g, e->u.member.base, root, d, off, gran);
+		if (t->kind == CSPV_T_STRUCT) {
+			int fi = cspv_es_field_index(t, e->u.member.member);
+			if (fi < 0) cspv_errorf(ctx, e->line, "unknown field '%s'", e->u.member.member);
+			*off += cspv_es_field_offset(ctx, t, fi, e->line);
+			return t->field_types[fi];
+		}
+		if (t->kind == CSPV_T_VEC) {
+			if (strlen(e->u.member.member) != 1) {
+				cspv_errorf(ctx, e->line, "a storage-buffer write through a multi-component swizzle cannot run on GLES3 (line %d): write the components one at a time or the whole vector", e->line);
+			}
+			*off += cspv_es_swizzle_index(e->u.member.member[0]);
+			return t->elem;
+		}
+	} else if (e->kind == CSPV_E_INDEX) {
+		cspv_type* t = cspv_es_cs_path(ctx, g, e->u.index.base, root, d, off, gran);
+		if (t->kind == CSPV_T_ARRAY || t->kind == CSPV_T_VEC) {
+			int stride = t->kind == CSPV_T_ARRAY ? cspv_es_words(ctx, t->elem, e->line, NULL) : 1;
+			*gran = cspv_es_gcd(*gran, stride);
+			if (g) {
+				sappend(ctx->tp_out, " + int(");
+				cspv_tp_expr(g, e->u.index.index, 0);
+				sfmt_append(ctx->tp_out, ") * %d", stride);
+			}
+			return t->elem;
+		}
+	}
+	cspv_errorf(ctx, e->line, "this storage-buffer write target cannot run on GLES3 (line %d)", e->line);
+	return NULL;
+}
+
+// 32-bit words a buffer write of type `t` stores (1, 2 or 4), validating what GLES can scatter:
+// one texel's worth, aligned so it never straddles two texels.
+static int cspv_es_cs_write_words(cspv_ctx* ctx, cspv_type* t, int line)
+{
+	if (cspv_es_has_bool(t)) cspv_errorf(ctx, line, "bool values in storage buffers cannot run on GLES3 (line %d)", line);
+	switch (t->kind) {
+	case CSPV_T_FLOAT: case CSPV_T_INT: case CSPV_T_UINT: return 1;
+	case CSPV_T_VEC:
+		if (t->cols == 3) cspv_errorf(ctx, line, "writing a vec3 to a storage buffer cannot run on GLES3 (line %d): write a vec4, or the components one at a time", line);
+		return t->cols;
+	case CSPV_T_STRUCT: {
+		// Texel alignment is the caller's check (strides and offsets along the path).
+		int n = cspv_es_words(ctx, t, line, NULL);
+		if (n != 1 && n != 2 && n != 4) {
+			cspv_errorf(ctx, line, "writing a whole struct to a storage buffer cannot run on GLES3 (line %d): write the struct's members one by one", line);
+		}
+		return n;
+	}
+	default:
+		cspv_errorf(ctx, line, "writing this type to a storage buffer cannot run on GLES3 (line %d)", line);
+		return 0;
+	}
+}
+
+// Validates one buffer write site; returns its word count.
+static int cspv_es_cs_check_buffer_write(cspv_ctx* ctx, cspv_expr* lval, const char** shadows)
+{
+	cspv_decl* d = NULL;
+	cspv_expr* root = cspv_es_buffer_root(ctx, lval, shadows, &d);
+	int off = 0, gran = 0;
+	cspv_type* t = cspv_es_cs_path(ctx, NULL, lval, root, d, &off, &gran);
+	int n = cspv_es_cs_write_words(ctx, t, lval->line);
+	gran = cspv_es_gcd(gran, off);
+	if (n > 1 && gran % n != 0) {
+		cspv_errorf(ctx, lval->line, "a %d-word storage-buffer write that is not %d-word aligned cannot run on GLES3 (line %d)", n, n, lval->line);
+	}
+	return n;
+}
+
+// The expression of a buffer element of type `t` at word `w + off` of u_cs_storage_<rank>
+// (inside a cspv_ld_<rank> loader, where `w` is the element's first word).
+static void cspv_es_load_expr(cspv_tp* g, cspv_type* t, int off, int rank)
+{
+	cspv_ctx* ctx = g->ctx;
+	switch (t->kind) {
+	case CSPV_T_FLOAT: case CSPV_T_INT: case CSPV_T_UINT: {
+		const char* pre = t->kind == CSPV_T_FLOAT ? "uintBitsToFloat" : t->kind == CSPV_T_INT ? "int" : "";
+		sfmt_append(ctx->tp_out, "%s(cspv_word(u_cs_storage_%d, w + %d))", pre, rank, off);
+		return;
+	}
+	case CSPV_T_VEC: {
+		cspv_type_kind ek = t->elem->kind;
+		if (ek == CSPV_T_FLOAT) sappend(ctx->tp_out, "uintBitsToFloat(");
+		else if (ek == CSPV_T_INT) sfmt_append(ctx->tp_out, "ivec%d(", t->cols);
+		else spush(ctx->tp_out, '(');
+		// std430 aligns vec2 to 8 and vec3/vec4 to 16 bytes: one texel holds the whole vector.
+		if (t->cols == 2) {
+			sfmt_append(ctx->tp_out, "cspv_pick2(cspv_texel(u_cs_storage_%d, (w + %d) >> 2), w + %d)", rank, off, off);
+		} else {
+			sfmt_append(ctx->tp_out, "cspv_texel(u_cs_storage_%d, (w + %d) >> 2)%s", rank, off, t->cols == 3 ? ".xyz" : "");
+		}
+		spush(ctx->tp_out, ')');
+		return;
+	}
+	case CSPV_T_STRUCT:
+		sfmt_append(ctx->tp_out, "%s(", t->name);
+		for (int i = 0; i < (int)asize(t->field_types); i++) {
+			if (i) sappend(ctx->tp_out, ", ");
+			cspv_es_load_expr(g, t->field_types[i], off + cspv_es_field_offset(ctx, t, i, 0), rank);
+		}
+		spush(ctx->tp_out, ')');
+		return;
+	case CSPV_T_ARRAY: {
+		int stride = cspv_es_words(ctx, t->elem, 0, NULL);
+		sfmt_append(ctx->tp_out, "%s[%d](", cspv_tp_type_name(g, t->elem), t->cols);
+		for (int i = 0; i < t->cols; i++) {
+			if (i) sappend(ctx->tp_out, ", ");
+			cspv_es_load_expr(g, t->elem, off + i * stride, rank);
+		}
+		spush(ctx->tp_out, ')');
+		return;
+	}
+	default:
+		sappend(ctx->tp_out, "0"); // Unreachable: rejected by validation.
+		return;
+	}
+}
+
+// Word `j` of value `base` (of type `t`) as a uint expression; padding prints 0u.
+static void cspv_es_word_expr(cspv_tp* g, cspv_type* t, const char* base, int j)
+{
+	cspv_ctx* ctx = g->ctx;
+	switch (t->kind) {
+	case CSPV_T_FLOAT: case CSPV_T_INT: case CSPV_T_UINT: {
+		if (j != 0) { sappend(ctx->tp_out, "0u"); return; }
+		const char* pre = t->kind == CSPV_T_FLOAT ? "floatBitsToUint" : t->kind == CSPV_T_INT ? "uint" : "";
+		sfmt_append(ctx->tp_out, "%s(%s)", pre, base);
+		return;
+	}
+	case CSPV_T_VEC: {
+		if (j >= t->cols) { sappend(ctx->tp_out, "0u"); return; }
+		char comp[512];
+		snprintf(comp, sizeof(comp), "%s.%c", base, "xyzw"[j]);
+		cspv_es_word_expr(g, t->elem, comp, 0);
+		return;
+	}
+	case CSPV_T_STRUCT:
+		for (int i = 0; i < (int)asize(t->field_types); i++) {
+			int fo = cspv_es_field_offset(ctx, t, i, 0);
+			int fs = cspv_es_words(ctx, t->field_types[i], 0, NULL);
+			if (j >= fo && j < fo + fs) {
+				char field[512];
+				snprintf(field, sizeof(field), "%s.%s", base, t->field_names[i]);
+				cspv_es_word_expr(g, t->field_types[i], field, j - fo);
+				return;
+			}
+		}
+		sappend(ctx->tp_out, "0u");
+		return;
+	default:
+		sappend(ctx->tp_out, "0u");
+		return;
+	}
+}
+
+static const char* cspv_es_compound_op(int op)
+{
+	switch (op) {
+	case CSPV_P_ADD_ASSIGN: return "+";
+	case CSPV_P_SUB_ASSIGN: return "-";
+	case CSPV_P_MUL_ASSIGN: return "*";
+	case CSPV_P_DIV_ASSIGN: return "/";
+	case CSPV_P_MOD_ASSIGN: return "%";
+	case CSPV_P_AND_ASSIGN: return "&";
+	case CSPV_P_OR_ASSIGN: return "|";
+	case CSPV_P_XOR_ASSIGN: return "^";
+	case CSPV_P_SHL_ASSIGN: return "<<";
+	case CSPV_P_SHR_ASSIGN: return ">>";
+	default: return "+";
+	}
+}
+
+// Write site `k` as a capture: the destination (coordinate or word offset) and the value are
+// evaluated every pass, exactly as the original statement evaluated them; only the active
+// site's pass records them into cspv_value/cspv_target.
+static void cspv_es_cs_emit_site(cspv_tp* g, cspv_stmt* s, int k)
+{
+	cspv_ctx* ctx = g->ctx;
+	cspv_expr* e = s->u.expr;
+	cspv_expr* lval = NULL;
+	cspv_decl* d = NULL;
+	int kind = cspv_es_cs_write(ctx, e, g->shadows, &lval, &d);
+	cspv_tp_indent(g);
+	sappend(ctx->tp_out, "{\n");
+	g->indent++;
+	if (kind == 1) {
+		cspv_expr** a = e->u.call.args;
+		cspv_decl* img = cspv_es_image_decl(ctx, a[0]);
+		bool u = img && (img->type->cols == 32 || img->type->cols == 33);
+		cspv_tp_indent(g);
+		sappend(ctx->tp_out, "ivec2 cspv_c = ");
+		cspv_tp_expr(g, a[1], 2);
+		sappend(ctx->tp_out, ";\n");
+		cspv_tp_indent(g);
+		sappend(ctx->tp_out, u ? "uvec4 cspv_v = " : "vec4 cspv_v = ");
+		cspv_tp_expr(g, a[2], 2);
+		sappend(ctx->tp_out, ";\n");
+		cspv_tp_indent(g);
+		sfmt_append(ctx->tp_out, "if (u_cspv_site == %d) { cspv_value = %s; cspv_target = ivec4(cspv_c, 0, 1); }\n",
+			k, u ? "cspv_v" : "floatBitsToUint(cspv_v)");
+	} else {
+		cspv_expr* root = cspv_es_buffer_root(ctx, lval, g->shadows, &d);
+		int off = 0, gran = 0;
+		cspv_tp_indent(g);
+		sappend(ctx->tp_out, "int cspv_w = ");
+		cspv_type* t = cspv_es_cs_path(ctx, g, lval, root, d, &off, &gran);
+		sfmt_append(ctx->tp_out, " + %d;\n", off);
+		int n = cspv_es_cs_write_words(ctx, t, lval->line);
+		cspv_tp_indent(g);
+		cspv_tp_var(g, t, "cspv_v");
+		sappend(ctx->tp_out, " = ");
+		if (e->kind == CSPV_E_BINARY && e->u.bin.op == '=') {
+			cspv_tp_expr(g, e->u.bin.r, 2);
+		} else if (e->kind == CSPV_E_BINARY) {
+			// Compound: the current value comes back through the loader.
+			int op = e->u.bin.op;
+			cspv_expr* r = e->u.bin.r;
+			cspv_type* rt = cspv_tp_rtype(g, r);
+			cspv_type* target = NULL;
+			if (cspv_tp_numeric(t) && cspv_tp_numeric(rt) && cspv_elem_type(t)->kind != cspv_elem_type(rt)->kind &&
+			    op != CSPV_P_SHL_ASSIGN && op != CSPV_P_SHR_ASSIGN) {
+				target = cspv_vec_type(ctx, cspv_elem_type(t), cspv_num_components(rt));
+			}
+			spush(ctx->tp_out, '(');
+			cspv_tp_expr(g, lval, 0);
+			sfmt_append(ctx->tp_out, ") %s (", cspv_es_compound_op(op));
+			if (target) cspv_tp_expr_to(g, r, target, 0);
+			else cspv_tp_expr(g, r, 0);
+			spush(ctx->tp_out, ')');
+		} else {
+			cspv_type_kind ek = cspv_elem_type(t)->kind;
+			spush(ctx->tp_out, '(');
+			cspv_tp_expr(g, lval, 0);
+			sfmt_append(ctx->tp_out, ") %s %s", e->u.un.op == CSPV_P_INC ? "+" : "-",
+				ek == CSPV_T_FLOAT ? "1.0" : ek == CSPV_T_UINT ? "1u" : "1");
+		}
+		sappend(ctx->tp_out, ";\n");
+		cspv_tp_indent(g);
+		sappend(ctx->tp_out, "uvec4 cspv_b = uvec4(");
+		for (int j = 0; j < 4; j++) {
+			if (j) sappend(ctx->tp_out, ", ");
+			if (j < n) cspv_es_word_expr(g, t, "cspv_v", j);
+			else sappend(ctx->tp_out, "0u");
+		}
+		sappend(ctx->tp_out, ");\n");
+		cspv_tp_indent(g);
+		sfmt_append(ctx->tp_out, "if (u_cspv_site == %d)\n", k);
+		cspv_tp_indent(g);
+		sappend(ctx->tp_out, "{\n");
+		g->indent++;
+		cspv_tp_indent(g);
+		// The words land in the components the destination texel holds them in.
+		if (n == 4) {
+			sappend(ctx->tp_out, "cspv_value = cspv_b;\n");
+		} else if (n == 2) {
+			sappend(ctx->tp_out, "cspv_value = (cspv_w & 2) == 0 ? uvec4(cspv_b.xy, 0u, 0u) : uvec4(0u, 0u, cspv_b.xy);\n");
+		} else {
+			sappend(ctx->tp_out, "int cspv_cc = cspv_w & 3;\n");
+			cspv_tp_indent(g);
+			sappend(ctx->tp_out, "cspv_value = uvec4(cspv_cc == 0 ? cspv_b.x : 0u, cspv_cc == 1 ? cspv_b.x : 0u, cspv_cc == 2 ? cspv_b.x : 0u, cspv_cc == 3 ? cspv_b.x : 0u);\n");
+		}
+		cspv_tp_indent(g);
+		sappend(ctx->tp_out, "cspv_target = ivec4((cspv_w >> 2) & 1023, (cspv_w >> 2) >> 10, cspv_w & 3, 1);\n");
+		g->indent--;
+		cspv_tp_indent(g);
+		sappend(ctx->tp_out, "}\n");
+	}
+	g->indent--;
+	cspv_tp_indent(g);
+	sappend(ctx->tp_out, "}\n");
+}
+
 static void cspv_tp_expr_node(cspv_tp* g, cspv_expr* e, int prec)
 {
 	switch (e->kind) {
@@ -6382,6 +6871,17 @@ static void cspv_tp_expr_node(cspv_tp* g, cspv_expr* e, int prec)
 		break;
 
 	case CSPV_E_INDEX:
+		if (g->es_cs) {
+			cspv_decl* bd = cspv_es_buffer_array(g->ctx, e->u.index.base, g->shadows);
+			if (bd) {
+				// Compute storage read: the element's std430 words come back through the
+				// buffer's loader (emitted per buffer in cspv_emit_glsl300).
+				sfmt_append(g->ctx->tp_out, "cspv_ld_%d(int(", cspv_es_buffer_rank(g->ctx, bd));
+				cspv_tp_expr(g, e->u.index.index, 0);
+				sappend(g->ctx->tp_out, "))");
+				break;
+			}
+		}
 		if (!g->hlsl && !g->msl && e->u.index.base->kind == CSPV_E_REF) {
 			int slot; cspv_type* elem;
 			if (cspv_tp_es_ssbo(g, e->u.index.base->u.name, &slot, &elem)) {
@@ -6454,6 +6954,18 @@ static void cspv_tp_expr_node(cspv_tp* g, cspv_expr* e, int prec)
 			break;
 		}
 		int argc = (int)asize(e->u.call.args);
+		if (g->es_cs && e->u.call.array_size == -1 && (!strcmp(e->u.call.name, "imageLoad") || !strcmp(e->u.call.name, "imageSize"))) {
+			// Compute storage images read as plain textures (declared as samplers of the same name).
+			bool load = !strcmp(e->u.call.name, "imageLoad");
+			sappend(g->ctx->tp_out, load ? "texelFetch(" : "textureSize(");
+			cspv_tp_expr(g, e->u.call.args[0], 2);
+			if (load) {
+				sappend(g->ctx->tp_out, ", ");
+				cspv_tp_expr(g, e->u.call.args[1], 2);
+			}
+			sappend(g->ctx->tp_out, ", 0)");
+			break;
+		}
 		if (e->u.call.array_size != -1) {
 			// Array constructor: ES requires arguments to match the element type
 			// exactly (no implicit conversions), so convert each explicitly.
@@ -6717,6 +7229,12 @@ static void cspv_tp_stmt(cspv_tp* g, cspv_stmt* s)
 		break;
 
 	case CSPV_S_EXPR:
+		for (int k = 0; k < (int)asize(g->cs_sites); k++) {
+			if (g->cs_sites[k] == s) {
+				cspv_es_cs_emit_site(g, s, k);
+				return;
+			}
+		}
 		cspv_tp_indent(g);
 		cspv_tp_expr(g, s->u.expr, 0);
 		sappend(g->ctx->tp_out, ";\n");
@@ -6828,8 +7346,10 @@ static void cspv_tp_func(cspv_tp* g, cspv_decl* d)
 {
 	// The vertex entry point is renamed; a synthesized main() wrapper applies
 	// CF's clip-space fixups after it runs (see cspv_emit_glsl300).
+	// Compute main is wrapped the same way, by the capture pass's prologue.
 	bool is_vertex_main = g->ctx->stage == CSPV_STAGE_VERTEX && d->name == g_cspv_kw.kw_main;
-	sfmt_append(g->ctx->tp_out, "%s %s(", cspv_type_name(d->type), is_vertex_main ? "cf_main_" : d->name);
+	bool is_compute_main = g->es_cs && d->name == g_cspv_kw.kw_main;
+	sfmt_append(g->ctx->tp_out, "%s %s(", cspv_type_name(d->type), is_vertex_main ? "cf_main_" : is_compute_main ? "cspv_main_" : d->name);
 	cspv_tp_push_shadows(g);
 	for (int i = 0; i < d->num_params; i++) {
 		if (i) sappend(g->ctx->tp_out, ", ");
@@ -6971,15 +7491,343 @@ static void cspv_es_validate_stmt(cspv_ctx* ctx, cspv_stmt* s)
 	}
 }
 
+// GLSL ES 3.00 compute: one walk serves two passes. With `g` NULL it validates (every error
+// fires here, before anything is allocated); with `g` it collects the write sites -- the
+// statement into g->cs_sites, the description into reflection.write_sites -- and the images
+// read as textures. Shadows accumulate per function in ctx->es_shadows, as for vs/fs.
+typedef struct cspv_es_cs_walk
+{
+	cspv_ctx* ctx;
+	cspv_tp* g;
+	bool in_main;
+	int loops;
+} cspv_es_cs_walk;
+
+static void cspv_es_cs_expr(cspv_es_cs_walk* w, cspv_expr* e);
+
+static void cspv_es_cs_expr_list(cspv_es_cs_walk* w, cspv_expr** list)
+{
+	for (int i = 0; i < (int)asize(list); i++) cspv_es_cs_expr(w, list[i]);
+}
+
+// The non-destination parts of a buffer write's lvalue: the index expressions along its path.
+static void cspv_es_cs_lvalue(cspv_es_cs_walk* w, cspv_expr* e)
+{
+	if (e->kind == CSPV_E_INDEX) {
+		if (!cspv_es_buffer_array(w->ctx, e->u.index.base, w->ctx->es_shadows)) cspv_es_cs_lvalue(w, e->u.index.base);
+		cspv_es_cs_expr(w, e->u.index.index);
+	} else if (e->kind == CSPV_E_MEMBER) {
+		cspv_es_cs_lvalue(w, e->u.member.base);
+	}
+}
+
+static void cspv_es_cs_expr(cspv_es_cs_walk* w, cspv_expr* e)
+{
+	cspv_ctx* ctx = w->ctx;
+	switch (e->kind) {
+	case CSPV_E_REF:
+		if (cspv_es_buffer_array(ctx, e, ctx->es_shadows)) {
+			cspv_errorf(ctx, e->line, "storage buffer array '%s' must be indexed directly in a compute shader on GLES3 (line %d)", e->u.name, e->line);
+		}
+		break;
+	case CSPV_E_MEMBER:
+		if (cspv_es_buffer_array(ctx, e, ctx->es_shadows)) {
+			cspv_errorf(ctx, e->line, "storage buffer array '%s' must be indexed directly in a compute shader on GLES3 (line %d)", e->u.member.member, e->line);
+		}
+		cspv_es_cs_expr(w, e->u.member.base);
+		break;
+	case CSPV_E_LENGTH:
+		if (cspv_es_buffer_array(ctx, e->u.member.base, ctx->es_shadows)) {
+			cspv_errorf(ctx, e->line, "compute shaders using '.length()' on a storage buffer cannot run on GLES3 (line %d): pass the count in a uniform", e->line);
+		}
+		cspv_es_cs_expr(w, e->u.member.base);
+		break;
+	case CSPV_E_INDEX:
+		if (!cspv_es_buffer_array(ctx, e->u.index.base, ctx->es_shadows)) cspv_es_cs_expr(w, e->u.index.base);
+		cspv_es_cs_expr(w, e->u.index.index);
+		break;
+	case CSPV_E_BINARY: {
+		cspv_expr* lval = NULL;
+		cspv_decl* d = NULL;
+		if (cspv_es_cs_write(ctx, e, ctx->es_shadows, &lval, &d)) {
+			cspv_errorf(ctx, e->line, "a storage-buffer write inside an expression cannot run on GLES3 (line %d): make the assignment its own statement", e->line);
+		}
+		cspv_es_cs_expr(w, e->u.bin.l);
+		cspv_es_cs_expr(w, e->u.bin.r);
+		break;
+	}
+	case CSPV_E_UNARY: {
+		cspv_expr* lval = NULL;
+		cspv_decl* d = NULL;
+		if (cspv_es_cs_write(ctx, e, ctx->es_shadows, &lval, &d)) {
+			cspv_errorf(ctx, e->line, "a storage-buffer write inside an expression cannot run on GLES3 (line %d): make the assignment its own statement", e->line);
+		}
+		cspv_es_cs_expr(w, e->u.un.e);
+		break;
+	}
+	case CSPV_E_COND:
+		cspv_es_cs_expr(w, e->u.cond.c);
+		cspv_es_cs_expr(w, e->u.cond.a);
+		cspv_es_cs_expr(w, e->u.cond.b);
+		break;
+	case CSPV_E_CALL: {
+		const char* n = e->u.call.name;
+		if (e->u.call.array_size == -1) {
+			if (!strcmp(n, "barrier") || !strncmp(n, "memoryBarrier", 13) || !strcmp(n, "groupMemoryBarrier")) {
+				cspv_errorf(ctx, e->line, "compute shaders using '%s' cannot run on GLES3 (line %d)", n, e->line);
+			}
+			if (!strncmp(n, "atomic", 6) || !strncmp(n, "imageAtomic", 11) || !strncmp(n, "subgroup", 8)) {
+				cspv_errorf(ctx, e->line, "compute shaders using '%s' cannot run on GLES3 (line %d)", n, e->line);
+			}
+			if (!strcmp(n, "imageStore")) {
+				cspv_errorf(ctx, e->line, "imageStore inside an expression cannot run on GLES3 (line %d): make it its own statement", e->line);
+			}
+			if (!strcmp(n, "imageLoad") || !strcmp(n, "imageSize")) {
+				cspv_decl* img = cspv_es_image_decl(ctx, e->u.call.args[0]);
+				if (!img) cspv_errorf(ctx, e->line, "'%s' must name a storage image directly in a compute shader on GLES3 (line %d)", n, e->line);
+				if (w->g) {
+					bool seen = false;
+					for (int i = 0; i < (int)asize(ctx->reflection.loaded_images); i++) {
+						if (ctx->reflection.loaded_images[i] == img->name) seen = true;
+					}
+					if (!seen) apush(ctx->reflection.loaded_images, img->name);
+				}
+				for (int i = 1; i < (int)asize(e->u.call.args); i++) cspv_es_cs_expr(w, e->u.call.args[i]);
+				break;
+			}
+		}
+		cspv_es_cs_expr_list(w, e->u.call.args);
+		break;
+	}
+	default: break;
+	}
+}
+
+static void cspv_es_cs_site(cspv_es_cs_walk* w, cspv_stmt* s)
+{
+	cspv_ctx* ctx = w->ctx;
+	cspv_expr* e = s->u.expr;
+	cspv_expr* lval = NULL;
+	cspv_decl* d = NULL;
+	int kind = cspv_es_cs_write(ctx, e, ctx->es_shadows, &lval, &d);
+	if (!w->in_main) {
+		cspv_errorf(ctx, e->line, "a storage write outside main() cannot run on GLES3 (line %d): move the write into main", e->line);
+	}
+	if (w->loops) {
+		cspv_errorf(ctx, e->line, "a storage write inside a loop cannot run on GLES3 (line %d): each write site can capture one write per invocation", e->line);
+	}
+	CSPV_WriteSite site;
+	memset(&site, 0, sizeof(site));
+	if (kind == 1) {
+		cspv_decl* img = cspv_es_image_decl(ctx, e->u.call.args[0]);
+		if (!img) cspv_errorf(ctx, e->line, "imageStore must name a storage image directly in a compute shader on GLES3 (line %d)", e->line);
+		cspv_es_cs_expr(w, e->u.call.args[1]);
+		cspv_es_cs_expr(w, e->u.call.args[2]);
+		site.kind = CSPV_WRITE_IMAGE;
+		site.name = img->name;
+		site.set = img->set;
+		site.binding = img->binding;
+		site.rank = cspv_es_image_rank(ctx, img);
+		site.words = 4;
+		site.image_format = img->type->cols;
+		site.type = (img->type->cols == 32 || img->type->cols == 33) ? CSPV_WRITE_UINT : CSPV_WRITE_FLOAT;
+	} else {
+		site.words = cspv_es_cs_check_buffer_write(ctx, lval, ctx->es_shadows);
+		cspv_es_cs_lvalue(w, lval);
+		if (e->kind == CSPV_E_BINARY) cspv_es_cs_expr(w, e->u.bin.r);
+		site.kind = CSPV_WRITE_BUFFER;
+		site.name = d->instance_name ? d->instance_name : d->member_names[0];
+		site.set = d->set;
+		site.binding = d->binding;
+		site.rank = cspv_es_buffer_rank(ctx, d);
+		site.type = CSPV_WRITE_UINT;
+	}
+	if (w->g) {
+		apush(w->g->cs_sites, s);
+		apush(ctx->reflection.write_sites, site);
+	}
+}
+
+static void cspv_es_cs_stmt(cspv_es_cs_walk* w, cspv_stmt* s)
+{
+	cspv_ctx* ctx = w->ctx;
+	switch (s->kind) {
+	case CSPV_S_BLOCK: for (int i = 0; i < (int)asize(s->u.block); i++) cspv_es_cs_stmt(w, s->u.block[i]); break;
+	case CSPV_S_DECL:
+		for (cspv_stmt* n = s; n; n = n->u.decl.next_decl) {
+			if (n->u.decl.init) cspv_es_cs_expr(w, n->u.decl.init);
+			apush(ctx->es_shadows, n->u.decl.name);
+		}
+		break;
+	case CSPV_S_EXPR: {
+		cspv_expr* lval = NULL;
+		cspv_decl* d = NULL;
+		if (cspv_es_cs_write(ctx, s->u.expr, ctx->es_shadows, &lval, &d)) cspv_es_cs_site(w, s);
+		else cspv_es_cs_expr(w, s->u.expr);
+		break;
+	}
+	case CSPV_S_IF:
+		cspv_es_cs_expr(w, s->u.if_s.cond);
+		cspv_es_cs_stmt(w, s->u.if_s.then_s);
+		if (s->u.if_s.else_s) cspv_es_cs_stmt(w, s->u.if_s.else_s);
+		break;
+	case CSPV_S_FOR:
+		if (s->u.for_s.init) cspv_es_cs_stmt(w, s->u.for_s.init);
+		w->loops++;
+		if (s->u.for_s.cond) cspv_es_cs_expr(w, s->u.for_s.cond);
+		if (s->u.for_s.iter) cspv_es_cs_expr(w, s->u.for_s.iter);
+		cspv_es_cs_stmt(w, s->u.for_s.body);
+		w->loops--;
+		break;
+	case CSPV_S_WHILE: case CSPV_S_DO:
+		w->loops++;
+		cspv_es_cs_expr(w, s->u.while_s.cond);
+		cspv_es_cs_stmt(w, s->u.while_s.body);
+		w->loops--;
+		break;
+	case CSPV_S_SWITCH: {
+		cspv_es_cs_expr(w, s->u.switch_s.sel);
+		cspv_switch_group* groups = s->u.switch_s.groups;
+		for (int i = 0; i < (int)asize(groups); i++) {
+			for (int j = 0; j < (int)asize(groups[i].stmts); j++) cspv_es_cs_stmt(w, groups[i].stmts[j]);
+		}
+		break;
+	}
+	case CSPV_S_RETURN: if (s->u.ret) cspv_es_cs_expr(w, s->u.ret); break;
+	default: break;
+	}
+}
+
+static void cspv_es_cs_walk_all(cspv_ctx* ctx, cspv_tp* g)
+{
+	for (int i = 0; i < (int)asize(ctx->decls); i++) {
+		cspv_decl* d = ctx->decls + i;
+		if (d->kind != CSPV_D_FUNC || !d->body) continue;
+		aclear(ctx->es_shadows);
+		for (int p = 0; p < d->num_params; p++) apush(ctx->es_shadows, d->params[p].name);
+		cspv_es_cs_walk w;
+		w.ctx = ctx;
+		w.g = g;
+		w.in_main = d->name == g_cspv_kw.kw_main;
+		w.loops = 0;
+		cspv_es_cs_stmt(&w, d->body);
+	}
+}
+
+static void cspv_es_cs_validate(cspv_ctx* ctx)
+{
+	for (int i = 0; i < (int)asize(ctx->decls); i++) {
+		cspv_decl* d = ctx->decls + i;
+		if (d->kind == CSPV_D_SHARED) {
+			cspv_errorf(ctx, d->line, "compute shaders using 'shared' cannot run on GLES3 (line %d)", d->line);
+		}
+		if (d->kind == CSPV_D_BLOCK && d->is_buffer) {
+			cspv_type* mt = d->num_members == 1 ? d->member_types[0] : NULL;
+			if (!mt || mt->kind != CSPV_T_ARRAY || mt->cols != -1) {
+				cspv_errorf(ctx, d->line, "compute shaders on GLES3 need buffer block '%s' to hold a single runtime array (line %d)", d->name, d->line);
+			}
+			if (cspv_es_has_bool(mt->elem)) {
+				cspv_errorf(ctx, d->line, "bool values in storage buffers cannot run on GLES3 (line %d)", d->line);
+			}
+			int a = 0, s = 0;
+			cspv_std430_layout(ctx, mt->elem, d->line, &a, &s);
+		}
+	}
+	cspv_es_cs_walk_all(ctx, NULL);
+}
+
+// The capture pass's fixed prelude: outputs, dispatch uniforms, the renamed builtins, and the
+// storage-word fetch helpers (1024-wide RGBA32UI textures, matching the GLES backend).
+static void cspv_es_cs_prelude(cspv_tp* g)
+{
+	cspv_ctx* ctx = g->ctx;
+	sappend(ctx->tp_out,
+		"precision highp usampler2D;\n"
+		"precision highp isampler2D;\n"
+		"precision highp sampler2D;\n"
+		"\n"
+		"uniform int u_cspv_site;\n"
+		"uniform ivec3 u_cspv_groups;\n"
+		"uniform int u_cspv_grid_w;\n"
+		"layout(location = 0) out highp uvec4 cspv_value;\n"
+		"layout(location = 1) out highp ivec4 cspv_target;\n"
+		"\n"
+		"uvec3 cspv_gid;\n"
+		"uvec3 cspv_lid;\n"
+		"uvec3 cspv_wgid;\n"
+		"uint cspv_lidx;\n"
+		"uvec3 cspv_nwg;\n");
+	bool any_buffer = false;
+	for (int i = 0; i < (int)asize(ctx->decls); i++) {
+		cspv_decl* d = ctx->decls + i;
+		if (d->kind == CSPV_D_BLOCK && d->is_buffer) any_buffer = true;
+	}
+	if (any_buffer) {
+		sappend(ctx->tp_out,
+			"\n"
+			"uvec4 cspv_texel(highp usampler2D s, int t) { return texelFetch(s, ivec2(t & 1023, t >> 10), 0); }\n"
+			"uint cspv_word(highp usampler2D s, int w) { uvec4 t = cspv_texel(s, w >> 2); int c = w & 3; return c == 0 ? t.x : (c == 1 ? t.y : (c == 2 ? t.z : t.w)); }\n"
+			"uvec2 cspv_pick2(uvec4 t, int w) { return (w & 2) == 0 ? t.xy : t.zw; }\n");
+	}
+}
+
+// One buffer block's texture and element loader (after the struct declarations it may name).
+static void cspv_es_cs_buffer(cspv_tp* g, cspv_decl* d)
+{
+	cspv_ctx* ctx = g->ctx;
+	int rank = cspv_es_buffer_rank(ctx, d);
+	cspv_type* et = d->member_types[0]->elem;
+	int stride = cspv_es_words(ctx, et, d->line, NULL);
+	sfmt_append(ctx->tp_out, "\nuniform highp usampler2D u_cs_storage_%d;\n", rank);
+	if (et->kind == CSPV_T_ARRAY) sfmt_append(ctx->tp_out, "%s[%d]", cspv_tp_type_name(g, et->elem), et->cols);
+	else sappend(ctx->tp_out, cspv_tp_type_name(g, et));
+	sfmt_append(ctx->tp_out, " cspv_ld_%d(int i) { int w = i * %d; return ", rank, stride);
+	cspv_es_load_expr(g, et, 0, rank);
+	sappend(ctx->tp_out, "; }\n");
+}
+
+// The synthesized entry point: zero the outputs, find this fragment's invocation, rebuild the
+// compute builtins from it, and run the shader's main.
+static void cspv_es_cs_main(cspv_tp* g)
+{
+	cspv_ctx* ctx = g->ctx;
+	int* ls = ctx->local_size;
+	int lx = ls[0] > 0 ? ls[0] : 1, ly = ls[1] > 0 ? ls[1] : 1, lz = ls[2] > 0 ? ls[2] : 1;
+	sfmt_append(ctx->tp_out,
+		"\nvoid main()\n"
+		"{\n"
+		"\tcspv_value = uvec4(0u);\n"
+		"\tcspv_target = ivec4(0);\n"
+		"\tivec3 cspv_ls = ivec3(%d, %d, %d);\n"
+		"\tivec3 cspv_ext = u_cspv_groups * cspv_ls;\n"
+		"\tint cspv_l = int(gl_FragCoord.y) * u_cspv_grid_w + int(gl_FragCoord.x);\n"
+		"\tif (cspv_l >= cspv_ext.x * cspv_ext.y * cspv_ext.z) return;\n"
+		"\tivec3 cspv_g = ivec3(cspv_l %% cspv_ext.x, (cspv_l / cspv_ext.x) %% cspv_ext.y, cspv_l / (cspv_ext.x * cspv_ext.y));\n"
+		"\tcspv_gid = uvec3(cspv_g);\n"
+		"\tcspv_wgid = uvec3(cspv_g / cspv_ls);\n"
+		"\tcspv_lid = uvec3(cspv_g - (cspv_g / cspv_ls) * cspv_ls);\n"
+		"\tcspv_lidx = cspv_lid.z * uint(cspv_ls.x * cspv_ls.y) + cspv_lid.y * uint(cspv_ls.x) + cspv_lid.x;\n"
+		"\tcspv_nwg = uvec3(u_cspv_groups);\n"
+		"\tcspv_main_();\n"
+		"}\n", lx, ly, lz);
+}
+
 static void cspv_emit_glsl300(cspv_ctx* ctx)
 {
 	// Validate up front (before the emitter allocates anything, so an errorf
 	// longjmp cannot leak): GLES 3.0 has no compute or storage images, and
 	// storage buffers emulate as texture fetches within CF's documented shape.
-	if (ctx->stage == CSPV_STAGE_COMPUTE) {
-		cspv_errorf(ctx, 0, "GLSL ES 3.00 output does not support compute shaders");
-	}
-	for (int i = 0; i < (int)asize(ctx->decls); i++) {
+	//
+	// Compute runs as a CAPTURE pass: a fragment shader, one fragment per invocation
+	// (laid out on a u_cspv_grid_w-wide grid), whose textual storage writes are the
+	// numbered write sites of reflection.write_sites. The draw for site k records that
+	// site's destination and raw value bits into cspv_target/cspv_value instead of
+	// writing; the runtime then scatters them with point draws. Every read therefore
+	// sees pre-dispatch contents. Storage buffers read through u_cs_storage_<rank>
+	// (std430 words in a 1024-wide RGBA32UI texture), images through same-named samplers.
+	bool cs = ctx->stage == CSPV_STAGE_COMPUTE;
+	if (cs) cspv_es_cs_validate(ctx);
+	for (int i = 0; i < (int)asize(ctx->decls) && !cs; i++) {
 		cspv_decl* d = ctx->decls + i;
 		if (d->kind == CSPV_D_BLOCK && d->is_buffer) {
 			// The GLES backend mirrors each buffer into an RGBA32UI texture; the
@@ -7001,7 +7849,7 @@ static void cspv_emit_glsl300(cspv_ctx* ctx)
 			cspv_errorf(ctx, d->line, "storage image '%s' is not supported in GLSL ES 3.00 output", d->name);
 		}
 	}
-	for (int i = 0; i < (int)asize(ctx->decls); i++) {
+	for (int i = 0; i < (int)asize(ctx->decls) && !cs; i++) {
 		cspv_decl* d = ctx->decls + i;
 		if (d->kind != CSPV_D_FUNC || !d->body) continue;
 		aclear(ctx->es_shadows);
@@ -7013,6 +7861,15 @@ static void cspv_emit_glsl300(cspv_ctx* ctx)
 	memset(&gg, 0, sizeof(gg));
 	gg.ctx = ctx;
 	cspv_tp* g = &gg;
+	if (cs) {
+		gg.es_cs = true;
+		cspv_tp_rename(g, sintern("gl_GlobalInvocationID"), "cspv_gid");
+		cspv_tp_rename(g, sintern("gl_LocalInvocationID"), "cspv_lid");
+		cspv_tp_rename(g, sintern("gl_WorkGroupID"), "cspv_wgid");
+		cspv_tp_rename(g, sintern("gl_LocalInvocationIndex"), "cspv_lidx");
+		cspv_tp_rename(g, sintern("gl_NumWorkGroups"), "cspv_nwg");
+		cspv_es_cs_walk_all(ctx, g);
+	}
 
 	// Builtin renames, plus canonical location-keyed varying names so the
 	// separately-compiled vertex and fragment stages link by name.
@@ -7051,7 +7908,7 @@ static void cspv_emit_glsl300(cspv_ctx* ctx)
 	// shared coordinate helper (element i sits at texel i of a 1024-wide texture;
 	// the width must match the GLES backend's CF_GLES_STORAGE_WIDTH).
 	bool any_ssbo = false;
-	for (int i = 0; i < (int)asize(ctx->decls); i++) {
+	for (int i = 0; i < (int)asize(ctx->decls) && !cs; i++) {
 		cspv_decl* d = ctx->decls + i;
 		if (d->kind != CSPV_D_BLOCK || !d->is_buffer) continue;
 		apush(g->es_ssbo_names, d->member_names[0]);
@@ -7064,6 +7921,7 @@ static void cspv_emit_glsl300(cspv_ctx* ctx)
 	// on gcc/clang, and these headers take no format arguments.)
 	ctx->tp_out = NULL;
 	sappend(ctx->tp_out, "#version 300 es\n\nprecision highp float;\nprecision highp int;\n");
+	if (cs) cspv_es_cs_prelude(g);
 	if (any_ssbo) sappend(ctx->tp_out, "\nivec2 cf_storage_coord(int i) { return ivec2(i & 1023, i >> 10); }\n");
 
 	for (int i = 0; i < (int)asize(ctx->decls); i++) {
@@ -7107,6 +7965,10 @@ static void cspv_emit_glsl300(cspv_ctx* ctx)
 		}
 
 		case CSPV_D_BLOCK:
+			if (d->is_buffer && cs) {
+				cspv_es_cs_buffer(g, d);
+				break;
+			}
 			if (d->is_buffer) {
 				// Emulated SSBO: the GLES backend mirrors the buffer into an RGBA32UI
 				// texture and binds it to this sampler by name at draw time (see
@@ -7130,6 +7992,15 @@ static void cspv_emit_glsl300(cspv_ctx* ctx)
 			break;
 
 		case CSPV_D_OPAQUE:
+			if (d->type->kind == CSPV_T_IMAGE2D) {
+				// Compute only (validation rejects images elsewhere): a loaded image reads
+				// as a texture of its own name; a write-only one has no ES declaration.
+				if (cspv_es_name_in(ctx->reflection.loaded_images, d->name)) {
+					bool u = d->type->cols == 32 || d->type->cols == 33;
+					sfmt_append(ctx->tp_out, "uniform highp %s %s;\n", u ? "usampler2D" : "sampler2D", d->name);
+				}
+				break;
+			}
 			// Samplers get explicit highp: usampler2D has no default precision in
 			// ES, and the lowp sampler2D default would degrade lookup precision.
 			sfmt_append(ctx->tp_out, "uniform highp %s %s;\n", cspv_type_name(d->type), d->name);
@@ -7158,6 +8029,8 @@ static void cspv_emit_glsl300(cspv_ctx* ctx)
 			"}\n");
 	}
 
+	if (cs) cspv_es_cs_main(g);
+
 	afree(gg.rename_from);
 	afree(gg.rename_to);
 	afree(gg.shadows);
@@ -7165,6 +8038,7 @@ static void cspv_emit_glsl300(cspv_ctx* ctx)
 	afree(gg.es_ssbo_names);
 	afree(gg.es_ssbo_slots);
 	afree(gg.es_ssbo_elems);
+	afree(gg.cs_sites);
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -9113,6 +9987,8 @@ static void cspv_cleanup(cspv_ctx* ctx)
 	afree(ctx->reflection.uniform_blocks);
 	afree(ctx->reflection.uniform_members);
 	afree(ctx->reflection.inputs);
+	afree(ctx->reflection.write_sites);
+	afree(ctx->reflection.loaded_images);
 	afree(ctx->decls);
 	sfree(ctx->tp_out);
 	cspv_arena_free(&ctx->arena);
@@ -9241,6 +10117,8 @@ void cspv_free(CSPV_Result* result)
 	afree(result->reflection.uniform_blocks);
 	afree(result->reflection.uniform_members);
 	afree(result->reflection.inputs);
+	afree(result->reflection.write_sites);
+	afree(result->reflection.loaded_images);
 	sfree(result->preprocessed);
 	sfree(result->glsl300);
 	sfree(result->hlsl);

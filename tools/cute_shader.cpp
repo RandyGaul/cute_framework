@@ -200,8 +200,9 @@ CF_ShaderCompilerResult cute_shader_compile(const char* source, CF_ShaderCompile
 	opts.user = &include_ctx;
 	opts.return_preprocessed = config.return_preprocessed_source;
 	opts.display_name = s_display_name;
-	// GLSL 300 es transpilation (skipped for compute -- GLES 3.0 has no compute support).
-	opts.emit_glsl300 = stage != CUTE_SHADER_STAGE_COMPUTE && !config.skip_glsl300;
+	// GLSL 300 es transpilation. A compute shader becomes the GLES backend's capture-pass
+	// fragment shader (GLES3 has no compute; see cf_gles_dispatch_compute).
+	opts.emit_glsl300 = !config.skip_glsl300;
 	// HLSL SM 5.1 transpilation, for D3D12 via the system FXC.
 	opts.emit_hlsl = !config.skip_hlsl;
 	// MSL transpilation, for Metal (the OS compiles the source at runtime).
@@ -335,6 +336,44 @@ CF_ShaderCompilerResult cute_shader_compile(const char* source, CF_ShaderCompile
 		memcpy(preprocessed_copy, r.preprocessed, preprocessed_size + 1);
 	}
 
+	// Storage images and buffers by name (the GLES backend binds them by name), and the
+	// compute emulation's write sites.
+	int num_storage_image_infos = (int)asize(rf->storage_images);
+	CF_ShaderResourceInfo* storage_image_infos = NULL;
+	if (num_storage_image_infos > 0) {
+		storage_image_infos = (CF_ShaderResourceInfo*)cf_alloc(sizeof(CF_ShaderResourceInfo) * num_storage_image_infos);
+		for (int i = 0; i < num_storage_image_infos; ++i) {
+			storage_image_infos[i].name = rf->storage_images[i].name;
+			storage_image_infos[i].set = rf->storage_images[i].set;
+			storage_image_infos[i].binding = rf->storage_images[i].binding;
+			storage_image_infos[i].readonly = rf->storage_images[i].readonly;
+		}
+	}
+	int num_storage_buffer_infos = (int)asize(rf->storage_buffers);
+	CF_ShaderResourceInfo* storage_buffer_infos = NULL;
+	if (num_storage_buffer_infos > 0) {
+		storage_buffer_infos = (CF_ShaderResourceInfo*)cf_alloc(sizeof(CF_ShaderResourceInfo) * num_storage_buffer_infos);
+		for (int i = 0; i < num_storage_buffer_infos; ++i) {
+			storage_buffer_infos[i].name = rf->storage_buffers[i].name;
+			storage_buffer_infos[i].set = rf->storage_buffers[i].set;
+			storage_buffer_infos[i].binding = rf->storage_buffers[i].binding;
+			storage_buffer_infos[i].readonly = rf->storage_buffers[i].readonly;
+		}
+	}
+	int num_write_sites = 0;
+	CF_ShaderWriteSite* write_sites = NULL;
+	num_write_sites = r.glsl300 ? (int)asize(rf->write_sites) : 0;
+	if (num_write_sites > 0) {
+		write_sites = (CF_ShaderWriteSite*)cf_alloc(sizeof(CF_ShaderWriteSite) * num_write_sites);
+		for (int i = 0; i < num_write_sites; ++i) {
+			write_sites[i].kind = rf->write_sites[i].kind == CSPV_WRITE_IMAGE ? CF_SHADER_WRITE_KIND_IMAGE : CF_SHADER_WRITE_KIND_BUFFER;
+			write_sites[i].name = rf->write_sites[i].name;
+			write_sites[i].set = rf->write_sites[i].set;
+			write_sites[i].binding = rf->write_sites[i].binding;
+			write_sites[i].words = rf->write_sites[i].words;
+		}
+	}
+
 	// Captured before cspv_free wipes the result.
 	int local_size[3] = { r.reflection.local_size[0], r.reflection.local_size[1], r.reflection.local_size[2] };
 
@@ -368,6 +407,12 @@ CF_ShaderCompilerResult cute_shader_compile(const char* source, CF_ShaderCompile
 	result.bytecode.shader_info.uniform_members = uniform_members;
 	result.bytecode.shader_info.num_inputs = num_inputs;
 	result.bytecode.shader_info.inputs = inputs;
+	result.bytecode.shader_info.num_storage_image_infos = num_storage_image_infos;
+	result.bytecode.shader_info.storage_image_infos = storage_image_infos;
+	result.bytecode.shader_info.num_storage_buffer_infos = num_storage_buffer_infos;
+	result.bytecode.shader_info.storage_buffer_infos = storage_buffer_infos;
+	result.bytecode.shader_info.num_write_sites = num_write_sites;
+	result.bytecode.shader_info.write_sites = write_sites;
 	result.preprocessed_source = preprocessed_copy;
 	result.preprocessed_source_size = preprocessed_size;
 	return result;
@@ -382,6 +427,9 @@ void cute_shader_free_result(CF_ShaderCompilerResult result)
 	cf_free(shader_info->uniforms);
 	cf_free(shader_info->image_names);
 	cf_free(shader_info->image_binding_slots);
+	cf_free(shader_info->storage_image_infos);
+	cf_free(shader_info->storage_buffer_infos);
+	cf_free(shader_info->write_sites);
 
 	cf_free((void*)result.bytecode.glsl300_src);
 	cf_free((void*)result.bytecode.hlsl_src);

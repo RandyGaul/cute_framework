@@ -219,6 +219,34 @@ static bool write_bytecode(
 		fprintf(file, "#define %s%s_inputs NULL\n", var_name, suffix);
 	}
 
+	// Storage resources and write sites: the GLES backend's compute emulation reads them.
+	const char* resource_fields[2] = { "storage_image_infos", "storage_buffer_infos" };
+	int resource_counts[2] = { shader_info->num_storage_image_infos, shader_info->num_storage_buffer_infos };
+	const CF_ShaderResourceInfo* resource_items[2] = { shader_info->storage_image_infos, shader_info->storage_buffer_infos };
+	for (int r = 0; r < 2; ++r) {
+		if (resource_counts[r] > 0) {
+			fprintf(file, "static CF_ShaderResourceInfo %s%s_%s[%d] = {\n", var_name, suffix, resource_fields[r], resource_counts[r]);
+			for (int i = 0; i < resource_counts[r]; ++i) {
+				const CF_ShaderResourceInfo* it = &resource_items[r][i];
+				fprintf(file, "\t{ .name = \"%s\", .set = %d, .binding = %d, .readonly = %s },\n", it->name, it->set, it->binding, it->readonly ? "true" : "false");
+			}
+			fprintf(file, "};\n");
+		} else {
+			fprintf(file, "#define %s%s_%s NULL\n", var_name, suffix, resource_fields[r]);
+		}
+	}
+	if (shader_info->num_write_sites > 0) {
+		fprintf(file, "static CF_ShaderWriteSite %s%s_write_sites[%d] = {\n", var_name, suffix, shader_info->num_write_sites);
+		for (int i = 0; i < shader_info->num_write_sites; ++i) {
+			const CF_ShaderWriteSite* w = &shader_info->write_sites[i];
+			fprintf(file, "\t{ .kind = %s, .name = \"%s\", .set = %d, .binding = %d, .words = %d },\n",
+				w->kind == CF_SHADER_WRITE_KIND_IMAGE ? "CF_SHADER_WRITE_KIND_IMAGE" : "CF_SHADER_WRITE_KIND_BUFFER", w->name, w->set, w->binding, w->words);
+		}
+		fprintf(file, "};\n");
+	} else {
+		fprintf(file, "#define %s%s_write_sites NULL\n", var_name, suffix);
+	}
+
 	return ferror(file) == 0;
 }
 
@@ -261,6 +289,12 @@ static bool write_bytecode_struct_contents(
 	TABS(); fprintf(file, "\t.num_inputs = %d,\n", shader_info->num_inputs);
 	TABS(); fprintf(file, "\t.inputs = %s%s_inputs,\n", var_name, suffix);
 	TABS(); fprintf(file, "\t.local_size = { %d, %d, %d },\n", shader_info->local_size[0], shader_info->local_size[1], shader_info->local_size[2]);
+	TABS(); fprintf(file, "\t.num_storage_image_infos = %d,\n", shader_info->num_storage_image_infos);
+	TABS(); fprintf(file, "\t.storage_image_infos = %s%s_storage_image_infos,\n", var_name, suffix);
+	TABS(); fprintf(file, "\t.num_storage_buffer_infos = %d,\n", shader_info->num_storage_buffer_infos);
+	TABS(); fprintf(file, "\t.storage_buffer_infos = %s%s_storage_buffer_infos,\n", var_name, suffix);
+	TABS(); fprintf(file, "\t.num_write_sites = %d,\n", shader_info->num_write_sites);
+	TABS(); fprintf(file, "\t.write_sites = %s%s_write_sites,\n", var_name, suffix);
 	TABS(); fprintf(file, "},\n");
 
 #undef TABS

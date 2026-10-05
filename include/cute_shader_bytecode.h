@@ -134,6 +134,69 @@ typedef struct CF_ShaderInputInfo
 // @end
 
 /**
+ * @struct   CF_ShaderResourceInfo
+ * @category graphics
+ * @brief    A storage image or storage buffer a compute shader declares.
+ * @related  CF_ShaderInfo CF_ShaderBytecode
+ */
+typedef struct CF_ShaderResourceInfo
+{
+	/* @member Name of the resource as declared. */
+	const char* name;
+	/* @member Descriptor set (0 readonly, 1 read-write). */
+	int set;
+	/* @member Binding within the set. */
+	int binding;
+	/* @member True for a readonly resource. */
+	bool readonly;
+} CF_ShaderResourceInfo;
+// @end
+
+/**
+ * @enum     CF_ShaderWriteKind
+ * @category graphics
+ * @brief    What a compute shader write site writes into, for the GLES backend's compute emulation.
+ * @related  CF_ShaderWriteSite
+ */
+#define CF_SHADER_WRITE_KIND_DEFS \
+	/* @entry An `imageStore` into a storage image. */ \
+	CF_ENUM(SHADER_WRITE_KIND_IMAGE,  0) \
+	/* @entry An assignment into an element (or a member of one) of a storage buffer. */ \
+	CF_ENUM(SHADER_WRITE_KIND_BUFFER, 1) \
+	/* @end */
+
+typedef enum CF_ShaderWriteKind
+{
+	#define CF_ENUM(K, V) CF_##K = V,
+	CF_SHADER_WRITE_KIND_DEFS
+	#undef CF_ENUM
+} CF_ShaderWriteKind;
+
+/**
+ * @struct   CF_ShaderWriteSite
+ * @category graphics
+ * @brief    One write in a compute shader, as the GLES backend emulates it.
+ * @remarks  GLES3 has no compute. Its backend runs a compute shader as a fragment pass that captures each
+ *           write site's value and destination, then draws one point per invocation into the destination.
+ *           Sites are numbered in source order; the transpiled shader selects the active one by uniform.
+ * @related  CF_ShaderInfo CF_ShaderWriteKind
+ */
+typedef struct CF_ShaderWriteSite
+{
+	/* @member Image or buffer. */
+	CF_ShaderWriteKind kind;
+	/* @member The destination's name as declared. */
+	const char* name;
+	/* @member The destination's descriptor set. */
+	int set;
+	/* @member The destination's binding. */
+	int binding;
+	/* @member 32-bit words written: 1, 2 or 4 (always 4 for images). */
+	int words;
+} CF_ShaderWriteSite;
+// @end
+
+/**
  * @struct   CF_ShaderInfo
  * @category graphics
  * @brief    Reflection info for a shader.
@@ -176,6 +239,21 @@ typedef struct CF_ShaderInfo
 
 	/* @member Compute workgroup size (zero for non-compute shaders). Metal pipelines dispatch with this. */
 	int local_size[3];
+
+	/* @member Number of storage images (compute), readonly and read-write. */
+	int num_storage_image_infos;
+	/* @member Each storage image: name, set, binding, readonly. The GLES backend binds them by name. */
+	CF_ShaderResourceInfo* storage_image_infos;
+
+	/* @member Number of storage buffers (compute), readonly and read-write. */
+	int num_storage_buffer_infos;
+	/* @member Each storage buffer: name, set, binding, readonly. */
+	CF_ShaderResourceInfo* storage_buffer_infos;
+
+	/* @member Number of write sites in a compute shader's GLSL ES output (zero elsewhere). */
+	int num_write_sites;
+	/* @member The GLSL ES compute emulation's write sites, see `CF_ShaderWriteSite`. */
+	CF_ShaderWriteSite* write_sites;
 } CF_ShaderInfo;
 // @end
 
