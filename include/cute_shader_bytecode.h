@@ -197,6 +197,84 @@ typedef struct CF_ShaderWriteSite
 // @end
 
 /**
+ * @enum     CF_ShaderWgslBindingKind
+ * @category graphics
+ * @brief    What one group/binding pair of a shader's WGSL source holds, for the WebGPU backend.
+ * @remarks  CF descriptor set N is WGSL group N. Inside a resource group, sampled texture i (in binding order) is
+ *           binding 2i and its sampler binding 2i+1; storage textures follow, then storage buffers, then the load
+ *           sides of split storage images (see `CF_ShaderWgslSplit`). Inside a uniform group, block slot u is
+ *           binding u.
+ * @related  CF_ShaderWgslBinding CF_ShaderWgslSplit CF_ShaderInfo
+ */
+#define CF_SHADER_WGSL_BINDING_KIND_DEFS \
+	/* @entry A sampled texture: `texture_2d<f32>`, `texture_cube<f32>`, `texture_depth_2d` and so on. */ \
+	CF_ENUM(SHADER_WGSL_BINDING_KIND_SAMPLED_TEXTURE,    0) \
+	/* @entry The sampler paired with a sampled texture: `sampler` or `sampler_comparison`. */ \
+	CF_ENUM(SHADER_WGSL_BINDING_KIND_SAMPLER,            1) \
+	/* @entry A storage texture: `texture_storage_2d<format, access>`. */ \
+	CF_ENUM(SHADER_WGSL_BINDING_KIND_STORAGE_TEXTURE,    2) \
+	/* @entry A storage buffer: `var<storage, read>` or `var<storage, read_write>`. */ \
+	CF_ENUM(SHADER_WGSL_BINDING_KIND_STORAGE_BUFFER,     3) \
+	/* @entry A uniform block: `var<uniform>`, laid out to match its std140 bytes. */ \
+	CF_ENUM(SHADER_WGSL_BINDING_KIND_UNIFORM_BUFFER,     4) \
+	/* @entry The `texture_2d` load side of a split storage image, see `CF_ShaderWgslSplit`. */ \
+	CF_ENUM(SHADER_WGSL_BINDING_KIND_SPLIT_LOAD_TEXTURE, 5) \
+	/* @end */
+
+typedef enum CF_ShaderWgslBindingKind
+{
+	#define CF_ENUM(K, V) CF_##K = V,
+	CF_SHADER_WGSL_BINDING_KIND_DEFS
+	#undef CF_ENUM
+} CF_ShaderWgslBindingKind;
+
+/**
+ * @struct   CF_ShaderWgslBinding
+ * @category graphics
+ * @brief    One group/binding pair declared by a shader's WGSL source.
+ * @remarks  The binding's full type (texture dimension, sample type, storage format and access) is spelled out in the
+ *           WGSL declaration itself.
+ * @related  CF_ShaderWgslBindingKind CF_ShaderWgslSplit CF_ShaderInfo
+ */
+typedef struct CF_ShaderWgslBinding
+{
+	/* @member The sampler, image or block this binding serves, as declared in the shader. */
+	const char* name;
+	/* @member What the binding holds. */
+	CF_ShaderWgslBindingKind kind;
+	/* @member The CF descriptor set, equal to the WGSL group. */
+	int set;
+	/* @member The resource's binding within its CF set, as declared in the shader. */
+	int slot;
+	/* @member The WGSL binding. */
+	int binding;
+} CF_ShaderWgslBinding;
+// @end
+
+/**
+ * @struct   CF_ShaderWgslSplit
+ * @category graphics
+ * @brief    A storage image a shader both loads and stores, split in two for WebGPU.
+ * @remarks  WebGPU only allows read-write storage access for r32 formats, and forbids binding one texture as both a
+ *           writable storage texture and a sampled texture in one dispatch. A shader that loads and stores an image of
+ *           any other format stores through a write-only storage texture at `store_binding`, and loads through a
+ *           `texture_2d` at `load_binding`. Bind a copy of the image, taken before the dispatch, as the load side.
+ * @related  CF_ShaderWgslBinding CF_ShaderInfo
+ */
+typedef struct CF_ShaderWgslSplit
+{
+	/* @member The image's name as declared. */
+	const char* name;
+	/* @member The CF descriptor set, equal to the WGSL group. */
+	int set;
+	/* @member The WGSL binding of the write-only storage texture. */
+	int store_binding;
+	/* @member The WGSL binding of the `texture_2d` load side. */
+	int load_binding;
+} CF_ShaderWgslSplit;
+// @end
+
+/**
  * @struct   CF_ShaderInfo
  * @category graphics
  * @brief    Reflection info for a shader.
@@ -254,6 +332,16 @@ typedef struct CF_ShaderInfo
 	int num_write_sites;
 	/* @member The GLSL ES compute emulation's write sites, see `CF_ShaderWriteSite`. */
 	CF_ShaderWriteSite* write_sites;
+
+	/* @member Number of bindings the WGSL source declares (zero without WGSL). */
+	int num_wgsl_bindings;
+	/* @member Every group/binding pair of the WGSL source, see `CF_ShaderWgslBinding`. */
+	CF_ShaderWgslBinding* wgsl_bindings;
+
+	/* @member Number of split storage images in the WGSL source. */
+	int num_wgsl_splits;
+	/* @member Storage images split into a store side and a load side, see `CF_ShaderWgslSplit`. */
+	CF_ShaderWgslSplit* wgsl_splits;
 } CF_ShaderInfo;
 // @end
 
@@ -284,6 +372,10 @@ typedef struct CF_ShaderBytecode
 	size_t msl_src_size;
 	/* @member Shader reflection info. */
 	CF_ShaderInfo shader_info;
+	/* @member The transpiled WGSL source for WebGPU (entry point "main"), or NULL when not compiled for WebGPU. */
+	const char* wgsl_src;
+	/* @member Size of the WGSL source. */
+	size_t wgsl_src_size;
 } CF_ShaderBytecode;
 // @end
 

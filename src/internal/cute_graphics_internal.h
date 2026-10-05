@@ -269,6 +269,25 @@ void cf_sdlgpu_cleanup();
 
 #endif
 
+#ifdef CF_WEBGPU
+
+CF_Result cf_webgpu_init(bool debug);
+const char* cf_webgpu_adapter_name();
+void cf_webgpu_attach(SDL_Window* window);
+bool cf_webgpu_supports_msaa(int sample_count);
+void cf_webgpu_flush();
+bool cf_webgpu_set_present_mode(CF_PresentMode mode);
+void cf_webgpu_begin_frame();
+void cf_webgpu_blit_canvas(CF_Canvas canvas);
+void cf_webgpu_end_frame();
+void cf_webgpu_cleanup();
+void cf_webgpu_imgui_init();
+void cf_webgpu_imgui_new_frame();
+void cf_webgpu_imgui_draw();
+void cf_webgpu_imgui_shutdown();
+
+#endif
+
 CF_Result cf_gles_init(bool debug);
 SDL_GLContext cf_gles_get_gl_context();
 void cf_gles_attach(SDL_Window* window);

@@ -426,7 +426,7 @@ static CF_ShaderBytecode cf_compile_shader_to_bytecode_internal(const char* shad
 	bool skip_hlsl = true;
 	bool skip_msl = true;
 #ifndef CF_EMSCRIPTEN
-	if (app->gfx_backend_type != CF_BACKEND_TYPE_GLES3) {
+	if (app->gfx_backend_type != CF_BACKEND_TYPE_GLES3 && app->gfx_backend_type != CF_BACKEND_TYPE_WEBGPU) {
 		skip_hlsl = !cf_sdlgpu_wants_hlsl();
 		skip_msl = !cf_sdlgpu_wants_msl();
 	}
@@ -469,6 +469,8 @@ static CF_ShaderBytecode cf_compile_shader_to_bytecode_internal(const char* shad
 
 		.vfs = &s_cute_shader_vfs,
 	};
+	// Only the WebGPU backend consumes the WGSL output.
+	config.skip_wgsl = app->gfx_backend_type != CF_BACKEND_TYPE_WEBGPU;
 
 	// The draw shader's payload storage buffer binds right after the user stub's
 	// last declared sampler (SDL_GPU wants set-2 bindings contiguous by resource
@@ -1105,45 +1107,38 @@ bool cf_compute_shader_reload(CF_ComputeShader* shader)
 //--------------------------------------------------------------------------------------------------
 // Backend dispatch shims.
 
+// Each backend arm compiles only where that backend exists: SDL_GPU off the web, WebGPU
+// under CF_WEBGPU, GLES3 everywhere.
 #ifdef CF_EMSCRIPTEN
+#	define CF_SDLGPU_ARM(...)
+#else
+#	define CF_SDLGPU_ARM(...) __VA_ARGS__
+#endif
+#ifdef CF_WEBGPU
+#	define CF_WEBGPU_ARM(...) __VA_ARGS__
+#else
+#	define CF_WEBGPU_ARM(...)
+#endif
 
 #define CF_DISPATCH_SHIM(RETURN_TYPE, OP, ARGUMENTS, ...) \
+	CF_SDLGPU_ARM(RETURN_TYPE cf_sdlgpu_##OP ARGUMENTS;) \
+	CF_WEBGPU_ARM(RETURN_TYPE cf_webgpu_##OP ARGUMENTS;) \
 	RETURN_TYPE cf_gles_##OP ARGUMENTS; \
 	RETURN_TYPE cf_##OP ARGUMENTS { \
+		CF_WEBGPU_ARM(if (app->gfx_backend_type == CF_BACKEND_TYPE_WEBGPU) return cf_webgpu_##OP(__VA_ARGS__);) \
+		CF_SDLGPU_ARM(if (app->gfx_backend_type != CF_BACKEND_TYPE_GLES3) return cf_sdlgpu_##OP(__VA_ARGS__);) \
 		return cf_gles_##OP(__VA_ARGS__); \
 	}
 
 #define CF_DISPATCH_SHIM_VOID(OP, ARGUMENTS, ...) \
+	CF_SDLGPU_ARM(void cf_sdlgpu_##OP ARGUMENTS;) \
+	CF_WEBGPU_ARM(void cf_webgpu_##OP ARGUMENTS;) \
 	void cf_gles_##OP ARGUMENTS; \
 	void cf_##OP ARGUMENTS { \
+		CF_WEBGPU_ARM(if (app->gfx_backend_type == CF_BACKEND_TYPE_WEBGPU) { cf_webgpu_##OP(__VA_ARGS__); return; }) \
+		CF_SDLGPU_ARM(if (app->gfx_backend_type != CF_BACKEND_TYPE_GLES3) { cf_sdlgpu_##OP(__VA_ARGS__); return; }) \
 		cf_gles_##OP(__VA_ARGS__); \
 	}
-
-#else
-
-#define CF_DISPATCH_SHIM(RETURN_TYPE, OP, ARGUMENTS, ...) \
-	RETURN_TYPE cf_sdlgpu_##OP ARGUMENTS; \
-	RETURN_TYPE cf_gles_##OP ARGUMENTS; \
-	RETURN_TYPE cf_##OP ARGUMENTS { \
-		if (app->gfx_backend_type == CF_BACKEND_TYPE_GLES3) { \
-			return cf_gles_##OP(__VA_ARGS__); \
-		} else { \
-			return cf_sdlgpu_##OP(__VA_ARGS__); \
-		} \
-	}
-
-#define CF_DISPATCH_SHIM_VOID(OP, ARGUMENTS, ...) \
-	void cf_sdlgpu_##OP ARGUMENTS; \
-	void cf_gles_##OP ARGUMENTS; \
-	void cf_##OP ARGUMENTS { \
-		if (app->gfx_backend_type == CF_BACKEND_TYPE_GLES3) { \
-			cf_gles_##OP(__VA_ARGS__); \
-		} else { \
-			cf_sdlgpu_##OP(__VA_ARGS__); \
-		} \
-	}
-
-#endif
 
 CF_DISPATCH_SHIM(bool, texture_supports_format, (CF_PixelFormat format, CF_TextureUsageBits usage), format, usage)
 CF_DISPATCH_SHIM(bool, query_pixel_format, (CF_PixelFormat format, CF_PixelFormatOp op), format, op)
@@ -1290,35 +1285,19 @@ CF_DISPATCH_SHIM_VOID(shader_swap_contents, (CF_Shader a, CF_Shader b), a, b)
 CF_DISPATCH_SHIM_VOID(compute_shader_swap_contents, (CF_ComputeShader a, CF_ComputeShader b), a, b)
 CF_DISPATCH_SHIM_VOID(apply_shader, (CF_Shader shader_handle, CF_Material material_handle), shader_handle, material_handle)
 
-void cf_sdlgpu_draw_elements();
-void cf_gles_draw_elements();
-void cf_draw_elements()
-{
-	if (app->gfx_backend_type == CF_BACKEND_TYPE_GLES3) {
-		cf_gles_draw_elements();
-	} else {
-#ifndef CF_EMSCRIPTEN
-		cf_sdlgpu_draw_elements();
-#endif
-	}
-}
+CF_DISPATCH_SHIM_VOID(draw_elements, (), )
 
 CF_DISPATCH_SHIM(CF_ComputeShader, make_compute_shader_from_bytecode, (CF_ShaderBytecode bytecode), bytecode)
 
-void cf_sdlgpu_destroy_compute_shader(CF_ComputeShader shader);
+CF_SDLGPU_ARM(void cf_sdlgpu_destroy_compute_shader(CF_ComputeShader shader);)
+CF_WEBGPU_ARM(void cf_webgpu_destroy_compute_shader(CF_ComputeShader shader);)
 void cf_gles_destroy_compute_shader(CF_ComputeShader shader);
 void cf_destroy_compute_shader(CF_ComputeShader shader)
 {
 	s_compute_shader_paths.remove(shader.id);
-#ifdef CF_EMSCRIPTEN
+	CF_WEBGPU_ARM(if (app->gfx_backend_type == CF_BACKEND_TYPE_WEBGPU) { cf_webgpu_destroy_compute_shader(shader); return; })
+	CF_SDLGPU_ARM(if (app->gfx_backend_type != CF_BACKEND_TYPE_GLES3) { cf_sdlgpu_destroy_compute_shader(shader); return; })
 	cf_gles_destroy_compute_shader(shader);
-#else
-	if (app->gfx_backend_type == CF_BACKEND_TYPE_GLES3) {
-		cf_gles_destroy_compute_shader(shader);
-	} else {
-		cf_sdlgpu_destroy_compute_shader(shader);
-	}
-#endif
 }
 CF_DISPATCH_SHIM(CF_StorageBuffer, make_storage_buffer, (CF_StorageBufferParams params), params)
 CF_DISPATCH_SHIM_VOID(update_storage_buffer, (CF_StorageBuffer buffer, const void* data, int size), buffer, data, size)

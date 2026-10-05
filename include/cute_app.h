@@ -202,6 +202,8 @@ CF_API CF_DisplayOrientation CF_CALL cf_display_orientation(CF_DisplayID display
 	CF_ENUM(APP_OPTIONS_GFX_DEBUG_BIT,                          1 << 12) \
 	/* @entry Disables the OS's high-pixel-density (Retina/HiDPI) backbuffer, forcing 1:1 logical-to-physical rendering. `cf_app_get_pixel_scale` will always return 1.0f. */ \
 	CF_ENUM(APP_OPTIONS_NO_HIGH_DPI_BIT,                        1 << 13) \
+	/* @entry Starts the application with a WebGPU backend. Requires building CF with the CF_WEBGPU CMake option. The web build picks WebGPU on its own when the browser supports it. */ \
+	CF_ENUM(APP_OPTIONS_GFX_WEBGPU_BIT,                         1 << 14) \
 	/* @end */
 
 typedef int CF_AppOptionFlags;

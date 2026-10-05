@@ -23,6 +23,8 @@ option(CF_FRAMEWORK_STATIC "Build static library for Cute Framework." ON)
 option(CF_CUTE_SHADERC "Build cute-shaderc, an offline shader compiler." ON)
 option(CF_CUTE_SYM "Build cute-sym, the crash reporter's symbol table tool (cf_symbols needs it)." ON)
 option(CF_FRAMEWORK_APPLE_FRAMEWORK "Build CF libraries as Apple Framework" OFF)
+option(CF_WEBGPU "Build the optional WebGPU graphics backend (emdawnwebgpu on the web, wgpu-native on desktop)." OFF)
+set(CF_WGPU_NATIVE_DIR "" CACHE PATH "Desktop CF_WEBGPU builds: a wgpu-native release (include/webgpu/webgpu.h, lib/).")
 
 # Make sure all libraries are placed into the same output folder.
 if (CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
@@ -232,6 +234,49 @@ else()
 	add_library(cute SHARED ${CF_SRCS} ${CF_HDRS})
 endif()
 target_compile_definitions(cute PRIVATE CF_EXPORT)
+
+# Optional WebGPU backend. OFF leaves the build exactly as it was.
+if(CF_WEBGPU)
+	target_sources(cute PRIVATE
+		src/cute_graphics_webgpu.cpp
+		libraries/imgui/backends/imgui_impl_wgpu.cpp
+	)
+	target_compile_definitions(cute PUBLIC CF_WEBGPU)
+	if(EMSCRIPTEN)
+		target_compile_options(cute PUBLIC --use-port=emdawnwebgpu)
+		target_link_options(cute INTERFACE --use-port=emdawnwebgpu)
+	else()
+		if(NOT CF_WGPU_NATIVE_DIR)
+			message(FATAL_ERROR "CF_WEBGPU on desktop needs CF_WGPU_NATIVE_DIR pointing at a wgpu-native release.")
+		endif()
+		target_include_directories(cute PUBLIC ${CF_WGPU_NATIVE_DIR}/include)
+		target_compile_definitions(cute PRIVATE IMGUI_IMPL_WEBGPU_BACKEND_DAWN) # wgpu-native v25+ speaks the standard header, which is the path imgui calls Dawn.
+		if(WIN32)
+			set(CF_WGPU_NATIVE_LIB ${CF_WGPU_NATIVE_DIR}/lib/wgpu_native.dll.lib)
+			set(CF_WGPU_NATIVE_RUNTIME ${CF_WGPU_NATIVE_DIR}/lib/wgpu_native.dll)
+		elseif(APPLE)
+			set(CF_WGPU_NATIVE_LIB ${CF_WGPU_NATIVE_DIR}/lib/libwgpu_native.dylib)
+			set(CF_WGPU_NATIVE_RUNTIME ${CF_WGPU_NATIVE_LIB})
+		else()
+			set(CF_WGPU_NATIVE_LIB ${CF_WGPU_NATIVE_DIR}/lib/libwgpu_native.so)
+			set(CF_WGPU_NATIVE_RUNTIME ${CF_WGPU_NATIVE_LIB})
+		endif()
+		target_link_libraries(cute PUBLIC ${CF_WGPU_NATIVE_LIB})
+		# The shared library has to sit beside every executable that links CF.
+		if(CMAKE_RUNTIME_OUTPUT_DIRECTORY)
+			get_property(CF_MULTI_CONFIG GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
+			if(CF_MULTI_CONFIG)
+				set(CF_WGPU_RUNTIME_DIR "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/$<CONFIG>")
+			else()
+				set(CF_WGPU_RUNTIME_DIR "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
+			endif()
+			add_custom_command(TARGET cute POST_BUILD
+				COMMAND ${CMAKE_COMMAND} -E make_directory "${CF_WGPU_RUNTIME_DIR}"
+				COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CF_WGPU_NATIVE_RUNTIME}" "${CF_WGPU_RUNTIME_DIR}"
+			)
+		endif()
+	endif()
+endif()
 
 # Box2D v3.1.1 (MIT), fetched shallow at configure time -- the release tag is the pin
 # (GIT_SHALLOW only composes with branch/tag names, not commit hashes, and a tag keeps the

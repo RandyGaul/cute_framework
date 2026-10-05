@@ -24,6 +24,8 @@ bool test_make_app(int w, int h, int extra_options)
 	int options = CF_APP_OPTIONS_HIDDEN_BIT | CF_APP_OPTIONS_NO_AUDIO_BIT | extra_options;
 	const char* gles = getenv("CF_TEST_GLES");
 	if (gles && *gles == '1') options |= CF_APP_OPTIONS_GFX_OPENGL_BIT | CF_APP_OPTIONS_GFX_DEBUG_BIT;
+	const char* webgpu = getenv("CF_TEST_WEBGPU");
+	if (webgpu && *webgpu == '1') options |= CF_APP_OPTIONS_GFX_WEBGPU_BIT;
 
 	if (s_fresh_mode()) {
 		// A failed REQUIRE returns out of a test before its trailing test_destroy_app, and

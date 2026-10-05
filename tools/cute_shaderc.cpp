@@ -156,6 +156,24 @@ static bool write_bytecode(
 		fprintf(file, "#define %s%s_msl_src NULL\n", var_name, suffix);
 	}
 
+	// Write WGSL (for WebGPU).
+	if (compile_result.bytecode.wgsl_src) {
+		fprintf(file, "static const char %s%s_wgsl_src[%zu] =\n\"", var_name, suffix, compile_result.bytecode.wgsl_src_size + 1);
+		for (size_t i = 0; i < compile_result.bytecode.wgsl_src_size; ++i) {
+			char ch = compile_result.bytecode.wgsl_src[i];
+			if (ch == '\n') {  // Escape new line as \n and start an actual new line
+				fprintf(file, "\\n\"\n\"");
+			} else if (ch == '"' || ch == '\\') {
+				fprintf(file, "\\%c", ch);
+			} else {
+				fprintf(file, "%c", ch);
+			}
+		}
+		fprintf(file, "\";\n");
+	} else {
+		fprintf(file, "#define %s%s_wgsl_src NULL\n", var_name, suffix);
+	}
+
 	// Write reflection info.
 	const CF_ShaderInfo* shader_info = &compile_result.bytecode.shader_info;
 
@@ -247,6 +265,33 @@ static bool write_bytecode(
 		fprintf(file, "#define %s%s_write_sites NULL\n", var_name, suffix);
 	}
 
+	// The WGSL bind groups: the WebGPU backend reads them.
+	if (shader_info->num_wgsl_bindings > 0) {
+		static const char* kinds[] = {
+			"CF_SHADER_WGSL_BINDING_KIND_SAMPLED_TEXTURE", "CF_SHADER_WGSL_BINDING_KIND_SAMPLER",
+			"CF_SHADER_WGSL_BINDING_KIND_STORAGE_TEXTURE", "CF_SHADER_WGSL_BINDING_KIND_STORAGE_BUFFER",
+			"CF_SHADER_WGSL_BINDING_KIND_UNIFORM_BUFFER", "CF_SHADER_WGSL_BINDING_KIND_SPLIT_LOAD_TEXTURE",
+		};
+		fprintf(file, "static CF_ShaderWgslBinding %s%s_wgsl_bindings[%d] = {\n", var_name, suffix, shader_info->num_wgsl_bindings);
+		for (int i = 0; i < shader_info->num_wgsl_bindings; ++i) {
+			const CF_ShaderWgslBinding* b = &shader_info->wgsl_bindings[i];
+			fprintf(file, "\t{ .name = \"%s\", .kind = %s, .set = %d, .slot = %d, .binding = %d },\n", b->name, kinds[b->kind], b->set, b->slot, b->binding);
+		}
+		fprintf(file, "};\n");
+	} else {
+		fprintf(file, "#define %s%s_wgsl_bindings NULL\n", var_name, suffix);
+	}
+	if (shader_info->num_wgsl_splits > 0) {
+		fprintf(file, "static CF_ShaderWgslSplit %s%s_wgsl_splits[%d] = {\n", var_name, suffix, shader_info->num_wgsl_splits);
+		for (int i = 0; i < shader_info->num_wgsl_splits; ++i) {
+			const CF_ShaderWgslSplit* sp = &shader_info->wgsl_splits[i];
+			fprintf(file, "\t{ .name = \"%s\", .set = %d, .store_binding = %d, .load_binding = %d },\n", sp->name, sp->set, sp->store_binding, sp->load_binding);
+		}
+		fprintf(file, "};\n");
+	} else {
+		fprintf(file, "#define %s%s_wgsl_splits NULL\n", var_name, suffix);
+	}
+
 	return ferror(file) == 0;
 }
 
@@ -295,7 +340,13 @@ static bool write_bytecode_struct_contents(
 	TABS(); fprintf(file, "\t.storage_buffer_infos = %s%s_storage_buffer_infos,\n", var_name, suffix);
 	TABS(); fprintf(file, "\t.num_write_sites = %d,\n", shader_info->num_write_sites);
 	TABS(); fprintf(file, "\t.write_sites = %s%s_write_sites,\n", var_name, suffix);
+	TABS(); fprintf(file, "\t.num_wgsl_bindings = %d,\n", shader_info->num_wgsl_bindings);
+	TABS(); fprintf(file, "\t.wgsl_bindings = %s%s_wgsl_bindings,\n", var_name, suffix);
+	TABS(); fprintf(file, "\t.num_wgsl_splits = %d,\n", shader_info->num_wgsl_splits);
+	TABS(); fprintf(file, "\t.wgsl_splits = %s%s_wgsl_splits,\n", var_name, suffix);
 	TABS(); fprintf(file, "},\n");
+	TABS(); fprintf(file, ".wgsl_src = %s%s_wgsl_src,\n", var_name, suffix);
+	TABS(); fprintf(file, ".wgsl_src_size = %zu,\n", compile_result.bytecode.wgsl_src_size);
 
 #undef TABS
 
@@ -624,6 +675,7 @@ int main(int argc, const char* argv[])
 			config.skip_glsl300 = false;
 			config.skip_hlsl = true; // Only the GLSL 300 output is grafted from this flavor.
 			config.skip_msl = true;
+			config.skip_wgsl = true;
 			defines[num_defines++] = { "CF_GLES", "1" };
 			config.num_builtin_defines = num_defines;
 			draw_gles_result = cute_shader_compile(
@@ -644,6 +696,7 @@ int main(int argc, const char* argv[])
 			config.num_builtin_defines = --num_defines;
 			config.skip_hlsl = false;
 			config.skip_msl = false;
+			config.skip_wgsl = false;
 		} else {
 			config.skip_glsl300 = true;
 		}

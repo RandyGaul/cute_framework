@@ -88,6 +88,151 @@ static bool validate_spirv(const uint32_t* words, size_t count)
 }
 
 //--------------------------------------------------------------------------------------------------
+// naga integration: every shader this suite compiles successfully is also transpiled to WGSL and
+// validated with naga (CSPV_NAGA = naga executable; default %USERPROFILE%\.cargo\bin\naga.exe,
+// then PATH). Validation runs with only shader_float16_in_float32 enabled -- core WebGPU (wgpu
+// grants it on every full WebGPU adapter; naga gates pack2x16float behind it). Identical
+// WGSL outputs validate once. CSPV_WGSL_DUMP names a directory to receive the failing modules,
+// CSPV_WGSL_ALL one to receive every module validated.
+
+static bool g_has_naga = false;
+static char* g_naga_path; // ckit strings.
+static char* g_temp_wgsl;
+static char* g_temp_naga_log;
+static CK_MAP(int) g_wgsl_seen;
+
+typedef struct wgsl_stat
+{
+	const char* what;
+	int total;
+	int valid;
+} wgsl_stat;
+
+enum { WGSL_TESTS, WGSL_BUILTIN, WGSL_SAMPLES, WGSL_EXTRA, WGSL_CAT_COUNT };
+static wgsl_stat g_wgsl_stats[WGSL_CAT_COUNT] = {
+	{ "compiler test shaders" }, { "builtin shaders" }, { "sample shaders" }, { "CSPV_EXTRA_SHADER_DIR shaders" },
+};
+static int g_wgsl_cat = WGSL_TESTS;
+static const char* g_wgsl_label = NULL; // File name of the shader under test, when known.
+
+static void detect_naga(void)
+{
+	const char* env = getenv("CSPV_NAGA");
+	const char* home = getenv("USERPROFILE");
+	if (env) g_naga_path = smake(env);
+	else if (home) g_naga_path = sfmake("%s\\.cargo\\bin\\naga.exe", home);
+	else g_naga_path = smake("naga");
+	char* cmd = sfmake("\"\"%s\" --version > nul 2>&1\"", g_naga_path);
+	g_has_naga = system(cmd) == 0;
+	sfree(cmd);
+	if (!g_has_naga && !env) {
+		sset(g_naga_path, "naga");
+		g_has_naga = system("naga --version > nul 2>&1") == 0;
+	}
+	if (!g_has_naga) printf("NOTE: naga not found (set CSPV_NAGA); skipping WGSL validation.\n");
+	const char* tmp = getenv("TEMP");
+	g_temp_wgsl = sfmake("%s\\cute_spirv_test.wgsl", tmp ? tmp : ".");
+	g_temp_naga_log = sfmake("%s\\cute_spirv_test_naga.txt", tmp ? tmp : ".");
+}
+
+static char* read_text_file(const char* path);
+
+static uint64_t wgsl_hash(const char* s)
+{
+	uint64_t h = 14695981039346656037ull;
+	for (; *s; s++) h = (h ^ (uint8_t)*s) * 1099511628211ull;
+	return h ? h : 1;
+}
+
+static void wgsl_dump_failure(const char* wgsl)
+{
+	const char* dir = getenv("CSPV_WGSL_DUMP");
+	if (!dir) return;
+	static int n = 0;
+	char* path = sfmake("%s\\fail_%03d.wgsl", dir, n++);
+	FILE* f = fopen(path, "wb");
+	if (f) {
+		fwrite(wgsl, 1, strlen(wgsl), f);
+		fclose(f);
+	}
+	printf("  (dumped to %s)\n", path);
+	sfree(path);
+}
+
+// Returns true when naga accepts the module (or naga is unavailable).
+static bool validate_wgsl(const char* wgsl)
+{
+	if (!g_has_naga) return true;
+	uint64_t h = wgsl_hash(wgsl);
+	if (map_has(g_wgsl_seen, h)) {
+		// Corpus files count each time (a game's copy of a sample shader is still a file).
+		bool ok = map_get(g_wgsl_seen, h) == 1;
+		if (g_wgsl_cat != WGSL_TESTS) {
+			g_wgsl_stats[g_wgsl_cat].total++;
+			if (ok) g_wgsl_stats[g_wgsl_cat].valid++;
+		}
+		return ok;
+	}
+	g_wgsl_stats[g_wgsl_cat].total++;
+	FILE* f = fopen(g_temp_wgsl, "wb");
+	if (!f) return false;
+	fwrite(wgsl, 1, strlen(wgsl), f);
+	fclose(f);
+	char* cmd = sfmake("\"\"%s\" --capabilities shader_float16_in_float32 \"%s\" > \"%s\" 2>&1\"", g_naga_path, g_temp_wgsl, g_temp_naga_log);
+	bool ok = system(cmd) == 0;
+	sfree(cmd);
+	map_set(g_wgsl_seen, h, ok ? 1 : 2);
+	const char* all_dir = getenv("CSPV_WGSL_ALL");
+	if (all_dir) {
+		static int all_n = 0;
+		char* path = sfmake("%s/%04d_%s.wgsl", all_dir, all_n++, g_current_test);
+		FILE* af = fopen(path, "wb");
+		if (af) {
+			fwrite(wgsl, 1, strlen(wgsl), af);
+			fclose(af);
+		}
+		sfree(path);
+	}
+	if (ok) {
+		g_wgsl_stats[g_wgsl_cat].valid++;
+	} else {
+		char* log = read_text_file(g_temp_naga_log);
+		printf("--- naga rejected WGSL (%s%s%s): ---\n%s\n", g_current_test, g_wgsl_label ? ", " : "", g_wgsl_label ? g_wgsl_label : "", log ? log : "(no output)");
+		free(log);
+		wgsl_dump_failure(wgsl);
+	}
+	return ok;
+}
+
+// Every successful compile in this file also goes through the WGSL emitter and naga, so the
+// whole suite doubles as WGSL coverage. Compiles that already request WGSL check their own.
+static CSPV_Result wgsl_checked_compile(const char* src, CSPV_Stage stage, const CSPV_Options* opts)
+{
+	CSPV_Result r = (cspv_compile_ex)(src, stage, opts);
+	if (!r.success || !g_has_naga || (opts && (opts->emit_wgsl || opts->preprocess_only))) return r;
+	CSPV_Options o;
+	if (opts) o = *opts;
+	else memset(&o, 0, sizeof(o));
+	o.emit_wgsl = true;
+	o.emit_glsl300 = false;
+	o.emit_hlsl = false;
+	o.emit_msl = false;
+	o.return_preprocessed = false;
+	CSPV_Result w = (cspv_compile_ex)(src, stage, &o);
+	if (!w.success) {
+		g_wgsl_stats[g_wgsl_cat].total++;
+		printf("--- WGSL emission failed (%s%s%s): %s\n", g_current_test, g_wgsl_label ? ", " : "", g_wgsl_label ? g_wgsl_label : "", w.error_message);
+		CHECK_MSG(false, "WGSL emission failed");
+	} else {
+		CHECK_MSG(validate_wgsl(w.wgsl), g_wgsl_label ? g_wgsl_label : "naga rejected the WGSL");
+	}
+	cspv_free(&w);
+	return r;
+}
+#define cspv_compile_ex(src, stage, opts) wgsl_checked_compile(src, stage, opts)
+#define cspv_compile(src, stage) wgsl_checked_compile(src, stage, NULL)
+
+//--------------------------------------------------------------------------------------------------
 // Compile helpers.
 
 static void expect_ok_ex(CSPV_Stage stage, const char* src, const CSPV_Options* opts)
@@ -2265,9 +2410,382 @@ static void test_compute_es(void)
 	sfree(g_temp_frag);
 }
 
+//--------------------------------------------------------------------------------------------------
+// WGSL: the shader corpus (builtins, every sample shader, CSPV_EXTRA_SHADER_DIR) through naga,
+// and the binding contract the WebGPU backend relies on.
+
+#ifdef _WIN32
+#include <io.h>
+#else
+#include <dirent.h>
+#include <sys/stat.h>
+#endif
+
+// Recursively collect files under `dir` ending in one of the shader extensions.
+static void list_shader_files(const char* dir, CK_DYNA char*** out)
+{
+	static const char* exts[] = { ".shd", ".c_shd", ".vs", ".fs" };
+#ifdef _WIN32
+	char* pattern = sfmake("%s/*", dir);
+	struct _finddata_t fd;
+	intptr_t h = _findfirst(pattern, &fd);
+	sfree(pattern);
+	if (h == -1) return;
+	do {
+		const char* name = fd.name;
+		bool is_dir = (fd.attrib & _A_SUBDIR) != 0;
+#else
+	DIR* d = opendir(dir);
+	if (!d) return;
+	struct dirent* ent;
+	while ((ent = readdir(d))) {
+		const char* name = ent->d_name;
+		char* full_stat = sfmake("%s/%s", dir, name);
+		struct stat st;
+		bool is_dir = stat(full_stat, &st) == 0 && S_ISDIR(st.st_mode);
+		sfree(full_stat);
+#endif
+		if (!strcmp(name, ".") || !strcmp(name, "..")) continue;
+		char* full = sfmake("%s/%s", dir, name);
+		if (is_dir) {
+			list_shader_files(full, out);
+			sfree(full);
+			continue;
+		}
+		bool match = false;
+		for (int i = 0; i < 4; i++) {
+			size_t n = strlen(name), e = strlen(exts[i]);
+			if (n > e && !strcmp(name + n - e, exts[i])) match = true;
+		}
+		if (match) apush(*out, full);
+		else sfree(full);
+#ifdef _WIN32
+	} while (_findnext(h, &fd) == 0);
+	_findclose(h);
+#else
+	}
+	closedir(d);
+#endif
+}
+
+static bool ends_with(const char* s, const char* suffix)
+{
+	size_t n = strlen(s), e = strlen(suffix);
+	return n >= e && !strcmp(s + n - e, suffix);
+}
+
+// Writes `wgsl` as <CSPV_WGSL_OUT>/<name> (for the WebGPU backend's hand checks).
+static void wgsl_write_out(const char* name, const char* wgsl)
+{
+	const char* dir = getenv("CSPV_WGSL_OUT");
+	if (!dir || !wgsl) return;
+	char* path = sfmake("%s/%s", dir, name);
+	FILE* f = fopen(path, "wb");
+	if (f) {
+		fwrite(wgsl, 1, strlen(wgsl), f);
+		fclose(f);
+	}
+	sfree(path);
+}
+
+static CSPV_Options wgsl_corpus_options(void)
+{
+	static CSPV_Define payload_define = { "CF_PAYLOAD_BINDING", "1" };
+	CSPV_Options o;
+	memset(&o, 0, sizeof(o));
+	o.include_resolve = corpus_resolve;
+	o.num_defines = 1;
+	o.defines = &payload_define;
+	o.emit_wgsl = true;
+	return o;
+}
+
+// Compile one shader to WGSL and validate it; returns the result for further checks.
+static CSPV_Result wgsl_compile(CSPV_Stage stage, const char* src, const CSPV_Options* opts, const char* label)
+{
+	g_wgsl_label = label;
+	CSPV_Result r = cspv_compile_ex(src, stage, opts);
+	if (!r.success) {
+		if (g_has_naga) g_wgsl_stats[g_wgsl_cat].total++;
+		printf("--- WGSL compile failed (%s): %s\n", label, r.error_message);
+		CHECK_MSG(false, r.error_message);
+	} else {
+		CHECK(r.wgsl != NULL);
+		if (r.wgsl) CHECK_MSG(validate_wgsl(r.wgsl), label);
+	}
+	g_wgsl_label = NULL;
+	return r;
+}
+
+static void wgsl_corpus_dir(const char* dir, const char* out_prefix)
+{
+	CK_DYNA char** files = NULL;
+	list_shader_files(dir, &files);
+	for (int i = 0; i < (int)asize(files); i++) {
+		const char* path = files[i];
+		char* src = read_text_file(path);
+		if (!src) continue;
+		const char* base = strrchr(path, '/');
+		base = base ? base + 1 : path;
+		CSPV_Options o = wgsl_corpus_options();
+		CSPV_Result r;
+		memset(&r, 0, sizeof(r));
+		bool ran = true;
+		if (ends_with(path, ".c_shd")) {
+			r = wgsl_compile(CSPV_STAGE_COMPUTE, src, &o, path);
+		} else if (ends_with(path, ".vs")) {
+			r = wgsl_compile(CSPV_STAGE_VERTEX, src, &o, path);
+		} else if (ends_with(path, ".fs")) {
+			r = wgsl_compile(CSPV_STAGE_FRAGMENT, src, &o, path);
+		} else if (strstr(src, "vec4 shader(")) {
+			// A draw shader: spliced into the draw fragment shader, like cf_make_draw_shader.
+			o.user = src;
+			r = wgsl_compile(CSPV_STAGE_FRAGMENT, s_draw_fs, &o, path);
+		} else {
+			ran = false;
+			printf("NOTE: %s is neither a draw shader nor a known stage; skipped.\n", path);
+		}
+		// The HRC GI sample's modules go to CSPV_WGSL_OUT for the WebGPU backend's checks.
+		if (ran && r.success && out_prefix && strstr(path, "hrc_gi_data")) {
+			char* name = sfmake("%shrc_gi_%s.wgsl", out_prefix, base);
+			wgsl_write_out(name, r.wgsl);
+			sfree(name);
+		}
+		cspv_free(&r);
+		free(src);
+	}
+	for (int i = 0; i < (int)asize(files); i++) sfree(files[i]);
+	afree(files);
+}
+
+static void test_wgsl_corpus(void)
+{
+	if (!g_has_naga) return;
+
+	// Builtins, exactly as cute_graphics compiles them (no CF_GLES: WebGPU has real storage).
+	g_wgsl_cat = WGSL_BUILTIN;
+	{
+		CSPV_Options o = wgsl_corpus_options();
+		for (int i = 0; i < (int)(sizeof(s_builtin_shader_sources) / sizeof(s_builtin_shader_sources[0])); i++) {
+			const char* name = s_builtin_shader_sources[i].name;
+			char* vs_name = sfmake("builtin_%s.vs.wgsl", name);
+			char* fs_name = sfmake("builtin_%s.fs.wgsl", name);
+			CSPV_Result v = wgsl_compile(CSPV_STAGE_VERTEX, s_builtin_shader_sources[i].vertex, &o, vs_name);
+			CSPV_Result f = wgsl_compile(CSPV_STAGE_FRAGMENT, s_builtin_shader_sources[i].fragment, &o, fs_name);
+			if (v.success) wgsl_write_out(vs_name, v.wgsl);
+			if (f.success) wgsl_write_out(fs_name, f.wgsl);
+			sfree(vs_name);
+			sfree(fs_name);
+			cspv_free(&v);
+			cspv_free(&f);
+		}
+		for (int i = 0; i < (int)(sizeof(s_builtin_compute_shader_sources) / sizeof(s_builtin_compute_shader_sources[0])); i++) {
+			char* cs_name = sfmake("builtin_%s.cs.wgsl", s_builtin_compute_shader_sources[i].name);
+			CSPV_Result c = wgsl_compile(CSPV_STAGE_COMPUTE, s_builtin_compute_shader_sources[i].source, &o, cs_name);
+			if (c.success) wgsl_write_out(cs_name, c.wgsl);
+			sfree(cs_name);
+			cspv_free(&c);
+		}
+	}
+
+	// Every sample shader.
+	g_wgsl_cat = WGSL_SAMPLES;
+	{
+		char* dir = smake(__FILE__);
+		for (char* p = dir; *p; p++) if (*p == '\\') *p = '/';
+		char* cut = strstr(dir, "cute_spirv_test.c");
+		if (cut) *cut = 0;
+		char* samples = sfmake("%s../samples", dir);
+		CK_DYNA char** probe = NULL;
+		list_shader_files(samples, &probe);
+		CHECK_MSG(asize(probe) > 0, samples);
+		for (int i = 0; i < (int)asize(probe); i++) sfree(probe[i]);
+		afree(probe);
+		wgsl_corpus_dir(samples, "");
+		sfree(samples);
+		sfree(dir);
+	}
+
+	// A game's shaders (Of Eld: CSPV_EXTRA_SHADER_DIR=C:\randy\rts\assets\shaders).
+	const char* extra = getenv("CSPV_EXTRA_SHADER_DIR");
+	if (extra) {
+		g_wgsl_cat = WGSL_EXTRA;
+		wgsl_corpus_dir(extra, NULL);
+	}
+	g_wgsl_cat = WGSL_TESTS;
+}
+
+static const CSPV_WgslBinding* find_wgsl_binding(const CSPV_Result* r, const char* name, CSPV_WgslBindingKind kind)
+{
+	for (int i = 0; i < (int)asize(r->reflection.wgsl_bindings); i++) {
+		const CSPV_WgslBinding* b = r->reflection.wgsl_bindings + i;
+		if (b->kind == kind && !strcmp(b->name, name)) return b;
+	}
+	return NULL;
+}
+
+static void test_wgsl_contract(void)
+{
+	CSPV_Options o;
+	memset(&o, 0, sizeof(o));
+	o.emit_wgsl = true;
+
+	// Fragment: samplers (pairs), a storage image, buffers, uniforms -- binding numbers by class
+	// rank regardless of the GLSL binding gaps.
+	{
+		CSPV_Result r = cspv_compile_ex(
+			"layout(location = 0) in vec2 v_uv;\n"
+			"layout(location = 1) flat in int v_id;\n"
+			"layout(location = 0) out vec4 result;\n"
+			"layout(set = 2, binding = 0) uniform sampler2D u_a;\n"
+			"layout(set = 2, binding = 1) uniform sampler2DShadow u_shadow;\n"
+			"layout(set = 2, binding = 2, rgba8) uniform readonly image2D u_img;\n"
+			"layout(std430, set = 2, binding = 3) readonly buffer B0 { vec4 data0[]; };\n"
+			"layout(std430, set = 2, binding = 4) readonly buffer B1 { uvec2 data1[]; } u_b1;\n"
+			"layout(set = 3, binding = 0) uniform U0 { vec3 u_dir; float u_k; mat4 u_m; };\n"
+			"layout(set = 3, binding = 1) uniform U1 { vec2 u_p; vec4 u_q[2]; };\n"
+			"void main() {\n"
+			"	vec4 c = texture(u_a, v_uv) * texture(u_shadow, vec3(v_uv, 0.5));\n"
+			"	c += imageLoad(u_img, ivec2(v_id, 0)) + data0[v_id] + vec4(u_b1.data1[0], 0u, 1u);\n"
+			"	result = c * u_k + vec4(u_dir, 1.0) * u_m + vec4(u_p, 0.0, 0.0) + u_q[1];\n"
+			"}\n", CSPV_STAGE_FRAGMENT, &o);
+		CHECK_MSG(r.success, r.error_message);
+		if (r.success) {
+			const char* s = r.wgsl;
+			CHECK(validate_wgsl(s));
+			CHECK(strstr(s, "diagnostic(off, derivative_uniformity);") != NULL);
+			CHECK(strstr(s, "@group(2) @binding(0) var u_a: texture_2d<f32>;") != NULL);
+			CHECK(strstr(s, "@group(2) @binding(1) var cspv_smp_u_a: sampler;") != NULL);
+			CHECK(strstr(s, "@group(2) @binding(2) var u_shadow: texture_depth_2d;") != NULL);
+			CHECK(strstr(s, "@group(2) @binding(3) var cspv_smp_u_shadow: sampler_comparison;") != NULL);
+			CHECK(strstr(s, "@group(2) @binding(4) var u_img: texture_storage_2d<rgba8unorm, read>;") != NULL);
+			CHECK(strstr(s, "@group(2) @binding(5) var<storage, read> cspv_sb_B0: cspv_SB_B0;") != NULL);
+			CHECK(strstr(s, "@group(2) @binding(6) var<storage, read> u_b1: cspv_SB_B1;") != NULL);
+			CHECK(strstr(s, "@group(3) @binding(0) var<uniform> cspv_ub_U0: cspv_UB_U0;") != NULL);
+			CHECK(strstr(s, "@group(3) @binding(1) var<uniform> cspv_ub_U1: cspv_UB_U1;") != NULL);
+			CHECK(strstr(s, "@location(1) @interpolate(flat) v_id: i32,") != NULL);
+			// std140: u_q starts at 16 (vec2 then vec4 array), so u_p pads to 16.
+			CHECK(strstr(s, "@size(16) u_p: vec2f,") != NULL);
+			CHECK(asize(r.reflection.wgsl_bindings) == 9);
+			const CSPV_WgslBinding* b = find_wgsl_binding(&r, "u_shadow", CSPV_WGSL_SAMPLER);
+			CHECK(b && b->binding == 3 && b->comparison && b->slot == 1);
+			b = find_wgsl_binding(&r, "u_shadow", CSPV_WGSL_SAMPLED_TEXTURE);
+			CHECK(b && b->binding == 2 && b->sample_type == CSPV_WGSL_SAMPLE_DEPTH);
+			b = find_wgsl_binding(&r, "u_img", CSPV_WGSL_STORAGE_TEXTURE);
+			CHECK(b && b->binding == 4 && b->access == CSPV_WGSL_ACCESS_READ && b->image_format == 4);
+			b = find_wgsl_binding(&r, "B1", CSPV_WGSL_STORAGE_BUFFER);
+			CHECK(b && b->binding == 6 && b->slot == 4 && b->access == CSPV_WGSL_ACCESS_READ);
+			b = find_wgsl_binding(&r, "U1", CSPV_WGSL_UNIFORM_BUFFER);
+			CHECK(b && b->set == 3 && b->binding == 1);
+		}
+		cspv_free(&r);
+	}
+
+	// Compute: set 0 read-only, set 1 read-write, a split rgba16f image (loaded and stored),
+	// an r32ui image that stays read_write, and the split's load side after everything else.
+	{
+		CSPV_Result r = cspv_compile_ex(
+			"layout(local_size_x = 8, local_size_y = 8) in;\n"
+			"layout(set = 0, binding = 0) uniform sampler2D u_src;\n"
+			"layout(std430, set = 0, binding = 1) readonly buffer In { vec4 inputs[]; };\n"
+			"layout(set = 1, binding = 0, rgba16f) uniform image2D u_acc;\n"
+			"layout(set = 1, binding = 1, r32ui) uniform image2D u_count;\n"
+			"layout(set = 1, binding = 2, rgba8) uniform writeonly image2D u_out;\n"
+			"layout(std430, set = 1, binding = 3) buffer Out { uint hits[]; };\n"
+			"layout(set = 2, binding = 0) uniform P { int u_n; };\n"
+			"void main() {\n"
+			"	ivec2 p = ivec2(gl_GlobalInvocationID.xy);\n"
+			"	vec4 a = imageLoad(u_acc, p) + textureLod(u_src, vec2(p) / 64.0, 0.0) + inputs[u_n];\n"
+			"	imageStore(u_acc, p, a);\n"
+			"	uvec4 c = imageLoad(u_count, p);\n"
+			"	imageStore(u_count, p, c + uvec4(1u));\n"
+			"	imageStore(u_out, p, a);\n"
+			"	atomicAdd(hits[0], 1u);\n"
+			"}\n", CSPV_STAGE_COMPUTE, &o);
+		CHECK_MSG(r.success, r.error_message);
+		if (r.success) {
+			const char* s = r.wgsl;
+			CHECK(validate_wgsl(s));
+			CHECK(strstr(s, "@group(0) @binding(0) var u_src: texture_2d<f32>;") != NULL);
+			CHECK(strstr(s, "@group(0) @binding(2) var<storage, read> cspv_sb_In: cspv_SB_In;") != NULL);
+			CHECK(strstr(s, "@group(1) @binding(0) var u_acc: texture_storage_2d<rgba16float, write>;") != NULL);
+			CHECK(strstr(s, "@group(1) @binding(1) var u_count: texture_storage_2d<r32uint, read_write>;") != NULL);
+			CHECK(strstr(s, "@group(1) @binding(2) var u_out: texture_storage_2d<rgba8unorm, write>;") != NULL);
+			CHECK(strstr(s, "@group(1) @binding(3) var<storage, read_write> cspv_sb_Out: cspv_SB_Out;") != NULL);
+			CHECK(strstr(s, "@group(1) @binding(4) var cspv_ld_u_acc: texture_2d<f32>;") != NULL);
+			CHECK(strstr(s, "@group(2) @binding(0) var<uniform> cspv_ub_P: cspv_UB_P;") != NULL);
+			CHECK(strstr(s, "hits: array<atomic<u32>>,") != NULL);
+			CHECK(strstr(s, "atomicAdd(&cspv_sb_Out.hits[0], 1u)") != NULL);
+			CHECK(strstr(s, "textureLoad(cspv_ld_u_acc, p, 0)") != NULL);
+			CHECK(strstr(s, "@compute @workgroup_size(8, 8, 1)") != NULL);
+			CHECK(asize(r.reflection.wgsl_splits) == 1);
+			if (asize(r.reflection.wgsl_splits) == 1) {
+				const CSPV_WgslSplit* sp = r.reflection.wgsl_splits;
+				CHECK(!strcmp(sp->name, "u_acc") && sp->set == 1 && sp->store_binding == 0 && sp->load_binding == 4);
+			}
+			const CSPV_WgslBinding* b = find_wgsl_binding(&r, "u_acc", CSPV_WGSL_SPLIT_LOAD_TEXTURE);
+			CHECK(b && b->binding == 4 && b->sample_type == CSPV_WGSL_SAMPLE_FLOAT && b->image_format == 2);
+			b = find_wgsl_binding(&r, "u_count", CSPV_WGSL_STORAGE_TEXTURE);
+			CHECK(b && b->access == CSPV_WGSL_ACCESS_READ_WRITE);
+		}
+		cspv_free(&r);
+	}
+
+	// WGSL strictness: out params through globals and swizzles, overloads, swizzle stores,
+	// fall-through switch, mod/inverse/diagonal helpers, ternaries, bvec ==, int shifts.
+	{
+		CSPV_Result r = cspv_compile_ex(
+			"layout(location = 0) out vec4 result;\n"
+			"vec3 g_acc;\n"
+			"void split(float x, out float a, inout vec2 b) { a = x; b += vec2(x); x = 0.0; }\n"
+			"float f(float x) { return x; }\n"
+			"float f(vec2 x) { return x.y; }\n"
+			"int pick(int k) {\n"
+			"	int r = 0;\n"
+			"	switch (k) { case 0: r += 1; case 1: r += 2; break; default: r = 7; }\n"
+			"	return r;\n"
+			"}\n"
+			"void main() {\n"
+			"	vec4 v = vec4(0.0);\n"
+			"	vec2 b = vec2(1.0);\n"
+			"	split(2.0, g_acc.y, v.zw);\n"
+			"	split(3.0, v.x, b);\n"
+			"	v.xy = v.yx * 2.0;\n"
+			"	v.zw *= 0.5;\n"
+			"	mat3 m = inverse(mat3(2.0));\n"
+			"	ivec2 q = ivec2(3, 5) << 1;\n"
+			"	uint u = 7u;\n"
+			"	u >>= 1;\n"
+			"	bool same = all(equal(b, vec2(1.0)));\n"
+			"	float t = same ? f(b) : f(v.x);\n"
+			"	result = vec4(mod(v.xyz, 2.0) + g_acc + m[1] + vec3(q, pick(int(u))), t);\n"
+			"}\n", CSPV_STAGE_FRAGMENT, &o);
+		CHECK_MSG(r.success, r.error_message);
+		if (r.success) {
+			const char* s = r.wgsl;
+			CHECK(validate_wgsl(s));
+			CHECK(strstr(s, "fn split(cspv_p_x: f32, a: ptr<function, f32>, b: ptr<function, vec2f>)") != NULL);
+			CHECK(strstr(s, "fn f_cspv0(x: f32) -> f32") != NULL);
+			CHECK(strstr(s, "fn f_cspv1(x: vec2f) -> f32") != NULL);
+			CHECK(strstr(s, "g_acc.y = cspv_o") != NULL);
+			CHECK(strstr(s, "split(3.0, &v.x") == NULL);
+			CHECK(strstr(s, "&b)") != NULL);
+			CHECK(strstr(s, "select(") != NULL);
+			CHECK(strstr(s, "all((b == vec2f(1.0)))") != NULL);
+			CHECK(strstr(s, "fn cspv_mod3(") != NULL);
+			CHECK(strstr(s, "fn cspv_inverse3(") != NULL);
+			CHECK(strstr(s, "fn cspv_diag3(") != NULL);
+		}
+		cspv_free(&r);
+	}
+}
+
 int main(void)
 {
 	detect_spirv_val();
+	detect_naga();
+	TEST(test_wgsl_corpus);
+	TEST(test_wgsl_contract);
 
 	TEST(test_preprocessor);
 	TEST(test_corpus_basic);
@@ -2297,6 +2815,17 @@ int main(void)
 	TEST(test_errors_recursion);
 	TEST(test_emitters);
 	TEST(test_compute_es);
+
+	if (g_has_naga) {
+		printf("\nWGSL validated by naga:\n");
+		for (int i = 0; i < WGSL_CAT_COUNT; i++) {
+			if (g_wgsl_stats[i].total) printf("  %-30s %d/%d\n", g_wgsl_stats[i].what, g_wgsl_stats[i].valid, g_wgsl_stats[i].total);
+		}
+	}
+	map_free(g_wgsl_seen);
+	sfree(g_naga_path);
+	sfree(g_temp_wgsl);
+	sfree(g_temp_naga_log);
 
 	printf("\n%d checks, %d failures.\n", g_checks, g_fails);
 	return g_fails ? 1 : 0;

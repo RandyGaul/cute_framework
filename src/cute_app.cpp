@@ -186,11 +186,23 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 	bool use_metal = options & CF_APP_OPTIONS_GFX_METAL_BIT;
 	bool use_vulkan = options & CF_APP_OPTIONS_GFX_VULKAN_BIT;
 	bool use_opengl = options & CF_APP_OPTIONS_GFX_OPENGL_BIT;
+	bool use_webgpu = options & CF_APP_OPTIONS_GFX_WEBGPU_BIT;
 	bool use_gfx = !(options & CF_APP_OPTIONS_NO_GFX_BIT);
 
+#ifndef CF_WEBGPU
+	if (use_webgpu) {
+		fprintf(stderr, "WARNING -- CF_APP_OPTIONS_GFX_WEBGPU_BIT needs CF built with the CF_WEBGPU CMake option; using the default backend.\n");
+		use_webgpu = false;
+	}
+#endif
+
 #ifdef CF_EMSCRIPTEN
-	// This is the only supported backend as of now
-	use_opengl = true;
+	// WebGPU when the build carries it and the browser offers an adapter (probed below, before
+	// the window exists), otherwise WebGL 2.
+#	ifdef CF_WEBGPU
+	use_webgpu = !use_opengl;
+#	endif
+	if (!use_webgpu) use_opengl = true;
 #elif defined(CF_ANDROID)
 	// On Android, default to Vulkan via SDL_GPU. GLES3 fallback is handled below.
 	if (!use_vulkan && !use_opengl) {
@@ -232,6 +244,13 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 		CF_ASSERT(!use_dx12);
 		CF_ASSERT(!use_metal);
 		CF_ASSERT(!use_vulkan);
+		CF_ASSERT(!use_webgpu);
+	}
+	if (use_webgpu) {
+		CF_ASSERT(!use_dx11);
+		CF_ASSERT(!use_dx12);
+		CF_ASSERT(!use_metal);
+		CF_ASSERT(!use_vulkan);
 	}
 
 	Uint32 sdl_options = SDL_INIT_EVENTS | SDL_INIT_VIDEO | SDL_INIT_GAMEPAD | SDL_INIT_HAPTIC;
@@ -256,8 +275,24 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 		CF_Result init_gfx_result = {  };
 		bool debug = options & CF_APP_OPTIONS_GFX_DEBUG_BIT;
 
+#ifdef CF_WEBGPU
+		if (use_webgpu) {
+			init_gfx_result = cf_webgpu_init(debug);
+			if (!cf_is_error(init_gfx_result)) {
+				gfx_backend_type = CF_BACKEND_TYPE_WEBGPU;
+			} else {
+#	ifdef CF_EMSCRIPTEN
+				// No adapter: the browser lacks WebGPU or blocks it, so WebGL 2 it is.
+				use_webgpu = false;
+				use_opengl = true;
+#	endif
+			}
+		}
+#endif
+
 		// Create the SDL GPU device.
-		if (!use_opengl) {
+		if (use_webgpu) {
+		} else if (!use_opengl) {
 #ifndef CF_EMSCRIPTEN
 			const char* device_name = NULL;
 			if (use_dx11) {
@@ -302,6 +337,9 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 		}
 		if (use_opengl) flags |= SDL_WINDOW_OPENGL;
 		if (use_metal) flags |= SDL_WINDOW_METAL;
+#if defined(CF_WEBGPU) && defined(__APPLE__)
+		if (use_webgpu) flags |= SDL_WINDOW_METAL;
+#endif
 		if (options & CF_APP_OPTIONS_FULLSCREEN_BIT) flags |= SDL_WINDOW_FULLSCREEN;
 		if (options & CF_APP_OPTIONS_RESIZABLE_BIT) flags |= SDL_WINDOW_RESIZABLE;
 		if (options & CF_APP_OPTIONS_HIDDEN_BIT) flags |= (SDL_WINDOW_HIDDEN | SDL_WINDOW_MINIMIZED);
@@ -324,8 +362,11 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 		window = SDL_CreateWindowWithProperties(props);
 		SDL_DestroyProperties(props);
 		if (!window) {
+#ifdef CF_WEBGPU
+			if (use_webgpu) cf_webgpu_cleanup();
+#endif
 #ifndef CF_EMSCRIPTEN
-			if (!use_opengl) cf_sdlgpu_cleanup();
+			if (!use_opengl && !use_webgpu) cf_sdlgpu_cleanup();
 #endif
 			SDL_Quit();
 			return cf_result_error("Failed to create the application window.");
@@ -368,6 +409,10 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 	if (use_gfx) {
 		if (app->gfx_backend_type == CF_BACKEND_TYPE_GLES3) {
 			cf_gles_attach(app->window);
+#ifdef CF_WEBGPU
+		} else if (app->gfx_backend_type == CF_BACKEND_TYPE_WEBGPU) {
+			cf_webgpu_attach(app->window);
+#endif
 		} else {
 #ifndef CF_EMSCRIPTEN
 			cf_sdlgpu_attach(app->window);
@@ -385,6 +430,10 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 		// Ensure initial resources are uploaded
 		if (app->gfx_backend_type == CF_BACKEND_TYPE_GLES3) {
 			cf_gles_flush();
+#ifdef CF_WEBGPU
+		} else if (app->gfx_backend_type == CF_BACKEND_TYPE_WEBGPU) {
+			cf_webgpu_flush();
+#endif
 		} else {
 #ifndef CF_EMSCRIPTEN
 			cf_sdlgpu_flush();
@@ -438,6 +487,10 @@ void cf_destroy_app()
 
 		if (app->gfx_backend_type == CF_BACKEND_TYPE_GLES3) {
 			cf_gles_cleanup();
+#ifdef CF_WEBGPU
+		} else if (app->gfx_backend_type == CF_BACKEND_TYPE_WEBGPU) {
+			cf_webgpu_cleanup();
+#endif
 		} else {
 #ifndef CF_EMSCRIPTEN
 			cf_sdlgpu_cleanup();
@@ -501,6 +554,10 @@ void cf_app_update(CF_OnUpdateFn* on_update)
 		if (app->using_imgui) {
 			if (app->gfx_backend_type == CF_BACKEND_TYPE_GLES3) {
 				ImGui_ImplOpenGL3_NewFrame();
+#ifdef CF_WEBGPU
+			} else if (app->gfx_backend_type == CF_BACKEND_TYPE_WEBGPU) {
+				cf_webgpu_imgui_new_frame();
+#endif
 			} else {
 				ImGui_ImplSDLGPU3_NewFrame();
 			}
@@ -510,6 +567,10 @@ void cf_app_update(CF_OnUpdateFn* on_update)
 
 		if (app->gfx_backend_type == CF_BACKEND_TYPE_GLES3) {
 			cf_gles_begin_frame();
+#ifdef CF_WEBGPU
+		} else if (app->gfx_backend_type == CF_BACKEND_TYPE_WEBGPU) {
+			cf_webgpu_begin_frame();
+#endif
 		} else {
 #ifndef CF_EMSCRIPTEN
 			cf_sdlgpu_begin_frame();
@@ -575,6 +636,10 @@ int cf_app_draw_onto_screen(bool clear)
 	// Draw the app canvas
 	if (app->gfx_backend_type == CF_BACKEND_TYPE_GLES3) {
 		cf_gles_blit_canvas(app->offscreen_canvas);
+#ifdef CF_WEBGPU
+	} else if (app->gfx_backend_type == CF_BACKEND_TYPE_WEBGPU) {
+		cf_webgpu_blit_canvas(app->offscreen_canvas);
+#endif
 	} else {
 #ifndef CF_EMSCRIPTEN
 		cf_sdlgpu_blit_canvas(app->offscreen_canvas);
@@ -599,6 +664,10 @@ int cf_app_draw_onto_screen(bool clear)
 
 	if (app->gfx_backend_type == CF_BACKEND_TYPE_GLES3) {
 		cf_gles_end_frame();
+#ifdef CF_WEBGPU
+	} else if (app->gfx_backend_type == CF_BACKEND_TYPE_WEBGPU) {
+		cf_webgpu_end_frame();
+#endif
 	} else {
 #ifndef CF_EMSCRIPTEN
 		cf_sdlgpu_end_frame();
@@ -784,6 +853,10 @@ bool cf_app_set_msaa(int sample_count)
 	bool supported = false;
 	if (app->gfx_backend_type == CF_BACKEND_TYPE_GLES3) {
 		supported = cf_gles_supports_msaa(sample_count);
+#ifdef CF_WEBGPU
+	} else if (app->gfx_backend_type == CF_BACKEND_TYPE_WEBGPU) {
+		supported = cf_webgpu_supports_msaa(sample_count);
+#endif
 	} else {
 #ifndef CF_EMSCRIPTEN
 		supported = cf_sdlgpu_supports_msaa(sample_count);
@@ -829,6 +902,10 @@ bool cf_app_set_present_mode(CF_PresentMode mode)
 	bool applied;
 	if (app->gfx_backend_type == CF_BACKEND_TYPE_GLES3) {
 		applied = cf_gles_set_present_mode(mode);
+#ifdef CF_WEBGPU
+	} else if (app->gfx_backend_type == CF_BACKEND_TYPE_WEBGPU) {
+		applied = cf_webgpu_set_present_mode(mode);
+#endif
 	} else {
 #ifndef CF_EMSCRIPTEN
 		applied = cf_sdlgpu_set_present_mode(mode);
