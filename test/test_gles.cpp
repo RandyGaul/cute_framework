@@ -245,6 +245,50 @@ TEST_CASE(test_texture_streaming_reuses_busy_slots)
 	return true;
 }
 
+// Range and instanced draws read their textures like any draw: the upload after one must not
+// land in the slot that draw reads.
+TEST_CASE(test_every_draw_kind_marks_texture_slots_busy)
+{
+	if (!test_make_app(W, H)) return true; // Headless CI: no display/GPU.
+	if (cf_query_backend() != CF_BACKEND_TYPE_GLES3) return true;
+
+	CF_Canvas canvas = cf_make_canvas(cf_canvas_defaults(STRIPS, H));
+	CF_Shader shader = cf_make_shader_from_source(s_vs, s_textured_fs);
+	REQUIRE(shader.id);
+	CF_TextureParams tp = cf_texture_defaults(1, 1);
+	tp.stream = true;
+	CF_Texture texture = cf_make_texture(tp);
+	CF_Material material = cf_make_material();
+	cf_material_set_texture_fs(material, "u_tex", texture);
+	CF_Mesh mesh = s_make_color_mesh(6);
+	Vertex v[6];
+	s_fill_strip(v, -1, 1, cf_color_white());
+	cf_mesh_update_vertex_data(mesh, v, 6);
+	CF_Pixel p = cf_pixel_white();
+
+	cf_app_update(NULL);
+	cf_apply_canvas(canvas, true);
+	for (int kind = 0; kind < 2; ++kind) {
+		cf_texture_update(texture, &p, sizeof(p));
+		int read_slot = cf_gles_texture_active_slot(texture);
+		cf_apply_mesh(mesh);
+		cf_apply_shader(shader, material);
+		if (kind == 0) cf_draw_elements_range(0, 6, 0);
+		else cf_draw_elements_instanced(1);
+		cf_texture_update(texture, &p, sizeof(p));
+		REQUIRE(cf_gles_texture_active_slot(texture) != read_slot);
+	}
+	cf_app_draw_onto_screen(false);
+
+	cf_destroy_mesh(mesh);
+	cf_destroy_material(material);
+	cf_destroy_texture(texture);
+	cf_destroy_shader(shader);
+	cf_destroy_canvas(canvas);
+	test_destroy_app();
+	return true;
+}
+
 enum ReadbackKind { READBACK_UNORM8, READBACK_HALF, READBACK_FLOAT };
 
 struct ReadbackCase
@@ -354,6 +398,7 @@ TEST_SUITE(test_gles)
 	RUN_TEST_CASE(test_scissor_box_survives_unscissored_pass);
 	RUN_TEST_CASE(test_mesh_streaming_within_one_frame);
 	RUN_TEST_CASE(test_texture_streaming_reuses_busy_slots);
+	RUN_TEST_CASE(test_every_draw_kind_marks_texture_slots_busy);
 	RUN_TEST_CASE(test_readback_formats);
 	RUN_TEST_CASE(test_readback_formats_guaranteed_pairs_only);
 }

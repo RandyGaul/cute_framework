@@ -282,6 +282,8 @@ void cf_gles_end_frame();
 void cf_gles_cleanup();
 // Test hook: how many times a full streaming ring has made the CPU wait on a GPU fence.
 int cf_gles_fence_wait_count();
+// Test hook: the ring slot a streamed texture's latest upload went to.
+int cf_gles_texture_active_slot(CF_Texture texture);
 // Test hook: a full ring reuses its busy head slot without a fence wait, as on the web.
 // No effect on the web, where it is always on.
 void cf_gles_reuse_busy_ring_slots(bool reuse);

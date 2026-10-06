@@ -557,6 +557,12 @@ int cf_gles_fence_wait_count()
 	return s_fence_wait_count;
 }
 
+int cf_gles_texture_active_slot(CF_Texture texture)
+{
+	CF_GL_Texture* t = (CF_GL_Texture*)(uintptr_t)texture.id;
+	return t ? t->active_slot : -1;
+}
+
 // WebGL fences signal only once control returns to the browser, so waiting on one would
 // yield mid-frame and let the browser composite a half-drawn canvas.
 #ifdef CF_EMSCRIPTEN
@@ -2457,6 +2463,26 @@ void cf_gles_apply_shader(CF_Shader shader_handle, CF_Material material_handle)
 	s_apply_vertex_attributes(shader, mesh);
 }
 
+static void s_fence_ring_slot(CF_GL_Ring& ring, int active_slot)
+{
+	if (active_slot >= 0 && active_slot < ring.count) s_set_slot_fence(ring.slots[active_slot]);
+}
+
+// Every draw marks the ring slots it reads busy, so the next upload to them takes another slot.
+static void s_fence_draw_inputs(CF_GL_Mesh* mesh, CF_MaterialInternal* material)
+{
+	s_fence_ring_slot(mesh->vbo.ring, mesh->vbo.active_slot);
+	s_fence_ring_slot(mesh->ibo.ring, mesh->ibo.active_slot);
+	s_fence_ring_slot(mesh->instance.ring, mesh->instance.active_slot);
+	CF_MaterialState* stages[2] = { &material->vs, &material->fs };
+	for (int s = 0; s < 2; ++s) {
+		for (int i = 0; i < stages[s]->textures.count(); ++i) {
+			CF_GL_Texture* texture = (CF_GL_Texture*)(uintptr_t)stages[s]->textures[i].handle.id;
+			if (texture) s_fence_ring_slot(texture->ring, texture->active_slot);
+		}
+	}
+}
+
 void cf_gles_draw_elements()
 {
 	CF_GL_Mesh* mesh = g_ctx.mesh;
@@ -2491,29 +2517,7 @@ void cf_gles_draw_elements()
 		}
 	}
 
-	if (mesh->vbo.active_slot >= 0 && mesh->vbo.active_slot < mesh->vbo.ring.count) {
-		s_set_slot_fence(mesh->vbo.ring.slots[mesh->vbo.active_slot]);
-	}
-	if (mesh->ibo.active_slot >= 0 && mesh->ibo.active_slot < mesh->ibo.ring.count) {
-		s_set_slot_fence(mesh->ibo.ring.slots[mesh->ibo.active_slot]);
-	}
-	if (mesh->instance.active_slot >= 0 && mesh->instance.active_slot < mesh->instance.ring.count) {
-		s_set_slot_fence(mesh->instance.ring.slots[mesh->instance.active_slot]);
-	}
-	for (int texture_index = 0; texture_index < material->fs.textures.count(); ++texture_index) {
-		CF_GL_Texture* texture = (CF_GL_Texture*)(uintptr_t)material->fs.textures[texture_index].handle.id;
-		if (!texture) continue;
-		if (texture->active_slot >= 0 && texture->active_slot < texture->ring.count) {
-			s_set_slot_fence(texture->ring.slots[texture->active_slot]);
-		}
-	}
-	for (int texture_index = 0; texture_index < material->vs.textures.count(); ++texture_index) {
-		CF_GL_Texture* texture = (CF_GL_Texture*)(uintptr_t)material->vs.textures[texture_index].handle.id;
-		if (!texture) continue;
-		if (texture->active_slot >= 0 && texture->active_slot < texture->ring.count) {
-			s_set_slot_fence(texture->ring.slots[texture->active_slot]);
-		}
-	}
+	s_fence_draw_inputs(mesh, material);
 
 	CF_POLL_OPENGL_ERROR();
 	++app->draw_call_count;
@@ -2561,15 +2565,7 @@ void cf_gles_draw_elements_range(int first_element, int element_count, int insta
 		}
 	}
 
-	if (mesh->vbo.active_slot >= 0 && mesh->vbo.active_slot < mesh->vbo.ring.count) {
-		s_set_slot_fence(mesh->vbo.ring.slots[mesh->vbo.active_slot]);
-	}
-	if (mesh->ibo.active_slot >= 0 && mesh->ibo.active_slot < mesh->ibo.ring.count) {
-		s_set_slot_fence(mesh->ibo.ring.slots[mesh->ibo.active_slot]);
-	}
-	if (mesh->instance.active_slot >= 0 && mesh->instance.active_slot < mesh->instance.ring.count) {
-		s_set_slot_fence(mesh->instance.ring.slots[mesh->instance.active_slot]);
-	}
+	s_fence_draw_inputs(mesh, material);
 
 	CF_POLL_OPENGL_ERROR();
 	++app->draw_call_count;
@@ -3350,6 +3346,7 @@ void cf_gles_draw_elements_instanced(int instance_count)
 	} else if (mesh->vbo.count > 0) {
 		glDrawArraysInstanced(prim, 0, mesh->vbo.count, instance_count);
 	}
+	s_fence_draw_inputs(mesh, material);
 
 	CF_POLL_OPENGL_ERROR();
 	++app->draw_call_count;
