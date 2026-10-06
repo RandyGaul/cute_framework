@@ -971,6 +971,7 @@ typedef struct cspv_ctx
 	uint32_t continue_target;
 	uint32_t entry_func_id;
 	uint32_t gl_pervertex_var;
+	uint32_t frag_depth_var; // Nonzero once the shader references gl_FragDepth.
 
 	// Reflection, built up during global declaration codegen. Ownership transfers
 	// to CSPV_Result on success.
@@ -2412,6 +2413,7 @@ typedef struct cspv_keywords
 	const char* kw_binding;
 	const char* kw_gl_Position;
 	const char* kw_gl_FragCoord;
+	const char* kw_gl_FragDepth;
 	const char* kw_struct;
 	const char* kw_length;
 	const char* kw_buffer;
@@ -2470,6 +2472,7 @@ static void cspv_init_keywords(void)
 	g_cspv_kw.kw_binding = sintern("binding");
 	g_cspv_kw.kw_gl_Position = sintern("gl_Position");
 	g_cspv_kw.kw_gl_FragCoord = sintern("gl_FragCoord");
+	g_cspv_kw.kw_gl_FragDepth = sintern("gl_FragDepth");
 	g_cspv_kw.kw_struct = sintern("struct");
 	g_cspv_kw.kw_length = sintern("length");
 	g_cspv_kw.kw_buffer = sintern("buffer");
@@ -3584,9 +3587,36 @@ static cspv_value cspv_gen_member(cspv_ctx* ctx, cspv_expr* e)
 //--------------------------------------------------------------------------------------------------
 // References.
 
+// gl_FragDepth is declared on first use, so a shader that never writes depth carries no depth
+// output (and no DepthReplacing). The first use can sit inside a helper or a branch, so the
+// symbol goes in the global scope where every later function sees the same output.
+static cspv_symbol* cspv_declare_frag_depth(cspv_ctx* ctx)
+{
+	uint32_t ptr_tid = cspv_ptr_type_id(ctx, ctx->t_float, CSpvStorageOutput);
+	uint32_t var = cspv_new_id(ctx);
+	cspv_emit3(&ctx->globals, CSpvOpVariable, ptr_tid, var, CSpvStorageOutput);
+	cspv_emit3(&ctx->decos, CSpvOpDecorate, var, CSpvDecorationBuiltIn, 22); // BuiltIn FragDepth
+	cspv_name_id(ctx, var, "gl_FragDepth");
+	apush(ctx->interface_ids, var);
+	ctx->frag_depth_var = var;
+
+	cspv_symbol* sym = (cspv_symbol*)cspv_arena_alloc(&ctx->arena, sizeof(cspv_symbol));
+	memset(sym, 0, sizeof(*sym));
+	sym->kind = CSPV_SYM_VAR;
+	sym->name = g_cspv_kw.kw_gl_FragDepth;
+	sym->type = ctx->t_float;
+	sym->id = var;
+	sym->storage = CSpvStorageOutput;
+	map_set(ctx->scopes[0].syms, (uint64_t)(uintptr_t)sym->name, sym);
+	return sym;
+}
+
 static cspv_value cspv_gen_ref(cspv_ctx* ctx, cspv_expr* e)
 {
 	cspv_symbol* sym = cspv_find_symbol(ctx, e->u.name);
+	if (!sym && ctx->stage == CSPV_STAGE_FRAGMENT && e->u.name == g_cspv_kw.kw_gl_FragDepth) {
+		sym = cspv_declare_frag_depth(ctx);
+	}
 	if (!sym) cspv_errorf(ctx, e->line, "undeclared identifier '%s'", e->u.name);
 
 	cspv_value v;
@@ -8700,6 +8730,7 @@ static void cspv_emit_hlsl(cspv_ctx* ctx)
 		sappend(ctx->tp_out, "static float4 gl_Position;\nstatic int gl_VertexIndex;\nstatic int gl_InstanceIndex;\n");
 	} else if (ctx->stage == CSPV_STAGE_FRAGMENT) {
 		sappend(ctx->tp_out, "static float4 gl_FragCoord;\n");
+		if (ctx->frag_depth_var) sappend(ctx->tp_out, "static float gl_FragDepth;\n");
 	} else {
 		sappend(ctx->tp_out,
 			"static uint3 gl_GlobalInvocationID;\nstatic uint3 gl_LocalInvocationID;\n"
@@ -8845,6 +8876,7 @@ static void cspv_emit_hlsl(cspv_ctx* ctx)
 			sfmt_append(ctx->tp_out, "_in : TEXCOORD%d;\n", d->location);
 		}
 		sappend(ctx->tp_out, "};\nstruct cf_ps_out\n{\n");
+		if (ctx->frag_depth_var) sappend(ctx->tp_out, "\tfloat cf_depth : SV_Depth;\n");
 		for (int i = 0; i < (int)asize(ctx->decls); i++) {
 			cspv_decl* d = ctx->decls + i;
 			if (d->kind != CSPV_D_INOUT || d->is_input) continue;
@@ -8859,6 +8891,7 @@ static void cspv_emit_hlsl(cspv_ctx* ctx)
 			sfmt_append(ctx->tp_out, "\t%s = cf_in.%s_in;\n", d->name, d->name);
 		}
 		sappend(ctx->tp_out, "\tcf_main_();\n\tcf_ps_out cf_out;\n");
+		if (ctx->frag_depth_var) sappend(ctx->tp_out, "\tcf_out.cf_depth = gl_FragDepth;\n");
 		for (int i = 0; i < (int)asize(ctx->decls); i++) {
 			cspv_decl* d = ctx->decls + i;
 			if (d->kind != CSPV_D_INOUT || d->is_input) continue;
@@ -9578,6 +9611,7 @@ static void cspv_emit_msl(cspv_ctx* ctx)
 		sappend(ctx->tp_out, "\tfloat4 gl_Position;\n\tint gl_VertexIndex;\n\tint gl_InstanceIndex;\n");
 	} else if (ctx->stage == CSPV_STAGE_FRAGMENT) {
 		sappend(ctx->tp_out, "\tfloat4 gl_FragCoord;\n");
+		if (ctx->frag_depth_var) sappend(ctx->tp_out, "\tfloat gl_FragDepth;\n");
 	} else {
 		sappend(ctx->tp_out, "\tuint3 gl_GlobalInvocationID;\n\tuint3 gl_LocalInvocationID;\n\tuint3 gl_WorkGroupID;\n\tuint gl_LocalInvocationIndex;\n");
 	}
@@ -9625,6 +9659,7 @@ static void cspv_emit_msl(cspv_ctx* ctx)
 			sfmt_append(ctx->tp_out, "\t%s %s [[user(locn%d)%s]];\n", cspv_hlsl_type_name(d->type), d->name, d->location, d->flat ? ", flat" : "");
 		}
 		sappend(ctx->tp_out, "};\nstruct cf_ps_out\n{\n");
+		if (ctx->frag_depth_var) sappend(ctx->tp_out, "\tfloat cf_depth [[depth(any)]];\n");
 		for (int i = 0; i < (int)asize(ctx->decls); i++) {
 			cspv_decl* d = ctx->decls + i;
 			if (d->kind != CSPV_D_INOUT || d->is_input) continue;
@@ -9745,6 +9780,7 @@ static void cspv_emit_msl(cspv_ctx* ctx)
 		sappend(ctx->tp_out, "\treturn cf_out;\n}\n");
 	} else if (ctx->stage == CSPV_STAGE_FRAGMENT) {
 		sappend(ctx->tp_out, "\tcf_ps_out cf_out;\n");
+		if (ctx->frag_depth_var) sappend(ctx->tp_out, "\tcf_out.cf_depth = s.gl_FragDepth;\n");
 		for (int i = 0; i < (int)asize(ctx->decls); i++) {
 			cspv_decl* d = ctx->decls + i;
 			if (d->kind == CSPV_D_INOUT && !d->is_input) sfmt_append(ctx->tp_out, "\tcf_out.%s = s.%s;\n", d->name, d->name);
@@ -9935,6 +9971,9 @@ static uint32_t* cspv_assemble(cspv_ctx* ctx, size_t* out_word_count)
 	if (ctx->stage == CSPV_STAGE_FRAGMENT) {
 		// OpExecutionMode %main OriginUpperLeft.
 		cspv_emit2(&mod, CSpvOpExecutionMode, ctx->entry_func_id, 7);
+		if (ctx->frag_depth_var) {
+			cspv_emit2(&mod, CSpvOpExecutionMode, ctx->entry_func_id, 12); // DepthReplacing.
+		}
 	} else if (ctx->stage == CSPV_STAGE_COMPUTE) {
 		// OpExecutionMode %main LocalSize x y z.
 		uint32_t w[5] = { ctx->entry_func_id, 17, (uint32_t)ctx->local_size[0], (uint32_t)ctx->local_size[1], (uint32_t)ctx->local_size[2] };
