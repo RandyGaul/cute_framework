@@ -442,6 +442,7 @@ if(NOT EMSCRIPTEN) # Emscripten provides it's own SDL3.
 	FetchContent_Declare(
 		SDL3
 		URL https://github.com/libsdl-org/SDL/releases/download/release-${SDL_REQUIRED_VERSION}/SDL3-${SDL_REQUIRED_VERSION}.zip
+		URL_HASH SHA256=9ac2debb493e0d3e13dbd2729fb91f4bfeb00a0f4dff5e04b73cc9bac276b38d
 		DOWNLOAD_EXTRACT_TIMESTAMP ON
 		UPDATE_DISCONNECTED TRUE
 		EXCLUDE_FROM_ALL
