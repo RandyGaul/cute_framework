@@ -590,8 +590,10 @@ typedef struct CF_CustomShape { uint32_t id; } CF_CustomShape;
  * @param    sdf_src  GLSL snippet defining `float sdf(vec2 p, ShapeParams s)`.
  * @return   A handle to draw with via `cf_draw_custom_shape` or `cf_draw_custom_shape_fill`.
  *           A zero id means registration failed (compile error, or unsupported backend).
- * @remarks  The snippet must define a signed distance function returning the distance in world
- *           units from point `p` to the shape's surface (negative inside). `ShapeParams` carries
+ * @remarks  The snippet defines a signed field over world-space point `p`: negative inside, positive
+ *           outside, and zero on the shape's surface. A true distance is the natural choice, but any
+ *           field whose zero crossing is the shape works -- warped, scaled, smoothly blended, or
+ *           metaball-style fields included. `ShapeParams` carries
  *           the 16 floats passed at draw time as eight `vec2`s named `a` through `h`, plus a
  *           `vec4 attributes` from `cf_draw_push_vertex_attributes`. The builtin distance helpers
  *           (`distance_box`, `distance_segment`, `distance_triangle`, `distance_polygon`,
@@ -605,11 +607,12 @@ typedef struct CF_CustomShape { uint32_t id; } CF_CustomShape;
  *           }
  *           ```
  *
- *           The function MUST be a true distance bound (Lipschitz constant <= 1). The renderer
- *           trusts it for tile binning and occlusion culling; an invalid bound (e.g.
- *           `|x|+|y| - r`) will drop pixels. All registered shapes batch together with builtin
- *           shapes, sprites, and text -- no extra draw calls or pipeline switches. Antialiasing,
- *           stroked outlines, colors, and all draw state apply automatically.
+ *           The edge is antialiased from the field's local slope, so it stays one aa width wide
+ *           whatever the field's scale. Stroke thickness is measured the same way, which is accurate
+ *           for strokes thin relative to the field's curvature. The renderer culls custom shapes only by the bounds passed
+ *           at draw time, which must contain the whole shape. All registered shapes batch together
+ *           with builtin shapes, sprites, and text -- no extra draw calls or pipeline switches.
+ *           Antialiasing, stroked outlines, colors, and all draw state apply automatically.
  *
  *           Register shapes once at init time (each registration recompiles the renderer's
  *           internal shaders), and before creating any custom draw shaders. Requires runtime
@@ -623,8 +626,8 @@ CF_API CF_CustomShape CF_CALL cf_make_custom_shape(const char* sdf_src);
  * @category draw
  * @brief    Draws the outline of a registered custom SDF shape.
  * @param    shape        The shape from `cf_make_custom_shape`.
- * @param    bounds       Conservative world-space bounds of the shape (the renderer pads for
- *                        stroke and antialias).
+ * @param    bounds       World-space bounds containing the whole shape (the renderer pads for
+ *                        stroke and antialias). Nothing outside them is drawn.
  * @param    thickness    The thickness of the outline stroke.
  * @param    params       Up to 16 floats delivered to the sdf as `ShapeParams` (a.x, a.y, b.x, ...).
  * @param    param_count  Number of floats in `params`.
@@ -639,9 +642,12 @@ CF_API void CF_CALL cf_draw_custom_shape(CF_CustomShape shape, CF_Aabb bounds, f
  * @category draw
  * @brief    Draws a filled registered custom SDF shape.
  * @param    shape        The shape from `cf_make_custom_shape`.
- * @param    bounds       Conservative world-space bounds of the shape (the renderer pads for antialias).
+ * @param    bounds       World-space bounds containing the whole shape (the renderer pads for
+ *                        antialias). Nothing outside them is drawn.
  * @param    params       Up to 16 floats delivered to the sdf as `ShapeParams` (a.x, a.y, b.x, ...).
  * @param    param_count  Number of floats in `params`.
+ * @remarks  The shape is the region where the sdf is negative; its edge is antialiased from the
+ *           field's local slope, so the field need not be a true distance.
  * @related  CF_CustomShape cf_make_custom_shape cf_draw_custom_shape
  */
 CF_API void CF_CALL cf_draw_custom_shape_fill(CF_CustomShape shape, CF_Aabb bounds, const float* params, int param_count);

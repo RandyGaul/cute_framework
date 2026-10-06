@@ -163,7 +163,7 @@ struct CF_PendingUV
 struct CF_TileCmd
 {
 	float aabb[4];    // Pixel-space bounds, top-left origin: min.xy, max.xy.
-	uint32_t type;    // Shape type id, 0-11 (see s_tile_fs / s_inst_vs).
+	uint32_t type;    // Shape type id, 0-11 (see s_tile_fs / s_inst_vs). Flags: 16 dashed, 32 user field (untrusted distance).
 	uint32_t color;   // packHalf2x16(premultiplied rg); ba rides in color_ba below.
 	uint32_t payload; // Offset into the payload buffer, in vec4 units.
 	uint32_t inv_mvp; // Offset of the inverse mvp (2 vec4s) in the payload buffer. SDF shapes only.

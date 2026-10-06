@@ -362,9 +362,9 @@ float dash_segment(vec2 p, vec2 a, vec2 b, float d, float r, vec3 dash)
 
 // Default custom-shape include: no shapes registered. cf_make_custom_shape() swaps in a
 // generated version stitching every registered `float sdf(vec2 p, ShapeParams s)` snippet
-// plus a per-command dispatcher. User snippets must be true signed distance functions
-// (Lipschitz <= 1): the binning compute shaders trust them for tile culling and
-// opaque-cover occlusion.
+// plus a per-command dispatcher. User snippets need not be true distances: commands carrying
+// one are flagged (type bit 32), bin by their bounds alone, never claim opaque cover, and
+// take their AA edge from the field's local slope (field_distance).
 static const char* s_custom_shapes_stub = R"(
 struct ShapeParams
 {
@@ -474,6 +474,19 @@ vec4 sdf_effects(vec4 shape_color, float d)
 float dd(float d)
 {
 	return length(vec2(dFdx(d), dFdy(d)));
+}
+
+// Custom fields need not be true distances (warps, scaled fields, blends). Dividing by the
+// field's local world-space slope turns one into a first-order distance near its zero
+// crossing, so the AA ramp, stroke, and effects keep their world-unit widths for any field.
+// s: the field's change per screen pixel along x and y. jx, jy: the world-space step of
+// one screen pixel along x and y. s = J^T g with J = [jx jy], so g = J^-T s.
+float field_distance(float d, vec2 s, vec2 jx, vec2 jy)
+{
+	float det = jx.x * jy.y - jx.y * jy.x;
+	if (det == 0.0) return d;
+	vec2 g = vec2(jy.y * s.x - jx.y * s.y, jx.x * s.y - jy.x * s.x) / det;
+	return d / max(length(g), 1.0e-6);
 }
 
 // Given two colors a and b, and a distance to the isosurface of a shape,
@@ -834,7 +847,13 @@ void main()
 		d = custom_sdf(v_n, v_pos, sp_custom);
 	} else if (is_csg) {
 		d = csg_distance(uint(v_po), v_n, v_pos, v_user);
-	} else if (is_glyph) {
+	}
+	// Custom fields (and groups holding one) take their edge from the local slope. Both
+	// branches above are primitive-uniform, so the derivatives are well-defined.
+	if ((is_custom || is_csg) && v_fx_params.z > 0.5) {
+		d = field_distance(d, vec2(dFdx(d), dFdy(d)), dFdx(v_pos), dFdy(v_pos));
+	}
+	if (is_glyph) {
 		// Curve glyph: winding coverage from the outline's quadratics. Derivatives are
 		// taken before any pixel-divergent math and the branch is primitive-uniform
 		// (one instance per command), so they stay well-defined.
@@ -983,6 +1002,22 @@ vec4 cf_payload(uint i) { return payload[i]; }
 #define CMD_TYPE_GLYPH    11u
 
 vec2 pts[8];
+
+// A custom shape's field, or a shape group's composite, at world point p.
+float tile_field(Cmd cmd, uint type, vec2 p)
+{
+	uint po = cmd.meta.z;
+	if (type == CMD_TYPE_CSG) return csg_distance(po, int(cmd.misc.y), p, cmd.user);
+	vec4 P0 = payload[po];
+	vec4 P1 = payload[po + 1u];
+	vec4 P2 = payload[po + 2u];
+	vec4 P3 = payload[po + 3u];
+	ShapeParams sp;
+	sp.a = P0.xy; sp.b = P0.zw; sp.c = P1.xy; sp.d = P1.zw;
+	sp.e = P2.xy; sp.f = P2.zw; sp.g = P3.xy; sp.h = P3.zw;
+	sp.attributes = cmd.user;
+	return custom_sdf(int(cmd.misc.y), p, sp);
+}
 
 void main()
 {
@@ -1163,16 +1198,18 @@ void main()
 				if (dashed) d = dash_segment(p, P0.xy, P0.zw, d, cmd.shape.x, payload[po + 3u].xyz);
 			} else if (type == CMD_TYPE_ARROW) {
 				d = distance_arrow(p, P0.xy, P0.zw, P1.x, P1.y);
-			} else if (type == CMD_TYPE_CUSTOM) {
-				vec4 P2 = payload[po + 2u];
-				vec4 P3 = payload[po + 3u];
-				ShapeParams sp;
-				sp.a = P0.xy; sp.b = P0.zw; sp.c = P1.xy; sp.d = P1.zw;
-				sp.e = P2.xy; sp.f = P2.zw; sp.g = P3.xy; sp.h = P3.zw;
-				sp.attributes = cmd.user;
-				d = custom_sdf(int(cmd.misc.y), p, sp);
-			} else if (type == CMD_TYPE_CSG) {
-				d = csg_distance(po, int(cmd.misc.y), p, cmd.user);
+			} else if (type == CMD_TYPE_CUSTOM || type == CMD_TYPE_CSG) {
+				d = tile_field(cmd, type, p);
+				if ((cmd.meta.x & 32u) != 0u) {
+					// No derivatives inside the tile walk (divergent skips above, and FXC
+					// forbids gradients in the dynamic loop): one-pixel forward differences
+					// stand in for dFdx/dFdy. Central ones cost two more field evaluations
+					// for no visible gain.
+					vec2 jx = im0.xy * (2.0 / u_canvas_wh.x);
+					vec2 jy = im0.zw * (-2.0 / u_canvas_wh.y);
+					vec2 s = vec2(tile_field(cmd, type, p + jx) - d, tile_field(cmd, type, p + jy) - d);
+					d = field_distance(d, s, jx, jy);
+				}
 			} else {
 				vec4 P2 = payload[po + 2u];
 				vec4 P3 = payload[po + 3u];
@@ -1309,6 +1346,8 @@ void main()
 		fx_glow = cf_payload(fx_off + 1u);
 		fx_params = cf_payload(fx_off + 2u);
 	}
+	// Field flag: the fragment stage derives this command's edge from the field's slope.
+	fx_params.z = (cmd.meta.x & 32u) != 0u ? 1.0 : 0.0;
 
 	vec2 pos = vec2(0);
 	vec2 uv = vec2(0);
@@ -1454,8 +1493,9 @@ void main()
 //
 // Five dispatches per batch: zero -> count -> scan -> scatter -> sort. The CPU only
 // uploads compact commands + payload; the GPU walks each command's pixel AABB at tile
-// granularity, with an SDF distance cull at tile centers for shape types (this is where
-// the old CPU-side tight OBB fitting effectively moved to). The sort pass restores
+// granularity, with an SDF distance cull at tile centers for built-in shape types (this is
+// where the old CPU-side tight OBB fitting effectively moved to; custom fields are untrusted
+// and bin by their bounds alone). The sort pass restores
 // painter's order within each tile (atomic scatter is nondeterministic, but typically
 // nearly-sorted, where insertion sort is ~linear) and then applies opaque-cover culling:
 // the latest opaque command whose interior covers the whole tile becomes the tile's new
@@ -1534,6 +1574,7 @@ void main()
 "{\n" \
 "	uint type = cmd.meta.x & 15u;\n" \
 "	if (type <= 1u || type == 4u || type == 11u) return true; /* Sprites/text/tris/glyphs: AABB only. */\n" \
+"	if ((cmd.meta.x & 32u) != 0u) return true; /* Custom fields may overestimate distance: their bounds are the only safe cull. */\n" \
 "	float r_tile;\n" \
 "	float d = cmd_distance_at(cmd, tx, ty, r_tile);\n" \
 "	/* cmd.fx.y is how far a glow reaches past the shape itself. */\n" \
