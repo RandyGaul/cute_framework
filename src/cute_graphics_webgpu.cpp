@@ -1437,6 +1437,8 @@ static void s_write_buffer(CF_WBuffer* b, const void* data, int size, bool stora
 		uint64_t off;
 		int pd = s_align(size, 4);
 		uint8_t* p = s_stage(pd, &src, &off);
+		// Staging is where a loss can first surface: no buffer, nothing more to encode.
+		if (!src || g_ctx.device_lost) return;
 		CF_MEMCPY(p, data, size);
 		if (pd != size) CF_MEMSET(p + size, 0, pd - size);
 		wgpuCommandEncoderCopyBufferToBuffer(s_encoder(), src, off, b->buffer, 0, (uint64_t)pd);

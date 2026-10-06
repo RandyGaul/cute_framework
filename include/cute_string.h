@@ -1117,7 +1117,7 @@ struct String
 {
 	CF_INLINE String() { }
 	CF_INLINE String(const char* s) { sset(m_str, s); }
-	CF_INLINE String(const char* start, const char* end) { int length = (int)(end - start); sfit(m_str, length); strncpy(m_str, start, length); CK_AHDR(m_str)->size = length + 1; }
+	CF_INLINE String(const char* start, const char* end) { int length = (int)(end - start); sfit(m_str, length); CF_MEMCPY(m_str, start, length); m_str[length] = 0; CK_AHDR(m_str)->size = length + 1; }
 	CF_INLINE String(const String& s) { sset(m_str, s); }
 	CF_INLINE String(String&& s) {  m_str = s.m_str; s.m_str = NULL; }
 	CF_INLINE String(int i) { sint(m_str, i); }
