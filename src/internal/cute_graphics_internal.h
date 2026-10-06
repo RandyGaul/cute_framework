@@ -281,15 +281,15 @@ void cf_gles_blit_canvas(CF_Canvas canvas);
 void cf_gles_end_frame();
 void cf_gles_cleanup();
 // Test hook: how many times a full streaming ring has made the CPU wait on a GPU fence.
-int cf_gles_fence_wait_count();
+CF_API int CF_CALL cf_gles_fence_wait_count();
 // Test hook: the ring slot a streamed texture's latest upload went to.
-int cf_gles_texture_active_slot(CF_Texture texture);
+CF_API int CF_CALL cf_gles_texture_active_slot(CF_Texture texture);
 // Test hook: a full ring reuses its busy head slot without a fence wait, as on the web.
 // No effect on the web, where it is always on.
-void cf_gles_reuse_busy_ring_slots(bool reuse);
+CF_API void CF_CALL cf_gles_reuse_busy_ring_slots(bool reuse);
 // Test hook: canvas readback acts as if the driver accepts only the (format, type) pair GLES
 // guarantees for each buffer class, as many mobile and WebGL drivers do.
-void cf_gles_only_guaranteed_read_pairs(bool only);
+CF_API void CF_CALL cf_gles_only_guaranteed_read_pairs(bool only);
 
 // Draw system sampler override API.
 // Used by the draw system to dynamically switch between nearest/linear filtering.

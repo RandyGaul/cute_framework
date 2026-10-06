@@ -552,12 +552,12 @@ static inline CF_GL_Slot* s_acquire_slot(CF_GL_Ring* ring, uint32_t frame, int* 
 
 static int s_fence_wait_count;
 
-int cf_gles_fence_wait_count()
+int CF_CALL cf_gles_fence_wait_count()
 {
 	return s_fence_wait_count;
 }
 
-int cf_gles_texture_active_slot(CF_Texture texture)
+int CF_CALL cf_gles_texture_active_slot(CF_Texture texture)
 {
 	CF_GL_Texture* t = (CF_GL_Texture*)(uintptr_t)texture.id;
 	return t ? t->active_slot : -1;
@@ -571,7 +571,7 @@ static const bool s_reuse_busy_slot = true;
 static bool s_reuse_busy_slot = false;
 #endif
 
-void cf_gles_reuse_busy_ring_slots(bool reuse)
+void CF_CALL cf_gles_reuse_busy_ring_slots(bool reuse)
 {
 #ifndef CF_EMSCRIPTEN
 	s_reuse_busy_slot = reuse;
@@ -3424,7 +3424,7 @@ static uint16_t s_half_from_float(float value)
 
 static bool s_only_guaranteed_read_pairs;
 
-void cf_gles_only_guaranteed_read_pairs(bool only)
+void CF_CALL cf_gles_only_guaranteed_read_pairs(bool only)
 {
 	s_only_guaranteed_read_pairs = only;
 }
