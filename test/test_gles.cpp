@@ -179,8 +179,114 @@ TEST_CASE(test_mesh_streaming_within_one_frame)
 	return true;
 }
 
+enum ReadbackKind { READBACK_UNORM8, READBACK_HALF, READBACK_FLOAT };
+
+struct ReadbackCase
+{
+	CF_PixelFormat format;
+	int channels;
+	ReadbackKind kind;
+};
+
+static const ReadbackCase s_readback_cases[] = {
+	{ CF_PIXEL_FORMAT_R8_UNORM, 1, READBACK_UNORM8 },
+	{ CF_PIXEL_FORMAT_R8G8_UNORM, 2, READBACK_UNORM8 },
+	{ CF_PIXEL_FORMAT_R16_FLOAT, 1, READBACK_HALF },
+	{ CF_PIXEL_FORMAT_R16G16_FLOAT, 2, READBACK_HALF },
+	{ CF_PIXEL_FORMAT_R16G16B16A16_FLOAT, 4, READBACK_HALF },
+	{ CF_PIXEL_FORMAT_R32_FLOAT, 1, READBACK_FLOAT },
+	{ CF_PIXEL_FORMAT_R32G32_FLOAT, 2, READBACK_FLOAT },
+};
+
+// Normal numbers and zero only, which is all the test values need.
+static float s_float_from_half(uint16_t h)
+{
+	uint32_t sign = (uint32_t)(h & 0x8000) << 16;
+	uint32_t exponent = (h >> 10) & 0x1f;
+	uint32_t mantissa = h & 0x3ff;
+	uint32_t x = exponent ? sign | ((exponent + 112) << 23) | (mantissa << 13) : sign;
+	float f;
+	CF_MEMCPY(&f, &x, sizeof f);
+	return f;
+}
+
+#define RB_W 8
+#define RB_H 8
+
+// Clears each format to known values and reads it back in the target's own layout.
+static bool s_check_readback_formats()
+{
+	const float float_values[4] = { 0.25f, 1.5f, -2.0f, 4.0f };
+	const float unorm_values[4] = { 0.25f, 0.5f, 0.75f, 1.0f };
+	const int unorm_bytes[4] = { 64, 128, 191, 255 };
+	for (int i = 0; i < (int)CF_ARRAY_SIZE(s_readback_cases); ++i) {
+		ReadbackCase rc = s_readback_cases[i];
+		if (!cf_query_pixel_format(rc.format, CF_PIXELFORMAT_OP_RENDER_TARGET)) continue;
+		CF_CanvasParams params = cf_canvas_defaults(RB_W, RB_H);
+		params.target.pixel_format = rc.format;
+		CF_Canvas canvas = cf_make_canvas(params);
+		REQUIRE(canvas.id);
+		const float* v = rc.kind == READBACK_UNORM8 ? unorm_values : float_values;
+		CF_Color clear = { v[0], v[1], v[2], v[3] };
+		cf_canvas_set_clear_color(canvas, clear);
+		cf_app_update(NULL);
+		cf_clear_canvas(canvas);
+		cf_app_draw_onto_screen(false);
+
+		int component_size = rc.kind == READBACK_UNORM8 ? 1 : rc.kind == READBACK_HALF ? 2 : 4;
+		int size = RB_W * RB_H * rc.channels * component_size;
+		CF_Readback rb = cf_canvas_readback(canvas);
+		REQUIRE(rb.id);
+		while (!cf_readback_ready(rb)) {}
+		REQUIRE(cf_readback_size(rb) == size);
+		uint8_t* data = (uint8_t*)cf_alloc(size);
+		cf_readback_data(rb, data, size);
+		cf_destroy_readback(rb);
+
+		int last = RB_W * RB_H - 1;
+		bool ok = true;
+		for (int texel = 0; texel <= last; texel += last) {
+			for (int c = 0; c < rc.channels; ++c) {
+				int k = texel * rc.channels + c;
+				if (rc.kind == READBACK_UNORM8) ok = ok && cf_abs(data[k] - unorm_bytes[c]) <= 1;
+				else if (rc.kind == READBACK_HALF) ok = ok && s_float_from_half(((uint16_t*)data)[k]) == v[c];
+				else ok = ok && ((float*)data)[k] == v[c];
+			}
+		}
+		if (!ok) printf("readback mismatch: %s\n", cf_pixel_format_to_string(rc.format));
+		cf_free(data);
+		cf_destroy_canvas(canvas);
+		REQUIRE(ok);
+	}
+	return true;
+}
+
+TEST_CASE(test_readback_formats)
+{
+	if (!test_make_app(W, H)) return true; // Headless CI: no display/GPU.
+	REQUIRE(s_check_readback_formats());
+	test_destroy_app();
+	return true;
+}
+
+// A driver may accept only the guaranteed pair of each buffer class for glReadPixels,
+// rejecting a target's own layout such as RED/HALF_FLOAT.
+TEST_CASE(test_readback_formats_guaranteed_pairs_only)
+{
+	if (!test_make_app(W, H)) return true; // Headless CI: no display/GPU.
+	if (cf_query_backend() != CF_BACKEND_TYPE_GLES3) return true;
+	cf_gles_only_guaranteed_read_pairs(true);
+	bool ok = s_check_readback_formats();
+	cf_gles_only_guaranteed_read_pairs(false);
+	REQUIRE(ok);
+	test_destroy_app();
+	return true;
+}
+
 TEST_SUITE(test_gles)
 {
 	RUN_TEST_CASE(test_scissor_box_survives_unscissored_pass);
 	RUN_TEST_CASE(test_mesh_streaming_within_one_frame);
+	RUN_TEST_CASE(test_readback_formats);
+	RUN_TEST_CASE(test_readback_formats_guaranteed_pairs_only);
 }
