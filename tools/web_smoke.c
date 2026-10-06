@@ -5,7 +5,7 @@
 	This software is dual-licensed with zlib or Unlicense, check LICENSE.txt for more info
 */
 
-// CI smoke page for the web build with CF_WEBGPU=ON (see tools/web_smoke.py). Draws a red box
+// CI smoke page for the web build with CF_WEBGPU=ON, loaded by web_smoke.py. Draws a red box
 // to an offscreen canvas, presents it, reads the canvas back, and reports the backend, the center
 // pixel, and every console error to the page title and to POST /result.
 

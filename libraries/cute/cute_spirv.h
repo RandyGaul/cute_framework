@@ -3,7 +3,7 @@
 		Licensing information can be found at the end of the file.
 	------------------------------------------------------------------------------
 
-	cute_spirv.h - v1.10
+	cute_spirv.h - v1.11
 
 	To create implementation (the function definitions)
 		#define CUTE_SPIRV_IMPLEMENTATION
@@ -11851,6 +11851,33 @@ static void cspv_wg_collect_locals(cspv_stmt* s, CK_DYNA const char*** names)
 	}
 }
 
+// discard is statement-only, so it reaches an expression solely through a call.
+static bool cspv_wg_stmt_discards(cspv_stmt* s)
+{
+	if (!s) return false;
+	switch (s->kind) {
+	case CSPV_S_DISCARD: return true;
+	case CSPV_S_BLOCK:
+		for (int i = 0; i < (int)asize(s->u.block); i++) {
+			if (cspv_wg_stmt_discards(s->u.block[i])) return true;
+		}
+		return false;
+	case CSPV_S_IF: return cspv_wg_stmt_discards(s->u.if_s.then_s) || cspv_wg_stmt_discards(s->u.if_s.else_s);
+	case CSPV_S_FOR: return cspv_wg_stmt_discards(s->u.for_s.init) || cspv_wg_stmt_discards(s->u.for_s.body);
+	case CSPV_S_WHILE: case CSPV_S_DO: return cspv_wg_stmt_discards(s->u.while_s.body);
+	case CSPV_S_SWITCH: {
+		cspv_switch_group* groups = s->u.switch_s.groups;
+		for (int i = 0; i < (int)asize(groups); i++) {
+			for (int j = 0; j < (int)asize(groups[i].stmts); j++) {
+				if (cspv_wg_stmt_discards(groups[i].stmts[j])) return true;
+			}
+		}
+		return false;
+	}
+	default: return false;
+	}
+}
+
 static bool cspv_wg_module_name(cspv_wg* g, const char* name)
 {
 	cspv_ctx* ctx = g->ctx;
@@ -11914,7 +11941,8 @@ static void cspv_wg_fx_visit(cspv_wg* g, cspv_expr* e, void* user)
 }
 
 // Whether calling `f` writes anything outside its own locals and parameters: module
-// variables, stage outputs, buffers, shared memory, images, atomics, transitively.
+// variables, stage outputs, buffers, shared memory, images, atomics, transitively. A
+// discard counts too: select() would run it unconditionally.
 static bool cspv_wg_func_effects(cspv_wg* g, cspv_decl* f)
 {
 	uint64_t key = (uint64_t)(uintptr_t)f;
@@ -11924,7 +11952,7 @@ static bool cspv_wg_func_effects(cspv_wg* g, cspv_decl* f)
 	cspv_wg_fx_scan scan;
 	scan.f = f;
 	scan.locals = NULL;
-	scan.effects = false;
+	scan.effects = cspv_wg_stmt_discards(f->body);
 	cspv_wg_collect_locals(f->body, &scan.locals);
 	cspv_wg_walk_stmt(g, f->body, cspv_wg_fx_visit, &scan);
 	afree(scan.locals);
@@ -11933,7 +11961,7 @@ static bool cspv_wg_func_effects(cspv_wg* g, cspv_decl* f)
 }
 
 // Whether evaluating `e` writes anything: assignments, ++/--, out/inout arguments, atomics,
-// imageStore, and calls to functions that write outside their locals.
+// imageStore, and calls to functions that write outside their locals or discard.
 static bool cspv_wg_effects(cspv_wg* g, cspv_expr* e)
 {
 	if (!e) return false;
@@ -12552,6 +12580,23 @@ static void cspv_wg_stmt(cspv_wg* g, cspv_stmt* s)
 	}
 }
 
+// Every path through s returns, the way WGSL's behavior analysis sees it. Loops, switches, and
+// discard count as falling through, which only costs a dead return.
+static bool cspv_wg_always_returns(cspv_stmt* s)
+{
+	if (!s) return false;
+	switch (s->kind) {
+	case CSPV_S_RETURN: return true;
+	case CSPV_S_BLOCK:
+		for (int i = 0; i < (int)asize(s->u.block); i++) {
+			if (cspv_wg_always_returns(s->u.block[i])) return true;
+		}
+		return false;
+	case CSPV_S_IF: return cspv_wg_always_returns(s->u.if_s.then_s) && cspv_wg_always_returns(s->u.if_s.else_s);
+	default: return false;
+	}
+}
+
 static void cspv_wg_func(cspv_wg* g, cspv_decl* d)
 {
 	cspv_ctx* ctx = g->ctx;
@@ -12590,11 +12635,8 @@ static void cspv_wg_func(cspv_wg* g, cspv_decl* d)
 	}
 	cspv_wg_body(g, d->body);
 	// WGSL rejects a value-returning function whose end is reachable; GLSL leaves it undefined.
-	if (d->type->kind != CSPV_T_VOID) {
-		cspv_stmt* b = d->body;
-		int n = b->kind == CSPV_S_BLOCK ? (int)asize(b->u.block) : 1;
-		cspv_stmt* last = b->kind == CSPV_S_BLOCK ? (n ? b->u.block[n - 1] : NULL) : b;
-		if (!last || last->kind != CSPV_S_RETURN) sfmt_append(*out, "\treturn %s();\n", cspv_wg_type(g, d->type));
+	if (d->type->kind != CSPV_T_VOID && !cspv_wg_always_returns(d->body)) {
+		sfmt_append(*out, "\treturn %s();\n", cspv_wg_type(g, d->type));
 	}
 	g->indent = 0;
 	sappend(*out, "}\n");

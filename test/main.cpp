@@ -24,6 +24,7 @@
 #include <pico/pico_unit.h>
 
 #include <cute.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "test_app_shared.h"
@@ -108,6 +109,23 @@ int main(int argc, char* argv[])
 		}
 		return false;
 	};
+
+	// Every GPU test skips when no app comes up, so a WebGPU run that silently lands on another
+	// backend, or on none, would pass. Refuse to run instead.
+	const char* webgpu = getenv("CF_TEST_WEBGPU");
+	if (webgpu && *webgpu == '1') {
+		CF_Result result = cf_make_app(NULL, 0, 0, 0, 64, 64, test_app_options(0), NULL);
+		CF_BackendType backend = cf_is_error(result) ? CF_BACKEND_TYPE_INVALID : cf_query_backend();
+		cf_destroy_app();
+		if (cf_is_error(result)) {
+			fprintf(stderr, "FATAL: CF_TEST_WEBGPU=1 but cf_make_app failed: %s\n", result.details ? result.details : "no details");
+			return 1;
+		}
+		if (backend != CF_BACKEND_TYPE_WEBGPU) {
+			fprintf(stderr, "FATAL: CF_TEST_WEBGPU=1 but the app came up on %s, not CF_BACKEND_TYPE_WEBGPU.\n", cf_backend_type_to_string(backend));
+			return 1;
+		}
+	}
 
 #define RUN_TRACED(suite_fp) if (suite_enabled(#suite_fp)) { fprintf(stderr, ">>> " #suite_fp "\n"); RUN_TEST_SUITE(suite_fp); fprintf(stderr, "<<< " #suite_fp "\n"); }
 	RUN_TRACED(test_alloc);

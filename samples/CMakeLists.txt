@@ -116,9 +116,6 @@ add_sample(customsprite custom_sprite.c)
 add_sample(sound_pan sound_pan.c)
 add_sample(tilefilters tile_filters.c)
 add_sample(nine_textures nine_textures.cpp)
-if (EMSCRIPTEN AND CF_WEBGPU)
-	add_sample(webgpu_smoke webgpu_smoke.c) # CI only: tools/web_smoke.py loads it in headless Chrome.
-endif()
 
 # Ensure that sample data is included in web build
 if (EMSCRIPTEN)

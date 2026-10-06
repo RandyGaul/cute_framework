@@ -29,6 +29,7 @@ GLES3 has no compute shaders, so CF runs each dispatch as a couple of draws inst
 - Atomics
 - Writes to images or storage buffers inside a loop, or outside `main()`
 - `vec3` writes to storage buffers (write a `vec4`, or one component at a time)
+- and a few shape rules; the compile error names each
 
 Breaking one of these rules is a compile error on GLES3 that names the problem and the line. The [WebGPU backend](webgpu.md) has none of these limits, and its own capability table compares all three backends.
 

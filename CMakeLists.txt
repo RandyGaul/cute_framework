@@ -245,12 +245,21 @@ if(CF_WEBGPU)
 	if(EMSCRIPTEN)
 		target_compile_options(cute PUBLIC --use-port=emdawnwebgpu)
 		target_link_options(cute INTERFACE --use-port=emdawnwebgpu)
+		# The C++20 module scan (emscan-deps) can't see the headers the port adds, and fails on
+		# webgpu/webgpu.h for a C++20 consumer project. CF has no modules to scan.
+		set_target_properties(cute PROPERTIES CXX_SCAN_FOR_MODULES OFF)
 	else()
 		# wgpu-native v29.0.1.1, the release zip for this platform, fetched unless
 		# CF_WGPU_NATIVE_DIR points at an unpacked release (include/webgpu/webgpu.h, lib/).
 		if(NOT CF_WGPU_NATIVE_DIR)
 			set(CF_WGPU_NATIVE_URL https://github.com/gfx-rs/wgpu-native/releases/download/v29.0.1.1)
-			string(TOLOWER "${CMAKE_SYSTEM_PROCESSOR}" CF_WGPU_ARCH)
+			# The target, not the host: Visual Studio generators leave CMAKE_SYSTEM_PROCESSOR on the
+			# host for -A Win32 and -A ARM64.
+			if(MSVC)
+				string(TOLOWER "${CMAKE_C_COMPILER_ARCHITECTURE_ID}" CF_WGPU_ARCH)
+			else()
+				string(TOLOWER "${CMAKE_SYSTEM_PROCESSOR}" CF_WGPU_ARCH)
+			endif()
 			if(CMAKE_OSX_ARCHITECTURES)
 				string(TOLOWER "${CMAKE_OSX_ARCHITECTURES}" CF_WGPU_ARCH)
 			endif()

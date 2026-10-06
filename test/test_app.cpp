@@ -6,6 +6,7 @@
 */
 
 #include "test_harness.h"
+#include "test_app_shared.h"
 
 #include <cute.h>
 using namespace Cute;
@@ -60,6 +61,27 @@ TEST_CASE(test_display_count_matches_list)
 	cf_free_display_list(list);
 	return true;
 }
+
+// Destroying an app quits SDL's video subsystem; the display queries must bring it back.
+TEST_CASE(test_display_count_after_app_destroyed)
+{
+	if (!test_make_private_app(64, 64)) return true; // Headless CI: no display/GPU.
+	test_destroy_private_app();
+	REQUIRE(cf_display_count() >= 1);
+	return true;
+}
+
+#if !defined(CF_WEBGPU) && !defined(CF_EMSCRIPTEN)
+// Asking for a backend the build lacks is an error, not a silent switch to another backend.
+TEST_CASE(test_app_webgpu_bit_without_webgpu_build)
+{
+	test_shutdown_shared_app();
+	CF_Result result = cf_make_app(NULL, 0, 0, 0, 64, 64, CF_APP_OPTIONS_HIDDEN_BIT | CF_APP_OPTIONS_NO_AUDIO_BIT | CF_APP_OPTIONS_GFX_WEBGPU_BIT, NULL);
+	cf_destroy_app();
+	REQUIRE(cf_is_error(result));
+	return true;
+}
+#endif
 
 TEST_CASE(test_display_invalid_id_is_safe)
 {
@@ -303,6 +325,10 @@ TEST_SUITE(test_app)
 	RUN_TEST_CASE(test_app_no_gfx_state_defaults);
 	RUN_TEST_CASE(test_display_count_matches_list);
 	RUN_TEST_CASE(test_display_invalid_id_is_safe);
+	RUN_TEST_CASE(test_display_count_after_app_destroyed);
+#if !defined(CF_WEBGPU) && !defined(CF_EMSCRIPTEN)
+	RUN_TEST_CASE(test_app_webgpu_bit_without_webgpu_build);
+#endif
 
 	// Requires headless GPU context support in CI -- see
 	// https://github.com/RandyGaul/cute_framework/pull/517

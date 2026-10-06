@@ -32,6 +32,22 @@ static char* s_cf_strdup(const char* s)
 	return copy;
 }
 
+// Matches cspv_wg_format: unknown formats emit as rgba8unorm. CF_PixelFormat has no r32ui.
+static CF_PixelFormat s_pixel_format_from_spirv(int image_format)
+{
+	switch (image_format) {
+	case 1:  return CF_PIXEL_FORMAT_R32G32B32A32_FLOAT;
+	case 2:  return CF_PIXEL_FORMAT_R16G16B16A16_FLOAT;
+	case 3:  return CF_PIXEL_FORMAT_R32_FLOAT;
+	case 6:  return CF_PIXEL_FORMAT_R32G32_FLOAT;
+	case 7:  return CF_PIXEL_FORMAT_R16G16_FLOAT;
+	case 9:  return CF_PIXEL_FORMAT_R16_FLOAT;
+	case 32: return CF_PIXEL_FORMAT_R8G8B8A8_UINT;
+	case 33: return CF_PIXEL_FORMAT_INVALID;
+	default: return CF_PIXEL_FORMAT_R8G8B8A8_UNORM;
+	}
+}
+
 //--------------------------------------------------------------------------------------------------
 // Default filesystem VFS (mirrors cute_shader.cpp's libc vfs).
 
@@ -404,6 +420,26 @@ CF_ShaderCompilerResult cute_shader_compile(const char* source, CF_ShaderCompile
 			case CSPV_WGSL_UNIFORM_BUFFER: wgsl_bindings[i].kind = CF_SHADER_WGSL_BINDING_KIND_UNIFORM_BUFFER; break;
 			default: wgsl_bindings[i].kind = CF_SHADER_WGSL_BINDING_KIND_SPLIT_LOAD_TEXTURE; break;
 			}
+			switch (b->dim) {
+			case CSPV_WGSL_DIM_CUBE: wgsl_bindings[i].dimension = CF_TEXTURE_TYPE_CUBE; break;
+			case CSPV_WGSL_DIM_3D: wgsl_bindings[i].dimension = CF_TEXTURE_TYPE_3D; break;
+			case CSPV_WGSL_DIM_2D_ARRAY: wgsl_bindings[i].dimension = CF_TEXTURE_TYPE_2D_ARRAY; break;
+			default: wgsl_bindings[i].dimension = CF_TEXTURE_TYPE_2D; break;
+			}
+			switch (b->sample_type) {
+			case CSPV_WGSL_SAMPLE_UINT: wgsl_bindings[i].sample_type = CF_SHADER_WGSL_SAMPLE_TYPE_UINT; break;
+			case CSPV_WGSL_SAMPLE_DEPTH: wgsl_bindings[i].sample_type = CF_SHADER_WGSL_SAMPLE_TYPE_DEPTH; break;
+			default: wgsl_bindings[i].sample_type = CF_SHADER_WGSL_SAMPLE_TYPE_FLOAT; break;
+			}
+			wgsl_bindings[i].multisampled = false;
+			bool texel_format = b->kind == CSPV_WGSL_STORAGE_TEXTURE || b->kind == CSPV_WGSL_SPLIT_LOAD_TEXTURE;
+			wgsl_bindings[i].storage_format = texel_format ? s_pixel_format_from_spirv(b->image_format) : CF_PIXEL_FORMAT_INVALID;
+			switch (b->access) {
+			case CSPV_WGSL_ACCESS_WRITE: wgsl_bindings[i].storage_access = CF_SHADER_WGSL_ACCESS_WRITE; break;
+			case CSPV_WGSL_ACCESS_READ_WRITE: wgsl_bindings[i].storage_access = CF_SHADER_WGSL_ACCESS_READ_WRITE; break;
+			default: wgsl_bindings[i].storage_access = CF_SHADER_WGSL_ACCESS_READ; break;
+			}
+			wgsl_bindings[i].comparison = b->comparison;
 		}
 	}
 	int num_wgsl_splits = r.wgsl ? (int)asize(rf->wgsl_splits) : 0;

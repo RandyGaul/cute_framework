@@ -2,7 +2,7 @@
 
 Cute Framework has an optional WebGPU backend. Its main job is web builds: with it, a game in the browser renders through WebGPU instead of WebGL 2, and gets real compute shaders, real storage buffers, and indirect draws. The same backend also runs on desktop through [wgpu-native](https://github.com/gfx-rs/wgpu-native), so you can test and debug it without a browser.
 
-The backend is off by default. A build without it is exactly the same as before.
+The backend is off by default, and a build without it contains none of its code.
 
 ## How It Works
 
@@ -48,11 +48,21 @@ if(WIN32)
 endif()
 ```
 
+On macOS and Linux nothing needs copying during development: CMake gives the executable an rpath pointing at wgpu-native's `lib/` folder. That rpath only exists in the build tree. To ship or install the game, put the library beside the executable and set an rpath that finds it there, `@executable_path` on macOS or `$ORIGIN` on Linux:
+
+```cmake
+if(APPLE)
+	set_target_properties(your_game PROPERTIES INSTALL_RPATH "@executable_path")
+elseif(UNIX)
+	set_target_properties(your_game PROPERTIES INSTALL_RPATH "$ORIGIN")
+endif()
+```
+
 `CF_WEBGPU` is also a public compile definition, so your own code can check for it with `#ifdef CF_WEBGPU`.
 
 ## Picking the Backend at Runtime
 
-**On the web** you don't have to do anything. When CF is built with `CF_WEBGPU`, it asks the browser for a WebGPU adapter at startup. If it gets one, the game runs on WebGPU. If it doesn't (the browser has no WebGPU, or it is turned off or blocked), or if WebGPU fails to start, the game runs on WebGL 2 instead. Passing `CF_APP_OPTIONS_GFX_OPENGL_BIT` to [`cf_make_app`](../app/function/cf_make_app.md) forces WebGL 2.
+**On the web** you don't have to do anything. When CF is built with `CF_WEBGPU`, it asks the browser for a WebGPU adapter at startup. If it gets one, the game runs on WebGPU. If it doesn't (the browser has no WebGPU, or it is turned off or blocked), or if WebGPU fails to start, the game runs on WebGL 2 instead. A browser without WebGPU is normal, so the fallback prints one plain line to the console saying why, not an error. Passing `CF_APP_OPTIONS_GFX_OPENGL_BIT` to [`cf_make_app`](../app/function/cf_make_app.md) forces WebGL 2.
 
 Since a player may land on either backend, keep your shaders within what the GLES3 backend supports if you want the game to run everywhere. The [GLES3 capability table](emscripten.md#gles3-backend-capabilities) lists those limits.
 
@@ -66,7 +76,7 @@ int options = CF_APP_OPTIONS_WINDOW_POS_CENTERED_BIT;
 CF_Result result = cf_make_app("My Game", 0, 0, 0, 640, 480, options, argv[0]);
 ```
 
-There is no fallback on desktop: if wgpu-native can't find an adapter, `cf_make_app` returns an error. If CF was built without `CF_WEBGPU`, the bit is ignored with a warning and the default backend is used.
+There is no fallback on desktop: if wgpu-native can't find an adapter, `cf_make_app` returns an error. Passing the bit to a desktop CF built without `CF_WEBGPU` is an error from `cf_make_app` too, rather than a quiet switch to another backend.
 
 Either way, [`cf_query_backend`](../graphics/function/cf_query_backend.md) tells you which backend is running. It returns `CF_BACKEND_TYPE_WEBGPU` for WebGPU.
 
@@ -120,6 +130,10 @@ The desktop backend runs the same code as the web one, which makes it the easy w
 
 - Run the test suite on WebGPU by setting the environment variable `CF_TEST_WEBGPU=1` before running `tests`.
 - Run the `hrc_gi` sample on WebGPU with `HRC_WEBGPU=1`.
-- Pass `CF_APP_OPTIONS_GFX_DEBUG_BIT` along with `CF_APP_OPTIONS_GFX_WEBGPU_BIT` to print wgpu-native's warnings to the console.
+- Pass `CF_APP_OPTIONS_GFX_DEBUG_BIT` along with `CF_APP_OPTIONS_GFX_WEBGPU_BIT` to print the adapter CF picked and wgpu-native's warnings to the console.
 
-CF's CI runs the whole test suite this way on Linux (wgpu-native over a software Vulkan driver), and builds the web version with `CF_WEBGPU=ON`.
+CF's CI covers the backend three ways:
+
+- The whole test suite runs on Linux with wgpu-native over a software Vulkan driver.
+- A web build with `CF_WEBGPU=ON` loads a smoke-test page in Chrome twice, once with WebGPU and once with WebGPU disabled so it falls back to WebGL 2, and checks the backend and a rendered pixel each time.
+- A macOS job runs part of the suite over Metal. It runs only when started by hand.

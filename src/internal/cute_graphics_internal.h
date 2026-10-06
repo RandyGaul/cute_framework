@@ -290,6 +290,7 @@ void cf_webgpu_imgui_shutdown();
 bool cf_webgpu_device_is_lost();
 int cf_webgpu_error_count();
 int cf_webgpu_render_pass_count(); // Render passes begun since init, blits excluded.
+int cf_webgpu_submit_count(); // Queue submits since init.
 void cf_webgpu_lose_device();
 
 #endif

@@ -10,6 +10,7 @@
 
 #include <cute.h>
 #include <internal/cute_graphics_internal.h>
+#include <SDL3/SDL.h>
 #include <stdlib.h>
 
 using namespace Cute;
@@ -165,13 +166,13 @@ static CF_Mesh s_make_quad()
 	return mesh;
 }
 
-// Spins at most a bounded number of polls: a readback that never turns ready must fail the
-// test, not hang the suite.
+// A readback that never turns ready must fail the test, not hang the suite.
 static bool s_readback_settles(CF_Canvas canvas, CF_Pixel* px)
 {
 	CF_Readback rb = cf_canvas_readback(canvas);
-	bool ready = false;
-	for (int i = 0; i < 100000 && !ready; ++i) ready = cf_readback_ready(rb);
+	bool ready = cf_readback_ready(rb);
+	Uint64 deadline = SDL_GetTicks() + 10000;
+	while (!ready && SDL_GetTicks() < deadline) ready = cf_readback_ready(rb);
 	if (ready) cf_readback_data(rb, px, W * H * (int)sizeof(CF_Pixel));
 	cf_destroy_readback(rb);
 	return ready;

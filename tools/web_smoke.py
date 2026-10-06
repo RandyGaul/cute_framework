@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-# Loads samples/webgpu_smoke.c's page in headless Chrome and checks the backend it picked, the
+# Loads tools/web_smoke.c's page (the cute-web-smoke target) in Chrome and checks the backend it picked, the
 # pixel it read back, and that nothing logged a console error. Exits nonzero on any mismatch.
 #   python3 tools/web_smoke.py --browser google-chrome --dir build --expect CF_BACKEND_TYPE_WEBGPU -- <browser flags>
 import argparse, http.server, json, shutil, subprocess, sys, tempfile, threading
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--browser", required=True)
-ap.add_argument("--dir", required=True, help="directory holding webgpu_smoke.html")
+ap.add_argument("--dir", required=True, help="directory holding web_smoke.html")
 ap.add_argument("--expect", required=True, help="backend name cf_backend_type_to_string reports")
 ap.add_argument("--allow", action="append", default=[], help="substring of a console error to tolerate")
 ap.add_argument("--timeout", type=float, default=60)
@@ -32,7 +32,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
 server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Handler)
 threading.Thread(target=server.serve_forever, daemon=True).start()
-url = "http://127.0.0.1:%d/webgpu_smoke.html" % server.server_address[1]
+url = "http://127.0.0.1:%d/web_smoke.html" % server.server_address[1]
 
 profile = tempfile.mkdtemp(prefix="cf-smoke-")
 cmd = [args.browser] + ([] if args.headful else ["--headless=new"]) + ["--no-first-run", "--no-default-browser-check",

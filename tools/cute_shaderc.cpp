@@ -268,15 +268,13 @@ static bool write_bytecode(
 
 	// The WGSL bind groups: the WebGPU backend reads them.
 	if (shader_info->num_wgsl_bindings > 0) {
-		static const char* kinds[] = {
-			"CF_SHADER_WGSL_BINDING_KIND_SAMPLED_TEXTURE", "CF_SHADER_WGSL_BINDING_KIND_SAMPLER",
-			"CF_SHADER_WGSL_BINDING_KIND_STORAGE_TEXTURE", "CF_SHADER_WGSL_BINDING_KIND_STORAGE_BUFFER",
-			"CF_SHADER_WGSL_BINDING_KIND_UNIFORM_BUFFER", "CF_SHADER_WGSL_BINDING_KIND_SPLIT_LOAD_TEXTURE",
-		};
 		fprintf(file, "static CF_ShaderWgslBinding %s%s_wgsl_bindings[%d] = {\n", var_name, suffix, shader_info->num_wgsl_bindings);
 		for (int i = 0; i < shader_info->num_wgsl_bindings; ++i) {
 			const CF_ShaderWgslBinding* b = &shader_info->wgsl_bindings[i];
-			fprintf(file, "\t{ .name = \"%s\", .kind = %s, .set = %d, .slot = %d, .binding = %d },\n", b->name, kinds[b->kind], b->set, b->slot, b->binding);
+			fprintf(file, "\t{ .name = \"%s\", .kind = %s, .set = %d, .slot = %d, .binding = %d, .dimension = %s, .sample_type = %s, .multisampled = %s, .storage_format = %s, .storage_access = %s, .comparison = %s },\n",
+				b->name, cf_shader_wgsl_binding_kind_to_string(b->kind), b->set, b->slot, b->binding,
+				cf_texture_type_to_string(b->dimension), cf_shader_wgsl_sample_type_to_string(b->sample_type), b->multisampled ? "true" : "false",
+				cf_pixel_format_to_string(b->storage_format), cf_shader_wgsl_access_to_string(b->storage_access), b->comparison ? "true" : "false");
 		}
 		fprintf(file, "};\n");
 	} else {
@@ -319,6 +317,8 @@ static bool write_bytecode_struct_contents(
 	TABS(); fprintf(file, ".hlsl_src_size = %zu,\n", compile_result.bytecode.hlsl_src_size);
 	TABS(); fprintf(file, ".msl_src = %s%s_msl_src,\n", var_name, suffix);
 	TABS(); fprintf(file, ".msl_src_size = %zu,\n", compile_result.bytecode.msl_src_size);
+	TABS(); fprintf(file, ".wgsl_src = %s%s_wgsl_src,\n", var_name, suffix);
+	TABS(); fprintf(file, ".wgsl_src_size = %zu,\n", compile_result.bytecode.wgsl_src_size);
 	TABS(); fprintf(file, ".shader_info = {\n");
 	TABS(); fprintf(file, "\t.num_samplers = %d,\n", shader_info->num_samplers);
 	TABS(); fprintf(file, "\t.num_storage_textures = %d,\n", shader_info->num_storage_textures);
@@ -346,8 +346,6 @@ static bool write_bytecode_struct_contents(
 	TABS(); fprintf(file, "\t.num_wgsl_splits = %d,\n", shader_info->num_wgsl_splits);
 	TABS(); fprintf(file, "\t.wgsl_splits = %s%s_wgsl_splits,\n", var_name, suffix);
 	TABS(); fprintf(file, "},\n");
-	TABS(); fprintf(file, ".wgsl_src = %s%s_wgsl_src,\n", var_name, suffix);
-	TABS(); fprintf(file, ".wgsl_src_size = %zu,\n", compile_result.bytecode.wgsl_src_size);
 
 #undef TABS
 

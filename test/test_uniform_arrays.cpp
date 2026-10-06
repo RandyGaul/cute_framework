@@ -14,6 +14,7 @@
 #include "test_app_shared.h"
 
 #include <cute.h>
+#include <internal/cute_graphics_internal.h>
 
 using namespace Cute;
 
@@ -195,9 +196,11 @@ TEST_CASE(test_uniform_array_vertex_stage)
 }
 
 // WebGPU packs every draw's uniform blocks into a per-submission ring; a full ring submits,
-// starts a new render pass, and grows. A 12 KiB block (materials pack blocks in a 16 KiB arena)
-// fills the 4 MiB starting ring in about 340 draws.
+// starts a new render pass, and grows. The tests watch the submit count for that split rather
+// than assume the ring's size. Materials pack blocks in a 16 KiB arena, so 12 KiB is near the
+// largest block a draw can carry.
 #define RING_BLOCK_BYTES (12 * 1024)
+#define RING_MAX_DRAWS (512 * 1024 * 1024 / RING_BLOCK_BYTES)
 
 static const char* s_ring_fs =
 "layout (location = 0) out vec4 result;\n"
@@ -230,6 +233,27 @@ static void s_read_canvas(CF_Canvas canvas, CF_Pixel* px)
 	cf_destroy_readback(rb);
 }
 
+static int s_submit_count()
+{
+#ifdef CF_WEBGPU
+	return cf_webgpu_submit_count();
+#else
+	return 0;
+#endif
+}
+
+// Draws until the ring overflows, which submits mid-pass. False if it never did.
+static bool s_draw_until_ring_splits(CF_Shader shader, CF_Material material)
+{
+	int submits = s_submit_count();
+	for (int i = 0; i < RING_MAX_DRAWS; ++i) {
+		cf_apply_shader(shader, material);
+		cf_draw_elements();
+		if (s_submit_count() != submits) return true;
+	}
+	return false;
+}
+
 static bool s_is(CF_Pixel p, int r, int g, int b)
 {
 	return cf_abs(p.colors.r - r) < 8 && cf_abs(p.colors.g - g) < 8 && cf_abs(p.colors.b - b) < 8;
@@ -252,17 +276,12 @@ TEST_CASE(test_uniform_ring_regrow)
 
 	float filler[4] = { 0.5f, 0.5f, 0.5f, 1 };
 	float finals[3][4] = { { 1, 0, 0, 1 }, { 0, 1, 0, 1 }, { 0, 0, 1, 1 } };
-	int ring_mib = 4;
 	for (int phase = 0; phase < 3; ++phase) {
 		cf_app_update(NULL);
 		cf_apply_canvas(canvas, true);
 		cf_apply_mesh(mesh);
-		int draws = ring_mib * 1024 * 1024 / RING_BLOCK_BYTES + 8;
 		cf_material_set_uniform_fs(material, "u_color", filler, CF_UNIFORM_TYPE_FLOAT4, 1);
-		for (int i = 0; i < draws; ++i) {
-			cf_apply_shader(shader, material);
-			cf_draw_elements();
-		}
+		REQUIRE(s_draw_until_ring_splits(shader, material));
 		cf_material_set_uniform_fs(material, "u_color", finals[phase], CF_UNIFORM_TYPE_FLOAT4, 1);
 		cf_apply_shader(shader, material);
 		cf_draw_elements();
@@ -270,7 +289,6 @@ TEST_CASE(test_uniform_ring_regrow)
 		s_read_canvas(canvas, px);
 		CF_Pixel c = px[(H / 2) * W + W / 8];
 		REQUIRE(s_is(c, (int)(finals[phase][0] * 255), (int)(finals[phase][1] * 255), (int)(finals[phase][2] * 255)));
-		ring_mib *= 2;
 	}
 
 	cf_free(px);
@@ -307,12 +325,7 @@ TEST_CASE(test_uniform_ring_overflow_keeps_pass_state)
 	cf_apply_viewport(0, 0, W / 2, H);
 	cf_apply_scissor(W / 8, 0, W - W / 8, H);
 	cf_draw_elements();
-	// Past the ring the earlier ring tests leave behind (32 MiB when this suite runs alone).
-	int draws = 48 * 1024 * 1024 / RING_BLOCK_BYTES;
-	for (int i = 0; i < draws; ++i) {
-		cf_apply_shader(shader, material);
-		cf_draw_elements();
-	}
+	REQUIRE(s_draw_until_ring_splits(shader, material));
 	cf_app_draw_onto_screen(false);
 	s_read_canvas(canvas, px);
 

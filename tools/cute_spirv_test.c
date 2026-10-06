@@ -2883,6 +2883,64 @@ static void test_wgsl_semantics(void)
 	}
 }
 
+// A ?: arm whose call can discard runs only when taken; select() would discard every fragment.
+static void test_wgsl_discard_arm(void)
+{
+	CSPV_Options o;
+	memset(&o, 0, sizeof(o));
+	o.emit_wgsl = true;
+	CSPV_Result r = cspv_compile_ex(
+		"layout(location = 0) out vec4 result;\n"
+		"float kill_if(float x) { if (x > -1.0) discard; return x; }\n"
+		"float kill_via(float x) { return kill_if(x) + 1.0; }\n"
+		"void main() {\n"
+		"	float a = gl_FragCoord.x < -5.0 ? kill_if(gl_FragCoord.y) : 0.0;\n"
+		"	float b = gl_FragCoord.x < -6.0 ? kill_via(gl_FragCoord.y) : 0.0;\n"
+		"	result = vec4(1.0, a, b, 1.0);\n"
+		"}\n", CSPV_STAGE_FRAGMENT, &o);
+	CHECK_MSG(r.success, r.error_message);
+	if (r.success) {
+		const char* s = r.wgsl;
+		CHECK(validate_wgsl(s));
+		CHECK(strstr(s, "select(0.0, kill_if(") == NULL);
+		CHECK(strstr(s, "select(0.0, kill_via(") == NULL);
+		CHECK(strstr(s, "if ((gl_FragCoord.x < -5.0))\n\t{\n\t\tcspv_t0 = kill_if(gl_FragCoord.y);") != NULL);
+		CHECK(strstr(s, "if ((gl_FragCoord.x < -6.0))\n\t{\n\t\tcspv_t1 = kill_via(gl_FragCoord.y);") != NULL);
+	}
+	cspv_free(&r);
+}
+
+// An if/else returning on both paths ends the function: a trailing return would be unreachable,
+// which Tint warns about on every page load. One falling-through path still gets the return.
+static void test_wgsl_no_dead_return(void)
+{
+	CSPV_Options o;
+	memset(&o, 0, sizeof(o));
+	o.emit_wgsl = true;
+	CSPV_Result r = cspv_compile_ex(
+		"layout(location = 0) out vec4 result;\n"
+		"float both(float x) { if (x > 0.0) { return 1.0; } else { return 2.0; } }\n"
+		"float one(float x) { if (x > 0.0) { return 1.0; } }\n"
+		"void main() { result = vec4(both(gl_FragCoord.x), one(gl_FragCoord.y), 0.0, 1.0); }\n", CSPV_STAGE_FRAGMENT, &o);
+	CHECK_MSG(r.success, r.error_message);
+	if (r.success) {
+		const char* s = r.wgsl;
+		CHECK(validate_wgsl(s));
+		const char* both = strstr(s, "fn both(");
+		const char* one = strstr(s, "fn one(");
+		CHECK(both && one);
+		if (both && one) {
+			const char* both_end = strstr(both, "\n}\n");
+			const char* one_end = strstr(one, "\n}\n");
+			const char* dead = strstr(both, "return f32();");
+			CHECK(!dead || (both_end && dead > both_end));
+			const char* kept = strstr(one, "return f32();");
+			CHECK(kept && one_end && kept < one_end);
+		}
+	}
+	cspv_free(&r);
+}
+
 int main(void)
 {
 	detect_spirv_val();
@@ -2890,6 +2948,8 @@ int main(void)
 	TEST(test_wgsl_corpus);
 	TEST(test_wgsl_contract);
 	TEST(test_wgsl_semantics);
+	TEST(test_wgsl_discard_arm);
+	TEST(test_wgsl_no_dead_return);
 
 	TEST(test_preprocessor);
 	TEST(test_corpus_basic);

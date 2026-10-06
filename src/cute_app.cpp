@@ -36,11 +36,10 @@
 
 CF_STATIC_ASSERT(sizeof(uint64_t) >= sizeof(void*), "Must be equal for opaque id implementations throughout CF.");
 
+// cf_destroy_app quits SDL, so a flag cached across apps would go stale.
 static void s_init_video()
 {
-	static bool init = false;
-	if (init) return;
-	init = SDL_Init(SDL_INIT_VIDEO);
+	if (!SDL_WasInit(SDL_INIT_VIDEO)) SDL_Init(SDL_INIT_VIDEO);
 }
 
 CF_DisplayID cf_default_display()
@@ -189,18 +188,19 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 	bool use_webgpu = options & CF_APP_OPTIONS_GFX_WEBGPU_BIT;
 	bool use_gfx = !(options & CF_APP_OPTIONS_NO_GFX_BIT);
 
-#ifndef CF_WEBGPU
+#if !defined(CF_WEBGPU) && !defined(CF_EMSCRIPTEN)
 	if (use_webgpu) {
-		fprintf(stderr, "WARNING -- CF_APP_OPTIONS_GFX_WEBGPU_BIT needs CF built with the CF_WEBGPU CMake option; using the default backend.\n");
-		use_webgpu = false;
+		return cf_result_error("CF_APP_OPTIONS_GFX_WEBGPU_BIT needs CF built with the CF_WEBGPU CMake option.");
 	}
 #endif
 
 #ifdef CF_EMSCRIPTEN
 	// WebGPU when the build carries it and the browser offers an adapter (probed below, before
-	// the window exists), otherwise WebGL 2.
+	// the window exists), otherwise WebGL 2. CF_APP_OPTIONS_GFX_WEBGPU_BIT has no say here.
 #	ifdef CF_WEBGPU
 	use_webgpu = !use_opengl;
+#	else
+	use_webgpu = false;
 #	endif
 	if (!use_webgpu) use_opengl = true;
 #elif defined(CF_ANDROID)
@@ -284,6 +284,7 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 #	ifdef CF_EMSCRIPTEN
 				// No adapter, device, or canvas context: the browser lacks WebGPU or blocks it, so
 				// WebGL 2 it is. The canvas is still free, since getContext("webgpu") failed.
+				printf("%s (falling back to WebGL 2)\n", init_gfx_result.details);
 				use_webgpu = false;
 				use_opengl = true;
 #	endif
@@ -292,8 +293,7 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 #endif
 
 		// Create the SDL GPU device.
-		if (use_webgpu) {
-		} else if (!use_opengl) {
+		if (!use_webgpu && !use_opengl) {
 #ifndef CF_EMSCRIPTEN
 			const char* device_name = NULL;
 			if (use_dx11) {
@@ -318,7 +318,7 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 			}
 #	endif
 #endif
-		} else {
+		} else if (use_opengl) {
 			init_gfx_result = cf_gles_init(debug);
 			gfx_backend_type = CF_BACKEND_TYPE_GLES3;
 		}
