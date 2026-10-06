@@ -44,6 +44,7 @@ struct CF_CurveGlyph
 struct CF_Font
 {
 	uint8_t* file_data = NULL;
+	bool owns_file_data = false;
 	stbtt_fontinfo info;
 	Cute::Map<int> kerning;
 	Cute::Map<CF_Glyph> glyphs;

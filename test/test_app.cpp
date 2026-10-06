@@ -6,6 +6,7 @@
 */
 
 #include "test_harness.h"
+#include "test_leak.h"
 
 #include <cute.h>
 using namespace Cute;
@@ -296,6 +297,29 @@ TEST_CASE(test_app_msaa_4x_supported_when_2x_is)
 	return true;
 }
 
+static void s_app_cycle()
+{
+	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, 64, 64, CF_APP_OPTIONS_HIDDEN_BIT | CF_APP_OPTIONS_NO_AUDIO_BIT, NULL))) return;
+	cf_app_update(NULL);
+	cf_draw_set_uniform_float("u_leak_tint", 1.0f);
+	cf_draw_text("Leak", cf_v2(0, 0), -1);
+	cf_draw_circle_fill2(cf_v2(0, 0), 10);
+	cf_app_draw_onto_screen(true);
+	cf_destroy_app();
+}
+
+// Covers what only cf_destroy_app releases: the draw uniform arena and every loaded font.
+TEST_CASE(test_app_make_destroy_does_not_leak)
+{
+	if (!test_leak_check_enabled()) return true;
+	s_app_cycle(); // The first cycle interns names and fills process-wide tables.
+	TestLeakCheck leak;
+	test_leak_begin(&leak);
+	s_app_cycle();
+	REQUIRE(test_leak_report(&leak, "app make/destroy") == 0);
+	return true;
+}
+
 TEST_SUITE(test_app)
 {
 	RUN_TEST_CASE(test_app_destroy_safety);
@@ -315,4 +339,5 @@ TEST_SUITE(test_app)
 	RUN_TEST_CASE(test_app_present_mode_off_round_trip);
 	RUN_TEST_CASE(test_app_present_mode_mailbox_failure_does_not_corrupt_state);
 	RUN_TEST_CASE(test_app_msaa_4x_supported_when_2x_is);
+	RUN_TEST_CASE(test_app_make_destroy_does_not_leak);
 }

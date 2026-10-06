@@ -979,6 +979,11 @@ typedef struct cspv_ctx
 
 	// Top-level declarations in source order, for the transpiler backends.
 	CK_DYNA cspv_decl* decls;
+	// The AST nodes live in the arena, while their stretchy child arrays use ckit's
+	// allocator. Track them so cleanup can release those arrays on success or error.
+	CK_DYNA cspv_expr** ast_exprs;
+	CK_DYNA cspv_stmt** ast_stmts;
+	CK_DYNA cspv_type** types_with_fields;
 	// Transpiler output under construction (kept on the context so a longjmp
 	// during validation cannot leak it; each emitter's result moves to
 	// CSPV_Result right after it runs).
@@ -2580,6 +2585,7 @@ static cspv_expr* cspv_new_expr(cspv_ctx* ctx, cspv_expr_kind kind, int line)
 	memset(e, 0, sizeof(*e));
 	e->kind = kind;
 	e->line = line;
+	apush(ctx->ast_exprs, e);
 	return e;
 }
 
@@ -2811,6 +2817,7 @@ static cspv_stmt* cspv_new_stmt(cspv_ctx* ctx, cspv_stmt_kind kind, int line)
 	memset(s, 0, sizeof(*s));
 	s->kind = kind;
 	s->line = line;
+	apush(ctx->ast_stmts, s);
 	return s;
 }
 
@@ -5611,6 +5618,7 @@ static void cspv_gen_uniform_block(cspv_ctx* ctx, cspv_layout* layout, const cha
 		memset(view, 0, sizeof(*view));
 		view->kind = CSPV_T_STRUCT;
 		view->name = block_name;
+		apush(ctx->types_with_fields, view);
 		for (int i = 0; i < (int)asize(member_types); i++) {
 			apush(view->field_names, member_names[i]);
 			apush(view->field_types, member_types[i]);
@@ -5906,6 +5914,7 @@ static void cspv_gen_struct_decl(cspv_ctx* ctx)
 	memset(t, 0, sizeof(*t));
 	t->kind = CSPV_T_STRUCT;
 	t->name = name;
+	apush(ctx->types_with_fields, t);
 
 	cspv_expect_punct(ctx, '{');
 	while (!cspv_is_punct(ctx, '}')) {
@@ -9995,6 +10004,29 @@ static uint32_t* cspv_assemble(cspv_ctx* ctx, size_t* out_word_count)
 
 static void cspv_cleanup(cspv_ctx* ctx)
 {
+	for (int i = 0; i < (int)asize(ctx->ast_exprs); i++) {
+		cspv_expr* e = ctx->ast_exprs[i];
+		if (e->kind == CSPV_E_CALL) afree(e->u.call.args);
+	}
+	for (int i = 0; i < (int)asize(ctx->ast_stmts); i++) {
+		cspv_stmt* s = ctx->ast_stmts[i];
+		if (s->kind == CSPV_S_BLOCK) {
+			afree(s->u.block);
+		} else if (s->kind == CSPV_S_SWITCH) {
+			for (int j = 0; j < (int)asize(s->u.switch_s.groups); j++) {
+				afree(s->u.switch_s.groups[j].labels);
+				afree(s->u.switch_s.groups[j].stmts);
+			}
+			afree(s->u.switch_s.groups);
+		}
+	}
+	for (int i = 0; i < (int)asize(ctx->types_with_fields); i++) {
+		afree(ctx->types_with_fields[i]->field_names);
+		afree(ctx->types_with_fields[i]->field_types);
+	}
+	afree(ctx->ast_exprs);
+	afree(ctx->ast_stmts);
+	afree(ctx->types_with_fields);
 	afree(ctx->es_shadows);
 	afree(ctx->names);
 	afree(ctx->decos);
@@ -10009,6 +10041,11 @@ static void cspv_cleanup(cspv_ctx* ctx)
 	map_free(ctx->const_ids);
 	map_free(ctx->fn_type_ids);
 	map_free(ctx->type_names);
+	map_free(ctx->array_types);
+	map_free(ctx->image_types);
+	map_free(ctx->laid_struct_tids);
+	map_free(ctx->laid_array_tids);
+	map_free(ctx->laid_elem_tids);
 	for (int i = 0; i < (int)map_size(ctx->functions); i++) {
 		for (cspv_symbol* o = map_val(ctx->functions, i); o; o = o->next_overload) {
 			afree(o->params);

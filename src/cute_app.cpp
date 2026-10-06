@@ -447,6 +447,7 @@ void cf_destroy_app()
 #endif
 		}
 	}
+	cf_destroy_all_fonts();
 	cf_destroy_aseprite_cache();
 	cf_destroy_custom_sprite_cache();
 	cs_shutdown();

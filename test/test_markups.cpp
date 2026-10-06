@@ -8,6 +8,7 @@
 #include "test_harness.h"
 
 #include <cute.h>
+#include <internal/cute_font_internal.h>
 using namespace Cute;
 
 static bool s_basic_hit = false;
@@ -170,6 +171,33 @@ TEST_CASE(test_markups_empty_tag_no_crash)
 	return true;
 }
 
+// cf_make_font_from_memory borrows its buffer. The default Calibri font points at a static
+// array, so destroying it must not free that array.
+TEST_CASE(test_markups_destroy_borrowed_fonts)
+{
+	REQUIRE(!is_error(make_app(NULL, 0, 0, 0, 0, CF_APP_OPTIONS_HIDDEN_BIT | CF_APP_OPTIONS_NO_AUDIO_BIT, NULL)));
+
+	bool had_calibri = cf_font_get("Calibri") != NULL;
+	destroy_font("Calibri");
+
+	uint8_t* bytes = (uint8_t*)cf_alloc(proggy_sz);
+	CF_MEMCPY(bytes, proggy_data, proggy_sz);
+	bool made = !is_error(make_font_from_memory(bytes, proggy_sz, "ProggyBorrowed"));
+	push_font("ProggyBorrowed");
+	float w = text_width("Hello", -1);
+	pop_font();
+	destroy_font("ProggyBorrowed");
+	destroy_app();
+
+	REQUIRE(had_calibri);
+	REQUIRE(made);
+	REQUIRE(w > 0);
+	// A freed buffer holds the debug heap's fill pattern, and freeing it again would crash.
+	REQUIRE(CF_MEMCMP(bytes, proggy_data, proggy_sz) == 0);
+	cf_free(bytes);
+	return true;
+}
+
 TEST_SUITE(test_markups)
 {
 	RUN_TEST_CASE(test_markups_basic);
@@ -177,4 +205,5 @@ TEST_SUITE(test_markups)
 	RUN_TEST_CASE(test_markups_font_style);
 	RUN_TEST_CASE(test_markups_font_size_vertical_metrics);
 	RUN_TEST_CASE(test_markups_empty_tag_no_crash);
+	RUN_TEST_CASE(test_markups_destroy_borrowed_fonts);
 }
