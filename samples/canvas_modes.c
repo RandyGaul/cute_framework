@@ -92,7 +92,7 @@ static void draw_scene(CF_Sprite* sprite, float w, float h, float t)
 	cf_draw_circle_fill2(cf_v2(-w * 0.32f, row_y), h * 0.11f);
 	cf_draw_circle2(cf_v2(-w * 0.12f, row_y), h * 0.11f, 2.0f);
 	CF_Aabb box = cf_make_aabb_pos_w_h(cf_v2(w * 0.10f, row_y), w * 0.14f, h * 0.20f);
-	cf_draw_box_rounded_fill(box, h * 0.03f);
+	cf_draw_box_fill(box, h * 0.03f);
 
 	// A dot orbiting the scene -- a moving probe that crosses crisp and blurry regions.
 	cf_draw_circle_fill2(cf_v2(cosf(t) * w * 0.42f, sinf(t) * h * 0.38f), 3.0f);
