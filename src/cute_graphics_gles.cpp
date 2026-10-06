@@ -646,6 +646,8 @@ static inline void s_apply_state()
 	) {
 		glScissor(target->scissor.x, target->scissor.y, target->scissor.w, target->scissor.h);
 	}
+	// GL keeps the last applied box while the test is off.
+	CF_GL_Rect scissor = target->scissor_enabled ? target->scissor : current->scissor;
 
 	if (target->stencil_reference != current->stencil_reference) {
 		GLenum front_compare = GL_ALWAYS;
@@ -674,6 +676,7 @@ static inline void s_apply_state()
 	}
 
 	*current = *target;
+	current->scissor = scissor;
 	CF_POLL_OPENGL_ERROR();
 }
 

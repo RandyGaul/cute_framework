@@ -31,6 +31,7 @@ set(CF_TEST_SRCS
 	test_instancing.cpp
 	test_draw3d.cpp
 	test_uniform_arrays.cpp
+	test_gles.cpp
 	test_math.cpp
 	test_math.c
 	test_math3d.cpp
