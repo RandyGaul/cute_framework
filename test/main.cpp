@@ -27,6 +27,7 @@
 #include <string.h>
 
 #include "test_app_shared.h"
+#include "test_leak.h"
 
 TEST_SUITE(test_alloc);
 TEST_SUITE(test_app);
@@ -77,14 +78,28 @@ TEST_SUITE(test_crash);
 
 #include <SDL3/SDL.h>
 
+#if defined(_MSC_VER) && defined(_DEBUG)
+// SDL's heap is tagged _CLIENT_BLOCK so the leak counts (normal blocks) measure CF alone.
+static void* SDLCALL s_sdl_malloc(size_t size) { return _malloc_dbg(size, _CLIENT_BLOCK, NULL, 0); }
+static void* SDLCALL s_sdl_calloc(size_t count, size_t size) { return _calloc_dbg(count, size, _CLIENT_BLOCK, NULL, 0); }
+static void* SDLCALL s_sdl_realloc(void* ptr, size_t size) { return _realloc_dbg(ptr, size, _CLIENT_BLOCK, NULL, 0); }
+static void SDLCALL s_sdl_free(void* ptr) { _free_dbg(ptr, _CLIENT_BLOCK); }
+#endif
+
 int main(int argc, char* argv[])
 {
+#if defined(_MSC_VER) && defined(_DEBUG)
+	SDL_SetMemoryFunctions(s_sdl_malloc, s_sdl_calloc, s_sdl_realloc, s_sdl_free);
+#endif
+	TestLeakCheck leak;
+	test_leak_begin(&leak);
+
 	cf_fs_init(argv[0]);
 	printf("Tests are running from \"%s\"\n\n", cf_fs_get_base_directory());
 	cf_fs_destroy();
 
 #ifdef _MSC_VER
-	_CrtSetDbgFlag(_CRTDBG_REPORT_FLAG | _CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
+	_CrtSetDbgFlag(_CrtSetDbgFlag(_CRTDBG_REPORT_FLAG) | _CRTDBG_ALLOC_MEM_DF);
 	_CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_FILE);
 	_CrtSetReportMode(_CRT_ERROR, _CRTDBG_MODE_FILE);
 	_CrtSetReportMode(_CRT_ASSERT, _CRTDBG_MODE_FILE);
@@ -161,5 +176,12 @@ int main(int argc, char* argv[])
 
 	test_shutdown_shared_app(); // The shared GPU app dies here so the leak checker sees a clean exit.
 	pu_print_stats();
+
+	// Interned strings and cute_spirv's global tables outlive the run by design, so this is a
+	// report rather than a pass/fail. CF_TEST_LEAK_DUMP=1 lists every surviving block.
+	if (test_leak_check_enabled()) {
+		fprintf(stderr, "Leak check: %lld bytes in %lld blocks still allocated at exit (plus %lld bytes held by SDL).\n", (long long)test_leak_bytes(&leak), (long long)test_leak_blocks(&leak), (long long)test_leak_sdl_bytes(&leak));
+		if (test_leak_dump_requested()) test_leak_dump(&leak);
+	}
 	return pu_test_failed();
 }

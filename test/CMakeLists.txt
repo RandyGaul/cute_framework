@@ -46,7 +46,7 @@ set(CF_TEST_SRCS
 	test_crash.cpp
 	test_app_shared.cpp
 )
-set(CF_TEST_HDRS test_harness.h test_app_shared.h jpg_test_vectors.h)
+set(CF_TEST_HDRS test_harness.h test_app_shared.h test_leak.h jpg_test_vectors.h)
 
 add_executable(tests ${CF_TEST_SRCS} ${CF_TEST_HDRS})
 target_link_libraries(tests PRIVATE cute)
