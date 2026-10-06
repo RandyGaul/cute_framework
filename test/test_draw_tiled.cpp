@@ -1350,6 +1350,46 @@ TEST_CASE(test_draw_concave_rounding)
 	return true;
 }
 
+// The physics debug draw shows a rounded polygon as the collider really is: the core grown by
+// Box2D's radius, rounded by the same radius.
+static b2WorldId s_rounded_world;
+
+static void s_scene_physics_rounded()
+{
+	cf_physics_draw(s_rounded_world, 1.0f);
+}
+
+TEST_CASE(test_draw_physics_rounded_polygon)
+{
+	if (!test_make_app(640, 480)) return true; // Headless CI: no display/GPU.
+
+	b2WorldDef def = b2DefaultWorldDef();
+	s_rounded_world = b2CreateWorld(&def);
+	b2BodyDef body_def = b2DefaultBodyDef();
+	b2BodyId body = b2CreateBody(s_rounded_world, &body_def);
+	b2ShapeDef shape_def = b2DefaultShapeDef();
+	b2Polygon box = b2MakeRoundedBox(80.0f, 40.0f, 20.0f); // Collider spans +-100 x +-60.
+	b2CreatePolygonShape(body, &shape_def, &box);
+
+	int w = 640, h = 480;
+	CF_Pixel* a = (CF_Pixel*)cf_alloc(w * h * sizeof(CF_Pixel));
+	REQUIRE(s_readback(s_scene_physics_rounded, 0, w, h, a));
+	REQUIRE(s_covered(s_probe_xy(a, w, h, -98, 0)));
+	REQUIRE(s_covered(s_probe_xy(a, w, h, 97, 0)));
+	REQUIRE(s_covered(s_probe_xy(a, w, h, 0, 57)));
+	REQUIRE(s_clear(s_probe_xy(a, w, h, -103, 0)));
+	REQUIRE(s_clear(s_probe_xy(a, w, h, 102, 0)));
+	REQUIRE(s_clear(s_probe_xy(a, w, h, 0, 62)));
+	// Corner: the collider's arc is centered on the core corner (80, 40) with radius 20.
+	REQUIRE(s_covered(s_probe_xy(a, w, h, 92, 52)));
+	REQUIRE(s_clear(s_probe_xy(a, w, h, 96, 56)));
+
+	b2DestroyWorld(s_rounded_world);
+	cf_free(a);
+	test_destroy_app();
+	return true;
+}
+
 // -------------------------------------------------------------------------------------------------
 // Dashed strokes (cf_draw_push_dash): dash-center pixels ink, gap-center pixels stay
 // empty, on both the instanced and tiled paths.
@@ -2795,6 +2835,7 @@ TEST_SUITE(test_draw_tiled)
 	RUN_TEST_CASE_IF(test_draw_strokes_inside);
 	RUN_TEST_CASE_IF(test_draw_rounding_clamp);
 	RUN_TEST_CASE_IF(test_draw_concave_rounding);
+	RUN_TEST_CASE_IF(test_draw_physics_rounded_polygon);
 	RUN_TEST_CASE_IF(test_draw_dashed_strokes);
 	RUN_TEST_CASE_IF(test_draw_dashed_polyline_flow);
 	RUN_TEST_CASE_IF(test_draw_arrow_no_overdraw);
