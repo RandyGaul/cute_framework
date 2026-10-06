@@ -173,7 +173,8 @@ struct CF_TileCmd
 	float user[4]; // User params (ShaderParams.attributes for custom draw shaders).
 	// Shape effects (cf_draw_push_outline / _glow). x: payload offset of the effect block in
 	// vec4 units, as float bits; 0 means no effects. y: how far past the shape's own extent the
-	// effects reach, so coverage quads and tile culling can pad for a glow. zw reserved.
+	// effects reach (the glow radius; outlines stay inside), so coverage quads and tile culling
+	// can pad for it. zw reserved.
 	float fx[4];
 };
 

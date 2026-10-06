@@ -68,10 +68,13 @@ CF_API void CF_CALL cf_draw_prefetch(const CF_Sprite* sprite);
  * @brief    Draws a quad wireframe.
  * @param    bb         The AABB (Axis-Aligned Bounding Box) to draw a quad over.
  * @param    thickness  The thickness of each line to draw.
- * @param    chubbiness Inflates the shape, similar to corner-rounding. Makes the shape chubbier.
+ * @param    rounding   Corner radius in world units. The shape keeps its extent, clamped to what it can hold.
+ * @remarks  Shapes keep the extent you ask for: a 100x40 box with rounding 8 stays 100x40 with rounded
+ *           corners, and rounding is clamped to half the shortest side (where a square becomes a circle).
+ *           The line runs inward from the edge, so the whole stroke lies within `bb`.
  * @related  cf_draw_quad cf_draw_quad2 cf_draw_quad_fill cf_draw_quad_fill2
  */
-CF_API void CF_CALL cf_draw_quad(CF_Aabb bb, float thickness, float chubbiness);
+CF_API void CF_CALL cf_draw_quad(CF_Aabb bb, float thickness, float rounding);
 
 /**
  * @function cf_draw_quad2
@@ -82,21 +85,21 @@ CF_API void CF_CALL cf_draw_quad(CF_Aabb bb, float thickness, float chubbiness);
  * @param    p2         A corner of the quad.
  * @param    p3         A corner of the quad.
  * @param    thickness  The thickness of each line to draw.
- * @param    chubbiness Inflates the shape, similar to corner-rounding. Makes the shape chubbier.
+ * @param    rounding   Corner radius in world units. The shape keeps its extent, clamped to what it can hold.
  * @remarks  All points `p0` through `p3` are encouraged to be in counter-clockwise order.
  * @related  cf_draw_quad cf_draw_quad2 cf_draw_quad_fill cf_draw_quad_fill2
  */
-CF_API void CF_CALL cf_draw_quad2(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float thickness, float chubbiness);
+CF_API void CF_CALL cf_draw_quad2(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float thickness, float rounding);
 
 /**
  * @function cf_draw_quad_fill
  * @category draw
  * @brief    Draws a quad.
  * @param    bb         The AABB (Axis-Aligned Bounding Box) to draw a quad over.
- * @param    chubbiness Inflates the shape, similar to corner-rounding. Makes the shape chubbier.
+ * @param    rounding   Corner radius in world units. The shape keeps its extent, clamped to what it can hold.
  * @related  cf_draw_quad cf_draw_quad2 cf_draw_quad_fill cf_draw_quad_fill2
  */
-CF_API void CF_CALL cf_draw_quad_fill(CF_Aabb bb, float chubbiness);
+CF_API void CF_CALL cf_draw_quad_fill(CF_Aabb bb, float rounding);
 
 /**
  * @function cf_draw_quad_fill2
@@ -106,11 +109,11 @@ CF_API void CF_CALL cf_draw_quad_fill(CF_Aabb bb, float chubbiness);
  * @param    p1         A corner of the quad.
  * @param    p2         A corner of the quad.
  * @param    p3         A corner of the quad.
- * @param    chubbiness Inflates the shape, similar to corner-rounding. Makes the shape chubbier.
+ * @param    rounding   Corner radius in world units. The shape keeps its extent, clamped to what it can hold.
  * @remarks  All points `p0` through `p3` are encouraged to be in counter-clockwise order.
  * @related  cf_draw_quad cf_draw_quad2 cf_draw_quad_fill cf_draw_quad_fill2
  */
-CF_API void CF_CALL cf_draw_quad_fill2(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float chubbiness);
+CF_API void CF_CALL cf_draw_quad_fill2(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float rounding);
 
 /**
  * @function cf_draw_box
@@ -118,11 +121,11 @@ CF_API void CF_CALL cf_draw_quad_fill2(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, f
  * @brief    Draws a quad wireframe.
  * @param    bb         The AABB (Axis-Aligned Bounding Box) to draw a quad over.
  * @param    thickness  The thickness of each line to draw.
- * @param    chubbiness Inflates the shape, similar to corner-rounding. Makes the shape chubbier.
+ * @param    rounding   Corner radius in world units. The shape keeps its extent, clamped to what it can hold.
  * @remarks  This is an alias for `cf_draw_quad`
  * @related  cf_draw_quad cf_draw_quad2 cf_draw_quad_fill cf_draw_quad_fill2
  */
-CF_INLINE void cf_draw_box(CF_Aabb bb, float thickness, float chubbiness) { cf_draw_quad(bb, thickness, chubbiness); }
+CF_INLINE void cf_draw_box(CF_Aabb bb, float thickness, float rounding) { cf_draw_quad(bb, thickness, rounding); }
 
 /**
  * @function cf_draw_box_rounded
@@ -131,9 +134,10 @@ CF_INLINE void cf_draw_box(CF_Aabb bb, float thickness, float chubbiness) { cf_d
  * @param    bb         The AABB (Axis-Aligned Bounding Box) to draw a quad over.
  * @param    thickness  The thickness of each line to draw.
  * @param    radius     The radius to use for rounding.
- * @related  cf_draw_quad cf_draw_quad2 cf_draw_quad_fill cf_draw_quad_fill2
+ * @deprecated Use cf_draw_box instead.
+ * @related  cf_draw_box cf_draw_quad cf_draw_quad2 cf_draw_quad_fill cf_draw_quad_fill2
  */
-CF_API void CF_CALL cf_draw_box_rounded(CF_Aabb bb, float thickness, float radius);
+CF_INLINE void cf_draw_box_rounded(CF_Aabb bb, float thickness, float radius) { cf_draw_box(bb, thickness, radius); }
 
 /**
  * @function cf_draw_box2
@@ -144,22 +148,22 @@ CF_API void CF_CALL cf_draw_box_rounded(CF_Aabb bb, float thickness, float radiu
  * @param    p2         A corner of the quad.
  * @param    p3         A corner of the quad.
  * @param    thickness  The thickness of each line to draw.
- * @param    chubbiness Inflates the shape, similar to corner-rounding. Makes the shape chubbier.
+ * @param    rounding   Corner radius in world units. The shape keeps its extent, clamped to what it can hold.
  * @remarks  All points `p0` through `p3` are encouraged to be in counter-clockwise order. This is an alias for `cf_draw_quad2`
  * @related  cf_draw_quad cf_draw_quad2 cf_draw_quad_fill cf_draw_quad_fill2
  */
-CF_INLINE void cf_draw_box2(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float thickness, float chubbiness) { cf_draw_quad2(p0, p1, p2, p3, thickness,  chubbiness); }
+CF_INLINE void cf_draw_box2(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float thickness, float rounding) { cf_draw_quad2(p0, p1, p2, p3, thickness,  rounding); }
 
 /**
  * @function cf_draw_box_fill
  * @category draw
  * @brief    Draws a quad.
  * @param    bb         The AABB (Axis-Aligned Bounding Box) to draw a quad over.
- * @param    chubbiness Inflates the shape, similar to corner-rounding. Makes the shape chubbier.
+ * @param    rounding   Corner radius in world units. The shape keeps its extent, clamped to what it can hold.
  * @remarks  This is an alias for `cf_draw_quad_fill`
  * @related  cf_draw_quad cf_draw_quad2 cf_draw_quad_fill cf_draw_quad_fill2
  */
-CF_INLINE void cf_draw_box_fill(CF_Aabb bb, float chubbiness) { cf_draw_quad_fill(bb, chubbiness); }
+CF_INLINE void cf_draw_box_fill(CF_Aabb bb, float rounding) { cf_draw_quad_fill(bb, rounding); }
 
 /**
  * @function cf_draw_box_fill2
@@ -169,11 +173,11 @@ CF_INLINE void cf_draw_box_fill(CF_Aabb bb, float chubbiness) { cf_draw_quad_fil
  * @param    p1         A corner of the quad.
  * @param    p2         A corner of the quad.
  * @param    p3         A corner of the quad.
- * @param    chubbiness Inflates the shape, similar to corner-rounding. Makes the shape chubbier.
+ * @param    rounding   Corner radius in world units. The shape keeps its extent, clamped to what it can hold.
  * @remarks  All points `p0` through `p3` are encouraged to be in counter-clockwise order. This is an alias for `cf_draw_quad_fill2`
  * @related  cf_draw_quad cf_draw_quad2 cf_draw_quad_fill cf_draw_quad_fill2
  */
-CF_INLINE void cf_draw_box_fill2(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float chubbiness) { cf_draw_quad_fill2(p0, p1, p2, p3, chubbiness); }
+CF_INLINE void cf_draw_box_fill2(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float rounding) { cf_draw_quad_fill2(p0, p1, p2, p3, rounding); }
 
 /**
  * @function cf_draw_box_rounded_fill
@@ -181,9 +185,10 @@ CF_INLINE void cf_draw_box_fill2(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float c
  * @brief    Draws a quad with rounded corners.
  * @param    bb         The AABB (Axis-Aligned Bounding Box) to draw a quad over.
  * @param    radius     The radius to use for rounding.
- * @related  cf_draw_quad cf_draw_quad2 cf_draw_quad_fill cf_draw_quad_fill2
+ * @deprecated Use cf_draw_box_fill instead.
+ * @related  cf_draw_box_fill cf_draw_quad cf_draw_quad2 cf_draw_quad_fill cf_draw_quad_fill2
  */
-CF_API void CF_CALL cf_draw_box_rounded_fill(CF_Aabb bb, float radius);
+CF_INLINE void cf_draw_box_rounded_fill(CF_Aabb bb, float radius) { cf_draw_box_fill(bb, radius); }
 
 /**
  * @function cf_draw_circle
@@ -191,6 +196,7 @@ CF_API void CF_CALL cf_draw_box_rounded_fill(CF_Aabb bb, float radius);
  * @brief    Draws a circle wireframe.
  * @param    circle     The circle.
  * @param    thickness  The thickness of each line to draw.
+ * @remarks  The ring runs inward from the radius, so the whole stroke lies within the circle.
  * @related  cf_draw_circle cf_draw_circle2 cf_draw_circle_fill cf_draw_circle_fill2
  */
 CF_API void CF_CALL cf_draw_circle(CF_Circle circle, float thickness);
@@ -202,6 +208,7 @@ CF_API void CF_CALL cf_draw_circle(CF_Circle circle, float thickness);
  * @param    p          Center of the circle.
  * @param    r          Radius of the circle.
  * @param    thickness  The thickness of each line to draw.
+ * @remarks  The ring runs inward from the radius, so the whole stroke lies within the circle.
  * @related  cf_draw_circle cf_draw_circle2 cf_draw_circle_fill cf_draw_circle_fill2
  */
 CF_API void CF_CALL cf_draw_circle2(CF_V2 p, float r, float thickness);
@@ -275,10 +282,12 @@ CF_API void CF_CALL cf_draw_capsule_fill2(CF_V2 p0, CF_V2 p1, float r);
  * @param    p1         A corner of the triangle.
  * @param    p2         A corner of the triangle.
  * @param    thickness  The thickness of each line to draw.
- * @param    chubbiness Inflates the shape, similar to corner-rounding. Makes the shape chubbier.
+ * @param    rounding   Corner radius in world units. The shape keeps its extent, clamped to what it can hold.
+ * @remarks  Rounding is clamped to the inscribed circle's radius, where the triangle becomes that circle.
+ *           The line runs inward from the edges, so the whole stroke lies within the triangle.
  * @related  cf_draw_tri cf_draw_tri_fill
  */
-CF_API void CF_CALL cf_draw_tri(CF_V2 p0, CF_V2 p1, CF_V2 p2, float thickness, float chubbiness);
+CF_API void CF_CALL cf_draw_tri(CF_V2 p0, CF_V2 p1, CF_V2 p2, float thickness, float rounding);
 
 /**
  * @function cf_draw_tri_fill
@@ -287,10 +296,11 @@ CF_API void CF_CALL cf_draw_tri(CF_V2 p0, CF_V2 p1, CF_V2 p2, float thickness, f
  * @param    p0         A corner of the triangle.
  * @param    p1         A corner of the triangle.
  * @param    p2         A corner of the triangle.
- * @param    chubbiness Inflates the shape, similar to corner-rounding. Makes the shape chubbier.
+ * @param    rounding   Corner radius in world units. The shape keeps its extent, clamped to what it can hold.
+ * @remarks  Rounding is clamped to the inscribed circle's radius, where the triangle becomes that circle.
  * @related  cf_draw_tri cf_draw_tri_fill
  */
-CF_API void CF_CALL cf_draw_tri_fill(CF_V2 p0, CF_V2 p1, CF_V2 p2, float chubbiness);
+CF_API void CF_CALL cf_draw_tri_fill(CF_V2 p0, CF_V2 p1, CF_V2 p2, float rounding);
 
 /**
  * @function cf_draw_line
@@ -321,11 +331,15 @@ CF_API void CF_CALL cf_draw_polyline(const CF_V2* points, int count, float thick
  * @brief    Draws a filled polygon.
  * @param    points       An array of points to define the polygon surface.
  * @param    count        The number of points in the polygon.
- * @param    chubbiness Inflates the shape, similar to corner-rounding. Makes the shape chubbier.
- * @remarks  This function has a hard-limit of up to 8 points.
+ * @param    rounding     Corner radius in world units. The shape keeps its extent, clamped to what it can hold.
+ * @remarks  This function has a hard-limit of up to 8 points. On a convex polygon rounding is clamped to the
+ *           inscribed circle's radius; at that limit the polygon becomes a circle or, for an elongated shape,
+ *           a capsule. On a concave polygon only the outward-pointing corners round -- inward-pointing ones
+ *           stay sharp -- and rounding is clamped where the shortest edge would vanish, so large values are
+ *           approximate.
  * @related  cf_draw_line cf_draw_polyline cf_draw_bezier_line cf_draw_bezier_line2 cf_draw_arrow cf_draw_polygon_fill cf_draw_polygon_fill_simple
  */
-CF_API void CF_CALL cf_draw_polygon_fill(const CF_V2* points, int count, float chubbiness);
+CF_API void CF_CALL cf_draw_polygon_fill(const CF_V2* points, int count, float rounding);
 
 /**
  * @function cf_draw_polygon_fill_simple
@@ -335,7 +349,7 @@ CF_API void CF_CALL cf_draw_polygon_fill(const CF_V2* points, int count, float c
  * @param    count        The number of points in the polygon.
  * @remarks  Unlike `cf_draw_polygon_fill`, this function can render a higher number of vertices than 8. However, the polygon
  *           must be a _simple polygon_, meaning no self-intersections are allowed, no duplicate or overlapping vertices are
- *           allowed, and other features like chubbiness or antialias can not be applied. This function simply converts your
+ *           allowed, and other features like rounding or antialias can not be applied. This function simply converts your
  *           polygon and renders a series of triangles under the hood. Please be sure to submit your vertices in CCW order.
  * @related  cf_draw_line cf_draw_polyline cf_draw_bezier_line cf_draw_bezier_line2 cf_draw_arrow cf_draw_polygon_fill cf_draw_polygon_fill_simple
  */
@@ -614,6 +628,8 @@ CF_API CF_CustomShape CF_CALL cf_make_custom_shape(const char* sdf_src);
  * @param    thickness    The thickness of the outline stroke.
  * @param    params       Up to 16 floats delivered to the sdf as `ShapeParams` (a.x, a.y, b.x, ...).
  * @param    param_count  Number of floats in `params`.
+ * @remarks  Unlike the built-in closed shapes, the stroke straddles the sdf's zero isoline (half the
+ *           thickness on each side): a user sdf may be unsigned, with no inside for the stroke to run into.
  * @related  CF_CustomShape cf_make_custom_shape cf_draw_custom_shape_fill
  */
 CF_API void CF_CALL cf_draw_custom_shape(CF_CustomShape shape, CF_Aabb bounds, float thickness, const float* params, int param_count);
@@ -708,7 +724,8 @@ CF_API void CF_CALL cf_draw_shape_group_end(void);
  * @brief    Ends the current shape group and draws the composite's outline at the given thickness.
  * @param    thickness  The stroke thickness.
  * @remarks  The outline traces the boundary of the boolean result itself -- e.g. the outline of a crescent,
- *           or of two smoothly-blended blobs, as one continuous stroke.
+ *           or of two smoothly-blended blobs, as one continuous stroke. Like every closed shape's stroke it
+ *           runs inward from that boundary, so it never grows the composite.
  * @related  CF_ShapeOp cf_draw_shape_group_begin cf_draw_shape_group_op cf_draw_shape_group_end
  */
 CF_API void CF_CALL cf_draw_shape_group_end_stroked(float thickness);
@@ -806,12 +823,14 @@ CF_API void CF_CALL cf_draw_pop_dash(void);
  * @brief    Draws an outline around subsequent shapes.
  * @param    color  The outline color.
  * @param    width  Outline width in world units. Zero (the default) disables it.
- * @remarks  The outline is a band hugging the shape's edge, drawn *under* the shape itself, so a
- *           translucent fill shows the solid outline through it rather than doubling up. It comes
- *           straight out of the signed distance the shape already computes -- no second draw, no
- *           extra geometry, and it anti-aliases exactly like the shape does. Works on every SDF
- *           shape (circles, boxes, capsules, triangles, polygons, arrows, custom shapes, shape
- *           groups) and composes with `cf_draw_push_glow`. Sprites and text ignore it.
+ * @remarks  The outline is a band running `width` inward from the shape's edge, drawn *over* the
+ *           shape like a CSS border over its background: the shape keeps its extent, and a
+ *           translucent outline blends over the fill beneath it. On a stroked shape the band runs
+ *           inward from both edges of the stroke. It comes straight out of the signed distance the
+ *           shape already computes -- no second draw, no extra geometry, and it anti-aliases exactly
+ *           like the shape does. Works on every SDF shape (circles, boxes, capsules, triangles,
+ *           polygons, arrows, custom shapes, shape groups) and composes with `cf_draw_push_glow`.
+ *           Sprites and text ignore it.
  * @related  cf_draw_pop_outline cf_draw_push_glow cf_draw_push_color
  */
 CF_API void CF_CALL cf_draw_push_outline(CF_Color color, float width);
@@ -833,7 +852,8 @@ CF_API void CF_CALL cf_draw_pop_outline(void);
  *                   disables it.
  * @remarks  A smooth falloff radiating from the shape's edge, evaluated from the shape's own
  *           signed distance -- exact at any zoom, with no blur pass, no render target, and no
- *           blurry-sprite fakery. Drawn under both the outline and the shape. Coverage and tile
+ *           blurry-sprite fakery. Drawn under both the outline and the shape, and the only thing CF
+ *           draws for a shape that reaches past its extent. Coverage and tile
  *           binning grow to fit the radius automatically. Works on every SDF shape; sprites and
  *           text ignore it. For an additive neon look, pair it with `cf_draw_push_blend`.
  * @related  cf_draw_pop_glow cf_draw_push_outline cf_draw_push_blend
@@ -927,7 +947,7 @@ CF_API CF_Color CF_CALL cf_draw_peek_vertex_attributes(void);
  * @param    c2          Color for the third vertex (p2).
  * @remarks  When active, triangles drawn with `cf_draw_tri_fill` will interpolate colors
  *           across the triangle surface between c0, c1, and c2 at vertices p0, p1, and p2.
- *           This only works when chubbiness is 0 and antialiasing is disabled.
+ *           This only works when rounding is 0 and antialiasing is disabled.
  * @related  cf_draw_push_tri_colors cf_draw_pop_tri_colors cf_draw_peek_tri_colors cf_draw_tri_fill
  */
 CF_API void CF_CALL cf_draw_push_tri_colors(CF_Color c0, CF_Color c1, CF_Color c2);
@@ -961,7 +981,7 @@ CF_API void CF_CALL cf_draw_peek_tri_colors(CF_Color* c0, CF_Color* c1, CF_Color
  * @remarks  When active, triangles drawn with `cf_draw_tri_fill` will interpolate attributes
  *           across the triangle surface between a0, a1, and a2 at vertices p0, p1, and p2.
  *           This is useful for custom shaders that need per-vertex data (UVs, blend weights, etc.).
- *           This only works when chubbiness is 0 and antialiasing is disabled.
+ *           This only works when rounding is 0 and antialiasing is disabled.
  * @related  cf_draw_push_tri_attributes cf_draw_pop_tri_attributes cf_draw_peek_tri_attributes cf_draw_tri_fill
  */
 CF_API void CF_CALL cf_draw_push_tri_attributes(CF_Color a0, CF_Color a1, CF_Color a2);
@@ -2433,18 +2453,18 @@ CF_INLINE void sprite_draw_9_slice_tiled(const CF_Sprite* sprite) { cf_draw_spri
 CF_INLINE void sprite_draw_9_slice_tiled(const CF_Sprite& sprite) { cf_draw_sprite_9_slice_tiled(&sprite); }
 CF_INLINE void draw_prefetch(const CF_Sprite* sprite) { cf_draw_prefetch(sprite); }
 CF_INLINE void draw_prefetch(const CF_Sprite& sprite) { cf_draw_prefetch(&sprite); }
-CF_INLINE void draw_quad(CF_Aabb bb, float thickness = 1.0f, float chubbiness = 0) { cf_draw_quad(bb, thickness, chubbiness); }
-CF_INLINE void draw_quad(v2 p0, v2 p1, v2 p2, v2 p3, float thickness = 1.0f, float chubbiness = 0) { cf_draw_quad2(p0, p1, p2, p3, thickness, chubbiness); }
-CF_INLINE void draw_quad_fill(CF_Aabb bb, float chubbiness = 0) { cf_draw_quad_fill(bb, chubbiness); }
-CF_INLINE void draw_quad_fill(v2 p0, v2 p1, v2 p2, v2 p3, float chubbiness = 0) { cf_draw_quad_fill2(p0, p1, p2, p3, chubbiness); }
-CF_INLINE void draw_box(CF_Aabb bb, float thickness = 1.0f, float chubbiness = 0) { cf_draw_quad(bb, thickness, chubbiness); }
-CF_INLINE void draw_box(v2 p0, v2 p1, v2 p2, v2 p3, float thickness = 1.0f, float chubbiness = 0) { cf_draw_quad2(p0, p1, p2, p3, thickness, chubbiness); }
-CF_INLINE void draw_box(v2 p, float w, float h, float thickness = 1.0f, float chubbiness = 0) { cf_draw_quad(make_aabb(p, w, h), thickness, chubbiness); }
-CF_INLINE void draw_box_rounded(CF_Aabb bb, float thickness = 1.0f, float chubbiness = 0) { cf_draw_box_rounded(bb, thickness, chubbiness); }
-CF_INLINE void draw_box_rounded_fill(CF_Aabb bb, float chubbiness = 0) { cf_draw_box_rounded_fill(bb, chubbiness); }
-CF_INLINE void draw_box_fill(CF_Aabb bb, float chubbiness = 0) { cf_draw_quad_fill(bb, chubbiness); }
-CF_INLINE void draw_box_fill(v2 p0, v2 p1, v2 p2, v2 p3, float chubbiness = 0) { cf_draw_quad_fill2(p0, p1, p2, p3, chubbiness); }
-CF_INLINE void draw_box_fill(v2 p, float w, float h, float chubbiness = 0) { cf_draw_quad_fill(make_aabb(p, w, h), chubbiness); }
+CF_INLINE void draw_quad(CF_Aabb bb, float thickness = 1.0f, float rounding = 0) { cf_draw_quad(bb, thickness, rounding); }
+CF_INLINE void draw_quad(v2 p0, v2 p1, v2 p2, v2 p3, float thickness = 1.0f, float rounding = 0) { cf_draw_quad2(p0, p1, p2, p3, thickness, rounding); }
+CF_INLINE void draw_quad_fill(CF_Aabb bb, float rounding = 0) { cf_draw_quad_fill(bb, rounding); }
+CF_INLINE void draw_quad_fill(v2 p0, v2 p1, v2 p2, v2 p3, float rounding = 0) { cf_draw_quad_fill2(p0, p1, p2, p3, rounding); }
+CF_INLINE void draw_box(CF_Aabb bb, float thickness = 1.0f, float rounding = 0) { cf_draw_quad(bb, thickness, rounding); }
+CF_INLINE void draw_box(v2 p0, v2 p1, v2 p2, v2 p3, float thickness = 1.0f, float rounding = 0) { cf_draw_quad2(p0, p1, p2, p3, thickness, rounding); }
+CF_INLINE void draw_box(v2 p, float w, float h, float thickness = 1.0f, float rounding = 0) { cf_draw_quad(make_aabb(p, w, h), thickness, rounding); }
+CF_INLINE void draw_box_rounded(CF_Aabb bb, float thickness = 1.0f, float radius = 0) { cf_draw_box_rounded(bb, thickness, radius); }
+CF_INLINE void draw_box_rounded_fill(CF_Aabb bb, float radius = 0) { cf_draw_box_rounded_fill(bb, radius); }
+CF_INLINE void draw_box_fill(CF_Aabb bb, float rounding = 0) { cf_draw_quad_fill(bb, rounding); }
+CF_INLINE void draw_box_fill(v2 p0, v2 p1, v2 p2, v2 p3, float rounding = 0) { cf_draw_quad_fill2(p0, p1, p2, p3, rounding); }
+CF_INLINE void draw_box_fill(v2 p, float w, float h, float rounding = 0) { cf_draw_quad_fill(make_aabb(p, w, h), rounding); }
 CF_INLINE void draw_circle(CF_Circle circle, float thickness = 1.0f) { cf_draw_circle(circle, thickness); }
 CF_INLINE void draw_circle(v2 p, float r, float thickness = 1.0f) { cf_draw_circle2(p, r, thickness); }
 CF_INLINE void draw_circle_fill(CF_Circle circle) { cf_draw_circle_fill(circle); }
@@ -2453,8 +2473,8 @@ CF_INLINE void draw_capsule(CF_Capsule capsule, float thickness = 1.0f) { cf_dra
 CF_INLINE void draw_capsule(v2 p0, v2 p1, float r, float thickness = 1.0f) { cf_draw_capsule2(p0, p1, r, thickness); }
 CF_INLINE void draw_capsule_fill(CF_Capsule capsule) { cf_draw_capsule_fill(capsule); }
 CF_INLINE void draw_capsule_fill(v2 p0, v2 p1, float r) { cf_draw_capsule_fill2(p0, p1, r); }
-CF_INLINE void draw_tri(v2 p0, v2 p1, v2 p2, float thickness = 1.0f, float chubbiness = 0) { cf_draw_tri(p0, p1, p2, thickness, chubbiness); }
-CF_INLINE void draw_tri_fill(v2 p0, v2 p1, v2 p2, float chubbiness = 0) { cf_draw_tri_fill(p0, p1, p2, chubbiness); }
+CF_INLINE void draw_tri(v2 p0, v2 p1, v2 p2, float thickness = 1.0f, float rounding = 0) { cf_draw_tri(p0, p1, p2, thickness, rounding); }
+CF_INLINE void draw_tri_fill(v2 p0, v2 p1, v2 p2, float rounding = 0) { cf_draw_tri_fill(p0, p1, p2, rounding); }
 CF_INLINE void draw_line(v2 p0, v2 p1, float thickness = 1.0f) { cf_draw_line(p0, p1, thickness); }
 CF_INLINE void draw_polyline(const v2* points, int count, float thickness = 1.0f, bool loop = false) { cf_draw_polyline(points, count, thickness, loop); }
 CF_INLINE void draw_path_begin() { cf_draw_path_begin(); }
@@ -2472,7 +2492,7 @@ CF_INLINE void draw_list_begin(CF_DrawList list) { cf_draw_list_begin(list); }
 CF_INLINE void draw_list_end() { cf_draw_list_end(); }
 CF_INLINE void draw_list(CF_DrawList list) { cf_draw_list(list); }
 CF_INLINE void destroy_draw_list(CF_DrawList list) { cf_destroy_draw_list(list); }
-CF_INLINE void draw_polygon_fill(const v2* points, int count, float chubbiness) { cf_draw_polygon_fill(points, count, chubbiness); }
+CF_INLINE void draw_polygon_fill(const v2* points, int count, float rounding) { cf_draw_polygon_fill(points, count, rounding); }
 CF_INLINE void draw_polygon_fill_simple(const v2* points, int count) { cf_draw_polygon_fill_simple(points, count); }
 CF_INLINE void draw_bezier_line(v2 a, v2 c0, v2 b, int iters, float thickness) { cf_draw_bezier_line(a, c0, b, iters, thickness); }
 CF_INLINE void draw_bezier_line(v2 a, v2 c0, v2 c1, v2 b, int iters, float thickness) { cf_draw_bezier_line2(a, c0, c1, b, iters, thickness); }

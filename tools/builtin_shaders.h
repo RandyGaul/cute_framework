@@ -445,31 +445,30 @@ float sdf_stroke(float d)
 }
 
 // Shape effects (cf_draw_push_outline / cf_draw_push_glow), applied to a shape's premultiplied
-// result using the signed distance it already produced -- an outline is a band just outside the
-// surface, a glow a falloff past it. Both are exact and cost one smoothstep each: no second
-// pass, no blur kernel, no extra geometry. Globals are set per command by the tile walk and from
-// varyings in the instanced path; a zero width/radius disables that effect.
+// result using the signed distance of what it drew -- an outline is a band just inside the edge,
+// over the shape like a border over its background; a glow is a falloff past the edge, under
+// it. Shapes keep their extent: only the glow ever leaves it. Both are exact and cost one
+// smoothstep each: no second pass, no blur kernel, no extra geometry. Globals are set per
+// command by the tile walk and from varyings in the instanced path; a zero width/radius
+// disables that effect.
 vec4 sdf_effects(vec4 shape_color, float d)
 {
 	if (v_outline_width <= 0.0 && v_glow_radius <= 0.0) return shape_color;
 	float aa = max(v_aa, 1.0e-6);
-	vec4 under = vec4(0.0);
-	// Glow first (furthest back): a falloff from the surface outward, squared so it reads like
-	// light rather than a flat halo.
+	vec4 c = shape_color;
+	if (v_outline_width > 0.0) {
+		// The outer edge reuses the shape's own coverage ramp, so the band never leaves it.
+		float cov = (1.0 - smoothstep(0.0, aa, d)) * smoothstep(-v_outline_width - aa, -v_outline_width, d);
+		// `edge`, not `line` -- the latter is a reserved word in HLSL.
+		vec4 edge = v_outline * cov;
+		c = edge + c * (1.0 - edge.a);
+	}
+	// Glow underneath everything: squared so it reads like light rather than a flat halo.
 	if (v_glow_radius > 0.0) {
 		float t = clamp(1.0 - max(d, 0.0) / v_glow_radius, 0.0, 1.0);
-		under = v_glow * (t * t);
+		c = c + v_glow * (t * t) * (1.0 - c.a);
 	}
-	// Outline over glow: everything within `width` of the surface, inside included, so it stays
-	// solid under a translucent fill.
-	if (v_outline_width > 0.0) {
-		// `edge`, not `line` -- the latter is a reserved word in HLSL.
-		float cov = 1.0 - smoothstep(v_outline_width - aa, v_outline_width, d);
-		vec4 edge = v_outline * cov;
-		under = edge + under * (1.0 - edge.a);
-	}
-	// Finally the shape itself over both.
-	return shape_color + under * (1.0 - shape_color.a);
+	return c;
 }
 
 float dd(float d)
@@ -492,7 +491,8 @@ vec4 sdf(vec4 a, vec4 b, float d)
 	vec4 fill = mix(fill_no_aa, fill_aa, v_aa > 0.0 ? 1.0 : 0.0);
 
 	result = mix(stroke, fill, v_fill);
-	result = sdf_effects(result, d);
+	// Effects follow what was drawn: a stroke's own band, or the filled shape.
+	result = sdf_effects(result, v_fill > 0.5 ? d : wire_d);
 	return result;
 }
 )";
@@ -933,7 +933,7 @@ struct Cmd
 	vec4 shape;   // radius, stroke (pre-halved), aa, alpha.
 	vec4 misc;    // x: fill (0 or 1), y: polygon vert count, z: opaque, w: packHalf2x16(color.ba) bits.
 	vec4 user;    // User params (ShaderParams.attributes).
-	vec4 fx;      // x: effect-block payload offset (float bits, 0 = none). y: extra extent. zw reserved.
+	vec4 fx;      // x: effect-block payload offset (float bits, 0 = none). y: glow reach past the shape. zw reserved.
 };
 
 layout (std430, set = 2, binding = 1) readonly buffer cmd_buffer { Cmd cmds[]; };
@@ -1296,7 +1296,7 @@ void main()
 	vec4 P1 = cf_payload(po + 1u);
 
 	// Conservative coverage inflation: radius + full stroke + aa (shape.y is the
-	// pre-halved stroke), plus however far an outline or glow reaches past the shape.
+	// pre-halved stroke), plus however far a glow reaches past the shape.
 	float pad = cmd.shape.x + cmd.shape.y * 2.0 + cmd.shape.z + cmd.fx.y;
 
 	// Shape effects ride a trailing payload block, flagged by a non-zero offset.
@@ -1381,14 +1381,15 @@ void main()
 	} else if (type == 9u) {
 		// Custom shape: CPU-supplied pre-padded bounds ride in the payload; the 16
 		// shape params pass through untouched via ab/cd/ef/gh.
-		vec4 P4 = cf_payload(po + 4u);
+		vec4 P4 = cf_payload(po + 4u) + vec4(-cmd.fx.y, -cmd.fx.y, cmd.fx.y, cmd.fx.y);
 		pos = vec2(mix(P4.x, P4.z, cx), mix(P4.y, P4.w, cy));
 		ef = cf_payload(po + 2u);
 		gh = cf_payload(po + 3u);
 	} else if (type == 10u) {
 		// CSG shape group: pre-padded composite bounds are the payload's first vec4;
 		// the fragment stage reads the operand list from the payload directly.
-		pos = vec2(mix(P0.x, P0.z, cx), mix(P0.y, P0.w, cy));
+		vec4 bb = P0 + vec4(-cmd.fx.y, -cmd.fx.y, cmd.fx.y, cmd.fx.y);
+		pos = vec2(mix(bb.x, bb.z, cx), mix(bb.y, bb.w, cy));
 	} else if (type == 11u) {
 		// Curve glyph: outline-box parallelogram (BL origin + x/y edges), inflated by
 		// stroke + aa along the edge directions.
@@ -1535,7 +1536,7 @@ void main()
 "	if (type <= 1u || type == 4u || type == 11u) return true; /* Sprites/text/tris/glyphs: AABB only. */\n" \
 "	float r_tile;\n" \
 "	float d = cmd_distance_at(cmd, tx, ty, r_tile);\n" \
-"	/* cmd.fx.y is how far an outline or glow reaches past the shape itself. */\n" \
+"	/* cmd.fx.y is how far a glow reaches past the shape itself. */\n" \
 "	return d - cmd.shape.x - cmd.shape.y - cmd.shape.z - cmd.fx.y - r_tile <= 0.0;\n" \
 "}\n"
 
