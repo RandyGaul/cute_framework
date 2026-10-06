@@ -341,4 +341,18 @@ void cf_destroy_instance_buffer(uint64_t handle);
 // per-flush staging buffer (each binds its own slice). Must be a multiple of the stride.
 void cf_apply_instance_buffer_override(uint64_t handle, int count, int offset_bytes);
 
+// What cf_canvas_copy_depth needs to know about each side; backends fill these in and share the
+// misuse reporting. `format` is backend-native (an SDL or GL enum), compared only for equality.
+struct CF_CanvasDepthDesc
+{
+	bool valid;
+	bool has_depth;
+	int w, h;
+	uint32_t format;
+	int sample_count;
+};
+
+// Asserts and logs on misuse, returning false; the copy must then be skipped.
+bool cf_canvas_copy_depth_check(CF_CanvasDepthDesc dst, CF_CanvasDepthDesc src, bool same_canvas);
+
 #endif // CF_GRAPHICS_INTERNAL_H

@@ -193,6 +193,7 @@ struct CF_GL_Canvas
 	GLuint depth;
 	bool has_depth;
 	bool has_stencil;
+	GLenum depth_internal_fmt;
 
 	// Rendering into a face/layer of a user-owned texture; the canvas does not own it.
 	bool attached;
@@ -1447,6 +1448,7 @@ CF_Canvas cf_gles_make_canvas(CF_CanvasParams params)
 		c->attached = true;
 		c->w = attach->w >> params.attach_mip; if (c->w < 1) c->w = 1;
 		c->h = attach->h >> params.attach_mip; if (c->h < 1) c->h = 1;
+		c->depth_internal_fmt = attach->internal_fmt;
 		switch (attach->internal_fmt) {
 		case GL_DEPTH_COMPONENT16:
 		case GL_DEPTH_COMPONENT24:
@@ -1502,6 +1504,7 @@ CF_Canvas cf_gles_make_canvas(CF_CanvasParams params)
 	CF_GL_PixelFormatInfo* depth_info = s_find_pixel_format_info(params.depth_stencil_target.pixel_format);
 	c->has_depth = depth_info && (depth_info->caps & CF_GL_FMT_CAP_DEPTH);
 	c->has_stencil = depth_info && depth_info->has_stencil && (depth_info->caps & CF_GL_FMT_CAP_STENCIL);
+	c->depth_internal_fmt = depth_info ? depth_info->internal_fmt : GL_NONE;
 	if (params.depth_stencil_target.usage & CF_TEXTURE_USAGE_SAMPLER_BIT) {
 	c->cf_depth = cf_gles_make_texture(params.depth_stencil_target);
 	if (!c->cf_depth.id) {
@@ -1622,6 +1625,41 @@ CF_Texture cf_gles_canvas_get_depth_stencil_target(CF_Canvas ch)
 	// and it is backed by a depth texture rather than a renderbuffer.
 	CF_GL_Canvas* c = (CF_GL_Canvas*)(uintptr_t)ch.id;
 	return c ? c->cf_depth : CF_Texture{};
+}
+
+static CF_CanvasDepthDesc s_canvas_depth_desc(const CF_GL_Canvas* c)
+{
+	CF_CanvasDepthDesc desc = { };
+	if (!c) return desc;
+	desc.valid = true;
+	desc.has_depth = c->has_depth;
+	desc.w = c->w;
+	desc.h = c->h;
+	desc.format = (uint32_t)c->depth_internal_fmt;
+	desc.sample_count = 1;
+	return desc;
+}
+
+void cf_gles_canvas_copy_depth(CF_Canvas dst_handle, CF_Canvas src_handle)
+{
+	CF_GL_Canvas* dst = (CF_GL_Canvas*)(uintptr_t)dst_handle.id;
+	CF_GL_Canvas* src = (CF_GL_Canvas*)(uintptr_t)src_handle.id;
+	if (!cf_canvas_copy_depth_check(s_canvas_depth_desc(dst), s_canvas_depth_desc(src), dst && dst == src)) return;
+
+	// Blits obey the scissor test and write masks like draws do. Same reset as s_clear_canvas;
+	// per-draw state application rebuilds all of it.
+	g_ctx.current_state.scissor_enabled = false;
+	glDisable(GL_SCISSOR_TEST);
+	glDepthMask(GL_TRUE);
+	glStencilMask(0xFF);
+	GLbitfield bits = GL_DEPTH_BUFFER_BIT;
+	if (src->has_stencil) bits |= GL_STENCIL_BUFFER_BIT;
+	glBindFramebuffer(GL_READ_FRAMEBUFFER, src->fbo);
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, dst->fbo);
+	// Depth/stencil blits require GL_NEAREST and identical formats (checked above).
+	glBlitFramebuffer(0, 0, src->w, src->h, 0, 0, dst->w, dst->h, bits, GL_NEAREST);
+	glBindFramebuffer(GL_FRAMEBUFFER, g_ctx.fbo);
+	CF_POLL_OPENGL_ERROR();
 }
 
 static inline void s_clear_canvas(const CF_GL_Canvas* canvas)

@@ -1619,6 +1619,49 @@ CF_Texture cf_sdlgpu_canvas_get_depth_stencil_target(CF_Canvas canvas_handle)
 	return canvas->cf_depth_stencil;
 }
 
+static CF_CanvasDepthDesc s_canvas_depth_desc(CF_CanvasInternal* canvas)
+{
+	CF_CanvasDepthDesc desc = { };
+	if (!canvas) return desc;
+	desc.valid = true;
+	desc.has_depth = canvas->depth_stencil != NULL;
+	desc.w = canvas->w;
+	desc.h = canvas->h;
+	desc.format = desc.has_depth ? (uint32_t)((CF_TextureInternal*)canvas->cf_depth_stencil.id)->format : 0;
+	desc.sample_count = 1 << (int)canvas->sample_count;
+	return desc;
+}
+
+void cf_sdlgpu_canvas_copy_depth(CF_Canvas dst_handle, CF_Canvas src_handle)
+{
+	CF_CanvasInternal* dst = (CF_CanvasInternal*)dst_handle.id;
+	CF_CanvasInternal* src = (CF_CanvasInternal*)src_handle.id;
+	if (!cf_canvas_copy_depth_check(s_canvas_depth_desc(dst), s_canvas_depth_desc(src), dst && dst == src)) return;
+
+	// Clears requested by cf_apply_canvas are deferred to the next pass on that canvas. Run them
+	// now so the copy lands in the same order GLES gives: src reads cleared depth, and a later
+	// pass on dst loads the copy instead of clearing it away.
+	if (src->clear) cf_sdlgpu_clear_canvas(src_handle);
+	if (dst->clear) cf_sdlgpu_clear_canvas(dst_handle);
+
+	// Whole-subresource only: D3D12 rejects partial copies of depth-stencil resources. Its
+	// SDL_GPU driver also copies only the depth plane, so stencil is not carried over there.
+	s_end_active_pass();
+	SDL_GPUCommandBuffer* cmd = g_ctx.cmd ? g_ctx.cmd : SDL_AcquireGPUCommandBuffer(g_ctx.device);
+	SDL_GPUCopyPass* pass = SDL_BeginGPUCopyPass(cmd);
+	SDL_GPUTextureLocation from = { };
+	from.texture = src->depth_stencil;
+	from.mip_level = (Uint32)(src->attached_depth ? src->attach_mip : 0);
+	from.layer = (Uint32)(src->attached_depth ? src->attach_layer : 0);
+	SDL_GPUTextureLocation to = { };
+	to.texture = dst->depth_stencil;
+	to.mip_level = (Uint32)(dst->attached_depth ? dst->attach_mip : 0);
+	to.layer = (Uint32)(dst->attached_depth ? dst->attach_layer : 0);
+	SDL_CopyGPUTextureToTexture(pass, &from, &to, (Uint32)src->w, (Uint32)src->h, 1, false);
+	SDL_EndGPUCopyPass(pass);
+	if (!g_ctx.cmd) SDL_SubmitGPUCommandBuffer(cmd);
+}
+
 CF_Readback cf_sdlgpu_canvas_readback2(CF_Canvas canvas_handle, int index)
 {
 	CF_CanvasInternal* canvas = (CF_CanvasInternal*)canvas_handle.id;
