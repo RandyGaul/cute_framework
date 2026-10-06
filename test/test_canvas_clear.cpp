@@ -9,6 +9,7 @@
 #include "test_app_shared.h"
 
 #include <cute.h>
+#include <SDL3/SDL.h>
 #include <stdlib.h>
 
 using namespace Cute;
@@ -168,8 +169,45 @@ TEST_CASE(test_canvas_clear_depth_is_honored)
 	return true;
 }
 
+// A window with no area (a collapsed browser canvas, a layout transition) used to rebuild the
+// app canvas at 0x0, which asserts on the next frame on every backend.
+TEST_CASE(test_zero_size_window_keeps_app_canvas)
+{
+	if (!test_make_app(W, H)) return true; // Headless CI: no display/GPU.
+	AppDestroyGuard app_guard;
+	int canvas_w = cf_app_get_canvas_width();
+	int canvas_h = cf_app_get_canvas_height();
+
+	cf_app_set_size(0, 0);
+	REQUIRE(cf_app_get_canvas_width() == canvas_w);
+	REQUIRE(cf_app_get_canvas_height() == canvas_h);
+	cf_app_update(NULL);
+	cf_draw_box(cf_make_aabb(cf_v2(-8, -8), cf_v2(8, 8)), 1.0f, 0);
+	cf_app_draw_onto_screen(true);
+
+	// The same collapse arriving as a window event.
+	SDL_Event e = { };
+	e.type = SDL_EVENT_WINDOW_RESIZED;
+	e.window.windowID = SDL_GetWindowID(cf_app_get_window());
+	REQUIRE(SDL_PushEvent(&e));
+	cf_app_update(NULL);
+	REQUIRE(cf_app_get_canvas_width() == canvas_w);
+	REQUIRE(cf_app_get_canvas_height() == canvas_h);
+	cf_app_draw_onto_screen(true);
+
+	cf_app_set_size(W, H);
+	float scale = cf_app_get_pixel_scale();
+	REQUIRE(cf_app_get_canvas_width() == (int)CF_ROUNDF(W * scale));
+	REQUIRE(cf_app_get_canvas_height() == (int)CF_ROUNDF(H * scale));
+	cf_app_update(NULL);
+	cf_draw_box(cf_make_aabb(cf_v2(-8, -8), cf_v2(8, 8)), 1.0f, 0);
+	cf_app_draw_onto_screen(true);
+	return true;
+}
+
 TEST_SUITE(test_canvas_clear)
 {
 	RUN_TEST_CASE(test_per_canvas_clear_color);
 	RUN_TEST_CASE(test_canvas_clear_depth_is_honored);
+	RUN_TEST_CASE(test_zero_size_window_keeps_app_canvas);
 }
